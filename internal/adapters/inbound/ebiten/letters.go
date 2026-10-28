@@ -103,7 +103,7 @@ func letterRowLabel(r letterRow) string {
 // the newest ending at the rect's bottom.
 func (a *App) letterRows(l hudLayout) []letterRow {
 	ls := a.letters()
-	if len(ls) == 0 || l.LetterRows <= 0 || l.Letters.empty() {
+	if len(ls) == 0 || l.LetterRows <= 0 || l.Letters.Empty() {
 		return nil
 	}
 	shown, older := stackSplit(len(ls), l.LetterRows, maxLetters)
@@ -112,9 +112,9 @@ func (a *App) letterRows(l hudLayout) []letterRow {
 		n++
 	}
 	rows := make([]letterRow, 0, n)
-	top := l.Letters.bottom() - float32(n)*(letterRowH+hudGap) + hudGap
+	top := l.Letters.Bottom() - float32(n)*(letterRowH+hudGap) + hudGap
 	at := func(i int) rect {
-		return rect{l.Letters.X, top + float32(i)*(letterRowH+hudGap), l.Letters.W, letterRowH}
+		return rect{X: l.Letters.X, Y: top + float32(i)*(letterRowH+hudGap), W: l.Letters.W, H: letterRowH}
 	}
 	i := 0
 	if older > 0 {
@@ -306,7 +306,7 @@ func (a *App) drawLettersIn(screen *ebiten.Image, l hudLayout) {
 			continue
 		}
 		k := letterKinds[letterKind(row.letter.Kind)]
-		hover := r.hit(mx, my)
+		hover := r.Hit(mx, my)
 		bg := uiPanel
 		if hover {
 			bg = uiBtnHover
@@ -315,7 +315,7 @@ func (a *App) drawLettersIn(screen *ebiten.Image, l hudLayout) {
 		if f := a.letterFlash(row.letter.ID); f > 0 {
 			fillRect(screen, r, fade(k.clr, 0.45*f))
 		}
-		fillRect(screen, rect{r.X, r.Y, letterBarW, r.H}, k.clr)
+		fillRect(screen, rect{X: r.X, Y: r.Y, W: letterBarW, H: r.H}, k.clr)
 		border := uiPanelBorder
 		if hover || a.letterFlash(row.letter.ID) > 0 {
 			border = k.clr
@@ -332,6 +332,6 @@ func (a *App) drawLettersIn(screen *ebiten.Image, l hudLayout) {
 		if a.letterRead(row.letter.ID) {
 			text = uiTextDim
 		}
-		drawText(screen, fitText(letterRowLabel(row), tsBody, r.right()-tx-letterPadX), float64(tx), float64(r.Y)+(float64(r.H)-lineH(tsBody))/2, withColor(tsBody, text))
+		drawText(screen, fitText(letterRowLabel(row), tsBody, r.Right()-tx-letterPadX), float64(tx), float64(r.Y)+(float64(r.H)-lineH(tsBody))/2, withColor(tsBody, text))
 	}
 }

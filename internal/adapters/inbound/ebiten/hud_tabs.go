@@ -31,7 +31,7 @@ var hudTabSpecs = []struct {
 }
 
 // tabsRect is the strip, the layout's Tabs rect.
-func tabsRect(sw, sh int) rect { return rect{0, float32(sh - tabsH), float32(sw), tabsH} }
+func tabsRect(sw, sh int) rect { return rect{X: 0, Y: float32(sh - tabsH), W: float32(sw), H: tabsH} }
 
 // tabOn reports tab id's window (or the Architect) is the one open.
 func (a *App) tabOn(id string) bool {
@@ -132,7 +132,7 @@ func (a *App) drawTabs(screen *ebiten.Image, sw, sh int) {
 		if b.id != ids.TabResearch {
 			continue
 		}
-		track := rect{b.x + 4, b.y + b.h - 6, b.w - 8, 3}
+		track := rect{X: b.x + 4, Y: b.y + b.h - 6, W: b.w - 8, H: 3}
 		uiFillRect(screen, track.X, track.Y, track.W, track.H, uiSliderTrack, false)
 		uiFillRect(screen, track.X, track.Y, track.W*float32(pct)/100, track.H, uiAccent, false)
 	}

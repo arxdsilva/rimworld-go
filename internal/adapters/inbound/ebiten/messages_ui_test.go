@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -41,14 +42,14 @@ func TestMessagesFillTheLayoutsRectRightAligned(t *testing.T) {
 		if r.r.H != msgRowH || r.r.Y != l.Messages.Y+float32(i)*msgStride {
 			t.Errorf("row %d at %+v, Messages %+v", i, r.r, l.Messages)
 		}
-		if r.r.right() != l.Messages.right() || r.r.X < l.Messages.X {
+		if r.r.Right() != l.Messages.Right() || r.r.X < l.Messages.X {
 			t.Errorf("row %d %+v is not right-aligned inside %+v", i, r.r, l.Messages)
 		}
 	}
 	if got := rows[maxMsgs-1].msg.Text; !strings.Contains(got, "number 7") {
 		t.Errorf("the newest message is last, got %q", got)
 	}
-	if l.Messages.right() >= l.Right.X {
+	if l.Messages.Right() >= l.Right.X {
 		t.Errorf("messages %+v reach the right column %+v", l.Messages, l.Right)
 	}
 	// each row with a place is a click-to-focus button, ids msg.<i>
@@ -78,14 +79,14 @@ func TestMessagesDrawInsideTheirRectAtScale(t *testing.T) {
 			a, f := colonyApp(t, sim)
 			pw, ph := rightAtScale(t, a, f, s)
 			l := a.hud()
-			if l.Messages.empty() {
+			if l.Messages.Empty() {
 				t.Fatal("no Messages rect")
 			}
 			var evs []traceEvent
-			drawTrace = func(e traceEvent) { evs = append(evs, e) }
-			t.Cleanup(func() { drawTrace = nil })
+			gfx.SetDrawTrace(func(e traceEvent) { evs = append(evs, e) })
+			t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 			a.drawMessagesIn(ebiten.NewImage(pw, ph), l)
-			drawTrace = nil
+			gfx.SetDrawTrace(nil)
 			if len(evs) == 0 {
 				t.Fatal("nothing drawn")
 			}
@@ -93,7 +94,7 @@ func TestMessagesDrawInsideTheirRectAtScale(t *testing.T) {
 			for _, e := range evs {
 				x, y, w, h := e.X/float32(s), e.Y/float32(s), e.W/float32(s), e.H/float32(s)
 				const eps = 0.6
-				if x < l.Messages.X-eps || y < l.Messages.Y-eps || x+w > l.Messages.right()+eps || y+h > l.Messages.bottom()+eps {
+				if x < l.Messages.X-eps || y < l.Messages.Y-eps || x+w > l.Messages.Right()+eps || y+h > l.Messages.Bottom()+eps {
 					t.Errorf("%s %q at %g,%g %gx%g (logical) leaves Messages %+v", e.Kind, e.Text, x, y, w, h, l.Messages)
 				}
 				if e.Kind == "text" {

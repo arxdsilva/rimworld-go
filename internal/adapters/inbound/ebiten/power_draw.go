@@ -3,6 +3,7 @@ package ebiten
 import (
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strconv"
 	"strings"
 
@@ -531,9 +532,9 @@ func (r *Renderer) drawNoPowerBadges(screen *ebiten.Image, w *game.WorldView, ti
 // anchor, a logical size, converted once.
 func worldIconCS(dst, img *ebiten.Image, physX, physY, size float64, cs colorScale) {
 	k := 1 / uiScale()
-	if drawTrace != nil {
-		defer func(old string) { traceVia = old }(traceVia)
-		traceVia = "worldIcon"
+	if gfx.Traced() {
+		defer gfx.SetVia(gfx.Via())
+		gfx.SetVia("worldIcon")
 	}
 	drawIconCS(dst, img, physX*k, physY*k, size, cs)
 }

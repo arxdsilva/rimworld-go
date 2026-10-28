@@ -35,16 +35,16 @@ func TestDevColumnAvoidsEveryRegion(t *testing.T) {
 	t.Parallel()
 	for name, l := range devLayouts() {
 		col := devColumn(l)
-		if col.empty() {
+		if col.Empty() {
 			continue // no room: nothing is drawn
 		}
 		regions := append(l.chrome(), l.Minimap)
 		for _, r := range regions {
-			if i := col.intersect(r); i.W > 0 && i.H > 0 {
+			if i := col.Intersect(r); i.W > 0 && i.H > 0 {
 				t.Errorf("%s: dev column %+v collides with %+v", name, col, r)
 			}
 		}
-		if col.X < l.Resources.right() || col.right() > l.Right.X {
+		if col.X < l.Resources.Right() || col.Right() > l.Right.X {
 			t.Errorf("%s: dev column %+v is not between the resource list and the right column", name, col)
 		}
 	}
@@ -67,20 +67,20 @@ func TestDevPanelsStackInTheColumn(t *testing.T) {
 	st := a.devStack()
 	var drawn []rect
 	for name, r := range map[string]rect{"fields": st.Fields, "inspector": st.Insp, "log": st.Log} {
-		if r.empty() {
+		if r.Empty() {
 			continue
 		}
-		if r.X < col.X || r.right() > col.right()+0.5 || r.Y < col.Y || r.bottom() > col.bottom()+0.5 {
+		if r.X < col.X || r.Right() > col.Right()+0.5 || r.Y < col.Y || r.Bottom() > col.Bottom()+0.5 {
 			t.Errorf("%s panel %+v is outside the dev column %+v", name, r, col)
 		}
 		for _, o := range drawn {
-			if i := r.intersect(o); i.W > 0 && i.H > 0 {
+			if i := r.Intersect(o); i.W > 0 && i.H > 0 {
 				t.Errorf("%s panel %+v overlaps another dev panel %+v", name, r, o)
 			}
 		}
 		drawn = append(drawn, r)
 	}
-	if st.Fields.empty() || st.Insp.empty() || st.Log.empty() {
+	if st.Fields.Empty() || st.Insp.Empty() || st.Log.Empty() {
 		t.Fatalf("stack = %+v: with room all three panels show", st)
 	}
 	if !(st.Fields.Y < st.Insp.Y && st.Insp.Y < st.Log.Y) {

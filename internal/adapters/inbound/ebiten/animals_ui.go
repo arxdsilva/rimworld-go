@@ -590,7 +590,7 @@ func (a *App) animalsTabUI(sw, sh int) {
 		}
 		an := an
 		a.areaDropdown("animals.area."+strconv.FormatUint(uint64(an.ID), 10),
-			rect{r.x + float32(cols.at(colArea)) - 2, y, colTrain - colArea - 4, 24}, an.AreaRef,
+			rect{X: r.x + float32(cols.at(colArea)) - 2, Y: y, W: colTrain - colArea - 4, H: 24}, an.AreaRef,
 			func(ref int) { a.assignArea(an.ID, ref) })
 	}
 }

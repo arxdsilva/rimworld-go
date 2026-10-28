@@ -80,14 +80,14 @@ func TestWorkbenchBillPickerReachesEveryRecipe(t *testing.T) {
 	if !ok {
 		t.Fatal("a bench has a Bills tab")
 	}
-	r := rect{0, 180, tab.WantW, tab.WantH}.inset(paneInset) // what the pane hands Declare
+	r := rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(paneInset) // what the pane hands Declare
 	setHook(a.uiSt(), func(a *App) { tab.Declare(r) })
 	f.frame(t, a)
 	for _, w := range a.uiSt().cur {
 		if strings.HasPrefix(w.id, "bill.add.") {
 			t.Errorf("per-recipe button %s would overflow the panel", w.id)
 		}
-		if w.r.X < r.X || w.r.Y < r.Y || w.r.right() > r.right() || w.r.bottom() > r.bottom() {
+		if w.r.X < r.X || w.r.Y < r.Y || w.r.Right() > r.Right() || w.r.Bottom() > r.Bottom() {
 			t.Errorf("%s outside the panel", w.id)
 		}
 	}
@@ -97,7 +97,7 @@ func TestWorkbenchBillPickerReachesEveryRecipe(t *testing.T) {
 			if p.id == "bill.rows" || q.id == "bill.rows" { // the scroll view holds the rows
 				continue
 			}
-			if p.r.X < q.r.right() && q.r.X < p.r.right() && p.r.Y < q.r.bottom() && q.r.Y < p.r.bottom() {
+			if p.r.X < q.r.Right() && q.r.X < p.r.Right() && p.r.Y < q.r.Bottom() && q.r.Y < p.r.Bottom() {
 				t.Errorf("%s overlaps %s", p.id, q.id)
 			}
 		}

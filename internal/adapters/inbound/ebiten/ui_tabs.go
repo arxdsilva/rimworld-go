@@ -24,7 +24,7 @@ func tabRects(r rect, labels []string) []rect {
 	x := r.X
 	for i, l := range labels {
 		w := max(tabMinW, textW(l, tsLabel)+tabPadX)
-		out[i] = rect{x, r.Y, w, r.H}
+		out[i] = rect{X: x, Y: r.Y, W: w, H: r.H}
 		x += w + tabGap
 	}
 	return out
@@ -98,7 +98,7 @@ func (a *App) uiTabs(id string, r rect, labels []string, sel *int, o tabsOpts) b
 			strokeRect(dst, tr, border)
 			st := tsLabel
 			st.Color, st.Align = text, alignCenter
-			cx, cy := tr.center()
+			cx, cy := tr.Center()
 			drawText(dst, fitText(l, tsLabel, tr.W-8), float64(cx), float64(cy)-lineH(st)/2, st)
 		}
 	})

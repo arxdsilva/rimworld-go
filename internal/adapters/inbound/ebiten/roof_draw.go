@@ -159,23 +159,23 @@ func (r *Renderer) drawEaves(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	a := float64(eaveAlpha(r.lit.light)) / 255
 	c := color.RGBA{shadowColorU8(0), shadowColorU8(1), shadowColorU8(2), 255}
 	b := &st.batch
-	b.reset()
+	b.Reset()
 	for _, e := range st.edges {
 		sx, sy := r.worldToScreen(e.x, e.y)
 		x, y := float64(sx), float64(sy)
 		px := eaveWidth(e.side, tile)
 		switch e.side {
 		case sideN:
-			b.rect(x, y, tile, px, c, a, a, 0, 0)
+			b.Rect(x, y, tile, px, c, a, a, 0, 0)
 		case sideS:
-			b.rect(x, y+tile-px, tile, px, c, 0, 0, a, a)
+			b.Rect(x, y+tile-px, tile, px, c, 0, 0, a, a)
 		case sideE:
-			b.rect(x+tile-px, y, px, tile, c, 0, a, 0, a)
+			b.Rect(x+tile-px, y, px, tile, c, 0, a, 0, a)
 		case sideW:
-			b.rect(x, y, px, tile, c, a, 0, a, 0)
+			b.Rect(x, y, px, tile, c, a, 0, a, 0)
 		}
 	}
-	b.flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
 }
 
 func shadowColorU8(i int) uint8 { return uint8(shadowColor[i]) }
@@ -241,7 +241,7 @@ func (r *Renderer) drawRoofOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 	r.setView(sw, sh, tile)
 	x0, y0, x1, y1 := r.visibleTiles()
 	b := &st.batch
-	b.reset()
+	b.Reset()
 	k := tile / TileSize
 	edge := math.Max(1.5, 2*k)
 	thin := math.Max(1, 1.5*k)
@@ -257,14 +257,14 @@ func (r *Renderer) drawRoofOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 			X, Y := float64(sx), float64(sy)
 			if s.fill.A > 0 {
 				a := alphaOf(s.fill)
-				b.rect(X, Y, tile, tile, s.fill, a, a, a, a)
+				b.Rect(X, Y, tile, tile, s.fill, a, a, a, a)
 			}
 			if s.stipple.A > 0 {
 				a, d := alphaOf(s.stipple), math.Max(1.5, 2.5*k)
 				for i := 0; i < 4; i++ {
 					for j := 0; j < 4; j++ {
 						if (i+j)%2 == 0 {
-							b.rect(X+(float64(i)+0.5)*tile/4-d/2, Y+(float64(j)+0.5)*tile/4-d/2, d, d, s.stipple, a, a, a, a)
+							b.Rect(X+(float64(i)+0.5)*tile/4-d/2, Y+(float64(j)+0.5)*tile/4-d/2, d, d, s.stipple, a, a, a, a)
 						}
 					}
 				}
@@ -273,9 +273,9 @@ func (r *Renderer) drawRoofOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 				a := alphaOf(s.hatch)
 				for t := 0.25; t < 2; t += 0.25 {
 					if t <= 1 {
-						b.line(X+t*tile, Y, X, Y+t*tile, thin, s.hatch, a)
+						b.Line(X+t*tile, Y, X, Y+t*tile, thin, s.hatch, a)
 					} else {
-						b.line(X+tile, Y+(t-1)*tile, X+(t-1)*tile, Y+tile, thin, s.hatch, a)
+						b.Line(X+tile, Y+(t-1)*tile, X+(t-1)*tile, Y+tile, thin, s.hatch, a)
 					}
 				}
 			}
@@ -292,8 +292,8 @@ func (r *Renderer) drawRoofOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 			}
 		}
 	}
-	st.overlayVerts = len(b.verts)
-	b.flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.overlayVerts = len(b.Verts)
+	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
 }
 
 // edgeStrip is a strip width px wide just inside a tile's side, from t0
@@ -303,13 +303,13 @@ func (r *Renderer) edgeStrip(b *triBatch, X, Y, tile float64, side int, width fl
 	l, n := (t1-t0)*tile, t0*tile
 	switch side {
 	case sideN:
-		b.rect(X+n, Y, l, width, c, a, a, a, a)
+		b.Rect(X+n, Y, l, width, c, a, a, a, a)
 	case sideS:
-		b.rect(X+n, Y+tile-width, l, width, c, a, a, a, a)
+		b.Rect(X+n, Y+tile-width, l, width, c, a, a, a, a)
 	case sideW:
-		b.rect(X, Y+n, width, l, c, a, a, a, a)
+		b.Rect(X, Y+n, width, l, c, a, a, a, a)
 	case sideE:
-		b.rect(X+tile-width, Y+n, width, l, c, a, a, a, a)
+		b.Rect(X+tile-width, Y+n, width, l, c, a, a, a, a)
 	}
 }
 
@@ -317,13 +317,13 @@ func (r *Renderer) edgeStrip(b *triBatch, X, Y, tile float64, side int, width fl
 // support: a red fill and an "×" (the roof tool's ghost, archtools.go).
 func (r *Renderer) drawRoofUnsupported(screen *ebiten.Image, x, y int, tile float64) {
 	b := &r.env.roof.batch
-	b.reset()
+	b.Reset()
 	sx, sy := r.worldToScreen(x, y)
 	X, Y := float64(sx), float64(sy)
 	a := alphaOf(roofUnsupportFill)
-	b.rect(X, Y, tile, tile, roofUnsupportFill, a, a, a, a)
+	b.Rect(X, Y, tile, tile, roofUnsupportFill, a, a, a, a)
 	m, wd := 0.28*tile, math.Max(1.5, 3*tile/TileSize)
-	b.line(X+m, Y+m, X+tile-m, Y+tile-m, wd, roofUnsupportMark, alphaOf(roofUnsupportMark))
-	b.line(X+tile-m, Y+m, X+m, Y+tile-m, wd, roofUnsupportMark, alphaOf(roofUnsupportMark))
-	b.flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	b.Line(X+m, Y+m, X+tile-m, Y+tile-m, wd, roofUnsupportMark, alphaOf(roofUnsupportMark))
+	b.Line(X+tile-m, Y+m, X+m, Y+tile-m, wd, roofUnsupportMark, alphaOf(roofUnsupportMark))
+	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
 }

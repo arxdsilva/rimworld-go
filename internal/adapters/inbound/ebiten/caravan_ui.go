@@ -106,10 +106,10 @@ func (a *App) formCaravanBody(f *formCaravan, body rect) {
 	if a.renderer == nil {
 		return
 	}
-	left, right := body.splitH(body.W / 2)
+	left, right := body.SplitH(body.W / 2)
 	left.W -= 12
 	hs := withColor(tsLabel, uiHeading)
-	lh, lrest := left.splitV(26)
+	lh, lrest := left.SplitV(26)
 	a.uiLabel(lh.X, lh.Y, "Colonists", hs)
 	var pawns []game.PawnView
 	for _, p := range a.shell.Pawns() {
@@ -117,16 +117,16 @@ func (a *App) formCaravanBody(f *formCaravan, body rect) {
 			pawns = append(pawns, p)
 		}
 	}
-	lrest, summary := lrest.splitV(lrest.H - 56)
+	lrest, summary := lrest.SplitV(lrest.H - 56)
 	if len(pawns) == 0 {
 		a.uiLabel(lrest.X, lrest.Y, "No colonists.", dimText())
 	} else {
 		area := a.uiScrollArea("form.members", lrest, float32(len(pawns)*formRowH), scrollOpts{Step: formRowH * 2})
 		y := area.View.Y - area.Off
 		for _, p := range pawns {
-			rr := rect{area.View.X, y, area.View.W, formRowH - 4}
+			rr := rect{X: area.View.X, Y: y, W: area.View.W, H: formRowH - 4}
 			y += formRowH
-			if rr.Y < area.View.Y || rr.bottom() > area.View.bottom() {
+			if rr.Y < area.View.Y || rr.Bottom() > area.View.Bottom() {
 				continue
 			}
 			why := caravanPickReason(p)
@@ -140,7 +140,7 @@ func (a *App) formCaravanBody(f *formCaravan, body rect) {
 	a.uiLabel(summary.X, summary.Y+6, fmt.Sprintf("%d colonist(s) · about %d tiles a day · 5 days of food", n, formTilesPerDay), tsSmall)
 	a.uiLabel(summary.X, summary.Y+26, "They walk to the map edge first; a friendly settlement hosts them a day.", withColor(tsSmall, uiTextDim))
 
-	rh, rrest := right.splitV(26)
+	rh, rrest := right.SplitV(26)
 	a.uiLabel(rh.X, rh.Y, "Destination", hs)
 	var sites []game.WorldSiteView
 	if src, ok := a.renderer.game.(worldSource); ok {
@@ -150,9 +150,9 @@ func (a *App) formCaravanBody(f *formCaravan, body rect) {
 	area := a.uiScrollArea("form.dests", rrest, float32(rows*formRowH), scrollOpts{Step: formRowH * 2})
 	y := area.View.Y - area.Off
 	row := func() (rect, bool) {
-		rr := rect{area.View.X, y, area.View.W - 4, formRowH - 4}
+		rr := rect{X: area.View.X, Y: y, W: area.View.W - 4, H: formRowH - 4}
 		y += formRowH
-		return rr, rr.Y >= area.View.Y && rr.bottom() <= area.View.bottom()
+		return rr, rr.Y >= area.View.Y && rr.Bottom() <= area.View.Bottom()
 	}
 	if rr, vis := row(); vis {
 		picked := f.world.picked

@@ -124,16 +124,16 @@ func TestFactionsTabDisabledWithoutFactions(t *testing.T) {
 
 func TestGoodwillChartPoints(t *testing.T) {
 	t.Parallel()
-	plot := rect{100, 100, 590, 200}
+	plot := rect{X: 100, Y: 100, W: 590, H: 200}
 	pts := chartPoints([]int{-100, 0, 100}, plot)
 	if len(pts) != 3 {
 		t.Fatalf("points = %d", len(pts))
 	}
 	// The last value sits on the right edge, +100 on top, -100 at the bottom.
-	if pts[2][0] != plot.right() || pts[2][1] != plot.Y {
+	if pts[2][0] != plot.Right() || pts[2][1] != plot.Y {
 		t.Fatalf("last point = %v, want the top-right corner", pts[2])
 	}
-	if pts[0][1] != plot.bottom() || pts[1][1] != plot.Y+plot.H/2 {
+	if pts[0][1] != plot.Bottom() || pts[1][1] != plot.Y+plot.H/2 {
 		t.Fatalf("points = %v", pts)
 	}
 	if pts[0][0] >= pts[1][0] || pts[0][0] <= plot.X {
@@ -583,8 +583,8 @@ func TestNewBuildingCards(t *testing.T) {
 	if r := a.architectRect(); r.y+r.h > l.Tabs.Y {
 		t.Errorf("architect panel ends at %v, below the tab strip at %v", r.y+r.h, l.Tabs.Y)
 	}
-	if l.Grid.bottom() > l.Tabs.Y {
-		t.Errorf("the tool grid ends at %v, below the tab strip at %v", l.Grid.bottom(), l.Tabs.Y)
+	if l.Grid.Bottom() > l.Tabs.Y {
+		t.Errorf("the tool grid ends at %v, below the tab strip at %v", l.Grid.Bottom(), l.Tabs.Y)
 	}
 }
 
@@ -620,7 +620,7 @@ func TestStatusChipsFromWorld(t *testing.T) {
 	a, f := colonyApp(t, s)
 	f.frame(t, a)
 	rs := a.chipRects(chips, a.sw)
-	if g := a.hud().Global; len(rs) != 2 || rs[0].right() != g.right() || rs[1].Y <= rs[0].Y || rs[0].Y < g.Y || rs[1].bottom() > g.bottom() {
+	if g := a.hud().Global; len(rs) != 2 || rs[0].Right() != g.Right() || rs[1].Y <= rs[0].Y || rs[0].Y < g.Y || rs[1].Bottom() > g.Bottom() {
 		t.Fatalf("chip rects = %+v, want a right-aligned stack inside Global %+v", rs, g)
 	}
 	if got := tipOf(t, a, "hud.chip.1"); !strings.Contains(got, "Ashfall sky") {

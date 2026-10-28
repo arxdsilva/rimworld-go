@@ -136,7 +136,7 @@ func TestClickOnAZoneLabelSelectsItDirectly(t *testing.T) {
 	if !plan.ok {
 		t.Fatal("the zone's label should show")
 	}
-	cx, cy := plan.plate.center()
+	cx, cy := plan.plate.Center()
 	a.cursor = &[2]int{int(cx), int(cy)}
 	a.clickSelect()
 	if !a.hasZone || a.zoneSel != 3 || a.hasPlant {

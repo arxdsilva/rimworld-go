@@ -31,7 +31,7 @@ func (j *journey) clickWith(id string, mods input.Mod) {
 		if b.id != id {
 			continue
 		}
-		s := float32(j.a.scale.s)
+		s := float32(j.a.scale.S)
 		j.f.cur.mx, j.f.cur.my = int((b.x+b.w/2)*s), int((b.y+b.h/2)*s)
 		j.f.click(j.t, j.a, mbLeft, mods)
 		j.f.cur.mx, j.f.cur.my = -50, -50
@@ -303,8 +303,8 @@ func TestJourneyHudLetterClickAndDismiss(t *testing.T) {
 	if len(rows) == 0 {
 		t.Fatal("no letter rows")
 	}
-	s := float32(j.a.scale.s)
-	cx, cy := rows[len(rows)-1].r.center()
+	s := float32(j.a.scale.S)
+	cx, cy := rows[len(rows)-1].r.Center()
 	j.f.cur.mx, j.f.cur.my = int(cx*s), int(cy*s)
 	j.f.click(t, j.a, mbRight, 0)
 	c, ok := j.lastCmd(command.DismissLetter)

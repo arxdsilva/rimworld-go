@@ -336,27 +336,27 @@ func (a *App) tradeBody(d *tradeDraft, body rect) {
 		v.NegotiatorName, v.Social, v.PriceModPct, v.HoursLeft), dimText())
 
 	top := body.Y + 50
-	sum := rect{body.X, body.bottom() - 84, body.W, 84}
-	table := rect{body.X, top + tradeHeadH, body.W, sum.Y - top - tradeHeadH - 6}
+	sum := rect{X: body.X, Y: body.Bottom() - 84, W: body.W, H: 84}
+	table := rect{X: body.X, Y: top + tradeHeadH, W: body.W, H: sum.Y - top - tradeHeadH - 6}
 
 	// column geometry, shared by the headers and the rows
 	const sw, aw, qw, pw = 40.0, 64.0, 46.0, 62.0
 	x := body.X
-	colPrice := rect{x, 0, pw, 0}
+	colPrice := rect{X: x, Y: 0, W: pw, H: 0}
 	x += pw
-	colQty := rect{x, 0, qw, 0}
+	colQty := rect{X: x, Y: 0, W: qw, H: 0}
 	x += qw + 4
-	colSell := rect{x, 0, 3 * (sw + 2), 0}
+	colSell := rect{X: x, Y: 0, W: 3 * (sw + 2), H: 0}
 	x += colSell.W + 4
-	colAmt := rect{x, 0, aw, 0}
+	colAmt := rect{X: x, Y: 0, W: aw, H: 0}
 	x += aw + 4
-	colBuy := rect{x, 0, 3 * (sw + 2), 0}
+	colBuy := rect{X: x, Y: 0, W: 3 * (sw + 2), H: 0}
 	x += colBuy.W + 4
-	colTQty := rect{x, 0, qw, 0}
+	colTQty := rect{X: x, Y: 0, W: qw, H: 0}
 	x += qw
-	colTPrice := rect{x, 0, pw, 0}
+	colTPrice := rect{X: x, Y: 0, W: pw, H: 0}
 	x += pw + 10
-	colName := rect{x, 0, body.right() - x - scrollBarW, 0}
+	colName := rect{X: x, Y: 0, W: body.Right() - x - scrollBarW, H: 0}
 
 	hd := withColor(tsSmall, uiTextDim)
 	a.uiLabel(colPrice.X, top+4, "Sell for", hd)
@@ -377,7 +377,7 @@ func (a *App) tradeBody(d *tradeDraft, body rect) {
 	for _, ln := range lines {
 		ry := y
 		y += tradeRowH
-		if ry < area.View.Y || ry+tradeRowH > area.View.bottom() {
+		if ry < area.View.Y || ry+tradeRowH > area.View.Bottom() {
 			continue
 		}
 		if ln.head != "" {
@@ -394,7 +394,7 @@ func (a *App) tradeBody(d *tradeDraft, body rect) {
 		verb = "You receive"
 	}
 	a.uiLabel(sum.X, sum.Y, fmt.Sprintf("%s %s silver", verb, silverText(abs(total))), tsLabel)
-	if a.uiCheck("trade.gift", rect{sum.X, sum.Y + 26, 220, 22}, "Gift (no payment)", &d.gift,
+	if a.uiCheck("trade.gift", rect{X: sum.X, Y: sum.Y + 26, W: 220, H: 22}, "Gift (no payment)", &d.gift,
 		checkOpts{Tip: "Gift\nGive goods away for goodwill instead of trading."}) {
 		d.setGift(d.gift)
 	}
@@ -445,7 +445,7 @@ func (a *App) tradeRow(d *tradeDraft, r game.TradeRowView, y float32,
 	a.uiLabel(cAmt.X+8, mid, label, amt)
 
 	lo, hi := d.bounds(r)
-	btn := rect{0, y + 2, 40, tradeRowH - 4}
+	btn := rect{X: 0, Y: y + 2, W: 40, H: tradeRowH - 4}
 	for i, s := range tradeSteps { // give: All, 10, 1 (left to right)
 		btn.X = cSell.X + float32(i)*42
 		why := ""

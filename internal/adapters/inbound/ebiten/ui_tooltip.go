@@ -60,7 +60,7 @@ func tipLayout(tip string, sw, sh, mx, my int) tipCard {
 	}
 	x = max(tipMargin, min(x, float32(sw-tipMargin)-bw))
 	y = max(tipMargin, min(y, float32(sh-tipMargin)-bh))
-	c.Box = rect{x, y, bw, bh}
+	c.Box = rect{X: x, Y: y, W: bw, H: bh}
 	return c
 }
 

@@ -341,7 +341,7 @@ func TestPlantInspectorDrawsAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
 	got := traceCanvas(t)
 	a.drawPlantMark(ebiten.NewImage(900, 700))
-	r := rect{8, 40, 340, 226} // the old panel, top-left
+	r := rect{X: 8, Y: 40, W: 340, H: 226} // the old panel, top-left
 	frame := fmt.Sprintf("%g,%g %gx%g", float64(r.X)*1.5, float64(r.Y)*1.5, float64(r.W)*1.5, float64(r.H)*1.5)
 	for _, c := range *got {
 		if strings.HasSuffix(c, frame) {

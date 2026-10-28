@@ -163,18 +163,18 @@ type messageRow struct {
 // messageRows places the live notices in l's Messages rect, oldest on top,
 // each as wide as its line (up to the rect) and right-aligned.
 func (a *App) messageRows(l hudLayout) []messageRow {
-	if l.Messages.empty() {
+	if l.Messages.Empty() {
 		return nil
 	}
 	live := a.liveMessageList()
 	var rows []messageRow
 	for i, lm := range live {
 		y := l.Messages.Y + float32(i)*msgStride
-		if y+msgRowH > l.Messages.bottom()+0.01 {
+		if y+msgRowH > l.Messages.Bottom()+0.01 {
 			break
 		}
 		w := min(textW(messageLine(lm.m), messageStyle(lm.m))+2*messagePadX+messageEdgeW, l.Messages.W)
-		rows = append(rows, messageRow{r: rect{l.Messages.right() - w, y, w, msgRowH}, msg: lm.m, idx: i, alpha: messageAlpha(lm.age)})
+		rows = append(rows, messageRow{r: rect{X: l.Messages.Right() - w, Y: y, W: w, H: msgRowH}, msg: lm.m, idx: i, alpha: messageAlpha(lm.age)})
 	}
 	return rows
 }
@@ -271,7 +271,7 @@ func (a *App) drawMessagesIn(screen *ebiten.Image, l hudLayout) {
 		r, k := row.r, row.alpha
 		fillRect(screen, r, fadeColor(uiTooltip, 0.85*k))
 		if e := messageEdge(row.msg); e.A != 0 {
-			fillRect(screen, rect{r.X, r.Y, messageEdgeW, r.H}, fadeColor(e, k))
+			fillRect(screen, rect{X: r.X, Y: r.Y, W: messageEdgeW, H: r.H}, fadeColor(e, k))
 		}
 		st := messageStyle(row.msg)
 		base := st.Color

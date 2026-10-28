@@ -117,20 +117,20 @@ type hudLayout struct {
 func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 	W, H := float32(sw), float32(sh)
 	var l hudLayout
-	l.Tabs = rect{0, H - tabsH, W, tabsH}
+	l.Tabs = rect{X: 0, Y: H - tabsH, W: W, H: tabsH}
 	floorY := l.Tabs.Y // the top of the lowest-left stack, for the resource list
 
 	// the right column
-	l.Right = rect{W - hudMargin - rightW, 0, rightW, H}
+	l.Right = rect{X: W - hudMargin - rightW, Y: 0, W: rightW, H: H}
 	rx := l.Right.X
 	if st.GlobalH > 0 {
-		l.Global = rect{rx, l.Tabs.Y - hudMargin - st.GlobalH, rightW, st.GlobalH}
+		l.Global = rect{X: rx, Y: l.Tabs.Y - hudMargin - st.GlobalH, W: rightW, H: st.GlobalH}
 	} else {
-		l.Global = rect{rx, l.Tabs.Y - hudMargin, rightW, 0}
+		l.Global = rect{X: rx, Y: l.Tabs.Y - hudMargin, W: rightW, H: 0}
 	}
 	stackBottom := l.Global.Y
 	if st.MinimapOn {
-		l.Minimap = rect{W - hudMargin - minimapSize, l.Global.Y - hudMargin - minimapSize, minimapSize, minimapSize}
+		l.Minimap = rect{X: W - hudMargin - minimapSize, Y: l.Global.Y - hudMargin - minimapSize, W: minimapSize, H: minimapSize}
 		stackBottom = l.Minimap.Y
 	}
 	top := float32(hudMargin)
@@ -151,8 +151,8 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 			h = min(learnHeaderH, stackBottom-2*hudMargin) // the header alone
 		}
 		if h > 0 {
-			l.Learn = rect{rx, hudMargin, rightW, h}
-			top = l.Learn.bottom() + hudMargin
+			l.Learn = rect{X: rx, Y: hudMargin, W: rightW, H: h}
+			top = l.Learn.Bottom() + hudMargin
 		}
 	}
 	if st.Letters > 0 {
@@ -164,7 +164,7 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 		rows = max(0, min(rows, room))
 		if rows > 0 {
 			h := float32(rows)*(letterRowH+hudGap) - hudGap
-			l.Letters = rect{rx, stackBottom - hudMargin - h, rightW, h}
+			l.Letters = rect{X: rx, Y: stackBottom - hudMargin - h, W: rightW, H: h}
 			l.LetterRows = rows
 			stackBottom = l.Letters.Y
 		}
@@ -173,7 +173,7 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 		room := int((stackBottom - hudMargin - top + hudGap) / (alertRowH + hudGap))
 		rows := max(0, min(st.Alerts, room))
 		if rows > 0 {
-			l.Alerts = rect{rx, top, rightW, float32(rows)*(alertRowH+hudGap) - hudGap}
+			l.Alerts = rect{X: rx, Y: top, W: rightW, H: float32(rows)*(alertRowH+hudGap) - hudGap}
 			l.AlertRows = rows
 		}
 	}
@@ -186,8 +186,8 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 		l.Bar = boundsOf(l.BarSlots)
 	}
 	barBottom := float32(hudMargin)
-	if !l.Bar.empty() {
-		barBottom = l.Bar.bottom()
+	if !l.Bar.Empty() {
+		barBottom = l.Bar.Bottom()
 	}
 
 	// a main-tab window takes the lower-left above the tabs; the inspect
@@ -195,32 +195,32 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 	if st.WindowW > 0 && st.WindowH > 0 {
 		h := min(st.WindowH, l.Tabs.Y-barBottom-2*hudMargin)
 		w := min(st.WindowW, rx-hudMargin)
-		l.Window = rect{0, l.Tabs.Y - h, w, h}
+		l.Window = rect{X: 0, Y: l.Tabs.Y - h, W: w, H: h}
 		floorY = l.Window.Y
 	}
 
 	gridX0 := float32(0)
 	switch {
-	case st.ArchOpen && l.Window.empty():
-		l.ArchCats = rect{0, l.Tabs.Y - archCatsH, archCatsW, archCatsH}
+	case st.ArchOpen && l.Window.Empty():
+		l.ArchCats = rect{X: 0, Y: l.Tabs.Y - archCatsH, W: archCatsW, H: archCatsH}
 		floorY = l.ArchCats.Y
 		if st.ArchDescH > 0 {
 			h := min(st.ArchDescH, l.ArchCats.Y-hudGap-barBottom-hudMargin)
-			l.ArchDesc = rect{0, l.ArchCats.Y - hudGap - h, archDescW, h}
+			l.ArchDesc = rect{X: 0, Y: l.ArchCats.Y - hudGap - h, W: archDescW, H: h}
 			floorY = l.ArchDesc.Y
 		}
-		gridX0 = l.ArchCats.right() + hudMargin
-	case st.PaneShown && l.Window.empty():
-		l.Pane = rect{0, l.Tabs.Y - paneH, paneW, paneH}
-		l.PaneTabs = rect{0, l.Pane.Y - paneTabsH, paneW, paneTabsH}
+		gridX0 = l.ArchCats.Right() + hudMargin
+	case st.PaneShown && l.Window.Empty():
+		l.Pane = rect{X: 0, Y: l.Tabs.Y - paneH, W: paneW, H: paneH}
+		l.PaneTabs = rect{X: 0, Y: l.Pane.Y - paneTabsH, W: paneW, H: paneTabsH}
 		floorY = l.PaneTabs.Y
 		if st.ExpandedW > 0 && st.ExpandedH > 0 {
 			w := min(max(st.ExpandedW, expandMinW), expandMaxW)
 			h := min(st.ExpandedH, l.PaneTabs.Y-barBottom-hudMargin)
-			l.Expanded = rect{0, l.PaneTabs.Y - h, w, h}
+			l.Expanded = rect{X: 0, Y: l.PaneTabs.Y - h, W: w, H: h}
 			floorY = l.Expanded.Y
 		}
-		gridX0 = l.Pane.right() + hudMargin
+		gridX0 = l.Pane.Right() + hudMargin
 	}
 
 	// command buttons: right of the pane (or the Architect's categories),
@@ -237,12 +237,12 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 			y := bottom - cmdCell - float32(r)*cmdStride
 			x0 := gridX0
 			for _, p := range []rect{l.Expanded, l.ArchDesc} {
-				if !p.empty() && y < p.bottom() && y+cmdCell > p.Y {
-					x0 = max(x0, p.right()+hudMargin)
+				if !p.Empty() && y < p.Bottom() && y+cmdCell > p.Y {
+					x0 = max(x0, p.Right()+hudMargin)
 				}
 			}
 			for x := x0; x+cmdCell <= x1 && len(l.GridCells) < st.Commands; x += cmdStride {
-				l.GridCells = append(l.GridCells, rect{x, y, cmdCell, cmdCell})
+				l.GridCells = append(l.GridCells, rect{X: x, Y: y, W: cmdCell, H: cmdCell})
 			}
 		}
 		l.Grid = boundsOf(l.GridCells)
@@ -253,15 +253,15 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 	// panel, the Architect's description, a window): they narrow to the room
 	// left, and hide while a wide window leaves less than msgMinW
 	if n := min(st.Messages, maxMsgs); n > 0 {
-		band := rect{0, barBottom + hudMargin, W, float32(n)*msgStride - (msgStride - msgRowH)}
+		band := rect{X: 0, Y: barBottom + hudMargin, W: W, H: float32(n)*msgStride - (msgStride - msgRowH)}
 		left := float32(hudMargin + resourcesW + hudMargin)
 		for _, r := range append([]rect{l.Window, l.ArchCats, l.ArchDesc, l.Pane, l.PaneTabs, l.Expanded}, l.GridCells...) {
-			if !r.empty() && r.Y < band.bottom() && r.bottom() > band.Y {
-				left = max(left, r.right()+hudMargin)
+			if !r.Empty() && r.Y < band.Bottom() && r.Bottom() > band.Y {
+				left = max(left, r.Right()+hudMargin)
 			}
 		}
 		if w := min(float32(msgMaxW), rx-hudMargin-left); w >= msgMinW {
-			l.Messages = rect{rx - hudMargin - w, band.Y, w, band.H}
+			l.Messages = rect{X: rx - hudMargin - w, Y: band.Y, W: w, H: band.H}
 		}
 	}
 
@@ -269,7 +269,7 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 	if st.ResourcesH > 0 {
 		h := min(st.ResourcesH, floorY-2*hudMargin-hudMargin)
 		if h >= resourcesMin {
-			l.Resources = rect{hudMargin, hudMargin, resourcesW, h}
+			l.Resources = rect{X: hudMargin, Y: hudMargin, W: resourcesW, H: h}
 		}
 	}
 
@@ -277,13 +277,13 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 
 	// hints and toasts: just above the command buttons or the pane
 	l.HintX = max(gridX0, hudMargin)
-	if !l.Expanded.empty() {
-		l.HintX = max(l.HintX, l.Expanded.right()+hudMargin)
+	if !l.Expanded.Empty() {
+		l.HintX = max(l.HintX, l.Expanded.Right()+hudMargin)
 	}
 	l.HintBottom = l.Tabs.Y - hudMargin
-	if !l.Grid.empty() {
+	if !l.Grid.Empty() {
 		l.HintBottom = l.Grid.Y - hudMargin
-	} else if !l.PaneTabs.empty() {
+	} else if !l.PaneTabs.Empty() {
 		l.HintBottom = l.PaneTabs.Y - hudMargin
 	}
 	return l
@@ -310,7 +310,7 @@ func layoutBar(W, capW float32, n int) (float32, []rect, int) {
 		slots := make([]rect, shown)
 		for j := range shown {
 			r, c := j/perRow, j%perRow
-			slots[j] = rect{x0 + float32(c)*pitch, hudMargin + float32(r)*(barSlotH+barGap)*s.scale, barSlotW * s.scale, barSlotH * s.scale}
+			slots[j] = rect{X: x0 + float32(c)*pitch, Y: hudMargin + float32(r)*(barSlotH+barGap)*s.scale, W: barSlotW * s.scale, H: barSlotH * s.scale}
 		}
 		return s.scale, slots, more
 	}
@@ -322,12 +322,12 @@ func boundsOf(rs []rect) rect {
 	if len(rs) == 0 {
 		return rect{}
 	}
-	x0, y0, x1, y1 := rs[0].X, rs[0].Y, rs[0].right(), rs[0].bottom()
+	x0, y0, x1, y1 := rs[0].X, rs[0].Y, rs[0].Right(), rs[0].Bottom()
 	for _, r := range rs[1:] {
 		x0, y0 = min(x0, r.X), min(y0, r.Y)
-		x1, y1 = max(x1, r.right()), max(y1, r.bottom())
+		x1, y1 = max(x1, r.Right()), max(y1, r.Bottom())
 	}
-	return rect{x0, y0, x1 - x0, y1 - y0}
+	return rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}
 }
 
 // chrome is every region the HUD draws, for blocking map clicks. The
@@ -337,7 +337,7 @@ func (l hudLayout) chrome() []rect {
 	out := make([]rect, 0, 16+len(l.GridCells))
 	for _, r := range []rect{l.Tabs, l.Pane, l.PaneTabs, l.Expanded, l.ArchCats, l.ArchDesc, l.Window,
 		l.Global, l.Letters, l.Learn, l.Alerts, l.Bar, l.Resources, l.Messages, l.Perf} {
-		if !r.empty() {
+		if !r.Empty() {
 			out = append(out, r)
 		}
 	}

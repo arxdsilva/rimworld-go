@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"slices"
 	"strings"
 	"testing"
@@ -55,22 +56,22 @@ func htPawns(n int) []game.PawnView {
 func htTrace(t *testing.T, fn func()) []traceEvent {
 	t.Helper()
 	var ev []traceEvent
-	drawTrace = func(e traceEvent) { ev = append(ev, e) }
-	t.Cleanup(func() { drawTrace = nil })
+	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 	fn()
-	drawTrace = nil
+	gfx.SetDrawTrace(nil)
 	return ev
 }
 
 // physRect is r in physical pixels at UI scale s.
 func htPhysRect(r rect, s float64) rect {
 	k := float32(s)
-	return rect{r.X * k, r.Y * k, r.W * k, r.H * k}
+	return rect{X: r.X * k, Y: r.Y * k, W: r.W * k, H: r.H * k}
 }
 
 func htInside(e traceEvent, r rect) bool {
 	const eps = 0.51
-	return e.X >= r.X-eps && e.Y >= r.Y-eps && e.X+e.W <= r.right()+eps && e.Y+e.H <= r.bottom()+eps
+	return e.X >= r.X-eps && e.Y >= r.Y-eps && e.X+e.W <= r.Right()+eps && e.Y+e.H <= r.Bottom()+eps
 }
 
 func TestBarSlotsFollowTheLayout(t *testing.T) {
@@ -98,7 +99,7 @@ func TestBarSlotsFollowTheLayout(t *testing.T) {
 				}
 				// the bar stays clear of the resources and the right column
 				for i, slot := range l.BarSlots {
-					if slot.X < hudMargin+resourcesW+hudMargin || slot.right() > l.Right.X-hudMargin {
+					if slot.X < hudMargin+resourcesW+hudMargin || slot.Right() > l.Right.X-hudMargin {
 						t.Errorf("slot %d %+v reaches the resources or the right column (right column at %v)", i, slot, l.Right.X)
 					}
 					if slot.Y < hudMargin {
@@ -148,7 +149,7 @@ func TestBarHiddenWhenTheSettingIsOff(t *testing.T) {
 	if n := a.barCount(); n != 0 {
 		t.Fatalf("barCount = %d with the bar off, want 0", n)
 	}
-	if l := a.hud(); !l.Bar.empty() || len(l.BarSlots) != 0 {
+	if l := a.hud(); !l.Bar.Empty() || len(l.BarSlots) != 0 {
 		t.Fatalf("layout bar = %+v with the bar off", l.Bar)
 	}
 	if bs := a.colonistBarButtons(a.sw, a.sh); len(bs) != 0 {
@@ -205,8 +206,8 @@ func TestBarCardDrawsMoodNameAndPortraitBox(t *testing.T) {
 					// the mood backing: a fill on the slot's floor, as tall as the mood
 					gauge := false
 					for _, e := range ev {
-						if e.Kind == "fill" && e.X >= pr.X-0.5 && e.X+e.W <= pr.right()+0.5 && e.W > pr.W-1 &&
-							abs32(e.Y+e.H-pr.bottom()) < 0.51 && abs32(e.H-pr.H*float32(p.Mood)/100) < 0.51 {
+						if e.Kind == "fill" && e.X >= pr.X-0.5 && e.X+e.W <= pr.Right()+0.5 && e.W > pr.W-1 &&
+							abs32(e.Y+e.H-pr.Bottom()) < 0.51 && abs32(e.H-pr.H*float32(p.Mood)/100) < 0.51 {
 							gauge = true
 						}
 					}
@@ -509,7 +510,7 @@ func TestBarPortraitsAndIconsStayInTheirSlots(t *testing.T) {
 			pr := htPhysRect(slot, s)
 			n, icons := 0, 0
 			for _, e := range ev {
-				if e.Kind != "image" || e.X+e.W/2 < pr.X || e.X+e.W/2 > pr.right() || e.Y+e.H/2 < pr.Y || e.Y+e.H/2 > pr.bottom() {
+				if e.Kind != "image" || e.X+e.W/2 < pr.X || e.X+e.W/2 > pr.Right() || e.Y+e.H/2 < pr.Y || e.Y+e.H/2 > pr.Bottom() {
 					continue
 				}
 				if !htInside(e, pr) {

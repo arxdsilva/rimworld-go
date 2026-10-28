@@ -503,7 +503,7 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	if r.env.shadow.casts != 3 || r.env.shadow.composites != 1 {
 		t.Fatalf("drew %d silhouettes, %d composites", r.env.shadow.casts, r.env.shadow.composites)
 	}
-	if n := len(r.env.shadow.contacts.verts); n != 0 {
+	if n := len(r.env.shadow.contacts.Verts); n != 0 {
 		t.Fatalf("contact batch not flushed: %d", n)
 	}
 	// Full daylight no longer empties the light list (the old "no point

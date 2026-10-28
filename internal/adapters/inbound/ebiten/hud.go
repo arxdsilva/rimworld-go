@@ -157,7 +157,7 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	}
 	x, y := float32(mx), float32(my)
 	for _, r := range a.chromeRects(sw, sh) {
-		if r.contains(x, y) {
+		if r.Contains(x, y) {
 			return true
 		}
 	}

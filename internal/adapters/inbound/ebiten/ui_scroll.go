@@ -42,7 +42,7 @@ func scrollThumb(bar rect, off, maxOff, contentH float32) rect {
 	if maxOff > 0 {
 		y += (bar.H - h) * off / maxOff
 	}
-	return rect{bar.X, y, bar.W, h}
+	return rect{X: bar.X, Y: y, W: bar.W, H: h}
 }
 
 // scrollOffFromThumb is the offset for a thumb whose top is at y.
@@ -68,14 +68,14 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 	if step <= 0 {
 		step = scrollStep
 	}
-	view := rect{r.X, r.Y, max(0, r.W-scrollBarW), r.H}
-	bar := rect{r.right() - scrollBarW, r.Y, scrollBarW, r.H}
+	view := rect{X: r.X, Y: r.Y, W: max(0, r.W-scrollBarW), H: r.H}
+	bar := rect{X: r.Right() - scrollBarW, Y: r.Y, W: scrollBarW, H: r.H}
 	maxOff := max(0, contentH-r.H)
 	off := max(0, min(maxOff, u.scroll[id]))
 	thumbID := id + ".thumb"
 	if u.add(uiWidget{id: id, r: r, wheel: true, focusable: o.Focusable}) {
 		mx, my := a.currentCursor()
-		hover := r.hit(mx, my)
+		hover := r.Hit(mx, my)
 		if hover && a.in.raw.wheelY != 0 {
 			off -= float32(a.in.raw.wheelY) * step
 			a.in.raw.wheelY = 0
@@ -83,7 +83,7 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 		if maxOff > 0 {
 			thumb := scrollThumb(bar, off, maxOff, contentH)
 			if a.uiPress(bar) {
-				if thumb.hit(mx, my) {
+				if thumb.Hit(mx, my) {
 					u.active, u.dragY = thumbID, float32(my)-thumb.Y
 				} else if float32(my) < thumb.Y {
 					off -= r.H * pageFrac
@@ -113,7 +113,7 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 		fillRect(dst, bar, uiScrollTrack)
 		thumb := scrollThumb(bar, u.scroll[id], maxOff, contentH)
 		c := uiScrollThumb
-		if u.active == thumbID || u.hot == id && thumb.hit(u.mx, u.my) {
+		if u.active == thumbID || u.hot == id && thumb.Hit(u.mx, u.my) {
 			c = lerpRGBA(c, uiText, 0.3)
 		}
 		fillRect(dst, thumb, c)
@@ -211,10 +211,12 @@ func (a *App) uiList(id string, r rect, n int, sel *int, sp listSpec) bool {
 	}
 	area := a.uiScrollArea(id, r, float32(n)*rowH, scrollOpts{Step: rowH * 3, Focusable: true})
 	first, last := listVisible(area.Off, r.H, rowH, n)
-	rowAt := func(i int) rect { return rect{area.View.X, r.Y + float32(i)*rowH - area.Off, area.View.W, rowH} }
+	rowAt := func(i int) rect {
+		return rect{X: area.View.X, Y: r.Y + float32(i)*rowH - area.Off, W: area.View.W, H: rowH}
+	}
 	for i := first; i <= last; i++ {
 		i := i
-		hit := rowAt(i).intersect(area.View)
+		hit := rowAt(i).Intersect(area.View)
 		w := uiWidget{id: optID(id, i), r: hit, disabled: disabled(i) != "", reason: disabled(i), click: func() { u.focus = id; pick(i) }}
 		if sp.Tip != nil {
 			w.tip = sp.Tip(i)

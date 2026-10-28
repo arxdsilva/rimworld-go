@@ -5,7 +5,7 @@ import (
 	"image/color"
 	"math"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/globemath"
@@ -402,13 +402,6 @@ func dedupeCorners(corners [][3]float32) (ids []uint32, pos [][3]float32) {
 		}
 	}
 	return ids, pos
-}
-
-func abs32(v float32) float32 {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 func norm3(v [3]float32) [3]float32 {

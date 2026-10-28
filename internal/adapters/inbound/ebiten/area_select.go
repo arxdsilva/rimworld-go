@@ -43,7 +43,7 @@ func (a *App) scheduleAreaRect(row int) (rect, bool) {
 		return rect{}, false
 	}
 	y := r.y + schedTop + float32(row*schedRowH)
-	return rect{x, y, w, schedRowH - 3}, true
+	return rect{X: x, Y: y, W: w, H: schedRowH - 3}, true
 }
 
 // scheduleAreaUI is the Schedule tab's "Allowed area" column: one
@@ -106,7 +106,7 @@ func (a *App) inspectorAreaUI() {
 	var r rect
 	for _, b := range a.paneButtons() {
 		if b.id == chip.ID {
-			r = rect{b.x, b.y, b.w, b.h}
+			r = rect{X: b.x, Y: b.y, W: b.w, H: b.h}
 			break
 		}
 	}

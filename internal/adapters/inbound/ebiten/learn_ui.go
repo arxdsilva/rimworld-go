@@ -334,19 +334,19 @@ func (a *App) learnLayout() learnLayout {
 	}
 	h := a.hud()
 	p := h.Learn
-	if p.empty() {
+	if p.Empty() {
 		return lay
 	}
 	lay.panel = p
-	lay.header = rect{p.X, p.Y, p.W, min(learnHeaderH, p.H)}
+	lay.header = rect{X: p.X, Y: p.Y, W: p.W, H: min(learnHeaderH, p.H)}
 	if a.learnFolded(p) {
 		return lay
 	}
-	lay.footer = rect{p.X, p.bottom() - learnFooterH, p.W, learnFooterH}
+	lay.footer = rect{X: p.X, Y: p.Bottom() - learnFooterH, W: p.W, H: learnFooterH}
 	left := a.learnLeft()
 	var openRow rect
 	for i := 0; i < min(learnShown, len(left)); i++ {
-		r := rect{p.X + learnPanelPad, p.Y + learnHeaderH + learnPanelPad + float32(i)*(learnRowH+learnRowGap), learnRowW, learnRowH}
+		r := rect{X: p.X + learnPanelPad, Y: p.Y + learnHeaderH + learnPanelPad + float32(i)*(learnRowH+learnRowGap), W: learnRowW, H: learnRowH}
 		lay.rows = append(lay.rows, learnRow{left[i], r})
 		if left[i].id == a.hst.learn.open {
 			lay.open, openRow = left[i], r
@@ -381,12 +381,12 @@ func (a *App) learnCardLayout(lay *learnLayout, h hudLayout, row rect) {
 	}
 	x := p.X - hudGap - w
 	y := row.Y
-	if !h.Bar.empty() && x < h.Bar.right() && x+w > h.Bar.X {
-		y = max(y, h.Bar.bottom()+hudGap)
+	if !h.Bar.Empty() && x < h.Bar.Right() && x+w > h.Bar.X {
+		y = max(y, h.Bar.Bottom()+hudGap)
 	}
 	y = max(min(y, h.Tabs.Y-hudMargin-hgt), hudMargin)
-	lay.card = rect{x, y, w, hgt}
-	lay.gotIt = rect{x + w - learnCardPad - learnGotItW, y + hgt - learnCardPad - learnGotItH, learnGotItW, learnGotItH}
+	lay.card = rect{X: x, Y: y, W: w, H: hgt}
+	lay.gotIt = rect{X: x + w - learnCardPad - learnGotItW, Y: y + hgt - learnCardPad - learnGotItH, W: learnGotItW, H: learnGotItH}
 }
 
 // learnCardHeight is the card's height for its wrapped text.
@@ -399,22 +399,22 @@ func learnCardHeight(lay *learnLayout) float32 {
 // the lesson rows, the header toggle.
 func (a *App) learnButtons() []button {
 	lay := a.learnLayout()
-	if lay.panel.empty() {
+	if lay.panel.Empty() {
 		return nil
 	}
 	var out []button
-	if lay.open != nil && !lay.card.empty() {
-		b := lay.gotIt.asButton("learn.done."+lay.open.id, "Got it")
+	if lay.open != nil && !lay.card.Empty() {
+		b := asButton(lay.gotIt, "learn.done."+lay.open.id, "Got it")
 		b.tip = "Mark this lesson learned"
 		out = append(out, b)
 	}
 	for _, rw := range lay.rows {
-		b := rw.r.asButton("learn.lesson."+rw.l.id, rw.l.title)
+		b := asButton(rw.r, "learn.lesson."+rw.l.id, rw.l.title)
 		b.selected = lay.open == rw.l
 		b.tip = "Read this lesson"
 		out = append(out, b)
 	}
-	t := lay.header.asButton("learn.toggle", "Learning helper")
+	t := asButton(lay.header, "learn.toggle", "Learning helper")
 	t.tip = "Fold or unfold the lessons (Options › Gameplay turns them off)"
 	return append(out, t)
 }
@@ -423,7 +423,7 @@ func (a *App) learnButtons() []button {
 // detail card, so a click on it never reaches the map.
 func (a *App) learnChrome() []rect {
 	lay := a.learnLayout()
-	if lay.open == nil || lay.card.empty() {
+	if lay.open == nil || lay.card.Empty() {
 		return nil
 	}
 	return []rect{lay.card}
@@ -472,7 +472,7 @@ func learnMix(a, b color.RGBA, t float64) color.RGBA {
 func (a *App) drawLearn(screen *ebiten.Image) {
 	lay := a.learnLayout()
 	p := lay.panel
-	if p.empty() {
+	if p.Empty() {
 		return
 	}
 	mx, my := a.currentCursor()
@@ -490,7 +490,7 @@ func (a *App) drawLearn(screen *ebiten.Image) {
 	uiStrokeRect(screen, p.X, p.Y, p.W, p.H, 1, uiTutorBorder, false)
 
 	// header: title, what is left, and the fold arrow
-	if lay.header.hit(mx, my) {
+	if lay.header.Hit(mx, my) {
 		uiFillRect(screen, p.X+1, p.Y+1, p.W-2, learnHeaderH-1, fade(uiTutorHeading, 0.14), false)
 	}
 	hy := float64(p.Y) + (learnHeaderH-lineH(tsLabel))/2
@@ -501,8 +501,8 @@ func (a *App) drawLearn(screen *ebiten.Image) {
 	}
 	st := withColor(tsSmall, uiTutorText)
 	st.Align = alignRight
-	drawText(screen, right, float64(p.right())-28, float64(p.Y)+(learnHeaderH-lineH(tsSmall))/2, st)
-	a.drawLearnChevron(screen, p.right()-16, p.Y+learnHeaderH/2, collapsed)
+	drawText(screen, right, float64(p.Right())-28, float64(p.Y)+(learnHeaderH-lineH(tsSmall))/2, st)
+	a.drawLearnChevron(screen, p.Right()-16, p.Y+learnHeaderH/2, collapsed)
 
 	if !collapsed {
 		a.drawLearnRows(screen, lay, mx, my)
@@ -513,7 +513,7 @@ func (a *App) drawLearn(screen *ebiten.Image) {
 		}
 		drawText(screen, fitText(note, nst, p.W-20), float64(p.X)+10, float64(lay.footer.Y)+(learnFooterH-lineH(tsSmall))/2, nst)
 	}
-	if lay.open != nil && !lay.card.empty() {
+	if lay.open != nil && !lay.card.Empty() {
 		a.drawLearnCard(screen, lay, mx, my)
 	}
 }
@@ -539,7 +539,7 @@ func (a *App) drawLearnRows(screen *ebiten.Image, lay learnLayout, mx, my int) {
 		switch {
 		case lay.open == rw.l:
 			fill = learnMix(dark, uiTutorBorder, 0.45)
-		case r.hit(mx, my):
+		case r.Hit(mx, my):
 			fill = learnMix(dark, uiTutorBorder, 0.25)
 		}
 		uiFillRect(screen, r.X, r.Y, r.W, r.H, fill, false)
@@ -577,11 +577,11 @@ func (a *App) drawLearnCard(screen *ebiten.Image, lay learnLayout, mx, my int) {
 	}
 	g := lay.gotIt
 	fill := learnMix(uiTutorPanel, color.RGBA{A: 0xFF}, 0.3)
-	if g.hit(mx, my) {
+	if g.Hit(mx, my) {
 		fill = learnMix(fill, uiTutorBorder, 0.45)
 	}
 	uiFillRect(screen, g.X, g.Y, g.W, g.H, fill, false)
 	uiStrokeRect(screen, g.X, g.Y, g.W, g.H, 1, uiTutorBorder, false)
-	cx, cy := g.center()
+	cx, cy := g.Center()
 	drawCentered(screen, "Got it", float64(cx), float64(cy), withColor(tsLabel, uiTutorHeading))
 }

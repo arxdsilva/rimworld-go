@@ -341,7 +341,7 @@ func TestLandingGlobeClickSelectsTile(t *testing.T) {
 		f.frame(t, a)
 	}
 	geo := landRects(a.sw, a.sh)
-	cx, cy := geo.globe.center()
+	cx, cy := geo.globe.Center()
 	f.cur.mx, f.cur.my = int(cx), int(cy)
 	f.frame(t, a)
 	want := a.ng.globe.pickTile(int(cx), int(cy))

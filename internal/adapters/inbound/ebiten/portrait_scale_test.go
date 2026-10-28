@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -18,14 +19,14 @@ func TestBarPortraitsInTheirSlotsAtScale(t *testing.T) {
 		withUIScale(t, s)
 		a.sw, a.sh = 1280, 720
 		var imgs [][4]float32
-		canvasTrace = func(kind string, x, y, w, h float32) {
+		gfx.SetCanvasTrace(func(kind string, x, y, w, h float32) {
 			if kind == "image" {
 				imgs = append(imgs, [4]float32{x, y, w, h})
 			}
-		}
+		})
 		screen := ebiten.NewImage(int(1280*s), int(720*s))
 		a.drawColonistPortraits(screen, a.sh)
-		canvasTrace = nil
+		gfx.SetCanvasTrace(nil)
 		if len(imgs) == 0 {
 			t.Fatalf("s=%v: no portrait image traced", s)
 		}
@@ -39,7 +40,7 @@ func TestBarPortraitsInTheirSlotsAtScale(t *testing.T) {
 			x, y, w, h := float64(r[0]), float64(r[1]), float64(r[2]), float64(r[3])
 			slot := -1
 			for i, sl := range l.BarSlots {
-				left, top, right, bottom := float64(sl.X)*s, float64(sl.Y)*s, float64(sl.right())*s, float64(sl.bottom())*s
+				left, top, right, bottom := float64(sl.X)*s, float64(sl.Y)*s, float64(sl.Right())*s, float64(sl.Bottom())*s
 				if x >= left-0.5 && x+w <= right+0.5 && y >= top-0.5 && y+h <= bottom+0.5 {
 					slot = i
 					break
@@ -57,7 +58,7 @@ func TestBarPortraitsInTheirSlotsAtScale(t *testing.T) {
 			}
 		}
 	}
-	t.Cleanup(func() { canvasTrace = nil })
+	t.Cleanup(func() { gfx.SetCanvasTrace(nil) })
 }
 
 // The colonist inspector's portrait sits inside the inspector panel.
@@ -69,12 +70,12 @@ func TestInspectorPortraitInPanelAtScale(t *testing.T) {
 	a.sw, a.sh = 1280, 720
 	a.renderer.Select(id)
 	var imgs [][4]float32
-	canvasTrace = func(kind string, x, y, w, h float32) {
+	gfx.SetCanvasTrace(func(kind string, x, y, w, h float32) {
 		if kind == "image" {
 			imgs = append(imgs, [4]float32{x, y, w, h})
 		}
-	}
-	t.Cleanup(func() { canvasTrace = nil })
+	})
+	t.Cleanup(func() { gfx.SetCanvasTrace(nil) })
 	screen := ebiten.NewImage(2560, 1440)
 	p, ok := a.selectedPawn()
 	if !ok {

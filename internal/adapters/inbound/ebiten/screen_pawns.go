@@ -117,9 +117,9 @@ func (a *App) pawnsUI(sw, sh int) {
 		ng.pawnSel = max(0, len(views)-1)
 	}
 	_, _, content, footer := dialogFrame(sw, sh)
-	roster, rest := content.splitH(pawnRosterW)
-	rest = rect{rest.X + dialogPad, rest.Y, rest.W - dialogPad, rest.H}
-	detail, team := rest.splitH(rest.W - pawnTeamW - dialogPad)
+	roster, rest := content.SplitH(pawnRosterW)
+	rest = rect{X: rest.X + dialogPad, Y: rest.Y, W: rest.W - dialogPad, H: rest.H}
+	detail, team := rest.SplitH(rest.W - pawnTeamW - dialogPad)
 	team.X, team.W = team.X+dialogPad, pawnTeamW
 
 	a.pawnsRoster(ng, roster, views, nSel)
@@ -133,12 +133,12 @@ func (a *App) pawnsUI(sw, sh int) {
 func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 	back := footerBack(footer)
 	a.ngButton(ids.WizardBack, back, "Back", btnOpts{}, a.goBack)
-	x := back.right() + 12
-	a.ngButton("pawns.reroll", rect{x, back.Y, 120, footerBtnH}, "Randomize", btnOpts{
+	x := back.Right() + 12
+	a.ngButton("pawns.reroll", rect{X: x, Y: back.Y, W: 120, H: footerBtnH}, "Randomize", btnOpts{
 		Tip: "Randomize\nRoll this colonist again. An edited name is kept; hold Shift to roll a new name too."},
 		func() { a.rerollSelected(ng) })
 	x += 128
-	a.ngButton("pawns.rerollAll", rect{x, back.Y, 130, footerBtnH}, "Randomize all", btnOpts{Tip: "Randomize all\nRoll every candidate again."},
+	a.ngButton("pawns.rerollAll", rect{X: x, Y: back.Y, W: 130, H: footerBtnH}, "Randomize all", btnOpts{Tip: "Randomize all\nRoll every candidate again."},
 		func() {
 			a.uiConfirm("pawns.rerollAll.confirm", "Randomize everyone?", "Every candidate is rolled again. Names you edited are kept.", "Randomize", false, func() {
 				ng.pool.RandomizeAll()
@@ -146,7 +146,7 @@ func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 			})
 		})
 	x += 138
-	a.ngButton("pawns.reset", rect{x, back.Y, 130, footerBtnH}, "Undo changes", btnOpts{Tip: "Undo changes\nPut the candidates back as they were when you came here."},
+	a.ngButton("pawns.reset", rect{X: x, Y: back.Y, W: 130, H: footerBtnH}, "Undo changes", btnOpts{Tip: "Undo changes\nPut the candidates back as they were when you came here."},
 		func() { a.undoCharacters(ng) })
 
 	reason := ng.startReason()
@@ -217,7 +217,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 	u := a.uiSt()
 	a.uiPanel(r)
 	btns := float32(2*28 + 6 + 8)
-	listR := rect{r.X + 4, r.Y + 4, r.W - 8, r.H - 8 - btns}
+	listR := rect{X: r.X + 4, Y: r.Y + 4, W: r.W - 8, H: r.H - 8 - btns}
 	n := len(views)
 	nLeft := n - nSel
 	total := rosterY(n, nSel) + 4
@@ -226,15 +226,15 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 	}
 	area := a.uiScrollArea(pawnRosterID, listR, total, scrollOpts{Step: pawnRowH})
 	rowAt := func(pos int) rect {
-		return rect{area.View.X, listR.Y + rosterY(pos, nSel) - area.Off, area.View.W, pawnRowH}
+		return rect{X: area.View.X, Y: listR.Y + rosterY(pos, nSel) - area.Off, W: area.View.W, H: pawnRowH}
 	}
 
 	mx, my := a.currentCursor()
 	for pos := range views {
 		pos := pos
 		rr := rowAt(pos)
-		hit := rr.intersect(area.View)
-		if hit.empty() {
+		hit := rr.Intersect(area.View)
+		if hit.Empty() {
 			continue
 		}
 		sel := func() { ng.pawnSel = pos; u.focus = pawnRosterID }
@@ -272,7 +272,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 		drawText(sub, fmt.Sprintf("Left behind (%d)", nLeft), float64(area.View.X+6), float64(listR.Y+rosterY(nSel, nSel)-pawnHeadH-area.Off)+3, hs)
 		for pos, v := range views {
 			rr := rowAt(pos)
-			if rr.bottom() < area.View.Y || rr.Y > area.View.bottom() {
+			if rr.Bottom() < area.View.Y || rr.Y > area.View.Bottom() {
 				continue
 			}
 			a.paintRosterRow(sub, rr, v, pos == selPos, u.hot == optID("pawns.row", pos), pos >= nSel, drag.on && drag.moved && drag.from == pos)
@@ -283,15 +283,15 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 			if to > drag.from {
 				ty += pawnRowH
 			}
-			fillRect(sub, rect{area.View.X, ty - 1, area.View.W, 3}, uiAccent)
-			ghost := rect{area.View.X, float32(my) - pawnRowH/2, area.View.W, pawnRowH}
+			fillRect(sub, rect{X: area.View.X, Y: ty - 1, W: area.View.W, H: 3}, uiAccent)
+			ghost := rect{X: area.View.X, Y: float32(my) - pawnRowH/2, W: area.View.W, H: pawnRowH}
 			a.paintRosterRow(dst, ghost, views[drag.from], true, false, false, false)
 		}
 	})
 	_ = mx
 
 	// Up, down and swap under the list.
-	by := r.bottom() - btns + 4
+	by := r.Bottom() - btns + 4
 	half := (r.W - 8 - 6) / 2
 	i := ng.pawnSel
 	upR, dnR := "", ""
@@ -301,9 +301,9 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 	if i >= n-1 {
 		dnR = "Already last."
 	}
-	a.ngButton("pawns.up", rect{r.X + 4, by, half, 28}, "Up", btnOpts{Disabled: upR != "", Reason: upR, Tip: "Move up\nMove this candidate up the roster."},
+	a.ngButton("pawns.up", rect{X: r.X + 4, Y: by, W: half, H: 28}, "Up", btnOpts{Disabled: upR != "", Reason: upR, Tip: "Move up\nMove this candidate up the roster."},
 		func() { ng.pool.Move(i, i-1); ng.pawnSel = i - 1; ng.namesOf = -1 })
-	a.ngButton("pawns.down", rect{r.X + 4 + half + 6, by, half, 28}, "Down", btnOpts{Disabled: dnR != "", Reason: dnR, Tip: "Move down\nMove this candidate down the roster."},
+	a.ngButton("pawns.down", rect{X: r.X + 4 + half + 6, Y: by, W: half, H: 28}, "Down", btnOpts{Disabled: dnR != "", Reason: dnR, Tip: "Move down\nMove this candidate down the roster."},
 		func() { ng.pool.Move(i, i+1); ng.pawnSel = i + 1; ng.namesOf = -1 })
 	swapLabel, swapReason := "Swap with left-behind...", ""
 	if i >= nSel {
@@ -312,7 +312,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 	if nSel == 0 || nLeft == 0 {
 		swapReason = "There is nobody to swap with."
 	}
-	a.ngButton("pawns.swap", rect{r.X + 4, by + 34, r.W - 8, 28}, swapLabel, btnOpts{Disabled: swapReason != "", Reason: swapReason},
+	a.ngButton("pawns.swap", rect{X: r.X + 4, Y: by + 34, W: r.W - 8, H: 28}, swapLabel, btnOpts{Disabled: swapReason != "", Reason: swapReason},
 		func() { a.pushSwap(ng, views, nSel) })
 }
 
@@ -335,15 +335,15 @@ func candidateLine(v game.CandidateView) string {
 func (a *App) paintRosterRow(dst *ebiten.Image, rr rect, v game.CandidateView, selected, hot, left, ghosted bool) {
 	switch {
 	case selected:
-		fillRect(dst, rr.inset(1), lerpRGBA(uiPanel, uiBtnSelected, 0.8))
-		strokeRect(dst, rr.inset(1), uiAccent)
+		fillRect(dst, rr.Inset(1), lerpRGBA(uiPanel, uiBtnSelected, 0.8))
+		strokeRect(dst, rr.Inset(1), uiAccent)
 	case hot:
-		fillRect(dst, rr.inset(1), uiBtnHover)
+		fillRect(dst, rr.Inset(1), uiBtnHover)
 	}
 	if ghosted {
 		return
 	}
-	pr := rect{rr.X + 8, rr.Y + (rr.H-pawnThumbH)/2, pawnThumbW, pawnThumbH}
+	pr := rect{X: rr.X + 8, Y: rr.Y + (rr.H-pawnThumbH)/2, W: pawnThumbW, H: pawnThumbH}
 	fillRect(dst, pr, uiField)
 	if !drawLookPortrait(dst, a.art, v.Look, float64(pr.X), float64(pr.Y), float64(pr.W), float64(pr.H)) {
 		drawSilhouette(dst, pr, "")
@@ -380,7 +380,7 @@ func (a *App) pushSwap(ng *newGameState, views []game.CandidateView, nSel int) {
 func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) {
 	u := a.uiSt()
 	a.uiPanel(r)
-	in := r.inset(12)
+	in := r.Inset(12)
 	if len(views) == 0 {
 		a.uiLabel(in.X, in.Y, "No candidates.", dimText())
 		return
@@ -388,9 +388,9 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 	v := views[ng.pawnSel]
 	a.syncNames(ng, v)
 
-	left := rect{in.X, in.Y, in.W - pawnBigW - 16, in.H}
+	left := rect{X: in.X, Y: in.Y, W: in.W - pawnBigW - 16, H: in.H}
 	// The portrait.
-	pr := rect{in.right() - pawnBigW, in.Y, pawnBigW, pawnBigH}
+	pr := rect{X: in.Right() - pawnBigW, Y: in.Y, W: pawnBigW, H: pawnBigH}
 	u.queue(func(dst *ebiten.Image) {
 		fillRect(dst, pr, uiField)
 		strokeRect(dst, pr, uiPanelBorder)
@@ -414,9 +414,9 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 		fx := left.X + float32(k)*(fw+10)
 		a.uiLabel(fx, y, l.text, dimText())
 		if l.tip != "" {
-			a.uiTip(l.id+".tip", rect{fx, y, fw, 16}, l.tip)
+			a.uiTip(l.id+".tip", rect{X: fx, Y: y, W: fw, H: 16}, l.tip)
 		}
-		ch, _ := a.uiTextField(l.id, rect{fx, y + 18, fw, 28}, &ng.names[k], textFieldSpec{MaxLen: game.MaxNameRunes, Valid: nameRune})
+		ch, _ := a.uiTextField(l.id, rect{X: fx, Y: y + 18, W: fw, H: 28}, &ng.names[k], textFieldSpec{MaxLen: game.MaxNameRunes, Valid: nameRune})
 		changed = changed || ch
 	}
 	if changed {
@@ -480,7 +480,7 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 		drawText(dst, fitText(incap, st, left.W-110), float64(left.X+104), float64(iy), st)
 	})
 	if full != "" {
-		a.uiTip("pawns.incap.tip", rect{left.X, y, left.W, 18}, "Incapable of\n"+full)
+		a.uiTip("pawns.incap.tip", rect{X: left.X, Y: y, W: left.W, H: 18}, "Incapable of\n"+full)
 	}
 	y += 26
 
@@ -489,12 +489,12 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 	if len(v.Conditions) > 1 {
 		healthH += float32(len(v.Conditions)-1) * 16
 	}
-	skillsTop := max(y, pr.bottom()+10)
-	avail := in.bottom() - healthH - skillsTop - pawnSkillHdrH
+	skillsTop := max(y, pr.Bottom()+10)
+	avail := in.Bottom() - healthH - skillsTop - pawnSkillHdrH
 	rowH := min(float32(20), max(float32(15), avail/float32(max(len(v.Skills), 1))))
-	a.skillsTable(rect{in.X, skillsTop, in.W, pawnSkillHdrH + rowH*float32(len(v.Skills))}, v, rowH)
+	a.skillsTable(rect{X: in.X, Y: skillsTop, W: in.W, H: pawnSkillHdrH + rowH*float32(len(v.Skills))}, v, rowH)
 
-	hy := in.bottom() - healthH + 6
+	hy := in.Bottom() - healthH + 6
 	a.uiLabel(in.X, hy, "Health:", tsLabel)
 	text := "No conditions"
 	if len(v.Conditions) > 0 {
@@ -534,7 +534,7 @@ func (a *App) backstoryLine(x, y, w float32, label, title, desc, id string) {
 		tip = title + "\n" + desc
 	}
 	if tip != "" {
-		a.uiTip(id, rect{x, y, w, 18}, tip)
+		a.uiTip(id, rect{X: x, Y: y, W: w, H: 18}, tip)
 	}
 }
 
@@ -552,7 +552,7 @@ func (a *App) traitChips(x, y, w float32, v game.CandidateView) float32 {
 		if cx+cw > x+w && cx > x+64 {
 			cx, cy = x+64, cy+28
 		}
-		cr := rect{cx, cy, cw, 24}
+		cr := rect{X: cx, Y: cy, W: cw, H: 24}
 		tip := t.Label + "\n" + t.Desc
 		if t.Effects != "" {
 			tip += "\n" + t.Effects
@@ -607,19 +607,19 @@ func skillTip(s game.SkillView) string {
 func (a *App) skillsTable(r rect, v game.CandidateView, rowH float32) {
 	u := a.uiSt()
 	for i, s := range v.Skills {
-		row := rect{r.X, r.Y + pawnSkillHdrH + float32(i)*rowH, r.W, rowH}
+		row := rect{X: r.X, Y: r.Y + pawnSkillHdrH + float32(i)*rowH, W: r.W, H: rowH}
 		a.uiTip(fmt.Sprintf("pawns.skill.%d", i), row, skillTip(s))
 	}
 	u.queue(func(dst *ebiten.Image) {
 		hs := tsLabel
 		hs.Color = uiHeading
-		fillRect(dst, rect{r.X, r.Y, r.W, pawnSkillHdrH}, uiBtn)
-		strokeRect(dst, rect{r.X, r.Y, r.W, pawnSkillHdrH}, uiBtnBorder)
+		fillRect(dst, rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uiBtn)
+		strokeRect(dst, rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uiBtnBorder)
 		drawText(dst, "Skill", float64(r.X+8), float64(r.Y)+(pawnSkillHdrH-lineH(hs))/2, hs)
 		drawText(dst, "Passion", float64(r.X+160), float64(r.Y)+(pawnSkillHdrH-lineH(hs))/2, hs)
 		drawText(dst, "Level", float64(r.X+240), float64(r.Y)+(pawnSkillHdrH-lineH(hs))/2, hs)
 		for i, s := range v.Skills {
-			row := rect{r.X, r.Y + pawnSkillHdrH + float32(i)*rowH, r.W, rowH}
+			row := rect{X: r.X, Y: r.Y + pawnSkillHdrH + float32(i)*rowH, W: r.W, H: rowH}
 			if i%2 == 1 {
 				fillRect(dst, row, uiFade(uiField, 0x28)) // premultiplied wash
 			}
@@ -644,9 +644,9 @@ func (a *App) skillsTable(r rect, v game.CandidateView, rowH float32) {
 			lt.Align = alignCenter
 			drawText(dst, skillLevelText(s), float64(row.X+250), ty, lt)
 			if !s.Incapable {
-				bar := rect{row.X + 280, row.Y + (row.H-8)/2, row.W - 296, 8}
+				bar := rect{X: row.X + 280, Y: row.Y + (row.H-8)/2, W: row.W - 296, H: 8}
 				fillRect(dst, bar, uiSliderTrack)
-				fillRect(dst, rect{bar.X, bar.Y, bar.W * float32(s.Level) / 20, bar.H}, uiSliderFill)
+				fillRect(dst, rect{X: bar.X, Y: bar.Y, W: bar.W * float32(s.Level) / 20, H: bar.H}, uiSliderFill)
 				strokeRect(dst, bar, uiPanelBorder)
 			}
 		}
@@ -658,7 +658,7 @@ func (a *App) skillsTable(r rect, v game.CandidateView, rowH float32) {
 func (a *App) pawnsTeam(ng *newGameState, r rect) {
 	u := a.uiSt()
 	a.uiPanel(r)
-	in := r.inset(12)
+	in := r.Inset(12)
 	hs := tsLarge
 	hs.Color = uiHeading
 	a.uiLabel(in.X, in.Y, "Team", hs)
@@ -668,7 +668,7 @@ func (a *App) pawnsTeam(ng *newGameState, r rect) {
 	y += 22
 	const rowH = 20
 	for i, b := range rep.Best {
-		row := rect{in.X, y + float32(i)*rowH, in.W, rowH}
+		row := rect{X: in.X, Y: y + float32(i)*rowH, W: in.W, H: rowH}
 		who := b.Who
 		tip := b.Label + "\nBest level on the team"
 		if who == "" {

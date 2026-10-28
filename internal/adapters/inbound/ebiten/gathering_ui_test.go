@@ -114,14 +114,14 @@ func TestGatheringBanner(t *testing.T) {
 		t.Fatalf("banner %q %v", text, ok)
 	}
 	l := a.hud()
-	if r.Y < l.Bar.bottom() || r.Y < l.Messages.bottom() || r.X <= 0 || r.X+r.W >= float32(a.sw) {
+	if r.Y < l.Bar.Bottom() || r.Y < l.Messages.Bottom() || r.X <= 0 || r.X+r.W >= float32(a.sw) {
 		t.Fatalf("banner rect %+v not under the bar %+v and messages %+v", r, l.Bar, l.Messages)
 	}
 	if cx := r.X + r.W/2; cx < float32(a.sw)/2-1 || cx > float32(a.sw)/2+1 {
 		t.Fatalf("banner rect %+v is not centred on the bar (screen centre %d)", r, a.sw/2)
 	}
 	for name, other := range map[string]rect{"right column": l.Right, "resources": l.Resources, "messages": l.Messages} {
-		if !other.empty() && r.X < other.right() && other.X < r.right() && r.Y < other.bottom() && other.Y < r.bottom() {
+		if !other.Empty() && r.X < other.Right() && other.X < r.Right() && r.Y < other.Bottom() && other.Y < r.Bottom() {
 			t.Fatalf("banner %+v overlaps the %s %+v", r, name, other)
 		}
 	}
@@ -151,10 +151,10 @@ func TestGatheringBannerClearsTheMessages(t *testing.T) {
 	s.gatherings = []game.GatheringView{{Kind: "party", Phase: "under way", Hosts: []string{"Ada"}}}
 	_, r, ok := a.gatheringBanner(a.sw)
 	l := a.hud()
-	if !ok || l.Messages.empty() {
+	if !ok || l.Messages.Empty() {
 		t.Fatalf("banner %v, messages %+v", ok, l.Messages)
 	}
-	if r.Y < l.Messages.bottom() {
+	if r.Y < l.Messages.Bottom() {
 		t.Fatalf("banner %+v is not below the messages %+v", r, l.Messages)
 	}
 }

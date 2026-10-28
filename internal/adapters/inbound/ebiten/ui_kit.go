@@ -102,7 +102,7 @@ func (u *uiState) add(w uiWidget) bool {
 	}
 	w.layer = u.layer
 	u.cur = append(u.cur, w)
-	if w.r.hit(u.mx, u.my) {
+	if w.r.Hit(u.mx, u.my) {
 		u.hot = w.id
 	}
 	return true
@@ -209,7 +209,7 @@ func (a *App) uiPress(r rect) bool {
 		return false
 	}
 	mx, my := a.currentCursor()
-	if !r.hit(mx, my) {
+	if !r.Hit(mx, my) {
 		return false
 	}
 	a.in.take(mbLeft)
@@ -326,7 +326,7 @@ func (a *App) uiButton(id string, r rect, label string, o btnOpts) bool {
 		uiStrokeRect(dst, r.X, r.Y, r.W, r.H, 1, border, false)
 		st := tsLabel
 		st.Color, st.Align = text, alignCenter
-		cx, cy := r.center()
+		cx, cy := r.Center()
 		drawText(dst, fitText(label, tsLabel, r.W-12), float64(cx), float64(cy)-lineH(st)/2, st)
 	})
 	return clicked

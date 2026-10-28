@@ -228,11 +228,11 @@ func TestGroupPaneListsTheMembers(t *testing.T) {
 	if len(spec.Rows) != 3 || spec.Rows[0].ID != "group.pick.1" || !strings.Contains(spec.Rows[0].Label, "Ada") {
 		t.Fatalf("rows = %+v", spec.Rows)
 	}
-	if !a.paneShown() || a.hud().Pane.empty() {
+	if !a.paneShown() || a.hud().Pane.Empty() {
 		t.Fatal("a group has a pane")
 	}
 	for _, r := range a.chromeRects(a.sw, a.sh) {
-		if r.empty() {
+		if r.Empty() {
 			t.Fatalf("empty chrome rect %+v", r)
 		}
 	}

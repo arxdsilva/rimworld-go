@@ -260,7 +260,7 @@ func uiScaleRow() optionRow {
 		value: uiScaleLabel,
 		live: func(a *App) string {
 			if a.settings.Accessibility.UIScaleAuto {
-				return fmt.Sprintf("Auto (%d%%)", int(math.Round(a.scale.ui*100)))
+				return fmt.Sprintf("Auto (%d%%)", int(math.Round(a.scale.UI*100)))
 			}
 			return uiScaleLabel(a.settings)
 		},

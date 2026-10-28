@@ -2,9 +2,10 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"slices"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/platform/config"
 )
@@ -25,27 +26,6 @@ import (
 // into an offscreen at world x the physical pixels (world_scale.go): the
 // camera then works in "map pixels" (physical x world, screenDev() =
 // dev x world) and the HUD and every label stay native.
-
-// uiScaleState is one App's scale. world is the map's render scale (0 or
-// 1: the map draws at every physical pixel; see worldK).
-type uiScaleState struct{ dev, ui, s, world float64 }
-
-var unitUIScale = uiScaleState{dev: 1, ui: 1, s: 1, world: 1}
-
-// worldK is the map's render scale: world when it is a reduced one
-// (0 < world < 1), else 1.
-func (u uiScaleState) worldK() float64 {
-	if u.world > 0 && u.world < 1 {
-		return u.world
-	}
-	return 1
-}
-
-// curUIScale is the scale the draw helpers and the font read. The App
-// writes it on the main goroutine at the start of Update and Draw, and
-// only when it changed, so parallel tests at the default scale only read
-// it. Tests that need another scale use withUIScale (never in parallel).
-var curUIScale = unitUIScale
 
 // Auto UI scale bounds and rounding.
 const (
@@ -92,7 +72,7 @@ func computeUIScale(st config.Settings, w, h, dev float64, capture bool) uiScale
 	if ui <= 0 {
 		ui = 1
 	}
-	return uiScaleState{dev: dev, ui: ui, s: dev * ui, world: world}
+	return uiScaleState{Dev: dev, UI: ui, S: dev * ui, World: world}
 }
 
 // renderScaleOf is the settings' map render scale: one of
@@ -137,7 +117,7 @@ func (a *App) LayoutF(outsideW, outsideH float64) (float64, float64) {
 	a.outW, a.outH = outsideW, outsideH
 	a.devRaw = a.deviceScale()
 	a.updateScale()
-	pw, ph := outsideW*a.scale.dev, outsideH*a.scale.dev
+	pw, ph := outsideW*a.scale.Dev, outsideH*a.scale.Dev
 	a.setPhysical(int(math.Ceil(pw)), int(math.Ceil(ph)))
 	return pw, ph
 }
@@ -154,13 +134,13 @@ func (a *App) Layout(outsideWidth, outsideHeight int) (int, int) {
 func (a *App) updateScale() {
 	a.scale = computeUIScale(a.settings, a.outW, a.outH, a.devRaw, a.cfg.Capture != nil)
 	if s := a.captureScale(); s > 0 {
-		a.scale = uiScaleState{dev: 1, ui: s, s: s, world: 1}
+		a.scale = uiScaleState{Dev: 1, UI: s, S: s, World: 1}
 	}
 	if a.cfg.Capture != nil {
 		// dev escape hatch: captures load the defaults (render scale 1), so
 		// only an explicit -render-scale reaches here; it shows the scaled
 		// map path in a screenshot
-		a.scale.world = renderScaleOf(a.settings.Graphics)
+		a.scale.World = renderScaleOf(a.settings.Graphics)
 	}
 	if a.pw > 0 && a.ph > 0 {
 		a.setPhysical(a.pw, a.ph)
@@ -171,7 +151,7 @@ func (a *App) updateScale() {
 // setPhysical records a physical screen size and its logical size.
 func (a *App) setPhysical(pw, ph int) {
 	a.pw, a.ph = pw, ph
-	a.sw, a.sh = logicalPx(pw, a.scale.s), logicalPx(ph, a.scale.s)
+	a.sw, a.sh = logicalPx(pw, a.scale.S), logicalPx(ph, a.scale.S)
 }
 
 // logicalPx is a physical length in logical pixels, rounded up.
@@ -185,41 +165,19 @@ func logicalPx(p int, s float64) int {
 // syncUIScale mirrors the App's scale into curUIScale (main goroutine,
 // once per Update and Draw; written only on a change).
 func (a *App) syncUIScale() {
-	if a.scale.s <= 0 {
+	if a.scale.S <= 0 {
 		a.scale = unitUIScale
 	}
-	if curUIScale != a.scale {
-		curUIScale = a.scale
-	}
+	gfx.SetScale(a.scale)
 }
-
-// uiScale is the total UI scale the canvas draws with. During a world
-// pass into the render-scaled map image (world_scale.go) it is s x world,
-// so a world pass's hand conversion (map pixels / uiScale()) still gives
-// logical pixels.
-func uiScale() float64 {
-	if worldPassK != 0 {
-		return curUIScale.s * worldPassK
-	}
-	return curUIScale.s
-}
-
-// hudScale is the UI scale the HUD and every label draw at, also during a
-// world pass: text is measured at the scale it is drawn at.
-func hudScale() float64 { return curUIScale.s }
-
-// mapUIScale is map pixels per logical UI pixel (s x the render scale),
-// in and out of a world pass: for map <-> logical conversions that also run
-// in Update (hit tests).
-func mapUIScale() float64 { return curUIScale.s * curUIScale.worldK() }
 
 // mapScale is logical UI pixels -> map pixels (s x the render scale): the
 // one conversion from a logical point or size to the camera's pixels.
-func (a *App) mapScale() float64 { return a.scale.s * a.scale.worldK() }
+func (a *App) mapScale() float64 { return a.scale.S * a.scale.WorldK() }
 
 // toLogical maps a physical (raw cursor) point to logical UI pixels.
 func (a *App) toLogical(px, py int) (int, int) {
-	s := a.scale.s
+	s := a.scale.S
 	if s == 1 || s <= 0 {
 		return px, py
 	}

@@ -322,7 +322,7 @@ func TestWallShadowsMergeSingleAlpha(t *testing.T) {
 	// every vertex is at the shadow alpha (core) or clear (feather edge):
 	// overlapping walls max to exactly the core alpha, never more; boxes
 	// carry no height (red 0) for the penumbra blur
-	for _, v := range b.verts {
+	for _, v := range b.Verts {
 		if v.ColorA != 0 && v.ColorA != 0.32 || v.ColorR != 0 {
 			t.Fatalf("vertex alpha %.3f red %.3f", v.ColorA, v.ColorR)
 		}
@@ -418,15 +418,15 @@ func TestShadowHalfResolutionKeepsWorldPlacement(t *testing.T) {
 	st := &r.env.shadow
 	box := func(k float32) (lo, hi [2]float32) {
 		var b triBatch
-		b.k = k
+		b.K = k
 		for _, c := range r.shadowCasters(w, nil) {
 			r.addBox(&b, c, r.lit.light, tile, 0.5)
 		}
-		if len(b.verts) == 0 {
+		if len(b.Verts) == 0 {
 			t.Fatal("no box vertices")
 		}
 		lo, hi = [2]float32{1e9, 1e9}, [2]float32{-1e9, -1e9}
-		for _, v := range b.verts {
+		for _, v := range b.Verts {
 			lo[0], lo[1] = min(lo[0], v.DstX), min(lo[1], v.DstY)
 			hi[0], hi[1] = max(hi[0], v.DstX), max(hi[1], v.DstY)
 		}

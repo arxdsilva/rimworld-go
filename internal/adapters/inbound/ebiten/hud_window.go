@@ -186,12 +186,12 @@ func (a *App) mainWindowUI(sw, sh int) {
 	}
 	for _, b := range a.hudTabButtons(sw, sh) {
 		if b.id == ids.TabAnimals && !b.disabled { // app.go's toggle does not know Wildlife
-			a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, tip: b.tip, click: a.toggleAnimalsTab})
+			a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, tip: b.tip, click: a.toggleAnimalsTab})
 		}
 	}
 	if a.workOpen {
 		// the wheel over any window scrolls it (or does nothing), never the map
-		if r := a.hud().Window; !r.empty() {
+		if r := a.hud().Window; !r.Empty() {
 			a.uiSt().add(uiWidget{id: "window.area", r: r, wheel: true})
 		}
 	}

@@ -310,10 +310,10 @@ func TestAlertHoverCardSitsLeftOfTheAlert(t *testing.T) {
 					t.Errorf("row %d card = %q / %q, want label %q and explanation %q", i, card.title, card.body, row.al.label, row.al.explain)
 				}
 				box, _, _ := layoutRightCard(card, anchor, a.sw, a.sh)
-				if box.right() > row.r.X {
+				if box.Right() > row.r.X {
 					t.Errorf("row %d: card %+v overlaps the alert %+v", i, box, row.r)
 				}
-				if box.X < 0 || box.Y < 0 || box.right() > float32(a.sw) || box.bottom() > float32(a.sh) {
+				if box.X < 0 || box.Y < 0 || box.Right() > float32(a.sw) || box.Bottom() > float32(a.sh) {
 					t.Errorf("row %d: card %+v off the %dx%d screen", i, box, a.sw, a.sh)
 				}
 			}
@@ -331,9 +331,9 @@ func TestAlertHoverCardSitsLeftOfTheAlert(t *testing.T) {
 func TestRightCardIsClampedOnScreen(t *testing.T) {
 	t.Parallel()
 	c := rightCard{title: "Title", body: strings.Repeat("A long explanation that wraps over several lines. ", 6)}
-	for _, anchor := range []rect{{1040, 690, 232, 24}, {1040, 0, 232, 24}, {1040, 360, 232, 24}} {
+	for _, anchor := range []rect{{X: 1040, Y: 690, W: 232, H: 24}, {X: 1040, Y: 0, W: 232, H: 24}, {X: 1040, Y: 360, W: 232, H: 24}} {
 		box, title, body := layoutRightCard(c, anchor, 1280, 720)
-		if box.right() > anchor.X || box.X < 0 || box.Y < 0 || box.bottom() > 720 {
+		if box.Right() > anchor.X || box.X < 0 || box.Y < 0 || box.Bottom() > 720 {
 			t.Errorf("anchor %+v: card %+v", anchor, box)
 		}
 		if len(title) == 0 || len(body) < 2 {
@@ -341,8 +341,8 @@ func TestRightCardIsClampedOnScreen(t *testing.T) {
 		}
 	}
 	// a screen too narrow for the card still keeps it on screen
-	box, _, _ := layoutRightCard(c, rect{150, 100, 100, 24}, 300, 300)
-	if box.X < 0 || box.right() > 300 {
+	box, _, _ := layoutRightCard(c, rect{X: 150, Y: 100, W: 100, H: 24}, 300, 300)
+	if box.X < 0 || box.Right() > 300 {
 		t.Errorf("narrow screen: card %+v", box)
 	}
 }

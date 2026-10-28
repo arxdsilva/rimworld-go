@@ -50,7 +50,7 @@ func (a *App) historyTabUI(sw, sh int) {
 		if b.id != ids.TabHistory || b.disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleHistory})
+		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleHistory})
 	}
 }
 
@@ -88,7 +88,7 @@ func (a *App) historyBody(body rect) {
 	var shown []vis
 	for i := range rows {
 		y := area.View.Y + float32(i)*historyRowH - area.Off
-		if y+historyRowH < area.View.Y || y > area.View.bottom() {
+		if y+historyRowH < area.View.Y || y > area.View.Bottom() {
 			continue
 		}
 		shown = append(shown, vis{i, y})
@@ -97,7 +97,7 @@ func (a *App) historyBody(body rect) {
 		sub := clipTo(dst, area.View)
 		for _, v := range shown {
 			r := rows[v.i]
-			row := rect{area.View.X, v.y, area.View.W, historyRowH}
+			row := rect{X: area.View.X, Y: v.y, W: area.View.W, H: historyRowH}
 			if v.i%2 == 1 {
 				fillRect(sub, row, uiStripe)
 			}
@@ -115,7 +115,7 @@ func (a *App) historyBody(body rect) {
 	for _, v := range shown {
 		r := rows[v.i]
 		w := uiWidget{id: fmt.Sprintf("history.row.%d", v.i), label: r.Text,
-			r: rect{area.View.X, v.y, area.View.W, historyRowH}.intersect(area.View)}
+			r: rect{X: area.View.X, Y: v.y, W: area.View.W, H: historyRowH}.Intersect(area.View)}
 		if len(r.Pawns) == 0 {
 			a.uiSt().add(w)
 			continue

@@ -245,10 +245,10 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 				t.Fatal("no power toggle rect")
 			}
 			first, _ := a.globalToggleRect(roofButtonID)
-			if pr.Y <= first.Y || pr.right() != g.right()-globalPad {
+			if pr.Y <= first.Y || pr.Right() != g.Right()-globalPad {
 				t.Errorf("power toggle %+v: want a second row, right-aligned below %+v in %+v", pr, first, g)
 			}
-			if pr.X < g.X || pr.bottom() > g.bottom() || pr.Y < g.Y {
+			if pr.X < g.X || pr.Bottom() > g.Bottom() || pr.Y < g.Y {
 				t.Errorf("power toggle %+v outside Global %+v", pr, g)
 			}
 			if _, ok := hasButton(a.layoutHits(a.sw, a.sh), powerButtonID); !ok {
@@ -733,11 +733,11 @@ func TestPowerLayoutAtScales(t *testing.T) {
 				t.Fatalf("Global %+v is not its measured stack %v", l.Global, a.globalHeight())
 			}
 			rows := a.globalRows()
-			if rows.Legend.empty() || rows.Legend.Y < l.Global.Y {
+			if rows.Legend.Empty() || rows.Legend.Y < l.Global.Y {
 				t.Errorf("legend %+v outside Global %+v", rows.Legend, l.Global)
 			}
 			for i, r := range rows.Toggles {
-				if r.X < l.Global.X || r.right() > l.Global.right() || r.bottom() > l.Global.bottom() || r.Y < l.Global.Y {
+				if r.X < l.Global.X || r.Right() > l.Global.Right() || r.Bottom() > l.Global.Bottom() || r.Y < l.Global.Y {
 					t.Errorf("toggle %d %+v outside Global %+v", i, r, l.Global)
 				}
 			}
@@ -753,10 +753,10 @@ func TestPowerLayoutAtScales(t *testing.T) {
 			for i := range regions {
 				for j := range regions[:i] {
 					p, q := regions[i], regions[j]
-					if p.empty() || q.empty() {
+					if p.Empty() || q.Empty() {
 						continue
 					}
-					if in := p.intersect(q); in.W > 0 && in.H > 0 {
+					if in := p.Intersect(q); in.W > 0 && in.H > 0 {
 						t.Errorf("region %d %+v overlaps region %d %+v", i, p, j, q)
 					}
 				}

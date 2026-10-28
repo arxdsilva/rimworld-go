@@ -34,7 +34,7 @@ func (a *App) captureSocialUI(ui string) {
 	case "social":
 		pick("Maren")
 		a.openPaneTab("social")
-		if r := a.expandedRect(); !r.empty() { // the first row's tooltip, under the tab's heading
+		if r := a.expandedRect(); !r.Empty() { // the first row's tooltip, under the tab's heading
 			a.cursor = &[2]int{int(r.X) + paneInset + 120, int(r.Y) + paneInset + 48}
 		}
 	case "health":

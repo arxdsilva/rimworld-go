@@ -71,7 +71,7 @@ func (a *App) toastRects(sw, sh int) []rect {
 			x = (float32(sw) - w) / 2
 		}
 		x = max(min(x, float32(sw)-hudMargin-w), hudMargin)
-		out = append(out, rect{x, bottom - toastH, w, toastH})
+		out = append(out, rect{X: x, Y: bottom - toastH, W: w, H: toastH})
 		bottom -= toastStride
 	}
 	return out

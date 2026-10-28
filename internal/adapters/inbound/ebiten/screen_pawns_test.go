@@ -233,8 +233,8 @@ func TestReorderAndSwap(t *testing.T) {
 	if !ok || !ok2 {
 		t.Fatal("rows 0 and 4 should be visible")
 	}
-	x0, y0 := r0.r.center()
-	_, y4 := r4.r.center()
+	x0, y0 := r0.r.Center()
+	_, y4 := r4.r.Center()
 	f.cur.mx, f.cur.my = int(x0), int(y0)
 	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
 	f.frame(t, a)

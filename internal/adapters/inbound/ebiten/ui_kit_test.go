@@ -59,7 +59,7 @@ func TestSliderDragAndKeys(t *testing.T) {
 	a, f, u := newKit(t)
 	val := 20.0
 	released := true
-	r := rect{100, 100, 300, 30}
+	r := rect{X: 100, Y: 100, W: 300, H: 30}
 	sp := sliderSpec{Min: 0, Max: 100, Step: 5, Title: "Rain"}
 	setHook(u, func(a *App) {
 		a.uiSlider("s", r, &val, sp)
@@ -109,7 +109,7 @@ func TestSliderDragAndKeys(t *testing.T) {
 
 	// Discrete stops snap and are labelled.
 	stop := 0.0
-	dr := rect{100, 200, 300, 40}
+	dr := rect{X: 100, Y: 200, W: 300, H: 40}
 	dsp := sliderSpec{Stops: []string{"Low", "Normal", "High"}}
 	setHook(u, func(a *App) { a.uiSlider("d", dr, &stop, dsp) })
 	dt := sliderTrack(dr)
@@ -142,7 +142,7 @@ func TestTextFieldEditing(t *testing.T) {
 	t.Parallel()
 	a, f, u := newKit(t)
 	val := "ab"
-	r := rect{100, 200, 300, 32}
+	r := rect{X: 100, Y: 200, W: 300, H: 32}
 	var changed, committed bool
 	setHook(u, func(a *App) {
 		c, m := a.uiTextField("t", r, &val, textFieldSpec{})
@@ -259,7 +259,7 @@ func TestTextFieldValidatorAndMaxLen(t *testing.T) {
 	t.Parallel()
 	a, f, u := newKit(t)
 	val := ""
-	r := rect{100, 200, 200, 32}
+	r := rect{X: 100, Y: 200, W: 200, H: 32}
 	setHook(u, func(a *App) {
 		a.uiTextField("n", r, &val, textFieldSpec{MaxLen: 3, Valid: digitsOnly, Placeholder: "seed"})
 	})
@@ -279,7 +279,7 @@ func TestTextFieldMultiline(t *testing.T) {
 	t.Parallel()
 	a, f, u := newKit(t)
 	val := "first line\nsecond"
-	r := rect{100, 200, 240, 120}
+	r := rect{X: 100, Y: 200, W: 240, H: 120}
 	setHook(u, func(a *App) { a.uiTextField("m", r, &val, textFieldSpec{Multiline: true}) })
 	f.clickAt(t, a, 330, 300) // below the text: caret at the end
 	if u.caret != len([]rune(val)) {
@@ -298,12 +298,12 @@ func TestTextFieldMultiline(t *testing.T) {
 		t.Fatalf("Enter inserts a newline in a multi-line field: %q", val)
 	}
 	f.typeText(t, a, "this extra text wraps around the narrow field")
-	spans := layoutLines([]rune(val), tsBody, float64(r.fieldInner().W))
+	spans := layoutLines([]rune(val), tsBody, float64(fieldInner(r).W))
 	if len(spans) < 4 {
 		t.Fatalf("long text wraps into visual lines: %d", len(spans))
 	}
 	for _, sp := range spans {
-		if w, _ := measure(val[sp.start:sp.end], tsBody); w > float64(r.fieldInner().W)+0.5 {
+		if w, _ := measure(val[sp.start:sp.end], tsBody); w > float64(fieldInner(r).W)+0.5 {
 			t.Fatalf("line %q is %v wide", val[sp.start:sp.end], w)
 		}
 	}
@@ -352,7 +352,7 @@ func TestTextBufEdits(t *testing.T) {
 func TestScrollViewWheelAndThumb(t *testing.T) {
 	t.Parallel()
 	a, f, u := newKit(t)
-	r := rect{100, 100, 300, 200}
+	r := rect{X: 100, Y: 100, W: 300, H: 200}
 	var area scrollArea
 	wheelLeft := 0.0
 	setHook(u, func(a *App) {
@@ -380,7 +380,7 @@ func TestScrollViewWheelAndThumb(t *testing.T) {
 	}
 
 	// The thumb: 200*200/1000 = 40 px tall at the top of the 8 px bar.
-	bar := rect{r.right() - scrollBarW, r.Y, scrollBarW, r.H}
+	bar := rect{X: r.Right() - scrollBarW, Y: r.Y, W: scrollBarW, H: r.H}
 	thumb := scrollThumb(bar, 0, 800, 1000)
 	if thumb.H != 40 || thumb.Y != 100 {
 		t.Fatalf("thumb = %+v", thumb)
@@ -424,7 +424,7 @@ func TestScrollViewWheelAndThumb(t *testing.T) {
 func TestListSelectionAndKeys(t *testing.T) {
 	t.Parallel()
 	a, f, u := newKit(t)
-	r := rect{100, 100, 300, 260}
+	r := rect{X: 100, Y: 100, W: 300, H: 260}
 	sel := -1
 	setHook(u, func(a *App) {
 		a.uiList("l", r, 100, &sel, listSpec{Label: func(i int) string { return "row " + uiNum(i) }})
@@ -463,7 +463,7 @@ func TestTooltipDelayAndClamp(t *testing.T) {
 	t.Parallel()
 	a, f, u := newKit(t)
 	setHook(u, func(a *App) {
-		a.uiTip("tip", rect{200, 200, 80, 30}, "Landing site\nTemperate forest, 14 C a year.")
+		a.uiTip("tip", rect{X: 200, Y: 200, W: 80, H: 30}, "Landing site\nTemperate forest, 14 C a year.")
 	})
 	f.cur.mx, f.cur.my = 210, 210
 	for i := 1; i <= 23; i++ {
@@ -499,7 +499,7 @@ func TestTooltipDelayAndClamp(t *testing.T) {
 
 	long := "Title that is rather long and will need wrapping onto several lines to fit\n" + strings.Repeat("A body sentence that keeps going. ", 12)
 	c := tipLayout(long, 1280, 720, 1270, 710)
-	if c.Box.W > tipMaxW || c.Box.X < tipMargin || c.Box.Y < tipMargin || c.Box.right() > 1280-tipMargin || c.Box.bottom() > 720-tipMargin {
+	if c.Box.W > tipMaxW || c.Box.X < tipMargin || c.Box.Y < tipMargin || c.Box.Right() > 1280-tipMargin || c.Box.Bottom() > 720-tipMargin {
 		t.Fatalf("card must stay on screen and within 360 px: %+v", c.Box)
 	}
 	if len(c.Title) < 2 || len(c.Body) < 3 {
@@ -556,7 +556,7 @@ func TestModalEscClosesTopOnly(t *testing.T) {
 
 	// The X closes the top one too.
 	_, tr, _, _ := modalGeometry(a.sw, a.sh, u.modals[0])
-	f.clickAt(t, a, int(tr.right())-modalCloseW/2-8, int(tr.Y+tr.H/2))
+	f.clickAt(t, a, int(tr.Right())-modalCloseW/2-8, int(tr.Y+tr.H/2))
 	if len(u.modals) != 0 || strings.Join(closed, ",") != "two,one" {
 		t.Fatalf("the X closes: %v closed=%v", u.modals, closed)
 	}
@@ -582,7 +582,7 @@ func TestModalConfirmAndButtons(t *testing.T) {
 	if !found {
 		t.Fatalf("OK button is registered: %+v", u.cur)
 	}
-	cx, cy := w.r.center()
+	cx, cy := w.r.Center()
 	f.clickAt(t, a, int(cx), int(cy))
 	if ok != 1 || len(u.modals) != 0 {
 		t.Fatalf("OK runs the action and closes: ok=%d modals=%d", ok, len(u.modals))
@@ -590,7 +590,7 @@ func TestModalConfirmAndButtons(t *testing.T) {
 	a.uiConfirm("c", "Discard world?", "The generated world will be lost.", "Discard", false, func() { ok++ })
 	f.frame(t, a)
 	w, _ = u.find("modal.c.cancel")
-	cx, cy = w.r.center()
+	cx, cy = w.r.Center()
 	f.clickAt(t, a, int(cx), int(cy))
 	if ok != 1 || len(u.modals) != 0 {
 		t.Fatalf("Cancel closes without acting: ok=%d", ok)
@@ -612,7 +612,7 @@ func TestTableSort(t *testing.T) {
 	names := []string{"cara", "adam", "bea"}
 	scores := []int{5, 9, 1}
 	sel := -1
-	r := rect{100, 100, 400, 200}
+	r := rect{X: 100, Y: 100, W: 400, H: 200}
 	cols := []tableCol{
 		{ID: "name", Title: "Name", Cell: func(i int) string { return names[i] }, Less: func(x, y int) bool { return names[x] < names[y] }},
 		{ID: "score", Title: "Score", Cell: func(i int) string { return uiNum(scores[i]) }, Less: func(x, y int) bool { return scores[x] < scores[y] },
@@ -685,11 +685,11 @@ func TestTabFocusOrder(t *testing.T) {
 	on, text, tab := false, "name", 0
 	v := 3.0
 	setHook(u, func(a *App) {
-		a.uiCheck("a", rect{100, 100, 200, 24}, "Check", &on, checkOpts{})
-		a.uiSlider("b", rect{100, 140, 200, 30}, &v, sliderSpec{Min: 0, Max: 10})
-		a.uiTextField("c", rect{100, 190, 200, 30}, &text, textFieldSpec{})
-		a.uiTabs("d", rect{100, 240, 300, 28}, []string{"One", "Two", "Three"}, &tab, tabsOpts{})
-		a.uiButton("e", rect{100, 290, 100, 30}, "Go", btnOpts{Disabled: true, Reason: "not yet"})
+		a.uiCheck("a", rect{X: 100, Y: 100, W: 200, H: 24}, "Check", &on, checkOpts{})
+		a.uiSlider("b", rect{X: 100, Y: 140, W: 200, H: 30}, &v, sliderSpec{Min: 0, Max: 10})
+		a.uiTextField("c", rect{X: 100, Y: 190, W: 200, H: 30}, &text, textFieldSpec{})
+		a.uiTabs("d", rect{X: 100, Y: 240, W: 300, H: 28}, []string{"One", "Two", "Three"}, &tab, tabsOpts{})
+		a.uiButton("e", rect{X: 100, Y: 290, W: 100, H: 30}, "Go", btnOpts{Disabled: true, Reason: "not yet"})
 	})
 	f.frame(t, a)
 	step := func(mods input.Mod) string {
@@ -752,13 +752,13 @@ func TestCheckRadioAndButtons(t *testing.T) {
 	on, pick, tab := false, 0, 0
 	clicks := 0
 	setHook(u, func(a *App) {
-		a.uiCheck("chk", rect{100, 100, 200, 24}, "Ruins", &on, checkOpts{})
-		a.uiRadio("rad", rect{100, 140, 200, 72}, []string{"One", "Two", "Locked"}, &pick, radioOpts{Disabled: []string{"", "", "needs a map"}})
-		a.uiTabs("tabs", rect{100, 240, 400, 28}, []string{"A", "B", "C"}, &tab, tabsOpts{Disabled: []string{"", "", "later"}})
-		if a.uiButton("btn", rect{100, 300, 100, 30}, "Go", btnOpts{}) {
+		a.uiCheck("chk", rect{X: 100, Y: 100, W: 200, H: 24}, "Ruins", &on, checkOpts{})
+		a.uiRadio("rad", rect{X: 100, Y: 140, W: 200, H: 72}, []string{"One", "Two", "Locked"}, &pick, radioOpts{Disabled: []string{"", "", "needs a map"}})
+		a.uiTabs("tabs", rect{X: 100, Y: 240, W: 400, H: 28}, []string{"A", "B", "C"}, &tab, tabsOpts{Disabled: []string{"", "", "later"}})
+		if a.uiButton("btn", rect{X: 100, Y: 300, W: 100, H: 30}, "Go", btnOpts{}) {
 			clicks++
 		}
-		if a.uiButton("dis", rect{220, 300, 100, 30}, "No", btnOpts{Disabled: true, Reason: "pick a tile first"}) {
+		if a.uiButton("dis", rect{X: 220, Y: 300, W: 100, H: 30}, "No", btnOpts{Disabled: true, Reason: "pick a tile first"}) {
 			clicks += 100
 		}
 	})
@@ -788,7 +788,7 @@ func TestCheckRadioAndButtons(t *testing.T) {
 	if pick != 1 {
 		t.Fatalf("Down skips the disabled option: %d", pick)
 	}
-	rects := tabRects(rect{100, 240, 400, 28}, []string{"A", "B", "C"})
+	rects := tabRects(rect{X: 100, Y: 240, W: 400, H: 28}, []string{"A", "B", "C"})
 	f.clickAt(t, a, int(rects[1].X)+5, 250)
 	f.clickAt(t, a, int(rects[2].X)+5, 250)
 	if tab != 1 || a.hint != "later" {
@@ -818,7 +818,7 @@ func TestWheelRoutingMenuVsCamera(t *testing.T) {
 	t.Parallel()
 	// In a menu the scroll view takes the wheel from the frame.
 	a, f, u := newKit(t)
-	r := rect{100, 100, 300, 200}
+	r := rect{X: 100, Y: 100, W: 300, H: 200}
 	left := 0.0
 	setHook(u, func(a *App) {
 		a.uiScrollArea("menu", r, 900, scrollOpts{})
@@ -835,7 +835,7 @@ func TestWheelRoutingMenuVsCamera(t *testing.T) {
 	// the list the wheel zooms the map as before.
 	ca, _, cs := inputColony(t)
 	ca.renderer.smooth.instant = true
-	lr := rect{300, 200, 300, 200}
+	lr := rect{X: 300, Y: 200, W: 300, H: 200}
 	ca.uiPushModal(modal{id: "list", title: "List", w: 400, h: 300, draw: func(a *App, body rect) {
 		a.uiScrollArea("modal.list", lr, 900, scrollOpts{})
 	}})
@@ -886,7 +886,7 @@ func TestSetupMinWindow(t *testing.T) {
 		if a.setupTooSmall(sw, sh) {
 			return
 		}
-		a.uiButton("btn", rect{100, 100, 100, 30}, "Go", btnOpts{})
+		a.uiButton("btn", rect{X: 100, Y: 100, W: 100, H: 30}, "Go", btnOpts{})
 	})
 	hasBtn := func() bool {
 		for _, b := range a.layoutHits(a.size()) {
@@ -914,61 +914,61 @@ func TestSetupMinWindow(t *testing.T) {
 func TestDialogFrameLayout(t *testing.T) {
 	t.Parallel()
 	frame, title, content, footer := dialogFrame(1280, 720)
-	if frame != (rect{40, 40, 1200, 640}) {
+	if frame != (rect{X: 40, Y: 40, W: 1200, H: 640}) {
 		t.Fatalf("frame at 1280x720 = %+v", frame)
 	}
-	if title != (rect{40, 40, 1200, 44}) || footer != (rect{40, 624, 1200, 56}) {
+	if title != (rect{X: 40, Y: 40, W: 1200, H: 44}) || footer != (rect{X: 40, Y: 624, W: 1200, H: 56}) {
 		t.Fatalf("title %+v footer %+v", title, footer)
 	}
-	if content != (rect{56, 100, 1168, 508}) {
+	if content != (rect{X: 56, Y: 100, W: 1168, H: 508}) {
 		t.Fatalf("content = %+v (16 px padding between the bars)", content)
 	}
 	frame, _, _, _ = dialogFrame(1920, 1080)
-	if frame != (rect{340, 160, 1240, 760}) {
+	if frame != (rect{X: 340, Y: 160, W: 1240, H: 760}) {
 		t.Fatalf("frame at 1920x1080 is capped and centred: %+v", frame)
 	}
 	back, next := footerBack(footer), footerNext(footer)
-	if back != (rect{56, 634, 140, 36}) || next != (rect{1064, 634, 160, 36}) {
+	if back != (rect{X: 56, Y: 634, W: 140, H: 36}) || next != (rect{X: 1064, Y: 634, W: 160, H: 36}) {
 		t.Fatalf("back %+v next %+v", back, next)
 	}
 
-	r := rect{10, 20, 100, 60}
-	l, rt := r.splitH(30)
-	if l != (rect{10, 20, 30, 60}) || rt != (rect{40, 20, 70, 60}) {
+	r := rect{X: 10, Y: 20, W: 100, H: 60}
+	l, rt := r.SplitH(30)
+	if l != (rect{X: 10, Y: 20, W: 30, H: 60}) || rt != (rect{X: 40, Y: 20, W: 70, H: 60}) {
 		t.Fatalf("splitH %+v %+v", l, rt)
 	}
-	l, rt = r.splitH(-30)
-	if l.W != 70 || rt != (rect{80, 20, 30, 60}) {
+	l, rt = r.SplitH(-30)
+	if l.W != 70 || rt != (rect{X: 80, Y: 20, W: 30, H: 60}) {
 		t.Fatalf("splitH(-30) cuts from the right: %+v %+v", l, rt)
 	}
-	tp, bt := r.splitV(-20)
-	if tp.H != 40 || bt != (rect{10, 60, 100, 20}) {
+	tp, bt := r.SplitV(-20)
+	if tp.H != 40 || bt != (rect{X: 10, Y: 60, W: 100, H: 20}) {
 		t.Fatalf("splitV(-20) %+v %+v", tp, bt)
 	}
-	cols := rect{0, 0, 100, 10}.columns(3, 5)
-	if len(cols) != 3 || cols[0].W != 30 || cols[1].X != 35 || cols[2].right() != 100 {
+	cols := rect{X: 0, Y: 0, W: 100, H: 10}.Columns(3, 5)
+	if len(cols) != 3 || cols[0].W != 30 || cols[1].X != 35 || cols[2].Right() != 100 {
 		t.Fatalf("columns = %+v", cols)
 	}
-	rows := rect{0, 0, 50, 100}.rows(20, 5)
+	rows := rect{X: 0, Y: 0, W: 50, H: 100}.Rows(20, 5)
 	if len(rows) != 4 || rows[3].Y != 75 {
 		t.Fatalf("rows fit the height: %+v", rows)
 	}
-	if got := r.rowsN(5, 20, 0); len(got) != 5 || got[4].Y != 100 {
+	if got := r.RowsN(5, 20, 0); len(got) != 5 || got[4].Y != 100 {
 		t.Fatalf("rowsN overflows on purpose: %+v", got)
 	}
-	if !r.contains(10, 20) || r.contains(110, 20) || !r.hit(50, 50) || r.hit(9, 50) {
+	if !r.Contains(10, 20) || r.Contains(110, 20) || !r.Hit(50, 50) || r.Hit(9, 50) {
 		t.Fatal("contains / hit")
 	}
-	if x, y := r.center(); x != 60 || y != 50 {
+	if x, y := r.Center(); x != 60 || y != 50 {
 		t.Fatalf("center %v,%v", x, y)
 	}
-	if in := r.inset(5); in != (rect{15, 25, 90, 50}) {
+	if in := r.Inset(5); in != (rect{X: 15, Y: 25, W: 90, H: 50}) {
 		t.Fatalf("inset %+v", in)
 	}
-	if !r.intersect(rect{200, 200, 5, 5}).empty() || r.intersect(rect{50, 50, 100, 100}) != (rect{50, 50, 60, 30}) {
+	if !r.Intersect(rect{X: 200, Y: 200, W: 5, H: 5}).Empty() || r.Intersect(rect{X: 50, Y: 50, W: 100, H: 100}) != (rect{X: 50, Y: 50, W: 60, H: 30}) {
 		t.Fatal("intersect")
 	}
-	if c := r.centered(20, 20); c != (rect{50, 40, 20, 20}) {
+	if c := r.Centered(20, 20); c != (rect{X: 50, Y: 40, W: 20, H: 20}) {
 		t.Fatalf("centered %+v", c)
 	}
 }
@@ -1005,7 +1005,7 @@ func TestKeyRepeatSchedule(t *testing.T) {
 
 func TestProgressAndSparkline(t *testing.T) {
 	t.Parallel()
-	r := rect{0, 0, 100, 40}
+	r := rect{X: 0, Y: 0, W: 100, H: 40}
 	pts := sparkPoints([]int{1, 5, 3, 9}, r)
 	if len(pts) != 4 || pts[0][0] != sparkPad || pts[3][0] != 100-sparkPad {
 		t.Fatalf("x spans the box: %v", pts)
@@ -1024,8 +1024,8 @@ func TestProgressAndSparkline(t *testing.T) {
 	img := ebiten.NewImage(200, 100)
 	drawSparkline(img, r, []int{1, 5, 3, 9}, uiAccent)
 	drawSparkline(img, r, nil, uiAccent)
-	drawProgress(img, rect{0, 50, 160, 40}, "World", 0.4, "Rivers")
-	drawProgress(img, rect{0, 50, 160, 40}, "World", 1.7, "")
+	drawProgress(img, rect{X: 0, Y: 50, W: 160, H: 40}, "World", 0.4, "Rivers")
+	drawProgress(img, rect{X: 0, Y: 50, W: 160, H: 40}, "World", 1.7, "")
 }
 
 // testScreen is a screen id nothing else uses, for the registry path.
@@ -1038,7 +1038,7 @@ var testScreenDrawn int
 func registerTestScreen(a *App) {
 	a.shell.screens[testScreen] = func(a *App, sw, sh int) {
 		testScreenDrawn++
-		a.uiPanel(rect{10, 10, 100, 100})
+		a.uiPanel(rect{X: 10, Y: 10, W: 100, H: 100})
 		a.uiLabel(20, 20, "registered", tsBody)
 	}
 }
@@ -1069,22 +1069,22 @@ func TestRegisteredScreenUIAndPaintSmoke(t *testing.T) {
 	on := true
 	pick := 1
 	setHook(u, func(a *App) {
-		a.uiSlider("st", rect{50, 50, 300, 40}, &v, sliderSpec{Stops: []string{"Low", "Normal", "High"}})
-		a.uiSlider("ct", rect{50, 100, 300, 30}, &sv, sliderSpec{Min: 0, Max: 1, Disabled: true, Reason: "locked", Format: func(f float64) string { return "x" }})
-		a.uiTextField("tf", rect{50, 150, 200, 30}, &text, textFieldSpec{})
-		a.uiTextField("mf", rect{50, 200, 160, 80}, &multi, textFieldSpec{Multiline: true})
-		a.uiTextField("ph", rect{300, 150, 200, 30}, new(string), textFieldSpec{Placeholder: "seed"})
-		a.uiTextField("dis", rect{300, 200, 200, 30}, &text, textFieldSpec{Disabled: true, Reason: "locked"})
-		a.uiList("ls", rect{50, 300, 200, 100}, 8, &sel, listSpec{Label: func(i int) string { return "item " + uiNum(i) }, Disabled: func(i int) string {
+		a.uiSlider("st", rect{X: 50, Y: 50, W: 300, H: 40}, &v, sliderSpec{Stops: []string{"Low", "Normal", "High"}})
+		a.uiSlider("ct", rect{X: 50, Y: 100, W: 300, H: 30}, &sv, sliderSpec{Min: 0, Max: 1, Disabled: true, Reason: "locked", Format: func(f float64) string { return "x" }})
+		a.uiTextField("tf", rect{X: 50, Y: 150, W: 200, H: 30}, &text, textFieldSpec{})
+		a.uiTextField("mf", rect{X: 50, Y: 200, W: 160, H: 80}, &multi, textFieldSpec{Multiline: true})
+		a.uiTextField("ph", rect{X: 300, Y: 150, W: 200, H: 30}, new(string), textFieldSpec{Placeholder: "seed"})
+		a.uiTextField("dis", rect{X: 300, Y: 200, W: 200, H: 30}, &text, textFieldSpec{Disabled: true, Reason: "locked"})
+		a.uiList("ls", rect{X: 50, Y: 300, W: 200, H: 100}, 8, &sel, listSpec{Label: func(i int) string { return "item " + uiNum(i) }, Disabled: func(i int) string {
 			if i == 5 {
 				return "gone"
 			}
 			return ""
 		}})
-		a.uiCheck("ck", rect{300, 300, 150, 24}, "Check", &on, checkOpts{Disabled: true, Reason: "r"})
-		a.uiRadio("rd", rect{300, 340, 150, 48}, []string{"a", "b"}, &pick, radioOpts{})
-		a.uiButton("b1", rect{300, 400, 90, 30}, "Primary", btnOpts{Style: btnPrimary})
-		a.uiButton("b2", rect{400, 400, 90, 30}, "Danger", btnOpts{Style: btnDanger, Tip: "Careful\nIt is final."})
+		a.uiCheck("ck", rect{X: 300, Y: 300, W: 150, H: 24}, "Check", &on, checkOpts{Disabled: true, Reason: "r"})
+		a.uiRadio("rd", rect{X: 300, Y: 340, W: 150, H: 48}, []string{"a", "b"}, &pick, radioOpts{})
+		a.uiButton("b1", rect{X: 300, Y: 400, W: 90, H: 30}, "Primary", btnOpts{Style: btnPrimary})
+		a.uiButton("b2", rect{X: 400, Y: 400, W: 90, H: 30}, "Danger", btnOpts{Style: btnDanger, Tip: "Careful\nIt is final."})
 	})
 	f.clickAt(t, a, 100, 165) // edit the single-line field
 	f.key(t, a, "ArrowLeft", input.ModShift)

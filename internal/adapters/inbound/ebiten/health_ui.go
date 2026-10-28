@@ -172,17 +172,17 @@ func (a *App) healthTab(p game.PawnView, in rect) {
 		a.uiLabel(in.X, top, noDataYet, dimText())
 		return
 	}
-	a.healthCare(p, rect{in.X, top, in.W, healthCareH}, h) // MED-03
+	a.healthCare(p, rect{X: in.X, Y: top, W: in.W, H: healthCareH}, h) // MED-03
 	top += healthCareH + 6
-	body := rect{in.X, top, in.W, in.bottom() - top}
-	upper, ops := body.splitV(body.H * (1 - healthOpsShare))
-	left, right := upper.splitH(upper.W * healthCapsShare)
-	a.healthCaps(left.insetXY(0, 0), h)
-	partsR := rect{right.X + 8, right.Y, right.W - 8, right.H - 6}
+	body := rect{X: in.X, Y: top, W: in.W, H: in.Bottom() - top}
+	upper, ops := body.SplitV(body.H * (1 - healthOpsShare))
+	left, right := upper.SplitH(upper.W * healthCapsShare)
+	a.healthCaps(left.InsetXY(0, 0), h)
+	partsR := rect{X: right.X + 8, Y: right.Y, W: right.W - 8, H: right.H - 6}
 	if n := len(h.Conditions); n > 0 { // MED-02: the conditions sit under the part rows
 		condH := min(float32(lineStep(tsLabel))+2+float32(n)*healthCondRowH, partsR.H/2)
 		partsR.H -= condH
-		a.healthConds(rect{partsR.X, partsR.bottom(), partsR.W, condH}, h.Conditions)
+		a.healthConds(rect{X: partsR.X, Y: partsR.Bottom(), W: partsR.W, H: condH}, h.Conditions)
 	}
 	a.healthParts(partsR, h.Parts)
 	a.healthOps(p, ops, h)
@@ -201,7 +201,7 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 	st.Color = uiTextDim
 	a.uiLabel(r.X, r.Y+(r.H-float32(lineH(st)))/2, "Care", st)
 	x := r.X + 40
-	w := r.right() - x
+	w := r.Right() - x
 	if !p.Prisoner && !p.Visitor {
 		w -= healthSelfW + 6
 	}
@@ -209,7 +209,7 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 	u := a.uiSt()
 	for c := medcare.Policy(0); c < medcare.NumPolicies; c++ {
 		cur := medcare.Policy(h.Care) == c
-		if a.uiButton(healthCareID(c), rect{x, r.Y, bw - 2, r.H}, careShort(c),
+		if a.uiButton(healthCareID(c), rect{X: x, Y: r.Y, W: bw - 2, H: r.H}, careShort(c),
 			btnOpts{Selected: cur, Tip: careTip(c), Disabled: dead, Reason: reason}) && !cur {
 			a.shell.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(p.ID), Mode: uint8(c)})
 		}
@@ -225,7 +225,7 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 		return // self-tend is for colonists
 	}
 	on := h.SelfTend
-	if a.uiCheck(healthSelfID, rect{r.right() - healthSelfW, r.Y, healthSelfW, r.H}, "Self-tend", &on,
+	if a.uiCheck(healthSelfID, rect{X: r.Right() - healthSelfW, Y: r.Y, W: healthSelfW, H: r.H}, "Self-tend", &on,
 		checkOpts{Disabled: dead, Reason: reason,
 			Tip: "Self-tend\nWith no one else to help, this colonist tends its own wounds (at lower quality)."}) {
 		a.shell.Enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(p.ID), Enabled: on})
@@ -240,7 +240,7 @@ func (a *App) healthArrow(id string, r rect, up bool, o btnOpts) bool {
 	if o.Disabled {
 		c = uiTextDisabled
 	}
-	cx, cy := r.center()
+	cx, cy := r.Center()
 	a.uiSt().queue(func(dst *ebiten.Image) {
 		if up {
 			uiFillPoly(dst, [][2]float32{{cx - 5, cy + 3}, {cx + 5, cy + 3}, {cx, cy - 4}}, c, true)
@@ -298,7 +298,7 @@ func (a *App) healthConds(r rect, conds []game.ConditionView) {
 	step := float32(lineStep(tsBody))
 	u := a.uiSt()
 	for i, c := range conds {
-		if y+healthCondRowH > r.bottom()+1 {
+		if y+healthCondRowH > r.Bottom()+1 {
 			break
 		}
 		st := tsBody
@@ -314,27 +314,27 @@ func (a *App) healthConds(r rect, conds []game.ConditionView) {
 			if c.Due {
 				ds.Color = uiDanger
 			}
-			a.uiLabel(r.right()-4, y+2, due, ds)
+			a.uiLabel(r.Right()-4, y+2, due, ds)
 		}
-		sev := rect{r.X, y + step, r.W - 4, healthCondBarH}
-		imm := rect{r.X, sev.bottom() + 2, r.W - 4, healthCondBarH}
+		sev := rect{X: r.X, Y: y + step, W: r.W - 4, H: healthCondBarH}
+		imm := rect{X: r.X, Y: sev.Bottom() + 2, W: r.W - 4, H: healthCondBarH}
 		sevW := sev.W * float32(min(max(c.SevPct, 0), 100)) / 100
 		immW := imm.W * float32(min(max(c.ImmPct, 0), 100)) / 100
 		u.queue(func(dst *ebiten.Image) {
 			fillRect(dst, sev, uiSliderTrack)
 			fillRect(dst, imm, uiSliderTrack)
 			if sevW > 0 {
-				fillRect(dst, rect{sev.X, sev.Y, sevW, sev.H}, uiDanger)
+				fillRect(dst, rect{X: sev.X, Y: sev.Y, W: sevW, H: sev.H}, uiDanger)
 			}
 			if immW > 0 {
-				fillRect(dst, rect{imm.X, imm.Y, immW, imm.H}, uiGood)
+				fillRect(dst, rect{X: imm.X, Y: imm.Y, W: immW, H: imm.H}, uiGood)
 			}
 		})
 		label := fmt.Sprintf("%s: severity %d%%, immunity %d%%", c.Label, c.SevPct, c.ImmPct)
 		if due != "" {
 			label += ", " + due
 		}
-		u.add(uiWidget{id: healthCondID(i), r: rect{r.X, y, r.W, healthCondRowH - 2}, label: label, tip: c.Tip})
+		u.add(uiWidget{id: healthCondID(i), r: rect{X: r.X, Y: y, W: r.W, H: healthCondRowH - 2}, label: label, tip: c.Tip})
 		y += healthCondRowH
 	}
 }
@@ -354,14 +354,14 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 	y := r.Y
 	step := float32(lineStep(tsBody))
 	u := a.uiSt()
-	if h.State != "" && y+step <= r.bottom() {
+	if h.State != "" && y+step <= r.Bottom() {
 		st := tsBody
 		st.Color = healthStateColor(h)
 		a.uiLabel(r.X, y, fitText(h.State, st, r.W-4), st)
-		u.add(uiWidget{id: healthStateID, r: rect{r.X, y, r.W, step}, label: h.State, tip: healthStateTip(h)})
+		u.add(uiWidget{id: healthStateID, r: rect{X: r.X, Y: y, W: r.W, H: step}, label: h.State, tip: healthStateTip(h)})
 		y += step + 2
 	}
-	if (h.BloodLossPct > 0 || h.BleedPerDay > 0) && y+step+healthBloodBarH+2 <= r.bottom() {
+	if (h.BloodLossPct > 0 || h.BleedPerDay > 0) && y+step+healthBloodBarH+2 <= r.Bottom() {
 		c := uiWarning
 		if h.BleedPerDay > 0 || h.BloodLossPct >= 60 {
 			c = uiDanger
@@ -370,8 +370,8 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 		a.uiLabel(r.X, y, fitText("Blood loss", tsBody, r.W-48), tsBody)
 		st := tsBody
 		st.Color, st.Align = c, alignRight
-		a.uiLabel(r.right()-4, y, fmt.Sprintf("%d%%", h.BloodLossPct), st)
-		bar := rect{r.X, y + step, r.W - 4, healthBloodBarH}
+		a.uiLabel(r.Right()-4, y, fmt.Sprintf("%d%%", h.BloodLossPct), st)
+		bar := rect{X: r.X, Y: y + step, W: r.W - 4, H: healthBloodBarH}
 		fill := bar
 		fill.W = bar.W * float32(min(max(h.BloodLossPct, 0), 100)) / 100
 		u.queue(func(dst *ebiten.Image) {
@@ -380,17 +380,17 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 				fillRect(dst, fill, c)
 			}
 		})
-		u.add(uiWidget{id: healthBloodID, r: rect{r.X, y, r.W, step + healthBloodBarH}, label: label, tip: healthBloodTip(h)})
+		u.add(uiWidget{id: healthBloodID, r: rect{X: r.X, Y: y, W: r.W, H: step + healthBloodBarH}, label: label, tip: healthBloodTip(h)})
 		y += step + healthBloodBarH + 4
 	}
 	line := func(label string, pct int, c color.RGBA) {
-		if y+step > r.bottom() {
+		if y+step > r.Bottom() {
 			return
 		}
 		a.uiLabel(r.X, y, fitText(label, tsBody, r.W-48), tsBody)
 		st := tsBody
 		st.Color, st.Align = c, alignRight
-		a.uiLabel(r.right()-4, y, fmt.Sprintf("%d%%", pct), st)
+		a.uiLabel(r.Right()-4, y, fmt.Sprintf("%d%%", pct), st)
 		y += step
 	}
 	painC := uiText
@@ -402,10 +402,10 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 		y0 := y
 		line(c.Label, c.Pct, healthCapColor(c.Pct))
 		if y > y0 && c.Tip != "" {
-			u.add(uiWidget{id: healthCapID(i), r: rect{r.X, y0, r.W, step}, label: fmt.Sprintf("%s: %d%%", c.Label, c.Pct), tip: c.Tip})
+			u.add(uiWidget{id: healthCapID(i), r: rect{X: r.X, Y: y0, W: r.W, H: step}, label: fmt.Sprintf("%s: %d%%", c.Label, c.Pct), tip: c.Tip})
 		}
 	}
-	if len(h.Drugs) > 0 && y+2*step <= r.bottom() {
+	if len(h.Drugs) > 0 && y+2*step <= r.Bottom() {
 		y += 4
 		a.uiLabel(r.X, y, "Drugs", tsLabel)
 		y += float32(lineStep(tsLabel))
@@ -439,7 +439,7 @@ func (a *App) healthParts(r rect, parts []game.PartView) {
 	var shown []vis
 	for i := range rows {
 		y := area.View.Y + float32(i)*healthRowH - area.Off
-		if y+healthRowH < area.View.Y || y > area.View.bottom() {
+		if y+healthRowH < area.View.Y || y > area.View.Bottom() {
 			continue
 		}
 		shown = append(shown, vis{i, y})
@@ -447,12 +447,12 @@ func (a *App) healthParts(r rect, parts []game.PartView) {
 	u.queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for _, v := range shown {
-			paintPartRow(sub, rect{area.View.X, v.y, area.View.W, healthRowH}, parts[rows[v.i]], v.i%2 == 1)
+			paintPartRow(sub, rect{X: area.View.X, Y: v.y, W: area.View.W, H: healthRowH}, parts[rows[v.i]], v.i%2 == 1)
 		}
 	})
 	for _, v := range shown {
 		pt := parts[rows[v.i]]
-		hit := rect{area.View.X, v.y, area.View.W, healthRowH}.intersect(area.View)
+		hit := rect{X: area.View.X, Y: v.y, W: area.View.W, H: healthRowH}.Intersect(area.View)
 		tip := pt.Label + "\n" + pt.Status
 		if !strings.HasPrefix(pt.Status, game.PartMissing) && !strings.HasPrefix(pt.Status, game.PartReplaced) {
 			tip += fmt.Sprintf("\nHealth left: %d", pt.HP)
@@ -494,7 +494,7 @@ func paintPartRow(dst *ebiten.Image, row rect, p game.PartView, stripe bool) {
 func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 	dead := p.Status == "dead"
 	a.uiLabel(r.X, r.Y+4, "Operations", tsLabel)
-	addR := rect{r.right() - 132, r.Y, 132, 24}
+	addR := rect{X: r.Right() - 132, Y: r.Y, W: 132, H: 24}
 	reason := ""
 	switch {
 	case dead:
@@ -512,7 +512,7 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		return
 	}
 	for _, op := range h.Operations {
-		if y+healthOpRowH > r.bottom() {
+		if y+healthOpRowH > r.Bottom() {
 			break
 		}
 		textW := r.W - 96 - 2*healthArrowW - healthChanceW
@@ -525,16 +525,16 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 			a.uiLabel(r.X, y+4, fitText(op.Label, tsBody, textW), tsBody)
 		}
 		// MED-03: move it one place up or down the queue
-		upR := rect{r.right() - 84 - 2*healthArrowW, y, healthArrowW, healthOpRowH - 2}
+		upR := rect{X: r.Right() - 84 - 2*healthArrowW, Y: y, W: healthArrowW, H: healthOpRowH - 2}
 		// MED-06: the success chance, its factors on hover
 		if op.ChanceTip != "" {
-			cr := rect{upR.X - healthChanceW - 2, y, healthChanceW, healthOpRowH - 2}
+			cr := rect{X: upR.X - healthChanceW - 2, Y: y, W: healthChanceW, H: healthOpRowH - 2}
 			cs := tsBody
 			cs.Color, cs.Align = healthChanceColor(op.ChancePct), alignRight
-			a.uiLabel(cr.right()-2, y+4, healthChanceText(op), cs)
+			a.uiLabel(cr.Right()-2, y+4, healthChanceText(op), cs)
 			a.uiSt().add(uiWidget{id: healthChanceID(op.Slot), r: cr, label: healthChanceText(op), tip: op.ChanceTip})
 		}
-		downR := rect{upR.right() + 2, y, healthArrowW, healthOpRowH - 2}
+		downR := rect{X: upR.Right() + 2, Y: y, W: healthArrowW, H: healthOpRowH - 2}
 		upWhy, downWhy := "", ""
 		switch {
 		case dead:
@@ -554,7 +554,7 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 			Tip: "Move down\nDo " + op.Label + " later."}) {
 			a.shell.Enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: 1})
 		}
-		if a.uiButton(healthRemoveID(op.Slot), rect{r.right() - 80, y, 80, healthOpRowH - 2}, "Cancel",
+		if a.uiButton(healthRemoveID(op.Slot), rect{X: r.Right() - 80, Y: y, W: 80, H: healthOpRowH - 2}, "Cancel",
 			btnOpts{Style: btnDanger, Tip: "Cancel\nTake " + op.Label + " off the queue."}) {
 			a.shell.Enqueue(command.Command{Kind: command.RemoveOperation, Pawn: uint64(p.ID), Index: op.Slot})
 		}
@@ -739,11 +739,11 @@ func (a *App) paintOptionRow(dst *ebiten.Image, row rect, o healthOption, hover,
 		st.Color = uiAccent
 	}
 	if o.reason == "" {
-		drawText(dst, fitText(o.label, st, row.right()-textX-4), float64(textX), float64(row.Y)+(float64(row.H)-lineH(st))/2, st)
+		drawText(dst, fitText(o.label, st, row.Right()-textX-4), float64(textX), float64(row.Y)+(float64(row.H)-lineH(st))/2, st)
 		return
 	}
 	sm := tsSmall
 	sm.Color = uiWarning
-	drawText(dst, fitText(o.label, st, row.right()-textX-4), float64(textX), float64(row.Y)+1, st)
-	drawText(dst, fitText(o.reason, sm, row.right()-textX-4), float64(textX), float64(row.Y)+lineH(st)+1, sm)
+	drawText(dst, fitText(o.label, st, row.Right()-textX-4), float64(textX), float64(row.Y)+1, st)
+	drawText(dst, fitText(o.reason, sm, row.Right()-textX-4), float64(textX), float64(row.Y)+lineH(st)+1, sm)
 }

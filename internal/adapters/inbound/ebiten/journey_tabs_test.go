@@ -247,9 +247,9 @@ func clickIDWith(j *journey, id string, mods input.Mod) {
 		if !ok {
 			j.t.Fatalf("no button or widget %q", id)
 		}
-		x, y = w.r.center()
+		x, y = w.r.Center()
 	}
-	s := float32(j.a.scale.s)
+	s := float32(j.a.scale.S)
 	j.f.cur.mx, j.f.cur.my = int(x*s), int(y*s)
 	j.f.click(j.t, j.a, mbLeft, mods)
 	j.f.cur.mx, j.f.cur.my = -50, -50

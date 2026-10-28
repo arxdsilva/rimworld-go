@@ -177,8 +177,8 @@ type globalRowRects struct {
 func layoutGlobal(g rect, p globalPlan, nToggles int) globalRowRects {
 	var o globalRowRects
 	text := textRowH()
-	right := g.right() - globalPad
-	y := g.bottom() - globalPad
+	right := g.Right() - globalPad
+	y := g.Bottom() - globalPad
 	rows := (nToggles + globalPerRow - 1) / globalPerRow
 	o.Toggles = make([]rect, nToggles)
 	for row := rows - 1; row >= 0; row-- {
@@ -186,7 +186,7 @@ func layoutGlobal(g rect, p globalPlan, nToggles int) globalRowRects {
 		first, last := row*globalPerRow, min(nToggles, (row+1)*globalPerRow)
 		x := right - float32(last-first)*globalIconPx - float32(last-first-1)*globalIconGap
 		for i := first; i < last; i++ {
-			o.Toggles[i] = rect{x, y, globalIconPx, globalIconPx}
+			o.Toggles[i] = rect{X: x, Y: y, W: globalIconPx, H: globalIconPx}
 			x += globalIconPx + globalIconGap
 		}
 		if row > 0 {
@@ -196,13 +196,13 @@ func layoutGlobal(g rect, p globalPlan, nToggles int) globalRowRects {
 	y -= globalGap + speedBtnH
 	x := right - 4*speedBtnW - 3*globalIconGap
 	for i := range o.Speed {
-		o.Speed[i] = rect{x, y, speedBtnW, speedBtnH}
+		o.Speed[i] = rect{X: x, Y: y, W: speedBtnW, H: speedBtnH}
 		x += speedBtnW + globalIconGap
 	}
 	y -= globalGap
 	next := func() rect {
 		y -= text
-		return rect{g.X + globalPad, y, g.W - 2*globalPad, text}
+		return rect{X: g.X + globalPad, Y: y, W: g.W - 2*globalPad, H: text}
 	}
 	if p.reason != "" {
 		o.Reason = next()
@@ -217,11 +217,11 @@ func layoutGlobal(g rect, p globalPlan, nToggles int) globalRowRects {
 	for i := len(p.chips) - 1; i >= 0; i-- {
 		r := next()
 		w := min(textW(p.chips[i].label, tsBody)+2*globalPad, g.W)
-		o.Conds[i] = rect{g.right() - w, r.Y, w, r.H}
+		o.Conds[i] = rect{X: g.Right() - w, Y: r.Y, W: w, H: r.H}
 	}
 	if n := len(p.legend); n > 0 {
 		y -= float32(n) * text
-		o.Legend = rect{g.X + globalPad, y, g.W - 2*globalPad, float32(n) * text}
+		o.Legend = rect{X: g.X + globalPad, Y: y, W: g.W - 2*globalPad, H: float32(n) * text}
 	}
 	o.top = y - globalPad
 	return o
@@ -229,7 +229,7 @@ func layoutGlobal(g rect, p globalPlan, nToggles int) globalRowRects {
 
 // globalStackHeight is the stack's measured height.
 func globalStackHeight(p globalPlan, nToggles int) float32 {
-	return -layoutGlobal(rect{0, 0, rightW, 0}, p, nToggles).top
+	return -layoutGlobal(rect{X: 0, Y: 0, W: rightW, H: 0}, p, nToggles).top
 }
 
 // globalHeight is the lower-right controls' height the layout reserves
@@ -329,11 +329,11 @@ func (a *App) globalUI(sw, sh int) {
 	w := a.shell.World()
 	a.uiTip("hud.tip.hour", rows.Hour, "Time\n"+a.hudTimeText())
 	a.uiTip("hud.tip.date", rows.Date, a.dateTip(w))
-	if !rows.Weather.empty() {
+	if !rows.Weather.Empty() {
 		a.uiTip("hud.tip.weather", rows.Weather, "Weather\nThe sky and the wind (the arrow shows where it blows).")
 	}
 	a.uiTip("hud.tip.temp", rows.Temp, "Temperature\nThe air under the cursor: indoors inside a room, outdoors elsewhere. Over the HUD it shows the outdoor temperature.")
-	if !rows.Reason.empty() {
+	if !rows.Reason.Empty() {
 		a.uiTip("hud.tip.reason", rows.Reason, "Paused\n"+a.speedReason())
 	}
 }
@@ -443,28 +443,28 @@ func (a *App) drawGlobalControls(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	g := a.hud().Global
-	if g.empty() {
+	if g.Empty() {
 		return
 	}
 	plan := a.globalPlan()
 	rows := layoutGlobal(g, plan, len(globalToggleList))
 	drawPanel(screen, g.X, g.Y, g.W, g.H)
-	right := g.right() - globalPad
+	right := g.Right() - globalPad
 	w := a.shell.World()
 	mx, my := a.currentCursor()
 
 	for i, l := range plan.legend {
-		r := rect{rows.Legend.X, rows.Legend.Y + float32(i)*textRowH(), rows.Legend.W, textRowH()}
+		r := rect{X: rows.Legend.X, Y: rows.Legend.Y + float32(i)*textRowH(), W: rows.Legend.W, H: textRowH()}
 		rightText(screen, l, right, r, withColor(tsBody, uiTextDim))
 	}
 	drawConditionLines(screen, plan.chips, rows.Conds) // status_chips.go
 	rightText(screen, a.temperatureLine(), right, rows.Temp, tsBody)
-	if !rows.Weather.empty() {
+	if !rows.Weather.Empty() {
 		drawWeatherLabelRight(screen, int(right), int(rows.Weather.Y)+2, w) // environment.go: drawLabel lifts its text 2 px
 	}
 	rightText(screen, a.dateLine(), right, rows.Date, tsBody)
 	rightText(screen, a.hourLine(), right, rows.Hour, tsBody)
-	if !rows.Reason.empty() {
+	if !rows.Reason.Empty() {
 		rightText(screen, a.speedReason(), right, rows.Reason, withColor(tsBody, uiWarning))
 	}
 	for i, sb := range speedButtons {
@@ -485,7 +485,7 @@ func (a *App) drawGlobalButton(screen *ebiten.Image, r rect, id, icon, short str
 		drawIcon(screen, img, float64(r.X+(r.W-size)/2), float64(r.Y+(r.H-size)/2), float64(size))
 		return
 	}
-	cx, cy := r.center()
+	cx, cy := r.Center()
 	drawCentered(screen, short, float64(cx), float64(cy), tsSmall)
 }
 

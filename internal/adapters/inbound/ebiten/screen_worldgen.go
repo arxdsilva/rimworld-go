@@ -101,7 +101,7 @@ func (a *App) worldGenUI(sw, sh int) {
 	}
 	a.worldStep()
 
-	cols := content.columns(2, dialogPad)
+	cols := content.Columns(2, dialogPad)
 	a.worldLeft(ng, cols[0])
 	a.worldRight(ng, cols[1])
 
@@ -111,7 +111,7 @@ func (a *App) worldGenUI(sw, sh int) {
 	} else if ng.planet != nil {
 		tip = "These settings differ from the world you made. Generate it again."
 	}
-	a.ngButton("world.resetAll", rect{footerBack(footer).right() + 12, footerBack(footer).Y, 120, footerBtnH}, "Reset all",
+	a.ngButton("world.resetAll", rect{X: footerBack(footer).Right() + 12, Y: footerBack(footer).Y, W: 120, H: footerBtnH}, "Reset all",
 		btnOpts{Tip: "Reset all\nPut every world setting back to its default and roll a new seed."}, func() {
 			a.uiConfirm("world.resetAll.confirm", "Reset all world settings?", "Every setting on this screen goes back to its default and the seed is replaced.", "Reset", true, a.resetWorldAll)
 		})
@@ -129,22 +129,22 @@ func (a *App) resetWorldAll() {
 
 func (a *App) worldLeft(ng *newGameState, col rect) {
 	a.uiPanel(col)
-	in := col.inset(14)
+	in := col.Inset(14)
 	hs := tsLarge
 	hs.Color = uiHeading
 	a.uiLabel(in.X, in.Y, "Planet", hs)
 	y := in.Y + float32(lineH(hs)) + 10
 
 	// Seed.
-	a.worldLabel("world.seed.lbl", rect{in.X, y, in.W, worldLabelH}, "Seed",
+	a.worldLabel("world.seed.lbl", rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, "Seed",
 		"Seed\nThe same seed and settings always make the same world. Any text of 1 to 32 characters.")
 	y += worldLabelH
 	diceW := float32(80)
-	a.uiTextField("world.seed", rect{in.X, y, in.W - diceW - 8, worldFieldH}, &ng.world.SeedText, textFieldSpec{
+	a.uiTextField("world.seed", rect{X: in.X, Y: y, W: in.W - diceW - 8, H: worldFieldH}, &ng.world.SeedText, textFieldSpec{
 		MaxLen: maxSeedText, Valid: seedTextRune, Normalize: normalizeSeedText, Placeholder: "seed",
 		Tip: "Seed\nLetters, digits, space, - and _ (1 to 32 characters).",
 	})
-	a.ngButton("world.dice", rect{in.right() - diceW, y, diceW, worldFieldH}, "Dice",
+	a.ngButton("world.dice", rect{X: in.Right() - diceW, Y: y, W: diceW, H: worldFieldH}, "Dice",
 		btnOpts{Tip: "Randomize seed\nReplace the seed with a random phrase. It does not generate."},
 		func() { ng.world.SeedText = randomWorldPhrase() })
 	y += worldFieldH + worldRowGap + 6
@@ -157,10 +157,10 @@ func (a *App) worldLeft(ng *newGameState, col rect) {
 			idx = i
 		}
 	}
-	a.worldLabel("world.coverage.lbl", rect{in.X, y, in.W, worldLabelH}, "Globe coverage",
+	a.worldLabel("world.coverage.lbl", rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, "Globe coverage",
 		"Globe coverage\nHow much of the planet is generated. Bigger worlds take longer. This is not your colony's map size.")
 	y += worldLabelH
-	if a.uiSliderInt("world.coverage", rect{in.X, y, in.W, worldSliderH}, &idx, sliderSpec{Stops: pctLabels(opts), Title: "Globe coverage"}) {
+	if a.uiSliderInt("world.coverage", rect{X: in.X, Y: y, W: in.W, H: worldSliderH}, &idx, sliderSpec{Stops: pctLabels(opts), Title: "Globe coverage"}) {
 		ng.world.Coverage = opts[idx]
 	}
 	y += worldSliderH + worldRowGap + 6
@@ -175,9 +175,9 @@ func (a *App) worldLeft(ng *newGameState, col rect) {
 		{"world.temp", "Temperature", "Temperature\nHow warm the planet is overall. Cold worlds have larger ice caps.", tempStops, &ng.world.Temp},
 		{"world.pop", "Population", "Population\nHow many other settlements exist. Doesn't change your colonists or raid sizes.", popStops, &ng.world.Pop},
 	} {
-		a.worldLabel(s.id+".lbl", rect{in.X, y, in.W, worldLabelH}, s.label, s.tip)
+		a.worldLabel(s.id+".lbl", rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, s.label, s.tip)
 		y += worldLabelH
-		a.uiSliderInt(s.id, rect{in.X, y, in.W, worldSliderH}, s.v, sliderSpec{Stops: s.stops, Title: s.label})
+		a.uiSliderInt(s.id, rect{X: in.X, Y: y, W: in.W, H: worldSliderH}, s.v, sliderSpec{Stops: s.stops, Title: s.label})
 		y += worldSliderH + worldRowGap + 6
 	}
 
@@ -221,7 +221,7 @@ func groupDigits(n int) string {
 
 func (a *App) worldRight(ng *newGameState, col rect) {
 	a.uiPanel(col)
-	in := col.inset(14)
+	in := col.Inset(14)
 	hs := tsLarge
 	hs.Color = uiHeading
 	a.uiLabel(in.X, in.Y, "Factions", hs)
@@ -235,7 +235,7 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 	for i := range slots {
 		s := &slots[i]
 		d := faction.DefOf(s.Type)
-		row := rect{in.X, y, in.W, worldFacRowH}
+		row := rect{X: in.X, Y: y, W: in.W, H: worldFacRowH}
 		a.worldFacRow(row, d, s, i)
 		y += worldFacRowH + 4
 		if len(ng.world.Factions) != len(slots) {
@@ -248,7 +248,7 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 	}
 
 	// The Swarm is always present.
-	sw := rect{in.X, y, in.W, worldFacRowH}
+	sw := rect{X: in.X, Y: y, W: in.W, H: worldFacRowH}
 	a.uiTip("world.fac.swarm", sw, "Always present\nHive swarms are part of every world. They are always hostile and have no settlements.")
 	a.uiSt().queue(func(dst *ebiten.Image) {
 		fillRect(dst, sw, uiField)
@@ -259,7 +259,7 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 		drawText(dst, "Hive swarms", float64(sw.X+44), float64(sw.Y)+(float64(sw.H)-lineH(st))/2, st)
 		dt := tsSmall
 		dt.Color, dt.Align = uiTextDim, alignRight
-		drawText(dst, "Always present", float64(sw.right()-10), float64(sw.Y)+(float64(sw.H)-lineH(dt))/2, dt)
+		drawText(dst, "Always present", float64(sw.Right()-10), float64(sw.Y)+(float64(sw.H)-lineH(dt))/2, dt)
 	})
 	y += worldFacRowH + 12
 
@@ -269,8 +269,8 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 	if len(addable) == 0 {
 		reason = "Every faction type is at its maximum."
 	}
-	a.ngButton("world.facAdd", rect{in.X, y, 150, 32}, "Add faction...", btnOpts{Disabled: reason != "", Reason: reason}, a.pushAddFaction)
-	a.ngButton("world.facReset", rect{in.X + 158, y, 150, 32}, "Reset factions", btnOpts{Tip: "Reset factions\nBack to the default factions."},
+	a.ngButton("world.facAdd", rect{X: in.X, Y: y, W: 150, H: 32}, "Add faction...", btnOpts{Disabled: reason != "", Reason: reason}, a.pushAddFaction)
+	a.ngButton("world.facReset", rect{X: in.X + 158, Y: y, W: 150, H: 32}, "Reset factions", btnOpts{Tip: "Reset factions\nBack to the default factions."},
 		func() { ng.world.Factions = faction.DefaultSlots() })
 	y += 32 + 12
 
@@ -298,13 +298,13 @@ func (a *App) worldFacRow(row rect, d faction.Def, s *faction.Slot, i int) {
 		ss.Color = uiTextDim
 		drawText(dst, techLabel(d.Tech)+", up to "+strconv.Itoa(d.MaxCount), float64(row.X+44), float64(row.Y)+5+lineH(st), ss)
 	})
-	a.uiTip("world.fac."+d.Key+".tip", rect{row.X, row.Y, row.W - 190, row.H}, factionTypeTip(d))
-	rm := rect{row.right() - 36, row.Y + 8, 28, 28}
+	a.uiTip("world.fac."+d.Key+".tip", rect{X: row.X, Y: row.Y, W: row.W - 190, H: row.H}, factionTypeTip(d))
+	rm := rect{X: row.Right() - 36, Y: row.Y + 8, W: 28, H: 28}
 	a.ngButton("world.fac."+d.Key+".rm", rm, "x", btnOpts{Tip: "Remove\nTake this faction type off the planet."}, func() {
 		fs := a.draft().world.Factions
 		a.draft().world.Factions = append(append([]faction.Slot(nil), fs[:i]...), fs[i+1:]...)
 	})
-	a.ngStepper("world.fac."+d.Key, rect{rm.X - 118, row.Y + 8, 112, 28}, &s.Count, 0, d.MaxCount)
+	a.ngStepper("world.fac."+d.Key, rect{X: rm.X - 118, Y: row.Y + 8, W: 112, H: 28}, &s.Count, 0, d.MaxCount)
 }
 
 // factionTypeTip explains a faction type on its row.
@@ -385,7 +385,7 @@ func (a *App) worldProgressBody(body rect) {
 		return
 	}
 	phase, frac := worldPhaseName(ng.genPhase), float64(ng.genFrac)
-	r := rect{body.X, body.Y + 8, body.W, 44}
+	r := rect{X: body.X, Y: body.Y + 8, W: body.W, H: 44}
 	a.uiSt().queue(func(dst *ebiten.Image) { drawProgress(dst, r, phase, frac, "") })
 }
 

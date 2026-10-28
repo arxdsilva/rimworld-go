@@ -100,7 +100,7 @@ func (r *Renderer) drawHomeOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 	}
 	r.setView(sw, sh, tile)
 	b := &st.batch
-	b.reset()
+	b.Reset()
 	a := homeFillA
 	for _, run := range st.runs {
 		sx, sy := r.worldToScreen(run.x0, run.y)
@@ -108,7 +108,7 @@ func (r *Renderer) drawHomeOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		if !visible(float32(sx), float32(sy), float32(wd), float32(tile), sw, sh) {
 			continue
 		}
-		b.rect(float64(sx), float64(sy), wd, tile, homeFill, a, a, a, a)
+		b.Rect(float64(sx), float64(sy), wd, tile, homeFill, a, a, a, a)
 	}
 	ec := homeFill
 	for _, e := range st.edges {
@@ -119,6 +119,6 @@ func (r *Renderer) drawHomeOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		ec.A = uint8(homeEdgeA * 255)
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, homeEdgePx, ec, 0, 1)
 	}
-	st.verts = len(b.verts)
-	b.flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.verts = len(b.Verts)
+	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
 }

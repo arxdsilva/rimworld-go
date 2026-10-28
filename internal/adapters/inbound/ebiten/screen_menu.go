@@ -82,7 +82,7 @@ func (a *App) ramNoticeCard(sw, sh int, text string) rect {
 	if y+h > float32(sh) { // a window under the minimum: stay on screen
 		y = float32(sh) - h
 	}
-	return rect{x, y, w, h}
+	return rect{X: x, Y: y, W: w, H: h}
 }
 
 // mainMenuUI declares the main menu's widgets: the low-RAM notice.
@@ -96,13 +96,13 @@ func (a *App) mainMenuUI(sw, sh int) {
 	lines := wrapPx(text, st, float64(card.W-2*ramCardPad-ramCardStripe))
 	a.uiPanel(card)
 	a.uiSt().queue(func(dst *ebiten.Image) {
-		fillRect(dst, rect{card.X, card.Y, ramCardStripe, card.H}, uiWarning)
+		fillRect(dst, rect{X: card.X, Y: card.Y, W: ramCardStripe, H: card.H}, uiWarning)
 		tx, ty := float64(card.X+ramCardPad+ramCardStripe), float64(card.Y+ramCardPad)
 		for i, l := range lines {
 			drawText(dst, l, tx, ty+float64(i)*lineH(st), st)
 		}
 	})
-	btn := rect{card.right() - ramCardPad - ramBtnW, card.bottom() - ramCardPad - ramBtnH, ramBtnW, ramBtnH}
+	btn := rect{X: card.Right() - ramCardPad - ramBtnW, Y: card.Bottom() - ramCardPad - ramBtnH, W: ramBtnW, H: ramBtnH}
 	a.ngButton(ramDismissID, btn, "Got it", btnOpts{Tip: "Got it\nHide this notice. It comes back only if the computer's memory changes."},
 		func() { a.dismissRAMNotice(total) })
 }
@@ -130,7 +130,7 @@ func (a *App) drawMainMenu(screen *ebiten.Image, sw, sh int) {
 // drawMenuButton is a main-menu rail button in the real font; the first
 // enabled one is the gold primary.
 func drawMenuButton(dst *ebiten.Image, b button, primary, hover bool) {
-	r := rect{b.x, b.y, b.w, b.h}
+	r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
 	style := btnNormal
 	if primary {
 		style = btnPrimary
@@ -143,7 +143,7 @@ func drawMenuButton(dst *ebiten.Image, b button, primary, hover bool) {
 	strokeRect(dst, r, border)
 	st := tsLarge
 	st.Color, st.Align = text, alignCenter
-	cx, cy := r.center()
+	cx, cy := r.Center()
 	drawText(dst, b.label, float64(cx), float64(cy)-lineH(st)/2, st)
 }
 

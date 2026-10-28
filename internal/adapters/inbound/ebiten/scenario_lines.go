@@ -224,7 +224,7 @@ func buildDetail(d scenario.Def, lines []game.DetailLine, w float32) detailLayou
 			hs.Color = uiHeading
 			add(float32(lineH(hs))+2, "", func(dst *ebiten.Image, x, y, w float32) {
 				drawText(dst, ln.Text, float64(x), float64(y), hs)
-				fillRect(dst, rect{x, y + float32(lineH(hs)) + 1, w, 1}, uiPanelBorder)
+				fillRect(dst, rect{X: x, Y: y + float32(lineH(hs)) + 1, W: w, H: 1}, uiPanelBorder)
 			})
 		case strings.Contains(ln.Text, "\t"):
 			k, v, _ := strings.Cut(ln.Text, "\t")
@@ -254,7 +254,7 @@ func buildDetail(d scenario.Def, lines []game.DetailLine, w float32) detailLayou
 // detailView declares a scenario's details in r (a scroll view with
 // tooltips on the item lines) and queues its drawing.
 func (a *App) detailView(id string, r rect, d scenario.Def, lines []game.DetailLine) {
-	pane := r.inset(10)
+	pane := r.Inset(10)
 	L := buildDetail(d, lines, max(40, pane.W-scrollBarW-8))
 	area := a.uiScrollArea(id, pane, L.total, scrollOpts{Step: 48})
 	u := a.uiSt()
@@ -262,8 +262,8 @@ func (a *App) detailView(id string, r rect, d scenario.Def, lines []game.DetailL
 		if row.tip == "" {
 			continue
 		}
-		rr := rect{area.View.X, area.View.Y + row.y - area.Off, area.View.W, row.h}.intersect(area.View)
-		if !rr.empty() {
+		rr := rect{X: area.View.X, Y: area.View.Y + row.y - area.Off, W: area.View.W, H: row.h}.Intersect(area.View)
+		if !rr.Empty() {
 			a.uiTip(id+".tip."+uiNum(i), rr, row.tip)
 		}
 	}
@@ -271,7 +271,7 @@ func (a *App) detailView(id string, r rect, d scenario.Def, lines []game.DetailL
 		sub := clipTo(dst, area.View)
 		for _, row := range L.rows {
 			y := area.View.Y + row.y - area.Off
-			if y+row.h < area.View.Y || y > area.View.bottom() {
+			if y+row.h < area.View.Y || y > area.View.Bottom() {
 				continue
 			}
 			row.draw(sub, area.View.X, y, area.View.W-8)

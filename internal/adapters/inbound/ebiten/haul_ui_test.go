@@ -203,7 +203,7 @@ func TestItemInspectorAtScale1_5(t *testing.T) {
 	}
 	for i, c := range cs {
 		cell := l.GridCells[i]
-		if cell.X < l.Pane.right() || cell.right() > l.Global.X || cell.bottom() > l.Tabs.Y {
+		if cell.X < l.Pane.Right() || cell.Right() > l.Global.X || cell.Bottom() > l.Tabs.Y {
 			t.Errorf("%s: cell %+v leaves the grid band", c.ID, cell)
 		}
 		for _, w := range strings.Fields(c.Label) {
@@ -212,7 +212,7 @@ func TestItemInspectorAtScale1_5(t *testing.T) {
 			}
 		}
 		for j, o := range l.GridCells[:i] {
-			if !cell.intersect(o).empty() {
+			if !cell.Intersect(o).Empty() {
 				t.Errorf("%s overlaps command %d", c.ID, j)
 			}
 		}
@@ -244,7 +244,7 @@ func TestGroupInspectorAtScale1_5(t *testing.T) {
 	s.world = game.WorldView{Items: foundItems()}
 	a.setGroup(selItem, []entity.EntityID{21, 22, 23})
 	l := a.hud()
-	if l.Pane.empty() {
+	if l.Pane.Empty() {
 		t.Fatal("a group has a pane")
 	}
 	if spec := a.groupPane(); len(spec.Rows) != 3 {
@@ -255,8 +255,8 @@ func TestGroupInspectorAtScale1_5(t *testing.T) {
 		t.Fatal("no group commands")
 	}
 	for i, b := range bs {
-		r := rect{b.x, b.y, b.w, b.h}
-		if r.X < l.Pane.right() || r.right() > l.Global.X || r.bottom() > l.Tabs.Y {
+		r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		if r.X < l.Pane.Right() || r.Right() > l.Global.X || r.Bottom() > l.Tabs.Y {
 			t.Errorf("%s (%+v) leaves the grid band", b.id, r)
 		}
 		for _, word := range strings.Fields(b.label) {

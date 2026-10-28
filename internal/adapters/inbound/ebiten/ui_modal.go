@@ -1,7 +1,7 @@
 package ebiten
 
 import (
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 // Modal stack (NG-1 §1.4): dialogs over a modal_dim scrim. The top modal
@@ -55,23 +55,23 @@ type modal struct {
 func modalGeometry(sw, sh int, m modal) (frame, title, body, footer rect) {
 	w := max(120, min(m.w, float32(sw)-2*modalEdge))
 	h := max(80, min(m.h, float32(sh)-2*modalEdge))
-	return modalParts(winRect(sw, sh).centered(w, h), m)
+	return modalParts(winRect(sw, sh).Centered(w, h), m)
 }
 
 // modalParts cuts a modal's frame into its title bar, body and footer.
 func modalParts(frame rect, m modal) (f, title, body, footer rect) {
-	title, rest := frame.splitV(modalTitleH)
+	title, rest := frame.SplitV(modalTitleH)
 	if len(m.buttons) > 0 {
-		rest, footer = rest.splitV(-modalFooterH)
+		rest, footer = rest.SplitV(-modalFooterH)
 	}
-	return frame, title, rest.inset(modalPad), footer
+	return frame, title, rest.Inset(modalPad), footer
 }
 
 // modalLayout is where m sits this frame: on its anchor when it has one
 // (cut to the screen), else centred.
 func (a *App) modalLayout(sw, sh int, m modal) (frame, title, body, footer rect) {
 	if m.anchor != nil {
-		if r := m.anchor(a).intersect(winRect(sw, sh)); !r.empty() {
+		if r := m.anchor(a).Intersect(winRect(sw, sh)); !r.Empty() {
 			return modalParts(r, m)
 		}
 	}
@@ -198,7 +198,7 @@ func (a *App) uiRunWindow(m modal) {
 func (a *App) uiModalChrome(m modal, frame, titleR rect) {
 	a.uiSt().queue(func(dst *ebiten.Image) {
 		drawPanel(dst, frame.X, frame.Y, frame.W, frame.H)
-		uiLine(dst, frame.X, titleR.bottom(), frame.right(), titleR.bottom(), 1, uiPanelBorder, false)
+		uiLine(dst, frame.X, titleR.Bottom(), frame.Right(), titleR.Bottom(), 1, uiPanelBorder, false)
 		st := tsLarge
 		st.Color = uiHeading
 		drawText(dst, fitText(m.title, st, titleR.W-modalCloseW-3*modalPad), float64(titleR.X+modalPad), float64(titleR.Y)+(float64(titleR.H)-lineH(st))/2, st)
@@ -207,15 +207,15 @@ func (a *App) uiModalChrome(m modal, frame, titleR rect) {
 
 // modalCloseRect is the X button in a title bar.
 func modalCloseRect(titleR rect) rect {
-	return rect{titleR.right() - modalCloseW - 8, titleR.Y + (titleR.H-modalCloseW)/2, modalCloseW, modalCloseW}
+	return rect{X: titleR.Right() - modalCloseW - 8, Y: titleR.Y + (titleR.H-modalCloseW)/2, W: modalCloseW, H: modalCloseW}
 }
 
 // uiModalButtons declares the footer buttons, right to left.
 func (a *App) uiModalButtons(m modal, footer rect) {
-	bx := footer.right() - modalPad
+	bx := footer.Right() - modalPad
 	for _, b := range m.buttons {
 		bw := max(100, textW(b.label, tsLabel)+32)
-		br := rect{bx - bw, footer.Y + (footer.H-footerBtnH)/2, bw, footerBtnH}
+		br := rect{X: bx - bw, Y: footer.Y + (footer.H-footerBtnH)/2, W: bw, H: footerBtnH}
 		bx -= bw + 8
 		o := btnOpts{Style: b.style}
 		if b.disabled != nil {
@@ -231,12 +231,6 @@ func (a *App) uiModalButtons(m modal, footer rect) {
 			}
 		}
 	}
-}
-
-// textW is the width of s in style st.
-func textW(s string, st textStyle) float32 {
-	w, _ := measure(s, st)
-	return float32(w)
 }
 
 // uiConfirm opens a Cancel / OK dialog; onOK runs when OK is pressed.

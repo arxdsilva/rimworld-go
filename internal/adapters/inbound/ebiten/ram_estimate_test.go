@@ -244,7 +244,7 @@ func TestLowRAMNoticeDrawsItsTextInTheCard(t *testing.T) {
 	}
 	var lines []string
 	for _, e := range drawnText(t, a, a.sw, a.sh) {
-		if float32(e.X) >= card.X && float32(e.Y) >= card.Y && float32(e.X+e.W) <= card.right()+0.5 && float32(e.Y+e.H) <= card.bottom()+0.5 {
+		if float32(e.X) >= card.X && float32(e.Y) >= card.Y && float32(e.X+e.W) <= card.Right()+0.5 && float32(e.Y+e.H) <= card.Bottom()+0.5 {
 			lines = append(lines, e.Text)
 		}
 	}
@@ -269,24 +269,24 @@ func TestLowRAMNoticeDoesNotCoverTheMenuButtons(t *testing.T) {
 		t.Fatalf("%d menu buttons", len(btns))
 	}
 	for _, b := range btns {
-		if rectsOverlap(card, rect{b.x, b.y, b.w, b.h}) {
+		if rectsOverlap(card, rect{X: b.x, Y: b.y, W: b.w, H: b.h}) {
 			t.Errorf("the notice %+v covers the %q button", card, b.id)
 		}
 	}
-	if card.X < 0 || card.Y < 0 || card.right() > float32(a.sw) || card.bottom() > float32(a.sh) {
+	if card.X < 0 || card.Y < 0 || card.Right() > float32(a.sw) || card.Bottom() > float32(a.sh) {
 		t.Errorf("the notice %+v leaves the %dx%d screen", card, a.sw, a.sh)
 	}
 	w, ok := a.uiSt().find(ramDismissID)
 	if !ok {
 		t.Fatal("no Got it button")
 	}
-	if w.r.X < card.X || w.r.Y < card.Y || w.r.right() > card.right() || w.r.bottom() > card.bottom() {
+	if w.r.X < card.X || w.r.Y < card.Y || w.r.Right() > card.Right() || w.r.Bottom() > card.Bottom() {
 		t.Errorf("Got it %+v is outside its card %+v", w.r, card)
 	}
 }
 
 func rectsOverlap(a, b rect) bool {
-	return a.X < b.right() && b.X < a.right() && a.Y < b.bottom() && b.Y < a.bottom()
+	return a.X < b.Right() && b.X < a.Right() && a.Y < b.Bottom() && b.Y < a.Bottom()
 }
 
 func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
@@ -354,9 +354,9 @@ func TestLowRAMNoticeAtUIScales(t *testing.T) {
 				if e.X < 0 || e.Y < 0 || e.X+e.W > float32(pw)+0.5 || e.Y+e.H > float32(ph)+0.5 {
 					t.Errorf("text %q at %g,%g %gx%g leaves the %dx%d screen", e.Text, e.X, e.Y, e.W, e.H, pw, ph)
 				}
-				if rectsOverlap(rect{e.X / float32(s), e.Y / float32(s), e.W / float32(s), e.H / float32(s)}, card) {
+				if rectsOverlap(rect{X: e.X / float32(s), Y: e.Y / float32(s), W: e.W / float32(s), H: e.H / float32(s)}, card) {
 					n++
-					if e.X/float32(s) < card.X-0.5 || (e.X+e.W)/float32(s) > card.right()+0.5 {
+					if e.X/float32(s) < card.X-0.5 || (e.X+e.W)/float32(s) > card.Right()+0.5 {
 						t.Errorf("notice line %q runs out of its card sideways", e.Text)
 					}
 				}
@@ -405,7 +405,7 @@ func sizeRows(t *testing.T, a *App) (opts []game.MapSizeView, rows []rect, drawn
 		rows = append(rows, w.r)
 		var on []traceEvent
 		for _, e := range ev {
-			if e.Y >= w.r.Y && e.Y+e.H <= w.r.bottom()+0.5 && e.X >= w.r.X && e.X+e.W <= w.r.right()+0.5 {
+			if e.Y >= w.r.Y && e.Y+e.H <= w.r.Bottom()+0.5 && e.X >= w.r.X && e.X+e.W <= w.r.Right()+0.5 {
 				on = append(on, e)
 			}
 		}
@@ -546,21 +546,21 @@ func TestSizeWarningsAtUIScales(t *testing.T) {
 				var row rect
 				for i := range mapSizeOptions() {
 					w, _ := a.uiSt().find(optID("land.mapsize", i))
-					if e.Y >= w.r.Y*float32(s)-0.5 && e.Y+e.H <= w.r.bottom()*float32(s)+0.5 {
+					if e.Y >= w.r.Y*float32(s)-0.5 && e.Y+e.H <= w.r.Bottom()*float32(s)+0.5 {
 						row = w.r
 					}
 				}
-				if row.empty() {
+				if row.Empty() {
 					t.Errorf("warning %q at y=%g is on no size row", e.Text, e.Y)
 					continue
 				}
-				if e.X < row.X*float32(s)-0.5 || e.X+e.W > row.right()*float32(s)+0.5 {
+				if e.X < row.X*float32(s)-0.5 || e.X+e.W > row.Right()*float32(s)+0.5 {
 					t.Errorf("warning %q (%g..%g) leaves its row %+v", e.Text, e.X, e.X+e.W, row)
 				}
 				// It must not run into the size label at the row's left.
-				me := rect{e.X, e.Y, e.W, e.H}
+				me := rect{X: e.X, Y: e.Y, W: e.W, H: e.H}
 				for _, l := range ev {
-					if strings.Contains(l.Text, " x ") && rectsOverlap(me, rect{l.X, l.Y, l.W, l.H}) {
+					if strings.Contains(l.Text, " x ") && rectsOverlap(me, rect{X: l.X, Y: l.Y, W: l.W, H: l.H}) {
 						t.Errorf("warning %q overlaps the label %q", e.Text, l.Text)
 					}
 				}

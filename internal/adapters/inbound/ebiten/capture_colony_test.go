@@ -58,7 +58,7 @@ func captureCursorOnTool(t *testing.T, a *App, id string) {
 	if !ok {
 		t.Fatalf("no %s button in the grid", id)
 	}
-	if a.cursor == nil || !cell.hit(a.cursor[0], a.cursor[1]) {
+	if a.cursor == nil || !cell.Hit(a.cursor[0], a.cursor[1]) {
 		t.Fatalf("cursor %v is not on the %s button %+v", a.cursor, id, cell)
 	}
 }

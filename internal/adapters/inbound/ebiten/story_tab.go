@@ -68,17 +68,17 @@ func customName(s difficulty.Settings) string {
 
 // storyCols splits the content area into the three columns.
 func storyCols(c rect) (left, mid, right rect) {
-	left = rect{c.X, c.Y, stColLeftW, c.H}
-	mid = rect{left.right() + stColGap, c.Y, stColMidW, c.H}
-	right = rect{mid.right() + stColGap, c.Y, max(0, c.right()-mid.right()-stColGap), c.H}
+	left = rect{X: c.X, Y: c.Y, W: stColLeftW, H: c.H}
+	mid = rect{X: left.Right() + stColGap, Y: c.Y, W: stColMidW, H: c.H}
+	right = rect{X: mid.Right() + stColGap, Y: c.Y, W: max(0, c.Right()-mid.Right()-stColGap), H: c.H}
 	return
 }
 
 func (a *App) storyTab(sw, sh int) {
 	v := a.renderer.game.Story()
-	panel := rect{40, 96, float32(sw - 80), float32(sh - 180)}
+	panel := rect{X: 40, Y: 96, W: float32(sw - 80), H: float32(sh - 180)}
 	top := float32(optTabY + optBtnH + 16)
-	c := rect{panel.X + 16, top, panel.W - 32, panel.bottom() - top - 16}
+	c := rect{X: panel.X + 16, Y: top, W: panel.W - 32, H: panel.Bottom() - top - 16}
 	if v.Preset == "" {
 		a.textLines(c.X, c.Y, c.W, "This colony started without a storyteller (the classic start), so there is nothing to change here.", dimText())
 		return
@@ -101,8 +101,8 @@ func (a *App) storytellerColumn(r rect, v game.StoryView) {
 	a.uiLabel(r.X, r.Y, "Storyteller", headingStyle())
 	for i, p := range storyteller.Profiles() {
 		p := p
-		cr := rect{r.X, r.Y + stHeadH + float32(i)*(stCardH+stCardGap), r.W, stCardH}
-		if cr.bottom() > r.bottom() {
+		cr := rect{X: r.X, Y: r.Y + stHeadH + float32(i)*(stCardH+stCardGap), W: r.W, H: stCardH}
+		if cr.Bottom() > r.Bottom() {
 			break
 		}
 		id := "opt.story.pick." + p.Key
@@ -134,15 +134,15 @@ func (a *App) difficultyColumn(r rect, v game.StoryView) {
 	var rows []row
 	y := r.Y + stHeadH
 	for _, n := range difficulty.Presets() {
-		rows = append(rows, row{"opt.diff." + n.Key, n.Label, n.Desc, presetTip(n), n.Preset, rect{r.X, y, r.W, stDiffRowH}})
+		rows = append(rows, row{"opt.diff." + n.Key, n.Label, n.Desc, presetTip(n), n.Preset, rect{X: r.X, Y: y, W: r.W, H: stDiffRowH}})
 		y += stDiffRowH
 	}
-	rows = append(rows, row{stCustomID, "Custom", "Every value set by hand.", "Custom\nSet every value yourself in the Custom Difficulty dialog.", difficulty.Custom, rect{r.X, y, r.W, stDiffRowH}})
+	rows = append(rows, row{stCustomID, "Custom", "Every value set by hand.", "Custom\nSet every value yourself in the Custom Difficulty dialog.", difficulty.Custom, rect{X: r.X, Y: y, W: r.W, H: stDiffRowH}})
 
 	// The Customize button first, so it takes its click before the row.
 	if cur == difficulty.Custom {
 		cr := rows[len(rows)-1].r
-		a.ngButton("opt.diff.customize", rect{cr.right() - 112, cr.Y + 10, 104, 24}, "Customize...",
+		a.ngButton("opt.diff.customize", rect{X: cr.Right() - 112, Y: cr.Y + 10, W: 104, H: 24}, "Customize...",
 			btnOpts{Tip: "Customize\nEdit every difficulty value."}, func() { a.openStoryCustom(v) })
 	}
 	for _, rw := range rows {
@@ -168,10 +168,10 @@ func (a *App) difficultyColumn(r rect, v game.StoryView) {
 func paintDiffRow(dst *ebiten.Image, r rect, label, desc string, selected, hot bool) {
 	switch {
 	case selected:
-		fillRect(dst, r.inset(1), lerpRGBA(uiPanel, uiBtnSelected, 0.8))
-		strokeRect(dst, r.inset(1), uiAccent)
+		fillRect(dst, r.Inset(1), lerpRGBA(uiPanel, uiBtnSelected, 0.8))
+		strokeRect(dst, r.Inset(1), uiAccent)
 	case hot:
-		fillRect(dst, r.inset(1), uiBtnHover)
+		fillRect(dst, r.Inset(1), uiBtnHover)
 	}
 	cx, cy := r.X+16, r.Y+r.H/2
 	uiFillCircle(dst, cx, cy, radioRadius, uiField, true)
@@ -242,15 +242,15 @@ func (a *App) openStoryCustom(v game.StoryView) {
 // storyCustomBody is customDifficultyBody (screen_difficulty.go) over the
 // dialog's own working copy instead of the wizard's draft.
 func (a *App) storyCustomBody(body rect, cd *customDiff, formH *float32) {
-	top, rest := body.splitV(diffTopRowH)
+	top, rest := body.SplitV(diffTopRowH)
 	lab := dimText()
 	a.uiLabel(top.X, top.Y+(top.H-float32(lineH(lab)))/2, "Start from:", lab)
 	names := make([]string, 0, int(difficulty.Custom))
 	for _, n := range difficulty.Presets() {
 		names = append(names, n.Label)
 	}
-	a.ngChoice("diff.from", rect{top.X + 90, top.Y + 2, 170, top.H - 4}, "Start from", names, int(cd.from), "", func(i int) { cd.from = difficulty.Preset(i) })
-	a.ngButton("diff.copy", rect{top.X + 272, top.Y + 2, 150, top.H - 4}, "Copy", btnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
+	a.ngChoice("diff.from", rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, "Start from", names, int(cd.from), "", func(i int) { cd.from = difficulty.Preset(i) })
+	a.ngButton("diff.copy", rect{X: top.X + 272, Y: top.Y + 2, W: 150, H: top.H - 4}, "Copy", btnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
 		func() { cd.s = difficulty.Of(cd.from) })
 
 	area := a.uiScrollArea(stFormID, rest, *formH, scrollOpts{Step: 40})

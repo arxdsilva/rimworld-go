@@ -368,13 +368,13 @@ func stackSplit(total, rows, limit int) (shown, folded int) {
 // alerts first, the last row counting the rest when they do not fit.
 func (a *App) alertRows(l hudLayout) []alertRow {
 	als := a.currentAlerts()
-	if len(als) == 0 || l.AlertRows <= 0 || l.Alerts.empty() {
+	if len(als) == 0 || l.AlertRows <= 0 || l.Alerts.Empty() {
 		return nil
 	}
 	shown, more := stackSplit(len(als), l.AlertRows, len(als))
 	rows := make([]alertRow, 0, shown+1)
 	at := func(i int) rect {
-		return rect{l.Alerts.X, l.Alerts.Y + float32(i)*(alertRowH+hudGap), l.Alerts.W, alertRowH}
+		return rect{X: l.Alerts.X, Y: l.Alerts.Y + float32(i)*(alertRowH+hudGap), W: l.Alerts.W, H: alertRowH}
 	}
 	for i := 0; i < shown; i++ {
 		rows = append(rows, alertRow{r: at(i), al: als[i]})
@@ -428,10 +428,10 @@ func (a *App) drawAlertsIn(screen *ebiten.Image, l hudLayout) {
 		}
 		fillRect(screen, r, bg)
 		if row.more == 0 {
-			fillRect(screen, rect{r.X, r.Y, 4, r.H}, edge)
+			fillRect(screen, rect{X: r.X, Y: r.Y, W: 4, H: r.H}, edge)
 		}
 		border := edge
-		if row.more > 0 || !r.hit(mx, my) {
+		if row.more > 0 || !r.Hit(mx, my) {
 			border = fade(edge, 0.5)
 		}
 		strokeRect(screen, r, border)

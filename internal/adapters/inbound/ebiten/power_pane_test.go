@@ -445,7 +445,7 @@ func TestPowerPaneAndGridAtUIScales(t *testing.T) {
 				a.selectCand(selCand{selBuilding, b.ID})
 				f.frame(t, a)
 				l := a.hud()
-				if l.Pane.empty() || !a.paneShown() {
+				if l.Pane.Empty() || !a.paneShown() {
 					t.Fatalf("%s: no pane", name)
 				}
 				if bad := layoutOverlaps(l, sw, sh); len(bad) > 0 {
@@ -463,7 +463,7 @@ func TestPowerPaneAndGridAtUIScales(t *testing.T) {
 						t.Errorf("%s: %s has no hit target", name, cm.ID)
 						continue
 					}
-					if got := (rect{hb.x, hb.y, hb.w, hb.h}); got != l.GridCells[i] {
+					if got := (rect{X: hb.x, Y: hb.y, W: hb.w, H: hb.h}); got != l.GridCells[i] {
 						t.Errorf("%s: %s is at %+v, its cell is %+v", name, cm.ID, got, l.GridCells[i])
 					}
 				}
@@ -500,7 +500,7 @@ func TestSolarFlareChipIsInTheGlobalControls(t *testing.T) {
 	a, f := colonyApp(t, s)
 	f.frame(t, a)
 	rs := a.chipRects(statusChips(a.renderer.world()), a.sw)
-	if len(rs) != 1 || rs[0].empty() {
+	if len(rs) != 1 || rs[0].Empty() {
 		t.Fatalf("chip rects = %+v", rs)
 	}
 	if _, ok := a.uiSt().find("hud.chip.0"); !ok {

@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -61,7 +62,7 @@ var globalScales = []struct {
 // (percent), paused, with the cursor parked off the map.
 func globalColony(t *testing.T, sim Simulation, ui int, ww, wh float64) (*App, *fakeInput) {
 	t.Helper()
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	a := testApp(sim)
 	a.devFn = func() float64 { return 1 } // not the test machine's Retina factor
 	st := a.settings
@@ -82,8 +83,8 @@ func globalColony(t *testing.T, sim Simulation, ui int, ww, wh float64) (*App, *
 
 // onRect puts the fake cursor on the centre of r (logical pixels).
 func (f *fakeInput) onRect(a *App, r rect) {
-	cx, cy := r.center()
-	f.cur.mx, f.cur.my = int(float64(cx)*a.scale.s), int(float64(cy)*a.scale.s)
+	cx, cy := r.Center()
+	f.cur.mx, f.cur.my = int(float64(cx)*a.scale.S), int(float64(cy)*a.scale.S)
 }
 
 var globalToggleIDs = []string{"hud.roof", "hud.home", "hud.homeauto", "hud.plan", "hud.rooms", "hud.learn", "hud.bar", "hud.rescat"}
@@ -96,7 +97,7 @@ func TestGlobalTogglesInsideGlobal(t *testing.T) {
 		t.Run(fmt.Sprintf("ui%d", sc.ui), func(t *testing.T) {
 			a, _ := globalColony(t, newGlobalSim(), sc.ui, sc.ww, sc.wh)
 			g := a.hud().Global
-			if g.empty() {
+			if g.Empty() {
 				t.Fatal("Global has no rect")
 			}
 			var rs []rect
@@ -108,11 +109,11 @@ func TestGlobalTogglesInsideGlobal(t *testing.T) {
 				if r.W != 24 || r.H != 24 {
 					t.Errorf("%s is %vx%v, want 24x24", id, r.W, r.H)
 				}
-				if r.X < g.X || r.right() > g.right() || r.Y < g.Y || r.bottom() > g.bottom() {
+				if r.X < g.X || r.Right() > g.Right() || r.Y < g.Y || r.Bottom() > g.Bottom() {
 					t.Errorf("%s %+v is outside Global %+v", id, r, g)
 				}
 				for j, o := range rs {
-					if r.intersect(o).W > 0 && r.intersect(o).H > 0 {
+					if r.Intersect(o).W > 0 && r.Intersect(o).H > 0 {
 						t.Errorf("%s %+v overlaps %s %+v", id, r, globalToggleIDs[j], o)
 					}
 				}
@@ -124,8 +125,8 @@ func TestGlobalTogglesInsideGlobal(t *testing.T) {
 					break
 				}
 			}
-			if last := rs[len(rs)-1]; g.right()-last.right() > 8 {
-				t.Errorf("the row is not right-aligned: last toggle ends %v short of Global's right edge", g.right()-last.right())
+			if last := rs[len(rs)-1]; g.Right()-last.Right() > 8 {
+				t.Errorf("the row is not right-aligned: last toggle ends %v short of Global's right edge", g.Right()-last.Right())
 			}
 			// the five legacy toggles are buttons, the three new ones widgets;
 			// both are hit-testable by id
@@ -269,7 +270,7 @@ func TestGlobalSpeedButtons(t *testing.T) {
 		key   string
 	}{{speedPaused, "[Space]"}, {speedNormal, "[1]"}, {speedFast, "[2]"}, {speedVeryFast, "[3]"}} {
 		b := find(i)
-		if b.w != 52 || b.h != 24 || b.x < g.X || b.x+b.w > g.right() || b.y < g.Y || b.y+b.h > g.bottom() {
+		if b.w != 52 || b.h != 24 || b.x < g.X || b.x+b.w > g.Right() || b.y < g.Y || b.y+b.h > g.Bottom() {
 			t.Errorf("speed.%d = %+v, want 52x24 inside Global %+v", i, b, g)
 		}
 		if !strings.Contains(b.tip, want.key) {
@@ -391,11 +392,11 @@ func TestGlobalConditionsAreLines(t *testing.T) {
 		t.Fatalf("rects = %+v", rs)
 	}
 	for i, r := range rs {
-		if r.X < g.X || r.right() > g.right() || r.Y < g.Y || r.bottom() > g.bottom() {
+		if r.X < g.X || r.Right() > g.Right() || r.Y < g.Y || r.Bottom() > g.Bottom() {
 			t.Errorf("condition %d %+v outside Global %+v", i, r, g)
 		}
-		if r.right() != g.right() {
-			t.Errorf("condition %d is not right-aligned: ends at %v, Global at %v", i, r.right(), g.right())
+		if r.Right() != g.Right() {
+			t.Errorf("condition %d is not right-aligned: ends at %v, Global at %v", i, r.Right(), g.Right())
 		}
 	}
 	if rs[1].Y <= rs[0].Y {
@@ -431,21 +432,21 @@ func TestGlobalStackIsMeasured(t *testing.T) {
 			if l.Global.H != a.globalHeight() || l.Global.H <= 0 {
 				t.Fatalf("Global %+v vs globalHeight %v", l.Global, a.globalHeight())
 			}
-			if l.Global.bottom() != l.Tabs.Y-hudMargin || l.Global.X != float32(a.sw)-240 || l.Global.W != 232 {
+			if l.Global.Bottom() != l.Tabs.Y-hudMargin || l.Global.X != float32(a.sw)-240 || l.Global.W != 232 {
 				t.Fatalf("Global %+v not at the lower-right above Tabs %+v", l.Global, l.Tabs)
 			}
 			rows := a.globalRows()
 			var all []rect
 			add := func(name string, r rect) {
 				t.Helper()
-				if r.empty() {
+				if r.Empty() {
 					return
 				}
-				if r.X < l.Global.X || r.right() > l.Global.right() || r.Y < l.Global.Y || r.bottom() > l.Global.bottom() {
+				if r.X < l.Global.X || r.Right() > l.Global.Right() || r.Y < l.Global.Y || r.Bottom() > l.Global.Bottom() {
 					t.Errorf("row %s %+v outside Global %+v", name, r, l.Global)
 				}
 				for _, o := range all {
-					if i := r.intersect(o); i.W > 0 && i.H > 0 {
+					if i := r.Intersect(o); i.W > 0 && i.H > 0 {
 						t.Errorf("row %s %+v overlaps %+v", name, r, o)
 					}
 				}
@@ -466,13 +467,13 @@ func TestGlobalStackIsMeasured(t *testing.T) {
 				add(fmt.Sprintf("cond%d", i), r)
 			}
 			add("legend", rows.Legend)
-			if rows.Legend.empty() {
+			if rows.Legend.Empty() {
 				t.Error("the roof legend is not in the stack while the overlay is on")
 			}
 			if rows.Legend.Y > rows.Conds[0].Y {
 				t.Errorf("the legend %+v should be the top line, conditions at %+v", rows.Legend, rows.Conds[0])
 			}
-			if rows.Toggles[0].bottom() < rows.Speed[0].bottom() {
+			if rows.Toggles[0].Bottom() < rows.Speed[0].Bottom() {
 				t.Errorf("toggles %+v should be below the speed buttons %+v", rows.Toggles[0], rows.Speed[0])
 			}
 		})
@@ -525,7 +526,7 @@ func TestGlobalConsumesClicks(t *testing.T) {
 	t.Parallel()
 	a, _ := globalColonyP(t, newGlobalSim())
 	g := a.hud().Global
-	cx, cy := g.center()
+	cx, cy := g.Center()
 	if !a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {
 		t.Fatal("Global's centre does not consume the click")
 	}
@@ -536,7 +537,7 @@ func TestGlobalConsumesClicks(t *testing.T) {
 // from the bottom; the measured height grows by a row each time.
 func TestLayoutGlobalWrapsToggleRows(t *testing.T) {
 	t.Parallel()
-	g := rect{1040, 400, 232, 0}
+	g := rect{X: 1040, Y: 400, W: 232, H: 0}
 	var prev float32
 	for _, n := range []int{8, 9, 16, 17} {
 		h := globalStackHeight(globalPlan{}, n)
@@ -547,15 +548,15 @@ func TestLayoutGlobalWrapsToggleRows(t *testing.T) {
 			t.Fatalf("n=%d: %d toggle rects", n, len(rows.Toggles))
 		}
 		for i, r := range rows.Toggles {
-			if r.X < g.X || r.right() > g.right() || r.Y < g.Y || r.bottom() > g.bottom() {
+			if r.X < g.X || r.Right() > g.Right() || r.Y < g.Y || r.Bottom() > g.Bottom() {
 				t.Errorf("n=%d toggle %d %+v outside %+v", n, i, r, g)
 			}
 			if i >= globalPerRow && r.Y <= rows.Toggles[i-globalPerRow].Y {
 				t.Errorf("n=%d: toggle %d %+v should be below toggle %d %+v (rows run top to bottom)", n, i, r, i-globalPerRow, rows.Toggles[i-globalPerRow])
 			}
 		}
-		if last := rows.Toggles[n-1]; g.right()-globalPad != last.right() {
-			t.Errorf("n=%d: the last toggle ends at %v, want the inner right edge %v", n, last.right(), g.right()-globalPad)
+		if last := rows.Toggles[n-1]; g.Right()-globalPad != last.Right() {
+			t.Errorf("n=%d: the last toggle ends at %v, want the inner right edge %v", n, last.Right(), g.Right()-globalPad)
 		}
 		if h < prev {
 			t.Errorf("n=%d: height %v shrank from %v", n, h, prev)

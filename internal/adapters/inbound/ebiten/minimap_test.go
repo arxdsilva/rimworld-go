@@ -95,27 +95,27 @@ func TestMinimapIsTheLayoutRect(t *testing.T) {
 		if m.W != minimapSize || m.H != minimapSize {
 			t.Fatalf("ui %d: minimap %+v, want a %d square", sc.ui, m, minimapSize)
 		}
-		if m.bottom() != l.Global.Y-hudMargin || m.right() != float32(a.sw)-hudMargin {
+		if m.Bottom() != l.Global.Y-hudMargin || m.Right() != float32(a.sw)-hudMargin {
 			t.Errorf("ui %d: minimap %+v should sit just above Global %+v at the right edge", sc.ui, m, l.Global)
 		}
 		bx, by, _, _, _, _ := a.renderer.minimapBox(colonyViewport(a.sw, a.sh))
 		if float32(bx) != m.X || float32(by) != m.Y {
 			t.Errorf("ui %d: minimapBox (%v,%v) disagrees with the layout %+v", sc.ui, bx, by, m)
 		}
-		cx, cy := m.center()
+		cx, cy := m.Center()
 		if a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {
 			t.Errorf("ui %d: the minimap is chrome; it keeps its own click path", sc.ui)
 		}
 		before := a.renderer.cam.offsetX
-		a.renderer.cam.offsetX = before + 1                   // so a recentre is visible
-		f.onRect(a, rect{m.X + m.W*0.1, m.Y + m.H*0.5, 1, 1}) // near the left of the map
+		a.renderer.cam.offsetX = before + 1                               // so a recentre is visible
+		f.onRect(a, rect{X: m.X + m.W*0.1, Y: m.Y + m.H*0.5, W: 1, H: 1}) // near the left of the map
 		f.click(t, a, mbLeft, 0)
 		if a.renderer.cam.offsetX == before+1 {
 			t.Errorf("ui %d: clicking the minimap did not move the camera", sc.ui)
 		}
 	}
 	small, _ := globalColonyP(t, newGlobalSim())
-	if m := small.hud().Minimap; !m.empty() {
+	if m := small.hud().Minimap; !m.Empty() {
 		t.Errorf("a 16x16 map has a minimap: %+v", m)
 	}
 }

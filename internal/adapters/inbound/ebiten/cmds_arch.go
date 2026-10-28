@@ -304,7 +304,7 @@ func (a *App) archDescButtons(r rect) []button {
 	plan := a.archPlan()
 	var out []button
 	add := func(b button) {
-		if b.y+b.h <= r.bottom() {
+		if b.y+b.h <= r.Bottom() {
 			out = append(out, b)
 		}
 	}

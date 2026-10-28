@@ -20,17 +20,17 @@ func drawProgress(dst *ebiten.Image, r rect, label string, frac float64, phase s
 	if phase != "" {
 		ps := tsSmall
 		ps.Color, ps.Align = uiTextDim, alignRight
-		drawText(dst, fitText(phase, tsSmall, r.W*0.6), float64(r.right()), float64(r.Y)+(float64(lh)-lineH(ps))/2, ps)
+		drawText(dst, fitText(phase, tsSmall, r.W*0.6), float64(r.Right()), float64(r.Y)+(float64(lh)-lineH(ps))/2, ps)
 	}
-	bar := rect{r.X, r.Y + lh + 4, r.W, min(progressBarH, max(8, r.H-lh-4))}
+	bar := rect{X: r.X, Y: r.Y + lh + 4, W: r.W, H: min(progressBarH, max(8, r.H-lh-4))}
 	fillRect(dst, bar, uiSliderTrack)
-	fillRect(dst, rect{bar.X, bar.Y, bar.W * float32(frac), bar.H}, uiAccent)
+	fillRect(dst, rect{X: bar.X, Y: bar.Y, W: bar.W * float32(frac), H: bar.H}, uiAccent)
 	strokeRect(dst, bar, uiPanelBorder)
 	ps := tsSmall
 	ps.Align, ps.Color = alignCenter, uiText
 	if frac > 0.5 {
 		ps.Color = uiField
 	}
-	cx, cy := bar.center()
+	cx, cy := bar.Center()
 	drawText(dst, fmt.Sprintf("%d%%", int(math.Round(frac*100))), float64(cx), float64(cy)-lineH(ps)/2, ps)
 }

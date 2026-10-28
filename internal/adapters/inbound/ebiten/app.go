@@ -732,7 +732,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 			}
 			if scaled {
 				a.endWorldPass()
-				compositeWorld(screen, dst, a.scale.worldK())
+				compositeWorld(screen, dst, a.scale.WorldK())
 				a.flushWorldOverlay(screen)
 			}
 		} else {
@@ -925,7 +925,7 @@ func (a *App) mapCursor() (int, int) {
 		s := a.mapScale()
 		return int(float64(a.cursor[0]) * s), int(float64(a.cursor[1]) * s)
 	}
-	if k := a.scale.worldK(); k != 1 {
+	if k := a.scale.WorldK(); k != 1 {
 		return int(float64(a.in.raw.mx) * k), int(float64(a.in.raw.my) * k)
 	}
 	return a.in.raw.mx, a.in.raw.my

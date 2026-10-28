@@ -122,7 +122,7 @@ func (a *App) deleteArea(ar game.AreaView) {
 // areasBody declares one row per area.
 func (a *App) areasBody(body rect, names map[int]*string) {
 	areas := a.renderer.game.Areas()
-	head, rest := body.splitV(28)
+	head, rest := body.SplitV(28)
 	a.uiLabel(head.X, head.Y, "Architect > Zones > Expand allowed area paints one.", withColor(tsSmall, uiTextDim))
 	if len(areas) == 0 {
 		a.uiLabel(rest.X, rest.Y+4, areasEmpty, dimText())
@@ -131,9 +131,9 @@ func (a *App) areasBody(body rect, names map[int]*string) {
 	sa := a.uiScrollArea("areas.list", rest, float32(len(areas)*areasRowH), scrollOpts{Step: areasRowH * 2})
 	y := sa.View.Y - sa.Off
 	for _, ar := range areas {
-		rr := rect{sa.View.X, y, sa.View.W - 4, areasRowH - 6}
+		rr := rect{X: sa.View.X, Y: y, W: sa.View.W - 4, H: areasRowH - 6}
 		y += areasRowH
-		if rr.Y < sa.View.Y || rr.bottom() > sa.View.bottom() {
+		if rr.Y < sa.View.Y || rr.Bottom() > sa.View.Bottom() {
 			continue
 		}
 		id := int(ar.ID)
@@ -151,7 +151,7 @@ func (a *App) areasBody(body rect, names map[int]*string) {
 			*v = ar.Name
 			names[id] = v
 		}
-		fr := rect{rr.X + 28, rr.Y, rr.W - 28 - 190, rr.H}
+		fr := rect{X: rr.X + 28, Y: rr.Y, W: rr.W - 28 - 190, H: rr.H}
 		_, committed := a.uiTextField(fid, fr, v, textFieldSpec{
 			MaxLen: 24, Placeholder: "Area name", Normalize: strings.TrimSpace})
 		if committed && *v != "" && *v != ar.Name {
@@ -159,12 +159,12 @@ func (a *App) areasBody(body rect, names map[int]*string) {
 		} else if a.uiSt().edit.id != fid {
 			*v = ar.Name
 		}
-		a.uiLabel(fr.right()+8, rr.Y+(rr.H-float32(lineH(tsSmall)))/2, fmt.Sprintf("%d cells", ar.Cells), withColor(tsSmall, uiTextDim))
-		if a.uiButton(fmt.Sprintf("areas.invert.%d", id), rect{rr.right() - 86, rr.Y, 56, rr.H}, "Invert", btnOpts{
+		a.uiLabel(fr.Right()+8, rr.Y+(rr.H-float32(lineH(tsSmall)))/2, fmt.Sprintf("%d cells", ar.Cells), withColor(tsSmall, uiTextDim))
+		if a.uiButton(fmt.Sprintf("areas.invert.%d", id), rect{X: rr.Right() - 86, Y: rr.Y, W: 56, H: rr.H}, "Invert", btnOpts{
 			Tip: "Invert\nSwap the area's tiles: painted become empty and the rest becomes painted."}) {
 			a.shell.Enqueue(command.Command{Kind: command.InvertArea, Index: id})
 		}
-		if a.uiButton(fmt.Sprintf("areas.delete.%d", id), rect{rr.right() - 26, rr.Y, 26, rr.H}, "X", btnOpts{
+		if a.uiButton(fmt.Sprintf("areas.delete.%d", id), rect{X: rr.Right() - 26, Y: rr.Y, W: 26, H: rr.H}, "X", btnOpts{
 			Style: btnDanger, Tip: "Delete\nRemove this area. Anyone restricted to it becomes unrestricted."}) {
 			a.deleteArea(ar)
 		}

@@ -57,7 +57,7 @@ func (sp sliderSpec) format(v float64) string {
 // sliderTrack is the track inside r: inset by half a knob so the knob
 // stays inside r at both ends.
 func sliderTrack(r rect) rect {
-	return rect{r.X + sliderKnobW/2, r.Y + (sliderKnobH-sliderTrackH)/2, max(0, r.W-sliderKnobW), sliderTrackH}
+	return rect{X: r.X + sliderKnobW/2, Y: r.Y + (sliderKnobH-sliderTrackH)/2, W: max(0, r.W-sliderKnobW), H: sliderTrackH}
 }
 
 // sliderFrac is v's position along the track, 0..1.
@@ -166,12 +166,12 @@ func (a *App) uiSliderInt(id string, r rect, val *int, sp sliderSpec) bool {
 func drawSlider(dst *ebiten.Image, r, track rect, v float64, sp sliderSpec, hot bool) {
 	fillRect(dst, track, uiSliderTrack)
 	t := float32(sp.frac(v))
-	fillRect(dst, rect{track.X, track.Y, track.W * t, track.H}, uiSliderFill)
+	fillRect(dst, rect{X: track.X, Y: track.Y, W: track.W * t, H: track.H}, uiSliderFill)
 	strokeRect(dst, track, uiPanelBorder)
 	n := len(sp.Stops)
 	for i, l := range sp.Stops {
 		x := track.X + track.W*float32(i)/float32(n-1)
-		uiLine(dst, x, track.bottom()+1, x, track.bottom()+4, 1, uiPanelBorder, false)
+		uiLine(dst, x, track.Bottom()+1, x, track.Bottom()+4, 1, uiPanelBorder, false)
 		st := tsSmall
 		st.Color = uiTextDim
 		if math.Round(v) == float64(i) {
@@ -182,14 +182,14 @@ func drawSlider(dst *ebiten.Image, r, track rect, v float64, sp sliderSpec, hot 
 		case i == 0:
 			st.Align, ax = alignLeft, float64(r.X)
 		case i == n-1:
-			st.Align, ax = alignRight, float64(r.right())
+			st.Align, ax = alignRight, float64(r.Right())
 		default:
 			st.Align = alignCenter
 		}
 		drawText(dst, l, ax, float64(r.Y+sliderKnobH+3), st)
 	}
 	kx := track.X + track.W*t
-	knob := rect{kx - sliderKnobW/2, r.Y, sliderKnobW, sliderKnobH}
+	knob := rect{X: kx - sliderKnobW/2, Y: r.Y, W: sliderKnobW, H: sliderKnobH}
 	c := uiSliderKnob
 	if sp.Disabled {
 		c = uiBtnDisabled

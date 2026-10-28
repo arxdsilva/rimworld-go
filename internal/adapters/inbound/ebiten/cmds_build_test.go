@@ -489,7 +489,7 @@ func billsTabApp(t *testing.T, bills []game.BillView) (*App, *stubSim, *fakeInpu
 	kind, _ := benchWithMostRecipes()
 	s := bldStub(game.BuildingView{ID: 77, Kind: kind, X: 8, Y: 8, W: 2, H: 1, Bench: true, Bills: bills})
 	a, f := bldApp(t, s, 77)
-	panel := rect{0, 180, 520, 300}
+	panel := rect{X: 0, Y: 180, W: 520, H: 300}
 	setHook(a.uiSt(), func(a *App) { a.billsTabUI(77, panel) })
 	f.frame(t, a)
 	return a, s, f, panel
@@ -519,7 +519,7 @@ func TestBillsTabDeclaresEveryRowControlInsideThePanel(t *testing.T) {
 			t.Errorf("no widget %s", id)
 			continue
 		}
-		if w.r.X < panel.X || w.r.Y < panel.Y || w.r.right() > panel.right() || w.r.bottom() > panel.bottom() {
+		if w.r.X < panel.X || w.r.Y < panel.Y || w.r.Right() > panel.Right() || w.r.Bottom() > panel.Bottom() {
 			t.Errorf("%s at %+v falls out of the panel %+v", id, w.r, panel)
 		}
 	}
@@ -530,7 +530,7 @@ func TestBillsTabDeclaresEveryRowControlInsideThePanel(t *testing.T) {
 			if p.id == "bill.rows" || q.id == "bill.rows" {
 				continue
 			}
-			if p.r.X < q.r.right() && q.r.X < p.r.right() && p.r.Y < q.r.bottom() && q.r.Y < p.r.bottom() {
+			if p.r.X < q.r.Right() && q.r.X < p.r.Right() && p.r.Y < q.r.Bottom() && q.r.Y < p.r.Bottom() {
 				t.Errorf("%s overlaps %s", p.id, q.id)
 			}
 		}
@@ -606,7 +606,7 @@ func TestBillsTabScrollsLongLists(t *testing.T) {
 	}
 	for _, id := range []string{"bill.plus.0", "bill.plus.1"} {
 		w, _ := a.uiSt().find(id)
-		if w.r.bottom() > panel.bottom() {
+		if w.r.Bottom() > panel.Bottom() {
 			t.Fatalf("%s spills out of the panel: %+v", id, w.r)
 		}
 	}
@@ -698,7 +698,7 @@ func TestBillsTabFitsItsWantedPanel(t *testing.T) {
 		s := bldStub(game.BuildingView{ID: 77, Kind: kind, X: 8, Y: 8, W: 2, H: 1, Bench: true, Bills: bills})
 		a, f := bldApp(t, s, 77)
 		tab, _ := bldTab(a.buildingPane(77), "inspector.bills")
-		inner := rect{0, 120, tab.WantW, tab.WantH}.inset(paneInset)
+		inner := rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(paneInset)
 		setHook(a.uiSt(), func(a *App) { tab.Declare(inner) })
 		f.frame(t, a)
 		for i := 0; i < n; i++ {
@@ -707,7 +707,7 @@ func TestBillsTabFitsItsWantedPanel(t *testing.T) {
 			}
 		}
 		w, ok := a.uiSt().find(billPickBtn)
-		if !ok || w.r.bottom() > inner.bottom()+0.01 || w.r.Y < inner.Y {
+		if !ok || w.r.Bottom() > inner.Bottom()+0.01 || w.r.Y < inner.Y {
 			t.Errorf("%d bills: Add bill at %+v, inner %+v", n, w.r, inner)
 		}
 	}
@@ -718,7 +718,7 @@ func TestPenTabFitsItsWantedPanel(t *testing.T) {
 	t.Parallel()
 	a := penApp(t, penSim())
 	tab, _ := bldTab(a.buildingPane(70), "inspector.pen")
-	inner := rect{0, 120, tab.WantW, tab.WantH}.inset(paneInset)
+	inner := rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(paneInset)
 	body := penTabBody(a.renderer.world(), penSim().world.Pens[0], inner.W-scrollBarW)
 	if body.h > inner.H+0.01 {
 		t.Fatalf("pen body %v tall in an inner panel %v tall", body.h, inner.H)
@@ -736,21 +736,21 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 	a, f := bldApp(t, s, 77)
 	f.frame(t, a)
 	l := a.hud()
-	if l.Pane.empty() || l.PaneTabs.empty() {
+	if l.Pane.Empty() || l.PaneTabs.Empty() {
 		t.Fatalf("no pane for a selected bench: %+v", l)
 	}
 	if got := len(a.buildingCommands(77)); got == 0 || len(l.GridCells) != got {
 		t.Fatalf("grid cells %d, commands %d", len(l.GridCells), got)
 	}
 	assertChromeIsTheLayout(t, a) // the legacy panel's area is not reserved
-	if !l.Expanded.empty() {
+	if !l.Expanded.Empty() {
 		t.Fatal("the Bills tab starts closed")
 	}
 
 	a.applyClick("inspector.bills")
 	f.frame(t, a)
 	l = a.hud()
-	if l.Expanded.empty() {
+	if l.Expanded.Empty() {
 		t.Fatal("clicking the Bills tab opens its panel")
 	}
 	for _, id := range []string{"bill.minus.0", "bill.plus.1", "bill.del.1", billPickBtn} {
@@ -758,7 +758,7 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 		if !ok {
 			t.Fatalf("no widget %s with the Bills tab open", id)
 		}
-		if w.r.X < l.Expanded.X || w.r.right() > l.Expanded.right() || w.r.Y < l.Expanded.Y || w.r.bottom() > l.Expanded.bottom() {
+		if w.r.X < l.Expanded.X || w.r.Right() > l.Expanded.Right() || w.r.Y < l.Expanded.Y || w.r.Bottom() > l.Expanded.Bottom() {
 			t.Errorf("%s at %+v falls out of the expanded panel %+v", id, w.r, l.Expanded)
 		}
 	}
@@ -798,7 +798,7 @@ func TestBlueprintSelectionThroughTheHUD(t *testing.T) {
 	a.selectCand(selCand{selFrame, 7})
 	f.frame(t, a)
 	l := a.hud()
-	if l.Pane.empty() || len(l.GridCells) != 1 {
+	if l.Pane.Empty() || len(l.GridCells) != 1 {
 		t.Fatalf("blueprint layout: pane %+v cells %d", l.Pane, len(l.GridCells))
 	}
 	assertChromeIsTheLayout(t, a) // the legacy panel's area is not reserved

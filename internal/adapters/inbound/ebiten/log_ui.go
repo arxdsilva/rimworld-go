@@ -95,7 +95,7 @@ func (a *App) handleLogWheel() bool {
 // scrollLogAt scrolls the colonist Log tab under the cursor (the animal's
 // Log tab is a widget-kit scroll area: declareAnimalLog).
 func (a *App) scrollLogAt(mx, my int, wy float64) bool {
-	return a.paneOpenTab() == "inspector.log" && a.inspectorVisible() && a.scrollLogIn(a.expandedRect().inset(paneInset), mx, my, wy)
+	return a.paneOpenTab() == "inspector.log" && a.inspectorVisible() && a.scrollLogIn(a.expandedRect().Inset(paneInset), mx, my, wy)
 }
 
 // scrollLogIn scrolls the selected colonist's Log tab, whose expanded

@@ -40,7 +40,7 @@ func pickIDs(a *App) map[string]button {
 // point (lx, ly) for one frame.
 func wheelOver(t *testing.T, a *App, f *fakeInput, lx, ly float32, notches float64) {
 	t.Helper()
-	f.cur.mx, f.cur.my = int(float64(lx)*a.scale.s), int(float64(ly)*a.scale.s)
+	f.cur.mx, f.cur.my = int(float64(lx)*a.scale.S), int(float64(ly)*a.scale.S)
 	f.cur.wheelY = notches
 	f.frame(t, a)
 	f.cur.wheelY = 0
@@ -57,7 +57,7 @@ func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI sc
 			a.applyClick("tab.research")
 			f.frame(t, a)
 			w := a.hud().Window
-			if w.empty() {
+			if w.Empty() {
 				t.Fatal("no Window rect")
 			}
 			if _, ok := pickIDs(a)["research.pick.15"]; ok {
@@ -66,7 +66,7 @@ func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI sc
 			if _, ok := pickIDs(a)["research.pick.0"]; !ok {
 				t.Fatalf("the first project is not shown at the top: %v", pickIDs(a))
 			}
-			cx, cy := w.center()
+			cx, cy := w.Center()
 			for i := 0; i < 40; i++ {
 				if _, ok := pickIDs(a)["research.pick.15"]; ok {
 					break
@@ -77,12 +77,12 @@ func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI sc
 			if !ok {
 				t.Fatalf("the wheel never reached the last project: %v", pickIDs(a))
 			}
-			if !w.contains(last.x, last.y) || !w.contains(last.x+last.w, last.y+last.h) {
+			if !w.Contains(last.x, last.y) || !w.Contains(last.x+last.w, last.y+last.h) {
 				t.Fatalf("the last project's button %+v is outside the window %+v", last, w)
 			}
 			// a real click on it picks it
 			bx, by := last.x+last.w/2, last.y+last.h/2
-			f.cur.mx, f.cur.my = int(float64(bx)*a.scale.s), int(float64(by)*a.scale.s)
+			f.cur.mx, f.cur.my = int(float64(bx)*a.scale.S), int(float64(by)*a.scale.S)
 			f.click(t, a, mbLeft, 0)
 			s := a.renderer.game.(*stubSim)
 			got := cmdsOf(s, command.SetResearch)
@@ -113,7 +113,7 @@ func TestResearchScrollBarAppearsOnlyWhenNeeded(t *testing.T) {
 	if !ok {
 		t.Fatal("no research.scroll widget")
 	}
-	if bar.r.right() > w.right()+0.01 || bar.r.Y < w.Y || bar.r.bottom() > w.bottom()+0.01 {
+	if bar.r.Right() > w.Right()+0.01 || bar.r.Y < w.Y || bar.r.Bottom() > w.Bottom()+0.01 {
 		t.Fatalf("scroll area %+v is outside the window %+v", bar.r, w)
 	}
 	if len(pickIDs(a)) >= 16 {
@@ -128,7 +128,7 @@ func TestResearchScrollBarAppearsOnlyWhenNeeded(t *testing.T) {
 	if got := len(pickIDs(b)); got != 3 {
 		t.Fatalf("3 projects show %d buttons", got)
 	}
-	cx, cy := b.hud().Window.center()
+	cx, cy := b.hud().Window.Center()
 	wheelOver(t, b, g, cx, cy, -3)
 	if got := len(pickIDs(b)); got != 3 {
 		t.Fatalf("the wheel over a short list changed the buttons: %d", got)
@@ -146,7 +146,7 @@ func TestResearchWindowOpensOnTheCurrentProject(t *testing.T) {
 	// scrolling away is not undone: the selection reveals itself on opening
 	// and when it changes, not every frame
 	w := a.hud().Window
-	cx, cy := w.center()
+	cx, cy := w.Center()
 	for i := 0; i < 40; i++ {
 		wheelOver(t, a, f, cx, cy, 1)
 	}
@@ -189,7 +189,7 @@ func TestResearchScrollBarClickPages(t *testing.T) {
 	}
 	before := len(pickIDs(a))
 	// a click on the track near the bottom pages down
-	f.cur.mx, f.cur.my = int(bar.r.right()-3), int(bar.r.bottom()-3)
+	f.cur.mx, f.cur.my = int(bar.r.Right()-3), int(bar.r.Bottom()-3)
 	f.click(t, a, mbLeft, 0)
 	if _, ok := pickIDs(a)["research.pick.0"]; ok {
 		t.Fatalf("a click below the thumb did not page down: %v", pickIDs(a))
@@ -211,7 +211,7 @@ func TestResearchWindowDrawsInsideAtEveryOffset(t *testing.T) {
 			a.applyClick("tab.research")
 			f.frame(t, a)
 			w := a.hud().Window
-			cx, cy := w.center()
+			cx, cy := w.Center()
 			for step := 0; step < 20; step++ {
 				wheelOver(t, a, f, cx, cy, -1)
 				added := winAdded(base, winTrace(a, img))
@@ -221,19 +221,19 @@ func TestResearchWindowDrawsInsideAtEveryOffset(t *testing.T) {
 				res := a.hud().Resources // the resource list re-flows above a tall window
 				var bad []string
 				for _, e := range added {
-					if !res.empty() && winInside(e, float64(res.X)*ui, float64(res.Y)*ui, float64(res.right())*ui, float64(res.bottom())*ui, 1) {
+					if !res.Empty() && winInside(e, float64(res.X)*ui, float64(res.Y)*ui, float64(res.Right())*ui, float64(res.Bottom())*ui, 1) {
 						continue
 					}
-					if float64(e.X) >= float64(w.right())*ui-1 {
+					if float64(e.X) >= float64(w.Right())*ui-1 {
 						continue // the right column (letters, helper): not the window's
 					}
-					if !winInside(e, float64(w.X)*ui, float64(w.Y)*ui, float64(w.right())*ui, float64(w.bottom())*ui, 1) {
+					if !winInside(e, float64(w.X)*ui, float64(w.Y)*ui, float64(w.Right())*ui, float64(w.Bottom())*ui, 1) {
 						bad = append(bad, winString(e)+" is outside the window")
 					}
 				}
 				winReport(t, "scroll step "+strconv.Itoa(step), bad)
 				for id, b := range pickIDs(a) {
-					if b.y < w.Y || b.y+b.h > w.bottom() {
+					if b.y < w.Y || b.y+b.h > w.Bottom() {
 						t.Fatalf("%s %+v is not wholly inside the window %+v", id, b, w)
 					}
 				}

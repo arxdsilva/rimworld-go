@@ -52,7 +52,7 @@ func clickID(t *testing.T, a *App, f *fakeInput, id string) {
 	if !ok {
 		t.Fatalf("no widget %q", id)
 	}
-	cx, cy := w.r.center()
+	cx, cy := w.r.Center()
 	f.clickAt(t, a, int(cx), int(cy))
 }
 

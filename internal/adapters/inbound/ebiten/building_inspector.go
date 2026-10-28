@@ -207,8 +207,8 @@ func (a *App) billsTab(b game.BuildingView) paneTab {
 // billsLayout splits the Bills tab's inner rectangle r: the scrolling list
 // of bills and the Add bill button under it.
 func billsLayout(r rect) (list, add rect) {
-	list, foot := r.splitV(-(billBtnH + bodyGap))
-	return list, rect{foot.X, foot.Y + bodyGap, billAddW, billBtnH}
+	list, foot := r.SplitV(-(billBtnH + bodyGap))
+	return list, rect{X: foot.X, Y: foot.Y + bodyGap, W: billAddW, H: billBtnH}
 }
 
 // billsBody lays out bench b's bills, viewW wide: a line of text and the
@@ -225,7 +225,7 @@ func billsBody(b game.BuildingView, viewW float32) tabBody {
 		y := float32(i) * billRowH
 		ix := strconv.Itoa(i)
 		if bl.Status != "" {
-			body.fills = append(body.fills, tabFill{rect{0, y, 4, billBtnH}, uiBtnDisabled})
+			body.fills = append(body.fills, tabFill{rect{X: 0, Y: y, W: 4, H: billBtnH}, uiBtnDisabled})
 		}
 		body.labels = append(body.labels, tabLabel{text: billLine(bl), x: 8, y: y + 2, w: x - 8 - bodyGap, st: tsBody})
 		body.buttons = append(body.buttons,
@@ -577,9 +577,9 @@ func (a *App) bedOwnerBody(body rect, bed entity.EntityID, slot int) {
 	area := a.uiScrollArea("bed.owner.rows", body, float32(len(rows)*assignRowH), scrollOpts{Step: assignRowH * 2})
 	y := area.View.Y - area.Off
 	for _, row := range rows {
-		rr := rect{area.View.X, y, area.View.W, assignRowH - 4}
+		rr := rect{X: area.View.X, Y: y, W: area.View.W, H: assignRowH - 4}
 		y += assignRowH
-		if rr.Y < area.View.Y || rr.bottom() > area.View.bottom() {
+		if rr.Y < area.View.Y || rr.Bottom() > area.View.Bottom() {
 			continue
 		}
 		if a.uiButton(bedOwnerPickID(row.id), rr, row.name, btnOpts{}) {

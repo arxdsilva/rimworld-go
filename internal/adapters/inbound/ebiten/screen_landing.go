@@ -42,12 +42,12 @@ type landGeo struct {
 func landRects(sw, sh int) landGeo {
 	w, h := float32(sw), float32(sh)
 	g := landGeo{}
-	g.panel = rect{w - landPanelW - landPanelPad, landPanelPad, landPanelW, h - landPanelPad - landBarH - 2*landPanelPad}
-	g.bar = rect{(w - 740) / 2, h - landBarH - landPanelPad, 740, landBarH}
-	g.globe = rect{0, landTitleH, g.panel.X, g.bar.Y - landTitleH}
-	g.title = rect{0, 12, g.panel.X, 32}
-	g.mode = rect{g.panel.X - 12 - 170, 14, 170, 30}
-	g.legend = rect{g.mode.X - 8 - 90, 14, 90, 30}
+	g.panel = rect{X: w - landPanelW - landPanelPad, Y: landPanelPad, W: landPanelW, H: h - landPanelPad - landBarH - 2*landPanelPad}
+	g.bar = rect{X: (w - 740) / 2, Y: h - landBarH - landPanelPad, W: 740, H: landBarH}
+	g.globe = rect{X: 0, Y: landTitleH, W: g.panel.X, H: g.bar.Y - landTitleH}
+	g.title = rect{X: 0, Y: 12, W: g.panel.X, H: 32}
+	g.mode = rect{X: g.panel.X - 12 - 170, Y: 14, W: 170, H: 30}
+	g.legend = rect{X: g.mode.X - 8 - 90, Y: 14, W: 90, H: 30}
 	return g
 }
 
@@ -446,12 +446,12 @@ func (a *App) landingUI(sw, sh int) {
 	if shown < 0 && g.Hovered() >= 0 {
 		shown = g.Hovered()
 	}
-	a.landInfoPanel(ng, geo.panel.inset(landPanelPad), shown, g.Hovered() == globeUncovered && ng.tile < 0)
+	a.landInfoPanel(ng, geo.panel.Inset(landPanelPad), shown, g.Hovered() == globeUncovered && ng.tile < 0)
 
 	// The globe takes the pointer anywhere outside the chrome and modals.
 	mx, my := a.currentCursor()
-	blocked := a.uiModalOpen() || geo.panel.hit(mx, my) || geo.bar.hit(mx, my) || geo.mode.hit(mx, my) || geo.legend.hit(mx, my) ||
-		(ng.legend && a.legendRect(geo).hit(mx, my))
+	blocked := a.uiModalOpen() || geo.panel.Hit(mx, my) || geo.bar.Hit(mx, my) || geo.mode.Hit(mx, my) || geo.legend.Hit(mx, my) ||
+		(ng.legend && a.legendRect(geo).Hit(mx, my))
 	clicked, _ := g.Update(globeInputFrom(&a.in, sw, sh, blocked), a.settings.Accessibility.ReducedMotion)
 	switch {
 	case clicked >= 0:
@@ -470,7 +470,7 @@ func (a *App) landBar(ng *newGameState, g *globeView, bar rect) {
 	x := bar.X + 12
 	y := bar.Y + (bar.H-footerBtnH)/2
 	btn := func(id, label string, w float32, o btnOpts, fn func()) {
-		a.ngButton(id, rect{x, y, w, footerBtnH}, label, o, fn)
+		a.ngButton(id, rect{X: x, Y: y, W: w, H: footerBtnH}, label, o, fn)
 		x += w + 10
 	}
 	btn(ids.WizardBack, "Back", 110, btnOpts{}, a.goBack)
@@ -519,7 +519,7 @@ func (a *App) landInfoPanel(ng *newGameState, r rect, tile int, uncovered bool) 
 	hs := tsLarge
 	hs.Color = uiHeading
 	a.uiLabel(r.X, r.Y, "Tile info", hs)
-	body := rect{r.X, r.Y + float32(lineH(hs)) + 8, r.W, r.H - float32(lineH(hs)) - 8}
+	body := rect{X: r.X, Y: r.Y + float32(lineH(hs)) + 8, W: r.W, H: r.H - float32(lineH(hs)) - 8}
 	if uncovered || tile == globeUncovered {
 		a.uiLabel(body.X, body.Y, planet.ReasonOutside, dimText())
 		return
@@ -537,10 +537,10 @@ func (a *App) landInfoPanel(ng *newGameState, r rect, tile int, uncovered bool) 
 	area := a.uiScrollArea("land.info", body, total, scrollOpts{Step: 40})
 	y := area.View.Y - area.Off
 	for i, b := range blocks {
-		br := rect{area.View.X, y, area.View.W, b.h}
+		br := rect{X: area.View.X, Y: y, W: area.View.W, H: b.h}
 		y += b.h
-		vis := br.intersect(area.View)
-		if vis.empty() {
+		vis := br.Intersect(area.View)
+		if vis.Empty() {
 			continue
 		}
 		if b.tip != "" {
@@ -629,7 +629,7 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 			for i, l := range lines {
 				drawText(dst, l, float64(r.X+landLabelW), float64(r.Y+2)+float64(i)*lineH(vs), vs)
 			}
-			fillRect(dst, rect{r.X, r.bottom() - 1, r.W, 1}, uiFade(uiPanelBorder, 0x50))
+			fillRect(dst, rect{X: r.X, Y: r.Bottom() - 1, W: r.W, H: 1}, uiFade(uiPanelBorder, 0x50))
 		}})
 	}
 	return out
@@ -638,7 +638,7 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 // ---- legend -----------------------------------------------------------------------------
 
 func (a *App) legendRect(geo landGeo) rect {
-	return rect{geo.mode.right() - 190, geo.mode.bottom() + 8, 190, 14 + 12*18}
+	return rect{X: geo.mode.Right() - 190, Y: geo.mode.Bottom() + 8, W: 190, H: 14 + 12*18}
 }
 
 // landLegend paints the biome colours (or the data ramp) in r.
@@ -650,7 +650,7 @@ func (a *App) landLegend(g *globeView, r rect) {
 			for i, d := range biome.All() {
 				y := r.Y + 8 + float32(i)*18
 				c := palRGB(d.Key)
-				fillRect(dst, rect{r.X + 10, y + 2, 14, 12}, color.RGBA{uint8(c[0] * 255), uint8(c[1] * 255), uint8(c[2] * 255), 255})
+				fillRect(dst, rect{X: r.X + 10, Y: y + 2, W: 14, H: 12}, color.RGBA{uint8(c[0] * 255), uint8(c[1] * 255), uint8(c[2] * 255), 255})
 				drawText(dst, d.Name, float64(r.X+32), float64(y), st)
 			}
 			return
@@ -665,18 +665,18 @@ func (a *App) landLegend(g *globeView, r rect) {
 		default:
 			stops, unit = elevRamp, " m"
 		}
-		bar := rect{r.X + 12, r.Y + 14, r.W - 24, 16}
+		bar := rect{X: r.X + 12, Y: r.Y + 14, W: r.W - 24, H: 16}
 		lo, hi := stops[0].at, stops[len(stops)-1].at
 		for x := 0; x < int(bar.W); x++ {
 			c := ramp(stops, lo+(hi-lo)*float32(x)/bar.W)
-			fillRect(dst, rect{bar.X + float32(x), bar.Y, 1, bar.H}, color.RGBA{uint8(c[0] * 255), uint8(c[1] * 255), uint8(c[2] * 255), 255})
+			fillRect(dst, rect{X: bar.X + float32(x), Y: bar.Y, W: 1, H: bar.H}, color.RGBA{uint8(c[0] * 255), uint8(c[1] * 255), uint8(c[2] * 255), 255})
 		}
 		strokeRect(dst, bar, uiPanelBorder)
 		ls := st
 		ls.Color = uiTextDim
-		drawText(dst, fmt.Sprintf("%.0f%s", lo, unit), float64(bar.X), float64(bar.bottom()+4), ls)
+		drawText(dst, fmt.Sprintf("%.0f%s", lo, unit), float64(bar.X), float64(bar.Bottom()+4), ls)
 		ls.Align = alignRight
-		drawText(dst, fmt.Sprintf("%.0f%s", hi, unit), float64(bar.right()), float64(bar.bottom()+4), ls)
+		drawText(dst, fmt.Sprintf("%.0f%s", hi, unit), float64(bar.Right()), float64(bar.Bottom()+4), ls)
 	})
 }
 
@@ -724,10 +724,10 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 	hs.Color = uiHeading
 	y := body.Y
 	a.uiLabel(body.X, y, "Starting season", hs)
-	a.uiTip("land.season.tip", rect{body.X, y, body.W, 22}, "Starting season\nSeason the colony starts in, at this site.")
+	a.uiTip("land.season.tip", rect{X: body.X, Y: y, W: body.W, H: 22}, "Starting season\nSeason the colony starts in, at this site.")
 	y += 26
 	sel := ng.season + 1
-	if a.uiRadio("land.season", rect{body.X, y, body.W, 5 * radioRowH}, append([]string{"Auto"}, seasonNames...), &sel, radioOpts{
+	if a.uiRadio("land.season", rect{X: body.X, Y: y, W: body.W, H: 5 * radioRowH}, append([]string{"Auto"}, seasonNames...), &sel, radioOpts{
 		Tips: []string{"Auto\nThe first season that is already warm (8°C or more) and getting warmer; otherwise the warmest one."},
 	}) {
 		ng.season = sel - 1
@@ -740,7 +740,7 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 	a.uiLabel(body.X, y, note, dimText())
 	y += 34
 	a.uiLabel(body.X, y, "Map size", hs)
-	a.uiTip("land.mapsize.tip", rect{body.X, y, body.W, 22}, "Map size\nThe side of the square local map. Bigger maps take longer to build and need a faster computer.")
+	a.uiTip("land.mapsize.tip", rect{X: body.X, Y: y, W: body.W, H: 22}, "Map size\nThe side of the square local map. Bigger maps take longer to build and need a faster computer.")
 	y += 26
 	labels := make([]string, len(opts))
 	dis := make([]string, len(opts))
@@ -760,7 +760,7 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 			msel = i
 		}
 	}
-	list := rect{body.X, y, body.W, float32(len(opts)) * radioRowH}
+	list := rect{X: body.X, Y: y, W: body.W, H: float32(len(opts)) * radioRowH}
 	if a.uiRadio("land.mapsize", list, labels, &msel, radioOpts{Disabled: dis, Tips: tips}) {
 		ng.mapSize = opts[msel].Side
 	}
@@ -771,7 +771,7 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 // end of its row, in the warning colour, clear of the size label. The size
 // stays selectable: this only draws.
 func (a *App) mapSizeWarnings(list rect, labels, notes []string) {
-	rows := list.rowsN(len(labels), radioRowH, 0)
+	rows := list.RowsN(len(labels), radioRowH, 0)
 	a.uiSt().queue(func(dst *ebiten.Image) {
 		st := withColor(tsBody, uiWarning)
 		st.Align = alignRight
@@ -781,11 +781,11 @@ func (a *App) mapSizeWarnings(list rect, labels, notes []string) {
 			}
 			row := rows[i]
 			labelEnd := row.X + 2*radioRadius + 1 + checkGap + textW(labels[i], tsBody) + 12
-			room := row.right() - 4 - labelEnd
+			room := row.Right() - 4 - labelEnd
 			if room <= 0 {
 				continue
 			}
-			drawText(dst, fitText(note, st, room), float64(row.right()-4), float64(row.Y)+(float64(row.H)-lineH(st))/2, st)
+			drawText(dst, fitText(note, st, room), float64(row.Right()-4), float64(row.Y)+(float64(row.H)-lineH(st))/2, st)
 		}
 	})
 }

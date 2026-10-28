@@ -94,7 +94,7 @@ func (a *App) factionsTabUI(sw, sh int) {
 		if b.id != ids.TabFactions || b.disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleColonyFactions})
+		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleColonyFactions})
 	}
 }
 
@@ -128,16 +128,16 @@ func (a *App) colonyFactionsBody(body rect, sel *int) {
 	}
 	*sel = max(0, min(*sel, len(rows)-1))
 	listH := min(float32(tableHeaderH+len(rows)*facRowH+4), colFacListMax)
-	tb, rest := body.splitV(listH)
+	tb, rest := body.SplitV(listH)
 	a.factionsTable(tb, plain, sel, nil)
-	a.colonyFactionDetail(rect{rest.X, rest.Y + 10, rest.W, rest.H - 10}, rows[*sel])
+	a.colonyFactionDetail(rect{X: rest.X, Y: rest.Y + 10, W: rest.W, H: rest.H - 10}, rows[*sel])
 }
 
 // colonyFactionDetail is the picked faction's goodwill history and events.
 func (a *App) colonyFactionDetail(r rect, row colFacRow) {
 	u := a.uiSt()
-	left, right := r.splitH(300)
-	chartR, evR := right.splitH(right.W * 0.56)
+	left, right := r.SplitH(300)
+	chartR, evR := right.SplitH(right.W * 0.56)
 	left.W -= 12
 
 	hs := tsLarge
@@ -156,9 +156,9 @@ func (a *App) colonyFactionDetail(r rect, row colFacRow) {
 	a.textLines(left.X, y, left.W, goodwillTip(row.facRow), ds)
 
 	// The sparkline.
-	capR := rect{chartR.X + 12, chartR.Y, chartR.W - 12, 18}
+	capR := rect{X: chartR.X + 12, Y: chartR.Y, W: chartR.W - 12, H: 18}
 	a.uiLabel(capR.X, capR.Y, "Goodwill, last 60 days", tsLabel)
-	plot := rect{capR.X + colFacAxisW, capR.Y + 24, capR.W - colFacAxisW - 4, colFacChartH}
+	plot := rect{X: capR.X + colFacAxisW, Y: capR.Y + 24, W: capR.W - colFacAxisW - 4, H: colFacChartH}
 	hist, relc := row.History, goodwillLineColor(row.Relation)
 	u.queue(func(dst *ebiten.Image) { drawGoodwillChart(dst, plot, hist, relc) })
 	a.uiTip("colfac.chart", plot, "Goodwill history\nOne point a day, from -100 (hostile) to +100 (friendly). Raids defeated and gifts move it; it drifts back toward the faction's usual mood.")
@@ -198,7 +198,7 @@ func chartPoints(hist []int, plot rect) [][2]float32 {
 		v = max(-100, min(100, v))
 		slot := faction.HistoryDays - n + i
 		x := plot.X + plot.W*float32(slot)/float32(faction.HistoryDays-1)
-		y := plot.bottom() - plot.H*float32(v+100)/200
+		y := plot.Bottom() - plot.H*float32(v+100)/200
 		pts[i] = [2]float32{x, y}
 	}
 	return pts
@@ -215,9 +215,9 @@ func drawGoodwillChart(dst *ebiten.Image, plot rect, hist []int, line color.RGBA
 		v int
 		c color.NRGBA
 	}{{100, chartGrid}, {50, chartGrid}, {0, chartZero}, {-50, chartGrid}, {-100, chartGrid}} {
-		y := plot.bottom() - plot.H*float32(g.v+100)/200
+		y := plot.Bottom() - plot.H*float32(g.v+100)/200
 		if g.v != 100 && g.v != -100 {
-			uiLine(dst, plot.X, y, plot.right(), y, 1, g.c, false)
+			uiLine(dst, plot.X, y, plot.Right(), y, 1, g.c, false)
 		}
 		drawText(dst, goodwillAxis(g.v), float64(plot.X-6), float64(y)-lineH(ls)/2, ls)
 	}
@@ -235,9 +235,9 @@ func drawGoodwillChart(dst *ebiten.Image, plot rect, hist []int, line color.RGBA
 	uiFillCircle(dst, last[0], last[1], 3, line, true)
 	es := tsSmall
 	es.Color = uiTextDim
-	drawText(dst, "60 days ago", float64(plot.X), float64(plot.bottom())+3, es)
+	drawText(dst, "60 days ago", float64(plot.X), float64(plot.Bottom())+3, es)
 	es.Align = alignRight
-	drawText(dst, "today", float64(plot.right()), float64(plot.bottom())+3, es)
+	drawText(dst, "today", float64(plot.Right()), float64(plot.Bottom())+3, es)
 }
 
 // goodwillAxis labels an axis value: "+50", "0", "-100".

@@ -93,12 +93,12 @@ type scenarioLayout struct {
 func scenarioRects(content rect) scenarioLayout {
 	leftW := float32(int(content.W * 0.38))
 	L := scenarioLayout{
-		left:  rect{content.X, content.Y, leftW - 8, content.H},
-		right: rect{content.X + leftW + 8, content.Y, content.W - leftW - 8, content.H},
+		left:  rect{X: content.X, Y: content.Y, W: leftW - 8, H: content.H},
+		right: rect{X: content.X + leftW + 8, Y: content.Y, W: content.W - leftW - 8, H: content.H},
 	}
-	L.search = rect{L.left.X, L.left.Y, L.left.W, scenSearchH}
-	L.buttons = rect{L.left.X, L.left.bottom() - scenButtonsH, L.left.W, scenButtonsH}
-	L.list = rect{L.left.X, L.search.bottom() + 8, L.left.W, L.buttons.Y - 8 - (L.search.bottom() + 8)}
+	L.search = rect{X: L.left.X, Y: L.left.Y, W: L.left.W, H: scenSearchH}
+	L.buttons = rect{X: L.left.X, Y: L.left.Bottom() - scenButtonsH, W: L.left.W, H: scenButtonsH}
+	L.list = rect{X: L.left.X, Y: L.search.Bottom() + 8, W: L.left.W, H: L.buttons.Y - 8 - (L.search.Bottom() + 8)}
 	return L
 }
 
@@ -126,7 +126,9 @@ func (a *App) scenarioUI(sw, sh int) {
 	a.scenarioList(ng, L.list)
 
 	third := (L.buttons.W - 12) / 3
-	b := func(i int) rect { return rect{L.buttons.X + float32(i)*(third+6), L.buttons.Y, third, L.buttons.H} }
+	b := func(i int) rect {
+		return rect{X: L.buttons.X + float32(i)*(third+6), Y: L.buttons.Y, W: third, H: L.buttons.H}
+	}
 	sel := ng.selected()
 	a.ngButton("scen.new", b(0), "New scenario", btnOpts{Tip: "New scenario\nStart a fresh scenario in the editor."}, func() {
 		a.openEditor(newScenarioDef(), "")
@@ -184,7 +186,7 @@ func cloneDef(d scenario.Def) scenario.Def {
 
 // scenarioUnreadable is the right column for a file that can't be read.
 func (a *App) scenarioUnreadable(r rect, e *scenEntry) {
-	in := r.inset(14)
+	in := r.Inset(14)
 	hs := tsTitle
 	hs.Color = uiDanger
 	a.uiLabel(in.X, in.Y, "Can't read this file", hs)
@@ -219,7 +221,7 @@ func (a *App) scenarioList(ng *newGameState, r rect) {
 	var shown []vis
 	for _, row := range rows {
 		y := area.View.Y + row.y - area.Off
-		if y+row.h < area.View.Y || y > area.View.bottom() {
+		if y+row.h < area.View.Y || y > area.View.Bottom() {
 			continue
 		}
 		shown = append(shown, vis{row, y})
@@ -237,16 +239,16 @@ func (a *App) scenarioList(ng *newGameState, r rect) {
 			continue
 		}
 		e := entries[v.row.entry]
-		row := rect{area.View.X, v.y, area.View.W, v.row.h}
+		row := rect{X: area.View.X, Y: v.y, W: area.View.W, H: v.row.h}
 		if e.deletable() {
-			del := rect{row.right() - 30, row.bottom() - 28, 22, 22}
-			if del.Y >= area.View.Y && del.bottom() <= area.View.bottom() {
+			del := rect{X: row.Right() - 30, Y: row.Bottom() - 28, W: 22, H: 22}
+			if del.Y >= area.View.Y && del.Bottom() <= area.View.Bottom() {
 				key := e.key
 				a.ngButton("scen.del."+key, del, "x", btnOpts{Style: btnDanger, Tip: "Delete\nRemove this scenario."}, func() { a.confirmDeleteScenario(key) })
 			}
 		}
 		idx := v.row.entry
-		hit := row.intersect(area.View)
+		hit := row.Intersect(area.View)
 		w := uiWidget{id: "scen.row." + e.key, r: hit, label: e.name}
 		pick := func() {
 			u.focus = "scen.list"
@@ -287,13 +289,13 @@ func (a *App) moveScenarioSel(ng *newGameState, rows []scenRow, step int, viewH 
 // paintScenarioRow draws one row of the list into dst (clipped to view).
 func (a *App) paintScenarioRow(dst *ebiten.Image, view rect, row scenRow, y float32, entries []scenEntry, selKey string) {
 	u := a.uiSt()
-	r := rect{view.X, y, view.W, row.h}
+	r := rect{X: view.X, Y: y, W: view.W, H: row.h}
 	switch row.kind {
 	case rowHeader:
 		st := tsLabel
 		st.Color = uiHeading
 		drawText(dst, row.text, float64(r.X+10), float64(r.Y)+(float64(r.H)-lineH(st))/2+2, st)
-		fillRect(dst, rect{r.X + 8, r.bottom() - 3, r.W - 16, 1}, uiPanelBorder)
+		fillRect(dst, rect{X: r.X + 8, Y: r.Bottom() - 3, W: r.W - 16, H: 1}, uiPanelBorder)
 	case rowNote:
 		st := dimText()
 		lines := wrapPx(row.text, st, float64(r.W-24))
@@ -305,10 +307,10 @@ func (a *App) paintScenarioRow(dst *ebiten.Image, view rect, row scenRow, y floa
 		hover := u.hot == "scen.row."+e.key
 		switch {
 		case e.key == selKey:
-			fillRect(dst, r.inset(2), uiBtnSelected)
-			strokeRect(dst, r.inset(2), uiAccent)
+			fillRect(dst, r.Inset(2), uiBtnSelected)
+			strokeRect(dst, r.Inset(2), uiAccent)
 		case hover:
-			fillRect(dst, r.inset(2), uiBtnHover)
+			fillRect(dst, r.Inset(2), uiBtnHover)
 		}
 		ix, iy := r.X+10, r.Y+(r.H-scenIconSize)/2
 		iconKey := "ui_icon/scenario_custom"
@@ -318,8 +320,8 @@ func (a *App) paintScenarioRow(dst *ebiten.Image, view rect, row scenRow, y floa
 		if img := a.art.image(iconKey, noTint); img != nil {
 			drawIcon(dst, img, float64(ix), float64(iy), scenIconSize)
 		} else {
-			fillRect(dst, rect{ix, iy, scenIconSize, scenIconSize}, uiField)
-			strokeRect(dst, rect{ix, iy, scenIconSize, scenIconSize}, uiPanelBorder)
+			fillRect(dst, rect{X: ix, Y: iy, W: scenIconSize, H: scenIconSize}, uiField)
+			strokeRect(dst, rect{X: ix, Y: iy, W: scenIconSize, H: scenIconSize}, uiPanelBorder)
 		}
 		tx := r.X + scenIconSize + 22
 		pipsW := float32(4*10 + 3*3)
@@ -348,7 +350,7 @@ func (a *App) paintScenarioRow(dst *ebiten.Image, view rect, row scenRow, y floa
 			}
 		}
 		if e.err == "" {
-			px := r.right() - 10 - pipsW
+			px := r.Right() - 10 - pipsW
 			for i := 0; i < 4; i++ {
 				c := uiSliderTrack
 				if i < e.hardness {

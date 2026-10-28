@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -197,8 +198,8 @@ func TestDedicatedHotkeyIsTheOneShown(t *testing.T) {
 func TestCommandGridDrawsTheKeyHints(t *testing.T) {
 	a, _, _ := cmdColony(t, 1, nCmds(3)...) // serial: it installs the draw trace
 	var ev []traceEvent
-	drawTrace = func(e traceEvent) { ev = append(ev, e) }
-	t.Cleanup(func() { drawTrace = nil })
+	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 	a.drawCommandGrid(ebiten.NewImage(1280, 720))
 	cells := a.hud().GridCells
 	for i, c := range a.selectionCommands() {
@@ -207,7 +208,7 @@ func TestCommandGridDrawsTheKeyHints(t *testing.T) {
 		for _, e := range ev {
 			if e.Kind == "text" && e.Text == key {
 				n++
-				if !visInside(e, float64(cells[i].X), float64(cells[i].Y), float64(cells[i].right()), float64(cells[i].bottom()), 1) {
+				if !visInside(e, float64(cells[i].X), float64(cells[i].Y), float64(cells[i].Right()), float64(cells[i].Bottom()), 1) {
 					t.Errorf("key %q of command %d drawn at %s, off its cell %+v", key, i, e, cells[i])
 				}
 			}
@@ -233,7 +234,7 @@ func TestRightClickOpensTheOptionsMenu(t *testing.T) {
 		cmdButton{ID: "cmd.test.plain", Label: "Plain", Run: func(*App) {}},
 	)
 	cells := a.hud().GridCells
-	cx, cy := cells[0].center()
+	cx, cy := cells[0].Center()
 	if !a.rightClickCommand(int(cx), int(cy)) || !a.float.open || len(a.float.opts) != 3 {
 		t.Fatalf("right-click on a command with options opens its menu: open=%v opts=%+v", a.float.open, a.float.opts)
 	}
@@ -260,7 +261,7 @@ func TestRightClickOpensTheOptionsMenu(t *testing.T) {
 	a.closeFloat()
 
 	// a command without options still swallows the click (it is over the HUD)
-	px, py := cells[1].center()
+	px, py := cells[1].Center()
 	if !a.rightClickCommand(int(px), int(py)) || a.float.open {
 		t.Fatal("right-click on a plain command is consumed and opens nothing")
 	}
@@ -287,14 +288,14 @@ func TestChromeBlocksOccupiedCellsOnly(t *testing.T) {
 	l := a.hud()
 	blocks := func(x, y float32) bool {
 		for _, r := range l.chrome() {
-			if r.contains(x, y) {
+			if r.Contains(x, y) {
 				return true
 			}
 		}
 		return false
 	}
 	for i, c := range l.GridCells {
-		cx, cy := c.center()
+		cx, cy := c.Center()
 		if !blocks(cx, cy) {
 			t.Errorf("occupied cell %d does not block clicks", i)
 		}
@@ -302,7 +303,7 @@ func TestChromeBlocksOccupiedCellsOnly(t *testing.T) {
 	// the cell after the last command is free map
 	next := l.GridCells[2]
 	next.X += cmdStride
-	if cx, cy := next.center(); blocks(cx, cy) {
+	if cx, cy := next.Center(); blocks(cx, cy) {
 		t.Error("an empty grid cell must let clicks reach the map")
 	}
 	assertChromeIsTheLayout(t, a) // the layout covers the cells, and only the occupied ones
@@ -321,7 +322,7 @@ func TestHintAnchorFollowsTheLayout(t *testing.T) {
 	a.setTestCommands(noCommands)
 	l = a.hud()
 	x, b = a.hintAnchor()
-	if !l.Pane.empty() || !l.Grid.empty() || x != hudMargin || b != l.Tabs.Y-hudMargin {
+	if !l.Pane.Empty() || !l.Grid.Empty() || x != hudMargin || b != l.Tabs.Y-hudMargin {
 		t.Fatalf("with no pane or grid the hint sits at %v,%v, want %v,%v", x, b, float32(hudMargin), l.Tabs.Y-hudMargin)
 	}
 }
@@ -359,8 +360,8 @@ func TestCommandGridDrawsInsideItsCells(t *testing.T) {
 	)
 	l := a.hud()
 	var rects []rect
-	canvasTrace = func(_ string, x, y, w, h float32) { rects = append(rects, rect{x, y, w, h}) }
-	t.Cleanup(func() { canvasTrace = nil })
+	gfx.SetCanvasTrace(func(_ string, x, y, w, h float32) { rects = append(rects, rect{X: x, Y: y, W: w, H: h}) })
+	t.Cleanup(func() { gfx.SetCanvasTrace(nil) })
 	a.drawCommandGrid(ebiten.NewImage(1280, 720))
 	if len(rects) == 0 {
 		t.Fatal("the grid drew nothing")
@@ -368,7 +369,7 @@ func TestCommandGridDrawsInsideItsCells(t *testing.T) {
 	for _, r := range rects {
 		in := false
 		for _, c := range l.GridCells {
-			if r.X >= c.X-0.01 && r.Y >= c.Y-0.01 && r.right() <= c.right()+0.01 && r.bottom() <= c.bottom()+0.01 {
+			if r.X >= c.X-0.01 && r.Y >= c.Y-0.01 && r.Right() <= c.Right()+0.01 && r.Bottom() <= c.Bottom()+0.01 {
 				in = true
 			}
 		}

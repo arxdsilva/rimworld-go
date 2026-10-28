@@ -47,7 +47,7 @@ func TestLogTabButtonAndRendering(t *testing.T) {
 		t.Fatalf("Log panel %+v", r)
 	}
 	// the tab sits inside the pane's tab strip and the panel inside the screen
-	if r.X < 0 || r.right() > 1280 || r.Y < 0 || r.bottom() > 720 {
+	if r.X < 0 || r.Right() > 1280 || r.Y < 0 || r.Bottom() > 720 {
 		t.Fatalf("Log panel %+v is off the screen", r)
 	}
 	a.inspectTab = "log"
@@ -89,18 +89,18 @@ func TestAnimalLogToggle(t *testing.T) {
 	if !a.selectAnimalAt(10, 10) {
 		t.Fatal("animal not selectable")
 	}
-	if !a.hud().Expanded.empty() {
+	if !a.hud().Expanded.Empty() {
 		t.Fatal("the pane starts folded")
 	}
 	click(t, a, "inspector.log")
 	l := a.hud()
-	if a.paneOpenTab() != "inspector.log" || l.Expanded.empty() || l.Expanded.bottom() != l.PaneTabs.Y {
+	if a.paneOpenTab() != "inspector.log" || l.Expanded.Empty() || l.Expanded.Bottom() != l.PaneTabs.Y {
 		t.Fatalf("Log expands the panel above the pane: open %q, expanded %+v", a.paneOpenTab(), l.Expanded)
 	}
 	screen := ebiten.NewImage(1280, 720)
 	a.drawPane(screen)
 	click(t, a, "inspector.log")
-	if a.paneOpenTab() != "" || !a.hud().Expanded.empty() {
+	if a.paneOpenTab() != "" || !a.hud().Expanded.Empty() {
 		t.Fatal("toggles back")
 	}
 }

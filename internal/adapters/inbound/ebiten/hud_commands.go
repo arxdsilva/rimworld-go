@@ -171,7 +171,9 @@ func (a *App) commandCells() []cmdSlot {
 func cmdOptionsID(i int) string { return "cmd.options." + strconv.Itoa(i) }
 
 // cmdArrowRect is the options arrow's area in a cell (top right).
-func cmdArrowRect(r rect) rect { return rect{r.right() - cmdArrowW, r.Y, cmdArrowW, cmdArrowW} }
+func cmdArrowRect(r rect) rect {
+	return rect{X: r.Right() - cmdArrowW, Y: r.Y, W: cmdArrowW, H: cmdArrowW}
+}
 
 // cellButtons are the grid's hit targets: each options arrow, then the
 // cells (the arrow sits on its cell, so it comes first).
@@ -180,13 +182,13 @@ func (a *App) cellButtons() []button {
 	var out []button
 	for _, c := range cells {
 		if c.cmd.Options != nil {
-			b := cmdArrowRect(c.r).asButton(cmdOptionsID(c.idx), "")
+			b := asButton(cmdArrowRect(c.r), cmdOptionsID(c.idx), "")
 			b.disabled, b.reason, b.quiet = c.cmd.Disabled, c.cmd.Reason, true
 			out = append(out, b)
 		}
 	}
 	for _, c := range cells {
-		b := c.r.asButton(c.cmd.ID, c.cmd.Label)
+		b := asButton(c.r, c.cmd.ID, c.cmd.Label)
 		b.disabled, b.reason, b.selected, b.quiet = c.cmd.Disabled, c.cmd.Reason, c.cmd.On, true
 		out = append(out, b)
 	}
@@ -257,7 +259,7 @@ func (a *App) drawCommandGrid(screen *ebiten.Image) {
 	}
 	mx, my := a.currentCursor()
 	for _, c := range cells {
-		drawCmdCell(screen, c.cmd, c.r, c.r.hit(mx, my), a.commandKeyLabel(c.idx, c.cmd), a.icon(c.cmd.Icon))
+		drawCmdCell(screen, c.cmd, c.r, c.r.Hit(mx, my), a.commandKeyLabel(c.idx, c.cmd), a.icon(c.cmd.Icon))
 	}
 }
 
@@ -274,7 +276,7 @@ func drawCmdCell(screen *ebiten.Image, c cmdButton, r rect, hover bool, key stri
 	}
 	fillRect(screen, r, fill)
 	if c.Mixed && !c.Disabled {
-		fillRect(screen, rect{r.X, r.Y + r.H/2, r.W, r.H / 2}, uiBtnSelected)
+		fillRect(screen, rect{X: r.X, Y: r.Y + r.H/2, W: r.W, H: r.H / 2}, uiBtnSelected)
 	}
 	if hover && !c.Disabled && !c.On {
 		border = uiAccent
@@ -288,7 +290,7 @@ func drawCmdCell(screen *ebiten.Image, c cmdButton, r rect, hover bool, key stri
 	}
 	ts, lines := cmdLabelLines(c.Label, maxW, c.Disabled)
 	step := lineStep(ts)
-	labelTop := r.bottom() - 2 - float32(len(lines))*step
+	labelTop := r.Bottom() - 2 - float32(len(lines))*step
 	for i, ln := range lines {
 		drawCentered(screen, ellipsize(ln, ts, maxW), float64(r.X+r.W/2), float64(labelTop+float32(i)*step)+lineH(ts)/2-1, ts)
 	}
@@ -303,17 +305,17 @@ func drawCmdCell(screen *ebiten.Image, c cmdButton, r rect, hover bool, key stri
 	case icon != nil:
 		drawIcon(screen, icon, float64(ix), float64(iy), float64(size))
 	default:
-		drawCmdFallback(screen, c.Label, rect{ix, iy, size, size}, c.Disabled)
+		drawCmdFallback(screen, c.Label, rect{X: ix, Y: iy, W: size, H: size}, c.Disabled)
 	}
 
 	if key != "" { // hotkey hint, top left
 		w := textW(key, tsSmall) + 4
-		fillRect(screen, rect{r.X + 2, r.Y + 2, w, step - 2}, uiSpace)
+		fillRect(screen, rect{X: r.X + 2, Y: r.Y + 2, W: w, H: step - 2}, uiSpace)
 		drawText(screen, key, float64(r.X+4), float64(r.Y+1), withColor(tsSmall, uiAccent))
 	}
 	if c.Options != nil { // options arrow, top right
 		ar := cmdArrowRect(r)
-		cx, cy := ar.center()
+		cx, cy := ar.Center()
 		clr := uiTextDim
 		if hover {
 			clr = uiAccent
@@ -334,7 +336,7 @@ func drawCmdFallback(screen *ebiten.Image, label string, r rect, disabled bool) 
 	if disabled {
 		ts = withColor(ts, uiTextDisabled)
 	}
-	cx, cy := r.center()
+	cx, cy := r.Center()
 	drawCentered(screen, strings.ToUpper(string([]rune(label)[:1])), float64(cx), float64(cy), ts)
 }
 
@@ -447,7 +449,7 @@ func (a *App) openCommandOptions(c cmdSlot) {
 // click anywhere on a cell is the HUD's, so it never reaches the map.
 func (a *App) rightClickCommand(mx, my int) bool {
 	for _, c := range a.commandCells() {
-		if c.r.hit(mx, my) {
+		if c.r.Hit(mx, my) {
 			a.openCommandOptions(c)
 			return true
 		}

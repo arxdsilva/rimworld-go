@@ -31,7 +31,7 @@ func TestHomeAutoButtonEmitsAndShowsState(t *testing.T) {
 			t.Fatalf("Home auto %+v overlaps %s %+v", b, o, ob)
 		}
 	}
-	if g := a.hud().Global; find().x < g.X || find().x+find().w > g.right() {
+	if g := a.hud().Global; find().x < g.X || find().x+find().w > g.Right() {
 		t.Fatalf("Home auto %+v is outside Global %+v", find(), g)
 	}
 	s.world.HomeAuto = true

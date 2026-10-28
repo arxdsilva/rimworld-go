@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"sort"
 	"strings"
 	"testing"
@@ -31,7 +32,7 @@ func assertChromeIsTheLayout(t *testing.T, a *App) {
 		for x := step / 2; x < sw; x += step {
 			in := false
 			for _, r := range regions {
-				if r.hit(x, y) {
+				if r.Hit(x, y) {
 					in = true
 					break
 				}
@@ -51,13 +52,13 @@ func assertButtonsInRegions(t *testing.T, a *App) {
 	sw, sh := a.size()
 	regions := append(a.hud().chrome(), a.learnChrome()...)
 	for _, b := range a.colonyButtons(sw, sh) {
-		br := rect{b.x, b.y, b.w, b.h}
-		if br.empty() {
+		br := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		if br.Empty() {
 			continue
 		}
 		in := false
 		for _, r := range regions {
-			if br.X >= r.X-0.5 && br.Y >= r.Y-0.5 && br.right() <= r.right()+0.5 && br.bottom() <= r.bottom()+0.5 {
+			if br.X >= r.X-0.5 && br.Y >= r.Y-0.5 && br.Right() <= r.Right()+0.5 && br.Bottom() <= r.Bottom()+0.5 {
 				in = true
 				break
 			}
@@ -75,7 +76,7 @@ func layoutRegions(l hudLayout) map[string]rect {
 	for name, r := range map[string]rect{"Tabs": l.Tabs, "Pane": l.Pane, "PaneTabs": l.PaneTabs, "Expanded": l.Expanded,
 		"ArchCats": l.ArchCats, "ArchDesc": l.ArchDesc, "Window": l.Window, "Global": l.Global, "Minimap": l.Minimap,
 		"Letters": l.Letters, "Learn": l.Learn, "Alerts": l.Alerts, "Resources": l.Resources, "Messages": l.Messages} {
-		if !r.empty() {
+		if !r.Empty() {
 			out[name] = r
 		}
 	}
@@ -98,14 +99,14 @@ func layoutOverlaps(l hudLayout, w, h int) []string {
 	}
 	sort.Strings(names)
 	var bad []string
-	screen := rect{0, 0, float32(w), float32(h)}
+	screen := rect{X: 0, Y: 0, W: float32(w), H: float32(h)}
 	for i, n := range names {
 		r := rs[n]
-		if r.X < -0.01 || r.Y < -0.01 || r.right() > screen.right()+0.01 || r.bottom() > screen.bottom()+0.01 {
+		if r.X < -0.01 || r.Y < -0.01 || r.Right() > screen.Right()+0.01 || r.Bottom() > screen.Bottom()+0.01 {
 			bad = append(bad, fmt.Sprintf("%s %+v leaves the %dx%d screen", n, r, w, h))
 		}
 		for _, m := range names[i+1:] {
-			if o := r.intersect(rs[m]); o.W > 0.01 && o.H > 0.01 {
+			if o := r.Intersect(rs[m]); o.W > 0.01 && o.H > 0.01 {
 				bad = append(bad, fmt.Sprintf("%s %+v overlaps %s %+v", n, r, m, rs[m]))
 			}
 		}
@@ -200,9 +201,9 @@ func busyStub(n int) *stubSim {
 // It changes package globals: never in parallel.
 func layoutScreen(t *testing.T, a *App, w, h int, ui float64) (int, int) {
 	t.Helper()
-	old := curUIScale
-	t.Cleanup(func() { curUIScale = old })
-	a.scale = uiScaleState{dev: 1, ui: ui, s: ui}
+	old := gfx.CurrentScale()
+	t.Cleanup(func() { gfx.SetScale(old) })
+	a.scale = uiScaleState{Dev: 1, UI: ui, S: ui}
 	a.syncUIScale()
 	a.setPhysical(int(math.Round(float64(w)*ui)), int(math.Round(float64(h)*ui)))
 	if abs(a.sw-w) > 1 || abs(a.sh-h) > 1 {
@@ -262,7 +263,7 @@ func TestLiveLayoutRegionsNeverOverlap(t *testing.T) { // not parallel: it sets 
 							c.open(t, a)
 							f.frame(t, a)
 							l := a.hud()
-							if !minimap != l.Minimap.empty() || learn == l.Learn.empty() {
+							if !minimap != l.Minimap.Empty() || learn == l.Learn.Empty() {
 								t.Fatalf("%s: minimap %+v, learn %+v", name, l.Minimap, l.Learn)
 							}
 							if bad := layoutOverlaps(l, sw, sh); len(bad) > 0 {
@@ -315,11 +316,11 @@ func TestLayoutColonistBarWraps(t *testing.T) {
 		for _, n := range []int{6, 30, 90} {
 			st.Colonists = n
 			l = computeHUDLayout(sz[0], sz[1], st)
-			if l.Resources.empty() {
+			if l.Resources.Empty() {
 				t.Fatalf("%v: no resource list", sz)
 			}
-			if l.Bar.X < l.Resources.right()+hudMargin || l.Bar.right() > l.Right.X-hudMargin {
-				t.Errorf("%v %d colonists: bar %+v reaches the resources (right %v) or the right column (%v)", sz, n, l.Bar, l.Resources.right(), l.Right.X)
+			if l.Bar.X < l.Resources.Right()+hudMargin || l.Bar.Right() > l.Right.X-hudMargin {
+				t.Errorf("%v %d colonists: bar %+v reaches the resources (right %v) or the right column (%v)", sz, n, l.Bar, l.Resources.Right(), l.Right.X)
 			}
 		}
 	}
@@ -338,7 +339,7 @@ func TestLayoutCommandGridWrapsUpward(t *testing.T) {
 				t.Fatalf("%v %d: no cells", sz, n)
 			}
 			first := l.GridCells[0]
-			if first.X != l.Pane.right()+hudMargin || first.bottom() != l.Tabs.Y-hudMargin {
+			if first.X != l.Pane.Right()+hudMargin || first.Bottom() != l.Tabs.Y-hudMargin {
 				t.Errorf("%v %d: the first cell %+v is not bottom-left of the grid, right of the pane %+v", sz, n, first, l.Pane)
 			}
 			if want := min(n, l.GridCols*cmdMaxRows); len(l.GridCells) != want {
@@ -348,7 +349,7 @@ func TestLayoutCommandGridWrapsUpward(t *testing.T) {
 				t.Errorf("%v %d: the row after the first does not sit above it", sz, n)
 			}
 			for i, c := range l.GridCells {
-				if c.right() > l.Global.X-hudMargin {
+				if c.Right() > l.Global.X-hudMargin {
 					t.Errorf("%v %d: cell %d %+v passes Global.X - 8 = %v", sz, n, i, c, l.Global.X-hudMargin)
 				}
 				if i > 0 && c.Y > l.GridCells[i-1].Y {
@@ -367,14 +368,14 @@ func TestLayoutWindowLeavesTheHUD(t *testing.T) {
 		for _, n := range []int{1, 6, 30, 90} {
 			st := hudState{Colonists: n, GlobalH: 196, Alerts: 12, Letters: 3, LearnH: learnHeaderH, WindowW: 5000, WindowH: 5000}
 			l := computeHUDLayout(sz[0], sz[1], st)
-			if l.Window.empty() {
+			if l.Window.Empty() {
 				t.Fatalf("%v: no window", sz)
 			}
 			for name, r := range map[string]rect{"Bar": l.Bar, "Alerts": l.Alerts, "Letters": l.Letters, "Global": l.Global, "Learn": l.Learn, "Tabs": l.Tabs} {
-				if r.empty() {
+				if r.Empty() {
 					t.Fatalf("%v %d: no %s", sz, n, name)
 				}
-				if o := l.Window.intersect(r); !o.empty() {
+				if o := l.Window.Intersect(r); !o.Empty() {
 					t.Errorf("%v %d colonists: Window %+v covers %s %+v", sz, n, l.Window, name, r)
 				}
 			}
@@ -389,7 +390,7 @@ func TestLayoutLearnFoldsWhenCramped(t *testing.T) {
 	t.Parallel()
 	st := hudState{MinimapOn: true, GlobalH: 240, LearnH: 196}
 	l := computeHUDLayout(1113, 626, st)
-	if l.Learn.H != learnHeaderH || !l.Learn.intersect(l.Minimap).empty() {
+	if l.Learn.H != learnHeaderH || !l.Learn.Intersect(l.Minimap).Empty() {
 		t.Fatalf("Learn %+v beside the minimap %+v: want the header alone, clear of it", l.Learn, l.Minimap)
 	}
 	if l = computeHUDLayout(1280, 720, st); l.Learn.H != 196 {
@@ -398,7 +399,7 @@ func TestLayoutLearnFoldsWhenCramped(t *testing.T) {
 	// the live helper then lists no lessons and blocks nothing below its header
 	a, _ := colonyApp(t, busyStub(6))
 	a.settings.Gameplay.ShowLearningHelper = true
-	p := rect{900, 8, rightW, learnHeaderH}
+	p := rect{X: 900, Y: 8, W: rightW, H: learnHeaderH}
 	if !a.learnFolded(p) {
 		t.Fatal("a Learn rect shorter than the lessons shows the header alone")
 	}
@@ -412,7 +413,7 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, busyStub(6))
 	sw, sh := a.size()
-	center := func(r rect) (int, int) { x, y := r.center(); return int(x), int(y) }
+	center := func(r rect) (int, int) { x, y := r.Center(); return int(x), int(y) }
 	for _, c := range layoutCases() {
 		c.open(t, a)
 		f.frame(t, a)
@@ -429,14 +430,14 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 			last := l.GridCells[n-1]
 			next := last
 			next.X += cmdStride
-			if next.right() <= l.Global.X-hudMargin {
+			if next.Right() <= l.Global.X-hudMargin {
 				if x, y := center(next); a.colonyChromeHit(x, y, sw, sh) {
 					t.Errorf("%s: empty grid space right of the last command blocks the map", c.name)
 				}
 			}
 			above := l.GridCells[0]
 			above.Y = l.Grid.Y - cmdStride
-			if x, y := center(above); a.colonyChromeHit(x, y, sw, sh) && l.Expanded.empty() && l.ArchDesc.empty() {
+			if x, y := center(above); a.colonyChromeHit(x, y, sw, sh) && l.Expanded.Empty() && l.ArchDesc.Empty() {
 				t.Errorf("%s: empty grid space above the grid blocks the map", c.name)
 			}
 		}
@@ -449,7 +450,7 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 	f.cur.mx, f.cur.my = sw/2, sh/2
 	f.frame(t, a)
 	r := a.cellInfoRect()
-	if r.empty() {
+	if r.Empty() {
 		t.Fatal("no cell info over the map")
 	}
 	if x, y := center(r); a.colonyChromeHit(x, y, sw, sh) {
@@ -470,7 +471,7 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 	f.frame(t, a)
 	sw, sh := a.size()
 	l := a.hud()
-	if len(l.GridCells) == 0 || l.Letters.empty() || l.Alerts.empty() {
+	if len(l.GridCells) == 0 || l.Letters.Empty() || l.Alerts.Empty() {
 		t.Fatalf("the HUD is not busy: cells %d letters %+v alerts %+v", len(l.GridCells), l.Letters, l.Alerts)
 	}
 	// nowhere off the regions does the HUD take a right-click
@@ -479,7 +480,7 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 		for x := 4; x < sw; x += 12 {
 			in := false
 			for _, r := range regions {
-				in = in || r.hit(x, y)
+				in = in || r.Hit(x, y)
 			}
 			if !in && a.hudRightClick(x, y) {
 				t.Fatalf("(%d,%d): a right-click off the HUD was taken by it", x, y)
@@ -489,7 +490,7 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 	// on the map beside the command grid, the drafted colonist moves
 	beside := l.GridCells[len(l.GridCells)-1]
 	beside.X += cmdStride
-	bx, by := beside.center()
+	bx, by := beside.Center()
 	s.cmds = nil
 	f.cur.mx, f.cur.my = int(bx), int(by)
 	f.click(t, a, mbRight, 0)
@@ -500,7 +501,7 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 	for name, r := range map[string]rect{"letters": l.Letters, "command": l.GridCells[0], "alerts": l.Alerts} {
 		s.cmds = nil
 		a.closeFloat()
-		cx, cy := r.center()
+		cx, cy := r.Center()
 		f.cur.mx, f.cur.my = int(cx), int(cy)
 		f.click(t, a, mbRight, 0)
 		if m := cmdsOf(s, command.MovePawn); len(m) != 0 {
@@ -550,7 +551,7 @@ func TestAlertsKeepRowsWhenLettersPileUp(t *testing.T) {
 	if l.LetterRows < 1 {
 		t.Fatal("the letters vanished entirely")
 	}
-	if !l.Alerts.empty() && !l.Letters.empty() && l.Alerts.bottom() > l.Letters.Y {
+	if !l.Alerts.Empty() && !l.Letters.Empty() && l.Alerts.Bottom() > l.Letters.Y {
 		t.Fatalf("alerts %+v overlap letters %+v", l.Alerts, l.Letters)
 	}
 	// with few alerts, the letters keep everything else

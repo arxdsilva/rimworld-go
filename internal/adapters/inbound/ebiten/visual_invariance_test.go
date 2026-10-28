@@ -323,7 +323,7 @@ func (b visBox) String() string {
 
 // visScaled is the logical rect r on the physical screen at scale sc.
 func visScaled(r rect, sc float64) visBox {
-	return visBox{float64(r.X) * sc, float64(r.Y) * sc, float64(r.right()) * sc, float64(r.bottom()) * sc}
+	return visBox{float64(r.X) * sc, float64(r.Y) * sc, float64(r.Right()) * sc, float64(r.Bottom()) * sc}
 }
 
 // visOverlaps reports the event's rectangle and b share more than tol
@@ -363,7 +363,7 @@ func visRegions(l hudLayout) []visRegion {
 		{"arch cats", l.ArchCats}, {"arch desc", l.ArchDesc}, {"window", l.Window}, {"global", l.Global},
 		{"minimap", l.Minimap}, {"letters", l.Letters}, {"learn", l.Learn}, {"alerts", l.Alerts},
 		{"bar", l.Bar}, {"resources", l.Resources}, {"messages", l.Messages}} {
-		if !r.r.empty() {
+		if !r.r.Empty() {
 			out = append(out, r)
 		}
 	}
@@ -448,7 +448,7 @@ func TestFrameInvariance(t *testing.T) {
 	if len(ref) < 50 {
 		t.Fatalf("the reference HUD drew only %d things", len(ref))
 	}
-	if s.a.hud().Learn.empty() {
+	if s.a.hud().Learn.Empty() {
 		t.Fatal("the learning helper is not up: the frame checks would not cover it")
 	}
 
@@ -644,7 +644,7 @@ func TestPanelsStayInTheirPanel(t *testing.T) {
 				if p.regions != nil {
 					var boxes []visBox
 					for _, r := range p.regions(s) {
-						if !r.empty() {
+						if !r.Empty() {
 							boxes = append(boxes, visScaled(r, sc))
 						}
 					}
@@ -744,7 +744,7 @@ func TestVisualCheckersCatchTheBugs(t *testing.T) {
 
 	// regions: a draw reaching past a region's edge is flagged, a clipped
 	// draw only for the part that shows
-	regions := []visRegion{{"pane", rect{0, 500, 400, 188}}, {"tabs", rect{0, 692, 1280, 28}}}
+	regions := []visRegion{{"pane", rect{X: 0, Y: 500, W: 400, H: 188}}, {"tabs", rect{X: 0, Y: 692, W: 1280, H: 28}}}
 	inPane := traceEvent{Kind: "text", Text: "Tile", X: 12, Y: 600, W: 80, H: 18, Pass: "hud"}
 	if bad := visCheckRegions([]traceEvent{inPane, hudBox}, regions[:1], 1); len(bad) != 0 {
 		t.Errorf("draws inside or away from a region were flagged: %q", bad)

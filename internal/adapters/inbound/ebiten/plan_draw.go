@@ -78,7 +78,7 @@ func (r *Renderer) drawPlanOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 	}
 	r.setView(sw, sh, tile)
 	b := &st.batch
-	b.reset()
+	b.Reset()
 	a := alphaOf(uiPlanFill)
 	for _, run := range st.runs {
 		sx, sy := r.worldToScreen(run.x0, run.y)
@@ -86,7 +86,7 @@ func (r *Renderer) drawPlanOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		if !visible(float32(sx), float32(sy), float32(wd), float32(tile), sw, sh) {
 			continue
 		}
-		b.rect(float64(sx), float64(sy), wd, tile, uiPlanFill, a, a, a, a)
+		b.Rect(float64(sx), float64(sy), wd, tile, uiPlanFill, a, a, a, a)
 	}
 	for _, e := range st.edges {
 		sx, sy := r.worldToScreen(e.x, e.y)
@@ -96,6 +96,6 @@ func (r *Renderer) drawPlanOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, planEdgePx, uiPlanEdge, 0, planDashEnd)
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, planEdgePx, uiPlanEdge, 1-planDashEnd, 1)
 	}
-	st.verts = len(b.verts)
-	b.flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.verts = len(b.Verts)
+	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
 }

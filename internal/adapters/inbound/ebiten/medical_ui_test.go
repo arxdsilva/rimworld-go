@@ -300,7 +300,7 @@ func TestMedicalCommandsFitTheGridAtUIScales(t *testing.T) {
 			}
 			for i, cm := range cs {
 				cell := l.GridCells[i]
-				if cell.X < l.Pane.right() || cell.right() > l.Global.X || cell.bottom() > l.Tabs.Y {
+				if cell.X < l.Pane.Right() || cell.Right() > l.Global.X || cell.Bottom() > l.Tabs.Y {
 					t.Errorf("scale %v %s: %s cell %+v leaves the grid band", scale, c.name, cm.ID, cell)
 				}
 				// the existing Deconstruct label is wider than its cell
@@ -314,7 +314,7 @@ func TestMedicalCommandsFitTheGridAtUIScales(t *testing.T) {
 					}
 				}
 				for j, o := range l.GridCells[:i] {
-					if !cell.intersect(o).empty() {
+					if !cell.Intersect(o).Empty() {
 						t.Errorf("scale %v %s: %s overlaps command %d", scale, c.name, cm.ID, j)
 					}
 				}

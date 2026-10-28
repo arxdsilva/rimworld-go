@@ -109,19 +109,19 @@ func TestCellInfoIsNotChrome(t *testing.T) {
 	f.moveTo(a, 4, 3)
 	f.frame(t, a)
 	r := a.cellInfoRect()
-	if r.empty() {
+	if r.Empty() {
 		t.Fatal("no cell info rect while hovering a cell")
 	}
 	l := a.hud()
-	if r.X != hudMargin || r.bottom() != l.Tabs.Y-hudMargin {
+	if r.X != hudMargin || r.Bottom() != l.Tabs.Y-hudMargin {
 		t.Errorf("cell info %+v, want its bottom-left corner at (8, %v)", r, l.Tabs.Y-hudMargin)
 	}
-	cx, cy := r.center()
+	cx, cy := r.Center()
 	if a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {
 		t.Errorf("cell info's centre (%v,%v) blocks the map: it must not be chrome", cx, cy)
 	}
 	for _, c := range a.chromeRects(a.sw, a.sh) {
-		if c.contains(cx, cy) {
+		if c.Contains(cx, cy) {
 			t.Errorf("chrome rect %+v covers the cell info", c)
 		}
 	}
@@ -165,7 +165,7 @@ func TestCellInfoHidesOverTheMinimap(t *testing.T) {
 	big := &globalSim{stubSim: &stubSim{w: 200, h: 200}, world: game.WorldView{TerrainW: 200, Terrain: make([]uint8, 200*200), OutdoorTemp: 70}}
 	a, f := globalColonyP(t, big)
 	m := a.hud().Minimap
-	if m.empty() {
+	if m.Empty() {
 		t.Fatal("a 200x200 map has no minimap rect")
 	}
 	f.onRect(a, m)

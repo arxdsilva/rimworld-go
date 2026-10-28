@@ -89,7 +89,7 @@ func (r *Renderer) drawAreas(screen *ebiten.Image, w game.WorldView, areas []gam
 	}
 	r.setView(sw, sh, tile)
 	b := &st.batch
-	b.reset()
+	b.Reset()
 	for _, ar := range areas {
 		if int(ar.ID) != st.armed && int(ar.ID) != st.hover {
 			continue
@@ -111,11 +111,11 @@ func (r *Renderer) drawAreas(screen *ebiten.Image, w game.WorldView, areas []gam
 			if !visible(float32(sx), float32(sy), float32(wd), float32(tile), sw, sh) {
 				continue
 			}
-			b.rect(float64(sx), float64(sy), wd, tile, c, areaOverlayA, areaOverlayA, areaOverlayA, areaOverlayA)
+			b.Rect(float64(sx), float64(sy), wd, tile, c, areaOverlayA, areaOverlayA, areaOverlayA, areaOverlayA)
 		}
 	}
-	st.verts = len(b.verts)
-	b.flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.verts = len(b.Verts)
+	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
 }
 
 // syncAreaOverlay points the overlay at the area the armed Architect tool

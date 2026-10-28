@@ -200,10 +200,10 @@ func (a *App) finishStart(sim Simulation) {
 func (a *App) drawLoading(screen *ebiten.Image, sw, sh int) {
 	a.drawSetupBackdrop(screen, sw, sh, a.ng.planet)
 	ld := a.ng.load
-	box := winRect(sw, sh).centered(560, 150)
+	box := winRect(sw, sh).Centered(560, 150)
 	drawPanel(screen, box.X, box.Y, box.W, box.H)
 	st := tsLarge
 	st.Color = uiHeading
 	drawText(screen, "Preparing your colony", float64(box.X+20), float64(box.Y+16), st)
-	drawProgress(screen, rect{box.X + 20, box.Y + 56, box.W - 40, 60}, ld.phase, float64(ld.frac), "")
+	drawProgress(screen, rect{X: box.X + 20, Y: box.Y + 56, W: box.W - 40, H: 60}, ld.phase, float64(ld.frac), "")
 }

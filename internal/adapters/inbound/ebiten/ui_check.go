@@ -48,7 +48,7 @@ func (a *App) uiCheck(id string, r rect, label string, val *bool, o checkOpts) b
 		changed = u.take(id)&evChanged != 0
 	}
 	u.queue(func(dst *ebiten.Image) {
-		box := rect{r.X, r.Y + (r.H-checkBox)/2, checkBox, checkBox}
+		box := rect{X: r.X, Y: r.Y + (r.H-checkBox)/2, W: checkBox, H: checkBox}
 		border := uiFieldBorder
 		if u.hot == id && !o.Disabled {
 			border = uiAccent
@@ -69,7 +69,7 @@ func (a *App) uiCheck(id string, r rect, label string, val *bool, o checkOpts) b
 		}
 		st := tsBody
 		st.Color = tc
-		drawText(dst, fitText(label, st, r.W-checkBox-checkGap), float64(box.right()+checkGap), float64(r.Y)+(float64(r.H)-lineH(st))/2, st)
+		drawText(dst, fitText(label, st, r.W-checkBox-checkGap), float64(box.Right()+checkGap), float64(r.Y)+(float64(r.H)-lineH(st))/2, st)
 	})
 	return changed
 }
@@ -109,12 +109,12 @@ func (a *App) uiRadio(id string, r rect, labels []string, sel *int, o radioOpts)
 		}
 		a.uiOK()
 	}
-	rows := r.rowsN(len(labels), rowH, 0)
+	rows := r.RowsN(len(labels), rowH, 0)
 	changed := false
 	if u.add(uiWidget{id: id, r: r, focusable: true}) {
 		for i := range labels {
 			i := i
-			w := uiWidget{id: optID(id, i), label: labels[i], r: rows[i].intersect(r), disabled: reason(i) != "", reason: reason(i), click: func() { choose(i) }}
+			w := uiWidget{id: optID(id, i), label: labels[i], r: rows[i].Intersect(r), disabled: reason(i) != "", reason: reason(i), click: func() { choose(i) }}
 			w.tip = reason(i)
 			if w.tip == "" && i < len(o.Tips) {
 				w.tip = o.Tips[i]

@@ -59,10 +59,10 @@ func pacingOf(p storyteller.Profile) []int { return storyteller.Spark(p, sparkDa
 type storyLayout struct{ left, centre, right rect }
 
 func storyRects(content rect) storyLayout {
-	left := rect{content.X, content.Y, storyLeftW, content.H}
-	right := rect{content.right() - storyRightW, content.Y, storyRightW, content.H}
-	cx := left.right() + dialogPad
-	return storyLayout{left, rect{cx, content.Y, right.X - dialogPad - cx, content.H}, right}
+	left := rect{X: content.X, Y: content.Y, W: storyLeftW, H: content.H}
+	right := rect{X: content.Right() - storyRightW, Y: content.Y, W: storyRightW, H: content.H}
+	cx := left.Right() + dialogPad
+	return storyLayout{left, rect{X: cx, Y: content.Y, W: right.X - dialogPad - cx, H: content.H}, right}
 }
 
 func (a *App) drawStoryteller(screen *ebiten.Image, sw, sh int) {
@@ -85,7 +85,7 @@ func (a *App) storytellerUI(sw, sh int) {
 
 	for i, p := range profiles {
 		p := p
-		r := rect{L.left.X, L.left.Y + float32(i)*(storyCardH+storyCardGap), storyLeftW, storyCardH}
+		r := rect{X: L.left.X, Y: L.left.Y + float32(i)*(storyCardH+storyCardGap), W: storyLeftW, H: storyCardH}
 		pick := func() { ng.storyteller = p.Key }
 		w := uiWidget{id: "story.pick." + p.Key, r: r, label: p.Name, focusable: true, click: func() { a.uiOK(); pick() },
 			tip: p.Name + ", " + p.Title + "\n" + modeCaption(p.Mode)}
@@ -140,7 +140,7 @@ func drawSilhouette(dst *ebiten.Image, box rect, name string) {
 	uiFillCircle(dst, cx, box.Y+box.H*0.95, box.W*0.42, c, true)
 	st := tsSmall
 	st.Align, st.Color = alignCenter, uiTextDim
-	drawText(dst, fitText(name, st, box.W-8), float64(cx), float64(box.bottom())-lineH(st)-4, st)
+	drawText(dst, fitText(name, st, box.W-8), float64(cx), float64(box.Bottom())-lineH(st)-4, st)
 }
 
 // paintStoryCard draws a storyteller's list card.
@@ -158,7 +158,7 @@ func (a *App) paintStoryCard(dst *ebiten.Image, r rect, p storyteller.Profile, s
 	} else {
 		strokeRect(dst, r, uiPanelBorder)
 	}
-	pr := rect{r.X + 2, r.Y + 2, 120, r.H - 4}
+	pr := rect{X: r.X + 2, Y: r.Y + 2, W: 120, H: r.H - 4}
 	if img := a.portraitImage(p.Key, true); img != nil {
 		drawFit(dst, img, pr)
 	} else {
@@ -183,10 +183,10 @@ func (a *App) paintStoryCard(dst *ebiten.Image, r rect, p storyteller.Profile, s
 func (a *App) storyCentre(r rect, p storyteller.Profile) {
 	u := a.uiSt()
 	a.uiPanel(r)
-	in := r.inset(12)
+	in := r.Inset(12)
 	ph := max(float32(180), min(float32(330), in.H*0.46))
-	pr := rect{in.X, in.Y, ph * 0.8, ph}
-	text := rect{pr.right() + 16, in.Y, in.right() - pr.right() - 16, ph}
+	pr := rect{X: in.X, Y: in.Y, W: ph * 0.8, H: ph}
+	text := rect{X: pr.Right() + 16, Y: in.Y, W: in.Right() - pr.Right() - 16, H: ph}
 	u.queue(func(dst *ebiten.Image) {
 		if img := a.portraitImage(p.Key, false); img != nil {
 			drawFit(dst, img, pr)
@@ -207,11 +207,11 @@ func (a *App) storyCentre(r rect, p storyteller.Profile) {
 		cs.Color = uiAccent
 		drawText(dst, "Pacing: "+modeCaption(p.Mode), float64(text.X), y+2+lineH(ts)+10, cs)
 	})
-	a.uiTip("story.mode", rect{text.X, text.Y, text.W, 90}, p.Name+"\n"+pacingTip(p))
+	a.uiTip("story.mode", rect{X: text.X, Y: text.Y, W: text.W, H: 90}, p.Name+"\n"+pacingTip(p))
 
 	// The bio, between the portrait and the pacing chart.
-	bioY := pr.bottom() + 10
-	bio := rect{in.X, bioY, in.W, max(0, in.bottom()-sparkBlockH-bioY)}
+	bioY := pr.Bottom() + 10
+	bio := rect{X: in.X, Y: bioY, W: in.W, H: max(0, in.Bottom()-sparkBlockH-bioY)}
 	paras := strings.Split(p.Bio, "\n\n")
 	bw := max(40, bio.W-scrollBarW-6)
 	total := float32(0)
@@ -231,7 +231,7 @@ func (a *App) storyCentre(r rect, p storyteller.Profile) {
 		}
 	})
 
-	chart := rect{in.X, in.bottom() - sparkBlockH + 6, in.W, sparkBlockH - 6}
+	chart := rect{X: in.X, Y: in.Bottom() - sparkBlockH + 6, W: in.W, H: sparkBlockH - 6}
 	vals := pacingOf(p)
 	a.uiTip("story.pacing", chart, "Example pacing\nSixty days of one possible story. Each bar is a day; taller bars are bigger threats and gaps are quiet days.")
 	u.queue(func(dst *ebiten.Image) { drawPacing(dst, chart, vals) })
@@ -255,7 +255,7 @@ func drawPacing(dst *ebiten.Image, r rect, vals []int) {
 	cs := tsSmall
 	cs.Color = uiTextDim
 	drawText(dst, "Example pacing — every colony differs.", float64(r.X), float64(r.Y), cs)
-	chart := rect{r.X, r.Y + float32(lineH(cs)) + 6, r.W, r.H - float32(lineH(cs)) - 6 - float32(lineH(cs)) - 2}
+	chart := rect{X: r.X, Y: r.Y + float32(lineH(cs)) + 6, W: r.W, H: r.H - float32(lineH(cs)) - 6 - float32(lineH(cs)) - 2}
 	fillRect(dst, chart, uiField)
 	strokeRect(dst, chart, uiPanelBorder)
 	hi := 1
@@ -269,7 +269,7 @@ func drawPacing(dst *ebiten.Image, r rect, vals []int) {
 			continue
 		}
 		h := (chart.H - 6) * float32(v) / float32(hi)
-		uiFillRect(dst, chart.X+float32(i)*bw+1, chart.bottom()-3-h, max(1, bw-2), h, uiAccent, false)
+		uiFillRect(dst, chart.X+float32(i)*bw+1, chart.Bottom()-3-h, max(1, bw-2), h, uiAccent, false)
 	}
 	for d := 0; d <= sparkDays; d += 10 {
 		x := chart.X + float32(d)*bw
@@ -282,7 +282,7 @@ func drawPacing(dst *ebiten.Image, r rect, vals []int) {
 		case sparkDays:
 			ls.Align = alignRight
 		}
-		drawText(dst, fmt.Sprintf("day %d", d), float64(x), float64(chart.bottom())+2, ls)
+		drawText(dst, fmt.Sprintf("day %d", d), float64(x), float64(chart.Bottom())+2, ls)
 	}
 }
 
@@ -299,7 +299,7 @@ func presetTip(n difficulty.Named) string {
 func (a *App) storyRight(ng *newGameState, r rect) {
 	u := a.uiSt()
 	a.uiPanel(r)
-	in := r.inset(10)
+	in := r.Inset(10)
 	presets := difficulty.Presets()
 	hs := tsLarge
 	hs.Color = uiHeading
@@ -340,7 +340,9 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 	y += noteH + 4
 
 	area := a.uiScrollArea("story.right", in, y, scrollOpts{Step: 48})
-	shown := func(sr srow) rect { return rect{area.View.X, area.View.Y + sr.y - area.Off, area.View.W, sr.h} }
+	shown := func(sr srow) rect {
+		return rect{X: area.View.X, Y: area.View.Y + sr.y - area.Off, W: area.View.W, H: sr.h}
+	}
 
 	// The Customize button comes first so it takes its click before the row.
 	for _, sr := range rows {
@@ -348,15 +350,15 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 			continue
 		}
 		rr := shown(sr)
-		btn := rect{rr.right() - 104, rr.Y + 8, 100, 24}
-		if btn.Y >= area.View.Y && btn.bottom() <= area.View.bottom() {
+		btn := rect{X: rr.Right() - 104, Y: rr.Y + 8, W: 100, H: 24}
+		if btn.Y >= area.View.Y && btn.Bottom() <= area.View.Bottom() {
 			a.ngButton("diff.customize", btn, "Customize...", btnOpts{Tip: "Customize\nEdit every difficulty value."}, a.openCustomDifficulty)
 		}
 	}
 	for _, sr := range rows {
 		sr := sr
-		hit := shown(sr).intersect(area.View)
-		if hit.empty() {
+		hit := shown(sr).Intersect(area.View)
+		if hit.Empty() {
 			continue
 		}
 		w := uiWidget{id: sr.id, r: hit, label: sr.label, tip: sr.tip, focusable: true, click: func() { a.uiOK(); sr.click() }}
@@ -377,16 +379,16 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 		}
 		for _, sr := range rows {
 			rr := shown(sr)
-			if rr.bottom() < area.View.Y || rr.Y > area.View.bottom() {
+			if rr.Bottom() < area.View.Y || rr.Y > area.View.Bottom() {
 				continue
 			}
 			hot := u.hot == sr.id
 			switch {
 			case sr.selected:
-				fillRect(sub, rr.inset(1), lerpRGBA(uiPanel, uiBtnSelected, 0.8))
-				strokeRect(sub, rr.inset(1), uiAccent)
+				fillRect(sub, rr.Inset(1), lerpRGBA(uiPanel, uiBtnSelected, 0.8))
+				strokeRect(sub, rr.Inset(1), uiAccent)
 			case hot:
-				fillRect(sub, rr.inset(1), uiBtnHover)
+				fillRect(sub, rr.Inset(1), uiBtnHover)
 			}
 			cx, cy := rr.X+16, rr.Y+12
 			uiFillCircle(sub, cx, cy, radioRadius, uiField, true)

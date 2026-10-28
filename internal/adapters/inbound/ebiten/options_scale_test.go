@@ -87,8 +87,8 @@ func TestOptionsScaleChangeKeepsStepperHit(t *testing.T) {
 	if b.x != before.x || b.y != before.y {
 		t.Fatalf("stepper moved logically: %+v -> %+v", before, b)
 	}
-	if a.scale.ui != 0.75 {
-		t.Fatalf("ui scale = %v", a.scale.ui)
+	if a.scale.UI != 0.75 {
+		t.Fatalf("ui scale = %v", a.scale.UI)
 	}
 	cx, cy := int(b.x+b.w/2), int(b.y+b.h/2)
 	if !b.contains(cx, cy) {

@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -87,7 +88,7 @@ func (a *App) architectButtons() []button {
 		return nil
 	}
 	l := a.hud()
-	if l.ArchCats.empty() {
+	if l.ArchCats.Empty() {
 		return nil
 	}
 	out := make([]button, 0, len(archCategories)+16)
@@ -100,7 +101,7 @@ func (a *App) architectButtons() []button {
 			w: archCatW, h: archCatH, selected: a.archCat == c.id,
 		})
 	}
-	if !l.ArchDesc.empty() {
+	if !l.ArchDesc.Empty() {
 		out = append(out, a.archDescButtons(l.ArchDesc)...)
 	}
 	return out
@@ -294,8 +295,6 @@ func (a *App) icon(name string) *ebiten.Image {
 	return a.art.image("ui_icon/"+name, color.NRGBA{})
 }
 
-func drawIcon(dst, img *ebiten.Image, x, y, size float64) { drawIconCS(dst, img, x, y, size, noCS) }
-
 // drawIconCS is drawIcon multiplied by cs (a stone item's tint).
 func drawIconCS(dst, img *ebiten.Image, x, y, size float64, cs colorScale) {
 	if img == nil {
@@ -309,7 +308,7 @@ func drawIconCS(dst, img *ebiten.Image, x, y, size float64, cs colorScale) {
 	if cs != noCS {
 		op.ColorScale.Scale(cs[0], cs[1], cs[2], cs[3])
 	}
-	uiDrawImage(dst, img, op)
+	gfx.DrawImage(dst, img, op)
 }
 
 // drawArchitect draws the category panel and the description box; the
@@ -319,11 +318,11 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		return
 	}
 	l := a.hud()
-	if l.ArchCats.empty() {
+	if l.ArchCats.Empty() {
 		return
 	}
 	drawPanel(screen, l.ArchCats.X, l.ArchCats.Y, l.ArchCats.W, l.ArchCats.H)
-	if d := l.ArchDesc; !d.empty() {
+	if d := l.ArchDesc; !d.Empty() {
 		drawPanel(screen, d.X, d.Y, d.W, d.H)
 		for _, ln := range a.archPlan().lines {
 			if ln.y+lineStep(ln.style) > d.H {

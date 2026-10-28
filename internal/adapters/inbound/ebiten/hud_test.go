@@ -139,11 +139,11 @@ func TestColonyChromeHitBeforeMap(t *testing.T) {
 	a, _, id := liveColony(t, 0)
 	sw, sh := a.sw, a.sh
 	hits := func(r rect) bool {
-		x, y := r.center()
+		x, y := r.Center()
 		return a.colonyChromeHit(int(x), int(y), sw, sh)
 	}
 	l := a.hud()
-	if l.Global.empty() || !hits(l.Global) {
+	if l.Global.Empty() || !hits(l.Global) {
 		t.Fatal("the lower-right time, speed and toggles should consume hits")
 	}
 	if !hits(l.Tabs) || !a.colonyChromeHit(10, sh-8, sw, sh) {
@@ -157,12 +157,12 @@ func TestColonyChromeHitBeforeMap(t *testing.T) {
 	}
 
 	a.renderer.Select(id)
-	if l := a.hud(); l.Pane.empty() || !hits(l.Pane) || !hits(l.PaneTabs) {
+	if l := a.hud(); l.Pane.Empty() || !hits(l.Pane) || !hits(l.PaneTabs) {
 		t.Fatal("the inspect pane and its tabs should consume hits")
 	}
 
 	click(t, a, "tab.work")
-	if w := a.hud().Window; w.empty() || !hits(w) || !a.colonyChromeHit(int(w.X)+20, int(w.Y)+40, sw, sh) {
+	if w := a.hud().Window; w.Empty() || !hits(w) || !a.colonyChromeHit(int(w.X)+20, int(w.Y)+40, sw, sh) {
 		t.Fatal("Work window should consume hits")
 	}
 }

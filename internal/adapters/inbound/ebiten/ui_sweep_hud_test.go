@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -15,8 +16,8 @@ func TestColonyHUDDrawsAtScale(t *testing.T) {
 	withUIScale(t, 1.5)
 	a.sw, a.sh = 1280, 720
 	var rects [][4]float32
-	canvasTrace = func(kind string, x, y, w, h float32) { rects = append(rects, [4]float32{x, y, w, h}) }
-	t.Cleanup(func() { canvasTrace = nil })
+	gfx.SetCanvasTrace(func(kind string, x, y, w, h float32) { rects = append(rects, [4]float32{x, y, w, h}) })
+	t.Cleanup(func() { gfx.SetCanvasTrace(nil) })
 
 	screen := ebiten.NewImage(1920, 1080)
 	a.drawMapOverlays(screen)

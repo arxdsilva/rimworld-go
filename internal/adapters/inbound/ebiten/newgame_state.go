@@ -364,7 +364,7 @@ func (a *App) ngFooter(footer rect, label, nextID string, o btnOpts, onNext func
 		onNext()
 	}
 	if o.Disabled && o.Reason != "" {
-		a.uiLabel(footerBack(footer).right()+16, footer.Y+(footer.H-float32(lineH(tsBody)))/2, o.Reason, dimText())
+		a.uiLabel(footerBack(footer).Right()+16, footer.Y+(footer.H-float32(lineH(tsBody)))/2, o.Reason, dimText())
 	}
 }
 
@@ -394,8 +394,8 @@ func (a *App) drawNGFrame(screen *ebiten.Image, sw, sh int, title string) {
 	st.Color = uiHeading
 	drawText(screen, title, float64(titleR.X+dialogPad), float64(titleR.Y)+(float64(titleR.H)-lineH(st))/2, st)
 	line := uiPanelBorder
-	fillRect(screen, rect{frame.X, titleR.bottom() - 1, frame.W, 1}, line)
-	fillRect(screen, rect{frame.X, footer.Y, frame.W, 1}, line)
+	fillRect(screen, rect{X: frame.X, Y: titleR.Bottom() - 1, W: frame.W, H: 1}, line)
+	fillRect(screen, rect{X: frame.X, Y: footer.Y, W: frame.W, H: 1}, line)
 }
 
 // formCtx lays a vertical form out inside a scroll view: row hands out
@@ -416,9 +416,9 @@ func newForm(area scrollArea) *formCtx {
 
 // row is the next row of height h.
 func (f *formCtx) row(h float32) (rect, bool) {
-	r := rect{f.x, f.view.Y + f.y - f.off, f.w, h}
+	r := rect{X: f.x, Y: f.view.Y + f.y - f.off, W: f.w, H: h}
 	f.y += h
-	return r, r.Y >= f.view.Y-0.5 && r.bottom() <= f.view.bottom()+0.5
+	return r, r.Y >= f.view.Y-0.5 && r.Bottom() <= f.view.Bottom()+0.5
 }
 
 // gap leaves h px empty.
@@ -442,7 +442,7 @@ func (ng *newGameState) setFormHeight(id string, h float32) {
 func (a *App) rowLabel(r rect, label string, labelW float32) rect {
 	st := dimText()
 	a.uiLabel(r.X, r.Y+(r.H-float32(lineH(st)))/2, fitText(label, st, labelW-8), st)
-	return rect{r.X + labelW, r.Y, max(0, r.W-labelW), r.H}
+	return rect{X: r.X + labelW, Y: r.Y, W: max(0, r.W-labelW), H: r.H}
 }
 
 // ngChoice is a dropdown: a button showing the current option that opens
@@ -482,8 +482,8 @@ func (a *App) pushPicker(id, title string, opts []string, cur int, pick func(i i
 func (a *App) ngStepper(id string, r rect, v *int, lo, hi int) {
 	*v = max(lo, min(hi, *v))
 	bw := float32(28)
-	a.ngButton(id+".dec", rect{r.X, r.Y, bw, r.H}, "-", btnOpts{Disabled: *v <= lo, Reason: fmt.Sprintf("The minimum is %d.", lo)}, func() { *v = max(lo, *v-1) })
-	a.ngButton(id+".inc", rect{r.X + bw + 56, r.Y, bw, r.H}, "+", btnOpts{Disabled: *v >= hi, Reason: fmt.Sprintf("The maximum is %d.", hi)}, func() { *v = min(hi, *v+1) })
+	a.ngButton(id+".dec", rect{X: r.X, Y: r.Y, W: bw, H: r.H}, "-", btnOpts{Disabled: *v <= lo, Reason: fmt.Sprintf("The minimum is %d.", lo)}, func() { *v = max(lo, *v-1) })
+	a.ngButton(id+".inc", rect{X: r.X + bw + 56, Y: r.Y, W: bw, H: r.H}, "+", btnOpts{Disabled: *v >= hi, Reason: fmt.Sprintf("The maximum is %d.", hi)}, func() { *v = min(hi, *v+1) })
 	val := *v
 	a.uiSt().queue(func(dst *ebiten.Image) {
 		st := tsLabel
@@ -533,7 +533,7 @@ func (a *App) segmented(id string, r rect, labels []string, sel *int, tips []str
 		if i < len(tips) {
 			o.Tip = tips[i]
 		}
-		a.ngButton(optID(id, i), rect{r.X + float32(i)*(w+4), r.Y, w, r.H}, l, o, func() { *sel = i })
+		a.ngButton(optID(id, i), rect{X: r.X + float32(i)*(w+4), Y: r.Y, W: w, H: r.H}, l, o, func() { *sel = i })
 	}
 }
 

@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -16,7 +17,7 @@ import (
 // 1280x720 logical, and returns the physical size.
 func atLogical1280(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	t.Helper()
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	a.devFn = func() float64 { return 1 } // not the test machine's Retina factor
 	st := a.settings
 	st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, int(s*100)

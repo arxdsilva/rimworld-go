@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -14,7 +15,7 @@ import (
 // logical and returns the physical size.
 func rightAtScale(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	t.Helper()
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	a.devFn = func() float64 { return 1 } // not the test machine's Retina factor
 	st := a.settings
 	st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, int(s*100)
@@ -45,7 +46,7 @@ func TestRightColumnCountsAreTheRealOnes(t *testing.T) {
 		t.Errorf("messageCount() = %d, want 3", got)
 	}
 	l := a.hud()
-	if l.LetterRows != 2 || l.AlertRows != a.alertCount() || l.Messages.empty() {
+	if l.LetterRows != 2 || l.AlertRows != a.alertCount() || l.Messages.Empty() {
 		t.Errorf("layout rows: letters %d, alerts %d, messages %+v", l.LetterRows, l.AlertRows, l.Messages)
 	}
 	// no colony: nothing to count
@@ -69,7 +70,7 @@ func TestRightClickOverTheColumnIsConsumed(t *testing.T) {
 	a, _ := colonyApp(t, s)
 	l := a.hud()
 	for name, r := range map[string]rect{"alerts": l.Alerts, "letters": l.Letters} {
-		if r.empty() {
+		if r.Empty() {
 			t.Fatalf("no %s rect", name)
 		}
 		if !a.rightClickRightColumn(int(r.X+r.W/2), int(r.Y+r.H/2)) {

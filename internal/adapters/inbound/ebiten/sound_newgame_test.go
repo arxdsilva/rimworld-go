@@ -20,7 +20,7 @@ func TestSliderPlaysTick(t *testing.T) {
 
 	// A discrete slider ticks on every step it moves.
 	stop := 0.0
-	dr := rect{100, 200, 300, 40}
+	dr := rect{X: 100, Y: 200, W: 300, H: 40}
 	dsp := sliderSpec{Stops: []string{"Low", "Normal", "High"}}
 	setHook(u, func(a *App) { a.uiSlider("d", dr, &stop, dsp) })
 	dt := sliderTrack(dr)
@@ -43,7 +43,7 @@ func TestSliderPlaysTick(t *testing.T) {
 
 	// A continuous slider ticks once per step crossed, not per frame.
 	val := 50.0
-	r := rect{100, 100, 300, 30}
+	r := rect{X: 100, Y: 100, W: 300, H: 30}
 	sp := sliderSpec{Min: 0, Max: 100, Step: 10}
 	setHook(u, func(a *App) { a.uiSlider("s", r, &val, sp) })
 	track := sliderTrack(r)

@@ -74,7 +74,7 @@ func drawConditionLines(screen *ebiten.Image, chips []statusChip, rs []rect) {
 		if i >= len(chips) {
 			break
 		}
-		rightText(screen, chips[i].label, r.right()-globalPad, r, withColor(tsBody, chips[i].edge))
+		rightText(screen, chips[i].label, r.Right()-globalPad, r, withColor(tsBody, chips[i].edge))
 	}
 }
 

@@ -119,11 +119,11 @@ func TestAnimalsTabMasterAndTrainingColumns(t *testing.T) {
 	click(t, a, "tab.animals")
 	// the Colony list fits the window at 1280 px: columns give way, and
 	// every button stays inside the Window rect
-	if w := a.hud().Window; a.sw != 1280 || w.empty() {
+	if w := a.hud().Window; a.sw != 1280 || w.Empty() {
 		t.Fatalf("no window at %d px: %+v", a.sw, w)
 	} else {
 		for _, b := range a.animalsTabButtons() {
-			if b.x < w.X-0.5 || b.x+b.w > w.right()+0.5 || b.y < w.Y-0.5 || b.y+b.h > w.bottom()+0.5 {
+			if b.x < w.X-0.5 || b.x+b.w > w.Right()+0.5 || b.y < w.Y-0.5 || b.y+b.h > w.Bottom()+0.5 {
 				t.Errorf("%s %v,%v %vx%v runs out of the window %+v", b.id, b.x, b.y, b.w, b.h, w)
 			}
 		}
@@ -160,7 +160,7 @@ func TestAnimalTabBodiesStayInTheirPanel(t *testing.T) {
 			}
 			for _, e := range events {
 				x0, y0 := inner.X*float32(scale), inner.Y*float32(scale)
-				x1, y1 := inner.right()*float32(scale), inner.bottom()*float32(scale)
+				x1, y1 := inner.Right()*float32(scale), inner.Bottom()*float32(scale)
 				// the log scrolls: a row cut by the bottom edge is clipped by the
 				// pane, so it only has to start inside; everything else must fit
 				bottom := y1 + 0.5
@@ -206,10 +206,10 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	a.selectPaneTab("inspector.log")
 	f.frame(t, a)
 	exp := a.expandedRect()
-	if exp.empty() {
+	if exp.Empty() {
 		t.Fatal("the Log tab opens an expanded panel")
 	}
-	cx, cy := exp.center()
+	cx, cy := exp.Center()
 	zoom := a.renderer.cam.zoom
 	f.cur.mx, f.cur.my, f.cur.wheelY = int(cx), int(cy), -1
 	f.frame(t, a)

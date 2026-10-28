@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -17,7 +18,7 @@ func scaledColony(t *testing.T) (*App, *recSim, *fakeInput) {
 		t.Fatal(err)
 	}
 	rs := &recSim{Simulation: g, moveOK: true}
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	a := testApp(rs)
 	a.devFn = func() float64 { return 1 }
 	s := a.settings
@@ -26,8 +27,8 @@ func scaledColony(t *testing.T) (*App, *recSim, *fakeInput) {
 	a.LayoutF(1920, 1080)
 	a.finishBoot()
 	a.startGame()
-	if a.renderer == nil || a.scale.s != 1.5 {
-		t.Fatalf("renderer=%v scale=%v", a.renderer != nil, a.scale.s)
+	if a.renderer == nil || a.scale.S != 1.5 {
+		t.Fatalf("renderer=%v scale=%v", a.renderer != nil, a.scale.S)
 	}
 	return a, rs, fakeOn(a)
 }
@@ -36,7 +37,7 @@ func scaledColony(t *testing.T) (*App, *recSim, *fakeInput) {
 // (physical) position for one Update.
 func clickAtLogical(t *testing.T, a *App, f *fakeInput, x, y float32) {
 	t.Helper()
-	f.cur.mx, f.cur.my = int(float64(x)*a.scale.s), int(float64(y)*a.scale.s)
+	f.cur.mx, f.cur.my = int(float64(x)*a.scale.S), int(float64(y)*a.scale.S)
 	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
@@ -72,7 +73,7 @@ func TestArchitectCategoryClickAtScale(t *testing.T) {
 		t.Fatal("no Zones button in the category panel")
 	}
 	l := a.hud()
-	if !l.ArchCats.contains(cat.x+cat.w/2, cat.y+cat.h/2) {
+	if !l.ArchCats.Contains(cat.x+cat.w/2, cat.y+cat.h/2) {
 		t.Fatalf("Zones button %+v is outside ArchCats %+v", cat, l.ArchCats)
 	}
 	clickAtLogical(t, a, f, cat.x+cat.w/2, cat.y+cat.h/2)

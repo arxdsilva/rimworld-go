@@ -92,7 +92,7 @@ func (r *Renderer) drawSnowClearOverlay(screen *ebiten.Image, w game.WorldView, 
 	}
 	r.setView(sw, sh, tile)
 	b := &st.batch
-	b.reset()
+	b.Reset()
 	a := snowClearFillA
 	for _, run := range st.runs {
 		sx, sy := r.worldToScreen(run.x0, run.y)
@@ -100,7 +100,7 @@ func (r *Renderer) drawSnowClearOverlay(screen *ebiten.Image, w game.WorldView, 
 		if !visible(float32(sx), float32(sy), float32(wd), float32(tile), sw, sh) {
 			continue
 		}
-		b.rect(float64(sx), float64(sy), wd, tile, snowClearFill, a, a, a, a)
+		b.Rect(float64(sx), float64(sy), wd, tile, snowClearFill, a, a, a, a)
 	}
 	ec := snowClearFill
 	ec.A = uint8(snowClearEdgeA * 255)
@@ -111,6 +111,6 @@ func (r *Renderer) drawSnowClearOverlay(screen *ebiten.Image, w game.WorldView, 
 		}
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, snowClearEdgePx, ec, 0, 1)
 	}
-	st.verts = len(b.verts)
-	b.flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.verts = len(b.Verts)
+	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
 }

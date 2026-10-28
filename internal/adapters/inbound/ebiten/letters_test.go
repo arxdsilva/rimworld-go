@@ -50,12 +50,12 @@ func TestLettersStackFromTheReadModel(t *testing.T) {
 		if r.r.H != letterRowH || r.r.X != l.Letters.X || r.r.W != l.Letters.W {
 			t.Errorf("row %d rect %+v in Letters %+v", i, r.r, l.Letters)
 		}
-		if i > 0 && r.r.Y-rows[i-1].r.bottom() != hudGap {
-			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.r.Y-rows[i-1].r.bottom(), i-1, hudGap)
+		if i > 0 && r.r.Y-rows[i-1].r.Bottom() != hudGap {
+			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.r.Y-rows[i-1].r.Bottom(), i-1, hudGap)
 		}
 	}
-	if got := rows[2].r.bottom(); got != l.Letters.bottom() {
-		t.Errorf("newest row ends at %v, Letters ends at %v: the newest sits just above the controls", got, l.Letters.bottom())
+	if got := rows[2].r.Bottom(); got != l.Letters.Bottom() {
+		t.Errorf("newest row ends at %v, Letters ends at %v: the newest sits just above the controls", got, l.Letters.Bottom())
 	}
 	// every row is a button with the id letter.<ID>
 	ids := map[string]button{}
@@ -120,8 +120,8 @@ func TestLettersStackKeepsTheNewestWhenCramped(t *testing.T) {
 	if len(rows) != l.LetterRows || rows[0].older != 6-(l.LetterRows-1) || rows[len(rows)-1].letter.ID != 6 {
 		t.Fatalf("rows %d (layout %d): first %+v, last %+v", len(rows), l.LetterRows, rows[0], rows[len(rows)-1])
 	}
-	if got := rows[len(rows)-1].r.bottom(); got != l.Letters.bottom() {
-		t.Errorf("newest ends at %v, want %v", got, l.Letters.bottom())
+	if got := rows[len(rows)-1].r.Bottom(); got != l.Letters.Bottom() {
+		t.Errorf("newest ends at %v, want %v", got, l.Letters.Bottom())
 	}
 	if rows := a.letterRows(hudLayout{}); len(rows) != 0 {
 		t.Errorf("rows without a Letters rect: %+v", rows)

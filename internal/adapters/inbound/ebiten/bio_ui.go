@@ -124,7 +124,7 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 	u := a.uiSt()
 
 	// Portrait and names.
-	pr := rect{in.X, in.Y, bioPortW, bioPortH}
+	pr := rect{X: in.X, Y: in.Y, W: bioPortW, H: bioPortH}
 	name := bioName(b)
 	u.queue(func(dst *ebiten.Image) {
 		fillRect(dst, pr, uiField)
@@ -133,8 +133,8 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 			drawSilhouette(dst, pr, name)
 		}
 	})
-	tx := pr.right() + 12
-	tw := in.right() - tx
+	tx := pr.Right() + 12
+	tw := in.Right() - tx
 	nm := tsLarge
 	nm.Color = uiHeading
 	y := in.Y
@@ -145,14 +145,14 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 		a.uiLabel(tx, y, l, nm)
 		y += float32(lineH(nm))
 	}
-	a.uiLabel(tx, y+2, fitText(bioInfoLine(b), dimText(), in.right()-tx), dimText())
+	a.uiLabel(tx, y+2, fitText(bioInfoLine(b), dimText(), in.Right()-tx), dimText())
 	y += 28
-	a.backstoryLine(tx, y, in.right()-tx, "Childhood", b.Childhood, b.ChildhoodDesc, "bio.child")
+	a.backstoryLine(tx, y, in.Right()-tx, "Childhood", b.Childhood, b.ChildhoodDesc, "bio.child")
 	y += 20
-	a.backstoryLine(tx, y, in.right()-tx, "Adulthood", b.Adulthood, b.AdulthoodDesc, "bio.adult")
+	a.backstoryLine(tx, y, in.Right()-tx, "Adulthood", b.Adulthood, b.AdulthoodDesc, "bio.adult")
 
 	// Traits.
-	y = max(pr.bottom()+6, y+22)
+	y = max(pr.Bottom()+6, y+22)
 	y = a.traitChips(in.X, y, in.W, game.CandidateView{BioView: b})
 
 	// Incapable of.
@@ -169,7 +169,7 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 		drawText(dst, fitText(short, st, in.W-104), float64(in.X+104), float64(iy), st)
 	})
 	if full != "" {
-		a.uiTip("bio.incap", rect{in.X, iy, in.W, 18}, "Incapable of\n"+full)
+		a.uiTip("bio.incap", rect{X: in.X, Y: iy, W: in.W, H: 18}, "Incapable of\n"+full)
 	}
 	y += 22
 
@@ -181,26 +181,26 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 		condH += float32(len(b.Conditions)-1) * 14
 	}
 	top := y
-	if in.bottom()-condH-relH-top < bioHdrH+bioScrollRows*bioRowMin {
+	if in.Bottom()-condH-relH-top < bioHdrH+bioScrollRows*bioRowMin {
 		rel, relH = nil, 0 // too tight for a useful table: the relations go first (the Social tab has them)
 	}
-	avail := in.bottom() - condH - relH - top - bioHdrH
+	avail := in.Bottom() - condH - relH - top - bioHdrH
 	rowH := min(float32(bioRowMax), max(float32(bioRowMin), avail/float32(max(len(b.Skills), 1))))
 	// the table scrolls when the room is less than its rows; never beyond the bottom blocks
-	tableH := min(bioHdrH+rowH*float32(len(b.Skills)), max(in.bottom()-condH-relH-top, bioHdrH))
-	a.bioSkills(rect{in.X, top, in.W, tableH}, b, week, rowH)
+	tableH := min(bioHdrH+rowH*float32(len(b.Skills)), max(in.Bottom()-condH-relH-top, bioHdrH))
+	a.bioSkills(rect{X: in.X, Y: top, W: in.W, H: tableH}, b, week, rowH)
 
 	if len(rel) > 0 {
-		ry := in.bottom() - condH - relH + 2
+		ry := in.Bottom() - condH - relH + 2
 		a.uiLabel(in.X, ry, "Relations:", tsLabel)
 		rs := tsSmall
 		rs.Color = uiTextDim
 		for i, ln := range rel {
 			a.uiLabel(in.X+74, ry+1+float32(i)*14, fitText(ln, rs, in.W-74), rs)
 		}
-		a.uiTip("bio.relations", rect{in.X, ry, in.W, relH}, "Relations\n"+strings.Join(rel, "\n")+"\nSee the Social tab for opinions.")
+		a.uiTip("bio.relations", rect{X: in.X, Y: ry, W: in.W, H: relH}, "Relations\n"+strings.Join(rel, "\n")+"\nSee the Social tab for opinions.")
 	}
-	cy := in.bottom() - condH + 2
+	cy := in.Bottom() - condH + 2
 	a.uiLabel(in.X, cy, "Health:", tsLabel)
 	text, st := "No conditions", tsSmall
 	st.Color = uiTextDim
@@ -224,15 +224,15 @@ func bioRelationsH(n int) float32 {
 // body scrolls (wheel, thumb) and is clipped to it.
 func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH float32) {
 	u := a.uiSt()
-	view := rect{r.X, r.Y + bioHdrH, r.W, max(0, r.H-bioHdrH)}
+	view := rect{X: r.X, Y: r.Y + bioHdrH, W: r.W, H: max(0, r.H-bioHdrH)}
 	var off float32
 	if contentH := rowH * float32(len(b.Skills)); contentH > view.H+0.5 {
 		area := a.uiScrollArea(bioSkillsID, view, contentH, scrollOpts{Step: rowH * 2})
 		view, off = area.View, area.Off
 	}
-	rowAt := func(i int) rect { return rect{view.X, view.Y + float32(i)*rowH - off, view.W, rowH} }
+	rowAt := func(i int) rect { return rect{X: view.X, Y: view.Y + float32(i)*rowH - off, W: view.W, H: rowH} }
 	for i := range b.Skills {
-		if row := rowAt(i).intersect(view); !row.empty() {
+		if row := rowAt(i).Intersect(view); !row.Empty() {
 			a.uiTip(fmt.Sprintf("bio.skill.%d", i), row, bioSkillTip(b.Skills[i], week[i]))
 		}
 	}
@@ -245,7 +245,7 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 	u.queue(func(dst *ebiten.Image) {
 		hs := tsSmall
 		hs.Color = uiHeading
-		hr := rect{r.X, r.Y, r.W, bioHdrH}
+		hr := rect{X: r.X, Y: r.Y, W: r.W, H: bioHdrH}
 		fillRect(dst, hr, uiBtn)
 		strokeRect(dst, hr, uiBtnBorder)
 		hy := float64(r.Y) + (bioHdrH-lineH(hs))/2
@@ -255,11 +255,11 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 		lh.Align = alignRight
 		drawText(dst, "Lvl", float64(r.X+lvlX+10), hy, lh)
 		drawText(dst, "Experience", float64(r.X+barX), hy, hs)
-		drawText(dst, "This week", float64(view.right()-6), hy, lh)
+		drawText(dst, "This week", float64(view.Right()-6), hy, lh)
 		body := clipTo(dst, view)
 		for i, s := range b.Skills {
 			row := rowAt(i)
-			if row.bottom() < view.Y || row.Y > view.bottom() {
+			if row.Bottom() < view.Y || row.Y > view.Bottom() {
 				continue
 			}
 			if i%2 == 1 {
@@ -284,9 +284,9 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 				drawText(body, "incapable", float64(row.X+barX), ty, st)
 				continue
 			}
-			bar := rect{row.X + barX, row.Y + (row.H-6)/2, barW, 6}
+			bar := rect{X: row.X + barX, Y: row.Y + (row.H-6)/2, W: barW, H: 6}
 			fillRect(body, bar, uiSliderTrack)
-			fillRect(body, rect{bar.X, bar.Y, bar.W * float32(s.XPPct) / 100, bar.H}, uiSliderFill)
+			fillRect(body, rect{X: bar.X, Y: bar.Y, W: bar.W * float32(s.XPPct) / 100, H: bar.H}, uiSliderFill)
 			strokeRect(body, bar, uiPanelBorder)
 			wt := st
 			wt.Align = alignRight
@@ -295,7 +295,7 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 			} else {
 				wt.Color = uiGood
 			}
-			drawText(body, weekText(week[i]), float64(row.right()-6), ty, wt)
+			drawText(body, weekText(week[i]), float64(row.Right()-6), ty, wt)
 		}
 	})
 }

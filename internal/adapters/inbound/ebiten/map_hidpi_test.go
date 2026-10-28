@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -19,9 +20,9 @@ import (
 // rest of the test.
 func withMapScale(t testing.TB, dev, ui float64) {
 	t.Helper()
-	old := curUIScale
-	curUIScale = uiScaleState{dev: dev, ui: ui, s: dev * ui}
-	t.Cleanup(func() { curUIScale = old })
+	old := gfx.CurrentScale()
+	gfx.SetScale(uiScaleState{Dev: dev, UI: ui, S: dev * ui})
+	t.Cleanup(func() { gfx.SetScale(old) })
 }
 
 func TestMapTileScalesWithDevOnly(t *testing.T) {
@@ -62,7 +63,7 @@ func TestDevChangeKeepsTheView(t *testing.T) {
 // 1280x720-point window and the UI scale ui (percent, 0: Auto).
 func hidpiColony(t *testing.T, dev float64, ui int) (*App, *fakeInput) {
 	t.Helper()
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	s := &stubSim{w: 40, h: 40, pawns: []game.PawnView{{ID: 7, Name: "Ada", X: 21, Y: 19, Status: "alive"}}}
 	a := testApp(s)
 	a.devFn = func() float64 { return dev }
@@ -86,13 +87,13 @@ func hidpiColony(t *testing.T, dev float64, ui int) (*App, *fakeInput) {
 
 func TestHiDPIClickSelectsSameTile(t *testing.T) {
 	one, _ := hidpiColony(t, 1, 0)
-	if one.scale.s != 1 || one.renderer.tilePx() != TileSize {
+	if one.scale.S != 1 || one.renderer.tilePx() != TileSize {
 		t.Fatalf("dev 1: scale %+v tile %v", one.scale, one.renderer.tilePx())
 	}
 	sx1, sy1 := one.renderer.worldToScreenF(21.5, 19.5)
 
 	two, f := hidpiColony(t, 2, 0)
-	if two.scale.dev != 2 || two.renderer.tilePx() != 2*TileSize {
+	if two.scale.Dev != 2 || two.renderer.tilePx() != 2*TileSize {
 		t.Fatalf("dev 2: scale %+v tile %v, want %v", two.scale, two.renderer.tilePx(), 2*TileSize)
 	}
 	sx2, sy2 := two.renderer.worldToScreenF(21.5, 19.5)
@@ -117,7 +118,7 @@ func TestHiDPIClickSelectsSameTile(t *testing.T) {
 
 func TestUIScaleLeavesMapTileSize(t *testing.T) {
 	a, _ := hidpiColony(t, 1, 150)
-	if a.scale.s != 1.5 || a.scale.dev != 1 {
+	if a.scale.S != 1.5 || a.scale.Dev != 1 {
 		t.Fatalf("scale %+v, want ui 1.5 at dev 1", a.scale)
 	}
 	if got := a.renderer.tilePx(); got != TileSize*a.renderer.cam.zoom {
@@ -210,7 +211,7 @@ func TestMinimapClickAtUIScale(t *testing.T) {
 
 func TestFPSReportNamesScale(t *testing.T) {
 	st := &fpsProbeState{}
-	if got := fpsReport(st, uiScaleState{dev: 2, ui: 1.5, s: 3, world: 0.5}); !strings.Contains(got, "s 3") || !strings.Contains(got, "dev 2") ||
+	if got := fpsReport(st, uiScaleState{Dev: 2, UI: 1.5, S: 3, World: 0.5}); !strings.Contains(got, "s 3") || !strings.Contains(got, "dev 2") ||
 		!strings.Contains(got, "world 0.5") {
 		t.Fatalf("report %q does not name the scale", got)
 	}

@@ -222,7 +222,7 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 		}
 	}
 	// every outline of every zone in one draw, over all the fills
-	r.zoneBatch.flush(screen, r.env.whiteImg(), ebiten.Blend{})
+	r.zoneBatch.Flush(screen, r.env.whiteImg(), ebiten.Blend{})
 }
 
 // zoneFill draws the zone sprite key on every visible cell not in skip as
@@ -341,11 +341,11 @@ func (r *Renderer) drawZoneRun(b *triBatch, kind string, run edgeRun, sw, sh int
 	if ax == bx {
 		ay -= off
 		by += off
-		b.rect(float64(ax-th/2), float64(ay), float64(th), float64(by-ay), growEdgeClr, 1, 1, 1, 1)
+		b.Rect(float64(ax-th/2), float64(ay), float64(th), float64(by-ay), growEdgeClr, 1, 1, 1, 1)
 	} else {
 		ax -= off
 		bx += off
-		b.rect(float64(ax), float64(ay-th/2), float64(bx-ax), float64(th), growEdgeClr, 1, 1, 1, 1)
+		b.Rect(float64(ax), float64(ay-th/2), float64(bx-ax), float64(th), growEdgeClr, 1, 1, 1, 1)
 	}
 }
 
@@ -412,12 +412,12 @@ func dashedRun(b *triBatch, ax, ay, bx, by, th, dash, gap float32, c color.RGBA,
 			if !visible(ax+d, ay-th/2, l, th, sw, sh) {
 				continue
 			}
-			b.rect(float64(ax+d), float64(ay-th/2), float64(l), float64(th), c, 1, 1, 1, 1)
+			b.Rect(float64(ax+d), float64(ay-th/2), float64(l), float64(th), c, 1, 1, 1, 1)
 		} else {
 			if !visible(ax-th/2, ay+d, th, l, sw, sh) {
 				continue
 			}
-			b.rect(float64(ax-th/2), float64(ay+d), float64(th), float64(l), c, 1, 1, 1, 1)
+			b.Rect(float64(ax-th/2), float64(ay+d), float64(th), float64(l), c, 1, 1, 1, 1)
 		}
 	}
 }
@@ -447,11 +447,11 @@ func (r *Renderer) drawFenceRun(b *triBatch, run edgeRun, tile float64) {
 	sax, say := r.worldToScreenF(ax, ay)
 	sbx, sby := r.worldToScreenF(bx, by)
 	rail := color.RGBA{150, 104, 62, 255}
-	b.line(float64(sax), float64(say), float64(sbx), float64(sby), max(2*screenDev(), tile*0.05), rail, 220.0/255)
+	b.Line(float64(sax), float64(say), float64(sbx), float64(sby), max(2*screenDev(), tile*0.05), rail, 220.0/255)
 	post := color.RGBA{110, 74, 44, 255}
 	ps := float32(max(3*screenDev(), tile*0.09))
 	dot := func(x, y float32) {
-		b.rect(float64(x-ps/2), float64(y-ps/2), float64(ps), float64(ps), post, 240.0/255, 240.0/255, 240.0/255, 240.0/255)
+		b.Rect(float64(x-ps/2), float64(y-ps/2), float64(ps), float64(ps), post, 240.0/255, 240.0/255, 240.0/255, 240.0/255)
 	}
 	dot(sax, say)
 	dot(sbx, sby)
@@ -644,7 +644,7 @@ func (r *Renderer) zoneLabelAt(w game.WorldView, mx, my int, tile float64, shown
 			continue
 		}
 		plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.zoneGeomOf(z), tile)
-		if plan.ok && plan.plate.contains(px, py) {
+		if plan.ok && plan.plate.Contains(px, py) {
 			return z, true
 		}
 	}

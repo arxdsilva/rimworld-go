@@ -128,7 +128,7 @@ func (a *App) captureColonyUI(ui string) {
 	pawns := a.renderer.snapshot()
 	cardAt := func(id string) { // the tool's command button in the grid
 		if c, ok := a.archToolCell(id); ok {
-			x, y := c.center()
+			x, y := c.Center()
 			a.cursor = &[2]int{int(x), int(y)}
 		}
 	}
@@ -161,7 +161,7 @@ func (a *App) captureColonyUI(ui string) {
 			for col := range workColumns {
 				if _, live := workLive[col]; live && p.Incapable.Enabled(work.Type(col)) && a.cursor == nil {
 					c := workCellRect(a.windowRect(), row, col)
-					x, y := c.center()
+					x, y := c.Center()
 					a.cursor = &[2]int{int(x), int(y)}
 				}
 			}

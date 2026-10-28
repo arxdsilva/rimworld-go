@@ -62,7 +62,7 @@ func TestResourceRowsComeFromStoredGoods(t *testing.T) {
 		t.Fatalf("resourcesHeight = %v, want %v", h, 3*resourceRowH)
 	}
 	l := a.hud()
-	want := rect{hudMargin, hudMargin, resourcesW, 3 * resourceRowH}
+	want := rect{X: hudMargin, Y: hudMargin, W: resourcesW, H: 3 * resourceRowH}
 	if l.Resources != want {
 		t.Fatalf("Resources rect = %+v, want %+v", l.Resources, want)
 	}
@@ -76,7 +76,7 @@ func TestResourceRowsComeFromStoredGoods(t *testing.T) {
 		if b.id != "res.row."+kind || b.tip != label {
 			t.Errorf("button %d = %q tip %q, want res.row.%s tip %q", i, b.id, b.tip, kind, label)
 		}
-		if r := (rect{b.x, b.y, b.w, b.h}); r.X < l.Resources.X || r.right() > l.Resources.right() || r.Y < l.Resources.Y || r.bottom() > l.Resources.bottom() {
+		if r := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}); r.X < l.Resources.X || r.Right() > l.Resources.Right() || r.Y < l.Resources.Y || r.Bottom() > l.Resources.Bottom() {
 			t.Errorf("button %s %+v leaves the list %+v", b.id, r, l.Resources)
 		}
 	}
@@ -100,7 +100,7 @@ func TestResourceRowsFallBackToTheTotals(t *testing.T) {
 	if kinds := htRowKinds(a.resourceRows()); !slices.Contains(kinds, "silver") || !slices.Contains(kinds, "gold") {
 		t.Fatalf("fallback rows = %v, want silver and gold", kinds)
 	}
-	if a.resourcesHeight() == 0 || a.hud().Resources.empty() {
+	if a.resourcesHeight() == 0 || a.hud().Resources.Empty() {
 		t.Fatal("the list is blank while the read model is empty")
 	}
 }
@@ -195,8 +195,8 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 	}
 	// the buttons are the visible rows only, clipped to the list
 	for _, b := range a.resourceButtons() {
-		if b.y < r.Y-0.01 || b.y+b.h > r.bottom()+0.01 {
-			t.Fatalf("button %s %v..%v leaves the list %v..%v", b.id, b.y, b.y+b.h, r.Y, r.bottom())
+		if b.y < r.Y-0.01 || b.y+b.h > r.Bottom()+0.01 {
+			t.Fatalf("button %s %v..%v leaves the list %v..%v", b.id, b.y, b.y+b.h, r.Y, r.Bottom())
 		}
 	}
 	zoom := a.renderer.smooth
@@ -222,7 +222,7 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		t.Fatalf("offset = %v after scrolling to the end, want %v", off, maxOff)
 	}
 	bs := a.resourceButtons()
-	if last := bs[len(bs)-1]; last.id != "res.row.kind39" || last.y+last.h > r.bottom()+0.01 {
+	if last := bs[len(bs)-1]; last.id != "res.row.kind39" || last.y+last.h > r.Bottom()+0.01 {
 		t.Fatalf("last row at the end = %+v", last)
 	}
 	// and back to the top
@@ -259,7 +259,7 @@ func TestResourcesHiddenWithoutRoom(t *testing.T) {
 	// a 90 px high window leaves 38 px above the tabs: under the 40 px minimum
 	a, _ := htResApp(t, game.WorldView{Stored: htManyStored(5)})
 	a.sh = 90
-	if l := a.hud(); !l.Resources.empty() {
+	if l := a.hud(); !l.Resources.Empty() {
 		t.Fatalf("Resources = %+v with no room", l.Resources)
 	}
 	if bs := a.resourceButtons(); len(bs) != 0 {
@@ -353,10 +353,10 @@ func TestRightClickOverTheResourcesIsTaken(t *testing.T) {
 	if !a.rightClickResources(int(r.X)+10, int(r.Y)+10) {
 		t.Error("a right click on the list reached the map")
 	}
-	if a.rightClickResources(int(r.right())+40, int(r.Y)+10) {
+	if a.rightClickResources(int(r.Right())+40, int(r.Y)+10) {
 		t.Error("a right click beside the list was taken")
 	}
-	if a.rightClickResources(int(r.X)+10, int(r.bottom())+40) {
+	if a.rightClickResources(int(r.X)+10, int(r.Bottom())+40) {
 		t.Error("a right click under the list was taken")
 	}
 }

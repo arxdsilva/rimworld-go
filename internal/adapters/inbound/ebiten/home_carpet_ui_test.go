@@ -158,7 +158,7 @@ func TestHomeButtonToggle(t *testing.T) {
 	if rb, _ := hasButton(a.colonyButtons(sw, sh), roofButtonID); b.x < rb.x+rb.w {
 		t.Fatalf("Home button %+v overlaps Roof %+v (Home follows Roof, left to right)", b, rb)
 	}
-	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.right() || b.y < g.Y || b.y+b.h > g.bottom() {
+	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.Right() || b.y < g.Y || b.y+b.h > g.Bottom() {
 		t.Fatalf("button %+v should sit inside Global %+v", b, g)
 	}
 	if !a.colonyChromeHit(int(b.x)+1, int(b.y)+1, sw, sh) {
@@ -209,7 +209,7 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 	if !stuffs[0].selected || a.toolStuff(tool) != bv.Stuffs[0] {
 		t.Fatalf("default material should be selected first: %q", a.toolStuff(tool))
 	}
-	if stuffs[0].x+stuffs[0].w > stuffs[1].x || stuffs[len(stuffs)-1].x+stuffs[len(stuffs)-1].w > a.hud().ArchDesc.right() {
+	if stuffs[0].x+stuffs[0].w > stuffs[1].x || stuffs[len(stuffs)-1].x+stuffs[len(stuffs)-1].w > a.hud().ArchDesc.Right() {
 		t.Fatalf("buttons overlap or overflow the panel: %+v", stuffs)
 	}
 	click(t, a, "arch.stuff.cloth carpet")

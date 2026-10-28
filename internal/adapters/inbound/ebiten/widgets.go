@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
@@ -25,7 +26,7 @@ var (
 	uiAccent      = color.RGBA{R: 0xD9, G: 0xB4, B: 0x5B, A: 0xFF}
 	uiDim         = color.RGBA{R: 0x05, G: 0x05, B: 0x06, A: 0xA0}
 	// NG-1 §1.2: text, states, fields, sliders, scrollbars, tooltips, modals.
-	uiText         = color.RGBA{R: 0xE8, G: 0xE4, B: 0xDA, A: 0xFF}
+	uiText         = gfx.TextColor
 	uiTextDim      = color.RGBA{R: 0xB8, G: 0xB4, B: 0xAA, A: 0xFF}
 	uiTextDisabled = color.RGBA{R: 0x6D, G: 0x6A, B: 0x64, A: 0xFF}
 	uiHeading      = color.RGBA{R: 0xF0, G: 0xD9, B: 0xA0, A: 0xFF}

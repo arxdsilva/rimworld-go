@@ -56,7 +56,7 @@ func tableColRects(x, y, w, h float32, cols []tableCol) []rect {
 		if cw <= 0 {
 			cw = share
 		}
-		out[i] = rect{x, y, cw, h}
+		out[i] = rect{X: x, Y: y, W: cw, H: h}
 		x += cw
 	}
 	return out
@@ -113,7 +113,7 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 	if rowH <= 0 {
 		rowH = listRowH
 	}
-	head, body := r.splitV(tableHeaderH)
+	head, body := r.SplitV(tableHeaderH)
 	cr := tableColRects(head.X, head.Y, head.W-scrollBarW, tableHeaderH, cols)
 	for i, c := range cols {
 		if c.Less == nil {
@@ -141,7 +141,7 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 	changed := a.uiList(bodyID, body, n, &disp, listSpec{
 		RowH: rowH,
 		Draw: func(dst *ebiten.Image, di int, row rect, hover, selected bool) {
-			hover = hover || row.hit(u.mx, u.my) && body.hit(u.mx, u.my)
+			hover = hover || row.Hit(u.mx, u.my) && body.Hit(u.mx, u.my)
 			switch {
 			case selected:
 				fillRect(dst, row, uiBtnSelected)
@@ -152,7 +152,7 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 				fillRect(dst, row, color.NRGBA{R: uiPanelBorder.R, G: uiPanelBorder.G, B: uiPanelBorder.B, A: 0x28})
 			}
 			for ci, c := range cols {
-				cell := rect{rcols[ci].X, row.Y, rcols[ci].W, row.H}
+				cell := rect{X: rcols[ci].X, Y: row.Y, W: rcols[ci].W, H: row.H}
 				if c.Draw != nil {
 					c.Draw(dst, order[di], cell)
 					continue
@@ -172,8 +172,8 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 			continue
 		}
 		for di := first; di <= last; di++ {
-			cell := rect{rcols[ci].X, body.Y + float32(di)*rowH - u.scroll[bodyID], rcols[ci].W, rowH}
-			u.add(uiWidget{id: id + ".cell." + uiNum(di) + "." + c.ID, r: cell.intersect(body), tip: c.Tip(order[di])})
+			cell := rect{X: rcols[ci].X, Y: body.Y + float32(di)*rowH - u.scroll[bodyID], W: rcols[ci].W, H: rowH}
+			u.add(uiWidget{id: id + ".cell." + uiNum(di) + "." + c.ID, r: cell.Intersect(body), tip: c.Tip(order[di])})
 		}
 	}
 	col, desc := a.uiTableSort(id)
@@ -189,7 +189,7 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 			}
 			drawCell(dst, cell, c.Title, c.Align, st)
 			if i == col {
-				cx, cy := cell.right()-12, cell.Y+cell.H/2
+				cx, cy := cell.Right()-12, cell.Y+cell.H/2
 				if desc {
 					fillTri(dst, cx-4, cy-2, cx+4, cy-2, cx, cy+3)
 				} else {
@@ -214,7 +214,7 @@ func drawCell(dst *ebiten.Image, cell rect, s string, al align, sts ...textStyle
 	case alignCenter:
 		x = float64(cell.X + cell.W/2)
 	case alignRight:
-		x = float64(cell.right() - tableCellPad)
+		x = float64(cell.Right() - tableCellPad)
 	}
 	drawText(dst, s, x, float64(cell.Y)+(float64(cell.H)-lineH(st))/2, st)
 }

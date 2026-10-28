@@ -228,12 +228,12 @@ type paneGeom struct {
 // fit are dropped rather than drawn over the pane's edge.
 func paneLayout(p rect, spec paneSpec) paneGeom {
 	var g paneGeom
-	inner := p.insetXY(paneInset, 0)
-	limit := p.bottom() - paneChipGap
+	inner := p.InsetXY(paneInset, 0)
+	limit := p.Bottom() - paneChipGap
 	y := p.Y + paneTop
 	g.titleW = inner.W
 	if spec.Close != "" {
-		g.close = rect{p.right() - paneTop - paneCloseW, p.Y + paneTop, paneCloseW, paneCloseW}
+		g.close = rect{X: p.Right() - paneTop - paneCloseW, Y: p.Y + paneTop, W: paneCloseW, H: paneCloseW}
 		g.titleW -= paneCloseW + paneTop
 	}
 	y += lineStep(tsLarge)
@@ -247,8 +247,8 @@ func paneLayout(p rect, spec paneSpec) paneGeom {
 		h := lineStep(tsSmall) + 2 + paneBarFill
 		for i := range n {
 			r, c := i/cols, i%cols
-			cell := rect{inner.X + float32(c)*(w+paneBarGap), y + float32(r)*(h+paneChipGap), w, h}
-			if cell.bottom() > limit {
+			cell := rect{X: inner.X + float32(c)*(w+paneBarGap), Y: y + float32(r)*(h+paneChipGap), W: w, H: h}
+			if cell.Bottom() > limit {
 				break
 			}
 			g.bars = append(g.bars, cell)
@@ -259,17 +259,17 @@ func paneLayout(p rect, spec paneSpec) paneGeom {
 		x := inner.X
 		for _, c := range spec.Chips {
 			w := min(inner.W, textW(c.Label, tsBody)+paneTabPad)
-			if x > inner.X && x+w > inner.right() {
+			if x > inner.X && x+w > inner.Right() {
 				x, y = inner.X, y+paneChipH+paneChipGap
 			}
 			if y+paneChipH <= limit {
-				g.chips = append(g.chips, rect{x, y, w, paneChipH})
+				g.chips = append(g.chips, rect{X: x, Y: y, W: w, H: paneChipH})
 			}
 			x += w + paneChipGap
 		}
 		y += paneChipH + paneChipGap
 	}
-	body := rect{inner.X, y, inner.W, max(0, limit-y)}
+	body := rect{X: inner.X, Y: y, W: inner.W, H: max(0, limit-y)}
 	if body.H < lineStep(tsBody) {
 		return g
 	}
@@ -307,7 +307,7 @@ func paneTabRects(strip rect, tabs []paneTab) []rect {
 	out := make([]rect, len(tabs))
 	x := strip.X
 	for i := range tabs {
-		out[i] = rect{x, strip.Y, ws[i], strip.H}
+		out[i] = rect{X: x, Y: strip.Y, W: ws[i], H: strip.H}
 		x += ws[i] + paneTabGap
 	}
 	return out
@@ -323,29 +323,29 @@ func (a *App) paneButtons() []button {
 		return nil
 	}
 	l := a.hud()
-	if l.Pane.empty() {
+	if l.Pane.Empty() {
 		return nil
 	}
 	g := paneLayout(l.Pane, spec)
 	var out []button
 	if spec.Close != "" {
-		out = append(out, g.close.asButton(spec.Close, "X"))
+		out = append(out, asButton(g.close, spec.Close, "X"))
 	}
 	for i, c := range g.chips {
-		b := c.asButton(spec.Chips[i].ID, spec.Chips[i].Label)
+		b := asButton(c, spec.Chips[i].ID, spec.Chips[i].Label)
 		b.disabled, b.reason, b.tip, b.quiet = spec.Chips[i].Disabled, spec.Chips[i].Reason, spec.Chips[i].Tip, true
 		out = append(out, b)
 	}
 	out = append(out, a.paneTabButtons(l.PaneTabs, spec)...)
-	if !g.body.empty() {
+	if !g.body.Empty() {
 		off := a.paneBodyOff()
-		view := rect{g.body.X, g.body.Y, g.body.W - scrollBarW, g.body.H}
+		view := rect{X: g.body.X, Y: g.body.Y, W: g.body.W - scrollBarW, H: g.body.H}
 		for i, row := range spec.Rows {
-			r := rect{view.X, g.body.Y + g.rowsY0 + float32(i)*paneRowH - off, view.W, paneRowH}.intersect(view)
+			r := rect{X: view.X, Y: g.body.Y + g.rowsY0 + float32(i)*paneRowH - off, W: view.W, H: paneRowH}.Intersect(view)
 			if r.H < paneRowH/2 {
 				continue
 			}
-			b := r.asButton(row.ID, row.Label)
+			b := asButton(r, row.ID, row.Label)
 			b.tip = row.Tip
 			out = append(out, b)
 		}
@@ -359,7 +359,7 @@ func (a *App) paneTabButtons(strip rect, spec paneSpec) []button {
 	out := make([]button, len(rs))
 	for i, r := range rs {
 		t := spec.Tabs[i]
-		out[i] = r.asButton(t.ID, t.Label)
+		out[i] = asButton(r, t.ID, t.Label)
 		out[i].disabled, out[i].reason, out[i].quiet = t.Disabled, t.Reason, true
 		out[i].selected = t.ID == a.hst.pane.openTab && !t.Disabled
 	}
@@ -373,17 +373,17 @@ func (a *App) drawPane(screen *ebiten.Image) {
 		return
 	}
 	l := a.hud()
-	if l.Pane.empty() {
+	if l.Pane.Empty() {
 		return
 	}
 	mx, my := a.currentCursor()
 	for _, b := range a.paneTabButtons(l.PaneTabs, spec) {
 		drawButton(screen, b, b.contains(mx, my))
 	}
-	if t, open := a.openTabOf(spec); open && !l.Expanded.empty() {
+	if t, open := a.openTabOf(spec); open && !l.Expanded.Empty() {
 		drawPanel(screen, l.Expanded.X, l.Expanded.Y, l.Expanded.W, l.Expanded.H)
 		if t.Draw != nil {
-			inner := l.Expanded.inset(paneInset)
+			inner := l.Expanded.Inset(paneInset)
 			t.Draw(clipTo(screen, inner), inner)
 		}
 	}
@@ -399,18 +399,18 @@ func (a *App) drawPane(screen *ebiten.Image) {
 		drawText(screen, ellipsize(spec.Subtitle, tsBody, float64(g.titleW)), x, y, withColor(tsBody, uiTextDim))
 	}
 	if spec.Close != "" {
-		drawButton(screen, g.close.asButton(spec.Close, "X"), g.close.hit(mx, my))
+		drawButton(screen, asButton(g.close, spec.Close, "X"), g.close.Hit(mx, my))
 	}
 	for i, r := range g.bars {
 		drawPaneBar(screen, r, spec.Bars[i])
 	}
 	for i, r := range g.chips {
 		c := spec.Chips[i]
-		b := r.asButton(c.ID, c.Label)
+		b := asButton(r, c.ID, c.Label)
 		b.disabled, b.quiet = c.Disabled, true
 		drawButton(screen, b, b.contains(mx, my))
 	}
-	if g.body.empty() {
+	if g.body.Empty() {
 		return
 	}
 	a.drawPaneBody(screen, spec, g, mx, my)
@@ -421,22 +421,22 @@ func drawPaneBar(screen *ebiten.Image, r rect, b paneBar) {
 	pct := max(0, min(100, b.Pct))
 	label := ellipsize(fmt.Sprintf("%s %d%%", b.Label, pct), tsSmall, float64(r.W))
 	drawText(screen, label, float64(r.X), float64(r.Y), withColor(tsSmall, uiTextDim))
-	track := rect{r.X, r.bottom() - paneBarFill, r.W, paneBarFill}
+	track := rect{X: r.X, Y: r.Bottom() - paneBarFill, W: r.W, H: paneBarFill}
 	fillRect(screen, track, uiField)
 	if w := track.W * float32(pct) / 100; w > 0 {
-		fillRect(screen, rect{track.X, track.Y, w, track.H}, b.Color)
+		fillRect(screen, rect{X: track.X, Y: track.Y, W: w, H: track.H}, b.Color)
 	}
 }
 
 // drawPaneBody draws the scrolled lines and rows, clipped to the body.
 func (a *App) drawPaneBody(screen *ebiten.Image, spec paneSpec, g paneGeom, mx, my int) {
 	off := a.paneBodyOff()
-	view := rect{g.body.X, g.body.Y, g.body.W - scrollBarW, g.body.H}
+	view := rect{X: g.body.X, Y: g.body.Y, W: g.body.W - scrollBarW, H: g.body.H}
 	sub := clipTo(screen, g.body)
 	step := lineStep(tsBody)
 	for i, ln := range g.lines {
 		ly := g.body.Y + float32(i)*step - off
-		if ly+step < g.body.Y || ly > g.body.bottom() {
+		if ly+step < g.body.Y || ly > g.body.Bottom() {
 			continue
 		}
 		st := tsBody
@@ -446,11 +446,11 @@ func (a *App) drawPaneBody(screen *ebiten.Image, spec paneSpec, g paneGeom, mx, 
 		drawText(sub, ln, float64(g.body.X), float64(ly), st)
 	}
 	for i, row := range spec.Rows {
-		r := rect{view.X, g.body.Y + g.rowsY0 + float32(i)*paneRowH - off, view.W, paneRowH}
-		if r.bottom() < g.body.Y || r.Y > g.body.bottom() {
+		r := rect{X: view.X, Y: g.body.Y + g.rowsY0 + float32(i)*paneRowH - off, W: view.W, H: paneRowH}
+		if r.Bottom() < g.body.Y || r.Y > g.body.Bottom() {
 			continue
 		}
-		if r.intersect(view).hit(mx, my) {
+		if r.Intersect(view).Hit(mx, my) {
 			fillRect(sub, r, uiBtnHover)
 		}
 		drawText(sub, ellipsize(row.Label, tsBody, float64(r.W-8)), float64(r.X+4), float64(r.Y)+(float64(r.H)-lineH(tsBody))/2, tsBody)
@@ -504,7 +504,7 @@ func (a *App) paneUI(sw, sh int) {
 		st.openTab = ""
 	}
 	l := a.hud()
-	if l.Pane.empty() {
+	if l.Pane.Empty() {
 		return
 	}
 	u := a.uiSt()
@@ -515,13 +515,13 @@ func (a *App) paneUI(sw, sh int) {
 		}
 	}
 	u.add(uiWidget{id: paneFrameID, r: l.Pane, wheel: true}) // the wheel never reaches the camera here
-	if g := paneLayout(l.Pane, spec); !g.body.empty() {
+	if g := paneLayout(l.Pane, spec); !g.body.Empty() {
 		a.uiScrollArea(paneBodyID, g.body, g.contentH, scrollOpts{Step: lineStep(tsBody) * 3})
 	}
-	if t, open := a.openTabOf(spec); open && !l.Expanded.empty() {
+	if t, open := a.openTabOf(spec); open && !l.Expanded.Empty() {
 		u.add(uiWidget{id: paneExpID, r: l.Expanded, wheel: true})
 		if t.Declare != nil {
-			t.Declare(l.Expanded.inset(paneInset))
+			t.Declare(l.Expanded.Inset(paneInset))
 		}
 	}
 }

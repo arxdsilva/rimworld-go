@@ -78,7 +78,7 @@ func (a *App) fpsProbeUpdate() bool {
 			a.renderer.cam.zoom = clampZoom(p.Zoom)
 		}
 		a.renderer.syncDev() // the probe frames the screen, in map pixels
-		tile, k := a.renderer.tilePx(), a.scale.worldK()
+		tile, k := a.renderer.tilePx(), a.scale.WorldK()
 		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.pw)*k/2
 		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.ph)*k/2
 		st.started, st.begin = true, now
@@ -151,7 +151,7 @@ func fpsReport(st *fpsProbeState, sc uiScaleState) string {
 	// display caps the frame rate whatever the renderer does.
 	upAvg, upP99, drAvg, drP99 := f.UpdateAvg, f.UpdateP99, f.DrawAvg, f.DrawP99
 	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; work avg %v p99 %v; scale s %g dev %g world %g; %s",
-		len(st.frames), fps, low, f.FrameP99, upAvg, upP99, drAvg, drP99, upAvg+drAvg, upP99+drP99, sc.s, sc.dev, sc.worldK(), memLine())
+		len(st.frames), fps, low, f.FrameP99, upAvg, upP99, drAvg, drP99, upAvg+drAvg, upP99+drP99, sc.S, sc.Dev, sc.WorldK(), memLine())
 }
 
 // memLine is the Go runtime's memory at the end of a probe (PLAY-019): the

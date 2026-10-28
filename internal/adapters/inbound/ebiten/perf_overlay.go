@@ -71,23 +71,23 @@ func perfRect(l hudLayout, w, h float32) rect {
 	if w <= 0 || h <= 0 {
 		return rect{}
 	}
-	x := max(l.Resources.right(), hudMargin+resourcesW) + hudMargin
+	x := max(l.Resources.Right(), hudMargin+resourcesW) + hudMargin
 	y := float32(hudMargin)
 	for _, r := range []rect{l.Bar, l.Messages} {
-		if !r.empty() && r.X < x+w && r.right() > x {
-			y = max(y, r.bottom()+hudMargin)
+		if !r.Empty() && r.X < x+w && r.Right() > x {
+			y = max(y, r.Bottom()+hudMargin)
 		}
 	}
 	bottom := l.Tabs.Y - hudMargin
 	for _, r := range []rect{l.Window, l.Expanded, l.PaneTabs, l.ArchDesc, l.ArchCats, l.Grid} {
-		if !r.empty() && r.X < x+w {
+		if !r.Empty() && r.X < x+w {
 			bottom = min(bottom, r.Y-hudMargin)
 		}
 	}
 	if x+w > l.Right.X-hudMargin || y+h > bottom {
 		return rect{}
 	}
-	return rect{x, y, w, h}
+	return rect{X: x, Y: y, W: w, H: h}
 }
 
 // drawPerfOverlay draws the performance box (PERF-002: fps, 1% low, frame,
@@ -99,7 +99,7 @@ func (a *App) drawPerfOverlay(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	r := a.hud().Perf
-	if r.empty() {
+	if r.Empty() {
 		return
 	}
 	a.perfRefresh(a.now())
@@ -120,7 +120,7 @@ func (a *App) drawPerfOverlay(screen *ebiten.Image, sw, sh int) {
 	drawText(screen, p.lines.work, x, y+2*step, tsSmall)
 	drawText(screen, p.lines.sim, x, y+3*step, tsSmall)
 	drawText(screen, p.lines.mem, x, y+4*step, tsSmall)
-	drawSparkline(screen, rect{r.X + perfPad, r.bottom() - perfPad - perfSparkH, r.W - 2*perfPad, perfSparkH}, p.spark, uiAccent)
+	drawSparkline(screen, rect{X: r.X + perfPad, Y: r.Bottom() - perfPad - perfSparkH, W: r.W - 2*perfPad, H: perfSparkH}, p.spark, uiAccent)
 }
 
 // seedPerfCapture fills the ring with a fixed series and freezes the clock

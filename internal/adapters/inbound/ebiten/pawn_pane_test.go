@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"slices"
 	"strings"
 	"testing"
@@ -301,11 +302,11 @@ func TestAreaChipIsAButtonOnThePane(t *testing.T) {
 	if chip.w == 0 || chip.label != "Area: Indoors" {
 		t.Fatalf("the pane has no area chip button: %+v", chip)
 	}
-	if !a.hud().Pane.contains(chip.x+chip.w/2, chip.y+chip.h/2) {
+	if !a.hud().Pane.Contains(chip.x+chip.w/2, chip.y+chip.h/2) {
 		t.Fatalf("chip %+v lies outside the pane %+v", chip, a.hud().Pane)
 	}
 	w, _ := a.uiSt().find(paneAreaChipID)
-	if w.r != (rect{chip.x, chip.y, chip.w, chip.h}) {
+	if w.r != (rect{X: chip.x, Y: chip.y, W: chip.w, H: chip.h}) {
 		t.Fatalf("the click widget %+v does not sit on the chip %+v", w.r, chip)
 	}
 	press(t, a, f, paneAreaChipID)
@@ -561,7 +562,7 @@ func TestPawnBioTabOpensThroughThePane(t *testing.T) {
 	if !a.bioTabOn() || !hasWidget(a, "bio.skill.0") {
 		t.Fatalf("tab %q: the Bio body is not declared", a.inspectTab)
 	}
-	if exp := a.expandedRect(); exp.empty() || !a.hud().PaneTabs.contains(exp.X+1, exp.bottom()+1) {
+	if exp := a.expandedRect(); exp.Empty() || !a.hud().PaneTabs.Contains(exp.X+1, exp.Bottom()+1) {
 		t.Fatalf("expanded %+v does not open upward from the tab strip %+v", exp, a.hud().PaneTabs)
 	}
 	click(t, a, "inspector.bio")
@@ -584,7 +585,7 @@ func bodyPaints(a *App) { a.uiSt().paints = a.uiSt().paints[:0] }
 
 // innerFor is the rectangle the pane hands tab tb's body: the panel the
 // layout gives it, inset by paneInset.
-func innerFor(sw, sh int, tb paneTab) rect { return expandedFor(sw, sh, tb).inset(paneInset) }
+func innerFor(sw, sh int, tb paneTab) rect { return expandedFor(sw, sh, tb).Inset(paneInset) }
 
 // openPawnTab opens the selected colonist's tab the way a click on the
 // pane's tab does. Call it on a closed tab (a second click collapses).
@@ -625,7 +626,7 @@ func summarize(events []traceEvent, n int) string {
 func inside(events []traceEvent, r rect, s float64) (bad []traceEvent) {
 	const slack = 2
 	x0, y0 := float64(r.X)*s-slack, float64(r.Y)*s-slack
-	x1, y1 := float64(r.right())*s+slack, float64(r.bottom())*s+slack
+	x1, y1 := float64(r.Right())*s+slack, float64(r.Bottom())*s+slack
 	for _, e := range events {
 		if float64(e.X) < x0 || float64(e.Y) < y0 || float64(e.X+e.W) > x1 || float64(e.Y+e.H) > y1 {
 			bad = append(bad, e)
@@ -645,13 +646,13 @@ func TestPawnTabBodiesDrawInsideExpandedPanel(t *testing.T) {
 				if !ok {
 					t.Fatalf("no %s tab", tab)
 				}
-				if o := expandedFor(1280, 720, tb); o.empty() || o.W < expandMinW || o.W > expandMaxW {
+				if o := expandedFor(1280, 720, tb); o.Empty() || o.W < expandMinW || o.W > expandMaxW {
 					t.Fatalf("expanded rect %+v for want %vx%v", o, tb.WantW, tb.WantH)
 				}
 				r := innerFor(1280, 720, tb) // what the pane hands the body
 				var got []traceEvent
-				drawTrace = func(e traceEvent) { got = append(got, e) }
-				t.Cleanup(func() { drawTrace = nil; tracePass = "hud"; traceVia = "" })
+				gfx.SetDrawTrace(func(e traceEvent) { got = append(got, e) })
+				t.Cleanup(func() { gfx.SetDrawTrace(nil); gfx.ForcePass("hud"); gfx.SetVia("") })
 				img := ebiten.NewImage(1920, 1080)
 				if tb.Draw != nil {
 					tb.Draw(img, r)
@@ -678,7 +679,7 @@ func TestPawnTabBodiesSurviveASmallPanel(t *testing.T) {
 	for _, tab := range []string{"needs", "bio", "health", "social", "gear", "log"} {
 		a, _ := paneApp(t, tabFixture())
 		tb, _ := paneTabByID(a.pawnPane(1), "inspector."+tab)
-		r := rect{0, 100, 400, 300}
+		r := rect{X: 0, Y: 100, W: 400, H: 300}
 		img := ebiten.NewImage(800, 600)
 		before := len(a.uiSt().cur) // the HUD's own widgets are not the tab's
 		if tb.Draw != nil {
@@ -688,7 +689,7 @@ func TestPawnTabBodiesSurviveASmallPanel(t *testing.T) {
 			a.uiPaint(img)
 		}
 		for _, w := range a.uiSt().cur[before:] {
-			if w.r.W > 0 && (w.r.Y < r.Y-1 || w.r.bottom() > r.bottom()+1 || w.r.X < r.X-1 || w.r.right() > r.right()+1) {
+			if w.r.W > 0 && (w.r.Y < r.Y-1 || w.r.Bottom() > r.Bottom()+1 || w.r.X < r.X-1 || w.r.Right() > r.Right()+1) {
 				t.Errorf("%s: widget %s at %+v lies outside the panel %+v", tab, w.id, w.r, r)
 			}
 		}
@@ -701,17 +702,17 @@ func TestPawnLogWheelScrollsInsideTheExpandedPanel(t *testing.T) {
 	s := paneSim()
 	s.pawns[0].Log = logs(40)
 	a, _ := paneApp(t, s)
-	r := rect{0, 100, 400, 280}
+	r := rect{X: 0, Y: 100, W: 400, H: 280}
 	p, _ := a.selectedPawn()
 	a.drawPawnLogRows(ebiten.NewImage(800, 600), p, r) // a frame draws before the wheel turns
 	x, y, w, h := logBodyRect(r)
-	if float32(x) < r.X || float32(y) < r.Y || float32(x+w) > r.right() || float32(y+h) > r.bottom() {
+	if float32(x) < r.X || float32(y) < r.Y || float32(x+w) > r.Right() || float32(y+h) > r.Bottom() {
 		t.Fatalf("log text area %d,%d %dx%d outside the panel %+v", x, y, w, h, r)
 	}
 	if !a.scrollLogIn(r, x+5, y+5, -1) || a.logScroll == 0 {
 		t.Fatalf("wheel over the log must scroll it (scroll %d)", a.logScroll)
 	}
-	if a.scrollLogIn(r, int(r.right())+40, int(r.bottom())+40, -1) {
+	if a.scrollLogIn(r, int(r.Right())+40, int(r.Bottom())+40, -1) {
 		t.Fatal("wheel outside the panel must not be taken")
 	}
 }
@@ -728,7 +729,7 @@ func TestPawnLogWheelThroughThePane(t *testing.T) {
 	}
 	click(t, a, "inspector.log")
 	drawFrame(t, a, f) // the frame draws the Log, which syncs it to the colonist
-	x, y, w, h := logBodyRect(a.expandedRect().inset(paneInset))
+	x, y, w, h := logBodyRect(a.expandedRect().Inset(paneInset))
 	if w <= 0 || h <= 0 {
 		t.Fatalf("log text area %d,%d %dx%d", x, y, w, h)
 	}
@@ -766,12 +767,14 @@ func TestPrisonerTabDrawsInsideExpandedPanel(t *testing.T) {
 		}
 		r := innerFor(1280, 720, tb)
 		var got []traceEvent
-		drawTrace = func(e traceEvent) { got = append(got, e) }
+		gfx.SetDrawTrace(func(e traceEvent) { got = append(got, e) })
 		img := ebiten.NewImage(1920, 1080)
 		bodyPaints(a)
 		tb.Declare(r)
 		a.uiPaint(img)
-		drawTrace, tracePass, traceVia = nil, "hud", ""
+		gfx.SetDrawTrace(nil)
+		gfx.ForcePass("hud")
+		gfx.SetVia("")
 		if len(got) == 0 {
 			t.Fatal("the Prisoner tab drew nothing")
 		}

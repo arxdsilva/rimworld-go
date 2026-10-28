@@ -3,7 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"math"
-	"strconv"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -20,8 +20,8 @@ import (
 // canvas's drawTrace recording what was drawn (ui_canvas.go). Unit tests
 // cannot read GPU pixels back; the trace is the next best thing, and it
 // sees text, icons and rectangles in physical pixels, tagged "world" or
-// "hud". Everything here changes package globals (curUIScale, drawTrace,
-// tracePass): never in parallel.
+// "hud". Everything here changes package globals (gfx.CurrentScale(), drawTrace,
+// gfx.Pass()): never in parallel.
 
 // The logical screen every frame is drawn on; the physical screen is this
 // x the UI scale s = dev x ui.
@@ -160,9 +160,9 @@ func newVisualScene(t *testing.T, art *artCatalog, extras bool) *visualScene {
 	a.settings.Gameplay.ShowLearningHelper = false
 	s.a = a
 	t.Cleanup(func() {
-		curUIScale = unitUIScale
-		drawTrace = nil
-		tracePass = "hud"
+		gfx.SetScale(unitUIScale)
+		gfx.SetDrawTrace(nil)
+		gfx.ForcePass("hud")
 		for _, img := range s.shots {
 			img.Deallocate()
 		}
@@ -177,7 +177,7 @@ func (s *visualScene) configure(t testing.TB, dev, ui, zoom float64) *ebiten.Ima
 	t.Helper()
 	a := s.a
 	sc := dev * ui
-	a.scale = uiScaleState{dev: dev, ui: ui, s: sc}
+	a.scale = uiScaleState{Dev: dev, UI: ui, S: sc}
 	a.syncUIScale()
 	pw, ph := int(math.Round(visLogicalW*sc)), int(math.Round(visLogicalH*sc))
 	a.setPhysical(pw, ph)
@@ -250,8 +250,8 @@ func (s *visualScene) pan(dx, dy int) {
 // frame draws one full App frame and returns everything the canvas drew.
 func (s *visualScene) frame(screen *ebiten.Image) []traceEvent {
 	var ev []traceEvent
-	drawTrace = func(e traceEvent) { ev = append(ev, e) }
-	defer func() { drawTrace = nil }()
+	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	defer func() { gfx.SetDrawTrace(nil) }()
 	screen.Clear()
 	s.a.Draw(screen)
 	return ev
@@ -266,18 +266,6 @@ func visPass(ev []traceEvent, pass string) []traceEvent {
 		}
 	}
 	return out
-}
-
-func (e traceEvent) String() string {
-	txt := ""
-	if e.Text != "" {
-		txt = " " + strconv.Quote(e.Text)
-	}
-	via := ""
-	if e.Via != "" {
-		via = " via " + e.Via
-	}
-	return fmt.Sprintf("%s%s %.1f,%.1f %.1fx%.1f [%s%s]", e.Kind, txt, e.X, e.Y, e.W, e.H, e.Pass, via)
 }
 
 // summary is a compact listing of events for failure messages.

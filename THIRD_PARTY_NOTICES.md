@@ -25,5 +25,5 @@
 ## Noto Sans
 
 - **Project:** [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) by the Noto Project Authors
-- **License:** SIL Open Font License 1.1. The full text is in [`internal/adapters/inbound/ebiten/fontdata/OFL.txt`](internal/adapters/inbound/ebiten/fontdata/OFL.txt).
+- **License:** SIL Open Font License 1.1. The full text is in [`internal/adapters/inbound/ebiten/gfx/fontdata/OFL.txt`](internal/adapters/inbound/ebiten/gfx/fontdata/OFL.txt).
 - **What:** `NotoSans-Regular.ttf` and `NotoSans-SemiBold.ttf` (hinted static builds from the notofonts release site), embedded unmodified as the interface font (NG-1).

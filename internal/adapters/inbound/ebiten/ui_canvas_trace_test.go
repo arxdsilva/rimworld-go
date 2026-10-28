@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -15,8 +16,8 @@ import (
 func collectTrace(t *testing.T) *[]traceEvent {
 	t.Helper()
 	var got []traceEvent
-	drawTrace = func(e traceEvent) { got = append(got, e) }
-	t.Cleanup(func() { drawTrace = nil; tracePass = "hud"; traceVia = "" })
+	gfx.SetDrawTrace(func(e traceEvent) { got = append(got, e) })
+	t.Cleanup(func() { gfx.SetDrawTrace(nil); gfx.ForcePass("hud"); gfx.SetVia("") })
 	return &got
 }
 
@@ -99,24 +100,24 @@ func TestDrawTraceTextAndWorldHelpers(t *testing.T) {
 
 	// worldText takes physical coordinates and converts them once.
 	*got = nil
-	tracePass = "world"
+	gfx.ForcePass("world")
 	worldText(dst, "Zone", 100, 60, tsSmall)
 	if len(*got) != 1 || (*got)[0].X != 100 || (*got)[0].Y != 60 || (*got)[0].Pass != "world" || (*got)[0].Via != "worldText" {
 		t.Errorf("worldText traced %s, want text at the physical 100,60 via worldText in the world pass", visSummary(*got, 5))
 	}
-	if traceVia != "" {
-		t.Errorf("traceVia = %q after worldText returned", traceVia)
+	if gfx.Via() != "" {
+		t.Errorf("traceVia = %q after worldText returned", gfx.Via())
 	}
 	*got = nil
 	img := ebiten.NewImage(10, 10)
 	worldIcon(dst, img, 100, 60, 8) // 8 logical = 16 physical, at the physical 100,60
 	wantEvent(t, *got, 0, "image", 100, 60, 16, 16)
-	if (*got)[0].Via != "worldIcon" || (*got)[0].Pass != "world" || traceVia != "" {
-		t.Errorf("worldIcon traced %s (traceVia %q)", (*got)[0], traceVia)
+	if (*got)[0].Via != "worldIcon" || (*got)[0].Pass != "world" || gfx.Via() != "" {
+		t.Errorf("worldIcon traced %s (gfx.Via() %q)", (*got)[0], gfx.Via())
 	}
 	// the legacy callers: drawIcon / drawText with logical coordinates stay "hud"
 	*got = nil
-	tracePass = "hud"
+	gfx.ForcePass("hud")
 	drawIcon(dst, img, 5, 5, 8)
 	wantEvent(t, *got, 0, "image", 10, 10, 16, 16)
 }

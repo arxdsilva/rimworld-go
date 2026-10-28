@@ -70,7 +70,7 @@ func archDescText(a *App) []string {
 }
 
 func within(b button, r rect) bool {
-	return b.x >= r.X && b.y >= r.Y && b.x+b.w <= r.right() && b.y+b.h <= r.bottom()
+	return b.x >= r.X && b.y >= r.Y && b.x+b.w <= r.Right() && b.y+b.h <= r.Bottom()
 }
 
 func overlap(a, b button) bool {
@@ -81,7 +81,7 @@ func TestArchitectCategoriesInTwoColumns(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
 	l := a.hud()
-	if l.ArchCats.empty() {
+	if l.ArchCats.Empty() {
 		t.Fatal("the layout has no ArchCats while the Architect is open")
 	}
 	cats := archButtonsWith(a, "arch.cat.")
@@ -128,7 +128,7 @@ func TestArchitectNoLegacyToolCards(t *testing.T) {
 	// description box and the categories, from the layout.
 	l := a.hud()
 	r := a.architectRect()
-	if r.x > l.ArchCats.X || r.x+r.w < l.ArchCats.right() || r.y+r.h != l.ArchCats.bottom() {
+	if r.x > l.ArchCats.X || r.x+r.w < l.ArchCats.Right() || r.y+r.h != l.ArchCats.Bottom() {
 		t.Fatalf("architectRect %+v does not cover ArchCats %+v", r, l.ArchCats)
 	}
 }
@@ -323,11 +323,11 @@ func TestArchitectDescriptionBoxSitsAboveCategories(t *testing.T) {
 			t.Fatalf("tool %q: archDescHeight = %v, want > 0", tool, h)
 		}
 		l := a.hud()
-		if l.ArchDesc.empty() || l.ArchDesc.H != h || l.ArchDesc.W != archDescW {
+		if l.ArchDesc.Empty() || l.ArchDesc.H != h || l.ArchDesc.W != archDescW {
 			t.Fatalf("tool %q: ArchDesc %+v, want %vx%v", tool, l.ArchDesc, archDescW, h)
 		}
-		if l.ArchDesc.bottom() != l.ArchCats.Y-hudGap {
-			t.Errorf("tool %q: ArchDesc bottom %v, want ArchCats.Y-gap = %v", tool, l.ArchDesc.bottom(), l.ArchCats.Y-hudGap)
+		if l.ArchDesc.Bottom() != l.ArchCats.Y-hudGap {
+			t.Errorf("tool %q: ArchDesc bottom %v, want ArchCats.Y-gap = %v", tool, l.ArchDesc.Bottom(), l.ArchCats.Y-hudGap)
 		}
 	}
 }
@@ -528,7 +528,7 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 			for _, s := range stuffs {
 				a.archStuff = s
 				l := a.hud()
-				if l.ArchDesc.empty() || l.ArchDesc.H != a.archDescHeight() {
+				if l.ArchDesc.Empty() || l.ArchDesc.H != a.archDescHeight() {
 					t.Errorf("%dx%d %s/%s: box %+v is clamped (wants %v)", sz[0], sz[1], tool.id, s, l.ArchDesc, a.archDescHeight())
 				}
 				if l.ArchDesc.Y < 0 {
@@ -572,10 +572,10 @@ func TestArchitectLayoutKeepsRegionsApart(t *testing.T) {
 			for i := range regions {
 				for j := range regions[:i] {
 					p, q := regions[i], regions[j]
-					if p.empty() || q.empty() {
+					if p.Empty() || q.Empty() {
 						continue
 					}
-					if p.X < q.right() && q.X < p.right() && p.Y < q.bottom() && q.Y < p.bottom() {
+					if p.X < q.Right() && q.X < p.Right() && p.Y < q.Bottom() && q.Y < p.Bottom() {
 						t.Errorf("%dx%d %s: region %d %+v overlaps region %d %+v", sz[0], sz[1], c.id, i, p, j, q)
 					}
 				}
@@ -583,8 +583,8 @@ func TestArchitectLayoutKeepsRegionsApart(t *testing.T) {
 			if len(l.GridCells) != len(cmds) {
 				t.Errorf("%dx%d %s: %d grid cells for %d tools", sz[0], sz[1], c.id, len(l.GridCells), len(cmds))
 			}
-			if len(l.GridCells) > 0 && l.GridCells[0].X != l.ArchCats.right()+hudMargin {
-				t.Errorf("%dx%d %s: grid starts at %v, want right of ArchCats (%v)", sz[0], sz[1], c.id, l.GridCells[0].X, l.ArchCats.right()+hudMargin)
+			if len(l.GridCells) > 0 && l.GridCells[0].X != l.ArchCats.Right()+hudMargin {
+				t.Errorf("%dx%d %s: grid starts at %v, want right of ArchCats (%v)", sz[0], sz[1], c.id, l.GridCells[0].X, l.ArchCats.Right()+hudMargin)
 			}
 		}
 	}
@@ -668,7 +668,7 @@ func TestArchitectToolClickThroughTheGrid(t *testing.T) {
 	}
 	inGrid := false
 	for _, r := range l.GridCells {
-		inGrid = inGrid || r.contains(cell.x+cell.w/2, cell.y+cell.h/2)
+		inGrid = inGrid || r.Contains(cell.x+cell.w/2, cell.y+cell.h/2)
 	}
 	if !inGrid {
 		t.Fatalf("wall button %+v is not in a grid cell", cell)

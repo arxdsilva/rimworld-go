@@ -66,7 +66,7 @@ func goodwillTip(r facRow) string {
 
 // drawGoodwill is the -100..+100 bar with the number.
 func drawGoodwill(dst *ebiten.Image, cell rect, r facRow) {
-	bar := rect{cell.X + tableCellPad, cell.Y + (cell.H-10)/2, cell.W - 2*tableCellPad - 36, 10}
+	bar := rect{X: cell.X + tableCellPad, Y: cell.Y + (cell.H-10)/2, W: cell.W - 2*tableCellPad - 36, H: 10}
 	fillRect(dst, bar, uiField)
 	strokeRect(dst, bar, uiPanelBorder)
 	mid := bar.X + bar.W/2
@@ -76,14 +76,14 @@ func drawGoodwill(dst *ebiten.Image, cell rect, r facRow) {
 		c = uiAccent
 	}
 	if frac >= 0 {
-		fillRect(dst, rect{mid, bar.Y + 1, bar.W / 2 * frac, bar.H - 2}, c)
+		fillRect(dst, rect{X: mid, Y: bar.Y + 1, W: bar.W / 2 * frac, H: bar.H - 2}, c)
 	} else {
-		fillRect(dst, rect{mid + bar.W/2*frac, bar.Y + 1, -bar.W / 2 * frac, bar.H - 2}, c)
+		fillRect(dst, rect{X: mid + bar.W/2*frac, Y: bar.Y + 1, W: -bar.W / 2 * frac, H: bar.H - 2}, c)
 	}
-	fillRect(dst, rect{mid, bar.Y - 1, 1, bar.H + 2}, uiTextDim)
+	fillRect(dst, rect{X: mid, Y: bar.Y - 1, W: 1, H: bar.H + 2}, uiTextDim)
 	st := tsSmall
 	st.Align = alignRight
-	drawText(dst, goodwillText(r.Goodwill), float64(cell.right()-tableCellPad), float64(cell.Y)+(float64(cell.H)-lineH(st))/2, st)
+	drawText(dst, goodwillText(r.Goodwill), float64(cell.Right()-tableCellPad), float64(cell.Y)+(float64(cell.H)-lineH(st))/2, st)
 }
 
 // factionsTable declares the table in r over rows; a click on a row
@@ -102,9 +102,9 @@ func (a *App) pushFactions(ng *newGameState, g *globeView) {
 	a.uiPushModal(modal{
 		id: facModalID, title: "Factions", w: facModalMaxW, h: facModalH,
 		draw: func(a *App, body rect) {
-			tb, hint := body.splitV(-24)
+			tb, hint := body.SplitV(-24)
 			a.uiLabel(hint.X, hint.Y+6, "Click a faction to find its capital on the globe.", dimText())
-			a.factionsTable(rect{tb.X, tb.Y, tb.W, tb.H}, rows, &ng.facSel, func(r facRow) {
+			a.factionsTable(rect{X: tb.X, Y: tb.Y, W: tb.W, H: tb.H}, rows, &ng.facSel, func(r facRow) {
 				if r.Capital < 0 {
 					return // the Swarm has no settlements
 				}

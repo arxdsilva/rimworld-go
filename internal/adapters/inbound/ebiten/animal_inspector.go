@@ -307,7 +307,7 @@ func (a *App) drawAnimalLogTab(screen *ebiten.Image, an game.AnimalView, inner r
 	off := a.uiSt().scroll[animalLogID]
 	for i, row := range rows {
 		y := inner.Y + float32(i*lh) - off
-		if y+float32(lh) < inner.Y || y > inner.bottom() {
+		if y+float32(lh) < inner.Y || y > inner.Bottom() {
 			continue
 		}
 		drawText(screen, row, float64(inner.X), float64(y), logStyle)
@@ -346,13 +346,13 @@ func (a *App) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, in
 	for _, t := range animalTrainable(an) {
 		drawText(screen, t.Label, x, y+(animalTrainRowH-lineH(tsBody))/2, tsBody)
 		bx, by := float32(x)+animalTrainLblW, float32(y)+(animalTrainRowH-animalTrainBarH)/2
-		fillRect(screen, rect{bx, by, animalTrainBarW, animalTrainBarH}, uiScrollTrack)
+		fillRect(screen, rect{X: bx, Y: by, W: animalTrainBarW, H: animalTrainBarH}, uiScrollTrack)
 		if t.Needed > 0 {
 			fill := uiSliderFill
 			if t.Learned {
 				fill = uiGood
 			}
-			fillRect(screen, rect{bx, by, animalTrainBarW * float32(min(t.Steps, t.Needed)) / float32(t.Needed), animalTrainBarH}, fill)
+			fillRect(screen, rect{X: bx, Y: by, W: animalTrainBarW * float32(min(t.Steps, t.Needed)) / float32(t.Needed), H: animalTrainBarH}, fill)
 		}
 		drawText(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(t)), float64(bx)+animalTrainBarW+10, y+(animalTrainRowH-lineH(tsSmall))/2, dim)
 		y += animalTrainRowH

@@ -6,7 +6,7 @@ import (
 	"math"
 	"strings"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 )
@@ -459,67 +459,6 @@ func roofRuns(w game.WorldView, x0, y0, x1, y1 int, out [][3]int) [][3]int {
 
 // --- batching ----------------------------------------------------------------------
 
-// triBatch is a reusable triangle batch (uint32 indices).
-type triBatch struct {
-	verts []ebiten.Vertex
-	idx   []uint32
-	// k scales every vertex position (DstX/DstY, not texels); zero is 1.
-	k float32
-}
-
-func (b *triBatch) reset() { b.verts, b.idx = b.verts[:0], b.idx[:0] }
-
-// vert adds a vertex at screen (x, y), texel (sx, sy), straight-alpha
-// colour c at alpha a; it returns its index.
-func (b *triBatch) vert(x, y, sx, sy float64, c color.RGBA, a float64) uint32 {
-	dx, dy := float32(x), float32(y)
-	if b.k != 0 {
-		dx, dy = dx*b.k, dy*b.k
-	}
-	b.verts = append(b.verts, ebiten.Vertex{DstX: dx, DstY: dy, SrcX: float32(sx), SrcY: float32(sy),
-		ColorR: float32(c.R) / 255, ColorG: float32(c.G) / 255, ColorB: float32(c.B) / 255, ColorA: float32(clamp01(a))})
-	return uint32(len(b.verts) - 1)
-}
-
-func (b *triBatch) tri(i, j, k uint32) { b.idx = append(b.idx, i, j, k) }
-
-// rect is a solid axis-aligned rectangle (screen px) on the white texel,
-// with per-corner alphas (top-left, top-right, bottom-left, bottom-right).
-func (b *triBatch) rect(x, y, w, h float64, c color.RGBA, a00, a10, a01, a11 float64) {
-	if w <= 0 || h <= 0 || a00+a10+a01+a11 <= 0 {
-		return
-	}
-	i := b.vert(x, y, 1.5, 1.5, c, a00)
-	b.vert(x+w, y, 1.5, 1.5, c, a10)
-	b.vert(x, y+h, 1.5, 1.5, c, a01)
-	b.vert(x+w, y+h, 1.5, 1.5, c, a11)
-	b.tri(i, i+1, i+2)
-	b.tri(i+1, i+3, i+2)
-}
-
-// line is a solid stroke from (x0, y0) to (x1, y1), width px wide.
-func (b *triBatch) line(x0, y0, x1, y1, width float64, c color.RGBA, a float64) {
-	dx, dy := x1-x0, y1-y0
-	n := math.Hypot(dx, dy)
-	if n == 0 || a <= 0 {
-		return
-	}
-	px, py := -dy/n*width/2, dx/n*width/2
-	i := b.vert(x0-px, y0-py, 1.5, 1.5, c, a)
-	b.vert(x0+px, y0+py, 1.5, 1.5, c, a)
-	b.vert(x1-px, y1-py, 1.5, 1.5, c, a)
-	b.vert(x1+px, y1+py, 1.5, 1.5, c, a)
-	b.tri(i, i+1, i+2)
-	b.tri(i+1, i+3, i+2)
-}
-
-func (b *triBatch) flush(dst, src *ebiten.Image, blend ebiten.Blend) {
-	if len(b.idx) > 0 {
-		dst.DrawTriangles32(b.verts, b.idx, src, &ebiten.DrawTrianglesOptions{Blend: blend, Filter: ebiten.FilterLinear})
-	}
-	b.reset()
-}
-
 // --- drawing -------------------------------------------------------------------------
 
 // blobTexture is overlay/shadow_blob, or a soft procedural ellipse until
@@ -561,13 +500,13 @@ func (r *Renderer) addTexQuad(b *triBatch, q [4][2]float64, tex *ebiten.Image, a
 	var i uint32
 	for k, p := range q {
 		sx, sy := r.worldToScreenF(p[0], p[1])
-		j := b.vert(float64(sx), float64(sy), uv[k][0], uv[k][1], shadowRGB, a)
+		j := b.Vert(float64(sx), float64(sy), uv[k][0], uv[k][1], shadowRGB, a)
 		if k == 0 {
 			i = j
 		}
 	}
-	b.tri(i, i+1, i+2)
-	b.tri(i+1, i+3, i+2)
+	b.Tri(i, i+1, i+2)
+	b.Tri(i+1, i+3, i+2)
 }
 
 // addBox queues a box caster's swept footprint with a feathered skirt,
@@ -579,13 +518,13 @@ func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile, a flo
 	}
 	white := shadowRGB
 	f := shadowFeather
-	base := uint32(len(b.verts))
+	base := uint32(len(b.Verts))
 	for i := 0; i < n; i++ {
 		sx, sy := r.worldToScreenF(pts[i][0], pts[i][1])
-		b.vert(float64(sx), float64(sy), 1.5, 1.5, white, a)
+		b.Vert(float64(sx), float64(sy), 1.5, 1.5, white, a)
 	}
 	for i := 1; i+1 < n; i++ {
-		b.tri(base, base+uint32(i), base+uint32(i+1))
+		b.Tri(base, base+uint32(i), base+uint32(i+1))
 	}
 	outer := base + uint32(n) // two outer vertices per edge
 	for i := 0; i < n; i++ {
@@ -598,16 +537,16 @@ func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile, a flo
 		nx, ny := dy/ln*f, -dx/ln*f // outward for a counter-clockwise hull
 		a, bb := r.worldToScreenF(p[0]+nx, p[1]+ny)
 		c2, d2 := r.worldToScreenF(q[0]+nx, q[1]+ny)
-		b.vert(float64(a), float64(bb), 1.5, 1.5, white, 0)
-		b.vert(float64(c2), float64(d2), 1.5, 1.5, white, 0)
+		b.Vert(float64(a), float64(bb), 1.5, 1.5, white, 0)
+		b.Vert(float64(c2), float64(d2), 1.5, 1.5, white, 0)
 	}
 	for i := 0; i < n; i++ {
 		pi, qi := base+uint32(i), base+uint32((i+1)%n)
 		po, qo := outer+uint32(2*i), outer+uint32(2*i+1)
-		b.tri(pi, qi, po)
-		b.tri(qi, qo, po)
+		b.Tri(pi, qi, po)
+		b.Tri(qi, qo, po)
 		prevOuter := outer + uint32(2*((i+n-1)%n)+1) // corner wedge at pi
-		b.tri(pi, prevOuter, po)
+		b.Tri(pi, prevOuter, po)
 	}
 }
 
@@ -651,11 +590,11 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 	st.layer.Clear()
 	st.scratch = fitLayer(st.scratch, lw, lh)
 	k32 := float32(k)
-	st.boxes.k, st.blobs.k, st.clear.k, st.contacts.k = k32, k32, k32, k32
+	st.boxes.K, st.blobs.K, st.clear.K, st.contacts.K = k32, k32, k32, k32
 	tex := r.blobTexture()
 	white := r.env.whiteImg()
-	st.boxes.reset()
-	st.blobs.reset()
+	st.boxes.Reset()
+	st.blobs.Reset()
 	for _, c := range casters {
 		if c.spec.kind == shadowBox {
 			r.addBox(&st.boxes, c, l, tile, sa)
@@ -663,8 +602,8 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 			r.addBlob(&st.blobs, c, l, tex, tile, sa)
 		}
 	}
-	st.boxes.flush(st.layer, white, shadowBlend)
-	st.blobs.flush(st.layer, tex, shadowBlend)
+	st.boxes.Flush(st.layer, white, shadowBlend)
+	st.blobs.Flush(st.layer, tex, shadowBlend)
 
 	sunEl := sunElevation(l)
 	daylight := daylightOf(sunEl)
@@ -694,22 +633,22 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 	var runs [][3]int
 	runs = roofRuns(w, x0, y0, x1, y1, runs)
 	if len(runs) > 0 {
-		st.clear.reset()
+		st.clear.Reset()
 		for _, run := range runs {
 			sx0, sy0 := r.worldToScreen(run[1], run[0])
 			sx1, sy1 := r.worldToScreen(run[2], run[0]+1)
-			st.clear.rect(float64(sx0), float64(sy0), float64(sx1-sx0), float64(sy1-sy0), color.RGBA{255, 255, 255, 255}, 1, 1, 1, 1)
+			st.clear.Rect(float64(sx0), float64(sy0), float64(sx1-sx0), float64(sy1-sy0), color.RGBA{255, 255, 255, 255}, 1, 1, 1, 1)
 		}
-		st.clear.flush(st.layer, white, ebiten.BlendDestinationOut)
+		st.clear.Flush(st.layer, white, ebiten.BlendDestinationOut)
 	}
-	st.contacts.reset()
+	st.contacts.Reset()
 	for i, c := range creatures {
 		for j := 0; j < plans[i].np; j++ {
 			r.castCreature(w, c, plans[i].points[j], tile)
 		}
 		r.addContact(&st.contacts, c, plans[i].contact, tex)
 	}
-	st.contacts.flush(st.layer, tex, shadowBlend)
+	st.contacts.Flush(st.layer, tex, shadowBlend)
 
 	maxEl := seasonMaxEl(w.DayOfYear) * math.Pi / 180
 	ratio := clamp01(sunEl / maxEl)
@@ -741,18 +680,6 @@ func shadowLayerScale(dev float64) float64 {
 		return 0.5
 	}
 	return 1
-}
-
-// fitLayer is img when it is sw x sh, else a new image of that size (the
-// old one deallocated).
-func fitLayer(img *ebiten.Image, sw, sh int) *ebiten.Image {
-	if img != nil && img.Bounds().Dx() == sw && img.Bounds().Dy() == sh {
-		return img
-	}
-	if img != nil {
-		img.Deallocate()
-	}
-	return ebiten.NewImage(sw, sh)
 }
 
 // shadowBlurShader is shadow_blur.kage, compiled on first use; nil when

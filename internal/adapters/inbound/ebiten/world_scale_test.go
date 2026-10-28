@@ -5,7 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"math"
-	"path/filepath"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -21,7 +21,7 @@ import (
 // colony on a dev x screen, a 1280x720-point window at UI scale 100 %.
 func renderScaleColony(t *testing.T, dev, k float64) (*App, *fakeInput) {
 	t.Helper()
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	s := &stubSim{w: 40, h: 40, pawns: []game.PawnView{{ID: 7, Name: "Ada", X: 21, Y: 19, Status: "alive"}}}
 	a := testApp(s)
 	a.devFn = func() float64 { return dev }
@@ -67,12 +67,12 @@ func TestComputeRenderScale(t *testing.T) {
 		{true, 2, true, 1},   // captures
 	} {
 		s.Graphics.HiDPI = c.hidpi
-		if got := computeUIScale(s, 1280, 720, c.dev, c.capture).worldK(); math.Abs(got-c.want) > 1e-9 {
+		if got := computeUIScale(s, 1280, 720, c.dev, c.capture).WorldK(); math.Abs(got-c.want) > 1e-9 {
 			t.Errorf("hidpi %v dev %g capture %v: world %g, want %g", c.hidpi, c.dev, c.capture, got, c.want)
 		}
 	}
 	s.Graphics.HiDPI, s.Graphics.RenderScale = true, 0.6 // not a choice
-	if got := computeUIScale(s, 1280, 720, 2, false).worldK(); got != 1 {
+	if got := computeUIScale(s, 1280, 720, 2, false).WorldK(); got != 1 {
 		t.Errorf("render scale 0.6: world %g, want 1", got)
 	}
 }
@@ -92,7 +92,7 @@ func TestRenderScaleOffscreenSize(t *testing.T) {
 	if a.renderer.cam.dev != 1 {
 		t.Fatalf("camera density %v, want dev x world = 1", a.renderer.cam.dev)
 	}
-	if worldDefer != nil || worldPassK != 0 {
+	if gfx.CurrentPass() != nil || gfx.WorldPassK() != 0 {
 		t.Fatal("the world pass did not end")
 	}
 	st := a.settings
@@ -159,12 +159,14 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 func TestRenderScaleToggleKeepsTheView(t *testing.T) {
 	r := New(&stubSim{w: 40, h: 40})
 	r.cam = camera{zoom: 1.3, offsetX: 410, offsetY: 195, placed: true}
-	old := curUIScale
-	t.Cleanup(func() { curUIScale = old })
-	curUIScale = uiScaleState{dev: 2, ui: 1, s: 2, world: 1}
+	old := gfx.CurrentScale()
+	t.Cleanup(func() { gfx.SetScale(old) })
+	gfx.SetScale(uiScaleState{Dev: 2, UI: 1, S: 2, World: 1})
 	r.syncDev()
 	wx, wy := r.screenToWorld(600, 400)
-	curUIScale.world = 0.5
+	sc := gfx.CurrentScale()
+	sc.World = 0.5
+	gfx.SetScale(sc)
 	r.syncDev()
 	if gx, gy := r.screenToWorld(300, 200); math.Abs(gx-wx) > 1e-9 || math.Abs(gy-wy) > 1e-9 {
 		t.Fatalf("after Full -> Half: (%v,%v), want (%v,%v)", gx, gy, wx, wy)
@@ -191,7 +193,7 @@ func TestRenderScaleToggleKeepsTheView(t *testing.T) {
 func rsConfigure(t *testing.T, s *visualScene, k float64) *ebiten.Image {
 	t.Helper()
 	a := s.a
-	a.scale = uiScaleState{dev: 2, ui: 1, s: 2, world: k}
+	a.scale = uiScaleState{Dev: 2, UI: 1, S: 2, World: k}
 	a.syncUIScale()
 	a.setPhysical(2*visLogicalW, 2*visLogicalH)
 	r := a.renderer
@@ -263,10 +265,7 @@ func TestRenderScaleKeepsTextOnTheScreen(t *testing.T) {
 // converted by mapScale(), or a viewport edge (mapViewport is map pixels).
 // A raw or logical point would miss the tile at a reduced render scale.
 func TestMapPixelsComeFromMapCursor(t *testing.T) {
-	files, err := filepath.Glob("*.go")
-	if err != nil {
-		t.Fatal(err)
-	}
+	files := packageFiles(t, ".")
 	fset := token.NewFileSet()
 	callsTo := func(n ast.Node, names ...string) bool {
 		found := false
@@ -375,15 +374,15 @@ func exprString(e ast.Expr) string {
 // TestOptionsRenderScaleRow: World detail cycles Full, 3/4, Half, records
 // the choice and applies it live.
 func TestOptionsRenderScaleRow(t *testing.T) {
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	store := graphicsStore()
 	a := optionsApp(store)
 	a.devFn = func() float64 { return 2 }
 	a.LayoutF(1280, 720)
 	a.optionsTab = "graphics"
 	b := optionBtn(t, a, "options.renderscale")
-	if b.label != "Full" || !strings.Contains(b.tip, "Half") || a.scale.worldK() != 1 {
-		t.Fatalf("row %q tip %q world %g", b.label, b.tip, a.scale.worldK())
+	if b.label != "Full" || !strings.Contains(b.tip, "Half") || a.scale.WorldK() != 1 {
+		t.Fatalf("row %q tip %q world %g", b.label, b.tip, a.scale.WorldK())
 	}
 	for _, want := range []struct {
 		label string
@@ -391,8 +390,8 @@ func TestOptionsRenderScaleRow(t *testing.T) {
 	}{{"3/4", 0.75}, {"Half", 0.5}, {"Full", 1}} {
 		a.applyOption("options.renderscale")
 		g := store.s.Graphics
-		if got := optionBtn(t, a, "options.renderscale").label; got != want.label || g.RenderScale != want.k || a.scale.worldK() != want.k {
-			t.Fatalf("after a click: %q, stored %g, world %g; want %q %g", got, g.RenderScale, a.scale.worldK(), want.label, want.k)
+		if got := optionBtn(t, a, "options.renderscale").label; got != want.label || g.RenderScale != want.k || a.scale.WorldK() != want.k {
+			t.Fatalf("after a click: %q, stored %g, world %g; want %q %g", got, g.RenderScale, a.scale.WorldK(), want.label, want.k)
 		}
 		if g.Quality != config.QualityCustom || !strings.Contains(strings.Join(g.Chosen, ","), "renderscale") {
 			t.Fatalf("the choice is not recorded: %+v", g)
@@ -419,9 +418,9 @@ func TestRenderScaleFogHidesLabels(t *testing.T) {
 	t.Cleanup(a.endWorldPass)
 	uiFillRect(img, 638, 358, 4, 4, uiAccent, false) // over the fog: dropped
 	uiFillRect(img, 8, 8, 4, 4, uiAccent, false)     // explored: queued
-	worldDefer.fogDrawn()
+	gfx.FogDrawn()
 	drawText(img, "after", 640, 360, tsSmall) // after the fog: queued
-	if n := len(a.wr.q.ops); n != 2 {
+	if n := a.wr.q.Len(); n != 2 {
 		t.Fatalf("%d draws queued, want 2", n)
 	}
 }

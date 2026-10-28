@@ -256,13 +256,13 @@ type tabBody struct {
 func (a *App) declareTabBody(scrollID string, outer rect, body tabBody, click func(id string)) {
 	area := a.uiScrollArea(scrollID, outer, body.h, scrollOpts{Step: tabScrollStep})
 	ox, oy := area.View.X, area.View.Y-area.Off
-	inView := func(y, h float32) bool { return oy+y >= area.View.Y && oy+y+h <= area.View.bottom() }
+	inView := func(y, h float32) bool { return oy+y >= area.View.Y && oy+y+h <= area.View.Bottom() }
 	u := a.uiSt()
 	for _, f := range body.fills {
 		if !inView(f.r.Y, f.r.H) {
 			continue
 		}
-		r, c := rect{ox + f.r.X, oy + f.r.Y, f.r.W, f.r.H}, f.c
+		r, c := rect{X: ox + f.r.X, Y: oy + f.r.Y, W: f.r.W, H: f.r.H}, f.c
 		u.queue(func(dst *ebiten.Image) { fillRect(dst, r, c) })
 	}
 	for _, l := range body.labels {
@@ -279,7 +279,7 @@ func (a *App) declareTabBody(scrollID string, outer rect, body tabBody, click fu
 		if !inView(bt.y, bt.h) {
 			continue
 		}
-		r := rect{ox + bt.x, oy + bt.y, bt.w, bt.h}
+		r := rect{X: ox + bt.x, Y: oy + bt.y, W: bt.w, H: bt.h}
 		if a.uiButton(bt.id, r, bt.label, btnOpts{Selected: bt.selected, Disabled: bt.disabled, Reason: bt.reason, Tip: bt.tip}) {
 			click(bt.id)
 		}

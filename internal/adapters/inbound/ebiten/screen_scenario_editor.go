@@ -164,14 +164,14 @@ type editorLayout struct {
 }
 
 func editorRects(content rect) editorLayout {
-	head, rest := content.splitV(edHeaderH + 10)
+	head, rest := content.SplitV(edHeaderH + 10)
 	leftW := float32(int(rest.W * 0.42))
-	L := editorLayout{header: rect{head.X, head.Y, head.W, edHeaderH}}
-	L.form = rect{rest.X, rest.Y, leftW - 8, rest.H}
-	right := rect{rest.X + leftW + 8, rest.Y, rest.W - leftW - 8, rest.H}
+	L := editorLayout{header: rect{X: head.X, Y: head.Y, W: head.W, H: edHeaderH}}
+	L.form = rect{X: rest.X, Y: rest.Y, W: leftW - 8, H: rest.H}
+	right := rect{X: rest.X + leftW + 8, Y: rest.Y, W: rest.W - leftW - 8, H: rest.H}
 	ph := max(120, float32(int(right.H*0.36)))
-	L.preview = rect{right.X, right.Y, right.W, right.H - ph - 8}
-	L.problems = rect{right.X, right.bottom() - ph, right.W, ph}
+	L.preview = rect{X: right.X, Y: right.Y, W: right.W, H: right.H - ph - 8}
+	L.problems = rect{X: right.X, Y: right.Bottom() - ph, W: right.W, H: ph}
 	return L
 }
 
@@ -201,14 +201,14 @@ func (a *App) editorUI(sw, sh int) {
 
 	// Header: name and the file buttons.
 	btnW := []float32{84, 84, 84, 150}
-	x := L.header.right()
+	x := L.header.Right()
 	var rects [4]rect
 	for i := 3; i >= 0; i-- {
 		x -= btnW[i]
-		rects[i] = rect{x, L.header.Y, btnW[i], L.header.H}
+		rects[i] = rect{X: x, Y: L.header.Y, W: btnW[i], H: L.header.H}
 		x -= 8
 	}
-	nameR := rect{L.header.X, L.header.Y, max(160, min(360, x-L.header.X)), L.header.H}
+	nameR := rect{X: L.header.X, Y: L.header.Y, W: max(160, min(360, x-L.header.X)), H: L.header.H}
 	a.uiTextField("sced.name", nameR, &ed.def.Name, textFieldSpec{MaxLen: scenario.MaxName, Placeholder: "Scenario name",
 		Normalize: strings.TrimSpace, Tip: "Name\nUp to 40 characters."})
 	saveOpts := btnOpts{Tip: "Save\nWrite the scenario to the scenarios folder."}
@@ -247,11 +247,11 @@ func (a *App) editorUI(sw, sh int) {
 func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem) {
 	u := a.uiSt()
 	a.uiPanel(r)
-	in := r.inset(10)
+	in := r.Inset(10)
 	hs := tsLabel
 	hs.Color = uiHeading
 	a.uiLabel(in.X, in.Y, "Validation", hs)
-	list := rect{in.X, in.Y + float32(lineH(hs)) + 6, in.W, in.H - float32(lineH(hs)) - 6}
+	list := rect{X: in.X, Y: in.Y + float32(lineH(hs)) + 6, W: in.W, H: in.H - float32(lineH(hs)) - 6}
 	if len(probs) == 0 {
 		gs := tsBody
 		gs.Color = uiGood
@@ -281,7 +281,7 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 		sub := clipTo(dst, area.View)
 		for i, r := range rows {
 			ry := area.View.Y + r.y - area.Off
-			if ry+r.h < area.View.Y || ry > area.View.bottom() {
+			if ry+r.h < area.View.Y || ry > area.View.Bottom() {
 				continue
 			}
 			c := uiDanger
@@ -289,9 +289,9 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 				c = uiWarning
 			}
 			if u.hot == "sced.prob."+uiNum(i) {
-				fillRect(sub, rect{area.View.X, ry, area.View.W, r.h}, uiBtnHover)
+				fillRect(sub, rect{X: area.View.X, Y: ry, W: area.View.W, H: r.h}, uiBtnHover)
 			}
-			fillRect(sub, rect{area.View.X + 4, ry + 5, 10, 10}, c)
+			fillRect(sub, rect{X: area.View.X + 4, Y: ry + 5, W: 10, H: 10}, c)
 			for k, l := range r.lines {
 				drawText(sub, l, float64(area.View.X+24), float64(ry)+4+float64(k)*float64(lh), tsBody)
 			}
@@ -300,8 +300,8 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 	for i, r := range rows {
 		i := i
 		ry := area.View.Y + r.y - area.Off
-		hit := rect{area.View.X, ry, area.View.W, r.h}.intersect(area.View)
-		if hit.empty() {
+		hit := rect{X: area.View.X, Y: ry, W: area.View.W, H: r.h}.Intersect(area.View)
+		if hit.Empty() {
 			continue
 		}
 		show := func() {
@@ -327,9 +327,9 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 // block and the optional parts, in one scroll view.
 func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scenario.Problem) {
 	a.uiPanel(r)
-	body, bar := r.splitV(-(edRowH + 12))
-	a.ngButton("sced.add", rect{bar.X + 8, bar.Y + 4, 150, edRowH}, "Add part...", btnOpts{Style: btnPrimary, Tip: "Add part\nAdd another rule to the scenario."}, a.openAddPart)
-	view := body.inset(6)
+	body, bar := r.SplitV(-(edRowH + 12))
+	a.ngButton("sced.add", rect{X: bar.X + 8, Y: bar.Y + 4, W: 150, H: edRowH}, "Add part...", btnOpts{Style: btnPrimary, Tip: "Add part\nAdd another rule to the scenario."}, a.openAddPart)
+	view := body.Inset(6)
 	area := a.uiScrollArea("sced.form", view, ng.formHeight("sced.form"), scrollOpts{Step: 48})
 	f := newForm(area)
 	d := &ed.def
@@ -337,13 +337,13 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 	// Summary and description.
 	if row, ok := f.row(edRowH); ok {
 		c := a.rowLabel(row, "Summary", 92)
-		a.uiTextField("sced.summary", c.inset(2), &d.Summary, textFieldSpec{MaxLen: scenario.MaxSummary, Placeholder: "One line shown in the list"})
+		a.uiTextField("sced.summary", c.Inset(2), &d.Summary, textFieldSpec{MaxLen: scenario.MaxSummary, Placeholder: "One line shown in the list"})
 	}
 	if row, ok := f.row(22); ok {
 		a.rowLabel(row, "Description", 120)
 	}
 	if row, ok := f.row(68); ok {
-		a.uiTextField("sced.desc", row.inset(2), &d.Desc, textFieldSpec{Multiline: true, MaxLen: scenario.MaxDesc, Placeholder: "The story of the start"})
+		a.uiTextField("sced.desc", row.Inset(2), &d.Desc, textFieldSpec{Multiline: true, MaxLen: scenario.MaxDesc, Placeholder: "The story of the start"})
 	}
 	f.gap(6)
 
@@ -355,7 +355,7 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 		if d.Faction == faction.Clans {
 			sel = 1
 		}
-		a.segmented("sced.faction", rect{c.X, c.Y + 3, min(c.W, 240), c.H - 6}, []string{"Settlers", "Clan"}, &sel,
+		a.segmented("sced.faction", rect{X: c.X, Y: c.Y + 3, W: min(c.W, 240), H: c.H - 6}, []string{"Settlers", "Clan"}, &sel,
 			[]string{"Settlers\nIndustrial colonists who ride down in pods.", "Clan\nA tribe that walks in with what it carries."})
 		if sel == 1 {
 			d.Faction = faction.Clans
@@ -366,7 +366,7 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 	if row, ok := f.row(edRowH); ok {
 		c := a.rowLabel(row, "Starting people", 120)
 		old := d.People
-		a.ngStepper("sced.people", rect{c.X, c.Y + 3, 112, c.H - 6}, &d.People, scenario.MinPeople, scenario.MaxPeople)
+		a.ngStepper("sced.people", rect{X: c.X, Y: c.Y + 3, W: 112, H: c.H - 6}, &d.People, scenario.MinPeople, scenario.MaxPeople)
 		if d.People != old {
 			d.ChooseFrom += d.People - old
 		}
@@ -374,18 +374,18 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 	}
 	if row, ok := f.row(edRowH); ok {
 		c := a.rowLabel(row, "Choose from", 120)
-		a.ngStepper("sced.choose", rect{c.X, c.Y + 3, 112, c.H - 6}, &d.ChooseFrom, d.People, d.People+scenario.MaxExtraPool)
+		a.ngStepper("sced.choose", rect{X: c.X, Y: c.Y + 3, W: 112, H: c.H - 6}, &d.ChooseFrom, d.People, d.People+scenario.MaxExtraPool)
 	}
 	if row, ok := f.row(edRowH); ok {
 		c := a.rowLabel(row, "Arrival", 120)
 		sel := int(d.Arrival)
-		a.segmented("sced.arrival", rect{c.X, c.Y + 3, min(c.W, 330), c.H - 6}, []string{"Drop pods", "Standing", "Walk in"}, &sel, nil)
+		a.segmented("sced.arrival", rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{"Drop pods", "Standing", "Walk in"}, &sel, nil)
 		d.Arrival = scenario.Arrival(sel)
 	}
 	if row, ok := f.row(edRowH); ok {
 		c := a.rowLabel(row, "Tech level", 120)
 		sel := int(d.Tech)
-		a.segmented("sced.tech", rect{c.X, c.Y + 3, min(c.W, 330), c.H - 6}, []string{"Neolithic", "Industrial", "Spacer"}, &sel, nil)
+		a.segmented("sced.tech", rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{"Neolithic", "Industrial", "Spacer"}, &sel, nil)
 		d.Tech = faction.Tech(sel)
 	}
 	f.gap(8)
@@ -420,7 +420,9 @@ func (f *formCtx) sectionTitle(a *App, s string) {
 		hs := tsLabel
 		hs.Color = uiHeading
 		a.uiLabel(row.X, row.Y+4, s, hs)
-		a.uiSt().queue(func(dst *ebiten.Image) { fillRect(dst, rect{row.X, row.bottom() - 2, row.W, 1}, uiPanelBorder) })
+		a.uiSt().queue(func(dst *ebiten.Image) {
+			fillRect(dst, rect{X: row.X, Y: row.Bottom() - 2, W: row.W, H: 1}, uiPanelBorder)
+		})
 	}
 }
 
@@ -435,7 +437,7 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 	expanded := ed.open[i]
 	if ok {
 		btn := float32(28)
-		hdr := rect{row.X, row.Y + 2, row.W - 3*(btn+4), edCardH - 4}
+		hdr := rect{X: row.X, Y: row.Y + 2, W: row.W - 3*(btn+4), H: edCardH - 4}
 		toggle := func() { ed.open[i] = !ed.open[i]; a.uiOK() }
 		w := uiWidget{id: "sced.card." + uiNum(i), r: hdr, label: p.Kind.Label(), click: toggle, focusable: true, tip: p.Kind.Label() + "\n" + p.Kind.Desc()}
 		if u.add(w) && (a.uiPress(hdr) || a.uiKeyAct(w.id)) {
@@ -472,19 +474,19 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 				drawText(dst, fitText(sum, ss, hdr.W-34-float32(tw)-10), float64(hdr.X+28)+tw+10, ty, ss)
 			}
 		})
-		bx := hdr.right() + 4
-		a.ngButton("sced.up."+uiNum(i), rect{bx, hdr.Y, btn, hdr.H}, "^", btnOpts{Disabled: i == 0, Reason: "Already first.", Tip: "Move up"}, func() {
+		bx := hdr.Right() + 4
+		a.ngButton("sced.up."+uiNum(i), rect{X: bx, Y: hdr.Y, W: btn, H: hdr.H}, "^", btnOpts{Disabled: i == 0, Reason: "Already first.", Tip: "Move up"}, func() {
 			ed.def.Parts[i], ed.def.Parts[i-1] = ed.def.Parts[i-1], ed.def.Parts[i]
 			ed.open[i], ed.open[i-1] = ed.open[i-1], ed.open[i]
 			changed = true
 		})
-		a.ngButton("sced.down."+uiNum(i), rect{bx + btn + 4, hdr.Y, btn, hdr.H}, "v", btnOpts{Disabled: i == len(ed.def.Parts)-1, Reason: "Already last.", Tip: "Move down"}, func() {
+		a.ngButton("sced.down."+uiNum(i), rect{X: bx + btn + 4, Y: hdr.Y, W: btn, H: hdr.H}, "v", btnOpts{Disabled: i == len(ed.def.Parts)-1, Reason: "Already last.", Tip: "Move down"}, func() {
 			ed.def.Parts[i], ed.def.Parts[i+1] = ed.def.Parts[i+1], ed.def.Parts[i]
 			ed.open[i], ed.open[i+1] = ed.open[i+1], ed.open[i]
 			changed = true
 		})
 		// The button ids are the spec's: sced.up.<i>, sced.down.<i>, sced.del.<i>.
-		a.ngButton("sced.del."+uiNum(i), rect{bx + 2*(btn+4), hdr.Y, btn, hdr.H}, "x", btnOpts{Style: btnDanger, Tip: "Remove this part"}, func() {
+		a.ngButton("sced.del."+uiNum(i), rect{X: bx + 2*(btn+4), Y: hdr.Y, W: btn, H: hdr.H}, "x", btnOpts{Style: btnDanger, Tip: "Remove this part"}, func() {
 			ed.def.Parts = append(ed.def.Parts[:i], ed.def.Parts[i+1:]...)
 			for k := i; k < len(ed.def.Parts)+1; k++ {
 				ed.open[k] = ed.open[k+1]
@@ -503,7 +505,7 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 	ed.cardEnd[i] = f.y
 	if ok {
 		barY, barH, barX := f.view.Y+top-f.off, f.y-top-4, f.x-3
-		u.queue(func(dst *ebiten.Image) { fillRect(dst, rect{barX, barY, 2, barH}, uiPanelBorder) })
+		u.queue(func(dst *ebiten.Image) { fillRect(dst, rect{X: barX, Y: barY, W: 2, H: barH}, uiPanelBorder) })
 	}
 	return changed
 }
@@ -517,16 +519,16 @@ func (a *App) ctl(f *formCtx, label string) (rect, bool) {
 	row.X += 14
 	row.W -= 14
 	c := a.rowLabel(row, label, 118)
-	return rect{c.X, c.Y + 3, c.W, c.H - 6}, true
+	return rect{X: c.X, Y: c.Y + 3, W: c.W, H: c.H - 6}, true
 }
 
 // slider is a percent slider with its value at the right.
 func (a *App) pctSlider(id string, c rect, v *int, lo, hi int, title string) {
-	sr := rect{c.X, c.Y - 1, max(60, c.W-54), 20}
+	sr := rect{X: c.X, Y: c.Y - 1, W: max(60, c.W-54), H: 20}
 	a.uiSliderInt(id, sr, v, sliderSpec{Min: float64(lo), Max: float64(hi), Step: 5, Title: title,
 		Format: func(x float64) string { return fmt.Sprintf("%d%%", int(x)) }})
 	val := *v
-	a.uiLabel(sr.right()+10, c.Y+(c.H-float32(lineH(tsBody)))/2, fmt.Sprintf("%d%%", val), tsBody)
+	a.uiLabel(sr.Right()+10, c.Y+(c.H-float32(lineH(tsBody)))/2, fmt.Sprintf("%d%%", val), tsBody)
 }
 
 // partControls declares the controls of an expanded part.
@@ -551,7 +553,7 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 			if p.Item.IsWeapon() {
 				hi = scenario.MaxWeaponQty
 			}
-			a.ngNum(id("qty"), rect{c.X, c.Y, 90, c.H}, &q, scenario.MinQty, hi)
+			a.ngNum(id("qty"), rect{X: c.X, Y: c.Y, W: 90, H: c.H}, &q, scenario.MinQty, hi)
 			p.Qty = int32(min(q, 1<<30))
 		}
 	}
@@ -573,7 +575,7 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 		if p.Who == scenario.WhoNRandom {
 			if c, ok := a.ctl(f, "How many"); ok {
 				n := int(p.N)
-				a.ngStepper(id("n"), rect{c.X, c.Y, 112, c.H}, &n, 1, max(1, d.People))
+				a.ngStepper(id("n"), rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &n, 1, max(1, d.People))
 				p.N = uint8(n)
 			}
 		}
@@ -581,12 +583,12 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 	case scenario.PartAgeRange:
 		if c, ok := a.ctl(f, "Youngest"); ok {
 			v := int(p.MinAge)
-			a.ngStepper(id("min"), rect{c.X, c.Y, 112, c.H}, &v, scenario.MinAge, scenario.MaxAge)
+			a.ngStepper(id("min"), rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &v, scenario.MinAge, scenario.MaxAge)
 			p.MinAge = uint8(v)
 		}
 		if c, ok := a.ctl(f, "Oldest"); ok {
 			v := int(p.MaxAge)
-			a.ngStepper(id("max"), rect{c.X, c.Y, 112, c.H}, &v, scenario.MinAge, scenario.MaxAge)
+			a.ngStepper(id("max"), rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &v, scenario.MinAge, scenario.MaxAge)
 			p.MaxAge = uint8(v)
 		}
 	case scenario.PartForcedCondition:
@@ -605,7 +607,7 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 		itemRows()
 		if c, ok := a.ctl(f, "Piles"); ok {
 			n := int(p.N)
-			a.ngStepper(id("piles"), rect{c.X, c.Y, 112, c.H}, &n, 1, 20)
+			a.ngStepper(id("piles"), rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &n, 1, 20)
 			p.N = uint8(n)
 		}
 		if c, ok := a.ctl(f, "Where"); ok {
@@ -613,12 +615,12 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 			if p.Near {
 				sel = 0
 			}
-			a.segmented(id("near"), rect{c.X, c.Y, min(c.W, 260), c.H}, []string{"Near the start", "Anywhere"}, &sel, nil)
+			a.segmented(id("near"), rect{X: c.X, Y: c.Y, W: min(c.W, 260), H: c.H}, []string{"Near the start", "Anywhere"}, &sel, nil)
 			p.Near = sel == 0
 		}
 	case scenario.PartStartAnimal:
 		if c, ok := a.ctl(f, "Random pet"); ok {
-			a.uiCheck(id("random"), rect{c.X, c.Y, 220, c.H}, "A cat, dog or guinea pig", &p.Random, checkOpts{})
+			a.uiCheck(id("random"), rect{X: c.X, Y: c.Y, W: 220, H: c.H}, "A cat, dog or guinea pig", &p.Random, checkOpts{})
 		}
 		if c, ok := a.ctl(f, "Species"); ok {
 			dis := ""
@@ -630,7 +632,7 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 		}
 		if c, ok := a.ctl(f, "Count"); ok {
 			n := int(p.N)
-			a.ngStepper(id("count"), rect{c.X, c.Y, 112, c.H}, &n, 1, scenario.MaxAnimals)
+			a.ngStepper(id("count"), rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &n, 1, scenario.MaxAnimals)
 			p.N = uint8(n)
 		}
 	case scenario.PartCondition:
@@ -642,12 +644,12 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 		incidentRow()
 		if c, ok := a.ctl(f, "First day"); ok {
 			v := int(p.FirstDay)
-			a.ngNum(id("first"), rect{c.X, c.Y, 90, c.H}, &v, scenario.MinFirstDay, scenario.MaxFirstDay)
+			a.ngNum(id("first"), rect{X: c.X, Y: c.Y, W: 90, H: c.H}, &v, scenario.MinFirstDay, scenario.MaxFirstDay)
 			p.FirstDay = uint16(min(v, 65535))
 		}
 		if c, ok := a.ctl(f, "Repeat every"); ok {
 			v := int(p.EveryDays)
-			a.ngNum(id("every"), rect{c.X, c.Y, 90, c.H}, &v, 0, scenario.MaxEveryDays)
+			a.ngNum(id("every"), rect{X: c.X, Y: c.Y, W: 90, H: c.H}, &v, 0, scenario.MaxEveryDays)
 			p.EveryDays = uint16(min(v, 65535))
 			a.uiLabel(c.X+100, c.Y+(c.H-float32(lineH(tsBody)))/2, "days (0 = once)", dimText())
 		}
@@ -672,7 +674,7 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 		if row, ok := f.row(120); ok {
 			row.X += 14
 			row.W -= 14
-			a.uiTextField(id("text"), row.inset(2), &p.Text, textFieldSpec{Multiline: true, MaxLen: scenario.MaxIntro, Placeholder: "Shown once after landing"})
+			a.uiTextField(id("text"), row.Inset(2), &p.Text, textFieldSpec{Multiline: true, MaxLen: scenario.MaxIntro, Placeholder: "Shown once after landing"})
 		}
 	}
 }
@@ -718,12 +720,12 @@ func (a *App) openAddPart() {
 					hs.Color = uiHeading
 					yy := area.View.Y + h.y - area.Off
 					drawText(sub, h.name, float64(area.View.X+4), float64(yy)+6, hs)
-					fillRect(sub, rect{area.View.X, yy + headH - 3, area.View.W, 1}, uiPanelBorder)
+					fillRect(sub, rect{X: area.View.X, Y: yy + headH - 3, W: area.View.W, H: 1}, uiPanelBorder)
 				}
 				for _, k := range kinds {
-					row := rect{area.View.X, area.View.Y + k.y - area.Off, area.View.W, kindH}
+					row := rect{X: area.View.X, Y: area.View.Y + k.y - area.Off, W: area.View.W, H: kindH}
 					if u.hot == "sced.addkind."+k.info.Kind.Key() {
-						fillRect(sub, row.inset(1), uiBtnHover)
+						fillRect(sub, row.Inset(1), uiBtnHover)
 					}
 					drawText(sub, k.info.Label, float64(row.X+12), float64(row.Y)+6, tsLabel)
 					ds := tsSmall
@@ -737,9 +739,9 @@ func (a *App) openAddPart() {
 			})
 			for _, k := range kinds {
 				k := k
-				row := rect{area.View.X, area.View.Y + k.y - area.Off, area.View.W, kindH}
-				hit := row.intersect(area.View)
-				if hit.empty() {
+				row := rect{X: area.View.X, Y: area.View.Y + k.y - area.Off, W: area.View.W, H: kindH}
+				hit := row.Intersect(area.View)
+				if hit.Empty() {
 					continue
 				}
 				add := func() { a.addPart(k.info.Kind) }
@@ -839,7 +841,7 @@ func (a *App) editorLoad() {
 				ls := tsBody
 				ls.Color = uiDanger
 				h := a.textLines(body.X, body.Y, body.W, ed.loadErr, ls)
-				_, tb = body.splitV(h + 8)
+				_, tb = body.SplitV(h + 8)
 			}
 			if len(files) == 0 {
 				a.textLines(tb.X, tb.Y, tb.W, "No scenario files yet. Save one first.", dimText())

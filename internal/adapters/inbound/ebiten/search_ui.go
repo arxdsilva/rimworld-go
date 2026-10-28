@@ -193,8 +193,8 @@ func (a *App) searchRect(sw int) button {
 	n := len(a.searchHits())
 	l := a.hud()
 	y := float32(hudMargin)
-	if !l.Bar.empty() {
-		y = l.Bar.bottom()
+	if !l.Bar.Empty() {
+		y = l.Bar.Bottom()
 	}
 	side := float32(rightW + 2*hudMargin) // the bar keeps this much clear on both sides; so does the box
 	w := max(min(searchW, float32(sw)-2*side), searchMinW)

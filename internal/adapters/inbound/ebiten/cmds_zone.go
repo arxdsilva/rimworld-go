@@ -244,7 +244,7 @@ func (a *App) openZoneRename(z game.ZoneView) {
 				focused = true
 				a.uiSt().tabTo = zoneRenameFieldID
 			}
-			field := rect{body.X, body.Y + 26, body.W, 28}
+			field := rect{X: body.X, Y: body.Y + 26, W: body.W, H: 28}
 			if _, committed := a.uiTextField(zoneRenameFieldID, field, &name, textFieldSpec{
 				MaxLen: game.ZoneNameMax, Placeholder: placeholder, Normalize: strings.TrimSpace}); committed {
 				send(a)

@@ -257,10 +257,10 @@ type barCard struct {
 // barCardOf lays a card out inside slot at bar scale s: the head and
 // shoulders on top, the name strip under them at full size only.
 func barCardOf(slot rect, s float32) barCard {
-	inner := slot.inset(barPad * s)
+	inner := slot.Inset(barPad * s)
 	c := barCard{slot: slot, art: inner, icon: max(barIconMin, barIconSize*s)}
 	if s >= barNameMin {
-		c.art, c.name = inner.splitV(-min(lineStep(tsSmall), inner.H))
+		c.art, c.name = inner.SplitV(-min(lineStep(tsSmall), inner.H))
 	}
 	return c
 }
@@ -390,10 +390,10 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 	fires := a.shell.World().Fires
 	for i, p := range pawns[:n] {
 		slot := l.BarSlots[i]
-		a.drawBarCard(screen, barCardOf(slot, l.BarScale), p, a.barSelected(p.ID), slot.hit(mx, my), a.barStatusesWith(p, fires))
+		a.drawBarCard(screen, barCardOf(slot, l.BarScale), p, a.barSelected(p.ID), slot.Hit(mx, my), a.barStatusesWith(p, fires))
 	}
 	if slot, ok := barMoreSlot(l); ok {
-		drawBarMore(screen, slot, l.BarMore, slot.hit(mx, my))
+		drawBarMore(screen, slot, l.BarMore, slot.Hit(mx, my))
 	}
 }
 
@@ -404,7 +404,7 @@ func (a *App) drawBarCard(screen *ebiten.Image, c barCard, p game.PawnView, sele
 	// the mood backing: a fill from the floor of the card up, as tall as the mood
 	if mood := max(0, min(p.Mood, 100)); mood > 0 {
 		fh := slot.H * float32(mood) / 100
-		uiFillRect(screen, slot.X, slot.bottom()-fh, slot.W, fh, fade(moodToken(mood), 0.55), false)
+		uiFillRect(screen, slot.X, slot.Bottom()-fh, slot.W, fh, fade(moodToken(mood), 0.55), false)
 	}
 	switch {
 	case selected:
@@ -414,8 +414,8 @@ func (a *App) drawBarCard(screen *ebiten.Image, c barCard, p game.PawnView, sele
 	}
 	a.drawPawnBust(screen, p, float64(c.art.X), float64(c.art.Y), float64(c.art.W), float64(c.art.H))
 	a.drawBarStatuses(screen, c, sts)
-	if !c.name.empty() {
-		uiFillRect(screen, slot.X, c.name.Y, slot.W, slot.bottom()-c.name.Y, fade(uiSpace, 0.5), false) // a quiet plate: the name reads over any mood
+	if !c.name.Empty() {
+		uiFillRect(screen, slot.X, c.name.Y, slot.W, slot.Bottom()-c.name.Y, fade(uiSpace, 0.5), false) // a quiet plate: the name reads over any mood
 		st := withColor(tsSmall, uiText)
 		st.Align = alignCenter
 		drawText(screen, ellipsize(pawnLabel(p), tsSmall, float64(c.name.W)), float64(c.name.X+c.name.W/2), float64(c.name.Y), st)
@@ -432,7 +432,7 @@ func (a *App) drawBarCard(screen *ebiten.Image, c barCard, p game.PawnView, sele
 func (a *App) drawBarStatuses(screen *ebiten.Image, c barCard, sts []barStatus) {
 	size := c.icon
 	fit := max(1, int((c.art.H+1)/(size+1)))
-	x := c.art.right() - size
+	x := c.art.Right() - size
 	y := c.art.Y
 	for i, s := range sts {
 		if i == fit {

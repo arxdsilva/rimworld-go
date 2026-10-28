@@ -228,7 +228,7 @@ func drawGear(screen *ebiten.Image, p game.PawnView, in rect) {
 	fx, fy := float64(in.X), float64(in.Y)
 	head := withColor(tsLabel, uiHeading)
 	ss := float64(lineStep(tsSmall))
-	fits := func(off float64, st textStyle) bool { return float32(fy+off+float64(lineStep(st))) <= in.bottom() }
+	fits := func(off float64, st textStyle) bool { return float32(fy+off+float64(lineStep(st))) <= in.Bottom() }
 	drawText(screen, "Weapon", fx, fy, head)
 	drawText(screen, ellipsize(p.Weapon, tsSmall, float64(in.W)-12), fx+12, fy+float64(g.weaponVal), tsSmall)
 	drawText(screen, "Wearing", fx, fy+float64(g.wearing), head)
@@ -272,19 +272,19 @@ func (a *App) drawNeedsTab(screen *ebiten.Image, id entity.EntityID, r rect) {
 	}{{p.Health, "health"}, {p.Hunger, "food"}, {p.Rest, "rest"}, {p.Recreation, "fun"}, {p.Mood, "mood"}}
 	for i, n := range needs {
 		by := y + i*insBarStep
-		if float32(by+13) > in.bottom() {
+		if float32(by+13) > in.Bottom() {
 			return
 		}
 		drawNeedBar(screen, x, by, bw, 13, n.pct, n.label)
 	}
 	fy := float64(y + len(needs)*insBarStep + 2)
-	if float32(fy)+lineStep(tsBody) > in.bottom() {
+	if float32(fy)+lineStep(tsBody) > in.Bottom() {
 		return
 	}
 	drawText(screen, "feels "+p.MoodLabel, float64(x), fy, withColor(tsBody, uiTextDim))
 	ty := fy + float64(lineStep(tsBody)) + 4
 	for i, th := range p.Thoughts {
-		if i >= 5 || float32(ty)+lineStep(tsSmall) > in.bottom() {
+		if i >= 5 || float32(ty)+lineStep(tsSmall) > in.Bottom() {
 			break
 		}
 		sign := "+"

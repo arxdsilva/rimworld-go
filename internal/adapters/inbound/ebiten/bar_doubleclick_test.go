@@ -20,8 +20,8 @@ func clickBarSlot(t *testing.T, a *App, f *fakeInput, id entity.EntityID) {
 	t.Helper()
 	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
 		if b.id == barSlotID(id) {
-			f.cur.mx = int(float64(b.x+b.w/2) * a.scale.s)
-			f.cur.my = int(float64(b.y+b.h/2) * a.scale.s)
+			f.cur.mx = int(float64(b.x+b.w/2) * a.scale.S)
+			f.cur.my = int(float64(b.y+b.h/2) * a.scale.S)
 			f.click(t, a, mbLeft, 0)
 			return
 		}
@@ -34,8 +34,8 @@ func clickBarSlot(t *testing.T, a *App, f *fakeInput, id entity.EntityID) {
 func barColony(t *testing.T) (*App, *fakeInput) {
 	t.Helper()
 	a, f := hidpiColony(t, 1, 150)
-	if a.scale.s != 1.5 {
-		t.Fatalf("scale = %v, want 1.5", a.scale.s)
+	if a.scale.S != 1.5 {
+		t.Fatalf("scale = %v, want 1.5", a.scale.S)
 	}
 	a.renderer.cam.zoom = 1
 	a.renderer.cam.offsetX, a.renderer.cam.offsetY = 0, 0

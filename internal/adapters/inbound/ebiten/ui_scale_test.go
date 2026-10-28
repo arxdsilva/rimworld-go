@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -19,9 +20,9 @@ import (
 // restores it after. Not for parallel tests.
 func withUIScale(t testing.TB, s float64) {
 	t.Helper()
-	old := curUIScale
-	curUIScale = uiScaleState{dev: 1, ui: s, s: s}
-	t.Cleanup(func() { curUIScale = old })
+	old := gfx.CurrentScale()
+	gfx.SetScale(uiScaleState{Dev: 1, UI: s, S: s})
+	t.Cleanup(func() { gfx.SetScale(old) })
 }
 
 func TestAutoUIScale(t *testing.T) {
@@ -52,18 +53,18 @@ func TestComputeUIScale(t *testing.T) {
 	s := config.Defaults()
 	s.Accessibility.UIScaleAuto = false
 	s.Accessibility.UIScale = 150
-	if got := computeUIScale(s, 1280, 720, 1, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5, world: 1}) {
+	if got := computeUIScale(s, 1280, 720, 1, false); got != (uiScaleState{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
 		t.Fatalf("preset 150 = %+v", got)
 	}
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{dev: 2, ui: 1.5, s: 3, world: 1}) {
+	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{Dev: 2, UI: 1.5, S: 3, World: 1}) {
 		t.Fatalf("preset 150 on a Retina screen = %+v", got)
 	}
 	s.Graphics.HiDPI = false
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5, world: 1}) {
+	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
 		t.Fatalf("HiDPI off = %+v", got)
 	}
 	s = config.Defaults() // Auto
-	if got := computeUIScale(s, 1920, 1080, 1, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5, world: 1}) {
+	if got := computeUIScale(s, 1920, 1080, 1, false); got != (uiScaleState{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
 		t.Fatalf("auto at 1080p = %+v", got)
 	}
 	if got := computeUIScale(s, 1920, 1080, 2, true); got != unitUIScale {
@@ -73,7 +74,7 @@ func TestComputeUIScale(t *testing.T) {
 
 func scaledTestApp(t *testing.T, dev float64, mutate func(*config.Settings)) *App {
 	t.Helper()
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	a := testApp(&stubSim{w: 8, h: 8})
 	a.devFn = func() float64 { return dev }
 	s := a.settings
@@ -90,7 +91,7 @@ func TestLayoutFHiDPI(t *testing.T) {
 	if pw != 2560 || ph != 1440 {
 		t.Fatalf("LayoutF = %vx%v, want 2560x1440 physical", pw, ph)
 	}
-	if a.pw != 2560 || a.ph != 1440 || a.sw != 1280 || a.sh != 720 || a.scale.s != 2 || a.scale.dev != 2 {
+	if a.pw != 2560 || a.ph != 1440 || a.sw != 1280 || a.sh != 720 || a.scale.S != 2 || a.scale.Dev != 2 {
 		t.Fatalf("physical %dx%d logical %dx%d scale %+v", a.pw, a.ph, a.sw, a.sh, a.scale)
 	}
 	if lw, lh := a.Layout(1280, 720); lw != 2560 || lh != 1440 {
@@ -98,7 +99,7 @@ func TestLayoutFHiDPI(t *testing.T) {
 	}
 
 	off := scaledTestApp(t, 2, func(s *config.Settings) { s.Graphics.HiDPI = false })
-	if pw, ph := off.LayoutF(1280, 720); pw != 1280 || ph != 720 || off.scale.s != 1 {
+	if pw, ph := off.LayoutF(1280, 720); pw != 1280 || ph != 720 || off.scale.S != 1 {
 		t.Fatalf("HiDPI off: LayoutF %vx%v scale %+v", pw, ph, off.scale)
 	}
 
@@ -111,13 +112,13 @@ func TestLayoutFHiDPI(t *testing.T) {
 	s := big.settings
 	s.Accessibility.UIScaleAuto, s.Accessibility.UIScale = false, 100
 	big.setSettings(s)
-	if big.scale.s != 1 || big.sw != 1920 || big.sh != 1080 {
+	if big.scale.S != 1 || big.sw != 1920 || big.sh != 1080 {
 		t.Fatalf("after preset 100: scale %+v logical %dx%d", big.scale, big.sw, big.sh)
 	}
 }
 
 func TestCaptureForcesUnitScale(t *testing.T) {
-	t.Cleanup(func() { curUIScale = unitUIScale })
+	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
 	a := NewApp(AppConfig{Version: "test", Capture: &Capture{},
 		LoadArt:       func() (*artCatalog, error) { return nil, nil },
 		LoadSplash:    func() (*ebiten.Image, error) { return nil, nil },
@@ -130,14 +131,14 @@ func TestCaptureForcesUnitScale(t *testing.T) {
 	if pw, ph := a.LayoutF(1920, 1080); pw != 1920 || ph != 1080 || a.scale != unitUIScale || a.sw != 1920 {
 		t.Fatalf("capture LayoutF %vx%v scale %+v logical %d", pw, ph, a.scale, a.sw)
 	}
-	if a.scale.world != 1 {
-		t.Fatalf("capture world %v, want 1", a.scale.world)
+	if a.scale.World != 1 {
+		t.Fatalf("capture world %v, want 1", a.scale.World)
 	}
 	// dev escape hatch: an explicit -render-scale (captures otherwise load
 	// the defaults) shows the render-scaled map in a screenshot
 	s.Graphics.RenderScale = 0.5
 	a.setSettings(s)
-	if a.scale.worldK() != 0.5 || a.scale.s != 1 || a.pw != 1920 {
+	if a.scale.WorldK() != 0.5 || a.scale.S != 1 || a.pw != 1920 {
 		t.Fatalf("capture with render scale 0.5: scale %+v physical %d", a.scale, a.pw)
 	}
 }
@@ -168,7 +169,7 @@ func TestTextMeasureScaleInvariant(t *testing.T) {
 	// Text rasterises at the real pixel size: whole pixels, never above
 	// size x s, exactly the style size at s = 1.
 	for _, c := range []struct{ size, s, px float64 }{{13, 1, 13}, {13, 2, 26}, {13, 1.5, 19}, {11, 1.25, 13}, {22, 1.75, 38}} {
-		if px, k := faceSize(c.size, c.s); px != c.px || k != c.px/c.size {
+		if px, k := gfx.FaceSize(c.size, c.s); px != c.px || k != c.px/c.size {
 			t.Errorf("faceSize(%v, %v) = %v, %v; want %v", c.size, c.s, px, k, c.px)
 		}
 	}
@@ -184,10 +185,10 @@ func TestTextMeasureScaleInvariant(t *testing.T) {
 func traceCanvas(t *testing.T) *[]string {
 	t.Helper()
 	var got []string
-	canvasTrace = func(kind string, x, y, w, h float32) {
+	gfx.SetCanvasTrace(func(kind string, x, y, w, h float32) {
 		got = append(got, fmt.Sprintf("%s %g,%g %gx%g", kind, x, y, w, h))
-	}
-	t.Cleanup(func() { canvasTrace = nil })
+	})
+	t.Cleanup(func() { gfx.SetCanvasTrace(nil) })
 	return &got
 }
 
@@ -273,7 +274,7 @@ func TestCanvasHelpersScale(t *testing.T) {
 		t.Fatal("uiDrawImage changed the caller's op")
 	}
 	vs := []ebiten.Vertex{{DstX: 1, DstY: 2}, {DstX: 3, DstY: 4}, {DstX: 5, DstY: 6}}
-	if sv := scaledVerts(vs); sv[0].DstX != 2 || sv[2].DstY != 12 {
+	if sv := gfx.ScaledVerts(vs); sv[0].DstX != 2 || sv[2].DstY != 12 {
 		t.Fatalf("scaledVerts = %+v", sv)
 	}
 	uiTriangles(img, vs, []uint16{0, 1, 2}, src, nil)
@@ -286,10 +287,10 @@ func TestCanvasHelpersScale(t *testing.T) {
 	uiStrokeCircle(img, 5, 5, 2, 1, color.White, true)
 	uiFillPoly(img, [][2]float32{{0, 0}, {4, 0}, {0, 4}}, color.White, true)
 	uiFillPoly(img, nil, color.White, true) // too few points: nothing
-	if r := uiPhysRect(rect{1, 2, 3, 4}); r != (rect{2, 4, 6, 8}) {
+	if r := uiPhysRect(rect{X: 1, Y: 2, W: 3, H: 4}); r != (rect{X: 2, Y: 4, W: 6, H: 8}) {
 		t.Fatalf("uiPhysRect = %+v", r)
 	}
-	if c := clipTo(img, rect{10, 10, 20, 20}); c.Bounds() != image.Rect(20, 20, 60, 60) {
+	if c := clipTo(img, rect{X: 10, Y: 10, W: 20, H: 20}); c.Bounds() != image.Rect(20, 20, 60, 60) {
 		t.Fatalf("clipTo at s=2 = %v, want the physical rectangle", c.Bounds())
 	}
 }

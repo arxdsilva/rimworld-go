@@ -117,7 +117,7 @@ func (a *App) workIncapable(p game.PawnView, col int) (string, bool) {
 func workCellRect(r button, row, col int) rect {
 	hx := r.x + 12 + workNameW
 	y := r.y + 48 + float32(row*workRowH)
-	return rect{hx + float32(col*workCellW), y, workCellW - 4, workRowH - 2}
+	return rect{X: hx + float32(col*workCellW), Y: y, W: workCellW - 4, H: workRowH - 2}
 }
 
 // workRowShown reports the row fits the panel.
@@ -160,7 +160,7 @@ func (a *App) workTipsUI(sw, sh int) {
 	r := a.windowRect()
 	for col := range workColumns {
 		cr := workCellRect(r, 0, col)
-		a.uiTip("work.hdr."+uiNum(col), rect{cr.X, r.y + 22, cr.W, 22}, workHelp[col])
+		a.uiTip("work.hdr."+uiNum(col), rect{X: cr.X, Y: r.y + 22, W: cr.W, H: 22}, workHelp[col])
 	}
 	for row, p := range a.shell.Pawns() {
 		if !workRowShown(r, row) {
@@ -325,7 +325,7 @@ func (a *App) drawWorkSkill(screen *ebiten.Image, p game.PawnView, col int, cell
 	ls.Color = uiTextDim
 	drawText(screen, strconv.Itoa(int(p.SkillLv[sk])), float64(cell.X+3), float64(cell.Y)+(float64(cell.H)-lineH(ls))/2, ls)
 	if ps := int(p.Passion[sk]); ps > 0 {
-		a.drawPassion(screen, ps, float64(cell.right()-13), float64(cell.Y)+(float64(cell.H)-10)/2, 10, ls, float64(cell.Y)+3)
+		a.drawPassion(screen, ps, float64(cell.Right()-13), float64(cell.Y)+(float64(cell.H)-10)/2, 10, ls, float64(cell.Y)+3)
 	}
 }
 
@@ -336,7 +336,7 @@ func drawHatch(dst *ebiten.Image, r rect) {
 	sub := clipTo(dst, r)
 	c := uiTextDisabled
 	for d := float32(-r.H); d < r.W; d += 6 {
-		uiLine(sub, r.X+d, r.bottom(), r.X+d+r.H, r.Y, 1, c, false)
+		uiLine(sub, r.X+d, r.Bottom(), r.X+d+r.H, r.Y, 1, c, false)
 	}
 	strokeRect(dst, r, uiBtnBorder)
 }

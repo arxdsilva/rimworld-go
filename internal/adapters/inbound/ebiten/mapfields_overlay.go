@@ -181,7 +181,7 @@ func (a *App) drawMapFieldLegend(screen *ebiten.Image) {
 		return
 	}
 	r := a.devStack().Fields
-	if r.empty() {
+	if r.Empty() {
 		return
 	}
 	l := o.layers[o.sel]

@@ -444,7 +444,7 @@ func TestGraphicsPresetsDriveEveryKnob(t *testing.T) {
 				if tier == config.QualityMedium && dev == 2 {
 					want = 0.75
 				}
-				if got := computeUIScale(st, 1280, 720, dev, false).worldK(); got != want {
+				if got := computeUIScale(st, 1280, 720, dev, false).WorldK(); got != want {
 					t.Fatalf("%s at device scale %g: world %g, want %g", tier, dev, got, want)
 				}
 			}

@@ -15,7 +15,7 @@ fields rimworld-go/internal/domain/world/planet.Planet 33
 files rimworld-go/internal/adapters/inbound/ebiten 213  # ARCH-002 raised 212 -> 213 for the seam itself (shell.go); the only raise in the programme, every later wave lowers it
 files rimworld-go/internal/application/game 185
 iface rimworld-go/internal/adapters/inbound/ebiten.Simulation 32
-lines rimworld-go/internal/adapters/inbound/ebiten 64602  # ARCH-002 raised 64178 -> 64602 for the seam itself (shell.go, render view, the ids imports); the only raise in the programme
+lines rimworld-go/internal/adapters/inbound/ebiten 63760  # ARCH-002 raised 64178 -> 64602 for the seam itself, the only raise in the programme; ARCH-003 lowers
 lines rimworld-go/internal/application/game 57019
 methods rimworld-go/internal/adapters/inbound/ebiten.App 950
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 398
@@ -33,18 +33,11 @@ init rimworld-go/internal/domain/world/biome/biome.go
 
 # --- runtime-assigned package state: becomes a field of its owner (SOLID_GO.md §9) ---
 global rimworld-go/internal/adapters/inbound/ebiten.alertExplanations
-global rimworld-go/internal/adapters/inbound/ebiten.canvasTrace
-global rimworld-go/internal/adapters/inbound/ebiten.curUIScale
-global rimworld-go/internal/adapters/inbound/ebiten.drawTrace
 global rimworld-go/internal/adapters/inbound/ebiten.flakeKeys
 global rimworld-go/internal/adapters/inbound/ebiten.frostKeys
 global rimworld-go/internal/adapters/inbound/ebiten.snowBankKeys
 global rimworld-go/internal/adapters/inbound/ebiten.snowDriftKeys
 global rimworld-go/internal/adapters/inbound/ebiten.splashKeys
-global rimworld-go/internal/adapters/inbound/ebiten.tracePass
-global rimworld-go/internal/adapters/inbound/ebiten.traceVia
-global rimworld-go/internal/adapters/inbound/ebiten.worldDefer
-global rimworld-go/internal/adapters/inbound/ebiten.worldPassK
 global rimworld-go/internal/application/game.indexSelfCheck
 global rimworld-go/internal/application/game.regionsOffAll
 global rimworld-go/internal/application/game.selfCheckEvery
@@ -54,3 +47,4 @@ global rimworld-go/internal/domain/incident.defs
 global rimworld-go/internal/domain/pawn/social.memDefs
 global rimworld-go/internal/domain/pawn/trait.defs
 global rimworld-go/internal/domain/world/biome.defs
+global rimworld-go/internal/adapters/inbound/ebiten/gfx.cur  # SOLID_GO.md §9: the one documented process-wide canvas state (UI scale, world pass, test traces; main goroutine only), never a second

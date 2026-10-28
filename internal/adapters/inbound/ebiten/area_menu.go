@@ -112,7 +112,7 @@ func (a *App) openAreaPicker(title string, cur int, base bool, pick func(ref int
 func (a *App) areaPickBody(body rect, cur int, base bool, pick func(ref int)) {
 	areas := a.renderer.game.Areas()
 	opts := areaPickOpts(areas, base)
-	list, foot := body.splitV(-areaPickRowH - 8)
+	list, foot := body.SplitV(-areaPickRowH - 8)
 	if len(opts) == 0 {
 		a.uiLabel(list.X, list.Y+4, areasEmpty, dimText())
 	}
@@ -121,9 +121,9 @@ func (a *App) areaPickBody(body rect, cur int, base bool, pick func(ref int)) {
 	hover := 0
 	cur = areaRef(cur)
 	for _, o := range opts {
-		rr := rect{sa.View.X, y, sa.View.W - 2, areaPickRowH - 4}
+		rr := rect{X: sa.View.X, Y: y, W: sa.View.W - 2, H: areaPickRowH - 4}
 		y += areaPickRowH
-		if rr.Y < sa.View.Y || rr.bottom() > sa.View.bottom() {
+		if rr.Y < sa.View.Y || rr.Bottom() > sa.View.Bottom() {
 			continue
 		}
 		id := "areapick.row." + strconv.Itoa(o.ref)
@@ -145,7 +145,7 @@ func (a *App) areaPickBody(body rect, cur int, base bool, pick func(ref int)) {
 		}
 	}
 	a.renderer.areaOv.hover = hover
-	if a.uiButton("areapick.manage", foot.inset(0), areaManage, btnOpts{}) {
+	if a.uiButton("areapick.manage", foot.Inset(0), areaManage, btnOpts{}) {
 		a.uiCloseModal(areaPickID)
 		a.renderer.areaOv.hover = 0
 		a.openAreaManager()

@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -58,13 +59,13 @@ func TestPaneShownNeedsATitle(t *testing.T) {
 	a, _, _ := inputColony(t, [2]int{3, 3})
 	a.renderer.Select(1)
 	// every selection kind has its pane (PLAY-018): the colonist's is up
-	if !a.paneShown() || a.hud().Pane.empty() {
+	if !a.paneShown() || a.hud().Pane.Empty() {
 		t.Fatal("the colonist's pane is shown in the layout")
 	}
 	// a spec without a Title shows nothing, and no legacy top-left panel
 	// (it sat at 8,40) is left blocking the map in its place
 	a.setTestPane(paneSpec{})
-	if a.paneShown() || !a.hud().Pane.empty() {
+	if a.paneShown() || !a.hud().Pane.Empty() {
 		t.Fatal("a pane without a Title is not shown")
 	}
 	for _, r := range a.chromeRects(a.sw, a.sh) {
@@ -73,7 +74,7 @@ func TestPaneShownNeedsATitle(t *testing.T) {
 		}
 	}
 	a.setTestPane(fullPane())
-	if !a.paneShown() || a.hud().Pane.empty() {
+	if !a.paneShown() || a.hud().Pane.Empty() {
 		t.Fatal("a pane with a Title is shown in the layout")
 	}
 	a.archOpen = true
@@ -93,7 +94,7 @@ func TestPaneTabOpensAndCollapses(t *testing.T) {
 		tabSpec("needs", "Needs", 480, 220, nil),
 		tabSpec("log", "Log", 300, 300, nil),
 	))
-	if !a.hud().Expanded.empty() || a.paneOpenTab() != "" {
+	if !a.hud().Expanded.Empty() || a.paneOpenTab() != "" {
 		t.Fatal("tabs start collapsed")
 	}
 	click(t, a, "inspector.needs")
@@ -101,7 +102,7 @@ func TestPaneTabOpensAndCollapses(t *testing.T) {
 	if a.paneOpenTab() != "inspector.needs" || l.Expanded.W != 480 || l.Expanded.H != 220 {
 		t.Fatalf("clicking a closed tab opens it at its wanted size: open=%q expanded=%+v", a.paneOpenTab(), l.Expanded)
 	}
-	if l.Expanded.bottom() != l.PaneTabs.Y {
+	if l.Expanded.Bottom() != l.PaneTabs.Y {
 		t.Fatalf("the panel opens upward from the tabs: %+v over %+v", l.Expanded, l.PaneTabs)
 	}
 	click(t, a, "inspector.log")
@@ -109,7 +110,7 @@ func TestPaneTabOpensAndCollapses(t *testing.T) {
 		t.Fatalf("another tab replaces it (width clamped to the minimum): %q %+v", a.paneOpenTab(), l.Expanded)
 	}
 	click(t, a, "inspector.log")
-	if a.paneOpenTab() != "" || !a.hud().Expanded.empty() {
+	if a.paneOpenTab() != "" || !a.hud().Expanded.Empty() {
 		t.Fatal("clicking the open tab collapses it")
 	}
 }
@@ -133,8 +134,8 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 		t.Fatalf("tab buttons = %+v", tabs)
 	}
 	for i, b := range tabs {
-		r := rect{b.x, b.y, b.w, b.h}
-		if r.X < l.PaneTabs.X || r.right() > l.PaneTabs.right()+0.01 || r.Y < l.PaneTabs.Y || r.bottom() > l.PaneTabs.bottom()+0.01 {
+		r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		if r.X < l.PaneTabs.X || r.Right() > l.PaneTabs.Right()+0.01 || r.Y < l.PaneTabs.Y || r.Bottom() > l.PaneTabs.Bottom()+0.01 {
 			t.Errorf("tab %d %+v leaves the tab strip %+v", i, r, l.PaneTabs)
 		}
 		if i > 0 && b.x < tabs[i-1].x+tabs[i-1].w {
@@ -188,7 +189,7 @@ func TestOpenTabIsDroppedWhenItVanishes(t *testing.T) {
 	click(t, a, "inspector.needs")
 	a.setTestPane(fullPane(tabSpec("log", "Log", 400, 100, nil))) // another kind: no Needs tab
 	f.frame(t, a)
-	if a.paneOpenTab() != "" || !a.hud().Expanded.empty() {
+	if a.paneOpenTab() != "" || !a.hud().Expanded.Empty() {
 		t.Fatal("a tab the new selection does not have must not stay open")
 	}
 	a.setTestPane(paneSpec{})
@@ -205,17 +206,17 @@ func TestExpandedTabDrawsInsideItsPanel(t *testing.T) {
 	draw := func(screen *ebiten.Image, r rect) {
 		got = r
 		b := screen.Bounds()
-		clip = rect{float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy())}
+		clip = rect{X: float32(b.Min.X), Y: float32(b.Min.Y), W: float32(b.Dx()), H: float32(b.Dy())}
 	}
 	a, _, _ := paneColony(t, fullPane(tabSpec("needs", "Needs", 520, 240, draw)))
 	click(t, a, "inspector.needs")
 	l := a.hud()
 	a.drawPane(ebiten.NewImage(1280, 720))
-	inner := l.Expanded.inset(paneInset)
+	inner := l.Expanded.Inset(paneInset)
 	if got != inner {
 		t.Fatalf("the tab body gets the panel inset by %d: got %+v, want %+v", paneInset, got, inner)
 	}
-	if clip.X < l.Expanded.X || clip.Y < l.Expanded.Y || clip.right() > l.Expanded.right()+1 || clip.bottom() > l.Expanded.bottom()+1 {
+	if clip.X < l.Expanded.X || clip.Y < l.Expanded.Y || clip.Right() > l.Expanded.Right()+1 || clip.Bottom() > l.Expanded.Bottom()+1 {
 		t.Fatalf("the body draws on a surface clipped to %+v, outside the panel %+v", clip, l.Expanded)
 	}
 }
@@ -227,7 +228,7 @@ func TestExpandedTabDeclaresItsKitWidgets(t *testing.T) {
 	a, _, f := paneColony(t, spec)
 	click(t, a, "inspector.kit")
 	f.frame(t, a)
-	if want := a.hud().Expanded.inset(paneInset); got != want {
+	if want := a.hud().Expanded.Inset(paneInset); got != want {
 		t.Fatalf("Declare got %+v, want %+v", got, want)
 	}
 }
@@ -240,7 +241,7 @@ func TestExpandedFollowsTheLayoutCaps(t *testing.T) {
 	if l.Expanded.W != expandMaxW {
 		t.Fatalf("width is clamped to %d: %+v", expandMaxW, l.Expanded)
 	}
-	if l.Expanded.Y < l.Bar.bottom() {
+	if l.Expanded.Y < l.Bar.Bottom() {
 		t.Fatalf("the panel stops below the colonist bar: %+v vs bar %+v", l.Expanded, l.Bar)
 	}
 	if a.expandedRect() != l.Expanded || a.paneRect() != l.Pane {
@@ -264,8 +265,8 @@ func TestPaneButtonsStayInsideThePane(t *testing.T) {
 		if strings.HasPrefix(b.id, "inspector.") && b.id != "inspector.close" {
 			continue // tabs live in the strip above
 		}
-		r := rect{b.x, b.y, b.w, b.h}
-		if r.X < l.Pane.X || r.Y < l.Pane.Y || r.right() > l.Pane.right()+0.01 || r.bottom() > l.Pane.bottom()+0.01 {
+		r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		if r.X < l.Pane.X || r.Y < l.Pane.Y || r.Right() > l.Pane.Right()+0.01 || r.Bottom() > l.Pane.Bottom()+0.01 {
 			t.Errorf("%s %+v leaves the pane %+v", b.id, r, l.Pane)
 		}
 	}
@@ -332,7 +333,7 @@ func TestPaneRowsAreClickableAndScroll(t *testing.T) {
 		t.Fatalf("only the rows in view are targets: %d of 30", len(vis))
 	}
 	for id, b := range vis {
-		if b.y < g.body.Y-0.01 || b.y+b.h > g.body.bottom()+0.01 {
+		if b.y < g.body.Y-0.01 || b.y+b.h > g.body.Bottom()+0.01 {
 			t.Errorf("%s %+v leaves the body %+v", id, b, g.body)
 		}
 	}
@@ -372,9 +373,9 @@ func TestDrawPaneStaysInItsRegions(t *testing.T) {
 		l := a.hud()
 		regions := []rect{l.Pane, l.PaneTabs, l.Expanded}
 		var rects []rect
-		canvasTrace = func(_ string, x, y, w, h float32) { rects = append(rects, rect{x, y, w, h}) }
+		gfx.SetCanvasTrace(func(_ string, x, y, w, h float32) { rects = append(rects, rect{X: x, Y: y, W: w, H: h}) })
 		a.drawPane(ebiten.NewImage(int(1280*scale), int(720*scale)))
-		canvasTrace = nil
+		gfx.SetCanvasTrace(nil)
 		if len(rects) == 0 {
 			t.Fatalf("scale %v: the pane drew nothing", scale)
 		}
@@ -382,7 +383,7 @@ func TestDrawPaneStaysInItsRegions(t *testing.T) {
 		for _, r := range rects {
 			ok := false
 			for _, g := range regions {
-				if r.X >= g.X*s-0.5 && r.Y >= g.Y*s-0.5 && r.right() <= g.right()*s+0.5 && r.bottom() <= g.bottom()*s+0.5 {
+				if r.X >= g.X*s-0.5 && r.Y >= g.Y*s-0.5 && r.Right() <= g.Right()*s+0.5 && r.Bottom() <= g.Bottom()*s+0.5 {
 					ok = true
 				}
 			}
@@ -399,14 +400,14 @@ func TestPaneLayoutDropsWhatDoesNotFit(t *testing.T) {
 	for i := range 30 {
 		spec.Chips = append(spec.Chips, paneChip{ID: fmt.Sprintf("c%d", i), Label: fmt.Sprintf("Chip number %d", i)})
 	}
-	p := rect{0, 500, paneW, paneH}
+	p := rect{X: 0, Y: 500, W: paneW, H: paneH}
 	g := paneLayout(p, spec)
 	for i, c := range g.chips {
-		if c.bottom() > p.bottom()-4+0.01 {
+		if c.Bottom() > p.Bottom()-4+0.01 {
 			t.Errorf("chip %d %+v runs out of the pane", i, c)
 		}
 	}
-	if !g.body.empty() && g.body.bottom() > p.bottom() {
+	if !g.body.Empty() && g.body.Bottom() > p.Bottom() {
 		t.Errorf("body %+v runs out of the pane", g.body)
 	}
 }

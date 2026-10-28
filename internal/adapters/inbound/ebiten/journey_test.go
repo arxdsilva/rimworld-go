@@ -211,9 +211,9 @@ func (j *journey) clickID(id string) bool {
 		if !ok {
 			j.t.Fatalf("no button or widget %q on %s", id, j.a.nav.screen())
 		}
-		x, y = w.r.center()
+		x, y = w.r.Center()
 	}
-	s := float32(j.a.scale.s)
+	s := float32(j.a.scale.S)
 	j.f.clickAt(j.t, j.a, int(x*s), int(y*s))
 	j.f.cur.mx, j.f.cur.my = -50, -50
 	return true
@@ -226,7 +226,7 @@ func (j *journey) pick(label string) {
 	for _, b := range j.a.floatButtons() {
 		labels = append(labels, b.label)
 		if strings.HasPrefix(b.label, label) {
-			s := float32(j.a.scale.s)
+			s := float32(j.a.scale.S)
 			j.f.clickAt(j.t, j.a, int((b.x+b.w/2)*s), int((b.y+b.h/2)*s))
 			j.f.cur.mx, j.f.cur.my = -50, -50
 			return
@@ -465,13 +465,9 @@ func TestEveryInputActionHasAJourney(t *testing.T) {
 	}
 
 	kinds := commandKinds(t)
-	src, err := filepath.Glob("*.go")
-	if err != nil {
-		t.Fatal(err)
-	}
 	var emitters []string
-	for _, f := range src {
-		if strings.HasSuffix(f, "_test.go") || f == "lessons.go" || f == "learn_ui.go" {
+	for _, f := range packageFiles(t, ".") { // the sub-packages too: a moved emitter stays covered
+		if f == "lessons.go" || f == "learn_ui.go" {
 			continue // the lessons observe commands; they don't send them
 		}
 		emitters = append(emitters, f)
@@ -511,8 +507,10 @@ func TestJourneysUseTheRealInputPath(t *testing.T) {
 		"openOrders": "right-click the tile", "Select": "click the thing", "enqueue": "send the command through the UI",
 		"toggleDraft": "use j.key(\"R\", 0)", "setSpeed": "use the speed keys", "togglePause": "use Space",
 		"LayoutF": "journeys run at scale 1 (parallel-safe)", "setSettings": "use the Options screen", "applyOption": "use j.clickID(\"options.*\")",
+		// the canvas's process-wide state (gfx/state.go) is not parallel-safe
+		"SetScale": "journeys run at scale 1 (parallel-safe)", "SetDrawTrace": "not parallel-safe", "SetCanvasTrace": "not parallel-safe",
+		"ForcePass": "not parallel-safe", "SetPass": "not parallel-safe", "SetVia": "not parallel-safe",
 	}
-	globals := map[string]bool{"curUIScale": true, "drawTrace": true, "canvasTrace": true, "tracePass": true}
 	fset := token.NewFileSet()
 	var bad []string
 	for _, path := range journeyFiles(t) {
@@ -525,12 +523,6 @@ func TestJourneysUseTheRealInputPath(t *testing.T) {
 						return true
 					}
 					bad = append(bad, fmt.Sprintf("%s: %s(): %s", fset.Position(x.Pos()), name, why))
-				}
-			case *ast.AssignStmt:
-				for _, lhs := range x.Lhs {
-					if id, ok := lhs.(*ast.Ident); ok && globals[id.Name] {
-						bad = append(bad, fmt.Sprintf("%s: assigns %s (not parallel-safe)", fset.Position(x.Pos()), id.Name))
-					}
 				}
 			}
 			return true

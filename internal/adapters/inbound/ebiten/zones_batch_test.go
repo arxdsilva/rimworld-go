@@ -8,7 +8,7 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-func quadsOf(b *triBatch) int { return len(b.idx) / 6 }
+func quadsOf(b *triBatch) int { return len(b.Idx) / 6 }
 
 // A dashed run far longer than the view only emits the dashes on screen.
 func TestDashedRunCullsOffscreen(t *testing.T) {
@@ -20,12 +20,12 @@ func TestDashedRunCullsOffscreen(t *testing.T) {
 	if got := quadsOf(&b); float64(got) < want-2 || float64(got) > want+3 {
 		t.Fatalf("dashes = %d, want about %.0f", got, want)
 	}
-	b.reset()
+	b.Reset()
 	dashedRun(&b, 50, -100*tile, 50, 300*tile, 2, dash, gap, stockEdgeClr, 400, 20*tile) // vertical
 	if got := quadsOf(&b); float64(got) < want-2 || float64(got) > want+3 {
 		t.Fatalf("vertical dashes = %d, want about %.0f", got, want)
 	}
-	b.reset()
+	b.Reset()
 	dashedRun(&b, 1e5, 50, 2e5, 50, 2, dash, gap, stockEdgeClr, 320, 200) // wholly off to the right
 	if quadsOf(&b) != 0 {
 		t.Fatalf("an off-screen run emitted %d dashes", quadsOf(&b))
@@ -50,8 +50,8 @@ func TestZoneOutlinesOneFlush(t *testing.T) {
 	}
 	screen := ebiten.NewImage(640, 400)
 	r.drawZones(screen, w, 640, 400, tile)
-	if len(r.zoneBatch.idx) != 0 || len(r.zoneBatch.verts) != 0 {
-		t.Fatalf("batch not flushed: %d indices left", len(r.zoneBatch.idx))
+	if len(r.zoneBatch.Idx) != 0 || len(r.zoneBatch.Verts) != 0 {
+		t.Fatalf("batch not flushed: %d indices left", len(r.zoneBatch.Idx))
 	}
 	// the outlines did go through the batch
 	for _, z := range w.Zones {

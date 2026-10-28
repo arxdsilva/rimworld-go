@@ -333,9 +333,8 @@ func TestLightsComeOnlyFromLightSources(t *testing.T) {
 	}
 
 	lampKind := regexp.MustCompile(`Kind\s*==\s*"lamp"|"lamp"\s*==\s*\w*\.?Kind`)
-	files, _ := filepath.Glob("*.go")
-	for _, f := range files {
-		if strings.HasSuffix(f, "_test.go") || f == "light_sources.go" {
+	for _, f := range packageFiles(t, ".") {
+		if filepath.Base(f) == "light_sources.go" {
 			continue
 		}
 		src, err := os.ReadFile(f)

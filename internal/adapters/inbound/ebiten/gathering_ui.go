@@ -69,13 +69,13 @@ func (a *App) gatheringBannerIn(sw int, l hudLayout) (string, rect, bool) {
 	room := float32(sw) - 2*(2*hudMargin+rightW)
 	w := min(textW(s, tsBody)+2*gatherBannerPad, max(room, 120))
 	y := float32(hudMargin)
-	if !l.Bar.empty() {
-		y = l.Bar.bottom() + hudGap
+	if !l.Bar.Empty() {
+		y = l.Bar.Bottom() + hudGap
 	}
-	if !l.Messages.empty() {
-		y = max(y, l.Messages.bottom()+hudGap)
+	if !l.Messages.Empty() {
+		y = max(y, l.Messages.Bottom()+hudGap)
 	}
-	return s, rect{(float32(sw) - w) / 2, y, w, gatherBannerH}, true
+	return s, rect{X: (float32(sw) - w) / 2, Y: y, W: w, H: gatherBannerH}, true
 }
 
 // gatheringUI declares the banner's tooltip (call from the colony UI).

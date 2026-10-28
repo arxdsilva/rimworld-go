@@ -89,11 +89,11 @@ func TestPlanButtonToggle(t *testing.T) {
 	// left to right in Global: Roof, Home, Auto home, Plans, Rooms; none shares a rect
 	for _, o := range []string{homeButtonID, roomsButtonID} {
 		ob, _ := hasButton(a.colonyButtons(sw, sh), o)
-		if i := (rect{b.x, b.y, b.w, b.h}).intersect(rect{ob.x, ob.y, ob.w, ob.h}); i.W > 0 && i.H > 0 {
+		if i := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}).Intersect(rect{X: ob.x, Y: ob.y, W: ob.w, H: ob.h}); i.W > 0 && i.H > 0 {
 			t.Fatalf("Plans button %+v overlaps %s %+v", b, o, ob)
 		}
 	}
-	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.right() || b.y < g.Y || b.y+b.h > g.bottom() {
+	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.Right() || b.y < g.Y || b.y+b.h > g.Bottom() {
 		t.Fatalf("Plans button %+v is outside Global %+v", b, g)
 	}
 	click(t, a, planButtonID)

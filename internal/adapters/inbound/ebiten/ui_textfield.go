@@ -216,12 +216,12 @@ func nearestIndex(rs []rune, x float64) int {
 	return i
 }
 
-func (r rect) fieldInner() rect { return r.insetXY(fieldPad, fieldPadTop) }
+func fieldInner(r rect) rect { return r.InsetXY(fieldPad, fieldPadTop) }
 
 // caretAt is the rune index under a cursor position in field r.
 func (a *App) textCaretAt(id string, rs []rune, r rect, sp textFieldSpec, mx, my int) int {
 	u := a.uiSt()
-	in := r.fieldInner()
+	in := fieldInner(r)
 	if !sp.Multiline {
 		return nearestIndex(rs, float64(float32(mx)-in.X+u.scroll[id+".x"]))
 	}
@@ -313,7 +313,7 @@ func (a *App) textReveal() {
 	if u.scroll == nil {
 		u.scroll = map[string]float32{}
 	}
-	in := e.r.fieldInner()
+	in := fieldInner(e.r)
 	rs := []rune(*e.val)
 	if !e.spec.Multiline {
 		cx, _ := measure(string(rs[:min(u.caret, len(rs))]), tsBody)
@@ -365,7 +365,7 @@ func (a *App) uiTextInput() {
 		return
 	}
 	mx, my := a.currentCursor()
-	if a.in.raw.press[mbLeft] && !e.r.hit(mx, my) { // click elsewhere commits
+	if a.in.raw.press[mbLeft] && !e.r.Hit(mx, my) { // click elsewhere commits
 		a.textEnd(true)
 		return
 	}
@@ -442,7 +442,7 @@ func (a *App) textLineEdge(b textBuf, end bool) int {
 		}
 		return 0
 	}
-	spans := a.uiSt().fieldLines(e.id, b.rs, e.r.fieldInner().W)
+	spans := a.uiSt().fieldLines(e.id, b.rs, fieldInner(e.r).W)
 	sp := spans[lineOf(spans, b.caret)]
 	if end {
 		return sp.end
@@ -454,7 +454,7 @@ func (a *App) textLineEdge(b textBuf, end bool) int {
 func (a *App) textVertical(b *textBuf, dir int, extend bool) {
 	u := a.uiSt()
 	e := &u.edit
-	spans := u.fieldLines(e.id, b.rs, e.r.fieldInner().W)
+	spans := u.fieldLines(e.id, b.rs, fieldInner(e.r).W)
 	k := lineOf(spans, b.caret)
 	switch {
 	case k+dir < 0:
@@ -533,7 +533,7 @@ func (a *App) drawTextField(dst *ebiten.Image, id string, r rect, s string, sp t
 	}
 	fillRect(dst, r, uiField)
 	strokeRect(dst, r, border)
-	in := r.fieldInner()
+	in := fieldInner(r)
 	clip := clipTo(dst, in)
 	st := tsBody
 	if sp.Disabled {
@@ -568,7 +568,7 @@ func (a *App) drawTextField(dst *ebiten.Image, id string, r rect, s string, sp t
 	lo, hi := u.selStart, u.selEnd
 	for i, ln := range spans {
 		y := ty + float32(i)*lh - sy
-		if y+lh < in.Y || y > in.bottom() {
+		if y+lh < in.Y || y > in.Bottom() {
 			continue
 		}
 		x0 := in.X - sx
@@ -581,7 +581,7 @@ func (a *App) drawTextField(dst *ebiten.Image, id string, r rect, s string, sp t
 			}
 			sel := uiBtnSelected
 			sel.A = 0xC0
-			fillRect(clip, rect{x0 + float32(xa), y, float32(xb - xa), lh}, sel)
+			fillRect(clip, rect{X: x0 + float32(xa), Y: y, W: float32(xb - xa), H: lh}, sel)
 		}
 		drawText(clip, string(rs[ln.start:ln.end]), float64(x0), float64(y), st)
 	}

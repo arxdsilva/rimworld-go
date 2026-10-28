@@ -38,7 +38,7 @@ func (a *App) hoveredCell() (tx, ty int, ok bool) {
 	if a.colonyChromeHit(mx, my, sw, sh) {
 		return 0, 0, false
 	}
-	if m := a.hud().Minimap; !m.empty() && m.hit(mx, my) { // not chrome (own click path), but not the map either
+	if m := a.hud().Minimap; !m.Empty() && m.Hit(mx, my) { // not chrome (own click path), but not the map either
 		return 0, 0, false
 	}
 	tx, ty = a.shell.TileAt(a.mapCursor()) // physical: the map's pixels
@@ -56,7 +56,7 @@ func (a *App) cellInfoLines() []string {
 	if a.renderer == nil || a.hideUI || a.archOpen || a.workOpen || !a.nothingSelected() {
 		return nil
 	}
-	if !a.hud().Window.empty() {
+	if !a.hud().Window.Empty() {
 		return nil
 	}
 	tx, ty, ok := a.hoveredCell()
@@ -102,7 +102,7 @@ func (a *App) cellInfoRect() rect {
 func cellInfoBox(lines []string, tabsY float32) rect {
 	w := maxTextW(lines, tsLabel) + 2*cellInfoPad
 	h := float32(len(lines))*lineStep(tsBody) + 2*cellInfoPad
-	return rect{hudMargin, tabsY - hudMargin - h, w, h}
+	return rect{X: hudMargin, Y: tabsY - hudMargin - h, W: w, H: h}
 }
 
 // drawCellInfo draws the hovered cell's lines.

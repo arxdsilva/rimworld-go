@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -33,17 +34,17 @@ var wlScales = []wlScale{
 // wlSetScale applies sc for the rest of the test.
 func wlSetScale(t *testing.T, sc wlScale) {
 	t.Helper()
-	old := curUIScale
-	curUIScale = uiScaleState{dev: sc.dev, ui: sc.ui, s: sc.dev * sc.ui}
-	t.Cleanup(func() { curUIScale = old })
+	old := gfx.CurrentScale()
+	gfx.SetScale(uiScaleState{Dev: sc.dev, UI: sc.ui, S: sc.dev * sc.ui})
+	t.Cleanup(func() { gfx.SetScale(old) })
 }
 
 // wlTrace records every canvas draw (including text) for the test.
 func wlTrace(t *testing.T) *[]traceEvent {
 	t.Helper()
 	var got []traceEvent
-	drawTrace = func(e traceEvent) { got = append(got, e) }
-	t.Cleanup(func() { drawTrace = nil })
+	gfx.SetDrawTrace(func(e traceEvent) { got = append(got, e) })
+	t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 	return &got
 }
 

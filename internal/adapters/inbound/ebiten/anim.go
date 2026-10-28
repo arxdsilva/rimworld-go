@@ -7,7 +7,7 @@ import (
 	"math"
 	"strings"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
@@ -136,16 +136,6 @@ func easeOutBack(t float64) float64 {
 	const c1 = 1.70158
 	const c3 = c1 + 1
 	return 1 + c3*math.Pow(t-1, 3) + c1*math.Pow(t-1, 2)
-}
-
-func clamp01(t float64) float64 {
-	if t < 0 {
-		return 0
-	}
-	if t > 1 {
-		return 1
-	}
-	return t
 }
 
 // hash01 is a stable pseudo-random value in [0, 1) for a key.

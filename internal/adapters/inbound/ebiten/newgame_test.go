@@ -114,7 +114,7 @@ func widgetAt(t *testing.T, a *App, id string) (int, int) {
 	if !ok {
 		t.Fatalf("no widget %q on %s", id, a.nav.screen())
 	}
-	x, y := w.r.center()
+	x, y := w.r.Center()
 	return int(x), int(y)
 }
 
@@ -703,8 +703,8 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 	// Drag the Threat scale slider to its end.
 	w, _ := a.uiSt().find("diff.f.ts")
 	track := sliderTrack(w.r)
-	f.press(t, a, int(track.right()), int(w.r.Y+9))
-	f.letGo(t, a, int(track.right()), int(w.r.Y+9))
+	f.press(t, a, int(track.Right()), int(w.r.Y+9))
+	f.letGo(t, a, int(track.Right()), int(w.r.Y+9))
 	if ng.cd.s.ThreatScale != 400 {
 		t.Fatalf("dragged threat scale = %d, want 400", ng.cd.s.ThreatScale)
 	}

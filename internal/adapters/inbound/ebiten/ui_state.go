@@ -76,7 +76,7 @@ func (a *App) uiPreInput(raw *rawInput) {
 // takes PageUp and PageDown.
 func (u *uiState) pageOwner(mx, my int) bool {
 	for _, w := range u.cur {
-		if w.wheel && (u.focus == w.id || w.r.hit(mx, my)) {
+		if w.wheel && (u.focus == w.id || w.r.Hit(mx, my)) {
 			return true
 		}
 	}
@@ -200,7 +200,7 @@ func (a *App) layoutHits(sw, sh int) []button {
 		if w.click == nil {
 			continue
 		}
-		b := w.r.asButton(w.id, w.label)
+		b := asButton(w.r, w.id, w.label)
 		b.disabled, b.reason = w.disabled, w.reason
 		out = append(out, b)
 	}
@@ -224,7 +224,7 @@ func (a *App) uiClick(id string) bool {
 // mouse wheel there (the colony camera does not zoom).
 func (a *App) uiWheelOver(mx, my int) bool {
 	for _, w := range a.uiSt().cur {
-		if w.wheel && w.r.hit(mx, my) {
+		if w.wheel && w.r.Hit(mx, my) {
 			return true
 		}
 	}
@@ -255,7 +255,7 @@ func (u *uiState) paintFocusRing(dst *ebiten.Image, layer int) {
 	}
 	for _, w := range u.cur {
 		if w.id == u.focus && w.layer == layer && w.focusable {
-			strokeRect(dst, w.r.inset(-2), uiFieldFocus)
+			strokeRect(dst, w.r.Inset(-2), uiFieldFocus)
 			return
 		}
 	}

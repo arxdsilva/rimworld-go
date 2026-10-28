@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -86,10 +87,10 @@ func thingPress(a *App, c cmdButton) {
 func thingTraceDraw(t *testing.T, fn func()) []traceEvent {
 	t.Helper()
 	var ev []traceEvent
-	drawTrace = func(e traceEvent) { ev = append(ev, e) }
-	t.Cleanup(func() { drawTrace = nil })
+	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 	fn()
-	drawTrace = nil
+	gfx.SetDrawTrace(nil)
 	return ev
 }
 
@@ -1015,7 +1016,7 @@ func TestThingCommandsFitTheGrid(t *testing.T) {
 				t.Errorf("%v at %dx%d: %d commands got %d cells", c.sel, sw.w, sw.h, len(cs), len(l.GridCells))
 			}
 			for _, cell := range l.GridCells {
-				if cell.X < l.Pane.right() || cell.right() > l.Global.X {
+				if cell.X < l.Pane.Right() || cell.Right() > l.Global.X {
 					t.Errorf("%v at %dx%d: cell %+v outside the grid band", c.sel, sw.w, sw.h, cell)
 				}
 			}
@@ -1053,7 +1054,7 @@ func TestThingPanesAndGridThroughTheLayout(t *testing.T) {
 		a.selectCand(c.sel)
 		f.frame(t, a)
 		l := a.hud()
-		if l.Pane.empty() || !a.paneShown() {
+		if l.Pane.Empty() || !a.paneShown() {
 			t.Fatalf("%v: no pane", c.sel)
 		}
 		assertChromeIsTheLayout(t, a) // the legacy panel area is not reserved
@@ -1069,11 +1070,11 @@ func TestThingPanesAndGridThroughTheLayout(t *testing.T) {
 				t.Errorf("%v: command %s has no hit target", c.sel, cm.ID)
 				continue
 			}
-			if got := (rect{b.x, b.y, b.w, b.h}); got != l.GridCells[i] {
+			if got := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}); got != l.GridCells[i] {
 				t.Errorf("%v: %s is at %+v, its cell is %+v", c.sel, cm.ID, got, l.GridCells[i])
 			}
 		}
-		px, py := l.Pane.center()
+		px, py := l.Pane.Center()
 		if !a.colonyChromeHit(int(px), int(py), a.sw, a.sh) {
 			t.Errorf("%v: a click on the pane would reach the map", c.sel)
 		}

@@ -101,7 +101,7 @@ func (a *App) handleMapMouse() {
 	f := &a.in
 	mx, my := a.mapCursor() // the press, the box and the double click live in map pixels
 	// the thresholds scale like the screen, then into map pixels
-	sc := max(1, a.scale.s) * a.scale.worldK()
+	sc := max(1, a.scale.S) * a.scale.WorldK()
 	boxMin, dblPx := int(boxMinPx*sc), int(doubleClickPx*sc)
 	switch {
 	case f.clicked(mbLeft):

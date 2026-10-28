@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func TestFrameStatsMatchProbeReport(t *testing.T) {
 		st.draw = append(st.draw, time.Duration(3+i%5)*time.Millisecond)
 	}
 	f := frameStats(st.frames, st.update, st.draw)
-	got := fpsReport(st, uiScaleState{s: 1, dev: 1})
+	got := fpsReport(st, uiScaleState{S: 1, Dev: 1})
 	want := fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; work avg %v p99 %v; scale s 1 dev 1 world 1; ",
 		200, f.FPS, f.Low1, f.FrameP99, f.UpdateAvg, f.UpdateP99, f.DrawAvg, f.DrawP99, f.UpdateAvg+f.DrawAvg, f.UpdateP99+f.DrawP99)
 	if len(got) < len(want) || got[:len(want)] != want {
@@ -80,8 +81,8 @@ func perfApp(t *testing.T, on bool) (*App, *fakeInput) {
 
 func traceDraw(a *App, w, h int, draw func(*ebiten.Image)) []traceEvent {
 	var evs []traceEvent
-	drawTrace = func(e traceEvent) { evs = append(evs, e) }
-	defer func() { drawTrace = nil }()
+	gfx.SetDrawTrace(func(e traceEvent) { evs = append(evs, e) })
+	defer func() { gfx.SetDrawTrace(nil) }()
 	draw(ebiten.NewImage(w, h))
 	return evs
 }
@@ -94,7 +95,7 @@ func TestPerfOverlayDrawsOnlyWhenOn(t *testing.T) {
 		if (len(evs) > 0) != on {
 			t.Fatalf("on=%v: %d draws", on, len(evs))
 		}
-		if !on && !a.hud().Perf.empty() {
+		if !on && !a.hud().Perf.Empty() {
 			t.Fatal("off but the layout reserves a rect")
 		}
 	}
@@ -104,7 +105,7 @@ func TestPerfOverlayShowsWithHiddenUI(t *testing.T) {
 	a, _ := perfApp(t, true)
 	a.seedPerfCapture()
 	a.hideUI = true
-	if a.hud().Perf.empty() {
+	if a.hud().Perf.Empty() {
 		t.Fatal("no rect")
 	}
 	evs := traceDraw(a, 1280, 720, func(img *ebiten.Image) { a.Draw(img) })
@@ -124,7 +125,7 @@ func TestPerfOverlayStaysInsideItsRect(t *testing.T) {
 			pw, ph := rightAtScale(t, a, f, s)
 			a.seedPerfCapture()
 			l := a.hud()
-			if l.Perf.empty() {
+			if l.Perf.Empty() {
 				t.Fatal("no Perf rect")
 			}
 			evs := traceDraw(a, pw, ph, func(img *ebiten.Image) { a.drawPerfOverlay(img, a.sw, a.sh) })
@@ -132,7 +133,7 @@ func TestPerfOverlayStaysInsideItsRect(t *testing.T) {
 			for _, e := range evs {
 				x, y, w, h := e.X/float32(s), e.Y/float32(s), e.W/float32(s), e.H/float32(s)
 				const eps = 0.6
-				if x < l.Perf.X-eps || y < l.Perf.Y-eps || x+w > l.Perf.right()+eps || y+h > l.Perf.bottom()+eps {
+				if x < l.Perf.X-eps || y < l.Perf.Y-eps || x+w > l.Perf.Right()+eps || y+h > l.Perf.Bottom()+eps {
 					t.Errorf("%s %q at %g,%g %gx%g leaves %+v", e.Kind, e.Text, x, y, w, h, l.Perf)
 				}
 				if e.Kind == "text" {
@@ -154,25 +155,25 @@ func TestPerfOverlayAvoidsHUDRegions(t *testing.T) {
 	for _, sz := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		for n, st := range map[string]hudState{"busy": busy, "idle": idle} {
 			l := computeHUDLayout(sz[0], sz[1], st)
-			if l.Perf.empty() {
+			if l.Perf.Empty() {
 				continue
 			}
 			for _, r := range append(l.chrome(), l.Minimap) {
 				if r == l.Perf {
 					continue
 				}
-				if i := l.Perf.intersect(r); i.W > 0 && i.H > 0 {
+				if i := l.Perf.Intersect(r); i.W > 0 && i.H > 0 {
 					t.Errorf("%s %v: perf %+v collides with %+v", n, sz, l.Perf, r)
 				}
 			}
-			if col := devColumn(l); !col.empty() {
-				if i := col.intersect(l.Perf); i.W > 0 && i.H > 0 {
+			if col := devColumn(l); !col.Empty() {
+				if i := col.Intersect(l.Perf); i.W > 0 && i.H > 0 {
 					t.Errorf("%s %v: dev column %+v overlaps perf %+v", n, sz, col, l.Perf)
 				}
 			}
 		}
 	}
-	if !computeHUDLayout(1280, 720, hudState{ResourcesH: 100, GlobalH: 150, PerfW: 215, PerfH: 120}).Perf.empty() == false {
+	if !computeHUDLayout(1280, 720, hudState{ResourcesH: 100, GlobalH: 150, PerfW: 215, PerfH: 120}).Perf.Empty() == false {
 		t.Error("an idle 1280x720 screen should fit the overlay")
 	}
 }

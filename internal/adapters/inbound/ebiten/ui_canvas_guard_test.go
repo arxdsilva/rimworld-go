@@ -49,17 +49,17 @@ import (
 // the canvas.
 var canvasExempt = map[string]string{
 	// the canvas itself: logical in, physical out
-	"ui_canvas.go:uiDrawImage":    "the canvas: logical in, physical out",
-	"ui_canvas.go:uiFillCircle":   "the canvas: logical in, physical out",
-	"ui_canvas.go:uiFillPoly":     "the canvas: logical in, physical out",
-	"ui_canvas.go:uiFillRect":     "the canvas: logical in, physical out",
-	"ui_canvas.go:uiImage":        "the canvas: logical in, physical out",
-	"ui_canvas.go:uiLine":         "the canvas: logical in, physical out",
-	"ui_canvas.go:uiStrokeCircle": "the canvas: logical in, physical out",
-	"ui_canvas.go:uiStrokeRect":   "the canvas: logical in, physical out",
-	"ui_canvas.go:uiTriangles":    "the canvas: logical in, physical out",
-	"ui_canvas.go:uiTriangles32":  "the canvas: logical in, physical out",
-	"font.go:drawText":            "the canvas's text path: scaled faces at physical positions",
+	"gfx/canvas.go:DrawImage":    "the canvas: logical in, physical out",
+	"gfx/canvas.go:FillCircle":   "the canvas: logical in, physical out",
+	"gfx/canvas.go:FillPoly":     "the canvas: logical in, physical out",
+	"gfx/canvas.go:FillRect":     "the canvas: logical in, physical out",
+	"gfx/canvas.go:Image":        "the canvas: logical in, physical out",
+	"gfx/canvas.go:Line":         "the canvas: logical in, physical out",
+	"gfx/canvas.go:StrokeCircle": "the canvas: logical in, physical out",
+	"gfx/canvas.go:StrokeRect":   "the canvas: logical in, physical out",
+	"gfx/canvas.go:Triangles":    "the canvas: logical in, physical out",
+	"gfx/canvas.go:Triangles32":  "the canvas: logical in, physical out",
+	"gfx/text.go:Text":           "the canvas's text path: scaled faces at physical positions",
 
 	// the world renderer
 	"renderer.go:drawDaylight":           "world: the sky tint over the map",
@@ -98,10 +98,10 @@ var canvasExempt = map[string]string{
 	"art_memory.go:bakeTint":             "world: tinted sprite texture baked offscreen on the GPU",
 	"grass_batch.go:flushGrass":          "world: grass batches",
 	"shadow.go:drawShadows":              "world: shadows",
-	"shadow.go:flush":                    "world: shadow triangle batch",
+	"gfx/batch.go:Flush":                 "world: shadow triangle batch",
 	"shadow_cast.go:castSilhouette":      "world: cast shadows",
 	"water_draw.go:drawWaterTile":        "world: water",
-	"world_scale.go:compositeWorld":      "world: the render-scaled map composited to the screen",
+	"gfx/worldpass.go:CompositeWorld":    "world: the render-scaled map composited to the screen",
 	"paths_draw.go:drawPaths":            "world: path lines",
 	"pen_draw.go:penSide":                "world: pen region outline on tiles",
 	"zones_draw.go:zoneFill":             "world: zone fill batch",
@@ -194,7 +194,6 @@ var hudFiles = []string{
 
 // hudFilesNot are files the globs above catch that are not HUD files.
 var hudFilesNot = []string{
-	"ui_canvas.go",      // the canvas
 	"world_ui.go",       // globe overlay
 	"order_queue_ui.go", // world route
 	"building_inspector.go",
@@ -242,6 +241,8 @@ func importNames(af *ast.File) map[string]string {
 			pkg = "ebitenutil"
 		case strings.HasSuffix(p, "/ebiten/v2/text/v2"), strings.HasSuffix(p, "/ebiten/v2/text"):
 			pkg = "text"
+		case strings.HasSuffix(p, "/inbound/ebiten/gfx"):
+			pkg = "gfx"
 		default:
 			continue
 		}
@@ -302,6 +303,15 @@ func scanFile(fset *token.FileSet, af *ast.File, base string) []*funcScan {
 			case *ast.CallExpr:
 				switch fn := x.Fun.(type) {
 				case *ast.SelectorExpr:
+					if id, ok := fn.X.(*ast.Ident); ok && pkgs[id.Name] == "gfx" { // the canvas package: logical in, physical out
+						switch fn.Sel.Name {
+						case "UIScale":
+							scan().UIScale = true
+						case "Text", "Icon", "Image", "DrawImage", "FillRect", "StrokeRect", "Line", "FillCircle", "StrokeCircle", "FillPoly", "Triangles", "Triangles32":
+							scan().Logical = append(scan().Logical, at(x, "gfx."+fn.Sel.Name))
+						}
+						return true
+					}
 					if rawMethods[fn.Sel.Name] {
 						scan().Raw = append(scan().Raw, at(x, "."+fn.Sel.Name))
 					}
@@ -329,20 +339,42 @@ func scanFile(fset *token.FileSet, af *ast.File, base string) []*funcScan {
 	return order
 }
 
-// scanPackage scans every non-test .go file of dir.
-func scanPackage(t testing.TB, dir string) []*funcScan {
+// packageFiles are the non-test .go files of dir and of its sub-packages
+// (the ebiten tree: a feature that moves into its own package stays
+// guarded), as slash paths relative to dir ("hud.go", "gfx/canvas.go").
+func packageFiles(t testing.TB, dir string) []string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	var files []string
+	err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if p != dir && (d.Name() == "fontdata" || strings.HasPrefix(d.Name(), ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasSuffix(p, ".go") && !strings.HasSuffix(p, "_test.go") {
+			rel, _ := filepath.Rel(dir, p)
+			files = append(files, filepath.ToSlash(rel))
+		}
+		return nil
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	sort.Strings(files)
+	return files
+}
+
+// scanPackage scans every non-test .go file of dir and its sub-packages.
+func scanPackage(t testing.TB, dir string) []*funcScan {
+	t.Helper()
 	fset := token.NewFileSet()
 	var out []*funcScan
-	for _, f := range files {
-		if strings.HasSuffix(f, "_test.go") {
-			continue
-		}
+	for _, rel := range packageFiles(t, dir) {
+		f := filepath.Join(dir, rel)
 		src, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)
@@ -351,7 +383,7 @@ func scanPackage(t testing.TB, dir string) []*funcScan {
 		if err != nil {
 			t.Fatal(err)
 		}
-		out = append(out, scanFile(fset, af, filepath.Base(f))...)
+		out = append(out, scanFile(fset, af, rel)...)
 	}
 	return out
 }
@@ -454,13 +486,10 @@ func mixesWorldAndLogical(s *funcScan) bool {
 func declaredFuncs(t testing.TB, dir string) (names map[string]bool, files []string) {
 	t.Helper()
 	names = map[string]bool{}
-	all, _ := filepath.Glob(filepath.Join(dir, "*.go"))
 	fset := token.NewFileSet()
-	for _, f := range all {
-		if strings.HasSuffix(f, "_test.go") {
-			continue
-		}
-		files = append(files, filepath.Base(f))
+	for _, rel := range packageFiles(t, dir) {
+		f := filepath.Join(dir, rel)
+		files = append(files, rel)
 		af, err := parser.ParseFile(fset, f, nil, 0)
 		if err != nil {
 			t.Fatal(err)
@@ -559,7 +588,7 @@ func TestGuardRule3HUDFiles(t *testing.T) {
 	if !isHUDFile("hud.go") || !isHUDFile("screen_menu.go") || !isHUDFile("plant_inspector.go") || !isHUDFile("climate_ui.go") {
 		t.Error("HUD/panel files not recognised")
 	}
-	if isHUDFile("ui_canvas.go") || isHUDFile("renderer.go") || isHUDFile("building_inspector.go") || isHUDFile("order_queue_ui.go") {
+	if isHUDFile("gfx/canvas.go") || isHUDFile("renderer.go") || isHUDFile("building_inspector.go") || isHUDFile("order_queue_ui.go") {
 		t.Error("canvas, world and mixed files are not HUD files")
 	}
 	src := "package p\nfunc bar(r R) { r.solidRect(dst, 1, 2, 3, 4, c); drawSprite(dst, k) }\nfunc ok(r R) { uiFillRect(dst, 1, 2, 3, 4, c, false) }\n"

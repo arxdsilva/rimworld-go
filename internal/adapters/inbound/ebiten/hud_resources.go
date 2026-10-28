@@ -163,7 +163,7 @@ func (a *App) resourceViewport(r rect, contentH float32) (view rect, off float32
 	if contentH <= r.H {
 		return r, 0
 	}
-	view = rect{r.X, r.Y, max(0, r.W-scrollBarW), r.H}
+	view = rect{X: r.X, Y: r.Y, W: max(0, r.W-scrollBarW), H: r.H}
 	off = max(0, min(contentH-r.H, a.uiSt().scroll[resScrollID]))
 	return view, off
 }
@@ -175,7 +175,7 @@ func (a *App) resourcesUI(sw, sh int) {
 		return
 	}
 	r := a.hud().Resources
-	if ch := a.resourcesHeight(); !r.empty() && ch > r.H {
+	if ch := a.resourcesHeight(); !r.Empty() && ch > r.H {
 		a.uiScrollArea(resScrollID, r, ch, scrollOpts{Step: resourceRowH * 3})
 		return
 	}
@@ -191,15 +191,15 @@ func (a *App) resourceButtons() []button {
 		return nil
 	}
 	r := a.hud().Resources
-	if r.empty() {
+	if r.Empty() {
 		return nil
 	}
 	rows := a.resourceRows()
 	view, off := a.resourceViewport(r, float32(len(rows))*resourceRowH)
 	out := make([]button, 0, len(rows))
 	for i, row := range rows {
-		rr := rect{view.X, view.Y + float32(i)*resourceRowH - off, view.W, resourceRowH}.intersect(view)
-		if rr.empty() {
+		rr := rect{X: view.X, Y: view.Y + float32(i)*resourceRowH - off, W: view.W, H: resourceRowH}.Intersect(view)
+		if rr.Empty() {
 			continue
 		}
 		b := button{x: rr.X, y: rr.Y, w: rr.W, h: rr.H}
@@ -239,7 +239,7 @@ func (a *App) rightClickResources(mx, my int) bool {
 		return false
 	}
 	r := a.hud().Resources
-	return !r.empty() && r.hit(mx, my)
+	return !r.Empty() && r.Hit(mx, my)
 }
 
 // ---- drawing ---------------------------------------------------------------
@@ -285,7 +285,7 @@ func (a *App) drawResources(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	r := a.hud().Resources
-	if r.empty() {
+	if r.Empty() {
 		return
 	}
 	rows := a.resourceRows()
@@ -297,11 +297,11 @@ func (a *App) drawResources(screen *ebiten.Image, sw, sh int) {
 	}
 	mx, my := a.currentCursor()
 	for i, row := range rows {
-		line := rect{view.X, view.Y + float32(i)*resourceRowH - off, view.W, resourceRowH}
-		if line.bottom() <= view.Y || line.Y >= view.bottom() {
+		line := rect{X: view.X, Y: view.Y + float32(i)*resourceRowH - off, W: view.W, H: resourceRowH}
+		if line.Bottom() <= view.Y || line.Y >= view.Bottom() {
 			continue
 		}
-		hover := view.hit(mx, my) && line.hit(mx, my)
+		hover := view.Hit(mx, my) && line.Hit(mx, my)
 		if row.header {
 			a.drawResourceHeader(dst, line, row, hover)
 		} else {
@@ -352,7 +352,7 @@ func (a *App) drawResourceHeader(dst *ebiten.Image, line rect, row resRow, hover
 	drawText(dst, ellipsize(row.label, st, float64(line.W-2*resPad-48)), float64(line.X+resPad+14), float64(line.Y)+(float64(line.H)-lineH(st))/2, st)
 	tot := withColor(tsSmall, uiTextDim)
 	tot.Align = alignRight
-	drawText(dst, strconv.Itoa(row.qty), float64(line.right()-resPad-2), float64(line.Y)+(float64(line.H)-lineH(tot))/2, tot)
+	drawText(dst, strconv.Itoa(row.qty), float64(line.Right()-resPad-2), float64(line.Y)+(float64(line.H)-lineH(tot))/2, tot)
 }
 
 // firstLetter is the first rune of s, upper case ("" for none).

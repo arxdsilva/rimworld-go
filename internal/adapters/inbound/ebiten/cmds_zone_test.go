@@ -333,7 +333,7 @@ func TestZonePaneAndGridAtUIScales(t *testing.T) {
 				a.selectCand(selCand{selZone, entityOf(z.ID)})
 				f.frame(t, a)
 				l := a.hud()
-				if l.Pane.empty() || !a.paneShown() {
+				if l.Pane.Empty() || !a.paneShown() {
 					t.Fatalf("%s: no pane", name)
 				}
 				if bad := layoutOverlaps(l, sw, sh); len(bad) > 0 {
@@ -351,17 +351,17 @@ func TestZonePaneAndGridAtUIScales(t *testing.T) {
 						t.Errorf("%s: %s has no hit target", name, cm.ID)
 						continue
 					}
-					if got := (rect{b.x, b.y, b.w, b.h}); got != l.GridCells[i] {
+					if got := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}); got != l.GridCells[i] {
 						t.Errorf("%s: %s is at %+v, its cell is %+v", name, cm.ID, got, l.GridCells[i])
 					}
-					if cell := l.GridCells[i]; cell.X < l.Pane.right() || cell.right() > l.Global.X {
+					if cell := l.GridCells[i]; cell.X < l.Pane.Right() || cell.Right() > l.Global.X {
 						t.Errorf("%s: cell %+v of %s outside the grid band", name, cell, cm.ID)
 					}
 				}
 				if _, ok := hasButton(hits, "zone.close"); !ok {
 					t.Errorf("%s: no close button", name)
 				}
-				px, py := l.Pane.center()
+				px, py := l.Pane.Center()
 				if !a.colonyChromeHit(int(px), int(py), a.sw, a.sh) {
 					t.Errorf("%s: a click on the pane would reach the map", name)
 				}

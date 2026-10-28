@@ -74,7 +74,7 @@ func (a *App) assignTabUI(sw, sh int) {
 		if b.id != ids.TabAssign || b.disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleAssign})
+		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleAssign})
 	}
 }
 
@@ -145,17 +145,17 @@ func (a *App) assignBody(body rect) {
 	if a.renderer == nil {
 		return
 	}
-	head, rest := body.splitV(assignHeadH)
+	head, rest := body.SplitV(assignHeadH)
 	hs := withColor(tsLabel, uiHeading)
 	a.uiLabel(head.X, head.Y, "Colonist", hs)
 	a.uiLabel(head.X+assignNameW, head.Y, "Drugs", hs)
-	a.uiTip("assign.head.drugs", rect{head.X + assignNameW, head.Y, 120, head.H}, assignDrugTip)
+	a.uiTip("assign.head.drugs", rect{X: head.X + assignNameW, Y: head.Y, W: 120, H: head.H}, assignDrugTip)
 	careX := head.X + assignNameW + assignDrugW + 10
 	a.uiLabel(careX, head.Y, "Medical", hs)
-	a.uiTip("assign.head.care", rect{careX, head.Y, 120, head.H}, assignCareTip)
-	rest, foot := rest.splitV(rest.H - 2*assignRowH) // MED-03: the default care row
+	a.uiTip("assign.head.care", rect{X: careX, Y: head.Y, W: 120, H: head.H}, assignCareTip)
+	rest, foot := rest.SplitV(rest.H - 2*assignRowH) // MED-03: the default care row
 	a.assignDefaultCare(foot)
-	if a.uiButton("assign.areas", rect{head.right() - 120, head.Y - 2, 120, head.H}, "Manage areas",
+	if a.uiButton("assign.areas", rect{X: head.Right() - 120, Y: head.Y - 2, W: 120, H: head.H}, "Manage areas",
 		btnOpts{Tip: "Allowed areas\nMake, rename, invert and delete areas. Pick a colonist's area in the Schedule tab, an animal's in the Animals tab."}) {
 		a.openAreaManager() // areas_ui.go
 	}
@@ -167,14 +167,14 @@ func (a *App) assignBody(body rect) {
 	area := a.uiScrollArea("assign.rows", rest, float32(len(rows)*assignRowH), scrollOpts{Step: assignRowH * 2})
 	y := area.View.Y - area.Off
 	for _, r := range rows {
-		rr := rect{area.View.X, y, area.View.W, assignRowH - 4}
+		rr := rect{X: area.View.X, Y: y, W: area.View.W, H: assignRowH - 4}
 		y += assignRowH
-		if rr.Y < area.View.Y || rr.bottom() > area.View.bottom() {
+		if rr.Y < area.View.Y || rr.Bottom() > area.View.Bottom() {
 			continue // outside the view: no widgets
 		}
 		a.uiLabel(rr.X, rr.Y+(rr.H-float32(lineH(tsBody)))/2, ellipsize(r.name, tsBody, assignNameW-12), tsBody)
 		a.assignCareButton(r, rr) // MED-03
-		br := rect{rr.X + assignNameW, rr.Y, min(assignDrugW, rr.W-assignNameW), rr.H}
+		br := rect{X: rr.X + assignNameW, Y: rr.Y, W: min(assignDrugW, rr.W-assignNameW), H: rr.H}
 		id := assignDrugID(r.id)
 		if !r.known {
 			a.uiButton(id, br, "-", btnOpts{Disabled: true, Reason: "Drug policies are not available in this game."})
@@ -188,7 +188,7 @@ func (a *App) assignBody(body rect) {
 
 // assignCareButton is a colonist's medical care button (MED-03).
 func (a *App) assignCareButton(r assignRow, rr rect) {
-	cr := rect{rr.X + assignNameW + assignDrugW + 10, rr.Y, min(assignCareW, rr.W-assignNameW-assignDrugW-10), rr.H}
+	cr := rect{X: rr.X + assignNameW + assignDrugW + 10, Y: rr.Y, W: min(assignCareW, rr.W-assignNameW-assignDrugW-10), H: rr.H}
 	if a.uiButton(assignCareID(r.id), cr, r.care.Label(), btnOpts{Tip: assignCareTip}) {
 		a.shell.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(nextCare(r.care))})
 	}
@@ -206,7 +206,7 @@ func (a *App) assignDefaultCare(r rect) {
 	y := r.Y + assignRowH
 	bw := (r.W - 8) / float32(medcare.NumGroups)
 	for g := medcare.Group(0); g < medcare.NumGroups; g++ {
-		br := rect{r.X + float32(g)*bw, y, bw - 6, assignRowH - 4}
+		br := rect{X: r.X + float32(g)*bw, Y: y, W: bw - 6, H: assignRowH - 4}
 		cur := medcare.Policy(def[g])
 		tip := "Default care: " + g.Label() + "\nNow " + cur.Label() + ". Anyone in this group without a level of its own gets it. A click picks the next level."
 		if !known {

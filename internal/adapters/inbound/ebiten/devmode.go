@@ -216,10 +216,10 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 	}
 	st := a.devStack()
 	a.drawMapFieldLegend(screen)
-	if !st.Log.empty() {
+	if !st.Log.Empty() {
 		a.drawDebugLog(screen, st.Log)
 	}
-	if !st.Insp.empty() {
+	if !st.Insp.Empty() {
 		a.drawDebugInspector(screen, st.Insp)
 	}
 }
@@ -229,16 +229,16 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 // above the lower-left stack (pane, Architect, window, command buttons)
 // and left of the right column. Empty when there is no room.
 func devColumn(l hudLayout) rect {
-	x := max(l.Resources.right(), hudMargin+resourcesW) + hudMargin
+	x := max(l.Resources.Right(), hudMargin+resourcesW) + hudMargin
 	y := float32(hudMargin)
 	for _, r := range []rect{l.Bar, l.Messages, l.Perf} {
-		if !r.empty() {
-			y = max(y, r.bottom()+hudMargin)
+		if !r.Empty() {
+			y = max(y, r.Bottom()+hudMargin)
 		}
 	}
 	bottom := l.Tabs.Y - hudMargin
 	for _, r := range []rect{l.Window, l.Expanded, l.PaneTabs, l.ArchDesc, l.ArchCats, l.Grid} {
-		if !r.empty() {
+		if !r.Empty() {
 			bottom = min(bottom, r.Y-hudMargin)
 		}
 	}
@@ -246,7 +246,7 @@ func devColumn(l hudLayout) rect {
 	if w <= 0 || h <= 0 {
 		return rect{}
 	}
-	return rect{x, y, w, h}
+	return rect{X: x, Y: y, W: w, H: h}
 }
 
 // devPanelRects are the developer panels' rects (empty: not shown).
@@ -261,15 +261,15 @@ func (a *App) devStack() devPanelRects {
 		return st
 	}
 	col := devColumn(a.hud())
-	if col.empty() {
+	if col.Empty() {
 		return st
 	}
 	y := col.Y
 	place := func(w, h float32) rect {
-		if h <= 0 || y+h > col.bottom() {
+		if h <= 0 || y+h > col.Bottom() {
 			return rect{}
 		}
-		r := rect{col.X, y, min(w, col.W), h}
+		r := rect{X: col.X, Y: y, W: min(w, col.W), H: h}
 		y += h + hudGap
 		return r
 	}
@@ -280,7 +280,7 @@ func (a *App) devStack() devPanelRects {
 		st.Insp = place(a.debugInspectorSize())
 	}
 	if a.dev.log {
-		lines := a.debugLogShown(int((col.bottom()-y-devLogChrome)/devStep), col.W-20)
+		lines := a.debugLogShown(int((col.Bottom()-y-devLogChrome)/devStep), col.W-20)
 		if len(lines) > 0 {
 			var w float32
 			for _, l := range lines {

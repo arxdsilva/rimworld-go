@@ -63,7 +63,7 @@ func (a *App) rightClickRightColumn(mx, my int) bool {
 	}
 	l := a.hud()
 	for _, row := range a.alertRows(l) {
-		if row.r.hit(mx, my) {
+		if row.r.Hit(mx, my) {
 			if row.more == 0 {
 				a.cycleAlert(row.al.key, -1)
 			}
@@ -71,7 +71,7 @@ func (a *App) rightClickRightColumn(mx, my int) bool {
 		}
 	}
 	for _, row := range a.letterRows(l) {
-		if row.r.hit(mx, my) {
+		if row.r.Hit(mx, my) {
 			if row.older == 0 {
 				a.dismissLetter(row.letter.ID)
 			}
@@ -79,7 +79,7 @@ func (a *App) rightClickRightColumn(mx, my int) bool {
 		}
 	}
 	for _, r := range []rect{l.Alerts, l.Letters, l.Messages} {
-		if !r.empty() && r.hit(mx, my) {
+		if !r.Empty() && r.Hit(mx, my) {
 			return true
 		}
 	}
@@ -127,7 +127,7 @@ func (a *App) rightHover(l hudLayout) (rightCard, rect, bool) {
 	}
 	mx, my := a.currentCursor()
 	for _, row := range a.alertRows(l) {
-		if !row.r.hit(mx, my) {
+		if !row.r.Hit(mx, my) {
 			continue
 		}
 		if row.more > 0 {
@@ -155,7 +155,7 @@ func (a *App) rightHover(l hudLayout) (rightCard, rect, bool) {
 		return rightCard{title: al.label, body: body, clr: clr}, row.r, true
 	}
 	for _, row := range a.letterRows(l) {
-		if !row.r.hit(mx, my) {
+		if !row.r.Hit(mx, my) {
 			continue
 		}
 		if row.older > 0 {
@@ -200,7 +200,7 @@ func layoutRightCard(c rightCard, anchor rect, sw, sh int) (box rect, title, bod
 	x = max(x, hudMargin)
 	y := min(anchor.Y, float32(sh)-hudMargin-bh)
 	y = max(y, hudMargin)
-	return rect{x, y, bw, bh}, title, body
+	return rect{X: x, Y: y, W: bw, H: bh}, title, body
 }
 
 // drawRightCard paints a card beside anchor.
@@ -208,7 +208,7 @@ func drawRightCard(screen *ebiten.Image, c rightCard, anchor rect, sw, sh int) {
 	box, title, body := layoutRightCard(c, anchor, sw, sh)
 	fillRect(screen, box, uiTooltip)
 	strokeRect(screen, box, uiTooltipEdge)
-	fillRect(screen, rect{box.X, box.Y, rightCardBar, box.H}, c.clr)
+	fillRect(screen, rect{X: box.X, Y: box.Y, W: rightCardBar, H: box.H}, c.clr)
 	x, y := float64(box.X+rightCardBar+rightCardPad), float64(box.Y+rightCardPad)
 	for _, ln := range title {
 		drawText(screen, ln, x, y, withColor(tsLabel, uiHeading))

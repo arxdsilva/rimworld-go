@@ -68,7 +68,7 @@ func (a *App) worldTabUI(sw, sh int) {
 		if b.id != ids.TabWorld || b.disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleWorld})
+		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleWorld})
 	}
 }
 
@@ -136,7 +136,7 @@ func (a *App) worldBody(st *worldUI, body rect) {
 		return
 	}
 	view := a.renderer.game.WorldMap()
-	globeR, list := body.splitH(body.W - worldListW)
+	globeR, list := body.SplitH(body.W - worldListW)
 	globeR.W -= 12
 	a.worldGlobe(st, globeR, view)
 	a.worldList(st, list, view)
@@ -175,7 +175,7 @@ func (a *App) worldGlobe(st *worldUI, r rect, view game.WorldMapView) {
 	}
 	g.Highlight(tiles, 2)
 	mx, my := a.currentCursor()
-	blocked := a.uiModalTop() != worldModalID || !r.hit(mx, my)
+	blocked := a.uiModalTop() != worldModalID || !r.Hit(mx, my)
 	if clicked, _ := g.Update(globeInputFrom(&a.in, a.sw, a.sh, blocked), a.settings.Accessibility.ReducedMotion); clicked >= 0 {
 		st.picked = clicked
 	}
@@ -198,7 +198,7 @@ func (a *App) worldGlobe(st *worldUI, r rect, view game.WorldMapView) {
 		}
 		line = "Picked: " + name
 	}
-	a.uiLabel(r.X+6, r.bottom()-float32(lineH(tsSmall))-4, line, withColor(tsSmall, uiTextDim))
+	a.uiLabel(r.X+6, r.Bottom()-float32(lineH(tsSmall))-4, line, withColor(tsSmall, uiTextDim))
 }
 
 // drawCaravanMarks draws each caravan's marker on the globe's facing side.
@@ -251,7 +251,7 @@ func caravanReturnLabel(c game.CaravanView) (label, reason string) {
 
 // worldList declares the caravan list (the §35 inspector rows).
 func (a *App) worldList(st *worldUI, r rect, view game.WorldMapView) {
-	head, rest := r.splitV(28)
+	head, rest := r.SplitV(28)
 	a.uiLabel(head.X, head.Y, "Caravans", withColor(tsLabel, uiHeading))
 	if len(view.Caravans) == 0 {
 		a.uiLabel(rest.X, rest.Y+4, worldNoCaravans, dimText())
@@ -260,13 +260,13 @@ func (a *App) worldList(st *worldUI, r rect, view game.WorldMapView) {
 	area := a.uiScrollArea("world.caravans", rest, float32(len(view.Caravans)*worldRowH), scrollOpts{Step: worldRowH})
 	y := area.View.Y - area.Off
 	for _, c := range view.Caravans {
-		row := rect{area.View.X, y, area.View.W - 4, worldRowH - 6}
+		row := rect{X: area.View.X, Y: y, W: area.View.W - 4, H: worldRowH - 6}
 		y += worldRowH
-		if row.Y < area.View.Y || row.bottom() > area.View.bottom() {
+		if row.Y < area.View.Y || row.Bottom() > area.View.Bottom() {
 			continue
 		}
 		id := fmt.Sprintf("world.caravan.%d", c.ID)
-		pick := rect{row.X, row.Y, row.W - 116, row.H} // the Return button sits beside it
+		pick := rect{X: row.X, Y: row.Y, W: row.W - 116, H: row.H} // the Return button sits beside it
 		// the hover card lists every member's health (caravan_ui.go)
 		if a.uiButton(id, pick, "", btnOpts{Selected: st.sel == c.ID, Tip: caravanTip(c)}) {
 			st.sel = c.ID
@@ -281,7 +281,7 @@ func (a *App) worldList(st *worldUI, r rect, view game.WorldMapView) {
 		}
 		a.uiLabel(row.X+8, row.Y+26, ellipsize(where, tsSmall, float64(row.W-16)), withColor(tsSmall, uiTextDim))
 		label, reason := caravanReturnLabel(c)
-		br := rect{row.right() - 108, row.bottom() - 30, 100, 26}
+		br := rect{X: row.Right() - 108, Y: row.Bottom() - 30, W: 100, H: 26}
 		if a.uiButton(id+".return", br, label, btnOpts{Disabled: reason != "", Reason: reason,
 			Tip: "Return\nThe caravan turns round and comes home the way it went."}) {
 			a.shell.Enqueue(command.Command{Kind: command.CaravanReturn, Target: c.ID})

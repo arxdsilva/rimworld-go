@@ -204,8 +204,8 @@ func TestJourneySelectHideUI(t *testing.T) {
 	if len(slots) == 0 {
 		t.Fatal("no colonist bar")
 	}
-	s := float32(j.a.scale.s)
-	cx, cy := slots[0].center()
+	s := float32(j.a.scale.S)
+	cx, cy := slots[0].Center()
 	j.key("F11", 0)
 	if !j.a.hideUI {
 		t.Fatal("F11 did not hide the interface")

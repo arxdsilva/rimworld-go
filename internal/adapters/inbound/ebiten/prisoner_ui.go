@@ -148,11 +148,11 @@ func (a *App) prisonerTab(p game.PawnView, in rect) {
 	y += float32(lineStep(tsBody)) + 8
 
 	a.uiLabel(in.X, y, fmt.Sprintf("Resistance %d", v.Resistance), tsBody)
-	bar := rect{in.X + 120, y + 4, in.W - 120, 10}
+	bar := rect{X: in.X + 120, Y: y + 4, W: in.W - 120, H: 10}
 	frac := min(float32(v.Resistance)/float32(prisonerResMax), 1)
 	a.uiSt().queue(func(dst *ebiten.Image) {
 		fillRect(dst, bar, uiSliderTrack)
-		fillRect(dst, rect{bar.X, bar.Y, bar.W * frac, bar.H}, uiSliderFill)
+		fillRect(dst, rect{X: bar.X, Y: bar.Y, W: bar.W * frac, H: bar.H}, uiSliderFill)
 	})
 	y += float32(lineStep(tsBody)) + 10
 
@@ -160,7 +160,7 @@ func (a *App) prisonerTab(p game.PawnView, in rect) {
 	y += float32(lineStep(tsLabel)) + 4
 	const bw, bh, gap = 120, 24, 8
 	for i, m := range prisonerModes {
-		br := rect{in.X + float32(i%3)*(bw+gap), y + float32(i/3)*(bh+6), bw, bh}
+		br := rect{X: in.X + float32(i%3)*(bw+gap), Y: y + float32(i/3)*(bh+6), W: bw, H: bh}
 		o := btnOpts{Selected: uint8(m.mode) == v.Mode, Tip: m.label + "\n" + m.tip}
 		if m.mode == prisoner.Execute {
 			o.Style = btnDanger
@@ -169,7 +169,7 @@ func (a *App) prisonerTab(p game.PawnView, in rect) {
 			a.shell.Enqueue(command.Command{Kind: command.SetPrisonerMode, Target: uint64(p.ID), Mode: uint8(m.mode)})
 		}
 	}
-	rel := rect{in.X + 2*(bw+gap), y + bh + 6, bw, bh}
+	rel := rect{X: in.X + 2*(bw+gap), Y: y + bh + 6, W: bw, H: bh}
 	ro := btnOpts{Tip: "Release now\nThe prisoner gets up and walks home."}
 	if p.Status != "alive" {
 		ro.Disabled, ro.Reason = true, "too hurt to walk out"

@@ -16,7 +16,7 @@ commands via `Enqueue`. Domain code does not import this package.
 
 - `App` — `ebiten.Game` shell, screen stack, overlay (pause), HUD
 - widgets: panel, label, button (hover/disabled), and the immediate-mode widget kit (see below)
-- the real font (`font.go`, Noto Sans embedded from `fontdata/`)
+- the real font (`gfx/text.go`, Noto Sans embedded from `gfx/fontdata/`)
 - the new-game wizard screens (`screen_*.go`, draft in `newgame_state.go`), the setup backdrop and the globe (`globe.go`, `globemath/`)
 - big-map rendering: chunk read models, zoom tiers (`lod.go`, `chunk_cache.go`) and the minimap (`minimap.go`)
 - UI chrome tokens (`assets/palettes/ui.yaml`, mirrored in Go)

@@ -6,7 +6,7 @@ import (
 )
 
 func htOverlaps(a, b rect) bool {
-	return !a.empty() && !b.empty() && a.X < b.right() && b.X < a.right() && a.Y < b.bottom() && b.Y < a.bottom()
+	return !a.Empty() && !b.Empty() && a.X < b.Right() && b.X < a.Right() && a.Y < b.Bottom() && b.Y < a.Bottom()
 }
 
 // PLAY-018: the search box sits centred under the colonist bar, clear of
@@ -19,17 +19,17 @@ func TestSearchBoxClearOfTheTopRegions(t *testing.T) {
 			a, _ := htApp(t, &stubSim{pawns: htPawns(tc.n)}, tc.sw, tc.sh)
 			a.openSearch()
 			r := a.searchRect(tc.sw)
-			box := rect{r.x, r.y, r.w, r.h}
+			box := rect{X: r.x, Y: r.y, W: r.w, H: r.h}
 			l := a.hud()
 			for name, other := range map[string]rect{"bar": l.Bar, "resources": l.Resources, "right column": l.Right, "learning helper": l.Learn} {
 				if htOverlaps(box, other) {
 					t.Errorf("search box %+v overlaps the %s %+v", box, name, other)
 				}
 			}
-			if !l.Bar.empty() && box.Y < l.Bar.bottom() {
-				t.Errorf("search box top %v is not under the bar (bottom %v)", box.Y, l.Bar.bottom())
+			if !l.Bar.Empty() && box.Y < l.Bar.Bottom() {
+				t.Errorf("search box top %v is not under the bar (bottom %v)", box.Y, l.Bar.Bottom())
 			}
-			if box.X < 0 || box.right() > float32(tc.sw) {
+			if box.X < 0 || box.Right() > float32(tc.sw) {
 				t.Errorf("search box %+v leaves the %d px window", box, tc.sw)
 			}
 			if mid := box.X + box.W/2; mid < float32(tc.sw)/2-1 || mid > float32(tc.sw)/2+1 {
@@ -37,7 +37,7 @@ func TestSearchBoxClearOfTheTopRegions(t *testing.T) {
 			}
 			// the result rows follow the box
 			for _, b := range a.searchButtons(tc.sw) {
-				if b.x < box.X || b.x+b.w > box.right() || b.y < box.Y {
+				if b.x < box.X || b.x+b.w > box.Right() || b.y < box.Y {
 					t.Errorf("search button %s %+v outside the box", b.id, b)
 				}
 			}

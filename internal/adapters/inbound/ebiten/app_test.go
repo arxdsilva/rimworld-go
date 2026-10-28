@@ -178,7 +178,7 @@ func click(t *testing.T, a *App, id string) {
 		a.hint = reason
 		return
 	}
-	s := float32(a.scale.s)
+	s := float32(a.scale.S)
 	f.cur.mx, f.cur.my = int(x*s), int(y*s)
 	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
 	quitFrame(t, a)
@@ -285,7 +285,7 @@ func elementAt(a *App, id string) (x, y float32, disabled bool, reason string, o
 		}
 	}
 	if w, found := a.uiSt().find(id); found {
-		x, y = w.r.center()
+		x, y = w.r.Center()
 		return x, y, false, "", true
 	}
 	return 0, 0, false, "", false
@@ -516,17 +516,17 @@ func TestBodyOriginClearsLeftRail(t *testing.T) {
 	for _, size := range [][2]int{{1280, 720}, {1920, 1080}} {
 		_, _, content, _ := dialogFrame(size[0], size[1])
 		L := scenarioRects(content)
-		if L.right.X < L.left.right() || L.list.right() > L.left.right()+0.5 {
-			t.Fatalf("%v scenario details start at %v, list ends at %v", size, L.right.X, L.left.right())
+		if L.right.X < L.left.Right() || L.list.Right() > L.left.Right()+0.5 {
+			t.Fatalf("%v scenario details start at %v, list ends at %v", size, L.right.X, L.left.Right())
 		}
 		if L.right.X < content.X+content.W*0.38 {
 			t.Fatalf("%v scenario details x=%v, want right of the 38%% list column", size, L.right.X)
 		}
-		if L.right.right() > content.right()+0.5 || L.buttons.bottom() > content.bottom()+0.5 {
+		if L.right.Right() > content.Right()+0.5 || L.buttons.Bottom() > content.Bottom()+0.5 {
 			t.Fatalf("%v scenario columns leave the content area", size)
 		}
 		S := storyRects(content)
-		if S.centre.X < S.left.right() || S.right.X < S.centre.right() || S.right.right() > content.right()+0.5 {
+		if S.centre.X < S.left.Right() || S.right.X < S.centre.Right() || S.right.Right() > content.Right()+0.5 {
 			t.Fatalf("%v storyteller columns overlap: %+v", size, S)
 		}
 	}
@@ -566,7 +566,7 @@ func TestWorldGenerateStaysInFooter(t *testing.T) {
 		t.Fatal("missing world.generate")
 	}
 	_, _, _, footer := dialogFrame(a.sw, a.sh)
-	if w.disabled || w.r.Y < footer.Y || w.r.bottom() > footer.bottom() {
+	if w.disabled || w.r.Y < footer.Y || w.r.Bottom() > footer.Bottom() {
 		t.Fatalf("Generate at %+v should be enabled in the footer %+v", w.r, footer)
 	}
 }

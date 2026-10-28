@@ -103,14 +103,14 @@ func (a *App) socialTab(p game.PawnView, in rect) {
 		a.uiLabel(in.X, top, noDataYet, dimText())
 		return
 	}
-	rowsH := (in.bottom() - top) * 0.55
-	rows := rect{in.X, top, in.W, rowsH}
+	rowsH := (in.Bottom() - top) * 0.55
+	rows := rect{X: in.X, Y: top, W: in.W, H: rowsH}
 	a.socialRows(rows, s.Relations)
 
-	ly := rows.bottom() + 8
+	ly := rows.Bottom() + 8
 	a.uiLabel(in.X, ly, "Social log", tsLabel)
 	ly += float32(lineStep(tsLabel)) + 2
-	a.socialLog(rect{in.X, ly, in.W, in.bottom() - ly}, s.Log)
+	a.socialLog(rect{X: in.X, Y: ly, W: in.W, H: in.Bottom() - ly}, s.Log)
 }
 
 // socialRows is the scrollable relation list.
@@ -128,7 +128,7 @@ func (a *App) socialRows(r rect, rels []game.RelationRowView) {
 	var shown []vis
 	for i := range rels {
 		y := area.View.Y + float32(i)*socialRowH - area.Off
-		if y+socialRowH < area.View.Y || y > area.View.bottom() {
+		if y+socialRowH < area.View.Y || y > area.View.Bottom() {
 			continue
 		}
 		shown = append(shown, vis{i, y})
@@ -136,11 +136,11 @@ func (a *App) socialRows(r rect, rels []game.RelationRowView) {
 	u.queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for _, v := range shown {
-			paintRelationRow(sub, rect{area.View.X, v.y, area.View.W, socialRowH}, rels[v.i], v.i%2 == 1)
+			paintRelationRow(sub, rect{X: area.View.X, Y: v.y, W: area.View.W, H: socialRowH}, rels[v.i], v.i%2 == 1)
 		}
 	})
 	for _, v := range shown {
-		hit := rect{area.View.X, v.y, area.View.W, socialRowH}.intersect(area.View)
+		hit := rect{X: area.View.X, Y: v.y, W: area.View.W, H: socialRowH}.Intersect(area.View)
 		a.uiSt().add(uiWidget{id: fmt.Sprintf("social.row.%d", v.i), r: hit, label: relationLine(rels[v.i]), tip: relationTip(rels[v.i])})
 	}
 }
@@ -185,11 +185,11 @@ func paintRelationRow(dst *ebiten.Image, row rect, r game.RelationRowView, strip
 	big := tsLabel
 	big.Color = opinionColor(r.OpinionTo)
 	big.Align = alignRight
-	drawText(dst, fmt.Sprintf("%+d", r.OpinionTo), float64(row.right()-48), float64(row.Y)+(float64(row.H)-lineH(big))/2, big)
+	drawText(dst, fmt.Sprintf("%+d", r.OpinionTo), float64(row.Right()-48), float64(row.Y)+(float64(row.H)-lineH(big))/2, big)
 	sm := small
 	sm.Color = opinionColor(r.OpinionFrom)
 	sm.Align = alignRight
-	drawText(dst, fmt.Sprintf("(%+d)", r.OpinionFrom), float64(row.right()-6), sy, sm)
+	drawText(dst, fmt.Sprintf("(%+d)", r.OpinionFrom), float64(row.Right()-6), sy, sm)
 }
 
 // socialLog is the scrollable social log, newest first.
@@ -205,7 +205,7 @@ func (a *App) socialLog(r rect, log []game.SocialLogLineView) {
 		sub := clipTo(dst, area.View)
 		for i, l := range lines {
 			y := area.View.Y + float32(i)*socialLogRowH - area.Off
-			if y+socialLogRowH < area.View.Y || y > area.View.bottom() {
+			if y+socialLogRowH < area.View.Y || y > area.View.Bottom() {
 				continue
 			}
 			st := tsSmall

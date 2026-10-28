@@ -18,7 +18,7 @@ func sparkPoints(vals []int, r rect) [][2]float32 {
 	for _, v := range vals {
 		lo, hi = min(lo, v), max(hi, v)
 	}
-	in := r.inset(sparkPad)
+	in := r.Inset(sparkPad)
 	pts := make([][2]float32, len(vals))
 	for i, v := range vals {
 		x := in.X + in.W/2
@@ -27,7 +27,7 @@ func sparkPoints(vals []int, r rect) [][2]float32 {
 		}
 		y := in.Y + in.H/2
 		if hi > lo {
-			y = in.bottom() - in.H*float32(v-lo)/float32(hi-lo)
+			y = in.Bottom() - in.H*float32(v-lo)/float32(hi-lo)
 		}
 		pts[i] = [2]float32{x, y}
 	}
@@ -39,7 +39,7 @@ func sparkPoints(vals []int, r rect) [][2]float32 {
 func drawSparkline(dst *ebiten.Image, r rect, vals []int, c color.Color) {
 	base := uiPanelBorder
 	base.A = 0x90
-	uiLine(dst, r.X, r.bottom()-0.5, r.right(), r.bottom()-0.5, 1, base, false)
+	uiLine(dst, r.X, r.Bottom()-0.5, r.Right(), r.Bottom()-0.5, 1, base, false)
 	pts := sparkPoints(vals, r)
 	for i := 1; i < len(pts); i++ {
 		uiLine(dst, pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1], 1.5, c, true)

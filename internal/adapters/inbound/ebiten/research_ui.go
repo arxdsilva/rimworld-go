@@ -67,7 +67,7 @@ func (a *App) researchFirst(n, shown int) int {
 
 // researchList is the rows' rectangle in the window r.
 func researchList(r button, shown int) rect {
-	return rect{r.x, r.y + researchTop, r.w, float32(shown) * researchRowH}
+	return rect{X: r.x, Y: r.y + researchTop, W: r.w, H: float32(shown) * researchRowH}
 }
 
 // researchUI declares the project list's scroll view (the wheel, the bar,

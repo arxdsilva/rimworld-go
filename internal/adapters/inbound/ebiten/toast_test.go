@@ -28,18 +28,18 @@ func TestToastsStackAtTheHintAnchor(t *testing.T) {
 				if r.X != l.HintX {
 					t.Errorf("toast %d x = %v, want HintX %v", i, r.X, l.HintX)
 				}
-				if r.bottom() > l.HintBottom {
-					t.Errorf("toast %d ends at %v, below HintBottom %v", i, r.bottom(), l.HintBottom)
+				if r.Bottom() > l.HintBottom {
+					t.Errorf("toast %d ends at %v, below HintBottom %v", i, r.Bottom(), l.HintBottom)
 				}
-				if r.X < 0 || r.right() > float32(a.sw) || r.Y < 0 {
+				if r.X < 0 || r.Right() > float32(a.sw) || r.Y < 0 {
 					t.Errorf("toast %d %+v off screen", i, r)
 				}
-				if i > 0 && rs[i-1].Y <= r.bottom() {
+				if i > 0 && rs[i-1].Y <= r.Bottom() {
 					t.Errorf("toast %d %+v overlaps the newer one %+v", i, r, rs[i-1])
 				}
 			}
-			if rs[0].bottom() != l.HintBottom {
-				t.Errorf("the newest toast ends at %v, want HintBottom %v", rs[0].bottom(), l.HintBottom)
+			if rs[0].Bottom() != l.HintBottom {
+				t.Errorf("the newest toast ends at %v, want HintBottom %v", rs[0].Bottom(), l.HintBottom)
 			}
 			a.drawToasts(ebiten.NewImage(pw, ph), a.sw, a.sh)
 		})
@@ -54,8 +54,8 @@ func TestToastsMakeRoomForTheHint(t *testing.T) {
 	free := a.toastRects(a.sw, a.sh)[0]
 	a.hint = "Needs a bed"
 	held := a.toastRects(a.sw, a.sh)[0]
-	if held.bottom() >= free.bottom() || held.bottom() > a.hud().HintBottom-lineStep(tsBody) {
-		t.Errorf("with a hint the toast ends at %v (free: %v)", held.bottom(), free.bottom())
+	if held.Bottom() >= free.Bottom() || held.Bottom() > a.hud().HintBottom-lineStep(tsBody) {
+		t.Errorf("with a hint the toast ends at %v (free: %v)", held.Bottom(), free.Bottom())
 	}
 }
 
@@ -71,7 +71,7 @@ func TestToastsOutsideTheColonyAndExpiry(t *testing.T) {
 		t.Fatalf("toasts %v", rs)
 	}
 	sw, sh := a.size()
-	if cx := rs[0].X + rs[0].W/2; cx < float32(sw)/2-1 || cx > float32(sw)/2+1 || rs[0].bottom() > float32(sh) {
+	if cx := rs[0].X + rs[0].W/2; cx < float32(sw)/2-1 || cx > float32(sw)/2+1 || rs[0].Bottom() > float32(sh) {
 		t.Errorf("menu toast %+v is not bottom-centre of %dx%d", rs[0], sw, sh)
 	}
 	a.updates += toastFrames

@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
@@ -112,11 +113,11 @@ func TestTabStripIsTheLayoutsTabsRect(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(3))
 	tabs := a.hud().Tabs
-	if tabs != (rect{0, float32(a.sh - 28), float32(a.sw), 28}) {
+	if tabs != (rect{X: 0, Y: float32(a.sh - 28), W: float32(a.sw), H: 28}) {
 		t.Fatalf("Tabs = %+v", tabs)
 	}
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if !(rect{b.x, b.y, b.w, b.h}).intersect(tabs).empty() && (b.y != tabs.Y || b.h != tabs.H) {
+		if !(rect{X: b.x, Y: b.y, W: b.w, H: b.h}).Intersect(tabs).Empty() && (b.y != tabs.Y || b.h != tabs.H) {
 			t.Errorf("%s leaves the Tabs rect: %+v", b.id, b)
 		}
 	}
@@ -150,10 +151,10 @@ func TestTabLabelsEllipsizeWhenNarrow(t *testing.T) {
 	a.sw, a.sh = sw, sh
 	img := ebiten.NewImage(sw, sh)
 	var ev []traceEvent
-	drawTrace = func(e traceEvent) { ev = append(ev, e) }
-	defer func() { drawTrace = nil }()
+	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	defer func() { gfx.SetDrawTrace(nil) }()
 	a.drawTabs(img, sw, sh)
-	drawTrace = nil
+	gfx.SetDrawTrace(nil)
 	bs := a.hudTabButtons(sw, sh)
 	shortened := 0
 	for _, e := range ev {
@@ -186,8 +187,8 @@ func TestResearchTabShowsProgressFill(t *testing.T) {
 	img := ebiten.NewImage(a.sw, a.sh)
 	fills := func() []traceEvent {
 		var ev []traceEvent
-		drawTrace = func(e traceEvent) { ev = append(ev, e) }
-		defer func() { drawTrace = nil }()
+		gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+		defer func() { gfx.SetDrawTrace(nil) }()
 		a.drawTabs(img, a.sw, a.sh)
 		var out []traceEvent
 		for _, b := range a.hudTabButtons(a.sw, a.sh) {
@@ -233,7 +234,7 @@ func TestWildlifeTabOpensTheWildlifeList(t *testing.T) {
 	if !sel["tab.wildlife"] || sel["tab.animals"] {
 		t.Fatalf("selected tabs %v: only Wildlife", sel)
 	}
-	if w := a.hud().Window; w.empty() {
+	if w := a.hud().Window; w.Empty() {
 		t.Fatal("the Wildlife list opens in the Window rect")
 	}
 	click(t, a, "animals.focus.deer") // the list is the wild species table
@@ -437,9 +438,9 @@ func TestWindowClosesTheArchitect(t *testing.T) {
 // globals: never in parallel.
 func winScreen(t *testing.T, a *App, w, h int, ui float64) *ebiten.Image {
 	t.Helper()
-	old := curUIScale
-	t.Cleanup(func() { curUIScale = old; drawTrace = nil; tracePass = "hud" })
-	a.scale = uiScaleState{dev: 1, ui: ui, s: ui}
+	old := gfx.CurrentScale()
+	t.Cleanup(func() { gfx.SetScale(old); gfx.SetDrawTrace(nil); gfx.ForcePass("hud") })
+	a.scale = uiScaleState{Dev: 1, UI: ui, S: ui}
 	a.syncUIScale()
 	pw, ph := int(math.Round(float64(w)*ui)), int(math.Round(float64(h)*ui))
 	a.setPhysical(pw, ph)
@@ -451,8 +452,8 @@ func winScreen(t *testing.T, a *App, w, h int, ui float64) *ebiten.Image {
 
 func winTrace(a *App, img *ebiten.Image) []traceEvent {
 	var ev []traceEvent
-	drawTrace = func(e traceEvent) { ev = append(ev, e) }
-	defer func() { drawTrace = nil }()
+	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	defer func() { gfx.SetDrawTrace(nil) }()
 	img.Clear()
 	a.Draw(img)
 	return winPass(ev)
@@ -477,14 +478,14 @@ func TestWindowsStayInsideTheWindowRect(t *testing.T) {
 				c.open(a)
 				f.frame(t, a)
 				w := a.hud().Window
-				if w.empty() {
+				if w.Empty() {
 					t.Fatalf("%s: no Window rect", c.name)
 				}
-				if w.X != 0 || w.bottom() != a.hud().Tabs.Y {
+				if w.X != 0 || w.Bottom() != a.hud().Tabs.Y {
 					t.Errorf("%s: Window %+v, want bottom-left above the tabs (Tabs.Y %v)", c.name, w, a.hud().Tabs.Y)
 				}
-				if w.right() > a.hud().Right.X-hudMargin+0.01 {
-					t.Errorf("%s: Window right %v reaches the right column at %v", c.name, w.right(), a.hud().Right.X)
+				if w.Right() > a.hud().Right.X-hudMargin+0.01 {
+					t.Errorf("%s: Window right %v reaches the right column at %v", c.name, w.Right(), a.hud().Right.X)
 				}
 				got := winTrace(a, img)
 				added := winAdded(base, got)
@@ -497,16 +498,16 @@ func TestWindowsStayInsideTheWindowRect(t *testing.T) {
 				res := a.hud().Resources
 				var bad []string
 				for _, e := range added {
-					if !res.empty() && winInside(e, float64(res.X)*s, float64(res.Y)*s, float64(res.right())*s, float64(res.bottom())*s, 1) {
+					if !res.Empty() && winInside(e, float64(res.X)*s, float64(res.Y)*s, float64(res.Right())*s, float64(res.Bottom())*s, 1) {
 						continue
 					}
-					if !winInside(e, float64(w.X)*s, float64(w.Y)*s, float64(w.right())*s, float64(w.bottom())*s, 1) {
-						bad = append(bad, fmt.Sprintf("%s is outside the window (%.0f,%.0f)-(%.0f,%.0f)", winString(e), float64(w.X)*s, float64(w.Y)*s, float64(w.right())*s, float64(w.bottom())*s))
+					if !winInside(e, float64(w.X)*s, float64(w.Y)*s, float64(w.Right())*s, float64(w.Bottom())*s, 1) {
+						bad = append(bad, fmt.Sprintf("%s is outside the window (%.0f,%.0f)-(%.0f,%.0f)", winString(e), float64(w.X)*s, float64(w.Y)*s, float64(w.Right())*s, float64(w.Bottom())*s))
 					}
 				}
 				winReport(t, c.name, bad)
 				// and the window is what covers the area: the HUD hit-test sees it
-				cx, cy := w.center()
+				cx, cy := w.Center()
 				if !a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {
 					t.Errorf("%s: the window's centre does not consume clicks", c.name)
 				}
@@ -527,23 +528,23 @@ func TestWindowsNeverCoverTheHUD(t *testing.T) {
 					c.open(a)
 					f.frame(t, a)
 					l := a.hud()
-					if l.Window.empty() {
+					if l.Window.Empty() {
 						t.Fatalf("%s: no Window rect", c.name)
 					}
 					for name, r := range map[string]rect{"Bar": l.Bar, "Alerts": l.Alerts, "Letters": l.Letters, "Learn": l.Learn,
 						"Global": l.Global, "Minimap": l.Minimap, "Resources": l.Resources, "Messages": l.Messages, "Tabs": l.Tabs, "Right": l.Right} {
-						if r.empty() {
+						if r.Empty() {
 							continue
 						}
-						if !l.Window.intersect(r).empty() {
+						if !l.Window.Intersect(r).Empty() {
 							t.Errorf("%s: Window %+v covers %s %+v", c.name, l.Window, name, r)
 						}
 					}
-					if l.Window.Y < l.Bar.bottom() && !l.Bar.empty() {
-						t.Errorf("%s: Window top %v is inside the bar (bottom %v)", c.name, l.Window.Y, l.Bar.bottom())
+					if l.Window.Y < l.Bar.Bottom() && !l.Bar.Empty() {
+						t.Errorf("%s: Window top %v is inside the bar (bottom %v)", c.name, l.Window.Y, l.Bar.Bottom())
 					}
 					// the inspect pane and the command grid give way
-					if !l.Pane.empty() || !l.Expanded.empty() || !l.Grid.empty() || !l.ArchCats.empty() {
+					if !l.Pane.Empty() || !l.Expanded.Empty() || !l.Grid.Empty() || !l.ArchCats.Empty() {
 						t.Errorf("%s: the pane or the grid is still up beside the window", c.name)
 					}
 				})
@@ -564,7 +565,7 @@ func TestWindowContentsLieInsideTheWindow(t *testing.T) {
 			w := a.hud().Window
 			tol := float32(0.5)
 			inside := func(id string, r rect) {
-				if r.X < w.X-tol || r.Y < w.Y-tol || r.right() > w.right()+tol || r.bottom() > w.bottom()+tol {
+				if r.X < w.X-tol || r.Y < w.Y-tol || r.Right() > w.Right()+tol || r.Bottom() > w.Bottom()+tol {
 					t.Errorf("%s: %s %+v leaves the window %+v", c.name, id, r, w)
 				}
 			}
@@ -572,7 +573,7 @@ func TestWindowContentsLieInsideTheWindow(t *testing.T) {
 			for _, b := range a.colonyButtons(a.sw, a.sh) {
 				for _, p := range c.prefixes {
 					if strings.HasPrefix(b.id, p) {
-						inside(b.id, rect{b.x, b.y, b.w, b.h})
+						inside(b.id, rect{X: b.x, Y: b.y, W: b.w, H: b.h})
 						n++
 					}
 				}
@@ -604,11 +605,11 @@ func TestWheelOverAWindowIsNotTheMapsWheel(t *testing.T) {
 			c.open(a)
 			f.frame(t, a)
 			w := a.hud().Window
-			cx, cy := w.center()
+			cx, cy := w.Center()
 			if !a.uiWheelOver(int(cx), int(cy)) {
 				t.Errorf("%s: the wheel over the window's middle is still the map's", c.name)
 			}
-			if a.uiWheelOver(int(w.right())+20, int(w.Y)-20) {
+			if a.uiWheelOver(int(w.Right())+20, int(w.Y)-20) {
 				t.Errorf("%s: the wheel outside the window is not the map's", c.name)
 			}
 		})
@@ -706,7 +707,7 @@ func TestAnimalsWindowFitsNarrowScreens(t *testing.T) {
 				n := 0
 				for _, b := range a.animalsTabButtons() {
 					n++
-					if b.x < w.X || b.x+b.w > w.right() || b.y < w.Y || b.y+b.h > w.bottom() {
+					if b.x < w.X || b.x+b.w > w.Right() || b.y < w.Y || b.y+b.h > w.Bottom() {
 						t.Errorf("%s %+v leaves the window %+v", b.id, b, w)
 					}
 				}
@@ -761,15 +762,15 @@ func TestModalsStayCentredWhenNotAnchored(t *testing.T) {
 	t.Parallel()
 	m := modal{id: "x", title: "X", w: 400, h: 300}
 	frame, title, body, footer := modalGeometry(1280, 720, m)
-	if frame != (rect{440, 210, 400, 300}) {
+	if frame != (rect{X: 440, Y: 210, W: 400, H: 300}) {
 		t.Fatalf("frame %+v, want centred", frame)
 	}
-	if title.Y != frame.Y || title.H != modalTitleH || body.X != frame.X+modalPad || !footer.empty() {
+	if title.Y != frame.Y || title.H != modalTitleH || body.X != frame.X+modalPad || !footer.Empty() {
 		t.Fatalf("title %+v body %+v footer %+v", title, body, footer)
 	}
 	// a modal that is too big is shrunk to the screen edge clearance
 	frame, _, _, _ = modalGeometry(1280, 720, modal{id: "y", w: 5000, h: 5000})
-	if frame != (rect{modalEdge, modalEdge, 1280 - 2*modalEdge, 720 - 2*modalEdge}) {
+	if frame != (rect{X: modalEdge, Y: modalEdge, W: 1280 - 2*modalEdge, H: 720 - 2*modalEdge}) {
 		t.Fatalf("big frame %+v", frame)
 	}
 }
@@ -777,7 +778,7 @@ func TestModalsStayCentredWhenNotAnchored(t *testing.T) {
 func TestAnchoredModalSitsOnItsAnchor(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(1))
-	anchor := rect{0, 300, 500, 380}
+	anchor := rect{X: 0, Y: 300, W: 500, H: 380}
 	var body rect
 	a.uiPushModal(modal{id: "anch", title: "Anchored", w: 900, h: 900,
 		anchor:  func(*App) rect { return anchor },
@@ -792,7 +793,7 @@ func TestAnchoredModalSitsOnItsAnchor(t *testing.T) {
 		t.Fatalf("body %+v in anchor %+v", body, anchor)
 	}
 	x, ok := a.uiSt().find("modal.anch.close")
-	if !ok || x.r.right() > anchor.right() || x.r.Y < anchor.Y || x.r.bottom() > anchor.Y+modalTitleH {
+	if !ok || x.r.Right() > anchor.Right() || x.r.Y < anchor.Y || x.r.Bottom() > anchor.Y+modalTitleH {
 		t.Fatalf("the X %+v is not in the anchored title bar", x.r)
 	}
 	// Esc closes it like any modal
@@ -823,7 +824,7 @@ func TestModelessModalIsAWindow(t *testing.T) {
 			t.Fatal("a modeless window must not take the modal input context")
 		}
 	}
-	if w := a.hud().Window; w.empty() || w.W != 500 {
+	if w := a.hud().Window; w.Empty() || w.W != 500 {
 		t.Fatalf("Window %+v", w)
 	}
 	// a second one replaces it

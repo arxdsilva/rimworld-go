@@ -64,7 +64,7 @@ func (a *App) acceptCustomDifficulty() {
 func (a *App) customDifficultyBody(body rect) {
 	ng := a.draft()
 	cd := &ng.cd
-	top, rest := body.splitV(diffTopRowH)
+	top, rest := body.SplitV(diffTopRowH)
 
 	lab := dimText()
 	a.uiLabel(top.X, top.Y+(top.H-float32(lineH(lab)))/2, "Start from:", lab)
@@ -72,8 +72,8 @@ func (a *App) customDifficultyBody(body rect) {
 	for _, n := range difficulty.Presets() {
 		names = append(names, n.Label)
 	}
-	a.ngChoice("diff.from", rect{top.X + 90, top.Y + 2, 170, top.H - 4}, "Start from", names, int(cd.from), "", func(i int) { cd.from = difficulty.Preset(i) })
-	a.ngButton("diff.copy", rect{top.X + 272, top.Y + 2, 150, top.H - 4}, "Copy", btnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
+	a.ngChoice("diff.from", rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, "Start from", names, int(cd.from), "", func(i int) { cd.from = difficulty.Preset(i) })
+	a.ngButton("diff.copy", rect{X: top.X + 272, Y: top.Y + 2, W: 150, H: top.H - 4}, "Copy", btnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
 		func() { cd.s = difficulty.Of(cd.from) })
 
 	area := a.uiScrollArea(diffFormID, rest, ng.formHeight(diffFormID), scrollOpts{Step: 40})
@@ -164,15 +164,15 @@ func (a *App) diffSlider(f *formCtx, id, label string, v *int, key string, forma
 		ls.Color, vs.Color = uiTextDisabled, uiTextDisabled
 	}
 	a.uiLabel(row.X, row.Y+1, label, ls)
-	a.uiLabel(row.right(), row.Y+1, format(*v), vs)
-	sr := rect{row.X + 2, row.Y + 20, row.W - 4, 18}
+	a.uiLabel(row.Right(), row.Y+1, format(*v), vs)
+	sr := rect{X: row.X + 2, Y: row.Y + 20, W: row.W - 4, H: 18}
 	a.uiSliderInt("diff.f."+id, sr, v, sliderSpec{
 		Min: float64(lim.Min), Max: float64(lim.Max), Step: stepFor(lim), Title: label,
 		Format:   func(x float64) string { return format(int(x)) },
 		Disabled: disabled != "", Reason: disabled,
 	})
 	if tip != "" && disabled == "" {
-		a.uiTip("diff.t."+id, rect{row.X, row.Y, row.W, 18}, tip)
+		a.uiTip("diff.t."+id, rect{X: row.X, Y: row.Y, W: row.W, H: 18}, tip)
 	}
 }
 
@@ -201,8 +201,8 @@ func (a *App) diffStepper(f *formCtx, id, label string, v *int, lo, hi int, tip 
 	}
 	ls := tsBody
 	a.uiLabel(row.X, row.Y+(row.H-float32(lineH(ls)))/2, label, ls)
-	a.ngStepper("diff.f."+id, rect{row.right() - 112, row.Y + 2, 112, row.H - 4}, v, lo, hi)
+	a.ngStepper("diff.f."+id, rect{X: row.Right() - 112, Y: row.Y + 2, W: 112, H: row.H - 4}, v, lo, hi)
 	if tip != "" {
-		a.uiTip("diff.t."+id, rect{row.X, row.Y, row.W - 116, row.H}, tip)
+		a.uiTip("diff.t."+id, rect{X: row.X, Y: row.Y, W: row.W - 116, H: row.H}, tip)
 	}
 }

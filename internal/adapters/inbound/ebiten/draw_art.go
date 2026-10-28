@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"slices"
 	"strconv"
 	"strings"
@@ -450,7 +451,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawSteamPuffs(screen, w, tile) // features_draw.go
 	r.drawWeather(screen, w, sw, sh, tile)
 	r.drawFog(screen, w, sw, sh, tile) // fog_draw.go: unexplored tiles over everything
-	worldDefer.fogDrawn()              // world_scale.go: later labels show over the fog
+	gfx.FogDrawn()                     // world_scale.go: later labels show over the fog
 	r.drawFloaters(screen, tile)
 
 	for _, cv := range views {

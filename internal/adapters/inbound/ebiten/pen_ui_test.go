@@ -65,7 +65,7 @@ func penTabApp(t *testing.T, s *stubSim) (*App, *fakeInput, rect) {
 	if !ok {
 		t.Fatal("a pen marker has a Pen tab")
 	}
-	panel := rect{0, 180, tab.WantW, tab.WantH}.inset(paneInset) // what the pane hands Declare
+	panel := rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(paneInset) // what the pane hands Declare
 	setHook(a.uiSt(), func(a *App) { tab.Declare(panel) })
 	f.frame(t, a)
 	return a, f, panel
@@ -152,7 +152,7 @@ func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 			t.Errorf("no widget %s", id)
 			continue
 		}
-		if w.r.X < panel.X || w.r.right() > panel.right() || w.r.Y < panel.Y || w.r.bottom() > panel.bottom() {
+		if w.r.X < panel.X || w.r.Right() > panel.Right() || w.r.Y < panel.Y || w.r.Bottom() > panel.Bottom() {
 			t.Errorf("widget %s at %+v falls out of the panel %+v", id, w.r, panel)
 		}
 	}

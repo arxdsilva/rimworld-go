@@ -1,6 +1,10 @@
 package ebiten
 
-import "math"
+import (
+	"math"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+)
 
 // viewport is the part of the screen the map can be seen through. Since
 // PLAY-018 that is the whole window: the HUD floats over the map.
@@ -30,7 +34,7 @@ func colonyViewportPhysical(sw, sh int, s float64) viewport {
 // and the sound director use. The logical size is rounded up, so the
 // right and bottom edges are capped at the screen.
 func (a *App) mapViewport() viewport {
-	k := a.scale.worldK()
+	k := a.scale.WorldK()
 	v := colonyViewportPhysical(a.sw, a.sh, a.mapScale())
 	if a.pw > 0 {
 		v.x1 = math.Min(v.x1, float64(a.pw)*k)
@@ -45,7 +49,7 @@ func (a *App) mapViewport() viewport {
 // screen's device pixel density x the map's render scale. The map's tile
 // size is TileSize x zoom x screenDev.
 func screenDev() float64 {
-	if d := curUIScale.dev * curUIScale.worldK(); d > 0 && !math.IsNaN(d) && !math.IsInf(d, 0) {
+	if d := gfx.CurrentScale().Dev * gfx.CurrentScale().WorldK(); d > 0 && !math.IsNaN(d) && !math.IsInf(d, 0) {
 		return d
 	}
 	return 1
