@@ -146,17 +146,17 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 	}{{"F1", "work", false}, {"F2", "schedule", false}, {"F4", "animals", false}, {"F5", "animals", true}, {"F6", "research", false}}
 	for _, c := range cases {
 		f.Key(t, a, c.key, 0)
-		if !a.workOpen || a.panelMode != c.mode || (c.mode == "animals" && a.animalsWild != c.wild) {
-			t.Fatalf("%s: open=%v mode=%q wild=%v", c.key, a.workOpen, a.panelMode, a.animalsWild)
+		if !a.win.Open || a.win.Mode != c.mode || (c.mode == "animals" && a.win.Wild != c.wild) {
+			t.Fatalf("%s: open=%v mode=%q wild=%v", c.key, a.win.Open, a.win.Mode, a.win.Wild)
 		}
 	}
 	f.Key(t, a, "F5", 0)
 	f.Key(t, a, "F5", 0)
-	if a.workOpen {
+	if a.win.Open {
 		t.Fatal("F5 again closes the Wild list")
 	}
 	f.Key(t, a, "Tab", 0)
-	if !a.archOpen {
+	if !a.arch.Open {
 		t.Fatal("Tab opens the Architect")
 	}
 	f.Key(t, a, "F3", 0)
@@ -194,19 +194,19 @@ func TestSearchTypingDraftsNobody(t *testing.T) {
 	a, s, f := inputColony(t, [2]int{5, 5}, [2]int{9, 9})
 	a.renderer.Select(1)
 	f.Key(t, a, "Z", 0)
-	if !a.search.open {
+	if !a.ord.Search.Open {
 		t.Fatal("Z opens search")
 	}
 	f.TypeText(t, a, "r")
-	if len(cmdsOf(s, command.DraftPawn)) != 0 || a.search.text != "r" {
-		t.Fatalf("typing r drafted someone or was lost: text=%q cmds=%+v", a.search.text, s.cmds)
+	if len(cmdsOf(s, command.DraftPawn)) != 0 || a.ord.Search.Text != "r" {
+		t.Fatalf("typing r drafted someone or was lost: text=%q cmds=%+v", a.ord.Search.Text, s.cmds)
 	}
 	f.Key(t, a, "Backspace", 0)
-	if a.search.text != "" {
+	if a.ord.Search.Text != "" {
 		t.Fatal("Backspace deletes")
 	}
 	f.Key(t, a, "Escape", 0)
-	if a.search.open || !a.renderer.HasSelect() {
+	if a.ord.Search.Open || !a.renderer.HasSelect() {
 		t.Fatal("Esc closes search and keeps the selection")
 	}
 }
@@ -222,7 +222,7 @@ func TestSearchFindsNamedColonist(t *testing.T) {
 	}
 	before := a.renderer.cam
 	f.Key(t, a, "Enter", 0)
-	if a.search.open || !a.renderer.HasSelect() || a.renderer.Selected() != 2 {
+	if a.ord.Search.Open || !a.renderer.HasSelect() || a.renderer.Selected() != 2 {
 		t.Fatal("Enter selects the result and closes search")
 	}
 	if a.renderer.cam == before {
@@ -394,17 +394,17 @@ func TestF10WritesScreenshotF11HidesUI(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t, [2]int{5, 5})
 	dir := t.TempDir()
-	a.shot.dir = func() (string, error) { return dir, nil }
+	a.meter.Shot.Dir = func() (string, error) { return dir, nil }
 	f.Key(t, a, "F10", 0)
-	if !a.shot.pending {
+	if !a.meter.Shot.Pending {
 		t.Fatal("F10 asks for a screenshot of the next frame")
 	}
-	a.shot.pending = false
+	a.meter.Shot.Pending = false
 	a.takeScreenshot(func(img *image.RGBA) { img.Pix[0] = 255 }, 8, 6) // what Draw does with ReadPixels
-	if a.shot.last == "" || filepath.Dir(a.shot.last) != dir || !strings.HasPrefix(filepath.Base(a.shot.last), "rimworld-go-") {
-		t.Fatalf("screenshot path %q", a.shot.last)
+	if a.meter.Shot.Last == "" || filepath.Dir(a.meter.Shot.Last) != dir || !strings.HasPrefix(filepath.Base(a.meter.Shot.Last), "rimworld-go-") {
+		t.Fatalf("screenshot path %q", a.meter.Shot.Last)
 	}
-	if _, err := os.Stat(a.shot.last); err != nil {
+	if _, err := os.Stat(a.meter.Shot.Last); err != nil {
 		t.Fatal(err)
 	}
 	if ts := a.liveToasts(); len(ts) == 0 || ts[len(ts)-1].text != "Screenshot saved" {
@@ -530,9 +530,9 @@ func TestQECyclesDrawStyleAndOvalZonesSendRows(t *testing.T) {
 		t.Fatalf("an oval zone is one rectangle per row: %+v", zs)
 	}
 	a.selectArchTool("bed")
-	before := a.archFacing
+	before := a.arch.Facing
 	f.Key(t, a, "E", 0)
-	if a.archFacing == before {
+	if a.arch.Facing == before {
 		t.Fatal("single placements keep Q/E rotation")
 	}
 }
@@ -590,7 +590,7 @@ func TestDevModeTickStepAndUltrafast(t *testing.T) {
 		t.Fatalf("4 = ultrafast, got %v", a.renderer.speed)
 	}
 	f.Key(t, a, "Slash", 0)
-	if !a.dev.menu || len(a.devButtons()) == 0 {
+	if !a.tools.State.Menu || len(a.devButtons()) == 0 {
 		t.Fatal("/ opens the debug actions")
 	}
 	f.Key(t, a, "R", 0)
@@ -598,17 +598,17 @@ func TestDevModeTickStepAndUltrafast(t *testing.T) {
 		t.Fatal("map keys are off under the debug menu")
 	}
 	f.Key(t, a, "Escape", 0)
-	if a.dev.menu {
+	if a.tools.State.Menu {
 		t.Fatal("Esc closes the debug menu")
 	}
 	f.Key(t, a, "Backquote", 0)
 	f.Key(t, a, "Quote", 0)
-	if !a.dev.log || !a.dev.insp {
+	if !a.tools.State.Log || !a.tools.State.Insp {
 		t.Fatal("` and ' toggle the debug log and inspector")
 	}
 	set.Gameplay.DevMode = false
 	a.setSettings(set)
-	if a.renderer.speed == speedUltra || a.dev.log {
+	if a.renderer.speed == speedUltra || a.tools.State.Log {
 		t.Fatal("leaving developer mode drops ultrafast and the panels")
 	}
 }
@@ -684,14 +684,14 @@ func TestRightClickLeavingToolDoesNotOrder(t *testing.T) {
 	a.selectArchTool("wall")
 	f.MoveTo(a, 12, 6)
 	f.Click(t, a, mbRight, 0)
-	if a.archTool != "" {
+	if a.arch.ToolID != "" {
 		t.Fatal("right-click drops the tool")
 	}
-	if a.float.open || len(s.cmds) != 0 {
-		t.Fatalf("and nothing else: menu=%v cmds=%+v", a.float.open, s.cmds)
+	if a.ord.Float.Open || len(s.cmds) != 0 {
+		t.Fatalf("and nothing else: menu=%v cmds=%+v", a.ord.Float.Open, s.cmds)
 	}
 	f.Click(t, a, mbRight, 0)
-	if !a.float.open {
+	if !a.ord.Float.Open {
 		t.Fatal("the next right-click opens the order menu")
 	}
 }
@@ -705,7 +705,7 @@ func TestEscInMoveModeHandledOnce(t *testing.T) {
 	a.startMove(s.world.Buildings[0])
 	f.Frame(t, a) // the opening frame
 	f.Key(t, a, "Escape", 0)
-	if a.bldgMove.on {
+	if a.moveSt().On {
 		t.Fatal("Esc leaves Move mode")
 	}
 	if !a.sel.HasBuilding || a.nav.overlay() != overlayNone {

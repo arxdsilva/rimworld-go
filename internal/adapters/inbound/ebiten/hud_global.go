@@ -529,7 +529,7 @@ func (a *App) syncRoofForce() {
 	a.syncSnowClearForce() // snow_clear_draw.go (PLAY-015)
 	a.syncPowerForce()     // power_overlay.go (PLAY-021)
 	if a.renderer != nil {
-		a.renderer.overlays().Roof.Forced = roofForced(a.archOpen, a.archTool)
+		a.renderer.overlays().Roof.Forced = roofForced(a.arch.Open, a.arch.ToolID)
 	}
 }
 
@@ -577,7 +577,7 @@ func homeForced(archOpen bool, toolID string) bool { return archOpen && homeTool
 // syncHomeForce keeps renderer.overlays().Home.Forced in step with the Architect.
 func (a *App) syncHomeForce() {
 	if a.renderer != nil {
-		a.renderer.overlays().Home.Forced = homeForced(a.archOpen, a.archTool)
+		a.renderer.overlays().Home.Forced = homeForced(a.arch.Open, a.arch.ToolID)
 	}
 }
 
@@ -617,7 +617,7 @@ func planForced(archOpen bool, toolID string) bool { return archOpen && planTool
 // syncPlanForce keeps renderer.overlays().Plan.Forced in step with the Architect.
 func (a *App) syncPlanForce() {
 	if a.renderer != nil {
-		a.renderer.overlays().Plan.Forced = planForced(a.archOpen, a.archTool)
+		a.renderer.overlays().Plan.Forced = planForced(a.arch.Open, a.arch.ToolID)
 	}
 }
 

@@ -314,8 +314,8 @@ func (r *Renderer) partView() (v *render.View, frame camera) {
 // them (lod.go).
 func (r *Renderer) overlayChunks() overlay.Chunks {
 	l := &r.lod
-	return overlay.Chunks{Views: l.views, VX0: l.vx0, VY0: l.vy0, VX1: l.vx1, VY1: l.vy1, ViewSet: l.viewSet,
-		Live: l.tier == lodLive, WholeMap: l.tier == lodMap, Baking: l.baking}
+	return overlay.Chunks{Views: l.Views, VX0: l.VX0, VY0: l.VY0, VX1: l.VX1, VY1: l.VY1, ViewSet: l.ViewSet,
+		Live: l.Tier == lodLive, WholeMap: l.Tier == lodMap, Baking: l.Baking}
 }
 
 // areasOf is the simulation's allowed areas (asked for only while one is

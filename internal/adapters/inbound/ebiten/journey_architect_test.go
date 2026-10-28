@@ -26,13 +26,13 @@ func archJourney(t *testing.T) *journey {
 // openArch opens the Architect with Tab and arms tool id from category cat.
 func (j *journey) openArch(cat, tool string) {
 	j.t.Helper()
-	if !j.a.archOpen {
+	if !j.a.arch.Open {
 		j.key("Tab", 0)
-		if !j.a.archOpen {
+		if !j.a.arch.Open {
 			j.t.Fatal("Tab did not open the Architect")
 		}
 	}
-	if j.a.archCat != cat || j.a.hst.arch.dflt == cat { // the open category again would collapse it
+	if j.a.arch.Cat != cat || j.a.arch.OpenedOn() == cat { // the open category again would collapse it
 		if !j.clickID("arch.cat." + cat) {
 			j.t.Fatalf("category %s is disabled", cat)
 		}
@@ -41,8 +41,8 @@ func (j *journey) openArch(cat, tool string) {
 		if !j.clickID("arch.tool." + tool) {
 			j.t.Fatalf("tool %s is disabled", tool)
 		}
-		if j.a.archTool != tool {
-			j.t.Fatalf("armed %q, want %q", j.a.archTool, tool)
+		if j.a.arch.ToolID != tool {
+			j.t.Fatalf("armed %q, want %q", j.a.arch.ToolID, tool)
 		}
 	}
 }
@@ -94,10 +94,10 @@ func TestJourneyArchitectRotateQE(t *testing.T) {
 	face("Q", 3)
 
 	j.openArch("structure", "wall")
-	if j.a.archStyle != styleDefault {
-		t.Fatalf("fresh wall style %v", j.a.archStyle)
+	if j.a.arch.Style != styleDefault {
+		t.Fatalf("fresh wall style %v", j.a.arch.Style)
 	}
-	before := j.a.archFacing
+	before := j.a.arch.Facing
 	j.key("E", 0)
 	if j.a.curStyle(mustTool(t, "wall")) != styleRect {
 		t.Fatalf("E on a wall: style %v, want a filled rectangle", j.a.curStyle(mustTool(t, "wall")))
@@ -107,7 +107,7 @@ func TestJourneyArchitectRotateQE(t *testing.T) {
 	if j.a.curStyle(mustTool(t, "wall")) != styleOvalEdge {
 		t.Fatalf("Q,Q from the rectangle: style %v, want the empty oval", j.a.curStyle(mustTool(t, "wall")))
 	}
-	if j.a.archFacing != before {
+	if j.a.arch.Facing != before {
 		t.Fatal("Q/E on a drag tool rotated it")
 	}
 }
@@ -176,18 +176,18 @@ func TestJourneyArchitectEscapeAndRightClickLeaveTool(t *testing.T) {
 	j := archJourney(t)
 	j.openArch("structure", "wall")
 	j.key("Escape", 0)
-	if j.a.archTool != "" || !j.a.archOpen {
-		t.Fatalf("first Escape: tool %q open %v, want no tool and the Architect open", j.a.archTool, j.a.archOpen)
+	if j.a.arch.ToolID != "" || !j.a.arch.Open {
+		t.Fatalf("first Escape: tool %q open %v, want no tool and the Architect open", j.a.arch.ToolID, j.a.arch.Open)
 	}
 	j.key("Escape", 0)
-	if j.a.archOpen {
+	if j.a.arch.Open {
 		t.Fatal("second Escape left the Architect open")
 	}
 	j.openArch("structure", "wall")
 	j.f.MoveTo(j.a, 9, 3)
 	j.f.Click(j.t, j.a, mbRight, 0)
-	if j.a.archTool != "" {
-		t.Fatalf("right-click left tool %q", j.a.archTool)
+	if j.a.arch.ToolID != "" {
+		t.Fatalf("right-click left tool %q", j.a.arch.ToolID)
 	}
 	if len(j.cmds) != 0 || len(j.world().Frames) != 0 {
 		t.Fatalf("leaving the tool sent %v", j.cmds)
@@ -203,8 +203,8 @@ func TestJourneyArchitectXDeconstructArea(t *testing.T) {
 		t.Fatal("no wall")
 	}
 	j.key("X", 0)
-	if j.a.archTool != "deconstruct" || !j.a.archOpen {
-		t.Fatalf("X armed %q open %v", j.a.archTool, j.a.archOpen)
+	if j.a.arch.ToolID != "deconstruct" || !j.a.arch.Open {
+		t.Fatalf("X armed %q open %v", j.a.arch.ToolID, j.a.arch.Open)
 	}
 	j.dragTiles(mbLeft, 8, 2, 10, 4, 0)
 	c, ok := j.lastCmd(command.DesignateDeconstruct)
@@ -233,8 +233,8 @@ func TestJourneyArchitectCCancelArea(t *testing.T) {
 		t.Fatalf("%d frames, want 4", n)
 	}
 	j.key("C", 0)
-	if j.a.archTool != "cancel" {
-		t.Fatalf("C armed %q", j.a.archTool)
+	if j.a.arch.ToolID != "cancel" {
+		t.Fatalf("C armed %q", j.a.arch.ToolID)
 	}
 	j.dragTiles(mbLeft, 7, 1, 12, 3, 0)
 	c, ok := j.lastCmd(command.DesignateCancel)
@@ -349,7 +349,7 @@ func TestJourneyArchitectBuildingMove(t *testing.T) {
 	if !j.clickID("bldg.move") {
 		t.Fatal("bldg.move disabled")
 	}
-	if !j.a.bldgMove.on {
+	if !j.a.moveSt().On {
 		t.Fatal("Move mode did not start")
 	}
 	j.key("E", 0)

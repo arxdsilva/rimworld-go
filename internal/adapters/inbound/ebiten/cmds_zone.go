@@ -21,15 +21,7 @@ const (
 // loaded (tests, plain mode) it is want. When none exists it is want too,
 // so the grid draws its plain initial tile.
 func (a *App) zoneIcon(want string, fallbacks ...string) string {
-	if a.art == nil {
-		return want
-	}
-	for _, n := range append([]string{want}, fallbacks...) {
-		if a.art.Has("ui_icon/" + n) {
-			return n
-		}
-	}
-	return want
+	return a.arch.IconName(want, fallbacks...)
 }
 
 // zoneCommands are the selected zone's command buttons.

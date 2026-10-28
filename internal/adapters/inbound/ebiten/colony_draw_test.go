@@ -65,7 +65,7 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 	a.renderer.ClearSelect()
 
 	// The Work tab, with the cursor on an incapable cell and on a header.
-	a.workOpen, a.panelMode = true, "work"
+	a.win.Open, a.win.Mode = true, "work"
 	r := a.windowRect()
 	for _, c := range []rect{workCellRect(r, 0, 6), workCellRect(r, 0, 2), {X: workCellRect(r, 0, 4).X, Y: r.Y + 24, W: 30, H: 16}} {
 		x, y := c.Center()
@@ -75,7 +75,7 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 		}
 		drawFrame(t, a, f)
 	}
-	a.workOpen = false
+	a.win.Open = false
 
 	// The Architect in every category with a card hovered.
 	f.Cur.Mx, f.Cur.My = -50, -50
@@ -126,7 +126,7 @@ func TestColonyWindowsDraw(t *testing.T) {
 	drawFrame(t, a, f)
 
 	// Options > Story, with the custom dialog over it.
-	a.optionsTab = "story"
+	a.opt.Tab = "story"
 	a.apply(intent{kind: intentPush, screen: screenOptions})
 	drawFrame(t, a, f)
 	a.openStoryCustom(s.story)
@@ -172,7 +172,7 @@ func TestOptionsTabsDrawInColony(t *testing.T) {
 		t.Fatalf("tabs = %v, want Story after Gameplay", tabs)
 	}
 	for _, tab := range tabs {
-		a.optionsTab = tab
+		a.opt.Tab = tab
 		drawFrame(t, a, f)
 		if a.currentOptionsTab() != tab {
 			t.Fatalf("tab %q did not open", tab)
@@ -199,8 +199,8 @@ func TestColonyToolGhostsAndHoverDraw(t *testing.T) {
 	for _, c := range []struct{ cat, tool string }{{"structure", "wall"}, {"zones", "grow"}, {"zones", "stockpile"}, {"zones", "roof"}, {"orders", "mine"}, {"furniture", "hospital_bed"}} {
 		a.selectArchCategory(c.cat)
 		a.selectArchTool(c.tool)
-		a.archDrag = true
-		a.archX0, a.archY0, a.archX1, a.archY1 = 7, 7, 10, 9
+		a.arch.Drag = true
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 7, 7, 10, 9
 		drawFrame(t, a, f)
 	}
 }

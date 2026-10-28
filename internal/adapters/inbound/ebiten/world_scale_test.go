@@ -260,7 +260,8 @@ func TestRenderScaleKeepsTextOnTheScreen(t *testing.T) {
 }
 
 // TestMapPixelsComeFromMapCursor: every TileAt / screenToWorld /
-// pawnUnderCursor call an App method makes takes map pixels: mapCursor()
+// pawnUnderCursor call a method of the App or a feature type makes takes
+// map pixels: mapCursor() / ports.Sizer.MapCursor()
 // (directly, or the names it was assigned to), a constant, a length
 // converted by mapScale(), or a viewport edge (mapViewport is map pixels).
 // A raw or logical point would miss the tile at a reduced render scale.
@@ -299,12 +300,15 @@ func TestMapPixelsComeFromMapCursor(t *testing.T) {
 			if !ok {
 				continue
 			}
-			if id, ok := st.X.(*ast.Ident); !ok || id.Name != "App" { // a generic receiver is an index expression, never App
+			// a generic receiver is an index expression; the features' types
+			// count like App; the Renderer and the globe are the converters
+			// themselves (they take map pixels by contract)
+			if id, ok := st.X.(*ast.Ident); !ok || id.Name == "Renderer" || strings.HasPrefix(f, "globe/") || strings.HasPrefix(f, "render/") {
 				continue
 			}
 			fromCursor := map[string]bool{}
 			ast.Inspect(fd.Body, func(n ast.Node) bool {
-				if as, ok := n.(*ast.AssignStmt); ok && len(as.Rhs) == 1 && callsTo(as.Rhs[0], "mapCursor") {
+				if as, ok := n.(*ast.AssignStmt); ok && len(as.Rhs) == 1 && callsTo(as.Rhs[0], "mapCursor", "MapCursor") {
 					for _, l := range as.Lhs {
 						if id, ok := l.(*ast.Ident); ok {
 							fromCursor[id.Name] = true
@@ -332,7 +336,7 @@ func TestMapPixelsComeFromMapCursor(t *testing.T) {
 							continue
 						}
 					}
-					if callsTo(arg, "mapCursor", "mapScale") || viewportEdge(arg) {
+					if callsTo(arg, "mapCursor", "mapScale", "MapCursor", "MapScale") || viewportEdge(arg) {
 						continue
 					}
 					t.Errorf("%s: %s.%s argument %s is not map pixels (use mapCursor or mapScale)",
@@ -383,7 +387,7 @@ func TestOptionsRenderScaleRow(t *testing.T) {
 	a := optionsApp(store)
 	a.devFn = func() float64 { return 2 }
 	a.LayoutF(1280, 720)
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	b := optionBtn(t, a, "options.renderscale")
 	if b.Label != "Full" || !strings.Contains(b.Tip, "Half") || a.scale.WorldK() != 1 {
 		t.Fatalf("row %q tip %q world %g", b.Label, b.Tip, a.scale.WorldK())

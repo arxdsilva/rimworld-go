@@ -6,7 +6,6 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/sim/command"
 )
 
 // snowClearWorld is a 10x10 map whose snow clearing area is the 3x2 block
@@ -55,38 +54,19 @@ func TestSnowClearOverlayOnlyWithToolHeld(t *testing.T) {
 	}
 }
 
-func TestSnowClearToolsInZones(t *testing.T) {
-	t.Parallel()
-	found := 0
-	for _, tl := range archTools {
-		if !snowClearToolID(tl.id) {
-			continue
-		}
-		found++
-		if tl.category != "zones" || tl.cmd != command.DesignateSnowClear || tl.mode != placeArea || tl.icon != "snow_clear" {
-			t.Fatalf("tool %+v", tl)
-		}
-		if (tl.id == "snow_clear") != tl.enable {
-			t.Fatalf("%s paints %v", tl.id, tl.enable)
-		}
-	}
-	if found != 2 {
-		t.Fatalf("%d snow clearing tools, want 2", found)
-	}
-}
-
 func TestSnowClearOverlayForcedByTool(t *testing.T) {
 	t.Parallel()
-	a := &App{renderer: stainRenderer()}
-	a.archOpen, a.archTool = true, "snow_clear"
+	a := testApp(nil)
+	a.renderer = stainRenderer()
+	a.arch.Open, a.arch.ToolID = true, "snow_clear"
 	a.syncSnowClearForce()
 	if !a.renderer.overlays().SnowClear.Forced {
 		t.Fatal("the tool in hand shows the area")
 	}
-	a.archTool = "home"
+	a.arch.ToolID = "home"
 	a.syncSnowClearForce()
 	if a.renderer.overlays().SnowClear.Forced {
 		t.Fatal("another tool hides it")
 	}
-	(&App{}).syncSnowClearForce() // menus: no renderer
+	testApp(nil).syncSnowClearForce() // menus: no renderer
 }

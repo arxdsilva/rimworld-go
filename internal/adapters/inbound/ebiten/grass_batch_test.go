@@ -73,7 +73,7 @@ func batchAt(r *Renderer, mw, mh int, tile float64, limit int) int {
 	r.view.W = w
 	r.stepEnvironment(w, nil)
 	r.drawGrassBatch(ebiten.NewImage(max(sw, 1), max(sh, 1)), &w, 0, 0, mw-1, mh-1, tile, sw, sh, limit)
-	return r.lod.grass.Quads
+	return r.lod.Grass.Quads
 }
 
 // TestGrassCopiesSpillPastEdge: copies sit in a jittered 3×3 grid; edge
@@ -138,13 +138,13 @@ func TestGrassBatchIsOneDraw(t *testing.T) {
 			order = append(order, "object")
 		}
 	}
-	r.lod.grass.OnFlush = func() { order = append(order, "grass") }
+	r.lod.Grass.OnFlush = func() { order = append(order, "grass") }
 	lodFrame(r, 64) // 640×400: 10×6.25 tiles
-	if r.lod.grass.Flushes != 1 {
-		t.Fatalf("tufts drawn in %d batches, want 1", r.lod.grass.Flushes)
+	if r.lod.Grass.Flushes != 1 {
+		t.Fatalf("tufts drawn in %d batches, want 1", r.lod.Grass.Flushes)
 	}
-	if r.lod.grass.Quads < 10*6*9 {
-		t.Fatalf("batch holds %d quads, want every copy of the view (≥ %d)", r.lod.grass.Quads, 10*6*9)
+	if r.lod.Grass.Quads < 10*6*9 {
+		t.Fatalf("batch holds %d quads, want every copy of the view (≥ %d)", r.lod.Grass.Quads, 10*6*9)
 	}
 	at := -1
 	for i, n := range order {
@@ -187,7 +187,7 @@ func TestGrassSnowFade(t *testing.T) {
 	w := grassWorld(8, 8, 100)
 	r, sim := grassRenderer(w, 8, 8)
 	batchAt(r, 8, 8, 64, 9)
-	for _, v := range r.lod.grass.Verts {
+	for _, v := range r.lod.Grass.Verts {
 		if v.ColorA != 1 {
 			t.Fatalf("no snow: vertex alpha %v", v.ColorA)
 		}
@@ -197,7 +197,7 @@ func TestGrassSnowFade(t *testing.T) {
 	r2.art = grassTestArt()
 	n := batchAt(r2, 8, 8, 64, 9)
 	faded := 0
-	for _, v := range r2.lod.grass.Verts {
+	for _, v := range r2.lod.Grass.Verts {
 		if v.ColorA < 1 {
 			faded++
 		}
@@ -221,26 +221,26 @@ func TestGrassLODTiers(t *testing.T) {
 	w := grassWorld(64, 64, 100)
 	r, _ := grassRenderer(w, 64, 64)
 	lodFrame(r, 64)
-	if r.lod.grass.Quads < 10*6*9 { // 640×400 shows 10×6 whole tiles
-		t.Fatalf("64 px: %d quads, want nine copies a tile (≥ %d)", r.lod.grass.Quads, 10*6*9)
+	if r.lod.Grass.Quads < 10*6*9 { // 640×400 shows 10×6 whole tiles
+		t.Fatalf("64 px: %d quads, want nine copies a tile (≥ %d)", r.lod.Grass.Quads, 10*6*9)
 	}
 	lodFrame(r, 32)
 	tiles := (640/32 + 2) * (400/32 + 3)
-	if q := r.lod.grass.Quads; q == 0 || q > 4*tiles {
+	if q := r.lod.Grass.Quads; q == 0 || q > 4*tiles {
 		t.Fatalf("32 px: %d quads, want 1..%d (four a tile)", q, 4*tiles)
 	}
-	baked := r.lod.grass.Baked
+	baked := r.lod.Grass.Baked
 	lodFrame(r, 20)
-	if r.lod.grass.Quads != 0 {
-		t.Fatalf("20 px drew %d live tuft quads, want them baked", r.lod.grass.Quads)
+	if r.lod.Grass.Quads != 0 {
+		t.Fatalf("20 px drew %d live tuft quads, want them baked", r.lod.Grass.Quads)
 	}
-	if r.lod.grass.Baked == baked {
+	if r.lod.Grass.Baked == baked {
 		t.Fatal("20 px: no tufts baked into the chunk images")
 	}
-	tints := r.lod.grass.Tinted
+	tints := r.lod.Grass.Tinted
 	lodFrame(r, 8)
-	if r.lod.grass.Quads != 0 || r.lod.grass.Tinted == tints {
-		t.Fatalf("8 px: %d live quads, %d tint bakes", r.lod.grass.Quads, r.lod.grass.Tinted-tints)
+	if r.lod.Grass.Quads != 0 || r.lod.Grass.Tinted == tints {
+		t.Fatalf("8 px: %d live quads, %d tint bakes", r.lod.Grass.Quads, r.lod.Grass.Tinted-tints)
 	}
 }
 
@@ -251,13 +251,13 @@ func TestChunkVersionFollowsGrassGrowth(t *testing.T) {
 	w := grassWorld(64, 64, 100)
 	r, sim := grassRenderer(w, 64, 64)
 	lodFrame(r, 20)
-	first := r.lod.chunks.bakes
+	first := r.lod.Chunks.Bakes
 	if first == 0 {
 		t.Fatal("no chunk baked")
 	}
 	lodFrame(r, 20)
-	if r.lod.chunks.bakes != first {
-		t.Fatalf("an unchanged frame rebaked %d chunks", r.lod.chunks.bakes-first)
+	if r.lod.Chunks.Bakes != first {
+		t.Fatalf("an unchanged frame rebaked %d chunks", r.lod.Chunks.Bakes-first)
 	}
 	g := make([]uint8, 64*64)
 	for i := range g {
@@ -266,17 +266,17 @@ func TestChunkVersionFollowsGrassGrowth(t *testing.T) {
 	g[8*64+8] = 10 // shoots in chunk (0,0)
 	sim.world.GrassGrowth, sim.world.GrassVer = g, 2
 	lodFrame(r, 20)
-	if got := r.lod.chunks.bakes - first; got != 1 {
+	if got := r.lod.Chunks.Bakes - first; got != 1 {
 		t.Fatalf("one regrown tile rebaked %d chunks, want 1", got)
 	}
 	// the 24–48 px tier bakes no tufts: growth never rebakes it
 	r2, sim2 := grassRenderer(grassWorld(64, 64, 100), 64, 64)
 	lodFrame(r2, 32)
-	b := r2.lod.chunks.bakes
+	b := r2.lod.Chunks.Bakes
 	sim2.world.GrassGrowth, sim2.world.GrassVer = g, 2
 	lodFrame(r2, 32)
-	if r2.lod.chunks.bakes != b {
-		t.Fatalf("32 px rebaked %d chunks on a growth change", r2.lod.chunks.bakes-b)
+	if r2.lod.Chunks.Bakes != b {
+		t.Fatalf("32 px rebaked %d chunks on a growth change", r2.lod.Chunks.Bakes-b)
 	}
 }
 
@@ -314,6 +314,6 @@ func BenchmarkGrassBatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		frame()
 	}
-	b.ReportMetric(float64(r.lod.grass.Quads), "quads/op")
+	b.ReportMetric(float64(r.lod.Grass.Quads), "quads/op")
 	b.ReportMetric(1, "draw-calls/op")
 }

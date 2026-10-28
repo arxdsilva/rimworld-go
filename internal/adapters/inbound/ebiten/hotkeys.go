@@ -19,7 +19,7 @@ type midDragState struct {
 // handleViewKeys runs on every screen: screenshot and hide UI.
 func (a *App) handleViewKeys() {
 	if a.in.Fired(input.Screenshot) {
-		a.shot.pending = true // taken after the next Draw (screenshot.go)
+		a.meter.Shot.Pending = true // taken after the next Draw (screenshot.go)
 	}
 	if a.in.Fired(input.HideUI) && a.nav.screen() == screenColony {
 		a.hideUI = !a.hideUI
@@ -98,14 +98,14 @@ func (a *App) handleTabKeys() {
 // openAnimals opens the Animals tab on its Colony or Wild list, or closes
 // it when that list is already showing.
 func (a *App) openAnimals(wild bool) {
-	if a.workOpen && a.panelMode == "animals" && a.animalsWild == wild {
-		a.workOpen = false
+	if a.win.Open && a.win.Mode == "animals" && a.win.Wild == wild {
+		a.win.Open = false
 		return
 	}
-	if !a.workOpen || a.panelMode != "animals" {
+	if !a.win.Open || a.win.Mode != "animals" {
 		a.applyClick("tab.animals")
 	}
-	a.animalsWild = wild
+	a.win.Wild = wild
 }
 
 // handleMapKeys are the colony-map actions.
@@ -151,8 +151,8 @@ func (a *App) presetTool(id string) {
 		return
 	}
 	a.openArchitect()
-	a.archCat = t.category
-	if a.archTool != id {
+	a.arch.Cat = t.category
+	if a.arch.ToolID != id {
 		a.selectArchTool(id)
 	}
 }

@@ -156,7 +156,7 @@ func (a *App) captureColonyUI(ui string) {
 			}
 		}
 	case "work-incapable":
-		a.workOpen, a.panelMode = true, "work"
+		a.win.Open, a.win.Mode = true, "work"
 		for row, p := range pawns {
 			for col := range workColumns {
 				if _, live := workLive[col]; live && p.Incapable.Enabled(work.Type(col)) && a.cursor == nil {
@@ -167,7 +167,7 @@ func (a *App) captureColonyUI(ui string) {
 			}
 		}
 	case "options-story":
-		a.optionsTab = "story"
+		a.opt.Tab = "story"
 		a.cursor = &[2]int{-100, -100}
 		a.apply(intent{kind: intentPush, screen: screenOptions})
 	case "arch-hospital":

@@ -21,8 +21,8 @@ func TestCropPickerListsTrees(t *testing.T) {
 	}
 	// picking Tree sends the tree species through the zone command
 	click(t, a, "arch.crop.tree")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 8, 7
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 8, 7
 	a.submitArchitect()
 	g.Step(1)
 	z := zonesOfKind(g.World(), game.ZoneGrow)

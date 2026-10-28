@@ -109,7 +109,7 @@ func (l colonyLoader) Finish() error {
 // finishStart installs the built colony and ends the wizard.
 func (a *App) finishStart(sim Simulation) {
 	a.startSession(sim)
-	a.saveSlot = newSlotName()
-	a.autosaveDay = 0
+	a.opt.SaveSlot = newSlotName()
+	a.opt.AutosaveDay = 0
 	a.wiz.Drop() // the setup is done: the wizard's draft goes with it
 }

@@ -21,7 +21,7 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 	}
 	a.finishBoot()
 	quickStart(t, a)
-	slot := a.saveSlot
+	slot := a.opt.SaveSlot
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.save")
 	if saved[slot] == nil {
@@ -29,12 +29,12 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 	}
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.load")
-	if a.nav.screen() != screenLoad || len(a.slots) != 1 {
-		t.Fatalf("load screen %s with %d slots", a.nav.screen(), len(a.slots))
+	if a.nav.screen() != screenLoad || len(a.opt.Slots) != 1 {
+		t.Fatalf("load screen %s with %d slots", a.nav.screen(), len(a.opt.Slots))
 	}
 	before := a.simsStarted
 	click(t, a, "load.slot.0")
-	if a.nav.screen() != screenColony || a.simsStarted != before+1 || a.saveSlot != slot {
-		t.Fatalf("after load: %s, sims %d, slot %q", a.nav.screen(), a.simsStarted, a.saveSlot)
+	if a.nav.screen() != screenColony || a.simsStarted != before+1 || a.opt.SaveSlot != slot {
+		t.Fatalf("after load: %s, sims %d, slot %q", a.nav.screen(), a.simsStarted, a.opt.SaveSlot)
 	}
 }

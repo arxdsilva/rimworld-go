@@ -265,7 +265,7 @@ func TestWorkTabIncapableCells(t *testing.T) {
 	a, f := colonyApp(t, s)
 	click(t, a, "tab.work")
 	f.Frame(t, a)
-	if !a.workOpen {
+	if !a.win.Open {
 		t.Fatal("the Work tab should open")
 	}
 
@@ -323,7 +323,7 @@ func storySim() *stubSim {
 func openStory(t *testing.T, s *stubSim) (*App, *fakeInput) {
 	t.Helper()
 	a, f := colonyApp(t, s)
-	a.optionsTab = "story"
+	a.opt.Tab = "story"
 	a.apply(intent{kind: intentPush, screen: screenOptions})
 	f.Frame(t, a)
 	if a.currentOptionsTab() != "story" {
@@ -393,7 +393,7 @@ func TestOptionsStoryTabOnlyInColony(t *testing.T) {
 			t.Fatal("the menu's Options must not offer Story")
 		}
 	}
-	a.optionsTab = "story"
+	a.opt.Tab = "story"
 	if a.currentOptionsTab() == "story" {
 		t.Fatal("no colony: the story tab can't be current")
 	}
@@ -516,12 +516,12 @@ func TestArchitectLockedByScenario(t *testing.T) {
 		t.Fatalf("lamp card = %+v, want enabled", lamp)
 	}
 	click(t, a, "arch.tool.campfire")
-	if a.archTool != "" || a.hint != game.ReasonScenario {
-		t.Fatalf("tool=%q hint=%q: a locked card must not select and says why", a.archTool, a.hint)
+	if a.arch.ToolID != "" || a.hint != game.ReasonScenario {
+		t.Fatalf("tool=%q hint=%q: a locked card must not select and says why", a.arch.ToolID, a.hint)
 	}
 	click(t, a, "arch.tool.lamp")
-	if a.archTool != "lamp" {
-		t.Fatalf("tool = %q, want lamp", a.archTool)
+	if a.arch.ToolID != "lamp" {
+		t.Fatalf("tool = %q, want lamp", a.arch.ToolID)
 	}
 	if lockWord(fire.Reason) != "locked" || lockWord("Needs research: Fabrication") != "needs research" {
 		t.Fatal("lockWord")

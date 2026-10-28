@@ -202,8 +202,8 @@ func TestFenceAndForbidToolsEmit(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.structure")
 	click(t, a, "arch.tool.fence")
-	a.archX0, a.archY0, a.archX1, a.archY1 = 2, 2, 4, 2
-	a.archDrag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 2, 4, 2
+	a.arch.Drag = true
 	a.submitArchitect()
 	id, _ := kindID("fence")
 	n := 0
@@ -222,7 +222,7 @@ func TestFenceAndForbidToolsEmit(t *testing.T) {
 	}{{"forbid", true}, {"allow", false}} {
 		s.cmds = nil
 		click(t, a, "arch.tool."+tc.id)
-		a.archX0, a.archY0, a.archX1, a.archY1 = 1, 2, 3, 4
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 2, 3, 4
 		a.submitArchitect()
 		c := lastCmd(t, s)
 		if c.Kind != command.DesignateForbid || c.Enabled != tc.on || c.X != 1 || c.Y2 != 4 {

@@ -1,13 +1,16 @@
 package ebiten
 
 import (
-	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"strings"
+
 	"rimworld-go/internal/application/game"
 )
 
 // Stone, ore and metal presentation (ART-015, SIM-029): the tints, the
-// linked keys and the material helpers live in render/sprite; the titles,
-// the Architect's default stone and the ground tile memo stay here.
+// linked keys and the material helpers live in render/sprite, the stone
+// cache with the ground tile memo in render/world (world.StoneArt); the
+// titles and the Architect's default stone stay here (they read
+// capitalize and stockOf).
 
 // stuffAdjective names a non-wood material for titles: "Granite",
 // "Steel", "Stone" (legacy); "" for wood.
@@ -32,18 +35,13 @@ func materialTitle(kind, stuff string) string {
 	return capitalize(kind)
 }
 
-// stoneArtCache is the painter's stone cache (sprite.StoneCache) and the
-// ground tile memo per terrain code for one catalog (draw_art.go).
-type stoneArtCache struct {
-	sprite.StoneCache
-	tilesArt *artCatalog
-	tiles    [][soilVariants]tileKeyEntry
-}
-
-type tileKeyEntry struct {
-	key  string
-	cs   colorScale
-	done bool
+// ruinTitle is "Ruined granite wall" / "Ruined wooden floor".
+func ruinTitle(b game.BuildingView) string {
+	adj := strings.ToLower(stuffAdjective(b.Stuff))
+	if adj == "" {
+		adj = "wooden"
+	}
+	return "Ruined " + adj + " " + b.Kind
 }
 
 // defaultStoneStuff is the stone material the Architect offers first: the
@@ -58,14 +56,4 @@ func defaultStoneStuff(w game.WorldView) string {
 		}
 	}
 	return defaultStone + " blocks"
-}
-
-// stoneCache is the renderer's stone cache with its ground tile memo
-// cleared when the catalog changed.
-func (r *Renderer) stoneCache() *stoneArtCache {
-	c := &r.stoneArt
-	if c.tilesArt != r.art {
-		c.tiles, c.tilesArt = nil, r.art
-	}
-	return c
 }

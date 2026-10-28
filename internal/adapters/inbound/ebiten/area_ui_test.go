@@ -57,19 +57,19 @@ func TestAreaToolSubmenuListsAreasAndArms(t *testing.T) {
 	}
 	press(t, a, f, "areapick.row.5")
 	f.Frame(t, a)
-	if a.archTool != "allowed_area" || a.areaPaintIndex() != 5 || a.uiModalTop() != "" {
-		t.Fatalf("armed tool %q area %d modal %q", a.archTool, a.areaPaintIndex(), a.uiModalTop())
+	if a.arch.ToolID != "allowed_area" || a.areaPaintIndex() != 5 || a.uiModalTop() != "" {
+		t.Fatalf("armed tool %q area %d modal %q", a.arch.ToolID, a.areaPaintIndex(), a.uiModalTop())
 	}
 	// A left-drag paints a rectangle on area id 5.
-	a.archX0, a.archY0, a.archX1, a.archY1 = 2, 3, 6, 7
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 6, 7
 	a.submitArchitect()
 	if c := lastAreaCmd(s); c.Kind != command.PaintArea || c.Index != 5 || !c.Enabled || c.X != 2 || c.Y2 != 7 {
 		t.Fatalf("paint command %+v", c)
 	}
 	// Escape-style cancel: picking the armed card again toggles it off.
 	a.selectArchTool("allowed_area")
-	if a.archTool != "" {
-		t.Fatalf("armed card did not toggle off: %q", a.archTool)
+	if a.arch.ToolID != "" {
+		t.Fatalf("armed card did not toggle off: %q", a.arch.ToolID)
 	}
 }
 
@@ -81,7 +81,7 @@ func TestAreaClearToolEmitsClear(t *testing.T) {
 	a.selectArchTool("allowed_area_clear")
 	press(t, a, f, "areapick.row.3")
 	f.Frame(t, a)
-	a.archX0, a.archY0, a.archX1, a.archY1 = 1, 1, 2, 2
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 1, 2, 2
 	a.submitArchitect()
 	if c := lastAreaCmd(s); c.Kind != command.PaintArea || c.Index != 3 || c.Enabled {
 		t.Fatalf("clear command %+v", c)
@@ -198,7 +198,7 @@ func TestScheduleAllowedAreaDropdown(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
 	a, f := areaApp(t, s)
-	a.workOpen, a.panelMode = true, "schedule"
+	a.win.Open, a.win.Mode = true, "schedule"
 	f.Frame(t, a)
 	w, ok := a.uiSt().Find("sched.area.1")
 	if !ok || !strings.HasPrefix(w.Label, "Indoors") {
@@ -256,22 +256,6 @@ func TestInspectorAreaLine(t *testing.T) {
 	f.Frame(t, a)
 	if !hasWidget(a, "inspector.area") {
 		t.Fatal("the Area chip shows on every tab")
-	}
-}
-
-func TestAreaRefLabels(t *testing.T) {
-	t.Parallel()
-	areas := []game.AreaView{{ID: 3, Name: "Indoors"}}
-	for ref, want := range map[int]string{0: "Unrestricted", -1: "Unrestricted", -2: "Home", 3: "Indoors", 9: "Unrestricted"} {
-		if got := areaRefLabel(areas, ref); got != want {
-			t.Errorf("ref %d = %q, want %q", ref, got, want)
-		}
-	}
-	if len(areaPickOpts(areas, true)) != 3 || len(areaPickOpts(areas, false)) != 1 {
-		t.Fatal("picker options")
-	}
-	if c := areaTint(game.AreaView{}); c.A != 255 || c.R == 0 {
-		t.Fatalf("uncoloured area tint %v", c)
 	}
 }
 
@@ -341,7 +325,7 @@ func TestAreaOverlayFollowsArmedTool(t *testing.T) {
 	if a.renderer.overlays().Area.Armed != 5 {
 		t.Fatalf("overlay armed on %d, want 5", a.renderer.overlays().Area.Armed)
 	}
-	a.archTool = ""
+	a.arch.ToolID = ""
 	f.Frame(t, a)
 	if a.renderer.overlays().Area.Armed != 0 {
 		t.Fatal("overlay stays armed after the tool is dropped")

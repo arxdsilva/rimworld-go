@@ -114,7 +114,7 @@ func TestDraftedRightClick(t *testing.T) {
 	}
 	// open ground: moves at once, no menu
 	a.rightClickTile(8, 8, 100, 100)
-	if a.float.open {
+	if a.ord.Float.Open {
 		t.Fatal("ground click must not open the menu")
 	}
 	g.Step(1)
@@ -127,7 +127,7 @@ func TestDraftedRightClick(t *testing.T) {
 	}
 	a.renderer.syncPawns()
 	a.rightClickTile(5, 5, 100, 100)
-	if !a.float.open {
+	if !a.ord.Float.Open {
 		t.Fatal("a drafted right-click on an animal must open the order menu")
 	}
 }

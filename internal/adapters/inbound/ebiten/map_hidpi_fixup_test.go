@@ -38,8 +38,8 @@ func TestDevMenuPicksPhysicalTile(t *testing.T) {
 	a.setSettings(set)
 	f.MoveTo(a, 21, 19)
 	f.Key(t, a, "Slash", 0)
-	if !a.dev.menu || a.dev.tx != 21 || a.dev.ty != 19 {
-		t.Fatalf("dev menu %v at tile %d,%d, want 21,19", a.dev.menu, a.dev.tx, a.dev.ty)
+	if !a.tools.State.Menu || a.tools.State.TX != 21 || a.tools.State.TY != 19 {
+		t.Fatalf("dev menu %v at tile %d,%d, want 21,19", a.tools.State.Menu, a.tools.State.TX, a.tools.State.TY)
 	}
 }
 

@@ -309,14 +309,14 @@ func (s shellSettings) KeyHint(act input.Action) string { return s.a.keyHint(act
 type shellPanels struct{ a *App }
 
 // ArchitectOpen reports the Architect panel is up.
-func (s shellPanels) ArchitectOpen() bool { return s.a.archOpen }
+func (s shellPanels) ArchitectOpen() bool { return s.a.arch.Open }
 
 // ArchitectTool is the Architect's tool in hand ("" when none).
-func (s shellPanels) ArchitectTool() string { return s.a.archTool }
+func (s shellPanels) ArchitectTool() string { return s.a.arch.ToolID }
 
 // WindowMode is the open main-tab window ("work", "schedule", …) and
 // whether one is open.
-func (s shellPanels) WindowMode() (mode string, open bool) { return s.a.panelMode, s.a.workOpen }
+func (s shellPanels) WindowMode() (mode string, open bool) { return s.a.win.Mode, s.a.win.Open }
 
 // UIHidden reports F11 hid the interface.
 func (s shellPanels) UIHidden() bool { return s.a.uiHidden() }
@@ -333,7 +333,7 @@ func (s shellWidgets) Kit() *uikit.Kit { return s.a.uiSt() }
 type shellSaves struct{ a *App }
 
 // Slots is the load screen's list (RefreshSlots reads it from disk).
-func (s shellSaves) Slots() []ports.SaveSlot { return s.a.slots }
+func (s shellSaves) Slots() []ports.SaveSlot { return s.a.opt.Slots }
 func (s shellSaves) RefreshSlots()           { s.a.refreshSlots() }
 func (s shellSaves) LoadSlot(i int)          { s.a.loadSlot(i) }
 func (s shellSaves) NewestSlot() int         { return s.a.newestSlot() }
@@ -354,9 +354,9 @@ func (s shellDispatch) Do(it ports.Intent) {
 	case ports.PresetBuildTool:
 		a.presetArchTool(it.Kind, it.Stuff, it.Facing)
 	case ports.ShowWindow:
-		a.showWindow(it.Mode)
+		a.win.Show(it.Mode)
 	case ports.CloseWindows:
-		a.workOpen = false
+		a.win.Open = false
 	case ports.SelectPawn:
 		a.selectCand(selCand{Kind: selPawn, ID: it.ID})
 	case ports.TogglePawnInSet:
@@ -442,36 +442,36 @@ func clickRoutes() []clickRoute {
 		exact(homeAutoButtonID, func(a *App, _ string) { a.toggleHomeAuto() }), // home_auto_ui.go
 		exact(planButtonID, func(a *App, _ string) { a.shell.TogglePlan() }),
 		exact(roomsButtonID, func(a *App, _ string) { a.rooms = !a.rooms }),
-		on(ids.PrefixLetter, (*App).applyLetterClick),                            // hud_right.go
-		on(ids.PrefixSpeed, (*App).applySpeedClick),                              // hud_global.go
-		on(ids.PrefixLearn, (*App).applyLearnClick),                              // learn_ui.go
-		on(ids.PrefixRes, (*App).applyResourceClick),                             // hud_resources.go
-		on(ids.PrefixCmd, (*App).applyCommandClick),                              // hud_commands.go
-		on(ids.PrefixWin, (*App).applyWindowClick),                               // hud_window.go
-		exact(ids.TabWildlife, func(a *App, _ string) { a.toggleWildlifeTab() }), // hud_window.go
-		on(ids.PrefixGroup, (*App).applyGroupClick),                              // multiselect.go
-		on(ids.PrefixSearch, (*App).applySearchClick),                            // search_ui.go
-		on(ids.PrefixDev, (*App).applyDevClick),                                  // devmode.go
-		on(ids.PrefixBarPawn, clickBarPawn),                                      // hud_colonistbar.go
-		on(ids.PrefixResearchPick, (*App).pickResearch),                          // research_ui.go
-		on(ids.PrefixAnimals, (*App).applyAnimalsTab),                            // animals_ui.go
-		{id: "tab.", prefix: true, run: clickMainTab},                            // work, schedule, research, animals; others fall through
+		on(ids.PrefixLetter, (*App).applyLetterClick),                                     // hud_right.go
+		on(ids.PrefixSpeed, (*App).applySpeedClick),                                       // hud_global.go
+		on(ids.PrefixLearn, (*App).applyLearnClick),                                       // learn_ui.go
+		on(ids.PrefixRes, (*App).applyResourceClick),                                      // hud_resources.go
+		on(ids.PrefixCmd, (*App).applyCommandClick),                                       // hud_commands.go
+		on(ids.PrefixWin, func(a *App, id string) { a.win.Click(id) }),                    // hud_window.go
+		exact(ids.TabWildlife, func(a *App, _ string) { a.win.ToggleWildlife() }),         // hud_window.go
+		on(ids.PrefixGroup, (*App).applyGroupClick),                                       // multiselect.go
+		on(ids.PrefixSearch, (*App).applySearchClick),                                     // search_ui.go
+		on(ids.PrefixDev, (*App).applyDevClick),                                           // devmode.go
+		on(ids.PrefixBarPawn, clickBarPawn),                                               // hud_colonistbar.go
+		on(ids.PrefixResearchPick, func(a *App, id string) { a.win.Research().Pick(id) }), // research_ui.go
+		on(ids.PrefixAnimals, func(a *App, id string) { a.win.Animals().Click(id) }),      // animals_ui.go
+		{id: "tab.", prefix: true, run: clickMainTab},                                     // work, schedule, research, animals; others fall through
 		on(ids.PrefixSchedBrush, func(a *App, id string) {
 			if v, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixSchedBrush)); err == nil {
-				a.schedBrush = schedule.Activity(v)
+				a.win.Brush = schedule.Activity(v)
 			}
 		}),
-		on(ids.PrefixSchedCell, (*App).paintSchedule), // schedule_ui.go
+		on(ids.PrefixSchedCell, func(a *App, id string) { a.win.Schedule().Paint(id) }), // windows
 		exact(ids.TabArchitect, func(a *App, _ string) {
-			if a.archOpen {
+			if a.arch.Open {
 				a.closeArchitect()
 			} else {
 				a.openArchitect()
 			}
 		}),
 		on(ids.PrefixArchCat, func(a *App, id string) { a.selectArchCategory(strings.TrimPrefix(id, ids.PrefixArchCat)) }),
-		on(ids.PrefixArchStuff, func(a *App, id string) { a.archStuff = strings.TrimPrefix(id, ids.PrefixArchStuff) }),
-		on(ids.PrefixArchCrop, func(a *App, id string) { a.archCrop = strings.TrimPrefix(id, ids.PrefixArchCrop) }),
+		on(ids.PrefixArchStuff, func(a *App, id string) { a.arch.Stuff = strings.TrimPrefix(id, ids.PrefixArchStuff) }),
+		on(ids.PrefixArchCrop, func(a *App, id string) { a.arch.Crop = strings.TrimPrefix(id, ids.PrefixArchCrop) }),
 		on(ids.PrefixArchTool, func(a *App, id string) { a.selectArchTool(strings.TrimPrefix(id, ids.PrefixArchTool)) }),
 		on(ids.PrefixFloat, (*App).chooseFloat), // orders.go
 		on(ids.PrefixLoadSlot, func(a *App, id string) {
@@ -481,7 +481,7 @@ func clickRoutes() []clickRoute {
 		}),
 		exact(ids.PauseSaveQuit, func(a *App, _ string) { a.apply(intent{kind: intentReturnToMenu}) }), // commitment: Save & Quit to Menu (saves.go)
 		exact(ids.PauseSave, func(a *App, _ string) {
-			a.saveNow(a.saveSlot)
+			a.saveNow(a.opt.SaveSlot)
 			a.apply(intent{kind: intentResume})
 		}),
 		exact(ids.PauseLoad, openLoadScreen),
@@ -507,7 +507,7 @@ func clickRoutes() []clickRoute {
 		on(ids.PrefixAlert, (*App).focusAlert),        // alerts.go
 		on(ids.PrefixBldg, (*App).applyBuildingClick), // building_inspector.go
 		on(ids.PrefixBill, (*App).applyBuildingClick), // building_inspector.go
-		on(ids.PrefixWorkCell, (*App).toggleWorkCell), // work.go
+		on(ids.PrefixWorkCell, (*App).toggleWorkCell), // app.go
 		exact(ids.TabMenu, func(a *App, _ string) { a.apply(intent{kind: intentPause}) }),
 		{id: ids.PrefixOptions, prefix: true, run: func(a *App, id string) bool { // screen_options.go
 			if id == ids.OptionsBack { // the screen intent, not an option
@@ -552,11 +552,11 @@ func clickMainTab(a *App, id string) bool {
 		return false
 	}
 	mode := strings.TrimPrefix(id, "tab.")
-	if a.workOpen && a.panelMode == mode {
-		a.workOpen = false
+	if a.win.Open && a.win.Mode == mode {
+		a.win.Open = false
 		return true
 	}
-	a.workOpen, a.panelMode = true, mode
+	a.win.Open, a.win.Mode = true, mode
 	a.closeArchitect()
 	a.closeFloat()
 	return true
@@ -570,7 +570,7 @@ func openLoadScreen(a *App, _ string) {
 
 // openOptions opens Options on its first tab with no key capture pending.
 func openOptions(a *App, id string) {
-	a.optionsTab = ""
+	a.opt.Tab = ""
 	a.rebind = rebindState{}
 	a.apply(a.clickIntent(id))
 }

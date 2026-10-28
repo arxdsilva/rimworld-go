@@ -156,21 +156,21 @@ func TestDevMenuLosePartAndSpawnImplants(t *testing.T) {
 	acts := a.devActions(3, 3)
 	byLabel := map[string]devAction{}
 	for _, x := range acts {
-		byLabel[x.label] = x
+		byLabel[x.Label] = x
 	}
 	imp, ok := byLabel["Spawn implants"]
-	if !ok || imp.reason != "" {
+	if !ok || imp.Reason != "" {
 		t.Fatalf("Spawn implants action: %+v", imp)
 	}
-	imp.run(d)
+	imp.Run(d)
 	if !d.implant {
 		t.Fatal("DevSpawnImplants not called")
 	}
 	lose, ok := byLabel["Lose a part..."]
-	if !ok || lose.reason != "" {
+	if !ok || lose.Reason != "" {
 		t.Fatalf("Lose a part action: %+v", lose)
 	}
-	lose.run(d)
+	lose.Run(d)
 	f.Frame(t, a)
 	if a.uiModalTop() != devLosePickID {
 		t.Fatal("part picker not open")
@@ -190,8 +190,8 @@ func TestDevPartActionsNeedAColonist(t *testing.T) {
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
 	for _, x := range a.devActions(1, 1) {
-		if (x.label == "Spawn implants" || x.label == "Lose a part...") && x.reason == "" {
-			t.Fatalf("%s should need a selected colonist", x.label)
+		if (x.Label == "Spawn implants" || x.Label == "Lose a part...") && x.Reason == "" {
+			t.Fatalf("%s should need a selected colonist", x.Label)
 		}
 	}
 }

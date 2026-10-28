@@ -240,23 +240,23 @@ func TestJourneySelectEscapeChain(t *testing.T) {
 	px, py := tileOf(j, 0)
 	j.clickTile(px, py, mbLeft, 0)
 	j.key("F1", 0) // the Work window
-	if !j.a.workOpen {
+	if !j.a.win.Open {
 		t.Fatal("F1 did not open the Work window")
 	}
 	j.key("Tab", 0) // the Architect (replaces the window)
 	j.clickID("arch.cat.structure")
 	j.clickID("arch.tool.wall")
-	if !j.a.archOpen || j.a.archTool == "" {
-		t.Fatalf("no armed Architect tool (open %v tool %q)", j.a.archOpen, j.a.archTool)
+	if !j.a.arch.Open || j.a.arch.ToolID == "" {
+		t.Fatalf("no armed Architect tool (open %v tool %q)", j.a.arch.Open, j.a.arch.ToolID)
 	}
 	j.key("F11", 0)
 	steps := []struct {
 		name string
 		done func() bool
 	}{
-		{"hidden UI returns", func() bool { return !j.a.hideUI && j.a.archTool != "" }},
-		{"Architect tool disarms", func() bool { return j.a.archOpen && j.a.archTool == "" }},
-		{"Architect closes", func() bool { return !j.a.archOpen && j.a.renderer.HasSelect() }},
+		{"hidden UI returns", func() bool { return !j.a.hideUI && j.a.arch.ToolID != "" }},
+		{"Architect tool disarms", func() bool { return j.a.arch.Open && j.a.arch.ToolID == "" }},
+		{"Architect closes", func() bool { return !j.a.arch.Open && j.a.renderer.HasSelect() }},
 		{"selection clears", func() bool { return !j.a.renderer.HasSelect() && j.a.nav.overlay() != overlayPause }},
 		{"pause overlay opens", func() bool { return j.a.nav.overlay() == overlayPause }},
 	}
@@ -264,7 +264,7 @@ func TestJourneySelectEscapeChain(t *testing.T) {
 		j.key("Escape", 0)
 		if !s.done() {
 			t.Fatalf("Escape step %q: archOpen %v tool %q hideUI %v workOpen %v selected %v overlay %v",
-				s.name, j.a.archOpen, j.a.archTool, j.a.hideUI, j.a.workOpen, j.a.renderer.HasSelect(), j.a.nav.overlay())
+				s.name, j.a.arch.Open, j.a.arch.ToolID, j.a.hideUI, j.a.win.Open, j.a.renderer.HasSelect(), j.a.nav.overlay())
 		}
 	}
 	j.key("Enter", 0) // dialog.accept: the pause overlay has no default button

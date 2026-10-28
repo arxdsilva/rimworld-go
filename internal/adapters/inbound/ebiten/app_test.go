@@ -219,23 +219,18 @@ func holdColony(a *App, f *fakeInput, id string) func() {
 		return func() {}
 	}
 	was := r.speed
-	st := &a.hst.learn
 	r.speed = speedPaused
-	if st.based {
-		st.lastSpeed = speedPaused
-	}
+	a.lrn.SetBaseSpeed(int(speedPaused))
 	return func() {
 		if a.renderer != r || r.speed != speedPaused {
 			return
 		}
-		if d := &a.dealings; d.trade != nil || d.comms != nil {
-			d.resume, d.paused = was, true
+		if a.deal.Open() {
+			a.deal.HoldPause(int(was))
 			return
 		}
 		r.speed = was
-		if st.based {
-			st.lastSpeed = was
-		}
+		a.lrn.SetBaseSpeed(int(was))
 	}
 }
 

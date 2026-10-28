@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -11,7 +12,7 @@ import (
 // trough accepts and the pen's tame animals; one command button holds the
 // Plants / Meat / Any filter (SetTroughFilter) as options.
 
-const troughKind = "feeding trough"
+const troughKind = world.TroughKind
 
 // troughFilters are the filter buttons; Mode is the SetTroughFilter value.
 var troughFilters = []struct {

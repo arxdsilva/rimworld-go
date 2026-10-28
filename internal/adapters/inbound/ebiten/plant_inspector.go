@@ -230,7 +230,7 @@ func (a *App) drawPlantIcon(dst *ebiten.Image, p game.PlantView, x, y, size floa
 // panel itself is the inspect pane (plantPane).
 func (a *App) drawPlantMark(screen *ebiten.Image) {
 	p, ok := a.selectedPlant()
-	if !ok || a.workOpen || a.archOpen {
+	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
 	if a.renderer.art != nil {

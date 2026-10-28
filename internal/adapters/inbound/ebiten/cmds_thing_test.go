@@ -474,8 +474,8 @@ func TestAnimalMasterOptions(t *testing.T) {
 	}
 	// a plain click opens the same list instead of picking the first one
 	thingPress(a, master)
-	if !a.float.open || len(a.float.opts) != 3 || a.float.opts[0].Label != "Ada (master)" {
-		t.Fatalf("a click lists the colonists: %+v", a.float)
+	if !a.ord.Float.Open || len(a.ord.Float.Opts) != 3 || a.ord.Float.Opts[0].Label != "Ada (master)" {
+		t.Fatalf("a click lists the colonists: %+v", a.ord.Float)
 	}
 	if len(s.cmds) != 1 {
 		t.Fatalf("opening the list sent %+v", s.cmds)

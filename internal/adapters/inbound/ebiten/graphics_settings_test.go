@@ -209,7 +209,7 @@ func TestOptionsGraphicsRowsRecordTheChoice(t *testing.T) {
 	} {
 		store := graphicsStore()
 		a := optionsApp(store)
-		a.optionsTab = "graphics"
+		a.opt.Tab = "graphics"
 		a.applyOption("options." + c.row)
 		g := store.s.Graphics
 		if !c.changed(g) {
@@ -230,7 +230,7 @@ func TestOptionsFullscreenIsNotAPresetRow(t *testing.T) {
 	t.Parallel()
 	store := graphicsStore()
 	a := optionsApp(store)
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	a.applyOption("options.fullscreen")
 	g := store.s.Graphics
 	if !g.Fullscreen || g.Quality != config.QualityHigh || len(g.Chosen) != 0 {
@@ -245,7 +245,7 @@ func TestOptionsQualityAppliesPresetAndClearsChoices(t *testing.T) {
 	store := graphicsStore()
 	a := optionsApp(store)
 	a.devFn = func() float64 { return 2 }
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	a.applyOption("options.shadows") // custom, shadows chosen
 	if g := store.s.Graphics; g.Quality != config.QualityCustom || g.Shadows {
 		t.Fatalf("setup: %+v", g)
@@ -288,7 +288,7 @@ func TestOptionsDetectAgain(t *testing.T) {
 	a := optionsApp(store)
 	a.cfg.Hardware = func() sysinfo.Info { return sysinfo.Info{Total: 4 * sysinfo.GiB, Cores: 2} }
 	a.devFn = func() float64 { return 1 }
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	a.applyOption("options.lighting") // a hand-picked row
 	if b := optionBtn(t, a, "options.quality.detect"); b.Disabled || b.Tip == "" {
 		t.Fatalf("detect button %+v", b)
@@ -312,7 +312,7 @@ func TestOptionsDetectAgain(t *testing.T) {
 func TestOptionsDetectAgainNeedsHardware(t *testing.T) {
 	t.Parallel()
 	a := optionsApp(graphicsStore())
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	b := optionBtn(t, a, "options.quality.detect")
 	if !b.Disabled || b.Reason == "" {
 		t.Fatalf("detect button %+v, want it disabled with a reason", b)
@@ -323,7 +323,7 @@ func TestOptionsDetectAgainNeedsHardware(t *testing.T) {
 func TestOptionsGraphicsRowsHaveCostTips(t *testing.T) {
 	t.Parallel()
 	a := optionsApp(graphicsStore())
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	for _, id := range []string{"quality", "effects", "shadows", "lighting", "water", "grass", "hidpi", "vsync", "renderscale"} {
 		if b := optionBtn(t, a, "options."+id); len(b.Tip) < 20 {
 			t.Fatalf("%s tip = %q, want a sentence", id, b.Tip)
@@ -349,7 +349,7 @@ func TestOptionsGraphicsLabelsFitTheirColumn(t *testing.T) {
 			t.Fatalf("row %q at y=%v reaches the footer of a 540 px window", r.Key, y)
 		}
 	}
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	for _, b := range a.optionsButtons(960, 540) {
 		if b.X+b.W > 960-40 { // inside the panel
 			t.Fatalf("%s ends at x=%v, outside the 960 px panel", b.ID, b.X+b.W)
@@ -364,16 +364,16 @@ func TestSyncRendererReadsGraphics(t *testing.T) {
 	a := optionsApp(graphicsStore())
 	a.startGame()
 	r := a.renderer
-	if r.env.Shadow.Off || r.lit.Off || r.water.Simple || r.lod.grass.Level != "" && r.lod.grass.Level != config.GrassFull {
+	if r.env.Shadow.Off || r.lit.Off || r.water.Simple || r.lod.Grass.Level != "" && r.lod.Grass.Level != config.GrassFull {
 		t.Fatalf("high defaults should leave every knob at today's look")
 	}
 	s := a.settings
 	s.Graphics.Shadows, s.Graphics.Lighting = false, false
 	s.Graphics.Water, s.Graphics.Grass = config.WaterSimple, config.GrassSparse
 	a.setSettings(s)
-	if !r.env.Shadow.Off || !r.lit.Off || !r.water.Simple || r.lod.grass.Level != config.GrassSparse {
+	if !r.env.Shadow.Off || !r.lit.Off || !r.water.Simple || r.lod.Grass.Level != config.GrassSparse {
 		t.Fatalf("knobs not synced: shadows off %v lighting off %v simple water %v grass %q",
-			r.env.Shadow.Off, r.lit.Off, r.water.Simple, r.lod.grass.Level)
+			r.env.Shadow.Off, r.lit.Off, r.water.Simple, r.lod.Grass.Level)
 	}
 	s.Graphics.Shadows, s.Graphics.Lighting = true, true
 	s.Graphics.Water, s.Graphics.Grass = config.WaterAnimated, config.GrassFull

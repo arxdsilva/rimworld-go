@@ -11,7 +11,7 @@ import (
 // state line reads what it is eating or hunting.
 func TestTamePredatorHuntLine(t *testing.T) {
 	t.Parallel()
-	a := &App{}
+	a := testApp(nil) // the features hang off NewApp (ARCH-005)
 	rex := game.AnimalView{Species: "timber_wolf", Tame: true, State: "hunting a hare", Diet: "meat", Hunts: true, Food: 30, Rest: 80}
 	if got := animalHuntLine(rex); got != "Hunts wild animals when hungry" {
 		t.Errorf("hunt line %q", got)

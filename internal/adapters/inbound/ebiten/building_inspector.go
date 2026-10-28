@@ -176,7 +176,7 @@ func (a *App) recipesFor(kind string) []game.RecipeView {
 // (cmds_build.go) is the building's panel now.
 func (a *App) drawBuildingMark(screen *ebiten.Image) {
 	b, ok := a.selectedBuilding()
-	if !ok || a.workOpen || a.archOpen {
+	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
 	a.drawBuildingSelection(screen, b)

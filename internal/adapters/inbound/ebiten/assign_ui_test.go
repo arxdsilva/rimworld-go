@@ -109,18 +109,4 @@ func TestAssignEmptyAndDraws(t *testing.T) {
 	}
 }
 
-func TestNextPresetCycles(t *testing.T) {
-	t.Parallel()
-	p := drug.NoDrugs
-	seen := map[drug.Preset]bool{}
-	for i := 0; i < len(assignPresets); i++ {
-		seen[p] = true
-		p = nextPreset(p)
-	}
-	if p != drug.NoDrugs || len(seen) != 3 {
-		t.Fatalf("cycle ends at %v after %v", p, seen)
-	}
-	if presetLabel(drug.Unrestricted) != "Unrestricted" {
-		t.Fatal(presetLabel(drug.Unrestricted))
-	}
-}
+// TestNextPresetCycles moved to windows/windows_test.go.

@@ -158,7 +158,7 @@ func buildInfo(f game.FrameView, w game.WorldView) frameInfo {
 // pane (cmds_build.go) is the blueprint's panel now.
 func (a *App) drawFrameMark(screen *ebiten.Image) {
 	f, ok := a.selectedFrame()
-	if !ok || a.workOpen || a.archOpen {
+	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
 	if a.renderer.art != nil {

@@ -74,11 +74,11 @@ func TestAnimalInspectorBondBlock(t *testing.T) {
 		t.Fatalf("obedience off: %+v", c)
 	}
 	click(t, a, "cmd.animal.master")
-	if !a.float.open || len(a.float.opts) != 3 {
-		t.Fatalf("the master picker lists both colonists and none: %+v", a.float.opts)
+	if !a.ord.Float.Open || len(a.ord.Float.Opts) != 3 {
+		t.Fatalf("the master picker lists both colonists and none: %+v", a.ord.Float.Opts)
 	}
-	if a.float.opts[0].Label != "Ada (master)" || a.float.opts[2].Cmd.Pawn != 0 {
-		t.Fatalf("picker %+v", a.float.opts)
+	if a.ord.Float.Opts[0].Label != "Ada (master)" || a.ord.Float.Opts[2].Cmd.Pawn != 0 {
+		t.Fatalf("picker %+v", a.ord.Float.Opts)
 	}
 	click(t, a, "float.1")
 	if c := s.cmds[len(s.cmds)-1]; c.Kind != command.SetAnimalMaster || c.Target != 50 || c.Pawn != 2 {

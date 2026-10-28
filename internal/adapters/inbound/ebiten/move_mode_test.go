@@ -77,7 +77,7 @@ func TestMoveModeEnqueuesMoveBuilding(t *testing.T) {
 	t.Parallel()
 	a, rs, b := bldgApp(t, "butcher table", "wood", "east")
 	a.applyBuildingClick("bldg.move")
-	if !a.moveSt().on {
+	if !a.moveSt().On {
 		t.Fatal("Move should enter move mode")
 	}
 	a.moveStep(5, 5, true, 0, true, false) // the opening click is swallowed
@@ -86,8 +86,8 @@ func TestMoveModeEnqueuesMoveBuilding(t *testing.T) {
 	}
 	rs.moveOK = false
 	a.moveStep(5, 5, true, 0, true, false)
-	if len(rs.cmds) != 0 || !a.moveSt().on || a.hint != "blocked" {
-		t.Fatalf("invalid spot: cmds=%v on=%v hint=%q", rs.cmds, a.moveSt().on, a.hint)
+	if len(rs.cmds) != 0 || !a.moveSt().On || a.hint != "blocked" {
+		t.Fatalf("invalid spot: cmds=%v on=%v hint=%q", rs.cmds, a.moveSt().On, a.hint)
 	}
 	rs.moveOK = true
 	a.moveStep(5, 5, true, 0, true, false)
@@ -98,7 +98,7 @@ func TestMoveModeEnqueuesMoveBuilding(t *testing.T) {
 	if c.Kind != command.MoveBuilding || c.Target != uint64(b.ID) || c.X != 5 || c.Y != 5 || c.Facing != facingIndex("east") {
 		t.Fatalf("command = %+v", c)
 	}
-	if a.moveSt().on {
+	if a.moveSt().On {
 		t.Fatal("placing should leave move mode")
 	}
 }
@@ -112,8 +112,8 @@ func TestMoveModeRotates(t *testing.T) {
 	a.applyBuildingClick("bldg.move")
 	a.moveStep(5, 5, true, 0, false, false) // swallow fresh frame
 	a.moveStep(5, 5, true, 1, false, false)
-	if a.moveSt().facing != facingIndex("east") {
-		t.Fatalf("facing = %d", a.moveSt().facing)
+	if a.moveSt().Facing != facingIndex("east") {
+		t.Fatalf("facing = %d", a.moveSt().Facing)
 	}
 	a.moveStep(5, 5, true, -1, false, false)
 	a.moveStep(5, 5, true, -1, true, false)
@@ -128,8 +128,8 @@ func TestMoveModeCancel(t *testing.T) {
 	a.applyBuildingClick("bldg.move")
 	a.moveStep(5, 5, true, 0, false, false)
 	a.moveStep(5, 5, true, 0, false, true)
-	if a.moveSt().on || len(rs.cmds) != 0 {
-		t.Fatalf("cancel: on=%v cmds=%v", a.moveSt().on, rs.cmds)
+	if a.moveSt().On || len(rs.cmds) != 0 {
+		t.Fatalf("cancel: on=%v cmds=%v", a.moveSt().On, rs.cmds)
 	}
 	if a.moveStep(5, 5, true, 0, true, false) {
 		t.Fatal("inactive move mode must not consume input")
@@ -142,12 +142,12 @@ func TestCopyOpensArchitectPreset(t *testing.T) {
 	// it and the material presets on stone walls and a steel door.
 	a, _, _ := bldgApp(t, "butcher table", "wood", "east")
 	a.applyBuildingClick("bldg.copy")
-	tool, ok := toolByID(a.archTool)
-	if !a.archOpen || !ok || tool.build != "butcher table" {
-		t.Fatalf("architect open=%v tool=%q", a.archOpen, a.archTool)
+	tool, ok := toolByID(a.arch.ToolID)
+	if !a.arch.Open || !ok || tool.build != "butcher table" {
+		t.Fatalf("architect open=%v tool=%q", a.arch.Open, a.arch.ToolID)
 	}
-	if a.archFacing != facingIndex("east") {
-		t.Fatalf("facing = %d", a.archFacing)
+	if a.arch.Facing != facingIndex("east") {
+		t.Fatalf("facing = %d", a.arch.Facing)
 	}
 	for _, c := range []struct{ kind, stuff, want string }{
 		{"wall", "marble blocks", "marble blocks"},
@@ -156,9 +156,9 @@ func TestCopyOpensArchitectPreset(t *testing.T) {
 	} {
 		w, _, _ := bldgApp(t, c.kind, c.stuff, "south")
 		w.applyBuildingClick("bldg.copy")
-		wt, _ := toolByID(w.archTool)
+		wt, _ := toolByID(w.arch.ToolID)
 		if wt.build != c.kind || w.toolStuff(wt) != c.want {
-			t.Fatalf("%s %s copy: tool=%q stuff=%q", c.stuff, c.kind, w.archTool, w.archStuff)
+			t.Fatalf("%s %s copy: tool=%q stuff=%q", c.stuff, c.kind, w.arch.ToolID, w.arch.Stuff)
 		}
 	}
 }

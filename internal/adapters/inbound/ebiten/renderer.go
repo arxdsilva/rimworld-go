@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -214,7 +215,8 @@ type Renderer struct {
 	figureBlood float32
 	// stepTicks are single ticks the developer asked for while paused.
 	stepTicks int
-	ov        *overlay.Set // the map overlays (render/overlay, overlay_compat.go)
+	ov        *overlay.Set    // the map overlays (render/overlay, overlay_compat.go)
+	wp        *world.Pipeline // the world draw order (render/world, world_compat.go)
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
@@ -235,23 +237,20 @@ type Renderer struct {
 
 	// sound (sound_signals.go): cues for the App's director, last frame's
 	// world to hear changes, the pending thunder and the world this frame.
-	// steamHeard is each vent's last burst already cued (features_draw.go).
-	steamHeard map[[2]int]uint64
 	threatAt   uint64 // present frame of the newest threat
 	heard      game.WorldView
 	dangerInit bool
 	lastDanger uint64
 	floaters   []floater
 
-	// links is the cached wall/rock/fence connectivity (linkgrid.go);
-	// stoneArt memoises stone tints and resolved linked keys, and draws
-	// is the reused per-frame object queue (stone_art.go, draw_art.go).
+	// links is the cached wall/rock/fence connectivity (sprite.LinkGrid);
+	// stoneArt memoises stone tints, resolved linked keys and the ground
+	// tiles (world.StoneArt). The pipeline (wp) works on both and on lod.
 	links    linkGrid
 	stoneArt stoneArtCache
-	draws    []artDraw
 	// ENG-D fields
 	// lod is the zoom tier, the chunk and whole-map bakes and the frame's
-	// chunk lists (lod.go, chunk_cache.go); mini the minimap (minimap.go).
+	// chunk lists (world.LOD); mini the minimap (minimap.go).
 	lod   lodState
 	mini  minimapState
 	snowc snowCache // snow_cache.go: snow veil and wet masks per chunk
@@ -535,7 +534,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
-	// this frame's context for the draw layers (render.View); drawArt adds
+	// this frame's context for the draw layers (render.View); the pipeline adds
 	// the world and pawns it reads
 	v := &r.view
 	v.SW, v.SH, v.Tile = sw, sh, tile
@@ -549,7 +548,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	v.Selected, v.HasSelect = r.selected, r.hasSelect
 
 	if r.art != nil {
-		r.drawArt(screen, sw, sh, tile) // lit by light.go: no veil
+		r.pipeline().Draw(screen) // render/world, lit by render/light: no veil
 		r.drawRoofOverlay(screen, r.view.W, sw, sh, tile)
 		r.drawPowerOverlay(screen, &r.view.W, sw, sh, tile) // power_overlay.go (PLAY-021)
 		r.drawTraces(screen, r.game.World(), tile)

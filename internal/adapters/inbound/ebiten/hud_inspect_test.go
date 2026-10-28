@@ -77,12 +77,12 @@ func TestPaneShownNeedsATitle(t *testing.T) {
 	if !a.paneShown() || a.hud().Pane.Empty() {
 		t.Fatal("a pane with a Title is shown in the layout")
 	}
-	a.archOpen = true
+	a.arch.Open = true
 	if a.paneShown() {
 		t.Fatal("the Architect takes the lower-left from the pane")
 	}
-	a.archOpen = false
-	a.workOpen = true
+	a.arch.Open = false
+	a.win.Open = true
 	if a.paneShown() {
 		t.Fatal("a main-tab window hides the pane")
 	}

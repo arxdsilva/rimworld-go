@@ -353,7 +353,7 @@ func pdRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]string) {
 	for i := range w.Frames {
 		cv.Frames = append(cv.Frames, int32(i))
 	}
-	r.lod.views = []game.ChunkView{cv}
+	r.lod.Views = []game.ChunkView{cv}
 	got := &[]string{}
 	r.overlays().Wiring.Parts.Trace = func(part, key string) { *got = append(*got, part+" "+key) }
 	return r, got
@@ -463,9 +463,9 @@ func TestGlowOnlyWhilePowered(t *testing.T) {
 	b := game.BuildingView{Kind: heaterKind, PowerRole: "consumer", Powered: true, X: 4, Y: 4, W: 1, H: 1}
 	w := game.WorldView{Buildings: []game.BuildingView{b}}
 	r, got := pdRenderer(t, w)
-	r.lod.baking = true
+	r.lod.Baking = true
 	r.drawBuildingObj(ebiten.NewImage(640, 400), &w.Buildings[0], r.tilePx(), 640, 400)
-	r.lod.baking = false
+	r.lod.Baking = false
 	if len(*got) != 0 {
 		t.Fatalf("a bake drew power parts: %v", *got)
 	}

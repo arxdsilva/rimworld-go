@@ -51,7 +51,7 @@ func (a *App) syncTreeFocus() {
 		}
 	}
 	var ghost []ghostCell
-	if a.archTool != "" {
+	if a.arch.ToolID != "" {
 		_, ghost = a.previewCells()
 	}
 	a.treeFocus = treeFocusCells(a.treeFocus[:0], hover, hovered, a.treeSel, ghost)

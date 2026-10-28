@@ -26,8 +26,8 @@ func TestJourneyTabsWorkCellCycles(t *testing.T) {
 	j := newJourney(t)
 	id := uint64(j.g.Snapshot()[0].ID)
 	j.key("F1", 0)
-	if !j.a.workOpen || j.a.panelMode != "work" {
-		t.Fatalf("F1 left the work tab closed (open %v, mode %q)", j.a.workOpen, j.a.panelMode)
+	if !j.a.win.Open || j.a.win.Mode != "work" {
+		t.Fatalf("F1 left the work tab closed (open %v, mode %q)", j.a.win.Open, j.a.win.Mode)
 	}
 	cell := "work.cell." + idStr(id) + ".1"
 	start := workPriority(j.pawn(id), 1)
@@ -50,7 +50,7 @@ func TestJourneyTabsWorkCellCycles(t *testing.T) {
 		t.Fatalf("five clicks ended at %d, started at %d: the cycle is not 5 long", want, start)
 	}
 	j.key("F1", 0)
-	if j.a.workOpen {
+	if j.a.win.Open {
 		t.Fatal("F1 again left the work tab open")
 	}
 }
@@ -61,8 +61,8 @@ func TestJourneyTabsScheduleBrushAndCell(t *testing.T) {
 	j := newJourney(t)
 	id := uint64(j.g.Snapshot()[0].ID)
 	j.key("F2", 0)
-	if !j.a.workOpen || j.a.panelMode != "schedule" {
-		t.Fatalf("F2 left the schedule closed (mode %q)", j.a.panelMode)
+	if !j.a.win.Open || j.a.win.Mode != "schedule" {
+		t.Fatalf("F2 left the schedule closed (mode %q)", j.a.win.Mode)
 	}
 	hour := 6
 	brush := schedule.Recreation
@@ -138,8 +138,8 @@ func TestJourneyTabsResearchPick(t *testing.T) {
 	// game.New is a sandbox that knows everything; a new colony knows nothing.
 	j := newJourney(t, jGame(game.NewColony(game.Config{Seed: 1, Width: 64, Height: 64})))
 	j.key("F6", 0)
-	if !j.a.workOpen || j.a.panelMode != "research" {
-		t.Fatalf("F6 left mode %q", j.a.panelMode)
+	if !j.a.win.Open || j.a.win.Mode != "research" {
+		t.Fatalf("F6 left mode %q", j.a.win.Mode)
 	}
 	var pick string
 	for _, b := range j.a.researchButtons() {
@@ -192,8 +192,8 @@ func TestJourneyTabsReservedKeysToast(t *testing.T) {
 			if len(toasts) == 0 || !strings.Contains(toasts[len(toasts)-1].text, "not implemented") {
 				t.Fatalf("%s toasted %+v, want a not-implemented notice", k, toasts)
 			}
-			if j.a.workOpen || j.a.uiModalTop() != "" {
-				t.Fatalf("%s opened something (work %v, modal %q)", k, j.a.workOpen, j.a.uiModalTop())
+			if j.a.win.Open || j.a.uiModalTop() != "" {
+				t.Fatalf("%s opened something (work %v, modal %q)", k, j.a.win.Open, j.a.uiModalTop())
 			}
 		})
 	}
@@ -207,8 +207,8 @@ func TestJourneyTabsWildlife(t *testing.T) {
 		t.Fatal(err)
 	}
 	j.key("F5", 0)
-	if !j.a.workOpen || j.a.panelMode != "animals" || !j.a.animalsWild {
-		t.Fatalf("F5 left mode %q wild %v", j.a.panelMode, j.a.animalsWild)
+	if !j.a.win.Open || j.a.win.Mode != "animals" || !j.a.win.Wild {
+		t.Fatalf("F5 left mode %q wild %v", j.a.win.Mode, j.a.win.Wild)
 	}
 	j.clickID("animals.wild.hunt.deer")
 	c, ok := j.lastCmd(command.DesignateHunt)
@@ -338,8 +338,8 @@ func TestJourneyTabsTameAnimals(t *testing.T) {
 	}
 
 	j.key("F4", 0)
-	if !j.a.workOpen || j.a.panelMode != "animals" || j.a.animalsWild {
-		t.Fatalf("F4 left mode %q (wild %v)", j.a.panelMode, j.a.animalsWild)
+	if !j.a.win.Open || j.a.win.Mode != "animals" || j.a.win.Wild {
+		t.Fatalf("F4 left mode %q (wild %v)", j.a.win.Mode, j.a.win.Wild)
 	}
 	j.clickID("animals.master." + n)
 	j.pick("Colonist")

@@ -189,7 +189,7 @@ func TestPowerToolsLockedBeforeElectricity(t *testing.T) {
 	a, _ := powerArch(t, s)
 	check := func(cat, tool, why string) {
 		t.Helper()
-		a.archCat = cat
+		a.arch.Cat = cat
 		c, ok := archCmd(a, "arch.tool."+tool)
 		if !ok {
 			t.Fatalf("no card %s in %s", tool, cat)
@@ -206,14 +206,14 @@ func TestPowerToolsLockedBeforeElectricity(t *testing.T) {
 	check("furniture", "torch_lamp", "")
 	check("production", "electric_stove", "Needs research: Electricity")
 	archPick(t, a, "electric_stove")
-	if a.archTool != "" || !strings.Contains(a.hint, "Electricity") {
-		t.Errorf("a locked card armed %q (hint %q)", a.archTool, a.hint)
+	if a.arch.ToolID != "" || !strings.Contains(a.hint, "Electricity") {
+		t.Errorf("a locked card armed %q (hint %q)", a.arch.ToolID, a.hint)
 	}
 	s.world.Locked = nil
 	check(archCatPower, "conduit", "")
 	archPick(t, a, "conduit")
-	if a.archTool != "conduit" {
-		t.Errorf("an open card did not arm: %q", a.archTool)
+	if a.arch.ToolID != "conduit" {
+		t.Errorf("an open card did not arm: %q", a.arch.ToolID)
 	}
 }
 
@@ -309,9 +309,9 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 		{"production", "electric_research", true}, {"furniture", "torch_lamp", false}, {"structure", "wall", false},
 		{"misc", "party_spot", false},
 	} {
-		a.archTool, a.archCat = "", c.cat
+		a.arch.ToolID, a.arch.Cat = "", c.cat
 		archPick(t, a, c.tool)
-		if a.archTool != c.tool {
+		if a.arch.ToolID != c.tool {
 			t.Fatalf("%s did not arm", c.tool)
 		}
 		if r.overlays().Power.Forced != c.forced || r.powerShown() != c.forced {
@@ -319,7 +319,7 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 		}
 	}
 	archPick(t, a, "party_spot") // drop it
-	a.archCat = archCatPower
+	a.arch.Cat = archCatPower
 	archPick(t, a, "conduit")
 	a.closeArchitect()
 	if r.overlays().Power.Forced || r.powerShown() {
@@ -327,7 +327,7 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 	}
 	r.togglePowerOverlay()
 	a.openArchitect()
-	a.archCat = "structure"
+	a.arch.Cat = "structure"
 	archPick(t, a, "wall")
 	if !r.powerShown() {
 		t.Error("a non-power tool hid the player's own overlay")
@@ -615,7 +615,7 @@ func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
 		PowerNets: []game.PowerNetView{{ID: 1}}}}
 	a, f := powerArch(t, s)
 	tl, _ := toolByID(tool)
-	a.archCat = tl.category
+	a.arch.Cat = tl.category
 	archPick(t, a, tool)
 	f.MoveTo(a, tx, ty)
 	f.Frame(t, a)
@@ -667,7 +667,7 @@ func TestCoolerGhostUsesCanPlace(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	a.openArchitect()
-	a.archCat = "misc"
+	a.arch.Cat = "misc"
 	archPick(t, a, "cooler")
 	f.MoveTo(a, 5, 5)
 	f.Frame(t, a)
@@ -697,10 +697,10 @@ func TestPowerToolsPlace(t *testing.T) {
 	t.Parallel()
 	s := &stubSim{}
 	a, _ := powerArch(t, s)
-	a.archCat = archCatPower
+	a.arch.Cat = archCatPower
 	archPick(t, a, "conduit")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 2, 3, 5, 3
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 5, 3
 	a.submitArchitect()
 	id, _ := kindID(conduitKind)
 	n := 0
@@ -725,7 +725,7 @@ func TestPowerLayoutAtScales(t *testing.T) {
 			a.renderer.togglePowerOverlay()
 			a.renderer.overlays().Roof.On = true
 			a.openArchitect()
-			a.archCat = archCatPower
+			a.arch.Cat = archCatPower
 			archPick(t, a, "battery")
 			a.updateOnce(t)
 			l := a.hud()

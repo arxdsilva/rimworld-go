@@ -52,8 +52,8 @@ func TestZoneRefusalTooltip(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.stockpile")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 0, 3, 0, 8
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 0, 3, 0, 8
 	a.submitArchitect()
 	if a.hint != "Can't zone here: "+game.ZoneRefuseEdge {
 		t.Fatalf("hint = %q", a.hint)
@@ -85,8 +85,8 @@ func TestDumpingStockpileTool(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.dump")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 8, 7
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 8, 7
 	a.submitArchitect()
 	g.Step(1)
 	found := false

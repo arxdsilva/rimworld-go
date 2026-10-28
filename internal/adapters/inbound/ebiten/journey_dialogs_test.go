@@ -433,7 +433,7 @@ func TestJourneyDialogsTradeCaravanAccept(t *testing.T) {
 	j.clickID("arch.cat.zones")
 	j.clickID("arch.tool.stockpile")
 	j.dragTiles(mbLeft, 31, 30, 33, 32, 0)
-	for i := 0; i < 2 && j.a.archOpen; i++ {
+	for i := 0; i < 2 && j.a.arch.Open; i++ {
 		j.key("Escape", 0)
 	}
 	if _, ok := zoneCellAt(j.world(), 32, 31); !ok {

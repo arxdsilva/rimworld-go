@@ -88,8 +88,8 @@ func TestCaptureColonyStates(t *testing.T) {
 			}
 		}},
 		{"work-incapable", 400, func(t *testing.T, a *App) {
-			if !a.workOpen || a.cursor == nil {
-				t.Fatalf("work open %v cursor %v: no incapable cell found to point at", a.workOpen, a.cursor)
+			if !a.win.Open || a.cursor == nil {
+				t.Fatalf("work open %v cursor %v: no incapable cell found to point at", a.win.Open, a.cursor)
 			}
 			hatched := 0
 			for _, b := range a.workButtons() {
@@ -117,14 +117,14 @@ func TestCaptureColonyStates(t *testing.T) {
 			}
 		}},
 		{"arch-hospital", 60, func(t *testing.T, a *App) {
-			if !a.archOpen || a.archCat != "furniture" || a.cursor == nil {
-				t.Fatalf("architect open %v cat %q cursor %v", a.archOpen, a.archCat, a.cursor)
+			if !a.arch.Open || a.arch.Cat != "furniture" || a.cursor == nil {
+				t.Fatalf("architect open %v cat %q cursor %v", a.arch.Open, a.arch.Cat, a.cursor)
 			}
 			captureCursorOnTool(t, a, "hospital_bed")
 		}},
 		{"arch-cabinet", 60, func(t *testing.T, a *App) {
-			if !a.archOpen || a.archCat != "production" || a.cursor == nil {
-				t.Fatalf("architect open %v cat %q cursor %v", a.archOpen, a.archCat, a.cursor)
+			if !a.arch.Open || a.arch.Cat != "production" || a.cursor == nil {
+				t.Fatalf("architect open %v cat %q cursor %v", a.arch.Open, a.arch.Cat, a.cursor)
 			}
 			captureCursorOnTool(t, a, "tool_cabinet")
 		}},

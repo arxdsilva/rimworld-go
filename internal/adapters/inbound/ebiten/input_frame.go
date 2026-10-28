@@ -37,7 +37,7 @@ func (a *App) textActive() bool {
 	switch {
 	case a.rebind.On && a.nav.screen() == screenOptions:
 		return true
-	case a.search.open && a.colonyLive():
+	case a.ord.Search.Open && a.colonyLive():
 		return true
 	case a.uiTextEditing(): // a widget-kit text field (ui_textfield.go)
 		return true
@@ -53,11 +53,11 @@ func (a *App) colonyLive() bool {
 // toolActive reports a tool owns the pointer: Move mode, an Architect
 // tool, or a formation drag.
 func (a *App) toolActive() bool {
-	return a.bldgMove.on || (a.archOpen && a.archTool != "") || a.form.on
+	return a.moveSt().On || (a.arch.Open && a.arch.ToolID != "") || a.ord.Form.On
 }
 
 // modalOpen reports a menu sits over the map.
-func (a *App) modalOpen() bool { return a.float.open || a.dev.menu }
+func (a *App) modalOpen() bool { return a.ord.Float.Open || a.tools.State.Menu }
 
 // contextStack is the active input layers, top first (UI-016): text
 // entry, modal, tool, panel, colony map, global, dev.
@@ -79,7 +79,7 @@ func (a *App) contextStack() []input.Context {
 		if a.toolActive() {
 			s = append(s, input.CtxTool)
 		}
-		if a.workOpen {
+		if a.win.Open {
 			s = append(s, input.CtxPanel)
 		}
 		s = append(s, input.CtxMap)
@@ -113,7 +113,7 @@ func (a *App) handleTextInput() {
 		a.uiTextInput() // ui_textfield.go
 	case a.rebind.On && a.nav.screen() == screenOptions:
 		a.captureBinding() // controls_ui.go
-	case a.search.open:
+	case a.ord.Search.Open:
 		a.searchTyping() // search_ui.go
 	}
 }

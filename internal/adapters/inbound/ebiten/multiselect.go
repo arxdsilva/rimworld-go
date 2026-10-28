@@ -213,7 +213,7 @@ func groupNoun(k selKind, n int) string {
 // groupButtons are the group's command buttons in the grid (the pane's
 // close and member rows are paneButtons).
 func (a *App) groupButtons() []button {
-	if !a.grouped() || a.workOpen || a.archOpen || a.renderer == nil {
+	if !a.grouped() || a.win.Open || a.arch.Open || a.renderer == nil {
 		return nil
 	}
 	if len(a.groupRows()) < 2 {

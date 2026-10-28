@@ -270,8 +270,8 @@ func TestJourneyFlowContinueLoads(t *testing.T) {
 		t.Fatal("Continue is disabled with a save listed")
 	}
 	flowAttach(j)
-	if j.a.saveSlot != "kept" || !strings.HasPrefix(j.a.hint, "loaded") {
-		t.Fatalf("slot %q hint %q after Continue, want the kept save loaded", j.a.saveSlot, j.a.hint)
+	if j.a.opt.SaveSlot != "kept" || !strings.HasPrefix(j.a.hint, "loaded") {
+		t.Fatalf("slot %q hint %q after Continue, want the kept save loaded", j.a.opt.SaveSlot, j.a.hint)
 	}
 	if len(j.g.Snapshot()) != 1 {
 		t.Fatalf("the loaded colony has %d colonists, want 1", len(j.g.Snapshot()))

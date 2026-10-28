@@ -14,8 +14,8 @@ func TestPlanToolsEmitDesignatePlan(t *testing.T) {
 		click(t, a, "tab.architect")
 		click(t, a, "arch.cat.orders")
 		click(t, a, "arch.tool."+id)
-		a.archDrag = true
-		a.archX0, a.archY0, a.archX1, a.archY1 = 2, 3, 5, 6
+		a.arch.Drag = true
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 5, 6
 		a.submitArchitect()
 		c := lastCmd(t, s)
 		if c.Kind != command.DesignatePlan || c.Enabled != enabled ||

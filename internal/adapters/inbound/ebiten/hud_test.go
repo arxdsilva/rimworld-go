@@ -49,7 +49,7 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	click(t, a, "tab.work")
-	if !a.workOpen {
+	if !a.win.Open {
 		t.Fatal("Work tab should open the overlay")
 	}
 	found := false
@@ -69,7 +69,7 @@ func TestDisabledTabsDoNotNavigate(t *testing.T) {
 	// the World tab is live now (ENG-003 M9): Factions is the one tab a
 	// legacy colony still has disabled
 	click(t, a, "tab.factions")
-	if a.workOpen || a.archOpen || a.uiModalOpen() {
+	if a.win.Open || a.arch.Open || a.uiModalOpen() {
 		t.Fatal("disabled Factions tab opened something")
 	}
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
@@ -96,7 +96,7 @@ func TestEscapeClosesWorkThenInspectorThenPause(t *testing.T) {
 	click(t, a, "tab.work")
 
 	a.pressEscape()
-	if a.workOpen {
+	if a.win.Open {
 		t.Fatal("first Escape should close Work")
 	}
 	if a.nav.overlay() != overlayNone {
@@ -181,7 +181,7 @@ func TestArchitectTabOpens(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	click(t, a, "tab.architect")
-	if !a.archOpen {
+	if !a.arch.Open {
 		t.Fatal("Architect tab should open")
 	}
 	if len(a.architectButtons()) == 0 {
@@ -218,13 +218,13 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	click(t, a, "tab.architect")
-	if !a.archOpen || a.archCat == "" {
+	if !a.arch.Open || a.arch.Cat == "" {
 		t.Fatal("Architect tab should open on a category")
 	}
 	seen := map[string]bool{}
 	for _, c := range archCategories {
 		click(t, a, "arch.cat."+c.id)
-		if a.archCat != c.id {
+		if a.arch.Cat != c.id {
 			t.Fatalf("category %s not selected", c.id)
 		}
 		// categories in ArchCats, the tools as command buttons in the grid
@@ -244,11 +244,11 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 	}
 	click(t, a, "arch.cat.orders")
 	click(t, a, "arch.tool.harvest")
-	if a.archTool != "harvest" {
-		t.Fatalf("archTool = %q, want harvest", a.archTool)
+	if a.arch.ToolID != "harvest" {
+		t.Fatalf("archTool = %q, want harvest", a.arch.ToolID)
 	}
 	click(t, a, "arch.tool.harvest")
-	if a.archTool != "" {
+	if a.arch.ToolID != "" {
 		t.Fatal("clicking the selected card should deselect it")
 	}
 }
@@ -258,7 +258,7 @@ func TestEscapeClosesArchitectBeforePause(t *testing.T) {
 	a, _, _ := liveColony(t, 0)
 	click(t, a, "tab.architect")
 	a.pressEscape()
-	if a.archOpen {
+	if a.arch.Open {
 		t.Fatal("Escape should close Architect")
 	}
 	if a.nav.overlay() != overlayNone {
@@ -341,7 +341,7 @@ func TestSchedulePainting(t *testing.T) {
 	t.Parallel()
 	a, g, id := liveColony(t, 0)
 	click(t, a, "tab.schedule")
-	if !a.workOpen || a.panelMode != "schedule" {
+	if !a.win.Open || a.win.Mode != "schedule" {
 		t.Fatal("Schedule tab should open the schedule panel")
 	}
 	click(t, a, "sched.brush.3") // sleep

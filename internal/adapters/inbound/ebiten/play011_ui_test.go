@@ -51,9 +51,9 @@ func TestGhostCellsCarryAutoFacingAndSame(t *testing.T) {
 		facings: map[[2]int]string{{4, 4}: "east"}, label: "wood wall → steel"}
 	a.renderer.game = sim
 	a.openArchitect()
-	a.archTool = "wall"
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 4, 4, 6, 4
+	a.arch.ToolID = "wall"
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 4, 4, 6, 4
 	_, cells := a.previewCells()
 	if len(cells) != 3 {
 		t.Fatalf("cells = %d", len(cells))

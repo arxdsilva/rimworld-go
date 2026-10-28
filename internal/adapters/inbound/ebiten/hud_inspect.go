@@ -151,7 +151,7 @@ func (a *App) paneFor(k selKind, id entity.EntityID) paneSpec {
 // is selected, the Architect and the main-tab windows are closed, and the
 // spec has a Title.
 func (a *App) shownPane() (paneSpec, bool) {
-	if a.renderer == nil || a.archOpen || a.workOpen {
+	if a.renderer == nil || a.arch.Open || a.win.Open {
 		return paneSpec{}, false
 	}
 	spec := a.selectionPane()

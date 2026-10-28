@@ -94,7 +94,7 @@ func (r *Renderer) cueBus() *cue.Bus {
 func (r *Renderer) cueView() *render.View {
 	v := &r.view
 	v.Present = r.present
-	if !r.lod.baking {
+	if !r.lod.Baking {
 		v.Cam = r.cam
 	}
 	if r.game != nil {

@@ -53,7 +53,7 @@ func (a *App) hoveredCell() (tx, ty int, ok bool) {
 // the temperature, and what stands or lies there. Nil when cell info is
 // not showing.
 func (a *App) cellInfoLines() []string {
-	if a.renderer == nil || a.hideUI || a.archOpen || a.workOpen || !a.nothingSelected() {
+	if a.renderer == nil || a.hideUI || a.arch.Open || a.win.Open || !a.nothingSelected() {
 		return nil
 	}
 	if !a.hud().Window.Empty() {

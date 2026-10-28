@@ -32,7 +32,7 @@ func TestJourneyOrdersEmergencyTend(t *testing.T) {
 	}
 	h := j.pawn(uint64(hurt.ID))
 	j.clickTile(h.X, h.Y, mbRight, 0)
-	if a := j.a; a.form.on {
+	if a := j.a; a.ord.Form.On {
 		t.Fatal("the right-click on the wounded colonist started a formation drag")
 	}
 	j.pick("Tend")
@@ -297,12 +297,12 @@ func TestJourneyOrdersRightClickCancelsToolNoOrder(t *testing.T) {
 	j.key("Tab", 0)
 	j.clickID("arch.cat.structure")
 	j.clickID("arch.tool.wall")
-	if j.a.archTool == "" {
+	if j.a.arch.ToolID == "" {
 		t.Fatal("the wall tool did not arm")
 	}
 	j.clickTile(14, 5, mbRight, 0)
-	if j.a.archTool != "" {
-		t.Fatalf("tool %q still armed after the right click", j.a.archTool)
+	if j.a.arch.ToolID != "" {
+		t.Fatalf("tool %q still armed after the right click", j.a.arch.ToolID)
 	}
 	if n := len(j.cmdsOf(command.MovePawn)); n != 0 || len(j.a.floatButtons()) != 0 {
 		t.Fatalf("the right click ordered %d moves / opened a menu", n)

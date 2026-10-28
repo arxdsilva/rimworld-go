@@ -406,7 +406,7 @@ func TestPuddleVeilDrawsFlatLitAtEveryTier(t *testing.T) {
 			t.Fatalf("tile %v px: %d veil draws, %d lit calls", px, r.snowc.WetDraws, r.lit.Calls-before)
 		}
 		// lit flat like the ground: no normal map, a sky value per vertex
-		for _, v := range r.lod.verts {
+		for _, v := range r.lod.Verts {
 			if v.Custom2 != 0 || v.Custom0 <= 0 {
 				t.Fatalf("tile %v px: veil vertex %+v is not lit flat under the sky", px, v)
 			}

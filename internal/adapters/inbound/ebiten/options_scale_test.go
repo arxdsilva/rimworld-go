@@ -22,7 +22,7 @@ func optionBtn(t *testing.T, a *App, id string) button {
 func TestOptionsUIScaleCyclesAutoAndPresets(t *testing.T) {
 	store := &fakeSettings{s: config.Defaults()}
 	a := optionsApp(store)
-	a.optionsTab = "access"
+	a.opt.Tab = "access"
 	if !a.settings.Accessibility.UIScaleAuto {
 		t.Fatal("defaults should be Auto")
 	}
@@ -37,8 +37,8 @@ func TestOptionsUIScaleCyclesAutoAndPresets(t *testing.T) {
 	if !store.s.Accessibility.UIScaleAuto {
 		t.Fatal("after the last preset the stepper returns to Auto")
 	}
-	if a.optionsTab != "access" {
-		t.Fatalf("tab changed to %q", a.optionsTab)
+	if a.opt.Tab != "access" {
+		t.Fatalf("tab changed to %q", a.opt.Tab)
 	}
 	if store.saves != len(config.UIScalePresets)+1 {
 		t.Fatalf("saves = %d", store.saves)
@@ -48,7 +48,7 @@ func TestOptionsUIScaleCyclesAutoAndPresets(t *testing.T) {
 func TestOptionsUIScaleAutoLabelShowsPercent(t *testing.T) {
 	a := scaledTestApp(t, 1, nil)
 	a.LayoutF(1920, 1080) // Auto: 1.5
-	a.optionsTab = "access"
+	a.opt.Tab = "access"
 	if got := optionBtn(t, a, "options.uiscale").Label; got != "Auto (150%)" {
 		t.Fatalf("label = %q", got)
 	}
@@ -61,7 +61,7 @@ func TestOptionsUIScaleAutoLabelShowsPercent(t *testing.T) {
 func TestOptionsHiDPIToggle(t *testing.T) {
 	store := &fakeSettings{s: config.Defaults()}
 	a := optionsApp(store)
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	b := optionBtn(t, a, "options.hidpi")
 	if b.Label != "On" || b.Tip == "" {
 		t.Fatalf("hidpi button %+v", b)
@@ -76,7 +76,7 @@ func TestOptionsScaleChangeKeepsStepperHit(t *testing.T) {
 	a := scaledTestApp(t, 1, nil)
 	a.LayoutF(1920, 1080)
 	a.finishBoot()
-	a.optionsTab = "access"
+	a.opt.Tab = "access"
 	before := optionBtn(t, a, "options.uiscale")
 	a.applyOption("options.uiscale") // Auto -> 75%
 	a.LayoutF(1920, 1080)
@@ -104,7 +104,7 @@ func TestOptionsDrawAtScales(t *testing.T) {
 			})
 			a.LayoutF(1920, 1080)
 			a.finishBoot()
-			a.optionsTab = tab
+			a.opt.Tab = tab
 			bs := a.optionsButtons(a.sw, a.sh)
 			for i, b := range bs {
 				if b.X+b.W > float32(a.sw) || b.Y+b.H > float32(a.sh) {

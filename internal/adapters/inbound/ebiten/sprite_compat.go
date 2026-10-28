@@ -97,7 +97,7 @@ func (r *Renderer) painter() sprite.Painter {
 // spritePass is the pass the renderer draws sprites in: the shadow
 // pass's cast, a bake, a figure's blood.
 func (r *Renderer) spritePass() sprite.Pass {
-	return sprite.Pass{Cast: r.cast, Baking: r.lod.baking, Blood: r.figureBlood}
+	return sprite.Pass{Cast: r.cast, Baking: r.lod.Baking, Blood: r.figureBlood}
 }
 
 // spriteView is the view a sprite draw reads (lightView) with the

@@ -58,7 +58,7 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 }
 
 // newestSlot is the index of the loadable save written last (-1 when none).
-func (a *App) newestSlot() int { return mainmenu.NewestSlot(a.slots) }
+func (a *App) newestSlot() int { return mainmenu.NewestSlot(a.opt.Slots) }
 
 // creditsButtons is the Credits screen's Back button.
 func (a *App) creditsButtons(sw, sh int) []button {
@@ -74,11 +74,11 @@ func (a *App) hasSaves() bool {
 	if !a.canLoad() {
 		return false
 	}
-	if !a.slotsRead {
-		a.slotsRead = true
+	if !a.opt.SlotsRead {
+		a.opt.SlotsRead = true
 		a.refreshSlots()
 	}
-	for _, sl := range a.slots {
+	for _, sl := range a.opt.Slots {
 		if sl.Err == "" {
 			return true
 		}

@@ -118,7 +118,7 @@ func TestTopBarNamesTheBiome(t *testing.T) {
 
 func TestAnimalInspectorLines(t *testing.T) {
 	t.Parallel()
-	a := &App{}
+	a := testApp(nil) // the features hang off NewApp (ARCH-005)
 	doe := game.AnimalView{Species: "goat", Tame: true, Female: true, State: "feeding", Food: 78, Rest: 61,
 		AgeDays: 34, Adult: true, Stage: "adult", Diet: "plants", Pregnant: true, PregPct: 40, Product: "milk", ProductPct: 70, Scale: 1}
 	if got := a.animalStateLine(doe); got != "Feeding" {
@@ -185,7 +185,7 @@ func TestWildTabRowsAndButtonsEmitCommands(t *testing.T) {
 	a.startGame()
 	click(t, a, "tab.animals")
 	click(t, a, "animals.view.wild")
-	if !a.animalsWild {
+	if !a.win.Wild {
 		t.Fatal("the Wild toggle shows the wild list")
 	}
 	click(t, a, "animals.wild.hunt.deer")
@@ -214,7 +214,7 @@ func TestWildTabRowsAndButtonsEmitCommands(t *testing.T) {
 	click(t, a, "animals.focus.deer")
 	click(t, a, "animals.focus.deer") // cycles to the second deer without panicking
 	click(t, a, "animals.view.colony")
-	if a.animalsWild {
+	if a.win.Wild {
 		t.Fatal("the Colony toggle shows the colony list")
 	}
 }

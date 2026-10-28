@@ -224,8 +224,8 @@ func TestWildlifeTabOpensTheWildlifeList(t *testing.T) {
 	a, f := winApp(t, winStub(2))
 	click(t, a, "tab.wildlife")
 	f.Frame(t, a)
-	if !a.workOpen || a.panelMode != "animals" || !a.animalsWild {
-		t.Fatalf("Wildlife tab: open %v mode %q wild %v", a.workOpen, a.panelMode, a.animalsWild)
+	if !a.win.Open || a.win.Mode != "animals" || !a.win.Wild {
+		t.Fatalf("Wildlife tab: open %v mode %q wild %v", a.win.Open, a.win.Mode, a.win.Wild)
 	}
 	sel := map[string]bool{}
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
@@ -240,7 +240,7 @@ func TestWildlifeTabOpensTheWildlifeList(t *testing.T) {
 	click(t, a, "animals.focus.deer") // the list is the wild species table
 	// clicking the open tab again closes it
 	click(t, a, "tab.wildlife")
-	if a.workOpen {
+	if a.win.Open {
 		t.Fatal("the open Wildlife tab closes it")
 	}
 }
@@ -251,8 +251,8 @@ func TestAnimalsTabWhileWildlifeIsOpenShowsTheColony(t *testing.T) {
 	click(t, a, "tab.wildlife")
 	f.Frame(t, a)
 	click(t, a, "tab.animals") // switching tabs replaces the window; it never just closes it
-	if !a.workOpen || a.panelMode != "animals" || a.animalsWild {
-		t.Fatalf("Animals over Wildlife: open %v mode %q wild %v", a.workOpen, a.panelMode, a.animalsWild)
+	if !a.win.Open || a.win.Mode != "animals" || a.win.Wild {
+		t.Fatalf("Animals over Wildlife: open %v mode %q wild %v", a.win.Open, a.win.Mode, a.win.Wild)
 	}
 	sel := map[string]bool{}
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
@@ -262,13 +262,13 @@ func TestAnimalsTabWhileWildlifeIsOpenShowsTheColony(t *testing.T) {
 		t.Fatalf("selected tabs %v: only Animals", sel)
 	}
 	click(t, a, "tab.animals")
-	if a.workOpen {
+	if a.win.Open {
 		t.Fatal("the open Animals tab closes it")
 	}
 	click(t, a, "tab.animals")
 	click(t, a, "tab.wildlife") // and Wildlife replaces Animals
-	if !a.workOpen || !a.animalsWild {
-		t.Fatalf("Wildlife over Animals: open %v wild %v", a.workOpen, a.animalsWild)
+	if !a.win.Open || !a.win.Wild {
+		t.Fatalf("Wildlife over Animals: open %v wild %v", a.win.Open, a.win.Wild)
 	}
 }
 
@@ -289,15 +289,15 @@ func TestTabsReplaceAndToggleWindows(t *testing.T) {
 				if from.tab == to.tab {
 					click(t, a, to.tab)
 					f.Frame(t, a)
-					if a.workOpen || a.uiModalTop() != "" {
-						t.Fatalf("the open %s tab should close its window (open %v, mode %q, top %q)", from.name, a.workOpen, a.panelMode, a.uiModalTop())
+					if a.win.Open || a.uiModalTop() != "" {
+						t.Fatalf("the open %s tab should close its window (open %v, mode %q, top %q)", from.name, a.win.Open, a.win.Mode, a.uiModalTop())
 					}
 					return
 				}
 				click(t, a, to.tab)
 				f.Frame(t, a)
 				if !a.windowOpenFor(to.tab) {
-					t.Fatalf("%s tab did not replace %s (mode %q top %q)", to.name, from.name, a.panelMode, a.uiModalTop())
+					t.Fatalf("%s tab did not replace %s (mode %q top %q)", to.name, from.name, a.win.Mode, a.uiModalTop())
 				}
 				if a.windowOpenFor(from.tab) {
 					t.Fatalf("%s is still open next to %s", from.name, to.name)
@@ -314,22 +314,22 @@ func (a *App) windowOpenFor(tab string) bool {
 			continue
 		}
 		if c.kit != "" {
-			return a.uiModalTop() == c.kit && a.workOpen
+			return a.uiModalTop() == c.kit && a.win.Open
 		}
-		if !a.workOpen || a.uiModalTop() != "" {
+		if !a.win.Open || a.uiModalTop() != "" {
 			return false
 		}
 		switch tab {
 		case "tab.work":
-			return a.panelMode == "work"
+			return a.win.Mode == "work"
 		case "tab.schedule":
-			return a.panelMode == "schedule"
+			return a.win.Mode == "schedule"
 		case "tab.research":
-			return a.panelMode == "research"
+			return a.win.Mode == "research"
 		case "tab.animals":
-			return a.panelMode == "animals" && !a.animalsWild
+			return a.win.Mode == "animals" && !a.win.Wild
 		case "tab.wildlife":
-			return a.panelMode == "animals" && a.animalsWild
+			return a.win.Mode == "animals" && a.win.Wild
 		}
 	}
 	return false
@@ -342,12 +342,12 @@ func TestEscapeClosesEveryWindow(t *testing.T) {
 			a, f := winApp(t, winStub(3))
 			c.open(a)
 			f.Frame(t, a)
-			if !a.workOpen {
+			if !a.win.Open {
 				t.Fatalf("%s did not open", c.name)
 			}
 			f.Key(t, a, "Escape", 0)
-			if a.workOpen || a.uiModalTop() != "" {
-				t.Fatalf("Escape left %s open (open %v, top %q)", c.name, a.workOpen, a.uiModalTop())
+			if a.win.Open || a.uiModalTop() != "" {
+				t.Fatalf("Escape left %s open (open %v, top %q)", c.name, a.win.Open, a.uiModalTop())
 			}
 			if a.nav.overlay() != overlayNone {
 				t.Fatal("the Escape that closes a window must not pause")
@@ -365,8 +365,8 @@ func TestEscapeOrderWindowSelectionPause(t *testing.T) {
 	a.openAssign()
 	f.Frame(t, a)
 	f.Key(t, a, "Escape", 0)
-	if a.workOpen || !a.renderer.HasSelect() {
-		t.Fatalf("first Escape: window open %v selection %v", a.workOpen, a.renderer.HasSelect())
+	if a.win.Open || !a.renderer.HasSelect() {
+		t.Fatalf("first Escape: window open %v selection %v", a.win.Open, a.renderer.HasSelect())
 	}
 	f.Key(t, a, "Escape", 0)
 	if a.renderer.HasSelect() || a.nav.overlay() != overlayNone {
@@ -391,8 +391,8 @@ func TestWindowKeysToggleAndReplace(t *testing.T) {
 		t.Fatalf("F9 over Assign: top %q", a.uiModalTop())
 	}
 	f.Key(t, a, "F9", 0)
-	if a.uiModalTop() != "" || a.workOpen {
-		t.Fatalf("F9 again: top %q open %v", a.uiModalTop(), a.workOpen)
+	if a.uiModalTop() != "" || a.win.Open {
+		t.Fatalf("F9 again: top %q open %v", a.uiModalTop(), a.win.Open)
 	}
 	f.Key(t, a, "F1", 0)
 	f.Key(t, a, "F3", 0)
@@ -400,8 +400,8 @@ func TestWindowKeysToggleAndReplace(t *testing.T) {
 		t.Fatalf("F3 over Work: top %q", a.uiModalTop())
 	}
 	f.Key(t, a, "F5", 0)
-	if !a.workOpen || a.panelMode != "animals" || !a.animalsWild || a.uiModalTop() != "" {
-		t.Fatalf("F5 over Assign: open %v mode %q wild %v top %q", a.workOpen, a.panelMode, a.animalsWild, a.uiModalTop())
+	if !a.win.Open || a.win.Mode != "animals" || !a.win.Wild || a.uiModalTop() != "" {
+		t.Fatalf("F5 over Assign: open %v mode %q wild %v top %q", a.win.Open, a.win.Mode, a.win.Wild, a.uiModalTop())
 	}
 }
 
@@ -411,12 +411,12 @@ func TestWindowCloseClick(t *testing.T) {
 	a.openHistory()
 	f.Frame(t, a)
 	press(t, a, f, "modal."+historyModalID+".close")
-	if a.workOpen || a.uiModalTop() != "" {
+	if a.win.Open || a.uiModalTop() != "" {
 		t.Fatal("the X closes the window")
 	}
 	a.applyClick("tab.work")
 	a.applyWindowClick("win.close")
-	if a.workOpen {
+	if a.win.Open {
 		t.Fatal("win.close closes the open window")
 	}
 }
@@ -427,7 +427,7 @@ func TestWindowClosesTheArchitect(t *testing.T) {
 	a, _ := winApp(t, winStub(3))
 	a.openArchitect()
 	a.openAssign()
-	if a.archOpen {
+	if a.arch.Open {
 		t.Fatal("the Architect should give way to a window")
 	}
 }
@@ -701,7 +701,7 @@ func TestAnimalsWindowFitsNarrowScreens(t *testing.T) {
 			t.Run(fmt.Sprintf("%dx%d_wild%v", size[0], size[1], wild), func(t *testing.T) {
 				a, f := winApp(t, winStub(3))
 				a.sw, a.sh = size[0], size[1]
-				a.workOpen, a.panelMode, a.animalsWild = true, "animals", wild
+				a.win.Open, a.win.Mode, a.win.Wild = true, "animals", wild
 				f.Frame(t, a)
 				w := a.hud().Window
 				n := 0
@@ -719,42 +719,7 @@ func TestAnimalsWindowFitsNarrowScreens(t *testing.T) {
 	}
 }
 
-// The lists keep every column when the window has room and leave the
-// low-priority ones out, never the buttons, when it does not.
-func TestAnimalColumnsDropToFit(t *testing.T) {
-	t.Parallel()
-	if c := animalColsFor(colonyFullW, false); len(c) != 0 {
-		t.Fatalf("a full-width window drops %v", c)
-	}
-	if c := animalColsFor(wildFullW, true); len(c) != 0 {
-		t.Fatalf("a full-width wild list drops %v", c)
-	}
-	for _, w := range []float32{1672, 1248, 1032, 900, 865, 830} {
-		c := animalColsFor(w, false)
-		if end := float32(c.at(colBtn) + 196 + 12); end > w {
-			t.Errorf("colony list at %v px ends at %v with %d dropped", w, end, len(c))
-		}
-		if c.at(colBtn) < colMaster || !c.shown(colName) || !c.shown(colMaster) || !c.shown(colArea) || !c.shown(colFollow) {
-			t.Errorf("colony list at %v px lost a needed column: %v", w, c)
-		}
-	}
-	for _, w := range []float32{984, 865, 700} {
-		c := animalColsFor(w, true)
-		if end := float32(c.at(wildBtn) + 272 + 12); end > w {
-			t.Errorf("wild list at %v px ends at %v", w, end)
-		}
-	}
-	// Doing and Training go first, then Preg., and the columns before a
-	// dropped one stay put
-	c := animalColsFor(1100, false)
-	if c.shown(colDoing) || c.shown(colTrain) || !c.shown(colPreg) || c.at(colBtn) != colBtn-108-104 || c.at(colMaster) != colMaster {
-		t.Errorf("1100 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
-	}
-	c = animalColsFor(1032, false)
-	if c.shown(colPreg) || c.at(colBtn) != colBtn-108-104-44 || c.at(colMaster) != colMaster-44 || c.at(colHealth) != colHealth-44 || c.at(colProduct) != colProduct {
-		t.Errorf("1032 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
-	}
-}
+// TestAnimalColumnsDropToFit moved to windows/windows_test.go.
 
 // ---- the modal stack's new options -------------------------------------
 
@@ -816,8 +781,8 @@ func TestModelessModalIsAWindow(t *testing.T) {
 	if a.uiModalOpen() {
 		t.Fatal("a modeless modal is not on the stack")
 	}
-	if a.uiModalTop() != "win1" || !a.workOpen {
-		t.Fatalf("top %q open %v", a.uiModalTop(), a.workOpen)
+	if a.uiModalTop() != "win1" || !a.win.Open {
+		t.Fatalf("top %q open %v", a.uiModalTop(), a.win.Open)
 	}
 	for _, c := range a.in.Stack {
 		if c == input.CtxModal {
@@ -842,8 +807,8 @@ func TestModelessModalIsAWindow(t *testing.T) {
 		t.Fatalf("top %q after the dialog closes", a.uiModalTop())
 	}
 	a.uiCloseTop()
-	if a.uiModalTop() != "" || a.workOpen {
-		t.Fatalf("top %q open %v after closing the window", a.uiModalTop(), a.workOpen)
+	if a.uiModalTop() != "" || a.win.Open {
+		t.Fatalf("top %q open %v after closing the window", a.uiModalTop(), a.win.Open)
 	}
 	// onClose runs when the window is closed by uiCloseTop
 	a.uiPushModal(modal{ID: "win3", Title: "Three", W: 400, H: 300, Modeless: true, Anchor: (*App).windowAnchor, OnClose: func() { closed++ }})
@@ -860,8 +825,8 @@ func TestEscapeInPanelAndModelessKeepsTheHUDLive(t *testing.T) {
 	f.Frame(t, a)
 	// a tab click works with the window open (a stacked modal would swallow it)
 	click(t, a, "tab.work")
-	if !a.workOpen || a.panelMode != "work" || a.uiModalTop() != "" {
-		t.Fatalf("Work over History: open %v mode %q top %q", a.workOpen, a.panelMode, a.uiModalTop())
+	if !a.win.Open || a.win.Mode != "work" || a.uiModalTop() != "" {
+		t.Fatalf("Work over History: open %v mode %q top %q", a.win.Open, a.win.Mode, a.uiModalTop())
 	}
 }
 

@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -199,10 +200,7 @@ func faceAttack(v pawnVisual, traces []game.TraceView, x, y int) pawnVisual {
 // itemSpriteSpecies is the stack's sprite: a carcass's or the bones'
 // per-tile variant (creature.CorpseSprite), else its item sprite.
 func itemSpriteSpecies(kind, species string, x, y int) string {
-	if k, ok := creature.CorpseSprite(kind, species, x, y); ok {
-		return k
-	}
-	return itemSprite(kind)
+	return world.ItemSpriteSpecies(kind, species, x, y)
 }
 
 // itemSpriteAt is itemSpriteSpecies without a species.
@@ -240,8 +238,8 @@ func (r *Renderer) creatureView() (v *render.View, frame camera) {
 // creatureCull is the frame's culling for the creature layer.
 func (r *Renderer) creatureCull() creature.Cull {
 	l := &r.lod
-	return creature.Cull{X0: l.vx0, Y0: l.vy0, X1: l.vx1, Y1: l.vy1, ViewSet: l.viewSet,
-		MapTier: l.tier == lodMap, MotionPad: motionViewPad, MinTile: creatureMinTile}
+	return creature.Cull{X0: l.VX0, Y0: l.VY0, X1: l.VX1, Y1: l.VY1, ViewSet: l.ViewSet,
+		MapTier: l.Tier == lodMap, MotionPad: motionViewPad, MinTile: creatureMinTile}
 }
 
 // creatureMarks is creatureCull with the animal pads at tile and the
@@ -249,7 +247,7 @@ func (r *Renderer) creatureCull() creature.Cull {
 func (r *Renderer) creatureMarks(tile float64) creature.Cull {
 	cl := r.creatureCull()
 	cl.Pad, cl.PadS = r.animalPads(tile)
-	cl.White = r.lod.whiteImg()
+	cl.White = r.lod.WhiteImg()
 	return cl
 }
 
@@ -595,7 +593,7 @@ func (r *Renderer) drawChaseLines(screen *ebiten.Image, w game.WorldView, tile f
 
 func (r *Renderer) drawAnimalName(screen *ebiten.Image, name string, wx, wy float64) {
 	c, cl := r.creatures(), r.creatureCull()
-	cl.White = r.lod.whiteImg()
+	cl.White = r.lod.WhiteImg()
 	v, frame := r.creatureView()
 	c.DrawAnimalName(v, &cl, screen, name, wx, wy)
 	v.Cam = frame

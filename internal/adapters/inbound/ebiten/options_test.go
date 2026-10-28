@@ -33,7 +33,7 @@ func TestOptionTabsLayout(t *testing.T) {
 	a := testApp(&stubSim{w: 4, h: 4})
 	for _, size := range [][2]int{{1280, 720}, {960, 540}} {
 		for _, tab := range optionTabs() {
-			a.optionsTab = tab
+			a.opt.Tab = tab
 			bs := a.optionsButtons(size[0], size[1])
 			seen := map[string]bool{}
 			for i, b := range bs {

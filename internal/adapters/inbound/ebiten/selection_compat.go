@@ -87,7 +87,7 @@ func (h selHost) SelectZoneLabel(w game.WorldView, mx, my, tx, ty int) bool {
 	return h.a.selectZoneLabel(w, mx, my, tx, ty)
 }
 
-func (h selHost) NoteCell(tile [2]int) { h.a.zoneSt().noteCell(tile) }
+func (h selHost) NoteCell(tile [2]int) { h.a.arch.Zones.NoteCell(tile) }
 
 func (h selHost) SetZone(id uint16, on bool) {
 	if on {

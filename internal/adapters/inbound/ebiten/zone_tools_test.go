@@ -76,7 +76,7 @@ func TestZoneToolSwallowsTheOpeningClick(t *testing.T) {
 	f.MoveTo(a, 15, 3)
 	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	f.Frame(t, a)
-	if a.zoneSt().drag {
+	if a.arch.Zones.State().Drag {
 		t.Fatal("the opening click started a drag")
 	}
 	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
@@ -87,7 +87,7 @@ func TestZoneToolSwallowsTheOpeningClick(t *testing.T) {
 	// The next press does start one.
 	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	f.Frame(t, a)
-	if !a.zoneSt().drag {
+	if !a.arch.Zones.State().Drag {
 		t.Fatal("a later press starts the drag")
 	}
 }
@@ -267,8 +267,8 @@ func TestRightClickDuringADragOnlyDropsTheDrag(t *testing.T) {
 	f.Frame(t, a)
 	f.Cur.Press[mbRight] = true
 	f.Frame(t, a)
-	if a.zoneSt().drag || !a.zoneToolOn(zoneToolShrink) {
-		t.Fatalf("drag=%v tool on=%v, want the drag dropped and the tool kept", a.zoneSt().drag, a.zoneToolOn(zoneToolShrink))
+	if a.arch.Zones.State().Drag || !a.zoneToolOn(zoneToolShrink) {
+		t.Fatalf("drag=%v tool on=%v, want the drag dropped and the tool kept", a.arch.Zones.State().Drag, a.zoneToolOn(zoneToolShrink))
 	}
 	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
 	f.Frame(t, a)
@@ -308,18 +308,6 @@ func TestSelectingSomethingElseEndsTheTool(t *testing.T) {
 	a.selectCand(selCand{Kind: selZone, ID: 2})
 	if a.zoneToolOn(zoneToolExpand) {
 		t.Fatal("selecting another zone starts with no tool")
-	}
-}
-
-func TestZoneToolHintNamesTheZone(t *testing.T) {
-	t.Parallel()
-	z := growZone(1, "potato", 8, 2, 11, 4)
-	if got := zoneToolHint(zoneToolExpand, z); got != "Expand Growing zone 1: drag to add tiles · right-click or Esc: done" {
-		t.Errorf("expand hint %q", got)
-	}
-	z.Name = "North field"
-	if got := zoneToolHint(zoneToolShrink, z); got != "Shrink North field: drag to remove tiles · right-click or Esc: done" {
-		t.Errorf("shrink hint %q", got)
 	}
 }
 

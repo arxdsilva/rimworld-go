@@ -76,23 +76,23 @@ func TestDraftedRightClickOffersTend(t *testing.T) {
 	selectPawn(t, a, id)
 	a.renderer.enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(id), Enabled: true})
 	a.rightClickTile(6, 6, 100, 100) // a healthy colonist: just walk there
-	if a.float.open {
+	if a.ord.Float.Open {
 		t.Fatal("nothing to tend: no menu")
 	}
 	g.Injure(bo, 75) // downed
 	a.renderer.syncPawns()
 	a.rightClickTile(6, 6, 100, 100)
-	if !a.float.open {
+	if !a.ord.Float.Open {
 		t.Fatal("a drafted right-click on a wounded colonist opens the order menu")
 	}
 	i := -1
-	for k, o := range a.float.opts {
+	for k, o := range a.ord.Float.Opts {
 		if o.Label == "Tend Bo" {
 			i = k
 		}
 	}
-	if i < 0 || a.float.opts[i].Disabled {
-		t.Fatalf("Tend Bo offered: %+v", a.float.opts)
+	if i < 0 || a.ord.Float.Opts[i].Disabled {
+		t.Fatalf("Tend Bo offered: %+v", a.ord.Float.Opts)
 	}
 	a.chooseFloat("float." + strconv.Itoa(i))
 	g.Step(1)

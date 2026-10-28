@@ -49,7 +49,7 @@ func modalGeometry(sw, sh int, m modal) (frame, title, body, footer rect) {
 // window instead and replaces any other.
 func (a *App) uiPushModal(m modal) {
 	if m.Modeless {
-		a.uiOpenWindow(m)
+		a.win.OpenKit(a.kitModal(m))
 		return
 	}
 	a.uiSt().Push(a.kitModal(m))
@@ -59,19 +59,13 @@ func (a *App) uiPushModal(m modal) {
 // the stack empty it closes the main-tab window.
 func (a *App) uiCloseTop() {
 	if !a.uiSt().CloseTop() {
-		a.uiCloseWindow()
+		a.win.CloseKit()
 	}
 }
 
 // uiCloseModal removes the modal id (the main-tab window, or wherever it
 // is in the stack) without running onClose.
-func (a *App) uiCloseModal(id string) {
-	if k := a.hst.win.kit; k != nil && k.ID == id && a.windowKitOpen() {
-		a.closeWindowQuietly()
-		return
-	}
-	a.uiSt().CloseModal(id)
-}
+func (a *App) uiCloseModal(id string) { a.win.CloseModal(id) }
 
 // uiModalTop is the id of the top modal: the top of the stack, else the
 // main-tab window (which sits under every stacked modal), else "".
@@ -79,15 +73,5 @@ func (a *App) uiModalTop() string {
 	if a.uiSt().ModalOpen() {
 		return a.uiSt().Top()
 	}
-	if a.windowKitOpen() {
-		return a.hst.win.kit.ID
-	}
-	return ""
-}
-
-// uiRunWindow declares the main-tab window m on the screen layer: its
-// frame sits on its anchor, there is no scrim, and the HUD around it stays
-// live. hud_window.go calls it once per Update while the window is open.
-func (a *App) uiRunWindow(m modal) {
-	a.uiSt().RunWindow(a.kitModal(m), a.uiCloseWindow, func() { a.uiCloseModal(m.ID) })
+	return a.win.KitID()
 }

@@ -13,7 +13,6 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/config"
-	"rimworld-go/internal/platform/input"
 )
 
 // The learning helper (PLAY-018): a collapsible top-right panel of short
@@ -64,47 +63,6 @@ func learnRowIDs(a *App) []string {
 		}
 	}
 	return out
-}
-
-func TestLessonCatalog(t *testing.T) {
-	t.Parallel()
-	want := []string{"camera", "select", "build", "zones", "work", "schedule", "draft", "forbid", "research", "speed"}
-	var got []string
-	seen := map[string]bool{}
-	a := testApp(&stubSim{w: 4, h: 4})
-	for _, l := range lessonCatalog {
-		got = append(got, l.id)
-		if seen[l.id] {
-			t.Fatalf("duplicate lesson id %q", l.id)
-		}
-		seen[l.id] = true
-		if l.onCmd == nil && l.onUI == nil {
-			t.Errorf("%s: no way to be done on its own", l.id)
-		}
-		body := l.body(a)
-		// 2-3 short sentences, our own words
-		n := strings.Count(body, ". ") + strings.Count(body, "? ") + 1
-		if n < 2 || n > 3 || !strings.HasSuffix(body, ".") {
-			t.Errorf("%s: body has %d sentences, want 2-3: %q", l.id, n, body)
-		}
-		if len(body) > 330 {
-			t.Errorf("%s: body is %d chars, keep it short", l.id, len(body))
-		}
-		for _, s := range []string{l.title, l.goal, body} {
-			if strings.Contains(strings.ToLower(s), "rimworld") || strings.Contains(s, "{") || s == "" {
-				t.Errorf("%s: bad text %q", l.id, s)
-			}
-		}
-		if w, _ := measure(l.title, tsLabel); w > learnRowW-learnRowPad*2 {
-			t.Errorf("%s: title %q is %.0f px, the row holds %d", l.id, l.title, w, learnRowW-learnRowPad*2)
-		}
-		if w, _ := measure(l.goal, tsSmall); w > learnRowW-learnRowPad*2 {
-			t.Errorf("%s: goal %q is %.0f px, the row holds %d", l.id, l.goal, w, learnRowW-learnRowPad*2)
-		}
-	}
-	if !slices.Equal(got, want) {
-		t.Fatalf("lessons = %v, want %v", got, want)
-	}
 }
 
 func TestPanelStartsWithTheFirstThreeLessons(t *testing.T) {
@@ -380,7 +338,7 @@ func TestOpeningALessonTwiceClosesItsCard(t *testing.T) {
 	t.Parallel()
 	a, _, _ := learnColony(t, learnStore(), nil)
 	click(t, a, "learn.lesson.select")
-	if l := a.learnLayout(); l.card.Empty() {
+	if l := a.learnLayout(); l.Card.Empty() {
 		t.Fatal("no detail card after clicking a lesson")
 	}
 	click(t, a, "learn.lesson.camera") // another lesson swaps the card
@@ -388,7 +346,7 @@ func TestOpeningALessonTwiceClosesItsCard(t *testing.T) {
 		t.Fatal("the card should show the last lesson clicked")
 	}
 	click(t, a, "learn.lesson.camera")
-	if l := a.learnLayout(); !l.card.Empty() {
+	if l := a.learnLayout(); !l.Card.Empty() {
 		t.Fatal("clicking the open lesson again should close its card")
 	}
 }
@@ -452,8 +410,8 @@ func TestHiddenWhenOffOrWhenEveryLessonIsDone(t *testing.T) {
 		t.Parallel()
 		a, _, _ := learnColony(t, learnStore(), nil)
 		for _, l := range lessonCatalog {
-			click(t, a, "learn.lesson."+l.id)
-			click(t, a, "learn.done."+l.id)
+			click(t, a, "learn.lesson."+l.ID)
+			click(t, a, "learn.done."+l.ID)
 		}
 		if a.learnHeight() != 0 || len(a.learnButtons()) != 0 || !a.hud().Learn.Empty() || len(a.learnChrome()) != 0 {
 			t.Fatal("with every lesson done the helper should hide itself")
@@ -543,7 +501,7 @@ func TestResetStartsTheLessonsAgain(t *testing.T) {
 	if !learnDone(a, "camera") {
 		t.Fatal("setup: the pan should finish the camera lesson")
 	}
-	a.optionsTab = "gameplay"
+	a.opt.Tab = "gameplay"
 	a.applyOption("options.learnhelper.reset")
 	if len(learnedNow(a)) != 0 || len(store.s.Gameplay.LearnedLessons) != 0 {
 		t.Fatalf("reset left %v", learnedNow(a))
@@ -647,7 +605,7 @@ func TestDetailCardStaysLeftOfThePanelAndOnScreen(t *testing.T) {
 					// a logical screen too short for the lessons above the time
 					// controls (1280x720 at 200%): the helper folds to its header,
 					// clear of them, and opens no card
-					if l.Learn.H != learnHeaderH || !l.Learn.Intersect(l.Global).Empty() || len(a.learnLayout().rows) != 0 || len(a.learnChrome()) != 0 {
+					if l.Learn.H != learnHeaderH || !l.Learn.Intersect(l.Global).Empty() || len(a.learnLayout().Rows) != 0 || len(a.learnChrome()) != 0 {
 						t.Fatalf("cramped helper %+v over Global %+v: want the header alone and no card", l.Learn, l.Global)
 					}
 					if a.sw >= 1280 {
@@ -656,33 +614,33 @@ func TestDetailCardStaysLeftOfThePanelAndOnScreen(t *testing.T) {
 					return
 				}
 				for _, l := range lessonCatalog[:3] {
-					click(t, a, "learn.lesson."+l.id)
+					click(t, a, "learn.lesson."+l.ID)
 					lay := a.learnLayout()
 					panel := a.hud().Learn
-					card := lay.card
+					card := lay.Card
 					if card.Empty() {
-						t.Fatalf("%s: no card (logical %dx%d)", l.id, a.sw, a.sh)
+						t.Fatalf("%s: no card (logical %dx%d)", l.ID, a.sw, a.sh)
 					}
 					if card.Right() > panel.X {
-						t.Errorf("%s: card %+v is not left of the panel %+v", l.id, card, panel)
+						t.Errorf("%s: card %+v is not left of the panel %+v", l.ID, card, panel)
 					}
 					if card.X < 0 || card.Y < 0 || card.Right() > float32(a.sw) || card.Bottom() > float32(a.sh) {
-						t.Errorf("%s: card %+v is off the %dx%d screen", l.id, card, a.sw, a.sh)
+						t.Errorf("%s: card %+v is off the %dx%d screen", l.ID, card, a.sw, a.sh)
 					}
 					if tabs := a.hud().Tabs; card.Bottom() > tabs.Y {
-						t.Errorf("%s: card %+v runs over the tab strip %+v", l.id, card, tabs)
+						t.Errorf("%s: card %+v runs over the tab strip %+v", l.ID, card, tabs)
 					}
-					done := lay.gotIt
+					done := lay.GotIt
 					if done.Empty() || done.X < card.X || done.Right() > card.Right() || done.Y < card.Y || done.Bottom() > card.Bottom() {
-						t.Errorf("%s: Got it %+v is not inside the card %+v", l.id, done, card)
+						t.Errorf("%s: Got it %+v is not inside the card %+v", l.ID, done, card)
 					}
 					for _, b := range a.learnButtons() {
-						if b.ID == "learn.done."+l.id && (b.X != done.X || b.Y != done.Y || b.W != done.W || b.H != done.H) {
-							t.Errorf("%s: the Got it button %+v is not the laid-out rect %+v", l.id, b, done)
+						if b.ID == "learn.done."+l.ID && (b.X != done.X || b.Y != done.Y || b.W != done.W || b.H != done.H) {
+							t.Errorf("%s: the Got it button %+v is not the laid-out rect %+v", l.ID, b, done)
 						}
 					}
 					if rc := a.learnChrome(); len(rc) != 1 || rc[0] != card {
-						t.Errorf("%s: chrome = %v, want the card %+v so clicks on it never reach the map", l.id, rc, card)
+						t.Errorf("%s: chrome = %v, want the card %+v so clicks on it never reach the map", l.ID, rc, card)
 					}
 				}
 			})
@@ -772,27 +730,11 @@ func TestSelectLessonSeesEveryKindOfSelection(t *testing.T) {
 	}
 }
 
-func TestLessonTextShowsLiveKeysAndSurvivesNoBinding(t *testing.T) {
-	t.Parallel()
-	a := testApp(&stubSim{w: 4, h: 4})
-	draft := lessonByID("draft")
-	if body := draft.body(a); !strings.Contains(body, " R ") && !strings.Contains(body, "press R") {
-		t.Fatalf("draft lesson should name the Draft key, got %q", body)
-	}
-	a.binds = input.Bindings{} // nothing bound
-	if body := draft.body(a); !strings.Contains(body, "its key") {
-		t.Fatalf("an unbound action should read %q, got %q", "its key", body)
-	}
-	if lessonByID("nosuch") != nil {
-		t.Fatal("unknown lesson id found")
-	}
-}
-
 func TestDetailCardCutsItsTextOnAVeryShortScreen(t *testing.T) {
 	// A 520x240 screen has no room for the lessons above the time controls:
 	// the helper folds to its header, clear of them, and lists no lesson.
 	small, _ := learnColonyAtScale(t, 100, 520, 240)
-	if l := small.hud(); l.Learn.H > learnHeaderH || !l.Learn.Intersect(l.Global).Empty() || len(small.learnLayout().rows) != 0 {
+	if l := small.hud(); l.Learn.H > learnHeaderH || !l.Learn.Intersect(l.Global).Empty() || len(small.learnLayout().Rows) != 0 {
 		t.Fatalf("the helper %+v on a %dx%d screen, over Global %+v", l.Learn, small.sw, small.sh, l.Global)
 	}
 	// The card itself cuts its text to the room above the tabs: laid out
@@ -801,20 +743,20 @@ func TestDetailCardCutsItsTextOnAVeryShortScreen(t *testing.T) {
 	a, _ := learnColonyAtScale(t, 100, 1280, 720)
 	click(t, a, "learn.lesson.camera")
 	lay := a.learnLayout()
-	if lay.card.Empty() || len(lay.rows) == 0 {
+	if lay.Card.Empty() || len(lay.Rows) == 0 {
 		t.Fatal("no card on the default screen")
 	}
 	short := a.hud()
 	short.Tabs.Y = small.hud().Tabs.Y
-	lay.panel.X = small.hud().Right.X
-	a.learnCardLayout(&lay, short, lay.rows[0].r)
-	if lay.card.Empty() {
+	lay.Panel.X = small.hud().Right.X
+	a.learnCardLayout(&lay, short, lay.Rows[0].R)
+	if lay.Card.Empty() {
 		t.Fatal("no card above a short tab strip")
 	}
-	if lay.card.Y < hudMargin || lay.card.Bottom() > short.Tabs.Y-hudMargin+0.5 {
-		t.Fatalf("card %+v does not fit between the top and the tabs (%v)", lay.card, short.Tabs.Y)
+	if lay.Card.Y < hudMargin || lay.Card.Bottom() > short.Tabs.Y-hudMargin+0.5 {
+		t.Fatalf("card %+v does not fit between the top and the tabs (%v)", lay.Card, short.Tabs.Y)
 	}
-	if last := lay.body[len(lay.body)-1]; !strings.HasSuffix(last, "…") {
+	if last := lay.Body[len(lay.Body)-1]; !strings.HasSuffix(last, "…") {
 		t.Fatalf("a cut text should end with an ellipsis, last line %q", last)
 	}
 }
@@ -822,8 +764,8 @@ func TestDetailCardCutsItsTextOnAVeryShortScreen(t *testing.T) {
 func TestNoCardWhenThereIsNoRoomBesideThePanel(t *testing.T) {
 	a, _ := learnColonyAtScale(t, 100, 300, 600)
 	click(t, a, "learn.lesson.camera")
-	if lay := a.learnLayout(); !lay.card.Empty() || lay.open != nil {
-		t.Fatalf("a card was laid out on a %d px wide screen: %+v", a.sw, lay.card)
+	if lay := a.learnLayout(); !lay.Card.Empty() || lay.Open != nil {
+		t.Fatalf("a card was laid out on a %d px wide screen: %+v", a.sw, lay.Card)
 	}
 	if learnHasButton(a.learnButtons(), "learn.done.camera") || len(a.learnChrome()) != 0 {
 		t.Fatal("no card: no Got it button and no chrome")
@@ -836,13 +778,13 @@ func TestUnknownLearnClicksAreIgnored(t *testing.T) {
 	a.applyLearnClick("learn.lesson.nosuch")
 	a.applyLearnClick("learn.done.nosuch")
 	a.applyLearnClick("learn.mystery")
-	if len(learnedNow(a)) != 0 || a.hst.learn.open != "" {
-		t.Fatalf("unknown ids changed the helper: learned %v open %q", learnedNow(a), a.hst.learn.open)
+	if len(learnedNow(a)) != 0 || a.lrn.Open() != "" {
+		t.Fatalf("unknown ids changed the helper: learned %v open %q", learnedNow(a), a.lrn.Open())
 	}
 	click(t, a, "learn.lesson.camera")
 	a.learnComplete("camera", false) // done behind the card's back
 	a.applyLearnClick("learn.lesson.camera")
-	if a.hst.learn.open != "" {
+	if a.lrn.Open() != "" {
 		t.Fatal("a finished lesson cannot be opened")
 	}
 }
@@ -851,7 +793,7 @@ func TestHighlightEnds(t *testing.T) {
 	t.Parallel()
 	a, _, f := learnColony(t, learnStore(), nil)
 	a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: 1})
-	if title, ok := a.learnFlash(); !ok || title != lessonByID("build").title {
+	if title, ok := a.learnFlash(); !ok || title != lessonByID("build").Title {
 		t.Fatalf("flash = %q %v, want the build lesson", title, ok)
 	}
 	for range learnFlashFrames + 1 {

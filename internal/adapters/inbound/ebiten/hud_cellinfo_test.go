@@ -82,17 +82,17 @@ func TestCellInfoOnlyWithNothingSelected(t *testing.T) {
 	}
 	a.clearZone()
 
-	a.archOpen = true
+	a.arch.Open = true
 	if got := a.cellInfoLines(); len(got) != 0 {
 		t.Errorf("the Architect is open, cell info = %q", got)
 	}
-	a.archOpen = false
+	a.arch.Open = false
 
-	a.workOpen, a.panelMode = true, "work"
+	a.win.Open, a.win.Mode = true, "work"
 	if got := a.cellInfoLines(); len(got) != 0 {
 		t.Errorf("a window is open, cell info = %q", got)
 	}
-	a.workOpen = false
+	a.win.Open = false
 
 	f.onRect(a, a.hud().Global) // the cursor over the HUD
 	f.Frame(t, a)

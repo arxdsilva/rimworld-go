@@ -101,7 +101,7 @@ func TestListenCasketsEmitsSound(t *testing.T) {
 
 func TestDormantAnimalLabel(t *testing.T) {
 	t.Parallel()
-	a := &App{}
+	a := testApp(nil) // the features hang off NewApp (ARCH-005)
 	an := game.AnimalView{State: "wandering"}
 	if got := a.animalStateLine(an); got == "Dormant" {
 		t.Fatalf("awake animal reads %q", got)

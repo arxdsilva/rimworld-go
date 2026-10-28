@@ -17,7 +17,7 @@ func (r *Renderer) syncAnimals(w game.WorldView) {
 	l := &r.lod
 	for i := range w.Animals {
 		an := &w.Animals[i]
-		if !l.inView(an.X, an.Y, motionViewPad, motionViewPad) {
+		if !l.InView(an.X, an.Y, motionViewPad, motionViewPad) {
 			// far off screen (a big map's wildlife): no motion track; it
 			// starts afresh, on its cell, when it nears the view again
 			delete(r.last, an.ID)

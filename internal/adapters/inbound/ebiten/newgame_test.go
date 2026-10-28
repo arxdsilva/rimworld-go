@@ -251,7 +251,7 @@ func TestContinueLoadsNewestIncludingCommitment(t *testing.T) {
 	if a.nav.screen() != screenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
-	if (&App{}).newestSlot() != -1 {
+	if testApp(nil).newestSlot() != -1 {
 		t.Fatal("no slots, no newest")
 	}
 }

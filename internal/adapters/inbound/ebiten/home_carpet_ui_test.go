@@ -78,8 +78,8 @@ func TestHomeToolsEmitDesignateHome(t *testing.T) {
 		click(t, a, "tab.architect")
 		click(t, a, "arch.cat.zones")
 		click(t, a, "arch.tool."+id)
-		a.archDrag = true
-		a.archX0, a.archY0, a.archX1, a.archY1 = 2, 3, 5, 6
+		a.arch.Drag = true
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 5, 6
 		a.submitArchitect()
 		c := lastCmd(t, s)
 		if c.Kind != command.DesignateHome || c.Enabled != enabled ||
@@ -328,8 +328,8 @@ func TestCarpetPlacementSendsStuff(t *testing.T) {
 	click(t, a, "arch.cat.furniture")
 	click(t, a, "arch.tool.carpet")
 	click(t, a, "arch.stuff.cloth carpet")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 4, 4, 4, 4
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 4, 4, 4, 4
 	a.submitArchitect()
 	c := lastCmd(t, s)
 	want, _ := game.StuffID("cloth carpet")
@@ -477,12 +477,12 @@ func TestCaptureHomeAndCarpetStates(t *testing.T) {
 		a.captureUI(ui)
 		switch ui {
 		case "home":
-			if a.archTool != "home" || !a.renderer.homeShown() {
-				t.Fatalf("home capture: tool=%q shown=%v", a.archTool, a.renderer.homeShown())
+			if a.arch.ToolID != "home" || !a.renderer.homeShown() {
+				t.Fatalf("home capture: tool=%q shown=%v", a.arch.ToolID, a.renderer.homeShown())
 			}
 		case "carpet":
-			if a.archTool != "carpet" || a.toolStuff(archTool{build: "carpet"}) != "cloth carpet" {
-				t.Fatalf("carpet capture: tool=%q", a.archTool)
+			if a.arch.ToolID != "carpet" || a.toolStuff(archTool{build: "carpet"}) != "cloth carpet" {
+				t.Fatalf("carpet capture: tool=%q", a.arch.ToolID)
 			}
 		}
 	}

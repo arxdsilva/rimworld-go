@@ -18,7 +18,7 @@ import (
 //	cmds_*.go          each selection kind's commands and pane (per kind)
 //	hud_tabs.go        the bottom tab strip                    (WINDOWS)
 //	hud_window.go      main-tab windows                        (WINDOWS)
-//	learn_ui.go        the learning helper                     (LEARN)
+//	learn/             the learning helper                     (LEARN)
 
 // hudStates is the HUD regions' presentation state, one struct per owner,
 // each declared in its owner's file (App.hst).
@@ -28,9 +28,6 @@ type hudStates struct {
 	right rightState     // hud_right.go
 	pane  paneState      // hud_inspect.go
 	cmds  cmdsState      // hud_commands.go
-	win   windowState    // hud_window.go
-	learn learnState     // learn_ui.go
-	arch  archState      // cmds_arch.go
 	lay   hudMemo        // hud(): the last layout for the same inputs
 }
 
@@ -41,7 +38,7 @@ func (a *App) hud() hudLayout {
 	st := hudState{
 		Colonists:  a.barCount(),
 		PaneShown:  a.paneShown(),
-		ArchOpen:   a.archOpen,
+		ArchOpen:   a.arch.Open,
 		Commands:   a.commandCount(),
 		GlobalH:    a.globalHeight(),
 		MinimapOn:  a.minimapOn(),
@@ -146,13 +143,13 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if mx < 0 || my < 0 || mx >= sw || my >= sh {
 		return true // off the window: never the map
 	}
-	if a.search.open && a.searchRect(sw).Contains(mx, my) {
+	if a.ord.Search.Open && a.searchRect(sw).Contains(mx, my) {
 		return true
 	}
-	if a.dev.menu && a.devMenuRect().Contains(mx, my) {
+	if a.tools.State.Menu && a.devMenuRect().Contains(mx, my) {
 		return true
 	}
-	if a.float.open && a.floatRect().Contains(mx, my) {
+	if a.ord.Float.Open && a.floatRect().Contains(mx, my) {
 		return true
 	}
 	x, y := float32(mx), float32(my)

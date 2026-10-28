@@ -46,8 +46,8 @@ func roofToolEmits(t *testing.T, id string, kind command.Kind) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool."+id)
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 2, 3, 6, 7
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 6, 7
 	a.submitArchitect()
 	if len(s.cmds) != 1 {
 		t.Fatalf("cmds = %+v", s.cmds)

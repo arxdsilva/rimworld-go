@@ -10,12 +10,18 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
+	"rimworld-go/internal/adapters/inbound/ebiten/learn"
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/orders"
+	"rimworld-go/internal/adapters/inbound/ebiten/perf"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/pawn/schedule"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
@@ -112,15 +118,10 @@ type AppConfig struct {
 // App is the ebiten.Game shell: screen routing, widgets, and (once
 // started) the colony renderer. Menus do not own or step a simulation.
 type App struct {
-	dealings dealingsUI // trade_ui.go, comms_ui.go: the open trade/comms dialogs
 	// hst is the colony HUD regions' own state (PLAY-018, hud.go): each
 	// region's owner keeps its fields in its own struct type.
 	hst hudStates
-	// fps is the dev frame-rate probe (fps_probe.go).
-	fps fpsProbeState
-	// perf is the always-on frame timing behind the performance overlay
-	// and debt the Update time budget's carried ticks (PERF-002).
-	perf perfClock
+	// debt is the Update time budget's carried ticks (PERF-002).
 	debt tickDebt
 	// alerts memoises currentAlerts per update (alerts.go).
 	alerts alertsMemo
@@ -156,55 +157,44 @@ type App struct {
 	menuTick           uint64           // drives menu motion; counts while no colony is shown
 	menuScreen         *mainmenu.Screen // mainmenu.Screen owns the main menu (ARCH-005)
 	wiz                *wizard.Flow     // wizard.Flow owns the New Colony flow (ARCH-005)
-	sessionErr         string
-	hint               string
-	shouldQuit         bool
+	// The colony's features, each its own package behind a Shell (ARCH-005
+	// wave 5.3): the Options screen, the main-tab windows, the Architect,
+	// the order flow, the dialogs, the learning helper, developer mode and
+	// the frame-timing instruments. Built by NewApp from the <pkg>_compat.go
+	// constructors.
+	opt        *options.Screen
+	win        *windows.Set
+	arch       *architect.Tool
+	ord        *orders.Controller
+	deal       *dialogs.Dealings
+	lrn        *learn.Helper
+	tools      *devtools.Panel
+	meter      *perf.Meter
+	sessionErr string
+	hint       string
+	shouldQuit bool
 
 	// ng is the New Colony wizard's draft as wizard.Flow hands it over
 	// (KeepDraft, wizard_compat.go); nil outside the wizard.
-	ng          *newGameState
-	animalsWild bool               // the Animals tab shows the Wild list
-	wildRows    []game.WildlifeRow // g.Wildlife(), read once per tick
-	wildTick    clock.Tick
-	wildRead    bool
+	ng *newGameState
 	// settings are the player's Options (settings.go).
-	settings   config.Settings
-	optionsTab string
-	snd        soundDirector // what is heard (sound_director.go)
+	settings config.Settings
+	snd      soundDirector // what is heard (sound_director.go)
 
-	simsStarted                    int
-	renderer                       *Renderer
-	workOpen                       bool
-	archOpen                       bool
-	archCat                        string
-	archTool                       string
-	archFacing                     uint8
-	archStuff                      string // picked material ("wood", "granite blocks", "steel", a carpet)
-	archCrop                       string // crop the growing-zone tool sows
-	float                          floatMenu
-	cursor                         *[2]int          // capture-only synthetic cursor
-	sel                            *selection.Model // selection.Model owns what is selected (ARCH-005)
-	zone                           *zoneState       // the selected zone's tools and last clicked cell (zone_tools.go)
-	bldgMove                       bldgMoveState    // the building panel's Move mode (move_mode.go)
-	equipCache                     equipCacheState  // the pawn Gear tab's nearby weapons (inspector.go)
-	alertCycle                     map[string]int
-	archDrag                       bool
-	archX0, archY0, archX1, archY1 int
-	inspectTab                     string
-	logScroll                      int // log_ui.go
-	logFor, animalLogFor           entity.EntityID
-	capture                        captureState
-	msgSeen                        map[string]uint64 // message key -> frame first shown
-	saveSlot                       string            // current colony's save slot
-	autosaveDay                    int               // in-game day of the last autosave
-	slots                          []SaveSlot        // load screen list
-	slotsRead                      bool              // main menu read the list once
-	panelMode                      string            // "work" or "schedule" while workOpen
-	schedBrush                     schedule.Activity // activity the schedule paints
-	lastPainted                    string            // schedule cell last painted by a drag
-	now                            func() time.Time  // wall clock for alpha (injectable for tests)
-	lastTick                       time.Time         // when the renderer last advanced
-	lastDraw                       time.Time         // previous colony Draw: the per-Draw camera step
+	simsStarted          int
+	renderer             *Renderer
+	cursor               *[2]int          // capture-only synthetic cursor
+	sel                  *selection.Model // selection.Model owns what is selected (ARCH-005)
+	equipCache           equipCacheState  // the pawn Gear tab's nearby weapons (inspector.go)
+	alertCycle           map[string]int
+	inspectTab           string
+	logScroll            int // log_ui.go
+	logFor, animalLogFor entity.EntityID
+	capture              captureState
+	msgSeen              map[string]uint64 // message key -> frame first shown
+	now                  func() time.Time  // wall clock for alpha (injectable for tests)
+	lastTick             time.Time         // when the renderer last advanced
+	lastDraw             time.Time         // previous colony Draw: the per-Draw camera step
 
 	// Input (UI-016): the device source (a fake in tests), this Update's
 	// resolved frame, the live bindings and an Update counter.
@@ -212,20 +202,13 @@ type App struct {
 	in      inputFrame
 	binds   input.Bindings
 	updates uint64
-	bg      bgState       // Run in background (background.go)
-	barClk  barClick      // last colonist-bar click, for the double click (hud.go)
-	rebind  rebindState   // Options › Controls key capture (controls_ui.go)
-	search  searchState   // Z search box (search_ui.go)
-	form    formationDrag // drafted colonists' right-drag line (formation.go)
-	midDrag midDragState  // middle-mouse camera drag
-	dev     devState      // developer mode panels (devmode.go)
-	toasts  []toast       // short notices (toast.go)
-	hideUI  bool          // F11: only the map is drawn
-	rooms   bool          // G: room stats overlay (room_stats.go)
-	// archStyle is the drag tool's draw style (0: the tool's default).
-	archStyle drawStyle
-	archCtrl  bool      // Ctrl held: the drag box is square (drawstyle.go)
-	shot      shotState // F10 screenshot (screenshot.go)
+	bg      bgState      // Run in background (background.go)
+	barClk  barClick     // last colonist-bar click, for the double click (hud.go)
+	rebind  rebindState  // Options › Controls key capture (controls_ui.go)
+	midDrag midDragState // middle-mouse camera drag
+	toasts  []toast      // short notices (toast.go)
+	hideUI  bool         // F11: only the map is drawn
+	rooms   bool         // G: room stats overlay (room_stats.go)
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -288,6 +271,8 @@ func NewApp(cfg AppConfig) *App {
 	a.sel = selection.New(a.shell, selHost{a})
 	a.menuScreen = mainmenu.New(menuHost{a})
 	a.wiz = wizard.New(wizHost{a})
+	a.opt, a.win, a.arch, a.ord = newOptions(a), newWindows(a), newArchitect(a), newOrders(a)
+	a.deal, a.lrn, a.tools, a.meter = newDialogs(a), newLearn(a), newDevtools(a), newPerf(a)
 	a.loadSettings()
 	a.applySettings()
 	return a
@@ -363,15 +348,15 @@ func (a *App) Update() error {
 			a.renderer.applyCamera(a.mapViewport(), a.cameraInput(a.mapViewport())) // physical (camera.go)
 		}
 		a.handleScheduleDrag()
-		if (a.float.open || a.dev.menu) && a.in.Clicked(mbLeft) {
+		if (a.ord.Float.Open || a.tools.State.Menu) && a.in.Clicked(mbLeft) {
 			a.closeFloat() // click outside a menu just closes it
-			a.dev.menu = false
+			a.tools.State.Menu = false
 			a.in.Take(mbLeft)
 		}
 		moving := a.handleMoveMode() // move_mode.go: placing a moved building
 		zoning := a.handleZoneTool() // zone_select.go: a selected zone's Expand or Shrink tool
 		a.handleArchitectInput()
-		if a.archTool == "" && !moving && !zoning {
+		if a.arch.ToolID == "" && !moving && !zoning {
 			a.handleMapMouse() // selection.go / multiselect.go / formation.go
 		}
 	}
@@ -405,36 +390,36 @@ func (a *App) handleColonyEscape() bool {
 		a.hideUI = false // Esc brings the interface back first
 		return true
 	}
-	if a.float.open {
+	if a.ord.Float.Open {
 		a.closeFloat()
 		return true
 	}
-	if a.dev.menu {
-		a.dev.menu = false
+	if a.tools.State.Menu {
+		a.tools.State.Menu = false
 		return true
 	}
-	if a.form.on {
-		a.form = formationDrag{}
+	if a.ord.Form.On {
+		a.ord.Form = orders.Formation{}
 		return true
 	}
-	if a.bldgMove.on {
-		a.bldgMove.on = false // Move mode takes Esc alone (UI-016)
+	if a.moveSt().On {
+		a.moveSt().On = false // Move mode takes Esc alone (UI-016)
 		return true
 	}
 	if a.escapeZoneTool() { // zone_select.go: a zone's Expand or Shrink tool
 		return true
 	}
-	if a.archOpen && a.archTool != "" {
-		a.archTool = ""
-		a.archDrag = false
+	if a.arch.Open && a.arch.ToolID != "" {
+		a.arch.ToolID = ""
+		a.arch.Drag = false
 		return true
 	}
-	if a.archOpen {
+	if a.arch.Open {
 		a.closeArchitect()
 		return true
 	}
-	if a.workOpen {
-		a.workOpen = false
+	if a.win.Open {
+		a.win.Open = false
 		return true
 	}
 	if a.closeLearnCard() { // learn_ui.go: the lesson detail card goes first
@@ -647,10 +632,10 @@ func (a *App) startGame() {
 func (a *App) startSession(sim Simulation) {
 	a.sessionErr = ""
 	a.simsStarted++
-	a.workOpen = false
+	a.win.Open = false
 	a.closeArchitect()
-	a.archCat = ""
-	a.archFacing = 0
+	a.arch.Cat = ""
+	a.arch.Facing = 0
 	a.closeFloat()
 	a.inspectTab = "character"
 	a.renderer = New(sim)
@@ -662,10 +647,10 @@ func (a *App) startSession(sim Simulation) {
 
 func (a *App) dropSession() {
 	a.renderer = nil
-	a.workOpen = false
-	a.archOpen = false
-	a.archTool = ""
-	a.archDrag = false
+	a.win.Open = false
+	a.arch.Open = false
+	a.arch.ToolID = ""
+	a.arch.Drag = false
 	a.inspectTab = "character"
 }
 
@@ -751,8 +736,8 @@ func (a *App) Draw(screen *ebiten.Image) {
 
 	a.uiPaint(screen) // widget kit: widgets, modals, tooltips (ui_state.go)
 	a.drawHoverHint(screen, sw, sh)
-	if a.shot.pending { // F10: this frame, before the toast that reports it
-		a.shot.pending = false
+	if a.meter.Shot.Pending { // F10: this frame, before the toast that reports it
+		a.meter.Shot.Pending = false
 		a.takeScreenshot(func(img *image.RGBA) { screen.ReadPixels(img.Pix) }, sw, sh)
 	}
 	if !a.uiHidden() {

@@ -42,9 +42,9 @@ func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
 	r.cam.Zoom = 32.0 / float64(TileSize)
 	r.art = &artCatalog{} // no bridge sprites landed: the plain deck stands in
-	r.lod.tier = lodLive
+	r.lod.Tier = lodLive
 	w := bridgeWorld(8, 8, terrain.DeepWater, [2]int{3, 3})
-	r.lod.views = []game.ChunkView{{Buildings: []int32{0}}}
+	r.lod.Views = []game.ChunkView{{Buildings: []int32{0}}}
 	var order []string
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	tile := r.tilePx()
@@ -55,7 +55,7 @@ func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	}
 	// not in the live tier: baked elsewhere, nothing traced
 	order = nil
-	r.lod.tier = lodChunk
+	r.lod.Tier = lodChunk
 	r.drawFoundation(screen, w, 320, 320, tile)
 	if len(order) != 1 {
 		t.Errorf("baked tier trace = %v", order)

@@ -136,14 +136,14 @@ func TestLightingOffGrassKeepsTuftsLitByTheTileLight(t *testing.T) {
 	r, _ := grassRenderer(w, 6, 6)
 	r.lit.Light = lightAt(8, summerDay, "clear", 0)
 	batchAt(r, 6, 6, 64, 9)
-	on := r.lod.grass.Verts[0]
+	on := r.lod.Grass.Verts[0]
 	if r.lit.Opts.Images[0] == nil {
 		t.Fatal("fixture: lit tufts should draw through the shader")
 	}
 	r.lit.Opts.Images[0] = nil
 	r.lit.Off = true
 	batchAt(r, 6, 6, 64, 9)
-	off := r.lod.grass.Verts[0]
+	off := r.lod.Grass.Verts[0]
 	if r.lit.Opts.Images[0] != nil {
 		t.Fatal("lighting off still drew tufts through lit.kage")
 	}
@@ -319,7 +319,7 @@ func TestGrassDetailThinsTuftsPerTile(t *testing.T) {
 	r, _ := grassRenderer(w, 16, 16)
 	colours := map[string]map[[4]float32]bool{}
 	quads := func(level string) int {
-		r.lod.grass.Level = level
+		r.lod.Grass.Level = level
 		n := batchAt(r, 16, 16, 64, 9)
 		colours[level] = distinctTuftColours(r)
 		return n
@@ -359,7 +359,7 @@ func TestGrassDetailThinsTuftsPerTile(t *testing.T) {
 // distinctTuftColours is the set of vertex colours of the last tuft batch.
 func distinctTuftColours(r *Renderer) map[[4]float32]bool {
 	out := map[[4]float32]bool{}
-	for _, v := range r.lod.grass.Verts {
+	for _, v := range r.lod.Grass.Verts {
 		out[[4]float32{v.ColorR, v.ColorG, v.ColorB, v.ColorA}] = true
 	}
 	return out
@@ -402,7 +402,7 @@ func TestGrassDetailChangesTheChunkBakeKey(t *testing.T) {
 	r, _ := grassRenderer(w, 8, 8)
 	sigs := map[uint64]bool{}
 	for _, level := range []string{config.GrassFull, config.GrassReduced, config.GrassSparse} {
-		r.lod.grass.Level = level
+		r.lod.Grass.Level = level
 		sigs[r.grassLookSig(&w, 1)] = true
 	}
 	if len(sigs) != 3 {
@@ -428,7 +428,7 @@ func TestGraphicsPresetsDriveEveryKnob(t *testing.T) {
 			got := struct {
 				shadowsOff, lightingOff, simpleWater bool
 				grass                                string
-			}{r.env.Shadow.Off, r.lit.Off, r.water.Simple, r.lod.grass.Level}
+			}{r.env.Shadow.Off, r.lit.Off, r.water.Simple, r.lod.Grass.Level}
 			if got != want {
 				t.Fatalf("%s: knobs %+v, want %+v", tier, got, want)
 			}

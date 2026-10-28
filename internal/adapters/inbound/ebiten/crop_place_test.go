@@ -48,14 +48,14 @@ func cropDrawEach(r *Renderer, mw, mh int, tile float64, fn func(p *game.PlantVi
 	r.stepEnvironment(w, nil)
 	dst := ebiten.NewImage(sw, sh)
 	defer dst.Deallocate()
-	r.lod.crops.Begin()
+	r.lod.Crops.Begin()
 	for i := range w.Plants {
-		n0, f0 := len(r.lod.crops.Verts), r.lod.crops.Flushes
+		n0, f0 := len(r.lod.Crops.Verts), r.lod.Crops.Flushes
 		r.drawCropObj(dst, &w, &w.Plants[i], tile)
-		if r.lod.crops.Flushes != f0 { // the batch was drawn first: this plant's units start it
+		if r.lod.Crops.Flushes != f0 { // the batch was drawn first: this plant's units start it
 			n0 = 0
 		}
-		fn(&w.Plants[i], r.lod.crops.Verts[n0:])
+		fn(&w.Plants[i], r.lod.Crops.Verts[n0:])
 	}
 }
 
@@ -199,8 +199,8 @@ func TestCropGrowthRisesStageToStage(t *testing.T) {
 					// the plant's height is its top's height above its root: the
 					// quad's bottom less the sprite's reach below the root
 					var spr *cropSprite
-					for i := range r.lod.crops.Atlas.Sprites {
-						if s := &r.lod.crops.Atlas.Sprites[i]; s.Sx == min(vs[q].SrcX, vs[q+1].SrcX) && s.Sy == vs[q].SrcY {
+					for i := range r.lod.Crops.Atlas.Sprites {
+						if s := &r.lod.Crops.Atlas.Sprites[i]; s.Sx == min(vs[q].SrcX, vs[q+1].SrcX) && s.Sy == vs[q].SrcY {
 							spr = s
 						}
 					}
@@ -244,7 +244,7 @@ func TestCropSwayPivotsAtRoot(t *testing.T) {
 		}
 		r.present = present
 		cropDraw(r, 6, 6, 64)
-		return slices.Clone(r.lod.crops.Verts)
+		return slices.Clone(r.lod.Crops.Verts)
 	}
 	a, b := draw(40), draw(95)
 	if len(a) != 16 || len(b) != 16 {

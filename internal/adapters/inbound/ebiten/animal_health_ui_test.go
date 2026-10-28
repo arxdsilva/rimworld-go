@@ -42,9 +42,9 @@ func TestAnimalInspectorHealthBlock(t *testing.T) {
 		t.Fatalf("care command %+v", care)
 	}
 	click(t, a, "cmd.animal.care")
-	if !a.float.open || len(a.float.opts) != int(medcare.NumPolicies) ||
-		a.float.opts[medcare.HerbalMax].Label != medcare.HerbalMax.Label()+" (now)" {
-		t.Fatalf("the care picker lists the five levels, the current marked: %+v", a.float.opts)
+	if !a.ord.Float.Open || len(a.ord.Float.Opts) != int(medcare.NumPolicies) ||
+		a.ord.Float.Opts[medcare.HerbalMax].Label != medcare.HerbalMax.Label()+" (now)" {
+		t.Fatalf("the care picker lists the five levels, the current marked: %+v", a.ord.Float.Opts)
 	}
 	click(t, a, "float.0")
 	if c := s.cmds[len(s.cmds)-1]; c.Kind != command.SetMedicalCare || c.Pawn != 50 || c.Mode != uint8(medcare.NoCare) {

@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -110,20 +111,10 @@ var (
 
 // plantKeyTable is the plant sprite keys: the env layer's crops and trees
 // (env.NewPlantKeys) and, in the same maps, the ground and biome plants
-// biome_art.go adds; Ground is theirs.
-type plantKeyTable struct {
-	*env.PlantKeyTable
-	Ground map[string]*groundKeys
-}
+// (render/world biome_art.go); Ground is theirs.
+type plantKeyTable = world.PlantKeyTable
 
-var plantKeys = buildPlantKeys()
-
-func buildPlantKeys() plantKeyTable {
-	t := plantKeyTable{PlantKeyTable: env.NewPlantKeys()}
-	addBiomePlantFallbacks(&t)
-	addGroundPlantKeys(&t)
-	return t
-}
+var plantKeys = world.PlantKeys
 
 func envTileKey(x, y int) uint32 { return env.TileKey(x, y) }
 
@@ -216,7 +207,7 @@ func ventLine(b game.BuildingView) string                 { return env.VentLine(
 func (r *Renderer) envLayer() *env.Layer {
 	e := &r.env.Layer
 	if e.Water == nil {
-		e.Water, e.SnowC, e.Trees, e.Grass, e.Crops = &r.water, &r.snowc, &r.treeFx, &r.lod.grass, &r.lod.crops
+		e.Water, e.SnowC, e.Trees, e.Grass, e.Crops = &r.water, &r.snowc, &r.treeFx, &r.lod.Grass, &r.lod.Crops
 		e.Keys = plantKeys.PlantKeyTable
 	}
 	r.env.paint = r.painter()
@@ -271,7 +262,7 @@ func (h envHost) DrawTile(screen *ebiten.Image, key string, wx, wy, tile float64
 func (h envHost) DrawSpritePose(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps pose) {
 	h.r.drawSpritePose(screen, key, tint, wx, wy, tile, ps)
 }
-func (h envHost) InView(x, y, pad, padS int) bool           { return h.r.lod.inView(x, y, pad, padS) }
+func (h envHost) InView(x, y, pad, padS int) bool           { return h.r.lod.InView(x, y, pad, padS) }
 func (h envHost) PawnMotion(id entity.EntityID) moveState   { return h.r.pawnMotion(id) }
 func (h envHost) AnimalMotion(id entity.EntityID) moveState { return h.r.animalMotion(id) }
 
@@ -279,7 +270,7 @@ func (h envHost) AnimalMotion(id entity.EntityID) moveState { return h.r.animalM
 // index (r.view.W, synced by syncFrameChunks): the same shared lists.
 func (r *Renderer) frameLists(l env.Lists) bool {
 	d := &r.view.W
-	return r.game != nil && len(r.lod.views) > 0 &&
+	return r.game != nil && len(r.lod.Views) > 0 &&
 		litFirst(l.Buildings) == litFirst(d.Buildings) && len(l.Buildings) == len(d.Buildings) &&
 		litFirst(l.Plants) == litFirst(d.Plants) && len(l.Plants) == len(d.Plants) &&
 		litFirst(l.Items) == litFirst(d.Items) && len(l.Items) == len(d.Items) &&
@@ -292,7 +283,7 @@ func (r *Renderer) frameViews(w *game.WorldView) []game.ChunkView {
 	if !r.frameLists(env.ListsOf(w)) {
 		return nil
 	}
-	return r.lod.views
+	return r.lod.Views
 }
 
 func (r *Renderer) windAt(x, y float64) (vx, vy float64) {
@@ -362,7 +353,7 @@ func (r *Renderer) grassFrameMask(w *game.WorldView, x0, y0, x1, y1 int) {
 
 func (r *Renderer) drawGrassBatch(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 int, tile float64, sw, sh, limit int) {
 	v, frame := r.envView()
-	r.envLayer().DrawGrassBatch(v, dst, w, x0, y0, x1, y1, tile, sw, sh, limit, r.lod.baking, envHost{r})
+	r.envLayer().DrawGrassBatch(v, dst, w, x0, y0, x1, y1, tile, sw, sh, limit, r.lod.Baking, envHost{r})
 	v.Cam = frame
 }
 
@@ -375,7 +366,7 @@ func (r *Renderer) grassReach(x0, y0, x1, y1 int) (int, int, int, int) {
 
 func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 int, tile float64, sw, sh, limit int) {
 	v, frame := r.envView()
-	r.envLayer().GrassBatchOf(v, dst, w, x0, y0, x1, y1, tile, sw, sh, limit, r.lod.baking)
+	r.envLayer().GrassBatchOf(v, dst, w, x0, y0, x1, y1, tile, sw, sh, limit, r.lod.Baking)
 	v.Cam = frame
 }
 
@@ -387,7 +378,7 @@ func (r *Renderer) drawGrassCutMarks(dst *ebiten.Image, w *game.WorldView, x0, y
 
 // grassBakesTufts reports the tier whose chunk images hold the tufts.
 func (r *Renderer) grassBakesTufts() bool {
-	return r.lod.tier == lodChunk && r.tilePx() < grassLiveMin
+	return r.lod.Tier == lodChunk && r.tilePx() < grassLiveMin
 }
 
 func (r *Renderer) grassChunkSig(w *game.WorldView, cx, cy int) uint64 {
@@ -412,14 +403,14 @@ func (r *Renderer) bakeTufts(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y
 
 func (r *Renderer) grassMapSig(w *game.WorldView, cx, cy int, ver uint64) uint64 {
 	v, frame := r.envView()
-	out := r.envLayer().GrassMapSig(v, w, cx, cy, ver, r.lod.chunks.frame)
+	out := r.envLayer().GrassMapSig(v, w, cx, cy, ver, r.lod.Chunks.Frame)
 	v.Cam = frame
 	return out
 }
 
 func (r *Renderer) bakeGrassTint(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 int, tile float64) {
 	v, frame := r.envView()
-	r.envLayer().BakeGrassTint(v, dst, w, x0, y0, x1, y1, tile, r.lod.whiteImg())
+	r.envLayer().BakeGrassTint(v, dst, w, x0, y0, x1, y1, tile, r.lod.WhiteImg())
 	v.Cam = frame
 }
 
@@ -445,7 +436,7 @@ func (r *Renderer) drawFurrows(dst *ebiten.Image, w game.WorldView, tile float64
 
 func (r *Renderer) drawDuskGlow(screen *ebiten.Image, w game.WorldView, tile float64) {
 	v, frame := r.envView()
-	r.envLayer().DrawDuskGlow(v, screen, w, tile, r.lod.tier == lodLive, r.lod.views)
+	r.envLayer().DrawDuskGlow(v, screen, w, tile, r.lod.Tier == lodLive, r.lod.Views)
 	v.Cam = frame
 }
 
@@ -455,7 +446,7 @@ func (r *Renderer) drawDuskGlow(screen *ebiten.Image, w game.WorldView, tile flo
 func (r *Renderer) SetTreeFocus(cells [][2]int) { r.envLayer().Trees.SetTreeFocus(cells) }
 
 func (r *Renderer) treeCanopyAlpha(x, y int) float32 {
-	return r.envLayer().Trees.TreeCanopyAlpha(r.envClock(), x, y, r.lod.creatures)
+	return r.envLayer().Trees.TreeCanopyAlpha(r.envClock(), x, y, r.lod.Creatures)
 }
 
 func (r *Renderer) sweepTreeFades() { r.envLayer().Trees.SweepTreeFades(r.envClock()) }

@@ -171,7 +171,7 @@ func TestDevSingleStepConsumedOnce(t *testing.T) {
 
 func TestFPSReportShowsBudget(t *testing.T) {
 	t.Parallel()
-	st := &fpsProbeState{budgetHeld0: 2}
+	st := &fpsProbeState{BudgetHeld0: 2}
 	got := budgetLine(st, tickDebt{held: 7, maxOwed: 3})
 	if !strings.Contains(got, "budget held 5 updates") || !strings.Contains(got, "max 3 ticks owed") {
 		t.Fatalf("budget line %q", got)

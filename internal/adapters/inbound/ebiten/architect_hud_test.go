@@ -37,7 +37,7 @@ func archPick(t *testing.T, a *App, tool string) {
 	t.Helper()
 	c, ok := archCmd(a, "arch.tool."+tool)
 	if !ok {
-		t.Fatalf("no command for tool %q in category %q", tool, a.archCat)
+		t.Fatalf("no command for tool %q in category %q", tool, a.arch.Cat)
 	}
 	if c.Disabled {
 		a.hint = c.Reason
@@ -63,8 +63,8 @@ func archButtonsWith(a *App, prefix string) []button {
 // archDescText is the description box's text lines, top to bottom.
 func archDescText(a *App) []string {
 	var out []string
-	for _, l := range a.archPlan().lines {
-		out = append(out, l.text)
+	for _, l := range a.archPlan().Lines {
+		out = append(out, l.Text)
 	}
 	return out
 }
@@ -99,8 +99,8 @@ func TestArchitectCategoriesInTwoColumns(t *testing.T) {
 		if b.W < 92 || b.W > 104 || b.H != 28 {
 			t.Errorf("%s is %vx%v, want about 100x28", b.ID, b.W, b.H)
 		}
-		if b.Selected != (archCategories[i].id == a.archCat) {
-			t.Errorf("%s selected = %v with archCat %q", b.ID, b.Selected, a.archCat)
+		if b.Selected != (archCategories[i].id == a.arch.Cat) {
+			t.Errorf("%s selected = %v with archCat %q", b.ID, b.Selected, a.arch.Cat)
 		}
 		if b.Label != archCategories[i].label {
 			t.Errorf("%s label = %q", b.ID, b.Label)
@@ -138,24 +138,24 @@ func TestArchitectNoLegacyToolCards(t *testing.T) {
 func TestArchitectOpeningCategoryIsConfirmedBeforeItCollapses(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
-	if a.archCat != "structure" {
-		t.Fatalf("opened on %q, want structure", a.archCat)
+	if a.arch.Cat != "structure" {
+		t.Fatalf("opened on %q, want structure", a.arch.Cat)
 	}
 	a.applyClick("arch.cat.structure")
-	if a.archCat != "structure" || len(a.archToolCommands()) == 0 {
-		t.Fatalf("the first click on the opening category collapsed it: %q", a.archCat)
+	if a.arch.Cat != "structure" || len(a.archToolCommands()) == 0 {
+		t.Fatalf("the first click on the opening category collapsed it: %q", a.arch.Cat)
 	}
 	a.applyClick("arch.cat.structure")
-	if a.archCat != "" {
-		t.Fatalf("the second click left %q open", a.archCat)
+	if a.arch.Cat != "" {
+		t.Fatalf("the second click left %q open", a.arch.Cat)
 	}
 
 	// Arming a tool in the opening category counts as working in it.
 	b, _ := archColony(t)
 	archPick(t, b, "wall")
 	b.applyClick("arch.cat.structure")
-	if b.archCat != "" || b.archTool != "" {
-		t.Fatalf("after arming a tool, a category click left archCat=%q archTool=%q", b.archCat, b.archTool)
+	if b.arch.Cat != "" || b.arch.ToolID != "" {
+		t.Fatalf("after arming a tool, a category click left archCat=%q archTool=%q", b.arch.Cat, b.arch.ToolID)
 	}
 }
 
@@ -163,21 +163,21 @@ func TestArchitectCategoryClickSelectsAndCollapses(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
 	a.applyClick("arch.cat.zones")
-	if a.archCat != "zones" {
-		t.Fatalf("archCat = %q, want zones", a.archCat)
+	if a.arch.Cat != "zones" {
+		t.Fatalf("archCat = %q, want zones", a.arch.Cat)
 	}
 	cmds := a.archToolCommands()
 	if len(cmds) == 0 || cmds[0].ID != "arch.tool.stockpile" {
 		t.Fatalf("zones tools = %+v, want stockpile first", cmds)
 	}
 	archPick(t, a, "stockpile")
-	if a.archTool != "stockpile" {
-		t.Fatalf("archTool = %q", a.archTool)
+	if a.arch.ToolID != "stockpile" {
+		t.Fatalf("archTool = %q", a.arch.ToolID)
 	}
 	// Clicking the open category again collapses it: no tools, none armed.
 	a.applyClick("arch.cat.zones")
-	if a.archCat != "" || a.archTool != "" {
-		t.Fatalf("collapse left archCat=%q archTool=%q", a.archCat, a.archTool)
+	if a.arch.Cat != "" || a.arch.ToolID != "" {
+		t.Fatalf("collapse left archCat=%q archTool=%q", a.arch.Cat, a.arch.ToolID)
 	}
 	if n := len(a.archToolCommands()); n != 0 {
 		t.Fatalf("%d tool commands with no category open", n)
@@ -192,14 +192,14 @@ func TestArchitectCategoryClickSelectsAndCollapses(t *testing.T) {
 		}
 	}
 	a.applyClick("arch.cat.orders")
-	if a.archCat != "orders" || len(a.archToolCommands()) == 0 {
-		t.Fatalf("category did not reopen: %q", a.archCat)
+	if a.arch.Cat != "orders" || len(a.archToolCommands()) == 0 {
+		t.Fatalf("category did not reopen: %q", a.arch.Cat)
 	}
 	// Reopening the Architect after a collapse lands on a category again.
 	a.applyClick("arch.cat.orders")
 	a.closeArchitect()
 	a.openArchitect()
-	if a.archCat == "" {
+	if a.arch.Cat == "" {
 		t.Fatal("openArchitect must leave a category open")
 	}
 }
@@ -210,8 +210,8 @@ func TestArchitectCategoryChangeDropsOtherCategoryTool(t *testing.T) {
 	a.applyClick("arch.cat.orders") // another category than the open Structure: opens it
 	archPick(t, a, "harvest")
 	a.applyClick("arch.cat.zones")
-	if a.archTool != "" {
-		t.Fatalf("archTool = %q after leaving its category", a.archTool)
+	if a.arch.ToolID != "" {
+		t.Fatalf("archTool = %q after leaving its category", a.arch.ToolID)
 	}
 }
 
@@ -219,8 +219,8 @@ func TestArchitectToolsAreCommands(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
 	for _, c := range archCategories {
-		a.archCat = c.id
-		a.archTool = ""
+		a.arch.Cat = c.id
+		a.arch.ToolID = ""
 		cmds := a.archToolCommands()
 		sel := a.selectionCommands()
 		tools := toolsIn(c.id)
@@ -297,8 +297,8 @@ func TestArchitectLockedToolsAreDisabledWithReason(t *testing.T) {
 	}
 	// A locked tool never selects, and says why.
 	archPick(t, a, "campfire")
-	if a.archTool != "" || a.hint != game.ReasonScenario {
-		t.Fatalf("tool=%q hint=%q: a locked tool must not select and says why", a.archTool, a.hint)
+	if a.arch.ToolID != "" || a.hint != game.ReasonScenario {
+		t.Fatalf("tool=%q hint=%q: a locked tool must not select and says why", a.arch.ToolID, a.hint)
 	}
 	// An area tool has no build to lock.
 	a.applyClick("arch.cat.orders")
@@ -313,9 +313,9 @@ func TestArchitectDescriptionBoxSitsAboveCategories(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
 	for _, tool := range []string{"", "wall", "bed", "carpet"} {
-		a.archTool = ""
+		a.arch.ToolID = ""
 		if tool != "" {
-			a.archCat = toolCategory(t, tool)
+			a.arch.Cat = toolCategory(t, tool)
 			archPick(t, a, tool)
 		}
 		h := a.archDescHeight()
@@ -345,7 +345,7 @@ func TestArchitectDescriptionHeightGrowsWithContent(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
 	none := a.archDescHeight()
-	a.archCat = "structure"
+	a.arch.Cat = "structure"
 	archPick(t, a, "wall") // seven materials
 	wall := a.archDescHeight()
 	a.applyClick("arch.cat.zones")
@@ -358,7 +358,7 @@ func TestArchitectDescriptionHeightGrowsWithContent(t *testing.T) {
 	if again := a.archDescHeight(); again != grow {
 		t.Fatalf("archDescHeight changed between calls: %v then %v", grow, again)
 	}
-	a.archOpen = false
+	a.arch.Open = false
 	if h := a.archDescHeight(); h != 0 {
 		t.Fatalf("archDescHeight = %v with the Architect closed", h)
 	}
@@ -438,7 +438,7 @@ func TestArchitectDescriptionMaterialRow(t *testing.T) {
 		if bv, ok := buildable(tool.build); !ok || len(bv.Stuffs) != 1 {
 			continue
 		}
-		a.archCat = tool.category
+		a.arch.Cat = tool.category
 		archPick(t, a, tool.id)
 		if got := archButtonsWith(a, "arch.stuff."); len(got) != 0 {
 			t.Fatalf("%s builds from one material but offers %d buttons", tool.id, len(got))
@@ -479,8 +479,8 @@ func TestArchitectDescriptionCropPicker(t *testing.T) {
 		t.Errorf("%d crops selected, want 1", sel)
 	}
 	a.applyClick("arch.crop.tree")
-	if a.archCrop != "tree" {
-		t.Fatalf("archCrop = %q", a.archCrop)
+	if a.arch.Crop != "tree" {
+		t.Fatalf("archCrop = %q", a.arch.Crop)
 	}
 	text := strings.Join(archDescText(a), "\n")
 	if !strings.Contains(text, "Tree: ") || !strings.Contains(text, "wood per tree") {
@@ -499,7 +499,7 @@ func TestArchitectDescriptionDragStyleHints(t *testing.T) {
 	if !strings.Contains(text, styleNames[styleLine]) || !strings.Contains(text, "shape, Ctrl square") {
 		t.Errorf("wall hint lacks its draw style:\n%s", text)
 	}
-	a.archStyle = styleOval
+	a.arch.Style = styleOval
 	text = strings.Join(archDescText(a), "\n")
 	if !strings.Contains(text, styleNames[styleOval]) {
 		t.Errorf("the box did not follow the draw style:\n%s", text)
@@ -514,11 +514,11 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 	for _, sz := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		a.sw, a.sh = sz[0], sz[1]
 		for _, tool := range allArchTools() {
-			a.archCat = tool.category
-			a.archTool = ""
-			a.archStuff = ""
+			a.arch.Cat = tool.category
+			a.arch.ToolID = ""
+			a.arch.Stuff = ""
 			archPick(t, a, tool.id)
-			if a.archTool != tool.id {
+			if a.arch.ToolID != tool.id {
 				continue // an allowed-area tool opens its area menu first
 			}
 			stuffs := []string{""}
@@ -526,7 +526,7 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 				stuffs = bv.Stuffs
 			}
 			for _, s := range stuffs {
-				a.archStuff = s
+				a.arch.Stuff = s
 				l := a.hud()
 				if l.ArchDesc.Empty() || l.ArchDesc.H != a.archDescHeight() {
 					t.Errorf("%dx%d %s/%s: box %+v is clamped (wants %v)", sz[0], sz[1], tool.id, s, l.ArchDesc, a.archDescHeight())
@@ -534,12 +534,12 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 				if l.ArchDesc.Y < 0 {
 					t.Errorf("%dx%d %s/%s: box above the screen: %+v", sz[0], sz[1], tool.id, s, l.ArchDesc)
 				}
-				for _, ln := range a.archPlan().lines {
-					if w, _ := measure(ln.text, ln.style); w > archInnerW+0.5 {
-						t.Errorf("%dx%d %s/%s: line %q is %.1f wide, the box holds %v", sz[0], sz[1], tool.id, s, ln.text, w, float32(archInnerW))
+				for _, ln := range a.archPlan().Lines {
+					if w, _ := measure(ln.Text, ln.Style); w > archInnerW+0.5 {
+						t.Errorf("%dx%d %s/%s: line %q is %.1f wide, the box holds %v", sz[0], sz[1], tool.id, s, ln.Text, w, float32(archInnerW))
 					}
-					if ln.y+lineStep(ln.style) > l.ArchDesc.H {
-						t.Errorf("%dx%d %s/%s: line %q at y=%v runs past the box (%v)", sz[0], sz[1], tool.id, s, ln.text, ln.y, l.ArchDesc.H)
+					if ln.Y+lineStep(ln.Style) > l.ArchDesc.H {
+						t.Errorf("%dx%d %s/%s: line %q at y=%v runs past the box (%v)", sz[0], sz[1], tool.id, s, ln.Text, ln.Y, l.ArchDesc.H)
 					}
 				}
 				for _, b := range archButtonsWith(a, "arch.stuff.") {
@@ -563,8 +563,8 @@ func TestArchitectLayoutKeepsRegionsApart(t *testing.T) {
 	for _, sz := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		a.sw, a.sh = sz[0], sz[1]
 		for _, c := range archCategories {
-			a.archCat = c.id
-			a.archTool = ""
+			a.arch.Cat = c.id
+			a.arch.ToolID = ""
 			cmds := a.archToolCommands()
 			l := computeHUDLayout(sz[0], sz[1], hudState{ArchOpen: true, Commands: len(cmds), ArchDescH: a.archDescHeight(), Colonists: 6})
 			regions := []rect{l.Tabs, l.ArchCats, l.ArchDesc}
@@ -598,11 +598,11 @@ func TestArchitectToolClickEmitsTheSameCommands(t *testing.T) {
 
 	// A line of walls: one DesignateBuild per cell, wood by default.
 	archPick(t, a, "wall") // Structure is open
-	if a.archTool != "wall" {
-		t.Fatalf("archTool = %q", a.archTool)
+	if a.arch.ToolID != "wall" {
+		t.Fatalf("archTool = %q", a.arch.ToolID)
 	}
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 3, 4, 6, 4
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 3, 4, 6, 4
 	a.submitArchitect()
 	wall, _ := kindID("wall")
 	wood, _ := game.StuffID("wood")
@@ -618,7 +618,7 @@ func TestArchitectToolClickEmitsTheSameCommands(t *testing.T) {
 	// A material pick changes the stuff of the next command.
 	s.cmds = nil
 	a.applyClick("arch.stuff.steel")
-	a.archX0, a.archY0, a.archX1, a.archY1 = 8, 8, 8, 8
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 8, 8, 8, 8
 	a.submitArchitect()
 	steel, _ := game.StuffID("steel")
 	if len(s.cmds) != 1 || s.cmds[0].Stuff != steel {
@@ -629,7 +629,7 @@ func TestArchitectToolClickEmitsTheSameCommands(t *testing.T) {
 	s.cmds = nil
 	a.applyClick("arch.cat.zones")
 	archPick(t, a, "stockpile")
-	a.archX0, a.archY0, a.archX1, a.archY1 = 2, 2, 5, 3
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 2, 5, 3
 	a.submitArchitect()
 	if len(s.cmds) != 1 || s.cmds[0].Kind != command.DesignateStockpile || s.cmds[0].X != 2 || s.cmds[0].Y2 != 3 {
 		t.Fatalf("stockpile commands = %+v", s.cmds)
@@ -639,7 +639,7 @@ func TestArchitectToolClickEmitsTheSameCommands(t *testing.T) {
 	s.cmds = nil
 	archPick(t, a, "grow")
 	a.applyClick("arch.crop.corn")
-	a.archX0, a.archY0, a.archX1, a.archY1 = 1, 1, 2, 2
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 1, 2, 2
 	a.submitArchitect()
 	if len(s.cmds) != 1 || s.cmds[0].Kind != command.DesignateGrowZone {
 		t.Fatalf("grow commands = %+v", s.cmds)
@@ -674,8 +674,8 @@ func TestArchitectToolClickThroughTheGrid(t *testing.T) {
 		t.Fatalf("wall button %+v is not in a grid cell", cell)
 	}
 	click(t, a, "arch.tool.wall")
-	if a.archTool != "wall" {
-		t.Fatalf("archTool = %q after a grid click", a.archTool)
+	if a.arch.ToolID != "wall" {
+		t.Fatalf("archTool = %q after a grid click", a.arch.ToolID)
 	}
 }
 
@@ -686,9 +686,9 @@ func TestArchitectDraws(t *testing.T) {
 	a, f := colonyApp(t, &stubSim{world: game.WorldView{Wood: 50, Stone: 20}})
 	a.openArchitect()
 	for _, tool := range []string{"", "wall", "carpet", "grow", "hospital_bed", "stockpile", "door"} {
-		a.archTool = ""
+		a.arch.ToolID = ""
 		if tool != "" {
-			a.archCat = toolCategory(t, tool)
+			a.arch.Cat = toolCategory(t, tool)
 			archPick(t, a, tool)
 		}
 		for _, id := range []string{"arch.cat.zones", "arch.stuff.steel", "arch.crop.potato"} {

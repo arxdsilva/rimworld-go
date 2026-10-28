@@ -55,8 +55,8 @@ func TestHuntToolMarksAnimals(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.orders")
 	click(t, a, "arch.tool.hunt")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 9, 9
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 9, 9
 	a.submitArchitect()
 	g.Step(1)
 	if an := g.World().Animals; len(an) != 1 || !an[0].Designated {

@@ -33,10 +33,10 @@ func zoneJourney(t *testing.T) *journey {
 // leaveArch drops the tool and closes the Architect with Escape.
 func (j *journey) leaveArch() {
 	j.t.Helper()
-	for i := 0; i < 2 && j.a.archOpen; i++ {
+	for i := 0; i < 2 && j.a.arch.Open; i++ {
 		j.key("Escape", 0)
 	}
-	if j.a.archOpen {
+	if j.a.arch.Open {
 		j.t.Fatal("the Architect stays open")
 	}
 }
@@ -198,12 +198,12 @@ func TestJourneyZonesAllowedAreaAndAreas(t *testing.T) {
 
 	// Paint with the tool: pick the area, drag.
 	j.clickID("arch.tool.allowed_area")
-	if j.a.archTool == "allowed_area" {
+	if j.a.arch.ToolID == "allowed_area" {
 		j.clickID("arch.tool.allowed_area") // the first click armed nothing: the picker is up
 	}
 	j.clickID(fmt.Sprintf("areapick.row.%d", id))
-	if j.a.archTool != "allowed_area" {
-		t.Fatalf("armed %q, want allowed_area", j.a.archTool)
+	if j.a.arch.ToolID != "allowed_area" {
+		t.Fatalf("armed %q, want allowed_area", j.a.arch.ToolID)
 	}
 	j.dragTiles(mbLeft, 8, 2, 9, 3, 0)
 	if c, ok := j.lastCmd(command.PaintArea); !ok || c.Index != id || !c.Enabled || c.X != 8 || c.Y2 != 3 {

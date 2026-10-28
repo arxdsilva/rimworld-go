@@ -138,22 +138,22 @@ func TestJourneyTimeDevStepUltrafastAndActions(t *testing.T) {
 	j.key("Space", 0)
 
 	j.key("Backquote", 0)
-	if !j.a.dev.log {
+	if !j.a.tools.State.Log {
 		t.Fatal("Backquote did not open the debug log")
 	}
 	j.key("Quote", 0)
-	if !j.a.dev.insp {
+	if !j.a.tools.State.Insp {
 		t.Fatal("Quote did not open the debug inspector")
 	}
 
 	j.f.MoveTo(j.a, 13, 5)
 	j.key("Slash", 0)
-	if !j.a.dev.menu {
+	if !j.a.tools.State.Menu {
 		t.Fatal("Slash opened no debug menu")
 	}
 	row := -1
-	for i, act := range j.a.devActions(j.a.dev.tx, j.a.dev.ty) {
-		if act.label == "Start fire here" {
+	for i, act := range j.a.devActions(j.a.tools.State.TX, j.a.tools.State.TY) {
+		if act.Label == "Start fire here" {
 			row = i
 		}
 	}

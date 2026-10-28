@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -56,45 +55,6 @@ func clickID(t *testing.T, a *App, f *fakeInput, id string) {
 	f.clickAt(t, a, int(cx), int(cy))
 }
 
-func TestTradeDialogTotals(t *testing.T) {
-	t.Parallel()
-	d := newTradeDraft(testTradeView())
-	wood, steel := d.view.Rows[0], d.view.Rows[1]
-	d.step(steel, 2) // buy 2 steel: 8.00
-	d.step(wood, -3) // sell 3 wood: 3.00
-	if got := d.totalC(); got != 500 {
-		t.Fatalf("total = %d, want 500", got)
-	}
-	if d.colonyAfterC() != 500 || d.traderAfterC() != 10500 {
-		t.Fatalf("after = %d / %d", d.colonyAfterC(), d.traderAfterC())
-	}
-	d.step(steel, 10) // 12 steel = 48.00 -> colony short
-	if d.colonyAfterC() >= 0 || d.reason() == "" {
-		t.Fatalf("overspend must disable Accept: after %d reason %q", d.colonyAfterC(), d.reason())
-	}
-	if silverText(-250) != "-2.50" {
-		t.Fatalf("silverText = %q", silverText(-250))
-	}
-}
-
-func TestTradeDialogStepperClamps(t *testing.T) {
-	t.Parallel()
-	d := newTradeDraft(testTradeView())
-	wood, steel := d.view.Rows[0], d.view.Rows[1]
-	d.step(wood, 99)
-	if d.net[wood.Kind] != 5 {
-		t.Fatalf("buy clamps to trader stock: %d", d.net[wood.Kind])
-	}
-	d.step(wood, -99)
-	if d.net[wood.Kind] != -30 {
-		t.Fatalf("sell clamps to colony stock: %d", d.net[wood.Kind])
-	}
-	d.step(steel, -5) // the trader does not buy steel from an empty colony
-	if _, ok := d.net[steel.Kind]; ok {
-		t.Fatalf("no selling what the colony lacks: %v", d.net)
-	}
-}
-
 func TestTradeDialogEmitsProposeTrade(t *testing.T) {
 	t.Parallel()
 	s := &dealSim{tv: testTradeView(), tok: true}
@@ -119,29 +79,6 @@ func TestTradeDialogEmitsProposeTrade(t *testing.T) {
 	}
 }
 
-func TestTradeDialogGiftMode(t *testing.T) {
-	t.Parallel()
-	d := newTradeDraft(testTradeView())
-	wood := d.view.Rows[0]
-	d.step(wood, 3)
-	d.setGift(true)
-	if d.net[wood.Kind] != 0 {
-		t.Fatalf("gift drops buying: %v", d.net)
-	}
-	d.step(wood, 4)
-	if d.net[wood.Kind] != 0 {
-		t.Fatalf("gift cannot buy: %v", d.net)
-	}
-	d.step(wood, -4)
-	if d.giftSilver() != 4 || d.reason() != "" {
-		t.Fatalf("gift value %d reason %q", d.giftSilver(), d.reason())
-	}
-	d.view.ColonySilver = 0 // a gift needs no silver
-	if d.reason() != "" {
-		t.Fatalf("gift reason %q", d.reason())
-	}
-}
-
 func TestTradeDialogCancelEmitsClose(t *testing.T) {
 	t.Parallel()
 	s := &dealSim{tv: testTradeView(), tok: true}
@@ -160,15 +97,7 @@ func TestTradeDialogCancelEmitsClose(t *testing.T) {
 	}
 	s.tok = false
 	f.Frame(t, a)
-	if a.renderer.speed == speedPaused && a.dealings.paused {
+	if a.renderer.speed == speedPaused && a.deal.Paused() {
 		t.Fatal("pause not released")
-	}
-}
-
-func TestTradeLinesGroupByCategory(t *testing.T) {
-	t.Parallel()
-	ls := tradeLines(testTradeView().Rows)
-	if len(ls) != 3 || ls[0].head != "Materials" || !strings.HasPrefix(ls[1].row.Label, "S") {
-		t.Fatalf("lines = %+v", ls)
 	}
 }

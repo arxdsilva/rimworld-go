@@ -583,7 +583,7 @@ func visPanels() []visPanel {
 		ps = append(ps, visPanel{
 			name: "options_" + tab,
 			open: func(t *testing.T, s *visualScene) {
-				s.a.optionsTab = tab
+				s.a.opt.Tab = tab
 				s.a.apply(intent{kind: intentPush, screen: screenOptions})
 			},
 		})

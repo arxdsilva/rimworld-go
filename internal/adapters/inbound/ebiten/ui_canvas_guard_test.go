@@ -69,12 +69,11 @@ var canvasExempt = map[string]string{
 	"renderer.go:drawSelection":                        "world: the no-art selection box",
 	"renderer.go:drawTerrain":                          "world: the no-art ground",
 	"renderer.go:drawWorld":                            "world: the no-art objects",
-	"draw_art.go:drawItemObj":                          "world: ground items",
+	"render/world/objects.go:drawItemObj":              "world: ground items",
 	"draw_art.go:drawPlacementGhost":                   "world: the building ghost on tiles",
 	"render/sprite/sprite.go:DrawScaled":               "world: sprite blit at a tile position",
-	"lod.go:drawPlantMark":                             "world: plant marks on tiles",
-	"lod.go:drawUnlit":                                 "world: unlit sprite blit",
-	"lod.go:solidRect":                                 "world: a tile-space rectangle as a sprite",
+	"render/world/lod.go:drawPlantMark":                "world: plant marks on tiles",
+	"render/world/base.go:drawUnlit":                   "world: unlit sprite blit",
 	"render/overlay/set.go:drawUnlit":                  "world: unlit overlay sprite blit",
 	"render/overlay/set.go:solidRect":                  "world: an overlay rectangle as a sprite",
 	"render/creature/set.go:solidRect":                 "world: a creature-layer rectangle as a sprite",
@@ -92,7 +91,7 @@ var canvasExempt = map[string]string{
 	"render/overlay/bridge_draw.go:DrawBridgeCell":     "world: bridge water shadows and fallback deck",
 	"render/env/cave_plants_draw.go:DrawDuskGlow":      "world: the duskmoss glow discs",
 	"render/env/crop_batch.go:DrawLitBatch":            "world: crop unit and furrow batches",
-	"biome_art.go:drawTroughFallback":                  "world: trough fallback quad",
+	"render/world/biome_art.go:drawTroughFallback":     "world: trough fallback quad",
 	"render/overlay/blood_draw.go:DrawStains":          "world: blood batches",
 	"render/overlay/dirt_draw.go:DrawDirt":             "world: dirt batches",
 	"render/overlay/fog_draw.go:DrawFogLayer":          "world: fog of war chunks over the map",
@@ -105,45 +104,45 @@ var canvasExempt = map[string]string{
 	"render/env/water_draw.go:DrawWaterTile":           "world: water",
 	"gfx/worldpass.go:CompositeWorld":                  "world: the render-scaled map composited to the screen",
 	"render/overlay/paths_draw.go:DrawPaths":           "world: path lines",
-	"pen_draw.go:penSide":                              "world: pen region outline on tiles",
+	"architect/pen_draw.go:penSide":                    "world: pen region outline on tiles",
 	"render/overlay/zones_draw.go:zoneFill":            "world: zone fill batch",
 	"render/overlay/zones_draw.go:DrawZones":           "world: zone tiles",
 	"render/overlay/zones_draw.go:DrawZoneHighlight":   "world: the selected zone's brighter fill and outline on tiles",
 	"render/sprite/fence.go:DrawFenceVector":           "world: fences on tiles",
-	"fence.go:drawForbiddenMark":                       "world: forbidden marks on tiles",
+	"render/world/fence.go:DrawForbiddenMark":          "world: forbidden marks on tiles",
 	"render/creature/traces.go:drawMeleeTrail":         "world: combat effects",
 	"render/creature/traces.go:DrawTraces":             "world: combat effects",
 	"render/env/environment.go:drawCentered":           "world: weather sprites over the map",
 	"render/env/environment.go:DrawLightning":          "world: lightning over the map",
 	"render/env/environment.go:DrawWeather":            "world: weather over the map",
 	"render/env/environment.go:flush":                  "world: weather triangle batch",
-	"mapfields_overlay.go:drawMapFields":               "world: dev map-field layer over the map",
+	"devtools/mapfields.go:DrawMapFields":              "world: dev map-field layer over the map",
 
 	// overlays anchored to tiles (the UI around them uses the canvas)
-	"labels.go:drawBreakClouds":                      "world: storm clouds over colonists (stack counts and icons use the canvas)",
-	"labels.go:drawBuildingDamage":                   "world: damage bars under buildings",
+	"render/world/labels.go:drawBreakClouds":         "world: storm clouds over colonists (stack counts and icons use the canvas)",
+	"render/world/labels.go:drawBuildingDamage":      "world: damage bars under buildings",
 	"render/creature/progress.go:DrawWorkProgress":   "world: work progress bars over the work spots",
 	"render/overlay/turret_draw.go:DrawRangeRing":    "world: a selected turret's range ring on the map",
-	"labels.go:drawFightMarker":                      "world: fight marker over colonists",
-	"labels.go:drawHostileMarker":                    "world: hostile chevron over raiders",
+	"render/world/labels.go:drawFightMarker":         "world: fight marker over colonists",
+	"render/world/labels.go:DrawHostileMarker":       "world: hostile chevron over raiders",
 	"building_inspector.go:drawBuildingSelection":    "world: the selected building's outline on the map (the pane uses the canvas)",
 	"room_stats.go:drawRoomOverlay":                  "mixed: the room tile tint is world (the hover card uses the canvas)",
 	"multiselect.go:drawGroupMarks":                  "world: group marks on tiles (the pane and the drag box use the canvas)",
-	"order_queue_ui.go:dashed":                       "world: order route over the map (text goes through the canvas)",
-	"order_queue_ui.go:drawOrderRoute":               "world: order route over the map",
-	"formation.go:drawFormation":                     "world: formation markers on tiles",
-	"architect.go:drawZoneGhost":                     "world: zone/drag ghost cells on the map (palette and labels use the canvas)",
-	"move_mode.go:drawMoveMode":                      "world: move-mode footprint outline (hints use the canvas)",
-	"zone_tools.go:drawZoneToolGhost":                "world: the Expand and Shrink ghost cells on the map (the icon and hint use the canvas)",
+	"orders/route.go:Dashed":                         "world: order route over the map (text goes through the canvas)",
+	"orders/route.go:DrawRoute":                      "world: order route over the map",
+	"orders/formation.go:DrawFormation":              "world: formation markers on tiles",
+	"architect/zone_tools.go:drawGhost":              "world: zone/drag ghost cells on the map (palette and labels use the canvas)",
+	"architect/move_mode.go:Draw":                    "world: move-mode footprint outline (hints use the canvas)",
+	"architect/zone_tools.go:drawToolGhost":          "world: the Expand and Shrink ghost cells on the map (the icon and hint use the canvas)",
 	"render/overlay/power_overlay.go:powerDot":       "world: the power overlay's device marks on tiles",
 	"render/overlay/power_overlay.go:DrawPowerLink":  "world: power link lines between tiles (the overlay and the placement ghost)",
 	"render/overlay/power_overlay.go:drawPowerFrame": "world: the red frame round a device on no power grid",
 
 	// the globe: physical size inside its logical area
-	"globe/globe.go:Draw":          "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
-	"globe/globe.go:DrawBody":      "globe: the sphere, at physical size",
-	"globe/globe.go:drawMarks":     "globe: marks on the sphere",
-	"world_ui.go:drawCaravanMarks": "globe overlay: caravan marks drawn on the globe surface",
+	"globe/globe.go:Draw":               "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
+	"globe/globe.go:DrawBody":           "globe: the sphere, at physical size",
+	"globe/globe.go:drawMarks":          "globe: marks on the sphere",
+	"windows/world.go:drawCaravanMarks": "globe overlay: caravan marks drawn on the globe surface",
 
 	// full-screen backgrounds, physical size, unscaled
 	"mainmenu/diorama.go:DrawDiorama":     "full-screen background (physical size, unscaled)",
@@ -158,7 +157,7 @@ var canvasExempt = map[string]string{
 // mentions uiScale() is converting by hand and needs no entry). Key
 // "file.go:func", with the reason.
 var worldDrawsLogical = map[string]string{
-	"move_mode.go:drawMoveMode": "the world position only feeds the raw footprint outline; the hint is drawn at the cursor, which is logical",
+	"architect/move_mode.go:Draw": "the world position only feeds the raw footprint outline; the hint is drawn at the cursor, which is logical",
 }
 
 // logicalDraws are the calls that take LOGICAL coordinates (x the UI
@@ -190,15 +189,17 @@ var worldPixelHelpers = map[string]bool{
 var hudFiles = []string{
 	"hud.go", "inspector.go", "*_inspector.go", "alerts.go", "status_chips.go",
 	"threat_ui.go", "climate_ui.go", "uikit/*.go",
-	"search_ui.go", "animals_ui.go", "archtools.go", "letters.go", "toast.go",
+	"orders/search.go", "windows/*.go", "architect/*.go", "options/*.go", "dialogs/*.go", "learn/*.go", "devtools/*.go", "perf/*.go", "letters.go", "toast.go",
 	"screen_*.go", "ui_*.go", "*_ui.go", "portrait.go",
 	"hud_*.go", "cmds_*.go", // PLAY-018 HUD regions
 }
 
 // hudFilesNot are files the globs above catch that are not HUD files.
 var hudFilesNot = []string{
-	"world_ui.go",       // globe overlay
-	"order_queue_ui.go", // world route
+	"architect/move_mode.go", "architect/pen_draw.go", "architect/zone_tools.go", // world ghosts and outlines
+	"devtools/mapfields.go", // world: the dev map-field layer
+	"windows/world.go",      // globe overlay
+	"order_queue_ui.go",     // world route
 	"building_inspector.go",
 }
 

@@ -133,20 +133,20 @@ func TestZonePlantCommandListsCropsAndEnqueuesSetZoneCrop(t *testing.T) {
 		t.Fatalf("label %q, want the zone's crop", cm.Label)
 	}
 	thingPress(a, cm)
-	if !a.float.open || a.float.pick == nil {
+	if !a.ord.Float.Open || a.ord.Float.Pick == nil {
 		t.Fatal("the Plant button opens the crop list")
 	}
 	idx := map[string]int{}
-	for i, o := range a.float.opts {
+	for i, o := range a.ord.Float.Opts {
 		idx[strings.ToLower(strings.TrimSuffix(o.Label, " (current)"))] = i
 	}
 	if len(idx) != len(zoneSpecies()) {
 		t.Fatalf("%d crops listed, the architect's picker has %d", len(idx), len(zoneSpecies()))
 	}
-	if !strings.HasSuffix(a.float.opts[idx["potato"]].Label, "(current)") {
-		t.Errorf("the zone's own crop is marked: %q", a.float.opts[idx["potato"]].Label)
+	if !strings.HasSuffix(a.ord.Float.Opts[idx["potato"]].Label, "(current)") {
+		t.Errorf("the zone's own crop is marked: %q", a.ord.Float.Opts[idx["potato"]].Label)
 	}
-	if o := a.float.opts[idx["corn"]]; !o.Disabled || o.Reason != "Needs research: Agriculture" {
+	if o := a.ord.Float.Opts[idx["corn"]]; !o.Disabled || o.Reason != "Needs research: Agriculture" {
 		t.Errorf("corn is locked like the architect's: %+v", o)
 	}
 	// A locked crop only shows its reason.
@@ -167,7 +167,7 @@ func TestZonePlantCommandListsCropsAndEnqueuesSetZoneCrop(t *testing.T) {
 	if got.Kind != command.SetZoneCrop || got.Target != 4 || got.Build != wheat {
 		t.Fatalf("picked wheat: %+v, want SetZoneCrop on zone 4 with Build %d", got, wheat)
 	}
-	if a.float.open {
+	if a.ord.Float.Open {
 		t.Fatal("picking closes the list")
 	}
 }
@@ -181,7 +181,7 @@ func TestZonePlantListHasTreesToo(t *testing.T) {
 	}
 	thingPress(a, cm)
 	var trees int
-	for _, o := range a.float.opts {
+	for _, o := range a.ord.Float.Opts {
 		if strings.Contains(strings.ToLower(o.Label), "pine") {
 			trees++
 		}

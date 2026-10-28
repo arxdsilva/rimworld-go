@@ -10,7 +10,7 @@ func TestResearchTabPicksProjectAndLocksTools(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	g.ResetResearch()
 	click(t, a, "tab.research")
-	if !a.workOpen || a.panelMode != "research" {
+	if !a.win.Open || a.win.Mode != "research" {
 		t.Fatal("research tab opens the research panel")
 	}
 	var gun, traps button

@@ -185,8 +185,8 @@ func TestChaseLineSkippedOffScreenAndWithoutATarget(t *testing.T) {
 
 	// both ends far outside the view: culled
 	r.view.Pawns = pawns
-	r.lod.viewSet = true
-	r.lod.vx0, r.lod.vy0, r.lod.vx1, r.lod.vy1 = 40, 40, 60, 60
+	r.lod.ViewSet = true
+	r.lod.VX0, r.lod.VY0, r.lod.VX1, r.lod.VY1 = 40, 40, 60, 60
 	*marks = nil
 	r.drawAnimalOverlays(img, w, 64, 1024, 768)
 	if n := len(ofKind(*marks, "chase-line")); n != 0 {
@@ -194,7 +194,7 @@ func TestChaseLineSkippedOffScreenAndWithoutATarget(t *testing.T) {
 	}
 
 	// the colonist is in view though the wolf is not: the line is drawn
-	r.lod.vx0, r.lod.vy0, r.lod.vx1, r.lod.vy1 = 0, 0, 7, 10
+	r.lod.VX0, r.lod.VY0, r.lod.VX1, r.lod.VY1 = 0, 0, 7, 10
 	w.Animals[0].X = 16
 	r.view.W = w
 	*marks = nil

@@ -62,7 +62,7 @@ func startColony(t *testing.T, sim Simulation, log *saveLog) *App {
 	a.cfg.Saves = log.hooks()
 	a.finishBoot()
 	quickStart(t, a)
-	if a.saveSlot == "" {
+	if a.opt.SaveSlot == "" {
 		t.Fatal("a new colony has no save slot")
 	}
 	return a
@@ -109,8 +109,8 @@ func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 		t.Fatalf("commit saves %v, plain saves %v: want one SaveCommit a day", log.commits, log.saves)
 	}
 	for _, slot := range log.commits {
-		if slot != a.saveSlot {
-			t.Fatalf("commitment saved to %q, want its one slot %q (no -autosave copy)", slot, a.saveSlot)
+		if slot != a.opt.SaveSlot {
+			t.Fatalf("commitment saved to %q, want its one slot %q (no -autosave copy)", slot, a.opt.SaveSlot)
 		}
 	}
 	// Options' "Off" does not turn a commitment colony's saving off.
@@ -126,8 +126,8 @@ func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 	b.cfg.Saves.SaveCommit = nil
 	s2.tick = morning(1)
 	b.tickAutosave()
-	if len(log2.saves) != 1 || log2.saves[0] != b.saveSlot {
-		t.Fatalf("fallback saves %v, want [%s]", log2.saves, b.saveSlot)
+	if len(log2.saves) != 1 || log2.saves[0] != b.opt.SaveSlot {
+		t.Fatalf("fallback saves %v, want [%s]", log2.saves, b.opt.SaveSlot)
 	}
 }
 
@@ -171,7 +171,7 @@ func TestCommitmentSavesOnReturnToMenu(t *testing.T) {
 		log := &saveLog{}
 		a, _ := newCommitColony(t, log)
 		fakeWin(a)
-		slot := a.saveSlot
+		slot := a.opt.SaveSlot
 		a.apply(intent{kind: intentPause})
 		click(t, a, id)
 		if a.nav.screen() != screenMainMenu || a.renderer != nil {
@@ -216,7 +216,7 @@ func TestCommitmentSavesOnClose(t *testing.T) {
 	if err := a.Update(); !errors.Is(err, ebiten.Termination) {
 		t.Fatalf("closing the window: Update = %v, want Termination", err)
 	}
-	if len(log.commits) != 1 || log.commits[0] != a.saveSlot {
+	if len(log.commits) != 1 || log.commits[0] != a.opt.SaveSlot {
 		t.Fatalf("saves on close %v", log.commits)
 	}
 	// Even when that save fails the window closes.
@@ -243,7 +243,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 	s := &stubSim{w: 4, h: 4}
 	a := startColony(t, s, log)
 	w := fakeWin(a)
-	slot := a.saveSlot
+	slot := a.opt.SaveSlot
 	a.apply(intent{kind: intentPause})
 	bs := a.pauseButtons(a.size())
 	if b := buttonByID(t, bs, "pause.save"); b.Label != "Save" || b.Disabled {
@@ -295,7 +295,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 func TestLoadListTagsCommitment(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
-	a.slots = []SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
+	a.opt.Slots = []SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
 	if bs := a.loadButtons(1280, 720); len(bs) != 3 || bs[1].Disabled {
 		t.Fatalf("a commitment save is listed and loadable: %+v", bs)
 	}

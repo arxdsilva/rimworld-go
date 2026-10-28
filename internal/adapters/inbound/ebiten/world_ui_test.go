@@ -73,7 +73,7 @@ func TestFormCaravanDialog(t *testing.T) {
 	s := worldStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	a.openFormCaravan(&worldUI{picked: -1})
+	a.deal.OpenFormCaravan(func() int { return -1 })
 	f.Frame(t, a)
 	send := "modal." + formCaravanID + ".form.send"
 	if w, _ := a.uiSt().Find(send); !w.Disabled || w.Reason != formNoMembers {
@@ -140,18 +140,7 @@ func TestWorldTabChartsTheGlobe(t *testing.T) {
 	s := &chartedSim{worldStub()}
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	st := &worldUI{picked: -1}
-	st.params, st.hasMap = s.WorldParams()
-	var p *planet.Planet
-	for i := 0; i < 400 && p == nil; i++ {
-		p = a.worldPlanetFor(st)
-	}
-	if p == nil {
-		t.Fatal("the world was never charted")
-	}
-	if q := a.worldPlanetFor(&worldUI{params: st.params, hasMap: true}); q != p {
-		t.Fatal("a reopened tab charts the world again")
-	}
+	// the charting and its cache: windows TestWorldTabChartsThePlanetOnce
 	a.toggleWorld()
 	for i := 0; i < 3; i++ {
 		f.Frame(t, a)

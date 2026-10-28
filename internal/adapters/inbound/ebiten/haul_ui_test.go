@@ -40,8 +40,8 @@ func TestHaulToolEmitsDesignateHaul(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.orders")
 	click(t, a, "arch.tool.haul")
-	a.archX0, a.archY0, a.archX1, a.archY1 = 1, 2, 3, 4
-	a.archDrag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 2, 3, 4
+	a.arch.Drag = true
 	a.submitArchitect()
 	c := lastCmd(t, s)
 	if c.Kind != command.DesignateHaul || !c.Enabled || c.X != 1 || c.Y != 2 || c.X2 != 3 || c.Y2 != 4 {

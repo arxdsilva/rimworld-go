@@ -346,14 +346,14 @@ func (a *App) captureUI(ui string) {
 		a.renderer.ClampCamera(v)
 	case "wild":
 		// the Animals tab's Wild list
-		a.workOpen, a.panelMode, a.animalsWild = true, "animals", true
+		a.win.Open, a.win.Mode, a.win.Wild = true, "animals", true
 	case "inspector", "trough":
 		// the -scenario pen: an animal with needs, or the trough, selected
 		a.captureBiomeInspect(ui)
 	case "work", "schedule", "research", "animals":
-		a.workOpen, a.panelMode = true, ui
+		a.win.Open, a.win.Mode = true, ui
 		if ui == "schedule" {
-			a.schedBrush = 3
+			a.win.Brush = 3
 			pawns := a.renderer.snapshot()
 			if len(pawns) > 1 { // give Bo a night-owl schedule to show
 				for h := 0; h < 24; h++ {
@@ -580,10 +580,10 @@ func (a *App) captureUI(ui string) {
 		a.openArchitect()
 		a.selectArchCategory("zones")
 		a.selectArchTool("grow")
-		a.archCrop = "corn"
+		a.arch.Crop = "corn"
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
-		a.archDrag = true
-		a.archX0, a.archY0, a.archX1, a.archY1 = cx+6, cy-2, cx+8, cy
+		a.arch.Drag = true
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = cx+6, cy-2, cx+8, cy
 		x, y := at(cx+8, cy)
 		a.cursor = &[2]int{x, y}
 	case "home":
@@ -593,8 +593,8 @@ func (a *App) captureUI(ui string) {
 		a.selectArchTool("home")
 		a.renderer.overlays().Home.On = true
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
-		a.archDrag = true
-		a.archX0, a.archY0, a.archX1, a.archY1 = cx-3, cy-2, cx+3, cy+2
+		a.arch.Drag = true
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = cx-3, cy-2, cx+3, cy+2
 		x, y := at(cx+3, cy+2)
 		a.cursor = &[2]int{x, y}
 	case "carpet":
@@ -602,7 +602,7 @@ func (a *App) captureUI(ui string) {
 		a.openArchitect()
 		a.selectArchCategory("furniture")
 		a.selectArchTool("carpet")
-		a.archStuff = "cloth carpet"
+		a.arch.Stuff = "cloth carpet"
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		x, y := at(cx+1, cy+1)
 		a.cursor = &[2]int{x, y}
@@ -615,10 +615,10 @@ func (a *App) captureUI(ui string) {
 		a.openArchitect()
 		a.selectArchCategory("structure")
 		a.selectArchTool("wall")
-		a.archStuff = defaultStoneStuff(a.renderer.world())
+		a.arch.Stuff = defaultStoneStuff(a.renderer.world())
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
-		a.archDrag = true
-		a.archX0, a.archY0, a.archX1, a.archY1 = cx+1, cy-2, cx+5, cy-2
+		a.arch.Drag = true
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = cx+1, cy-2, cx+5, cy-2
 		x, y := at(cx+5, cy-2)
 		a.cursor = &[2]int{x, y}
 	case "hits":
@@ -720,8 +720,8 @@ func (a *App) captureInput(ui string, at func(tx, ty int) (int, int)) {
 	switch ui {
 	case "search":
 		a.openSearch()
-		a.search.text = "wo"
-		a.search.idx = 1
+		a.ord.Search.Text = "wo"
+		a.ord.Search.Idx = 1
 	case "rooms":
 		a.rooms = true
 		x, y := at(cx-3, cy+1) // inside the walled room of captureOrders
@@ -738,9 +738,9 @@ func (a *App) captureInput(ui string, at func(tx, ty int) (int, int)) {
 		a.openArchitect()
 		a.selectArchCategory("structure")
 		a.selectArchTool("wall")
-		a.archStyle = styleOvalEdge
-		a.archDrag = true
-		a.archX0, a.archY0, a.archX1, a.archY1 = cx+5, cy-4, cx+9, cy+1
+		a.arch.Style = styleOvalEdge
+		a.arch.Drag = true
+		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = cx+5, cy-4, cx+9, cy+1
 		x, y := at(cx+9, cy+1)
 		a.cursor = &[2]int{x, y}
 	case "hideui":
@@ -851,7 +851,7 @@ func (a *App) captureInspect(ui string) {
 		a.selectBuildingAt(bx, by)
 		if ui == "move" {
 			a.applyBuildingClick("bldg.move")
-			a.bldgMove.fresh = false
+			a.moveSt().Fresh = false
 		} else {
 			a.applyBuildingClick("bldg.copy")
 		}
@@ -879,10 +879,10 @@ func (a *App) captureZone(shrink bool, at func(tx, ty int) (int, int)) {
 		a.renderer.centerOn(float64(z.MinX+z.MaxX)/2, float64(z.MinY+z.MaxY)/2, sw, sh)
 		if shrink {
 			a.startZoneTool(zoneToolShrink)
-			st := a.zoneSt()
-			st.fresh, st.drag = false, true
-			st.x0, st.y0, st.x1, st.y1 = z.MinX, z.MinY, (z.MinX+z.MaxX)/2, z.MaxY
-			x, y := at(st.x1, st.y1)
+			st := a.arch.Zones.State()
+			st.Fresh, st.Drag = false, true
+			st.X0, st.Y0, st.X1, st.Y1 = z.MinX, z.MinY, (z.MinX+z.MaxX)/2, z.MaxY
+			x, y := at(st.X1, st.Y1)
 			a.cursor = &[2]int{x, y}
 		}
 		return
@@ -940,8 +940,8 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	a.openArchitect()
 	a.selectArchCategory("zones")
 	a.selectArchTool("grow")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = gx-3, gy-1, gx+3, gy+2
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = gx-3, gy-1, gx+3, gy+2
 	x, y := at(gx+3, gy+2)
 	a.cursor = &[2]int{x, y}
 	sw, sh := a.size()

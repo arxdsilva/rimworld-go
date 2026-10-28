@@ -244,12 +244,12 @@ func TestJourneyHudSearchTypeEnter(t *testing.T) {
 	bo, _ := j.g.SpawnNamedPawn(18, 7, "Bo")
 	j.update(1)
 	j.key("Z", 0)
-	if !j.a.search.open {
+	if !j.a.ord.Search.Open {
 		t.Fatal("Z did not open search")
 	}
 	j.typeText("bo")
 	j.key("Enter", 0)
-	if j.a.search.open {
+	if j.a.ord.Search.Open {
 		t.Fatal("Enter left the search open")
 	}
 	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != bo {
@@ -349,10 +349,10 @@ func TestJourneyHudScreenshotKeyArms(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	j.key("F10", 0)
-	if !j.a.shot.pending {
+	if !j.a.meter.Shot.Pending {
 		t.Fatal("F10 did not arm a screenshot")
 	}
-	j.a.shot.pending = false
+	j.a.meter.Shot.Pending = false
 }
 
 // TestJourneyHudHaulMark: the item pane's Mark for hauling button marks a found stack.

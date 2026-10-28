@@ -28,36 +28,6 @@ func TestStuffTitles(t *testing.T) {
 	}
 }
 
-func TestBuildSpriteStuffMaterials(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		kind, stuff string
-		mask        int
-		ew, open    bool
-		want        string
-	}{
-		{"wall", "steel", 5, false, false, "structure/wall_steel_05"},
-		{"wall", "slate blocks", 15, false, false, "structure/wall_stone_15"},
-		{"wall", "stone", 3, false, false, "structure/wall_stone_03"},
-		{"wall", "wood", 3, false, false, "structure/wall_wood_03"},
-		{"door", "steel", 10, true, true, "structure/door_steel_ew_open"},
-		{"door", "steel", 5, false, false, "structure/door_steel_ns_closed"},
-		{"door", "wood", 5, false, false, "structure/door_wood_ns_closed"},
-		{"door", "wood", 0, doorAxisEW("south"), false, "structure/door_wood_ew_closed"}, // axis from the stored facing, not the links mask
-		{"door", "steel", 15, doorAxisEW("west"), true, "structure/door_steel_ns_open"},
-		{"floor", "granite blocks", 0, false, false, "structure/floor_stone"},
-		{"fence", "marble blocks", 15, false, false, "structure/fence_stone_15"},
-	}
-	for _, c := range cases {
-		if got := buildSpriteStuff(c.kind, c.stuff, "", c.mask, c.ew, c.open); got != c.want {
-			t.Fatalf("buildSpriteStuff(%s, %s) = %s, want %s", c.kind, c.stuff, got, c.want)
-		}
-	}
-	if wallPrefix("granite blocks") != "structure/wall_stone" || wallPrefix("steel") != "structure/wall_steel" || wallPrefix("wood") != "structure/wall_wood" {
-		t.Fatal("wallPrefix")
-	}
-}
-
 func TestStoneItemSprites(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[string]string{
@@ -161,8 +131,8 @@ func TestSmoothToolSendsOneRect(t *testing.T) {
 	if tool.icon != "order_smooth" || tool.mode != placeArea {
 		t.Fatalf("smooth tool = %+v", tool)
 	}
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 3, 2, 5
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 3, 2, 5
 	a.submitArchitect()
 	c := lastCmd(t, s)
 	if c.Kind != command.DesignateSmooth || min(c.X, c.X2) != 2 || max(c.X, c.X2) != 6 || min(c.Y, c.Y2) != 3 || max(c.Y, c.Y2) != 5 {
@@ -189,23 +159,6 @@ func TestSmoothActionAnimates(t *testing.T) {
 	act, d, ok := actionOf(game.PawnView{Action: game.ActionSmooth})
 	if !ok || act != game.ActionSmooth || d.Motion != motionSwing || len(d.Parts) == 0 || actionSounds[game.ActionSmooth] == "" {
 		t.Fatalf("smooth action = %q %+v %v", act, d, ok)
-	}
-}
-
-func TestTerrainEdgePriorityMatchesArt(t *testing.T) {
-	t.Parallel()
-	// the edge art's order: soil < soil_rich < gravel < stone < stone_smooth < sand < marsh < ice
-	order := []string{"soil", "rich_soil", "gravel", "stone", "stone_smooth", "sand", "marsh", "ice"}
-	for i, n := range order {
-		if terrainPriority[n] != i || terrainByPri[i] != n {
-			t.Fatalf("%s: priority %d, want %d", n, terrainPriority[n], i)
-		}
-	}
-	if terrainPriority["rock"] != terrainPriority["stone"] || terrainPriority["rock_smooth"] != terrainPriority["stone_smooth"] {
-		t.Fatal("rock draws its ground as the matching stone")
-	}
-	if terrainSprite["rock_smooth"] != "stone_smooth" || terrainSprite["stone_smooth"] != "stone_smooth" {
-		t.Fatal("smooth ground sprite")
 	}
 }
 

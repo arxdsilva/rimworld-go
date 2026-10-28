@@ -46,7 +46,7 @@ func TestRunInBackgroundOptionRow(t *testing.T) {
 	t.Parallel()
 	store := &fakeSettings{s: config.Defaults()}
 	a := optionsApp(store)
-	a.optionsTab = "gameplay"
+	a.opt.Tab = "gameplay"
 	b := optionBtn(t, a, "options.runinbackground")
 	if b.Label != "Off" {
 		t.Fatalf("run in background shows %q by default, want Off", b.Label)

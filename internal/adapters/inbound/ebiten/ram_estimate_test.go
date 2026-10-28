@@ -7,6 +7,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/sysinfo"
@@ -47,133 +48,11 @@ func drawnText(t *testing.T, a *App, pw, ph int) []traceEvent {
 	return textEvents(*got)
 }
 
-// ---- the model (pure) ------------------------------------------------------
-
-func TestEstimatedRAMGrowsWithTheMap(t *testing.T) {
+// The root's wizard default is the map the minimum RAM is figured for.
+func TestRAMReferenceMapIsTheWizardDefault(t *testing.T) {
 	t.Parallel()
-	if got := estimatedRAM(250) - estimatedRAM(0); got != 250*250*ramPerTile {
-		t.Fatalf("250 adds %d bytes over the base, want side^2 x %d", got, ramPerTile)
-	}
-	if estimatedRAM(0) != ramBase {
-		t.Fatalf("estimatedRAM(0) = %d, want the base %d", estimatedRAM(0), ramBase)
-	}
-	prev := estimatedRAM(0)
-	for _, s := range []int{120, 200, 250, 300, 400, 500} {
-		if e := estimatedRAM(s); e <= prev {
-			t.Errorf("estimatedRAM(%d) = %d is not above the smaller map's %d", s, e, prev)
-		} else {
-			prev = e
-		}
-	}
-	if estimatedRAM(-5) != ramBase {
-		t.Error("a negative side counts as no tiles")
-	}
-	// The measured footprint fit: 1850 MiB at no tiles, and the 250 ->
-	// grown 500 difference (1180 MiB over 187 500 tiles) per tile.
-	if ramBase != 1850<<20 || ramPerTile != 6600 {
-		t.Errorf("base %d, per tile %d; want 1850 MiB and 6600 B (measured peak footprint)", ramBase, ramPerTile)
-	}
-	if got := estimatedRAM(500) >> 20; got < 3400 || got > 3450 {
-		t.Errorf("grown 500 estimate %d MiB, want the measured 3422 MiB", got)
-	}
-	if ramPerTile < 256 {
-		t.Errorf("per-tile cost %d is below the 256-byte floor", ramPerTile)
-	}
-}
-
-func TestMinimumRAMIsOneAndAHalfPlusTwoGiBRoundedUp(t *testing.T) {
-	t.Parallel()
-	need := estimatedRAM(defaultMapSide)*3/2 + 2*gib
-	got := minimumRAM()
-	if got%gib != 0 {
-		t.Errorf("minimum %d is not a whole number of GiB", got)
-	}
-	if got < need || got >= need+gib {
-		t.Errorf("minimum %d is not %d rounded up to a GiB", got, need)
-	}
-}
-
-func TestGBRounding(t *testing.T) {
-	t.Parallel()
-	for _, c := range []struct {
-		b           uint64
-		ceil, round int
-	}{
-		{0, 0, 0},
-		{1, 1, 0},
-		{gib, 1, 1},
-		{gib + 1, 2, 1},
-		{gib * 3 / 2, 2, 2},        // 1.5 GiB rounds half up
-		{gib * 37 / 10, 4, 4},      // 3.7
-		{gib * 79 / 10, 8, 8},      // a "8 GB" PC that reports 7.9 GiB
-		{16 * gib, 16, 16},         // exact
-		{16*gib - 100<<20, 16, 16}, // 15.9 GiB
-	} {
-		if got := gbCeil(c.b); got != c.ceil {
-			t.Errorf("gbCeil(%d) = %d, want %d", c.b, got, c.ceil)
-		}
-		if got := gbRound(c.b); got != c.round {
-			t.Errorf("gbRound(%d) = %d, want %d", c.b, got, c.round)
-		}
-	}
-}
-
-func TestLowRAMTextNamesBothAmounts(t *testing.T) {
-	t.Parallel()
-	want := fmt.Sprintf("This computer has 4 GB of memory; the game needs about %d GB to run smoothly. It will use low graphics settings.",
-		minimumRAM()/gib)
-	if got := lowRAMText(4 * gib); got != want {
-		t.Errorf("text = %q, want %q", got, want)
-	}
-	// Just under the minimum must never read "has 6 GB; needs about 6 GB".
-	just := minimumRAM() - 1
-	if !strings.Contains(lowRAMText(just), fmt.Sprintf("has %d GB", minimumRAM()/gib-1)) {
-		t.Errorf("a machine just under the minimum reads %q", lowRAMText(just))
-	}
-}
-
-func TestMapSizeNoteOnlyOverSeventyPercentOfRAM(t *testing.T) {
-	t.Parallel()
-	// A machine whose 70% line falls between a 350 and a 400 map.
-	total := estimatedRAM(375) * 10 / 7
-	for _, s := range []int{120, 200, 250, 300, 350} {
-		if n := mapSizeNote(s, total); n != "" {
-			t.Errorf("%d fits (%d of %d bytes) but warns %q", s, estimatedRAM(s), total, n)
-		}
-	}
-	for _, s := range []int{400, 450, 500} {
-		want := fmt.Sprintf("Needs about %d GB; this computer has %d GB.", gbCeil(estimatedRAM(s)), gbRound(total))
-		if n := mapSizeNote(s, total); n != want {
-			t.Errorf("%d: note %q, want %q", s, n, want)
-		}
-	}
-	// The line itself: exactly 70% does not warn, a byte less memory does.
-	est := estimatedRAM(300)
-	if mapSizeNote(300, (est*10+6)/7) != "" {
-		t.Error("an estimate at or under 70% of RAM must not warn")
-	}
-	if mapSizeNote(300, est*10/7-1) == "" {
-		t.Error("an estimate over 70% of RAM must warn")
-	}
-}
-
-func TestMapSizeNoteWithUnknownHardware(t *testing.T) {
-	t.Parallel()
-	for _, s := range []int{120, 200, 250, 300, 349} {
-		if n := mapSizeNote(s, 0); n != "" {
-			t.Errorf("%d with unknown hardware: %q, want nothing", s, n)
-		}
-	}
-	for _, s := range []int{350, 400, 500} {
-		if n := mapSizeNote(s, 0); n != "Large map: needs a capable computer" {
-			t.Errorf("%d with unknown hardware: %q, want the gentle large-map note", s, n)
-		}
-	}
-	// The fallback line is the application's "Large" flag.
-	for _, o := range game.MapSizes() {
-		if o.Large != (o.Side >= largeMapSide) {
-			t.Errorf("%d: game says Large=%v but the UI fallback starts at %d", o.Side, o.Large, largeMapSide)
-		}
+	if options.DefaultMapSide != defaultMapSide {
+		t.Fatalf("options.DefaultMapSide %d, wizard %d", options.DefaultMapSide, defaultMapSide)
 	}
 }
 

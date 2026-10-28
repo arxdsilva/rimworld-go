@@ -55,8 +55,8 @@ func TestArchitectCardClickAtScale(t *testing.T) {
 	// The grid is laid out in logical pixels: the click lands on the
 	// cell's logical centre x 1.5 and selects the tool.
 	clickAtLogical(t, a, f, card.X+card.W/2, card.Y+card.H/2)
-	if a.archTool != "wall" {
-		t.Fatalf("archTool = %q after a tool click at s=1.5, want wall", a.archTool)
+	if a.arch.ToolID != "wall" {
+		t.Fatalf("archTool = %q after a tool click at s=1.5, want wall", a.arch.ToolID)
 	}
 }
 
@@ -77,15 +77,15 @@ func TestArchitectCategoryClickAtScale(t *testing.T) {
 		t.Fatalf("Zones button %+v is outside ArchCats %+v", cat, l.ArchCats)
 	}
 	clickAtLogical(t, a, f, cat.X+cat.W/2, cat.Y+cat.H/2)
-	if a.archCat != "zones" {
-		t.Fatalf("archCat = %q after a category click at s=1.5, want zones", a.archCat)
+	if a.arch.Cat != "zones" {
+		t.Fatalf("archCat = %q after a category click at s=1.5, want zones", a.arch.Cat)
 	}
 }
 
 func TestGhostDragMapsToTilesAtScale(t *testing.T) {
 	a, _, _ := scaledColony(t)
 	a.openArchitect()
-	a.archTool = "wall"
+	a.arch.ToolID = "wall"
 	// World mapping uses the raw physical cursor: the UI scale must not
 	// change which tile is under the pointer.
 	a.cursor = &[2]int{400, 300}
@@ -105,7 +105,7 @@ func TestGhostDragMapsToTilesAtScale(t *testing.T) {
 
 func TestWorkCellClickAtScale(t *testing.T) {
 	a, rs, f := scaledColony(t)
-	a.workOpen, a.panelMode = true, "work"
+	a.win.Open, a.win.Mode = true, "work"
 	var cell button
 	for _, b := range a.workButtons() {
 		if len(b.ID) > 10 && b.ID[:10] == "work.cell." && !b.Disabled {
@@ -139,7 +139,7 @@ func TestOrdersMenuEntryClickAtScale(t *testing.T) {
 		a.renderer.Select(a.renderer.snapshot()[0].ID)
 	}
 	a.openOrders(6, 2, 300, 200)
-	if !a.float.open {
+	if !a.ord.Float.Open {
 		t.Fatal("order menu should open")
 	}
 	btns := a.floatButtons()
@@ -148,7 +148,7 @@ func TestOrdersMenuEntryClickAtScale(t *testing.T) {
 	}
 	b := btns[0] // "Go here"
 	clickAtLogical(t, a, f, b.X+b.W/2, b.Y+b.H/2)
-	if a.float.open {
+	if a.ord.Float.Open {
 		t.Fatal("clicking an order entry at s=1.5 should close the menu")
 	}
 }

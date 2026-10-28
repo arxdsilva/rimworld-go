@@ -19,7 +19,7 @@ func TestAnimalsTabListsTameAnimals(t *testing.T) {
 	}
 	g.TameAnimal(id, "Clover")
 	click(t, a, "tab.animals")
-	if !a.workOpen || a.panelMode != "animals" {
+	if !a.win.Open || a.win.Mode != "animals" {
 		t.Fatal("animals tab opens the animals panel")
 	}
 	sid := strconv.FormatUint(uint64(id), 10)
@@ -111,8 +111,8 @@ func TestAnimalsTabMasterDropdownEmitsCommand(t *testing.T) {
 	a, _ := colonyApp(t, s)
 	click(t, a, "tab.animals")
 	click(t, a, "animals.master.50")
-	if !a.float.open || len(a.float.opts) != 3 {
-		t.Fatalf("master dropdown lists the colonists and none: %+v", a.float.opts)
+	if !a.ord.Float.Open || len(a.ord.Float.Opts) != 3 {
+		t.Fatalf("master dropdown lists the colonists and none: %+v", a.ord.Float.Opts)
 	}
 	click(t, a, "float.1")
 	if c := s.cmds[len(s.cmds)-1]; c.Kind != command.SetAnimalMaster || c.Target != 50 || c.Pawn != 2 {

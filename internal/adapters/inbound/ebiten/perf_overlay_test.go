@@ -4,74 +4,11 @@ import (
 	"fmt"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
-	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/platform/config"
 )
-
-func durs(n int, d time.Duration) []time.Duration {
-	out := make([]time.Duration, n)
-	for i := range out {
-		out[i] = d
-	}
-	return out
-}
-
-func TestFrameStats(t *testing.T) {
-	t.Parallel()
-	frames := durs(99, 10*time.Millisecond)
-	frames = append(frames, 50*time.Millisecond) // one hitch
-	st := frameStats(frames, durs(10, 2*time.Millisecond), durs(10, 4*time.Millisecond))
-	if st.FrameP99 != 50*time.Millisecond || st.Low1 != 20 {
-		t.Fatalf("p99 %v low %v", st.FrameP99, st.Low1)
-	}
-	if want := float64(time.Second) / float64(st.FrameAvg); st.FPS != want || st.FPS < 90 || st.FPS > 100 {
-		t.Fatalf("fps %v", st.FPS)
-	}
-	if st.UpdateAvg != 2*time.Millisecond || st.DrawP99 != 4*time.Millisecond {
-		t.Fatalf("update %v draw p99 %v", st.UpdateAvg, st.DrawP99)
-	}
-	if z := frameStats(nil, nil, nil); z.FPS != 0 || z.Low1 != 0 {
-		t.Fatalf("empty stats %+v", z)
-	}
-}
-
-func TestFrameStatsMatchProbeReport(t *testing.T) {
-	t.Parallel()
-	st := &fpsProbeState{}
-	for i := 1; i <= 200; i++ {
-		st.frames = append(st.frames, time.Duration(7+i%9)*time.Millisecond)
-		st.update = append(st.update, time.Duration(1+i%4)*time.Millisecond)
-		st.draw = append(st.draw, time.Duration(3+i%5)*time.Millisecond)
-	}
-	f := frameStats(st.frames, st.update, st.draw)
-	got := fpsReport(st, uiScaleState{S: 1, Dev: 1})
-	want := fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; work avg %v p99 %v; scale s 1 dev 1 world 1; ",
-		200, f.FPS, f.Low1, f.FrameP99, f.UpdateAvg, f.UpdateP99, f.DrawAvg, f.DrawP99, f.UpdateAvg+f.DrawAvg, f.UpdateP99+f.DrawP99)
-	if len(got) < len(want) || got[:len(want)] != want {
-		t.Fatalf("report\n%q\nwant prefix\n%q", got, want)
-	}
-}
-
-func TestPerfRingWraps(t *testing.T) {
-	t.Parallel()
-	var r perfRing
-	for i := 1; i <= perfRingLen+50; i++ {
-		r.push(perfSample{frame: time.Duration(i)})
-	}
-	if r.frame.n != perfRingLen {
-		t.Fatalf("held %d", r.frame.n)
-	}
-	got := r.frame.last(perfRingLen, nil)
-	if got[0] != 51 || got[len(got)-1] != perfRingLen+50 {
-		t.Fatalf("window %v .. %v", got[0], got[len(got)-1])
-	}
-	if l := r.frame.last(3, nil); l[0] != perfRingLen+48 || len(l) != 3 {
-		t.Fatalf("newest three %v", l)
-	}
-}
 
 func perfApp(t *testing.T, on bool) (*App, *fakeInput) {
 	a, f := colonyApp(t, &stubSim{})
@@ -111,7 +48,7 @@ func TestPerfOverlayShowsWithHiddenUI(t *testing.T) {
 	evs := traceDraw(a, 1280, 720, func(img *ebiten.Image) { a.Draw(img) })
 	found := false
 	for _, e := range evs {
-		found = found || (e.Kind == "text" && e.Text == a.perf.lines.fps)
+		found = found || (e.Kind == "text" && e.Text == a.meter.Clock.Lines.FPS)
 	}
 	if !found {
 		t.Fatal("hidden UI hides the overlay")
@@ -190,10 +127,10 @@ func TestPerfOverlayDrawNoAllocs(t *testing.T) {
 	prims := func() {
 		a.hud()
 		drawPanel(img, r.X, r.Y, r.W, r.H)
-		for i, l := range a.perf.lines.all() {
+		for i, l := range a.meter.Clock.Lines.All() {
 			drawText(img, l, 10, float64(10+i*12), tsSmall)
 		}
-		drawSparkline(img, r, a.perf.spark, uiAccent)
+		drawSparkline(img, r, a.meter.Clock.Spark, uiAccent)
 	}
 	prims()
 	a.drawPerfOverlay(img, 1280, 720) // warm the glyph caches
@@ -212,7 +149,7 @@ func TestCapturePerfIsDeterministic(t *testing.T) {
 		if !a.settings.Graphics.PerfOverlay {
 			t.Fatal("capture did not turn the overlay on")
 		}
-		got[i] = append(a.perf.lines.all(), fmt.Sprint(a.perf.spark))
+		got[i] = append(a.meter.Clock.Lines.All(), fmt.Sprint(a.meter.Clock.Spark))
 	}
 	if fmt.Sprint(got[0]) != fmt.Sprint(got[1]) {
 		t.Fatalf("captures differ:\n%v\n%v", got[0], got[1])
@@ -222,7 +159,7 @@ func TestCapturePerfIsDeterministic(t *testing.T) {
 func TestOptionsPerfOverlayToggle(t *testing.T) {
 	store := &fakeSettings{s: config.Defaults()}
 	a := optionsApp(store)
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	b := optionBtn(t, a, "options.perfoverlay")
 	if b.Label != "Off" || b.Tip == "" {
 		t.Fatalf("perf overlay button %+v", b)

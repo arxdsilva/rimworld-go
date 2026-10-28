@@ -48,18 +48,3 @@ func TestHomeAutoButtonEmitsAndShowsState(t *testing.T) {
 		t.Fatalf("click with auto off emits %+v, want on", c)
 	}
 }
-
-func TestZoneToolsRenamedAndRoofMoved(t *testing.T) {
-	t.Parallel()
-	for id, w := range map[string]struct{ label, icon string }{
-		"home":   {"Expand home area", "home"},
-		"unhome": {"Clear home area", "home_clear"},
-		"roof":   {"Build roof area", "roof_area"},
-		"noroof": {"Remove roof area", "roof_remove"},
-	} {
-		tool, ok := toolByID(id)
-		if !ok || tool.category != "zones" || tool.label != w.label || tool.icon != w.icon {
-			t.Errorf("tool %q = %+v", id, tool)
-		}
-	}
-}

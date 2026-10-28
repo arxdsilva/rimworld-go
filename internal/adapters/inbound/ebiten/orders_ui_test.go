@@ -43,8 +43,8 @@ func TestArchitectDragPlacesOnlyValidBlueprints(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.structure")
 	click(t, a, "arch.tool.wall")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 4, 4, 8, 5 // horizontal line y=4, one cell has wood
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 4, 4, 8, 5 // horizontal line y=4, one cell has wood
 	_, cells := a.previewCells()
 	bad := 0
 	for _, c := range cells {
@@ -72,8 +72,8 @@ func TestArchitectRotationReachesBlueprint(t *testing.T) {
 	click(t, a, "arch.cat.furniture")
 	click(t, a, "arch.tool.chair")
 	a.rotateTool(1)
-	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 6, 6
-	a.archDrag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 6, 6
+	a.arch.Drag = true
 	a.submitArchitect()
 	g.Step(1)
 	f := g.World().Frames
@@ -91,8 +91,8 @@ func TestAreaToolSendsOneRectangleCommand(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.stockpile")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 1, 2, 4, 3
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 2, 4, 3
 	a.submitArchitect()
 	if len(sim.cmds) != 1 || sim.cmds[0].Kind != command.DesignateStockpile || sim.cmds[0].X2 != 4 {
 		t.Fatalf("cmds = %+v", sim.cmds)
@@ -118,7 +118,7 @@ func TestDraftButtonAndOrderMenu(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.openOrders(6, 2, 300, 200)
-	if !a.float.open {
+	if !a.ord.Float.Open {
 		t.Fatal("order menu should open")
 	}
 	labels := []string{}
@@ -131,20 +131,20 @@ func TestDraftButtonAndOrderMenu(t *testing.T) {
 		t.Fatalf("menu = %q", joined)
 	}
 	// disabled entry shows its reason and keeps the menu open
-	for i, o := range a.float.opts {
+	for i, o := range a.ord.Float.Opts {
 		if o.Disabled {
 			a.chooseFloat(floatID(i))
-			if !a.float.open || a.hint != o.Reason {
-				t.Fatalf("disabled click: open=%v hint=%q", a.float.open, a.hint)
+			if !a.ord.Float.Open || a.hint != o.Reason {
+				t.Fatalf("disabled click: open=%v hint=%q", a.ord.Float.Open, a.hint)
 			}
 		}
 	}
-	for i, o := range a.float.opts {
+	for i, o := range a.ord.Float.Opts {
 		if strings.HasPrefix(o.Label, "Eat") {
 			a.chooseFloat(floatID(i))
 		}
 	}
-	if a.float.open {
+	if a.ord.Float.Open {
 		t.Fatal("choosing an order closes the menu")
 	}
 	g.Step(2)
@@ -159,7 +159,7 @@ func TestEscapeClosesOrderMenuFirst(t *testing.T) {
 	a.renderer.Select(id)
 	a.openOrders(5, 5, 100, 100)
 	a.pressEscape()
-	if a.float.open || !a.renderer.HasSelect() {
+	if a.ord.Float.Open || !a.renderer.HasSelect() {
 		t.Fatal("Escape should close the menu and keep the selection")
 	}
 }
@@ -179,8 +179,8 @@ func TestStoneMaterialReachesBlueprint(t *testing.T) {
 	if a.toolStuff(archTool{build: "door"}) != "wood" {
 		t.Fatal("doors cannot be stone; they fall back to wood")
 	}
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 7, 6
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 7, 6
 	a.submitArchitect()
 	g.Step(1)
 	f := g.World().Frames
@@ -212,8 +212,8 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.grow")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 8, 7
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 8, 7
 	a.submitArchitect()
 	g.Step(1)
 	z := zonesOfKind(g.World(), game.ZoneGrow)
@@ -222,8 +222,8 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 	}
 	// the crop picker changes what the next zone sows
 	click(t, a, "arch.crop.corn")
-	a.archDrag = true
-	a.archX0, a.archY0, a.archX1, a.archY1 = 10, 6, 11, 7
+	a.arch.Drag = true
+	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 10, 6, 11, 7
 	a.submitArchitect()
 	g.Step(1)
 	z = zonesOfKind(g.World(), game.ZoneGrow)

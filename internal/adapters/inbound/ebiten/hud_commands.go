@@ -88,12 +88,12 @@ const (
 // selectionCommands are the current selection's (or the Architect's)
 // commands, in declaration order.
 func (a *App) selectionCommands() []cmdButton {
-	if a.renderer == nil || a.workOpen {
+	if a.renderer == nil || a.win.Open {
 		return nil
 	}
 	selID, hasSel := a.shell.Selected()
 	switch {
-	case a.archOpen:
+	case a.arch.Open:
 		return a.commandsFor(selNone, 0)
 	case a.grouped():
 		return a.groupCommands()

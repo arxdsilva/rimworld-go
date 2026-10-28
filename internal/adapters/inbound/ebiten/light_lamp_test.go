@@ -156,7 +156,7 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 		return pos{int32(math.Round(float64(vx.DstX) / tile * 8)), int32(math.Round(float64(vx.DstY) / tile * 8))}
 	}
 	at := map[pos]float32{}
-	for _, vx := range r.lod.verts {
+	for _, vx := range r.lod.Verts {
 		if vx.Custom1 < 0 || vx.Custom1 > 1 {
 			t.Fatalf("ground vertex carries a packed lamp value %v; want a plain level", vx.Custom1)
 		}
@@ -215,7 +215,7 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 		}
 	}
 	// the dark east (x ≥ 12) merges: fewer quads than tiles
-	if quads, tiles := len(r.lod.verts)/4, w*h; quads >= tiles/2 {
+	if quads, tiles := len(r.lod.Verts)/4, w*h; quads >= tiles/2 {
 		t.Fatalf("%d quads for %d tiles: unlit runs did not merge", quads, tiles)
 	}
 }

@@ -467,8 +467,8 @@ func TestEveryInputActionHasAJourney(t *testing.T) {
 	kinds := commandKinds(t)
 	var emitters []string
 	for _, f := range packageFiles(t, ".") { // the sub-packages too: a moved emitter stays covered
-		if f == "lessons.go" || f == "learn_ui.go" {
-			continue // the lessons observe commands; they don't send them
+		if strings.HasPrefix(f, "learn/") {
+			continue // the lessons (learn/) observe commands; they don't send them
 		}
 		emitters = append(emitters, f)
 	}

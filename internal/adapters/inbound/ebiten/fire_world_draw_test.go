@@ -118,10 +118,10 @@ func TestDevStartFireEmitsCommand(t *testing.T) {
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
 	for _, x := range a.devActions(7, 8) {
-		if x.label == "Start fire here" {
-			x.run(nil)
-			if x.icon != "start_fire" {
-				t.Errorf("icon %q", x.icon)
+		if x.Label == "Start fire here" {
+			x.Run(nil)
+			if x.Icon != "start_fire" {
+				t.Errorf("icon %q", x.Icon)
 			}
 			c := s.cmds[len(s.cmds)-1]
 			if c.Kind != command.DevStartFire || c.X != 7 || c.Y != 8 {

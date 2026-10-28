@@ -6,16 +6,6 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-func TestSteamVentResolvesToItsSprite(t *testing.T) {
-	t.Parallel()
-	if got := buildSprite("steam vent", "", 0, false, false); got != "structure/steam_vent" {
-		t.Fatalf("sprite = %q", got)
-	}
-	if got := buildSpriteStuff("steam vent", "", "", 0, false, false); got != "structure/steam_vent" {
-		t.Fatalf("stuff sprite = %q", got)
-	}
-}
-
 func TestRuinAndVentTitles(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {

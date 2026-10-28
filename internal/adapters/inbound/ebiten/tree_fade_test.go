@@ -14,7 +14,7 @@ import (
 func fadeRenderer() *Renderer {
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
 	r.cam.Zoom = 32.0 / float64(TileSize)
-	r.lod.creatures = map[[2]int]bool{}
+	r.lod.Creatures = map[[2]int]bool{}
 	return r
 }
 
@@ -31,7 +31,7 @@ func TestCanopyFadesWithCreatureBehind(t *testing.T) {
 	t.Parallel()
 	for _, c := range [][2]int{{5, 5}, {5, 4}, {4, 4}, {6, 4}} { // tree tile, above, both diagonals above
 		r := fadeRenderer()
-		r.lod.creatures[c] = true
+		r.lod.Creatures[c] = true
 		if a := runFade(r, 5, 5, 30); math.Abs(float64(a)-treeSeeThrough) > 0.02 {
 			t.Fatalf("creature at %v: canopy alpha %.3f, want ~%.1f", c, a, treeSeeThrough)
 		}
@@ -39,7 +39,7 @@ func TestCanopyFadesWithCreatureBehind(t *testing.T) {
 	// the tile below or two above does not count
 	for _, c := range [][2]int{{5, 6}, {5, 3}, {7, 4}} {
 		r := fadeRenderer()
-		r.lod.creatures[c] = true
+		r.lod.Creatures[c] = true
 		if a := runFade(r, 5, 5, 30); a != 1 {
 			t.Fatalf("creature at %v: canopy alpha %.3f, want 1", c, a)
 		}
@@ -57,13 +57,13 @@ func TestCanopyOpaqueWithNobodyNear(t *testing.T) {
 func TestCanopyEasesAndRecovers(t *testing.T) {
 	t.Parallel()
 	r := fadeRenderer()
-	r.lod.creatures[[2]int{5, 4}] = true
+	r.lod.Creatures[[2]int{5, 4}] = true
 	a1 := runFade(r, 5, 5, 3)
 	if a1 >= 1 || a1 <= treeSeeThrough {
 		t.Fatalf("mid-ease alpha %.3f should lie between %.1f and 1", a1, treeSeeThrough)
 	}
 	runFade(r, 5, 5, 30)
-	delete(r.lod.creatures, [2]int{5, 4})
+	delete(r.lod.Creatures, [2]int{5, 4})
 	if a := runFade(r, 5, 5, 60); a != 1 || len(r.treeFx.Fades) != 0 {
 		t.Fatalf("after leaving: alpha %.3f, fades %d", a, len(r.treeFx.Fades))
 	}
@@ -73,12 +73,12 @@ func TestCanopyReducedMotionSnaps(t *testing.T) {
 	t.Parallel()
 	r := fadeRenderer()
 	r.reducedMotion = true
-	r.lod.creatures[[2]int{5, 4}] = true
+	r.lod.Creatures[[2]int{5, 4}] = true
 	r.present++
 	if a := r.treeCanopyAlpha(5, 5); a != treeSeeThrough {
 		t.Fatalf("reduced motion alpha %.3f, want snap to %.1f", a, treeSeeThrough)
 	}
-	delete(r.lod.creatures, [2]int{5, 4})
+	delete(r.lod.Creatures, [2]int{5, 4})
 	r.present++
 	if a := r.treeCanopyAlpha(5, 5); a != 1 {
 		t.Fatalf("reduced motion alpha %.3f, want snap back to 1", a)
@@ -101,7 +101,7 @@ func TestCanopyFadesForHoverOrGhost(t *testing.T) {
 func TestTreeFadeDroppedOutOfView(t *testing.T) {
 	t.Parallel()
 	r := fadeRenderer()
-	r.lod.creatures[[2]int{5, 5}] = true
+	r.lod.Creatures[[2]int{5, 5}] = true
 	runFade(r, 5, 5, 5)
 	if len(r.treeFx.Fades) != 1 {
 		t.Fatalf("fades = %d, want 1", len(r.treeFx.Fades))
@@ -133,7 +133,7 @@ func TestTreeDrawsTrunkThenCanopy(t *testing.T) {
 	if got := strings.Join(order, ","); got != "tree_trunk,tree_canopy" {
 		t.Skipf("tree parts not generated yet (order %q)", got)
 	}
-	r.lod.creatures[[2]int{5, 4}] = true
+	r.lod.Creatures[[2]int{5, 4}] = true
 	for i := 0; i < 5; i++ {
 		r.present++
 		r.drawPlantObj(dst, &w, &w.Plants[0], r.tilePx())

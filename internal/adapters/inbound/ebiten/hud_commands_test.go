@@ -235,18 +235,18 @@ func TestRightClickOpensTheOptionsMenu(t *testing.T) {
 	)
 	cells := a.hud().GridCells
 	cx, cy := cells[0].Center()
-	if !a.rightClickCommand(int(cx), int(cy)) || !a.float.open || len(a.float.opts) != 3 {
-		t.Fatalf("right-click on a command with options opens its menu: open=%v opts=%+v", a.float.open, a.float.opts)
+	if !a.rightClickCommand(int(cx), int(cy)) || !a.ord.Float.Open || len(a.ord.Float.Opts) != 3 {
+		t.Fatalf("right-click on a command with options opens its menu: open=%v opts=%+v", a.ord.Float.Open, a.ord.Float.Opts)
 	}
-	if a.float.opts[0].Label != "Ada" || !a.float.opts[2].Disabled || a.float.opts[2].Reason != "asleep" {
-		t.Fatalf("menu entries = %+v", a.float.opts)
+	if a.ord.Float.Opts[0].Label != "Ada" || !a.ord.Float.Opts[2].Disabled || a.ord.Float.Opts[2].Reason != "asleep" {
+		t.Fatalf("menu entries = %+v", a.ord.Float.Opts)
 	}
 	if r := a.floatRect(); r.Y+r.H > cells[0].Y+0.5 {
 		t.Errorf("the menu opens upward from the cell: menu %+v, cell %+v", r, cells[0])
 	}
 	click(t, a, "float.1")
-	if picked != "Bo" || a.float.open {
-		t.Fatalf("picking an option runs it and closes the menu: picked=%q open=%v", picked, a.float.open)
+	if picked != "Bo" || a.ord.Float.Open {
+		t.Fatalf("picking an option runs it and closes the menu: picked=%q open=%v", picked, a.ord.Float.Open)
 	}
 	a.rightClickCommand(int(cx), int(cy))
 	click(t, a, "float.0")
@@ -255,14 +255,14 @@ func TestRightClickOpensTheOptionsMenu(t *testing.T) {
 	}
 	a.rightClickCommand(int(cx), int(cy))
 	click(t, a, "float.2")
-	if !a.float.open || a.hint != "asleep" {
-		t.Fatalf("a disabled option shows its reason and keeps the menu: open=%v hint=%q", a.float.open, a.hint)
+	if !a.ord.Float.Open || a.hint != "asleep" {
+		t.Fatalf("a disabled option shows its reason and keeps the menu: open=%v hint=%q", a.ord.Float.Open, a.hint)
 	}
 	a.closeFloat()
 
 	// a command without options still swallows the click (it is over the HUD)
 	px, py := cells[1].Center()
-	if !a.rightClickCommand(int(px), int(py)) || a.float.open {
+	if !a.rightClickCommand(int(px), int(py)) || a.ord.Float.Open {
 		t.Fatal("right-click on a plain command is consumed and opens nothing")
 	}
 	// empty space is not the grid's
@@ -277,8 +277,8 @@ func TestOptionsArrowOpensTheMenuOnLeftClick(t *testing.T) {
 		return []cmdOption{{Label: "one"}, {Label: "two"}}
 	}})
 	click(t, a, "cmd.options.0") // the corner arrow is its own hit target
-	if !a.float.open || len(a.float.opts) != 2 {
-		t.Fatalf("the corner arrow opens the menu: open=%v", a.float.open)
+	if !a.ord.Float.Open || len(a.ord.Float.Opts) != 2 {
+		t.Fatalf("the corner arrow opens the menu: open=%v", a.ord.Float.Open)
 	}
 }
 

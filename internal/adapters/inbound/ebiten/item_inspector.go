@@ -172,7 +172,7 @@ func (a *App) drawItemIcon(dst *ebiten.Image, it game.ItemView, x, y, size float
 // panel itself is the inspect pane (itemPane).
 func (a *App) drawItemMark(screen *ebiten.Image) {
 	it, ok := a.selectedItem()
-	if !ok || a.workOpen || a.archOpen {
+	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
 	if a.renderer.art != nil {

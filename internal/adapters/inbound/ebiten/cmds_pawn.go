@@ -35,9 +35,6 @@ const (
 	prisonerWantW, prisonerWantH = 480, 300
 )
 
-// paneAreaChipID is the allowed-area chip's id (it opens the area picker).
-const paneAreaChipID = "inspector.area"
-
 // pawnCommands are colonist id's command buttons, in declaration order
 // (hotkeys follow it): Draft, Clear orders, Equip nearby, Rest when hurt (a
 // living colonist) and, for a free colonist, Capture and Arrest. A dead or

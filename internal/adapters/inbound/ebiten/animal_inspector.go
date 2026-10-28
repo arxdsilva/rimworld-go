@@ -99,7 +99,7 @@ func drawAnimalIcon(dst *ebiten.Image, art *artCatalog, an game.AnimalView, x, y
 // panel itself is the inspect pane (animalPane).
 func (a *App) drawAnimalMark(screen *ebiten.Image) {
 	an, ok := a.selectedAnimal()
-	if !ok || a.workOpen || a.archOpen {
+	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
 	if a.renderer.art != nil {

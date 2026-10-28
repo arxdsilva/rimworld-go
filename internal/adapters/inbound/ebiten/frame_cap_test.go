@@ -89,7 +89,7 @@ func TestFrameCapRow(t *testing.T) {
 	}
 	store := graphicsStore()
 	a := optionsApp(store)
-	a.optionsTab = "graphics"
+	a.opt.Tab = "graphics"
 	a.applyOption("options.framecap")
 	if g := store.s.Graphics; g.FrameCap != 144 || g.Quality != config.QualityCustom {
 		t.Fatalf("after one cycle: cap %d quality %s, want 144 and custom", g.FrameCap, g.Quality)

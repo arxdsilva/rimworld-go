@@ -46,34 +46,27 @@ func lodFrame(r *Renderer, tile float64) {
 
 func TestLODSwitchesByZoom(t *testing.T) {
 	t.Parallel()
-	for _, c := range []struct {
-		tile float64
-		want lodTier
-	}{{64, lodLive}, {48, lodLive}, {47.9, lodChunk}, {32, lodChunk}, {16, lodChunk}, {15.9, lodMap}, {6.4, lodMap}} {
-		if got := lodFor(c.tile); got != c.want {
-			t.Fatalf("lodFor(%v) = %d, want %d", c.tile, got, c.want)
-		}
-	}
+	// the tier table itself is render/world TestTierFor
 	w := lodWorld(64, 64)
 	r, _ := lodRenderer(w, 64, 64)
 	lodFrame(r, 64)
-	if r.lod.tier != lodLive || r.lod.chunks.bakes != 0 || r.lod.pages.pages != nil {
-		t.Fatalf("64 px: tier %d, %d chunk bakes, pages %v", r.lod.tier, r.lod.chunks.bakes, r.lod.pages.pages != nil)
+	if r.lod.Tier != lodLive || r.lod.Chunks.Bakes != 0 || r.lod.Pages.Pages != nil {
+		t.Fatalf("64 px: tier %d, %d chunk bakes, pages %v", r.lod.Tier, r.lod.Chunks.Bakes, r.lod.Pages.Pages != nil)
 	}
 	lodFrame(r, 32)
-	if r.lod.tier != lodChunk || r.lod.chunks.bakes == 0 {
-		t.Fatalf("32 px: tier %d, %d chunk bakes", r.lod.tier, r.lod.chunks.bakes)
+	if r.lod.Tier != lodChunk || r.lod.Chunks.Bakes == 0 {
+		t.Fatalf("32 px: tier %d, %d chunk bakes", r.lod.Tier, r.lod.Chunks.Bakes)
 	}
 	// 640×400 at 32 px is 20×12.5 tiles: chunks (0,0) and (1,0)
-	if n := len(r.lod.chunks.byChunk); n != 2 {
+	if n := len(r.lod.Chunks.ByChunk); n != 2 {
 		t.Fatalf("32 px baked %d chunks, want the 2 in view", n)
 	}
 	lodFrame(r, 8)
-	if r.lod.tier != lodMap || r.lod.pages.pages == nil || r.lod.pages.pages[0] == nil {
-		t.Fatalf("8 px: tier %d, no map page", r.lod.tier)
+	if r.lod.Tier != lodMap || r.lod.Pages.Pages == nil || r.lod.Pages.Pages[0] == nil {
+		t.Fatalf("8 px: tier %d, no map page", r.lod.Tier)
 	}
 	baked := 0
-	for _, b := range r.lod.pages.baked {
+	for _, b := range r.lod.Pages.Baked {
 		if b {
 			baked++
 		}
@@ -88,47 +81,27 @@ func TestChunkBakeInvalidatedOnVersion(t *testing.T) {
 	w := lodWorld(64, 64)
 	r, sim := lodRenderer(w, 64, 64)
 	lodFrame(r, 24)
-	first := r.lod.chunks.bakes
+	first := r.lod.Chunks.Bakes
 	if first == 0 {
 		t.Fatal("no chunk baked")
 	}
 	lodFrame(r, 24)
-	if r.lod.chunks.bakes != first {
-		t.Fatalf("an unchanged frame rebaked %d chunks", r.lod.chunks.bakes-first)
+	if r.lod.Chunks.Bakes != first {
+		t.Fatalf("an unchanged frame rebaked %d chunks", r.lod.Chunks.Bakes-first)
 	}
 	// new ground in chunk (0,0) only (well inside it): one rebake
 	t2 := append([]uint8(nil), w.Terrain...)
 	t2[8*64+8] = t2[2*64+2]
 	sim.world.Terrain, sim.world.StructVer = t2, 2
 	lodFrame(r, 24)
-	if got := r.lod.chunks.bakes - first; got != 1 {
+	if got := r.lod.Chunks.Bakes - first; got != 1 {
 		t.Fatalf("one changed chunk rebaked %d", got)
 	}
 	// the bake budget spreads a full rebake over frames
 	r2, _ := lodRenderer(lodWorld(512, 512), 512, 512)
 	lodFrame(r2, 16) // 40×25 tiles: 3×2 chunks in view, padded to more
-	if r2.lod.chunks.bakes > bakeBudget {
-		t.Fatalf("one frame baked %d chunks, budget %d", r2.lod.chunks.bakes, bakeBudget)
-	}
-}
-
-// TestCreaturesKeepMinimumSize: below creatureMinTile a creature is drawn
-// at that size, on its own tile's footprint (centre and bottom kept).
-func TestCreaturesKeepMinimumSize(t *testing.T) {
-	t.Parallel()
-	if lodTile(6) != creatureMinTile || lodTile(40) != 40 {
-		t.Fatal("lodTile")
-	}
-	wx, wy := creatureAt(10, 20, 8, 16) // drawn twice the tile size
-	// footprint centre x and bottom stay at tile (10, 20)'s
-	if cx := (wx + 0.5*2); cx != 10.5 {
-		t.Fatalf("centre x %v, want 10.5", cx)
-	}
-	if bottom := wy + 2; bottom != 21 {
-		t.Fatalf("bottom %v, want 21", bottom)
-	}
-	if x, y := creatureAt(3, 4, 32, 16); x != 3 || y != 4 {
-		t.Fatal("no shift at or above the minimum")
+	if r2.lod.Chunks.Bakes > bakeBudget {
+		t.Fatalf("one frame baked %d chunks, budget %d", r2.lod.Chunks.Bakes, bakeBudget)
 	}
 }
 

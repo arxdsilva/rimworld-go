@@ -471,7 +471,7 @@ func TestKitWindowHasNoHiddenWorkCells(t *testing.T) {
 	a, f := colonyApp(t, s)
 	a.applyClick("tab.history")
 	f.Frame(t, a)
-	if !a.windowKitOpen() {
+	if !a.win.KitOpen() {
 		t.Fatal("the History window is not open")
 	}
 	for _, b := range a.colonyButtons(a.sw, a.sh) {

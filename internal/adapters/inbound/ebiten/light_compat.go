@@ -137,7 +137,7 @@ func (r *Renderer) litLayer() *litRenderer {
 func (r *Renderer) lightView() *render.View {
 	v := &r.view
 	v.Art, v.Present = r.art, r.present
-	if !r.lod.baking {
+	if !r.lod.Baking {
 		v.Cam = r.cam
 	}
 	return v
@@ -150,12 +150,12 @@ func (r *Renderer) litShader() *ebiten.Shader { return r.lit.LitShader() }
 // (wx, wy) is (light.Lit.Draw), in the renderer's pass: a bake, the
 // shadow pass's cast, a figure's blood.
 func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScale, wx, wy float64) {
-	r.litLayer().Draw(r.lightView(), dst, img, geo, cs, wx, wy, r.cast, r.lod.baking, r.figureBlood)
+	r.litLayer().Draw(r.lightView(), dst, img, geo, cs, wx, wy, r.cast, r.lod.Baking, r.figureBlood)
 }
 
 // drawLitGround is drawLit for a ground plane (light.Lit.DrawGround).
 func (r *Renderer) drawLitGround(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScale, wx, wy float64) {
-	r.litLayer().DrawGround(r.lightView(), dst, img, geo, cs, wx, wy, r.cast, r.lod.baking, r.figureBlood)
+	r.litLayer().DrawGround(r.lightView(), dst, img, geo, cs, wx, wy, r.cast, r.lod.Baking, r.figureBlood)
 }
 
 // litSource is the image a lit draw of img samples (light.Lit.SourceOf).

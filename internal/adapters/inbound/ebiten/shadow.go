@@ -121,7 +121,7 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 		addBox(key, float64(it.X), float64(it.Y), 1, 1, 1)
 	}
 	if r.frameLists(env.ListsOf(&w)) { // only the chunks in view (lod.go)
-		for _, cv := range r.lod.views {
+		for _, cv := range r.lod.Views {
 			for _, i := range cv.Buildings {
 				if int(i) < len(w.Buildings) {
 					building(&w.Buildings[i])
@@ -129,14 +129,14 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 			}
 		}
 		r.addRockCasters(w, addBox)
-		for _, cv := range r.lod.views {
+		for _, cv := range r.lod.Views {
 			for _, i := range cv.Plants {
 				if int(i) < len(w.Plants) {
 					plant(&w.Plants[i])
 				}
 			}
 		}
-		for _, cv := range r.lod.views {
+		for _, cv := range r.lod.Views {
 			for _, i := range cv.Items {
 				if int(i) < len(w.Items) {
 					stack(&w.Items[i])

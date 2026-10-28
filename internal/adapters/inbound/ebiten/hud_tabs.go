@@ -37,17 +37,17 @@ func tabsRect(sw, sh int) rect { return rect{X: 0, Y: float32(sh - tabsH), W: fl
 func (a *App) tabOn(id string) bool {
 	switch id {
 	case ids.TabArchitect:
-		return a.archOpen
+		return a.arch.Open
 	case ids.TabWork:
-		return a.workOpen && (a.panelMode == "work" || a.panelMode == "")
+		return a.win.Open && (a.win.Mode == "work" || a.win.Mode == "")
 	case ids.TabSchedule:
-		return a.workOpen && a.panelMode == "schedule"
+		return a.win.Open && a.win.Mode == "schedule"
 	case ids.TabResearch:
-		return a.workOpen && a.panelMode == "research"
+		return a.win.Open && a.win.Mode == "research"
 	case ids.TabAnimals:
-		return a.workOpen && a.panelMode == "animals" && !a.animalsWild
+		return a.win.Open && a.win.Mode == "animals" && !a.win.Wild
 	case ids.TabWildlife:
-		return a.workOpen && a.panelMode == "animals" && a.animalsWild
+		return a.win.Open && a.win.Mode == "animals" && a.win.Wild
 	case ids.TabAssign:
 		return a.kitWindowOn(assignModalID)
 	case ids.TabWorld:
@@ -62,7 +62,7 @@ func (a *App) tabOn(id string) bool {
 
 // kitWindowOn reports the kit window id is the open one.
 func (a *App) kitWindowOn(id string) bool {
-	return a.windowKitOpen() && a.hst.win.kit.ID == id
+	return a.win.KitID() == id
 }
 
 func (a *App) hudTabButtons(sw, sh int) []button {

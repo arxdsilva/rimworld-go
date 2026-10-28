@@ -64,12 +64,6 @@ func TestCommsGiftEmitsCommand(t *testing.T) {
 	if got == nil || got.Index != 3 || got.Count != 50 {
 		t.Fatalf("cmds = %+v", s.cmds)
 	}
-	d := &commsDraft{view: game.CommsView{BeaconSilver: 45}, gift: map[int]int{}}
-	d.stepGift(1, 10)
-	d.stepGift(1, 10)
-	if d.giftOf(1) != 45 {
-		t.Fatalf("gift clamps to the silver in reach: %d", d.giftOf(1))
-	}
 }
 
 func TestCommsCallShipOpensTrade(t *testing.T) {
