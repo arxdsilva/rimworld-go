@@ -49,8 +49,10 @@ func settings() spritenormals.Settings {
 	return s
 }
 
-// wanted reports a sprite PNG that needs a normal map. Terrain and floors
-// lie flat on the ground and are lit flat (ART §6.1), so they get none.
+// wanted reports a sprite PNG that needs a normal map. Terrain, floors and
+// the flat ground decals (snow cover, frost) lie flat on the ground and
+// are lit flat (ART §6.1), so they get none; a bevel dome made them read
+// as gel blobs (PLAY-022).
 func wanted(path string) bool {
 	base := filepath.Base(path)
 	if !strings.HasSuffix(base, ".png") || strings.HasSuffix(base, "_mask.png") || strings.HasSuffix(base, "_n.png") {
@@ -58,6 +60,9 @@ func wanted(path string) bool {
 	}
 	p := filepath.ToSlash(path)
 	if strings.Contains(p, "/structure/") && strings.HasPrefix(base, "floor") {
+		return false
+	}
+	if strings.Contains(p, "/weather/") && (strings.HasPrefix(base, "snow_cover") || strings.HasPrefix(base, "frost")) {
 		return false
 	}
 	return !strings.Contains(p, "/ui/") && !strings.Contains(p, "/terrain/")

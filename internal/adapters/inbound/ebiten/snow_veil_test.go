@@ -53,11 +53,22 @@ func TestSnowDepthPerTile(t *testing.T) {
 	}
 }
 
-// snowTexel is the snow (row 0) or open-ground (row 1) mask byte at
-// texel (sub, sub) of tile (x, y) of the last bake in sc.pix of chunk (0, 0).
+// snowTexel is the snow (row 0) or wet veil (row 1, PLAY-022) alpha at
+// texel (sx, sy) of 4 a tile (snowPx) of chunk-local tile (x, y), from
+// the last bake in sc.pix or sc.wpix (a direct bake is at 4 texels a
+// tile; the wet veil is 0 where no image was written).
 func snowTexel(sc *snowCache, row, x, y, sx, sy int) uint8 {
-	tx, ty := snowPad+x*snowPx+sx, row*snowImgW+snowPad+y*snowPx+sy
-	return sc.pix[4*(ty*snowImgW+tx)+3]
+	if row == 0 {
+		tx, ty := snowPad+x*snowPx+sx, snowPad+y*snowPx+sy
+		return sc.pix[4*(ty*snowImgW+tx)+3]
+	}
+	px := max(sc.wantPx, snowPx)
+	iw := wetImgW(px)
+	tx, ty := snowPad+x*px+sx*px/snowPx, snowPad+y*px+sy*px/snowPx
+	if len(sc.wpix) < 4*iw*iw {
+		return 0
+	}
+	return sc.wpix[4*(ty*iw+tx)+3]
 }
 
 func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {

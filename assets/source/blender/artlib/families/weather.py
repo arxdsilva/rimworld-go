@@ -9,8 +9,11 @@ Ground decals are one full 128 px tile and draw on top of the terrain:
   in the metadata names the side that stays covered: north, east, south,
   west); 04 and 05 are full tiles. All wrap on their covered edges.
 - snow_drift_00..03: small lit drifts with a soft contact shadow.
-- puddle_00..05: irregular puddles, sky reflection band, darker wet rim.
 - frost_00..03: faint crystalline overlays, mostly transparent.
+
+Snow cover and frost lie flat (lit like terrain, no normal map); rain
+puddles are not sprites but the renderer's wet veil (PLAY-022,
+internal/adapters/inbound/ebiten/puddle_veil.go).
 
 Particles are small sprites (footprint [0, 0], origin at their centre):
 splash_00..02 (crown splash frames: small, tall, spent; rain streaks
@@ -190,37 +193,6 @@ def _snow_drift(i):
     return _tile("snow_drift_%02d" % i, img, {"weather": "snow_drift", "variant": i})
 
 
-# --------------------------------------------------------------- water
-def _puddle(i):
-    gl, bl, soil = _mat("glass"), _mat("blossom"), _mat("soil_rich")
-    xx, yy = _grid()
-    rng = np.random.RandomState(30 + i)
-    R = 36 + 5 * (i % 3) + 3 * (i // 3)
-    asp = 1.15 + 0.18 * ((i * 5) % 3)
-    dx, dy = (xx - 64 + rng.uniform(-3, 3)) / asp, (yy - 66) * 1.0
-    th = np.arctan2(dy, dx)
-    r = np.ones_like(th)
-    for k, a in zip((2, 3, 4, 5), (0.10, 0.09, 0.06, 0.04)):
-        r += a * np.cos(k * th + rng.uniform(0, 6.28))
-    q = np.hypot(dx, dy) / (R * r)
-    alpha = 0.9 * (1.0 - _smooth(0.90, 1.0, q))
-    # interior: sky toward the top, deeper water below, one reflection band
-    t = np.clip((yy - 64 + R) / (2 * R), 0, 1)
-    water = _mix(gl["base"], gl["shadow"], _smooth(0.15, 0.95, t)[..., None] * 0.8)
-    water = _mix(water, np.array([0.50, 0.58, 0.60], np.float32), 0.15)
-    band = _smooth(0.0, 1.0, 1 - np.abs(((xx * 0.55 + yy * 0.8) - (64 * 1.35 + 6 * (i % 3) - 6)) / 11.0))
-    band *= (q < 0.78)
-    water = _mix(water, _mix(gl["light"], bl["light"], 0.6), (band * 0.6)[..., None])
-    glint = _smooth(0.82, 1.0, _vnoise(N, N, 16, 60 + i)) * (q < 0.7) * 0.45
-    water = _mix(water, bl["light"], glint[..., None])
-    # darker wet rim hugging the border
-    rim = _smooth(0.68, 0.93, q) * (1 - _smooth(0.96, 1.02, q))
-    rim_col = _mix(soil["shadow"], gl["shadow"], 0.35)
-    rgb = _mix(water, rim_col, (rim * 0.78)[..., None])
-    img = np.dstack([rgb, alpha])
-    return _tile("puddle_%02d" % i, img, {"weather": "puddle", "variant": i})
-
-
 # --------------------------------------------------------------- frost
 def _line_cov(cov, ax, ay, bx, by, width):
     x0, x1 = int(max(0, min(ax, bx) - width - 2)), int(min(N, max(ax, bx) + width + 3))
@@ -350,7 +322,6 @@ def _snowflake(i):
 def build():
     out = [_snow_cover(i) for i in range(6)]
     out += [_snow_drift(i) for i in range(4)]
-    out += [_puddle(i) for i in range(6)]
     out += [_frost(i) for i in range(4)]
     out += [_splash(i) for i in range(3)]
     out += [_snowflake(i) for i in range(4)]

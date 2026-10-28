@@ -768,33 +768,40 @@ func TestFrostOnFreezingMornings(t *testing.T) {
 
 func TestPuddlesFollowWetness(t *testing.T) {
 	t.Parallel()
-	count := func(wet float64) (int, map[string]bool) {
-		n, keys := 0, map[string]bool{}
+	// PLAY-022: puddles are one field, not per-tile stickers: water lies
+	// where the ground's relief (puddleField) is under the level the
+	// wetness raises. The six sprite variants are retired; patch shape and
+	// size variety is TestPuddlesAreCoherentPatches.
+	salt := puddleSalt(30, 30)
+	count := func(wet float64) int {
+		n := 0
 		for i := 0; i < 900; i++ {
-			k, a := puddle(i%30, i/30, wet)
-			if a > 0 {
+			if puddleField(float64(i%30)+0.5, float64(i/30)+0.5, salt) < puddleLevel(wet) {
 				n++
-				keys[k] = true
-				if !strings.HasPrefix(k, "weather/puddle_0") {
-					t.Fatalf("puddle key %s", k)
-				}
 			}
 		}
-		return n, keys
+		return n
 	}
-	dry, _ := count(0)
-	damp, _ := count(0.3)
-	soaked, keys := count(1)
+	dry, damp, soaked := count(0), count(0.3), count(1)
 	if dry != 0 || !(damp > 0 && damp < soaked) || soaked > 450 {
 		t.Fatalf("puddles by wetness: 0->%d 0.3->%d 1->%d of 900", dry, damp, soaked)
 	}
-	if len(keys) < 5 {
-		t.Fatalf("puddles use %d variants", len(keys))
+	// a puddle never shrinks as it gets wetter: the level only rises
+	for wet := 0.0; wet < 1; wet += 0.05 {
+		if puddleLevel(wet+0.05) < puddleLevel(wet) {
+			t.Fatalf("the water level falls from wetness %.2f", wet)
+		}
 	}
-	_, a1 := puddle(5, 5, 0.6)
-	_, a2 := puddle(5, 5, 1)
-	if a2 < a1 {
-		t.Fatalf("a puddle shrinks as it gets wetter: %.2f -> %.2f", a1, a2)
+	// the field is the map's own: another map size lays them elsewhere
+	other, same := puddleSalt(31, 30), 0
+	for i := 0; i < 900; i++ {
+		fx, fy := float64(i%30)+0.5, float64(i/30)+0.5
+		if (puddleField(fx, fy, salt) < puddleLevel(1)) == (puddleField(fx, fy, other) < puddleLevel(1)) {
+			same++
+		}
+	}
+	if same == 900 {
+		t.Fatal("two maps share one puddle layout")
 	}
 }
 
@@ -862,7 +869,7 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 	weather := []string{"weather/raindrop", "weather/splash_00", "weather/splash_01", "weather/splash_02",
 		"weather/snowflake_00", "weather/snowflake_01", "weather/snowflake_02", "weather/snowflake_03"}
 	for i := 0; i < 6; i++ {
-		weather = append(weather, artKey("weather", "snow_cover", i), artKey("weather", "puddle", i))
+		weather = append(weather, artKey("weather", "snow_cover", i))
 	}
 	for i := 0; i < 4; i++ {
 		weather = append(weather, artKey("weather", "snow_drift", i), artKey("weather", "frost", i))
@@ -882,6 +889,7 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 			screen := ebiten.NewImage(640, 400)
 			for f := 0; f < 90; f++ {
 				r.advance()
+				r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
 				r.drawGroundCover(screen, w, 640, 400, r.tilePx())
 				r.drawWeather(screen, w, 640, 400, r.tilePx())
 			}
@@ -890,7 +898,7 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 			}
 		}
 	}
-	// puddles without their art, a lightning flash, the HUD label
+	// the puddle veil (no art of its own), a lightning flash, the HUD label
 	w := game.WorldView{Weather: "storm", WeatherIntensity: 1, WindX: 2, WindY: -1, Wetness: 1, Season: "Fall"}
 	sim := &stubSim{w: 30, h: 20}
 	b := uint64(7)
@@ -901,6 +909,7 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 	for f := 0; f < 50; f++ {
 		r.present++
 		r.stepEnvironment(w, nil)
+		r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
 		r.drawGroundCover(screen, w, 640, 400, r.tilePx())
 		r.drawWeather(screen, w, 640, 400, r.tilePx())
 	}

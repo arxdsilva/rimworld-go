@@ -916,9 +916,11 @@ func (c *litPairCache) put(src, pair *ebiten.Image, frame uint64) {
 }
 
 // isGroundKey reports a ground-plane sprite: terrain tiles and edges,
-// and floors.
+// floors, and the flat ground decals (snow cover, frost; cmd/normalgen
+// gives them no normal map).
 func isGroundKey(key string) bool {
-	return strings.HasPrefix(key, "terrain/") || strings.HasPrefix(key, "structure/floor")
+	return strings.HasPrefix(key, "terrain/") || strings.HasPrefix(key, "structure/floor") ||
+		strings.HasPrefix(key, "weather/snow_cover") || strings.HasPrefix(key, "weather/frost")
 }
 
 // groundPlane reports whether img is a ground-plane sprite's image (plain

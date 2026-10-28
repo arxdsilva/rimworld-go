@@ -16,7 +16,7 @@ import (
 
 // Environment presentation (ART §27.3, §16): the wind field, plants and
 // grass waving in it and bending around creatures, rain and snow,
-// snow cover and puddles, seasonal looks. Presentation-only: reads
+// snow cover and puddles (puddle_veil.go), seasonal looks. Presentation-only: reads
 // WorldView weather and creature motion, never feeds the simulation.
 //
 // Clocks: ambient waving and weather run on r.present (they keep going
@@ -704,7 +704,7 @@ func (r *Renderer) stepWeather() {
 			switch {
 			case d.kind == dropSnow:
 				d.kind, d.life = dropSettled, 40
-			case e.wet > 0 && func() bool { _, a := puddle(x, y, e.wet); return a > 0 }():
+			case e.wet > 0 && r.puddleAt(d.gx, d.gy) >= puddleRippleMin: // puddle_veil.go: in the water
 				d.kind, d.life = dropRipple, 26
 			default:
 				d.kind, d.life = dropSplash, 9
@@ -824,16 +824,12 @@ var (
 	snowCoverKeys = [2]string{artKey("weather", "snow_cover", 4), artKey("weather", "snow_cover", 5)} // tileable
 	snowBankKeys  = [4]string{}                                                                       // N, E, S, W edge masks
 	snowDriftKeys = [4]string{}
-	puddleKeys    = [6]string{}
 	frostKeys     = [4]string{}
 	splashKeys    = [3]string{}
 	flakeKeys     = [4]string{}
 )
 
 func init() {
-	for i := range puddleKeys {
-		puddleKeys[i] = artKey("weather", "puddle", i)
-	}
 	for i := range snowDriftKeys {
 		snowBankKeys[i] = artKey("weather", "snow_cover", i)
 		snowDriftKeys[i] = artKey("weather", "snow_drift", i)
@@ -891,18 +887,6 @@ func frostStrength(tempTenths int, snow float64, d clock.Date) float64 {
 	return 0.35 * clamp01(float64(-tempTenths)/50) * clamp01((10-hour)/4)
 }
 
-// puddle is the puddle on a tile and its opacity at this wetness: more
-// tiles hold water as the ground gets wetter.
-func puddle(x, y int, wet float64) (string, float64) {
-	th := tileHash(x, y)
-	lim := 0.35 * wet
-	h := hash01(th, 0x9dd1)
-	if h >= lim {
-		return "", 0
-	}
-	return puddleKeys[mix64(th^0x9d)%6], clamp01((lim - h) / 0.06)
-}
-
 // setView records the visible world rectangle in tiles.
 func (r *Renderer) setView(sw, sh int, tile float64) {
 	if tile <= 0 {
@@ -920,17 +904,17 @@ func (r *Renderer) visibleTiles() (x0, y0, x1, y1 int) {
 	return
 }
 
-// drawGroundCover draws snow cover and puddles over the terrain: first a
-// seamless layer (wet darkening, a snow veil shaded smoothly corner to
-// corner, drawn puddles when their art is missing) in one batch, then
-// the per-tile decals for texture.
+// drawGroundCover draws snow cover and frost over the terrain: first a
+// seamless snow veil shaded smoothly corner to corner in one batch, then
+// the per-tile decals for texture. The wet ground and its puddles are the
+// wet veil under the grass (drawPuddleVeil, puddle_veil.go).
 func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	r.setView(sw, sh, tile)
 	e := &r.env
-	snow, wet := clamp01(w.SnowDepth), clamp01(w.Wetness)
+	snow := clamp01(w.SnowDepth)
 	frost := frostStrength(w.OutdoorTemp, snow, r.game.Date())
 	anySnow := snow > 0 || len(w.Snow) > 0 // PLAY-015: per-tile snow (snow_veil.go)
-	if !anySnow && wet <= 0 && frost <= 0 {
+	if !anySnow && frost <= 0 {
 		return
 	}
 	e.setWeather(w)
@@ -939,7 +923,9 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	if r.art.has(snowCoverKeys[0]) && tile >= decalMinTile {
 		veil = 0.5
 	}
-	r.drawSnowLayer(screen, w, sw, sh, tile, wet, veil)
+	if anySnow {
+		r.drawSnowLayer(screen, w, sw, sh, tile, veil)
+	}
 	if tile < decalMinTile { // zoomed out: the veil alone (lod.go)
 		return
 	}
@@ -955,15 +941,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 			if !open(x, y) {
 				continue
 			}
-			d := e.snowDepthAt(x, y)
-			if d < 0.5 {
-				k, a := puddle(x, y, wet)
-				decal(k, x, y, a)
-				if a > 0 && !r.art.has(k) {
-					r.puddleShape(x, y, tile, a)
-				}
-			}
-			if d > 0 {
+			if d := e.snowDepthAt(x, y); d > 0 {
 				k, a := snowCover(x, y, d)
 				// texture where the snow lies full; thin snow is the smooth veil alone
 				decal(k, x, y, 0.8*smoothstep01((a-0.6)/0.4))
@@ -983,23 +961,11 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	}
 }
 
-// groundOpen reports ground that takes snow cover, drifts, puddles and
-// frost: open to the sky (not roofed, not a wall) and not rock (rough or
+// groundOpen reports ground that takes snow cover, drifts, the wet veil
+// and frost: open to the sky (not roofed, not a wall) and not rock (rough or
 // smoothed).
 func (r *Renderer) groundOpen(w game.WorldView, x, y int) bool {
 	return r.env.outdoors(x, y) && !isRockWallName(r.terrainName(w, x, y))
-}
-
-// puddleShape is a drawn puddle when its art is missing: a dark ellipse
-// with a lighter band of reflected sky.
-func (r *Renderer) puddleShape(x, y int, tile, a float64) {
-	h := tileHash(x, y)
-	cx := float64(x) + 0.35 + 0.3*hash01(h, 1)
-	cy := float64(y) + 0.4 + 0.25*hash01(h, 2)
-	rx := 0.22 + 0.14*hash01(h, 3)
-	sx, sy := r.worldToScreenF(cx, cy)
-	r.env.ellipse(float64(sx), float64(sy), rx*tile, rx*0.5*tile, color.RGBA{52, 64, 78, 255}, 0.55*a)
-	r.env.ellipse(float64(sx)-rx*0.2*tile, float64(sy)-rx*0.12*tile, rx*0.55*tile, rx*0.18*tile, color.RGBA{170, 186, 204, 255}, 0.35*a)
 }
 
 // --- drawing ------------------------------------------------------------------------

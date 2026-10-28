@@ -21,6 +21,10 @@ func TestWanted(t *testing.T) {
 		"assets/generated/world/terrain/soil_00.png":        false,
 		"assets/generated/world/structure/floor_stone.png":  false,
 		"assets/generated/world/structure/wall_wood_00.png": true,
+		// flat ground decals lie on the ground like terrain (PLAY-022)
+		"assets/generated/world/weather/snow_cover_04.png": false,
+		"assets/generated/world/weather/frost_02.png":      false,
+		"assets/generated/world/weather/snow_drift_01.png": true, // a heap
 	} {
 		if got := wanted(path); got != want {
 			t.Errorf("wanted(%q) = %v, want %v", path, got, want)
