@@ -46,7 +46,7 @@ func corpsePlanFor(c *artCatalog, it game.ItemView) corpsePlan {
 
 // deceasedOf finds the pawn a corpse belongs to (still in the snapshot).
 func (r *Renderer) deceasedOf(it game.ItemView) (game.PawnView, bool) {
-	for _, p := range r.drawPawns {
+	for _, p := range r.view.Pawns {
 		if p.ID == it.Of && it.Of != 0 {
 			return p, true
 		}

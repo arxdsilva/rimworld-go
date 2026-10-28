@@ -623,7 +623,7 @@ func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile, a flo
 //	(d) contact pools under every creature
 //
 // then one contact-hardening blur into scratch and one composite. w is
-// the frame's view (r.drawW): the point lights come from the light grid
+// the frame's view (r.view.W): the point lights come from the light grid
 // synced to it.
 func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	if sw <= 0 || sh <= 0 || r.env.shadow.off {
@@ -638,9 +638,9 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 	}
 	var casters []shadowCaster
 	if sa > 0 {
-		casters = r.shadowCasters(w, r.drawPawns)
+		casters = r.shadowCasters(w, r.view.Pawns)
 	}
-	creatures := r.creatureCasters(w, r.drawPawns)
+	creatures := r.creatureCasters(w, r.view.Pawns)
 	if len(casters) == 0 && len(creatures) == 0 {
 		return
 	}

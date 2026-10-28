@@ -139,7 +139,7 @@ func TestLightGridBuildsOnlyReadChunks(t *testing.T) {
 	const w, h = 64, 64
 	v := game.WorldView{TerrainW: w, Terrain: make([]uint8, w*h), RoomGrid: make([]int, w*h), RoofCells: make([]uint8, w*h)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	r.lightTile(1, 1)
 	built := 0
 	for _, b := range r.lit.grid.built {
@@ -153,14 +153,14 @@ func TestLightGridBuildsOnlyReadChunks(t *testing.T) {
 	gen := r.lit.grid.gen
 	v2 := v
 	v2.Buildings = []game.BuildingView{{Kind: "wall", X: 5, Y: 5}} // a new list, no light change
-	r.drawW = v2
+	r.view.W = v2
 	r.lightTile(1, 1)
 	if r.lit.grid.gen != gen {
 		t.Fatal("a new building list without fires or lit rooms rebuilt the light")
 	}
 	v3 := v2
 	v3.Buildings = []game.BuildingView{{Kind: "campfire", X: 5, Y: 5, Burning: true, Glow: true, GlowRadius: 5}}
-	r.drawW = v3
+	r.view.W = v3
 	if _, l := r.lightTile(5, 6); l <= 0 || r.lit.grid.gen == gen {
 		t.Fatalf("a lit campfire: lamp %v, generation kept %v", l, r.lit.grid.gen == gen)
 	}

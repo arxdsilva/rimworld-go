@@ -13,10 +13,6 @@ import (
 // Choose Storyteller (NG-1 §2.4): three independent choices on one screen:
 // who paces the story, how hard it is, and whether the player can reload.
 
-func init() {
-	registerScreenUI(screenStoryteller, func(a *App, sw, sh int) { a.storytellerUI(sw, sh) })
-}
-
 // Layout metrics.
 const (
 	storyLeftW   = 300

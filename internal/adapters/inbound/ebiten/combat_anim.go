@@ -170,7 +170,7 @@ func (r *Renderer) lastStrike(id entity.EntityID, x, y int, dur float64) (reactT
 	now := r.animT()
 	var best reactTrace
 	bestAge := math.Inf(1)
-	for _, rt := range r.traceList(r.drawW) {
+	for _, rt := range r.traceList(r.view.W) {
 		if !strikeBy(rt.TraceView, id, x, y) {
 			continue
 		}
@@ -189,7 +189,7 @@ func (r *Renderer) hitAge(id entity.EntityID, hitTick uint64, x, y int) (float64
 	}
 	el := math.Max(0, r.animT()-float64(hitTick))
 	frames := math.Inf(1)
-	for _, rt := range r.traceList(r.drawW) {
+	for _, rt := range r.traceList(r.view.W) {
 		mine := rt.Target == id || rt.Target == 0 && rt.ToX == x && rt.ToY == y
 		if mine && rt.Hit && math.Abs(rt.born-float64(hitTick)) <= 1 {
 			frames = math.Min(frames, rt.frames)
@@ -349,13 +349,13 @@ func (r *Renderer) creatureSpot(id entity.EntityID) (vec, bool) {
 	if m, ok := r.motionOf(id); ok {
 		return vec{m.X + 0.5, m.Y + 0.4}, true
 	}
-	for _, q := range r.drawPawns {
+	for _, q := range r.view.Pawns {
 		if q.ID == id {
 			return vec{float64(q.X) + 0.5, float64(q.Y) + 0.4}, true
 		}
 	}
-	for i := range r.drawW.Animals {
-		if an := &r.drawW.Animals[i]; an.ID == id {
+	for i := range r.view.W.Animals {
+		if an := &r.view.W.Animals[i]; an.ID == id {
 			return vec{float64(an.X) + 0.5, float64(an.Y) + 0.4}, true
 		}
 	}

@@ -73,7 +73,7 @@ func wlRenderer(sc wlScale, zoom, offX, offY float64, pawns ...game.PawnView) *R
 	r := New(&stubSim{w: 32, h: 32, tick: 100})
 	r.art = wlArt()
 	r.cam.zoom, r.cam.offsetX, r.cam.offsetY, r.cam.dev = zoom, offX, offY, sc.dev
-	r.drawPawns = pawns
+	r.view.Pawns = pawns
 	return r
 }
 

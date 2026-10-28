@@ -28,11 +28,12 @@ type fakeWindow struct {
 func (w *fakeWindow) SetClosingHandled(v bool) { w.handled = append(w.handled, v) }
 func (w *fakeWindow) BeingClosed() bool        { return w.closing }
 
-func useFakeWindow(t *testing.T) *fakeWindow {
-	t.Helper()
+// fakeWin gives a the fake window hooks (AppConfig.WindowHooks is the
+// real window by default); the colony fixtures run Updates of their own,
+// so the close handling is announced again to the fake.
+func fakeWin(a *App) *fakeWindow {
 	w := &fakeWindow{}
-	appWindow = w
-	t.Cleanup(func() { appWindow = ebitenWindow{} })
+	a.cfg.WindowHooks, a.closeHandled = w, false // the fake hears the state on the next Update
 	return w
 }
 
@@ -93,9 +94,9 @@ func lacksButton(bs []button, id string) bool {
 }
 
 func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
-	useFakeWindow(t)
 	log := &saveLog{}
 	a, s := newCommitColony(t, log)
+	fakeWin(a)
 	a.settings.Gameplay.AutosaveDays = 7 // commitment still saves daily
 	for day := 1; day <= 3; day++ {
 		s.tick = morning(day)
@@ -131,8 +132,8 @@ func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 }
 
 func TestCommitmentPauseButtons(t *testing.T) {
-	useFakeWindow(t)
 	a, _ := newCommitColony(t, &saveLog{})
+	fakeWin(a)
 	a.apply(intent{kind: intentPause})
 	bs := a.pauseButtons(a.size())
 	if !lacksButton(bs, "pause.save") {
@@ -166,10 +167,10 @@ func TestCommitmentPauseButtons(t *testing.T) {
 }
 
 func TestCommitmentSavesOnReturnToMenu(t *testing.T) {
-	useFakeWindow(t)
 	for _, id := range []string{"pause.menu", "pause.savequit"} {
 		log := &saveLog{}
 		a, _ := newCommitColony(t, log)
+		fakeWin(a)
 		slot := a.saveSlot
 		a.apply(intent{kind: intentPause})
 		click(t, a, id)
@@ -199,9 +200,9 @@ func TestCommitmentSavesOnReturnToMenu(t *testing.T) {
 }
 
 func TestCommitmentSavesOnClose(t *testing.T) {
-	w := useFakeWindow(t)
 	log := &saveLog{}
 	a, _ := newCommitColony(t, log)
+	w := fakeWin(a)
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
@@ -219,16 +220,16 @@ func TestCommitmentSavesOnClose(t *testing.T) {
 		t.Fatalf("saves on close %v", log.commits)
 	}
 	// Even when that save fails the window closes.
-	w2 := useFakeWindow(t)
 	log2 := &saveLog{fail: errors.New("read-only")}
 	b, _ := newCommitColony(t, log2)
+	w2 := fakeWin(b)
 	w2.closing = true
 	if err := b.Update(); !errors.Is(err, ebiten.Termination) || len(log2.commits) != 1 {
 		t.Fatalf("failed save on close: %v, saves %v", err, log2.commits)
 	}
 	// Back on the main menu the window closes normally again.
-	w3 := useFakeWindow(t)
 	c, _ := newCommitColony(t, &saveLog{})
+	w3 := fakeWin(c)
 	_ = c.Update()
 	c.apply(intent{kind: intentReturnToMenu})
 	_ = c.Update()
@@ -238,10 +239,10 @@ func TestCommitmentSavesOnClose(t *testing.T) {
 }
 
 func TestReloadAnytimeUnchanged(t *testing.T) {
-	w := useFakeWindow(t)
 	log := &saveLog{}
 	s := &stubSim{w: 4, h: 4}
 	a := startColony(t, s, log)
+	w := fakeWin(a)
 	slot := a.saveSlot
 	a.apply(intent{kind: intentPause})
 	bs := a.pauseButtons(a.size())

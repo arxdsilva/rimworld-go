@@ -94,7 +94,7 @@ func (r *Renderer) drawPaths(screen *ebiten.Image, sw, sh int, tile float64) {
 	if r.hasSelect {
 		sel = uint64(r.selected)
 	}
-	plans := planPaths(r.drawPawns, sel, r.hasSelect, r.cam.zoom, sw, sh, r.worldToScreenF, r.interpWorld)
+	plans := planPaths(r.view.Pawns, sel, r.hasSelect, r.cam.zoom, sw, sh, r.worldToScreenF, r.interpWorld)
 	if len(plans) == 0 {
 		return
 	}

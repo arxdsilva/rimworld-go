@@ -186,7 +186,7 @@ func TestOffscreenStainsSkipped(t *testing.T) {
 		{X: 3, Y: 40, Kind: "blood", Amount: 1},
 		{X: 4, Y: 4, Kind: "blood", Amount: 0}, // faded away
 	}}
-	r.drawW = w
+	r.view.W = w
 	var b stainBatch
 	if n := r.buildStains(&b, w, 320, 320, tile); n != 2 || len(b.verts) != 8 || len(b.idx) != 12 {
 		t.Fatalf("on screen: %d quads, %d verts, %d indices", n, len(b.verts), len(b.idx))
@@ -206,7 +206,7 @@ func TestStainsLitByTheirTile(t *testing.T) {
 	r := stainRenderer()
 	w := roomWorld()
 	w.Stains = []game.StainView{{X: 0, Y: 0, Amount: 0.5}}
-	r.drawW = w
+	r.view.W = w
 	var b stainBatch
 	r.buildStains(&b, w, 320, 320, r.tilePx())
 	sky, lamp := r.lightTile(0, 0)
@@ -343,7 +343,7 @@ func TestHairAndHeldStayClean(t *testing.T) {
 	got := litLog(r)
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 30, Wounded: true, Weapon: "spear", Drafted: true, Status: "alive"}
 	patient := game.PawnView{ID: 2, X: 2, Y: 2, Health: 20, CarriedBy: 1, Status: "downed"}
-	r.drawPawns = []game.PawnView{p, patient}
+	r.view.Pawns = []game.PawnView{p, patient}
 	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, r.pawnFigurePoseOf(p))
 	want := encodeBlood(0.75, 0, false)
 	var body, cloth, hair, held int
@@ -444,7 +444,7 @@ func TestNonFigureDrawsHaveNoBlood(t *testing.T) {
 func TestDrawLitWritesCustom3(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	img := ebiten.NewImage(4, 4)
 	dst := ebiten.NewImage(16, 16)
 	r.figureBlood = encodeBlood(0.4, 3, true)
@@ -481,7 +481,7 @@ func TestBloodShaderCompiles(t *testing.T) {
 	}
 	// draw through it with blood set: compiles and runs on this backend
 	r := &Renderer{}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	r.figureBlood = encodeBlood(0.6, 10, false)
 	img := ebiten.NewImage(8, 8)

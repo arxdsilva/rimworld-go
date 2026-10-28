@@ -197,7 +197,7 @@ func roomWorld() game.WorldView {
 func TestIndoorAmbientWhenRoofed(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	for _, c := range []struct {
 		x, y int
 		sky  float32
@@ -219,7 +219,7 @@ func TestIndoorAmbientWhenRoofed(t *testing.T) {
 	// a new frame's view rebuilds the grid
 	w := roomWorld()
 	w.RoofCells = make([]uint8, len(w.RoofCells))
-	r.drawW = w
+	r.view.W = w
 	if sky, _ := r.lightTile(1, 1); sky != 1 {
 		t.Fatalf("roof removed: sky %v, want 1", sky)
 	}
@@ -234,7 +234,7 @@ func TestLampAddsWarmth(t *testing.T) {
 	// neighbours, falling off with distance, and stops at its walls.
 	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 0, W: 1, H: 1},
 		{Kind: "campfire", X: 6, Y: 0, Burning: true, Glow: true, GlowRadius: 5}, {Kind: "campfire", X: 0, Y: 3}}
-	r.drawW = w
+	r.view.W = w
 	if l := levelAt(r, 1, 0); l != 1 {
 		t.Fatalf("on the lamp %v, want 1", l)
 	}
@@ -279,12 +279,12 @@ func TestLightGridNoAllocAfterWarmup(t *testing.T) {
 	for i := range views { // a room lamp and an outdoor one: the lamp paths too
 		views[i].Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 1, W: 1, H: 1}, {ID: 2, Kind: "lamp", Glow: true, GlowRadius: 6, X: 6, Y: 2, W: 1, H: 1}}
 	}
-	r.drawW = views[0]
+	r.view.W = views[0]
 	r.lightTile(0, 0)
 	i := 0
 	allocs := testing.AllocsPerRun(50, func() {
 		i++
-		r.drawW = views[i%2] // a new frame
+		r.view.W = views[i%2] // a new frame
 		r.lightTile(1, 1)
 		r.lightTile(4, 3)
 	})
@@ -371,7 +371,7 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 	// flag, so the lit room gets its lamp at (1, 1) (its tile: lamp 1).
 	w := roomWorld()
 	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 1, W: 1, H: 1}}
-	r.drawW = w
+	r.view.W = w
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
 
@@ -617,7 +617,7 @@ func TestLitRoomWallCornersGlow(t *testing.T) {
 		}
 	}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	for _, c := range [][4]int{{0, 0, 1, 1}, {3, 0, 2, 1}, {0, 3, 1, 2}, {3, 3, 2, 2}} {
 		if l, want := levelAt(r, c[0], c[1]), levelAt(r, c[2], c[3]); math.Abs(float64(l-want)) > 2e-3 || l < 0.9 {
 			t.Fatalf("corner %v lamp %v, want its diagonal floor's %v", c[:2], l, want)

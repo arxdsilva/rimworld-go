@@ -24,7 +24,7 @@ func (r *Renderer) drawOrderRoute(screen *ebiten.Image, tile float64) {
 	}
 	var p game.PawnView
 	found := false
-	for _, q := range r.drawPawns {
+	for _, q := range r.view.Pawns {
 		if q.ID == r.selected {
 			p, found = q, true
 		}

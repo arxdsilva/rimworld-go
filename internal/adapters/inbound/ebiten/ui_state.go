@@ -9,16 +9,6 @@ import (
 // uiSt is the App's widget-kit state.
 func (a *App) uiSt() *uiState { return &a.ui }
 
-// screenUIs are the per-screen widget declarations, filled at init time
-// by the screen files (registerScreenUI) and only read afterwards.
-var screenUIs = map[screenID]func(a *App, sw, sh int){}
-
-// registerScreenUI sets the function that declares a screen's widgets.
-// Call it from an init() in the screen's file. It runs once per Update,
-// right after the input is polled, while the screen is on top with no
-// overlay.
-func registerScreenUI(s screenID, fn func(a *App, sw, sh int)) { screenUIs[s] = fn }
-
 // Tooltip metrics (NG-1 §1.4).
 const (
 	tipDelay = 24  // frames the cursor rests before the card shows
@@ -148,8 +138,8 @@ func (a *App) uiBegin() {
 	switch {
 	case u.hook != nil:
 		u.hook(a, sw, sh)
-	case screenUIs[a.nav.screen()] != nil:
-		screenUIs[a.nav.screen()](a, sw, sh)
+	case a.shell.screens[a.nav.screen()] != nil:
+		a.shell.screens[a.nav.screen()](a, sw, sh)
 	}
 }
 

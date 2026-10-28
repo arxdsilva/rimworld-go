@@ -6,10 +6,6 @@ package ebiten
 // Where a button of the same id exists (a tab), the widget answers its
 // click through uiClick, so app.go's applyClick needs no case for it.
 
-func init() {
-	registerScreenUI(screenColony, func(a *App, sw, sh int) { a.colonyUI(sw, sh) })
-}
-
 func (a *App) colonyUI(sw, sh int) {
 	a.declareOnScreenLayer()
 	if a.renderer == nil {

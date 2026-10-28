@@ -22,10 +22,6 @@ import (
 // panel on the right, the bottom bar and the Advanced and Factions
 // dialogs.
 
-func init() {
-	registerScreenUI(screenLanding, func(a *App, sw, sh int) { a.landingUI(sw, sh) })
-}
-
 // Layout metrics.
 const (
 	landPanelW   = 380

@@ -149,12 +149,12 @@ func TestLightGridPicksUpBlazeByVersion(t *testing.T) {
 	r := &Renderer{}
 	v := roomWorld()
 	v.Fires, v.FireVer = []game.FireView{{X: 4, Y: 1, Size: 90}}, 1
-	r.drawW = v
+	r.view.W = v
 	if _, lamp := r.lightTile(4, 1); lamp <= 0 {
 		t.Fatalf("a burning cell lights its tile, lamp %v", lamp)
 	}
 	v.Fires, v.FireVer = nil, 2
-	r.drawW = v
+	r.view.W = v
 	if _, lamp := r.lightTile(4, 1); lamp != 0 {
 		t.Fatalf("light stays after the fire is out, lamp %v", lamp)
 	}

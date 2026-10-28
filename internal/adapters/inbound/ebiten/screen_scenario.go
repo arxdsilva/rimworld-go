@@ -13,10 +13,6 @@ import (
 // custom scenarios on the left, the read-only details of the selected one
 // on the right. Next stamps a copy of the scenario into the draft.
 
-func init() {
-	registerScreenUI(screenScenario, func(a *App, sw, sh int) { a.scenarioUI(sw, sh) })
-}
-
 // Row heights of the list.
 const (
 	scenRowHeadH  = 28

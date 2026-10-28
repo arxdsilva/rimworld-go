@@ -16,10 +16,6 @@ import (
 // temperature, population and faction list, then a progress modal that
 // steps planet.Builder a fixed budget of work units per frame.
 
-func init() {
-	registerScreenUI(screenWorldGen, func(a *App, sw, sh int) { a.worldGenUI(sw, sh) })
-}
-
 // Layout metrics.
 const (
 	worldRowGap   = 8

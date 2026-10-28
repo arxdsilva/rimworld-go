@@ -715,7 +715,7 @@ func (r *Renderer) lightFoot(wx, wy float64) (sky, lamp float32) {
 	return r.syncLight().atF(wx, wy)
 }
 
-// syncLight points the light grid at this frame's view (r.drawW), with
+// syncLight points the light grid at this frame's view (r.view.W), with
 // the lamp radius from the art's metadata (re-read when the catalog
 // changes), and returns it.
 func (r *Renderer) syncLight() *lightGrid {
@@ -724,7 +724,7 @@ func (r *Renderer) syncLight() *lightGrid {
 		r.lit.radArt, r.lit.radOK = r.art, true
 		g.lampR = lampRadiusOf(r.art)
 	}
-	g.sync(&r.drawW)
+	g.sync(&r.view.W)
 	return g
 }
 

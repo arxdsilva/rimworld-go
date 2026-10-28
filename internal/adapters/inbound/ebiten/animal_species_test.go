@@ -462,7 +462,7 @@ func TestMarksClearTheArt(t *testing.T) {
 	if got := r.animalTop(tall, 8); got <= top {
 		t.Fatalf("drawn at the minimum creature size the body rises higher: %v", got)
 	}
-	marks := traceMarks(t)
+	marks := traceMarks(t, r)
 	r.drawAnimalOverlays(ebiten.NewImage(1024, 1024), game.WorldView{Animals: []game.AnimalView{tall}}, 64, 1024, 1024)
 	lift := ofKind(*marks, "mark-lift")
 	_, topY := r.worldToScreenF(10, 10-top)

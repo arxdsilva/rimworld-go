@@ -122,9 +122,9 @@ func (r *Renderer) grassFrameMask(w *game.WorldView, x0, y0, x1, y1 int) {
 }
 
 // frameLists reports whether w is the world this frame's chunk lists
-// index (r.drawW, synced by syncFrameChunks): the same shared lists.
+// index (r.view.W, synced by syncFrameChunks): the same shared lists.
 func (r *Renderer) frameLists(w *game.WorldView) bool {
-	d := &r.drawW
+	d := &r.view.W
 	return r.game != nil && len(r.lod.views) > 0 &&
 		litFirst(w.Buildings) == litFirst(d.Buildings) && len(w.Buildings) == len(d.Buildings) &&
 		litFirst(w.Plants) == litFirst(d.Plants) && len(w.Plants) == len(d.Plants) &&

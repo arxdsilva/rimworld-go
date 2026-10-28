@@ -39,7 +39,7 @@ func BenchmarkShadows(b *testing.B) {
 	}
 	r := benchShadowRenderer(mw, mh)
 	r.cam.zoom = 0.5
-	r.drawPawns = pawns
+	r.view.Pawns = pawns
 	r.lit.light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
@@ -80,7 +80,7 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 	r := benchShadowRenderer(mw, mh)
 	r.cam.zoom = 0.5
 	r.cam.dev = 2
-	r.drawPawns = pawns
+	r.view.Pawns = pawns
 	r.lit.light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
@@ -146,8 +146,8 @@ func BenchmarkCreatureShadows(b *testing.B) {
 		w.Animals = append(w.Animals, game.AnimalView{ID: entity.EntityID(200 + i), Species: species, X: x, Y: y, Health: 100})
 	}
 	r.cam.zoom = 0.5
-	r.drawPawns = pawns
-	r.drawW = w
+	r.view.Pawns = pawns
+	r.view.W = w
 	r.lit.light = testLight(0.5, 0.2, 0.3) // a low sun: point lights still cast
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()

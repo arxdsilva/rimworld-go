@@ -25,7 +25,7 @@ func figureKeys(r *Renderer, p game.PawnView) []string {
 	var keys []string
 	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	defer func() { r.lit.onDraw = nil }()
-	r.drawPawns = []game.PawnView{p}
+	r.view.Pawns = []game.PawnView{p}
 	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, r.pawnFigurePoseOf(p))
 	return keys
 }

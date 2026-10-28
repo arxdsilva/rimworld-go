@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -167,7 +168,7 @@ func TestZoneDrawsOverFloor(t *testing.T) {
 	r := New(g)
 	r.art = art
 	var order []string
-	r.layerTrace = func(n string) { order = append(order, n) }
+	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	screen := ebiten.NewImage(640, 400)
 	tile := r.tilePx()
 	r.setView(640, 400, tile)

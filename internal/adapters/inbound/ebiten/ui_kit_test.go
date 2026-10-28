@@ -1033,16 +1033,19 @@ const testScreen screenID = 99
 
 var testScreenDrawn int
 
-func init() {
-	registerScreenUI(testScreen, func(a *App, sw, sh int) {
+// registerTestScreen adds the test screen to a's table, as NewApp does
+// for the real ones.
+func registerTestScreen(a *App) {
+	a.shell.screens[testScreen] = func(a *App, sw, sh int) {
 		testScreenDrawn++
 		a.uiPanel(rect{10, 10, 100, 100})
 		a.uiLabel(20, 20, "registered", tsBody)
-	})
+	}
 }
 
 func TestRegisteredScreenUIAndPaintSmoke(t *testing.T) {
 	a, f, u := newKit(t)
+	registerTestScreen(a)
 	before := testScreenDrawn
 	a.nav.push(frame{screen: testScreen})
 	f.frame(t, a)

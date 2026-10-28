@@ -15,7 +15,7 @@ import (
 func combatRenderer(tick uint64, pawns []game.PawnView, w game.WorldView) *Renderer {
 	r := New(&stubSim{w: 64, h: 64, tick: clock.Tick(tick)})
 	r.art = fakeCombatArt()
-	r.drawPawns, r.drawW = pawns, w
+	r.view.Pawns, r.view.W = pawns, w
 	return r
 }
 
@@ -187,7 +187,7 @@ func TestMuzzleFlashAtMuzzle(t *testing.T) {
 	tr := shot(1, false)
 	w := game.WorldView{Traces: []game.TraceView{tr}}
 	r := combatRenderer(100, []game.PawnView{p, targetAt(9, 5)}, w)
-	r.animateCombat(w, r.drawPawns) // first sighting: the strike frame
+	r.animateCombat(w, r.view.Pawns) // first sighting: the strike frame
 	mz, ok := r.traceMuzzle(tr)
 	want, ok2 := r.pawnHeldPoint(p, "muzzle")
 	if !ok || !ok2 || mz != want {
@@ -216,7 +216,7 @@ func TestMuzzleFlashAtMuzzle(t *testing.T) {
 	r.drawTraces(screen, w, 64)
 	// without art the shot leaves from in front of the shooter's tile
 	r.art = nil
-	m, _ := r.shotPoints(tr, r.drawPawns)
+	m, _ := r.shotPoints(tr, r.view.Pawns)
 	if m.x != 6 || m.y != 5.3 {
 		t.Fatalf("fallback muzzle %v", m)
 	}
@@ -244,11 +244,11 @@ func TestShellCasingParticle(t *testing.T) {
 		}
 		return n
 	}
-	r.animateCombat(w, r.drawPawns)
+	r.animateCombat(w, r.view.Pawns)
 	if count() != 1 {
 		t.Fatalf("one case per shot, none per blow: %d", count())
 	}
-	r.animateCombat(w, r.drawPawns)
+	r.animateCombat(w, r.view.Pawns)
 	if count() != 1 {
 		t.Fatal("a trace ejects once")
 	}
@@ -375,7 +375,7 @@ func TestPunch(t *testing.T) {
 	if pts := r.meleeTrail(tr); len(pts) < 2 || pts[1].x <= pts[0].x {
 		t.Fatalf("trail out along the punch: %v", pts)
 	}
-	r.drawTraces(ebiten.NewImage(800, 600), r.drawW, 64)
+	r.drawTraces(ebiten.NewImage(800, 600), r.view.W, 64)
 }
 
 func TestHitFlinchDirectional(t *testing.T) {

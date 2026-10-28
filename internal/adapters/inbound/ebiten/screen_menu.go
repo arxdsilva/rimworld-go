@@ -6,10 +6,6 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-func init() {
-	registerScreenUI(screenMainMenu, func(a *App, sw, sh int) { a.mainMenuUI(sw, sh) })
-}
-
 // Main menu metrics (NG-1 §2.1): a right rail of 300x40 buttons, 10 px
 // apart, from y = 140.
 const (

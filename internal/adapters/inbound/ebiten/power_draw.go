@@ -372,7 +372,7 @@ func (r *Renderer) bladeAt(b *game.BuildingView, baseKey, bladeK string) (float6
 // drawTurbineBlades draws turbine b's blades over its base (key), on the
 // frame its phase has reached; Reduced Motion holds them still.
 func (r *Renderer) drawTurbineBlades(dst *ebiten.Image, b *game.BuildingView, key string, tile float64, sw, sh int) {
-	fps := turbineFPS(r.drawW.WindX, r.drawW.WindY, b)
+	fps := turbineFPS(r.view.W.WindX, r.view.W.WindY, b)
 	if r.reducedMotion {
 		fps = 0
 	}

@@ -62,7 +62,7 @@ func TestLampNearBrighterThanFarInRoom(t *testing.T) {
 	lampRoom(&v, 0, 0, 0, 10, 6) // inside x 1..9, y 1..5
 	v.Buildings = []game.BuildingView{lampBuilding(1, 2, 3)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	if l := levelAt(r, 2, 3); l != 1 {
 		t.Fatalf("under the lamp %v, want 1", l)
 	}
@@ -89,7 +89,7 @@ func TestLampNoLightThroughWall(t *testing.T) {
 	lampRoom(&v, 1, 4, 0, 8, 5) // shares the wall at x 4; inside x 5..7
 	v.Buildings = []game.BuildingView{lampBuilding(1, 3, 2)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	if l := levelAt(r, 5, 2); l != 0 {
 		t.Fatalf("the next room, 2 tiles from the lamp through a wall: %v, want 0", l)
 	}
@@ -110,7 +110,7 @@ func TestOutdoorLampLightsOpenGroundNotBehindWall(t *testing.T) {
 	lampRoom(&v, 0, 1, 7, 3, 9) // an enclosed room south-west; inside (2, 8)
 	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	for _, c := range [][2]int{{5, 5}, {7, 5}, {5, 8}, {5, 10}, {3, 3}} {
 		if l := levelAt(r, c[0], c[1]); l <= 0 {
 			t.Fatalf("open ground %v in reach: lamp %v", c, l)
@@ -136,7 +136,7 @@ func TestLampWestFacingBrighterEastOfLamp(t *testing.T) {
 	lampRoom(&v, 0, 0, 0, 10, 6)
 	v.Buildings = []game.BuildingView{lampBuilding(1, 2, 3)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	ls := lightAt(0, summerDay, "clear", 0)
 	west, east := [3]float32{-0.7071, 0, 0.7071}, [3]float32{0.7071, 0, 0.7071}
 	lampPart := func(n [3]float32, l float32) float32 { return litFactor(&ls, n, 0, l)[0] - ls.IndoorAmbient[0] }
@@ -167,7 +167,7 @@ func TestRoofedRoomAtNoonNoSunTerm(t *testing.T) {
 	lampRoom(&v, 0, 0, 0, 10, 6)
 	v.Buildings = []game.BuildingView{lampBuilding(1, 2, 3)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	noon := lightAt(12, summerDay, "clear", 0)
 	dark := noon
 	dark.SunColor, dark.MoonColor = [3]float32{}, [3]float32{}
@@ -259,12 +259,12 @@ func TestLampRadiusFromMetadata(t *testing.T) {
 	v := lampTestWorld(16, 10)
 	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
 	r := &Renderer{art: art}
-	r.drawW = v
+	r.view.W = v
 	if a, b := levelAt(r, 7, 5), levelAt(r, 8, 5); a <= 0 || b != 0 {
 		t.Fatalf("radius 3: 2 tiles %v, 3 tiles %v", a, b)
 	}
 	r2 := &Renderer{}
-	r2.drawW = v
+	r2.view.W = v
 	if l := levelAt(r2, 9, 5); l <= 0 {
 		t.Fatalf("default radius 6: 4 tiles %v", l)
 	}
@@ -275,19 +275,19 @@ func TestLightGridRebuildsOnlyOnStructureOrLampChange(t *testing.T) {
 	v := lampTestWorld(20, 20)
 	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	levelAt(r, 5, 5)
 	gen := r.lit.grid.gen
 	same := v
 	same.Buildings = []game.BuildingView{lampBuilding(1, 5, 5), {ID: 2, Kind: "chair", X: 9, Y: 9, W: 1, H: 1}}
-	r.drawW = same
+	r.view.W = same
 	levelAt(r, 5, 5)
 	if r.lit.grid.gen != gen {
 		t.Fatal("a new building list with the same lamps rebuilt the light")
 	}
 	moved := v
 	moved.Buildings = []game.BuildingView{lampBuilding(1, 6, 5)}
-	r.drawW = moved
+	r.view.W = moved
 	if l := levelAt(r, 6, 5); l != 1 || r.lit.grid.gen == gen {
 		t.Fatalf("a moved lamp: level %v, generation kept %v", l, r.lit.grid.gen == gen)
 	}
@@ -295,7 +295,7 @@ func TestLightGridRebuildsOnlyOnStructureOrLampChange(t *testing.T) {
 	walled := moved
 	walled.RoomGrid = append([]int(nil), moved.RoomGrid...)
 	walled.RoomGrid[5*20+7] = -2
-	r.drawW = walled
+	r.view.W = walled
 	if l := levelAt(r, 8, 5); l != 0 || r.lit.grid.gen == gen {
 		t.Fatalf("a new wall: behind it %v, generation kept %v", l, r.lit.grid.gen == gen)
 	}
@@ -317,7 +317,7 @@ func TestLightsComeOnlyFromLightSources(t *testing.T) {
 	}
 
 	r := shadowRenderer(t, v)
-	r.drawW = v
+	r.view.W = v
 	r.lit.grid.sources = func(dst []lightSource, _ *game.WorldView, _ float64) []lightSource {
 		return append(dst, lightSource{ID: 9, X: 10, Y: 6, Radius: 6, Kind: lightLamp}) // where no lamp stands
 	}
@@ -364,7 +364,7 @@ func BenchmarkLightGridLamps(b *testing.B) {
 		v.Buildings = append(v.Buildings, lampBuilding(1+i, x+2, y+3), lampBuilding(100+i, x+20, y+20))
 	}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	const vw, vh = 96, 64 // tiles in view
 	read := func() {
 		for y := 0; y < vh; y++ {
@@ -402,7 +402,7 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 	}
 	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
 	r := New(&stubSim{w: w, h: h, world: v})
-	r.drawW = v
+	r.view.W = v
 	r.cam.offsetX, r.cam.offsetY = 0, 0
 	tile := r.tilePx()
 	r.drawBaked(ebiten.NewImage(64, 64), ebiten.NewImage(64, 64), 0, 0, 0, 0, 2, 0, 0, w-1, h-1)
@@ -490,7 +490,7 @@ func TestLampLevelContinuousAtSpriteFoot(t *testing.T) {
 	}
 	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
 	r := &Renderer{}
-	r.drawW = v
+	r.view.W = v
 	for _, c := range [][2]int{{5, 5}, {7, 5}, {8, 3}, {10, 6}} {
 		s0, l0 := r.lightTile(c[0], c[1])
 		if s1, l1 := r.lightFoot(float64(c[0]), float64(c[1])); s1 != s0 || l1 != l0 {

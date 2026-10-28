@@ -79,7 +79,7 @@ func cropDrawEach(r *Renderer, mw, mh int, tile float64, fn func(p *game.PlantVi
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
-	r.drawW = w
+	r.view.W = w
 	r.stepEnvironment(w, nil)
 	dst := ebiten.NewImage(sw, sh)
 	defer dst.Deallocate()

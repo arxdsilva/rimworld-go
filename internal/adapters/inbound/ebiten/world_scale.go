@@ -218,9 +218,9 @@ func (a *App) flushWorldOverlay(screen *ebiten.Image) {
 // cover a label there.
 func (a *App) fogHidesLabel(lx, ly float32) bool {
 	r := a.renderer
-	if r == nil || len(r.drawW.Fog) == 0 {
+	if r == nil || len(r.view.W.Fog) == 0 {
 		return false
 	}
 	tx, ty := r.TileAt(int(math.Floor(float64(lx)*a.mapScale())), int(math.Floor(float64(ly)*a.mapScale())))
-	return worldFogged(r.drawW, tx, ty)
+	return worldFogged(r.view.W, tx, ty)
 }

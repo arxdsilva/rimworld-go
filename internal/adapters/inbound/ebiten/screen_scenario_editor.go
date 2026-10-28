@@ -22,10 +22,6 @@ import (
 // validation panel. It edits a copy; Done hands the copy back to Choose
 // Scenario, Save writes it to the scenarios folder.
 
-func init() {
-	registerScreenUI(screenScenarioEditor, func(a *App, sw, sh int) { a.editorUI(sw, sh) })
-}
-
 // editorState is the open editor.
 type editorState struct {
 	def, orig scenario.Def

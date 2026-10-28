@@ -406,10 +406,10 @@ func TestOptionsRenderScaleRow(t *testing.T) {
 func TestRenderScaleFogHidesLabels(t *testing.T) {
 	a, _ := renderScaleColony(t, 2, 0.5)
 	r := a.renderer
-	r.drawW.TerrainW = 40
-	r.drawW.Fog = make([]uint8, 40*40)
+	r.view.W.TerrainW = 40
+	r.view.W.Fog = make([]uint8, 40*40)
 	tx, ty := r.TileAt(640, 360) // the screen's centre, in map pixels
-	r.drawW.Fog[ty*40+tx] = 1
+	r.view.W.Fog[ty*40+tx] = 1
 	if !a.fogHidesLabel(640, 360) || a.fogHidesLabel(10, 10) {
 		t.Fatal("fogHidesLabel does not read the tile under a logical point")
 	}

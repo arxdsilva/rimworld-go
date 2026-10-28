@@ -629,11 +629,11 @@ func (r *Renderer) sway(x, y int, amount float64) float64 {
 
 // drawWorkGlow flickers a warm glow over stoves that are cooking.
 func (r *Renderer) drawWorkGlow(screen *ebiten.Image, tile float64) {
-	for _, p := range r.drawPawns {
+	for _, p := range r.view.Pawns {
 		if p.Acting != "work at stove" {
 			continue
 		}
-		b, ok := buildingAt(r.drawW, p.ActX, p.ActY)
+		b, ok := buildingAt(r.view.W, p.ActX, p.ActY)
 		if !ok {
 			continue
 		}

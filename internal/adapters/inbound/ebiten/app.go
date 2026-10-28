@@ -98,7 +98,12 @@ type AppConfig struct {
 	// Hardware reads the machine's memory and cores (PLAY-019): the first
 	// start picks a graphics tier from it and small machines get a notice
 	// (nil: unknown, nothing detected).
-	Hardware func() sysinfo.Info
+	// Background is the window the run-in-background setting drives and
+	// Window the close hooks (saves.go); nil means the real Ebitengine
+	// window. Tests pass fakes here instead of swapping package state.
+	Background  bgWindow
+	WindowHooks windowHooks
+	Hardware    func() sysinfo.Info
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -120,6 +125,9 @@ type App struct {
 	ui  uiState
 	cfg AppConfig
 	nav nav
+	// sh is what the features see of the App: the ports roles and the
+	// screen and click tables, filled by NewApp (shell.go), never by init().
+	shell shell
 
 	// sw, sh are the logical screen size every layout and hit test reads;
 	// pw, ph the physical one (sw x scale.s). outW, outH are the window in
@@ -136,9 +144,8 @@ type App struct {
 	artTried   bool
 	art        *artCatalog
 	artWarn    string
-	// win is the window close hooks (saves.go), closeHandled what they
-	// were last told.
-	win          windowHooks
+	// closeHandled is what the window close hooks (cfg.WindowHooks,
+	// saves.go) were last told.
 	closeHandled bool
 	// treeFocus / treeSel are reused buffers for the see-through canopy
 	// focus (tree_focus.go).
@@ -273,9 +280,14 @@ func NewApp(cfg AppConfig) *App {
 	if cfg.Sound == nil {
 		cfg.Sound = noSound{}
 	}
+	if cfg.WindowHooks == nil {
+		cfg.WindowHooks = ebitenWindow{}
+	}
+	if cfg.Background == nil {
+		cfg.Background = ebitenBG{}
+	}
 	a := &App{
 		cfg: cfg,
-		win: appWindow,
 		now: time.Now,
 		nav: newNav(),
 		sw:  DefaultWindowWidth,
@@ -284,6 +296,7 @@ func NewApp(cfg AppConfig) *App {
 		scale:  unitUIScale,
 		devRaw: 1,
 	}
+	a.shell = newShell(a)
 	a.loadSettings()
 	a.applySettings()
 	return a
@@ -524,148 +537,19 @@ func (a *App) finishBoot() {
 	a.nav.reset(frame{screen: screenMainMenu})
 }
 
+// applyClick runs a clicked id: the widget kit first, then the first
+// route whose id or prefix matches (click_routes.go), else the screen
+// intent the id names.
 func (a *App) applyClick(id string) {
 	if a.uiClick(id) { // widget kit ids (ui_state.go)
 		return
 	}
-	switch {
-	case id == roofButtonID:
-		a.renderer.toggleRoofOverlayIfAny()
-	case id == homeButtonID:
-		a.renderer.toggleHomeOverlayIfAny()
-	case id == homeAutoButtonID:
-		a.toggleHomeAuto() // home_auto_ui.go
-	case id == planButtonID:
-		a.renderer.togglePlanOverlayIfAny()
-	case id == roomsButtonID:
-		a.rooms = !a.rooms
-	case strings.HasPrefix(id, "letter."):
-		a.applyLetterClick(id) // hud_right.go
-	case strings.HasPrefix(id, "speed."):
-		a.applySpeedClick(id) // hud_global.go
-	case strings.HasPrefix(id, "learn."):
-		a.applyLearnClick(id) // learn_ui.go
-	case strings.HasPrefix(id, "res."):
-		a.applyResourceClick(id) // hud_resources.go
-	case strings.HasPrefix(id, "cmd."):
-		a.applyCommandClick(id) // hud_commands.go
-	case strings.HasPrefix(id, "win."):
-		a.applyWindowClick(id) // hud_window.go
-	case id == "tab.wildlife":
-		a.toggleWildlifeTab() // hud_window.go
-	case strings.HasPrefix(id, "group."):
-		a.applyGroupClick(id) // multiselect.go
-	case strings.HasPrefix(id, "search."):
-		a.applySearchClick(id) // search_ui.go
-	case strings.HasPrefix(id, "dev."):
-		a.applyDevClick(id) // devmode.go
-	case strings.HasPrefix(id, "bar.pawn."):
-		n, err := strconv.ParseUint(strings.TrimPrefix(id, "bar.pawn."), 10, 64)
-		if err == nil && a.renderer != nil {
-			if a.in.shift() { // Shift+click on the bar adds or removes
-				a.toggleInSet(selCand{selPawn, entity.EntityID(n)})
-				break
-			}
-			pid := entity.EntityID(n)
-			a.selectCand(selCand{selPawn, pid}) // clears every other selection
-			if a.barDoubleClick(pid) {
-				a.centreOnPawn(pid)
-			}
+	for _, rt := range a.shell.routes {
+		if rt.matches(id) && rt.run(a, id) {
+			return
 		}
-	case strings.HasPrefix(id, "research.pick."):
-		a.pickResearch(id)
-	case strings.HasPrefix(id, "animals."):
-		a.applyAnimalsTab(id)
-	case id == "tab.work", id == "tab.schedule", id == "tab.research", id == "tab.animals":
-		mode := strings.TrimPrefix(id, "tab.")
-		if a.workOpen && a.panelMode == mode {
-			a.workOpen = false
-		} else {
-			a.workOpen, a.panelMode = true, mode
-			a.closeArchitect()
-			a.closeFloat()
-		}
-	case strings.HasPrefix(id, "sched.brush."):
-		if v, err := strconv.Atoi(strings.TrimPrefix(id, "sched.brush.")); err == nil {
-			a.schedBrush = schedule.Activity(v)
-		}
-	case strings.HasPrefix(id, "sched.cell."):
-		a.paintSchedule(id)
-	case id == "tab.architect":
-		if a.archOpen {
-			a.closeArchitect()
-		} else {
-			a.openArchitect()
-		}
-	case strings.HasPrefix(id, "arch.cat."):
-		a.selectArchCategory(strings.TrimPrefix(id, "arch.cat."))
-	case strings.HasPrefix(id, "arch.stuff."):
-		a.archStuff = strings.TrimPrefix(id, "arch.stuff.")
-	case strings.HasPrefix(id, "arch.crop."):
-		a.archCrop = strings.TrimPrefix(id, "arch.crop.")
-	case strings.HasPrefix(id, "arch.tool."):
-		a.selectArchTool(strings.TrimPrefix(id, "arch.tool."))
-	case strings.HasPrefix(id, "float."):
-		a.chooseFloat(id)
-	case strings.HasPrefix(id, "load.slot."):
-		if i, err := strconv.Atoi(strings.TrimPrefix(id, "load.slot.")); err == nil {
-			a.loadSlot(i)
-		}
-	case id == "pause.savequit": // commitment: Save & Quit to Menu (saves.go)
-		a.apply(intent{kind: intentReturnToMenu})
-	case id == "pause.save":
-		a.saveNow(a.saveSlot)
-		a.apply(intent{kind: intentResume})
-	case id == "pause.load", id == "menu.load":
-		a.refreshSlots()
-		a.apply(intent{kind: intentPush, screen: screenLoad})
-	case id == "menu.continue":
-		a.refreshSlots()
-		if i := a.newestSlot(); i >= 0 { // the most recent save, commitment ones too
-			a.loadSlot(i)
-		}
-	case id == "pawn.draft":
-		a.toggleDraft()
-	case id == "pawn.clearorders":
-		if p, ok := a.selectedPawn(); ok {
-			a.renderer.enqueue(command.Command{Kind: command.ClearOrders, Pawn: uint64(p.ID)})
-		}
-	case strings.HasPrefix(id, "animal."):
-		a.applyAnimalClick(id)
-	case strings.HasPrefix(id, "plant."):
-		a.applyPlantClick(id) // plant_inspector.go
-	case strings.HasPrefix(id, "item."):
-		a.applyItemClick(id) // item_inspector.go
-	case strings.HasPrefix(id, "frame."):
-		a.applyFrameClick(id) // frame_inspector.go
-	case strings.HasPrefix(id, "zone."):
-		a.applyZoneClick(id) // zone_select.go
-	case strings.HasPrefix(id, "msg."):
-		a.focusMessage(id)
-	case strings.HasPrefix(id, "alert."):
-		a.focusAlert(id)
-	case strings.HasPrefix(id, "bldg.") || strings.HasPrefix(id, "bill."):
-		a.applyBuildingClick(id)
-	case strings.HasPrefix(id, "work.cell."):
-		a.toggleWorkCell(id)
-	case id == "tab.menu":
-		a.apply(intent{kind: intentPause})
-	case strings.HasPrefix(id, "options.") && id != "options.back":
-		a.applyOption(id)
-	case id == "menu.options" || id == "pause.options":
-		a.optionsTab = "" // always open on the first tab
-		a.rebind = rebindState{}
-		a.apply(a.clickIntent(id))
-	case id == "inspector.close":
-		if a.renderer != nil {
-			a.renderer.ClearSelect()
-		}
-	case strings.HasPrefix(id, "inspector."):
-		a.selectPaneTab(id) // hud_inspect.go: open (or collapse) a tab
-	case a.applyWizardClick(id):
-	default:
-		a.apply(a.clickIntent(id))
 	}
+	a.apply(a.clickIntent(id))
 }
 
 func (a *App) clickIntent(id string) intent {

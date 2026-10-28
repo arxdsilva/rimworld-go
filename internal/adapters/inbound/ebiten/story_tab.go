@@ -17,10 +17,6 @@ import (
 // out as the typed commands SetStoryteller and SetDifficulty. The tab exists
 // only while a colony is running.
 
-func init() {
-	registerScreenUI(screenOptions, func(a *App, sw, sh int) { a.optionsUI(sw, sh) })
-}
-
 const (
 	stColLeftW  = 330
 	stColMidW   = 400

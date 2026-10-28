@@ -62,7 +62,7 @@ func TestLightingOffDrawsPlainWithoutPairs(t *testing.T) {
 	art := &artCatalog{}
 	sprite := normalSprite(art)
 	r := &Renderer{art: art}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
 	r.lit.off = true
@@ -93,7 +93,7 @@ func TestLightingOffBloodyFigureStillShades(t *testing.T) {
 	art := &artCatalog{}
 	sprite := normalSprite(art)
 	r := &Renderer{art: art}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	r.lit.off = true
 	r.figureBlood = 1.5
@@ -219,7 +219,7 @@ func TestLitPairsStayBounded(t *testing.T) {
 	t.Parallel()
 	art := &artCatalog{}
 	r := &Renderer{art: art}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
 	n := litPairsMin + 60
@@ -247,7 +247,7 @@ func TestLitPairsStayBounded(t *testing.T) {
 
 func waterRendererFixture() *Renderer {
 	r := &Renderer{}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	r.art = &artCatalog{sprites: map[string]*artSprite{}}
 	for v := 0; v < soilVariants; v++ {

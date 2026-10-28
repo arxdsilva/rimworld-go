@@ -35,7 +35,7 @@ func turretRenderer(t *testing.T, b game.BuildingView) (*Renderer, *[]string) {
 }
 
 func drawOne(r *Renderer) {
-	r.drawBuildingObj(ebiten.NewImage(640, 400), &r.drawW.Buildings[0], r.tilePx(), 640, 400)
+	r.drawBuildingObj(ebiten.NewImage(640, 400), &r.view.W.Buildings[0], r.tilePx(), 640, 400)
 }
 
 func TestTurretDrawAimFrame(t *testing.T) {

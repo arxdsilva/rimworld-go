@@ -12,6 +12,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -191,8 +192,8 @@ type Renderer struct {
 	// onEnqueue, when set, sees every command the player sends (PLAY-018:
 	// the learning helper marks lessons done from the player's own orders).
 	onEnqueue  func(command.Command)
-	layerTrace func(string) // test hook: ground layers in draw order
-	treeFx     treeFx       // see-through tree canopies (tree_fade.go)
+	view       render.View // this frame's context for the draw layers (render/view.go)
+	treeFx     treeFx      // see-through tree canopies (tree_fade.go)
 	game       Simulation
 	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
 	zoneBatch  triBatch             // zones_draw.go: every zone outline of a frame, one draw
@@ -221,13 +222,11 @@ type Renderer struct {
 	viewCached bool
 	split      pawnSplit
 	itemsInit  bool
-	drawW      game.WorldView  // world for the frame being drawn
-	drawPawns  []game.PawnView // pawns for the frame being drawn
-	mo         motionState     // per-creature motion and the animT clock (motion.go)
-	anims      *animState      // body-animation bookkeeping (anim.go)
-	smooth     camSmooth       // eased pan and zoom (camera_smooth.go)
-	env        envState        // wind, contact springs and weather (environment.go)
-	lit        litRenderer     // sun, moon and lamp lighting (light.go)
+	mo         motionState // per-creature motion and the animT clock (motion.go)
+	anims      *animState  // body-animation bookkeeping (anim.go)
+	smooth     camSmooth   // eased pan and zoom (camera_smooth.go)
+	env        envState    // wind, contact springs and weather (environment.go)
+	lit        litRenderer // sun, moon and lamp lighting (light.go)
 	// cast, while set, turns world sprite draws into shadow silhouettes
 	// (shadow_cast.go).
 	cast *shadowCast
@@ -583,11 +582,22 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
+	// this frame's context for the draw layers (render.View); drawArt adds
+	// the world and pawns it reads
+	v := &r.view
+	v.SW, v.SH, v.Tile = sw, sh, tile
+	v.Zoom, v.Dev = r.cam.zoom, r.cam.dev
+	v.MapW, v.MapH = r.game.Width(), r.game.Height()
+	v.Tick = r.game.Tick()
+	v.Present, v.AnimT, v.Alpha = r.present, r.animT(), r.mo.alpha
+	v.Paused = r.speed == speedPaused
+	v.Fx, v.ReducedMotion, v.ReducedFlashing, v.Cached = r.fx, r.reducedMotion, r.reducedFlashing, r.viewCached
+	v.Selected, v.HasSelect = r.selected, r.hasSelect
 
 	if r.art != nil {
 		r.drawArt(screen, sw, sh, tile) // lit by light.go: no veil
-		r.drawRoofOverlay(screen, r.drawW, sw, sh, tile)
-		r.drawPowerOverlay(screen, &r.drawW, sw, sh, tile) // power_overlay.go (PLAY-021)
+		r.drawRoofOverlay(screen, r.view.W, sw, sh, tile)
+		r.drawPowerOverlay(screen, &r.view.W, sw, sh, tile) // power_overlay.go (PLAY-021)
 		r.drawTraces(screen, r.game.World(), tile)
 		return
 	}

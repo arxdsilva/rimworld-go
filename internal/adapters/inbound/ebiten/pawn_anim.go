@@ -106,13 +106,13 @@ func (r *Renderer) poseFacing(p game.PawnView, m moveState) facing {
 	if m.Blend >= minBlend {
 		return f
 	}
-	if tf, ok := targetFacing(p, r.drawPawns, r.drawW.Animals, f); ok {
+	if tf, ok := targetFacing(p, r.view.Pawns, r.view.W.Animals, f); ok {
 		return tf
 	}
 	if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
 		return facingFor(p.ActX-p.X, p.ActY-p.Y, f)
 	}
-	return blockedFacing(p, r.drawPawns, r.drawW.Animals, f)
+	return blockedFacing(p, r.view.Pawns, r.view.W.Animals, f)
 }
 
 // actionPose is one action layer's contribution to an upright pawn (ART
@@ -271,7 +271,7 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 
 // drawCarriedBy draws the patients rescuer p carries.
 func (r *Renderer) drawCarriedBy(dst *ebiten.Image, p game.PawnView, fp pawnFigurePose, wx, wy, tile float64) {
-	for _, q := range r.drawPawns {
+	for _, q := range r.view.Pawns {
 		if q.CarriedBy != 0 && q.CarriedBy == p.ID {
 			r.drawCarried(dst, q, fp.face, wx+fp.ps.dx, wy+fp.ps.dy, tile)
 		}
@@ -318,7 +318,7 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 		if r.cast != nil {
 			return // the bed casts the shadow
 		}
-		if b, ok := bedUnder(r.drawW, p.X, p.Y); ok {
+		if b, ok := bedUnder(r.view.W, p.X, p.Y); ok {
 			r.drawInBed(screen, p, b, vis.lyingSince, tile, cs)
 			return
 		}

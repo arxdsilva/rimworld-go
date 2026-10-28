@@ -31,6 +31,7 @@ type hudStates struct {
 	win   windowState    // hud_window.go
 	learn learnState     // learn_ui.go
 	arch  archState      // cmds_arch.go
+	lay   hudMemo        // hud(): the last layout for the same inputs
 }
 
 // hud is this frame's HUD layout. The state comes from each region's
@@ -54,7 +55,22 @@ func (a *App) hud() hudLayout {
 	st.ExpandedW, st.ExpandedH = a.expandedWant()
 	st.WindowW, st.WindowH = a.windowWant()
 	st.PerfW, st.PerfH = a.perfBox()
-	return computeHUDLayout(sw, sh, st)
+	if m := &a.hst.lay; m.ok && m.sw == sw && m.sh == sh && m.st == st {
+		return m.lay
+	}
+	lay := computeHUDLayout(sw, sh, st)
+	a.hst.lay = hudMemo{sw: sw, sh: sh, st: st, lay: lay, ok: true}
+	return lay
+}
+
+// hudMemo is the last layout hud() computed and the inputs it came from:
+// the same inputs give the same layout, so the regions that ask for it
+// several times per frame pay for one computation (ARCH-002).
+type hudMemo struct {
+	sw, sh int
+	st     hudState
+	lay    hudLayout
+	ok     bool
 }
 
 func (a *App) colonyButtons(sw, sh int) []button {

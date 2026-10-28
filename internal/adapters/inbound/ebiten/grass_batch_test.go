@@ -70,7 +70,7 @@ func batchAt(r *Renderer, mw, mh int, tile float64, limit int) int {
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
-	r.drawW = w
+	r.view.W = w
 	r.stepEnvironment(w, nil)
 	r.drawGrassBatch(ebiten.NewImage(max(sw, 1), max(sh, 1)), &w, 0, 0, mw-1, mh-1, tile, sw, sh, limit)
 	return r.lod.grass.quads
@@ -397,7 +397,7 @@ func BenchmarkGrassBatch(b *testing.B) {
 	frame := func() {
 		r.present++
 		r.setView(sw, sh, 64)
-		r.drawW = w
+		r.view.W = w
 		r.stepEnvironment(w, nil)
 		x0, y0, x1, y1 := r.visibleTiles()
 		r.drawGrassBatch(screen, &w, x0, y0, x1, y1, 64, sw, sh, 9)

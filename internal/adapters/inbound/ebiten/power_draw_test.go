@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"strconv"
 	"strings"
 	"testing"
@@ -343,7 +344,7 @@ func pdRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]string) {
 	t.Helper()
 	r := New(&stubSim{w: 20, h: 12, world: w})
 	r.art = pdArt()
-	r.drawW = w
+	r.view.W = w
 	r.links.sync(w, 20, 12)
 	cv := game.ChunkView{}
 	for i := range w.Buildings {
@@ -791,7 +792,7 @@ func TestPowerPassesInTheFrame(t *testing.T) {
 	w.Frames = []game.FrameView{{ID: 60, Kind: conduitKind, X: 2, Y: 0, W: 1, H: 1}}
 	r, got := pdRenderer(t, w)
 	var order []string
-	r.layerTrace = func(n string) { order = append(order, n) }
+	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	conduitDraws := 0
 	r.lit.onDraw = func(img *ebiten.Image, _ float32) {
 		if strings.HasPrefix(keyOf(r.art, img), "power/power_conduit_") {

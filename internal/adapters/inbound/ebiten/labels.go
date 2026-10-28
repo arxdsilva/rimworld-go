@@ -78,7 +78,7 @@ func interactionRecent(p game.PawnView, now clock.Tick) bool {
 // (PLAY-020); without art it is a small dark disc with three dots.
 func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 	now := r.game.Tick()
-	for _, p := range r.drawPawns {
+	for _, p := range r.view.Pawns {
 		if p.SocialFight {
 			wx, wy := r.interpWorld(p)
 			r.drawFightMarker(screen, wx, wy, tile)
@@ -137,7 +137,7 @@ func (r *Renderer) drawFightMarker(screen *ebiten.Image, wx, wy, tile float64) {
 // drawBreakClouds floats a small dark storm cloud over colonists having a
 // mental break.
 func (r *Renderer) drawBreakClouds(screen *ebiten.Image, tile float64) {
-	for _, p := range r.drawPawns {
+	for _, p := range r.view.Pawns {
 		if p.MentalBreak == "" {
 			continue
 		}

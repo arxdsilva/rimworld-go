@@ -17,10 +17,6 @@ import (
 // the team's strengths and gaps. The candidates come from the application's
 // game.CandidatePool; this screen keeps only what is being typed.
 
-func init() {
-	registerScreenUI(screenPawns, func(a *App, sw, sh int) { a.pawnsUI(sw, sh) })
-}
-
 // candidatePool is the consumer-owned view of game.CandidatePool, so the
 // screen's tests can run on a stand-in.
 type candidatePool interface {

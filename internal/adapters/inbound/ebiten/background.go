@@ -38,11 +38,6 @@ type ebitenBG struct{}
 func (ebitenBG) SetRunnableOnUnfocused(on bool) { ebiten.SetRunnableOnUnfocused(on) }
 func (ebitenBG) SetVsyncEnabled(on bool)        { ebiten.SetVsyncEnabled(on) }
 
-// appBackground is the window a new App drives (tests swap fields on the
-// App instead). It is only touched when the option is on, so a default
-// App never calls Ebitengine.
-var appBackground bgWindow = ebitenBG{}
-
 // bgState is the App's background bookkeeping.
 type bgState struct {
 	win   bgWindow
@@ -63,7 +58,7 @@ type bgState struct {
 
 func (a *App) bgWin() bgWindow {
 	if a.bg.win == nil {
-		a.bg.win = appBackground
+		a.bg.win = a.cfg.Background
 	}
 	return a.bg.win
 }

@@ -95,9 +95,9 @@ func recoilPush(shotAge int) float64 {
 
 // buildingByID finds a drawn building by id (traces name a turret by it).
 func (r *Renderer) buildingByID(id entity.EntityID) (*game.BuildingView, bool) {
-	for i := range r.drawW.Buildings {
-		if r.drawW.Buildings[i].ID == id {
-			return &r.drawW.Buildings[i], true
+	for i := range r.view.W.Buildings {
+		if r.view.W.Buildings[i].ID == id {
+			return &r.view.W.Buildings[i], true
 		}
 	}
 	return nil, false

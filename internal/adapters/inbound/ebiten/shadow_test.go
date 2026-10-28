@@ -286,8 +286,8 @@ func TestShadowsClippedAtRoofedTiles(t *testing.T) {
 	w.Plants = []game.PlantView{{Species: "tree", X: 9, Y: 2, Growth: 60}}
 	w.Items = []game.ItemView{{Kind: "wood", X: 10, Y: 3}}
 	w.Animals = []game.AnimalView{{ID: 7, Species: "dustbuck", X: 12, Y: 4}}
-	r.drawPawns = []game.PawnView{{ID: 1, X: 11, Y: 3}}
-	if n := len(r.shadowCasters(w, r.drawPawns)); n != 3 {
+	r.view.Pawns = []game.PawnView{{ID: 1, X: 11, Y: 3}}
+	if n := len(r.shadowCasters(w, r.view.Pawns)); n != 3 {
 		t.Fatalf("got %d box and blob casters, want 3", n)
 	}
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())

@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -68,15 +69,14 @@ type markTrace struct {
 	a, b, c, d float32
 }
 
-// traceMarks records the marks drawAnimalOverlays draws in the world pass.
-// Not for parallel tests.
-func traceMarks(t *testing.T) *[]markTrace {
+// traceMarks records the marks r's drawAnimalOverlays draws in the world pass.
+func traceMarks(t *testing.T, r *Renderer) *[]markTrace {
 	t.Helper()
 	var got []markTrace
-	animalMarkTrace = func(kind string, a, b, c, d float32) {
+	r.view.Trace = &render.Trace{AnimalMark: func(kind string, a, b, c, d float32) {
 		got = append(got, markTrace{kind, a, b, c, d})
-	}
-	t.Cleanup(func() { animalMarkTrace = nil })
+	}}
+	t.Cleanup(func() { r.view.Trace = nil })
 	return &got
 }
 
@@ -111,8 +111,8 @@ func chaseWorld() (game.WorldView, []game.PawnView) {
 func TestHostileAnimalsGetAMarkAndOnlyChasersGetALine(t *testing.T) {
 	r := New(&stubSim{w: 32, h: 32})
 	w, pawns := chaseWorld()
-	r.drawPawns, r.drawW = pawns, w
-	marks := traceMarks(t)
+	r.view.Pawns, r.view.W = pawns, w
+	marks := traceMarks(t, r)
 	r.drawAnimalOverlays(ebiten.NewImage(1024, 768), w, 64, 1024, 768)
 
 	// a red marker on every hostile animal (wolf, boar, manhunting deer)
@@ -149,14 +149,14 @@ func TestHostileAnimalsGetAMarkAndOnlyChasersGetALine(t *testing.T) {
 func TestChaseLineEndsAtTheDrawnPositions(t *testing.T) {
 	r := New(&stubSim{w: 32, h: 32})
 	w, pawns := chaseWorld()
-	r.drawPawns, r.drawW = pawns, w
+	r.view.Pawns, r.view.W = pawns, w
 	// both creatures are drawn off the tile the read model reports (as
 	// mid-step): the line follows what is drawn
 	r.mo.tracks = map[entity.EntityID]*moTrack{
 		10: {x: 8, y: 5},
 		1:  {x: 6, y: 6},
 	}
-	marks := traceMarks(t)
+	marks := traceMarks(t, r)
 	r.drawAnimalOverlays(ebiten.NewImage(1024, 768), w, 64, 1024, 768)
 	lines := ofKind(*marks, "chase-line")
 	if len(lines) != 1 {
@@ -172,19 +172,19 @@ func TestChaseLineEndsAtTheDrawnPositions(t *testing.T) {
 func TestChaseLineSkippedOffScreenAndWithoutATarget(t *testing.T) {
 	r := New(&stubSim{w: 64, h: 64})
 	w, pawns := chaseWorld()
-	r.drawW = w
-	marks := traceMarks(t)
+	r.view.W = w
+	marks := traceMarks(t, r)
 	img := ebiten.NewImage(1024, 768)
 
 	// the target is not a pawn we can see: no line
-	r.drawPawns = nil
+	r.view.Pawns = nil
 	r.drawAnimalOverlays(img, w, 64, 1024, 768)
 	if n := len(ofKind(*marks, "chase-line")); n != 0 {
 		t.Fatalf("%d lines to a missing target", n)
 	}
 
 	// both ends far outside the view: culled
-	r.drawPawns = pawns
+	r.view.Pawns = pawns
 	r.lod.viewSet = true
 	r.lod.vx0, r.lod.vy0, r.lod.vx1, r.lod.vy1 = 40, 40, 60, 60
 	*marks = nil
@@ -196,7 +196,7 @@ func TestChaseLineSkippedOffScreenAndWithoutATarget(t *testing.T) {
 	// the colonist is in view though the wolf is not: the line is drawn
 	r.lod.vx0, r.lod.vy0, r.lod.vx1, r.lod.vy1 = 0, 0, 7, 10
 	w.Animals[0].X = 16
-	r.drawW = w
+	r.view.W = w
 	*marks = nil
 	r.drawAnimalOverlays(img, w, 64, 1024, 768)
 	if n := len(ofKind(*marks, "chase-line")); n != 1 {
@@ -213,8 +213,8 @@ func TestTameNameSitsUnderItsAnimalAtScale(t *testing.T) {
 			r := New(&stubSim{w: 32, h: 32})
 			an := game.AnimalView{ID: 3, Species: "cow", Label: "cow", Tame: true, Name: "Bessie", Size: 1.2, Health: 100, X: 5, Y: 6}
 			w := game.WorldView{Animals: []game.AnimalView{an}}
-			r.drawW = w
-			marks := traceMarks(t)
+			r.view.W = w
+			marks := traceMarks(t, r)
 			draw := func() ([]markTrace, []markTrace) {
 				*marks = nil
 				r.drawAnimalOverlays(ebiten.NewImage(1024, 768), w, 64, 1024, 768)
@@ -268,7 +268,7 @@ func TestTameNameHiddenWhenZoomedOutOrUnnamed(t *testing.T) {
 		{ID: 4, Species: "cow", Tame: true, Size: 1.2, Health: 100, X: 7, Y: 6},
 		{ID: 5, Species: "cow", Name: "Wild", Size: 1.2, Health: 100, X: 9, Y: 6},
 	}}
-	marks := traceMarks(t)
+	marks := traceMarks(t, r)
 	r.drawAnimalOverlays(ebiten.NewImage(1024, 768), w, 64, 1024, 768)
 	if n := len(ofKind(*marks, "name-plate")); n != 1 {
 		t.Fatalf("%d name plates, want only the named tame animal's", n)

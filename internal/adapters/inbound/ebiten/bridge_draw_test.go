@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -129,7 +130,7 @@ func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	w := bridgeWorld(8, 8, terrain.DeepWater, [2]int{3, 3})
 	r.lod.views = []game.ChunkView{{Buildings: []int32{0}}}
 	var order []string
-	r.layerTrace = func(n string) { order = append(order, n) }
+	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	tile := r.tilePx()
 	screen := ebiten.NewImage(320, 320)
 	r.drawFoundation(screen, w, 320, 320, tile)

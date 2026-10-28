@@ -168,7 +168,7 @@ func TestWaterShaderCompiles(t *testing.T) {
 	}
 	// draw a water tile through it: compiles on this backend and runs
 	r := &Renderer{}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	r.present = 90
 	img := ebiten.NewImage(16, 16)

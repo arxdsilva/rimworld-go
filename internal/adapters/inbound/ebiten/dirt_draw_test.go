@@ -3,6 +3,7 @@ package ebiten
 import (
 	"bytes"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"strings"
 	"testing"
 
@@ -142,7 +143,7 @@ func TestOffscreenDirtSkipped(t *testing.T) {
 		{X: 3, Y: 40, Amount: 1},
 		{X: 4, Y: 4, Amount: 0}, // cleaned
 	}}
-	r.drawW = w
+	r.view.W = w
 	var b stainBatch
 	if n := r.buildDirt(&b, w, 320, 320, tile); n != 2 || len(b.verts) != 8 || len(b.idx) != 12 {
 		t.Fatalf("on screen: %d quads, %d verts, %d indices", n, len(b.verts), len(b.idx))
@@ -162,7 +163,7 @@ func TestDirtLitByTheirTile(t *testing.T) {
 	r := stainRenderer()
 	w := roomWorld()
 	w.Dirt = []game.DirtView{{X: 0, Y: 0, Amount: 0.5}}
-	r.drawW = w
+	r.view.W = w
 	var b stainBatch
 	r.buildDirt(&b, w, 320, 320, r.tilePx())
 	sky, lamp := r.lightTile(0, 0)
@@ -177,12 +178,12 @@ func TestDirtDrawOrder(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
 	var order []string
-	r.layerTrace = func(n string) { order = append(order, n) }
+	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	w := game.WorldView{
 		Dirt:   []game.DirtView{{X: 2, Y: 2, Amount: 0.5}},
 		Stains: []game.StainView{{X: 2, Y: 2, Kind: "blood", Amount: 0.5}},
 	}
-	r.drawW = w
+	r.view.W = w
 	r.drawFloorLayers(ebiten.NewImage(320, 320), w, 320, 320, r.tilePx())
 	if got := strings.Join(order, ","); got != "floors,dirt,stains" {
 		t.Fatalf("layer order = %s, want floors,dirt,stains", got)
@@ -293,14 +294,14 @@ func BenchmarkDrawDirt(b *testing.B) {
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	r.setView(1280, 800, tile)
-	r.drawW = r.game.World()
+	r.view.W = r.game.World()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	for i := 0; i < 5; i++ {
-		r.drawDirt(screen, r.drawW, 1280, 800, tile)
+		r.drawDirt(screen, r.view.W, 1280, 800, tile)
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r.drawDirt(screen, r.drawW, 1280, 800, tile)
+		r.drawDirt(screen, r.view.W, 1280, 800, tile)
 	}
 }

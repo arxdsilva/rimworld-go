@@ -381,7 +381,7 @@ func TestCastModeRoutesAllFigureDraws(t *testing.T) {
 	shooter := game.PawnView{ID: 1, X: 2, Y: 2, Weapon: "rifle", Drafted: true, Hostile: true}
 	r := New(&stubSim{w: 16, h: 16, tick: 100})
 	r.art = figureArt()
-	r.drawPawns = []game.PawnView{shooter}
+	r.view.Pawns = []game.PawnView{shooter}
 	got := castAll(r, shooter)
 	hair := "pawn/hair_" + look.HairStyles[shooter.Look.HairStyle] + "_south"
 	for _, k := range []string{"pawn/body_south", "pawn/pants_basic_south", "pawn/shirt_basic_south", hair, "weapon/rifle_basic"} {
@@ -397,14 +397,14 @@ func TestCastModeRoutesAllFigureDraws(t *testing.T) {
 	}
 	// a hauler's load is part of its silhouette
 	hauler := game.PawnView{ID: 2, X: 2, Y: 2, Carrying: "wood"}
-	r.drawPawns = []game.PawnView{hauler}
+	r.view.Pawns = []game.PawnView{hauler}
 	if got := castAll(r, hauler); got["item/wood_pile"] != 1 || got["pawn/body_south"] != 1 {
 		t.Fatalf("hauler cast %v", got)
 	}
 	// a rescuer's patient is too
 	rescuer := game.PawnView{ID: 3, X: 2, Y: 2, Carrying: "pawn"}
 	patient := game.PawnView{ID: 4, X: 2, Y: 2, CarriedBy: 3}
-	r.drawPawns = []game.PawnView{rescuer, patient}
+	r.view.Pawns = []game.PawnView{rescuer, patient}
 	if got := castAll(r, rescuer); got["pawn/body_south"] != 2 {
 		t.Fatalf("rescuer and patient cast %v", got)
 	}
@@ -418,7 +418,7 @@ func TestFigureDrawIsPure(t *testing.T) {
 	r := New(&stubSim{w: 16, h: 16, tick: 100})
 	r.art = figureArt()
 	r.present = 100
-	r.drawPawns = []game.PawnView{rescuer, patient, downed}
+	r.view.Pawns = []game.PawnView{rescuer, patient, downed}
 	r.last[5] = pawnVisual{facing: faceEast, lyingSince: 90}
 	st := r.animState()
 	st.prevStride[3] = 0.25
@@ -447,8 +447,8 @@ func TestFigureDrawIsPure(t *testing.T) {
 	}
 	// pawns in bed cast nothing; the figure draws no extras (markers, icons)
 	sleeper := game.PawnView{ID: 6, X: 8, Y: 8, Lying: true, InBed: true, Status: "alive"}
-	r.drawW.Buildings = []game.BuildingView{{ID: 1, Kind: "bed", X: 8, Y: 8, W: 1, H: 2}}
-	r.drawPawns = []game.PawnView{sleeper}
+	r.view.W.Buildings = []game.BuildingView{{ID: 1, Kind: "bed", X: 8, Y: 8, W: 1, H: 2}}
+	r.view.Pawns = []game.PawnView{sleeper}
 	if got := castAll(r, sleeper); len(got) != 0 {
 		t.Fatalf("a pawn in bed cast %v", got)
 	}
@@ -474,7 +474,7 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 		{ID: 4, Kind: "lamp", Glow: true, GlowRadius: 6, X: 10, Y: 9, W: 1, H: 1}, // room 2
 	}
 	r := shadowRenderer(t, w)
-	r.drawW = w
+	r.view.W = w
 	// PLAY-020 §3b, PLAY-021: every lamp that glows (powered) is a light,
 	// not only those in a room the sim calls lit; the banked campfire is out.
 	got := r.pointLights()
@@ -495,8 +495,8 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 		}
 		w.RoofCells[i] = roofBuilt
 	}
-	r.drawW = w
-	r.drawPawns = []game.PawnView{{ID: 1, X: 3, Y: 8}, {ID: 2, X: 9, Y: 3}}
+	r.view.W = w
+	r.view.Pawns = []game.PawnView{{ID: 1, X: 3, Y: 8}, {ID: 2, X: 9, Y: 3}}
 	r.lit.light = lightAt(23, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
 	// pawn 1: the moon and the fire; pawn 2: the lamp only
@@ -523,8 +523,8 @@ func castsAt(t *testing.T, w game.WorldView, hour float64, pawns ...game.PawnVie
 	t.Helper()
 	r := shadowRenderer(t, w)
 	r.art = figureArt()
-	r.drawW = w
-	r.drawPawns = pawns
+	r.view.W = w
+	r.view.Pawns = pawns
 	r.lit.light = lightAt(hour, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
 	return r.env.shadow.casts

@@ -47,7 +47,7 @@ const (
 	objItem                     // w.Items[i]
 	objForbidden                // the forbidden mark over w.Items[i]
 	objAnimal                   // w.Animals[i] at (wx, wy)
-	objPawn                     // r.drawPawns[i] at (wx, wy)
+	objPawn                     // r.view.Pawns[i] at (wx, wy)
 )
 
 // sortDraws orders draws north to south, then west to east, keeping the
@@ -172,7 +172,7 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 	}
 	var p map[[2]int]linkFlag
 	if r.art != nil && link.flags != 0 { // ghosts join built walls, rock, frames and each other
-		w := r.drawW
+		w := r.view.W
 		if w.TerrainW == 0 {
 			w = r.world()
 		}
@@ -262,15 +262,13 @@ func (r *Renderer) buildKey(kind, stuff, facing string, mask int, ew, open bool)
 
 // layer marks the start of a ground layer for the draw-order test.
 func (r *Renderer) layer(name string) {
-	if r.layerTrace != nil {
-		r.layerTrace(name)
-	}
+	r.view.LayerDrawn(name)
 }
 
 func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	w := r.game.World()
-	r.drawW, r.drawPawns = w, r.game.Snapshot()
+	r.view.W, r.view.Pawns = w, r.game.Snapshot() // this frame's world and pawns, for every layer
 	r.lit.light = lightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
 	r.setView(sw, sh, tile)
 	r.links.sync(w, r.game.Width(), r.game.Height()) // linkgrid.go: rebuilt only on StructVer
@@ -336,7 +334,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	l := &r.lod
 	l.occupied = resetCells(l.occupied)
 	l.creatures = resetCells(l.creatures)
-	for _, p := range r.drawPawns {
+	for _, p := range r.view.Pawns {
 		l.occupied[[2]int{p.X, p.Y}] = true
 		l.creatures[[2]int{p.X, p.Y}] = true
 	}
@@ -410,8 +408,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		wx, wy = creatureAt(wx, wy, tile, ct)
 		draws = append(draws, artDraw{row: wy + 0.01, col: wx, kind: objAnimal, i: int32(i), wx: wx, wy: wy})
 	}
-	for i := range r.drawPawns {
-		p := &r.drawPawns[i]
+	for i := range r.view.Pawns {
+		p := &r.view.Pawns[i]
 		if p.Embodied || !l.near(p.X, p.Y, 3, 4) {
 			continue // an embodied pawn's body is a corpse item now
 		}
@@ -442,8 +440,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		r.drawStackCounts(screen, w, tile)
 	}
 	r.drawBuildingDamage(screen, w, tile)
-	r.drawWorkProgress(screen, r.drawPawns, tile) // work_progress.go: bars over the work spots
-	r.drawNoPowerBadges(screen, &w, tile)         // power_draw.go
+	r.drawWorkProgress(screen, r.view.Pawns, tile) // work_progress.go: bars over the work spots
+	r.drawNoPowerBadges(screen, &w, tile)          // power_draw.go
 	r.drawChatBubbles(screen, tile)
 	r.drawBreakClouds(screen, tile)
 	r.drawOrderRoute(screen, tile)
@@ -487,7 +485,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 	r.drawAnimalOverlays(screen, w, tile, sw, sh)
 	if r.hasSelect {
-		for _, p := range r.drawPawns {
+		for _, p := range r.view.Pawns {
 			if p.ID == r.selected {
 				wx, wy := r.interpWorld(p)
 				wx, wy = creatureAt(wx, wy, tile, ct)
@@ -546,7 +544,7 @@ func (r *Renderer) runDraw(dst *ebiten.Image, w *game.WorldView, d *artDraw, til
 	case objAnimal:
 		r.drawAnimalFigure(dst, w.Animals[d.i], d.wx, d.wy, lodTile(tile))
 	case objPawn:
-		r.drawPawnArt(dst, r.drawPawns[d.i], d.wx, d.wy, lodTile(tile), sw, sh)
+		r.drawPawnArt(dst, r.view.Pawns[d.i], d.wx, d.wy, lodTile(tile), sw, sh)
 	}
 }
 

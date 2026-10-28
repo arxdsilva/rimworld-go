@@ -276,14 +276,13 @@ func TestEbitenInputBlurredNeedsFocusFirst(t *testing.T) {
 	}
 }
 
-// A new App drives the package's window (appBackground) until a test
-// swaps it. Not parallel: it replaces a package variable.
+// A new App drives the window its config names (AppConfig.Background;
+// the real one by default) the first time the setting needs it.
 func TestBackgroundUsesTheAppWindowByDefault(t *testing.T) {
+	t.Parallel()
 	w := &fakeBG{}
-	old := appBackground
-	appBackground = w
-	t.Cleanup(func() { appBackground = old })
 	a, _, f := inputColony(t, [2]int{5, 5})
+	a.cfg.Background, a.bg.win = w, nil
 	runInBackground(t, a, true)
 	f.frame(t, a)
 	if !slices.Equal(w.calls, []string{"runnable:true"}) {

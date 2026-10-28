@@ -64,15 +64,6 @@ func (r *Renderer) interpAnimal(an game.AnimalView) (float64, float64) {
 	return m.X, m.Y
 }
 
-// animalMarkTrace, when set (tests only, never in parallel), sees each mark
-// the animal overlays put in the world pass, in physical pixels:
-// "hostile-marker" (a, b: the animal's top-left), "mark-lift" (b: the
-// marker's height on screen, PLAY-022), "chase-line" (a, b the
-// animal's centre, c, d the target's), "name-plate" (a, b, c, d: x, y,
-// width, height) and "name-text" (a, b: the text's anchor, as handed to
-// worldText).
-var animalMarkTrace func(kind string, a, b, c, d float32)
-
 // drawAnimalOverlays draws hunt marks and health bars above animals, then
 // the sleepers' snores. The snores (vector strokes) go in a pass of their
 // own: a vector stroke between two sprite draws flushes the vector batch,
@@ -103,11 +94,11 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 		lift := markerLift(top)
 		switch {
 		case an.Hostile || an.Manhunter: // PLAY-017: every hostile animal, not only manhunters
-			if animalMarkTrace != nil {
+			if r.view.Tracing() {
 				sx, sy := r.worldToScreenF(wx, wy)
-				animalMarkTrace("hostile-marker", sx, sy, 0, 0)
+				r.view.MarkDrawn("hostile-marker", sx, sy, 0, 0)
 				_, my := r.worldToScreenF(wx, wy-lift)
-				animalMarkTrace("mark-lift", sx, my, 0, 0)
+				r.view.MarkDrawn("mark-lift", sx, my, 0, 0)
 			}
 			r.drawHostileMarker(screen, game.PawnView{}, wx, wy, lift, tile)
 		case an.Designated: // the icon (a half-size tile) centred where the chevron would be
@@ -154,7 +145,7 @@ func (r *Renderer) drawChaseLines(screen *ebiten.Image, w game.WorldView, tile f
 		if !an.Hostile || an.TargetID == 0 {
 			continue
 		}
-		p, ok := chasedPawn(r.drawPawns, an.TargetID) // chase_ui.go
+		p, ok := chasedPawn(r.view.Pawns, an.TargetID) // chase_ui.go
 		if !ok || (!r.lod.inView(an.X, an.Y, pad, padS) && !r.lod.inView(p.X, p.Y, 3, 4)) {
 			continue
 		}
@@ -162,8 +153,8 @@ func (r *Renderer) drawChaseLines(screen *ebiten.Image, w game.WorldView, tile f
 		px, py := r.interpWorld(p)
 		x0, y0 := r.worldToScreenF(ax+0.5, ay+0.5)
 		x1, y1 := r.worldToScreenF(px+0.5, py+0.5)
-		if animalMarkTrace != nil {
-			animalMarkTrace("chase-line", x0, y0, x1, y1)
+		if r.view.Tracing() {
+			r.view.MarkDrawn("chase-line", x0, y0, x1, y1)
 		}
 		dist := math.Hypot(float64(x1-x0), float64(y1-y0))
 		n := min(chaseMaxDots, max(1, int(math.Round(dist/(tile*chaseDotStep)))))
@@ -193,9 +184,9 @@ func (r *Renderer) drawAnimalName(screen *ebiten.Image, name string, wx, wy floa
 	sx, sy := r.worldToScreenF(wx, wy)
 	k := float32(uiScale())
 	pw, ph := (textW(name, tsSmall)+namePlatePad)*k, float32(namePlateH)*k
-	if animalMarkTrace != nil {
-		animalMarkTrace("name-plate", sx-pw/2, sy, pw, ph)
-		animalMarkTrace("name-text", sx, sy-nameTextRaise*k, 0, 0)
+	if r.view.Tracing() {
+		r.view.MarkDrawn("name-plate", sx-pw/2, sy, pw, ph)
+		r.view.MarkDrawn("name-text", sx, sy-nameTextRaise*k, 0, 0)
 	}
 	r.solidRect(screen, sx-pw/2, sy, pw, ph, color.RGBA{16, 12, 8, 150})
 	st := tsSmall
@@ -377,7 +368,7 @@ func (r *Renderer) traceMuzzle(tr game.TraceView) (vec, bool) {
 		}
 		return vec{}, false
 	}
-	p, ok := pawnByStrike(r.drawPawns, tr)
+	p, ok := pawnByStrike(r.view.Pawns, tr)
 	if !ok {
 		return vec{}, false
 	}
@@ -395,7 +386,7 @@ var meleeTrailSteps = []struct {
 // through its strike motion, in world tiles; nil when the attacker is
 // not a drawn pawn or the motion does not move the tip.
 func (r *Renderer) meleeTrail(tr game.TraceView) []vec {
-	p, ok := pawnByStrike(r.drawPawns, tr)
+	p, ok := pawnByStrike(r.view.Pawns, tr)
 	if !ok || p.Lying || p.CarriedBy != 0 || r.art == nil {
 		return nil
 	}

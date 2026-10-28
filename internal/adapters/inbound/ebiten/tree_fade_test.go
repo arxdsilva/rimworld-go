@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"strings"
 	"testing"
 
@@ -126,7 +127,7 @@ func TestTreeDrawsTrunkThenCanopy(t *testing.T) {
 	r := treeArtRenderer(t)
 	w := game.WorldView{Season: "Summer", Plants: []game.PlantView{{ID: 1, X: 5, Y: 5, Species: "tree", Growth: 100}}}
 	var order []string
-	r.layerTrace = func(n string) { order = append(order, n) }
+	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	dst := ebiten.NewImage(640, 640)
 	r.drawPlantObj(dst, &w, &w.Plants[0], r.tilePx())
 	if got := strings.Join(order, ","); got != "tree_trunk,tree_canopy" {
@@ -153,7 +154,7 @@ func TestTreeFallsBackToFullSpriteWithoutParts(t *testing.T) {
 	r.art = &artCatalog{} // no sprites at all: no parts, nothing drawn, no panic
 	w := game.WorldView{Season: "Summer", Plants: []game.PlantView{{ID: 1, X: 5, Y: 5, Species: "tree", Growth: 100}}}
 	var order []string
-	r.layerTrace = func(n string) { order = append(order, n) }
+	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	r.drawPlantObj(ebiten.NewImage(64, 64), &w, &w.Plants[0], r.tilePx())
 	if len(order) != 0 {
 		t.Fatalf("parts traced without art: %v", order)

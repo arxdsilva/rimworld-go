@@ -197,7 +197,7 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 	}
 	sprite, normal := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8)
 	r := &Renderer{art: &artCatalog{normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
-	r.drawW = roomWorld()
+	r.view.W = roomWorld()
 	r.lit.light = lightAt(8, summerDay, "clear", 0)
 	dst := ebiten.NewImage(32, 32)
 	for _, c := range []struct {
@@ -245,7 +245,7 @@ func TestMarkersFloatAboveHead(t *testing.T) {
 	res := game.PawnView{ID: 1, X: 2, Y: 2}
 	pat := game.PawnView{ID: 2, X: 2, Y: 2, CarriedBy: 1, Look: look.Look{HairStyle: 3}}
 	r.art.sprites["pawn/hair_long_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
-	r.drawPawns = []game.PawnView{res, pat}
+	r.view.Pawns = []game.PawnView{res, pat}
 	for _, c := range []struct {
 		f      facing
 		before bool
