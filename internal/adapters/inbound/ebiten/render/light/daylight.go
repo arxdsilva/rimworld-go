@@ -1,4 +1,4 @@
-package ebiten
+package light
 
 import (
 	"image/color"
@@ -7,16 +7,16 @@ import (
 	"rimworld-go/internal/domain/world/lighting"
 )
 
-// skyOverlayMaxAlpha is the night-time veil. Keep it low so sprites
+// SkyOverlayMaxAlpha is the night-time veil. Keep it low so sprites
 // stay readable; the grade is a hint, not a filter.
-const skyOverlayMaxAlpha = 96
+const SkyOverlayMaxAlpha = 96
 
-// skyOverlay is a presentation-only grade over the world, used only by
+// SkyOverlay is a presentation-only grade over the world, used only by
 // the fallback (no art) renderer; the art path is lit per sprite by
 // light.go (ART §6.1). Morning and afternoon stay clear. Evening and
 // night raise alpha as outdoor light falls; hue follows the hour.
 // HUD stays above it.
-func skyOverlay(t clock.Tick) color.RGBA {
+func SkyOverlay(t clock.Tick) color.RGBA {
 	hour := int(clock.HourOfDay(t))
 	if hour >= clock.HoursPerDay {
 		hour = clock.HoursPerDay - 1
@@ -27,7 +27,7 @@ func skyOverlay(t clock.Tick) color.RGBA {
 	}
 	rgb := skyHue(clock.HourOfDay(t))
 	level := float64(lighting.Outdoor(t))
-	a := uint8((1 - level) * skyOverlayMaxAlpha)
+	a := uint8((1 - level) * SkyOverlayMaxAlpha)
 	// color.RGBA is alpha-premultiplied: un-premultiplied sky RGB would
 	// add light instead of tinting the scene darker.
 	pm := func(v uint8) uint8 { return uint8(uint16(v) * uint16(a) / 255) }

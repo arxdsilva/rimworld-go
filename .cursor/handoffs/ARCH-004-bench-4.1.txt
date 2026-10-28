@@ -1,0 +1,103 @@
+goos: darwin
+goarch: arm64
+pkg: rimworld-go/internal/adapters/inbound/ebiten
+cpu: Apple M2 Max
+BenchmarkDrawArt500/z1-12 	    1022	   1144114 ns/op	       418.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  928166 B/op	    3826 allocs/op
+BenchmarkDrawArt500/z1-12 	    1040	   1138510 ns/op	       418.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  947178 B/op	    3826 allocs/op
+BenchmarkDrawArt500/z1-12 	    1024	   1131968 ns/op	       418.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  922200 B/op	    3826 allocs/op
+BenchmarkDrawArt500/z1-12 	    1113	   1722338 ns/op	       418.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  934186 B/op	    3826 allocs/op
+BenchmarkDrawArt500/z1-12 	     670	   1894058 ns/op	       418.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  976150 B/op	    3826 allocs/op
+BenchmarkDrawArt500/z0.5-12         	     525	   2517067 ns/op	       600.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1641736 B/op	    3930 allocs/op
+BenchmarkDrawArt500/z0.5-12         	     468	   2446677 ns/op	       600.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1786991 B/op	    3930 allocs/op
+BenchmarkDrawArt500/z0.5-12         	     555	   2174868 ns/op	       600.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1642035 B/op	    3930 allocs/op
+BenchmarkDrawArt500/z0.5-12         	     766	   1567622 ns/op	       600.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1641736 B/op	    3930 allocs/op
+BenchmarkDrawArt500/z0.5-12         	     686	   1570203 ns/op	       600.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1641736 B/op	    3930 allocs/op
+BenchmarkDrawArt500/z0.25-12        	     294	   3555872 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2933766 B/op	    6496 allocs/op
+BenchmarkDrawArt500/z0.25-12        	     304	   3640876 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2932648 B/op	    6496 allocs/op
+BenchmarkDrawArt500/z0.25-12        	     315	   3577988 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2932648 B/op	    6496 allocs/op
+BenchmarkDrawArt500/z0.25-12        	     336	   3544572 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3326912 B/op	    6496 allocs/op
+BenchmarkDrawArt500/z0.25-12        	     334	   3614005 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2933525 B/op	    6496 allocs/op
+BenchmarkDrawArt500/zmin-12         	     697	   1486870 ns/op	       269.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1600872 B/op	    2312 allocs/op
+BenchmarkDrawArt500/zmin-12         	     784	   1404378 ns/op	       269.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1600925 B/op	    2312 allocs/op
+BenchmarkDrawArt500/zmin-12         	     735	   1428279 ns/op	       269.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1826168 B/op	    2312 allocs/op
+BenchmarkDrawArt500/zmin-12         	     654	   1585087 ns/op	       269.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1600872 B/op	    2312 allocs/op
+BenchmarkDrawArt500/zmin-12         	     738	   1431988 ns/op	       269.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1600929 B/op	    2312 allocs/op
+BenchmarkDrawArt500/z0.25-run-12    	     258	   4072377 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3308907 B/op	    7075 allocs/op
+BenchmarkDrawArt500/z0.25-run-12    	     291	   3956104 ns/op	      1007 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3129658 B/op	    6990 allocs/op
+BenchmarkDrawArt500/z0.25-run-12    	     295	   4337380 ns/op	      1007 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3120641 B/op	    6982 allocs/op
+BenchmarkDrawArt500/z0.25-run-12    	     322	   3632223 ns/op	      1007 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3089986 B/op	    6949 allocs/op
+BenchmarkDrawArt500/z0.25-run-12    	     324	   3445258 ns/op	      1007 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3086828 B/op	    6947 allocs/op
+BenchmarkDrawArt500/zmin-run-12     	     745	   1529797 ns/op	       268.7 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1581163 B/op	    2416 allocs/op
+BenchmarkDrawArt500/zmin-run-12     	     877	   1477907 ns/op	       268.7 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1533928 B/op	    2412 allocs/op
+BenchmarkDrawArt500/zmin-run-12     	     832	   1412084 ns/op	       268.7 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1535746 B/op	    2413 allocs/op
+BenchmarkDrawArt500/zmin-run-12     	     867	   1462194 ns/op	       268.7 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1533418 B/op	    2411 allocs/op
+BenchmarkDrawArt500/zmin-run-12     	     834	   1459523 ns/op	       268.7 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1845939 B/op	    2413 allocs/op
+BenchmarkDrawArt250/z1-12           	    1377	    930951 ns/op	       423.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  723988 B/op	    3603 allocs/op
+BenchmarkDrawArt250/z1-12           	    1308	    932741 ns/op	       423.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  723994 B/op	    3603 allocs/op
+BenchmarkDrawArt250/z1-12           	    1242	    943376 ns/op	       423.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  723974 B/op	    3603 allocs/op
+BenchmarkDrawArt250/z1-12           	    1288	    954844 ns/op	       423.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  723995 B/op	    3603 allocs/op
+BenchmarkDrawArt250/z1-12           	    1257	    961500 ns/op	       423.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	  981311 B/op	    3603 allocs/op
+BenchmarkDrawArt250/z0.5-12         	    1072	   1206714 ns/op	       571.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1201518 B/op	    3360 allocs/op
+BenchmarkDrawArt250/z0.5-12         	     910	   1229642 ns/op	       571.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1201533 B/op	    3360 allocs/op
+BenchmarkDrawArt250/z0.5-12         	     951	   1221302 ns/op	       571.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1201529 B/op	    3360 allocs/op
+BenchmarkDrawArt250/z0.5-12         	     996	   1208283 ns/op	       571.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1201617 B/op	    3360 allocs/op
+BenchmarkDrawArt250/z0.5-12         	     981	   1193545 ns/op	       571.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1201620 B/op	    3360 allocs/op
+BenchmarkDrawArt250/z0.25-12        	     361	   3374098 ns/op	      1017 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3030528 B/op	    7003 allocs/op
+BenchmarkDrawArt250/z0.25-12        	     337	   3493554 ns/op	      1017 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3030642 B/op	    7003 allocs/op
+BenchmarkDrawArt250/z0.25-12        	     360	   3294752 ns/op	      1017 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3031044 B/op	    7003 allocs/op
+BenchmarkDrawArt250/z0.25-12        	     364	   3622527 ns/op	      1017 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 4141884 B/op	    7003 allocs/op
+BenchmarkDrawArt250/z0.25-12        	     340	   3328119 ns/op	      1017 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3031191 B/op	    7003 allocs/op
+BenchmarkDrawArt250/zmin-12         	     685	   1665576 ns/op	       336.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2073856 B/op	    3264 allocs/op
+BenchmarkDrawArt250/zmin-12         	     724	   1755394 ns/op	       336.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2073916 B/op	    3264 allocs/op
+BenchmarkDrawArt250/zmin-12         	     668	   1653816 ns/op	       336.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2073931 B/op	    3264 allocs/op
+BenchmarkDrawArt250/zmin-12         	     649	   1671923 ns/op	       336.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2073848 B/op	    3264 allocs/op
+BenchmarkDrawArt250/zmin-12         	     636	   1662568 ns/op	       336.0 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 2073848 B/op	    3264 allocs/op
+BenchmarkDrawArt250/z0.25-run-12    	     250	   4402159 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3786071 B/op	    7816 allocs/op
+BenchmarkDrawArt250/z0.25-run-12    	     304	   3777562 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3541569 B/op	    7754 allocs/op
+BenchmarkDrawArt250/z0.25-run-12    	     326	   3678939 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3501075 B/op	    7724 allocs/op
+BenchmarkDrawArt250/z0.25-run-12    	     310	   3691232 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3524553 B/op	    7746 allocs/op
+BenchmarkDrawArt250/z0.25-run-12    	     279	   3824639 ns/op	      1006 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 3564878 B/op	    7773 allocs/op
+BenchmarkDrawArt250/zmin-run-12     	     603	   1780067 ns/op	       336.6 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1521495 B/op	    3234 allocs/op
+BenchmarkDrawArt250/zmin-run-12     	     692	   1598855 ns/op	       336.4 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1432050 B/op	    3193 allocs/op
+BenchmarkDrawArt250/zmin-run-12     	     684	   1554384 ns/op	       336.4 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1411851 B/op	    3194 allocs/op
+BenchmarkDrawArt250/zmin-run-12     	     768	   1535403 ns/op	       336.2 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1365459 B/op	    3151 allocs/op
+BenchmarkDrawArt250/zmin-run-12     	     664	   1525296 ns/op	       336.5 draw-calls/op	         0 snow-bakes/op	         0 snow-draws/op	 1424217 B/op	    3204 allocs/op
+PASS
+ok  	rimworld-go/internal/adapters/inbound/ebiten	1567.632s
+goos: darwin
+goarch: arm64
+pkg: rimworld-go/internal/adapters/inbound/ebiten/render/light
+cpu: Apple M2 Max
+BenchmarkLightGridLamps/rebuild-12         	    8622	    132681 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/rebuild-12         	    9108	    131429 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/rebuild-12         	    8925	    131157 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/rebuild-12         	    8844	    131434 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/rebuild-12         	    9183	    130802 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/frame-12           	   30843	     38850 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/frame-12           	   29979	     39087 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/frame-12           	   30674	     39322 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/frame-12           	   30571	     39100 ns/op	       0 B/op	       0 allocs/op
+BenchmarkLightGridLamps/frame-12           	   30781	     39300 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	rimworld-go/internal/adapters/inbound/ebiten/render/light	14.547s
+goos: darwin
+goarch: arm64
+pkg: rimworld-go/internal/adapters/inbound/ebiten/globe
+cpu: Apple M2 Max
+BenchmarkGlobeFrame/dist1.5-12         	    3850	    302775 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist1.5-12         	    3823	    303846 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist1.5-12         	    3853	    303267 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist1.5-12         	    3932	    303915 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist1.5-12         	    3928	    305383 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist2.9-12         	    2392	    495030 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist2.9-12         	    2472	    494294 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist2.9-12         	    2444	    496150 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist2.9-12         	    2431	    494239 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist2.9-12         	    2296	    498809 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist4.0-12         	    2294	    531101 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist4.0-12         	    2281	    528755 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist4.0-12         	    2281	    528311 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist4.0-12         	    2246	    528249 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGlobeFrame/dist4.0-12         	    2319	    526295 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	rimworld-go/internal/adapters/inbound/ebiten/globe	19.586s

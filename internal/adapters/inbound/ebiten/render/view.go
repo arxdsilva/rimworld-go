@@ -30,7 +30,7 @@ type View struct {
 	Date  clock.Date
 
 	Present uint64  // presentation frame counter: animation reads it, the sim never does
-	AnimT   float64 // animation clock in seconds (motion.go)
+	AnimT   float64 // the animation clock in simulation ticks (render/motion)
 	Alpha   float64 // interpolation between the last two ticks
 	Paused  bool
 

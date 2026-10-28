@@ -112,7 +112,7 @@ commands via `Enqueue`. Domain code does not import this package.
 ## UI scale (PLAY-012, UI-024)
 
 - The UI lays out in logical pixels (`a.sw/a.sh`, `currentCursor()`) and
-  draws through `ui_canvas.go` (`uiFillRect`, `uiStrokeRect`, `uiLine`,
+  draws through the canvas, `gfx/canvas.go` (`uiFillRect`, `uiStrokeRect`, `uiLine`,
   `uiImage`, `uiTriangles`, …) and `drawText`; the scale is `uiScale()`.
 - Anything placed by the camera stays raw in physical pixels: use
   `mapCursor()`, `a.mapViewport()`, `r.cam.tile()`. Convert a world anchor
@@ -128,22 +128,25 @@ commands via `Enqueue`. Domain code does not import this package.
 
 ## Widget kit and text (NG-1)
 
-- Immediate mode (`ui_kit.go`, `ui_state.go`). A screen declares its widgets once
-  per `Update` from a hook it registers in an `init()` with
-  `registerScreenUI`; the hook runs right after input is polled, before the
+- Immediate mode (`uikit/`: `uikit.Kit`, reached from the root as `a.ui` / `uiSt()`
+  through `uikit_compat.go`'s aliases and one-line wrappers; the kit sees the
+  App only through `uikit.Host`, eight methods). A screen declares its widgets
+  once per `Update` from the table `NewApp` fills (`shell.go` `screenTable`,
+  never `init()`); the hook runs right after input is polled, before the
   click path, and only while the screen is on top with no overlay. Widgets
   read the input, mutate the value they are bound to, register a hit
   rectangle and queue their drawing; `App.Draw` calls `uiPaint` for the queue,
   the modal stack and the tooltip. State is `a.ui` (`uiSt()`).
-- Widgets: `ui_check.go` (checkbox, radio), `ui_slider.go`, `ui_textfield.go`
+- Widgets (`uikit/`): `check.go` (checkbox, radio), `slider.go`, `textfield.go`
   (single and multi-line; `CtxText` stops global shortcuts, Esc restores),
-  `ui_scroll.go` (virtualised, wheel routed away from the camera),
-  `ui_tooltip.go`, `ui_modal.go` (stack, `CtxModal`), `ui_table.go`,
-  `ui_tabs.go`, `ui_progress.go`, `ui_spark.go`, `ui_layout.go` (`rect`, the
-  setup dialog frame, the 1280x720 minimum). Ids carry a per-screen prefix
+  `scroll.go` (virtualised, wheel routed away from the camera),
+  `tooltip.go`, `modal.go` (the stack; the root's `ui_modal.go` keeps the
+  `CtxModal` and window-kit coupling), `table.go`, `tabs.go`, `progress.go`,
+  `spark.go`, `dialog.go` (the setup dialog frame, the 1280x720 minimum);
+  `gfx.Rect` is the rectangle. Ids carry a per-screen prefix
   (`scen.`, `sced.`, `story.`, `diff.`, `world.`, `land.`, `pawns.`, `fac.`,
   `modal.`). Esc order: text edit, top modal, Back.
-- Text goes through `font.go`: `textStyle` (`tsSmall` 11, `tsBody` 13,
+- Text goes through `gfx/text.go`: `textStyle` (`tsSmall` 11, `tsBody` 13,
   `tsLabel` 13 bold, `tsLarge` 16 bold, `tsTitle` 22 bold, `tsHuge` 32 bold),
   `drawText`, `measure`, `lineH`, `wrapPx`, `ellipsize`, `setUIScale`.
   `drawLabel` and `debugPrintAt` forward to it. Never assume a glyph width or
@@ -303,7 +306,7 @@ CI (`.github/workflows/test.yml`) runs everything on every push.
 
 ## Motion and body animation (ART-007, ART §27.1)
 
-- `motion.go` owns on-screen movement: `pawnMotion`/`animalMotion` return a
+- `render/motion` owns on-screen movement (the root's `motion_compat.go` keeps the old names): `pawnMotion`/`animalMotion` return a
   `moveState` (position, velocity, speed, stride, walk blend, facing) built
   from the snapshot's `StepTick`, `StepTicks`, `NextX/NextY`, `HasNext` and
   `BlockedBy`. Paths curve through tile centres; walks ease in and out;

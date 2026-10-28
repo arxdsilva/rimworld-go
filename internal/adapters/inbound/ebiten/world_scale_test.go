@@ -295,7 +295,11 @@ func TestMapPixelsComeFromMapCursor(t *testing.T) {
 			if !ok || fd.Body == nil || fd.Recv == nil || len(fd.Recv.List) != 1 {
 				continue
 			}
-			if st, ok := fd.Recv.List[0].Type.(*ast.StarExpr); !ok || st.X.(*ast.Ident).Name != "App" {
+			st, ok := fd.Recv.List[0].Type.(*ast.StarExpr)
+			if !ok {
+				continue
+			}
+			if id, ok := st.X.(*ast.Ident); !ok || id.Name != "App" { // a generic receiver is an index expression, never App
 				continue
 			}
 			fromCursor := map[string]bool{}

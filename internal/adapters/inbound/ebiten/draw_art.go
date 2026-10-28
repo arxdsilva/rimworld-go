@@ -20,7 +20,6 @@ import (
 
 const (
 	soilVariants = 4
-	pawnBobPx    = 0.035 // of a tile
 	grassEvery   = 5
 )
 

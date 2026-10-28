@@ -6,6 +6,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -21,7 +22,11 @@ func newKit(t *testing.T) (*App, *fakeInput, *uiState) {
 	return a, f, a.uiSt()
 }
 
-func setHook(u *uiState, fn func(a *App)) { u.Hook = func(a *App, _, _ int) { fn(a) } }
+// setHook makes fn the kit's screen hook; u is an App's kit (a.uiSt()).
+func setHook(u *uiState, fn func(a *App)) {
+	a := u.Host().(uiHost).a
+	u.Hook = func(_, _ int) { fn(a) }
+}
 
 // press holds the left button down for one frame at (x, y).
 func (f *fakeInput) press(t *testing.T, a *App, x, y int) {
@@ -313,42 +318,6 @@ func TestTextFieldMultiline(t *testing.T) {
 	}
 }
 
-func TestTextBufEdits(t *testing.T) {
-	t.Parallel()
-	b := textBuf{Rs: []rune("héllo")}
-	b.Move(2, false)
-	b.Insert([]rune("XY"), 0)
-	if string(b.Rs) != "héXYllo" || b.Caret != 4 {
-		t.Fatalf("%q %d", string(b.Rs), b.Caret)
-	}
-	b.Move(0, true) // select to the start
-	if lo, hi := b.Sel(); lo != 0 || hi != 4 {
-		t.Fatalf("sel [%d,%d)", lo, hi)
-	}
-	if !b.Backspace() || string(b.Rs) != "llo" {
-		t.Fatalf("backspace deletes the selection: %q", string(b.Rs))
-	}
-	if b.Backspace() {
-		t.Fatal("nothing before the caret")
-	}
-	b.Move(3, false)
-	if b.Del() {
-		t.Fatal("nothing after the caret")
-	}
-	if b.Insert([]rune("abcdef"), 5); string(b.Rs) != "llo"+"ab" {
-		t.Fatalf("max length cuts the insert: %q", string(b.Rs))
-	}
-	if b.Insert(nil, 0) {
-		t.Fatal("inserting nothing changes nothing")
-	}
-	if got := nearestIndex([]rune("abc"), 0); got != 0 {
-		t.Fatalf("nearest at 0 = %d", got)
-	}
-	if got := nearestIndex([]rune("abc"), 1e6); got != 3 {
-		t.Fatalf("nearest far right = %d", got)
-	}
-}
-
 func TestScrollViewWheelAndThumb(t *testing.T) {
 	t.Parallel()
 	a, f, u := newKit(t)
@@ -555,7 +524,7 @@ func TestModalEscClosesTopOnly(t *testing.T) {
 	}
 
 	// The X closes the top one too.
-	_, tr, _, _ := modalGeometry(a.sw, a.sh, u.Modals[0])
+	_, tr, _, _ := uikit.ModalGeometry(a.sw, a.sh, u.Modals[0])
 	f.clickAt(t, a, int(tr.Right())-modalCloseW/2-8, int(tr.Y+tr.H/2))
 	if len(u.Modals) != 0 || strings.Join(closed, ",") != "two,one" {
 		t.Fatalf("the X closes: %v closed=%v", u.Modals, closed)
@@ -911,68 +880,6 @@ func TestSetupMinWindow(t *testing.T) {
 	}
 }
 
-func TestDialogFrameLayout(t *testing.T) {
-	t.Parallel()
-	frame, title, content, footer := dialogFrame(1280, 720)
-	if frame != (rect{X: 40, Y: 40, W: 1200, H: 640}) {
-		t.Fatalf("frame at 1280x720 = %+v", frame)
-	}
-	if title != (rect{X: 40, Y: 40, W: 1200, H: 44}) || footer != (rect{X: 40, Y: 624, W: 1200, H: 56}) {
-		t.Fatalf("title %+v footer %+v", title, footer)
-	}
-	if content != (rect{X: 56, Y: 100, W: 1168, H: 508}) {
-		t.Fatalf("content = %+v (16 px padding between the bars)", content)
-	}
-	frame, _, _, _ = dialogFrame(1920, 1080)
-	if frame != (rect{X: 340, Y: 160, W: 1240, H: 760}) {
-		t.Fatalf("frame at 1920x1080 is capped and centred: %+v", frame)
-	}
-	back, next := footerBack(footer), footerNext(footer)
-	if back != (rect{X: 56, Y: 634, W: 140, H: 36}) || next != (rect{X: 1064, Y: 634, W: 160, H: 36}) {
-		t.Fatalf("back %+v next %+v", back, next)
-	}
-
-	r := rect{X: 10, Y: 20, W: 100, H: 60}
-	l, rt := r.SplitH(30)
-	if l != (rect{X: 10, Y: 20, W: 30, H: 60}) || rt != (rect{X: 40, Y: 20, W: 70, H: 60}) {
-		t.Fatalf("splitH %+v %+v", l, rt)
-	}
-	l, rt = r.SplitH(-30)
-	if l.W != 70 || rt != (rect{X: 80, Y: 20, W: 30, H: 60}) {
-		t.Fatalf("splitH(-30) cuts from the right: %+v %+v", l, rt)
-	}
-	tp, bt := r.SplitV(-20)
-	if tp.H != 40 || bt != (rect{X: 10, Y: 60, W: 100, H: 20}) {
-		t.Fatalf("splitV(-20) %+v %+v", tp, bt)
-	}
-	cols := rect{X: 0, Y: 0, W: 100, H: 10}.Columns(3, 5)
-	if len(cols) != 3 || cols[0].W != 30 || cols[1].X != 35 || cols[2].Right() != 100 {
-		t.Fatalf("columns = %+v", cols)
-	}
-	rows := rect{X: 0, Y: 0, W: 50, H: 100}.Rows(20, 5)
-	if len(rows) != 4 || rows[3].Y != 75 {
-		t.Fatalf("rows fit the height: %+v", rows)
-	}
-	if got := r.RowsN(5, 20, 0); len(got) != 5 || got[4].Y != 100 {
-		t.Fatalf("rowsN overflows on purpose: %+v", got)
-	}
-	if !r.Contains(10, 20) || r.Contains(110, 20) || !r.Hit(50, 50) || r.Hit(9, 50) {
-		t.Fatal("contains / hit")
-	}
-	if x, y := r.Center(); x != 60 || y != 50 {
-		t.Fatalf("center %v,%v", x, y)
-	}
-	if in := r.Inset(5); in != (rect{X: 15, Y: 25, W: 90, H: 50}) {
-		t.Fatalf("inset %+v", in)
-	}
-	if !r.Intersect(rect{X: 200, Y: 200, W: 5, H: 5}).Empty() || r.Intersect(rect{X: 50, Y: 50, W: 100, H: 100}) != (rect{X: 50, Y: 50, W: 60, H: 30}) {
-		t.Fatal("intersect")
-	}
-	if c := r.Centered(20, 20); c != (rect{X: 50, Y: 40, W: 20, H: 20}) {
-		t.Fatalf("centered %+v", c)
-	}
-}
-
 func TestKeyRepeatSchedule(t *testing.T) {
 	t.Parallel()
 	var fired []int
@@ -1001,31 +908,6 @@ func TestKeyRepeatSchedule(t *testing.T) {
 	if a.keyRepeat("ArrowDown") {
 		t.Fatal("released keys do not repeat")
 	}
-}
-
-func TestProgressAndSparkline(t *testing.T) {
-	t.Parallel()
-	r := rect{X: 0, Y: 0, W: 100, H: 40}
-	pts := sparkPoints([]int{1, 5, 3, 9}, r)
-	if len(pts) != 4 || pts[0][0] != sparkPad || pts[3][0] != 100-sparkPad {
-		t.Fatalf("x spans the box: %v", pts)
-	}
-	if !(pts[3][1] < pts[1][1] && pts[1][1] < pts[2][1] && pts[2][1] < pts[0][1]) {
-		t.Fatalf("larger values sit higher: %v", pts)
-	}
-	flat := sparkPoints([]int{4, 4, 4}, r)
-	if flat[0][1] != 20 || sparkPoints(nil, r) != nil {
-		t.Fatalf("flat series sits mid-height: %v", flat)
-	}
-	one := sparkPoints([]int{7}, r)
-	if len(one) != 1 || one[0][0] != 50 {
-		t.Fatalf("single point is centred: %v", one)
-	}
-	img := ebiten.NewImage(200, 100)
-	drawSparkline(img, r, []int{1, 5, 3, 9}, uiAccent)
-	drawSparkline(img, r, nil, uiAccent)
-	drawProgress(img, rect{X: 0, Y: 50, W: 160, H: 40}, "World", 0.4, "Rivers")
-	drawProgress(img, rect{X: 0, Y: 50, W: 160, H: 40}, "World", 1.7, "")
 }
 
 // testScreen is a screen id nothing else uses, for the registry path.

@@ -1,7 +1,9 @@
-package ebiten
+package uikit
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -15,8 +17,8 @@ const (
 	sliderKnobH  = 18
 )
 
-// sliderSpec describes a slider's range and look.
-type sliderSpec struct {
+// SliderSpec describes a slider's range and look.
+type SliderSpec struct {
 	Min, Max float64
 	// Stops, when it has two or more labels, makes the slider discrete:
 	// the value is the stop index (Min and Max are ignored).
@@ -29,9 +31,12 @@ type sliderSpec struct {
 	Title    string // tooltip title above the value
 	Disabled bool
 	Reason   string
+	// Tick is the host's step sound, called on every change of the value
+	// from old to cur (nil: silent).
+	Tick func(lo, hi, old, cur float64)
 }
 
-func (sp sliderSpec) bounds() (lo, hi float64) {
+func (sp SliderSpec) bounds() (lo, hi float64) {
 	if len(sp.Stops) >= 2 {
 		return 0, float64(len(sp.Stops) - 1)
 	}
@@ -42,9 +47,9 @@ func (sp sliderSpec) bounds() (lo, hi float64) {
 	return lo, hi
 }
 
-func (sp sliderSpec) Discrete() bool { return len(sp.Stops) >= 2 }
+func (sp SliderSpec) Discrete() bool { return len(sp.Stops) >= 2 }
 
-func (sp sliderSpec) format(v float64) string {
+func (sp SliderSpec) format(v float64) string {
 	switch {
 	case sp.Format != nil:
 		return sp.Format(v)
@@ -54,21 +59,21 @@ func (sp sliderSpec) format(v float64) string {
 	return strconv.FormatFloat(math.Round(v*100)/100, 'f', -1, 64)
 }
 
-// sliderTrack is the track inside r: inset by half a knob so the knob
+// SliderTrackRect is the track inside r: inset by half a knob so the knob
 // stays inside r at both ends.
-func sliderTrack(r rect) rect {
-	return rect{X: r.X + sliderKnobW/2, Y: r.Y + (sliderKnobH-sliderTrackH)/2, W: max(0, r.W-sliderKnobW), H: sliderTrackH}
+func SliderTrackRect(r gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: r.X + sliderKnobW/2, Y: r.Y + (sliderKnobH-sliderTrackH)/2, W: max(0, r.W-sliderKnobW), H: sliderTrackH}
 }
 
 // sliderFrac is v's position along the track, 0..1.
-func (sp sliderSpec) frac(v float64) float64 {
+func (sp SliderSpec) frac(v float64) float64 {
 	lo, hi := sp.bounds()
 	return math.Max(0, math.Min(1, (v-lo)/(hi-lo)))
 }
 
 // sliderValueAt is the value for a cursor x on the track, snapped to the
 // stops of a discrete slider.
-func (sp sliderSpec) valueAt(x float32, track rect) float64 {
+func (sp SliderSpec) valueAt(x float32, track gfx.Rect) float64 {
 	lo, hi := sp.bounds()
 	t := 0.0
 	if track.W > 0 {
@@ -81,14 +86,13 @@ func (sp sliderSpec) valueAt(x float32, track rect) float64 {
 	return v
 }
 
-// uiSlider is a horizontal slider bound to *val. Pressing the knob or the
+// Slider is a horizontal slider bound to *val. Pressing the knob or the
 // track captures the mouse and the knob follows the cursor until release
 // (which is consumed). Left and Right move one step while focused, Shift
 // five, Home and End jump to the ends. It reports the value changed.
-func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
-	u := a.uiSt()
+func (k *Kit) Slider(id string, r gfx.Rect, val *float64, sp SliderSpec) bool {
 	lo, hi := sp.bounds()
-	track := sliderTrack(r)
+	track := SliderTrackRect(r)
 	*val = math.Max(lo, math.Min(hi, *val))
 	if sp.Discrete() {
 		*val = math.Round(*val)
@@ -100,43 +104,45 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 			v = math.Round(v)
 		}
 		if v != *val {
-			a.sliderCue(sp, lo, hi, *val, v)
+			if sp.Tick != nil {
+				sp.Tick(lo, hi, *val, v)
+			}
 			*val, changed = v, true
 		}
 	}
-	w := uiWidget{ID: id, R: r, Focusable: true, Disabled: sp.Disabled, Reason: sp.Reason}
-	live := u.Add(w)
-	idx := len(u.Cur) - 1
+	w := Widget{ID: id, R: r, Focusable: true, Disabled: sp.Disabled, Reason: sp.Reason}
+	live := k.Add(w)
+	idx := len(k.Cur) - 1
 	if live && !sp.Disabled {
-		mx, _ := a.currentCursor()
-		if a.uiPress(r) {
-			u.Active, u.Focus = id, id
+		mx, _ := k.host.Cursor()
+		if k.Press(r) {
+			k.Active, k.Focus = id, id
 			set(sp.valueAt(float32(mx), track))
 		}
-		if u.Active == id {
+		if k.Active == id {
 			set(sp.valueAt(float32(mx), track))
-			if !a.in.Down(mbLeft) {
-				u.Active = ""
-				a.uiRelease() // the release must not click what is under the cursor
+			if !k.in().Down(inputframe.Left) {
+				k.Active = ""
+				k.release() // the release must not click what is under the cursor
 			}
-		} else if u.Focus == id {
+		} else if k.Focus == id {
 			step := sp.Step
 			if sp.Discrete() {
 				step = 1
 			} else if step <= 0 {
 				step = (hi - lo) / 20
 			}
-			if a.in.Shift() {
+			if k.in().Shift() {
 				step *= 5
 			}
 			switch {
-			case a.keyRepeat("ArrowLeft"):
+			case k.host.KeyRepeat("ArrowLeft"):
 				set(*val - step)
-			case a.keyRepeat("ArrowRight"):
+			case k.host.KeyRepeat("ArrowRight"):
 				set(*val + step)
-			case a.in.Key("Home"):
+			case k.in().Key("Home"):
 				set(lo)
-			case a.in.Key("End"):
+			case k.in().Key("End"):
 				set(hi)
 			}
 		}
@@ -149,53 +155,53 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 		if sp.Disabled && sp.Reason != "" {
 			tip = sp.Reason
 		}
-		u.Cur[idx].Tip = tip
+		k.Cur[idx].Tip = tip
 	}
-	u.Queue(func(dst *ebiten.Image) { drawSlider(dst, r, track, *val, sp, u.Hot == id || u.Active == id) })
+	k.Queue(func(dst *ebiten.Image) { drawSlider(dst, r, track, *val, sp, k.Hot == id || k.Active == id) })
 	return changed
 }
 
-// uiSliderInt is uiSlider over an int.
-func (a *App) uiSliderInt(id string, r rect, val *int, sp sliderSpec) bool {
+// SliderInt is Slider over an int.
+func (k *Kit) SliderInt(id string, r gfx.Rect, val *int, sp SliderSpec) bool {
 	f := float64(*val)
-	changed := a.uiSlider(id, r, &f, sp)
+	changed := k.Slider(id, r, &f, sp)
 	*val = int(math.Round(f))
 	return changed
 }
 
-func drawSlider(dst *ebiten.Image, r, track rect, v float64, sp sliderSpec, hot bool) {
-	fillRect(dst, track, uiSliderTrack)
+func drawSlider(dst *ebiten.Image, r, track gfx.Rect, v float64, sp SliderSpec, hot bool) {
+	FillRect(dst, track, SliderTrack)
 	t := float32(sp.frac(v))
-	fillRect(dst, rect{X: track.X, Y: track.Y, W: track.W * t, H: track.H}, uiSliderFill)
-	strokeRect(dst, track, uiPanelBorder)
+	FillRect(dst, gfx.Rect{X: track.X, Y: track.Y, W: track.W * t, H: track.H}, SliderFill)
+	StrokeRect(dst, track, PanelBorder)
 	n := len(sp.Stops)
 	for i, l := range sp.Stops {
 		x := track.X + track.W*float32(i)/float32(n-1)
-		uiLine(dst, x, track.Bottom()+1, x, track.Bottom()+4, 1, uiPanelBorder, false)
-		st := tsSmall
-		st.Color = uiTextDim
+		gfx.Line(dst, x, track.Bottom()+1, x, track.Bottom()+4, 1, PanelBorder, false)
+		st := gfx.Small
+		st.Color = TextDim
 		if math.Round(v) == float64(i) {
-			st.Color = uiText
+			st.Color = Text
 		}
 		ax := float64(x)
 		switch {
 		case i == 0:
-			st.Align, ax = alignLeft, float64(r.X)
+			st.Align, ax = gfx.AlignLeft, float64(r.X)
 		case i == n-1:
-			st.Align, ax = alignRight, float64(r.Right())
+			st.Align, ax = gfx.AlignRight, float64(r.Right())
 		default:
-			st.Align = alignCenter
+			st.Align = gfx.AlignCenter
 		}
-		drawText(dst, l, ax, float64(r.Y+sliderKnobH+3), st)
+		gfx.Text(dst, l, ax, float64(r.Y+sliderKnobH+3), st)
 	}
 	kx := track.X + track.W*t
-	knob := rect{X: kx - sliderKnobW/2, Y: r.Y, W: sliderKnobW, H: sliderKnobH}
-	c := uiSliderKnob
+	knob := gfx.Rect{X: kx - sliderKnobW/2, Y: r.Y, W: sliderKnobW, H: sliderKnobH}
+	c := SliderKnob
 	if sp.Disabled {
-		c = uiBtnDisabled
+		c = BtnDisabled
 	} else if hot {
-		c = lerpRGBA(c, uiText, 0.35)
+		c = LerpRGBA(c, Text, 0.35)
 	}
-	fillRect(dst, knob, c)
-	strokeRect(dst, knob, uiBtnBorder)
+	FillRect(dst, knob, c)
+	StrokeRect(dst, knob, BtnBorder)
 }

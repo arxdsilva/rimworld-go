@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -14,52 +13,16 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Animation (ART spec §27). Everything here is presentation-only: it
-// reads the read model and the presentation clock (r.present) and never
-// feeds back into the simulation. Pseudo-randomness comes from mix64 of
-// stable keys, so a replay looks the same.
+// Animation (ART spec §27): the drawing half — posed sprites, particles,
+// footstep dust, the work glow and ground-item pops. The pure half (poses,
+// gaits, easing, motion tracks and the animT clock) is render/motion.
+// Everything here is presentation-only: it reads the read model and the
+// presentation clock (r.present) and never feeds back into the
+// simulation. Pseudo-randomness comes from mix64 of stable keys, so a
+// replay looks the same.
 
-// pose is a transform applied to a whole figure (all of its layers).
-type pose struct {
-	Dx, Dy float64 // offset in tiles
-	Rot    float64 // radians (screen, clockwise) about the pivot
-	Px, Py float64 // pivot in tiles from the sprite's tile top-left
-	Sx, Sy float64 // scale about the pivot; 0 means 1
-	Cs     colorScale
-	Flash  float32 // 0..1 hit flash
-	Skew   float64 // horizontal shear about the pivot (wind sway)
-}
-
-// Geo is the pose part of a sprite transform, for a tile whose
-// top-left is at screen (sx, sy).
-func (p pose) Geo(sx, sy, tile float64) ebiten.GeoM {
-	px, py := sx+p.Px*tile, sy+p.Py*tile
-	kx, ky := p.Scale()
-	g := ebiten.GeoM{}
-	g.Translate(-px, -py)
-	if p.Skew != 0 {
-		g.Skew(p.Skew, 0)
-	}
-	g.Scale(kx, ky)
-	g.Rotate(p.Rot)
-	g.Translate(px+p.Dx*tile, py+p.Dy*tile)
-	return g
-}
-
-func (p pose) Scale() (float64, float64) {
-	sx, sy := p.Sx, p.Sy
-	if sx == 0 {
-		sx = 1
-	}
-	if sy == 0 {
-		sy = 1
-	}
-	return sx, sy
-}
-
-// figurePivot is where a standing animal's feet meet the ground, in
-// tiles from its tile's top-left (pawns: pawnFeetX, pawnFeetY).
-const figurePivotX, figurePivotY = 0.5, 0.55
+// vec is a point in world tiles (combat marks, held items, turrets).
+type vec struct{ X, Y float64 }
 
 // drawSpritePose draws a sprite at tile (wx, wy) transformed by ps.
 func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps pose) {
@@ -125,160 +88,7 @@ func geoVisible(g ebiten.GeoM, w, h float64, b image.Rectangle) bool {
 	return x1 >= float64(b.Min.X) && y1 >= float64(b.Min.Y) && x0 < float64(b.Max.X) && y0 < float64(b.Max.Y)
 }
 
-func easeOut(t float64) float64 {
-	t = clamp01(t)
-	return 1 - (1-t)*(1-t)
-}
-
-// easeOutBack overshoots slightly: items "pop" in.
-func easeOutBack(t float64) float64 {
-	t = clamp01(t)
-	const c1 = 1.70158
-	const c3 = c1 + 1
-	return 1 + c3*math.Pow(t-1, 3) + c1*math.Pow(t-1, 2)
-}
-
-// hash01 is a stable pseudo-random value in [0, 1) for a key.
-func hash01(keys ...uint64) float64 {
-	h := uint64(0x9E3779B97F4A7C15)
-	for _, k := range keys {
-		h = mix64(h ^ k)
-	}
-	return float64(h>>11) / float64(1<<53)
-}
-
-// --- walk cycle -------------------------------------------------------
-
-// Gait (ART §27.1): a pawn's cycle (two footfalls) spans strideLen tiles
-// of stride. Pawns have no walk frames: walkFrames only phases the bob so
-// its peaks fall where the old cycle's contact poses were (01 and 07). An
-// animal trot has trotFrames frames and its own ground travel per cycle
-// (metadata "gait", PLAY-022; animal_figure.go).
-const (
-	walkFrames = 12
-	trotFrames = 8
-	strideLen  = 1.6
-	// contactEvery is the stride between two foot contacts.
-	contactEvery = strideLen / 2
-
-	// gait amplitudes, in tiles / radians at normal walking speed
-	bobAmp   = pawnBobPx * 1.4
-	swayAmp  = 0.015
-	leanAmp  = 0.06
-	leanBack = 0.05
-	minBlend = 0.05 // below this the static pose is used
-)
-
-// trotSuffix is the animal trot frame suffix ("_walk01".."_walk08") for
-// phase ph, in cycles (any real; the fraction picks the frame).
-func trotSuffix(ph float64) string {
-	return fmt.Sprintf("_walk%02d", trotFrame(ph)+1)
-}
-
-// trotFrame is the 0-based trot frame at phase ph.
-func trotFrame(ph float64) int {
-	f := ph - math.Floor(ph)
-	return min(int(f*trotFrames), trotFrames-1)
-}
-
-// gaitScale is how strongly the gait shows: speed relative to a straight
-// step, capped (diagonals are faster), times the walk blend.
-func gaitScale(m moveState) float64 {
-	return math.Min(m.Speed*float64(game.TicksPerCell), 1) * clamp01(m.Blend)
-}
-
-// humps is |cos| with two humps per cycle whose peaks sit on the centres
-// of frames 01 and 07 (foot contact); n is the cycle's frame count.
-func humps(stride float64, n int) float64 {
-	cyc := stride/strideLen - 0.5/float64(n)
-	return math.Abs(math.Cos(2 * math.Pi * cyc))
-}
-
-// bobRaise is how far (tiles, up) the body is lifted: A*|cos| scaled by
-// speed and walk blend, peaking at foot contact.
-func bobRaise(stride, speed, blend float64) float64 {
-	return bobAmp * humps(stride, walkFrames) * gaitScale(moveState{Speed: speed, Blend: blend})
-}
-
-// gaitSway is the lateral body sway (tiles) for N/S walkers: weight
-// shifts onto the stance foot once per cycle.
-func gaitSway(m moveState) float64 {
-	return swayAmp * math.Sin(2*math.Pi*m.Stride/strideLen) * gaitScale(m)
-}
-
-// gaitLean is the forward lean (radians, clockwise) of an E/W walker:
-// proportional to speed, and a short lean back while slowing to a stop.
-func gaitLean(f facing, m moveState) float64 {
-	var k float64
-	switch {
-	case m.Moving:
-		k = leanAmp * gaitScale(m)
-	case m.Blend > 0:
-		k = -leanBack * clamp01(m.Blend)
-	}
-	switch f {
-	case faceEast:
-		return k
-	case faceWest:
-		return -k
-	}
-	return 0
-}
-
-// walkPose is the gait's share of a figure transform.
-func walkPose(f facing, m moveState) pose {
-	ps := standPose()
-	if m.Blend >= minBlend {
-		ps.Dy = -bobRaise(m.Stride, m.Speed, m.Blend)
-	}
-	if f == faceNorth || f == faceSouth {
-		ps.Dx = gaitSway(m)
-	}
-	ps.Rot = gaitLean(f, m)
-	return ps
-}
-
-// blockedFacing turns a blocked creature towards whatever is in its way.
-func blockedFacing(p game.PawnView, pawns []game.PawnView, animals []game.AnimalView, prev facing) facing {
-	if p.BlockedBy == 0 {
-		return prev
-	}
-	for _, q := range pawns {
-		if q.ID == p.BlockedBy {
-			return facingFor(q.X-p.X, q.Y-p.Y, prev)
-		}
-	}
-	for _, a := range animals {
-		if a.ID == p.BlockedBy {
-			return facingFor(a.X-p.X, a.Y-p.Y, prev)
-		}
-	}
-	return prev
-}
-
 // --- footstep dust ---------------------------------------------------
-
-// contactsCrossed counts foot contacts (every contactEvery of stride)
-// passed going from one stride to the next.
-func contactsCrossed(prev, cur float64) int {
-	if cur <= prev {
-		return 0
-	}
-	return int(math.Floor(cur/contactEvery) - math.Floor(prev/contactEvery))
-}
-
-// footPoint is where the foot of a given contact parity lands, in world
-// tiles, for a creature whose tile corner is (x, y).
-func footPoint(x, y float64, f facing, parity int) [2]float64 {
-	side := 0.12
-	if parity%2 != 0 {
-		side = -side
-	}
-	if f == faceEast || f == faceWest {
-		return [2]float64{x + 0.5 + side, y + 0.62}
-	}
-	return [2]float64{x + 0.5 + side, y + 0.6}
-}
 
 // stepDust puffs dust at the foot for every contact the stride passed
 // since last time. The first sighting only records the stride.
@@ -322,18 +132,6 @@ func (r *Renderer) animState() *animState {
 	return r.anims
 }
 
-// easeFrames is how long bed entry and carry lifts take, in present frames.
-const easeFrames = 12
-
-// smoothEase is smoothstep over frames present frames since since.
-func smoothEase(now, since uint64, frames float64) float64 {
-	if now <= since {
-		return 0
-	}
-	t := clamp01(float64(now-since) / frames)
-	return t * t * (3 - 2*t)
-}
-
 // CarryEase is the lift progress of a carried patient (0 on the ground,
 // 1 slung); the first call for a patient starts the lift.
 func (st *animState) CarryEase(id entity.EntityID, now uint64) float64 {
@@ -347,44 +145,6 @@ func (st *animState) CarryEase(id entity.EntityID, now uint64) float64 {
 
 // DropCarry forgets a patient that is no longer carried.
 func (st *animState) DropCarry(id entity.EntityID) { delete(st.CarryBorn, id) }
-
-// lerpPose blends two poses (same pivot assumed from a).
-func lerpPose(a, b pose, k float64) pose {
-	if k <= 0 {
-		return a
-	}
-	if k >= 1 {
-		return b
-	}
-	l := func(x, y float64) float64 { return x*(1-k) + y*k }
-	ax, ay := a.Scale()
-	bx, by := b.Scale()
-	return pose{
-		Dx: l(a.Dx, b.Dx), Dy: l(a.Dy, b.Dy), Rot: l(a.Rot, b.Rot),
-		Px: a.Px, Py: a.Py,
-		Sx: l(ax, bx), Sy: l(ay, by),
-		Cs: b.Cs, Flash: b.Flash, Skew: l(a.Skew, b.Skew),
-	}
-}
-
-// framed returns key+suffix when that frame exists, else key.
-func (r *Renderer) framed(key, suffix string) string {
-	if suffix == "" {
-		return key
-	}
-	if k := key + suffix; r.art.Has(k) {
-		return k
-	}
-	return key
-}
-
-func unit(x, y float64) (float64, float64) {
-	n := math.Hypot(x, y)
-	if n == 0 {
-		return 0, 0
-	}
-	return x / n, y / n
-}
 
 // --- particles ----------------------------------------------------------
 
@@ -598,23 +358,6 @@ func (r *Renderer) syncItems(w game.WorldView) {
 		}
 	}
 	r.itemsInit = true
-}
-
-// itemPop is the pop-in scale of a ground item.
-func (r *Renderer) itemPop(id entity.EntityID) float64 {
-	born, ok := r.itemBorn[id]
-	if !ok || born == 0 {
-		return 1
-	}
-	return easeOutBack(float64(r.present-born) / 14)
-}
-
-// sway is the wind shear for a plant at (x, y): a slow breeze with
-// gusts, offset per tile so a field ripples.
-func (r *Renderer) sway(x, y int, amount float64) float64 {
-	t := float64(r.present)
-	gust := 0.6 + 0.4*math.Sin(t/260+float64(x)*0.12)
-	return amount * gust * math.Sin(t/38+float64(x)*0.55+float64(y)*0.35)
 }
 
 // drawWorkGlow flickers a warm glow over stoves that are cooking.
