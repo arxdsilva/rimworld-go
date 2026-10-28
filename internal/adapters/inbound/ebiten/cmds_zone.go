@@ -87,7 +87,7 @@ func (a *App) pickZonePriority(zid uint16, cur string, names []string, i int) {
 	if i < 0 || i >= len(names) || names[i] == cur {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.SetZonePriority, Target: uint64(zid), Index: i})
+	a.shell.Enqueue(command.Command{Kind: command.SetZonePriority, Target: uint64(zid), Index: i})
 }
 
 // zoneCropIcon is the crop's produce icon, else the growing-zone icon.
@@ -143,7 +143,7 @@ func (a *App) pickZoneCrop(zid uint16, cur, name string) {
 	if !ok {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.SetZoneCrop, Target: uint64(zid), Build: id})
+	a.shell.Enqueue(command.Command{Kind: command.SetZoneCrop, Target: uint64(zid), Build: id})
 }
 
 // zoneSowCmd is the Allow sowing toggle.
@@ -152,7 +152,7 @@ func (a *App) zoneSowCmd(z game.ZoneView) cmdButton {
 	c := cmdButton{ID: "cmd.zone.sow", Label: "Allow sowing", Icon: a.zoneIcon("zone_sow", "zone_grow"), Toggle: true, On: allowed,
 		Desc: "Colonists sow this zone. Turn it off to stop sowing here; harvesting goes on.",
 		Run: func(a *App) {
-			a.renderer.enqueue(command.Command{Kind: command.SetZoneSow, Target: uint64(zid), Enabled: !allowed})
+			a.shell.Enqueue(command.Command{Kind: command.SetZoneSow, Target: uint64(zid), Enabled: !allowed})
 		}}
 	if !allowed {
 		c.Desc = "Sowing is off here: nobody sows this zone. Harvesting goes on. Turn it on to sow again."
@@ -166,7 +166,7 @@ func (a *App) zoneCutCmd(z game.ZoneView) cmdButton {
 	c := cmdButton{ID: "cmd.zone.cut", Label: "Allow cutting", Icon: a.zoneIcon("zone_cut", "order_cut"), Toggle: true, On: allowed,
 		Desc: "Growers cut the other plants in the way and chop trees here. Turn it off to leave them; their tiles stay unsown.",
 		Run: func(a *App) {
-			a.renderer.enqueue(command.Command{Kind: command.SetZoneCut, Target: uint64(zid), Enabled: !allowed})
+			a.shell.Enqueue(command.Command{Kind: command.SetZoneCut, Target: uint64(zid), Enabled: !allowed})
 		}}
 	if !allowed {
 		c.Desc = "Cutting is off here: growers leave other plants and trees alone, so their tiles stay unsown. Turn it on to clear them."
@@ -196,7 +196,7 @@ func (a *App) zoneDeleteCmd(z game.ZoneView) cmdButton {
 	return cmdButton{ID: "cmd.zone.delete", Label: "Delete", Icon: a.zoneIcon("zone_delete", "order_cancel"),
 		Desc: "Remove the whole zone. Its plants and items stay where they are.",
 		Run: func(a *App) {
-			a.renderer.enqueue(command.Command{Kind: command.DeleteZone, Target: uint64(zid)})
+			a.shell.Enqueue(command.Command{Kind: command.DeleteZone, Target: uint64(zid)})
 			a.clearZone()
 		}}
 }
@@ -207,7 +207,7 @@ func (a *App) zoneHideCmd(z game.ZoneView) cmdButton {
 	c := cmdButton{ID: "cmd.zone.hide", Label: "Hide", Icon: a.zoneIcon("zone_hide", "order_forbid"), Toggle: true, On: hidden,
 		Desc: "Hide this zone's fill, outline and name on the map. It keeps working; click its tiles to select it.",
 		Run: func(a *App) {
-			a.renderer.enqueue(command.Command{Kind: command.SetZoneHidden, Target: uint64(zid), Enabled: !hidden})
+			a.shell.Enqueue(command.Command{Kind: command.SetZoneHidden, Target: uint64(zid), Enabled: !hidden})
 		}}
 	if hidden {
 		c.Desc = "This zone's overlay is hidden on the map while it is not selected. Turn it off to show it again."
@@ -234,7 +234,7 @@ func (a *App) openZoneRename(z game.ZoneView) {
 			return
 		}
 		done = true
-		a.renderer.enqueue(command.Command{Kind: command.RenameZone, Target: uint64(zid), Name: zoneRenameName(name)})
+		a.shell.Enqueue(command.Command{Kind: command.RenameZone, Target: uint64(zid), Name: zoneRenameName(name)})
 	}
 	a.uiPushModal(modal{
 		id: zoneRenameModalID, title: "Rename " + strings.ToLower(zoneKindName(z)), w: 380, h: 150,

@@ -15,5 +15,5 @@ func (a *App) toggleHomeAuto() {
 	if a.renderer == nil {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.SetHomeAuto, Enabled: !a.renderer.world().HomeAuto})
+	a.shell.Enqueue(command.Command{Kind: command.SetHomeAuto, Enabled: !a.shell.World().HomeAuto})
 }

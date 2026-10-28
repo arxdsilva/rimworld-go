@@ -5,6 +5,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -16,17 +17,17 @@ var hudTabSpecs = []struct {
 	id, label string
 	key       input.Action // its shortcut ("" none)
 }{
-	{"tab.architect", "Architect", input.TabArchitect},
-	{"tab.work", "Work", input.TabWork},
-	{"tab.schedule", "Schedule", input.TabSchedule},
-	{"tab.assign", "Assign", input.TabAssign},
-	{"tab.animals", "Animals", input.TabAnimals},
-	{"tab.wildlife", "Wildlife", input.TabWildlife},
-	{"tab.research", "Research", input.TabResearch},
-	{"tab.world", "World", input.TabWorld},
-	{"tab.history", "History", input.TabHistory},
-	{"tab.factions", "Factions", ""},
-	{"tab.menu", "Menu", input.Cancel},
+	{ids.TabArchitect, "Architect", input.TabArchitect},
+	{ids.TabWork, "Work", input.TabWork},
+	{ids.TabSchedule, "Schedule", input.TabSchedule},
+	{ids.TabAssign, "Assign", input.TabAssign},
+	{ids.TabAnimals, "Animals", input.TabAnimals},
+	{ids.TabWildlife, "Wildlife", input.TabWildlife},
+	{ids.TabResearch, "Research", input.TabResearch},
+	{ids.TabWorld, "World", input.TabWorld},
+	{ids.TabHistory, "History", input.TabHistory},
+	{ids.TabFactions, "Factions", ""},
+	{ids.TabMenu, "Menu", input.Cancel},
 }
 
 // tabsRect is the strip, the layout's Tabs rect.
@@ -35,25 +36,25 @@ func tabsRect(sw, sh int) rect { return rect{0, float32(sh - tabsH), float32(sw)
 // tabOn reports tab id's window (or the Architect) is the one open.
 func (a *App) tabOn(id string) bool {
 	switch id {
-	case "tab.architect":
+	case ids.TabArchitect:
 		return a.archOpen
-	case "tab.work":
+	case ids.TabWork:
 		return a.workOpen && (a.panelMode == "work" || a.panelMode == "")
-	case "tab.schedule":
+	case ids.TabSchedule:
 		return a.workOpen && a.panelMode == "schedule"
-	case "tab.research":
+	case ids.TabResearch:
 		return a.workOpen && a.panelMode == "research"
-	case "tab.animals":
+	case ids.TabAnimals:
 		return a.workOpen && a.panelMode == "animals" && !a.animalsWild
-	case "tab.wildlife":
+	case ids.TabWildlife:
 		return a.workOpen && a.panelMode == "animals" && a.animalsWild
-	case "tab.assign":
+	case ids.TabAssign:
 		return a.kitWindowOn(assignModalID)
-	case "tab.world":
+	case ids.TabWorld:
 		return a.kitWindowOn(worldModalID)
-	case "tab.history":
+	case ids.TabHistory:
 		return a.kitWindowOn(historyModalID)
-	case "tab.factions":
+	case ids.TabFactions:
 		return a.kitWindowOn(colFacModalID)
 	}
 	return false
@@ -86,11 +87,11 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 			b.tip = t.label + a.keyHint(t.key)
 		}
 		switch t.id {
-		case "tab.research":
+		case ids.TabResearch:
 			if name, pct, ok := a.researchUnderWay(); ok {
 				b.tip = fmt.Sprintf("%s: %s %d%%", b.tip, name, pct)
 			}
-		case "tab.factions":
+		case ids.TabFactions:
 			if a.renderer != nil && len(a.renderer.game.Factions()) == 0 {
 				b.disabled, b.reason = true, "no other peoples in this colony"
 				b.selected = false
@@ -106,7 +107,7 @@ func (a *App) researchUnderWay() (name string, pct int, ok bool) {
 	if a.renderer == nil {
 		return "", 0, false
 	}
-	for _, p := range a.renderer.world().Research {
+	for _, p := range a.shell.World().Research {
 		if p.Current && !p.Done {
 			if p.Cost > 0 {
 				pct = min(100, 100*p.Progress/p.Cost)
@@ -128,7 +129,7 @@ func (a *App) drawTabs(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	for _, b := range bs {
-		if b.id != "tab.research" {
+		if b.id != ids.TabResearch {
 			continue
 		}
 		track := rect{b.x + 4, b.y + b.h - 6, b.w - 8, 3}

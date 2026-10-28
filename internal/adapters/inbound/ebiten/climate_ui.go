@@ -8,6 +8,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -109,8 +110,8 @@ func (a *App) liveMessageList() []liveMessage {
 	if a.msgSeen == nil {
 		a.msgSeen = map[string]uint64{}
 	}
-	now := a.renderer.present
-	msgs := a.renderer.world().Messages
+	now := a.shell.Present()
+	msgs := a.shell.World().Messages
 	var live []liveMessage
 	for _, m := range msgs {
 		k := messageKey(m)
@@ -188,7 +189,7 @@ func (a *App) messageButtonsIn(l hudLayout) []button {
 		if row.msg.Focus == 0 && row.msg.X == 0 && row.msg.Y == 0 {
 			continue
 		}
-		out = append(out, button{id: "msg." + strconv.Itoa(row.idx), x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
+		out = append(out, button{id: ids.PrefixMsg + strconv.Itoa(row.idx), x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
 	}
 	return out
 }
@@ -199,16 +200,16 @@ func (a *App) focusEntity(id entity.EntityID) bool {
 	if a.renderer == nil || id == 0 {
 		return false
 	}
-	for _, an := range a.renderer.world().Animals {
+	for _, an := range a.shell.World().Animals {
 		if an.ID == id {
 			a.selectCand(selCand{selAnimal, an.ID})
 			a.centerOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
 			return true
 		}
 	}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.ID == id {
-			a.renderer.Select(p.ID)
+			a.shell.Select(p.ID)
 			a.centerOnMap(float64(p.X)+0.5, float64(p.Y)+0.5)
 			return true
 		}
@@ -219,7 +220,7 @@ func (a *App) focusEntity(id entity.EntityID) bool {
 // focusMessage centres the camera on message i's creature (selecting
 // it, so the inspector shows it) or else on its tile.
 func (a *App) focusMessage(id string) {
-	i, err := strconv.Atoi(strings.TrimPrefix(id, "msg."))
+	i, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixMsg))
 	live := a.liveMessages()
 	if err != nil || i < 0 || i >= len(live) || a.renderer == nil {
 		return

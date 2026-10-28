@@ -80,7 +80,7 @@ func (a *App) penOutlines() []game.PenView {
 		return nil
 	}
 	if a.penToolHeld() {
-		return a.renderer.world().Pens
+		return a.shell.World().Pens
 	}
 	if pv, ok := a.penOutlined(); ok {
 		return []game.PenView{pv}
@@ -95,8 +95,8 @@ func (a *App) drawPenOutline(screen *ebiten.Image) {
 		return
 	}
 	sw, sh := a.size()
-	w := a.renderer.world()
-	tile := float32(a.renderer.tilePx())
+	w := a.shell.World()
+	tile := float32(a.shell.TilePx())
 	for _, pv := range pens {
 		if !pv.Enclosed || len(pv.Bits) == 0 || w.TerrainW <= 0 {
 			a.drawOpenPen(screen, pv, tile, sw, sh)
@@ -104,7 +104,7 @@ func (a *App) drawPenOutline(screen *ebiten.Image) {
 		}
 		h := len(pv.Bits) * 64 / w.TerrainW
 		for _, e := range penEdges(pv.Bits, w.TerrainW, h) {
-			sx, sy := a.renderer.worldToScreen(e.x, e.y)
+			sx, sy := a.shell.WorldToScreen(e.x, e.y)
 			if !visible(sx, sy, tile, tile, sw, sh) {
 				continue
 			}
@@ -115,7 +115,7 @@ func (a *App) drawPenOutline(screen *ebiten.Image) {
 
 // drawOpenPen is a red dashed box around the marker and a label.
 func (a *App) drawOpenPen(screen *ebiten.Image, pv game.PenView, tile float32, sw, sh int) {
-	sx, sy := a.renderer.worldToScreen(pv.X, pv.Y)
+	sx, sy := a.shell.WorldToScreen(pv.X, pv.Y)
 	if !visible(sx, sy, tile, tile, sw, sh) {
 		return
 	}

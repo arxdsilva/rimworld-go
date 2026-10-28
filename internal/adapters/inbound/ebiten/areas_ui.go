@@ -79,7 +79,7 @@ func (a *App) newArea() {
 	if n >= areasMax {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.CreateArea, Name: fmt.Sprintf("Area %d", n+1)})
+	a.shell.Enqueue(command.Command{Kind: command.CreateArea, Name: fmt.Sprintf("Area %d", n+1)})
 }
 
 // areaUsers counts the colonists and animals whose allowed area is id.
@@ -87,13 +87,13 @@ func (a *App) areaUsers(id int) int {
 	n := 0
 	rd, ok := a.renderer.game.(areaReader)
 	if ok {
-		for _, p := range a.renderer.snapshot() {
+		for _, p := range a.shell.Pawns() {
 			if p.Status != "dead" && areaRef(rd.AreaOf(p.ID)) == id {
 				n++
 			}
 		}
 	}
-	for _, an := range a.renderer.world().Animals {
+	for _, an := range a.shell.World().Animals {
 		if an.Tame && !an.Penned && areaRef(an.AreaRef) == id {
 			n++
 		}
@@ -104,7 +104,7 @@ func (a *App) areaUsers(id int) int {
 // deleteArea deletes area ar, asking first when pawns use it.
 func (a *App) deleteArea(ar game.AreaView) {
 	del := func() {
-		a.renderer.enqueue(command.Command{Kind: command.DeleteArea, Index: int(ar.ID)})
+		a.shell.Enqueue(command.Command{Kind: command.DeleteArea, Index: int(ar.ID)})
 	}
 	n := a.areaUsers(int(ar.ID))
 	if n == 0 {
@@ -155,14 +155,14 @@ func (a *App) areasBody(body rect, names map[int]*string) {
 		_, committed := a.uiTextField(fid, fr, v, textFieldSpec{
 			MaxLen: 24, Placeholder: "Area name", Normalize: strings.TrimSpace})
 		if committed && *v != "" && *v != ar.Name {
-			a.renderer.enqueue(command.Command{Kind: command.RenameArea, Index: id, Name: *v})
+			a.shell.Enqueue(command.Command{Kind: command.RenameArea, Index: id, Name: *v})
 		} else if a.uiSt().edit.id != fid {
 			*v = ar.Name
 		}
 		a.uiLabel(fr.right()+8, rr.Y+(rr.H-float32(lineH(tsSmall)))/2, fmt.Sprintf("%d cells", ar.Cells), withColor(tsSmall, uiTextDim))
 		if a.uiButton(fmt.Sprintf("areas.invert.%d", id), rect{rr.right() - 86, rr.Y, 56, rr.H}, "Invert", btnOpts{
 			Tip: "Invert\nSwap the area's tiles: painted become empty and the rest becomes painted."}) {
-			a.renderer.enqueue(command.Command{Kind: command.InvertArea, Index: id})
+			a.shell.Enqueue(command.Command{Kind: command.InvertArea, Index: id})
 		}
 		if a.uiButton(fmt.Sprintf("areas.delete.%d", id), rect{rr.right() - 26, rr.Y, 26, rr.H}, "X", btnOpts{
 			Style: btnDanger, Tip: "Delete\nRemove this area. Anyone restricted to it becomes unrestricted."}) {
@@ -180,7 +180,7 @@ type areaReader interface {
 
 // assignArea emits AssignArea for pawn with ref.
 func (a *App) assignArea(pawn entity.EntityID, ref int) {
-	a.renderer.enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(pawn), Index: ref})
+	a.shell.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(pawn), Index: ref})
 }
 
 // colonistArea is colonist id's area ref (unrestricted when the game does

@@ -8,6 +8,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
 )
@@ -90,7 +91,7 @@ func colonyFactionRows(views []game.FactionView) []colFacRow {
 // button is drawn by the HUD, this widget answers its click.
 func (a *App) factionsTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != "tab.factions" || b.disabled {
+		if b.id != ids.TabFactions || b.disabled {
 			continue
 		}
 		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleColonyFactions})

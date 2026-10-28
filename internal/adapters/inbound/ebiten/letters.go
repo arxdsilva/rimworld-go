@@ -8,6 +8,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -72,7 +73,7 @@ func (a *App) letters() []game.LetterView {
 	if a.renderer == nil {
 		return nil
 	}
-	return a.renderer.world().Letters
+	return a.shell.World().Letters
 }
 
 // letterCount is the number of letters the layout reserves rows for.
@@ -136,7 +137,7 @@ func (a *App) letterButtonsIn(l hudLayout) []button {
 		if row.older > 0 {
 			continue
 		}
-		out = append(out, button{id: "letter." + strconv.FormatUint(row.letter.ID, 10), label: letterRowLabel(row),
+		out = append(out, button{id: ids.PrefixLetter + strconv.FormatUint(row.letter.ID, 10), label: letterRowLabel(row),
 			x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
 	}
 	return out
@@ -172,10 +173,10 @@ func (a *App) letterFlash(id uint64) float64 {
 		return 0
 	}
 	at, ok := a.rightSession().fresh[id]
-	if !ok || a.renderer.present < at {
+	if !ok || a.shell.Present() < at {
 		return 0
 	}
-	age := a.renderer.present - at
+	age := a.shell.Present() - at
 	if age >= letterFlashFrames {
 		return 0
 	}
@@ -190,12 +191,12 @@ func (a *App) lettersUI() {
 		return
 	}
 	st := a.rightSession()
-	now := uint64(a.renderer.game.Tick())
+	now := uint64(a.shell.Tick())
 	for _, l := range a.letters() {
 		if !st.known[l.ID] {
 			st.known[l.ID] = true
 			if st.primed {
-				st.fresh[l.ID] = a.renderer.present
+				st.fresh[l.ID] = a.shell.Present()
 			}
 		}
 		if !l.Intro {
@@ -211,7 +212,7 @@ func (a *App) lettersUI() {
 		if l.Tick+letterFresh < now {
 			continue // a loaded save's intro stays in the stack
 		}
-		a.msgSeen[key] = a.renderer.present
+		a.msgSeen[key] = a.shell.Present()
 		a.openLetterView(l)
 	}
 	st.primed = true
@@ -219,7 +220,7 @@ func (a *App) lettersUI() {
 
 // applyLetterClick handles a "letter.<ID>" click: it opens the letter.
 func (a *App) applyLetterClick(id string) {
-	n, err := strconv.ParseUint(strings.TrimPrefix(id, "letter."), 10, 64)
+	n, err := strconv.ParseUint(strings.TrimPrefix(id, ids.PrefixLetter), 10, 64)
 	if err != nil {
 		return
 	}
@@ -230,7 +231,7 @@ func (a *App) applyLetterClick(id string) {
 
 // dismissLetter asks the game to drop letter id from the stack.
 func (a *App) dismissLetter(id uint64) {
-	a.renderer.enqueue(command.Command{Kind: command.DismissLetter, Target: id})
+	a.shell.Enqueue(command.Command{Kind: command.DismissLetter, Target: id})
 }
 
 // letterHasPlace reports the letter can take the camera somewhere.

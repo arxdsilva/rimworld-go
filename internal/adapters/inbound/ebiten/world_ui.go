@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/planet"
@@ -64,7 +65,7 @@ type worldUI struct {
 // colony's widget hook).
 func (a *App) worldTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != "tab.world" || b.disabled {
+		if b.id != ids.TabWorld || b.disabled {
 			continue
 		}
 		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleWorld})
@@ -283,7 +284,7 @@ func (a *App) worldList(st *worldUI, r rect, view game.WorldMapView) {
 		br := rect{row.right() - 108, row.bottom() - 30, 100, 26}
 		if a.uiButton(id+".return", br, label, btnOpts{Disabled: reason != "", Reason: reason,
 			Tip: "Return\nThe caravan turns round and comes home the way it went."}) {
-			a.renderer.enqueue(command.Command{Kind: command.CaravanReturn, Target: c.ID})
+			a.shell.Enqueue(command.Command{Kind: command.CaravanReturn, Target: c.ID})
 		}
 	}
 }

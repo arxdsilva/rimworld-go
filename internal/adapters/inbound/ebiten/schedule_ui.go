@@ -8,6 +8,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
@@ -47,7 +48,7 @@ func (a *App) scheduleButtons() []button {
 	r := a.windowRect()
 	var out []button
 	for i, b := range schedBrushes {
-		out = append(out, button{id: "sched.brush." + strconv.Itoa(int(b)), label: b.String(),
+		out = append(out, button{id: ids.PrefixSchedBrush + strconv.Itoa(int(b)), label: b.String(),
 			x: r.x + 12 + float32(i*118), y: r.y + 30, w: 112, h: 26, selected: a.schedBrush == b})
 	}
 	gx := r.x + 12 + workNameW
@@ -57,7 +58,7 @@ func (a *App) scheduleButtons() []button {
 			break
 		}
 		for h := 0; h < 24; h++ {
-			out = append(out, button{id: "sched.cell." + strconv.FormatUint(id, 10) + "." + strconv.Itoa(h),
+			out = append(out, button{id: ids.PrefixSchedCell + strconv.FormatUint(id, 10) + "." + strconv.Itoa(h),
 				x: gx + float32(h*schedCellW), y: y, w: schedCellW - 2, h: schedRowH - 3})
 		}
 	}
@@ -67,7 +68,7 @@ func (a *App) scheduleButtons() []button {
 // scheduleRows lists row owners: 0 (everyone) then each colonist.
 func (a *App) scheduleRows() []uint64 {
 	rows := []uint64{0}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.Status != "dead" {
 			rows = append(rows, uint64(p.ID))
 		}
@@ -95,11 +96,11 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 		hintX, float64(r.y)+6+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	mx, my := a.currentCursor()
 	for _, b := range a.scheduleButtons() {
-		if !strings.HasPrefix(b.id, "sched.brush.") {
+		if !strings.HasPrefix(b.id, ids.PrefixSchedBrush) {
 			continue
 		}
 		drawButton(screen, b, b.contains(mx, my))
-		v, _ := strconv.Atoi(strings.TrimPrefix(b.id, "sched.brush."))
+		v, _ := strconv.Atoi(strings.TrimPrefix(b.id, ids.PrefixSchedBrush))
 		uiFillRect(screen, b.x+b.w-16, b.y+8, 10, 10, schedColor(schedule.Activity(v)), false)
 	}
 	gx := int(r.x) + 12 + workNameW
@@ -107,17 +108,17 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 		drawText(screen, fmt.Sprintf("%02d", h), float64(gx+h*schedCellW+2), float64(int(r.y)+schedTop)-lineH(tsSmall)-1, withColor(tsSmall, uiTextDim))
 	}
 	byID := map[uint64]game.PawnView{}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		byID[uint64(p.ID)] = p
 	}
-	now := a.renderer.game.Date().Hour
+	now := a.shell.Date().Hour
 	for row, id := range a.scheduleRows() {
 		y := int(r.y) + schedTop + row*schedRowH
 		if y > int(r.y+r.h)-20 {
 			break
 		}
 		name := "Everyone"
-		grid := a.renderer.world().Schedule
+		grid := a.shell.World().Schedule
 		if p, ok := byID[id]; ok {
 			name, grid = pawnLabel(p), p.Schedule
 		}
@@ -138,7 +139,7 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 
 // paintSchedule paints the clicked cell with the current brush.
 func (a *App) paintSchedule(id string) {
-	parts := strings.Split(strings.TrimPrefix(id, "sched.cell."), ".")
+	parts := strings.Split(strings.TrimPrefix(id, ids.PrefixSchedCell), ".")
 	if len(parts) != 2 || a.renderer == nil {
 		return
 	}
@@ -148,13 +149,13 @@ func (a *App) paintSchedule(id string) {
 		return
 	}
 	if pawn != 0 {
-		for _, p := range a.renderer.snapshot() {
+		for _, p := range a.shell.Pawns() {
 			if uint64(p.ID) == pawn && hour < len(p.Schedule) && p.Schedule[hour] == a.schedBrush {
 				return // already painted: don't resend while dragging
 			}
 		}
 	}
-	a.renderer.enqueue(command.Command{Kind: command.SetSchedule, Pawn: pawn, Index: hour, Mode: uint8(a.schedBrush)})
+	a.shell.Enqueue(command.Command{Kind: command.SetSchedule, Pawn: pawn, Index: hour, Mode: uint8(a.schedBrush)})
 }
 
 // handleScheduleDrag keeps painting while the mouse is held over cells.
@@ -163,7 +164,7 @@ func (a *App) handleScheduleDrag() {
 		return
 	}
 	mx, my := a.currentCursor()
-	if b, ok := hitButton(a.scheduleButtons(), mx, my); ok && strings.HasPrefix(b.id, "sched.cell.") {
+	if b, ok := hitButton(a.scheduleButtons(), mx, my); ok && strings.HasPrefix(b.id, ids.PrefixSchedCell) {
 		if b.id != a.lastPainted {
 			a.lastPainted = b.id
 			a.paintSchedule(b.id)

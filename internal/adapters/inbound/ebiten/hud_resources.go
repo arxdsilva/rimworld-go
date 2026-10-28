@@ -129,7 +129,7 @@ func (a *App) resourceRows() []resRow {
 	if a.renderer == nil {
 		return nil
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	st := &a.hst.res
 	k := resKey{
 		n: len(w.Stored), cat: a.settings.Gameplay.CategorizedResources, ver: st.ver,

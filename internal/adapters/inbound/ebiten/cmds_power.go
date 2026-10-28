@@ -235,5 +235,5 @@ func (a *App) powerSelection() {
 	if !ok || !hasPowerToggle(b) {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.SetPowerWanted, Target: uint64(b.ID), Enabled: !b.PowerWantOn})
+	a.shell.Enqueue(command.Command{Kind: command.SetPowerWanted, Target: uint64(b.ID), Enabled: !b.PowerWantOn})
 }

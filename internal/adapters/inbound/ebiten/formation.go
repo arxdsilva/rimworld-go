@@ -239,7 +239,7 @@ func (a *App) handleOrders() {
 	}
 	f := &a.in
 	mx, my := a.currentCursor()
-	tx, ty := a.renderer.TileAt(a.mapCursor()) // the map is physical
+	tx, ty := a.shell.TileAt(a.mapCursor()) // the map is physical
 	if a.form.on {
 		if f.down(mbRight) {
 			a.form.x1, a.form.y1 = tx, ty
@@ -266,7 +266,7 @@ func (a *App) handleOrders() {
 		return
 	}
 	if a.grouped() {
-		a.hint = "Draft the colonists to move them together"
+		a.shell.Hint("Draft the colonists to move them together")
 		return
 	}
 	a.rightClickTile(tx, ty, float32(mx), float32(my))
@@ -280,9 +280,10 @@ func (a *App) finishFormation() {
 	if len(pawns) == 0 {
 		return
 	}
-	free := walkableFn(a.renderer.world(), a.renderer.game.Width(), a.renderer.game.Height())
+	mapW, mapH := a.shell.MapSize()
+	free := walkableFn(a.shell.World(), mapW, mapH)
 	for _, m := range formationMoves(pawns, d.x0, d.y0, d.x1, d.y1, free) {
-		a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(m.pawn), X: m.x, Y: m.y, Queue: a.queueing()})
+		a.shell.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(m.pawn), X: m.x, Y: m.y, Queue: a.queueing()})
 	}
 }
 

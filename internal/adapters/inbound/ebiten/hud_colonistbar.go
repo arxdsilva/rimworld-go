@@ -8,6 +8,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -55,7 +56,9 @@ func barTip(p game.PawnView) string {
 }
 
 // barSlotID is the id of a colonist's bar slot.
-func barSlotID(id entity.EntityID) string { return "bar.pawn." + strconv.FormatUint(uint64(id), 10) }
+func barSlotID(id entity.EntityID) string {
+	return ids.PrefixBarPawn + strconv.FormatUint(uint64(id), 10)
+}
 
 // barClick is the last click on a colonist's bar slot.
 type barClick struct {
@@ -157,11 +160,11 @@ func (a *App) updateBarIdle() {
 		st.idle = nil
 		return
 	}
-	tick := a.renderer.game.Tick()
+	tick := a.shell.Tick()
 	if st.idle == nil || len(st.idle) > 512 {
 		st.idle = map[entity.EntityID]clock.Tick{}
 	}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		since, was := st.idle[p.ID]
 		switch {
 		case !barIdleNow(p):
@@ -184,12 +187,12 @@ func onFire(fires []game.FireView, p game.PawnView) bool {
 
 // barStatusesOf are p's marks now.
 func (a *App) barStatusesOf(p game.PawnView) []barStatus {
-	return a.barStatusesWith(p, a.renderer.world().Fires)
+	return a.barStatusesWith(p, a.shell.World().Fires)
 }
 
 func (a *App) barStatusesWith(p game.PawnView, fires []game.FireView) []barStatus {
 	since, idling := a.hst.bar.idle[p.ID]
-	held := idling && a.renderer.game.Tick() >= since+barIdleHold
+	held := idling && a.shell.Tick() >= since+barIdleHold
 	return barStatuses(p, onFire(fires, p), held)
 }
 
@@ -220,7 +223,7 @@ func (a *App) barCount() int {
 		return 0
 	}
 	n := 0
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if !p.Prisoner && !p.Visitor { // as barPawns: visitors and allies stay off the bar
 			n++
 		}
@@ -270,7 +273,7 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 	l := a.hud()
 	pawns := a.barPawns()
 	n := min(barShown(l), len(pawns))
-	fires := a.renderer.world().Fires
+	fires := a.shell.World().Fires
 	out := make([]button, 0, n)
 	for i, p := range pawns[:n] {
 		slot := l.BarSlots[i]
@@ -289,7 +292,8 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 
 // barSelected reports the colonist is selected, alone or in a group.
 func (a *App) barSelected(id entity.EntityID) bool {
-	return a.renderer.HasSelect() && a.renderer.Selected() == id || a.inGroup(selPawn, id)
+	sel, ok := a.shell.Selected()
+	return ok && sel == id || a.inGroup(selPawn, id)
 }
 
 // colonistBarUI declares the "+N" slot (a hit area with a tip) and ticks
@@ -324,9 +328,9 @@ func (a *App) cycleHiddenColonist() {
 		return
 	}
 	next := 0
-	if a.renderer.HasSelect() {
+	if sel, ok := a.shell.Selected(); ok {
 		for i, p := range hidden {
-			if p.ID == a.renderer.Selected() {
+			if p.ID == sel {
 				next = (i + 1) % len(hidden)
 			}
 		}
@@ -337,7 +341,7 @@ func (a *App) cycleHiddenColonist() {
 // barPawns are the colonists the colonist bar shows: everyone but
 // prisoners and visitors (traders, guests), who stay selectable on the map.
 func (a *App) barPawns() []game.PawnView {
-	pawns := a.renderer.snapshot()
+	pawns := a.shell.Pawns()
 	for i, p := range pawns {
 		if p.Prisoner || p.Visitor {
 			out := append(make([]game.PawnView, 0, len(pawns)), pawns[:i]...)
@@ -383,7 +387,7 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 	pawns := a.barPawns()
 	n := min(barShown(l), len(pawns))
 	mx, my := a.currentCursor()
-	fires := a.renderer.world().Fires
+	fires := a.shell.World().Fires
 	for i, p := range pawns[:n] {
 		slot := l.BarSlots[i]
 		a.drawBarCard(screen, barCardOf(slot, l.BarScale), p, a.barSelected(p.ID), slot.hit(mx, my), a.barStatusesWith(p, fires))

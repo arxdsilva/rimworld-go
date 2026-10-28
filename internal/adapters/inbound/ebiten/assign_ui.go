@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
@@ -70,7 +71,7 @@ type drugPolicyReader interface {
 // is drawn by the HUD, this widget answers its click.
 func (a *App) assignTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != "tab.assign" || b.disabled {
+		if b.id != ids.TabAssign || b.disabled {
 			continue
 		}
 		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleAssign})
@@ -106,7 +107,7 @@ type assignRow struct {
 func (a *App) assignRows() []assignRow {
 	rd, known := a.renderer.game.(drugPolicyReader)
 	var out []assignRow
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.Status == "dead" {
 			continue
 		}
@@ -180,7 +181,7 @@ func (a *App) assignBody(body rect) {
 			continue
 		}
 		if a.uiButton(id, br, presetLabel(r.policy), btnOpts{Tip: assignDrugTip}) {
-			a.renderer.enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(r.id), Mode: uint8(nextPreset(r.policy))})
+			a.shell.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(r.id), Mode: uint8(nextPreset(r.policy))})
 		}
 	}
 }
@@ -189,7 +190,7 @@ func (a *App) assignBody(body rect) {
 func (a *App) assignCareButton(r assignRow, rr rect) {
 	cr := rect{rr.X + assignNameW + assignDrugW + 10, rr.Y, min(assignCareW, rr.W-assignNameW-assignDrugW-10), rr.H}
 	if a.uiButton(assignCareID(r.id), cr, r.care.Label(), btnOpts{Tip: assignCareTip}) {
-		a.renderer.enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(nextCare(r.care))})
+		a.shell.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(nextCare(r.care))})
 	}
 }
 
@@ -213,7 +214,7 @@ func (a *App) assignDefaultCare(r rect) {
 			continue
 		}
 		if a.uiButton(assignDefCareID(g), br, g.Label()+": "+careShort(cur), btnOpts{Tip: tip}) {
-			a.renderer.enqueue(command.Command{Kind: command.SetDefaultCare, Index: int(g), Mode: uint8(nextCare(cur))})
+			a.shell.Enqueue(command.Command{Kind: command.SetDefaultCare, Index: int(g), Mode: uint8(nextCare(cur))})
 		}
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -48,12 +49,12 @@ func (a *App) pawnCommands(id entity.EntityID) []cmdButton {
 		return nil
 	}
 	draft := cmdButton{
-		ID: "pawn.draft", Label: "Draft", Icon: "draft", Hotkey: input.Draft, Toggle: true, On: p.Drafted,
+		ID: ids.PawnDraft, Label: "Draft", Icon: "draft", Hotkey: input.Draft, Toggle: true, On: p.Drafted,
 		Desc: "Take direct control. A drafted colonist drops their work and obeys orders: right-click to move or attack. " +
 			"Undraft to send them back to their schedule.",
 	}
 	clear := cmdButton{
-		ID: "pawn.clearorders", Label: "Clear orders", Icon: "clear_orders",
+		ID: ids.PawnClearOrders, Label: "Clear orders", Icon: "clear_orders",
 		Desc: "Cancel the current order and everything queued behind it.",
 	}
 	switch {
@@ -84,7 +85,7 @@ func bedRestCommand(p game.PawnView) (cmdButton, bool) {
 		Desc: "Lie in bed to heal when in pain, wounded or sick.",
 		Run: func(a *App) {
 			if pv, ok := a.pawnView(id); ok {
-				a.renderer.enqueue(command.Command{Kind: command.SetPawnBedRest, Target: uint64(id), Enabled: !pv.RestWhenHurt})
+				a.shell.Enqueue(command.Command{Kind: command.SetPawnBedRest, Target: uint64(id), Enabled: !pv.RestWhenHurt})
 			}
 		},
 	}, true
@@ -136,7 +137,7 @@ func (a *App) pawnPane(id entity.EntityID) paneSpec {
 		Chips:    a.pawnChips(p),
 		Lines:    a.pawnLines(p),
 		Tabs:     a.pawnTabs(p),
-		Close:    "inspector.close",
+		Close:    ids.InspectorClose,
 	}
 }
 
@@ -187,7 +188,7 @@ func (a *App) pawnChips(p game.PawnView) []paneChip {
 	}
 	if !p.Prisoner {
 		out = append(out, paneChip{
-			ID:    "tab.schedule",
+			ID:    ids.TabSchedule,
 			Label: "Schedule: " + p.Activity.String(),
 			Tip:   "Schedule\nWhat " + pawnLabel(p) + " is scheduled to do this hour. Click to open the Schedule tab.",
 		})
@@ -264,7 +265,7 @@ func (a *App) pawnLines(p game.PawnView) []string {
 	out = append(out, "Wearing: "+wearingSummary(p))
 	out = append(out, fmt.Sprintf("Tile: (%d, %d)  %s", p.X, p.Y, fmtTemp(p.Temp)))
 	if a.renderer != nil {
-		if rt := roomLabelAt(a.renderer.world(), p.X, p.Y); rt != "" {
+		if rt := roomLabelAt(a.shell.World(), p.X, p.Y); rt != "" {
 			out = append(out, "Room: "+rt)
 		}
 	}

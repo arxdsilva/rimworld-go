@@ -15,7 +15,7 @@ fields rimworld-go/internal/domain/world/planet.Planet 33
 files rimworld-go/internal/adapters/inbound/ebiten 213  # ARCH-002 raised 212 -> 213 for the seam itself (shell.go); the only raise in the programme, every later wave lowers it
 files rimworld-go/internal/application/game 185
 iface rimworld-go/internal/adapters/inbound/ebiten.Simulation 32
-lines rimworld-go/internal/adapters/inbound/ebiten 64561  # ARCH-002 raised 64178 -> 64561 for the seam itself (shell.go, render view); the only raise in the programme
+lines rimworld-go/internal/adapters/inbound/ebiten 64602  # ARCH-002 raised 64178 -> 64602 for the seam itself (shell.go, render view, the ids imports); the only raise in the programme
 lines rimworld-go/internal/application/game 57019
 methods rimworld-go/internal/adapters/inbound/ebiten.App 950
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 398

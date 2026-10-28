@@ -176,7 +176,7 @@ func (a *App) drawItemMark(screen *ebiten.Image) {
 		return
 	}
 	if a.renderer.art != nil {
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
+		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.shell.TilePx(), a.pw, a.ph) // physical, like the map
 	}
 }
 
@@ -191,12 +191,12 @@ func (a *App) applyItemClick(id string) {
 		return
 	}
 	if id == "item.forbid" {
-		a.renderer.enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: !it.Forbidden})
+		a.shell.Enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: !it.Forbidden})
 		return
 	}
 	if id == "item.haulmark" {
 		if it.Unclaimed { // colony stacks have no mark
-			a.renderer.enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: !it.HaulMarked})
+			a.shell.Enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: !it.HaulMarked})
 		}
 		return
 	}

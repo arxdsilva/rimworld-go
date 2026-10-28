@@ -1,6 +1,11 @@
 package ebiten
 
-import ebiten "github.com/hajimehoshi/ebiten/v2"
+import (
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+)
 
 // Main-tab windows (PLAY-018: WINDOWS owns them): Work, Schedule,
 // Research, Animals, Wildlife, Assign, History, Factions and World open
@@ -89,7 +94,7 @@ func (a *App) applyWindowClick(id string) {
 // "research" or "animals"), replacing any other.
 func (a *App) showWindow(mode string) {
 	a.workOpen, a.panelMode = true, mode
-	a.closeArchitect()
+	a.shell.Do(ports.CloseArchitect{})
 	a.closeFloat()
 }
 
@@ -180,7 +185,7 @@ func (a *App) mainWindowUI(sw, sh int) {
 		w.kit = nil // Escape or another tab closed it
 	}
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id == "tab.animals" && !b.disabled { // app.go's toggle does not know Wildlife
+		if b.id == ids.TabAnimals && !b.disabled { // app.go's toggle does not know Wildlife
 			a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, tip: b.tip, click: a.toggleAnimalsTab})
 		}
 	}

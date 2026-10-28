@@ -7,6 +7,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -386,28 +387,28 @@ func (a *App) optionsButtons(sw, sh int) []button {
 		_, cx, y := optPos(rows, i)
 		if r.kind == rowStep {
 			out = append(out,
-				button{id: "options." + r.key + ".dec", label: "-", x: cx, y: y, w: optBtnH, h: optBtnH},
-				button{id: "options." + r.key + ".inc", label: "+", x: cx + optBtnH + 8 + optBarW + 8, y: y, w: optBtnH, h: optBtnH})
+				button{id: ids.PrefixOptions + r.key + ".dec", label: "-", x: cx, y: y, w: optBtnH, h: optBtnH},
+				button{id: ids.PrefixOptions + r.key + ".inc", label: "+", x: cx + optBtnH + 8 + optBarW + 8, y: y, w: optBtnH, h: optBtnH})
 			continue
 		}
 		lock := a.optionLock(r.key) // saves.go: developer mode is locked in commitment mode
-		out = append(out, button{id: "options." + r.key, label: a.rowValue(r), x: cx, y: y, w: 160, h: optBtnH,
+		out = append(out, button{id: ids.PrefixOptions + r.key, label: a.rowValue(r), x: cx, y: y, w: 160, h: optBtnH,
 			disabled: lock != "", reason: lock, tip: r.tip})
 		if x := r.extra; x != nil {
 			off := ""
 			if x.off != nil {
 				off = x.off(a)
 			}
-			out = append(out, button{id: "options." + r.key + "." + x.key, label: x.label, x: cx + 160 + 8, y: y, w: 150, h: optBtnH,
+			out = append(out, button{id: ids.PrefixOptions + r.key + "." + x.key, label: x.label, x: cx + 160 + 8, y: y, w: 150, h: optBtnH,
 				tip: x.tip, disabled: off != "", reason: off})
 		}
 	}
-	return append(out, button{id: "options.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36})
+	return append(out, button{id: ids.OptionsBack, label: "Back", x: 40, y: footerY(sh), w: 140, h: 36})
 }
 
 // applyOption handles an options.* click: a tab, or a row's control.
 func (a *App) applyOption(id string) {
-	key := strings.TrimPrefix(id, "options.")
+	key := strings.TrimPrefix(id, ids.PrefixOptions)
 	if t, ok := strings.CutPrefix(key, "tab."); ok {
 		a.optionsTab = t
 		a.rebind = rebindState{}
@@ -469,7 +470,7 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 		a.drawControls(screen, sw, sh)
 		mx, my := a.currentCursor()
 		a.drawButtons(screen, a.optionsButtons(sw, sh)[:len(a.optionTabList())], mx, my)
-		a.drawButtons(screen, []button{{id: "options.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36}}, mx, my)
+		a.drawButtons(screen, []button{{id: ids.OptionsBack, label: "Back", x: 40, y: footerY(sh), w: 140, h: 36}}, mx, my)
 		return
 	}
 	rows := optionRows(tab)

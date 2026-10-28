@@ -49,13 +49,13 @@ type selCycle struct {
 // counts only while the power overlay shows, the only place it is drawn
 // (PLAY-021).
 func (a *App) selectables(w game.WorldView, tx, ty int) []selCand {
-	cands, solid := selectablesSplit(w, a.renderer.snapshot(), tx, ty)
+	cands, solid := selectablesSplit(w, a.shell.Pawns(), tx, ty)
 	if !worldFogged(w, tx, ty) {
 		if body := a.renderer.animalsCovering(w, tx, ty); len(body) > 0 {
 			cands = slices.Insert(cands, solid, body...)
 		}
 	}
-	if a.renderer.powerShown() {
+	if a.shell.PowerShown() {
 		return cands
 	}
 	return slices.DeleteFunc(cands, func(c selCand) bool {
@@ -235,8 +235,8 @@ func (r *Renderer) pawnUnderCursor(mx, my int) (entity.EntityID, bool) {
 // physical pixels (mapCursor).
 func (a *App) clickSelect() {
 	mx, my := a.mapCursor()
-	tx, ty := a.renderer.TileAt(mx, my)
-	w := a.renderer.world()
+	tx, ty := a.shell.TileAt(mx, my)
+	w := a.shell.World()
 	if a.selectZoneLabel(w, mx, my, tx, ty) { // zone_select.go: a click on a zone's name plate
 		a.selCycle = selCycle{}
 		return
@@ -274,7 +274,7 @@ func (a *App) selectCand(c selCand) {
 	a.clearSelections(c.kind)
 	switch c.kind {
 	case selPawn:
-		a.renderer.Select(c.id)
+		a.shell.Select(c.id)
 	case selAnimal:
 		a.selAnimal, a.hasAnimal = c.id, true
 	case selItem:
@@ -294,7 +294,7 @@ func (a *App) selectCand(c selCand) {
 func (a *App) clearSelections(keep selKind) {
 	a.group = selGroup{}
 	if keep != selPawn && a.renderer != nil {
-		a.renderer.ClearSelect()
+		a.shell.ClearSelect()
 	}
 	if keep != selAnimal {
 		a.hasAnimal = false
@@ -318,7 +318,7 @@ func (a *App) clearSelections(keep selKind) {
 
 // selectPlantAt selects the plant at (tx, ty).
 func (a *App) selectPlantAt(tx, ty int) bool {
-	for _, p := range a.renderer.world().Plants {
+	for _, p := range a.shell.World().Plants {
 		if p.X == tx && p.Y == ty {
 			a.selectCand(selCand{selPlant, p.ID})
 			return true
@@ -329,7 +329,7 @@ func (a *App) selectPlantAt(tx, ty int) bool {
 
 // selectItemAt selects the ground item at (tx, ty).
 func (a *App) selectItemAt(tx, ty int) bool {
-	for _, it := range a.renderer.world().Items {
+	for _, it := range a.shell.World().Items {
 		if it.X == tx && it.Y == ty && !it.Carried {
 			a.selectCand(selCand{selItem, it.ID})
 			return true
@@ -346,7 +346,7 @@ func (a *App) selectedPlant() (game.PlantView, bool) {
 	if !a.hasPlant || a.renderer == nil {
 		return game.PlantView{}, false
 	}
-	for _, p := range a.renderer.world().Plants {
+	for _, p := range a.shell.World().Plants {
 		if p.ID == a.selPlant {
 			return p, true
 		}
@@ -360,7 +360,7 @@ func (a *App) selectedItem() (game.ItemView, bool) {
 	if !a.hasItem || a.renderer == nil {
 		return game.ItemView{}, false
 	}
-	for _, it := range a.renderer.world().Items {
+	for _, it := range a.shell.World().Items {
 		if it.ID == a.selItem && !it.Carried {
 			return it, true
 		}

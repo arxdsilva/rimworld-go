@@ -76,7 +76,7 @@ func (a *App) moveBuilding() (game.BuildingView, bool) {
 	if !s.on || a.renderer == nil {
 		return game.BuildingView{}, false
 	}
-	for _, b := range a.renderer.world().Buildings {
+	for _, b := range a.shell.World().Buildings {
 		if b.ID == s.bid {
 			return b, true
 		}
@@ -134,10 +134,10 @@ func (a *App) moveStep(tx, ty int, onMap bool, rotate int, left, cancel bool) bo
 	if left && onMap {
 		okMove, why := a.moveValid(b, tx, ty)
 		if !okMove {
-			a.hint = why
+			a.shell.Hint(why)
 			return true
 		}
-		a.renderer.enqueue(command.Command{Kind: command.MoveBuilding, Target: uint64(b.ID), X: tx, Y: ty, Facing: s.facing})
+		a.shell.Enqueue(command.Command{Kind: command.MoveBuilding, Target: uint64(b.ID), X: tx, Y: ty, Facing: s.facing})
 		s.on = false
 	}
 	return true
@@ -161,7 +161,7 @@ func (a *App) handleMoveMode() (consumed bool) {
 	mx, my := a.currentCursor()
 	sw, sh := a.size()
 	pmx, pmy := a.mapCursor()
-	tx, ty := a.renderer.TileAt(pmx, pmy)
+	tx, ty := a.shell.TileAt(pmx, pmy)
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
 	cancel := f.clicked(mbRight)
 	left := f.clicked(mbLeft)
@@ -178,15 +178,15 @@ func (a *App) drawMoveMode(screen *ebiten.Image) {
 		return
 	}
 	mx, my := a.currentCursor()
-	tile := float32(a.renderer.tilePx())
-	ox, oy := a.renderer.worldToScreen(b.X, b.Y)
+	tile := float32(a.shell.TilePx())
+	ox, oy := a.shell.WorldToScreen(b.X, b.Y)
 	vector.StrokeRect(screen, ox+1, oy+1, tile*float32(max(b.W, 1))-2, tile*float32(max(b.H, 1))-2, 1, uiAccent, false)
 	sw, sh := a.size()
 	if a.colonyChromeHit(mx, my, sw, sh) {
 		return
 	}
 	pmx, pmy := a.mapCursor()
-	tx, ty := a.renderer.TileAt(pmx, pmy)
+	tx, ty := a.shell.TileAt(pmx, pmy)
 	okMove, why := a.moveValid(b, tx, ty)
 	a.renderer.drawPlacementGhost(screen, b.Kind, b.Stuff, facingNames[a.moveSt().facing],
 		[]ghostCell{{x: tx, y: ty, ok: okMove, reason: why}})
@@ -205,11 +205,11 @@ func (a *App) drawMoveMarkers(screen *ebiten.Image) {
 	if a.renderer == nil {
 		return
 	}
-	for _, f := range a.renderer.world().Frames {
+	for _, f := range a.shell.World().Frames {
 		if !f.Moving {
 			continue
 		}
-		sx, sy := a.renderer.worldToScreen(f.X, f.Y)
+		sx, sy := a.shell.WorldToScreen(f.X, f.Y)
 		drawText(screen, "->", float64(sx)/uiScale()+2, float64(sy)/uiScale()+2, withColor(tsSmall, uiAccent))
 	}
 }

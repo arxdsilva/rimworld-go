@@ -210,7 +210,7 @@ func plantMarkCmd(p game.PlantView, harvest, undo bool) command.Command {
 func (a *App) plantIconKey(p game.PlantView) string {
 	key, _ := plantSprite(p)
 	if a.renderer.art != nil {
-		key = a.renderer.seasonKey(key, a.renderer.world())
+		key = a.renderer.seasonKey(key, a.shell.World())
 	}
 	return key
 }
@@ -234,7 +234,7 @@ func (a *App) drawPlantMark(screen *ebiten.Image) {
 		return
 	}
 	if a.renderer.art != nil {
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(p.X), float64(p.Y), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
+		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(p.X), float64(p.Y), a.shell.TilePx(), a.pw, a.ph) // physical, like the map
 	}
 }
 
@@ -249,9 +249,9 @@ func (a *App) applyPlantClick(id string) {
 		a.clearPlant()
 	case id == "plant.harvest" && !isTree(p):
 		if p.Designated || p.Harvestable {
-			a.renderer.enqueue(plantMarkCmd(p, true, p.Designated))
+			a.shell.Enqueue(plantMarkCmd(p, true, p.Designated))
 		}
 	case id == "plant.cut":
-		a.renderer.enqueue(plantMarkCmd(p, false, p.Cut))
+		a.shell.Enqueue(plantMarkCmd(p, false, p.Cut))
 	}
 }

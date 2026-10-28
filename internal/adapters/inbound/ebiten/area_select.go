@@ -92,7 +92,7 @@ func (a *App) areaChip(p game.PawnView) (paneChip, bool) {
 // the area picker (applyClick runs a clicked widget id's action first, so
 // app.go needs no case for it).
 func (a *App) inspectorAreaUI() {
-	if !a.renderer.HasSelect() {
+	if _, ok := a.shell.Selected(); !ok {
 		return
 	}
 	p, ok := a.selectedPawn()

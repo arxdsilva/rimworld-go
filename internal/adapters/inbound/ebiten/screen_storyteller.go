@@ -6,6 +6,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/storyteller"
 )
@@ -100,7 +101,7 @@ func (a *App) storytellerUI(sw, sh int) {
 	a.storyCentre(L.centre, cur)
 	a.storyRight(ng, L.right)
 
-	a.ngFooter(footer, "Next", "wizard.next", btnOpts{}, func() {
+	a.ngFooter(footer, "Next", ids.WizardNext, btnOpts{}, func() {
 		s := a.settings
 		s.Gameplay.LastStoryteller = ng.storyteller
 		s.Gameplay.LastDifficulty = ng.preset.Key()

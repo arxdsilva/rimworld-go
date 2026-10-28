@@ -61,7 +61,7 @@ func (a *App) selectedZone() (game.ZoneView, bool) {
 	if !a.hasZone || a.renderer == nil {
 		return game.ZoneView{}, false
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	if z, ok := zoneByID(w, a.zoneSel); ok {
 		return z, true
 	}
@@ -84,7 +84,7 @@ func (a *App) zoneView(id uint16) (game.ZoneView, bool) {
 	if a.hasZone && a.zoneSel == id {
 		return a.selectedZone()
 	}
-	return zoneByID(a.renderer.world(), id)
+	return zoneByID(a.shell.World(), id)
 }
 
 // selectZone makes zone id the selection (the other kinds are cleared by
@@ -96,7 +96,7 @@ func (a *App) selectZone(id uint16) {
 	// The cell to follow if the zone splits: the last click when it is
 	// inside, else the zone's first cell.
 	if a.renderer != nil {
-		if z, ok := zoneByID(a.renderer.world(), id); ok && len(z.Cells) > 0 &&
+		if z, ok := zoneByID(a.shell.World(), id); ok && len(z.Cells) > 0 &&
 			(!st.hasCell || !zoneHasCell(&z, st.cell[0], st.cell[1])) {
 			st.cell, st.hasCell = z.Cells[0], true
 		}
@@ -114,7 +114,7 @@ func (a *App) clearZone() {
 // selectZoneLabel selects the zone whose name plate is under physical
 // pixel (mx, my) and reports it did. (tx, ty) is the tile under the pointer.
 func (a *App) selectZoneLabel(w game.WorldView, mx, my, tx, ty int) bool {
-	z, ok := a.renderer.zoneLabelAt(w, mx, my, a.renderer.tilePx(), a.shownHiddenZone())
+	z, ok := a.renderer.zoneLabelAt(w, mx, my, a.shell.TilePx(), a.shownHiddenZone())
 	if !ok {
 		return false
 	}
@@ -129,7 +129,7 @@ func (a *App) selectZoneLabel(w game.WorldView, mx, my, tx, ty int) bool {
 // one hidden zone whose label still shows (0: none).
 func (a *App) shownHiddenZone() uint16 {
 	if a.hasZone && a.renderer != nil {
-		if z, ok := zoneByID(a.renderer.world(), a.zoneSel); ok && z.Hidden {
+		if z, ok := zoneByID(a.shell.World(), a.zoneSel); ok && z.Hidden {
 			return z.ID
 		}
 	}
@@ -157,10 +157,10 @@ func (a *App) drawZoneSelection(screen *ebiten.Image) {
 		return
 	}
 	r := a.renderer
-	tile := r.tilePx()
+	tile := a.shell.TilePx()
 	sw, sh := a.size()
 	pw, ph := int(math.Ceil(float64(sw)*a.mapScale())), int(math.Ceil(float64(sh)*a.mapScale())) // map pixels, like the camera
-	r.drawZoneHighlight(screen, r.world(), z, pw, ph, tile)
+	r.drawZoneHighlight(screen, a.shell.World(), z, pw, ph, tile)
 	if z.Hidden {
 		r.drawZoneLabel(screen, z, r.zoneGeomOf(z), pw, ph, tile)
 	}
@@ -327,7 +327,7 @@ func zoneOwnPlant(p *game.PlantView) bool {
 func (a *App) zonePlantsLine(z game.ZoneView) string {
 	r := a.renderer
 	g := r.zoneGeomOf(z)
-	w := r.world()
+	w := a.shell.World()
 	st := a.zoneSt()
 	st.plants = r.plantsOn(&w, g.minX, g.minY, g.maxX, g.maxY, st.plants[:0])
 	sown, ripe, growth := 0, 0, 0

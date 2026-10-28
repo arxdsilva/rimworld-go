@@ -5,6 +5,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -46,7 +47,7 @@ func historyRows(es []game.HistoryEntryView) []historyRow {
 // historyTabUI makes the HUD's History tab open the window.
 func (a *App) historyTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != "tab.history" || b.disabled {
+		if b.id != ids.TabHistory || b.disabled {
 			continue
 		}
 		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleHistory})
@@ -134,11 +135,11 @@ func (a *App) focusHistoryPawn(id uint64) {
 	if a.renderer == nil {
 		return
 	}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if uint64(p.ID) != id {
 			continue
 		}
-		a.renderer.Select(p.ID)
+		a.shell.Select(p.ID)
 		a.centerOnMap(float64(p.X)+0.5, float64(p.Y)+0.5)
 		a.uiCloseTop()
 		return

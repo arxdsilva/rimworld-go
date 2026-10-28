@@ -6,6 +6,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/domain/scenario"
 )
 
@@ -160,7 +161,7 @@ func (a *App) scenarioUI(sw, sh int) {
 		next.Disabled = true
 		next.Reason = fmt.Sprintf("Fix %d problem%s in the editor", sel.errCount(), plural(sel.errCount()))
 	}
-	a.ngFooter(footer, "Next", "wizard.next", next, func() {
+	a.ngFooter(footer, "Next", ids.WizardNext, next, func() {
 		if s := ng.selected(); s != nil && s.err == "" {
 			ng.scenario = cloneDef(s.def)
 			a.forward()

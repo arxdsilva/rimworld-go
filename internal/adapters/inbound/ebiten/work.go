@@ -7,6 +7,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -161,7 +162,7 @@ func (a *App) workTipsUI(sw, sh int) {
 		cr := workCellRect(r, 0, col)
 		a.uiTip("work.hdr."+uiNum(col), rect{cr.X, r.y + 22, cr.W, 22}, workHelp[col])
 	}
-	for row, p := range a.renderer.snapshot() {
+	for row, p := range a.shell.Pawns() {
 		if !workRowShown(r, row) {
 			break
 		}
@@ -183,7 +184,7 @@ func (a *App) workTipsUI(sw, sh int) {
 func (a *App) workWant() (float32, float32) {
 	n := 0
 	if a.renderer != nil {
-		n = len(a.renderer.snapshot())
+		n = len(a.shell.Pawns())
 	}
 	return float32(12 + workNameW + len(workColumns)*workCellW + 8), float32(max(160, 48+n*workRowH+20))
 }
@@ -216,7 +217,7 @@ func (a *App) workButtons() []button {
 	}
 	r := a.windowRect()
 	hx := int(r.x) + 12 + workNameW
-	pawns := a.renderer.snapshot()
+	pawns := a.shell.Pawns()
 	out := make([]button, 0)
 	for row, p := range pawns {
 		y := int(r.y) + 48 + row*workRowH
@@ -228,7 +229,7 @@ func (a *App) workButtons() []button {
 				continue
 			}
 			b := button{
-				id:    "work.cell." + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
+				id:    ids.PrefixWorkCell + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
 				label: "",
 				x:     float32(hx + col*workCellW),
 				y:     float32(y),
@@ -277,7 +278,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 	for i, col := range workColumns {
 		drawText(screen, col, float64(hx+i*workCellW)+float64(workCellW-4)/2, float64(r.y)+28, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignCenter})
 	}
-	pawns := a.renderer.snapshot()
+	pawns := a.shell.Pawns()
 	for row, p := range pawns {
 		y := int(r.y) + 48 + row*workRowH
 		if y > int(r.y+r.h)-20 {

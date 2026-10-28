@@ -280,7 +280,7 @@ func (a *App) powerToggleTip() string {
 
 // powerLegend is the key shown in the global stack while the overlay is on.
 func (a *App) powerLegend() string {
-	if a.renderer == nil || !a.renderer.powerShown() {
+	if a.renderer == nil || !a.shell.PowerShown() {
 		return ""
 	}
 	return powerLegendTxt
@@ -456,11 +456,11 @@ func (a *App) drawPowerGhostLinks(screen *ebiten.Image, t archTool, cells []ghos
 	if !ok {
 		return
 	}
-	w := r.world()
+	w := a.shell.World()
 	is := r.pov.transmitters(&w)
 	r.pov.syncNets(w.PowerNets)
-	mw, mh := r.game.Width(), r.game.Height()
-	tile := r.tilePx()
+	mw, mh := a.shell.MapSize()
+	tile := a.shell.TilePx()
 	for _, c := range cells {
 		if !c.ok || c.same {
 			continue
@@ -480,7 +480,7 @@ func (a *App) drawPowerGhostLinks(screen *ebiten.Image, t archTool, cells []ghos
 		for _, f := range foot {
 			x0, y0, x1 = min(x0, f[0]), min(y0, f[1]), max(x1, f[0])
 		}
-		sx, sy := r.worldToScreenF(float64(x0+x1+1)/2, float64(y0))
+		sx, sy := a.shell.WorldToScreenF(float64(x0+x1+1)/2, float64(y0))
 		worldTag(screen, powerGhostLabel, float64(sx), float64(sy), withColor(tsSmall, uiWarning))
 		r.pov.emit("not connected", c.x, c.y, tokenNRGBA(uiWarning))
 	}

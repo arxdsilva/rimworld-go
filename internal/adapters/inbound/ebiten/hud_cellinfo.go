@@ -23,7 +23,7 @@ const (
 // nothingSelected reports no pawn, animal, item, plant, building, frame,
 // zone or group is selected.
 func (a *App) nothingSelected() bool {
-	return a.renderer != nil && !a.grouped() && !a.renderer.HasSelect() &&
+	return a.renderer != nil && !a.grouped() && !hasPawnSel(a) &&
 		!a.hasAnimal && !a.hasItem && !a.hasPlant && !a.hasBuilding && !a.hasFrame && !a.hasZone
 }
 
@@ -41,8 +41,9 @@ func (a *App) hoveredCell() (tx, ty int, ok bool) {
 	if m := a.hud().Minimap; !m.empty() && m.hit(mx, my) { // not chrome (own click path), but not the map either
 		return 0, 0, false
 	}
-	tx, ty = a.renderer.TileAt(a.mapCursor()) // physical: the map's pixels
-	if tx < 0 || ty < 0 || tx >= a.renderer.game.Width() || ty >= a.renderer.game.Height() {
+	tx, ty = a.shell.TileAt(a.mapCursor()) // physical: the map's pixels
+	mw, mh := a.shell.MapSize()
+	if tx < 0 || ty < 0 || tx >= mw || ty >= mh {
 		return 0, 0, false
 	}
 	return tx, ty, true
@@ -62,7 +63,7 @@ func (a *App) cellInfoLines() []string {
 	if !ok {
 		return nil
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	if fl := unexploredLines(w, tx, ty); fl != nil { // fog_draw.go
 		return fl
 	}
@@ -221,4 +222,10 @@ func itemLabelAt(w game.WorldView, x, y int) string {
 		}
 	}
 	return ""
+}
+
+// hasPawnSel reports a pawn is selected.
+func hasPawnSel(a *App) bool {
+	_, ok := a.shell.Selected()
+	return ok
 }

@@ -7,6 +7,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -90,13 +91,14 @@ func (a *App) selectionCommands() []cmdButton {
 	if a.renderer == nil || a.workOpen {
 		return nil
 	}
+	selID, hasSel := a.shell.Selected()
 	switch {
 	case a.archOpen:
 		return a.commandsFor(selNone, 0)
 	case a.grouped():
 		return a.groupCommands()
-	case a.renderer.HasSelect():
-		return a.commandsFor(selPawn, a.renderer.Selected())
+	case hasSel:
+		return a.commandsFor(selPawn, selID)
 	case a.hasAnimal:
 		return a.commandsFor(selAnimal, a.selAnimal)
 	case a.hasItem:
@@ -372,7 +374,7 @@ func (a *App) runCommand(c cmdButton) {
 		c.Run(a)
 	case len(c.Cmds) > 0:
 		for _, cm := range c.Cmds {
-			a.renderer.enqueue(cm)
+			a.shell.Enqueue(cm)
 		}
 	case c.Options != nil:
 		for _, o := range c.Options(a) {
@@ -381,7 +383,7 @@ func (a *App) runCommand(c cmdButton) {
 				return
 			}
 		}
-	case !strings.HasPrefix(c.ID, "cmd."):
+	case !strings.HasPrefix(c.ID, ids.PrefixCmd):
 		a.applyClick(c.ID)
 	}
 }
@@ -392,7 +394,7 @@ func (a *App) runOption(o cmdOption) {
 	case o.Disabled:
 		a.hint = o.Reason
 	case o.Cmd != nil:
-		a.renderer.enqueue(*o.Cmd)
+		a.shell.Enqueue(*o.Cmd)
 	case o.Run != nil:
 		o.Run(a)
 	}
@@ -513,7 +515,7 @@ func mergeCommands(sets [][]cmdButton, run func(a *App, member int, c cmdButton)
 	for _, k := range order {
 		s := byKey[k]
 		m := s.first
-		m.ID = "cmd.group." + strings.TrimPrefix(k, "cmd.")
+		m.ID = "cmd.group." + strings.TrimPrefix(k, ids.PrefixCmd)
 		m.Key = k
 		m.Options, m.Cmds = nil, nil
 		n := len(s.cmds)

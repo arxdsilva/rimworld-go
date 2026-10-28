@@ -9,6 +9,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
@@ -308,7 +309,7 @@ func (a *App) forward() { a.apply(intent{kind: intentPush, screen: wizardNext(a.
 // It reports the id was one of these screens'.
 func (a *App) ngClick(id string) bool {
 	switch {
-	case id == "menu.newgame":
+	case id == ids.MenuNewGame:
 		a.ng = nil
 		a.draft()
 		a.apply(intent{kind: intentPush, screen: screenScenario})
@@ -350,11 +351,11 @@ func (a *App) ngButton(id string, r rect, label string, o btnOpts, fn func()) {
 // screen. Enter presses the forward button when it is enabled.
 func (a *App) ngFooter(footer rect, label, nextID string, o btnOpts, onNext func()) {
 	back := func() { a.pageSound(); a.goBack() }
-	a.ngButton("wizard.back", footerBack(footer), "Back", btnOpts{}, back)
+	a.ngButton(ids.WizardBack, footerBack(footer), "Back", btnOpts{}, back)
 	if o.Style == btnNormal {
 		o.Style = btnPrimary
 	}
-	if nextID == "wizard.next" {
+	if nextID == ids.WizardNext {
 		inner := onNext
 		onNext = func() { a.pageSound(); inner() }
 	}

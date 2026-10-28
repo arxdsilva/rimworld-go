@@ -10,6 +10,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 )
 
@@ -276,12 +277,12 @@ func (a *App) currentAlerts() []alert {
 	// Several HUD passes ask every frame (chips, alert rows, hit layout):
 	// build once per update while the read models are the same ones.
 	r := a.renderer
-	snap, w := r.game.Snapshot(), r.world()
+	snap, w := r.game.Snapshot(), a.shell.World()
 	k := newAlertsKey(r, snap, w)
 	if m := &a.alerts; r.viewCached && m.ok && m.key == k {
 		return m.out
 	}
-	out := buildAlerts(append(r.snapshot(), r.hostiles()...), w)
+	out := buildAlerts(append(a.shell.Pawns(), r.hostiles()...), w)
 	if extra := tradeAlertsFrom(r.game); len(extra) > 0 { // alerts_trade.go (PLAY-024)
 		for i := range extra {
 			extra[i].sev, extra[i].explain = sevWarning, alertExplain(extra[i].key)
@@ -393,7 +394,7 @@ func (a *App) alertButtonsIn(l hudLayout) []button {
 		if row.more > 0 {
 			continue // the count is not a place to jump to
 		}
-		out = append(out, button{id: "alert." + row.al.key, label: row.al.label, x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
+		out = append(out, button{id: ids.PrefixAlert + row.al.key, label: row.al.label, x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
 	}
 	return out
 }
@@ -414,7 +415,7 @@ func (a *App) drawAlertsIn(screen *ebiten.Image, l hudLayout) {
 	if len(rows) == 0 {
 		return
 	}
-	pulse := alertPulse(a.renderer.present, a.renderer.reducedMotion)
+	pulse := alertPulse(a.shell.Present(), a.renderer.reducedMotion)
 	mx, my := a.currentCursor()
 	for _, row := range rows {
 		r := row.r
@@ -439,7 +440,7 @@ func (a *App) drawAlertsIn(screen *ebiten.Image, l hudLayout) {
 }
 
 // focusAlert centres the camera on the alert's next target.
-func (a *App) focusAlert(id string) { a.cycleAlert(strings.TrimPrefix(id, "alert."), 1) }
+func (a *App) focusAlert(id string) { a.cycleAlert(strings.TrimPrefix(id, ids.PrefixAlert), 1) }
 
 // cycleAlert centres the camera on the alert's next target (dir 1) or
 // previous one (dir -1), wrapping round. alertCycle holds one more than

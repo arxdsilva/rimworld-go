@@ -113,7 +113,7 @@ func (a *App) devActions(tx, ty int) []devAction {
 		}
 	}
 	start := devAction{label: "Start fire here", icon: "start_fire", run: func(devTools) string {
-		a.renderer.enqueue(command.Command{Kind: command.DevStartFire, X: tx, Y: ty})
+		a.shell.Enqueue(command.Command{Kind: command.DevStartFire, X: tx, Y: ty})
 		return "Fire started"
 	}}
 	return append(out, kill, feed, lose, spawnImp, start, a.mapFieldsAction())
@@ -317,7 +317,7 @@ func debugLogLines(w game.WorldView, pawns []game.PawnView, n int) []string {
 // debugLogShown is the debug log's lines, at most n, each cut to the log's
 // width (at most devLogMaxW, and maxW when the column is narrower).
 func (a *App) debugLogShown(n int, maxW float32) []string {
-	lines := debugLogLines(a.renderer.world(), a.renderer.snapshot(), 12)
+	lines := debugLogLines(a.shell.World(), a.shell.Pawns(), 12)
 	if len(lines) > 18 {
 		lines = lines[:18]
 	}
@@ -376,7 +376,7 @@ func (a *App) debugInspectLines() []string {
 
 // debugInspectorLines are the inspector panel's lines, title first.
 func (a *App) debugInspectorLines() []string {
-	return append([]string{fmt.Sprintf("Debug inspector  tick %d", a.renderer.game.Tick()),
+	return append([]string{fmt.Sprintf("Debug inspector  tick %d", a.shell.Tick()),
 		fmt.Sprintf("update budget: owed %d held %d", a.debt.owed, a.debt.held)}, a.debugInspectLines()...)
 }
 

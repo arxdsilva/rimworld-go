@@ -120,7 +120,8 @@ func (a *App) scrollLogIn(r rect, mx, my int, wy float64) bool {
 }
 
 func (a *App) inspectorVisible() bool {
-	return a.renderer != nil && a.renderer.HasSelect() && !a.workOpen && !a.archOpen
+	_, ok := a.shell.Selected()
+	return ok && !a.workOpen && !a.archOpen
 }
 
 // syncLogFor resets the colonist log scroll when the selection changed.

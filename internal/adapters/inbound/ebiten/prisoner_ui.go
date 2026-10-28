@@ -166,7 +166,7 @@ func (a *App) prisonerTab(p game.PawnView, in rect) {
 			o.Style = btnDanger
 		}
 		if a.uiButton(prisonerModeID(m.mode), br, m.label, o) {
-			a.renderer.enqueue(command.Command{Kind: command.SetPrisonerMode, Target: uint64(p.ID), Mode: uint8(m.mode)})
+			a.shell.Enqueue(command.Command{Kind: command.SetPrisonerMode, Target: uint64(p.ID), Mode: uint8(m.mode)})
 		}
 	}
 	rel := rect{in.X + 2*(bw+gap), y + bh + 6, bw, bh}
@@ -175,7 +175,7 @@ func (a *App) prisonerTab(p game.PawnView, in rect) {
 		ro.Disabled, ro.Reason = true, "too hurt to walk out"
 	}
 	if a.uiButton(prisonerRelease, rel, "Release now", ro) {
-		a.renderer.enqueue(command.Command{Kind: command.ReleasePrisoner, Target: uint64(p.ID)})
+		a.shell.Enqueue(command.Command{Kind: command.ReleasePrisoner, Target: uint64(p.ID)})
 	}
 	y += 2*(bh+6) + 8
 
@@ -209,7 +209,7 @@ func (a *App) prisonerWarnings(p game.PawnView, v game.PrisonerView) []string {
 
 // anyWarden reports a colonist has Warden work on.
 func (a *App) anyWarden() bool {
-	for _, c := range a.renderer.snapshot() {
+	for _, c := range a.shell.Pawns() {
 		if !c.Hostile && !c.Prisoner && int(work.Warden) < len(c.Priorities) && c.Priorities[work.Warden] > 0 {
 			return true
 		}

@@ -17,7 +17,7 @@ const animalRowH = 30
 
 func (a *App) tameAnimals() []game.AnimalView {
 	var out []game.AnimalView
-	for _, an := range a.renderer.world().Animals {
+	for _, an := range a.shell.World().Animals {
 		if an.Tame {
 			out = append(out, an)
 		}
@@ -136,7 +136,7 @@ func (a *App) wildlife() []game.WildlifeRow {
 	if a.renderer == nil {
 		return nil
 	}
-	t := a.renderer.game.Tick()
+	t := a.shell.Tick()
 	if !a.wildRead || t != a.wildTick {
 		a.wildRows, a.wildTick, a.wildRead = a.renderer.game.Wildlife(), t, true
 	}
@@ -234,11 +234,11 @@ func (a *App) applyAnimalsTab(id string) {
 			if an.Designated { // only the mark: the pen stays
 				c.Kind, c.Order = command.Undesignate, command.OrderHunt
 			}
-			a.renderer.enqueue(c)
+			a.shell.Enqueue(c)
 		case "release":
-			a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n})
+			a.shell.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n})
 		case "follow":
-			a.renderer.enqueue(command.Command{Kind: command.SetAnimalFollow, Target: n, Enabled: !an.Follows})
+			a.shell.Enqueue(command.Command{Kind: command.SetAnimalFollow, Target: n, Enabled: !an.Follows})
 		}
 	}
 }
@@ -246,7 +246,7 @@ func (a *App) applyAnimalsTab(id string) {
 // wildOf lists the wild (not tame) animals of a species.
 func (a *App) wildOf(species string) []game.AnimalView {
 	var out []game.AnimalView
-	for _, an := range a.renderer.world().Animals {
+	for _, an := range a.shell.World().Animals {
 		if !an.Tame && an.Species == species {
 			out = append(out, an)
 		}
@@ -264,13 +264,13 @@ func (a *App) applyWildAction(verb, species string) {
 	case "hunt":
 		for _, an := range a.wildOf(species) {
 			if !an.Designated {
-				a.renderer.enqueue(at(command.DesignateHunt, an))
+				a.shell.Enqueue(at(command.DesignateHunt, an))
 			}
 		}
 	case "tame":
 		for _, an := range a.wildOf(species) {
 			if !an.TameMark && !an.Manhunter {
-				a.renderer.enqueue(at(command.DesignateTame, an))
+				a.shell.Enqueue(at(command.DesignateTame, an))
 				return
 			}
 		}
@@ -279,12 +279,12 @@ func (a *App) applyWildAction(verb, species string) {
 			if an.Designated {
 				c := at(command.Undesignate, an)
 				c.Order = command.OrderHunt
-				a.renderer.enqueue(c)
+				a.shell.Enqueue(c)
 			}
 			if an.TameMark {
 				c := at(command.Undesignate, an)
 				c.Order = command.OrderTame
-				a.renderer.enqueue(c)
+				a.shell.Enqueue(c)
 			}
 		}
 	}
@@ -308,7 +308,7 @@ func (a *App) focusWild(species string) {
 func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 	r := a.windowRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	w := a.renderer.world()
+	w := a.shell.World()
 	marked := 0
 	for _, an := range w.Animals {
 		if an.TameMark {
@@ -599,7 +599,7 @@ func (a *App) animalsTabUI(sw, sh int) {
 // SetAnimalMaster choices under the animal's Master button.
 func (a *App) openAnimalMasterMenu(an game.AnimalView) {
 	var opts []game.OrderOption
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		o := game.OrderOption{Label: p.Name, Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID), Pawn: uint64(p.ID)}}
 		if p.ID == an.MasterID {
 			o.Label += " (master)"

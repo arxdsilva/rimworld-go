@@ -62,17 +62,13 @@ func (a *App) openComms(v game.CommsView) {
 func (a *App) dismissComms() {
 	a.dealings.comms = nil
 	a.dealings.commsDismissed = true
-	if a.renderer != nil {
-		a.renderer.enqueue(command.Command{Kind: command.CloseComms})
-	}
+	a.shell.Enqueue(command.Command{Kind: command.CloseComms})
 	a.dealingsPause()
 }
 
 // emit sends c if the renderer is up.
 func (a *App) emit(c command.Command) {
-	if a.renderer != nil {
-		a.renderer.enqueue(c)
-	}
+	a.shell.Enqueue(c)
 }
 
 // commsActionLabel is a button label with its goodwill cost.

@@ -4,6 +4,8 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 )
 
 // Main menu metrics (NG-1 §2.1): a right rail of 300x40 buttons, 10 px
@@ -16,15 +18,15 @@ const (
 
 func (a *App) mainMenuButtons(sw, sh int) []button {
 	cx := menuRailX(sw)
-	cont := buttonSpec{id: "menu.continue", label: "Continue", disabled: !a.hasSaves(), reason: "no saves yet"}
+	cont := buttonSpec{id: ids.MenuContinue, label: "Continue", disabled: !a.hasSaves(), reason: "no saves yet"}
 	specs := []buttonSpec{
-		{id: "menu.newgame", label: "New Colony"},
-		{id: "menu.load", label: "Load Game"},
+		{id: ids.MenuNewGame, label: "New Colony"},
+		{id: ids.MenuLoad, label: "Load Game"},
 		{id: "menu.plugins", label: "Plugins", disabled: true, reason: "not implemented"},
-		{id: "menu.options", label: "Options"},
+		{id: ids.MenuOptions, label: "Options"},
 		{id: "menu.tutorial", label: "Tutorial / Help", disabled: true, reason: "not implemented"},
-		{id: "menu.credits", label: "Credits"},
-		{id: "menu.quit", label: "Quit"},
+		{id: ids.MenuCredits, label: "Credits"},
+		{id: ids.MenuQuit, label: "Quit"},
 	}
 	if cont.disabled { // Continue leads the list only when it can be used
 		specs = append([]buttonSpec{specs[0], cont}, specs[1:]...)

@@ -152,8 +152,8 @@ func (a *App) drawMapFields(screen *ebiten.Image) {
 	if img == nil {
 		return
 	}
-	tile := a.renderer.tilePx()
-	x, y := a.renderer.worldToScreen(0, 0)
+	tile := a.shell.TilePx()
+	x, y := a.shell.WorldToScreen(0, 0)
 	// one texel per cell, nearest-sampled so cells stay crisp at any zoom
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest}
 	op.GeoM.Scale(tile, tile)

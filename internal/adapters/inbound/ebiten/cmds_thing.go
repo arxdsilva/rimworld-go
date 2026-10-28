@@ -30,7 +30,7 @@ func (a *App) animalView(id entity.EntityID) (game.AnimalView, bool) {
 	if a.renderer == nil {
 		return game.AnimalView{}, false
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	for i := range w.Animals {
 		if w.Animals[i].ID == id {
 			return w.Animals[i], true
@@ -47,7 +47,7 @@ func (a *App) itemView(id entity.EntityID) (game.ItemView, bool) {
 	if a.renderer == nil {
 		return game.ItemView{}, false
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	for i := range w.Items {
 		if w.Items[i].ID == id && !w.Items[i].Carried {
 			return w.Items[i], true
@@ -64,7 +64,7 @@ func (a *App) plantView(id entity.EntityID) (game.PlantView, bool) {
 	if a.renderer == nil {
 		return game.PlantView{}, false
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	for i := range w.Plants {
 		if w.Plants[i].ID == id {
 			return w.Plants[i], true
@@ -324,7 +324,7 @@ func (a *App) animalTameCmd(an game.AnimalView) cmdButton {
 // choices; the current master is marked.
 func (a *App) animalMasterOrders(an game.AnimalView) []game.OrderOption {
 	var opts []game.OrderOption
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		o := game.OrderOption{Label: p.Name, Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID), Pawn: uint64(p.ID)}}
 		if p.ID == an.MasterID {
 			o.Label += " (master)"
@@ -386,7 +386,7 @@ func (a *App) itemPane(id entity.EntityID) paneSpec {
 	if !ok {
 		return paneSpec{}
 	}
-	lines := itemLines(it, inStockpile(a.renderer.world(), it.X, it.Y))
+	lines := itemLines(it, inStockpile(a.shell.World(), it.X, it.Y))
 	if rot := itemRotLine(it); rot != "" { // right under the freshness line
 		lines = append(lines[:1:1], append([]string{rot}, lines[1:]...)...)
 	}
@@ -433,7 +433,7 @@ func (a *App) itemCommands(id entity.EntityID) []cmdButton {
 		}
 		out = append(out, mark)
 	}
-	for _, v := range itemVerbs(it, inStockpile(a.renderer.world(), it.X, it.Y)) {
+	for _, v := range itemVerbs(it, inStockpile(a.shell.World(), it.X, it.Y)) {
 		out = append(out, a.colonistVerbCmd(v.id, v.label, v.icon, v.desc, it.X, it.Y, v.match))
 	}
 	return out

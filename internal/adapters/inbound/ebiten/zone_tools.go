@@ -118,7 +118,7 @@ func (a *App) handleZoneTool() bool {
 	mx, my := a.currentCursor()
 	sw, sh := a.size()
 	pmx, pmy := a.mapCursor()
-	tx, ty := a.renderer.TileAt(pmx, pmy)
+	tx, ty := a.shell.TileAt(pmx, pmy)
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
 	cancel := f.clicked(mbRight)
 	press := onMap && f.clicked(mbLeft)
@@ -184,7 +184,7 @@ func (a *App) zoneToolRect() (x0, y0, x1, y1 int, ok bool) {
 	if a.colonyChromeHit(mx, my, sw, sh) {
 		return 0, 0, 0, 0, false
 	}
-	tx, ty := a.renderer.TileAt(a.mapCursor())
+	tx, ty := a.shell.TileAt(a.mapCursor())
 	return tx, ty, tx, ty, true
 }
 
@@ -229,20 +229,21 @@ func (a *App) submitZoneTool(z game.ZoneView) {
 	switch st.tool {
 	case zoneToolExpand:
 		if why, free := zoneDragRefusal(x0, y0, x1, y1, func(x, y int) string { return a.zoneRefusalAt(z.Kind, x, y) }); !free {
-			a.hint = "nothing to add there"
+			hint := "nothing to add there"
 			if why != zoneNoReason && why != game.ZoneRefuseTaken {
-				a.hint += ": " + strings.ToLower(why) // PLAY-023: the most common refusal
+				hint += ": " + strings.ToLower(why) // PLAY-023: the most common refusal
 			}
+			a.shell.Hint(hint)
 			return
 		}
-		r.enqueue(command.Command{Kind: command.ExpandZone, Target: uint64(z.ID), X: x0, Y: y0, X2: x1, Y2: y1})
+		a.shell.Enqueue(command.Command{Kind: command.ExpandZone, Target: uint64(z.ID), X: x0, Y: y0, X2: x1, Y2: y1})
 	case zoneToolShrink:
 		own := r.zoneGeomOf(z).cells
 		if !anyZoneCell(x0, y0, x1, y1, func(x, y int) bool { return own[[2]int{x, y}] }) {
-			a.hint = "none of this zone's tiles there"
+			a.shell.Hint("none of this zone's tiles there")
 			return
 		}
-		r.enqueue(command.Command{Kind: command.RemoveZoneCells, Target: uint64(z.ID), X: x0, Y: y0, X2: x1, Y2: y1})
+		a.shell.Enqueue(command.Command{Kind: command.RemoveZoneCells, Target: uint64(z.ID), X: x0, Y: y0, X2: x1, Y2: y1})
 	}
 }
 
@@ -268,7 +269,7 @@ func (a *App) drawZoneTool(screen *ebiten.Image, z game.ZoneView) {
 // drawZoneToolGhost tints the cells under the tool, in physical pixels
 // like the map.
 func (a *App) drawZoneToolGhost(screen *ebiten.Image, cells []ghostCell, k zoneToolKind) {
-	tile := float32(a.renderer.tilePx())
+	tile := float32(a.shell.TilePx())
 	for _, c := range cells {
 		clr := zoneDenyClr
 		switch {
@@ -277,7 +278,7 @@ func (a *App) drawZoneToolGhost(screen *ebiten.Image, cells []ghostCell, k zoneT
 		case c.ok:
 			clr = zoneAddClr
 		}
-		sx, sy := a.renderer.worldToScreen(c.x, c.y)
+		sx, sy := a.shell.WorldToScreen(c.x, c.y)
 		vector.FillRect(screen, sx, sy, tile, tile, clr, false)
 	}
 }

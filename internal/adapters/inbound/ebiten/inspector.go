@@ -58,8 +58,8 @@ func (a *App) equipNearby(p game.PawnView) []equipOption {
 	if a.renderer == nil || p.Status != "alive" {
 		return nil
 	}
-	items := a.renderer.world().Items
-	key := equipCacheKey{r: a.renderer, pawn: p.ID, tick: a.renderer.game.Tick(), x: p.X, y: p.Y,
+	items := a.shell.World().Items
+	key := equipCacheKey{r: a.renderer, pawn: p.ID, tick: a.shell.Tick(), x: p.X, y: p.Y,
 		items: len(items), drafted: p.Drafted, weapon: p.Weapon, queued: len(p.QueuedOrders)}
 	if a.equipCache.set && a.equipCache.key == key {
 		return a.equipCache.opts
@@ -149,7 +149,7 @@ func (a *App) pawnView(id entity.EntityID) (game.PawnView, bool) {
 	if a.renderer == nil {
 		return game.PawnView{}, false
 	}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.ID == id {
 			return p, true
 		}
@@ -158,10 +158,11 @@ func (a *App) pawnView(id entity.EntityID) (game.PawnView, bool) {
 }
 
 func (a *App) selectedPawn() (game.PawnView, bool) {
-	if a.renderer == nil || !a.renderer.HasSelect() {
+	id, ok := a.shell.Selected()
+	if !ok {
 		return game.PawnView{}, false
 	}
-	return a.pawnView(a.renderer.Selected())
+	return a.pawnView(id)
 }
 
 // moodColor is the mood bar's fill: bad, middling or good.
@@ -364,7 +365,7 @@ func (a *App) creatureName(id entity.EntityID) string {
 			return pawnLabel(p)
 		}
 	}
-	for _, an := range a.renderer.world().Animals {
+	for _, an := range a.shell.World().Animals {
 		if an.ID == id {
 			if an.Name != "" {
 				return an.Name

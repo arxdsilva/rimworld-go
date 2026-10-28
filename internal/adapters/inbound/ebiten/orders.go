@@ -6,6 +6,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -79,7 +80,7 @@ func (a *App) floatButtons() []button {
 	out := make([]button, 0, len(a.float.opts))
 	for i, o := range a.float.opts {
 		out = append(out, button{
-			id: "float." + strconv.Itoa(i), label: floatLabel(o),
+			id: ids.PrefixFloat + strconv.Itoa(i), label: floatLabel(o),
 			x: r.x, y: r.y + float32(i*floatRowH), w: r.w, h: floatRowH,
 			disabled: o.Disabled, reason: o.Reason,
 		})
@@ -118,13 +119,13 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 }
 
 func (a *App) chooseFloat(id string) {
-	i, err := strconv.Atoi(strings.TrimPrefix(id, "float."))
+	i, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixFloat))
 	if err != nil || i < 0 || i >= len(a.float.opts) || a.renderer == nil {
 		return
 	}
 	o := a.float.opts[i]
 	if o.Disabled {
-		a.hint = o.Reason
+		a.shell.Hint(o.Reason)
 		return
 	}
 	if pick := a.float.pick; pick != nil {
@@ -134,7 +135,7 @@ func (a *App) chooseFloat(id string) {
 	}
 	c := o.Cmd
 	c.Queue = a.queueing() // Shift: queue behind the current order
-	a.renderer.enqueue(c)
+	a.shell.Enqueue(c)
 	a.closeFloat()
 }
 
@@ -168,7 +169,7 @@ func (a *App) rightClickTile(tx, ty int, sx, sy float32) {
 	if !ok {
 		return
 	}
-	if opts := fireOrders(p, a.renderer.world(), tx, ty); opts != nil && !a.creatureAt(tx, ty, p.ID) {
+	if opts := fireOrders(p, a.shell.World(), tx, ty); opts != nil && !a.creatureAt(tx, ty, p.ID) {
 		a.float = floatMenu{open: true, x: sx + 6, y: sy + 4, opts: opts, tx: tx, ty: ty} // fire_world_draw.go
 		return
 	}
@@ -179,7 +180,7 @@ func (a *App) rightClickTile(tx, ty int, sx, sy float32) {
 			return
 		}
 		a.closeFloat()
-		a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty, Queue: a.queueing()})
+		a.shell.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty, Queue: a.queueing()})
 		return
 	}
 	a.openOrders(tx, ty, sx, sy)
@@ -204,7 +205,7 @@ func (a *App) creatureAt(tx, ty int, self entity.EntityID) bool {
 			return true
 		}
 	}
-	_, ok := animalAt(a.renderer.world(), tx, ty)
+	_, ok := animalAt(a.shell.World(), tx, ty)
 	return ok
 }
 
@@ -213,5 +214,5 @@ func (a *App) toggleDraft() {
 	if !ok || a.renderer == nil {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: !p.Drafted})
+	a.shell.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: !p.Drafted})
 }

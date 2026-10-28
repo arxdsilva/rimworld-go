@@ -8,6 +8,8 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/input"
@@ -92,7 +94,7 @@ func (a *App) architectButtons() []button {
 	for i, c := range archCategories {
 		col, row := i%2, i/2
 		out = append(out, button{
-			id: "arch.cat." + c.id, label: c.label,
+			id: ids.PrefixArchCat + c.id, label: c.label,
 			x: l.ArchCats.X + archPad + float32(col)*(archCatW+archCatGap),
 			y: l.ArchCats.Y + archPad + float32(row)*(archCatH+archCatGap),
 			w: archCatW, h: archCatH, selected: a.archCat == c.id,
@@ -233,7 +235,7 @@ func cropLines(c game.CropView) []string {
 
 func (a *App) openArchitect() {
 	a.archOpen = true
-	a.workOpen = false
+	a.shell.Do(ports.CloseWindows{})
 	a.closeFloat()
 	if a.archCat == "" {
 		a.archCat, a.hst.arch.dflt = "structure", "structure"
@@ -371,7 +373,7 @@ func (a *App) handleArchitectInput() {
 	sw, sh := a.size()
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
 	pmx, pmy := a.mapCursor()
-	tx, ty := a.renderer.TileAt(pmx, pmy)
+	tx, ty := a.shell.TileAt(pmx, pmy)
 	if onMap && f.clicked(mbLeft) {
 		f.take(mbLeft)
 		a.archDrag = true
@@ -453,7 +455,7 @@ func (a *App) previewCells() (archTool, []ghostCell) {
 func (a *App) dragSpan() (x0, y0, x1, y1 int) {
 	x0, y0, x1, y1 = a.archX0, a.archY0, a.archX1, a.archY1
 	if !a.archDrag {
-		x0, y0 = a.renderer.TileAt(a.mapCursor())
+		x0, y0 = a.shell.TileAt(a.mapCursor())
 		x1, y1 = x0, y0
 	}
 	if t, ok := toolByID(a.archTool); ok && a.archCtrl && a.curStyle(t) != styleLine && len(toolStyles(t)) > 0 {
@@ -488,7 +490,7 @@ func (a *App) submitArchitect() {
 		}
 		if kind := zoneKindOf(t); kind != "" {
 			if why, free := zoneDragRefusal(x0, y0, x1, y1, func(x, y int) string { return a.zoneRefusalAt(kind, x, y) }); !free {
-				a.hint = zoneDragHint(why) // the command still goes out; the sim ignores it
+				a.shell.Hint(zoneDragHint(why)) // the command still goes out; the sim ignores it
 			}
 		}
 		for _, run := range runs {
@@ -505,7 +507,7 @@ func (a *App) submitArchitect() {
 			if t.variant != 0 {
 				c.Build = t.variant // a dumping stockpile (PLAY-023)
 			}
-			a.renderer.enqueue(c)
+			a.shell.Enqueue(c)
 		}
 		return
 	}
@@ -516,7 +518,7 @@ func (a *App) submitArchitect() {
 	stuff, _ := game.StuffID(a.toolStuff(t))
 	for _, c := range cells {
 		if c.ok && !c.same {
-			a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: id, Facing: a.archFacing, Stuff: stuff, X: c.x, Y: c.y})
+			a.shell.Enqueue(command.Command{Kind: command.DesignateBuild, Build: id, Facing: a.archFacing, Stuff: stuff, X: c.x, Y: c.y})
 		}
 	}
 }
@@ -682,12 +684,12 @@ func zoneGhostCells(x0, y0, x1, y1 int, clip [4]int, can func(x, y int) bool) []
 func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 int) {
 	r := a.renderer
 	sw, sh := a.size()
-	tile := r.tilePx()
+	tile := a.shell.TilePx()
 	cx0, cy0 := r.TileAt(0, 0)
 	cx1, cy1 := r.TileAt(int(float64(sw)*a.mapScale()), int(float64(sh)*a.mapScale()))
 	clip := [4]int{cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1}
 	for _, c := range zoneGhostCells(x0, y0, x1, y1, clip, func(x, y int) bool { return r.game.CanZoneAt(kind, x, y) }) {
-		sx, sy := r.worldToScreen(c.x, c.y)
+		sx, sy := a.shell.WorldToScreen(c.x, c.y)
 		clr := color.NRGBA{R: 90, G: 200, B: 90, A: 64}
 		if !c.ok {
 			clr = color.NRGBA{R: 220, G: 70, B: 60, A: 64}
@@ -765,7 +767,7 @@ func zoneTipText(why string) string {
 // drawZoneRefusalTip names, beside the cursor, why the hovered cell can't
 // take the zone.
 func (a *App) drawZoneRefusalTip(screen *ebiten.Image, kind string, mx, my int) {
-	tx, ty := a.renderer.TileAt(a.mapCursor())
+	tx, ty := a.shell.TileAt(a.mapCursor())
 	msg := zoneTipText(a.zoneRefusalAt(kind, tx, ty))
 	if msg == "" {
 		return

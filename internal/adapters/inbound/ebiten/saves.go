@@ -8,6 +8,8 @@ import (
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 )
 
 // Saved games. The app only sees saves through these hooks (wired in
@@ -98,8 +100,8 @@ func (a *App) tickAutosave() {
 	if n <= 0 {
 		return
 	}
-	d := a.renderer.game.Date()
-	day := int(a.renderer.game.Tick()) / 60000
+	d := a.shell.Date()
+	day := int(a.shell.Tick()) / 60000
 	if d.Hour == autosaveHour && day-a.autosaveDay >= n {
 		a.autosaveDay = day
 		a.saveNow(slot)
@@ -207,7 +209,7 @@ func (a *App) loadButtons(sw, sh int) []button {
 			break
 		}
 		// the row's text is drawn by drawLoad (proportional columns)
-		out = append(out, button{id: "load.slot." + strconv.Itoa(i), quiet: true,
+		out = append(out, button{id: ids.PrefixLoadSlot + strconv.Itoa(i), quiet: true,
 			x: x, y: float32(120 + i*(slotRowH+6)), w: 600, h: slotRowH,
 			disabled: sl.Err != "", reason: sl.Err})
 	}

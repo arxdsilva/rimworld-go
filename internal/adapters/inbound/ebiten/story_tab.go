@@ -46,7 +46,7 @@ func (a *App) sendNow(c command.Command) {
 	if a.renderer == nil {
 		return
 	}
-	a.renderer.enqueue(c) // the renderer's queue: applies at once while paused, and the lessons see it
+	a.shell.Enqueue(c) // the renderer's queue: applies at once while paused, and the lessons see it
 	if p, ok := a.renderer.game.(pendingApplier); ok {
 		p.ApplyPending()
 	}

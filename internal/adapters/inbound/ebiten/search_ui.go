@@ -140,9 +140,9 @@ func (a *App) searchHits() []searchHit {
 	if a.renderer == nil {
 		return nil
 	}
-	tick := a.renderer.game.Tick()
+	tick := a.shell.Tick()
 	if !s.hitSet || s.hitText != s.text || s.hitTick != tick {
-		s.hits = searchResults(a.renderer.world(), a.renderer.snapshot(), s.text)
+		s.hits = searchResults(a.shell.World(), a.shell.Pawns(), s.text)
 		s.hitText, s.hitTick, s.hitSet = s.text, tick, true
 	}
 	return s.hits

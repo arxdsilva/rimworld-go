@@ -8,6 +8,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -38,14 +39,14 @@ func (a *App) lockedBy(key string) string {
 	if a.renderer == nil {
 		return ""
 	}
-	return a.renderer.world().Locked[key]
+	return a.shell.World().Locked[key]
 }
 
 // researchWant is the Research window's wanted size: a row per project.
 func (a *App) researchWant() (float32, float32) {
 	n := 0
 	if a.renderer != nil {
-		n = len(a.renderer.world().Research)
+		n = len(a.shell.World().Research)
 	}
 	return 760, float32(max(160, researchTop+n*researchRowH+researchBottomPad))
 }
@@ -79,7 +80,7 @@ func (a *App) researchUI(sw, sh int) {
 		delete(u.scroll, researchScrollID)
 		return
 	}
-	views := a.renderer.world().Research
+	views := a.shell.World().Research
 	r := a.windowRect()
 	if len(views) == 0 || r.w <= 0 {
 		return
@@ -108,14 +109,14 @@ func (a *App) researchUI(sw, sh int) {
 
 func (a *App) researchButtons() []button {
 	r := a.windowRect()
-	views := a.renderer.world().Research
+	views := a.shell.World().Research
 	shown := researchShown(r, len(views))
 	first := a.researchFirst(len(views), shown)
 	var out []button
 	for i := first; i < first+shown; i++ {
 		p := views[i]
 		y := r.y + researchTop + float32((i-first)*researchRowH)
-		b := button{id: "research.pick." + strconv.Itoa(int(p.ID)), x: r.x + 12, y: y, w: 220, h: researchRowH - 8,
+		b := button{id: ids.PrefixResearchPick + strconv.Itoa(int(p.ID)), x: r.x + 12, y: y, w: 220, h: researchRowH - 8,
 			label: p.Label, selected: p.Current, quiet: true}
 		switch {
 		case p.Done:
@@ -129,11 +130,11 @@ func (a *App) researchButtons() []button {
 }
 
 func (a *App) pickResearch(id string) {
-	n, err := strconv.Atoi(strings.TrimPrefix(id, "research.pick."))
+	n, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixResearchPick))
 	if err != nil || a.renderer == nil {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.SetResearch, Build: uint8(n)})
+	a.shell.Enqueue(command.Command{Kind: command.SetResearch, Build: uint8(n)})
 }
 
 func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
@@ -147,7 +148,7 @@ func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
 		drawText(screen, "No research bench yet: build one from Architect > Production.", float64(r.x)+12, float64(r.y)+25, withColor(tsSmall, uiWarning))
 	}
 	mx, my := a.currentCursor()
-	views := a.renderer.world().Research
+	views := a.shell.World().Research
 	shown := researchShown(r, len(views))
 	first := a.researchFirst(len(views), shown)
 	right := float64(r.x+r.w) - 12
@@ -190,7 +191,7 @@ func drawResearchBar(screen *ebiten.Image, x, y, w, h float32, p game.ResearchVi
 // hasResearchBench reports a research bench stands: the plain one or the
 // electric one (which works the same research, powered).
 func (a *App) hasResearchBench() bool {
-	for _, b := range a.renderer.world().Buildings {
+	for _, b := range a.shell.World().Buildings {
 		if recipeBenchName(b.Kind) == "research bench" {
 			return true
 		}

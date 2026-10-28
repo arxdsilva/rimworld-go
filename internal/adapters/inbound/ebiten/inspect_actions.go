@@ -31,7 +31,7 @@ func (a *App) colonistActions(tx, ty int, match func(game.OrderOption) bool) []c
 		return nil
 	}
 	var out []colonistAction
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.Hostile || p.Prisoner || p.Embodied || p.Status != "alive" {
 			continue
 		}

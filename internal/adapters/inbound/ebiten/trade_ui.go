@@ -278,9 +278,7 @@ func (a *App) openTrade(v game.TradeView) {
 func (a *App) dismissTrade() {
 	a.dealings.trade = nil
 	a.dealings.tradeDismissed = true
-	if a.renderer != nil {
-		a.renderer.enqueue(command.Command{Kind: command.CloseTrade})
-	}
+	a.shell.Enqueue(command.Command{Kind: command.CloseTrade})
 	a.dealingsPause()
 }
 
@@ -289,7 +287,7 @@ func (a *App) proposeTrade(d *tradeDraft) {
 	if d.reason() != "" || a.renderer == nil {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.ProposeTrade, Name: game.EncodeTradeOffer(d.offer()), Enabled: d.gift})
+	a.shell.Enqueue(command.Command{Kind: command.ProposeTrade, Name: game.EncodeTradeOffer(d.offer()), Enabled: d.gift})
 }
 
 // tradeLine is one row of the table: a category header or a goods row.

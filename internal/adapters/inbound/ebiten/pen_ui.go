@@ -32,7 +32,7 @@ func isPenMarker(b game.BuildingView) bool { return b.Kind == penMarkerKind }
 
 // penOf is the PenView of marker b.
 func (a *App) penOf(b game.BuildingView) (game.PenView, bool) {
-	for _, p := range a.renderer.world().Pens {
+	for _, p := range a.shell.World().Pens {
 		if p.ID == b.ID {
 			return p, true
 		}
@@ -186,7 +186,7 @@ func (a *App) penTab(b game.BuildingView) paneTab {
 	id := b.ID
 	h := float32(2 * paneInset)
 	if pv, ok := a.penOf(b); ok {
-		h += penTabBody(a.renderer.world(), pv, penTabW-2*paneInset-scrollBarW).h
+		h += penTabBody(a.shell.World(), pv, penTabW-2*paneInset-scrollBarW).h
 	}
 	return paneTab{ID: "inspector.pen", Label: "Pen", WantW: penTabW, WantH: h,
 		Declare: func(r rect) { a.penTabUI(id, r) }}
@@ -203,7 +203,7 @@ func (a *App) penTabUI(id entity.EntityID, r rect) {
 	if !ok {
 		return
 	}
-	a.declareTabBody("bldg.pen.body", r, penTabBody(a.renderer.world(), pv, r.W-scrollBarW), a.applyBuildingClick)
+	a.declareTabBody("bldg.pen.body", r, penTabBody(a.shell.World(), pv, r.W-scrollBarW), a.applyBuildingClick)
 }
 
 // penPlantLabel is a plant species key as words ("jungle_tree").
@@ -219,7 +219,7 @@ func (a *App) applyPenClick(id string, b game.BuildingView) bool {
 	if !found {
 		return true
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	rows := penSpeciesRows(w, pv)
 	switch {
 	case rest == "all", rest == "none":
@@ -287,5 +287,5 @@ func (a *App) emitPenSettings(pv game.PenView, rows []penSpeciesRow, autoCut []s
 			ps.Species = append(ps.Species, r.set)
 		}
 	}
-	a.renderer.enqueue(command.Command{Kind: command.SetPenSettings, Target: uint64(pv.ID), Name: game.EncodePenSettings(ps)})
+	a.shell.Enqueue(command.Command{Kind: command.SetPenSettings, Target: uint64(pv.ID), Name: game.EncodePenSettings(ps)})
 }

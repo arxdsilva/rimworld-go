@@ -93,7 +93,7 @@ func (a *App) applyCasketClickFor(id string, b game.BuildingView, sealed bool) b
 		return false
 	}
 	if sealed {
-		a.renderer.enqueue(command.Command{Kind: command.OpenCasket, Target: uint64(b.ID)})
+		a.shell.Enqueue(command.Command{Kind: command.OpenCasket, Target: uint64(b.ID)})
 	}
 	return true
 }

@@ -7,6 +7,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -100,11 +101,12 @@ func (a *App) selectionPane() paneSpec {
 	if a.renderer == nil {
 		return paneSpec{}
 	}
+	selID, hasSel := a.shell.Selected()
 	switch {
 	case a.grouped():
 		return a.groupPane()
-	case a.renderer.HasSelect():
-		return a.paneFor(selPawn, a.renderer.Selected())
+	case hasSel:
+		return a.paneFor(selPawn, selID)
 	case a.hasAnimal:
 		return a.paneFor(selAnimal, a.selAnimal)
 	case a.hasItem:
@@ -458,7 +460,7 @@ func (a *App) drawPaneBody(screen *ebiten.Image, spec paneSpec, g paneGeom, mx, 
 // selectPaneTab handles a pane tab click ("inspector.<tab>"): a closed
 // tab opens, the open tab collapses; a disabled tab shows its reason.
 func (a *App) selectPaneTab(id string) {
-	name := strings.TrimPrefix(id, "inspector.")
+	name := strings.TrimPrefix(id, ids.PrefixInspector)
 	for _, t := range a.selectionPane().Tabs {
 		if t.ID != id {
 			continue
@@ -482,7 +484,7 @@ func (a *App) selectPaneTab(id string) {
 // it is open already, and reports it is open (false: the pane has no such
 // live tab). Captures use it to show a tab.
 func (a *App) openPaneTab(name string) bool {
-	id := "inspector." + name
+	id := ids.PrefixInspector + name
 	if a.hst.pane.openTab != id {
 		a.selectPaneTab(id)
 	}

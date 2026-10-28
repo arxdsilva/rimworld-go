@@ -7,6 +7,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -131,7 +132,7 @@ func (a *App) pawnsUI(sw, sh int) {
 
 func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 	back := footerBack(footer)
-	a.ngButton("wizard.back", back, "Back", btnOpts{}, a.goBack)
+	a.ngButton(ids.WizardBack, back, "Back", btnOpts{}, a.goBack)
 	x := back.right() + 12
 	a.ngButton("pawns.reroll", rect{x, back.Y, 120, footerBtnH}, "Randomize", btnOpts{
 		Tip: "Randomize\nRoll this colonist again. An edited name is kept; hold Shift to roll a new name too."},
@@ -154,7 +155,7 @@ func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 			a.beginLoading()
 		}
 	}
-	a.ngButton("wizard.start", footerNext(footer), "Start", btnOpts{Style: btnPrimary, Disabled: reason != "", Reason: reason}, start)
+	a.ngButton(ids.WizardStart, footerNext(footer), "Start", btnOpts{Style: btnPrimary, Disabled: reason != "", Reason: reason}, start)
 	if a.in.fired(input.Accept) && reason == "" && !a.uiModalOpen() && !a.uiTextEditing() {
 		start()
 	}

@@ -92,7 +92,7 @@ func (a *App) troughLines(b game.BuildingView) []string {
 	if b.TroughFilter != "" {
 		out = append(out, "Accepts: "+b.TroughFilter)
 	}
-	list := penAnimals(a.renderer.world(), b.X, b.Y)
+	list := penAnimals(a.shell.World(), b.X, b.Y)
 	out = append(out, fmt.Sprintf("Pen animals (%d)", len(list)))
 	for i, an := range list {
 		if i >= maxTroughAnimals {

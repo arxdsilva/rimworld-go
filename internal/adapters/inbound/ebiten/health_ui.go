@@ -211,7 +211,7 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 		cur := medcare.Policy(h.Care) == c
 		if a.uiButton(healthCareID(c), rect{x, r.Y, bw - 2, r.H}, careShort(c),
 			btnOpts{Selected: cur, Tip: careTip(c), Disabled: dead, Reason: reason}) && !cur {
-			a.renderer.enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(p.ID), Mode: uint8(c)})
+			a.shell.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(p.ID), Mode: uint8(c)})
 		}
 		if a.renderer != nil && a.renderer.art != nil && bw >= 2*r.H {
 			if img := a.renderer.art.image(careIcon(c), color.NRGBA{}); img != nil {
@@ -228,7 +228,7 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 	if a.uiCheck(healthSelfID, rect{r.right() - healthSelfW, r.Y, healthSelfW, r.H}, "Self-tend", &on,
 		checkOpts{Disabled: dead, Reason: reason,
 			Tip: "Self-tend\nWith no one else to help, this colonist tends its own wounds (at lower quality)."}) {
-		a.renderer.enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(p.ID), Enabled: on})
+		a.shell.Enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(p.ID), Enabled: on})
 	}
 }
 
@@ -548,15 +548,15 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		}
 		if a.healthArrow(healthUpID(op.Slot), upR, true, btnOpts{Disabled: upWhy != "", Reason: upWhy,
 			Tip: "Move up\nDo " + op.Label + " sooner."}) {
-			a.renderer.enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: -1})
+			a.shell.Enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: -1})
 		}
 		if a.healthArrow(healthDownID(op.Slot), downR, false, btnOpts{Disabled: downWhy != "", Reason: downWhy,
 			Tip: "Move down\nDo " + op.Label + " later."}) {
-			a.renderer.enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: 1})
+			a.shell.Enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: 1})
 		}
 		if a.uiButton(healthRemoveID(op.Slot), rect{r.right() - 80, y, 80, healthOpRowH - 2}, "Cancel",
 			btnOpts{Style: btnDanger, Tip: "Cancel\nTake " + op.Label + " off the queue."}) {
-			a.renderer.enqueue(command.Command{Kind: command.RemoveOperation, Pawn: uint64(p.ID), Index: op.Slot})
+			a.shell.Enqueue(command.Command{Kind: command.RemoveOperation, Pawn: uint64(p.ID), Index: op.Slot})
 		}
 		y += healthOpRowH
 	}
@@ -710,7 +710,7 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 						return
 					}
 					o := opts[sel]
-					a.renderer.enqueue(command.Command{Kind: command.AddOperation, Pawn: uint64(id),
+					a.shell.Enqueue(command.Command{Kind: command.AddOperation, Pawn: uint64(id),
 						Index: int(o.op), Build: uint8(o.part), Stuff: uint8(o.item)})
 				}},
 			{id: "health.addop.cancel", label: "Cancel", closes: true},

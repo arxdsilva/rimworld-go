@@ -8,6 +8,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
@@ -472,7 +473,7 @@ func (a *App) landBar(ng *newGameState, g *globeView, bar rect) {
 		a.ngButton(id, rect{x, y, w, footerBtnH}, label, o, fn)
 		x += w + 10
 	}
-	btn("wizard.back", "Back", 110, btnOpts{}, a.goBack)
+	btn(ids.WizardBack, "Back", 110, btnOpts{}, a.goBack)
 	btn("land.random", "Select random site", 190, btnOpts{Tip: "Select random site\nPick a pleasant place at random. Press again for another."}, func() { a.randomLanding(ng, g) })
 	btn("land.advanced", "Advanced...", 120, btnOpts{Tip: "Advanced\nStarting season and map size."}, a.pushLandingAdvanced)
 	btn("land.factions", "Factions...", 120, btnOpts{Tip: "Factions\nWho lives on this planet."}, func() { a.pushFactions(ng, g) })
@@ -482,7 +483,7 @@ func (a *App) landBar(ng *newGameState, g *globeView, bar rect) {
 			a.forward()
 		}
 	}
-	btn("wizard.next", "Next", 130, btnOpts{Style: btnPrimary, Disabled: reason != "", Reason: reason}, next)
+	btn(ids.WizardNext, "Next", 130, btnOpts{Style: btnPrimary, Disabled: reason != "", Reason: reason}, next)
 	if a.in.fired(input.Accept) && reason == "" && !a.uiModalOpen() && !a.uiTextEditing() {
 		next()
 	}

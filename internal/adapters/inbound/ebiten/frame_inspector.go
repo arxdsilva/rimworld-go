@@ -22,7 +22,7 @@ func (a *App) selectedFrame() (game.FrameView, bool) {
 	if !a.hasFrame || a.renderer == nil {
 		return game.FrameView{}, false
 	}
-	for _, f := range a.renderer.world().Frames {
+	for _, f := range a.shell.World().Frames {
 		if f.ID == a.selFrame {
 			return f, true
 		}
@@ -43,7 +43,7 @@ func (a *App) applyFrameClick(id string) {
 	case "frame.close":
 		a.clearFrame()
 	case "frame.cancel":
-		a.renderer.enqueue(command.Command{Kind: command.CancelFrame, Target: uint64(f.ID)})
+		a.shell.Enqueue(command.Command{Kind: command.CancelFrame, Target: uint64(f.ID)})
 		a.clearFrame()
 	}
 }
@@ -165,7 +165,7 @@ func (a *App) drawFrameMark(screen *ebiten.Image) {
 		bw, bh := max(f.W, 1), max(f.H, 1)
 		for dy := 0; dy < bh; dy++ {
 			for dx := 0; dx < bw; dx++ {
-				a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(f.X+dx), float64(f.Y+dy), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
+				a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(f.X+dx), float64(f.Y+dy), a.shell.TilePx(), a.pw, a.ph) // physical, like the map
 			}
 		}
 	}

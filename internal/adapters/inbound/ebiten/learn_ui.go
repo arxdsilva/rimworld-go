@@ -112,7 +112,7 @@ func (a *App) learnSave(s config.Settings) {
 	a.settings = s.Normalize()
 	if a.cfg.Settings.Save != nil {
 		if err := a.cfg.Settings.Save(a.settings); err != nil {
-			a.hint = "settings not saved: " + err.Error()
+			a.shell.Hint("settings not saved: " + err.Error())
 		}
 	}
 }

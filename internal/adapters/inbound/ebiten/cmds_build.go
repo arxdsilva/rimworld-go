@@ -24,7 +24,7 @@ func (a *App) buildingView(id entity.EntityID) (game.BuildingView, bool) {
 	if a.renderer == nil {
 		return game.BuildingView{}, false
 	}
-	bs := a.renderer.world().Buildings
+	bs := a.shell.World().Buildings
 	for i := range bs { // by index: the views are large
 		if bs[i].ID == id {
 			return bs[i], true
@@ -38,7 +38,7 @@ func (a *App) frameView(id entity.EntityID) (game.FrameView, bool) {
 	if a.renderer == nil {
 		return game.FrameView{}, false
 	}
-	fs := a.renderer.world().Frames
+	fs := a.shell.World().Frames
 	for i := range fs {
 		if fs[i].ID == id {
 			return fs[i], true
@@ -147,7 +147,7 @@ func (a *App) buildingLines(b game.BuildingView) []string {
 	if b.Deconstruct {
 		add("Marked for deconstruction")
 	}
-	w := a.renderer.world()
+	w := a.shell.World()
 	add(roomLabelAt(w, b.X, b.Y))
 	add(fuelLine(b))
 	add(turretLine(b))
@@ -195,7 +195,7 @@ func (a *App) framePane(id entity.EntityID) paneSpec {
 	if !ok {
 		return paneSpec{}
 	}
-	in := buildInfo(f, a.renderer.world())
+	in := buildInfo(f, a.shell.World())
 	p := paneSpec{Title: in.Title, Subtitle: in.Foot, Close: "frame.close"}
 	p.Lines = append(p.Lines, "Status: "+in.Status)
 	if in.Material != "" {

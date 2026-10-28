@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/command"
@@ -122,7 +123,7 @@ func buildingAt(w game.WorldView, x, y int) (game.BuildingView, bool) {
 }
 
 func (a *App) selectBuildingAt(tx, ty int) bool {
-	b, ok := buildingAt(a.renderer.world(), tx, ty)
+	b, ok := buildingAt(a.shell.World(), tx, ty)
 	if !ok {
 		a.hasBuilding = false
 		return false
@@ -308,15 +309,15 @@ func billLine(bl game.BillView) string {
 }
 
 func (a *App) drawBuildingSelection(screen *ebiten.Image, b game.BuildingView) {
-	tile := a.renderer.tilePx()
-	sx, sy := a.renderer.worldToScreen(b.X, b.Y)
+	tile := a.shell.TilePx()
+	sx, sy := a.shell.WorldToScreen(b.X, b.Y)
 	w, h := float32(float64(max(b.W, 1))*tile), float32(float64(max(b.H, 1))*tile)
 	vector.StrokeRect(screen, sx+1, sy+1, w-2, h-2, 2, uiAccent, false)
 	if b.Kind == sentryTurretKind { // turret_draw.go: its reach
 		a.renderer.drawRangeRing(screen, b.X, b.Y, turretRangeTiles, tokenNRGBA(uiAccent))
 	}
 	if b.HasSpot {
-		px, py := a.renderer.worldToScreen(b.SpotX, b.SpotY)
+		px, py := a.shell.WorldToScreen(b.SpotX, b.SpotY)
 		vector.StrokeRect(screen, px+tile32(tile)*0.3, py+tile32(tile)*0.3, tile32(tile)*0.4, tile32(tile)*0.4, 1, uiAccent, false)
 	}
 }
@@ -334,7 +335,7 @@ func (a *App) applyBuildingClick(id string) {
 		return
 	}
 	if id == "bldg.deconstruct" {
-		a.renderer.enqueue(command.Command{Kind: command.DesignateDeconstruct, X: b.X, Y: b.Y,
+		a.shell.Enqueue(command.Command{Kind: command.DesignateDeconstruct, X: b.X, Y: b.Y,
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
 		return
 	}
@@ -346,11 +347,11 @@ func (a *App) applyBuildingClick(id string) {
 		a.startMove(b)
 		return
 	case "bldg.copy":
-		a.presetArchTool(b.Kind, b.Stuff, b.Facing)
+		a.shell.Do(ports.PresetBuildTool{Kind: b.Kind, Stuff: b.Stuff, Facing: b.Facing})
 		return
 	case "bldg.cancelmove":
-		if f, ok := pendingMoveFrame(a.renderer.world(), b.ID); ok {
-			a.renderer.enqueue(moveCancelRect(f))
+		if f, ok := pendingMoveFrame(a.shell.World(), b.ID); ok {
+			a.shell.Enqueue(moveCancelRect(f))
 		}
 		return
 	}
@@ -367,7 +368,7 @@ func (a *App) applyBuildingClick(id string) {
 		return
 	}
 	if parts[1] == "add" {
-		a.renderer.enqueue(command.Command{Kind: command.AddBill, X: b.X, Y: b.Y, Recipe: uint8(n),
+		a.shell.Enqueue(command.Command{Kind: command.AddBill, X: b.X, Y: b.Y, Recipe: uint8(n),
 			Mode: billModeDo, Count: 1})
 		return
 	}
@@ -387,12 +388,12 @@ func (a *App) applyBuildingClick(id string) {
 	case "pause":
 		set.Enabled = !bl.Suspended
 	case "del":
-		a.renderer.enqueue(command.Command{Kind: command.RemoveBill, X: b.X, Y: b.Y, Index: n})
+		a.shell.Enqueue(command.Command{Kind: command.RemoveBill, X: b.X, Y: b.Y, Index: n})
 		return
 	default:
 		return
 	}
-	a.renderer.enqueue(set)
+	a.shell.Enqueue(set)
 }
 
 func hasBuildTool(kind string) bool {
@@ -509,7 +510,7 @@ func (a *App) bedCommands(b game.BuildingView) []cmdButton {
 
 // pawnName is the colonist's label in the snapshot ("" when unknown).
 func (a *App) pawnName(id entity.EntityID) string {
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.ID == id {
 			return pawnLabel(p)
 		}
@@ -525,12 +526,12 @@ func (a *App) applyBedClick(id string, b game.BuildingView) bool {
 	if id == "bldg.bed.prisoners" {
 		rd, ok := a.renderer.game.(bedPrisonReader)
 		if ok {
-			a.renderer.enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(b.ID), Enabled: !rd.BedForPrisoners(b.ID)})
+			a.shell.Enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(b.ID), Enabled: !rd.BedForPrisoners(b.ID)})
 		}
 		return true
 	}
 	if id == bedMedicalID {
-		a.renderer.enqueue(command.Command{Kind: command.SetBedMedical, Target: uint64(b.ID), Enabled: !b.Medical})
+		a.shell.Enqueue(command.Command{Kind: command.SetBedMedical, Target: uint64(b.ID), Enabled: !b.Medical})
 		return true
 	}
 	s, ok := strings.CutPrefix(id, "bldg.bed.owner.")
@@ -565,7 +566,7 @@ func (a *App) bedOwnerBody(body rect, bed entity.EntityID, slot int) {
 		id   entity.EntityID
 		name string
 	}{{0, "Nobody"}}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.Status != "dead" {
 			rows = append(rows, struct {
 				id   entity.EntityID
@@ -589,7 +590,7 @@ func (a *App) bedOwnerBody(body rect, bed entity.EntityID, slot int) {
 
 // assignBedOwner sends AssignBedOwner and closes the picker.
 func (a *App) assignBedOwner(bed entity.EntityID, slot int, owner entity.EntityID) {
-	a.renderer.enqueue(command.Command{Kind: command.AssignBedOwner, Target: uint64(bed), Pawn: uint64(owner), Index: slot})
+	a.shell.Enqueue(command.Command{Kind: command.AssignBedOwner, Target: uint64(bed), Pawn: uint64(owner), Index: slot})
 	if a.uiModalTop() == bedOwnerModalID {
 		a.uiCloseTop()
 	}

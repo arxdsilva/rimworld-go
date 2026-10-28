@@ -27,7 +27,8 @@ import (
 //   - Rule 1: only functions listed in canvasExempt (key "file.go:func",
 //     with a reason) may draw raw (vector, ebitenutil, DrawImage,
 //     DrawTriangles*, Draw*Shader, text.Draw).
-//   - Rule 2: a function that converts world positions (worldToScreen*)
+//   - Rule 2: a function that converts world positions (worldToScreen*,
+//     or the shell's WorldToScreen*)
 //     must not call the logical-coordinate draws (drawText, drawIcon, ui*,
 //     ...) directly; it goes through worldText / worldIcon, which convert
 //     once. A function that divides by uiScale() itself is converting by
@@ -295,7 +296,7 @@ func scanFile(fset *token.FileSet, af *ast.File, base string) []*funcScan {
 						scan().Raw = append(scan().Raw, at(x, id.Name+"."+x.Sel.Name))
 					}
 				}
-				if strings.HasPrefix(x.Sel.Name, "worldToScreen") {
+				if strings.HasPrefix(x.Sel.Name, "worldToScreen") || strings.HasPrefix(x.Sel.Name, "WorldToScreen") { // the renderer's, or the shell role's (shell.go)
 					scan().World = append(scan().World, at(x, x.Sel.Name))
 				}
 			case *ast.CallExpr:

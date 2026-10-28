@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/application/game"
 )
 
@@ -50,11 +51,11 @@ func (a *App) archToolCommands() []cmdButton {
 	}
 	var w game.WorldView
 	if a.renderer != nil {
-		w = a.renderer.world()
+		w = a.shell.World()
 	}
 	out := make([]cmdButton, 0, len(tools))
 	for _, t := range tools {
-		b := cmdButton{ID: "arch.tool." + t.id, Label: t.label, Icon: t.icon, Toggle: true}
+		b := cmdButton{ID: ids.PrefixArchTool + t.id, Label: t.label, Icon: t.icon, Toggle: true}
 		stuff := a.toolStuff(t)
 		stock := 0
 		if bv, ok := buildable(t.build); ok && bv.Carpet {
@@ -76,7 +77,7 @@ func (a *App) archToolCommands() []cmdButton {
 func (a *App) archToolCell(id string) (rect, bool) {
 	cells := a.hud().GridCells
 	for i, c := range a.archToolCommands() {
-		if c.ID == "arch.tool."+id && i < len(cells) {
+		if c.ID == ids.PrefixArchTool+id && i < len(cells) {
 			return cells[i], true
 		}
 	}
@@ -141,7 +142,7 @@ func (a *App) archKey() archPlanKey {
 	k := archPlanKey{tool: a.archTool, facing: a.archFacing, scale: hudScale(), rot: a.rotateKeys()}
 	var w game.WorldView
 	if a.renderer != nil {
-		w = a.renderer.world()
+		w = a.shell.World()
 		k.hasWorld, k.wood, k.stone = true, w.Wood, w.Stone
 	}
 	t, ok := toolByID(a.archTool)
@@ -193,7 +194,7 @@ func (a *App) buildArchPlan(k archPlanKey) archDescPlan {
 	}
 	var w game.WorldView
 	if a.renderer != nil {
-		w = a.renderer.world()
+		w = a.shell.World()
 	}
 	t, ok := toolByID(a.archTool)
 	if !ok {
@@ -313,10 +314,10 @@ func (a *App) archDescButtons(r rect) []button {
 			row, col := i/plan.stuffPerRow, i%plan.stuffPerRow
 			label := stuffLabel(s)
 			if bv.Carpet && a.renderer != nil {
-				label = fmt.Sprintf("%s (%d)", label, stockOf(a.renderer.world(), s))
+				label = fmt.Sprintf("%s (%d)", label, stockOf(a.shell.World(), s))
 			}
 			add(button{
-				id: "arch.stuff." + s, label: label,
+				id: ids.PrefixArchStuff + s, label: label,
 				x: r.X + archPad + float32(col)*(plan.stuffW+archBtnGap),
 				y: r.Y + plan.stuffTop + float32(row)*(archBtnH+archBtnGap),
 				w: plan.stuffW, h: archBtnH, selected: sel == s,
@@ -328,7 +329,7 @@ func (a *App) archDescButtons(r rect) []button {
 		for i, c := range zoneSpecies() {
 			col, row := i%plan.cropCols, i/plan.cropCols
 			b := button{
-				id: "arch.crop." + c.Name, label: cropLabel(c.Name),
+				id: ids.PrefixArchCrop + c.Name, label: cropLabel(c.Name),
 				x: r.X + archPad + float32(col)*(plan.cropW+archBtnGap),
 				y: r.Y + plan.cropTop + float32(row)*(archBtnH+archBtnGap),
 				w: plan.cropW, h: archBtnH, selected: c.Name == sel,

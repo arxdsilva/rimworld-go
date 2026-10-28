@@ -86,7 +86,7 @@ func (a *App) sendCaravan(f *formCaravan) {
 	if f.reason() != "" || a.renderer == nil {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.FormCaravan, Name: memberList(f.members()), Count: f.dest})
+	a.shell.Enqueue(command.Command{Kind: command.FormCaravan, Name: memberList(f.members()), Count: f.dest})
 }
 
 // caravanPickReason is why colonist p cannot join ("" it can).
@@ -112,7 +112,7 @@ func (a *App) formCaravanBody(f *formCaravan, body rect) {
 	lh, lrest := left.splitV(26)
 	a.uiLabel(lh.X, lh.Y, "Colonists", hs)
 	var pawns []game.PawnView
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		if p.Status != "dead" {
 			pawns = append(pawns, p)
 		}

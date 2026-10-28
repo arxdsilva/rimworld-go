@@ -28,7 +28,7 @@ func animalAt(w game.WorldView, x, y int) (game.AnimalView, bool) {
 }
 
 func (a *App) selectAnimalAt(tx, ty int) bool {
-	an, ok := animalAt(a.renderer.world(), tx, ty)
+	an, ok := animalAt(a.shell.World(), tx, ty)
 	if !ok {
 		a.hasAnimal = false
 		return false
@@ -43,7 +43,7 @@ func (a *App) selectedAnimal() (game.AnimalView, bool) {
 	if !a.hasAnimal || a.renderer == nil {
 		return game.AnimalView{}, false
 	}
-	for _, an := range a.renderer.world().Animals {
+	for _, an := range a.shell.World().Animals {
 		if an.ID == a.selAnimal {
 			return an, true
 		}
@@ -104,7 +104,7 @@ func (a *App) drawAnimalMark(screen *ebiten.Image) {
 	}
 	if a.renderer.art != nil {
 		wx, wy := a.renderer.interpAnimal(an)
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, wx, wy, a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
+		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, wx, wy, a.shell.TilePx(), a.pw, a.ph) // physical, like the map
 	}
 }
 
@@ -121,15 +121,15 @@ func (a *App) applyAnimalClick(id string) {
 		if an.Designated { // only the mark: a pen or zone underneath stays
 			c.Kind, c.Order = command.Undesignate, command.OrderHunt
 		}
-		a.renderer.enqueue(c)
+		a.shell.Enqueue(c)
 	case "animal.tame":
 		c := command.Command{Kind: command.DesignateTame, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y}
 		if an.TameMark {
 			c.Kind, c.Order = command.Undesignate, command.OrderTame
 		}
-		a.renderer.enqueue(c)
+		a.shell.Enqueue(c)
 	case "animal.release":
-		a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)})
+		a.shell.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)})
 	case "animal.area": // the pane's allowed-area chip (a tame animal that is not penned)
 		if an.Tame && !an.Penned {
 			a.openAreaPicker("Allowed area", an.AreaRef, true, func(ref int) { a.assignArea(an.ID, ref) })
@@ -261,7 +261,7 @@ func (a *App) toggleTraining(an game.AnimalView, s string) {
 	}
 	for _, t := range an.Training {
 		if t.Skill == n && t.Allowed {
-			a.renderer.enqueue(command.Command{Kind: command.SetTraining, Target: uint64(an.ID), Index: n, Enabled: !t.On})
+			a.shell.Enqueue(command.Command{Kind: command.SetTraining, Target: uint64(an.ID), Index: n, Enabled: !t.On})
 		}
 	}
 }

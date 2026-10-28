@@ -138,8 +138,8 @@ func (a *App) candUnderCursor() (selCand, bool) {
 	if id, ok := a.renderer.pawnUnderCursor(mx, my); ok {
 		return selCand{selPawn, id}, true
 	}
-	tx, ty := a.renderer.TileAt(mx, my)
-	if cands := a.selectables(a.renderer.world(), tx, ty); len(cands) > 0 {
+	tx, ty := a.shell.TileAt(mx, my)
+	if cands := a.selectables(a.shell.World(), tx, ty); len(cands) > 0 {
 		return cands[0], true
 	}
 	return selCand{}, false
@@ -332,7 +332,7 @@ func (a *App) selectedPawns() []game.PawnView {
 		return nil
 	}
 	byID := map[entity.EntityID]game.PawnView{}
-	for _, p := range a.renderer.snapshot() {
+	for _, p := range a.shell.Pawns() {
 		byID[p.ID] = p
 	}
 	var out []game.PawnView
@@ -359,7 +359,7 @@ func (a *App) selectedItems() []game.ItemView {
 		return nil
 	}
 	byID := map[entity.EntityID]game.ItemView{}
-	for _, it := range a.renderer.world().Items {
+	for _, it := range a.shell.World().Items {
 		if !it.Carried {
 			byID[it.ID] = it
 		}
@@ -379,7 +379,7 @@ func (a *App) selectedAnimals() []game.AnimalView {
 		return nil
 	}
 	byID := map[entity.EntityID]game.AnimalView{}
-	for _, an := range a.renderer.world().Animals {
+	for _, an := range a.shell.World().Animals {
 		byID[an.ID] = an
 	}
 	var out []game.AnimalView
@@ -621,20 +621,20 @@ func (a *App) applyGroupClick(id string) {
 		on := id == "group.draft"
 		for _, p := range a.selectedPawns() {
 			if p.Drafted != on {
-				a.renderer.enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: on})
+				a.shell.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: on})
 			}
 		}
 	case "group.forbid", "group.allow":
 		on := id == "group.forbid"
 		for _, it := range a.selectedItems() {
 			if it.Forbidden != on {
-				a.renderer.enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: on})
+				a.shell.Enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: on})
 			}
 		}
 	case "group.haulmark":
 		for _, it := range a.selectedItems() {
 			if it.Unclaimed && !it.HaulMarked {
-				a.renderer.enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: true})
+				a.shell.Enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: true})
 			}
 		}
 	default:

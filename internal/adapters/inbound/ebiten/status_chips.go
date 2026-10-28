@@ -61,7 +61,7 @@ func (a *App) chipRects(chips []statusChip, sw int) []rect {
 
 // statusChipsUI declares the conditions' hover cards.
 func (a *App) statusChipsUI(sw int) {
-	chips := statusChips(a.renderer.world())
+	chips := statusChips(a.shell.World())
 	for i, r := range a.chipRects(chips, sw) {
 		a.uiTip("hud.chip."+uiNum(i), r, chips[i].tip)
 	}
@@ -80,6 +80,6 @@ func drawConditionLines(screen *ebiten.Image, chips []statusChip, rs []rect) {
 
 // drawStatusChips paints the conditions.
 func (a *App) drawStatusChips(screen *ebiten.Image, sw int) {
-	chips := statusChips(a.renderer.world())
+	chips := statusChips(a.shell.World())
 	drawConditionLines(screen, chips, a.chipRects(chips, sw))
 }
