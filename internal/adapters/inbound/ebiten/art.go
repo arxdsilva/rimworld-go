@@ -274,8 +274,12 @@ type artSprite struct {
 	// filled guards the one lazy fill from src or file, so catalogs shared
 	// across goroutines (tests) stay race-free.
 	filled sync.Once
-	// opaqueH caches opaqueHeightPx (0: not measured yet).
-	opaqueH float64
+	// opaqueH caches opaqueHeightPx and opaqueBx opaqueBox (x0, y0, x1,
+	// y1 canvas px), measured once in the same pass (measured: catalogs
+	// are shared across parallel tests).
+	measured sync.Once
+	opaqueH  float64
+	opaqueBx [4]float64
 	// maskImg is the tint mask's coverage box on the GPU (maskBox, in the
 	// sprite's pixels) for tint bakes (bakeTint), made on the first bake;
 	// maskDone marks it made (nil when the mask covers nothing).
@@ -293,35 +297,65 @@ const opaqueAlphaMin = 32
 // sprite without opaque pixels reports its canvas height. It calibrates
 // a creature's shadow (ART-012: κ = shadow.h / opaque height).
 func (sp *artSprite) opaqueHeightPx() float64 {
-	if sp.opaqueH > 0 {
-		return sp.opaqueH
-	}
-	h := float64(sp.meta.Canvas[1])
+	sp.measured.Do(sp.measureOpaque)
+	return sp.opaqueH
+}
+
+// opaqueBox is the box of the sprite's opaque pixels (alpha bounds, as
+// opaqueHeightPx) in canvas px: x0, y0 inclusive, x1, y1 exclusive. A
+// sprite without pixels or opaque ones reports its whole canvas. Measured
+// with the height, so a released sprite (art_memory.go) keeps it.
+func (sp *artSprite) opaqueBox() (x0, y0, x1, y1 float64) {
+	sp.measured.Do(sp.measureOpaque)
+	return sp.opaqueBx[0], sp.opaqueBx[1], sp.opaqueBx[2], sp.opaqueBx[3]
+}
+
+// measureOpaque finds the opaque box: each row is scanned in from both
+// ends up to its first opaque pixel, so an opaque row costs only its
+// margins. A pixel image smaller than the canvas (a test's) is scaled up.
+func (sp *artSprite) measureOpaque() {
+	cw, ch := float64(sp.meta.Canvas[0]), float64(sp.meta.Canvas[1])
+	box := [4]float64{0, 0, cw, ch}
 	if sp.pix != nil {
 		b := sp.pix.Bounds()
-		top, bot := -1, -1
+		top, bot, left, right := -1, -1, b.Dx(), -1
 		for y := b.Min.Y; y < b.Max.Y; y++ {
 			row := sp.pix.Pix[sp.pix.PixOffset(b.Min.X, y):]
+			l := -1
 			for x := 0; x < b.Dx(); x++ {
 				if row[4*x+3] >= opaqueAlphaMin {
-					if top < 0 {
-						top = y
-					}
-					bot = y
+					l = x
+					break
+				}
+			}
+			if l < 0 {
+				continue
+			}
+			if top < 0 {
+				top = y - b.Min.Y
+			}
+			bot = y - b.Min.Y
+			left = min(left, l)
+			for x := b.Dx() - 1; x >= l; x-- {
+				if row[4*x+3] >= opaqueAlphaMin {
+					right = max(right, x)
 					break
 				}
 			}
 		}
-		if top >= 0 && b.Dy() > 0 {
-			k := 1.0
-			if sp.meta.Canvas[1] > 0 {
-				k = float64(sp.meta.Canvas[1]) / float64(b.Dy())
+		if top >= 0 && b.Dx() > 0 && b.Dy() > 0 {
+			kx, ky := 1.0, 1.0
+			if cw > 0 {
+				kx = cw / float64(b.Dx())
 			}
-			h = float64(bot-top+1) * k
+			if ch > 0 {
+				ky = ch / float64(b.Dy())
+			}
+			box = [4]float64{float64(left) * kx, float64(top) * ky, float64(right+1) * kx, float64(bot+1) * ky}
 		}
 	}
-	sp.opaqueH = math.Max(h, 1)
-	return sp.opaqueH
+	sp.opaqueBx = box
+	sp.opaqueH = math.Max(box[3]-box[1], 1)
 }
 
 type tintKey struct {
@@ -347,6 +381,50 @@ type artCatalog struct {
 	freeCPU bool
 	mem     *artMem
 	tintLRU tintLRU
+	// ext is how far any animal canvas reaches past its cell
+	// (animalExtent), measured once from the metadata.
+	extOnce sync.Once
+	ext     animalExt
+}
+
+// animalExt is how far an animal's canvas reaches past the edges of the
+// cell it stands on, in tiles (PLAY-022 A.3): sideways (either way: west
+// draws east mirrored), up (north) and down (south). The largest canvas of
+// any animal facing sets it, so a cell-based cull padded by it never drops
+// a body whose cell is off screen.
+type animalExt struct{ side, up, down float64 }
+
+// animalSpanFallback is the reach (tiles, every way) assumed when a
+// catalog has no animal sprites: about the longest XL canvas.
+const animalSpanFallback = 4.5
+
+// animalExtent is the catalog's animalExt, from every "animal/" sprite's
+// canvas, origin and ppt (metadata only, nothing decoded), once.
+func (c *artCatalog) animalExtent() animalExt {
+	if c == nil {
+		return animalExt{animalSpanFallback, animalSpanFallback, animalSpanFallback}
+	}
+	c.extOnce.Do(func() {
+		var e animalExt
+		n := 0
+		for k, sp := range c.sprites {
+			if !strings.HasPrefix(k, "animal/") || sp == nil || sp.meta.Canvas[0] <= 0 {
+				continue
+			}
+			m := &sp.meta
+			p := m.pxPerTile()
+			l, r := m.Origin[0]/p, (float64(m.Canvas[0])-m.Origin[0])/p-1
+			u, d := m.Origin[1]/p, (float64(m.Canvas[1])-m.Origin[1])/p-1
+			e.side = max(e.side, l, r)
+			e.up, e.down = max(e.up, u), max(e.down, d)
+			n++
+		}
+		if n == 0 {
+			e = animalExt{animalSpanFallback, animalSpanFallback, animalSpanFallback}
+		}
+		c.ext = e
+	})
+	return c.ext
 }
 
 // LocateArt finds assets/metadata above the working directory or the
@@ -526,6 +604,17 @@ func (c *artCatalog) has(key string) bool {
 	}
 	_, ok := c.sprites[key]
 	return ok
+}
+
+// metaOf is key's metadata without decoding its pixels (nil: no sprite).
+func (c *artCatalog) metaOf(key string) *artMeta {
+	if c == nil {
+		return nil
+	}
+	if sp := c.sprites[key]; sp != nil {
+		return &sp.meta
+	}
+	return nil
 }
 
 func (c *artCatalog) sprite(key string) *artSprite {

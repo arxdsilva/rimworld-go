@@ -47,8 +47,9 @@ const (
 	// bakePad is the margin baked around a chunk image, so bilinear taps
 	// at its edge read the neighbouring ground.
 	bakePad = 1
-	// decalMinTile: ground-cover decals (snow, puddles) need at least this
-	// tile size; below it the smooth veil alone shows.
+	// decalMinTile: ground-cover decals (snow cover, drifts, frost) need at
+	// least this tile size; below it the smooth veil alone shows (puddles
+	// are always the veil, puddle_veil.go).
 	decalMinTile = 32.0
 	// creatureMinTile is the smallest tile size creatures are drawn at.
 	creatureMinTile = 16.0
@@ -97,7 +98,10 @@ type lodState struct {
 
 // visPad is how far past the visible tiles the per-frame chunk lists
 // reach: tall sprites (trees, walls) south of the view and the longest
-// shadows (shadowMaxLen) from any side.
+// shadows (shadowMaxLen) from any side, a big carcass's canvas (up to about
+// 1.7 tiles past its cell, PLAY-022) with its shadow included
+// (TestRealAnimalBodies). Animals are not chunk-listed: their culls pad by
+// animalPads.
 const visPad = 5
 
 // bakeBudget is how many chunk bakes a frame may do (ground of 256 tiles
@@ -590,3 +594,23 @@ func (r *Renderer) drawMapChunk(screen *ebiten.Image, w *game.WorldView, cx, cy 
 // lodTile is the tile size creatures are drawn at: the camera's, or the
 // minimum below it.
 func lodTile(tile float64) float64 { return math.Max(tile, creatureMinTile) }
+
+// animalDrift is how far (tiles) a drawn animal strays from its read-model
+// cell when a cull reads only the cell: the step it is still finishing (a
+// diagonal) plus a correction blend.
+const animalDrift = 2.0
+
+// animalPads are the near/inView pads of a cell-based animal cull
+// (PLAY-022 A.3) at a camera tile size: the largest animal canvas
+// (artCatalog animalExtent), grown by the minimum creature size below
+// creatureMinTile (lodTile), plus animalDrift. pad is west, east and north
+// (where a body's lower part reaches down into the view), padS south
+// (where its height reaches up into it).
+func (r *Renderer) animalPads(tile float64) (pad, padS int) {
+	e := r.art.animalExtent()
+	k := 1.0
+	if tile > 0 {
+		k = lodTile(tile) / tile
+	}
+	return int(math.Ceil(k*(max(e.side, e.down)+1) - 1 + animalDrift)), int(math.Ceil(k*(e.up+1) - 1 + animalDrift))
+}

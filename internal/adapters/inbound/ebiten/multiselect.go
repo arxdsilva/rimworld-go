@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -190,6 +191,38 @@ func (r *Renderer) inRect(wx, wy float64, x0, y0, x1, y1 float32) bool {
 	return sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1
 }
 
+// bodyInRect reports the screen rectangle holding the centre of a tile
+// an's drawn body covers (PLAY-022 C7: a box over a big animal's flank
+// takes it, as a click there does). An animal whose cell is farther from
+// the box than the largest body reaches is not measured.
+func (r *Renderer) bodyInRect(an game.AnimalView, x0, y0, x1, y1 float32) bool {
+	tile := r.tilePx()
+	pad, padS := r.animalPads(tile)
+	// the tile centres inside the box
+	tx0 := int(math.Ceil((float64(x0)+r.cam.offsetX)/tile - 0.5))
+	ty0 := int(math.Ceil((float64(y0)+r.cam.offsetY)/tile - 0.5))
+	tx1 := int(math.Floor((float64(x1)+r.cam.offsetX)/tile - 0.5))
+	ty1 := int(math.Floor((float64(y1)+r.cam.offsetY)/tile - 0.5))
+	if tx1 < tx0 || ty1 < ty0 || an.X < tx0-pad || an.X > tx1+pad || an.Y < ty0-pad || an.Y > ty1+padS {
+		return false
+	}
+	bx0, by0, bx1, by1, ok := r.animalBodyRect(an)
+	if !ok {
+		return false
+	}
+	// the tiles the body spans whose centres the box holds
+	cx0, cy0 := int(math.Floor(bx0)), int(math.Floor(by0))
+	cx1, cy1 := int(math.Floor(bx1)), int(math.Floor(by1))
+	for ty := max(cy0, ty0); ty <= min(cy1, ty1); ty++ {
+		for tx := max(cx0, tx0); tx <= min(cx1, tx1); tx++ {
+			if coversTile(bx0, by0, bx1, by1, tx, ty) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // thingsIn lists what lies inside a screen rectangle: colonists, else
 // animals, else ground items (each in read-model order).
 func (a *App) thingsIn(x0, y0, x1, y1 float32) (selKind, []entity.EntityID) {
@@ -204,8 +237,12 @@ func (a *App) thingsIn(x0, y0, x1, y1 float32) (selKind, []entity.EntityID) {
 	if len(ids) > 0 {
 		return selPawn, ids
 	}
-	for _, an := range w.Animals {
-		if wx, wy := r.interpAnimal(an); !worldFogged(w, an.X, an.Y) && r.inRect(wx, wy, x0, y0, x1, y1) {
+	for i := range w.Animals {
+		an := &w.Animals[i]
+		if worldFogged(w, an.X, an.Y) {
+			continue
+		}
+		if wx, wy := r.interpAnimal(*an); r.inRect(wx, wy, x0, y0, x1, y1) || r.bodyInRect(*an, x0, y0, x1, y1) {
 			ids = append(ids, an.ID)
 		}
 	}

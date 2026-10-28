@@ -1220,22 +1220,6 @@ func (e *envState) dotQuad(x, y, rad, a float64) {
 
 const ellipseSegs = 14
 
-// ellipse is a filled ellipse (a triangle fan).
-func (e *envState) ellipse(cx, cy, rx, ry float64, c color.RGBA, a float64) {
-	if !e.room(ellipseSegs + 1) {
-		return
-	}
-	base := uint16(len(e.verts))
-	e.vert(cx, cy, 1.5, 1.5, c, a)
-	for i := 0; i < ellipseSegs; i++ {
-		th := 2 * math.Pi * float64(i) / ellipseSegs
-		e.vert(cx+rx*math.Cos(th), cy+ry*math.Sin(th), 1.5, 1.5, c, a)
-	}
-	for i := 0; i < ellipseSegs; i++ {
-		e.idx = append(e.idx, base, base+1+uint16(i), base+1+uint16((i+1)%ellipseSegs))
-	}
-}
-
 // ring is an elliptical outline of the given stroke width.
 func (e *envState) ring(cx, cy, rx, ry, width float64, c color.RGBA, a float64) {
 	if a <= 0 || !e.room(2*ellipseSegs) {

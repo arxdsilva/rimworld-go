@@ -19,6 +19,10 @@ type moveState struct {
 	Blend  float64 // 0..1 walk weight (eases idle <-> walk)
 	Facing facing  // hysteresis-smoothed
 	Moving bool    // inside a step (false while blocked or idle)
+	// Left is the stride left until the current walk ends at rest, in
+	// tiles: +Inf while the path goes on (PLAY-022: a stopping animal's
+	// walk cycle steers onto a neutral frame by then).
+	Left float64
 }
 
 // Motion tuning (ART §27.1).
@@ -36,13 +40,19 @@ const (
 	velH        = 1e-3  // finite-difference step, ticks
 	// drawnReach bounds how far (tiles) a drawn creature can be from its
 	// read-model cell (the trailing step plus a correction): cell-based
-	// culls pad by it before paying for the motion sample.
+	// culls pad by it before paying for the motion sample (an animal's add
+	// its body's reach, artCatalog.animalExtent).
 	drawnReach = 3.0
 	// motionViewPad: animals within this many tiles of the last frame's
 	// view keep a motion track (syncAnimals); every pass that samples
 	// their motion culls tighter (objects, shadows, plant contacts).
 	motionViewPad = contactViewPad + 2
 )
+
+// sideBias weighs an animal's east-west travel against north-south when it
+// picks a facing (PLAY-022): a long body on a diagonal shows its side, not
+// a front walking crabwise.
+const sideBias = 1.4
 
 // motionState is the Renderer's presentation motion bookkeeping: the
 // clocks (C7) and one track per creature.
@@ -96,7 +106,22 @@ func (r *Renderer) motionOf(id entity.EntityID) (moveState, bool) {
 	if k == nil {
 		return moveState{}, false
 	}
-	return k.state(r.animT()), true
+	t := r.animT()
+	if k.memo.ok && k.memo.t == t && k.memo.gen == r.mo.gen {
+		return k.memo.m, true // a draw samples a creature many times
+	}
+	m := k.state(t)
+	k.memo = moMemo{m: m, t: t, gen: r.mo.gen, ok: true}
+	return m, true
+}
+
+// moMemo is a track's last sampled state: valid for its animT within one
+// sync generation (observe and turn run only in a sync; settle clears it).
+type moMemo struct {
+	m   moveState
+	t   float64
+	gen uint64
+	ok  bool
 }
 
 // --- sync -------------------------------------------------------------
@@ -111,6 +136,7 @@ type moView struct {
 	blocked   entity.EntityID
 	legacy    bool // the sim fills no step timing: estimate it
 	defDur    int  // step duration when the view has none
+	animal    bool // an animal: diagonals face sideways (sideBias)
 }
 
 func pawnMoView(p game.PawnView) moView {
@@ -122,7 +148,7 @@ func pawnMoView(p game.PawnView) moView {
 func animalMoView(an game.AnimalView) moView {
 	return moView{x: an.X, y: an.Y, stepTick: an.StepTick, stepTicks: an.StepTicks,
 		nx: an.NextX, ny: an.NextY, hasNext: an.HasNext, blocked: an.BlockedBy,
-		legacy: an.StepTick == 0, defDur: max(an.StepTicks, 1)}
+		legacy: an.StepTick == 0, defDur: max(an.StepTicks, 1), animal: true}
 }
 
 // beginSync starts a sync at sim tick now.
@@ -159,7 +185,7 @@ func (mo *motionState) corrMax() float64 {
 func (mo *motionState) observe(id entity.EntityID, v moView, face facing) *moTrack {
 	k := mo.tracks[id]
 	if k == nil {
-		k = &moTrack{x: v.x, y: v.y, fac: face, turnTo: face}
+		k = &moTrack{x: v.x, y: v.y, fac: face, turnTo: face, side: v.animal}
 		mo.tracks[id] = k
 		k.plan(v, mo.now)
 		k.gen = mo.gen
@@ -296,6 +322,9 @@ func (k *moTrack) wantFacing(ref float64) (facing, bool) {
 		return k.turnTo, false
 	}
 	k.chordX = cx
+	if k.side {
+		cx *= sideBias
+	}
 	return hystFacing(cx, cy, k.turnTo), true
 }
 
@@ -356,6 +385,8 @@ func (k *moTrack) settle() {
 	}
 	k.segs, k.corr = nil, moCorr{}
 	k.turnLeft, k.fac = 0, k.turnTo
+	k.body = animalBody{} // the next draw starts the animal's pose afresh, at rest
+	k.memo = moMemo{}
 }
 
 // --- the drawn path -----------------------------------------------------
@@ -389,8 +420,12 @@ type moTrack struct {
 	fac, turnTo facing
 	turnLeft    int
 	chordX      float64
+	side        bool // an animal: favour side facings (sideBias)
 	gen         uint64
 	lens        [maxSegs + 1]geomLen // arc-length memo per step index (lengths)
+	// body is an animal's walk phase and idle pose player (animal_figure.go).
+	body animalBody
+	memo moMemo // motionOf's last sample
 }
 
 // moSample is the corrected part of the motion.
@@ -446,7 +481,28 @@ func (k *moTrack) state(t float64) moveState {
 	if !m.Moving && m.Blend < 1e-9 {
 		m.Blend = 0
 	}
+	m.Left = math.Max(0, k.walkEnd(t)-d.stride)
 	return m
+}
+
+// walkEnd is the stride at which the walk under way at t ends at rest
+// (the end of the first final step from there), +Inf while the path goes
+// on; standing, the stride it rests at.
+func (k *moTrack) walkEnd(t float64) float64 {
+	n := len(k.segs)
+	if n == 0 {
+		return k.rest
+	}
+	i := n - 1
+	for i > 0 && k.segs[i].start > t {
+		i--
+	}
+	for j := i; j < n; j++ {
+		if s := &k.segs[j]; s.final || (j+1 < n && !k.segs[j+1].cont) {
+			return s.base + k.segLen(j)
+		}
+	}
+	return math.Inf(1)
 }
 
 func (k *moTrack) drawn(t float64) moSample { return k.model(t).add(k.corr.at(t)) }
@@ -639,8 +695,6 @@ func (g moGeom) evalL(s *moSeg, t, l1 float64) moSample {
 	}
 	return moSample{x: p.x, y: p.y, stride: s.base + l}
 }
-
-func (g moGeom) length() float64 { return g.h1.arc(1) + g.h2.arc(1) }
 
 type vec struct{ x, y float64 }
 

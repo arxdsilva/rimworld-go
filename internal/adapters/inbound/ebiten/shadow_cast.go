@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"cmp"
 	_ "embed"
 	"math"
 
@@ -141,12 +142,13 @@ func castQuad(vs *[4]ebiten.Vertex, sx, sy, w, h float32, geo ebiten.GeoM, c *sh
 }
 
 // spriteKappa is κ for a caster h tiles tall whose opaque part is
-// opaquePx source pixels tall: tiles of height per tile of sprite.
-func spriteKappa(h, opaquePx float64) float64 {
-	if opaquePx <= 0 {
+// opaquePx source pixels tall at ppt pixels per tile (its metadata
+// density, PLAY-022): tiles of height per tile of sprite.
+func spriteKappa(h, opaquePx, ppt float64) float64 {
+	if opaquePx <= 0 || ppt <= 0 {
 		return 0
 	}
-	return h * artTilePx / opaquePx
+	return h * ppt / opaquePx
 }
 
 // castProjection is the silhouette projection about the screen pivot
@@ -330,6 +332,7 @@ type creatureCaster struct {
 	px, py float64          // the feet: the ground pivot, tiles
 	w, h   float64          // footprint width and height, tiles
 	opaque float64          // opaque height, source px (κ = h/opaque)
+	ppt    float64          // the sprite's px per tile (artMeta.pxPerTile)
 	lying  bool             // flat on the ground
 	sky    bool             // on open-sky ground
 	tx, ty int              // the tile it stands on (sky, lamp reach)
@@ -356,7 +359,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		if s.h <= 0 {
 			return
 		}
-		c.w, c.h, c.opaque = s.w, s.h, sp.opaqueHeightPx()
+		c.w, c.h, c.opaque, c.ppt = s.w, s.h, sp.opaqueHeightPx(), sp.meta.pxPerTile()
 		c.px, c.py = c.wx+feetX, c.wy+feetY
 		c.tx, c.ty = int(math.Floor(c.wx+0.5)), int(math.Floor(c.wy+0.5))
 		c.sky = skyOpen(w, c.tx, c.ty)
@@ -373,17 +376,22 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		}
 		add(creatureCaster{pawn: p, wx: wx, wy: wy, lying: figureLying(*p), fp: r.pawnFigurePoseOf(*p)}, "pawn/body_south", pawnFeetX, pawnFeetY)
 	}
+	// an animal's silhouette reaches past its cell by its body (PLAY-022:
+	// up to about 2.5 tiles for the longest canvases) before the shadow
+	// itself
+	e := r.art.animalExtent()
+	ma := mg + max(e.side, e.up, e.down)
 	for i := range w.Animals {
 		an := &w.Animals[i]
 		// cull on the cell first: the drawn position stays within a few
 		// tiles of it (interpolation and corrections), and most of a big
 		// map's animals are far off screen
 		if fx, fy := float64(an.X), float64(an.Y); !v.empty() &&
-			(fx+1+drawnReach < v.x0-mg || fy+1+drawnReach < v.y0-mg || fx-drawnReach > v.x1+mg || fy-drawnReach > v.y1+mg) {
+			(fx+1+drawnReach < v.x0-ma || fy+1+drawnReach < v.y0-ma || fx-drawnReach > v.x1+ma || fy-drawnReach > v.y1+ma) {
 			continue
 		}
 		wx, wy := r.interpAnimal(*an)
-		if !inView(wx, wy) {
+		if !v.empty() && !(wx+1 >= v.x0-ma && wy+1 >= v.y0-ma && wx <= v.x1+ma && wy <= v.y1+ma) {
 			continue
 		}
 		add(creatureCaster{animal: an, wx: wx, wy: wy}, r.animalBaseKey(*an), figurePivotX, figurePivotY)
@@ -403,7 +411,7 @@ func (r *Renderer) castCreature(w game.WorldView, c creatureCaster, cl castLight
 		cs.shader, _ = ebiten.NewShader([]byte(castKage)) // nil: no silhouettes, contact pools stay
 	}
 	sx, sy := r.worldToScreenF(c.px, c.py)
-	k := spriteKappa(c.h, c.opaque)
+	k := spriteKappa(c.h, c.opaque, cmp.Or(c.ppt, artTilePx))
 	if c.lying {
 		k *= lyingKappa
 	}
@@ -414,7 +422,7 @@ func (r *Renderer) castCreature(w game.WorldView, c creatureCaster, cl castLight
 	}
 	cs.alpha = float32(cl.alpha)
 	cs.pivotY = float64(sy)
-	cs.heightPx = c.opaque * tile / artTilePx
+	cs.heightPx = c.opaque * tile / cmp.Or(c.ppt, artTilePx)
 	r.cast = cs
 	if c.pawn != nil {
 		r.drawPawnFigure(st.scratch, *c.pawn, c.wx, c.wy, tile, c.fp)

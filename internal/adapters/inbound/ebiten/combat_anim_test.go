@@ -533,14 +533,19 @@ func TestAnimalBiteKickSynced(t *testing.T) {
 	if s, _ := frame(buck, kick); s != "_kick3" {
 		t.Fatalf("a strike by weapon alone picks the kick: %s", s)
 	}
+	// PLAY-022 C5 re-expresses the old 0.75 s graze1/graze2 toggle: the
+	// head stays down (graze2) for seconds, passing graze1 on its way down
+	// and up, with a standing look-up between bouts (here an untracked
+	// animal's repeating first bout; animal_motion_test.go drives a tracked
+	// one).
 	graze := game.AnimalView{ID: 9, Species: "dustbuck", X: 2, Y: 2, Action: game.ActionGraze}
-	seen := map[string]bool{}
-	for tick := uint64(100); tick < 200; tick += 5 {
+	seen := map[string]int{}
+	for tick := uint64(100); tick < 100+20*60; tick++ {
 		r := combatRenderer(tick, nil, game.WorldView{Animals: []game.AnimalView{graze}})
-		seen[r.animalFrame(graze)] = true
+		seen[r.animalFrame(graze)]++
 	}
-	if !seen["_graze1"] || !seen["_graze2"] || len(seen) != 2 {
-		t.Fatalf("grazing alternates graze1/graze2: %v", seen)
+	if seen["_graze1"] == 0 || seen["_graze2"] < grazeDownMin || seen[""] == 0 || len(seen) != 3 {
+		t.Fatalf("a graze bout: head down for seconds, graze1 between, a standing look: %v", seen)
 	}
 }
 

@@ -64,7 +64,10 @@ const (
 	capCalls       = 2
 	capSpeciesSpan = 600 // at most capSpecies distinct species per capSpeciesSpan frames
 	capSpecies     = 3
-	largeSize      = 1.4 // AnimalView.Size at or above which the interval stretches
+	// largeSize is the AnimalView.Size at or above which the interval
+	// stretches: the L class's body length (2.2, PLAY-022 C1) less its
+	// -15% trim, so every L and XL animal counts (it was the old L 1.4).
+	largeSize = 2.2 * 0.85
 )
 
 // Volumes of each event (the director adds distance and zoom).

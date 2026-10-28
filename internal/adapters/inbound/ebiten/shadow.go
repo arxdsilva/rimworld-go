@@ -113,7 +113,7 @@ func shadowFallback(key string, m *artMeta) shadowSpec {
 			fd = float64(m.Footprint[1])
 		}
 		if m.Canvas[1] > 0 {
-			canvasH = float64(m.Canvas[1]) / artTilePx
+			canvasH = float64(m.Canvas[1]) / m.pxPerTile()
 		}
 	}
 	switch fam {

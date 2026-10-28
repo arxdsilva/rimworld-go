@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"cmp"
+	"math"
 	"slices"
 
 	"rimworld-go/internal/application/game"
@@ -40,11 +42,19 @@ type selCycle struct {
 }
 
 // selectablesAt lists what a click on (tx, ty) can select, in precedence.
-// selectables is selectablesAt for a click on the map: a hidden conduit
+// selectables is selectablesAt for a click on the map: an animal whose
+// drawn body covers the tile from another cell (PLAY-022 C7) comes after
+// whatever stands on the tile itself (pawns, animals, items, frames,
+// buildings) and before its plants, floors and zone; a hidden conduit
 // counts only while the power overlay shows, the only place it is drawn
 // (PLAY-021).
 func (a *App) selectables(w game.WorldView, tx, ty int) []selCand {
-	cands := selectablesAt(w, a.renderer.snapshot(), tx, ty)
+	cands, solid := selectablesSplit(w, a.renderer.snapshot(), tx, ty)
+	if !worldFogged(w, tx, ty) {
+		if body := a.renderer.animalsCovering(w, tx, ty); len(body) > 0 {
+			cands = slices.Insert(cands, solid, body...)
+		}
+	}
 	if a.renderer.powerShown() {
 		return cands
 	}
@@ -62,9 +72,15 @@ func (a *App) selectables(w game.WorldView, tx, ty int) []selCand {
 }
 
 func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCand {
-	var out []selCand
+	out, _ := selectablesSplit(w, pawns, tx, ty)
+	return out
+}
+
+// selectablesSplit is selectablesAt and solid, the index where the things
+// standing on the tile end and its ground (plants, floors, zone) begins.
+func selectablesSplit(w game.WorldView, pawns []game.PawnView, tx, ty int) (out []selCand, solid int) {
 	if worldFogged(w, tx, ty) {
-		return nil // unexplored: nothing to pick
+		return nil, 0 // unexplored: nothing to pick
 	}
 	for _, p := range pawns {
 		if p.X == tx && p.Y == ty && !p.Embodied {
@@ -105,6 +121,7 @@ func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCan
 			out = append(out, selCand{selBuilding, b.ID})
 		}
 	}
+	solid = len(out)
 	for _, p := range w.Plants {
 		if p.X == tx && p.Y == ty {
 			out = append(out, selCand{selPlant, p.ID})
@@ -114,6 +131,89 @@ func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCan
 	out = append(out, floorFrames...)
 	if z, ok := zoneCellAt(w, tx, ty); ok { // PLAY-020: a zone comes last
 		out = append(out, selCand{selZone, entity.EntityID(z.ID)})
+	}
+	return out, solid
+}
+
+// pickCover is how much of a tile (tiles, in x and in y) an animal's body
+// box must overlap to cover it: a sliver of outline or shadow-side fringe
+// over a neighbour does not.
+const pickCover = 0.15
+
+// animalBodyRect is the box, in world tiles, of animal an's drawn body:
+// its standing frame's opaque pixels (artSprite.opaqueBox) placed as the
+// object pass draws it (drawn position, minimum creature size, juvenile
+// scale, west mirrored), without the passing pose of a lunge or a breath.
+func (r *Renderer) animalBodyRect(an game.AnimalView) (x0, y0, x1, y1 float64, ok bool) {
+	sp := r.art.sprite(r.animalBaseKey(an)) // decoded at most once, for its box
+	if sp == nil {
+		return 0, 0, 0, 0, false
+	}
+	bx0, by0, bx1, by1 := sp.opaqueBox()
+	m := &sp.meta
+	p := m.pxPerTile()
+	// tiles from the drawn tile's top-left
+	x0, y0, x1, y1 = (bx0-m.Origin[0])/p, (by0-m.Origin[1])/p, (bx1-m.Origin[0])/p, (by1-m.Origin[1])/p
+	if r.animalMirrored(an) {
+		x0, x1 = 2*figurePivotX-x1, 2*figurePivotX-x0
+	}
+	if s := an.Scale; s > 0 && s < 1 {
+		x0, x1 = figurePivotX+(x0-figurePivotX)*s, figurePivotX+(x1-figurePivotX)*s
+		y0, y1 = figurePivotY+(y0-figurePivotY)*s, figurePivotY+(y1-figurePivotY)*s
+	}
+	wx, wy := r.interpAnimal(an)
+	tile := r.tilePx()
+	k := 1.0
+	if ct := lodTile(tile); tile > 0 && ct > tile {
+		wx, wy = creatureAt(wx, wy, tile, ct)
+		k = ct / tile
+	}
+	return wx + x0*k, wy + y0*k, wx + x1*k, wy + y1*k, true
+}
+
+// coversTile reports a body box overlapping tile (tx, ty) by pickCover.
+func coversTile(x0, y0, x1, y1 float64, tx, ty int) bool {
+	fx, fy := float64(tx), float64(ty)
+	return math.Min(x1, fx+1)-math.Max(x0, fx) >= pickCover && math.Min(y1, fy+1)-math.Max(y0, fy) >= pickCover
+}
+
+// animalsCovering lists the animals whose drawn body covers tile (tx, ty)
+// from another cell, nearest first (PLAY-022 C7). Only animals whose cell
+// lies within the largest body's reach of the tile are measured.
+func (r *Renderer) animalsCovering(w game.WorldView, tx, ty int) []selCand {
+	pad, padS := r.animalPads(r.tilePx())
+	type hit struct {
+		id entity.EntityID
+		d  float64
+	}
+	var hits []hit
+	for i := range w.Animals {
+		an := &w.Animals[i]
+		if an.X == tx && an.Y == ty || an.X < tx-pad || an.X > tx+pad || an.Y < ty-pad || an.Y > ty+padS {
+			continue // on the tile itself (selectablesAt), or too far to reach it
+		}
+		if worldFogged(w, an.X, an.Y) {
+			continue
+		}
+		x0, y0, x1, y1, ok := r.animalBodyRect(*an)
+		if !ok || !coversTile(x0, y0, x1, y1, tx, ty) {
+			continue
+		}
+		cx, cy := (x0+x1)/2, (y0+y1)/2
+		hits = append(hits, hit{an.ID, math.Hypot(cx-float64(tx)-0.5, cy-float64(ty)-0.5)})
+	}
+	if len(hits) == 0 {
+		return nil
+	}
+	slices.SortFunc(hits, func(a, b hit) int {
+		if c := cmp.Compare(a.d, b.d); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.id, b.id)
+	})
+	out := make([]selCand, len(hits))
+	for i, h := range hits {
+		out[i] = selCand{selAnimal, h.id}
 	}
 	return out
 }

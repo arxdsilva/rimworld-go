@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"math"
 	"strings"
@@ -62,24 +63,22 @@ const figurePivotX, figurePivotY = 0.5, 0.55
 
 // drawSpritePose draws a sprite at tile (wx, wy) transformed by ps.
 func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps pose) {
-	sp := r.art.sprite(key)
-	if sp == nil {
+	m := r.art.metaOf(key) // no decode before the cull
+	if m == nil {
+		return
+	}
+	sx, sy := r.worldToScreenF(wx, wy)
+	geo := spritePoseGeo(*m, float64(sx), float64(sy), tile, ps)
+	// cull on the posed canvas itself (PLAY-022: an XL body reaches 2+
+	// tiles past its cell). A silhouette (r.cast) is projected away from
+	// the sprite, so its caster list culls instead (creatureCasters).
+	if r.cast == nil && !geoVisible(geo, float64(m.Canvas[0]), float64(m.Canvas[1]), screen.Bounds()) {
 		return
 	}
 	img := r.art.image(key, tint)
 	if img == nil {
 		return
 	}
-	sx, sy := r.worldToScreenF(wx, wy)
-	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	if !visible(sx-float32(tile)*2, sy-float32(tile)*2, float32(tile)*5, float32(tile)*5, sw, sh) {
-		return
-	}
-	x, y, s := artOrigin(sp.meta, float64(sx), float64(sy), tile)
-	geo := ebiten.GeoM{}
-	geo.Scale(s, s)
-	geo.Translate(x, y)
-	geo.Concat(ps.geo(float64(sx), float64(sy), tile))
 	cs := ps.cs
 	if cs == (colorScale{}) {
 		cs = noCS
@@ -99,6 +98,31 @@ func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.N
 		fl.ColorScale.Scale(1.9*f, 0.75*f, 0.7*f, f*0.55)
 		screen.DrawImage(img, fl)
 	}
+}
+
+// spritePoseGeo places a sprite's canvas for a tile whose top-left is at
+// screen (sx, sy): its footprint anchor at its own density (artOrigin,
+// PLAY-022 ppt), then the pose about its pivot in tiles.
+func spritePoseGeo(m artMeta, sx, sy, tile float64, ps pose) ebiten.GeoM {
+	x, y, s := artOrigin(m, sx, sy, tile)
+	geo := ebiten.GeoM{}
+	geo.Scale(s, s)
+	geo.Translate(x, y)
+	geo.Concat(ps.geo(sx, sy, tile))
+	return geo
+}
+
+// geoVisible reports whether the w x h source rectangle placed by g
+// overlaps the bounds b: its four corners' bounding box, so rotation,
+// mirroring and scale are covered.
+func geoVisible(g ebiten.GeoM, w, h float64, b image.Rectangle) bool {
+	x0, y0 := math.Inf(1), math.Inf(1)
+	x1, y1 := math.Inf(-1), math.Inf(-1)
+	for _, c := range [4][2]float64{{0, 0}, {w, 0}, {0, h}, {w, h}} {
+		x, y := g.Apply(c[0], c[1])
+		x0, y0, x1, y1 = math.Min(x0, x), math.Min(y0, y), math.Max(x1, x), math.Max(y1, y)
+	}
+	return x1 >= float64(b.Min.X) && y1 >= float64(b.Min.Y) && x0 < float64(b.Max.X) && y0 < float64(b.Max.Y)
 }
 
 func easeOut(t float64) float64 {
@@ -135,10 +159,11 @@ func hash01(keys ...uint64) float64 {
 
 // --- walk cycle -------------------------------------------------------
 
-// Gait (ART §27.1): one cycle (two footfalls) per strideLen tiles of
-// stride. Pawns have no walk frames: walkFrames only phases the bob so its
-// peaks fall where the old cycle's contact poses were (01 and 07). An
-// animal trot has trotFrames frames.
+// Gait (ART §27.1): a pawn's cycle (two footfalls) spans strideLen tiles
+// of stride. Pawns have no walk frames: walkFrames only phases the bob so
+// its peaks fall where the old cycle's contact poses were (01 and 07). An
+// animal trot has trotFrames frames and its own ground travel per cycle
+// (metadata "gait", PLAY-022; animal_figure.go).
 const (
 	walkFrames = 12
 	trotFrames = 8
@@ -147,29 +172,23 @@ const (
 	contactEvery = strideLen / 2
 
 	// gait amplitudes, in tiles / radians at normal walking speed
-	bobAmp    = pawnBobPx * 1.4
-	swayAmp   = 0.015
-	leanAmp   = 0.06
-	leanBack  = 0.05
-	minBlend  = 0.05 // below this the static pose is used
-	trotBobPx = 0.03
+	bobAmp   = pawnBobPx * 1.4
+	swayAmp  = 0.015
+	leanAmp  = 0.06
+	leanBack = 0.05
+	minBlend = 0.05 // below this the static pose is used
 )
 
-// cycleIndex is floor(stride/strideLen*n) mod n, also for negative stride.
-func cycleIndex(stride float64, n int) int {
-	i := int(math.Floor(stride/strideLen*float64(n))) % n
-	if i < 0 {
-		i += n
-	}
-	return i
+// trotSuffix is the animal trot frame suffix ("_walk01".."_walk08") for
+// phase ph, in cycles (any real; the fraction picks the frame).
+func trotSuffix(ph float64) string {
+	return fmt.Sprintf("_walk%02d", trotFrame(ph)+1)
 }
 
-// trotSuffix is the animal trot frame suffix ("_walk01".."_walk08").
-func trotSuffix(m moveState) string {
-	if m.Blend < minBlend {
-		return ""
-	}
-	return fmt.Sprintf("_walk%02d", cycleIndex(m.Stride, trotFrames)+1)
+// trotFrame is the 0-based trot frame at phase ph.
+func trotFrame(ph float64) int {
+	f := ph - math.Floor(ph)
+	return min(int(f*trotFrames), trotFrames-1)
 }
 
 // gaitScale is how strongly the gait shows: speed relative to a straight
@@ -189,16 +208,6 @@ func humps(stride float64, n int) float64 {
 // speed and walk blend, peaking at foot contact.
 func bobRaise(stride, speed, blend float64) float64 {
 	return bobAmp * humps(stride, walkFrames) * gaitScale(moveState{Speed: speed, Blend: blend})
-}
-
-// trotBob is the animal's bounce (tiles, up); a fleeing animal gallops
-// with a 1.6x bounce.
-func trotBob(m moveState, fleeing bool) float64 {
-	b := trotBobPx * humps(m.Stride, trotFrames) * gaitScale(m)
-	if fleeing {
-		b *= 1.6
-	}
-	return b
 }
 
 // gaitSway is the lateral body sway (tiles) for N/S walkers: weight

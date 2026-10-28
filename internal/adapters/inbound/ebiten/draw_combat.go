@@ -66,7 +66,8 @@ func (r *Renderer) interpAnimal(an game.AnimalView) (float64, float64) {
 
 // animalMarkTrace, when set (tests only, never in parallel), sees each mark
 // the animal overlays put in the world pass, in physical pixels:
-// "hostile-marker" (a, b: the animal's top-left), "chase-line" (a, b the
+// "hostile-marker" (a, b: the animal's top-left), "mark-lift" (b: the
+// marker's height on screen, PLAY-022), "chase-line" (a, b the
 // animal's centre, c, d the target's), "name-plate" (a, b, c, d: x, y,
 // width, height) and "name-text" (a, b: the text's anchor, as handed to
 // worldText).
@@ -77,44 +78,50 @@ var animalMarkTrace func(kind string, a, b, c, d float32)
 // own: a vector stroke between two sprite draws flushes the vector batch,
 // a path fill per animal (milliseconds a frame with the map in view).
 func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, tile float64, sw, sh int) {
+	pad, padS := r.animalPads(tile) // lod.go: off screen, as the figure pass culls
+	padS++                          // the marks float over the tallest body
 	for i := range w.Animals {
 		an := &w.Animals[i]
-		if !r.lod.inView(an.X, an.Y, 3, 4) { // lod.go: off screen, as the figure pass culls
+		if !r.lod.inView(an.X, an.Y, pad, padS) {
 			continue
 		}
 		// the map tier (< 16 px tiles) draws no decals (lod.go): a snore's
 		// "z" would be under two pixels there
 		if an.Sleeping && r.lod.tier != lodMap && r.animalResting(*an) {
 			wx, wy := r.interpAnimal(*an)
-			r.drawSnoreFor(screen, uint64(an.ID), wx+0.25, wy+0.1-an.Size*0.1, tile)
+			r.drawSnoreFor(screen, uint64(an.ID), wx+0.25, wy+snoreDrop-r.animalRestTop(*an), tile)
 		}
 	}
 	r.drawChaseLines(screen, w, tile) // PLAY-017: under the marks
 	for i := range w.Animals {
 		an := &w.Animals[i]
-		if !r.lod.inView(an.X, an.Y, 3, 4) {
+		if !r.lod.inView(an.X, an.Y, pad, padS) {
 			continue
 		}
 		wx, wy := r.interpAnimal(*an)
+		top := r.animalTop(*an, tile)
+		lift := markerLift(top)
 		switch {
 		case an.Hostile || an.Manhunter: // PLAY-017: every hostile animal, not only manhunters
 			if animalMarkTrace != nil {
 				sx, sy := r.worldToScreenF(wx, wy)
 				animalMarkTrace("hostile-marker", sx, sy, 0, 0)
+				_, my := r.worldToScreenF(wx, wy-lift)
+				animalMarkTrace("mark-lift", sx, my, 0, 0)
 			}
-			r.drawHostileMarker(screen, game.PawnView{}, wx, wy, animalMarkerLift(an.Size), tile)
-		case an.Designated:
+			r.drawHostileMarker(screen, game.PawnView{}, wx, wy, lift, tile)
+		case an.Designated: // the icon (a half-size tile) centred where the chevron would be
 			spin := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5, rot: float64(r.present) * 0.035}
-			r.drawSpritePose(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size), tile, spin)
+			r.drawSpritePose(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-lift-0.5, tile, spin)
 		case an.TameMark:
 			bob := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5}
-			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size)-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
+			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-lift-0.5-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
 		}
 		if an.Tame && an.Name != "" && tile >= stackCountMinTile {
 			r.drawAnimalName(screen, an.Name, wx+0.5, wy+1.0)
 		}
 		if an.Health < 100 {
-			sx, sy := r.worldToScreenF(wx+0.15, wy-animalBarLift(an.Size))
+			sx, sy := r.worldToScreenF(wx+0.15, wy-barLift(top))
 			bw := float32(tile) * 0.7
 			r.solidRect(screen, sx, sy, bw, 4, color.RGBA{30, 24, 20, 220}) // lod.go: a sprite, not a path fill
 			r.solidRect(screen, sx, sy, bw*float32(an.Health)/100, 4, healthColor(an.Health))
@@ -141,13 +148,14 @@ const (
 // (solidRect), not a vector stroke, which would flush the batch for every
 // line. A line with both ends off screen is skipped.
 func (r *Renderer) drawChaseLines(screen *ebiten.Image, w game.WorldView, tile float64) {
+	pad, padS := r.animalPads(tile)
 	for i := range w.Animals {
 		an := &w.Animals[i]
 		if !an.Hostile || an.TargetID == 0 {
 			continue
 		}
 		p, ok := chasedPawn(r.drawPawns, an.TargetID) // chase_ui.go
-		if !ok || (!r.lod.inView(an.X, an.Y, 3, 4) && !r.lod.inView(p.X, p.Y, 3, 4)) {
+		if !ok || (!r.lod.inView(an.X, an.Y, pad, padS) && !r.lod.inView(p.X, p.Y, 3, 4)) {
 			continue
 		}
 		ax, ay := r.interpAnimal(*an)
@@ -467,9 +475,11 @@ func (r *Renderer) settleVisuals() {
 
 // animalFrame is the animal's body frame: a flinch while a hit is
 // fresh, the bite or kick (strike frame 3 on the attack's trace, wind-up
-// 1-2 by AttackCycle), the trot while moving, grazing.
+// 1-2 by AttackCycle), else what its body player shows (animalShow: the
+// walk cycle, graze bouts, standing).
 func (r *Renderer) animalFrame(an game.AnimalView) string {
 	m := r.animalMotion(an.ID)
+	show := r.animalShow(an) // advanced every draw, under a flinch or strike too
 	if age, ok := r.hitAge(an.ID, an.HitTick, an.X, an.Y); ok && age < staggerTicks {
 		if age < 4 {
 			return "_flinch1"
@@ -491,16 +501,7 @@ func (r *Renderer) animalFrame(an game.AnimalView) string {
 			return set + "2"
 		}
 	}
-	if moving {
-		return trotSuffix(m)
-	}
-	if an.Action == game.ActionGraze {
-		if math.Mod(r.animT()+float64(an.ID)*17, 90) < 45 {
-			return "_graze1"
-		}
-		return "_graze2"
-	}
-	return ""
+	return show.suffix
 }
 
 // attackAction reports an Action that is a natural-weapon attack.
@@ -527,49 +528,130 @@ func animalAttackSet(an game.AnimalView, st reactTrace, struck bool) string {
 	return "_bite"
 }
 
-// Overlay heights over an animal, in tiles above its tile origin. The
-// former single-size values fit a 0.95-tile deer; bigger bodies lift
-// them by their extra height (about 0.45 of the body length for a
-// quadruped) so marks clear an elephant and hug a rat.
+// Overlay heights over an animal, in tiles above its tile's top edge
+// (PLAY-022 C8). The height is how far the drawn body rises above that
+// edge: from its art (animalTop: the standing canvas's top) or, without
+// art, estimated from its body length by animalHeights, the class
+// medians of the PLAY-022 sprites at the class lengths (XS 1.45 … XL
+// 3.0). Marks float animalMarkAbove over it, the health bar animalBarAbove.
 const (
-	animalHeightK   = 0.45
-	animalRefSize   = 0.95 // body length the base lifts were tuned for
-	animalMarkBase  = 0.95
-	animalBarBase   = 0.32
+	animalRefSize   = 1.8 // an unknown size counts as an M body (a deer)
 	animalMinMark   = 0.55
 	animalMinBar    = 0.1
 	animalMarkAbove = 0.4 // a mark floats at least this far over the height
+	animalBarAbove  = 0.1 // the bar's top edge sits this far over the height
 )
 
-// animalHeight is an animal's estimated height in tiles from its body
-// length (an unknown size counts as the reference deer).
+// animalHeights are (body length, height above the tile's top) points of
+// the size → height estimate: the class medians of the PLAY-022 standing
+// canvases (XS 0.3, S 0.5, M 0.8, L 1.45, XL 1.7 tiles).
+var animalHeights = [...][2]float64{{1.45, 0.3}, {1.65, 0.5}, {1.8, 0.8}, {2.2, 1.45}, {3.0, 1.7}}
+
+// animalHeight is an animal's estimated height above its tile's top in
+// tiles from its body length: linear between the class points, clamped
+// past the ends (an unknown size counts as the reference M body).
 func animalHeight(size float64) float64 {
 	if size <= 0 {
 		size = animalRefSize
 	}
-	return animalHeightK * size
+	hs := animalHeights
+	if size <= hs[0][0] {
+		return hs[0][1] * size / hs[0][0]
+	}
+	for i := 1; i < len(hs); i++ {
+		if size <= hs[i][0] {
+			a, b := hs[i-1], hs[i]
+			return a[1] + (b[1]-a[1])*(size-a[0])/(b[0]-a[0])
+		}
+	}
+	last := hs[len(hs)-1]
+	return last[1] * size / last[0]
 }
 
-// animalMarkerLift is how far above its tile the hunt and tame marks hover.
-func animalMarkerLift(size float64) float64 {
-	extra := animalHeight(size) - animalHeight(animalRefSize)
-	return max(animalMinMark, animalMarkBase+extra, animalHeight(size)+animalMarkAbove)
+// snoreDrop is where a sleeper's snores start below the top of its lying
+// body (drawSnoreFor rises from 0.25 above its anchor).
+const snoreDrop = 0.25
+
+// animalRestTop is how far a lying animal's body rises above its tile's
+// top edge: its rest frame's opaque top (that sprite is drawn, so it is
+// decoded or measured), else half the size estimate.
+func (r *Renderer) animalRestTop(an game.AnimalView) float64 {
+	if sp := r.art.sprite(r.animalBaseKey(an) + "_rest"); sp != nil {
+		_, y0, _, _ := sp.opaqueBox()
+		return (sp.meta.Origin[1] - y0) / sp.meta.pxPerTile()
+	}
+	return 0.5 * animalHeight(an.Size)
 }
 
-// animalBarLift is how far above its tile the health bar sits.
-func animalBarLift(size float64) float64 {
-	return max(animalMinBar, animalBarBase+animalHeight(size)-animalHeight(animalRefSize))
+// markerLift is how far above its tile's top a mark hovers over a body h
+// tiles high; barLift the health bar.
+func markerLift(h float64) float64 { return max(animalMinMark, h+animalMarkAbove) }
+func barLift(h float64) float64    { return max(animalMinBar, h+animalBarAbove) }
+
+// animalMarkerLift is how far above its tile the hunt and tame marks
+// hover over a body of this length, without art.
+func animalMarkerLift(size float64) float64 { return markerLift(animalHeight(size)) }
+
+// animalBarLift is how far above its tile the health bar sits, without art.
+func animalBarLift(size float64) float64 { return barLift(animalHeight(size)) }
+
+// animalTop is how far an animal's drawn body rises above its tile's top
+// edge, in tiles, at camera tile size tile: its standing canvas's top (the
+// union of the facing's poses, so no frame pokes through a mark) or the
+// size estimate without art, shrunk for a juvenile about its feet and
+// grown by the minimum creature size (creatureAt) about the tile's foot.
+func (r *Renderer) animalTop(an game.AnimalView, tile float64) float64 {
+	h := animalHeight(an.Size)
+	if m := r.art.metaOf(r.animalBaseKey(an)); m != nil {
+		h = m.Origin[1] / m.pxPerTile()
+	}
+	if s := an.Scale; s > 0 && s < 1 {
+		h = (h+figurePivotY)*s - figurePivotY
+	}
+	if ct := lodTile(tile); tile > 0 && ct > tile {
+		h = (h+1)*ct/tile - 1
+	}
+	return h
 }
 
-// animalPose: a trot bob (more when running), idle breathing, a lunge
-// into each bite or kick, and a stagger away from the attacker when hit.
+// Animal motion on top of the frames (PLAY-022 B.3): the baked walk carries
+// the body's rise and the head's nod, so the renderer adds no bob; a run
+// leans forward a little; standing, lying and grazing bodies breathe.
+const (
+	runLean = 0.035 // radians at full run speed (east/west)
+	// breathe: the body's top moves breatheBase + breatheK x its height
+	// (tiles), once per breathePeriod + breathePeriodK x height frames, so
+	// a rat's breath shows as well as an elephant's.
+	breatheBase    = 0.02
+	breatheK       = 0.01
+	breathePeriod  = 90
+	breathePeriodK = 30
+)
+
+// breathe is the idle breath's vertical scale about the feet for a body h
+// tiles from its feet to its top, at present frame p.
+func breathe(h float64, p uint64, id entity.EntityID) float64 {
+	h = math.Max(h, 0.2)
+	period := breathePeriod + breathePeriodK*h
+	return 1 + (breatheBase+breatheK*h)/h*math.Sin(2*math.Pi*float64(p+uint64(id)*29)/period)
+}
+
+// animalPose: idle breathing, a slight lean into a run, a lunge into each
+// bite or kick, and a stagger away from the attacker when hit.
 func (r *Renderer) animalPose(an game.AnimalView) pose {
 	ps := pose{px: figurePivotX, py: figurePivotY}
 	m := r.animalMotion(an.ID)
 	if m.Blend >= minBlend {
-		ps.dy = -trotBob(m, an.Mode != "wandering")
+		if an.Gait == game.GaitRun {
+			switch m.Facing {
+			case faceEast:
+				ps.rot = runLean * gaitScale(m)
+			case faceWest:
+				ps.rot = -runLean * gaitScale(m)
+			}
+		}
 	} else {
-		ps.sy = 1 + 0.015*math.Sin(2*math.Pi*float64(r.present+uint64(an.ID)*29)/120)
+		ps.sy = breathe(r.animalTop(an, 0)+figurePivotY, r.present, an.ID)
 	}
 	if st, age, struck := r.lastStrike(an.ID, an.X, an.Y, meleeTicks); struck && age < meleeTicks {
 		k := math.Sin(math.Pi * age / meleeTicks)

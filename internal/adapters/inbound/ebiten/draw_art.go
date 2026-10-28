@@ -381,7 +381,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 					continue
 				}
 				it := &w.Items[i]
-				if it.Carried || !l.near(it.X, it.Y, 1, 2) {
+				if it.Carried || !l.near(it.X, it.Y, 2, 2) { // an XL corpse reaches 1.66 tiles (PLAY-022)
 					continue
 				}
 				if it.Forbidden {
@@ -399,10 +399,11 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			}
 		}
 	}
-	ct := lodTile(tile) // creatures keep a minimum size (lod.go)
+	ct := lodTile(tile)               // creatures keep a minimum size (lod.go)
+	apad, apadS := r.animalPads(tile) // lod.go: the largest animal canvas (PLAY-022)
 	for i := range w.Animals {
 		an := &w.Animals[i]
-		if !l.near(an.X, an.Y, 3, 4) {
+		if !l.near(an.X, an.Y, apad, apadS) {
 			continue
 		}
 		wx, wy := r.interpAnimal(*an)

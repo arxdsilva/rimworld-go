@@ -145,16 +145,18 @@ func bodyCentre(m artMeta) ([2]float64, bool) {
 	if !ok {
 		return [2]float64{}, false
 	}
-	feet := m.Origin[1] + pawnFeetY*artTilePx
+	feet := m.Origin[1] + pawnFeetY*m.pxPerTile()
 	return [2]float64{head[0], (head[1] + feet) / 2}, true
 }
 
 // heldPivot is the sprite point a held item turns about and is placed by:
-// a load's tile centre; a gear sprite's centre on its centre line (the
+// a load's tile centre (at its own density: a big carcass bakes below
+// artTilePx, PLAY-022); a gear sprite's centre on its centre line (the
 // grip's height).
 func heldPivot(sp *artSprite, st heldStance) [2]float64 {
 	if st == stanceLoad {
-		return [2]float64{sp.meta.Origin[0] + artTilePx/2, sp.meta.Origin[1] + artTilePx/2}
+		p := sp.meta.pxPerTile()
+		return [2]float64{sp.meta.Origin[0] + p/2, sp.meta.Origin[1] + p/2}
 	}
 	c := [2]float64{float64(sp.meta.Canvas[0]) / 2, float64(sp.meta.Canvas[1]) / 2}
 	if g, ok := sp.meta.Attach["grip"]; ok {
@@ -188,6 +190,8 @@ func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps p
 	}
 	sx, sy := r.worldToScreenF(wx, wy)
 	bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)
+	bp := rig.body.meta.pxPerTile()
+	k *= bp / sp.meta.pxPerTile() // the held sprite at its own density (s is the body's)
 	poseG := ps.geo(float64(sx), float64(sy), tile)
 	pv := heldPivot(sp, h.stance)
 	g := ebiten.GeoM{}
@@ -216,7 +220,7 @@ func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps p
 		return heldPlacement{g: g, key: h.key, behind: math.Sin(theta) < 0}, true
 	case stanceLoad:
 		g.Scale(s*k, s*k)
-		g.Translate(bx+c[0]*s, by+(c[1]+loadDrop*artTilePx)*s)
+		g.Translate(bx+c[0]*s, by+(c[1]+loadDrop*bp)*s)
 	default:
 		ahead := 0.0
 		if rig.face == faceEast {
@@ -224,7 +228,7 @@ func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps p
 		}
 		g.Rotate(carriedTurn - h.angle)
 		g.Scale(s*k, s*k)
-		g.Translate(bx+(c[0]+ahead*artTilePx)*s, by+(c[1]+carriedDrop*artTilePx)*s)
+		g.Translate(bx+(c[0]+ahead*bp)*s, by+(c[1]+carriedDrop*bp)*s)
 	}
 	g.Concat(poseG)
 	return heldPlacement{g: g, key: h.key, behind: rig.face == faceNorth}, true
@@ -271,7 +275,8 @@ func (r *Renderer) heldPoint(rig heldRig, h heldItem, wx, wy float64, ps pose, a
 		}
 		if attach == "hold" && h.push != 0 {
 			fx, fy := facingUnit(rig.face)
-			a = [2]float64{a[0] + fx*h.push*artTilePx, a[1] + fy*h.push*artTilePx}
+			p := rig.body.meta.pxPerTile()
+			a = [2]float64{a[0] + fx*h.push*p, a[1] + fy*h.push*p}
 		}
 		sx, sy := r.worldToScreenF(wx, wy)
 		bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)

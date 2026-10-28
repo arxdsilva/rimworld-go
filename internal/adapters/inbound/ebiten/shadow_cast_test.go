@@ -24,7 +24,7 @@ func headOf(t *testing.T, l lightState, hRef, kappaK float64) (dx, dy float64) {
 	t.Helper()
 	const px, py = 300.0, 200.0
 	opaque := hRef * artTilePx // source px: hRef tiles tall
-	k := spriteKappa(hRef, opaque) * kappaK
+	k := spriteKappa(hRef, opaque, artTilePx) * kappaK
 	g := shadowProjection(px, py, k, l, hRef, 1)
 	top := py - opaque*castTile/artTilePx // screen px above the pivot
 	x, y := g.Apply(px, top)
@@ -57,7 +57,7 @@ func TestHeadMapsToShadowTip(t *testing.T) {
 	for _, rho := range []float64{1, 0.5} {
 		const px, py = 300.0, 200.0
 		opaque := hRef * artTilePx
-		g := shadowProjection(px, py, spriteKappa(hRef, opaque), l, hRef, rho)
+		g := shadowProjection(px, py, spriteKappa(hRef, opaque, artTilePx), l, hRef, rho)
 		x, y := g.Apply(px, py-opaque*castTile/artTilePx)
 		wantX, wantY := px+l.ShadowDir[0]*n*castTile, py+l.ShadowDir[1]*n*rho*castTile
 		if !near(x, wantX, 1e-6) || !near(y, wantY, 1e-6) {
@@ -307,7 +307,7 @@ func TestCalibrationFromAlphaBounds(t *testing.T) {
 	if h := sp.opaqueHeightPx(); h != 50 {
 		t.Fatalf("opaque height %v, want 50", h)
 	}
-	if k := spriteKappa(0.948, 50); !near(k, 0.948*artTilePx/50, 1e-12) {
+	if k := spriteKappa(0.948, 50, artTilePx); !near(k, 0.948*artTilePx/50, 1e-12) {
 		t.Fatalf("kappa %v", k)
 	}
 	// a sprite without opaque pixels falls back to its canvas

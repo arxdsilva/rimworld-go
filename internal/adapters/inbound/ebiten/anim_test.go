@@ -315,24 +315,42 @@ func TestCombatMinVisibleFrames(t *testing.T) {
 	}
 }
 
+// TestTrotEightFrames: the trot runs walk01..walk08 once per cycle of
+// phase. PLAY-022 re-expresses the old pins: the cycle spans the set's own
+// gait (staticShow, without a motion track) instead of the pawns' 1.6
+// tiles, it starts on walk03 (a neutral frame), and the renderer adds no
+// bob to an animal (the baked walk carries the body's rise; the old 1.6x
+// flee bounce is gone).
 func TestTrotEightFrames(t *testing.T) {
 	t.Parallel()
 	seen := map[string]bool{}
-	for s := 0.0; s < strideLen; s += 0.01 {
-		seen[trotSuffix(moveState{Stride: s, Blend: 1})] = true
+	for ph := 0.0; ph < 1; ph += 0.01 {
+		seen[trotSuffix(ph)] = true
 	}
 	if len(seen) != 8 || !seen["_walk01"] || !seen["_walk08"] {
 		t.Fatalf("trot has 8 frames walk01..walk08: %v", seen)
 	}
-	if trotSuffix(moveState{Stride: 0.5}) != "" {
+	if trotSuffix(1.01) != "_walk01" || trotSuffix(2.0/8+1e-9) != "_walk03" {
+		t.Fatal("the frame is the phase's fraction")
+	}
+	const gait = 0.816 // the deer's
+	walk := moveState{Stride: 0, Blend: 1}
+	if s := staticShow(game.AnimalView{ID: 1}, walk, 0, gait); s.suffix != "_walk03" {
+		t.Fatalf("a walk starts on walk03, got %q", s.suffix)
+	}
+	walk.Stride = gait
+	if s := staticShow(game.AnimalView{ID: 1}, walk, 0, gait); s.suffix != "_walk03" {
+		t.Fatalf("the trot repeats every gait (%.3f tiles), got %q", gait, s.suffix)
+	}
+	if s := staticShow(game.AnimalView{ID: 1}, moveState{Stride: 0.5}, 0, gait); s.walk || s.suffix != "" {
 		t.Fatal("idle animals use the static pose")
 	}
-	if trotSuffix(moveState{Stride: strideLen + 0.01, Blend: 1}) != "_walk01" {
-		t.Fatal("trot repeats every 1.6 tiles")
-	}
-	m := moveState{Stride: 0.2, Speed: 0.06, Blend: 1}
-	if g, w := trotBob(m, true), trotBob(m, false); math.Abs(g-1.6*w) > 1e-9 || w <= 0 {
-		t.Fatalf("fleeing gallop bobs 1.6x: %v vs %v", g, w)
+	r := combatRenderer(100, nil, game.WorldView{})
+	for _, gt := range []string{game.GaitAmble, game.GaitWalk, game.GaitRun} {
+		an := game.AnimalView{ID: 3, X: 4, Y: 4, Gait: gt, Mode: "fleeing"}
+		if ps := r.animalPose(an); ps.dy != 0 {
+			t.Fatalf("%s: the renderer bobs an animal by %v", gt, ps.dy)
+		}
 	}
 }
 
