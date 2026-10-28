@@ -165,6 +165,29 @@ func TestArtOriginAnchorsFootprint(t *testing.T) {
 	}
 }
 
+// PLAY-022: an animal sprite may be baked at its own density (metadata
+// "ppt"); it covers the same tiles as one baked at 128 px per tile.
+func TestArtOriginHonoursSpriteDensity(t *testing.T) {
+	t.Parallel()
+	m, err := parseArtMeta("id: a\nimage: a.png\ncanvas: [96, 64]\nppt: 64\ngait: 1.25\norigin_px: [8, 40]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.PPT != 64 || m.Gait != 1.25 {
+		t.Fatalf("ppt %v gait %v", m.PPT, m.Gait)
+	}
+	x, y, s := artOrigin(m, 640, 320, TileSize)
+	if s != 1 || x != 632 || y != 280 {
+		t.Fatalf("origin = %v,%v scale %v (a 64 px tile shows a 64 ppt sprite 1:1)", x, y, s)
+	}
+	if got := m.pxPerTile(); got != 64 {
+		t.Fatalf("pxPerTile = %v", got)
+	}
+	if got := (artMeta{}).pxPerTile(); got != artTilePx {
+		t.Fatalf("absent ppt = %v, want the %v default", got, artTilePx)
+	}
+}
+
 func TestTwoDigits(t *testing.T) {
 	t.Parallel()
 	for n, want := range map[int]string{0: "00", 7: "07", 15: "15"} {

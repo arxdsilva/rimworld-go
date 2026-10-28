@@ -810,9 +810,10 @@ func roofYard(g *game.Game, cx, cy int) {
 }
 
 // zoo pens every animal species, tamed and named after its species, in
-// rows of 12 three tiles apart from (4, 3) (cmd only: dev hooks).
+// rows of 12 five tiles apart from (4, 3), room for an XL body about 3
+// tiles long (PLAY-022; cmd only: dev hooks).
 func zoo(g *game.Game) {
-	const cols, step, x0, y0 = 12, 3, 4, 3
+	const cols, step, x0, y0 = 12, 5, 4, 3
 	species := animal.All()
 	rows := (len(species) + cols - 1) / cols
 	x1, y1 := x0+cols*step, y0+rows*step

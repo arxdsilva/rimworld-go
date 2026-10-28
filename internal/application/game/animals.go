@@ -10,6 +10,14 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
+// Animal gaits (PLAY-022, AnimalView.Gait): wandering, grazing and penned
+// milling amble; errands walk; fleeing, hunting and charging run.
+const (
+	GaitAmble = "amble"
+	GaitWalk  = "walk"
+	GaitRun   = "run"
+)
+
 // AnimalView is one living wild animal.
 type AnimalView struct {
 	ID entity.EntityID
@@ -43,7 +51,10 @@ type AnimalView struct {
 	HasNext      bool
 	BlockedBy    entity.EntityID
 	// Action, as on PawnView: "bite", "kick", "graze", "flee" or "".
-	Action             string
+	Action string
+	// Gait is how the animal moves this step (PLAY-022): GaitAmble,
+	// GaitWalk or GaitRun; "" when it is not moving (read as GaitWalk).
+	Gait               string
 	AttackCycle        float64
 	HitTick            uint64
 	HitFromX, HitFromY int

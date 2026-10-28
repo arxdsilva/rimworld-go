@@ -378,9 +378,9 @@ func (a *App) captureUI(ui string) {
 		sw, sh := a.size()
 		a.renderer.centerOn(a.capture.pan[0][0], a.capture.pan[0][1], sw, sh)
 	case "zoo":
-		// the -scenario zoo pen (rows of 12 animals from (4, 3), 3 apart)
+		// the -scenario zoo pen (6 rows of 12 animals from (4, 3), 5 apart)
 		sw, sh := a.size()
-		a.renderer.centerOn(4+12*3/2, 3+7.5, sw, sh)
+		a.renderer.centerOn(4+11*5/2.0, 3+5*5/2.0, sw, sh)
 	case "frame":
 		// a wall frame with part of its materials delivered, selected
 		w := a.renderer.world()

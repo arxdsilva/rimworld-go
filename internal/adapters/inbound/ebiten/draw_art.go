@@ -285,6 +285,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		r.drawTerrainArt(screen, w, sw, sh, tile)
 	} else {
 		r.drawGroundLOD(screen, &w, sw, sh, tile) // lod.go: chunk or map bakes
+		r.drawPuddleVeil(screen, w, sw, sh, tile) // puddle_veil.go (PLAY-022): under the tufts
 		if lt == lodChunk {
 			r.drawFurrows(screen, w, tile) // crop_batch.go: tilled ground under crops
 			r.drawTufts(screen, w, sw, sh, tile)
@@ -943,7 +944,8 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 			r.drawGroundTile(screen, &w, x, y, tile, sw, sh)
 		}
 	}
-	r.drawFurrows(screen, w, tile) // crop_batch.go: tilled ground under crops
+	r.drawFurrows(screen, w, tile)            // crop_batch.go: tilled ground under crops
+	r.drawPuddleVeil(screen, w, sw, sh, tile) // puddle_veil.go (PLAY-022): under the tufts
 	r.drawTufts(screen, w, sw, sh, tile)
 }
 

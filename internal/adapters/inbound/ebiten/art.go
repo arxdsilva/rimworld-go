@@ -51,6 +51,20 @@ type artMeta struct {
 	// LightRadius is a light's reach in tiles (metadata "light_radius",
 	// PLAY-020 §3b); 0 when the sprite gives none.
 	LightRadius float64
+	// PPT is the sprite's pixels per tile (metadata "ppt", PLAY-022): big
+	// animals bake below artTilePx and are scaled up; 0 when absent (use
+	// pxPerTile). Gait is an animal set's ground travel per walk cycle in
+	// tiles (metadata "gait"), so the feet stay planted; 0 when absent.
+	PPT  float64
+	Gait float64
+}
+
+// pxPerTile is the sprite's baked density: its "ppt", else artTilePx.
+func (m artMeta) pxPerTile() float64 {
+	if m.PPT > 0 {
+		return m.PPT
+	}
+	return artTilePx
 }
 
 // artShadow is a sprite's shadow caster (metadata "shadow:").
@@ -98,6 +112,10 @@ func parseArtMeta(src string) (artMeta, error) {
 			m.Origin, err = parsePair(val)
 		case !nested && key == "light_radius":
 			m.LightRadius, err = strconv.ParseFloat(val, 64)
+		case !nested && key == "ppt":
+			m.PPT, err = strconv.ParseFloat(val, 64)
+		case !nested && key == "gait":
+			m.Gait, err = strconv.ParseFloat(val, 64)
 		case nested && parent == "tint" && key == "group":
 			m.TintGroup = val
 		case nested && parent == "tint" && key == "mask":
@@ -664,8 +682,9 @@ func mix64(x uint64) uint64 {
 }
 
 // artOrigin converts a sprite's footprint anchor to a screen position:
-// the footprint's top-left lands at (sx, sy); scale is tile/artTilePx.
+// the footprint's top-left lands at (sx, sy); scale is tile over the
+// sprite's density (pxPerTile).
 func artOrigin(m artMeta, sx, sy, tile float64) (x, y, scale float64) {
-	scale = tile / artTilePx
+	scale = tile / m.pxPerTile()
 	return sx - m.Origin[0]*scale, sy - m.Origin[1]*scale, scale
 }
