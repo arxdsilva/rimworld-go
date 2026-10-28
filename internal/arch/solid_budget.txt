@@ -6,7 +6,7 @@
 fields rimworld-go/internal/adapters/inbound/ebiten.App 111
 fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 72
 fields rimworld-go/internal/adapters/inbound/ebiten.envState 40
-fields rimworld-go/internal/adapters/inbound/ebiten.globeView 51
+fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 51  # the same debt, moved with the type (ARCH-003)
 fields rimworld-go/internal/adapters/inbound/ebiten.newGameState 43
 fields rimworld-go/internal/adapters/inbound/ebiten.uiState 32
 fields rimworld-go/internal/application/game.Game 152
@@ -15,7 +15,7 @@ fields rimworld-go/internal/domain/world/planet.Planet 33
 files rimworld-go/internal/adapters/inbound/ebiten 213  # ARCH-002 raised 212 -> 213 for the seam itself (shell.go); the only raise in the programme, every later wave lowers it
 files rimworld-go/internal/application/game 185
 iface rimworld-go/internal/adapters/inbound/ebiten.Simulation 32
-lines rimworld-go/internal/adapters/inbound/ebiten 63760  # ARCH-002 raised 64178 -> 64602 for the seam itself, the only raise in the programme; ARCH-003 lowers
+lines rimworld-go/internal/adapters/inbound/ebiten 60131  # ARCH-002 raised 64178 -> 64602 for the seam itself, the only raise; ARCH-003 lowers
 lines rimworld-go/internal/application/game 57019
 methods rimworld-go/internal/adapters/inbound/ebiten.App 950
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 398

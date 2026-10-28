@@ -1,29 +1,29 @@
-package ebiten
+package camera
 
 import (
 	"math"
 	"testing"
 )
 
-func testLimits() camLimits {
-	return camLimits{V: viewport{0, 0, 800, 600}, MapW: 100, MapH: 100, MinZoom: 0.2}
+func testLimits() Limits {
+	return Limits{V: Viewport{X0: 0, Y0: 0, X1: 800, Y1: 600}, MapW: 100, MapH: 100, MinZoom: 0.2}
 }
 
-func testCam() *camera {
-	return &camera{Zoom: 1, Placed: true, OffsetX: 1000, OffsetY: 1000}
+func testCam() *Camera {
+	return &Camera{Zoom: 1, Placed: true, OffsetX: 1000, OffsetY: 1000}
 }
 
 const dt60 = 1.0 / 60
 
 func TestPanAcceleratesAndCoasts(t *testing.T) {
-	var s camSmooth
+	var s Smooth
 	c := testCam()
 	lim := testLimits()
 	for i := 0; i < 30; i++ { // 0.5 s held
 		s.PushPan(1, 0)
 		s.Step(dt60, c, lim)
 	}
-	maxPerFrame := float64(panPixels)
+	maxPerFrame := float64(PanPixels)
 	before := c.OffsetX
 	s.PushPan(1, 0)
 	s.Step(dt60, c, lim)
@@ -49,10 +49,10 @@ func TestPanAcceleratesAndCoasts(t *testing.T) {
 }
 
 func TestPanDoesNotOvershootBounds(t *testing.T) {
-	var s camSmooth
+	var s Smooth
 	c := testCam()
 	lim := testLimits()
-	hi := 100*TileSize*c.Zoom - lim.V.X1 + edgeSlack*lim.V.W()
+	hi := 100*TileSize*c.Zoom - lim.V.X1 + EdgeSlack*lim.V.W()
 	for i := 0; i < 600; i++ {
 		s.PushPan(1, 0)
 		s.Step(dt60, c, lim)
@@ -69,7 +69,7 @@ func TestPanDoesNotOvershootBounds(t *testing.T) {
 }
 
 func TestZoomEasesToTargetAnchoredAtCursor(t *testing.T) {
-	var s camSmooth
+	var s Smooth
 	c := testCam()
 	lim := testLimits()
 	ax, ay := 300.0, 200.0
@@ -100,15 +100,15 @@ func TestZoomEasesToTargetAnchoredAtCursor(t *testing.T) {
 }
 
 func TestZoomStepsAccumulateAndClamp(t *testing.T) {
-	var s camSmooth
+	var s Smooth
 	c := testCam()
 	lim := testLimits()
 	s.ZoomAt(100, 400, 300)
 	for i := 0; i < 120; i++ {
 		s.Step(dt60, c, lim)
 	}
-	if c.Zoom != maxZoom {
-		t.Fatalf("zoom %v, want max %v", c.Zoom, maxZoom)
+	if c.Zoom != MaxZoom {
+		t.Fatalf("zoom %v, want max %v", c.Zoom, MaxZoom)
 	}
 	s.ZoomAt(0.0001, 400, 300)
 	for i := 0; i < 240; i++ {
@@ -120,7 +120,7 @@ func TestZoomStepsAccumulateAndClamp(t *testing.T) {
 }
 
 func TestCaptureCameraInstant(t *testing.T) {
-	s := camSmooth{Instant: true}
+	s := Smooth{Instant: true}
 	c := testCam()
 	lim := testLimits()
 	s.ZoomAt(1.1, 300, 200)

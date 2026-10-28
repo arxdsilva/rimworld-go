@@ -95,7 +95,7 @@ var canvasExempt = map[string]string{
 	"dirt_draw.go:drawDirt":              "world: dirt batches",
 	"fog_draw.go:drawFogLayer":           "world: fog of war chunks over the map",
 	"grass_batch.go:bakeGrassTint":       "world: grass batches",
-	"art_memory.go:bakeTint":             "world: tinted sprite texture baked offscreen on the GPU",
+	"art/memory.go:bakeTint":             "world: tinted sprite texture baked offscreen on the GPU",
 	"grass_batch.go:flushGrass":          "world: grass batches",
 	"shadow.go:drawShadows":              "world: shadows",
 	"gfx/batch.go:Flush":                 "world: shadow triangle batch",
@@ -138,9 +138,9 @@ var canvasExempt = map[string]string{
 	"power_overlay.go:drawPowerFrame":             "world: the red frame round a device on no power grid",
 
 	// the globe: physical size inside its logical area
-	"globe.go:Draw":                "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
-	"globe.go:drawBody":            "globe: the sphere, at physical size",
-	"globe.go:drawMarks":           "globe: marks on the sphere",
+	"globe/globe.go:Draw":          "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
+	"globe/globe.go:DrawBody":      "globe: the sphere, at physical size",
+	"globe/globe.go:drawMarks":     "globe: marks on the sphere",
 	"world_ui.go:drawCaravanMarks": "globe overlay: caravan marks drawn on the globe surface",
 
 	// full-screen backgrounds, physical size, unscaled

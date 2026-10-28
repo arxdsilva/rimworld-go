@@ -3,13 +3,8 @@ package ebiten
 import (
 	"bytes"
 	"fmt"
-	"image"
-	"image/color"
-	"path/filepath"
 	"strings"
 	"testing"
-
-	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/animal"
@@ -35,71 +30,6 @@ attachments:
   hold: [103.0, 176.4]
 `
 
-func TestParseArtMeta(t *testing.T) {
-	t.Parallel()
-	m, err := parseArtMeta(sampleMeta)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if m.ID != "core:pawn/body_south" || m.Image != "generated/world/pawn/body_south.png" {
-		t.Fatalf("id/image = %q %q", m.ID, m.Image)
-	}
-	if m.Canvas != [2]int{160, 297} || m.Footprint != [2]int{1, 1} || m.Origin != [2]float64{16, 153} {
-		t.Fatalf("geometry = %v %v %v", m.Canvas, m.Footprint, m.Origin)
-	}
-	if m.TintGroup != "skin" || m.TintMask != "generated/world/pawn/body_south_mask.png" {
-		t.Fatalf("tint = %q %q (top-level mask must not leak into tint)", m.TintGroup, m.TintMask)
-	}
-	if m.Attach["hold"] != [2]float64{103, 176.4} {
-		t.Fatalf("hold = %v", m.Attach["hold"])
-	}
-}
-
-func TestParseArtMetaRejectsIncomplete(t *testing.T) {
-	t.Parallel()
-	if _, err := parseArtMeta("id: x\n"); err == nil {
-		t.Fatal("expected error for missing image/canvas")
-	}
-	if _, err := parseArtMeta("id: x\nimage: a.png\ncanvas: [1]\n"); err == nil {
-		t.Fatal("expected error for bad pair")
-	}
-}
-
-func TestParseTints(t *testing.T) {
-	t.Parallel()
-	src := "version: 1\ntints:\n  skin:  {pale: \"#f0d3be\", dark: \"#5e3d29\"}\n  hair: {black: \"#2b2522\"}\nother:\n  x: {a: \"#000000\"}\n"
-	tt, err := parseTints(src)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := tt["skin"]["dark"]; got != (color.NRGBA{0x5e, 0x3d, 0x29, 255}) {
-		t.Fatalf("skin.dark = %v", got)
-	}
-	if len(tt) != 2 {
-		t.Fatalf("only tints: groups expected, got %v", tt)
-	}
-}
-
-func TestTintNRGBAOnlyInsideMask(t *testing.T) {
-	t.Parallel()
-	src := image.NewNRGBA(image.Rect(0, 0, 2, 1))
-	src.SetNRGBA(0, 0, color.NRGBA{200, 200, 200, 255})
-	src.SetNRGBA(1, 0, color.NRGBA{200, 200, 200, 255})
-	mask := image.NewNRGBA(image.Rect(0, 0, 2, 1))
-	mask.SetNRGBA(0, 0, color.NRGBA{255, 255, 255, 255})
-	mask.SetNRGBA(1, 0, color.NRGBA{0, 0, 0, 255})
-	out := tintNRGBA(src, mask, color.NRGBA{255, 0, 0, 255})
-	if got := out.NRGBAAt(0, 0); got != (color.NRGBA{200, 0, 0, 255}) {
-		t.Fatalf("masked pixel = %v", got)
-	}
-	if got := out.NRGBAAt(1, 0); got != (color.NRGBA{200, 200, 200, 255}) {
-		t.Fatalf("unmasked pixel changed: %v", got)
-	}
-	if src.NRGBAAt(0, 0).G != 200 {
-		t.Fatal("source must not be mutated")
-	}
-}
-
 func TestWallMask(t *testing.T) {
 	t.Parallel()
 	w := game.WorldView{StructVer: 1}
@@ -119,27 +49,6 @@ func TestWallMask(t *testing.T) {
 	}
 }
 
-func TestFacingFor(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		dx, dy int
-		prev   facing
-		want   facing
-	}{
-		{1, 0, faceSouth, faceEast},
-		{-1, 0, faceSouth, faceWest},
-		{0, 1, faceEast, faceSouth},
-		{0, -1, faceEast, faceNorth},
-		{1, 1, faceNorth, faceEast},
-		{0, 0, faceWest, faceWest},
-	}
-	for _, c := range cases {
-		if got := facingFor(c.dx, c.dy, c.prev); got != c.want {
-			t.Errorf("facingFor(%d,%d,%v) = %v, want %v", c.dx, c.dy, c.prev, got, c.want)
-		}
-	}
-}
-
 func TestNextVisualTracksFacing(t *testing.T) {
 	t.Parallel()
 	v := nextVisual(pawnVisual{}, false, 3, 3, 0, 1)
@@ -153,38 +62,6 @@ func TestNextVisualTracksFacing(t *testing.T) {
 	v = nextVisual(v, true, 3, 2, 2, 3)
 	if v.facing != faceNorth {
 		t.Fatalf("standing still keeps facing, got %v", v.facing)
-	}
-}
-
-func TestArtOriginAnchorsFootprint(t *testing.T) {
-	t.Parallel()
-	m := artMeta{Origin: [2]float64{16, 80}}
-	x, y, s := artOrigin(m, 640, 320, TileSize)
-	if s != 0.5 || x != 632 || y != 280 {
-		t.Fatalf("origin = %v,%v scale %v", x, y, s)
-	}
-}
-
-// PLAY-022: an animal sprite may be baked at its own density (metadata
-// "ppt"); it covers the same tiles as one baked at 128 px per tile.
-func TestArtOriginHonoursSpriteDensity(t *testing.T) {
-	t.Parallel()
-	m, err := parseArtMeta("id: a\nimage: a.png\ncanvas: [96, 64]\nppt: 64\ngait: 1.25\norigin_px: [8, 40]\n")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if m.PPT != 64 || m.Gait != 1.25 {
-		t.Fatalf("ppt %v gait %v", m.PPT, m.Gait)
-	}
-	x, y, s := artOrigin(m, 640, 320, TileSize)
-	if s != 1 || x != 632 || y != 280 {
-		t.Fatalf("origin = %v,%v scale %v (a 64 px tile shows a 64 ppt sprite 1:1)", x, y, s)
-	}
-	if got := m.PxPerTile(); got != 64 {
-		t.Fatalf("pxPerTile = %v", got)
-	}
-	if got := (artMeta{}).PxPerTile(); got != artTilePx {
-		t.Fatalf("absent ppt = %v, want the %v default", got, artTilePx)
 	}
 }
 
@@ -434,22 +311,5 @@ func TestIndexCatalogMatchesLoad(t *testing.T) {
 		if (got.Meta.TintMask != "") != (got.Mask != nil) {
 			t.Fatalf("%s: mask %v for tint mask %q", key, got.Mask != nil, got.Meta.TintMask)
 		}
-	}
-}
-
-// A sprite whose file can't be decoded is handed out without pixels and
-// draws nothing, rather than panicking mid-frame.
-func TestLazySpriteWithBadFileDrawsNothing(t *testing.T) {
-	c := &artCatalog{Sprites: map[string]*artSprite{
-		"rock/x": {File: &fileSrc{Image: filepath.Join(t.TempDir(), "missing.png")}},
-	}, Tinted: map[tintKey]*ebiten.Image{}, Normals: map[*ebiten.Image]*ebiten.Image{}}
-	if img := c.Image("rock/x", color.NRGBA{}); img != nil {
-		t.Fatal("a sprite with no pixels drew")
-	}
-	if c.Sprites["rock/x"].File.Err == nil {
-		t.Fatal("decode error not kept")
-	}
-	if err := c.DecodeFiles(); err == nil {
-		t.Fatal("the eager load must report the bad file")
 	}
 }

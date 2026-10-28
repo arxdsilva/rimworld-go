@@ -70,7 +70,7 @@ func pawnKey(layer string, l look.Look, facing string, built bool) string {
 
 // clothTints are the cloth presets a look indexes (the raider tint is
 // reserved for hostile clothing).
-func (c *artCatalog) clothTints() []string {
+func clothTints(c *artCatalog) []string {
 	var out []string
 	for _, n := range c.TintNames("cloth") {
 		if n != raiderCloth {
@@ -114,7 +114,7 @@ type figureDress struct {
 // look built on the pawns screen is the one walking in the colony.
 func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []portraitLayer {
 	skin := art.Tint("skin", pick(art.TintNames("skin"), l.Skin))
-	cloths := art.clothTints()
+	cloths := clothTints(art)
 	cloth := func(i uint8) color.NRGBA { return art.Tint("cloth", pick(cloths, i)) }
 	shirt, pants, vest := cloth(l.Shirt), cloth(l.Pants), cloth(l.VestCloth)
 	if d.raider {

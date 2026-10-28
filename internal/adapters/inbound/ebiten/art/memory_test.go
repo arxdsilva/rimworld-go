@@ -1,4 +1,4 @@
-package ebiten
+package art
 
 import (
 	"bytes"
@@ -63,7 +63,7 @@ func syntheticFiles(t *testing.T, sprites ...fileArtSprite) string {
 			}
 			writeTestPNG(t, filepath.Join(root, filepath.FromSlash(strings.TrimSuffix(img, ".png")+"_n.png")), n)
 		}
-		mp := filepath.Join(root, artMetadataRel, fam, name+".yaml")
+		mp := filepath.Join(root, MetadataRel, fam, name+".yaml")
 		if err := os.MkdirAll(filepath.Dir(mp), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -88,7 +88,7 @@ var memTestSprites = []fileArtSprite{
 func TestLoadArtCatalogDecodesOnFirstUse(t *testing.T) {
 	t.Parallel()
 	root := syntheticFiles(t, memTestSprites...)
-	c, err := loadArtCatalog(root)
+	c, err := Load(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestLoadArtCatalogDecodesOnFirstUse(t *testing.T) {
 	if s := c.MemStats(); s.ColdFills != 1 || s.WarmFills != 0 {
 		t.Fatalf("fills: %+v", s)
 	}
-	if idx, err := indexArtCatalog(root, true); err != nil || idx.FreeCPU {
+	if idx, err := Index(root, true); err != nil || idx.FreeCPU {
 		t.Fatalf("the tests' index keeps CPU copies (err %v)", err)
 	}
 }
@@ -117,11 +117,11 @@ func TestLoadArtCatalogDecodesOnFirstUse(t *testing.T) {
 func TestPrewarmFilesHoldsDeflatedCopies(t *testing.T) {
 	t.Parallel()
 	root := syntheticFiles(t, memTestSprites...)
-	plain, err := indexArtCatalog(root, false)
+	plain, err := Index(root, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := loadArtCatalog(root)
+	c, err := Load(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,14 +129,14 @@ func TestPrewarmFilesHoldsDeflatedCopies(t *testing.T) {
 	if c.MemStats().WarmHeld <= 0 {
 		t.Fatal("prewarm held nothing")
 	}
-	if c.Sprites["animal/deer_east"].File.Warm[layerPix].Z != nil {
+	if c.Sprites["animal/deer_east"].File.Warm[LayerPix].Z != nil {
 		t.Fatal("animals are left to first use")
 	}
 	for k := range c.Sprites {
 		if strings.HasPrefix(k, "animal/") {
 			continue
 		}
-		if c.Sprites[k].File.Warm[layerPix].Z == nil {
+		if c.Sprites[k].File.Warm[LayerPix].Z == nil {
 			t.Fatalf("%s not prewarmed", k)
 		}
 		got, want := c.Sprite(k), plain.Sprite(k)
@@ -148,7 +148,7 @@ func TestPrewarmFilesHoldsDeflatedCopies(t *testing.T) {
 		}
 		if got.NormalPath != "" {
 			n := got.File.NormalNRGBA(got)
-			wn, err := decodeNRGBA(got.NormalPath)
+			wn, err := DecodeNRGBA(got.NormalPath)
 			if err != nil || n == nil || !bytes.Equal(n.Pix, wn.Pix) {
 				t.Fatalf("%s: prewarmed normal differs from the file", k)
 			}
@@ -168,11 +168,11 @@ func TestPrewarmFilesHoldsDeflatedCopies(t *testing.T) {
 func TestPrewarmFilesRacingDraws(t *testing.T) {
 	t.Parallel()
 	root := syntheticFiles(t, memTestSprites...)
-	plain, err := indexArtCatalog(root, false)
+	plain, err := Index(root, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := loadArtCatalog(root)
+	c, err := Load(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,10 +204,11 @@ func TestPrewarmFilesRacingDraws(t *testing.T) {
 func TestImageReleasesCPUPixels(t *testing.T) {
 	t.Parallel()
 	root := syntheticFiles(t, memTestSprites...)
-	c, err := loadArtCatalog(root)
+	c, err := Load(root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	c.ReadBack = func(key string) bool { return key == "plant/grass_short_v0" }
 	for _, k := range []string{"plant/bush_mature_v0", "terrain/soil_0", "animal/deer_east"} {
 		sp := c.Sprite(k)
 		if c.Image(k, color.NRGBA{}) == nil {
@@ -238,7 +239,7 @@ func TestImageReleasesCPUPixels(t *testing.T) {
 		t.Fatalf("report %q", s.String())
 	}
 
-	idx, err := indexArtCatalog(root, true)
+	idx, err := Index(root, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +254,7 @@ func TestImageReleasesCPUPixels(t *testing.T) {
 func TestReleasedMaskedSpriteStillTints(t *testing.T) {
 	t.Parallel()
 	root := syntheticFiles(t, memTestSprites...)
-	c, err := loadArtCatalog(root)
+	c, err := Load(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +273,7 @@ func TestReleasedMaskedSpriteStillTints(t *testing.T) {
 	if sp.Mask.Rect != image.Rect(4, 7, 12, 9) {
 		t.Fatalf("mask kept as %v, want its coverage box", sp.Mask.Rect)
 	}
-	if !bytes.Equal(tintNRGBA(pix, sp.Mask, red).Pix, tintNRGBA(pix, full, red).Pix) {
+	if !bytes.Equal(TintNRGBA(pix, sp.Mask, red).Pix, TintNRGBA(pix, full, red).Pix) {
 		t.Fatal("the cropped mask tints differently")
 	}
 	if c.Image("rock/ore_a", red) != img {
@@ -293,7 +294,7 @@ func TestReleasedMaskedSpriteStillTints(t *testing.T) {
 func TestTintBakesEvictLeastRecentlyUsed(t *testing.T) {
 	t.Parallel()
 	root := syntheticFiles(t, memTestSprites...)
-	c, err := loadArtCatalog(root)
+	c, err := Load(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,13 +307,13 @@ func TestTintBakesEvictLeastRecentlyUsed(t *testing.T) {
 		t.Fatal("cache miss on a fresh bake")
 	}
 	c.Image("rock/ore_a", tint(3)) // evicts b
-	if _, ok := c.Tinted[tintKey{"rock/ore_a", tint(2)}]; ok {
+	if _, ok := c.Tinted[TintKey{"rock/ore_a", tint(2)}]; ok {
 		t.Fatal("least recently used bake kept")
 	}
 	if c.NormalOf(b) != nil {
 		t.Fatal("an evicted bake's normal link kept")
 	}
-	if c.Tinted[tintKey{"rock/ore_a", tint(1)}] != a {
+	if c.Tinted[TintKey{"rock/ore_a", tint(1)}] != a {
 		t.Fatal("recently used bake evicted")
 	}
 	s := c.MemStats()
@@ -320,19 +321,19 @@ func TestTintBakesEvictLeastRecentlyUsed(t *testing.T) {
 		t.Fatalf("tint stats %+v", s)
 	}
 	// a literal catalog (tests) bakes with no budget set and no maps made
-	lit := &artCatalog{Sprites: map[string]*artSprite{"x/y": {
+	lit := &Catalog{Sprites: map[string]*Sprite{"x/y": {
 		Pix: image.NewNRGBA(image.Rect(0, 0, 4, 4)), Mask: image.NewNRGBA(image.Rect(0, 0, 4, 4))}}}
 	if lit.Image("x/y", tint(1)) == nil || len(lit.Tinted) != 1 {
 		t.Fatal("literal catalog bake")
 	}
 }
 
-// tint.kage is tintNRGBA on the GPU: its Go twin agrees with the CPU bake
+// tint.kage is TintNRGBA on the GPU: its Go twin agrees with the CPU bake
 // to two levels (the CPU bake floors twice, the GPU rounds once), and the
 // shader compiles.
 func TestTintShaderTwin(t *testing.T) {
 	t.Parallel()
-	if _, err := tintShader(); err != nil {
+	if _, err := TintShader(); err != nil {
 		t.Fatal(err)
 	}
 	src := image.NewNRGBA(image.Rect(0, 0, 16, 16))
@@ -343,11 +344,11 @@ func TestTintShaderTwin(t *testing.T) {
 		mask.Pix[o], mask.Pix[o+1], mask.Pix[o+2], mask.Pix[o+3] = uint8(i*13), uint8(i*13), uint8(i*13), 255
 	}
 	for _, tc := range []color.NRGBA{{240, 211, 190, 255}, {192, 48, 32, 255}, {0, 0, 0, 255}, {255, 255, 255, 255}} {
-		cpu := tintNRGBA(src, mask, tc)
+		cpu := TintNRGBA(src, mask, tc)
 		for i := range 256 {
 			o := 4 * i
 			for ch, tv := range [3]uint8{tc.R, tc.G, tc.B} {
-				got := tintTexel(src.Pix[o+ch], mask.Pix[o], tv)
+				got := TintTexel(src.Pix[o+ch], mask.Pix[o], tv)
 				if d := int(got) - int(cpu.Pix[o+ch]); d < -2 || d > 2 {
 					t.Fatalf("tint %v texel %d ch %d: twin %d, CPU %d", tc, i, ch, got, cpu.Pix[o+ch])
 				}
@@ -356,7 +357,7 @@ func TestTintShaderTwin(t *testing.T) {
 	}
 }
 
-// maskImage keeps the coverage box as an opaque grey image (red =
+// MaskImage keeps the coverage box as an opaque grey image (red =
 // coverage), clipped to the sprite.
 func TestMaskImageCoverageBox(t *testing.T) {
 	t.Parallel()
@@ -364,16 +365,16 @@ func TestMaskImageCoverageBox(t *testing.T) {
 	for i := 3; i < len(m.Pix); i += 4 {
 		m.Pix[i] = 255
 	}
-	if img, box := maskImage(m, image.Rect(0, 0, 10, 10)); img != nil || !box.Empty() {
+	if img, box := MaskImage(m, image.Rect(0, 0, 10, 10)); img != nil || !box.Empty() {
 		t.Fatal("an empty mask needs no GPU image")
 	}
 	m.SetNRGBA(2, 3, color.NRGBA{9, 9, 9, 255})
 	m.SetNRGBA(8, 9, color.NRGBA{200, 200, 200, 255})
-	cov := maskCoverage(m)
+	cov := MaskCoverage(m)
 	if cov.Rect != image.Rect(2, 3, 9, 10) || cov.NRGBAAt(8, 9) != (color.NRGBA{200, 200, 200, 255}) || cov.NRGBAAt(3, 3).A != 255 {
 		t.Fatalf("coverage %v", cov.Rect)
 	}
-	img, box := maskImage(m, image.Rect(0, 0, 6, 6))
+	img, box := MaskImage(m, image.Rect(0, 0, 6, 6))
 	if box != image.Rect(2, 3, 6, 6) || img == nil || img.Bounds().Size() != box.Size() {
 		t.Fatalf("clipped box %v", box)
 	}
@@ -383,7 +384,7 @@ func TestMaskImageCoverageBox(t *testing.T) {
 // The report counts the atlas sprites' deflated copies until taken.
 func TestMemStatsCountsAtlasCopies(t *testing.T) {
 	t.Parallel()
-	c, err := loadArtCatalog(syntheticAtlas(t, 3))
+	c, err := Load(syntheticAtlas(t, 3))
 	if err != nil {
 		t.Fatal(err)
 	}

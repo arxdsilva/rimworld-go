@@ -103,9 +103,9 @@ func TestGlobeCapture(t *testing.T) {
 			centreOn(g, [3]float32{c[0], c[1], c[2]})
 		}
 		g.Select(landTile(t, g))
-		g.hovered = int(p.Neighbours(g.selected)[0])
+		g.SetHovered(int(p.Neighbours(g.Selected())[0]))
 		shot("globe_"+tag+"_biome.png", g)
-		g.hovered = -1
+		g.SetHovered(-1)
 		g.Cam.SetDist(1.45)
 		if len(g.Marks) > 0 {
 			g.Center(int(g.Marks[0].Tile))

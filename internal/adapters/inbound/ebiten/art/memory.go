@@ -1,4 +1,4 @@
-package ebiten
+package art
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// Memory diet (PLAY-019 §2). The game's catalog (loadArtCatalog) decodes
+// Memory diet (PLAY-019 §2). The game's catalog (Load) decodes
 // nothing at load: a sprite is decoded the first time it is used. So the
 // first use seldom pays a PNG decode mid-frame, a background prewarm
 // (prewarmAsync) decodes the families every colony shows ahead and keeps
@@ -60,8 +60,8 @@ type artMem struct {
 	tintEvicted, tintBake atomic.Int64 // tint bakes evicted / made
 }
 
-// artMemStats is a snapshot of a catalog's memory bookkeeping.
-type artMemStats struct {
+// MemSnapshot is a snapshot of a catalog's memory bookkeeping.
+type MemSnapshot struct {
 	WarmHeld             int64 // deflated prewarm copies still held, bytes
 	AtlasHeld            int64 // atlas sprites' deflated copies still held, bytes
 	WarmFills, ColdFills int64
@@ -74,8 +74,8 @@ type artMemStats struct {
 }
 
 // MemStats reads the catalog's memory bookkeeping (frame goroutine).
-func (c *artCatalog) MemStats() artMemStats {
-	var s artMemStats
+func (c *Catalog) MemStats() MemSnapshot {
+	var s MemSnapshot
 	if c == nil {
 		return s
 	}
@@ -89,7 +89,7 @@ func (c *artCatalog) MemStats() artMemStats {
 		s.TintBakes, s.TintEvicted = m.tintBake.Load(), m.tintEvicted.Load()
 	}
 	s.Tints, s.TintBytes = c.tintLRU.order.Len(), c.tintLRU.bytes
-	seen := map[*spriteAtlas]bool{}
+	seen := map[*Atlas]bool{}
 	for _, sp := range c.Sprites {
 		if sp.Src == nil || seen[sp.Src.Atlas] {
 			continue
@@ -110,7 +110,7 @@ func (c *artCatalog) MemStats() artMemStats {
 }
 
 // String is the probe's art line (fps_probe.go).
-func (s artMemStats) String() string {
+func (s MemSnapshot) String() string {
 	mib := func(b int64) float64 { return float64(b) / (1 << 20) }
 	return fmt.Sprintf("art: cpu freed %d (%.0f MiB), kept %d (%.1f MiB); prewarm held %.1f MiB, atlas held %.0f MiB, fills %d warm / %d cold; tints %d (%.0f MiB), %d baked, %d evicted",
 		s.Freed, mib(s.FreedBytes), s.Kept, mib(s.KeptBytes), mib(s.WarmHeld), mib(s.AtlasHeld), s.WarmFills, s.ColdFills,
@@ -166,19 +166,19 @@ func (f *fileSrc) publish(layer int, z []byte, r image.Rectangle) {
 
 // NormalNRGBA is sp's normal map from its prewarmed copy or its file, nil
 // when it has none.
-func (f *fileSrc) NormalNRGBA(sp *artSprite) *image.NRGBA {
+func (f *fileSrc) NormalNRGBA(sp *Sprite) *image.NRGBA {
 	if sp.NormalPath == "" {
 		return nil
 	}
 	if n := f.takeWarm(layerNorm); n != nil {
 		return n
 	}
-	n, _ := decodeNRGBA(sp.NormalPath)
+	n, _ := DecodeNRGBA(sp.NormalPath)
 	return n
 }
 
 // prewarmFileKeys lists the file sprites the prewarm decodes, in its order.
-func (c *artCatalog) prewarmFileKeys() []string {
+func (c *Catalog) prewarmFileKeys() []string {
 	rank := map[string]int{}
 	for i, f := range prewarmFirst {
 		rank[f] = i + 1
@@ -215,22 +215,22 @@ const prewarmWorkers = 4
 // publishes it deflated (the background prewarm's file half), keys taken
 // in order by prewarmWorkers goroutines. Sprites, paths and keys never
 // change after load; only warm and taken are shared (under mem.mu).
-func (c *artCatalog) prewarmFiles(keys []string) {
+func (c *Catalog) prewarmFiles(keys []string) {
 	var next atomic.Int64
 	var wg sync.WaitGroup
 	for range prewarmWorkers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var z deflater
+			var z Deflater
 			for i := next.Add(1) - 1; i < int64(len(keys)); i = next.Add(1) - 1 {
 				sp := c.Sprites[keys[i]]
 				f := sp.File
-				for layer, path := range [atlasLayers]string{layerPix: f.Image, layerMask: f.mask, layerNorm: sp.NormalPath} {
+				for layer, path := range [AtlasLayers]string{LayerPix: f.Image, layerMask: f.mask, layerNorm: sp.NormalPath} {
 					if path == "" || f.isTaken(layer) {
 						continue
 					}
-					img, err := decodeNRGBA(path)
+					img, err := DecodeNRGBA(path)
 					if err != nil {
 						continue // the fill decodes it again and keeps the error
 					}
@@ -265,49 +265,29 @@ func inflateNRGBA(z []byte, r image.Rectangle) *image.NRGBA {
 // --- releasing CPU pixels ------------------------------------------------
 
 // keepsCPUPixels reports a sprite whose pixels CPU bakes read back after
-// it may have been drawn: crop units and their fallbacks and the furrow
-// decals (crop_batch.go), and grass tufts (grass_batch.go).
-func keepsCPUPixels(key string) bool {
-	return strings.HasPrefix(key, "overlay/tilled_") || cpuReadKeys()[key]
+// it may have been drawn: the furrow decals and whatever the renderer's
+// ReadBack names (crop units, grass tufts).
+func (c *Catalog) keepsCPUPixels(key string) bool {
+	return strings.HasPrefix(key, "overlay/tilled_") || (c.ReadBack != nil && c.ReadBack(key))
 }
-
-var cpuReadKeys = sync.OnceValue(func() map[string]bool {
-	m := map[string]bool{}
-	for _, ks := range plantKeys.crops {
-		for st := range ks {
-			for _, k := range ks[st] {
-				m[k] = true
-				for _, fb := range plantKeys.fallback[k] {
-					m[fb] = true
-				}
-			}
-		}
-	}
-	for _, set := range [][]string{grassShortKeys, grassTallKeys, grassDormantKeys} {
-		for _, k := range set {
-			m[k] = true
-		}
-	}
-	return m
-})
 
 // release frees sp's CPU pixels once its GPU image and normal map exist
 // (the game's catalog only): its opaque height is measured first, and its
-// tint mask shrinks to its coverage box (tintNRGBA and the GPU bake read
+// tint mask shrinks to its coverage box (TintNRGBA and the GPU bake read
 // nothing outside it).
-func (c *artCatalog) release(key string, sp *artSprite) {
+func (c *Catalog) release(key string, sp *Sprite) {
 	if !c.FreeCPU || sp.Pix == nil || c.mem == nil {
 		return
 	}
 	n := int64(len(sp.Pix.Pix))
-	if keepsCPUPixels(key) {
+	if c.keepsCPUPixels(key) {
 		c.mem.kept.Add(1)
 		c.mem.keptBytes.Add(n)
 		return
 	}
 	sp.OpaqueHeightPx()
 	if sp.Mask != nil {
-		m := maskCoverage(sp.Mask)
+		m := MaskCoverage(sp.Mask)
 		n += int64(len(sp.Mask.Pix) - len(m.Pix))
 		sp.Mask = m
 	}
@@ -316,10 +296,10 @@ func (c *artCatalog) release(key string, sp *artSprite) {
 	c.mem.freedBytes.Add(n)
 }
 
-// maskCoverage is mask cut to the box of its covered pixels (red > 0), as
+// MaskCoverage is mask cut to the box of its covered pixels (red > 0), as
 // an opaque grey copy (R=G=B=coverage, A=255); empty when nothing is
 // covered.
-func maskCoverage(mask *image.NRGBA) *image.NRGBA {
+func MaskCoverage(mask *image.NRGBA) *image.NRGBA {
 	b := mask.Bounds()
 	x0, y0, x1, y1 := b.Max.X, b.Max.Y, b.Min.X, b.Min.Y
 	for y := b.Min.Y; y < b.Max.Y; y++ {
@@ -347,10 +327,10 @@ func maskCoverage(mask *image.NRGBA) *image.NRGBA {
 	return out
 }
 
-// maskImage is the GPU copy of mask's coverage within clip (the sprite's
+// MaskImage is the GPU copy of mask's coverage within clip (the sprite's
 // bounds) and that box; nil and an empty box when nothing is covered.
-func maskImage(mask *image.NRGBA, clip image.Rectangle) (*ebiten.Image, image.Rectangle) {
-	cov := maskCoverage(mask)
+func MaskImage(mask *image.NRGBA, clip image.Rectangle) (*ebiten.Image, image.Rectangle) {
+	cov := MaskCoverage(mask)
 	box := cov.Rect.Intersect(clip)
 	if box.Empty() {
 		return nil, image.Rectangle{}
@@ -363,28 +343,28 @@ func maskImage(mask *image.NRGBA, clip image.Rectangle) (*ebiten.Image, image.Re
 //go:embed tint.kage
 var tintKage []byte
 
-// tintShader is tint.kage, compiled once.
-var tintShader = sync.OnceValues(func() (*ebiten.Shader, error) { return ebiten.NewShader(tintKage) })
+// TintShader is tint.kage, compiled once.
+var TintShader = sync.OnceValues(func() (*ebiten.Shader, error) { return ebiten.NewShader(tintKage) })
 
-// tintTexel is tint.kage's colour channel (its Go twin; tintNRGBA is the
+// TintTexel is tint.kage's colour channel (its Go twin; TintNRGBA is the
 // CPU bake it matches to two levels, flooring twice where this rounds
 // once): v * mix(1, t, k), all 0..255.
-func tintTexel(v, k, t uint8) uint8 {
+func TintTexel(v, k, t uint8) uint8 {
 	kf, tf := float64(k)/255, float64(t)/255
 	return uint8(math.Round(float64(v) * (1 + (tf-1)*kf)))
 }
 
 // bakeTint draws sp's image tinted through its mask into a new image of
 // the same size: a copy, then tint.kage over the mask's coverage box.
-func (c *artCatalog) bakeTint(sp *artSprite, tint color.NRGBA) *ebiten.Image {
+func (c *Catalog) bakeTint(sp *Sprite, tint color.NRGBA) *ebiten.Image {
 	b := sp.Img.Bounds()
 	dst := ebiten.NewImage(b.Dx(), b.Dy())
 	dst.DrawImage(sp.Img, &ebiten.DrawImageOptions{Blend: ebiten.BlendCopy})
 	if sp.maskImg == nil && !sp.maskDone {
 		sp.maskDone = true
-		sp.maskImg, sp.maskBox = maskImage(sp.Mask, b)
+		sp.maskImg, sp.maskBox = MaskImage(sp.Mask, b)
 	}
-	sh, err := tintShader()
+	sh, err := TintShader()
 	if sp.maskImg == nil || err != nil {
 		return dst
 	}
@@ -403,18 +383,18 @@ func (c *artCatalog) bakeTint(sp *artSprite, tint color.NRGBA) *ebiten.Image {
 // budget. Frame goroutine only.
 type tintLRU struct {
 	order list.List // of *tintEntry
-	at    map[tintKey]*list.Element
+	at    map[TintKey]*list.Element
 	bytes int64
 }
 
 type tintEntry struct {
-	k     tintKey
+	k     TintKey
 	img   *ebiten.Image
 	bytes int64
 }
 
 // cachedTint returns the bake for k, marking it used; nil when none.
-func (c *artCatalog) cachedTint(k tintKey) *ebiten.Image {
+func (c *Catalog) cachedTint(k TintKey) *ebiten.Image {
 	img, ok := c.Tinted[k]
 	if !ok {
 		return nil
@@ -428,12 +408,12 @@ func (c *artCatalog) cachedTint(k tintKey) *ebiten.Image {
 // addTint caches a new bake for k and evicts the least recently used ones
 // while the bakes exceed the budget (never the new one): each leaves
 // c.tinted and c.normals and is deallocated.
-func (c *artCatalog) addTint(k tintKey, img *ebiten.Image) {
+func (c *Catalog) addTint(k TintKey, img *ebiten.Image) {
 	if c.Tinted == nil {
-		c.Tinted = map[tintKey]*ebiten.Image{}
+		c.Tinted = map[TintKey]*ebiten.Image{}
 	}
 	if c.tintLRU.at == nil {
-		c.tintLRU.at = map[tintKey]*list.Element{}
+		c.tintLRU.at = map[TintKey]*list.Element{}
 	}
 	sz := img.Bounds().Size()
 	e := &tintEntry{k: k, img: img, bytes: int64(sz.X * sz.Y * 4)}

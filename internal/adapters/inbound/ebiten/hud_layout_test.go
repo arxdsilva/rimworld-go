@@ -278,54 +278,6 @@ func TestLiveLayoutRegionsNeverOverlap(t *testing.T) { // not parallel: it sets 
 	}
 }
 
-// Six colonists fit one full-size row; thirty wrap to more rows at a
-// smaller scale (18 + 12 at 0.75 on the default screen), and the bar never
-// reaches the resource list or the right column.
-func TestLayoutColonistBarWraps(t *testing.T) {
-	t.Parallel()
-	st := hudState{GlobalH: 196, ResourcesH: 600, Alerts: 8, Letters: 4, LearnH: learnHeaderH}
-	for _, sz := range layoutScreens {
-		st.Colonists = 6
-		l := computeHUDLayout(sz[0], sz[1], st)
-		if l.BarScale != 1 || len(l.BarSlots) != 6 || l.BarMore != 0 || l.Bar.H != barSlotH {
-			t.Errorf("%v: 6 colonists = scale %v, %d slots (+%d), bar %+v; want one full-size row", sz, l.BarScale, len(l.BarSlots), l.BarMore, l.Bar)
-		}
-		st.Colonists = 30
-		l = computeHUDLayout(sz[0], sz[1], st)
-		rows := map[float32]bool{}
-		for _, s := range l.BarSlots {
-			rows[s.Y] = true
-		}
-		if l.BarScale >= 1 || len(l.BarSlots) != 30 || l.BarMore != 0 {
-			t.Errorf("%v: 30 colonists = scale %v, %d slots (+%d); want them all, smaller", sz, l.BarScale, len(l.BarSlots), l.BarMore)
-		}
-		if sz[0] < 1920 && len(rows) < 2 { // the big screen holds them in one smaller row
-			t.Errorf("%v: 30 colonists sit in %d row(s), want them wrapped", sz, len(rows))
-		}
-		if sz == [2]int{1280, 720} {
-			first := 0
-			for _, s := range l.BarSlots {
-				if s.Y == l.BarSlots[0].Y {
-					first++
-				}
-			}
-			if l.BarScale != 0.75 || first != 18 || len(rows) != 2 {
-				t.Errorf("1280x720: 30 colonists = scale %v, %d in the first row, %d rows; want 18 + 12 at 0.75", l.BarScale, first, len(rows))
-			}
-		}
-		for _, n := range []int{6, 30, 90} {
-			st.Colonists = n
-			l = computeHUDLayout(sz[0], sz[1], st)
-			if l.Resources.Empty() {
-				t.Fatalf("%v: no resource list", sz)
-			}
-			if l.Bar.X < l.Resources.Right()+hudMargin || l.Bar.Right() > l.Right.X-hudMargin {
-				t.Errorf("%v %d colonists: bar %+v reaches the resources (right %v) or the right column (%v)", sz, n, l.Bar, l.Resources.Right(), l.Right.X)
-			}
-		}
-	}
-}
-
 // Thirteen and twenty-seven commands fill the bottom row from the pane
 // rightward, then wrap upward; the grid stops short of the lower-right
 // controls (its right edge at most Global.X - 8).

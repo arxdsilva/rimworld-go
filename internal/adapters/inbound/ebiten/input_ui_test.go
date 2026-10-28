@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -17,16 +18,7 @@ import (
 // fakeInput is a scripted keyboard and mouse: each poll returns the
 // current state, then clears what only lasts one frame (presses,
 // releases, typed characters, the wheel).
-type fakeInput struct{ Cur rawInput }
-
-func (f *fakeInput) poll() rawInput {
-	r := f.Cur
-	f.Cur.Pressed, f.Cur.Chars = nil, nil
-	f.Cur.Press, f.Cur.Release = [numMouse]bool{}, [numMouse]bool{}
-	f.Cur.wheelX, f.Cur.WheelY = 0, 0
-	r.Held = append(append([]string(nil), r.Held...), r.Pressed...)
-	return r
-}
+type fakeInput struct{ inputframe.FakeSource }
 
 func fakeOn(a *App) *fakeInput {
 	f := &fakeInput{}

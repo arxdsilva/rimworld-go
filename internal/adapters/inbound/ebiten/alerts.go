@@ -472,7 +472,7 @@ func (a *App) cycleAlert(key string, dir int) {
 // centerOn moves the camera so world point (wx, wy) is mid-screen.
 // sw x sh is the screen in the map's pixels (captures run at scale 1).
 func (r *Renderer) centerOn(wx, wy float64, sw, sh int) {
-	r.centerOnView(wx, wy, viewport{0, 0, float64(sw), float64(sh)}, colonyViewport(sw, sh))
+	r.centerOnView(wx, wy, viewport{X0: 0, Y0: 0, X1: float64(sw), Y1: float64(sh)}, colonyViewport(sw, sh))
 }
 
 // centerOnView centres the camera on a world point in the middle of the

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -92,14 +93,10 @@ type Simulation interface {
 
 var _ Simulation = (*game.Game)(nil)
 
-// TileSize is the on-screen pixel size of one logical tile at zoom 1,
-// matching the art-spec reference of 64 px/tile.
-const TileSize = 64
-
 const (
-	panPixels = 8
-	minZoom   = 0.1 // absolute floor; the map-fit limit is minZoomFor
-	maxZoom   = 3.0
+	panPixels = camerapkg.PanPixels
+	minZoom   = camerapkg.MinZoom // absolute floor; the map-fit limit is minZoomFor
+	maxZoom   = camerapkg.MaxZoom
 	zoomStep  = 0.1
 )
 

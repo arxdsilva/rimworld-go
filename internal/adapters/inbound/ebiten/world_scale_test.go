@@ -349,7 +349,7 @@ func viewportEdge(e ast.Expr) bool {
 	ast.Inspect(e, func(n ast.Node) bool {
 		if s, ok := n.(*ast.SelectorExpr); ok {
 			switch s.Sel.Name {
-			case "x0", "x1", "y0", "y1":
+			case "X0", "X1", "Y0", "Y1": // camera.Viewport edges
 				found = true
 			}
 		}

@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -67,28 +68,7 @@ func (a *App) perfBox() (w, h float32) {
 // perfRect is where the box sits: right of the resource list, clear of the
 // colonist bar and the messages, never reaching the right column or the
 // lower-left stack. Empty when it does not fit.
-func perfRect(l hudLayout, w, h float32) rect {
-	if w <= 0 || h <= 0 {
-		return rect{}
-	}
-	x := max(l.Resources.Right(), hudMargin+resourcesW) + hudMargin
-	y := float32(hudMargin)
-	for _, r := range []rect{l.Bar, l.Messages} {
-		if !r.Empty() && r.X < x+w && r.Right() > x {
-			y = max(y, r.Bottom()+hudMargin)
-		}
-	}
-	bottom := l.Tabs.Y - hudMargin
-	for _, r := range []rect{l.Window, l.Expanded, l.PaneTabs, l.ArchDesc, l.ArchCats, l.Grid} {
-		if !r.Empty() && r.X < x+w {
-			bottom = min(bottom, r.Y-hudMargin)
-		}
-	}
-	if x+w > l.Right.X-hudMargin || y+h > bottom {
-		return rect{}
-	}
-	return rect{X: x, Y: y, W: w, H: h}
-}
+func perfRect(l hudLayout, w, h float32) rect { return hudlayout.PerfRect(l, w, h) }
 
 // drawPerfOverlay draws the performance box (PERF-002: fps, 1% low, frame,
 // update and draw time, sim rate and memory) when Graphics.PerfOverlay is

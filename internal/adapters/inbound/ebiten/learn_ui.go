@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"slices"
 	"strings"
 
@@ -29,7 +30,7 @@ import (
 // back on and resets the lessons.
 
 const (
-	learnHeaderH  = 28
+	learnHeaderH  = hudlayout.LearnHeaderH
 	learnRowH     = 44
 	learnRowGap   = 4
 	learnFooterH  = 20

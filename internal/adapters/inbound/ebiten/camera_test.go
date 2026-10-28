@@ -6,39 +6,22 @@ import (
 	"testing"
 )
 
-func TestClampAxis(t *testing.T) {
-	// map 1000px, viewport 0..500, slack 50
-	if got := clampAxis(-500, 1000, 0, 500, 50); got != -50 {
-		t.Errorf("near edge: got %v, want -50", got)
-	}
-	if got := clampAxis(5000, 1000, 0, 500, 50); got != 550 {
-		t.Errorf("far edge: got %v, want 550", got)
-	}
-	if got := clampAxis(200, 1000, 0, 500, 50); got != 200 {
-		t.Errorf("inside: got %v, want 200", got)
-	}
-	// map 200px in a 500px viewport is centred: left edge at 150
-	if got := clampAxis(0, 200, 0, 500, 50); got != -150 {
-		t.Errorf("small map: got %v, want -150", got)
-	}
-}
-
 // The map fills the whole window and the HUD floats over it (PLAY-018):
 // the logical viewport is the screen, the physical one is the same
 // scaled, and the App's map viewport is the physical window.
 func TestColonyViewportIsTheWholeScreen(t *testing.T) {
 	for _, s := range []float64{1, 1.5, 2} {
 		l := colonyViewport(1280, 720)
-		if l != (viewport{0, 0, 1280, 720}) {
+		if l != (viewport{X0: 0, Y0: 0, X1: 1280, Y1: 720}) {
 			t.Fatalf("logical viewport %+v, want the whole 1280x720 screen", l)
 		}
-		if p := colonyViewportPhysical(1280, 720, s); p != (viewport{0, 0, 1280 * s, 720 * s}) {
+		if p := colonyViewportPhysical(1280, 720, s); p != (viewport{X0: 0, Y0: 0, X1: 1280 * s, Y1: 720 * s}) {
 			t.Fatalf("s=%v: physical viewport %+v", s, p)
 		}
 	}
 	for _, sc := range globalScales {
 		a, _ := globalColony(t, newGlobalSim(), sc.ui, sc.ww, sc.wh)
-		if v := a.mapViewport(); v != (viewport{0, 0, sc.ww, sc.wh}) {
+		if v := a.mapViewport(); v != (viewport{X0: 0, Y0: 0, X1: sc.ww, Y1: sc.wh}) {
 			t.Errorf("ui %d: map viewport %+v, want the whole %vx%v window", sc.ui, v, sc.ww, sc.wh)
 		}
 	}

@@ -4,72 +4,12 @@ import (
 	"rimworld-go/internal/platform/input"
 )
 
-// inputFrame is this Update's input: the raw devices plus the actions the
-// bindings resolved for the context stack. Handlers read it instead of
-// Ebitengine, and take() a mouse button they used so no later handler
-// acts on the same click.
-type inputFrame struct {
-	// Raw is the devices as polled: Raw.mx/my are physical pixels (the
-	// map reads them through App.mapCursor). ui is the same pointer in
-	// logical UI pixels (Raw / s), read through App.currentCursor.
-	Raw   rawInput
-	Ui    uiPoint
-	keys  map[string]bool // keys pressed this frame
-	Res   input.Result
-	Stack []input.Context
-	taken [numMouse]bool
-}
-
-// uiPoint is a pointer position in logical UI pixels.
-type uiPoint struct{ Mx, My int }
-
-func newFrame(raw rawInput) inputFrame {
-	f := inputFrame{Raw: raw, keys: make(map[string]bool, len(raw.Pressed))}
-	for _, k := range raw.Pressed {
-		f.keys[k] = true
-	}
-	return f
-}
-
-// Fired reports a Press/Toggle action Fired this frame.
-func (f *inputFrame) Fired(a input.Action) bool { return f.Res.Fired(a) }
-
-// Held reports a Hold action is active.
-func (f *inputFrame) Held(a input.Action) bool { return f.Res.Held(a) }
-
-// Key reports a raw Key went down (text fields and Key capture read it).
-func (f *inputFrame) Key(name string) bool { return f.keys[name] }
-
-// Clicked reports button b went down this frame and nobody took it yet.
-func (f *inputFrame) Clicked(b mouseBtn) bool { return f.Raw.Press[b] && !f.taken[b] }
-
-// Take marks b's press as used.
-func (f *inputFrame) Take(b mouseBtn) { f.taken[b] = true }
-
-// Down reports b is held.
-func (f *inputFrame) Down(b mouseBtn) bool { return f.Raw.Down[b] }
-
-// Released reports b came up this frame.
-func (f *inputFrame) Released(b mouseBtn) bool { return f.Raw.Release[b] }
-
-func (f *inputFrame) Shift() bool { return f.Raw.Mods&input.ModShift != 0 }
-func (f *inputFrame) Ctrl() bool  { return f.Raw.Mods&input.ModCtrl != 0 }
-func (f *inputFrame) Alt() bool   { return f.Raw.Mods&input.ModAlt != 0 }
-
-// Top is the topmost active context.
-func (f *inputFrame) Top() input.Context {
-	if len(f.Stack) == 0 {
-		return input.CtxGlobal
-	}
-	return f.Stack[0]
-}
-
 // pollInput reads the devices once and resolves this frame's actions.
 func (a *App) pollInput() {
 	if a.src == nil {
 		a.src = &ebitenInput{}
 	}
-	raw := a.src.poll()
+	raw := a.src.Poll()
 	a.uiPreInput(&raw) // widget kit: held keys, Esc for a modal, Tab focus (ui_state.go)
 	a.in = newFrame(raw)
 	a.in.Ui.Mx, a.in.Ui.My = a.toLogical(raw.Mx, raw.My)
@@ -77,10 +17,6 @@ func (a *App) pollInput() {
 	a.in.Res = input.Resolve(input.Frame{Pressed: raw.Pressed, Held: raw.Held, Mods: raw.Mods}, a.bindings(), a.in.Stack)
 	a.uiBegin() // widget kit: tooltips, modals, the screen's widgets (ui_state.go)
 }
-
-// repeatFire reports a key held for n consecutive frames fires: on the
-// first, then after 24 frames and every 3 frames after that.
-func repeatFire(n int) bool { return n == 1 || (n >= 25 && (n-25)%3 == 0) }
 
 // keyRepeat reports the key went down this frame or is repeating while
 // held (first repeat after 24 frames, then every 3). Text fields and list

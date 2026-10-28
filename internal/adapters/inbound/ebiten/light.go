@@ -800,7 +800,7 @@ func (r *Renderer) litSource(img *ebiten.Image) (src *ebiten.Image, off float32,
 		}
 		return p, off, false
 	}
-	if r.art.groundPlane(img) {
+	if groundPlane(r.art, img) {
 		r.lit.pairs.put(img, img, r.present)
 		return img, 0, true
 	}
@@ -925,7 +925,7 @@ func isGroundKey(key string) bool {
 
 // groundPlane reports whether img is a ground-plane sprite's image (plain
 // or tinted). It scans the catalog, so callers cache the answer.
-func (c *artCatalog) groundPlane(img *ebiten.Image) bool {
+func groundPlane(c *artCatalog, img *ebiten.Image) bool {
 	if c == nil {
 		return false
 	}

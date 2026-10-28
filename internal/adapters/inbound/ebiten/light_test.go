@@ -442,7 +442,7 @@ func TestGroundPlanesLitFlat(t *testing.T) {
 			}
 		}
 	}
-	if (*artCatalog)(nil).groundPlane(soil) || art.groundPlane(n) {
+	if groundPlane(nil, soil) || groundPlane(art, n) {
 		t.Fatal("unknown images are not ground planes")
 	}
 }

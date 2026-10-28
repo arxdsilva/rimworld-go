@@ -1,4 +1,7 @@
-package ebiten
+// Package globe is the New Colony wizard's planet view: the baked sphere,
+// starfield, view modes and hit testing. It is built on globemath, gfx and
+// art and never changes the planet it reads.
+package globe
 
 import (
 	"image"
@@ -8,7 +11,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/globemath"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
@@ -22,24 +28,24 @@ import (
 // colours change only with the view mode; positions and lighting are
 // recomputed every frame for the tiles facing the eye.
 
-// globeMode is the landing screen's view mode (recolour only).
-type globeMode uint8
+// Mode is the landing screen's view mode (recolour only).
+type Mode uint8
 
 const (
-	globeBiome globeMode = iota
-	globeTemperature
-	globeRainfall
-	globeElevation
-	numGlobeModes
+	ModeBiome Mode = iota
+	ModeTemperature
+	ModeRainfall
+	ModeElevation
+	NumModes
 )
 
-func (m globeMode) String() string {
+func (m Mode) String() string {
 	switch m {
-	case globeTemperature:
+	case ModeTemperature:
 		return "Temperature"
-	case globeRainfall:
+	case ModeRainfall:
 		return "Rainfall"
-	case globeElevation:
+	case ModeElevation:
 		return "Elevation"
 	}
 	return "Biome"
@@ -48,25 +54,25 @@ func (m globeMode) String() string {
 // Pointer results of Update: no tile, or the uncovered part of the sphere
 // (a click there selects nothing; the screen says "Not part of this world").
 const (
-	globeNone      = -1
-	globeUncovered = -2
+	ModeNone      = -1
+	ModeUncovered = -2
 )
 
 const (
-	globeDragPx         = 4  // a click moves less than this between press and release
-	globeDoubleFrames   = 24 // frames between the clicks of a double-click
-	globeDoublePx       = 6
-	globeCullSlack      = 0.08 // tiles this far past the horizon are still drawn
-	globeCornerShade    = 0.94 // tile corners are slightly darker than the centre: a bevel
-	globeFlyFrames      = 24
-	globeTilePx1        = 0.0265 // a tile's angular spacing, radians
-	globeSphereBakeSize = 640    // baked sphere image (halo + shaded disc), px
-	globeSphereBakeR    = 256    // the disc's radius in that image
+	globeDragPx      = 4  // a click moves less than this between press and release
+	DoubleFrames     = 24 // frames between the clicks of a double-click
+	globeDoublePx    = 6
+	CullSlack        = 0.08 // tiles this far past the horizon are still drawn
+	globeCornerShade = 0.94 // tile corners are slightly darker than the centre: a bevel
+	FlyFrames        = 24
+	globeTilePx1     = 0.0265 // a tile's angular spacing, radians
+	SphereBakeSize   = 640    // baked sphere image (halo + shaded disc), px
+	SphereBakeR      = 256    // the disc's radius in that image
 )
 
-// worldPalette mirrors assets/palettes/world.yaml (without the "world."
+// WorldPalette mirrors assets/palettes/world.yaml (without the "world."
 // prefix); TestGlobePaletteMatchesYAML keeps the two equal.
-var worldPalette = map[string]color.RGBA{
+var WorldPalette = map[string]color.RGBA{
 	"ocean_deep":          hex6(0x0E2A47),
 	"ocean_shallow":       hex6(0x1F4E79),
 	"lake":                hex6(0x2D6A9A),
@@ -99,9 +105,9 @@ func toRGB(c color.RGBA) rgb {
 	return rgb{float32(c.R) / 255, float32(c.G) / 255, float32(c.B) / 255}
 }
 
-func palRGB(key string) rgb { return toRGB(worldPalette[key]) }
+func PalRGB(key string) rgb { return toRGB(WorldPalette[key]) }
 
-func mixRGB(a, b rgb, t float32) rgb {
+func MixRGB(a, b rgb, t float32) rgb {
 	return rgb{a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t, a[2] + (b[2]-a[2])*t}
 }
 
@@ -117,42 +123,42 @@ func clampF32(v, lo, hi float32) float32 {
 	return v
 }
 
-// hillMix is how far a tile's colour moves towards the mountain tint
+// HillMix is how far a tile's colour moves towards the mountain tint
 // (NG-1 §1.2): flat 0, small hills 12 %, large hills 25 %, mountainous 40 %.
-var hillMix = [...]float32{site.HillsDefault: 0, site.Flat: 0, site.SmallHills: 0.12, site.LargeHills: 0.25, site.Mountainous: 0.40}
+var HillMix = [...]float32{site.HillsDefault: 0, site.Flat: 0, site.SmallHills: 0.12, site.LargeHills: 0.25, site.Mountainous: 0.40}
 
-// colourStop is a stop of a data-view colour ramp.
-type colourStop struct {
+// ColourStop is a stop of a data-view colour Ramp.
+type ColourStop struct {
 	At float32
 	c  rgb
 }
 
-func stop(at float32, v uint32) colourStop { return colourStop{at, toRGB(hex6(v))} }
+func stop(at float32, v uint32) ColourStop { return ColourStop{at, toRGB(hex6(v))} }
 
-func ramp(stops []colourStop, v float32) rgb {
+func Ramp(stops []ColourStop, v float32) rgb {
 	if v <= stops[0].At {
 		return stops[0].c
 	}
 	for i := 1; i < len(stops); i++ {
 		if v <= stops[i].At {
 			a, b := stops[i-1], stops[i]
-			return mixRGB(a.c, b.c, (v-a.At)/(b.At-a.At))
+			return MixRGB(a.c, b.c, (v-a.At)/(b.At-a.At))
 		}
 	}
 	return stops[len(stops)-1].c
 }
 
 var (
-	tempRamp = []colourStop{stop(-30, 0x25318F), stop(-15, 0x4A7BC8), stop(-2, 0xA9D6E8),
+	TempRamp = []ColourStop{stop(-30, 0x25318F), stop(-15, 0x4A7BC8), stop(-2, 0xA9D6E8),
 		stop(8, 0xA8D58A), stop(18, 0xE6D96A), stop(26, 0xEE9A3E), stop(34, 0xC8412E)}
-	rainRamp = []colourStop{stop(0, 0xC9A66B), stop(300, 0xD8C98A), stop(800, 0x9CC47A),
+	RainRamp = []ColourStop{stop(0, 0xC9A66B), stop(300, 0xD8C98A), stop(800, 0x9CC47A),
 		stop(1500, 0x3F9A5E), stop(2400, 0x2B6FA8), stop(3500, 0x1B3F8A)}
-	elevRamp = []colourStop{stop(0, 0x3E7A45), stop(300, 0x7FA050), stop(800, 0xB7A862),
+	ElevRamp = []ColourStop{stop(0, 0x3E7A45), stop(300, 0x7FA050), stop(800, 0xB7A862),
 		stop(1600, 0x9C7B55), stop(3000, 0x8A7F78), stop(4500, 0xF0F0F0)}
 )
 
-// globeAccent is a faction's colour on the globe (emblem tint).
-func globeAccent(t faction.Type) color.NRGBA {
+// Accent is a faction's colour on the globe (emblem tint).
+func Accent(t faction.Type) color.NRGBA {
 	switch t {
 	case faction.Settlers:
 		return color.NRGBA{0x5B, 0x9B, 0xD5, 0xFF}
@@ -176,10 +182,10 @@ var globeSun = func() [3]float32 {
 	return [3]float32{float32(v[0] / l), float32(v[1] / l), float32(v[2] / l)}
 }()
 
-// globeShade is the Lambert factor k1 for a unit view-space normal and the
+// Shade is the Lambert factor k1 for a unit view-space normal and the
 // atmosphere share k2 (a rim that grows towards the limb): the lit colour
 // is base*k1 + rim*k2.
-func globeShade(vx, vy, vz float32) (k1, k2 float32) {
+func Shade(vx, vy, vz float32) (k1, k2 float32) {
 	diff := vx*globeSun[0] + vy*globeSun[1] + vz*globeSun[2]
 	if diff < 0 {
 		diff = 0
@@ -208,31 +214,20 @@ type settleMark struct {
 	Label string
 }
 
-// globeInput is one frame of pointer and keyboard state for the globe.
-type globeInput struct {
+// Input is one frame of pointer and keyboard state for the globe.
+type Input struct {
 	W, H    int // screen size
 	MX, MY  int
 	Wheel   float64
-	Down    [numMouse]bool
-	Press   [numMouse]bool
-	Release [numMouse]bool
+	Down    [inputframe.NumMouse]bool
+	Press   [inputframe.NumMouse]bool
+	Release [inputframe.NumMouse]bool
 	Held    []string // keys down now (input key names)
 	Keys    []string // keys that went down this frame
 	Shift   bool
 	// Blocked: the pointer is over a panel or modal; the globe ignores
 	// hover, wheel and new presses (a drag in progress continues).
 	Blocked bool
-}
-
-// globeInputFrom adapts the App's frame: w x h is the logical screen, the
-// pointer the raw (physical) one the globe picks and drags with. blocked
-// is whether the pointer is over screen chrome.
-func globeInputFrom(in *inputFrame, w, h int, blocked bool) globeInput {
-	return globeInput{
-		W: w, H: h, MX: in.Raw.Mx, MY: in.Raw.My, Wheel: in.Raw.WheelY,
-		Down: in.Raw.Down, Press: in.Raw.Press, Release: in.Raw.Release,
-		Held: in.Raw.Held, Keys: in.Raw.Pressed, Shift: in.Shift(), Blocked: blocked,
-	}
 }
 
 type globeDrag struct {
@@ -249,13 +244,13 @@ type globeDrag struct {
 	lastTile   int
 }
 
-// globeView draws and drives the planet globe.
-type globeView struct {
+// View draws and drives the planet globe.
+type View struct {
 	P   *planet.Planet
-	art *artCatalog
+	cat *art.Catalog
 	Cam *globemath.Camera
 
-	mode     globeMode
+	mode     Mode
 	selected int
 	hovered  int
 	Reduced  bool
@@ -304,12 +299,12 @@ type globeView struct {
 	rimColor rgb
 }
 
-// newGlobeView prepares the globe for p. art supplies the settlement
+// New prepares the globe for p. cat supplies the settlement
 // emblems and may be nil (circles are drawn instead).
-func newGlobeView(p *planet.Planet, art *artCatalog) *globeView {
+func New(p *planet.Planet, cat *art.Catalog) *View {
 	n := p.TileCount()
-	g := &globeView{P: p, art: art, Cam: globemath.NewCamera(), selected: -1, hovered: -1}
-	g.cornerID, g.cornerPos = dedupeCorners(p.Corners)
+	g := &View{P: p, cat: cat, Cam: globemath.NewCamera(), selected: -1, hovered: -1}
+	g.cornerID, g.cornerPos = DedupeCorners(p.Corners)
 	g.stamp = make([]uint32, len(g.cornerPos))
 	g.csx = make([]float32, len(g.cornerPos))
 	g.csy = make([]float32, len(g.cornerPos))
@@ -329,11 +324,11 @@ func newGlobeView(p *planet.Planet, art *artCatalog) *globeView {
 	g.ovMax = 4 * (len(p.Roads)*2 + countRiverSegs(p) + 4*1024)
 	g.Ov = make([]ebiten.Vertex, 0, g.ovMax)
 	g.Oi = make([]uint32, 0, g.ovMax/4*6)
-	g.rimColor = scaleRGB(palRGB("atmosphere_rim"), 0.85)
+	g.rimColor = scaleRGB(PalRGB("atmosphere_rim"), 0.85)
 	g.buildLines()
 	g.buildMarks()
 	g.recolour()
-	g.drag.lastTile = globeNone
+	g.drag.lastTile = ModeNone
 	return g
 }
 
@@ -349,11 +344,11 @@ func countRiverSegs(p *planet.Planet) int {
 
 type cornerKey [3]int32
 
-// dedupeCorners merges the per-tile corner copies into unique corners (a
+// DedupeCorners merges the per-tile corner copies into unique corners (a
 // corner is shared by three tiles). The copies differ by float rounding,
 // so each is matched against its grid cell and the neighbouring cells it
 // lies close to.
-func dedupeCorners(corners [][3]float32) (ids []uint32, pos [][3]float32) {
+func DedupeCorners(corners [][3]float32) (ids []uint32, pos [][3]float32) {
 	const cell = 4e-3
 	const edge = 1e-3 / cell // distance to a cell border, in cells, that also checks the next cell
 	const tol = 1e-3
@@ -388,7 +383,7 @@ func dedupeCorners(corners [][3]float32) (ids []uint32, pos [][3]float32) {
 						continue
 					}
 					q := pos[id]
-					if abs32(q[0]-c[0]) < tol && abs32(q[1]-c[1]) < tol && abs32(q[2]-c[2]) < tol {
+					if gfx.Abs32(q[0]-c[0]) < tol && gfx.Abs32(q[1]-c[1]) < tol && gfx.Abs32(q[2]-c[2]) < tol {
 						ids[i], found = id, true
 					}
 				}
@@ -413,7 +408,7 @@ func norm3(v [3]float32) [3]float32 {
 }
 
 // buildLines turns the planet's rivers and roads into surface segments.
-func (g *globeView) buildLines() {
+func (g *View) buildLines() {
 	p := g.P
 	for i := range p.River {
 		if p.River[i] == site.NoRiver || p.RiverTo[i] < 0 {
@@ -430,7 +425,7 @@ func (g *globeView) buildLines() {
 }
 
 // buildMarks lists the settlements with their emblem key, tint and label.
-func (g *globeView) buildMarks() {
+func (g *View) buildMarks() {
 	p := g.P
 	for _, t := range p.SettlementTiles() {
 		f, _ := p.SettlementFaction(int(t))
@@ -442,55 +437,55 @@ func (g *globeView) buildMarks() {
 		if faction.DefOf(ft).Tech == faction.Neolithic {
 			key = "ui_icon/settlement_neolithic"
 		}
-		g.Marks = append(g.Marks, settleMark{Tile: t, Key: key, Tint: globeAccent(ft), Label: p.SettlementName(int(t))})
+		g.Marks = append(g.Marks, settleMark{Tile: t, Key: key, Tint: Accent(ft), Label: p.SettlementName(int(t))})
 	}
 }
 
 // --- colours -----------------------------------------------------------
 
-func oceanColour(elev int16) rgb {
+func OceanColour(elev int16) rgb {
 	d := clampF32(float32(-elev)/3500, 0, 1)
 	t := 1 - float32(math.Sqrt(float64(d)))
-	return mixRGB(palRGB("ocean_deep"), palRGB("ocean_shallow"), t)
+	return MixRGB(PalRGB("ocean_deep"), PalRGB("ocean_shallow"), t)
 }
 
 // tileColour is tile i's flat colour in the current view mode.
-func (g *globeView) tileColour(i int) rgb {
+func (g *View) tileColour(i int) rgb {
 	p := g.P
 	switch p.Water[i] {
 	case planet.Ocean:
-		c := oceanColour(p.Elev[i])
-		if g.mode != globeBiome {
+		c := OceanColour(p.Elev[i])
+		if g.mode != ModeBiome {
 			c = scaleRGB(c, 0.55)
 		}
 		return c
 	case planet.Lake:
-		c := palRGB("lake")
-		if g.mode != globeBiome {
+		c := PalRGB("lake")
+		if g.mode != ModeBiome {
 			c = scaleRGB(c, 0.7)
 		}
 		return c
 	}
 	switch g.mode {
-	case globeTemperature:
-		return ramp(tempRamp, float32(p.Temp[i])/10)
-	case globeRainfall:
-		return ramp(rainRamp, float32(p.Rain[i]))
-	case globeElevation:
-		return ramp(elevRamp, float32(p.Elev[i]))
+	case ModeTemperature:
+		return Ramp(TempRamp, float32(p.Temp[i])/10)
+	case ModeRainfall:
+		return Ramp(RainRamp, float32(p.Rain[i]))
+	case ModeElevation:
+		return Ramp(ElevRamp, float32(p.Elev[i]))
 	}
-	c := palRGB(biome.DefOf(p.Biome[i]).Key)
+	c := PalRGB(biome.DefOf(p.Biome[i]).Key)
 	h := int(p.Hill[i])
-	if h < len(hillMix) {
-		c = mixRGB(c, palRGB("mountain_tint"), hillMix[h])
+	if h < len(HillMix) {
+		c = MixRGB(c, PalRGB("mountain_tint"), HillMix[h])
 	}
 	// A touch of per-tile variation so the hex mosaic reads.
-	j := float32(mix64(uint64(i)*0x9E3779B97F4A7C15+0x77)>>40) / float32(1<<24)
+	j := float32(art.Mix64(uint64(i)*0x9E3779B97F4A7C15+0x77)>>40) / float32(1<<24)
 	return scaleRGB(c, 0.97+0.06*j)
 }
 
 // recolour recomputes every tile's colour for the current mode.
-func (g *globeView) recolour() {
+func (g *View) recolour() {
 	n := g.P.TileCount()
 	if cap(g.Base) < n {
 		g.Base = make([]rgb, n)
@@ -502,8 +497,8 @@ func (g *globeView) recolour() {
 }
 
 // SetMode switches the view mode and recolours the tiles.
-func (g *globeView) SetMode(m globeMode) {
-	if m >= numGlobeModes || m == g.mode {
+func (g *View) SetMode(m Mode) {
+	if m >= NumModes || m == g.mode {
 		return
 	}
 	g.mode = m
@@ -511,12 +506,12 @@ func (g *globeView) SetMode(m globeMode) {
 }
 
 // Mode is the current view mode.
-func (g *globeView) Mode() globeMode { return g.mode }
+func (g *View) Mode() Mode { return g.mode }
 
 // --- state and API for the screen ---------------------------------------
 
 // Select marks tile i as the selection (-1 clears).
-func (g *globeView) Select(i int) {
+func (g *View) Select(i int) {
 	if i < 0 || i >= g.P.TileCount() {
 		i = -1
 	}
@@ -524,18 +519,22 @@ func (g *globeView) Select(i int) {
 }
 
 // Selected is the selected tile, -1 when none.
-func (g *globeView) Selected() int { return g.selected }
+func (g *View) Selected() int { return g.selected }
 
 // Hovered is the tile under the pointer after the last Update, -1 when none.
-func (g *globeView) Hovered() int { return g.hovered }
+func (g *View) Hovered() int { return g.hovered }
+
+// SetHovered marks tile i as hovered (-1 clears it); the pointer does it in
+// Update, the screenshot capture does it by hand.
+func (g *View) SetHovered(i int) { g.hovered = i }
 
 // Center flies the view to tile i (instantly with Reduced Motion).
-func (g *globeView) Center(i int) {
+func (g *View) Center(i int) {
 	if i < 0 || i >= g.P.TileCount() {
 		return
 	}
 	c := g.P.Center[i]
-	frames := globeFlyFrames
+	frames := FlyFrames
 	if g.Reduced {
 		frames = 0
 	}
@@ -545,7 +544,7 @@ func (g *globeView) Center(i int) {
 
 // Highlight pulses the given tiles for the next frames Draw calls (the
 // pulse is steady with Reduced Motion).
-func (g *globeView) Highlight(tiles []int, frames int) {
+func (g *View) Highlight(tiles []int, frames int) {
 	g.Hl = append(g.Hl[:0], tiles...)
 	g.HlLeft = frames
 }
@@ -557,26 +556,26 @@ func (g *globeView) Highlight(tiles []int, frames int) {
 // The globe itself works in physical pixels (PLAY-012 B.4): it is drawn at
 // physical size inside the rectangle x the UI scale, and picks and drags
 // with the raw (physical) cursor, so it stays sharp at any scale.
-func (g *globeView) SetArea(x, y, w, h float64) {
+func (g *View) SetArea(x, y, w, h float64) {
 	g.area, g.areaPx = [4]float64{x, y, w, h}, false
 }
 
 // SetAreaPx is SetArea in physical pixels, unscaled: for a globe rendered
 // into its own image (the setup backdrop's disc).
-func (g *globeView) SetAreaPx(x, y, w, h float64) {
+func (g *View) SetAreaPx(x, y, w, h float64) {
 	g.area, g.areaPx = [4]float64{x, y, w, h}, true
 }
 
 // k is the factor from the area's units to physical pixels.
-func (g *globeView) k() float64 {
+func (g *View) k() float64 {
 	if g.areaPx {
 		return 1
 	}
-	return uiScale()
+	return gfx.UIScale()
 }
 
 // AreaRect is the globe's area in physical pixels.
-func (g *globeView) AreaRect() (x, y, w, h float64) {
+func (g *View) AreaRect() (x, y, w, h float64) {
 	k := g.k()
 	if g.area[2] > 0 && g.area[3] > 0 {
 		return g.area[0] * k, g.area[1] * k, g.area[2] * k, g.area[3] * k
@@ -584,29 +583,29 @@ func (g *globeView) AreaRect() (x, y, w, h float64) {
 	return 0, 0, float64(g.Sw) * k, float64(g.Sh) * k
 }
 
-func (g *globeView) Viewport() globemath.Viewport {
+func (g *View) Viewport() globemath.Viewport {
 	x, y, w, h := g.AreaRect()
 	return g.Cam.Viewport(x, y, w, h)
 }
 
 // PickTile is the tile under a physical screen point (the raw cursor): a
-// tile index, globeUncovered
-// over the part of the sphere without tiles, or globeNone off the globe.
-func (g *globeView) PickTile(mx, my int) int {
+// tile index, ModeUncovered
+// over the part of the sphere without tiles, or ModeNone off the globe.
+func (g *View) PickTile(mx, my int) int {
 	w, ok := g.Cam.Pick(g.Viewport(), float64(mx), float64(my))
 	if !ok {
-		return globeNone
+		return ModeNone
 	}
 	t := g.P.TileAt([3]float32{float32(w[0]), float32(w[1]), float32(w[2])})
 	if t < 0 {
-		return globeUncovered
+		return ModeUncovered
 	}
 	return t
 }
 
 // TilePx is roughly how many physical pixels one tile spans at the view
 // centre.
-func (g *globeView) TilePx() float64 {
+func (g *View) TilePx() float64 {
 	vp := g.Viewport()
 	return globeTilePx1 * vp.F / (g.Cam.Dist - 1)
 }
@@ -623,9 +622,9 @@ func isHeld(keys []string, names ...string) bool {
 }
 
 // Update handles one frame of input. It returns the tile the player
-// selected this frame (globeNone if none; globeUncovered for a click on the
+// selected this frame (ModeNone if none; ModeUncovered for a click on the
 // uncovered sphere, which clears the selection) and the tile under the
-// pointer (globeNone, or globeUncovered).
+// pointer (ModeNone, or ModeUncovered).
 //
 //	left click (release within 4 px)  select; a second click on the same
 //	                                  tile within 24 frames also centres it
@@ -635,14 +634,14 @@ func isHeld(keys []string, names ...string) bool {
 //	WASD / arrows                     rotate (Shift 3x)
 //	right click                       clear the selection
 //	Home                              centre on the selection (and reset the pan)
-func (g *globeView) Update(in globeInput, reducedMotion bool) (clicked, hovered int) {
+func (g *View) Update(in Input, reducedMotion bool) (clicked, hovered int) {
 	g.tick++
 	g.Reduced = reducedMotion
 	if in.W > 0 && in.H > 0 {
 		g.Sw, g.Sh = in.W, in.H
 	}
 	cam := g.Cam
-	clicked = globeNone
+	clicked = ModeNone
 	if g.HlLeft > 0 {
 		g.HlLeft--
 	}
@@ -687,13 +686,13 @@ func (g *globeView) Update(in globeInput, reducedMotion bool) (clicked, hovered 
 	// Left button: click or drag.
 	d := &g.drag
 	vp := g.Viewport()
-	if in.Press[mbLeft] && !in.Blocked && !d.on {
+	if in.Press[inputframe.Left] && !in.Blocked && !d.on {
 		*d = globeDrag{on: true, sx: in.MX, sy: in.MY, lx: in.MX, ly: in.MY,
 			lastClickT: d.lastClickT, lastClickX: d.lastClickX, lastClickY: d.lastClickY, lastTile: d.lastTile}
 		cam.StopSpin()
 	}
 	if d.on {
-		if in.Down[mbLeft] {
+		if in.Down[inputframe.Left] {
 			if dp := globeDragPx * g.k(); !d.moved && float64(sqr(in.MX-d.sx)+sqr(in.MY-d.sy)) > dp*dp {
 				d.moved = true
 				d.lx, d.ly = d.sx, d.sy
@@ -706,7 +705,7 @@ func (g *globeView) Update(in globeInput, reducedMotion bool) (clicked, hovered 
 				d.lx, d.ly = in.MX, in.MY
 			}
 		}
-		if in.Release[mbLeft] || !in.Down[mbLeft] && !in.Press[mbLeft] {
+		if in.Release[inputframe.Left] || !in.Down[inputframe.Left] && !in.Press[inputframe.Left] {
 			if d.moved {
 				cam.Fling(d.vx, d.vy, vp, reducedMotion)
 			} else {
@@ -717,12 +716,12 @@ func (g *globeView) Update(in globeInput, reducedMotion bool) (clicked, hovered 
 	}
 
 	// Middle button: pan.
-	if in.Press[mbMiddle] && !in.Blocked {
+	if in.Press[inputframe.Middle] && !in.Blocked {
 		d.panning = true
 		d.plx, d.ply = in.MX, in.MY
 	}
 	if d.panning {
-		if in.Down[mbMiddle] {
+		if in.Down[inputframe.Middle] {
 			cam.PanX += float64(in.MX - d.plx)
 			cam.PanY += float64(in.MY - d.ply)
 			_, _, w, h := g.AreaRect()
@@ -734,39 +733,39 @@ func (g *globeView) Update(in globeInput, reducedMotion bool) (clicked, hovered 
 	}
 
 	// Right button: clear.
-	if in.Press[mbRight] && !in.Blocked {
+	if in.Press[inputframe.Right] && !in.Blocked {
 		g.selected = -1
 	}
 
 	cam.Step(reducedMotion)
 
-	g.hovered = globeNone
+	g.hovered = ModeNone
 	if !in.Blocked && !d.moved && !d.panning {
 		g.hovered = g.PickTile(in.MX, in.MY)
 	}
 	return clicked, g.hovered
 }
 
-func globeClamp(v, lo, hi float64) float64 { return math.Max(lo, math.Min(hi, v)) }
+func Clamp(v, lo, hi float64) float64 { return math.Max(lo, math.Min(hi, v)) }
 
 func sqr(v int) int { return v * v }
 
 // click selects the tile under (mx, my); a double-click also centres it.
-func (g *globeView) click(mx, my int) int {
+func (g *View) click(mx, my int) int {
 	d := &g.drag
 	t := g.PickTile(mx, my)
 	if t < 0 {
-		if t == globeUncovered {
+		if t == ModeUncovered {
 			g.selected = -1
 		}
-		d.lastTile = globeNone
+		d.lastTile = ModeNone
 		return t
 	}
 	g.selected = t
-	if d.lastTile == t && g.tick-d.lastClickT <= globeDoubleFrames &&
+	if d.lastTile == t && g.tick-d.lastClickT <= DoubleFrames &&
 		float64(sqr(mx-d.lastClickX)+sqr(my-d.lastClickY)) <= globeDoublePx*globeDoublePx*g.k()*g.k() {
 		g.Center(t)
-		d.lastTile = globeNone
+		d.lastTile = ModeNone
 	} else {
 		d.lastTile, d.lastClickT, d.lastClickX, d.lastClickY = t, g.tick, mx, my
 	}
@@ -776,7 +775,7 @@ func (g *globeView) click(mx, my int) int {
 // --- per-frame mesh ------------------------------------------------------
 
 // setupFrame loads the camera into the per-frame fields.
-func (g *globeView) setupFrame() {
+func (g *View) setupFrame() {
 	m := g.Cam.Orientation().Matrix()
 	for i, v := range m {
 		g.mat[i] = float32(v)
@@ -792,7 +791,7 @@ func (g *globeView) setupFrame() {
 }
 
 // view rotates a world vector into view space.
-func (g *globeView) view(p *[3]float32) (vx, vy, vz float32) {
+func (g *View) view(p *[3]float32) (vx, vy, vz float32) {
 	m := &g.mat
 	return m[0]*p[0] + m[1]*p[1] + m[2]*p[2],
 		m[3]*p[0] + m[4]*p[1] + m[5]*p[2],
@@ -801,7 +800,7 @@ func (g *globeView) view(p *[3]float32) (vx, vy, vz float32) {
 
 // project maps a view-space point to the screen; points past the horizon
 // are pushed onto the limb so a tile that straddles it keeps a sane shape.
-func (g *globeView) project(vx, vy, vz float32) (sx, sy float32) {
+func (g *View) project(vx, vy, vz float32) (sx, sy float32) {
 	if vz < g.Zh {
 		r := float32(math.Hypot(float64(vx), float64(vy)))
 		if r < 1e-6 {
@@ -816,11 +815,11 @@ func (g *globeView) project(vx, vy, vz float32) (sx, sy float32) {
 
 // corner makes sure unique corner id has this frame's screen position and
 // light, and returns them.
-func (g *globeView) corner(id uint32) (sx, sy, k1, k2 float32) {
+func (g *View) corner(id uint32) (sx, sy, k1, k2 float32) {
 	if g.stamp[id] != g.bf {
 		vx, vy, vz := g.view(&g.cornerPos[id])
 		g.csx[id], g.csy[id] = g.project(vx, vy, vz)
-		g.ck1[id], g.ck2[id] = globeShade(vx, vy, vz)
+		g.ck1[id], g.ck2[id] = Shade(vx, vy, vz)
 		g.stamp[id] = g.bf
 	}
 	return g.csx[id], g.csy[id], g.ck1[id], g.ck2[id]
@@ -828,10 +827,10 @@ func (g *globeView) corner(id uint32) (sx, sy, k1, k2 float32) {
 
 // Build fills the tile and overlay meshes for the current camera. It
 // allocates nothing once the buffers exist.
-func (g *globeView) Build() {
+func (g *View) Build() {
 	g.setupFrame()
 	p := g.P
-	thresh := g.Zh - globeCullSlack
+	thresh := g.Zh - CullSlack
 	cd := &g.CamDir
 	rim := g.rimColor
 	nv, ni := 0, 0
@@ -851,7 +850,7 @@ func (g *globeView) Build() {
 
 		vx, vy, vz := g.view(c)
 		sx, sy := g.project(vx, vy, vz)
-		k1, k2 := globeShade(vx, vy, vz)
+		k1, k2 := Shade(vx, vy, vz)
 		v := &verts[nv]
 		v.DstX, v.DstY = sx, sy
 		v.ColorR = min32(base[0]*k1+rim[0]*k2, 1)
@@ -886,7 +885,7 @@ func min32(a, b float32) float32 {
 }
 
 // WorldPt projects a world point: screen position and view-space z.
-func (g *globeView) WorldPt(p *[3]float32) (sx, sy, vz float32) {
+func (g *View) WorldPt(p *[3]float32) (sx, sy, vz float32) {
 	vx, vy, vz := g.view(p)
 	sx, sy = g.project(vx, vy, vz)
 	return sx, sy, vz
@@ -899,14 +898,14 @@ func ovFrom(c color.RGBA, a float32) ovColour {
 	return ovColour{float32(c.R) / 255, float32(c.G) / 255, float32(c.B) / 255, a}
 }
 
-func (g *globeView) ovVert(x, y float32, c ovColour) {
+func (g *View) ovVert(x, y float32, c ovColour) {
 	g.Ov = append(g.Ov, ebiten.Vertex{DstX: x, DstY: y, SrcX: 1.5, SrcY: 1.5,
 		ColorR: c.r, ColorG: c.g, ColorB: c.b, ColorA: c.a})
 }
 
 // ovQuad adds a w-wide line from (ax, ay) to (bx, by), its ends extended
 // by a third of the width so consecutive pieces overlap at bends.
-func (g *globeView) ovQuad(ax, ay, bx, by, w float32, c ovColour) {
+func (g *View) ovQuad(ax, ay, bx, by, w float32, c ovColour) {
 	if len(g.Ov)+4 > g.ovMax {
 		return
 	}
@@ -928,7 +927,7 @@ func (g *globeView) ovQuad(ax, ay, bx, by, w float32, c ovColour) {
 }
 
 // ovLine draws a world-space line piece when both ends face the eye.
-func (g *globeView) ovLine(a, b *[3]float32, w float32, c ovColour) {
+func (g *View) ovLine(a, b *[3]float32, w float32, c ovColour) {
 	ax, ay, az := g.WorldPt(a)
 	bx, by, bz := g.WorldPt(b)
 	lim := g.Zh + 0.01
@@ -943,7 +942,7 @@ func globeLerp3(a, b *[3]float32, t float32) [3]float32 {
 }
 
 // ovOutline strokes tile i's border.
-func (g *globeView) ovOutline(i int, w float32, c ovColour) {
+func (g *View) ovOutline(i int, w float32, c ovColour) {
 	o0, o1 := g.P.CornerOff[i], g.P.CornerOff[i+1]
 	n := int(o1 - o0)
 	for k := 0; k < n; k++ {
@@ -954,7 +953,7 @@ func (g *globeView) ovOutline(i int, w float32, c ovColour) {
 }
 
 // ovFill shades tile i's polygon.
-func (g *globeView) ovFill(i int, c ovColour) {
+func (g *View) ovFill(i int, c ovColour) {
 	o0, o1 := g.P.CornerOff[i], g.P.CornerOff[i+1]
 	n := int(o1 - o0)
 	if len(g.Ov)+n+1 > g.ovMax {
@@ -970,25 +969,25 @@ func (g *globeView) ovFill(i int, c ovColour) {
 	}
 }
 
-func (g *globeView) tileFacing(i int) bool {
+func (g *View) tileFacing(i int) bool {
 	c, cd := &g.P.Center[i], &g.CamDir
 	return c[0]*cd[0]+c[1]*cd[1]+c[2]*cd[2] >= g.Zh+0.02
 }
 
 // buildOverlay adds rivers, roads and the outlines on top of the tiles.
-func (g *globeView) buildOverlay() {
+func (g *View) buildOverlay() {
 	g.Ov, g.Oi = g.Ov[:0], g.Oi[:0]
 	lk := float32(g.k()) // line widths are in area units: physical x lk
-	zs := float32(globeClamp(g.TilePx()/(14*float64(lk)), 0.6, 3))
+	zs := float32(Clamp(g.TilePx()/(14*float64(lk)), 0.6, 3))
 	scale := zs * lk
-	river := ovFrom(worldPalette["river"], 1)
+	river := ovFrom(WorldPalette["river"], 1)
 	if zs >= 0.75 {
 		for k := range g.Rivers {
 			s := &g.Rivers[k]
 			g.ovLine(&s.a, &s.b, (0.7+0.9*float32(s.w))*scale, river)
 		}
 	}
-	road := ovFrom(worldPalette["road"], 1)
+	road := ovFrom(WorldPalette["road"], 1)
 	casing := ovColour{0.06, 0.05, 0.04, 0.55}
 	for pass := 0; pass < 2; pass++ { // a dark casing under the dashes keeps them readable on sand
 		w, c := 2.9*scale, casing
@@ -1028,42 +1027,42 @@ func (g *globeView) buildOverlay() {
 
 // --- drawing -------------------------------------------------------------
 
-func (g *globeView) EnsureGPU(sw, sh int) {
+func (g *View) EnsureGPU(sw, sh int) {
 	if g.white == nil {
 		g.white = ebiten.NewImage(3, 3)
 		g.white.Fill(color.White)
 		g.whiteSub = g.white.SubImage(image.Rect(1, 1, 2, 2)).(*ebiten.Image)
 		g.opts = ebiten.DrawTrianglesOptions{}
-		g.sphere = ebiten.NewImageFromImage(bakeSphere(globeSphereBakeSize, globeSphereBakeR, palRGB("uncovered"), palRGB("atmosphere_rim")))
+		g.sphere = ebiten.NewImageFromImage(BakeSphere(SphereBakeSize, SphereBakeR, PalRGB("uncovered"), PalRGB("atmosphere_rim")))
 	}
 	if g.stars == nil || g.StarW != sw || g.StarH != sh {
-		g.stars = ebiten.NewImageFromImage(bakeStarfield(g.P.Seed, sw, sh, 1, 0))
+		g.stars = ebiten.NewImageFromImage(BakeStarfield(g.P.Seed, sw, sh, 1, 0))
 		g.StarW, g.StarH = sw, sh
 	}
 }
 
 // Draw renders the globe over a starfield into dst (the logical screen
 // sw x sh; dst and the starfield are physical).
-func (g *globeView) Draw(dst *ebiten.Image, sw, sh int) {
+func (g *View) Draw(dst *ebiten.Image, sw, sh int) {
 	g.Sw, g.Sh = sw, sh
 	if b := dst.Bounds(); b.Dx() > 0 && b.Dy() > 0 {
 		g.EnsureGPU(b.Dx(), b.Dy())
 	} else {
 		g.EnsureGPU(sw, sh)
 	}
-	dst.Fill(uiSpace)
+	dst.Fill(spaceColour)
 	dst.DrawImage(g.stars, nil)
 	g.DrawBody(dst)
 }
 
 // DrawBody draws the sphere, tiles, overlays and emblems into dst without
 // a background (g.ensureGPU must have run).
-func (g *globeView) DrawBody(dst *ebiten.Image) {
+func (g *View) DrawBody(dst *ebiten.Image) {
 	vp := g.Viewport()
 	r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
-	op.GeoM.Translate(-globeSphereBakeSize/2, -globeSphereBakeSize/2)
-	op.GeoM.Scale(r/globeSphereBakeR, r/globeSphereBakeR)
+	op.GeoM.Translate(-SphereBakeSize/2, -SphereBakeSize/2)
+	op.GeoM.Scale(r/SphereBakeR, r/SphereBakeR)
 	op.GeoM.Translate(vp.CX, vp.CY)
 	dst.DrawImage(g.sphere, op)
 
@@ -1078,10 +1077,10 @@ func (g *globeView) DrawBody(dst *ebiten.Image) {
 // drawMarks draws the settlement emblems (scaled with zoom) and, when
 // zoomed in, their names. Positions and sizes are physical; the names go
 // through the canvas's text path (logical).
-func (g *globeView) drawMarks(dst *ebiten.Image) {
+func (g *View) drawMarks(dst *ebiten.Image) {
 	pk := g.k()
-	size := globeClamp(g.TilePx()*2, 12*pk, 46*pk)
-	ts := uiScale() // drawText takes logical coordinates
+	size := Clamp(g.TilePx()*2, 12*pk, 46*pk)
+	ts := gfx.UIScale() // drawText takes logical coordinates
 	labels := g.Cam.Dist <= 1.9
 	for k := range g.Marks {
 		m := &g.Marks[k]
@@ -1092,7 +1091,7 @@ func (g *globeView) drawMarks(dst *ebiten.Image) {
 		}
 		x, y := float64(sx), float64(sy)
 		vector.FillCircle(dst, sx, sy, float32(size*0.56), color.RGBA{10, 14, 20, 150}, true)
-		if img := g.art.Image(m.Key, color.NRGBA{}); img != nil {
+		if img := g.cat.Image(m.Key, color.NRGBA{}); img != nil {
 			// The glyphs are white: the faction accent is a colour scale.
 			b := img.Bounds()
 			s := size / float64(b.Dx())
@@ -1105,22 +1104,22 @@ func (g *globeView) drawMarks(dst *ebiten.Image) {
 			vector.FillCircle(dst, sx, sy, float32(size*0.32), color.RGBA{m.Tint.R, m.Tint.G, m.Tint.B, 255}, true)
 		}
 		if labels && m.Label != "" {
-			st := tsSmall
-			st.Align = alignCenter
+			st := gfx.Small
+			st.Align = gfx.AlignCenter
 			st.Color = color.RGBA{10, 14, 20, 230}
-			drawText(dst, m.Label, (x+pk)/ts, (y+size*0.58+pk)/ts, st)
-			st.Color = uiText
-			drawText(dst, m.Label, x/ts, (y+size*0.58)/ts, st)
+			gfx.Text(dst, m.Label, (x+pk)/ts, (y+size*0.58+pk)/ts, st)
+			st.Color = gfx.TextColor
+			gfx.Text(dst, m.Label, x/ts, (y+size*0.58)/ts, st)
 		}
 	}
 }
 
 // --- baked images --------------------------------------------------------
 
-// bakeSphere renders the sphere's backdrop in view space: a shaded disc of
+// BakeSphere renders the sphere's backdrop in view space: a shaded disc of
 // the uncovered colour (radius r px) and a soft atmosphere halo around it,
 // in a size x size image.
-func bakeSphere(size, r int, uncovered, rimC rgb) *image.NRGBA {
+func BakeSphere(size, r int, uncovered, rimC rgb) *image.NRGBA {
 	img := image.NewNRGBA(image.Rect(0, 0, size, size))
 	c := float64(size) / 2
 	for y := 0; y < size; y++ {
@@ -1132,13 +1131,13 @@ func bakeSphere(size, r int, uncovered, rimC rgb) *image.NRGBA {
 			switch {
 			case rr <= 1:
 				nz := math.Sqrt(math.Max(0, 1-rr*rr))
-				k1, k2 := globeShade(float32(dx), float32(dy), float32(nz))
+				k1, k2 := Shade(float32(dx), float32(dy), float32(nz))
 				col = rgb{
 					uncovered[0]*k1 + rimC[0]*0.85*k2,
 					uncovered[1]*k1 + rimC[1]*0.85*k2,
 					uncovered[2]*k1 + rimC[2]*0.85*k2,
 				}
-				a = clamp01((1 - rr) * float64(r) / 1.5) // anti-aliased edge
+				a = gfx.Clamp01((1 - rr) * float64(r) / 1.5) // anti-aliased edge
 			case rr < 1.28:
 				t := 1 - (rr-1)/0.28
 				a = 0.6 * t * t * t
@@ -1157,18 +1156,18 @@ func bakeSphere(size, r int, uncovered, rimC rgb) *image.NRGBA {
 	return img
 }
 
-// bakeStarfield scatters a starfield for seed over a w x h image
+// BakeStarfield scatters a starfield for seed over a w x h image
 // (transparent between the stars). Positions come from the seed in unit
 // coordinates, so a resize keeps the same sky. strength scales brightness;
 // skyFade (0..1) dims the stars towards the bottom edge.
-func bakeStarfield(seed uint64, w, h int, strength, skyFade float64) *image.NRGBA {
+func BakeStarfield(seed uint64, w, h int, strength, skyFade float64) *image.NRGBA {
 	img := image.NewNRGBA(image.Rect(0, 0, max(w, 1), max(h, 1)))
 	n := w * h / 2600
 	for i := 0; i < n; i++ {
-		hs := mix64(seed ^ uint64(i+1)*0x9E3779B97F4A7C15)
-		fx, fy := hashUnit(hs), hashUnit(mix64(hs))
-		b := hashUnit(mix64(hs ^ 0x51))
-		tone := hashUnit(mix64(hs ^ 0xA7))
+		hs := art.Mix64(seed ^ uint64(i+1)*0x9E3779B97F4A7C15)
+		fx, fy := hashUnit(hs), hashUnit(art.Mix64(hs))
+		b := hashUnit(art.Mix64(hs ^ 0x51))
+		tone := hashUnit(art.Mix64(hs ^ 0xA7))
 		bright := (0.25 + 0.75*b*b*b) * strength * (1 - skyFade*fy)
 		c := [3]float64{0.85 + 0.15*tone, 0.88, 1 - 0.18*tone}
 		if tone > 0.8 {
@@ -1193,3 +1192,9 @@ func bakeStarfield(seed uint64, w, h int, strength, skyFade float64) *image.NRGB
 	}
 	return img
 }
+
+// spaceColour is the backdrop behind the planet (the root's uiSpace).
+var spaceColour = color.RGBA{R: 0x0E, G: 0x0F, B: 0x12, A: 0xFF}
+
+// hashUnit maps a hash to [0, 1).
+func hashUnit(h uint64) float64 { return float64(h>>11) / (1 << 53) }
