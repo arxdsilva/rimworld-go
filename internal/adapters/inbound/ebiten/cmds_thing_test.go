@@ -2,6 +2,12 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
 
@@ -21,7 +27,7 @@ import (
 // does, so they hold whatever draws the pane.
 
 // thingCmd is the command with id, or a failure.
-func thingCmd(t *testing.T, cs []cmdButton, id string) cmdButton {
+func thingCmd(t *testing.T, cs []inspector.Button, id string) inspector.Button {
 	t.Helper()
 	c, ok := thingFind(cs, id)
 	if !ok {
@@ -30,16 +36,16 @@ func thingCmd(t *testing.T, cs []cmdButton, id string) cmdButton {
 	return c
 }
 
-func thingFind(cs []cmdButton, id string) (cmdButton, bool) {
+func thingFind(cs []inspector.Button, id string) (inspector.Button, bool) {
 	for _, c := range cs {
 		if c.ID == id {
 			return c, true
 		}
 	}
-	return cmdButton{}, false
+	return inspector.Button{}, false
 }
 
-func thingIDs(cs []cmdButton) []string {
+func thingIDs(cs []inspector.Button) []string {
 	var out []string
 	for _, c := range cs {
 		out = append(out, c.ID)
@@ -48,7 +54,7 @@ func thingIDs(cs []cmdButton) []string {
 }
 
 // thingPick picks option o: its command is enqueued, else it runs.
-func thingPick(a *App, o cmdOption) {
+func thingPick(a *App, o inspector.Option) {
 	switch {
 	case o.Cmd != nil:
 		a.renderer.enqueue(*o.Cmd)
@@ -60,7 +66,7 @@ func thingPick(a *App, o cmdOption) {
 // thingPress presses c like the grid: a disabled command only shows its
 // reason; else Run, else its Cmds, else (only Options) the first enabled
 // option, else the legacy click id.
-func thingPress(a *App, c cmdButton) {
+func thingPress(a *App, c inspector.Button) {
 	switch {
 	case c.Disabled:
 		a.hint = c.Reason
@@ -84,10 +90,10 @@ func thingPress(a *App, c cmdButton) {
 
 // thingTraceDraw runs fn and returns every draw the canvas made (physical
 // pixels). The trace is global: callers must not be parallel.
-func thingTraceDraw(t *testing.T, fn func()) []traceEvent {
+func thingTraceDraw(t *testing.T, fn func()) []gfx.TraceEvent {
 	t.Helper()
-	var ev []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	var ev []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { ev = append(ev, e) })
 	t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 	fn()
 	gfx.SetDrawTrace(nil)
@@ -103,24 +109,24 @@ func thingLog(n int) []game.LogLineView {
 	return out
 }
 
-func thingLines(sp paneSpec) string { return strings.Join(sp.Lines, "|") }
+func thingLines(sp inspector.Spec) string { return strings.Join(sp.Lines, "|") }
 
-func thingBar(sp paneSpec, label string) (paneBar, bool) {
+func thingBar(sp inspector.Spec, label string) (inspector.Bar, bool) {
 	for _, b := range sp.Bars {
 		if b.Label == label {
 			return b, true
 		}
 	}
-	return paneBar{}, false
+	return inspector.Bar{}, false
 }
 
-func thingTab(sp paneSpec, id string) (paneTab, bool) {
+func thingTab(sp inspector.Spec, id string) (inspector.Tab, bool) {
 	for _, tb := range sp.Tabs {
 		if tb.ID == id {
 			return tb, true
 		}
 	}
-	return paneTab{}, false
+	return inspector.Tab{}, false
 }
 
 // thingDeerSim is a stub colony with a wild doe at (4, 4) and two colonists.
@@ -140,8 +146,8 @@ func TestAnimalPaneWild(t *testing.T) {
 	t.Parallel()
 	s := thingDeerSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
-	sp := a.animalPane(9)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
+	sp := a.insp.Animal().AnimalPane(9)
 	if sp.Title != "Deer" || sp.Close != "animal.close" {
 		t.Fatalf("title %q close %q", sp.Title, sp.Close)
 	}
@@ -166,15 +172,15 @@ func TestAnimalPaneWild(t *testing.T) {
 	}
 	// the hunt and tame marks are lines of their own
 	s.world.Animals[0].Designated, s.world.Animals[0].TameMark = true, true
-	if l := thingLines(a.animalPane(9)); !strings.Contains(l, "Marked for hunting") || !strings.Contains(l, "Marked for taming") {
+	if l := thingLines(a.insp.Animal().AnimalPane(9)); !strings.Contains(l, "Marked for hunting") || !strings.Contains(l, "Marked for taming") {
 		t.Errorf("marks missing from %q", l)
 	}
 	// a vanished animal has no pane and clears the selection
-	if sp := a.animalPane(404); sp.Title != "" {
+	if sp := a.insp.Animal().AnimalPane(404); sp.Title != "" {
 		t.Fatalf("pane for a missing animal = %+v", sp)
 	}
 	a.sel.SelAnimal, a.sel.HasAnimal = 404, true
-	a.animalPane(404)
+	a.insp.Animal().AnimalPane(404)
 	if a.sel.HasAnimal {
 		t.Fatal("a vanished animal is deselected")
 	}
@@ -184,18 +190,18 @@ func TestAnimalPaneManhunterAndHostileStates(t *testing.T) {
 	t.Parallel()
 	s := thingDeerSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
 	s.world.Animals[0].Manhunter = true
-	if l := thingLines(a.animalPane(9)); !strings.Contains(l, "MANHUNTER: hunting colonists!") {
+	if l := thingLines(a.insp.Animal().AnimalPane(9)); !strings.Contains(l, "MANHUNTER: hunting colonists!") {
 		t.Errorf("manhunter lines %q", l)
 	}
 	s.world.Animals[0].Manhunter, s.world.Animals[0].Hostile = false, true
-	if l := thingLines(a.animalPane(9)); !strings.Contains(l, "attacking a colonist!") {
+	if l := thingLines(a.insp.Animal().AnimalPane(9)); !strings.Contains(l, "attacking a colonist!") {
 		t.Errorf("hostile lines %q", l)
 	}
 	// no needs in the view (older game): only the health bar
 	s.world.Animals[0].State, s.world.Animals[0].Hostile = "", false
-	sp := a.animalPane(9)
+	sp := a.insp.Animal().AnimalPane(9)
 	if _, ok := thingBar(sp, "Food"); ok {
 		t.Errorf("an animal without needs shows a Food bar: %+v", sp.Bars)
 	}
@@ -209,8 +215,8 @@ func TestAnimalPaneTameShowsMasterBondAndAreaChip(t *testing.T) {
 	s := bondSim()
 	s.world.Animals[0].Product, s.world.Animals[0].ProductPct = "milk", 40
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
-	sp := a.animalPane(50)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50})
+	sp := a.insp.Animal().AnimalPane(50)
 	if sp.Title != "Rook" {
 		t.Fatalf("a named tame animal is titled by its name: %q", sp.Title)
 	}
@@ -233,14 +239,14 @@ func TestAnimalPaneTameShowsMasterBondAndAreaChip(t *testing.T) {
 	}
 	// a penned animal shows its pen as a line and has no area chip
 	s.world.Animals[0].Penned, s.world.Animals[0].Pen = true, "Pen 1"
-	sp = a.animalPane(50)
+	sp = a.insp.Animal().AnimalPane(50)
 	if !strings.Contains(thingLines(sp), "Pen: Pen 1") || len(sp.Chips) != 0 {
 		t.Fatalf("penned: lines %q chips %+v", thingLines(sp), sp.Chips)
 	}
 	// the area chip opens the picker and assigns the pick
 	s.world.Animals[0].Penned = false
 	a.applyClick("animal.area")
-	if a.uiModalTop() != areaPickID {
+	if a.uiModalTop() != architect.AreaPickID {
 		t.Fatal("the area chip opens the allowed-area picker")
 	}
 }
@@ -249,10 +255,10 @@ func TestAnimalPaneTabs(t *testing.T) {
 	t.Parallel()
 	s := bondSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
-	sp := a.animalPane(50)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50})
+	sp := a.insp.Animal().AnimalPane(50)
 	logTab, ok := thingTab(sp, "inspector.log")
-	if !ok || logTab.Label != "Log" || logTab.Draw == nil || logTab.WantW < expandMinW || logTab.WantH <= 0 {
+	if !ok || logTab.Label != "Log" || logTab.Draw == nil || logTab.WantW < hudlayout.ExpandMinW || logTab.WantH <= 0 {
 		t.Fatalf("log tab = %+v (%v)", logTab, ok)
 	}
 	train, ok := thingTab(sp, "inspector.training")
@@ -261,15 +267,15 @@ func TestAnimalPaneTabs(t *testing.T) {
 	}
 	// both bodies draw (no art, no panic) inside their panel
 	img := ebiten.NewImage(1280, 720)
-	r := rect{X: 0, Y: 300, W: logTab.WantW, H: logTab.WantH}
+	r := gfx.Rect{X: 0, Y: 300, W: logTab.WantW, H: logTab.WantH}
 	logTab.Draw(img, r)
-	train.Draw(img, rect{X: 0, Y: 300, W: train.WantW, H: train.WantH})
+	train.Draw(img, gfx.Rect{X: 0, Y: 300, W: train.WantW, H: train.WantH})
 
 	// a wild animal has the Log but no Training tab
 	w := thingDeerSim()
 	b, _ := colonyApp(t, w)
-	b.selectCand(selCand{Kind: selAnimal, ID: 9})
-	wp := b.animalPane(9)
+	b.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
+	wp := b.insp.Animal().AnimalPane(9)
 	if _, ok := thingTab(wp, "inspector.log"); !ok {
 		t.Error("a wild animal still has a Log")
 	}
@@ -278,7 +284,7 @@ func TestAnimalPaneTabs(t *testing.T) {
 	}
 	// a tame animal that can learn nothing has none either
 	s.world.Animals[0].Training = nil
-	if _, ok := thingTab(a.animalPane(50), "inspector.training"); ok {
+	if _, ok := thingTab(a.insp.Animal().AnimalPane(50), "inspector.training"); ok {
 		t.Error("nothing to train: no Training tab")
 	}
 }
@@ -289,8 +295,8 @@ func TestAnimalCommandsWild(t *testing.T) {
 	t.Parallel()
 	s := thingDeerSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
-	cs := a.animalCommands(9)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
+	cs := a.insp.Animal().AnimalCommands(9)
 	if got := strings.Join(thingIDs(cs), ","); got != "animal.hunt,animal.tame" {
 		t.Fatalf("wild animal commands = %s", got)
 	}
@@ -308,17 +314,17 @@ func TestAnimalCommandsWild(t *testing.T) {
 
 	// marked: the label flips and the toggle is on
 	s.world.Animals[0].Designated = true
-	hunt = thingCmd(t, a.animalCommands(9), "animal.hunt")
+	hunt = thingCmd(t, a.insp.Animal().AnimalCommands(9), "animal.hunt")
 	if hunt.Label != "Cancel hunt" || !hunt.On || hunt.Disabled {
 		t.Fatalf("marked hunt = %+v", hunt)
 	}
 	// while it is marked for hunting, taming it is blocked, and the reverse
-	tame = thingCmd(t, a.animalCommands(9), "animal.tame")
+	tame = thingCmd(t, a.insp.Animal().AnimalCommands(9), "animal.tame")
 	if !tame.Disabled || tame.Reason != "marked for hunting" {
 		t.Fatalf("tame while hunted = %+v", tame)
 	}
 	s.world.Animals[0].Designated, s.world.Animals[0].TameMark = false, true
-	cs = a.animalCommands(9)
+	cs = a.insp.Animal().AnimalCommands(9)
 	if tame = thingCmd(t, cs, "animal.tame"); tame.Label != "Cancel tame" || !tame.On || tame.Disabled {
 		t.Fatalf("marked tame = %+v", tame)
 	}
@@ -332,8 +338,8 @@ func TestAnimalTameDisabledWhenUntameable(t *testing.T) {
 	s := thingDeerSim()
 	s.wild[0].TameChance = 0 // hive insects are never tamed
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
-	tame := thingCmd(t, a.animalCommands(9), "animal.tame")
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
+	tame := thingCmd(t, a.insp.Animal().AnimalCommands(9), "animal.tame")
 	if !tame.Disabled || tame.Reason != "cannot be tamed" {
 		t.Fatalf("tame = %+v", tame)
 	}
@@ -349,8 +355,8 @@ func TestManhunterCannotBeTamed(t *testing.T) {
 	s := thingDeerSim()
 	s.world.Animals[0].Manhunter = true
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
-	cs := a.animalCommands(9)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
+	cs := a.insp.Animal().AnimalCommands(9)
 	if _, ok := thingFind(cs, "animal.tame"); ok {
 		t.Fatalf("an enraged animal has no Tame command: %v", thingIDs(cs))
 	}
@@ -363,23 +369,23 @@ func TestAnimalCommandsEmitHuntAndTameOrders(t *testing.T) {
 	t.Parallel()
 	s := thingDeerSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
-	thingPress(a, thingCmd(t, a.animalCommands(9), "animal.hunt"))
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
+	thingPress(a, thingCmd(t, a.insp.Animal().AnimalCommands(9), "animal.hunt"))
 	if c := lastCmd(t, s); c.Kind != command.DesignateHunt || c.X != 4 || c.Y != 4 || c.X2 != 4 || c.Y2 != 4 {
 		t.Fatalf("hunt = %+v", c)
 	}
 	s.world.Animals[0].Designated = true
-	thingPress(a, thingCmd(t, a.animalCommands(9), "animal.hunt"))
+	thingPress(a, thingCmd(t, a.insp.Animal().AnimalCommands(9), "animal.hunt"))
 	if c := lastCmd(t, s); c.Kind != command.Undesignate || c.Order != command.OrderHunt || c.X != 4 {
 		t.Fatalf("cancel hunt clears only the mark: %+v", c)
 	}
 	s.world.Animals[0].Designated = false
-	thingPress(a, thingCmd(t, a.animalCommands(9), "animal.tame"))
+	thingPress(a, thingCmd(t, a.insp.Animal().AnimalCommands(9), "animal.tame"))
 	if c := lastCmd(t, s); c.Kind != command.DesignateTame || c.X != 4 || c.Y != 4 {
 		t.Fatalf("tame = %+v", c)
 	}
 	s.world.Animals[0].TameMark = true
-	thingPress(a, thingCmd(t, a.animalCommands(9), "animal.tame"))
+	thingPress(a, thingCmd(t, a.insp.Animal().AnimalCommands(9), "animal.tame"))
 	if c := lastCmd(t, s); c.Kind != command.Undesignate || c.Order != command.OrderTame {
 		t.Fatalf("cancel tame = %+v", c)
 	}
@@ -389,8 +395,8 @@ func TestAnimalCommandsTame(t *testing.T) {
 	t.Parallel()
 	s := bondSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
-	cs := a.animalCommands(50)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50})
+	cs := a.insp.Animal().AnimalCommands(50)
 	if got := strings.Join(thingIDs(cs), ","); got != "animal.hunt,animal.release,cmd.animal.master,cmd.animal.care,animal.train.0,animal.train.1" {
 		t.Fatalf("tame commands = %s", got)
 	}
@@ -399,7 +405,7 @@ func TestAnimalCommandsTame(t *testing.T) {
 		t.Fatalf("slaughter = %+v", slaughter)
 	}
 	s.world.Animals[0].Designated = true
-	if c := thingCmd(t, a.animalCommands(50), "animal.hunt"); c.Label != "Cancel hunt" || !c.On {
+	if c := thingCmd(t, a.insp.Animal().AnimalCommands(50), "animal.hunt"); c.Label != "Cancel hunt" || !c.On {
 		t.Fatalf("marked slaughter = %+v", c)
 	}
 	s.world.Animals[0].Designated = false
@@ -420,8 +426,8 @@ func TestAnimalTrainingToggles(t *testing.T) {
 	t.Parallel()
 	s := bondSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
-	cs := a.animalCommands(50)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50})
+	cs := a.insp.Animal().AnimalCommands(50)
 	if _, ok := thingFind(cs, "animal.train.2"); ok {
 		t.Fatal("a skill the species can't learn has no command")
 	}
@@ -429,13 +435,13 @@ func TestAnimalTrainingToggles(t *testing.T) {
 	if !obey.On || !obey.Toggle || guard.On || obey.Label != "Obedience 2/3" {
 		t.Fatalf("obedience %+v guard %+v", obey, guard)
 	}
-	for _, c := range []cmdButton{obey, guard} {
+	for _, c := range []inspector.Button{obey, guard} {
 		if c.Desc == "" || c.Run != nil || c.Cmds != nil {
 			t.Errorf("%s: desc %q (legacy id: no Run or Cmds)", c.ID, c.Desc)
 		}
 		for _, w := range strings.Fields(c.Label) {
-			if tw := textW(w, tsSmall); tw > cmdCell-8 {
-				t.Errorf("%s: %q (%.0f px) does not fit a %d px cell", c.ID, w, tw, cmdCell)
+			if tw := gfx.TextW(w, gfx.Small); tw > hudlayout.CmdCell-8 {
+				t.Errorf("%s: %q (%.0f px) does not fit a %d px cell", c.ID, w, tw, hudlayout.CmdCell)
 			}
 		}
 	}
@@ -456,8 +462,8 @@ func TestAnimalMasterOptions(t *testing.T) {
 	t.Parallel()
 	s := bondSim()
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
-	master := thingCmd(t, a.animalCommands(50), "cmd.animal.master")
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50})
+	master := thingCmd(t, a.insp.Animal().AnimalCommands(50), "cmd.animal.master")
 	if master.Label != "Master" || master.Options == nil || master.Disabled || master.Desc == "" {
 		t.Fatalf("master = %+v", master)
 	}
@@ -485,13 +491,13 @@ func TestAnimalMasterOptions(t *testing.T) {
 func TestWildAnimalHasNoMasterOrTrainingCommands(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, thingDeerSim())
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
-	for _, c := range a.animalCommands(9) {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 9})
+	for _, c := range a.insp.Animal().AnimalCommands(9) {
 		if strings.Contains(c.ID, "master") || strings.Contains(c.ID, "train") || c.ID == "animal.release" {
 			t.Errorf("wild animal has %s", c.ID)
 		}
 	}
-	if cs := a.animalCommands(404); cs != nil {
+	if cs := a.insp.Animal().AnimalCommands(404); cs != nil {
 		t.Fatalf("commands for a missing animal: %v", thingIDs(cs))
 	}
 }
@@ -514,8 +520,8 @@ func TestItemPaneContents(t *testing.T) {
 		game.ItemView{ID: 24, Kind: "meat", Qty: 3, X: 5, Y: 2, Dried: true, FreshDays: 9})
 	a, _ := colonyApp(t, s)
 
-	a.selectCand(selCand{Kind: selItem, ID: 21})
-	sp := a.itemPane(21)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 21})
+	sp := a.insp.Thing().ItemPane(21)
 	if sp.Title != "Wood ×25" || sp.Subtitle != "material" || sp.Close != "item.close" || len(sp.Tabs) != 0 {
 		t.Fatalf("pane = %+v", sp)
 	}
@@ -526,28 +532,28 @@ func TestItemPaneContents(t *testing.T) {
 		t.Fatalf("storage stays last: %q", sp.Lines)
 	}
 
-	a.selectCand(selCand{Kind: selItem, ID: 22})
-	l := thingLines(a.itemPane(22))
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 22})
+	l := thingLines(a.insp.Thing().ItemPane(22))
 	for _, want := range []string{"Fresh for 4 days", "Rots at 50% of the normal rate", "Forbidden: colonists leave it alone"} {
 		if !strings.Contains(l, want) {
 			t.Errorf("meal lines %q lack %q", l, want)
 		}
 	}
 	s.world.Items[1].RotRate = 0
-	if l := thingLines(a.itemPane(22)); !strings.Contains(l, "Frozen: it does not rot") {
+	if l := thingLines(a.insp.Thing().ItemPane(22)); !strings.Contains(l, "Frozen: it does not rot") {
 		t.Errorf("frozen meal lines %q", l)
 	}
 	s.world.Items[1].RotRate = 1000
-	if l := thingLines(a.itemPane(22)); strings.Contains(l, "Rots") || strings.Contains(l, "Frozen") {
+	if l := thingLines(a.insp.Thing().ItemPane(22)); strings.Contains(l, "Rots") || strings.Contains(l, "Frozen") {
 		t.Errorf("a normal rot rate adds no line: %q", l)
 	}
 
-	a.selectCand(selCand{Kind: selItem, ID: 23})
-	if l := thingLines(a.itemPane(23)); !strings.Contains(l, "Catches 40% of tracked dirt") {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 23})
+	if l := thingLines(a.insp.Thing().ItemPane(23)); !strings.Contains(l, "Catches 40% of tracked dirt") {
 		t.Errorf("carpet lines %q", l)
 	}
-	a.selectCand(selCand{Kind: selItem, ID: 24})
-	l = thingLines(a.itemPane(24))
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 24})
+	l = thingLines(a.insp.Thing().ItemPane(24))
 	if !strings.Contains(l, "Dried") || strings.Contains(l, "Rots") {
 		t.Errorf("dried lines %q", l)
 	}
@@ -557,21 +563,21 @@ func TestItemPaneGoneItem(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, thingItemSim())
 	a.sel.SelItem, a.sel.HasItem = 9999, true
-	if sp := a.itemPane(9999); sp.Title != "" {
+	if sp := a.insp.Thing().ItemPane(9999); sp.Title != "" {
 		t.Fatalf("pane = %+v", sp)
 	}
-	if cs := a.itemCommands(9999); len(cs) != 0 || a.sel.HasItem {
+	if cs := a.insp.Thing().ItemCommands(9999); len(cs) != 0 || a.sel.HasItem {
 		t.Fatalf("a vanished stack has no commands and closes the selection (%v, hasItem %v)", thingIDs(cs), a.sel.HasItem)
 	}
-	a.applyItemClick("item.close") // nothing selected: no-op
+	a.insp.Thing().ApplyItemClick("item.close") // nothing selected: no-op
 }
 
 func TestItemForbidCommand(t *testing.T) {
 	t.Parallel()
 	s := thingItemSim(game.ItemView{ID: 11, Kind: "wood", Qty: 5, X: 2, Y: 2, FreshDays: -1})
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selItem, ID: 11})
-	cs := a.itemCommands(11)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 11})
+	cs := a.insp.Thing().ItemCommands(11)
 	forbid := thingCmd(t, cs, "item.forbid")
 	if forbid.Label != "Forbid" || forbid.Icon != "order_forbid" || !forbid.Toggle || forbid.On || forbid.Hotkey != input.Forbid || forbid.Desc == "" {
 		t.Fatalf("forbid = %+v", forbid)
@@ -587,7 +593,7 @@ func TestItemForbidCommand(t *testing.T) {
 		t.Fatalf("forbid cmd = %+v", c)
 	}
 	s.world.Items[0].Forbidden = true
-	allow := thingCmd(t, a.itemCommands(11), "item.forbid")
+	allow := thingCmd(t, a.insp.Thing().ItemCommands(11), "item.forbid")
 	if allow.Label != "Allow" || allow.Icon != "order_allow" || !allow.On {
 		t.Fatalf("allow = %+v", allow)
 	}
@@ -603,7 +609,7 @@ func TestForbidKeyTogglesSelectedItem(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t)
 	s.world.Items = []game.ItemView{{ID: 90, Kind: "wood", Qty: 3, X: 3, Y: 3, FreshDays: -1}}
-	a.selectCand(selCand{Kind: selItem, ID: 90})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 90})
 	f.Key(t, a, a.bindings().Of(input.Forbid)[0].Key, 0)
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 1 || c[0].Target != 90 || !c[0].Enabled {
 		t.Fatalf("F forbids the selected stack: %+v", s.cmds)
@@ -613,7 +619,7 @@ func TestForbidKeyTogglesSelectedItem(t *testing.T) {
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 2 || c[1].Enabled {
 		t.Fatalf("F again allows it: %+v", s.cmds)
 	}
-	if got := thingCmd(t, a.itemCommands(90), "item.forbid").Hotkey; got != input.Forbid {
+	if got := thingCmd(t, a.insp.Thing().ItemCommands(90), "item.forbid").Hotkey; got != input.Forbid {
 		t.Fatalf("the Forbid command carries the Forbid key, got %q", got)
 	}
 }
@@ -622,28 +628,28 @@ func TestItemHaulMarkCommand(t *testing.T) {
 	t.Parallel()
 	s := thingItemSim(foundItems()...)
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selItem, ID: 21})
-	mark := thingCmd(t, a.itemCommands(21), "item.haulmark")
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 21})
+	mark := thingCmd(t, a.insp.Thing().ItemCommands(21), "item.haulmark")
 	if mark.Label != "Mark for hauling" || mark.Icon != "order_haul" || !mark.Toggle || mark.On || mark.Desc == "" {
 		t.Fatalf("mark = %+v", mark)
 	}
 	// a marked stack offers Unmark
-	a.selectCand(selCand{Kind: selItem, ID: 22})
-	if c := thingCmd(t, a.itemCommands(22), "item.haulmark"); c.Label != "Unmark" || !c.On {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 22})
+	if c := thingCmd(t, a.insp.Thing().ItemCommands(22), "item.haulmark"); c.Label != "Unmark" || !c.On {
 		t.Fatalf("marked = %+v", c)
 	}
 	// a forbidden stack would not be hauled: the mark says so, but Unmark stays on
 	s.world.Items[0].Forbidden = true
-	if c := thingCmd(t, a.itemCommands(21), "item.haulmark"); !c.Disabled || c.Reason != "forbidden: allow it first" {
+	if c := thingCmd(t, a.insp.Thing().ItemCommands(21), "item.haulmark"); !c.Disabled || c.Reason != "forbidden: allow it first" {
 		t.Fatalf("forbidden stack mark = %+v", c)
 	}
 	s.world.Items[1].Forbidden = true // already marked
-	if c := thingCmd(t, a.itemCommands(22), "item.haulmark"); c.Disabled || c.Label != "Unmark" {
+	if c := thingCmd(t, a.insp.Thing().ItemCommands(22), "item.haulmark"); c.Disabled || c.Label != "Unmark" {
 		t.Fatalf("a marked stack can always be unmarked: %+v", c)
 	}
 	// a colony stack needs no mark
-	a.selectCand(selCand{Kind: selItem, ID: 23})
-	if _, ok := thingFind(a.itemCommands(23), "item.haulmark"); ok {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 23})
+	if _, ok := thingFind(a.insp.Thing().ItemCommands(23), "item.haulmark"); ok {
 		t.Fatal("a claimed stack has no mark command")
 	}
 }
@@ -674,8 +680,8 @@ func TestItemVerbCommands(t *testing.T) {
 	} {
 		s := thingItemVerbSim(c.order)
 		a, _ := colonyApp(t, s)
-		a.selectCand(selCand{Kind: selItem, ID: entity.EntityID(c.pawn)})
-		cs := a.itemCommands(entity.EntityID(c.pawn))
+		a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: entity.EntityID(c.pawn)})
+		cs := a.insp.Thing().ItemCommands(entity.EntityID(c.pawn))
 		cmd := thingCmd(t, cs, c.id)
 		if cmd.Label != c.label || cmd.Icon != c.icon || cmd.Options == nil || cmd.Disabled || cmd.Desc == "" {
 			t.Errorf("%s: %+v", c.id, cmd)
@@ -717,8 +723,8 @@ func TestItemVerbDisabledWhenNobodyCan(t *testing.T) {
 	s.orders = []game.OrderOption{{Label: "Equip", Disabled: true, Reason: "cannot reach",
 		Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderEquip}}}
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selItem, ID: 31})
-	equip := thingCmd(t, a.itemCommands(31), "cmd.item.equip")
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 31})
+	equip := thingCmd(t, a.insp.Thing().ItemCommands(31), "cmd.item.equip")
 	if !equip.Disabled || equip.Reason != "cannot reach" {
 		t.Fatalf("equip = %+v", equip)
 	}
@@ -734,7 +740,7 @@ func TestItemVerbDisabledWhenNobodyCan(t *testing.T) {
 
 	// no colonist at all: still listed, with a reason
 	s.pawns = nil
-	if equip = thingCmd(t, a.itemCommands(31), "cmd.item.equip"); !equip.Disabled || equip.Reason != "no colonist can do that" {
+	if equip = thingCmd(t, a.insp.Thing().ItemCommands(31), "cmd.item.equip"); !equip.Disabled || equip.Reason != "no colonist can do that" {
 		t.Fatalf("no colonists: %+v", equip)
 	}
 }
@@ -744,18 +750,18 @@ func TestItemHaulCommandOnlyWhenUnstored(t *testing.T) {
 	s := thingItemVerbSim(command.OrderHaul)
 	s.world.Zones = []game.ZoneView{rectZone(1, game.ZoneStockpile, 8, 5, 9, 7)}
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selItem, ID: 34}) // wood at (8, 6): in the stockpile
-	if _, ok := thingFind(a.itemCommands(34), "cmd.item.haul"); ok {
-		t.Fatalf("stored wood has no Haul: %v", thingIDs(a.itemCommands(34)))
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Item, ID: 34}) // wood at (8, 6): in the stockpile
+	if _, ok := thingFind(a.insp.Thing().ItemCommands(34), "cmd.item.haul"); ok {
+		t.Fatalf("stored wood has no Haul: %v", thingIDs(a.insp.Thing().ItemCommands(34)))
 	}
-	if l := a.itemPane(34).Lines; l[len(l)-1] != "In a stockpile" {
+	if l := a.insp.Thing().ItemPane(34).Lines; l[len(l)-1] != "In a stockpile" {
 		t.Fatalf("lines = %q", l)
 	}
 	s.world.Items[3].X = 12 // moved out of the stockpile
-	if _, ok := thingFind(a.itemCommands(34), "cmd.item.haul"); !ok {
+	if _, ok := thingFind(a.insp.Thing().ItemCommands(34), "cmd.item.haul"); !ok {
 		t.Fatal("loose wood can be hauled")
 	}
-	if l := a.itemPane(34).Lines; l[len(l)-1] != "Not stored" {
+	if l := a.insp.Thing().ItemPane(34).Lines; l[len(l)-1] != "Not stored" {
 		t.Fatalf("lines = %q", l)
 	}
 }
@@ -782,8 +788,8 @@ func TestPlantPaneContents(t *testing.T) {
 		43: {State: "growing", RipeIn: d * 12}, 44: {State: "ripe", RipeIn: -1}}
 	a, _ := colonyApp(t, s)
 
-	a.selectCand(selCand{Kind: selPlant, ID: 41})
-	sp := a.plantPane(41)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 41})
+	sp := a.insp.Thing().PlantPane(41)
 	if sp.Title != "Potato" || sp.Close != "plant.close" || len(sp.Tabs) != 0 {
 		t.Fatalf("pane = %+v", sp)
 	}
@@ -793,7 +799,7 @@ func TestPlantPaneContents(t *testing.T) {
 		}
 	}
 	b, ok := thingBar(sp, "Growth")
-	if !ok || b.Pct != 42 || b.Color != uiGood {
+	if !ok || b.Pct != 42 || b.Color != uikit.Good {
 		t.Fatalf("growth bar = %+v (%v)", b, ok)
 	}
 	// the PLAY-017 caption leads, then the old lines in their order
@@ -803,24 +809,24 @@ func TestPlantPaneContents(t *testing.T) {
 	}
 
 	// a state that needs attention paints the bar in the warning colour
-	a.selectCand(selCand{Kind: selPlant, ID: 42})
-	sp = a.plantPane(42)
-	if b, _ := thingBar(sp, "Growth"); b.Color != uiWarning {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 42})
+	sp = a.insp.Thing().PlantPane(42)
+	if b, _ := thingBar(sp, "Growth"); b.Color != uikit.Warning {
 		t.Fatalf("a dark crop's bar = %+v", b)
 	}
 	if sp.Lines[0] != "too dark: needs sun or a lamp nearby" {
 		t.Fatalf("lines = %q", sp.Lines)
 	}
-	if l := thingLines(sp); !strings.Contains(l, plantDamageLine(s.world.Plants[1])) || plantDamageLine(s.world.Plants[1]) == "" {
+	if l := thingLines(sp); !strings.Contains(l, env.PlantDamageLine(s.world.Plants[1])) || env.PlantDamageLine(s.world.Plants[1]) == "" {
 		t.Fatalf("the damage line is kept: %q", l)
 	}
 
-	a.selectCand(selCand{Kind: selPlant, ID: 43})
-	if sp = a.plantPane(43); sp.Subtitle == "" || !strings.HasPrefix(sp.Subtitle, "Tree") {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 43})
+	if sp = a.insp.Thing().PlantPane(43); sp.Subtitle == "" || !strings.HasPrefix(sp.Subtitle, "Tree") {
 		t.Fatalf("tree subtitle = %q", sp.Subtitle)
 	}
-	a.selectCand(selCand{Kind: selPlant, ID: 44})
-	sp = a.plantPane(44)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 44})
+	sp = a.insp.Thing().PlantPane(44)
 	if !strings.Contains(sp.Subtitle, "ready to harvest") || !contains(sp.Lines, "Marked to harvest") || !contains(sp.Lines, "Ready to harvest") {
 		t.Fatalf("ripe pane = %+v", sp)
 	}
@@ -830,14 +836,14 @@ func TestPlantPaneGoneAndMissing(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, thingPlantSim())
 	a.sel.SelPlant, a.sel.HasPlant = 9999, true
-	if sp := a.plantPane(9999); sp.Title != "" {
+	if sp := a.insp.Thing().PlantPane(9999); sp.Title != "" {
 		t.Fatalf("pane = %+v", sp)
 	}
-	if cs := a.plantCommands(9999); len(cs) != 0 || a.sel.HasPlant {
+	if cs := a.insp.Thing().PlantCommands(9999); len(cs) != 0 || a.sel.HasPlant {
 		t.Fatalf("a vanished plant has no commands and closes (%v, hasPlant %v)", thingIDs(cs), a.sel.HasPlant)
 	}
-	a.applyPlantClick("plant.harvest") // nothing selected: no-op
-	a.applyPlantClick("plant.close")
+	a.insp.Thing().ApplyPlantClick("plant.harvest") // nothing selected: no-op
+	a.insp.Thing().ApplyPlantClick("plant.close")
 }
 
 func TestPlantHarvestAndCutCommands(t *testing.T) {
@@ -848,8 +854,8 @@ func TestPlantHarvestAndCutCommands(t *testing.T) {
 		game.PlantView{ID: 43, X: 5, Y: 3, Species: "tree", Growth: 100, Stage: 3})
 	a, _ := colonyApp(t, s)
 
-	a.selectCand(selCand{Kind: selPlant, ID: 41})
-	cs := a.plantCommands(41)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 41})
+	cs := a.insp.Thing().PlantCommands(41)
 	harvest := thingCmd(t, cs, "plant.harvest")
 	if harvest.Label != "Harvest" || harvest.Icon != "order_harvest" || harvest.Disabled || !harvest.Toggle || harvest.On || harvest.Desc == "" {
 		t.Fatalf("harvest = %+v", harvest)
@@ -863,7 +869,7 @@ func TestPlantHarvestAndCutCommands(t *testing.T) {
 		t.Fatalf("harvest cmd = %+v", c)
 	}
 	s.world.Plants[0].Designated = true
-	harvest = thingCmd(t, a.plantCommands(41), "plant.harvest")
+	harvest = thingCmd(t, a.insp.Thing().PlantCommands(41), "plant.harvest")
 	if harvest.Label != "Cancel harvest" || !harvest.On {
 		t.Fatalf("marked harvest = %+v", harvest)
 	}
@@ -876,14 +882,14 @@ func TestPlantHarvestAndCutCommands(t *testing.T) {
 		t.Fatalf("cut cmd = %+v", c)
 	}
 	s.world.Plants[0].Cut = true
-	cut = thingCmd(t, a.plantCommands(41), "plant.cut")
+	cut = thingCmd(t, a.insp.Thing().PlantCommands(41), "plant.cut")
 	if cut.Label != "Cancel cut" || !cut.On {
 		t.Fatalf("marked cut = %+v", cut)
 	}
 
 	// an unripe crop cannot be harvested yet: disabled with the reason
-	a.selectCand(selCand{Kind: selPlant, ID: 42})
-	harvest = thingCmd(t, a.plantCommands(42), "plant.harvest")
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 42})
+	harvest = thingCmd(t, a.insp.Thing().PlantCommands(42), "plant.harvest")
 	if !harvest.Disabled || harvest.Reason != "not ready" {
 		t.Fatalf("unripe harvest = %+v", harvest)
 	}
@@ -893,8 +899,8 @@ func TestPlantHarvestAndCutCommands(t *testing.T) {
 	}
 
 	// trees are chopped, never harvested
-	a.selectCand(selCand{Kind: selPlant, ID: 43})
-	cs = a.plantCommands(43)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 43})
+	cs = a.insp.Thing().PlantCommands(43)
 	if c := thingCmd(t, cs, "plant.cut"); c.Label != "Chop" {
 		t.Fatalf("tree cut = %+v", c)
 	}
@@ -910,8 +916,8 @@ func TestPlantNowByOptions(t *testing.T) {
 		game.PlantView{ID: 42, X: 4, Y: 3, Species: "corn", Growth: 30, Stage: 1})
 	s.orders = []game.OrderOption{{Label: "Harvest", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderHarvest}}}
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selPlant, ID: 41})
-	now := thingCmd(t, a.plantCommands(41), "cmd.plant.now")
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 41})
+	now := thingCmd(t, a.insp.Thing().PlantCommands(41), "cmd.plant.now")
 	if now.Label != "Now by..." || now.Options == nil || now.Disabled || now.Run != nil || now.Cmds != nil || now.Desc == "" {
 		t.Fatalf("now = %+v", now)
 	}
@@ -925,9 +931,9 @@ func TestPlantNowByOptions(t *testing.T) {
 	}
 
 	// an unripe crop's "now" is a cut order
-	a.selectCand(selCand{Kind: selPlant, ID: 42})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 42})
 	s.orders = []game.OrderOption{{Label: "Cut", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderCut}}}
-	now = thingCmd(t, a.plantCommands(42), "cmd.plant.now")
+	now = thingCmd(t, a.insp.Thing().PlantCommands(42), "cmd.plant.now")
 	thingPress(a, now)
 	if c := lastCmd(t, s); c.Order != command.OrderCut {
 		t.Fatalf("unripe now = %+v", c)
@@ -936,11 +942,11 @@ func TestPlantNowByOptions(t *testing.T) {
 	// every colonist blocked: the command says why; none at all too
 	s.orders = []game.OrderOption{{Label: "Cut", Disabled: true, Reason: "cannot reach",
 		Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderCut}}}
-	if now = thingCmd(t, a.plantCommands(42), "cmd.plant.now"); !now.Disabled || now.Reason != "cannot reach" {
+	if now = thingCmd(t, a.insp.Thing().PlantCommands(42), "cmd.plant.now"); !now.Disabled || now.Reason != "cannot reach" {
 		t.Fatalf("blocked now = %+v", now)
 	}
 	s.pawns = nil
-	if now = thingCmd(t, a.plantCommands(42), "cmd.plant.now"); !now.Disabled || now.Reason != "no colonist can do that" {
+	if now = thingCmd(t, a.insp.Thing().PlantCommands(42), "cmd.plant.now"); !now.Disabled || now.Reason != "no colonist can do that" {
 		t.Fatalf("nobody now = %+v", now)
 	}
 }
@@ -956,8 +962,8 @@ func TestLegacyThingPanelsAreGone(t *testing.T) { // not parallel: the canvas tr
 	a, _ := colonyApp(t, s)
 	img := ebiten.NewImage(1280, 720)
 	frames := traceCanvas(t)
-	for _, c := range []selCand{{Kind: selAnimal, ID: 50}, {Kind: selItem, ID: 90}, {Kind: selPlant, ID: 41}} {
-		a.selectCand(c)
+	for _, c := range []selectionpkg.Cand{{Kind: selectionpkg.Animal, ID: 50}, {Kind: selectionpkg.Item, ID: 90}, {Kind: selectionpkg.Plant, ID: 41}} {
+		a.sel.Select(c)
 		assertButtonsInRegions(t, a) // legacy buttons are gone: every hit target is in a layout region
 		*frames = nil
 		a.drawAnimalMark(img)
@@ -981,20 +987,20 @@ func TestThingCommandsFitTheGrid(t *testing.T) {
 	s.pawns[0].Status, s.pawns[1].Status = "alive", "alive"
 	a, _ := colonyApp(t, s)
 	for _, c := range []struct {
-		sel selCand
-		cmd func() []cmdButton
+		sel selectionpkg.Cand
+		cmd func() []inspector.Button
 	}{
-		{selCand{Kind: selAnimal, ID: 50}, func() []cmdButton { return a.animalCommands(50) }},
-		{selCand{Kind: selItem, ID: 90}, func() []cmdButton { return a.itemCommands(90) }},
-		{selCand{Kind: selPlant, ID: 41}, func() []cmdButton { return a.plantCommands(41) }},
+		{selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50}, func() []inspector.Button { return a.insp.Animal().AnimalCommands(50) }},
+		{selectionpkg.Cand{Kind: selectionpkg.Item, ID: 90}, func() []inspector.Button { return a.insp.Thing().ItemCommands(90) }},
+		{selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 41}, func() []inspector.Button { return a.insp.Thing().PlantCommands(41) }},
 	} {
-		a.selectCand(c.sel)
+		a.sel.Select(c.sel)
 		cs := c.cmd()
 		if len(cs) == 0 {
 			t.Fatalf("%v: no commands", c.sel)
 		}
 		for _, sw := range []struct{ w, h int }{{1280, 720}, {1113, 626}, {1920, 1080}} {
-			l := computeHUDLayout(sw.w, sw.h, hudState{PaneShown: true, Commands: len(cs), GlobalH: 200})
+			l := hudlayout.Compute(sw.w, sw.h, hudlayout.Inputs{PaneShown: true, Commands: len(cs), GlobalH: 200})
 			if len(l.GridCells) != len(cs) {
 				t.Errorf("%v at %dx%d: %d commands got %d cells", c.sel, sw.w, sw.h, len(cs), len(l.GridCells))
 			}
@@ -1031,17 +1037,17 @@ func TestThingPanesAndGridThroughTheLayout(t *testing.T) {
 	s.orders = []game.OrderOption{{Label: "x", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderEquip}}}
 	a, f := colonyApp(t, s)
 	for _, c := range []struct {
-		sel   selCand
+		sel   selectionpkg.Cand
 		close string
-	}{{selCand{Kind: selAnimal, ID: 50}, "animal.close"}, {selCand{Kind: selItem, ID: 90}, "item.close"}, {selCand{Kind: selPlant, ID: 41}, "plant.close"}} {
-		a.selectCand(c.sel)
+	}{{selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50}, "animal.close"}, {selectionpkg.Cand{Kind: selectionpkg.Item, ID: 90}, "item.close"}, {selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 41}, "plant.close"}} {
+		a.sel.Select(c.sel)
 		f.Frame(t, a)
 		l := a.hud()
-		if l.Pane.Empty() || !a.paneShown() {
+		if l.Pane.Empty() || !a.insp.PaneShown() {
 			t.Fatalf("%v: no pane", c.sel)
 		}
 		assertChromeIsTheLayout(t, a) // the legacy panel area is not reserved
-		cs := a.selectionCommands()
+		cs := a.insp.Commands().SelectionCommands()
 		if len(l.GridCells) != len(cs) {
 			t.Fatalf("%v: %d commands, %d cells", c.sel, len(cs), len(l.GridCells))
 		}
@@ -1053,7 +1059,7 @@ func TestThingPanesAndGridThroughTheLayout(t *testing.T) {
 				t.Errorf("%v: command %s has no hit target", c.sel, cm.ID)
 				continue
 			}
-			if got := (rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); got != l.GridCells[i] {
+			if got := (gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); got != l.GridCells[i] {
 				t.Errorf("%v: %s is at %+v, its cell is %+v", c.sel, cm.ID, got, l.GridCells[i])
 			}
 		}
@@ -1075,14 +1081,14 @@ func TestAnimalAreaChipOnThePane(t *testing.T) {
 	s := bondSim()
 	s.areas = []game.AreaView{{Index: 0, ID: 3, Name: "Yard", Cells: 20}}
 	a, f := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50})
 	f.Frame(t, a)
 	click(t, a, "animal.area")
-	if a.uiModalTop() != areaPickID {
+	if a.uiModalTop() != architect.AreaPickID {
 		t.Fatalf("the chip opens the area picker, top modal %q", a.uiModalTop())
 	}
 	f.Frame(t, a)
-	if sp := a.animalPane(50); sp.Chips[0].Label != "Area: Unrestricted" {
+	if sp := a.insp.Animal().AnimalPane(50); sp.Chips[0].Label != "Area: Unrestricted" {
 		t.Fatalf("chip %+v", sp.Chips)
 	}
 	press(t, a, f, "areapick.row.3")
@@ -1104,7 +1110,7 @@ func TestThingIconsDrawWithoutPanic(t *testing.T) {
 		a.drawItemIcon(img, it, 10, 10, 40)
 	}
 	a.drawPlantIcon(img, s.world.Plants[0], 10, 10, 40)
-	drawAnimalIcon(img, a.renderer.art, s.world.Animals[0], 10, 10, 40)
+	inspector.DrawAnimalIcon(img, a.renderer.art, s.world.Animals[0], 10, 10, 40)
 	a.renderer.art = nil // no art: nothing drawn, no panic
 	a.drawItemIcon(img, s.world.Items[0], 10, 10, 40)
 	a.drawPlantIcon(img, s.world.Plants[0], 10, 10, 40)

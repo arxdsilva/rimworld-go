@@ -5,6 +5,12 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
 
@@ -36,20 +42,20 @@ func TestPowerArchitectTools(t *testing.T) {
 	for _, c := range archCategories {
 		listed[c.id] = true
 	}
-	if !listed[archCatPower] {
+	if !listed[architectpkg.CatPower] {
 		t.Fatal("no Power category")
 	}
 	// A ninth category overflows the four-row panel: the heater and cooler
 	// sit in Misc (PLAY021_PLAN fallback), so Temperature stays unlisted.
-	if len(archCategories) > 8 || listed[archCatTemperature] {
-		t.Fatalf("%d categories (Temperature listed %v): the panel holds eight", len(archCategories), listed[archCatTemperature])
+	if len(archCategories) > 8 || listed[architectpkg.CatTemperature] {
+		t.Fatalf("%d categories (Temperature listed %v): the panel holds eight", len(archCategories), listed[architectpkg.CatTemperature])
 	}
 	want := []string{"conduit", "hidden_conduit", "power_switch", "wood_generator", "solar_panel", "wind_turbine", "geothermal", "battery"}
-	if got := toolIDsIn(archCatPower); strings.Join(got, ",") != strings.Join(want, ",") {
+	if got := toolIDsIn(architectpkg.CatPower); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("Power tools %v, want %v", got, want)
 	}
 	for _, id := range []string{"conduit", "hidden_conduit"} {
-		if tl, _ := toolByID(id); tl.mode != placeLine {
+		if tl, _ := toolByID(id); tl.mode != architectpkg.PlaceLine {
 			t.Errorf("%s places in mode %v, want a line", id, tl.mode)
 		}
 	}
@@ -71,10 +77,10 @@ func TestPowerArchitectTools(t *testing.T) {
 		}
 	}
 	// every new tool builds a real kind, has its own icon and words
-	kinds := map[string]string{"conduit": conduitKind, "hidden_conduit": hiddenConduitKind, "power_switch": powerSwitchKind,
-		"wood_generator": woodGeneratorKind, "solar_panel": solarPanelKind, "wind_turbine": windTurbineKind,
-		"geothermal": geothermalKind, "battery": batteryKind, "torch_lamp": torchLampKind, "heater": heaterKind,
-		"cooler": coolerKind, "electric_stove": "electric stove", "electric_tailor": "electric tailoring bench",
+	kinds := map[string]string{"conduit": overlaypkg.ConduitKind, "hidden_conduit": overlaypkg.HiddenConduitKind, "power_switch": overlaypkg.PowerSwitchKind,
+		"wood_generator": overlaypkg.WoodGeneratorKind, "solar_panel": overlaypkg.SolarPanelKind, "wind_turbine": overlaypkg.WindTurbineKind,
+		"geothermal": overlaypkg.GeothermalKind, "battery": overlaypkg.BatteryKind, "torch_lamp": overlaypkg.TorchLampKind, "heater": overlaypkg.HeaterKind,
+		"cooler": overlaypkg.CoolerKind, "electric_stove": "electric stove", "electric_tailor": "electric tailoring bench",
 		"electric_research": "electric research bench"}
 	root := repoRoot(t)
 	descs := map[string]string{}
@@ -93,7 +99,7 @@ func TestPowerArchitectTools(t *testing.T) {
 		if tl.build != kind {
 			t.Errorf("%s builds %q, want %q", id, tl.build, kind)
 		}
-		if _, ok := buildable(tl.build); !ok {
+		if _, ok := architectpkg.Buildable(tl.build); !ok {
 			t.Errorf("%s: %q is not in the buildable catalog", id, tl.build)
 		}
 		if len(tl.desc) < 30 {
@@ -129,24 +135,24 @@ func repoRoot(t *testing.T) string {
 func TestArchPowerLine(t *testing.T) {
 	t.Parallel()
 	cases := map[string]string{
-		heaterKind:        "Power: uses 180 W working, 20 W idle",
-		coolerKind:        "Power: uses 220 W working, 20 W idle",
-		"lamp":            "Power: uses 50 W",
-		"electric stove":  "Power: uses 250 W working, 25 W idle",
-		woodGeneratorKind: "Power: makes up to 800 W",
-		geothermalKind:    "Power: makes up to 1800 W",
-		batteryKind:       "Power: stores 1200 Wh",
-		conduitKind:       "",
-		powerSwitchKind:   "",
-		torchLampKind:     "",
-		"wall":            "",
+		overlaypkg.HeaterKind:        "Power: uses 180 W working, 20 W idle",
+		overlaypkg.CoolerKind:        "Power: uses 220 W working, 20 W idle",
+		"lamp":                       "Power: uses 50 W",
+		"electric stove":             "Power: uses 250 W working, 25 W idle",
+		overlaypkg.WoodGeneratorKind: "Power: makes up to 800 W",
+		overlaypkg.GeothermalKind:    "Power: makes up to 1800 W",
+		overlaypkg.BatteryKind:       "Power: stores 1200 Wh",
+		overlaypkg.ConduitKind:       "",
+		overlaypkg.PowerSwitchKind:   "",
+		overlaypkg.TorchLampKind:     "",
+		"wall":                       "",
 	}
 	for kind, want := range cases {
-		bv, ok := buildable(kind)
+		bv, ok := architectpkg.Buildable(kind)
 		if !ok {
 			t.Fatalf("%s is not buildable", kind)
 		}
-		if got := archPowerLine(bv); got != want {
+		if got := architectpkg.PowerLine(bv); got != want {
 			t.Errorf("%s: %q, want %q", kind, got, want)
 		}
 	}
@@ -198,9 +204,9 @@ func TestPowerToolsLockedBeforeElectricity(t *testing.T) {
 			t.Errorf("%s: disabled %v %q, want %q", tool, c.Disabled, got, why)
 		}
 	}
-	check(archCatPower, "conduit", "Needs research: Electricity")
-	check(archCatPower, "battery", "Needs research: Batteries")
-	check(archCatPower, "geothermal", "Needs research: Geothermal power")
+	check(architectpkg.CatPower, "conduit", "Needs research: Electricity")
+	check(architectpkg.CatPower, "battery", "Needs research: Batteries")
+	check(architectpkg.CatPower, "geothermal", "Needs research: Geothermal power")
 	check("misc", "heater", "Needs research: Electricity")
 	check("furniture", "lamp", "Needs research: Electricity")
 	check("furniture", "torch_lamp", "")
@@ -210,7 +216,7 @@ func TestPowerToolsLockedBeforeElectricity(t *testing.T) {
 		t.Errorf("a locked card armed %q (hint %q)", a.arch.ToolID, a.hint)
 	}
 	s.world.Locked = nil
-	check(archCatPower, "conduit", "")
+	check(architectpkg.CatPower, "conduit", "")
 	archPick(t, a, "conduit")
 	if a.arch.ToolID != "conduit" {
 		t.Errorf("an open card did not arm: %q", a.arch.ToolID)
@@ -221,46 +227,46 @@ func TestPowerToolsLockedBeforeElectricity(t *testing.T) {
 func powerArch(t *testing.T, s *stubSim) (*App, *fakeInput) {
 	t.Helper()
 	a, f := colonyApp(t, s)
-	a.openArchitect()
+	a.arch.OpenPanel()
 	return a, f
 }
 
 // The Power grid toggle is the ninth: it wraps to a second row, sits
 // inside Global at every UI scale, and flips only the power overlay.
 func TestPowerToggleWrapsAndToggles(t *testing.T) {
-	if n := len(globalToggleList); n <= globalPerRow {
+	if n := len(globalToggleList); n <= hud.GlobalPerRow {
 		t.Fatalf("%d toggles: the power toggle should be the one that wraps", n)
 	}
 	last := globalToggleList[len(globalToggleList)-1]
-	if last.id != powerButtonID || last.icon != "overlay_power" {
-		t.Fatalf("last toggle %s/%s, want %s/overlay_power", last.id, last.icon, powerButtonID)
+	if last.id != architectpkg.PowerButtonID || last.icon != "overlay_power" {
+		t.Fatalf("last toggle %s/%s, want %s/overlay_power", last.id, last.icon, architectpkg.PowerButtonID)
 	}
 	for _, sc := range globalScales {
 		t.Run(fmt.Sprintf("ui%d", sc.ui), func(t *testing.T) {
 			s := newGlobalSim()
 			a, f := globalColony(t, s, sc.ui, sc.ww, sc.wh)
 			g := a.hud().Global
-			pr, ok := a.globalToggleRect(powerButtonID)
+			pr, ok := a.chrome.Global().ToggleRect(architectpkg.PowerButtonID)
 			if !ok {
 				t.Fatal("no power toggle rect")
 			}
-			first, _ := a.globalToggleRect(roofButtonID)
-			if pr.Y <= first.Y || pr.Right() != g.Right()-globalPad {
+			first, _ := a.chrome.Global().ToggleRect(hud.RoofButtonID)
+			if pr.Y <= first.Y || pr.Right() != g.Right()-hud.GlobalPad {
 				t.Errorf("power toggle %+v: want a second row, right-aligned below %+v in %+v", pr, first, g)
 			}
 			if pr.X < g.X || pr.Bottom() > g.Bottom() || pr.Y < g.Y {
 				t.Errorf("power toggle %+v outside Global %+v", pr, g)
 			}
-			if _, ok := hasButton(a.layoutHits(a.sw, a.sh), powerButtonID); !ok {
+			if _, ok := hasButton(a.layoutHits(a.sw, a.sh), architectpkg.PowerButtonID); !ok {
 				t.Error("no hit target for the power toggle")
 			}
-			if !strings.Contains(tipOf(t, a, powerButtonID), "Power grid") {
-				t.Errorf("tip %q", tipOf(t, a, powerButtonID))
+			if !strings.Contains(tipOf(t, a, architectpkg.PowerButtonID), "Power grid") {
+				t.Errorf("tip %q", tipOf(t, a, architectpkg.PowerButtonID))
 			}
 			before := a.overlayFlags()
 			f.onRect(a, pr)
-			f.Click(t, a, mbLeft, 0)
-			if !a.renderer.overlays().Power.On || !a.renderer.powerShown() {
+			f.Click(t, a, inputframe.Left, 0)
+			if !a.renderer.overlays().Power.On || !a.renderer.overlays().Power.Shown() {
 				t.Fatal("the click did not show the power overlay")
 			}
 			if a.overlayFlags() != before {
@@ -269,8 +275,8 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 			if a.globalPlan().legend == nil {
 				t.Error("no legend while the power overlay is on")
 			}
-			f.Click(t, a, mbLeft, 0)
-			if a.renderer.powerShown() {
+			f.Click(t, a, inputframe.Left, 0)
+			if a.renderer.overlays().Power.Shown() {
 				t.Error("a second click did not hide it")
 			}
 		})
@@ -289,7 +295,7 @@ func TestPowerOverlayHotkey(t *testing.T) {
 	if a.renderer.overlays().Power.On {
 		t.Fatal("Shift+P again did not hide it")
 	}
-	if tip := a.powerToggleTip(); !strings.Contains(tip, "Shift") || !strings.Contains(tip, "P") {
+	if tip := a.arch.Marks.PowerToggleTip(); !strings.Contains(tip, "Shift") || !strings.Contains(tip, "P") {
 		t.Errorf("tip %q lacks the key", tip)
 	}
 }
@@ -304,8 +310,8 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 		cat, tool string
 		forced    bool
 	}{
-		{archCatPower, "conduit", true}, {archCatPower, "hidden_conduit", true}, {archCatPower, "power_switch", true},
-		{archCatPower, "battery", true}, {"misc", "heater", true}, {"misc", "cooler", true}, {"furniture", "lamp", true},
+		{architectpkg.CatPower, "conduit", true}, {architectpkg.CatPower, "hidden_conduit", true}, {architectpkg.CatPower, "power_switch", true},
+		{architectpkg.CatPower, "battery", true}, {"misc", "heater", true}, {"misc", "cooler", true}, {"furniture", "lamp", true},
 		{"production", "electric_research", true}, {"furniture", "torch_lamp", false}, {"structure", "wall", false},
 		{"misc", "party_spot", false},
 	} {
@@ -314,22 +320,22 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 		if a.arch.ToolID != c.tool {
 			t.Fatalf("%s did not arm", c.tool)
 		}
-		if r.overlays().Power.Forced != c.forced || r.powerShown() != c.forced {
-			t.Errorf("%s: forced %v shown %v, want %v", c.tool, r.overlays().Power.Forced, r.powerShown(), c.forced)
+		if r.overlays().Power.Forced != c.forced || r.overlays().Power.Shown() != c.forced {
+			t.Errorf("%s: forced %v shown %v, want %v", c.tool, r.overlays().Power.Forced, r.overlays().Power.Shown(), c.forced)
 		}
 	}
 	archPick(t, a, "party_spot") // drop it
-	a.arch.Cat = archCatPower
+	a.arch.Cat = architectpkg.CatPower
 	archPick(t, a, "conduit")
-	a.closeArchitect()
-	if r.overlays().Power.Forced || r.powerShown() {
+	a.arch.ClosePanel()
+	if r.overlays().Power.Forced || r.overlays().Power.Shown() {
 		t.Error("closing the Architect left the overlay forced on")
 	}
-	r.togglePowerOverlay()
-	a.openArchitect()
+	r.overlays().Power.Toggle()
+	a.arch.OpenPanel()
 	a.arch.Cat = "structure"
 	archPick(t, a, "wall")
-	if !r.powerShown() {
+	if !r.overlays().Power.Shown() {
 		t.Error("a non-power tool hid the player's own overlay")
 	}
 }
@@ -339,13 +345,13 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 // while the palette has room. Net 0 (no grid) is grey.
 func TestPowerNetColours(t *testing.T) {
 	t.Parallel()
-	var o powerOverlay
+	var o overlaypkg.PowerOverlay
 	o.SyncNets([]game.PowerNetView{{ID: 5}, {ID: 9}})
 	c5, c9 := o.NetColour(5), o.NetColour(9)
 	if c5 == c9 {
 		t.Fatalf("nets 5 and 9 share %v", c5)
 	}
-	if o.NetColour(0) != tokenNRGBA(uiPowerNone) {
+	if o.NetColour(0) != overlaypkg.TokenNRGBA(uikit.PowerNone) {
 		t.Errorf("net 0 is %v, want the no-grid grey", o.NetColour(0))
 	}
 	o.SyncNets([]game.PowerNetView{{ID: 2}, {ID: 5}, {ID: 9}}) // a smaller id appears
@@ -365,14 +371,14 @@ func TestPowerNetColours(t *testing.T) {
 	for i := 1; i <= 7; i++ {
 		many = append(many, game.PowerNetView{ID: i * 10})
 	}
-	var p powerOverlay
+	var p overlaypkg.PowerOverlay
 	p.SyncNets(many)
 	used := map[color.NRGBA]int{}
 	for _, n := range many {
 		used[p.NetColour(n.ID)]++
 	}
-	if len(used) != len(powerPalette) {
-		t.Errorf("seven nets use %d colours, want all %d", len(used), len(powerPalette))
+	if len(used) != len(overlaypkg.PowerPalette) {
+		t.Errorf("seven nets use %d colours, want all %d", len(used), len(overlaypkg.PowerPalette))
 	}
 }
 
@@ -424,21 +430,21 @@ func povWorld() game.WorldView {
 		w.Buildings = append(w.Buildings, b)
 	}
 	for x := 1; x <= 3; x++ {
-		add(game.BuildingView{Kind: conduitKind, X: x, Y: 0, PowerRole: "transmitter", PowerNet: 1})
+		add(game.BuildingView{Kind: overlaypkg.ConduitKind, X: x, Y: 0, PowerRole: "transmitter", PowerNet: 1})
 	}
-	add(game.BuildingView{Kind: hiddenConduitKind, X: 8, Y: 0, PowerRole: "transmitter", PowerNet: 2})
-	add(game.BuildingView{Kind: heaterKind, X: 1, Y: 2, PowerRole: "consumer", PowerNet: 1, Powered: true, PowerOn: true,
+	add(game.BuildingView{Kind: overlaypkg.HiddenConduitKind, X: 8, Y: 0, PowerRole: "transmitter", PowerNet: 2})
+	add(game.BuildingView{Kind: overlaypkg.HeaterKind, X: 1, Y: 2, PowerRole: "consumer", PowerNet: 1, Powered: true, PowerOn: true,
 		HasLink: true, LinkX: 1, LinkY: 0, LinkFromX: 1, LinkFromY: 2})
-	add(game.BuildingView{Kind: heaterKind, X: 3, Y: 2, PowerRole: "consumer", PowerNet: 1, NoPowerReason: game.NoPowerBrownout,
+	add(game.BuildingView{Kind: overlaypkg.HeaterKind, X: 3, Y: 2, PowerRole: "consumer", PowerNet: 1, NoPowerReason: game.NoPowerBrownout,
 		PowerOn: true, HasLink: true, LinkX: 3, LinkY: 0, LinkFromX: 3, LinkFromY: 2})
 	add(game.BuildingView{Kind: "lamp", X: 5, Y: 1, PowerRole: "consumer", PowerNet: 1, NoPowerReason: game.NoPowerSwitchedOff,
 		HasLink: true, LinkX: 3, LinkY: 0, LinkFromX: 5, LinkFromY: 1})
-	add(game.BuildingView{Kind: batteryKind, X: 8, Y: 2, W: 1, H: 2, PowerRole: "storage", PowerNet: 2, StoredWh: 600, CapWh: 1200,
+	add(game.BuildingView{Kind: overlaypkg.BatteryKind, X: 8, Y: 2, W: 1, H: 2, PowerRole: "storage", PowerNet: 2, StoredWh: 600, CapWh: 1200,
 		HasLink: true, LinkX: 8, LinkY: 0, LinkFromX: 8, LinkFromY: 2})
-	add(game.BuildingView{Kind: woodGeneratorKind, X: 12, Y: 4, W: 2, H: 2, PowerRole: "producer", PowerOn: true,
+	add(game.BuildingView{Kind: overlaypkg.WoodGeneratorKind, X: 12, Y: 4, W: 2, H: 2, PowerRole: "producer", PowerOn: true,
 		NoPowerReason: game.NoPowerNotConnected})
-	add(game.BuildingView{Kind: conduitKind, X: 6, Y: 6, PowerRole: "transmitter"})
-	add(game.BuildingView{Kind: powerSwitchKind, X: 6, Y: 6, PowerRole: "switch"})
+	add(game.BuildingView{Kind: overlaypkg.ConduitKind, X: 6, Y: 6, PowerRole: "transmitter"})
+	add(game.BuildingView{Kind: overlaypkg.PowerSwitchKind, X: 6, Y: 6, PowerRole: "switch"})
 	return w
 }
 
@@ -451,12 +457,12 @@ func TestPowerOverlayDrawsPerNet(t *testing.T) {
 	w := povWorld()
 	r, got, markings := povRenderer(t, w)
 	dst := ebiten.NewImage(640, 400)
-	r.drawPowerOverlay(dst, &w, 640, 400, r.tilePx())
+	r.drawPowerOverlay(dst, &w, 640, 400, r.cam.Tile())
 	if len(*got) != 0 || len(*markings) != 0 {
 		t.Fatalf("the overlay drew while off: %v %v", *got, *markings)
 	}
-	r.togglePowerOverlay()
-	r.drawPowerOverlay(dst, &w, 640, 400, r.tilePx())
+	r.overlays().Power.Toggle()
+	r.drawPowerOverlay(dst, &w, 640, 400, r.cam.Tile())
 
 	n1, n2 := r.overlays().Wiring.Nets.NetColour(1), r.overlays().Wiring.Nets.NetColour(2)
 	if n1 == n2 {
@@ -474,7 +480,7 @@ func TestPowerOverlayDrawsPerNet(t *testing.T) {
 	if byCell[[2]int{8, 0}] != n2 {
 		t.Errorf("the hidden conduit is %v, want net 2's %v", byCell[[2]int{8, 0}], n2)
 	}
-	if byCell[[2]int{6, 6}] != tokenNRGBA(uiPowerNone) {
+	if byCell[[2]int{6, 6}] != overlaypkg.TokenNRGBA(uikit.PowerNone) {
 		t.Errorf("the conduit on no grid is %v, want grey", byCell[[2]int{6, 6}])
 	}
 	if pdCount(*markings, "marking ") != 5 {
@@ -519,12 +525,12 @@ func TestPowerOverlayDrawsPerNet(t *testing.T) {
 func TestPowerLegend(t *testing.T) {
 	t.Parallel()
 	a, _ := globalColonyP(t, newGlobalSim())
-	if a.powerLegend() != "" {
+	if a.arch.Marks.PowerLegend() != "" {
 		t.Fatal("a legend with the overlay off")
 	}
-	a.renderer.togglePowerOverlay()
-	if !strings.HasPrefix(a.powerLegend(), "Power:") {
-		t.Fatalf("legend %q", a.powerLegend())
+	a.renderer.overlays().Power.Toggle()
+	if !strings.HasPrefix(a.arch.Marks.PowerLegend(), "Power:") {
+		t.Fatalf("legend %q", a.arch.Marks.PowerLegend())
 	}
 	a.renderer.overlays().Roof.On = true
 	all := strings.Join(a.globalPlan().legend, " ")
@@ -532,7 +538,7 @@ func TestPowerLegend(t *testing.T) {
 		t.Errorf("legend %q, want the roof key then the power key", all)
 	}
 	for _, l := range a.globalPlan().legend {
-		if textW(l, tsBody) > globalInnerW {
+		if gfx.TextW(l, gfx.Body) > hud.GlobalInnerW {
 			t.Errorf("legend line %q is wider than Global", l)
 		}
 	}
@@ -573,7 +579,7 @@ func TestGhostLinkRule(t *testing.T) {
 		{"off the map", [][2]int{{0, 0}}, transAt([2]int{-1, 0}), [2]int{}, [2]int{}, false},
 	}
 	for _, c := range cases {
-		from, to, ok := ghostLink(c.cells, 20, 20, c.trans)
+		from, to, ok := overlaypkg.GhostLink(c.cells, 20, 20, c.trans)
 		if ok != c.ok || (ok && (from != c.from || to != c.to)) {
 			t.Errorf("%s: %v -> %v ok %v, want %v -> %v ok %v", c.name, from, to, ok, c.from, c.to, c.ok)
 		}
@@ -585,14 +591,14 @@ func TestGhostLinkRule(t *testing.T) {
 func TestGhostTransmitters(t *testing.T) {
 	t.Parallel()
 	w := game.WorldView{TerrainW: 10, StructVer: 3, Buildings: []game.BuildingView{
-		{ID: 1, Kind: conduitKind, X: 1, Y: 1, W: 1, H: 1, PowerRole: "transmitter"},
-		{ID: 2, Kind: hiddenConduitKind, X: 2, Y: 1, W: 1, H: 1, PowerRole: "transmitter"},
-		{ID: 3, Kind: powerSwitchKind, X: 3, Y: 1, W: 1, H: 1, PowerRole: "switch", PowerOn: true},
-		{ID: 4, Kind: powerSwitchKind, X: 4, Y: 1, W: 1, H: 1, PowerRole: "switch"},
-		{ID: 5, Kind: conduitKind, X: 4, Y: 1, W: 1, H: 1, PowerRole: "transmitter"},
-		{ID: 6, Kind: heaterKind, X: 5, Y: 1, W: 1, H: 1, PowerRole: "consumer"},
+		{ID: 1, Kind: overlaypkg.ConduitKind, X: 1, Y: 1, W: 1, H: 1, PowerRole: "transmitter"},
+		{ID: 2, Kind: overlaypkg.HiddenConduitKind, X: 2, Y: 1, W: 1, H: 1, PowerRole: "transmitter"},
+		{ID: 3, Kind: overlaypkg.PowerSwitchKind, X: 3, Y: 1, W: 1, H: 1, PowerRole: "switch", PowerOn: true},
+		{ID: 4, Kind: overlaypkg.PowerSwitchKind, X: 4, Y: 1, W: 1, H: 1, PowerRole: "switch"},
+		{ID: 5, Kind: overlaypkg.ConduitKind, X: 4, Y: 1, W: 1, H: 1, PowerRole: "transmitter"},
+		{ID: 6, Kind: overlaypkg.HeaterKind, X: 5, Y: 1, W: 1, H: 1, PowerRole: "consumer"},
 	}}
-	var o powerOverlay
+	var o overlaypkg.PowerOverlay
 	is := o.Transmitters(&w)
 	for x, want := range map[int]bool{1: true, 2: true, 3: true, 4: false, 5: false} {
 		if is(x, 1) != want {
@@ -611,7 +617,7 @@ func TestGhostTransmitters(t *testing.T) {
 func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
 	t.Helper()
 	s := &stubSim{w: 24, h: 24, world: game.WorldView{TerrainW: 24, Terrain: make([]uint8, 24*24), StructVer: 1,
-		Buildings: []game.BuildingView{{ID: 1, Kind: conduitKind, X: 4, Y: 4, W: 1, H: 1, PowerRole: "transmitter", PowerNet: 1}},
+		Buildings: []game.BuildingView{{ID: 1, Kind: overlaypkg.ConduitKind, X: 4, Y: 4, W: 1, H: 1, PowerRole: "transmitter", PowerNet: 1}},
 		PowerNets: []game.PowerNetView{{ID: 1}}}}
 	a, f := powerArch(t, s)
 	tl, _ := toolByID(tool)
@@ -630,7 +636,7 @@ func TestPlacementGhostLink(t *testing.T) {
 	t.Parallel()
 	screen := ebiten.NewImage(640, 400)
 	a, got := ghostApp(t, "heater", 6, 6)
-	a.drawArchitectGhost(screen)
+	a.arch.DrawGhost(screen)
 	if l := povParts(*got, "ghost link"); len(l) != 1 || l[0].x != 6 || l[0].y != 6 || l[0].c != a.renderer.overlays().Wiring.Nets.NetColour(1) {
 		t.Errorf("ghost links %v, want one from 6,6 in net 1's colour", *got)
 	}
@@ -639,21 +645,21 @@ func TestPlacementGhostLink(t *testing.T) {
 	}
 
 	a, got = ghostApp(t, "heater", 10, 6)
-	a.drawArchitectGhost(screen)
+	a.arch.DrawGhost(screen)
 	if len(povParts(*got, "ghost link")) != 0 || len(povParts(*got, "not connected")) != 1 {
 		t.Errorf("out of range: %v, want one Not connected", *got)
 	}
-	if powerGhostLabel != "Not connected" {
-		t.Errorf("label %q", powerGhostLabel)
+	if architectpkg.PowerGhostLabel != "Not connected" {
+		t.Errorf("label %q", architectpkg.PowerGhostLabel)
 	}
 
 	a, got = ghostApp(t, "conduit", 6, 6)
-	a.drawArchitectGhost(screen)
+	a.arch.DrawGhost(screen)
 	if len(*got) != 0 {
 		t.Errorf("a conduit ghost drew links: %v", *got)
 	}
 	a, got = ghostApp(t, "torch_lamp", 10, 6)
-	a.drawArchitectGhost(screen)
+	a.arch.DrawGhost(screen)
 	if len(*got) != 0 {
 		t.Errorf("an unpowered building's ghost drew links: %v", *got)
 	}
@@ -666,7 +672,7 @@ func TestCoolerGhostUsesCanPlace(t *testing.T) {
 	s := &wallGapSim{stubSim: &stubSim{w: 24, h: 24}}
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	a.openArchitect()
+	a.arch.OpenPanel()
 	a.arch.Cat = "misc"
 	archPick(t, a, "cooler")
 	f.MoveTo(a, 5, 5)
@@ -686,7 +692,7 @@ func TestCoolerGhostUsesCanPlace(t *testing.T) {
 type wallGapSim struct{ *stubSim }
 
 func (s *wallGapSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
-	if kind == coolerKind && (x != 7 || y != 5) {
+	if kind == overlaypkg.CoolerKind && (x != 7 || y != 5) {
 		return false, game.ReasonNeedsWall
 	}
 	return s.stubSim.CanPlaceAt(kind, stuff, facing, x, y)
@@ -697,12 +703,12 @@ func TestPowerToolsPlace(t *testing.T) {
 	t.Parallel()
 	s := &stubSim{}
 	a, _ := powerArch(t, s)
-	a.arch.Cat = archCatPower
+	a.arch.Cat = architectpkg.CatPower
 	archPick(t, a, "conduit")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 5, 3
-	a.submitArchitect()
-	id, _ := kindID(conduitKind)
+	a.arch.Submit()
+	id, _ := architectpkg.KindID(overlaypkg.ConduitKind)
 	n := 0
 	for _, c := range s.cmds {
 		if c.Kind == command.DesignateBuild && c.Build == id {
@@ -722,17 +728,17 @@ func TestPowerLayoutAtScales(t *testing.T) {
 		t.Run(fmt.Sprintf("ui%d", sc.ui), func(t *testing.T) {
 			s := newGlobalSim()
 			a, _ := globalColony(t, s, sc.ui, sc.ww, sc.wh)
-			a.renderer.togglePowerOverlay()
+			a.renderer.overlays().Power.Toggle()
 			a.renderer.overlays().Roof.On = true
-			a.openArchitect()
-			a.arch.Cat = archCatPower
+			a.arch.OpenPanel()
+			a.arch.Cat = architectpkg.CatPower
 			archPick(t, a, "battery")
 			a.updateOnce(t)
 			l := a.hud()
 			if l.Global.H != a.globalHeight() {
 				t.Fatalf("Global %+v is not its measured stack %v", l.Global, a.globalHeight())
 			}
-			rows := a.globalRows()
+			rows := a.chrome.Global().Rows()
 			if rows.Legend.Empty() || rows.Legend.Y < l.Global.Y {
 				t.Errorf("legend %+v outside Global %+v", rows.Legend, l.Global)
 			}
@@ -746,10 +752,10 @@ func TestPowerLayoutAtScales(t *testing.T) {
 					t.Errorf("%s %+v outside ArchCats %+v", b.ID, b, l.ArchCats)
 				}
 			}
-			if cmds := a.archToolCommands(); len(l.GridCells) != len(cmds) || len(cmds) != len(toolsIn(archCatPower)) {
+			if cmds := a.archToolCommands(); len(l.GridCells) != len(cmds) || len(cmds) != len(toolsIn(architectpkg.CatPower)) {
 				t.Errorf("%d grid cells for %d power tools", len(l.GridCells), len(cmds))
 			}
-			regions := append([]rect{l.Tabs, l.ArchCats, l.ArchDesc, l.Global}, l.GridCells...)
+			regions := append([]gfx.Rect{l.Tabs, l.ArchCats, l.ArchDesc, l.Global}, l.GridCells...)
 			for i := range regions {
 				for j := range regions[:i] {
 					p, q := regions[i], regions[j]
@@ -762,8 +768,8 @@ func TestPowerLayoutAtScales(t *testing.T) {
 				}
 			}
 			screen := ebiten.NewImage(a.pw, a.ph)
-			a.drawGlobalControls(screen, a.sw, a.sh)
-			a.drawArchitect(screen)
+			a.chrome.Global().Draw(screen, a.sw, a.sh)
+			a.arch.Draw(screen)
 		})
 	}
 }

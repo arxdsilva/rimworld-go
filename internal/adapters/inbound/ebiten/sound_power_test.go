@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
@@ -61,7 +62,7 @@ func TestMachineLoopsPlayWhileTheMachineRuns(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			a.renderer.cam.Zoom = 1.5
 			a.renderer.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{tc.b}}
-			want := map[string]loopWant{}
+			want := map[string]cue.Loop{}
 			a.colonyAmbience(want)
 			var got []string
 			for key, l := range want {
@@ -91,7 +92,7 @@ func TestMachineLoopsStartAndStopWithTheState(t *testing.T) {
 	b.Powered, b.PowerUse = true, 180
 	r.cam.Zoom = 1.5
 	r.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{b}}
-	want := map[string]loopWant{}
+	want := map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	a.setLoops(want)
 	l, ok := rec.loops["power:7"]
@@ -100,7 +101,7 @@ func TestMachineLoopsStartAndStopWithTheState(t *testing.T) {
 	}
 	b.PowerUse = 20 // the room reached its target
 	r.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{b}}
-	want = map[string]loopWant{}
+	want = map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	a.setLoops(want)
 	if l := rec.loops["power:7"]; l.vol != 0 {
@@ -125,7 +126,7 @@ func TestMachineLoopsAreSpatialAndCapped(t *testing.T) {
 	bs = append(bs, far)
 	r.cam.Zoom = 1.5
 	r.heard = game.WorldView{Hour: 12, Buildings: bs}
-	want := map[string]loopWant{}
+	want := map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	n := 0
 	for key, l := range want {
@@ -139,8 +140,8 @@ func TestMachineLoopsAreSpatialAndCapped(t *testing.T) {
 			}
 		}
 	}
-	if n != maxMachineLoops {
-		t.Fatalf("%d generator loops at once, want the nearest %d", n, maxMachineLoops)
+	if n != cue.MaxMachineLoops {
+		t.Fatalf("%d generator loops at once, want the nearest %d", n, cue.MaxMachineLoops)
 	}
 	if _, ok := want["power:10"]; !ok {
 		t.Fatal("the generator in the middle of the view is the one heard")
@@ -149,7 +150,7 @@ func TestMachineLoopsAreSpatialAndCapped(t *testing.T) {
 		t.Fatalf("a generator to the right pans right of the centre one: %+v vs %+v", right, want["power:10"])
 	}
 	r.cam.Zoom = r.MinZoomFor(a.mapViewport())
-	want = map[string]loopWant{}
+	want = map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	for key := range want {
 		if len(key) > 6 && key[:6] == "power:" {
@@ -169,20 +170,20 @@ func TestSwitchClicksWhenPowerOnFlips(t *testing.T) {
 	}
 	r.listenWorld(sw(true), nil)
 	r.listenWorld(sw(true), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("an unchanged switch cued %+v", c)
 	}
 	r.listenWorld(sw(false), nil)
-	c := r.takeCues()
+	c := r.cueBus().Take()
 	if len(c) != 1 || c[0].ID != "sfx.switch_click" || c[0].X != 4.5 || c[0].Y != 6.5 || c[0].Global {
 		t.Fatalf("a switch thrown off clicks where it stands, got %+v", c)
 	}
 	r.listenWorld(sw(false), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the click is heard once, got %+v", c)
 	}
 	r.listenWorld(sw(true), nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.switch_click" {
+	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.switch_click" {
 		t.Fatalf("a switch thrown on clicks too, got %+v", c)
 	}
 }
@@ -209,12 +210,12 @@ func TestSwitchClickIgnoresEverythingElse(t *testing.T) {
 	r.listenWorld(view(true, false, false, false), nil)
 	// a new switch built is not a click
 	r.listenWorld(view(true, false, false, true), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("no switch changed state, got %+v", c)
 	}
 	// a switch deconstructed is not a click either
 	r.listenWorld(game.WorldView{}, nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a removed switch cued %+v", c)
 	}
 }
@@ -238,33 +239,33 @@ func TestShortCircuitSoundsOnItsLetterNotOnDeconstruction(t *testing.T) {
 	r.listenWorld(grid(3, 4, 5), nil)
 	// the player deconstructs a conduit: quiet
 	r.listenWorld(grid(3, 5), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a deconstructed conduit cued %+v", c)
 	}
 	// a conduit burns out and its letter arrives with it
 	w := grid(3)
 	w.Letters = []game.LetterView{sndLetterAt(1, "Short circuit", 5, 5)}
 	r.listenWorld(w, nil)
-	c := r.takeCues()
+	c := r.cueBus().Take()
 	if len(c) != 1 || c[0].ID != "sfx.short_circuit" || c[0].X != 5.5 || c[0].Y != 5.5 || c[0].Global {
 		t.Fatalf("a short circuit zaps where the conduit was, got %+v", c)
 	}
 	// the letter stays in the stack: it is heard once
 	r.listenWorld(w, nil)
 	r.listenWorld(w, nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the same letter cued again: %+v", c)
 	}
 	// other letters are not short circuits
 	w.Letters = append(w.Letters, sndLetterAt(2, "Solar flare", -1, -1), sndLetterAt(3, "Visitors", 2, 2))
 	r.listenWorld(w, nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("another letter cued %+v", c)
 	}
 	// a second circuit later is heard again
 	w.Letters = append(w.Letters, sndLetterAt(4, "Short circuit", 3, 5))
 	r.listenWorld(w, nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].X != 3.5 {
+	if c := r.cueBus().Take(); len(c) != 1 || c[0].X != 3.5 {
 		t.Fatalf("the next short circuit is heard, got %+v", c)
 	}
 }
@@ -277,21 +278,21 @@ func TestShortCircuitLettersAlreadyThereAreSilent(t *testing.T) {
 	old := game.WorldView{Letters: []game.LetterView{sndLetterAt(7, "Short circuit", 5, 5)}}
 	r.listenWorld(old, nil)
 	r.listenWorld(old, nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a letter from before the game was loaded cued %+v", c)
 	}
 	// a stale letter showing up late (an old save's stack) is silent too
 	stale := old
 	stale.Letters = append(stale.Letters, game.LetterView{ID: 8, Title: "Short circuit", X: 2, Y: 2, Tick: 10})
 	r.listenWorld(stale, nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a letter from long ago cued %+v", c)
 	}
 	// a letter without a place has nowhere to sound
 	nowhere := old
 	nowhere.Letters = append(nowhere.Letters, game.LetterView{ID: 9, Title: "Short circuit", X: -1, Y: -1, Tick: uint64(sim.tick)})
 	r.listenWorld(nowhere, nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a letter without a place cued %+v", c)
 	}
 }
@@ -302,26 +303,26 @@ func TestSolarFlareBuzzesOncePerFlare(t *testing.T) {
 	flare := func(on bool) game.WorldView { return game.WorldView{SolarFlare: on} }
 	r.listenWorld(flare(false), nil)
 	r.listenWorld(flare(false), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("calm sun cued %+v", c)
 	}
 	r.listenWorld(flare(true), nil)
-	c := r.takeCues()
+	c := r.cueBus().Take()
 	if len(c) != 1 || c[0].ID != "ui.solar_flare" || !c[0].Global {
 		t.Fatalf("the flare starts with one global buzz, got %+v", c)
 	}
 	for range 5 {
 		r.listenWorld(flare(true), nil)
 	}
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the buzz repeated during the flare: %+v", c)
 	}
 	r.listenWorld(flare(false), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the end of a flare is silent, got %+v", c)
 	}
 	r.listenWorld(flare(true), nil)
-	if c := r.takeCues(); len(c) != 1 {
+	if c := r.cueBus().Take(); len(c) != 1 {
 		t.Fatalf("the next flare buzzes again, got %+v", c)
 	}
 }
@@ -331,7 +332,7 @@ func TestSolarFlareAlreadyOnWhenLoadedIsSilent(t *testing.T) {
 	r := New(&stubSim{w: 20, h: 20})
 	r.listenWorld(game.WorldView{SolarFlare: true}, nil)
 	r.listenWorld(game.WorldView{SolarFlare: true}, nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a flare already under way when the game loaded cued %+v", c)
 	}
 }
@@ -345,7 +346,7 @@ func TestPowerCuesReachTheSoundBus(t *testing.T) {
 	cx, cy := centreTile(a)
 	r.cam.Zoom = 1.5
 	r.cue("sfx.switch_click", cx+6, cy, 1)
-	r.globalCue("ui.solar_flare")
+	r.cueBus().Global("ui.solar_flare")
 	a.colonyCues()
 	click, buzz := rec.played("sfx.switch_click"), rec.played("ui.solar_flare")
 	if len(click) != 1 || click[0].pan <= 0.05 {

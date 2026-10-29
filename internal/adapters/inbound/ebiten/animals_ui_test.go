@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -76,17 +77,17 @@ func TestAnimalsTabAreaAndPenColumns(t *testing.T) {
 	if got := animalAreaCell(game.AnimalView{AreaRef: command.AreaHome}, nil); got != "Home" {
 		t.Fatalf("home area %q", got)
 	}
-	if got := followCell(s.world.Animals[0]); got != "on" {
+	if got := windows.FollowCell(s.world.Animals[0]); got != "on" {
 		t.Fatalf("trained animal follows: %q", got)
 	}
-	if got := followCell(game.AnimalView{CanFollow: true}); got != "off" {
+	if got := windows.FollowCell(game.AnimalView{CanFollow: true}); got != "off" {
 		t.Fatalf("following turned off: %q", got)
 	}
-	if got := followCell(s.world.Animals[1]); got != "-" {
+	if got := windows.FollowCell(s.world.Animals[1]); got != "-" {
 		t.Fatalf("untrained: %q", got)
 	}
 	screen := ebiten.NewImage(1280, 720)
-	a.drawAnimalsTab(screen, 1280, 720)
+	a.win.Animals().Draw(screen, 1280, 720)
 }
 
 func TestAnimalsTabAreaDropdownAssigns(t *testing.T) {
@@ -135,7 +136,7 @@ func TestAnimalsTabFollowToggle(t *testing.T) {
 	if !found {
 		t.Fatal("trained animal has no Follow toggle")
 	}
-	a.applyAnimalsTab(id)
+	a.win.Animals().Click(id)
 	var got []command.Command
 	for _, c := range s.cmds {
 		if c.Kind == command.SetAnimalFollow {

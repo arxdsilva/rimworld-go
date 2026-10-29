@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/input"
@@ -33,7 +34,7 @@ func (j *journey) clickWith(id string, mods input.Mod) {
 		}
 		s := float32(j.a.scale.S)
 		j.f.Cur.Mx, j.f.Cur.My = int((b.X+b.W/2)*s), int((b.Y+b.H/2)*s)
-		j.f.Click(j.t, j.a, mbLeft, mods)
+		j.f.Click(j.t, j.a, inputframe.Left, mods)
 		j.f.Cur.Mx, j.f.Cur.My = -50, -50
 		return
 	}
@@ -55,7 +56,7 @@ func TestJourneyHudBarSelectAndShift(t *testing.T) {
 	}
 	j.settle()
 	j.clickWith(bar(1), input.ModShift)
-	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 2 {
+	if !j.a.sel.Grouped() || len(j.a.sel.Group.Ids) != 2 {
 		t.Fatalf("Shift on the bar gave group %v, want both", j.a.sel.Group.Ids)
 	}
 }
@@ -117,19 +118,19 @@ func TestJourneyHudOverlayKeys(t *testing.T) {
 	j := newJourney(t)
 	r := j.a.renderer
 	j.key("R", input.ModShift)
-	if !r.roofOverlayOn() {
+	if !r.overlays().Roof.Shown() {
 		t.Fatal("Shift+R did not show the roof overlay")
 	}
 	j.key("R", input.ModShift)
-	if r.roofOverlayOn() {
+	if r.overlays().Roof.Shown() {
 		t.Fatal("Shift+R again did not hide it")
 	}
 	j.key("P", input.ModShift)
-	if !r.powerShown() {
+	if !r.overlays().Power.Shown() {
 		t.Fatal("Shift+P did not show the power overlay")
 	}
 	j.key("P", input.ModShift)
-	if r.powerShown() {
+	if r.overlays().Power.Shown() {
 		t.Fatal("Shift+P again did not hide it")
 	}
 	j.key("G", 0)
@@ -143,18 +144,18 @@ func TestJourneyHudOverlayKeys(t *testing.T) {
 
 	j.f.MoveTo(j.a, 15, 7)
 	j.update(1)
-	plain := len(j.a.cellInfoLines())
+	plain := len(j.a.chrome.Cell().Lines())
 	if plain == 0 {
 		t.Fatal("hovering a tile shows no cell info")
 	}
 	j.f.Cur.Mods = input.ModAlt
 	j.update(1)
-	if alt := len(j.a.cellInfoLines()); alt <= plain {
+	if alt := len(j.a.chrome.Cell().Lines()); alt <= plain {
 		t.Fatalf("Alt added no detail lines (%d plain, %d with Alt)", plain, alt)
 	}
 	j.release()
 	j.update(1)
-	if len(j.a.cellInfoLines()) != plain {
+	if len(j.a.chrome.Cell().Lines()) != plain {
 		t.Fatal("releasing Alt kept the detail lines")
 	}
 }
@@ -164,7 +165,7 @@ func TestJourneyHudForbidKey(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	id, _ := j.g.SpawnStack(item.Wood, 10, 12, 2)
-	j.clickTile(12, 2, mbLeft, 0)
+	j.clickTile(12, 2, inputframe.Left, 0)
 	j.key("F", 0)
 	c, ok := j.lastCmd(command.SetForbidden)
 	if !ok || c.Target != uint64(id) || !c.Enabled {
@@ -185,7 +186,7 @@ func TestJourneyHudPowerKeyAndThermostat(t *testing.T) {
 	if !j.g.BuildNow("heater", "steel", "south", 12, 2) {
 		t.Fatal("no heater")
 	}
-	j.clickTile(12, 2, mbLeft, 0)
+	j.clickTile(12, 2, inputframe.Left, 0)
 	if !j.a.sel.HasBuilding {
 		t.Fatal("the heater did not select")
 	}
@@ -306,7 +307,7 @@ func TestJourneyHudLetterClickAndDismiss(t *testing.T) {
 	s := float32(j.a.scale.S)
 	cx, cy := rows[len(rows)-1].r.Center()
 	j.f.Cur.Mx, j.f.Cur.My = int(cx*s), int(cy*s)
-	j.f.Click(t, j.a, mbRight, 0)
+	j.f.Click(t, j.a, inputframe.Right, 0)
 	c, ok := j.lastCmd(command.DismissLetter)
 	if !ok || c.Target != l.ID {
 		t.Fatalf("right click sent %+v (%v), want a dismissal of %d", c, ok, l.ID)
@@ -323,7 +324,7 @@ func TestJourneyHudAlertJump(t *testing.T) {
 	j.g.Raid(1)
 	j.update(2)
 	id := ""
-	for _, b := range j.a.alertButtons(j.a.sw) {
+	for _, b := range j.a.chrome.Alerts().Buttons(j.a.sw) {
 		id = b.ID
 		break
 	}
@@ -375,7 +376,7 @@ func TestJourneyHudHaulMark(t *testing.T) {
 		t.Fatal("no found stack to mark")
 	}
 	j.lookAt(tx, ty)
-	j.clickTile(tx, ty, mbLeft, 0)
+	j.clickTile(tx, ty, inputframe.Left, 0)
 	if !j.a.sel.HasItem {
 		t.Fatal("the stack did not select")
 	}

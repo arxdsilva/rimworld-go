@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
 )
 
@@ -38,8 +39,8 @@ func TestNotConnectedAlertFollowsTheRealGrid(t *testing.T) {
 			heater = b
 		}
 	}
-	a.selectCand(selCand{Kind: selBuilding, ID: heater.ID})
-	if got := bldLines(a.buildingPane(heater.ID)); !strings.Contains(got, "No power: not connected") {
+	a.sel.Select(selection.Cand{Kind: selection.Building, ID: heater.ID})
+	if got := bldLines(a.insp.Building().BuildingPane(heater.ID)); !strings.Contains(got, "No power: not connected") {
 		t.Fatalf("the heater's pane: %q", got)
 	}
 	// wire it: a conduit within reach, and a generator on the same line

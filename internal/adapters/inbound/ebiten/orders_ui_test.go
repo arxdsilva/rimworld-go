@@ -5,6 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
@@ -12,24 +16,24 @@ import (
 
 func TestPlacementCells(t *testing.T) {
 	t.Parallel()
-	if got := placementCells(placeSingle, 1, 1, 4, 2); len(got) != 1 || got[0] != [2]int{4, 2} {
+	if got := architect.PlacementCells(architect.PlaceSingle, 1, 1, 4, 2); len(got) != 1 || got[0] != [2]int{4, 2} {
 		t.Fatalf("single = %v", got)
 	}
-	line := placementCells(placeLine, 2, 2, 6, 3)
+	line := architect.PlacementCells(architect.PlaceLine, 2, 2, 6, 3)
 	if len(line) != 5 || line[0] != [2]int{2, 2} || line[4] != [2]int{6, 2} {
 		t.Fatalf("horizontal line = %v", line)
 	}
-	if v := placementCells(placeLine, 2, 5, 3, 1); len(v) != 5 || v[0] != [2]int{2, 1} || v[4] != [2]int{2, 5} {
+	if v := architect.PlacementCells(architect.PlaceLine, 2, 5, 3, 1); len(v) != 5 || v[0] != [2]int{2, 1} || v[4] != [2]int{2, 5} {
 		t.Fatalf("vertical line = %v", v)
 	}
-	if f := placementCells(placeFill, 3, 3, 1, 2); len(f) != 6 || f[0] != [2]int{1, 2} {
+	if f := architect.PlacementCells(architect.PlaceFill, 3, 3, 1, 2); len(f) != 6 || f[0] != [2]int{1, 2} {
 		t.Fatalf("fill = %v", f)
 	}
 }
 
 func TestRotateFacingWraps(t *testing.T) {
 	t.Parallel()
-	if rotateFacing(0, -1) != 3 || rotateFacing(3, 1) != 0 || rotateFacing(1, 1) != 2 {
+	if architect.RotateFacing(0, -1) != 3 || architect.RotateFacing(3, 1) != 0 || architect.RotateFacing(1, 1) != 2 {
 		t.Fatal("rotation should wrap through four facings")
 	}
 }
@@ -58,7 +62,7 @@ func TestArchitectDragPlacesOnlyValidBlueprints(t *testing.T) {
 	if len(cells) != 5 || bad != 1 {
 		t.Fatalf("cells=%d bad=%d", len(cells), bad)
 	}
-	a.submitArchitect()
+	a.arch.Submit()
 	g.Step(1)
 	if n := len(g.World().Frames); n != 4 {
 		t.Fatalf("frames = %d, want 4 (item cell skipped)", n)
@@ -71,10 +75,10 @@ func TestArchitectRotationReachesBlueprint(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.furniture")
 	click(t, a, "arch.tool.chair")
-	a.rotateTool(1)
+	a.arch.RotateTool(1)
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 6, 6
 	a.arch.Drag = true
-	a.submitArchitect()
+	a.arch.Submit()
 	g.Step(1)
 	f := g.World().Frames
 	if len(f) != 1 || f[0].Kind != "chair" || f[0].Facing != "east" {
@@ -93,7 +97,7 @@ func TestAreaToolSendsOneRectangleCommand(t *testing.T) {
 	click(t, a, "arch.tool.stockpile")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 2, 4, 3
-	a.submitArchitect()
+	a.arch.Submit()
 	if len(sim.cmds) != 1 || sim.cmds[0].Kind != command.DesignateStockpile || sim.cmds[0].X2 != 4 {
 		t.Fatalf("cmds = %+v", sim.cmds)
 	}
@@ -105,24 +109,24 @@ func TestDraftButtonAndOrderMenu(t *testing.T) {
 	a.renderer.Select(id)
 	click(t, a, "pawn.draft")
 	g.Step(1)
-	if p, _ := a.selectedPawn(); !p.Drafted {
+	if p, _ := a.insp.SelectedPawn(); !p.Drafted {
 		t.Fatal("draft button should draft the pawn")
 	}
 	click(t, a, "pawn.draft")
 	g.Step(1)
-	if p, _ := a.selectedPawn(); p.Drafted {
+	if p, _ := a.insp.SelectedPawn(); p.Drafted {
 		t.Fatal("second click should undraft")
 	}
 
 	if _, err := g.SpawnStack(item.Food, 3, 6, 2); err != nil {
 		t.Fatal(err)
 	}
-	a.openOrders(6, 2, 300, 200)
+	a.ord.OpenOrders(6, 2, 300, 200)
 	if !a.ord.Float.Open {
 		t.Fatal("order menu should open")
 	}
 	labels := []string{}
-	for _, b := range a.floatButtons() {
+	for _, b := range a.ord.FloatButtons() {
 		labels = append(labels, b.Label)
 	}
 	joined := strings.Join(labels, "|")
@@ -133,7 +137,7 @@ func TestDraftButtonAndOrderMenu(t *testing.T) {
 	// disabled entry shows its reason and keeps the menu open
 	for i, o := range a.ord.Float.Opts {
 		if o.Disabled {
-			a.chooseFloat(floatID(i))
+			a.ord.ChooseFloat(floatID(i))
 			if !a.ord.Float.Open || a.hint != o.Reason {
 				t.Fatalf("disabled click: open=%v hint=%q", a.ord.Float.Open, a.hint)
 			}
@@ -141,14 +145,14 @@ func TestDraftButtonAndOrderMenu(t *testing.T) {
 	}
 	for i, o := range a.ord.Float.Opts {
 		if strings.HasPrefix(o.Label, "Eat") {
-			a.chooseFloat(floatID(i))
+			a.ord.ChooseFloat(floatID(i))
 		}
 	}
 	if a.ord.Float.Open {
 		t.Fatal("choosing an order closes the menu")
 	}
 	g.Step(2)
-	if p, _ := a.selectedPawn(); !strings.HasPrefix(p.Job, "eat") {
+	if p, _ := a.insp.SelectedPawn(); !strings.HasPrefix(p.Job, "eat") {
 		t.Fatalf("prioritized eat, job = %s", p.Job)
 	}
 }
@@ -157,7 +161,7 @@ func TestEscapeClosesOrderMenuFirst(t *testing.T) {
 	t.Parallel()
 	a, _, id := liveColony(t, 0)
 	a.renderer.Select(id)
-	a.openOrders(5, 5, 100, 100)
+	a.ord.OpenOrders(5, 5, 100, 100)
 	a.pressEscape()
 	if a.ord.Float.Open || !a.renderer.HasSelect() {
 		t.Fatal("Escape should close the menu and keep the selection")
@@ -181,7 +185,7 @@ func TestStoneMaterialReachesBlueprint(t *testing.T) {
 	}
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 7, 6
-	a.submitArchitect()
+	a.arch.Submit()
 	g.Step(1)
 	f := g.World().Frames
 	if len(f) != 2 || f[0].Stuff != "granite blocks" || f[1].Stuff != "granite blocks" {
@@ -191,17 +195,17 @@ func TestStoneMaterialReachesBlueprint(t *testing.T) {
 
 func TestPlantSpriteScalesWithGrowth(t *testing.T) {
 	t.Parallel()
-	_, young := plantSprite(game.PlantView{Species: "tree", Growth: 10})
-	key, grown := plantSprite(game.PlantView{Species: "tree", Growth: 100})
+	_, young := world.PlantSprite(game.PlantView{Species: "tree", Growth: 10})
+	key, grown := world.PlantSprite(game.PlantView{Species: "tree", Growth: 100})
 	if !(young < grown) || grown != 1 || !strings.HasPrefix(key, "plant/tree_") {
 		t.Fatalf("tree scale young=%v grown=%v key=%s", young, grown, key)
 	}
 	// crops carry stage and a per-tile variant (ART §9); seasonKey falls
 	// back to the older shared sprites (environment_test.go)
-	if k, _ := plantSprite(game.PlantView{Species: "potato", Stage: 3}); k != "plant/potato_harvestable_v0" {
+	if k, _ := world.PlantSprite(game.PlantView{Species: "potato", Stage: 3}); k != "plant/potato_harvestable_v0" {
 		t.Fatalf("ripe crop sprite = %s", k)
 	}
-	if k, _ := plantSprite(game.PlantView{Species: "corn", Stage: 0}); k != "plant/corn_sown_v0" {
+	if k, _ := world.PlantSprite(game.PlantView{Species: "corn", Stage: 0}); k != "plant/corn_sown_v0" {
 		t.Fatalf("freshly sown crop sprite = %s", k)
 	}
 }
@@ -214,7 +218,7 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 	click(t, a, "arch.tool.grow")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 8, 7
-	a.submitArchitect()
+	a.arch.Submit()
 	g.Step(1)
 	z := zonesOfKind(g.World(), game.ZoneGrow)
 	if len(z) != 1 || z[0].Crop != "potato" || z[0].MaxX != 8 {
@@ -224,7 +228,7 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 	click(t, a, "arch.crop.corn")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 10, 6, 11, 7
-	a.submitArchitect()
+	a.arch.Submit()
 	g.Step(1)
 	z = zonesOfKind(g.World(), game.ZoneGrow)
 	if len(z) != 2 || z[1].Crop != "corn" {
@@ -235,7 +239,7 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 func TestBenchBillsPanel(t *testing.T) {
 	t.Parallel()
 	a, g, _ := liveColony(t, 0)
-	stove, _ := kindID("stove")
+	stove, _ := architect.KindID("stove")
 	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: stove, X: 6, Y: 6})
 	g.Step(1)
 	if len(g.World().Frames) != 1 {
@@ -249,29 +253,29 @@ func TestBenchBillsPanel(t *testing.T) {
 	if len(g.World().Buildings) != 1 {
 		t.Fatalf("stove not built: %+v", g.World().Frames)
 	}
-	if !a.selectBuildingAt(7, 6) { // second cell of the 2x1 stove
+	if !a.insp.Building().SelectBuildingAt(7, 6) { // second cell of the 2x1 stove
 		t.Fatal("clicking any stove cell selects it")
 	}
 	// the bills live in the pane's Bills tab (PLAY-018)
 	f := fakeOn(a)
 	a.renderer.speed = speedPaused
-	tab, ok := bldTab(a.buildingPane(a.sel.SelBuilding), "inspector.bills")
+	tab, ok := bldTab(a.insp.Building().BuildingPane(a.sel.SelBuilding), "inspector.bills")
 	if !ok {
 		t.Fatal("a stove has a Bills tab")
 	}
-	panel := rect{X: 0, Y: 100, W: tab.WantW, H: 400}
+	panel := gfx.Rect{X: 0, Y: 100, W: tab.WantW, H: 400}
 	setHook(a.uiSt(), func(a *App) { tab.Declare(panel) })
 	f.Frame(t, a)
-	if !hasWidget(a, billPickBtn) {
+	if !hasWidget(a, inspector.BillPickBtn) {
 		t.Fatal("stove should offer the recipe picker")
 	}
-	rcs := a.recipesFor("stove")
+	rcs := a.insp.Building().RecipesFor("stove")
 	if len(rcs) == 0 {
 		t.Fatal("stove should offer a recipe")
 	}
-	a.applyBuildingClick("bill.add." + strconv.Itoa(int(rcs[0].ID)))
+	a.insp.Building().ApplyBuildingClick("bill.add." + strconv.Itoa(int(rcs[0].ID)))
 	g.Step(1)
-	b, _ := a.selectedBuilding()
+	b, _ := a.insp.SelectedBuilding()
 	if len(b.Bills) != 1 || b.Bills[0].Target != 1 {
 		t.Fatalf("bills = %+v", b.Bills)
 	}
@@ -279,25 +283,25 @@ func TestBenchBillsPanel(t *testing.T) {
 	g.Step(1)
 	press(t, a, f, "bill.mode.0")
 	g.Step(1)
-	b, _ = a.selectedBuilding()
+	b, _ = a.insp.SelectedBuilding()
 	if b.Bills[0].Target != 2 || b.Bills[0].Mode != "forever" {
 		t.Fatalf("after +/mode: %+v", b.Bills[0])
 	}
-	if !strings.Contains(billLine(b.Bills[0]), "forever") {
-		t.Fatalf("line = %q", billLine(b.Bills[0]))
+	if !strings.Contains(inspector.BillLine(b.Bills[0]), "forever") {
+		t.Fatalf("line = %q", inspector.BillLine(b.Bills[0]))
 	}
 	press(t, a, f, "bill.del.0")
 	g.Step(1)
-	if b, _ = a.selectedBuilding(); len(b.Bills) != 0 {
+	if b, _ = a.insp.SelectedBuilding(); len(b.Bills) != 0 {
 		t.Fatal("delete removes the bill")
 	}
-	dc, ok := bldCmd(a.buildingCommands(a.sel.SelBuilding), "bldg.deconstruct")
+	dc, ok := bldCmd(a.insp.Building().BuildingCommands(a.sel.SelBuilding), "bldg.deconstruct")
 	if !ok {
 		t.Fatal("a stove can be deconstructed")
 	}
 	a.applyClick(dc.ID) // what a click on the command button does
 	g.Step(1)
-	if b, _ = a.selectedBuilding(); !b.Deconstruct {
+	if b, _ = a.insp.SelectedBuilding(); !b.Deconstruct {
 		t.Fatal("deconstruct button marks the building")
 	}
 	a.pressEscape()

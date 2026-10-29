@@ -22,7 +22,7 @@ func homeWorld(ver uint32) game.WorldView {
 func TestHomeOverlayOnlyWhenOn(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	screen := ebiten.NewImage(320, 320)
 	w := homeWorld(1)
 	r.drawHomeOverlay(screen, w, 320, 320, tile)
@@ -30,7 +30,7 @@ func TestHomeOverlayOnlyWhenOn(t *testing.T) {
 		t.Fatalf("overlay off draws nothing: %d verts, %d builds", r.overlays().HomeDraw.Verts, r.overlays().HomeDraw.Builds)
 	}
 	r.overlays().Home.On = true
-	if !r.homeOverlayOn() {
+	if !r.overlays().Home.Shown() {
 		t.Fatal("toggled on")
 	}
 	r.drawHomeOverlay(screen, w, 320, 320, tile)
@@ -49,15 +49,15 @@ func TestHomeOverlayForced(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
 	r.overlays().Home.Forced = true // a Home tool is held
-	if !r.homeOverlayOn() {
+	if !r.overlays().Home.Shown() {
 		t.Fatal("forced on")
 	}
-	r.drawHomeOverlay(ebiten.NewImage(320, 320), homeWorld(1), 320, 320, r.tilePx())
+	r.drawHomeOverlay(ebiten.NewImage(320, 320), homeWorld(1), 320, 320, r.cam.Tile())
 	if r.overlays().HomeDraw.Verts == 0 {
 		t.Fatal("forced overlay draws")
 	}
 	// no Home data (or a map without a grid) draws nothing and never panics
-	r.drawHomeOverlay(ebiten.NewImage(320, 320), game.WorldView{}, 320, 320, r.tilePx())
+	r.drawHomeOverlay(ebiten.NewImage(320, 320), game.WorldView{}, 320, 320, r.cam.Tile())
 	if r.overlays().HomeDraw.Verts != 0 {
 		t.Fatal("no Home, nothing to draw")
 	}
@@ -67,7 +67,7 @@ func TestHomeOverlayCachedByVer(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
 	r.overlays().Home.On = true
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	screen := ebiten.NewImage(320, 320)
 	w := homeWorld(5)
 	for i := 0; i < 4; i++ {
@@ -97,7 +97,7 @@ func TestRoofOverlayDrawsHomeToo(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
 	r.overlays().Home.On = true
-	r.drawRoofOverlay(ebiten.NewImage(320, 320), homeWorld(1), 320, 320, r.tilePx())
+	r.drawRoofOverlay(ebiten.NewImage(320, 320), homeWorld(1), 320, 320, r.cam.Tile())
 	if r.overlays().HomeDraw.Verts == 0 {
 		t.Fatal("the Roof overlay pass draws the Home overlay")
 	}

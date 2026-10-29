@@ -22,7 +22,7 @@ func planWorld(ver uint32) game.WorldView {
 func TestPlanOverlayVisibleByDefaultAndHideable(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	screen := ebiten.NewImage(320, 320)
 	r.drawPlanOverlay(screen, planWorld(1), 320, 320, tile)
 	// 2 row-run fills + 10 outline sides drawn as 2 dashes each
@@ -45,8 +45,8 @@ func TestPlanOverlayOnlyForMarks(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
 	screen := ebiten.NewImage(320, 320)
-	r.drawPlanOverlay(screen, game.WorldView{TerrainW: 10}, 320, 320, r.tilePx())
-	r.drawPlanOverlay(screen, game.WorldView{}, 320, 320, r.tilePx())
+	r.drawPlanOverlay(screen, game.WorldView{TerrainW: 10}, 320, 320, r.cam.Tile())
+	r.drawPlanOverlay(screen, game.WorldView{}, 320, 320, r.cam.Tile())
 	if r.overlays().PlanDraw.Verts != 0 || r.overlays().PlanDraw.Builds != 0 {
 		t.Fatalf("no marks, nothing built or drawn: %d verts %d builds", r.overlays().PlanDraw.Verts, r.overlays().PlanDraw.Builds)
 	}
@@ -55,7 +55,7 @@ func TestPlanOverlayOnlyForMarks(t *testing.T) {
 func TestPlanOverlayCachedByVer(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	screen := ebiten.NewImage(320, 320)
 	w := planWorld(5)
 	for i := 0; i < 4; i++ {

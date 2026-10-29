@@ -3,6 +3,8 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -10,18 +12,18 @@ func TestSetupCapturesOpenTheirScreens(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		ui     string
-		screen screenID
+		screen ports.Screen
 		modal  string
 	}{
-		{"worldgen", screenWorldGen, ""},
-		{"seed", screenWorldGen, ""},
-		{"worldgen-progress", screenWorldGen, worldProgress},
-		{"landing", screenLanding, ""},
-		{"picker", screenLanding, ""},
-		{"landing-advanced", screenLanding, "land.advanced"},
-		{"landing-factions", screenLanding, facModalID},
-		{"pawns", screenPawns, ""},
-		{"pawns-reroll", screenPawns, ""},
+		{"worldgen", ports.ScreenWorldGen, ""},
+		{"seed", ports.ScreenWorldGen, ""},
+		{"worldgen-progress", ports.ScreenWorldGen, wizard.WorldProgress},
+		{"landing", ports.ScreenLanding, ""},
+		{"picker", ports.ScreenLanding, ""},
+		{"landing-advanced", ports.ScreenLanding, "land.advanced"},
+		{"landing-factions", ports.ScreenLanding, wizard.FacModalID},
+		{"pawns", ports.ScreenPawns, ""},
+		{"pawns-reroll", ports.ScreenPawns, ""},
 	}
 	for _, c := range cases {
 		a, f, _ := ngTest(t, nil)
@@ -51,19 +53,19 @@ func TestEscapeOrderOnTheLaterSteps(t *testing.T) {
 	click(t, a, "land.advanced")
 	f.Frame(t, a)
 	f.Key(t, a, "Escape", 0)
-	if a.uiModalOpen() || a.nav.screen() != screenLanding {
+	if a.uiSt().ModalOpen() || a.nav.screen() != ports.ScreenLanding {
 		t.Fatalf("first Esc closes the modal: modal=%q screen=%s", a.uiModalTop(), a.nav.screen())
 	}
 	f.Key(t, a, "Escape", 0)
-	if a.nav.screen() != screenWorldGen || a.ng == nil || a.ng.Planet == nil {
+	if a.nav.screen() != ports.ScreenWorldGen || a.ng == nil || a.ng.Planet == nil {
 		t.Fatalf("second Esc goes Back and keeps the planet: screen=%s", a.nav.screen())
 	}
 	// Create World: a text field in edit takes Esc first.
 	f.Frame(t, a)
 	press(t, a, f, "world.seed")
 	f.Key(t, a, "Escape", 0)
-	if a.nav.screen() != screenWorldGen || a.uiTextEditing() {
-		t.Fatalf("Esc ends the edit only: screen=%s editing=%v", a.nav.screen(), a.uiTextEditing())
+	if a.nav.screen() != ports.ScreenWorldGen || a.uiSt().Editing() {
+		t.Fatalf("Esc ends the edit only: screen=%s editing=%v", a.nav.screen(), a.uiSt().Editing())
 	}
 	// Characters: Back returns to the landing site with the tile kept.
 	b, fb := pawnsApp(t)
@@ -71,7 +73,7 @@ func TestEscapeOrderOnTheLaterSteps(t *testing.T) {
 	f2 := fb
 	f2.Key(t, b, "Escape", 0)
 	f2.Frame(t, b)
-	if b.nav.screen() != screenLanding || b.ng.Tile != tile {
+	if b.nav.screen() != ports.ScreenLanding || b.ng.Tile != tile {
 		t.Fatalf("screen=%s tile=%d want %d", b.nav.screen(), b.ng.Tile, tile)
 	}
 	_ = input.Cancel

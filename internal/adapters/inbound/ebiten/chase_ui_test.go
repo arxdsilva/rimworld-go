@@ -3,7 +3,11 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -18,19 +22,19 @@ import (
 
 func TestDangerMessageIsRed(t *testing.T) {
 	t.Parallel()
-	danger := messageStyle(game.MessageView{Text: "A timber wolf is chasing Ada!", Danger: true, Focus: 4})
-	if danger.Color != uiDanger {
-		t.Fatalf("danger message colour = %v, want the UI danger red %v", danger.Color, uiDanger)
+	danger := hud.MessageStyle(game.MessageView{Text: "A timber wolf is chasing Ada!", Danger: true, Focus: 4})
+	if danger.Color != uikit.Danger {
+		t.Fatalf("danger message colour = %v, want the UI danger red %v", danger.Color, uikit.Danger)
 	}
 	r, g, b, _ := danger.Color.RGBA()
 	if r <= g || r <= b {
 		t.Fatalf("danger colour %v is not red", danger.Color)
 	}
-	calm := messageStyle(game.MessageView{Text: "A deer gave birth", Focus: 4})
+	calm := hud.MessageStyle(game.MessageView{Text: "A deer gave birth", Focus: 4})
 	if calm.Color != nil {
 		t.Fatalf("an ordinary message keeps the default colour, got %v", calm.Color)
 	}
-	if danger.Size != tsBody.Size || calm.Size != tsBody.Size {
+	if danger.Size != gfx.Body.Size || calm.Size != gfx.Body.Size {
 		t.Fatalf("message text stays body size: %v / %v", danger.Size, calm.Size)
 	}
 }
@@ -48,13 +52,13 @@ func TestDangerMessageStaysClickable(t *testing.T) {
 	a.startGame()
 	a.sw, a.sh = 1280, 720
 	found := false
-	for _, b := range a.messageButtons(a.sw) {
+	for _, b := range a.chrome.Right().MessageButtons(a.sw) {
 		found = found || b.ID == "msg.0"
 	}
 	if !found {
 		t.Fatal("a danger message with a Focus is clickable")
 	}
-	a.drawMessages(ebiten.NewImage(1280, 720))
+	a.chrome.Right().DrawMessages(ebiten.NewImage(1280, 720))
 	a.applyClick("msg.0")
 	if !a.sel.HasAnimal || a.sel.SelAnimal != 5 {
 		t.Fatalf("selected animal = %v/%d, want 5", a.sel.HasAnimal, a.sel.SelAnimal)
@@ -235,7 +239,7 @@ func TestTameNameSitsUnderItsAnimalAtScale(t *testing.T) {
 			// sized in the same units as the text: logical width + 6 and
 			// 14 high, times the UI scale
 			us := float32(s)
-			if wantW := (textW("Bessie", tsSmall) + 6) * us; !near32(p.c, wantW) || !near32(p.d, 14*us) {
+			if wantW := (gfx.TextW("Bessie", gfx.Small) + 6) * us; !near32(p.c, wantW) || !near32(p.d, 14*us) {
 				t.Errorf("plate is %vx%v, want %vx%v", p.c, p.d, wantW, 14*us)
 			}
 			// the text anchor is the plate's centre top (physical, drawn
@@ -287,8 +291,8 @@ func TestTameNameHiddenWhenZoomedOutOrUnnamed(t *testing.T) {
 // at (cx, cy) chased by animal 10 at (ax, ay).
 func chaseCamera(cx, cy, ax, ay int) (*Renderer, game.WorldView) {
 	r := New(&stubSim{w: 64, h: 64, pawns: []game.PawnView{{ID: 1, Name: "Ada", X: cx, Y: cy}}})
-	r.cam = camera{Zoom: 1, Placed: true}
-	r.cueBus().Voice.View = viewport{X0: 0, Y0: 40, X1: 800, Y1: 560}
+	r.cam = camerapkg.Camera{Zoom: 1, Placed: true}
+	r.cueBus().Voice.View = camerapkg.Viewport{X0: 0, Y0: 40, X1: 800, Y1: 560}
 	w := game.WorldView{
 		Animals: []game.AnimalView{{ID: 10, Species: "timber_wolf", Label: "timber wolf", Hostile: true, TargetID: 1, X: ax, Y: ay}},
 		Messages: []game.MessageView{
@@ -380,7 +384,7 @@ func TestThreatPauseIgnoresOtherDangers(t *testing.T) {
 func TestThreatPauseWithoutAViewportKeepsTheCamera(t *testing.T) {
 	t.Parallel()
 	r, w := chaseCamera(52, 50, 50, 50)
-	r.cueBus().Voice.View = viewport{} // no App has set the viewport yet
+	r.cueBus().Voice.View = camerapkg.Viewport{} // no App has set the viewport yet
 	before := r.cam
 	r.onThreatPause(w, 5)
 	if r.cam != before {

@@ -5,6 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"strings"
 	"testing"
 
@@ -29,7 +34,7 @@ func lampRoom(v *game.WorldView, id, x0, y0, x1, y1 int) {
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			i := y*v.TerrainW + x
-			v.RoofCells[i] = roofBuilt
+			v.RoofCells[i] = overlay.RoofBuilt
 			if x == x0 || y == y0 || x == x1 || y == y1 {
 				v.RoomGrid[i] = -2
 			} else {
@@ -49,20 +54,20 @@ func lampBuilding(id, x, y int) game.BuildingView {
 // levelAt is the lamp light level at (x, y), the packed vertex value decoded.
 func levelAt(r *Renderer, x, y int) float32 {
 	_, l := r.lightTile(x, y)
-	return lampLevel(l)
+	return lightpkg.LampLevel(l)
 }
 
 func TestLampRadiusFromMetadata(t *testing.T) {
 	t.Parallel()
-	m, err := parseArtMeta(sampleMeta + "light_radius: 3\n")
+	m, err := artpkg.ParseMeta(sampleMeta + "light_radius: 3\n")
 	if err != nil || m.LightRadius != 3 {
 		t.Fatalf("light_radius: %v (%v)", m.LightRadius, err)
 	}
-	if got := lampRadiusOf(nil); got != lampDefaultRadius || lampDefaultRadius != 6 {
+	if got := lightpkg.LampRadiusOf(nil); got != lightpkg.LampDefaultRadius || lightpkg.LampDefaultRadius != 6 {
 		t.Fatalf("default radius %v", got)
 	}
-	art := &artCatalog{Sprites: map[string]*artSprite{buildSprite("lamp", "", 0, false, false): {Meta: m}}}
-	if got := lampRadiusOf(art); got != 3 {
+	art := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{architect.BuildSprite("lamp", "", 0, false, false): {Meta: m}}}
+	if got := lightpkg.LampRadiusOf(art); got != 3 {
 		t.Fatalf("metadata radius %v, want 3", got)
 	}
 	v := lampTestWorld(16, 10)
@@ -88,16 +93,16 @@ func TestLightsComeOnlyFromLightSources(t *testing.T) {
 	v := lampTestWorld(20, 12)
 	v.Buildings = []game.BuildingView{lampBuilding(1, 3, 3), {ID: 2, Kind: "campfire", X: 15, Y: 8, W: 1, H: 1, Burning: true, Glow: true, GlowRadius: 5},
 		{ID: 3, Kind: "campfire", X: 15, Y: 2, W: 1, H: 1}, {ID: 4, Kind: "chair", X: 9, Y: 9, W: 1, H: 1}}
-	got := appendLightSources(nil, &v, 6)
-	want := []lightSource{{ID: 1, X: 3, Y: 3, Radius: 6, Kind: lightLamp}, {ID: 2, X: 15, Y: 8, Radius: campfireReach, Kind: lightCampfire}}
+	got := lightpkg.AppendSources(nil, &v, 6)
+	want := []lightpkg.Source{{ID: 1, X: 3, Y: 3, Radius: 6, Kind: lightpkg.Lamp}, {ID: 2, X: 15, Y: 8, Radius: lightpkg.CampfireReach, Kind: lightpkg.Campfire}}
 	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("light sources %+v, want %+v", got, want)
 	}
 
 	r := shadowRenderer(t, v)
 	r.view.W = v
-	r.lit.Grid.Sources = func(dst []lightSource, _ *game.WorldView, _ float64) []lightSource {
-		return append(dst, lightSource{ID: 9, X: 10, Y: 6, Radius: 6, Kind: lightLamp}) // where no lamp stands
+	r.lit.Grid.Sources = func(dst []lightpkg.Source, _ *game.WorldView, _ float64) []lightpkg.Source {
+		return append(dst, lightpkg.Source{ID: 9, X: 10, Y: 6, Radius: 6, Kind: lightpkg.Lamp}) // where no lamp stands
 	}
 	if l := levelAt(r, 10, 6); l != 1 {
 		t.Fatalf("the grid ignores the source list: %v at the listed lamp", l)
@@ -148,8 +153,8 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 	r := New(&stubSim{w: w, h: h, world: v})
 	r.view.W = v
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0
-	tile := r.tilePx()
-	r.drawBaked(ebiten.NewImage(64, 64), ebiten.NewImage(64, 64), 0, 0, 0, 0, 2, 0, 0, w-1, h-1)
+	tile := r.cam.Tile()
+	r.pipe().Bk.DrawBaked(ebiten.NewImage(64, 64), ebiten.NewImage(64, 64), 0, 0, 0, 0, 2, 0, 0, w-1, h-1)
 
 	type pos struct{ x, y int32 }
 	key := func(vx ebiten.Vertex) pos {
@@ -207,7 +212,7 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 	var geo ebiten.GeoM
 	geo.Scale(tile/16, tile/16)
 	geo.Translate(7*tile, 5*tile)
-	litQuad(&vs, 0, 0, 16, 16, geo, noCS, 1, 0.5, 0)
+	lightpkg.LitQuad(&vs, 0, 0, 16, 16, geo, sprite.NoCS, 1, 0.5, 0)
 	r.groundLamp(&vs)
 	for i, c := range [4][2]int{{7, 5}, {8, 5}, {7, 6}, {8, 6}} {
 		if want := corner(c[0], c[1]); math.Abs(float64(vs[i].Custom1-want)) > 1e-6 {

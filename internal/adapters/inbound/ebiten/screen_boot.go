@@ -1,6 +1,11 @@
 package ebiten
 
-import ebiten "github.com/hajimehoshi/ebiten/v2"
+import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+)
 
 func (a *App) drawBoot(screen *ebiten.Image, sw, sh int) {
 	phase := a.bootPhase()
@@ -17,7 +22,7 @@ func (a *App) drawBoot(screen *ebiten.Image, sw, sh int) {
 		body = append(body, "", "warning: "+a.artWarn)
 	}
 	a.fillMenu(screen, sw, sh, "rimworld-go", body, bodyDefaultX)
-	drawText(screen, "escape to skip", 56, float64(sh-40), withColor(tsSmall, uiTextDim))
+	gfx.Text(screen, "escape to skip", 56, float64(sh-40), gfx.WithColor(gfx.Small, uikit.TextDim))
 }
 
 func fmtProgress(n, total int) string {

@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -20,32 +21,32 @@ import (
 // the ghosts.
 func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing string, cells []ghostCell) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	link, power := overlay.BuildingLink(kind), false
 	if c := overlay.PowerLink(kind); c.Accepts != 0 { // conduits link on the power layer
 		link, power = c, true
 	}
-	var p map[[2]int]linkFlag
+	var p map[[2]int]spritepkg.LinkFlag
 	if r.art != nil && link.Flags != 0 { // ghosts join built walls, rock, frames and each other
 		w := r.view.W
 		if w.TerrainW == 0 {
 			w = r.world()
 		}
 		r.links.Sync(w, r.game.Width(), r.game.Height())
-		ghosts := make([]plannedCell, len(cells))
+		ghosts := make([]spritepkg.PlannedCell, len(cells))
 		for i, c := range cells {
-			ghosts[i] = plannedCell{X: c.x, Y: c.y, Flags: link.Flags}
+			ghosts[i] = spritepkg.PlannedCell{X: c.x, Y: c.y, Flags: link.Flags}
 		}
 		p = r.links.Plan(w.Frames, ghosts)
 	}
 	tint := r.stuffTint(stuff)
 	for _, c := range cells {
-		cs := ghostOKCS
+		cs := spritepkg.GhostOKCS
 		switch {
 		case c.same:
-			cs = ghostSameCS
+			cs = spritepkg.GhostSameCS
 		case !c.ok:
-			cs = ghostBadCS
+			cs = spritepkg.GhostBadCS
 		}
 		if r.art == nil {
 			sx, sy := r.worldToScreen(c.x, c.y)
@@ -60,21 +61,21 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 			mask = r.links.PlannedMask(p, link.Accepts, c.x, c.y)
 			corners = r.links.PlannedCorners(p, link.Accepts, c.x, c.y)
 		}
-		if kind == "wall" && r.drawLinked(screen, wallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
+		if kind == "wall" && r.drawLinked(screen, spritepkg.WallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
 			continue
 		}
 		cf := ghostFacing(c, facing)
-		key := r.buildKey(kind, stuff, cf, mask, doorAxisEW(cf), false)
+		key := r.pipe().BuildKey(kind, stuff, cf, mask, spritepkg.DoorAxisEW(cf), false)
 		if !r.art.Has(key) {
 			sx, sy := r.worldToScreen(c.x, c.y)
-			if isFenceKind(kind) {
-				drawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, isStoneStuff(stuff), 170)
+			if spritepkg.IsFenceKind(kind) {
+				spritepkg.DrawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, spritepkg.IsStoneStuff(stuff), 170)
 				continue
 			}
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), ghostFill(c), false)
 			continue
 		}
-		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, mulCS(tintCS(tint), cs))
+		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, spritepkg.MulCS(spritepkg.TintCS(tint), cs))
 	}
 }
 
@@ -112,6 +113,3 @@ func (r *Renderer) pawnFigureLayers(p game.PawnView, fs string) []portraitLayer 
 func (r *Renderer) pawnPortraitLayers(p game.PawnView) []portraitLayer {
 	return r.pawnFigureLayers(p, "south")
 }
-
-// faceScarSouth is the south-facing face scar of a disfigured pawn.
-const faceScarSouth = "pawn/face_scar_south"

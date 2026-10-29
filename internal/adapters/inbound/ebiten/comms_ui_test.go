@@ -3,6 +3,7 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -79,7 +80,7 @@ func TestCommsCallShipOpensTrade(t *testing.T) {
 	if !found {
 		t.Fatalf("cmds = %+v", s.cmds)
 	}
-	clickID(t, a, f, "modal."+commsModalID+".close")
+	clickID(t, a, f, "modal."+dialogs.CommsModalID+".close")
 	last := s.cmds[len(s.cmds)-1]
 	if last.Kind != command.CloseComms {
 		t.Fatalf("close emits %v", last.Kind)

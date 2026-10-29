@@ -3,6 +3,8 @@ package ebiten
 import (
 	"errors"
 	"path/filepath"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -25,22 +27,22 @@ func TestMainMenuDrawsDioramaOrFallsBack(t *testing.T) {
 	a.cfg.LoadMenuScene = func() (*mainmenu.Diorama, error) { return nil, errors.New("not generated") }
 	a.finishBoot()
 	screen := ebiten.NewImage(640, 360)
-	if a.drawMenuDiorama(screen, 640, 360, 0) {
+	if a.menuScreen.DrawDiorama(screen, 640, 360, 0) {
 		t.Fatal("drew a diorama that failed to load")
 	}
-	a.drawMainMenu(screen, 640, 360)
+	a.menuScreen.Draw(screen, 640, 360)
 	a.menuScreen.SetDiorama(testDiorama())
 	a.menuTick = 777
-	if !a.drawMenuDiorama(screen, 640, 360, 0.5) {
+	if !a.menuScreen.DrawDiorama(screen, 640, 360, 0.5) {
 		t.Fatal("diorama not drawn")
 	}
-	a.drawMainMenu(screen, 640, 360)
+	a.menuScreen.Draw(screen, 640, 360)
 	a.drawCredits(screen, 640, 360)
 }
 
 func TestArtCatalogSkipsMenuFamily(t *testing.T) {
 	t.Parallel()
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		t.Skip(err)
 	}
@@ -65,7 +67,7 @@ func TestMenuCaptureDoesNotStartSim(t *testing.T) {
 	if a.renderer != nil || a.simsStarted != 0 {
 		t.Fatal("menu capture started a game")
 	}
-	if a.nav.screen() != screenMainMenu || a.menuTick != 300 {
+	if a.nav.screen() != ports.ScreenMainMenu || a.menuTick != 300 {
 		t.Fatalf("screen %v tick %d, want main menu at tick 300", a.nav.screen(), a.menuTick)
 	}
 }

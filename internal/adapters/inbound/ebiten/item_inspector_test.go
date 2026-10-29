@@ -5,6 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -13,7 +14,7 @@ import (
 func selectItemTile(t *testing.T, a *App, id entity.EntityID, x, y int) {
 	t.Helper()
 	clickTile(a, x, y)
-	if it, ok := a.selectedItem(); !ok || it.ID != id {
+	if it, ok := a.sel.SelectedItem(); !ok || it.ID != id {
 		t.Fatalf("item %d not selected", id)
 	}
 }
@@ -23,7 +24,7 @@ func TestItemEquipChipsPerColonist(t *testing.T) {
 	a, g, _ := liveColony(t, 1)
 	id, _ := g.SpawnStack(item.Rifle, 1, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
-	cs := a.itemCommands(id)
+	cs := a.insp.Thing().ItemCommands(id)
 	equip := thingCmd(t, cs, "cmd.item.equip")
 	opts := equip.Options()
 	if len(opts) < 2 {
@@ -57,7 +58,7 @@ func TestItemUnreachableColonistDisabled(t *testing.T) {
 	}
 	id, _ := g.SpawnStack(item.Rifle, 1, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
-	equip := thingCmd(t, a.itemCommands(id), "cmd.item.equip")
+	equip := thingCmd(t, a.insp.Thing().ItemCommands(id), "cmd.item.equip")
 	opts := equip.Options()
 	if len(opts) == 0 {
 		t.Skip("walls were not built instantly")
@@ -75,25 +76,25 @@ func TestItemHaulOnlyWhenUnstored(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	id, _ := g.SpawnStack(item.Wood, 25, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
-	it, _ := a.selectedItem()
+	it, _ := a.sel.SelectedItem()
 	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].label != "Haul" {
 		t.Fatalf("unstored wood verbs = %+v", vs)
 	}
 	if vs := itemVerbs(it, true); len(vs) != 0 {
 		t.Fatalf("stored wood must have no Haul: %+v", vs)
 	}
-	if got := itemLines(it, false); got[len(got)-1] != "Not stored" {
+	if got := inspector.ItemLines(it, false); got[len(got)-1] != "Not stored" {
 		t.Fatalf("lines = %v", got)
 	}
-	if got := itemLines(it, true); got[len(got)-1] != "In a stockpile" {
+	if got := inspector.ItemLines(it, true); got[len(got)-1] != "In a stockpile" {
 		t.Fatalf("lines = %v", got)
 	}
 	w := game.WorldView{Zones: []game.ZoneView{rectZone(1, game.ZoneStockpile, 7, 7, 9, 9)}}
-	if !inStockpile(w, 8, 8) || inStockpile(w, 10, 8) {
+	if !inspector.InStockpile(w, 8, 8) || inspector.InStockpile(w, 10, 8) {
 		t.Fatal("inStockpile bounds wrong")
 	}
-	if itemCategory(it) != "material" {
-		t.Fatalf("category = %q", itemCategory(it))
+	if inspector.ItemCategory(it) != "material" {
+		t.Fatalf("category = %q", inspector.ItemCategory(it))
 	}
 }
 
@@ -102,29 +103,29 @@ func TestItemFoodAndApparelRows(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	id, _ := g.SpawnStack(item.Meal, 2, 6, 6)
 	selectItemTile(t, a, id, 6, 6)
-	it, _ := a.selectedItem()
+	it, _ := a.sel.SelectedItem()
 	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].id != "cmd.item.eat" || vs[0].label != "Eat" {
 		t.Fatalf("meal verbs = %+v", vs)
 	}
 	pid, _ := g.SpawnStack(item.Parka, 1, 7, 7)
 	selectItemTile(t, a, pid, 7, 7)
-	it, _ = a.selectedItem()
+	it, _ = a.sel.SelectedItem()
 	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].id != "cmd.item.wear" || vs[0].label != "Wear" {
 		t.Fatalf("parka verbs = %+v", vs)
 	}
-	a.applyItemClick("item.act.99")
-	a.applyItemClick("item.act.x")
-	a.applyItemClick("item.bogus")
+	a.insp.Thing().ApplyItemClick("item.act.99")
+	a.insp.Thing().ApplyItemClick("item.act.x")
+	a.insp.Thing().ApplyItemClick("item.bogus")
 }
 
 func TestItemPanelClosesWhenItemGone(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	a.sel.SelItem, a.sel.HasItem = 9999, true
-	if len(a.commandGridButtons()) != 0 || len(a.itemCommands(9999)) != 0 || a.itemPane(9999).Title != "" || a.sel.HasItem {
+	if len(a.insp.Commands().CommandGridButtons()) != 0 || len(a.insp.Thing().ItemCommands(9999)) != 0 || a.insp.Thing().ItemPane(9999).Title != "" || a.sel.HasItem {
 		t.Fatal("panel must close")
 	}
-	a.applyItemClick("item.close")
+	a.insp.Thing().ApplyItemClick("item.close")
 }
 
 func TestInspectorsDrawWithoutArt(t *testing.T) {
@@ -137,7 +138,7 @@ func TestInspectorsDrawWithoutArt(t *testing.T) {
 	a.drawPlantMark(screen)
 	selectItemTile(t, a, iid, 10, 10)
 	a.drawItemMark(screen)
-	if got := capitalize(""); got != "" {
+	if got := inspector.Capitalize(""); got != "" {
 		t.Fatalf("capitalize empty = %q", got)
 	}
 }

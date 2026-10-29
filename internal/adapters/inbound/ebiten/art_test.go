@@ -3,6 +3,12 @@ package ebiten
 import (
 	"bytes"
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
 	"testing"
 
@@ -38,10 +44,10 @@ func TestWallMask(t *testing.T) {
 	}
 	var g linkGrid
 	g.Sync(w, 8, 8)
-	if got := g.Mask(1, 1); got != wallN|wallE|wallS|wallW {
+	if got := g.Mask(1, 1); got != artpkg.WallN|artpkg.WallE|artpkg.WallS|artpkg.WallW {
 		t.Fatalf("cross = %d", got)
 	}
-	if got := g.Mask(1, 0); got != wallS {
+	if got := g.Mask(1, 0); got != artpkg.WallS {
 		t.Fatalf("north arm = %d", got)
 	}
 	if got := g.Mask(5, 5); got != 0 {
@@ -52,15 +58,15 @@ func TestWallMask(t *testing.T) {
 func TestNextVisualTracksFacing(t *testing.T) {
 	t.Parallel()
 	v := nextVisual(pawnVisual{}, false, 3, 3, 0, 1)
-	if v.facing != faceSouth {
+	if v.facing != artpkg.FaceSouth {
 		t.Fatalf("new pawn faces %v", v.facing)
 	}
 	v = nextVisual(v, true, 3, 2, 1, 2)
-	if v.facing != faceNorth {
+	if v.facing != artpkg.FaceNorth {
 		t.Fatalf("moving north faces %v", v.facing)
 	}
 	v = nextVisual(v, true, 3, 2, 2, 3)
-	if v.facing != faceNorth {
+	if v.facing != artpkg.FaceNorth {
 		t.Fatalf("standing still keeps facing, got %v", v.facing)
 	}
 }
@@ -68,7 +74,7 @@ func TestNextVisualTracksFacing(t *testing.T) {
 func TestTwoDigits(t *testing.T) {
 	t.Parallel()
 	for n, want := range map[int]string{0: "00", 7: "07", 15: "15"} {
-		if got := twoDigits(n); got != want {
+		if got := spritepkg.TwoDigits(n); got != want {
 			t.Errorf("twoDigits(%d) = %q", n, got)
 		}
 	}
@@ -82,7 +88,7 @@ func animalSpriteKeys(base, attack string) []string {
 	for _, fs := range []string{"south", "east", "north"} {
 		stand := base + "_" + fs
 		keys = append(keys, stand)
-		for i := 1; i <= trotFrames; i++ {
+		for i := 1; i <= motionpkg.TrotFrames; i++ {
 			keys = append(keys, fmt.Sprintf("%s_walk%02d", stand, i))
 		}
 		for i := 1; i <= 4; i++ {
@@ -127,16 +133,16 @@ func TestEverySpeciesHasArt(t *testing.T) {
 func TestGeneratedArtCoversRenderer(t *testing.T) {
 	c := realArt(t)
 	var keys []string
-	for v := 0; v < soilVariants; v++ {
-		keys = append(keys, artKey("terrain", "soil", v))
+	for v := 0; v < worldpkg.SoilVariants; v++ {
+		keys = append(keys, env.ArtKey("terrain", "soil", v))
 	}
 	for m := 0; m < 16; m++ {
-		keys = append(keys, "structure/wall_wood_"+twoDigits(m))
+		keys = append(keys, "structure/wall_wood_"+spritepkg.TwoDigits(m))
 	}
 	keys = append(keys, "plant/grass_short_v0", "plant/grass_short_v1", "plant/bush_mature_v0", "plant/bush_mature_v1",
 		"plant/berry_bush_harvestable_v0", "plant/berry_bush_harvestable_v1", "overlay/grow_zone",
-		itemSprite("food"), itemSprite("berries"), itemSprite("meat"),
-		itemSprite("meal"), itemSprite("stone"), "rock/rock_wall_15", "terrain/stone_edge_15",
+		worldpkg.ItemSprite("food"), worldpkg.ItemSprite("berries"), worldpkg.ItemSprite("meat"),
+		worldpkg.ItemSprite("meal"), worldpkg.ItemSprite("stone"), "rock/rock_wall_15", "terrain/stone_edge_15",
 		"structure/wall_stone_15", "structure/floor_stone",
 		"structure/frame_1x1", "item/wood_pile", "item/food_crate", "overlay/stockpile",
 		"overlay/blueprint", "overlay/selection", "overlay/designation_harvest",
@@ -148,20 +154,20 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		keys = append(keys, fmt.Sprintf("overlay/tilled_%d", v))
 	}
 	for _, c := range game.Crops() {
-		for _, row := range plantKeys.Crops[c.Name] { // PLAY-016: every unit sprite crop_batch.go draws
+		for _, row := range worldpkg.PlantKeys.Crops[c.Name] { // PLAY-016: every unit sprite crop_batch.go draws
 			keys = append(keys, row[:]...)
 		}
-		keys = append(keys, itemSprite(c.Label), "ui_icon/"+strings.ReplaceAll(c.Label, " ", "_"))
+		keys = append(keys, worldpkg.ItemSprite(c.Label), "ui_icon/"+strings.ReplaceAll(c.Label, " ", "_"))
 	}
 	for _, t := range archTools {
 		keys = append(keys, "ui_icon/"+t.icon)
 		if t.build == "" {
 			continue
 		}
-		for _, f := range facingNames {
+		for _, f := range architect.FacingNames {
 			for _, open := range []bool{false, true} {
 				for _, ew := range []bool{false, true} {
-					keys = append(keys, buildSprite(t.build, f, 0, ew, open))
+					keys = append(keys, architect.BuildSprite(t.build, f, 0, ew, open))
 				}
 			}
 		}
@@ -170,23 +176,23 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	// the stone, ore and smoothing singles.
 	for _, prefix := range []string{"rock/rock_wall", "rock/rock_smooth", "rock/ore_steel", "rock/ore_silver", "rock/ore_gold",
 		"rock/ore_machinery", "structure/wall_wood", "structure/wall_stone", "structure/wall_steel"} {
-		keys = append(keys, linkedKeys(prefix)...)
+		keys = append(keys, spritepkg.LinkedKeys(prefix)...)
 	}
 	for _, ew := range []bool{false, true} {
 		for _, open := range []bool{false, true} {
-			keys = append(keys, buildSpriteStuff("door", "steel", "", 0, ew, open))
+			keys = append(keys, architect.BuildSpriteStuff("door", "steel", "", 0, ew, open))
 		}
 	}
-	for v := 0; v < soilVariants; v++ {
-		keys = append(keys, artKey("terrain", "stone_smooth", v))
+	for v := 0; v < worldpkg.SoilVariants; v++ {
+		keys = append(keys, env.ArtKey("terrain", "stone_smooth", v))
 	}
 	for m := 1; m < 16; m++ {
-		keys = append(keys, "terrain/stone_smooth_edge_"+twoDigits(m))
+		keys = append(keys, "terrain/stone_smooth_edge_"+spritepkg.TwoDigits(m))
 	}
-	keys = append(keys, itemSprite("granite chunk"), itemSprite("marble blocks"), itemSprite("steel"),
-		itemSprite("silver"), itemSprite("gold"), smoothMarkKey)
+	keys = append(keys, worldpkg.ItemSprite("granite chunk"), worldpkg.ItemSprite("marble blocks"), worldpkg.ItemSprite("steel"),
+		worldpkg.ItemSprite("silver"), worldpkg.ItemSprite("gold"), worldpkg.SmoothMarkKey)
 	keys = append(keys, ng1ArtKeys()...) // water, mud, track, caves, pods, components, medicine, cabinet, hospital bed
-	for f := faceSouth; f <= faceWest; f++ {
+	for f := artpkg.FaceSouth; f <= artpkg.FaceWest; f++ {
 		keys = append(keys, "furniture/bed_basic_blanket_"+f.String())
 	}
 	// pawns: one standing sprite per build, layer and drawn facing (west
@@ -208,16 +214,16 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		}
 		keys = append(keys, "pawn/tuque_knit_"+fs, "pawn/face_scar_"+fs)
 	}
-	for _, k := range treePartCoverageKeys() { // PLAY-010 2.9: whole tree plus its trunk and canopy parts
-		keys = append(keys, k, k+treeTrunkSuffix, k+treeCanopySuffix)
+	for _, k := range env.TreePartCoverageKeys() { // PLAY-010 2.9: whole tree plus its trunk and canopy parts
+		keys = append(keys, k, k+env.TreeTrunkSuffix, k+env.TreeCanopySuffix)
 	}
 	for _, k := range keys {
 		if !c.Has(k) {
 			t.Errorf("missing generated sprite %s", k)
 		}
 	}
-	if n := len(c.TintNames("stone_tint")); n != len(stoneNames)-1 {
-		t.Errorf("stone_tint has %d presets, want one per stone (%d)", n, len(stoneNames)-1)
+	if n := len(c.TintNames("stone_tint")); n != len(spritepkg.StoneNames)-1 {
+		t.Errorf("stone_tint has %d presets, want one per stone (%d)", n, len(spritepkg.StoneNames)-1)
 	}
 	for _, o := range []string{"steel", "silver", "gold"} { // the ore body takes the stone tint through a mask
 		if sp := c.Sprite("rock/ore_" + o + "_15_cf"); sp != nil && (sp.Mask == nil || sp.Meta.TintGroup == "") {
@@ -242,11 +248,11 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 
 func TestArtFrameNames(t *testing.T) {
 	t.Parallel()
-	if trotFrames != 8 {
+	if motionpkg.TrotFrames != 8 {
 		t.Fatal("C5: 8 trot frames")
 	}
 	// the limbless pawn body carries head, hold and back
-	m, err := parseArtMeta(sampleMeta + "  head: [96.5, 60.0]\n  back: [80.0, 120.5]\n")
+	m, err := artpkg.ParseMeta(sampleMeta + "  head: [96.5, 60.0]\n  back: [80.0, 120.5]\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +260,7 @@ func TestArtFrameNames(t *testing.T) {
 		t.Fatalf("head, hold and back attach: %v", m.Attach)
 	}
 	// metadata without head still parses; head is simply absent
-	old, err := parseArtMeta(sampleMeta)
+	old, err := artpkg.ParseMeta(sampleMeta)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +268,7 @@ func TestArtFrameNames(t *testing.T) {
 		t.Fatal("no head in old metadata")
 	}
 	// animal frames resolve, missing ones fall back to the standing sprite
-	c := &artCatalog{Sprites: map[string]*artSprite{"animal/deer_south": {}, "animal/deer_south_walk03": {}}}
+	c := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{"animal/deer_south": {}, "animal/deer_south_walk03": {}}}
 	r := &Renderer{art: c}
 	if r.framed("animal/deer_south", "_walk03") != "animal/deer_south_walk03" {
 		t.Fatal("frame names resolve")
@@ -275,7 +281,7 @@ func TestArtFrameNames(t *testing.T) {
 // The test index serves the same sprites as the game's eager load, but
 // decodes a sprite only when it is handed out.
 func TestIndexCatalogMatchesLoad(t *testing.T) {
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		t.Skip(err)
 	}
@@ -300,7 +306,7 @@ func TestIndexCatalogMatchesLoad(t *testing.T) {
 		if sp.Pix != nil {
 			t.Fatalf("%s decoded before use", key)
 		}
-		want, err := decodeNRGBA(sp.File.Image)
+		want, err := artpkg.DecodeNRGBA(sp.File.Image)
 		if err != nil {
 			t.Fatal(err)
 		}

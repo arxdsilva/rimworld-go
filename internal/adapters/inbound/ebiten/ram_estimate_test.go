@@ -2,6 +2,10 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"strings"
 	"testing"
 
@@ -29,8 +33,8 @@ func withHardware(total uint64) func(*AppConfig) {
 }
 
 // textEvents are the text runs of a trace.
-func textEvents(ev []traceEvent) []traceEvent {
-	var out []traceEvent
+func textEvents(ev []gfx.TraceEvent) []gfx.TraceEvent {
+	var out []gfx.TraceEvent
 	for _, e := range ev {
 		if e.Kind == "text" {
 			out = append(out, e)
@@ -41,7 +45,7 @@ func textEvents(ev []traceEvent) []traceEvent {
 
 // drawnText draws the App once at its logical size x scale and returns the
 // text runs it drew, in physical pixels.
-func drawnText(t *testing.T, a *App, pw, ph int) []traceEvent {
+func drawnText(t *testing.T, a *App, pw, ph int) []gfx.TraceEvent {
 	t.Helper()
 	got := collectTrace(t)
 	a.Draw(ebiten.NewImage(pw, ph))
@@ -51,19 +55,19 @@ func drawnText(t *testing.T, a *App, pw, ph int) []traceEvent {
 // The root's wizard default is the map the minimum RAM is figured for.
 func TestRAMReferenceMapIsTheWizardDefault(t *testing.T) {
 	t.Parallel()
-	if options.DefaultMapSide != defaultMapSide {
-		t.Fatalf("options.DefaultMapSide %d, wizard %d", options.DefaultMapSide, defaultMapSide)
+	if options.DefaultMapSide != wizardpkg.DefaultMapSide {
+		t.Fatalf("options.DefaultMapSide %d, wizard %d", options.DefaultMapSide, wizardpkg.DefaultMapSide)
 	}
 }
 
 func TestMapSizeLabelNoLongerClaimsAComputer(t *testing.T) {
 	t.Parallel()
 	for _, o := range game.MapSizes() {
-		if l := mapSizeLabel(o); strings.Contains(l, "capable computer") {
+		if l := wizardpkg.MapSizeLabel(o); strings.Contains(l, "capable computer") {
 			t.Errorf("%d: label %q keeps the old fixed text", o.Side, l)
 		}
 	}
-	if got := mapSizeLabel(game.MapSizeView{Side: 400, Large: true}); got != "400 x 400" {
+	if got := wizardpkg.MapSizeLabel(game.MapSizeView{Side: 400, Large: true}); got != "400 x 400" {
 		t.Errorf("label = %q, want the plain size", got)
 	}
 }
@@ -77,8 +81,8 @@ func TestLowRAMNoticeShowsOn4GiBAndHidesOn16GiBAndUnknown(t *testing.T) {
 		shown bool
 	}{
 		{"4 GiB", withHardware(4 * gib), true},
-		{"just under the minimum", withHardware(minimumRAM() - 1), true},
-		{"the minimum", withHardware(minimumRAM()), false},
+		{"just under the minimum", withHardware(options.MinimumRAM() - 1), true},
+		{"the minimum", withHardware(options.MinimumRAM()), false},
 		{"16 GiB", withHardware(16 * gib), false},
 		{"hardware unknown (nil)", nil, false},
 		{"hardware unreadable (Total 0)", withHardware(0), false},
@@ -86,7 +90,7 @@ func TestLowRAMNoticeShowsOn4GiBAndHidesOn16GiBAndUnknown(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			a, f, _ := ngTest(t, c.mod)
 			f.Frame(t, a)
-			if got := hasWidget(a, ramDismissID); got != c.shown {
+			if got := hasWidget(a, mainmenu.RAMDismissID); got != c.shown {
 				t.Fatalf("Got it button present = %v, want %v", got, c.shown)
 			}
 			joined := ""
@@ -103,12 +107,12 @@ func TestLowRAMNoticeShowsOn4GiBAndHidesOn16GiBAndUnknown(t *testing.T) {
 func TestLowRAMNoticeIsOnlyOnTheMainMenu(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(4*gib))
 	f.Frame(t, a)
-	if !hasWidget(a, ramDismissID) {
+	if !hasWidget(a, mainmenu.RAMDismissID) {
 		t.Fatal("the main menu shows the notice")
 	}
 	click(t, a, "menu.options")
 	f.Frame(t, a)
-	if hasWidget(a, ramDismissID) {
+	if hasWidget(a, mainmenu.RAMDismissID) {
 		t.Error("the Options screen must not carry the main-menu notice")
 	}
 }
@@ -116,8 +120,8 @@ func TestLowRAMNoticeIsOnlyOnTheMainMenu(t *testing.T) {
 func TestLowRAMNoticeDrawsItsTextInTheCard(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(4*gib))
 	f.Frame(t, a)
-	text := lowRAMText(4 * gib)
-	card := a.ramNoticeCard(a.sw, a.sh, text)
+	text := options.LowRAMText(4 * gib)
+	card := a.menuScreen.RAMNoticeCard(a.sw, a.sh, text)
 	if card.W <= 0 || card.H <= 0 {
 		t.Fatalf("card %+v", card)
 	}
@@ -134,28 +138,28 @@ func TestLowRAMNoticeDrawsItsTextInTheCard(t *testing.T) {
 
 func TestLowRAMNoticeStyledWithTheWarningToken(t *testing.T) {
 	t.Parallel()
-	if got := ramNoticeStyle().Color; got != uiWarning {
-		t.Errorf("notice text colour = %v, want uiWarning %v", got, uiWarning)
+	if got := mainmenu.RAMNoticeStyle().Color; got != uikit.Warning {
+		t.Errorf("notice text colour = %v, want uiWarning %v", got, uikit.Warning)
 	}
 }
 
 func TestLowRAMNoticeDoesNotCoverTheMenuButtons(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(4*gib))
 	f.Frame(t, a)
-	card := a.ramNoticeCard(a.sw, a.sh, lowRAMText(4*gib))
-	btns := a.mainMenuButtons(a.sw, a.sh)
+	card := a.menuScreen.RAMNoticeCard(a.sw, a.sh, options.LowRAMText(4*gib))
+	btns := a.menuScreen.Buttons(a.sw, a.sh)
 	if len(btns) < 7 {
 		t.Fatalf("%d menu buttons", len(btns))
 	}
 	for _, b := range btns {
-		if rectsOverlap(card, rect{X: b.X, Y: b.Y, W: b.W, H: b.H}) {
+		if rectsOverlap(card, gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}) {
 			t.Errorf("the notice %+v covers the %q button", card, b.ID)
 		}
 	}
 	if card.X < 0 || card.Y < 0 || card.Right() > float32(a.sw) || card.Bottom() > float32(a.sh) {
 		t.Errorf("the notice %+v leaves the %dx%d screen", card, a.sw, a.sh)
 	}
-	w, ok := a.uiSt().Find(ramDismissID)
+	w, ok := a.uiSt().Find(mainmenu.RAMDismissID)
 	if !ok {
 		t.Fatal("no Got it button")
 	}
@@ -164,7 +168,7 @@ func TestLowRAMNoticeDoesNotCoverTheMenuButtons(t *testing.T) {
 	}
 }
 
-func rectsOverlap(a, b rect) bool {
+func rectsOverlap(a, b gfx.Rect) bool {
 	return a.X < b.Right() && b.X < a.Right() && a.Y < b.Bottom() && b.Y < a.Bottom()
 }
 
@@ -173,7 +177,7 @@ func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
 	hooks := func(start config.Settings) func(*AppConfig) {
 		return func(c *AppConfig) {
 			c.Hardware = hwOf(4 * gib)
-			c.Settings = SettingsHooks{
+			c.Settings = options.Hooks{
 				Load: func() (config.Settings, error) { return start, nil },
 				Save: func(s config.Settings) error { saved = append(saved, s); return nil },
 			}
@@ -181,12 +185,12 @@ func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
 	}
 	a, f, _ := ngTest(t, hooks(config.Defaults()))
 	f.Frame(t, a)
-	if !hasWidget(a, ramDismissID) {
+	if !hasWidget(a, mainmenu.RAMDismissID) {
 		t.Fatal("a fresh settings file shows the notice")
 	}
-	press(t, a, f, ramDismissID)
+	press(t, a, f, mainmenu.RAMDismissID)
 	f.Frame(t, a)
-	if hasWidget(a, ramDismissID) {
+	if hasWidget(a, mainmenu.RAMDismissID) {
 		t.Fatal("Got it hides the notice")
 	}
 	if a.settings.Gameplay.RAMNoticeSeen != 4*gib {
@@ -205,7 +209,7 @@ func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
 	seen := saved[len(saved)-1]
 	b, g, _ := ngTest(t, hooks(seen))
 	g.Frame(t, b)
-	if hasWidget(b, ramDismissID) {
+	if hasWidget(b, mainmenu.RAMDismissID) {
 		t.Error("the same amount of RAM must stay dismissed on the next start")
 	}
 	// A different amount (a memory change, another machine) shows it again.
@@ -214,7 +218,7 @@ func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
 		cfg.Hardware = hwOf(3 * gib)
 	})
 	h.Frame(t, c)
-	if !hasWidget(c, ramDismissID) {
+	if !hasWidget(c, mainmenu.RAMDismissID) {
 		t.Error("a different amount of RAM brings the notice back")
 	}
 }
@@ -225,15 +229,15 @@ func TestLowRAMNoticeAtUIScales(t *testing.T) {
 			a, f, _ := ngTest(t, withHardware(4*gib))
 			f.Frame(t, a)
 			pw, ph := atLogical1280(t, a, f, s)
-			text := lowRAMText(4 * gib)
-			card := a.ramNoticeCard(a.sw, a.sh, text)
+			text := options.LowRAMText(4 * gib)
+			card := a.menuScreen.RAMNoticeCard(a.sw, a.sh, text)
 			ev := drawnText(t, a, pw, ph)
 			n := 0
 			for _, e := range ev {
 				if e.X < 0 || e.Y < 0 || e.X+e.W > float32(pw)+0.5 || e.Y+e.H > float32(ph)+0.5 {
 					t.Errorf("text %q at %g,%g %gx%g leaves the %dx%d screen", e.Text, e.X, e.Y, e.W, e.H, pw, ph)
 				}
-				if rectsOverlap(rect{X: e.X / float32(s), Y: e.Y / float32(s), W: e.W / float32(s), H: e.H / float32(s)}, card) {
+				if rectsOverlap(gfx.Rect{X: e.X / float32(s), Y: e.Y / float32(s), W: e.W / float32(s), H: e.H / float32(s)}, card) {
 					n++
 					if e.X/float32(s) < card.X-0.5 || (e.X+e.W)/float32(s) > card.Right()+0.5 {
 						t.Errorf("notice line %q runs out of its card sideways", e.Text)
@@ -244,21 +248,21 @@ func TestLowRAMNoticeAtUIScales(t *testing.T) {
 				t.Error("no notice text found in the card")
 			}
 			for _, h := range a.layoutHits(a.sw, a.sh) {
-				if h.ID == ramDismissID && (h.X < 0 || h.Y < 0 || h.X+h.W > float32(a.sw) || h.Y+h.H > float32(a.sh)) {
+				if h.ID == mainmenu.RAMDismissID && (h.X < 0 || h.Y < 0 || h.X+h.W > float32(a.sw) || h.Y+h.H > float32(a.sh)) {
 					t.Errorf("Got it %+v is outside the logical screen", h)
 				}
 			}
 			// The hit is reachable: the cursor over its centre makes it the hot widget.
-			var btn button
+			var btn uikit.Button
 			for _, h := range a.layoutHits(a.sw, a.sh) {
-				if h.ID == ramDismissID {
+				if h.ID == mainmenu.RAMDismissID {
 					btn = h
 				}
 			}
 			f.Cur.Mx, f.Cur.My = int((btn.X+btn.W/2)*float32(s)), int((btn.Y+btn.H/2)*float32(s))
 			f.Frame(t, a)
 			f.Frame(t, a)
-			if a.uiSt().Hot != ramDismissID {
+			if a.uiSt().Hot != mainmenu.RAMDismissID {
 				t.Errorf("the cursor over Got it hits %q", a.uiSt().Hot)
 			}
 		})
@@ -268,21 +272,21 @@ func TestLowRAMNoticeAtUIScales(t *testing.T) {
 // ---- the map-size warnings ---------------------------------------------------
 
 // sizeNoteTotal is a machine whose 70% line falls between 350 and 400.
-func sizeNoteTotal() uint64 { return estimatedRAM(375) * 10 / 7 }
+func sizeNoteTotal() uint64 { return options.EstimatedRAM(375) * 10 / 7 }
 
 // sizeRows is, per map size option, the radio row's rectangle and the text
 // runs drawn on it (physical pixels, scale 1).
-func sizeRows(t *testing.T, a *App) (opts []game.MapSizeView, rows []rect, drawn [][]traceEvent) {
+func sizeRows(t *testing.T, a *App) (opts []game.MapSizeView, rows []gfx.Rect, drawn [][]gfx.TraceEvent) {
 	t.Helper()
-	opts = mapSizeOptions()
+	opts = wizardpkg.MapSizeOptions()
 	ev := drawnText(t, a, a.sw, a.sh)
 	for i := range opts {
-		w, ok := a.uiSt().Find(optID("land.mapsize", i))
+		w, ok := a.uiSt().Find(uikit.OptID("land.mapsize", i))
 		if !ok {
 			t.Fatalf("no size row %d", i)
 		}
 		rows = append(rows, w.R)
-		var on []traceEvent
+		var on []gfx.TraceEvent
 		for _, e := range ev {
 			if e.Y >= w.R.Y && e.Y+e.H <= w.R.Bottom()+0.5 && e.X >= w.R.X && e.X+e.W <= w.R.Right()+0.5 {
 				on = append(on, e)
@@ -309,7 +313,7 @@ func TestSizePickerWarnsOnlyForSizesOverSeventyPercent(t *testing.T) {
 	opts, _, drawn := sizeRows(t, a)
 	warned := 0
 	for i, o := range opts {
-		want := mapSizeNote(o.Side, total)
+		want := options.MapSizeNote(o.Side, total)
 		got := ""
 		for _, e := range drawn[i] {
 			if strings.HasPrefix(e.Text, "Needs about") || strings.HasPrefix(e.Text, "Large map") {
@@ -339,7 +343,7 @@ func TestSizeWarningsNameTheRightNumbers(t *testing.T) {
 		if o.Side != 500 {
 			continue
 		}
-		want := fmt.Sprintf("Needs about %d GB; this computer has %d GB.", gbCeil(estimatedRAM(500)), gbRound(total))
+		want := fmt.Sprintf("Needs about %d GB; this computer has %d GB.", options.GBCeil(options.EstimatedRAM(500)), options.GBRound(total))
 		found := false
 		for _, e := range drawn[i] {
 			found = found || e.Text == want
@@ -356,15 +360,15 @@ func TestWarnedSizesStaySelectable(t *testing.T) {
 	toLanding(t, a)
 	f.Frame(t, a)
 	openAdvanced(t, a, f)
-	for i, o := range mapSizeOptions() {
-		if mapSizeNote(o.Side, total) == "" || !o.Enabled {
+	for i, o := range wizardpkg.MapSizeOptions() {
+		if options.MapSizeNote(o.Side, total) == "" || !o.Enabled {
 			continue
 		}
-		w, ok := a.uiSt().Find(optID("land.mapsize", i))
+		w, ok := a.uiSt().Find(uikit.OptID("land.mapsize", i))
 		if !ok || w.Disabled {
 			t.Fatalf("%d: warned size row present=%v disabled=%v", o.Side, ok, w.Disabled)
 		}
-		press(t, a, f, optID("land.mapsize", i))
+		press(t, a, f, uikit.OptID("land.mapsize", i))
 		if a.ng.MapSize != o.Side {
 			t.Errorf("clicking %d x %d left the map at %d", o.Side, o.Side, a.ng.MapSize)
 		}
@@ -422,9 +426,9 @@ func TestSizeWarningsAtUIScales(t *testing.T) {
 					continue
 				}
 				found++
-				var row rect
-				for i := range mapSizeOptions() {
-					w, _ := a.uiSt().Find(optID("land.mapsize", i))
+				var row gfx.Rect
+				for i := range wizardpkg.MapSizeOptions() {
+					w, _ := a.uiSt().Find(uikit.OptID("land.mapsize", i))
 					if e.Y >= w.R.Y*float32(s)-0.5 && e.Y+e.H <= w.R.Bottom()*float32(s)+0.5 {
 						row = w.R
 					}
@@ -437,9 +441,9 @@ func TestSizeWarningsAtUIScales(t *testing.T) {
 					t.Errorf("warning %q (%g..%g) leaves its row %+v", e.Text, e.X, e.X+e.W, row)
 				}
 				// It must not run into the size label at the row's left.
-				me := rect{X: e.X, Y: e.Y, W: e.W, H: e.H}
+				me := gfx.Rect{X: e.X, Y: e.Y, W: e.W, H: e.H}
 				for _, l := range ev {
-					if strings.Contains(l.Text, " x ") && rectsOverlap(me, rect{X: l.X, Y: l.Y, W: l.W, H: l.H}) {
+					if strings.Contains(l.Text, " x ") && rectsOverlap(me, gfx.Rect{X: l.X, Y: l.Y, W: l.W, H: l.H}) {
 						t.Errorf("warning %q overlaps the label %q", e.Text, l.Text)
 					}
 				}
@@ -467,7 +471,7 @@ func TestTileInfoUsesTheSameRule(t *testing.T) {
 		side  int
 		total uint64
 	}{{300, total}, {400, total}, {500, total}, {300, 0}, {349, 0}, {350, 0}, {500, 0}, {500, 16 * gib}} {
-		want := mapSizeNote(c.side, c.total)
+		want := options.MapSizeNote(c.side, c.total)
 		warns := buildTileInfo(p, land, c.side, c.total).Warnings
 		for _, w := range warns {
 			if strings.HasPrefix(w, "Needs about") || strings.HasPrefix(w, "Large map") {
@@ -498,7 +502,7 @@ func TestSitePanelShowsTheRAMWarning(t *testing.T) {
 	a.ng.MapSize = 500
 	f.Frame(t, a)
 	f.Frame(t, a)
-	want := mapSizeNote(500, total)
+	want := options.MapSizeNote(500, total)
 	found := false
 	for _, e := range drawnText(t, a, a.sw, a.sh) {
 		found = found || e.Text == want

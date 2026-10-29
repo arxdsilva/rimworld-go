@@ -3,6 +3,9 @@ package ebiten
 // journey_orders_test.go: orders, draft and formation journeys (QA-001).
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -25,13 +28,13 @@ func TestJourneyOrdersEmergencyTend(t *testing.T) {
 	j.g.InjureCut(hurt.ID, 6)
 	j.update(1)
 	d := j.pawn(uint64(doc.ID))
-	j.clickTile(d.X, d.Y, mbLeft, 0)
+	j.clickTile(d.X, d.Y, inputframe.Left, 0)
 	j.key("R", 0)
 	if !j.pawn(uint64(doc.ID)).Drafted {
 		t.Fatal("R did not draft the doctor")
 	}
 	h := j.pawn(uint64(hurt.ID))
-	j.clickTile(h.X, h.Y, mbRight, 0)
+	j.clickTile(h.X, h.Y, inputframe.Right, 0)
 	if a := j.a; a.ord.Form.On {
 		t.Fatal("the right-click on the wounded colonist started a formation drag")
 	}
@@ -56,7 +59,7 @@ func ordPick(j *journey, i int) {
 		}
 	}
 	x, y := at[i][0], at[i][1]
-	j.clickTile(x, y, mbLeft, 0)
+	j.clickTile(x, y, inputframe.Left, 0)
 	j.draw(2)
 	if !j.a.renderer.HasSelect() {
 		j.t.Fatalf("clicking (%d, %d) selected no colonist", x, y)
@@ -108,7 +111,7 @@ func TestJourneyOrdersDraftedRightClickMovesAndArrives(t *testing.T) {
 	id := ordColonists(j)[0]
 	ordPick(j, 0)
 	j.key("R", 0)
-	j.clickTile(14, 5, mbRight, 0)
+	j.clickTile(14, 5, inputframe.Right, 0)
 	c, ok := j.lastCmd(command.MovePawn)
 	if !ok || c.Pawn != id || c.X != 14 || c.Y != 5 || c.Queue {
 		t.Fatalf("right click sent %+v (%v), want MovePawn to (14, 5)", c, ok)
@@ -124,8 +127,8 @@ func TestJourneyOrdersShiftQueuesMove(t *testing.T) {
 	j := newJourney(t)
 	ordPick(j, 0)
 	j.key("R", 0)
-	j.clickTile(12, 4, mbRight, 0)
-	j.clickTile(14, 6, mbRight, input.ModShift)
+	j.clickTile(12, 4, inputframe.Right, 0)
+	j.clickTile(14, 6, inputframe.Right, input.ModShift)
 	moves := j.cmdsOf(command.MovePawn)
 	if len(moves) != 2 || moves[0].Queue || !moves[1].Queue || moves[1].X != 14 || moves[1].Y != 6 {
 		t.Fatalf("moves %+v, want a plain move then a queued one to (14, 6)", moves)
@@ -137,15 +140,15 @@ func TestJourneyOrdersShiftQueuesMove(t *testing.T) {
 func TestJourneyOrdersFormationDrag(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 3}, [2]int{9, 3}, [2]int{10, 3}))
-	j.dragTiles(mbLeft, 7, 2, 11, 6, 0)
-	if !j.a.grouped() {
+	j.dragTiles(inputframe.Left, 7, 2, 11, 6, 0)
+	if !j.a.sel.Grouped() {
 		t.Fatal("the box select did not group the three colonists")
 	}
 	j.key("R", 0)
 	if n := len(j.cmdsOf(command.DraftPawn)); n != 3 {
 		t.Fatalf("R drafted %d colonists, want 3", n)
 	}
-	j.dragTiles(mbRight, 8, 7, 14, 7, 0)
+	j.dragTiles(inputframe.Right, 8, 7, 14, 7, 0)
 	moves := j.cmdsOf(command.MovePawn)
 	if len(moves) != 3 {
 		t.Fatalf("the drag sent %d moves, want 3", len(moves))
@@ -170,8 +173,8 @@ func TestJourneyOrdersUndraftedMenuGoHere(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	ordPick(j, 0)
-	j.clickTile(13, 6, mbRight, 0)
-	if len(j.a.floatButtons()) == 0 {
+	j.clickTile(13, 6, inputframe.Right, 0)
+	if len(j.a.ord.FloatButtons()) == 0 {
 		t.Fatal("no order menu opened")
 	}
 	if len(j.cmds) != 0 {
@@ -182,7 +185,7 @@ func TestJourneyOrdersUndraftedMenuGoHere(t *testing.T) {
 	if !ok || c.X != 13 || c.Y != 6 {
 		t.Fatalf("Go here sent %+v (%v), want MovePawn to (13, 6)", c, ok)
 	}
-	if n := len(j.a.floatButtons()); n != 0 {
+	if n := len(j.a.ord.FloatButtons()); n != 0 {
 		t.Fatalf("%d menu rows still open after the pick", n)
 	}
 }
@@ -195,7 +198,7 @@ func TestJourneyOrdersEquipFromMenu(t *testing.T) {
 		t.Fatal(err)
 	}
 	ordPick(j, 0)
-	j.clickTile(12, 4, mbRight, 0)
+	j.clickTile(12, 4, inputframe.Right, 0)
 	j.pick("Equip")
 	c, ok := j.lastCmd(command.Prioritize)
 	if !ok || c.Order != command.OrderEquip || c.X != 12 || c.Y != 4 {
@@ -219,24 +222,24 @@ func TestJourneyOrdersHaulHuntMenu(t *testing.T) {
 	j.key("Tab", 0) // a stockpile for the wood to go to
 	j.clickID("arch.cat.zones")
 	j.clickID("arch.tool.stockpile")
-	j.dragTiles(mbLeft, 16, 6, 17, 7, 0)
+	j.dragTiles(inputframe.Left, 16, 6, 17, 7, 0)
 	j.key("Escape", 0)
 	j.key("Escape", 0)
 	j.settle()
 	ordPick(j, 0)
-	j.clickTile(12, 5, mbRight, 0)
+	j.clickTile(12, 5, inputframe.Right, 0)
 	j.pick("Haul")
 	if c, ok := j.lastCmd(command.Prioritize); !ok || c.Order != command.OrderHaul || c.X != 12 || c.Y != 5 {
 		t.Fatalf("Haul sent %+v (%v), want Prioritize OrderHaul at (12, 5)", c, ok)
 	}
 	j.reset()
-	j.clickTile(9, 6, mbRight, 0)
+	j.clickTile(9, 6, inputframe.Right, 0)
 	j.pick("Equip")
 	j.key("Digit1", 0)
 	j.until(func() bool { return j.pawn(ordColonists(j)[0]).Weapon == "rifle" }, 900)
 	j.key("Space", 0)
 	j.reset()
-	j.clickTile(14, 6, mbRight, 0)
+	j.clickTile(14, 6, inputframe.Right, 0)
 	j.pick("Hunt")
 	if c, ok := j.lastCmd(command.Prioritize); !ok || c.Order != command.OrderHunt || c.X != 14 || c.Y != 6 {
 		t.Fatalf("Hunt sent %+v (%v), want Prioritize OrderHunt at (14, 6)", c, ok)
@@ -252,8 +255,8 @@ func TestJourneyOrdersDisabledEntryHintOnly(t *testing.T) {
 		t.Fatal("no wall built")
 	}
 	ordPick(j, 0)
-	j.clickTile(13, 5, mbRight, 0)
-	rows := len(j.a.floatButtons())
+	j.clickTile(13, 5, inputframe.Right, 0)
+	rows := len(j.a.ord.FloatButtons())
 	if rows == 0 {
 		t.Fatal("no menu opened on the wall")
 	}
@@ -264,7 +267,7 @@ func TestJourneyOrdersDisabledEntryHintOnly(t *testing.T) {
 	if j.a.hint == "" {
 		t.Fatal("a disabled row gave no reason")
 	}
-	if n := len(j.a.floatButtons()); n != rows {
+	if n := len(j.a.ord.FloatButtons()); n != rows {
 		t.Fatalf("menu has %d rows after the pick, want it still open with %d", n, rows)
 	}
 }
@@ -276,8 +279,8 @@ func TestJourneyOrdersClearOrders(t *testing.T) {
 	id := ordColonists(j)[0]
 	ordPick(j, 0)
 	j.key("R", 0)
-	j.clickTile(13, 6, mbRight, 0)
-	j.clickTile(15, 6, mbRight, input.ModShift)
+	j.clickTile(13, 6, inputframe.Right, 0)
+	j.clickTile(15, 6, inputframe.Right, input.ModShift)
 	j.tick(1)
 	j.reset()
 	if !j.clickID("pawn.clearorders") {
@@ -300,11 +303,11 @@ func TestJourneyOrdersRightClickCancelsToolNoOrder(t *testing.T) {
 	if j.a.arch.ToolID == "" {
 		t.Fatal("the wall tool did not arm")
 	}
-	j.clickTile(14, 5, mbRight, 0)
+	j.clickTile(14, 5, inputframe.Right, 0)
 	if j.a.arch.ToolID != "" {
 		t.Fatalf("tool %q still armed after the right click", j.a.arch.ToolID)
 	}
-	if n := len(j.cmdsOf(command.MovePawn)); n != 0 || len(j.a.floatButtons()) != 0 {
+	if n := len(j.cmdsOf(command.MovePawn)); n != 0 || len(j.a.ord.FloatButtons()) != 0 {
 		t.Fatalf("the right click ordered %d moves / opened a menu", n)
 	}
 }
@@ -320,10 +323,10 @@ func TestJourneyOrdersGizmoKeys(t *testing.T) {
 		j := newJourney(t)
 		id := ordColonists(j)[0]
 		ordPick(j, 0)
-		j.a.insp.TestCommands = func(k selKind, _ entity.EntityID) []cmdButton {
-			cells := make([]cmdButton, len(keys))
+		j.a.insp.TestCommands = func(k selectionpkg.Kind, _ entity.EntityID) []inspector.Button {
+			cells := make([]inspector.Button, len(keys))
 			for i := range cells {
-				cells[i] = cmdButton{ID: "cmd.test", Label: keys[i],
+				cells[i] = inspector.Button{ID: "cmd.test", Label: keys[i],
 					Cmds: []command.Command{{Kind: command.ClearOrders, Pawn: id, X: i}}}
 			}
 			cells[4].Disabled, cells[4].Reason, cells[4].Cmds = true, "not now", nil
@@ -351,9 +354,9 @@ func TestJourneyOrdersGizmoKeys(t *testing.T) {
 		if !j.g.BuildNow("bed", "wood", "n", 10, 4) {
 			t.Fatal("no bed built")
 		}
-		j.clickTile(10, 4, mbLeft, 0)
+		j.clickTile(10, 4, inputframe.Left, 0)
 		j.draw(2)
-		n := len(j.a.selectionCommands())
+		n := len(j.a.insp.Commands().SelectionCommands())
 		if n < 2 || n >= len(keys) {
 			t.Fatalf("a bed has %d cells, want a few", n)
 		}

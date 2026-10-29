@@ -5,6 +5,10 @@ import (
 	"image"
 	"image/color"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -15,16 +19,16 @@ import (
 // grassTestArt is a catalog with soil tiles and the PLAY-010 grass tuft
 // keys, each tuft a small opaque block standing on the canvas bottom
 // third (so the atlas finds a real alpha box).
-func grassTestArt() *artCatalog {
+func grassTestArt() *artpkg.Catalog {
 	c := envArt("terrain/soil_00", "terrain/soil_01", "terrain/soil_02", "terrain/soil_03", "terrain/stone_00")
-	tuft := func(h int) *artSprite {
+	tuft := func(h int) *artpkg.Sprite {
 		pix := image.NewNRGBA(image.Rect(0, 0, 40, 46))
 		for y := 30 - h; y < 30; y++ {
 			for x := 14; x < 26; x++ {
 				pix.SetNRGBA(x, y, color.NRGBA{112, 128, 82, 255})
 			}
 		}
-		return &artSprite{Meta: artMeta{Canvas: [2]int{160, 184}, Origin: [2]float64{16, 40}}, Pix: pix}
+		return &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{160, 184}, Origin: [2]float64{16, 40}}, Pix: pix}
 	}
 	for v := 0; v < 6; v++ {
 		c.Sprites[fmt.Sprintf("plant/grass_short_v%d", v)] = tuft(10)
@@ -66,7 +70,7 @@ func grassRenderer(w game.WorldView, mw, mh int) (*Renderer, *stubSim) {
 // per tile on a screen showing the whole map with a one-tile margin (so
 // no copy is culled), and returns its quads.
 func batchAt(r *Renderer, mw, mh int, tile float64, limit int) int {
-	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/TileSize, -tile, -tile
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/camerapkg.TileSize, -tile, -tile
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
@@ -82,14 +86,14 @@ func batchAt(r *Renderer, mw, mh int, tile float64, limit int) int {
 func TestGrassCopiesSpillPastEdge(t *testing.T) {
 	t.Parallel()
 	var maxSpill float64
-	var buf []tuftCopy
+	var buf []env.TuftCopy
 	for y := 0; y < 40; y++ {
 		for x := 0; x < 40; x++ {
-			buf = grassCopies(x, y, 100, 9, x%3 == 0, buf[:0])
+			buf = env.GrassCopies(x, y, 100, 9, x%3 == 0, buf[:0])
 			for _, c := range buf {
 				spill := max(-c.Dx, c.Dx-1, -c.Dy, c.Dy-1)
-				if spill > grassEdgeSpill+1e-9 {
-					t.Fatalf("tile (%d,%d): copy at (%.3f,%.3f) spills %.3f > %.2f", x, y, c.Dx, c.Dy, spill, grassEdgeSpill)
+				if spill > env.GrassEdgeSpill+1e-9 {
+					t.Fatalf("tile (%d,%d): copy at (%.3f,%.3f) spills %.3f > %.2f", x, y, c.Dx, c.Dy, spill, env.GrassEdgeSpill)
 				}
 				maxSpill = max(maxSpill, spill)
 			}
@@ -101,8 +105,8 @@ func TestGrassCopiesSpillPastEdge(t *testing.T) {
 	// the centre copy stays within ±0.18 of the tile centre
 	for y := 0; y < 20; y++ {
 		for x := 0; x < 20; x++ {
-			c := grassCopies(x, y, 10, 9, false, nil)[0] // one copy: the centre cell
-			if math.Abs(c.Dx-0.5) > grassCellJitter+1e-9 || math.Abs(c.Dy-0.5) > grassCellJitter+1e-9 {
+			c := env.GrassCopies(x, y, 10, 9, false, nil)[0] // one copy: the centre cell
+			if math.Abs(c.Dx-0.5) > env.GrassCellJitter+1e-9 || math.Abs(c.Dy-0.5) > env.GrassCellJitter+1e-9 {
 				t.Fatalf("centre copy at (%.3f,%.3f)", c.Dx, c.Dy)
 			}
 		}
@@ -110,7 +114,7 @@ func TestGrassCopiesSpillPastEdge(t *testing.T) {
 }
 
 func terrainCodeOf(name string) uint8 {
-	for i, n := range terrainNames {
+	for i, n := range worldpkg.TerrainNames {
 		if n == name {
 			return uint8(i)
 		}
@@ -129,7 +133,7 @@ func TestGrassBatchIsOneDraw(t *testing.T) {
 	var order []string
 	ground := map[*ebiten.Image]bool{}
 	for v := 0; v < 4; v++ {
-		ground[r.art.Image(artKey("terrain", "soil", v), color.NRGBA{})] = true
+		ground[r.art.Image(env.ArtKey("terrain", "soil", v), color.NRGBA{})] = true
 	}
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) {
 		if ground[img] {
@@ -285,7 +289,7 @@ func TestChunkVersionFollowsGrassGrowth(t *testing.T) {
 // present. PLAY-010 budget: ≤ 1.0 ms.
 func BenchmarkGrassBatch(b *testing.B) {
 	art := grassTestArt()
-	if root, err := LocateArt(); err == nil {
+	if root, err := artpkg.Locate(); err == nil {
 		if c, err := loadArtCatalog(root); err == nil {
 			art = c
 		}

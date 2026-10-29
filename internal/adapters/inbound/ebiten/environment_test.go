@@ -3,6 +3,13 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
 	"testing"
 
@@ -17,15 +24,15 @@ import (
 // world pipeline's (lod.go) until the two share one table.
 func TestEnvTiersMatchLOD(t *testing.T) {
 	t.Parallel()
-	if env.LiveMin != lodLiveMin || env.ChunkMin != lodChunkMin || env.DecalMinTile != decalMinTile || env.VisPad != visPad {
+	if env.LiveMin != worldpkg.LiveMin || env.ChunkMin != worldpkg.ChunkMin || env.DecalMinTile != worldpkg.DecalMinTile || env.VisPad != worldpkg.VisPad {
 		t.Fatalf("env tiers %v/%v/%v/%v, lod.go %v/%v/%v/%v", env.LiveMin, env.ChunkMin, env.DecalMinTile, env.VisPad,
-			lodLiveMin, lodChunkMin, decalMinTile, visPad)
+			worldpkg.LiveMin, worldpkg.ChunkMin, worldpkg.DecalMinTile, worldpkg.VisPad)
 	}
-	if env.SoilVariants != soilVariants || env.GrassEvery != grassEvery {
+	if env.SoilVariants != worldpkg.SoilVariants || env.GrassEvery != worldpkg.GrassEvery {
 		t.Fatal("env's terrain variants or grass spacing differ from draw_art.go's")
 	}
 	for _, tile := range []float64{4, 16, 24, 32, 48, 96} {
-		if got, want := wetPxFor(tile), map[lodTier]int{lodLive: 8, lodChunk: 4, lodMap: 2}[lodFor(tile)]; got != want {
+		if got, want := envpkg.WetPxFor(tile), map[worldpkg.Tier]int{worldpkg.Live: 8, worldpkg.Chunk: 4, worldpkg.Map: 2}[worldpkg.TierFor(tile)]; got != want {
 			t.Fatalf("tile %v: wet texels %d, lod tier wants %d", tile, got, want)
 		}
 	}
@@ -60,11 +67,11 @@ func envRenderer(w game.WorldView) *Renderer {
 // leanEast is how far a pose tips its top east, in radians. GeoM.Skew
 // shears x by tan(skew)*y about the pivot; above the pivot y < 0, so a
 // negative skew moves the top east.
-func leanEast(ps pose) float64 { return -ps.Skew }
+func leanEast(ps motionpkg.Pose) float64 { return -ps.Skew }
 
 // envArt is a catalog holding just these sprite keys.
-func envArt(keys ...string) *artCatalog {
-	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
+func envArt(keys ...string) *artpkg.Catalog {
+	c := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{}, Tinted: map[artpkg.TintKey]*ebiten.Image{}}
 	for _, k := range keys {
 		c.Sprites[k] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
 	}
@@ -153,12 +160,12 @@ func TestGustFrontsTravelDownwind(t *testing.T) {
 
 // --- plant lean ---------------------------------------------------------------
 
-var leanLimit = map[plantKind]float64{kindGrass: 0.35, kindCrop: 0.22, kindBush: 0.12, kindTree: 0.06 + 0.02}
+var leanLimit = map[envpkg.PlantKind]float64{envpkg.KindGrass: 0.35, envpkg.KindCrop: 0.22, envpkg.KindBush: 0.12, envpkg.KindTree: 0.06 + 0.02}
 
 func TestPlantLeanBoundedPerKind(t *testing.T) {
 	t.Parallel()
-	amounts := map[plantKind]float64{kindGrass: 0.05, kindCrop: 0.07, kindBush: 0.035, kindTree: 0.022}
-	peak := map[plantKind]float64{}
+	amounts := map[envpkg.PlantKind]float64{envpkg.KindGrass: 0.05, envpkg.KindCrop: 0.07, envpkg.KindBush: 0.035, envpkg.KindTree: 0.022}
+	peak := map[envpkg.PlantKind]float64{}
 	for _, wind := range [][2]float64{{4.5, 0}, {-3.2, 3.2}} {
 		r := envRenderer(game.WorldView{Weather: "storm", WeatherIntensity: 1, WindX: wind[0], WindY: wind[1]})
 		for f := 0; f < 400; f += 5 {
@@ -174,7 +181,7 @@ func TestPlantLeanBoundedPerKind(t *testing.T) {
 			}
 		}
 		// a creature shoving hard still cannot break the limit
-		r.env.Springs[envTileKey(4, 3)] = &envSpring{Cx: 50, Cy: -50, Vx: 90}
+		r.env.Springs[envpkg.TileKey(4, 3)] = &envpkg.Spring{Cx: 50, Cy: -50, Vx: 90}
 		for k, lim := range leanLimit {
 			if ps := r.plantPose(4, 3, k, amounts[k], 1); math.Abs(ps.Skew) > lim+1e-9 || ps.Sy <= 0 {
 				t.Fatalf("kind %d shoved: skew %.3f sy %.3f", k, ps.Skew, ps.Sy)
@@ -186,7 +193,7 @@ func TestPlantLeanBoundedPerKind(t *testing.T) {
 			t.Fatalf("kind %d peaks at %.3f, under 40%% of its %.2f limit in a storm", k, peak[k], lim)
 		}
 	}
-	if !(peak[kindGrass] > peak[kindCrop] && peak[kindCrop] > peak[kindBush] && peak[kindBush] > peak[kindTree]) {
+	if !(peak[envpkg.KindGrass] > peak[envpkg.KindCrop] && peak[envpkg.KindCrop] > peak[envpkg.KindBush] && peak[envpkg.KindBush] > peak[envpkg.KindTree]) {
 		t.Fatalf("stiffer plants should lean less: %v", peak)
 	}
 }
@@ -197,7 +204,7 @@ func TestGrassSways(t *testing.T) {
 	lo, hi := math.Inf(1), math.Inf(-1)
 	for f := 0; f < 600; f++ {
 		r.present = uint64(f)
-		l := leanEast(r.plantPose(10, 10, kindGrass, 0.05, 1))
+		l := leanEast(r.plantPose(10, 10, envpkg.KindGrass, 0.05, 1))
 		lo, hi = math.Min(lo, l), math.Max(hi, l)
 	}
 	if hi-lo < 0.03 {
@@ -210,7 +217,7 @@ func TestGrassSways(t *testing.T) {
 	r.present = 200
 	var xs []float64
 	for x := 0; x < 24; x++ {
-		xs = append(xs, leanEast(r.plantPose(x, 10, kindGrass, 0.05, 1)))
+		xs = append(xs, leanEast(r.plantPose(x, 10, envpkg.KindGrass, 0.05, 1)))
 	}
 	if _, cv := meanCV(xs); cv < 0.05 {
 		t.Fatalf("tufts across the field lean in lockstep (cv %.4f)", cv)
@@ -219,7 +226,7 @@ func TestGrassSways(t *testing.T) {
 	calm := envRenderer(windy(0, 0))
 	for f := 0; f < 300; f++ {
 		calm.present = uint64(f)
-		if l := math.Abs(leanEast(calm.plantPose(10, 10, kindGrass, 0.05, 1))); l > 0.03 {
+		if l := math.Abs(leanEast(calm.plantPose(10, 10, envpkg.KindGrass, 0.05, 1))); l > 0.03 {
 			t.Fatalf("grass leans %.3f in still air", l)
 		}
 	}
@@ -230,8 +237,8 @@ func TestGrassSways(t *testing.T) {
 // walkPast runs a walker along path and the same world without it, frame by
 // frame, handing each frame's walker motion and the pose difference at
 // (px, py).
-func walkPast(t *testing.T, w game.WorldView, path []cell, px, py int, kind plantKind, frames int,
-	fn func(f int, m moveState, d pose, with, ref *Renderer)) {
+func walkPast(t *testing.T, w game.WorldView, path []cell, px, py int, kind envpkg.PlantKind, frames int,
+	fn func(f int, m motionpkg.MoveState, d motionpkg.Pose, with, ref *Renderer)) {
 	t.Helper()
 	with := New(newEnvSim(w, &scriptMover{id: 1, path: path, start: 10}))
 	ref := New(newEnvSim(w))
@@ -239,7 +246,7 @@ func walkPast(t *testing.T, w game.WorldView, path []cell, px, py int, kind plan
 		with.advance()
 		ref.advance()
 		a, b := with.plantPose(px, py, kind, 0.055, 1), ref.plantPose(px, py, kind, 0.055, 1)
-		fn(f, with.pawnMotion(1), pose{Skew: a.Skew - b.Skew, Sy: a.Sy - b.Sy}, with, ref)
+		fn(f, with.pawnMotion(1), motionpkg.Pose{Skew: a.Skew - b.Skew, Sy: a.Sy - b.Sy}, with, ref)
 	}
 }
 
@@ -247,17 +254,17 @@ func TestContactBendsAwayFromMover(t *testing.T) {
 	t.Parallel()
 	w := windy(0, 0)
 	east, west, south := 0.0, 0.0, 0.0
-	walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, kindCrop, 200, func(_ int, m moveState, d pose, _, _ *Renderer) {
+	walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, envpkg.KindCrop, 200, func(_ int, m motionpkg.MoveState, d motionpkg.Pose, _, _ *Renderer) {
 		if m.X > 6.4 && m.X < 7 && math.Abs(m.Y-5) < 0.01 {
 			east = math.Max(east, leanEast(d))
 		}
 	})
-	walkPast(t, w, line(12, 5, -1, 0, 10), 7, 5, kindCrop, 200, func(_ int, m moveState, d pose, _, _ *Renderer) {
+	walkPast(t, w, line(12, 5, -1, 0, 10), 7, 5, envpkg.KindCrop, 200, func(_ int, m motionpkg.MoveState, d motionpkg.Pose, _, _ *Renderer) {
 		if m.X > 7 && m.X < 7.6 {
 			west = math.Max(west, -leanEast(d))
 		}
 	})
-	walkPast(t, w, line(7, 1, 0, 1, 10), 7, 5, kindCrop, 200, func(_ int, m moveState, d pose, _, _ *Renderer) {
+	walkPast(t, w, line(7, 1, 0, 1, 10), 7, 5, envpkg.KindCrop, 200, func(_ int, m motionpkg.MoveState, d motionpkg.Pose, _, _ *Renderer) {
 		if m.Y > 4.4 && m.Y < 5 {
 			south = math.Max(south, -d.Sy) // leaning south shortens it on screen
 		}
@@ -274,9 +281,9 @@ func TestContactSpringsBack(t *testing.T) {
 	var lean []float64
 	last := -1
 	var with *Renderer
-	walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, kindCrop, 420, func(f int, m moveState, d pose, r, _ *Renderer) {
+	walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, envpkg.KindCrop, 420, func(f int, m motionpkg.MoveState, d motionpkg.Pose, r, _ *Renderer) {
 		lean = append(lean, math.Abs(d.Skew))
-		if math.Hypot(m.X-7, m.Y-5) < contactRadius {
+		if math.Hypot(m.X-7, m.Y-5) < envpkg.ContactRadius {
 			last = f
 		}
 		with = r
@@ -319,7 +326,7 @@ func TestContactIgnoresFarAndStillCreatures(t *testing.T) {
 				t.Fatalf("frame %d: contact spring on row %d, away from the only walker", f, y)
 			}
 		}
-		if a, b := with.plantPose(7, 5, kindCrop, 0.055, 1), ref.plantPose(7, 5, kindCrop, 0.055, 1); a != b {
+		if a, b := with.plantPose(7, 5, envpkg.KindCrop, 0.055, 1), ref.plantPose(7, 5, envpkg.KindCrop, 0.055, 1); a != b {
 			t.Fatalf("frame %d: a standing creature moved the plant under it: %+v vs %+v", f, a, b)
 		}
 	}
@@ -332,11 +339,11 @@ func TestTreeShakesWhenBrushed(t *testing.T) {
 		w.Season = season
 		w.Plants = []game.PlantView{{ID: 50, X: 7, Y: 5, Species: "tree", Growth: 100}}
 		shake := 0.0
-		walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, kindTree, 200, func(_ int, _ moveState, d pose, _, _ *Renderer) {
+		walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, envpkg.KindTree, 200, func(_ int, _ motionpkg.MoveState, d motionpkg.Pose, _, _ *Renderer) {
 			shake = math.Max(shake, math.Abs(d.Skew))
 		})
 		t.Logf("%s: shake %.4f", season, shake)
-		if shake < 0.01 || shake > leanLimit[kindTree] {
+		if shake < 0.01 || shake > leanLimit[envpkg.KindTree] {
 			t.Fatalf("%s: brushed tree shake %.4f", season, shake)
 		}
 	}
@@ -351,7 +358,7 @@ func TestTreeShakesWhenBrushed(t *testing.T) {
 			r.advance()
 			n := 0
 			for _, p := range r.parts {
-				if p.Kind == partLeaf {
+				if p.Kind == creaturepkg.PartLeaf {
 					n++
 				}
 			}
@@ -374,7 +381,7 @@ func treeAt(t *testing.T, species string) (game.PlantView, string) {
 	t.Helper()
 	for i := 0; i < 400; i++ {
 		p := game.PlantView{X: i % 20, Y: i / 20, Species: "tree", Growth: 100}
-		if k, _ := plantSprite(p); strings.HasPrefix(k, "plant/tree_"+species+"_") {
+		if k, _ := worldpkg.PlantSprite(p); strings.HasPrefix(k, "plant/tree_"+species+"_") {
 			return p, k
 		}
 	}
@@ -387,7 +394,7 @@ func TestSeasonalTreeKey(t *testing.T) {
 	var all []string
 	for _, sp := range []string{"oak", "birch", "pine"} {
 		for v := 0; v < 3; v++ {
-			k := artKey("plant", "tree_"+sp, v)
+			k := envpkg.ArtKey("plant", "tree_"+sp, v)
 			all = append(all, k)
 			if sp != "pine" {
 				all = append(all, k+"_autumn", k+"_bare")
@@ -426,7 +433,7 @@ func TestSeasonalTreeKey(t *testing.T) {
 	if again := r.seasonKey(oak, season("Fall")); again != oak {
 		t.Fatalf("cached key changed: %s then %s", oak, again)
 	}
-	if k, _ := plantSprite(p); k != oak {
+	if k, _ := worldpkg.PlantSprite(p); k != oak {
 		t.Fatalf("tree key not stable per tile: %s then %s", oak, k)
 	}
 }
@@ -451,8 +458,8 @@ func TestCropStageAndVariantKey(t *testing.T) {
 		seen := map[string]bool{}
 		for x := 0; x < 30; x++ {
 			p := game.PlantView{X: x, Y: 4, Species: "potato", Stage: c.stage, Growth: c.growth}
-			k, scale := plantSprite(p)
-			v := int(tileHash(x, 4) % cropVariants)
+			k, scale := worldpkg.PlantSprite(p)
+			v := int(spritepkg.TileHash(x, 4) % envpkg.CropVariants)
 			want := "plant/potato_" + c.want + "_v" + string(rune('0'+v))
 			if k != want || scale != 1 {
 				t.Fatalf("stage %d growth %d at x=%d: %s (scale %v), want %s", c.stage, c.growth, x, k, scale, want)
@@ -472,8 +479,8 @@ func TestCropStageAndVariantKey(t *testing.T) {
 				t.Fatalf("%s without its variant: %s, want %s", k, got, v0)
 			}
 		}
-		if len(seen) != cropVariants {
-			t.Fatalf("stage %s uses %d variants, want %d", c.want, len(seen), cropVariants)
+		if len(seen) != envpkg.CropVariants {
+			t.Fatalf("stage %s uses %d variants, want %d", c.want, len(seen), envpkg.CropVariants)
 		}
 	}
 }
@@ -482,14 +489,14 @@ func TestBushVariantKey(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 64, h: 64})
 	var arts []string
-	for v := 0; v < groundVariants; v++ {
+	for v := 0; v < worldpkg.GroundVariants; v++ {
 		arts = append(arts, fmt.Sprintf("plant/berry_bush_mature_v%d", v), fmt.Sprintf("plant/berry_bush_harvestable_v%d", v), fmt.Sprintf("plant/berry_bush_dormant_v%d", v), fmt.Sprintf("plant/bramble_mature_v%d", v))
 	}
 	r.art = envArt(arts...)
 	berry := map[string]bool{}
 	for x := 0; x < 30; x++ {
 		p := game.PlantView{X: x, Y: 2, Species: "berry_bush", Growth: 100, Harvestable: x%2 == 0}
-		k, scale := plantSprite(p)
+		k, scale := worldpkg.PlantSprite(p)
 		if !strings.HasPrefix(k, "plant/berry_bush_") || strings.Contains(k, "_harvestable_v") != p.Harvestable || scale != 1 {
 			t.Fatalf("berry bush at x=%d: %s scale %v", x, k, scale)
 		}
@@ -504,7 +511,7 @@ func TestBushVariantKey(t *testing.T) {
 	}
 	wild := map[string]bool{}
 	for x := 0; x < 40; x++ {
-		k, _ := plantSprite(game.PlantView{X: x, Y: 2, Species: "bramble", Growth: 50})
+		k, _ := worldpkg.PlantSprite(game.PlantView{X: x, Y: 2, Species: "bramble", Growth: 50})
 		wild[k] = true
 		if got := r.seasonKey(k, game.WorldView{}); !r.art.Has(got) {
 			t.Fatalf("bush %s falls back to missing %s", k, got)
@@ -520,9 +527,9 @@ func TestWiltedKey(t *testing.T) {
 	r := New(&stubSim{w: 64, h: 64})
 	r.art = envArt("plant/corn_wilted_v0")
 	for stage := 0; stage <= 3; stage++ {
-		p := game.PlantView{X: 3, Y: 3, Species: "corn", Stage: stage, Growth: 25 * stage, Damage: cropWiltDamage, DamageKind: "cold"}
-		k, _ := plantSprite(p)
-		want := "plant/corn_wilted_v" + string(rune('0'+int(tileHash(3, 3)%cropVariants)))
+		p := game.PlantView{X: 3, Y: 3, Species: "corn", Stage: stage, Growth: 25 * stage, Damage: envpkg.CropWiltDamage, DamageKind: "cold"}
+		k, _ := worldpkg.PlantSprite(p)
+		want := "plant/corn_wilted_v" + string(rune('0'+int(spritepkg.TileHash(3, 3)%envpkg.CropVariants)))
 		if k != want {
 			t.Fatalf("wilted corn at stage %d: %s, want %s", stage, k, want)
 		}
@@ -531,11 +538,11 @@ func TestWiltedKey(t *testing.T) {
 		}
 	}
 	// the plain Wilted flag (near frost, no damage yet) keeps the normal look
-	if k, _ := plantSprite(game.PlantView{X: 3, Y: 3, Species: "corn", Stage: 2, Growth: 60, Wilted: true}); strings.Contains(k, "wilted") {
+	if k, _ := worldpkg.PlantSprite(game.PlantView{X: 3, Y: 3, Species: "corn", Stage: 2, Growth: 60, Wilted: true}); strings.Contains(k, "wilted") {
 		t.Fatalf("a flagged but undamaged crop wilted: %s", k)
 	}
 	// only crops wilt
-	tree, _ := plantSprite(game.PlantView{X: 3, Y: 3, Species: "tree", Growth: 100, Wilted: true})
+	tree, _ := worldpkg.PlantSprite(game.PlantView{X: 3, Y: 3, Species: "tree", Growth: 100, Wilted: true})
 	if strings.Contains(tree, "wilted") {
 		t.Fatalf("a tree wilted: %s", tree)
 	}
@@ -547,12 +554,12 @@ func TestWiltedKey(t *testing.T) {
 // of weather w.
 func weatherRun(w game.WorldView, n int) *Renderer {
 	r := New(&stubSim{w: 64, h: 64})
-	r.env.View = envRect{X0: 0, Y0: 0, X1: 24, Y1: 14}
+	r.env.View = envpkg.Rect{X0: 0, Y0: 0, X1: 24, Y1: 14}
 	stepFrames(r, w, n)
 	return r
 }
 
-func countDrops(r *Renderer, kind dropKind) int {
+func countDrops(r *Renderer, kind envpkg.DropKind) int {
 	n := 0
 	for _, d := range r.env.Drops {
 		if d.Kind == kind {
@@ -565,7 +572,7 @@ func countDrops(r *Renderer, kind dropKind) int {
 func TestRainDensityFollowsIntensity(t *testing.T) {
 	t.Parallel()
 	rain := func(i float64) int {
-		return countDrops(weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: i, WindX: 1}, 240), dropRain)
+		return countDrops(weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: i, WindX: 1}, 240), envpkg.DropRain)
 	}
 	none, light, mid, heavy := rain(0), rain(0.2), rain(0.5), rain(1)
 	t.Logf("drops: %d %d %d %d", none, light, mid, heavy)
@@ -578,7 +585,7 @@ func TestRainDensityFollowsIntensity(t *testing.T) {
 	if n := len(weatherRun(game.WorldView{Weather: "clear", WindX: 1}, 120).env.Drops); n != 0 {
 		t.Fatalf("clear sky has %d drops", n)
 	}
-	if n := countDrops(weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: 0.8}, 240), dropSplash); n == 0 {
+	if n := countDrops(weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: 0.8}, 240), envpkg.DropSplash); n == 0 {
 		t.Fatal("rain makes no splashes where it lands")
 	}
 }
@@ -589,7 +596,7 @@ func TestRainAngleFollowsWind(t *testing.T) {
 		r := weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: 0.7, WindX: wx}, 120)
 		sum, n := 0.0, 0
 		for _, d := range r.env.Drops {
-			if d.Kind == dropRain {
+			if d.Kind == envpkg.DropRain {
 				sx, sy := d.ScreenVel()
 				if sy <= 0 {
 					t.Fatalf("rain falls upward on screen: %v,%v", sx, sy)
@@ -618,7 +625,7 @@ func TestSnowFlakesDriftAndFlutter(t *testing.T) {
 	var drift float64
 	n := 0
 	for _, d := range r.env.Drops {
-		if d.Kind != dropSnow {
+		if d.Kind != envpkg.DropSnow {
 			continue
 		}
 		sizes[d.Size] = true
@@ -632,9 +639,9 @@ func TestSnowFlakesDriftAndFlutter(t *testing.T) {
 		t.Fatalf("flakes drift %.2f tiles/s in a 1.2 wind", m)
 	}
 	// one flake's path wanders around its drift line
-	var d *weatherDrop
+	var d *envpkg.Drop
 	for i := range r.env.Drops {
-		if r.env.Drops[i].Kind == dropSnow && r.env.Drops[i].T > 2 {
+		if r.env.Drops[i].Kind == envpkg.DropSnow && r.env.Drops[i].T > 2 {
 			d = &r.env.Drops[i]
 			break
 		}
@@ -661,7 +668,7 @@ func TestSnowFlakesDriftAndFlutter(t *testing.T) {
 	// snow drifts more slowly than rain falls
 	rain := weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: 0.6}, 60)
 	for _, rd := range rain.env.Drops {
-		if rd.Kind == dropRain && rd.Vz < 3*d.Vz {
+		if rd.Kind == envpkg.DropRain && rd.Vz < 3*d.Vz {
 			t.Fatalf("snow falls at %.2f, rain at %.2f", d.Vz, rd.Vz)
 		}
 	}
@@ -674,7 +681,7 @@ func TestWeatherParticlePoolCapped(t *testing.T) {
 		cap  int
 	}{{"storm", 1400}, {"blizzard", 1100}, {"rain", 1400}, {"snow", 1100}} {
 		r := New(&stubSim{w: 400, h: 400})
-		r.env.View = envRect{X0: 0, Y0: 0, X1: 300, Y1: 200} // zoomed far out
+		r.env.View = envpkg.Rect{X0: 0, Y0: 0, X1: 300, Y1: 200} // zoomed far out
 		w := game.WorldView{Weather: c.kind, WeatherIntensity: 1, WindX: 3}
 		peak := 0
 		for f := 0; f < 500; f++ {
@@ -699,7 +706,7 @@ func TestSnowCoverFollowsDepthWithVariants(t *testing.T) {
 	cover := func(depth float64) (float64, map[string]bool) {
 		sum, keys := 0.0, map[string]bool{}
 		for i := 0; i < 400; i++ {
-			k, a := snowCover(i%20, i/20, depth)
+			k, a := envpkg.SnowCover(i%20, i/20, depth)
 			if a < 0 || a > 1 {
 				t.Fatalf("cover alpha %v", a)
 			}
@@ -722,17 +729,17 @@ func TestSnowCoverFollowsDepthWithVariants(t *testing.T) {
 		t.Fatalf("snow cover variants %v", keys)
 	}
 	for d, want := range []string{"weather/snow_cover_00", "weather/snow_cover_01", "weather/snow_cover_02", "weather/snow_cover_03"} {
-		if snowBankKeys[d] != want {
-			t.Fatalf("bank %d uses %s", d, snowBankKeys[d])
+		if envpkg.SnowBankKeys[d] != want {
+			t.Fatalf("bank %d uses %s", d, envpkg.SnowBankKeys[d])
 		}
 	}
-	if k1, _ := snowCover(4, 9, 0.5); func() bool { k2, _ := snowCover(4, 9, 0.9); return k1 != k2 }() {
+	if k1, _ := envpkg.SnowCover(4, 9, 0.5); func() bool { k2, _ := envpkg.SnowCover(4, 9, 0.9); return k1 != k2 }() {
 		t.Fatal("a tile's snow variant changes with depth")
 	}
 	drifts := func(depth float64) int {
 		n := 0
 		for i := 0; i < 400; i++ {
-			if k, a := snowDrift(i%20, i/20, depth); a > 0 {
+			if k, a := envpkg.SnowDrift(i%20, i/20, depth); a > 0 {
 				if !strings.HasPrefix(k, "weather/snow_drift_0") {
 					t.Fatalf("drift key %s", k)
 				}
@@ -751,9 +758,9 @@ func TestSnowCoverFollowsDepthWithVariants(t *testing.T) {
 		r := envRenderer(w)
 		sum := 0.0
 		for x := 0; x < 40; x++ {
-			ps := r.plantPose(x, 7, kindGrass, 0.05, 1)
+			ps := r.plantPose(x, 7, envpkg.KindGrass, 0.05, 1)
 			a := float64(ps.Cs[3])
-			if ps.Cs == (colorScale{}) {
+			if ps.Cs == (spritepkg.ColorScale{}) {
 				a = 1
 			}
 			sum += a * ps.Sy
@@ -793,12 +800,12 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 	weather := []string{"weather/raindrop", "weather/splash_00", "weather/splash_01", "weather/splash_02",
 		"weather/snowflake_00", "weather/snowflake_01", "weather/snowflake_02", "weather/snowflake_03"}
 	for i := 0; i < 6; i++ {
-		weather = append(weather, artKey("weather", "snow_cover", i))
+		weather = append(weather, envpkg.ArtKey("weather", "snow_cover", i))
 	}
 	for i := 0; i < 4; i++ {
-		weather = append(weather, artKey("weather", "snow_drift", i), artKey("weather", "frost", i))
+		weather = append(weather, envpkg.ArtKey("weather", "snow_drift", i), envpkg.ArtKey("weather", "frost", i))
 	}
-	for _, art := range []*artCatalog{nil, envArt(), envArt(weather...)} {
+	for _, art := range []*artpkg.Catalog{nil, envArt(), envArt(weather...)} {
 		for _, kind := range []string{"rain", "storm", "snow", "blizzard", "cloudy"} {
 			w := game.WorldView{Weather: kind, WeatherIntensity: 1, WindX: 2, SnowDepth: 0.7, Wetness: 0.8,
 				OutdoorTemp: -30, TerrainW: 30, Terrain: make([]uint8, 30*20), RoomGrid: make([]int, 30*20)}
@@ -813,9 +820,9 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 			screen := ebiten.NewImage(640, 400)
 			for f := 0; f < 90; f++ {
 				r.advance()
-				r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
-				r.drawGroundCover(screen, w, 640, 400, r.tilePx())
-				r.drawWeather(screen, w, 640, 400, r.tilePx())
+				r.drawPuddleVeil(screen, w, 640, 400, r.cam.Tile())
+				r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
+				r.drawWeather(screen, w, 640, 400, r.cam.Tile())
 			}
 			if kind != "cloudy" && len(r.env.Drops) == 0 {
 				t.Fatalf("%s drew no particles", kind)
@@ -826,21 +833,21 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 	w := game.WorldView{Weather: "storm", WeatherIntensity: 1, WindX: 2, WindY: -1, Wetness: 1, Season: "Fall"}
 	sim := &stubSim{w: 30, h: 20}
 	b := uint64(7)
-	sim.tick = clock.Tick(b * lightningBucket)
+	sim.tick = clock.Tick(b * envpkg.LightningBucket)
 	w.Strikes = []game.StrikeView{{X: 3, Y: 4, Tick: uint64(sim.tick)}} // the sim's strike this tick
 	r := New(sim)
 	screen := ebiten.NewImage(640, 400)
 	for f := 0; f < 50; f++ {
 		r.present++
 		r.stepEnvironment(w, nil)
-		r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
-		r.drawGroundCover(screen, w, 640, 400, r.tilePx())
-		r.drawWeather(screen, w, 640, 400, r.tilePx())
+		r.drawPuddleVeil(screen, w, 640, 400, r.cam.Tile())
+		r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
+		r.drawWeather(screen, w, 640, 400, r.cam.Tile())
 	}
-	if !r.env.FlashSeen || r.env.FlashBucket != uint64(sim.tick)/lightningBucket {
+	if !r.env.FlashSeen || r.env.FlashBucket != uint64(sim.tick)/envpkg.LightningBucket {
 		t.Fatal("the storm's lightning never flashed")
 	}
-	if countDrops(r, dropRipple) == 0 {
+	if countDrops(r, envpkg.DropRipple) == 0 {
 		t.Fatal("rain on soaked ground makes no ripples")
 	}
 	for _, lw := range []game.WorldView{w, {Weather: "clear"}, {}} {
@@ -858,7 +865,7 @@ func roofedWorld(weather string) game.WorldView {
 	for i := range w.RoomGrid {
 		w.RoomGrid[i] = -1
 		if i%64 < 32 {
-			w.RoofCells[i] = roofBuilt
+			w.RoofCells[i] = overlay.RoofBuilt
 		}
 	}
 	return w
@@ -867,21 +874,21 @@ func roofedWorld(weather string) game.WorldView {
 func TestNoGroundCoverUnderRoof(t *testing.T) {
 	t.Parallel()
 	w := roofedWorld("snow")
-	w.RoofCells[5*64+40] = roofNatural
-	w.RoofCells[6*64+40] = roofPlanBuild // planned, not built: still open
+	w.RoofCells[5*64+40] = overlay.RoofNatural
+	w.RoofCells[6*64+40] = overlay.RoofPlanBuild // planned, not built: still open
 	r := envRenderer(w)
 	for _, c := range []struct {
 		x, y int
 		open bool
 	}{{3, 3, false}, {31, 9, false}, {40, 5, false}, {40, 6, true}, {45, 9, true}} {
-		if got := r.groundOpen(w, c.x, c.y); got != c.open {
+		if got := r.envLayer().GroundOpen(w, c.x, c.y); got != c.open {
 			t.Errorf("groundOpen(%d,%d) = %v, want %v", c.x, c.y, got, c.open)
 		}
 	}
 	// grass under a roof is not buried in snow
-	under := r.plantPose(3, 3, kindGrass, 0.05, 1)
-	open := r.plantPose(45, 3, kindGrass, 0.05, 1)
-	if under.Cs != (colorScale{}) && under.Cs[3] != 1 || under.Sy < open.Sy {
+	under := r.plantPose(3, 3, envpkg.KindGrass, 0.05, 1)
+	open := r.plantPose(45, 3, envpkg.KindGrass, 0.05, 1)
+	if under.Cs != (spritepkg.ColorScale{}) && under.Cs[3] != 1 || under.Sy < open.Sy {
 		t.Errorf("roofed grass buried: %+v vs open %+v", under, open)
 	}
 	if open.Sy >= 1 {
@@ -892,9 +899,9 @@ func TestNoGroundCoverUnderRoof(t *testing.T) {
 	r = New(sim)
 	r.art = envArt()
 	screen := ebiten.NewImage(640, 400)
-	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
+	r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
 	// the snow and wet masks are empty under the roof, set on open ground
-	var c snowChunk
+	var c envpkg.SnowChunk
 	r.bakeSnowChunk(&c, w, 64, 64, 0, 0)
 	sc := &r.snowc
 	for row := 0; row < 2; row++ {
@@ -916,7 +923,7 @@ func TestRainSkipsRoofedTiles(t *testing.T) {
 	for _, kind := range []string{"rain", "snow"} {
 		w := roofedWorld(kind)
 		r := New(&stubSim{w: 64, h: 64})
-		r.env.View = envRect{X0: 20, Y0: 0, X1: 44, Y1: 14}
+		r.env.View = envpkg.Rect{X0: 20, Y0: 0, X1: 44, Y1: 14}
 		stepFrames(r, w, 240)
 		if len(r.env.Drops) == 0 {
 			t.Fatalf("%s: no drops at all", kind)
@@ -933,14 +940,14 @@ func TestRainSkipsRoofedTiles(t *testing.T) {
 		w.RoofCells[i] = 0
 	}
 	r := New(&stubSim{w: 64, h: 64})
-	r.env.View = envRect{X0: 0, Y0: 0, X1: 24, Y1: 14}
+	r.env.View = envpkg.Rect{X0: 0, Y0: 0, X1: 24, Y1: 14}
 	stepFrames(r, w, 60)
 	for i := range w.RoofCells {
-		w.RoofCells[i] = roofBuilt
+		w.RoofCells[i] = overlay.RoofBuilt
 	}
 	stepFrames(r, w, 60)
 	for _, d := range r.env.Drops {
-		if d.Kind != dropRain && d.Gx >= 0 && d.Gy >= 0 { // beyond the map edge is open sky
+		if d.Kind != envpkg.DropRain && d.Gx >= 0 && d.Gy >= 0 { // beyond the map edge is open sky
 			t.Fatalf("drop kind %d landed under a new roof", d.Kind)
 		}
 	}
@@ -950,7 +957,7 @@ func TestCollapseDustOncePerStamp(t *testing.T) {
 	t.Parallel()
 	w := game.WorldView{Weather: "clear", RoofCollapses: []game.RoofCollapseView{{X: 4, Y: 5, Tick: 900}}}
 	r := envRenderer(w)
-	count := func(k partKind) int {
+	count := func(k creaturepkg.PartKind) int {
 		n := 0
 		for _, p := range r.parts {
 			if p.Kind == k {
@@ -959,8 +966,8 @@ func TestCollapseDustOncePerStamp(t *testing.T) {
 		}
 		return n
 	}
-	if count(partDust) != 12 || count(partChip) != 4 {
-		t.Fatalf("first frame: dust %d chips %d, want 12 and 4", count(partDust), count(partChip))
+	if count(creaturepkg.PartDust) != 12 || count(creaturepkg.PartChip) != 4 {
+		t.Fatalf("first frame: dust %d chips %d, want 12 and 4", count(creaturepkg.PartDust), count(creaturepkg.PartChip))
 	}
 	for _, p := range r.parts {
 		if p.X < 4 || p.X > 5 || p.Y < 5 || p.Y > 6 {
@@ -968,18 +975,18 @@ func TestCollapseDustOncePerStamp(t *testing.T) {
 		}
 	}
 	stepFrames(r, w, 5)
-	if count(partDust) != 12 || count(partChip) != 4 {
-		t.Fatalf("stamp replayed: dust %d chips %d", count(partDust), count(partChip))
+	if count(creaturepkg.PartDust) != 12 || count(creaturepkg.PartChip) != 4 {
+		t.Fatalf("stamp replayed: dust %d chips %d", count(creaturepkg.PartDust), count(creaturepkg.PartChip))
 	}
 	// a second collapse puffs once more; the first stays quiet
 	w.RoofCollapses = append(w.RoofCollapses, game.RoofCollapseView{X: 9, Y: 2, Tick: 1200})
 	stepFrames(r, w, 3)
-	if count(partDust) != 24 || count(partChip) != 8 {
-		t.Fatalf("second stamp: dust %d chips %d, want 24 and 8", count(partDust), count(partChip))
+	if count(creaturepkg.PartDust) != 24 || count(creaturepkg.PartChip) != 8 {
+		t.Fatalf("second stamp: dust %d chips %d, want 24 and 8", count(creaturepkg.PartDust), count(creaturepkg.PartChip))
 	}
 	// Draw never emits: drawing a frame leaves the pool as it was
 	n := len(r.parts)
-	r.drawRoofOverlay(ebiten.NewImage(64, 64), w, 64, 64, r.tilePx())
+	r.drawRoofOverlay(ebiten.NewImage(64, 64), w, 64, 64, r.cam.Tile())
 	if len(r.parts) != n {
 		t.Fatal("drawing emitted particles")
 	}

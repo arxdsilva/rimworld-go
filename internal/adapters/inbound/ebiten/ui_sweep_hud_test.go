@@ -22,8 +22,8 @@ func TestColonyHUDDrawsAtScale(t *testing.T) {
 	screen := ebiten.NewImage(1920, 1080)
 	a.drawMapOverlays(screen)
 	a.drawColonyHUD(screen, a.sw, a.sh)
-	a.drawStatusChips(screen, a.sw)
-	a.drawAlerts(screen, a.sw)
+	a.chrome.Global().DrawChips(screen, a.sw)
+	a.chrome.Alerts().Draw(screen, a.sw)
 	a.drawBoxSelect(screen)
 	if len(rects) == 0 {
 		t.Fatal("HUD drew nothing through the canvas")

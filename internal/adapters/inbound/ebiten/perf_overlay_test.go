@@ -2,7 +2,10 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -16,9 +19,9 @@ func perfApp(t *testing.T, on bool) (*App, *fakeInput) {
 	return a, f
 }
 
-func traceDraw(a *App, w, h int, draw func(*ebiten.Image)) []traceEvent {
-	var evs []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { evs = append(evs, e) })
+func traceDraw(a *App, w, h int, draw func(*ebiten.Image)) []gfx.TraceEvent {
+	var evs []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { evs = append(evs, e) })
 	defer func() { gfx.SetDrawTrace(nil) }()
 	draw(ebiten.NewImage(w, h))
 	return evs
@@ -27,7 +30,7 @@ func traceDraw(a *App, w, h int, draw func(*ebiten.Image)) []traceEvent {
 func TestPerfOverlayDrawsOnlyWhenOn(t *testing.T) {
 	for _, on := range []bool{false, true} {
 		a, _ := perfApp(t, on)
-		a.seedPerfCapture()
+		a.meter.SeedCapture()
 		evs := traceDraw(a, 1280, 720, func(img *ebiten.Image) { a.drawPerfOverlay(img, 1280, 720) })
 		if (len(evs) > 0) != on {
 			t.Fatalf("on=%v: %d draws", on, len(evs))
@@ -40,7 +43,7 @@ func TestPerfOverlayDrawsOnlyWhenOn(t *testing.T) {
 
 func TestPerfOverlayShowsWithHiddenUI(t *testing.T) {
 	a, _ := perfApp(t, true)
-	a.seedPerfCapture()
+	a.meter.SeedCapture()
 	a.chrome.Hidden = true
 	if a.hud().Perf.Empty() {
 		t.Fatal("no rect")
@@ -60,7 +63,7 @@ func TestPerfOverlayStaysInsideItsRect(t *testing.T) {
 		t.Run(fmt.Sprintf("x%v", s), func(t *testing.T) {
 			a, f := perfApp(t, true)
 			pw, ph := rightAtScale(t, a, f, s)
-			a.seedPerfCapture()
+			a.meter.SeedCapture()
 			l := a.hud()
 			if l.Perf.Empty() {
 				t.Fatal("no Perf rect")
@@ -86,12 +89,12 @@ func TestPerfOverlayStaysInsideItsRect(t *testing.T) {
 
 func TestPerfOverlayAvoidsHUDRegions(t *testing.T) {
 	t.Parallel()
-	busy := hudState{Colonists: 30, PaneShown: true, Commands: 13, GlobalH: 190, MinimapOn: true, LearnH: 200,
+	busy := hudlayout.Inputs{Colonists: 30, PaneShown: true, Commands: 13, GlobalH: 190, MinimapOn: true, LearnH: 200,
 		Alerts: 8, Letters: 8, ResourcesH: 600, Messages: 5, ExpandedW: 500, ExpandedH: 300, PerfW: 215, PerfH: 120}
-	idle := hudState{GlobalH: 150, ResourcesH: 100, PerfW: 215, PerfH: 120}
+	idle := hudlayout.Inputs{GlobalH: 150, ResourcesH: 100, PerfW: 215, PerfH: 120}
 	for _, sz := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
-		for n, st := range map[string]hudState{"busy": busy, "idle": idle} {
-			l := computeHUDLayout(sz[0], sz[1], st)
+		for n, st := range map[string]hudlayout.Inputs{"busy": busy, "idle": idle} {
+			l := hudlayout.Compute(sz[0], sz[1], st)
 			if l.Perf.Empty() {
 				continue
 			}
@@ -103,14 +106,14 @@ func TestPerfOverlayAvoidsHUDRegions(t *testing.T) {
 					t.Errorf("%s %v: perf %+v collides with %+v", n, sz, l.Perf, r)
 				}
 			}
-			if col := devColumn(l); !col.Empty() {
+			if col := devtools.Column(l); !col.Empty() {
 				if i := col.Intersect(l.Perf); i.W > 0 && i.H > 0 {
 					t.Errorf("%s %v: dev column %+v overlaps perf %+v", n, sz, col, l.Perf)
 				}
 			}
 		}
 	}
-	if !computeHUDLayout(1280, 720, hudState{ResourcesH: 100, GlobalH: 150, PerfW: 215, PerfH: 120}).Perf.Empty() == false {
+	if !hudlayout.Compute(1280, 720, hudlayout.Inputs{ResourcesH: 100, GlobalH: 150, PerfW: 215, PerfH: 120}).Perf.Empty() == false {
 		t.Error("an idle 1280x720 screen should fit the overlay")
 	}
 }
@@ -121,16 +124,16 @@ func TestPerfOverlayAvoidsHUDRegions(t *testing.T) {
 // themselves) and nothing more.
 func TestPerfOverlayDrawNoAllocs(t *testing.T) {
 	a, _ := perfApp(t, true)
-	a.seedPerfCapture()
+	a.meter.SeedCapture()
 	img := ebiten.NewImage(1280, 720)
 	r := a.hud().Perf
 	prims := func() {
 		a.hud()
-		drawPanel(img, r.X, r.Y, r.W, r.H)
+		uikit.DrawPanel(img, r.X, r.Y, r.W, r.H)
 		for i, l := range a.meter.Clock.Lines.All() {
-			drawText(img, l, 10, float64(10+i*12), tsSmall)
+			gfx.Text(img, l, 10, float64(10+i*12), gfx.Small)
 		}
-		drawSparkline(img, r, a.meter.Clock.Spark, uiAccent)
+		uikit.DrawSparkline(img, r, a.meter.Clock.Spark, uikit.Accent)
 	}
 	prims()
 	a.drawPerfOverlay(img, 1280, 720) // warm the glyph caches
@@ -164,7 +167,7 @@ func TestOptionsPerfOverlayToggle(t *testing.T) {
 	if b.Label != "Off" || b.Tip == "" {
 		t.Fatalf("perf overlay button %+v", b)
 	}
-	a.applyOption("options.perfoverlay")
+	a.opt.ApplyOption("options.perfoverlay")
 	if !store.s.Graphics.PerfOverlay || optionBtn(t, a, "options.perfoverlay").Label != "On" {
 		t.Fatal("overlay should be on and saved")
 	}

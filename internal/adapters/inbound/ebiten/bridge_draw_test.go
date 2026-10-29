@@ -1,6 +1,11 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -28,10 +33,10 @@ func TestBridgeKeys(t *testing.T) {
 		mask int
 		want string
 	}{{0, "structure/bridge_00"}, {5, "structure/bridge_05"}, {15, "structure/bridge_15"}} {
-		if got := bridgeKey(c.mask); got != c.want {
+		if got := overlay.BridgeKey(c.mask); got != c.want {
 			t.Errorf("bridgeKey(%d) = %q, want %q", c.mask, got, c.want)
 		}
-		if got := buildSprite("bridge", "", c.mask, false, false); got != c.want {
+		if got := architect.BuildSprite("bridge", "", c.mask, false, false); got != c.want {
 			t.Errorf("buildSprite(bridge, %d) = %q, want %q", c.mask, got, c.want)
 		}
 	}
@@ -40,14 +45,14 @@ func TestBridgeKeys(t *testing.T) {
 func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
-	r.cam.Zoom = 32.0 / float64(TileSize)
-	r.art = &artCatalog{} // no bridge sprites landed: the plain deck stands in
-	r.lod.Tier = lodLive
+	r.cam.Zoom = 32.0 / float64(camerapkg.TileSize)
+	r.art = &art.Catalog{} // no bridge sprites landed: the plain deck stands in
+	r.lod.Tier = worldpkg.Live
 	w := bridgeWorld(8, 8, terrain.DeepWater, [2]int{3, 3})
 	r.lod.Views = []game.ChunkView{{Buildings: []int32{0}}}
 	var order []string
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	screen := ebiten.NewImage(320, 320)
 	r.drawFoundation(screen, w, 320, 320, tile)
 	if len(order) != 1 || order[0] != "foundation" {
@@ -55,11 +60,11 @@ func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	}
 	// not in the live tier: baked elsewhere, nothing traced
 	order = nil
-	r.lod.Tier = lodChunk
+	r.lod.Tier = worldpkg.Chunk
 	r.drawFoundation(screen, w, 320, 320, tile)
 	if len(order) != 1 {
 		t.Errorf("baked tier trace = %v", order)
 	}
 	// the bake path draws a bridge cell too
-	r.drawBridgeCell(screen, w, bridgeCells(w), &w.Buildings[0], tile, 320, 320)
+	r.drawBridgeCell(screen, w, overlay.BridgeCells(w), &w.Buildings[0], tile, 320, 320)
 }

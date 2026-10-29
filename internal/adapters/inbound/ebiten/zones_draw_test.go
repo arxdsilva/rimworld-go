@@ -2,6 +2,11 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -42,7 +47,7 @@ func cellSet(cells ...[2]int) map[[2]int]bool {
 func TestZoneEdgeRunsMergeConsecutiveCells(t *testing.T) {
 	t.Parallel()
 	z := rectZone(1, game.ZoneGrow, 2, 3, 4, 3) // a 3x1 strip
-	runs := zoneEdgeRuns(cellSet(z.Cells...), z.Cells)
+	runs := overlay.ZoneEdgeRuns(cellSet(z.Cells...), z.Cells)
 	if len(runs) != 4 {
 		t.Fatalf("a strip has 4 outline runs, got %d: %+v", len(runs), runs)
 	}
@@ -59,7 +64,7 @@ func TestZoneEdgeRunsMergeConsecutiveCells(t *testing.T) {
 	a := rectZone(1, game.ZoneStockpile, 0, 0, 1, 1)
 	b := rectZone(2, game.ZoneStockpile, 2, 0, 3, 1)
 	union := append(append([][2]int{}, a.Cells...), b.Cells...)
-	if got := len(zoneEdgeRuns(cellSet(union...), union)); got != 4 {
+	if got := len(overlay.ZoneEdgeRuns(cellSet(union...), union)); got != 4 {
 		t.Fatalf("merged 4x2 block must outline as 4 runs, got %d", got)
 	}
 }
@@ -79,7 +84,7 @@ func TestZoneGhostCellsColourPerCell(t *testing.T) {
 	if clipped := zoneGhostCells(0, 0, 100, 100, [4]int{10, 10, 12, 11}, can); len(clipped) != 6 {
 		t.Fatalf("the ghost clips to the viewport, got %d", len(clipped))
 	}
-	if anyZoneCell(0, 0, 2, 2, func(x, y int) bool { return false }) {
+	if architect.AnyZoneCell(0, 0, 2, 2, func(x, y int) bool { return false }) {
 		t.Fatal("no free cell expected")
 	}
 }
@@ -103,11 +108,11 @@ func TestSecondZoneOverClaimedTilesHints(t *testing.T) {
 	click(t, a, "arch.tool.stockpile")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 8, 7
-	a.submitArchitect()
+	a.arch.Submit()
 	g.Step(1)
 	a.hint = ""
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 8, 7
-	a.submitArchitect()
+	a.arch.Submit()
 	if a.hint != "Can't zone here: "+game.ZoneRefuseTaken { // PLAY-023: the most common refusal
 		t.Fatalf("hint = %q", a.hint)
 	}
@@ -117,10 +122,10 @@ func TestZoneLabelOncePerZone(t *testing.T) {
 	t.Parallel()
 	z := rectZone(3, game.ZoneGrow, 4, 4, 6, 5)
 	z.Crop = "potato"
-	if zoneLabelText(z) != "Potato" || zoneLabelText(game.ZoneView{Kind: game.ZonePen}) != "Pen" {
+	if overlay.ZoneLabelText(z) != "Potato" || overlay.ZoneLabelText(game.ZoneView{Kind: game.ZonePen}) != "Pen" {
 		t.Fatal("label text")
 	}
-	g := (&Renderer{}).zoneGeomOf(z)
+	g := (&Renderer{}).overlays().Zones.ZoneGeomOf(z)
 	if len(g.Cells) != 6 {
 		t.Fatalf("geom cells = %d", len(g.Cells))
 	}
@@ -137,7 +142,7 @@ func TestZoneDrawsOverFloor(t *testing.T) {
 	var order []string
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	screen := ebiten.NewImage(640, 400)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.setView(640, 400, tile)
 	r.drawArt(screen, 640, 400, tile)
 	// other traced layers (tree trunks and canopies, PLAY-010) may come
@@ -163,7 +168,7 @@ func TestZoneLabelSizeGrowsWithZone(t *testing.T) {
 		withUIScale(t, ui)
 		prev, first := 0.0, 0.0
 		for side := 40.0; side <= 500; side += 10 {
-			p := zoneLabelLayout("Pen", side, side, side/2, side/2, zoneLabelMax)
+			p := overlay.ZoneLabelLayout("Pen", side, side, side/2, side/2, overlay.ZoneLabelMax)
 			if !p.Ok {
 				continue
 			}
@@ -191,7 +196,7 @@ func TestZoneLabelFitsTheZoneWidth(t *testing.T) {
 		for _, text := range []string{"Pen", "Stockpile", "Potato", "Strawberries"} {
 			for w := 24.0; w <= 600; w += 6 {
 				for _, h := range []float64{30, 80, 400} {
-					p := zoneLabelLayout(text, w, h, w/2, h/2, zoneLabelMax)
+					p := overlay.ZoneLabelLayout(text, w, h, w/2, h/2, overlay.ZoneLabelMax)
 					if !p.Ok {
 						continue
 					}
@@ -201,7 +206,7 @@ func TestZoneLabelFitsTheZoneWidth(t *testing.T) {
 					if p.Plate.X < 0 || p.Plate.Y < 0 || p.Plate.X+p.Plate.W > float32(w) || p.Plate.Y+p.Plate.H > float32(h) {
 						t.Fatalf("ui %g %q in %gx%g: plate %+v sticks out of a zone it is centred in", ui, text, w, h, p.Plate)
 					}
-					if tw := textW(p.Text, p.Style); tw > p.Plate.W {
+					if tw := gfx.TextW(p.Text, p.Style); tw > p.Plate.W {
 						t.Fatalf("ui %g %q in %gx%g: text %g wide on a plate %g wide", ui, text, w, h, tw, p.Plate.W)
 					}
 					// ellipsized only at the 11 px floor
@@ -211,10 +216,10 @@ func TestZoneLabelFitsTheZoneWidth(t *testing.T) {
 					// shrunk only as far as needed: half a step more would not fit
 					want := math.Round(min(40, max(11, 0.45*min(w, h)))*2) / 2
 					if p.Style.Size < want {
-						px, _ := zoneLabelPad(p.Style.Size + 0.5)
+						px, _ := overlay.ZoneLabelPad(p.Style.Size + 0.5)
 						up := p.Style
 						up.Size += 0.5
-						if tw := float64(textW(text, up)); tw+2*px <= 0.9*w {
+						if tw := float64(gfx.TextW(text, up)); tw+2*px <= 0.9*w {
 							t.Fatalf("ui %g %q in %gx%g: shrunk to %g although %g fits", ui, text, w, h, p.Style.Size, up.Size)
 						}
 					}
@@ -227,24 +232,24 @@ func TestZoneLabelFitsTheZoneWidth(t *testing.T) {
 func TestZoneLabelEllipsizesThenHides(t *testing.T) {
 	withUIScale(t, 1.5)
 	// wide enough for the whole word (shrunk to fit)
-	wide := zoneLabelLayout("Stockpile", 110, 200, 55, 100, zoneLabelMax)
+	wide := overlay.ZoneLabelLayout("Stockpile", 110, 200, 55, 100, overlay.ZoneLabelMax)
 	if !wide.Ok || wide.Text != "Stockpile" {
 		t.Fatalf("110 px wide: %+v", wide)
 	}
 	// too narrow for the word at 11 px: ellipsized at 11 px, still shown
-	narrow := zoneLabelLayout("Stockpile", 56, 200, 28, 100, zoneLabelMax)
+	narrow := overlay.ZoneLabelLayout("Stockpile", 56, 200, 28, 100, overlay.ZoneLabelMax)
 	if !narrow.Ok || narrow.Style.Size != 11 || narrow.Text == "Stockpile" || narrow.Text[len(narrow.Text)-len("…"):] != "…" {
 		t.Fatalf("56 px wide: %+v", narrow)
 	}
 	// narrower than about two letters: hidden
-	if p := zoneLabelLayout("Stockpile", 16, 200, 8, 100, zoneLabelMax); p.Ok {
+	if p := overlay.ZoneLabelLayout("Stockpile", 16, 200, 8, 100, overlay.ZoneLabelMax); p.Ok {
 		t.Fatalf("16 px wide must hide the label, got %+v", p)
 	}
 	// 11 px text cannot fit a zone shorter than its line
-	if p := zoneLabelLayout("Pen", 300, 10, 150, 5, zoneLabelMax); p.Ok {
+	if p := overlay.ZoneLabelLayout("Pen", 300, 10, 150, 5, overlay.ZoneLabelMax); p.Ok {
 		t.Fatalf("a 10 px tall zone must hide the label, got %+v", p)
 	}
-	if p := zoneLabelLayout("", 300, 100, 150, 50, zoneLabelMax); p.Ok {
+	if p := overlay.ZoneLabelLayout("", 300, 100, 150, 50, overlay.ZoneLabelMax); p.Ok {
 		t.Fatal("no text, no label")
 	}
 }
@@ -252,19 +257,19 @@ func TestZoneLabelEllipsizesThenHides(t *testing.T) {
 // zlFrame draws z's label once on a renderer whose camera shows the zone
 // centre at the screen centre plus pan, at the given scales and zoom. It
 // returns the renderer and the events drawn.
-func zlFrame(t *testing.T, z game.ZoneView, sc wlScale, zoom float64, pan [2]float64) (*Renderer, []traceEvent) {
+func zlFrame(t *testing.T, z game.ZoneView, sc wlScale, zoom float64, pan [2]float64) (*Renderer, []gfx.TraceEvent) {
 	t.Helper()
 	wlSetScale(t, sc)
 	got := wlTrace(t)
 	r := New(&stubSim{w: 64, h: 64})
 	r.cam.Zoom, r.cam.Dev = zoom, sc.dev
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	sw, sh := int(1280*sc.dev), int(720*sc.dev)
 	cx := float64(z.MinX+z.MaxX+1) / 2
 	cy := float64(z.MinY+z.MaxY+1) / 2
 	r.cam.OffsetX = cx*tile - float64(sw)/2 + pan[0]
 	r.cam.OffsetY = cy*tile - float64(sh)/2 + pan[1]
-	r.drawZoneLabel(ebiten.NewImage(64, 64), z, r.zoneGeomOf(z), sw, sh, tile)
+	r.drawZoneLabel(ebiten.NewImage(64, 64), z, r.overlays().Zones.ZoneGeomOf(z), sw, sh, tile)
 	return r, *got
 }
 
@@ -282,7 +287,7 @@ func TestZoneLabelStaysInsideTheZoneAtScale(t *testing.T) {
 		z := rectZone(4, kind, 10, 8, 14, 12) // 5x5 tiles
 		for _, sc := range zlScales {
 			for _, zoom := range []float64{0.5, 1, 2} {
-				var first *traceEvent
+				var first *gfx.TraceEvent
 				var firstPan [2]float64
 				for _, pan := range [][2]float64{{0, 0}, {137.5, -61}, {-90, 40.25}} {
 					r, evs := zlFrame(t, z, sc, zoom, pan)
@@ -291,14 +296,14 @@ func TestZoneLabelStaysInsideTheZoneAtScale(t *testing.T) {
 						t.Fatalf("%s %s zoom %g pan %v: %d plates and %d texts, want one each", kind, sc.name, zoom, pan, len(fills), len(texts))
 					}
 					plate, txt := fills[0], texts[0]
-					if txt.Text != zoneLabelText(z) {
-						t.Errorf("%s %s zoom %g: text %q, want %q", kind, sc.name, zoom, txt.Text, zoneLabelText(z))
+					if txt.Text != overlay.ZoneLabelText(z) {
+						t.Errorf("%s %s zoom %g: text %q, want %q", kind, sc.name, zoom, txt.Text, overlay.ZoneLabelText(z))
 					}
 					if txt.Via != "worldText" {
 						t.Errorf("%s %s zoom %g: text drawn via %q, want worldText", kind, sc.name, zoom, txt.Via)
 					}
 					x0, y0, x1, y1 := zlPhysRect(r, z)
-					in := func(what string, e traceEvent, tol float64) {
+					in := func(what string, e gfx.TraceEvent, tol float64) {
 						if float64(e.X) < x0-tol || float64(e.Y) < y0-tol || float64(e.X+e.W) > x1+tol || float64(e.Y+e.H) > y1+tol {
 							t.Errorf("%s %s zoom %g pan %v: %s %+v outside the zone (%g,%g)-(%g,%g)", kind, sc.name, zoom, pan, what, e, x0, y0, x1, y1)
 						}
@@ -335,7 +340,7 @@ func TestZoneLabelGrowsWithZoom(t *testing.T) {
 		// logical px: label sizes 11.5, 14.5, 17, clear of the 11 px floor
 		// and of the zoom cap (zoneLabelCap; tiles 13..19 px allow 33+)
 		for _, side := range []float64{26, 32, 38} {
-			zoom := side * sc.ui / (2 * TileSize)
+			zoom := side * sc.ui / (2 * camerapkg.TileSize)
 			_, evs := zlFrame(t, z, sc, zoom, [2]float64{})
 			texts := wlOfKind(evs, "text")
 			if len(texts) != 1 {
@@ -384,7 +389,7 @@ func TestZoneLabelOfAnLShapeIsInsideIt(t *testing.T) {
 			}
 			p := fills[0]
 			// the plate centre, back in tiles, is on a zone cell
-			tile := r.tilePx()
+			tile := r.cam.Tile()
 			tx := (float64(p.X+p.W/2) + r.cam.OffsetX) / tile
 			ty := (float64(p.Y+p.H/2) + r.cam.OffsetY) / tile
 			if !set[[2]int{int(math.Floor(tx)), int(math.Floor(ty))}] {
@@ -406,7 +411,7 @@ func TestZoneLabelDrawnOncePerZone(t *testing.T) {
 		rectZone(2, game.ZoneGrow, 9, 2, 13, 6),
 		rectZone(3, game.ZonePen, 2, 9, 6, 13),
 	}}
-	r.drawZoneLabels(ebiten.NewImage(64, 64), w, 1280, 720, r.tilePx())
+	r.drawZoneLabels(ebiten.NewImage(64, 64), w, 1280, 720, r.cam.Tile())
 	if texts := wlOfKind(*got, "text"); len(texts) != 3 {
 		t.Fatalf("%d labels for 3 zones: %+v", len(texts), texts)
 	}
@@ -419,24 +424,24 @@ func TestZoneLabelDrawnOncePerZone(t *testing.T) {
 // crops it names); zoomed out it may grow to the full 40 px, so a field's
 // name reads from afar (PLAY-017).
 func TestZoneLabelCapFollowsZoom(t *testing.T) {
-	if c := zoneLabelCap(43); c != zoneLabelNear {
-		t.Fatalf("close zoom (43 px tiles): cap %g, want %g", c, zoneLabelNear)
+	if c := overlay.ZoneLabelCap(43); c != overlay.ZoneLabelNear {
+		t.Fatalf("close zoom (43 px tiles): cap %g, want %g", c, overlay.ZoneLabelNear)
 	}
-	if c := zoneLabelCap(12); c != zoneLabelMax {
-		t.Fatalf("far zoom (12 px tiles): cap %g, want %g", c, zoneLabelMax)
+	if c := overlay.ZoneLabelCap(12); c != overlay.ZoneLabelMax {
+		t.Fatalf("far zoom (12 px tiles): cap %g, want %g", c, overlay.ZoneLabelMax)
 	}
-	prev := zoneLabelMax + 1
+	prev := overlay.ZoneLabelMax + 1
 	for tl := 8.0; tl <= 64; tl++ {
-		c := zoneLabelCap(tl)
+		c := overlay.ZoneLabelCap(tl)
 		if c > prev {
 			t.Fatalf("cap grew from %g to %g as tiles grew to %g px", prev, c, tl)
 		}
 		prev = c
 	}
 	withUIScale(t, 1.5)
-	big := zoneLabelLayout("Stockpile", 300, 200, 150, 100, zoneLabelCap(43))
-	if !big.Ok || big.Style.Size > zoneLabelNear {
-		t.Fatalf("a big zone up close: size %g, want at most %g", big.Style.Size, zoneLabelNear)
+	big := overlay.ZoneLabelLayout("Stockpile", 300, 200, 150, 100, overlay.ZoneLabelCap(43))
+	if !big.Ok || big.Style.Size > overlay.ZoneLabelNear {
+		t.Fatalf("a big zone up close: size %g, want at most %g", big.Style.Size, overlay.ZoneLabelNear)
 	}
 }
 
@@ -454,7 +459,7 @@ func TestZoneLabelsDrawnAfterObjects(t *testing.T) {
 	wlSetScale(t, sc)
 	got := wlTrace(t)
 	r := New(&stubSim{w: 64, h: 64})
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.drawZones(ebiten.NewImage(64, 64), w, 1280, 720, tile)
 	for _, e := range *got {
 		if e.Kind == "text" {
@@ -476,12 +481,12 @@ func TestZoneLabelsDrawnAfterObjects(t *testing.T) {
 // --- PLAY-020: a growing zone's fill leaves its own plants uncovered -------
 
 // fillQuads draws w's zones at zoom and counts the fill batch's quads.
-func fillQuads(t *testing.T, art *artCatalog, w game.WorldView, zoom float64) int {
+func fillQuads(t *testing.T, art *artpkg.Catalog, w game.WorldView, zoom float64) int {
 	t.Helper()
 	r := New(&stubSim{w: 32, h: 32})
 	r.art = art
 	r.cam.Zoom = zoom
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.setView(640, 400, tile)
 	r.drawZones(ebiten.NewImage(640, 400), w, 640, 400, tile)
 	return r.overlays().Zones.FillQuads()

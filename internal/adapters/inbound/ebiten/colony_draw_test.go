@@ -5,6 +5,11 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -56,7 +61,7 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 		a.insp.Tab = tab
 		drawFrame(t, a, f)
 	}
-	a.openHistory()
+	a.win.History().Launch()
 	drawFrame(t, a, f)
 	a.uiCloseTop()
 	a.renderer.Select(2) // a colonist with no biography still shows the Bio tab's disabled state
@@ -66,11 +71,11 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 
 	// The Work tab, with the cursor on an incapable cell and on a header.
 	a.win.Open, a.win.Mode = true, "work"
-	r := a.windowRect()
-	for _, c := range []rect{workCellRect(r, 0, 6), workCellRect(r, 0, 2), {X: workCellRect(r, 0, 4).X, Y: r.Y + 24, W: 30, H: 16}} {
+	r := a.win.Rect()
+	for _, c := range []gfx.Rect{windows.WorkCellRect(r, 0, 6), windows.WorkCellRect(r, 0, 2), {X: windows.WorkCellRect(r, 0, 4).X, Y: r.Y + 24, W: 30, H: 16}} {
 		x, y := c.Center()
 		f.Cur.Mx, f.Cur.My = int(x), int(y)
-		for i := 0; i < tipDelay+2; i++ {
+		for i := 0; i < uikit.TipDelay+2; i++ {
 			f.Frame(t, a)
 		}
 		drawFrame(t, a, f)
@@ -79,18 +84,18 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 
 	// The Architect in every category with a card hovered.
 	f.Cur.Mx, f.Cur.My = -50, -50
-	a.openArchitect()
+	a.arch.OpenPanel()
 	for _, c := range archCategories {
-		a.selectArchCategory(c.id)
+		a.arch.SelectCategory(c.id)
 		if cells := a.hud().GridCells; len(cells) > 0 { // hover the category's first tool
 			f.Cur.Mx, f.Cur.My = int(cells[0].X+cells[0].W/2), int(cells[0].Y+cells[0].H/2)
 		}
 		drawFrame(t, a, f)
 	}
-	a.selectArchCategory("furniture")
-	a.selectArchTool("hospital_bed")
+	a.arch.SelectCategory("furniture")
+	a.arch.SelectTool("hospital_bed")
 	drawFrame(t, a, f)
-	a.closeArchitect()
+	a.arch.ClosePanel()
 }
 
 func TestColonyWindowsDraw(t *testing.T) {
@@ -101,11 +106,11 @@ func TestColonyWindowsDraw(t *testing.T) {
 	f.Cur.Mx, f.Cur.My = -50, -50
 
 	// The Factions window on each faction row, and with no factions at all.
-	a.openColonyFactions()
+	a.win.Factions().Launch()
 	drawFrame(t, a, f)
 	a.uiCloseTop()
 	s.factions = nil
-	a.openColonyFactions()
+	a.win.Factions().Launch()
 	drawFrame(t, a, f)
 	a.uiCloseTop()
 
@@ -119,7 +124,7 @@ func TestColonyWindowsDraw(t *testing.T) {
 	}
 	pressButton(t, a, f, "letter.3")
 	drawFrame(t, a, f)
-	if !a.uiModalOpen() {
+	if !a.uiSt().ModalOpen() {
 		t.Fatal("the letter should be open")
 	}
 	a.uiCloseTop()
@@ -127,9 +132,9 @@ func TestColonyWindowsDraw(t *testing.T) {
 
 	// Options > Story, with the custom dialog over it.
 	a.opt.Tab = "story"
-	a.apply(intent{kind: intentPush, screen: screenOptions})
+	a.apply(intent{kind: intentPush, screen: ports.ScreenOptions})
 	drawFrame(t, a, f)
-	a.openStoryCustom(s.story)
+	a.opt.OpenStoryCustom(s.story)
 	drawFrame(t, a, f)
 	f.Cur.Mx, f.Cur.My = 640, 300
 	drawFrame(t, a, f)
@@ -166,15 +171,15 @@ func TestCaptureSetupHasWhatTheShotsShow(t *testing.T) {
 func TestOptionsTabsDrawInColony(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, drawSim())
-	a.apply(intent{kind: intentPush, screen: screenOptions})
-	tabs := a.optionTabList()
+	a.apply(intent{kind: intentPush, screen: ports.ScreenOptions})
+	tabs := a.opt.TabList()
 	if tabs[3] != "story" {
 		t.Fatalf("tabs = %v, want Story after Gameplay", tabs)
 	}
 	for _, tab := range tabs {
 		a.opt.Tab = tab
 		drawFrame(t, a, f)
-		if a.currentOptionsTab() != tab {
+		if a.opt.CurrentTab() != tab {
 			t.Fatalf("tab %q did not open", tab)
 		}
 	}
@@ -195,10 +200,10 @@ func TestColonyToolGhostsAndHoverDraw(t *testing.T) {
 	a.cursor = &[2]int{int(sx), int(sy)}
 	drawFrame(t, a, f) // the hover card over a plant
 
-	a.openArchitect()
+	a.arch.OpenPanel()
 	for _, c := range []struct{ cat, tool string }{{"structure", "wall"}, {"zones", "grow"}, {"zones", "stockpile"}, {"zones", "roof"}, {"orders", "mine"}, {"furniture", "hospital_bed"}} {
-		a.selectArchCategory(c.cat)
-		a.selectArchTool(c.tool)
+		a.arch.SelectCategory(c.cat)
+		a.arch.SelectTool(c.tool)
 		a.arch.Drag = true
 		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 7, 7, 10, 9
 		drawFrame(t, a, f)
@@ -208,21 +213,21 @@ func TestColonyToolGhostsAndHoverDraw(t *testing.T) {
 func TestInspectorHelpers(t *testing.T) {
 	t.Parallel()
 	for _, k := range []string{"parka", "wool parka", "tuque", "duster", "sweater"} {
-		if gearLine(k) == "" {
+		if inspector.GearLine(k) == "" {
 			t.Errorf("gearLine(%q) is empty", k)
 		}
 	}
-	if titleCase("") != "" || titleCase("rifle") != "Rifle" {
+	if inspector.TitleCase("") != "" || inspector.TitleCase("rifle") != "Rifle" {
 		t.Error("titleCase")
 	}
-	if moodColor(10) == moodColor(90) || moodColor(40) == moodColor(90) {
+	if inspector.MoodColor(10) == inspector.MoodColor(90) || inspector.MoodColor(40) == inspector.MoodColor(90) {
 		t.Error("moodColor should tell low, middling and good moods apart")
 	}
 	a, _ := colonyApp(t, bioSim())
-	if got := a.creatureName(1); got != "Ada" {
+	if got := a.insp.Pawn().CreatureName(1); got != "Ada" {
 		t.Errorf("creatureName = %q", got)
 	}
-	if got := a.creatureName(99); got != "" {
+	if got := a.insp.Pawn().CreatureName(99); got != "" {
 		t.Errorf("unknown creature = %q", got)
 	}
 }

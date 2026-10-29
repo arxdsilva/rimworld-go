@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
 )
 
@@ -13,13 +15,13 @@ import (
 // defaultStoneStuff is the stone material the Architect offers first: the
 // first stone blocks (enum order) with free stock, else granite blocks.
 func defaultStoneStuff(w game.WorldView) string {
-	for _, s := range stoneNames {
+	for _, s := range spritepkg.StoneNames {
 		if s == "" {
 			continue
 		}
-		if k := s + " blocks"; stockOf(w, k) > 0 {
+		if k := s + " blocks"; architect.StockOf(w, k) > 0 {
 			return k
 		}
 	}
-	return defaultStone + " blocks"
+	return spritepkg.DefaultStone + " blocks"
 }

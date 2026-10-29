@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -17,7 +19,7 @@ import (
 // 1280x720 logical, and returns the physical size.
 func atLogical1280(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	t.Helper()
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	a.devFn = func() float64 { return 1 } // not the test machine's Retina factor
 	st := a.settings
 	st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, int(s*100)
@@ -50,7 +52,7 @@ func checkScaledScreen(t *testing.T, a *App, f *fakeInput, s float64, forward st
 	if forward == "" {
 		return
 	}
-	var fb button
+	var fb uikit.Button
 	found := false
 	for _, h := range a.layoutHits(a.sw, a.sh) {
 		if h.ID == forward {
@@ -114,9 +116,9 @@ func TestSetupScreensDrawAndHitAtUIScales(t *testing.T) {
 // the physical size even though the screen's logical size is smaller.
 func TestSetupBackdropFillsPhysicalScreen(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
-	resetSetupBackdrop()
+	wizard.ResetBackdrop()
 	pw, ph := atLogical1280(t, a, f, 1.5)
-	a.drawSetupBackdrop(ebiten.NewImage(pw, ph), a.sw, a.sh, nil)
+	a.wiz.DrawBackdrop(ebiten.NewImage(pw, ph), a.sw, a.sh, nil)
 	setupBackdropMu.Lock()
 	defer setupBackdropMu.Unlock()
 	if setupBackdrop.StarW != pw || setupBackdrop.StarH != ph {

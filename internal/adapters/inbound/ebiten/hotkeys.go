@@ -1,6 +1,11 @@
 package ebiten
 
 import (
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
@@ -21,7 +26,7 @@ func (a *App) handleViewKeys() {
 	if a.in.Fired(input.Screenshot) {
 		a.meter.Shot.Pending = true // taken after the next Draw (screenshot.go)
 	}
-	if a.in.Fired(input.HideUI) && a.nav.screen() == screenColony {
+	if a.in.Fired(input.HideUI) && a.nav.screen() == ports.ScreenColony {
 		a.chrome.Hidden = !a.chrome.Hidden
 	}
 }
@@ -31,7 +36,7 @@ func (a *App) handleViewKeys() {
 func (a *App) reservedFired() bool {
 	for _, act := range a.in.Res.FiredList() {
 		if d, ok := input.Lookup(act); ok && d.Reserved != "" {
-			a.toast(d.Label + ": " + d.Reserved)
+			a.chrome.Toast(d.Label + ": " + d.Reserved)
 			return true
 		}
 	}
@@ -79,14 +84,14 @@ func (a *App) handleTabKeys() {
 	case f.Fired(input.TabResearch):
 		a.applyClick("tab.research")
 	case f.Fired(input.TabAssign):
-		a.toggleAssign()
+		a.win.Assign().Toggle()
 	case f.Fired(input.TabWorld):
-		a.toggleWorld() // world_ui.go
+		a.win.World().Toggle() // world_ui.go
 	case f.Fired(input.TabHistory):
-		if a.uiModalTop() == historyModalID {
+		if a.uiModalTop() == windows.HistoryModalID {
 			a.uiCloseTop()
 		} else {
-			a.openHistory()
+			a.win.History().Launch()
 		}
 	case f.Fired(input.TabAnimals):
 		a.openAnimals(false)
@@ -117,15 +122,15 @@ func (a *App) handleMapKeys() {
 	case f.Fired(input.Forbid):
 		a.forbidSelection()
 	case f.Fired(input.Power):
-		a.powerSelection() // cmds_power.go (PLAY-021)
+		a.insp.Building().PowerSelection() // cmds_power.go (PLAY-021)
 	case f.Fired(input.RoofOverlay):
-		a.renderer.toggleRoofOverlay()
+		a.renderer.overlays().Roof.Toggle()
 	case f.Fired(input.RoomStats):
 		a.chrome.Rooms = !a.chrome.Rooms
 	case f.Fired(input.PowerOverlay):
-		a.renderer.togglePowerOverlay() // power_overlay.go (PLAY-021)
+		a.renderer.overlays().Power.Toggle() // power_overlay.go (PLAY-021)
 	case f.Fired(input.Search):
-		a.openSearch() // search_ui.go
+		a.ord.OpenSearch() // search_ui.go
 	case f.Fired(input.PrevColonist):
 		a.cycleColonist(-1)
 	case f.Fired(input.NextColonist):
@@ -139,7 +144,7 @@ func (a *App) handleMapKeys() {
 	}
 	for i, g := range input.Gizmos {
 		if f.Fired(g) {
-			a.pressCommandKey(i) // hud_commands.go
+			a.insp.Commands().PressCommandKey(i) // hud_commands.go
 		}
 	}
 }
@@ -150,17 +155,17 @@ func (a *App) presetTool(id string) {
 	if !ok {
 		return
 	}
-	a.openArchitect()
+	a.arch.OpenPanel()
 	a.arch.Cat = t.category
 	if a.arch.ToolID != id {
-		a.selectArchTool(id)
+		a.arch.SelectTool(id)
 	}
 }
 
 // draftSelection is R: the selected colonists (one or a group) are
 // drafted, or undrafted when all already are.
 func (a *App) draftSelection() {
-	pawns := a.selectedPawns()
+	pawns := a.sel.SelectedPawns()
 	if len(pawns) == 0 {
 		return
 	}
@@ -179,7 +184,7 @@ func (a *App) draftSelection() {
 // forbidSelection is F: the selected item stacks are forbidden, or allowed
 // when all already are.
 func (a *App) forbidSelection() {
-	items := a.selectedItems()
+	items := a.sel.SelectedItems()
 	if len(items) == 0 {
 		return
 	}
@@ -203,7 +208,7 @@ func (a *App) cycleColonist(d int) {
 		return
 	}
 	i := -1
-	if p, ok := a.selectedPawn(); ok {
+	if p, ok := a.insp.SelectedPawn(); ok {
 		for j, q := range pawns {
 			if q.ID == p.ID {
 				i = j
@@ -219,7 +224,7 @@ func (a *App) cycleColonist(d int) {
 		i = (i + d + len(pawns)) % len(pawns)
 	}
 	p := pawns[i]
-	a.selectCand(selCand{Kind: selPawn, ID: p.ID})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: p.ID})
 	a.centreOnPawn(p.ID)
 }
 
@@ -238,44 +243,44 @@ func (a *App) centreOnPawn(id entity.EntityID) {
 
 // selectedTile is where the single selection stands.
 func (a *App) selectedTile() (int, int, bool) {
-	if p, ok := a.selectedPawn(); ok {
+	if p, ok := a.insp.SelectedPawn(); ok {
 		return p.X, p.Y, true
 	}
-	if an, ok := a.selectedAnimal(); ok {
+	if an, ok := a.insp.SelectedAnimal(); ok {
 		return an.X, an.Y, true
 	}
-	if it, ok := a.selectedItem(); ok {
+	if it, ok := a.sel.SelectedItem(); ok {
 		return it.X, it.Y, true
 	}
-	if b, ok := a.selectedBuilding(); ok {
+	if b, ok := a.insp.SelectedBuilding(); ok {
 		return b.X, b.Y, true
 	}
-	if pl, ok := a.selectedPlant(); ok {
+	if pl, ok := a.sel.SelectedPlant(); ok {
 		return pl.X, pl.Y, true
 	}
-	if fr, ok := a.selectedFrame(); ok {
+	if fr, ok := a.insp.SelectedFrame(); ok {
 		return fr.X, fr.Y, true
 	}
 	return 0, 0, false
 }
 
 // selectedCand is the single selection as a candidate.
-func (a *App) selectedCand() (selCand, bool) {
+func (a *App) selectedCand() (selectionpkg.Cand, bool) {
 	switch {
 	case a.renderer.HasSelect():
-		return selCand{Kind: selPawn, ID: a.renderer.Selected()}, true
+		return selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: a.renderer.Selected()}, true
 	case a.sel.HasAnimal:
-		return selCand{Kind: selAnimal, ID: a.sel.SelAnimal}, true
+		return selectionpkg.Cand{Kind: selectionpkg.Animal, ID: a.sel.SelAnimal}, true
 	case a.sel.HasItem:
-		return selCand{Kind: selItem, ID: a.sel.SelItem}, true
+		return selectionpkg.Cand{Kind: selectionpkg.Item, ID: a.sel.SelItem}, true
 	case a.sel.HasBuilding:
-		return selCand{Kind: selBuilding, ID: a.sel.SelBuilding}, true
+		return selectionpkg.Cand{Kind: selectionpkg.Building, ID: a.sel.SelBuilding}, true
 	case a.sel.HasPlant:
-		return selCand{Kind: selPlant, ID: a.sel.SelPlant}, true
+		return selectionpkg.Cand{Kind: selectionpkg.Plant, ID: a.sel.SelPlant}, true
 	case a.sel.HasFrame:
-		return selCand{Kind: selFrame, ID: a.sel.SelFrame}, true
+		return selectionpkg.Cand{Kind: selectionpkg.Frame, ID: a.sel.SelFrame}, true
 	}
-	return selCand{}, false
+	return selectionpkg.Cand{}, false
 }
 
 // cycleCell is Numpad *: the next thing in the selected thing's cell, as
@@ -285,7 +290,7 @@ func (a *App) cycleCell() {
 	if !ok {
 		return
 	}
-	cands := a.selectables(a.renderer.world(), tx, ty)
+	cands := a.sel.Selectables(a.renderer.world(), tx, ty)
 	if len(cands) < 2 {
 		return
 	}
@@ -297,12 +302,12 @@ func (a *App) cycleCell() {
 		}
 	}
 	i = (i + 1) % len(cands)
-	a.selectCand(cands[i])
-	a.sel.Cycle = selCycle{Tile: [2]int{tx, ty}, Idx: i, N: len(cands), Ok: true}
+	a.sel.Select(cands[i])
+	a.sel.Cycle = selectionpkg.Cycle{Tile: [2]int{tx, ty}, Idx: i, N: len(cands), Ok: true}
 }
 
 // cameraInput gathers this frame's camera intent.
-func (a *App) cameraInput(v viewport) camInput {
+func (a *App) cameraInput(v camerapkg.Viewport) camInput {
 	f := &a.in
 	var c camInput
 	if f.Held(input.CamLeft) {
@@ -331,14 +336,14 @@ func (a *App) cameraInput(v viewport) camInput {
 	if f.Fired(input.ZoomOut) {
 		c.zoom--
 	}
-	if lx, ly := a.currentCursor(); f.Raw.WheelY != 0 && !a.renderer.wheelTaken && !a.uiWheelOver(lx, ly) { // a scroll view under the cursor owns the wheel
+	if lx, ly := a.currentCursor(); f.Raw.WheelY != 0 && !a.renderer.wheelTaken && !a.uiSt().WheelOver(lx, ly) { // a scroll view under the cursor owns the wheel
 		c.wheel, c.wx, c.wy = f.Raw.WheelY, float64(mx), float64(my)
 	}
 	switch {
-	case f.Clicked(mbMiddle):
-		f.Take(mbMiddle)
+	case f.Clicked(inputframe.Middle):
+		f.Take(inputframe.Middle)
 		a.midDrag = midDragState{on: true, x: mx, y: my}
-	case a.midDrag.on && f.Down(mbMiddle):
+	case a.midDrag.on && f.Down(inputframe.Middle):
 		c.dragX, c.dragY = float64(mx-a.midDrag.x), float64(my-a.midDrag.y)
 		a.midDrag.x, a.midDrag.y = mx, my
 	default:

@@ -6,6 +6,11 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -31,22 +36,22 @@ func TestAnimalInspectorBondBlock(t *testing.T) {
 	t.Parallel()
 	s := bondSim()
 	a, _ := colonyApp(t, s)
-	if !a.selectAnimalAt(6, 6) {
+	if !a.insp.Animal().SelectAnimalAt(6, 6) {
 		t.Fatal("select the dog")
 	}
-	an, _ := a.selectedAnimal()
-	rows := strings.Join(animalBondRows(an), "|")
+	an, _ := a.insp.SelectedAnimal()
+	rows := strings.Join(inspector.AnimalBondRows(an), "|")
 	for _, want := range []string{"Master: Ada", "Bond: Bo", "Mother: Clover", "Young: Ash, Moss"} {
 		if !strings.Contains(rows, want) {
 			t.Fatalf("bond rows %q lack %q", rows, want)
 		}
 	}
 	// the pane shows those rows, and the commands carry the training skills
-	if lines := thingLines(a.animalPane(an.ID)); !strings.Contains(lines, rows) {
+	if lines := thingLines(a.insp.Animal().AnimalPane(an.ID)); !strings.Contains(lines, rows) {
 		t.Fatalf("pane lines %q lack the bond rows %q", lines, rows)
 	}
-	cs := a.animalCommands(an.ID)
-	ids := map[string]cmdButton{}
+	cs := a.insp.Animal().AnimalCommands(an.ID)
+	ids := map[string]inspector.Button{}
 	for _, c := range cs {
 		ids[c.ID] = c
 	}
@@ -58,7 +63,7 @@ func TestAnimalInspectorBondBlock(t *testing.T) {
 	}
 	// every command has a cell in the grid beside the pane (the old panel
 	// check that no button fell out of it)
-	l := computeHUDLayout(1280, 720, hudState{PaneShown: true, Commands: len(cs)})
+	l := hudlayout.Compute(1280, 720, hudlayout.Inputs{PaneShown: true, Commands: len(cs)})
 	if len(l.GridCells) != len(cs) {
 		t.Fatalf("%d commands, %d grid cells", len(cs), len(l.GridCells))
 	}
@@ -91,14 +96,14 @@ func TestAnimalInspectorBondBlock(t *testing.T) {
 func TestWildAnimalHasNoMasterRow(t *testing.T) {
 	t.Parallel()
 	an := game.AnimalView{ID: 9, Species: "deer", Mode: "wandering", State: "wandering", Mother: "a deer"}
-	rows := animalBondRows(an)
+	rows := inspector.AnimalBondRows(an)
 	if len(rows) != 1 || rows[0] != "Mother: a deer" {
 		t.Fatalf("wild rows %v", rows)
 	}
 	st := &stubSim{world: game.WorldView{Animals: []game.AnimalView{an}}}
 	a, _ := colonyApp(t, st)
-	a.selectCand(selCand{Kind: selAnimal, ID: 9})
-	for _, c := range a.animalCommands(9) {
+	a.sel.Select(selection.Cand{Kind: selection.Animal, ID: 9})
+	for _, c := range a.insp.Animal().AnimalCommands(9) {
 		if strings.Contains(c.ID, "master") || strings.Contains(c.ID, "train") {
 			t.Fatalf("no master or training command for a wild animal: %s", c.ID)
 		}
@@ -108,10 +113,10 @@ func TestWildAnimalHasNoMasterRow(t *testing.T) {
 func TestAnimalsTabMasterAndTrainingColumns(t *testing.T) {
 	t.Parallel()
 	an := bondSim().world.Animals[0]
-	if animalMasterCell(an) != "Ada" || animalMasterCell(game.AnimalView{}) != "-" {
+	if windows.AnimalMasterCell(an) != "Ada" || windows.AnimalMasterCell(game.AnimalView{}) != "-" {
 		t.Fatal("master cell")
 	}
-	if got := animalTrainingCell(an); got != "Obedience 2/3" {
+	if got := windows.AnimalTrainingCell(an); got != "Obedience 2/3" {
 		t.Fatalf("training cell %q", got)
 	}
 	s := bondSim()
@@ -122,14 +127,14 @@ func TestAnimalsTabMasterAndTrainingColumns(t *testing.T) {
 	if w := a.hud().Window; a.sw != 1280 || w.Empty() {
 		t.Fatalf("no window at %d px: %+v", a.sw, w)
 	} else {
-		for _, b := range a.animalsTabButtons() {
+		for _, b := range a.win.Animals().Buttons() {
 			if b.X < w.X-0.5 || b.X+b.W > w.Right()+0.5 || b.Y < w.Y-0.5 || b.Y+b.H > w.Bottom()+0.5 {
 				t.Errorf("%s %v,%v %vx%v runs out of the window %+v", b.ID, b.X, b.Y, b.W, b.H, w)
 			}
 		}
 	}
 	screen := ebiten.NewImage(1280, 720)
-	a.drawAnimalsTab(screen, 1280, 720)
+	a.win.Animals().Draw(screen, 1280, 720)
 }
 
 // The pane's tab bodies (the log and the training rows) draw only inside
@@ -140,8 +145,8 @@ func TestAnimalTabBodiesStayInTheirPanel(t *testing.T) {
 	s := bondSim()
 	s.world.Animals[0].Log = thingLog(40)
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
-	sp := a.animalPane(50)
+	a.sel.Select(selection.Cand{Kind: selection.Animal, ID: 50})
+	sp := a.insp.Animal().AnimalPane(50)
 	for _, scale := range []float64{1, 1.5} {
 		withUIScale(t, scale)
 		for _, id := range []string{"inspector.log", "inspector.training"} {
@@ -149,10 +154,10 @@ func TestAnimalTabBodiesStayInTheirPanel(t *testing.T) {
 			if !ok {
 				t.Fatalf("no tab %s", id)
 			}
-			if tb.WantW < expandMinW || tb.WantW > expandMaxW {
-				t.Errorf("%s wants %v px wide, the panel clamps to %d..%d", id, tb.WantW, expandMinW, expandMaxW)
+			if tb.WantW < hudlayout.ExpandMinW || tb.WantW > hudlayout.ExpandMaxW {
+				t.Errorf("%s wants %v px wide, the panel clamps to %d..%d", id, tb.WantW, hudlayout.ExpandMinW, hudlayout.ExpandMaxW)
 			}
-			inner := rect{X: 40, Y: 260, W: tb.WantW - 2*paneInset, H: tb.WantH - 2*paneInset}
+			inner := gfx.Rect{X: 40, Y: 260, W: tb.WantW - 2*inspector.PaneInset, H: tb.WantH - 2*inspector.PaneInset}
 			img := ebiten.NewImage(1280, 720)
 			events := thingTraceDraw(t, func() { tb.Draw(img, inner) })
 			if len(events) == 0 {
@@ -181,13 +186,13 @@ func TestAnimalTabBodiesStayInTheirPanel(t *testing.T) {
 			}
 		}
 	}
-	for _, c := range a.animalCommands(50) {
+	for _, c := range a.insp.Animal().AnimalCommands(50) {
 		if !strings.HasPrefix(c.ID, "animal.train.") {
 			continue
 		}
 		for _, word := range strings.Fields(c.Label) {
-			if w := textW(word, tsSmall); w > cmdCell-8 {
-				t.Errorf("%s: %q (%.0f px) is clipped in a %d px cell", c.ID, word, w, cmdCell)
+			if w := gfx.TextW(word, gfx.Small); w > hudlayout.CmdCell-8 {
+				t.Errorf("%s: %q (%.0f px) is clipped in a %d px cell", c.ID, word, w, hudlayout.CmdCell)
 			}
 		}
 	}
@@ -201,11 +206,11 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	s := bondSim()
 	s.world.Animals[0].Log = thingLog(80)
 	a, f := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 50})
+	a.sel.Select(selection.Cand{Kind: selection.Animal, ID: 50})
 	f.Frame(t, a)
-	a.selectPaneTab("inspector.log")
+	a.insp.SelectPaneTab("inspector.log")
 	f.Frame(t, a)
-	exp := a.expandedRect()
+	exp := a.insp.ExpandedRect()
 	if exp.Empty() {
 		t.Fatal("the Log tab opens an expanded panel")
 	}
@@ -213,7 +218,7 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	zoom := a.renderer.cam.Zoom
 	f.Cur.Mx, f.Cur.My, f.Cur.WheelY = int(cx), int(cy), -1
 	f.Frame(t, a)
-	if off := a.uiSt().Scroll[animalLogID]; off <= 0 {
+	if off := a.uiSt().Scroll[inspector.AnimalLogID]; off <= 0 {
 		t.Fatalf("the wheel scrolled the log by %v", off)
 	}
 	if a.renderer.cam.Zoom != zoom {
@@ -221,9 +226,9 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	}
 	// another animal starts at the top
 	s.world.Animals = append(s.world.Animals, game.AnimalView{ID: 51, Species: "labrador", Label: "labrador", X: 7, Y: 7, Tame: true, Name: "Ash", Log: thingLog(80)})
-	a.selectCand(selCand{Kind: selAnimal, ID: 51})
+	a.sel.Select(selection.Cand{Kind: selection.Animal, ID: 51})
 	f.Frame(t, a)
-	if off := a.uiSt().Scroll[animalLogID]; off != 0 {
+	if off := a.uiSt().Scroll[inspector.AnimalLogID]; off != 0 {
 		t.Fatalf("a new animal's log scrolls from the top, got %v", off)
 	}
 }

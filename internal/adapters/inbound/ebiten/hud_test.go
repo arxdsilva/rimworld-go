@@ -2,6 +2,9 @@ package ebiten
 
 import (
 	"fmt"
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -23,7 +26,7 @@ func liveColony(t *testing.T, extraPawns int) (*App, *game.Game, entity.EntityID
 	a := testApp(g)
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony || a.renderer == nil {
+	if a.nav.screen() != ports.ScreenColony || a.renderer == nil {
 		t.Fatalf("startGame = %s renderer=%v", a.nav.screen(), a.renderer != nil)
 	}
 	return a, g, id
@@ -40,7 +43,7 @@ func TestColonistBarClickSelects(t *testing.T) {
 	if !a.renderer.HasSelect() || a.renderer.Selected() != id {
 		t.Fatalf("select = %v/%d, want %d", a.renderer.HasSelect(), a.renderer.Selected(), id)
 	}
-	if !a.paneShown() || len(a.paneButtons()) == 0 {
+	if !a.insp.PaneShown() || len(a.insp.PaneButtons()) == 0 {
 		t.Fatal("the inspect pane should be visible after bar select")
 	}
 }
@@ -53,7 +56,7 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 		t.Fatal("Work tab should open the overlay")
 	}
 	found := false
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		if b.ID == "tab.work" && b.Selected {
 			found = true
 		}
@@ -69,10 +72,10 @@ func TestDisabledTabsDoNotNavigate(t *testing.T) {
 	// the World tab is live now (ENG-003 M9): Factions is the one tab a
 	// legacy colony still has disabled
 	click(t, a, "tab.factions")
-	if a.win.Open || a.arch.Open || a.uiModalOpen() {
+	if a.win.Open || a.arch.Open || a.uiSt().ModalOpen() {
 		t.Fatal("disabled Factions tab opened something")
 	}
-	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
+	if a.nav.screen() != ports.ScreenColony || a.nav.overlay() != overlayNone {
 		t.Fatalf("disabled tab navigated to %s/%s", a.nav.screen(), a.nav.overlay())
 	}
 	if a.hint != "no other peoples in this colony" {
@@ -138,7 +141,7 @@ func TestColonyChromeHitBeforeMap(t *testing.T) {
 	t.Parallel()
 	a, _, id := liveColony(t, 0)
 	sw, sh := a.sw, a.sh
-	hits := func(r rect) bool {
+	hits := func(r gfx.Rect) bool {
 		x, y := r.Center()
 		return a.colonyChromeHit(int(x), int(y), sw, sh)
 	}
@@ -184,7 +187,7 @@ func TestArchitectTabOpens(t *testing.T) {
 	if !a.arch.Open {
 		t.Fatal("Architect tab should open")
 	}
-	if len(a.architectButtons()) == 0 {
+	if len(a.arch.Buttons()) == 0 {
 		t.Fatal("architect tools should be visible")
 	}
 }
@@ -200,11 +203,11 @@ func TestInspectorShowsNameAndJob(t *testing.T) {
 	if p.Job == "" {
 		t.Fatal("expected job line")
 	}
-	if spec := a.selectionPane(); spec.Title != p.Name {
+	if spec := a.insp.SelectionPane(); spec.Title != p.Name {
 		t.Fatalf("pane title = %q, want the colonist's name %q", spec.Title, p.Name)
 	}
 	found := false
-	for _, b := range a.paneButtons() {
+	for _, b := range a.insp.PaneButtons() {
 		if b.ID == "inspector.needs" && !b.Disabled {
 			found = true
 		}
@@ -228,7 +231,7 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 			t.Fatalf("category %s not selected", c.id)
 		}
 		// categories in ArchCats, the tools as command buttons in the grid
-		for _, b := range append(a.architectButtons(), a.commandGridButtons()...) {
+		for _, b := range append(a.arch.Buttons(), a.insp.Commands().CommandGridButtons()...) {
 			seen[b.ID] = true
 		}
 	}
@@ -237,7 +240,7 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 			t.Fatalf("tool %s is not reachable from any category", tool.id)
 		}
 		if tool.build != "" {
-			if _, ok := buildable(tool.build); !ok {
+			if _, ok := architectpkg.Buildable(tool.build); !ok {
 				t.Fatalf("tool %s builds unknown kind %q", tool.id, tool.build)
 			}
 		}
@@ -277,7 +280,7 @@ func TestInspectorShowsNameJobAndNeeds(t *testing.T) {
 	a.finishBoot()
 	a.startGame()
 	click(t, a, barID(id))
-	p, ok := a.selectedPawn()
+	p, ok := a.insp.SelectedPawn()
 	if !ok || p.Name != "Ada" {
 		t.Fatalf("selected = %+v ok=%v", p, ok)
 	}

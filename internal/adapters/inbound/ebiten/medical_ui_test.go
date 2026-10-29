@@ -7,6 +7,10 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -28,9 +32,9 @@ func TestBedMedicalToggleOnEverySleepingBed(t *testing.T) {
 	for _, kind := range []string{"bed", "double bed", "hospital bed", "sleeping spot"} {
 		s := medicalStub(kind, false)
 		a, _ := bldApp(t, s, 40)
-		c, ok := bldCmd(a.buildingCommands(40), "bldg.bed.medical")
+		c, ok := bldCmd(a.insp.Building().BuildingCommands(40), "bldg.bed.medical")
 		if !ok {
-			t.Fatalf("%s: no Medical command in %v", kind, bldCmdIDs(a.buildingCommands(40)))
+			t.Fatalf("%s: no Medical command in %v", kind, bldCmdIDs(a.insp.Building().BuildingCommands(40)))
 		}
 		if c.Label != "Medical" || !c.Toggle || c.On || c.Disabled || c.Icon != "hospital_bed" || c.Desc != medicalBedDesc {
 			t.Errorf("%s: Medical command %+v", kind, c)
@@ -42,7 +46,7 @@ func TestBedMedicalToggleOnEverySleepingBed(t *testing.T) {
 	// a building that is not a bed has no Medical toggle
 	s := bldStub(game.BuildingView{ID: 40, Kind: "wall", X: 5, Y: 5, W: 1, H: 1})
 	a, _ := bldApp(t, s, 40)
-	if _, ok := bldCmd(a.buildingCommands(40), "bldg.bed.medical"); ok {
+	if _, ok := bldCmd(a.insp.Building().BuildingCommands(40), "bldg.bed.medical"); ok {
 		t.Fatal("a wall has no Medical toggle")
 	}
 }
@@ -51,7 +55,7 @@ func TestBedMedicalToggleFollowsAndFlipsTheBed(t *testing.T) {
 	t.Parallel()
 	s := medicalStub("bed", false)
 	a, _ := bldApp(t, s, 40)
-	c, _ := bldCmd(a.buildingCommands(40), "bldg.bed.medical")
+	c, _ := bldCmd(a.insp.Building().BuildingCommands(40), "bldg.bed.medical")
 	pressCmd(a, c)
 	got := cmdsOf(s, command.SetBedMedical)
 	if len(got) != 1 || got[0].Target != 40 || !got[0].Enabled {
@@ -59,7 +63,7 @@ func TestBedMedicalToggleFollowsAndFlipsTheBed(t *testing.T) {
 	}
 
 	s.world.Buildings[0].Medical = true
-	c, _ = bldCmd(a.buildingCommands(40), "bldg.bed.medical")
+	c, _ = bldCmd(a.insp.Building().BuildingCommands(40), "bldg.bed.medical")
 	if !c.On {
 		t.Fatalf("a medical bed shows the toggle on: %+v", c)
 	}
@@ -78,7 +82,7 @@ func TestBedMedicalToggleIsIndependentOfThePrisonerMark(t *testing.T) {
 	s.world.Buildings[0].Medical = true
 	a, _ := bldApp(t, s.stubSim, 40)
 	a.renderer.game = s
-	cs := a.buildingCommands(40)
+	cs := a.insp.Building().BuildingCommands(40)
 	med, _ := bldCmd(cs, "bldg.bed.medical")
 	pr, _ := bldCmd(cs, "bldg.bed.prisoners")
 	if !med.On || med.Disabled || pr.On {
@@ -94,12 +98,12 @@ func TestBedMedicalToggleIsIndependentOfThePrisonerMark(t *testing.T) {
 func TestMedicalBedLine(t *testing.T) {
 	t.Parallel()
 	a, _ := bldApp(t, medicalStub("hospital bed", true), 40)
-	if !strings.Contains(bldLines(a.buildingPane(40)), "Medical bed") {
-		t.Fatalf("a medical bed says so: %q", a.buildingPane(40).Lines)
+	if !strings.Contains(bldLines(a.insp.Building().BuildingPane(40)), "Medical bed") {
+		t.Fatalf("a medical bed says so: %q", a.insp.Building().BuildingPane(40).Lines)
 	}
 	a, _ = bldApp(t, medicalStub("hospital bed", false), 40)
-	if strings.Contains(bldLines(a.buildingPane(40)), "Medical bed") {
-		t.Fatalf("a plain bed is not called medical: %q", a.buildingPane(40).Lines)
+	if strings.Contains(bldLines(a.insp.Building().BuildingPane(40)), "Medical bed") {
+		t.Fatalf("a plain bed is not called medical: %q", a.insp.Building().BuildingPane(40).Lines)
 	}
 }
 
@@ -109,9 +113,9 @@ func TestMedicalBedOwnerButtonsAreDisabledWithTheReason(t *testing.T) {
 		s := medicalStub(kind, true)
 		a, _ := bldApp(t, s, 40)
 		slots := map[string]int{"bed": 1, "double bed": 2}[kind]
-		cs := a.buildingCommands(40)
+		cs := a.insp.Building().BuildingCommands(40)
 		for slot := range slots {
-			c, ok := bldCmd(cs, bedOwnerID(slot))
+			c, ok := bldCmd(cs, inspector.BedOwnerID(slot))
 			if !ok {
 				t.Fatalf("%s: no owner button %d in %v", kind, slot, bldCmdIDs(cs))
 			}
@@ -127,7 +131,7 @@ func TestMedicalBedOwnerButtonsAreDisabledWithTheReason(t *testing.T) {
 		// the same bed, no longer medical, has working owner buttons again
 		s.world.Buildings[0].Medical = false
 		for slot := range slots {
-			if c, _ := bldCmd(a.buildingCommands(40), bedOwnerID(slot)); c.Disabled || c.Reason != "" {
+			if c, _ := bldCmd(a.insp.Building().BuildingCommands(40), inspector.BedOwnerID(slot)); c.Disabled || c.Reason != "" {
 				t.Errorf("%s owner %d on a plain bed: %+v", kind, slot, c)
 			}
 		}
@@ -143,7 +147,7 @@ func TestPawnRestWhenHurtToggleFollowsAndFlipsTheSetting(t *testing.T) {
 	s := paneSim()
 	s.pawns[0].RestWhenHurt = true
 	a, _ := paneApp(t, s)
-	c := mustCmd(t, a.pawnCommands(1), "cmd.pawn.bedrest")
+	c := mustCmd(t, a.insp.Pawn().PawnCommands(1), "cmd.pawn.bedrest")
 	if c.Label != "Rest when hurt" || !c.Toggle || !c.On || c.Disabled || c.Icon != "bed_rest" || c.Desc != restWhenHurtDesc {
 		t.Fatalf("Rest when hurt command %+v", c)
 	}
@@ -157,7 +161,7 @@ func TestPawnRestWhenHurtToggleFollowsAndFlipsTheSetting(t *testing.T) {
 	}
 
 	s.pawns[0].RestWhenHurt = false
-	c = mustCmd(t, a.pawnCommands(1), "cmd.pawn.bedrest")
+	c = mustCmd(t, a.insp.Pawn().PawnCommands(1), "cmd.pawn.bedrest")
 	if c.On {
 		t.Fatalf("the toggle reads the setting back: %+v", c)
 	}
@@ -174,7 +178,7 @@ func TestPawnRestWhenHurtClickReadsTheLiveSetting(t *testing.T) {
 	s := paneSim()
 	s.pawns[0].RestWhenHurt = true
 	a, _ := paneApp(t, s)
-	c := mustCmd(t, a.pawnCommands(1), "cmd.pawn.bedrest")
+	c := mustCmd(t, a.insp.Pawn().PawnCommands(1), "cmd.pawn.bedrest")
 	s.pawns[0].RestWhenHurt = false // changed since the grid was built
 	pressCmd(a, c)
 	if got := cmdsOf(s, command.SetPawnBedRest); len(got) != 1 || !got[0].Enabled {
@@ -186,10 +190,10 @@ func TestPawnRestWhenHurtIsForColonistsOnly(t *testing.T) {
 	t.Parallel()
 	s := prisonerSim()
 	a, _ := paneApp(t, s)
-	if _, ok := cmdByID(a.pawnCommands(1), "cmd.pawn.bedrest"); !ok {
+	if _, ok := cmdByID(a.insp.Pawn().PawnCommands(1), "cmd.pawn.bedrest"); !ok {
 		t.Fatal("a free colonist has Rest when hurt")
 	}
-	if _, ok := cmdByID(a.pawnCommands(2), "cmd.pawn.bedrest"); ok {
+	if _, ok := cmdByID(a.insp.Pawn().PawnCommands(2), "cmd.pawn.bedrest"); ok {
 		t.Fatal("a prisoner has no Rest when hurt")
 	}
 	for _, c := range []struct {
@@ -203,7 +207,7 @@ func TestPawnRestWhenHurtIsForColonistsOnly(t *testing.T) {
 		s := paneSim()
 		c.edit(&s.pawns[0])
 		a, _ := paneApp(t, s)
-		if _, ok := cmdByID(a.pawnCommands(1), "cmd.pawn.bedrest"); ok {
+		if _, ok := cmdByID(a.insp.Pawn().PawnCommands(1), "cmd.pawn.bedrest"); ok {
 			t.Errorf("%s has no Rest when hurt", c.name)
 		}
 	}
@@ -218,9 +222,9 @@ func TestPawnRestWhenHurtMergesInAGroup(t *testing.T) {
 		{ID: 2, Name: "Bo", Status: "alive", RestWhenHurt: true},
 	}}
 	a, _ := colonyApp(t, s)
-	a.setGroup(selPawn, []entity.EntityID{1, 2})
+	a.sel.SetGroup(selection.Pawn, []entity.EntityID{1, 2})
 	const id = "cmd.group.pawn.bedrest"
-	c, ok := cmdByID(a.groupCommands(), id)
+	c, ok := cmdByID(a.insp.Commands().GroupCommands(), id)
 	if !ok || !c.On || c.Mixed {
 		t.Fatalf("both rest when hurt: %+v ok=%v", c, ok)
 	}
@@ -231,7 +235,7 @@ func TestPawnRestWhenHurtMergesInAGroup(t *testing.T) {
 	}
 	s.pawns[1].RestWhenHurt = false
 	a.updates++ // a new Update: the live grid asks again
-	if c, _ = cmdByID(a.groupCommands(), id); !c.Mixed || c.On {
+	if c, _ = cmdByID(a.insp.Commands().GroupCommands(), id); !c.Mixed || c.On {
 		t.Fatalf("one of two rests when hurt: %+v", c)
 	}
 }
@@ -240,10 +244,10 @@ func TestPawnRestWhenHurtSitsAfterEquipBeforeThePrisonerCommands(t *testing.T) {
 	t.Parallel()
 	a, _ := paneApp(t, paneSim())
 	var ids []string
-	for _, c := range a.pawnCommands(1) {
+	for _, c := range a.insp.Pawn().PawnCommands(1) {
 		ids = append(ids, c.ID)
 	}
-	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", prisonerCapture, prisonerArrest}
+	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", inspector.PrisonerCapture, inspector.PrisonerArrest}
 	if !slices.Equal(ids, want) {
 		t.Fatalf("commands %v, want %v", ids, want)
 	}
@@ -257,13 +261,13 @@ func TestPawnPaneSaysRestingInjuredOnce(t *testing.T) {
 	s.pawns[0].BedRest, s.pawns[0].Job = true, "Resting (injured)"
 	a, _ := paneApp(t, s)
 	n := 0
-	for _, ln := range a.pawnLines(s.pawns[0]) {
+	for _, ln := range a.insp.Pawn().PawnLines(s.pawns[0]) {
 		if strings.Contains(ln, "Resting (injured)") {
 			n++
 		}
 	}
 	if n != 1 {
-		t.Fatalf("pane lines %q: %d mention resting, want 1 (the job line)", a.pawnLines(s.pawns[0]), n)
+		t.Fatalf("pane lines %q: %d mention resting, want 1 (the job line)", a.insp.Pawn().PawnLines(s.pawns[0]), n)
 	}
 }
 
@@ -284,17 +288,17 @@ func TestMedicalCommandsFitTheGridAtUIScales(t *testing.T) {
 		for _, c := range []struct {
 			name string
 			app  *App
-			cmds []cmdButton
+			cmds []inspector.Button
 		}{
-			{"bed", ba, ba.buildingCommands(40)},
-			{"pawn", pa, pa.pawnCommands(1)},
+			{"bed", ba, ba.insp.Building().BuildingCommands(40)},
+			{"pawn", pa, pa.insp.Pawn().PawnCommands(1)},
 		} {
 			a, cs := c.app, c.cmds
 			if len(cs) == 0 {
 				t.Fatalf("scale %v %s: no commands", scale, c.name)
 			}
 			sw, sh := a.size()
-			l := computeHUDLayout(sw, sh, hudState{PaneShown: true, Commands: len(cs), GlobalH: 200})
+			l := hudlayout.Compute(sw, sh, hudlayout.Inputs{PaneShown: true, Commands: len(cs), GlobalH: 200})
 			if len(l.GridCells) != len(cs) {
 				t.Fatalf("scale %v %s: %d commands, %d cells", scale, c.name, len(cs), len(l.GridCells))
 			}
@@ -309,7 +313,7 @@ func TestMedicalCommandsFitTheGridAtUIScales(t *testing.T) {
 					if cm.ID == "bldg.deconstruct" {
 						break
 					}
-					if tw := textW(w, tsSmall); tw > cell.W-8 {
+					if tw := gfx.TextW(w, gfx.Small); tw > cell.W-8 {
 						t.Errorf("scale %v %s: %s label word %q (%.0fpx) does not fit %.0fpx", scale, c.name, cm.ID, w, tw, cell.W)
 					}
 				}
@@ -324,8 +328,8 @@ func TestMedicalCommandsFitTheGridAtUIScales(t *testing.T) {
 				t.Errorf("scale %v %s: the live grid shows %d of %d commands", scale, c.name, got, len(cs))
 			}
 			img := ebiten.NewImage(sw, sh)
-			a.drawPane(img)
-			a.drawCommandGrid(img)
+			a.insp.DrawPane(img)
+			a.insp.Commands().DrawCommandGrid(img)
 		}
 	}
 }

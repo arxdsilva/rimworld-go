@@ -14,6 +14,9 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/input"
@@ -81,7 +84,7 @@ func newJourney(t *testing.T, opts ...jOpt) *journey {
 	a := testApp(g)
 	a.finishBoot()
 	a.startGame()
-	if a.renderer == nil || a.nav.screen() != screenColony {
+	if a.renderer == nil || a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("no colony: screen %s, %s", a.nav.screen(), a.sessionErr)
 	}
 	j := &journey{t: t, a: a, g: g, clock: time.Unix(1000, 0)}
@@ -169,7 +172,7 @@ func (j *journey) lookAt(tx, ty int) {
 
 // clickTile clicks a tile's centre with btn; the tile must not be under
 // the HUD.
-func (j *journey) clickTile(x, y int, btn mouseBtn, mods input.Mod) {
+func (j *journey) clickTile(x, y int, btn inputframe.MouseBtn, mods input.Mod) {
 	j.t.Helper()
 	j.f.MoveTo(j.a, x, y)
 	if j.a.colonyChromeHit(j.f.Cur.Mx, j.f.Cur.My, j.a.sw, j.a.sh) {
@@ -179,14 +182,14 @@ func (j *journey) clickTile(x, y int, btn mouseBtn, mods input.Mod) {
 }
 
 // dragTiles drags btn from one tile centre to another (three Updates).
-func (j *journey) dragTiles(btn mouseBtn, x0, y0, x1, y1 int, mods input.Mod) {
+func (j *journey) dragTiles(btn inputframe.MouseBtn, x0, y0, x1, y1 int, mods input.Mod) {
 	j.t.Helper()
 	j.f.Drag(j.t, j.a, btn, x0, y0, x1, y1, mods)
 }
 
 // settle puts enough Updates between two clicks that they are never a
 // double click.
-func (j *journey) settle() { j.a.updates += doubleClickFrames + 1 }
+func (j *journey) settle() { j.a.updates += selection.DoubleClickFrames + 1 }
 
 // clickID clicks a HUD button or a kit widget by id with the mouse, the
 // real path: one Update to lay the screen out, a press and a release at
@@ -223,7 +226,7 @@ func (j *journey) clickID(id string) bool {
 func (j *journey) pick(label string) {
 	j.t.Helper()
 	var labels []string
-	for _, b := range j.a.floatButtons() {
+	for _, b := range j.a.ord.FloatButtons() {
 		labels = append(labels, b.Label)
 		if strings.HasPrefix(b.Label, label) {
 			s := float32(j.a.scale.S)

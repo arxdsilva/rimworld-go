@@ -2,6 +2,10 @@ package ebiten
 
 import (
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -19,13 +23,13 @@ const castTile = 64.0
 
 // headOf maps the top of a caster hRef tiles tall (calibrated so its
 // opaque height is exactly hRef tiles on screen) through the projection.
-func headOf(t *testing.T, l lightState, hRef, kappaK float64) (dx, dy float64) {
+func headOf(t *testing.T, l lightpkg.State, hRef, kappaK float64) (dx, dy float64) {
 	t.Helper()
 	const px, py = 300.0, 200.0
-	opaque := hRef * artTilePx // source px: hRef tiles tall
-	k := spriteKappa(hRef, opaque, artTilePx) * kappaK
-	g := shadowProjection(px, py, k, l, hRef, 1)
-	top := py - opaque*castTile/artTilePx // screen px above the pivot
+	opaque := hRef * artpkg.TilePx // source px: hRef tiles tall
+	k := lightpkg.SpriteKappa(hRef, opaque, artpkg.TilePx) * kappaK
+	g := lightpkg.ShadowProjection(px, py, k, l, hRef, 1)
+	top := py - opaque*castTile/artpkg.TilePx // screen px above the pivot
 	x, y := g.Apply(px, top)
 	return (x - px) / castTile, (y - py) / castTile
 }
@@ -36,21 +40,21 @@ func TestLyingPoseFlat(t *testing.T) {
 	t.Parallel()
 	l := testLight(1, 0.6, 0.3)
 	ux, uy := headOf(t, l, 1, 1)
-	lx, ly := headOf(t, l, 1, lyingKappa)
-	if lyingKappa != 0.25 || !near(lx, ux*0.25, 1e-9) || !near(ly, uy*0.25, 1e-9) {
+	lx, ly := headOf(t, l, 1, lightpkg.LyingKappa)
+	if lightpkg.LyingKappa != 0.25 || !near(lx, ux*0.25, 1e-9) || !near(ly, uy*0.25, 1e-9) {
 		t.Fatalf("lying tip (%.3f, %.3f), upright (%.3f, %.3f): want a quarter", lx, ly, ux, uy)
 	}
 	// a pawn lying on the ground uses the lying projection; one in bed casts nothing
 	p := game.PawnView{ID: 1, Lying: true}
-	if !figureLying(p) {
+	if !creaturepkg.FigureLying(p) {
 		t.Fatal("a pawn on the ground is not lying flat")
 	}
 }
 
 // figureArt is the combat test art plus the clothing and hair layers.
-func figureArt() *artCatalog {
+func figureArt() *artpkg.Catalog {
 	c := fakeCombatArt()
-	for f := faceSouth; f <= faceWest; f++ {
+	for f := artpkg.FaceSouth; f <= artpkg.FaceWest; f++ {
 		for _, k := range []string{"pants_basic_", "shirt_basic_", "vest_utility_", "hair_short_", "hair_crop_", "hair_bun_"} {
 			c.Sprites["pawn/"+k+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 		}
@@ -59,7 +63,7 @@ func figureArt() *artCatalog {
 }
 
 // keyOf maps a drawn image back to its sprite key.
-func keyOf(c *artCatalog, img *ebiten.Image) string {
+func keyOf(c *artpkg.Catalog, img *ebiten.Image) string {
 	for k, sp := range c.Sprites {
 		if sp.Img == img {
 			return k
@@ -72,7 +76,7 @@ func keyOf(c *artCatalog, img *ebiten.Image) string {
 func castAll(r *Renderer, p game.PawnView) map[string]int {
 	got := map[string]int{}
 	layer := ebiten.NewImage(512, 512)
-	r.cast = &shadowCast{Layer: layer, Alpha: 0.3, OnDraw: func(img *ebiten.Image) { got[keyOf(r.art, img)]++ }}
+	r.cast = &lightpkg.Cast{Layer: layer, Alpha: 0.3, OnDraw: func(img *ebiten.Image) { got[keyOf(r.art, img)]++ }}
 	defer func() { r.cast = nil }()
 	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, castTile, r.pawnFigurePoseOf(p))
 	return got
@@ -121,8 +125,8 @@ func TestFigureDrawIsPure(t *testing.T) {
 	r.art = figureArt()
 	r.present = 100
 	r.view.Pawns = []game.PawnView{rescuer, patient, downed}
-	r.last[5] = pawnVisual{facing: faceEast, lyingSince: 90}
-	st := r.animState()
+	r.last[5] = pawnVisual{facing: artpkg.FaceEast, lyingSince: 90}
+	st := r.creatures()
 	st.PrevStride[3] = 0.25
 	type snap struct {
 		carry, stride, work, recs, last, parts, floaters int
@@ -154,7 +158,7 @@ func TestFigureDrawIsPure(t *testing.T) {
 	if got := castAll(r, sleeper); len(got) != 0 {
 		t.Fatalf("a pawn in bed cast %v", got)
 	}
-	if figureLying(sleeper) {
+	if creaturepkg.FigureLying(sleeper) {
 		t.Fatal("a pawn in bed counts as lying on the ground")
 	}
 }
@@ -180,8 +184,8 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	// PLAY-020 §3b, PLAY-021: every lamp that glows (powered) is a light,
 	// not only those in a room the sim calls lit; the banked campfire is out.
 	got := r.pointLights()
-	if len(got) != 3 || got[0].ID != 1 || got[0].H != campfireLightH || got[1].ID != 3 || got[1].H != lampLightH ||
-		got[2].ID != 4 || got[1].Reach != lampLightReach {
+	if len(got) != 3 || got[0].ID != 1 || got[0].H != lightpkg.CampfireLightH || got[1].ID != 3 || got[1].H != lightpkg.LampLightH ||
+		got[2].ID != 4 || got[1].Reach != lightpkg.LampLightReach {
 		t.Fatalf("lights %+v", got)
 	}
 	if got[0].X != 2.5 || got[0].Y != 8.5 {
@@ -195,12 +199,12 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 		if w.RoofCells == nil {
 			w.RoofCells = make([]uint8, len(w.RoomGrid))
 		}
-		w.RoofCells[i] = roofBuilt
+		w.RoofCells[i] = overlay.RoofBuilt
 	}
 	r.view.W = w
 	r.view.Pawns = []game.PawnView{{ID: 1, X: 3, Y: 8}, {ID: 2, X: 9, Y: 3}}
-	r.lit.Light = lightAt(23, 15, "clear", 0)
-	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	r.lit.Light = lightpkg.LightAt(23, 15, "clear", 0)
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
 	// pawn 1: the moon and the fire; pawn 2: the lamp only
 	if r.env.Shadow.Casts != 3 || r.env.Shadow.Composites != 1 {
 		t.Fatalf("drew %d silhouettes, %d composites", r.env.Shadow.Casts, r.env.Shadow.Composites)
@@ -212,8 +216,8 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	// lights at daylight 1"): it washes out only open-sky creatures. At
 	// noon pawn 1 casts the sun only (its fire shadow is gone) and pawn 2,
 	// under the roof, keeps its lamp shadow.
-	r.lit.Light = lightAt(12, 15, "clear", 0)
-	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	r.lit.Light = lightpkg.LightAt(12, 15, "clear", 0)
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
 	if r.env.Shadow.Casts != 3+2 {
 		t.Fatalf("noon drew %d silhouettes, want the sun and the indoor lamp", r.env.Shadow.Casts-3)
 	}
@@ -227,8 +231,8 @@ func castsAt(t *testing.T, w game.WorldView, hour float64, pawns ...game.PawnVie
 	r.art = figureArt()
 	r.view.W = w
 	r.view.Pawns = pawns
-	r.lit.Light = lightAt(hour, 15, "clear", 0)
-	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	r.lit.Light = lightpkg.LightAt(hour, 15, "clear", 0)
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
 	return r.env.Shadow.Casts
 }
 

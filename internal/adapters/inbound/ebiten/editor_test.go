@@ -7,6 +7,9 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/scenario"
@@ -26,7 +29,7 @@ func editorApp(t *testing.T, fromNew bool) (*App, *fakeInput, *memStore) {
 		click(t, a, "scen.edit")
 	}
 	f.Frame(t, a)
-	if a.nav.screen() != screenScenarioEditor || a.ng.Ed == nil {
+	if a.nav.screen() != ports.ScreenScenarioEditor || a.ng.Ed == nil {
 		t.Fatalf("screen = %s, editor = %v", a.nav.screen(), a.ng.Ed)
 	}
 	return a, f, st
@@ -76,7 +79,7 @@ func TestEditorAddMoveRemoveParts(t *testing.T) {
 	for _, k := range []string{"forced_trait", "age_range"} {
 		press(t, a, f, "sced.addkind."+k)
 		f.Frame(t, a)
-		if a.uiModalOpen() {
+		if a.uiSt().ModalOpen() {
 			t.Fatalf("choosing %s should close the dialog", k)
 		}
 		if k == "forced_trait" {
@@ -165,18 +168,18 @@ func TestEditorCardsToggleAndEditValues(t *testing.T) {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
 	f.Frame(t, a)
-	idx := indexWhere(len(edItems), func(i int) bool { return edItems[i] == item.Steel })
+	idx := wizard.IndexWhere(len(wizard.EdItems), func(i int) bool { return wizard.EdItems[i] == item.Steel })
 	// Scroll the list so the row is declared, then click it.
 	a.uiSt().Scroll["modal.pick.sced.p.0.item.list.scroll"] = 0
-	id := "modal.pick.sced.p.0.item.list." + uiNum(idx)
+	id := "modal.pick.sced.p.0.item.list." + uikit.Num(idx)
 	for i := 0; i < 60 && !hasWidget(a, id); i++ {
-		a.uiSt().Scroll["modal.pick.sced.p.0.item.list"] += 3 * listRowH
+		a.uiSt().Scroll["modal.pick.sced.p.0.item.list"] += 3 * uikit.ListRowH
 		f.Frame(t, a)
 	}
 	press(t, a, f, id)
 	f.Frame(t, a)
-	if ed.Def.Parts[0].Item != item.Steel || a.uiModalOpen() {
-		t.Fatalf("item = %v modal=%v", ed.Def.Parts[0].Item, a.uiModalOpen())
+	if ed.Def.Parts[0].Item != item.Steel || a.uiSt().ModalOpen() {
+		t.Fatalf("item = %v modal=%v", ed.Def.Parts[0].Item, a.uiSt().ModalOpen())
 	}
 	press(t, a, f, "sced.card.0") // collapse again
 	f.Frame(t, a)
@@ -236,7 +239,7 @@ func TestEditorValidationLinksToPart(t *testing.T) {
 	if len(probs) != 1 || probs[0].Part != last || probs[0].Severity != scenario.Error {
 		t.Fatalf("problems = %+v, want one error on part %d", probs, last)
 	}
-	if hasWidget(a, "sced.card."+uiNum(last)) {
+	if hasWidget(a, "sced.card."+uikit.Num(last)) {
 		t.Fatal("the bad part should start below the visible form")
 	}
 	if ed.Open[last] {
@@ -256,7 +259,7 @@ func TestEditorValidationLinksToPart(t *testing.T) {
 	if a.uiSt().Scroll["sced.form"] <= 0 {
 		t.Fatal("clicking a problem scrolls to its part")
 	}
-	if !hasWidget(a, "sced.card."+uiNum(last)) || !hasWidget(a, "sced.p."+uiNum(last)+".chance") {
+	if !hasWidget(a, "sced.card."+uikit.Num(last)) || !hasWidget(a, "sced.p."+uikit.Num(last)+".chance") {
 		t.Fatal("the part and its controls are in view")
 	}
 }
@@ -284,13 +287,13 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 		t.Fatalf("an error must block Done: disabled=%v %q", w.Disabled, w.Reason)
 	}
 	click(t, a, "sced.done")
-	if a.nav.screen() != screenScenarioEditor {
+	if a.nav.screen() != ports.ScreenScenarioEditor {
 		t.Fatalf("Done with errors left the editor: %s", a.nav.screen())
 	}
 	ed.Def.Name = "Fresh start"
 	f.Frame(t, a)
 	click(t, a, "sced.done")
-	if a.nav.screen() != screenScenario || a.ng.Ed != nil {
+	if a.nav.screen() != ports.ScreenScenario || a.ng.Ed != nil {
 		t.Fatalf("Done = %s, editor %v", a.nav.screen(), a.ng.Ed)
 	}
 	if len(a.wiz.Unsaved) != 1 || a.wiz.Unsaved[0].Name != "Fresh start" {
@@ -313,7 +316,7 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 	// And it goes forward from Choose Scenario.
 	f.Frame(t, a)
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenStoryteller || a.ng.Scenario.Name != "Fresh start" {
+	if a.nav.screen() != ports.ScreenStoryteller || a.ng.Scenario.Name != "Fresh start" {
 		t.Fatalf("screen=%s scenario=%q", a.nav.screen(), a.ng.Scenario.Name)
 	}
 }
@@ -355,13 +358,13 @@ func TestEditorSaveLoadRoundTrip(t *testing.T) {
 	f.Frame(t, a)
 	press(t, a, f, "modal.sced.load.table.body.0")
 	f.Frame(t, a)
-	if a.uiModalOpen() || ed.Def.Summary != "round trip" || ed.Def.Desc != "line one\nline two" {
-		t.Fatalf("modal=%v summary=%q", a.uiModalOpen(), ed.Def.Summary)
+	if a.uiSt().ModalOpen() || ed.Def.Summary != "round trip" || ed.Def.Desc != "line one\nline two" {
+		t.Fatalf("modal=%v summary=%q", a.uiSt().ModalOpen(), ed.Def.Summary)
 	}
 	// Saving the same name again from this editor needs no question.
 	press(t, a, f, "sced.save")
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("re-saving a file this editor wrote asks nothing")
 	}
 
@@ -392,7 +395,7 @@ func TestEditorSaveLoadRoundTrip(t *testing.T) {
 	}
 	// Done after saving selects the file in the list.
 	click(t, a, "sced.done")
-	if sel := a.ng.Selected(); a.nav.screen() != screenScenario || sel == nil || sel.Key != "file.my-test-camp" || sel.Unsaved {
+	if sel := a.ng.Selected(); a.nav.screen() != ports.ScreenScenario || sel == nil || sel.Key != "file.my-test-camp" || sel.Unsaved {
 		t.Fatalf("screen=%s selected=%+v", a.nav.screen(), sel)
 	}
 	if len(a.wiz.Unsaved) != 0 {
@@ -448,8 +451,8 @@ func TestEditorLoadShowsErrorsOfBrokenFiles(t *testing.T) {
 	f.Frame(t, a)
 	press(t, a, f, "modal.sced.load.table.body.0")
 	f.Frame(t, a)
-	if !a.uiModalOpen() || !strings.Contains(a.ng.Ed.LoadErr, "broken") {
-		t.Fatalf("a file that can't be read keeps the dialog open with the reason: modal=%v err=%q", a.uiModalOpen(), a.ng.Ed.LoadErr)
+	if !a.uiSt().ModalOpen() || !strings.Contains(a.ng.Ed.LoadErr, "broken") {
+		t.Fatalf("a file that can't be read keeps the dialog open with the reason: modal=%v err=%q", a.uiSt().ModalOpen(), a.ng.Ed.LoadErr)
 	}
 	a.Draw(ebiten.NewImage(a.sw, a.sh))
 }
@@ -481,7 +484,7 @@ func TestEditorBackAsksOnlyWhenDirty(t *testing.T) {
 	t.Parallel()
 	a, f, _ := editorApp(t, false)
 	click(t, a, "wizard.back")
-	if a.nav.screen() != screenScenario || a.uiModalOpen() {
+	if a.nav.screen() != ports.ScreenScenario || a.uiSt().ModalOpen() {
 		t.Fatalf("an untouched editor leaves at once: %s", a.nav.screen())
 	}
 	f.Frame(t, a)
@@ -491,12 +494,12 @@ func TestEditorBackAsksOnlyWhenDirty(t *testing.T) {
 	f.Frame(t, a)
 	click(t, a, "wizard.back")
 	f.Frame(t, a)
-	if a.nav.screen() != screenScenarioEditor || a.uiModalTop() != "sced.discard" {
+	if a.nav.screen() != ports.ScreenScenarioEditor || a.uiModalTop() != "sced.discard" {
 		t.Fatalf("screen=%s modal=%q, want Discard changes?", a.nav.screen(), a.uiModalTop())
 	}
 	press(t, a, f, "modal.sced.discard.cancel")
 	f.Frame(t, a)
-	if a.nav.screen() != screenScenarioEditor {
+	if a.nav.screen() != ports.ScreenScenarioEditor {
 		t.Fatal("Cancel stays in the editor")
 	}
 	f.Key(t, a, "Escape", 0) // Esc asks too
@@ -505,7 +508,7 @@ func TestEditorBackAsksOnlyWhenDirty(t *testing.T) {
 	}
 	press(t, a, f, "modal.sced.discard.ok")
 	f.Frame(t, a)
-	if a.nav.screen() != screenScenario || a.ng.Ed != nil || len(a.wiz.Unsaved) != 0 {
+	if a.nav.screen() != ports.ScreenScenario || a.ng.Ed != nil || len(a.wiz.Unsaved) != 0 {
 		t.Fatalf("Discard: screen=%s ed=%v unsaved=%d", a.nav.screen(), a.ng.Ed, len(a.wiz.Unsaved))
 	}
 }
@@ -555,27 +558,27 @@ func TestEditorHelpers(t *testing.T) {
 		"???":                   "scenario",
 		strings.Repeat("a", 90): strings.Repeat("a", 40),
 	} {
-		if got := slugOf(in); got != want {
+		if got := wizard.SlugOf(in); got != want {
 			t.Errorf("slugOf(%q) = %q, want %q", in, got, want)
 		}
 	}
 	d, _ := scenario.Builtin("gilded_expedition")
-	c := copyForEditing(d)
+	c := wizard.CopyForEditing(d)
 	if c.Name != "Gilded Expedition copy" || c.Builtin || c.Key != "" {
 		t.Fatalf("copy = %+v", c)
 	}
-	long := cloneDef(d)
+	long := wizard.CloneDef(d)
 	long.Name = strings.Repeat("x", scenario.MaxName)
 	long.Builtin = true
-	if n := len([]rune(copyForEditing(long).Name)); n != scenario.MaxName {
+	if n := len([]rune(wizard.CopyForEditing(long).Name)); n != scenario.MaxName {
 		t.Fatalf("a long copied name is %d runes, want the limit %d", n, scenario.MaxName)
 	}
-	custom := cloneDef(d)
+	custom := wizard.CloneDef(d)
 	custom.Builtin, custom.Name = false, "Mine"
-	if copyForEditing(custom).Name != "Mine" {
+	if wizard.CopyForEditing(custom).Name != "Mine" {
 		t.Fatal("a custom scenario keeps its name when copied")
 	}
-	if prettyKey("industrial_medicine") != "Industrial medicine" || prettyKey("") != "" {
+	if wizard.PrettyKey("industrial_medicine") != "Industrial medicine" || wizard.PrettyKey("") != "" {
 		t.Fatal("prettyKey")
 	}
 }

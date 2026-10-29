@@ -5,6 +5,12 @@ import (
 	"image"
 	"math"
 	"regexp"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	hudpkg "rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strconv"
 	"strings"
 	"testing"
@@ -58,7 +64,7 @@ func visName(dev, ui, zoom float64) string {
 
 // visCheckPan compares a frame before (a) and after (b) the camera moved by
 // (dx, dy) tiles of tile physical pixels.
-func visCheckPan(a, b []traceEvent, dx, dy int, tile float64) []string {
+func visCheckPan(a, b []gfx.TraceEvent, dx, dy int, tile float64) []string {
 	var bad []string
 	ha, hb := visPass(a, "hud"), visPass(b, "hud")
 	if len(ha) != len(hb) {
@@ -88,7 +94,7 @@ func visCheckPan(a, b []traceEvent, dx, dy int, tile float64) []string {
 }
 
 // visSame reports a and b are the same draw within tol pixels.
-func visSame(a, b traceEvent, tol float64) bool {
+func visSame(a, b gfx.TraceEvent, tol float64) bool {
 	return a.Kind == b.Kind && a.Text == b.Text &&
 		visNear(a.X, b.X, tol) && visNear(a.Y, b.Y, tol) && visNear(a.W, b.W, tol) && visNear(a.H, b.H, tol)
 }
@@ -104,7 +110,7 @@ func visNear(a, b float32, tol float64) bool { return math.Abs(float64(a-b)) <= 
 // font is rasterised at a whole pixel size (font.go faceSize floors
 // size x s), so glyph runs come out up to one ppem narrower than s x the
 // reference (3 % measured at s = 1.5).
-func visCheckScale(ref, got []traceEvent, s float64) []string {
+func visCheckScale(ref, got []gfx.TraceEvent, s float64) []string {
 	var bad []string
 	if len(ref) != len(got) {
 		bad = append(bad, fmt.Sprintf("hud: %d draws at scale 1, %d at scale %g%s", len(ref), len(got), s, visFirstDiff(ref, got, s)))
@@ -146,7 +152,7 @@ func visScaleText(s string) string {
 }
 
 // visFirstDiff names the first draw where two HUD streams stop agreeing.
-func visFirstDiff(ref, got []traceEvent, s float64) string {
+func visFirstDiff(ref, got []gfx.TraceEvent, s float64) string {
 	for i := 0; i < len(ref) && i < len(got); i++ {
 		if ref[i].Kind != got[i].Kind || visScaleText(ref[i].Text) != visScaleText(got[i].Text) {
 			return fmt.Sprintf("; first difference at %d:\n\t\tscale 1 %s\n\t\tscale %g %s", i, ref[i], s, got[i])
@@ -159,19 +165,19 @@ func visFirstDiff(ref, got []traceEvent, s float64) string {
 }
 
 // visInside reports the event's rectangle lies in [x0,x1] x [y0,y1].
-func visInside(e traceEvent, x0, y0, x1, y1, tol float64) bool {
+func visInside(e gfx.TraceEvent, x0, y0, x1, y1, tol float64) bool {
 	return float64(e.X) >= x0-tol && float64(e.Y) >= y0-tol && float64(e.X+e.W) <= x1+tol && float64(e.Y+e.H) <= y1+tol
 }
 
 // checkAnchors verifies the labels of the world frame ev sit where they
 // belong. tile is the tile size in physical pixels.
-func (s *visualScene) checkAnchors(ev []traceEvent, sc, tile float64) []string {
+func (s *visualScene) checkAnchors(ev []gfx.TraceEvent, sc, tile float64) []string {
 	var bad []string
 	r := s.a.renderer
 	w := r.world()
 	world := visPass(ev, "world")
-	textsOf := func(txt string) []traceEvent {
-		var out []traceEvent
+	textsOf := func(txt string) []gfx.TraceEvent {
+		var out []gfx.TraceEvent
 		for _, e := range world {
 			if e.Kind == "text" && e.Text == txt {
 				out = append(out, e)
@@ -183,7 +189,7 @@ func (s *visualScene) checkAnchors(ev []traceEvent, sc, tile float64) []string {
 	// Zone names sit inside their zone.
 	if tile >= 40 {
 		for _, z := range w.Zones {
-			lbl := zoneLabelText(z)
+			lbl := overlaypkg.ZoneLabelText(z)
 			x0f, y0f := r.worldToScreenF(float64(z.MinX), float64(z.MinY))
 			x1f, y1f := r.worldToScreenF(float64(z.MaxX+1), float64(z.MaxY+1))
 			x0, y0, x1, y1 := float64(x0f), float64(y0f), float64(x1f), float64(y1f)
@@ -200,7 +206,7 @@ func (s *visualScene) checkAnchors(ev []traceEvent, sc, tile float64) []string {
 	}
 
 	// The tame animal's name sits under its animal.
-	if tile >= stackCountMinTile {
+	if tile >= worldpkg.StackCountMinTile {
 		for _, an := range w.Animals {
 			if !an.Tame || an.Name == "" {
 				continue
@@ -222,7 +228,7 @@ func (s *visualScene) checkAnchors(ev []traceEvent, sc, tile float64) []string {
 	}
 
 	// Stack counts sit on their stack's tile.
-	if tile >= stackCountMinTile {
+	if tile >= worldpkg.StackCountMinTile {
 		for _, st := range visStacks {
 			if st.qty <= 1 {
 				continue
@@ -275,16 +281,16 @@ func (s *visualScene) checkAnchors(ev []traceEvent, sc, tile float64) []string {
 // checkPortraits verifies every image the HUD draws over the colonist bar
 // sits inside one of the layout's BarSlots, and that every shown
 // colonist's slot draws a portrait (an image that is not a status mark).
-func (s *visualScene) checkPortraits(ev []traceEvent, sc float64) []string {
+func (s *visualScene) checkPortraits(ev []gfx.TraceEvent, sc float64) []string {
 	var bad []string
 	a := s.a
 	l := a.hud()
-	n := barShown(l)
-	if want := len(a.barPawns()); n != want || l.BarMore != 0 {
+	n := hudpkg.BarShown(l)
+	if want := len(a.chrome.Bar().Pawns()); n != want || l.BarMore != 0 {
 		bad = append(bad, fmt.Sprintf("the bar shows %d of %d colonists (+%d)", n, want, l.BarMore))
 	}
 	bar := visScaled(l.Bar, sc)
-	mark := float64(max(barIconMin, barIconSize*l.BarScale)) * sc // a status mark's size
+	mark := float64(max(hudpkg.BarIconMin, hudpkg.BarIconSize*l.BarScale)) * sc // a status mark's size
 	have := map[int]bool{}
 	for _, e := range visPass(ev, "hud") {
 		if e.Kind != "image" || !visOverlaps(e, bar, 0.5) {
@@ -322,13 +328,13 @@ func (b visBox) String() string {
 }
 
 // visScaled is the logical rect r on the physical screen at scale sc.
-func visScaled(r rect, sc float64) visBox {
+func visScaled(r gfx.Rect, sc float64) visBox {
 	return visBox{float64(r.X) * sc, float64(r.Y) * sc, float64(r.Right()) * sc, float64(r.Bottom()) * sc}
 }
 
 // visOverlaps reports the event's rectangle and b share more than tol
 // pixels each way.
-func visOverlaps(e traceEvent, b visBox, tol float64) bool {
+func visOverlaps(e gfx.TraceEvent, b visBox, tol float64) bool {
 	return math.Min(float64(e.X+e.W), b.x1)-math.Max(float64(e.X), b.x0) > tol &&
 		math.Min(float64(e.Y+e.H), b.y1)-math.Max(float64(e.Y), b.y0) > tol
 }
@@ -336,7 +342,7 @@ func visOverlaps(e traceEvent, b visBox, tol float64) bool {
 // visVisible is the part of the draw its destination shows: a draw into a
 // clipped sub-image (clipTo: a scrolled list, the pane's body, a tab's
 // panel) is cut to the clip. False when none of it shows.
-func visVisible(e traceEvent) (traceEvent, bool) {
+func visVisible(e gfx.TraceEvent) (gfx.TraceEvent, bool) {
 	c := e.Clip
 	if c.Empty() {
 		return e, true
@@ -353,11 +359,11 @@ func visVisible(e traceEvent) (traceEvent, bool) {
 // visRegion is one named region of the HUD layout.
 type visRegion struct {
 	name string
-	r    rect
+	r    gfx.Rect
 }
 
 // visRegions are the layout's shown regions (each command cell is its own).
-func visRegions(l hudLayout) []visRegion {
+func visRegions(l hudlayout.Layout) []visRegion {
 	var out []visRegion
 	for _, r := range []visRegion{{"tabs", l.Tabs}, {"pane", l.Pane}, {"pane tabs", l.PaneTabs}, {"expanded", l.Expanded},
 		{"arch cats", l.ArchCats}, {"arch desc", l.ArchDesc}, {"window", l.Window}, {"global", l.Global},
@@ -377,11 +383,11 @@ func visRegions(l hudLayout) []visRegion {
 // draw that reaches into a region lies wholly inside it (the part of it
 // that shows, for a clipped draw). A region drawing past its rect, or
 // something else drawing over a region, fails.
-func (s *visualScene) checkRegions(ev []traceEvent, sc float64) []string {
+func (s *visualScene) checkRegions(ev []gfx.TraceEvent, sc float64) []string {
 	return visCheckRegions(ev, visRegions(s.a.hud()), sc)
 }
 
-func visCheckRegions(ev []traceEvent, regions []visRegion, sc float64) []string {
+func visCheckRegions(ev []gfx.TraceEvent, regions []visRegion, sc float64) []string {
 	var bad []string
 	for _, e := range visPass(ev, "hud") {
 		e, shown := visVisible(e)
@@ -402,7 +408,7 @@ func visCheckRegions(ev []traceEvent, regions []visRegion, sc float64) []string 
 // images and outlines lie inside it, and a fill starts inside it (panels
 // and backdrops may bleed past an edge by design: a footer band a pixel
 // too tall, a backdrop disc bigger than the window).
-func visCheckOnScreen(ev []traceEvent, pw, ph int) []string {
+func visCheckOnScreen(ev []gfx.TraceEvent, pw, ph int) []string {
 	var bad []string
 	for _, e := range visPass(ev, "hud") {
 		switch e.Kind {
@@ -458,7 +464,7 @@ func TestFrameInvariance(t *testing.T) {
 				sc := dev * ui
 				t.Run(visName(dev, ui, zoom), func(t *testing.T) {
 					screen := s.configure(t, dev, ui, zoom)
-					tile := s.a.renderer.tilePx()
+					tile := s.a.renderer.cam.Tile()
 					a := s.frame(screen)
 
 					visReport(t, "anchors", s.checkAnchors(a, sc, tile))
@@ -484,25 +490,25 @@ func TestFrameInvariance(t *testing.T) {
 type visPanel struct {
 	name    string
 	open    func(t *testing.T, s *visualScene)
-	regions func(s *visualScene) []rect
+	regions func(s *visualScene) []gfx.Rect
 }
 
 // visSelRegions are a selection's regions: the inspect pane, its tabs, an
 // open tab's panel and the occupied command cells, plus the resource list,
 // which gives way to whatever the lower-left holds (it shrinks and scrolls
 // inside its own rect).
-func visSelRegions(s *visualScene) []rect {
+func visSelRegions(s *visualScene) []gfx.Rect {
 	l := s.a.hud()
-	return append([]rect{l.Pane, l.PaneTabs, l.Expanded, l.Resources}, l.GridCells...)
+	return append([]gfx.Rect{l.Pane, l.PaneTabs, l.Expanded, l.Resources}, l.GridCells...)
 }
 
 // visPawnRegions are a selected colonist's: the selection's, plus its own
 // colonist-bar card (which turns selected).
-func visPawnRegions(s *visualScene) []rect {
+func visPawnRegions(s *visualScene) []gfx.Rect {
 	out := visSelRegions(s)
 	l := s.a.hud()
-	for i, p := range s.a.barPawns() {
-		if i < barShown(l) && s.a.barSelected(p.ID) {
+	for i, p := range s.a.chrome.Bar().Pawns() {
+		if i < hudpkg.BarShown(l) && s.a.chrome.Bar().Picked(p.ID) {
 			out = append(out, l.BarSlots[i])
 		}
 	}
@@ -511,9 +517,9 @@ func visPawnRegions(s *visualScene) []rect {
 
 // visWindowRegions are a main tab's: the Window rect (and the resource
 // list giving way to it).
-func visWindowRegions(s *visualScene) []rect {
+func visWindowRegions(s *visualScene) []gfx.Rect {
 	l := s.a.hud()
-	return []rect{l.Window, l.Resources}
+	return []gfx.Rect{l.Window, l.Resources}
 }
 
 func visPanels() []visPanel {
@@ -527,9 +533,9 @@ func visPanels() []visPanel {
 				if tab == "character" {
 					return
 				}
-				s.a.selectPaneTab("inspector." + tab)
-				if s.a.paneOpenTab() != "inspector."+tab {
-					t.Fatalf("the %s tab did not open (open %q)", tab, s.a.paneOpenTab())
+				s.a.insp.SelectPaneTab("inspector." + tab)
+				if s.a.insp.PaneOpenTab() != "inspector."+tab {
+					t.Fatalf("the %s tab did not open (open %q)", tab, s.a.insp.PaneOpenTab())
 				}
 			},
 			regions: visPawnRegions,
@@ -537,22 +543,22 @@ func visPanels() []visPanel {
 	}
 	ps = append(ps,
 		visPanel{"animal", func(t *testing.T, s *visualScene) {
-			if !s.a.selectAnimalAt(visAnimal[0], visAnimal[1]) {
+			if !s.a.insp.Animal().SelectAnimalAt(visAnimal[0], visAnimal[1]) {
 				t.Fatal("animal not selectable")
 			}
 		}, visSelRegions},
 		visPanel{"item", func(t *testing.T, s *visualScene) {
-			if !s.a.selectItemAt(visStacks[0].x, visStacks[0].y) {
+			if !s.a.sel.SelectItemAt(visStacks[0].x, visStacks[0].y) {
 				t.Fatal("item not selectable")
 			}
 		}, visSelRegions},
 		visPanel{"plant", func(t *testing.T, s *visualScene) {
-			if !s.a.selectPlantAt(visPlant[0], visPlant[1]) {
+			if !s.a.sel.SelectPlantAt(visPlant[0], visPlant[1]) {
 				t.Fatal("plant not selectable")
 			}
 		}, visSelRegions},
 		visPanel{"building", func(t *testing.T, s *visualScene) {
-			if !s.a.selectBuildingAt(visBuilding[0], visBuilding[1]) {
+			if !s.a.insp.Building().SelectBuildingAt(visBuilding[0], visBuilding[1]) {
 				t.Fatal("building not selectable")
 			}
 		}, visSelRegions},
@@ -567,15 +573,15 @@ func visPanels() []visPanel {
 	}
 	ps = append(ps,
 		visPanel{"tab_architect", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.architect") },
-			func(s *visualScene) []rect {
+			func(s *visualScene) []gfx.Rect {
 				l := s.a.hud()
-				return append([]rect{l.ArchCats, l.ArchDesc, l.Resources}, l.GridCells...)
+				return append([]gfx.Rect{l.ArchCats, l.ArchDesc, l.Resources}, l.GridCells...)
 			}},
 		// the pause overlay, a letter and the options screens: no single
 		// region, the screen bounds them
 		visPanel{"pause_menu", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.menu") }, nil},
 		visPanel{"letter", func(t *testing.T, s *visualScene) {
-			s.a.openLetter(game.MessageView{Tick: 1, Title: "Heat wave", Letter: true,
+			s.a.chrome.Right().OpenLetter(game.MessageView{Tick: 1, Title: "Heat wave", Letter: true,
 				Text: "A heat wave has settled over the land. Keep colonists indoors and watered."})
 		}, nil},
 	)
@@ -584,7 +590,7 @@ func visPanels() []visPanel {
 			name: "options_" + tab,
 			open: func(t *testing.T, s *visualScene) {
 				s.a.opt.Tab = tab
-				s.a.apply(intent{kind: intentPush, screen: screenOptions})
+				s.a.apply(intent{kind: intentPush, screen: ports.ScreenOptions})
 			},
 		})
 	}
@@ -593,12 +599,12 @@ func visPanels() []visPanel {
 
 // visAdded are the events of got that base does not already hold (a
 // multiset difference): what opening a panel drew.
-func visAdded(base, got []traceEvent) []traceEvent {
+func visAdded(base, got []gfx.TraceEvent) []gfx.TraceEvent {
 	have := map[string]int{}
 	for _, e := range base {
 		have[e.String()]++
 	}
-	var out []traceEvent
+	var out []gfx.TraceEvent
 	for _, e := range got {
 		if k := e.String(); have[k] > 0 {
 			have[k]--
@@ -620,7 +626,7 @@ func TestPanelsStayInTheirPanel(t *testing.T) {
 	type cfg struct{ dev, ui float64 }
 	cfgs := []cfg{{1, 1}, {1, 1.5}, {2, 2}}
 	scenes := map[cfg]*visualScene{}
-	base := map[cfg][]traceEvent{} // the HUD with nothing open
+	base := map[cfg][]gfx.TraceEvent{} // the HUD with nothing open
 	for _, c := range cfgs {
 		s := newVisualScene(t, art, true)
 		base[c] = visPass(s.frame(s.configure(t, c.dev, c.ui, 1)), "hud")
@@ -628,7 +634,7 @@ func TestPanelsStayInTheirPanel(t *testing.T) {
 	}
 	for _, p := range visPanels() {
 		t.Run(p.name, func(t *testing.T) {
-			var ref []traceEvent
+			var ref []gfx.TraceEvent
 			for _, c := range cfgs {
 				sc := c.dev * c.ui
 				s := scenes[c]
@@ -689,29 +695,29 @@ func TestPanelsStayInTheirPanel(t *testing.T) {
 // logical x drifts at twice the camera's speed; a HUD draw left unscaled
 // stays at its scale-1 size).
 func TestVisualCheckersCatchTheBugs(t *testing.T) {
-	hudBox := traceEvent{Kind: "fill", X: 0, Y: 0, W: 1280, H: 32, Pass: "hud"}
-	label := func(x, y float32) traceEvent {
-		return traceEvent{Kind: "text", Text: "Stockpile", X: x, Y: y, W: 50, H: 15, Pass: "world"}
+	hudBox := gfx.TraceEvent{Kind: "fill", X: 0, Y: 0, W: 1280, H: 32, Pass: "hud"}
+	label := func(x, y float32) gfx.TraceEvent {
+		return gfx.TraceEvent{Kind: "text", Text: "Stockpile", X: x, Y: y, W: 50, H: 15, Pass: "world"}
 	}
 	const tile = 64.0
 
 	// pan: the camera moves right 2 tiles, down 1: the world moves (-128, -64)
-	before := []traceEvent{hudBox, label(500, 400)}
-	good := []traceEvent{hudBox, label(372, 336)}
+	before := []gfx.TraceEvent{hudBox, label(500, 400)}
+	good := []gfx.TraceEvent{hudBox, label(372, 336)}
 	if bad := visCheckPan(before, good, 2, 1, tile); len(bad) != 0 {
 		t.Errorf("a label that moved with the world was flagged: %q", bad)
 	}
-	drift := []traceEvent{hudBox, label(500-2*128, 400-2*64)} // the zone-label bug at scale 2
+	drift := []gfx.TraceEvent{hudBox, label(500-2*128, 400-2*64)} // the zone-label bug at scale 2
 	if bad := visCheckPan(before, drift, 2, 1, tile); len(bad) != 1 || !strings.Contains(bad[0], "did not move by exactly") {
 		t.Errorf("a label drifting at twice the camera speed = %q, want one problem", bad)
 	}
-	still := []traceEvent{hudBox, label(500, 400)}
+	still := []gfx.TraceEvent{hudBox, label(500, 400)}
 	if bad := visCheckPan(before, still, 2, 1, tile); len(bad) != 1 {
 		t.Errorf("a world label that stayed on screen = %q, want one problem", bad)
 	}
 	moved := hudBox
 	moved.X -= 128
-	if bad := visCheckPan(before, []traceEvent{moved, label(372, 336)}, 2, 1, tile); len(bad) != 1 || !strings.Contains(bad[0], "hud draw moved") {
+	if bad := visCheckPan(before, []gfx.TraceEvent{moved, label(372, 336)}, 2, 1, tile); len(bad) != 1 || !strings.Contains(bad[0], "hud draw moved") {
 		t.Errorf("a HUD draw that moved with the camera = %q, want one problem", bad)
 	}
 	if bad := visCheckPan(before, good[:1], 2, 1, tile); len(bad) != 1 || !strings.Contains(bad[0], "world: 1 draws before") {
@@ -719,44 +725,44 @@ func TestVisualCheckersCatchTheBugs(t *testing.T) {
 	}
 
 	// scale: HUD draws at 2 are the scale-1 draws x 2
-	ref := []traceEvent{hudBox, {Kind: "text", Text: "Food 7", X: 8, Y: 8, W: 41, H: 17.7, Pass: "hud"}}
-	ok := []traceEvent{{Kind: "fill", X: 0, Y: 0, W: 2560, H: 64, Pass: "hud"}, {Kind: "text", Text: "Food 7", X: 16, Y: 16, W: 82.6, H: 35.4, Pass: "hud"}}
+	ref := []gfx.TraceEvent{hudBox, {Kind: "text", Text: "Food 7", X: 8, Y: 8, W: 41, H: 17.7, Pass: "hud"}}
+	ok := []gfx.TraceEvent{{Kind: "fill", X: 0, Y: 0, W: 2560, H: 64, Pass: "hud"}, {Kind: "text", Text: "Food 7", X: 16, Y: 16, W: 82.6, H: 35.4, Pass: "hud"}}
 	if bad := visCheckScale(ref, ok, 2); len(bad) != 0 {
 		t.Errorf("a correctly scaled HUD was flagged: %q", bad)
 	}
-	unscaled := []traceEvent{hudBox, ref[1]} // drawn raw: still at scale-1 size and place
+	unscaled := []gfx.TraceEvent{hudBox, ref[1]} // drawn raw: still at scale-1 size and place
 	if bad := visCheckScale(ref, unscaled, 2); len(bad) != 2 {
 		t.Errorf("an unscaled HUD = %q, want both draws flagged", bad)
 	}
 	if bad := visCheckScale(ref, ok[:1], 2); len(bad) != 1 || !strings.Contains(bad[0], "2 draws at scale 1, 1 at scale 2") {
 		t.Errorf("a HUD draw that vanished at scale 2 = %q", bad)
 	}
-	renamed := []traceEvent{ok[0], ok[1]}
+	renamed := []gfx.TraceEvent{ok[0], ok[1]}
 	renamed[1].Text = "Food 8"
 	if bad := visCheckScale(ref, renamed, 2); len(bad) != 1 || !strings.Contains(bad[0], "kind/text") {
 		t.Errorf("a changed text = %q, want one problem", bad)
 	}
-	auto1 := []traceEvent{{Kind: "text", Text: "Auto (100%)", X: 270, Y: 171, W: 73, H: 17.7, Pass: "hud"}}
-	auto2 := []traceEvent{{Kind: "text", Text: "Auto (200%)", X: 540, Y: 342, W: 146, H: 35.4, Pass: "hud"}}
+	auto1 := []gfx.TraceEvent{{Kind: "text", Text: "Auto (100%)", X: 270, Y: 171, W: 73, H: 17.7, Pass: "hud"}}
+	auto2 := []gfx.TraceEvent{{Kind: "text", Text: "Auto (200%)", X: 540, Y: 342, W: 146, H: 35.4, Pass: "hud"}}
 	if bad := visCheckScale(auto1, auto2, 2); len(bad) != 0 {
 		t.Errorf("the Options \"Auto (n%%)\" label names the scale by design: %q", bad)
 	}
 
 	// regions: a draw reaching past a region's edge is flagged, a clipped
 	// draw only for the part that shows
-	regions := []visRegion{{"pane", rect{X: 0, Y: 500, W: 400, H: 188}}, {"tabs", rect{X: 0, Y: 692, W: 1280, H: 28}}}
-	inPane := traceEvent{Kind: "text", Text: "Tile", X: 12, Y: 600, W: 80, H: 18, Pass: "hud"}
-	if bad := visCheckRegions([]traceEvent{inPane, hudBox}, regions[:1], 1); len(bad) != 0 {
+	regions := []visRegion{{"pane", gfx.Rect{X: 0, Y: 500, W: 400, H: 188}}, {"tabs", gfx.Rect{X: 0, Y: 692, W: 1280, H: 28}}}
+	inPane := gfx.TraceEvent{Kind: "text", Text: "Tile", X: 12, Y: 600, W: 80, H: 18, Pass: "hud"}
+	if bad := visCheckRegions([]gfx.TraceEvent{inPane, hudBox}, regions[:1], 1); len(bad) != 0 {
 		t.Errorf("draws inside or away from a region were flagged: %q", bad)
 	}
 	straddle := inPane
 	straddle.Y = 680 // 680..698: through the pane's bottom into the tabs
-	if bad := visCheckRegions([]traceEvent{straddle}, regions, 1); len(bad) != 2 {
+	if bad := visCheckRegions([]gfx.TraceEvent{straddle}, regions, 1); len(bad) != 2 {
 		t.Errorf("a draw straddling the pane and the tabs = %q, want both regions flagged", bad)
 	}
 	clipped := straddle
 	clipped.Clip = image.Rect(0, 500, 400, 688) // drawn into the pane's clipped body
-	if bad := visCheckRegions([]traceEvent{clipped}, regions, 1); len(bad) != 0 {
+	if bad := visCheckRegions([]gfx.TraceEvent{clipped}, regions, 1); len(bad) != 0 {
 		t.Errorf("a draw clipped to the pane was flagged: %q", bad)
 	}
 	hidden := straddle
@@ -766,11 +772,11 @@ func TestVisualCheckersCatchTheBugs(t *testing.T) {
 	}
 
 	// panel diff and screen bounds
-	panel := []traceEvent{hudBox, {Kind: "fill", X: 8, Y: 40, W: 400, H: 500, Pass: "hud"}}
-	if added := visAdded([]traceEvent{hudBox}, panel); len(added) != 1 || added[0].W != 400 {
+	panel := []gfx.TraceEvent{hudBox, {Kind: "fill", X: 8, Y: 40, W: 400, H: 500, Pass: "hud"}}
+	if added := visAdded([]gfx.TraceEvent{hudBox}, panel); len(added) != 1 || added[0].W != 400 {
 		t.Errorf("visAdded = %v", added)
 	}
-	off := []traceEvent{{Kind: "text", Text: "x", X: 1270, Y: 10, W: 30, H: 15, Pass: "hud"}, {Kind: "fill", X: 0, Y: 660, W: 1280, H: 61, Pass: "hud"}}
+	off := []gfx.TraceEvent{{Kind: "text", Text: "x", X: 1270, Y: 10, W: 30, H: 15, Pass: "hud"}, {Kind: "fill", X: 0, Y: 660, W: 1280, H: 61, Pass: "hud"}}
 	if bad := visCheckOnScreen(off, 1280, 720); len(bad) != 1 {
 		t.Errorf("a text past the right edge = %q, want one problem (a fill may bleed)", bad)
 	}

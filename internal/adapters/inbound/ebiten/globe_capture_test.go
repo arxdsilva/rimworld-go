@@ -8,6 +8,10 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	globepkg "rimworld-go/internal/adapters/inbound/ebiten/globe"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -28,29 +32,29 @@ func TestGlobeCapture(t *testing.T) {
 	if dir == "" {
 		t.Skip("set GLOBE_CAPTURE_DIR to write globe captures")
 	}
-	root, err := LocateArt()
-	var art *artCatalog
+	root, err := artpkg.Locate()
+	var art *artpkg.Catalog
 	if err == nil {
 		art, _ = loadArtCatalog(root)
 	}
 	const W, H = 1280, 720
-	shot := func(name string, g *globeView) {
+	shot := func(name string, g *globepkg.View) {
 		g.Sw, g.Sh = W, H
 		img := image.NewRGBA(image.Rect(0, 0, W, H))
-		draw.Draw(img, img.Bounds(), image.NewUniform(uiSpace), image.Point{}, draw.Src)
-		drawOver(img, bakeStarfield(g.P.Seed, W, H, 1, 0), 0, 0, 1)
+		draw.Draw(img, img.Bounds(), image.NewUniform(uikit.Space), image.Point{}, draw.Src)
+		drawOver(img, globepkg.BakeStarfield(g.P.Seed, W, H, 1, 0), 0, 0, 1)
 		vp := g.Viewport()
 		r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
-		sph := bakeSphere(globeSphereBakeSize, globeSphereBakeR, palRGB("uncovered"), palRGB("atmosphere_rim"))
-		sc := r / globeSphereBakeR
+		sph := globepkg.BakeSphere(globepkg.SphereBakeSize, globepkg.SphereBakeR, globepkg.PalRGB("uncovered"), globepkg.PalRGB("atmosphere_rim"))
+		sc := r / globepkg.SphereBakeR
 		for y := int(vp.CY - 1.3*r); y <= int(vp.CY+1.3*r); y++ {
 			for x := int(vp.CX - 1.3*r); x <= int(vp.CX+1.3*r); x++ {
 				if x < 0 || y < 0 || x >= W || y >= H {
 					continue
 				}
-				sx := int((float64(x)-vp.CX)/sc) + globeSphereBakeSize/2
-				sy := int((float64(y)-vp.CY)/sc) + globeSphereBakeSize/2
-				if sx < 0 || sy < 0 || sx >= globeSphereBakeSize || sy >= globeSphereBakeSize {
+				sx := int((float64(x)-vp.CX)/sc) + globepkg.SphereBakeSize/2
+				sy := int((float64(y)-vp.CY)/sc) + globepkg.SphereBakeSize/2
+				if sx < 0 || sy < 0 || sx >= globepkg.SphereBakeSize || sy >= globepkg.SphereBakeSize {
 					continue
 				}
 				blend(img, x, y, sph.NRGBAAt(sx, sy), 1)
@@ -59,7 +63,7 @@ func TestGlobeCapture(t *testing.T) {
 		g.Build()
 		raster(img, g.Verts, g.Idx[:g.NI])
 		raster(img, g.Ov, g.Oi)
-		size := globeClamp(g.TilePx()*2, 12, 46)
+		size := globepkg.Clamp(g.TilePx()*2, 12, 46)
 		for k := range g.Marks {
 			m := &g.Marks[k]
 			sx, sy, vz := g.WorldPt(&g.P.Center[m.Tile])
@@ -94,7 +98,7 @@ func TestGlobeCapture(t *testing.T) {
 	for _, cov := range []int{30, 100} {
 		p := planet.Build(planet.Params{SeedText: "amber-hollow", Coverage: cov, Rain: 2, Temp: 2, Pop: 1,
 			Factions: faction.DefaultSlots()})
-		g := newGlobeView(p, art)
+		g := globepkg.New(p, art)
 		g.Reduced = true
 		tag := map[int]string{30: "30", 100: "100"}[cov]
 		g.Cam.Lat, g.Cam.Lon = 0.3, 0.5
@@ -112,7 +116,7 @@ func TestGlobeCapture(t *testing.T) {
 		}
 		shot("globe_"+tag+"_zoom.png", g)
 		g.Cam.SetDist(2.9)
-		for _, m := range []globeMode{globeTemperature, globeRainfall, globeElevation} {
+		for _, m := range []globepkg.Mode{globepkg.ModeTemperature, globepkg.ModeRainfall, globepkg.ModeElevation} {
 			g.SetMode(m)
 			shot("globe_"+tag+"_"+m.String()+".png", g)
 		}
@@ -120,23 +124,23 @@ func TestGlobeCapture(t *testing.T) {
 	// The backdrop's planet disc: stars plus the disc as it is composed
 	// (the diorama is not part of this capture).
 	{
-		p := planet.Build(backdropShowcase)
-		g := newGlobeView(p, nil)
+		p := planet.Build(wizard.BackdropShowcase)
+		g := globepkg.New(p, nil)
 		g.Rivers, g.Roads, g.Marks = nil, nil, nil
-		g.SetAreaPx(0, 0, backdropDiscArea, backdropDiscArea)
-		g.Cam.SetDist(backdropDiscDist)
+		g.SetAreaPx(0, 0, wizard.BackdropDiscArea, wizard.BackdropDiscArea)
+		g.Cam.SetDist(wizard.BackdropDiscDist)
 		g.Cam.Lat, g.Cam.Lon = 0.35, float64(p.Seed%628)/100
-		g.Sw, g.Sh = backdropDiscArea, backdropDiscArea
-		disc := image.NewRGBA(image.Rect(0, 0, backdropDiscArea, backdropDiscArea))
-		sph := bakeSphere(globeSphereBakeSize, globeSphereBakeR, palRGB("uncovered"), palRGB("atmosphere_rim"))
+		g.Sw, g.Sh = wizard.BackdropDiscArea, wizard.BackdropDiscArea
+		disc := image.NewRGBA(image.Rect(0, 0, wizard.BackdropDiscArea, wizard.BackdropDiscArea))
+		sph := globepkg.BakeSphere(globepkg.SphereBakeSize, globepkg.SphereBakeR, globepkg.PalRGB("uncovered"), globepkg.PalRGB("atmosphere_rim"))
 		vp := g.Viewport()
 		r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
-		sc := r / globeSphereBakeR
-		for y := 0; y < backdropDiscArea; y++ {
-			for x := 0; x < backdropDiscArea; x++ {
-				sx := int((float64(x)-vp.CX)/sc) + globeSphereBakeSize/2
-				sy := int((float64(y)-vp.CY)/sc) + globeSphereBakeSize/2
-				if sx >= 0 && sy >= 0 && sx < globeSphereBakeSize && sy < globeSphereBakeSize {
+		sc := r / globepkg.SphereBakeR
+		for y := 0; y < wizard.BackdropDiscArea; y++ {
+			for x := 0; x < wizard.BackdropDiscArea; x++ {
+				sx := int((float64(x)-vp.CX)/sc) + globepkg.SphereBakeSize/2
+				sy := int((float64(y)-vp.CY)/sc) + globepkg.SphereBakeSize/2
+				if sx >= 0 && sy >= 0 && sx < globepkg.SphereBakeSize && sy < globepkg.SphereBakeSize {
 					c := sph.NRGBAAt(sx, sy)
 					disc.SetRGBA(x, y, color.RGBA{uint8(int(c.R) * int(c.A) / 255), uint8(int(c.G) * int(c.A) / 255), uint8(int(c.B) * int(c.A) / 255), c.A})
 				}
@@ -145,16 +149,16 @@ func TestGlobeCapture(t *testing.T) {
 		g.Build()
 		raster(disc, g.Verts, g.Idx[:g.NI])
 		bg := image.NewRGBA(image.Rect(0, 0, W, H))
-		draw.Draw(bg, bg.Bounds(), image.NewUniform(uiSpace), image.Point{}, draw.Src)
-		drawOver(bg, bakeStarfield(p.Seed, W, H, 0.9, 0.6), 0, 0, 1)
+		draw.Draw(bg, bg.Bounds(), image.NewUniform(uikit.Space), image.Point{}, draw.Src)
+		drawOver(bg, globepkg.BakeStarfield(p.Seed, W, H, 0.9, 0.6), 0, 0, 1)
 		rr := math.Min(float64(H)*0.15, 130)
-		scale := rr / discSilhouette()
+		scale := rr / wizard.DiscSilhouette()
 		cx, cy := float64(W)*0.83, float64(H)*0.22
 		for y := 0; y < H; y++ {
 			for x := 0; x < W; x++ {
-				sx := int((float64(x)-cx)/scale + backdropDiscArea/2)
-				sy := int((float64(y)-cy)/scale + backdropDiscArea/2)
-				if sx >= 0 && sy >= 0 && sx < backdropDiscArea && sy < backdropDiscArea {
+				sx := int((float64(x)-cx)/scale + wizard.BackdropDiscArea/2)
+				sy := int((float64(y)-cy)/scale + wizard.BackdropDiscArea/2)
+				if sx >= 0 && sy >= 0 && sx < wizard.BackdropDiscArea && sy < wizard.BackdropDiscArea {
 					c := disc.RGBAAt(sx, sy)
 					blend(bg, x, y, color.NRGBA{c.R, c.G, c.B, 255}, float64(c.A)/255)
 				}
@@ -169,7 +173,7 @@ func TestGlobeCapture(t *testing.T) {
 	}
 }
 
-func centreOn(g *globeView, c [3]float32) {
+func centreOn(g *globepkg.View, c [3]float32) {
 	g.Cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
 }
 

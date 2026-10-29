@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -26,8 +28,8 @@ func researchStub(n, current int) *stubSim {
 }
 
 // pickIDs are the research.pick ids among the window's hit targets.
-func pickIDs(a *App) map[string]button {
-	out := map[string]button{}
+func pickIDs(a *App) map[string]uikit.Button {
+	out := map[string]uikit.Button{}
 	for _, b := range a.layoutHits(a.sw, a.sh) {
 		if len(b.ID) > 14 && b.ID[:14] == "research.pick." {
 			out[b.ID] = b
@@ -83,7 +85,7 @@ func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI sc
 			// a real click on it picks it
 			bx, by := last.X+last.W/2, last.Y+last.H/2
 			f.Cur.Mx, f.Cur.My = int(float64(bx)*a.scale.S), int(float64(by)*a.scale.S)
-			f.Click(t, a, mbLeft, 0)
+			f.Click(t, a, inputframe.Left, 0)
 			s := a.renderer.game.(*stubSim)
 			got := cmdsOf(s, command.SetResearch)
 			if len(got) != 1 || got[0].Build != 15 {
@@ -190,7 +192,7 @@ func TestResearchScrollBarClickPages(t *testing.T) {
 	before := len(pickIDs(a))
 	// a click on the track near the bottom pages down
 	f.Cur.Mx, f.Cur.My = int(bar.R.Right()-3), int(bar.R.Bottom()-3)
-	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, inputframe.Left, 0)
 	if _, ok := pickIDs(a)["research.pick.0"]; ok {
 		t.Fatalf("a click below the thumb did not page down: %v", pickIDs(a))
 	}

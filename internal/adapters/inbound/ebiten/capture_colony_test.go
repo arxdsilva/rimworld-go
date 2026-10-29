@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 )
 
@@ -54,7 +56,7 @@ func captureColony(t *testing.T, ui string, ticks int) (*App, *fakeInput) {
 // command button (its tooltip is what the shot shows).
 func captureCursorOnTool(t *testing.T, a *App, id string) {
 	t.Helper()
-	cell, ok := a.archToolCell(id)
+	cell, ok := a.arch.ToolCell(id)
 	if !ok {
 		t.Fatalf("no %s button in the grid", id)
 	}
@@ -71,7 +73,7 @@ func TestCaptureColonyStates(t *testing.T) {
 		check func(t *testing.T, a *App)
 	}{
 		{"factions-colony", 400, func(t *testing.T, a *App) {
-			if a.uiModalTop() != colFacModalID {
+			if a.uiModalTop() != windows.ColFacModalID {
 				t.Fatalf("top modal = %q, want the Factions window", a.uiModalTop())
 			}
 			rows := colonyFactionRows(a.renderer.game.Factions())
@@ -80,7 +82,7 @@ func TestCaptureColonyStates(t *testing.T) {
 			}
 		}},
 		{"bio", 400, func(t *testing.T, a *App) {
-			if !a.bioTabOn() {
+			if !a.insp.Tabs().BioTabOn() {
 				t.Fatalf("bio tab not showing: tab %q select %v", a.insp.Tab, a.renderer.HasSelect())
 			}
 			if b, ok := a.renderer.game.Bio(a.renderer.Selected()); !ok || len(b.Skills) != 11 {
@@ -92,7 +94,7 @@ func TestCaptureColonyStates(t *testing.T) {
 				t.Fatalf("work open %v cursor %v: no incapable cell found to point at", a.win.Open, a.cursor)
 			}
 			hatched := 0
-			for _, b := range a.workButtons() {
+			for _, b := range a.win.Buttons() {
 				if b.Disabled {
 					hatched++
 				}
@@ -107,8 +109,8 @@ func TestCaptureColonyStates(t *testing.T) {
 			}
 		}},
 		{"options-story", 60, func(t *testing.T, a *App) {
-			if a.nav.screen() != screenOptions || a.currentOptionsTab() != "story" {
-				t.Fatalf("screen %s tab %s", a.nav.screen(), a.currentOptionsTab())
+			if a.nav.screen() != ports.ScreenOptions || a.opt.CurrentTab() != "story" {
+				t.Fatalf("screen %s tab %s", a.nav.screen(), a.opt.CurrentTab())
 			}
 		}},
 		{"letter-intro", 300, func(t *testing.T, a *App) {
@@ -130,7 +132,7 @@ func TestCaptureColonyStates(t *testing.T) {
 		}},
 		{"arch-locked", 60, func(t *testing.T, a *App) {
 			captureCursorOnTool(t, a, "campfire")
-			for _, b := range a.commandGridButtons() { // the tools are command buttons
+			for _, b := range a.insp.Commands().CommandGridButtons() { // the tools are command buttons
 				if b.ID == "arch.tool.campfire" {
 					if !b.Disabled || b.Reason != game.ReasonScenario {
 						t.Fatalf("campfire = %+v, want locked by the scenario", b)
@@ -155,7 +157,7 @@ func TestCaptureColonyStates(t *testing.T) {
 				f.Frame(t, a)
 			}
 			c.check(t, a)
-			if c.ui != "factions-colony" && c.ui != "letter-intro" && c.ui != "options-story" && a.uiModalOpen() {
+			if c.ui != "factions-colony" && c.ui != "letter-intro" && c.ui != "options-story" && a.uiSt().ModalOpen() {
 				t.Fatalf("%s: a window (%q) sits over the shot", c.ui, a.uiModalTop())
 			}
 			drawFrame(t, a, f) // and it paints

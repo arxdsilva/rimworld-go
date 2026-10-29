@@ -4,6 +4,12 @@ import (
 	"image"
 	"image/color"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"slices"
 	"strings"
 	"testing"
@@ -19,18 +25,18 @@ import (
 // figure's pivot.
 func TestWestMirrorsEast(t *testing.T) {
 	t.Parallel()
-	for f, want := range map[facing]struct {
+	for f, want := range map[artpkg.Facing]struct {
 		key    string
 		mirror bool
-	}{faceSouth: {"south", false}, faceEast: {"east", false}, faceNorth: {"north", false}, faceWest: {"east", true}} {
-		if k, m := facingKey(f); k != want.key || m != want.mirror {
+	}{artpkg.FaceSouth: {"south", false}, artpkg.FaceEast: {"east", false}, artpkg.FaceNorth: {"north", false}, artpkg.FaceWest: {"east", true}} {
+		if k, m := creature.FacingKey(f); k != want.key || m != want.mirror {
 			t.Fatalf("facingKey(%v) = %s %v", f, k, m)
 		}
 	}
 	r := New(&stubSim{w: 16, h: 16, tick: 100})
 	r.art = figureArt()
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Weapon: "rifle", Drafted: true}
-	west, east := drawnKeys(r, p, faceWest), drawnKeys(r, p, faceEast)
+	west, east := drawnKeys(r, p, artpkg.FaceWest), drawnKeys(r, p, artpkg.FaceEast)
 	if !slices.Equal(west, east) || len(west) == 0 {
 		t.Fatalf("west draws %v, east %v", west, east)
 	}
@@ -40,10 +46,10 @@ func TestWestMirrorsEast(t *testing.T) {
 		}
 	}
 	// the geometry is the east figure flipped about the pivot's screen x
-	sx, _ := r.worldToScreenF(2+pawnFeetX, 2)
-	er, eps := rigFor(r, faceEast)
-	wr, wps := rigFor(r, faceWest)
-	h := readyHeld(p)
+	sx, _ := r.worldToScreenF(2+creature.PawnFeetX, 2)
+	er, eps := rigFor(r, artpkg.FaceEast)
+	wr, wps := rigFor(r, artpkg.FaceWest)
+	h := creature.ReadyHeld(p)
 	for _, name := range []string{"head", "hold", "back"} {
 		e, w := bodyPoint(r, er, eps, name, 2, 2, 64), bodyPoint(r, wr, wps, name, 2, 2, 64)
 		if math.Abs((e[0]-float64(sx))+(w[0]-float64(sx))) > 1e-6 || math.Abs(e[1]-w[1]) > 1e-6 {
@@ -55,12 +61,12 @@ func TestWestMirrorsEast(t *testing.T) {
 	}
 	em, _ := r.heldPoint(er, h, 2, 2, eps, "muzzle")
 	wm, _ := r.heldPoint(wr, h, 2, 2, wps, "muzzle")
-	if math.Abs((em.X-2-pawnFeetX)+(wm.X-2-pawnFeetX)) > 1e-9 || wm.X >= 2+pawnFeetX {
+	if math.Abs((em.X-2-creature.PawnFeetX)+(wm.X-2-creature.PawnFeetX)) > 1e-9 || wm.X >= 2+creature.PawnFeetX {
 		t.Fatalf("the muzzle points west: east %v west %v", em, wm)
 	}
 	// animals too: a west-facing animal draws its east art, mirrored
 	r.art.Sprites["animal/deer_east"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
-	r.last[7] = pawnVisual{facing: faceWest}
+	r.last[7] = pawnVisual{facing: artpkg.FaceWest}
 	an := game.AnimalView{ID: 7, Species: "deer", X: 2, Y: 2}
 	if k := r.animalBaseKey(an); k != "animal/deer_east" || !r.animalMirrored(an) {
 		t.Fatalf("west animal: %s mirrored=%v", k, r.animalMirrored(an))
@@ -76,11 +82,11 @@ func TestWestMirrorsEast(t *testing.T) {
 
 // drawnKeys draws p's standing figure facing f and lists the sprite keys
 // in draw order.
-func drawnKeys(r *Renderer, p game.PawnView, f facing) []string {
+func drawnKeys(r *Renderer, p game.PawnView, f artpkg.Facing) []string {
 	var keys []string
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	defer func() { r.lit.OnDraw = nil }()
-	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{Face: f, Ps: standPose(), Held: r.idleHeld(p, moveState{})})
+	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: f, Ps: creature.StandPose(), Held: r.creatures().IdleHeld(p, motionpkg.MoveState{})})
 	return keys
 }
 
@@ -101,9 +107,9 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 	}
 	l := look.Look{Sex: look.Female, Build: look.Heavy, Beard: 2, HairStyle: 3}
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Look: l}
-	for _, f := range []facing{faceSouth, faceEast, faceNorth, faceWest} {
+	for _, f := range []artpkg.Facing{artpkg.FaceSouth, artpkg.FaceEast, artpkg.FaceNorth, artpkg.FaceWest} {
 		keys := drawnKeys(r, game.PawnView{ID: 1, X: 2, Y: 2, Look: l, Weapon: "rifle", Drafted: true}, f)
-		fs, _ := facingKey(f)
+		fs, _ := creature.FacingKey(f)
 		for _, want := range []string{"pawn/body_f_heavy_", "pawn/shirt_basic_f_heavy_", "pawn/beard_full_", "pawn/hair_long_"} {
 			if !slices.Contains(keys, want+fs) {
 				t.Fatalf("%v: %s missing from the colony figure: %v", f, want+fs, keys)
@@ -111,7 +117,7 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 		}
 	}
 	// the held item anchors on the build's own hold point
-	rig := r.rigOf(p, faceEast)
+	rig := r.rigOf(p, artpkg.FaceEast)
 	if rig.Body != r.art.Sprite("pawn/body_f_heavy_east") {
 		t.Fatal("the rig is the build's body")
 	}
@@ -139,7 +145,7 @@ func TestPawnCropsFromMetadata(t *testing.T) {
 	t.Parallel()
 	body := fakeSprite([2]int{160, 297}, pt{16, 153}, map[string]pt{"head": {80, 122}})
 	port, bust := pawnCrops(body)
-	feet := 153 + pawnFeetY*artTilePx
+	feet := 153 + creature.PawnFeetY*artpkg.TilePx
 	if port.Min.Y >= 122-30 || port.Max.Y <= int(feet) || bust.Max.Y >= int(feet) || bust.Min.Y != port.Min.Y {
 		t.Fatalf("portrait %v covers the head to the feet (%v), the bust the head and shoulders %v", port, feet, bust)
 	}
@@ -165,26 +171,26 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 	flip := ebiten.GeoM{}
 	flip.Scale(-1, 1)
 	flip.Translate(8, 0)
-	if mirrorNormalOff(9, flip) != -9 || mirrorNormalOff(9, ebiten.GeoM{}) != 9 || mirrorNormalOff(0, flip) != 0 {
+	if lightpkg.MirrorNormalOff(9, flip) != -9 || lightpkg.MirrorNormalOff(9, ebiten.GeoM{}) != 9 || lightpkg.MirrorNormalOff(0, flip) != 0 {
 		t.Fatal("the offset's sign marks a mirrored draw")
 	}
 	east := [4]float32{1, 0.5, 0.5, 1}
-	if n, w := decodeNormalMirrored(east, true, true), decodeNormal([4]float32{0, 0.5, 0.5, 1}, true); math.Abs(float64(n[0]-w[0])) > 1e-6 || n[0] >= 0 {
+	if n, w := lightpkg.DecodeNormalMirrored(east, true, true), lightpkg.DecodeNormal([4]float32{0, 0.5, 0.5, 1}, true); math.Abs(float64(n[0]-w[0])) > 1e-6 || n[0] >= 0 {
 		t.Fatalf("mirrored east normal %v reads as the west normal %v", n, w)
 	}
-	if n := decodeNormalMirrored(east, true, false); n != decodeNormal(east, true) {
+	if n := lightpkg.DecodeNormalMirrored(east, true, false); n != lightpkg.DecodeNormal(east, true) {
 		t.Fatal("unmirrored: unchanged")
 	}
 	sprite, normal := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8)
-	r := &Renderer{art: &artCatalog{Normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
+	r := &Renderer{art: &artpkg.Catalog{Normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
 	r.view.W = roomWorld()
-	r.lit.Light = lightAt(8, summerDay, "clear", 0)
+	r.lit.Light = lightpkg.LightAt(8, summerDay, "clear", 0)
 	dst := ebiten.NewImage(32, 32)
 	for _, c := range []struct {
 		g    ebiten.GeoM
 		want float32
-	}{{ebiten.GeoM{}, 8 + litGap}, {flip, -(8 + litGap)}} {
-		r.drawLit(dst, sprite, c.g, noCS, 0, 0)
+	}{{ebiten.GeoM{}, 8 + lightpkg.LitGap}, {flip, -(8 + lightpkg.LitGap)}} {
+		r.drawLit(dst, sprite, c.g, spritepkg.NoCS, 0, 0)
 		if r.lit.Err != nil {
 			t.Fatal(r.lit.Err)
 		}
@@ -195,7 +201,7 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 		}
 	}
 	// a mirrored pose (west) gives drawSpritePose a mirroring GeoM
-	ps := mirrored(standPose())
+	ps := creature.Mirrored(creature.StandPose())
 	if g := ps.Geo(0, 0, 64); g.Element(0, 0)*g.Element(1, 1)-g.Element(0, 1)*g.Element(1, 0) >= 0 {
 		t.Fatal("a west pose mirrors")
 	}
@@ -206,17 +212,17 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 // re-rendered, shorter figure brings them down with it.
 func TestMarkersFloatAboveHead(t *testing.T) {
 	t.Parallel()
-	c := &artCatalog{Sprites: map[string]*artSprite{
+	c := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{
 		"pawn/body_south": fakeSprite([2]int{160, 288}, pt{16, 144}, map[string]pt{"head": {80, 118.8}}),
 	}}
-	_, hy := pawnHead(c)
-	if lift := pawnMarkerLift(c); math.Abs(lift-(markerAboveHead-hy)) > 1e-9 || lift <= -hy {
+	_, hy := creature.PawnHead(c)
+	if lift := world.PawnMarkerLift(c); math.Abs(lift-(world.MarkerAboveHead-hy)) > 1e-9 || lift <= -hy {
 		t.Fatalf("marker lift %v over a head at %v", lift, hy)
 	}
-	taller := &artCatalog{Sprites: map[string]*artSprite{
+	taller := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{
 		"pawn/body_south": fakeSprite([2]int{160, 297}, pt{16, 153}, map[string]pt{"head": {80, 90}}),
 	}}
-	if pawnMarkerLift(taller) <= pawnMarkerLift(c) {
+	if world.PawnMarkerLift(taller) <= world.PawnMarkerLift(c) {
 		t.Fatal("a higher head lifts the markers")
 	}
 	// the rescuer's head stays in front of a slung patient (drawn first)
@@ -227,9 +233,9 @@ func TestMarkersFloatAboveHead(t *testing.T) {
 	r.art.Sprites["pawn/hair_long_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	r.view.Pawns = []game.PawnView{res, pat}
 	for _, c := range []struct {
-		f      facing
+		f      artpkg.Facing
 		before bool
-	}{{faceEast, true}, {faceSouth, true}, {faceNorth, false}} {
+	}{{artpkg.FaceEast, true}, {artpkg.FaceSouth, true}, {artpkg.FaceNorth, false}} {
 		keys := drawnKeys(r, res, c.f)
 		patient := slices.Index(keys, "pawn/hair_long_south") // only the patient has long hair
 		hair := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_short_") })

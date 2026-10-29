@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"testing"
 )
 
@@ -11,17 +12,17 @@ import (
 // scaled, and the App's map viewport is the physical window.
 func TestColonyViewportIsTheWholeScreen(t *testing.T) {
 	for _, s := range []float64{1, 1.5, 2} {
-		l := colonyViewport(1280, 720)
-		if l != (viewport{X0: 0, Y0: 0, X1: 1280, Y1: 720}) {
+		l := camerapkg.ColonyViewport(1280, 720)
+		if l != (camerapkg.Viewport{X0: 0, Y0: 0, X1: 1280, Y1: 720}) {
 			t.Fatalf("logical viewport %+v, want the whole 1280x720 screen", l)
 		}
-		if p := colonyViewportPhysical(1280, 720, s); p != (viewport{X0: 0, Y0: 0, X1: 1280 * s, Y1: 720 * s}) {
+		if p := camerapkg.ColonyViewportPhysical(1280, 720, s); p != (camerapkg.Viewport{X0: 0, Y0: 0, X1: 1280 * s, Y1: 720 * s}) {
 			t.Fatalf("s=%v: physical viewport %+v", s, p)
 		}
 	}
 	for _, sc := range globalScales {
 		a, _ := globalColony(t, newGlobalSim(), sc.ui, sc.ww, sc.wh)
-		if v := a.mapViewport(); v != (viewport{X0: 0, Y0: 0, X1: sc.ww, Y1: sc.wh}) {
+		if v := a.mapViewport(); v != (camerapkg.Viewport{X0: 0, Y0: 0, X1: sc.ww, Y1: sc.wh}) {
 			t.Errorf("ui %d: map viewport %+v, want the whole %vx%v window", sc.ui, v, sc.ww, sc.wh)
 		}
 	}
@@ -32,11 +33,11 @@ func TestColonyViewportIsTheWholeScreen(t *testing.T) {
 // screen's own edges, not of an inner area.
 func TestCameraClampsToTheWholeScreen(t *testing.T) {
 	t.Parallel()
-	v := colonyViewport(1280, 720)
+	v := camerapkg.ColonyViewport(1280, 720)
 	r := New(&stubSim{w: 40, h: 40})
 	r.cam.Zoom = 1
 	r.ClampCamera(v) // first call: centred on the map
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	if cx := (v.X0+v.X1)/2 + r.cam.OffsetX; cx != 20*tile {
 		t.Errorf("map centre at %v, want %v: not centred on the screen", cx, 20*tile)
 	}
@@ -45,22 +46,22 @@ func TestCameraClampsToTheWholeScreen(t *testing.T) {
 	}
 	r.cam.OffsetX, r.cam.OffsetY = -1e6, -1e6 // pushed to the top-left limit
 	r.ClampCamera(v)
-	if left := -r.cam.OffsetX; left > edgeSlack*v.W()+1e-6 {
-		t.Errorf("the map's left edge is %v px in, more than the slack %v", left, edgeSlack*v.W())
+	if left := -r.cam.OffsetX; left > camerapkg.EdgeSlack*v.W()+1e-6 {
+		t.Errorf("the map's left edge is %v px in, more than the slack %v", left, camerapkg.EdgeSlack*v.W())
 	}
-	if top := -r.cam.OffsetY; top > edgeSlack*v.H()+1e-6 {
-		t.Errorf("the map's top edge is %v px in, more than the slack %v", top, edgeSlack*v.H())
+	if top := -r.cam.OffsetY; top > camerapkg.EdgeSlack*v.H()+1e-6 {
+		t.Errorf("the map's top edge is %v px in, more than the slack %v", top, camerapkg.EdgeSlack*v.H())
 	}
-	if top := -r.cam.OffsetY; top < edgeSlack*v.H()-1e-6 {
-		t.Errorf("the top limit %v is short of the screen's slack %v: something still reserves a top strip", top, edgeSlack*v.H())
+	if top := -r.cam.OffsetY; top < camerapkg.EdgeSlack*v.H()-1e-6 {
+		t.Errorf("the top limit %v is short of the screen's slack %v: something still reserves a top strip", top, camerapkg.EdgeSlack*v.H())
 	}
 	r.cam.OffsetX, r.cam.OffsetY = 1e6, 1e6 // and the bottom-right
 	r.ClampCamera(v)
-	if right := 40*tile - r.cam.OffsetX; right < v.X1-edgeSlack*v.W()-1e-6 {
+	if right := 40*tile - r.cam.OffsetX; right < v.X1-camerapkg.EdgeSlack*v.W()-1e-6 {
 		t.Errorf("the map's right edge %v is further in than the slack from %v", right, v.X1)
 	}
-	if bottom := 40*tile - r.cam.OffsetY; bottom < v.Y1-edgeSlack*v.H()-1e-6 || bottom > v.Y1-edgeSlack*v.H()+1e-6 {
-		t.Errorf("the map's bottom edge %v should end the slack %v above the screen's bottom %v", bottom, edgeSlack*v.H(), v.Y1)
+	if bottom := 40*tile - r.cam.OffsetY; bottom < v.Y1-camerapkg.EdgeSlack*v.H()-1e-6 || bottom > v.Y1-camerapkg.EdgeSlack*v.H()+1e-6 {
+		t.Errorf("the map's bottom edge %v should end the slack %v above the screen's bottom %v", bottom, camerapkg.EdgeSlack*v.H(), v.Y1)
 	}
 }
 
@@ -103,7 +104,7 @@ func TestEdgeScrollAtEveryScreenEdge(t *testing.T) {
 				{"bottom-left corner", 0, h - 1, -1, 1},
 				{"left edge", 0, h / 2, -1, 0},
 				{"middle of the screen", w / 2, h / 2, 0, 0},
-				{"just inside the band", w / 2, int(6*screenDev()) + 2, 0, 0},
+				{"just inside the band", w / 2, int(6*camerapkg.ScreenDev()) + 2, 0, 0},
 			} {
 				f.Cur.Mx, f.Cur.My = c.x, c.y
 				f.Frame(t, a)

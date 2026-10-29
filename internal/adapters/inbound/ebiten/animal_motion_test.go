@@ -2,6 +2,9 @@ package ebiten
 
 import (
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -41,10 +44,10 @@ func (s *gaitSim) World() game.WorldView {
 
 // gaitArt is a catalog with one species' standing facings carrying a gait
 // (metadata only: nothing here draws).
-func gaitArt(species string, gait float64) *artCatalog {
-	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
+func gaitArt(species string, gait float64) *artpkg.Catalog {
+	c := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{}, Tinted: map[artpkg.TintKey]*ebiten.Image{}}
 	for _, f := range []string{"south", "east", "north"} {
-		c.Sprites["animal/"+species+"_"+f] = &artSprite{Meta: artMeta{Canvas: [2]int{256, 192}, Origin: [2]float64{64, 128}, Gait: gait}}
+		c.Sprites["animal/"+species+"_"+f] = &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{256, 192}, Origin: [2]float64{64, 128}, Gait: gait}}
 	}
 	return c
 }
@@ -61,8 +64,8 @@ func gaitRenderer(species string, gait float64, path []cell) (*Renderer, *gaitSi
 
 type gaitSample struct {
 	t     float64
-	m     moveState
-	show  bodyShow
+	m     motionpkg.MoveState
+	show  creature.BodyShow
 	frame string
 }
 
@@ -75,7 +78,7 @@ func driveGait(r *Renderer, tpf, updates int, alphas []float64) []gaitSample {
 		r.advance()
 		an := r.game.World().Animals[0]
 		for _, a := range alphas {
-			r.setAlpha(a)
+			r.mo.SetAlpha(a)
 			out = append(out, gaitSample{t: r.animT(), m: r.animalMotion(an.ID), show: r.animalShow(an), frame: r.animalFrame(an)})
 		}
 	}
@@ -120,8 +123,8 @@ func TestAnimalFeetStayPlanted(t *testing.T) {
 	if g := r.animalGait(game.AnimalView{Species: "deer", Scale: 0.6}); math.Abs(g-0.816*0.6) > 1e-12 {
 		t.Fatalf("a juvenile's gait %v, want 0.6 x 0.816", g)
 	}
-	if g := r.animalGait(game.AnimalView{Species: "nosuch"}); g != gaitFallback {
-		t.Fatalf("a set without gait walks %v, want the %v fallback", g, gaitFallback)
+	if g := r.animalGait(game.AnimalView{Species: "nosuch"}); g != creature.GaitFallback {
+		t.Fatalf("a set without gait walks %v, want the %v fallback", g, creature.GaitFallback)
 	}
 }
 
@@ -150,11 +153,11 @@ func TestAnimalWalkStartsAndStopsOnNeutralFrames(t *testing.T) {
 						}
 					case a.show.Walk && !b.show.Walk:
 						stops++
-						if !neutralFrame(a.show.Ph) {
+						if !creature.NeutralFrame(a.show.Ph) {
 							t.Fatalf("gait %v %dx n=%d: stopped from mid-stride %s (phase %.3f)", gait, tpf, n, a.frame, a.show.Ph)
 						}
 					case a.show.Walk && b.show.Walk:
-						if d := b.show.Ph - a.show.Ph; d < 0 || d > maxPhasePerDraw+1e-9 {
+						if d := b.show.Ph - a.show.Ph; d < 0 || d > creature.MaxPhasePerDraw+1e-9 {
 							t.Fatalf("gait %v %dx n=%d: the phase jumps %.3f", gait, tpf, n, d)
 						}
 					}
@@ -175,7 +178,7 @@ func TestAnimalStopLandsWithTheBody(t *testing.T) {
 	s := driveGait(r, 1, 140, []float64{0})
 	stopped := -1.0
 	for i := 1; i < len(s); i++ {
-		if s[i-1].m.Blend >= minBlend && s[i].m.Blend < minBlend {
+		if s[i-1].m.Blend >= motionpkg.MinBlend && s[i].m.Blend < motionpkg.MinBlend {
 			stopped = s[i].t
 		}
 		if stopped >= 0 && s[i-1].show.Walk && !s[i].show.Walk {
@@ -200,16 +203,16 @@ func TestAnimalWalkCappedAtSixTimes(t *testing.T) {
 			continue
 		}
 		d := s[i].show.Ph - s[i-1].show.Ph
-		if d > maxPhasePerDraw+1e-9 {
+		if d > creature.MaxPhasePerDraw+1e-9 {
 			t.Fatalf("6x: the walk advanced %.3f cycles in one draw", d)
 		}
-		capped = capped || d > maxPhasePerDraw-1e-9
+		capped = capped || d > creature.MaxPhasePerDraw-1e-9
 	}
 	if !capped {
 		t.Fatal("6x: a rat's walk never reached the cap; the test is moot")
 	}
-	if maxPhasePerDraw*trotFrames > 3 {
-		t.Fatalf("the cap lets %v frames go by in one draw", maxPhasePerDraw*trotFrames)
+	if creature.MaxPhasePerDraw*motionpkg.TrotFrames > 3 {
+		t.Fatalf("the cap lets %v frames go by in one draw", creature.MaxPhasePerDraw*motionpkg.TrotFrames)
 	}
 }
 
@@ -225,10 +228,10 @@ func TestAnimalWalkHasNoRendererBob(t *testing.T) {
 		an := r.game.World().Animals[0]
 		m := r.animalMotion(an.ID)
 		ps := r.animalPose(an)
-		if m.Blend >= minBlend && ps.Dy != 0 {
+		if m.Blend >= motionpkg.MinBlend && ps.Dy != 0 {
 			t.Fatalf("a walking animal bobs %v tiles", ps.Dy)
 		}
-		if m.Blend >= minBlend && m.Facing == faceEast && ps.Rot > 0 && ps.Rot <= runLean {
+		if m.Blend >= motionpkg.MinBlend && m.Facing == artpkg.FaceEast && ps.Rot > 0 && ps.Rot <= creature.RunLean {
 			leaned = true
 		}
 	}
@@ -297,8 +300,8 @@ func TestGrazeBoutsLastSeconds(t *testing.T) {
 			break
 		}
 	}
-	if first < 1 || all[first-1].frame != "" || all[first-1].held < bodyNeutralHold {
-		t.Fatalf("the walk stops, then stands %d ticks before grazing: %+v", bodyNeutralHold, all)
+	if first < 1 || all[first-1].frame != "" || all[first-1].held < creature.BodyNeutralHold {
+		t.Fatalf("the walk stops, then stands %d ticks before grazing: %+v", creature.BodyNeutralHold, all)
 	}
 	runs := all[first-1:]
 	if len(runs) < 8 || runs[2].frame != "_graze2" {
@@ -308,16 +311,16 @@ func TestGrazeBoutsLastSeconds(t *testing.T) {
 	for i, run := range runs[1 : len(runs)-1] {
 		switch run.frame {
 		case "_graze1":
-			if run.held != bodyReachTicks {
-				t.Fatalf("run %d: graze1 held %.0f ticks, want %d", i+1, run.held, bodyReachTicks)
+			if run.held != creature.BodyReachTicks {
+				t.Fatalf("run %d: graze1 held %.0f ticks, want %d", i+1, run.held, creature.BodyReachTicks)
 			}
 		case "_graze2":
-			if run.held < grazeDownMin || run.held > grazeDownMin+grazeDownSpan {
+			if run.held < creature.GrazeDownMin || run.held > creature.GrazeDownMin+creature.GrazeDownSpan {
 				t.Fatalf("run %d: head down %.0f ticks, want 3-8 s", i+1, run.held)
 			}
 			downs[run.held] = true
 		case "":
-			if run.held < grazeLookMin || run.held > grazeLookMin+grazeLookSpan {
+			if run.held < creature.GrazeLookMin || run.held > creature.GrazeLookMin+creature.GrazeLookSpan {
 				t.Fatalf("run %d: looked up %.0f ticks, want 1-2 s", i+1, run.held)
 			}
 		default:
@@ -359,8 +362,8 @@ func TestAnimalPosesDoNotFlap(t *testing.T) {
 			t.Fatalf("%s: the pose never changed: %+v", c.name, runs)
 		}
 		for i, run := range runs[1 : len(runs)-1] {
-			if run.held < bodyMinHold {
-				t.Fatalf("%s: run %d (%s) held %.1f ticks, under the %d-tick hold", c.name, i+1, run.frame, run.held, bodyMinHold)
+			if run.held < creature.BodyMinHold {
+				t.Fatalf("%s: run %d (%s) held %.1f ticks, under the %d-tick hold", c.name, i+1, run.frame, run.held, creature.BodyMinHold)
 			}
 			if run.frame == "rest" && runs[i].frame != "" {
 				t.Fatalf("%s: lay down from %q, not from standing", c.name, runs[i].frame)
@@ -394,10 +397,10 @@ func TestRestPassesThroughStanding(t *testing.T) {
 		runs[3].frame != "rest" || runs[4].frame != "" || !runs[5].isWalk() {
 		t.Fatalf("graze2, graze1, stand, rest, stand, walk: %v", seq)
 	}
-	if runs[2].held < bodyNeutralHold {
-		t.Fatalf("stood %.0f ticks before lying down, want a %d-tick hold", runs[2].held, bodyNeutralHold)
+	if runs[2].held < creature.BodyNeutralHold {
+		t.Fatalf("stood %.0f ticks before lying down, want a %d-tick hold", runs[2].held, creature.BodyNeutralHold)
 	}
-	if runs[4].held < bodyReachTicks {
+	if runs[4].held < creature.BodyReachTicks {
 		t.Fatalf("stood %.0f ticks between lying and walking", runs[4].held)
 	}
 }
@@ -418,16 +421,16 @@ func TestAnimalDiagonalFacesSideways(t *testing.T) {
 	for _, animal := range []bool{true, false} {
 		mv := &scriptMover{id: 1, path: path, start: 10, animal: animal}
 		r := New(newMotionSim(mv))
-		var mid facing
+		var mid artpkg.Facing
 		for _, x := range drive(r, 1, 1, 70, []float64{0}) {
 			if x.t > 40 && x.t < 60 {
 				mid = x.m.Facing
 			}
 		}
-		if animal && mid != faceEast {
+		if animal && mid != artpkg.FaceEast {
 			t.Fatalf("an animal on a diagonal faces %v, want its side (east)", mid)
 		}
-		if !animal && mid != faceSouth {
+		if !animal && mid != artpkg.FaceSouth {
 			t.Fatalf("a pawn on a diagonal faces %v, want its axis kept (south)", mid)
 		}
 	}

@@ -4,12 +4,11 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/learn"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
-
-	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
 // learn.Helper owns the learning helper (ARCH-005, PLAY-018); learnHost is
@@ -30,22 +29,6 @@ type learnShell struct {
 func newLearn(a *App) *learn.Helper {
 	return learn.New(learnShell{a.shell, learnHost{a}})
 }
-
-type (
-	learnLayout = learn.Layout
-)
-
-const (
-	learnHeaderH     = learn.HeaderH
-	learnRowW        = learn.RowW
-	learnRowPad      = learn.RowPad
-	learnPanFrames   = learn.PanFrames
-	learnFlashFrames = learn.FlashFrames
-)
-
-var lessonCatalog = learn.Catalog
-
-func lessonByID(id string) *learn.Lesson { return learn.ByID(id) }
 
 // Colony is the running colony (nil on a menu screen) and whether a
 // scripted capture runs it.
@@ -72,7 +55,7 @@ func (h learnHost) Chain(observe func(command.Command)) {
 }
 
 // Frame is this Update's input.
-func (h learnHost) Frame() *inputFrame { return &h.a.in }
+func (h learnHost) Frame() *inputframe.Frame { return &h.a.in }
 
 // Sense reads the colony state the UI-event lessons compare.
 func (h learnHost) Sense() learn.Sensed {
@@ -120,7 +103,7 @@ func (a *App) keyName(act input.Action) string {
 func (a *App) learnSelection() string {
 	r := a.renderer
 	switch {
-	case a.grouped():
+	case a.sel.Grouped():
 		return fmt.Sprintf("g%d:%v", a.sel.Group.Kind, a.sel.Group.Ids)
 	case r.HasSelect():
 		return fmt.Sprintf("p%d", r.Selected())
@@ -140,19 +123,4 @@ func (a *App) learnSelection() string {
 	return ""
 }
 
-func (a *App) learnButtons() []button              { return a.lrn.Buttons() }
-func (a *App) learnChrome() []rect                 { return a.lrn.Chrome() }
-func (a *App) learnHeight() float32                { return a.lrn.Height() }
-func (a *App) learnLayout() learn.Layout           { return a.lrn.Layout() }
-func (a *App) learnFlash() (string, bool)          { return a.lrn.Flash() }
-func (a *App) applyLearnClick(id string)           { a.lrn.ApplyClick(id) }
-func (a *App) closeLearnCard() bool                { return a.lrn.CloseCard() }
-func (a *App) drawLearn(screen *ebiten.Image)      { a.lrn.Draw(screen) }
-func (a *App) learnObserve(c command.Command)      { a.lrn.Observe(c) }
-func (a *App) learnUI(sw, sh int)                  { a.lrn.UI(sw, sh) }
-func (a *App) learnComplete(id string, flash bool) { a.lrn.Complete(id, flash) }
-func (a *App) learnFolded(p rect) bool             { return a.lrn.Folded(p) }
-func (a *App) learnTracking() bool                 { return a.lrn.Tracking() }
-func (a *App) learnCardLayout(l *learn.Layout, h hudLayout, row rect) {
-	a.lrn.CardLayout(l, h, row)
-}
+func (a *App) applyLearnClick(id string) { a.lrn.ApplyClick(id) }

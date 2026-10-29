@@ -6,6 +6,10 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -57,36 +61,36 @@ func penApp(t *testing.T, s *stubSim) *App {
 }
 
 // penTabApp is penApp with the Pen tab declared into its expanded panel.
-func penTabApp(t *testing.T, s *stubSim) (*App, *fakeInput, rect) {
+func penTabApp(t *testing.T, s *stubSim) (*App, *fakeInput, gfx.Rect) {
 	t.Helper()
 	a, f := colonyApp(t, s)
 	a.sel.SelBuilding, a.sel.HasBuilding = 70, true
-	tab, ok := bldTab(a.buildingPane(70), "inspector.pen")
+	tab, ok := bldTab(a.insp.Building().BuildingPane(70), "inspector.pen")
 	if !ok {
 		t.Fatal("a pen marker has a Pen tab")
 	}
-	panel := rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(paneInset) // what the pane hands Declare
+	panel := gfx.Rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(inspector.PaneInset) // what the pane hands Declare
 	setHook(a.uiSt(), func(a *App) { tab.Declare(panel) })
 	f.Frame(t, a)
 	return a, f, panel
 }
 
 // penBody is the Pen tab's laid-out content for the app's pen.
-func penBody(t *testing.T, a *App) tabBody {
+func penBody(t *testing.T, a *App) inspector.TabBody {
 	t.Helper()
-	b, ok := a.buildingView(70)
+	b, ok := a.insp.BuildingView(70)
 	if !ok {
 		t.Fatal("no marker")
 	}
-	pv, ok := a.penOf(b)
+	pv, ok := a.insp.Building().PenOf(b)
 	if !ok {
 		t.Fatal("no pen")
 	}
-	return penTabBody(a.renderer.world(), pv, penTabW-2*paneInset-scrollBarW)
+	return inspector.PenTabBody(a.renderer.world(), pv, inspector.PenTabW-2*inspector.PaneInset-uikit.ScrollBarW)
 }
 
-func penBodyButtons(body tabBody) map[string]button {
-	ids := map[string]button{}
+func penBodyButtons(body inspector.TabBody) map[string]uikit.Button {
+	ids := map[string]uikit.Button{}
 	for _, b := range body.Buttons {
 		ids[b.ID] = b
 	}
@@ -125,7 +129,7 @@ func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 			t.Errorf("missing button %s", id)
 		}
 	}
-	if a.buildingPane(70).Close != "bldg.close" {
+	if a.insp.Building().BuildingPane(70).Close != "bldg.close" {
 		t.Error("the pane has a close button")
 	}
 	if _, ok := ids["bldg.pen.sp.labrador"]; ok {
@@ -138,7 +142,7 @@ func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 	if !ids["bldg.pen.sp.chicken"].Selected || !ids["bldg.pen.sp.chicken.m"].Selected || !ids["bldg.pen.sp.chicken.f"].Selected {
 		t.Error("an unlisted species defaults to every sex allowed")
 	}
-	viewW := float32(penTabW - 2*paneInset - scrollBarW)
+	viewW := float32(inspector.PenTabW - 2*inspector.PaneInset - uikit.ScrollBarW)
 	for _, b := range ids {
 		if b.Y+b.H > body.H || b.X+b.W > viewW || b.X < 0 || b.Y < 0 {
 			t.Errorf("button %s falls out of the tab body", b.ID)
@@ -210,15 +214,15 @@ func TestPenNotEnclosedWarning(t *testing.T) {
 	s := penSim()
 	s.world.Pens[0].Enclosed, s.world.Pens[0].Bits = false, nil
 	a := penApp(t, s)
-	if got := penStatusLine(s.world.Pens[0]); !strings.Contains(got, "Not enclosed") {
+	if got := inspector.PenStatusLine(s.world.Pens[0]); !strings.Contains(got, "Not enclosed") {
 		t.Fatalf("status %q", got)
 	}
-	if got := penStatusLine(penSim().world.Pens[0]); strings.Contains(got, "Not enclosed") {
+	if got := inspector.PenStatusLine(penSim().world.Pens[0]); strings.Contains(got, "Not enclosed") {
 		t.Fatalf("an enclosed pen is not warned: %q", got)
 	}
 	screen := ebiten.NewImage(1280, 720)
 	a.drawBuildingMark(screen)
-	a.drawPenOutline(screen) // an open pen draws a red dashed box: must not panic
+	a.arch.Marks.DrawPenOutline(screen) // an open pen draws a red dashed box: must not panic
 }
 
 func TestPenAutoCutChecklist(t *testing.T) {
@@ -258,27 +262,27 @@ func TestPenAutoCutChecklist(t *testing.T) {
 func TestPenMarkerHasNoGenericBuildingExtras(t *testing.T) {
 	t.Parallel()
 	a := penApp(t, penSim())
-	for _, c := range a.buildingCommands(70) {
+	for _, c := range a.insp.Building().BuildingCommands(70) {
 		if strings.HasPrefix(c.ID, "bill.") {
 			t.Errorf("a marker has no bills: %s", c.ID)
 		}
 	}
-	for _, tab := range a.buildingPane(70).Tabs {
+	for _, tab := range a.insp.Building().BuildingPane(70).Tabs {
 		if tab.ID == "inspector.bills" {
 			t.Error("a marker has no Bills tab")
 		}
 	}
 	screen := ebiten.NewImage(1280, 720)
 	a.drawBuildingMark(screen)
-	a.drawPenOutline(screen)
+	a.arch.Marks.DrawPenOutline(screen)
 	// the Pen tab asks for a taller panel than the plain pane's header
-	tab, _ := bldTab(a.buildingPane(70), "inspector.pen")
-	if tab.WantH <= 2*paneInset {
+	tab, _ := bldTab(a.insp.Building().BuildingPane(70), "inspector.pen")
+	if tab.WantH <= 2*inspector.PaneInset {
 		t.Errorf("the Pen tab wants %v", tab.WantH)
 	}
 	// other buildings have no Pen tab
 	a.sel.SelBuilding = 71
-	if got := a.buildingPane(71).Tabs; len(got) != 0 {
+	if got := a.insp.Building().BuildingPane(71).Tabs; len(got) != 0 {
 		t.Errorf("a wall has tabs: %+v", got)
 	}
 }
@@ -286,25 +290,25 @@ func TestPenMarkerHasNoGenericBuildingExtras(t *testing.T) {
 func TestPenOutlineEdgesAndToolGate(t *testing.T) {
 	t.Parallel()
 	pv := penSim().world.Pens[0]
-	edges := penEdges(pv.Bits, 24, 24)
+	edges := architect.PenEdges(pv.Bits, 24, 24)
 	if len(edges) != 8 { // a 2x2 block has 8 unit edges
 		t.Fatalf("2x2 pen has %d outline edges", len(edges))
 	}
-	if len(penEdges(nil, 24, 24)) != 0 {
+	if len(architect.PenEdges(nil, 24, 24)) != 0 {
 		t.Fatal("no bits, no edges")
 	}
 	a := penApp(t, penSim())
-	if _, ok := a.penOutlined(); !ok {
+	if _, ok := a.arch.Marks.PenOutlined(); !ok {
 		t.Fatal("the selected marker's pen is outlined")
 	}
 	a.sel.HasBuilding = false
-	if _, ok := a.penOutlined(); ok {
+	if _, ok := a.arch.Marks.PenOutlined(); ok {
 		t.Fatal("nothing selected, no pen tool: no outline")
 	}
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.misc")
 	click(t, a, "arch.tool.pen_marker")
-	if all := a.penOutlines(); len(all) != 1 {
+	if all := a.arch.Marks.PenOutlines(); len(all) != 1 {
 		t.Fatalf("holding the pen marker tool shows every pen: %d", len(all))
 	}
 }
@@ -323,7 +327,7 @@ func TestArchitectPenMarkerToolReplacesPenZone(t *testing.T) {
 	if !ok {
 		t.Fatal("Architect has a Pen marker tool")
 	}
-	if tl.category != "misc" || tl.icon != "pen_marker" || tl.build != "pen marker" || tl.mode != placeSingle {
+	if tl.category != "misc" || tl.icon != "pen_marker" || tl.build != "pen marker" || tl.mode != architect.PlaceSingle {
 		t.Fatalf("pen marker tool %+v", tl)
 	}
 }

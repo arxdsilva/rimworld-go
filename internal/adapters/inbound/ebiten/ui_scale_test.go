@@ -5,7 +5,13 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -21,7 +27,7 @@ import (
 func withUIScale(t testing.TB, s float64) {
 	t.Helper()
 	old := gfx.CurrentScale()
-	gfx.SetScale(uiScaleState{Dev: 1, UI: s, S: s})
+	gfx.SetScale(gfx.Scale{Dev: 1, UI: s, S: s})
 	t.Cleanup(func() { gfx.SetScale(old) })
 }
 
@@ -43,7 +49,7 @@ func TestAutoUIScale(t *testing.T) {
 		if got := autoUIScale(c.w, c.h); math.Abs(got-c.want) > 1e-9 {
 			t.Errorf("autoUIScale(%v, %v) = %v, want %v", c.w, c.h, got, c.want)
 		}
-		if ui := autoUIScale(c.w, c.h); c.w >= minSetupW && c.h >= minSetupH && (c.w/ui < minSetupW-0.01 || c.h/ui < minSetupH-0.01) {
+		if ui := autoUIScale(c.w, c.h); c.w >= uikit.MinSetupW && c.h >= uikit.MinSetupH && (c.w/ui < uikit.MinSetupW-0.01 || c.h/ui < uikit.MinSetupH-0.01) {
 			t.Errorf("auto %v on %vx%v leaves less than the minimum logical window", ui, c.w, c.h)
 		}
 	}
@@ -53,28 +59,28 @@ func TestComputeUIScale(t *testing.T) {
 	s := config.Defaults()
 	s.Accessibility.UIScaleAuto = false
 	s.Accessibility.UIScale = 150
-	if got := computeUIScale(s, 1280, 720, 1, false); got != (uiScaleState{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
+	if got := computeUIScale(s, 1280, 720, 1, false); got != (gfx.Scale{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
 		t.Fatalf("preset 150 = %+v", got)
 	}
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{Dev: 2, UI: 1.5, S: 3, World: 1}) {
+	if got := computeUIScale(s, 1280, 720, 2, false); got != (gfx.Scale{Dev: 2, UI: 1.5, S: 3, World: 1}) {
 		t.Fatalf("preset 150 on a Retina screen = %+v", got)
 	}
 	s.Graphics.HiDPI = false
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
+	if got := computeUIScale(s, 1280, 720, 2, false); got != (gfx.Scale{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
 		t.Fatalf("HiDPI off = %+v", got)
 	}
 	s = config.Defaults() // Auto
-	if got := computeUIScale(s, 1920, 1080, 1, false); got != (uiScaleState{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
+	if got := computeUIScale(s, 1920, 1080, 1, false); got != (gfx.Scale{Dev: 1, UI: 1.5, S: 1.5, World: 1}) {
 		t.Fatalf("auto at 1080p = %+v", got)
 	}
-	if got := computeUIScale(s, 1920, 1080, 2, true); got != unitUIScale {
+	if got := computeUIScale(s, 1920, 1080, 2, true); got != gfx.UnitScale {
 		t.Fatalf("capture = %+v, want unit", got)
 	}
 }
 
 func scaledTestApp(t *testing.T, dev float64, mutate func(*config.Settings)) *App {
 	t.Helper()
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	a := testApp(&stubSim{w: 8, h: 8})
 	a.devFn = func() float64 { return dev }
 	s := a.settings
@@ -118,17 +124,17 @@ func TestLayoutFHiDPI(t *testing.T) {
 }
 
 func TestCaptureForcesUnitScale(t *testing.T) {
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	a := NewApp(AppConfig{Version: "test", Capture: &Capture{},
-		LoadArt:       func() (*artCatalog, error) { return nil, nil },
+		LoadArt:       func() (*art.Catalog, error) { return nil, nil },
 		LoadSplash:    func() (*ebiten.Image, error) { return nil, nil },
-		LoadMenuScene: func() (*menuDiorama, error) { return nil, nil },
+		LoadMenuScene: func() (*mainmenu.Diorama, error) { return nil, nil },
 	})
 	a.devFn = func() float64 { return 2 }
 	s := a.settings
 	s.Accessibility.UIScaleAuto, s.Accessibility.UIScale = false, 200
 	a.setSettings(s)
-	if pw, ph := a.LayoutF(1920, 1080); pw != 1920 || ph != 1080 || a.scale != unitUIScale || a.sw != 1920 {
+	if pw, ph := a.LayoutF(1920, 1080); pw != 1920 || ph != 1080 || a.scale != gfx.UnitScale || a.sw != 1920 {
 		t.Fatalf("capture LayoutF %vx%v scale %+v logical %d", pw, ph, a.scale, a.sw)
 	}
 	if a.scale.World != 1 {
@@ -145,15 +151,15 @@ func TestCaptureForcesUnitScale(t *testing.T) {
 
 func TestTextMeasureScaleInvariant(t *testing.T) {
 	strs := []string{"Broken Hull", "New Colony", "Supercalifragilistic", "A wanderer joins: Ilse, 31, cook"}
-	styles := []textStyle{tsSmall, tsBody, tsLabel, tsLarge, tsTitle}
+	styles := []gfx.TextStyle{gfx.Small, gfx.Body, gfx.Label, gfx.Large, gfx.Title}
 	type m struct{ w, lh float64 }
 	at := func(s float64) []m {
 		withUIScale(t, s)
 		var out []m
 		for _, st := range styles {
 			for _, str := range strs {
-				w, _ := measure(str, st)
-				out = append(out, m{w, lineH(st)})
+				w, _ := gfx.Measure(str, st)
+				out = append(out, m{w, gfx.LineH(st)})
 			}
 		}
 		return out
@@ -174,9 +180,9 @@ func TestTextMeasureScaleInvariant(t *testing.T) {
 		}
 	}
 	withUIScale(t, 2)
-	lines := wrapPx("three crew members survive a hull breach and ride the lifeboats down", tsBody, 120)
+	lines := gfx.WrapPx("three crew members survive a hull breach and ride the lifeboats down", gfx.Body, 120)
 	withUIScale(t, 1)
-	if want := wrapPx("three crew members survive a hull breach and ride the lifeboats down", tsBody, 120); len(lines) != len(want) {
+	if want := gfx.WrapPx("three crew members survive a hull breach and ride the lifeboats down", gfx.Body, 120); len(lines) != len(want) {
 		t.Errorf("wrap at s=2 %q, at s=1 %q", lines, want)
 	}
 }
@@ -197,7 +203,7 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 	withUIScale(t, 1.5)
 	got := traceCanvas(t)
 	img := ebiten.NewImage(300, 150)
-	drawButton(img, button{X: 20, Y: 20, W: 100, H: 40, Label: "New Colony"}, true)
+	uikit.DrawButton(img, uikit.Button{X: 20, Y: 20, W: 100, H: 40, Label: "New Colony"}, true)
 	want := []string{"fill 30,30 150x60", "stroke 30,30 150x60"}
 	if len(*got) != 2 || (*got)[0] != want[0] || (*got)[1] != want[1] {
 		t.Fatalf("drawButton at s=1.5 drew %q, want %q", *got, want)
@@ -211,15 +217,15 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 	a.LayoutF(1920, 1080)
 	a.finishBoot()
 	f := fakeOn(a)
-	var b button
-	for _, x := range a.mainMenuButtons(a.sw, a.sh) {
+	var b uikit.Button
+	for _, x := range a.menuScreen.Buttons(a.sw, a.sh) {
 		if x.ID == "menu.newgame" {
 			b = x
 		}
 	}
 	cx, cy := b.X+b.W/2, b.Y+b.H/2
 	f.Cur.Mx, f.Cur.My = int(cx*1.5), int(cy*1.5)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +235,7 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 	if px, py := a.mapCursor(); px != int(cx*1.5) || py != int(cy*1.5) {
 		t.Fatalf("map cursor (%d,%d), want raw physical", px, py)
 	}
-	if a.nav.screen() != screenScenario {
+	if a.nav.screen() != ports.ScreenScenario {
 		t.Fatalf("after a scaled click on New Colony: %s, want scenario", a.nav.screen())
 	}
 	screen := ebiten.NewImage(a.pw, a.ph)
@@ -241,8 +247,8 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 
 func TestColonyViewportPhysical(t *testing.T) {
 	for _, s := range []float64{1, 1.5, 2} {
-		l := colonyViewport(1280, 720)
-		p := colonyViewportPhysical(1280, 720, s)
+		l := camerapkg.ColonyViewport(1280, 720)
+		p := camerapkg.ColonyViewportPhysical(1280, 720, s)
 		if p.X0 != l.X0*s || p.Y0 != l.Y0*s || p.X1 != l.X1*s || p.Y1 != l.Y1*s {
 			t.Fatalf("s=%v: physical %+v, logical %+v", s, p, l)
 		}
@@ -253,23 +259,23 @@ func TestCanvasHelpersScale(t *testing.T) {
 	withUIScale(t, 2)
 	got := traceCanvas(t)
 	img := ebiten.NewImage(100, 100)
-	uiFillRect(img, 10, 10, 10, 10, color.White, false)
-	uiStrokeRect(img, 1, 2, 3, 4, 1, color.White, false)
+	gfx.FillRect(img, 10, 10, 10, 10, color.White, false)
+	gfx.StrokeRect(img, 1, 2, 3, 4, 1, color.White, false)
 	src := ebiten.NewImage(4, 4)
-	uiImage(img, src, 5, 5, 10, 10, nil) // logical 5..15 -> physical 10..30
+	gfx.Image(img, src, 5, 5, 10, 10, nil) // logical 5..15 -> physical 10..30
 	want := []string{"fill 20,20 20x20", "stroke 2,4 6x8", "image 10,10 20x20"}
 	if fmt.Sprint(*got) != fmt.Sprint(want) {
 		t.Fatalf("canvas drew %q, want %q", *got, want)
 	}
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(3, 4)
-	uiImageOp(op)
+	gfx.ImageOp(op)
 	if x, y := op.GeoM.Apply(0, 0); x != 6 || y != 8 {
 		t.Fatalf("uiImageOp origin = (%v,%v), want (6,8)", x, y)
 	}
 	op2 := &ebiten.DrawImageOptions{}
 	op2.GeoM.Translate(3, 4)
-	uiDrawImage(img, src, op2)
+	gfx.DrawImage(img, src, op2)
 	if x, _ := op2.GeoM.Apply(0, 0); x != 3 {
 		t.Fatal("uiDrawImage changed the caller's op")
 	}
@@ -277,20 +283,20 @@ func TestCanvasHelpersScale(t *testing.T) {
 	if sv := gfx.ScaledVerts(vs); sv[0].DstX != 2 || sv[2].DstY != 12 {
 		t.Fatalf("scaledVerts = %+v", sv)
 	}
-	uiTriangles(img, vs, []uint16{0, 1, 2}, src, nil)
-	uiTriangles32(img, vs, []uint32{0, 1, 2}, src, nil)
+	gfx.Triangles(img, vs, []uint16{0, 1, 2}, src, nil)
+	gfx.Triangles32(img, vs, []uint32{0, 1, 2}, src, nil)
 	if vs[0].DstX != 1 || vs[2].DstY != 6 {
 		t.Fatal("uiTriangles changed the caller's vertices")
 	}
-	uiLine(img, 0, 0, 1, 1, 1, color.White, true)
-	uiFillCircle(img, 5, 5, 2, color.White, true)
-	uiStrokeCircle(img, 5, 5, 2, 1, color.White, true)
-	uiFillPoly(img, [][2]float32{{0, 0}, {4, 0}, {0, 4}}, color.White, true)
-	uiFillPoly(img, nil, color.White, true) // too few points: nothing
-	if r := uiPhysRect(rect{X: 1, Y: 2, W: 3, H: 4}); r != (rect{X: 2, Y: 4, W: 6, H: 8}) {
+	gfx.Line(img, 0, 0, 1, 1, 1, color.White, true)
+	gfx.FillCircle(img, 5, 5, 2, color.White, true)
+	gfx.StrokeCircle(img, 5, 5, 2, 1, color.White, true)
+	gfx.FillPoly(img, [][2]float32{{0, 0}, {4, 0}, {0, 4}}, color.White, true)
+	gfx.FillPoly(img, nil, color.White, true) // too few points: nothing
+	if r := gfx.PhysRect(gfx.Rect{X: 1, Y: 2, W: 3, H: 4}); r != (gfx.Rect{X: 2, Y: 4, W: 6, H: 8}) {
 		t.Fatalf("uiPhysRect = %+v", r)
 	}
-	if c := clipTo(img, rect{X: 10, Y: 10, W: 20, H: 20}); c.Bounds() != image.Rect(20, 20, 60, 60) {
+	if c := gfx.ClipTo(img, gfx.Rect{X: 10, Y: 10, W: 20, H: 20}); c.Bounds() != image.Rect(20, 20, 60, 60) {
 		t.Fatalf("clipTo at s=2 = %v, want the physical rectangle", c.Bounds())
 	}
 }

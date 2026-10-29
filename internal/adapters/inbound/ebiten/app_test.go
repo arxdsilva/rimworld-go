@@ -1,6 +1,12 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"strings"
 	"testing"
 
@@ -122,13 +128,13 @@ func (s *stubSim) CanZoneAt(kind string, x, y int) bool {
 func testApp(sim Simulation) *App {
 	return NewApp(AppConfig{
 		Version: "test",
-		LoadArt: func() (*artCatalog, error) {
+		LoadArt: func() (*art.Catalog, error) {
 			return nil, nil
 		},
 		LoadSplash: func() (*ebiten.Image, error) {
 			return nil, nil
 		},
-		LoadMenuScene: func() (*menuDiorama, error) {
+		LoadMenuScene: func() (*mainmenu.Diorama, error) {
 			return nil, nil
 		},
 		NewSim: func(NewGame) (Simulation, error) {
@@ -141,7 +147,7 @@ func testApp(sim Simulation) *App {
 // has none) so the screen's kit widgets are declared and clickable by id.
 func settleUI(t *testing.T, a *App) {
 	t.Helper()
-	if s := a.nav.screen(); s == screenBoot || s == screenColony {
+	if s := a.nav.screen(); s == ports.ScreenBoot || s == ports.ScreenColony {
 		return
 	}
 	if a.src == nil {
@@ -180,9 +186,9 @@ func click(t *testing.T, a *App, id string) {
 	}
 	s := float32(a.scale.S)
 	f.Cur.Mx, f.Cur.My = int(x*s), int(y*s)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	quitFrame(t, a)
-	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true
 	quitFrame(t, a)
 	f.Cur.Mx, f.Cur.My = -50, -50
 }
@@ -207,7 +213,7 @@ func click(t *testing.T, a *App, id string) {
 // learn helper on small logical screens.
 func holdColony(a *App, f *fakeInput, id string) func() {
 	r := a.renderer
-	if r == nil || a.nav.screen() != screenColony {
+	if r == nil || a.nav.screen() != ports.ScreenColony {
 		blurred := f.Cur.Blurred
 		f.Cur.Blurred = true
 		return func() {
@@ -290,13 +296,13 @@ func TestBootTicksToMainMenuWithoutSim(t *testing.T) {
 	t.Parallel()
 	sim := &stubSim{w: 8, h: 8}
 	a := testApp(sim)
-	if a.nav.screen() != screenBoot {
+	if a.nav.screen() != ports.ScreenBoot {
 		t.Fatalf("start screen = %s, want boot", a.nav.screen())
 	}
 	for i := 0; i < bootFramesPerPhase*len(bootPhases)+1; i++ {
 		a.tick()
 	}
-	if a.nav.screen() != screenMainMenu {
+	if a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("after boot = %s, want main_menu", a.nav.screen())
 	}
 	if a.simsStarted != 0 || a.renderer != nil {
@@ -315,11 +321,11 @@ func TestNewGameWizardAndStart(t *testing.T) {
 
 	want := []struct {
 		id  string
-		scr screenID
+		scr ports.Screen
 	}{
-		{"menu.newgame", screenScenario},
-		{"wizard.next", screenStoryteller},
-		{"wizard.next", screenWorldGen},
+		{"menu.newgame", ports.ScreenScenario},
+		{"wizard.next", ports.ScreenStoryteller},
+		{"wizard.next", ports.ScreenWorldGen},
 	}
 	for _, step := range want {
 		click(t, a, step.id)
@@ -329,17 +335,17 @@ func TestNewGameWizardAndStart(t *testing.T) {
 	}
 	// Create World generates (a tiny world) and arrives at the landing
 	// site screen; Next then needs a chosen site.
-	ng := a.draft()
+	ng := a.wiz.Draft()
 	ng.World.SeedText, ng.World.Coverage = tinySeed, 5
 	click(t, a, "world.generate")
-	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	runUntil(t, a, func() bool { return a.nav.screen() == ports.ScreenLanding })
 	click(t, a, "land.random")
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenPawns {
+	if a.nav.screen() != ports.ScreenPawns {
 		t.Fatalf("after landing Next = %s, want pawns", a.nav.screen())
 	}
 	click(t, a, "wizard.start")
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("after start = %s, want colony", a.nav.screen())
 	}
 	if a.simsStarted != 1 || a.renderer == nil {
@@ -355,14 +361,14 @@ func TestDisabledActionsDoNotNavigate(t *testing.T) {
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
 	click(t, a, "menu.continue")
-	if a.nav.screen() != screenMainMenu {
+	if a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("continue navigated to %s", a.nav.screen())
 	}
 	if a.hint != "no saves yet" {
 		t.Fatalf("hint = %q, want no saves yet", a.hint)
 	}
 	click(t, a, "menu.plugins")
-	if a.nav.screen() != screenMainMenu {
+	if a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("plugins navigated to %s", a.nav.screen())
 	}
 }
@@ -374,11 +380,11 @@ func TestBackAndEscapeUnwind(t *testing.T) {
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
 	a.apply(a.nav.escapeIntent())
-	if a.nav.screen() != screenScenario {
+	if a.nav.screen() != ports.ScreenScenario {
 		t.Fatalf("escape = %s, want scenario", a.nav.screen())
 	}
 	click(t, a, "wizard.back")
-	if a.nav.screen() != screenMainMenu {
+	if a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("back = %s, want main_menu", a.nav.screen())
 	}
 }
@@ -423,7 +429,7 @@ func TestReturnToMenuDropsSim(t *testing.T) {
 	quickStart(t, a)
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.menu")
-	if a.nav.screen() != screenMainMenu {
+	if a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("return = %s, want main_menu", a.nav.screen())
 	}
 	if a.renderer != nil {
@@ -446,11 +452,11 @@ func TestOptionsFromPauseReturnsToPause(t *testing.T) {
 	quickStart(t, a)
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.options")
-	if a.nav.screen() != screenOptions {
+	if a.nav.screen() != ports.ScreenOptions {
 		t.Fatalf("options = %s", a.nav.screen())
 	}
 	click(t, a, "options.back")
-	if a.nav.screen() != screenColony || a.nav.overlay() != overlayPause {
+	if a.nav.screen() != ports.ScreenColony || a.nav.overlay() != overlayPause {
 		t.Fatalf("back from options = %s/%s, want colony/pause", a.nav.screen(), a.nav.overlay())
 	}
 }
@@ -470,19 +476,19 @@ func TestLoadAndCreditsNavigate(t *testing.T) {
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
 	click(t, a, "menu.load")
-	if a.nav.screen() != screenLoad {
+	if a.nav.screen() != ports.ScreenLoad {
 		t.Fatalf("load = %s", a.nav.screen())
 	}
 	click(t, a, "load.back")
 	click(t, a, "menu.credits")
-	if a.nav.screen() != screenCredits {
+	if a.nav.screen() != ports.ScreenCredits {
 		t.Fatalf("credits = %s", a.nav.screen())
 	}
-	if lines := creditsLines(); len(lines) == 0 || lines[0] != "Created by arxdsilva" {
+	if lines := mainmenu.CreditsLines(); len(lines) == 0 || lines[0] != "Created by arxdsilva" {
 		t.Fatalf("credits open with %q, want the creator first", lines)
 	}
 	click(t, a, "credits.back")
-	if a.nav.screen() != screenMainMenu {
+	if a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("credits back = %s", a.nav.screen())
 	}
 }
@@ -493,8 +499,8 @@ func TestScenarioSelectionStaysOnScreen(t *testing.T) {
 	a.finishBoot()
 	click(t, a, "menu.newgame")
 	click(t, a, "scen.row.gilded_expedition") // the third built-in
-	if sel := a.draft().Selected(); sel == nil || sel.Key != "gilded_expedition" || a.nav.screen() != screenScenario {
-		t.Fatalf("select the third scenario: sel=%+v screen=%s", a.draft().Selected(), a.nav.screen())
+	if sel := a.wiz.Draft().Selected(); sel == nil || sel.Key != "gilded_expedition" || a.nav.screen() != ports.ScreenScenario {
+		t.Fatalf("select the third scenario: sel=%+v screen=%s", a.wiz.Draft().Selected(), a.nav.screen())
 	}
 }
 
@@ -509,8 +515,8 @@ func TestBodyOriginClearsLeftRail(t *testing.T) {
 	click(t, a, "menu.newgame")
 
 	for _, size := range [][2]int{{1280, 720}, {1920, 1080}} {
-		_, _, content, _ := dialogFrame(size[0], size[1])
-		L := scenarioRects(content)
+		_, _, content, _ := uikit.DialogFrame(size[0], size[1])
+		L := wizardpkg.ScenarioRects(content)
 		if L.Right.X < L.Left.Right() || L.List.Right() > L.Left.Right()+0.5 {
 			t.Fatalf("%v scenario details start at %v, list ends at %v", size, L.Right.X, L.Left.Right())
 		}
@@ -520,26 +526,26 @@ func TestBodyOriginClearsLeftRail(t *testing.T) {
 		if L.Right.Right() > content.Right()+0.5 || L.Buttons.Bottom() > content.Bottom()+0.5 {
 			t.Fatalf("%v scenario columns leave the content area", size)
 		}
-		S := storyRects(content)
+		S := wizardpkg.StoryRects(content)
 		if S.Centre.X < S.Left.Right() || S.Right.X < S.Centre.Right() || S.Right.Right() > content.Right()+0.5 {
 			t.Fatalf("%v storyteller columns overlap: %+v", size, S)
 		}
 	}
 
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenStoryteller {
+	if a.nav.screen() != ports.ScreenStoryteller {
 		t.Fatalf("screen = %s, want storyteller", a.nav.screen())
 	}
 	click(t, a, "wizard.back")
 	click(t, a, "wizard.back")
 	click(t, a, "menu.load")
-	x, _ := bodyOrigin(a.loadButtons(a.sw, a.sh), a.sh)
+	x, _ := bodyOrigin(a.opt.LoadButtons(a.sw, a.sh), a.sh)
 	if x != bodyDefaultX {
 		t.Fatalf("load body x=%d, want %d (footer only)", x, bodyDefaultX)
 	}
 	click(t, a, "load.back")
 	click(t, a, "menu.options")
-	x, _ = bodyOrigin(a.optionsButtons(a.sw, a.sh), a.sh)
+	x, _ = bodyOrigin(a.opt.Buttons(a.sw, a.sh), a.sh)
 	if x < 280 {
 		t.Fatalf("options body x=%d, want right of the toggle", x)
 	}
@@ -552,7 +558,7 @@ func TestWorldGenerateStaysInFooter(t *testing.T) {
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenWorldGen {
+	if a.nav.screen() != ports.ScreenWorldGen {
 		t.Fatalf("screen = %s, want world_gen", a.nav.screen())
 	}
 	settleUI(t, a)
@@ -560,8 +566,63 @@ func TestWorldGenerateStaysInFooter(t *testing.T) {
 	if !ok {
 		t.Fatal("missing world.generate")
 	}
-	_, _, _, footer := dialogFrame(a.sw, a.sh)
+	_, _, _, footer := uikit.DialogFrame(a.sw, a.sh)
 	if w.Disabled || w.R.Y < footer.Y || w.R.Bottom() > footer.Bottom() {
 		t.Fatalf("Generate at %+v should be enabled in the footer %+v", w.R, footer)
 	}
 }
+
+// art_atlas.go: pages cut in the background, not mid-frame
+
+// dev frame-rate probe (fps_probe.go)
+
+// perf_stats.go: the overlay's timing (PERF-002)
+
+// commitment: save before the window closes (saves.go)
+
+// ui_scale.go: before any measure or hit test
+
+// background.go: Run in background, from this frame's focus
+
+// F10 screenshot, F11 hide UI (hotkeys.go)
+
+// minimap (minimap.go): the camera moved
+
+// hud.go: letters, alerts, command options
+
+// hotkeys.go
+
+// captures frame the camera themselves
+// physical (camera.go)
+
+// click outside a menu just closes it
+
+// move_mode.go: placing a moved building
+// zone_select.go: a selected zone's Expand or Shrink tool
+
+// selection.go / multiselect.go / formation.go
+
+// background.go: ~20 fps while running in the background
+// perf_stats.go: runs before the throttle sleeps (PERF-002)
+// ui_scale.go: the canvas and the font draw at this scale
+
+// logical
+
+// the viewport is in this frame's map pixels
+
+// tree_focus.go: hover, selection and ghost see through canopies
+// world_scale.go: the map, and what the tools mark on it, draw
+// into the render-scaled offscreen when there is one; its canvas
+// labels are queued and drawn on the screen after it
+
+// mapfields_overlay.go: dev only
+
+// hud.go: selection marks, ghosts, the drag box
+
+// minimap.go: big maps only
+
+// perf_overlay.go: also with the UI hidden (PERF-002)
+
+// widget kit: widgets, modals, tooltips (ui_state.go)
+
+// F10: this frame, before the toast that reports it

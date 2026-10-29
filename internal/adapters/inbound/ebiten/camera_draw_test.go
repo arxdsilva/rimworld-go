@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"testing"
 	"time"
 
@@ -66,7 +67,7 @@ func TestCameraStepClampsStall(t *testing.T) {
 	*clock = clock.Add(2 * time.Second)
 	a.Draw(img)
 	moved := r.cam.OffsetX - before
-	if max := panMaxSpeed * camMaxDt * r.cam.Dev; r.cam.Dev > 0 && moved > max+0.01 || moved < 0 {
+	if max := camerapkg.PanMaxSpeed * camMaxDt * r.cam.Dev; r.cam.Dev > 0 && moved > max+0.01 || moved < 0 {
 		t.Fatalf("a 2 s stall moved %v, want at most %v", moved, max)
 	}
 }

@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -20,7 +22,7 @@ func BenchmarkShadows(b *testing.B) {
 		w.RoomGrid[i] = -1
 	}
 	for i := 0; i < 300; i++ { // a roofed block
-		w.RoofCells[(2+i/20)*mw+10+i%20] = roofBuilt
+		w.RoofCells[(2+i/20)*mw+10+i%20] = overlay.RoofBuilt
 	}
 	for i := 0; i < 200; i++ { // wall runs
 		w.Buildings = append(w.Buildings, game.BuildingView{Kind: "wall", X: i % 40, Y: 18 + i/40, W: 1, H: 1})
@@ -42,7 +44,7 @@ func BenchmarkShadows(b *testing.B) {
 	r.view.Pawns = pawns
 	r.lit.Light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.drawShadows(screen, w, 1280, 800, tile)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -60,7 +62,7 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 		w.RoomGrid[i] = -1
 	}
 	for i := 0; i < 300; i++ { // a roofed block
-		w.RoofCells[(2+i/20)*mw+10+i%20] = roofBuilt
+		w.RoofCells[(2+i/20)*mw+10+i%20] = overlay.RoofBuilt
 	}
 	for i := 0; i < 200; i++ { // wall runs
 		w.Buildings = append(w.Buildings, game.BuildingView{Kind: "wall", X: i % 40, Y: 18 + i/40, W: 1, H: 1})
@@ -83,7 +85,7 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 	r.view.Pawns = pawns
 	r.lit.Light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.drawShadows(screen, w, 1280, 800, tile)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -97,7 +99,7 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 // benchShadowRenderer is a renderer with the generated art (or none).
 func benchShadowRenderer(mw, mh int) *Renderer {
 	r := New(&stubSim{w: mw, h: mh})
-	if root, err := LocateArt(); err == nil {
+	if root, err := artpkg.Locate(); err == nil {
 		if art, err := loadArtCatalog(root); err == nil {
 			r.art = art
 		}
@@ -110,7 +112,7 @@ func benchShadowRenderer(mw, mh int) *Renderer {
 
 // benchSpecies is a species with generated art (the roster is being
 // re-rendered, so whichever is present).
-func benchSpecies(c *artCatalog) string {
+func benchSpecies(c *artpkg.Catalog) string {
 	for _, sp := range []string{"deer", "timber_wolf", "dustbuck", "ridgewolf"} {
 		if c.Has("animal/" + sp + "_south") {
 			return sp
@@ -150,7 +152,7 @@ func BenchmarkCreatureShadows(b *testing.B) {
 	r.view.W = w
 	r.lit.Light = testLight(0.5, 0.2, 0.3) // a low sun: point lights still cast
 	screen := ebiten.NewImage(1280, 800)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.drawShadows(screen, w, 1280, 800, tile)
 	if want := 40 * 3; r.env.Shadow.Casts < want && r.art.Has("pawn/body_south") && r.art.Has("animal/"+species+"_south") {
 		b.Fatalf("drew %d silhouettes, want %d (sun and 2 campfires each)", r.env.Shadow.Casts, want)

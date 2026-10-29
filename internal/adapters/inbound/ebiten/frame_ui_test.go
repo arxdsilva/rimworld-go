@@ -6,6 +6,12 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -26,8 +32,8 @@ func TestFrameSelectionCycle(t *testing.T) {
 			{ID: 5, Kind: "wall", X: 3, Y: 3, W: 1, H: 1},
 		},
 	}
-	got := selectablesAt(w, nil, 3, 3)
-	want := []selCand{{Kind: selItem, ID: 1}, {Kind: selFrame, ID: 5}, {Kind: selBuilding, ID: 2}, {Kind: selBuilding, ID: 3}, {Kind: selFrame, ID: 4}}
+	got := selection.SelectablesAt(w, nil, 3, 3)
+	want := []selection.Cand{{Kind: selection.Item, ID: 1}, {Kind: selection.Frame, ID: 5}, {Kind: selection.Building, ID: 2}, {Kind: selection.Building, ID: 3}, {Kind: selection.Frame, ID: 4}}
 	if len(got) != len(want) {
 		t.Fatalf("cands = %v", got)
 	}
@@ -38,7 +44,7 @@ func TestFrameSelectionCycle(t *testing.T) {
 	}
 	// footprint: a 2x1 frame covers its second tile
 	w = game.WorldView{Frames: []game.FrameView{{ID: 9, Kind: "workbench", X: 2, Y: 2, W: 2, H: 1}}}
-	if c := selectablesAt(w, nil, 3, 2); len(c) != 1 || c[0].Kind != selFrame {
+	if c := selection.SelectablesAt(w, nil, 3, 2); len(c) != 1 || c[0].Kind != selection.Frame {
 		t.Fatalf("2x1 frame second tile = %v", c)
 	}
 }
@@ -46,13 +52,13 @@ func TestFrameSelectionCycle(t *testing.T) {
 func frameApp(t *testing.T, f game.FrameView) (*App, *stubSim) {
 	a, s := stubColony(t)
 	s.world = game.WorldView{Frames: []game.FrameView{f}}
-	a.selectCand(selCand{Kind: selFrame, ID: f.ID})
+	a.sel.Select(selection.Cand{Kind: selection.Frame, ID: f.ID})
 	return a, s
 }
 
 func TestFrameInspectorLines(t *testing.T) {
 	t.Parallel()
-	in := buildInfo(wallFrame(), game.WorldView{})
+	in := inspector.BuildInfo(wallFrame(), game.WorldView{})
 	if in.Title != "Wall (frame)" || in.Status != "Materials on the way" {
 		t.Fatalf("%+v", in)
 	}
@@ -64,19 +70,19 @@ func TestFrameInspectorLines(t *testing.T) {
 	}
 	f := wallFrame()
 	f.Wood, f.Incoming, f.WorkLeft, f.Status = 0, 0, 40, "No wood in stock"
-	if in := buildInfo(f, game.WorldView{}); in.Title != "Wall (blueprint)" || in.Status != "No wood in stock" {
+	if in := inspector.BuildInfo(f, game.WorldView{}); in.Title != "Wall (blueprint)" || in.Status != "No wood in stock" {
 		t.Fatalf("%+v", in)
 	}
 	f = wallFrame()
 	f.Wood, f.WorkLeft, f.Builder = 10, 20, "Bo"
 	f.Status = "Being built by Bo"
-	in = buildInfo(f, game.WorldView{})
+	in = inspector.BuildInfo(f, game.WorldView{})
 	if !strings.HasPrefix(in.Work, "20 / 40  ~ ") || !strings.Contains(in.Work, "in-game min") || !strings.HasSuffix(in.People, "Building: Bo") || in.Stock != "" {
 		t.Fatalf("%+v", in)
 	}
 	// reinstall
 	mv := game.FrameView{ID: 8, Kind: "workbench", Moving: true, MovingFrom: 5, W: 2, H: 1, WorkTotal: 30, WorkLeft: 30}
-	in = buildInfo(mv, game.WorldView{Buildings: []game.BuildingView{{ID: 5, Kind: "workbench"}}})
+	in = inspector.BuildInfo(mv, game.WorldView{Buildings: []game.BuildingView{{ID: 5, Kind: "workbench"}}})
 	if in.Status != "Moving workbench here: needs no materials" || in.Material != "" {
 		t.Fatalf("%+v", in)
 	}
@@ -84,7 +90,7 @@ func TestFrameInspectorLines(t *testing.T) {
 	f = wallFrame()
 	f.Status = ""
 	f.Wood = 0
-	if in := buildInfo(f, game.WorldView{}); in.Status != "Waiting for materials" {
+	if in := inspector.BuildInfo(f, game.WorldView{}); in.Status != "Waiting for materials" {
 		t.Fatalf("%+v", in)
 	}
 }
@@ -92,7 +98,7 @@ func TestFrameInspectorLines(t *testing.T) {
 func TestFrameCancelEmitsCancelFrame(t *testing.T) {
 	t.Parallel()
 	a, s := frameApp(t, wallFrame())
-	cancel, ok := bldCmd(a.frameCommands(7), "frame.cancel")
+	cancel, ok := bldCmd(a.insp.Thing().FrameCommands(7), "frame.cancel")
 	if !ok {
 		t.Fatal("no cancel command")
 	}
@@ -113,9 +119,9 @@ func TestFrameEscClosesAndVanishedClears(t *testing.T) {
 	if a.sel.HasFrame {
 		t.Fatal("Esc should close the frame panel")
 	}
-	a.selectCand(selCand{Kind: selFrame, ID: 7})
+	a.sel.Select(selection.Cand{Kind: selection.Frame, ID: 7})
 	s.world = game.WorldView{}
-	if _, ok := a.selectedFrame(); ok || a.sel.HasFrame {
+	if _, ok := a.insp.SelectedFrame(); ok || a.sel.HasFrame {
 		t.Fatal("a finished frame must deselect")
 	}
 }
@@ -155,14 +161,14 @@ func TestCarpetMaterialButtonsShowCounts(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.furniture")
 	click(t, a, "arch.tool.carpet")
-	bs := a.architectButtons()
+	bs := a.arch.Buttons()
 	if b, _ := hasButton(bs, "arch.stuff.straw carpet"); b.Label != "Straw (0)" {
 		t.Fatalf("label = %q", b.Label)
 	}
 	if b, _ := hasButton(bs, "arch.stuff.cloth carpet"); b.Label != "Cloth (3)" {
 		t.Fatalf("label = %q", b.Label)
 	}
-	r := a.architectRect()
+	r := a.arch.Rect()
 	for _, b := range bs {
 		if strings.HasPrefix(b.ID, "arch.stuff.") && b.Y+b.H > r.Y+r.H {
 			t.Fatalf("%s overflows the panel", b.ID)
@@ -192,10 +198,10 @@ func TestFenceAndForbidToolsEmit(t *testing.T) {
 			t.Fatalf("tool %s = %+v", id, tool)
 		}
 	}
-	if g, _ := toolByID("fence_gate"); g.mode != placeSingle {
+	if g, _ := toolByID("fence_gate"); g.mode != architect.PlaceSingle {
 		t.Fatal("gate is a single placement")
 	}
-	if f, _ := toolByID("fence"); f.mode != placeLine {
+	if f, _ := toolByID("fence"); f.mode != architect.PlaceLine {
 		t.Fatal("fence draws lines")
 	}
 	a, s := stubColony(t)
@@ -204,8 +210,8 @@ func TestFenceAndForbidToolsEmit(t *testing.T) {
 	click(t, a, "arch.tool.fence")
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 2, 4, 2
 	a.arch.Drag = true
-	a.submitArchitect()
-	id, _ := kindID("fence")
+	a.arch.Submit()
+	id, _ := architect.KindID("fence")
 	n := 0
 	for _, c := range s.cmds {
 		if c.Kind == command.DesignateBuild && c.Build == id {
@@ -223,7 +229,7 @@ func TestFenceAndForbidToolsEmit(t *testing.T) {
 		s.cmds = nil
 		click(t, a, "arch.tool."+tc.id)
 		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 2, 3, 4
-		a.submitArchitect()
+		a.arch.Submit()
 		c := lastCmd(t, s)
 		if c.Kind != command.DesignateForbid || c.Enabled != tc.on || c.X != 1 || c.Y2 != 4 {
 			t.Fatalf("%s cmd = %+v", tc.id, c)
@@ -235,40 +241,40 @@ func TestItemForbidToggle(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: []game.ItemView{{ID: 11, Kind: "wood", Qty: 5, X: 2, Y: 2}}}
-	a.selectCand(selCand{Kind: selItem, ID: 11})
+	a.sel.Select(selection.Cand{Kind: selection.Item, ID: 11})
 	click(t, a, "item.forbid")
 	if c := lastCmd(t, s); c.Kind != command.SetForbidden || c.Target != 11 || !c.Enabled {
 		t.Fatalf("cmd = %+v", c)
 	}
 	s.world.Items[0].Forbidden = true
-	if b, _ := hasButton(a.commandGridButtons(), "item.forbid"); b.Label != "Allow" { // the command button in the grid
+	if b, _ := hasButton(a.insp.Commands().CommandGridButtons(), "item.forbid"); b.Label != "Allow" { // the command button in the grid
 		t.Fatalf("label = %q", b.Label)
 	}
 	click(t, a, "item.forbid")
 	if c := lastCmd(t, s); c.Enabled {
 		t.Fatalf("cmd = %+v, want allow", c)
 	}
-	if ls := itemLines(s.world.Items[0], false); !contains(ls, "Forbidden: colonists leave it alone") {
+	if ls := inspector.ItemLines(s.world.Items[0], false); !contains(ls, "Forbidden: colonists leave it alone") {
 		t.Fatalf("lines = %q", ls)
 	}
 }
 
 func TestFenceSpriteKeys(t *testing.T) {
 	t.Parallel()
-	if got := buildSpriteStuff("fence", "wood", "", 5, false, false); got != "structure/fence_wood_05" {
+	if got := architect.BuildSpriteStuff("fence", "wood", "", 5, false, false); got != "structure/fence_wood_05" {
 		t.Fatal(got)
 	}
-	if got := buildSpriteStuff("fence", "stone", "", 15, false, false); got != "structure/fence_stone_15" {
+	if got := architect.BuildSpriteStuff("fence", "stone", "", 15, false, false); got != "structure/fence_stone_15" {
 		t.Fatal(got)
 	}
-	if got := buildSpriteStuff("fence gate", "stone", "east", 0, false, true); got != "structure/fence_gate_open_east" {
+	if got := architect.BuildSpriteStuff("fence gate", "stone", "east", 0, false, true); got != "structure/fence_gate_open_east" {
 		t.Fatal(got)
 	}
-	if got := buildSpriteStuff("fence gate", "wood", "", 0, false, false); got != "structure/fence_gate_south" {
+	if got := architect.BuildSpriteStuff("fence gate", "wood", "", 0, false, false); got != "structure/fence_gate_south" {
 		t.Fatal(got)
 	}
 	// the gate takes the sim's auto-oriented facing, never the links mask
-	if got := buildSpriteStuff("fence gate", "wood", "west", 15, doorAxisEW("west"), false); got != "structure/fence_gate_west" {
+	if got := architect.BuildSpriteStuff("fence gate", "wood", "west", 15, sprite.DoorAxisEW("west"), false); got != "structure/fence_gate_west" {
 		t.Fatal(got)
 	}
 	w := game.WorldView{
@@ -276,10 +282,10 @@ func TestFenceSpriteKeys(t *testing.T) {
 	}
 	var g linkGrid
 	g.Sync(w, 3, 3)
-	if m := g.Mask(1, 1); m != wallN|wallE {
+	if m := g.Mask(1, 1); m != art.WallN|art.WallE {
 		t.Fatalf("mask = %d, want N|E (wall above, gate right, bed ignored)", m)
 	}
-	if lbl := fenceLabelAt(w, 1, 1); !strings.HasPrefix(lbl, "Fence") {
+	if lbl := world.FenceLabelAt(w, 1, 1); !strings.HasPrefix(lbl, "Fence") {
 		t.Fatal(lbl)
 	}
 }
@@ -287,9 +293,9 @@ func TestFenceSpriteKeys(t *testing.T) {
 func TestFenceFallbacksDoNotPanic(t *testing.T) {
 	t.Parallel()
 	img := ebiten.NewImage(128, 128)
-	drawFenceVector(img, 0, 0, 64, "fence", wallN|wallE, false, false, 255)
-	drawFenceVector(img, 0, 0, 64, "fence gate", 0, true, true, 140)
-	drawFenceVector(img, 0, 0, 64, "fence gate", 0, false, false, 255)
+	sprite.DrawFenceVector(img, 0, 0, 64, "fence", art.WallN|art.WallE, false, false, 255)
+	sprite.DrawFenceVector(img, 0, 0, 64, "fence gate", 0, true, true, 140)
+	sprite.DrawFenceVector(img, 0, 0, 64, "fence gate", 0, false, false, 255)
 	a, _ := stubColony(t)
 	drawIconFallback(img, archTool{label: "Fence"}, 0, 0)
 	a.renderer.art = nil

@@ -1,6 +1,10 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
 
@@ -33,7 +37,7 @@ func TestArchitectHasRoofTools(t *testing.T) {
 		if !ok {
 			t.Fatalf("tool %q missing", id)
 		}
-		if tool.category != "zones" || tool.mode != placeArea || tool.label != w.label ||
+		if tool.category != "zones" || tool.mode != architect.PlaceArea || tool.label != w.label ||
 			tool.desc != w.desc || tool.icon != w.icon || tool.cmd != w.cmd {
 			t.Fatalf("tool %q = %+v", id, tool)
 		}
@@ -48,7 +52,7 @@ func roofToolEmits(t *testing.T, id string, kind command.Kind) {
 	click(t, a, "arch.tool."+id)
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 6, 7
-	a.submitArchitect()
+	a.arch.Submit()
 	if len(s.cmds) != 1 {
 		t.Fatalf("cmds = %+v", s.cmds)
 	}
@@ -77,10 +81,10 @@ func TestRoofGhostMarksUnsupported(t *testing.T) {
 		want  bool
 	}{
 		{"unsupported open tile", 0, false, true},
-		{"supported tile", roofSupported, false, false},
-		{"supported and planned", roofSupported | roofPlanBuild, false, false},
+		{"supported tile", overlaypkg.RoofSupported, false, false},
+		{"supported and planned", overlaypkg.RoofSupported | overlaypkg.RoofPlanBuild, false, false},
 		{"wall is skipped", 0, true, false},
-		{"already roofed but unsupported", roofBuilt, false, true},
+		{"already roofed but unsupported", overlaypkg.RoofBuilt, false, true},
 	}
 	for _, c := range cases {
 		if got := roofGhostUnsupported(c.flags, c.wall); got != c.want {
@@ -95,7 +99,7 @@ func TestRoofToolForcesOverlay(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.roof")
-	if !a.renderer.overlays().Roof.Forced || !a.renderer.roofOverlayOn() {
+	if !a.renderer.overlays().Roof.Forced || !a.renderer.overlays().Roof.Shown() {
 		t.Fatal("roof tool should force the overlay")
 	}
 	click(t, a, "arch.tool.noroof")
@@ -103,7 +107,7 @@ func TestRoofToolForcesOverlay(t *testing.T) {
 		t.Fatal("remove-roof tool should force the overlay")
 	}
 	click(t, a, "arch.tool.noroof") // deselect
-	if a.renderer.overlays().Roof.Forced || a.renderer.roofOverlayOn() {
+	if a.renderer.overlays().Roof.Forced || a.renderer.overlays().Roof.Shown() {
 		t.Fatal("deselect should clear the forced overlay")
 	}
 	click(t, a, "arch.tool.roof")
@@ -123,23 +127,23 @@ func TestHUDRoofButtonToggles(t *testing.T) {
 	t.Parallel()
 	a, _ := roofStubApp(t)
 	sw, sh := a.sw, a.sh
-	find := func() button {
+	find := func() uikit.Button {
 		for _, b := range a.colonyButtons(sw, sh) {
-			if b.ID == roofButtonID {
+			if b.ID == hud.RoofButtonID {
 				return b
 			}
 		}
 		t.Fatal("hud.roof button missing")
-		return button{}
+		return uikit.Button{}
 	}
 	if find().Selected {
 		t.Fatal("button active while overlay off")
 	}
-	click(t, a, roofButtonID)
+	click(t, a, hud.RoofButtonID)
 	if !a.renderer.overlays().Roof.On || !find().Selected {
 		t.Fatal("click should turn the overlay on and show active")
 	}
-	click(t, a, roofButtonID)
+	click(t, a, hud.RoofButtonID)
 	if a.renderer.overlays().Roof.On || find().Selected {
 		t.Fatal("second click should turn it off")
 	}
@@ -157,11 +161,11 @@ func TestHUDRoofButtonToggles(t *testing.T) {
 func TestRKeyToggles(t *testing.T) {
 	t.Parallel()
 	a, _ := roofStubApp(t)
-	a.renderer.toggleRoofOverlay() // what Shift+R calls
+	a.renderer.overlays().Roof.Toggle() // what Shift+R calls
 	if !a.renderer.overlays().Roof.On {
 		t.Fatal("toggle should turn the overlay on")
 	}
-	a.renderer.toggleRoofOverlay()
+	a.renderer.overlays().Roof.Toggle()
 	if a.renderer.overlays().Roof.On {
 		t.Fatal("toggle should turn the overlay off")
 	}
@@ -170,17 +174,17 @@ func TestRKeyToggles(t *testing.T) {
 func TestLegendShownWithOverlay(t *testing.T) {
 	t.Parallel()
 	a, _ := roofStubApp(t)
-	if got := a.roofLegend(); got != "" {
+	if got := a.chrome.Global().RoofLegend(); got != "" {
 		t.Fatalf("legend = %q with overlay off", got)
 	}
 	a.renderer.overlays().Roof.On = true
 	want := "Roof: blue built · slate natural · dashed planned · hatched removal"
-	if got := a.roofLegend(); got != want {
+	if got := a.chrome.Global().RoofLegend(); got != want {
 		t.Fatalf("legend = %q", got)
 	}
 	a.renderer.overlays().Roof.On = false
 	a.renderer.overlays().Roof.Forced = true
-	if !strings.HasPrefix(a.roofLegend(), "Roof:") {
+	if !strings.HasPrefix(a.chrome.Global().RoofLegend(), "Roof:") {
 		t.Fatal("legend should show when forced")
 	}
 }

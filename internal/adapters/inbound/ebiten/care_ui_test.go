@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -28,22 +29,22 @@ func TestAssignMedicalCareColumn(t *testing.T) {
 	s := &careSim{policySim: ps, def: [medcare.NumGroups]uint8{uint8(medcare.Best), uint8(medcare.HerbalMax), uint8(medcare.HerbalMax), uint8(medcare.HerbalMax)}}
 	a, f := colonyApp(t, ps.stubSim)
 	a.renderer.game = s
-	a.openAssign()
+	a.win.Assign().Launch()
 	f.Frame(t, a)
-	if w, ok := a.uiSt().Find(assignCareID(1)); !ok || w.Label != medcare.Best.Label() {
+	if w, ok := a.uiSt().Find(windows.AssignCareID(1)); !ok || w.Label != medcare.Best.Label() {
 		t.Fatalf("Ada's care button %+v", w)
 	}
-	if hasWidget(a, assignCareID(3)) {
+	if hasWidget(a, windows.AssignCareID(3)) {
 		t.Fatal("the dead get no care button")
 	}
-	press(t, a, f, assignCareID(1)) // the best wraps round to no care
+	press(t, a, f, windows.AssignCareID(1)) // the best wraps round to no care
 	if c := lastOf(ps.stubSim, command.SetMedicalCare); c == nil || c.Pawn != 1 || medcare.Policy(c.Mode) != medcare.NoCare {
 		t.Fatalf("SetMedicalCare = %+v", c)
 	}
-	if w, _ := a.uiSt().Find(assignDefCareID(medcare.Prisoners)); w.Label != "Prisoners: Herbal" || w.Disabled {
+	if w, _ := a.uiSt().Find(windows.AssignDefCareID(medcare.Prisoners)); w.Label != "Prisoners: Herbal" || w.Disabled {
 		t.Fatalf("prisoners' default %+v", w)
 	}
-	press(t, a, f, assignDefCareID(medcare.Prisoners))
+	press(t, a, f, windows.AssignDefCareID(medcare.Prisoners))
 	if c := lastOf(ps.stubSim, command.SetDefaultCare); c == nil || c.Index != int(medcare.Prisoners) || medcare.Policy(c.Mode) != medcare.IndustrialMax {
 		t.Fatalf("SetDefaultCare = %+v", c)
 	}
@@ -55,13 +56,13 @@ func TestAssignDefaultCareWithoutReadModel(t *testing.T) {
 	t.Parallel()
 	ps := assignStub()
 	a, f := colonyApp(t, ps.stubSim)
-	a.openAssign()
+	a.win.Assign().Launch()
 	f.Frame(t, a)
-	w, ok := a.uiSt().Find(assignDefCareID(medcare.Colonists))
+	w, ok := a.uiSt().Find(windows.AssignDefCareID(medcare.Colonists))
 	if !ok || !w.Disabled || w.Reason == "" {
 		t.Fatalf("default care %+v: disabled with a reason", w)
 	}
-	if nextCare(medcare.Best) != medcare.NoCare || nextCare(medcare.NoCare) != medcare.NoMeds {
+	if windows.NextCare(medcare.Best) != medcare.NoCare || windows.NextCare(medcare.NoCare) != medcare.NoMeds {
 		t.Fatal("the care cycle")
 	}
 }
@@ -75,13 +76,13 @@ func TestDraftedRightClickOffersTend(t *testing.T) {
 	a.renderer.syncPawns()
 	selectPawn(t, a, id)
 	a.renderer.enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(id), Enabled: true})
-	a.rightClickTile(6, 6, 100, 100) // a healthy colonist: just walk there
+	a.ord.RightClickTile(6, 6, 100, 100) // a healthy colonist: just walk there
 	if a.ord.Float.Open {
 		t.Fatal("nothing to tend: no menu")
 	}
 	g.Injure(bo, 75) // downed
 	a.renderer.syncPawns()
-	a.rightClickTile(6, 6, 100, 100)
+	a.ord.RightClickTile(6, 6, 100, 100)
 	if !a.ord.Float.Open {
 		t.Fatal("a drafted right-click on a wounded colonist opens the order menu")
 	}
@@ -94,10 +95,10 @@ func TestDraftedRightClickOffersTend(t *testing.T) {
 	if i < 0 || a.ord.Float.Opts[i].Disabled {
 		t.Fatalf("Tend Bo offered: %+v", a.ord.Float.Opts)
 	}
-	a.chooseFloat("float." + strconv.Itoa(i))
+	a.ord.ChooseFloat("float." + strconv.Itoa(i))
 	g.Step(1)
 	a.renderer.syncPawns()
-	if p, _ := a.selectedPawn(); !p.Drafted || !strings.HasPrefix(p.Job, "emergency tend") {
+	if p, _ := a.insp.SelectedPawn(); !p.Drafted || !strings.HasPrefix(p.Job, "emergency tend") {
 		t.Fatalf("the drafted colonist goes to tend: drafted %v, job %q", p.Drafted, p.Job)
 	}
 }

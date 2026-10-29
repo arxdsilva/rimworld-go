@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -33,13 +36,13 @@ func socialFixture() game.SocialView {
 func TestOpinionBands(t *testing.T) {
 	t.Parallel()
 	for v, want := range map[int]int{-100: 0, -60: 0, -59: 1, -21: 1, -20: 2, 0: 2, 20: 2, 21: 3, 59: 3, 60: 4, 61: 4, 100: 4} {
-		if got := opinionBand(v); got != want {
+		if got := inspector.OpinionBand(v); got != want {
 			t.Errorf("opinionBand(%d) = %d, want %d", v, got, want)
 		}
 	}
 	seen := map[[4]uint8]bool{}
 	for _, v := range []int{-80, -40, 0, 40, 80} {
-		c := opinionColor(v)
+		c := inspector.OpinionColor(v)
 		seen[[4]uint8{c.R, c.G, c.B, c.A}] = true
 	}
 	if len(seen) != 5 {
@@ -51,19 +54,19 @@ func TestRelationTipOrder(t *testing.T) {
 	t.Parallel()
 	r := socialFixture().Relations[0]
 	want := "Opinion of Bo: 75\nPretty: +20\nKind words: +10\n\nBo is open to romance.\n\nBo's opinion of me: 40\nInsulted me: -12"
-	if got := relationTip(r); got != want {
+	if got := inspector.RelationTip(r); got != want {
 		t.Errorf("tip =\n%q\nwant\n%q", got, want)
 	}
 	r.RomanceNote = ""
-	if got := relationTip(r); strings.Contains(got, "romance") || strings.Contains(got, "\n\n\n") {
+	if got := inspector.RelationTip(r); strings.Contains(got, "romance") || strings.Contains(got, "\n\n\n") {
 		t.Errorf("no note, no extra blank: %q", got)
 	}
 }
 
 func TestStatusTags(t *testing.T) {
 	t.Parallel()
-	if statusTag("") != "" || statusTag("dead") != "dead" || statusTag("off-map") != "off-map" ||
-		statusTag("prisoner") != "prisoner" || statusTag("kidnapped") != "kidnapped" || statusTag("caravan") != "in caravan" {
+	if inspector.StatusTag("") != "" || inspector.StatusTag("dead") != "dead" || inspector.StatusTag("off-map") != "off-map" ||
+		inspector.StatusTag("prisoner") != "prisoner" || inspector.StatusTag("kidnapped") != "kidnapped" || inspector.StatusTag("caravan") != "in caravan" {
 		t.Error("status tags")
 	}
 }
@@ -78,7 +81,7 @@ func TestSocialTabRowsAndEmpty(t *testing.T) {
 	openPawnTab(t, a, "social") // the pane's Social tab
 	f.Frame(t, a)
 	f.Frame(t, a)
-	if !a.kitTabOn() {
+	if !a.insp.Tabs().KitTabOn() {
 		t.Fatal("social tab not open")
 	}
 	tip := tipOf(t, a, "social.row.0")
@@ -94,7 +97,7 @@ func TestSocialTabRowsAndEmpty(t *testing.T) {
 		t.Error("only three relations")
 	}
 	// Newest log line first.
-	log := logNewestFirst(socialFixture().Log)
+	log := inspector.LogNewestFirst(socialFixture().Log)
 	if log[0].Tick != 900 || log[1].Tick != 500 || log[2].Tick != 100 {
 		t.Errorf("log order = %v", log)
 	}
@@ -106,8 +109,8 @@ func TestSocialTabRowsAndEmpty(t *testing.T) {
 	if hasWidget(a, "social.row.0") {
 		t.Error("empty state has rows")
 	}
-	if socialEmptyText != "No relationships yet" {
-		t.Errorf("empty text = %q", socialEmptyText)
+	if inspector.SocialEmptyText != "No relationships yet" {
+		t.Errorf("empty text = %q", inspector.SocialEmptyText)
 	}
 	drawFrame(t, a, f)
 }
@@ -138,23 +141,23 @@ func TestSocialRowsScroll(t *testing.T) {
 func TestInteractionBubbleRecent(t *testing.T) {
 	t.Parallel()
 	p := game.PawnView{Interaction: "insult", InteractTick: 1000}
-	if !interactionRecent(p, 1000) || !interactionRecent(p, 1299) {
+	if !world.InteractionRecent(p, 1000) || !world.InteractionRecent(p, 1299) {
 		t.Error("recent within 300 ticks")
 	}
-	if interactionRecent(p, 1301) {
+	if world.InteractionRecent(p, 1301) {
 		t.Error("stale after 300 ticks")
 	}
-	if interactionRecent(game.PawnView{InteractTick: 1000}, 1000) {
+	if world.InteractionRecent(game.PawnView{InteractTick: 1000}, 1000) {
 		t.Error("no interaction, no bubble")
 	}
-	if interactionRecent(p, 900) != true {
+	if world.InteractionRecent(p, 900) != true {
 		t.Error("a tick before the interaction (load) still draws")
 	}
-	if interactionIconKey("insult") != "ui_icon/social_insult" || interactionIconKey("nonsense") != "" {
+	if world.InteractionIconKey("insult") != "ui_icon/social_insult" || world.InteractionIconKey("nonsense") != "" {
 		t.Error("icon keys")
 	}
 	for _, k := range []string{"chitchat", "deep_talk", "slight", "insult", "kind_words", "romance", "rebuff", "proposal", "breakup", "fight", "lovin"} {
-		if interactionIconKey(k) == "" {
+		if world.InteractionIconKey(k) == "" {
 			t.Errorf("kind %s unknown", k)
 		}
 	}
@@ -178,11 +181,11 @@ func TestInteractionBubblesDrawWithoutArt(t *testing.T) {
 func TestBioRelationLines(t *testing.T) {
 	t.Parallel()
 	rows := append(socialFixture().Relations, game.RelationRowView{Name: "Ed", Label: "Friend"})
-	got := bioRelationLines(rows)
+	got := inspector.BioRelationLines(rows)
 	if len(got) != 3 || got[0] != "Wife: Bo" || got[1] != "Rival: Cy" || got[2] != "Acquaintance: Di" {
 		t.Errorf("lines = %v", got)
 	}
-	if len(bioRelationLines(nil)) != 0 {
+	if len(inspector.BioRelationLines(nil)) != 0 {
 		t.Error("none")
 	}
 }
@@ -213,21 +216,21 @@ func TestHistoryTab(t *testing.T) {
 		{Tick: 90000, Text: "Ada and Bo married.", Kind: "social", Pawns: []uint64{1, 2}},
 	}
 	a, f := colonyApp(t, s)
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		if b.ID == "tab.history" && b.Disabled {
 			t.Fatal("history tab disabled")
 		}
 	}
 	press(t, a, f, "tab.history")
 	f.Frame(t, a)
-	if a.uiModalTop() != historyModalID {
+	if a.uiModalTop() != windows.HistoryModalID {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
 	f.Frame(t, a)
 	if !hasWidget(a, "history.row.0") || !hasWidget(a, "history.row.1") {
 		t.Fatal("history rows missing")
 	}
-	rows := historyRows(s.history)
+	rows := windows.HistoryRows(s.history)
 	if rows[0].Text != "Ada and Bo married." || !strings.Contains(rows[0].When, "Y") {
 		t.Errorf("rows = %+v", rows)
 	}
@@ -242,7 +245,7 @@ func TestHistoryTab(t *testing.T) {
 func TestHistoryEmpty(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, bioSim())
-	a.openHistory()
+	a.win.History().Launch()
 	drawFrame(t, a, f)
 	drawFrame(t, a, f)
 }

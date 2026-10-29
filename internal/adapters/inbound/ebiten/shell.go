@@ -1,6 +1,11 @@
 package ebiten
 
 import (
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strconv"
 	"strings"
 
@@ -42,8 +47,8 @@ type shell struct {
 	shellSaves
 	shellDispatch
 
-	screens map[screenID]func(a *App, sw, sh int) // uiBegin: each screen's widgets
-	routes  []clickRoute                          // applyClick: by id or prefix, in order
+	screens map[portspkg.Screen]func(a *App, sw, sh int) // uiBegin: each screen's widgets
+	routes  []clickRoute                                 // applyClick: by id or prefix, in order
 }
 
 func newShell(a *App) shell {
@@ -143,7 +148,7 @@ func (s shellWorld) Tick() clock.Tick {
 // Date is the calendar date.
 func (s shellWorld) Date() clock.Date {
 	if r := s.a.renderer; r != nil {
-		return r.date()
+		return r.game.Date()
 	}
 	return clock.Date{}
 }
@@ -164,9 +169,9 @@ func (s shellView) TileAt(mx, my int) (int, int) {
 // TilePx is the tile size in map pixels.
 func (s shellView) TilePx() float64 {
 	if r := s.a.renderer; r != nil {
-		return r.tilePx()
+		return r.cam.Tile()
 	}
-	return TileSize
+	return camerapkg.TileSize
 }
 
 // WorldToScreen is a tile's top-left on the map in map pixels.
@@ -231,10 +236,14 @@ func (s shellSel) ClearSelect() {
 
 type shellOverlay struct{ a *App }
 
-func (s shellOverlay) RoofShown() bool  { return s.a.renderer != nil && s.a.renderer.roofOverlayOn() }
-func (s shellOverlay) HomeShown() bool  { return s.a.renderer != nil && s.a.renderer.homeShown() }
-func (s shellOverlay) PlanShown() bool  { return s.a.renderer != nil && s.a.renderer.planShown() }
-func (s shellOverlay) PowerShown() bool { return s.a.renderer != nil && s.a.renderer.powerShown() }
+func (s shellOverlay) RoofShown() bool {
+	return s.a.renderer != nil && s.a.renderer.overlays().Roof.Shown()
+}
+func (s shellOverlay) HomeShown() bool { return s.a.renderer != nil && s.a.renderer.homeShown() }
+func (s shellOverlay) PlanShown() bool { return s.a.renderer != nil && s.a.renderer.planOverlayOn() }
+func (s shellOverlay) PowerShown() bool {
+	return s.a.renderer != nil && s.a.renderer.overlays().Power.Shown()
+}
 
 func (s shellOverlay) ToggleRoof() {
 	if r := s.a.renderer; r != nil {
@@ -335,8 +344,8 @@ type shellSaves struct{ a *App }
 
 // Slots is the load screen's list (RefreshSlots reads it from disk).
 func (s shellSaves) Slots() []ports.SaveSlot { return s.a.opt.Slots }
-func (s shellSaves) RefreshSlots()           { s.a.refreshSlots() }
-func (s shellSaves) LoadSlot(i int)          { s.a.loadSlot(i) }
+func (s shellSaves) RefreshSlots()           { s.a.opt.RefreshSlots() }
+func (s shellSaves) LoadSlot(i int)          { s.a.opt.LoadSlot(i) }
 func (s shellSaves) NewestSlot() int         { return s.a.newestSlot() }
 
 // ---- Dispatcher
@@ -349,21 +358,21 @@ func (s shellDispatch) Do(it ports.Intent) {
 	a := s.a
 	switch it := it.(type) {
 	case ports.OpenArchitect:
-		a.openArchitect()
+		a.arch.OpenPanel()
 	case ports.CloseArchitect:
-		a.closeArchitect()
+		a.arch.ClosePanel()
 	case ports.PresetBuildTool:
-		a.presetArchTool(it.Kind, it.Stuff, it.Facing)
+		a.arch.Preset(it.Kind, it.Stuff, it.Facing)
 	case ports.ShowWindow:
 		a.win.Show(it.Mode)
 	case ports.CloseWindows:
 		a.win.Open = false
 	case ports.SelectPawn:
-		a.selectCand(selCand{Kind: selPawn, ID: it.ID})
+		a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: it.ID})
 	case ports.TogglePawnInSet:
-		a.toggleInSet(selCand{Kind: selPawn, ID: it.ID})
+		a.sel.ToggleInSet(selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: it.ID})
 	case ports.ClearSelection:
-		a.clearSelections(selNone)
+		a.sel.Clear(selectionpkg.None)
 	case ports.CenterOnPawn:
 		a.centreOnPawn(it.ID)
 	case ports.Push:
@@ -389,17 +398,17 @@ func (s shellDispatch) Do(it ports.Intent) {
 // per Update, right after the input is polled, while the screen is on
 // top with no overlay. A new screen adds a row here (SOLID_GO.md §4:
 // registration at the composition root, not init()).
-func screenTable() map[screenID]func(a *App, sw, sh int) {
-	return map[screenID]func(a *App, sw, sh int){
-		screenMainMenu:       func(a *App, sw, sh int) { a.mainMenuUI(sw, sh) },
-		screenScenario:       func(a *App, sw, sh int) { a.scenarioUI(sw, sh) },
-		screenScenarioEditor: func(a *App, sw, sh int) { a.editorUI(sw, sh) },
-		screenStoryteller:    func(a *App, sw, sh int) { a.storytellerUI(sw, sh) },
-		screenWorldGen:       func(a *App, sw, sh int) { a.worldGenUI(sw, sh) },
-		screenLanding:        func(a *App, sw, sh int) { a.landingUI(sw, sh) },
-		screenPawns:          func(a *App, sw, sh int) { a.pawnsUI(sw, sh) },
-		screenOptions:        func(a *App, sw, sh int) { a.optionsUI(sw, sh) },
-		screenColony:         func(a *App, sw, sh int) { a.colonyUI(sw, sh) },
+func screenTable() map[portspkg.Screen]func(a *App, sw, sh int) {
+	return map[portspkg.Screen]func(a *App, sw, sh int){
+		portspkg.ScreenMainMenu:       func(a *App, sw, sh int) { a.menuScreen.Declare(sw, sh) },
+		portspkg.ScreenScenario:       func(a *App, sw, sh int) { a.scenarioUI(sw, sh) },
+		portspkg.ScreenScenarioEditor: func(a *App, sw, sh int) { a.editorUI(sw, sh) },
+		portspkg.ScreenStoryteller:    func(a *App, sw, sh int) { a.storytellerUI(sw, sh) },
+		portspkg.ScreenWorldGen:       func(a *App, sw, sh int) { a.worldGenUI(sw, sh) },
+		portspkg.ScreenLanding:        func(a *App, sw, sh int) { a.landingUI(sw, sh) },
+		portspkg.ScreenPawns:          func(a *App, sw, sh int) { a.pawnsUI(sw, sh) },
+		portspkg.ScreenOptions:        func(a *App, sw, sh int) { a.opt.UI(sw, sh) },
+		portspkg.ScreenColony:         func(a *App, sw, sh int) { a.colonyUI(sw, sh) },
 	}
 }
 
@@ -440,7 +449,7 @@ func clickRoutes() []clickRoute {
 	return []clickRoute{
 		exact(hud.RoofButtonID, func(a *App, _ string) { a.shell.ToggleRoof() }),
 		exact(hud.HomeButtonID, func(a *App, _ string) { a.shell.ToggleHome() }),
-		exact(homeAutoButtonID, func(a *App, _ string) { a.toggleHomeAuto() }), // home_auto_ui.go
+		exact(architectpkg.HomeAutoButtonID, func(a *App, _ string) { a.arch.ToggleHomeAuto() }), // home_auto_ui.go
 		exact(hud.PlanButtonID, func(a *App, _ string) { a.shell.TogglePlan() }),
 		exact(hud.RoomsButtonID, func(a *App, _ string) { a.chrome.Rooms = !a.chrome.Rooms }),
 		on(ids.PrefixLetter, func(a *App, id string) { a.chrome.Right().LetterClick(id) }), // hud/letters.go
@@ -465,37 +474,37 @@ func clickRoutes() []clickRoute {
 		on(ids.PrefixSchedCell, func(a *App, id string) { a.win.Schedule().Paint(id) }), // windows
 		exact(ids.TabArchitect, func(a *App, _ string) {
 			if a.arch.Open {
-				a.closeArchitect()
+				a.arch.ClosePanel()
 			} else {
-				a.openArchitect()
+				a.arch.OpenPanel()
 			}
 		}),
-		on(ids.PrefixArchCat, func(a *App, id string) { a.selectArchCategory(strings.TrimPrefix(id, ids.PrefixArchCat)) }),
+		on(ids.PrefixArchCat, func(a *App, id string) { a.arch.SelectCategory(strings.TrimPrefix(id, ids.PrefixArchCat)) }),
 		on(ids.PrefixArchStuff, func(a *App, id string) { a.arch.Stuff = strings.TrimPrefix(id, ids.PrefixArchStuff) }),
 		on(ids.PrefixArchCrop, func(a *App, id string) { a.arch.Crop = strings.TrimPrefix(id, ids.PrefixArchCrop) }),
-		on(ids.PrefixArchTool, func(a *App, id string) { a.selectArchTool(strings.TrimPrefix(id, ids.PrefixArchTool)) }),
+		on(ids.PrefixArchTool, func(a *App, id string) { a.arch.SelectTool(strings.TrimPrefix(id, ids.PrefixArchTool)) }),
 		on(ids.PrefixFloat, (*App).chooseFloat), // orders.go
 		on(ids.PrefixLoadSlot, func(a *App, id string) {
 			if i, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixLoadSlot)); err == nil {
-				a.loadSlot(i)
+				a.opt.LoadSlot(i)
 			}
 		}),
 		exact(ids.PauseSaveQuit, func(a *App, _ string) { a.apply(intent{kind: intentReturnToMenu}) }), // commitment: Save & Quit to Menu (saves.go)
 		exact(ids.PauseSave, func(a *App, _ string) {
-			a.saveNow(a.opt.SaveSlot)
+			a.opt.SaveNow(a.opt.SaveSlot)
 			a.apply(intent{kind: intentResume})
 		}),
 		exact(ids.PauseLoad, openLoadScreen),
 		exact(ids.MenuLoad, openLoadScreen),
 		exact(ids.MenuContinue, func(a *App, _ string) {
-			a.refreshSlots()
+			a.opt.RefreshSlots()
 			if i := a.newestSlot(); i >= 0 { // the most recent save, commitment ones too
-				a.loadSlot(i)
+				a.opt.LoadSlot(i)
 			}
 		}),
-		exact(ids.PawnDraft, func(a *App, _ string) { a.toggleDraft() }),
+		exact(ids.PawnDraft, func(a *App, _ string) { a.ord.ToggleDraft() }),
 		exact(ids.PawnClearOrders, func(a *App, _ string) {
-			if p, ok := a.selectedPawn(); ok {
+			if p, ok := a.insp.SelectedPawn(); ok {
 				a.shell.Enqueue(command.Command{Kind: command.ClearOrders, Pawn: uint64(p.ID)})
 			}
 		}),
@@ -514,7 +523,7 @@ func clickRoutes() []clickRoute {
 			if id == ids.OptionsBack { // the screen intent, not an option
 				return false
 			}
-			a.applyOption(id)
+			a.opt.ApplyOption(id)
 			return true
 		}},
 		exact(ids.MenuOptions, openOptions),
@@ -534,10 +543,10 @@ func clickBarPawn(a *App, id string) {
 	}
 	pid := entity.EntityID(n)
 	if a.in.Shift() {
-		a.toggleInSet(selCand{Kind: selPawn, ID: pid})
+		a.sel.ToggleInSet(selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: pid})
 		return
 	}
-	a.selectCand(selCand{Kind: selPawn, ID: pid}) // clears every other selection
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: pid}) // clears every other selection
 	if a.chrome.Bar().DoubleClick(pid) {
 		a.centreOnPawn(pid)
 	}
@@ -558,20 +567,20 @@ func clickMainTab(a *App, id string) bool {
 		return true
 	}
 	a.win.Open, a.win.Mode = true, mode
-	a.closeArchitect()
-	a.closeFloat()
+	a.arch.ClosePanel()
+	a.ord.CloseFloat()
 	return true
 }
 
 // openLoadScreen refreshes the slot list and pushes the Load screen.
 func openLoadScreen(a *App, _ string) {
-	a.refreshSlots()
-	a.apply(intent{kind: intentPush, screen: screenLoad})
+	a.opt.RefreshSlots()
+	a.apply(intent{kind: intentPush, screen: portspkg.ScreenLoad})
 }
 
 // openOptions opens Options on its first tab with no key capture pending.
 func openOptions(a *App, id string) {
 	a.opt.Tab = ""
-	a.rebind = rebindState{}
+	a.rebind = options.RebindState{}
 	a.apply(a.clickIntent(id))
 }

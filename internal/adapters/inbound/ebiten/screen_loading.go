@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
 )
@@ -36,9 +37,6 @@ func (b *oneShotBuilder) Step(int) (string, float32, bool) {
 }
 
 func (b *oneShotBuilder) Sim() (Simulation, error) { return b.sim, b.err }
-
-// loadUnits is the work units stepped per frame.
-const loadUnits = wizard.LoadUnits
 
 // newGameOf is what the factory receives for a setup: the seed and the
 // site's biome (the legacy start reads these) and the full setup.
@@ -109,7 +107,7 @@ func (l colonyLoader) Finish() error {
 // finishStart installs the built colony and ends the wizard.
 func (a *App) finishStart(sim Simulation) {
 	a.startSession(sim)
-	a.opt.SaveSlot = newSlotName()
+	a.opt.SaveSlot = options.NewSlotName()
 	a.opt.AutosaveDay = 0
 	a.wiz.Drop() // the setup is done: the wizard's draft goes with it
 }

@@ -4,6 +4,10 @@ import (
 	"math"
 	"testing"
 
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -61,7 +65,7 @@ func soundApp(sim *stubSim) (*App, *soundRecorder) {
 
 // centreTile is the world tile under the middle of the colony view.
 func centreTile(a *App) (float64, float64) {
-	v := colonyViewport(a.sw, a.sh)
+	v := camerapkg.ColonyViewport(a.sw, a.sh)
 	return a.renderer.screenToWorld(int((v.X0+v.X1)/2), int((v.Y0+v.Y1)/2))
 }
 
@@ -73,12 +77,12 @@ func TestStrikeCueIsCentredAndOncePerSwing(t *testing.T) {
 	if len(r.cueBus().Cues) != 0 {
 		t.Fatal("no sound before the strike")
 	}
-	sim.tick = clock.Tick(tickAt(3, 46, strikeAt) + 46)
+	sim.tick = clock.Tick(tickAt(3, 46, creature.StrikeAt) + 46)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	if len(r.cueBus().Cues) != 1 || r.cueBus().Cues[0].ID != "sfx.chop" || r.cueBus().Cues[0].X != 6.5 {
 		t.Fatalf("one chop at the trunk, got %+v", r.cueBus().Cues)
 	}
-	r.takeCues()
+	r.cueBus().Take()
 	r.animateWork(game.WorldView{}, []game.PawnView{p}) // clock stopped: paused
 	if len(r.cueBus().Cues) != 0 {
 		t.Fatalf("a paused clock makes no sound: %+v", r.cueBus().Cues)
@@ -90,7 +94,7 @@ func TestSilentActionsMakeNoSound(t *testing.T) {
 	r, sim := workRenderer(tickAt(3, 60, 0.1))
 	p := worker(game.ActionResearch)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	sim.tick = clock.Tick(tickAt(3, 60, strikeAt) + 60)
+	sim.tick = clock.Tick(tickAt(3, 60, creature.StrikeAt) + 60)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	if len(r.cueBus().Cues) != 0 {
 		t.Fatalf("research is quiet: %+v", r.cueBus().Cues)
@@ -126,13 +130,13 @@ func TestDirectorLimitsRepeats(t *testing.T) {
 		a.renderer.cue("sfx.chop", cx+float64(i)*0.2, cy, 1)
 	}
 	a.colonyCues()
-	if n := len(rec.played("sfx.chop")); n != cueMaxPerID {
-		t.Fatalf("%d chops in one frame, want %d", n, cueMaxPerID)
+	if n := len(rec.played("sfx.chop")); n != cue.MaxPerID {
+		t.Fatalf("%d chops in one frame, want %d", n, cue.MaxPerID)
 	}
 	a.snd.Frame++
 	a.renderer.cue("sfx.chop", cx, cy, 1)
 	a.colonyCues()
-	if n := len(rec.played("sfx.chop")); n != cueMaxPerID {
+	if n := len(rec.played("sfx.chop")); n != cue.MaxPerID {
 		t.Fatalf("a chop one frame later should wait for the gap, got %d plays", n)
 	}
 }
@@ -148,14 +152,14 @@ func TestDoorAndTreeCues(t *testing.T) {
 	walker := game.PawnView{ID: 4, X: 4, Y: 4}
 	r.listenWorld(game.WorldView{Buildings: []game.BuildingView{door}}, []game.PawnView{walker})
 	ids := map[string]bool{}
-	for _, c := range r.takeCues() {
+	for _, c := range r.cueBus().Take() {
 		ids[c.ID] = true
 	}
 	if !ids["sfx.door_open"] || !ids["sfx.tree_fall"] {
 		t.Fatalf("want a door opening and a tree falling, got %v", ids)
 	}
 	r.listenWorld(game.WorldView{Buildings: []game.BuildingView{door}}, nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.door_close" {
+	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.door_close" {
 		t.Fatalf("want the door closing, got %+v", c)
 	}
 }
@@ -229,9 +233,9 @@ func TestClickSounds(t *testing.T) {
 	rec := &soundRecorder{}
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.cfg.Sound = rec
-	a.uiSound(button{ID: "menu.newgame"})
-	a.uiSound(button{ID: "menu.plugins", Disabled: true})
-	a.uiSound(button{ID: "options.master.inc"})
+	a.uiSound(uikit.Button{ID: "menu.newgame"})
+	a.uiSound(uikit.Button{ID: "menu.plugins", Disabled: true})
+	a.uiSound(uikit.Button{ID: "options.master.inc"})
 	if len(rec.played("ui.click")) != 1 || len(rec.played("ui.deny")) != 1 || len(rec.plays) != 2 {
 		t.Fatalf("plays: %+v", rec.plays)
 	}
@@ -250,7 +254,7 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 	t.Parallel()
 	a, rec := soundApp(&stubSim{w: 48, h: 40})
 	r := a.renderer
-	v := colonyViewport(a.sw, a.sh)
+	v := camerapkg.ColonyViewport(a.sw, a.sh)
 	hear := func(zoom, dx float64) []soundCall {
 		r.cam.Zoom = zoom
 		rec.plays = nil
@@ -274,13 +278,13 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 	r.cam.Zoom = 1.5
 	cx, cy := centreTile(a)
 	r.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{{ID: 5, Kind: "campfire", X: int(cx), Y: int(cy), Burning: true}}}
-	want := map[string]loopWant{}
+	want := map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	if _, ok := want["fire:5"]; !ok {
 		t.Fatal("the campfire crackles zoomed in")
 	}
 	r.cam.Zoom = r.MinZoomFor(v)
-	want = map[string]loopWant{}
+	want = map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	if _, ok := want["fire:5"]; ok {
 		t.Fatal("a campfire is silent fully zoomed out")
@@ -305,24 +309,24 @@ func TestMineAndSmoothCuesOnlyOnTerrainChange(t *testing.T) {
 	// cancelling a mine mark leaves the rock: no break sound
 	r.listenWorld(terrainWorld("rock", mark, nil), nil)
 	r.listenWorld(terrainWorld("rock", nil, nil), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("cancelled mine cued %+v", c)
 	}
 	// mined out: the rock is gone
 	r.listenWorld(terrainWorld("rock", mark, nil), nil)
 	r.listenWorld(terrainWorld("stone", nil, nil), nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.rock_break" || c[0].X != 1.5 {
+	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.rock_break" || c[0].X != 1.5 {
 		t.Fatalf("mined rock cues %+v", c)
 	}
 	// smoothing: silent when cancelled, a chisel strike when done
 	r.listenWorld(terrainWorld("rock", nil, mark), nil)
 	r.listenWorld(terrainWorld("rock", nil, nil), nil)
-	if c := r.takeCues(); len(c) != 0 {
+	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("cancelled smoothing cued %+v", c)
 	}
 	r.listenWorld(terrainWorld("rock", nil, mark), nil)
 	r.listenWorld(terrainWorld("rock_smooth", nil, nil), nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.pick" {
+	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.pick" {
 		t.Fatalf("smoothed rock cues %+v", c)
 	}
 }

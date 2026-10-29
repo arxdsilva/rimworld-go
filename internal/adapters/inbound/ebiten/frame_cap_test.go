@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/perf"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -64,7 +66,7 @@ func TestFrameCapOff(t *testing.T) {
 		{"vsync", func(a *App) { a.settings.Graphics.VSync = true }},
 		{"off", func(a *App) { a.settings.Graphics.FrameCap = 0 }},
 		{"capture", func(a *App) { a.cfg.Capture = &Capture{} }},
-		{"probe", func(a *App) { a.cfg.FPSProbe = &FPSProbe{Seconds: 1} }},
+		{"probe", func(a *App) { a.cfg.FPSProbe = &perf.FPSProbe{Seconds: 1} }},
 	} {
 		a, clock, slept := cappedColony(t)
 		c.set(a)
@@ -81,16 +83,16 @@ func TestFrameCapOff(t *testing.T) {
 // TestFrameCapRow: the Options row cycles the caps and is a preset row.
 func TestFrameCapRow(t *testing.T) {
 	t.Parallel()
-	if got := frameCapLabel(0); got != "Off" {
+	if got := options.FrameCapLabel(0); got != "Off" {
 		t.Fatalf("label for 0 = %q", got)
 	}
-	if got := frameCapLabel(120); got != "120" {
+	if got := options.FrameCapLabel(120); got != "120" {
 		t.Fatalf("label for 120 = %q", got)
 	}
 	store := graphicsStore()
 	a := optionsApp(store)
 	a.opt.Tab = "graphics"
-	a.applyOption("options.framecap")
+	a.opt.ApplyOption("options.framecap")
 	if g := store.s.Graphics; g.FrameCap != 144 || g.Quality != config.QualityCustom {
 		t.Fatalf("after one cycle: cap %d quality %s, want 144 and custom", g.FrameCap, g.Quality)
 	}

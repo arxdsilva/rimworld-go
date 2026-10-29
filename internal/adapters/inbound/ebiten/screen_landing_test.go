@@ -1,6 +1,12 @@
 package ebiten
 
 import (
+	globepkg "rimworld-go/internal/adapters/inbound/ebiten/globe"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	optionspkg "rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"strings"
 	"testing"
 
@@ -98,7 +104,7 @@ func TestLandingInvalidTilesBlockNext(t *testing.T) {
 		t.Fatalf("a valid tile enables Next, got %q", r)
 	}
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenPawns {
+	if a.nav.screen() != ports.ScreenPawns {
 		t.Fatalf("screen = %s, want pawns", a.nav.screen())
 	}
 }
@@ -139,26 +145,26 @@ func TestRandomSiteValidAndDeterministic(t *testing.T) {
 func TestAdvancedSeasonAuto(t *testing.T) {
 	t.Parallel()
 	temperate := temperature.Temperate
-	if got := autoSeason(temperate); got != game.SeasonSpring {
+	if got := wizard.AutoSeason(temperate); got != game.SeasonSpring {
 		t.Errorf("temperate: %v, want Spring (9 C and rising)", got)
 	}
 	south := temperate
 	south.PeakDay = 45
-	if got := autoSeason(south); got != game.SeasonSpring {
+	if got := wizard.AutoSeason(south); got != game.SeasonSpring {
 		t.Errorf("southern: %v, want Spring (seasons are local)", got)
 	}
 	cold := temperature.Climate{YearMean: -100, Amplitude: 150, PeakDay: 15, DaySwing: 50}
-	if got := autoSeason(cold); got != game.SeasonSummer {
+	if got := wizard.AutoSeason(cold); got != game.SeasonSummer {
 		t.Errorf("cold: %v, want the warmest season (Summer)", got)
 	}
 	chilly := temperature.Climate{YearMean: 40, Amplitude: 150, PeakDay: 15, DaySwing: 50}
-	if got := autoSeason(chilly); got != game.SeasonSummer {
+	if got := wizard.AutoSeason(chilly); got != game.SeasonSummer {
 		t.Errorf("chilly spring (4 C): %v, want Summer, the warmest", got)
 	}
-	if seasonMid(temperate, game.SeasonSummer) != 15 || seasonMid(south, game.SeasonSummer) != 45 {
+	if wizard.SeasonMid(temperate, game.SeasonSummer) != 15 || wizard.SeasonMid(south, game.SeasonSummer) != 45 {
 		t.Error("summer is centred on the peak day")
 	}
-	if dayMean(temperate, seasonMid(temperate, game.SeasonWinter)) >= dayMean(temperate, seasonMid(temperate, game.SeasonSummer)) {
+	if wizard.DayMean(temperate, wizard.SeasonMid(temperate, game.SeasonWinter)) >= wizard.DayMean(temperate, wizard.SeasonMid(temperate, game.SeasonSummer)) {
 		t.Error("winter is colder than summer")
 	}
 
@@ -174,7 +180,7 @@ func TestAdvancedSeasonAuto(t *testing.T) {
 	if a.uiModalTop() != "land.advanced" {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	if ng.ResolvedSeason() != autoSeason(ng.Planet.Site(ng.Tile).Climate) {
+	if ng.ResolvedSeason() != wizard.AutoSeason(ng.Planet.Site(ng.Tile).Climate) {
 		t.Fatal("Auto resolves from the tile's climate")
 	}
 	press(t, a, f, "land.season.4") // Winter
@@ -186,14 +192,14 @@ func TestAdvancedSeasonAuto(t *testing.T) {
 		t.Fatalf("season = %d, want Auto", ng.Season)
 	}
 	click(t, a, "modal.land.advanced.reset")
-	if ng.Season != -1 || ng.MapSize != defaultMapSideEnabled() {
+	if ng.Season != -1 || ng.MapSize != wizard.DefaultMapSideEnabled() {
 		t.Fatal("Reset puts the advanced options back")
 	}
 }
 
 func TestMapSizeOptionsGated(t *testing.T) {
 	t.Parallel()
-	opts := mapSizeOptions()
+	opts := wizard.MapSizeOptions()
 	if len(opts) < 9 {
 		t.Fatalf("%d options", len(opts))
 	}
@@ -208,14 +214,14 @@ func TestMapSizeOptionsGated(t *testing.T) {
 		if o.Enabled {
 			enabled++
 		}
-		if o.Large != (o.Side >= 350) && o.Side != preReleaseSide {
+		if o.Large != (o.Side >= 350) && o.Side != wizard.PreReleaseSide {
 			t.Errorf("%d: large=%v", o.Side, o.Large)
 		}
 	}
 	if enabled == 0 {
 		t.Fatal("at least one size is playable")
 	}
-	if d := defaultMapSideEnabled(); d > game.MaxEnabledSide {
+	if d := wizard.DefaultMapSideEnabled(); d > game.MaxEnabledSide {
 		t.Fatalf("default %d is over the gate %d", d, game.MaxEnabledSide)
 	}
 
@@ -225,7 +231,7 @@ func TestMapSizeOptionsGated(t *testing.T) {
 	before := ng(a).MapSize
 	for i, o := range opts {
 		if !o.Enabled {
-			click(t, a, optID("land.mapsize", i))
+			click(t, a, uikit.OptID("land.mapsize", i))
 			if ng(a).MapSize != before {
 				t.Fatalf("a disabled size (%d) must not be selectable", o.Side)
 			}
@@ -237,7 +243,7 @@ func TestMapSizeOptionsGated(t *testing.T) {
 	}
 	for i, o := range opts {
 		if o.Enabled && o.Side != before {
-			press(t, a, f, optID("land.mapsize", i))
+			press(t, a, f, uikit.OptID("land.mapsize", i))
 			if ng(a).MapSize != o.Side {
 				t.Fatalf("map size = %d, want %d", ng(a).MapSize, o.Side)
 			}
@@ -245,12 +251,12 @@ func TestMapSizeOptionsGated(t *testing.T) {
 	}
 	// The size label is just the size; what a size needs is mapSizeNote's
 	// one rule (ram_estimate.go), shown beside it.
-	if mapSizeNote(400, 0) != "Large map: needs a capable computer" {
+	if optionspkg.MapSizeNote(400, 0) != "Large map: needs a capable computer" {
 		t.Error("large sizes with unknown hardware say they need a capable computer")
 	}
 }
 
-func ng(a *App) *newGameState { return a.draft() }
+func ng(a *App) *wizard.Draft { return a.wiz.Draft() }
 
 func TestTileInfoFields(t *testing.T) {
 	t.Parallel()
@@ -306,13 +312,13 @@ func TestTileInfoFields(t *testing.T) {
 	if w := buildTileInfo(p, land, 300, 0).Warnings; containsStr(w, "Large map: needs a capable computer") {
 		t.Errorf("warnings at 300: %v", w)
 	}
-	if coordText(-342, -1217) != "34.2°S 121.7°W" || coordText(342, 1217) != "34.2°N 121.7°E" {
-		t.Errorf("coords %q", coordText(-342, -1217))
+	if wizard.CoordText(-342, -1217) != "34.2°S 121.7°W" || wizard.CoordText(342, 1217) != "34.2°N 121.7°E" {
+		t.Errorf("coords %q", wizard.CoordText(-342, -1217))
 	}
-	if movementDifficulty(site.Mountainous, biome.IceSheet) > 3 || movementDifficulty(site.Flat, biome.TemperateForest) != 1 {
+	if wizard.MovementDifficulty(site.Mountainous, biome.IceSheet) > 3 || wizard.MovementDifficulty(site.Flat, biome.TemperateForest) != 1 {
 		t.Error("movement difficulty runs from x1.0 to x3.0")
 	}
-	if forageLevel(biome.TemperateForest) != "High" || forageLevel(biome.IceSheet) != "Low" || wildlifeLevel(biome.ExtremeDesert) != "Sparse" || wildlifeLevel(biome.TemperateForest) != "Abundant" {
+	if wizard.ForageLevel(biome.TemperateForest) != "High" || wizard.ForageLevel(biome.IceSheet) != "Low" || wizard.WildlifeLevel(biome.ExtremeDesert) != "Sparse" || wizard.WildlifeLevel(biome.TemperateForest) != "Abundant" {
 		t.Error("forage and wildlife levels")
 	}
 	// The panel tracks the selection and the hover.
@@ -340,30 +346,30 @@ func TestLandingGlobeClickSelectsTile(t *testing.T) {
 	for i := 0; i < 60; i++ {
 		f.Frame(t, a)
 	}
-	geo := landRects(a.sw, a.sh)
+	geo := wizard.LandRects(a.sw, a.sh)
 	cx, cy := geo.Globe.Center()
 	f.Cur.Mx, f.Cur.My = int(cx), int(cy)
 	f.Frame(t, a)
 	want := a.ng.Globe.PickTile(int(cx), int(cy))
-	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, inputframe.Left, 0)
 	if want < 0 || a.ng.Tile != want {
 		t.Fatalf("clicked tile %d, the globe picked %d", a.ng.Tile, want)
 	}
 	// A drag turns the globe and does not select.
 	a.ng.Globe.Select(-1)
 	f.Frame(t, a)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	f.Frame(t, a)
 	f.Cur.Mx += 80
 	f.Frame(t, a)
-	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true
 	f.Frame(t, a)
 	if a.ng.Tile != -1 {
 		t.Fatalf("a drag selected tile %d", a.ng.Tile)
 	}
 	// The panel and the bar take the pointer, not the globe.
 	f.Cur.Mx, f.Cur.My = int(geo.Panel.X)+20, int(geo.Panel.Y)+200
-	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, inputframe.Left, 0)
 	if a.ng.Tile != -1 {
 		t.Fatal("a click on the info panel must not select a tile")
 	}
@@ -376,13 +382,13 @@ func TestLandingBackKeepsPlanetAndTile(t *testing.T) {
 	tile, p := a.ng.Tile, a.ng.Planet
 	click(t, a, "wizard.back")
 	f.Frame(t, a)
-	if a.nav.screen() != screenWorldGen {
+	if a.nav.screen() != ports.ScreenWorldGen {
 		t.Fatalf("screen = %s", a.nav.screen())
 	}
 	click(t, a, "world.generate") // Next: the planet is unchanged
 	f.Frame(t, a)
 	f.Frame(t, a)
-	if a.nav.screen() != screenLanding || a.ng.Planet != p || a.ng.Tile != tile || a.ng.Globe.Selected() != tile {
+	if a.nav.screen() != ports.ScreenLanding || a.ng.Planet != p || a.ng.Tile != tile || a.ng.Globe.Selected() != tile {
 		t.Fatalf("screen=%s tile=%d want %d", a.nav.screen(), a.ng.Tile, tile)
 	}
 }
@@ -392,21 +398,21 @@ func TestLandingLegendModesAndDrawing(t *testing.T) {
 	a, f := landingApp(t)
 	click(t, a, "land.random")
 	img := ebiten.NewImage(a.sw, a.sh)
-	seen := map[globeMode]bool{}
-	for i := 0; i < int(numGlobeModes)+1; i++ {
+	seen := map[globepkg.Mode]bool{}
+	for i := 0; i < int(globepkg.NumModes)+1; i++ {
 		seen[a.ng.Globe.Mode()] = true
 		f.Frame(t, a)
 		a.Draw(img)
 		click(t, a, "land.mode")
 	}
-	if len(seen) != int(numGlobeModes) || a.ng.Globe.Mode() != globeTemperature {
+	if len(seen) != int(globepkg.NumModes) || a.ng.Globe.Mode() != globepkg.ModeTemperature {
 		t.Fatalf("modes seen %v, now %v", seen, a.ng.Globe.Mode())
 	}
 	click(t, a, "land.legend")
 	if !a.ng.Legend {
 		t.Fatal("the legend opens")
 	}
-	for m := globeMode(0); m < numGlobeModes; m++ {
+	for m := globepkg.Mode(0); m < globepkg.NumModes; m++ {
 		a.ng.Globe.SetMode(m)
 		f.Frame(t, a)
 		a.Draw(img)
@@ -418,7 +424,7 @@ func TestLandingLegendModesAndDrawing(t *testing.T) {
 	}
 	// Enter presses Next when it is enabled.
 	f.Key(t, a, "Enter", 0)
-	if a.nav.screen() != screenPawns {
+	if a.nav.screen() != ports.ScreenPawns {
 		t.Fatalf("Enter on a valid site goes on, screen=%s", a.nav.screen())
 	}
 	_ = input.Accept
@@ -430,10 +436,10 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 	a, f := landingApp(t)
 	press(t, a, f, "land.factions")
 	f.Frame(t, a)
-	if a.uiModalTop() != facModalID {
+	if a.uiModalTop() != wizard.FacModalID {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	rows := factionRows(a.ng.Planet.Factions)
+	rows := wizard.FactionRows(a.ng.Planet.Factions)
 	if len(rows) != len(a.ng.Planet.Factions)+1 || !rows[len(rows)-1].Swarm {
 		t.Fatalf("rows = %d, want the factions and the Swarm", len(rows))
 	}
@@ -445,30 +451,30 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 		t.Fatalf("row %+v", first)
 	}
 	// Sorting by Name: the first row of the display is the alphabetical first.
-	press(t, a, f, facTableID+".col.name")
+	press(t, a, f, wizard.FacTableID+".col.name")
 	f.Frame(t, a)
-	col, desc := a.uiTableSort(facTableID)
+	col, desc := a.uiSt().TableSort(wizard.FacTableID)
 	if col != 1 || desc {
 		t.Fatalf("sort = %d/%v, want the Name column ascending", col, desc)
 	}
-	order := a.tableOrder(facTableID, a.factionColumns(rows), len(rows))
+	order := a.uiSt().TableOrder(wizard.FacTableID, a.wiz.FactionColumns(rows), len(rows))
 	for i := 1; i < len(order); i++ {
 		if strings.ToLower(rows[order[i-1]].Name) > strings.ToLower(rows[order[i]].Name) {
 			t.Fatalf("names are not sorted: %v", order)
 		}
 	}
-	press(t, a, f, facTableID+".col.name")
+	press(t, a, f, wizard.FacTableID+".col.name")
 	f.Frame(t, a)
-	if _, desc := a.uiTableSort(facTableID); !desc {
+	if _, desc := a.uiSt().TableSort(wizard.FacTableID); !desc {
 		t.Fatal("a second click reverses")
 	}
 	// A click on a row closes the dialog and shows the faction's capital.
 	target := rows[order[len(order)-1]]
 	_ = target
-	d := a.tableOrder(facTableID, a.factionColumns(rows), len(rows))
-	press(t, a, f, optID(facTableID+".body", 0))
+	d := a.uiSt().TableOrder(wizard.FacTableID, a.wiz.FactionColumns(rows), len(rows))
+	press(t, a, f, uikit.OptID(wizard.FacTableID+".body", 0))
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("picking a faction closes the dialog")
 	}
 	picked := rows[d[0]]
@@ -476,7 +482,7 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 		t.Skip("the Swarm row sorted first; it has no capital")
 	}
 	g := a.ng.Globe
-	if len(g.Hl) != len(picked.Tiles) || g.HlLeft <= 0 || g.HlLeft > facHighlight {
+	if len(g.Hl) != len(picked.Tiles) || g.HlLeft <= 0 || g.HlLeft > wizard.FacHighlight {
 		t.Fatalf("highlight %v for %d settlements, left %d", g.Hl, len(picked.Tiles), g.HlLeft)
 	}
 	if picked.Capital < 0 || g.Hl[0] != picked.Capital {
@@ -486,13 +492,13 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 
 func TestFactionRowsLabelsAndRelations(t *testing.T) {
 	t.Parallel()
-	if relationLabel(1) != "Hostile" || relationLabel(2) != "Friendly" || relationLabel(0) != "Neutral" {
+	if wizard.RelationLabel(1) != "Hostile" || wizard.RelationLabel(2) != "Friendly" || wizard.RelationLabel(0) != "Neutral" {
 		t.Error("relation labels")
 	}
-	if relationColor(1) != uiDanger || relationColor(2) != uiGood || relationColor(0) != uiTextDim {
+	if wizard.RelationColor(1) != uikit.Danger || wizard.RelationColor(2) != uikit.Good || wizard.RelationColor(0) != uikit.TextDim {
 		t.Error("relation colours: Hostile danger, Friendly good, Neutral dim")
 	}
-	if goodwillText(12) != "+12" || goodwillText(-40) != "-40" {
+	if wizard.GoodwillText(12) != "+12" || wizard.GoodwillText(-40) != "-40" {
 		t.Error("goodwill text")
 	}
 }

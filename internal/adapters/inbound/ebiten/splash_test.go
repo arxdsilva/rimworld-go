@@ -11,7 +11,7 @@ func TestMainMenuButtonsRightRail(t *testing.T) {
 	a.finishBoot()
 	mid := float32(a.sw) / 2
 	found := 0
-	for _, b := range a.mainMenuButtons(a.sw, a.sh) {
+	for _, b := range a.menuScreen.Buttons(a.sw, a.sh) {
 		if !strings.HasPrefix(b.ID, "menu.") {
 			continue
 		}

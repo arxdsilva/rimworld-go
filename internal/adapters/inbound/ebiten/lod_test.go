@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -12,7 +15,7 @@ import (
 func lodWorld(w, h int) game.WorldView {
 	v := game.WorldView{TerrainW: w, Terrain: make([]uint8, w*h), StructVer: 1}
 	stone := uint8(0)
-	for i, n := range terrainNames {
+	for i, n := range worldpkg.TerrainNames {
 		if n == "stone" {
 			stone = uint8(i)
 		}
@@ -37,11 +40,11 @@ func lodRenderer(w game.WorldView, mw, mh int) (*Renderer, *stubSim) {
 }
 
 func lodFrame(r *Renderer, tile float64) {
-	r.cam.Zoom = tile / TileSize
+	r.cam.Zoom = tile / camerapkg.TileSize
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
-	r.setView(640, 400, r.tilePx())
-	r.drawArt(screen, 640, 400, r.tilePx())
+	r.setView(640, 400, r.cam.Tile())
+	r.drawArt(screen, 640, 400, r.cam.Tile())
 }
 
 func TestLODSwitchesByZoom(t *testing.T) {
@@ -50,11 +53,11 @@ func TestLODSwitchesByZoom(t *testing.T) {
 	w := lodWorld(64, 64)
 	r, _ := lodRenderer(w, 64, 64)
 	lodFrame(r, 64)
-	if r.lod.Tier != lodLive || r.lod.Chunks.Bakes != 0 || r.lod.Pages.Pages != nil {
+	if r.lod.Tier != worldpkg.Live || r.lod.Chunks.Bakes != 0 || r.lod.Pages.Pages != nil {
 		t.Fatalf("64 px: tier %d, %d chunk bakes, pages %v", r.lod.Tier, r.lod.Chunks.Bakes, r.lod.Pages.Pages != nil)
 	}
 	lodFrame(r, 32)
-	if r.lod.Tier != lodChunk || r.lod.Chunks.Bakes == 0 {
+	if r.lod.Tier != worldpkg.Chunk || r.lod.Chunks.Bakes == 0 {
 		t.Fatalf("32 px: tier %d, %d chunk bakes", r.lod.Tier, r.lod.Chunks.Bakes)
 	}
 	// 640×400 at 32 px is 20×12.5 tiles: chunks (0,0) and (1,0)
@@ -62,7 +65,7 @@ func TestLODSwitchesByZoom(t *testing.T) {
 		t.Fatalf("32 px baked %d chunks, want the 2 in view", n)
 	}
 	lodFrame(r, 8)
-	if r.lod.Tier != lodMap || r.lod.Pages.Pages == nil || r.lod.Pages.Pages[0] == nil {
+	if r.lod.Tier != worldpkg.Map || r.lod.Pages.Pages == nil || r.lod.Pages.Pages[0] == nil {
 		t.Fatalf("8 px: tier %d, no map page", r.lod.Tier)
 	}
 	baked := 0
@@ -100,8 +103,8 @@ func TestChunkBakeInvalidatedOnVersion(t *testing.T) {
 	// the bake budget spreads a full rebake over frames
 	r2, _ := lodRenderer(lodWorld(512, 512), 512, 512)
 	lodFrame(r2, 16) // 40×25 tiles: 3×2 chunks in view, padded to more
-	if r2.lod.Chunks.Bakes > bakeBudget {
-		t.Fatalf("one frame baked %d chunks, budget %d", r2.lod.Chunks.Bakes, bakeBudget)
+	if r2.lod.Chunks.Bakes > worldpkg.BakeBudget {
+		t.Fatalf("one frame baked %d chunks, budget %d", r2.lod.Chunks.Bakes, worldpkg.BakeBudget)
 	}
 }
 
@@ -156,7 +159,7 @@ func TestAnimalPadsFromLargestCanvas(t *testing.T) {
 		t.Fatalf("pads %d, %d at 8 px tiles (drawn at 16), want 8, 7", pad, padS)
 	}
 	bare := &Renderer{art: envArt("terrain/soil_00")}
-	if e := bare.art.AnimalExtent(); e.Side != animalSpanFallback || e.Up != animalSpanFallback {
+	if e := bare.art.AnimalExtent(); e.Side != artpkg.AnimalSpanFallback || e.Up != artpkg.AnimalSpanFallback {
 		t.Fatalf("no animal art: %+v", e)
 	}
 }
@@ -175,11 +178,11 @@ func TestBigAnimalOffScreenStillDraws(t *testing.T) {
 	}
 	drawn := map[*ebiten.Image]int{}
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { drawn[img]++ }
-	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = 1, 10*TileSize, 10*TileSize // the view starts at tile (10, 10)
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = 1, 10*camerapkg.TileSize, 10*camerapkg.TileSize // the view starts at tile (10, 10)
 	screen := ebiten.NewImage(640, 400)
 	r.advance()
-	r.setView(640, 400, r.tilePx())
-	r.drawArt(screen, 640, 400, r.tilePx())
+	r.setView(640, 400, r.cam.Tile())
+	r.drawArt(screen, 640, 400, r.cam.Tile())
 	img := r.art.Sprites["animal/elephant_south"].Img
 	if img == nil || drawn[img] != 1 {
 		t.Fatalf("the elephant reaching into the view drew %d times, want once (the other is off screen)", drawn[img])

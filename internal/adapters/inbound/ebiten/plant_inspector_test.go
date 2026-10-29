@@ -7,19 +7,23 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-func btnByID(bs []button, id string) (button, bool) {
+func btnByID(bs []uikit.Button, id string) (uikit.Button, bool) {
 	for _, b := range bs {
 		if b.ID == id {
 			return b, true
 		}
 	}
-	return button{}, false
+	return uikit.Button{}, false
 }
 
 func plantByID(a *App, id entity.EntityID) game.PlantView {
@@ -34,7 +38,7 @@ func plantByID(a *App, id entity.EntityID) game.PlantView {
 func selectPlantTile(t *testing.T, a *App, id entity.EntityID, x, y int) {
 	t.Helper()
 	clickTile(a, x, y)
-	if p, ok := a.selectedPlant(); !ok || p.ID != id {
+	if p, ok := a.sel.SelectedPlant(); !ok || p.ID != id {
 		t.Fatalf("plant %d not selected", id)
 	}
 }
@@ -46,7 +50,7 @@ func TestPlantPanelHarvestStates(t *testing.T) {
 	young, _ := g.SpawnCrop("corn", 10, 10, 30)
 
 	selectPlantTile(t, a, ripe, 8, 8)
-	b, ok := thingFind(a.plantCommands(ripe), "plant.harvest")
+	b, ok := thingFind(a.insp.Thing().PlantCommands(ripe), "plant.harvest")
 	if !ok || b.Disabled || b.Label != "Harvest" {
 		t.Fatalf("ripe crop harvest button = %+v", b)
 	}
@@ -55,7 +59,7 @@ func TestPlantPanelHarvestStates(t *testing.T) {
 	if !plantByID(a, ripe).Designated {
 		t.Fatal("Harvest marks the plant")
 	}
-	if b, _ := thingFind(a.plantCommands(ripe), "plant.harvest"); b.Label != "Cancel harvest" || !b.On {
+	if b, _ := thingFind(a.insp.Thing().PlantCommands(ripe), "plant.harvest"); b.Label != "Cancel harvest" || !b.On {
 		t.Fatalf("marked plant should offer Cancel harvest: %+v", b)
 	}
 	click(t, a, "plant.harvest")
@@ -65,15 +69,15 @@ func TestPlantPanelHarvestStates(t *testing.T) {
 	}
 
 	selectPlantTile(t, a, young, 10, 10)
-	b, _ = thingFind(a.plantCommands(young), "plant.harvest")
+	b, _ = thingFind(a.insp.Thing().PlantCommands(young), "plant.harvest")
 	if !b.Disabled || b.Reason != "not ready" {
 		t.Fatalf("unripe crop harvest must be disabled 'not ready': %+v", b)
 	}
-	lines := strings.Join(plantLines(plantByID(a, young)), "|")
+	lines := strings.Join(inspector.PlantLines(plantByID(a, young)), "|")
 	if !strings.Contains(lines, "Not ready (30%)") {
 		t.Fatalf("lines = %q", lines)
 	}
-	if got := plantLines(plantByID(a, ripe)); got[0] != "Ready to harvest" {
+	if got := inspector.PlantLines(plantByID(a, ripe)); got[0] != "Ready to harvest" {
 		t.Fatalf("ripe lines = %v", got)
 	}
 }
@@ -81,14 +85,14 @@ func TestPlantPanelHarvestStates(t *testing.T) {
 func TestPlantCutUsesUndesignate(t *testing.T) {
 	t.Parallel()
 	p := game.PlantView{X: 4, Y: 5, Species: "corn", Cut: true}
-	c := plantMarkCmd(p, false, true)
+	c := inspector.PlantMarkCmd(p, false, true)
 	if c.Kind != command.Undesignate || c.Order != command.OrderCut || c.X != 4 || c.X2 != 4 || c.Y2 != 5 {
 		t.Fatalf("cancel cut = %+v, want 1-tile Undesignate OrderCut", c)
 	}
-	if c := plantMarkCmd(p, true, true); c.Kind != command.Undesignate || c.Order != command.OrderHarvest {
+	if c := inspector.PlantMarkCmd(p, true, true); c.Kind != command.Undesignate || c.Order != command.OrderHarvest {
 		t.Fatalf("cancel harvest = %+v", c)
 	}
-	if c := plantMarkCmd(p, false, false); c.Kind != command.DesignateCut {
+	if c := inspector.PlantMarkCmd(p, false, false); c.Kind != command.DesignateCut {
 		t.Fatalf("cut = %+v", c)
 	}
 
@@ -100,7 +104,7 @@ func TestPlantCutUsesUndesignate(t *testing.T) {
 	if !plantByID(a, id).Cut {
 		t.Fatal("Cut marks the plant")
 	}
-	if b, _ := thingFind(a.plantCommands(id), "plant.cut"); b.Label != "Cancel cut" {
+	if b, _ := thingFind(a.insp.Thing().PlantCommands(id), "plant.cut"); b.Label != "Cancel cut" {
 		t.Fatalf("label = %q", b.Label)
 	}
 	click(t, a, "plant.cut")
@@ -115,7 +119,7 @@ func TestTreeSaysChop(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	id, _ := g.SpawnCrop("tree", 8, 8, 100)
 	selectPlantTile(t, a, id, 8, 8)
-	cs := a.plantCommands(id)
+	cs := a.insp.Thing().PlantCommands(id)
 	if b, ok := thingFind(cs, "plant.cut"); !ok || b.Label != "Chop" {
 		t.Fatalf("tree cut button = %+v", b)
 	}
@@ -123,11 +127,11 @@ func TestTreeSaysChop(t *testing.T) {
 		t.Fatal("trees have no Harvest button")
 	}
 	p := plantByID(a, id)
-	if title := plantTitle(p); !strings.HasSuffix(title, " tree") || title == "Tree" {
+	if title := inspector.PlantTitle(p); !strings.HasSuffix(title, " tree") || title == "Tree" {
 		t.Fatalf("title = %q", title)
 	}
-	if plantCategory(p) != "Tree" {
-		t.Fatalf("category = %q", plantCategory(p))
+	if inspector.PlantCategory(p) != "Tree" {
+		t.Fatalf("category = %q", inspector.PlantCategory(p))
 	}
 }
 
@@ -136,7 +140,7 @@ func TestPlantNowChips(t *testing.T) {
 	a, g, pawn := liveColony(t, 0)
 	id, _ := g.SpawnCrop("potato", 5, 5, 100)
 	selectPlantTile(t, a, id, 5, 5)
-	now, ok := thingFind(a.plantCommands(id), "cmd.plant.now")
+	now, ok := thingFind(a.insp.Thing().PlantCommands(id), "cmd.plant.now")
 	if !ok || now.Disabled {
 		t.Fatalf("expected an enabled now command, got %+v", now)
 	}
@@ -149,17 +153,17 @@ func TestPlantNowChips(t *testing.T) {
 	}
 	thingPress(a, now) // the nearest colonist
 	click(t, a, "cmd.plant.now")
-	a.applyPlantClick("plant.now.notanumber")
-	a.applyPlantClick("plant.close")
+	a.insp.Thing().ApplyPlantClick("plant.now.notanumber")
+	a.insp.Thing().ApplyPlantClick("plant.close")
 	if a.sel.HasPlant {
 		t.Fatal("close clears the selection")
 	}
-	a.applyPlantClick("plant.close") // nothing selected: no-op
+	a.insp.Thing().ApplyPlantClick("plant.close") // nothing selected: no-op
 }
 
 func TestPlantPanelButtonsDisabledChip(t *testing.T) {
 	t.Parallel()
-	opts := colonistOptions([]colonistAction{{Pawn: 7, Name: "Ada", Disabled: true, Reason: "cannot reach"}})
+	opts := inspector.ColonistOptions([]inspector.ColonistAction{{Pawn: 7, Name: "Ada", Disabled: true, Reason: "cannot reach"}})
 	if len(opts) != 1 || !opts[0].Disabled || opts[0].Reason != "cannot reach" || opts[0].Label != "Ada" {
 		t.Fatalf("option = %+v", opts)
 	}
@@ -169,13 +173,13 @@ func TestPlantPanelClosesWhenPlantGone(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	a.sel.SelPlant, a.sel.HasPlant = 9999, true
-	if _, ok := a.selectedPlant(); ok {
+	if _, ok := a.sel.SelectedPlant(); ok {
 		t.Fatal("a vanished plant is not selected")
 	}
-	if len(a.commandGridButtons()) != 0 || len(a.plantCommands(9999)) != 0 || a.plantPane(9999).Title != "" || a.sel.HasPlant {
+	if len(a.insp.Commands().CommandGridButtons()) != 0 || len(a.insp.Thing().PlantCommands(9999)) != 0 || a.insp.Thing().PlantPane(9999).Title != "" || a.sel.HasPlant {
 		t.Fatal("panel must close with no buttons")
 	}
-	a.applyPlantClick("plant.harvest") // no-op, no panic
+	a.insp.Thing().ApplyPlantClick("plant.harvest") // no-op, no panic
 }
 
 // ---- growth state (PLAY-017) ----
@@ -193,15 +197,15 @@ func TestPlantPanelShowsLiveGrowthState(t *testing.T) {
 	if !ok || gv.State == "" {
 		t.Fatalf("the game gave the plant no growth state: %+v (%v)", gv, ok)
 	}
-	c := plantGrowCaption(p, gv)
+	c := inspector.PlantGrowCaption(p, gv)
 	if c == "" {
 		t.Fatalf("no caption for state %q", gv.State)
 	}
-	line := plantRipeLine(p, gv)
+	line := inspector.PlantRipeLine(p, gv)
 	if growing := gv.RipeIn > 0; growing != (line != "") {
 		t.Fatalf("state %q, RipeIn %d, line %q", gv.State, gv.RipeIn, line)
 	}
-	if sp := a.plantPane(id); len(sp.Lines) == 0 || sp.Lines[0] != c {
+	if sp := a.insp.Thing().PlantPane(id); len(sp.Lines) == 0 || sp.Lines[0] != c {
 		t.Fatalf("the pane does not lead with the live caption %q: %q", c, sp.Lines)
 	}
 }
@@ -211,7 +215,7 @@ func TestPlantPanelShowsLiveGrowthState(t *testing.T) {
 // crop with the most lines a growing one carries; the caption leads.
 func TestPlantPanelTextFitsAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
-	width := float64(paneW - 2*paneInset - scrollBarW - 4) // the pane body's wrap width
+	width := float64(hudlayout.PaneW - 2*inspector.PaneInset - uikit.ScrollBarW - 4) // the pane body's wrap width
 	for _, c := range []struct {
 		p  game.PlantView
 		gv game.PlantGrowthView
@@ -223,18 +227,18 @@ func TestPlantPanelTextFitsAtScale1_5(t *testing.T) {
 		{game.PlantView{Species: "tree", Growth: 90}, game.PlantGrowthView{State: "growing", RipeIn: clock.TicksPerDay * 12}},
 	} {
 		p, gv := c.p, c.gv
-		lines := plantPaneLines(p, gv)
+		lines := inspector.PlantPaneLines(p, gv)
 		var texts []string
 		for _, l := range lines {
-			texts = append(texts, wrapPx(l, tsBody, width)...)
+			texts = append(texts, gfx.WrapPx(l, gfx.Body, width)...)
 		}
-		if w := maxTextW(texts, tsBody); float64(w) > width {
+		if w := gfx.MaxTextW(texts, gfx.Body); float64(w) > width {
 			t.Errorf("%s/%s: widest line %.0f px, pane text width %.0f", p.Species, gv.State, w, width)
 		}
-		if c := plantGrowCaption(p, gv); c != "" && (len(lines) == 0 || lines[0] != c) {
+		if c := inspector.PlantGrowCaption(p, gv); c != "" && (len(lines) == 0 || lines[0] != c) {
 			t.Errorf("%s/%s: caption %q is not the first line (%v)", p.Species, gv.State, c, lines)
 		}
-		if !strings.HasSuffix(strings.Join(lines, "|"), strings.Join(plantBodyLines(p, gv), "|")) {
+		if !strings.HasSuffix(strings.Join(lines, "|"), strings.Join(inspector.PlantBodyLines(p, gv), "|")) {
 			t.Errorf("%s/%s: the body lines follow the caption: %v", p.Species, gv.State, lines)
 		}
 	}
@@ -249,7 +253,7 @@ func TestPlantInspectorDrawsAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
 	got := traceCanvas(t)
 	a.drawPlantMark(ebiten.NewImage(900, 700))
-	r := rect{X: 8, Y: 40, W: 340, H: 226} // the old panel, top-left
+	r := gfx.Rect{X: 8, Y: 40, W: 340, H: 226} // the old panel, top-left
 	frame := fmt.Sprintf("%g,%g %gx%g", float64(r.X)*1.5, float64(r.Y)*1.5, float64(r.W)*1.5, float64(r.H)*1.5)
 	for _, c := range *got {
 		if strings.HasSuffix(c, frame) {

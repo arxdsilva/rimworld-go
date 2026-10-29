@@ -4,6 +4,10 @@ import (
 	"image"
 	"image/color"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -33,7 +37,7 @@ const (
 // (the whole figure) and the colonist bar's bust (head and shoulders)
 // show, from its metadata: the head attachment, origin_px and the feet
 // (pawnFeetY). Without a head attachment the whole canvas is shown.
-func pawnCrops(body *artSprite) (portrait, bust image.Rectangle) {
+func pawnCrops(body *artpkg.Sprite) (portrait, bust image.Rectangle) {
 	if body == nil {
 		return image.Rectangle{}, image.Rectangle{}
 	}
@@ -43,7 +47,7 @@ func pawnCrops(body *artSprite) (portrait, bust image.Rectangle) {
 		full := image.Rect(0, 0, m.Canvas[0], m.Canvas[1])
 		return full, full
 	}
-	feet := m.Origin[1] + pawnFeetY*artTilePx
+	feet := m.Origin[1] + creature.PawnFeetY*artpkg.TilePx
 	h := feet - head[1]
 	box := func(top, bottom, aspect float64) image.Rectangle {
 		w := (bottom - top) * aspect
@@ -70,10 +74,10 @@ func pawnKey(layer string, l look.Look, facing string, built bool) string {
 
 // clothTints are the cloth presets a look indexes (the raider tint is
 // reserved for hostile clothing).
-func clothTints(c *artCatalog) []string {
+func clothTints(c *artpkg.Catalog) []string {
 	var out []string
 	for _, n := range c.TintNames("cloth") {
-		if n != raiderCloth {
+		if n != world.RaiderCloth {
 			out = append(out, n)
 		}
 	}
@@ -88,14 +92,9 @@ func pick(names []string, i uint8) string {
 	return names[int(i)%len(names)]
 }
 
-// portraitLayers lists the portrait's sprites in draw order for a look.
-func portraitLayers(art *artCatalog, l look.Look) []portraitLayer {
-	return scarredLayers(art, l, false)
-}
-
 // scarredLayers is portraitLayers; scarred adds the face scar over the
 // hair (a disfigured pawn).
-func scarredLayers(art *artCatalog, l look.Look, scarred bool) []portraitLayer {
+func scarredLayers(art *artpkg.Catalog, l look.Look, scarred bool) []portraitLayer {
 	return figureLayers(art, l, "south", figureDress{Scarred: scarred})
 }
 
@@ -112,14 +111,14 @@ type figureDress struct {
 // outer apparel, beard, hair, the face scar, then a hat. The colony
 // figure, the portraits and the colonist bar all draw from it, so the
 // look built on the pawns screen is the one walking in the colony.
-func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []portraitLayer {
+func figureLayers(art *artpkg.Catalog, l look.Look, fs string, d figureDress) []portraitLayer {
 	skin := art.Tint("skin", pick(art.TintNames("skin"), l.Skin))
 	cloths := clothTints(art)
 	cloth := func(i uint8) color.NRGBA { return art.Tint("cloth", pick(cloths, i)) }
 	shirt, pants, vest := cloth(l.Shirt), cloth(l.Pants), cloth(l.VestCloth)
 	if d.Raider {
 		l.Bare, l.Vest = false, true
-		shirt, vest, pants = art.Tint("cloth", raiderCloth), art.Tint("cloth", raiderCloth), art.Tint("cloth", "slate")
+		shirt, vest, pants = art.Tint("cloth", world.RaiderCloth), art.Tint("cloth", world.RaiderCloth), art.Tint("cloth", "slate")
 	}
 	hairName := pick(art.TintNames("hair"), l.Hair)
 	if l.Grey {
@@ -171,13 +170,13 @@ func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []port
 // drawLookPortrait draws the pawn with look l fitted into the box (x, y,
 // w, h) of dst. It reports whether anything was drawn (false while the art
 // is missing, so the caller can draw a stand-in).
-func drawLookPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, x, y, w, h float64) bool {
+func drawLookPortrait(dst *ebiten.Image, art *artpkg.Catalog, l look.Look, x, y, w, h float64) bool {
 	return drawPortrait(dst, art, l, false, x, y, w, h)
 }
 
 // drawPortrait is drawLookPortrait with the face scar of a disfigured
 // pawn (scarred).
-func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool, x, y, w, h float64) bool {
+func drawPortrait(dst *ebiten.Image, art *artpkg.Catalog, l look.Look, scarred bool, x, y, w, h float64) bool {
 	if art == nil || !art.Has(pawnKey("body", l, "south", false)) {
 		return false
 	}
@@ -204,7 +203,7 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 		op.GeoM.Scale(s/k, s/k)
 		op.GeoM.Translate(ox+float64(crop.Min.X-int(float64(portraitCrop.Min.X)*k))*s/k, oy+float64(crop.Min.Y-int(float64(portraitCrop.Min.Y)*k))*s/k)
-		uiDrawImage(dst, sub, op)
+		gfx.DrawImage(dst, sub, op)
 		drew = true
 	}
 	return drew
@@ -240,7 +239,7 @@ func (r *Renderer) drawPawnBustArt(screen *ebiten.Image, p game.PawnView, x, y, 
 
 // drawPawnCropped draws p's portrait layers cut to crop (canvas px of
 // body's canvas) fitted into the logical w x h box at (x, y).
-func (r *Renderer) drawPawnCropped(screen *ebiten.Image, p game.PawnView, body *artSprite, crop image.Rectangle, x, y, w, h float64) {
+func (r *Renderer) drawPawnCropped(screen *ebiten.Image, p game.PawnView, body *artpkg.Sprite, crop image.Rectangle, x, y, w, h float64) {
 	canvasW := float64(body.Meta.Canvas[0])
 	cw, ch := float64(crop.Dx()), float64(crop.Dy())
 	if cw <= 0 || ch <= 0 {
@@ -263,6 +262,6 @@ func (r *Renderer) drawPawnCropped(screen *ebiten.Image, p game.PawnView, body *
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 		op.GeoM.Scale(s/k, s/k)
 		op.GeoM.Translate(ox+float64(cut.Min.X-x0)*s/k, oy+float64(cut.Min.Y-y0)*s/k)
-		uiDrawImage(screen, img.SubImage(cut).(*ebiten.Image), op)
+		gfx.DrawImage(screen, img.SubImage(cut).(*ebiten.Image), op)
 	}
 }

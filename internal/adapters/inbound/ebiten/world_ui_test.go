@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
+	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"strings"
 	"testing"
 
@@ -46,14 +49,14 @@ func TestWorldTabListsCaravansAndReturns(t *testing.T) {
 	s := worldStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		if b.ID == "tab.world" && b.Disabled {
 			t.Fatal("the World tab is disabled")
 		}
 	}
-	a.toggleWorld()
+	a.win.World().Toggle()
 	f.Frame(t, a)
-	if a.uiModalTop() != worldModalID {
+	if a.uiModalTop() != windowspkg.WorldModalID {
 		t.Fatalf("top modal %q", a.uiModalTop())
 	}
 	if !hasWidget(a, "world.caravan.40") {
@@ -63,7 +66,7 @@ func TestWorldTabListsCaravansAndReturns(t *testing.T) {
 	if n := len(s.cmds); n != 1 || s.cmds[0].Kind != command.CaravanReturn || s.cmds[0].Target != 40 {
 		t.Fatalf("commands %+v, want CaravanReturn 40", s.cmds)
 	}
-	if w, _ := a.uiSt().Find("modal." + worldModalID + ".world.form"); !w.Disabled || !strings.Contains(w.Reason, "no world map") {
+	if w, _ := a.uiSt().Find("modal." + windowspkg.WorldModalID + ".world.form"); !w.Disabled || !strings.Contains(w.Reason, "no world map") {
 		t.Fatalf("Form caravan without a world map: %+v", w)
 	}
 }
@@ -75,8 +78,8 @@ func TestFormCaravanDialog(t *testing.T) {
 	a.renderer.game = s
 	a.deal.OpenFormCaravan(func() int { return -1 })
 	f.Frame(t, a)
-	send := "modal." + formCaravanID + ".form.send"
-	if w, _ := a.uiSt().Find(send); !w.Disabled || w.Reason != formNoMembers {
+	send := "modal." + dialogs.FormCaravanID + ".form.send"
+	if w, _ := a.uiSt().Find(send); !w.Disabled || w.Reason != dialogs.FormNoMembers {
 		t.Fatalf("Send with nothing picked: %+v", w)
 	}
 	if w, _ := a.uiSt().Find("form.member.2"); !w.Disabled {
@@ -87,7 +90,7 @@ func TestFormCaravanDialog(t *testing.T) {
 	}
 	press(t, a, f, "form.member.1")
 	f.Frame(t, a)
-	if w, _ := a.uiSt().Find(send); !w.Disabled || w.Reason != formNoDest {
+	if w, _ := a.uiSt().Find(send); !w.Disabled || w.Reason != dialogs.FormNoDest {
 		t.Fatalf("Send without a destination: %+v", w)
 	}
 	press(t, a, f, "form.dest.9")
@@ -106,24 +109,24 @@ func TestAssignTabHasNoAreaColumnAndOpensManager(t *testing.T) {
 	s.area = map[entity.EntityID]int{1: 1}
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	a.openAssign()
+	a.win.Assign().Launch()
 	f.Frame(t, a)
 	if hasWidget(a, "assign.area.1") {
 		t.Fatal("the Assign tab still has an Area button")
 	}
-	if !hasWidget(a, assignDrugID(1)) {
+	if !hasWidget(a, windowspkg.AssignDrugID(1)) {
 		t.Fatal("the drug policy column is gone")
 	}
 	press(t, a, f, "assign.areas")
 	f.Frame(t, a)
-	if a.uiModalTop() != areasModalID || !hasWidget(a, "areas.name.2") {
+	if a.uiModalTop() != architect.AreasModalID || !hasWidget(a, "areas.name.2") {
 		t.Fatalf("area manager not open: %q", a.uiModalTop())
 	}
 }
 
 func TestAreaHelpers(t *testing.T) {
 	t.Parallel()
-	if memberList([]entity.EntityID{3, 12}) != "3,12" {
+	if dialogs.MemberList([]entity.EntityID{3, 12}) != "3,12" {
 		t.Fatal("member list")
 	}
 }
@@ -141,18 +144,18 @@ func TestWorldTabChartsTheGlobe(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	// the charting and its cache: windows TestWorldTabChartsThePlanetOnce
-	a.toggleWorld()
+	a.win.World().Toggle()
 	for i := 0; i < 3; i++ {
 		f.Frame(t, a)
 	}
-	if a.uiModalTop() != worldModalID || hasWidget(a, "modal."+worldModalID+".world.form") == false {
+	if a.uiModalTop() != windowspkg.WorldModalID || hasWidget(a, "modal."+windowspkg.WorldModalID+".world.form") == false {
 		t.Fatal("World tab not open")
 	}
 	_ = drawFrame(t, a, f) // the globe and its caravan marker draw in the modal
-	if st := a.uiModalTop(); st != worldModalID {
+	if st := a.uiModalTop(); st != windowspkg.WorldModalID {
 		t.Fatalf("top modal after a draw %q", st)
 	}
-	if w, _ := a.uiSt().Find("modal." + worldModalID + ".world.form"); w.Disabled {
+	if w, _ := a.uiSt().Find("modal." + windowspkg.WorldModalID + ".world.form"); w.Disabled {
 		t.Fatalf("Form caravan disabled with a world map: %q", w.Reason)
 	}
 }

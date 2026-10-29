@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"runtime"
 	"sync"
 	"testing"
@@ -12,11 +13,11 @@ import (
 
 var (
 	realArtOnce sync.Once
-	realArtCat  *artCatalog
+	realArtCat  *artpkg.Catalog
 	realArtErr  error
 
 	atlasArtOnce sync.Once
-	atlasArtCat  *artCatalog
+	atlasArtCat  *artpkg.Catalog
 	atlasArtErr  error
 )
 
@@ -24,10 +25,10 @@ var (
 // by parallel tests: key lookups and the (once-guarded) lazy decode are
 // safe, but drawing also writes texture caches, so a test that draws
 // takes its own testArt.
-func realArt(t *testing.T) *artCatalog {
+func realArt(t *testing.T) *artpkg.Catalog {
 	t.Helper()
 	realArtOnce.Do(func() {
-		root, err := LocateArt()
+		root, err := artpkg.Locate()
 		if err != nil {
 			realArtErr = err
 			return
@@ -45,10 +46,10 @@ func realArt(t *testing.T) *artCatalog {
 // themselves. Every page layer is cut once up front on all cores
 // (cutPageAside is safe per page and layer): one by one under the race
 // detector that takes minutes.
-func atlasArt(t *testing.T) *artCatalog {
+func atlasArt(t *testing.T) *artpkg.Catalog {
 	t.Helper()
 	atlasArtOnce.Do(func() {
-		root, err := LocateArt()
+		root, err := artpkg.Locate()
 		if err != nil {
 			atlasArtErr = err
 			return
@@ -57,7 +58,7 @@ func atlasArt(t *testing.T) *artCatalog {
 			return
 		}
 		type job struct {
-			a         *spriteAtlas
+			a         *artpkg.Atlas
 			pg, layer int
 		}
 		jobs := make(chan job)
@@ -66,13 +67,13 @@ func atlasArt(t *testing.T) *artCatalog {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				var z deflater
+				var z artpkg.Deflater
 				for j := range jobs {
 					j.a.CutPageAside(j.pg, j.layer, &z)
 				}
 			}()
 		}
-		seen := map[*spriteAtlas]bool{}
+		seen := map[*artpkg.Atlas]bool{}
 		for _, sp := range atlasArtCat.Sprites {
 			if sp.Src == nil || seen[sp.Src.Atlas] {
 				continue
@@ -80,7 +81,7 @@ func atlasArt(t *testing.T) *artCatalog {
 			a := sp.Src.Atlas
 			seen[a] = true
 			for pg := range a.ByPage {
-				for layer := 0; layer < atlasLayers; layer++ {
+				for layer := 0; layer < artpkg.AtlasLayers; layer++ {
 					jobs <- job{a, pg, layer}
 				}
 			}
@@ -97,9 +98,9 @@ func atlasArt(t *testing.T) *artCatalog {
 // testArt is a fresh lazy index of the generated art for one test that
 // draws, or skips: it decodes only the sprites the test hands out, which
 // keeps the race-enabled suite fast.
-func testArt(t testing.TB) *artCatalog {
+func testArt(t testing.TB) *artpkg.Catalog {
 	t.Helper()
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		t.Skip("generated art not present:", err)
 	}
@@ -168,4 +169,9 @@ func TestPortraitKeysFollowTheBuild(t *testing.T) {
 	if pick(nil, 3) != "" || pick([]string{"a", "b"}, 3) != "b" {
 		t.Error("palette indices wrap")
 	}
+}
+
+// portraitLayers lists the portrait's sprites in draw order for a look.
+func portraitLayers(art *artpkg.Catalog, l look.Look) []portraitLayer {
+	return scarredLayers(art, l, false)
 }

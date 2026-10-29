@@ -4,6 +4,9 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/perf"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/sysinfo"
 )
@@ -169,7 +172,7 @@ func TestCapturesAndProbeNeverDetect(t *testing.T) {
 	t.Parallel()
 	for name, set := range map[string]func(a *App){
 		"capture": func(a *App) { a.cfg.Capture = &Capture{} },
-		"probe":   func(a *App) { a.cfg.FPSProbe = &FPSProbe{} },
+		"probe":   func(a *App) { a.cfg.FPSProbe = &perf.FPSProbe{} },
 	} {
 		store := &fakeSettings{s: config.Defaults()}
 		a := hwApp(store, 4*sysinfo.GiB, 2, 1)
@@ -210,7 +213,7 @@ func TestOptionsGraphicsRowsRecordTheChoice(t *testing.T) {
 		store := graphicsStore()
 		a := optionsApp(store)
 		a.opt.Tab = "graphics"
-		a.applyOption("options." + c.row)
+		a.opt.ApplyOption("options." + c.row)
 		g := store.s.Graphics
 		if !c.changed(g) {
 			t.Fatalf("%s: not changed in the stored settings: %+v", c.row, g)
@@ -231,7 +234,7 @@ func TestOptionsFullscreenIsNotAPresetRow(t *testing.T) {
 	store := graphicsStore()
 	a := optionsApp(store)
 	a.opt.Tab = "graphics"
-	a.applyOption("options.fullscreen")
+	a.opt.ApplyOption("options.fullscreen")
 	g := store.s.Graphics
 	if !g.Fullscreen || g.Quality != config.QualityHigh || len(g.Chosen) != 0 {
 		t.Fatalf("graphics = %+v", g)
@@ -246,7 +249,7 @@ func TestOptionsQualityAppliesPresetAndClearsChoices(t *testing.T) {
 	a := optionsApp(store)
 	a.devFn = func() float64 { return 2 }
 	a.opt.Tab = "graphics"
-	a.applyOption("options.shadows") // custom, shadows chosen
+	a.opt.ApplyOption("options.shadows") // custom, shadows chosen
 	if g := store.s.Graphics; g.Quality != config.QualityCustom || g.Shadows {
 		t.Fatalf("setup: %+v", g)
 	}
@@ -266,7 +269,7 @@ func TestOptionsQualityAppliesPresetAndClearsChoices(t *testing.T) {
 		{"High", func(g config.Graphics) bool { return g.Quality == config.QualityHigh && g.Shadows && g.Lighting }},
 	}
 	for i, s := range steps {
-		a.applyOption("options.quality")
+		a.opt.ApplyOption("options.quality")
 		g := store.s.Graphics
 		if !s.check(g) || len(g.Chosen) != 0 {
 			t.Fatalf("step %d: graphics %+v, want the %s preset with no chosen rows", i, g, s.label)
@@ -289,12 +292,12 @@ func TestOptionsDetectAgain(t *testing.T) {
 	a.cfg.Hardware = func() sysinfo.Info { return sysinfo.Info{Total: 4 * sysinfo.GiB, Cores: 2} }
 	a.devFn = func() float64 { return 1 }
 	a.opt.Tab = "graphics"
-	a.applyOption("options.lighting") // a hand-picked row
+	a.opt.ApplyOption("options.lighting") // a hand-picked row
 	if b := optionBtn(t, a, "options.quality.detect"); b.Disabled || b.Tip == "" {
 		t.Fatalf("detect button %+v", b)
 	}
 	saves := store.saves
-	a.applyOption("options.quality.detect")
+	a.opt.ApplyOption("options.quality.detect")
 	g := store.s.Graphics
 	if g.Detected != config.QualityLow || g.Quality != config.QualityLow || len(g.Chosen) != 0 || g.VSync || g.FrameCap != config.FrameCapDefault {
 		t.Fatalf("graphics = %+v, want the low tier applied and nothing chosen", g)
@@ -336,21 +339,21 @@ func TestOptionsGraphicsRowsHaveCostTips(t *testing.T) {
 func TestOptionsGraphicsLabelsFitTheirColumn(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
-	rows := optionRows("graphics")
-	if !slices.ContainsFunc(rows, func(r optionRow) bool { return r.Key == "renderscale" && r.Col == 1 }) {
+	rows := options.OptionRows("graphics")
+	if !slices.ContainsFunc(rows, func(r options.OptionRow) bool { return r.Key == "renderscale" && r.Col == 1 }) {
 		t.Fatal("no World detail row in the detail column")
 	}
 	for i, r := range rows {
-		lx, cx, y := optPos(rows, i)
-		if w, _ := measure(r.Label, tsBody); lx+float32(w) > cx-8 {
+		lx, cx, y := options.OptPos(rows, i)
+		if w, _ := gfx.Measure(r.Label, gfx.Body); lx+float32(w) > cx-8 {
 			t.Fatalf("label %q (%v px at x=%v) runs into its control at x=%v", r.Label, w, lx, cx)
 		}
-		if y+optBtnH > float32(540-footerYOff) {
+		if y+options.OptBtnH > float32(540-footerYOff) {
 			t.Fatalf("row %q at y=%v reaches the footer of a 540 px window", r.Key, y)
 		}
 	}
 	a.opt.Tab = "graphics"
-	for _, b := range a.optionsButtons(960, 540) {
+	for _, b := range a.opt.Buttons(960, 540) {
 		if b.X+b.W > 960-40 { // inside the panel
 			t.Fatalf("%s ends at x=%v, outside the 960 px panel", b.ID, b.X+b.W)
 		}

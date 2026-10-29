@@ -1,7 +1,10 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	uikitpkg "rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -11,7 +14,7 @@ import (
 // the click path's hit list.
 
 // uiSt is the App's widget kit, bound to the App on first use.
-func (a *App) uiSt() *uiState {
+func (a *App) uiSt() *uikitpkg.Kit {
 	if !a.ui.Bound() {
 		a.ui.Bind(uiHost{a})
 	}
@@ -22,7 +25,7 @@ func (a *App) uiSt() *uiState {
 // counts held keys (keyRepeat) and takes the keys the kit owns out of the
 // frame so no binding also fires: PageUp/PageDown over a scroll view, Esc
 // closes the top modal, Tab moves focus.
-func (a *App) uiPreInput(raw *rawInput) {
+func (a *App) uiPreInput(raw *inputframe.Raw) {
 	u := a.uiSt()
 	u.CountHeld(raw)
 	if a.textActive() {
@@ -45,15 +48,15 @@ func (a *App) uiPreInput(raw *rawInput) {
 // declared.
 func (a *App) uiBegin() {
 	u := a.uiSt()
-	last, _ := u.LastScreen.(screenID) // unset: the zero screen
+	last, _ := u.LastScreen.(ports.Screen) // unset: the zero screen
 	if scr := a.nav.screen(); scr != last {
 		u.LastScreen = scr
 		u.Reset()
 	}
 	u.Begin()
-	a.syncDealings() // trade_ui.go: open/close the trade and comms dialogs
+	a.deal.SyncDealings() // trade_ui.go: open/close the trade and comms dialogs
 	u.RunModals(a.uiCloseModal)
-	if a.nav.overlay() != overlayNone || a.nav.screen() == screenBoot {
+	if a.nav.overlay() != overlayNone || a.nav.screen() == ports.ScreenBoot {
 		return
 	}
 	sw, sh := a.size()
@@ -69,15 +72,15 @@ func (a *App) uiBegin() {
 // click path (and tests that click by id) reach both. Widgets come first:
 // they sit on top. While a modal is open the screen's buttons are
 // unreachable.
-func (a *App) layoutHits(sw, sh int) []button {
+func (a *App) layoutHits(sw, sh int) []uikitpkg.Button {
 	u := a.uiSt()
-	var out []button
+	var out []uikitpkg.Button
 	for i := len(u.Cur) - 1; i >= 0; i-- {
 		w := u.Cur[i]
 		if w.Click == nil {
 			continue
 		}
-		b := asButton(w.R, w.ID, w.Label)
+		b := uikitpkg.AsButton(w.R, w.ID, w.Label)
 		b.Disabled, b.Reason = w.Disabled, w.Reason
 		out = append(out, b)
 	}

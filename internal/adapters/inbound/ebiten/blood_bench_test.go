@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -39,7 +41,7 @@ func benchStains(n, w, h int) []game.StainView {
 // stainBench is a 80×50 colony renderer with the real art and 500
 // stains, at the zoom of BenchmarkDrawArt.
 func stainBench(b *testing.B) (*Renderer, *ebiten.Image) {
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		b.Skip("generated art not present:", err)
 	}
@@ -59,10 +61,10 @@ func stainBench(b *testing.B) (*Renderer, *ebiten.Image) {
 // at most 0.3 ms).
 func BenchmarkDrawStains(b *testing.B) {
 	r, screen := stainBench(b)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.setView(1280, 800, tile)
 	r.view.W = r.game.World()
-	r.lit.Light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = light.LightAt(12, summerDay, "clear", 0)
 	for i := 0; i < 5; i++ {
 		r.drawStains(screen, r.view.W, 1280, 800, tile)
 	}
@@ -77,7 +79,7 @@ func BenchmarkDrawStains(b *testing.B) {
 // stains on the ground.
 func BenchmarkDrawArtStains(b *testing.B) {
 	r, screen := stainBench(b)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	frame := func() {
 		r.present++
 		r.advance()

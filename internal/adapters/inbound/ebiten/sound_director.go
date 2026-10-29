@@ -2,6 +2,9 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"sort"
 	"strconv"
 	"strings"
@@ -45,7 +48,7 @@ func (a *App) play(id string, vol, pan float64) {
 }
 
 // uiSound plays an interface sound for a click on b.
-func (a *App) uiSound(b button) {
+func (a *App) uiSound(b uikit.Button) {
 	switch {
 	case b.Disabled:
 		a.cfg.Sound.Play("ui.deny", 1, 0)
@@ -56,9 +59,6 @@ func (a *App) uiSound(b button) {
 	}
 }
 
-// pageSound is the soft swish of a wizard page turning (Next or Back).
-func (a *App) pageSound() { a.cfg.Sound.Play("ui.page", 1, 0) }
-
 // sliderTickSteps is how finely a continuous slider ticks: 20 steps along
 // its track when it has no step of its own.
 const sliderTickSteps = 20
@@ -67,7 +67,7 @@ const sliderTickSteps = 20
 // change of a discrete slider, one tick per sliderTickSteps-th of a
 // continuous one (or per sp.Step), so a drag ticks as it moves, not every
 // frame.
-func (a *App) sliderCue(sp sliderSpec, lo, hi, old, cur float64) {
+func (a *App) sliderCue(sp uikit.SliderSpec, lo, hi, old, cur float64) {
 	if sp.Discrete() {
 		a.play("ui.slider_tick", 1, 0)
 		return
@@ -86,9 +86,9 @@ func (a *App) sliderCue(sp sliderSpec, lo, hi, old, cur float64) {
 func (a *App) soundFrame() {
 	d := &a.snd
 	d.Frame++
-	want := map[string]loopWant{}
+	want := map[string]cue.Loop{}
 	snd := a.cfg.Sound
-	if a.nav.screen() == screenColony && a.renderer != nil {
+	if a.nav.screen() == ports.ScreenColony && a.renderer != nil {
 		a.colonyCues()
 		a.colonyAmbience(want)
 		track := trackCalm
@@ -102,9 +102,9 @@ func (a *App) soundFrame() {
 		snd.Music(available(snd, track), vol)
 	} else {
 		if snd.Has("amb.night") {
-			want["menu:night"] = loopWant{ID: "amb.night", Vol: menuNightVol}
+			want["menu:night"] = cue.Loop{ID: "amb.night", Vol: menuNightVol}
 		}
-		want["menu:fire"] = loopWant{ID: "amb.campfire", Vol: menuFireVol}
+		want["menu:fire"] = cue.Loop{ID: "amb.campfire", Vol: menuFireVol}
 		track := trackMenu
 		if !snd.Has(trackMenu) {
 			track = trackCalm
@@ -124,7 +124,7 @@ func available(snd Sound, track string) string {
 }
 
 // setLoops sends every wanted loop and fades out the ones no longer wanted.
-func (a *App) setLoops(want map[string]loopWant) {
+func (a *App) setLoops(want map[string]cue.Loop) {
 	d := &a.snd
 	snd := a.cfg.Sound
 	for key, id := range d.loops {
@@ -148,14 +148,14 @@ func (a *App) setLoops(want map[string]loopWant) {
 func (a *App) colonyCues() {
 	r := a.renderer
 	v := a.mapViewport() // physical, like worldToScreen
-	_, _, perID := zoomEar(r.cam.Zoom, r.MinZoomFor(v))
+	_, _, perID := cue.ZoomEar(r.cam.Zoom, r.MinZoomFor(v))
 	type placed struct {
 		id       string
 		vol, pan float64
 		dist     float64
 	}
 	var near []placed
-	for _, c := range r.takeCues() {
+	for _, c := range r.cueBus().Take() {
 		if c.Global {
 			a.play(c.ID, c.Vol, 0)
 			continue
@@ -200,7 +200,7 @@ func dayWeight(hour float64) float64 {
 }
 
 // colonyAmbience is the day or night bed, rain, and the nearest campfires.
-func (a *App) colonyAmbience(want map[string]loopWant) {
+func (a *App) colonyAmbience(want map[string]cue.Loop) {
 	r := a.renderer
 	w := r.heard
 	v := a.mapViewport() // physical, like worldToScreen
@@ -224,23 +224,23 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 	if winter {
 		birds = 0.6
 	}
-	want["amb.day"] = loopWant{ID: "amb.day", Vol: day * (1 - 0.5*rain) * birds * inside}
+	want["amb.day"] = cue.Loop{ID: "amb.day", Vol: day * (1 - 0.5*rain) * birds * inside}
 	crickets := 1.0
 	if winter || w.OutdoorTemp <= 80 {
 		crickets = 0
 	}
-	want["amb.night"] = loopWant{ID: "amb.night", Vol: (1 - day) * (1 - 0.5*rain) * crickets * inside}
-	want["amb.rain"] = loopWant{ID: "amb.rain", Vol: rain * inside}
+	want["amb.night"] = cue.Loop{ID: "amb.night", Vol: (1 - day) * (1 - 0.5*rain) * crickets * inside}
+	want["amb.rain"] = cue.Loop{ID: "amb.rain", Vol: rain * inside}
 	water, shore := r.waterOnScreen(w, v)
-	want["amb.water_river"] = loopWant{ID: "amb.water_river", Vol: math.Min(1, water*waterRiverGain) * inside}
-	want["amb.water_shore"] = loopWant{ID: "amb.water_shore", Vol: math.Min(1, shore*waterShoreGain) * inside}
+	want["amb.water_river"] = cue.Loop{ID: "amb.water_river", Vol: math.Min(1, water*cue.WaterRiverGain) * inside}
+	want["amb.water_shore"] = cue.Loop{ID: "amb.water_shore", Vol: math.Min(1, shore*cue.WaterShoreGain) * inside}
 	type fire struct {
 		key      string
 		vol, pan float64
 	}
 	var fires []fire
 	for _, b := range w.Buildings {
-		if !b.Burning || b.Kind == sndWoodGenerator { // a generator has its own chug
+		if !b.Burning || b.Kind == cue.WoodGeneratorKind { // a generator has its own chug
 			continue
 		}
 		vol, pan, ok := spatial(r, float64(b.X)+0.5, float64(b.Y)+0.5, v)
@@ -253,7 +253,7 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 		if i == 2 {
 			break
 		}
-		want[f.key] = loopWant{ID: "amb.campfire", Vol: f.vol, Pan: f.pan}
+		want[f.key] = cue.Loop{ID: "amb.campfire", Vol: f.vol, Pan: f.pan}
 	}
 	r.blazeAmbience(want, w, v)
 	r.machineAmbience(want, w, v)

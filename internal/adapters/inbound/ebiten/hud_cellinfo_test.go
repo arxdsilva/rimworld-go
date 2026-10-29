@@ -6,6 +6,8 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
@@ -35,7 +37,7 @@ func TestCellInfoDescribesHoveredCell(t *testing.T) {
 	a, f := globalColonyP(t, cellInfoSim())
 	f.MoveTo(a, 4, 3)
 	f.Frame(t, a)
-	lines := a.cellInfoLines()
+	lines := a.chrome.Cell().Lines()
 	if len(lines) < 3 {
 		t.Fatalf("cell info = %q, want the ground's lines", lines)
 	}
@@ -47,7 +49,7 @@ func TestCellInfoDescribesHoveredCell(t *testing.T) {
 	}
 	f.MoveTo(a, 9, 9) // inside the room
 	f.Frame(t, a)
-	if lines = a.cellInfoLines(); !hasLine(lines, "(indoors)") || !hasLine(lines, "Temperature 19C") {
+	if lines = a.chrome.Cell().Lines(); !hasLine(lines, "(indoors)") || !hasLine(lines, "Temperature 19C") {
 		t.Errorf("room cell info = %q, want the indoor temperature of (9,9)", lines)
 	}
 }
@@ -59,44 +61,44 @@ func TestCellInfoOnlyWithNothingSelected(t *testing.T) {
 	a, f := globalColonyP(t, cellInfoSim())
 	f.MoveTo(a, 4, 3)
 	f.Frame(t, a)
-	if len(a.cellInfoLines()) == 0 {
+	if len(a.chrome.Cell().Lines()) == 0 {
 		t.Fatal("nothing selected: expected cell info")
 	}
 
 	a.renderer.Select(entity.EntityID(1))
-	if got := a.cellInfoLines(); len(got) != 0 {
+	if got := a.chrome.Cell().Lines(); len(got) != 0 {
 		t.Errorf("a pawn is selected, cell info = %q", got)
 	}
 	a.renderer.ClearSelect()
-	if len(a.cellInfoLines()) == 0 {
+	if len(a.chrome.Cell().Lines()) == 0 {
 		t.Fatal("selection cleared: expected cell info back")
 	}
 
 	// PLAY-020: a selected zone has its pane there too
 	a.sel.ZoneSel, a.sel.HasZone = 1, true
-	if got := a.cellInfoLines(); len(got) != 0 {
+	if got := a.chrome.Cell().Lines(); len(got) != 0 {
 		t.Errorf("a zone is selected, cell info = %q", got)
 	}
 	if a.learnSelection() == "" {
 		t.Error("a selected zone counts as a selection for the learning helper")
 	}
-	a.clearZone()
+	a.arch.Zones.Clear()
 
 	a.arch.Open = true
-	if got := a.cellInfoLines(); len(got) != 0 {
+	if got := a.chrome.Cell().Lines(); len(got) != 0 {
 		t.Errorf("the Architect is open, cell info = %q", got)
 	}
 	a.arch.Open = false
 
 	a.win.Open, a.win.Mode = true, "work"
-	if got := a.cellInfoLines(); len(got) != 0 {
+	if got := a.chrome.Cell().Lines(); len(got) != 0 {
 		t.Errorf("a window is open, cell info = %q", got)
 	}
 	a.win.Open = false
 
 	f.onRect(a, a.hud().Global) // the cursor over the HUD
 	f.Frame(t, a)
-	if got := a.cellInfoLines(); len(got) != 0 {
+	if got := a.chrome.Cell().Lines(); len(got) != 0 {
 		t.Errorf("cursor over the HUD, cell info = %q", got)
 	}
 }
@@ -108,13 +110,13 @@ func TestCellInfoIsNotChrome(t *testing.T) {
 	a, f := globalColonyP(t, cellInfoSim())
 	f.MoveTo(a, 4, 3)
 	f.Frame(t, a)
-	r := a.cellInfoRect()
+	r := a.chrome.Cell().Rect()
 	if r.Empty() {
 		t.Fatal("no cell info rect while hovering a cell")
 	}
 	l := a.hud()
-	if r.X != hudMargin || r.Bottom() != l.Tabs.Y-hudMargin {
-		t.Errorf("cell info %+v, want its bottom-left corner at (8, %v)", r, l.Tabs.Y-hudMargin)
+	if r.X != hudlayout.HudMargin || r.Bottom() != l.Tabs.Y-hudlayout.HudMargin {
+		t.Errorf("cell info %+v, want its bottom-left corner at (8, %v)", r, l.Tabs.Y-hudlayout.HudMargin)
 	}
 	cx, cy := r.Center()
 	if a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {
@@ -126,7 +128,7 @@ func TestCellInfoIsNotChrome(t *testing.T) {
 		}
 	}
 	screen := ebiten.NewImage(a.sw, a.sh)
-	a.drawCellInfo(screen, a.sh) // paints with a cell hovered
+	a.chrome.Cell().Draw(screen, a.sh) // paints with a cell hovered
 }
 
 // Alt adds the detailed cell lines.
@@ -135,13 +137,13 @@ func TestCellInfoAltAddsDetail(t *testing.T) {
 	a, f := globalColonyP(t, cellInfoSim())
 	f.MoveTo(a, 4, 3)
 	f.Frame(t, a)
-	if hasLine(a.cellInfoLines(), "Cell (4, 3)") {
+	if hasLine(a.chrome.Cell().Lines(), "Cell (4, 3)") {
 		t.Fatal("detail lines without Alt")
 	}
 	f.Cur.Mods = input.ModAlt
 	f.Frame(t, a)
-	if !hasLine(a.cellInfoLines(), "Cell (4, 3)") {
-		t.Fatalf("Alt held: cell info = %q, want the detail lines", a.cellInfoLines())
+	if !hasLine(a.chrome.Cell().Lines(), "Cell (4, 3)") {
+		t.Fatalf("Alt held: cell info = %q, want the detail lines", a.chrome.Cell().Lines())
 	}
 }
 
@@ -154,7 +156,7 @@ func TestCellInfoUnexplored(t *testing.T) {
 	a, f := globalColonyP(t, s)
 	f.MoveTo(a, 4, 3)
 	f.Frame(t, a)
-	if got := a.cellInfoLines(); len(got) != 1 || got[0] != "Unexplored" {
+	if got := a.chrome.Cell().Lines(); len(got) != 1 || got[0] != "Unexplored" {
 		t.Fatalf("fogged cell info = %q", got)
 	}
 }
@@ -170,10 +172,10 @@ func TestCellInfoHidesOverTheMinimap(t *testing.T) {
 	}
 	f.onRect(a, m)
 	f.Frame(t, a)
-	if got := a.cellInfoLines(); len(got) != 0 {
+	if got := a.chrome.Cell().Lines(); len(got) != 0 {
 		t.Errorf("cursor over the minimap, cell info = %q", got)
 	}
-	if got, want := a.temperatureLine(), "Outdoors 7 °C"; got != want {
+	if got, want := a.chrome.Global().TemperatureLine(), "Outdoors 7 °C"; got != want {
 		t.Errorf("over the minimap: %q, want %q", got, want)
 	}
 }
@@ -186,11 +188,11 @@ func TestHintSitsAboveCellInfo(t *testing.T) {
 	a, f := globalColonyP(t, cellInfoSim())
 	f.MoveTo(a, 4, 3)
 	f.Frame(t, a)
-	lines := a.cellInfoLines()
+	lines := a.chrome.Cell().Lines()
 	if len(lines) == 0 {
 		t.Fatal("no cell info to test against")
 	}
-	box := cellInfoBox(lines, a.hud().Tabs.Y)
+	box := hud.CellInfoBox(lines, a.hud().Tabs.Y)
 	if _, bottom := a.hintAnchor(); bottom > box.Y {
 		t.Fatalf("hint rests at y %v, inside the cell info box from y %v", bottom, box.Y)
 	}

@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"slices"
 	"strings"
 	"testing"
@@ -12,9 +14,9 @@ import (
 )
 
 // scarArt is figureArt plus the face scar sprites.
-func scarArt() *artCatalog {
+func scarArt() *artpkg.Catalog {
 	c := figureArt()
-	for f := faceSouth; f <= faceWest; f++ {
+	for f := artpkg.FaceSouth; f <= artpkg.FaceWest; f++ {
 		c.Sprites["pawn/face_scar_"+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	}
 	return c
@@ -123,7 +125,7 @@ func TestFallingFigureFaceScar(t *testing.T) {
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 0, Status: "alive", Lying: true, Disfigured: true}
 	var keys []string
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-	r.drawFigureIn(ebiten.NewImage(512, 512), p, faceWest, 2, 2, 64, standPose())
+	r.drawFigureIn(ebiten.NewImage(512, 512), p, artpkg.FaceWest, 2, 2, 64, creature.StandPose())
 	r.lit.OnDraw = nil
 	scar := slices.IndexFunc(keys, func(k string) bool { return k == "pawn/face_scar_east" })
 	hair := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_") })

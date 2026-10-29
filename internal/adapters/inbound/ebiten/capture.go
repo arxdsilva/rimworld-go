@@ -6,6 +6,11 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -87,7 +92,7 @@ type captureState struct {
 func captureOrders(cx, cy int) []command.Command {
 	var out []command.Command
 	bk := func(kind string, f uint8, x, y int) {
-		if id, ok := kindID(kind); ok {
+		if id, ok := architectpkg.KindID(kind); ok {
 			out = append(out, command.Command{Kind: command.DesignateBuild, Build: id, Facing: f, X: x, Y: y})
 		}
 	}
@@ -143,7 +148,7 @@ func (a *App) tickCapture() {
 		return
 	}
 	if !a.capture.started {
-		if a.nav.screen() == screenBoot {
+		if a.nav.screen() == ports.ScreenBoot {
 			a.finishBoot()
 		}
 		a.captureStart(c.UI) // capture_colony.go: a setup colony for the colony UI states
@@ -157,7 +162,7 @@ func (a *App) tickCapture() {
 			a.renderer.cam.Zoom = clampZoom(c.Zoom)
 		}
 		// centre the camera on the colony
-		tile := a.renderer.tilePx()
+		tile := a.renderer.cam.Tile()
 		a.renderer.cam.OffsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.sw)/2
 		a.renderer.cam.OffsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.sh)/2
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
@@ -250,14 +255,14 @@ var (
 // a generated world with a landing site chosen, or a generation frozen
 // part-way.
 func (a *App) captureStep(step string) {
-	ng := a.draft()
+	ng := a.wiz.Draft()
 	switch step {
 	case "@seed":
 		ng.World.SeedText = "amber-hollow"
 	case "@landing":
-		a.worldGenerate()
+		a.wiz.WorldGenerate()
 		for ng.Builder != nil { // run the generation to the end at once
-			a.worldStep()
+			a.wiz.WorldStep()
 		}
 		a.uiSt().Modals = nil
 		if ng.Planet != nil {
@@ -268,7 +273,7 @@ func (a *App) captureStep(step string) {
 		}
 	case "@worldgen-progress":
 		ng.GenHold = 0.4
-		a.worldGenerate()
+		a.wiz.WorldGenerate()
 		ng.GenStep = 1500
 	}
 }
@@ -279,7 +284,7 @@ func (a *App) captureStep(step string) {
 func (a *App) tickMenuCapture(open []string) {
 	c := a.cfg.Capture
 	if !a.capture.started {
-		if a.nav.screen() == screenBoot {
+		if a.nav.screen() == ports.ScreenBoot {
 			a.finishBoot()
 		}
 		if a.capture.opened < len(open) {
@@ -318,24 +323,24 @@ func (a *App) captureUI(ui string) {
 	switch ui {
 	case "perf":
 		a.settings.Graphics.PerfOverlay = true
-		a.seedPerfCapture() // perf_overlay.go: fixed samples, frozen clock
+		a.meter.SeedCapture() // perf_overlay.go: fixed samples, frozen clock
 	case "bills":
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
-		a.renderer.enqueue(command.Command{Kind: command.AddBill, X: cx + 1, Y: cy + 6, Recipe: 0, Mode: billModeForever, Count: 1})
+		a.renderer.enqueue(command.Command{Kind: command.AddBill, X: cx + 1, Y: cy + 6, Recipe: 0, Mode: inspectorpkg.BillModeForever, Count: 1})
 		for i := 0; i < 50; i++ {
 			a.renderer.game.Step(60)
 			a.renderer.syncPawns()
 		}
-		a.selectBuildingAt(cx+1, cy+6)
-		a.openPaneTab("bills") // hud_inspect.go: the Bills tab open above the pane
-		tile := a.renderer.tilePx()
+		a.insp.Building().SelectBuildingAt(cx+1, cy+6)
+		a.insp.OpenPaneTab("bills") // hud_inspect.go: the Bills tab open above the pane
+		tile := a.renderer.cam.Tile()
 		a.renderer.cam.OffsetX = float64(cx+1)*tile - float64(a.sw)/2 + 180
 		a.renderer.cam.OffsetY = float64(cy+5)*tile - float64(a.sh)/2
 		x, y := at(cx+1, cy+6)
 		a.cursor = &[2]int{x, y}
 	case "zoomout", "zoomedge":
 		// furthest zoom-out, centred, or pushed to the top-left limit
-		v := colonyViewport(a.sw, a.sh)
+		v := camerapkg.ColonyViewport(a.sw, a.sh)
 		a.renderer.cam.Zoom = a.renderer.MinZoomFor(v)
 		a.renderer.cam.Placed = false
 		if ui == "zoomedge" {
@@ -395,7 +400,7 @@ func (a *App) captureUI(ui string) {
 			}
 		}
 		if pick != nil {
-			a.selectCand(selCand{Kind: selFrame, ID: pick.ID})
+			a.sel.Select(selection.Cand{Kind: selection.Frame, ID: pick.ID})
 			sw, sh := a.size()
 			a.renderer.centerOn(float64(pick.X)+3, float64(pick.Y), sw, sh)
 		}
@@ -410,7 +415,7 @@ func (a *App) captureUI(ui string) {
 		a.renderer.centerOn(float64(cx+6), float64(cy-5), sw, sh)
 		for _, it := range a.renderer.world().Items {
 			if it.Forbidden && !it.Carried {
-				a.selectCand(selCand{Kind: selItem, ID: it.ID})
+				a.sel.Select(selection.Cand{Kind: selection.Item, ID: it.ID})
 				break
 			}
 		}
@@ -454,7 +459,7 @@ func (a *App) captureUI(ui string) {
 		// the colonist inspector's Log tab
 		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
 			a.renderer.Select(pawns[0].ID)
-			a.openPaneTab("log")
+			a.insp.OpenPaneTab("log")
 		}
 	case "paused-stockpile":
 		// a stockpile painted while paused shows at once
@@ -538,7 +543,7 @@ func (a *App) captureUI(ui string) {
 		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
 			p := pawns[0]
 			a.renderer.selected, a.renderer.hasSelect = p.ID, true
-			a.openPaneTab("gear")
+			a.insp.OpenPaneTab("gear")
 			sw, sh := a.size()
 			a.renderer.centerOn(float64(p.X)-2, float64(p.Y)+0.5, sw, sh)
 		}
@@ -577,9 +582,9 @@ func (a *App) captureUI(ui string) {
 		x, y := at(cx+3, cy-1)
 		a.cursor = &[2]int{x, y}
 	case "grow":
-		a.openArchitect()
-		a.selectArchCategory("zones")
-		a.selectArchTool("grow")
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("zones")
+		a.arch.SelectTool("grow")
 		a.arch.Crop = "corn"
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		a.arch.Drag = true
@@ -588,9 +593,9 @@ func (a *App) captureUI(ui string) {
 		a.cursor = &[2]int{x, y}
 	case "home":
 		// the Home tool in hand, overlay on, a rectangle being dragged
-		a.openArchitect()
-		a.selectArchCategory("zones")
-		a.selectArchTool("home")
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("zones")
+		a.arch.SelectTool("home")
 		a.renderer.overlays().Home.On = true
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		a.arch.Drag = true
@@ -599,9 +604,9 @@ func (a *App) captureUI(ui string) {
 		a.cursor = &[2]int{x, y}
 	case "carpet":
 		// the Carpet tool with its four material buttons, cloth picked
-		a.openArchitect()
-		a.selectArchCategory("furniture")
-		a.selectArchTool("carpet")
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("furniture")
+		a.arch.SelectTool("carpet")
 		a.arch.Stuff = "cloth carpet"
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		x, y := at(cx+1, cy+1)
@@ -612,9 +617,9 @@ func (a *App) captureUI(ui string) {
 		"arch-hospital", "arch-cabinet", "arch-locked", "chips":
 		a.captureColonyUI(ui) // capture_colony.go
 	case "architect":
-		a.openArchitect()
-		a.selectArchCategory("structure")
-		a.selectArchTool("wall")
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("structure")
+		a.arch.SelectTool("wall")
 		a.arch.Stuff = defaultStoneStuff(a.renderer.world())
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		a.arch.Drag = true
@@ -665,7 +670,7 @@ func (a *App) captureUI(ui string) {
 		if !found {
 			return
 		}
-		tile := a.renderer.tilePx()
+		tile := a.renderer.cam.Tile()
 		a.renderer.cam.OffsetX = float64(shot.FromX+shot.ToX+1)/2*tile - float64(a.sw)/2
 		a.renderer.cam.OffsetY = float64(shot.FromY+shot.ToY+1)/2*tile - float64(a.sh)/2
 		for _, p := range a.renderer.snapshot() {
@@ -708,7 +713,7 @@ func (a *App) captureUI(ui string) {
 		tx, ty := a.renderer.game.Width()/2+8, a.renderer.game.Height()/2-3 // near the cut orders
 		x, y := at(tx, ty)
 		a.cursor = &[2]int{x + 20, y}
-		a.openOrders(tx, ty, float32(x), float32(y))
+		a.ord.OpenOrders(tx, ty, float32(x), float32(y))
 	}
 }
 
@@ -719,7 +724,7 @@ func (a *App) captureInput(ui string, at func(tx, ty int) (int, int)) {
 	cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 	switch ui {
 	case "search":
-		a.openSearch()
+		a.ord.OpenSearch()
 		a.ord.Search.Text = "wo"
 		a.ord.Search.Idx = 1
 	case "rooms":
@@ -731,14 +736,14 @@ func (a *App) captureInput(ui string, at func(tx, ty int) (int, int)) {
 		for _, p := range a.renderer.snapshot() {
 			ids = append(ids, p.ID)
 		}
-		a.setGroup(selPawn, ids)
+		a.sel.SetGroup(selection.Pawn, ids)
 		x, y := at(cx+6, cy-1)
 		a.cursor = &[2]int{x, y}
 	case "drawstyle":
-		a.openArchitect()
-		a.selectArchCategory("structure")
-		a.selectArchTool("wall")
-		a.arch.Style = styleOvalEdge
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("structure")
+		a.arch.SelectTool("wall")
+		a.arch.Style = architectpkg.StyleOvalEdge
 		a.arch.Drag = true
 		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = cx+5, cy-4, cx+9, cy+1
 		x, y := at(cx+9, cy+1)
@@ -786,9 +791,6 @@ func (a *App) drawCapture(screen *ebiten.Image) {
 	a.capture.err = png.Encode(f, img)
 }
 
-// CaptureErr reports a failed capture run after RunGame returns.
-func (a *App) CaptureErr() error { return a.capture.err }
-
 // panAt is the camera point at progress t (0..1) along waypoints, eased
 // in and out on each leg.
 func panAt(wp [][2]float64, t float64) (float64, float64) {
@@ -814,7 +816,7 @@ func panAt(wp [][2]float64, t float64) (float64, float64) {
 func (a *App) captureInspect(ui string) {
 	w := a.renderer.world()
 	cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
-	near := func(x, y int) int { return abs(x-cx) + abs(y-cy) }
+	near := func(x, y int) int { return architectpkg.Abs(x-cx) + architectpkg.Abs(y-cy) }
 	best, bx, by := 1<<30, cx, cy
 	pick := func(x, y int) {
 		if d := near(x, y); d < best {
@@ -828,32 +830,32 @@ func (a *App) captureInspect(ui string) {
 				pick(p.X, p.Y)
 			}
 		}
-		a.selectPlantAt(bx, by)
+		a.sel.SelectPlantAt(bx, by)
 	case "item":
 		for _, it := range w.Items {
 			if !it.Carried {
 				pick(it.X, it.Y)
 			}
 		}
-		a.selectItemAt(bx, by)
+		a.sel.SelectItemAt(bx, by)
 	case "pawnactions":
 		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
 			a.renderer.Select(pawns[0].ID)
 			bx, by = pawns[0].X, pawns[0].Y
-			a.openPaneTab("gear")
+			a.insp.OpenPaneTab("gear")
 		}
 	case "move", "copy":
 		for _, b := range w.Buildings {
-			if movableKind(b.Kind, b.Floor) {
+			if architectpkg.MovableKind(b.Kind, b.Floor) {
 				pick(b.X, b.Y)
 			}
 		}
-		a.selectBuildingAt(bx, by)
+		a.insp.Building().SelectBuildingAt(bx, by)
 		if ui == "move" {
-			a.applyBuildingClick("bldg.move")
-			a.moveSt().Fresh = false
+			a.insp.Building().ApplyBuildingClick("bldg.move")
+			a.arch.Mover.State().Fresh = false
 		} else {
-			a.applyBuildingClick("bldg.copy")
+			a.insp.Building().ApplyBuildingClick("bldg.copy")
 		}
 	}
 	sw, sh := a.size()
@@ -874,11 +876,11 @@ func (a *App) captureZone(shrink bool, at func(tx, ty int) (int, int)) {
 		if z.Kind != game.ZoneGrow {
 			continue
 		}
-		a.selectCand(selCand{Kind: selZone, ID: entity.EntityID(z.ID)})
+		a.sel.Select(selection.Cand{Kind: selection.Zone, ID: entity.EntityID(z.ID)})
 		sw, sh := a.size()
 		a.renderer.centerOn(float64(z.MinX+z.MaxX)/2, float64(z.MinY+z.MaxY)/2, sw, sh)
 		if shrink {
-			a.startZoneTool(zoneToolShrink)
+			a.arch.Zones.Start(architectpkg.ZoneToolShrink)
 			st := a.arch.Zones.State()
 			st.Fresh, st.Drag = false, true
 			st.X0, st.Y0, st.X1, st.Y1 = z.MinX, z.MinY, (z.MinX+z.MaxX)/2, z.MaxY
@@ -906,7 +908,7 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	sx, sy, best := cx, cy, 1<<30
 	for y := 2; y < g.Height()-8; y++ {
 		for x := 2; x < g.Width()-12; x++ {
-			if d := abs(x-cx) + abs(y-cy); d < best && free(game.ZoneStockpile, x, y, 8, 6) {
+			if d := architectpkg.Abs(x-cx) + architectpkg.Abs(y-cy); d < best && free(game.ZoneStockpile, x, y, 8, 6) {
 				sx, sy, best = x, y, d
 			}
 		}
@@ -916,7 +918,7 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	id, _ := game.CropID("potato")
 	a.renderer.enqueue(command.Command{Kind: command.DesignateGrowZone, X: sx + 5, Y: sy, X2: sx + 7, Y2: sy + 1, Build: id})
 	// the second stockpile's centre sits on a built wood floor
-	if id, ok := kindID("floor"); ok {
+	if id, ok := architectpkg.KindID("floor"); ok {
 		for y := sy + 2; y <= sy+3; y++ {
 			for x := sx + 2; x <= sx+4; x++ {
 				a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: id, X: x, Y: y})
@@ -932,14 +934,14 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	gx, gy, gbest := sx, sy+7, 1<<30
 	for y := 2; y < g.Height()-4; y++ {
 		for x := 2; x < g.Width()-6; x++ {
-			if d := abs(x-cx) + abs(y-cy); d < gbest && g.CanZoneAt(game.ZoneStockpile, x, y) && !g.CanZoneAt(game.ZoneGrow, x, y) {
+			if d := architectpkg.Abs(x-cx) + architectpkg.Abs(y-cy); d < gbest && g.CanZoneAt(game.ZoneStockpile, x, y) && !g.CanZoneAt(game.ZoneGrow, x, y) {
 				gx, gy, gbest = x, y, d
 			}
 		}
 	}
-	a.openArchitect()
-	a.selectArchCategory("zones")
-	a.selectArchTool("grow")
+	a.arch.OpenPanel()
+	a.arch.SelectCategory("zones")
+	a.arch.SelectTool("grow")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = gx-3, gy-1, gx+3, gy+2
 	x, y := at(gx+3, gy+2)
@@ -956,8 +958,8 @@ func (a *App) captureBiomeInspect(ui string) {
 	sw, sh := a.size()
 	if ui == "trough" {
 		for _, b := range w.Buildings {
-			if isTrough(b) {
-				a.selectBuildingAt(b.X, b.Y)
+			if inspectorpkg.IsTrough(b) {
+				a.insp.Building().SelectBuildingAt(b.X, b.Y)
 				a.renderer.centerOn(float64(b.X)+0.5, float64(b.Y)+0.5, sw, sh)
 				return
 			}
@@ -966,7 +968,7 @@ func (a *App) captureBiomeInspect(ui string) {
 	}
 	for _, an := range w.Animals {
 		if an.Tame {
-			a.selectCand(selCand{Kind: selAnimal, ID: an.ID})
+			a.sel.Select(selection.Cand{Kind: selection.Animal, ID: an.ID})
 			a.renderer.centerOn(float64(an.X)+0.5, float64(an.Y)+0.5, sw, sh)
 			return
 		}
@@ -1001,3 +1003,6 @@ func (a *App) captureTrade() {
 		}
 	}
 }
+
+// CaptureErr reports a failed capture run after RunGame returns.
+func (a *App) CaptureErr() error { return a.capture.err }

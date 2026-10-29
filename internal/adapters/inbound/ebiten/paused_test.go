@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 
 	"rimworld-go/internal/domain/sim/command"
@@ -24,7 +25,7 @@ func TestPausedStockpileShowsAtOnce(t *testing.T) {
 	a, tick := pausedColony(t)
 	before := tick()
 	a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: 5, Y: 5, X2: 7, Y2: 6})
-	if countZones(a.renderer.world(), game.ZoneStockpile) != 1 {
+	if windows.CountZones(a.renderer.world(), game.ZoneStockpile) != 1 {
 		t.Fatal("a stockpile painted while paused must show at once")
 	}
 	if tick() != before {
@@ -50,7 +51,7 @@ func TestPausedWorkPriorityCycles(t *testing.T) {
 	var seen []int
 	for i := 0; i < 3; i++ {
 		click(t, a, cell)
-		seen = append(seen, workPriority(a.renderer.snapshot()[0], 6))
+		seen = append(seen, windows.WorkPriority(a.renderer.snapshot()[0], 6))
 	}
 	for i := 1; i < len(seen); i++ {
 		if seen[i] == seen[i-1] {
@@ -64,11 +65,11 @@ func TestPausedDraftToggles(t *testing.T) {
 	a, _ := pausedColony(t)
 	id := a.renderer.snapshot()[0].ID
 	a.renderer.Select(id)
-	a.toggleDraft()
+	a.ord.ToggleDraft()
 	if !a.renderer.snapshot()[0].Drafted {
 		t.Fatal("drafting while paused must show at once")
 	}
-	a.toggleDraft()
+	a.ord.ToggleDraft()
 	if a.renderer.snapshot()[0].Drafted {
 		t.Fatal("a second press while paused must undraft")
 	}
@@ -79,11 +80,11 @@ func TestRunningStillQueuesForStep(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	a.renderer.speed = speedNormal
 	a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: 5, Y: 5, X2: 7, Y2: 6})
-	if countZones(a.renderer.world(), game.ZoneStockpile) != 0 {
+	if windows.CountZones(a.renderer.world(), game.ZoneStockpile) != 0 {
 		t.Fatal("while running, commands still wait for the next Step")
 	}
 	g.Step(1)
-	if countZones(a.renderer.world(), game.ZoneStockpile) != 1 {
+	if windows.CountZones(a.renderer.world(), game.ZoneStockpile) != 1 {
 		t.Fatal("the next Step applies it")
 	}
 }

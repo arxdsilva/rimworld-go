@@ -7,6 +7,11 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -40,26 +45,26 @@ func TestLettersStackFromTheReadModel(t *testing.T) {
 	a, _ := colonyApp(t, s)
 	l := a.hud()
 	rows := a.letterRows(l)
-	if len(rows) != 3 || l.LetterRows != 3 || a.letterCount() != 3 {
-		t.Fatalf("rows %d, layout rows %d, count %d; want 3", len(rows), l.LetterRows, a.letterCount())
+	if len(rows) != 3 || l.LetterRows != 3 || a.chrome.Right().LetterCount() != 3 {
+		t.Fatalf("rows %d, layout rows %d, count %d; want 3", len(rows), l.LetterRows, a.chrome.Right().LetterCount())
 	}
 	for i, r := range rows {
 		if r.letter.ID != uint64(11+i) {
 			t.Errorf("row %d is letter %d, want %d (oldest at the top)", i, r.letter.ID, 11+i)
 		}
-		if r.r.H != letterRowH || r.r.X != l.Letters.X || r.r.W != l.Letters.W {
+		if r.r.H != hudlayout.LetterRowH || r.r.X != l.Letters.X || r.r.W != l.Letters.W {
 			t.Errorf("row %d rect %+v in Letters %+v", i, r.r, l.Letters)
 		}
-		if i > 0 && r.r.Y-rows[i-1].r.Bottom() != hudGap {
-			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.r.Y-rows[i-1].r.Bottom(), i-1, hudGap)
+		if i > 0 && r.r.Y-rows[i-1].r.Bottom() != hudlayout.HudGap {
+			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.r.Y-rows[i-1].r.Bottom(), i-1, hudlayout.HudGap)
 		}
 	}
 	if got := rows[2].r.Bottom(); got != l.Letters.Bottom() {
 		t.Errorf("newest row ends at %v, Letters ends at %v: the newest sits just above the controls", got, l.Letters.Bottom())
 	}
 	// every row is a button with the id letter.<ID>
-	ids := map[string]button{}
-	for _, b := range a.rightColumnButtons(a.sw) {
+	ids := map[string]uikit.Button{}
+	for _, b := range a.chrome.Right().Buttons(a.sw) {
 		ids[b.ID] = b
 	}
 	for _, r := range rows {
@@ -69,12 +74,12 @@ func TestLettersStackFromTheReadModel(t *testing.T) {
 		}
 	}
 	// kind colours
-	for kind, want := range map[string]any{"threat": uiLetterThreat, "caution": uiLetterCaution, "good": uiLetterGood, "info": uiLetterInfo, "": uiLetterInfo, "bogus": uiLetterInfo} {
-		if got := letterColor(kind); got != want {
+	for kind, want := range map[string]any{"threat": uikit.LetterThreat, "caution": uikit.LetterCaution, "good": uikit.LetterGood, "info": uikit.LetterInfo, "": uikit.LetterInfo, "bogus": uikit.LetterInfo} {
+		if got := hud.LetterColor(kind); got != want {
 			t.Errorf("letterColor(%q) = %v, want %v", kind, got, want)
 		}
 	}
-	a.drawRightColumn(ebiten.NewImage(a.sw, a.sh), a.sw, a.sh) // no art, no panic: icons degrade
+	a.chrome.Right().Draw(ebiten.NewImage(a.sw, a.sh), a.sw, a.sh) // no art, no panic: icons degrade
 }
 
 func TestLettersPlusNOlder(t *testing.T) {
@@ -83,8 +88,8 @@ func TestLettersPlusNOlder(t *testing.T) {
 	a.sw, a.sh = 1920, 1080 // room for the full stack beside the alerts' reserved rows
 	l := a.hud()
 	rows := a.letterRows(l)
-	if l.LetterRows != maxLetters+1 || len(rows) != maxLetters+1 {
-		t.Fatalf("rows %d (layout %d), want the %d newest and a +N row", len(rows), l.LetterRows, maxLetters)
+	if l.LetterRows != hudlayout.MaxLetters+1 || len(rows) != hudlayout.MaxLetters+1 {
+		t.Fatalf("rows %d (layout %d), want the %d newest and a +N row", len(rows), l.LetterRows, hudlayout.MaxLetters)
 	}
 	if rows[0].older != 3 || letterRowLabel(rows[0]) != "+3 older" {
 		t.Fatalf("top row = %+v (%q), want \"+3 older\"", rows[0], letterRowLabel(rows[0]))
@@ -94,7 +99,7 @@ func TestLettersPlusNOlder(t *testing.T) {
 			t.Errorf("row %d = letter %d, want %d", i+1, r.letter.ID, want)
 		}
 	}
-	for _, b := range a.rightColumnButtons(a.sw) {
+	for _, b := range a.chrome.Right().Buttons(a.sw) {
 		if b.ID == "letter.0" || strings.Contains(b.Label, "older") {
 			t.Errorf("the +N older row is a button: %+v", b)
 		}
@@ -112,7 +117,7 @@ func TestLettersPlusNOlder(t *testing.T) {
 func TestLettersStackKeepsTheNewestWhenCramped(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, letterStub(nLetters(6)...))
-	l := computeHUDLayout(1280, 720, hudState{Letters: 6, GlobalH: 380, LearnH: 200})
+	l := hudlayout.Compute(1280, 720, hudlayout.Inputs{Letters: 6, GlobalH: 380, LearnH: 200})
 	if l.LetterRows == 0 || l.LetterRows >= 6 {
 		t.Fatalf("fixture: %d rows", l.LetterRows)
 	}
@@ -123,7 +128,7 @@ func TestLettersStackKeepsTheNewestWhenCramped(t *testing.T) {
 	if got := rows[len(rows)-1].r.Bottom(); got != l.Letters.Bottom() {
 		t.Errorf("newest ends at %v, want %v", got, l.Letters.Bottom())
 	}
-	if rows := a.letterRows(hudLayout{}); len(rows) != 0 {
+	if rows := a.letterRows(hudlayout.Layout{}); len(rows) != 0 {
 		t.Errorf("rows without a Letters rect: %+v", rows)
 	}
 }
@@ -133,7 +138,7 @@ func TestLetterClickOpensTheLetterWindow(t *testing.T) {
 	s := letterStub(letter(21, "info", "Quiet day"))
 	s.world.Letters[0].X, s.world.Letters[0].Y = 30, 31
 	a, f := colonyApp(t, s)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("a plain letter opened by itself")
 	}
 	pressButton(t, a, f, "letter.21")
@@ -151,7 +156,7 @@ func TestLetterClickOpensTheLetterWindow(t *testing.T) {
 	if !hasWidget(a, "modal."+top+".jump") {
 		t.Fatal("a letter with a place has a \"Jump to\" button")
 	}
-	if !a.letterRead(21) {
+	if !a.chrome.Right().LetterRead(21) {
 		t.Error("an opened letter is read")
 	}
 	// Jump to moves the camera onto the place and closes the window
@@ -161,10 +166,10 @@ func TestLetterClickOpensTheLetterWindow(t *testing.T) {
 		t.Error("Jump to did not move the camera")
 	}
 	x, y := a.renderer.TileAt(int((a.mapViewport().X0+a.mapViewport().X1)/2), int((a.mapViewport().Y0+a.mapViewport().Y1)/2))
-	if abs(x-30) > 1 || abs(y-31) > 1 {
+	if architect.Abs(x-30) > 1 || architect.Abs(y-31) > 1 {
 		t.Errorf("camera centred on %d,%d, want 30,31", x, y)
 	}
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Error("Jump to leaves the window open")
 	}
 	// the letter stays in the stack: only a dismissal removes it
@@ -206,19 +211,19 @@ func TestLetterRightClickEnqueuesDismissLetter(t *testing.T) {
 		t.Fatalf("rows %d", len(rows))
 	}
 	f.Cur.Mx, f.Cur.My = int(rows[0].r.X+rows[0].r.W/2), int(rows[0].r.Y+rows[0].r.H/2)
-	f.Click(t, a, mbRight, 0)
+	f.Click(t, a, inputframe.Right, 0)
 	got := cmdsOf(s, command.DismissLetter)
 	if len(got) != 1 || got[0].Target != 41 {
 		t.Fatalf("DismissLetter commands = %+v, want one for letter 41", got)
 	}
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Error("right-click opened the letter")
 	}
 	// the +N older row is not a letter
 	a2, f2 := colonyApp(t, letterStub(nLetters(10)...))
 	r2 := a2.letterRows(a2.hud())
 	f2.Cur.Mx, f2.Cur.My = int(r2[0].r.X+r2[0].r.W/2), int(r2[0].r.Y+r2[0].r.H/2)
-	f2.Click(t, a2, mbRight, 0)
+	f2.Click(t, a2, inputframe.Right, 0)
 	if got := cmdsOf(a2.renderer.game.(*stubSim), command.DismissLetter); len(got) != 0 {
 		t.Errorf("right-click on +N older dismissed %+v", got)
 	}
@@ -243,13 +248,13 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 		t.Fatalf("modals = %+v", a.uiSt().Modals)
 	}
 	press(t, a, f, "modal."+a.uiModalTop()+".continue")
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("Continue should close the letter")
 	}
 	for i := 0; i < 5; i++ {
 		f.Frame(t, a)
 	}
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("the intro must not open again")
 	}
 	if len(a.letterRows(a.hud())) != 1 {
@@ -260,7 +265,7 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 	s.world.Letters = append(s.world.Letters, letter(2, "caution", "Heat wave"), letter(3, "threat", "Raid"))
 	s.world.Letters[1].Tick, s.world.Letters[2].Tick = 9, 10
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatalf("a new letter opened by itself: %+v", a.uiSt().Modals)
 	}
 
@@ -269,7 +274,7 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 	a.dropSession()
 	a.startSession(s)
 	f.Frame(t, a)
-	if !a.uiModalOpen() {
+	if !a.uiSt().ModalOpen() {
 		t.Fatal("a new colony should show its own intro letter")
 	}
 }
@@ -277,10 +282,10 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 func TestOldIntroLetterStaysInTheStack(t *testing.T) {
 	t.Parallel()
 	s := introStub()
-	s.tick = 5 + letterFresh + 1 // a loaded save's saved letter
+	s.tick = 5 + hud.LetterFresh + 1 // a loaded save's saved letter
 	a, f := colonyApp(t, s)
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatalf("a stale intro opened: %+v", a.uiSt().Modals)
 	}
 	if len(a.letterRows(a.hud())) != 1 {
@@ -294,25 +299,25 @@ func TestNewLetterRowFlashesBriefly(t *testing.T) {
 	t.Parallel()
 	s := letterStub(letter(51, "info", "Old news"))
 	a, f := colonyApp(t, s)
-	if a.letterFlash(51) != 0 {
+	if a.chrome.Right().LetterFlash(51) != 0 {
 		t.Fatal("a letter that was there from the start flashes")
 	}
 	s.world.Letters = append(s.world.Letters, letter(52, "threat", "Fresh"))
 	f.Frame(t, a)
 	_ = a.letterRows(a.hud()) // the stack notices it
-	if k := a.letterFlash(52); k <= 0.9 {
+	if k := a.chrome.Right().LetterFlash(52); k <= 0.9 {
 		t.Fatalf("a new letter's flash = %v, want it near 1", k)
 	}
-	a.renderer.present += letterFlashFrames / 2
-	if k := a.letterFlash(52); k <= 0 || k >= 0.9 {
+	a.renderer.present += hud.LetterFlashFrames / 2
+	if k := a.chrome.Right().LetterFlash(52); k <= 0 || k >= 0.9 {
 		t.Fatalf("half way, flash = %v", k)
 	}
-	a.renderer.present += letterFlashFrames
-	if k := a.letterFlash(52); k != 0 {
+	a.renderer.present += hud.LetterFlashFrames
+	if k := a.chrome.Right().LetterFlash(52); k != 0 {
 		t.Fatalf("after the flash, %v", k)
 	}
-	if a.letterFlash(51) != 0 {
+	if a.chrome.Right().LetterFlash(51) != 0 {
 		t.Error("the old letter flashed")
 	}
-	a.drawRightColumn(ebiten.NewImage(a.sw, a.sh), a.sw, a.sh)
+	a.chrome.Right().Draw(ebiten.NewImage(a.sw, a.sh), a.sw, a.sh)
 }

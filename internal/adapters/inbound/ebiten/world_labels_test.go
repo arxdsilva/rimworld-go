@@ -2,7 +2,10 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -35,22 +38,22 @@ var wlScales = []wlScale{
 func wlSetScale(t *testing.T, sc wlScale) {
 	t.Helper()
 	old := gfx.CurrentScale()
-	gfx.SetScale(uiScaleState{Dev: sc.dev, UI: sc.ui, S: sc.dev * sc.ui})
+	gfx.SetScale(gfx.Scale{Dev: sc.dev, UI: sc.ui, S: sc.dev * sc.ui})
 	t.Cleanup(func() { gfx.SetScale(old) })
 }
 
 // wlTrace records every canvas draw (including text) for the test.
-func wlTrace(t *testing.T) *[]traceEvent {
+func wlTrace(t *testing.T) *[]gfx.TraceEvent {
 	t.Helper()
-	var got []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { got = append(got, e) })
+	var got []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { got = append(got, e) })
 	t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 	return &got
 }
 
 // wlOfKind filters events by kind.
-func wlOfKind(evs []traceEvent, kind string) []traceEvent {
-	var out []traceEvent
+func wlOfKind(evs []gfx.TraceEvent, kind string) []gfx.TraceEvent {
+	var out []gfx.TraceEvent
 	for _, e := range evs {
 		if e.Kind == kind {
 			out = append(out, e)
@@ -60,7 +63,7 @@ func wlOfKind(evs []traceEvent, kind string) []traceEvent {
 }
 
 // wlArt is a fake catalog holding just the icons these labels use.
-func wlArt() *artCatalog {
+func wlArt() *art.Catalog {
 	c := figureArt()
 	for _, k := range []string{"ui_icon/draft", "overlay/fight_lightning", "ui_icon/social_chitchat"} {
 		c.Sprites[k] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
@@ -96,7 +99,7 @@ func TestChatIconSitsOnPawnAtScale(t *testing.T) {
 				got := wlTrace(t)
 				p := game.PawnView{ID: 7, X: 6, Y: 5, Interaction: "chitchat", InteractTick: 90}
 				r := wlRenderer(sc, zoom, pan[0], pan[1], p)
-				tile := r.tilePx()
+				tile := r.cam.Tile()
 				r.drawChatBubbles(ebiten.NewImage(64, 64), tile)
 
 				imgs := wlOfKind(*got, "image")
@@ -109,8 +112,8 @@ func TestChatIconSitsOnPawnAtScale(t *testing.T) {
 				}
 				// the bubble sits up and right of the pawn, beside its head
 				// (body metadata); the icon fills it
-				_, hy := pawnHead(r.art)
-				bx, by := r.worldToScreenF(6+0.75, 5+hy-chatAboveHead)
+				_, hy := creature.PawnHead(r.art)
+				bx, by := r.worldToScreenF(6+0.75, 5+hy-worldpkg.ChatAboveHead)
 				wlNear(t, sc.name+" icon centre x", float64(icon.X+icon.W/2), float64(bx), 1)
 				wlNear(t, sc.name+" icon centre y", float64(icon.Y+icon.H/2), float64(by), 1)
 				wlNear(t, sc.name+" icon size", float64(icon.W), tile*0.42-4, 1)
@@ -127,7 +130,7 @@ func TestFightMarkerSitsOnPawnAtScale(t *testing.T) {
 				got := wlTrace(t)
 				p := game.PawnView{ID: 7, X: 6, Y: 5, SocialFight: true}
 				r := wlRenderer(sc, zoom, pan[0], pan[1], p)
-				tile := r.tilePx()
+				tile := r.cam.Tile()
 				r.drawChatBubbles(ebiten.NewImage(64, 64), tile)
 
 				imgs := wlOfKind(*got, "image")
@@ -138,7 +141,7 @@ func TestFightMarkerSitsOnPawnAtScale(t *testing.T) {
 				if icon.Via != "worldIcon" {
 					t.Errorf("%s: fight marker drawn via %q, want worldIcon", sc.name, icon.Via)
 				}
-				mx, my := r.worldToScreenF(6+0.5, 5-pawnMarkerLift(r.art))
+				mx, my := r.worldToScreenF(6+0.5, 5-worldpkg.PawnMarkerLift(r.art))
 				wlNear(t, sc.name+" marker centre x", float64(icon.X+icon.W/2), float64(mx), 1)
 				wlNear(t, sc.name+" marker centre y", float64(icon.Y+icon.H/2), float64(my), 1)
 				wlNear(t, sc.name+" marker size", float64(icon.W), tile*0.32, 1)
@@ -155,7 +158,7 @@ func TestDraftedIconSitsOnPawnAtScale(t *testing.T) {
 				got := wlTrace(t)
 				p := game.PawnView{ID: 3, X: 6, Y: 5, Drafted: true}
 				r := wlRenderer(sc, zoom, pan[0], pan[1], p)
-				tile := r.tilePx()
+				tile := r.cam.Tile()
 				r.drawPawnArt(ebiten.NewImage(64, 64), p, 6, 5, tile, 64, 64)
 
 				imgs := wlOfKind(*got, "image")
@@ -168,7 +171,7 @@ func TestDraftedIconSitsOnPawnAtScale(t *testing.T) {
 				}
 				// above the pawn's head (body metadata), right of centre
 				// (pose offsets are a few hundredths of a tile at rest)
-				ix, iy := r.worldToScreenF(6+0.62, 5-pawnMarkerLift(r.art))
+				ix, iy := r.worldToScreenF(6+0.62, 5-worldpkg.PawnMarkerLift(r.art))
 				wlNear(t, sc.name+" icon x", float64(icon.X), float64(ix), 0.1*tile+1)
 				wlNear(t, sc.name+" icon y", float64(icon.Y), float64(iy), 0.1*tile+1)
 				wlNear(t, sc.name+" icon size", float64(icon.W), tile*0.3, 1)
@@ -180,13 +183,13 @@ func TestDraftedIconSitsOnPawnAtScale(t *testing.T) {
 // TestWorldIconsAreScaleInvariant: a world-anchored icon covers the same
 // physical pixels at every UI scale (the UI scale never zooms the map).
 func TestWorldIconsAreScaleInvariant(t *testing.T) {
-	var ref traceEvent
+	var ref gfx.TraceEvent
 	for i, sc := range wlScales[:3] { // same device density, three UI scales
 		wlSetScale(t, sc)
 		got := wlTrace(t)
 		p := game.PawnView{ID: 7, X: 6, Y: 5, SocialFight: true}
 		r := wlRenderer(sc, 1, 40, 30, p)
-		r.drawChatBubbles(ebiten.NewImage(64, 64), r.tilePx())
+		r.drawChatBubbles(ebiten.NewImage(64, 64), r.cam.Tile())
 		imgs := wlOfKind(*got, "image")
 		if len(imgs) != 1 {
 			t.Fatalf("%s: %d images", sc.name, len(imgs))

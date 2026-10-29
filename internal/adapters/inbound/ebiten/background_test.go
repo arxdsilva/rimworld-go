@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/perf"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -55,7 +57,7 @@ func TestRunInBackgroundOptionRow(t *testing.T) {
 	if b.Tip != tip {
 		t.Fatalf("tip = %q", b.Tip)
 	}
-	a.applyOption("options.runinbackground")
+	a.opt.ApplyOption("options.runinbackground")
 	if !a.settings.Gameplay.RunInBackground || !store.s.Gameplay.RunInBackground {
 		t.Fatalf("toggle did not set and store the option: %+v", store.s.Gameplay)
 	}
@@ -66,7 +68,7 @@ func TestRunInBackgroundOptionRow(t *testing.T) {
 	if b2 := optionsApp(store); !b2.settings.Gameplay.RunInBackground {
 		t.Fatal("run in background lost after restart")
 	}
-	a.applyOption("options.runinbackground")
+	a.opt.ApplyOption("options.runinbackground")
 	if a.settings.Gameplay.RunInBackground || store.s.Gameplay.RunInBackground {
 		t.Fatal("second click should switch it off again")
 	}
@@ -90,7 +92,7 @@ func TestBackgroundOffPausesAndKeepsSpeed(t *testing.T) {
 	if s.steps != before {
 		t.Fatalf("ticks advanced while the window was in the background: %d -> %d", before, s.steps)
 	}
-	if got := a.hudTimeText(); !strings.Contains(got, bgPausedText) {
+	if got := a.chrome.Global().TimeText(); !strings.Contains(got, bgPausedText) {
 		t.Fatalf("top strip %q should say %q", got, bgPausedText)
 	}
 	if a.renderer.speed != speedFast {
@@ -101,7 +103,7 @@ func TestBackgroundOffPausesAndKeepsSpeed(t *testing.T) {
 	if s.steps != before+speedFast.ticksPerFrame() {
 		t.Fatalf("refocus should resume at Fast: steps %d -> %d", before, s.steps)
 	}
-	if got := a.hudTimeText(); strings.Contains(got, "background") {
+	if got := a.chrome.Global().TimeText(); strings.Contains(got, "background") {
 		t.Fatalf("top strip %q still says background after refocus", got)
 	}
 }
@@ -121,7 +123,7 @@ func TestBackgroundKeepsManualPause(t *testing.T) {
 	if a.renderer.speed != speedPaused || s.steps != 0 {
 		t.Fatalf("manual pause lost across a background trip: speed %v, steps %d", a.renderer.speed, s.steps)
 	}
-	if got := a.hudTimeText(); strings.Contains(got, "background") {
+	if got := a.chrome.Global().TimeText(); strings.Contains(got, "background") {
 		t.Fatalf("a manually paused colony shows %q after refocus", got)
 	}
 	a.renderer.togglePause() // the player resumes: ticks flow again
@@ -143,7 +145,7 @@ func TestBackgroundOnKeepsTicking(t *testing.T) {
 	if s.steps != 4 {
 		t.Fatalf("steps = %d after 4 background frames at Normal, want 4", s.steps)
 	}
-	if got := a.hudTimeText(); strings.Contains(got, "background") {
+	if got := a.chrome.Global().TimeText(); strings.Contains(got, "background") {
 		t.Fatalf("top strip %q shows a background pause with the option on", got)
 	}
 }
@@ -205,7 +207,7 @@ func TestBackgroundNeverPausesCapturesOrProbe(t *testing.T) {
 	t.Parallel()
 	for name, set := range map[string]func(*App){
 		"capture": func(a *App) { a.cfg.Capture = &Capture{} },
-		"probe":   func(a *App) { a.cfg.FPSProbe = &FPSProbe{} },
+		"probe":   func(a *App) { a.cfg.FPSProbe = &perf.FPSProbe{} },
 	} {
 		t.Run(name, func(t *testing.T) {
 			a, _, _, _ := bgColony(t)
@@ -261,7 +263,7 @@ func TestBackgroundDrawCap(t *testing.T) {
 // launched behind the terminal) is not "in the background".
 func TestEbitenInputBlurredNeedsFocusFirst(t *testing.T) {
 	t.Parallel()
-	var e ebitenInput
+	var e inputframe.EbitenSource
 	steps := []struct{ focused, blurred bool }{
 		{false, false}, // never focused yet
 		{true, false},

@@ -5,6 +5,9 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/application/game"
 )
 
@@ -18,13 +21,13 @@ func TestDevPanelsStackInTheColumn(t *testing.T) {
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
 	a.tools.State.Log, a.tools.State.Insp = true, true
-	a.tools.State.Fields = mapFieldsOverlay{Shown: true, Layers: []game.MapFieldLayer{{Name: "fertility", W: 2, H: 2, Classes: []uint8{0, 1, 0, 1},
+	a.tools.State.Fields = devtools.FieldsOverlay{Shown: true, Layers: []game.MapFieldLayer{{Name: "fertility", W: 2, H: 2, Classes: []uint8{0, 1, 0, 1},
 		Legend: []game.LegendEntry{{Label: "poor", RGBA: [4]uint8{1, 2, 3, 255}}, {Label: "rich", RGBA: [4]uint8{4, 5, 6, 255}}}}}}
 	a.updateOnce(t)
-	col := devColumn(a.hud())
-	st := a.devStack()
-	var drawn []rect
-	for name, r := range map[string]rect{"fields": st.Fields, "inspector": st.Insp, "log": st.Log} {
+	col := devtools.Column(a.hud())
+	st := a.tools.Stack()
+	var drawn []gfx.Rect
+	for name, r := range map[string]gfx.Rect{"fields": st.Fields, "inspector": st.Insp, "log": st.Log} {
 		if r.Empty() {
 			continue
 		}
@@ -45,7 +48,7 @@ func TestDevPanelsStackInTheColumn(t *testing.T) {
 		t.Errorf("stack order is legend, inspector, log: %+v", st)
 	}
 	screen := ebiten.NewImage(a.sw, a.sh)
-	a.drawDevPanels(screen, a.sw, a.sh) // paints the three
+	a.tools.Draw(screen, a.sw, a.sh) // paints the three
 }
 
 // The debug menu stays on the window: under the cursor but clear of the
@@ -57,9 +60,9 @@ func TestDevMenuStaysAboveTheTabStrip(t *testing.T) {
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
 	a.tools.State.Menu, a.tools.State.MX, a.tools.State.MY = true, a.sw-10, a.sh-5
-	r := a.devMenuRect()
+	r := a.tools.MenuRect()
 	l := a.hud()
-	if r.Y < hudMargin || r.Y+r.H > l.Tabs.Y {
+	if r.Y < hudlayout.HudMargin || r.Y+r.H > l.Tabs.Y {
 		t.Errorf("debug menu %+v runs past the tab strip at y=%v", r, l.Tabs.Y)
 	}
 	if r.X+r.W > float32(a.sw) {

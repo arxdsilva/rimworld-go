@@ -25,13 +25,13 @@ func TestBarPortraitsInTheirSlotsAtScale(t *testing.T) {
 			}
 		})
 		screen := ebiten.NewImage(int(1280*s), int(720*s))
-		a.drawColonistPortraits(screen, a.sh)
+		a.chrome.Bar().DrawPortraits(screen, a.sh)
 		gfx.SetCanvasTrace(nil)
 		if len(imgs) == 0 {
 			t.Fatalf("s=%v: no portrait image traced", s)
 		}
 		l := a.hud()
-		n := len(a.barPawns())
+		n := len(a.chrome.Bar().Pawns())
 		if len(l.BarSlots) != n {
 			t.Fatalf("s=%v: %d bar slots for %d colonists", s, len(l.BarSlots), n)
 		}
@@ -77,7 +77,7 @@ func TestInspectorPortraitInPanelAtScale(t *testing.T) {
 	})
 	t.Cleanup(func() { gfx.SetCanvasTrace(nil) })
 	screen := ebiten.NewImage(2560, 1440)
-	p, ok := a.selectedPawn()
+	p, ok := a.insp.SelectedPawn()
 	if !ok {
 		t.Fatal("no selected colonist")
 	}

@@ -2,7 +2,11 @@ package ebiten
 
 import (
 	"math"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/perf"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"strings"
 	"testing"
 
@@ -21,7 +25,7 @@ import (
 func withMapScale(t testing.TB, dev, ui float64) {
 	t.Helper()
 	old := gfx.CurrentScale()
-	gfx.SetScale(uiScaleState{Dev: dev, UI: ui, S: dev * ui})
+	gfx.SetScale(gfx.Scale{Dev: dev, UI: ui, S: dev * ui})
 	t.Cleanup(func() { gfx.SetScale(old) })
 }
 
@@ -30,16 +34,16 @@ func TestMapTileScalesWithDevOnly(t *testing.T) {
 	r.cam.Zoom = 1
 	withMapScale(t, 1, 1.5) // the UI scale alone
 	r.SyncDev()
-	if got := r.tilePx(); got != TileSize {
-		t.Fatalf("ui 1.5, dev 1: tile %v, want %v (the UI scale never zooms the map)", got, TileSize)
+	if got := r.cam.Tile(); got != camerapkg.TileSize {
+		t.Fatalf("ui 1.5, dev 1: tile %v, want %v (the UI scale never zooms the map)", got, camerapkg.TileSize)
 	}
 	withMapScale(t, 2, 1)
 	r.SyncDev()
-	if got := r.tilePx(); got != 2*TileSize {
-		t.Fatalf("dev 2: tile %v, want %v", got, 2*TileSize)
+	if got := r.cam.Tile(); got != 2*camerapkg.TileSize {
+		t.Fatalf("dev 2: tile %v, want %v", got, 2*camerapkg.TileSize)
 	}
 	// A bake's camera (lod.go withBake) has no density: px per tile as given.
-	if c := (camera{Zoom: 0.5}); c.Tile() != TileSize/2 {
+	if c := (camerapkg.Camera{Zoom: 0.5}); c.Tile() != camerapkg.TileSize/2 {
 		t.Fatalf("bake camera tile %v", c.Tile())
 	}
 }
@@ -48,7 +52,7 @@ func TestMapTileScalesWithDevOnly(t *testing.T) {
 // screen) keeps the same world point under every point-space position.
 func TestDevChangeKeepsTheView(t *testing.T) {
 	r := New(&stubSim{w: 40, h: 40})
-	r.cam = camera{Zoom: 1.3, OffsetX: 210, OffsetY: 95, Placed: true}
+	r.cam = camerapkg.Camera{Zoom: 1.3, OffsetX: 210, OffsetY: 95, Placed: true}
 	withMapScale(t, 1, 1)
 	r.SyncDev()
 	wx, wy := r.screenToWorld(300, 200)
@@ -63,7 +67,7 @@ func TestDevChangeKeepsTheView(t *testing.T) {
 // 1280x720-point window and the UI scale ui (percent, 0: Auto).
 func hidpiColony(t *testing.T, dev float64, ui int) (*App, *fakeInput) {
 	t.Helper()
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	s := &stubSim{w: 40, h: 40, pawns: []game.PawnView{{ID: 7, Name: "Ada", X: 21, Y: 19, Status: "alive"}}}
 	a := testApp(s)
 	a.devFn = func() float64 { return dev }
@@ -75,7 +79,7 @@ func hidpiColony(t *testing.T, dev float64, ui int) (*App, *fakeInput) {
 	a.LayoutF(1280, 720)
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
@@ -87,14 +91,14 @@ func hidpiColony(t *testing.T, dev float64, ui int) (*App, *fakeInput) {
 
 func TestHiDPIClickSelectsSameTile(t *testing.T) {
 	one, _ := hidpiColony(t, 1, 0)
-	if one.scale.S != 1 || one.renderer.tilePx() != TileSize {
-		t.Fatalf("dev 1: scale %+v tile %v", one.scale, one.renderer.tilePx())
+	if one.scale.S != 1 || one.renderer.cam.Tile() != camerapkg.TileSize {
+		t.Fatalf("dev 1: scale %+v tile %v", one.scale, one.renderer.cam.Tile())
 	}
 	sx1, sy1 := one.renderer.worldToScreenF(21.5, 19.5)
 
 	two, f := hidpiColony(t, 2, 0)
-	if two.scale.Dev != 2 || two.renderer.tilePx() != 2*TileSize {
-		t.Fatalf("dev 2: scale %+v tile %v, want %v", two.scale, two.renderer.tilePx(), 2*TileSize)
+	if two.scale.Dev != 2 || two.renderer.cam.Tile() != 2*camerapkg.TileSize {
+		t.Fatalf("dev 2: scale %+v tile %v, want %v", two.scale, two.renderer.cam.Tile(), 2*camerapkg.TileSize)
 	}
 	sx2, sy2 := two.renderer.worldToScreenF(21.5, 19.5)
 	if math.Abs(float64(sx2-2*sx1)) > 1 || math.Abs(float64(sy2-2*sy1)) > 1 {
@@ -110,7 +114,7 @@ func TestHiDPIClickSelectsSameTile(t *testing.T) {
 		t.Fatalf("dev 1 TileAt(%d,%d) = %d,%d", x/2, y/2, tx, ty)
 	}
 	f.Cur.Mx, f.Cur.My = x, y
-	f.Click(t, two, mbLeft, 0)
+	f.Click(t, two, inputframe.Left, 0)
 	if !two.renderer.HasSelect() || two.renderer.Selected() != 7 {
 		t.Fatalf("a physical click on the pawn at dev 2 did not select it (select %v %v)", two.renderer.HasSelect(), two.renderer.Selected())
 	}
@@ -121,7 +125,7 @@ func TestUIScaleLeavesMapTileSize(t *testing.T) {
 	if a.scale.S != 1.5 || a.scale.Dev != 1 {
 		t.Fatalf("scale %+v, want ui 1.5 at dev 1", a.scale)
 	}
-	if got := a.renderer.tilePx(); got != TileSize*a.renderer.cam.Zoom {
+	if got := a.renderer.cam.Tile(); got != camerapkg.TileSize*a.renderer.cam.Zoom {
 		t.Fatalf("tile %v at zoom %v: the UI scale zoomed the map", got, a.renderer.cam.Zoom)
 	}
 	// The map's viewport is the physical screen: the map fills all of it
@@ -150,13 +154,13 @@ func TestCameraClampCoversPhysicalViewport(t *testing.T) {
 	r := two.renderer
 	r.cam.Zoom = 0.01
 	r.ClampCamera(v2)
-	mw, mh := 40*r.tilePx(), 40*r.tilePx()
-	if long := math.Max(mw/v2.W(), mh/v2.H()); long < minCover-1e-9 {
+	mw, mh := 40*r.cam.Tile(), 40*r.cam.Tile()
+	if long := math.Max(mw/v2.W(), mh/v2.H()); long < camerapkg.MinCover-1e-9 {
 		t.Fatalf("zoomed out, the map is %vx%v in a %vx%v physical viewport", mw, mh, v2.W(), v2.H())
 	}
 	one.renderer.cam.Zoom = 0.01
 	one.renderer.ClampCamera(v1)
-	if w1 := 40 * one.renderer.tilePx(); math.Abs(mw-2*w1) > 1e-6 {
+	if w1 := 40 * one.renderer.cam.Tile(); math.Abs(mw-2*w1) > 1e-6 {
 		t.Fatalf("zoomed out, the map is %v physical px at dev 2, %v at dev 1", mw, w1)
 	}
 	// Pushed far past the bottom-right, the map's far edges stay within
@@ -164,11 +168,11 @@ func TestCameraClampCoversPhysicalViewport(t *testing.T) {
 	r.cam.Zoom = 1
 	r.cam.OffsetX, r.cam.OffsetY = 1e6, 1e6
 	r.ClampCamera(v2)
-	t2 := r.tilePx()
-	if right := 40*t2 - r.cam.OffsetX; right < v2.X1-edgeSlack*v2.W()-1e-6 {
+	t2 := r.cam.Tile()
+	if right := 40*t2 - r.cam.OffsetX; right < v2.X1-camerapkg.EdgeSlack*v2.W()-1e-6 {
 		t.Fatalf("map right edge %v, viewport right %v", right, v2.X1)
 	}
-	if bottom := 40*t2 - r.cam.OffsetY; bottom < v2.Y1-edgeSlack*v2.H()-1e-6 {
+	if bottom := 40*t2 - r.cam.OffsetY; bottom < v2.Y1-camerapkg.EdgeSlack*v2.H()-1e-6 {
 		t.Fatalf("map bottom edge %v, viewport bottom %v", bottom, v2.Y1)
 	}
 }
@@ -192,7 +196,7 @@ func TestZoomToCursorAnchorHiDPI(t *testing.T) {
 func TestMinimapClickAtUIScale(t *testing.T) {
 	withMapScale(t, 1, 1.5)
 	const sw, sh = 1280, 720 // logical
-	lv, pv := colonyViewport(sw, sh), colonyViewportPhysical(sw, sh, 1.5)
+	lv, pv := camerapkg.ColonyViewport(sw, sh), camerapkg.ColonyViewportPhysical(sw, sh, 1.5)
 	r := New(&stubSim{w: 200, h: 200, world: game.WorldView{TerrainW: 200, Terrain: make([]uint8, 200*200)}})
 	r.cam.Zoom = 1
 	r.ClampCamera(pv)
@@ -201,7 +205,7 @@ func TestMinimapClickAtUIScale(t *testing.T) {
 	if !r.minimapClick(int(cx), int(cy), lv, pv) {
 		t.Fatal("a logical click on the minimap not taken")
 	}
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	centreX := (r.cam.OffsetX + (pv.X0+pv.X1)/2) / tile
 	centreY := (r.cam.OffsetY + (pv.Y0+pv.Y1)/2) / tile
 	if math.Abs(centreX-50) > 1.5 || math.Abs(centreY-150) > 1.5 {
@@ -210,8 +214,8 @@ func TestMinimapClickAtUIScale(t *testing.T) {
 }
 
 func TestFPSReportNamesScale(t *testing.T) {
-	st := &fpsProbeState{}
-	if got := fpsReport(st, uiScaleState{Dev: 2, UI: 1.5, S: 3, World: 0.5}); !strings.Contains(got, "s 3") || !strings.Contains(got, "dev 2") ||
+	st := &perf.Probe{}
+	if got := perf.Report(st, gfx.Scale{Dev: 2, UI: 1.5, S: 3, World: 0.5}); !strings.Contains(got, "s 3") || !strings.Contains(got, "dev 2") ||
 		!strings.Contains(got, "world 0.5") {
 		t.Fatalf("report %q does not name the scale", got)
 	}

@@ -1,6 +1,11 @@
 package ebiten
 
 import (
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,12 +21,12 @@ func entityOf(id uint16) entity.EntityID { return entity.EntityID(id) }
 // PLAY-020 ZONEUI: the selected zone's command buttons (cmds_zone.go).
 
 // zoneCmdsOf selects zone id and returns its commands.
-func zoneCmdsOf(a *App, id uint16) []cmdButton {
-	a.selectCand(selCand{Kind: selZone, ID: entityOf(id)})
+func zoneCmdsOf(a *App, id uint16) []inspector.Button {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: entityOf(id)})
 	return a.zoneCommands(id)
 }
 
-func zoneCmdIDs(cs []cmdButton) string { return strings.Join(thingIDs(cs), " ") }
+func zoneCmdIDs(cs []inspector.Button) string { return strings.Join(thingIDs(cs), " ") }
 
 func lastZoneCmd(t *testing.T, s *zoneSim) command.Command {
 	t.Helper()
@@ -70,7 +75,7 @@ func TestZoneIconsFallBackToExistingOnesUntilTheNewOnesLand(t *testing.T) {
 		}
 	}
 	// With an art catalog that has only the old icons, each falls back.
-	art := &artCatalog{Sprites: map[string]*artSprite{}}
+	art := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{}}
 	for _, k := range []string{"zone_grow", "order_cancel", "plan_clear", "order_cut", "order_forbid"} {
 		art.Sprites["ui_icon/"+k] = fakeSprite([2]int{64, 64}, pt{}, nil)
 	}
@@ -140,8 +145,8 @@ func TestZonePlantCommandListsCropsAndEnqueuesSetZoneCrop(t *testing.T) {
 	for i, o := range a.ord.Float.Opts {
 		idx[strings.ToLower(strings.TrimSuffix(o.Label, " (current)"))] = i
 	}
-	if len(idx) != len(zoneSpecies()) {
-		t.Fatalf("%d crops listed, the architect's picker has %d", len(idx), len(zoneSpecies()))
+	if len(idx) != len(architectpkg.ZoneSpecies()) {
+		t.Fatalf("%d crops listed, the architect's picker has %d", len(idx), len(architectpkg.ZoneSpecies()))
 	}
 	if !strings.HasSuffix(a.ord.Float.Opts[idx["potato"]].Label, "(current)") {
 		t.Errorf("the zone's own crop is marked: %q", a.ord.Float.Opts[idx["potato"]].Label)
@@ -150,18 +155,18 @@ func TestZonePlantCommandListsCropsAndEnqueuesSetZoneCrop(t *testing.T) {
 		t.Errorf("corn is locked like the architect's: %+v", o)
 	}
 	// A locked crop only shows its reason.
-	a.chooseFloat("float." + strconv.Itoa(idx["corn"]))
+	a.ord.ChooseFloat("float." + strconv.Itoa(idx["corn"]))
 	if len(s.cmds) != 0 || a.hint != "Needs research: Agriculture" {
 		t.Fatalf("locked pick: cmds %v hint %q", s.cmds, a.hint)
 	}
 	// The zone's own crop sends nothing.
-	a.chooseFloat("float." + strconv.Itoa(idx["potato"]))
+	a.ord.ChooseFloat("float." + strconv.Itoa(idx["potato"]))
 	if len(s.cmds) != 0 {
 		t.Fatalf("picking the current crop sent %+v", s.cmds)
 	}
 	// Wheat goes out as SetZoneCrop with the species id.
 	thingPress(a, cm)
-	a.chooseFloat("float." + strconv.Itoa(idx["wheat"]))
+	a.ord.ChooseFloat("float." + strconv.Itoa(idx["wheat"]))
 	wheat, _ := game.ZoneSpeciesID("wheat")
 	got := lastZoneCmd(t, s)
 	if got.Kind != command.SetZoneCrop || got.Target != 4 || got.Build != wheat {
@@ -214,15 +219,15 @@ func TestZoneExpandAndShrinkButtonsArmTheTools(t *testing.T) {
 		t.Fatal("no tool is on yet")
 	}
 	thingPress(a, exp)
-	if !a.zoneToolOn(zoneToolExpand) || !thingCmd(t, a.zoneCommands(4), "cmd.zone.expand").On {
+	if !a.arch.Zones.On(architectpkg.ZoneToolExpand) || !thingCmd(t, a.zoneCommands(4), "cmd.zone.expand").On {
 		t.Fatal("Expand arms its tool and shows on")
 	}
 	thingPress(a, thingCmd(t, a.zoneCommands(4), "cmd.zone.shrink"))
-	if a.zoneToolOn(zoneToolExpand) || !a.zoneToolOn(zoneToolShrink) {
+	if a.arch.Zones.On(architectpkg.ZoneToolExpand) || !a.arch.Zones.On(architectpkg.ZoneToolShrink) {
 		t.Fatal("Shrink replaces Expand")
 	}
 	thingPress(a, thingCmd(t, a.zoneCommands(4), "cmd.zone.shrink"))
-	if a.zoneToolOn(zoneToolShrink) {
+	if a.arch.Zones.On(architectpkg.ZoneToolShrink) {
 		t.Fatal("pressing the armed tool again turns it off")
 	}
 	if len(s.cmds) != 0 {
@@ -329,18 +334,18 @@ func TestZonePaneAndGridAtUIScales(t *testing.T) {
 			a, f := colonyApp(t, s)
 			sw, sh := layoutScreen(t, a, sz[0], sz[1], ui)
 			for _, z := range zones {
-				name := zoneKindName(z) + " ui" + strconv.FormatFloat(ui, 'g', -1, 64) + " " + strconv.Itoa(sw) + "x" + strconv.Itoa(sh)
-				a.selectCand(selCand{Kind: selZone, ID: entityOf(z.ID)})
+				name := architectpkg.ZoneKindName(z) + " ui" + strconv.FormatFloat(ui, 'g', -1, 64) + " " + strconv.Itoa(sw) + "x" + strconv.Itoa(sh)
+				a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: entityOf(z.ID)})
 				f.Frame(t, a)
 				l := a.hud()
-				if l.Pane.Empty() || !a.paneShown() {
+				if l.Pane.Empty() || !a.insp.PaneShown() {
 					t.Fatalf("%s: no pane", name)
 				}
 				if bad := layoutOverlaps(l, sw, sh); len(bad) > 0 {
 					t.Fatalf("%s:\n\t%s", name, strings.Join(bad, "\n\t"))
 				}
 				assertChromeIsTheLayout(t, a)
-				cs := a.selectionCommands()
+				cs := a.insp.Commands().SelectionCommands()
 				if len(cs) == 0 || len(l.GridCells) != len(cs) {
 					t.Fatalf("%s: %d commands, %d cells", name, len(cs), len(l.GridCells))
 				}
@@ -351,7 +356,7 @@ func TestZonePaneAndGridAtUIScales(t *testing.T) {
 						t.Errorf("%s: %s has no hit target", name, cm.ID)
 						continue
 					}
-					if got := (rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); got != l.GridCells[i] {
+					if got := (gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); got != l.GridCells[i] {
 						t.Errorf("%s: %s is at %+v, its cell is %+v", name, cm.ID, got, l.GridCells[i])
 					}
 					if cell := l.GridCells[i]; cell.X < l.Pane.Right() || cell.Right() > l.Global.X {

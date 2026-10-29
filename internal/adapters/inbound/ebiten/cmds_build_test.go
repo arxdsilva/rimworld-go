@@ -1,6 +1,14 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,16 +25,16 @@ import (
 // tabs (cmds_build.go, building_inspector.go, pen_ui.go).
 
 // bldCmd is the command button with id.
-func bldCmd(cs []cmdButton, id string) (cmdButton, bool) {
+func bldCmd(cs []inspector.Button, id string) (inspector.Button, bool) {
 	for _, c := range cs {
 		if c.ID == id {
 			return c, true
 		}
 	}
-	return cmdButton{}, false
+	return inspector.Button{}, false
 }
 
-func bldCmdIDs(cs []cmdButton) []string {
+func bldCmdIDs(cs []inspector.Button) []string {
 	var out []string
 	for _, c := range cs {
 		out = append(out, c.ID)
@@ -34,22 +42,22 @@ func bldCmdIDs(cs []cmdButton) []string {
 	return out
 }
 
-func bldTab(p paneSpec, id string) (paneTab, bool) {
+func bldTab(p inspector.Spec, id string) (inspector.Tab, bool) {
 	for _, t := range p.Tabs {
 		if t.ID == id {
 			return t, true
 		}
 	}
-	return paneTab{}, false
+	return inspector.Tab{}, false
 }
 
-func bldLines(p paneSpec) string { return strings.Join(p.Lines, "\n") }
+func bldLines(p inspector.Spec) string { return strings.Join(p.Lines, "\n") }
 
 // bldApp is a paused colony over s with building id selected.
 func bldApp(t *testing.T, s *stubSim, id entity.EntityID) (*App, *fakeInput) {
 	t.Helper()
 	a, f := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selBuilding, ID: id})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Building, ID: id})
 	if !a.sel.HasBuilding {
 		t.Fatalf("building %d is not selectable", id)
 	}
@@ -66,7 +74,7 @@ func TestBuildingPaneHeaderHealthAndClose(t *testing.T) {
 	t.Parallel()
 	b := game.BuildingView{ID: 9, Kind: "wall", Stuff: "stone", X: 4, Y: 5, W: 1, H: 1, HPPct: 64}
 	a, _ := bldApp(t, bldStub(b), 9)
-	p := a.buildingPane(9)
+	p := a.insp.Building().BuildingPane(9)
 	if p.Title != "Stone wall" || !strings.Contains(p.Subtitle, "(4, 5)") {
 		t.Fatalf("header = %q / %q", p.Title, p.Subtitle)
 	}
@@ -80,13 +88,13 @@ func TestBuildingPaneHeaderHealthAndClose(t *testing.T) {
 		t.Fatalf("a wall has no tabs: %+v", p.Tabs)
 	}
 	// an unknown building has no pane (the legacy panel stays gone)
-	if a.buildingPane(404).Title != "" {
+	if a.insp.Building().BuildingPane(404).Title != "" {
 		t.Fatal("a missing building must not produce a pane")
 	}
 	// no health reading yet: no bar
 	b.HPPct = 0
 	a2, _ := bldApp(t, bldStub(b), 9)
-	if bars := a2.buildingPane(9).Bars; len(bars) != 0 {
+	if bars := a2.insp.Building().BuildingPane(9).Bars; len(bars) != 0 {
 		t.Fatalf("no reading, no bar: %+v", bars)
 	}
 }
@@ -111,9 +119,9 @@ func TestBuildingPaneStatusLines(t *testing.T) {
 		{"drying", game.BuildingView{Kind: "drying rack", DryQty: 3, DryKind: "meat", DryPct: 50}, []string{"Drying 3 meat, 50%"}, ""},
 		{"grave", game.BuildingView{Kind: "grave", Occupant: "Ada", Epitaph: "Loved."}, []string{"Here lies Ada", "Loved."}, ""},
 		{"empty grave", game.BuildingView{Kind: "grave"}, []string{"Empty grave"}, ""},
-		{"vent", game.BuildingView{Kind: steamVentKind}, []string{ventLine(game.BuildingView{Kind: steamVentKind})}, ""},
+		{"vent", game.BuildingView{Kind: env.SteamVentKind}, []string{env.VentLine(game.BuildingView{Kind: env.SteamVentKind})}, ""},
 		{"carpet", game.BuildingView{Kind: "carpet", Stuff: "straw carpet", Catch: 35}, []string{"Catches 35% of tracked dirt"}, ""},
-		{"bridge", game.BuildingView{Kind: bridgeKind}, []string{"Holds light things: no stone walls or floors"}, ""},
+		{"bridge", game.BuildingView{Kind: overlay.BridgeKind}, []string{"Holds light things: no stone walls or floors"}, ""},
 		{"swap", game.BuildingView{Kind: "wall", SwapTo: "steel", SwapPct: 40}, []string{"Changing to steel (40%)"}, ""},
 		{"moving", game.BuildingView{Kind: "butcher table", MovingTo: &moving}, []string{"Moving to (7, 8)"}, ""},
 		{"room", game.BuildingView{Kind: "wall"}, []string{"Outdoors"}, ""},
@@ -123,7 +131,7 @@ func TestBuildingPaneStatusLines(t *testing.T) {
 		s := bldStub(c.b)
 		s.world.TerrainW, s.world.RoomGrid = room.TerrainW, room.RoomGrid
 		a, _ := bldApp(t, s, 5)
-		p := a.buildingPane(5)
+		p := a.insp.Building().BuildingPane(5)
 		for _, w := range c.want {
 			if !strings.Contains(bldLines(p), w) {
 				t.Errorf("%s: lines %q lack %q", c.name, p.Lines, w)
@@ -146,12 +154,12 @@ func TestBedPaneOwnersAndCommands(t *testing.T) {
 	s := bedStub()
 	a, _ := bldApp(t, s.stubSim, 40)
 	a.renderer.game = s
-	p := a.buildingPane(40)
+	p := a.insp.Building().BuildingPane(40)
 	if !strings.Contains(bldLines(p), "Owner 1: Ada") || !strings.Contains(bldLines(p), "Owner 2: nobody") {
 		t.Fatalf("owner lines = %q", p.Lines)
 	}
-	cs := a.buildingCommands(40)
-	for _, id := range []string{bedOwnerID(0), bedOwnerID(1), "bldg.bed.prisoners"} {
+	cs := a.insp.Building().BuildingCommands(40)
+	for _, id := range []string{inspector.BedOwnerID(0), inspector.BedOwnerID(1), "bldg.bed.prisoners"} {
 		c, ok := bldCmd(cs, id)
 		if !ok {
 			t.Fatalf("no %s command in %v", id, bldCmdIDs(cs))
@@ -165,38 +173,38 @@ func TestBedPaneOwnersAndCommands(t *testing.T) {
 		t.Fatalf("prisoner toggle %+v", pr)
 	}
 	s.prison[40] = true
-	if pr, _ = bldCmd(a.buildingCommands(40), "bldg.bed.prisoners"); !pr.On {
+	if pr, _ = bldCmd(a.insp.Building().BuildingCommands(40), "bldg.bed.prisoners"); !pr.On {
 		t.Fatal("the toggle does not read the mark back")
 	}
-	if !strings.Contains(bldLines(a.buildingPane(40)), "For prisoners") {
-		t.Fatalf("a prisoner bed says so: %q", a.buildingPane(40).Lines)
+	if !strings.Contains(bldLines(a.insp.Building().BuildingPane(40)), "For prisoners") {
+		t.Fatalf("a prisoner bed says so: %q", a.insp.Building().BuildingPane(40).Lines)
 	}
 	// without the read model the toggle is disabled and says why
 	a.renderer.game = s.stubSim
-	if pr, _ = bldCmd(a.buildingCommands(40), "bldg.bed.prisoners"); !pr.Disabled || pr.Reason == "" {
+	if pr, _ = bldCmd(a.insp.Building().BuildingCommands(40), "bldg.bed.prisoners"); !pr.Disabled || pr.Reason == "" {
 		t.Fatalf("toggle without the read model: %+v", pr)
 	}
 	// a single bed has one owner command
 	one := bldStub(game.BuildingView{ID: 41, Kind: "bed", X: 2, Y: 2, W: 1, H: 2})
 	a1, _ := bldApp(t, one, 41)
-	c1 := a1.buildingCommands(41)
-	if _, ok := bldCmd(c1, bedOwnerID(0)); !ok {
+	c1 := a1.insp.Building().BuildingCommands(41)
+	if _, ok := bldCmd(c1, inspector.BedOwnerID(0)); !ok {
 		t.Fatalf("single bed: %v", bldCmdIDs(c1))
 	}
-	if _, ok := bldCmd(c1, bedOwnerID(1)); ok {
+	if _, ok := bldCmd(c1, inspector.BedOwnerID(1)); ok {
 		t.Fatal("a single bed has no second owner")
 	}
-	if !strings.Contains(bldLines(a1.buildingPane(41)), "Owner: nobody") {
-		t.Fatalf("single bed lines: %q", a1.buildingPane(41).Lines)
+	if !strings.Contains(bldLines(a1.insp.Building().BuildingPane(41)), "Owner: nobody") {
+		t.Fatalf("single bed lines: %q", a1.insp.Building().BuildingPane(41).Lines)
 	}
 }
 
 func TestTroughPaneAndFilterOptions(t *testing.T) {
 	t.Parallel()
-	b := game.BuildingView{ID: 77, Kind: troughKind, X: 4, Y: 4, W: 1, H: 2, TroughFill: 12, TroughCap: 60, TroughFilter: "plants"}
+	b := game.BuildingView{ID: 77, Kind: inspector.TroughKind, X: 4, Y: 4, W: 1, H: 2, TroughFill: 12, TroughCap: 60, TroughFilter: "plants"}
 	a, _ := bldApp(t, bldStub(b), 77)
-	p := a.buildingPane(77)
-	var feed *paneBar
+	p := a.insp.Building().BuildingPane(77)
+	var feed *inspector.Bar
 	for i := range p.Bars {
 		if p.Bars[i].Label == "Feed" {
 			feed = &p.Bars[i]
@@ -208,7 +216,7 @@ func TestTroughPaneAndFilterOptions(t *testing.T) {
 	if !strings.Contains(bldLines(p), "Accepts: plants") || !strings.Contains(bldLines(p), "Pen animals (0)") {
 		t.Fatalf("lines = %q", p.Lines)
 	}
-	c, ok := bldCmd(a.buildingCommands(77), "cmd.bldg.trough")
+	c, ok := bldCmd(a.insp.Building().BuildingCommands(77), "cmd.bldg.trough")
 	if !ok || c.Options == nil {
 		t.Fatalf("trough filter command = %+v", c)
 	}
@@ -235,14 +243,14 @@ func TestTroughPaneAndFilterOptions(t *testing.T) {
 func TestTroughPaneListsThePenHerd(t *testing.T) {
 	t.Parallel()
 	cell := func(x, y int) uint64 { return 1 << (y*10 + x) }
-	s := bldStub(game.BuildingView{ID: 77, Kind: troughKind, X: 2, Y: 2, W: 1, H: 1, TroughFilter: "any"})
+	s := bldStub(game.BuildingView{ID: 77, Kind: inspector.TroughKind, X: 2, Y: 2, W: 1, H: 1, TroughFilter: "any"})
 	s.world.TerrainW = 10
 	s.world.Pens = []game.PenView{{Enclosed: true, Bits: []uint64{cell(1, 1) | cell(2, 1)}}}
-	for i := 0; i < maxTroughAnimals+2; i++ {
+	for i := 0; i < inspector.MaxTroughAnimals+2; i++ {
 		s.world.Animals = append(s.world.Animals, game.AnimalView{ID: entity.EntityID(100 + i), Name: "Moo", Label: "cow", Tame: true, X: 1, Y: 1})
 	}
 	a, _ := bldApp(t, s, 77)
-	got := bldLines(a.buildingPane(77))
+	got := bldLines(a.insp.Building().BuildingPane(77))
 	if !strings.Contains(got, "Pen animals (8)") || !strings.Contains(got, "... and 2 more") || !strings.Contains(got, "Moo (") {
 		t.Fatalf("lines = %q", got)
 	}
@@ -251,7 +259,7 @@ func TestTroughPaneListsThePenHerd(t *testing.T) {
 func TestBuildingCommandsGeneric(t *testing.T) {
 	t.Parallel()
 	a, _ := bldApp(t, bldStub(game.BuildingView{ID: 9, Kind: "wall", Stuff: "stone", X: 4, Y: 5, W: 1, H: 1}), 9)
-	cs := a.buildingCommands(9)
+	cs := a.insp.Building().BuildingCommands(9)
 	if got := bldCmdIDs(cs); strings.Join(got, ",") != "bldg.move,bldg.copy,bldg.deconstruct" {
 		t.Fatalf("a wall's commands = %v", got)
 	}
@@ -277,15 +285,15 @@ func TestBuildingCommandsGeneric(t *testing.T) {
 	}
 	// a building already marked has no Deconstruct
 	a2, _ := bldApp(t, bldStub(game.BuildingView{ID: 9, Kind: "wall", Deconstruct: true, W: 1, H: 1}), 9)
-	if _, ok := bldCmd(a2.buildingCommands(9), "bldg.deconstruct"); ok {
+	if _, ok := bldCmd(a2.insp.Building().BuildingCommands(9), "bldg.deconstruct"); ok {
 		t.Fatal("a marked building offers no second Deconstruct")
 	}
 	// a steam vent is natural: nothing to do
-	a3, _ := bldApp(t, bldStub(game.BuildingView{ID: 9, Kind: steamVentKind, W: 1, H: 1}), 9)
-	if cs := a3.buildingCommands(9); len(cs) != 0 {
+	a3, _ := bldApp(t, bldStub(game.BuildingView{ID: 9, Kind: env.SteamVentKind, W: 1, H: 1}), 9)
+	if cs := a3.insp.Building().BuildingCommands(9); len(cs) != 0 {
 		t.Fatalf("a steam vent has commands: %v", bldCmdIDs(cs))
 	}
-	if a3.buildingCommands(404) != nil {
+	if a3.insp.Building().BuildingCommands(404) != nil {
 		t.Fatal("a missing building has no commands")
 	}
 }
@@ -296,7 +304,7 @@ func TestBuildingCommandsCancelMoveAndLockedCopy(t *testing.T) {
 	s := bldStub(game.BuildingView{ID: 9, Kind: "butcher table", X: 2, Y: 2, W: 2, H: 1, MovingTo: &at})
 	s.world.Locked = map[string]string{"build:butcher table": "Smithing"}
 	a, _ := bldApp(t, s, 9)
-	cs := a.buildingCommands(9)
+	cs := a.insp.Building().BuildingCommands(9)
 	if got := strings.Join(bldCmdIDs(cs), ","); got != "bldg.move,bldg.copy,bldg.cancelmove,bldg.deconstruct" {
 		t.Fatalf("commands = %s", got)
 	}
@@ -314,7 +322,7 @@ func TestBuildingCommandsCancelMoveAndLockedCopy(t *testing.T) {
 func TestPenMarkerOffersOnlyDeconstruct(t *testing.T) {
 	t.Parallel()
 	a := penApp(t, penSim())
-	if got := strings.Join(bldCmdIDs(a.buildingCommands(70)), ","); got != "bldg.deconstruct" {
+	if got := strings.Join(bldCmdIDs(a.insp.Building().BuildingCommands(70)), ","); got != "bldg.deconstruct" {
 		t.Fatalf("pen marker commands = %s", got)
 	}
 }
@@ -322,7 +330,7 @@ func TestPenMarkerOffersOnlyDeconstruct(t *testing.T) {
 func TestPenMarkerPaneStatusAndTab(t *testing.T) {
 	t.Parallel()
 	a := penApp(t, penSim())
-	p := a.buildingPane(70)
+	p := a.insp.Building().BuildingPane(70)
 	if p.Title != "Pen marker" || p.Close != "bldg.close" {
 		t.Fatalf("header = %q close %q", p.Title, p.Close)
 	}
@@ -334,7 +342,7 @@ func TestPenMarkerPaneStatusAndTab(t *testing.T) {
 		}
 	}
 	tab, ok := bldTab(p, "inspector.pen")
-	if !ok || tab.Label != "Pen" || tab.Declare == nil || tab.WantH <= 0 || tab.WantW < expandMinW {
+	if !ok || tab.Label != "Pen" || tab.Declare == nil || tab.WantH <= 0 || tab.WantW < hudlayout.ExpandMinW {
 		t.Fatalf("pen tab = %+v ok=%v", tab, ok)
 	}
 	if _, ok := bldTab(p, "inspector.bills"); ok {
@@ -344,8 +352,8 @@ func TestPenMarkerPaneStatusAndTab(t *testing.T) {
 	s := penSim()
 	s.world.Pens[0].Enclosed, s.world.Pens[0].Bits = false, nil
 	open := penApp(t, s)
-	if !strings.Contains(bldLines(open.buildingPane(70)), "Not enclosed") {
-		t.Fatalf("an open pen warns: %q", open.buildingPane(70).Lines)
+	if !strings.Contains(bldLines(open.insp.Building().BuildingPane(70)), "Not enclosed") {
+		t.Fatalf("an open pen warns: %q", open.insp.Building().BuildingPane(70).Lines)
 	}
 }
 
@@ -354,41 +362,41 @@ func TestBenchPaneHasBillsTab(t *testing.T) {
 	kind, _ := benchWithMostRecipes()
 	b := game.BuildingView{ID: 77, Kind: kind, X: 8, Y: 8, W: 2, H: 1, Bench: true, Bills: []game.BillView{{Label: "a"}, {Label: "b"}}}
 	a, _ := bldApp(t, bldStub(b), 77)
-	p := a.buildingPane(77)
+	p := a.insp.Building().BuildingPane(77)
 	tab, ok := bldTab(p, "inspector.bills")
 	if !ok || tab.Label != "Bills" || tab.Declare == nil || tab.Draw != nil {
 		t.Fatalf("bills tab = %+v ok=%v", tab, ok)
 	}
-	if tab.WantW < expandMinW || tab.WantW > expandMaxW || tab.WantH <= 0 {
+	if tab.WantW < hudlayout.ExpandMinW || tab.WantW > hudlayout.ExpandMaxW || tab.WantH <= 0 {
 		t.Fatalf("bills tab wants %vx%v", tab.WantW, tab.WantH)
 	}
 	// more bills ask for a taller panel
 	b.Bills = append(b.Bills, game.BillView{Label: "c"}, game.BillView{Label: "d"})
 	a2, _ := bldApp(t, bldStub(b), 77)
-	if t2, _ := bldTab(a2.buildingPane(77), "inspector.bills"); t2.WantH <= tab.WantH {
+	if t2, _ := bldTab(a2.insp.Building().BuildingPane(77), "inspector.bills"); t2.WantH <= tab.WantH {
 		t.Fatalf("4 bills want %v, 2 want %v", t2.WantH, tab.WantH)
 	}
 	// a plain building has no bills tab
 	a3, _ := bldApp(t, bldStub(game.BuildingView{ID: 3, Kind: "wall", W: 1, H: 1}), 3)
-	if len(a3.buildingPane(3).Tabs) != 0 {
+	if len(a3.insp.Building().BuildingPane(3).Tabs) != 0 {
 		t.Fatal("a wall has no tabs")
 	}
 }
 
 func TestCasketCommandInPane(t *testing.T) {
 	t.Parallel()
-	b := game.BuildingView{ID: 5, Kind: casketKind, X: 2, Y: 2, W: 1, H: 2, Sealed: true, OpenReason: "Nobody can reach it."}
+	b := game.BuildingView{ID: 5, Kind: overlay.CasketKind, X: 2, Y: 2, W: 1, H: 2, Sealed: true, OpenReason: "Nobody can reach it."}
 	a, _ := bldApp(t, bldStub(b), 5)
-	if got := a.buildingPane(5).Title; got != "Sleeper casket (sealed)" {
+	if got := a.insp.Building().BuildingPane(5).Title; got != "Sleeper casket (sealed)" {
 		t.Fatalf("title = %q", got)
 	}
-	c, ok := bldCmd(a.buildingCommands(5), casketBtnID)
+	c, ok := bldCmd(a.insp.Building().BuildingCommands(5), inspector.CasketBtnID)
 	if !ok || !c.Disabled || c.Reason != "Nobody can reach it." || c.Icon != "open_casket" {
 		t.Fatalf("casket command = %+v ok=%v", c, ok)
 	}
 	b.OpenReason = ""
 	a2, _ := bldApp(t, bldStub(b), 5)
-	if c, _ = bldCmd(a2.buildingCommands(5), casketBtnID); c.Disabled {
+	if c, _ = bldCmd(a2.insp.Building().BuildingCommands(5), inspector.CasketBtnID); c.Disabled {
 		t.Fatalf("an accepted casket: %+v", c)
 	}
 }
@@ -398,7 +406,7 @@ func TestCasketCommandInPane(t *testing.T) {
 func TestFramePaneLinesAndBars(t *testing.T) {
 	t.Parallel()
 	a, _ := frameApp(t, wallFrame())
-	p := a.framePane(7)
+	p := a.insp.Thing().FramePane(7)
 	if p.Title != "Wall (frame)" || p.Close != "frame.close" {
 		t.Fatalf("header = %q close %q", p.Title, p.Close)
 	}
@@ -422,7 +430,7 @@ func TestFramePaneLinesAndBars(t *testing.T) {
 	if len(p.Tabs) != 0 {
 		t.Fatalf("a blueprint has no tabs: %+v", p.Tabs)
 	}
-	if a.framePane(404).Title != "" {
+	if a.insp.Thing().FramePane(404).Title != "" {
 		t.Fatal("a missing frame must not produce a pane")
 	}
 }
@@ -431,7 +439,7 @@ func TestFramePaneReinstallHasNoMaterials(t *testing.T) {
 	t.Parallel()
 	mv := game.FrameView{ID: 8, Kind: "workbench", Moving: true, MovingFrom: 5, X: 2, Y: 2, W: 2, H: 1, WorkTotal: 30, WorkLeft: 30}
 	a, _ := frameApp(t, mv)
-	p := a.framePane(8)
+	p := a.insp.Thing().FramePane(8)
 	if !strings.Contains(bldLines(p), "Moving workbench here: needs no materials") {
 		t.Fatalf("lines = %q", p.Lines)
 	}
@@ -445,7 +453,7 @@ func TestFramePaneReinstallHasNoMaterials(t *testing.T) {
 func TestFrameCommandsCancelBlueprint(t *testing.T) {
 	t.Parallel()
 	a, s := frameApp(t, wallFrame())
-	cs := a.frameCommands(7)
+	cs := a.insp.Thing().FrameCommands(7)
 	if len(cs) != 1 {
 		t.Fatalf("commands = %v", bldCmdIDs(cs))
 	}
@@ -460,7 +468,7 @@ func TestFrameCommandsCancelBlueprint(t *testing.T) {
 	if got := lastCmd(t, s); got.Kind != command.CancelFrame || got.Target != 7 {
 		t.Fatalf("cmd = %+v", got)
 	}
-	if a.frameCommands(404) != nil {
+	if a.insp.Thing().FrameCommands(404) != nil {
 		t.Fatal("a missing frame has no commands")
 	}
 }
@@ -484,22 +492,22 @@ func TestLegacyBuildingAndFramePanelsDrawNothing(t *testing.T) {
 
 // billsTabApp is a paused colony with a bench (id 77) holding bills, and
 // the bills tab declared into panel (the pane's expanded rectangle).
-func billsTabApp(t *testing.T, bills []game.BillView) (*App, *stubSim, *fakeInput, rect) {
+func billsTabApp(t *testing.T, bills []game.BillView) (*App, *stubSim, *fakeInput, gfx.Rect) {
 	t.Helper()
 	kind, _ := benchWithMostRecipes()
 	s := bldStub(game.BuildingView{ID: 77, Kind: kind, X: 8, Y: 8, W: 2, H: 1, Bench: true, Bills: bills})
 	a, f := bldApp(t, s, 77)
-	panel := rect{X: 0, Y: 180, W: 520, H: 300}
-	setHook(a.uiSt(), func(a *App) { a.billsTabUI(77, panel) })
+	panel := gfx.Rect{X: 0, Y: 180, W: 520, H: 300}
+	setHook(a.uiSt(), func(a *App) { a.insp.Building().BillsTabUI(77, panel) })
 	f.Frame(t, a)
 	return a, s, f, panel
 }
 
 func threeBills() []game.BillView {
 	return []game.BillView{
-		{Label: "Cook meal", ModeID: billModeDo, Target: 5, Done: 2},
-		{Label: "Make bandage", ModeID: billModeForever, Target: 3, Status: "no cloth"},
-		{Label: "Make pemmican", ModeID: billModeUntil, Target: 10, Suspended: true},
+		{Label: "Cook meal", ModeID: inspector.BillModeDo, Target: 5, Done: 2},
+		{Label: "Make bandage", ModeID: inspector.BillModeForever, Target: 3, Status: "no cloth"},
+		{Label: "Make pemmican", ModeID: inspector.BillModeUntil, Target: 10, Suspended: true},
 	}
 }
 
@@ -512,7 +520,7 @@ func TestBillsTabDeclaresEveryRowControlInsideThePanel(t *testing.T) {
 			ids = append(ids, "bill."+k+"."+strconv.Itoa(i))
 		}
 	}
-	ids = append(ids, billPickBtn)
+	ids = append(ids, inspector.BillPickBtn)
 	for _, id := range ids {
 		w, ok := a.uiSt().Find(id)
 		if !ok {
@@ -548,7 +556,7 @@ func TestBillsTabButtonsWorkByID(t *testing.T) {
 
 	press(t, a, f, "bill.plus.0") // 5 -> 6
 	c := lastCmd(t, s)
-	if c.Kind != command.SetBill || c.Index != 0 || c.Count != 6 || c.Mode != billModeDo || c.X != 8 || c.Y != 8 {
+	if c.Kind != command.SetBill || c.Index != 0 || c.Count != 6 || c.Mode != inspector.BillModeDo || c.X != 8 || c.Y != 8 {
 		t.Fatalf("plus: %+v", c)
 	}
 	press(t, a, f, "bill.minus.0") // 5 -> 4
@@ -556,7 +564,7 @@ func TestBillsTabButtonsWorkByID(t *testing.T) {
 		t.Fatalf("minus: %+v", c)
 	}
 	press(t, a, f, "bill.mode.1") // forever -> until
-	if c = lastCmd(t, s); c.Kind != command.SetBill || c.Index != 1 || c.Mode != billModeUntil {
+	if c = lastCmd(t, s); c.Kind != command.SetBill || c.Index != 1 || c.Mode != inspector.BillModeUntil {
 		t.Fatalf("mode: %+v", c)
 	}
 	press(t, a, f, "bill.pause.2") // suspended -> resumed
@@ -576,16 +584,16 @@ func TestBillsTabButtonsWorkByID(t *testing.T) {
 func TestBillsTabAddBillOpensPickerAndAdds(t *testing.T) {
 	t.Parallel()
 	a, s, f, _ := billsTabApp(t, nil)
-	press(t, a, f, billPickBtn)
+	press(t, a, f, inspector.BillPickBtn)
 	f.Frame(t, a)
-	if a.uiModalTop() != billPickID {
+	if a.uiModalTop() != inspector.BillPickID {
 		t.Fatalf("top modal %q, want the recipe picker", a.uiModalTop())
 	}
-	if !hasWidget(a, optID(billPickList, 0)) {
+	if !hasWidget(a, uikit.OptID(inspector.BillPickList, 0)) {
 		t.Fatal("recipes are listed")
 	}
-	press(t, a, f, optID(billPickList, 0))
-	press(t, a, f, "modal."+billPickID+".bill.picker.ok")
+	press(t, a, f, uikit.OptID(inspector.BillPickList, 0))
+	press(t, a, f, "modal."+inspector.BillPickID+".bill.picker.ok")
 	if len(cmdsOf(s, command.AddBill)) != 1 {
 		t.Fatalf("AddBill not sent: %+v", s.cmds)
 	}
@@ -601,7 +609,7 @@ func TestBillsTabScrollsLongLists(t *testing.T) {
 	if hasWidget(a, "bill.plus.29") {
 		t.Fatal("a row below the view must not be live")
 	}
-	if !hasWidget(a, "bill.plus.0") || !hasWidget(a, billPickBtn) {
+	if !hasWidget(a, "bill.plus.0") || !hasWidget(a, inspector.BillPickBtn) {
 		t.Fatal("the first row and the Add button stay reachable")
 	}
 	for _, id := range []string{"bill.plus.0", "bill.plus.1"} {
@@ -636,7 +644,7 @@ func TestBillsTabQuantityModifiers(t *testing.T) {
 		f.Frame(t, a)
 		x, y := widgetAt(t, a, c.id)
 		f.Cur.Mx, f.Cur.My = x, y
-		f.Click(t, a, mbLeft, c.mods)
+		f.Click(t, a, inputframe.Left, c.mods)
 		if set := cmdsOf(s, command.SetBill); len(set) != 1 || set[0].Count != c.want {
 			t.Fatalf("%s with mods %v: %+v, want %d", c.id, c.mods, set, c.want)
 		}
@@ -648,12 +656,12 @@ func TestBillsTabQuantityModifiers(t *testing.T) {
 func TestPaneCloseIDsClearTheSelection(t *testing.T) {
 	t.Parallel()
 	a, _ := bldApp(t, bldStub(game.BuildingView{ID: 9, Kind: "wall", W: 1, H: 1}), 9)
-	a.applyClick(a.buildingPane(9).Close)
+	a.applyClick(a.insp.Building().BuildingPane(9).Close)
 	if a.sel.HasBuilding {
 		t.Fatal("closing the building pane keeps the building selected")
 	}
 	fa, _ := frameApp(t, wallFrame())
-	fa.applyClick(fa.framePane(7).Close)
+	fa.applyClick(fa.insp.Thing().FramePane(7).Close)
 	if fa.sel.HasFrame {
 		t.Fatal("closing the blueprint pane keeps the frame selected")
 	}
@@ -672,8 +680,8 @@ func TestBillsTabFitsItsWantedPanel(t *testing.T) {
 		}
 		s := bldStub(game.BuildingView{ID: 77, Kind: kind, X: 8, Y: 8, W: 2, H: 1, Bench: true, Bills: bills})
 		a, f := bldApp(t, s, 77)
-		tab, _ := bldTab(a.buildingPane(77), "inspector.bills")
-		inner := rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(paneInset)
+		tab, _ := bldTab(a.insp.Building().BuildingPane(77), "inspector.bills")
+		inner := gfx.Rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(inspector.PaneInset)
 		setHook(a.uiSt(), func(a *App) { tab.Declare(inner) })
 		f.Frame(t, a)
 		for i := 0; i < n; i++ {
@@ -681,7 +689,7 @@ func TestBillsTabFitsItsWantedPanel(t *testing.T) {
 				t.Errorf("%d bills: row %d is not live in its wanted panel", n, i)
 			}
 		}
-		w, ok := a.uiSt().Find(billPickBtn)
+		w, ok := a.uiSt().Find(inspector.BillPickBtn)
 		if !ok || w.R.Bottom() > inner.Bottom()+0.01 || w.R.Y < inner.Y {
 			t.Errorf("%d bills: Add bill at %+v, inner %+v", n, w.R, inner)
 		}
@@ -692,9 +700,9 @@ func TestBillsTabFitsItsWantedPanel(t *testing.T) {
 func TestPenTabFitsItsWantedPanel(t *testing.T) {
 	t.Parallel()
 	a := penApp(t, penSim())
-	tab, _ := bldTab(a.buildingPane(70), "inspector.pen")
-	inner := rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(paneInset)
-	body := penTabBody(a.renderer.world(), penSim().world.Pens[0], inner.W-scrollBarW)
+	tab, _ := bldTab(a.insp.Building().BuildingPane(70), "inspector.pen")
+	inner := gfx.Rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(inspector.PaneInset)
+	body := inspector.PenTabBody(a.renderer.world(), penSim().world.Pens[0], inner.W-uikit.ScrollBarW)
 	if body.H > inner.H+0.01 {
 		t.Fatalf("pen body %v tall in an inner panel %v tall", body.H, inner.H)
 	}
@@ -714,7 +722,7 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 	if l.Pane.Empty() || l.PaneTabs.Empty() {
 		t.Fatalf("no pane for a selected bench: %+v", l)
 	}
-	if got := len(a.buildingCommands(77)); got == 0 || len(l.GridCells) != got {
+	if got := len(a.insp.Building().BuildingCommands(77)); got == 0 || len(l.GridCells) != got {
 		t.Fatalf("grid cells %d, commands %d", len(l.GridCells), got)
 	}
 	assertChromeIsTheLayout(t, a) // the legacy panel's area is not reserved
@@ -728,7 +736,7 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 	if l.Expanded.Empty() {
 		t.Fatal("clicking the Bills tab opens its panel")
 	}
-	for _, id := range []string{"bill.minus.0", "bill.plus.1", "bill.del.1", billPickBtn} {
+	for _, id := range []string{"bill.minus.0", "bill.plus.1", "bill.del.1", inspector.BillPickBtn} {
 		w, ok := a.uiSt().Find(id)
 		if !ok {
 			t.Fatalf("no widget %s with the Bills tab open", id)
@@ -753,11 +761,11 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 // other filter.
 func TestTroughFilterCommandRunsFromTheGrid(t *testing.T) {
 	t.Parallel()
-	b := game.BuildingView{ID: 77, Kind: troughKind, X: 4, Y: 4, W: 1, H: 2, TroughFill: 12, TroughCap: 60, TroughFilter: "plants"}
+	b := game.BuildingView{ID: 77, Kind: inspector.TroughKind, X: 4, Y: 4, W: 1, H: 2, TroughFill: 12, TroughCap: 60, TroughFilter: "plants"}
 	s := bldStub(b)
 	a, f := bldApp(t, s, 77)
 	f.Frame(t, a)
-	a.applyCommandClick("cmd.bldg.trough")
+	a.insp.Commands().ApplyCommandClick("cmd.bldg.trough")
 	if c := lastCmd(t, s); c.Kind != command.SetTroughFilter || c.Target != 77 || c.Mode != 1 {
 		t.Fatalf("a click on the filter: %+v, want meat (1)", c)
 	}
@@ -770,7 +778,7 @@ func TestBlueprintSelectionThroughTheHUD(t *testing.T) {
 	s := bldStub()
 	s.world.Frames = []game.FrameView{wallFrame()}
 	a, f := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selFrame, ID: 7})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Frame, ID: 7})
 	f.Frame(t, a)
 	l := a.hud()
 	if l.Pane.Empty() || len(l.GridCells) != 1 {

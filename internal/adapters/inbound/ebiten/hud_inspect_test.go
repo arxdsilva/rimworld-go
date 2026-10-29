@@ -3,6 +3,10 @@ package ebiten
 import (
 	"fmt"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
 
@@ -16,27 +20,27 @@ import (
 
 // setTestPane makes every selection show spec (a spec with no Title is
 // "not migrated").
-func (a *App) setTestPane(spec paneSpec) {
-	a.insp.TestPane = func(selKind, entity.EntityID) paneSpec { return spec }
+func (a *App) setTestPane(spec inspectorpkg.Spec) {
+	a.insp.TestPane = func(selectionpkg.Kind, entity.EntityID) inspectorpkg.Spec { return spec }
 }
 
 // setTestCommands replaces the per-kind command producers (nil: the real
 // ones) and forgets any merged group commands.
-func (a *App) setTestCommands(fn func(*App, selKind, entity.EntityID) []cmdButton) {
+func (a *App) setTestCommands(fn func(*App, selectionpkg.Kind, entity.EntityID) []inspectorpkg.Button) {
 	a.insp.TestCommands = nil
 	if fn != nil {
-		a.insp.TestCommands = func(k selKind, id entity.EntityID) []cmdButton { return fn(a, k, id) }
+		a.insp.TestCommands = func(k selectionpkg.Kind, id entity.EntityID) []inspectorpkg.Button { return fn(a, k, id) }
 	}
 	a.updates++ // a new Update forgets any merged group commands
 }
 
-func noCommands(*App, selKind, entity.EntityID) []cmdButton { return nil }
+func noCommands(*App, selectionpkg.Kind, entity.EntityID) []inspectorpkg.Button { return nil }
 
-func tabSpec(id, label string, w, h float32, draw func(*ebiten.Image, rect)) paneTab {
-	return paneTab{ID: "inspector." + id, Label: label, WantW: w, WantH: h, Draw: draw}
+func tabSpec(id, label string, w, h float32, draw func(*ebiten.Image, gfx.Rect)) inspectorpkg.Tab {
+	return inspectorpkg.Tab{ID: "inspector." + id, Label: label, WantW: w, WantH: h, Draw: draw}
 }
 
-func paneColony(t *testing.T, spec paneSpec) (*App, *stubSim, *fakeInput) {
+func paneColony(t *testing.T, spec inspectorpkg.Spec) (*App, *stubSim, *fakeInput) {
 	t.Helper()
 	a, s, f := inputColony(t, [2]int{3, 3})
 	a.renderer.Select(1)
@@ -45,12 +49,12 @@ func paneColony(t *testing.T, spec paneSpec) (*App, *stubSim, *fakeInput) {
 	return a, s, f
 }
 
-func fullPane(tabs ...paneTab) paneSpec {
-	return paneSpec{
+func fullPane(tabs ...inspectorpkg.Tab) inspectorpkg.Spec {
+	return inspectorpkg.Spec{
 		Title:    "Ada",
 		Subtitle: "Colonist, 31",
-		Bars:     []paneBar{{Label: "Health", Pct: 82, Color: uiGood}, {Label: "Mood", Pct: 55, Color: uiWarning}, {Label: "Food", Pct: 20, Color: uiDanger}},
-		Chips:    []paneChip{{ID: "pane.area", Label: "Area: Home zone", Tip: "Where Ada may go"}},
+		Bars:     []inspectorpkg.Bar{{Label: "Health", Pct: 82, Color: uikit.Good}, {Label: "Mood", Pct: 55, Color: uikit.Warning}, {Label: "Food", Pct: 20, Color: uikit.Danger}},
+		Chips:    []inspectorpkg.Chip{{ID: "pane.area", Label: "Area: Home zone", Tip: "Where Ada may go"}},
 		Lines:    []string{"Doing: hauling wood", "Resting soon"},
 		Tabs:     tabs,
 		Close:    "inspector.close",
@@ -62,13 +66,13 @@ func TestPaneShownNeedsATitle(t *testing.T) {
 	a, _, _ := inputColony(t, [2]int{3, 3})
 	a.renderer.Select(1)
 	// every selection kind has its pane (PLAY-018): the colonist's is up
-	if !a.paneShown() || a.hud().Pane.Empty() {
+	if !a.insp.PaneShown() || a.hud().Pane.Empty() {
 		t.Fatal("the colonist's pane is shown in the layout")
 	}
 	// a spec without a Title shows nothing, and no legacy top-left panel
 	// (it sat at 8,40) is left blocking the map in its place
-	a.setTestPane(paneSpec{})
-	if a.paneShown() || !a.hud().Pane.Empty() {
+	a.setTestPane(inspectorpkg.Spec{})
+	if a.insp.PaneShown() || !a.hud().Pane.Empty() {
 		t.Fatal("a pane without a Title is not shown")
 	}
 	for _, r := range a.chromeRects(a.sw, a.sh) {
@@ -77,16 +81,16 @@ func TestPaneShownNeedsATitle(t *testing.T) {
 		}
 	}
 	a.setTestPane(fullPane())
-	if !a.paneShown() || a.hud().Pane.Empty() {
+	if !a.insp.PaneShown() || a.hud().Pane.Empty() {
 		t.Fatal("a pane with a Title is shown in the layout")
 	}
 	a.arch.Open = true
-	if a.paneShown() {
+	if a.insp.PaneShown() {
 		t.Fatal("the Architect takes the lower-left from the pane")
 	}
 	a.arch.Open = false
 	a.win.Open = true
-	if a.paneShown() {
+	if a.insp.PaneShown() {
 		t.Fatal("a main-tab window hides the pane")
 	}
 }
@@ -97,23 +101,23 @@ func TestPaneTabOpensAndCollapses(t *testing.T) {
 		tabSpec("needs", "Needs", 480, 220, nil),
 		tabSpec("log", "Log", 300, 300, nil),
 	))
-	if !a.hud().Expanded.Empty() || a.paneOpenTab() != "" {
+	if !a.hud().Expanded.Empty() || a.insp.PaneOpenTab() != "" {
 		t.Fatal("tabs start collapsed")
 	}
 	click(t, a, "inspector.needs")
 	l := a.hud()
-	if a.paneOpenTab() != "inspector.needs" || l.Expanded.W != 480 || l.Expanded.H != 220 {
-		t.Fatalf("clicking a closed tab opens it at its wanted size: open=%q expanded=%+v", a.paneOpenTab(), l.Expanded)
+	if a.insp.PaneOpenTab() != "inspector.needs" || l.Expanded.W != 480 || l.Expanded.H != 220 {
+		t.Fatalf("clicking a closed tab opens it at its wanted size: open=%q expanded=%+v", a.insp.PaneOpenTab(), l.Expanded)
 	}
 	if l.Expanded.Bottom() != l.PaneTabs.Y {
 		t.Fatalf("the panel opens upward from the tabs: %+v over %+v", l.Expanded, l.PaneTabs)
 	}
 	click(t, a, "inspector.log")
-	if l := a.hud(); a.paneOpenTab() != "inspector.log" || l.Expanded.W != expandMinW || l.Expanded.H != 300 {
-		t.Fatalf("another tab replaces it (width clamped to the minimum): %q %+v", a.paneOpenTab(), l.Expanded)
+	if l := a.hud(); a.insp.PaneOpenTab() != "inspector.log" || l.Expanded.W != hudlayout.ExpandMinW || l.Expanded.H != 300 {
+		t.Fatalf("another tab replaces it (width clamped to the minimum): %q %+v", a.insp.PaneOpenTab(), l.Expanded)
 	}
 	click(t, a, "inspector.log")
-	if a.paneOpenTab() != "" || !a.hud().Expanded.Empty() {
+	if a.insp.PaneOpenTab() != "" || !a.hud().Expanded.Empty() {
 		t.Fatal("clicking the open tab collapses it")
 	}
 }
@@ -123,12 +127,12 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 	spec := fullPane(
 		tabSpec("a", "Go", 400, 100, nil),
 		tabSpec("b", "A rather long tab label", 400, 100, nil),
-		paneTab{ID: "inspector.c", Label: "Gear", Disabled: true, Reason: "nobody to dress"},
+		inspectorpkg.Tab{ID: "inspector.c", Label: "Gear", Disabled: true, Reason: "nobody to dress"},
 	)
 	a, _, _ := paneColony(t, spec)
 	l := a.hud()
-	var tabs []button
-	for _, b := range a.paneButtons() {
+	var tabs []uikit.Button
+	for _, b := range a.insp.PaneButtons() {
 		if strings.HasPrefix(b.ID, "inspector.") && b.ID != "inspector.close" {
 			tabs = append(tabs, b)
 		}
@@ -137,7 +141,7 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 		t.Fatalf("tab buttons = %+v", tabs)
 	}
 	for i, b := range tabs {
-		r := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
+		r := gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if r.X < l.PaneTabs.X || r.Right() > l.PaneTabs.Right()+0.01 || r.Y < l.PaneTabs.Y || r.Bottom() > l.PaneTabs.Bottom()+0.01 {
 			t.Errorf("tab %d %+v leaves the tab strip %+v", i, r, l.PaneTabs)
 		}
@@ -148,18 +152,18 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 	if !(tabs[1].W > tabs[0].W) {
 		t.Errorf("widths follow the label: %.0f vs %.0f", tabs[0].W, tabs[1].W)
 	}
-	if w, _ := measure("A rather long tab label", tsBody); float64(tabs[1].W) < w {
+	if w, _ := gfx.Measure("A rather long tab label", gfx.Body); float64(tabs[1].W) < w {
 		t.Errorf("tab width %.0f is narrower than its label (%.0f)", tabs[1].W, w)
 	}
 	if !tabs[2].Disabled || tabs[2].Reason != "nobody to dress" {
 		t.Errorf("a disabled tab reports its reason: %+v", tabs[2])
 	}
 	click(t, a, "inspector.c")
-	if a.paneOpenTab() != "" || a.hint != "nobody to dress" {
-		t.Fatalf("a disabled tab does not open: open=%q hint=%q", a.paneOpenTab(), a.hint)
+	if a.insp.PaneOpenTab() != "" || a.hint != "nobody to dress" {
+		t.Fatalf("a disabled tab does not open: open=%q hint=%q", a.insp.PaneOpenTab(), a.hint)
 	}
 	click(t, a, "inspector.a")
-	a2 := a.paneButtons()
+	a2 := a.insp.PaneButtons()
 	sel := 0
 	for _, b := range a2 {
 		if b.Selected {
@@ -174,14 +178,14 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 func TestEscapeClosesTheOpenTabFirst(t *testing.T) {
 	t.Parallel()
 	a, _, _ := paneColony(t, fullPane(tabSpec("needs", "Needs", 480, 220, nil)))
-	if a.closePaneTab() {
+	if a.insp.ClosePaneTab() {
 		t.Fatal("nothing is open")
 	}
 	click(t, a, "inspector.needs")
-	if !a.closePaneTab() || a.paneOpenTab() != "" {
+	if !a.insp.ClosePaneTab() || a.insp.PaneOpenTab() != "" {
 		t.Fatal("Escape closes the open tab")
 	}
-	if a.closePaneTab() {
+	if a.insp.ClosePaneTab() {
 		t.Fatal("and only the tab")
 	}
 }
@@ -192,10 +196,10 @@ func TestOpenTabIsDroppedWhenItVanishes(t *testing.T) {
 	click(t, a, "inspector.needs")
 	a.setTestPane(fullPane(tabSpec("log", "Log", 400, 100, nil))) // another kind: no Needs tab
 	f.Frame(t, a)
-	if a.paneOpenTab() != "" || !a.hud().Expanded.Empty() {
+	if a.insp.PaneOpenTab() != "" || !a.hud().Expanded.Empty() {
 		t.Fatal("a tab the new selection does not have must not stay open")
 	}
-	a.setTestPane(paneSpec{})
+	a.setTestPane(inspectorpkg.Spec{})
 	f.Frame(t, a)
 	if a.hud().PaneTabs.W != 0 {
 		t.Fatal("no pane, no tabs")
@@ -204,20 +208,20 @@ func TestOpenTabIsDroppedWhenItVanishes(t *testing.T) {
 
 func TestExpandedTabDrawsInsideItsPanel(t *testing.T) {
 	t.Parallel()
-	var got rect
-	var clip rect
-	draw := func(screen *ebiten.Image, r rect) {
+	var got gfx.Rect
+	var clip gfx.Rect
+	draw := func(screen *ebiten.Image, r gfx.Rect) {
 		got = r
 		b := screen.Bounds()
-		clip = rect{X: float32(b.Min.X), Y: float32(b.Min.Y), W: float32(b.Dx()), H: float32(b.Dy())}
+		clip = gfx.Rect{X: float32(b.Min.X), Y: float32(b.Min.Y), W: float32(b.Dx()), H: float32(b.Dy())}
 	}
 	a, _, _ := paneColony(t, fullPane(tabSpec("needs", "Needs", 520, 240, draw)))
 	click(t, a, "inspector.needs")
 	l := a.hud()
-	a.drawPane(ebiten.NewImage(1280, 720))
-	inner := l.Expanded.Inset(paneInset)
+	a.insp.DrawPane(ebiten.NewImage(1280, 720))
+	inner := l.Expanded.Inset(inspectorpkg.PaneInset)
 	if got != inner {
-		t.Fatalf("the tab body gets the panel inset by %d: got %+v, want %+v", paneInset, got, inner)
+		t.Fatalf("the tab body gets the panel inset by %d: got %+v, want %+v", inspectorpkg.PaneInset, got, inner)
 	}
 	if clip.X < l.Expanded.X || clip.Y < l.Expanded.Y || clip.Right() > l.Expanded.Right()+1 || clip.Bottom() > l.Expanded.Bottom()+1 {
 		t.Fatalf("the body draws on a surface clipped to %+v, outside the panel %+v", clip, l.Expanded)
@@ -226,12 +230,12 @@ func TestExpandedTabDrawsInsideItsPanel(t *testing.T) {
 
 func TestExpandedTabDeclaresItsKitWidgets(t *testing.T) {
 	t.Parallel()
-	var got rect
-	spec := fullPane(paneTab{ID: "inspector.kit", Label: "Kit", WantW: 500, WantH: 200, Declare: func(r rect) { got = r }})
+	var got gfx.Rect
+	spec := fullPane(inspectorpkg.Tab{ID: "inspector.kit", Label: "Kit", WantW: 500, WantH: 200, Declare: func(r gfx.Rect) { got = r }})
 	a, _, f := paneColony(t, spec)
 	click(t, a, "inspector.kit")
 	f.Frame(t, a)
-	if want := a.hud().Expanded.Inset(paneInset); got != want {
+	if want := a.hud().Expanded.Inset(inspectorpkg.PaneInset); got != want {
 		t.Fatalf("Declare got %+v, want %+v", got, want)
 	}
 }
@@ -241,13 +245,13 @@ func TestExpandedFollowsTheLayoutCaps(t *testing.T) {
 	a, _, _ := paneColony(t, fullPane(tabSpec("huge", "Huge", 900, 5000, nil)))
 	click(t, a, "inspector.huge")
 	l := a.hud()
-	if l.Expanded.W != expandMaxW {
-		t.Fatalf("width is clamped to %d: %+v", expandMaxW, l.Expanded)
+	if l.Expanded.W != hudlayout.ExpandMaxW {
+		t.Fatalf("width is clamped to %d: %+v", hudlayout.ExpandMaxW, l.Expanded)
 	}
 	if l.Expanded.Y < l.Bar.Bottom() {
 		t.Fatalf("the panel stops below the colonist bar: %+v vs bar %+v", l.Expanded, l.Bar)
 	}
-	if a.expandedRect() != l.Expanded || a.paneRect() != l.Pane {
+	if a.insp.ExpandedRect() != l.Expanded || a.insp.PaneRect() != l.Pane {
 		t.Fatal("paneRect and expandedRect are the layout's")
 	}
 }
@@ -256,19 +260,19 @@ func TestPaneButtonsStayInsideThePane(t *testing.T) {
 	t.Parallel()
 	spec := fullPane(tabSpec("a", "A", 400, 100, nil))
 	spec.Chips = append(spec.Chips,
-		paneChip{ID: "pane.c2", Label: "Second chip"},
-		paneChip{ID: "pane.c3", Label: "A third chip with a rather long label"},
-		paneChip{ID: "pane.c4", Label: "Fourth"},
+		inspectorpkg.Chip{ID: "pane.c2", Label: "Second chip"},
+		inspectorpkg.Chip{ID: "pane.c3", Label: "A third chip with a rather long label"},
+		inspectorpkg.Chip{ID: "pane.c4", Label: "Fourth"},
 	)
 	a, _, _ := paneColony(t, spec)
 	l := a.hud()
 	ids := map[string]bool{}
-	for _, b := range a.paneButtons() {
+	for _, b := range a.insp.PaneButtons() {
 		ids[b.ID] = true
 		if strings.HasPrefix(b.ID, "inspector.") && b.ID != "inspector.close" {
 			continue // tabs live in the strip above
 		}
-		r := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
+		r := gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if r.X < l.Pane.X || r.Y < l.Pane.Y || r.Right() > l.Pane.Right()+0.01 || r.Bottom() > l.Pane.Bottom()+0.01 {
 			t.Errorf("%s %+v leaves the pane %+v", b.ID, r, l.Pane)
 		}
@@ -278,7 +282,7 @@ func TestPaneButtonsStayInsideThePane(t *testing.T) {
 			t.Errorf("no %s button", id)
 		}
 	}
-	for _, b := range a.paneButtons() {
+	for _, b := range a.insp.PaneButtons() {
 		if b.ID == "pane.area" && b.Tip != "Where Ada may go" {
 			t.Errorf("chip tip = %q", b.Tip)
 		}
@@ -293,7 +297,7 @@ func TestPaneBodyScrollsAndOwnsTheWheel(t *testing.T) {
 	}
 	a, _, f := paneColony(t, spec)
 	l := a.hud()
-	g := paneLayout(l.Pane, spec)
+	g := inspectorpkg.PaneLayout(l.Pane, spec)
 	if g.ContentH <= g.Body.H {
 		t.Fatalf("40 lines must overflow the %v px body, content %v", g.Body.H, g.ContentH)
 	}
@@ -302,7 +306,7 @@ func TestPaneBodyScrollsAndOwnsTheWheel(t *testing.T) {
 	f.Cur.Mx, f.Cur.My = int(g.Body.X+20), int(g.Body.Y+20)
 	f.Cur.WheelY = -1
 	f.Frame(t, a)
-	if off := a.uiSt().Scroll[paneBodyID]; off <= 0 {
+	if off := a.uiSt().Scroll[inspectorpkg.PaneBodyID]; off <= 0 {
 		t.Fatalf("the wheel over the body scrolls it, offset %v", off)
 	}
 	if a.renderer.cam.Zoom != z {
@@ -319,15 +323,15 @@ func TestPaneBodyScrollsAndOwnsTheWheel(t *testing.T) {
 
 func TestPaneRowsAreClickableAndScroll(t *testing.T) {
 	t.Parallel()
-	spec := paneSpec{Title: "6 colonists", Close: "group.close"}
+	spec := inspectorpkg.Spec{Title: "6 colonists", Close: "group.close"}
 	for i := range 30 {
-		spec.Rows = append(spec.Rows, paneRow{ID: fmt.Sprintf("pane.row.%d", i), Label: fmt.Sprintf("Row %d", i), Tip: "pick"})
+		spec.Rows = append(spec.Rows, inspectorpkg.Row{ID: fmt.Sprintf("pane.row.%d", i), Label: fmt.Sprintf("Row %d", i), Tip: "pick"})
 	}
 	a, _, _ := paneColony(t, spec)
 	l := a.hud()
-	g := paneLayout(l.Pane, spec)
-	vis := map[string]button{}
-	for _, b := range a.paneButtons() {
+	g := inspectorpkg.PaneLayout(l.Pane, spec)
+	vis := map[string]uikit.Button{}
+	for _, b := range a.insp.PaneButtons() {
 		if strings.HasPrefix(b.ID, "pane.row.") {
 			vis[b.ID] = b
 		}
@@ -343,9 +347,9 @@ func TestPaneRowsAreClickableAndScroll(t *testing.T) {
 	if _, ok := vis["pane.row.0"]; !ok {
 		t.Fatal("the first row is in view")
 	}
-	a.uiSt().Scroll[paneBodyID] = 10 * paneRowH
-	again := map[string]button{}
-	for _, b := range a.paneButtons() {
+	a.uiSt().Scroll[inspectorpkg.PaneBodyID] = 10 * inspectorpkg.PaneRowH
+	again := map[string]uikit.Button{}
+	for _, b := range a.insp.PaneButtons() {
 		if strings.HasPrefix(b.ID, "pane.row.") {
 			again[b.ID] = b
 		}
@@ -361,8 +365,8 @@ func TestPaneRowsAreClickableAndScroll(t *testing.T) {
 func TestDrawPaneStaysInItsRegions(t *testing.T) {
 	// serial: it installs the canvas trace and changes the UI scale
 	for _, scale := range []float64{1, 1.5} {
-		draw := func(screen *ebiten.Image, r rect) {
-			uiFillRect(screen, r.X, r.Y, r.W, r.H, uiBtn, false)
+		draw := func(screen *ebiten.Image, r gfx.Rect) {
+			gfx.FillRect(screen, r.X, r.Y, r.W, r.H, uikit.Btn, false)
 		}
 		spec := fullPane(tabSpec("needs", "Needs", 520, 240, draw), tabSpec("log", "Log", 400, 100, nil))
 		for i := range 30 {
@@ -374,10 +378,10 @@ func TestDrawPaneStaysInItsRegions(t *testing.T) {
 		}
 		clickDirect(t, a, "inspector.needs") // a mouse click's Update would reset the forced scale; this test is about the drawing
 		l := a.hud()
-		regions := []rect{l.Pane, l.PaneTabs, l.Expanded}
-		var rects []rect
-		gfx.SetCanvasTrace(func(_ string, x, y, w, h float32) { rects = append(rects, rect{X: x, Y: y, W: w, H: h}) })
-		a.drawPane(ebiten.NewImage(int(1280*scale), int(720*scale)))
+		regions := []gfx.Rect{l.Pane, l.PaneTabs, l.Expanded}
+		var rects []gfx.Rect
+		gfx.SetCanvasTrace(func(_ string, x, y, w, h float32) { rects = append(rects, gfx.Rect{X: x, Y: y, W: w, H: h}) })
+		a.insp.DrawPane(ebiten.NewImage(int(1280*scale), int(720*scale)))
 		gfx.SetCanvasTrace(nil)
 		if len(rects) == 0 {
 			t.Fatalf("scale %v: the pane drew nothing", scale)
@@ -401,10 +405,10 @@ func TestPaneLayoutDropsWhatDoesNotFit(t *testing.T) {
 	t.Parallel()
 	spec := fullPane()
 	for i := range 30 {
-		spec.Chips = append(spec.Chips, paneChip{ID: fmt.Sprintf("c%d", i), Label: fmt.Sprintf("Chip number %d", i)})
+		spec.Chips = append(spec.Chips, inspectorpkg.Chip{ID: fmt.Sprintf("c%d", i), Label: fmt.Sprintf("Chip number %d", i)})
 	}
-	p := rect{X: 0, Y: 500, W: paneW, H: paneH}
-	g := paneLayout(p, spec)
+	p := gfx.Rect{X: 0, Y: 500, W: hudlayout.PaneW, H: hudlayout.PaneH}
+	g := inspectorpkg.PaneLayout(p, spec)
 	for i, c := range g.Chips {
 		if c.Bottom() > p.Bottom()-4+0.01 {
 			t.Errorf("chip %d %+v runs out of the pane", i, c)
@@ -421,30 +425,30 @@ func TestSelectPaneTabOpensTheSelectionsTab(t *testing.T) {
 	t.Parallel()
 	a, _, _ := inputColony(t, [2]int{3, 3})
 	a.renderer.Select(1)
-	a.selectPaneTab("inspector.needs")
-	if a.insp.Tab != "needs" || a.paneOpenTab() != "inspector.needs" {
-		t.Fatalf("the colonist's Needs tab: inspectTab=%q open=%q", a.insp.Tab, a.paneOpenTab())
+	a.insp.SelectPaneTab("inspector.needs")
+	if a.insp.Tab != "needs" || a.insp.PaneOpenTab() != "inspector.needs" {
+		t.Fatalf("the colonist's Needs tab: inspectTab=%q open=%q", a.insp.Tab, a.insp.PaneOpenTab())
 	}
-	a.closePaneTab()
-	a.setTestPane(paneSpec{})
-	a.selectPaneTab("inspector.needs")
-	if a.insp.Tab != "character" || a.paneOpenTab() != "" {
-		t.Fatalf("a pane without the tab took the click: inspectTab=%q open=%q", a.insp.Tab, a.paneOpenTab())
+	a.insp.ClosePaneTab()
+	a.setTestPane(inspectorpkg.Spec{})
+	a.insp.SelectPaneTab("inspector.needs")
+	if a.insp.Tab != "character" || a.insp.PaneOpenTab() != "" {
+		t.Fatalf("a pane without the tab took the click: inspectTab=%q open=%q", a.insp.Tab, a.insp.PaneOpenTab())
 	}
 }
 
 func TestDrawPaneBodyWithRowsAndAMenu(t *testing.T) {
 	t.Parallel()
-	spec := paneSpec{Title: "3 colonists", Lines: []string{"first", "second"}, Close: "group.close"}
+	spec := inspectorpkg.Spec{Title: "3 colonists", Lines: []string{"first", "second"}, Close: "group.close"}
 	for i := range 12 {
-		spec.Rows = append(spec.Rows, paneRow{ID: fmt.Sprintf("r%d", i), Label: fmt.Sprintf("Row %d", i)})
+		spec.Rows = append(spec.Rows, inspectorpkg.Row{ID: fmt.Sprintf("r%d", i), Label: fmt.Sprintf("Row %d", i)})
 	}
 	a, _, _ := paneColony(t, spec)
 	img := ebiten.NewImage(1280, 720)
-	g := paneLayout(a.hud().Pane, spec)
+	g := inspectorpkg.PaneLayout(a.hud().Pane, spec)
 	a.cursor = &[2]int{int(g.Body.X) + 10, int(g.Body.Y+g.RowsY0) + 5} // hover the first row
-	a.uiSt().Scroll[paneBodyID] = paneRowH
-	a.drawPane(img)
-	a.openPick(300, 300, false, pickEntries(), func(int) {})
-	a.drawFloat(img) // the pick menu draws without the queue footer
+	a.uiSt().Scroll[inspectorpkg.PaneBodyID] = inspectorpkg.PaneRowH
+	a.insp.DrawPane(img)
+	a.ord.OpenPick(300, 300, false, pickEntries(), func(int) {})
+	a.ord.DrawFloat(img) // the pick menu draws without the queue footer
 }

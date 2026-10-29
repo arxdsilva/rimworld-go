@@ -23,7 +23,7 @@ func snowClearWorld(ver uint64) game.WorldView {
 func TestSnowClearOverlayOnlyWithToolHeld(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	screen := ebiten.NewImage(320, 320)
 	w := snowClearWorld(1)
 	r.drawSnowClearOverlay(screen, w, 320, 320, tile)

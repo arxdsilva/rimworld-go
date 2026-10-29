@@ -3,6 +3,7 @@ package ebiten
 import (
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -13,15 +14,15 @@ import (
 // draw, in physical pixels, tagged with its pass. These tests change
 // package globals and must not run in parallel.
 
-func collectTrace(t *testing.T) *[]traceEvent {
+func collectTrace(t *testing.T) *[]gfx.TraceEvent {
 	t.Helper()
-	var got []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { got = append(got, e) })
+	var got []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { got = append(got, e) })
 	t.Cleanup(func() { gfx.SetDrawTrace(nil); gfx.ForcePass("hud"); gfx.SetVia("") })
 	return &got
 }
 
-func wantEvent(t *testing.T, got []traceEvent, i int, kind string, x, y, w, h float64) traceEvent {
+func wantEvent(t *testing.T, got []gfx.TraceEvent, i int, kind string, x, y, w, h float64) gfx.TraceEvent {
 	t.Helper()
 	if i >= len(got) {
 		t.Fatalf("event %d missing (%d traced)", i, len(got))
@@ -39,23 +40,23 @@ func TestDrawTraceSeesEveryCanvasDraw(t *testing.T) {
 	got := collectTrace(t)
 	dst := ebiten.NewImage(400, 300)
 	img := ebiten.NewImage(10, 20)
-	black := uiText
+	black := uikit.Text
 
-	uiFillRect(dst, 10, 20, 30, 40, black, false)
-	uiStrokeRect(dst, 10, 20, 30, 40, 1, black, false)
-	uiLine(dst, 1, 2, 5, 10, 1, black, false)
-	uiFillCircle(dst, 10, 10, 3, black, false)
-	uiStrokeCircle(dst, 10, 10, 3, 1, black, false)
-	uiFillPoly(dst, [][2]float32{{1, 1}, {9, 2}, {4, 7}}, black, false)
-	uiFillPoly(dst, [][2]float32{{1, 1}, {2, 2}}, black, false) // not a polygon: nothing drawn
-	uiImage(dst, img, 5, 6, 7, 8, nil)
+	gfx.FillRect(dst, 10, 20, 30, 40, black, false)
+	gfx.StrokeRect(dst, 10, 20, 30, 40, 1, black, false)
+	gfx.Line(dst, 1, 2, 5, 10, 1, black, false)
+	gfx.FillCircle(dst, 10, 10, 3, black, false)
+	gfx.StrokeCircle(dst, 10, 10, 3, 1, black, false)
+	gfx.FillPoly(dst, [][2]float32{{1, 1}, {9, 2}, {4, 7}}, black, false)
+	gfx.FillPoly(dst, [][2]float32{{1, 1}, {2, 2}}, black, false) // not a polygon: nothing drawn
+	gfx.Image(dst, img, 5, 6, 7, 8, nil)
 	var op ebiten.DrawImageOptions
 	op.GeoM.Translate(3, 4)
-	uiDrawImage(dst, img, &op) // a 10x20 image at (3,4), x2
+	gfx.DrawImage(dst, img, &op) // a 10x20 image at (3,4), x2
 	vs := []ebiten.Vertex{{DstX: 1, DstY: 2}, {DstX: 9, DstY: 3}, {DstX: 4, DstY: 8}}
-	uiTriangles(dst, vs, []uint16{0, 1, 2}, img, nil)
-	uiTriangles32(dst, vs, []uint32{0, 1, 2}, img, nil)
-	uiTriangles(dst, nil, nil, img, nil) // empty: nothing to report
+	gfx.Triangles(dst, vs, []uint16{0, 1, 2}, img, nil)
+	gfx.Triangles32(dst, vs, []uint32{0, 1, 2}, img, nil)
+	gfx.Triangles(dst, nil, nil, img, nil) // empty: nothing to report
 
 	g := *got
 	wantEvent(t, g, 0, "fill", 20, 40, 60, 80)
@@ -83,10 +84,10 @@ func TestDrawTraceTextAndWorldHelpers(t *testing.T) {
 	got := collectTrace(t)
 	dst := ebiten.NewImage(400, 300)
 
-	drawText(dst, "Hello", 10, 20, tsBody)
-	drawText(dst, "Hello", 100, 20, textStyle{Size: 13, Align: alignCenter})
-	drawText(dst, "Hello", 200, 20, textStyle{Size: 13, Align: alignRight})
-	drawText(dst, "", 10, 20, tsBody) // nothing drawn, nothing reported
+	gfx.Text(dst, "Hello", 10, 20, gfx.Body)
+	gfx.Text(dst, "Hello", 100, 20, gfx.TextStyle{Size: 13, Align: gfx.AlignCenter})
+	gfx.Text(dst, "Hello", 200, 20, gfx.TextStyle{Size: 13, Align: gfx.AlignRight})
+	gfx.Text(dst, "", 10, 20, gfx.Body) // nothing drawn, nothing reported
 	left, centre, right := (*got)[0], (*got)[1], (*got)[2]
 	if len(*got) != 3 {
 		t.Fatalf("%d text events, want 3", len(*got))
@@ -101,7 +102,7 @@ func TestDrawTraceTextAndWorldHelpers(t *testing.T) {
 	// worldText takes physical coordinates and converts them once.
 	*got = nil
 	gfx.ForcePass("world")
-	worldText(dst, "Zone", 100, 60, tsSmall)
+	gfx.WorldText(dst, "Zone", 100, 60, gfx.Small)
 	if len(*got) != 1 || (*got)[0].X != 100 || (*got)[0].Y != 60 || (*got)[0].Pass != "world" || (*got)[0].Via != "worldText" {
 		t.Errorf("worldText traced %s, want text at the physical 100,60 via worldText in the world pass", visSummary(*got, 5))
 	}
@@ -110,7 +111,7 @@ func TestDrawTraceTextAndWorldHelpers(t *testing.T) {
 	}
 	*got = nil
 	img := ebiten.NewImage(10, 10)
-	worldIcon(dst, img, 100, 60, 8) // 8 logical = 16 physical, at the physical 100,60
+	gfx.WorldIcon(dst, img, 100, 60, 8) // 8 logical = 16 physical, at the physical 100,60
 	wantEvent(t, *got, 0, "image", 100, 60, 16, 16)
 	if (*got)[0].Via != "worldIcon" || (*got)[0].Pass != "world" || gfx.Via() != "" {
 		t.Errorf("worldIcon traced %s (gfx.Via() %q)", (*got)[0], gfx.Via())
@@ -118,7 +119,7 @@ func TestDrawTraceTextAndWorldHelpers(t *testing.T) {
 	// the legacy callers: drawIcon / drawText with logical coordinates stay "hud"
 	*got = nil
 	gfx.ForcePass("hud")
-	drawIcon(dst, img, 5, 5, 8)
+	gfx.Icon(dst, img, 5, 5, 8)
 	wantEvent(t, *got, 0, "image", 10, 10, 16, 16)
 }
 
@@ -130,11 +131,11 @@ func TestCanvasTraceStaysTheOldStream(t *testing.T) {
 	all := collectTrace(t)
 	dst := ebiten.NewImage(300, 200)
 	img := ebiten.NewImage(10, 10)
-	drawPanel(dst, 10, 10, 50, 20)
-	drawText(dst, "x", 5, 5, tsBody)
-	uiLine(dst, 0, 0, 5, 5, 1, uiText, false)
-	uiFillCircle(dst, 5, 5, 2, uiText, false)
-	uiImage(dst, img, 1, 1, 4, 4, nil)
+	uikit.DrawPanel(dst, 10, 10, 50, 20)
+	gfx.Text(dst, "x", 5, 5, gfx.Body)
+	gfx.Line(dst, 0, 0, 5, 5, 1, uikit.Text, false)
+	gfx.FillCircle(dst, 5, 5, 2, uikit.Text, false)
+	gfx.Image(dst, img, 1, 1, 4, 4, nil)
 	if len(*old) != 3 || (*old)[0] != "fill 15,15 75x30" || (*old)[1] != "stroke 15,15 75x30" || (*old)[2] != "image 1.5,1.5 6x6" {
 		t.Errorf("canvasTrace = %q, want the fill, stroke and image only", *old)
 	}
@@ -144,11 +145,11 @@ func TestCanvasTraceStaysTheOldStream(t *testing.T) {
 }
 
 func TestTraceEventString(t *testing.T) {
-	e := traceEvent{Kind: "text", Text: "Hi", X: 1, Y: 2, W: 3, H: 4, Pass: "world", Via: "worldText"}
+	e := gfx.TraceEvent{Kind: "text", Text: "Hi", X: 1, Y: 2, W: 3, H: 4, Pass: "world", Via: "worldText"}
 	if got, want := e.String(), `text "Hi" 1.0,2.0 3.0x4.0 [world via worldText]`; got != want {
 		t.Errorf("String = %q, want %q", got, want)
 	}
-	if got := visSummary([]traceEvent{e, e, e}, 2); got == "" {
+	if got := visSummary([]gfx.TraceEvent{e, e, e}, 2); got == "" {
 		t.Error("empty summary")
 	}
 }

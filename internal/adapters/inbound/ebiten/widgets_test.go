@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
 )
@@ -22,10 +23,10 @@ func TestUITokensMatchPaletteYAML(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != len(uiTokens) {
-		t.Fatalf("yaml has %d tokens, go has %d", len(got), len(uiTokens))
+	if len(got) != len(uikit.Tokens) {
+		t.Fatalf("yaml has %d tokens, go has %d", len(got), len(uikit.Tokens))
 	}
-	for name, want := range uiTokens {
+	for name, want := range uikit.Tokens {
 		c, ok := got[name]
 		if !ok {
 			t.Fatalf("yaml missing %s", name)
@@ -40,13 +41,13 @@ func TestLerpRGBAClamps(t *testing.T) {
 	t.Parallel()
 	a := color.RGBA{R: 10, G: 20, B: 30, A: 40}
 	b := color.RGBA{R: 110, G: 120, B: 130, A: 140}
-	if got := lerpRGBA(a, b, 0); got != a {
+	if got := uikit.LerpRGBA(a, b, 0); got != a {
 		t.Fatalf("t=0: %v", got)
 	}
-	if got := lerpRGBA(a, b, 1); got != b {
+	if got := uikit.LerpRGBA(a, b, 1); got != b {
 		t.Fatalf("t=1: %v", got)
 	}
-	mid := lerpRGBA(a, b, 0.5)
+	mid := uikit.LerpRGBA(a, b, 0.5)
 	if mid.R != 60 || mid.G != 70 || mid.B != 80 || mid.A != 90 {
 		t.Fatalf("t=0.5: %v", mid)
 	}
@@ -61,51 +62,51 @@ func TestUIContrast(t *testing.T) {
 	t.Parallel()
 	white := color.RGBA{0xFF, 0xFF, 0xFF, 0xFF}
 	black := color.RGBA{0, 0, 0, 0xFF}
-	panelW, panelK := overOpaque(uiPanel, white), overOpaque(uiPanel, black)
-	tipW, tutorW := overOpaque(uiTooltip, white), overOpaque(uiTutorPanel, white)
-	kitHover, _, kitHoverText := btnNormal.Colors(true, false, false)
-	kitSel, _, kitSelText := btnNormal.Colors(false, false, true)
-	primary, _, primaryText := btnPrimary.Colors(false, false, false)
-	primaryHover, _, _ := btnPrimary.Colors(true, false, false)
+	panelW, panelK := overOpaque(uikit.Panel, white), overOpaque(uikit.Panel, black)
+	tipW, tutorW := overOpaque(uikit.Tooltip, white), overOpaque(uikit.TutorPanel, white)
+	kitHover, _, kitHoverText := uikit.BtnNormal.Colors(true, false, false)
+	kitSel, _, kitSelText := uikit.BtnNormal.Colors(false, false, true)
+	primary, _, primaryText := uikit.BtnPrimary.Colors(false, false, false)
+	primaryHover, _, _ := uikit.BtnPrimary.Colors(true, false, false)
 	type pair struct {
 		name   string
 		fg, bg color.RGBA
 		min    float64
 	}
 	pairs := []pair{
-		{"text on panel (white map)", uiText, panelW, 4.5},
-		{"text on panel (black map)", uiText, panelK, 4.5},
-		{"text on button", uiText, uiBtn, 4.5},
-		{"text on button hover", uiText, uiBtnHover, 4.5},
-		{"text on button selected", uiText, uiBtnSelected, 4.5},
+		{"text on panel (white map)", uikit.Text, panelW, 4.5},
+		{"text on panel (black map)", uikit.Text, panelK, 4.5},
+		{"text on button", uikit.Text, uikit.Btn, 4.5},
+		{"text on button hover", uikit.Text, uikit.BtnHover, 4.5},
+		{"text on button selected", uikit.Text, uikit.BtnSelected, 4.5},
 		{"text on kit hover", kitHoverText, kitHover, 4.5},
 		{"text on kit selected", kitSelText, kitSel, 4.5},
 		{"text on kit primary", primaryText, primary, 4.5},
 		{"text on kit primary hover", primaryText, primaryHover, 4.5},
-		{"text on field", uiText, uiField, 4.5},
-		{"text on tooltip (white map)", uiText, tipW, 4.5},
-		{"heading on panel (white map)", uiHeading, panelW, 4.5},
-		{"warning on panel (white map)", uiWarning, panelW, 4.5},
-		{"danger on panel (white map)", uiDanger, panelW, 4.5},
-		{"good on panel (white map)", uiGood, panelW, 4.5},
-		{"text on danger alert (white map)", uiText, overOpaque(uiAlertDangerBg, white), 4.5},
-		{"text on warning alert (white map)", uiText, overOpaque(uiAlertWarnBg, white), 4.5},
-		{"tutor text on tutor panel (white map)", uiTutorText, tutorW, 4.5},
-		{"tutor heading on tutor panel (white map)", uiTutorHeading, tutorW, 4.5},
-		{"dim text on panel (white map)", uiTextDim, panelW, 3},
-		{"dim text on panel (black map)", uiTextDim, panelK, 3},
-		{"dim text on button", uiTextDim, uiBtn, 3},
-		{"dim text on tooltip (white map)", uiTextDim, tipW, 3},
-		{"disabled text on disabled button", uiTextDisabled, uiBtnDisabled, 1.8},
-		{"disabled text on panel (black map)", uiTextDisabled, panelK, 1.8},
-		{"accent on panel (black map)", uiAccent, panelK, 3},
-		{"tutor border on tutor panel (white map)", uiTutorBorder, tutorW, 3},
+		{"text on field", uikit.Text, uikit.Field, 4.5},
+		{"text on tooltip (white map)", uikit.Text, tipW, 4.5},
+		{"heading on panel (white map)", uikit.Heading, panelW, 4.5},
+		{"warning on panel (white map)", uikit.Warning, panelW, 4.5},
+		{"danger on panel (white map)", uikit.Danger, panelW, 4.5},
+		{"good on panel (white map)", uikit.Good, panelW, 4.5},
+		{"text on danger alert (white map)", uikit.Text, overOpaque(uikit.AlertDangerBg, white), 4.5},
+		{"text on warning alert (white map)", uikit.Text, overOpaque(uikit.AlertWarnBg, white), 4.5},
+		{"tutor text on tutor panel (white map)", uikit.TutorText, tutorW, 4.5},
+		{"tutor heading on tutor panel (white map)", uikit.TutorHeading, tutorW, 4.5},
+		{"dim text on panel (white map)", uikit.TextDim, panelW, 3},
+		{"dim text on panel (black map)", uikit.TextDim, panelK, 3},
+		{"dim text on button", uikit.TextDim, uikit.Btn, 3},
+		{"dim text on tooltip (white map)", uikit.TextDim, tipW, 3},
+		{"disabled text on disabled button", uikit.TextDisabled, uikit.BtnDisabled, 1.8},
+		{"disabled text on panel (black map)", uikit.TextDisabled, panelK, 1.8},
+		{"accent on panel (black map)", uikit.Accent, panelK, 3},
+		{"tutor border on tutor panel (white map)", uikit.TutorBorder, tutorW, 3},
 	}
 	for _, k := range []struct {
 		name string
 		c    color.RGBA
-	}{{"letter threat", uiLetterThreat}, {"letter caution", uiLetterCaution}, {"letter info", uiLetterInfo},
-		{"letter good", uiLetterGood}, {"mood good", uiMoodGood}, {"mood mid", uiMoodMid}, {"mood bad", uiMoodBad}} {
+	}{{"letter threat", uikit.LetterThreat}, {"letter caution", uikit.LetterCaution}, {"letter info", uikit.LetterInfo},
+		{"letter good", uikit.LetterGood}, {"mood good", uikit.MoodGood}, {"mood mid", uikit.MoodMid}, {"mood bad", uikit.MoodBad}} {
 		pairs = append(pairs, pair{k.name + " on panel (white map)", k.c, panelW, 3})
 	}
 	for _, p := range pairs {
@@ -114,12 +115,12 @@ func TestUIContrast(t *testing.T) {
 		}
 	}
 	// Disabled reads clearly dimmer than dim, which reads dimmer than text.
-	if !(relLum(uiText) > relLum(uiTextDim) && relLum(uiTextDim) > relLum(uiTextDisabled)) {
+	if !(relLum(uikit.Text) > relLum(uikit.TextDim) && relLum(uikit.TextDim) > relLum(uikit.TextDisabled)) {
 		t.Errorf("text %.3f, dim %.3f, disabled %.3f: want strictly falling luminance",
-			relLum(uiText), relLum(uiTextDim), relLum(uiTextDisabled))
+			relLum(uikit.Text), relLum(uikit.TextDim), relLum(uikit.TextDisabled))
 	}
-	for _, bg := range []color.RGBA{panelK, uiBtnDisabled} {
-		dim, off := contrastRatio(uiTextDim, bg), contrastRatio(uiTextDisabled, bg)
+	for _, bg := range []color.RGBA{panelK, uikit.BtnDisabled} {
+		dim, off := contrastRatio(uikit.TextDim, bg), contrastRatio(uikit.TextDisabled, bg)
 		if off > 0.6*dim {
 			t.Errorf("disabled %.2f:1 vs dim %.2f:1 on %v: want disabled <= 60%% of dim", off, dim, bg)
 		}
@@ -148,7 +149,7 @@ func TestUIPanelsAreNeutralTranslucent(t *testing.T) {
 	t.Parallel()
 	const maxChroma = 6
 	for _, name := range uiNeutralTokens {
-		c, ok := uiTokens[name]
+		c, ok := uikit.Tokens[name]
 		if !ok {
 			t.Fatalf("no token %s", name)
 		}
@@ -156,11 +157,11 @@ func TestUIPanelsAreNeutralTranslucent(t *testing.T) {
 			t.Errorf("%s %02X%02X%02X has chroma %.1f, want <= %d", name, c.R, c.G, c.B, ch, maxChroma)
 		}
 	}
-	if uiPanel.A < 0xB0 || uiPanel.A > 0xE6 {
-		t.Errorf("panel alpha %#02x, want 0xB0-0xE6", uiPanel.A)
+	if uikit.Panel.A < 0xB0 || uikit.Panel.A > 0xE6 {
+		t.Errorf("panel alpha %#02x, want 0xB0-0xE6", uikit.Panel.A)
 	}
-	if relLum(uiBtnSelected) <= relLum(uiBtn) || labChroma(uiBtnSelected) <= maxChroma {
-		t.Errorf("selected button %v: want a lighter, warm (tinted) fill that reads apart from the grey ones", uiBtnSelected)
+	if relLum(uikit.BtnSelected) <= relLum(uikit.Btn) || labChroma(uikit.BtnSelected) <= maxChroma {
+		t.Errorf("selected button %v: want a lighter, warm (tinted) fill that reads apart from the grey ones", uikit.BtnSelected)
 	}
 }
 
@@ -177,15 +178,15 @@ func TestUITextContrast(t *testing.T) {
 		name string
 		bg   color.RGBA
 	}{
-		{"panel (dark map)", overOpaque(uiPanel, black)},
-		{"panel (grey map)", overOpaque(uiPanel, grey)},
-		{"button", uiBtn},
-		{"tooltip (grey map)", overOpaque(uiTooltip, grey)},
+		{"panel (dark map)", overOpaque(uikit.Panel, black)},
+		{"panel (grey map)", overOpaque(uikit.Panel, grey)},
+		{"button", uikit.Btn},
+		{"tooltip (grey map)", overOpaque(uikit.Tooltip, grey)},
 	}
 	inks := []struct {
 		name string
 		c    color.RGBA
-	}{{"text", uiText}, {"dim text", uiTextDim}, {"heading", uiHeading}}
+	}{{"text", uikit.Text}, {"dim text", uikit.TextDim}, {"heading", uikit.Heading}}
 	for _, s := range surfaces {
 		for _, ink := range inks {
 			if got := contrastRatio(ink.c, s.bg); got < 4.5 {
@@ -201,7 +202,7 @@ func TestUITextContrast(t *testing.T) {
 func TestUITokensAreNotCopies(t *testing.T) {
 	t.Parallel()
 	const minDE = 3
-	for name, c := range uiTokens {
+	for name, c := range uikit.Tokens {
 		for _, h := range uiReferenceHexes {
 			ref, err := parseHexRGBA(h + "FF")
 			if err != nil {
@@ -220,27 +221,27 @@ func TestButtonColorsStates(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name                string
-		b                   button
+		b                   uikit.Button
 		hover               bool
 		fill, border, label color.RGBA
 	}{
-		{"normal", button{}, false, uiBtn, uiBtnBorder, uiText},
-		{"hover", button{}, true, uiBtnHover, uiBtnBorder, uiText},
-		{"selected", button{Selected: true}, false, uiBtnSelected, uiAccent, uiText},
-		{"selected hover", button{Selected: true}, true, uiBtnSelected, uiAccent, uiText},
-		{"disabled", button{Disabled: true}, true, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
-		{"disabled selected", button{Disabled: true, Selected: true}, false, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
+		{"normal", uikit.Button{}, false, uikit.Btn, uikit.BtnBorder, uikit.Text},
+		{"hover", uikit.Button{}, true, uikit.BtnHover, uikit.BtnBorder, uikit.Text},
+		{"selected", uikit.Button{Selected: true}, false, uikit.BtnSelected, uikit.Accent, uikit.Text},
+		{"selected hover", uikit.Button{Selected: true}, true, uikit.BtnSelected, uikit.Accent, uikit.Text},
+		{"disabled", uikit.Button{Disabled: true}, true, uikit.BtnDisabled, uikit.BtnBorder, uikit.TextDisabled},
+		{"disabled selected", uikit.Button{Disabled: true, Selected: true}, false, uikit.BtnDisabled, uikit.BtnBorder, uikit.TextDisabled},
 	}
 	for _, c := range cases {
-		fill, border, label := buttonColors(c.b, c.hover)
+		fill, border, label := uikit.ButtonColors(c.b, c.hover)
 		if fill != c.fill || border != c.border || label != c.label {
 			t.Errorf("%s: got %v %v %v, want %v %v %v", c.name, fill, border, label, c.fill, c.border, c.label)
 		}
 	}
-	if !(relLum(uiBtnHover) > relLum(uiBtn) && relLum(uiBtn) > relLum(uiBtnDisabled)) {
+	if !(relLum(uikit.BtnHover) > relLum(uikit.Btn) && relLum(uikit.Btn) > relLum(uikit.BtnDisabled)) {
 		t.Errorf("want hover lighter than a button and disabled darker")
 	}
-	if uiBtnSelected == uiBtn || uiBtnSelected == uiBtnHover {
+	if uikit.BtnSelected == uikit.Btn || uikit.BtnSelected == uikit.BtnHover {
 		t.Errorf("selected fill must differ from the plain and hover fills")
 	}
 }

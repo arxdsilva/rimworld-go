@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"strings"
 	"testing"
 
@@ -65,10 +68,10 @@ func winCases() []winCase {
 		{"research", "tab.research", "", []string{"research."}, click("tab.research")},
 		{"animals", "tab.animals", "", []string{"animals."}, click("tab.animals")},
 		{"wildlife", "tab.wildlife", "", []string{"animals."}, click("tab.wildlife")},
-		{"assign", "tab.assign", assignModalID, []string{"assign.", "modal." + assignModalID}, func(a *App) { a.openAssign() }},
-		{"history", "tab.history", historyModalID, []string{"history.", "modal." + historyModalID}, func(a *App) { a.openHistory() }},
-		{"factions", "tab.factions", colFacModalID, []string{"fac.", "colfac.", "modal." + colFacModalID}, func(a *App) { a.openColonyFactions() }},
-		{"world", "tab.world", worldModalID, []string{"world.", "modal." + worldModalID}, func(a *App) { a.openWorld() }},
+		{"assign", "tab.assign", windowspkg.AssignModalID, []string{"assign.", "modal." + windowspkg.AssignModalID}, func(a *App) { a.win.Assign().Launch() }},
+		{"history", "tab.history", windowspkg.HistoryModalID, []string{"history.", "modal." + windowspkg.HistoryModalID}, func(a *App) { a.win.History().Launch() }},
+		{"factions", "tab.factions", windowspkg.ColFacModalID, []string{"fac.", "colfac.", "modal." + windowspkg.ColFacModalID}, func(a *App) { a.win.Factions().Launch() }},
+		{"world", "tab.world", windowspkg.WorldModalID, []string{"world.", "modal." + windowspkg.WorldModalID}, func(a *App) { a.win.World().Launch() }},
 	}
 }
 
@@ -86,7 +89,7 @@ func TestTabStripHasElevenEqualTabs(t *testing.T) {
 	a, _ := winApp(t, winStub(3))
 	for _, size := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		a.sw, a.sh = size[0], size[1]
-		bs := a.hudTabButtons(a.sw, a.sh)
+		bs := a.chrome.Tabs().Buttons(a.sw, a.sh)
 		want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.world", "tab.history", "tab.factions", "tab.menu"}
 		if len(bs) != len(want) {
 			t.Fatalf("%v: %d tabs, want %d", size, len(bs), len(want))
@@ -99,8 +102,8 @@ func TestTabStripHasElevenEqualTabs(t *testing.T) {
 			if math.Abs(float64(b.W-w)) > 0.01 || math.Abs(float64(b.X-float32(i)*w)) > 0.01 {
 				t.Errorf("%v: %s is x %v w %v, want x %v w %v", size, b.ID, b.X, b.W, float32(i)*w, w)
 			}
-			if b.Y != float32(a.sh-tabsH) || b.H != tabsH {
-				t.Errorf("%v: %s is y %v h %v, want y %d h %d", size, b.ID, b.Y, b.H, a.sh-tabsH, tabsH)
+			if b.Y != float32(a.sh-hudlayout.TabsH) || b.H != hudlayout.TabsH {
+				t.Errorf("%v: %s is y %v h %v, want y %d h %d", size, b.ID, b.Y, b.H, a.sh-hudlayout.TabsH, hudlayout.TabsH)
 			}
 		}
 		if last := bs[len(bs)-1]; math.Abs(float64(last.X+last.W-float32(a.sw))) > 0.01 {
@@ -113,11 +116,11 @@ func TestTabStripIsTheLayoutsTabsRect(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(3))
 	tabs := a.hud().Tabs
-	if tabs != (rect{X: 0, Y: float32(a.sh - 28), W: float32(a.sw), H: 28}) {
+	if tabs != (gfx.Rect{X: 0, Y: float32(a.sh - 28), W: float32(a.sw), H: 28}) {
 		t.Fatalf("Tabs = %+v", tabs)
 	}
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if !(rect{X: b.X, Y: b.Y, W: b.W, H: b.H}).Intersect(tabs).Empty() && (b.Y != tabs.Y || b.H != tabs.H) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
+		if !(gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}).Intersect(tabs).Empty() && (b.Y != tabs.Y || b.H != tabs.H) {
 			t.Errorf("%s leaves the Tabs rect: %+v", b.ID, b)
 		}
 	}
@@ -130,7 +133,7 @@ func TestTabStripShowsKeyHints(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(1))
 	tips := map[string]string{}
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		tips[b.ID] = b.Tip
 	}
 	for id, key := range map[string]string{"tab.work": "[F1]", "tab.animals": "[F4]", "tab.wildlife": "[F5]", "tab.research": "[F6]", "tab.history": "[F9]"} {
@@ -150,12 +153,12 @@ func TestTabLabelsEllipsizeWhenNarrow(t *testing.T) {
 	sw, sh := 640, 360 // 58 px a tab
 	a.sw, a.sh = sw, sh
 	img := ebiten.NewImage(sw, sh)
-	var ev []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	var ev []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { ev = append(ev, e) })
 	defer func() { gfx.SetDrawTrace(nil) }()
-	a.drawTabs(img, sw, sh)
+	a.chrome.Tabs().Draw(img, sw, sh)
 	gfx.SetDrawTrace(nil)
-	bs := a.hudTabButtons(sw, sh)
+	bs := a.chrome.Tabs().Buttons(sw, sh)
 	shortened := 0
 	for _, e := range ev {
 		if e.Kind != "text" {
@@ -185,13 +188,13 @@ func TestResearchTabShowsProgressFill(t *testing.T) {
 	s.world.Research[3].Progress, s.world.Research[3].Cost = 50, 100
 	a, _ := winApp(t, s)
 	img := ebiten.NewImage(a.sw, a.sh)
-	fills := func() []traceEvent {
-		var ev []traceEvent
-		gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	fills := func() []gfx.TraceEvent {
+		var ev []gfx.TraceEvent
+		gfx.SetDrawTrace(func(e gfx.TraceEvent) { ev = append(ev, e) })
 		defer func() { gfx.SetDrawTrace(nil) }()
-		a.drawTabs(img, a.sw, a.sh)
-		var out []traceEvent
-		for _, b := range a.hudTabButtons(a.sw, a.sh) {
+		a.chrome.Tabs().Draw(img, a.sw, a.sh)
+		var out []gfx.TraceEvent
+		for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 			if b.ID != "tab.research" {
 				continue
 			}
@@ -228,7 +231,7 @@ func TestWildlifeTabOpensTheWildlifeList(t *testing.T) {
 		t.Fatalf("Wildlife tab: open %v mode %q wild %v", a.win.Open, a.win.Mode, a.win.Wild)
 	}
 	sel := map[string]bool{}
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		sel[b.ID] = b.Selected
 	}
 	if !sel["tab.wildlife"] || sel["tab.animals"] {
@@ -255,7 +258,7 @@ func TestAnimalsTabWhileWildlifeIsOpenShowsTheColony(t *testing.T) {
 		t.Fatalf("Animals over Wildlife: open %v mode %q wild %v", a.win.Open, a.win.Mode, a.win.Wild)
 	}
 	sel := map[string]bool{}
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		sel[b.ID] = b.Selected
 	}
 	if !sel["tab.animals"] || sel["tab.wildlife"] {
@@ -362,7 +365,7 @@ func TestEscapeOrderWindowSelectionPause(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(3))
 	a.renderer.Select(1)
-	a.openAssign()
+	a.win.Assign().Launch()
 	f.Frame(t, a)
 	f.Key(t, a, "Escape", 0)
 	if a.win.Open || !a.renderer.HasSelect() {
@@ -383,11 +386,11 @@ func TestWindowKeysToggleAndReplace(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(3))
 	f.Key(t, a, "F3", 0)
-	if a.uiModalTop() != assignModalID {
+	if a.uiModalTop() != windowspkg.AssignModalID {
 		t.Fatalf("F3 top %q", a.uiModalTop())
 	}
 	f.Key(t, a, "F9", 0)
-	if a.uiModalTop() != historyModalID {
+	if a.uiModalTop() != windowspkg.HistoryModalID {
 		t.Fatalf("F9 over Assign: top %q", a.uiModalTop())
 	}
 	f.Key(t, a, "F9", 0)
@@ -396,7 +399,7 @@ func TestWindowKeysToggleAndReplace(t *testing.T) {
 	}
 	f.Key(t, a, "F1", 0)
 	f.Key(t, a, "F3", 0)
-	if a.uiModalTop() != assignModalID {
+	if a.uiModalTop() != windowspkg.AssignModalID {
 		t.Fatalf("F3 over Work: top %q", a.uiModalTop())
 	}
 	f.Key(t, a, "F5", 0)
@@ -408,14 +411,14 @@ func TestWindowKeysToggleAndReplace(t *testing.T) {
 func TestWindowCloseClick(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(3))
-	a.openHistory()
+	a.win.History().Launch()
 	f.Frame(t, a)
-	press(t, a, f, "modal."+historyModalID+".close")
+	press(t, a, f, "modal."+windowspkg.HistoryModalID+".close")
 	if a.win.Open || a.uiModalTop() != "" {
 		t.Fatal("the X closes the window")
 	}
 	a.applyClick("tab.work")
-	a.applyWindowClick("win.close")
+	a.win.Click("win.close")
 	if a.win.Open {
 		t.Fatal("win.close closes the open window")
 	}
@@ -425,8 +428,8 @@ func TestWindowCloseClick(t *testing.T) {
 func TestWindowClosesTheArchitect(t *testing.T) {
 	t.Parallel()
 	a, _ := winApp(t, winStub(3))
-	a.openArchitect()
-	a.openAssign()
+	a.arch.OpenPanel()
+	a.win.Assign().Launch()
 	if a.arch.Open {
 		t.Fatal("the Architect should give way to a window")
 	}
@@ -440,7 +443,7 @@ func winScreen(t *testing.T, a *App, w, h int, ui float64) *ebiten.Image {
 	t.Helper()
 	old := gfx.CurrentScale()
 	t.Cleanup(func() { gfx.SetScale(old); gfx.SetDrawTrace(nil); gfx.ForcePass("hud") })
-	a.scale = uiScaleState{Dev: 1, UI: ui, S: ui}
+	a.scale = gfx.Scale{Dev: 1, UI: ui, S: ui}
 	a.syncUIScale()
 	pw, ph := int(math.Round(float64(w)*ui)), int(math.Round(float64(h)*ui))
 	a.setPhysical(pw, ph)
@@ -450,9 +453,9 @@ func winScreen(t *testing.T, a *App, w, h int, ui float64) *ebiten.Image {
 	return ebiten.NewImage(pw, ph)
 }
 
-func winTrace(a *App, img *ebiten.Image) []traceEvent {
-	var ev []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+func winTrace(a *App, img *ebiten.Image) []gfx.TraceEvent {
+	var ev []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { ev = append(ev, e) })
 	defer func() { gfx.SetDrawTrace(nil) }()
 	img.Clear()
 	a.Draw(img)
@@ -484,7 +487,7 @@ func TestWindowsStayInsideTheWindowRect(t *testing.T) {
 				if w.X != 0 || w.Bottom() != a.hud().Tabs.Y {
 					t.Errorf("%s: Window %+v, want bottom-left above the tabs (Tabs.Y %v)", c.name, w, a.hud().Tabs.Y)
 				}
-				if w.Right() > a.hud().Right.X-hudMargin+0.01 {
+				if w.Right() > a.hud().Right.X-hudlayout.HudMargin+0.01 {
 					t.Errorf("%s: Window right %v reaches the right column at %v", c.name, w.Right(), a.hud().Right.X)
 				}
 				got := winTrace(a, img)
@@ -531,7 +534,7 @@ func TestWindowsNeverCoverTheHUD(t *testing.T) {
 					if l.Window.Empty() {
 						t.Fatalf("%s: no Window rect", c.name)
 					}
-					for name, r := range map[string]rect{"Bar": l.Bar, "Alerts": l.Alerts, "Letters": l.Letters, "Learn": l.Learn,
+					for name, r := range map[string]gfx.Rect{"Bar": l.Bar, "Alerts": l.Alerts, "Letters": l.Letters, "Learn": l.Learn,
 						"Global": l.Global, "Minimap": l.Minimap, "Resources": l.Resources, "Messages": l.Messages, "Tabs": l.Tabs, "Right": l.Right} {
 						if r.Empty() {
 							continue
@@ -564,7 +567,7 @@ func TestWindowContentsLieInsideTheWindow(t *testing.T) {
 			f.Frame(t, a)
 			w := a.hud().Window
 			tol := float32(0.5)
-			inside := func(id string, r rect) {
+			inside := func(id string, r gfx.Rect) {
 				if r.X < w.X-tol || r.Y < w.Y-tol || r.Right() > w.Right()+tol || r.Bottom() > w.Bottom()+tol {
 					t.Errorf("%s: %s %+v leaves the window %+v", c.name, id, r, w)
 				}
@@ -573,7 +576,7 @@ func TestWindowContentsLieInsideTheWindow(t *testing.T) {
 			for _, b := range a.colonyButtons(a.sw, a.sh) {
 				for _, p := range c.prefixes {
 					if strings.HasPrefix(b.ID, p) {
-						inside(b.ID, rect{X: b.X, Y: b.Y, W: b.W, H: b.H})
+						inside(b.ID, gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H})
 						n++
 					}
 				}
@@ -599,17 +602,17 @@ func TestWheelOverAWindowIsNotTheMapsWheel(t *testing.T) {
 	for _, c := range winCases() {
 		t.Run(c.name, func(t *testing.T) {
 			a, f := winApp(t, winStub(4))
-			if a.uiWheelOver(5, 5) {
+			if a.uiSt().WheelOver(5, 5) {
 				t.Fatal("nothing open: the wheel is the map's")
 			}
 			c.open(a)
 			f.Frame(t, a)
 			w := a.hud().Window
 			cx, cy := w.Center()
-			if !a.uiWheelOver(int(cx), int(cy)) {
+			if !a.uiSt().WheelOver(int(cx), int(cy)) {
 				t.Errorf("%s: the wheel over the window's middle is still the map's", c.name)
 			}
-			if a.uiWheelOver(int(w.Right())+20, int(w.Y)-20) {
+			if a.uiSt().WheelOver(int(w.Right())+20, int(w.Y)-20) {
 				t.Errorf("%s: the wheel outside the window is not the map's", c.name)
 			}
 		})
@@ -623,12 +626,12 @@ func TestWindowWantsAreSizes(t *testing.T) {
 	for _, c := range winCases() {
 		t.Run(c.name, func(t *testing.T) {
 			a, f := winApp(t, winStub(5))
-			if w, h := a.windowWant(); w != 0 || h != 0 {
+			if w, h := a.win.Want(); w != 0 || h != 0 {
 				t.Fatalf("nothing open, yet the want is %vx%v", w, h)
 			}
 			c.open(a)
 			f.Frame(t, a)
-			w, h := a.windowWant()
+			w, h := a.win.Want()
 			if w < 300 || h < 150 {
 				t.Fatalf("%s wants %vx%v", c.name, w, h)
 			}
@@ -705,7 +708,7 @@ func TestAnimalsWindowFitsNarrowScreens(t *testing.T) {
 				f.Frame(t, a)
 				w := a.hud().Window
 				n := 0
-				for _, b := range a.animalsTabButtons() {
+				for _, b := range a.win.Animals().Buttons() {
 					n++
 					if b.X < w.X || b.X+b.W > w.Right() || b.Y < w.Y || b.Y+b.H > w.Bottom() {
 						t.Errorf("%s %+v leaves the window %+v", b.ID, b, w)
@@ -727,15 +730,15 @@ func TestModalsStayCentredWhenNotAnchored(t *testing.T) {
 	t.Parallel()
 	m := modal{ID: "x", Title: "X", W: 400, H: 300}
 	frame, title, body, footer := modalGeometry(1280, 720, m)
-	if frame != (rect{X: 440, Y: 210, W: 400, H: 300}) {
+	if frame != (gfx.Rect{X: 440, Y: 210, W: 400, H: 300}) {
 		t.Fatalf("frame %+v, want centred", frame)
 	}
-	if title.Y != frame.Y || title.H != modalTitleH || body.X != frame.X+modalPad || !footer.Empty() {
+	if title.Y != frame.Y || title.H != uikit.ModalTitleH || body.X != frame.X+uikit.ModalPad || !footer.Empty() {
 		t.Fatalf("title %+v body %+v footer %+v", title, body, footer)
 	}
 	// a modal that is too big is shrunk to the screen edge clearance
 	frame, _, _, _ = modalGeometry(1280, 720, modal{ID: "y", W: 5000, H: 5000})
-	if frame != (rect{X: modalEdge, Y: modalEdge, W: 1280 - 2*modalEdge, H: 720 - 2*modalEdge}) {
+	if frame != (gfx.Rect{X: uikit.ModalEdge, Y: uikit.ModalEdge, W: 1280 - 2*uikit.ModalEdge, H: 720 - 2*uikit.ModalEdge}) {
 		t.Fatalf("big frame %+v", frame)
 	}
 }
@@ -743,27 +746,27 @@ func TestModalsStayCentredWhenNotAnchored(t *testing.T) {
 func TestAnchoredModalSitsOnItsAnchor(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(1))
-	anchor := rect{X: 0, Y: 300, W: 500, H: 380}
-	var body rect
+	anchor := gfx.Rect{X: 0, Y: 300, W: 500, H: 380}
+	var body gfx.Rect
 	a.uiPushModal(modal{ID: "anch", Title: "Anchored", W: 900, H: 900,
-		Anchor:  func(*App) rect { return anchor },
-		Draw:    func(_ *App, b rect) { body = b },
-		Buttons: []modalButton{{ID: "ok", Label: "OK", Closes: true}},
+		Anchor:  func(*App) gfx.Rect { return anchor },
+		Draw:    func(_ *App, b gfx.Rect) { body = b },
+		Buttons: []uikit.ModalButton{{ID: "ok", Label: "OK", Closes: true}},
 	})
 	f.Frame(t, a)
-	if !a.uiModalOpen() || a.uiModalTop() != "anch" {
+	if !a.uiSt().ModalOpen() || a.uiModalTop() != "anch" {
 		t.Fatal("an anchored modal is still a stacked, blocking modal")
 	}
-	if body.X != anchor.X+modalPad || body.Y != anchor.Y+modalTitleH+modalPad || body.W != anchor.W-2*modalPad {
+	if body.X != anchor.X+uikit.ModalPad || body.Y != anchor.Y+uikit.ModalTitleH+uikit.ModalPad || body.W != anchor.W-2*uikit.ModalPad {
 		t.Fatalf("body %+v in anchor %+v", body, anchor)
 	}
 	x, ok := a.uiSt().Find("modal.anch.close")
-	if !ok || x.R.Right() > anchor.Right() || x.R.Y < anchor.Y || x.R.Bottom() > anchor.Y+modalTitleH {
+	if !ok || x.R.Right() > anchor.Right() || x.R.Y < anchor.Y || x.R.Bottom() > anchor.Y+uikit.ModalTitleH {
 		t.Fatalf("the X %+v is not in the anchored title bar", x.R)
 	}
 	// Esc closes it like any modal
 	f.Key(t, a, "Escape", 0)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("Escape closes an anchored modal")
 	}
 }
@@ -776,9 +779,9 @@ func TestModelessModalIsAWindow(t *testing.T) {
 	a, f := winApp(t, winStub(2))
 	closed := 0
 	a.uiPushModal(modal{ID: "win1", Title: "One", W: 500, H: 300, Modeless: true, Anchor: (*App).windowAnchor,
-		Draw: func(a *App, b rect) { a.uiLabel(b.X, b.Y, "hello", tsBody) }, OnClose: func() { closed++ }})
+		Draw: func(a *App, b gfx.Rect) { a.uiSt().Label(b.X, b.Y, "hello", gfx.Body) }, OnClose: func() { closed++ }})
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("a modeless modal is not on the stack")
 	}
 	if a.uiModalTop() != "win1" || !a.win.Open {
@@ -799,7 +802,7 @@ func TestModelessModalIsAWindow(t *testing.T) {
 	}
 	// a real modal opens over it
 	a.uiPushModal(modal{ID: "dlg", Title: "Dialog", W: 300, H: 200})
-	if a.uiModalTop() != "dlg" || !a.uiModalOpen() {
+	if a.uiModalTop() != "dlg" || !a.uiSt().ModalOpen() {
 		t.Fatalf("top %q", a.uiModalTop())
 	}
 	a.uiCloseTop()
@@ -821,7 +824,7 @@ func TestModelessModalIsAWindow(t *testing.T) {
 func TestEscapeInPanelAndModelessKeepsTheHUDLive(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(2))
-	a.openHistory()
+	a.win.History().Launch()
 	f.Frame(t, a)
 	// a tab click works with the window open (a stacked modal would swallow it)
 	click(t, a, "tab.work")
@@ -831,8 +834,8 @@ func TestEscapeInPanelAndModelessKeepsTheHUDLive(t *testing.T) {
 }
 
 // winPass is the HUD draws of a trace.
-func winPass(ev []traceEvent) []traceEvent {
-	var out []traceEvent
+func winPass(ev []gfx.TraceEvent) []gfx.TraceEvent {
+	var out []gfx.TraceEvent
 	for _, e := range ev {
 		if e.Pass == "hud" {
 			out = append(out, e)
@@ -843,12 +846,12 @@ func winPass(ev []traceEvent) []traceEvent {
 
 // winAdded is the events of got that base does not hold (a multiset
 // difference): what opening a window drew.
-func winAdded(base, got []traceEvent) []traceEvent {
+func winAdded(base, got []gfx.TraceEvent) []gfx.TraceEvent {
 	have := map[string]int{}
 	for _, e := range base {
 		have[winKey(e)]++
 	}
-	var out []traceEvent
+	var out []gfx.TraceEvent
 	for _, e := range got {
 		if k := winKey(e); have[k] > 0 {
 			have[k]--
@@ -860,17 +863,17 @@ func winAdded(base, got []traceEvent) []traceEvent {
 }
 
 // winKey names a draw: kind, text and rectangle.
-func winKey(e traceEvent) string {
+func winKey(e gfx.TraceEvent) string {
 	return fmt.Sprintf("%s|%s|%.2f|%.2f|%.2f|%.2f", e.Kind, e.Text, e.X, e.Y, e.W, e.H)
 }
 
 // winString is a draw for failure messages.
-func winString(e traceEvent) string {
+func winString(e gfx.TraceEvent) string {
 	return fmt.Sprintf("%s %q %.1f,%.1f %.1fx%.1f", e.Kind, e.Text, e.X, e.Y, e.W, e.H)
 }
 
 // winInside reports the event's rectangle lies in [x0,x1] x [y0,y1].
-func winInside(e traceEvent, x0, y0, x1, y1, tol float64) bool {
+func winInside(e gfx.TraceEvent, x0, y0, x1, y1, tol float64) bool {
 	return float64(e.X) >= x0-tol && float64(e.Y) >= y0-tol && float64(e.X+e.W) <= x1+tol && float64(e.Y+e.H) <= y1+tol
 }
 

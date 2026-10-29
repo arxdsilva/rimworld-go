@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	optionspkg "rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -8,15 +11,15 @@ import (
 	"rimworld-go/internal/platform/config"
 )
 
-func optionBtn(t *testing.T, a *App, id string) button {
+func optionBtn(t *testing.T, a *App, id string) uikit.Button {
 	t.Helper()
-	for _, b := range a.optionsButtons(a.sw, a.sh) {
+	for _, b := range a.opt.Buttons(a.sw, a.sh) {
 		if b.ID == id {
 			return b
 		}
 	}
 	t.Fatalf("no options button %q", id)
-	return button{}
+	return uikit.Button{}
 }
 
 func TestOptionsUIScaleCyclesAutoAndPresets(t *testing.T) {
@@ -27,13 +30,13 @@ func TestOptionsUIScaleCyclesAutoAndPresets(t *testing.T) {
 		t.Fatal("defaults should be Auto")
 	}
 	for _, p := range config.UIScalePresets {
-		a.applyOption("options.uiscale")
+		a.opt.ApplyOption("options.uiscale")
 		ac := store.s.Accessibility
 		if ac.UIScaleAuto || ac.UIScale != p {
 			t.Fatalf("after step: auto=%v scale=%d, want %d", ac.UIScaleAuto, ac.UIScale, p)
 		}
 	}
-	a.applyOption("options.uiscale")
+	a.opt.ApplyOption("options.uiscale")
 	if !store.s.Accessibility.UIScaleAuto {
 		t.Fatal("after the last preset the stepper returns to Auto")
 	}
@@ -52,7 +55,7 @@ func TestOptionsUIScaleAutoLabelShowsPercent(t *testing.T) {
 	if got := optionBtn(t, a, "options.uiscale").Label; got != "Auto (150%)" {
 		t.Fatalf("label = %q", got)
 	}
-	a.applyOption("options.uiscale")
+	a.opt.ApplyOption("options.uiscale")
 	if got := optionBtn(t, a, "options.uiscale").Label; got != "75%" {
 		t.Fatalf("label = %q", got)
 	}
@@ -66,7 +69,7 @@ func TestOptionsHiDPIToggle(t *testing.T) {
 	if b.Label != "On" || b.Tip == "" {
 		t.Fatalf("hidpi button %+v", b)
 	}
-	a.applyOption("options.hidpi")
+	a.opt.ApplyOption("options.hidpi")
 	if store.s.Graphics.HiDPI || optionBtn(t, a, "options.hidpi").Label != "Off" {
 		t.Fatal("HiDPI should be off and saved")
 	}
@@ -78,9 +81,9 @@ func TestOptionsScaleChangeKeepsStepperHit(t *testing.T) {
 	a.finishBoot()
 	a.opt.Tab = "access"
 	before := optionBtn(t, a, "options.uiscale")
-	a.applyOption("options.uiscale") // Auto -> 75%
+	a.opt.ApplyOption("options.uiscale") // Auto -> 75%
 	a.LayoutF(1920, 1080)
-	if a.currentOptionsTab() != "access" {
+	if a.opt.CurrentTab() != "access" {
 		t.Fatal("tab lost")
 	}
 	b := optionBtn(t, a, "options.uiscale")
@@ -105,7 +108,7 @@ func TestOptionsDrawAtScales(t *testing.T) {
 			a.LayoutF(1920, 1080)
 			a.finishBoot()
 			a.opt.Tab = tab
-			bs := a.optionsButtons(a.sw, a.sh)
+			bs := a.opt.Buttons(a.sw, a.sh)
 			for i, b := range bs {
 				if b.X+b.W > float32(a.sw) || b.Y+b.H > float32(a.sh) {
 					t.Fatalf("%s s=%v: %s off screen", tab, s, b.ID)
@@ -116,8 +119,8 @@ func TestOptionsDrawAtScales(t *testing.T) {
 					}
 				}
 			}
-			for i, r := range optionRows(tab) {
-				if w, _ := measure(r.Label, tsBody); 56+w > optCtrlX-8 {
+			for i, r := range optionspkg.OptionRows(tab) {
+				if w, _ := gfx.Measure(r.Label, gfx.Body); 56+w > optionspkg.OptCtrlX-8 {
 					t.Fatalf("%s: label %q (%v px) runs into row %d control", tab, r.Label, w, i)
 				}
 			}

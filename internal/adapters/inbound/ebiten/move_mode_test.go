@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -41,16 +44,16 @@ func bldgApp(t *testing.T, kind, stuff, facing string) (*App, *recSim, game.Buil
 	}
 	rs := &recSim{Simulation: g, moveOK: true}
 	a.renderer.game = rs
-	b, ok := buildingAt(a.renderer.world(), 8, 8)
+	b, ok := inspector.BuildingAt(a.renderer.world(), 8, 8)
 	if !ok {
 		t.Fatalf("no %s built", kind)
 	}
-	a.selectCand(selCand{Kind: selBuilding, ID: b.ID})
+	a.sel.Select(selection.Cand{Kind: selection.Building, ID: b.ID})
 	return a, rs, b
 }
 
-func findBtn(a *App, id string) (cmdButton, bool) {
-	return bldCmd(a.buildingCommands(a.sel.SelBuilding), id)
+func findBtn(a *App, id string) (inspector.Button, bool) {
+	return bldCmd(a.insp.Building().BuildingCommands(a.sel.SelBuilding), id)
 }
 
 func TestMoveButtonDisabledForWalls(t *testing.T) {
@@ -64,11 +67,11 @@ func TestMoveButtonDisabledForWalls(t *testing.T) {
 		t.Fatalf("copy must work on walls: %+v", cp)
 	}
 	for _, k := range []string{"door", "grave", "fence", "fence gate"} {
-		if movableKind(k, false) {
+		if architectpkg.MovableKind(k, false) {
 			t.Fatalf("%s must not be movable", k)
 		}
 	}
-	if movableKind("rug", true) || !movableKind("bed", false) {
+	if architectpkg.MovableKind("rug", true) || !architectpkg.MovableKind("bed", false) {
 		t.Fatal("floors are fixed, beds move")
 	}
 }
@@ -76,29 +79,29 @@ func TestMoveButtonDisabledForWalls(t *testing.T) {
 func TestMoveModeEnqueuesMoveBuilding(t *testing.T) {
 	t.Parallel()
 	a, rs, b := bldgApp(t, "butcher table", "wood", "east")
-	a.applyBuildingClick("bldg.move")
-	if !a.moveSt().On {
+	a.insp.Building().ApplyBuildingClick("bldg.move")
+	if !a.arch.Mover.State().On {
 		t.Fatal("Move should enter move mode")
 	}
-	a.moveStep(5, 5, true, 0, true, false) // the opening click is swallowed
+	a.arch.Mover.Step(5, 5, true, 0, true, false) // the opening click is swallowed
 	if len(rs.cmds) != 0 {
 		t.Fatalf("opening frame enqueued %v", rs.cmds)
 	}
 	rs.moveOK = false
-	a.moveStep(5, 5, true, 0, true, false)
-	if len(rs.cmds) != 0 || !a.moveSt().On || a.hint != "blocked" {
-		t.Fatalf("invalid spot: cmds=%v on=%v hint=%q", rs.cmds, a.moveSt().On, a.hint)
+	a.arch.Mover.Step(5, 5, true, 0, true, false)
+	if len(rs.cmds) != 0 || !a.arch.Mover.State().On || a.hint != "blocked" {
+		t.Fatalf("invalid spot: cmds=%v on=%v hint=%q", rs.cmds, a.arch.Mover.State().On, a.hint)
 	}
 	rs.moveOK = true
-	a.moveStep(5, 5, true, 0, true, false)
+	a.arch.Mover.Step(5, 5, true, 0, true, false)
 	if len(rs.cmds) != 1 {
 		t.Fatalf("cmds = %v", rs.cmds)
 	}
 	c := rs.cmds[0]
-	if c.Kind != command.MoveBuilding || c.Target != uint64(b.ID) || c.X != 5 || c.Y != 5 || c.Facing != facingIndex("east") {
+	if c.Kind != command.MoveBuilding || c.Target != uint64(b.ID) || c.X != 5 || c.Y != 5 || c.Facing != architectpkg.FacingIndex("east") {
 		t.Fatalf("command = %+v", c)
 	}
-	if a.moveSt().On {
+	if a.arch.Mover.State().On {
 		t.Fatal("placing should leave move mode")
 	}
 }
@@ -106,18 +109,18 @@ func TestMoveModeEnqueuesMoveBuilding(t *testing.T) {
 func TestMoveModeRotates(t *testing.T) {
 	t.Parallel()
 	a, rs, _ := bldgApp(t, "butcher table", "wood", "south")
-	if bv, _ := buildable("butcher table"); !bv.Rotatable {
+	if bv, _ := architectpkg.Buildable("butcher table"); !bv.Rotatable {
 		t.Skip("butcher table not rotatable")
 	}
-	a.applyBuildingClick("bldg.move")
-	a.moveStep(5, 5, true, 0, false, false) // swallow fresh frame
-	a.moveStep(5, 5, true, 1, false, false)
-	if a.moveSt().Facing != facingIndex("east") {
-		t.Fatalf("facing = %d", a.moveSt().Facing)
+	a.insp.Building().ApplyBuildingClick("bldg.move")
+	a.arch.Mover.Step(5, 5, true, 0, false, false) // swallow fresh frame
+	a.arch.Mover.Step(5, 5, true, 1, false, false)
+	if a.arch.Mover.State().Facing != architectpkg.FacingIndex("east") {
+		t.Fatalf("facing = %d", a.arch.Mover.State().Facing)
 	}
-	a.moveStep(5, 5, true, -1, false, false)
-	a.moveStep(5, 5, true, -1, true, false)
-	if len(rs.cmds) != 1 || rs.cmds[0].Facing != facingIndex("west") {
+	a.arch.Mover.Step(5, 5, true, -1, false, false)
+	a.arch.Mover.Step(5, 5, true, -1, true, false)
+	if len(rs.cmds) != 1 || rs.cmds[0].Facing != architectpkg.FacingIndex("west") {
 		t.Fatalf("cmds = %+v", rs.cmds)
 	}
 }
@@ -125,13 +128,13 @@ func TestMoveModeRotates(t *testing.T) {
 func TestMoveModeCancel(t *testing.T) {
 	t.Parallel()
 	a, rs, _ := bldgApp(t, "butcher table", "wood", "south")
-	a.applyBuildingClick("bldg.move")
-	a.moveStep(5, 5, true, 0, false, false)
-	a.moveStep(5, 5, true, 0, false, true)
-	if a.moveSt().On || len(rs.cmds) != 0 {
-		t.Fatalf("cancel: on=%v cmds=%v", a.moveSt().On, rs.cmds)
+	a.insp.Building().ApplyBuildingClick("bldg.move")
+	a.arch.Mover.Step(5, 5, true, 0, false, false)
+	a.arch.Mover.Step(5, 5, true, 0, false, true)
+	if a.arch.Mover.State().On || len(rs.cmds) != 0 {
+		t.Fatalf("cancel: on=%v cmds=%v", a.arch.Mover.State().On, rs.cmds)
 	}
-	if a.moveStep(5, 5, true, 0, true, false) {
+	if a.arch.Mover.Step(5, 5, true, 0, true, false) {
 		t.Fatal("inactive move mode must not consume input")
 	}
 }
@@ -141,12 +144,12 @@ func TestCopyOpensArchitectPreset(t *testing.T) {
 	// A butcher table cannot be stone, so kind and facing are checked on
 	// it and the material presets on stone walls and a steel door.
 	a, _, _ := bldgApp(t, "butcher table", "wood", "east")
-	a.applyBuildingClick("bldg.copy")
+	a.insp.Building().ApplyBuildingClick("bldg.copy")
 	tool, ok := toolByID(a.arch.ToolID)
 	if !a.arch.Open || !ok || tool.build != "butcher table" {
 		t.Fatalf("architect open=%v tool=%q", a.arch.Open, a.arch.ToolID)
 	}
-	if a.arch.Facing != facingIndex("east") {
+	if a.arch.Facing != architectpkg.FacingIndex("east") {
 		t.Fatalf("facing = %d", a.arch.Facing)
 	}
 	for _, c := range []struct{ kind, stuff, want string }{
@@ -155,7 +158,7 @@ func TestCopyOpensArchitectPreset(t *testing.T) {
 		{"door", "steel", "steel"},
 	} {
 		w, _, _ := bldgApp(t, c.kind, c.stuff, "south")
-		w.applyBuildingClick("bldg.copy")
+		w.insp.Building().ApplyBuildingClick("bldg.copy")
 		wt, _ := toolByID(w.arch.ToolID)
 		if wt.build != c.kind || w.toolStuff(wt) != c.want {
 			t.Fatalf("%s %s copy: tool=%q stuff=%q", c.stuff, c.kind, w.arch.ToolID, w.arch.Stuff)
@@ -174,7 +177,7 @@ func TestCopyDisabledWhenLocked(t *testing.T) {
 	if hasBuildTool("no such kind") {
 		t.Fatal("unknown kind has no tool")
 	}
-	if a.presetArchTool("no such kind", "", "") {
+	if a.arch.Preset("no such kind", "", "") {
 		t.Fatal("preset of unknown kind should fail")
 	}
 }
@@ -186,18 +189,18 @@ func TestPendingMoveShowsCancel(t *testing.T) {
 		t.Fatal("no cancel button without a pending move")
 	}
 	b.MovingTo = &[2]int{4, 5}
-	if got := movingLine(b); got != "Moving to (4, 5)" {
+	if got := architectpkg.MovingLine(b); got != "Moving to (4, 5)" {
 		t.Fatalf("line = %q", got)
 	}
-	if out := a.moveCommands(b); len(out) != 3 || out[2].ID != "bldg.cancelmove" {
+	if out := a.insp.Building().MoveCommands(b); len(out) != 3 || out[2].ID != "bldg.cancelmove" {
 		t.Fatalf("buttons = %+v", out)
 	}
 	f := game.FrameView{X: 4, Y: 5, Moving: true, MovingFrom: b.ID}
-	c := moveCancelRect(f)
+	c := architectpkg.MoveCancelRect(f)
 	if c.Kind != command.DesignateCancel || c.X != 4 || c.X2 != 4 || c.Y != 5 || c.Y2 != 5 {
 		t.Fatalf("cancel = %+v", c)
 	}
-	if got, ok := pendingMoveFrame(game.WorldView{Frames: []game.FrameView{f}}, b.ID); !ok || got.X != 4 {
+	if got, ok := architectpkg.PendingMoveFrame(game.WorldView{Frames: []game.FrameView{f}}, b.ID); !ok || got.X != 4 {
 		t.Fatal("pendingMoveFrame")
 	}
 	_ = rs

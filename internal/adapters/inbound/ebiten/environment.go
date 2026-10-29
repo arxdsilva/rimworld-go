@@ -4,6 +4,14 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -26,10 +34,10 @@ import (
 // it.
 type envState struct {
 	env.Layer
-	Shadow    shadowState        // the shadow pass (shadow.go)
-	Roof      roofDrawState      // eaves and the Roof overlay (roof_draw.go)
-	Home      homeDrawState      // the Home overlay's cached outline (home_draw.go)
-	SnowClear snowClearDrawState // the snow clearing area overlay (snow_clear_draw.go)
+	Shadow    shadowState                   // the shadow pass (shadow.go)
+	Roof      overlaypkg.RoofDrawState      // eaves and the Roof overlay (roof_draw.go)
+	Home      overlaypkg.HomeDrawState      // the Home overlay's cached outline (home_draw.go)
+	SnowClear overlaypkg.SnowClearDrawState // the snow clearing area overlay (snow_clear_draw.go)
 	// collapses are the roof-collapse stamps already shown as dust.
 	collapses map[game.RoofCollapseView]bool
 	// paint is the sprite painter the layer draws with, refreshed from
@@ -48,9 +56,9 @@ func (r *Renderer) stepCollapses(w game.WorldView) {
 	seen := make(map[game.RoofCollapseView]bool, len(w.RoofCollapses))
 	for _, c := range w.RoofCollapses {
 		if !e.collapses[c] {
-			seed := mix64(c.Tick ^ uint64(envTileKey(c.X, c.Y))<<20 ^ 0xc011)
-			r.burst(partDust, float64(c.X)+0.5, float64(c.Y)+0.5, 12, seed)
-			r.burst(partChip, float64(c.X)+0.5, float64(c.Y)+0.4, 4, seed^0x5a)
+			seed := art.Mix64(c.Tick ^ uint64(envpkg.TileKey(c.X, c.Y))<<20 ^ 0xc011)
+			r.burst(creature.PartDust, float64(c.X)+0.5, float64(c.Y)+0.5, 12, seed)
+			r.burst(creature.PartChip, float64(c.X)+0.5, float64(c.Y)+0.4, 4, seed^0x5a)
 		}
 		seen[c] = true
 	}
@@ -62,10 +70,10 @@ var autumnLeaves = []color.RGBA{{214, 140, 52, 255}, {178, 74, 44, 255}, {226, 1
 // dropLeaves lets one or two autumn leaves fall from a brushed tree
 // (env.Layer.Leaves lists them after a Step).
 func (r *Renderer) dropLeaves(x, y int) {
-	seed := tileHash(x, y) ^ r.present*0x9E3779B97F4A7C15
+	seed := spritepkg.TileHash(x, y) ^ r.present*0x9E3779B97F4A7C15
 	n := 1 + int(hash01(seed, 7)*2)
 	from := len(r.parts)
-	r.burst(partLeaf, float64(x)+0.5, float64(y)-0.55, n, seed)
+	r.burst(creature.PartLeaf, float64(x)+0.5, float64(y)-0.55, n, seed)
 	for i := from; i < len(r.parts); i++ {
 		r.parts[i].Clr = autumnLeaves[int(hash01(seed, uint64(i), 9)*float64(len(autumnLeaves)))%len(autumnLeaves)]
 		r.parts[i].Life += 30 // leaves flutter down slowly
@@ -100,11 +108,11 @@ func weatherLabelW(w game.WorldView) float32 {
 		return 0
 	}
 	if strings.HasSuffix(lbl, ", calm") {
-		return textW(lbl, tsBody)
+		return gfx.TextW(lbl, gfx.Body)
 	}
 	name, rest, _ := strings.Cut(lbl, " ")
 	_, speed, _ := strings.Cut(rest, " ")
-	return textW(name, tsBody) + 20 + textW(speed, tsBody)
+	return gfx.TextW(name, gfx.Body) + 20 + gfx.TextW(speed, gfx.Body)
 }
 
 // drawWeatherLabelRight is drawWeatherLabel with its right edge at x.
@@ -123,23 +131,23 @@ func drawWeatherLabel(screen *ebiten.Image, x, y int, w game.WorldView) {
 		return
 	}
 	if strings.HasSuffix(lbl, ", calm") {
-		drawLabel(screen, x, y, lbl)
+		uikit.DrawLabel(screen, x, y, lbl)
 		return
 	}
 	name, rest, _ := strings.Cut(lbl, " ")
 	_, speed, _ := strings.Cut(rest, " ")
-	drawLabel(screen, x, y, name)
-	nameW := textW(name, tsBody)
+	uikit.DrawLabel(screen, x, y, name)
+	nameW := gfx.TextW(name, gfx.Body)
 	cx, cy := float32(x)+nameW+10, float32(y+8)
-	ux, uy := unit(w.WindX, w.WindY)
+	ux, uy := motionpkg.Unit(w.WindX, w.WindY)
 	fx, fy := float32(ux), float32(uy)
 	clr := color.RGBA{230, 230, 220, 255}
 	tipX, tipY := cx+fx*6, cy+fy*6
-	uiLine(screen, cx-fx*6, cy-fy*6, tipX, tipY, 1.5, clr, true)
+	gfx.Line(screen, cx-fx*6, cy-fy*6, tipX, tipY, 1.5, clr, true)
 	for _, s := range [2]float32{1, -1} { // arrow head
 		hx := tipX - fx*4 + s*-fy*3
 		hy := tipY - fy*4 + s*fx*3
-		uiLine(screen, tipX, tipY, hx, hy, 1.5, clr, true)
+		gfx.Line(screen, tipX, tipY, hx, hy, 1.5, clr, true)
 	}
-	drawLabel(screen, x+int(nameW)+20, y, speed)
+	uikit.DrawLabel(screen, x+int(nameW)+20, y, speed)
 }

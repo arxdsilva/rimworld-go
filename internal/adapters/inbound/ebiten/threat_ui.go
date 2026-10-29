@@ -26,7 +26,7 @@ func (r *Renderer) watchThreats(w game.WorldView) {
 	}
 	r.lastDanger = newest
 	r.threatAt = r.present
-	r.globalCue("ui.threat")
+	r.cueBus().Global("ui.threat")
 	if r.pauseOnThreat && r.speed != speedPaused {
 		r.speed = speedPaused
 		r.threatPaused = true

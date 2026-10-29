@@ -3,6 +3,9 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/application/game"
 )
 
@@ -12,10 +15,10 @@ func TestBridgeArchitectToolInStructure(t *testing.T) {
 	if !ok {
 		t.Fatal("the Architect needs a Bridge tool")
 	}
-	if tool.category != "structure" || tool.mode != placeFill || tool.build != "bridge" || tool.icon != "bridge" {
+	if tool.category != "structure" || tool.mode != architect.PlaceFill || tool.build != "bridge" || tool.icon != "bridge" {
 		t.Fatalf("bridge tool = %+v", tool)
 	}
-	if _, ok := buildable("bridge"); !ok {
+	if _, ok := architect.Buildable("bridge"); !ok {
 		t.Error("the simulation catalog must offer a bridge")
 	}
 	var floorAt, bridgeAt = -1, -1
@@ -49,13 +52,13 @@ func TestBridgeToolLockedBeforeResearch(t *testing.T) {
 func TestBridgeInspectorTitleAndLine(t *testing.T) {
 	t.Parallel()
 	b := game.BuildingView{Kind: "bridge", Stuff: "wood"}
-	if got := buildingTitle(b); got != "Wooden bridge" {
+	if got := inspector.BuildingTitle(b); got != "Wooden bridge" {
 		t.Errorf("title = %q", got)
 	}
-	if got := bridgeLine(b); got != "Holds light things: no stone walls or floors" {
+	if got := overlay.BridgeLine(b); got != "Holds light things: no stone walls or floors" {
 		t.Errorf("line = %q", got)
 	}
-	if got := bridgeLine(game.BuildingView{Kind: "wall"}); got != "" {
+	if got := overlay.BridgeLine(game.BuildingView{Kind: "wall"}); got != "" {
 		t.Errorf("non-bridge line = %q", got)
 	}
 }
@@ -63,11 +66,11 @@ func TestBridgeInspectorTitleAndLine(t *testing.T) {
 func TestBridgeSelectableWhenNothingStandsOnIt(t *testing.T) {
 	t.Parallel()
 	w := bridgeWorld(3, 3, 11, [2]int{1, 1})
-	if b, ok := buildingAt(w, 1, 1); !ok || b.Kind != "bridge" {
+	if b, ok := inspector.BuildingAt(w, 1, 1); !ok || b.Kind != "bridge" {
 		t.Fatalf("bridge alone: %+v %v", b, ok)
 	}
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 7, Kind: "wall", X: 1, Y: 1, W: 1, H: 1})
-	if b, _ := buildingAt(w, 1, 1); b.Kind != "wall" {
+	if b, _ := inspector.BuildingAt(w, 1, 1); b.Kind != "wall" {
 		t.Errorf("a wall on the bridge must win, got %q", b.Kind)
 	}
 }

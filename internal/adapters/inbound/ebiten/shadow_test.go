@@ -2,6 +2,11 @@ package ebiten
 
 import (
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -12,14 +17,14 @@ import (
 // testLight is a hand-built light: shadows fall away from a light at
 // azimuth az (screen space, 0 = east) and elevation el (radians), with
 // the ART §6.1 length clamp and the given alpha.
-func testLight(az, el, alpha float64) lightState {
+func testLight(az, el, alpha float64) lightpkg.State {
 	lx, ly := math.Cos(az)*math.Cos(el), 0.5*math.Sin(az)*math.Cos(el)
 	n := math.Hypot(lx, ly)
-	return lightState{
+	return lightpkg.State{
 		SunL:      [3]float32{float32(lx), float32(ly), float32(math.Sin(el))},
 		ShadowDir: [2]float64{-lx / n, -ly / n},
 		ShadowLen: func(h float64) float64 {
-			return math.Min(math.Max(h/math.Tan(el), 0.25*h), shadowMaxLen)
+			return math.Min(math.Max(h/math.Tan(el), 0.25*h), lightpkg.ShadowMaxLen)
 		},
 		ShadowAlpha: alpha,
 	}
@@ -27,21 +32,21 @@ func testLight(az, el, alpha float64) lightState {
 
 func TestStormFadesShadows(t *testing.T) {
 	t.Parallel()
-	clear := shadowCompositeScale(testLight(1, 1, 0.32))
-	storm := shadowCompositeScale(testLight(1, 1, 0.32*(1-0.6)))
+	clear := lightpkg.ShadowCompositeScale(testLight(1, 1, 0.32))
+	storm := lightpkg.ShadowCompositeScale(testLight(1, 1, 0.32*(1-0.6)))
 	if !(storm[3] < clear[3]) || math.Abs(float64(storm[3])-0.128) > 1e-4 {
 		t.Fatalf("storm alpha %.3f clear %.3f", storm[3], clear[3])
 	}
 	// no shadows at all: the pass draws nothing
 	r := shadowRenderer(t, shadowWorld(nil))
 	r.lit.Light = testLight(1, 1, 0)
-	r.drawShadows(ebiten.NewImage(64, 64), shadowWorld(nil), 64, 64, r.tilePx())
+	r.drawShadows(ebiten.NewImage(64, 64), shadowWorld(nil), 64, 64, r.cam.Tile())
 	if r.env.Shadow.Composites != 0 {
 		t.Fatal("composited a shadow layer with zero shadow alpha")
 	}
 }
 
-func kindOf(m *artMeta) string {
+func kindOf(m *artpkg.Meta) string {
 	if m == nil {
 		return "<nil>"
 	}
@@ -68,13 +73,13 @@ func shadowRenderer(t *testing.T, w game.WorldView) *Renderer {
 	t.Helper()
 	r := New(&stubSim{w: 20, h: 12})
 	r.art = envArt()
-	r.env.View = envRect{X0: 0, Y0: 0, X1: 20, Y1: 12}
+	r.env.View = env.Rect{X0: 0, Y0: 0, X1: 20, Y1: 12}
 	return r
 }
 
 func TestNoShadowsUnderRoof(t *testing.T) {
 	t.Parallel()
-	w := shadowWorld(map[int]uint8{3*20 + 4: roofBuilt, 3*20 + 6: roofNatural, 3*20 + 8: roofPlanBuild})
+	w := shadowWorld(map[int]uint8{3*20 + 4: overlay.RoofBuilt, 3*20 + 6: overlay.RoofNatural, 3*20 + 8: overlay.RoofPlanBuild})
 	w.Items = []game.ItemView{{Kind: "wood", X: 4, Y: 3}, {Kind: "wood", X: 6, Y: 3}, {Kind: "wood", X: 8, Y: 3}, {Kind: "wood", X: 10, Y: 3}}
 	w.Buildings = []game.BuildingView{{Kind: "wall", X: 4, Y: 3, W: 1, H: 1}, {Kind: "wall", X: 11, Y: 3, W: 1, H: 1},
 		{Kind: "floor", Floor: true, X: 12, Y: 3, W: 1, H: 1}}
@@ -108,7 +113,7 @@ func TestNoShadowsUnderRoof(t *testing.T) {
 		t.Fatalf("creature casters (id: open sky) %v", sky)
 	}
 	// off-screen casters (beyond the longest shadow) are skipped
-	r.env.View = envRect{X0: 0, Y0: 0, X1: 2, Y1: 2}
+	r.env.View = env.Rect{X0: 0, Y0: 0, X1: 2, Y1: 2}
 	far := game.WorldView{TerrainW: w.TerrainW, Items: []game.ItemView{{Kind: "wood", X: 1, Y: 1}, {Kind: "wood", X: 19, Y: 11}}}
 	if n := len(r.shadowCasters(far, nil)); n != 1 {
 		t.Fatalf("got %d casters, want only the one in view", n)
@@ -118,11 +123,11 @@ func TestNoShadowsUnderRoof(t *testing.T) {
 func TestShadowsClippedAtRoofedTiles(t *testing.T) {
 	t.Parallel()
 	w := shadowWorld(map[int]uint8{
-		2*20 + 3: roofBuilt, 2*20 + 4: roofBuilt, 2*20 + 5: roofNatural, // one run of three
-		2*20 + 7: roofBuilt,     // a run of one
-		5*20 + 0: roofPlanBuild, // planned only: not clipped
+		2*20 + 3: overlay.RoofBuilt, 2*20 + 4: overlay.RoofBuilt, 2*20 + 5: overlay.RoofNatural, // one run of three
+		2*20 + 7: overlay.RoofBuilt,     // a run of one
+		5*20 + 0: overlay.RoofPlanBuild, // planned only: not clipped
 	})
-	runs := roofRuns(w, 0, 0, 19, 11, nil)
+	runs := lightpkg.RoofRuns(w, 0, 0, 19, 11, nil)
 	want := [][3]int{{2, 3, 6}, {2, 7, 8}}
 	if len(runs) != len(want) {
 		t.Fatalf("runs %v, want %v", runs, want)
@@ -132,7 +137,7 @@ func TestShadowsClippedAtRoofedTiles(t *testing.T) {
 			t.Fatalf("runs %v, want %v", runs, want)
 		}
 	}
-	if n := len(roofRuns(shadowWorld(nil), 0, 0, 19, 11, nil)); n != 0 {
+	if n := len(lightpkg.RoofRuns(shadowWorld(nil), 0, 0, 19, 11, nil)); n != 0 {
 		t.Fatalf("no roof data clipped %d runs", n)
 	}
 	// a full frame: the shadow is drawn and the roofed run cleared
@@ -146,7 +151,7 @@ func TestShadowsClippedAtRoofedTiles(t *testing.T) {
 	if n := len(r.shadowCasters(w, r.view.Pawns)); n != 3 {
 		t.Fatalf("got %d box and blob casters, want 3", n)
 	}
-	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
 	if r.env.Shadow.Composites != 1 {
 		t.Fatalf("composites %d, want 1", r.env.Shadow.Composites)
 	}
@@ -155,8 +160,8 @@ func TestShadowsClippedAtRoofedTiles(t *testing.T) {
 func TestWallShadowsMergeSingleAlpha(t *testing.T) {
 	t.Parallel()
 	// the layer merges by max, so overlapping shadows keep one alpha
-	if shadowBlend.BlendOperationAlpha != ebiten.BlendOperationMax || shadowBlend.BlendOperationRGB != ebiten.BlendOperationMax {
-		t.Fatalf("shadow layer blend %+v is not max", shadowBlend)
+	if lightpkg.ShadowBlend.BlendOperationAlpha != ebiten.BlendOperationMax || lightpkg.ShadowBlend.BlendOperationRGB != ebiten.BlendOperationMax {
+		t.Fatalf("shadow layer blend %+v is not max", lightpkg.ShadowBlend)
 	}
 	w := shadowWorld(nil)
 	for x := 2; x < 12; x++ {
@@ -168,12 +173,12 @@ func TestWallShadowsMergeSingleAlpha(t *testing.T) {
 	if len(casters) != 10 {
 		t.Fatalf("got %d wall casters, want one box per wall tile", len(casters))
 	}
-	var b triBatch
+	var b gfx.TriBatch
 	for _, c := range casters {
-		if c.Spec.Kind != shadowBox {
+		if c.Spec.Kind != lightpkg.ShadowBox {
 			t.Fatalf("wall caster %+v is not a box", c)
 		}
-		r.addBox(&b, c, r.lit.Light, r.tilePx(), 0.32)
+		r.addBox(&b, c, r.lit.Light, r.cam.Tile(), 0.32)
 	}
 	// every vertex is at the shadow alpha (core) or clear (feather edge):
 	// overlapping walls max to exactly the core alpha, never more; boxes
@@ -184,20 +189,20 @@ func TestWallShadowsMergeSingleAlpha(t *testing.T) {
 		}
 	}
 	// the whole layer is composited once, at the light's shadow alpha
-	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
 	if r.env.Shadow.Composites != 1 {
 		t.Fatalf("composited %d times", r.env.Shadow.Composites)
 	}
-	if cs := shadowCompositeScale(r.lit.Light); math.Abs(float64(cs[3])-0.32) > 1e-6 {
+	if cs := lightpkg.ShadowCompositeScale(r.lit.Light); math.Abs(float64(cs[3])-0.32) > 1e-6 {
 		t.Fatalf("composite alpha %.3f", cs[3])
 	}
 	// and the layer is reused across frames, reallocated only on resize
 	layer := r.env.Shadow.Layer
-	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
 	if r.env.Shadow.Layer != layer {
 		t.Fatal("layer reallocated without a resize")
 	}
-	r.drawShadows(ebiten.NewImage(320, 200), w, 320, 200, r.tilePx())
+	r.drawShadows(ebiten.NewImage(320, 200), w, 320, 200, r.cam.Tile())
 	if r.env.Shadow.Layer.Bounds().Dx() != 320 {
 		t.Fatal("layer not resized with the screen")
 	}
@@ -211,7 +216,7 @@ func TestShadowLayerHalfResolution(t *testing.T) {
 		r := shadowRenderer(t, w)
 		r.cam.Dev = dev
 		r.lit.Light = testLight(0.3, 0.3, 0.32)
-		r.drawShadows(ebiten.NewImage(641, 401), w, 641, 401, r.tilePx())
+		r.drawShadows(ebiten.NewImage(641, 401), w, 641, 401, r.cam.Tile())
 		if r.env.Shadow.Composites != 1 {
 			t.Fatalf("dev %v: composites %d, want 1", dev, r.env.Shadow.Composites)
 		}
@@ -244,7 +249,7 @@ func TestShadowHalfResolutionKeepsWorldPlacement(t *testing.T) {
 	r.cam.Dev = 2
 	r.lit.Light = testLight(1.2, 0.9, 0.5) // high sun: a short shadow hugging the wall
 	screen := ebiten.NewImage(640, 400)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	r.drawShadows(screen, w, 640, 400, tile)
 	cx, cy := r.worldToScreenF(2.5, 2.5)
 	// pixels cannot be read without a running game, so check the geometry
@@ -252,7 +257,7 @@ func TestShadowHalfResolutionKeepsWorldPlacement(t *testing.T) {
 	// box halved, and still covers the half-scaled wall centre
 	st := &r.env.Shadow
 	box := func(k float32) (lo, hi [2]float32) {
-		var b triBatch
+		var b gfx.TriBatch
 		b.K = k
 		for _, c := range r.shadowCasters(w, nil) {
 			r.addBox(&b, c, r.lit.Light, tile, 0.5)

@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strings"
 	"testing"
 
@@ -53,14 +55,14 @@ func TestZoneIsTheLastSelectionCandidate(t *testing.T) {
 		Plants: []game.PlantView{{ID: 41, X: 5, Y: 5, Species: "potato", Zone: "potato"}},
 		Items:  []game.ItemView{{ID: 90, X: 5, Y: 5, Kind: "rifle", Qty: 1, FreshDays: -1}},
 	}
-	cands := selectablesAt(w, nil, 5, 5)
-	if len(cands) != 3 || cands[0].Kind != selItem || cands[1].Kind != selPlant || cands[2] != (selCand{Kind: selZone, ID: 3}) {
+	cands := selectionpkg.SelectablesAt(w, nil, 5, 5)
+	if len(cands) != 3 || cands[0].Kind != selectionpkg.Item || cands[1].Kind != selectionpkg.Plant || cands[2] != (selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 3}) {
 		t.Fatalf("candidates at a zone cell with an item and a crop = %+v, want item, plant, zone 3", cands)
 	}
-	if cands := selectablesAt(w, nil, 6, 6); len(cands) != 1 || cands[0] != (selCand{Kind: selZone, ID: 3}) {
+	if cands := selectionpkg.SelectablesAt(w, nil, 6, 6); len(cands) != 1 || cands[0] != (selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 3}) {
 		t.Fatalf("an empty zone cell offers only the zone, got %+v", cands)
 	}
-	if cands := selectablesAt(w, nil, 9, 9); len(cands) != 0 {
+	if cands := selectionpkg.SelectablesAt(w, nil, 9, 9); len(cands) != 0 {
 		t.Fatalf("a cell outside the zone offers %+v", cands)
 	}
 }
@@ -72,7 +74,7 @@ func TestClickOnAnEmptyZoneCellSelectsTheZone(t *testing.T) {
 	if !a.sel.HasZone || a.sel.ZoneSel != 3 {
 		t.Fatalf("selected zone = %v/%d, want zone 3", a.sel.HasZone, a.sel.ZoneSel)
 	}
-	if !a.paneShown() {
+	if !a.insp.PaneShown() {
 		t.Fatal("a selected zone has an inspect pane")
 	}
 	clickTile(a, 12, 12) // empty ground
@@ -86,7 +88,7 @@ func TestRepeatClicksCycleToTheZoneAndBack(t *testing.T) {
 	a, s, _ := zoneApp(t, growZone(3, "potato", 4, 4, 7, 7))
 	s.world.Plants = []game.PlantView{{ID: 41, X: 5, Y: 5, Species: "potato", Zone: "potato"}}
 	clickTile(a, 5, 5)
-	if _, ok := a.selectedPlant(); !ok || a.sel.HasZone {
+	if _, ok := a.sel.SelectedPlant(); !ok || a.sel.HasZone {
 		t.Fatal("the crop comes before the zone under it")
 	}
 	clickTile(a, 5, 5)
@@ -94,7 +96,7 @@ func TestRepeatClicksCycleToTheZoneAndBack(t *testing.T) {
 		t.Fatal("a second click cycles to the zone and clears the plant")
 	}
 	clickTile(a, 5, 5)
-	if _, ok := a.selectedPlant(); !ok || a.sel.HasZone {
+	if _, ok := a.sel.SelectedPlant(); !ok || a.sel.HasZone {
 		t.Fatal("the cycle wraps back to the crop")
 	}
 }
@@ -111,7 +113,7 @@ func TestPawnAndItemStillComeBeforeTheZone(t *testing.T) {
 		t.Fatalf("zones = %d, want 1 stockpile", len(g.World().Zones))
 	}
 	clickTile(a, 6, 6) // a corner, clear of the zone's name plate in the middle
-	if _, ok := a.selectedItem(); !ok || a.sel.HasZone {
+	if _, ok := a.sel.SelectedItem(); !ok || a.sel.HasZone {
 		t.Fatal("a stack in a stockpile selects the stack first")
 	}
 	clickTile(a, 6, 6)
@@ -132,20 +134,20 @@ func TestClickOnAZoneLabelSelectsItDirectly(t *testing.T) {
 		s.world.Plants = append(s.world.Plants, game.PlantView{ID: entity.EntityID(41 + i), X: c[0], Y: c[1], Species: "potato", Zone: "potato"})
 	}
 	r := a.renderer
-	plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.zoneGeomOf(z), r.tilePx())
+	plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.overlays().Zones.ZoneGeomOf(z), r.cam.Tile())
 	if !plan.Ok {
 		t.Fatal("the zone's label should show")
 	}
 	cx, cy := plan.Plate.Center()
 	a.cursor = &[2]int{int(cx), int(cy)}
-	a.clickSelect()
+	a.sel.ClickSelect()
 	if !a.sel.HasZone || a.sel.ZoneSel != 3 || a.sel.HasPlant {
 		t.Fatalf("a click on the label selected zone=%v/%d plant=%v, want zone 3", a.sel.HasZone, a.sel.ZoneSel, a.sel.HasPlant)
 	}
 	// Just left of the plate it is an ordinary click: the plant under it.
-	a.clearSelections(selNone)
+	a.sel.Clear(selectionpkg.None)
 	a.cursor = &[2]int{int(plan.Plate.X) - 2, int(cy)}
-	a.clickSelect()
+	a.sel.ClickSelect()
 	if !a.sel.HasPlant || a.sel.HasZone {
 		t.Fatalf("a click beside the plate selected plant=%v zone=%v, want the plant", a.sel.HasPlant, a.sel.HasZone)
 	}
@@ -155,22 +157,22 @@ func TestSelectingAnotherKindClearsTheZone(t *testing.T) {
 	t.Parallel()
 	a, s, _ := zoneApp(t, growZone(3, "potato", 4, 4, 7, 7))
 	s.world.Plants = []game.PlantView{{ID: 41, X: 14, Y: 14, Species: "potato"}}
-	a.selectCand(selCand{Kind: selZone, ID: 3})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 3})
 	if !a.sel.HasZone {
 		t.Fatal("zone not selected")
 	}
-	a.selectCand(selCand{Kind: selPlant, ID: 41})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Plant, ID: 41})
 	if a.sel.HasZone {
 		t.Fatal("selecting a plant clears the zone")
 	}
-	a.selectCand(selCand{Kind: selZone, ID: 3})
-	a.clearSelections(selNone)
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 3})
+	a.sel.Clear(selectionpkg.None)
 	if a.sel.HasZone {
 		t.Fatal("clearSelections clears the zone")
 	}
-	a.selectCand(selCand{Kind: selZone, ID: 3})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 3})
 	a.renderer.Select(1)
-	a.clearSelections(selPawn)
+	a.sel.Clear(selectionpkg.Pawn)
 	if a.sel.HasZone {
 		t.Fatal("selecting a colonist clears the zone")
 	}
@@ -189,13 +191,13 @@ func TestSelectedZoneFollowsTheSplitPieceWithTheLastClick(t *testing.T) {
 	left := growZone(3, "potato", 4, 4, 7, 5)
 	right := growZone(9, "potato", 8, 4, 9, 5)
 	s.world.Zones = []game.ZoneView{left, right}
-	if z, ok := a.selectedZone(); !ok || z.ID != 3 {
+	if z, ok := a.arch.Zones.Selected(); !ok || z.ID != 3 {
 		t.Fatalf("the id still exists, the selection stays: %+v/%v", z.ID, ok)
 	}
 	// The piece with the id is gone instead (merged away): the pane, asked
 	// for the old id, follows the cell.
 	s.world.Zones = []game.ZoneView{growZone(5, "potato", 8, 4, 9, 5)}
-	if sp := a.selectionPane(); sp.Title != "Growing zone 5" || a.sel.ZoneSel != 5 {
+	if sp := a.insp.SelectionPane(); sp.Title != "Growing zone 5" || a.sel.ZoneSel != 5 {
 		t.Fatalf("followed to %q (sel %d), want zone 5", sp.Title, a.sel.ZoneSel)
 	}
 }
@@ -208,7 +210,7 @@ func TestSelectedZoneClearsWhenItIsDeleted(t *testing.T) {
 		t.Fatal("not selected")
 	}
 	s.world.Zones = nil
-	if _, ok := a.selectedZone(); ok || a.sel.HasZone {
+	if _, ok := a.arch.Zones.Selected(); ok || a.sel.HasZone {
 		t.Fatal("a deleted zone clears the selection")
 	}
 	if sp := a.zonePane(3); sp.Title != "" {
@@ -233,13 +235,13 @@ func TestHiddenZoneCanStillBeSelected(t *testing.T) {
 func TestZoneCloseButtonAndEscape(t *testing.T) {
 	t.Parallel()
 	a, _, f := zoneApp(t, growZone(3, "potato", 4, 4, 7, 7))
-	a.selectCand(selCand{Kind: selZone, ID: 3})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 3})
 	f.Frame(t, a)
 	click(t, a, "zone.close")
 	if a.sel.HasZone {
 		t.Fatal("the pane's close button clears the zone")
 	}
-	a.selectCand(selCand{Kind: selZone, ID: 3})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 3})
 	f.Key(t, a, "Escape", 0)
 	if a.sel.HasZone {
 		t.Fatal("Escape clears the zone")
@@ -266,8 +268,8 @@ func TestZonePaneTitles(t *testing.T) {
 		{3, "Pen 3", ""},
 		{4, "North field", "Growing zone 4"},
 	} {
-		a.selectCand(selCand{Kind: selZone, ID: entity.EntityID(c.id)})
-		sp := a.selectionPane()
+		a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: entity.EntityID(c.id)})
+		sp := a.insp.SelectionPane()
 		if sp.Title != c.title || sp.Subtitle != c.subtitle || sp.Close != "zone.close" {
 			t.Errorf("zone %d pane = %q/%q close %q, want %q/%q", c.id, sp.Title, sp.Subtitle, sp.Close, c.title, c.subtitle)
 		}
@@ -285,7 +287,7 @@ func TestZonePaneLinesForAGrowingZone(t *testing.T) {
 		{ID: 5, X: 9, Y: 9, Species: "potato", Zone: "potato", Growth: 90}, // another field
 	}
 	s.temp = 180
-	got := a.zoneLines(zoneByIDOrFail(t, a, 1))
+	got := a.arch.Zones.Lines(zoneByIDOrFail(t, a, 1))
 	want := []string{
 		"4 tiles",
 		"Plant: Potato",
@@ -297,14 +299,14 @@ func TestZonePaneLinesForAGrowingZone(t *testing.T) {
 	}
 	// Nothing sown yet.
 	s.world.Plants = nil
-	if got := a.zoneLines(zoneByIDOrFail(t, a, 1)); got[3] != "Sown 0 of 4" {
+	if got := a.arch.Zones.Lines(zoneByIDOrFail(t, a, 1)); got[3] != "Sown 0 of 4" {
 		t.Fatalf("empty field line %q", got[3])
 	}
 }
 
 func zoneByIDOrFail(t *testing.T, a *App, id uint16) game.ZoneView {
 	t.Helper()
-	z, ok := zoneByID(a.renderer.world(), id)
+	z, ok := architect.ZoneByID(a.renderer.world(), id)
 	if !ok {
 		t.Fatalf("no zone %d", id)
 	}
@@ -326,7 +328,7 @@ func TestZonePaneSaysWhenItIsTooColdOrTooHot(t *testing.T) {
 		{500, "Too hot to grow: 50C (needs below 45C)"},
 	} {
 		s.temp = c.temp
-		if got := a.zoneLines(z)[2]; !strings.HasPrefix(got, c.want) {
+		if got := a.arch.Zones.Lines(z)[2]; !strings.HasPrefix(got, c.want) {
 			t.Errorf("at %d tenths: %q, want %q", c.temp, got, c.want)
 		}
 	}
@@ -337,12 +339,12 @@ func TestZonePaneShowsSowingAndCuttingOff(t *testing.T) {
 	z := growZone(1, "potato", 4, 4, 5, 5)
 	z.NoSow, z.NoCut = true, true
 	a, _, _ := zoneApp(t, z)
-	got := a.zoneLines(z)
+	got := a.arch.Zones.Lines(z)
 	if got[len(got)-2] != "Sowing off" || got[len(got)-1] != "Cutting off" {
 		t.Fatalf("lines %q, want Sowing off and Cutting off last", got)
 	}
 	z.NoCut = false
-	if got := a.zoneLines(z); got[len(got)-1] != "Sowing off" || len(got) != 5 {
+	if got := a.arch.Zones.Lines(z); got[len(got)-1] != "Sowing off" || len(got) != 5 {
 		t.Fatalf("lines %q, want only Sowing off", got)
 	}
 }
@@ -365,8 +367,8 @@ func TestZonePaneLinesForStockpilesAndPens(t *testing.T) {
 		{pen, []string{"4 tiles"}},
 		{dump, []string{"6 tiles", "Priority: Low", "Accepts: Animal corpses, Stone chunks"}},
 	} {
-		if got := a.zoneLines(c.z); strings.Join(got, "|") != strings.Join(c.want, "|") {
-			t.Errorf("%s lines = %q, want %q", zoneKindName(c.z), got, c.want)
+		if got := a.arch.Zones.Lines(c.z); strings.Join(got, "|") != strings.Join(c.want, "|") {
+			t.Errorf("%s lines = %q, want %q", architect.ZoneKindName(c.z), got, c.want)
 		}
 	}
 }

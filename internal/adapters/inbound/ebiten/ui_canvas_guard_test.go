@@ -163,21 +163,14 @@ var worldDrawsLogical = map[string]string{
 // logicalDraws are the calls that take LOGICAL coordinates (x the UI
 // scale on the way out). A world-pass function calling one with a
 // worldToScreen position is the zone-label bug.
-var logicalDraws = map[string]bool{
-	"drawText": true, "drawIcon": true, "drawIconCS": true, "drawLabel": true,
-	"drawLabelClip": true, "drawFitSmall": true, "drawPanel": true, "drawButton": true,
-	"debugPrintAt": true,
-	"uiFillRect":   true, "uiStrokeRect": true, "uiLine": true, "uiFillCircle": true,
-	"uiStrokeCircle": true, "uiFillPoly": true, "uiImage": true, "uiDrawImage": true,
-	"uiTriangles": true, "uiTriangles32": true,
-}
+var logicalDraws = map[string]bool{"drawIconCS": true, "drawButton": true}
 
 // worldPixelHelpers take PHYSICAL pixels (they are exempt, world-side
 // blits). A HUD function calling one with logical coordinates is the
 // portrait bug.
 var worldPixelHelpers = map[string]bool{
 	"drawSprite": true, "drawSpritePose": true, "drawSpriteScaled": true,
-	"solidRect": true, "drawUnlit": true, "drawBaked": true,
+	"solidRect": true, "drawUnlit": true,
 }
 
 // hudFiles are the HUD, inspector, panel and screen files (globs): all
@@ -539,14 +532,14 @@ func guardOn(t *testing.T, file, src string, exempt, logicalOK map[string]string
 	return out
 }
 
-const guardHeader = "package p\nimport (\n\t\"github.com/hajimehoshi/ebiten/v2/vector\"\n\ttext \"github.com/hajimehoshi/ebiten/v2/text/v2\"\n)\n"
+const guardHeader = "package p\nimport (\n\t\"github.com/hajimehoshi/ebiten/v2/vector\"\n\ttext \"github.com/hajimehoshi/ebiten/v2/text/v2\"\n\t\"rimworld-go/internal/adapters/inbound/ebiten/gfx\"\n)\n"
 
 func TestGuardRule1RawDraws(t *testing.T) {
 	src := guardHeader + `
 func hud(dst I) { vector.FillRect(dst, 0, 0, 1, 1, c, false) }
 func hud2(dst I) { dst.DrawImage(img, op); dst.DrawTriangles32(v, i, img, o); text.Draw(dst, "x", f, op) }
 func world(dst I) { vector.StrokeLine(dst, 0, 0, 1, 1, 1, c, false) }
-func clean(dst I) { uiFillRect(dst, 0, 0, 1, 1, c, false) }
+func clean(dst I) { gfx.FillRect(dst, 0, 0, 1, 1, c, false) }
 `
 	got := guardOn(t, "x.go", src, map[string]string{"x.go:world": "world"}, nil)
 	if len(got) != 2 || !strings.Contains(got[0], "x.go:hud ") || !strings.Contains(got[1], "x.go:hud2 ") {
@@ -564,13 +557,13 @@ func clean(dst I) { uiFillRect(dst, 0, 0, 1, 1, c, false) }
 
 func TestGuardRule2WorldToScreenThenLogical(t *testing.T) {
 	src := guardHeader + `
-func label(r R) { sx, sy := r.worldToScreenF(1, 2); drawText(dst, "x", float64(sx), float64(sy), st) }
-func icon(r R) { sx, sy := r.worldToScreen(1, 2); drawIcon(dst, img, float64(sx), float64(sy), 8) }
-func rect(r R) { sx, _ := r.worldToScreenFoo(1, 2); uiFillRect(dst, sx, 0, 1, 1, c, false) }
+func label(r R) { sx, sy := r.worldToScreenF(1, 2); gfx.Text(dst, "x", float64(sx), float64(sy), st) }
+func icon(r R) { sx, sy := r.worldToScreen(1, 2); gfx.Icon(dst, img, float64(sx), float64(sy), 8) }
+func rect(r R) { sx, _ := r.worldToScreenFoo(1, 2); gfx.FillRect(dst, sx, 0, 1, 1, c, false) }
 func good(r R) { sx, sy := r.worldToScreenF(1, 2); worldText(dst, "x", float64(sx), float64(sy), st) }
-func hand(r R) { sx, _ := r.worldToScreen(1, 2); drawText(dst, "x", float64(sx)/uiScale(), 0, st) }
-func cursor(r R) { ox, _ := r.worldToScreen(1, 2); vector.StrokeRect(dst, ox, 0, 1, 1, 1, c, false); drawText(dst, "hint", mx, my, st) }
-func hudOnly() { drawText(dst, "x", 1, 2, st) }
+func hand(r R) { sx, _ := r.worldToScreen(1, 2); gfx.Text(dst, "x", float64(sx)/uiScale(), 0, st) }
+func cursor(r R) { ox, _ := r.worldToScreen(1, 2); vector.StrokeRect(dst, ox, 0, 1, 1, 1, c, false); gfx.Text(dst, "hint", mx, my, st) }
+func hudOnly() { gfx.Text(dst, "x", 1, 2, st) }
 `
 	got := guardOn(t, "x.go", src, map[string]string{"x.go:cursor": "world outline"}, map[string]string{"x.go:cursor": "the hint is at the logical cursor"})
 	if len(got) != 3 {
@@ -590,7 +583,7 @@ func TestGuardRule3HUDFiles(t *testing.T) {
 	if isHUDFile("gfx/canvas.go") || isHUDFile("renderer.go") || isHUDFile("multiselect_render.go") || isHUDFile("order_queue_ui.go") {
 		t.Error("canvas, world and mixed files are not HUD files")
 	}
-	src := "package p\nfunc bar(r R) { r.solidRect(dst, 1, 2, 3, 4, c); drawSprite(dst, k) }\nfunc ok(r R) { uiFillRect(dst, 1, 2, 3, 4, c, false) }\n"
+	src := "package p\nfunc bar(r R) { r.solidRect(dst, 1, 2, 3, 4, c); drawSprite(dst, k) }\nfunc ok(r R) { gfx.FillRect(dst, 1, 2, 3, 4, c, false) }\n"
 	got := guardOn(t, "ui_x.go", src, nil, nil)
 	if len(got) != 1 || !strings.Contains(got[0], "rule 3") || !strings.Contains(got[0], "ui_x.go:bar") ||
 		!strings.Contains(got[0], "solidRect") || !strings.Contains(got[0], "drawSprite") {

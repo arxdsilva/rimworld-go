@@ -5,6 +5,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"strings"
 	"testing"
 
@@ -16,11 +17,11 @@ import (
 // has individual metadata), and a sample of sprites, masks and normal
 // maps cut from the pages are byte-identical to their individual files.
 func TestAtlasCoversKeys(t *testing.T) {
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		t.Skip("generated art not present:", err)
 	}
-	idxs, _ := filepath.Glob(filepath.Join(root, artMetadataRel, atlasMetaDir, "*.yaml"))
+	idxs, _ := filepath.Glob(filepath.Join(root, artpkg.MetadataRel, artpkg.AtlasMetaDir, "*.yaml"))
 	if len(idxs) == 0 {
 		t.Skip("no atlas generated (go run ./cmd/atlasgen)")
 	}
@@ -44,7 +45,7 @@ func TestAtlasCoversKeys(t *testing.T) {
 			}
 		}
 		// every sprite that still has its own metadata is in the atlas
-		if files, err := os.ReadDir(filepath.Join(root, artMetadataRel, family)); err == nil {
+		if files, err := os.ReadDir(filepath.Join(root, artpkg.MetadataRel, family)); err == nil {
 			for _, f := range files {
 				if k, ok := strings.CutSuffix(f.Name(), ".yaml"); ok && !c.Has(family+"/"+k) {
 					t.Errorf("%s/%s has metadata but is not served by the catalog", family, k)
@@ -61,7 +62,7 @@ func TestAtlasCoversKeys(t *testing.T) {
 			if _, err := os.Stat(file); err != nil {
 				continue // individual files pruned: nothing to compare with
 			}
-			want, err := decodeNRGBA(file)
+			want, err := artpkg.DecodeNRGBA(file)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -69,7 +70,7 @@ func TestAtlasCoversKeys(t *testing.T) {
 				t.Errorf("%s/%s: atlas pixels differ from %s", family, e.Key, file)
 			}
 			if sp.Mask != nil {
-				wm, err := decodeNRGBA(strings.TrimSuffix(file, ".png") + "_mask.png")
+				wm, err := artpkg.DecodeNRGBA(strings.TrimSuffix(file, ".png") + "_mask.png")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -78,7 +79,7 @@ func TestAtlasCoversKeys(t *testing.T) {
 				}
 			}
 			nf := strings.TrimSuffix(file, ".png") + "_n.png"
-			if wn, err := decodeNRGBA(nf); err == nil {
+			if wn, err := artpkg.DecodeNRGBA(nf); err == nil {
 				n := sp.Src.NormalImage(sp)
 				if n == nil || n.Bounds() != wn.Bounds() {
 					t.Errorf("%s/%s: atlas normal map missing or the wrong size", family, e.Key)

@@ -1,6 +1,12 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"strconv"
 	"testing"
 
@@ -23,7 +29,7 @@ var _ = owe("journey_dialogs_test.go",
 // dlgBuildingAt is the colony's building standing on (x, y).
 func dlgBuildingAt(j *journey, x, y int) game.BuildingView {
 	j.t.Helper()
-	b, ok := buildingAt(j.world(), x, y)
+	b, ok := inspectorpkg.BuildingAt(j.world(), x, y)
 	if !ok {
 		j.t.Fatalf("no building at (%d, %d)", x, y)
 	}
@@ -51,17 +57,17 @@ func TestJourneyDialogsBenchBills(t *testing.T) {
 		t.Fatal("no workbench")
 	}
 	bench := dlgBuildingAt(j, 10, 5)
-	j.clickTile(10, 5, mbLeft, 0)
+	j.clickTile(10, 5, inputframe.Left, 0)
 	if !j.a.sel.HasBuilding || uint64(j.a.sel.SelBuilding) != uint64(bench.ID) {
 		t.Fatalf("the click selected %v (has %v), want the workbench", j.a.sel.SelBuilding, j.a.sel.HasBuilding)
 	}
 	j.clickID("inspector.bills")
-	if j.a.paneOpenTab() != "inspector.bills" {
-		t.Fatalf("open tab %q, want Bills", j.a.paneOpenTab())
+	if j.a.insp.PaneOpenTab() != "inspector.bills" {
+		t.Fatalf("open tab %q, want Bills", j.a.insp.PaneOpenTab())
 	}
 	j.clickID("bill.pick")
 	j.update(1)
-	if j.a.uiModalTop() != billPickID {
+	if j.a.uiModalTop() != inspectorpkg.BillPickID {
 		t.Fatalf("top modal %q, want the recipe picker", j.a.uiModalTop())
 	}
 	j.clickID("bill.picker.list.0")
@@ -101,35 +107,35 @@ func TestJourneyDialogsBedOwnerMedicalPrisoners(t *testing.T) {
 	}
 	bed := dlgBuildingAt(j, 12, 5)
 	colonist := j.g.Snapshot()[0].ID
-	j.clickTile(12, 5, mbLeft, 0)
+	j.clickTile(12, 5, inputframe.Left, 0)
 	if !j.a.sel.HasBuilding || j.a.sel.SelBuilding != bed.ID {
 		t.Fatal("the click did not select the bed")
 	}
 
-	j.clickID(bedOwnerID(0))
+	j.clickID(inspectorpkg.BedOwnerID(0))
 	j.update(1)
-	if j.a.uiModalTop() != bedOwnerModalID {
+	if j.a.uiModalTop() != inspectorpkg.BedOwnerModalID {
 		t.Fatalf("top modal %q, want the owner picker", j.a.uiModalTop())
 	}
-	j.clickID(bedOwnerPickID(colonist))
+	j.clickID(inspectorpkg.BedOwnerPickID(colonist))
 	if c, ok := j.lastCmd(command.AssignBedOwner); !ok || c.Target != uint64(bed.ID) || c.Pawn != uint64(colonist) {
 		t.Fatalf("AssignBedOwner %+v (sent %v), want the colonist in the bed", c, ok)
 	}
 	if got := dlgBuilding(j, uint64(bed.ID)).Claimant; got != colonist {
 		t.Fatalf("the bed's owner is %v, want %v", got, colonist)
 	}
-	if j.a.uiModalOpen() {
+	if j.a.uiSt().ModalOpen() {
 		t.Fatal("picking an owner left the picker open")
 	}
 
-	j.clickID(bedMedicalID)
+	j.clickID(inspectorpkg.BedMedicalID)
 	if c, ok := j.lastCmd(command.SetBedMedical); !ok || !c.Enabled {
 		t.Fatalf("SetBedMedical %+v (sent %v), want it on", c, ok)
 	}
 	if !dlgBuilding(j, uint64(bed.ID)).Medical {
 		t.Fatal("the bed is not medical after the toggle")
 	}
-	j.clickID(bedMedicalID) // back off, so the prisoner mark is not refused
+	j.clickID(inspectorpkg.BedMedicalID) // back off, so the prisoner mark is not refused
 	j.clickID("bldg.bed.prisoners")
 	if c, ok := j.lastCmd(command.SetBedForPrisoners); !ok || !c.Enabled {
 		t.Fatalf("SetBedForPrisoners %+v (sent %v), want it on", c, ok)
@@ -148,8 +154,8 @@ func TestJourneyDialogsHealthOperations(t *testing.T) {
 	p := j.g.Snapshot()[0]
 	j.g.Injure(p.ID, 4)
 	q := j.pawn(uint64(p.ID))
-	j.clickTile(q.X, q.Y, mbLeft, 0)
-	if sel, ok := j.a.selectedPawn(); !ok || sel.ID != p.ID {
+	j.clickTile(q.X, q.Y, inputframe.Left, 0)
+	if sel, ok := j.a.insp.SelectedPawn(); !ok || sel.ID != p.ID {
 		t.Fatal("the click did not select the colonist")
 	}
 
@@ -163,11 +169,11 @@ func TestJourneyDialogsHealthOperations(t *testing.T) {
 	}
 
 	j.clickID("inspector.health")
-	if j.a.paneOpenTab() != "inspector.health" {
-		t.Fatalf("open tab %q, want Health", j.a.paneOpenTab())
+	if j.a.insp.PaneOpenTab() != "inspector.health" {
+		t.Fatalf("open tab %q, want Health", j.a.insp.PaneOpenTab())
 	}
 	h0, _ := j.g.Health(p.ID)
-	j.clickID(healthSelfID)
+	j.clickID(inspectorpkg.HealthSelfID)
 	if c, ok := j.lastCmd(command.SetSelfTend); !ok || c.Enabled == h0.SelfTend {
 		t.Fatalf("SetSelfTend %+v (sent %v), want it flipped from %v", c, ok, h0.SelfTend)
 	}
@@ -191,15 +197,15 @@ func TestJourneyDialogsHealthOperations(t *testing.T) {
 		t.Fatalf("the picker offers %d operations, all on one part", len(opts))
 	}
 	for _, i := range rows {
-		if !j.clickID(healthAddID) {
+		if !j.clickID(inspectorpkg.HealthAddID) {
 			t.Fatal("Add operation is disabled")
 		}
 		j.update(1)
-		if j.a.uiModalTop() != healthPickID {
+		if j.a.uiModalTop() != inspectorpkg.HealthPickID {
 			t.Fatalf("top modal %q, want the operation picker", j.a.uiModalTop())
 		}
-		j.clickID(optID(healthPickList, i))
-		j.clickID("modal." + healthPickID + ".health.addop.ok")
+		j.clickID(uikit.OptID(inspectorpkg.HealthPickList, i))
+		j.clickID("modal." + inspectorpkg.HealthPickID + ".health.addop.ok")
 	}
 	// The picker and the Cancel button enqueue on the simulation directly,
 	// not through the renderer (health_ui.go): nothing records them and,
@@ -207,14 +213,14 @@ func TestJourneyDialogsHealthOperations(t *testing.T) {
 	j.tick(1)
 	appliedBy(j, command.AddOperation, func() bool { return len(ops()) == 2 })
 	first, second := ops()[0].Label, ops()[1].Label
-	j.clickID(healthDownID(0))
+	j.clickID(inspectorpkg.HealthDownID(0))
 	if c, ok := j.lastCmd(command.ReorderOperation); !ok || c.Count != 1 || c.Index != 0 {
 		t.Fatalf("ReorderOperation %+v (sent %v), want slot 0 down", c, ok)
 	}
 	if got := ops(); got[0].Label != second || got[1].Label != first {
 		t.Fatalf("queue %q, %q after moving the first down, want %q, %q", got[0].Label, got[1].Label, second, first)
 	}
-	j.clickID(healthRemoveID(0))
+	j.clickID(inspectorpkg.HealthRemoveID(0))
 	j.tick(1)
 	appliedBy(j, command.RemoveOperation, func() bool { got := ops(); return len(got) == 1 && got[0].Label == first })
 }
@@ -262,19 +268,19 @@ func useRadio(t *testing.T, j *journey) {
 	t.Helper()
 	p := j.g.Snapshot()[0]
 	j.lookAt(p.X, p.Y) // the colonist wandered while the generator lit
-	j.clickTile(p.X, p.Y, mbLeft, 0)
-	if sel, ok := j.a.selectedPawn(); !ok || sel.ID != p.ID {
+	j.clickTile(p.X, p.Y, inputframe.Left, 0)
+	if sel, ok := j.a.insp.SelectedPawn(); !ok || sel.ID != p.ID {
 		t.Fatal("the click did not select the colonist")
 	}
 	j.settle()
 	j.lookAt(10, 5)
-	j.clickTile(10, 5, mbRight, 0)
+	j.clickTile(10, 5, inputframe.Right, 0)
 	j.pick("Use radio")
 	if c, ok := j.lastCmd(command.Prioritize); !ok || c.Order != command.OrderUseComms {
 		t.Fatalf("the menu sent %+v (%v), want Prioritize UseComms", c, ok)
 	}
 	j.key("Digit1", 0)
-	j.until(func() bool { return j.a.uiModalTop() == commsModalID }, 3000)
+	j.until(func() bool { return j.a.uiModalTop() == dialogs.CommsModalID }, 3000)
 }
 
 // TestJourneyDialogsCommsConsole: a colonist ordered onto a powered radio
@@ -316,8 +322,8 @@ func TestJourneyDialogsCommsConsole(t *testing.T) {
 	gw := goodwill()
 	j.clickID(id("giftmore"))
 	j.clickID(id("gift"))
-	if c, ok := j.lastCmd(command.CommsGift); !ok || c.Index != friend || c.Count != commsGiftStart+commsGiftStep {
-		t.Fatalf("CommsGift %+v (sent %v), want %d silver to faction %d", c, ok, commsGiftStart+commsGiftStep, friend)
+	if c, ok := j.lastCmd(command.CommsGift); !ok || c.Index != friend || c.Count != dialogs.CommsGiftStart+dialogs.CommsGiftStep {
+		t.Fatalf("CommsGift %+v (sent %v), want %d silver to faction %d", c, ok, dialogs.CommsGiftStart+dialogs.CommsGiftStep, friend)
 	}
 	if goodwill() <= gw {
 		t.Fatalf("goodwill %d after the gift, want above %d", goodwill(), gw)
@@ -336,11 +342,11 @@ func TestJourneyDialogsCommsConsole(t *testing.T) {
 	if c, ok := j.lastCmd(command.CommsRequestAid); !ok || c.Index != friend {
 		t.Fatalf("CommsRequestAid %+v (sent %v), want faction %d", c, ok, friend)
 	}
-	j.clickID("modal." + commsModalID + ".close")
+	j.clickID("modal." + dialogs.CommsModalID + ".close")
 	if _, ok := j.lastCmd(command.CloseComms); !ok {
 		t.Fatal("Close sent no CloseComms")
 	}
-	if _, open := j.g.CommsView(); open || j.a.uiModalOpen() {
+	if _, open := j.g.CommsView(); open || j.a.uiSt().ModalOpen() {
 		t.Fatalf("comms still open after Close (session %v, modal %q)", open, j.a.uiModalTop())
 	}
 
@@ -352,11 +358,11 @@ func TestJourneyDialogsCommsConsole(t *testing.T) {
 		t.Fatal("Call trade ship sent no CommsCallTrader")
 	}
 	j.update(2)
-	if j.a.uiModalTop() != tradeModalID {
+	if j.a.uiModalTop() != dialogs.TradeModalID {
 		t.Fatalf("top modal %q after the call, want the trade dialog", j.a.uiModalTop())
 	}
 	tradeOne(t, j)
-	j.clickID("modal." + tradeModalID + ".cancel")
+	j.clickID("modal." + dialogs.TradeModalID + ".cancel")
 	if _, ok := j.lastCmd(command.CloseTrade); !ok {
 		t.Fatal("Cancel sent no CloseTrade")
 	}
@@ -395,7 +401,7 @@ func tradeOne(t *testing.T, j *journey) {
 	if !j.clickID("trade." + row.Kind + "." + btn + ".1") {
 		t.Fatalf("%s 1 %s is disabled", btn, row.Kind)
 	}
-	if !j.clickID("modal." + tradeModalID + ".accept") {
+	if !j.clickID("modal." + dialogs.TradeModalID + ".accept") {
 		t.Fatalf("Accept is disabled with one %s on the table", row.Kind)
 	}
 	if c, ok := j.lastCmd(command.ProposeTrade); !ok || c.Name == "" {
@@ -432,11 +438,11 @@ func TestJourneyDialogsTradeCaravanAccept(t *testing.T) {
 	j.key("Tab", 0)
 	j.clickID("arch.cat.zones")
 	j.clickID("arch.tool.stockpile")
-	j.dragTiles(mbLeft, 31, 30, 33, 32, 0)
+	j.dragTiles(inputframe.Left, 31, 30, 33, 32, 0)
 	for i := 0; i < 2 && j.a.arch.Open; i++ {
 		j.key("Escape", 0)
 	}
-	if _, ok := zoneCellAt(j.world(), 32, 31); !ok {
+	if _, ok := architect.ZoneCellAt(j.world(), 32, 31); !ok {
 		t.Fatal("no stockpile under the silver")
 	}
 	if !g.FireIncident("trader_caravan") {
@@ -465,25 +471,25 @@ func TestJourneyDialogsTradeCaravanAccept(t *testing.T) {
 	}
 	c := j.pawn(uint64(colonist))
 	j.lookAt(c.X, c.Y)
-	j.clickTile(c.X, c.Y, mbLeft, 0)
+	j.clickTile(c.X, c.Y, inputframe.Left, 0)
 	j.settle()
 	j.lookAt(tp.X, tp.Y)
-	j.clickTile(tp.X, tp.Y, mbRight, 0)
+	j.clickTile(tp.X, tp.Y, inputframe.Right, 0)
 	j.pick("Trade with")
 	if cmd, ok := j.lastCmd(command.Prioritize); !ok || cmd.Order != command.OrderTrade {
 		t.Fatalf("the menu sent %+v (%v), want Prioritize Trade", cmd, ok)
 	}
 	j.key("Digit1", 0)
-	j.until(func() bool { return j.a.uiModalTop() == tradeModalID }, 3000)
+	j.until(func() bool { return j.a.uiModalTop() == dialogs.TradeModalID }, 3000)
 	if j.a.renderer.speed != speedPaused {
 		t.Fatal("the trade dialog did not pause the colony")
 	}
 	tradeOne(t, j)
-	j.clickID("modal." + tradeModalID + ".cancel")
+	j.clickID("modal." + dialogs.TradeModalID + ".cancel")
 	if _, ok := j.lastCmd(command.CloseTrade); !ok {
 		t.Fatal("Cancel sent no CloseTrade")
 	}
-	if _, open := g.TradeView(); open || j.a.uiModalOpen() {
+	if _, open := g.TradeView(); open || j.a.uiSt().ModalOpen() {
 		t.Fatalf("trade still open after Cancel (modal %q)", j.a.uiModalTop())
 	}
 }
@@ -497,7 +503,7 @@ func TestJourneyDialogsPrisonerTab(t *testing.T) {
 		t.Fatal(err)
 	}
 	j := newJourney(t, jGame(g))
-	if j.a.uiModalOpen() {
+	if j.a.uiSt().ModalOpen() {
 		j.key("Escape", 0)
 	}
 	if _, ok := g.Prisoner(cast.Prisoner); !ok { // the warden walks over and arrests
@@ -507,22 +513,22 @@ func TestJourneyDialogsPrisonerTab(t *testing.T) {
 	}
 	p := j.pawn(uint64(cast.Prisoner))
 	j.lookAt(p.X, p.Y)
-	j.clickTile(p.X, p.Y, mbLeft, 0)
-	if sel, ok := j.a.selectedPawn(); !ok || sel.ID != cast.Prisoner {
+	j.clickTile(p.X, p.Y, inputframe.Left, 0)
+	if sel, ok := j.a.insp.SelectedPawn(); !ok || sel.ID != cast.Prisoner {
 		t.Fatalf("the click selected %v (%v), want the prisoner", sel.ID, ok)
 	}
-	j.clickID(prisonerTabID)
-	if j.a.paneOpenTab() != prisonerTabID {
-		t.Fatalf("open tab %q, want Prisoner", j.a.paneOpenTab())
+	j.clickID(inspectorpkg.PrisonerTabID)
+	if j.a.insp.PaneOpenTab() != inspectorpkg.PrisonerTabID {
+		t.Fatalf("open tab %q, want Prisoner", j.a.insp.PaneOpenTab())
 	}
-	j.clickID(prisonerModeID(prisoner.Reduce))
+	j.clickID(inspectorpkg.PrisonerModeID(prisoner.Reduce))
 	if c, ok := j.lastCmd(command.SetPrisonerMode); !ok || c.Target != uint64(cast.Prisoner) || c.Mode != uint8(prisoner.Reduce) {
 		t.Fatalf("SetPrisonerMode %+v (sent %v), want Reduce for the prisoner", c, ok)
 	}
 	if v, _ := g.Prisoner(cast.Prisoner); v.Mode != uint8(prisoner.Reduce) {
 		t.Fatalf("mode %d after Reduce, want %d", v.Mode, prisoner.Reduce)
 	}
-	if !j.clickID(prisonerRelease) {
+	if !j.clickID(inspectorpkg.PrisonerRelease) {
 		t.Fatal("Release now is disabled for a healthy prisoner")
 	}
 	if c, ok := j.lastCmd(command.ReleasePrisoner); !ok || c.Target != uint64(cast.Prisoner) {
@@ -545,14 +551,14 @@ func TestJourneyDialogsCaravanFormAndReturn(t *testing.T) {
 		j.key("Space", 0)
 	}
 	j.key("F8", 0)
-	if j.a.uiModalTop() != worldModalID {
+	if j.a.uiModalTop() != windows.WorldModalID {
 		t.Fatalf("F8 opened %q, want the World tab", j.a.uiModalTop())
 	}
-	if !j.clickID("modal." + worldModalID + ".world.form") {
+	if !j.clickID("modal." + windows.WorldModalID + ".world.form") {
 		t.Fatal("Form caravan is disabled on a colony with a world")
 	}
 	j.update(1)
-	if j.a.uiModalTop() != formCaravanID {
+	if j.a.uiModalTop() != dialogs.FormCaravanID {
 		t.Fatalf("top modal %q, want Form caravan", j.a.uiModalTop())
 	}
 	member := j.g.Snapshot()[0].ID
@@ -568,7 +574,7 @@ func TestJourneyDialogsCaravanFormAndReturn(t *testing.T) {
 		t.Fatalf("no settlement takes a caravan: %+v", j.g.WorldSites())
 	}
 	j.clickID("form.dest." + strconv.Itoa(dest))
-	if !j.clickID("modal." + formCaravanID + ".form.send") {
+	if !j.clickID("modal." + dialogs.FormCaravanID + ".form.send") {
 		t.Fatal("Send is disabled with a colonist and a destination picked")
 	}
 	c, ok := j.lastCmd(command.FormCaravan)
@@ -579,7 +585,7 @@ func TestJourneyDialogsCaravanFormAndReturn(t *testing.T) {
 	if len(cs) != 1 {
 		t.Fatalf("%d caravans after Send, want 1", len(cs))
 	}
-	if j.a.uiModalTop() != worldModalID {
+	if j.a.uiModalTop() != windows.WorldModalID {
 		t.Fatalf("top modal %q after Send, want the World tab back", j.a.uiModalTop())
 	}
 	row := "world.caravan." + strconv.FormatUint(cs[0].ID, 10) + ".return"
@@ -590,6 +596,6 @@ func TestJourneyDialogsCaravanFormAndReturn(t *testing.T) {
 		t.Fatalf("CaravanReturn %+v (sent %v), want caravan %d", c, ok, cs[0].ID)
 	}
 	if after := j.g.WorldMap().Caravans; len(after) == 1 && after[0].State == cs[0].State {
-		t.Fatalf("the caravan is still %q after %s", after[0].State, func() string { l, _ := caravanReturnLabel(cs[0]); return l }())
+		t.Fatalf("the caravan is still %q after %s", after[0].State, func() string { l, _ := windows.CaravanReturnLabel(cs[0]); return l }())
 	}
 }

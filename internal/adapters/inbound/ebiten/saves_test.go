@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"testing"
 )
 
@@ -10,10 +11,10 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 	saved := map[string]Simulation{}
 	a.cfg.Saves = SaveHooks{
 		Save: func(sim Simulation, slot string) error { saved[slot] = sim; return nil },
-		List: func() ([]SaveSlot, error) {
-			var out []SaveSlot
+		List: func() ([]ports.SaveSlot, error) {
+			var out []ports.SaveSlot
 			for name := range saved {
-				out = append(out, SaveSlot{Name: name, Path: name, Date: "Year 1", Colonists: 3})
+				out = append(out, ports.SaveSlot{Name: name, Path: name, Date: "Year 1", Colonists: 3})
 			}
 			return out, nil
 		},
@@ -29,12 +30,12 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 	}
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.load")
-	if a.nav.screen() != screenLoad || len(a.opt.Slots) != 1 {
+	if a.nav.screen() != ports.ScreenLoad || len(a.opt.Slots) != 1 {
 		t.Fatalf("load screen %s with %d slots", a.nav.screen(), len(a.opt.Slots))
 	}
 	before := a.simsStarted
 	click(t, a, "load.slot.0")
-	if a.nav.screen() != screenColony || a.simsStarted != before+1 || a.opt.SaveSlot != slot {
+	if a.nav.screen() != ports.ScreenColony || a.simsStarted != before+1 || a.opt.SaveSlot != slot {
 		t.Fatalf("after load: %s, sims %d, slot %q", a.nav.screen(), a.simsStarted, a.opt.SaveSlot)
 	}
 }

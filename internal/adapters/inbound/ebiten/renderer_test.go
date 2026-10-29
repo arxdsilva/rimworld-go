@@ -98,3 +98,26 @@ func TestNextVisualLerpsThenSettles(t *testing.T) {
 		t.Fatal("moving -x should flip")
 	}
 }
+
+func moveProgress(sinceTick, period int) float64 {
+	if period <= 0 {
+		return 1
+	}
+	if sinceTick <= 0 {
+		return 0
+	}
+	if sinceTick >= period {
+		return 1
+	}
+	return float64(sinceTick) / float64(period)
+}
+
+func lerp(a, b int, t float64) float64 {
+	if t <= 0 {
+		return float64(a)
+	}
+	if t >= 1 {
+		return float64(b)
+	}
+	return float64(a) + (float64(b)-float64(a))*t
+}

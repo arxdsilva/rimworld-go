@@ -2,6 +2,10 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"slices"
 	"strings"
 	"testing"
@@ -28,7 +32,7 @@ func htApp(t *testing.T, s *stubSim, sw, sh int) (*App, *fakeInput) {
 	a := testApp(s)
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	a.sw, a.sh = sw, sh
@@ -52,10 +56,10 @@ func htPawns(n int) []game.PawnView {
 }
 
 // htTrace records every canvas draw while fn runs.
-func htTrace(t *testing.T, fn func()) []traceEvent {
+func htTrace(t *testing.T, fn func()) []gfx.TraceEvent {
 	t.Helper()
-	var ev []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+	var ev []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { ev = append(ev, e) })
 	t.Cleanup(func() { gfx.SetDrawTrace(nil) })
 	fn()
 	gfx.SetDrawTrace(nil)
@@ -63,12 +67,12 @@ func htTrace(t *testing.T, fn func()) []traceEvent {
 }
 
 // physRect is r in physical pixels at UI scale s.
-func htPhysRect(r rect, s float64) rect {
+func htPhysRect(r gfx.Rect, s float64) gfx.Rect {
 	k := float32(s)
-	return rect{X: r.X * k, Y: r.Y * k, W: r.W * k, H: r.H * k}
+	return gfx.Rect{X: r.X * k, Y: r.Y * k, W: r.W * k, H: r.H * k}
 }
 
-func htInside(e traceEvent, r rect) bool {
+func htInside(e gfx.TraceEvent, r gfx.Rect) bool {
 	const eps = 0.51
 	return e.X >= r.X-eps && e.Y >= r.Y-eps && e.X+e.W <= r.Right()+eps && e.Y+e.H <= r.Bottom()+eps
 }
@@ -83,7 +87,7 @@ func TestBarSlotsFollowTheLayout(t *testing.T) {
 				if len(l.BarSlots) == 0 {
 					t.Fatal("the layout has no bar slots")
 				}
-				buttons := a.colonistBarButtons(sw, sh)
+				buttons := a.chrome.Bar().Buttons(sw, sh)
 				if want := n - l.BarMore; len(buttons) != want {
 					t.Fatalf("%d bar buttons, want %d (%d colonists, %d hidden)", len(buttons), want, n, l.BarMore)
 				}
@@ -92,16 +96,16 @@ func TestBarSlotsFollowTheLayout(t *testing.T) {
 					if b.X != slot.X || b.Y != slot.Y || b.W != slot.W || b.H != slot.H {
 						t.Errorf("button %s = (%v,%v,%v,%v), want slot %+v", b.ID, b.X, b.Y, b.W, b.H, slot)
 					}
-					if want := barSlotID(entity.EntityID(i + 1)); b.ID != want {
+					if want := hud.BarSlotID(entity.EntityID(i + 1)); b.ID != want {
 						t.Errorf("button %d id = %q, want %q", i, b.ID, want)
 					}
 				}
 				// the bar stays clear of the resources and the right column
 				for i, slot := range l.BarSlots {
-					if slot.X < hudMargin+resourcesW+hudMargin || slot.Right() > l.Right.X-hudMargin {
+					if slot.X < hudlayout.HudMargin+hudlayout.ResourcesW+hudlayout.HudMargin || slot.Right() > l.Right.X-hudlayout.HudMargin {
 						t.Errorf("slot %d %+v reaches the resources or the right column (right column at %v)", i, slot, l.Right.X)
 					}
-					if slot.Y < hudMargin {
+					if slot.Y < hudlayout.HudMargin {
 						t.Errorf("slot %d %+v above the top margin", i, slot)
 					}
 				}
@@ -118,8 +122,8 @@ func TestBarRowsAtTheDefaultSize(t *testing.T) {
 	if l.BarScale != 1 || l.BarMore != 0 || len(l.BarSlots) != 6 {
 		t.Fatalf("6 colonists: scale %v, hidden %d, slots %d; want one row at scale 1", l.BarScale, l.BarMore, len(l.BarSlots))
 	}
-	if l.Bar.Y != hudMargin {
-		t.Errorf("bar top = %v, want the %d px margin", l.Bar.Y, hudMargin)
+	if l.Bar.Y != hudlayout.HudMargin {
+		t.Errorf("bar top = %v, want the %d px margin", l.Bar.Y, hudlayout.HudMargin)
 	}
 	if mid := l.Bar.X + l.Bar.W/2; mid < 639 || mid > 641 {
 		t.Errorf("bar centre = %v, want 640 (top-centre)", mid)
@@ -145,19 +149,19 @@ func TestBarHiddenWhenTheSettingIsOff(t *testing.T) {
 	a, f := htApp(t, &stubSim{pawns: htPawns(6)}, 1280, 720)
 	a.settings.Gameplay.ShowColonistBar = false
 	f.Frame(t, a)
-	if n := a.barCount(); n != 0 {
+	if n := a.chrome.Bar().Count(); n != 0 {
 		t.Fatalf("barCount = %d with the bar off, want 0", n)
 	}
 	if l := a.hud(); !l.Bar.Empty() || len(l.BarSlots) != 0 {
 		t.Fatalf("layout bar = %+v with the bar off", l.Bar)
 	}
-	if bs := a.colonistBarButtons(a.sw, a.sh); len(bs) != 0 {
+	if bs := a.chrome.Bar().Buttons(a.sw, a.sh); len(bs) != 0 {
 		t.Fatalf("%d bar buttons with the bar off", len(bs))
 	}
-	if _, ok := a.uiSt().Find(barMoreID); ok {
+	if _, ok := a.uiSt().Find(hud.BarMoreID); ok {
 		t.Fatal("the +N slot is declared with the bar off")
 	}
-	ev := htTrace(t, func() { a.drawColonistBar(ebiten.NewImage(1280, 720), 1280, 720) })
+	ev := htTrace(t, func() { a.chrome.Bar().Draw(ebiten.NewImage(1280, 720), 1280, 720) })
 	if len(ev) != 0 {
 		t.Fatalf("the bar drew %d things while hidden", len(ev))
 	}
@@ -167,11 +171,11 @@ func TestBarLeavesOutPrisoners(t *testing.T) {
 	ps := htPawns(4)
 	ps[1].Prisoner = true
 	a, _ := htApp(t, &stubSim{pawns: ps}, 1280, 720)
-	if n := a.barCount(); n != 3 {
+	if n := a.chrome.Bar().Count(); n != 3 {
 		t.Fatalf("barCount = %d, want 3 (the prisoner is not on the bar)", n)
 	}
-	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.ID == barSlotID(2) {
+	for _, b := range a.chrome.Bar().Buttons(a.sw, a.sh) {
+		if b.ID == hud.BarSlotID(2) {
 			t.Fatal("the prisoner has a bar slot")
 		}
 	}
@@ -191,7 +195,7 @@ func TestBarCardDrawsMoodNameAndPortraitBox(t *testing.T) {
 					t.Fatalf("setup: bar scale %v for %d colonists", l.BarScale, n)
 				}
 				screen := ebiten.NewImage(int(float64(sw)*s), int(float64(sh)*s))
-				ev := htTrace(t, func() { a.drawColonistBar(screen, sw, sh) })
+				ev := htTrace(t, func() { a.chrome.Bar().Draw(screen, sw, sh) })
 
 				names := map[string]bool{}
 				for _, e := range ev {
@@ -199,14 +203,14 @@ func TestBarCardDrawsMoodNameAndPortraitBox(t *testing.T) {
 						names[e.Text] = true
 					}
 				}
-				for i, slot := range l.BarSlots[:barShown(l)] {
+				for i, slot := range l.BarSlots[:hud.BarShown(l)] {
 					p := ps[i]
 					pr := htPhysRect(slot, s)
 					// the mood backing: a fill on the slot's floor, as tall as the mood
 					gauge := false
 					for _, e := range ev {
 						if e.Kind == "fill" && e.X >= pr.X-0.5 && e.X+e.W <= pr.Right()+0.5 && e.W > pr.W-1 &&
-							abs32(e.Y+e.H-pr.Bottom()) < 0.51 && abs32(e.H-pr.H*float32(p.Mood)/100) < 0.51 {
+							gfx.Abs32(e.Y+e.H-pr.Bottom()) < 0.51 && gfx.Abs32(e.H-pr.H*float32(p.Mood)/100) < 0.51 {
 							gauge = true
 						}
 					}
@@ -234,8 +238,8 @@ func TestBarSelectedSlotHasAnOutline(t *testing.T) {
 	a.renderer.Select(3)
 	l := a.hud()
 	screen := ebiten.NewImage(1280, 720)
-	ev := htTrace(t, func() { a.drawColonistBar(screen, 1280, 720) })
-	outlined := func(slot rect) int {
+	ev := htTrace(t, func() { a.chrome.Bar().Draw(screen, 1280, 720) })
+	outlined := func(slot gfx.Rect) int {
 		n := 0
 		for _, e := range ev {
 			if e.Kind == "stroke" && e.X == slot.X+1 && e.Y == slot.Y+1 && e.W == slot.W-2 && e.H == slot.H-2 {
@@ -255,8 +259,8 @@ func TestBarSelectedSlotHasAnOutline(t *testing.T) {
 	}
 	// a colonist in a group selection is outlined too
 	a.renderer.ClearSelect()
-	a.setGroup(selPawn, []entity.EntityID{2, 5})
-	ev = htTrace(t, func() { a.drawColonistBar(screen, 1280, 720) })
+	a.sel.SetGroup(selectionpkg.Pawn, []entity.EntityID{2, 5})
+	ev = htTrace(t, func() { a.chrome.Bar().Draw(screen, 1280, 720) })
 	for i, slot := range l.BarSlots {
 		want := 0
 		if i == 1 || i == 4 {
@@ -276,8 +280,8 @@ func TestBarStatusIconsAreDrawnInTheSlot(t *testing.T) {
 	a, _ := htApp(t, &stubSim{pawns: ps}, 1280, 720)
 	l := a.hud()
 	screen := ebiten.NewImage(1280, 720)
-	ev := htTrace(t, func() { a.drawColonistBar(screen, 1280, 720) })
-	pips := func(slot rect) int { // no art in the unit tests: each status degrades to a pip
+	ev := htTrace(t, func() { a.chrome.Bar().Draw(screen, 1280, 720) })
+	pips := func(slot gfx.Rect) int { // no art in the unit tests: each status degrades to a pip
 		n := 0
 		for _, e := range ev {
 			if e.Kind == "circle" && htInside(e, slot) {
@@ -297,13 +301,13 @@ func TestBarTooltipNamesTheStatuses(t *testing.T) {
 	ps := htPawns(2)
 	ps[0].Drafted, ps[0].Lying = true, true
 	a, _ := htApp(t, &stubSim{pawns: ps}, 1280, 720)
-	bs := a.colonistBarButtons(a.sw, a.sh)
+	bs := a.chrome.Bar().Buttons(a.sw, a.sh)
 	if want := "Pawn01 (drafted, sleeping)"; bs[0].Tip != want {
 		t.Errorf("tip = %q, want %q", bs[0].Tip, want)
 	}
 	// a plain colonist keeps the legacy line (name, age, title)
-	if bs[1].Tip != barTip(ps[1]) || bs[1].Tip != "Pawn02" {
-		t.Errorf("plain tip = %q, want %q", bs[1].Tip, barTip(ps[1]))
+	if bs[1].Tip != hud.BarTip(ps[1]) || bs[1].Tip != "Pawn02" {
+		t.Errorf("plain tip = %q, want %q", bs[1].Tip, hud.BarTip(ps[1]))
 	}
 }
 
@@ -334,10 +338,10 @@ func TestBarIdleIconWaitsOutShortGaps(t *testing.T) {
 	if idle() {
 		t.Fatal("idle shows the moment the colonist runs out of work")
 	}
-	s.tick += barIdleHold - 1
+	s.tick += hud.BarIdleHold - 1
 	f.Frame(t, a)
 	if idle() {
-		t.Fatalf("idle shows after %d ticks, before the %d tick hold", barIdleHold-1, barIdleHold)
+		t.Fatalf("idle shows after %d ticks, before the %d tick hold", hud.BarIdleHold-1, hud.BarIdleHold)
 	}
 	s.tick++
 	f.Frame(t, a)
@@ -358,7 +362,7 @@ func TestBarIdleIconWaitsOutShortGaps(t *testing.T) {
 	}
 	// an idle spell from before a new game (the clock is earlier now) does not carry over
 	s.pawns[0].Activity = schedule.Work
-	s.tick += barIdleHold
+	s.tick += hud.BarIdleHold
 	f.Frame(t, a)
 	if !idle() {
 		t.Fatal("setup: idle should show after the hold")
@@ -370,7 +374,7 @@ func TestBarIdleIconWaitsOutShortGaps(t *testing.T) {
 	}
 	// free time with nothing to do is not worth a flag
 	s.pawns[0].Activity = schedule.Recreation
-	s.tick += barIdleHold * 2
+	s.tick += hud.BarIdleHold * 2
 	f.Frame(t, a)
 	if idle() {
 		t.Fatal("idle shows during recreation hours")
@@ -384,7 +388,7 @@ func TestBarMoreSlotCyclesTheHiddenColonists(t *testing.T) {
 		t.Fatalf("setup: %d hidden, want an overflowing bar", l.BarMore)
 	}
 	shown := len(l.BarSlots) - 1 // the last slot is the "+N"
-	w, ok := a.uiSt().Find(barMoreID)
+	w, ok := a.uiSt().Find(hud.BarMoreID)
 	if !ok {
 		t.Fatal("no +N widget")
 	}
@@ -395,18 +399,18 @@ func TestBarMoreSlotCyclesTheHiddenColonists(t *testing.T) {
 	if want := fmt.Sprintf("%d more colonists", l.BarMore); !strings.HasPrefix(w.Tip, want) {
 		t.Errorf("+N tip = %q, want it to start with %q", w.Tip, want)
 	}
-	click(t, a, barMoreID)
+	click(t, a, hud.BarMoreID)
 	if !a.renderer.HasSelect() || a.renderer.Selected() != entity.EntityID(shown+1) {
 		t.Fatalf("first +N click selected %d (has %v), want the first hidden colonist %d", a.renderer.Selected(), a.renderer.HasSelect(), shown+1)
 	}
 	f.Frame(t, a)
-	click(t, a, barMoreID)
+	click(t, a, hud.BarMoreID)
 	if a.renderer.Selected() != entity.EntityID(shown+2) {
 		t.Fatalf("second +N click selected %d, want the next hidden colonist %d", a.renderer.Selected(), shown+2)
 	}
 	// the last hidden colonist wraps round to the first
 	a.renderer.Select(30)
-	click(t, a, barMoreID)
+	click(t, a, hud.BarMoreID)
 	if a.renderer.Selected() != entity.EntityID(shown+1) {
 		t.Fatalf("after the last hidden colonist the click selected %d, want %d", a.renderer.Selected(), shown+1)
 	}
@@ -415,7 +419,7 @@ func TestBarMoreSlotCyclesTheHiddenColonists(t *testing.T) {
 func TestBarMoreSlotDrawsItsCount(t *testing.T) {
 	a, _ := htApp(t, &stubSim{pawns: htPawns(30)}, 700, 720)
 	l := a.hud()
-	ev := htTrace(t, func() { a.drawColonistBar(ebiten.NewImage(700, 720), 700, 720) })
+	ev := htTrace(t, func() { a.chrome.Bar().Draw(ebiten.NewImage(700, 720), 700, 720) })
 	want := fmt.Sprintf("+%d", l.BarMore)
 	for _, e := range ev {
 		if e.Kind == "text" && e.Text == want && htInside(e, l.BarSlots[len(l.BarSlots)-1]) {
@@ -427,15 +431,15 @@ func TestBarMoreSlotDrawsItsCount(t *testing.T) {
 
 func TestBarShiftClickAndHoverStillWork(t *testing.T) {
 	a, _ := htApp(t, &stubSim{pawns: htPawns(3)}, 1280, 720)
-	click(t, a, barSlotID(2))
+	click(t, a, hud.BarSlotID(2))
 	if a.renderer.Selected() != 2 {
 		t.Fatalf("bar click selected %d", a.renderer.Selected())
 	}
-	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.ID == barSlotID(2) && !b.Selected {
+	for _, b := range a.chrome.Bar().Buttons(a.sw, a.sh) {
+		if b.ID == hud.BarSlotID(2) && !b.Selected {
 			t.Error("the selected colonist's button is not marked selected")
 		}
-		if b.ID != barSlotID(2) && b.Selected {
+		if b.ID != hud.BarSlotID(2) && b.Selected {
 			t.Errorf("%s is marked selected", b.ID)
 		}
 	}
@@ -454,7 +458,7 @@ func TestBarPortraitsAndIconsStayInTheirSlots(t *testing.T) {
 		withUIScale(t, s)
 		l := a.hud()
 		screen := ebiten.NewImage(int(float64(sw)*s), int(float64(sh)*s))
-		ev := htTrace(t, func() { a.drawColonistBar(screen, sw, sh) })
+		ev := htTrace(t, func() { a.chrome.Bar().Draw(screen, sw, sh) })
 		for i, slot := range l.BarSlots {
 			pr := htPhysRect(slot, s)
 			n, icons := 0, 0
@@ -466,7 +470,7 @@ func TestBarPortraitsAndIconsStayInTheirSlots(t *testing.T) {
 					t.Errorf("s=%v slot %d: image %v leaves its slot %+v", s, i, e, pr)
 				}
 				n++
-				if abs32(e.W-float32(barIconSize)*l.BarScale*float32(s)) < 0.6 && abs32(e.H-e.W) < 0.6 {
+				if gfx.Abs32(e.W-float32(hud.BarIconSize)*l.BarScale*float32(s)) < 0.6 && gfx.Abs32(e.H-e.W) < 0.6 {
 					icons++
 				}
 			}

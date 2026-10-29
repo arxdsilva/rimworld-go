@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	globepkg "rimworld-go/internal/adapters/inbound/ebiten/globe"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"sync"
 	"testing"
 
@@ -30,21 +32,21 @@ func globeTestPlanet(tb testing.TB, coverage int) *planet.Planet {
 }
 
 // testGlobe is a fresh view on the 30 % world at 1280x720.
-func testGlobe(t testing.TB) *globeView {
+func testGlobe(t testing.TB) *globepkg.View {
 	t.Helper()
-	g := newGlobeView(globeTestPlanet(t, 30), nil)
+	g := globepkg.New(globeTestPlanet(t, 30), nil)
 	g.Sw, g.Sh = 1280, 720
 	g.Reduced = true
 	return g
 }
 
-func centreNow(g *globeView, i int) {
+func centreNow(g *globepkg.View, i int) {
 	c := g.P.Center[i]
 	g.Cam.PanX, g.Cam.PanY = 0, 0
 	g.Cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
 }
 
-func landTile(t testing.TB, g *globeView) int {
+func landTile(t testing.TB, g *globepkg.View) int {
 	t.Helper()
 	for i := 0; i < g.P.TileCount(); i++ {
 		if ok, _ := g.P.ValidLanding(i); ok {
@@ -57,11 +59,11 @@ func landTile(t testing.TB, g *globeView) int {
 
 func TestGlobeInputFromFrame(t *testing.T) {
 	t.Parallel()
-	raw := rawInput{Mx: 30, My: 40, WheelY: 2, Held: []string{"W"}, Pressed: []string{"Home"}}
-	raw.Press[mbLeft], raw.Down[mbLeft], raw.Release[mbRight] = true, true, true
-	f := newFrame(raw)
+	raw := inputframe.Raw{Mx: 30, My: 40, WheelY: 2, Held: []string{"W"}, Pressed: []string{"Home"}}
+	raw.Press[inputframe.Left], raw.Down[inputframe.Left], raw.Release[inputframe.Right] = true, true, true
+	f := inputframe.NewFrame(raw)
 	in := globeInputFrom(&f, 1280, 720, true)
-	if in.MX != 30 || in.MY != 40 || in.Wheel != 2 || !in.Press[mbLeft] || !in.Down[mbLeft] || !in.Release[mbRight] ||
+	if in.MX != 30 || in.MY != 40 || in.Wheel != 2 || !in.Press[inputframe.Left] || !in.Down[inputframe.Left] || !in.Release[inputframe.Right] ||
 		!in.Blocked || in.W != 1280 || in.H != 720 || len(in.Held) != 1 || len(in.Keys) != 1 || in.Shift {
 		t.Fatalf("globeInputFrom = %+v", in)
 	}

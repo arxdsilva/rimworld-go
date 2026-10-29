@@ -6,6 +6,8 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -22,9 +24,9 @@ func BenchmarkDrawPlants(b *testing.B) {
 		p := game.PlantView{ID: entity.EntityID(100 + i), X: i % 40, Y: i / 40, Species: species[i%len(species)],
 			Growth: 20 + i%80, Stage: i % 4, Harvestable: i%3 == 0}
 		w.Plants = append(w.Plants, p)
-		k, _ := plantSprite(p)
+		k, _ := world.PlantSprite(p)
 		keys = append(keys, k)
-		if fb := plantKeys.Fallback[k]; len(fb) > 0 { // variant 0 of a stage has none
+		if fb := world.PlantKeys.Fallback[k]; len(fb) > 0 { // variant 0 of a stage has none
 			keys = append(keys, fb[len(fb)-1])
 		}
 	}
@@ -36,18 +38,18 @@ func BenchmarkDrawPlants(b *testing.B) {
 	r.art = envArt(keys...)
 	r.cam.Zoom = 0.5 // the whole 40x25 field on screen
 	screen := ebiten.NewImage(1280, 800)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	none := color.NRGBA{}
-	kindOf := func(sp string) (plantKind, float64) {
+	kindOf := func(sp string) (env.PlantKind, float64) {
 		switch sp {
 		case "tree":
-			return kindTree, 0.022
+			return env.KindTree, 0.022
 		case "wheat", "corn":
-			return kindCrop, 0.07
+			return env.KindCrop, 0.07
 		case "berry_bush":
-			return kindBush, 0.035
+			return env.KindBush, 0.035
 		}
-		return kindCrop, 0.04
+		return env.KindCrop, 0.04
 	}
 	frame := func() {
 		r.present++
@@ -55,7 +57,7 @@ func BenchmarkDrawPlants(b *testing.B) {
 		r.stepEnvironment(w, r.game.Snapshot())
 		r.setView(1280, 800, tile)
 		for _, p := range w.Plants {
-			key, scale := plantSprite(p)
+			key, scale := world.PlantSprite(p)
 			key = r.seasonKey(key, w)
 			kind, amount := kindOf(p.Species)
 			ps := r.plantPose(p.X, p.Y, kind, amount, scale)

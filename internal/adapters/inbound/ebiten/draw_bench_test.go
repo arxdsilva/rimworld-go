@@ -2,6 +2,8 @@ package ebiten
 
 import (
 	"os"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -36,7 +38,7 @@ func BenchmarkDrawArtMountain(b *testing.B) {
 }
 
 func benchDraw(b *testing.B, setup func(*game.Game)) {
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		b.Skip("generated art not present:", err)
 	}
@@ -51,7 +53,7 @@ func benchDraw(b *testing.B, setup func(*game.Game)) {
 	r.art = art
 	r.cam.Zoom = 0.6
 	screen := ebiten.NewImage(1280, 800)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	frame := func() {
 		r.present++
 		r.advance()
@@ -87,7 +89,7 @@ func BenchmarkDrawArt250(b *testing.B) {
 }
 
 func benchDrawGrown(b *testing.B, side int) {
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		b.Skip("generated art not present:", err)
 	}
@@ -118,14 +120,14 @@ func benchDrawGrown(b *testing.B, side int) {
 				r.speed = speedNormal
 			}
 			const sw, sh = 1280, 800
-			v := colonyViewport(sw, sh)
+			v := camerapkg.ColonyViewport(sw, sh)
 			r.cam.Zoom = z.zoom
 			if z.zoom == 0 {
 				r.cam.Zoom = r.MinZoomFor(v)
 			}
 			r.ClampCamera(v) // centred on the colony
 			screen := ebiten.NewImage(sw, sh)
-			tile := r.tilePx()
+			tile := r.cam.Tile()
 			frame := func() {
 				r.advance()
 				r.setView(sw, sh, tile)

@@ -2,6 +2,12 @@ package ebiten
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"strconv"
 	"strings"
 
@@ -12,7 +18,6 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/medcare"
-	"rimworld-go/internal/domain/pawn/skill"
 )
 
 // windows.Set owns the colony's main-tab windows (ARCH-005 wave 5.3);
@@ -53,7 +58,7 @@ func (h windowsHost) Env() windows.Env {
 	return e
 }
 
-func (h windowsHost) WindowRect() rect { return h.a.hud().Window }
+func (h windowsHost) WindowRect() gfx.Rect { return h.a.hud().Window }
 
 func (h windowsHost) CenterOnMap(wx, wy float64) {
 	if h.a.renderer != nil {
@@ -61,42 +66,42 @@ func (h windowsHost) CenterOnMap(wx, wy float64) {
 	}
 }
 
-func (h windowsHost) AreaDropdown(id string, r rect, ref int, pick func(ref int)) {
-	h.a.areaDropdown(id, r, ref, pick)
+func (h windowsHost) AreaDropdown(id string, r gfx.Rect, ref int, pick func(ref int)) {
+	h.a.arch.Areas.Dropdown(id, r, ref, pick)
 }
 
-func (h windowsHost) ManageAreas() { h.a.openAreaManager() }
+func (h windowsHost) ManageAreas() { h.a.arch.Areas.OpenManager() }
 
 func (h windowsHost) Float(x, y float32, opts []game.OrderOption) {
 	if opts == nil {
-		h.a.closeFloat()
+		h.a.ord.CloseFloat()
 		return
 	}
-	h.a.openPick(x, y, false, opts, func(i int) { h.a.shell.Enqueue(opts[i].Cmd) })
+	h.a.ord.OpenPick(x, y, false, opts, func(i int) { h.a.shell.Enqueue(opts[i].Cmd) })
 }
 
 func (h windowsHost) FormCaravan(globePick func() int) { h.a.deal.OpenFormCaravan(globePick) }
 
-func (h windowsHost) FactionsTable(body rect, maxH float32, sel *int) rect {
+func (h windowsHost) FactionsTable(body gfx.Rect, maxH float32, sel *int) gfx.Rect {
 	rows := h.colonyRows()
-	plain := make([]facRow, len(rows))
+	plain := make([]wizardpkg.FacRow, len(rows))
 	for i, r := range rows {
-		plain[i] = r.facRow
+		plain[i] = r.FacRow
 	}
-	listH := min(float32(tableHeaderH+len(rows)*facRowH+4), maxH)
+	listH := min(float32(uikit.TableHeaderH+len(rows)*wizardpkg.FacRowH+4), maxH)
 	tb, rest := body.SplitV(listH)
-	h.a.factionsTable(tb, plain, sel, nil)
+	h.a.wiz.FactionsTable(tb, plain, sel, nil)
 	return rest
 }
 
 // ---- windows.Labels
 
-func (h windowsHost) PawnLabel(p game.PawnView) string       { return pawnLabel(p) }
-func (h windowsHost) AnimalLabel(an game.AnimalView) string  { return animalLabel(an) }
-func (h windowsHost) AnimalHealth(an game.AnimalView) string { return animalHealthCell(an) }
-func (h windowsHost) CareShort(p medcare.Policy) string      { return careShort(p) }
+func (h windowsHost) PawnLabel(p game.PawnView) string       { return hud.PawnLabel(p) }
+func (h windowsHost) AnimalLabel(an game.AnimalView) string  { return inspector.AnimalLabel(an) }
+func (h windowsHost) AnimalHealth(an game.AnimalView) string { return inspector.AnimalHealthCell(an) }
+func (h windowsHost) CareShort(p medcare.Policy) string      { return inspector.CareShort(p) }
 func (h windowsHost) Caravan(c game.CaravanView) (string, string) {
-	return caravanTip(c), caravanHealthNote(c)
+	return dialogs.CaravanTip(c), dialogs.CaravanHealthNote(c)
 }
 
 func (h windowsHost) Factions() []windows.Faction {
@@ -105,7 +110,7 @@ func (h windowsHost) Factions() []windows.Faction {
 	for i, r := range rows {
 		out[i] = windows.Faction{
 			Name: r.Name, TypeLabel: r.TypeLabel, Tech: r.Tech, Goodwill: r.Goodwill, Relation: r.Relation,
-			Standing: relationLabel(r.Relation), Color: relationColor(r.Relation), Tip: goodwillTip(r.facRow),
+			Standing: wizardpkg.RelationLabel(r.Relation), Color: wizardpkg.RelationColor(r.Relation), Tip: wizardpkg.GoodwillTip(r.FacRow),
 			History: r.History, Events: r.Events,
 		}
 	}
@@ -114,12 +119,12 @@ func (h windowsHost) Factions() []windows.Faction {
 
 func (h windowsHost) DrawAnimalIcon(dst *ebiten.Image, an game.AnimalView, x, y, size float64) {
 	if r := h.a.renderer; r != nil {
-		drawAnimalIcon(dst, r.art, an, x, y, size)
+		inspector.DrawAnimalIcon(dst, r.art, an, x, y, size)
 	}
 }
 
-func (h windowsHost) DrawPassion(dst *ebiten.Image, p int, x, y, size float64, st textStyle, ty float64) {
-	h.a.drawPassion(dst, p, x, y, size, st, ty)
+func (h windowsHost) DrawPassion(dst *ebiten.Image, p int, x, y, size float64, st gfx.TextStyle, ty float64) {
+	h.a.insp.Tabs().DrawPassion(dst, p, x, y, size, st, ty)
 }
 
 // colonyRows are the live Factions table rows (none off the colony).
@@ -135,7 +140,7 @@ func (h windowsHost) colonyRows() []colFacRow {
 
 // colFacRow is one table row and the faction's detail.
 type colFacRow struct {
-	facRow
+	wizardpkg.FacRow
 	History []int
 	Events  []string
 }
@@ -160,7 +165,7 @@ func accentOfView(hex string) color.NRGBA {
 			return color.NRGBA{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v), A: 0xFF}
 		}
 	}
-	return color.NRGBA{R: uiTextDim.R, G: uiTextDim.G, B: uiTextDim.B, A: 0xFF}
+	return color.NRGBA{R: uikit.TextDim.R, G: uikit.TextDim.G, B: uikit.TextDim.B, A: 0xFF}
 }
 
 // colonyFactionRows turns the read model into table rows: the visible
@@ -172,7 +177,7 @@ func colonyFactionRows(views []game.FactionView) []colFacRow {
 		if v.Hidden {
 			continue
 		}
-		r := facRow{
+		r := wizardpkg.FacRow{
 			ID: v.ID, Name: v.Name, TypeLabel: v.Type, Goodwill: v.Goodwill,
 			Relation: relationOfView(v.Relation), Settlements: v.Settlements, Tech: v.Tech,
 			Emblem: v.Emblem, Accent: accentOfView(v.Accent), Capital: -1,
@@ -184,10 +189,10 @@ func colonyFactionRows(views []game.FactionView) []colFacRow {
 		for i, h := range v.History {
 			hist[i] = int(h)
 		}
-		rows = append(rows, colFacRow{facRow: r, History: hist, Events: v.Events})
+		rows = append(rows, colFacRow{FacRow: r, History: hist, Events: v.Events})
 	}
-	for _, s := range factionRows(nil) { // the Swarm
-		rows = append(rows, colFacRow{facRow: s})
+	for _, s := range wizardpkg.FactionRows(nil) { // the Swarm
+		rows = append(rows, colFacRow{FacRow: s})
 	}
 	return rows
 }
@@ -198,11 +203,11 @@ func colonyFactionRows(views []game.FactionView) []colFacRow {
 // tabWidget declares the widget of the HUD tab id (when enabled) that runs
 // click; tip carries the button's hover card over.
 func (a *App) tabWidget(sw, sh int, id string, tip bool, click func()) {
-	for _, b := range a.hudTabButtons(sw, sh) {
+	for _, b := range a.chrome.Tabs().Buttons(sw, sh) {
 		if b.ID != id || b.Disabled {
 			continue
 		}
-		w := uiWidget{ID: b.ID, Label: b.Label, R: rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, Click: click}
+		w := uikit.Widget{ID: b.ID, Label: b.Label, R: gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, Click: click}
 		if tip {
 			w.Tip = b.Tip
 		}
@@ -233,115 +238,6 @@ func (a *App) mainWindowUI(sw, sh int) {
 
 // ---- the kit window's shim
 
-func (a *App) windowKitOpen() bool { return a.win.KitOpen() }
-
-func (a *App) uiOpenWindow(m modal)   { a.win.OpenKit(a.kitModal(m)) }
-func (a *App) uiCloseWindow()         { a.win.CloseKit() }
-func (a *App) closeWindowQuietly()    { a.win.CloseQuietly() }
-func (a *App) showWindow(mode string) { a.win.Show(mode) }
-
 // ---- window wrappers
 
-func (a *App) drawWindows(screen *ebiten.Image, sw, sh int) { a.win.Draw(screen, sw, sh) }
-func (a *App) windowWant() (float32, float32)               { return a.win.Want() }
-func (a *App) windowRect() button                           { return a.win.Rect() }
-func (a *App) windowAnchor() rect                           { return a.win.Anchor() }
-func (a *App) applyWindowClick(id string)                   { a.win.Click(id) }
-func (a *App) toggleWildlifeTab()                           { a.win.ToggleWildlife() }
-func (a *App) workButtons() []button                        { return a.win.Buttons() }
-func (a *App) workTipsUI(sw, sh int)                        { a.win.Work().Tips(sw, sh) }
-func (a *App) scheduleRows() []uint64                       { return a.win.Schedule().Rows() }
-func (a *App) paintSchedule(id string)                      { a.win.Schedule().Paint(id) }
-func (a *App) handleScheduleDrag()                          { a.win.Schedule().Drag() }
-func (a *App) toggleAssign()                                { a.win.Assign().Toggle() }
-func (a *App) openAssign()                                  { a.win.Assign().Launch() }
-func (a *App) animalsTabButtons() []button                  { return a.win.Animals().Buttons() }
-func (a *App) animalsTabUI(sw, sh int)                      { a.win.Animals().Declare(sw, sh) }
-func (a *App) applyAnimalsTab(id string)                    { a.win.Animals().Click(id) }
-func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
-	a.win.Animals().Draw(screen, sw, sh)
-}
-func (a *App) wildRow(species string) (game.WildlifeRow, bool) {
-	return a.win.Animals().WildRow(species)
-}
-func (a *App) lockedBy(key string) string { return a.win.Research().LockedBy(key) }
-func (a *App) researchUI(sw, sh int)      { a.win.Research().Declare(sw, sh) }
-func (a *App) researchButtons() []button  { return a.win.Research().Buttons() }
-func (a *App) pickResearch(id string)     { a.win.Research().Pick(id) }
-func (a *App) hasResearchBench() bool     { return a.win.Research().HasBench() }
-func (a *App) openHistory()               { a.win.History().Launch() }
-func (a *App) openColonyFactions()        { a.win.Factions().Launch() }
-func (a *App) openWorld()                 { a.win.World().Launch() }
-func (a *App) toggleWorld()               { a.win.World().Toggle() }
-
 // ---- aliases
-
-const (
-	assignModalID  = windows.AssignModalID
-	assignRowH     = windows.AssignRowH
-	colFacModalID  = windows.ColFacModalID
-	historyModalID = windows.HistoryModalID
-	worldModalID   = windows.WorldModalID
-	schedCellW     = windows.SchedCellW
-	schedRowH      = windows.SchedRowH
-	schedTop       = windows.SchedTop
-	workNameW      = windows.WorkNameW
-)
-
-type worldSource = windows.WorldSource
-
-var (
-	animalBlurbs  = windows.AnimalBlurbs
-	assignPresets = windows.AssignPresets
-	workColumns   = windows.WorkColumns
-	workHelp      = windows.WorkHelp
-	workLive      = windows.WorkLive
-)
-
-// workColSkill mirrors windows.WorkColSkill in its old field names for
-// social_tabs_ui_test.go.
-var workColSkill = func() (out [len(windows.WorkColSkill)]struct {
-	sk skill.ID
-	ok bool
-}) {
-	for i, c := range windows.WorkColSkill {
-		out[i].sk, out[i].ok = c.Skill, c.OK
-	}
-	return out
-}()
-
-var (
-	animalAgeText      = windows.AnimalAgeText
-	animalBlurb        = windows.AnimalBlurb
-	animalDoing        = windows.AnimalDoing
-	animalMasterCell   = windows.AnimalMasterCell
-	animalPregCell     = windows.AnimalPregCell
-	animalProductText  = windows.AnimalProductText
-	animalSexLetter    = windows.AnimalSexLetter
-	animalTrainingCell = windows.AnimalTrainingCell
-	assignCareID       = windows.AssignCareID
-	assignDefCareID    = windows.AssignDefCareID
-	assignDrugID       = windows.AssignDrugID
-	caravanReturnLabel = windows.CaravanReturnLabel
-	chartPoints        = windows.ChartPoints
-	countZones         = windows.CountZones
-	drawGoodwillChart  = windows.DrawGoodwillChart
-	followCell         = windows.FollowCell
-	historyRows        = windows.HistoryRows
-	nextCare           = windows.NextCare
-	nextPreset         = windows.NextPreset
-	nextPriority       = windows.NextPriority
-	presetLabel        = windows.PresetLabel
-	workCellRect       = windows.WorkCellRect
-	workCellValue      = windows.WorkCellValue
-	workPriority       = windows.WorkPriority
-	workTypeForCol     = windows.WorkTypeForCol
-)
-
-// animalAreaCell is the Area / Pen column's text over the areas.
-func animalAreaCell(an game.AnimalView, areas []game.AreaView) string {
-	return windows.AnimalAreaCell(an, areaRefLabel(areas, an.AreaRef))
-}
-
-// animalRow is one line of the Animals tab (animal_species_test.go).
-func animalRow(an game.AnimalView) string { return windows.AnimalRow(an, animalLabel(an)) }

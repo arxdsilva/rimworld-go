@@ -3,6 +3,9 @@ package ebiten
 import (
 	"testing"
 
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/platform/config"
 )
@@ -13,8 +16,8 @@ type fakeSettings struct {
 	saves int
 }
 
-func (f *fakeSettings) hooks() SettingsHooks {
-	return SettingsHooks{
+func (f *fakeSettings) hooks() options.Hooks {
+	return options.Hooks{
 		Load: func() (config.Settings, error) { return f.s, nil },
 		Save: func(s config.Settings) error { f.s = s; f.saves++; return nil },
 	}
@@ -32,9 +35,9 @@ func TestOptionTabsLayout(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	for _, size := range [][2]int{{1280, 720}, {960, 540}} {
-		for _, tab := range optionTabs() {
+		for _, tab := range options.OptionTabs() {
 			a.opt.Tab = tab
-			bs := a.optionsButtons(size[0], size[1])
+			bs := a.opt.Buttons(size[0], size[1])
 			seen := map[string]bool{}
 			for i, b := range bs {
 				if seen[b.ID] {
@@ -100,8 +103,8 @@ func TestOptionsTabSwitchChangesRows(t *testing.T) {
 	t.Parallel()
 	a := optionsApp(&fakeSettings{s: config.Defaults()})
 	click(t, a, "menu.options")
-	if a.currentOptionsTab() != "audio" {
-		t.Fatalf("opens on %q, want audio", a.currentOptionsTab())
+	if a.opt.CurrentTab() != "audio" {
+		t.Fatalf("opens on %q, want audio", a.opt.CurrentTab())
 	}
 	click(t, a, "options.tab.access")
 	click(t, a, "options.reducedmotion")
@@ -126,7 +129,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 
 func TestEdgePan(t *testing.T) {
 	t.Parallel()
-	v := viewport{X0: 0, Y0: 40, X1: 1280, Y1: 680}
+	v := camerapkg.Viewport{X0: 0, Y0: 40, X1: 1280, Y1: 680}
 	cases := []struct {
 		mx, my int
 		dx, dy float64
@@ -150,15 +153,15 @@ func TestEdgePan(t *testing.T) {
 func TestMenuParticlesFollowSettings(t *testing.T) {
 	t.Parallel()
 	s := config.Defaults()
-	if e, m := menuParticles(s); e != menuEmbers || m != menuMotes {
+	if e, m := mainmenu.Particles(s); e != mainmenu.EmberCount || m != mainmenu.MoteCount {
 		t.Fatalf("full effects = %d embers %d motes", e, m)
 	}
 	s.Graphics.Effects = config.EffectsMinimal
-	if e, m := menuParticles(s); e >= menuEmbers || m >= menuMotes || e == 0 {
+	if e, m := mainmenu.Particles(s); e >= mainmenu.EmberCount || m >= mainmenu.MoteCount || e == 0 {
 		t.Fatalf("minimal effects = %d embers %d motes", e, m)
 	}
 	s.Accessibility.ReducedMotion = true
-	if e, m := menuParticles(s); e != 0 || m != 0 {
+	if e, m := mainmenu.Particles(s); e != 0 || m != 0 {
 		t.Fatalf("reduced motion = %d embers %d motes, want none", e, m)
 	}
 }
@@ -174,7 +177,7 @@ func TestAutosaveInterval(t *testing.T) {
 	a.settings.Gameplay.AutosaveDays = 3
 	for t0 := clock.Tick(0); t0 < 10*60000; t0 += 100 {
 		sim.tick = t0
-		a.tickAutosave()
+		a.opt.TickAutosave()
 	}
 	if saves != 3 { // days 3, 6 and 9
 		t.Fatalf("autosaves in 10 days every 3 = %d, want 3", saves)

@@ -2,25 +2,6 @@ package ebiten
 
 import "rimworld-go/internal/adapters/inbound/ebiten/ports"
 
-// screenID is a full-screen route (ports.Screen). Presentation-only; it
-// never exists in the domain.
-type screenID = ports.Screen
-
-const (
-	screenBoot           = ports.ScreenBoot
-	screenMainMenu       = ports.ScreenMainMenu
-	screenScenario       = ports.ScreenScenario
-	screenStoryteller    = ports.ScreenStoryteller
-	screenWorldGen       = ports.ScreenWorldGen
-	screenLanding        = ports.ScreenLanding
-	screenPawns          = ports.ScreenPawns
-	screenColony         = ports.ScreenColony
-	screenOptions        = ports.ScreenOptions
-	screenLoad           = ports.ScreenLoad
-	screenCredits        = ports.ScreenCredits
-	screenScenarioEditor = ports.ScreenScenarioEditor
-)
-
 // overlayID is a modal layer on top of the current full screen.
 type overlayID int
 
@@ -37,7 +18,7 @@ func (o overlayID) String() string {
 }
 
 type frame struct {
-	screen  screenID
+	screen  ports.Screen
 	overlay overlayID
 }
 
@@ -46,14 +27,14 @@ type nav struct {
 }
 
 func newNav() nav {
-	return nav{stack: []frame{{screen: screenBoot}}}
+	return nav{stack: []frame{{screen: ports.ScreenBoot}}}
 }
 
 func (n *nav) top() frame {
 	return n.stack[len(n.stack)-1]
 }
 
-func (n *nav) screen() screenID { return n.top().screen }
+func (n *nav) screen() ports.Screen { return n.top().screen }
 
 func (n *nav) overlay() overlayID { return n.top().overlay }
 
@@ -93,7 +74,7 @@ const (
 
 type intent struct {
 	kind   intentKind
-	screen screenID
+	screen ports.Screen
 }
 
 func (n *nav) escapeIntent() intent {
@@ -104,25 +85,25 @@ func (n *nav) escapeIntent() intent {
 	if len(n.stack) > 1 {
 		return intent{kind: intentBack}
 	}
-	if t.screen == screenColony {
+	if t.screen == ports.ScreenColony {
 		return intent{kind: intentPause}
 	}
-	if t.screen == screenBoot {
+	if t.screen == ports.ScreenBoot {
 		return intent{kind: intentFinishBoot}
 	}
 	return intent{}
 }
 
-func wizardNext(s screenID) screenID {
+func wizardNext(s ports.Screen) ports.Screen {
 	switch s {
-	case screenScenario:
-		return screenStoryteller
-	case screenStoryteller:
-		return screenWorldGen
-	case screenWorldGen:
-		return screenLanding
-	case screenLanding:
-		return screenPawns
+	case ports.ScreenScenario:
+		return ports.ScreenStoryteller
+	case ports.ScreenStoryteller:
+		return ports.ScreenWorldGen
+	case ports.ScreenWorldGen:
+		return ports.ScreenLanding
+	case ports.ScreenLanding:
+		return ports.ScreenPawns
 	default:
 		return s
 	}

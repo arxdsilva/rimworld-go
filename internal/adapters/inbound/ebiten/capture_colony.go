@@ -1,6 +1,10 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
+	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"slices"
 
 	"rimworld-go/internal/application/game"
@@ -58,7 +62,7 @@ func (a *App) captureStart(ui string) {
 		return
 	}
 	for {
-		if _, _, done := b.Step(loadUnits); done {
+		if _, _, done := b.Step(wizardpkg.LoadUnits); done {
 			break
 		}
 	}
@@ -127,7 +131,7 @@ func (a *App) captureColonyUI(ui string) {
 	a.uiSt().LastScreen = a.nav.screen() // a window opened now must survive the kit's screen-change reset
 	pawns := a.renderer.snapshot()
 	cardAt := func(id string) { // the tool's command button in the grid
-		if c, ok := a.archToolCell(id); ok {
+		if c, ok := a.arch.ToolCell(id); ok {
 			x, y := c.Center()
 			a.cursor = &[2]int{int(x), int(y)}
 		}
@@ -138,19 +142,19 @@ func (a *App) captureColonyUI(ui string) {
 				if a.chrome.MsgSeen == nil {
 					a.chrome.MsgSeen = map[string]uint64{}
 				}
-				a.chrome.MsgSeen[a.letterKey(m)] = 0
+				a.chrome.MsgSeen[a.chrome.Right().LetterKey(m)] = 0
 			}
 		}
 	}
 	switch ui {
 	case "factions-colony":
 		a.cursor = &[2]int{-100, -100}
-		a.openColonyFactions()
+		a.win.Factions().Launch()
 	case "bio":
 		for _, p := range pawns {
-			if hasBio(p) {
+			if inspector.HasBio(p) {
 				a.renderer.Select(p.ID)
-				a.openPaneTab("bio")
+				a.insp.OpenPaneTab("bio")
 				a.renderer.centerOn(float64(p.X)+4, float64(p.Y), sw, sh)
 				break
 			}
@@ -158,9 +162,9 @@ func (a *App) captureColonyUI(ui string) {
 	case "work-incapable":
 		a.win.Open, a.win.Mode = true, "work"
 		for row, p := range pawns {
-			for col := range workColumns {
-				if _, live := workLive[col]; live && p.Incapable.Enabled(work.Type(col)) && a.cursor == nil {
-					c := workCellRect(a.windowRect(), row, col)
+			for col := range windows.WorkColumns {
+				if _, live := windows.WorkLive[col]; live && p.Incapable.Enabled(work.Type(col)) && a.cursor == nil {
+					c := windows.WorkCellRect(a.win.Rect(), row, col)
 					x, y := c.Center()
 					a.cursor = &[2]int{int(x), int(y)}
 				}
@@ -169,20 +173,20 @@ func (a *App) captureColonyUI(ui string) {
 	case "options-story":
 		a.opt.Tab = "story"
 		a.cursor = &[2]int{-100, -100}
-		a.apply(intent{kind: intentPush, screen: screenOptions})
+		a.apply(intent{kind: intentPush, screen: ports.ScreenOptions})
 	case "arch-hospital":
-		a.openArchitect()
-		a.selectArchCategory("furniture")
-		a.selectArchTool("hospital_bed")
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("furniture")
+		a.arch.SelectTool("hospital_bed")
 		cardAt("hospital_bed")
 	case "arch-cabinet":
-		a.openArchitect()
-		a.selectArchCategory("production")
-		a.selectArchTool("tool_cabinet")
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("production")
+		a.arch.SelectTool("tool_cabinet")
 		cardAt("tool_cabinet")
 	case "arch-locked":
-		a.openArchitect()
-		a.selectArchCategory("furniture")
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("furniture")
 		cardAt("campfire")
 	}
 }

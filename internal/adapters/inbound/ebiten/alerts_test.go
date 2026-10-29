@@ -7,6 +7,11 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -23,7 +28,7 @@ func TestAlertClickCentresCamera(t *testing.T) {
 		t.Fatal("expected an alert for a starving/collapsed colonist")
 	}
 	before := a.renderer.cam
-	a.focusAlert("alert." + als[0].key)
+	a.chrome.Alerts().Focus("alert." + als[0].key)
 	if a.renderer.cam == before && len(als[0].targets) > 0 {
 		t.Fatal("clicking an alert moves the camera")
 	}
@@ -49,7 +54,7 @@ func rightWorld() *stubSim {
 }
 
 // cursorOver puts the logical cursor on r's centre.
-func cursorOver(a *App, r rect) { a.cursor = &[2]int{int(r.X + r.W/2), int(r.Y + r.H/2)} }
+func cursorOver(a *App, r gfx.Rect) { a.cursor = &[2]int{int(r.X + r.W/2), int(r.Y + r.H/2)} }
 
 func TestAlertRowsFillTheLayoutsAlertsRect(t *testing.T) {
 	t.Parallel()
@@ -59,11 +64,11 @@ func TestAlertRowsFillTheLayoutsAlertsRect(t *testing.T) {
 	if len(rows) != len(a.currentAlerts()) || l.AlertRows != len(rows) {
 		t.Fatalf("rows %d, alerts %d, layout rows %d", len(rows), len(a.currentAlerts()), l.AlertRows)
 	}
-	if a.alertCount() != len(rows) {
-		t.Fatalf("alertCount() = %d, want %d", a.alertCount(), len(rows))
+	if a.chrome.Alerts().Count() != len(rows) {
+		t.Fatalf("alertCount() = %d, want %d", a.chrome.Alerts().Count(), len(rows))
 	}
 	for i, r := range rows {
-		if r.r.X != l.Alerts.X || r.r.W != l.Alerts.W || r.r.H != alertRowH || r.r.Y != l.Alerts.Y+float32(i)*(alertRowH+hudGap) {
+		if r.r.X != l.Alerts.X || r.r.W != l.Alerts.W || r.r.H != hudlayout.AlertRowH || r.r.Y != l.Alerts.Y+float32(i)*(hudlayout.AlertRowH+hudlayout.HudGap) {
 			t.Errorf("row %d at %+v, Alerts %+v", i, r.r, l.Alerts)
 		}
 		if r.al.key != a.currentAlerts()[i].key {
@@ -71,8 +76,8 @@ func TestAlertRowsFillTheLayoutsAlertsRect(t *testing.T) {
 		}
 	}
 	// each row is a button with the legacy id
-	ids := map[string]button{}
-	for _, b := range a.rightColumnButtons(a.sw) {
+	ids := map[string]uikit.Button{}
+	for _, b := range a.chrome.Right().Buttons(a.sw) {
 		ids[b.ID] = b
 	}
 	for _, r := range rows {
@@ -91,7 +96,7 @@ func TestAlertsPlusNMore(t *testing.T) {
 	if len(als) < 5 {
 		t.Fatalf("need five alerts, have %v", alertKeys(als))
 	}
-	l := computeHUDLayout(1280, 720, hudState{Alerts: len(als), Letters: 4, GlobalH: 380, LearnH: 28})
+	l := hudlayout.Compute(1280, 720, hudlayout.Inputs{Alerts: len(als), Letters: 4, GlobalH: 380, LearnH: 28})
 	if l.AlertRows == 0 || l.AlertRows >= len(als) {
 		t.Fatalf("layout rows = %d for %d alerts: the fixture must not fit", l.AlertRows, len(als))
 	}
@@ -116,7 +121,7 @@ func TestAlertsPlusNMore(t *testing.T) {
 		t.Fatalf("hidden alerts %d, more %d", len(last.hidden), last.more)
 	}
 	// the "+N more" row is not a button: only real alerts jump
-	for _, b := range a.alertButtonsIn(l) {
+	for _, b := range a.chrome.Alerts().ButtonsIn(l) {
 		if strings.Contains(b.Label, "more") {
 			t.Errorf("button %+v for the +N row", b)
 		}
@@ -153,7 +158,7 @@ func TestAlertHoverCardSitsLeftOfTheAlert(t *testing.T) {
 				}
 			}
 			// drawing the column with the card up does not panic
-			a.drawRightColumn(ebiten.NewImage(pw, ph), a.sw, a.sh)
+			a.chrome.Right().Draw(ebiten.NewImage(pw, ph), a.sw, a.sh)
 			a.cursor = &[2]int{-50, -50}
 			if _, _, ok := a.rightHover(l); ok {
 				t.Error("a card with the cursor off the column")
@@ -176,7 +181,7 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 		t.Fatalf("raid alert targets = %v, want two raiders", al.targets)
 	}
 	l := a.hud()
-	var row rect
+	var row gfx.Rect
 	for _, r := range a.alertRows(l) {
 		if r.al.key == "raid" {
 			row = r.r
@@ -188,7 +193,9 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 		return [2]int{x, y}
 	}
 	at := func(i int) [2]int { return al.targets[i] }
-	near := func(got, want [2]int) bool { return abs(got[0]-want[0]) <= 1 && abs(got[1]-want[1]) <= 1 }
+	near := func(got, want [2]int) bool {
+		return architect.Abs(got[0]-want[0]) <= 1 && architect.Abs(got[1]-want[1]) <= 1
+	}
 
 	pressButton(t, a, f, "alert.raid") // left: first target
 	if c := centre(); !near(c, at(0)) {
@@ -199,11 +206,11 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 		t.Fatalf("second click centres %v, want %v", c, at(1))
 	}
 	f.Cur.Mx, f.Cur.My = int(row.X+row.W/2), int(row.Y+row.H/2)
-	f.Click(t, a, mbRight, 0) // right: back to the first
+	f.Click(t, a, inputframe.Right, 0) // right: back to the first
 	if c := centre(); !near(c, at(0)) {
 		t.Fatalf("right-click centres %v, want back at %v", c, at(0))
 	}
-	f.Click(t, a, mbRight, 0) // right again: wraps to the last
+	f.Click(t, a, inputframe.Right, 0) // right again: wraps to the last
 	if c := centre(); !near(c, at(1)) {
 		t.Fatalf("second right-click centres %v, want %v (wrapped)", c, at(1))
 	}

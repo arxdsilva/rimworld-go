@@ -5,6 +5,12 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -29,32 +35,32 @@ func lastCmd(t *testing.T, s *stubSim) command.Command {
 	return s.cmds[len(s.cmds)-1]
 }
 
-func hasButton(bs []button, id string) (button, bool) {
+func hasButton(bs []uikit.Button, id string) (uikit.Button, bool) {
 	for _, b := range bs {
 		if b.ID == id {
 			return b, true
 		}
 	}
-	return button{}, false
+	return uikit.Button{}, false
 }
 
 // Work column 7 (Cln) is live, shows the pawn's priority and emits WorkClean.
 func TestWorkColumnCleanLive(t *testing.T) {
 	t.Parallel()
-	if workColumns[7] != "Cln" {
-		t.Fatalf("column 7 = %q", workColumns[7])
+	if windows.WorkColumns[7] != "Cln" {
+		t.Fatalf("column 7 = %q", windows.WorkColumns[7])
 	}
-	wt, ok := workTypeForCol(7)
+	wt, ok := windows.WorkTypeForCol(7)
 	if !ok || wt != command.WorkClean {
 		t.Fatalf("col 7 = %v/%v, want WorkClean", wt, ok)
 	}
-	if got := workCellValue(game.PawnView{WorkClean: true}, 7); got != "3" {
+	if got := windows.WorkCellValue(game.PawnView{WorkClean: true}, 7); got != "3" {
 		t.Fatalf("cell on = %q", got)
 	}
-	if got := workCellValue(game.PawnView{}, 7); got != "-" {
+	if got := windows.WorkCellValue(game.PawnView{}, 7); got != "-" {
 		t.Fatalf("cell off = %q", got)
 	}
-	if got := workPriority(game.PawnView{Priorities: []int{0, 0, 0, 0, 0, 0, 0, 2}}, 7); got != 2 {
+	if got := windows.WorkPriority(game.PawnView{Priorities: []int{0, 0, 0, 0, 0, 0, 0, 2}}, 7); got != 2 {
 		t.Fatalf("priority = %d", got)
 	}
 }
@@ -80,7 +86,7 @@ func TestHomeToolsEmitDesignateHome(t *testing.T) {
 		click(t, a, "arch.tool."+id)
 		a.arch.Drag = true
 		a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 5, 6
-		a.submitArchitect()
+		a.arch.Submit()
 		c := lastCmd(t, s)
 		if c.Kind != command.DesignateHome || c.Enabled != enabled ||
 			c.X != 2 || c.Y != 3 || c.X2 != 5 || c.Y2 != 6 {
@@ -96,7 +102,7 @@ func TestHomeToolCatalog(t *testing.T) {
 	t.Parallel()
 	for id, icon := range map[string]string{"home": "home", "unhome": "home_clear"} {
 		tool, ok := toolByID(id)
-		if !ok || tool.category != "zones" || tool.mode != placeArea || tool.icon != icon || tool.cmd != command.DesignateHome {
+		if !ok || tool.category != "zones" || tool.mode != architect.PlaceArea || tool.icon != icon || tool.cmd != command.DesignateHome {
 			t.Fatalf("tool %q = %+v ok=%v", id, tool, ok)
 		}
 	}
@@ -144,8 +150,8 @@ func TestHomeButtonToggle(t *testing.T) {
 	t.Parallel()
 	a, _ := stubColony(t)
 	sw, sh := a.sw, a.sh
-	find := func() button {
-		b, ok := hasButton(a.colonyButtons(sw, sh), homeButtonID)
+	find := func() uikit.Button {
+		b, ok := hasButton(a.colonyButtons(sw, sh), hud.HomeButtonID)
 		if !ok {
 			t.Fatal("hud.home button missing")
 		}
@@ -155,7 +161,7 @@ func TestHomeButtonToggle(t *testing.T) {
 	if b.Selected {
 		t.Fatal("active while overlay off")
 	}
-	if rb, _ := hasButton(a.colonyButtons(sw, sh), roofButtonID); b.X < rb.X+rb.W {
+	if rb, _ := hasButton(a.colonyButtons(sw, sh), hud.RoofButtonID); b.X < rb.X+rb.W {
 		t.Fatalf("Home button %+v overlaps Roof %+v (Home follows Roof, left to right)", b, rb)
 	}
 	if g := a.hud().Global; b.X < g.X || b.X+b.W > g.Right() || b.Y < g.Y || b.Y+b.H > g.Bottom() {
@@ -180,21 +186,21 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 	t.Parallel()
 	a, _ := stubColony(t)
 	tool, ok := toolByID("carpet")
-	if !ok || tool.category != "furniture" || tool.mode != placeSingle || tool.build != "carpet" || tool.icon != "carpet" {
+	if !ok || tool.category != "furniture" || tool.mode != architect.PlaceSingle || tool.build != "carpet" || tool.icon != "carpet" {
 		t.Fatalf("carpet tool = %+v ok=%v", tool, ok)
 	}
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.furniture")
 	click(t, a, "arch.tool.carpet")
-	var stuffs []button
-	for _, b := range a.architectButtons() {
+	var stuffs []uikit.Button
+	for _, b := range a.arch.Buttons() {
 		if strings.HasPrefix(b.ID, "arch.stuff.") {
 			stuffs = append(stuffs, b)
 		}
 	}
 	// wool carpet joined with animal products (SIM-026)
 	want := []string{"straw carpet", "wood carpet", "leather carpet", "cloth carpet", "wool carpet"}
-	bv, _ := buildable("carpet")
+	bv, _ := architect.Buildable("carpet")
 	if len(bv.Stuffs) != len(want) {
 		t.Fatalf("carpet stuffs = %v", bv.Stuffs)
 	}
@@ -226,9 +232,9 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	// wood, every stone's blocks and steel, labelled and inside the panel
 	want := map[string]string{"wood": "Wood", "sandstone blocks": "Sandstone blocks", "granite blocks": "Granite blocks",
 		"limestone blocks": "Limestone blocks", "slate blocks": "Slate blocks", "marble blocks": "Marble blocks", "steel": "Steel"}
-	r := a.architectRect()
+	r := a.arch.Rect()
 	n := 0
-	for _, b := range a.architectButtons() {
+	for _, b := range a.arch.Buttons() {
 		if !strings.HasPrefix(b.ID, "arch.stuff.") {
 			continue
 		}
@@ -255,7 +261,7 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	click(t, a, "arch.cat.structure")
 	click(t, a, "arch.tool.door")
 	var door []string
-	for _, b := range a.architectButtons() {
+	for _, b := range a.arch.Buttons() {
 		if strings.HasPrefix(b.ID, "arch.stuff.") {
 			door = append(door, strings.TrimPrefix(b.ID, "arch.stuff."))
 		}
@@ -271,7 +277,7 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 func TestCarpetTooltipUsesSelectedMaterial(t *testing.T) {
 	t.Parallel()
 	tool, _ := toolByID("carpet")
-	bv, _ := buildable("carpet")
+	bv, _ := architect.Buildable("carpet")
 	for i, s := range bv.Stuffs {
 		lines := archTooltipLines(tool, s, 0, 0)
 		want := fmt.Sprintf("Cost: 1 %s · Work %d · catches %d%% of tracked dirt", s, bv.Work, bv.Catches[i])
@@ -295,7 +301,7 @@ func TestCarpetTooltipUsesSelectedMaterial(t *testing.T) {
 func TestStoneWallTooltipNamesStone(t *testing.T) {
 	t.Parallel()
 	tool, _ := toolByID("wall")
-	bv, _ := buildable("wall")
+	bv, _ := architect.Buildable("wall")
 	lines := archTooltipLines(tool, "stone", 0, 0)
 	want := fmt.Sprintf("Cost: %d stone   Work: %d", bv.Wood, bv.Work)
 	if !contains(lines, want) {
@@ -330,10 +336,10 @@ func TestCarpetPlacementSendsStuff(t *testing.T) {
 	click(t, a, "arch.stuff.cloth carpet")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 4, 4, 4, 4
-	a.submitArchitect()
+	a.arch.Submit()
 	c := lastCmd(t, s)
 	want, _ := game.StuffID("cloth carpet")
-	kind, _ := kindID("carpet")
+	kind, _ := architect.KindID("carpet")
 	if c.Kind != command.DesignateBuild || c.Build != kind || c.Stuff != want || want == 0 {
 		t.Fatalf("cmd = %+v, want carpet stuff %d", c, want)
 	}
@@ -346,11 +352,11 @@ func TestCarpetSpriteKeys(t *testing.T) {
 		"leather carpet": "furniture/carpet_leather", "cloth carpet": "furniture/carpet_cloth",
 		"": "furniture/carpet_straw", "bogus": "furniture/carpet_straw",
 	} {
-		if got := buildSpriteStuff("carpet", stuff, "south", 0, false, false); got != want {
+		if got := architect.BuildSpriteStuff("carpet", stuff, "south", 0, false, false); got != want {
 			t.Errorf("sprite(%q) = %q, want %q", stuff, got, want)
 		}
 	}
-	if got := buildSprite("carpet", "south", 0, false, false); got != "furniture/carpet_straw" {
+	if got := architect.BuildSprite("carpet", "south", 0, false, false); got != "furniture/carpet_straw" {
 		t.Errorf("default = %q", got)
 	}
 }
@@ -358,7 +364,7 @@ func TestCarpetSpriteKeys(t *testing.T) {
 func TestPresetArchToolCarpetMaterial(t *testing.T) {
 	t.Parallel()
 	a, _ := stubColony(t)
-	if !a.presetArchTool("carpet", "leather carpet", "south") {
+	if !a.arch.Preset("carpet", "leather carpet", "south") {
 		t.Fatal("no carpet tool")
 	}
 	tool, _ := toolByID("carpet")
@@ -383,26 +389,26 @@ func TestCropLinesCottonAndWheat(t *testing.T) {
 	if cotton.Name == "" || wheat.Name == "" {
 		t.Skip("catalog lacks cotton or wheat")
 	}
-	if got := strings.Join(cropLines(cotton), "|"); !strings.Contains(got, "cloth, not food") || strings.Contains(got, "food 0 each") {
+	if got := strings.Join(architect.CropLines(cotton), "|"); !strings.Contains(got, "cloth, not food") || strings.Contains(got, "food 0 each") {
 		t.Fatalf("cotton lines = %q", got)
 	}
-	if got := strings.Join(cropLines(wheat), "|"); !strings.Contains(got, "+4 straw") {
+	if got := strings.Join(architect.CropLines(wheat), "|"); !strings.Contains(got, "+4 straw") {
 		t.Fatalf("wheat lines = %q", got)
 	}
-	if got := strings.Join(cropLines(potato), "|"); strings.Contains(got, "not food") || strings.Contains(got, "straw") {
+	if got := strings.Join(architect.CropLines(potato), "|"); strings.Contains(got, "not food") || strings.Contains(got, "straw") {
 		t.Fatalf("potato lines = %q", got)
 	}
-	if lines := cropLines(game.CropView{Name: "tree", Days: 5, Yield: 10}); len(lines) != 2 {
+	if lines := architect.CropLines(game.CropView{Name: "tree", Days: 5, Yield: 10}); len(lines) != 2 {
 		t.Fatalf("tree lines = %q", lines)
 	}
 }
 
 func TestPawnDirtyBootsLine(t *testing.T) {
 	t.Parallel()
-	if got := dirtyBootsLine(game.PawnView{}); got != "" {
+	if got := inspector.DirtyBootsLine(game.PawnView{}); got != "" {
 		t.Fatalf("clean boots = %q", got)
 	}
-	if got := dirtyBootsLine(game.PawnView{Dirt: 42}); got != "Dirty boots 42%" {
+	if got := inspector.DirtyBootsLine(game.PawnView{Dirt: 42}); got != "Dirty boots 42%" {
 		t.Fatalf("line = %q", got)
 	}
 }
@@ -410,16 +416,16 @@ func TestPawnDirtyBootsLine(t *testing.T) {
 func TestCarpetBuildingInspector(t *testing.T) {
 	t.Parallel()
 	b := game.BuildingView{Kind: "carpet", Stuff: "straw carpet", Catch: 35}
-	if got := buildingTitle(b); got != "Straw carpet" {
+	if got := inspector.BuildingTitle(b); got != "Straw carpet" {
 		t.Fatalf("title = %q", got)
 	}
-	if got := carpetLine(b); got != "Catches 35% of tracked dirt" {
+	if got := inspector.CarpetLine(b); got != "Catches 35% of tracked dirt" {
 		t.Fatalf("line = %q", got)
 	}
-	if got := carpetLine(game.BuildingView{Kind: "wall"}); got != "" {
+	if got := inspector.CarpetLine(game.BuildingView{Kind: "wall"}); got != "" {
 		t.Fatalf("wall line = %q", got)
 	}
-	if got := buildingTitle(game.BuildingView{Kind: "wall", Stuff: "stone"}); got != "Stone wall" {
+	if got := inspector.BuildingTitle(game.BuildingView{Kind: "wall", Stuff: "stone"}); got != "Stone wall" {
 		t.Fatalf("wall title = %q", got)
 	}
 }
@@ -427,19 +433,19 @@ func TestCarpetBuildingInspector(t *testing.T) {
 func TestCarpetAndMaterialItemInspector(t *testing.T) {
 	t.Parallel()
 	for _, k := range []string{"cloth", "straw"} {
-		if got := itemCategory(game.ItemView{Kind: k}); got != "material" {
+		if got := inspector.ItemCategory(game.ItemView{Kind: k}); got != "material" {
 			t.Fatalf("%s category = %q", k, got)
 		}
 	}
 	it := game.ItemView{Kind: "cloth carpet", Qty: 1, Catch: 70, FreshDays: -1}
-	if got := itemCategory(it); got != "furnishing" {
+	if got := inspector.ItemCategory(it); got != "furnishing" {
 		t.Fatalf("category = %q", got)
 	}
-	lines := itemLines(it, true)
+	lines := inspector.ItemLines(it, true)
 	if !contains(lines, "Catches 70% of tracked dirt") || !contains(lines, "Install from Architect > Furniture > Carpet") {
 		t.Fatalf("lines = %q", lines)
 	}
-	if lines := itemLines(game.ItemView{Kind: "cloth", FreshDays: -1}, false); len(lines) != 1 {
+	if lines := inspector.ItemLines(game.ItemView{Kind: "cloth", FreshDays: -1}, false); len(lines) != 1 {
 		t.Fatalf("cloth lines = %q", lines)
 	}
 }
@@ -455,16 +461,16 @@ func TestHoverHomeAndCleanliness(t *testing.T) {
 			{Cleanliness: "clean"},
 		},
 	}
-	if got := homeLabelAt(w, 1, 0); got != "Home area" {
+	if got := hud.HomeLabelAt(w, 1, 0); got != "Home area" {
 		t.Fatalf("home = %q", got)
 	}
-	if got := homeLabelAt(w, 0, 0); got != "" {
+	if got := hud.HomeLabelAt(w, 0, 0); got != "" {
 		t.Fatalf("not home = %q", got)
 	}
-	if got := homeLabelAt(w, 9, 9); got != "" {
+	if got := hud.HomeLabelAt(w, 9, 9); got != "" {
 		t.Fatalf("oob = %q", got)
 	}
-	if got := roomLabelAt(w, 1, 0); !strings.Contains(got, "dirty (-3)") {
+	if got := world.RoomLabelAt(w, 1, 0); !strings.Contains(got, "dirty (-3)") {
 		t.Fatalf("hover room label = %q, want the cleanliness once", got)
 	}
 }

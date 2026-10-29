@@ -7,6 +7,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
 	"rimworld-go/internal/application/game"
 )
 
@@ -42,15 +43,15 @@ func fieldsApp(t *testing.T, fs *fieldsSim) *App {
 	return a
 }
 
-func mapFieldsAction(t *testing.T, a *App) devAction {
+func mapFieldsAction(t *testing.T, a *App) devtools.Action {
 	t.Helper()
-	for _, x := range a.devActions(1, 1) {
+	for _, x := range a.tools.Actions(1, 1) {
 		if strings.HasPrefix(x.Label, "Map fields") {
 			return x
 		}
 	}
 	t.Fatal("dev menu has no Map fields entry")
-	return devAction{}
+	return devtools.Action{}
 }
 
 func TestDevMenuMapFieldsCyclesThroughEveryLayerBackToOff(t *testing.T) {
@@ -124,8 +125,8 @@ func TestMapFieldsDrawMapAndLegend(t *testing.T) {
 	a := fieldsApp(t, &fieldsSim{layers: testFieldLayers()})
 	screen := ebiten.NewImage(320, 240)
 	for range 4 { // every layer, then off
-		a.drawMapFields(screen)
-		a.drawMapFieldLegend(screen)
+		a.tools.DrawMapFields(screen)
+		a.tools.DrawMapFieldLegend(screen)
 		mapFieldsAction(t, a).Run(nil)
 	}
 	if a.tools.State.Fields.On() {

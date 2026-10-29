@@ -1,6 +1,12 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strings"
 	"testing"
 
@@ -29,7 +35,7 @@ func foundItems() []game.ItemView {
 func TestHaulToolEmitsDesignateHaul(t *testing.T) {
 	t.Parallel()
 	tool, ok := toolByID("haul")
-	if !ok || tool.category != "orders" || tool.icon != "order_haul" || tool.mode != placeArea ||
+	if !ok || tool.category != "orders" || tool.icon != "order_haul" || tool.mode != architect.PlaceArea ||
 		tool.cmd != command.DesignateHaul || !tool.enable || tool.label != "Haul things" {
 		t.Fatalf("haul tool = %+v", tool)
 	}
@@ -42,7 +48,7 @@ func TestHaulToolEmitsDesignateHaul(t *testing.T) {
 	click(t, a, "arch.tool.haul")
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 2, 3, 4
 	a.arch.Drag = true
-	a.submitArchitect()
+	a.arch.Submit()
 	c := lastCmd(t, s)
 	if c.Kind != command.DesignateHaul || !c.Enabled || c.X != 1 || c.Y != 2 || c.X2 != 3 || c.Y2 != 4 {
 		t.Fatalf("haul cmd = %+v, want DesignateHaul(1,2)-(3,4) marking", c)
@@ -53,8 +59,8 @@ func TestItemHaulMarkButtonEmitsAndFlips(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
-	a.selectCand(selCand{Kind: selItem, ID: 21})
-	b, ok := thingFind(a.itemCommands(21), "item.haulmark")
+	a.sel.Select(selection.Cand{Kind: selection.Item, ID: 21})
+	b, ok := thingFind(a.insp.Thing().ItemCommands(21), "item.haulmark")
 	if !ok || b.Label != "Mark for hauling" {
 		t.Fatalf("unclaimed unmarked stack: command = %+v", b)
 	}
@@ -63,7 +69,7 @@ func TestItemHaulMarkButtonEmitsAndFlips(t *testing.T) {
 		t.Fatalf("cmd = %+v, want SetHaulMark(21) on", c)
 	}
 	s.world.Items[0].HaulMarked = true
-	if b, _ := thingFind(a.itemCommands(21), "item.haulmark"); b.Label != "Unmark" {
+	if b, _ := thingFind(a.insp.Thing().ItemCommands(21), "item.haulmark"); b.Label != "Unmark" {
 		t.Fatalf("marked label = %q", b.Label)
 	}
 	click(t, a, "item.haulmark")
@@ -71,7 +77,7 @@ func TestItemHaulMarkButtonEmitsAndFlips(t *testing.T) {
 		t.Fatalf("cmd = %+v, want SetHaulMark(21) off", c)
 	}
 	// the Forbid command stays beside it
-	if _, ok := thingFind(a.itemCommands(21), "item.forbid"); !ok {
+	if _, ok := thingFind(a.insp.Thing().ItemCommands(21), "item.forbid"); !ok {
 		t.Fatal("Forbid command gone")
 	}
 }
@@ -80,12 +86,12 @@ func TestItemHaulMarkButtonHiddenForColonyStacks(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
-	a.selectCand(selCand{Kind: selItem, ID: 23})
-	if _, ok := thingFind(a.itemCommands(23), "item.haulmark"); ok {
+	a.sel.Select(selection.Cand{Kind: selection.Item, ID: 23})
+	if _, ok := thingFind(a.insp.Thing().ItemCommands(23), "item.haulmark"); ok {
 		t.Fatal("a claimed stack needs no mark button")
 	}
 	// a stale click does nothing
-	a.applyItemClick("item.haulmark")
+	a.insp.Thing().ApplyItemClick("item.haulmark")
 	if len(s.cmds) != 0 {
 		t.Fatalf("claimed stack emitted %+v", s.cmds)
 	}
@@ -94,13 +100,13 @@ func TestItemHaulMarkButtonHiddenForColonyStacks(t *testing.T) {
 func TestItemFoundLineOnlyForUnclaimed(t *testing.T) {
 	t.Parallel()
 	found, marked, colony := foundItems()[0], foundItems()[1], foundItems()[2]
-	if ls := itemLines(found, false); !contains(ls, haulFoundLine) {
+	if ls := inspector.ItemLines(found, false); !contains(ls, haulFoundLine) {
 		t.Fatalf("unclaimed lines = %q", ls)
 	}
-	if ls := itemLines(marked, false); contains(ls, haulFoundLine) || !contains(ls, "Found here. Marked: colonists will haul it.") {
+	if ls := inspector.ItemLines(marked, false); contains(ls, haulFoundLine) || !contains(ls, "Found here. Marked: colonists will haul it.") {
 		t.Fatalf("marked lines = %q", ls)
 	}
-	ls := itemLines(colony, false)
+	ls := inspector.ItemLines(colony, false)
 	for _, l := range ls {
 		if strings.Contains(l, "Found here") {
 			t.Fatalf("colony stack shows %q", l)
@@ -117,8 +123,8 @@ func TestItemInspectorKeepsForcedHaulChip(t *testing.T) {
 	s.world = game.WorldView{Items: foundItems()}
 	s.pawns = []game.PawnView{{ID: 1, Name: "Ada", X: 5, Y: 5, Status: "alive"}}
 	s.orders = []game.OrderOption{{Label: "Haul", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderHaul, Pawn: 1}}}
-	a.selectCand(selCand{Kind: selItem, ID: 21})
-	it, _ := a.selectedItem()
+	a.sel.Select(selection.Cand{Kind: selection.Item, ID: 21})
+	it, _ := a.sel.SelectedItem()
 	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].id != "cmd.item.haul" {
 		t.Fatalf("a found stack still offers the forced Haul command: %+v", vs)
 	}
@@ -133,11 +139,11 @@ func TestGroupMarkForHaulingButton(t *testing.T) {
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: append(foundItems(),
 		game.ItemView{ID: 24, Kind: "wood", Qty: 2, X: 5, Y: 2, Unclaimed: true})}
-	a.setGroup(selItem, []entity.EntityID{21, 22, 23, 24})
-	if !a.grouped() {
+	a.sel.SetGroup(selection.Item, []entity.EntityID{21, 22, 23, 24})
+	if !a.sel.Grouped() {
 		t.Fatal("no group")
 	}
-	b, ok := hasButton(a.groupButtons(), "group.haulmark")
+	b, ok := hasButton(a.insp.Commands().GroupButtons(), "group.haulmark")
 	if !ok || b.Label != "Mark for hauling" {
 		t.Fatalf("button = %+v", b)
 	}
@@ -149,12 +155,12 @@ func TestGroupMarkForHaulingButton(t *testing.T) {
 	// once every found stack is marked the button goes away
 	s.world.Items[0].HaulMarked = true
 	s.world.Items[3].HaulMarked = true
-	if _, ok := hasButton(a.groupButtons(), "group.haulmark"); ok {
+	if _, ok := hasButton(a.insp.Commands().GroupButtons(), "group.haulmark"); ok {
 		t.Fatal("nothing left to mark")
 	}
 	// the Forbid/Allow pair is unchanged
 	for _, id := range []string{"group.forbid", "group.allow"} {
-		if _, ok := hasButton(a.groupButtons(), id); !ok {
+		if _, ok := hasButton(a.insp.Commands().GroupButtons(), id); !ok {
 			t.Fatalf("%s gone", id)
 		}
 	}
@@ -167,11 +173,11 @@ func TestGroupMarkButtonHiddenWithoutFoundStacks(t *testing.T) {
 		{ID: 31, Kind: "wood", Qty: 1, X: 2, Y: 2},
 		{ID: 32, Kind: "wood", Qty: 1, X: 3, Y: 2},
 	}}
-	a.setGroup(selItem, []entity.EntityID{31, 32})
-	if !a.grouped() {
+	a.sel.SetGroup(selection.Item, []entity.EntityID{31, 32})
+	if !a.sel.Grouped() {
 		t.Fatal("no group")
 	}
-	if _, ok := hasButton(a.groupButtons(), "group.haulmark"); ok {
+	if _, ok := hasButton(a.insp.Commands().GroupButtons(), "group.haulmark"); ok {
 		t.Fatal("a colony-only group has nothing to mark")
 	}
 }
@@ -191,13 +197,13 @@ func TestItemInspectorAtScale1_5(t *testing.T) {
 		{Label: "Haul", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderHaul}},
 	}
 	s.pawns = []game.PawnView{{ID: 1, Name: "Ada", X: 5, Y: 5, Status: "alive"}, {ID: 2, Name: "Bo", X: 6, Y: 5, Status: "alive"}}
-	a.selectCand(selCand{Kind: selItem, ID: 21})
-	cs := a.itemCommands(21)
+	a.sel.Select(selection.Cand{Kind: selection.Item, ID: 21})
+	cs := a.insp.Thing().ItemCommands(21)
 	if _, ok := thingFind(cs, "item.haulmark"); !ok {
 		t.Fatalf("no mark command: %v", thingIDs(cs))
 	}
 	sw, sh := a.size()
-	l := computeHUDLayout(sw, sh, hudState{PaneShown: true, Commands: len(cs)})
+	l := hudlayout.Compute(sw, sh, hudlayout.Inputs{PaneShown: true, Commands: len(cs)})
 	if len(l.GridCells) != len(cs) {
 		t.Fatalf("%d commands, %d cells", len(cs), len(l.GridCells))
 	}
@@ -207,7 +213,7 @@ func TestItemInspectorAtScale1_5(t *testing.T) {
 			t.Errorf("%s: cell %+v leaves the grid band", c.ID, cell)
 		}
 		for _, w := range strings.Fields(c.Label) {
-			if tw := textW(w, tsSmall); tw > cell.W-8 {
+			if tw := gfx.TextW(w, gfx.Small); tw > cell.W-8 {
 				t.Errorf("%s label word %q (%.0fpx) does not fit its %.0fpx cell", c.ID, w, tw, cell.W)
 			}
 		}
@@ -218,7 +224,7 @@ func TestItemInspectorAtScale1_5(t *testing.T) {
 		}
 	}
 	// the worst-case body: every status line is on the pane, storage last
-	sp := a.itemPane(21)
+	sp := a.insp.Thing().ItemPane(21)
 	for _, want := range []string{"Forbidden: colonists leave it alone", "Found here. Colonists won't haul it until you mark it.", "Not stored"} {
 		if !contains(sp.Lines, want) {
 			t.Errorf("pane lines %q lack %q", sp.Lines, want)
@@ -242,25 +248,25 @@ func TestGroupInspectorAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
-	a.setGroup(selItem, []entity.EntityID{21, 22, 23})
+	a.sel.SetGroup(selection.Item, []entity.EntityID{21, 22, 23})
 	l := a.hud()
 	if l.Pane.Empty() {
 		t.Fatal("a group has a pane")
 	}
-	if spec := a.groupPane(); len(spec.Rows) != 3 {
+	if spec := a.insp.Commands().GroupPane(); len(spec.Rows) != 3 {
 		t.Fatalf("the pane lists the members: %+v", spec.Rows)
 	}
-	bs := a.groupButtons()
+	bs := a.insp.Commands().GroupButtons()
 	if len(bs) == 0 {
 		t.Fatal("no group commands")
 	}
 	for i, b := range bs {
-		r := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
+		r := gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if r.X < l.Pane.Right() || r.Right() > l.Global.X || r.Bottom() > l.Tabs.Y {
 			t.Errorf("%s (%+v) leaves the grid band", b.ID, r)
 		}
 		for _, word := range strings.Fields(b.Label) {
-			if w := textW(word, tsSmall); w > b.W-8 {
+			if w := gfx.TextW(word, gfx.Small); w > b.W-8 {
 				t.Errorf("%s label word %q (%.0fpx) does not fit %.0fpx", b.ID, word, w, b.W)
 			}
 		}
@@ -271,8 +277,8 @@ func TestGroupInspectorAtScale1_5(t *testing.T) {
 		}
 	}
 	img := ebiten.NewImage(1280, 720)
-	a.drawPane(img) // the group's pane and merged command buttons draw
-	a.drawCommandGrid(img)
+	a.insp.DrawPane(img) // the group's pane and merged command buttons draw
+	a.insp.Commands().DrawCommandGrid(img)
 }
 
 // haulOverlay draws one live-tier frame of items over a stub world with a
@@ -283,7 +289,7 @@ func haulOverlay(t *testing.T, tile float64, items ...game.ItemView) bool {
 	w.Items = items
 	r, _ := lodRenderer(w, 64, 64)
 	sp := fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
-	r.art.Sprites[haulMarkKey] = sp
+	r.art.Sprites[worldpkg.HaulMarkKey] = sp
 	lodFrame(r, tile)
 	return sp.Img != nil
 }

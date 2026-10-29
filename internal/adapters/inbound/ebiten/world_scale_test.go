@@ -5,7 +5,11 @@ import (
 	"go/parser"
 	"go/token"
 	"math"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
 
@@ -21,7 +25,7 @@ import (
 // colony on a dev x screen, a 1280x720-point window at UI scale 100 %.
 func renderScaleColony(t *testing.T, dev, k float64) (*App, *fakeInput) {
 	t.Helper()
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	s := &stubSim{w: 40, h: 40, pawns: []game.PawnView{{ID: 7, Name: "Ada", X: 21, Y: 19, Status: "alive"}}}
 	a := testApp(s)
 	a.devFn = func() float64 { return dev }
@@ -32,7 +36,7 @@ func renderScaleColony(t *testing.T, dev, k float64) (*App, *fakeInput) {
 	a.LayoutF(1280, 720)
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
@@ -144,7 +148,7 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 	// a raw (physical) click on the pawn selects it
 	half.cursor = nil
 	f.Cur.Mx, f.Cur.My = int(sx1), int(sy1)
-	f.Click(t, half, mbLeft, 0)
+	f.Click(t, half, inputframe.Left, 0)
 	if !half.renderer.HasSelect() || half.renderer.Selected() != 7 {
 		t.Fatalf("a physical click on the pawn at Half did not select it (select %v %v)", half.renderer.HasSelect(), half.renderer.Selected())
 	}
@@ -158,10 +162,10 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 // under every screen point (syncDev rescales the camera, like HiDPI).
 func TestRenderScaleToggleKeepsTheView(t *testing.T) {
 	r := New(&stubSim{w: 40, h: 40})
-	r.cam = camera{Zoom: 1.3, OffsetX: 410, OffsetY: 195, Placed: true}
+	r.cam = camerapkg.Camera{Zoom: 1.3, OffsetX: 410, OffsetY: 195, Placed: true}
 	old := gfx.CurrentScale()
 	t.Cleanup(func() { gfx.SetScale(old) })
-	gfx.SetScale(uiScaleState{Dev: 2, UI: 1, S: 2, World: 1})
+	gfx.SetScale(gfx.Scale{Dev: 2, UI: 1, S: 2, World: 1})
 	r.SyncDev()
 	wx, wy := r.screenToWorld(600, 400)
 	sc := gfx.CurrentScale()
@@ -193,7 +197,7 @@ func TestRenderScaleToggleKeepsTheView(t *testing.T) {
 func rsConfigure(t *testing.T, s *visualScene, k float64) *ebiten.Image {
 	t.Helper()
 	a := s.a
-	a.scale = uiScaleState{Dev: 2, UI: 1, S: 2, World: k}
+	a.scale = gfx.Scale{Dev: 2, UI: 1, S: 2, World: k}
 	a.syncUIScale()
 	a.setPhysical(2*visLogicalW, 2*visLogicalH)
 	r := a.renderer
@@ -216,8 +220,8 @@ func rsConfigure(t *testing.T, s *visualScene, k float64) *ebiten.Image {
 func TestRenderScaleKeepsTextOnTheScreen(t *testing.T) {
 	art := visArt(t)
 	s := newVisualScene(t, art, false)
-	labels := func(ev []traceEvent) []traceEvent {
-		var out []traceEvent
+	labels := func(ev []gfx.TraceEvent) []gfx.TraceEvent {
+		var out []gfx.TraceEvent
 		for _, e := range ev {
 			if e.Pass == "world" && (e.Kind == "text" || e.Via != "") {
 				out = append(out, e)
@@ -382,7 +386,7 @@ func exprString(e ast.Expr) string {
 // TestOptionsRenderScaleRow: World detail cycles Full, 3/4, Half, records
 // the choice and applies it live.
 func TestOptionsRenderScaleRow(t *testing.T) {
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	store := graphicsStore()
 	a := optionsApp(store)
 	a.devFn = func() float64 { return 2 }
@@ -396,7 +400,7 @@ func TestOptionsRenderScaleRow(t *testing.T) {
 		label string
 		k     float64
 	}{{"3/4", 0.75}, {"Half", 0.5}, {"Full", 1}} {
-		a.applyOption("options.renderscale")
+		a.opt.ApplyOption("options.renderscale")
 		g := store.s.Graphics
 		if got := optionBtn(t, a, "options.renderscale").Label; got != want.label || g.RenderScale != want.k || a.scale.WorldK() != want.k {
 			t.Fatalf("after a click: %q, stored %g, world %g; want %q %g", got, g.RenderScale, a.scale.WorldK(), want.label, want.k)
@@ -424,10 +428,10 @@ func TestRenderScaleFogHidesLabels(t *testing.T) {
 	t.Cleanup(img.Deallocate)
 	a.beginWorldPass(img)
 	t.Cleanup(a.endWorldPass)
-	uiFillRect(img, 638, 358, 4, 4, uiAccent, false) // over the fog: dropped
-	uiFillRect(img, 8, 8, 4, 4, uiAccent, false)     // explored: queued
+	gfx.FillRect(img, 638, 358, 4, 4, uikit.Accent, false) // over the fog: dropped
+	gfx.FillRect(img, 8, 8, 4, 4, uikit.Accent, false)     // explored: queued
 	gfx.FogDrawn()
-	drawText(img, "after", 640, 360, tsSmall) // after the fog: queued
+	gfx.Text(img, "after", 640, 360, gfx.Small) // after the fog: queued
 	if n := a.wr.q.Len(); n != 2 {
 		t.Fatalf("%d draws queued, want 2", n)
 	}

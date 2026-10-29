@@ -4,7 +4,11 @@ package ebiten
 import (
 	"image/color"
 	"math"
-	"strings"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -17,11 +21,11 @@ import (
 // leftMouse adapts the input frame's left button to selection.Mouse.
 type leftMouse struct{ f *inputframe.Frame }
 
-func (m leftMouse) Clicked() bool { return m.f.Clicked(mbLeft) }
+func (m leftMouse) Clicked() bool { return m.f.Clicked(inputframe.Left) }
 
-func (m leftMouse) Take() { m.f.Take(mbLeft) }
+func (m leftMouse) Take() { m.f.Take(inputframe.Left) }
 
-func (m leftMouse) Down() bool { return m.f.Down(mbLeft) }
+func (m leftMouse) Down() bool { return m.f.Down(inputframe.Left) }
 
 func (m leftMouse) Shift() bool { return m.f.Shift() }
 
@@ -48,7 +52,7 @@ func (r *Renderer) inRect(wx, wy float64, x0, y0, x1, y1 float32) bool {
 // takes it, as a click there does). An animal whose cell is farther from
 // the box than the largest body reaches is not measured.
 func (r *Renderer) bodyInRect(an game.AnimalView, x0, y0, x1, y1 float32) bool {
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	pad, padS := r.animalPads(tile)
 	// the tile centres inside the box
 	tx0 := int(math.Ceil((float64(x0)+r.cam.OffsetX)/tile - 0.5))
@@ -77,21 +81,21 @@ func (r *Renderer) bodyInRect(an game.AnimalView, x0, y0, x1, y1 float32) bool {
 
 // thingsIn lists what lies inside a screen rectangle: colonists, else
 // animals, else ground items (each in read-model order).
-func (a *App) thingsIn(x0, y0, x1, y1 float32) (selKind, []entity.EntityID) {
+func (a *App) thingsIn(x0, y0, x1, y1 float32) (selectionpkg.Kind, []entity.EntityID) {
 	r := a.renderer
 	var ids []entity.EntityID
 	w := r.world()
 	for _, p := range r.snapshot() {
-		if wx, wy := r.interpWorld(p); !p.Embodied && !worldFogged(w, p.X, p.Y) && r.inRect(wx, wy, x0, y0, x1, y1) {
+		if wx, wy := r.interpWorld(p); !p.Embodied && !overlaypkg.WorldFogged(w, p.X, p.Y) && r.inRect(wx, wy, x0, y0, x1, y1) {
 			ids = append(ids, p.ID)
 		}
 	}
 	if len(ids) > 0 {
-		return selPawn, ids
+		return selectionpkg.Pawn, ids
 	}
 	for i := range w.Animals {
 		an := &w.Animals[i]
-		if worldFogged(w, an.X, an.Y) {
+		if overlaypkg.WorldFogged(w, an.X, an.Y) {
 			continue
 		}
 		if wx, wy := r.interpAnimal(*an); r.inRect(wx, wy, x0, y0, x1, y1) || r.bodyInRect(*an, x0, y0, x1, y1) {
@@ -99,17 +103,17 @@ func (a *App) thingsIn(x0, y0, x1, y1 float32) (selKind, []entity.EntityID) {
 		}
 	}
 	if len(ids) > 0 {
-		return selAnimal, ids
+		return selectionpkg.Animal, ids
 	}
 	for _, it := range w.Items {
-		if !it.Carried && !worldFogged(w, it.X, it.Y) && r.inRect(float64(it.X), float64(it.Y), x0, y0, x1, y1) {
+		if !it.Carried && !overlaypkg.WorldFogged(w, it.X, it.Y) && r.inRect(float64(it.X), float64(it.Y), x0, y0, x1, y1) {
 			ids = append(ids, it.ID)
 		}
 	}
 	if len(ids) > 0 {
-		return selItem, ids
+		return selectionpkg.Item, ids
 	}
-	return selNone, nil
+	return selectionpkg.None, nil
 }
 
 // boxSelect selects what the dragged box covers; with add (Shift) it joins
@@ -123,8 +127,8 @@ func (a *App) boxSelect(sx0, sy0, sx1, sy1 int, add bool) {
 // of the same species, or stack of the same item.
 func (a *App) selectSameOnScreen() {
 	c, ok := a.selectedCand()
-	if !ok || !groupable(c.Kind) {
-		a.clickSelect()
+	if !ok || !selectionpkg.Groupable(c.Kind) {
+		a.sel.ClickSelect()
 		return
 	}
 	v := a.mapViewport() // physical, like worldToScreenF
@@ -133,52 +137,52 @@ func (a *App) selectSameOnScreen() {
 	w := r.world()
 	var ids []entity.EntityID
 	switch c.Kind {
-	case selPawn:
+	case selectionpkg.Pawn:
 		for _, p := range r.snapshot() {
 			if wx, wy := r.interpWorld(p); !p.Embodied && r.inRect(wx, wy, x0, y0, x1, y1) {
 				ids = append(ids, p.ID)
 			}
 		}
-	case selAnimal:
-		an, _ := a.selectedAnimal()
+	case selectionpkg.Animal:
+		an, _ := a.insp.SelectedAnimal()
 		for _, o := range w.Animals {
 			if wx, wy := r.interpAnimal(o); o.Species == an.Species && r.inRect(wx, wy, x0, y0, x1, y1) {
 				ids = append(ids, o.ID)
 			}
 		}
-	case selItem:
-		it, _ := a.selectedItem()
+	case selectionpkg.Item:
+		it, _ := a.sel.SelectedItem()
 		for _, o := range w.Items {
 			if !o.Carried && o.Kind == it.Kind && r.inRect(float64(o.X), float64(o.Y), x0, y0, x1, y1) {
 				ids = append(ids, o.ID)
 			}
 		}
 	}
-	a.setGroup(c.Kind, append([]entity.EntityID{c.ID}, ids...))
+	a.sel.SetGroup(c.Kind, append([]entity.EntityID{c.ID}, ids...))
 }
 
 // drawGroupMarks outlines every group member on the map.
 func (a *App) drawGroupMarks(screen *ebiten.Image) {
-	if !a.grouped() || a.renderer == nil {
+	if !a.sel.Grouped() || a.renderer == nil {
 		return
 	}
 	r := a.renderer
-	tile := float32(r.tilePx())
+	tile := float32(r.cam.Tile())
 	mark := func(wx, wy float64) {
 		sx, sy := r.worldToScreenF(wx, wy)
 		vector.StrokeRect(screen, sx+1, sy+1, tile-2, tile-2, 2, r.selectClr, false)
 	}
 	switch a.sel.Group.Kind {
-	case selPawn:
-		for _, p := range a.selectedPawns() {
+	case selectionpkg.Pawn:
+		for _, p := range a.sel.SelectedPawns() {
 			mark(r.interpWorld(p))
 		}
-	case selAnimal:
-		for _, an := range a.selectedAnimals() {
+	case selectionpkg.Animal:
+		for _, an := range a.sel.SelectedAnimals() {
 			mark(r.interpAnimal(an))
 		}
-	case selItem:
-		for _, it := range a.selectedItems() {
+	case selectionpkg.Item:
+		for _, it := range a.sel.SelectedItems() {
 			mark(float64(it.X), float64(it.Y))
 		}
 	}
@@ -195,16 +199,16 @@ func (a *App) drawBoxSelect(screen *ebiten.Image) {
 	lx0, ly0 := a.mapToLogical(a.sel.Press.X, a.sel.Press.Y)
 	lx1, ly1 := a.mapToLogical(pmx, pmy)
 	x0, y0, x1, y1 := screenRect(lx0, ly0, lx1, ly1)
-	fill := uiAccent
+	fill := uikit.Accent
 	fill.A = 40
-	uiFillRect(screen, x0, y0, x1-x0, y1-y0, fill, false)
-	uiStrokeRect(screen, x0, y0, x1-x0, y1-y0, 1, uiAccent, false)
+	gfx.FillRect(screen, x0, y0, x1-x0, y1-y0, fill, false)
+	gfx.StrokeRect(screen, x0, y0, x1-x0, y1-y0, 1, uikit.Accent, false)
 }
 
 // drawAnimalMark draws the selection mark on the animal's tile; the
 // panel itself is the inspect pane (animalPane).
 func (a *App) drawAnimalMark(screen *ebiten.Image) {
-	an, ok := a.selectedAnimal()
+	an, ok := a.insp.SelectedAnimal()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
@@ -217,7 +221,7 @@ func (a *App) drawAnimalMark(screen *ebiten.Image) {
 // drawFrameMark marks the selected blueprint's tiles on the map. The
 // pane (cmds_build.go) is the blueprint's panel now.
 func (a *App) drawFrameMark(screen *ebiten.Image) {
-	f, ok := a.selectedFrame()
+	f, ok := a.insp.SelectedFrame()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
@@ -231,26 +235,12 @@ func (a *App) drawFrameMark(screen *ebiten.Image) {
 	}
 }
 
-// drawItemIcon draws the stack's icon, size px square at (x, y): its
-// ui_icon, else its stone sprite. Nothing without art.
-func (a *App) drawItemIcon(dst *ebiten.Image, it game.ItemView, x, y, size float64) {
-	if a.renderer == nil || a.renderer.art == nil {
-		return
-	}
-	key := "ui_icon/" + strings.ReplaceAll(it.Kind, " ", "_") // "cloth carpet" -> cloth_carpet
-	cs := noCS
-	if !a.renderer.art.Has(key) {
-		key, cs = a.renderer.stoneItem(itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Kind, noCS)
-	}
-	if img := a.renderer.art.Image(key, color.NRGBA{}); img != nil {
-		drawIconCS(dst, img, x, y, size, cs)
-	}
-}
+// "cloth carpet" -> cloth_carpet
 
 // drawItemMark draws the selection mark on the stack's tile; the
 // panel itself is the inspect pane (itemPane).
 func (a *App) drawItemMark(screen *ebiten.Image) {
-	it, ok := a.selectedItem()
+	it, ok := a.sel.SelectedItem()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
@@ -261,28 +251,17 @@ func (a *App) drawItemMark(screen *ebiten.Image) {
 
 // plantIconKey is the sprite key of the plant's icon.
 func (a *App) plantIconKey(p game.PlantView) string {
-	key, _ := plantSprite(p)
+	key, _ := worldpkg.PlantSprite(p)
 	if a.renderer.art != nil {
 		key = a.renderer.seasonKey(key, a.shell.World())
 	}
 	return key
 }
 
-// drawPlantIcon draws the plant's icon, size px square at (x, y). Nothing
-// without art.
-func (a *App) drawPlantIcon(dst *ebiten.Image, p game.PlantView, x, y, size float64) {
-	if a.renderer == nil || a.renderer.art == nil {
-		return
-	}
-	if img := a.renderer.art.Image(a.plantIconKey(p), color.NRGBA{}); img != nil {
-		drawIcon(dst, img, x, y, size)
-	}
-}
-
 // drawPlantMark draws the selection mark on the plant's tile; the
 // panel itself is the inspect pane (plantPane).
 func (a *App) drawPlantMark(screen *ebiten.Image) {
-	p, ok := a.selectedPlant()
+	p, ok := a.sel.SelectedPlant()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
@@ -294,7 +273,7 @@ func (a *App) drawPlantMark(screen *ebiten.Image) {
 // drawBuildingMark marks the selected building on the map. The pane
 // (cmds_build.go) is the building's panel now.
 func (a *App) drawBuildingMark(screen *ebiten.Image) {
-	b, ok := a.selectedBuilding()
+	b, ok := a.insp.SelectedBuilding()
 	if !ok || a.win.Open || a.arch.Open {
 		return
 	}
@@ -305,13 +284,13 @@ func (a *App) drawBuildingSelection(screen *ebiten.Image, b game.BuildingView) {
 	tile := a.shell.TilePx()
 	sx, sy := a.shell.WorldToScreen(b.X, b.Y)
 	w, h := float32(float64(max(b.W, 1))*tile), float32(float64(max(b.H, 1))*tile)
-	vector.StrokeRect(screen, sx+1, sy+1, w-2, h-2, 2, uiAccent, false)
-	if b.Kind == sentryTurretKind { // turret_draw.go: its reach
-		a.renderer.drawRangeRing(screen, b.X, b.Y, turretRangeTiles, tokenNRGBA(uiAccent))
+	vector.StrokeRect(screen, sx+1, sy+1, w-2, h-2, 2, uikit.Accent, false)
+	if b.Kind == overlaypkg.SentryTurretKind { // turret_draw.go: its reach
+		a.renderer.drawRangeRing(screen, b.X, b.Y, overlaypkg.TurretRangeTiles, overlaypkg.TokenNRGBA(uikit.Accent))
 	}
 	if b.HasSpot {
 		px, py := a.shell.WorldToScreen(b.SpotX, b.SpotY)
-		vector.StrokeRect(screen, px+tile32(tile)*0.3, py+tile32(tile)*0.3, tile32(tile)*0.4, tile32(tile)*0.4, 1, uiAccent, false)
+		vector.StrokeRect(screen, px+tile32(tile)*0.3, py+tile32(tile)*0.3, tile32(tile)*0.4, tile32(tile)*0.4, 1, uikit.Accent, false)
 	}
 }
 

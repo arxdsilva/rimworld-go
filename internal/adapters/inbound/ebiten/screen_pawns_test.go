@@ -7,6 +7,10 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -47,7 +51,7 @@ func TestRosterSelectedCountMatchesScenario(t *testing.T) {
 		t.Fatalf("pool of %d, want %d", len(views), wantPool)
 	}
 	for i := range views {
-		if !hasWidget(a, optID("pawns.row", i)) {
+		if !hasWidget(a, uikit.OptID("pawns.row", i)) {
 			// Rows below the scroll fold are not declared; the first ones are.
 			if i < 3 {
 				t.Fatalf("row %d missing", i)
@@ -61,9 +65,9 @@ func TestRosterSelectedCountMatchesScenario(t *testing.T) {
 	click(t, a2, "scen.row.ember_clan")
 	click(t, a2, "wizard.next")
 	click(t, a2, "wizard.next")
-	a2.draft().World.SeedText, a2.draft().World.Coverage = tinySeed, 5
+	a2.wiz.Draft().World.SeedText, a2.wiz.Draft().World.Coverage = tinySeed, 5
 	click(t, a2, "world.generate")
-	runUntil(t, a2, func() bool { return a2.nav.screen() == screenLanding })
+	runUntil(t, a2, func() bool { return a2.nav.screen() == ports.ScreenLanding })
 	click(t, a2, "land.random")
 	click(t, a2, "wizard.next")
 	f2.Frame(t, a2)
@@ -106,7 +110,7 @@ func TestRerollDeterministicAndKeepsEditedName(t *testing.T) {
 	f.Frame(t, a)
 	x, y := widgetAt(t, a, "pawns.reroll")
 	f.Cur.Mx, f.Cur.My = x, y
-	f.Click(t, a, mbLeft, input.ModShift)
+	f.Click(t, a, inputframe.Left, input.ModShift)
 	f.Cur.Mx, f.Cur.My = -50, -50
 	if got := ng.Pool.Views()[0].Nick; got == "Brisk" {
 		t.Fatal("Shift+Randomize rolls a new name too")
@@ -191,7 +195,7 @@ func fakePawnsApp(t *testing.T, n, nSel int) (*App, *fakeInput, *fakePool) {
 	t.Helper()
 	a, f := pawnsApp(t)
 	fp := newFakePool(n, nSel)
-	a.ng.Pool, a.ng.PoolKey = fp, a.poolKeyFor(a.ng)
+	a.ng.Pool, a.ng.PoolKey = fp, a.wiz.PoolKeyFor(a.ng)
 	a.ng.PawnSel, a.ng.NamesOf = 0, -1
 	f.Frame(t, a)
 	return a, f, fp
@@ -217,7 +221,7 @@ func TestReorderAndSwap(t *testing.T) {
 	}
 	// Swap with left-behind: pick the first left-behind candidate.
 	click(t, a, "pawns.swap")
-	if !a.uiModalOpen() {
+	if !a.uiSt().ModalOpen() {
 		t.Fatal("Swap opens a list")
 	}
 	f.Frame(t, a)
@@ -236,11 +240,11 @@ func TestReorderAndSwap(t *testing.T) {
 	x0, y0 := r0.R.Center()
 	_, y4 := r4.R.Center()
 	f.Cur.Mx, f.Cur.My = int(x0), int(y0)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	f.Frame(t, a)
 	f.Cur.My = int(y4)
 	f.Frame(t, a)
-	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true
 	f.Frame(t, a)
 	last := fp.moves[len(fp.moves)-1]
 	if last != [2]int{0, 4} || a.ng.PawnSel != 4 {
@@ -254,7 +258,7 @@ func TestReorderAndSwap(t *testing.T) {
 	if len(fp.moves) != n || a.ng.PawnSel != 2 {
 		t.Fatalf("a click moved %v / sel %d", fp.moves[n:], a.ng.PawnSel)
 	}
-	if rosterTarget(0, 6, 3) != 0 || rosterTarget(10000, 6, 3) != 5 || rosterTarget(rosterY(4, 3)+5, 6, 3) != 4 {
+	if wizard.RosterTarget(0, 6, 3) != 0 || wizard.RosterTarget(10000, 6, 3) != 5 || wizard.RosterTarget(wizard.RosterY(4, 3)+5, 6, 3) != 4 {
 		t.Error("drop targets")
 	}
 }
@@ -341,7 +345,7 @@ func TestTeamWarnings(t *testing.T) {
 		last = idx
 	}
 	for i := range rep.Best {
-		if !hasWidget(b, "pawns.team."+uiNum(i)) {
+		if !hasWidget(b, "pawns.team."+uikit.Num(i)) {
 			t.Fatalf("team row %d has no tooltip area", i)
 		}
 	}
@@ -351,16 +355,16 @@ func TestTeamWarnings(t *testing.T) {
 
 func TestIncapableSkillsShownDash(t *testing.T) {
 	t.Parallel()
-	if skillLevelText(game.SkillView{Incapable: true, Level: 0}) != "—" {
+	if wizard.SkillLevelText(game.SkillView{Incapable: true, Level: 0}) != "—" {
 		t.Error("an incapable skill shows a dash")
 	}
-	if skillLevelText(game.SkillView{Level: 12}) != "12" {
+	if wizard.SkillLevelText(game.SkillView{Level: 12}) != "12" {
 		t.Error("a capable skill shows its level")
 	}
-	if tip := skillTip(game.SkillView{Label: "Medicine", Incapable: true}); !strings.Contains(tip, "Incapable") {
+	if tip := wizard.SkillTip(game.SkillView{Label: "Medicine", Incapable: true}); !strings.Contains(tip, "Incapable") {
 		t.Errorf("tooltip %q", tip)
 	}
-	tip := skillTip(game.SkillView{Label: "Plants", Level: 9, LevelLabel: "Skilled", Passion: 2, SpeedPct: 112, Affects: "Grow"})
+	tip := wizard.SkillTip(game.SkillView{Label: "Plants", Level: 9, LevelLabel: "Skilled", Passion: 2, SpeedPct: 112, Affects: "Grow"})
 	for _, want := range []string{"Skilled", "112%", "major passion", "Grow"} {
 		if !strings.Contains(tip, want) {
 			t.Errorf("tooltip %q lacks %q", tip, want)
@@ -374,7 +378,7 @@ func TestIncapableSkillsShownDash(t *testing.T) {
 		for _, s := range v.Skills {
 			if s.Incapable {
 				found = true
-				if skillLevelText(s) != "—" {
+				if wizard.SkillLevelText(s) != "—" {
 					t.Fatalf("%s of candidate %d", s.Label, i)
 				}
 			}
@@ -390,7 +394,7 @@ func TestForcedTraitAndAgeHonoured(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	toWorld(t, a)
 	click(t, a, "world.generate")
-	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	runUntil(t, a, func() bool { return a.nav.screen() == ports.ScreenLanding })
 	// A scenario with a forced trait and a narrow age range.
 	d := a.ng.Scenario
 	d.Parts = append(append([]scenario.Part(nil), d.Parts...),
@@ -433,8 +437,8 @@ func TestSetupSeedAndPoolFollowTheTile(t *testing.T) {
 	a, f := pawnsApp(t)
 	ng := a.ng
 	first := ng.Pool.Views()[0].Nick
-	seed := setupSeedOf(ng)
-	if want := fnv64a(tinySeed) ^ uint64(int64(ng.Tile))*0x9E3779B97F4A7C15 ^ ng.Scenario.Seed; seed != want {
+	seed := wizard.SetupSeedOf(ng)
+	if want := wizard.Fnv64a(tinySeed) ^ uint64(int64(ng.Tile))*0x9E3779B97F4A7C15 ^ ng.Scenario.Seed; seed != want {
 		t.Fatalf("seed %x, want %x", seed, want)
 	}
 	// Going back and choosing another site makes another pool.
@@ -443,7 +447,7 @@ func TestSetupSeedAndPoolFollowTheTile(t *testing.T) {
 	click(t, a, "land.random")
 	click(t, a, "wizard.next")
 	f.Frame(t, a)
-	if setupSeedOf(ng) == seed {
+	if wizard.SetupSeedOf(ng) == seed {
 		t.Fatal("another tile, another setup seed")
 	}
 	if ng.Pool.Views()[0].Nick == first && ng.Pool.Views()[1].Nick == "" {

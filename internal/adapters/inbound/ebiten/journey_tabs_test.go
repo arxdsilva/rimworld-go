@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"strconv"
 	"strings"
 	"testing"
@@ -30,11 +33,11 @@ func TestJourneyTabsWorkCellCycles(t *testing.T) {
 		t.Fatalf("F1 left the work tab closed (open %v, mode %q)", j.a.win.Open, j.a.win.Mode)
 	}
 	cell := "work.cell." + idStr(id) + ".1"
-	start := workPriority(j.pawn(id), 1)
+	start := windowspkg.WorkPriority(j.pawn(id), 1)
 	want := start
 	for i := 0; i < 5; i++ {
 		j.reset()
-		want = nextPriority(want)
+		want = windowspkg.NextPriority(want)
 		if !j.clickID(cell) {
 			t.Fatalf("cell %s is disabled", cell)
 		}
@@ -106,11 +109,11 @@ func TestJourneyTabsAssignCareAndPolicies(t *testing.T) {
 	j := newJourney(t)
 	id := uint64(j.g.Snapshot()[0].ID)
 	j.key("F3", 0)
-	if j.a.uiModalTop() != assignModalID {
+	if j.a.uiModalTop() != windowspkg.AssignModalID {
 		t.Fatalf("F3 opened %q", j.a.uiModalTop())
 	}
 	care0 := j.pawn(id).CareLevel
-	j.clickID(assignCareID(j.g.Snapshot()[0].ID))
+	j.clickID(windowspkg.AssignCareID(j.g.Snapshot()[0].ID))
 	c, ok := j.lastCmd(command.SetMedicalCare)
 	if !ok || c.Pawn != id || c.Mode == care0 {
 		t.Fatalf("care click sent %+v (%v) from level %d", c, ok, care0)
@@ -118,7 +121,7 @@ func TestJourneyTabsAssignCareAndPolicies(t *testing.T) {
 	if got := j.pawn(id).CareLevel; got != c.Mode {
 		t.Fatalf("care level %d after the click, want %d", got, c.Mode)
 	}
-	j.clickID(assignDrugID(j.g.Snapshot()[0].ID))
+	j.clickID(windowspkg.AssignDrugID(j.g.Snapshot()[0].ID))
 	if c, ok := j.lastCmd(command.SetDrugPolicy); !ok || c.Pawn != id {
 		t.Fatalf("drug policy click sent %+v (%v)", c, ok)
 	}
@@ -142,14 +145,14 @@ func TestJourneyTabsResearchPick(t *testing.T) {
 		t.Fatalf("F6 left mode %q", j.a.win.Mode)
 	}
 	var pick string
-	for _, b := range j.a.researchButtons() {
+	for _, b := range j.a.win.Research().Buttons() {
 		if !b.Disabled && !b.Selected {
 			pick = b.ID
 			break
 		}
 	}
 	if pick == "" {
-		t.Fatalf("no available research project: %+v", j.a.researchButtons())
+		t.Fatalf("no available research project: %+v", j.a.win.Research().Buttons())
 	}
 	j.clickID(pick)
 	c, ok := j.lastCmd(command.SetResearch)
@@ -251,7 +254,7 @@ func clickIDWith(j *journey, id string, mods input.Mod) {
 	}
 	s := float32(j.a.scale.S)
 	j.f.Cur.Mx, j.f.Cur.My = int(x*s), int(y*s)
-	j.f.Click(j.t, j.a, mbLeft, mods)
+	j.f.Click(j.t, j.a, inputframe.Left, mods)
 	j.f.Cur.Mx, j.f.Cur.My = -50, -50
 }
 
@@ -265,10 +268,10 @@ func TestJourneyTabsQuantityModifiers(t *testing.T) {
 	}
 	j.lookAt(10, 3)
 	j.update(1)
-	j.clickTile(10, 3, mbLeft, 0)
+	j.clickTile(10, 3, inputframe.Left, 0)
 	j.clickID("inspector.bills")
-	j.clickID(billPickBtn)
-	j.clickID(billPickList + ".0")
+	j.clickID(inspector.BillPickBtn)
+	j.clickID(inspector.BillPickList + ".0")
 	j.clickID("modal.bill.picker.bill.picker.ok")
 	bills := func() int {
 		for _, b := range j.world().Buildings {
@@ -298,7 +301,7 @@ func TestJourneyTabsQuantityModifiers(t *testing.T) {
 		j.reset()
 		clickIDWith(j, "bill.plus.0", c.mods)
 		cmd, ok := j.lastCmd(command.SetBill)
-		want := min(before+c.step, billMaxCount)
+		want := min(before+c.step, inspector.BillMaxCount)
 		if !ok || cmd.Count != want {
 			t.Fatalf("%s: + from %d sent %+v (%v), want count %d", c.name, before, cmd, ok, want)
 		}
@@ -361,7 +364,7 @@ func TestJourneyTabsTameAnimals(t *testing.T) {
 	j.key("F4", 0)
 	j.lookAt(12, 6)
 	j.update(1)
-	j.clickTile(12, 6, mbLeft, 0)
+	j.clickTile(12, 6, inputframe.Left, 0)
 	j.reset()
 	j.clickID("animal.train.1")
 	if c, ok := j.lastCmd(command.SetTraining); !ok || c.Target != uint64(id) || c.Index != 1 || !c.Enabled {

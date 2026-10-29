@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strconv"
 	"strings"
 	"testing"
@@ -13,29 +15,29 @@ import (
 // findButton finds id among what the selected colonist offers: its command
 // buttons (the label carries the live key, as the grid's badge does), the
 // pane's tabs and its chips.
-func findButton(a *App, id string) (button, bool) {
-	p, ok := a.selectedPawn()
+func findButton(a *App, id string) (uikit.Button, bool) {
+	p, ok := a.insp.SelectedPawn()
 	if !ok {
-		return button{}, false
+		return uikit.Button{}, false
 	}
-	for _, c := range a.pawnCommands(p.ID) {
+	for _, c := range a.insp.Pawn().PawnCommands(p.ID) {
 		if c.ID == id {
-			return button{ID: c.ID, Label: c.Label + a.keyHint(c.Hotkey), Disabled: c.Disabled, Reason: c.Reason, Tip: c.Desc, Selected: c.On}, true
+			return uikit.Button{ID: c.ID, Label: c.Label + a.keyHint(c.Hotkey), Disabled: c.Disabled, Reason: c.Reason, Tip: c.Desc, Selected: c.On}, true
 		}
 	}
-	spec := a.pawnPane(p.ID)
+	spec := a.insp.Pawn().PawnPane(p.ID)
 	for _, tb := range spec.Tabs {
 		if tb.ID == id {
-			return button{ID: tb.ID, Label: tb.Label, Disabled: tb.Disabled, Reason: tb.Reason,
+			return uikit.Button{ID: tb.ID, Label: tb.Label, Disabled: tb.Disabled, Reason: tb.Reason,
 				Selected: a.insp.Tab == strings.TrimPrefix(tb.ID, "inspector.")}, true
 		}
 	}
 	for _, c := range spec.Chips {
 		if c.ID == id {
-			return button{ID: c.ID, Label: c.Label, Disabled: c.Disabled, Reason: c.Reason, Tip: c.Tip}, true
+			return uikit.Button{ID: c.ID, Label: c.Label, Disabled: c.Disabled, Reason: c.Reason, Tip: c.Tip}, true
 		}
 	}
-	return button{}, false
+	return uikit.Button{}, false
 }
 
 func selectPawn(t *testing.T, a *App, id entity.EntityID) {
@@ -48,7 +50,7 @@ func selectPawn(t *testing.T, a *App, id entity.EntityID) {
 }
 
 // equipOptions are the options of the selected colonist's Equip command.
-func equipOptions(t *testing.T, a *App) []cmdOption {
+func equipOptions(t *testing.T, a *App) []inspectorpkg.Option {
 	t.Helper()
 	b, ok := findCmd(a, "cmd.pawn.equip")
 	if !ok || b.Options == nil {
@@ -58,12 +60,12 @@ func equipOptions(t *testing.T, a *App) []cmdOption {
 }
 
 // findCmd finds a command button of the selected colonist.
-func findCmd(a *App, id string) (cmdButton, bool) {
-	p, ok := a.selectedPawn()
+func findCmd(a *App, id string) (inspectorpkg.Button, bool) {
+	p, ok := a.insp.SelectedPawn()
 	if !ok {
-		return cmdButton{}, false
+		return inspectorpkg.Button{}, false
 	}
-	return cmdByID(a.pawnCommands(p.ID), id)
+	return cmdByID(a.insp.Pawn().PawnCommands(p.ID), id)
 }
 
 // Draft and Clear orders are commands whatever tab is open; the legacy
@@ -177,7 +179,7 @@ func TestEquipNearbyEnqueuesOrder(t *testing.T) {
 	}
 	a.renderer.enqueue(*opts[0].Cmd) // what picking the option does
 	g.Step(1)
-	p, _ := a.selectedPawn()
+	p, _ := a.insp.SelectedPawn()
 	if p.Job == "" || !strings.Contains(strings.ToLower(p.Job), "equip") {
 		t.Fatalf("equip order not applied: job=%q activity=%q queued=%v", p.Job, p.Activity, p.QueuedOrders)
 	}
@@ -190,11 +192,11 @@ func TestDeadPawnActionsDisabled(t *testing.T) {
 	a.insp.Tab = "gear"
 	g.Injure(id, 100000)
 	g.ApplyPending()
-	p, _ := a.selectedPawn()
+	p, _ := a.insp.SelectedPawn()
 	if p.Status == "alive" {
 		t.Skipf("pawn survived: %s", p.Status)
 	}
-	for _, c := range a.pawnCommands(p.ID) {
+	for _, c := range a.insp.Pawn().PawnCommands(p.ID) {
 		if c.ID == "pawn.draft" || c.ID == "pawn.clearorders" || c.ID == "cmd.pawn.equip" {
 			if !c.Disabled || c.Reason != p.Status {
 				t.Fatalf("%s: disabled=%v reason=%q, want reason %q", c.ID, c.Disabled, c.Reason, p.Status)

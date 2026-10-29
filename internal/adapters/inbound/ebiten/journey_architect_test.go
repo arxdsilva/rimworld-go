@@ -3,6 +3,8 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/input"
@@ -51,12 +53,12 @@ func TestJourneyArchitectTabOpensStructureWallDrag(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
 	j.openArch("structure", "wall")
-	j.dragTiles(mbLeft, 8, 2, 11, 2, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 11, 2, 0)
 	cmds := j.cmdsOf(command.DesignateBuild)
 	if len(cmds) != 4 {
 		t.Fatalf("%d DesignateBuild, want 4", len(cmds))
 	}
-	id, _ := kindID("wall")
+	id, _ := architect.KindID("wall")
 	for i, c := range cmds {
 		if c.Build != id || c.X != 8+i || c.Y != 2 {
 			t.Fatalf("cmd %d = %+v, want a wall at (%d, 2)", i, c, 8+i)
@@ -82,7 +84,7 @@ func TestJourneyArchitectRotateQE(t *testing.T) {
 			j.key(key, 0)
 		}
 		row += 2
-		j.clickTile(10, row, mbLeft, 0)
+		j.clickTile(10, row, inputframe.Left, 0)
 		c, ok := j.lastCmd(command.DesignateBuild)
 		if !ok || c.Facing != want {
 			t.Fatalf("after %q: %+v ok=%v, want facing %d", key, c, ok, want)
@@ -94,17 +96,17 @@ func TestJourneyArchitectRotateQE(t *testing.T) {
 	face("Q", 3)
 
 	j.openArch("structure", "wall")
-	if j.a.arch.Style != styleDefault {
+	if j.a.arch.Style != architect.StyleDefault {
 		t.Fatalf("fresh wall style %v", j.a.arch.Style)
 	}
 	before := j.a.arch.Facing
 	j.key("E", 0)
-	if j.a.curStyle(mustTool(t, "wall")) != styleRect {
+	if j.a.curStyle(mustTool(t, "wall")) != architect.StyleRect {
 		t.Fatalf("E on a wall: style %v, want a filled rectangle", j.a.curStyle(mustTool(t, "wall")))
 	}
 	j.key("Q", 0)
 	j.key("Q", 0)
-	if j.a.curStyle(mustTool(t, "wall")) != styleOvalEdge {
+	if j.a.curStyle(mustTool(t, "wall")) != architect.StyleOvalEdge {
 		t.Fatalf("Q,Q from the rectangle: style %v, want the empty oval", j.a.curStyle(mustTool(t, "wall")))
 	}
 	if j.a.arch.Facing != before {
@@ -126,7 +128,7 @@ func TestJourneyArchitectCtrlConstrainsDrag(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
 	j.openArch("structure", "floor")
-	j.dragTiles(mbLeft, 8, 2, 12, 4, input.ModCtrl)
+	j.dragTiles(inputframe.Left, 8, 2, 12, 4, input.ModCtrl)
 	cells := map[[2]int]bool{}
 	for _, c := range j.cmdsOf(command.DesignateBuild) {
 		cells[[2]int{c.X, c.Y}] = true
@@ -140,7 +142,7 @@ func TestJourneyArchitectCtrlConstrainsDrag(t *testing.T) {
 		}
 	}
 	j.reset()
-	j.dragTiles(mbLeft, 8, 7, 10, 8, 0)
+	j.dragTiles(inputframe.Left, 8, 7, 10, 8, 0)
 	if n := len(j.cmdsOf(command.DesignateBuild)); n != 6 {
 		t.Fatalf("a plain drag placed %d cells, want the 3x2 rectangle", n)
 	}
@@ -152,7 +154,7 @@ func TestJourneyArchitectStuffButton(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
 	j.openArch("structure", "wall")
-	bv, _ := buildable("wall")
+	bv, _ := architect.Buildable("wall")
 	if len(bv.Stuffs) < 2 {
 		t.Fatalf("wall stuffs %v", bv.Stuffs)
 	}
@@ -160,7 +162,7 @@ func TestJourneyArchitectStuffButton(t *testing.T) {
 	if !j.clickID("arch.stuff." + pick) {
 		t.Fatalf("stuff %s is disabled", pick)
 	}
-	j.dragTiles(mbLeft, 8, 2, 9, 2, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 9, 2, 0)
 	c, ok := j.lastCmd(command.DesignateBuild)
 	want, _ := game.StuffID(pick)
 	if !ok || c.Stuff != want {
@@ -185,7 +187,7 @@ func TestJourneyArchitectEscapeAndRightClickLeaveTool(t *testing.T) {
 	}
 	j.openArch("structure", "wall")
 	j.f.MoveTo(j.a, 9, 3)
-	j.f.Click(j.t, j.a, mbRight, 0)
+	j.f.Click(j.t, j.a, inputframe.Right, 0)
 	if j.a.arch.ToolID != "" {
 		t.Fatalf("right-click left tool %q", j.a.arch.ToolID)
 	}
@@ -206,7 +208,7 @@ func TestJourneyArchitectXDeconstructArea(t *testing.T) {
 	if j.a.arch.ToolID != "deconstruct" || !j.a.arch.Open {
 		t.Fatalf("X armed %q open %v", j.a.arch.ToolID, j.a.arch.Open)
 	}
-	j.dragTiles(mbLeft, 8, 2, 10, 4, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 10, 4, 0)
 	c, ok := j.lastCmd(command.DesignateDeconstruct)
 	if !ok || c.X != 8 || c.Y != 2 || c.X2 != 10 || c.Y2 != 4 {
 		t.Fatalf("DesignateDeconstruct %+v ok=%v", c, ok)
@@ -228,7 +230,7 @@ func TestJourneyArchitectCCancelArea(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
 	j.openArch("structure", "wall")
-	j.dragTiles(mbLeft, 8, 2, 11, 2, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 11, 2, 0)
 	if n := len(j.world().Frames); n != 4 {
 		t.Fatalf("%d frames, want 4", n)
 	}
@@ -236,7 +238,7 @@ func TestJourneyArchitectCCancelArea(t *testing.T) {
 	if j.a.arch.ToolID != "cancel" {
 		t.Fatalf("C armed %q", j.a.arch.ToolID)
 	}
-	j.dragTiles(mbLeft, 7, 1, 12, 3, 0)
+	j.dragTiles(inputframe.Left, 7, 1, 12, 3, 0)
 	c, ok := j.lastCmd(command.DesignateCancel)
 	if !ok || c.X != 7 || c.Y != 1 || c.X2 != 12 || c.Y2 != 3 {
 		t.Fatalf("DesignateCancel %+v ok=%v", c, ok)
@@ -266,7 +268,7 @@ func TestJourneyArchitectOrdersTools(t *testing.T) {
 			t.Parallel()
 			j := archJourney(t)
 			j.openArch("orders", c.tool)
-			j.dragTiles(mbLeft, 8, 2, 11, 4, 0)
+			j.dragTiles(inputframe.Left, 8, 2, 11, 4, 0)
 			got, ok := j.lastCmd(c.kind)
 			if !ok || got.X != 8 || got.Y != 2 || got.X2 != 11 || got.Y2 != 4 || got.Enabled != c.enabled {
 				t.Fatalf("%s sent %+v ok=%v, want %v rect 8,2-11,4 enabled=%v", c.tool, got, ok, c.kind, c.enabled)
@@ -284,13 +286,13 @@ func TestJourneyArchitectUndesignate(t *testing.T) {
 		t.Fatal(err)
 	}
 	j.openArch("orders", "hunt")
-	j.dragTiles(mbLeft, 10, 5, 10, 5, 0)
+	j.dragTiles(inputframe.Left, 10, 5, 10, 5, 0)
 	if _, ok := j.lastCmd(command.DesignateHunt); !ok {
 		t.Fatal("no DesignateHunt")
 	}
 	j.key("Escape", 0)
 	j.key("Escape", 0)
-	j.clickTile(10, 5, mbLeft, 0)
+	j.clickTile(10, 5, inputframe.Left, 0)
 	if !j.clickID("animal.hunt") {
 		t.Fatal("animal.hunt disabled")
 	}
@@ -308,7 +310,7 @@ func TestJourneyArchitectBuildingPaneDeconstructCancelFrame(t *testing.T) {
 	if !j.g.BuildNow("wall", "wood", "south", 9, 3) {
 		t.Fatal("no wall")
 	}
-	j.clickTile(9, 3, mbLeft, 0)
+	j.clickTile(9, 3, inputframe.Left, 0)
 	if !j.clickID("bldg.deconstruct") {
 		t.Fatal("bldg.deconstruct disabled")
 	}
@@ -318,14 +320,14 @@ func TestJourneyArchitectBuildingPaneDeconstructCancelFrame(t *testing.T) {
 	}
 
 	j.openArch("structure", "wall")
-	j.dragTiles(mbLeft, 12, 2, 12, 2, 0)
+	j.dragTiles(inputframe.Left, 12, 2, 12, 2, 0)
 	if n := len(j.world().Frames); n != 1 {
 		t.Fatalf("%d frames, want 1", n)
 	}
 	j.key("Escape", 0)
 	j.key("Escape", 0)
 	j.settle()
-	j.clickTile(12, 2, mbLeft, 0)
+	j.clickTile(12, 2, inputframe.Left, 0)
 	if !j.clickID("frame.cancel") {
 		t.Fatal("frame.cancel disabled")
 	}
@@ -345,16 +347,16 @@ func TestJourneyArchitectBuildingMove(t *testing.T) {
 	if !j.g.BuildNow("bed", "wood", "south", 9, 5) {
 		t.Fatal("no bed")
 	}
-	j.clickTile(9, 5, mbLeft, 0)
+	j.clickTile(9, 5, inputframe.Left, 0)
 	if !j.clickID("bldg.move") {
 		t.Fatal("bldg.move disabled")
 	}
-	if !j.a.moveSt().On {
+	if !j.a.arch.Mover.State().On {
 		t.Fatal("Move mode did not start")
 	}
 	j.key("E", 0)
 	j.settle()
-	j.clickTile(13, 6, mbLeft, 0)
+	j.clickTile(13, 6, inputframe.Left, 0)
 	c, ok := j.lastCmd(command.MoveBuilding)
 	if !ok || c.X != 13 || c.Y != 6 || c.Facing != 1 {
 		t.Fatalf("MoveBuilding %+v ok=%v, want (13, 6) facing 1", c, ok)

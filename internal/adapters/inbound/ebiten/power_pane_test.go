@@ -5,6 +5,11 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -114,7 +119,7 @@ func TestPowerPaneLines(t *testing.T) {
 		s := bldStub(c.b)
 		s.world.PowerNets = pwrNets
 		a, _ := bldApp(t, s, 5)
-		got := bldLines(a.buildingPane(5))
+		got := bldLines(a.insp.Building().BuildingPane(5))
 		for _, w := range c.want {
 			if !strings.Contains(got, w) {
 				t.Errorf("%s: lines %q lack %q", c.name, got, w)
@@ -144,7 +149,7 @@ func TestPowerPaneGridLineVariants(t *testing.T) {
 		s := bldStub(pwrHeater())
 		s.world.PowerNets = []game.PowerNetView{{ID: 99, Gen: 5}, c.net} // the right net is found by id
 		a, _ := bldApp(t, s, 10)
-		got := bldLines(a.buildingPane(10))
+		got := bldLines(a.insp.Building().BuildingPane(10))
 		if !strings.Contains(got, c.want) {
 			t.Errorf("%s: lines %q lack %q", c.name, got, c.want)
 		}
@@ -158,7 +163,7 @@ func TestPowerPaneGridLineVariants(t *testing.T) {
 	// a net the world does not list says nothing about a grid
 	s := bldStub(pwrHeater())
 	a, _ := bldApp(t, s, 10)
-	if got := bldLines(a.buildingPane(10)); strings.Contains(got, "Grid:") {
+	if got := bldLines(a.insp.Building().BuildingPane(10)); strings.Contains(got, "Grid:") {
 		t.Errorf("an unknown net shows a grid line: %q", got)
 	}
 }
@@ -166,15 +171,15 @@ func TestPowerPaneGridLineVariants(t *testing.T) {
 func TestBatteryPaneChargeBar(t *testing.T) {
 	t.Parallel()
 	a, _, _ := pwrApp(t, 0, pwrBattery())
-	bar := paneBarNamed(a.buildingPane(12), "Charge")
+	bar := paneBarNamed(a.insp.Building().BuildingPane(12), "Charge")
 	if bar == nil || bar.Pct != 75 {
-		t.Fatalf("charge bar = %+v in %+v", bar, a.buildingPane(12).Bars)
+		t.Fatalf("charge bar = %+v in %+v", bar, a.insp.Building().BuildingPane(12).Bars)
 	}
 	for stored, want := range map[int]int{0: 0, 1200: 100, 1500: 100, 600: 50} {
 		b := pwrBattery()
 		b.StoredWh = stored
 		a, _, _ := pwrApp(t, 0, b)
-		if bar := paneBarNamed(a.buildingPane(12), "Charge"); bar == nil || bar.Pct != want {
+		if bar := paneBarNamed(a.insp.Building().BuildingPane(12), "Charge"); bar == nil || bar.Pct != want {
 			t.Errorf("%d Wh: charge bar = %+v, want %d%%", stored, bar, want)
 		}
 	}
@@ -184,13 +189,13 @@ func TestBatteryPaneChargeBar(t *testing.T) {
 	}
 }
 
-func paneOf(t *testing.T, b game.BuildingView) paneSpec {
+func paneOf(t *testing.T, b game.BuildingView) inspector.Spec {
 	t.Helper()
 	a, _, _ := pwrApp(t, 0, b)
-	return a.buildingPane(b.ID)
+	return a.insp.Building().BuildingPane(b.ID)
 }
 
-func paneBarNamed(p paneSpec, label string) *paneBar {
+func paneBarNamed(p inspector.Spec, label string) *inspector.Bar {
 	for i := range p.Bars {
 		if p.Bars[i].Label == label {
 			return &p.Bars[i]
@@ -219,7 +224,7 @@ func TestFuelBarAndLinesForGeneratorAndTorch(t *testing.T) {
 	for _, c := range cases {
 		c.b.W, c.b.H = 1, 1
 		a, _, _ := pwrApp(t, 0, c.b)
-		p := a.buildingPane(c.b.ID)
+		p := a.insp.Building().BuildingPane(c.b.ID)
 		bar := paneBarNamed(p, "Fuel")
 		if bar == nil || bar.Pct != c.pct {
 			t.Errorf("%s: fuel bar = %+v, want %d%%", c.name, bar, c.pct)
@@ -237,7 +242,7 @@ func TestPowerToggleCommand(t *testing.T) {
 	for _, mk := range []func() game.BuildingView{pwrHeater, pwrGenerator, pwrSwitch} {
 		b := mk()
 		a, s, _ := pwrApp(t, 0, b)
-		cs := a.buildingCommands(b.ID)
+		cs := a.insp.Building().BuildingCommands(b.ID)
 		c, ok := bldCmd(cs, "cmd.power.toggle")
 		if !ok {
 			t.Fatalf("%s: no power toggle in %v", b.Kind, bldCmdIDs(cs))
@@ -249,7 +254,7 @@ func TestPowerToggleCommand(t *testing.T) {
 			t.Errorf("%s: the tip should say a colonist flicks it: %q", b.Kind, c.Desc)
 		}
 		// on now: a click asks for off
-		a.applyCommandClick("cmd.power.toggle")
+		a.insp.Commands().ApplyCommandClick("cmd.power.toggle")
 		got := cmdsOf(s, command.SetPowerWanted)
 		if len(got) != 1 || got[0].Target != uint64(b.ID) || got[0].Enabled {
 			t.Fatalf("%s: click sent %+v, want SetPowerWanted off for %d", b.Kind, got, b.ID)
@@ -257,15 +262,15 @@ func TestPowerToggleCommand(t *testing.T) {
 		// the player's wish is the button's state, not the device's: a flick
 		// pending shows the wish, and the pane says so
 		s.world.Buildings[0].PowerWantOn = false
-		c, _ = bldCmd(a.buildingCommands(b.ID), "cmd.power.toggle")
+		c, _ = bldCmd(a.insp.Building().BuildingCommands(b.ID), "cmd.power.toggle")
 		if c.On {
 			t.Errorf("%s: toggle still on after the wish went off", b.Kind)
 		}
-		if !strings.Contains(bldLines(a.buildingPane(b.ID)), "Flick pending") {
-			t.Errorf("%s: no flick pending line: %q", b.Kind, a.buildingPane(b.ID).Lines)
+		if !strings.Contains(bldLines(a.insp.Building().BuildingPane(b.ID)), "Flick pending") {
+			t.Errorf("%s: no flick pending line: %q", b.Kind, a.insp.Building().BuildingPane(b.ID).Lines)
 		}
 		// wished off: a click asks for on
-		a.applyCommandClick("cmd.power.toggle")
+		a.insp.Commands().ApplyCommandClick("cmd.power.toggle")
 		got = cmdsOf(s, command.SetPowerWanted)
 		if len(got) != 2 || !got[1].Enabled || got[1].Target != uint64(b.ID) {
 			t.Fatalf("%s: second click sent %+v", b.Kind, got)
@@ -278,7 +283,7 @@ func TestPowerToggleIsOnlyOnToggleDevices(t *testing.T) {
 	for _, b := range []game.BuildingView{pwrBattery(), pwrConduit(),
 		{ID: 30, Kind: "wall", X: 1, Y: 1}, {ID: 31, Kind: "torch lamp", X: 1, Y: 1, Fuel: true}} {
 		a, _, _ := pwrApp(t, 0, b)
-		for _, c := range a.buildingCommands(b.ID) {
+		for _, c := range a.insp.Building().BuildingCommands(b.ID) {
 			if strings.HasPrefix(c.ID, "cmd.power.") {
 				t.Errorf("%s has %s", b.Kind, c.ID)
 			}
@@ -287,7 +292,7 @@ func TestPowerToggleIsOnlyOnToggleDevices(t *testing.T) {
 	// and only heaters and coolers have a thermostat
 	for _, b := range []game.BuildingView{pwrGenerator(), pwrSwitch()} {
 		a, _, _ := pwrApp(t, 0, b)
-		if _, ok := bldCmd(a.buildingCommands(b.ID), "cmd.power.temp_up"); ok {
+		if _, ok := bldCmd(a.insp.Building().BuildingCommands(b.ID), "cmd.power.temp_up"); ok {
 			t.Errorf("%s has a thermostat", b.Kind)
 		}
 	}
@@ -299,7 +304,7 @@ func TestThermostatCommands(t *testing.T) {
 	cooler.ID, cooler.Kind, cooler.ThermoTarget = 15, "cooler", 195
 	for _, b := range []game.BuildingView{pwrHeater(), cooler} {
 		a, s, _ := pwrApp(t, 0, b)
-		cs := a.buildingCommands(b.ID)
+		cs := a.insp.Building().BuildingCommands(b.ID)
 		down, ok1 := bldCmd(cs, "cmd.power.temp_down")
 		up, ok2 := bldCmd(cs, "cmd.power.temp_up")
 		if !ok1 || !ok2 {
@@ -308,11 +313,11 @@ func TestThermostatCommands(t *testing.T) {
 		if down.Label != "-1 °C" || down.Icon != "thermostat_down" || up.Label != "+1 °C" || up.Icon != "thermostat_up" {
 			t.Errorf("%s: down %+v up %+v", b.Kind, down, up)
 		}
-		if down.Desc == "" || up.Desc == "" || !strings.Contains(up.Desc, fmtTarget(b.ThermoTarget)) {
+		if down.Desc == "" || up.Desc == "" || !strings.Contains(up.Desc, inspector.FmtTarget(b.ThermoTarget)) {
 			t.Errorf("%s: tips should state the target: %q / %q", b.Kind, down.Desc, up.Desc)
 		}
-		a.applyCommandClick("cmd.power.temp_down")
-		a.applyCommandClick("cmd.power.temp_up")
+		a.insp.Commands().ApplyCommandClick("cmd.power.temp_down")
+		a.insp.Commands().ApplyCommandClick("cmd.power.temp_up")
 		got := cmdsOf(s, command.SetThermostat)
 		if len(got) != 2 || got[0].Target != uint64(b.ID) || got[0].Count != b.ThermoTarget-10 ||
 			got[1].Target != uint64(b.ID) || got[1].Count != b.ThermoTarget+10 {
@@ -324,12 +329,12 @@ func TestThermostatCommands(t *testing.T) {
 func TestPowerCommandsComeBeforeMoveAndKeepTheirHotkeyLabel(t *testing.T) {
 	t.Parallel()
 	a, _, _ := pwrApp(t, 0, pwrHeater())
-	ids := strings.Join(bldCmdIDs(a.buildingCommands(10)), ",")
+	ids := strings.Join(bldCmdIDs(a.insp.Building().BuildingCommands(10)), ",")
 	if ids != "cmd.power.toggle,cmd.power.temp_down,cmd.power.temp_up,bldg.move,bldg.copy,bldg.deconstruct" {
 		t.Fatalf("heater commands = %s", ids)
 	}
-	c, _ := bldCmd(a.buildingCommands(10), "cmd.power.toggle")
-	if got := a.commandKeyLabel(0, c); got != "V" {
+	c, _ := bldCmd(a.insp.Building().BuildingCommands(10), "cmd.power.toggle")
+	if got := a.insp.Commands().CommandKeyLabel(0, c); got != "V" {
 		t.Fatalf("the toggle's key label = %q, want V", got)
 	}
 	if d, ok := input.Lookup(input.Power); !ok || d.Reserved != "" {
@@ -377,19 +382,19 @@ func TestPowerToggleOverAGroup(t *testing.T) {
 	on, off := pwrHeater(), pwrGenerator()
 	off.PowerOn, off.PowerWantOn, off.PowerOut = false, false, 0
 	a, s, _ := pwrApp(t, 0, on, off)
-	a.clearSelections(selNone)
-	a.sel.Group = selGroup{Kind: selBuilding, Ids: []entity.EntityID{on.ID, off.ID}}
-	merged := func() cmdButton {
-		c, ok := bldCmd(a.groupCommands(), "cmd.group.power.toggle")
+	a.sel.Clear(selection.None)
+	a.sel.Group = selection.Group{Kind: selection.Building, Ids: []entity.EntityID{on.ID, off.ID}}
+	merged := func() inspector.Button {
+		c, ok := bldCmd(a.insp.Commands().GroupCommands(), "cmd.group.power.toggle")
 		if !ok {
-			t.Fatalf("no merged toggle in %v", bldCmdIDs(a.groupCommands()))
+			t.Fatalf("no merged toggle in %v", bldCmdIDs(a.insp.Commands().GroupCommands()))
 		}
 		return c
 	}
 	if c := merged(); !c.Mixed || c.On {
 		t.Fatalf("a mixed group: %+v", c)
 	}
-	a.runCommand(merged())
+	a.insp.Commands().RunCommand(merged())
 	got := cmdsOf(s, command.SetPowerWanted)
 	if len(got) != 1 || got[0].Target != uint64(off.ID) || !got[0].Enabled {
 		t.Fatalf("a mixed group switches the off device on: %+v", got)
@@ -401,7 +406,7 @@ func TestPowerToggleOverAGroup(t *testing.T) {
 		t.Fatalf("an all-on group: %+v", c)
 	}
 	s.cmds = nil
-	a.runCommand(merged())
+	a.insp.Commands().RunCommand(merged())
 	got = cmdsOf(s, command.SetPowerWanted)
 	if len(got) != 2 || got[0].Enabled || got[1].Enabled {
 		t.Fatalf("an all-on group switches both off: %+v", got)
@@ -428,17 +433,17 @@ func TestPowerPaneAndGridAtUIScales(t *testing.T) {
 			sw, sh := layoutScreen(t, a, sz[0], sz[1], ui)
 			for _, b := range bs {
 				name := b.Kind + " ui" + strconv.FormatFloat(ui, 'g', -1, 64) + " " + strconv.Itoa(sw) + "x" + strconv.Itoa(sh)
-				a.selectCand(selCand{Kind: selBuilding, ID: b.ID})
+				a.sel.Select(selection.Cand{Kind: selection.Building, ID: b.ID})
 				f.Frame(t, a)
 				l := a.hud()
-				if l.Pane.Empty() || !a.paneShown() {
+				if l.Pane.Empty() || !a.insp.PaneShown() {
 					t.Fatalf("%s: no pane", name)
 				}
 				if bad := layoutOverlaps(l, sw, sh); len(bad) > 0 {
 					t.Fatalf("%s:\n\t%s", name, strings.Join(bad, "\n\t"))
 				}
 				assertChromeIsTheLayout(t, a)
-				cs := a.selectionCommands()
+				cs := a.insp.Commands().SelectionCommands()
 				if len(cs) == 0 || len(l.GridCells) != len(cs) {
 					t.Fatalf("%s: %d commands, %d cells", name, len(cs), len(l.GridCells))
 				}
@@ -449,7 +454,7 @@ func TestPowerPaneAndGridAtUIScales(t *testing.T) {
 						t.Errorf("%s: %s has no hit target", name, cm.ID)
 						continue
 					}
-					if got := (rect{X: hb.X, Y: hb.Y, W: hb.W, H: hb.H}); got != l.GridCells[i] {
+					if got := (gfx.Rect{X: hb.X, Y: hb.Y, W: hb.W, H: hb.H}); got != l.GridCells[i] {
 						t.Errorf("%s: %s is at %+v, its cell is %+v", name, cm.ID, got, l.GridCells[i])
 					}
 				}
@@ -466,7 +471,7 @@ func TestSolarFlareChip(t *testing.T) {
 		t.Fatalf("no flare, yet chips %+v", chips)
 	}
 	chips := statusChips(game.WorldView{SolarFlare: true})
-	if len(chips) != 1 || chips[0].label != "Solar flare" || chips[0].edge != uiWarning {
+	if len(chips) != 1 || chips[0].label != "Solar flare" || chips[0].edge != uikit.Warning {
 		t.Fatalf("flare chip = %+v", chips)
 	}
 	if !strings.HasPrefix(chips[0].tip, "Solar flare\n") || !strings.Contains(chips[0].tip, "Batteries") {
@@ -500,10 +505,10 @@ func TestSolarFlareChipIsInTheGlobalControls(t *testing.T) {
 // threat; the letter stack shows each kind with its own icon and colour.
 func TestPowerLettersShowWithTheirKind(t *testing.T) {
 	t.Parallel()
-	if letterKinds[letterKind("caution")].icon != "letter_caution" || letterKinds[letterKind("threat")].icon != "letter_threat" {
-		t.Fatalf("kinds: caution %+v threat %+v", letterKinds[letterKind("caution")], letterKinds[letterKind("threat")])
+	if letterKinds[hud.LetterKind("caution")].icon != "letter_caution" || letterKinds[hud.LetterKind("threat")].icon != "letter_threat" {
+		t.Fatalf("kinds: caution %+v threat %+v", letterKinds[hud.LetterKind("caution")], letterKinds[hud.LetterKind("threat")])
 	}
-	if letterKind("caution") == letterKind("threat") {
+	if hud.LetterKind("caution") == hud.LetterKind("threat") {
 		t.Fatal("caution and threat share a kind")
 	}
 }
@@ -515,15 +520,15 @@ func TestUnpoweredBenchBillsSayNoPower(t *testing.T) {
 	b := game.BuildingView{ID: 40, Kind: "electric stove", X: 3, Y: 3, W: 2, H: 1, Bench: true, PowerRole: "consumer", PowerOn: true, PowerWantOn: true,
 		NoPowerReason: game.NoPowerNotConnected,
 		Bills:         []game.BillView{{Recipe: "simple_meal", Label: "Cook simple meal", Mode: "forever", ModeID: 1, Status: game.BillNoPower}}}
-	if got := billLine(b.Bills[0]); !strings.Contains(strings.ToLower(got), "no power") {
+	if got := inspector.BillLine(b.Bills[0]); !strings.Contains(strings.ToLower(got), "no power") {
 		t.Fatalf("bill line = %q", got)
 	}
 	a, _, _ := pwrApp(t, 0, b)
-	p := a.buildingPane(40)
+	p := a.insp.Building().BuildingPane(40)
 	if _, ok := bldTab(p, "inspector.bills"); !ok {
 		t.Fatalf("no Bills tab on an electric bench: %+v", p.Tabs)
 	}
-	body := billsBody(b, 500)
+	body := inspector.BillsBody(b, 500)
 	if len(body.Labels) != 1 || !strings.Contains(strings.ToLower(body.Labels[0].Text), "no power") {
 		t.Fatalf("bills body labels = %+v", body.Labels)
 	}
@@ -536,7 +541,7 @@ func TestUnpoweredBenchBillsSayNoPower(t *testing.T) {
 	// a powered bench's bill has no such note
 	b.NoPowerReason, b.Powered, b.PowerUse = "", true, 250
 	b.Bills[0].Status = ""
-	if strings.Contains(strings.ToLower(billLine(b.Bills[0])), "no power") {
+	if strings.Contains(strings.ToLower(inspector.BillLine(b.Bills[0])), "no power") {
 		t.Fatal("an active bill says no power")
 	}
 }
@@ -556,7 +561,7 @@ func TestElectricBenchesListTheirBaseRecipes(t *testing.T) {
 		{"electric tailoring bench", "tailoring bench", true},
 		{"electric research bench", "research bench", false},
 	} {
-		got, want := a.recipesFor(c.electric), a.recipesFor(c.base)
+		got, want := a.insp.Building().RecipesFor(c.electric), a.insp.Building().RecipesFor(c.base)
 		if c.needRecipes && len(want) == 0 {
 			t.Fatalf("the %s has no recipes to copy", c.base)
 		}
@@ -570,10 +575,10 @@ func TestElectricBenchesListTheirBaseRecipes(t *testing.T) {
 			}
 		}
 	}
-	if recipeBenchName("heater") != "heater" || recipeBenchName("stove") != "stove" || recipeBenchName("nonsense") != "nonsense" {
+	if inspector.RecipeBenchName("heater") != "heater" || inspector.RecipeBenchName("stove") != "stove" || inspector.RecipeBenchName("nonsense") != "nonsense" {
 		t.Fatal("a kind with no base bench is its own")
 	}
-	if len(a.recipesFor("heater")) != 0 {
+	if len(a.insp.Building().RecipesFor("heater")) != 0 {
 		t.Fatal("a heater is no bench")
 	}
 }
@@ -583,7 +588,7 @@ func TestElectricResearchBenchCountsAsAResearchBench(t *testing.T) {
 	for kind, want := range map[string]bool{"research bench": true, "electric research bench": true, "stove": false, "electric stove": false} {
 		s := bldStub(game.BuildingView{ID: 3, Kind: kind, X: 3, Y: 3, W: 2, H: 1})
 		a, _ := colonyApp(t, s)
-		if got := a.hasResearchBench(); got != want {
+		if got := a.win.Research().HasBench(); got != want {
 			t.Errorf("a %s: hasResearchBench = %v, want %v", kind, got, want)
 		}
 	}

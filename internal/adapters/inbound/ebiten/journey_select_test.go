@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -43,20 +45,20 @@ func TestJourneySelectClickPawnOpensInspector(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	id := selPawnIDs(j)[0]
-	if j.a.renderer.HasSelect() || j.a.paneShown() {
+	if j.a.renderer.HasSelect() || j.a.insp.PaneShown() {
 		t.Fatal("something is selected before any click")
 	}
 	px, py := tileOf(j, 0)
-	j.clickTile(px, py, mbLeft, 0)
+	j.clickTile(px, py, inputframe.Left, 0)
 	j.draw(2)
 	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != id {
 		t.Fatalf("selected %v (has %v), want pawn %v", j.a.renderer.Selected(), j.a.renderer.HasSelect(), id)
 	}
-	if !j.a.paneShown() {
+	if !j.a.insp.PaneShown() {
 		t.Fatal("no inspector pane for the selected colonist")
 	}
-	j.clickTile(15, 7, mbLeft, 0) // empty ground deselects
-	if j.a.renderer.HasSelect() || j.a.paneShown() {
+	j.clickTile(15, 7, inputframe.Left, 0) // empty ground deselects
+	if j.a.renderer.HasSelect() || j.a.insp.PaneShown() {
 		t.Fatal("a click on bare ground kept the selection")
 	}
 }
@@ -72,12 +74,12 @@ func TestJourneySelectSameTileCycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	j.clickTile(px, py, mbLeft, 0)
+	j.clickTile(px, py, inputframe.Left, 0)
 	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != pid {
 		t.Fatal("the first click did not take the colonist")
 	}
 	j.settle()
-	j.clickTile(px, py, mbLeft, 0)
+	j.clickTile(px, py, inputframe.Left, 0)
 	if !j.a.sel.HasItem || j.a.sel.SelItem != sid || j.a.renderer.HasSelect() {
 		t.Fatalf("the second click: item %v/%v pawn %v, want the stack %v", j.a.sel.HasItem, j.a.sel.SelItem, j.a.renderer.HasSelect(), sid)
 	}
@@ -101,21 +103,21 @@ func TestJourneySelectClickBuildingItemPlant(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	j.clickTile(10, 2, mbLeft, 0)
+	j.clickTile(10, 2, inputframe.Left, 0)
 	if !j.a.sel.HasBuilding {
 		t.Fatal("a wall click did not select a building")
 	}
 	j.settle()
-	j.clickTile(12, 2, mbLeft, 0)
+	j.clickTile(12, 2, inputframe.Left, 0)
 	if !j.a.sel.HasItem || j.a.sel.SelItem != sid || j.a.sel.HasBuilding {
 		t.Fatalf("a stack click: item %v/%v building %v", j.a.sel.HasItem, j.a.sel.SelItem, j.a.sel.HasBuilding)
 	}
 	j.settle()
-	j.clickTile(14, 2, mbLeft, 0)
+	j.clickTile(14, 2, inputframe.Left, 0)
 	if !j.a.sel.HasPlant || j.a.sel.SelPlant != pid || j.a.sel.HasItem {
 		t.Fatalf("a plant click: plant %v/%v item %v", j.a.sel.HasPlant, j.a.sel.SelPlant, j.a.sel.HasItem)
 	}
-	if !j.a.paneShown() {
+	if !j.a.insp.PaneShown() {
 		t.Fatal("no pane for the plant")
 	}
 }
@@ -128,15 +130,15 @@ func TestJourneySelectShiftClickAddsAndRemoves(t *testing.T) {
 	ids := selPawnIDs(j)
 	ax, ay := tileOf(j, 0)
 	bx, by := tileOf(j, 1)
-	j.clickTile(ax, ay, mbLeft, 0)
+	j.clickTile(ax, ay, inputframe.Left, 0)
 	j.settle()
-	j.clickTile(bx, by, mbLeft, input.ModShift)
-	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 2 {
+	j.clickTile(bx, by, inputframe.Left, input.ModShift)
+	if !j.a.sel.Grouped() || len(j.a.sel.Group.Ids) != 2 {
 		t.Fatalf("group %v after a Shift click, want both colonists", j.a.sel.Group.Ids)
 	}
 	j.settle()
-	j.clickTile(bx, by, mbLeft, input.ModShift)
-	if j.a.grouped() || !j.a.renderer.HasSelect() || j.a.renderer.Selected() != ids[0] {
+	j.clickTile(bx, by, inputframe.Left, input.ModShift)
+	if j.a.sel.Grouped() || !j.a.renderer.HasSelect() || j.a.renderer.Selected() != ids[0] {
 		t.Fatalf("after the second Shift click: group %v, selected %v", j.a.sel.Group.Ids, j.a.renderer.Selected())
 	}
 }
@@ -146,8 +148,8 @@ func TestJourneySelectShiftClickAddsAndRemoves(t *testing.T) {
 func TestJourneySelectBoxSelect(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{10, 4}, [2]int{12, 4}))
-	j.dragTiles(mbLeft, 7, 3, 13, 5, 0)
-	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 3 || j.a.sel.Group.Kind != selPawn {
+	j.dragTiles(inputframe.Left, 7, 3, 13, 5, 0)
+	if !j.a.sel.Grouped() || len(j.a.sel.Group.Ids) != 3 || j.a.sel.Group.Kind != selectionpkg.Pawn {
 		t.Fatalf("box select gave kind %v ids %v, want 3 colonists", j.a.sel.Group.Kind, j.a.sel.Group.Ids)
 	}
 }
@@ -158,9 +160,9 @@ func TestJourneySelectDoubleClickKind(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{10, 4}, [2]int{12, 6}))
 	ax, ay := tileOf(j, 0)
-	j.clickTile(ax, ay, mbLeft, 0)
-	j.clickTile(ax, ay, mbLeft, 0)
-	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 3 {
+	j.clickTile(ax, ay, inputframe.Left, 0)
+	j.clickTile(ax, ay, inputframe.Left, 0)
+	if !j.a.sel.Grouped() || len(j.a.sel.Group.Ids) != 3 {
 		t.Fatalf("a double click grouped %v, want all 3 colonists", j.a.sel.Group.Ids)
 	}
 }
@@ -171,22 +173,22 @@ func TestJourneySelectInspectorTabs(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	px, py := tileOf(j, 0)
-	j.clickTile(px, py, mbLeft, 0)
+	j.clickTile(px, py, inputframe.Left, 0)
 	j.draw(2)
-	if j.a.paneOpenTab() != "" {
-		t.Fatalf("tab %q open before any click", j.a.paneOpenTab())
+	if j.a.insp.PaneOpenTab() != "" {
+		t.Fatalf("tab %q open before any click", j.a.insp.PaneOpenTab())
 	}
 	for _, id := range []string{"inspector.needs", "inspector.health", "inspector.social", "inspector.log"} {
 		if !j.clickID(id) {
 			t.Fatalf("%s is disabled", id)
 		}
-		if j.a.paneOpenTab() != id {
-			t.Fatalf("clicked %s: open tab %q", id, j.a.paneOpenTab())
+		if j.a.insp.PaneOpenTab() != id {
+			t.Fatalf("clicked %s: open tab %q", id, j.a.insp.PaneOpenTab())
 		}
 	}
 	j.key("Escape", 0)
-	if j.a.paneOpenTab() != "" || !j.a.renderer.HasSelect() {
-		t.Fatalf("first Escape: tab %q selected %v, want the tab closed and the colonist kept", j.a.paneOpenTab(), j.a.renderer.HasSelect())
+	if j.a.insp.PaneOpenTab() != "" || !j.a.renderer.HasSelect() {
+		t.Fatalf("first Escape: tab %q selected %v, want the tab closed and the colonist kept", j.a.insp.PaneOpenTab(), j.a.renderer.HasSelect())
 	}
 	j.key("Escape", 0)
 	if j.a.renderer.HasSelect() {
@@ -238,7 +240,7 @@ func TestJourneySelectEscapeChain(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	px, py := tileOf(j, 0)
-	j.clickTile(px, py, mbLeft, 0)
+	j.clickTile(px, py, inputframe.Left, 0)
 	j.key("F1", 0) // the Work window
 	if !j.a.win.Open {
 		t.Fatal("F1 did not open the Work window")

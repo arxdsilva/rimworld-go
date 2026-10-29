@@ -4,7 +4,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
-	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 )
 
 // Developer mode lives in devtools (ARCH-005). These aliases and one-line
@@ -12,37 +12,11 @@ import (
 // hotkeys, the tests) unchanged while the features move out one package at
 // a time; the last mover deletes this file (SOLID_GO.md §11).
 
-type (
-	devState         = devtools.State
-	devAction        = devtools.Action
-	devTools         = devtools.Tools
-	devPanelRects    = devtools.PanelRects
-	mapFieldsOverlay = devtools.FieldsOverlay
-)
-
-const (
-	devLosePickID   = devtools.LosePickID
-	devLosePickList = devtools.LosePickList
-	fieldAlpha      = devtools.FieldAlpha
-)
-
-func devColumn(l hudLayout) rect                     { return devtools.Column(l) }
-func devLoseParts() []string                         { return devtools.LoseParts() }
-func fieldPixels(l game.MapFieldLayer) []byte        { return devtools.FieldPixels(l) }
-func fieldLegendLines(l game.MapFieldLayer) []string { return devtools.FieldLegendLines(l) }
-
 // ---- the App's developer-mode methods
 
-func (a *App) devMode() bool                           { return a.tools.Mode() }
-func (a *App) devActions(tx, ty int) []devAction       { return a.tools.Actions(tx, ty) }
-func (a *App) handleDevKeys()                          { a.tools.HandleKeys(&a.in) }
-func (a *App) devMenuRect() button                     { return a.tools.MenuRect() }
-func (a *App) devButtons() []button                    { return a.tools.Buttons() }
-func (a *App) applyDevClick(id string)                 { a.tools.Click(id) }
-func (a *App) devStack() devPanelRects                 { return a.tools.Stack() }
-func (a *App) drawMapFields(screen *ebiten.Image)      { a.tools.DrawMapFields(screen) }
-func (a *App) drawMapFieldLegend(s *ebiten.Image)      { a.tools.DrawMapFieldLegend(s) }
-func (a *App) drawDevPanels(s *ebiten.Image, w, h int) { a.tools.Draw(s, w, h) }
+func (a *App) handleDevKeys() { a.tools.HandleKeys(&a.in) }
+
+func (a *App) applyDevClick(id string) { a.tools.Click(id) }
 
 // devtoolsHost is the root's side of devtools.Host.
 type devtoolsHost struct{ a *App }
@@ -74,34 +48,34 @@ func (h devtoolsHost) Env() devtools.Env {
 }
 
 // HUD is this frame's HUD layout.
-func (h devtoolsHost) HUD() hudLayout { return h.a.hud() }
+func (h devtoolsHost) HUD() hudlayout.Layout { return h.a.hud() }
 
 // Toast shows a transient message.
-func (h devtoolsHost) Toast(msg string) { h.a.toast(msg) }
+func (h devtoolsHost) Toast(msg string) { h.a.chrome.Toast(msg) }
 
 // Selected is the current selection.
 func (h devtoolsHost) Selected() devtools.Selected {
 	a := h.a
 	var s devtools.Selected
-	if v, ok := a.selectedPawn(); ok {
+	if v, ok := a.insp.SelectedPawn(); ok {
 		s.Pawn = &v
 	}
-	if v, ok := a.selectedAnimal(); ok {
+	if v, ok := a.insp.SelectedAnimal(); ok {
 		s.Animal = &v
 	}
-	if v, ok := a.selectedItem(); ok {
+	if v, ok := a.sel.SelectedItem(); ok {
 		s.Item = &v
 	}
-	if v, ok := a.selectedBuilding(); ok {
+	if v, ok := a.insp.SelectedBuilding(); ok {
 		s.Building = &v
 	}
-	if v, ok := a.selectedPlant(); ok {
+	if v, ok := a.sel.SelectedPlant(); ok {
 		s.Plant = &v
 	}
-	if v, ok := a.selectedFrame(); ok {
+	if v, ok := a.insp.SelectedFrame(); ok {
 		s.Frame = &v
 	}
-	if a.grouped() {
+	if a.sel.Grouped() {
 		s.Group = a.sel.Group.Ids
 	}
 	return s
@@ -115,4 +89,4 @@ func (h devtoolsHost) StepTick() {
 }
 
 // Icon is the UI icon "ui_icon/<name>".
-func (h devtoolsHost) Icon(name string) *ebiten.Image { return h.a.icon(name) }
+func (h devtoolsHost) Icon(name string) *ebiten.Image { return h.a.arch.Icon(name) }

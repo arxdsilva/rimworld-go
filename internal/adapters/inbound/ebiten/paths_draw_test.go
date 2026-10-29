@@ -3,6 +3,7 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/application/game"
 )
 
@@ -18,7 +19,7 @@ func TestPlanPathsEveryColonistWithAPath(t *testing.T) {
 		{ID: 4, X: 2, Y: 2, Hostile: true, Path: [][2]int{{3, 2}}}, // raider: skipped
 		{ID: 5, X: 40, Y: 40, Path: [][2]int{{41, 40}}},            // off-screen
 	}
-	plans := planPaths(pawns, 2, true, 1, 640, 480, idScreen, atTile)
+	plans := overlay.PlanPaths(pawns, 2, true, 1, 640, 480, idScreen, atTile)
 	if len(plans) != 2 {
 		t.Fatalf("plans = %d, want 2 (colonists 1 and 2): %+v", len(plans), plans)
 	}
@@ -33,11 +34,11 @@ func TestPlanPathsEveryColonistWithAPath(t *testing.T) {
 func TestPlanPathsDropAndZoomedOut(t *testing.T) {
 	t.Parallel()
 	p := game.PawnView{ID: 1, X: 1, Y: 1, Path: [][2]int{{2, 1}}, HasGoal: true, GoalX: 2, GoalY: 1, HasDrop: true, DropX: 4, DropY: 1}
-	plans := planPaths([]game.PawnView{p}, 0, false, 1, 640, 480, idScreen, atTile)
+	plans := overlay.PlanPaths([]game.PawnView{p}, 0, false, 1, 640, 480, idScreen, atTile)
 	if len(plans) != 1 || !plans[0].HasDrop {
 		t.Fatalf("plans = %+v", plans)
 	}
-	far := planPaths([]game.PawnView{p}, 0, false, 0.2, 640, 480, idScreen, atTile)
+	far := overlay.PlanPaths([]game.PawnView{p}, 0, false, 0.2, 640, 480, idScreen, atTile)
 	if len(far) != 1 || len(far[0].Segs) != 0 || !far[0].HasGoal {
 		t.Fatalf("zoomed out draws only the goal marker: %+v", far)
 	}
@@ -46,7 +47,7 @@ func TestPlanPathsDropAndZoomedOut(t *testing.T) {
 func TestPlanPathsKeepsSegmentCrossingScreen(t *testing.T) {
 	t.Parallel()
 	p := game.PawnView{ID: 1, X: -3, Y: 2, Path: [][2]int{{12, 2}}} // from off the left edge to off the right
-	plans := planPaths([]game.PawnView{p}, 0, false, 1, 640, 480, idScreen, atTile)
+	plans := overlay.PlanPaths([]game.PawnView{p}, 0, false, 1, 640, 480, idScreen, atTile)
 	if len(plans) != 1 || len(plans[0].Segs) != 1 {
 		t.Fatalf("a segment crossing the screen is drawn: %+v", plans)
 	}

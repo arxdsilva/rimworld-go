@@ -2,10 +2,11 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"testing"
 )
 
-func htOverlaps(a, b rect) bool {
+func htOverlaps(a, b gfx.Rect) bool {
 	return !a.Empty() && !b.Empty() && a.X < b.Right() && b.X < a.Right() && a.Y < b.Bottom() && b.Y < a.Bottom()
 }
 
@@ -17,11 +18,11 @@ func TestSearchBoxClearOfTheTopRegions(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("%d colonists in %dx%d", tc.n, tc.sw, tc.sh), func(t *testing.T) {
 			a, _ := htApp(t, &stubSim{pawns: htPawns(tc.n)}, tc.sw, tc.sh)
-			a.openSearch()
-			r := a.searchRect(tc.sw)
-			box := rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
+			a.ord.OpenSearch()
+			r := a.ord.SearchRect(tc.sw)
+			box := gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
 			l := a.hud()
-			for name, other := range map[string]rect{"bar": l.Bar, "resources": l.Resources, "right column": l.Right, "learning helper": l.Learn} {
+			for name, other := range map[string]gfx.Rect{"bar": l.Bar, "resources": l.Resources, "right column": l.Right, "learning helper": l.Learn} {
 				if htOverlaps(box, other) {
 					t.Errorf("search box %+v overlaps the %s %+v", box, name, other)
 				}
@@ -36,7 +37,7 @@ func TestSearchBoxClearOfTheTopRegions(t *testing.T) {
 				t.Errorf("search box centre %v, want the window centre %v", mid, float32(tc.sw)/2)
 			}
 			// the result rows follow the box
-			for _, b := range a.searchButtons(tc.sw) {
+			for _, b := range a.ord.SearchButtons(tc.sw) {
 				if b.X < box.X || b.X+b.W > box.Right() || b.Y < box.Y {
 					t.Errorf("search button %s %+v outside the box", b.ID, b)
 				}

@@ -8,6 +8,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/application/game"
 )
 
@@ -34,13 +36,13 @@ var cropStates = []cropState{
 	{"sown", 2, 0, 0}, {"sprout8", 8, 0, 0}, {"sprout14", 14, 0, 0}, {"sprout19", 19, 0, 0},
 	{"young20", 20, 1, 0}, {"young37", 37, 1, 0}, {"young54", 54, 1, 0},
 	{"mature55", 55, 2, 0}, {"mature77", 77, 2, 0}, {"mature99", 99, 2, 0},
-	{"ripe", 100, 3, 0}, {"wilted", 100, 3, cropWiltDamage}, {"wilted-young", 40, 1, 60}, {"fading", 100, 3, 85},
+	{"ripe", 100, 3, 0}, {"wilted", 100, 3, env.CropWiltDamage}, {"wilted-young", 40, 1, 60}, {"fading", 100, 3, 85},
 }
 
 // cropDrawEach draws every plant of r's stub world like cropDraw and hands
 // each plant's queued unit quads to fn.
 func cropDrawEach(r *Renderer, mw, mh int, tile float64, fn func(p *game.PlantView, quads []ebiten.Vertex)) {
-	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/TileSize, -tile, -tile
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/camerapkg.TileSize, -tile, -tile
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
@@ -116,7 +118,7 @@ func TestCropUnitsStayOnTheirTile(t *testing.T) {
 			w, mw, mh := cropStateFields(sp, vertical)
 			for _, wind := range winds {
 				w.WindX, w.WindY, w.Weather = wind.wx, wind.wy, "cloudy"
-				for _, tile := range []float64{TileSize, 32} {
+				for _, tile := range []float64{camerapkg.TileSize, 32} {
 					for _, present := range []uint64{0, 37} {
 						sim := &stubSim{w: mw, h: mh, world: w}
 						r := New(sim)
@@ -171,13 +173,13 @@ func TestCropGrowthRisesStageToStage(t *testing.T) {
 		set := a.Sets[sp]
 		prev := 0.0
 		for g := 8; g <= 100; g++ {
-			st := cropGrowthStage(game.PlantView{Species: sp, Growth: g, Stage: stageOfGrowth(g)})
+			st := env.CropGrowthStage(game.PlantView{Species: sp, Growth: g, Stage: stageOfGrowth(g)})
 			if set.Nominal[st] <= 0 {
-				t.Fatalf("%s: no %s sprite", sp, cropStageNames[st])
+				t.Fatalf("%s: no %s sprite", sp, env.CropStageNames[st])
 			}
 			h := set.Height(float64(g))
 			if got := float64(set.Nominal[st]) * set.Scale(st, g); math.Abs(got-h) > 1e-6 {
-				t.Errorf("%s growth %d: the %s sprite draws %.3f tall, the growth curve says %.3f (the scale clamp binds)", sp, g, cropStageNames[st], got, h)
+				t.Errorf("%s growth %d: the %s sprite draws %.3f tall, the growth curve says %.3f (the scale clamp binds)", sp, g, env.CropStageNames[st], got, h)
 			}
 			if h < prev-1e-9 {
 				t.Errorf("%s growth %d: the plant shrinks to %.3f from %.3f", sp, g, h, prev)
@@ -194,11 +196,11 @@ func TestCropGrowthRisesStageToStage(t *testing.T) {
 			r.art, r.speed = art, speedPaused
 			var sum float64
 			var units int
-			cropDrawEach(r, 14, 14, TileSize, func(_ *game.PlantView, vs []ebiten.Vertex) {
+			cropDrawEach(r, 14, 14, camerapkg.TileSize, func(_ *game.PlantView, vs []ebiten.Vertex) {
 				for q := 0; q+3 < len(vs); q += 4 {
 					// the plant's height is its top's height above its root: the
 					// quad's bottom less the sprite's reach below the root
-					var spr *cropSprite
+					var spr *env.CropSprite
 					for i := range r.lod.Crops.Atlas.Sprites {
 						if s := &r.lod.Crops.Atlas.Sprites[i]; s.Sx == min(vs[q].SrcX, vs[q+1].SrcX) && s.Sy == vs[q].SrcY {
 							spr = s
@@ -209,7 +211,7 @@ func TestCropGrowthRisesStageToStage(t *testing.T) {
 					}
 					ks := (vs[q+1].DstX - vs[q].DstX) / spr.W
 					root := max(vs[q+2].DstY, vs[q+3].DstY) - (spr.H-spr.Fy)*ks
-					sum += float64(root-min(vs[q].DstY, vs[q+1].DstY)) / TileSize
+					sum += float64(root-min(vs[q].DstY, vs[q+1].DstY)) / camerapkg.TileSize
 					units++
 				}
 			})
@@ -237,8 +239,8 @@ func TestCropSwayPivotsAtRoot(t *testing.T) {
 		w := cropWorld(6, 6, cropPlants("wheat", 2, 2, 1, 1, nil))
 		w.WindX, w.WindY, w.Weather = 2.4, 0.4, "cloudy"
 		r := cropRenderer(w, 6, 6)
-		for _, name := range cropStageNames {
-			for v := 0; v < cropVariants; v++ {
+		for _, name := range env.CropStageNames {
+			for v := 0; v < env.CropVariants; v++ {
 				r.art.Sprites[fmt.Sprintf("plant/wheat_%s_v%d", name, v)] = cropBlockSprite(up, down)
 			}
 		}

@@ -9,6 +9,9 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/application/game"
 )
 
@@ -58,15 +61,15 @@ func TestResourceRowsComeFromStoredGoods(t *testing.T) {
 	if got, want := htRowKinds(a.resourceRows()), []string{"wood", "steel", "meal"}; !slices.Equal(got, want) {
 		t.Fatalf("rows = %v, want %v", got, want)
 	}
-	if h := a.resourcesHeight(); h != 3*resourceRowH {
-		t.Fatalf("resourcesHeight = %v, want %v", h, 3*resourceRowH)
+	if h := a.chrome.Res().Height(); h != 3*hudlayout.ResourceRowH {
+		t.Fatalf("resourcesHeight = %v, want %v", h, 3*hudlayout.ResourceRowH)
 	}
 	l := a.hud()
-	want := rect{X: hudMargin, Y: hudMargin, W: resourcesW, H: 3 * resourceRowH}
+	want := gfx.Rect{X: hudlayout.HudMargin, Y: hudlayout.HudMargin, W: hudlayout.ResourcesW, H: 3 * hudlayout.ResourceRowH}
 	if l.Resources != want {
 		t.Fatalf("Resources rect = %+v, want %+v", l.Resources, want)
 	}
-	bs := a.resourceButtons()
+	bs := a.chrome.Res().Buttons()
 	if len(bs) != 3 {
 		t.Fatalf("%d resource buttons, want 3", len(bs))
 	}
@@ -76,7 +79,7 @@ func TestResourceRowsComeFromStoredGoods(t *testing.T) {
 		if b.ID != "res.row."+kind || b.Tip != label {
 			t.Errorf("button %d = %q tip %q, want res.row.%s tip %q", i, b.ID, b.Tip, kind, label)
 		}
-		if r := (rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); r.X < l.Resources.X || r.Right() > l.Resources.Right() || r.Y < l.Resources.Y || r.Bottom() > l.Resources.Bottom() {
+		if r := (gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); r.X < l.Resources.X || r.Right() > l.Resources.Right() || r.Y < l.Resources.Y || r.Bottom() > l.Resources.Bottom() {
 			t.Errorf("button %s %+v leaves the list %+v", b.ID, r, l.Resources)
 		}
 	}
@@ -100,7 +103,7 @@ func TestResourceRowsFallBackToTheTotals(t *testing.T) {
 	if kinds := htRowKinds(a.resourceRows()); !slices.Contains(kinds, "silver") || !slices.Contains(kinds, "gold") {
 		t.Fatalf("fallback rows = %v, want silver and gold", kinds)
 	}
-	if a.resourcesHeight() == 0 || a.hud().Resources.Empty() {
+	if a.chrome.Res().Height() == 0 || a.hud().Resources.Empty() {
 		t.Fatal("the list is blank while the read model is empty")
 	}
 }
@@ -127,11 +130,11 @@ func TestResourcesCategorisedWithCollapsibleHeaders(t *testing.T) {
 	if got := htRowKinds(a.resourceRows()); !slices.Equal(got, want) {
 		t.Fatalf("categorised rows = %v, want %v", got, want)
 	}
-	if h := a.resourcesHeight(); h != float32(len(want))*resourceRowH {
-		t.Fatalf("height = %v, want %v", h, float32(len(want))*resourceRowH)
+	if h := a.chrome.Res().Height(); h != float32(len(want))*hudlayout.ResourceRowH {
+		t.Fatalf("height = %v, want %v", h, float32(len(want))*hudlayout.ResourceRowH)
 	}
 	var ids []string
-	for _, b := range a.resourceButtons() {
+	for _, b := range a.chrome.Res().Buttons() {
 		ids = append(ids, b.ID)
 	}
 	wantIDs := []string{"res.cat.Food", "res.row.meal", "res.row.meat", "res.cat.Materials", "res.row.wood", "res.row.steel", "res.cat.Zebra things", "res.row.odd"}
@@ -145,10 +148,10 @@ func TestResourcesCategorisedWithCollapsibleHeaders(t *testing.T) {
 	if got := htRowKinds(a.resourceRows()); !slices.Equal(got, want) {
 		t.Fatalf("after folding Food: %v, want %v", got, want)
 	}
-	if h := a.resourcesHeight(); h != float32(len(want))*resourceRowH {
-		t.Fatalf("height after folding = %v, want %v", h, float32(len(want))*resourceRowH)
+	if h := a.chrome.Res().Height(); h != float32(len(want))*hudlayout.ResourceRowH {
+		t.Fatalf("height after folding = %v, want %v", h, float32(len(want))*hudlayout.ResourceRowH)
 	}
-	if l := a.hud(); l.Resources.H != float32(len(want))*resourceRowH {
+	if l := a.hud(); l.Resources.H != float32(len(want))*hudlayout.ResourceRowH {
 		t.Fatalf("the layout rect did not shrink: %+v", l.Resources)
 	}
 	click(t, a, "res.cat.Food")
@@ -178,13 +181,13 @@ func TestResourcesHeaderTotalsShowWhenFolded(t *testing.T) {
 func TestResourcesScrollWithTheWheel(t *testing.T) {
 	a, f := htResApp(t, game.WorldView{Stored: htManyStored(40)})
 	r := a.hud().Resources
-	content := a.resourcesHeight()
-	if content != 40*resourceRowH || r.H >= content {
+	content := a.chrome.Res().Height()
+	if content != 40*hudlayout.ResourceRowH || r.H >= content {
 		t.Fatalf("setup: content %v in a %v px list, want it to overflow", content, r.H)
 	}
 	maxOff := content - r.H
 	first := func() string {
-		bs := a.resourceButtons()
+		bs := a.chrome.Res().Buttons()
 		if len(bs) == 0 {
 			return ""
 		}
@@ -194,7 +197,7 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		t.Fatalf("first visible row = %q before scrolling", got)
 	}
 	// the buttons are the visible rows only, clipped to the list
-	for _, b := range a.resourceButtons() {
+	for _, b := range a.chrome.Res().Buttons() {
 		if b.Y < r.Y-0.01 || b.Y+b.H > r.Bottom()+0.01 {
 			t.Fatalf("button %s %v..%v leaves the list %v..%v", b.ID, b.Y, b.Y+b.H, r.Y, r.Bottom())
 		}
@@ -203,7 +206,7 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 	f.Cur.Mx, f.Cur.My = int(r.X+20), int(r.Y+20)
 	f.Cur.WheelY = -1
 	f.Frame(t, a)
-	off := a.uiSt().Scroll[resScrollID]
+	off := a.uiSt().Scroll[hud.ResScrollID]
 	if off <= 0 {
 		t.Fatalf("the wheel over the list left the offset at %v", off)
 	}
@@ -218,10 +221,10 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		f.Cur.WheelY = -1
 		f.Frame(t, a)
 	}
-	if off = a.uiSt().Scroll[resScrollID]; off != maxOff {
+	if off = a.uiSt().Scroll[hud.ResScrollID]; off != maxOff {
 		t.Fatalf("offset = %v after scrolling to the end, want %v", off, maxOff)
 	}
-	bs := a.resourceButtons()
+	bs := a.chrome.Res().Buttons()
 	if last := bs[len(bs)-1]; last.ID != "res.row.kind39" || last.Y+last.H > r.Bottom()+0.01 {
 		t.Fatalf("last row at the end = %+v", last)
 	}
@@ -230,7 +233,7 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		f.Cur.WheelY = 1
 		f.Frame(t, a)
 	}
-	if off = a.uiSt().Scroll[resScrollID]; off != 0 {
+	if off = a.uiSt().Scroll[hud.ResScrollID]; off != 0 {
 		t.Fatalf("offset = %v after scrolling back, want 0", off)
 	}
 	// a wheel away from the list belongs to the camera
@@ -238,7 +241,7 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 	f.Cur.Mx, f.Cur.My = 640, 400
 	f.Cur.WheelY = -1
 	f.Frame(t, a)
-	if off = a.uiSt().Scroll[resScrollID]; off != 0 {
+	if off = a.uiSt().Scroll[hud.ResScrollID]; off != 0 {
 		t.Fatalf("a wheel over the map scrolled the list to %v", off)
 	}
 	if a.renderer.smooth == before {
@@ -250,7 +253,7 @@ func TestResourcesWheelIsNotTakenWhenTheListFits(t *testing.T) {
 	a, f := htResApp(t, game.WorldView{Stored: htManyStored(3)})
 	r := a.hud().Resources
 	f.Cur.Mx, f.Cur.My = int(r.X+20), int(r.Y+10)
-	if a.uiWheelOver(f.Cur.Mx, f.Cur.My) {
+	if a.uiSt().WheelOver(f.Cur.Mx, f.Cur.My) {
 		t.Fatal("a list that fits takes the wheel")
 	}
 }
@@ -262,14 +265,14 @@ func TestResourcesHiddenWithoutRoom(t *testing.T) {
 	if l := a.hud(); !l.Resources.Empty() {
 		t.Fatalf("Resources = %+v with no room", l.Resources)
 	}
-	if bs := a.resourceButtons(); len(bs) != 0 {
+	if bs := a.chrome.Res().Buttons(); len(bs) != 0 {
 		t.Fatalf("%d resource buttons with no room", len(bs))
 	}
-	ev := htTrace(t, func() { a.drawResources(ebiten.NewImage(1280, 90), 1280, 90) })
+	ev := htTrace(t, func() { a.chrome.Res().Draw(ebiten.NewImage(1280, 90), 1280, 90) })
 	if len(ev) != 0 {
 		t.Fatalf("the hidden list drew %d things", len(ev))
 	}
-	if a.rightClickResources(20, 20) {
+	if a.chrome.Res().RightClick(20, 20) {
 		t.Fatal("a hidden list takes right clicks")
 	}
 }
@@ -279,8 +282,8 @@ func TestResourcesDrawIconAndCountPerRow(t *testing.T) {
 		htStored("wood", "Wood", "Materials", 40), htStored("steel", "Steel", "Materials", 1234),
 	}})
 	r := a.hud().Resources
-	ev := htTrace(t, func() { a.drawResources(ebiten.NewImage(1280, 720), 1280, 720) })
-	texts := map[string]traceEvent{}
+	ev := htTrace(t, func() { a.chrome.Res().Draw(ebiten.NewImage(1280, 720), 1280, 720) })
+	texts := map[string]gfx.TraceEvent{}
 	fills := 0
 	for _, e := range ev {
 		if !htInside(e, r) {
@@ -312,7 +315,7 @@ func TestResourcesHeadersDrawTheirNames(t *testing.T) {
 		htStored("meal", "Meal", "Food", 3), htStored("wood", "Wood", "Materials", 40),
 	}})
 	a.settings.Gameplay.CategorizedResources = true
-	ev := htTrace(t, func() { a.drawResources(ebiten.NewImage(1280, 720), 1280, 720) })
+	ev := htTrace(t, func() { a.chrome.Res().Draw(ebiten.NewImage(1280, 720), 1280, 720) })
 	var texts []string
 	for _, e := range ev {
 		if e.Kind == "text" {
@@ -334,7 +337,7 @@ func TestResourcesScaleWithTheUI(t *testing.T) {
 		withUIScale(t, s) // after the frames: Update re-derives the scale from the settings
 		r := htPhysRect(a.hud().Resources, s)
 		screen := ebiten.NewImage(1280, 720)
-		ev := htTrace(t, func() { a.drawResources(screen, sw, sh) })
+		ev := htTrace(t, func() { a.chrome.Res().Draw(screen, sw, sh) })
 		if len(ev) == 0 {
 			t.Fatalf("s=%v: nothing drawn", s)
 		}
@@ -350,13 +353,13 @@ func TestRightClickOverTheResourcesIsTaken(t *testing.T) {
 	t.Parallel()
 	a, _ := htResApp(t, game.WorldView{Stored: htManyStored(5)})
 	r := a.hud().Resources
-	if !a.rightClickResources(int(r.X)+10, int(r.Y)+10) {
+	if !a.chrome.Res().RightClick(int(r.X)+10, int(r.Y)+10) {
 		t.Error("a right click on the list reached the map")
 	}
-	if a.rightClickResources(int(r.Right())+40, int(r.Y)+10) {
+	if a.chrome.Res().RightClick(int(r.Right())+40, int(r.Y)+10) {
 		t.Error("a right click beside the list was taken")
 	}
-	if a.rightClickResources(int(r.X)+10, int(r.Bottom())+40) {
+	if a.chrome.Res().RightClick(int(r.X)+10, int(r.Bottom())+40) {
 		t.Error("a right click under the list was taken")
 	}
 }
@@ -381,12 +384,12 @@ func TestResourceIconFallsBackToTheItemSprite(t *testing.T) {
 	a, _ := htResApp(t, game.WorldView{})
 	a.renderer.art = art
 	for _, kind := range []string{"wood", "steel", "silver", "granite blocks"} {
-		img, _ := a.resourceIcon(kind)
+		img, _ := a.chrome.Res().Icon(kind)
 		if img == nil {
 			t.Errorf("no icon for %q: neither a ui_icon nor an item sprite", kind)
 		}
 	}
-	if img, _ := a.resourceIcon("no such kind"); img != nil {
+	if img, _ := a.chrome.Res().Icon("no such kind"); img != nil {
 		t.Error("an unknown kind found an icon")
 	}
 }
@@ -398,13 +401,13 @@ func TestResourcesDrawWithoutArt(t *testing.T) {
 		t.Fatal("setup: the unit test has art")
 	}
 	screen := ebiten.NewImage(1280, 720)
-	a.drawResources(screen, 1280, 720) // missing icons degrade to a letter tile: no panic
+	a.chrome.Res().Draw(screen, 1280, 720) // missing icons degrade to a letter tile: no panic
 }
 
 func TestResourceRowButtonsDoNotCollideWithEachOther(t *testing.T) {
 	t.Parallel()
 	a, _ := htResApp(t, game.WorldView{Stored: htManyStored(12)})
-	bs := a.resourceButtons()
+	bs := a.chrome.Res().Buttons()
 	for i := 1; i < len(bs); i++ {
 		if bs[i].Y < bs[i-1].Y+bs[i-1].H-0.01 {
 			t.Fatalf("buttons %s and %s overlap", bs[i-1].ID, bs[i].ID)

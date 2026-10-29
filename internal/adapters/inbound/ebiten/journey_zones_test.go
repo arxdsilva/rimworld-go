@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -42,21 +44,23 @@ func (j *journey) leaveArch() {
 }
 
 // zoneAt is the zone holding tile (x, y) in the read model.
-func (j *journey) zoneAt(x, y int) (game.ZoneView, bool) { return zoneCellAt(j.world(), x, y) }
+func (j *journey) zoneAt(x, y int) (game.ZoneView, bool) {
+	return architect.ZoneCellAt(j.world(), x, y)
+}
 
 // layZone drags kind's tool over (x0, y0)-(x1, y1), leaves the Architect
 // and clicks the zone's (x0, y0) cell, so its pane is selected.
 func (j *journey) layZone(cat, tool string, x0, y0, x1, y1 int) game.ZoneView {
 	j.t.Helper()
 	j.openArch(cat, tool)
-	j.dragTiles(mbLeft, x0, y0, x1, y1, 0)
+	j.dragTiles(inputframe.Left, x0, y0, x1, y1, 0)
 	z, ok := j.zoneAt(x0, y0)
 	if !ok {
 		j.t.Fatalf("no zone at (%d, %d) after the %s drag", x0, y0, tool)
 	}
 	j.leaveArch()
 	j.settle()
-	j.clickTile(x0, y0, mbLeft, 0)
+	j.clickTile(x0, y0, inputframe.Left, 0)
 	if !j.a.sel.HasZone || j.a.sel.ZoneSel != z.ID {
 		j.t.Fatalf("clicking the zone selected %v/%d, want zone %d", j.a.sel.HasZone, j.a.sel.ZoneSel, z.ID)
 	}
@@ -67,8 +71,8 @@ func TestJourneyZonesGrowZoneWithCrop(t *testing.T) {
 	t.Parallel()
 	j := zoneJourney(t)
 	crop := ""
-	for _, c := range zoneSpecies() {
-		if c.Name != "potato" && c.Name != "tree" && j.a.lockedBy("crop:"+c.Name) == "" {
+	for _, c := range architect.ZoneSpecies() {
+		if c.Name != "potato" && c.Name != "tree" && j.a.win.Research().LockedBy("crop:"+c.Name) == "" {
 			crop = c.Name
 			break
 		}
@@ -80,7 +84,7 @@ func TestJourneyZonesGrowZoneWithCrop(t *testing.T) {
 	if !j.clickID("arch.crop." + crop) {
 		t.Fatalf("crop %s is disabled", crop)
 	}
-	j.dragTiles(mbLeft, 8, 2, 10, 3, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 10, 3, 0)
 	c, ok := j.lastCmd(command.DesignateGrowZone)
 	want, _ := game.ZoneSpeciesID(crop)
 	if !ok || c.Build != want || c.X != 8 || c.Y != 2 || c.X2 != 10 || c.Y2 != 3 {
@@ -96,9 +100,9 @@ func TestJourneyZonesStockpileAndDump(t *testing.T) {
 	t.Parallel()
 	j := zoneJourney(t)
 	j.openArch("zones", "stockpile")
-	j.dragTiles(mbLeft, 8, 1, 9, 2, 0)
+	j.dragTiles(inputframe.Left, 8, 1, 9, 2, 0)
 	j.openArch("zones", "dump")
-	j.dragTiles(mbLeft, 12, 1, 13, 2, 0)
+	j.dragTiles(inputframe.Left, 12, 1, 13, 2, 0)
 	cs := j.cmdsOf(command.DesignateStockpile)
 	if len(cs) != 2 || cs[0].Build != 0 || cs[1].Build != game.StockpileVariantDump {
 		t.Fatalf("DesignateStockpile %+v, want a plain one and a dump", cs)
@@ -122,27 +126,27 @@ func TestJourneyZonesHomeRoofSnowArea(t *testing.T) {
 	t.Parallel()
 	j := zoneJourney(t)
 	j.openArch("zones", "unhome")
-	j.dragTiles(mbLeft, 8, 2, 9, 3, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 9, 3, 0)
 	if c, ok := j.lastCmd(command.DesignateHome); !ok || c.Enabled || homeBit(j, 8, 2) {
 		t.Fatalf("unhome sent %+v ok=%v, Home bit %v", c, ok, homeBit(j, 8, 2))
 	}
 	j.openArch("zones", "home")
-	j.dragTiles(mbLeft, 8, 2, 9, 3, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 9, 3, 0)
 	if c, ok := j.lastCmd(command.DesignateHome); !ok || !c.Enabled || c.X != 8 || c.X2 != 9 || !homeBit(j, 9, 3) {
 		t.Fatalf("home sent %+v ok=%v, Home bit %v", c, ok, homeBit(j, 9, 3))
 	}
 	j.openArch("zones", "roof")
-	j.dragTiles(mbLeft, 14, 2, 16, 3, 0)
+	j.dragTiles(inputframe.Left, 14, 2, 16, 3, 0)
 	if c, ok := j.lastCmd(command.DesignateRoof); !ok || c.X != 14 || c.Y2 != 3 {
 		t.Fatalf("roof sent %+v ok=%v", c, ok)
 	}
 	j.openArch("zones", "noroof")
-	j.dragTiles(mbLeft, 14, 2, 16, 3, 0)
+	j.dragTiles(inputframe.Left, 14, 2, 16, 3, 0)
 	if c, ok := j.lastCmd(command.DesignateRemoveRoof); !ok || c.X != 14 || c.Y2 != 3 {
 		t.Fatalf("noroof sent %+v ok=%v", c, ok)
 	}
 	j.openArch("zones", "snow_clear")
-	j.dragTiles(mbLeft, 8, 6, 10, 6, 0)
+	j.dragTiles(inputframe.Left, 8, 6, 10, 6, 0)
 	if c, ok := j.lastCmd(command.DesignateSnowClear); !ok || !c.Enabled || c.X != 8 || c.X2 != 10 || c.Y != 6 {
 		t.Fatalf("snow_clear sent %+v ok=%v", c, ok)
 	}
@@ -205,7 +209,7 @@ func TestJourneyZonesAllowedAreaAndAreas(t *testing.T) {
 	if j.a.arch.ToolID != "allowed_area" {
 		t.Fatalf("armed %q, want allowed_area", j.a.arch.ToolID)
 	}
-	j.dragTiles(mbLeft, 8, 2, 9, 3, 0)
+	j.dragTiles(inputframe.Left, 8, 2, 9, 3, 0)
 	if c, ok := j.lastCmd(command.PaintArea); !ok || c.Index != id || !c.Enabled || c.X != 8 || c.Y2 != 3 {
 		t.Fatalf("PaintArea %+v ok=%v", c, ok)
 	}
@@ -252,7 +256,7 @@ func TestJourneyZonesPen(t *testing.T) {
 	if !j.g.BuildNow("feeding trough", "wood", "south", 13, 3) {
 		t.Fatal("no trough")
 	}
-	j.clickTile(9, 3, mbLeft, 0)
+	j.clickTile(9, 3, inputframe.Left, 0)
 	if !j.clickID("inspector.pen") {
 		t.Fatal("no Pen tab")
 	}
@@ -273,7 +277,7 @@ func TestJourneyZonesPen(t *testing.T) {
 
 	j.key("Escape", 0)
 	j.settle()
-	j.clickTile(13, 3, mbLeft, 0)
+	j.clickTile(13, 3, inputframe.Left, 0)
 	if !j.clickID("cmd.bldg.trough") {
 		t.Fatal("trough button disabled")
 	}
@@ -292,13 +296,13 @@ func TestJourneyZonesZonePaneCommands(t *testing.T) {
 
 	j.clickID("cmd.zone.crop")
 	crop := ""
-	for _, c := range zoneSpecies() {
-		if c.Name != grow.Crop && c.Name != "tree" && j.a.lockedBy("crop:"+c.Name) == "" {
+	for _, c := range architect.ZoneSpecies() {
+		if c.Name != grow.Crop && c.Name != "tree" && j.a.win.Research().LockedBy("crop:"+c.Name) == "" {
 			crop = c.Name
 			break
 		}
 	}
-	j.pick(cropLabel(crop))
+	j.pick(architect.CropLabel(crop))
 	want, _ := game.ZoneSpeciesID(crop)
 	if c, ok := j.lastCmd(command.SetZoneCrop); !ok || c.Target != uint64(grow.ID) || c.Build != want {
 		t.Fatalf("SetZoneCrop %+v ok=%v, want %s (%d)", c, ok, crop, want)
@@ -362,7 +366,7 @@ func TestJourneyZonesZoneExpandShrink(t *testing.T) {
 	z := j.layZone("zones", "stockpile", 8, 2, 9, 3)
 	j.clickID("cmd.zone.expand")
 	j.update(1)
-	j.dragTiles(mbLeft, 10, 2, 11, 3, 0)
+	j.dragTiles(inputframe.Left, 10, 2, 11, 3, 0)
 	c, ok := j.lastCmd(command.ExpandZone)
 	if !ok || c.Target != uint64(z.ID) || c.X != 10 || c.X2 != 11 || c.Y != 2 || c.Y2 != 3 {
 		t.Fatalf("ExpandZone %+v ok=%v", c, ok)
@@ -373,7 +377,7 @@ func TestJourneyZonesZoneExpandShrink(t *testing.T) {
 	j.key("Escape", 0) // ends the tool, keeps the selection
 	j.clickID("cmd.zone.shrink")
 	j.update(1)
-	j.dragTiles(mbLeft, 10, 2, 11, 3, 0)
+	j.dragTiles(inputframe.Left, 10, 2, 11, 3, 0)
 	c, ok = j.lastCmd(command.RemoveZoneCells)
 	if !ok || c.Target != uint64(z.ID) || c.X != 10 || c.X2 != 11 {
 		t.Fatalf("RemoveZoneCells %+v ok=%v", c, ok)

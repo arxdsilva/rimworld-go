@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -24,7 +29,7 @@ func TestShadowsOffSkipsTheLayer(t *testing.T) {
 	r := shadowRenderer(t, w)
 	r.lit.Light = testLight(0.4, 0.4, 0.3)
 	dst := ebiten.NewImage(640, 400)
-	r.drawShadows(dst, w, 640, 400, r.tilePx())
+	r.drawShadows(dst, w, 640, 400, r.cam.Tile())
 	if r.env.Shadow.Composites != 1 || r.env.Shadow.Layer == nil {
 		t.Fatalf("fixture: composites %d, layer %v; the shadow layer should draw with shadows on", r.env.Shadow.Composites, r.env.Shadow.Layer)
 	}
@@ -33,13 +38,13 @@ func TestShadowsOffSkipsTheLayer(t *testing.T) {
 		t.Fatal("turning shadows off should free the screen-sized layers")
 	}
 	for i := 0; i < 3; i++ {
-		r.drawShadows(dst, w, 640, 400, r.tilePx())
+		r.drawShadows(dst, w, 640, 400, r.cam.Tile())
 	}
 	if r.env.Shadow.Composites != 1 || r.env.Shadow.Layer != nil {
 		t.Fatalf("shadows off still drew: composites %d, layer %v", r.env.Shadow.Composites, r.env.Shadow.Layer)
 	}
 	r.env.Shadow.SetOff(false)
-	r.drawShadows(dst, w, 640, 400, r.tilePx())
+	r.drawShadows(dst, w, 640, 400, r.cam.Tile())
 	if r.env.Shadow.Composites != 2 {
 		t.Fatalf("shadows back on: composites %d, want 2", r.env.Shadow.Composites)
 	}
@@ -48,7 +53,7 @@ func TestShadowsOffSkipsTheLayer(t *testing.T) {
 // --- lighting --------------------------------------------------------------------
 
 // normalSprite is a sprite image with a normal map in art.
-func normalSprite(art *artCatalog) *ebiten.Image {
+func normalSprite(art *artpkg.Catalog) *ebiten.Image {
 	img, n := ebiten.NewImage(8, 6), ebiten.NewImage(8, 6)
 	if art.Normals == nil {
 		art.Normals = map[*ebiten.Image]*ebiten.Image{}
@@ -59,15 +64,15 @@ func normalSprite(art *artCatalog) *ebiten.Image {
 
 func TestLightingOffDrawsPlainWithoutPairs(t *testing.T) {
 	t.Parallel()
-	art := &artCatalog{}
+	art := &artpkg.Catalog{}
 	sprite := normalSprite(art)
 	r := &Renderer{art: art}
 	r.view.W = roomWorld()
-	r.lit.Light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
 	r.lit.Off = true
 	for i := 0; i < 3; i++ {
-		r.drawLit(dst, sprite, ebiten.GeoM{}, noCS, 0, 0)
+		r.drawLit(dst, sprite, ebiten.GeoM{}, spritepkg.NoCS, 0, 0)
 	}
 	if n := r.lit.Pairs.Size(); n != 0 {
 		t.Fatalf("lighting off made %d lit pairs", n)
@@ -79,7 +84,7 @@ func TestLightingOffDrawsPlainWithoutPairs(t *testing.T) {
 		t.Fatalf("draw calls = %d, want the 3 plain draws counted", r.lit.Calls)
 	}
 	r.lit.Off = false
-	r.drawLit(dst, sprite, ebiten.GeoM{}, noCS, 0, 0)
+	r.drawLit(dst, sprite, ebiten.GeoM{}, spritepkg.NoCS, 0, 0)
 	if n := r.lit.Pairs.Size(); n != 1 || r.lit.Opts.Images[0] == nil {
 		t.Fatalf("lighting back on: %d pairs, shader image %v", n, r.lit.Opts.Images[0])
 	}
@@ -90,14 +95,14 @@ func TestLightingOffDrawsPlainWithoutPairs(t *testing.T) {
 // (flat, still no pair image).
 func TestLightingOffBloodyFigureStillShades(t *testing.T) {
 	t.Parallel()
-	art := &artCatalog{}
+	art := &artpkg.Catalog{}
 	sprite := normalSprite(art)
 	r := &Renderer{art: art}
 	r.view.W = roomWorld()
-	r.lit.Light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	r.lit.Off = true
 	r.figureBlood = 1.5
-	r.drawLit(ebiten.NewImage(64, 64), sprite, ebiten.GeoM{}, noCS, 0, 0)
+	r.drawLit(ebiten.NewImage(64, 64), sprite, ebiten.GeoM{}, spritepkg.NoCS, 0, 0)
 	if r.lit.Opts.Images[0] != sprite || r.lit.Pairs.Size() != 0 {
 		t.Fatalf("bloody figure: shader image is the sprite %v, %d pairs; want a flat shader draw", r.lit.Opts.Images[0] == sprite, r.lit.Pairs.Size())
 	}
@@ -107,22 +112,22 @@ func TestLightingOffBloodyFigureStillShades(t *testing.T) {
 // the hour, the roof and the lamps, and the sprite's own colour scale.
 func TestLightingOffKeepsDaylightTint(t *testing.T) {
 	t.Parallel()
-	noon, night := lightAt(12, summerDay, "clear", 0), lightAt(0, summerDay, "clear", 0)
-	day := flatLitScale(&noon, noCS, 1, 0)
-	dark := flatLitScale(&night, noCS, 1, 0)
+	noon, night := lightpkg.LightAt(12, summerDay, "clear", 0), lightpkg.LightAt(0, summerDay, "clear", 0)
+	day := lightpkg.FlatLitScale(&noon, spritepkg.NoCS, 1, 0)
+	dark := lightpkg.FlatLitScale(&night, spritepkg.NoCS, 1, 0)
 	if math.Abs(float64(day[0])-1) > 0.15 || day[3] != 1 {
 		t.Fatalf("noon scale %v, want about 1 (today's unlit look) at full alpha", day)
 	}
 	if !(dark[0] < day[0]/2) {
 		t.Fatalf("midnight scale %v is not much darker than noon %v", dark, day)
 	}
-	if in := flatLitScale(&noon, noCS, 0, 0); !(in[0] < day[0]) {
+	if in := lightpkg.FlatLitScale(&noon, spritepkg.NoCS, 0, 0); !(in[0] < day[0]) {
 		t.Fatalf("a roofed tile (%v) should be darker than open sky (%v)", in, day)
 	}
-	if lamp := flatLitScale(&night, noCS, 0, 1); !(lamp[0] > dark[0]) {
+	if lamp := lightpkg.FlatLitScale(&night, spritepkg.NoCS, 0, 1); !(lamp[0] > dark[0]) {
 		t.Fatalf("a lit room at night (%v) should be brighter than the dark (%v)", lamp, dark)
 	}
-	half := flatLitScale(&noon, colorScale{0.5, 0.5, 0.5, 0.5}, 1, 0) // premultiplied like DrawImage's ColorScale
+	half := lightpkg.FlatLitScale(&noon, spritepkg.ColorScale{0.5, 0.5, 0.5, 0.5}, 1, 0) // premultiplied like DrawImage's ColorScale
 	if math.Abs(float64(half[0])-float64(day[0])*0.25) > 1e-5 || half[3] != 0.5 {
 		t.Fatalf("scaled sprite %v, want rgb x0.25 (colour x alpha) and alpha 0.5", half)
 	}
@@ -134,7 +139,7 @@ func TestLightingOffGrassKeepsTuftsLitByTheTileLight(t *testing.T) {
 	t.Parallel()
 	w := grassWorld(6, 6, 100)
 	r, _ := grassRenderer(w, 6, 6)
-	r.lit.Light = lightAt(8, summerDay, "clear", 0)
+	r.lit.Light = lightpkg.LightAt(8, summerDay, "clear", 0)
 	batchAt(r, 6, 6, 64, 9)
 	on := r.lod.Grass.Verts[0]
 	if r.lit.Opts.Images[0] == nil {
@@ -147,7 +152,7 @@ func TestLightingOffGrassKeepsTuftsLitByTheTileLight(t *testing.T) {
 	if r.lit.Opts.Images[0] != nil {
 		t.Fatal("lighting off still drew tufts through lit.kage")
 	}
-	f := litFactor(&r.lit.Light, [3]float32{0, 0, 1}, 1, 0)
+	f := lightpkg.LitFactor(&r.lit.Light, [3]float32{0, 0, 1}, 1, 0)
 	for i, got := range [3]float32{off.ColorR, off.ColorG, off.ColorB} {
 		want := [3]float32{on.ColorR, on.ColorG, on.ColorB}[i] * f[i]
 		if math.Abs(float64(got-want)) > 1e-5 {
@@ -166,7 +171,7 @@ func TestLitPairCacheEvictsLeastRecentlyUsed(t *testing.T) {
 	img := func() *ebiten.Image { return ebiten.NewImage(2, 2) }
 	a, b, c, d := img(), img(), img(), img()
 	pa, pb, pc, pd := img(), img(), img(), img()
-	cache := litPairCache{Limit: 3}
+	cache := lightpkg.PairCache{Limit: 3}
 	cache.Put(a, pa, 0)
 	cache.Put(b, pb, 0)
 	cache.Put(c, pc, 0)
@@ -192,17 +197,17 @@ func TestLitPairCacheEvictsLeastRecentlyUsed(t *testing.T) {
 
 func TestLitPairCapacityFollowsTheVisibleSprites(t *testing.T) {
 	t.Parallel()
-	if litPairCapFor(0) != litPairsMin || litPairCapFor(10) != litPairsMin {
-		t.Fatalf("small scenes keep the floor: %d %d", litPairCapFor(0), litPairCapFor(10))
+	if lightpkg.PairCapFor(0) != lightpkg.PairsMin || lightpkg.PairCapFor(10) != lightpkg.PairsMin {
+		t.Fatalf("small scenes keep the floor: %d %d", lightpkg.PairCapFor(0), lightpkg.PairCapFor(10))
 	}
-	if got := litPairCapFor(400); got != 600 {
+	if got := lightpkg.PairCapFor(400); got != 600 {
 		t.Fatalf("cap for 400 visible = %d, want 600 (1.5x)", got)
 	}
-	if litPairCapFor(1<<20) != litPairsMax {
-		t.Fatalf("cap for a huge scene = %d, want the ceiling %d", litPairCapFor(1<<20), litPairsMax)
+	if lightpkg.PairCapFor(1<<20) != lightpkg.PairsMax {
+		t.Fatalf("cap for a huge scene = %d, want the ceiling %d", lightpkg.PairCapFor(1<<20), lightpkg.PairsMax)
 	}
 	// the cap follows last frame's distinct sprites
-	var c litPairCache
+	var c lightpkg.PairCache
 	for i := 0; i < 400; i++ {
 		c.Put(ebiten.NewImage(1, 1), ebiten.NewImage(1, 1), 1)
 	}
@@ -217,28 +222,28 @@ func TestLitPairCapacityFollowsTheVisibleSprites(t *testing.T) {
 // again (its pair is rebuilt).
 func TestLitPairsStayBounded(t *testing.T) {
 	t.Parallel()
-	art := &artCatalog{}
+	art := &artpkg.Catalog{}
 	r := &Renderer{art: art}
 	r.view.W = roomWorld()
-	r.lit.Light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
-	n := litPairsMin + 60
+	n := lightpkg.PairsMin + 60
 	sprites := make([]*ebiten.Image, n)
 	for i := range sprites {
 		sprites[i] = normalSprite(art)
-		r.drawLit(dst, sprites[i], ebiten.GeoM{}, noCS, 0, 0)
-		if sz := r.lit.Pairs.Size(); sz > litPairsMin {
-			t.Fatalf("after %d sprites the cache holds %d pairs, bound %d", i+1, sz, litPairsMin)
+		r.drawLit(dst, sprites[i], ebiten.GeoM{}, spritepkg.NoCS, 0, 0)
+		if sz := r.lit.Pairs.Size(); sz > lightpkg.PairsMin {
+			t.Fatalf("after %d sprites the cache holds %d pairs, bound %d", i+1, sz, lightpkg.PairsMin)
 		}
 	}
-	if r.lit.Pairs.Evicted != n-litPairsMin {
-		t.Fatalf("evicted %d, want %d", r.lit.Pairs.Evicted, n-litPairsMin)
+	if r.lit.Pairs.Evicted != n-lightpkg.PairsMin {
+		t.Fatalf("evicted %d, want %d", r.lit.Pairs.Evicted, n-lightpkg.PairsMin)
 	}
-	r.drawLit(dst, sprites[0], ebiten.GeoM{}, noCS, 0, 0) // evicted: rebuilt, still bounded and correct
-	if pair := r.lit.Opts.Images[0]; pair == sprites[0] || pair.Bounds().Dx() != 2*8+litGap {
+	r.drawLit(dst, sprites[0], ebiten.GeoM{}, spritepkg.NoCS, 0, 0) // evicted: rebuilt, still bounded and correct
+	if pair := r.lit.Opts.Images[0]; pair == sprites[0] || pair.Bounds().Dx() != 2*8+lightpkg.LitGap {
 		t.Fatalf("an evicted sprite should draw from a rebuilt pair, got %v", pair.Bounds())
 	}
-	if r.lit.Pairs.Size() > litPairsMin {
+	if r.lit.Pairs.Size() > lightpkg.PairsMin {
 		t.Fatalf("cache grew to %d", r.lit.Pairs.Size())
 	}
 }
@@ -248,12 +253,12 @@ func TestLitPairsStayBounded(t *testing.T) {
 func waterRendererFixture() *Renderer {
 	r := &Renderer{}
 	r.view.W = roomWorld()
-	r.lit.Light = lightAt(12, summerDay, "clear", 0)
-	r.art = &artCatalog{Sprites: map[string]*artSprite{}}
-	for v := 0; v < soilVariants; v++ {
+	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
+	r.art = &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{}}
+	for v := 0; v < worldpkg.SoilVariants; v++ {
 		img := ebiten.NewImage(16, 16)
 		img.Fill(color.NRGBA{40, 90, 160, 255})
-		r.art.Sprites[artKey("terrain", "shallow_water", v)] = &artSprite{Meta: artMeta{Canvas: [2]int{16, 16}}, Img: img}
+		r.art.Sprites[env.ArtKey("terrain", "shallow_water", v)] = &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{16, 16}}, Img: img}
 	}
 	r.setView(64, 64, 32)
 	return r
@@ -272,9 +277,9 @@ func TestSimpleWaterIsStillAndSkipsTheRippleShader(t *testing.T) {
 			shaderDraws++
 		}
 	}
-	for p := uint64(0); p < 4*waterFrameTicks; p += waterFrameTicks / 2 {
+	for p := uint64(0); p < 4*env.WaterFrameTicks; p += env.WaterFrameTicks / 2 {
 		r.present = p
-		r.drawWaterTile(dst, "shallow_water", 0, 0, 32, 64, 64, noCS)
+		r.drawWaterTile(dst, "shallow_water", 0, 0, 32, 64, 64, spritepkg.NoCS)
 	}
 	if shaderDraws != 0 || r.water.Shader != nil || r.water.Err != nil {
 		t.Fatalf("simple water used the ripple shader: %d draws, compiled %v err %v", shaderDraws, r.water.Shader != nil, r.water.Err)
@@ -285,11 +290,11 @@ func TestSimpleWaterIsStillAndSkipsTheRippleShader(t *testing.T) {
 	if r.waterClock() != 0 {
 		t.Fatal("simple water has a still clock")
 	}
-	if cs := r.foamCS(2, 3); cs != (colorScale{1, 1, 1, 0.85}) {
+	if cs := r.foamCS(2, 3); cs != (spritepkg.ColorScale{1, 1, 1, 0.85}) {
 		t.Fatalf("foam %v, want the steady foam of reduced motion", cs)
 	}
 	r.present = 77
-	if cs := r.foamCS(2, 3); cs != (colorScale{1, 1, 1, 0.85}) {
+	if cs := r.foamCS(2, 3); cs != (spritepkg.ColorScale{1, 1, 1, 0.85}) {
 		t.Fatalf("foam moved at another frame: %v", cs)
 	}
 }
@@ -305,7 +310,7 @@ func TestAnimatedWaterStillRipples(t *testing.T) {
 		}
 	}
 	r.present = 90
-	r.drawWaterTile(dst, "shallow_water", 0, 0, 32, 64, 64, noCS)
+	r.drawWaterTile(dst, "shallow_water", 0, 0, 32, 64, 64, spritepkg.NoCS)
 	if shaderDraws != 1 || r.waterClock() != float32(90)/60 {
 		t.Fatalf("animated water: %d shader draws, clock %v", shaderDraws, r.waterClock())
 	}
@@ -370,13 +375,13 @@ func TestGrassKeepIsDeterministicAndNested(t *testing.T) {
 	for n := 1; n <= 9; n++ {
 		for y := 0; y < 24; y++ {
 			for x := 0; x < 24; x++ {
-				full := grassKeep(config.GrassFull, x, y, n)
-				red := grassKeep(config.GrassReduced, x, y, n)
-				sp := grassKeep(config.GrassSparse, x, y, n)
+				full := env.GrassKeep(config.GrassFull, x, y, n)
+				red := env.GrassKeep(config.GrassReduced, x, y, n)
+				sp := env.GrassKeep(config.GrassSparse, x, y, n)
 				if full != n || !(sp <= red && red <= full) {
 					t.Fatalf("tile (%d,%d) of %d copies keeps %d/%d/%d (sparse/reduced/full)", x, y, n, sp, red, full)
 				}
-				if red != grassKeep(config.GrassReduced, x, y, n) {
+				if red != env.GrassKeep(config.GrassReduced, x, y, n) {
 					t.Fatalf("tile (%d,%d) is not deterministic", x, y)
 				}
 			}
@@ -386,7 +391,7 @@ func TestGrassKeepIsDeterministicAndNested(t *testing.T) {
 	kept := 0
 	for y := 0; y < 32; y++ {
 		for x := 0; x < 32; x++ {
-			kept += grassKeep(config.GrassSparse, x, y, 1)
+			kept += env.GrassKeep(config.GrassSparse, x, y, 1)
 		}
 	}
 	if kept < 32*32/5 || kept > 32*32*2/5 {
@@ -403,7 +408,7 @@ func TestGrassDetailChangesTheChunkBakeKey(t *testing.T) {
 	sigs := map[uint64]bool{}
 	for _, level := range []string{config.GrassFull, config.GrassReduced, config.GrassSparse} {
 		r.lod.Grass.Level = level
-		sigs[r.grassLookSig(&w, 1)] = true
+		sigs[r.envLayer().GrassLookSig(&w, 1)] = true
 	}
 	if len(sigs) != 3 {
 		t.Fatalf("the grass look signature is the same for different detail levels: %v", sigs)

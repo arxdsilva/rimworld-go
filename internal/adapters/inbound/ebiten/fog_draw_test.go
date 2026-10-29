@@ -5,6 +5,9 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
 )
 
@@ -60,13 +63,13 @@ func TestSelectionIgnoresHiddenTiles(t *testing.T) {
 	w := fogWorld(10, 10, 5)
 	w.Items = []game.ItemView{{ID: 1, X: 7, Y: 2}, {ID: 2, X: 1, Y: 2}}
 	pawns := []game.PawnView{{ID: 9, X: 8, Y: 8}}
-	if got := selectablesAt(w, pawns, 7, 2); len(got) != 0 {
+	if got := selection.SelectablesAt(w, pawns, 7, 2); len(got) != 0 {
 		t.Fatalf("hidden tile picked %v", got)
 	}
-	if got := selectablesAt(w, pawns, 8, 8); len(got) != 0 {
+	if got := selection.SelectablesAt(w, pawns, 8, 8); len(got) != 0 {
 		t.Fatalf("hidden pawn picked %v", got)
 	}
-	if got := selectablesAt(w, pawns, 1, 2); len(got) != 1 {
+	if got := selection.SelectablesAt(w, pawns, 1, 2); len(got) != 1 {
 		t.Fatalf("revealed item not picked: %v", got)
 	}
 }
@@ -76,26 +79,26 @@ func TestMinimapHidesFoggedTiles(t *testing.T) {
 	w := fogWorld(160, 160, 80)
 	r := New(&stubSim{w: 160, h: 160, world: w})
 	screen := ebiten.NewImage(1280, 800)
-	v := colonyViewport(1280, 800)
+	v := camerapkg.ColonyViewport(1280, 800)
 	r.drawMinimap(screen, v, v)
 	i := 10*160 + 100
-	if got := [3]byte{r.mini.Pix[4*i], r.mini.Pix[4*i+1], r.mini.Pix[4*i+2]}; got != [3]byte{fogClr.R, fogClr.G, fogClr.B} {
+	if got := [3]byte{r.mini.Pix[4*i], r.mini.Pix[4*i+1], r.mini.Pix[4*i+2]}; got != [3]byte{overlay.FogClr.R, overlay.FogClr.G, overlay.FogClr.B} {
 		t.Fatalf("hidden minimap pixel = %v", got)
 	}
 	j := 10*160 + 10
-	if r.mini.Pix[4*j] == fogClr.R && r.mini.Pix[4*j+1] == fogClr.G && r.mini.Pix[4*j+2] == fogClr.B {
+	if r.mini.Pix[4*j] == overlay.FogClr.R && r.mini.Pix[4*j+1] == overlay.FogClr.G && r.mini.Pix[4*j+2] == overlay.FogClr.B {
 		t.Fatal("revealed minimap pixel is black")
 	}
 }
 
 func TestCameraStartsOnLanding(t *testing.T) {
 	t.Parallel()
-	v := colonyViewportPhysical(1280, 800, 1)
+	v := camerapkg.ColonyViewportPhysical(1280, 800, 1)
 	w := game.WorldView{TerrainW: 200, Terrain: make([]uint8, 200*200), Landing: [2]int{40, 60}}
 	r := New(&stubSim{w: 200, h: 200, world: w})
 	r.cam.Zoom = 1
 	r.ClampCamera(v)
-	t0 := r.tilePx()
+	t0 := r.cam.Tile()
 	cx := (r.cam.OffsetX + (v.X0+v.X1)/2) / t0
 	cy := (r.cam.OffsetY + (v.Y0+v.Y1)/2) / t0
 	if cx < 39 || cx > 42 || cy < 59 || cy > 62 {

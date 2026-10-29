@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -138,7 +141,7 @@ func speedFor(tpf int) speed {
 
 type drawSample struct {
 	t float64
-	m moveState
+	m motionpkg.MoveState
 }
 
 // drive runs updates at tpf ticks each and samples motion of id once per
@@ -149,7 +152,7 @@ func drive(r *Renderer, id entity.EntityID, tpf, updates int, alphas []float64) 
 	for i := 0; i < updates; i++ {
 		r.advance()
 		for _, a := range alphas {
-			r.setAlpha(a)
+			r.mo.SetAlpha(a)
 			m := r.pawnMotion(id)
 			if isAnimal(r, id) {
 				m = r.animalMotion(id)
@@ -169,7 +172,7 @@ func isAnimal(r *Renderer, id entity.EntityID) bool {
 	return false
 }
 
-func dist(a, b moveState) float64 { return math.Hypot(a.X-b.X, a.Y-b.Y) }
+func dist(a, b motionpkg.MoveState) float64 { return math.Hypot(a.X-b.X, a.Y-b.Y) }
 
 func alphaSteps(n int) []float64 {
 	out := make([]float64, n)
@@ -381,7 +384,7 @@ func TestBlockedEasesToStop(t *testing.T) {
 		if fin.X != 9 || fin.Y != 5 || fin.Moving || fin.Speed != 0 || fin.Blend != 0 {
 			t.Fatalf("%dx: stops on its cell: %+v", tpf, fin)
 		}
-		if fin.Facing != faceEast {
+		if fin.Facing != art.FaceEast {
 			t.Fatalf("%dx: faces the blocker, got %v", tpf, fin.Facing)
 		}
 	}
@@ -400,13 +403,13 @@ func TestFacingHysteresisZigZag(t *testing.T) {
 		mv := &scriptMover{id: 1, path: path, start: 10}
 		r := New(newMotionSim(mv))
 		for _, x := range drive(r, 1, tpf, 400/tpf, []float64{0}) {
-			if x.t > float64(mv.start) && x.m.Facing != faceEast {
+			if x.t > float64(mv.start) && x.m.Facing != art.FaceEast {
 				t.Fatalf("%dx: zig-zag flickers to %v at t=%.1f", tpf, x.m.Facing, x.t)
 			}
 		}
 	}
 	// sanity: the tile steps alone would flicker
-	if facingFor(0, 1, faceEast) == faceEast {
+	if art.FacingFor(0, 1, art.FaceEast) == art.FaceEast {
 		t.Fatal("per-step facing would not flicker; test is moot")
 	}
 }
@@ -416,7 +419,7 @@ func TestNorthSouthTurnViaSide(t *testing.T) {
 	path := []cell{{6, 9}, {5, 9}, {5, 8}, {5, 7}, {5, 6}, {5, 7}, {5, 8}, {5, 9}}
 	mv := &scriptMover{id: 1, path: path, start: 10}
 	r := New(newMotionSim(mv))
-	var seq []facing
+	var seq []art.Facing
 	for _, x := range drive(r, 1, 1, 160, []float64{0}) {
 		if x.t > float64(mv.start) {
 			seq = append(seq, x.m.Facing)
@@ -424,7 +427,7 @@ func TestNorthSouthTurnViaSide(t *testing.T) {
 	}
 	i0 := -1
 	for i, f := range seq {
-		if f == faceNorth {
+		if f == art.FaceNorth {
 			i0 = i
 			break
 		}
@@ -435,14 +438,14 @@ func TestNorthSouthTurnViaSide(t *testing.T) {
 	sawN, sawS, side := false, false, 0
 	for i := i0; i < len(seq); i++ {
 		switch f := seq[i]; f {
-		case faceNorth:
+		case art.FaceNorth:
 			sawN = true
 			if sawS || side > 0 {
 				t.Fatal("back to north after the turn")
 			}
-		case faceSouth:
+		case art.FaceSouth:
 			sawS = true
-			if seq[i-1] == faceNorth {
+			if seq[i-1] == art.FaceNorth {
 				t.Fatal("north flipped straight to south")
 			}
 		default:
@@ -463,7 +466,7 @@ func TestPausedFreezes(t *testing.T) {
 	sim := newMotionSim(mv)
 	r := New(sim)
 	drive(r, 1, 3, 15, []float64{0})
-	r.setAlpha(0.999)
+	r.mo.SetAlpha(0.999)
 	before := r.pawnMotion(1)
 	tick := sim.tick
 	paused := drive(r, 1, 0, 20, []float64{0, 0.3, 0.7, 0.99})
@@ -485,7 +488,7 @@ func TestPausedFreezes(t *testing.T) {
 	// resuming continues from the frozen point
 	r.speed = speedNormal
 	r.advance()
-	r.setAlpha(0)
+	r.mo.SetAlpha(0)
 	if d := dist(r.pawnMotion(1), ref.m); d > 1e-9 {
 		t.Fatalf("resume jumps %.4f", d)
 	}
@@ -619,14 +622,14 @@ func TestTracerMinVisibleFrames(t *testing.T) {
 	t.Parallel()
 	shot := game.TraceView{FromX: 2, FromY: 5, ToX: 6, ToY: 5, Hit: true}
 	// dropped by a fast sim 3 frames ago: still flying
-	if a := traceAge(reactTrace{TraceView: shot, Sim: math.Inf(1), Frames: 3}, tracerTicks); a >= tracerTicks {
+	if a := creature.TraceAge(creature.ReactTrace{TraceView: shot, Sim: math.Inf(1), Frames: 3}, creature.TracerTicks); a >= creature.TracerTicks {
 		t.Fatalf("tracer gone after 3 frames: age %.2f", a)
 	}
-	if a := traceAge(reactTrace{TraceView: shot, Sim: math.Inf(1), Frames: 8}, tracerTicks); a < tracerTicks {
+	if a := creature.TraceAge(creature.ReactTrace{TraceView: shot, Sim: math.Inf(1), Frames: 8}, creature.TracerTicks); a < creature.TracerTicks {
 		t.Fatalf("tracer still shown after 8 frames: age %.2f", a)
 	}
 	// a slow sim keeps its own, longer timing
-	if a := traceAge(reactTrace{TraceView: shot, Sim: 4, Frames: 40}, tracerTicks); a != 4 {
+	if a := creature.TraceAge(creature.ReactTrace{TraceView: shot, Sim: 4, Frames: 40}, creature.TracerTicks); a != 4 {
 		t.Fatalf("sim age governs when slower: %.2f", a)
 	}
 	// untracked traces (captures) are drawn by sim age, oldest first, in a
@@ -646,7 +649,7 @@ func TestTracerFromInterpolatedShooter(t *testing.T) {
 	drive(r, 1, 1, 10, []float64{0.5})
 	m := r.pawnMotion(1)
 	w := r.game.World()
-	from, to := traceEnds(r.traceSpots(w), game.TraceView{FromX: 6, FromY: 5, ToX: 9, ToY: 9})
+	from, to := creature.TraceEnds(r.traceSpots(w), game.TraceView{FromX: 6, FromY: 5, ToX: 9, ToY: 9})
 	if from.X != m.X+0.5 || from.Y != m.Y+0.3 {
 		t.Fatalf("tracer leaves the drawn shooter: %+v vs %v,%v", from, m.X, m.Y)
 	}
@@ -675,14 +678,14 @@ func TestRealSimStraightWalkConstantSpeed(t *testing.T) {
 		p.X, p.Y = cx-8, cy
 		r := New(g)
 		type frame struct {
-			m    moveState
+			m    motionpkg.MoveState
 			view game.PawnView
 		}
 		var fs []frame
 		for i := 0; i < 900/tpf; i++ {
 			r.speed = speedFor(tpf)
 			r.advance()
-			r.setAlpha(0)
+			r.mo.SetAlpha(0)
 			for _, q := range g.Snapshot() {
 				if q.ID == p.ID {
 					fs = append(fs, frame{r.pawnMotion(p.ID), q})
@@ -732,18 +735,18 @@ func TestAnimTUsesSteppedTicks(t *testing.T) {
 	r := New(&stubSim{w: 8, h: 8})
 	r.speed = speedFast
 	r.advance()
-	r.setAlpha(alphaMax)
+	r.mo.SetAlpha(motionpkg.AlphaMax)
 	prev, prevTick := r.animT(), float64(r.game.Tick())
 	if got := r.advanceTicks(3, func(done int) bool { return done < 2 }); got != 2 || r.mo.Stepped != 2 {
 		t.Fatalf("advanceTicks done %d stepped %d, want 2", got, r.mo.Stepped)
 	}
-	r.setAlpha(0)
+	r.mo.SetAlpha(0)
 	if got, want := r.animT(), float64(r.game.Tick())-2; got != want {
 		t.Fatalf("animT %v, want Tick-2 = %v", got, want)
 	}
 	// alpha 0 resumes exactly where alpha 1 would have left the last frame;
 	// alphaMax (< 1) leaves at most (1-alphaMax)*3 ticks between them.
-	if math.Abs(r.animT()-prevTick) > 1e-6 || r.animT()-prev > (1-alphaMax)*3+1e-9 || r.animT() < prev {
+	if math.Abs(r.animT()-prevTick) > 1e-6 || r.animT()-prev > (1-motionpkg.AlphaMax)*3+1e-9 || r.animT() < prev {
 		t.Fatalf("animT jumped across a held advance: prev %v (tick %v) now %v", prev, prevTick, r.animT())
 	}
 }

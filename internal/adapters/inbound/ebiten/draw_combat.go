@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -25,7 +26,7 @@ func (r *Renderer) syncAnimals(w game.WorldView) {
 		}
 		prev, seen := r.last[an.ID]
 		v := nextVisualStep(prev, seen, an.X, an.Y, tick, r.present, an.StepTicks)
-		k := r.mo.Observe(an.ID, animalMoView(*an), v.facing)
+		k := r.mo.Observe(an.ID, motionpkg.AnimalMoView(*an), v.facing)
 		want, moving := k.WantFacing(r.mo.Ref)
 		if !moving {
 			want = faceAttack(pawnVisual{facing: want}, w.Traces, an.X, an.Y).facing

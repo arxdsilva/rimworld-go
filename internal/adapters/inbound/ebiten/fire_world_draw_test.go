@@ -6,20 +6,23 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/orders"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
 
 func TestStrikeFlashAndThunder(t *testing.T) {
 	r := &Renderer{present: 100}
-	r.onSimStrike(5, 6, 4000)
+	r.overlays().Fires.OnSimStrike(5, 6, 4000)
 	if !r.envLayer().FlashSeen || r.envLayer().FlashAt != 100 {
 		t.Errorf("flash %+v", r.env)
 	}
 	if r.cueBus().ThunderAt <= 100 {
 		t.Errorf("thunder at %d, want after the flash", r.cueBus().ThunderAt)
 	}
-	cues := r.takeCues()
+	cues := r.cueBus().Take()
 	if len(cues) != 1 || cues[0].ID != "sfx.lightning_strike" || cues[0].X != 5.5 {
 		t.Errorf("cues %+v", cues)
 	}
@@ -27,13 +30,13 @@ func TestStrikeFlashAndThunder(t *testing.T) {
 
 func TestExtinguishOnlyForDraftedOnFire(t *testing.T) {
 	w := game.WorldView{Fires: []game.FireView{{X: 4, Y: 5, Size: 30}}}
-	if fireOrders(game.PawnView{ID: 1}, w, 4, 5) != nil {
+	if orders.FireOrders(game.PawnView{ID: 1}, w, 4, 5) != nil {
 		t.Error("undrafted pawn got the fire menu")
 	}
-	if fireOrders(game.PawnView{ID: 1, Drafted: true}, w, 0, 0) != nil {
+	if orders.FireOrders(game.PawnView{ID: 1, Drafted: true}, w, 0, 0) != nil {
 		t.Error("menu off the fire")
 	}
-	opts := fireOrders(game.PawnView{ID: 7, Drafted: true}, w, 4, 5)
+	opts := orders.FireOrders(game.PawnView{ID: 7, Drafted: true}, w, 4, 5)
 	if len(opts) != 2 {
 		t.Fatalf("options %d", len(opts))
 	}
@@ -41,7 +44,7 @@ func TestExtinguishOnlyForDraftedOnFire(t *testing.T) {
 	if c.Kind != command.Prioritize || c.Order != command.OrderExtinguish || c.Pawn != 7 || c.X != 4 || c.Y != 5 {
 		t.Errorf("cmd %+v", c)
 	}
-	if floatIcon(opts[1]) != "extinguish" || floatIcon(opts[0]) != "" {
+	if orders.FloatIcon(opts[1]) != "extinguish" || orders.FloatIcon(opts[0]) != "" {
 		t.Error("icons")
 	}
 }
@@ -71,7 +74,7 @@ func TestBlazeAmbiencePerCluster(t *testing.T) {
 	r.heard = game.WorldView{Hour: 12, FireVer: 1, Fires: []game.FireView{
 		{X: x, Y: y, Size: 50}, {X: x + 1, Y: y, Size: 50}, {X: x, Y: y + 1, Size: 50},
 	}}
-	want := map[string]loopWant{}
+	want := map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	n := 0
 	for k, l := range want {
@@ -84,7 +87,7 @@ func TestBlazeAmbiencePerCluster(t *testing.T) {
 		t.Fatalf("one blaze, %d amb.fire loops (%v)", n, want)
 	}
 	r.heard.Fires, r.heard.FireVer = nil, 2
-	want = map[string]loopWant{}
+	want = map[string]cue.Loop{}
 	a.colonyAmbience(want)
 	for _, l := range want {
 		if l.ID == "amb.fire" {
@@ -117,7 +120,7 @@ func TestDevStartFireEmitsCommand(t *testing.T) {
 	set := a.settings
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
-	for _, x := range a.devActions(7, 8) {
+	for _, x := range a.tools.Actions(7, 8) {
 		if x.Label == "Start fire here" {
 			x.Run(nil)
 			if x.Icon != "start_fire" {
@@ -135,14 +138,14 @@ func TestDevStartFireEmitsCommand(t *testing.T) {
 
 func TestFirefightColumnLive(t *testing.T) {
 	t.Parallel()
-	w, ok := workTypeForCol(0)
+	w, ok := windows.WorkTypeForCol(0)
 	if !ok || w != command.WorkFirefight {
 		t.Fatalf("firefight column: %v %v", w, ok)
 	}
-	if strings.Contains(workHelp[0], "Not available") {
+	if strings.Contains(windows.WorkHelp[0], "Not available") {
 		t.Error("help still says not available")
 	}
-	if workPriority(game.PawnView{Priorities: []int{2}}, 0) != 2 {
+	if windows.WorkPriority(game.PawnView{Priorities: []int{2}}, 0) != 2 {
 		t.Error("priority not read")
 	}
 }
@@ -155,7 +158,7 @@ func TestShowStrikesOncePerStrikeAndNotOldOnes(t *testing.T) {
 	w := game.WorldView{Strikes: []game.StrikeView{{X: 1, Y: 1, Tick: 100}, {X: 2, Y: 3, Tick: 4990}}}
 	r.showStrikes(w)
 	r.showStrikes(w) // the same view again: no second crack
-	cues := r.takeCues()
+	cues := r.cueBus().Take()
 	if len(cues) != 1 || cues[0].X != 2.5 || cues[0].Y != 3.5 {
 		t.Fatalf("cues %+v: want one crack, at the fresh strike", cues)
 	}

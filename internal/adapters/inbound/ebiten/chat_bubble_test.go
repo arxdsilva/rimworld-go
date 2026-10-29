@@ -19,7 +19,7 @@ func TestChatBubbleIsJustItsIcon(t *testing.T) {
 	social := game.PawnView{ID: 7, X: 6, Y: 5, Interaction: "chitchat", InteractTick: 90}
 	chat := game.PawnView{ID: 8, X: 12, Y: 5, Job: "chat do"} // even id: its turn at frame 0
 	r := wlRenderer(sc, 1, 0, 0, social, chat)
-	r.drawChatBubbles(ebiten.NewImage(64, 64), r.tilePx())
+	r.drawChatBubbles(ebiten.NewImage(64, 64), r.cam.Tile())
 
 	imgs := wlOfKind(*got, "image")
 	if len(imgs) != 2 {
@@ -43,7 +43,7 @@ func TestChatBubbleFallbackIsADiscNotABox(t *testing.T) {
 	got := wlTrace(t)
 	r := wlRenderer(sc, 1, 0, 0, game.PawnView{ID: 8, X: 6, Y: 5, Job: "chat do"})
 	r.art = figureArt() // no social icons
-	r.drawChatBubbles(ebiten.NewImage(64, 64), r.tilePx())
+	r.drawChatBubbles(ebiten.NewImage(64, 64), r.cam.Tile())
 
 	if n := len(wlOfKind(*got, "fill")) + len(wlOfKind(*got, "stroke")); n != 0 {
 		t.Fatalf("%d box draws, want none", n)

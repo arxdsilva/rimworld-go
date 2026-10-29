@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"strconv"
 	"testing"
 )
@@ -23,7 +24,7 @@ func TestProjShearMatchesMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if k != projShearK {
-		t.Fatalf("projShearK = %v, art metadata shear_k = %v", projShearK, k)
+	if k != light.ProjShearK {
+		t.Fatalf("projShearK = %v, art metadata shear_k = %v", light.ProjShearK, k)
 	}
 }

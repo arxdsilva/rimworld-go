@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"strings"
 	"testing"
 
@@ -23,21 +24,21 @@ func TestAnimalInspectorHealthBlock(t *testing.T) {
 	dog.NeedsTend = true
 	dog.CareLevel = uint8(medcare.HerbalMax)
 	a, _ := colonyApp(t, s)
-	if !a.selectAnimalAt(6, 6) {
+	if !a.insp.Animal().SelectAnimalAt(6, 6) {
 		t.Fatal("select the dog")
 	}
-	an, _ := a.selectedAnimal()
-	lines := thingLines(a.animalPane(an.ID))
+	an, _ := a.insp.SelectedAnimal()
+	lines := thingLines(a.insp.Animal().AnimalPane(an.ID))
 	for _, want := range []string{"Bleeding 25%/day · death in 31h", "Blood loss 18% (minor)",
 		"Infection 34% · immunity 20% (losing)", "Needs tending"} {
 		if !strings.Contains(lines, want) {
 			t.Fatalf("pane lines %q lack %q", lines, want)
 		}
 	}
-	if c := animalHealthCell(an); c != "62%!" {
+	if c := inspectorpkg.AnimalHealthCell(an); c != "62%!" {
 		t.Fatalf("Animals table cell %q", c)
 	}
-	care := thingCmd(t, a.animalCommands(an.ID), "cmd.animal.care")
+	care := thingCmd(t, a.insp.Animal().AnimalCommands(an.ID), "cmd.animal.care")
 	if care.Label != "Care: Herbal" || care.Icon != "care_herbal" || len(care.Options()) != int(medcare.NumPolicies) {
 		t.Fatalf("care command %+v", care)
 	}
@@ -53,11 +54,11 @@ func TestAnimalInspectorHealthBlock(t *testing.T) {
 	// a healthy animal shows no health lines and a plain cell; a wild one
 	// has no care command
 	calm := game.AnimalView{ID: 9, Species: "deer", Health: 100, HealthState: "Healthy", BleedDeathHours: -1}
-	if rows := animalHealthRows(calm); len(rows) != 0 || animalHealthCell(calm) != "100%" {
-		t.Fatalf("healthy: rows %q cell %q", rows, animalHealthCell(calm))
+	if rows := inspectorpkg.AnimalHealthRows(calm); len(rows) != 0 || inspectorpkg.AnimalHealthCell(calm) != "100%" {
+		t.Fatalf("healthy: rows %q cell %q", rows, inspectorpkg.AnimalHealthCell(calm))
 	}
 	s.world.Animals = append(s.world.Animals, calm)
-	for _, c := range a.animalCommands(9) {
+	for _, c := range a.insp.Animal().AnimalCommands(9) {
 		if c.ID == "cmd.animal.care" {
 			t.Fatal("a wild animal has no care command")
 		}
@@ -77,11 +78,11 @@ func TestAnimalInspectorPartLines(t *testing.T) {
 		{Label: "front left leg", MaxHP: 17, Missing: true},
 	}
 	a, _ := colonyApp(t, s)
-	if !a.selectAnimalAt(6, 6) {
+	if !a.insp.Animal().SelectAnimalAt(6, 6) {
 		t.Fatal("select the dog")
 	}
-	an, _ := a.selectedAnimal()
-	lines := thingLines(a.animalPane(an.ID))
+	an, _ := a.insp.SelectedAnimal()
+	lines := thingLines(a.insp.Animal().AnimalPane(an.ID))
 	for _, want := range []string{"Moving 75%", "Torso: 12/28 HP, bleeding", "Front left leg: missing"} {
 		if !strings.Contains(lines, want) {
 			t.Fatalf("pane lines %q lack %q", lines, want)
@@ -89,15 +90,15 @@ func TestAnimalInspectorPartLines(t *testing.T) {
 	}
 	// a body with every part whole moving at full shows no part lines; a
 	// long list is capped
-	if rows := animalPartRows(game.AnimalView{MovingPct: 100}); rows != nil {
+	if rows := inspectorpkg.AnimalPartRows(game.AnimalView{MovingPct: 100}); rows != nil {
 		t.Fatalf("whole: %q", rows)
 	}
 	many := game.AnimalView{MovingPct: 100}
-	for i := 0; i < animalPartRowsMax+3; i++ {
+	for i := 0; i < inspectorpkg.AnimalPartRowsMax+3; i++ {
 		many.Parts = append(many.Parts, game.AnimalPartView{Label: "tail", HP: 1, MaxHP: 5})
 	}
-	rows := animalPartRows(many)
-	if len(rows) != animalPartRowsMax+1 || rows[len(rows)-1] != "+3 more" || rows[0] != "Tail: 1/5 HP" {
+	rows := inspectorpkg.AnimalPartRows(many)
+	if len(rows) != inspectorpkg.AnimalPartRowsMax+1 || rows[len(rows)-1] != "+3 more" || rows[0] != "Tail: 1/5 HP" {
 		t.Fatalf("capped rows %q", rows)
 	}
 }

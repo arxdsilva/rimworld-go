@@ -5,6 +5,11 @@ import (
 	"image"
 	"image/color"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
 	"testing"
 
@@ -17,7 +22,7 @@ import (
 // cropTestHeights is each stage's unit height in tiles at scale 1 in the
 // test art: sown specks, a sprout, a young plant, full foliage, the
 // ripe plant, the wilted one.
-var cropTestHeights = [numCropStages]float64{6.0 / 64, 13.0 / 64, 29.0 / 64, 51.0 / 64, 58.0 / 64, 45.0 / 64}
+var cropTestHeights = [env.NumCropStages]float64{6.0 / 64, 13.0 / 64, 29.0 / 64, 51.0 / 64, 58.0 / 64, 45.0 / 64}
 
 // cropTestRoot is the stored row of a test unit's root: the art's
 // tile-centre point (origin.y + 64 = 136 canvas px, at half size), where
@@ -27,29 +32,29 @@ const cropTestRoot = 68
 // cropUnitSprite is a unit sprite h tiles tall: a block whose bottom
 // edge is the root (metadata root = (origin.x + 64, origin.y + 64) of a
 // 128×192 canvas stored at half size).
-func cropUnitSprite(h float64) *artSprite {
+func cropUnitSprite(h float64) *artpkg.Sprite {
 	return cropBlockSprite(max(int(math.Round(h*64)), 1), 0) // 64 stored px a tile
 }
 
 // cropBlockSprite is a unit sprite whose block reaches up rows stored
 // px above the root and down rows below it.
-func cropBlockSprite(up, down int) *artSprite {
+func cropBlockSprite(up, down int) *artpkg.Sprite {
 	pix := image.NewNRGBA(image.Rect(0, 0, 64, 96))
 	for y := cropTestRoot - up; y < cropTestRoot+down; y++ {
 		for x := 22; x < 42; x++ {
 			pix.SetNRGBA(x, y, color.NRGBA{120, 150, 80, 255})
 		}
 	}
-	return &artSprite{Meta: artMeta{Canvas: [2]int{128, 192}, Origin: [2]float64{0, 72}, Footprint: [2]int{1, 1}}, Pix: pix}
+	return &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{128, 192}, Origin: [2]float64{0, 72}, Footprint: [2]int{1, 1}}, Pix: pix}
 }
 
 // cropTestArt is a soil catalog with unit sprites (four variants of each
 // stage) for the species, and the four tilled furrow decals.
-func cropTestArt(species ...string) *artCatalog {
+func cropTestArt(species ...string) *artpkg.Catalog {
 	c := envArt("terrain/soil_00", "terrain/soil_01", "terrain/soil_02", "terrain/soil_03", "terrain/stone_00")
 	for _, sp := range species {
-		for st, name := range cropStageNames {
-			for v := 0; v < cropVariants; v++ {
+		for st, name := range env.CropStageNames {
+			for v := 0; v < env.CropVariants; v++ {
 				c.Sprites[fmt.Sprintf("plant/%s_%s_v%d", sp, name, v)] = cropUnitSprite(cropTestHeights[st])
 			}
 		}
@@ -59,7 +64,7 @@ func cropTestArt(species ...string) *artCatalog {
 		for i := range pix.Pix {
 			pix.Pix[i] = 200
 		}
-		c.Sprites[fmt.Sprintf("overlay/tilled_%d", v)] = &artSprite{Meta: artMeta{Canvas: [2]int{128, 128}, Footprint: [2]int{1, 1}}, Pix: pix}
+		c.Sprites[fmt.Sprintf("overlay/tilled_%d", v)] = &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{128, 128}, Footprint: [2]int{1, 1}}, Pix: pix}
 	}
 	return c
 }
@@ -96,7 +101,7 @@ func cropRenderer(w game.WorldView, mw, mh int, species ...string) *Renderer {
 // tile px on a screen showing the whole map, and returns the unit quads
 // queued (still pending in the batch, bar those a new species flushed).
 func cropDraw(r *Renderer, mw, mh int, tile float64) int {
-	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/TileSize, -tile, -tile
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/camerapkg.TileSize, -tile, -tile
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
@@ -115,21 +120,21 @@ func TestCropUnitCounts(t *testing.T) {
 	want := map[string]int{"corn": 2, "wheat": 4, "brewgrain": 4, "cotton": 3, "potato": 3, "beans": 3,
 		"healroot": 3, "ashleaf": 3, "lettuce": 4, "radish": 4, "pumpkin": 1}
 	for sp, n := range want {
-		if got := cropUnitCount(sp); got != n {
+		if got := env.CropUnitCount(sp); got != n {
 			t.Errorf("%s: %d units, want %d", sp, got, n)
 		}
 		for _, vert := range []bool{false, true} {
-			if got := len(cropUnits(3, 4, n, vert, nil)); got != n {
+			if got := len(env.CropUnits(3, 4, n, vert, nil)); got != n {
 				t.Errorf("%s vertical=%v: layout of %d units", sp, vert, got)
 			}
 		}
 	}
 	for _, c := range game.Crops() {
-		if cropUnitCount(c.Name) < 1 {
+		if env.CropUnitCount(c.Name) < 1 {
 			t.Errorf("crop %s has no unit count", c.Name)
 		}
 	}
-	if cropUnitCount("not a crop") != 1 {
+	if env.CropUnitCount("not a crop") != 1 {
 		t.Error("unknown species is one unit")
 	}
 }
@@ -145,7 +150,7 @@ func TestCropGrowthScaleContinuous(t *testing.T) {
 		t.Fatal("no corn set in the atlas")
 	}
 	drawn := func(g int) float64 {
-		st := cropGrowthStage(game.PlantView{Species: "corn", Growth: g, Stage: stageOfGrowth(g)})
+		st := env.CropGrowthStage(game.PlantView{Species: "corn", Growth: g, Stage: stageOfGrowth(g)})
 		return cropTestHeights[st] * set.Scale(st, g)
 	}
 	prev := drawn(8)
@@ -159,10 +164,10 @@ func TestCropGrowthScaleContinuous(t *testing.T) {
 		}
 		prev = h
 	}
-	if h := drawn(100); math.Abs(h-cropTestHeights[stHarvestable]) > 1e-6 {
-		t.Errorf("ripe plant draws %.3f tall, want its sprite's %.3f", h, cropTestHeights[stHarvestable])
+	if h := drawn(100); math.Abs(h-cropTestHeights[env.StHarvestable]) > 1e-6 {
+		t.Errorf("ripe plant draws %.3f tall, want its sprite's %.3f", h, cropTestHeights[env.StHarvestable])
 	}
-	if s := set.Scale(stSown, 3); s != 1 {
+	if s := set.Scale(env.StSown, 3); s != 1 {
 		t.Errorf("sown scale %v, want 1", s)
 	}
 }
@@ -225,11 +230,11 @@ func TestCropDrawsUnitsPerTile(t *testing.T) {
 		}
 	}
 	// each species joining the atlas flushed the units before it (2), the last run now
-	r.flushCrops(ebiten.NewImage(10, 10))
+	r.envLayer().FlushCrops(ebiten.NewImage(10, 10))
 	if r.lod.Crops.Flushes != 3 || len(r.lod.Crops.Idx) != 0 {
 		t.Fatalf("flush: %d draws, %d indices left", r.lod.Crops.Flushes, len(r.lod.Crops.Idx))
 	}
-	r.flushCrops(ebiten.NewImage(10, 10))
+	r.envLayer().FlushCrops(ebiten.NewImage(10, 10))
 	if r.lod.Crops.Flushes != 3 {
 		t.Fatal("an empty batch drew")
 	}
@@ -310,7 +315,7 @@ func TestCropFrameTiers(t *testing.T) {
 		t.Fatalf("32 px: %d unit quads, want 12", q)
 	}
 	lodFrame(r, 8)
-	if r.lod.Tier != lodMap || r.lod.Crops.Quads != 0 {
+	if r.lod.Tier != worldpkg.Map || r.lod.Crops.Quads != 0 {
 		t.Fatalf("8 px: tier %d, %d unit quads, want the map marks only", r.lod.Tier, r.lod.Crops.Quads)
 	}
 }
@@ -450,10 +455,10 @@ func TestCropLabels(t *testing.T) {
 		{game.PlantView{Species: "corn"}, ""},
 	}
 	for _, c := range cases {
-		if got := plantDamageLine(c.p); got != c.want {
+		if got := env.PlantDamageLine(c.p); got != c.want {
 			t.Errorf("%+v: %q, want %q", c.p, got, c.want)
 		}
-		lines := plantLines(c.p)
+		lines := inspectorpkg.PlantLines(c.p)
 		has := false
 		for _, l := range lines {
 			has = has || l == c.want
@@ -470,10 +475,10 @@ func TestCropLabels(t *testing.T) {
 		}
 	}
 	w := game.WorldView{Plants: []game.PlantView{{X: 3, Y: 2, Species: "wheat", Growth: 80, Damage: 25, DamageKind: "cold"}}}
-	if got := plantDamageLabelAt(w, 3, 2); got != "Freezing: 25% damaged" {
+	if got := env.PlantDamageLabelAt(w, 3, 2); got != "Freezing: 25% damaged" {
 		t.Errorf("hover = %q", got)
 	}
-	if plantDamageLabelAt(w, 0, 0) != "" || plantDamageLabelAt(game.WorldView{}, 3, 2) != "" {
+	if env.PlantDamageLabelAt(w, 0, 0) != "" || env.PlantDamageLabelAt(game.WorldView{}, 3, 2) != "" {
 		t.Error("hover line where no damaged plant stands")
 	}
 }
@@ -481,14 +486,14 @@ func TestCropLabels(t *testing.T) {
 // TestCropSway: units in a tile sway out of step; taller crops lean more.
 func TestCropSway(t *testing.T) {
 	t.Parallel()
-	if !(cropSwayAmount("corn") > cropSwayAmount("lettuce") && cropSwayAmount("wheat") > cropSwayAmount("radish")) {
-		t.Fatalf("corn %v wheat %v lettuce %v radish %v", cropSwayAmount("corn"), cropSwayAmount("wheat"), cropSwayAmount("lettuce"), cropSwayAmount("radish"))
+	if !(env.CropSwayAmount("corn") > env.CropSwayAmount("lettuce") && env.CropSwayAmount("wheat") > env.CropSwayAmount("radish")) {
+		t.Fatalf("corn %v wheat %v lettuce %v radish %v", env.CropSwayAmount("corn"), env.CropSwayAmount("wheat"), env.CropSwayAmount("lettuce"), env.CropSwayAmount("radish"))
 	}
-	if !(cropSwayFactor("corn") > cropSwayFactor("lettuce")) {
+	if !(env.CropSwayFactor("corn") > env.CropSwayFactor("lettuce")) {
 		t.Fatal("corn does not sway more than lettuce")
 	}
 	for _, c := range game.Crops() {
-		if f := cropSwayFactor(c.Name); f < 0.4 || f > 1.5 {
+		if f := env.CropSwayFactor(c.Name); f < 0.4 || f > 1.5 {
 			t.Errorf("%s sway factor %v is out of range", c.Name, f)
 		}
 	}
@@ -533,7 +538,7 @@ func TestCropFallbackArt(t *testing.T) {
 	if got := cropDraw(r, 6, 6, 64); got != 4*2 {
 		t.Fatalf("three variants: %d quads, want 8", got)
 	}
-	if n := len(r.lod.Crops.Atlas.Sets["corn"].Stages[stHarvestable]); n != 3 {
+	if n := len(r.lod.Crops.Atlas.Sets["corn"].Stages[env.StHarvestable]); n != 3 {
 		t.Fatalf("%d ripe variants packed, want 3", n)
 	}
 	// no crop art at all
@@ -567,7 +572,7 @@ func TestCropSpeciesJoinAtlasLazily(t *testing.T) {
 
 func TestCropMarkColor(t *testing.T) {
 	t.Parallel()
-	mark := func(p game.PlantView) color.RGBA { p.Species = "corn"; c, _ := plantMarkColor(&p); return c }
+	mark := func(p game.PlantView) color.RGBA { p.Species = "corn"; c, _ := worldpkg.PlantMarkColor(&p); return c }
 	sown, ripe := mark(game.PlantView{Growth: 2, Stage: 0}), mark(game.PlantView{Growth: 100, Stage: 3})
 	if sown == ripe {
 		t.Error("a sown field and a ripe one share a mark colour")
@@ -581,7 +586,7 @@ func TestCropMarkColor(t *testing.T) {
 	if dead := mark(game.PlantView{Growth: 100, Stage: 3, Damage: 80, DamageKind: "cold"}); dead == ripe {
 		t.Error("a dying crop's mark is the healthy one")
 	}
-	if _, k := plantMarkColor(&game.PlantView{Species: "corn", Growth: 100}); k <= 0 {
+	if _, k := worldpkg.PlantMarkColor(&game.PlantView{Species: "corn", Growth: 100}); k <= 0 {
 		t.Errorf("mark size %v", k)
 	}
 }
@@ -616,12 +621,12 @@ func BenchmarkCropField500(b *testing.B) {
 			sim := &stubSim{w: mw, h: mh, world: w}
 			r := New(sim)
 			r.art = cropTestArt(species...)
-			if root, err := LocateArt(); err == nil {
+			if root, err := artpkg.Locate(); err == nil {
 				if cat, err := loadArtCatalog(root); err == nil && cat.Has("plant/corn_mature_v0") {
 					r.art = cat
 				}
 			}
-			r.cam.Zoom = c.tile / TileSize
+			r.cam.Zoom = c.tile / camerapkg.TileSize
 			screen := ebiten.NewImage(c.sw, c.sh)
 			frame := func() {
 				r.present++
@@ -635,7 +640,7 @@ func BenchmarkCropField500(b *testing.B) {
 						r.drawCropObj(screen, &w, p, c.tile)
 					}
 				}
-				r.flushCrops(screen)
+				r.envLayer().FlushCrops(screen)
 			}
 			for i := 0; i < 3; i++ {
 				frame()

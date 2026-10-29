@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"slices"
 	"strings"
 	"testing"
@@ -46,7 +49,7 @@ func healthApp(t *testing.T) (*App, *fakeInput, *stubSim) {
 func TestHealthTabListsPartsAndOperations(t *testing.T) {
 	t.Parallel()
 	a, f, s := healthApp(t)
-	for _, id := range []string{"health.part.16", "health.part.18", "health.part.13", "health.part.6", healthRemoveID(0), healthAddID} {
+	for _, id := range []string{"health.part.16", "health.part.18", "health.part.13", "health.part.6", inspector.HealthRemoveID(0), inspector.HealthAddID} {
 		if !hasWidget(a, id) {
 			t.Fatalf("widget %s missing", id)
 		}
@@ -57,7 +60,7 @@ func TestHealthTabListsPartsAndOperations(t *testing.T) {
 	if w, _ := a.uiSt().Find("health.part.16"); w.Label != "left leg: missing" {
 		t.Fatalf("leg row = %q", w.Label)
 	}
-	press(t, a, f, healthRemoveID(0))
+	press(t, a, f, inspector.HealthRemoveID(0))
 	if n := len(s.cmds); n == 0 || s.cmds[n-1].Kind != command.RemoveOperation || s.cmds[n-1].Index != 0 || s.cmds[n-1].Pawn != 1 {
 		t.Fatalf("cancel sends RemoveOperation: %+v", s.cmds)
 	}
@@ -96,12 +99,12 @@ func TestHealthOptionsFollowTheBody(t *testing.T) {
 func TestHealthPickerSendsAddOperation(t *testing.T) {
 	t.Parallel()
 	a, f, s := healthApp(t)
-	press(t, a, f, healthAddID)
+	press(t, a, f, inspector.HealthAddID)
 	f.Frame(t, a)
-	if a.uiModalTop() != healthPickID {
+	if a.uiModalTop() != inspector.HealthPickID {
 		t.Fatalf("picker not open (top %q)", a.uiModalTop())
 	}
-	if w, ok := a.uiSt().Find("modal." + healthPickID + ".health.addop.ok"); !ok || !w.Disabled {
+	if w, ok := a.uiSt().Find("modal." + inspector.HealthPickID + ".health.addop.ok"); !ok || !w.Disabled {
 		t.Fatalf("Add waits for a pick: %+v", w)
 	}
 	opts := healthOptions(s.health[1])
@@ -111,8 +114,8 @@ func TestHealthPickerSendsAddOperation(t *testing.T) {
 			want = i
 		}
 	}
-	press(t, a, f, optID(healthPickList, want))
-	press(t, a, f, "modal."+healthPickID+".health.addop.ok")
+	press(t, a, f, uikit.OptID(inspector.HealthPickList, want))
+	press(t, a, f, "modal."+inspector.HealthPickID+".health.addop.ok")
 	var got *command.Command
 	for i := range s.cmds {
 		if s.cmds[i].Kind == command.AddOperation {
@@ -122,7 +125,7 @@ func TestHealthPickerSendsAddOperation(t *testing.T) {
 	if got == nil || got.Pawn != 1 || got.Index != int(body.InstallImplant) || got.Build != uint8(body.LegL) || got.Stuff != uint8(item.ProstheticLeg) {
 		t.Fatalf("AddOperation = %+v", got)
 	}
-	if a.uiModalTop() == healthPickID {
+	if a.uiModalTop() == inspector.HealthPickID {
 		t.Fatal("Add closes the picker")
 	}
 }
@@ -132,7 +135,7 @@ func TestHealthTabStates(t *testing.T) {
 	a, f, s := healthApp(t)
 	s.health = nil
 	drawFrame(t, a, f)
-	if hasWidget(a, healthAddID) {
+	if hasWidget(a, inspector.HealthAddID) {
 		t.Fatal("no read model: No data yet, no controls")
 	}
 	h := healthSimView()
@@ -143,10 +146,10 @@ func TestHealthTabStates(t *testing.T) {
 	s.health = map[entity.EntityID]game.HealthView{1: h}
 	s.pawns[0].Status = "dead"
 	drawFrame(t, a, f)
-	if w, ok := a.uiSt().Find(healthAddID); !ok || !w.Disabled || w.Reason == "" {
+	if w, ok := a.uiSt().Find(inspector.HealthAddID); !ok || !w.Disabled || w.Reason == "" {
 		t.Fatalf("a dead colonist's Add operation explains why: %+v", w)
 	}
-	if hasWidget(a, healthRemoveID(0)) || hasWidget(a, "health.part.16") {
+	if hasWidget(a, inspector.HealthRemoveID(0)) || hasWidget(a, "health.part.16") {
 		t.Fatal("nothing queued, nothing hurt: no rows")
 	}
 }
@@ -162,14 +165,14 @@ func TestHealthTabBleeding(t *testing.T) {
 	h.Parts[body.ArmR].Bleed = 140
 	s.health = map[entity.EntityID]game.HealthView{1: h}
 	drawFrame(t, a, f)
-	w, ok := a.uiSt().Find(healthStateID)
+	w, ok := a.uiSt().Find(inspector.HealthStateID)
 	if !ok || w.Label != h.State || !strings.Contains(w.Tip, "9 hours") {
 		t.Fatalf("state line %+v", w)
 	}
-	if healthStateColor(h) != uiDanger {
+	if inspector.HealthStateColor(h) != uikit.Danger {
 		t.Fatal("bleeding is red")
 	}
-	if w, ok := a.uiSt().Find(healthBloodID); !ok || w.Label != "Blood loss: 37%" {
+	if w, ok := a.uiSt().Find(inspector.HealthBloodID); !ok || w.Label != "Blood loss: 37%" {
 		t.Fatalf("blood row %+v", w)
 	}
 	if w, ok := a.uiSt().Find("health.part.13"); !ok || !strings.Contains(w.Tip, "Bleeding: 140%/day") {
@@ -180,19 +183,19 @@ func TestHealthTabBleeding(t *testing.T) {
 	h.Parts[body.ArmR].Bleed = 0
 	s.health = map[entity.EntityID]game.HealthView{1: h}
 	drawFrame(t, a, f)
-	if hasWidget(a, healthBloodID) || healthStateColor(h) != uiText {
+	if hasWidget(a, inspector.HealthBloodID) || inspector.HealthStateColor(h) != uikit.Text {
 		t.Fatal("no blood loss: no row")
 	}
-	if w, _ := a.uiSt().Find(healthStateID); strings.Contains(w.Tip, "hours") {
+	if w, _ := a.uiSt().Find(inspector.HealthStateID); strings.Contains(w.Tip, "hours") {
 		t.Fatalf("healthy tip %q", w.Tip)
 	}
-	if healthStateColor(game.HealthView{State: "Downed"}) != uiWarning {
+	if inspector.HealthStateColor(game.HealthView{State: "Downed"}) != uikit.Warning {
 		t.Fatal("downed is amber")
 	}
 	h.BloodLossPct = 20 // recovering: the row stays until the blood is back
 	s.health = map[entity.EntityID]game.HealthView{1: h}
 	drawFrame(t, a, f)
-	if w, ok := a.uiSt().Find(healthBloodID); !ok || !strings.Contains(w.Tip, "third") {
+	if w, ok := a.uiSt().Find(inspector.HealthBloodID); !ok || !strings.Contains(w.Tip, "third") {
 		t.Fatalf("recovering row %+v", w)
 	}
 }
@@ -214,36 +217,36 @@ func TestHealthTabConditions(t *testing.T) {
 	}
 	s.health = map[entity.EntityID]game.HealthView{1: h}
 	drawFrame(t, a, f)
-	w, ok := a.uiSt().Find(healthCondID(0))
+	w, ok := a.uiSt().Find(inspector.HealthCondID(0))
 	if !ok || w.Label != "Infection (major), right arm: severity 42%, immunity 30%, needs tend in 5h" || !strings.Contains(w.Tip, "74% quality") {
 		t.Fatalf("condition row %+v", w)
 	}
-	if w, ok := a.uiSt().Find(healthCondID(1)); !ok || !strings.HasSuffix(w.Label, "needs tend now") {
+	if w, ok := a.uiSt().Find(inspector.HealthCondID(1)); !ok || !strings.HasSuffix(w.Label, "needs tend now") {
 		t.Fatalf("due row %+v", w)
 	}
-	if healthStateColor(h) != uiDanger || healthStateColor(game.HealthView{State: "Infection: winning"}) != uiWarning {
+	if inspector.HealthStateColor(h) != uikit.Danger || inspector.HealthStateColor(game.HealthView{State: "Infection: winning"}) != uikit.Warning {
 		t.Fatal("losing is red, winning amber")
 	}
-	if w, _ := a.uiSt().Find(healthStateID); !strings.Contains(w.Tip, "20 hours") {
+	if w, _ := a.uiSt().Find(inspector.HealthStateID); !strings.Contains(w.Tip, "20 hours") {
 		t.Fatalf("losing headline tip %q", w.Tip)
 	}
 	if w, ok := a.uiSt().Find("health.part.13"); !ok || !strings.Contains(w.Tip, "tended 74%") {
 		t.Fatalf("arm tooltip %+v", w)
 	}
-	if healthCondDue(game.ConditionView{}) != "" {
+	if inspector.HealthCondDue(game.ConditionView{}) != "" {
 		t.Fatal("no tending, no marker")
 	}
 	h.Conditions = nil
 	s.health = map[entity.EntityID]game.HealthView{1: h}
 	drawFrame(t, a, f)
-	if hasWidget(a, healthCondID(0)) {
+	if hasWidget(a, inspector.HealthCondID(0)) {
 		t.Fatal("no conditions, no rows")
 	}
 	name := func(entity.EntityID) string { return "" }
-	if got := pawnStatusLines(game.PawnView{Status: "alive", Infection: 42, InfectionLosing: true}, name); !slices.Contains(got, "Infection: losing (42%)") {
+	if got := inspector.PawnStatusLines(game.PawnView{Status: "alive", Infection: 42, InfectionLosing: true}, name); !slices.Contains(got, "Infection: losing (42%)") {
 		t.Fatalf("losing lines %v", got)
 	}
-	if got := pawnStatusLines(game.PawnView{Status: "alive", Infection: 42}, name); !slices.Contains(got, "Infection: winning (42%)") {
+	if got := inspector.PawnStatusLines(game.PawnView{Status: "alive", Infection: 42}, name); !slices.Contains(got, "Infection: winning (42%)") {
 		t.Fatalf("winning lines %v", got)
 	}
 }
@@ -267,16 +270,16 @@ func TestHealthCareRow(t *testing.T) {
 	s.health[1] = h
 	f.Frame(t, a)
 	for c := medcare.Policy(0); c < medcare.NumPolicies; c++ {
-		w, ok := a.uiSt().Find(healthCareID(c))
-		if !ok || w.Label != careShort(c) || !strings.HasPrefix(w.Tip, c.Label()) {
+		w, ok := a.uiSt().Find(inspector.HealthCareID(c))
+		if !ok || w.Label != inspector.CareShort(c) || !strings.HasPrefix(w.Tip, c.Label()) {
 			t.Fatalf("care button %d: %+v", c, w)
 		}
 	}
-	press(t, a, f, healthCareID(medcare.Best)) // already the level: nothing to send
+	press(t, a, f, inspector.HealthCareID(medcare.Best)) // already the level: nothing to send
 	if c := lastOf(s, command.SetMedicalCare); c != nil {
 		t.Fatalf("the current level sends nothing: %+v", c)
 	}
-	press(t, a, f, healthCareID(medcare.NoMeds))
+	press(t, a, f, inspector.HealthCareID(medcare.NoMeds))
 	if c := lastOf(s, command.SetMedicalCare); c == nil || c.Pawn != 1 || medcare.Policy(c.Mode) != medcare.NoMeds {
 		t.Fatalf("SetMedicalCare = %+v", c)
 	}
@@ -287,25 +290,25 @@ func TestHealthCareRow(t *testing.T) {
 func TestHealthSelfTendCheckbox(t *testing.T) {
 	t.Parallel()
 	a, f, s := healthApp(t)
-	press(t, a, f, healthSelfID)
+	press(t, a, f, inspector.HealthSelfID)
 	if c := lastOf(s, command.SetSelfTend); c == nil || c.Pawn != 1 || !c.Enabled {
 		t.Fatalf("SetSelfTend = %+v", c)
 	}
 	h := s.health[1]
 	h.SelfTend = true
 	s.health[1] = h
-	press(t, a, f, healthSelfID)
+	press(t, a, f, inspector.HealthSelfID)
 	if c := lastOf(s, command.SetSelfTend); c == nil || c.Enabled {
 		t.Fatalf("unchecking sends off: %+v", c)
 	}
 	s.pawns[0].Prisoner = true
 	f.Frame(t, a)
-	if hasWidget(a, healthSelfID) || !hasWidget(a, healthCareID(medcare.NoCare)) {
+	if hasWidget(a, inspector.HealthSelfID) || !hasWidget(a, inspector.HealthCareID(medcare.NoCare)) {
 		t.Fatal("a prisoner has care levels but no self-tend")
 	}
 	s.pawns[0].Prisoner, s.pawns[0].Status = false, "dead"
 	f.Frame(t, a)
-	if w, _ := a.uiSt().Find(healthCareID(medcare.NoMeds)); !w.Disabled || w.Reason == "" {
+	if w, _ := a.uiSt().Find(inspector.HealthCareID(medcare.NoMeds)); !w.Disabled || w.Reason == "" {
 		t.Fatalf("the dead: care disabled with a reason: %+v", w)
 	}
 }
@@ -318,17 +321,17 @@ func TestHealthReorderButtons(t *testing.T) {
 	h.Operations = append(h.Operations, game.OperationView{Label: "Amputate right arm", Slot: 1})
 	s.health[1] = h
 	f.Frame(t, a)
-	if w, _ := a.uiSt().Find(healthUpID(0)); !w.Disabled || w.Reason == "" {
+	if w, _ := a.uiSt().Find(inspector.HealthUpID(0)); !w.Disabled || w.Reason == "" {
 		t.Fatalf("the first can't move up: %+v", w)
 	}
-	if w, _ := a.uiSt().Find(healthDownID(1)); !w.Disabled {
+	if w, _ := a.uiSt().Find(inspector.HealthDownID(1)); !w.Disabled {
 		t.Fatalf("the last can't move down: %+v", w)
 	}
-	press(t, a, f, healthDownID(0))
+	press(t, a, f, inspector.HealthDownID(0))
 	if c := lastOf(s, command.ReorderOperation); c == nil || c.Pawn != 1 || c.Index != 0 || c.Count != 1 {
 		t.Fatalf("down = %+v", c)
 	}
-	press(t, a, f, healthUpID(1))
+	press(t, a, f, inspector.HealthUpID(1))
 	if c := lastOf(s, command.ReorderOperation); c == nil || c.Index != 1 || c.Count != -1 {
 		t.Fatalf("up = %+v", c)
 	}
@@ -336,7 +339,7 @@ func TestHealthReorderButtons(t *testing.T) {
 	h.Operations = h.Operations[:1]
 	s.health[1] = h
 	f.Frame(t, a)
-	if w, _ := a.uiSt().Find(healthDownID(0)); !w.Disabled {
+	if w, _ := a.uiSt().Find(inspector.HealthDownID(0)); !w.Disabled {
 		t.Fatal("a single operation has nowhere to go")
 	}
 }
@@ -351,20 +354,20 @@ func TestHealthOperationChance(t *testing.T) {
 	h.Operations[0].ChanceTip = "Success chance 72% (Doc)\nMedicine skill 8: 80%\nHospital bed: ×115%"
 	s.health[1] = h
 	drawFrame(t, a, f)
-	w, ok := a.uiSt().Find(healthChanceID(0))
+	w, ok := a.uiSt().Find(inspector.HealthChanceID(0))
 	if !ok || w.Label != "72 %" || !strings.Contains(w.Tip, "Hospital bed: ×115%") {
 		t.Fatalf("chance cell %+v", w)
 	}
-	if l := strings.Join(a.healthLines(s.pawns[0]), "|"); !strings.Contains(l, "Operation: Install peg leg (left leg) (72 %)") {
+	if l := strings.Join(a.insp.Tabs().HealthLines(s.pawns[0]), "|"); !strings.Contains(l, "Operation: Install peg leg (left leg) (72 %)") {
 		t.Fatalf("plain lines %q", l)
 	}
-	if healthChanceColor(72) != uiWarning || healthChanceColor(40) != uiDanger || healthChanceColor(98) != uiText {
+	if inspector.HealthChanceColor(72) != uikit.Warning || inspector.HealthChanceColor(40) != uikit.Danger || inspector.HealthChanceColor(98) != uikit.Text {
 		t.Fatal("chance tints")
 	}
 	h.Operations[0].ChanceTip = "" // an older view: no chance cell
 	s.health[1] = h
 	drawFrame(t, a, f)
-	if hasWidget(a, healthChanceID(0)) {
+	if hasWidget(a, inspector.HealthChanceID(0)) {
 		t.Fatal("no breakdown, no cell")
 	}
 }
@@ -384,7 +387,7 @@ func TestHealthPickerSurgeryOptions(t *testing.T) {
 	}
 	s.health[1] = h
 	f.Frame(t, a)
-	press(t, a, f, healthAddID)
+	press(t, a, f, inspector.HealthAddID)
 	f.Frame(t, a)
 	opts := pickerOptions(s.health[1])
 	if len(opts) != 4 || opts[1].reason != "no kidney in stock" || opts[3].reason == "" {
@@ -403,8 +406,8 @@ func TestHealthPickerSurgeryOptions(t *testing.T) {
 	if tip := healthOptionTip(opts[1]); !strings.Contains(tip, "no kidney in stock") || !strings.Contains(tip, "queue it anyway") {
 		t.Fatalf("a blocked option explains why: %q", tip)
 	}
-	press(t, a, f, optID(healthPickList, 2))
-	press(t, a, f, "modal."+healthPickID+".health.addop.ok")
+	press(t, a, f, uikit.OptID(inspector.HealthPickList, 2))
+	press(t, a, f, "modal."+inspector.HealthPickID+".health.addop.ok")
 	c := lastOf(s, command.AddOperation)
 	if c == nil || c.Index != int(body.Euthanize) || c.Build != uint8(body.Torso) || c.Pawn != 1 {
 		t.Fatalf("euthanize = %+v", c)
@@ -422,16 +425,16 @@ func TestHealthPrisonerQueuesOperations(t *testing.T) {
 			s.pawns[0].Visitor = true
 		}
 		f.Frame(t, a)
-		if w, ok := a.uiSt().Find(healthAddID); !ok || w.Disabled {
+		if w, ok := a.uiSt().Find(inspector.HealthAddID); !ok || w.Disabled {
 			t.Fatalf("%s: Add operation is open: %+v", who, w)
 		}
-		press(t, a, f, healthAddID)
+		press(t, a, f, inspector.HealthAddID)
 		f.Frame(t, a)
-		if a.uiModalTop() != healthPickID {
+		if a.uiModalTop() != inspector.HealthPickID {
 			t.Fatalf("%s: the picker opens", who)
 		}
-		press(t, a, f, optID(healthPickList, 0))
-		press(t, a, f, "modal."+healthPickID+".health.addop.ok")
+		press(t, a, f, uikit.OptID(inspector.HealthPickList, 0))
+		press(t, a, f, "modal."+inspector.HealthPickID+".health.addop.ok")
 		if c := lastOf(s, command.AddOperation); c == nil || c.Pawn != 1 {
 			t.Fatalf("%s: AddOperation = %+v", who, c)
 		}
@@ -452,7 +455,7 @@ func TestArchVitalsMonitor(t *testing.T) {
 		t.Fatalf("tool %+v", tool)
 	}
 	for _, f := range []string{"south", "east", "north", "west"} {
-		if got := buildSprite("vitals monitor", f, 0, false, false); got != "furniture/vitals_monitor_"+f {
+		if got := architectpkg.BuildSprite("vitals monitor", f, 0, false, false); got != "furniture/vitals_monitor_"+f {
 			t.Fatalf("sprite %q", got)
 		}
 	}
@@ -466,7 +469,7 @@ func TestCapacityRowTooltip(t *testing.T) {
 	h.Capacities[1].Tip = "Moving\nLeft leg: missing 0%\n= 50%"
 	s.health = map[entity.EntityID]game.HealthView{1: h}
 	drawFrame(t, a, f)
-	w, ok := a.uiSt().Find(healthCapID(1))
+	w, ok := a.uiSt().Find(inspector.HealthCapID(1))
 	if !ok || !strings.Contains(w.Tip, "Left leg: missing 0%") || !strings.HasPrefix(w.Label, "Moving") {
 		t.Fatalf("capacity row %+v", w)
 	}

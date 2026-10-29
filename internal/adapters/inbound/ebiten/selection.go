@@ -3,6 +3,10 @@ package ebiten
 import (
 	"cmp"
 	"math"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"slices"
 
 	"rimworld-go/internal/application/game"
@@ -34,17 +38,17 @@ func (r *Renderer) animalBodyRect(an game.AnimalView) (x0, y0, x1, y1 float64, o
 	// tiles from the drawn tile's top-left
 	x0, y0, x1, y1 = (bx0-m.Origin[0])/p, (by0-m.Origin[1])/p, (bx1-m.Origin[0])/p, (by1-m.Origin[1])/p
 	if r.animalMirrored(an) {
-		x0, x1 = 2*figurePivotX-x1, 2*figurePivotX-x0
+		x0, x1 = 2*motionpkg.FigurePivotX-x1, 2*motionpkg.FigurePivotX-x0
 	}
 	if s := an.Scale; s > 0 && s < 1 {
-		x0, x1 = figurePivotX+(x0-figurePivotX)*s, figurePivotX+(x1-figurePivotX)*s
-		y0, y1 = figurePivotY+(y0-figurePivotY)*s, figurePivotY+(y1-figurePivotY)*s
+		x0, x1 = motionpkg.FigurePivotX+(x0-motionpkg.FigurePivotX)*s, motionpkg.FigurePivotX+(x1-motionpkg.FigurePivotX)*s
+		y0, y1 = motionpkg.FigurePivotY+(y0-motionpkg.FigurePivotY)*s, motionpkg.FigurePivotY+(y1-motionpkg.FigurePivotY)*s
 	}
 	wx, wy := r.interpAnimal(an)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	k := 1.0
-	if ct := lodTile(tile); tile > 0 && ct > tile {
-		wx, wy = creatureAt(wx, wy, tile, ct)
+	if ct := worldpkg.LodTile(tile); tile > 0 && ct > tile {
+		wx, wy = worldpkg.CreatureAt(wx, wy, tile, ct)
 		k = ct / tile
 	}
 	return wx + x0*k, wy + y0*k, wx + x1*k, wy + y1*k, true
@@ -59,8 +63,8 @@ func coversTile(x0, y0, x1, y1 float64, tx, ty int) bool {
 // animalsCovering lists the animals whose drawn body covers tile (tx, ty)
 // from another cell, nearest first (PLAY-022 C7). Only animals whose cell
 // lies within the largest body's reach of the tile are measured.
-func (r *Renderer) animalsCovering(w game.WorldView, tx, ty int) []selCand {
-	pad, padS := r.animalPads(r.tilePx())
+func (r *Renderer) animalsCovering(w game.WorldView, tx, ty int) []selectionpkg.Cand {
+	pad, padS := r.animalPads(r.cam.Tile())
 	type hit struct {
 		id entity.EntityID
 		d  float64
@@ -71,7 +75,7 @@ func (r *Renderer) animalsCovering(w game.WorldView, tx, ty int) []selCand {
 		if an.X == tx && an.Y == ty || an.X < tx-pad || an.X > tx+pad || an.Y < ty-pad || an.Y > ty+padS {
 			continue // on the tile itself (selectablesAt), or too far to reach it
 		}
-		if worldFogged(w, an.X, an.Y) {
+		if overlay.WorldFogged(w, an.X, an.Y) {
 			continue
 		}
 		x0, y0, x1, y1, ok := r.animalBodyRect(*an)
@@ -90,9 +94,9 @@ func (r *Renderer) animalsCovering(w game.WorldView, tx, ty int) []selCand {
 		}
 		return cmp.Compare(a.id, b.id)
 	})
-	out := make([]selCand, len(hits))
+	out := make([]selectionpkg.Cand, len(hits))
 	for i, h := range hits {
-		out[i] = selCand{Kind: selAnimal, ID: h.id}
+		out[i] = selectionpkg.Cand{Kind: selectionpkg.Animal, ID: h.id}
 	}
 	return out
 }

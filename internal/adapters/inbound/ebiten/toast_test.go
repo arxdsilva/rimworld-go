@@ -2,6 +2,8 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -15,11 +17,11 @@ func TestToastsStackAtTheHintAnchor(t *testing.T) {
 		t.Run(fmt.Sprintf("x%v", s), func(t *testing.T) {
 			a, f := colonyApp(t, messageStub(0))
 			pw, ph := rightAtScale(t, a, f, s)
-			a.toast("Screenshot saved")
-			a.toast("Autosaved")
-			a.toast("Not implemented yet")
+			a.chrome.Toast("Screenshot saved")
+			a.chrome.Toast("Autosaved")
+			a.chrome.Toast("Not implemented yet")
 			l := a.hud()
-			rs := a.toastRects(a.sw, a.sh)
+			rs := a.chrome.ToastRects(a.sw, a.sh)
 			if len(rs) != 3 {
 				t.Fatalf("%d toast rects, want 3", len(rs))
 			}
@@ -41,7 +43,7 @@ func TestToastsStackAtTheHintAnchor(t *testing.T) {
 			if rs[0].Bottom() != l.HintBottom {
 				t.Errorf("the newest toast ends at %v, want HintBottom %v", rs[0].Bottom(), l.HintBottom)
 			}
-			a.drawToasts(ebiten.NewImage(pw, ph), a.sw, a.sh)
+			a.chrome.DrawToasts(ebiten.NewImage(pw, ph), a.sw, a.sh)
 		})
 	}
 }
@@ -50,11 +52,11 @@ func TestToastsStackAtTheHintAnchor(t *testing.T) {
 func TestToastsMakeRoomForTheHint(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, messageStub(0))
-	a.toast("Autosaved")
-	free := a.toastRects(a.sw, a.sh)[0]
+	a.chrome.Toast("Autosaved")
+	free := a.chrome.ToastRects(a.sw, a.sh)[0]
 	a.hint = "Needs a bed"
-	held := a.toastRects(a.sw, a.sh)[0]
-	if held.Bottom() >= free.Bottom() || held.Bottom() > a.hud().HintBottom-lineStep(tsBody) {
+	held := a.chrome.ToastRects(a.sw, a.sh)[0]
+	if held.Bottom() >= free.Bottom() || held.Bottom() > a.hud().HintBottom-gfx.LineStep(gfx.Body) {
 		t.Errorf("with a hint the toast ends at %v (free: %v)", held.Bottom(), free.Bottom())
 	}
 }
@@ -65,8 +67,8 @@ func TestToastsOutsideTheColonyAndExpiry(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
-	a.toast("Screenshot saved")
-	rs := a.toastRects(a.sw, a.sh)
+	a.chrome.Toast("Screenshot saved")
+	rs := a.chrome.ToastRects(a.sw, a.sh)
 	if len(rs) != 1 {
 		t.Fatalf("toasts %v", rs)
 	}
@@ -74,8 +76,8 @@ func TestToastsOutsideTheColonyAndExpiry(t *testing.T) {
 	if cx := rs[0].X + rs[0].W/2; cx < float32(sw)/2-1 || cx > float32(sw)/2+1 || rs[0].Bottom() > float32(sh) {
 		t.Errorf("menu toast %+v is not bottom-centre of %dx%d", rs[0], sw, sh)
 	}
-	a.updates += toastFrames
-	if len(a.liveToasts()) != 0 || len(a.toastRects(sw, sh)) != 0 {
+	a.updates += hud.ToastFrames
+	if len(a.liveToasts()) != 0 || len(a.chrome.ToastRects(sw, sh)) != 0 {
 		t.Error("a toast outlives toastFrames")
 	}
 }

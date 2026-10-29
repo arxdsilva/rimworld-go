@@ -6,6 +6,9 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -50,7 +53,7 @@ func (l *saveLog) hooks() SaveHooks {
 			l.commits = append(l.commits, slot)
 			return l.fail
 		},
-		List: func() ([]SaveSlot, error) { return nil, nil },
+		List: func() ([]ports.SaveSlot, error) { return nil, nil },
 		Load: func(path string) (Simulation, string, error) { return nil, "", errors.New("unused") },
 	}
 }
@@ -76,10 +79,10 @@ func newCommitColony(t *testing.T, log *saveLog) (*App, *stubSim) {
 
 // morning is tick of day's autosave hour.
 func morning(day int) clock.Tick {
-	return clock.Tick(day*clock.TicksPerDay + autosaveHour*clock.TicksPerHour)
+	return clock.Tick(day*clock.TicksPerDay + options.AutosaveHour*clock.TicksPerHour)
 }
 
-func buttonByID(t *testing.T, bs []button, id string) button {
+func buttonByID(t *testing.T, bs []uikit.Button, id string) uikit.Button {
 	t.Helper()
 	b, ok := hasButton(bs, id) // home_carpet_ui_test.go
 	if !ok {
@@ -88,7 +91,7 @@ func buttonByID(t *testing.T, bs []button, id string) button {
 	return b
 }
 
-func lacksButton(bs []button, id string) bool {
+func lacksButton(bs []uikit.Button, id string) bool {
 	_, ok := hasButton(bs, id)
 	return !ok
 }
@@ -100,11 +103,11 @@ func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 	a.settings.Gameplay.AutosaveDays = 7 // commitment still saves daily
 	for day := 1; day <= 3; day++ {
 		s.tick = morning(day)
-		a.tickAutosave()
-		a.tickAutosave() // once per morning
+		a.opt.TickAutosave()
+		a.opt.TickAutosave() // once per morning
 	}
 	s.tick = morning(3) + clock.TicksPerHour // not the autosave hour
-	a.tickAutosave()
+	a.opt.TickAutosave()
 	if len(log.commits) != 3 || len(log.saves) != 0 {
 		t.Fatalf("commit saves %v, plain saves %v: want one SaveCommit a day", log.commits, log.saves)
 	}
@@ -116,7 +119,7 @@ func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 	// Options' "Off" does not turn a commitment colony's saving off.
 	a.settings.Gameplay.AutosaveDays = 0
 	s.tick = morning(4)
-	a.tickAutosave()
+	a.opt.TickAutosave()
 	if len(log.commits) != 4 {
 		t.Fatalf("autosave off must not stop commitment saves: %v", log.commits)
 	}
@@ -125,7 +128,7 @@ func TestCommitmentSingleSlotNoAutosaveCopy(t *testing.T) {
 	b, s2 := newCommitColony(t, log2)
 	b.cfg.Saves.SaveCommit = nil
 	s2.tick = morning(1)
-	b.tickAutosave()
+	b.opt.TickAutosave()
 	if len(log2.saves) != 1 || log2.saves[0] != b.opt.SaveSlot {
 		t.Fatalf("fallback saves %v, want [%s]", log2.saves, b.opt.SaveSlot)
 	}
@@ -146,14 +149,14 @@ func TestCommitmentPauseButtons(t *testing.T) {
 		t.Fatalf("load button %+v", b)
 	}
 	click(t, a, "pause.load")
-	if a.nav.screen() != screenColony || a.hint != "Commitment: one timeline" {
+	if a.nav.screen() != ports.ScreenColony || a.hint != "Commitment: one timeline" {
 		t.Fatalf("Load must stay disabled: screen %s, hint %q", a.nav.screen(), a.hint)
 	}
 	// Developer mode is locked in Options while the colony runs.
 	a.settings.Gameplay.DevMode = false
 	click(t, a, "pause.options")
 	click(t, a, "options.tab.gameplay")
-	dev := buttonByID(t, a.optionsButtons(a.size()), "options.devmode")
+	dev := buttonByID(t, a.opt.Buttons(a.size()), "options.devmode")
 	if !dev.Disabled || dev.Reason != "Commitment mode" {
 		t.Fatalf("dev mode row %+v", dev)
 	}
@@ -161,7 +164,7 @@ func TestCommitmentPauseButtons(t *testing.T) {
 	if a.settings.Gameplay.DevMode || a.hint != "Commitment mode" {
 		t.Fatalf("dev mode toggled in commitment (hint %q)", a.hint)
 	}
-	if b := buttonByID(t, a.optionsButtons(a.size()), "options.autosave"); b.Disabled {
+	if b := buttonByID(t, a.opt.Buttons(a.size()), "options.autosave"); b.Disabled {
 		t.Fatal("only developer mode is locked")
 	}
 }
@@ -174,7 +177,7 @@ func TestCommitmentSavesOnReturnToMenu(t *testing.T) {
 		slot := a.opt.SaveSlot
 		a.apply(intent{kind: intentPause})
 		click(t, a, id)
-		if a.nav.screen() != screenMainMenu || a.renderer != nil {
+		if a.nav.screen() != ports.ScreenMainMenu || a.renderer != nil {
 			t.Fatalf("%s: on %s, want the main menu", id, a.nav.screen())
 		}
 		if len(log.commits) != 1 || log.commits[0] != slot {
@@ -186,7 +189,7 @@ func TestCommitmentSavesOnReturnToMenu(t *testing.T) {
 	a, _ := newCommitColony(t, log)
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.savequit")
-	if a.nav.screen() != screenColony || a.renderer == nil || a.hint != "save failed: disk full" {
+	if a.nav.screen() != ports.ScreenColony || a.renderer == nil || a.hint != "save failed: disk full" {
 		t.Fatalf("after a failed save: %s, hint %q", a.nav.screen(), a.hint)
 	}
 	// Quit saves too.
@@ -262,15 +265,15 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 	// Autosave follows Options, to the -autosave copy.
 	a.settings.Gameplay.AutosaveDays = 2
 	s.tick = morning(1)
-	a.tickAutosave()
+	a.opt.TickAutosave()
 	s.tick = morning(2)
-	a.tickAutosave()
+	a.opt.TickAutosave()
 	if len(log.saves) != 2 || log.saves[1] != slot+"-autosave" {
 		t.Fatalf("autosaves %v", log.saves)
 	}
 	a.settings.Gameplay.AutosaveDays = 0
 	s.tick = morning(5)
-	a.tickAutosave()
+	a.opt.TickAutosave()
 	if len(log.saves) != 2 {
 		t.Fatal("autosave Off must not save")
 	}
@@ -279,7 +282,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.options")
 	click(t, a, "options.tab.gameplay")
-	if b := buttonByID(t, a.optionsButtons(a.size()), "options.devmode"); b.Disabled {
+	if b := buttonByID(t, a.opt.Buttons(a.size()), "options.devmode"); b.Disabled {
 		t.Fatal("developer mode locked without commitment")
 	}
 	_ = a.Update()
@@ -287,7 +290,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 		t.Fatalf("reload anytime must not take over the close button: %v", w.handled)
 	}
 	a.apply(intent{kind: intentReturnToMenu})
-	if a.nav.screen() != screenMainMenu || len(log.saves) != 2 {
+	if a.nav.screen() != ports.ScreenMainMenu || len(log.saves) != 2 {
 		t.Fatalf("return to menu: %s, saves %v", a.nav.screen(), log.saves)
 	}
 }
@@ -295,8 +298,8 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 func TestLoadListTagsCommitment(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
-	a.opt.Slots = []SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
-	if bs := a.loadButtons(1280, 720); len(bs) != 3 || bs[1].Disabled {
+	a.opt.Slots = []ports.SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
+	if bs := a.opt.LoadButtons(1280, 720); len(bs) != 3 || bs[1].Disabled {
 		t.Fatalf("a commitment save is listed and loadable: %+v", bs)
 	}
 }

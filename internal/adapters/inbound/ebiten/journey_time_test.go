@@ -152,7 +152,7 @@ func TestJourneyTimeDevStepUltrafastAndActions(t *testing.T) {
 		t.Fatal("Slash opened no debug menu")
 	}
 	row := -1
-	for i, act := range j.a.devActions(j.a.tools.State.TX, j.a.tools.State.TY) {
+	for i, act := range j.a.tools.Actions(j.a.tools.State.TX, j.a.tools.State.TY) {
 		if act.Label == "Start fire here" {
 			row = i
 		}

@@ -1,6 +1,12 @@
 package ebiten
 
 import (
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"slices"
 	"testing"
 
@@ -20,10 +26,10 @@ func TestSliderPlaysTick(t *testing.T) {
 
 	// A discrete slider ticks on every step it moves.
 	stop := 0.0
-	dr := rect{X: 100, Y: 200, W: 300, H: 40}
-	dsp := sliderSpec{Stops: []string{"Low", "Normal", "High"}}
+	dr := gfx.Rect{X: 100, Y: 200, W: 300, H: 40}
+	dsp := uikit.SliderSpec{Stops: []string{"Low", "Normal", "High"}}
 	setHook(u, func(a *App) { a.uiSlider("d", dr, &stop, dsp) })
-	dt := sliderTrack(dr)
+	dt := uikit.SliderTrackRect(dr)
 	f.press(t, a, int(dt.X+dt.W*0.5), 205)
 	f.letGo(t, a, int(dt.X+dt.W*0.5), 205)
 	if stop != 1 || len(rec.played("ui.slider_tick")) != 1 {
@@ -43,10 +49,10 @@ func TestSliderPlaysTick(t *testing.T) {
 
 	// A continuous slider ticks once per step crossed, not per frame.
 	val := 50.0
-	r := rect{X: 100, Y: 100, W: 300, H: 30}
-	sp := sliderSpec{Min: 0, Max: 100, Step: 10}
+	r := gfx.Rect{X: 100, Y: 100, W: 300, H: 30}
+	sp := uikit.SliderSpec{Min: 0, Max: 100, Step: 10}
 	setHook(u, func(a *App) { a.uiSlider("s", r, &val, sp) })
-	track := sliderTrack(r)
+	track := uikit.SliderTrackRect(r)
 	at := func(frac float32) int { return int(track.X + track.W*frac) }
 	rec.plays = nil
 	gap()
@@ -79,7 +85,7 @@ func TestWizardPagesPlay(t *testing.T) {
 		t.Fatalf("choosing a scenario is not a page turn: %d", n)
 	}
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenStoryteller || len(rec.played("ui.page")) != 1 {
+	if a.nav.screen() != ports.ScreenStoryteller || len(rec.played("ui.page")) != 1 {
 		t.Fatalf("Next turns the page: screen=%s plays=%+v", a.nav.screen(), rec.plays)
 	}
 	click(t, a, "wizard.back")
@@ -101,7 +107,7 @@ func TestPodCuesFollowArrivals(t *testing.T) {
 	}
 	ids := func() []string {
 		var out []string
-		for _, c := range r.takeCues() {
+		for _, c := range r.cueBus().Take() {
 			out = append(out, c.ID)
 		}
 		return out
@@ -115,10 +121,10 @@ func TestPodCuesFollowArrivals(t *testing.T) {
 	if got := at(0, false); len(got) != 0 {
 		t.Fatalf("a pod far from landing is quiet: %v", got)
 	}
-	if got := at(land-podFallLead-1, false); len(got) != 0 {
+	if got := at(land-cue.PodFallLead-1, false); len(got) != 0 {
 		t.Fatalf("not yet falling: %v", got)
 	}
-	if got := at(land-podFallLead, false); !slices.Equal(got, []string{"sfx.pod_fall"}) {
+	if got := at(land-cue.PodFallLead, false); !slices.Equal(got, []string{"sfx.pod_fall"}) {
 		t.Fatalf("the descent starts: %v", got)
 	}
 	if got := at(land-10, false); len(got) != 0 {
@@ -159,7 +165,7 @@ func TestWaterAmbienceFollowsScreen(t *testing.T) {
 	t.Parallel()
 	const side = 200
 	var wet uint8
-	for i, n := range terrainNames {
+	for i, n := range worldpkg.TerrainNames {
 		if n == "shallow_water" {
 			wet = uint8(i)
 		}
@@ -174,10 +180,10 @@ func TestWaterAmbienceFollowsScreen(t *testing.T) {
 	r := a.renderer
 	r.heard = game.WorldView{Hour: 12, Season: "summer", OutdoorTemp: 200, Terrain: terr, TerrainW: side}
 	look := func(tileX float64) {
-		v := colonyViewport(a.sw, a.sh)
+		v := camerapkg.ColonyViewport(a.sw, a.sh)
 		r.cam.Zoom = 1
-		r.cam.OffsetX = tileX*float64(TileSize) - (v.X0+v.X1)/2
-		r.cam.OffsetY = 100*float64(TileSize) - (v.Y0+v.Y1)/2
+		r.cam.OffsetX = tileX*float64(camerapkg.TileSize) - (v.X0+v.X1)/2
+		r.cam.OffsetY = 100*float64(camerapkg.TileSize) - (v.Y0+v.Y1)/2
 		a.snd.Frame += cueGap
 		a.soundFrame()
 	}

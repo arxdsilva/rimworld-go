@@ -2,7 +2,10 @@ package ebiten
 
 import (
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"strings"
 	"testing"
 
@@ -13,7 +16,7 @@ import (
 
 func fadeRenderer() *Renderer {
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
-	r.cam.Zoom = 32.0 / float64(TileSize)
+	r.cam.Zoom = 32.0 / float64(camerapkg.TileSize)
 	r.lod.Creatures = map[[2]int]bool{}
 	return r
 }
@@ -32,8 +35,8 @@ func TestCanopyFadesWithCreatureBehind(t *testing.T) {
 	for _, c := range [][2]int{{5, 5}, {5, 4}, {4, 4}, {6, 4}} { // tree tile, above, both diagonals above
 		r := fadeRenderer()
 		r.lod.Creatures[c] = true
-		if a := runFade(r, 5, 5, 30); math.Abs(float64(a)-treeSeeThrough) > 0.02 {
-			t.Fatalf("creature at %v: canopy alpha %.3f, want ~%.1f", c, a, treeSeeThrough)
+		if a := runFade(r, 5, 5, 30); math.Abs(float64(a)-env.TreeSeeThrough) > 0.02 {
+			t.Fatalf("creature at %v: canopy alpha %.3f, want ~%.1f", c, a, env.TreeSeeThrough)
 		}
 	}
 	// the tile below or two above does not count
@@ -59,8 +62,8 @@ func TestCanopyEasesAndRecovers(t *testing.T) {
 	r := fadeRenderer()
 	r.lod.Creatures[[2]int{5, 4}] = true
 	a1 := runFade(r, 5, 5, 3)
-	if a1 >= 1 || a1 <= treeSeeThrough {
-		t.Fatalf("mid-ease alpha %.3f should lie between %.1f and 1", a1, treeSeeThrough)
+	if a1 >= 1 || a1 <= env.TreeSeeThrough {
+		t.Fatalf("mid-ease alpha %.3f should lie between %.1f and 1", a1, env.TreeSeeThrough)
 	}
 	runFade(r, 5, 5, 30)
 	delete(r.lod.Creatures, [2]int{5, 4})
@@ -75,8 +78,8 @@ func TestCanopyReducedMotionSnaps(t *testing.T) {
 	r.reducedMotion = true
 	r.lod.Creatures[[2]int{5, 4}] = true
 	r.present++
-	if a := r.treeCanopyAlpha(5, 5); a != treeSeeThrough {
-		t.Fatalf("reduced motion alpha %.3f, want snap to %.1f", a, treeSeeThrough)
+	if a := r.treeCanopyAlpha(5, 5); a != env.TreeSeeThrough {
+		t.Fatalf("reduced motion alpha %.3f, want snap to %.1f", a, env.TreeSeeThrough)
 	}
 	delete(r.lod.Creatures, [2]int{5, 4})
 	r.present++
@@ -129,19 +132,19 @@ func TestTreeDrawsTrunkThenCanopy(t *testing.T) {
 	var order []string
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	dst := ebiten.NewImage(640, 640)
-	r.drawPlantObj(dst, &w, &w.Plants[0], r.tilePx())
+	r.drawPlantObj(dst, &w, &w.Plants[0], r.cam.Tile())
 	if got := strings.Join(order, ","); got != "tree_trunk,tree_canopy" {
 		t.Skipf("tree parts not generated yet (order %q)", got)
 	}
 	r.lod.Creatures[[2]int{5, 4}] = true
 	for i := 0; i < 5; i++ {
 		r.present++
-		r.drawPlantObj(dst, &w, &w.Plants[0], r.tilePx())
+		r.drawPlantObj(dst, &w, &w.Plants[0], r.cam.Tile())
 	}
 	if got := strings.Join(order[2:], ","); got != strings.Repeat("tree_trunk,tree_canopy,", 4)+"tree_trunk,tree_canopy" {
 		t.Fatalf("faded tree order = %q", got)
 	}
-	if st := r.treeFx.Fades[envTileKey(5, 5)]; st == nil || st.Alpha >= 1 {
+	if st := r.treeFx.Fades[env.TileKey(5, 5)]; st == nil || st.Alpha >= 1 {
 		t.Fatalf("canopy not fading: %+v", st)
 	}
 }
@@ -151,11 +154,11 @@ func TestTreeFallsBackToFullSpriteWithoutParts(t *testing.T) {
 	if _, _, ok := r.treePartKeys("plant/bush_mature_v0"); ok {
 		t.Fatal("a bush has no tree parts")
 	}
-	r.art = &artCatalog{} // no sprites at all: no parts, nothing drawn, no panic
+	r.art = &artpkg.Catalog{} // no sprites at all: no parts, nothing drawn, no panic
 	w := game.WorldView{Season: "Summer", Plants: []game.PlantView{{ID: 1, X: 5, Y: 5, Species: "tree", Growth: 100}}}
 	var order []string
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
-	r.drawPlantObj(ebiten.NewImage(64, 64), &w, &w.Plants[0], r.tilePx())
+	r.drawPlantObj(ebiten.NewImage(64, 64), &w, &w.Plants[0], r.cam.Tile())
 	if len(order) != 0 {
 		t.Fatalf("parts traced without art: %v", order)
 	}

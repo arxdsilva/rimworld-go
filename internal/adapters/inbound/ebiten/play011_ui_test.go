@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
 )
 
@@ -32,14 +35,14 @@ func (s *swapSim) AutoFacingAt(kind, facing string, x, y int) string {
 func TestDoorAxisFollowsFacing(t *testing.T) {
 	t.Parallel()
 	for f, ew := range map[string]bool{"south": true, "north": true, "": true, "east": false, "west": false} {
-		if got := doorAxisEW(f); got != ew {
+		if got := sprite.DoorAxisEW(f); got != ew {
 			t.Fatalf("doorAxisEW(%q) = %v, want %v", f, got, ew)
 		}
 	}
-	if got := buildSpriteStuff("door", "wood", "east", 0, doorAxisEW("east"), false); got != "structure/door_wood_ns_closed" {
+	if got := architect.BuildSpriteStuff("door", "wood", "east", 0, sprite.DoorAxisEW("east"), false); got != "structure/door_wood_ns_closed" {
 		t.Fatal(got)
 	}
-	if got := buildSpriteStuff("door", "steel", "south", 0, doorAxisEW("south"), true); got != "structure/door_steel_ew_open" {
+	if got := architect.BuildSpriteStuff("door", "steel", "south", 0, sprite.DoorAxisEW("south"), true); got != "structure/door_steel_ew_open" {
 		t.Fatal(got)
 	}
 }
@@ -50,7 +53,7 @@ func TestGhostCellsCarryAutoFacingAndSame(t *testing.T) {
 	sim := &swapSim{stubSim: stub, same: map[[2]int]bool{{5, 4}: true},
 		facings: map[[2]int]string{{4, 4}: "east"}, label: "wood wall → steel"}
 	a.renderer.game = sim
-	a.openArchitect()
+	a.arch.OpenPanel()
 	a.arch.ToolID = "wall"
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 4, 4, 6, 4
@@ -67,7 +70,7 @@ func TestGhostCellsCarryAutoFacingAndSame(t *testing.T) {
 	if cells[0].same || !cells[0].ok || cells[0].replaces != "wood wall → steel" {
 		t.Fatalf("swap cell = %+v", cells[0])
 	}
-	a.submitArchitect()
+	a.arch.Submit()
 	if len(stub.cmds) != 2 {
 		t.Fatalf("submitted %d commands, want 2 (same cell skipped)", len(stub.cmds))
 	}
@@ -84,7 +87,7 @@ func TestGhostDrawsEachCellWithItsOwnFacing(t *testing.T) {
 	want := []string{"structure/door_wood_ns_closed", "structure/door_wood_ew_closed", "structure/door_wood_ew_closed"}
 	for i, c := range cells {
 		f := ghostFacing(c, "south")
-		if got := buildSpriteStuff("door", "wood", f, 0, doorAxisEW(f), false); got != want[i] {
+		if got := architect.BuildSpriteStuff("door", "wood", f, 0, sprite.DoorAxisEW(f), false); got != want[i] {
 			t.Fatalf("cell %d key = %s, want %s", i, got, want[i])
 		}
 	}
@@ -112,10 +115,10 @@ func TestDoorGateHintsDropRotate(t *testing.T) {
 
 func TestSwapLine(t *testing.T) {
 	t.Parallel()
-	if swapLine(game.BuildingView{}) != "" {
+	if inspector.SwapLine(game.BuildingView{}) != "" {
 		t.Fatal("no swap, no line")
 	}
-	if got := swapLine(game.BuildingView{SwapTo: "steel", SwapPct: 40}); got != "Changing to steel (40%)" {
+	if got := inspector.SwapLine(game.BuildingView{SwapTo: "steel", SwapPct: 40}); got != "Changing to steel (40%)" {
 		t.Fatal(got)
 	}
 }
@@ -123,7 +126,7 @@ func TestSwapLine(t *testing.T) {
 func TestFencesAndGatesNotMovable(t *testing.T) {
 	t.Parallel()
 	for _, k := range []string{"fence", "fence gate"} {
-		if movableKind(k, false) {
+		if architect.MovableKind(k, false) {
 			t.Fatalf("%s must not be movable", k)
 		}
 	}

@@ -2,8 +2,9 @@ package ebiten
 
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
+	dialogspkg "rimworld-go/internal/adapters/inbound/ebiten/dialogs"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/sim/entity"
 )
 
 // dialogs.Dealings owns the trade, comms and caravan dialogs (ARCH-005);
@@ -28,7 +29,7 @@ func newDialogs(a *App) *dialogs.Dealings {
 // Trade is the open trade session, if the simulation offers sessions.
 func (h dialogsHost) Trade() (game.TradeView, bool) {
 	if r := h.a.renderer; r != nil {
-		if s, ok := r.game.(tradeSource); ok {
+		if s, ok := r.game.(dialogspkg.TradeSource); ok {
 			return s.TradeView()
 		}
 	}
@@ -38,7 +39,7 @@ func (h dialogsHost) Trade() (game.TradeView, bool) {
 // Comms is the open comms session, if the simulation offers sessions.
 func (h dialogsHost) Comms() (game.CommsView, bool) {
 	if r := h.a.renderer; r != nil {
-		if s, ok := r.game.(commsSource); ok {
+		if s, ok := r.game.(dialogspkg.CommsSource); ok {
 			return s.CommsView()
 		}
 	}
@@ -48,7 +49,7 @@ func (h dialogsHost) Comms() (game.CommsView, bool) {
 // Sites are the settlements a caravan may visit.
 func (h dialogsHost) Sites() []game.WorldSiteView {
 	if r := h.a.renderer; r != nil {
-		if s, ok := r.game.(worldSource); ok {
+		if s, ok := r.game.(windows.WorldSource); ok {
 			return s.WorldSites()
 		}
 	}
@@ -62,37 +63,8 @@ func (h dialogsHost) HoldSpeed(tier int) {
 	}
 }
 
-type (
-	tradeSource = dialogs.TradeSource
-	commsSource = dialogs.CommsSource
-)
-
-const (
-	tradeModalID   = dialogs.TradeModalID
-	commsModalID   = dialogs.CommsModalID
-	commsGiftStep  = dialogs.CommsGiftStep
-	commsGiftStart = dialogs.CommsGiftStart
-	formCaravanID  = dialogs.FormCaravanID
-	formNoMembers  = dialogs.FormNoMembers
-	formNoDest     = dialogs.FormNoDest
-)
-
 // tradeLine is one row of the trade table (test-only reach).
 type tradeLine struct {
 	head string
 	row  game.TradeRowView
 }
-
-func tradeLines(rows []game.TradeRowView) []tradeLine {
-	var out []tradeLine
-	for _, l := range dialogs.TradeLines(rows) {
-		out = append(out, tradeLine{head: l.Head, row: l.Row})
-	}
-	return out
-}
-
-func caravanHealthNote(c game.CaravanView) string { return dialogs.CaravanHealthNote(c) }
-func caravanTip(c game.CaravanView) string        { return dialogs.CaravanTip(c) }
-func memberList(ids []entity.EntityID) string     { return dialogs.MemberList(ids) }
-
-func (a *App) syncDealings() { a.deal.SyncDealings() }

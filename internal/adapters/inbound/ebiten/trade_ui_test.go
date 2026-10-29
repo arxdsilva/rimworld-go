@@ -3,6 +3,7 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
@@ -60,13 +61,13 @@ func TestTradeDialogEmitsProposeTrade(t *testing.T) {
 	s := &dealSim{tv: testTradeView(), tok: true}
 	a, f := dealApp(t, s)
 	f.Frame(t, a)
-	if !a.uiModalOpen() || a.renderer.speed != speedPaused {
-		t.Fatalf("open=%v speed=%v", a.uiModalOpen(), a.renderer.speed)
+	if !a.uiSt().ModalOpen() || a.renderer.speed != speedPaused {
+		t.Fatalf("open=%v speed=%v", a.uiSt().ModalOpen(), a.renderer.speed)
 	}
 	clickID(t, a, f, "trade."+item.Wood.String()+".take.1")
 	clickID(t, a, f, "trade."+item.Wood.String()+".give.1")
 	clickID(t, a, f, "trade."+item.Wood.String()+".give.1")
-	clickID(t, a, f, "modal."+tradeModalID+".accept")
+	clickID(t, a, f, "modal."+dialogs.TradeModalID+".accept")
 	want := game.EncodeTradeOffer([]trade.Delta{{Kind: item.Wood, Qty: -1}})
 	var got *command.Command
 	for i := range s.cmds {
@@ -84,7 +85,7 @@ func TestTradeDialogCancelEmitsClose(t *testing.T) {
 	s := &dealSim{tv: testTradeView(), tok: true}
 	a, f := dealApp(t, s)
 	f.Frame(t, a)
-	clickID(t, a, f, "modal."+tradeModalID+".cancel")
+	clickID(t, a, f, "modal."+dialogs.TradeModalID+".cancel")
 	f.Frame(t, a)
 	n := 0
 	for _, c := range s.cmds {
@@ -92,8 +93,8 @@ func TestTradeDialogCancelEmitsClose(t *testing.T) {
 			n++
 		}
 	}
-	if n != 1 || a.uiModalOpen() {
-		t.Fatalf("CloseTrade x%d, modal open=%v (the live session must not reopen it)", n, a.uiModalOpen())
+	if n != 1 || a.uiSt().ModalOpen() {
+		t.Fatalf("CloseTrade x%d, modal open=%v (the live session must not reopen it)", n, a.uiSt().ModalOpen())
 	}
 	s.tok = false
 	f.Frame(t, a)

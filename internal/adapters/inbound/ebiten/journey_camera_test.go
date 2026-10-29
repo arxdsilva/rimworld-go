@@ -5,6 +5,8 @@ import (
 	"math"
 	"testing"
 
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -170,11 +172,11 @@ func TestJourneyCameraMiddleDrag(t *testing.T) {
 	r := j.a.renderer
 	x0 := r.cam.OffsetX
 	j.f.Cur.Mx, j.f.Cur.My = j.a.sw/2, j.a.sh/2
-	j.f.Cur.Press[mbMiddle], j.f.Cur.Down[mbMiddle] = true, true
+	j.f.Cur.Press[inputframe.Middle], j.f.Cur.Down[inputframe.Middle] = true, true
 	j.update(1)
 	j.f.Cur.Mx += 40
 	j.update(1)
-	j.f.Cur.Down[mbMiddle], j.f.Cur.Release[mbMiddle] = false, true
+	j.f.Cur.Down[inputframe.Middle], j.f.Cur.Release[inputframe.Middle] = false, true
 	j.update(1)
 	if moved := r.cam.OffsetX - x0; math.Abs(moved+40) > 0.5 {
 		t.Fatalf("a 40 px drag right moved the camera by %v, want -40", moved)
@@ -190,12 +192,12 @@ func TestJourneyCameraMinimap(t *testing.T) {
 	if !r.minimapOn() {
 		t.Fatal("a 160² map should show the minimap")
 	}
-	v := colonyViewport(j.a.sw, j.a.sh)
+	v := camerapkg.ColonyViewport(j.a.sw, j.a.sh)
 	_, _, mx, my, mw, mh := r.minimapBox(v)
 	j.f.Cur.Mx, j.f.Cur.My = int(mx+mw*0.25), int(my+mh*0.75)
-	j.f.Click(j.t, j.a, mbLeft, 0)
+	j.f.Click(j.t, j.a, inputframe.Left, 0)
 	mv := j.a.mapViewport()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	cx := (r.cam.OffsetX + (mv.X0+mv.X1)/2) / tile
 	cy := (r.cam.OffsetY + (mv.Y0+mv.Y1)/2) / tile
 	if math.Abs(cx-40) > 1.5 || math.Abs(cy-120) > 1.5 {
@@ -253,7 +255,7 @@ func TestJourneyCameraBarDoubleClickCentres(t *testing.T) {
 	p := j.pawn(uint64(id))
 	mv := j.a.mapViewport()
 	sx, sy := r.worldToScreenF(float64(p.X)+0.5, float64(p.Y)+0.5)
-	if math.Abs(float64(sx)-(mv.X0+mv.X1)/2) > r.tilePx() || math.Abs(float64(sy)-(mv.Y0+mv.Y1)/2) > r.tilePx() {
+	if math.Abs(float64(sx)-(mv.X0+mv.X1)/2) > r.cam.Tile() || math.Abs(float64(sy)-(mv.Y0+mv.Y1)/2) > r.cam.Tile() {
 		t.Fatalf("after the double click the colonist is at (%v, %v), not the viewport centre (%v, %v)", sx, sy, (mv.X0+mv.X1)/2, (mv.Y0+mv.Y1)/2)
 	}
 }

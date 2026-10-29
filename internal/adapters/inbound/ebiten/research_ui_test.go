@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strings"
 	"testing"
 )
@@ -13,7 +14,7 @@ func TestResearchTabPicksProjectAndLocksTools(t *testing.T) {
 	if !a.win.Open || a.win.Mode != "research" {
 		t.Fatal("research tab opens the research panel")
 	}
-	var gun, traps button
+	var gun, traps uikit.Button
 	for _, b := range a.layoutButtons(a.sw, a.sh) {
 		switch b.ID {
 		case "research.pick.4":

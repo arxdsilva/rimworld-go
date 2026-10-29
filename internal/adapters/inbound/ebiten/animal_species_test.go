@@ -6,6 +6,15 @@ import (
 	"image/color"
 	"image/draw"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"slices"
 	"strings"
 	"testing"
@@ -82,13 +91,13 @@ func TestFemaleVariantByID(t *testing.T) {
 // TestBlurbsForAll: every roster species has its own short description.
 func TestBlurbsForAll(t *testing.T) {
 	t.Parallel()
-	if len(animalBlurbs) != len(animal.All()) {
-		t.Fatalf("%d blurbs for %d species", len(animalBlurbs), len(animal.All()))
+	if len(windows.AnimalBlurbs) != len(animal.All()) {
+		t.Fatalf("%d blurbs for %d species", len(windows.AnimalBlurbs), len(animal.All()))
 	}
 	seen := map[string]string{}
 	for _, s := range animal.All() {
 		key := s.String()
-		b, ok := animalBlurbs[key]
+		b, ok := windows.AnimalBlurbs[key]
 		if !ok || strings.TrimSpace(b) == "" {
 			t.Errorf("%s has no blurb", key)
 			continue
@@ -100,11 +109,11 @@ func TestBlurbsForAll(t *testing.T) {
 			t.Errorf("%s repeats %s's blurb", key, other)
 		}
 		seen[b] = key
-		if animalBlurb(key) != b {
+		if windows.AnimalBlurb(key) != b {
 			t.Errorf("animalBlurb(%s) does not return its entry", key)
 		}
 	}
-	if animalBlurb("not_a_species") == "" {
+	if windows.AnimalBlurb("not_a_species") == "" {
 		t.Error("unknown species still gets the generic blurb")
 	}
 }
@@ -115,7 +124,7 @@ func TestCorpseSpriteBySpecies(t *testing.T) {
 	t.Parallel()
 	seen := map[string]bool{}
 	for x := 0; x < 20; x++ {
-		got := itemSpriteSpecies("animal corpse", "elephant", x, 3)
+		got := worldpkg.ItemSpriteSpecies("animal corpse", "elephant", x, 3)
 		if !strings.HasPrefix(got, "item/corpse_elephant_v") {
 			t.Fatalf("elephant corpse: %s", got)
 		}
@@ -124,19 +133,19 @@ func TestCorpseSpriteBySpecies(t *testing.T) {
 	if len(seen) != 3 {
 		t.Fatalf("three variants by tile, saw %v", seen)
 	}
-	if got := itemSpriteSpecies("animal corpse", "elephant", 4, 4); got != itemSpriteSpecies("animal corpse", "elephant", 4, 4) {
+	if got := worldpkg.ItemSpriteSpecies("animal corpse", "elephant", 4, 4); got != worldpkg.ItemSpriteSpecies("animal corpse", "elephant", 4, 4) {
 		t.Fatal("the variant is stable per tile")
 	}
-	if got := itemSpriteSpecies("animal corpse", "", 4, 4); !strings.HasPrefix(got, "item/corpse_deer_v") {
+	if got := worldpkg.ItemSpriteSpecies("animal corpse", "", 4, 4); !strings.HasPrefix(got, "item/corpse_deer_v") {
 		t.Fatalf("a carcass of unknown species falls back to the deer: %s", got)
 	}
-	if got := itemSpriteSpecies("dustbuck corpse", "", 4, 4); !strings.HasPrefix(got, "item/corpse_dustbuck_v") {
+	if got := worldpkg.ItemSpriteSpecies("dustbuck corpse", "", 4, 4); !strings.HasPrefix(got, "item/corpse_dustbuck_v") {
 		t.Fatalf("legacy dustbuck corpse: %s", got)
 	}
-	if got := itemSpriteSpecies("wood", "", 1, 1); got != itemSprite("wood") {
+	if got := worldpkg.ItemSpriteSpecies("wood", "", 1, 1); got != worldpkg.ItemSprite("wood") {
 		t.Fatalf("other items unchanged: %s", got)
 	}
-	if itemSpriteAt("animal corpse", 4, 4) != itemSpriteSpecies("animal corpse", "", 4, 4) {
+	if itemSpriteAt("animal corpse", 4, 4) != worldpkg.ItemSpriteSpecies("animal corpse", "", 4, 4) {
 		t.Fatal("itemSpriteAt is the species-less form")
 	}
 }
@@ -149,24 +158,24 @@ func TestCorpseSpriteBySpecies(t *testing.T) {
 func TestOverlayAboveTallAnimals(t *testing.T) {
 	t.Parallel()
 	rat, deer, elephant := 1.45, 1.8, 3.0
-	if animalMarkerLift(0) != animalMarkerLift(deer) || animalBarLift(0) != animalBarLift(deer) {
+	if creaturepkg.AnimalMarkerLift(0) != creaturepkg.AnimalMarkerLift(deer) || creaturepkg.AnimalBarLift(0) != creaturepkg.AnimalBarLift(deer) {
 		t.Fatal("an unknown size is drawn like the deer")
 	}
-	if !(animalMarkerLift(rat) < animalMarkerLift(deer) && animalMarkerLift(deer) < animalMarkerLift(elephant)) {
-		t.Fatalf("marker lift grows with size: %v %v %v", animalMarkerLift(rat), animalMarkerLift(deer), animalMarkerLift(elephant))
+	if !(creaturepkg.AnimalMarkerLift(rat) < creaturepkg.AnimalMarkerLift(deer) && creaturepkg.AnimalMarkerLift(deer) < creaturepkg.AnimalMarkerLift(elephant)) {
+		t.Fatalf("marker lift grows with size: %v %v %v", creaturepkg.AnimalMarkerLift(rat), creaturepkg.AnimalMarkerLift(deer), creaturepkg.AnimalMarkerLift(elephant))
 	}
-	if !(animalBarLift(rat) < animalBarLift(deer) && animalBarLift(deer) < animalBarLift(elephant)) {
+	if !(creaturepkg.AnimalBarLift(rat) < creaturepkg.AnimalBarLift(deer) && creaturepkg.AnimalBarLift(deer) < creaturepkg.AnimalBarLift(elephant)) {
 		t.Fatal("bar lift grows with size")
 	}
 	for _, size := range []float64{rat, deer, elephant} {
-		h := animalHeight(size)
-		if animalMarkerLift(size) < h+0.4 {
-			t.Errorf("size %v: marker %.2f must clear height %.2f", size, animalMarkerLift(size), h)
+		h := creaturepkg.AnimalHeight(size)
+		if creaturepkg.AnimalMarkerLift(size) < h+0.4 {
+			t.Errorf("size %v: marker %.2f must clear height %.2f", size, creaturepkg.AnimalMarkerLift(size), h)
 		}
-		if animalBarLift(size) < 0.1 {
+		if creaturepkg.AnimalBarLift(size) < 0.1 {
 			t.Errorf("size %v: bar sits on the animal", size)
 		}
-		if animalBarLift(size) >= animalMarkerLift(size) {
+		if creaturepkg.AnimalBarLift(size) >= creaturepkg.AnimalMarkerLift(size) {
 			t.Errorf("size %v: marker is above the bar", size)
 		}
 	}
@@ -184,17 +193,17 @@ func TestOverlayAboveTallAnimals(t *testing.T) {
 func TestAnimalLabelsShown(t *testing.T) {
 	t.Parallel()
 	an := game.AnimalView{Species: "arctic_fox", Label: "arctic fox"}
-	if got := animalTitle(an); got != "Arctic fox" {
+	if got := inspector.AnimalTitle(an); got != "Arctic fox" {
 		t.Fatalf("title: %q", got)
 	}
 	an.Tame, an.Name = true, "Frost"
-	if got := animalTitle(an); got != "Frost (tame arctic fox)" {
+	if got := inspector.AnimalTitle(an); got != "Frost (tame arctic fox)" {
 		t.Fatalf("tame title: %q", got)
 	}
-	if got := animalLabel(game.AnimalView{Species: "arctic_fox"}); got != "arctic fox" {
+	if got := inspector.AnimalLabel(game.AnimalView{Species: "arctic_fox"}); got != "arctic fox" {
 		t.Fatalf("no label: key without underscores, got %q", got)
 	}
-	if got := animalLabel(game.AnimalView{}); got == "" {
+	if got := inspector.AnimalLabel(game.AnimalView{}); got == "" {
 		t.Fatal("a label always exists")
 	}
 	// the tab row keeps its columns for the longest label
@@ -209,15 +218,15 @@ func TestAnimalLabelsShown(t *testing.T) {
 func TestIconFallbackInitial(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[string]string{"arctic fox": "A", "": "?", "  yak": "Y", "hive_brute": "H"} {
-		if got := animalInitial(in); got != want {
+		if got := inspector.AnimalInitial(in); got != want {
 			t.Errorf("animalInitial(%q) = %q, want %q", in, got, want)
 		}
 	}
 	r := combatRenderer(100, nil, game.WorldView{})
 	screen := ebiten.NewImage(64, 64)
 	// no art catalog, an art catalog without the icon: both draw the disc
-	drawAnimalIcon(screen, nil, game.AnimalView{Species: "yak", Label: "yak"}, 8, 8, 40)
-	drawAnimalIcon(screen, r.art, game.AnimalView{Species: "yak", Label: "yak"}, 8, 8, 40)
+	inspector.DrawAnimalIcon(screen, nil, game.AnimalView{Species: "yak", Label: "yak"}, 8, 8, 40)
+	inspector.DrawAnimalIcon(screen, r.art, game.AnimalView{Species: "yak", Label: "yak"}, 8, 8, 40)
 }
 
 // TestBurstEmitsOnce: an explosion stamp sparks a flash, embers and smoke
@@ -225,18 +234,18 @@ func TestIconFallbackInitial(t *testing.T) {
 func TestBurstEmitsOnce(t *testing.T) {
 	t.Parallel()
 	r := combatRenderer(100, nil, game.WorldView{})
-	var tr burstTracker
-	ev := []burstEvent{{ID: 4, X: 6, Y: 7, Tick: 90}}
+	var tr creaturepkg.BurstTracker
+	ev := []creaturepkg.BurstEvent{{ID: 4, X: 6, Y: 7, Tick: 90}}
 	r.emitBursts(&tr, ev)
 	n := len(r.parts)
 	if n < 10 {
 		t.Fatalf("a burst throws many particles, got %d", n)
 	}
-	kinds := map[partKind]bool{}
+	kinds := map[creaturepkg.PartKind]bool{}
 	for _, p := range r.parts {
 		kinds[p.Kind] = true
 	}
-	for _, k := range []partKind{partEmber, partSmoke} {
+	for _, k := range []creaturepkg.PartKind{creaturepkg.PartEmber, creaturepkg.PartSmoke} {
 		if !kinds[k] {
 			t.Errorf("missing particle kind %d", k)
 		}
@@ -245,13 +254,13 @@ func TestBurstEmitsOnce(t *testing.T) {
 	if len(r.parts) != n {
 		t.Fatalf("the same stamp does not burst twice: %d -> %d", n, len(r.parts))
 	}
-	r.emitBursts(&tr, append(ev, burstEvent{ID: 5, X: 1, Y: 1, Tick: 95}))
+	r.emitBursts(&tr, append(ev, creaturepkg.BurstEvent{ID: 5, X: 1, Y: 1, Tick: 95}))
 	if len(r.parts) <= n {
 		t.Fatal("a new stamp bursts")
 	}
 	// determinism: the same stamp makes the same particles
 	r2 := combatRenderer(100, nil, game.WorldView{})
-	var tr2 burstTracker
+	var tr2 creaturepkg.BurstTracker
 	r2.emitBursts(&tr2, ev)
 	if fmt.Sprint(r2.parts) != fmt.Sprint(r.parts[:n]) {
 		t.Fatal("bursts are deterministic")
@@ -276,7 +285,7 @@ func TestWorldItemsHaveSprites(t *testing.T) {
 		t.Fatalf("%d items, want the 5 carcasses", len(w.Items))
 	}
 	for _, it := range w.Items {
-		if key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y); !c.Has(key) {
+		if key := worldpkg.ItemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y); !c.Has(key) {
 			t.Errorf("%q (animal %q) draws %q, which has no sprite", it.Kind, it.Animal, key)
 		}
 	}
@@ -292,7 +301,7 @@ func TestCarriedCarcassShowsItsSpecies(t *testing.T) {
 	}
 	p := game.PawnView{Carrying: "animal corpse", CarryingAnimal: "capybara"}
 	r := &Renderer{art: c}
-	if a := r.carryPose(p, moveState{}); a.Held.Key != key {
+	if a := r.carryPose(p, motionpkg.MoveState{}); a.Held.Key != key {
 		t.Fatalf("held %q, want %q", a.Held.Key, key)
 	}
 }
@@ -301,18 +310,18 @@ func TestCarriedCarcassShowsItsSpecies(t *testing.T) {
 
 // bodySprite is an animal sprite baked at ppt px per tile whose opaque
 // pixels fill body (canvas px); its pixels are the full canvas.
-func bodySprite(canvas [2]int, origin pt, ppt float64, body image.Rectangle) *artSprite {
+func bodySprite(canvas [2]int, origin pt, ppt float64, body image.Rectangle) *artpkg.Sprite {
 	pix := image.NewNRGBA(image.Rect(0, 0, canvas[0], canvas[1]))
 	draw.Draw(pix, body, image.NewUniform(color.NRGBA{120, 90, 60, 255}), image.Point{}, draw.Src)
-	return &artSprite{Meta: artMeta{Canvas: canvas, Origin: origin, PPT: ppt, Gait: 1.136}, Pix: pix}
+	return &artpkg.Sprite{Meta: artpkg.Meta{Canvas: canvas, Origin: origin, PPT: ppt, Gait: 1.136}, Pix: pix}
 }
 
 // xlArt is a catalog whose "elephant" (every facing, female none) is an XL
 // body at 64 px per tile: canvas 6 x 3 tiles, the body 5 tiles long, from
 // 2 tiles west of its cell to 3 east, and from 1 tile above its cell's top
 // to 0.75 into it.
-func xlArt() *artCatalog {
-	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
+func xlArt() *artpkg.Catalog {
+	c := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{}, Tinted: map[artpkg.TintKey]*ebiten.Image{}}
 	for _, f := range []string{"south", "east", "north"} {
 		c.Sprites["animal/elephant_"+f] = bodySprite([2]int{384, 192}, pt{160, 128}, 64, image.Rect(32, 64, 352, 176))
 	}
@@ -325,16 +334,16 @@ func xlArt() *artCatalog {
 // carcass baked at 64 sits and scales like one at 128 (held.go).
 func TestAnimalDensityKeepsTileSize(t *testing.T) {
 	t.Parallel()
-	hi := artMeta{Canvas: [2]int{512, 384}, Origin: pt{128, 256}, PPT: 128}
-	lo := artMeta{Canvas: [2]int{256, 192}, Origin: pt{64, 128}, PPT: 64}
-	box := func(m artMeta, ps pose) [4]float64 {
-		g := spritePoseGeo(m, 300, 200, 48, ps)
+	hi := artpkg.Meta{Canvas: [2]int{512, 384}, Origin: pt{128, 256}, PPT: 128}
+	lo := artpkg.Meta{Canvas: [2]int{256, 192}, Origin: pt{64, 128}, PPT: 64}
+	box := func(m artpkg.Meta, ps motionpkg.Pose) [4]float64 {
+		g := creaturepkg.SpritePoseGeo(m, 300, 200, 48, ps)
 		x0, y0 := g.Apply(0, 0)
 		x1, y1 := g.Apply(float64(m.Canvas[0]), float64(m.Canvas[1]))
 		return [4]float64{math.Min(x0, x1), math.Min(y0, y1), math.Max(x0, x1), math.Max(y0, y1)}
 	}
-	base := pose{Px: figurePivotX, Py: figurePivotY}
-	for _, ps := range []pose{base, mirrored(base), youngPose(base, 0.6), {Px: 0.5, Py: 0.55, Rot: 0.1, Sy: 1.02}} {
+	base := motionpkg.Pose{Px: motionpkg.FigurePivotX, Py: motionpkg.FigurePivotY}
+	for _, ps := range []motionpkg.Pose{base, creaturepkg.Mirrored(base), creaturepkg.YoungPose(base, 0.6), {Px: 0.5, Py: 0.55, Rot: 0.1, Sy: 1.02}} {
 		a, b := box(hi, ps), box(lo, ps)
 		for i := range a {
 			if math.Abs(a[i]-b[i]) > 1e-9 {
@@ -342,18 +351,18 @@ func TestAnimalDensityKeepsTileSize(t *testing.T) {
 			}
 		}
 	}
-	if k1, k2 := spriteKappa(1.6, 200, 128), spriteKappa(1.6, 100, 64); math.Abs(k1-k2) > 1e-12 {
+	if k1, k2 := light.SpriteKappa(1.6, 200, 128), light.SpriteKappa(1.6, 100, 64); math.Abs(k1-k2) > 1e-12 {
 		t.Fatalf("kappa %v at 128 ppt, %v at 64", k1, k2)
 	}
-	if a, b := shadowFallback("animal/x", &hi), shadowFallback("animal/x", &lo); a != b {
+	if a, b := light.ShadowFallback("animal/x", &hi), light.ShadowFallback("animal/x", &lo); a != b {
 		t.Fatalf("fallback caster %+v at 128 ppt, %+v at 64", a, b)
 	}
 	r := artRenderer()
-	r.art.Sprites["item/corpse_hi"] = &artSprite{Meta: artMeta{Canvas: [2]int{384, 160}, Origin: pt{128, 16}, PPT: 128}}
-	r.art.Sprites["item/corpse_lo"] = &artSprite{Meta: artMeta{Canvas: [2]int{192, 80}, Origin: pt{64, 8}, PPT: 64}}
-	rig, ps := rigFor(r, faceSouth)
+	r.art.Sprites["item/corpse_hi"] = &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{384, 160}, Origin: pt{128, 16}, PPT: 128}}
+	r.art.Sprites["item/corpse_lo"] = &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{192, 80}, Origin: pt{64, 8}, PPT: 64}}
+	rig, ps := rigFor(r, artpkg.FaceSouth)
 	place := func(key string) [2]pt {
-		pl, ok := r.heldPlace(rig, heldItem{Key: key, Stance: stanceLoad}, 5, 5, 64, ps)
+		pl, ok := r.heldPlace(rig, creaturepkg.HeldItem{Key: key, Stance: creaturepkg.StanceLoad}, 5, 5, 64, ps)
 		if !ok {
 			t.Fatalf("%s not placed", key)
 		}
@@ -370,7 +379,7 @@ func TestAnimalDensityKeepsTileSize(t *testing.T) {
 func pickRenderer(w game.WorldView) *Renderer {
 	r := New(&stubSim{w: 40, h: 40, world: w})
 	r.art = xlArt()
-	r.cam = camera{Zoom: 1, Placed: true}
+	r.cam = camerapkg.Camera{Zoom: 1, Placed: true}
 	r.advance()
 	return r
 }
@@ -389,7 +398,7 @@ func TestBigAnimalBodyTilesPick(t *testing.T) {
 	}
 	covers := func(tx, ty int) bool {
 		got := r.animalsCovering(w, tx, ty)
-		return len(got) == 1 && got[0] == (selCand{Kind: selAnimal, ID: 5})
+		return len(got) == 1 && got[0] == (selection.Cand{Kind: selection.Animal, ID: 5})
 	}
 	for _, c := range [][2]int{{8, 9}, {12, 10}, {11, 9}, {9, 10}} {
 		if !covers(c[0], c[1]) {
@@ -429,17 +438,17 @@ func TestBodyPickComesAfterTheTilesOwnThings(t *testing.T) {
 		Items:   []game.ItemView{{ID: 6, Kind: "wood", Qty: 3, X: 12, Y: 10}},
 		Plants:  []game.PlantView{{ID: 7, Species: "grass", X: 12, Y: 10}, {ID: 8, Species: "grass", X: 11, Y: 9}},
 	}
-	out, solid := selectablesSplit(w, nil, 12, 10)
-	if solid != 1 || len(out) != 2 || out[0].Kind != selItem || out[1].Kind != selPlant {
+	out, solid := selection.SelectablesSplit(w, nil, 12, 10)
+	if solid != 1 || len(out) != 2 || out[0].Kind != selection.Item || out[1].Kind != selection.Plant {
 		t.Fatalf("tile (12, 10): %+v, solid %d", out, solid)
 	}
 	a := testApp(&stubSim{w: 40, h: 40, world: w})
 	a.renderer = pickRenderer(w)
-	got := a.selectables(w, 12, 10)
-	if len(got) != 3 || got[0].Kind != selItem || got[1] != (selCand{Kind: selAnimal, ID: 5}) || got[2].Kind != selPlant {
+	got := a.sel.Selectables(w, 12, 10)
+	if len(got) != 3 || got[0].Kind != selection.Item || got[1] != (selection.Cand{Kind: selection.Animal, ID: 5}) || got[2].Kind != selection.Plant {
 		t.Fatalf("item, then the body, then the grass: %+v", got)
 	}
-	if got := a.selectables(w, 11, 9); len(got) != 2 || got[0] != (selCand{Kind: selAnimal, ID: 5}) {
+	if got := a.sel.Selectables(w, 11, 9); len(got) != 2 || got[0] != (selection.Cand{Kind: selection.Animal, ID: 5}) {
 		t.Fatalf("a flank tile with grass: %+v", got)
 	}
 }
@@ -456,7 +465,7 @@ func TestMarksClearTheArt(t *testing.T) {
 	}
 	young := tall
 	young.Scale = 0.5
-	if got, want := r.animalTop(young, 64), (top+figurePivotY)*0.5-figurePivotY; math.Abs(got-want) > 1e-9 {
+	if got, want := r.animalTop(young, 64), (top+motionpkg.FigurePivotY)*0.5-motionpkg.FigurePivotY; math.Abs(got-want) > 1e-9 {
 		t.Fatalf("a calf's top %v, want %v", got, want)
 	}
 	if got := r.animalTop(tall, 8); got <= top {
@@ -466,15 +475,15 @@ func TestMarksClearTheArt(t *testing.T) {
 	r.drawAnimalOverlays(ebiten.NewImage(1024, 1024), game.WorldView{Animals: []game.AnimalView{tall}}, 64, 1024, 1024)
 	lift := ofKind(*marks, "mark-lift")
 	_, topY := r.worldToScreenF(10, 10-top)
-	if len(lift) != 1 || lift[0].b > topY-float32(animalMarkAbove*64)+0.5 {
-		t.Fatalf("the mark at y %v must float %.1f tiles over the body's top (y %v)", lift, animalMarkAbove, topY)
+	if len(lift) != 1 || lift[0].b > topY-float32(creaturepkg.AnimalMarkAbove*64)+0.5 {
+		t.Fatalf("the mark at y %v must float %.1f tiles over the body's top (y %v)", lift, creaturepkg.AnimalMarkAbove, topY)
 	}
-	if barLift(top) <= top || barLift(top) >= markerLift(top) {
-		t.Fatalf("bar %v between the top %v and the mark %v", barLift(top), top, markerLift(top))
+	if creaturepkg.BarLift(top) <= top || creaturepkg.BarLift(top) >= creaturepkg.MarkerLift(top) {
+		t.Fatalf("bar %v between the top %v and the mark %v", creaturepkg.BarLift(top), top, creaturepkg.MarkerLift(top))
 	}
 	bare := &Renderer{}
-	if got := bare.animalTop(game.AnimalView{Size: 2.2}, 64); got != animalHeight(2.2) {
-		t.Fatalf("no art: top %v, want the estimate %v", got, animalHeight(2.2))
+	if got := bare.animalTop(game.AnimalView{Size: 2.2}, 64); got != creaturepkg.AnimalHeight(2.2) {
+		t.Fatalf("no art: top %v, want the estimate %v", got, creaturepkg.AnimalHeight(2.2))
 	}
 }
 
@@ -530,8 +539,8 @@ func TestRealAnimalBodies(t *testing.T) {
 	}
 	e := c.AnimalExtent()
 	t.Logf("animal reach past the cell: side %.2f, up %.2f, down %.2f tiles", e.Side, e.Up, e.Down)
-	if e.Side <= 0 || e.Side > animalSpanFallback || e.Up > animalSpanFallback || e.Down > animalSpanFallback {
-		t.Errorf("animal extent %+v outside the fallback's %v", e, animalSpanFallback)
+	if e.Side <= 0 || e.Side > artpkg.AnimalSpanFallback || e.Up > artpkg.AnimalSpanFallback || e.Down > artpkg.AnimalSpanFallback {
+		t.Errorf("animal extent %+v outside the fallback's %v", e, artpkg.AnimalSpanFallback)
 	}
 	var corpse float64
 	for k, sp := range c.Sprites {
@@ -543,8 +552,8 @@ func TestRealAnimalBodies(t *testing.T) {
 		corpse = max(corpse, m.Origin[0]/p, (float64(m.Canvas[0])-m.Origin[0])/p-1, m.Origin[1]/p, (float64(m.Canvas[1])-m.Origin[1])/p-1)
 	}
 	t.Logf("corpse reach past the cell: %.2f tiles", corpse)
-	if corpse+shadowMaxLen > visPad {
-		t.Errorf("a corpse reaches %.2f tiles past its cell and its shadow %v more: over visPad %d", corpse, shadowMaxLen, visPad)
+	if corpse+light.ShadowMaxLen > worldpkg.VisPad {
+		t.Errorf("a corpse reaches %.2f tiles past its cell and its shadow %v more: over visPad %d", corpse, light.ShadowMaxLen, worldpkg.VisPad)
 	}
 }
 
@@ -560,11 +569,11 @@ func TestRealElephantFlankPicks(t *testing.T) {
 	}}
 	r := New(&stubSim{w: 40, h: 40, world: w})
 	r.art = c
-	r.cam = camera{Zoom: 1, Placed: true}
+	r.cam = camerapkg.Camera{Zoom: 1, Placed: true}
 	r.advance()
 	for _, id := range []entity.EntityID{5, 6} {
 		v := r.last[id]
-		v.facing = faceEast
+		v.facing = artpkg.FaceEast
 		r.last[id] = v
 	}
 	for _, tile := range [][2]int{{9, 10}, {11, 10}} {

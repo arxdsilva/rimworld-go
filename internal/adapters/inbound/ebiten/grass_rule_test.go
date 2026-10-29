@@ -3,6 +3,7 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
@@ -15,16 +16,16 @@ import (
 func TestGrassMatchesRendererRule(t *testing.T) {
 	for code, name := range terrain.Names() {
 		tt := terrain.Type(code)
-		if got, want := grassGroundCode[code], plant.GrassGround(tt, false); got != want {
+		if got, want := env.GrassGroundCode[code], plant.GrassGround(tt, false); got != want {
 			t.Fatalf("%s: renderer grass ground %v, sim %v", name, got, want)
 		}
 		w := game.WorldView{TerrainW: 1, Terrain: []uint8{uint8(code)}, Grass: []uint8{1}}
-		if got := grassVisible(grassMask(w, nil), w, name, 0, 0); got != plant.GrassGround(tt, false) {
+		if got := env.GrassVisible(env.GrassMask(w, nil), w, name, 0, 0); got != plant.GrassGround(tt, false) {
 			t.Fatalf("%s: seeded grass visible=%v", name, got)
 		}
 		for y := 0; y < 16; y++ {
 			for x := 0; x < 16; x++ {
-				if plant.GrassAt(tt, x, y) && !grassGroundCode[code] {
+				if plant.GrassAt(tt, x, y) && !env.GrassGroundCode[code] {
 					t.Fatalf("%s (%d,%d): legacy grass on non-grass ground", name, x, y)
 				}
 			}

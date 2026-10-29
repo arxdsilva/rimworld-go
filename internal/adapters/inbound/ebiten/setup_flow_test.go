@@ -3,6 +3,7 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/planet"
 )
@@ -35,10 +36,10 @@ func toWorld(t *testing.T, a *App) {
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenWorldGen {
+	if a.nav.screen() != ports.ScreenWorldGen {
 		t.Fatalf("screen = %s, want world_gen", a.nav.screen())
 	}
-	ng := a.draft()
+	ng := a.wiz.Draft()
 	ng.World.SeedText, ng.World.Coverage = tinySeed, 5
 }
 
@@ -47,7 +48,7 @@ func toLanding(t *testing.T, a *App) {
 	t.Helper()
 	toWorld(t, a)
 	click(t, a, "world.generate")
-	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	runUntil(t, a, func() bool { return a.nav.screen() == ports.ScreenLanding })
 }
 
 // toPawns picks a random site and arrives at Create Characters.
@@ -56,8 +57,8 @@ func toPawns(t *testing.T, a *App) {
 	toLanding(t, a)
 	click(t, a, "land.random")
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenPawns {
-		t.Fatalf("screen = %s, want pawns (tile %d)", a.nav.screen(), a.draft().Tile)
+	if a.nav.screen() != ports.ScreenPawns {
+		t.Fatalf("screen = %s, want pawns (tile %d)", a.nav.screen(), a.wiz.Draft().Tile)
 	}
 	settleUI(t, a)
 }

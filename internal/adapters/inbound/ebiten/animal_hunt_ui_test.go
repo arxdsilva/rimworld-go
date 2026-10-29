@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"slices"
 	"testing"
 
@@ -13,24 +16,24 @@ func TestTamePredatorHuntLine(t *testing.T) {
 	t.Parallel()
 	a := testApp(nil) // the features hang off NewApp (ARCH-005)
 	rex := game.AnimalView{Species: "timber_wolf", Tame: true, State: "hunting a hare", Diet: "meat", Hunts: true, Food: 30, Rest: 80}
-	if got := animalHuntLine(rex); got != "Hunts wild animals when hungry" {
+	if got := inspectorpkg.AnimalHuntLine(rex); got != "Hunts wild animals when hungry" {
 		t.Errorf("hunt line %q", got)
 	}
-	if got := a.animalStateLine(rex); got != "Hunting a hare" {
+	if got := a.insp.Animal().AnimalStateLine(rex); got != "Hunting a hare" {
 		t.Errorf("state %q", got)
 	}
 	// Food + Rest, the diet line and the hunting note (the pane's lines)
-	if ls := a.animalPaneLines(rex); !animalHasNeeds(rex) || !slices.Contains(ls, "Diet: meat") || !slices.Contains(ls, "Hunts wild animals when hungry") {
-		t.Errorf("needs %v, pane lines %q", animalHasNeeds(rex), ls)
+	if ls := a.insp.Animal().AnimalPaneLines(rex); !inspectorpkg.AnimalHasNeeds(rex) || !slices.Contains(ls, "Diet: meat") || !slices.Contains(ls, "Hunts wild animals when hungry") {
+		t.Errorf("needs %v, pane lines %q", inspectorpkg.AnimalHasNeeds(rex), ls)
 	}
 	dog := game.AnimalView{Species: "husky", Tame: true, State: "eating from the stockpile", Diet: "meat"}
-	if ls := a.animalPaneLines(dog); animalHuntLine(dog) != "" || !slices.Contains(ls, "Diet: meat") || slices.Contains(ls, "Hunts wild animals when hungry") {
-		t.Errorf("a pet has no hunting note: %q %q", animalHuntLine(dog), ls)
+	if ls := a.insp.Animal().AnimalPaneLines(dog); inspectorpkg.AnimalHuntLine(dog) != "" || !slices.Contains(ls, "Diet: meat") || slices.Contains(ls, "Hunts wild animals when hungry") {
+		t.Errorf("a pet has no hunting note: %q %q", inspectorpkg.AnimalHuntLine(dog), ls)
 	}
-	if got := a.animalStateLine(dog); got != "Eating from the stockpile" {
+	if got := a.insp.Animal().AnimalStateLine(dog); got != "Eating from the stockpile" {
 		t.Errorf("state %q", got)
 	}
-	if got := animalDoing(game.AnimalView{State: "eating berries"}); got != "eating berries" {
+	if got := windows.AnimalDoing(game.AnimalView{State: "eating berries"}); got != "eating berries" {
 		t.Errorf("colony list %q", got)
 	}
 }
@@ -44,8 +47,8 @@ func TestTamePredatorPaneHuntLine(t *testing.T) {
 		{ID: 2, Species: "husky", Label: "husky", Name: "Fido", Tame: true, State: "eating from the stockpile", Diet: "meat", Health: 100, Food: 50, Rest: 50, X: 4, Y: 3},
 	}}}
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{Kind: selAnimal, ID: 1})
-	sp := a.animalPane(1)
+	a.sel.Select(selection.Cand{Kind: selection.Animal, ID: 1})
+	sp := a.insp.Animal().AnimalPane(1)
 	lines := sp.Lines
 	diet, note := -1, -1
 	for i, l := range lines {
@@ -67,8 +70,8 @@ func TestTamePredatorPaneHuntLine(t *testing.T) {
 			t.Errorf("bar %s = %+v (%v), want %d", label, b, ok, pct)
 		}
 	}
-	a.selectCand(selCand{Kind: selAnimal, ID: 2})
-	pet := a.animalPane(2)
+	a.sel.Select(selection.Cand{Kind: selection.Animal, ID: 2})
+	pet := a.insp.Animal().AnimalPane(2)
 	for _, l := range pet.Lines {
 		if l == "Hunts wild animals when hungry" {
 			t.Errorf("a pet has no hunting note: %q", pet.Lines)

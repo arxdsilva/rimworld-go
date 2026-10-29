@@ -6,6 +6,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -41,10 +42,10 @@ func TestAreaToolSubmenuListsAreasAndArms(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
 	a, f := areaApp(t, s)
-	a.openArchitect()
-	a.selectArchTool("allowed_area")
+	a.arch.OpenPanel()
+	a.arch.SelectTool("allowed_area")
 	f.Frame(t, a)
-	if a.uiModalTop() != areaPickID {
+	if a.uiModalTop() != architect.AreaPickID {
 		t.Fatalf("top modal %q, want the area submenu", a.uiModalTop())
 	}
 	for _, id := range []string{"areapick.row.3", "areapick.row.5", "areapick.manage"} {
@@ -57,17 +58,17 @@ func TestAreaToolSubmenuListsAreasAndArms(t *testing.T) {
 	}
 	press(t, a, f, "areapick.row.5")
 	f.Frame(t, a)
-	if a.arch.ToolID != "allowed_area" || a.areaPaintIndex() != 5 || a.uiModalTop() != "" {
-		t.Fatalf("armed tool %q area %d modal %q", a.arch.ToolID, a.areaPaintIndex(), a.uiModalTop())
+	if a.arch.ToolID != "allowed_area" || a.arch.Areas.PaintIndex() != 5 || a.uiModalTop() != "" {
+		t.Fatalf("armed tool %q area %d modal %q", a.arch.ToolID, a.arch.Areas.PaintIndex(), a.uiModalTop())
 	}
 	// A left-drag paints a rectangle on area id 5.
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 2, 3, 6, 7
-	a.submitArchitect()
+	a.arch.Submit()
 	if c := lastAreaCmd(s); c.Kind != command.PaintArea || c.Index != 5 || !c.Enabled || c.X != 2 || c.Y2 != 7 {
 		t.Fatalf("paint command %+v", c)
 	}
 	// Escape-style cancel: picking the armed card again toggles it off.
-	a.selectArchTool("allowed_area")
+	a.arch.SelectTool("allowed_area")
 	if a.arch.ToolID != "" {
 		t.Fatalf("armed card did not toggle off: %q", a.arch.ToolID)
 	}
@@ -77,12 +78,12 @@ func TestAreaClearToolEmitsClear(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
 	a, f := areaApp(t, s)
-	a.openArchitect()
-	a.selectArchTool("allowed_area_clear")
+	a.arch.OpenPanel()
+	a.arch.SelectTool("allowed_area_clear")
 	press(t, a, f, "areapick.row.3")
 	f.Frame(t, a)
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 1, 1, 2, 2
-	a.submitArchitect()
+	a.arch.Submit()
 	if c := lastAreaCmd(s); c.Kind != command.PaintArea || c.Index != 3 || c.Enabled {
 		t.Fatalf("clear command %+v", c)
 	}
@@ -93,8 +94,8 @@ func TestAreaSubmenuWithoutAreasOnlyManages(t *testing.T) {
 	s := worldStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	a.openArchitect()
-	a.selectArchTool("allowed_area")
+	a.arch.OpenPanel()
+	a.arch.SelectTool("allowed_area")
 	f.Frame(t, a)
 	if !hasWidget(a, "areapick.manage") {
 		t.Fatal("no Manage row")
@@ -106,7 +107,7 @@ func TestAreaSubmenuWithoutAreasOnlyManages(t *testing.T) {
 	}
 	press(t, a, f, "areapick.manage")
 	f.Frame(t, a)
-	if a.uiModalTop() != areasModalID {
+	if a.uiModalTop() != architect.AreasModalID {
 		t.Fatalf("Manage opened %q", a.uiModalTop())
 	}
 }
@@ -115,7 +116,7 @@ func TestAreaManagerActions(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
 	a, f := areaApp(t, s)
-	a.openAreaManager()
+	a.arch.Areas.OpenManager()
 	f.Frame(t, a)
 	press(t, a, f, "areas.invert.5")
 	if c := lastAreaCmd(s); c.Kind != command.InvertArea || c.Index != 5 {
@@ -126,7 +127,7 @@ func TestAreaManagerActions(t *testing.T) {
 	if c := lastAreaCmd(s); c.Kind != command.DeleteArea || c.Index != 5 {
 		t.Fatalf("delete %+v", c)
 	}
-	press(t, a, f, "modal."+areasModalID+".areas.new")
+	press(t, a, f, "modal."+architect.AreasModalID+".areas.new")
 	if c := lastAreaCmd(s); c.Kind != command.CreateArea || c.Name != "Area 3" {
 		t.Fatalf("new area %+v", c)
 	}
@@ -136,7 +137,7 @@ func TestAreaManagerRenames(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
 	a, f := areaApp(t, s)
-	a.openAreaManager()
+	a.arch.Areas.OpenManager()
 	f.Frame(t, a)
 	press(t, a, f, "areas.name.5") // focus the field
 	f.TypeText(t, a, "s")          // "Yard" -> "Yards"
@@ -152,14 +153,14 @@ func TestAreaDeleteConfirmsWhenUsed(t *testing.T) {
 	s := areaStub()
 	s.world.Animals = []game.AnimalView{{Tame: true, AreaRef: 3}}
 	a, f := areaApp(t, s)
-	a.openAreaManager()
+	a.arch.Areas.OpenManager()
 	f.Frame(t, a)
-	if n := a.areaUsers(3); n != 2 { // Ada and one animal
+	if n := a.arch.Areas.Users(3); n != 2 { // Ada and one animal
 		t.Fatalf("users of area 3 = %d, want 2", n)
 	}
 	press(t, a, f, "areas.delete.3")
 	f.Frame(t, a)
-	if a.uiModalTop() != areasConfirm {
+	if a.uiModalTop() != architect.AreasConfirm {
 		t.Fatalf("top modal %q, want the delete confirm", a.uiModalTop())
 	}
 	for _, c := range s.cmds {
@@ -167,7 +168,7 @@ func TestAreaDeleteConfirmsWhenUsed(t *testing.T) {
 			t.Fatal("deleted before the confirm")
 		}
 	}
-	press(t, a, f, "modal."+areasConfirm+".ok")
+	press(t, a, f, "modal."+architect.AreasConfirm+".ok")
 	if c := lastAreaCmd(s); c.Kind != command.DeleteArea || c.Index != 3 {
 		t.Fatalf("confirmed delete %+v", c)
 	}
@@ -176,17 +177,17 @@ func TestAreaDeleteConfirmsWhenUsed(t *testing.T) {
 func TestAreaNewDisabledAtCap(t *testing.T) {
 	t.Parallel()
 	s := worldStub()
-	for i := 1; i <= areasMax; i++ {
+	for i := 1; i <= architect.AreasMax; i++ {
 		s.areas = append(s.areas, game.AreaView{Index: i - 1, ID: uint16(i), Name: "A"})
 	}
 	a, f := areaApp(t, s)
-	a.openAreaManager()
+	a.arch.Areas.OpenManager()
 	f.Frame(t, a)
-	w, ok := a.uiSt().Find("modal." + areasModalID + ".areas.new")
+	w, ok := a.uiSt().Find("modal." + architect.AreasModalID + ".areas.new")
 	if !ok || !w.Disabled {
 		t.Fatalf("New area at the cap: found=%v disabled=%v", ok, w.Disabled)
 	}
-	press(t, a, f, "modal."+areasModalID+".areas.new")
+	press(t, a, f, "modal."+architect.AreasModalID+".areas.new")
 	for _, c := range s.cmds {
 		if c.Kind == command.CreateArea {
 			t.Fatal("created past the cap")
@@ -272,7 +273,7 @@ func areaBits(w, h int, cells ...[2]int) []uint64 {
 func TestAreaOverlayBakesOnVerChangeAndUsesColour(t *testing.T) {
 	t.Parallel()
 	r := stainRenderer()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	screen := ebiten.NewImage(320, 320)
 	w := game.WorldView{TerrainW: 10}
 	ar := game.AreaView{ID: 3, Name: "Indoors", Color: [4]uint8{200, 60, 20, 255}, Ver: 1,
@@ -318,8 +319,8 @@ func TestAreaOverlayFollowsArmedTool(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
 	a, f := areaApp(t, s)
-	a.openArchitect()
-	a.selectArchTool("allowed_area")
+	a.arch.OpenPanel()
+	a.arch.SelectTool("allowed_area")
 	press(t, a, f, "areapick.row.5")
 	f.Frame(t, a)
 	if a.renderer.overlays().Area.Armed != 5 {

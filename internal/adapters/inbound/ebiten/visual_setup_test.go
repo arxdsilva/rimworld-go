@@ -3,7 +3,10 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -90,10 +93,10 @@ type visualScene struct {
 
 // visArtCat is the art index every visual test shares (testArt decodes
 // lazily, so one index serves them all).
-var visArtCat *artCatalog
+var visArtCat *artpkg.Catalog
 
 // visArt returns the shared art index, or skips the test without art.
-func visArt(t testing.TB) *artCatalog {
+func visArt(t testing.TB) *artpkg.Catalog {
 	t.Helper()
 	if visArtCat == nil {
 		visArtCat = testArt(t) // skips when the art is missing
@@ -103,7 +106,7 @@ func visArt(t testing.TB) *artCatalog {
 
 // newVisualScene builds the colony (extras: with a plant and a building to
 // inspect) drawn with art, which the labels need.
-func newVisualScene(t *testing.T, art *artCatalog, extras bool) *visualScene {
+func newVisualScene(t *testing.T, art *artpkg.Catalog, extras bool) *visualScene {
 	t.Helper()
 	g := game.New(game.Config{Seed: 1, Width: 32, Height: 32})
 	s := &visualScene{g: g, items: map[int]entity.EntityID{}, shots: map[[2]int]*ebiten.Image{}}
@@ -148,7 +151,7 @@ func newVisualScene(t *testing.T, art *artCatalog, extras bool) *visualScene {
 	a := testApp(sim)
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony || a.renderer == nil {
+	if a.nav.screen() != ports.ScreenColony || a.renderer == nil {
 		t.Fatalf("startGame = %s renderer=%v", a.nav.screen(), a.renderer != nil)
 	}
 	a.art, a.renderer.art = art, art
@@ -160,7 +163,7 @@ func newVisualScene(t *testing.T, art *artCatalog, extras bool) *visualScene {
 	a.settings.Gameplay.ShowLearningHelper = false
 	s.a = a
 	t.Cleanup(func() {
-		gfx.SetScale(unitUIScale)
+		gfx.SetScale(gfx.UnitScale)
 		gfx.SetDrawTrace(nil)
 		gfx.ForcePass("hud")
 		for _, img := range s.shots {
@@ -177,7 +180,7 @@ func (s *visualScene) configure(t testing.TB, dev, ui, zoom float64) *ebiten.Ima
 	t.Helper()
 	a := s.a
 	sc := dev * ui
-	a.scale = uiScaleState{Dev: dev, UI: ui, S: sc}
+	a.scale = gfx.Scale{Dev: dev, UI: ui, S: sc}
 	a.syncUIScale()
 	pw, ph := int(math.Round(visLogicalW*sc)), int(math.Round(visLogicalH*sc))
 	a.setPhysical(pw, ph)
@@ -219,22 +222,22 @@ func (s *visualScene) update(t testing.TB) {
 func (s *visualScene) closeAll(t testing.TB) {
 	t.Helper()
 	a := s.a
-	a.closePaneTab()
-	a.clearSelections(selNone)
+	a.insp.ClosePaneTab()
+	a.sel.Clear(selection.None)
 	a.win.Open = false
-	a.closeArchitect()
-	a.closeFloat()
+	a.arch.ClosePanel()
+	a.ord.CloseFloat()
 	for i := 0; i < 8 && len(a.uiSt().Modals) > 0; i++ {
 		a.uiCloseTop()
 	}
-	for i := 0; i < 8 && a.nav.screen() != screenColony; i++ {
+	for i := 0; i < 8 && a.nav.screen() != ports.ScreenColony; i++ {
 		a.apply(intent{kind: intentBack})
 	}
 	if a.nav.overlay() != overlayNone {
 		a.apply(intent{kind: intentResume})
 	}
 	a.insp.Tab, a.opt.Tab = "character", ""
-	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone || len(a.uiSt().Modals) > 0 {
+	if a.nav.screen() != ports.ScreenColony || a.nav.overlay() != overlayNone || len(a.uiSt().Modals) > 0 {
 		t.Fatalf("closeAll left %s/%s with %d modal(s)", a.nav.screen(), a.nav.overlay(), len(a.uiSt().Modals))
 	}
 }
@@ -242,15 +245,15 @@ func (s *visualScene) closeAll(t testing.TB) {
 // pan moves the camera by whole tiles (the world moves the other way).
 func (s *visualScene) pan(dx, dy int) {
 	r := s.a.renderer
-	t := r.tilePx()
+	t := r.cam.Tile()
 	r.cam.OffsetX += float64(dx) * t
 	r.cam.OffsetY += float64(dy) * t
 }
 
 // frame draws one full App frame and returns everything the canvas drew.
-func (s *visualScene) frame(screen *ebiten.Image) []traceEvent {
-	var ev []traceEvent
-	gfx.SetDrawTrace(func(e traceEvent) { ev = append(ev, e) })
+func (s *visualScene) frame(screen *ebiten.Image) []gfx.TraceEvent {
+	var ev []gfx.TraceEvent
+	gfx.SetDrawTrace(func(e gfx.TraceEvent) { ev = append(ev, e) })
 	defer func() { gfx.SetDrawTrace(nil) }()
 	screen.Clear()
 	s.a.Draw(screen)
@@ -258,8 +261,8 @@ func (s *visualScene) frame(screen *ebiten.Image) []traceEvent {
 }
 
 // passOf returns the events drawn in one pass.
-func visPass(ev []traceEvent, pass string) []traceEvent {
-	var out []traceEvent
+func visPass(ev []gfx.TraceEvent, pass string) []gfx.TraceEvent {
+	var out []gfx.TraceEvent
 	for _, e := range ev {
 		if e.Pass == pass {
 			out = append(out, e)
@@ -269,7 +272,7 @@ func visPass(ev []traceEvent, pass string) []traceEvent {
 }
 
 // summary is a compact listing of events for failure messages.
-func visSummary(ev []traceEvent, max int) string {
+func visSummary(ev []gfx.TraceEvent, max int) string {
 	out := ""
 	for i, e := range ev {
 		if i == max {

@@ -1,6 +1,17 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"slices"
 	"strings"
 	"testing"
@@ -24,9 +35,9 @@ func (s *worldSim) World() game.WorldView { return s.w }
 func appWith(sim Simulation, mod func(*AppConfig), got *[]NewGame) *App {
 	cfg := AppConfig{
 		Version:       "test",
-		LoadArt:       func() (*artCatalog, error) { return nil, nil },
+		LoadArt:       func() (*artpkg.Catalog, error) { return nil, nil },
 		LoadSplash:    func() (*ebiten.Image, error) { return nil, nil },
-		LoadMenuScene: func() (*menuDiorama, error) { return nil, nil },
+		LoadMenuScene: func() (*mainmenu.Diorama, error) { return nil, nil },
 		NewSim: func(ng NewGame) (Simulation, error) {
 			if got != nil {
 				*got = append(*got, ng)
@@ -66,7 +77,7 @@ func TestPickerListsEveryBiomeAndStartPassesTheChoice(t *testing.T) {
 func TestLandingDetailShowsClimateGroundAndWildlife(t *testing.T) {
 	t.Parallel()
 	id, _ := biome.Parse("boreal_forest")
-	lines := strings.Join(landingDetail(game.BiomeInfoOf(id), 60), "\n")
+	lines := strings.Join(wizard.LandingDetail(game.BiomeInfoOf(id), 60), "\n")
 	for _, want := range []string{"Boreal forest", "winter low", "summer high", "Growing", "Ground", "Plants", "Wildlife"} {
 		if !strings.Contains(lines, want) {
 			t.Errorf("detail lacks %q:\n%s", want, lines)
@@ -86,7 +97,7 @@ func TestWorldStepSeedFieldAndDice(t *testing.T) {
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
 	click(t, a, "wizard.next")
-	ng := a.draft()
+	ng := a.wiz.Draft()
 	if ng.World.SeedText != "99" {
 		t.Fatalf("seed = %q, want the configured 99", ng.World.SeedText)
 	}
@@ -96,7 +107,7 @@ func TestWorldStepSeedFieldAndDice(t *testing.T) {
 	}
 	ng.World.SeedText, ng.World.Coverage = tinySeed, 5
 	click(t, a, "world.generate")
-	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	runUntil(t, a, func() bool { return a.nav.screen() == ports.ScreenLanding })
 	if ng.World.SeedText != tinySeed || ng.Planet == nil {
 		t.Fatalf("generate: seed=%q planet=%v", ng.World.SeedText, ng.Planet != nil)
 	}
@@ -107,48 +118,48 @@ func TestAnimalInspectorLines(t *testing.T) {
 	a := testApp(nil) // the features hang off NewApp (ARCH-005)
 	doe := game.AnimalView{Species: "goat", Tame: true, Female: true, State: "feeding", Food: 78, Rest: 61,
 		AgeDays: 34, Adult: true, Stage: "adult", Diet: "plants", Pregnant: true, PregPct: 40, Product: "milk", ProductPct: 70, Scale: 1}
-	if got := a.animalStateLine(doe); got != "Feeding" {
+	if got := a.insp.Animal().AnimalStateLine(doe); got != "Feeding" {
 		t.Errorf("state = %q", got)
 	}
-	if got := animalLifeLine(doe); got != "Female | adult | 34 days old" {
+	if got := inspector.AnimalLifeLine(doe); got != "Female | adult | 34 days old" {
 		t.Errorf("life = %q", got)
 	}
-	if got := animalPregLine(doe); got != "Pregnant 40%" {
+	if got := inspector.AnimalPregLine(doe); got != "Pregnant 40%" {
 		t.Errorf("preg = %q", got)
 	}
-	if got := animalDietLine(doe); got != "Diet: plants" {
+	if got := inspector.AnimalDietLine(doe); got != "Diet: plants" {
 		t.Errorf("diet = %q", got)
 	}
 	// Food + Rest, the product, the pregnancy and the diet (the pane's lines)
-	ls := a.animalPaneLines(doe)
+	ls := a.insp.Animal().AnimalPaneLines(doe)
 	for _, want := range []string{"Pregnant 40%", "Diet: plants", "Milk: 70%"} {
 		if !slices.Contains(ls, want) {
 			t.Errorf("pane lines %q lack %q", ls, want)
 		}
 	}
-	if !animalHasNeeds(doe) {
+	if !inspector.AnimalHasNeeds(doe) {
 		t.Error("a goat has Food and Rest")
 	}
 	kid := game.AnimalView{State: "resting", Female: false, AgeDays: 6, Stage: "young", Scale: 0.6}
-	if got := animalLifeLine(kid); got != "Male | young | 6 days old" {
+	if got := inspector.AnimalLifeLine(kid); got != "Male | young | 6 days old" {
 		t.Errorf("juvenile = %q", got)
 	}
 	wild := game.AnimalView{State: "wandering"}
-	if got := a.animalStateLine(wild); got != "Wild | Wandering" {
+	if got := a.insp.Animal().AnimalStateLine(wild); got != "Wild | Wandering" {
 		t.Errorf("wild state = %q", got)
 	}
-	if animalHasNeeds(game.AnimalView{}) {
+	if inspector.AnimalHasNeeds(game.AnimalView{}) {
 		t.Error("an animal view without needs has no Food and Rest")
 	}
 }
 
 func TestJuvenilePoseShrinks(t *testing.T) {
 	t.Parallel()
-	ps := youngPose(pose{Px: 0.5, Py: 0.55, Sy: 1.01}, 0.6)
+	ps := creature.YoungPose(motionpkg.Pose{Px: 0.5, Py: 0.55, Sy: 1.01}, 0.6)
 	if ps.Sx != 0.6 || ps.Sy < 0.6 || ps.Sy > 0.61 {
 		t.Fatalf("pose = %+v", ps)
 	}
-	if youngPose(pose{}, 1).Sx != 0 || youngPose(pose{}, 0).Sx != 0 {
+	if creature.YoungPose(motionpkg.Pose{}, 1).Sx != 0 || creature.YoungPose(motionpkg.Pose{}, 0).Sx != 0 {
 		t.Fatal("an adult keeps its pose")
 	}
 }
@@ -209,18 +220,18 @@ func TestColonyListColumns(t *testing.T) {
 	t.Parallel()
 	an := game.AnimalView{Female: true, AgeDays: 20, Adult: true, State: "feeding", Product: "wool", ProductPct: 55, Pregnant: true, PregPct: 40}
 	for got, want := range map[string]string{
-		animalSexLetter(an):                  "F",
-		animalAgeText(an):                    "20d",
-		animalProductText(an):                "wool 55%",
-		animalPregCell(an):                   "40%",
-		animalDoing(an):                      "feeding",
-		animalProductText(game.AnimalView{}): "-",
+		windows.AnimalSexLetter(an):                  "F",
+		windows.AnimalAgeText(an):                    "20d",
+		windows.AnimalProductText(an):                "wool 55%",
+		windows.AnimalPregCell(an):                   "40%",
+		windows.AnimalDoing(an):                      "feeding",
+		windows.AnimalProductText(game.AnimalView{}): "-",
 	} {
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	}
-	if got := animalAgeText(game.AnimalView{AgeDays: 5, State: "resting"}); !strings.Contains(got, "young") {
+	if got := windows.AnimalAgeText(game.AnimalView{AgeDays: 5, State: "resting"}); !strings.Contains(got, "young") {
 		t.Errorf("juvenile age = %q", got)
 	}
 }
@@ -232,13 +243,13 @@ func TestTroughFilterEmitsCommand(t *testing.T) {
 	a := appWith(sim, nil, nil)
 	a.finishBoot()
 	a.startGame()
-	a.selectBuildingAt(4, 4)
-	if _, ok := a.selectedBuilding(); !ok {
+	a.insp.Building().SelectBuildingAt(4, 4)
+	if _, ok := a.insp.SelectedBuilding(); !ok {
 		t.Fatal("the trough should be selected")
 	}
 	// the filter is one command button with the three filters as options
 	// (PLAY-018); picking an option enqueues its command
-	filter, ok := bldCmd(a.buildingCommands(77), "cmd.bldg.trough")
+	filter, ok := bldCmd(a.insp.Building().BuildingCommands(77), "cmd.bldg.trough")
 	if !ok || filter.Options == nil {
 		t.Fatal("the trough should offer its filter options")
 	}
@@ -280,11 +291,11 @@ func TestPenAnimalsListsTheTroughsHerd(t *testing.T) {
 			{ID: 1, Tame: true, X: 1, Y: 1}, {ID: 2, Tame: true, X: 9, Y: 9}, {ID: 3, Tame: false, X: 2, Y: 1},
 		},
 	}
-	got := penAnimals(w, 2, 2)
+	got := inspector.PenAnimals(w, 2, 2)
 	if len(got) != 1 || got[0].ID != 1 {
 		t.Fatalf("pen animals = %+v", got)
 	}
-	if penAnimals(w, 8, 8) != nil {
+	if inspector.PenAnimals(w, 8, 8) != nil {
 		t.Fatal("a trough by no pen has no herd")
 	}
 }
@@ -300,7 +311,7 @@ func TestMessageFocusJumpsToTheCreature(t *testing.T) {
 	a.startGame()
 	a.sw, a.sh = 1280, 720
 	found := false
-	for _, b := range a.messageButtons(a.sw) {
+	for _, b := range a.chrome.Right().MessageButtons(a.sw) {
 		found = found || b.ID == "msg.0"
 	}
 	if !found {
@@ -314,15 +325,15 @@ func TestMessageFocusJumpsToTheCreature(t *testing.T) {
 
 func TestHandleWorkColumn(t *testing.T) {
 	t.Parallel()
-	if workColumns[11] != "Hndl" {
-		t.Fatalf("column 11 = %q", workColumns[11])
+	if windows.WorkColumns[11] != "Hndl" {
+		t.Fatalf("column 11 = %q", windows.WorkColumns[11])
 	}
-	if c, ok := workTypeForCol(11); !ok || c != command.WorkHandle {
+	if c, ok := windows.WorkTypeForCol(11); !ok || c != command.WorkHandle {
 		t.Fatalf("column 11 maps to %v, %v", c, ok)
 	}
 	p := game.PawnView{Priorities: make([]int, 12)}
 	p.Priorities[11] = 2
-	if workPriority(p, 11) != 2 {
+	if windows.WorkPriority(p, 11) != 2 {
 		t.Fatal("the Handle priority reads from the pawn's priorities")
 	}
 }
@@ -331,13 +342,13 @@ func TestNewBiomeKeysFallBackWithoutArt(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{}
 	for _, terr := range []string{"sand", "marsh", "ice", "soil", "unheard_of"} {
-		if k, _ := r.terrainTileKey(terr, 1); k == "" {
+		if k, _ := r.pipe().TerrainTileKey(terr, 1); k == "" {
 			t.Errorf("terrain %q has no key", terr)
 		}
 	}
 	// no art loaded: every new plant still resolves to a key
 	for _, sp := range []string{"pine", "jungle_tree", "cactus", "shrub", "reeds"} {
-		k, sc, ok := newPlantKey(game.PlantView{Species: sp, X: 1, Y: 2, Growth: 50}, 7)
+		k, sc, ok := world.NewPlantKey(game.PlantView{Species: sp, X: 1, Y: 2, Growth: 50}, 7)
 		if !ok || k == "" || sc <= 0 {
 			t.Errorf("plant %q: %q %v %v", sp, k, sc, ok)
 		}
@@ -346,20 +357,20 @@ func TestNewBiomeKeysFallBackWithoutArt(t *testing.T) {
 		}
 	}
 	for _, kind := range []string{"milk", "wool", "egg", "fertile egg", "ember oil", "wool parka", "wool carpet"} {
-		if itemSprite(kind) == "" {
+		if world.ItemSprite(kind) == "" {
 			t.Errorf("item %q has no sprite key", kind)
 		}
 	}
-	if k := troughKey(game.BuildingView{TroughFill: 3, Facing: "east"}); k != "furniture/feeding_trough_full_east" {
+	if k := world.TroughKey(game.BuildingView{TroughFill: 3, Facing: "east"}); k != "furniture/feeding_trough_full_east" {
 		t.Errorf("trough key = %q", k)
 	}
-	if buildSprite("feeding trough", "", 0, false, false) == "" {
+	if architect.BuildSprite("feeding trough", "", 0, false, false) == "" {
 		t.Error("the trough ghost has a sprite")
 	}
 	for _, d := range game.Biomes() {
-		_ = grassTint(d.Key)
+		_ = spritepkg.GrassTint(d.Key)
 	}
-	if grassTint("desert") == noCS || grassTint("temperate_forest") != noCS {
+	if spritepkg.GrassTint("desert") == spritepkg.NoCS || spritepkg.GrassTint("temperate_forest") != spritepkg.NoCS {
 		t.Error("desert grass is tinted dry; temperate stays as drawn")
 	}
 }

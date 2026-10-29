@@ -2,6 +2,8 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"testing"
 )
 
@@ -53,12 +55,12 @@ func TestBoxSelectPhysical(t *testing.T) {
 	}{{"dev2", 2, 0}, {"ui1.5", 1, 150}} {
 		t.Run(c.name, func(t *testing.T) {
 			a, f := hidpiColony(t, c.dev, c.ui)
-			f.Drag(t, a, mbLeft, 20, 18, 22, 20, 0)
-			if !a.grouped() && !(a.renderer.HasSelect() && a.renderer.Selected() == 7) {
+			f.Drag(t, a, inputframe.Left, 20, 18, 22, 20, 0)
+			if !a.sel.Grouped() && !(a.renderer.HasSelect() && a.renderer.Selected() == 7) {
 				t.Fatal("a box around the pawn did not select it")
 			}
-			if a.grouped() {
-				if _, ids := a.selectionSet(); len(ids) != 1 || ids[0] != 7 {
+			if a.sel.Grouped() {
+				if _, ids := a.sel.SelectionSet(); len(ids) != 1 || ids[0] != 7 {
 					t.Fatalf("group %v", ids)
 				}
 			}
@@ -70,8 +72,8 @@ func TestBoxSelectPhysical(t *testing.T) {
 // does not select it (guards against a logical/physical mix-up).
 func TestBoxSelectMissesPhysical(t *testing.T) {
 	a, f := hidpiColony(t, 2, 0)
-	f.Drag(t, a, mbLeft, 10, 10, 12, 12, 0)
-	if a.grouped() || (a.renderer.HasSelect() && a.renderer.Selected() == 7) {
+	f.Drag(t, a, inputframe.Left, 10, 10, 12, 12, 0)
+	if a.sel.Grouped() || (a.renderer.HasSelect() && a.renderer.Selected() == 7) {
 		t.Fatal("a box far from the pawn selected it")
 	}
 }
@@ -79,12 +81,12 @@ func TestBoxSelectMissesPhysical(t *testing.T) {
 // TestStrokesKeepApparentThickness: zone and path strokes scale with dev.
 func TestStrokesKeepApparentThickness(t *testing.T) {
 	withMapScale(t, 1, 1)
-	one := zoneStroke(1)
+	one := overlay.ZoneStroke(1)
 	withMapScale(t, 2, 1)
-	if two := zoneStroke(1); two != 2*one {
+	if two := overlay.ZoneStroke(1); two != 2*one {
 		t.Fatalf("zone stroke %v at dev 2, want %v", two, 2*one)
 	}
-	if got, want := pathStroke(1), float32(2*1.5); got != want {
+	if got, want := overlay.PathStroke(1), float32(2*1.5); got != want {
 		t.Fatalf("path stroke %v at dev 2, want %v", got, want)
 	}
 }

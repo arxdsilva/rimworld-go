@@ -6,6 +6,8 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/planet"
 	"rimworld-go/internal/platform/input"
@@ -32,8 +34,8 @@ func TestSeedFieldFreeTextAndDice(t *testing.T) {
 	}
 	f.Key(t, a, "A", input.ModCtrl)
 	f.TypeText(t, a, strings.Repeat("a", 40))
-	if n := len([]rune(ng.World.SeedText)); n != maxSeedText {
-		t.Fatalf("seed is %d characters, want at most %d", n, maxSeedText)
+	if n := len([]rune(ng.World.SeedText)); n != wizard.MaxSeedText {
+		t.Fatalf("seed is %d characters, want at most %d", n, wizard.MaxSeedText)
 	}
 	// Clearing the field and leaving it never leaves an empty seed.
 	f.Key(t, a, "A", input.ModCtrl)
@@ -48,7 +50,7 @@ func TestSeedFieldFreeTextAndDice(t *testing.T) {
 	if ng.World.SeedText == before || !strings.Contains(ng.World.SeedText, "-") {
 		t.Fatalf("dice gave %q (was %q)", ng.World.SeedText, before)
 	}
-	if ng.Builder != nil || ng.Planet != nil || a.uiModalOpen() {
+	if ng.Builder != nil || ng.Planet != nil || a.uiSt().ModalOpen() {
 		t.Fatal("the dice only replaces the text")
 	}
 }
@@ -56,17 +58,17 @@ func TestSeedFieldFreeTextAndDice(t *testing.T) {
 func TestWorldWordsMakeValidTwoWordSeeds(t *testing.T) {
 	t.Parallel()
 	for i := 0; i < 200; i++ {
-		p := randomWorldPhrase()
-		if len(p) < 3 || len([]rune(p)) > maxSeedText || strings.Count(p, "-") != 1 {
+		p := wizard.RandomWorldPhrase()
+		if len(p) < 3 || len([]rune(p)) > wizard.MaxSeedText || strings.Count(p, "-") != 1 {
 			t.Fatalf("phrase %q", p)
 		}
 		for _, r := range p {
-			if !seedTextRune(r) {
+			if !wizard.SeedTextRune(r) {
 				t.Fatalf("phrase %q has %q", p, r)
 			}
 		}
 	}
-	if len(worldAdjectives) < 40 || len(worldNouns) < 40 {
+	if len(wizard.WorldAdjectives) < 40 || len(wizard.WorldNouns) < 40 {
 		t.Fatal("the word lists are too short for variety")
 	}
 }
@@ -78,22 +80,22 @@ func TestGenerateRunsBuilderToDone(t *testing.T) {
 	phases := map[string]bool{}
 	var last float32
 	click(t, a, "world.generate")
-	if !a.uiModalOpen() || a.uiModalTop() != worldProgress || ng.Builder == nil {
+	if !a.uiSt().ModalOpen() || a.uiModalTop() != wizard.WorldProgress || ng.Builder == nil {
 		t.Fatalf("modal=%q builder=%v", a.uiModalTop(), ng.Builder != nil)
 	}
-	for i := 0; i < 4000 && a.nav.screen() == screenWorldGen; i++ {
+	for i := 0; i < 4000 && a.nav.screen() == ports.ScreenWorldGen; i++ {
 		ng.GenStep = 100 // small steps, so the phases show one by one
 		f.Frame(t, a)
 		if ng.Builder != nil {
-			phases[worldPhaseName(ng.GenPhase)] = true
+			phases[wizard.WorldPhaseName(ng.GenPhase)] = true
 			if ng.GenFrac < last {
 				t.Fatalf("progress went back: %v after %v", ng.GenFrac, last)
 			}
 			last = ng.GenFrac
 		}
 	}
-	if a.nav.screen() != screenLanding || ng.Planet == nil || ng.Builder != nil || a.uiModalOpen() {
-		t.Fatalf("screen=%s planet=%v builder=%v modal=%v", a.nav.screen(), ng.Planet != nil, ng.Builder != nil, a.uiModalOpen())
+	if a.nav.screen() != ports.ScreenLanding || ng.Planet == nil || ng.Builder != nil || a.uiSt().ModalOpen() {
+		t.Fatalf("screen=%s planet=%v builder=%v modal=%v", a.nav.screen(), ng.Planet != nil, ng.Builder != nil, a.uiSt().ModalOpen())
 	}
 	if ng.Planet.Params.SeedText != tinySeed || ng.Planet.TileCount() < 500 || ng.PlanetKey != ng.World.Key() {
 		t.Fatalf("planet seed=%q tiles=%d", ng.Planet.Params.SeedText, ng.Planet.TileCount())
@@ -108,11 +110,11 @@ func TestGenerateSameParamsSkips(t *testing.T) {
 	a, f := worldApp(t)
 	ng := a.ng
 	click(t, a, "world.generate")
-	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	runUntil(t, a, func() bool { return a.nav.screen() == ports.ScreenLanding })
 	p := ng.Planet
 	click(t, a, "wizard.back")
 	f.Frame(t, a)
-	if a.nav.screen() != screenWorldGen || ng.Planet != p {
+	if a.nav.screen() != ports.ScreenWorldGen || ng.Planet != p {
 		t.Fatalf("Back keeps the planet: screen=%s", a.nav.screen())
 	}
 	w, ok := a.uiSt().Find("world.generate")
@@ -120,7 +122,7 @@ func TestGenerateSameParamsSkips(t *testing.T) {
 		t.Fatalf("the forward button says %q, want Next for a matching world", w.Label)
 	}
 	click(t, a, "world.generate")
-	if a.nav.screen() != screenLanding || ng.Planet != p || ng.Builder != nil || a.uiModalOpen() {
+	if a.nav.screen() != ports.ScreenLanding || ng.Planet != p || ng.Builder != nil || a.uiSt().ModalOpen() {
 		t.Fatalf("Next must reuse the planet: screen=%s builder=%v", a.nav.screen(), ng.Builder != nil)
 	}
 }
@@ -130,7 +132,7 @@ func TestParamsChangeMarksPlanetStale(t *testing.T) {
 	a, f := worldApp(t)
 	ng := a.ng
 	click(t, a, "world.generate")
-	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	runUntil(t, a, func() bool { return a.nav.screen() == ports.ScreenLanding })
 	click(t, a, "land.random")
 	if ng.Tile < 0 {
 		t.Fatal("no tile chosen")
@@ -152,7 +154,7 @@ func TestParamsChangeMarksPlanetStale(t *testing.T) {
 	}
 	// A slider drag changes a setting through the real widget too.
 	ng.World.Rain = 2
-	a.draft().World.Temp = 1
+	a.wiz.Draft().World.Temp = 1
 	f.Frame(t, a)
 	if ng.WorldReady() {
 		t.Fatal("temperature is part of the world's key")
@@ -164,7 +166,7 @@ func TestFactionTableAddRemoveReset(t *testing.T) {
 	a, f := worldApp(t)
 	ng := a.ng
 	count := func(ty faction.Type) int {
-		if i := slotIndex(ng.World.Factions, ty); i >= 0 {
+		if i := wizard.SlotIndex(ng.World.Factions, ty); i >= 0 {
 			return ng.World.Factions[i].Count
 		}
 		return -1
@@ -190,17 +192,17 @@ func TestFactionTableAddRemoveReset(t *testing.T) {
 	}
 	// Add: a removed type comes back from the list with a count of 1.
 	click(t, a, "world.facAdd")
-	if !a.uiModalOpen() {
+	if !a.uiSt().ModalOpen() {
 		t.Fatal("Add faction opens a list")
 	}
-	choices := addableTypes(ng.World.Factions)
-	if len(choices) == 0 || slotIndex(ng.World.Factions, faction.Drifters) >= 0 && count(faction.Drifters) >= faction.DefOf(faction.Drifters).MaxCount {
+	choices := wizard.AddableTypes(ng.World.Factions)
+	if len(choices) == 0 || wizard.SlotIndex(ng.World.Factions, faction.Drifters) >= 0 && count(faction.Drifters) >= faction.DefOf(faction.Drifters).MaxCount {
 		t.Fatalf("addable = %v", choices)
 	}
 	f.Frame(t, a)
 	press(t, a, f, "modal.pick.world.facAdd.pick.list.0")
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("picking closes the list")
 	}
 	if count(choices[0]) < 1 {
@@ -217,10 +219,10 @@ func TestFactionTableAddRemoveReset(t *testing.T) {
 		}
 	}
 	// The Swarm is locked: it has no controls and no slot.
-	if hasWidget(a, "world.fac.swarm.inc") || slotIndex(ng.World.Factions, faction.Swarm) >= 0 {
+	if hasWidget(a, "world.fac.swarm.inc") || wizard.SlotIndex(ng.World.Factions, faction.Swarm) >= 0 {
 		t.Fatal("the Swarm is always present and can't be edited")
 	}
-	for _, d := range addableTypes(nil) {
+	for _, d := range wizard.AddableTypes(nil) {
 		if d == faction.Swarm {
 			t.Fatal("the Swarm is never addable")
 		}
@@ -229,17 +231,17 @@ func TestFactionTableAddRemoveReset(t *testing.T) {
 
 func TestNoHostileWarning(t *testing.T) {
 	t.Parallel()
-	if !hostileCapable(faction.DefaultSlots()) {
+	if !wizard.HostileCapable(faction.DefaultSlots()) {
 		t.Fatal("the defaults include Freebooters and Drifters")
 	}
 	peaceful := []faction.Slot{{Type: faction.Settlers, Count: 2}, {Type: faction.Clans, Count: 2}}
-	if hostileCapable(peaceful) {
+	if wizard.HostileCapable(peaceful) {
 		t.Fatal("settlers and clans alone can't raid")
 	}
-	if hostileCapable([]faction.Slot{{Type: faction.Freebooters, Count: 0}}) {
+	if wizard.HostileCapable([]faction.Slot{{Type: faction.Freebooters, Count: 0}}) {
 		t.Fatal("a zero count is nobody")
 	}
-	if !hostileCapable(append(peaceful, faction.Slot{Type: faction.Freebooters, Count: 1})) {
+	if !wizard.HostileCapable(append(peaceful, faction.Slot{Type: faction.Freebooters, Count: 1})) {
 		t.Fatal("freebooters make raids possible")
 	}
 	// The screen draws the warning without a problem in both states.
@@ -247,7 +249,7 @@ func TestNoHostileWarning(t *testing.T) {
 	a.ng.World.Factions = peaceful
 	f.Frame(t, a)
 	a.Draw(ebiten.NewImage(a.sw, a.sh))
-	if !strings.Contains(noHostileWarning, "No faction can raid you") {
+	if !strings.Contains(wizard.NoHostileWarning, "No faction can raid you") {
 		t.Fatal("warning text")
 	}
 }
@@ -265,15 +267,15 @@ func TestCancelDiscards(t *testing.T) {
 	}
 	press(t, a, f, "modal.world.progress.cancel")
 	f.Frame(t, a)
-	if ng.Builder != nil || ng.Planet != nil || a.uiModalOpen() || a.nav.screen() != screenWorldGen {
-		t.Fatalf("builder=%v planet=%v modal=%v screen=%s", ng.Builder != nil, ng.Planet != nil, a.uiModalOpen(), a.nav.screen())
+	if ng.Builder != nil || ng.Planet != nil || a.uiSt().ModalOpen() || a.nav.screen() != ports.ScreenWorldGen {
+		t.Fatalf("builder=%v planet=%v modal=%v screen=%s", ng.Builder != nil, ng.Planet != nil, a.uiSt().ModalOpen(), a.nav.screen())
 	}
 	// Esc cancels as well.
 	click(t, a, "world.generate")
 	ng.GenStep = 50
 	f.Frame(t, a)
 	f.Key(t, a, "Escape", 0)
-	if ng.Builder != nil || a.uiModalOpen() || a.nav.screen() != screenWorldGen {
+	if ng.Builder != nil || a.uiSt().ModalOpen() || a.nav.screen() != ports.ScreenWorldGen {
 		t.Fatal("Esc on the progress modal cancels the generation")
 	}
 }
@@ -308,7 +310,7 @@ func TestResetAllConfirmsThenRestoresDefaults(t *testing.T) {
 	f.Frame(t, a)
 	press(t, a, f, "modal.world.resetAll.confirm.ok")
 	f.Frame(t, a)
-	if ng.World.Rain != 2 || ng.World.Coverage != defaultCoverage || ng.World.SeedText == tinySeed || ng.World.SeedText == "" {
+	if ng.World.Rain != 2 || ng.World.Coverage != wizard.DefaultCoverage || ng.World.SeedText == tinySeed || ng.World.SeedText == "" {
 		t.Fatalf("world = %+v", ng.World)
 	}
 }
@@ -317,11 +319,11 @@ func TestCoverageSliderOffersFiveOnlyInDevMode(t *testing.T) {
 	t.Parallel()
 	a, f := worldApp(t)
 	a.ng.World.Coverage = 30
-	if got := a.coverageOptions(); len(got) != 3 || got[0] != 30 {
+	if got := a.wiz.CoverageOptions(); len(got) != 3 || got[0] != 30 {
 		t.Fatalf("options = %v", got)
 	}
 	a.settings.Gameplay.DevMode = true
-	if got := a.coverageOptions(); len(got) != 4 || got[0] != 5 {
+	if got := a.wiz.CoverageOptions(); len(got) != 4 || got[0] != 5 {
 		t.Fatalf("dev options = %v", got)
 	}
 	f.Frame(t, a)

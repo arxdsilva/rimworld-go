@@ -8,6 +8,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/application/game"
 )
 
@@ -15,7 +17,7 @@ import (
 // logical and returns the physical size.
 func rightAtScale(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	t.Helper()
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	a.devFn = func() float64 { return 1 } // not the test machine's Retina factor
 	st := a.settings
 	st.Accessibility.UIScaleAuto, st.Accessibility.UIScale = false, int(s*100)
@@ -36,27 +38,27 @@ func TestRightColumnCountsAreTheRealOnes(t *testing.T) {
 	s.world.Letters = []game.LetterView{{ID: 1, Kind: "info", Title: "One", X: -1, Y: -1}, {ID: 2, Kind: "good", Title: "Two", X: -1, Y: -1}}
 	s.world.Messages = []game.MessageView{{Tick: 1, Text: "a"}, {Tick: 2, Text: "b"}, {Tick: 3, Text: "c"}}
 	a, _ := colonyApp(t, s)
-	if got, want := a.alertCount(), len(a.currentAlerts()); got != want || got == 0 {
+	if got, want := a.chrome.Alerts().Count(), len(a.currentAlerts()); got != want || got == 0 {
 		t.Errorf("alertCount() = %d, want %d", got, want)
 	}
-	if got := a.letterCount(); got != 2 {
+	if got := a.chrome.Right().LetterCount(); got != 2 {
 		t.Errorf("letterCount() = %d, want 2", got)
 	}
-	if got := a.messageCount(); got != 3 {
+	if got := a.chrome.Right().MessageCount(); got != 3 {
 		t.Errorf("messageCount() = %d, want 3", got)
 	}
 	l := a.hud()
-	if l.LetterRows != 2 || l.AlertRows != a.alertCount() || l.Messages.Empty() {
+	if l.LetterRows != 2 || l.AlertRows != a.chrome.Alerts().Count() || l.Messages.Empty() {
 		t.Errorf("layout rows: letters %d, alerts %d, messages %+v", l.LetterRows, l.AlertRows, l.Messages)
 	}
 	// no colony: nothing to count
 	b := testApp(&stubSim{w: 4, h: 4})
-	if b.alertCount()+b.letterCount()+b.messageCount() != 0 {
+	if b.chrome.Alerts().Count()+b.chrome.Right().LetterCount()+b.chrome.Right().MessageCount() != 0 {
 		t.Error("counts without a renderer")
 	}
 	// F11 hides the HUD, so it also hides the column's buttons
 	a.chrome.Hidden = true
-	if len(a.rightColumnButtons(a.sw)) != 0 {
+	if len(a.chrome.Right().Buttons(a.sw)) != 0 {
 		t.Error("buttons while the interface is hidden")
 	}
 }
@@ -69,15 +71,15 @@ func TestRightClickOverTheColumnIsConsumed(t *testing.T) {
 	s.world.Letters = []game.LetterView{{ID: 1, Kind: "info", Title: "One", X: -1, Y: -1}}
 	a, _ := colonyApp(t, s)
 	l := a.hud()
-	for name, r := range map[string]rect{"alerts": l.Alerts, "letters": l.Letters} {
+	for name, r := range map[string]gfx.Rect{"alerts": l.Alerts, "letters": l.Letters} {
 		if r.Empty() {
 			t.Fatalf("no %s rect", name)
 		}
-		if !a.rightClickRightColumn(int(r.X+r.W/2), int(r.Y+r.H/2)) {
+		if !a.chrome.Right().RightClick(int(r.X+r.W/2), int(r.Y+r.H/2)) {
 			t.Errorf("right-click on the %s rect not taken", name)
 		}
 	}
-	if a.rightClickRightColumn(10, int(l.Tabs.Y)-100) {
+	if a.chrome.Right().RightClick(10, int(l.Tabs.Y)-100) {
 		t.Error("right-click on the map taken")
 	}
 }
@@ -114,7 +116,7 @@ func TestRightHoverCardsForLettersAndFoldedRows(t *testing.T) {
 	cursorOver(a, rows[len(rows)-1].r) // the newest letter
 	card, _, ok = a.rightHover(l)
 	last := rows[len(rows)-1].letter
-	if !ok || card.title != last.Title || card.clr != letterColor(last.Kind) || !strings.Contains(card.body, last.Text) {
+	if !ok || card.title != last.Title || card.clr != hud.LetterColor(last.Kind) || !strings.Contains(card.body, last.Text) {
 		t.Fatalf("letter card = %+v %v", card, ok)
 	}
 	// a long letter text is cut in the preview
@@ -127,7 +129,7 @@ func TestRightHoverCardsForLettersAndFoldedRows(t *testing.T) {
 
 	// folded alerts
 	b, _ := colonyApp(t, rightWorld())
-	lay := computeHUDLayout(1280, 720, hudState{Alerts: len(b.currentAlerts()), Letters: 4, GlobalH: 380, LearnH: 28})
+	lay := hudlayout.Compute(1280, 720, hudlayout.Inputs{Alerts: len(b.currentAlerts()), Letters: 4, GlobalH: 380, LearnH: 28})
 	arows := b.alertRows(lay)
 	more := arows[len(arows)-1]
 	if more.more == 0 {
@@ -152,22 +154,22 @@ func TestRightColumnWrappers(t *testing.T) {
 	s := rightWorld()
 	s.world.Letters = []game.LetterView{{ID: 7, Kind: "caution", Title: "Cold snap", Text: "It freezes.", X: -1, Y: -1}}
 	a, _ := colonyApp(t, s)
-	if len(a.alertButtons(a.sw)) == 0 || len(a.letterButtons()) != 1 || a.letterButtons()[0].ID != "letter.7" {
-		t.Errorf("alert buttons %v, letter buttons %v", a.alertButtons(a.sw), a.letterButtons())
+	if len(a.chrome.Alerts().Buttons(a.sw)) == 0 || len(a.chrome.Right().LetterButtons()) != 1 || a.chrome.Right().LetterButtons()[0].ID != "letter.7" {
+		t.Errorf("alert buttons %v, letter buttons %v", a.chrome.Alerts().Buttons(a.sw), a.chrome.Right().LetterButtons())
 	}
 	img := ebiten.NewImage(a.sw, a.sh)
-	a.drawAlerts(img, a.sw)
-	a.drawGatheringBanner(img, a.sw)
-	a.rightColumnUI(a.sw, a.sh)
+	a.chrome.Alerts().Draw(img, a.sw)
+	a.chrome.Banner().Draw(img, a.sw)
+	a.chrome.Right().Declare(a.sw, a.sh)
 	assertChromeIsTheLayout(t, a) // the column has no legacy chrome
 	// a message that is a letter still opens its window through openLetter
-	a.openLetter(game.MessageView{Tick: 3, Title: "Heat wave", Letter: true, Text: "It is hot.", X: 4, Y: 5})
+	a.chrome.Right().OpenLetter(game.MessageView{Tick: 3, Title: "Heat wave", Letter: true, Text: "It is hot.", X: 4, Y: 5})
 	if m := a.uiSt().Modals; len(m) != 1 || m[0].Title != "Heat wave" || len(m[0].Buttons) != 2 {
 		t.Errorf("modals %+v, want the letter with Continue and Jump to", m)
 	}
 	// a letter id that is not a number, or not in the stack, does nothing
-	a.applyLetterClick("letter.older")
-	a.applyLetterClick("letter.999")
+	a.chrome.Right().LetterClick("letter.older")
+	a.chrome.Right().LetterClick("letter.999")
 	if len(a.uiSt().Modals) != 1 {
 		t.Errorf("modals %d after clicks on nothing", len(a.uiSt().Modals))
 	}

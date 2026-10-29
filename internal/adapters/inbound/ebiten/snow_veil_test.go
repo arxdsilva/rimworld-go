@@ -6,6 +6,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/application/game"
 )
 
@@ -29,14 +30,14 @@ func snowyWorld() game.WorldView {
 // texel (sx, sy) of 4 a tile (snowPx) of chunk-local tile (x, y), from
 // the last bake in sc.pix or sc.wpix (a direct bake is at 4 texels a
 // tile; the wet veil is 0 where no image was written).
-func snowTexel(sc *snowCache, row, x, y, sx, sy int) uint8 {
+func snowTexel(sc *env.SnowCache, row, x, y, sx, sy int) uint8 {
 	if row == 0 {
-		tx, ty := snowPad+x*snowPx+sx, snowPad+y*snowPx+sy
-		return sc.Pix[4*(ty*snowImgW+tx)+3]
+		tx, ty := env.SnowPad+x*env.SnowPx+sx, env.SnowPad+y*env.SnowPx+sy
+		return sc.Pix[4*(ty*env.SnowImgW+tx)+3]
 	}
-	px := max(sc.WantPx, snowPx)
-	iw := wetImgW(px)
-	tx, ty := snowPad+x*px+sx*px/snowPx, snowPad+y*px+sy*px/snowPx
+	px := max(sc.WantPx, env.SnowPx)
+	iw := env.WetImgW(px)
+	tx, ty := env.SnowPad+x*px+sx*px/env.SnowPx, env.SnowPad+y*px+sy*px/env.SnowPx
 	if len(sc.Wpix) < 4*iw*iw {
 		return 0
 	}
@@ -50,7 +51,7 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 	r.art = envArt()
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0 // the map's top-left corner
 	screen := ebiten.NewImage(640, 400)
-	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
+	r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
 	if x0, y0, x1, y1 := r.visibleTiles(); x0 > 1 || y0 > 0 || x1 < 7 || y1 < 6 {
 		t.Fatalf("view %d,%d..%d,%d misses the block", x0, y0, x1, y1)
 	}
@@ -58,7 +59,7 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 	if sc.Bakes == 0 || sc.Draws == 0 {
 		t.Fatalf("snowy block: %d bakes, %d draws", sc.Bakes, sc.Draws)
 	}
-	var c snowChunk
+	var c env.SnowChunk
 	r.bakeSnowChunk(&c, w, 64, 64, 0, 0)
 	if !c.Any {
 		t.Fatal("chunk (0,0) holds snow but reads bare")
@@ -75,7 +76,7 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 	}
 	// a bare layer draws nothing
 	w.Snow, w.SnowVer = make([]uint8, 64*64), 2
-	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
+	r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
 	for id, ch := range sc.Chunks {
 		if ch.Any {
 			t.Fatalf("bare layer: chunk %d still holds snow", id)
@@ -86,7 +87,7 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 	}
 	// an older sim with only the map figure veils every open tile
 	w.Snow, w.SnowDepth = nil, 0.8
-	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
+	r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
 	if sc.Draws == 0 {
 		t.Fatal("uniform snow draws nothing")
 	}
@@ -103,7 +104,7 @@ func TestSnowCacheRebakesOnlyChangedChunks(t *testing.T) {
 	r.art = envArt()
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	draw := func() int {
 		n := r.snowc.Bakes
 		r.drawGroundCover(screen, w, 640, 400, tile)
@@ -140,7 +141,7 @@ func TestSnowLayerDrawsLit(t *testing.T) {
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
 	before := r.lit.Calls
-	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
+	r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
 	if r.snowc.Draws == 0 || r.lit.Calls-before < r.snowc.Draws {
 		t.Fatalf("lit calls %d for %d snow draws", r.lit.Calls-before, r.snowc.Draws)
 	}
@@ -167,7 +168,7 @@ func BenchmarkGroundCover(b *testing.B) {
 			r.art = envArt()
 			r.cam.Zoom = px / 64
 			screen := ebiten.NewImage(1280, 800)
-			tile := r.tilePx()
+			tile := r.cam.Tile()
 			r.cam.OffsetX, r.cam.OffsetY = 100*tile, 100*tile
 			r.drawGroundCover(screen, w, 1280, 800, tile)
 			b0, d0 := r.snowc.Bakes, 0

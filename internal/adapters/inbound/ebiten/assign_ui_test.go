@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -32,8 +34,8 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s // the stub with the read model
 
-	var tab button
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	var tab uikit.Button
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		if b.ID == "tab.assign" {
 			tab = b
 		}
@@ -43,21 +45,21 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 	}
 	press(t, a, f, "tab.assign")
 	f.Frame(t, a)
-	if a.uiModalTop() != assignModalID {
-		t.Fatalf("top modal = %q, want %q", a.uiModalTop(), assignModalID)
+	if a.uiModalTop() != windowspkg.AssignModalID {
+		t.Fatalf("top modal = %q, want %q", a.uiModalTop(), windowspkg.AssignModalID)
 	}
-	if !hasWidget(a, assignDrugID(1)) || !hasWidget(a, assignDrugID(2)) {
+	if !hasWidget(a, windowspkg.AssignDrugID(1)) || !hasWidget(a, windowspkg.AssignDrugID(2)) {
 		t.Fatal("a drug policy button per living colonist")
 	}
-	if hasWidget(a, assignDrugID(3)) {
+	if hasWidget(a, windowspkg.AssignDrugID(3)) {
 		t.Fatal("the dead get no row")
 	}
-	if w, _ := a.uiSt().Find(assignDrugID(1)); w.Label != "Social drinking" {
+	if w, _ := a.uiSt().Find(windowspkg.AssignDrugID(1)); w.Label != "Social drinking" {
 		t.Fatalf("Ada's button %q", w.Label)
 	}
 
 	// A click cycles to the next preset through a typed command.
-	press(t, a, f, assignDrugID(2))
+	press(t, a, f, windowspkg.AssignDrugID(2))
 	var got []command.Command
 	for _, c := range s.cmds {
 		if c.Kind == command.SetDrugPolicy {
@@ -69,9 +71,9 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 	}
 
 	// Its key (F3) closes the window again.
-	a.toggleAssign()
+	a.win.Assign().Toggle()
 	f.Frame(t, a)
-	if a.uiModalTop() == assignModalID {
+	if a.uiModalTop() == windowspkg.AssignModalID {
 		t.Fatal("the Assign key toggles the window")
 	}
 }
@@ -81,13 +83,13 @@ func TestAssignTabWithoutPolicies(t *testing.T) {
 	t.Parallel()
 	s := assignStub()
 	a, f := colonyApp(t, s.stubSim)
-	a.openAssign()
+	a.win.Assign().Launch()
 	f.Frame(t, a)
-	w, ok := a.uiSt().Find(assignDrugID(1))
+	w, ok := a.uiSt().Find(windowspkg.AssignDrugID(1))
 	if !ok || !w.Disabled || w.Reason == "" {
 		t.Fatalf("button %+v: disabled with a reason", w)
 	}
-	press(t, a, f, assignDrugID(1))
+	press(t, a, f, windowspkg.AssignDrugID(1))
 	for _, c := range s.cmds {
 		if c.Kind == command.SetDrugPolicy {
 			t.Fatal("a disabled button sends nothing")
@@ -100,11 +102,11 @@ func TestAssignEmptyAndDraws(t *testing.T) {
 	s := assignStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	a.openAssign()
+	a.win.Assign().Launch()
 	drawFrame(t, a, f)
 	s.pawns = nil
 	drawFrame(t, a, f)
-	if hasWidget(a, assignDrugID(1)) {
+	if hasWidget(a, windowspkg.AssignDrugID(1)) {
 		t.Fatal("no colonists: no rows")
 	}
 }

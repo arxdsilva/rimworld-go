@@ -1,5 +1,7 @@
 package ebiten
 
+import "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+
 // Captures of the social colony's tabs and windows (-scenario social):
 //
 //	social    Maren's Social tab (married to Tobias), first row hovered
@@ -33,21 +35,21 @@ func (a *App) captureSocialUI(ui string) {
 	switch ui {
 	case "social":
 		pick("Maren")
-		a.openPaneTab("social")
-		if r := a.expandedRect(); !r.Empty() { // the first row's tooltip, under the tab's heading
-			a.cursor = &[2]int{int(r.X) + paneInset + 120, int(r.Y) + paneInset + 48}
+		a.insp.OpenPaneTab("social")
+		if r := a.insp.ExpandedRect(); !r.Empty() { // the first row's tooltip, under the tab's heading
+			a.cursor = &[2]int{int(r.X) + inspector.PaneInset + 120, int(r.Y) + inspector.PaneInset + 48}
 		}
 	case "health":
 		pick("Cyrus")
-		a.openPaneTab("health")
+		a.insp.OpenPaneTab("health")
 	case "prisoner":
 		pick("Garr")
-		a.openPaneTab("prisoner")
+		a.insp.OpenPaneTab("prisoner")
 	case "history":
-		a.openHistory()
+		a.win.History().Launch()
 	case "world":
-		a.toggleWorld()
+		a.win.World().Toggle()
 	case "assign":
-		a.openAssign()
+		a.win.Assign().Launch()
 	}
 }

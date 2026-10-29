@@ -1,6 +1,10 @@
 package ebiten
 
 import (
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
 	"testing"
 
@@ -20,12 +24,12 @@ func roofLabelWorld() game.WorldView {
 		}
 	}
 	w.RoomGrid[4] = -2
-	w.RoofCells[4] = roofBuilt // a roof flag on a wall still reads nothing
-	w.RoofCells[10] = roofBuilt | roofPlanRemove
-	w.RoofCells[11] = roofPlanBuild
-	w.RoofCells[12] = roofNatural
-	w.RoofCells[13] = roofBuilt
-	w.RoofCells[20] = roofNatural | roofThick
+	w.RoofCells[4] = overlaypkg.RoofBuilt // a roof flag on a wall still reads nothing
+	w.RoofCells[10] = overlaypkg.RoofBuilt | overlaypkg.RoofPlanRemove
+	w.RoofCells[11] = overlaypkg.RoofPlanBuild
+	w.RoofCells[12] = overlaypkg.RoofNatural
+	w.RoofCells[13] = overlaypkg.RoofBuilt
+	w.RoofCells[20] = overlaypkg.RoofNatural | overlaypkg.RoofThick
 	return w
 }
 
@@ -35,10 +39,10 @@ func TestRoomLabelRoofedPercent(t *testing.T) {
 		{ID: 0, Role: "bedroom", Label: "decent", Score: 12, Roofed: 1},
 		{ID: 1, Role: "barn", Label: "dull", Score: 3, Lit: true, Roofed: 0.426},
 	}}
-	if got := roomLabelAt(w, 0, 0); !strings.HasSuffix(got, ", roofed 100%") || !strings.HasPrefix(got, "Room: bedroom") {
+	if got := world.RoomLabelAt(w, 0, 0); !strings.HasSuffix(got, ", roofed 100%") || !strings.HasPrefix(got, "Room: bedroom") {
 		t.Errorf("full roof: %q", got)
 	}
-	if got := roomLabelAt(w, 1, 0); !strings.HasSuffix(got, ", lit, roofed 43%") {
+	if got := world.RoomLabelAt(w, 1, 0); !strings.HasSuffix(got, ", lit, roofed 43%") {
 		t.Errorf("partial roof: %q", got)
 	}
 }
@@ -57,24 +61,24 @@ func eaveWorld() game.WorldView {
 				w.RoomGrid[i] = -2
 			default:
 				w.RoomGrid[i] = 0
-				w.RoofCells[i] = roofBuilt
+				w.RoofCells[i] = overlaypkg.RoofBuilt
 			}
 		}
 	}
 	w.RoofCells[3*9+3] = 0 // an unroofed hole: no eave from it
-	w.RoofCells[2*9+8] = roofBuilt
+	w.RoofCells[2*9+8] = overlaypkg.RoofBuilt
 	return w
 }
 
 func TestEavesOnRoofedInteriorEdges(t *testing.T) {
 	t.Parallel()
 	w := eaveWorld()
-	edges := eaveEdges(w, 0, 0, 8, 5, nil)
-	has := map[eaveEdge]bool{}
+	edges := overlaypkg.EaveEdges(w, 0, 0, 8, 5, nil)
+	has := map[overlaypkg.EaveEdge]bool{}
 	for _, e := range edges {
 		has[e] = true
 	}
-	for _, want := range []eaveEdge{{X: 1, Y: 1, Side: sideN}, {X: 1, Y: 1, Side: sideW}, {X: 5, Y: 4, Side: sideE}, {X: 5, Y: 4, Side: sideS}, {X: 3, Y: 1, Side: sideN}, {X: 1, Y: 3, Side: sideW}} {
+	for _, want := range []overlaypkg.EaveEdge{{X: 1, Y: 1, Side: overlaypkg.SideN}, {X: 1, Y: 1, Side: overlaypkg.SideW}, {X: 5, Y: 4, Side: overlaypkg.SideE}, {X: 5, Y: 4, Side: overlaypkg.SideS}, {X: 3, Y: 1, Side: overlaypkg.SideN}, {X: 1, Y: 3, Side: overlaypkg.SideW}} {
 		if !has[want] {
 			t.Errorf("missing eave %+v", want)
 		}
@@ -83,7 +87,7 @@ func TestEavesOnRoofedInteriorEdges(t *testing.T) {
 		if e.X == 3 && e.Y == 3 {
 			t.Errorf("eave on an unroofed tile: %+v", e)
 		}
-		if roomIDAt(w, e.X, e.Y) == -2 {
+		if overlaypkg.RoomIDAt(w, e.X, e.Y) == -2 {
 			t.Errorf("eave on a wall: %+v", e)
 		}
 	}
@@ -92,17 +96,17 @@ func TestEavesOnRoofedInteriorEdges(t *testing.T) {
 		t.Errorf("got %d eave edges, want 18: %v", len(edges), edges)
 	}
 	// the outside roofed tile at (8,2) sits beside no wall
-	if eaveWidth(sideN, TileSize) != 10 || eaveWidth(sideE, TileSize) != 6 || eaveWidth(sideS, TileSize/2) != 3 {
+	if overlaypkg.EaveWidth(overlaypkg.SideN, camerapkg.TileSize) != 10 || overlaypkg.EaveWidth(overlaypkg.SideE, camerapkg.TileSize) != 6 || overlaypkg.EaveWidth(overlaypkg.SideS, camerapkg.TileSize/2) != 3 {
 		t.Error("eave widths: want 10 px under a top wall, 6 elsewhere, scaled by zoom")
 	}
-	if eaveAlpha(lightState{SunL: [3]float32{0, 0, 0.5}}) != 30 || eaveAlpha(lightState{ShadowAlpha: 0.12}) != 18 {
+	if overlaypkg.EaveAlpha(light.State{SunL: [3]float32{0, 0, 0.5}}) != 30 || overlaypkg.EaveAlpha(light.State{ShadowAlpha: 0.12}) != 18 {
 		t.Error("eave alpha: want 30 by day, 18 at night")
 	}
-	if n := len(eaveEdges(game.WorldView{TerrainW: 9, RoomGrid: w.RoomGrid}, 0, 0, 8, 5, nil)); n != 0 {
+	if n := len(overlaypkg.EaveEdges(game.WorldView{TerrainW: 9, RoomGrid: w.RoomGrid}, 0, 0, 8, 5, nil)); n != 0 {
 		t.Errorf("no roof data drew %d eaves", n)
 	}
 	r := New(&stubSim{w: 9, h: 6})
-	r.drawEaves(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	r.drawEaves(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
 	if len(r.overlays().RoofDraw.Edges) != 18 {
 		t.Errorf("drawEaves found %d edges", len(r.overlays().RoofDraw.Edges))
 	}
@@ -117,27 +121,27 @@ func TestOverlayOnlyWhenToggledOrForced(t *testing.T) {
 	} {
 		r := New(&stubSim{w: 9, h: 6})
 		r.overlays().Roof.On, r.overlays().Roof.Forced = c.toggled, c.forced
-		if r.roofOverlayOn() != c.want {
-			t.Fatalf("%+v: roofOverlayOn %v", c, r.roofOverlayOn())
+		if r.overlays().Roof.Shown() != c.want {
+			t.Fatalf("%+v: roofOverlayOn %v", c, r.overlays().Roof.Shown())
 		}
-		r.drawRoofOverlay(screen, w, 640, 400, r.tilePx())
+		r.drawRoofOverlay(screen, w, 640, 400, r.cam.Tile())
 		if drew := r.overlays().RoofDraw.OverlayVerts > 0; drew != c.want {
 			t.Fatalf("%+v: overlay drew %d vertices", c, r.overlays().RoofDraw.OverlayVerts)
 		}
 		// no roof data: nothing, even when on
-		r.drawRoofOverlay(screen, game.WorldView{TerrainW: 9}, 640, 400, r.tilePx())
+		r.drawRoofOverlay(screen, game.WorldView{TerrainW: 9}, 640, 400, r.cam.Tile())
 		if r.overlays().RoofDraw.OverlayVerts != 0 {
 			t.Fatalf("%+v: overlay drew without roof data", c)
 		}
 	}
 	// every marking draws: hatch, dashes and stipple
-	w.RoofCells[1*9+1] |= roofPlanRemove
-	w.RoofCells[3*9+3] = roofPlanBuild
-	w.RoofCells[4*9+1] = roofNatural
+	w.RoofCells[1*9+1] |= overlaypkg.RoofPlanRemove
+	w.RoofCells[3*9+3] = overlaypkg.RoofPlanBuild
+	w.RoofCells[4*9+1] = overlaypkg.RoofNatural
 	r := New(&stubSim{w: 9, h: 6})
 	r.overlays().Roof.On = true
-	r.drawRoofOverlay(screen, w, 640, 400, r.tilePx())
-	r.drawRoofUnsupported(screen, 2, 2, r.tilePx())
+	r.drawRoofOverlay(screen, w, 640, 400, r.cam.Tile())
+	r.drawRoofUnsupported(screen, 2, 2, r.cam.Tile())
 	if r.overlays().RoofDraw.OverlayVerts == 0 {
 		t.Fatal("overlay drew nothing")
 	}

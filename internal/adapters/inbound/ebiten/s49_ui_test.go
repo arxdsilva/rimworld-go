@@ -4,6 +4,10 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -25,14 +29,14 @@ func TestHealthPickerUsesViewOptionsAndShowsReasons(t *testing.T) {
 		t.Fatalf("pickerOptions = %+v", got)
 	}
 	drawFrame(t, a, f) // status line under the queued row paints
-	press(t, a, f, healthAddID)
+	press(t, a, f, inspector.HealthAddID)
 	f.Frame(t, a)
-	if !hasWidget(a, optID(healthPickList, 1)) {
+	if !hasWidget(a, uikit.OptID(inspector.HealthPickList, 1)) {
 		t.Fatal("both view options are listed")
 	}
 	// the disabled one still queues
-	press(t, a, f, optID(healthPickList, 0))
-	press(t, a, f, "modal."+healthPickID+".health.addop.ok")
+	press(t, a, f, uikit.OptID(inspector.HealthPickList, 0))
+	press(t, a, f, "modal."+inspector.HealthPickID+".health.addop.ok")
 	var got *command.Command
 	for i := range s.cmds {
 		if s.cmds[i].Kind == command.AddOperation {
@@ -46,8 +50,8 @@ func TestHealthPickerUsesViewOptionsAndShowsReasons(t *testing.T) {
 
 func TestOperationStatusColour(t *testing.T) {
 	t.Parallel()
-	if opStatusColor(game.OperationView{Status: "no peg leg in stock", Blocked: true}) != uiWarning ||
-		opStatusColor(game.OperationView{Status: "a doctor is on the way"}) != uiTextDim {
+	if inspector.OpStatusColor(game.OperationView{Status: "no peg leg in stock", Blocked: true}) != uikit.Warning ||
+		inspector.OpStatusColor(game.OperationView{Status: "a doctor is on the way"}) != uikit.TextDim {
 		t.Fatal("blocked operations warn, progress stays dim")
 	}
 }
@@ -71,16 +75,16 @@ func TestWorkbenchBillPickerReachesEveryRecipe(t *testing.T) {
 	s.world.Buildings = []game.BuildingView{{ID: 77, Kind: kind, X: 8, Y: 8, W: 2, H: 1, Bench: true,
 		Bills: []game.BillView{{Label: "a"}, {Label: "b"}, {Label: "c"}}}}
 	a, f := colonyApp(t, s)
-	if !a.selectBuildingAt(8, 8) {
+	if !a.insp.Building().SelectBuildingAt(8, 8) {
 		t.Fatal("select bench")
 	}
 	// the bills live in the pane's Bills tab (PLAY-018), declared into the
 	// expanded panel
-	tab, ok := bldTab(a.buildingPane(77), "inspector.bills")
+	tab, ok := bldTab(a.insp.Building().BuildingPane(77), "inspector.bills")
 	if !ok {
 		t.Fatal("a bench has a Bills tab")
 	}
-	r := rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(paneInset) // what the pane hands Declare
+	r := gfx.Rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(inspector.PaneInset) // what the pane hands Declare
 	setHook(a.uiSt(), func(a *App) { tab.Declare(r) })
 	f.Frame(t, a)
 	for _, w := range a.uiSt().Cur {
@@ -102,22 +106,22 @@ func TestWorkbenchBillPickerReachesEveryRecipe(t *testing.T) {
 			}
 		}
 	}
-	if !hasWidget(a, billPickBtn) {
+	if !hasWidget(a, inspector.BillPickBtn) {
 		t.Fatal("no Add bill button")
 	}
-	press(t, a, f, billPickBtn)
+	press(t, a, f, inspector.BillPickBtn)
 	f.Frame(t, a)
-	if a.uiModalTop() != billPickID {
+	if a.uiModalTop() != inspector.BillPickID {
 		t.Fatal("picker not open")
 	}
-	if n < 1 || !hasWidget(a, optID(billPickList, 0)) {
+	if n < 1 || !hasWidget(a, uikit.OptID(inspector.BillPickList, 0)) {
 		t.Fatal("recipes listed")
 	}
-	if got := len(a.recipesFor(kind)); got != n {
+	if got := len(a.insp.Building().RecipesFor(kind)); got != n {
 		t.Fatalf("recipes %d != %d", got, n)
 	}
-	press(t, a, f, optID(billPickList, 0))
-	press(t, a, f, "modal."+billPickID+".bill.picker.ok")
+	press(t, a, f, uikit.OptID(inspector.BillPickList, 0))
+	press(t, a, f, "modal."+inspector.BillPickID+".bill.picker.ok")
 	if len(cmdsOf(s, command.AddBill)) != 1 {
 		t.Fatalf("AddBill not sent: %+v", s.cmds)
 	}
@@ -153,8 +157,8 @@ func TestDevMenuLosePartAndSpawnImplants(t *testing.T) {
 	a.setSettings(set)
 	a.renderer.Select(1)
 	f.Frame(t, a)
-	acts := a.devActions(3, 3)
-	byLabel := map[string]devAction{}
+	acts := a.tools.Actions(3, 3)
+	byLabel := map[string]devtools.Action{}
 	for _, x := range acts {
 		byLabel[x.Label] = x
 	}
@@ -172,12 +176,12 @@ func TestDevMenuLosePartAndSpawnImplants(t *testing.T) {
 	}
 	lose.Run(d)
 	f.Frame(t, a)
-	if a.uiModalTop() != devLosePickID {
+	if a.uiModalTop() != devtools.LosePickID {
 		t.Fatal("part picker not open")
 	}
-	press(t, a, f, optID(devLosePickList, 2))
-	press(t, a, f, "modal."+devLosePickID+".dev.lose.ok")
-	if len(d.lost) != 1 || d.lost[0] != devLoseParts()[2] {
+	press(t, a, f, uikit.OptID(devtools.LosePickList, 2))
+	press(t, a, f, "modal."+devtools.LosePickID+".dev.lose.ok")
+	if len(d.lost) != 1 || d.lost[0] != devtools.LoseParts()[2] {
 		t.Fatalf("lost = %v", d.lost)
 	}
 }
@@ -189,7 +193,7 @@ func TestDevPartActionsNeedAColonist(t *testing.T) {
 	set := a.settings
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
-	for _, x := range a.devActions(1, 1) {
+	for _, x := range a.tools.Actions(1, 1) {
 		if (x.Label == "Spawn implants" || x.Label == "Lose a part...") && x.Reason == "" {
 			t.Fatalf("%s should need a selected colonist", x.Label)
 		}

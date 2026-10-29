@@ -8,7 +8,15 @@ import (
 	"fmt"
 	"image/color"
 	"math"
-	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	camerapkgpkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
+	minimappkg "rimworld-go/internal/adapters/inbound/ebiten/render/minimap"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -16,92 +24,34 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/ai/work"
-	"rimworld-go/internal/domain/pawn/schedule"
-	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Simulation is the behavior this renderer needs from the application
-// game. It is consumer-owned (defined here, not by package game) so the
-// renderer depends on an abstraction rather than a concrete type — any
-// implementation satisfying it can be swapped in without touching this
-// adapter.
+// Simulation is the composition root's union of the readers and the
+// command sink the client needs of the colony (sim_ports.go): cmd/game
+// hands one in and the root stores it; every feature and layer depends on
+// its own smaller interface (SOLID_GO.md §6), never on this union.
 type Simulation interface {
-	// TemperatureAt is the air temperature on a tile, in tenths of a degree C
-	// (rooms, weather, vents, fire): the lower-right temperature line
-	// follows the cursor with it (PLAY-018).
-	TemperatureAt(x, y int) int
-	Step(ticks int)
-	Snapshot() []game.PawnView
-	World() game.WorldView
-	Enqueue(command.Command)
-	Width() int
-	Height() int
-	Tick() clock.Tick
-	Date() clock.Date
-	Activity() schedule.Activity
-	// CanPlaceAt is the read-only placement rule the Architect previews
-	// (material, facing and every footprint cell).
-	CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string)
-	// ReplacesAt names the wall or fence a door or gate would replace
-	// there ("" when none): the ghost reads "replaces wall".
-	ReplacesAt(kind, stuff string, x, y int) string
-	// AutoFacingAt is the facing the sim would give a piece placed here
-	// (doors and gates face along their walls, PLAY-011).
-	AutoFacingAt(kind, facing string, x, y int) string
-	// OrdersAt lists what a pawn can be ordered to do at a tile.
-	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
-	// CanZoneAt reports whether a zone of kind ("stockpile", "grow",
-	// "pen") could claim a tile: the zone drag ghost per cell.
-	CanZoneAt(kind string, x, y int) bool
-	// Wildlife lists the wild species on the map (the Animals tab's Wild
-	// list).
-	Wildlife() []game.WildlifeRow
-	// NG-1: the Factions window, storyteller/difficulty and a colonist's Bio.
-	Factions() []game.FactionView
-	Story() game.StoryView
-	Bio(id entity.EntityID) (game.BioView, bool)
-	// NG-1 colony UI (UI-COLONY): the building catalog with the scenario's
-	// locks (BuildableView.Locked), the Work tab's "Incapable: <why>" for a
-	// colonist's work type ("" when it can) and the Bio tab's experience
-	// gained in the last 7 days per skill.
-	Buildables() []game.BuildableView
-	IncapableReason(id entity.EntityID, t work.Type) string
-	LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int
-	// NG-1 E5 renderer read models (chunk_view.go, minimap_view.go): a
-	// chunk's share of World() and its bake versions, the plants in a tile
-	// rectangle, and the minimap layer when it changed since ver.
-	ChunkLayer(cx, cy int) game.ChunkView
-	PlantsIn(x0, y0, x1, y1 int, buf []int32) []int32
-	MinimapLayer(ver uint64) (game.MinimapView, bool)
-	// PlantGrowth is why a plant is or isn't growing now and when it
-	// ripens (PLAY-017): the plant inspector asks for the one it shows
-	// (it follows the clock, so it is not on every PlantView).
-	PlantGrowth(id entity.EntityID) (game.PlantGrowthView, bool)
-	// ENG-003 social and host-system read models: a colonist's Social and
-	// Health tabs, a prisoner's tab (ok false: nothing to show), the World
-	// tab, the allowed areas and the colony History.
-	Social(id entity.EntityID) (game.SocialView, bool)
-	Health(id entity.EntityID) (game.HealthView, bool)
-	Prisoner(id entity.EntityID) (game.PrisonerView, bool)
-	WorldMap() game.WorldMapView
-	Areas() []game.AreaView
-	History() []game.HistoryEntryView
+	SimStepper
+	SimCommander
+	SimFrame
+	SimWorld
+	SimPlacement
+	SimColony
+	SimTabs
+	SimChunks
 }
 
 var _ Simulation = (*game.Game)(nil)
 
 const (
-	panPixels = camerapkg.PanPixels
-	minZoom   = camerapkg.MinZoom // absolute floor; the map-fit limit is minZoomFor
-	maxZoom   = camerapkg.MaxZoom
-	zoomStep  = 0.1
+	// absolute floor; the map-fit limit is minZoomFor
+
+	zoomStep = 0.1
 )
 
 // speed is a presentation-only game-speed tier. It controls how often
@@ -162,7 +112,7 @@ type pawnVisual struct {
 	flip         bool
 	lastMove     uint64
 	moveTick     clock.Tick
-	facing       facing
+	facing       artpkg.Facing
 	steps        uint64 // tiles walked (walk-cycle phase)
 	lying        bool
 	lyingSince   uint64 // present frame when it went down
@@ -173,13 +123,13 @@ type Renderer struct {
 	// onEnqueue, when set, sees every command the player sends (PLAY-018:
 	// the learning helper marks lessons done from the player's own orders).
 	onEnqueue  func(command.Command)
-	view       render.View // this frame's context for the draw layers (render/view.go)
-	treeFx     treeFx      // see-through tree canopies (tree_fade.go)
+	view       render.View   // this frame's context for the draw layers (render/view.go)
+	treeFx     envpkg.TreeFx // see-through tree canopies (tree_fade.go)
 	game       Simulation
 	wheelTaken bool // the mouse wheel scrolled a log this frame
 	speed      speed
-	cam        camera
-	art        *artCatalog
+	cam        camerapkgpkg.Camera
+	art        *artpkg.Catalog
 
 	// present is a presentation-only frame counter. Animation reads it;
 	// simulation never does. Tile lerp uses sim ticks vs moveTick.
@@ -189,21 +139,21 @@ type Renderer struct {
 	last      map[entity.EntityID]pawnVisual
 
 	// animation state (presentation only)
-	parts    []particle
+	parts    []creaturepkg.Particle
 	itemBorn map[entity.EntityID]uint64
 	// viewCached: the simulation caches its read models (viewCacher), so a
 	// read model handed out again is the same, unchanged one and memos
 	// keyed on its identity hold (split, App.alerts).
 	viewCached bool
 	split      pawnSplit
-	mo         motionState // per-creature motion and the animT clock (motion.go)
-	anims      *animState  // body-animation bookkeeping (anim.go)
-	smooth     camSmooth   // eased pan and zoom (camera_smooth.go)
-	env        envState    // wind, contact springs and weather (environment.go)
-	lit        litRenderer // sun, moon and lamp lighting (light.go)
+	mo         motionState         // per-creature motion and the animT clock (motion.go)
+	anims      *creaturepkg.Set    // body-animation bookkeeping (anim.go)
+	smooth     camerapkgpkg.Smooth // eased pan and zoom (camera_smooth.go)
+	env        envState            // wind, contact springs and weather (environment.go)
+	lit        lightpkg.Lit        // sun, moon and lamp lighting (light.go)
 	// cast, while set, turns world sprite draws into shadow silhouettes
 	// (shadow_cast.go).
-	cast *shadowCast
+	cast *lightpkg.Cast
 	// bursts remembers which explosive deaths already burst (animal_burst.go).
 	// voice is the animals' sound memory (animal_sounds.go); soundHas
 	// reports a sound id exists (the App wires Sound.Has; nil: all do).
@@ -233,7 +183,7 @@ type Renderer struct {
 	edgeScroll      bool
 	reducedFlashing bool
 	reducedMotion   bool // freezes the water ripple and foam (water_draw.go)
-	water           waterRenderer
+	water           envpkg.Water
 
 	// sound (sound_signals.go): cues for the App's director, last frame's
 	// world to hear changes, the pending thunder and the world this frame.
@@ -241,19 +191,19 @@ type Renderer struct {
 	heard      game.WorldView
 	dangerInit bool
 	lastDanger uint64
-	floaters   []floater
+	floaters   []creaturepkg.Floater
 
 	// links is the cached wall/rock/fence connectivity (sprite.LinkGrid);
 	// stoneArt memoises stone tints, resolved linked keys and the ground
 	// tiles (world.StoneArt). The pipeline (wp) works on both and on lod.
 	links    linkGrid
-	stoneArt stoneArtCache
+	stoneArt worldpkg.StoneArt
 	// ENG-D fields
 	// lod is the zoom tier, the chunk and whole-map bakes and the frame's
 	// chunk lists (world.LOD); mini the minimap (minimap.go).
-	lod   lodState
-	mini  minimapState
-	snowc snowCache // snow_cache.go: snow veil and wet masks per chunk
+	lod   worldpkg.LOD
+	mini  minimappkg.Map
+	snowc envpkg.SnowCache // snow_cache.go: snow veil and wet masks per chunk
 }
 
 // viewCacher is a simulation that can cache its read models between
@@ -273,7 +223,7 @@ func New(sim Simulation) *Renderer {
 		game:          sim,
 		viewCached:    cached,
 		speed:         speedNormal,
-		cam:           camera{Zoom: 1},
+		cam:           camerapkgpkg.Camera{Zoom: 1},
 		pauseOnThreat: true,
 		fx:            1,
 		last:          map[entity.EntityID]pawnVisual{},
@@ -339,12 +289,12 @@ func (r *Renderer) syncPawns() {
 	for _, p := range r.game.Snapshot() {
 		prev, seen := r.last[p.ID]
 		v := nextVisual(prev, seen, p.X, p.Y, tick, r.present)
-		k := r.mo.Observe(p.ID, pawnMoView(p), v.facing)
+		k := r.mo.Observe(p.ID, motionpkg.PawnMoView(p), v.facing)
 		want, moving := k.WantFacing(r.mo.Ref)
 		if !moving { // standing: attacks and work turn it
 			want = faceAttack(pawnVisual{facing: want}, w.Traces, p.X, p.Y).facing
 			if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
-				want = facingFor(p.ActX-p.X, p.ActY-p.Y, want)
+				want = artpkg.FacingFor(p.ActX-p.X, p.ActY-p.Y, want)
 			}
 		}
 		v.facing = k.Turn(want, p.ID, running)
@@ -366,17 +316,17 @@ func (r *Renderer) syncPawns() {
 func (r *Renderer) togglePause() {
 	if r.speed == speedPaused {
 		r.speed = speedNormal
-		r.globalCue("ui.resume")
+		r.cueBus().Global("ui.resume")
 		return
 	}
 	r.speed = speedPaused
-	r.globalCue("ui.pause")
+	r.cueBus().Global("ui.pause")
 }
 
 // setSpeed picks a speed tier.
 func (r *Renderer) setSpeed(s speed) {
 	r.speed = s
-	r.globalCue("ui.speed")
+	r.cueBus().Global("ui.speed")
 }
 
 // stepSpeed moves one tier up (d > 0) or down, paused .. superfast
@@ -406,7 +356,7 @@ type camInput struct {
 const fastPanBoost = 2.5
 
 // applyCamera pans and zooms by one frame of intent, then clamps.
-func (r *Renderer) applyCamera(v viewport, in camInput) {
+func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) {
 	// The held direction is this Update's: clear the last one first, then
 	// push what is held now. It stays set through every Draw until the next
 	// Update (stepCamera steps with it), so a released key stops the push
@@ -444,7 +394,7 @@ const camMaxDt = 0.1
 // stepCamera advances the smoothed camera by dt wall seconds, once per Draw,
 // so panning and zoom run at the display rate rather than at 60 TPS. Input
 // mapping in Update sees the previous Draw's camera: one frame of lag.
-func (r *Renderer) stepCamera(dt float64, v viewport) {
+func (r *Renderer) stepCamera(dt float64, v camerapkgpkg.Viewport) {
 	if r.smooth.Instant || r.smooth.Idle() {
 		return
 	}
@@ -459,12 +409,12 @@ const edgeBand = 6
 // edgePan is the pan direction for a physical cursor at (mx, my) in the
 // physical viewport v: towards any edge within edgeBand points, nothing
 // when the cursor is outside it.
-func edgePan(mx, my int, v viewport) (dx, dy float64) {
+func edgePan(mx, my int, v camerapkgpkg.Viewport) (dx, dy float64) {
 	x, y := float64(mx), float64(my)
 	if x < v.X0 || x >= v.X1 || y < v.Y0 || y >= v.Y1 {
 		return 0, 0
 	}
-	band := edgeBand * screenDev()
+	band := edgeBand * camerapkgpkg.ScreenDev()
 	switch {
 	case x < v.X0+band:
 		dx = -1
@@ -481,11 +431,11 @@ func edgePan(mx, my int, v viewport) (dx, dy float64) {
 }
 
 func clampZoom(z float64) float64 {
-	if z < minZoom {
-		return minZoom
+	if z < camerapkgpkg.MinZoom {
+		return camerapkgpkg.MinZoom
 	}
-	if z > maxZoom {
-		return maxZoom
+	if z > camerapkgpkg.MaxZoom {
+		return camerapkgpkg.MaxZoom
 	}
 	return z
 }
@@ -518,22 +468,13 @@ func (r *Renderer) worldToScreenF(wx, wy float64) (float32, float32) {
 	return float32(sx), float32(sy)
 }
 
-// tilePx is one tile in physical pixels: TileSize x zoom x dev (the UI
-// scale never zooms the map).
-func (r *Renderer) tilePx() float64 {
-	return r.cam.Tile()
-}
-
-// visible reports a sprite box touches the screen (sprite.Visible).
-func visible(x, y, w, h float32, sw, sh int) bool { return sprite.Visible(x, y, w, h, sw, sh) }
-
 // Draw renders terrain, pawns, and selection. HUD chrome is App-owned.
 func (r *Renderer) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 28, G: 42, B: 32, A: 255})
 	r.SyncDev() // camera.go: the screen is physical
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	// this frame's context for the draw layers (render.View); the pipeline adds
 	// the world and pawns it reads
 	v := &r.view
@@ -562,7 +503,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	for _, p := range r.game.Snapshot() {
 		wx, wy := r.interpWorld(p)
 		sx, sy := r.worldToScreenF(wx, wy)
-		if !visible(sx, sy, float32(tile), float32(tile)*2, sw, sh) {
+		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile)*2, sw, sh) {
 			continue
 		}
 		r.drawPawn(screen, p, sx, sy, tile)
@@ -575,7 +516,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 }
 
 func (r *Renderer) drawDaylight(screen *ebiten.Image, sw, sh int) {
-	c := skyOverlay(r.game.Tick())
+	c := lightpkg.SkyOverlay(r.game.Tick())
 	if c.A == 0 {
 		return
 	}
@@ -586,7 +527,7 @@ func (r *Renderer) drawTerrain(screen *ebiten.Image, sw, sh int, tile float64) {
 	for y := 0; y < r.game.Height(); y++ {
 		for x := 0; x < r.game.Width(); x++ {
 			sx, sy := r.worldToScreen(x, y)
-			if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 				continue
 			}
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), fallbackGround, false)
@@ -623,7 +564,7 @@ func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present u
 		if x != prev.x {
 			v.flip = x < prev.x
 		}
-		v.facing = facingFor(x-prev.x, y-prev.y, prev.facing)
+		v.facing = artpkg.FacingFor(x-prev.x, y-prev.y, prev.facing)
 		return v
 	}
 	v.fromX, v.fromY = prev.fromX, prev.fromY
@@ -631,29 +572,6 @@ func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present u
 		v.fromX, v.fromY = x, y
 	}
 	return v
-}
-
-func moveProgress(sinceTick, period int) float64 {
-	if period <= 0 {
-		return 1
-	}
-	if sinceTick <= 0 {
-		return 0
-	}
-	if sinceTick >= period {
-		return 1
-	}
-	return float64(sinceTick) / float64(period)
-}
-
-func lerp(a, b int, t float64) float64 {
-	if t <= 0 {
-		return float64(a)
-	}
-	if t >= 1 {
-		return float64(b)
-	}
-	return float64(a) + (float64(b)-float64(a))*t
 }
 
 // fallbackGround is the terrain colour when no art is loaded.
@@ -730,10 +648,6 @@ func (r *Renderer) splitPawns() {
 
 func (r *Renderer) world() game.WorldView { return r.game.World() }
 
-func (r *Renderer) date() clock.Date { return r.game.Date() }
-
-func (r *Renderer) activity() schedule.Activity { return r.game.Activity() }
-
 // pendingApplier applies queued commands without advancing time
 // (consumer-owned: test fakes need not implement it).
 type pendingApplier interface{ ApplyPending() }
@@ -766,7 +680,7 @@ func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 		if !b.Floor {
 			continue
 		}
-		if sx, sy := r.worldToScreen(b.X, b.Y); visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+		if sx, sy := r.worldToScreen(b.X, b.Y); spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 			vector.FillRect(screen, sx+4, sy+4, float32(tile)-8, float32(tile)-8, floorClr, false)
 		}
 	}
@@ -775,7 +689,7 @@ func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 	desigClr := color.RGBA{R: 240, G: 220, B: 40, A: 200}
 	for _, p := range w.Plants {
 		sx, sy := r.worldToScreen(p.X, p.Y)
-		if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 			continue
 		}
 		pad := float32(tile) * 0.25
@@ -791,7 +705,7 @@ func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 			continue
 		}
 		sx, sy := r.worldToScreen(it.X, it.Y)
-		if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 			continue
 		}
 		c := foodClr
@@ -804,7 +718,7 @@ func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 	ghostClr := color.RGBA{R: 90, G: 180, B: 220, A: 120}
 	for _, f := range w.Frames {
 		sx, sy := r.worldToScreen(f.X, f.Y)
-		if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+		if spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 			vector.StrokeRect(screen, sx+3, sy+3, float32(tile)-6, float32(tile)-6, 2, ghostClr, false)
 		}
 	}
@@ -815,7 +729,7 @@ func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 			continue // drawn before the zones
 		}
 		sx, sy := r.worldToScreen(b.X, b.Y)
-		if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 			continue
 		}
 		c := wallClr
@@ -837,12 +751,12 @@ func (r *Renderer) drawGhostRect(screen *ebiten.Image, x0, y0, x1, y1 int) {
 	if maxY < minY {
 		minY, maxY = maxY, minY
 	}
-	tile := r.tilePx()
+	tile := r.cam.Tile()
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
 			sx, sy := r.worldToScreen(x, y)
-			if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			if spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 				vector.StrokeRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, 2, ghostClr, false)
 			}
 		}

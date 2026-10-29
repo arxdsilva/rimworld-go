@@ -5,28 +5,30 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/application/game"
 )
 
-func quadsOf(b *triBatch) int { return len(b.Idx) / 6 }
+func quadsOf(b *gfx.TriBatch) int { return len(b.Idx) / 6 }
 
 // A dashed run far longer than the view only emits the dashes on screen.
 func TestDashedRunCullsOffscreen(t *testing.T) {
 	const tile, dash, gap = 16.0, 6.0, 4.8
-	var b triBatch
+	var b gfx.TriBatch
 	// 400 tiles long, starting 100 tiles left of the view, 20 tiles visible
-	dashedRun(&b, -100*tile, 50, 300*tile, 50, 2, dash, gap, stockEdgeClr, 20*tile, 400)
+	overlay.DashedRun(&b, -100*tile, 50, 300*tile, 50, 2, dash, gap, overlay.StockEdgeClr, 20*tile, 400)
 	want := 20 * tile / (dash + gap)
 	if got := quadsOf(&b); float64(got) < want-2 || float64(got) > want+3 {
 		t.Fatalf("dashes = %d, want about %.0f", got, want)
 	}
 	b.Reset()
-	dashedRun(&b, 50, -100*tile, 50, 300*tile, 2, dash, gap, stockEdgeClr, 400, 20*tile) // vertical
+	overlay.DashedRun(&b, 50, -100*tile, 50, 300*tile, 2, dash, gap, overlay.StockEdgeClr, 400, 20*tile) // vertical
 	if got := quadsOf(&b); float64(got) < want-2 || float64(got) > want+3 {
 		t.Fatalf("vertical dashes = %d, want about %.0f", got, want)
 	}
 	b.Reset()
-	dashedRun(&b, 1e5, 50, 2e5, 50, 2, dash, gap, stockEdgeClr, 320, 200) // wholly off to the right
+	overlay.DashedRun(&b, 1e5, 50, 2e5, 50, 2, dash, gap, overlay.StockEdgeClr, 320, 200) // wholly off to the right
 	if quadsOf(&b) != 0 {
 		t.Fatalf("an off-screen run emitted %d dashes", quadsOf(&b))
 	}
@@ -55,7 +57,7 @@ func TestZoneOutlinesOneFlush(t *testing.T) {
 	}
 	// the outlines did go through the batch
 	for _, z := range w.Zones {
-		for _, run := range r.zoneGeomOf(z).Runs {
+		for _, run := range r.overlays().Zones.ZoneGeomOf(z).Runs {
 			r.drawZoneRun(&r.overlays().Zones.Batch, z.Kind, run, 640, 400, tile)
 		}
 	}
@@ -67,8 +69,8 @@ func TestZoneOutlinesOneFlush(t *testing.T) {
 // A fence run of N tiles is a rail plus N+1 posts.
 func TestFenceRunPosts(t *testing.T) {
 	r, tile := zoneBatchRenderer(t)
-	var b triBatch
-	r.drawFenceRun(&b, edgeRun{X0: 2, Y0: 3, X1: 9, Y1: 3, Ny: -1, StartConvex: true, EndConvex: true}, tile)
+	var b gfx.TriBatch
+	r.drawFenceRun(&b, overlay.EdgeRun{X0: 2, Y0: 3, X1: 9, Y1: 3, Ny: -1, StartConvex: true, EndConvex: true}, tile)
 	if got := quadsOf(&b); got != 1+8 {
 		t.Fatalf("quads = %d, want 1 rail + 8 posts", got)
 	}

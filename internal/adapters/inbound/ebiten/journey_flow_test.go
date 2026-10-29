@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -30,7 +31,7 @@ func newMenuJourney(t *testing.T, cfg ...func(*AppConfig)) *journey {
 		c(&a.cfg)
 	}
 	a.finishBoot()
-	if a.nav.screen() != screenMainMenu {
+	if a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("boot ended on %s, want the main menu", a.nav.screen())
 	}
 	j := &journey{t: t, a: a, clock: time.Unix(1000, 0)}
@@ -46,7 +47,7 @@ func newMenuJourney(t *testing.T, cfg ...func(*AppConfig)) *journey {
 // commands the renderer sends are recorded, as newJourney does.
 func flowAttach(j *journey) {
 	j.t.Helper()
-	if j.a.renderer == nil || j.a.nav.screen() != screenColony {
+	if j.a.renderer == nil || j.a.nav.screen() != ports.ScreenColony {
 		j.t.Fatalf("no colony: screen %s, %s", j.a.nav.screen(), j.a.sessionErr)
 	}
 	g, ok := j.a.renderer.game.(*game.Game)
@@ -84,45 +85,45 @@ func wizardToColony(t *testing.T, j *journey) {
 	t.Helper()
 	a := j.a
 	j.clickID("menu.newgame")
-	if a.nav.screen() != screenScenario {
+	if a.nav.screen() != ports.ScreenScenario {
 		t.Fatalf("New Colony opened %s, want the scenario screen", a.nav.screen())
 	}
 	j.clickID("wizard.next")
-	if a.nav.screen() != screenStoryteller {
+	if a.nav.screen() != ports.ScreenStoryteller {
 		t.Fatalf("Next opened %s, want Choose Storyteller", a.nav.screen())
 	}
 	j.clickID("story.pick.hearth")
 	j.clickID("diff.seasoned")
-	if ng := a.draft(); ng.Storyteller != "hearth" || ng.Preset.Key() != "seasoned" {
+	if ng := a.wiz.Draft(); ng.Storyteller != "hearth" || ng.Preset.Key() != "seasoned" {
 		t.Fatalf("draft storyteller %q preset %q, want hearth on seasoned", ng.Storyteller, ng.Preset.Key())
 	}
 	j.clickID("wizard.next")
-	if a.nav.screen() != screenWorldGen {
+	if a.nav.screen() != ports.ScreenWorldGen {
 		t.Fatalf("Next opened %s, want Create World", a.nav.screen())
 	}
-	ng := a.draft()
+	ng := a.wiz.Draft()
 	ng.World.SeedText, ng.World.Coverage = tinySeed, 5 // a tiny world keeps the journey fast
 	j.clickID("world.generate")
-	flowUntil(j, "the landing screen", func() bool { return a.nav.screen() == screenLanding }, 4000)
+	flowUntil(j, "the landing screen", func() bool { return a.nav.screen() == ports.ScreenLanding }, 4000)
 	j.clickID("land.random")
 	j.clickID("land.advanced")
 	j.update(1)
 	j.clickID("land.mapsize.0")
-	if side := a.draft().MapSize; side != game.MapSizes()[0].Side {
+	if side := a.wiz.Draft().MapSize; side != game.MapSizes()[0].Side {
 		t.Fatalf("map size %d after picking the first row, want %d", side, game.MapSizes()[0].Side)
 	}
 	j.clickID("modal.land.advanced.close")
 	j.clickID("wizard.next")
-	if a.nav.screen() != screenPawns {
-		t.Fatalf("Next opened %s, want Create Characters (tile %d)", a.nav.screen(), a.draft().Tile)
+	if a.nav.screen() != ports.ScreenPawns {
+		t.Fatalf("Next opened %s, want Create Characters (tile %d)", a.nav.screen(), a.wiz.Draft().Tile)
 	}
 	j.clickID("wizard.start")
-	flowUntil(j, "the colony", func() bool { return a.nav.screen() == screenColony && a.renderer != nil }, 4000)
+	flowUntil(j, "the colony", func() bool { return a.nav.screen() == ports.ScreenColony && a.renderer != nil }, 4000)
 	flowAttach(j)
 	// the pods land, then the scenario's intro letter opens by itself
 	flowUntil(j, "the intro letter", a.uiModalOpen, 2000)
 	j.key("Escape", 0)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatalf("Escape left the modal %q open", a.uiModalTop())
 	}
 }
@@ -176,13 +177,13 @@ func appliedBy(j *journey, kind command.Kind, effect func() bool) {
 // flowSaves is an in-memory SaveHooks: one listed slot, loads a fresh game.
 type flowSaves struct {
 	saves []string
-	slots []SaveSlot
+	slots []ports.SaveSlot
 }
 
 func (s *flowSaves) hooks() SaveHooks {
 	return SaveHooks{
 		Save: func(_ Simulation, slot string) error { s.saves = append(s.saves, slot); return nil },
-		List: func() ([]SaveSlot, error) { return s.slots, nil },
+		List: func() ([]ports.SaveSlot, error) { return s.slots, nil },
 		Load: func(path string) (Simulation, string, error) {
 			if path != "saves/kept.sav" {
 				return nil, "", errors.New("no such save " + path)
@@ -216,7 +217,7 @@ func TestJourneyFlowPauseSaveHook(t *testing.T) {
 	if !strings.HasPrefix(j.a.hint, "saved") {
 		t.Fatalf("hint %q after Save, want it to say saved", j.a.hint)
 	}
-	if j.a.nav.overlay() == overlayPause || j.a.nav.screen() != screenColony {
+	if j.a.nav.overlay() == overlayPause || j.a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("Save left the pause menu up (screen %s)", j.a.nav.screen())
 	}
 }
@@ -231,7 +232,7 @@ func TestJourneyFlowReturnToMenuDropsRenderer(t *testing.T) {
 	if j.a.renderer != nil {
 		t.Fatal("the renderer survived Return to Main Menu")
 	}
-	if j.a.nav.screen() != screenMainMenu {
+	if j.a.nav.screen() != ports.ScreenMainMenu {
 		t.Fatalf("Return to Main Menu opened %s", j.a.nav.screen())
 	}
 	j.update(2) // the menu runs without a colony
@@ -247,7 +248,7 @@ func TestJourneyFlowOptionsRowApplies(t *testing.T) {
 	}
 	j.key("Escape", 0)
 	j.clickID("pause.options")
-	if j.a.nav.screen() != screenOptions {
+	if j.a.nav.screen() != ports.ScreenOptions {
 		t.Fatalf("Options opened %s", j.a.nav.screen())
 	}
 	j.clickID("options.tab.access")
@@ -264,7 +265,7 @@ func TestJourneyFlowOptionsRowApplies(t *testing.T) {
 // save into a colony.
 func TestJourneyFlowContinueLoads(t *testing.T) {
 	t.Parallel()
-	saves := &flowSaves{slots: []SaveSlot{{Name: "kept", Path: "saves/kept.sav", Colonists: 1, Modified: time.Unix(500, 0)}}}
+	saves := &flowSaves{slots: []ports.SaveSlot{{Name: "kept", Path: "saves/kept.sav", Colonists: 1, Modified: time.Unix(500, 0)}}}
 	j := newMenuJourney(t, func(c *AppConfig) { c.Saves = saves.hooks() })
 	if !j.clickID("menu.continue") {
 		t.Fatal("Continue is disabled with a save listed")

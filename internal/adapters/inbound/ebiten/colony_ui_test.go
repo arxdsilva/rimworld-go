@@ -2,6 +2,15 @@ package ebiten
 
 import (
 	"fmt"
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"strings"
 	"testing"
 
@@ -24,7 +33,7 @@ func colonyApp(t *testing.T, s *stubSim) (*App, *fakeInput) {
 	a := testApp(s)
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
@@ -62,8 +71,8 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 	s := &stubSim{factions: factionViews()}
 	a, f := colonyApp(t, s)
 
-	var tab button
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	var tab uikit.Button
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		if b.ID == "tab.factions" {
 			tab = b
 		}
@@ -73,10 +82,10 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 	}
 	press(t, a, f, "tab.factions")
 	f.Frame(t, a)
-	if a.uiModalTop() != colFacModalID {
-		t.Fatalf("top modal = %q, want %q", a.uiModalTop(), colFacModalID)
+	if a.uiModalTop() != windows.ColFacModalID {
+		t.Fatalf("top modal = %q, want %q", a.uiModalTop(), windows.ColFacModalID)
 	}
-	if !hasWidget(a, facTableID+".body") {
+	if !hasWidget(a, wizard.FacTableID+".body") {
 		t.Fatal("the window has no faction table")
 	}
 
@@ -86,16 +95,16 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 	}
 	r := rows[0]
 	if r.Name != "Lynx Reavers" || r.Leader != "Ringleader Brand Eastwood" || r.Relation != faction.Hostile || r.Goodwill != -60 {
-		t.Fatalf("first row = %+v", r.facRow)
+		t.Fatalf("first row = %+v", r.FacRow)
 	}
 	if got := fmt.Sprint(r.History); got != "[-40 -45 -50 -60]" || len(r.Events) != 3 {
 		t.Fatalf("detail = %v %v", r.History, r.Events)
 	}
 	if rows[1].Name != "Oakwood Commonwealth" || rows[1].Settlements != 2 || rows[1].Relation != faction.Friendly {
-		t.Fatalf("second row = %+v", rows[1].facRow)
+		t.Fatalf("second row = %+v", rows[1].FacRow)
 	}
 	if last := rows[2]; !last.Swarm || last.Relation != faction.Hostile {
-		t.Fatalf("last row = %+v, want the Swarm", last.facRow)
+		t.Fatalf("last row = %+v, want the Swarm", last.FacRow)
 	}
 
 	// The window follows the read model: a goodwill change shows next frame.
@@ -106,8 +115,8 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 	f.Frame(t, a)
 
 	// Close ends it.
-	press(t, a, f, "modal."+colFacModalID+".close")
-	if a.uiModalOpen() {
+	press(t, a, f, "modal."+windows.ColFacModalID+".close")
+	if a.uiSt().ModalOpen() {
 		t.Fatal("the window should close")
 	}
 }
@@ -115,7 +124,7 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 func TestFactionsTabDisabledWithoutFactions(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, &stubSim{})
-	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Tabs().Buttons(a.sw, a.sh) {
 		if b.ID == "tab.factions" && (!b.Disabled || b.Reason == "") {
 			t.Fatalf("Factions tab = %+v, want disabled with a reason", b)
 		}
@@ -124,8 +133,8 @@ func TestFactionsTabDisabledWithoutFactions(t *testing.T) {
 
 func TestGoodwillChartPoints(t *testing.T) {
 	t.Parallel()
-	plot := rect{X: 100, Y: 100, W: 590, H: 200}
-	pts := chartPoints([]int{-100, 0, 100}, plot)
+	plot := gfx.Rect{X: 100, Y: 100, W: 590, H: 200}
+	pts := windows.ChartPoints([]int{-100, 0, 100}, plot)
 	if len(pts) != 3 {
 		t.Fatalf("points = %d", len(pts))
 	}
@@ -140,7 +149,7 @@ func TestGoodwillChartPoints(t *testing.T) {
 		t.Fatalf("a short history should leave the left empty: %v", pts)
 	}
 	long := make([]int, 90)
-	if p := chartPoints(long, plot); len(p) != faction.HistoryDays || p[0][0] != plot.X {
+	if p := windows.ChartPoints(long, plot); len(p) != faction.HistoryDays || p[0][0] != plot.X {
 		t.Fatalf("a long history keeps the last %d days", faction.HistoryDays)
 	}
 }
@@ -177,20 +186,20 @@ func TestBioTabFields(t *testing.T) {
 	a.renderer.Select(1)
 	f.Frame(t, a)
 
-	if tab, ok := paneTabByID(a.pawnPane(1), "inspector.bio"); !ok || tab.Disabled {
+	if tab, ok := paneTabByID(a.insp.Pawn().PawnPane(1), "inspector.bio"); !ok || tab.Disabled {
 		t.Fatalf("the inspector has no live Bio tab: %+v %v", tab, ok)
 	}
 	pressButton(t, a, f, "inspector.bio") // the pane's tab strip, the real mouse path
 	f.Frame(t, a)
-	if a.insp.Tab != "bio" || a.paneOpenTab() != "inspector.bio" || !a.bioTabOn() {
-		t.Fatalf("tab = %q (pane %q), want bio", a.insp.Tab, a.paneOpenTab())
+	if a.insp.Tab != "bio" || a.insp.PaneOpenTab() != "inspector.bio" || !a.insp.Tabs().BioTabOn() {
+		t.Fatalf("tab = %q (pane %q), want bio", a.insp.Tab, a.insp.PaneOpenTab())
 	}
 
 	b := s.bios[1]
-	if got := bioName(b); got != `Ada "Sparks" Voss` {
+	if got := inspectorpkg.BioName(b); got != `Ada "Sparks" Voss` {
 		t.Fatalf("name = %q", got)
 	}
-	if got := bioInfoLine(b); got != "Female, age 31, heavy build" {
+	if got := inspectorpkg.BioInfoLine(b); got != "Female, age 31, heavy build" {
 		t.Fatalf("info = %q", got)
 	}
 	// Backstories, traits and the incapable list carry their descriptions.
@@ -214,26 +223,26 @@ func TestBioTabFields(t *testing.T) {
 	if got := bioSkillTip(b.Skills[skill.Mining], 0); !strings.Contains(got, "Nothing learned") {
 		t.Errorf("idle tip = %q", got)
 	}
-	if weekText(0) != "·" || weekText(35) != "+35" {
-		t.Errorf("weekText = %q %q", weekText(0), weekText(35))
+	if inspectorpkg.WeekText(0) != "·" || inspectorpkg.WeekText(35) != "+35" {
+		t.Errorf("weekText = %q %q", inspectorpkg.WeekText(0), inspectorpkg.WeekText(35))
 	}
-	short, full := bioIncapable(b)
+	short, full := inspectorpkg.BioIncapable(b)
 	if short != "Violence" || !strings.Contains(full, "Convoy mechanic") {
 		t.Errorf("incapable = %q / %q", short, full)
 	}
-	if s, _ := bioIncapable(game.BioView{}); s != "None" {
+	if s, _ := inspectorpkg.BioIncapable(game.BioView{}); s != "None" {
 		t.Errorf("no incapabilities = %q", s)
 	}
 
 	// A colonist without a bio has the tab disabled.
 	s.pawns[0].Sex = ""
-	if tab, ok := paneTabByID(a.pawnPane(1), "inspector.bio"); !ok || !tab.Disabled || tab.Reason == "" {
+	if tab, ok := paneTabByID(a.insp.Pawn().PawnPane(1), "inspector.bio"); !ok || !tab.Disabled || tab.Reason == "" {
 		t.Fatalf("Bio tab = %+v (%v), want disabled with a reason", tab, ok)
 	}
-	if b, ok := hasButton(a.paneButtons(), "inspector.bio"); !ok || !b.Disabled || b.Reason == "" {
+	if b, ok := hasButton(a.insp.PaneButtons(), "inspector.bio"); !ok || !b.Disabled || b.Reason == "" {
 		t.Fatalf("Bio tab button = %+v (%v), want disabled with a reason", b, ok)
 	}
-	if a.bioTabOn() {
+	if a.insp.Tabs().BioTabOn() {
 		t.Fatal("the Bio tab can't be on for a colonist without one")
 	}
 }
@@ -242,13 +251,13 @@ func TestColonistBarTooltipAgeAndTitle(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, bioSim())
 	var tip string
-	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
+	for _, b := range a.chrome.Bar().Buttons(a.sw, a.sh) {
 		tip = b.Tip
 	}
 	if tip != "Ada, 31, Convoy mechanic" {
 		t.Fatalf("bar tip = %q", tip)
 	}
-	if got := barTip(game.PawnView{ID: 4}); got != "Colonist 4" {
+	if got := hud.BarTip(game.PawnView{ID: 4}); got != "Colonist 4" {
 		t.Fatalf("legacy bar tip = %q", got)
 	}
 }
@@ -270,8 +279,8 @@ func TestWorkTabIncapableCells(t *testing.T) {
 	}
 
 	haul, grow := "work.cell.1.6", "work.cell.1.2"
-	byID := map[string]button{}
-	for _, b := range a.workButtons() {
+	byID := map[string]uikit.Button{}
+	for _, b := range a.win.Buttons() {
 		byID[b.ID] = b
 	}
 	if b := byID[haul]; !b.Disabled || b.Reason != why {
@@ -305,8 +314,8 @@ func TestWorkTabIncapableCells(t *testing.T) {
 	if got := tipOf(t, a, "work.hdr.4"); !strings.Contains(got, "Skill: Construction") {
 		t.Errorf("header tip = %q", got)
 	}
-	for col := range workColumns { // every header names its work
-		if workHelp[col] == "" {
+	for col := range windows.WorkColumns { // every header names its work
+		if windows.WorkHelp[col] == "" {
 			t.Errorf("column %d has no header card", col)
 		}
 	}
@@ -324,10 +333,10 @@ func openStory(t *testing.T, s *stubSim) (*App, *fakeInput) {
 	t.Helper()
 	a, f := colonyApp(t, s)
 	a.opt.Tab = "story"
-	a.apply(intent{kind: intentPush, screen: screenOptions})
+	a.apply(intent{kind: intentPush, screen: ports.ScreenOptions})
 	f.Frame(t, a)
-	if a.currentOptionsTab() != "story" {
-		t.Fatalf("tab = %q, want story", a.currentOptionsTab())
+	if a.opt.CurrentTab() != "story" {
+		t.Fatalf("tab = %q, want story", a.opt.CurrentTab())
 	}
 	return a, f
 }
@@ -349,12 +358,12 @@ func TestOptionsStoryTabSendsCommands(t *testing.T) {
 	}
 
 	// Custom opens the dialog on the current values; Accept sends them.
-	press(t, a, f, stCustomID)
+	press(t, a, f, options.StCustomID)
 	f.Frame(t, a)
-	if a.uiModalTop() != stCustomMod {
+	if a.uiModalTop() != options.StCustomMod {
 		t.Fatalf("top modal = %q, want the custom dialog", a.uiModalTop())
 	}
-	press(t, a, f, "modal."+stCustomMod+".accept")
+	press(t, a, f, "modal."+options.StCustomMod+".accept")
 	cs := cmdsOf(s, command.SetDifficulty)
 	if len(cs) != 2 || !strings.HasPrefix(cs[1].Name, "custom:") {
 		t.Fatalf("difficulty commands = %+v, want a custom one", cs)
@@ -363,7 +372,7 @@ func TestOptionsStoryTabSendsCommands(t *testing.T) {
 	if err != nil || got != difficulty.Of(difficulty.Settled) {
 		t.Fatalf("custom values = %+v (%v), want the current Settled values", got, err)
 	}
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("Accept should close the dialog")
 	}
 }
@@ -379,7 +388,7 @@ func TestOptionsStoryTabSaveModeReadOnly(t *testing.T) {
 			t.Errorf("save mode %q must not be a control in play", id)
 		}
 	}
-	if got := storySummary(s.story); len(got) < 2 || !strings.Contains(got[0], "Orla Vane") {
+	if got := options.StorySummary(s.story); len(got) < 2 || !strings.Contains(got[0], "Orla Vane") {
 		t.Fatalf("summary = %v", got)
 	}
 }
@@ -388,17 +397,17 @@ func TestOptionsStoryTabOnlyInColony(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 8, h: 8})
 	a.finishBoot()
-	for _, tab := range a.optionTabList() {
+	for _, tab := range a.opt.TabList() {
 		if tab == "story" {
 			t.Fatal("the menu's Options must not offer Story")
 		}
 	}
 	a.opt.Tab = "story"
-	if a.currentOptionsTab() == "story" {
+	if a.opt.CurrentTab() == "story" {
 		t.Fatal("no colony: the story tab can't be current")
 	}
 	b, _ := colonyApp(t, storySim())
-	if tabs := b.optionTabList(); !strings.Contains(strings.Join(tabs, ","), "story") {
+	if tabs := b.opt.TabList(); !strings.Contains(strings.Join(tabs, ","), "story") {
 		t.Fatalf("colony tabs = %v, want story among them", tabs)
 	}
 }
@@ -434,13 +443,13 @@ func TestIntroLetterShownOnce(t *testing.T) {
 		t.Fatalf("modals = %+v", a.uiSt().Modals)
 	}
 	press(t, a, f, "modal."+a.uiModalTop()+".continue")
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("Continue should close the letter")
 	}
 	for i := 0; i < 5; i++ {
 		f.Frame(t, a)
 	}
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatal("the letter must not open again")
 	}
 
@@ -449,7 +458,7 @@ func TestIntroLetterShownOnce(t *testing.T) {
 	s.world.Messages = append(s.world.Messages, game.MessageView{Tick: 8, Text: "A heat wave has settled.", Letter: true, Title: "Heat wave"})
 	s.world.Letters = append(s.world.Letters, game.LetterView{ID: 2, Tick: 8, Kind: "caution", Title: "Heat wave", Text: "A heat wave has settled.", X: -1, Y: -1})
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatalf("modals = %+v: a new letter must wait in the stack", a.uiSt().Modals)
 	}
 	if n := len(a.letterRows(a.hud())); n != 2 {
@@ -459,7 +468,7 @@ func TestIntroLetterShownOnce(t *testing.T) {
 	a.dropSession()
 	a.startSession(s)
 	f.Frame(t, a)
-	if !a.uiModalOpen() {
+	if !a.uiSt().ModalOpen() {
 		t.Fatal("a new colony should show its own intro letter")
 	}
 }
@@ -467,16 +476,16 @@ func TestIntroLetterShownOnce(t *testing.T) {
 func TestOldLettersAreNotReopened(t *testing.T) {
 	t.Parallel()
 	s := letterSim()
-	s.tick = 5 + letterFresh + 1 // a loaded save's saved letter
+	s.tick = 5 + hud.LetterFresh + 1 // a loaded save's saved letter
 	a, f := colonyApp(t, s)
 	f.Frame(t, a)
-	if a.uiModalOpen() {
+	if a.uiSt().ModalOpen() {
 		t.Fatalf("stale letter opened: %+v", a.uiSt().Modals)
 	}
-	if got := messageLine(s.world.Messages[0]); got != "Letter: Broken Hull" {
+	if got := hud.MessageLine(s.world.Messages[0]); got != "Letter: Broken Hull" {
 		t.Fatalf("message strip line = %q, want the letter's title", got)
 	}
-	if got := messageLine(game.MessageView{Text: "12 meat rotted away"}); got != "12 meat rotted away" {
+	if got := hud.MessageLine(game.MessageView{Text: "12 meat rotted away"}); got != "12 meat rotted away" {
 		t.Fatalf("plain message = %q", got)
 	}
 }
@@ -497,11 +506,11 @@ func TestArchitectLockedByScenario(t *testing.T) {
 	t.Parallel()
 	s := &stubSim{buildables: lockedCatalog("campfire")}
 	a, _ := colonyApp(t, s)
-	a.openArchitect()
-	a.selectArchCategory("furniture")
+	a.arch.OpenPanel()
+	a.arch.SelectCategory("furniture")
 
-	var fire, lamp button
-	for _, b := range a.commandGridButtons() { // the tools are command buttons
+	var fire, lamp uikit.Button
+	for _, b := range a.insp.Commands().CommandGridButtons() { // the tools are command buttons
 		switch b.ID {
 		case "arch.tool.campfire":
 			fire = b
@@ -523,7 +532,7 @@ func TestArchitectLockedByScenario(t *testing.T) {
 	if a.arch.ToolID != "lamp" {
 		t.Fatalf("tool = %q, want lamp", a.arch.ToolID)
 	}
-	if lockWord(fire.Reason) != "locked" || lockWord("Needs research: Fabrication") != "needs research" {
+	if architectpkg.LockWord(fire.Reason) != "locked" || architectpkg.LockWord("Needs research: Fabrication") != "needs research" {
 		t.Fatal("lockWord")
 	}
 }
@@ -538,13 +547,13 @@ func TestNewBuildingCards(t *testing.T) {
 	if cab.icon != "tool_cabinet" || bed.icon != "hospital_bed" || cab.build != "tool cabinet" || bed.build != "hospital bed" {
 		t.Fatalf("cards = %+v %+v", cab, bed)
 	}
-	if _, ok := kindID("tool cabinet"); !ok {
+	if _, ok := architectpkg.KindID("tool cabinet"); !ok {
 		t.Fatal("the cabinet is not in the catalog")
 	}
-	if got := buildSprite("tool cabinet", "south", 0, false, false); got != "furniture/tool_cabinet" {
+	if got := architectpkg.BuildSprite("tool cabinet", "south", 0, false, false); got != "furniture/tool_cabinet" {
 		t.Fatalf("cabinet sprite = %q", got)
 	}
-	if got := buildSprite("hospital bed", "east", 0, false, false); got != "furniture/hospital_bed_east" {
+	if got := architectpkg.BuildSprite("hospital bed", "east", 0, false, false); got != "furniture/hospital_bed_east" {
 		t.Fatalf("bed sprite = %q", got)
 	}
 	// The tooltips carry the component cost beside the material.
@@ -562,11 +571,11 @@ func TestNewBuildingCards(t *testing.T) {
 
 	// They sit in their categories, each card reachable.
 	a, _ := colonyApp(t, &stubSim{})
-	a.openArchitect()
+	a.arch.OpenPanel()
 	for cat, id := range map[string]string{"production": "tool_cabinet", "furniture": "hospital_bed"} {
-		a.selectArchCategory(cat)
+		a.arch.SelectCategory(cat)
 		found := false
-		for _, b := range a.commandGridButtons() { // the tools are command buttons
+		for _, b := range a.insp.Commands().CommandGridButtons() { // the tools are command buttons
 			found = found || b.ID == "arch.tool."+id
 		}
 		if !found {
@@ -575,12 +584,12 @@ func TestNewBuildingCards(t *testing.T) {
 	}
 	// The longest category still fits: every tool has a grid cell, and the
 	// Architect (categories, description, grid) ends above the tab strip.
-	a.selectArchCategory("furniture")
+	a.arch.SelectCategory("furniture")
 	l := a.hud()
 	if n := len(a.archToolCommands()); len(l.GridCells) != n {
 		t.Errorf("furniture has %d tools but the grid shows %d", n, len(l.GridCells))
 	}
-	if r := a.architectRect(); r.Y+r.H > l.Tabs.Y {
+	if r := a.arch.Rect(); r.Y+r.H > l.Tabs.Y {
 		t.Errorf("architect panel ends at %v, below the tab strip at %v", r.Y+r.H, l.Tabs.Y)
 	}
 	if l.Grid.Bottom() > l.Tabs.Y {

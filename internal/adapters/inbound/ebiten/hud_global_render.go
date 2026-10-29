@@ -1,6 +1,11 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -9,13 +14,10 @@ import (
 // camera jumps, and why the game paused itself. The HUD's regions live in
 // package hud and reach these through hudHost (hud_compat.go).
 
-// toggleRoofOverlay is the Shift+R key and HUD button action.
-func (r *Renderer) toggleRoofOverlay() { r.overlays().Roof.Toggle() }
-
 // toggleRoofOverlayIfAny tolerates a nil renderer (menus).
 func (r *Renderer) toggleRoofOverlayIfAny() {
 	if r != nil {
-		r.toggleRoofOverlay()
+		r.overlays().Roof.Toggle()
 	}
 }
 
@@ -29,9 +31,6 @@ func (r *Renderer) toggleHomeOverlayIfAny() {
 		r.overlays().Home.Toggle()
 	}
 }
-
-// planShown reports the Plan overlay is showing (default on, tool held).
-func (r *Renderer) planShown() bool { return r.planOverlayOn() }
 
 // togglePlanOverlayIfAny is the HUD Plans button action; it tolerates a nil
 // renderer (menus).
@@ -64,7 +63,7 @@ func (a *App) syncRoofForce() {
 // rectangle gets the red "can't roof" mark: any non-wall cell lacking
 // the Supported flag.
 func roofGhostUnsupported(flags uint8, wall bool) bool {
-	return !wall && flags&roofSupported == 0
+	return !wall && flags&overlaypkg.RoofSupported == 0
 }
 
 // drawRoofToolGhost marks unsupported cells under the dragged rectangle.
@@ -79,12 +78,12 @@ func (a *App) drawRoofToolGhost(screen *ebiten.Image, x0, y0, x1, y1 int) {
 	}
 	tile := a.shell.TilePx()
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	for _, c := range placementCells(placeArea, x0, y0, x1, y1) {
-		if !roofGhostUnsupported(roofCellAt(w, c[0], c[1]), walls[c]) {
+	for _, c := range architect.PlacementCells(architect.PlaceArea, x0, y0, x1, y1) {
+		if !roofGhostUnsupported(overlaypkg.RoofCellAt(w, c[0], c[1]), walls[c]) {
 			continue
 		}
 		sx, sy := a.shell.WorldToScreen(c[0], c[1])
-		if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+		if sprite.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 			r.drawRoofUnsupported(screen, c[0], c[1], tile) // roof_draw.go
 		}
 	}
@@ -141,13 +140,13 @@ func (a *App) speedReason() string {
 // centerOn moves the camera so world point (wx, wy) is mid-screen.
 // sw x sh is the screen in the map's pixels (captures run at scale 1).
 func (r *Renderer) centerOn(wx, wy float64, sw, sh int) {
-	r.centerOnView(wx, wy, viewport{X0: 0, Y0: 0, X1: float64(sw), Y1: float64(sh)}, colonyViewport(sw, sh))
+	r.centerOnView(wx, wy, camerapkg.Viewport{X0: 0, Y0: 0, X1: float64(sw), Y1: float64(sh)}, camerapkg.ColonyViewport(sw, sh))
 }
 
 // centerOnView centres the camera on a world point in the middle of the
 // physical screen `screen`, clamped to the physical map viewport v.
-func (r *Renderer) centerOnView(wx, wy float64, screen, v viewport) {
-	tile := r.tilePx()
+func (r *Renderer) centerOnView(wx, wy float64, screen, v camerapkg.Viewport) {
+	tile := r.cam.Tile()
 	r.cam.OffsetX = wx*tile - (screen.X0+screen.X1)/2
 	r.cam.OffsetY = wy*tile - (screen.Y0+screen.Y1)/2
 	r.cam.Placed = true // an explicit jump; don't recentre on the map

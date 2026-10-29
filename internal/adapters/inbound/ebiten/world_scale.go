@@ -3,6 +3,7 @@ package ebiten
 import (
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -31,7 +32,7 @@ import (
 // worldRender is an App's render-scaled map: the offscreen and the queue.
 type worldRender struct {
 	img    *ebiten.Image
-	q      worldDeferQueue
+	q      gfx.WorldPass
 	hidden func(lx, ly float32) bool // a.fogHidesLabel, bound once
 }
 
@@ -53,7 +54,7 @@ func (a *App) worldTarget(screen *ebiten.Image) (*ebiten.Image, bool) {
 		return screen, false
 	}
 	b := screen.Bounds()
-	w.img = fitLayer(w.img, int(math.Ceil(float64(b.Dx())*k)), int(math.Ceil(float64(b.Dy())*k)))
+	w.img = gfx.FitLayer(w.img, int(math.Ceil(float64(b.Dx())*k)), int(math.Ceil(float64(b.Dy())*k)))
 	return w.img, true
 }
 
@@ -73,10 +74,6 @@ func (a *App) endWorldPass() {
 	gfx.EndWorldPass()
 }
 
-// flushWorldOverlay draws the queued labels and icons on the screen at the
-// HUD scale, in the order they were made, each with its trace tags.
-func (a *App) flushWorldOverlay(screen *ebiten.Image) { a.wr.q.Flush(screen) }
-
 // fogHidesLabel reports the logical point (lx, ly) is over an unexplored
 // tile of the frame being drawn: the fog, drawn after the labels, would
 // cover a label there.
@@ -86,5 +83,5 @@ func (a *App) fogHidesLabel(lx, ly float32) bool {
 		return false
 	}
 	tx, ty := r.TileAt(int(math.Floor(float64(lx)*a.mapScale())), int(math.Floor(float64(ly)*a.mapScale())))
-	return worldFogged(r.view.W, tx, ty)
+	return overlay.WorldFogged(r.view.W, tx, ty)
 }

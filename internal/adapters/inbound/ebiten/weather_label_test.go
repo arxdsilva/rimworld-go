@@ -5,6 +5,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/application/game"
 )
 
@@ -42,9 +43,9 @@ func TestWeatherLabelArrowSitsBetweenItsTextAtScale(t *testing.T) {
 				t.Errorf("%s wind %v: arrow y %g..%g outside the text row %g..%g", sc.name, wind, y0, y1, name.Y, name.Y+name.H)
 			}
 			// the arrow sits where the layout puts it: 10 logical px past the name
-			s := float32(uiScale())
+			s := float32(gfx.UIScale())
 			cx := (x0 + x1) / 2
-			wlNear(t, sc.name+" arrow centre x", float64(cx), float64((300+textW(texts[0].Text, tsBody)+10)*s), float64(1.5*s))
+			wlNear(t, sc.name+" arrow centre x", float64(cx), float64((300+gfx.TextW(texts[0].Text, gfx.Body)+10)*s), float64(1.5*s))
 		}
 	}
 }

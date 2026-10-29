@@ -2,6 +2,10 @@ package ebiten
 
 import (
 	"math"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"testing"
 
 	"rimworld-go/internal/domain/sim/entity"
@@ -18,11 +22,11 @@ const barPawnID = entity.EntityID(7) // hidpiColony's colonist, at tile (21, 19)
 // path (two Updates: press, then release).
 func clickBarSlot(t *testing.T, a *App, f *fakeInput, id entity.EntityID) {
 	t.Helper()
-	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.ID == barSlotID(id) {
+	for _, b := range a.chrome.Bar().Buttons(a.sw, a.sh) {
+		if b.ID == hud.BarSlotID(id) {
 			f.Cur.Mx = int(float64(b.X+b.W/2) * a.scale.S)
 			f.Cur.My = int(float64(b.Y+b.H/2) * a.scale.S)
-			f.Click(t, a, mbLeft, 0)
+			f.Click(t, a, inputframe.Left, 0)
 			return
 		}
 	}
@@ -76,13 +80,13 @@ func TestBarDoubleClickCentresCamera(t *testing.T) {
 func TestBarClicksFurtherApartDoNotCentre(t *testing.T) {
 	a, f := barColony(t)
 	clickBarSlot(t, a, f, barPawnID)
-	for i := 0; i <= doubleClickFrames; i++ {
+	for i := 0; i <= selectionpkg.DoubleClickFrames; i++ {
 		f.Frame(t, a)
 	}
 	cam := a.renderer.cam
 	clickBarSlot(t, a, f, barPawnID)
 	if a.renderer.cam.OffsetX != cam.OffsetX || a.renderer.cam.OffsetY != cam.OffsetY || pawnCentred(a) {
-		t.Fatalf("two clicks more than %d frames apart moved the camera: %+v -> %+v", doubleClickFrames, cam, a.renderer.cam)
+		t.Fatalf("two clicks more than %d frames apart moved the camera: %+v -> %+v", selectionpkg.DoubleClickFrames, cam, a.renderer.cam)
 	}
 	// ...but the second click is the first of a new pair.
 	clickBarSlot(t, a, f, barPawnID)
@@ -150,7 +154,7 @@ func TestBarDoubleClickStopsCameraSmoothing(t *testing.T) {
 
 func TestCamSmoothHaltStopsMotion(t *testing.T) {
 	t.Parallel()
-	s := camSmooth{Vx: 5, Vy: 6, DirX: 1, DirY: -1, Zooming: true, TargetZoom: 2, PendingScale: 1.3, Speed: 1.5}
+	s := camerapkg.Smooth{Vx: 5, Vy: 6, DirX: 1, DirY: -1, Zooming: true, TargetZoom: 2, PendingScale: 1.3, Speed: 1.5}
 	s.Halt()
 	if s.Vx != 0 || s.Vy != 0 || s.DirX != 0 || s.DirY != 0 || s.Zooming || s.PendingScale != 0 {
 		t.Fatalf("halt left motion: %+v", s)

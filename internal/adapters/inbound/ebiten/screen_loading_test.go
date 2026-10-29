@@ -2,6 +2,8 @@ package ebiten
 
 import (
 	"errors"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -25,9 +27,9 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 	click(t, a, "diff.seasoned")
 	click(t, a, "save.commit")
 	click(t, a, "wizard.next")
-	a.draft().World.SeedText, a.draft().World.Coverage = tinySeed, 5
+	a.wiz.Draft().World.SeedText, a.wiz.Draft().World.Coverage = tinySeed, 5
 	click(t, a, "world.generate")
-	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	runUntil(t, a, func() bool { return a.nav.screen() == ports.ScreenLanding })
 	click(t, a, "land.random")
 	click(t, a, "land.advanced")
 	f.Frame(t, a)
@@ -48,7 +50,7 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 	if s.Scenario.Key != "ember_clan" || len(s.Colonists) != s.Scenario.People {
 		t.Errorf("scenario %q with %d colonists", s.Scenario.Key, len(s.Colonists))
 	}
-	if s.Storyteller != defaultStoryteller || s.Preset != difficulty.Seasoned || s.Difficulty != difficulty.Of(difficulty.Seasoned) {
+	if s.Storyteller != wizardpkg.DefaultStoryteller || s.Preset != difficulty.Seasoned || s.Difficulty != difficulty.Of(difficulty.Seasoned) {
 		t.Errorf("story %q preset %v", s.Storyteller, s.Preset)
 	}
 	if s.SaveMode != difficulty.Commitment {
@@ -63,16 +65,16 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 	if len(s.Factions) != len(plt.Factions) || len(s.Factions) == 0 {
 		t.Errorf("%d factions, planet has %d", len(s.Factions), len(plt.Factions))
 	}
-	if s.MapSize != defaultMapSideEnabled() || s.Season != game.SeasonWinter {
+	if s.MapSize != wizardpkg.DefaultMapSideEnabled() || s.Season != game.SeasonWinter {
 		t.Errorf("map %d season %v", s.MapSize, s.Season)
 	}
 	if len(s.Colonists) != len(chosen) || s.Colonists[0].Nick != chosen[0].Nick {
 		t.Errorf("colonists %v, selected %v", s.Colonists, chosen)
 	}
-	if want := fnv64a(tinySeed) ^ uint64(int64(tile))*0x9E3779B97F4A7C15 ^ s.Scenario.Seed; s.Seed != want || got[0].Seed != want {
+	if want := wizardpkg.Fnv64a(tinySeed) ^ uint64(int64(tile))*0x9E3779B97F4A7C15 ^ s.Scenario.Seed; s.Seed != want || got[0].Seed != want {
 		t.Errorf("seed %x, want %x", s.Seed, want)
 	}
-	if a.ng != nil || a.nav.screen() != screenColony || a.renderer == nil {
+	if a.ng != nil || a.nav.screen() != ports.ScreenColony || a.renderer == nil {
 		t.Fatal("starting ends the wizard in the colony")
 	}
 	// The setup owns its factions: editing them leaves the planet alone.
@@ -86,7 +88,7 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 
 func TestStartNeedsATileAndAPool(t *testing.T) {
 	t.Parallel()
-	ng := &newGameState{Tile: -1}
+	ng := &wizardpkg.Draft{Tile: -1}
 	if _, ok := ng.BuildSetup(); ok {
 		t.Fatal("no planet, no setup")
 	}
@@ -116,19 +118,19 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	a.cfg.NewSimBuilder = func(NewGame) (SimBuilder, error) { return sb, nil }
 	f.Frame(t, a)
 	click(t, a, "wizard.start")
-	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.Load == nil {
+	if a.nav.screen() != ports.ScreenPawns || a.ng == nil || a.ng.Load == nil {
 		t.Fatalf("a builder that is not done keeps the loading screen: screen=%s", a.nav.screen())
 	}
 	img := ebiten.NewImage(a.sw, a.sh)
 	var phases []string
-	for i := 0; i < 20 && a.nav.screen() != screenColony; i++ {
+	for i := 0; i < 20 && a.nav.screen() != ports.ScreenColony; i++ {
 		f.Frame(t, a)
 		a.Draw(img)
 		if a.ng != nil && a.ng.Load != nil {
 			phases = append(phases, a.ng.Load.Phase)
 		}
 	}
-	if a.nav.screen() != screenColony || a.renderer == nil || a.ng != nil {
+	if a.nav.screen() != ports.ScreenColony || a.renderer == nil || a.ng != nil {
 		t.Fatal("the colony starts when the builder is done")
 	}
 	if sb.steps != 6 {
@@ -143,7 +145,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	a2.cfg.NewSimBuilder = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 50, sim: &stubSim{w: 4, h: 4}}, nil }
 	click(t, a2, "wizard.start")
 	f2.Key(t, a2, "Escape", 0)
-	if a2.nav.screen() != screenPawns || a2.ng.Load == nil {
+	if a2.nav.screen() != ports.ScreenPawns || a2.ng.Load == nil {
 		t.Fatalf("Esc while loading: screen=%s", a2.nav.screen())
 	}
 }
@@ -155,7 +157,7 @@ func TestStartFailureReturnsToCharacters(t *testing.T) {
 	a.cfg.NewSimBuilder = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 1, err: errors.New("disk full")}, nil }
 	click(t, a, "wizard.start")
 	f.Frame(t, a)
-	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.Load != nil || a.sessionErr != "disk full" {
+	if a.nav.screen() != ports.ScreenPawns || a.ng == nil || a.ng.Load != nil || a.sessionErr != "disk full" {
 		t.Fatalf("screen=%s err=%q", a.nav.screen(), a.sessionErr)
 	}
 	a.Draw(ebiten.NewImage(a.sw, a.sh)) // shows the failure

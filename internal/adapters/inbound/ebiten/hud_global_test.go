@@ -8,6 +8,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -62,7 +67,7 @@ var globalScales = []struct {
 // (percent), paused, with the cursor parked off the map.
 func globalColony(t *testing.T, sim Simulation, ui int, ww, wh float64) (*App, *fakeInput) {
 	t.Helper()
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	a := testApp(sim)
 	a.devFn = func() float64 { return 1 } // not the test machine's Retina factor
 	st := a.settings
@@ -71,7 +76,7 @@ func globalColony(t *testing.T, sim Simulation, ui int, ww, wh float64) (*App, *
 	a.LayoutF(ww, wh)
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
@@ -82,7 +87,7 @@ func globalColony(t *testing.T, sim Simulation, ui int, ww, wh float64) (*App, *
 }
 
 // onRect puts the fake cursor on the centre of r (logical pixels).
-func (f *fakeInput) onRect(a *App, r rect) {
+func (f *fakeInput) onRect(a *App, r gfx.Rect) {
 	cx, cy := r.Center()
 	f.Cur.Mx, f.Cur.My = int(float64(cx)*a.scale.S), int(float64(cy)*a.scale.S)
 }
@@ -100,9 +105,9 @@ func TestGlobalTogglesInsideGlobal(t *testing.T) {
 			if g.Empty() {
 				t.Fatal("Global has no rect")
 			}
-			var rs []rect
+			var rs []gfx.Rect
 			for _, id := range globalToggleIDs {
-				r, ok := a.globalToggleRect(id)
+				r, ok := a.chrome.Global().ToggleRect(id)
 				if !ok {
 					t.Fatalf("toggle %s missing", id)
 				}
@@ -166,11 +171,11 @@ func TestGlobalTogglesClickTheirOwnOverlay(t *testing.T) {
 				"hud.rescat":   func(o *overlayFlags) { o.rescat = !o.rescat },
 			}
 			for _, id := range globalToggleIDs {
-				rc, _ := a.globalToggleRect(id)
+				rc, _ := a.chrome.Global().ToggleRect(id)
 				want := a.overlayFlags()
 				flip[id](&want)
 				f.onRect(a, rc)
-				f.Click(t, a, mbLeft, 0)
+				f.Click(t, a, inputframe.Left, 0)
 				if got := a.overlayFlags(); got != want {
 					t.Errorf("%s: click at %+v left %+v, want only its own flag flipped: %+v", id, rc, got, want)
 				}
@@ -211,7 +216,7 @@ func globalColonyP(t *testing.T, sim Simulation) (*App, *fakeInput) {
 	a.devFn = func() float64 { return 1 }
 	a.finishBoot()
 	a.startGame()
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
@@ -252,7 +257,7 @@ func TestGlobalSpeedButtons(t *testing.T) {
 	t.Parallel()
 	a, _ := globalColonyP(t, newGlobalSim())
 	r := a.renderer
-	find := func(i int) button {
+	find := func(i int) uikit.Button {
 		b, ok := hasButton(a.colonyButtons(a.sw, a.sh), fmt.Sprintf("speed.%d", i))
 		if !ok {
 			t.Fatalf("speed.%d missing", i)
@@ -336,7 +341,7 @@ func TestGlobalTemperatureFollowsHoveredCell(t *testing.T) {
 	hover := func(tx, ty int) string {
 		f.MoveTo(a, tx, ty)
 		f.Frame(t, a)
-		return a.temperatureLine()
+		return a.chrome.Global().TemperatureLine()
 	}
 	if got, want := hover(3, 3), "Outdoors 13 °C"; got != want { // TemperatureAt(3,3) = 130
 		t.Errorf("outdoor cell: %q, want %q", got, want)
@@ -349,12 +354,12 @@ func TestGlobalTemperatureFollowsHoveredCell(t *testing.T) {
 	}
 	f.onRect(a, a.hud().Global)
 	f.Frame(t, a)
-	if got, want := a.temperatureLine(), "Outdoors 9 °C"; got != want { // over the HUD: WorldView.OutdoorTemp
+	if got, want := a.chrome.Global().TemperatureLine(), "Outdoors 9 °C"; got != want { // over the HUD: WorldView.OutdoorTemp
 		t.Errorf("over the HUD: %q, want %q", got, want)
 	}
 	f.Cur.Mx, f.Cur.My = -50, -50
 	f.Frame(t, a)
-	if got, want := a.temperatureLine(), "Outdoors 9 °C"; got != want {
+	if got, want := a.chrome.Global().TemperatureLine(), "Outdoors 9 °C"; got != want {
 		t.Errorf("off the window: %q, want %q", got, want)
 	}
 }
@@ -372,7 +377,7 @@ func TestGlobalConditionsAreLines(t *testing.T) {
 	if len(chips) != 2 {
 		t.Fatalf("chips = %+v", chips)
 	}
-	row := textRowH()
+	row := hud.TextRowH()
 	if h1 := a.globalHeight(); h1 < h0+2*row-1 {
 		t.Fatalf("two conditions: Global %v -> %v, want about two rows (%v) taller", h0, h1, row)
 	}
@@ -422,12 +427,12 @@ func TestGlobalStackIsMeasured(t *testing.T) {
 			if l.Global.H != a.globalHeight() || l.Global.H <= 0 {
 				t.Fatalf("Global %+v vs globalHeight %v", l.Global, a.globalHeight())
 			}
-			if l.Global.Bottom() != l.Tabs.Y-hudMargin || l.Global.X != float32(a.sw)-240 || l.Global.W != 232 {
+			if l.Global.Bottom() != l.Tabs.Y-hudlayout.HudMargin || l.Global.X != float32(a.sw)-240 || l.Global.W != 232 {
 				t.Fatalf("Global %+v not at the lower-right above Tabs %+v", l.Global, l.Tabs)
 			}
-			rows := a.globalRows()
-			var all []rect
-			add := func(name string, r rect) {
+			rows := a.chrome.Global().Rows()
+			var all []gfx.Rect
+			add := func(name string, r gfx.Rect) {
 				t.Helper()
 				if r.Empty() {
 					return
@@ -477,20 +482,20 @@ func TestGlobalDateLines(t *testing.T) {
 	s := newGlobalSim()
 	a, _ := globalColonyP(t, s)
 	s.stubSim.tick = 3*clock.TicksPerDay + 8*clock.TicksPerHour + 500 // a few days in, about 08:12
-	hour, date := a.hourLine(), a.dateLine()
+	hour, date := a.chrome.Global().HourLine(), a.chrome.Global().DateLine()
 	if !strings.Contains(hour, "08:") || !strings.Contains(hour, "work") {
 		t.Errorf("hour line %q should show the time and the activity", hour)
 	}
 	if !strings.Contains(date, "Spring") {
 		t.Errorf("date line %q should carry the season", date)
 	}
-	if w := textW(date, tsBody); w > 224 {
+	if w := gfx.TextW(date, gfx.Body); w > 224 {
 		t.Errorf("date line %q is %v px wide, more than Global's inner width", date, w)
 	}
 	// a long calendar still fits in a 232 px column
-	long := dateSeasonLine(clock.Date{Year: 11, Quadrum: 3, Day: 14, Hour: 23}, "Midwinter", 224)
-	if textW(long, tsBody) > 224 {
-		t.Errorf("long date %q is %v px", long, textW(long, tsBody))
+	long := hud.DateSeasonLine(clock.Date{Year: 11, Quadrum: 3, Day: 14, Hour: 23}, "Midwinter", 224)
+	if gfx.TextW(long, gfx.Body) > 224 {
+		t.Errorf("long date %q is %v px", long, gfx.TextW(long, gfx.Body))
 	}
 }
 
@@ -505,7 +510,7 @@ func TestGlobalDrawsAtScales(t *testing.T) {
 			a.renderer.overlays().Roof.On, a.chrome.Rooms = true, true
 			a.bg.paused = true
 			screen := ebiten.NewImage(a.pw, a.ph)
-			a.drawGlobalControls(screen, a.sw, a.sh)
+			a.chrome.Global().Draw(screen, a.sw, a.sh)
 		})
 	}
 }
@@ -531,12 +536,12 @@ func TestWeatherLabelWidth(t *testing.T) {
 		t.Fatal("no weather has no width")
 	}
 	calm := game.WorldView{Weather: "clear"}
-	if got, want := weatherLabelW(calm), textW("Clear, calm", tsBody); got != want {
+	if got, want := weatherLabelW(calm), gfx.TextW("Clear, calm", gfx.Body); got != want {
 		t.Errorf("calm width %v, want %v", got, want)
 	}
 	windy := game.WorldView{Weather: "rain", WindX: 2, WindY: 1}
 	lbl := weatherLabel(windy)
-	if got := weatherLabelW(windy); got <= textW("Rain", tsBody)+20 || got > textW(lbl, tsBody)+40 {
+	if got := weatherLabelW(windy); got <= gfx.TextW("Rain", gfx.Body)+20 || got > gfx.TextW(lbl, gfx.Body)+40 {
 		t.Errorf("windy width %v for %q", got, lbl)
 	}
 }
@@ -547,17 +552,17 @@ func TestGlobalInertWithoutAColony(t *testing.T) {
 	t.Parallel()
 	a, _ := globalColonyP(t, newGlobalSim())
 	a.renderer.speed = speedFast
-	a.applySpeedClick("speed.9")
+	a.chrome.Global().SpeedClick("speed.9")
 	if a.renderer.speed != speedFast {
 		t.Fatalf("speed.9 changed the speed to %v", a.renderer.speed)
 	}
 	menu := testApp(&stubSim{w: 4, h: 4})
-	if menu.globalHeight() != 0 || menu.globalButtons(100) != nil || menu.minimapOn() {
+	if menu.globalHeight() != 0 || menu.chrome.Global().Buttons(100) != nil || menu.minimapOn() {
 		t.Fatal("the menu has no global controls")
 	}
-	menu.applySpeedClick("speed.1")
-	menu.globalUI(100, 100)
-	if _, ok := menu.globalToggleRect("hud.roof"); ok {
+	menu.chrome.Global().SpeedClick("speed.1")
+	menu.chrome.Global().Declare(100, 100)
+	if _, ok := menu.chrome.Global().ToggleRect("hud.roof"); ok {
 		t.Fatal("a toggle rect without a colony")
 	}
 }

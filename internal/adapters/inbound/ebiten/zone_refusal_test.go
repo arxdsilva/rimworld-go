@@ -3,6 +3,8 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -14,18 +16,18 @@ import (
 func TestZoneRefusalTooltip(t *testing.T) {
 	t.Parallel()
 	a, g, _ := liveColony(t, 0)
-	if got := a.zoneRefusalAt(game.ZoneStockpile, 0, 5); got != game.ZoneRefuseEdge {
+	if got := a.arch.Zones.RefusalAt(game.ZoneStockpile, 0, 5); got != game.ZoneRefuseEdge {
 		t.Fatalf("edge cell refusal = %q", got)
 	}
-	if got := a.zoneRefusalAt(game.ZoneStockpile, 5, 5); got != "" {
+	if got := a.arch.Zones.RefusalAt(game.ZoneStockpile, 5, 5); got != "" {
 		t.Fatalf("a free cell is refused: %q", got)
 	}
-	if zoneTipText(game.ZoneRefuseEdge) != "Can't zone: Too close to the map edge" || zoneTipText("") != "" ||
-		zoneTipText(zoneNoReason) != "Can't zone here" {
+	if architect.ZoneTipText(game.ZoneRefuseEdge) != "Can't zone: Too close to the map edge" || architect.ZoneTipText("") != "" ||
+		architect.ZoneTipText(architect.ZoneNoReason) != "Can't zone here" {
 		t.Fatal("tip text")
 	}
 	// the most common refusal over a drag, ties to the first met
-	why, free := zoneDragRefusal(0, 0, 2, 1, func(x, y int) string {
+	why, free := architect.ZoneDragRefusal(0, 0, 2, 1, func(x, y int) string {
 		if x == 0 {
 			return "Rock"
 		}
@@ -34,10 +36,10 @@ func TestZoneRefusalTooltip(t *testing.T) {
 	if free || why != "Water" {
 		t.Fatalf("most common = %q free=%v, want Water", why, free)
 	}
-	if why, _ := zoneDragRefusal(1, 0, 0, 0, func(x, y int) string { return []string{"A", "B"}[x] }); why != "A" {
+	if why, _ := architect.ZoneDragRefusal(1, 0, 0, 0, func(x, y int) string { return []string{"A", "B"}[x] }); why != "A" {
 		t.Fatalf("tie goes to the first reason met, got %q", why)
 	}
-	if _, free := zoneDragRefusal(0, 0, 3, 3, func(x, y int) string {
+	if _, free := architect.ZoneDragRefusal(0, 0, 3, 3, func(x, y int) string {
 		if x == 3 && y == 3 {
 			return ""
 		}
@@ -45,7 +47,7 @@ func TestZoneRefusalTooltip(t *testing.T) {
 	}); !free {
 		t.Fatal("one free cell makes the drag fine")
 	}
-	if zoneDragHint(zoneNoReason) != "No free tiles there" || zoneDragHint("Rock") != "Can't zone here: Rock" {
+	if architect.ZoneDragHint(architect.ZoneNoReason) != "No free tiles there" || architect.ZoneDragHint("Rock") != "Can't zone here: Rock" {
 		t.Fatal("drag hint text")
 	}
 	// a drag along the map edge hints the edge
@@ -54,7 +56,7 @@ func TestZoneRefusalTooltip(t *testing.T) {
 	click(t, a, "arch.tool.stockpile")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 0, 3, 0, 8
-	a.submitArchitect()
+	a.arch.Submit()
 	if a.hint != "Can't zone here: "+game.ZoneRefuseEdge {
 		t.Fatalf("hint = %q", a.hint)
 	}
@@ -66,7 +68,7 @@ func TestZoneRefusalFallsBackWithoutReasons(t *testing.T) {
 	t.Parallel()
 	a, s, _ := zoneApp(t)
 	s.deny = func(x, y int) bool { return x == 2 }
-	if a.zoneRefusalAt(game.ZoneStockpile, 2, 2) != zoneNoReason || a.zoneRefusalAt(game.ZoneStockpile, 3, 2) != "" {
+	if a.arch.Zones.RefusalAt(game.ZoneStockpile, 2, 2) != architect.ZoneNoReason || a.arch.Zones.RefusalAt(game.ZoneStockpile, 3, 2) != "" {
 		t.Fatal("fallback refusal")
 	}
 }
@@ -87,7 +89,7 @@ func TestDumpingStockpileTool(t *testing.T) {
 	click(t, a, "arch.tool.dump")
 	a.arch.Drag = true
 	a.arch.X0, a.arch.Y0, a.arch.X1, a.arch.Y1 = 6, 6, 8, 7
-	a.submitArchitect()
+	a.arch.Submit()
 	g.Step(1)
 	found := false
 	for _, z := range g.World().Zones {
@@ -105,7 +107,7 @@ func TestZonePriorityPickSendsCommand(t *testing.T) {
 	st := rectZone(2, game.ZoneStockpile, 3, 0, 4, 1)
 	st.Priority = "Normal"
 	a, s, _ := zoneApp(t, st)
-	var pc cmdButton
+	var pc inspector.Button
 	for _, c := range zoneCmdsOf(a, 2) {
 		if c.ID == "cmd.zone.priority" {
 			pc = c

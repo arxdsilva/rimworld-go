@@ -3,7 +3,11 @@ package ebiten
 import (
 	"fmt"
 	"math"
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	learnpkg "rimworld-go/internal/adapters/inbound/ebiten/learn"
 	"sort"
 	"strings"
 	"testing"
@@ -26,7 +30,7 @@ import (
 func assertChromeIsTheLayout(t *testing.T, a *App) {
 	t.Helper()
 	sw, sh := a.size()
-	regions := append(a.hud().Chrome(), a.learnChrome()...)
+	regions := append(a.hud().Chrome(), a.lrn.Chrome()...)
 	const step = 20
 	for y := step / 2; y < sh; y += step {
 		for x := step / 2; x < sw; x += step {
@@ -50,9 +54,9 @@ func assertChromeIsTheLayout(t *testing.T, a *App) {
 func assertButtonsInRegions(t *testing.T, a *App) {
 	t.Helper()
 	sw, sh := a.size()
-	regions := append(a.hud().Chrome(), a.learnChrome()...)
+	regions := append(a.hud().Chrome(), a.lrn.Chrome()...)
 	for _, b := range a.colonyButtons(sw, sh) {
-		br := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
+		br := gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if br.Empty() {
 			continue
 		}
@@ -71,9 +75,9 @@ func assertButtonsInRegions(t *testing.T, a *App) {
 
 // layoutRegions are a layout's shown regions by name (each command cell
 // and each colonist-bar slot its own, the minimap included).
-func layoutRegions(l hudLayout) map[string]rect {
-	out := map[string]rect{}
-	for name, r := range map[string]rect{"Tabs": l.Tabs, "Pane": l.Pane, "PaneTabs": l.PaneTabs, "Expanded": l.Expanded,
+func layoutRegions(l hudlayout.Layout) map[string]gfx.Rect {
+	out := map[string]gfx.Rect{}
+	for name, r := range map[string]gfx.Rect{"Tabs": l.Tabs, "Pane": l.Pane, "PaneTabs": l.PaneTabs, "Expanded": l.Expanded,
 		"ArchCats": l.ArchCats, "ArchDesc": l.ArchDesc, "Window": l.Window, "Global": l.Global, "Minimap": l.Minimap,
 		"Letters": l.Letters, "Learn": l.Learn, "Alerts": l.Alerts, "Resources": l.Resources, "Messages": l.Messages} {
 		if !r.Empty() {
@@ -91,7 +95,7 @@ func layoutRegions(l hudLayout) map[string]rect {
 
 // overlaps are the pairs of regions of l that share area (touching edges
 // is fine), and the regions that leave the w x h screen.
-func layoutOverlaps(l hudLayout, w, h int) []string {
+func layoutOverlaps(l hudlayout.Layout, w, h int) []string {
 	rs := layoutRegions(l)
 	names := make([]string, 0, len(rs))
 	for n := range rs {
@@ -99,7 +103,7 @@ func layoutOverlaps(l hudLayout, w, h int) []string {
 	}
 	sort.Strings(names)
 	var bad []string
-	screen := rect{X: 0, Y: 0, W: float32(w), H: float32(h)}
+	screen := gfx.Rect{X: 0, Y: 0, W: float32(w), H: float32(h)}
 	for i, n := range names {
 		r := rs[n]
 		if r.X < -0.01 || r.Y < -0.01 || r.Right() > screen.Right()+0.01 || r.Bottom() > screen.Bottom()+0.01 {
@@ -132,13 +136,13 @@ func maxArchTools() int {
 // the pane with and without a tall tab, the Architect with a description,
 // a window), with the colonist bar, letters, alerts, messages and the
 // resource list full, the minimap and the learning helper on and off.
-func layoutStates() []hudState {
-	var out []hudState
+func layoutStates() []hudlayout.Inputs {
+	var out []hudlayout.Inputs
 	for _, minimap := range []bool{false, true} {
-		for _, learn := range []float32{0, learnHeaderH, 200} {
+		for _, learn := range []float32{0, learnpkg.HeaderH, 200} {
 			for _, colonists := range []int{1, 6, 30, 90} {
 				for _, cmds := range []int{0, 1, 13, 27, 60} {
-					base := hudState{
+					base := hudlayout.Inputs{
 						Colonists: colonists, Commands: cmds, GlobalH: 196, MinimapOn: minimap, LearnH: learn,
 						Alerts: 12, Letters: 11, ResourcesH: 600, Messages: 5,
 					}
@@ -147,7 +151,7 @@ func layoutStates() []hudState {
 					pane := base
 					pane.PaneShown = true
 					tall := pane
-					tall.ExpandedW, tall.ExpandedH = expandMaxW+100, 2000
+					tall.ExpandedW, tall.ExpandedH = hudlayout.ExpandMaxW+100, 2000
 					arch := base // the biggest category, the tallest description
 					arch.ArchOpen, arch.Commands, arch.ArchDescH = true, maxArchTools(), 2000
 					win := base
@@ -166,7 +170,7 @@ func TestLayoutRegionsNeverOverlap(t *testing.T) {
 	t.Parallel()
 	for _, sz := range layoutScreens {
 		for _, st := range layoutStates() {
-			l := computeHUDLayout(sz[0], sz[1], st)
+			l := hudlayout.Compute(sz[0], sz[1], st)
 			if bad := layoutOverlaps(l, sz[0], sz[1]); len(bad) > 0 {
 				t.Fatalf("%dx%d %+v:\n\t%s", sz[0], sz[1], st, strings.Join(bad, "\n\t"))
 			}
@@ -203,10 +207,10 @@ func layoutScreen(t *testing.T, a *App, w, h int, ui float64) (int, int) {
 	t.Helper()
 	old := gfx.CurrentScale()
 	t.Cleanup(func() { gfx.SetScale(old) })
-	a.scale = uiScaleState{Dev: 1, UI: ui, S: ui}
+	a.scale = gfx.Scale{Dev: 1, UI: ui, S: ui}
 	a.syncUIScale()
 	a.setPhysical(int(math.Round(float64(w)*ui)), int(math.Round(float64(h)*ui)))
-	if abs(a.sw-w) > 1 || abs(a.sh-h) > 1 {
+	if architectpkg.Abs(a.sw-w) > 1 || architectpkg.Abs(a.sh-h) > 1 {
 		t.Fatalf("logical screen %dx%d, want about %dx%d", a.sw, a.sh, w, h)
 	}
 	return a.sw, a.sh
@@ -224,20 +228,20 @@ func layoutCases() []layoutCase {
 		{"colonist", func(t *testing.T, a *App) { a.renderer.Select(3) }},
 		{"colonist_social", func(t *testing.T, a *App) {
 			a.renderer.Select(3)
-			if !a.openPaneTab("social") {
+			if !a.insp.OpenPaneTab("social") {
 				t.Fatal("the Social tab did not open")
 			}
 		}},
 		{"colonist_log", func(t *testing.T, a *App) {
 			a.renderer.Select(3)
-			if !a.openPaneTab("log") {
+			if !a.insp.OpenPaneTab("log") {
 				t.Fatal("the Log tab did not open")
 			}
 		}},
 		{"architect", func(t *testing.T, a *App) {
-			a.openArchitect()
-			a.selectArchCategory("furniture")
-			a.selectArchTool("hospital_bed")
+			a.arch.OpenPanel()
+			a.arch.SelectCategory("furniture")
+			a.arch.SelectTool("hospital_bed")
 		}},
 		{"window_work", func(t *testing.T, a *App) { a.applyClick("tab.work") }},
 		{"window_history", func(t *testing.T, a *App) { a.applyClick("tab.history") }},
@@ -285,24 +289,24 @@ func TestLayoutCommandGridWrapsUpward(t *testing.T) {
 	t.Parallel()
 	for _, sz := range layoutScreens {
 		for _, n := range []int{13, 27} {
-			st := hudState{Colonists: 6, PaneShown: true, Commands: n, GlobalH: 196}
-			l := computeHUDLayout(sz[0], sz[1], st)
+			st := hudlayout.Inputs{Colonists: 6, PaneShown: true, Commands: n, GlobalH: 196}
+			l := hudlayout.Compute(sz[0], sz[1], st)
 			if len(l.GridCells) == 0 {
 				t.Fatalf("%v %d: no cells", sz, n)
 			}
 			first := l.GridCells[0]
-			if first.X != l.Pane.Right()+hudMargin || first.Bottom() != l.Tabs.Y-hudMargin {
+			if first.X != l.Pane.Right()+hudlayout.HudMargin || first.Bottom() != l.Tabs.Y-hudlayout.HudMargin {
 				t.Errorf("%v %d: the first cell %+v is not bottom-left of the grid, right of the pane %+v", sz, n, first, l.Pane)
 			}
-			if want := min(n, l.GridCols*cmdMaxRows); len(l.GridCells) != want {
-				t.Errorf("%v %d: %d cells, want %d (%d columns x %d rows)", sz, n, len(l.GridCells), want, l.GridCols, cmdMaxRows)
+			if want := min(n, l.GridCols*hudlayout.CmdMaxRows); len(l.GridCells) != want {
+				t.Errorf("%v %d: %d cells, want %d (%d columns x %d rows)", sz, n, len(l.GridCells), want, l.GridCols, hudlayout.CmdMaxRows)
 			}
 			if l.GridCols*2 < n && len(l.GridCells) > l.GridCols && l.GridCells[l.GridCols].Y >= first.Y {
 				t.Errorf("%v %d: the row after the first does not sit above it", sz, n)
 			}
 			for i, c := range l.GridCells {
-				if c.Right() > l.Global.X-hudMargin {
-					t.Errorf("%v %d: cell %d %+v passes Global.X - 8 = %v", sz, n, i, c, l.Global.X-hudMargin)
+				if c.Right() > l.Global.X-hudlayout.HudMargin {
+					t.Errorf("%v %d: cell %d %+v passes Global.X - 8 = %v", sz, n, i, c, l.Global.X-hudlayout.HudMargin)
 				}
 				if i > 0 && c.Y > l.GridCells[i-1].Y {
 					t.Errorf("%v %d: cell %d %+v sits below the one before it %+v (the grid wraps upward)", sz, n, i, c, l.GridCells[i-1])
@@ -318,12 +322,12 @@ func TestLayoutWindowLeavesTheHUD(t *testing.T) {
 	t.Parallel()
 	for _, sz := range layoutScreens {
 		for _, n := range []int{1, 6, 30, 90} {
-			st := hudState{Colonists: n, GlobalH: 196, Alerts: 12, Letters: 3, LearnH: learnHeaderH, WindowW: 5000, WindowH: 5000}
-			l := computeHUDLayout(sz[0], sz[1], st)
+			st := hudlayout.Inputs{Colonists: n, GlobalH: 196, Alerts: 12, Letters: 3, LearnH: learnpkg.HeaderH, WindowW: 5000, WindowH: 5000}
+			l := hudlayout.Compute(sz[0], sz[1], st)
 			if l.Window.Empty() {
 				t.Fatalf("%v: no window", sz)
 			}
-			for name, r := range map[string]rect{"Bar": l.Bar, "Alerts": l.Alerts, "Letters": l.Letters, "Global": l.Global, "Learn": l.Learn, "Tabs": l.Tabs} {
+			for name, r := range map[string]gfx.Rect{"Bar": l.Bar, "Alerts": l.Alerts, "Letters": l.Letters, "Global": l.Global, "Learn": l.Learn, "Tabs": l.Tabs} {
 				if r.Empty() {
 					t.Fatalf("%v %d: no %s", sz, n, name)
 				}
@@ -340,19 +344,19 @@ func TestLayoutWindowLeavesTheHUD(t *testing.T) {
 // minimap.
 func TestLayoutLearnFoldsWhenCramped(t *testing.T) {
 	t.Parallel()
-	st := hudState{MinimapOn: true, GlobalH: 240, LearnH: 196}
-	l := computeHUDLayout(1113, 626, st)
-	if l.Learn.H != learnHeaderH || !l.Learn.Intersect(l.Minimap).Empty() {
+	st := hudlayout.Inputs{MinimapOn: true, GlobalH: 240, LearnH: 196}
+	l := hudlayout.Compute(1113, 626, st)
+	if l.Learn.H != learnpkg.HeaderH || !l.Learn.Intersect(l.Minimap).Empty() {
 		t.Fatalf("Learn %+v beside the minimap %+v: want the header alone, clear of it", l.Learn, l.Minimap)
 	}
-	if l = computeHUDLayout(1280, 720, st); l.Learn.H != 196 {
+	if l = hudlayout.Compute(1280, 720, st); l.Learn.H != 196 {
 		t.Fatalf("Learn %+v: a tall enough screen keeps the lessons", l.Learn)
 	}
 	// the live helper then lists no lessons and blocks nothing below its header
 	a, _ := colonyApp(t, busyStub(6))
 	a.settings.Gameplay.ShowLearningHelper = true
-	p := rect{X: 900, Y: 8, W: rightW, H: learnHeaderH}
-	if !a.learnFolded(p) {
+	p := gfx.Rect{X: 900, Y: 8, W: hudlayout.RightW, H: learnpkg.HeaderH}
+	if !a.lrn.Folded(p) {
 		t.Fatal("a Learn rect shorter than the lessons shows the header alone")
 	}
 }
@@ -365,7 +369,7 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, busyStub(6))
 	sw, sh := a.size()
-	center := func(r rect) (int, int) { x, y := r.Center(); return int(x), int(y) }
+	center := func(r gfx.Rect) (int, int) { x, y := r.Center(); return int(x), int(y) }
 	for _, c := range layoutCases() {
 		c.open(t, a)
 		f.Frame(t, a)
@@ -381,14 +385,14 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 		if n := len(l.GridCells); n > 0 {
 			last := l.GridCells[n-1]
 			next := last
-			next.X += cmdStride
-			if next.Right() <= l.Global.X-hudMargin {
+			next.X += hudlayout.CmdStride
+			if next.Right() <= l.Global.X-hudlayout.HudMargin {
 				if x, y := center(next); a.colonyChromeHit(x, y, sw, sh) {
 					t.Errorf("%s: empty grid space right of the last command blocks the map", c.name)
 				}
 			}
 			above := l.GridCells[0]
-			above.Y = l.Grid.Y - cmdStride
+			above.Y = l.Grid.Y - hudlayout.CmdStride
 			if x, y := center(above); a.colonyChromeHit(x, y, sw, sh) && l.Expanded.Empty() && l.ArchDesc.Empty() {
 				t.Errorf("%s: empty grid space above the grid blocks the map", c.name)
 			}
@@ -401,7 +405,7 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 	// lower-left, and a click on them still reaches the map
 	f.Cur.Mx, f.Cur.My = sw/2, sh/2
 	f.Frame(t, a)
-	r := a.cellInfoRect()
+	r := a.chrome.Cell().Rect()
 	if r.Empty() {
 		t.Fatal("no cell info over the map")
 	}
@@ -427,7 +431,7 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 		t.Fatalf("the HUD is not busy: cells %d letters %+v alerts %+v", len(l.GridCells), l.Letters, l.Alerts)
 	}
 	// nowhere off the regions does the HUD take a right-click
-	regions := append(l.Chrome(), a.learnChrome()...)
+	regions := append(l.Chrome(), a.lrn.Chrome()...)
 	for y := 4; y < sh; y += 12 {
 		for x := 4; x < sw; x += 12 {
 			in := false
@@ -441,21 +445,21 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 	}
 	// on the map beside the command grid, the drafted colonist moves
 	beside := l.GridCells[len(l.GridCells)-1]
-	beside.X += cmdStride
+	beside.X += hudlayout.CmdStride
 	bx, by := beside.Center()
 	s.cmds = nil
 	f.Cur.Mx, f.Cur.My = int(bx), int(by)
-	f.Click(t, a, mbRight, 0)
+	f.Click(t, a, inputframe.Right, 0)
 	if m := cmdsOf(s, command.MovePawn); len(m) != 1 || m[0].Pawn != 3 {
 		t.Fatalf("a right-click on the map beside the grid: moves %+v", m)
 	}
 	// on a letter row or a command button, nobody moves
-	for name, r := range map[string]rect{"letters": l.Letters, "command": l.GridCells[0], "alerts": l.Alerts} {
+	for name, r := range map[string]gfx.Rect{"letters": l.Letters, "command": l.GridCells[0], "alerts": l.Alerts} {
 		s.cmds = nil
-		a.closeFloat()
+		a.ord.CloseFloat()
 		cx, cy := r.Center()
 		f.Cur.Mx, f.Cur.My = int(cx), int(cy)
-		f.Click(t, a, mbRight, 0)
+		f.Click(t, a, inputframe.Right, 0)
 		if m := cmdsOf(s, command.MovePawn); len(m) != 0 {
 			t.Errorf("a right-click on the %s moved the colonist: %+v", name, m)
 		}
@@ -483,7 +487,7 @@ func TestKitWindowHasNoHiddenWorkCells(t *testing.T) {
 	for _, p := range [][2]float32{{0.3, 0.4}, {0.5, 0.5}, {0.7, 0.6}} {
 		s.cmds = nil
 		f.Cur.Mx, f.Cur.My = int(w.X+w.W*p[0]), int(w.Y+w.H*p[1])
-		f.Click(t, a, mbLeft, 0)
+		f.Click(t, a, inputframe.Left, 0)
 		if c := cmdsOf(s, command.SetWorkPriority); len(c) != 0 {
 			t.Fatalf("a click in the History window set a work priority: %+v", c)
 		}
@@ -495,10 +499,10 @@ func TestKitWindowHasNoHiddenWorkCells(t *testing.T) {
 // helper folded to its header as the app folds it when cramped) still
 // leaves them a few rows; the letters give way first (PLAY-018).
 func TestAlertsKeepRowsWhenLettersPileUp(t *testing.T) {
-	st := hudState{Colonists: 6, Alerts: 5, Letters: 12, LearnH: 28, MinimapOn: true, GlobalH: 196}
-	l := computeHUDLayout(1280, 720, st)
-	if l.AlertRows < minAlertRows {
-		t.Fatalf("alerts got %d rows under 12 letters, want at least %d", l.AlertRows, minAlertRows)
+	st := hudlayout.Inputs{Colonists: 6, Alerts: 5, Letters: 12, LearnH: 28, MinimapOn: true, GlobalH: 196}
+	l := hudlayout.Compute(1280, 720, st)
+	if l.AlertRows < hudlayout.MinAlertRows {
+		t.Fatalf("alerts got %d rows under 12 letters, want at least %d", l.AlertRows, hudlayout.MinAlertRows)
 	}
 	if l.LetterRows < 1 {
 		t.Fatal("the letters vanished entirely")
@@ -508,7 +512,7 @@ func TestAlertsKeepRowsWhenLettersPileUp(t *testing.T) {
 	}
 	// with few alerts, the letters keep everything else
 	st.Alerts = 1
-	if l1 := computeHUDLayout(1280, 720, st); l1.LetterRows < l.LetterRows {
+	if l1 := hudlayout.Compute(1280, 720, st); l1.LetterRows < l.LetterRows {
 		t.Fatalf("one alert took more room than five: letters %d < %d", l1.LetterRows, l.LetterRows)
 	}
 }
@@ -517,16 +521,16 @@ func TestAlertsKeepRowsWhenLettersPileUp(t *testing.T) {
 // open on a short screen (1280x720 with the minimap up), it folds to its
 // header before alerts or letters lose their rows.
 func TestLearnFoldsBeforeAlertsAndLettersShrink(t *testing.T) {
-	st := hudState{Colonists: 6, Alerts: 5, Letters: 12, LearnH: 200, MinimapOn: true, GlobalH: 196}
-	l := computeHUDLayout(1280, 720, st)
-	if l.Learn.H != learnHeaderH {
-		t.Fatalf("learning helper %v tall, want folded to its %v header", l.Learn.H, float32(learnHeaderH))
+	st := hudlayout.Inputs{Colonists: 6, Alerts: 5, Letters: 12, LearnH: 200, MinimapOn: true, GlobalH: 196}
+	l := hudlayout.Compute(1280, 720, st)
+	if l.Learn.H != learnpkg.HeaderH {
+		t.Fatalf("learning helper %v tall, want folded to its %v header", l.Learn.H, float32(learnpkg.HeaderH))
 	}
-	if l.AlertRows < minAlertRows || l.LetterRows < 2 {
+	if l.AlertRows < hudlayout.MinAlertRows || l.LetterRows < 2 {
 		t.Fatalf("alerts %d rows, letters %d rows: the folded helper left them too little", l.AlertRows, l.LetterRows)
 	}
 	// on a tall screen it stays open
-	if l2 := computeHUDLayout(1920, 1080, st); l2.Learn.H != 200 {
+	if l2 := hudlayout.Compute(1920, 1080, st); l2.Learn.H != 200 {
 		t.Fatalf("1080p: helper %v tall, want 200 (open)", l2.Learn.H)
 	}
 }

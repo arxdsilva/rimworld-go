@@ -3,6 +3,8 @@ package ebiten
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -14,14 +16,14 @@ func TestAlliesNotInColonistBar(t *testing.T) {
 	ps[2].Visitor = true // an ally sent as military aid
 	ps[3].Visitor = true
 	a, _ := htApp(t, &stubSim{pawns: ps}, 1280, 720)
-	if n := a.barCount(); n != 2 {
+	if n := a.chrome.Bar().Count(); n != 2 {
 		t.Fatalf("barCount = %d, want 2 (allies are not on the bar)", n)
 	}
-	if n := len(a.barPawns()); n != 2 {
+	if n := len(a.chrome.Bar().Pawns()); n != 2 {
 		t.Fatalf("barPawns = %d, want 2", n)
 	}
-	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.ID == barSlotID(3) || b.ID == barSlotID(4) {
+	for _, b := range a.chrome.Bar().Buttons(a.sw, a.sh) {
+		if b.ID == hud.BarSlotID(3) || b.ID == hud.BarSlotID(4) {
 			t.Fatalf("an ally has a bar slot: %s", b.ID)
 		}
 	}
@@ -59,7 +61,7 @@ func TestPawnSubtitleNamesAllyAndVisitor(t *testing.T) {
 		{game.PawnView{Prisoner: true, Visitor: true}, "Prisoner"},
 		{game.PawnView{}, "Colonist"},
 	} {
-		if got := pawnSubtitle(c.p); got != c.want {
+		if got := inspector.PawnSubtitle(c.p); got != c.want {
 			t.Errorf("pawnSubtitle(%+v) = %q, want %q", c.p, got, c.want)
 		}
 	}

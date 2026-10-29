@@ -3,6 +3,11 @@ package ebiten
 import (
 	"errors"
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/options"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"sort"
 	"strings"
 	"testing"
@@ -25,7 +30,7 @@ func quickStart(t *testing.T, a *App) {
 	t.Helper()
 	toPawns(t, a)
 	click(t, a, "wizard.start")
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("quickStart ended on %s, want colony", a.nav.screen())
 	}
 }
@@ -40,13 +45,13 @@ type memStore struct {
 
 func newMemStore() *memStore { return &memStore{files: map[string][]byte{}} }
 
-func (m *memStore) List() ([]ScenarioFile, error) {
+func (m *memStore) List() ([]wizardpkg.ScenarioFile, error) {
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
-	var out []ScenarioFile
+	var out []wizardpkg.ScenarioFile
 	for n := range m.files {
-		out = append(out, ScenarioFile{Name: n, Modified: "2026-01-02 03:04"})
+		out = append(out, wizardpkg.ScenarioFile{Name: n, Modified: "2026-01-02 03:04"})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
@@ -133,16 +138,16 @@ func hasWidget(a *App, id string) bool {
 	return ok
 }
 
-func rowKeys(a *App, ng *newGameState) []string {
+func rowKeys(a *App, ng *wizardpkg.Draft) []string {
 	rows, _ := ng.Rows(a.cfg.Scenarios != nil)
 	var out []string
 	for _, r := range rows {
 		switch r.Kind {
-		case rowHeader:
+		case wizardpkg.RowHeader:
 			out = append(out, "#"+r.Text)
-		case rowEntry:
+		case wizardpkg.RowEntry:
 			out = append(out, ng.Entries[r.Entry].Key)
-		case rowNote:
+		case wizardpkg.RowNote:
 			out = append(out, "!"+r.Text)
 		}
 	}
@@ -152,7 +157,7 @@ func rowKeys(a *App, ng *newGameState) []string {
 func TestMainMenuNamesNewColonyAndKeepsIDs(t *testing.T) {
 	t.Parallel()
 	a, _, _ := ngTest(t, nil)
-	btns := a.mainMenuButtons(a.sw, a.sh)
+	btns := a.menuScreen.Buttons(a.sw, a.sh)
 	if btns[0].ID != "menu.newgame" || btns[0].Label != "New Colony" {
 		t.Fatalf("first button = %+v, want New Colony on menu.newgame while there are no saves", btns[0])
 	}
@@ -160,11 +165,11 @@ func TestMainMenuNamesNewColonyAndKeepsIDs(t *testing.T) {
 		t.Fatalf("continue = %+v, want it disabled after New Colony", btns[1])
 	}
 	for _, b := range btns {
-		if b.W != menuRailW || b.H != menuBtnH || b.X != float32(a.sw-340) {
+		if b.W != mainmenu.RailW || b.H != mainmenu.BtnH || b.X != float32(a.sw-340) {
 			t.Fatalf("%s is %vx%v at x=%v, want 300x40 on the right rail", b.ID, b.W, b.H, b.X)
 		}
 	}
-	if btns[0].Y != 140 || btns[1].Y != 140+menuBtnH+menuBtnGap {
+	if btns[0].Y != 140 || btns[1].Y != 140+mainmenu.BtnH+mainmenu.BtnGap {
 		t.Fatalf("rail starts at %v with a %v step", btns[0].Y, btns[1].Y-btns[0].Y)
 	}
 }
@@ -177,7 +182,7 @@ func TestNewColonyCreatesFreshDraft(t *testing.T) {
 	}
 	click(t, a, "menu.newgame")
 	ng := a.ng
-	if ng == nil || a.nav.screen() != screenScenario {
+	if ng == nil || a.nav.screen() != ports.ScreenScenario {
 		t.Fatalf("draft=%v screen=%s", ng, a.nav.screen())
 	}
 	if ng.Storyteller != "steady" || ng.Preset != difficulty.Settled || ng.SaveMode != difficulty.ReloadAnytime {
@@ -192,7 +197,7 @@ func TestNewColonyCreatesFreshDraft(t *testing.T) {
 	// Edit it, leave through the main menu, come back: a fresh draft.
 	ng.Storyteller, ng.Preset = "gambler", difficulty.Grim
 	a.popScreen()
-	if a.nav.screen() != screenMainMenu || a.ng != nil {
+	if a.nav.screen() != ports.ScreenMainMenu || a.ng != nil {
 		t.Fatalf("the main menu discards the draft: screen=%s ng=%v", a.nav.screen(), a.ng)
 	}
 	click(t, a, "menu.newgame")
@@ -224,7 +229,7 @@ func TestNewDraftUsesTheLastChoicesFromSettings(t *testing.T) {
 func TestContinueLoadsNewestIncludingCommitment(t *testing.T) {
 	t.Parallel()
 	base := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
-	slots := []SaveSlot{
+	slots := []ports.SaveSlot{
 		{Name: "old", Path: "/s/old", Modified: base},
 		{Name: "broken", Path: "/s/broken", Modified: base.Add(10 * time.Hour), Err: "unreadable"},
 		{Name: "colony-commitment", Path: "/s/commit", Modified: base.Add(3 * time.Hour)},
@@ -233,14 +238,14 @@ func TestContinueLoadsNewestIncludingCommitment(t *testing.T) {
 	var loaded []string
 	a, _, _ := ngTest(t, func(c *AppConfig) {
 		c.Saves = SaveHooks{
-			List: func() ([]SaveSlot, error) { return slots, nil },
+			List: func() ([]ports.SaveSlot, error) { return slots, nil },
 			Load: func(path string) (Simulation, string, error) {
 				loaded = append(loaded, path)
 				return &stubSim{w: 8, h: 8}, "colony-commitment", nil
 			},
 		}
 	})
-	btns := a.mainMenuButtons(a.sw, a.sh)
+	btns := a.menuScreen.Buttons(a.sw, a.sh)
 	if btns[0].ID != "menu.continue" || btns[0].Disabled {
 		t.Fatalf("with saves Continue leads the rail: %+v", btns[0])
 	}
@@ -248,7 +253,7 @@ func TestContinueLoadsNewestIncludingCommitment(t *testing.T) {
 	if len(loaded) != 1 || loaded[0] != "/s/commit" {
 		t.Fatalf("loaded %v, want the newest loadable save (the commitment one)", loaded)
 	}
-	if a.nav.screen() != screenColony {
+	if a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	if testApp(nil).newestSlot() != -1 {
@@ -266,7 +271,7 @@ func TestScenarioListShowsBuiltinsThenCustom(t *testing.T) {
 	st.putDef(t, "zeta", d)
 	d.Name = "alpha camp"
 	st.putDef(t, "alpha", d)
-	extra := cloneDef(d)
+	extra := wizardpkg.CloneDef(d)
 	extra.Name = "Mid unsaved"
 	a.wiz.Unsaved = append(a.wiz.Unsaved, extra)
 	click(t, a, "menu.newgame")
@@ -373,7 +378,7 @@ func TestScenarioDetailsFromParts(t *testing.T) {
 		return b.String()
 	}
 	hull, _ := scenario.Builtin("broken_hull")
-	got := text(scenarioLines(hull))
+	got := text(wizardpkg.ScenarioLines(hull))
 	for _, want := range []string{
 		"Player faction\tSettlers", "Starting people\t3, chosen from 8 candidates", "Arrival\tDrop pods",
 		"Tech level\tIndustrial", "Research cost\t100% of normal",
@@ -389,7 +394,7 @@ func TestScenarioDetailsFromParts(t *testing.T) {
 		t.Errorf("Broken Hull has no special rules:\n%s", got)
 	}
 	var rifle game.DetailLine
-	for _, l := range scenarioLines(hull) {
+	for _, l := range wizardpkg.ScenarioLines(hull) {
 		if l.Text == "Rifle ×2" {
 			rifle = l
 		}
@@ -399,21 +404,21 @@ func TestScenarioDetailsFromParts(t *testing.T) {
 	}
 
 	ember, _ := scenario.Builtin("ember_clan")
-	if got := text(scenarioLines(ember)); !strings.Contains(got, "Player faction\tClan") || !strings.Contains(got, "Research cost\t150% of normal") || !strings.Contains(got, "Arrival\tStanding") {
+	if got := text(wizardpkg.ScenarioLines(ember)); !strings.Contains(got, "Player faction\tClan") || !strings.Contains(got, "Research cost\t150% of normal") || !strings.Contains(got, "Arrival\tStanding") {
 		t.Errorf("Ember Clan details:\n%s", got)
 	}
 	bare, _ := scenario.Builtin("bare_hands")
-	got = text(scenarioLines(bare))
+	got = text(wizardpkg.ScenarioLines(bare))
 	if !strings.Contains(got, "## Special rules") || !strings.Contains(got, "No clothes") || !strings.Contains(got, "Forced condition: Exhausted") {
 		t.Errorf("Bare Hands rules:\n%s", got)
 	}
 
 	// The layout wraps and totals the rows.
-	L := buildDetail(hull, scenarioLines(hull), 400)
+	L := wizardpkg.BuildDetail(hull, wizardpkg.ScenarioLines(hull), 400)
 	if len(L.Rows) < 20 || L.Total <= 0 {
 		t.Fatalf("layout has %d rows, height %v", len(L.Rows), L.Total)
 	}
-	narrow := buildDetail(hull, scenarioLines(hull), 200)
+	narrow := wizardpkg.BuildDetail(hull, wizardpkg.ScenarioLines(hull), 200)
 	if narrow.Total <= L.Total {
 		t.Fatalf("a narrower panel must be taller: %v vs %v", narrow.Total, L.Total)
 	}
@@ -439,11 +444,11 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 		t.Fatalf("Next = disabled %v reason %q", w.Disabled, w.Reason)
 	}
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenScenario {
+	if a.nav.screen() != ports.ScreenScenario {
 		t.Fatalf("Next on an invalid scenario moved to %s", a.nav.screen())
 	}
 	f.Key(t, a, "Enter", 0)
-	if a.nav.screen() != screenScenario {
+	if a.nav.screen() != ports.ScreenScenario {
 		t.Fatalf("Enter on an invalid scenario moved to %s", a.nav.screen())
 	}
 
@@ -452,7 +457,7 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 	if sel := a.ng.Selected(); sel.Key != "file.bad" {
 		t.Fatalf("an unreadable file was selected: %s", sel.Key)
 	}
-	var junk scenEntry
+	var junk wizardpkg.ScenEntry
 	for _, e := range a.ng.Entries {
 		if e.Key == "file.junk" {
 			junk = e
@@ -474,7 +479,7 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 		t.Fatalf("Next disabled for a valid scenario: %q", w.Reason)
 	}
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenStoryteller || a.ng.Scenario.Key != "ember_clan" || a.ng.Scenario.People != 5 {
+	if a.nav.screen() != ports.ScreenStoryteller || a.ng.Scenario.Key != "ember_clan" || a.ng.Scenario.People != 5 {
 		t.Fatalf("screen=%s draft scenario=%+v", a.nav.screen(), a.ng.Scenario)
 	}
 	// The draft holds a copy, not the list entry's slice.
@@ -490,7 +495,7 @@ func TestEnterAdvancesFromScenario(t *testing.T) {
 	click(t, a, "menu.newgame")
 	f.Frame(t, a)
 	f.Key(t, a, "Enter", 0)
-	if a.nav.screen() != screenStoryteller {
+	if a.nav.screen() != ports.ScreenStoryteller {
 		t.Fatalf("Enter = %s, want storyteller", a.nav.screen())
 	}
 }
@@ -528,8 +533,8 @@ func TestDeleteCustomConfirms(t *testing.T) {
 	// Cancel keeps it.
 	press(t, a, f, "modal.scen.delete.cancel")
 	f.Frame(t, a)
-	if a.uiModalOpen() || len(st.deleted) != 0 {
-		t.Fatalf("cancel: modal=%v deleted=%v", a.uiModalOpen(), st.deleted)
+	if a.uiSt().ModalOpen() || len(st.deleted) != 0 {
+		t.Fatalf("cancel: modal=%v deleted=%v", a.uiSt().ModalOpen(), st.deleted)
 	}
 	// OK removes it and the list follows.
 	press(t, a, f, "scen.del.file.doomed")
@@ -570,8 +575,8 @@ func TestLoadFileModalSelectsTheFile(t *testing.T) {
 	f.Frame(t, a)
 	press(t, a, f, "modal.scen.load.table.body.0")
 	f.Frame(t, a)
-	if a.uiModalOpen() || a.ng.Selected().Key != "file.fromdisk" {
-		t.Fatalf("modal=%v selected=%s", a.uiModalOpen(), a.ng.Selected().Key)
+	if a.uiSt().ModalOpen() || a.ng.Selected().Key != "file.fromdisk" {
+		t.Fatalf("modal=%v selected=%s", a.uiSt().ModalOpen(), a.ng.Selected().Key)
 	}
 }
 
@@ -582,8 +587,8 @@ func TestBackDiscardConfirmOnlyWhenChanged(t *testing.T) {
 	f.Frame(t, a)
 	// Nothing changed: Back leaves at once.
 	click(t, a, "wizard.back")
-	if a.nav.screen() != screenMainMenu || a.uiModalOpen() {
-		t.Fatalf("an untouched draft: screen=%s modal=%v", a.nav.screen(), a.uiModalOpen())
+	if a.nav.screen() != ports.ScreenMainMenu || a.uiSt().ModalOpen() {
+		t.Fatalf("an untouched draft: screen=%s modal=%v", a.nav.screen(), a.uiSt().ModalOpen())
 	}
 	// Changing a later step makes Back from Choose Scenario ask.
 	click(t, a, "menu.newgame")
@@ -592,13 +597,13 @@ func TestBackDiscardConfirmOnlyWhenChanged(t *testing.T) {
 	click(t, a, "wizard.back")
 	f.Frame(t, a)
 	click(t, a, "wizard.back")
-	if a.nav.screen() != screenScenario || a.uiModalTop() != "scen.discard" {
+	if a.nav.screen() != ports.ScreenScenario || a.uiModalTop() != "scen.discard" {
 		t.Fatalf("screen=%s modal=%q, want the discard confirmation", a.nav.screen(), a.uiModalTop())
 	}
 	// Cancel stays, the draft survives.
 	press(t, a, f, "modal.scen.discard.cancel")
 	f.Frame(t, a)
-	if a.nav.screen() != screenScenario || a.ng == nil || a.ng.Storyteller != "gambler" {
+	if a.nav.screen() != ports.ScreenScenario || a.ng == nil || a.ng.Storyteller != "gambler" {
 		t.Fatalf("cancel left screen=%s draft=%v", a.nav.screen(), a.ng)
 	}
 	// Esc asks again; Discard leaves and drops the draft.
@@ -608,7 +613,7 @@ func TestBackDiscardConfirmOnlyWhenChanged(t *testing.T) {
 	}
 	press(t, a, f, "modal.scen.discard.ok")
 	f.Frame(t, a)
-	if a.nav.screen() != screenMainMenu || a.ng != nil {
+	if a.nav.screen() != ports.ScreenMainMenu || a.ng != nil {
 		t.Fatalf("discard: screen=%s draft=%v", a.nav.screen(), a.ng)
 	}
 }
@@ -672,15 +677,15 @@ func TestCustomOpensEditorOnce(t *testing.T) {
 	ng.Cd.S.ThreatScale = 250
 	press(t, a, f, "modal.diff.custom.accept")
 	f.Frame(t, a)
-	if a.uiModalOpen() || ng.Preset != difficulty.Custom || ng.Custom.ThreatScale != 250 || !ng.CustomOpen {
-		t.Fatalf("accept: modal=%v preset=%v custom=%+v", a.uiModalOpen(), ng.Preset, ng.Custom)
+	if a.uiSt().ModalOpen() || ng.Preset != difficulty.Custom || ng.Custom.ThreatScale != 250 || !ng.CustomOpen {
+		t.Fatalf("accept: modal=%v preset=%v custom=%+v", a.uiSt().ModalOpen(), ng.Preset, ng.Custom)
 	}
 	// Later, Custom selects directly; Customize reopens.
 	click(t, a, "diff.seasoned")
 	click(t, a, "diff.custom")
 	f.Frame(t, a)
-	if a.uiModalOpen() || ng.Preset != difficulty.Custom {
-		t.Fatalf("Custom opens the dialog only once: modal=%v preset=%v", a.uiModalOpen(), ng.Preset)
+	if a.uiSt().ModalOpen() || ng.Preset != difficulty.Custom {
+		t.Fatalf("Custom opens the dialog only once: modal=%v preset=%v", a.uiSt().ModalOpen(), ng.Preset)
 	}
 	click(t, a, "diff.customize")
 	f.Frame(t, a)
@@ -702,7 +707,7 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 
 	// Drag the Threat scale slider to its end.
 	w, _ := a.uiSt().Find("diff.f.ts")
-	track := sliderTrack(w.R)
+	track := uikit.SliderTrackRect(w.R)
 	f.press(t, a, int(track.Right()), int(w.R.Y+9))
 	f.letGo(t, a, int(track.Right()), int(w.R.Y+9))
 	if ng.Cd.S.ThreatScale != 400 {
@@ -710,16 +715,16 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 	}
 	press(t, a, f, "modal.diff.custom.cancel")
 	f.Frame(t, a)
-	if a.uiModalOpen() || ng.Custom != before || ng.Preset != difficulty.Settled || ng.CustomOpen {
-		t.Fatalf("cancel must restore: modal=%v custom=%+v preset=%v", a.uiModalOpen(), ng.Custom, ng.Preset)
+	if a.uiSt().ModalOpen() || ng.Custom != before || ng.Preset != difficulty.Settled || ng.CustomOpen {
+		t.Fatalf("cancel must restore: modal=%v custom=%+v preset=%v", a.uiSt().ModalOpen(), ng.Custom, ng.Preset)
 	}
 	// Esc is a cancel too.
 	click(t, a, "diff.custom")
 	f.Frame(t, a)
 	ng.Cd.S.CropYield = 300
 	f.Key(t, a, "Escape", 0)
-	if a.uiModalOpen() || ng.Custom != before {
-		t.Fatalf("Esc: modal=%v custom=%+v", a.uiModalOpen(), ng.Custom)
+	if a.uiSt().ModalOpen() || ng.Custom != before {
+		t.Fatalf("Esc: modal=%v custom=%+v", a.uiSt().ModalOpen(), ng.Custom)
 	}
 }
 
@@ -806,7 +811,7 @@ func TestSaveModeDefaultsAndPersistsInDraft(t *testing.T) {
 	t.Parallel()
 	var stored []config.Settings
 	a, f, _ := ngTest(t, func(c *AppConfig) {
-		c.Settings = SettingsHooks{
+		c.Settings = options.Hooks{
 			Load: func() (config.Settings, error) { return config.Defaults(), nil },
 			Save: func(s config.Settings) error { stored = append(stored, s); return nil },
 		}
@@ -822,7 +827,7 @@ func TestSaveModeDefaultsAndPersistsInDraft(t *testing.T) {
 	click(t, a, "story.pick.gambler")
 	click(t, a, "diff.merciless")
 	click(t, a, "wizard.next") // writes the choices back to the settings
-	if a.nav.screen() != screenWorldGen {
+	if a.nav.screen() != ports.ScreenWorldGen {
 		t.Fatalf("screen = %s", a.nav.screen())
 	}
 	if len(stored) != 1 {
@@ -834,7 +839,7 @@ func TestSaveModeDefaultsAndPersistsInDraft(t *testing.T) {
 	// Back keeps the draft's choices.
 	click(t, a, "wizard.back")
 	f.Frame(t, a)
-	if a.nav.screen() != screenStoryteller || ng.SaveMode != difficulty.Commitment || ng.Storyteller != "gambler" || ng.Preset != difficulty.Merciless {
+	if a.nav.screen() != ports.ScreenStoryteller || ng.SaveMode != difficulty.Commitment || ng.Storyteller != "gambler" || ng.Preset != difficulty.Merciless {
 		t.Fatalf("after Back: %s %v %s %v", a.nav.screen(), ng.SaveMode, ng.Storyteller, ng.Preset)
 	}
 	// The next New Colony remembers them.
@@ -850,8 +855,8 @@ func TestPacingSparklineDeterministic(t *testing.T) {
 	t.Parallel()
 	seen := map[string]bool{}
 	for _, p := range storyteller.Profiles() {
-		a, b := pacingOf(p), pacingOf(p)
-		if len(a) != sparkDays || fmt.Sprint(a) != fmt.Sprint(b) {
+		a, b := wizardpkg.PacingOf(p), wizardpkg.PacingOf(p)
+		if len(a) != wizardpkg.SparkDays || fmt.Sprint(a) != fmt.Sprint(b) {
 			t.Fatalf("%s: pacing differs between calls or has %d days", p.Key, len(a))
 		}
 		total := 0
@@ -894,7 +899,7 @@ func TestSetupScreensDrawAtBothSizesWithoutArt(t *testing.T) {
 		click(t, a, "diff.custom")
 		f.Frame(t, a)
 		a.Draw(img)
-		if a.nav.screen() != screenStoryteller || a.uiModalTop() != "diff.custom" {
+		if a.nav.screen() != ports.ScreenStoryteller || a.uiModalTop() != "diff.custom" {
 			t.Fatalf("%v: screen=%s modal=%q", size, a.nav.screen(), a.uiModalTop())
 		}
 	}
@@ -919,14 +924,14 @@ func TestCapturesOpenTheirScreens(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		ui     string
-		screen screenID
+		screen ports.Screen
 		modal  string
 	}{
-		{"scenario", screenScenario, ""},
-		{"scenario-editor", screenScenarioEditor, ""},
-		{"scenario-editor-addpart", screenScenarioEditor, "sced.addpart"},
-		{"storyteller", screenStoryteller, ""},
-		{"difficulty-custom", screenStoryteller, "diff.custom"},
+		{"scenario", ports.ScreenScenario, ""},
+		{"scenario-editor", ports.ScreenScenarioEditor, ""},
+		{"scenario-editor-addpart", ports.ScreenScenarioEditor, "sced.addpart"},
+		{"storyteller", ports.ScreenStoryteller, ""},
+		{"difficulty-custom", ports.ScreenStoryteller, "diff.custom"},
 	}
 	for _, c := range cases {
 		a, f, _ := ngTest(t, nil)

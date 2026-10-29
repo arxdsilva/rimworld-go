@@ -2,6 +2,13 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
 	"testing"
 
@@ -27,22 +34,22 @@ func TestHumanCorpseDrawsDeceasedLying(t *testing.T) {
 	if _, ok := r.deceasedOf(game.ItemView{Of: 77}); ok {
 		t.Fatal("unknown deceased")
 	}
-	plan := corpsePlanFor(r.art, it)
+	plan := creature.CorpsePlanFor(r.art, it)
 	side := math.Copysign(1, plan.Ps.Rot)
-	want := lyingPose(r.art, side)
-	want.Cs = deadCS
+	want := creature.LyingPose(r.art, side)
+	want.Cs = creature.DeadCS
 	if plan.Ps != want || math.Abs(math.Abs(plan.Ps.Rot)-math.Pi/2) > 1e-9 {
 		t.Fatalf("the standing figure laid flat on its side: %+v", plan.Ps)
 	}
-	if plan.Ps.Cs != deadCS {
+	if plan.Ps.Cs != creature.DeadCS {
 		t.Fatalf("dead tint: %v", plan.Ps.Cs)
 	}
 	it.Rotten = true
-	if corpsePlanFor(r.art, it).Ps.Cs != rottenCS {
+	if creature.CorpsePlanFor(r.art, it).Ps.Cs != spritepkg.RottenCS {
 		t.Fatal("rotten tint")
 	}
 	// the side it fell on is stable per body
-	if corpsePlanFor(r.art, it).Ps.Rot != plan.Ps.Rot {
+	if creature.CorpsePlanFor(r.art, it).Ps.Rot != plan.Ps.Rot {
 		t.Fatal("stable lying side")
 	}
 	screen := ebiten.NewImage(512, 512)
@@ -61,14 +68,14 @@ func TestBonesSprite(t *testing.T) {
 	t.Parallel()
 	seen := map[string]bool{}
 	for x := 0; x < 20; x++ {
-		k := bonesSprite(x, 3)
-		if k != bonesSprite(x, 3) {
+		k := creature.BonesSprite(x, 3)
+		if k != creature.BonesSprite(x, 3) {
 			t.Fatal("stable per tile")
 		}
 		if k != "item/bones_00" && k != "item/bones_01" {
 			t.Fatalf("variant key %s", k)
 		}
-		if want := artKey("item", "bones", int(tileHash(x, 3)%2)); k != want {
+		if want := env.ArtKey("item", "bones", int(spritepkg.TileHash(x, 3)%2)); k != want {
 			t.Fatalf("variant by tileHash: %s vs %s", k, want)
 		}
 		seen[k] = true
@@ -76,13 +83,13 @@ func TestBonesSprite(t *testing.T) {
 	if len(seen) != 2 {
 		t.Fatal("both variants appear")
 	}
-	if itemSpriteAt("bones", 4, 4) != bonesSprite(4, 4) {
+	if itemSpriteAt("bones", 4, 4) != creature.BonesSprite(4, 4) {
 		t.Fatal("itemSpriteAt maps bones")
 	}
 	if got := itemSpriteAt("dustbuck corpse", 4, 4); !strings.HasPrefix(got, "item/corpse_dustbuck_v") {
 		t.Fatalf("animal corpse variants: %s", got)
 	}
-	if itemSpriteAt("wood", 1, 1) != itemSprite("wood") {
+	if itemSpriteAt("wood", 1, 1) != world.ItemSprite("wood") {
 		t.Fatal("other items unchanged")
 	}
 }
@@ -101,7 +108,7 @@ func TestGraveDugAndFilledSprites(t *testing.T) {
 		{game.BuildingView{Kind: "grave", Occupant: "Ada", Facing: "east"}, "furniture/grave_filled_east"},
 	}
 	for _, c := range cases {
-		if got := graveSprite(c.b); got != c.want {
+		if got := creature.GraveSprite(c.b); got != c.want {
 			t.Fatalf("%+v: %s want %s", c.b, got, c.want)
 		}
 	}
@@ -111,10 +118,10 @@ func TestGraveDugAndFilledSprites(t *testing.T) {
 
 func TestPyreBurningDrawsFireAndSmoke(t *testing.T) {
 	t.Parallel()
-	if pyreSprite(game.BuildingView{Kind: "funeral pyre"}) != "furniture/pyre" {
+	if creature.PyreSprite(game.BuildingView{Kind: "funeral pyre"}) != "furniture/pyre" {
 		t.Fatal("cold pyre")
 	}
-	if pyreSprite(game.BuildingView{Kind: "funeral pyre", Burning: true}) != "furniture/pyre_burning" {
+	if creature.PyreSprite(game.BuildingView{Kind: "funeral pyre", Burning: true}) != "furniture/pyre_burning" {
 		t.Fatal("burning pyre sprite")
 	}
 	cold := burialRenderer(nil)
@@ -131,14 +138,14 @@ func TestPyreBurningDrawsFireAndSmoke(t *testing.T) {
 		hot.present = f
 		hot.emitPyre(b)
 	}
-	kinds := map[partKind]int{}
+	kinds := map[creature.PartKind]int{}
 	for _, p := range hot.parts {
 		kinds[p.Kind]++
 	}
-	if kinds[partSmoke] == 0 || kinds[partEmber] == 0 {
+	if kinds[creature.PartSmoke] == 0 || kinds[creature.PartEmber] == 0 {
 		t.Fatalf("smoke and embers: %v", kinds)
 	}
-	if pyreFlameScale <= 1 {
+	if creature.PyreFlameScale <= 1 {
 		t.Fatal("pyre flames are bigger than a campfire's")
 	}
 	screen := ebiten.NewImage(256, 256)
@@ -160,59 +167,59 @@ func TestArchitectHasGraveAndPyre(t *testing.T) {
 		if tool.category != "furniture" || tool.desc != desc {
 			t.Fatalf("%s: %+v", id, tool)
 		}
-		if _, ok := buildable(tool.build); !ok {
+		if _, ok := architect.Buildable(tool.build); !ok {
 			t.Fatalf("%s builds unknown kind %q", id, tool.build)
 		}
 	}
-	if buildSprite("grave", "east", 0, false, false) != "furniture/grave_dug_east" ||
-		buildSprite("funeral pyre", "", 0, false, false) != "furniture/pyre" {
+	if architect.BuildSprite("grave", "east", 0, false, false) != "furniture/grave_dug_east" ||
+		architect.BuildSprite("funeral pyre", "", 0, false, false) != "furniture/pyre" {
 		t.Fatal("ghost sprites")
 	}
 }
 
 func TestGraveInspectorShowsEpitaph(t *testing.T) {
 	t.Parallel()
-	got := graveLines(game.BuildingView{Kind: "grave", Occupant: "Ada", Epitaph: "Ada - died of infection, day 12"})
+	got := inspector.GraveLines(game.BuildingView{Kind: "grave", Occupant: "Ada", Epitaph: "Ada - died of infection, day 12"})
 	if len(got) != 2 || got[0] != "Here lies Ada" || got[1] != "Ada - died of infection, day 12" {
 		t.Fatalf("filled grave: %q", got)
 	}
-	if got := graveLines(game.BuildingView{Kind: "grave", Occupant: "Ada"}); len(got) != 1 {
+	if got := inspector.GraveLines(game.BuildingView{Kind: "grave", Occupant: "Ada"}); len(got) != 1 {
 		t.Fatalf("no epitaph line when blank: %q", got)
 	}
-	if got := graveLines(game.BuildingView{Kind: "grave"}); len(got) != 1 || got[0] != "Empty grave" {
+	if got := inspector.GraveLines(game.BuildingView{Kind: "grave"}); len(got) != 1 || got[0] != "Empty grave" {
 		t.Fatalf("empty grave: %q", got)
 	}
-	if graveLines(game.BuildingView{Kind: "wall"}) != nil {
+	if inspector.GraveLines(game.BuildingView{Kind: "wall"}) != nil {
 		t.Fatal("only graves")
 	}
 }
 
 func TestDigSwings(t *testing.T) {
 	t.Parallel()
-	d, ok := workTable[game.ActionDig]
-	if !ok || d.Motion != motionSwing {
+	d, ok := creature.WorkTable[game.ActionDig]
+	if !ok || d.Motion != creature.MotionSwing {
 		t.Fatalf("dig row: %+v", d)
 	}
-	if len(d.Parts) == 0 || d.Parts[0].Kind != partSoil || d.At != atTarget {
+	if len(d.Parts) == 0 || d.Parts[0].Kind != creature.PartSoil || d.At != creature.AtTarget {
 		t.Fatalf("soil at the grave tile: %+v", d.Parts)
 	}
-	r, _ := workRenderer(tickAt(3, d.Period, strikeAt+0.01))
-	if pose := r.workPose(worker(game.ActionDig), moveState{}); !pose.Ok || pose.Held.Key != "" || pose.Dx <= 0 || pose.Squash <= 0 {
+	r, _ := workRenderer(tickAt(3, d.Period, creature.StrikeAt+0.01))
+	if pose := r.workPose(worker(game.ActionDig), motionpkg.MoveState{}); !pose.Ok || pose.Held.Key != "" || pose.Dx <= 0 || pose.Squash <= 0 {
 		t.Fatalf("digging leans into the grave, no shovel drawn: %+v", pose)
 	}
 }
 
 func TestBuryKneelsAndPats(t *testing.T) {
 	t.Parallel()
-	d, ok := workTable[game.ActionBury]
-	if !ok || d.Motion != motionReach || d.Squash <= 0 {
+	d, ok := creature.WorkTable[game.ActionBury]
+	if !ok || d.Motion != creature.MotionReach || d.Squash <= 0 {
 		t.Fatalf("bury row: %+v", d)
 	}
-	if len(d.Parts) == 0 || d.Parts[0].Kind != partSoil {
+	if len(d.Parts) == 0 || d.Parts[0].Kind != creature.PartSoil {
 		t.Fatalf("soil: %+v", d.Parts)
 	}
 	r, _ := workRenderer(0)
-	if pose := r.workPose(worker(game.ActionBury), moveState{}); !pose.Ok || pose.Held.Key != "" || pose.Squash <= 0 {
+	if pose := r.workPose(worker(game.ActionBury), motionpkg.MoveState{}); !pose.Ok || pose.Held.Key != "" || pose.Squash <= 0 {
 		t.Fatalf("bare hands: %+v", pose)
 	}
 }
@@ -221,11 +228,11 @@ func TestCarryingCorpseShowsBody(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(0)
 	p := game.PawnView{ID: 2, Carrying: "human corpse"}
-	a := r.carryPose(p, moveState{})
-	if !a.Ok || !a.Held.Set || a.Held.Stance != stanceLoad || a.Held.Key != itemSprite("human corpse") || a.Held.Key == "" {
+	a := r.carryPose(p, motionpkg.MoveState{})
+	if !a.Ok || !a.Held.Set || a.Held.Stance != creature.StanceLoad || a.Held.Key != world.ItemSprite("human corpse") || a.Held.Key == "" {
 		t.Fatalf("body in both arms: %+v", a.Held)
 	}
-	if itemSprite("human corpse") != corpseCarrySprite {
+	if world.ItemSprite("human corpse") != creature.CorpseCarrySprite {
 		t.Fatal("the carried body sprite")
 	}
 }

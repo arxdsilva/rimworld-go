@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"slices"
 	"strings"
 	"testing"
@@ -21,7 +24,7 @@ func toolApp(t *testing.T) (*App, *zoneSim, *fakeInput) {
 	a, s, f := zoneApp(t,
 		growZone(1, "potato", 8, 2, 11, 4),
 		rectZone(2, game.ZoneStockpile, 12, 2, 13, 4))
-	a.selectCand(selCand{Kind: selZone, ID: 1})
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 1})
 	f.Frame(t, a)
 	for _, p := range [][2]int{{8, 2}, {16, 5}, {8, 5}} {
 		if mx, my := a.renderer.worldToScreenF(float64(p[0])+0.5, float64(p[1])+0.5); a.colonyChromeHit(int(mx), int(my), a.sw, a.sh) {
@@ -32,11 +35,11 @@ func toolApp(t *testing.T) (*App, *zoneSim, *fakeInput) {
 }
 
 // armed starts tool k and lets its opening frame pass.
-func armed(t *testing.T, a *App, f *fakeInput, k zoneToolKind) {
+func armed(t *testing.T, a *App, f *fakeInput, k architect.ZoneToolKind) {
 	t.Helper()
-	a.startZoneTool(k)
+	a.arch.Zones.Start(k)
 	f.Frame(t, a)
-	if !a.zoneToolOn(k) {
+	if !a.arch.Zones.On(k) {
 		t.Fatalf("tool %v is not on", k)
 	}
 }
@@ -52,16 +55,16 @@ func cellsOf(gs []ghostCell) [][2]int {
 func TestZoneToolGatesTheMapMouse(t *testing.T) {
 	t.Parallel()
 	a, _, f := toolApp(t)
-	if a.handleZoneTool() {
+	if a.arch.Zones.Handle() {
 		t.Fatal("no tool, no gate")
 	}
-	armed(t, a, f, zoneToolExpand)
-	if !a.handleZoneTool() {
+	armed(t, a, f, architect.ZoneToolExpand)
+	if !a.arch.Zones.Handle() {
 		t.Fatal("an active tool owns the map mouse")
 	}
 	// A click on empty ground with the tool on must not select anything.
 	f.MoveTo(a, 15, 5)
-	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, inputframe.Left, 0)
 	if a.renderer.HasSelect() || a.sel.HasPlant || !a.sel.HasZone {
 		t.Fatal("the tool took the click: the selection must not change")
 	}
@@ -70,22 +73,22 @@ func TestZoneToolGatesTheMapMouse(t *testing.T) {
 func TestZoneToolSwallowsTheOpeningClick(t *testing.T) {
 	t.Parallel()
 	a, s, f := toolApp(t)
-	a.startZoneTool(zoneToolExpand)
+	a.arch.Zones.Start(architect.ZoneToolExpand)
 	// The very next frame carries a left press on the map (the click that
 	// pressed the button): it starts no drag.
 	f.MoveTo(a, 15, 3)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	f.Frame(t, a)
 	if a.arch.Zones.State().Drag {
 		t.Fatal("the opening click started a drag")
 	}
-	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true
 	f.Frame(t, a)
 	if len(s.cmds) != 0 {
 		t.Fatalf("the opening click sent %+v", s.cmds)
 	}
 	// The next press does start one.
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	f.Frame(t, a)
 	if !a.arch.Zones.State().Drag {
 		t.Fatal("a later press starts the drag")
@@ -95,8 +98,8 @@ func TestZoneToolSwallowsTheOpeningClick(t *testing.T) {
 func TestExpandSendsOneCommandPerDragAndStaysOn(t *testing.T) {
 	t.Parallel()
 	a, s, f := toolApp(t)
-	armed(t, a, f, zoneToolExpand)
-	f.Drag(t, a, mbLeft, 14, 2, 16, 4, 0) // three columns east of the stockpile
+	armed(t, a, f, architect.ZoneToolExpand)
+	f.Drag(t, a, inputframe.Left, 14, 2, 16, 4, 0) // three columns east of the stockpile
 	got := cmdsOf(s.stubSim, command.ExpandZone)
 	if len(got) != 1 {
 		t.Fatalf("%d ExpandZone commands, want one per drag (all: %+v)", len(got), s.cmds)
@@ -104,18 +107,18 @@ func TestExpandSendsOneCommandPerDragAndStaysOn(t *testing.T) {
 	if c := got[0]; c.Target != 1 || c.X != 14 || c.Y != 2 || c.X2 != 16 || c.Y2 != 4 {
 		t.Fatalf("expand %+v, want zone 1 rect (14,2)-(16,4)", c)
 	}
-	if !a.zoneToolOn(zoneToolExpand) {
+	if !a.arch.Zones.On(architect.ZoneToolExpand) {
 		t.Fatal("the tool stays on after a drag")
 	}
 	// A drag the other way round is normalised; a second drag is a second command.
-	f.Drag(t, a, mbLeft, 16, 5, 15, 5, 0)
+	f.Drag(t, a, inputframe.Left, 16, 5, 15, 5, 0)
 	got = cmdsOf(s.stubSim, command.ExpandZone)
 	if len(got) != 2 || got[1].X != 15 || got[1].X2 != 16 || got[1].Y != 5 || got[1].Y2 != 5 {
 		t.Fatalf("second drag: %+v", got)
 	}
 	// A single click adds one tile.
 	f.MoveTo(a, 9, 5)
-	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, inputframe.Left, 0)
 	got = cmdsOf(s.stubSim, command.ExpandZone)
 	if len(got) != 3 || got[2].X != 9 || got[2].X2 != 9 || got[2].Y != 5 || got[2].Y2 != 5 {
 		t.Fatalf("click: %+v", got)
@@ -126,7 +129,7 @@ func TestExpandGhostIsPerCellGreenOrRedByTheZoneRules(t *testing.T) {
 	t.Parallel()
 	a, s, f := toolApp(t)
 	s.deny = func(x, y int) bool { return x == 15 } // a column the kind cannot claim
-	armed(t, a, f, zoneToolExpand)
+	armed(t, a, f, architect.ZoneToolExpand)
 	z := zoneByIDOrFail(t, a, 1)
 	// Hovering shows the tile under the pointer.
 	f.MoveTo(a, 14, 3)
@@ -135,7 +138,7 @@ func TestExpandGhostIsPerCellGreenOrRedByTheZoneRules(t *testing.T) {
 		t.Fatalf("hover ghost %+v, want the one valid tile", got)
 	}
 	// Mid-drag the ghost is the rectangle, each cell judged on its own.
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	f.Frame(t, a)
 	f.MoveTo(a, 16, 4)
 	f.Frame(t, a)
@@ -149,13 +152,13 @@ func TestExpandGhostIsPerCellGreenOrRedByTheZoneRules(t *testing.T) {
 		}
 	}
 	// Let go: one command for the whole rectangle (the sim skips the red cell).
-	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true
 	f.Frame(t, a)
 	if got := cmdsOf(s.stubSim, command.ExpandZone); len(got) != 1 || got[0].X != 14 || got[0].X2 != 16 {
 		t.Fatalf("expand %+v", got)
 	}
 	// Nothing valid in the rectangle: no command, and the reason is hinted.
-	f.Drag(t, a, mbLeft, 15, 2, 15, 4, 0)
+	f.Drag(t, a, inputframe.Left, 15, 2, 15, 4, 0)
 	if n := len(cmdsOf(s.stubSim, command.ExpandZone)); n != 1 {
 		t.Fatalf("a drag over only invalid tiles sent a command (%d total)", n)
 	}
@@ -167,12 +170,12 @@ func TestExpandGhostIsPerCellGreenOrRedByTheZoneRules(t *testing.T) {
 func TestShrinkGhostAndCommandOnlyTouchTheSelectedZone(t *testing.T) {
 	t.Parallel()
 	a, s, f := toolApp(t)
-	armed(t, a, f, zoneToolShrink)
+	armed(t, a, f, architect.ZoneToolShrink)
 	z := zoneByIDOrFail(t, a, 1)
 	// Drag across the grow zone's east half and the stockpile beside it.
 	f.Cur.Mods = 0
 	f.MoveTo(a, 10, 2)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	f.Frame(t, a)
 	f.MoveTo(a, 13, 3)
 	f.Frame(t, a)
@@ -192,13 +195,13 @@ func TestShrinkGhostAndCommandOnlyTouchTheSelectedZone(t *testing.T) {
 			t.Errorf("cell (%d,%d) is drawn as an addition", g.x, g.y)
 		}
 	}
-	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true
 	f.Frame(t, a)
 	rm := cmdsOf(s.stubSim, command.RemoveZoneCells)
 	if len(rm) != 1 || rm[0].Target != 1 || rm[0].X != 10 || rm[0].Y != 2 || rm[0].X2 != 13 || rm[0].Y2 != 3 {
 		t.Fatalf("shrink sent %+v, want one RemoveZoneCells on zone 1 for the whole rectangle", rm)
 	}
-	if !a.zoneToolOn(zoneToolShrink) {
+	if !a.arch.Zones.On(architect.ZoneToolShrink) {
 		t.Fatal("the tool stays on after a drag")
 	}
 }
@@ -206,16 +209,16 @@ func TestShrinkGhostAndCommandOnlyTouchTheSelectedZone(t *testing.T) {
 func TestShrinkSingleClickRemovesOneCell(t *testing.T) {
 	t.Parallel()
 	a, s, f := toolApp(t)
-	armed(t, a, f, zoneToolShrink)
+	armed(t, a, f, architect.ZoneToolShrink)
 	f.MoveTo(a, 9, 3)
-	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, inputframe.Left, 0)
 	rm := cmdsOf(s.stubSim, command.RemoveZoneCells)
 	if len(rm) != 1 || rm[0] != (command.Command{Kind: command.RemoveZoneCells, Target: 1, X: 9, Y: 3, X2: 9, Y2: 3}) {
 		t.Fatalf("a click sent %+v, want one cell", rm)
 	}
 	// A click outside the zone changes nothing and says so.
 	f.MoveTo(a, 15, 5)
-	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, inputframe.Left, 0)
 	if n := len(cmdsOf(s.stubSim, command.RemoveZoneCells)); n != 1 {
 		t.Fatalf("a click outside the zone sent a command (%d total)", n)
 	}
@@ -228,21 +231,21 @@ func TestZoneToolRightClickAndEscapeExit(t *testing.T) {
 	t.Parallel()
 	for _, how := range []string{"right-click", "escape"} {
 		a, s, f := toolApp(t)
-		armed(t, a, f, zoneToolExpand)
+		armed(t, a, f, architect.ZoneToolExpand)
 		f.MoveTo(a, 14, 3)
 		switch how {
 		case "right-click":
-			f.Click(t, a, mbRight, 0)
+			f.Click(t, a, inputframe.Right, 0)
 		case "escape":
 			f.Key(t, a, "Escape", 0)
 		}
-		if a.zoneToolOn(zoneToolExpand) {
+		if a.arch.Zones.On(architect.ZoneToolExpand) {
 			t.Fatalf("%s leaves the tool on", how)
 		}
 		if !a.sel.HasZone {
 			t.Fatalf("%s must only end the tool, the zone stays selected", how)
 		}
-		if a.handleZoneTool() {
+		if a.arch.Zones.Handle() {
 			t.Fatalf("%s: the map mouse is free again", how)
 		}
 		if len(s.cmds) != 0 {
@@ -261,16 +264,16 @@ func TestZoneToolRightClickAndEscapeExit(t *testing.T) {
 func TestRightClickDuringADragOnlyDropsTheDrag(t *testing.T) {
 	t.Parallel()
 	a, s, f := toolApp(t)
-	armed(t, a, f, zoneToolShrink)
+	armed(t, a, f, architect.ZoneToolShrink)
 	f.MoveTo(a, 9, 3)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	f.Frame(t, a)
-	f.Cur.Press[mbRight] = true
+	f.Cur.Press[inputframe.Right] = true
 	f.Frame(t, a)
-	if a.arch.Zones.State().Drag || !a.zoneToolOn(zoneToolShrink) {
-		t.Fatalf("drag=%v tool on=%v, want the drag dropped and the tool kept", a.arch.Zones.State().Drag, a.zoneToolOn(zoneToolShrink))
+	if a.arch.Zones.State().Drag || !a.arch.Zones.On(architect.ZoneToolShrink) {
+		t.Fatalf("drag=%v tool on=%v, want the drag dropped and the tool kept", a.arch.Zones.State().Drag, a.arch.Zones.On(architect.ZoneToolShrink))
 	}
-	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true
 	f.Frame(t, a)
 	if len(s.cmds) != 0 {
 		t.Fatalf("a dropped drag sent %+v", s.cmds)
@@ -280,17 +283,17 @@ func TestRightClickDuringADragOnlyDropsTheDrag(t *testing.T) {
 func TestZoneToolEndsWhenTheZoneVanishesOrAnotherPanelOpens(t *testing.T) {
 	t.Parallel()
 	a, s, f := toolApp(t)
-	armed(t, a, f, zoneToolShrink)
+	armed(t, a, f, architect.ZoneToolShrink)
 	s.world.Zones = s.world.Zones[1:] // zone 1 is gone
 	f.Frame(t, a)
-	if a.sel.HasZone || a.zoneToolOn(zoneToolShrink) {
-		t.Fatalf("zone selected=%v tool on=%v, want both gone", a.sel.HasZone, a.zoneToolOn(zoneToolShrink))
+	if a.sel.HasZone || a.arch.Zones.On(architect.ZoneToolShrink) {
+		t.Fatalf("zone selected=%v tool on=%v, want both gone", a.sel.HasZone, a.arch.Zones.On(architect.ZoneToolShrink))
 	}
 	a, _, f = toolApp(t)
-	armed(t, a, f, zoneToolExpand)
-	a.openArchitect()
+	armed(t, a, f, architect.ZoneToolExpand)
+	a.arch.OpenPanel()
 	f.Frame(t, a)
-	if a.zoneToolOn(zoneToolExpand) {
+	if a.arch.Zones.On(architect.ZoneToolExpand) {
 		t.Fatal("opening the Architect ends the zone tool")
 	}
 }
@@ -298,26 +301,26 @@ func TestZoneToolEndsWhenTheZoneVanishesOrAnotherPanelOpens(t *testing.T) {
 func TestSelectingSomethingElseEndsTheTool(t *testing.T) {
 	t.Parallel()
 	a, _, f := toolApp(t)
-	armed(t, a, f, zoneToolExpand)
+	armed(t, a, f, architect.ZoneToolExpand)
 	a.renderer.Select(1)
-	a.clearSelections(selPawn)
-	if a.zoneToolOn(zoneToolExpand) {
+	a.sel.Clear(selectionpkg.Pawn)
+	if a.arch.Zones.On(architect.ZoneToolExpand) {
 		t.Fatal("deselecting the zone ends its tool")
 	}
 	// And the tool of one zone is not the next zone's.
-	a.selectCand(selCand{Kind: selZone, ID: 2})
-	if a.zoneToolOn(zoneToolExpand) {
+	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Zone, ID: 2})
+	if a.arch.Zones.On(architect.ZoneToolExpand) {
 		t.Fatal("selecting another zone starts with no tool")
 	}
 }
 
 func TestZoneToolDrawsItsHintAndIcon(t *testing.T) {
 	a, _, f := toolApp(t)
-	armed(t, a, f, zoneToolShrink)
+	armed(t, a, f, architect.ZoneToolShrink)
 	f.MoveTo(a, 9, 3)
 	f.Frame(t, a)
 	got := wlTrace(t)
-	a.drawZoneSelection(ebiten.NewImage(64, 64))
+	a.arch.Zones.DrawSelection(ebiten.NewImage(64, 64))
 	var texts []string
 	for _, e := range wlOfKind(*got, "text") {
 		texts = append(texts, e.Text)
@@ -329,7 +332,7 @@ func TestZoneToolDrawsItsHintAndIcon(t *testing.T) {
 	*got = (*got)[:0]
 	f.Cur.Mx, f.Cur.My = 20, a.sh-20
 	f.Frame(t, a)
-	a.drawZoneSelection(ebiten.NewImage(64, 64))
+	a.arch.Zones.DrawSelection(ebiten.NewImage(64, 64))
 	for _, e := range wlOfKind(*got, "text") {
 		if strings.HasPrefix(e.Text, "Shrink") {
 			t.Fatalf("the hint follows the pointer onto the HUD: %q", e.Text)

@@ -2,6 +2,11 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -14,12 +19,12 @@ import (
 // radius, inspector line, trade alerts.
 
 // turretArt adds the turret, console and beacon sprites to pdArt.
-func turretArt() *artCatalog {
+func turretArt() *artpkg.Catalog {
 	c := pdArt()
-	c.Sprites[turretBaseKey] = fakeSprite([2]int{160, 200}, pt{16, 80}, map[string]pt{"mount": {80, 100}})
-	c.Sprites[turretBaseKey+"_glow"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
-	for i := 0; i < turretAimFrames; i++ {
-		c.Sprites[turretGunKey(i)] = fakeSprite([2]int{120, 120}, pt{20, 60}, map[string]pt{"mount": {60, 60}, "muzzle": {60 + float64(i), 110}})
+	c.Sprites[overlay.TurretBaseKey] = fakeSprite([2]int{160, 200}, pt{16, 80}, map[string]pt{"mount": {80, 100}})
+	c.Sprites[overlay.TurretBaseKey+"_glow"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
+	for i := 0; i < overlay.TurretAimFrames; i++ {
+		c.Sprites[overlay.TurretGunKey(i)] = fakeSprite([2]int{120, 120}, pt{20, 60}, map[string]pt{"mount": {60, 60}, "muzzle": {60 + float64(i), 110}})
 	}
 	c.Sprites["power/trade_beacon"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
 	c.Sprites["power/trade_beacon_glow"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
@@ -35,20 +40,20 @@ func turretRenderer(t *testing.T, b game.BuildingView) (*Renderer, *[]string) {
 }
 
 func drawOne(r *Renderer) {
-	r.drawBuildingObj(ebiten.NewImage(640, 400), &r.view.W.Buildings[0], r.tilePx(), 640, 400)
+	r.drawBuildingObj(ebiten.NewImage(640, 400), &r.view.W.Buildings[0], r.cam.Tile(), 640, 400)
 }
 
 func TestTurretDrawAimFrame(t *testing.T) {
 	t.Parallel()
 	for _, dir := range []int8{0, 5, 15} {
-		b := game.BuildingView{ID: 1, Kind: sentryTurretKind, X: 3, Y: 3, AimDir: dir, ShotAge: -1, PowerRole: "consumer", Powered: true}
+		b := game.BuildingView{ID: 1, Kind: overlay.SentryTurretKind, X: 3, Y: 3, AimDir: dir, ShotAge: -1, PowerRole: "consumer", Powered: true}
 		r, got := turretRenderer(t, b)
 		drawOne(r)
 		if want := "gun " + fmt.Sprintf("defense/sentry_turret_gun_%02d", dir); !pdHas(*got, want) {
 			t.Errorf("aim %d drew %v, want %q", dir, *got, want)
 		}
 	}
-	if recoilPush(-1) != 0 || recoilPush(0) <= recoilPush(3) || recoilPush(turretRecoilTicks) != 0 {
+	if overlay.RecoilPush(-1) != 0 || overlay.RecoilPush(0) <= overlay.RecoilPush(3) || overlay.RecoilPush(overlay.TurretRecoilTicks) != 0 {
 		t.Error("recoil should push at the shot, fade and end")
 	}
 	if v := turretAimVec(0); v.X != 0 || v.Y != 1 {
@@ -62,10 +67,10 @@ func TestTurretDrawAimFrame(t *testing.T) {
 func TestTurretGlowOnlyWhenPowered(t *testing.T) {
 	t.Parallel()
 	for _, powered := range []bool{true, false} {
-		b := game.BuildingView{ID: 1, Kind: sentryTurretKind, X: 3, Y: 3, ShotAge: -1, PowerRole: "consumer", Powered: powered}
+		b := game.BuildingView{ID: 1, Kind: overlay.SentryTurretKind, X: 3, Y: 3, ShotAge: -1, PowerRole: "consumer", Powered: powered}
 		r, got := turretRenderer(t, b)
 		drawOne(r)
-		if has := pdHas(*got, "glow "+turretBaseKey+"_glow"); has != powered {
+		if has := pdHas(*got, "glow "+overlay.TurretBaseKey+"_glow"); has != powered {
 			t.Errorf("powered %v: glow drawn %v (%v)", powered, has, *got)
 		}
 	}
@@ -73,7 +78,7 @@ func TestTurretGlowOnlyWhenPowered(t *testing.T) {
 
 func TestTurretMuzzleFlashFromBuildingTrace(t *testing.T) {
 	t.Parallel()
-	b := game.BuildingView{ID: 7, Kind: sentryTurretKind, X: 3, Y: 3, AimDir: 2, ShotAge: 0}
+	b := game.BuildingView{ID: 7, Kind: overlay.SentryTurretKind, X: 3, Y: 3, AimDir: 2, ShotAge: 0}
 	r, _ := turretRenderer(t, b)
 	tr := game.TraceView{FromX: 3, FromY: 3, ToX: 8, ToY: 3, FromBuilding: true, Attacker: entity.EntityID(7)}
 	mz, ok := r.traceMuzzle(tr)
@@ -81,7 +86,7 @@ func TestTurretMuzzleFlashFromBuildingTrace(t *testing.T) {
 		t.Fatal("no muzzle for a turret's trace")
 	}
 	// mount (80,100) on origin (16,80), gun mount (60,60) origin (20,60), muzzle (62,110)
-	px := float64(artTilePx)
+	px := float64(artpkg.TilePx)
 	wantX := 3 + (80-16)/px - (60-20)/px + (62-20)/px
 	wantY := 3 + (100-80)/px - (60-60)/px + (110-60)/px
 	if d := mz.X - wantX; d > 1e-9 || d < -1e-9 {
@@ -97,27 +102,27 @@ func TestTurretMuzzleFlashFromBuildingTrace(t *testing.T) {
 
 func TestBeaconGhostShowsRadius(t *testing.T) {
 	t.Parallel()
-	if rad, ok := placementRing(tradeBeaconKind); !ok || rad != 6 {
+	if rad, ok := overlay.PlacementRing(overlay.TradeBeaconKind); !ok || rad != 6 {
 		t.Fatalf("beacon ring = %v %v, want 6", rad, ok)
 	}
-	if _, ok := placementRing("wall"); ok {
+	if _, ok := overlay.PlacementRing("wall"); ok {
 		t.Error("only the beacon shows a ghost ring")
 	}
-	r, got := turretRenderer(t, game.BuildingView{ID: 1, Kind: tradeBeaconKind, X: 2, Y: 2})
-	r.drawRangeRing(ebiten.NewImage(640, 400), 4, 5, beaconRadiusTiles, tokenNRGBA(uiAccent))
+	r, got := turretRenderer(t, game.BuildingView{ID: 1, Kind: overlay.TradeBeaconKind, X: 2, Y: 2})
+	r.drawRangeRing(ebiten.NewImage(640, 400), 4, 5, overlay.BeaconRadiusTiles, overlay.TokenNRGBA(uikit.Accent))
 	if !pdHas(*got, "ring 4,5,6") {
 		t.Errorf("ring not drawn: %v", *got)
 	}
 	// the beacon light blinks (and stays lit under reduced motion)
 	on, off := 0, 0
-	for f := uint64(0); f < beaconBlinkFrames; f++ {
-		if beaconLit(f, 1, false) {
+	for f := uint64(0); f < overlay.BeaconBlinkFrames; f++ {
+		if overlay.BeaconLit(f, 1, false) {
 			on++
 		} else {
 			off++
 		}
 	}
-	if on == 0 || off == 0 || !beaconLit(1000, 1, true) {
+	if on == 0 || off == 0 || !overlay.BeaconLit(1000, 1, true) {
 		t.Errorf("beacon blink on %d off %d", on, off)
 	}
 }
@@ -139,7 +144,7 @@ func TestTradeAlerts(t *testing.T) {
 		if a.danger {
 			t.Errorf("%s should not be a danger", a.key)
 		}
-		if e := alertExplain(a.key); e == "Select this alert to look at the cause." {
+		if e := hud.AlertExplain(a.key); e == "Select this alert to look at the cause." {
 			t.Errorf("%s has no explanation", a.key)
 		}
 	}
@@ -156,22 +161,22 @@ func TestTradeAlerts(t *testing.T) {
 // art lands.
 func TestTurretArtCoversRenderer(t *testing.T) {
 	t.Parallel()
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		t.Skip(err)
 	}
-	if _, ok := pdMeta(t, root, turretBaseKey); !ok {
+	if _, ok := pdMeta(t, root, overlay.TurretBaseKey); !ok {
 		t.Skip("PLAY-024 art not generated yet")
 	}
-	keys := []string{turretBaseKey, glowKey(turretBaseKey), "power/trade_beacon", glowKey("power/trade_beacon")}
-	for i := 0; i < turretAimFrames; i++ {
-		keys = append(keys, turretGunKey(i))
+	keys := []string{overlay.TurretBaseKey, overlay.GlowKey(overlay.TurretBaseKey), "power/trade_beacon", overlay.GlowKey("power/trade_beacon")}
+	for i := 0; i < overlay.TurretAimFrames; i++ {
+		keys = append(keys, overlay.TurretGunKey(i))
 	}
-	for _, f := range facingNames {
-		keys = append(keys, buildSprite(radioConsoleKind, f, 0, false, false), glowKey(buildSprite(radioConsoleKind, f, 0, false, false)))
+	for _, f := range architect.FacingNames {
+		keys = append(keys, architect.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false), overlay.GlowKey(architect.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false)))
 	}
 	for _, tool := range archTools {
-		if tool.build == sentryTurretKind || tool.build == tradeBeaconKind || tool.build == radioConsoleKind {
+		if tool.build == overlay.SentryTurretKind || tool.build == overlay.TradeBeaconKind || tool.build == overlay.RadioConsoleKind {
 			keys = append(keys, "ui_icon/"+tool.icon)
 		}
 	}

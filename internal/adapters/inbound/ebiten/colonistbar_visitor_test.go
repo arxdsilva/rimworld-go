@@ -13,7 +13,7 @@ func TestColonistBarSkipsVisitorsAndPrisoners(t *testing.T) {
 	a := testApp(s)
 	a.finishBoot()
 	a.startGame()
-	got := a.barPawns()
+	got := a.chrome.Bar().Pawns()
 	if len(got) != 2 || got[0].ID != 1 || got[1].ID != 4 {
 		t.Fatalf("bar pawns = %+v", got)
 	}

@@ -6,6 +6,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -31,10 +32,10 @@ func TestWorkProgressBarDrawnOverTarget(t *testing.T) {
 	if cx := b.X + b.W/2; math.Abs(float64(cx-(tx+tile/2))) > 1e-3 {
 		t.Fatalf("centred on the work tile: %v vs %v", cx, tx+tile/2)
 	}
-	if math.Abs(float64(b.W)-workBarW*tile) > 1e-3 || b.H < 3 || b.H > 0.1*tile {
+	if math.Abs(float64(b.W)-creature.WorkBarW*tile) > 1e-3 || b.H < 3 || b.H > 0.1*tile {
 		t.Fatalf("a small bar: %+v", b)
 	}
-	if feet := ty + pawnFeetY*tile; b.Y <= feet || b.Y+b.H > ty+tile {
+	if feet := ty + creature.PawnFeetY*tile; b.Y <= feet || b.Y+b.H > ty+tile {
 		t.Fatalf("along the work tile's bottom, under the feet (%v): %v..%v, tile %v..%v", feet, b.Y, b.Y+b.H, ty, ty+tile)
 	}
 	if b.K != 0.4 {
@@ -73,11 +74,11 @@ func TestWorkProgressBarHiddenWhenZoomedOut(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 16, h: 16, tick: 100})
 	pawns := []game.PawnView{builder(1, 0.5)}
-	if got := r.workBarRects(pawns, workBarMinTile-1, nil); len(got) != 0 {
-		t.Fatalf("too small to read below %v px: %+v", workBarMinTile, got)
+	if got := r.workBarRects(pawns, creature.WorkBarMinTile-1, nil); len(got) != 0 {
+		t.Fatalf("too small to read below %v px: %+v", creature.WorkBarMinTile, got)
 	}
-	if got := r.workBarRects(pawns, workBarMinTile, nil); len(got) != 1 {
-		t.Fatalf("drawn from %v px: %+v", workBarMinTile, got)
+	if got := r.workBarRects(pawns, creature.WorkBarMinTile, nil); len(got) != 1 {
+		t.Fatalf("drawn from %v px: %+v", creature.WorkBarMinTile, got)
 	}
 }
 

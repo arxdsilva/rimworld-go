@@ -1,6 +1,10 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strings"
 	"testing"
 
@@ -38,16 +42,16 @@ func TestBedInspectorOwnersAndPrisonerToggle(t *testing.T) {
 	s := bedStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	a.selectCand(selCand{Kind: selBuilding, ID: 40})
-	b, ok := a.selectedBuilding()
+	a.sel.Select(selection.Cand{Kind: selection.Building, ID: 40})
+	b, ok := a.insp.SelectedBuilding()
 	if !ok {
 		t.Fatal("bed not selected")
 	}
-	ids := map[string]cmdButton{}
-	for _, bt := range a.buildingCommands(40) {
+	ids := map[string]inspectorpkg.Button{}
+	for _, bt := range a.insp.Building().BuildingCommands(40) {
 		ids[bt.ID] = bt
 	}
-	for _, id := range []string{bedOwnerID(0), bedOwnerID(1), "bldg.bed.prisoners"} {
+	for _, id := range []string{inspectorpkg.BedOwnerID(0), inspectorpkg.BedOwnerID(1), "bldg.bed.prisoners"} {
 		if _, ok := ids[id]; !ok {
 			t.Fatalf("no %s command: %v", id, ids)
 		}
@@ -55,34 +59,34 @@ func TestBedInspectorOwnersAndPrisonerToggle(t *testing.T) {
 	if ids["bldg.bed.prisoners"].Disabled || ids["bldg.bed.prisoners"].On {
 		t.Fatalf("toggle %+v", ids["bldg.bed.prisoners"])
 	}
-	if bedOwner(b, 0) != 1 || bedOwner(b, 1) != 0 || a.pawnName(1) != "Ada" {
+	if inspectorpkg.BedOwner(b, 0) != 1 || inspectorpkg.BedOwner(b, 1) != 0 || a.insp.Building().PawnName(1) != "Ada" {
 		t.Fatal("owner rows read wrong")
 	}
 
-	a.applyBuildingClick(bedOwnerID(1))
+	a.insp.Building().ApplyBuildingClick(inspectorpkg.BedOwnerID(1))
 	f.Frame(t, a)
-	if a.uiModalTop() != bedOwnerModalID {
+	if a.uiModalTop() != inspectorpkg.BedOwnerModalID {
 		t.Fatalf("top modal %q, want the owner picker", a.uiModalTop())
 	}
-	if !hasWidget(a, bedOwnerPickID(0)) || !hasWidget(a, bedOwnerPickID(2)) || hasWidget(a, bedOwnerPickID(3)) {
+	if !hasWidget(a, inspectorpkg.BedOwnerPickID(0)) || !hasWidget(a, inspectorpkg.BedOwnerPickID(2)) || hasWidget(a, inspectorpkg.BedOwnerPickID(3)) {
 		t.Fatal("picker lists nobody and the living colonists only")
 	}
-	press(t, a, f, bedOwnerPickID(2))
+	press(t, a, f, inspectorpkg.BedOwnerPickID(2))
 	got := cmdsOf(s.stubSim, command.AssignBedOwner)
 	if len(got) != 1 || got[0].Target != 40 || got[0].Pawn != 2 || got[0].Index != 1 {
 		t.Fatalf("AssignBedOwner %+v", got)
 	}
-	if a.uiModalTop() == bedOwnerModalID {
+	if a.uiModalTop() == inspectorpkg.BedOwnerModalID {
 		t.Fatal("picker stays open after a pick")
 	}
 
-	a.applyBuildingClick("bldg.bed.prisoners")
+	a.insp.Building().ApplyBuildingClick("bldg.bed.prisoners")
 	pr := cmdsOf(s.stubSim, command.SetBedForPrisoners)
 	if len(pr) != 1 || pr[0].Target != 40 || !pr[0].Enabled {
 		t.Fatalf("SetBedForPrisoners %+v", pr)
 	}
 	s.prison[40] = true
-	for _, bt := range a.buildingCommands(40) {
+	for _, bt := range a.insp.Building().BuildingCommands(40) {
 		if bt.ID == "bldg.bed.prisoners" && !bt.On {
 			t.Fatal("toggle does not read the mark back")
 		}
@@ -90,7 +94,7 @@ func TestBedInspectorOwnersAndPrisonerToggle(t *testing.T) {
 
 	// without the read model the toggle is disabled and says why
 	a.renderer.game = s.stubSim
-	for _, bt := range a.buildingCommands(40) {
+	for _, bt := range a.insp.Building().BuildingCommands(40) {
 		if bt.ID == "bldg.bed.prisoners" && (!bt.Disabled || bt.Reason == "") {
 			t.Fatalf("toggle without the read model %+v", bt)
 		}
@@ -105,11 +109,11 @@ func TestGatheringBanner(t *testing.T) {
 	s := bedStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	if _, _, ok := a.gatheringBanner(a.sw); ok {
+	if _, _, ok := a.chrome.Banner().Line(a.sw); ok {
 		t.Fatal("banner with nothing under way")
 	}
 	s.gatherings = []game.GatheringView{{Kind: "wedding", Phase: "ceremony", Hosts: []string{"Ada", "Bo"}, X: 3, Y: 4}}
-	text, r, ok := a.gatheringBanner(a.sw)
+	text, r, ok := a.chrome.Banner().Line(a.sw)
 	if !ok || text != "Wedding of Ada and Bo: ceremony" {
 		t.Fatalf("banner %q %v", text, ok)
 	}
@@ -120,22 +124,22 @@ func TestGatheringBanner(t *testing.T) {
 	if cx := r.X + r.W/2; cx < float32(a.sw)/2-1 || cx > float32(a.sw)/2+1 {
 		t.Fatalf("banner rect %+v is not centred on the bar (screen centre %d)", r, a.sw/2)
 	}
-	for name, other := range map[string]rect{"right column": l.Right, "resources": l.Resources, "messages": l.Messages} {
+	for name, other := range map[string]gfx.Rect{"right column": l.Right, "resources": l.Resources, "messages": l.Messages} {
 		if !other.Empty() && r.X < other.Right() && other.X < r.Right() && r.Y < other.Bottom() && other.Y < r.Bottom() {
 			t.Fatalf("banner %+v overlaps the %s %+v", r, name, other)
 		}
 	}
-	a.gatheringUI(a.sw)
+	a.chrome.Banner().Declare(a.sw)
 	if tip := tipOf(t, a, "hud.gathering"); !strings.Contains(tip, "Wedding of Ada and Bo") {
 		t.Fatalf("tip %q", tip)
 	}
 	scr := ebiten.NewImage(a.sw, a.sh)
-	a.drawGatheringBanner(scr, a.sw)
-	if got := gatheringText(game.GatheringView{Kind: "party", Phase: "under way", Hosts: []string{"Cy"}}); got != "Party hosted by Cy: under way" {
+	a.chrome.Banner().Draw(scr, a.sw)
+	if got := hud.GatheringText(game.GatheringView{Kind: "party", Phase: "under way", Hosts: []string{"Cy"}}); got != "Party hosted by Cy: under way" {
 		t.Fatalf("party line %q", got)
 	}
 	a.renderer.game = s.stubSim
-	if _, _, ok := a.gatheringBanner(a.sw); ok {
+	if _, _, ok := a.chrome.Banner().Line(a.sw); ok {
 		t.Fatal("banner without the read model")
 	}
 	f.Frame(t, a)
@@ -149,7 +153,7 @@ func TestGatheringBannerClearsTheMessages(t *testing.T) {
 	a, _ := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	s.gatherings = []game.GatheringView{{Kind: "party", Phase: "under way", Hosts: []string{"Ada"}}}
-	_, r, ok := a.gatheringBanner(a.sw)
+	_, r, ok := a.chrome.Banner().Line(a.sw)
 	l := a.hud()
 	if !ok || l.Messages.Empty() {
 		t.Fatalf("banner %v, messages %+v", ok, l.Messages)

@@ -2,6 +2,8 @@ package ebiten
 
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -18,7 +20,7 @@ func scaledColony(t *testing.T) (*App, *recSim, *fakeInput) {
 		t.Fatal(err)
 	}
 	rs := &recSim{Simulation: g, moveOK: true}
-	t.Cleanup(func() { gfx.SetScale(unitUIScale) })
+	t.Cleanup(func() { gfx.SetScale(gfx.UnitScale) })
 	a := testApp(rs)
 	a.devFn = func() float64 { return 1 }
 	s := a.settings
@@ -38,17 +40,17 @@ func scaledColony(t *testing.T) (*App, *recSim, *fakeInput) {
 func clickAtLogical(t *testing.T, a *App, f *fakeInput, x, y float32) {
 	t.Helper()
 	f.Cur.Mx, f.Cur.My = int(float64(x)*a.scale.S), int(float64(y)*a.scale.S)
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = true, true
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
-	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = false, false
+	f.Cur.Press[inputframe.Left], f.Cur.Down[inputframe.Left] = false, false
 }
 
 func TestArchitectCardClickAtScale(t *testing.T) {
 	a, _, f := scaledColony(t)
-	a.openArchitect() // opens on Structure
-	card, ok := a.archToolCell("wall")
+	a.arch.OpenPanel() // opens on Structure
+	card, ok := a.arch.ToolCell("wall")
 	if !ok {
 		t.Fatalf("no wall cell in the command grid (%d cells for %d tools)", len(a.hud().GridCells), len(a.archToolCommands()))
 	}
@@ -62,9 +64,9 @@ func TestArchitectCardClickAtScale(t *testing.T) {
 
 func TestArchitectCategoryClickAtScale(t *testing.T) {
 	a, _, f := scaledColony(t)
-	a.openArchitect()
-	var cat button
-	for _, b := range a.architectButtons() {
+	a.arch.OpenPanel()
+	var cat uikit.Button
+	for _, b := range a.arch.Buttons() {
 		if b.ID == "arch.cat.zones" {
 			cat = b
 		}
@@ -84,7 +86,7 @@ func TestArchitectCategoryClickAtScale(t *testing.T) {
 
 func TestGhostDragMapsToTilesAtScale(t *testing.T) {
 	a, _, _ := scaledColony(t)
-	a.openArchitect()
+	a.arch.OpenPanel()
 	a.arch.ToolID = "wall"
 	// World mapping uses the raw physical cursor: the UI scale must not
 	// change which tile is under the pointer.
@@ -94,7 +96,7 @@ func TestGhostDragMapsToTilesAtScale(t *testing.T) {
 		t.Fatalf("mapCursor = (%d,%d), want (600,450)", px, py)
 	}
 	wantX, wantY := a.renderer.TileAt(px, py)
-	x0, y0, x1, y1 := a.dragSpan()
+	x0, y0, x1, y1 := a.arch.DragSpan()
 	if x0 != wantX || y0 != wantY || x1 != wantX || y1 != wantY {
 		t.Fatalf("hover span (%d,%d)-(%d,%d), want tile (%d,%d)", x0, y0, x1, y1, wantX, wantY)
 	}
@@ -106,8 +108,8 @@ func TestGhostDragMapsToTilesAtScale(t *testing.T) {
 func TestWorkCellClickAtScale(t *testing.T) {
 	a, rs, f := scaledColony(t)
 	a.win.Open, a.win.Mode = true, "work"
-	var cell button
-	for _, b := range a.workButtons() {
+	var cell uikit.Button
+	for _, b := range a.win.Buttons() {
 		if len(b.ID) > 10 && b.ID[:10] == "work.cell." && !b.Disabled {
 			cell = b
 			break
@@ -134,15 +136,15 @@ func TestOrdersMenuEntryClickAtScale(t *testing.T) {
 	if _, err := g.SpawnStack(item.Food, 3, 6, 2); err != nil {
 		t.Fatal(err)
 	}
-	p, _ := a.selectedPawn()
+	p, _ := a.insp.SelectedPawn()
 	if p.ID == 0 {
 		a.renderer.Select(a.renderer.snapshot()[0].ID)
 	}
-	a.openOrders(6, 2, 300, 200)
+	a.ord.OpenOrders(6, 2, 300, 200)
 	if !a.ord.Float.Open {
 		t.Fatal("order menu should open")
 	}
-	btns := a.floatButtons()
+	btns := a.ord.FloatButtons()
 	if len(btns) == 0 {
 		t.Fatal("no menu entries")
 	}

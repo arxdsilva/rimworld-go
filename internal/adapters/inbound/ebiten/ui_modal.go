@@ -1,6 +1,10 @@
 package ebiten
 
-import "rimworld-go/internal/adapters/inbound/ebiten/uikit"
+import (
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	uikitpkg "rimworld-go/internal/adapters/inbound/ebiten/uikit"
+)
 
 // The modal stack lives in uikit (ARCH-003). The App declares its modals
 // with a body that takes the App, and owns the one modeless main-tab
@@ -14,13 +18,13 @@ type modal struct {
 	ID, Title string
 	W, H      float32
 	// Draw declares the body's widgets (and draws its text) in body.
-	Draw    func(a *App, body rect)
-	Buttons []modalButton // footer, laid out right to left (first = rightmost)
+	Draw    func(a *App, body gfx.Rect)
+	Buttons []uikitpkg.ModalButton // footer, laid out right to left (first = rightmost)
 	// OnClose runs when Esc or the X closes it.
 	OnClose func()
 	// Anchor returns the rectangle the frame sits on (nil: centred on the
 	// screen). The frame is that rectangle cut to the screen.
-	Anchor func(a *App) rect
+	Anchor func(a *App) gfx.Rect
 	// Modeless makes the modal the main-tab window: no scrim, the HUD
 	// stays live, the modal input context is not taken; it is closed by
 	// Escape, a tab click or its X.
@@ -31,17 +35,12 @@ type modal struct {
 func (a *App) kitModal(m modal) uikit.Modal {
 	km := uikit.Modal{ID: m.ID, Title: m.Title, W: m.W, H: m.H, Buttons: m.Buttons, OnClose: m.OnClose}
 	if m.Draw != nil {
-		km.Draw = func(body rect) { m.Draw(a, body) }
+		km.Draw = func(body gfx.Rect) { m.Draw(a, body) }
 	}
 	if m.Anchor != nil {
-		km.Anchor = func() rect { return m.Anchor(a) }
+		km.Anchor = func() gfx.Rect { return m.Anchor(a) }
 	}
 	return km
-}
-
-// modalGeometry places a w x h modal centred on the screen, shrunk to fit.
-func modalGeometry(sw, sh int, m modal) (frame, title, body, footer rect) {
-	return uikit.ModalGeometry(sw, sh, uikit.Modal{W: m.W, H: m.H, Buttons: m.Buttons})
 }
 
 // uiPushModal opens m on top of the stack (a modal with the same id is

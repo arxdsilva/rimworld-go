@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"strings"
 	"testing"
 )
@@ -13,30 +15,30 @@ func TestAnimalInspectorDownedLine(t *testing.T) {
 	dog := &s.world.Animals[0]
 	dog.Downed, dog.Sleeping, dog.State, dog.Designated = true, true, "downed", true
 	a, _ := colonyApp(t, s)
-	if !a.selectAnimalAt(6, 6) {
+	if !a.insp.Animal().SelectAnimalAt(6, 6) {
 		t.Fatal("select the dog")
 	}
-	an, _ := a.selectedAnimal()
-	if got := a.animalStateLine(an); got != "Downed" {
+	an, _ := a.insp.SelectedAnimal()
+	if got := a.insp.Animal().AnimalStateLine(an); got != "Downed" {
 		t.Fatalf("tame state line %q", got)
 	}
-	if lines := thingLines(a.animalPane(an.ID)); !strings.Contains(lines, "Downed") {
+	if lines := thingLines(a.insp.Animal().AnimalPane(an.ID)); !strings.Contains(lines, "Downed") {
 		t.Fatalf("pane lines %q lack Downed", lines)
 	}
-	if got := animalDoing(an); got != "Downed" {
+	if got := windows.AnimalDoing(an); got != "Downed" {
 		t.Fatalf("Animals table status %q", got)
 	}
 	wild := an
 	wild.Tame = false
-	if got := a.animalStateLine(wild); got != "Wild | Downed" {
+	if got := a.insp.Animal().AnimalStateLine(wild); got != "Wild | Downed" {
 		t.Fatalf("wild state line %q", got)
 	}
 	cs, ok := a.renderer.animalFigureScale(an)
-	if !ok || cs == noCS || cs[3] != 1 {
+	if !ok || cs == sprite.NoCS || cs[3] != 1 {
 		t.Fatalf("a downed figure is tinted, opaque: %v %v", cs, ok)
 	}
 	an.Downed = false
-	if cs, _ := a.renderer.animalFigureScale(an); cs != noCS && !a.renderer.animalRestFallback(an) {
+	if cs, _ := a.renderer.animalFigureScale(an); cs != sprite.NoCS && !a.renderer.animalRestFallback(an) {
 		t.Fatalf("a standing figure is untinted: %v", cs)
 	}
 }

@@ -3,6 +3,7 @@ package ebiten
 import (
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -44,7 +45,7 @@ func autoUIScale(w, h float64) float64 {
 	if w <= 0 || h <= 0 {
 		return autoUIMin
 	}
-	f := math.Min(w/minSetupW, h/minSetupH)
+	f := math.Min(w/uikit.MinSetupW, h/uikit.MinSetupH)
 	f = math.Floor(f/autoUIStep+1e-6) * autoUIStep
 	f = math.Round(f*100) / 100 // exact hundredths (1.5, not 1.5000000000000002)
 	return math.Max(autoUIMin, math.Min(autoUIMax, f))
@@ -54,9 +55,9 @@ func autoUIScale(w, h float64) float64 {
 // and the screen's device scale factor. Captures are always 1. The map's
 // render scale never takes the map below one pixel per point (1/dev): at
 // dev 1 (HiDPI off, or a 1x screen) a smaller map would only blur.
-func computeUIScale(st config.Settings, w, h, dev float64, capture bool) uiScaleState {
+func computeUIScale(st config.Settings, w, h, dev float64, capture bool) gfx.Scale {
 	if capture {
-		return unitUIScale
+		return gfx.UnitScale
 	}
 	if !st.Graphics.HiDPI || dev <= 0 || math.IsNaN(dev) {
 		dev = 1
@@ -72,7 +73,7 @@ func computeUIScale(st config.Settings, w, h, dev float64, capture bool) uiScale
 	if ui <= 0 {
 		ui = 1
 	}
-	return uiScaleState{Dev: dev, UI: ui, S: dev * ui, World: world}
+	return gfx.Scale{Dev: dev, UI: ui, S: dev * ui, World: world}
 }
 
 // renderScaleOf is the settings' map render scale: one of
@@ -122,19 +123,12 @@ func (a *App) LayoutF(outsideW, outsideH float64) (float64, float64) {
 	return pw, ph
 }
 
-// Layout keeps the int path consistent with LayoutF (Ebitengine calls
-// LayoutF when it exists).
-func (a *App) Layout(outsideWidth, outsideHeight int) (int, int) {
-	pw, ph := a.LayoutF(float64(outsideWidth), float64(outsideHeight))
-	return int(math.Ceil(pw)), int(math.Ceil(ph))
-}
-
 // updateScale recomputes the scale from the settings, the last window
 // size and the last device factor (LayoutF and applySettings).
 func (a *App) updateScale() {
 	a.scale = computeUIScale(a.settings, a.outW, a.outH, a.devRaw, a.cfg.Capture != nil)
 	if s := a.captureScale(); s > 0 {
-		a.scale = uiScaleState{Dev: 1, UI: s, S: s, World: 1}
+		a.scale = gfx.Scale{Dev: 1, UI: s, S: s, World: 1}
 	}
 	if a.cfg.Capture != nil {
 		// dev escape hatch: captures load the defaults (render scale 1), so
@@ -166,7 +160,7 @@ func logicalPx(p int, s float64) int {
 // once per Update and Draw; written only on a change).
 func (a *App) syncUIScale() {
 	if a.scale.S <= 0 {
-		a.scale = unitUIScale
+		a.scale = gfx.UnitScale
 	}
 	gfx.SetScale(a.scale)
 }
@@ -192,4 +186,11 @@ func (a *App) mapToLogical(px, py int) (int, int) {
 		return px, py
 	}
 	return int(math.Floor(float64(px) / s)), int(math.Floor(float64(py) / s))
+}
+
+// Layout keeps the int path consistent with LayoutF (Ebitengine calls
+// LayoutF when it exists).
+func (a *App) Layout(outsideWidth, outsideHeight int) (int, int) {
+	pw, ph := a.LayoutF(float64(outsideWidth), float64(outsideHeight))
+	return int(math.Ceil(pw)), int(math.Ceil(ph))
 }

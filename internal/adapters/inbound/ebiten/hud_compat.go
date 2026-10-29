@@ -2,6 +2,11 @@ package ebiten
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	hudpkg "rimworld-go/internal/adapters/inbound/ebiten/hud"
+	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -10,7 +15,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/config"
 )
@@ -55,10 +59,10 @@ func (h hudHost) Env() hud.Env {
 	}
 	if r := a.renderer; r != nil {
 		e.Game, e.Art = r.game, r.art
-		e.Colony = a.nav.screen() == screenColony
+		e.Colony = a.nav.screen() == portspkg.ScreenColony
 		e.ReducedMotion, e.ViewCached = r.reducedMotion, r.viewCached
 		_, pawn := a.shell.Selected()
-		e.NothingSelected = !a.grouped() && !pawn && !a.sel.HasAnimal && !a.sel.HasItem && !a.sel.HasPlant &&
+		e.NothingSelected = !a.sel.Grouped() && !pawn && !a.sel.HasAnimal && !a.sel.HasItem && !a.sel.HasPlant &&
 			!a.sel.HasBuilding && !a.sel.HasFrame && !a.sel.HasZone
 	}
 	return e
@@ -68,11 +72,13 @@ func (h hudHost) Layout() hudlayout.Layout          { return h.a.hud() }
 func (h hudHost) ChromeHit(mx, my, sw, sh int) bool { return h.a.colonyChromeHit(mx, my, sw, sh) }
 func (h hudHost) SpeedLabel() string                { return h.a.speedLabel() }
 func (h hudHost) SetSettings(s config.Settings)     { h.a.setSettings(s) }
-func (h hudHost) Pick(c selection.Cand)             { h.a.selectCand(c) }
-func (h hudHost) Picked(id entity.EntityID) bool    { return h.a.inGroup(selPawn, id) }
-func (h hudHost) Power() (legend, tip string)       { return h.a.powerLegend(), h.a.powerToggleTip() }
-func (h hudHost) StoneItem(key, kind string, cs colorScale) (string, colorScale) {
-	return h.a.renderer.stoneItem(key, kind, cs)
+func (h hudHost) Pick(c selection.Cand)             { h.a.sel.Select(c) }
+func (h hudHost) Picked(id entity.EntityID) bool    { return h.a.sel.InGroup(selection.Pawn, id) }
+func (h hudHost) Power() (legend, tip string) {
+	return h.a.arch.Marks.PowerLegend(), h.a.arch.Marks.PowerToggleTip()
+}
+func (h hudHost) StoneItem(key, kind string, cs sprite.ColorScale) (string, sprite.ColorScale) {
+	return h.a.renderer.pipe().StoneItem(key, kind, cs)
 }
 
 func (h hudHost) CenterOnMap(wx, wy float64) {
@@ -108,74 +114,18 @@ func (h hudHost) TabOn(id string) bool {
 	case ids.TabWildlife:
 		return a.win.Open && a.win.Mode == "animals" && a.win.Wild
 	case ids.TabAssign:
-		return a.win.KitID() == assignModalID
+		return a.win.KitID() == windows.AssignModalID
 	case ids.TabWorld:
-		return a.win.KitID() == worldModalID
+		return a.win.KitID() == windows.WorldModalID
 	case ids.TabHistory:
-		return a.win.KitID() == historyModalID
+		return a.win.KitID() == windows.HistoryModalID
 	case ids.TabFactions:
-		return a.win.KitID() == colFacModalID
+		return a.win.KitID() == windows.ColFacModalID
 	}
 	return false
 }
 
-// drawPawnPortrait draws the whole colonist, fitted into the logical box
-// (x, y, w, h): the inspector's portrait.
-func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) {
-	if a.renderer.art != nil {
-		a.renderer.drawPawnPortraitArt(screen, p, x, y, w, h)
-	}
-}
-
 // ---- aliases
-
-const (
-	barIconMin        = hud.BarIconMin
-	barIconSize       = hud.BarIconSize
-	barIdleHold       = hud.BarIdleHold
-	barMoreID         = hud.BarMoreID
-	globalInnerW      = hud.GlobalInnerW
-	globalPad         = hud.GlobalPad
-	globalPerRow      = hud.GlobalPerRow
-	homeButtonID      = hud.HomeButtonID
-	planButtonID      = hud.PlanButtonID
-	roofButtonID      = hud.RoofButtonID
-	roomsButtonID     = hud.RoomsButtonID
-	letterFlashFrames = hud.LetterFlashFrames
-	letterFresh       = hud.LetterFresh
-	messageFadeFrames = hud.MessageFadeFrames
-	messageFrames     = hud.MessageFrames
-	resScrollID       = hud.ResScrollID
-	toastFrames       = hud.ToastFrames
-)
-
-type alertSev = hud.AlertSev
-
-func alertExplain(key string) string                 { return hud.AlertExplain(key) }
-func barShown(l hudLayout) int                       { return hud.BarShown(l) }
-func barSlotID(id entity.EntityID) string            { return hud.BarSlotID(id) }
-func barTip(p game.PawnView) string                  { return hud.BarTip(p) }
-func cellInfoBox(lines []string, tabsY float32) rect { return hud.CellInfoBox(lines, tabsY) }
-func dateSeasonLine(d clock.Date, season string, maxW float64) string {
-	return hud.DateSeasonLine(d, season, maxW)
-}
-func detailLines(w game.WorldView, x, y int) []string { return hud.DetailLines(w, x, y) }
-func fmtTemp(tenths int) string                       { return hud.FmtTemp(tenths) }
-func gatheringText(v game.GatheringView) string       { return hud.GatheringText(v) }
-func grassLabelAt(w game.WorldView, x, y int) string  { return hud.GrassLabelAt(w, x, y) }
-func homeLabelAt(w game.WorldView, x, y int) string   { return hud.HomeLabelAt(w, x, y) }
-func letterColor(kind string) color.RGBA              { return hud.LetterColor(kind) }
-func letterKind(kind string) int                      { return hud.LetterKind(kind) }
-func messageAlpha(age uint64) float64                 { return hud.MessageAlpha(age) }
-func messageEdge(m game.MessageView) color.RGBA       { return hud.MessageEdge(m) }
-func messageLine(m game.MessageView) string           { return hud.MessageLine(m) }
-func messageStyle(m game.MessageView) textStyle       { return hud.MessageStyle(m) }
-func pawnLabel(p game.PawnView) string                { return hud.PawnLabel(p) }
-func planLabelAt(w game.WorldView, x, y int) string   { return hud.PlanLabelAt(w, x, y) }
-func roomCardLines(rm game.RoomView) []string         { return hud.RoomCardLines(rm) }
-func roomTint(score int) color.NRGBA                  { return hud.RoomTint(score) }
-func soilLines(w game.WorldView, x, y int) []string   { return hud.SoilLines(w, x, y) }
-func textRowH() float32                               { return hud.TextRowH() }
 
 // ---- converting shims (lowercase-field copies for the root tests)
 
@@ -184,7 +134,7 @@ type alert struct {
 	key     string
 	label   string
 	danger  bool
-	sev     alertSev
+	sev     hudpkg.AlertSev
 	explain string
 	targets [][2]int
 }
@@ -219,42 +169,12 @@ func fromAlerts(as []alert) []hud.Alert {
 	return out
 }
 
-func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
-	return toAlerts(hud.BuildAlerts(pawns, w))
-}
-func tradeAlertsFrom(src any) []alert { return toAlerts(hud.TradeAlertsFrom(src)) }
-func fireAlert(w game.WorldView) (alert, bool) {
-	a, ok := hud.FireAlert(w)
-	return toAlert(a), ok
-}
-func waitingFramesAlert(w game.WorldView) (alert, bool) {
-	a, ok := hud.WaitingFramesAlert(w)
-	return toAlert(a), ok
-}
-func (a *App) currentAlerts() []alert { return toAlerts(a.chrome.Alerts().Current()) }
-
 // alertRow is hud.AlertRow as the root tests read it.
 type alertRow struct {
-	r      rect
+	r      gfx.Rect
 	al     alert
 	more   int
 	hidden []alert
-}
-
-func alertRowLabel(r alertRow) string {
-	return hud.AlertRowLabel(hud.AlertRow{R: r.r, Al: fromAlert(r.al), More: r.more, Hidden: fromAlerts(r.hidden)})
-}
-
-func (a *App) alertRows(l hudLayout) []alertRow {
-	rows := a.chrome.Alerts().Rows(l)
-	if rows == nil {
-		return nil
-	}
-	out := make([]alertRow, len(rows))
-	for i, r := range rows {
-		out[i] = alertRow{r: r.R, al: toAlert(r.Al), more: r.More, hidden: toAlerts(r.Hidden)}
-	}
-	return out
 }
 
 // rightCard is hud.RightCard as the root tests read it.
@@ -263,71 +183,19 @@ type rightCard struct {
 	clr         color.RGBA
 }
 
-func layoutRightCard(c rightCard, anchor rect, sw, sh int) (box rect, title, body []string) {
-	return hud.LayoutRightCard(hud.RightCard{Title: c.title, Body: c.body, Clr: c.clr}, anchor, sw, sh)
-}
-
-func (a *App) rightHover(l hudLayout) (rightCard, rect, bool) {
-	c, r, ok := a.chrome.Right().Hover(l)
-	return rightCard{title: c.Title, body: c.Body, clr: c.Clr}, r, ok
-}
-
 // letterRow is hud.LetterRow as the root tests read it.
 type letterRow struct {
-	r      rect
+	r      gfx.Rect
 	letter game.LetterView
 	older  int
 }
 
-func letterRowLabel(r letterRow) string {
-	return hud.LetterRowLabel(hud.LetterRow{R: r.r, Letter: r.letter, Older: r.older})
-}
-
-func (a *App) letterRows(l hudLayout) []letterRow {
-	rows := a.chrome.Right().LetterRows(l)
-	if rows == nil {
-		return nil
-	}
-	out := make([]letterRow, len(rows))
-	for i, r := range rows {
-		out[i] = letterRow{r: r.R, letter: r.Letter, older: r.Older}
-	}
-	return out
-}
-
-// letterKinds is hud.LetterKinds as the root tests read it.
-var letterKinds = func() []struct {
-	kind, icon string
-	clr        color.RGBA
-} {
-	out := make([]struct {
-		kind, icon string
-		clr        color.RGBA
-	}, len(hud.LetterKinds))
-	for i, k := range hud.LetterKinds {
-		out[i].kind, out[i].icon, out[i].clr = k.Kind, k.Icon, k.Clr
-	}
-	return out
-}()
-
 // messageRow is hud.MessageRow as the root tests read it.
 type messageRow struct {
-	r     rect
+	r     gfx.Rect
 	msg   game.MessageView
 	idx   int
 	alpha float64
-}
-
-func (a *App) messageRows(l hudLayout) []messageRow {
-	rows := a.chrome.Right().MessageRows(l)
-	if rows == nil {
-		return nil
-	}
-	out := make([]messageRow, len(rows))
-	for i, r := range rows {
-		out[i] = messageRow{r: r.R, msg: r.Msg, idx: r.Idx, alpha: r.Alpha}
-	}
-	return out
 }
 
 // statusChip is hud.StatusChip as the root tests read it.
@@ -358,11 +226,6 @@ func fromChips(cs []statusChip) []hud.StatusChip {
 	return out
 }
 
-func statusChips(w game.WorldView) []statusChip { return toChips(hud.StatusChips(w)) }
-func (a *App) chipRects(chips []statusChip, sw int) []rect {
-	return a.chrome.Global().ChipRects(fromChips(chips), sw)
-}
-
 // globalPlan is hud.GlobalPlan as the root tests read it.
 type globalPlan struct {
 	reason  string
@@ -371,36 +234,10 @@ type globalPlan struct {
 	legend  []string
 }
 
-func (a *App) globalPlan() globalPlan {
-	p := a.chrome.Global().Plan()
-	return globalPlan{reason: p.Reason, weather: p.Weather, chips: toChips(p.Chips), legend: p.Legend}
-}
-
-// globalToggleList is hud.GlobalToggles as the root tests read it.
-var globalToggleList = func() []struct{ id, icon, short string } {
-	out := make([]struct{ id, icon, short string }, len(hud.GlobalToggles))
-	for i, t := range hud.GlobalToggles {
-		out[i].id, out[i].icon, out[i].short = t.ID, t.Icon, t.Short
-	}
-	return out
-}()
-
 // toast is hud.Toast as the root tests read it.
 type toast struct {
 	text string
 	at   uint64
-}
-
-func (a *App) liveToasts() []toast {
-	ts := a.chrome.LiveToasts()
-	if ts == nil {
-		return nil
-	}
-	out := make([]toast, len(ts))
-	for i, t := range ts {
-		out[i] = toast{text: t.Text, at: t.At}
-	}
-	return out
 }
 
 // resRow is hud.ResRow as the root tests read it.
@@ -408,18 +245,6 @@ type resRow struct {
 	header           bool
 	cat, kind, label string
 	qty              int
-}
-
-func (a *App) resourceRows() []resRow {
-	rows := a.chrome.Res().Rows()
-	if rows == nil {
-		return nil
-	}
-	out := make([]resRow, len(rows))
-	for i, r := range rows {
-		out[i] = resRow{header: r.Header, cat: r.Cat, kind: r.Kind, label: r.Label, qty: r.Qty}
-	}
-	return out
 }
 
 // barStatus is hud.BarStatus as the root tests read it.
@@ -436,75 +261,7 @@ func toStatuses(ss []hud.BarStatus) []barStatus {
 	return out
 }
 
-func (a *App) barStatusesOf(p game.PawnView) []barStatus {
-	return toStatuses(a.chrome.Bar().StatusesOf(p))
-}
-
 // ---- one-line wrappers
-
-func (a *App) alertButtons(sw int) []button                { return a.chrome.Alerts().Buttons(sw) }
-func (a *App) alertButtonsIn(l hudLayout) []button         { return a.chrome.Alerts().ButtonsIn(l) }
-func (a *App) alertCount() int                             { return a.chrome.Alerts().Count() }
-func (a *App) applyLetterClick(id string)                  { a.chrome.Right().LetterClick(id) }
-func (a *App) applyResourceClick(id string)                { a.chrome.Res().Click(id) }
-func (a *App) applySpeedClick(id string)                   { a.chrome.Global().SpeedClick(id) }
-func (a *App) barCount() int                               { return a.chrome.Bar().Count() }
-func (a *App) barDoubleClick(id entity.EntityID) bool      { return a.chrome.Bar().DoubleClick(id) }
-func (a *App) barPawns() []game.PawnView                   { return a.chrome.Bar().Pawns() }
-func (a *App) barSelected(id entity.EntityID) bool         { return a.chrome.Bar().Picked(id) }
-func (a *App) cellInfoLines() []string                     { return a.chrome.Cell().Lines() }
-func (a *App) cellInfoRect() rect                          { return a.chrome.Cell().Rect() }
-func (a *App) colonistBarButtons(sw, sh int) []button      { return a.chrome.Bar().Buttons(sw, sh) }
-func (a *App) dateLine() string                            { return a.chrome.Global().DateLine() }
-func (a *App) drawAlerts(screen *ebiten.Image, sw int)     { a.chrome.Alerts().Draw(screen, sw) }
-func (a *App) drawCellInfo(screen *ebiten.Image, sh int)   { a.chrome.Cell().Draw(screen, sh) }
-func (a *App) drawColonistBar(s *ebiten.Image, sw, sh int) { a.chrome.Bar().Draw(s, sw, sh) }
-func (a *App) drawColonistPortraits(s *ebiten.Image, sh int) {
-	a.chrome.Bar().DrawPortraits(s, sh)
-}
-func (a *App) drawGatheringBanner(s *ebiten.Image, sw int)    { a.chrome.Banner().Draw(s, sw) }
-func (a *App) drawGlobalControls(s *ebiten.Image, sw, sh int) { a.chrome.Global().Draw(s, sw, sh) }
-func (a *App) drawMessages(s *ebiten.Image)                   { a.chrome.Right().DrawMessages(s) }
-func (a *App) drawMessagesIn(s *ebiten.Image, l hudLayout)    { a.chrome.Right().DrawMessagesIn(s, l) }
-func (a *App) drawResources(s *ebiten.Image, sw, sh int)      { a.chrome.Res().Draw(s, sw, sh) }
-func (a *App) drawRightColumn(s *ebiten.Image, sw, sh int)    { a.chrome.Right().Draw(s, sw, sh) }
-func (a *App) drawStatusChips(s *ebiten.Image, sw int)        { a.chrome.Global().DrawChips(s, sw) }
-func (a *App) drawTabs(s *ebiten.Image, sw, sh int)           { a.chrome.Tabs().Draw(s, sw, sh) }
-func (a *App) drawToasts(s *ebiten.Image, sw, sh int)         { a.chrome.DrawToasts(s, sw, sh) }
-func (a *App) focusAlert(id string)                           { a.chrome.Alerts().Focus(id) }
-func (a *App) focusMessage(id string)                         { a.chrome.Right().FocusMessage(id) }
-func (a *App) gatheringBanner(sw int) (string, rect, bool)    { return a.chrome.Banner().Line(sw) }
-func (a *App) gatheringUI(sw int)                             { a.chrome.Banner().Declare(sw) }
-func (a *App) globalButtons(sw int) []button                  { return a.chrome.Global().Buttons(sw) }
-func (a *App) globalRows() hud.GlobalRowRects                 { return a.chrome.Global().Rows() }
-func (a *App) globalToggleRect(id string) (rect, bool)        { return a.chrome.Global().ToggleRect(id) }
-func (a *App) globalUI(sw, sh int)                            { a.chrome.Global().Declare(sw, sh) }
-func (a *App) hourLine() string                               { return a.chrome.Global().HourLine() }
-func (a *App) hudTabButtons(sw, sh int) []button              { return a.chrome.Tabs().Buttons(sw, sh) }
-func (a *App) hudTimeText() string                            { return a.chrome.Global().TimeText() }
-func (a *App) letterButtons() []button                        { return a.chrome.Right().LetterButtons() }
-func (a *App) letterCount() int                               { return a.chrome.Right().LetterCount() }
-func (a *App) letterFlash(id uint64) float64                  { return a.chrome.Right().LetterFlash(id) }
-func (a *App) letterKey(m game.MessageView) string            { return a.chrome.Right().LetterKey(m) }
-func (a *App) letterRead(id uint64) bool                      { return a.chrome.Right().LetterRead(id) }
-func (a *App) lettersUI()                                     { a.chrome.Right().DeclareLetters() }
-func (a *App) messageButtons(sw int) []button                 { return a.chrome.Right().MessageButtons(sw) }
-func (a *App) messageCount() int                              { return a.chrome.Right().MessageCount() }
-func (a *App) openLetter(m game.MessageView)                  { a.chrome.Right().OpenLetter(m) }
-func (a *App) resourceButtons() []button                      { return a.chrome.Res().Buttons() }
-func (a *App) resourceIcon(kind string) (*ebiten.Image, colorScale) {
-	return a.chrome.Res().Icon(kind)
-}
-func (a *App) resourcesHeight() float32              { return a.chrome.Res().Height() }
-func (a *App) rightClickResources(mx, my int) bool   { return a.chrome.Res().RightClick(mx, my) }
-func (a *App) rightClickRightColumn(mx, my int) bool { return a.chrome.Right().RightClick(mx, my) }
-func (a *App) rightColumnButtons(sw int) []button    { return a.chrome.Right().Buttons(sw) }
-func (a *App) rightColumnUI(sw, sh int)              { a.chrome.Right().Declare(sw, sh) }
-func (a *App) roofLegend() string                    { return a.chrome.Global().RoofLegend() }
-func (a *App) statusChipsUI(sw int)                  { a.chrome.Global().DeclareChips(sw) }
-func (a *App) temperatureLine() string               { return a.chrome.Global().TemperatureLine() }
-func (a *App) toast(msg string)                      { a.chrome.Toast(msg) }
-func (a *App) toastRects(sw, sh int) []rect          { return a.chrome.ToastRects(sw, sh) }
 
 // globalHeight is the Global controls' height the layout reserves; the
 // minimap, which sits above Global, learns it here too.

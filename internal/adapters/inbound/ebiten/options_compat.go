@@ -1,6 +1,12 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
@@ -27,55 +33,8 @@ type (
 	// defaults, nothing saved).
 	SettingsHooks = options.Hooks
 	// SaveSlot is one save as the load screen lists it (ports.SaveSlot).
-	SaveSlot    = ports.SaveSlot
-	rebindState = options.RebindState
-	optionRow   = options.OptionRow
+	SaveSlot = ports.SaveSlot
 )
-
-const (
-	autosaveHour     = options.AutosaveHour
-	commitLoadReason = options.CommitLoadReason
-	largeMapSide     = options.LargeMapSide
-	optBtnH          = options.OptBtnH
-	optCtrlX         = options.OptCtrlX
-	ramBase          = options.RamBase
-	ramPerTile       = options.RamPerTile
-	stCustomID       = options.StCustomID
-	stCustomMod      = options.StCustomMod
-)
-
-func ctlPages(sh int) int                       { return options.CtlPages(sh) }
-func ctlSlotID(act input.Action, n int) string  { return options.CtlSlotID(act, n) }
-func estimatedRAM(side int) uint64              { return options.EstimatedRAM(side) }
-func frameCapLabel(v int) string                { return options.FrameCapLabel(v) }
-func gbCeil(b uint64) int                       { return options.GBCeil(b) }
-func gbRound(b uint64) int                      { return options.GBRound(b) }
-func lowRAMText(total uint64) string            { return options.LowRAMText(total) }
-func mapSizeNote(side int, total uint64) string { return options.MapSizeNote(side, total) }
-func minimumRAM() uint64                        { return options.MinimumRAM() }
-func newSlotName() string                       { return options.NewSlotName() }
-func optionRows(tab string) []optionRow         { return options.OptionRows(tab) }
-func optionTabs() []string                      { return options.OptionTabs() }
-func storySummary(v game.StoryView) []string    { return options.StorySummary(v) }
-func optPos(rows []optionRow, i int) (labelX, ctrlX, y float32) {
-	return options.OptPos(rows, i)
-}
-
-func (a *App) applyOption(id string)                   { a.opt.ApplyOption(id) }
-func (a *App) captureBinding()                         { a.opt.CaptureBinding() }
-func (a *App) currentOptionsTab() string               { return a.opt.CurrentTab() }
-func (a *App) drawLoad(s *ebiten.Image, sw, sh int)    { a.opt.DrawLoad(s, sw, sh) }
-func (a *App) drawOptions(s *ebiten.Image, sw, sh int) { a.opt.DrawOptions(s, sw, sh) }
-func (a *App) loadButtons(sw, sh int) []button         { return a.opt.LoadButtons(sw, sh) }
-func (a *App) loadSlot(i int)                          { a.opt.LoadSlot(i) }
-func (a *App) openStoryCustom(v game.StoryView)        { a.opt.OpenStoryCustom(v) }
-func (a *App) optionTabList() []string                 { return a.opt.TabList() }
-func (a *App) optionsButtons(sw, sh int) []button      { return a.opt.Buttons(sw, sh) }
-func (a *App) optionsUI(sw, sh int)                    { a.opt.UI(sw, sh) }
-func (a *App) refreshSlots()                           { a.opt.RefreshSlots() }
-func (a *App) saveBeforeLeaving() bool                 { return a.opt.SaveBeforeLeaving() }
-func (a *App) saveNow(slot string) bool                { return a.opt.SaveNow(slot) }
-func (a *App) tickAutosave()                           { a.opt.TickAutosave() }
 
 // ---- the feature's shell
 
@@ -114,7 +73,7 @@ func (h optionsHost) SetSettings(s config.Settings) { h.a.setSettings(s) }
 func (h optionsHost) Cue(id string) { h.a.cfg.Sound.Play(id, 1, 0) }
 
 // Toast shows a short message.
-func (h optionsHost) Toast(text string) { h.a.toast(text) }
+func (h optionsHost) Toast(text string) { h.a.chrome.Toast(text) }
 
 // Send enqueues a command through the renderer and applies it at once.
 func (h optionsHost) Send(c command.Command) {
@@ -129,7 +88,7 @@ func (h optionsHost) Send(c command.Command) {
 }
 
 // PaintMenu draws the menu backdrop, the title, a body and the buttons.
-func (h optionsHost) PaintMenu(dst *ebiten.Image, sw, sh int, title string, body []string, buttons []button) {
+func (h optionsHost) PaintMenu(dst *ebiten.Image, sw, sh int, title string, body []string, buttons []uikit.Button) {
 	h.a.paintMenu(dst, sw, sh, title, body, buttons)
 }
 
@@ -178,23 +137,23 @@ func (s optionsStory) StoryView() game.StoryView {
 }
 
 // PaintCard draws a storyteller's card.
-func (s optionsStory) PaintCard(dst *ebiten.Image, r rect, p storyteller.Profile, selected, hot bool) {
-	s.a.paintStoryCard(dst, r, p, selected, hot)
+func (s optionsStory) PaintCard(dst *ebiten.Image, r gfx.Rect, p storyteller.Profile, selected, hot bool) {
+	s.a.wiz.PaintStoryCard(dst, r, p, selected, hot)
 }
 
 // CardTip is a storyteller card's hover text.
 func (s optionsStory) CardTip(p storyteller.Profile) string {
-	return modeCaption(p.Mode) + ". " + pacingTip(p)
+	return wizardpkg.ModeCaption(p.Mode) + ". " + wizardpkg.PacingTip(p)
 }
 
 // PresetTip is a difficulty row's hover text.
-func (s optionsStory) PresetTip(n difficulty.Named) string { return presetTip(n) }
+func (s optionsStory) PresetTip(n difficulty.Named) string { return wizardpkg.PresetTip(n) }
 
 // SaveMode names a save mode and says what it does.
 func (s optionsStory) SaveMode(commitment bool) (label, text string) {
-	m := saveModes[0]
+	m := wizardpkg.SaveModes[0]
 	if commitment {
-		m = saveModes[1]
+		m = wizardpkg.SaveModes[1]
 	}
 	return m.Label, m.Text
 }
@@ -206,13 +165,13 @@ func (s optionsStory) OpenCustom(v game.StoryView, accept func(difficulty.Settin
 	if !ok || from == difficulty.Custom {
 		from = difficulty.Seasoned
 	}
-	cd := customDiff{S: v.Difficulty, From: from}
+	cd := wizardpkg.CustomDiff{S: v.Difficulty, From: from}
 	formH := new(float32)
 	a.uiPushModal(modal{
-		ID: stCustomMod, Title: "Custom difficulty", W: diffModalW, H: diffModalH,
-		Draw: func(a *App, body rect) { a.storyCustomBody(body, &cd, formH) },
-		Buttons: []modalButton{
-			{ID: "accept", Label: "Accept", Style: btnPrimary, Closes: true, OnClick: func() { accept(cd.S) }},
+		ID: options.StCustomMod, Title: "Custom difficulty", W: wizardpkg.DiffModalW, H: wizardpkg.DiffModalH,
+		Draw: func(a *App, body gfx.Rect) { a.storyCustomBody(body, &cd, formH) },
+		Buttons: []uikit.ModalButton{
+			{ID: "accept", Label: "Accept", Style: uikit.BtnPrimary, Closes: true, OnClick: func() { accept(cd.S) }},
 			{ID: "reset", Label: "Reset", OnClick: func() { cd.S = difficulty.Of(cd.From) }},
 			{ID: "cancel", Label: "Cancel", Closes: true},
 		},
@@ -221,30 +180,30 @@ func (s optionsStory) OpenCustom(v game.StoryView, accept func(difficulty.Settin
 
 // storyCustomBody is the wizard's custom-difficulty form over the dialog's
 // own working copy instead of the wizard's draft.
-func (a *App) storyCustomBody(body rect, cd *customDiff, formH *float32) {
-	top, rest := body.SplitV(diffTopRowH)
-	lab := dimText()
-	a.uiLabel(top.X, top.Y+(top.H-float32(lineH(lab)))/2, "Start from:", lab)
+func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *float32) {
+	top, rest := body.SplitV(wizardpkg.DiffTopRowH)
+	lab := uikit.DimText()
+	a.uiSt().Label(top.X, top.Y+(top.H-float32(gfx.LineH(lab)))/2, "Start from:", lab)
 	names := make([]string, 0, int(difficulty.Custom))
 	for _, n := range difficulty.Presets() {
 		names = append(names, n.Label)
 	}
-	a.ngChoice("diff.from", rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, "Start from", names, int(cd.From), "", func(i int) { cd.From = difficulty.Preset(i) })
-	a.ngButton("diff.copy", rect{X: top.X + 272, Y: top.Y + 2, W: 150, H: top.H - 4}, "Copy", btnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
+	a.ngChoice("diff.from", gfx.Rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, "Start from", names, int(cd.From), "", func(i int) { cd.From = difficulty.Preset(i) })
+	a.ngButton("diff.copy", gfx.Rect{X: top.X + 272, Y: top.Y + 2, W: 150, H: top.H - 4}, "Copy", uikit.BtnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
 		func() { cd.S = difficulty.Of(cd.From) })
 
-	area := a.uiScrollArea(options.StFormID, rest, *formH, scrollOpts{Step: 40})
-	colW := (area.View.W - 8 - diffColGap) / 2
-	left := &formCtx{View: area.View, X: area.View.X + 4, W: colW, Off: area.Off}
-	right := &formCtx{View: area.View, X: area.View.X + 4 + colW + diffColGap, W: colW, Off: area.Off}
+	area := a.uiSt().ScrollArea(options.StFormID, rest, *formH, uikit.ScrollOpts{Step: 40})
+	colW := (area.View.W - 8 - wizardpkg.DiffColGap) / 2
+	left := &uikit.Form{View: area.View, X: area.View.X + 4, W: colW, Off: area.Off}
+	right := &uikit.Form{View: area.View, X: area.View.X + 4 + colW + wizardpkg.DiffColGap, W: colW, Off: area.Off}
 	s := &cd.S
 
 	left.SectionTitle(a, "Threats")
-	a.diffSlider(left, "ts", "Threat scale", &s.ThreatScale, "ts", pctText, "", "Threat scale\nHow big raids and packs are, as a share of the normal size.")
+	a.diffSlider(left, "ts", "Threat scale", &s.ThreatScale, "ts", wizardpkg.PctText, "", "Threat scale\nHow big raids and packs are, as a share of the normal size.")
 	a.diffCheck(left, "bt", "Big threats", &s.BigThreats, "", "Big threats\nRaids and packs. Off leaves only small events.")
 	a.diffStepper(left, "pd", "Peaceful start (days)", &s.PeacefulDays, 0, 30, "Peaceful start\nDays at the start with no big threat.")
 	a.diffCheck(left, "ph", "Predators hunt colonists", &s.PredatorsHuntColonists, "", "Predators\nWild predators may attack colonists, not only prey.")
-	a.diffSlider(left, "ar", "Hostile wildlife revenge", &s.AnimalRevenge, "ar", pctText, "", "Revenge\nHow fiercely wild animals fight back when hurt.")
+	a.diffSlider(left, "ar", "Hostile wildlife revenge", &s.AnimalRevenge, "ar", wizardpkg.PctText, "", "Revenge\nHow fiercely wild animals fight back when hurt.")
 	left.Gap(8)
 
 	left.SectionTitle(a, "Escalation")
@@ -253,35 +212,35 @@ func (a *App) storyCustomBody(body rect, cd *customDiff, formH *float32) {
 	if !s.Adaptation {
 		adaptOff = "Only used with adaptation"
 	}
-	a.diffSlider(left, "as", "Adaptation strength", &s.AdaptStrength, "as", pctText, adaptOff, "Adaptation strength\nHow far adaptation can move the threat size.")
+	a.diffSlider(left, "as", "Adaptation strength", &s.AdaptStrength, "as", wizardpkg.PctText, adaptOff, "Adaptation strength\nHow far adaptation can move the threat size.")
 	a.diffCheck(left, "te", "Time-based escalation", &s.TimeEscalation, "", "Time-based escalation\nThreats also grow with the years that pass.")
 	if !s.TimeEscalation {
 		s.IgnoreWealth = false
 	}
 	timeOff := ""
 	if !s.TimeEscalation {
-		timeOff = disabledNote
+		timeOff = wizardpkg.DisabledNote
 	}
-	a.diffSlider(left, "ep", "Escalation per year", &s.EscPerYear, "ep", pctText, timeOff, "Escalation per year\nHow much the threat size grows each year.")
+	a.diffSlider(left, "ep", "Escalation per year", &s.EscPerYear, "ep", wizardpkg.PctText, timeOff, "Escalation per year\nHow much the threat size grows each year.")
 	a.diffCheck(left, "iw", "Ignore wealth", &s.IgnoreWealth, timeOff, "Ignore wealth\nThreat size follows time and people only, not what you own.")
 
 	right.SectionTitle(a, "Economy")
-	a.diffSlider(right, "cy", "Crop yield", &s.CropYield, "cy", pctText, "", "")
-	a.diffSlider(right, "my", "Mining yield", &s.MineYield, "my", pctText, "", "")
-	a.diffSlider(right, "by", "Butchering yield", &s.ButcherYield, "by", pctText, "", "")
-	a.diffSlider(right, "rs", "Research speed", &s.ResearchSpeed, "rs", pctText, "", "")
+	a.diffSlider(right, "cy", "Crop yield", &s.CropYield, "cy", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "my", "Mining yield", &s.MineYield, "my", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "by", "Butchering yield", &s.ButcherYield, "by", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "rs", "Research speed", &s.ResearchSpeed, "rs", wizardpkg.PctText, "", "")
 	right.Gap(8)
 
 	right.SectionTitle(a, "Health and mind")
-	a.diffSlider(right, "mo", "Mood offset", &s.MoodOffset, "mo", signedText, "", "Mood offset\nAdded to every colonist's mood.")
-	a.diffSlider(right, "if", "Infection chance", &s.Infection, "if", pctText, "", "")
-	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", pctText, "", diseaseFreqTip)
+	a.diffSlider(right, "mo", "Mood offset", &s.MoodOffset, "mo", wizardpkg.SignedText, "", "Mood offset\nAdded to every colonist's mood.")
+	a.diffSlider(right, "if", "Infection chance", &s.Infection, "if", wizardpkg.PctText, "", "")
+	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", wizardpkg.PctText, "", wizardpkg.DiseaseFreqTip)
 	if row, ok := right.Row(18); ok {
-		ns := tsSmall
-		ns.Color = uiTextDim
-		a.uiLabel(row.X, row.Y, diseaseFreqNote, ns)
+		ns := gfx.Small
+		ns.Color = uikit.TextDim
+		a.uiSt().Label(row.X, row.Y, wizardpkg.DiseaseFreqNote, ns)
 	}
-	a.diffSlider(right, "pt", "Pain tolerance offset", &s.PainTolerance, "pt", signedText, "", "")
+	a.diffSlider(right, "pt", "Pain tolerance offset", &s.PainTolerance, "pt", wizardpkg.SignedText, "", "")
 	right.Gap(8)
 
 	right.SectionTitle(a, "Nature")
@@ -296,7 +255,7 @@ func (a *App) storyCustomBody(body rect, cd *customDiff, formH *float32) {
 // that feature.
 type SaveHooks struct {
 	Save func(sim Simulation, slot string) error
-	List func() ([]SaveSlot, error)
+	List func() ([]portspkg.SaveSlot, error)
 	Load func(path string) (Simulation, string, error) // sim, slot name
 	// SaveCommit saves a commitment-mode colony to its one slot (NG-1 §2.13);
 	// nil falls back to Save.
@@ -343,7 +302,7 @@ func (a *App) handleWindowClose() bool {
 	if !a.closeHandled || !a.cfg.WindowHooks.BeingClosed() {
 		return false
 	}
-	a.saveBeforeLeaving()
+	a.opt.SaveBeforeLeaving()
 	return true
 }
 
@@ -388,7 +347,7 @@ func (a *App) applySettings() {
 	a.binds = input.FromSettings(a.settings.Controls.Bindings)
 	a.updateScale() // UI scale and HiDPI apply live (ui_scale.go)
 	if !a.settings.Gameplay.DevMode {
-		*a.tools.State = devState{}
+		*a.tools.State = devtools.State{}
 	}
 	if a.cfg.Window != nil {
 		a.cfg.Window(a.settings.Graphics.Fullscreen, a.settings.Graphics.VSync)

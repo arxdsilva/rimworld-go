@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"errors"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -38,7 +39,7 @@ func roomWorld() game.WorldView {
 // (lit) and with the unlit DrawImage fallback (unlit), side by side, so
 // the lighting cost reads apart from machine load and other changes.
 func BenchmarkDrawArtLitAB(b *testing.B) {
-	root, err := LocateArt()
+	root, err := artpkg.Locate()
 	if err != nil {
 		b.Skip("generated art not present:", err)
 	}
@@ -57,7 +58,7 @@ func BenchmarkDrawArtLitAB(b *testing.B) {
 				r.lit.Err = errors.New("benchmark: unlit")
 			}
 			screen := ebiten.NewImage(1280, 800)
-			tile := r.tilePx()
+			tile := r.cam.Tile()
 			frame := func() {
 				r.present++
 				r.advance()

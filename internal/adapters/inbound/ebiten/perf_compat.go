@@ -2,7 +2,9 @@ package ebiten
 
 import (
 	"fmt"
-	"image"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	perfpkg "rimworld-go/internal/adapters/inbound/ebiten/perf"
+	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -17,29 +19,17 @@ import (
 
 type (
 	// FPSProbe is the dev frame-rate measurement (cmd/game's -fpsprobe).
-	FPSProbe      = perf.FPSProbe
-	perfClock     = perf.Clock
-	fpsProbeState = perf.Probe
-	shotState     = perf.Shot
+	FPSProbe = perf.FPSProbe
 )
-
-// fpsReport and budgetLine are the probe's report parts (tests).
-func fpsReport(st *fpsProbeState, sc uiScaleState) string { return perf.Report(st, sc) }
-func budgetLine(st *fpsProbeState, d tickDebt) string {
-	return perf.BudgetLine(st, d.held, d.maxOwed)
-}
 
 // ---- the App's instruments. The three timing wrappers run every frame:
 // they hand the clock reading to the meter and nothing else.
 
-func (a *App) perfBeginUpdate()                          { a.meter.BeginUpdate(a.now()) }
-func (a *App) perfEndUpdate()                            { a.meter.EndUpdate(a.now()) }
-func (a *App) perfEndDraw(start time.Time)               { a.meter.EndDraw(start, a.now()) }
-func (a *App) perfBox() (w, h float32)                   { return a.meter.Box() }
-func (a *App) drawPerfOverlay(s *ebiten.Image, _, _ int) { a.meter.Draw(s) }
-func (a *App) seedPerfCapture()                          { a.meter.SeedCapture() }
+func (a *App) perfBeginUpdate()            { a.meter.BeginUpdate(a.now()) }
+func (a *App) perfEndUpdate()              { a.meter.EndUpdate(a.now()) }
+func (a *App) perfEndDraw(start time.Time) { a.meter.EndDraw(start, a.now()) }
 
-func (a *App) takeScreenshot(read func(*image.RGBA), w, h int) { a.meter.TakeScreenshot(read, w, h) }
+func (a *App) drawPerfOverlay(s *ebiten.Image, _, _ int) { a.meter.Draw(s) }
 
 func (a *App) fpsProbeUpdate() bool {
 	return a.cfg.FPSProbe != nil && a.meter.ProbeUpdate()
@@ -84,7 +74,7 @@ func (h perfHost) Env() perf.Env {
 	a := h.a
 	e := perf.Env{PW: a.pw, PH: a.ph, Held: a.debt.held, MaxOwed: a.debt.maxOwed, Scale: a.scale, Probe: a.cfg.FPSProbe}
 	if r := a.renderer; r != nil {
-		e.InGame, e.Stepped, e.Tick, e.Date, e.Speed = true, r.mo.Stepped, uint64(r.game.Tick()), r.date(), int(r.speed)
+		e.InGame, e.Stepped, e.Tick, e.Date, e.Speed = true, r.mo.Stepped, uint64(r.game.Tick()), r.game.Date(), int(r.speed)
 	}
 	return e
 }
@@ -93,10 +83,10 @@ func (h perfHost) Env() perf.Env {
 func (h perfHost) ResetMaxOwed() { h.a.debt.maxOwed = 0 }
 
 // PerfRect is where the HUD reserves the performance box.
-func (h perfHost) PerfRect() rect { return h.a.hud().Perf }
+func (h perfHost) PerfRect() gfx.Rect { return h.a.hud().Perf }
 
 // Toast shows a transient message.
-func (h perfHost) Toast(msg string) { h.a.toast(msg) }
+func (h perfHost) Toast(msg string) { h.a.chrome.Toast(msg) }
 
 // ArtMem describes the art catalogue's memory.
 func (h perfHost) ArtMem() string { return fmt.Sprint(h.a.art.MemStats()) }
@@ -110,9 +100,9 @@ func (h perfHost) ForceSpeed(tier int) {
 
 // StartProbe starts the probe's colony and frames the camera: the probe
 // measures the whole map, in map pixels.
-func (h perfHost) StartProbe(p *FPSProbe) (int, uint64, string) {
+func (h perfHost) StartProbe(p *perfpkg.FPSProbe) (int, uint64, string) {
 	a := h.a
-	if a.nav.screen() == screenBoot {
+	if a.nav.screen() == portspkg.ScreenBoot {
 		a.finishBoot()
 	}
 	a.startGame()
@@ -133,7 +123,7 @@ func (h perfHost) StartProbe(p *FPSProbe) (int, uint64, string) {
 		r.cam.Zoom = clampZoom(p.Zoom)
 	}
 	r.SyncDev() // the probe frames the screen, in map pixels
-	tile, k := r.tilePx(), a.scale.WorldK()
+	tile, k := r.cam.Tile(), a.scale.WorldK()
 	r.cam.OffsetX = (float64(r.game.Width())/2+0.5)*tile - float64(a.pw)*k/2
 	r.cam.OffsetY = (float64(r.game.Height())/2)*tile - float64(a.ph)*k/2
 	return int(r.speed), tick0, ""

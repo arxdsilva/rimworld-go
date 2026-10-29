@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -14,8 +17,8 @@ import (
 
 // zoneFillArt is a catalog with just the zone fill sprites, so the fill
 // batch has something to count.
-func zoneFillArt() *artCatalog {
-	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
+func zoneFillArt() *artpkg.Catalog {
+	c := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{}, Tinted: map[artpkg.TintKey]*ebiten.Image{}}
 	for _, k := range []string{"overlay/grow_zone", "overlay/stockpile", "overlay/pen_zone"} {
 		c.Sprites[k] = fakeSprite([2]int{128, 128}, pt{}, nil)
 	}
@@ -55,7 +58,7 @@ func TestHiddenZoneDrawsNoLabelAndARenamedOneShowsItsName(t *testing.T) {
 	hidden := rectZone(2, game.ZoneStockpile, 12, 2, 18, 6)
 	hidden.Hidden = true
 	plain := rectZone(3, game.ZonePen, 2, 8, 8, 10)
-	r.drawZoneLabels(ebiten.NewImage(64, 64), game.WorldView{Zones: []game.ZoneView{named, hidden, plain}}, 1280, 720, r.tilePx())
+	r.drawZoneLabels(ebiten.NewImage(64, 64), game.WorldView{Zones: []game.ZoneView{named, hidden, plain}}, 1280, 720, r.cam.Tile())
 	var texts []string
 	for _, e := range wlOfKind(*got, "text") {
 		texts = append(texts, e.Text)
@@ -73,10 +76,10 @@ func TestSelectedHiddenZoneShowsItsNameAndAShownOneDoesNot(t *testing.T) {
 	z.Name = "Hidden plot"
 	z.Hidden = true
 	a, _, f := zoneApp(t, z)
-	a.selectCand(selCand{Kind: selZone, ID: entity.EntityID(1)})
+	a.sel.Select(selection.Cand{Kind: selection.Zone, ID: entity.EntityID(1)})
 	f.Frame(t, a)
 	got := wlTrace(t)
-	a.drawZoneSelection(ebiten.NewImage(64, 64))
+	a.arch.Zones.DrawSelection(ebiten.NewImage(64, 64))
 	if texts := wlOfKind(*got, "text"); len(texts) != 1 || texts[0].Text != "Hidden plot" {
 		t.Fatalf("labels drawn for a selected hidden zone: %+v, want its name once", texts)
 	}
@@ -84,13 +87,13 @@ func TestSelectedHiddenZoneShowsItsNameAndAShownOneDoesNot(t *testing.T) {
 	s := a.renderer.game.(*zoneSim)
 	s.world.Zones[0].Hidden = false
 	*got = (*got)[:0]
-	a.drawZoneSelection(ebiten.NewImage(64, 64))
+	a.arch.Zones.DrawSelection(ebiten.NewImage(64, 64))
 	if texts := wlOfKind(*got, "text"); len(texts) != 0 {
 		t.Fatalf("a shown zone's highlight drew text %+v", texts)
 	}
 	// Nothing selected, nothing drawn.
-	a.clearZone()
-	a.drawZoneSelection(ebiten.NewImage(64, 64))
+	a.arch.Zones.Clear()
+	a.arch.Zones.DrawSelection(ebiten.NewImage(64, 64))
 }
 
 func TestHiddenZoneLabelIsNotClickableUnlessSelected(t *testing.T) {
@@ -98,20 +101,20 @@ func TestHiddenZoneLabelIsNotClickableUnlessSelected(t *testing.T) {
 	z := growZone(1, "potato", 8, 1, 15, 5)
 	a, s, _ := zoneApp(t, z)
 	r := a.renderer
-	plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.zoneGeomOf(z), r.tilePx())
+	plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.overlays().Zones.ZoneGeomOf(z), r.cam.Tile())
 	cx, cy := plan.Plate.Center()
-	px, py := int(cx*float32(uiScale())), int(cy*float32(uiScale()))
-	if got, ok := r.zoneLabelAt(r.world(), px, py, r.tilePx(), 0); !ok || got.ID != 1 {
+	px, py := int(cx*float32(gfx.UIScale())), int(cy*float32(gfx.UIScale()))
+	if got, ok := r.zoneLabelAt(r.world(), px, py, r.cam.Tile(), 0); !ok || got.ID != 1 {
 		t.Fatal("a shown zone's label plate is clickable")
 	}
 	s.world.Zones[0].Hidden = true
-	if _, ok := r.zoneLabelAt(r.world(), px, py, r.tilePx(), 0); ok {
+	if _, ok := r.zoneLabelAt(r.world(), px, py, r.cam.Tile(), 0); ok {
 		t.Fatal("a hidden zone has no plate to click")
 	}
-	if got, ok := r.zoneLabelAt(r.world(), px, py, r.tilePx(), 1); !ok || got.ID != 1 {
+	if got, ok := r.zoneLabelAt(r.world(), px, py, r.cam.Tile(), 1); !ok || got.ID != 1 {
 		t.Fatal("the selected hidden zone shows its plate")
 	}
-	if _, ok := r.zoneLabelAt(r.world(), px-400, py, r.tilePx(), 0); ok {
+	if _, ok := r.zoneLabelAt(r.world(), px-400, py, r.cam.Tile(), 0); ok {
 		t.Fatal("a point off the plate hits nothing")
 	}
 }
