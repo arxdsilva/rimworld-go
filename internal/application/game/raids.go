@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -42,7 +43,7 @@ type raiderState struct {
 	Arrived uint64
 	// The colony's prisoners (prisoners.go, M8) stay on this list, out of
 	// the raid AI. Leaving: released, walking off the map (since Idle).
-	// Hungry: the food band (prisonerFoodLow..prisonerFoodFed) wants a
+	// Hungry: the food band (prison.FoodLow..prison.FoodFed) wants a
 	// meal brought, not before FoodRetry. Warden: who last visited.
 	Leaving   bool
 	Hungry    bool
@@ -91,10 +92,12 @@ func (g *Game) isRaider(id entity.EntityID) bool {
 	return ok && !r.Leaving
 }
 
-// standingRaider is a hostile raider still on its feet (never a prisoner).
+// standingRaider is a hostile raider still on its feet (never a
+// prisoner), or a colonist on its feet in a berserk or murderous break:
+// colonists may attack it (SIM-066).
 func (g *Game) standingRaider(id entity.EntityID) bool {
 	v, ok := g.vital.Get(id)
-	return ok && v.Status == health.Alive && g.isRaider(id) && g.prisoners[id] == nil
+	return ok && v.Status == health.Alive && (g.isRaider(id) && !g.prison.Is(id) || mind.Hostile(g.breaks[id].kind))
 }
 
 // phaseThreats runs the storyteller and every raider.
@@ -369,8 +372,8 @@ func (g *Game) groupBroken(group int) bool {
 
 func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 	r := g.raiders[id]
-	if r.Leaving || g.prisoners[id] != nil {
-		g.thinkPrisoner(id, now) // prisoner_life.go: out of the raid AI
+	if r.Leaving || g.prison.Is(id) {
+		g.prison.Live(id, now) // prison/life.go: out of the raid AI
 		return
 	}
 	v, _ := g.vital.Get(id)
@@ -585,10 +588,16 @@ func (g *Game) removeRaider(id entity.EntityID) {
 	g.raiderIDs = kept
 }
 
-// raiderAt is the raider standing (or lying) on a tile.
+// raiderAt is the raider standing (or lying) on a tile, else a colonist
+// there in a berserk or murderous break (an attack target, SIM-066).
 func (g *Game) raiderAt(x, y int) entity.EntityID {
 	for _, id := range g.raiderIDs {
 		if p, ok := g.positions.Get(id); ok && p.X == x && p.Y == y {
+			return id
+		}
+	}
+	for _, id := range g.pawnIDs {
+		if p, ok := g.positions.Get(id); ok && p.X == x && p.Y == y && mind.Hostile(g.breaks[id].kind) {
 			return id
 		}
 	}
@@ -599,8 +608,8 @@ func (g *Game) raiderAt(x, y int) entity.EntityID {
 func (g *Game) raiderViews() []PawnView {
 	out := make([]PawnView, 0, len(g.raiderIDs))
 	for _, id := range g.raiderIDs {
-		if g.prisoners[id] != nil || g.raiders[id].Leaving {
-			out = append(out, g.prisonerPawnView(id)) // prisoner_life.go
+		if g.prison.Is(id) || g.raiders[id].Leaving {
+			out = append(out, g.prisonerPawnView(id)) // prisoners.go
 			continue
 		}
 		pos, _ := g.positions.Get(id)
@@ -624,7 +633,7 @@ func (g *Game) raiderViews() []PawnView {
 // colony's prisoners.
 func (g *Game) Raiders() (standing, total int) {
 	for _, id := range g.raiderIDs {
-		if g.prisoners[id] != nil || g.raiders[id].Leaving {
+		if g.prison.Is(id) || g.raiders[id].Leaving {
 			continue
 		}
 		total++

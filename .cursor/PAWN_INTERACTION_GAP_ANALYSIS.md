@@ -4,7 +4,7 @@ Scope: bring colonist-to-colonist interaction (player orders on a target pawn, r
 
 ## Status (2026-10-29)
 
-SIM-061 (rule rewrite, guard, this document, care extraction) and SIM-062 (orders on a pawn: rescue, capture, arrest, prioritize tending) are done. SIM-063..066 are not started. Every row in section 3 is `open` except the ones that section 3.5 lists as already at fidelity. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+SIM-061…066 are done (rule and care extraction; orders on a pawn; rescue fidelity and guests; feeding patients; visiting the sick and strip; mental breaks that target others). Open: feeding downed animals, tantrum and escape breaks, an event that brings strangers, and the out-of-scope rows. Every row in section 3 is `open` except the ones that section 3.5 lists as already at fidelity. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -34,10 +34,10 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | "Arrest X" on a standing non-hostile (visitor, colonist in a break). | SIM-062: "Arrest <name>" with the selected colonist as arrester (`Care.StartArrest`). | — | SIM-062 | done |
 | "Prioritize tending X" by an undrafted doctor. | SIM-062: "Prioritize tending <name>" (`OrderTendPatient`); Doctor priority never gates a forced order, incapability does. | — | SIM-062 | done |
 | "Tend X" when drafted. | `EmergencyTend` works and, since SIM-062, Shift queues it behind the current order (`tick.go`, `order_queue.go` `execOrder`). | — | SIM-062 | done |
-| "Feed X" for a downed or bedridden patient. | None. | Menu option and job. | SIM-064 | open |
-| "Strip X" for a downed pawn or a prisoner. | None. | Option and job; apparel and weapon drop as items. | SIM-065 | open |
+| "Feed X" for a downed or bedridden patient. | SIM-064: "Feed <name>" (`Feeding.judge/force`, `care/feed.go`), offered below 80 % food, disabled "no food". | — | SIM-064 | done |
+| "Strip X" for a downed pawn or a prisoner. | SIM-065: "Strip <name>" on any downed pawn or a prisoner (`care/strip.go`); stripping a downed guest costs −40 goodwill. | — | SIM-065 | done |
 | "Carry X to a cryptosleep casket". | No casket building. | - | - | out of scope (needs a casket building) |
-| "Melee attack X" on a berserk colonist. | Attack targets only standing raiders and animals: `standingRaider` (`raids.go:95`). | Allow berserk colonists as targets. | SIM-066 | open |
+| "Melee attack X" on a berserk colonist. | SIM-066: `standingRaider` admits a standing colonist in berserk or murderous rage; a drafted colonist gets "Melee attack/Shoot <name>" (no "raider" label), anyone "Arrest <name>". | — | SIM-066 | done |
 | The order queue names each order's target. | SIM-062: `orderLabel` also matches `Command.Target` (`order_queue.go`; `TestOrderLabelMatchesTarget`). | — | SIM-062 | done |
 | A drafted right-click on any pawn with options opens the menu. | SIM-061: `hasPawnOrder` (`internal/adapters/inbound/ebiten/orders/float.go`), true for `EmergencyTend` or `Prioritize` with a target. A drafted group still checks the first drafted pawn's options, which may differ from the primary pawn. | — | SIM-061, SIM-062 | done |
 
@@ -45,12 +45,12 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | RimWorld behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Any downed colonist out of bed is rescued, whatever the cause (injury, blood loss, hunger, disease, toxins, heat, cold). Exhaustion is a collapse into sleep, not a rescue. | `InjuredDowned` admits only injury, hypothermia and heatstroke (`care/rescue.go:23`). | Admit every downed cause except `CauseNoBed` and in-bed anaesthesia. | SIM-063 | open |
-| Non-hostile downed humanlikes (guests, traders, allies, strangers) are rescued, tended under the guest care group, and leave when healed. Goodwill reacts. | Colonists only. | Rescue, guest bed, leave, goodwill. | SIM-063 | open |
-| A rescued faction-less stranger may ask to join (vanilla 19.5). | None. | Join-offer letter on recovery. | SIM-063 | open |
-| A downed prisoner outside a bed is carried back to a prison bed by a warden. | Tended where they lie. | Warden take-to-bed job (`OrderCarryToPrisonBed` plus autonomous). | SIM-063 | open |
-| Safe bed: reachable, not burning, not forbidden, not deadly in temperature. A patient that needs care gets a medical bed, else their own bed, else any free bed. | Since SIM-061 one `SafeBedFor` (`care/beds.go:34`) reproduces the two old rankings (rescue: medical, hospital, nearest; bed rest: its own distance rule); `prisonBedFor` (`prisoners.go:93`) is still separate. `DoRescue` keeps the patient's own bed only when the target bed is medical; otherwise `ReleaseBed` drops it (`care/rescue.go:171`). No fire or temperature check. | One `SafeBedFor` ranking with a `BedHazard` check, keeping the own claim. | SIM-061 (merge), SIM-063 (rules) | open |
-| A carrier that is downed, drafted or fleeing drops the patient. | `DropPatient` exists (`care/care.go:60`); the interruption paths are unverified. | Verify each path and add one test per path. | SIM-063 | open |
+| Any downed colonist out of bed is rescued, whatever the cause (injury, blood loss, hunger, disease, toxins, heat, cold). Exhaustion is a collapse into sleep, not a rescue. | SIM-063: `InjuredDowned` (`care/rescue.go`) admits every downed cause but `CauseNoBed`; in-bed anaesthesia stays (out of bed is required). | — | SIM-063 | done |
+| Non-hostile downed humanlikes (guests, traders, allies, strangers) are rescued, tended under the guest care group, and leave when healed. Goodwill reacts. | SIM-063: guests (visitors, traders, allies, faction-less strangers) are rescued autonomously and by order, tended under the guest care group, leave when healed (+12 goodwill); a guest dying downed costs −5 (`care/guest.go`, `visitors.go`). | — | SIM-063 | done |
+| A rescued faction-less stranger may ask to join (vanilla 19.5). | SIM-063: a recovered stranger asks to join (50 % safe / 100 % unsafe); the letter has Accept (`command.AcceptLetter`) and Decline. No event spawns strangers yet (`Game.DevJoinOffer` for tests). | — | SIM-063 | done |
+| A downed prisoner outside a bed is carried back to a prison bed by a warden. | SIM-063: wardens carry a downed prisoner back to a prison bed, autonomously and by "Take <name> to bed" (`care/prisonbed.go`). | — | SIM-063 | done |
+| Safe bed: reachable, not burning, not forbidden, not deadly in temperature. A patient that needs care gets a medical bed, else their own bed, else any free bed. | SIM-063: `SafeBedFor` filters fire within a tile and air beyond the 90 °C margin (`BedHazard`), ranks medical beds first for a patient who needs care or a guest, else its own bed, else any free bed; a rescue keeps the patient's own claim and holds another bed for the stay. | — | SIM-061 (merge), SIM-063 (rules) | done |
+| A carrier that is downed, drafted or fleeing drops the patient. | SIM-063: draft, a new order, flight and a downed carrier drop the patient through `interrupt`; a patient dying mid-carry is dropped by `Doctor.PatientDied` (combat.go); one test each (`rescue_fidelity_test.go`). | — | SIM-063 | done |
 | The carry relation is cheap to query both ways. | `care.Carries` (`care/carry.go`): a two-way index replaced the `g.carrying` map and its linear scan. | — | SIM-061 | done |
 | Capture and rescue share one carry-to-bed flow. | SIM-062: `carryToBed` (`care/carrybed.go`) drives both `DoRescue` and `DoCapture`; the trip picks the bed (`SafeBedFor` or the prison bed) and the end action. | — | SIM-062 | done |
 
@@ -58,18 +58,18 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | RimWorld behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Downed pawns keep getting hungry. Doctors feed patients who cannot feed themselves. Wardens feed prisoners. | Downed needs are frozen: the downed branch in `tick.go:293-307` runs before any need decay. Only prisoners are fed (`feedPrisoner`, `prisoner_warden.go:194`). | Unfreeze food and add a Feed-patient job, shipped in one commit. Generalise `feedPrisoner` into `feedPawn`. | SIM-064 | open |
-| Bedridden patients gain recreation from visitors ("visit sick"). | `idleChat` skips downed and sleeping pawns (`idle.go:127`, filter at `:135-139`). | Visit-sick recreation job. Awake bedridden pawns become valid partners. | SIM-065 | open |
+| Downed pawns keep getting hungry. Doctors feed patients who cannot feed themselves. Wardens feed prisoners. | SIM-064: downed pawns' food falls at the awake rate (rest stays frozen); doctors feed a downed patient at or below Hungry (2,500), the warden's food run shares the driver (`Feeding`), a failed run retries after 1,000 ticks. | — | SIM-064 | done |
+| Bedridden patients gain recreation from visitors ("visit sick"). | SIM-065: friends (opinion 20+) visit an awake bedridden colonist for 1,500 ticks, both gain 0.216 of the recreation bar; awake patients are social partners. The pair cooldown is a fixed time window (no saved state). | — | SIM-065 | done |
 | Downed animals are fed. | Not done (MED gap section 7). | Optional extension of Feed. | SIM-064 | open |
 
 ### 3.4 Mental breaks that involve others (vanilla 10.1)
 
 | RimWorld behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Insulting spree and targeted insulting spree. | `SocialFight` exists as a non-mood break (`internal/domain/pawn/mentalbreak/mentalbreak.go:16`; hook in `mental.go:44`). No spree. | New kinds that use `social.Insult`. | SIM-066 | open |
-| Berserk (attacks anyone near) and murderous rage (hunts one target). | None. | Aggressive breaks. Colonists may attack or arrest the berserker. | SIM-066 | open |
-| Catatonic breakdown (downed until recovered, needs rescue and feeding). | None. | Reuses SIM-063 rescue and SIM-064 feeding. | SIM-066 | open |
-| Break severity tiers (minor, major, extreme) gate which breaks can fire. | Hourly roll below mood 20, no tiers or traits (checklist 10.1). | Tier table and a pure `Pick`. | SIM-061 (domain), SIM-066 | open |
+| Insulting spree and targeted insulting spree. | SIM-066: insulting spree and targeted insulting spree insult through the social interaction path and can start a social fight (`internal/application/game/mind`). | — | SIM-066 | done |
+| Berserk (attacks anyone near) and murderous rage (hunts one target). | SIM-066: berserk attacks the nearest creature until downed or timed out; murderous rage hunts one colonist or prisoner until it dies or the rager is downed or arrested. | — | SIM-066 | done |
+| Catatonic breakdown (downed until recovered, needs rescue and feeding). | SIM-066: catatonic breakdown downs the pawn (`health.CauseCatatonic`) for 100,000–300,000 ticks; rescue and feeding apply. | — | SIM-066 | done |
+| Break severity tiers (minor, major, extreme) gate which breaks can fire. | SIM-066: tiers at mood 35/20/5 shifted by break-threshold traits, wiki MTBs, `mentalbreak.Pick` with the caller's roll. | — | SIM-061 (domain), SIM-066 | done |
 | Arrest a colonist in a break. | SIM-062: "Arrest <name>" in the right-click menu (the target may be in a break; the arrester may not). | — | SIM-062 | done |
 
 ### 3.5 Already at fidelity (no work)

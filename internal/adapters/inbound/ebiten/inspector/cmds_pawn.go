@@ -217,8 +217,14 @@ func PawnStatusLines(p game.PawnView, name func(entity.EntityID) string) []strin
 	if p.CarryingPawn != 0 {
 		out = append(out, "Carrying "+carryName(name, p.CarryingPawn))
 	}
-	if p.MentalBreak != "" {
-		out = append(out, "MENTAL BREAK: "+p.MentalBreak)
+	if ln := mentalBreakLine(p, name); ln != "" {
+		out = append(out, ln)
+	}
+	if ln := guestLine(p); ln != "" {
+		out = append(out, ln)
+	}
+	if ln := bedStateLine(p); ln != "" {
+		out = append(out, ln)
 	}
 	if p.Hypothermia > 0 {
 		out = append(out, fmt.Sprintf("Hypothermia %d%%", p.Hypothermia/10))

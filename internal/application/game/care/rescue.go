@@ -18,11 +18,14 @@ type Doctor struct {
 	tendedUntil map[entity.EntityID]uint64
 }
 
-// InjuredDowned: a pawn lying down from injury (or from exposure).
+// InjuredDowned: a pawn down for any reason a bed helps with (SIM-063):
+// injury, blood loss, malnutrition, disease, toxins, heatstroke,
+// hypothermia, an anaesthetic. Not a collapse from exhaustion
+// (health.CauseNoBed), which is sleep where it falls, as in RimWorld; an
+// anaesthetised patient already in bed is left out by rescueEligible.
 func (d *Doctor) InjuredDowned(id entity.EntityID) bool {
 	v, ok := d.h.Vital(id)
-	return ok && v.Status == health.Downed &&
-		(v.Cause == health.CauseInjury || v.Cause == health.CauseHypothermia || v.Cause == health.CauseHeatstroke)
+	return ok && v.Status == health.Downed && v.Cause != health.CauseNoBed
 }
 
 // Assign is the humanlike half of Doctor work, each step its own giver:
@@ -30,7 +33,7 @@ func (d *Doctor) InjuredDowned(id entity.EntityID) bool {
 // else (or itself, with no one else to help). Surgery and animals follow
 // in the host's work assignment.
 func (d *Doctor) Assign(id entity.EntityID) bool {
-	return d.assignRescue(id) || d.assignTendWhere(id, true) || d.assignTendOther(id)
+	return d.assignRescue(id) || d.assignTendWhere(id, true) || d.assignTendOther(id) || d.c.Feed.assign(id) // feed.go (SIM-064)
 }
 
 // patientRank is a doctor's candidate: the job it would start, how fast
@@ -92,18 +95,18 @@ func (d *Doctor) bestPatient(id entity.EntityID, want func(pid entity.EntityID) 
 		consider(pid)
 	}
 	for _, pid := range d.h.RaiderIDs() {
-		if d.h.IsPrisoner(pid) {
+		if k := d.c.kindOf(pid); k == targetPrisoner || k == targetGuest || k == targetStranger {
 			consider(pid)
 		}
 	}
 	return best
 }
 
-// Rescuable: pid is a downed colonist (prisoners are tended where they
-// lie) out of bed with a free bed to be carried to. Its care level does
-// not matter: even "No care" is rescued.
+// Rescuable: pid is rescueEligible with a safe bed to be carried to
+// (SafeBedFor). Its care level does not matter: even "No care" is
+// rescued. A downed prisoner is the warden's (prisonbed.go).
 func (d *Doctor) Rescuable(pid entity.EntityID) bool {
-	if !d.InjuredDowned(pid) || d.h.IsPrisoner(pid) || d.h.BedUnder(pid) != 0 {
+	if !d.rescueEligible(pid) {
 		return false
 	}
 	px, py, _ := d.h.Pos(pid)
@@ -128,4 +131,27 @@ func (d *Doctor) DoRescue(id entity.EntityID, j job.Record) {
 		return
 	}
 	d.c.carryToBed(id, j, tripRescue)
+}
+
+// PatientDied: id died; whoever carried it lets go where it stands and
+// stops (SIM-063). The host's Interrupt clears the carrier's job and its
+// reservations; the patient is put down first so the carry index is clean
+// whatever the host does.
+func (d *Doctor) PatientDied(id entity.EntityID) {
+	carrier := d.c.Carry.Carrier(id)
+	if carrier == 0 {
+		return
+	}
+	d.c.DropPatient(carrier)
+	d.h.Interrupt(carrier, job.TargetGone)
+}
+
+// rescueEligible: pid is downed where a rescue helps and lies out of bed,
+// a colonist or a guest the colony takes in (guest.go); Rescuable adds
+// "a free bed exists", which the order menu shows as a reason instead.
+func (d *Doctor) rescueEligible(pid entity.EntityID) bool {
+	if !d.InjuredDowned(pid) || d.h.IsPrisoner(pid) || d.h.BedUnder(pid) != 0 {
+		return false
+	}
+	return d.h.IsColonist(pid) || d.c.Guest.Rescuable(pid)
 }

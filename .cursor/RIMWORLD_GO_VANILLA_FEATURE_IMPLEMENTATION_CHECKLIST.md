@@ -845,7 +845,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 10.1 Mental breaks
 
--   [-] **Mental break eligibility** (hourly roll below mood 20, 2% per point; no severity tiers/traits)
+-   [x] **Mental break eligibility** (SIM-066: minor/major/extreme tiers at mood 35/20/5 shifted by break-threshold traits, mean time between breaks 4/0.8/0.5 days, rolled hourly; wiki numbers, ENG-003)
     -   Low mood sustained below thresholds.
     -   Break severity influenced by current threshold/traits.
 -   [x] **Mental state framework** (break replaces work, schedule, orders and drafting; explicit start/end; needs still met when critical)
@@ -858,12 +858,12 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   food binge.
     -   drug binge where available.
     -   hide-in-room style isolation.
--   [ ] **Destructive/aggressive breaks**
+-   [-] **Destructive/aggressive breaks** (SIM-066: insulting spree, targeted insulting spree, berserk, murderous rage; colonists may arrest or, drafted, attack a berserker. Missing: tantrum/object destruction, escape)
     -   Insulting spree.
     -   tantrum/object destruction.
     -   berserk/aggression.
     -   prisoner-like escape behavior where relevant.
--   [ ] **Catatonic/extreme shutdown equivalent**
+-   [x] **Catatonic/extreme shutdown equivalent** (SIM-066: catatonic breakdown downs the pawn for its duration; it is rescued and fed like any downed patient)
     -   Pawn becomes temporarily unavailable and requires care.
 -   [x] **Recovery** (break ends after its duration with a day of catharsis +30)
     -   End state.
@@ -883,7 +883,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 10.3 Social interactions
 
--   [x] **Periodic social interaction** (SIM-041: every 60 ticks staggered among nearby same-room pawns; chitchat, deep talk, slight, insult, kind words)
+-   [x] **Periodic social interaction** (SIM-041: every 60 ticks staggered among nearby same-room pawns; chitchat, deep talk, slight, insult, kind words; SIM-065: an awake bedridden patient is a partner, and friends visit the sick for shared recreation)
     -   Nearby awake pawns may chat, insult, compliment, etc.
     -   Sparse event-driven relationships, never all-pairs every tick.
 -   [x] **Opinion** (SIM-041: directional, relation bonus + traits + beauty + memories, clamp +-100)
@@ -974,7 +974,7 @@ treatment, and surgery are major colony-management systems.
     -   Derived from injuries/conditions.
     -   affects consciousness/mood/performance.
     -   extreme pain can down pawn.
--   [x] **Downed state** (MED-01: downed by consciousness < 30 %, moving < 15 % or pain shock, back up at 35 %/20 %/shock − 5 % (hysteresis); rescue and capture work (PLAY-010, SIM-045); rest 0 forces sleep instead of downing; MED-12: animals go down at 80 % injury or severe blood loss and stand at 50 % / moderate (hysteresis), lie where they fell, are tended in place, can be finished by predators and hunters, and tame at double chance)
+-   [x] **Downed state** (MED-01: downed by consciousness < 30 %, moving < 15 % or pain shock, back up at 35 %/20 %/shock − 5 % (hysteresis); rescue and capture work (PLAY-010, SIM-045); rest 0 forces sleep instead of downing; SIM-063: every downed cause but collapse-asleep is rescued; downed pawns get hungry and doctors feed them (SIM-064); MED-12: animals go down at 80 % injury or severe blood loss and stand at 50 % / moderate (hysteresis), lie where they fell, are tended in place, can be finished by predators and hunters, and tame at double chance)
     -   Pawn cannot normally act.
     -   can be rescued/captured.
     -   not equivalent to death.
@@ -1009,8 +1009,8 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Medical beds** (NG-1: the hospital bed gives 115 % healing and half the infection chance, and rescuers prefer it; PLAY-020: any bed can be marked Medical, that bed only, with no owner; healthy colonists never sleep in it; patients and rescuers prefer it; hospital beds start medical)
     -   Mark beds for medical use.
     -   injured/sick pawns seek treatment/rest.
--   [x] **Bed rest** (PLAY-020: colonists in pain (healable injury 40+), with an untended wound, sick or waiting for surgery lie in bed until healed (15 or less, nothing to tend, at least 2 h), by default; a hungry patient eats and returns; no free bed retries after 6 h; self-tend in bed without another doctor; per-colonist "Rest when hurt"; no-flap tested)
--   [-] **Rescue** (PLAY-010 autonomous Doctor rescue; SIM-062 "Rescue <name>" order, drafted or not, Shift-queued; capture shares the carry-to-bed driver. Missing: guests, allies and strangers, every downed cause, the safe-bed ranking (SIM-063))
+-   [x] **Bed rest** (PLAY-020: colonists in pain (healable injury 40+), with an untended wound, sick or waiting for surgery lie in bed until healed (15 or less, nothing to tend, at least 2 h), by default; a hungry patient eats and returns; SIM-064: a patient who cannot feed itself is fed by a doctor ("Feed <name>" too); no free bed retries after 6 h; self-tend in bed without another doctor; per-colonist "Rest when hurt"; no-flap tested)
+-   [x] **Rescue** (PLAY-010 autonomous Doctor rescue; SIM-062 "Rescue <name>" order, drafted or not, Shift-queued; SIM-063: every downed cause but collapse-asleep, guests, allies and strangers too, a safe bed (no fire, survivable temperature; medical for a patient who needs care, else its own, else any free bed), the patient's own bed kept, a carrier downed or the patient dying drops it)
     -   Carry downed friendly pawn to valid bed.
 
 ## 11.6 Infection
@@ -1549,7 +1549,7 @@ children systems.
 
 -   [x] **Capture downed hostile** (SIM-045)
     -   Carry to prisoner-designated bed/room.
--   [-] **Prisoner state** (SIM-045: room-bound; no escape behaviour)
+-   [-] **Prisoner state** (SIM-045: room-bound; SIM-063: a warden carries a downed prisoner back to a prison bed, "Take <name> to bed" too; no escape behaviour)
     -   Faction remains distinct until recruited.
     -   Restricted movement/escape behavior.
 
@@ -1580,7 +1580,7 @@ children systems.
 
 ## 19.5 Other recruitment
 
--   [ ] **Rescue/recovery join chance**
+-   [-] **Rescue/recovery join chance** (SIM-063: a rescued faction-less stranger asks to join on recovery, 50 % when leaving is safe, 100 % when not; Accept/Decline letter. Missing: an event that brings such strangers (transport pod crash))
 -   [x] **Wanderer/migrant joins event** (SIM-046)
 -   [ ] **Refugee/visitor join opportunity where part of base event
     set**

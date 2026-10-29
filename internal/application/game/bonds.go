@@ -49,7 +49,7 @@ func (g *Game) bondRoll(permille int32) bool {
 // bondable reports whether c can bond with or own an animal: a living
 // colonist (not a raider or prisoner).
 func (g *Game) bondable(c entity.EntityID) bool {
-	if c == 0 || !g.colonist(c) || g.isPrisoner(c) {
+	if c == 0 || !g.colonist(c) || g.prison.Is(c) {
 		return false
 	}
 	v, ok := g.vital.Get(c)

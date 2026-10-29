@@ -262,11 +262,11 @@ func TestPawnOrdersCaptureRows(t *testing.T) {
 		t.Fatalf("a downed raider is captured, not rescued or arrested: %q", labelsAt(g2, ada2, 12, 6))
 	}
 	g2.Enqueue(r.Cmd)
-	for i := 0; i < 2000 && !g2.isPrisoner(rid2); i++ {
+	for i := 0; i < 2000 && !g2.prison.Is(rid2); i++ {
 		g2.Step(1)
 		fed(g2, ada2)
 	}
-	if !g2.isPrisoner(rid2) {
+	if !g2.prison.Is(rid2) {
 		t.Fatal("the Capture row's command captures the raider")
 	}
 }

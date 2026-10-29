@@ -275,7 +275,7 @@ func TestDefaultCareForPrisoners(t *testing.T) {
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	dog, _ := g.SpawnAnimal("labrador", 6, 3)
-	if !g.isPrisoner(rid) {
+	if !g.prison.Is(rid) {
 		t.Fatal("fixture: captured")
 	}
 	if g.care.Level(ada) != medcare.Best || g.care.Level(rid) != medcare.HerbalMax || g.care.Level(dog) != medcare.HerbalMax {

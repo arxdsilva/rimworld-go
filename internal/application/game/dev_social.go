@@ -151,3 +151,12 @@ func partByLabel(name string) (body.Part, bool) {
 	}
 	return 0, false
 }
+
+// DevJoinOffer places a faction-less stranger at (x, y) and posts its
+// offer to join (SIM-063), for developer mode and the journeys.
+func (g *Game) DevJoinOffer(x, y int) entity.EntityID {
+	s := g.spawnVisitor(0, nil, x, y, uint64(g.clock.Now()))
+	careGuests{g}.offerJoin(s)
+	g.viewGen++ // the read model shows the new stranger and letter
+	return s
+}

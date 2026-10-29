@@ -84,6 +84,9 @@ type Reach interface {
 	Owner(target entity.EntityID) (entity.EntityID, bool)
 	// Claim reserves target for owner.
 	Claim(owner, target entity.EntityID) bool
+	// BedHazard: bed is no safe place to lay a patient now (burning, or
+	// its room at a deadly temperature; SIM-063).
+	BedHazard(bed entity.EntityID) bool
 }
 
 // Jobs starts and stops pawns' jobs.
@@ -148,6 +151,9 @@ type Treatment interface {
 	// ApplyTend tends every wound of patient at quality q now: the body,
 	// standing up when it can, and the vital record.
 	ApplyTend(patient entity.EntityID, q int32)
+	// Feed: patient eats from the food stack carry its feeder brought
+	// (SIM-064; the warden's prisoner feeding, generalised).
+	Feed(patient, carry entity.EntityID)
 }
 
 // Events records what care did, for logs and opinions.
@@ -183,4 +189,42 @@ type Prison interface {
 	ArrestRoll(arrester, target entity.EntityID) bool
 	// StartFight starts a social fight: starter attacks other.
 	StartFight(starter, other entity.EntityID)
+}
+
+// Guests is what rescuing non-colonists needs (SIM-063): visitors,
+// traders, allies and faction-less strangers on the map.
+type Guests interface {
+	// IsGuest: id is a non-hostile humanlike on the map that is neither a
+	// colonist nor a prisoner.
+	IsGuest(id entity.EntityID) bool
+	// FactionOf is id's faction (0: none, a stranger).
+	FactionOf(id entity.EntityID) uint64
+	// Goodwill changes faction's goodwill by delta, for reason.
+	Goodwill(faction uint64, delta int, reason string)
+	// Leave sends a recovered guest off the map.
+	Leave(id entity.EntityID)
+	// JoinOffer asks the player whether stranger id, rescued, may join.
+	JoinOffer(id entity.EntityID)
+}
+
+// Social is what visiting the sick needs (SIM-065).
+type Social interface {
+	// Opinion is from's opinion of to.
+	Opinion(from, to entity.EntityID) int
+	// Awake: id is not asleep.
+	Awake(id entity.EntityID) bool
+	// Interact runs one social interaction between a and b now.
+	Interact(a, b entity.EntityID)
+	// Recreation is id's recreation need; Recreate adds amount to it.
+	Recreation(id entity.EntityID) int
+	Recreate(id entity.EntityID, amount int)
+}
+
+// Gear is what stripping needs (SIM-065).
+type Gear interface {
+	// StripGear drops target's apparel and weapon as items where it lies;
+	// false when it had nothing to drop.
+	StripGear(target entity.EntityID) bool
+	// HasGear: target wears apparel or holds a weapon to strip.
+	HasGear(target entity.EntityID) bool
 }

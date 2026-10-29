@@ -2,8 +2,11 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -84,7 +87,7 @@ func (g *Game) socialCheck(id entity.EntityID, now uint64) {
 // visitor or prisoner, conscious, awake, not breaking, drafted or
 // fighting, and able to talk (initiator) or hear (recipient).
 func (g *Game) canSocialize(id entity.EntityID, initiator bool) bool {
-	if v, ok := g.vital.Get(id); !ok || v.Status != health.Alive {
+	if v, ok := g.vital.Get(id); !ok || v.Status != health.Alive && !(v.Status == health.Downed && g.lyingAwake(id)) {
 		return false
 	}
 	p := g.personOf(id)
@@ -94,7 +97,7 @@ func (g *Game) canSocialize(id entity.EntityID, initiator bool) bool {
 	if _, breaking := g.breaks[id]; breaking || g.drafted(id) {
 		return false
 	}
-	if j, _ := g.jobs.Get(id); j.Kind == job.Sleep && j.State == job.Do || j.Kind == job.Brawl {
+	if j, _ := g.jobs.Get(id); j.Kind == job.Sleep && j.State == job.Do && !g.lyingAwake(id) || j.Kind == job.Brawl {
 		return false
 	}
 	if initiator {
@@ -273,4 +276,76 @@ func (g *Game) applyInteraction(a, b entity.EntityID, k social.Interaction, now 
 	}
 	g.addSocialLog(a, b, lk, topic, now)
 	g.maybeSocialFight(a, b, k) // social_fight.go (M6)
+}
+
+// careSocial is care.Social and careGear care.Gear (care/deps.go,
+// SIM-065): visiting the sick and stripping.
+type careSocial struct{ g *Game }
+
+func (h careSocial) Opinion(from, to entity.EntityID) int { return int(h.g.opinion(from, to)) }
+func (h careSocial) Awake(id entity.EntityID) bool        { return !h.g.asleep(id) }
+func (h careSocial) Recreation(id entity.EntityID) int    { return h.g.joy[id] }
+func (h careSocial) Recreate(id entity.EntityID, amount int) {
+	h.g.joy[id] = recreation.Clamp(h.g.joy[id] + amount)
+}
+
+// Interact is the bedside talk of a visit: an interaction, and a "visited
+// by" line in the patient's log.
+func (h careSocial) Interact(a, b entity.EntityID) {
+	h.g.ensurePerson(a)
+	h.g.ensurePerson(b)
+	h.g.interact(a, b, uint64(h.g.clock.Now()))
+	h.g.logEvent(b, logEntry{Kind: logVisited, Other: a, Name: h.g.name(a)})
+}
+
+// asleep: id sleeps. A patient lying awake in bed does not.
+func (g *Game) asleep(id entity.EntityID) bool {
+	j, _ := g.jobs.Get(id)
+	return j.Kind == job.Sleep && j.State == job.Do && !g.lyingAwake(id)
+}
+
+// lyingAwake: id is a patient (on bed rest, downed or needing a tend) lying
+// in a bed, rested and conscious: a valid partner for a chat or a visit.
+func (g *Game) lyingAwake(id entity.EntityID) bool {
+	n, _ := g.need.Get(id)
+	v, _ := g.vital.Get(id)
+	return n.Rest >= needs.WakeRest && g.bedUnder(id) != 0 && g.capacity(id, body.Consciousness) > 0 &&
+		(v.Status == health.Downed || g.care.Rest.On(id) || g.needsTending(id))
+}
+
+type careGear struct{ g *Game }
+
+// HasGear: target has apparel or a weapon to strip.
+func (h careGear) HasGear(target entity.EntityID) bool {
+	_, armed := h.g.equip[target]
+	w := h.g.apparel[target]
+	return armed || w[item.Body] != 0 || w[item.Head] != 0
+}
+
+// StripGear drops target's apparel and weapon where it lies.
+func (h careGear) StripGear(target entity.EntityID) bool {
+	g := h.g
+	if !h.HasGear(target) {
+		return false
+	}
+	pos, _ := g.positions.Get(target)
+	for _, s := range wearSlots {
+		if k := g.apparel[target][s]; k != 0 {
+			w := g.apparel[target]
+			w[s] = 0
+			w.setForced(s, false)
+			g.apparel[target] = w
+			g.dropStack(k, 1, pos.X, pos.Y)
+			g.dressChanged(target, s)
+			g.dressNote(target, logTookOff, k)
+		}
+	}
+	g.dropRaiderGear(target) // raids.go: a raider's or stranger's weapon is found, not the colony's
+	return true
+}
+
+// negotiation is warden id's negotiation ability, permille: its Social
+// impact (Social skill and Talking).
+func (g *Game) negotiation(id entity.EntityID) int32 {
+	return social.SocialImpact(int(g.skillOf(id, skSocial).Level), g.capacity(id, body.Talking))
 }

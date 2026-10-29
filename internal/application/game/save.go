@@ -10,6 +10,7 @@ import (
 	"io"
 	mathbits "math/bits"
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -200,6 +201,7 @@ type saveState struct {
 	Scheds     map[entity.EntityID]schedule.Grid
 	Joy        map[entity.EntityID]int
 	Breaks     map[entity.EntityID]savedBreak
+	Mind       mind.Save // mind (SIM-066): break targets and retarget ticks
 	RoomGrid   []int
 	RoomTemps  []temperature.Temp
 	Memories   map[entity.EntityID]mood.Memories
@@ -350,6 +352,9 @@ type saveState struct {
 	// (care/policy.go); nil while all are at their defaults, so older saves
 	// hash as before.
 	Care *care.PolicySave
+	// FeedRetry (SIM-064): when a patient nobody could feed is tried
+	// again (care/feed.go); nil when there is none (absent in older saves).
+	FeedRetry []care.Entry[uint64]
 	// PLAY-024: the trade state (trade.go) and the sentry turrets' aims
 	// (turret.go); nil when there is nothing to keep, so older saves and
 	// colonies without traders or turrets hash as before.
@@ -471,11 +476,13 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Social, s.People, s.World = g.exportSocial(), g.exportPeople(), g.exportWorld()
 	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
 	s.Surgery = g.exportSurgery()
-	s.BedRest = g.care.Rest.Export() // care/rest.go (PLAY-020)
-	s.Power = g.exportPower()        // power.go (PLAY-021): nil without power
-	s.Care = g.care.Policy.Export()  // care package (MED-03): nil at the defaults
-	s.Trade = g.exportTrade()        // trade.go (PLAY-024): nil while there is nothing to keep
-	s.Turrets = g.exportTurrets()    // turret.go (PLAY-024): nil while no turret aims
+	s.BedRest = g.care.Rest.Export()   // care/rest.go (PLAY-020)
+	s.Mind = g.mind.Export()           // mind (SIM-066)
+	s.FeedRetry = g.care.Feed.Export() // care/feed.go (SIM-064)
+	s.Power = g.exportPower()          // power.go (PLAY-021): nil without power
+	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
+	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
+	s.Turrets = g.exportTurrets()      // turret.go (PLAY-024): nil while no turret aims
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -651,6 +658,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
 	g.care.Rest.Import(s.BedRest)
+	g.mind.Import(s.Mind) // mind (SIM-066)
+	g.care.Feed.Import(s.FeedRetry)
 	g.care.Policy.Import(s.Care) // care/policy.go (MED-03)
 	g.med.animalIdxOK = false    // animal_health.go: rebuilt on first use
 	g.importPower(s.Power)       // power.go (PLAY-021)

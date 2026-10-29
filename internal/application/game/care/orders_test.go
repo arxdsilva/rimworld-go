@@ -42,7 +42,7 @@ func orderScene() (*Care, *fakeHost, *orderPrison) {
 	pr.raider[raider] = true
 	pr.visitor[visitor] = true
 	pr.prisonBd = prisonID
-	return New(h, pr), h, pr
+	return New(h, Roles{Prison: pr}), h, pr
 }
 
 func TestPawnOrdersMenu(t *testing.T) {
@@ -136,7 +136,9 @@ func orderCases() []orderCase {
 		{"rescue carried", resc, doc, patient, func(c *Care, _ *fakeHost, _ *orderPrison) { c.Carry.Pick(carrier, patient) }, false, ReasonCarried + "P7"},
 		{"rescue held", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) { h.owners[patient] = other }, false, ReasonBusyTarget + "P3"},
 		{"rescue held by the doer", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) { h.owners[patient] = doc }, false, ""},
-		{"rescue unreachable", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) { h.noPath = true }, false, ReasonUnreachable},
+		// noPath cuts every way, the patient's to any bed too: no safe bed
+		// (SIM-063); the doer alone cut off is TestRescueDoerCutOff.
+		{"rescue unreachable", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) { h.noPath = true }, false, ReasonNoBed},
 		{"rescue standing", resc, doc, mate, none, true, ""},
 		{"rescue in bed", resc, doc, patient, func(_ *Care, h *fakeHost, _ *orderPrison) {
 			h.bldgs[bedID] = construction.Building{Kind: construction.Bed, X: 5, Y: 5, Claimant: uint64(patient)}

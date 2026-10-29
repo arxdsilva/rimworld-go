@@ -31,6 +31,12 @@ func (c *Care) Force(doer entity.EntityID, o command.Order, target entity.Entity
 		return c.StartCapture(doer, target, true)
 	case command.OrderArrest:
 		return c.StartArrest(doer, target, true)
+	case command.OrderFeedPatient:
+		return c.Feed.force(doer, target) // feed.go (SIM-064)
+	case command.OrderStrip:
+		return c.Strip.Force(doer, target) // strip.go (SIM-065)
+	case command.OrderCarryToPrisonBed:
+		return c.PrisonBeds.Force(doer, target) // prisonbed.go (SIM-063)
 	}
 	return ReasonIncapable // judge refuses every other order
 }
@@ -89,8 +95,14 @@ func (c *Care) judge(doer entity.EntityID, o command.Order, target entity.Entity
 		return true, firstWhy(c.doerWhy(doer, false), c.holdWhy(doer, target), c.prisonBedWhy(target), c.reachWhy(doer, target))
 	case command.OrderTendPatient:
 		return c.judgeTend(doer, target)
+	case command.OrderFeedPatient:
+		return c.Feed.judge(doer, target) // feed.go (SIM-064)
+	case command.OrderStrip:
+		return c.Strip.Judge(doer, target) // strip.go (SIM-065)
+	case command.OrderCarryToPrisonBed:
+		return c.PrisonBeds.Judge(doer, target) // prisonbed.go (SIM-063)
 	}
-	return false, ReasonIncapable // feeding, stripping, carrying to a prison bed: later phases
+	return false, ReasonIncapable
 }
 
 // judgeTend is "Prioritize tending": an undrafted doer (drafted, it gets
@@ -104,7 +116,7 @@ func (c *Care) judgeTend(doer, target entity.EntityID) (bool, string) {
 		return false, ReasonNothingToTend
 	case c.Carry.Carrier(target) != 0:
 		return false, ReasonCarried + c.personName(c.Carry.Carrier(target))
-	case h.Drafted(doer) || !c.Level(target).Tends() || !h.IsColonist(target) && !h.IsPrisoner(target):
+	case h.Drafted(doer) || !c.Level(target).Tends() || c.kindOf(target) == targetNone || c.kindOf(target) == targetHostile:
 		return false, ReasonNoLonger
 	}
 	return true, firstWhy(c.doerWhy(doer, true), c.Doctor.tendWhy(doer, target))
@@ -123,10 +135,7 @@ func firstWhy(whys ...string) string {
 // rescueTarget: target is a colonist downed where a rescue helps (the
 // Doctor's InjuredDowned), out of bed: Doctor.Rescuable without its "a
 // free bed exists", which disables the option instead (rescueBedWhy).
-func (c *Care) rescueTarget(target entity.EntityID) bool {
-	h := c.h
-	return h.IsColonist(target) && !h.IsPrisoner(target) && c.Doctor.InjuredDowned(target) && h.BedUnder(target) == 0
-}
+func (c *Care) rescueTarget(target entity.EntityID) bool { return c.Doctor.rescueEligible(target) }
 
 // doerWhy: doer can't act at all (not a standing colonist, or in a
 // mental break), or, for a Doctor job (doctor), is incapable of Doctor

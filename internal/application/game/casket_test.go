@@ -147,7 +147,7 @@ func TestCasketOccupants(t *testing.T) {
 			if k, ok := g.equip[id]; !ok || k == 0 {
 				t.Fatal("an unarmed hostile")
 			}
-			if g.name(id) == "" || g.prisoners[id] != nil {
+			if g.name(id) == "" || g.prison.Is(id) {
 				t.Fatal("hostile name or status")
 			}
 		}

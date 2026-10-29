@@ -84,7 +84,7 @@ func (g *Game) diseasePct() int {
 func (g *Game) diseaseCandidates(k body.CondKind) []entity.EntityID {
 	var out []entity.EntityID
 	for _, id := range g.colonistsHomeAndAway() { // caravan_medical.go
-		if g.isPrisoner(id) || g.isRaider(id) || g.visitor(id) || g.prophylaxed(id, k) { // drugs.go (MED-07): prophyl
+		if g.prison.Is(id) || g.isRaider(id) || g.visitor(id) || g.prophylaxed(id, k) { // drugs.go (MED-07): prophyl
 			continue
 		}
 		if b := g.bodies[id]; b != nil {

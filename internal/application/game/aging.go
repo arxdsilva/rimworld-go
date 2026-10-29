@@ -107,7 +107,7 @@ func (g *Game) stepAgingConds(now uint64) {
 // prisoner, raider or visitor) with an age.
 func (g *Game) agingCandidate(id entity.EntityID) bool {
 	v, ok := g.vital.Get(id)
-	if !ok || v.Status == health.Dead || g.isPrisoner(id) || g.isRaider(id) || g.visitor(id) {
+	if !ok || v.Status == health.Dead || g.prison.Is(id) || g.isRaider(id) || g.visitor(id) {
 		return false
 	}
 	_, aged := g.sk.bios[id]

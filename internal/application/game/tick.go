@@ -148,6 +148,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.markHaul(c.X, c.Y, c.X2, c.Y2, c.Enabled)
 	case command.DismissLetter:
 		g.dismissLetter(c.Target) // letters.go: an unknown id is ignored
+	case command.AcceptLetter:
+		g.acceptLetter(c.Target) // letters.go (SIM-063): a rescued stranger joins
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:
@@ -297,7 +299,8 @@ func (g *Game) phaseNeeds() {
 		}
 		if v.Status == health.Downed {
 			g.stainDowned(id, now) // stains.go: an untended body pools
-			n, _ := g.need.Get(id)
+			dj, _ := g.jobs.Get(id)
+			n := g.downedHunger(id, &v, now, dj.Kind == job.Sleep && dj.State == job.Do) // care_host_prison.go (SIM-064)
 			if n.Starving() && v.Cause != health.CauseNoFood {
 				v.Cause = health.CauseNoFood
 				v.DownedTick = now
@@ -422,6 +425,7 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		if v.Status == health.Downed {
+			g.mind.Downed(id) // mind: a catatonic pawn recovers; a downed breaker calms
 			j, _ := g.jobs.Get(id)
 			if v.Cause == health.CauseNoBed && j.Kind != job.Sleep {
 				g.assignSleepInPlace(id)
@@ -443,7 +447,7 @@ func (g *Game) phaseAI() {
 		}
 		g.releaseStaleDelivery(id, j) // a delivery swapped out without an interrupt
 		g.care.Rest.Update(id)        // care/rest.go: starts and ends bed rest
-		if g.mentalBreakTick(id, j) {
+		if g.mind.Tick(id, j) {
 			continue // acting out: no orders, no work
 		}
 		if g.fireDanger(id, j) {
@@ -1073,13 +1077,15 @@ func (g *Game) phaseJobs() {
 		case job.Gather:
 			g.doGather(id, j) // gathering.go
 		case job.Brawl:
-			g.doBrawl(id, j) // social_fight.go
+			g.mind.Brawl(id, j) // mind/fight.go
 		case job.Capture:
 			g.care.DoCapture(id, j) // care/capture.go
+		case job.FeedPatient, job.Strip, job.VisitSick, job.CarryToPrisonBed:
+			g.care.Do(id, j) // care (SIM-063…065): feed, strip, visit, carry to a prison bed
 		case job.Warden:
-			g.doWarden(id, j) // prisoners.go
+			g.prison.Do(id, j) // prison/warden.go
 		case job.DeliverFood:
-			g.doDeliverFood(id, j) // prisoners.go
+			g.care.Feed.Do(id, j) // care/feed.go (SIM-064)
 		case job.SocialRelax:
 			g.doSocialRelax(id, j) // social.go
 		case job.Train:

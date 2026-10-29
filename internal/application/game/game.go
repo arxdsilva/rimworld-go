@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/mind"
+	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/world/biome"
@@ -26,7 +28,6 @@ import (
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
-	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -136,8 +137,9 @@ type PawnView struct {
 	Temp                    int
 	// Recreation is the recreation need, percent; MentalBreak names a
 	// break in progress ("" when none).
-	Recreation  int
-	MentalBreak string
+	Recreation   int
+	MentalBreak  string
+	MentalTarget entity.EntityID // whom a targeted break is aimed at (0: none; SIM-066)
 	// Apparel is what the colonist wears over everyday clothes; ComfortMin
 	// and ComfortMax its comfortable range (tenths of a degree C).
 	// ApparelForced is, per Apparel entry, whether the player chose it
@@ -170,6 +172,10 @@ type PawnView struct {
 	InBed        bool
 	CarriedBy    entity.EntityID
 	CarryingPawn entity.EntityID
+	// OnMedicalBed: lying in a medical bed; GuestFaction: a guest's
+	// faction ("" for a stranger or a non-guest) (SIM-063).
+	OnMedicalBed bool
+	GuestFaction string
 	Tended       bool
 	// PLAY-020 bed rest: BedRest while resting in bed to heal;
 	// RestWhenHurt is the colonist's setting (on unless the player turned
@@ -283,6 +289,9 @@ type LetterView struct {
 	X, Y  int             // where it happened (-1: nowhere)
 	Focus entity.EntityID // the creature it is about (0: none)
 	Intro bool            // the scenario's opening letter (opens by itself)
+	// JoinOffer: the letter asks whether a rescued stranger may join
+	// (AcceptLetter accepts, DismissLetter declines; SIM-063).
+	JoinOffer bool
 }
 
 // StoredResourceView is one row of the resource list (PLAY-018).
@@ -618,9 +627,7 @@ type Game struct {
 	geo       geology.Map
 	smooths   map[[2]int]bool
 	structVer uint64
-	viewStone []uint8
-	viewOre   []uint8
-	viewVer   uint64
+	stoneView stoneView // world.go: stoneLayers' cache, at structVer
 
 	zones      *zone.Map // stockpiles, grow zones and pens (zones.go, ZONE-001)
 	lastMeal   map[entity.EntityID]item.Kind
@@ -765,18 +772,19 @@ type Game struct {
 	mapFields *mapFieldCache
 	// Social and host systems (ENG-003): each container is nil until its
 	// milestone first needs it, and saved as an additive field.
-	soc       *socialState                        // social_state.go
-	people    *peopleRegistry                     // people.go
-	bodies    map[entity.EntityID]*body.Body      // body.go
-	med       medState                            // patients.go (MED-00)
-	care      *care.Care                          // care package (SIM-061): carry, policy, doctor
-	surg      *surgeryState                       // surgery.go
-	drugs     map[entity.EntityID]*drug.State     // drugs.go
-	prisoners map[entity.EntityID]*prisoner.State // prisoners.go
-	worldSt   *worldState                         // world_state.go
-	areas     *area.Set                           // areas.go
-	history   []historyEntry                      // history.go
-	streams   rngStreams                          // rng_streams.go: never g.rng
+	soc     *socialState                    // social_state.go
+	people  *peopleRegistry                 // people.go
+	bodies  map[entity.EntityID]*body.Body  // body.go
+	med     medState                        // patients.go (MED-00)
+	care    *care.Care                      // care package (SIM-061): carry, policy, doctor
+	mind    *mind.Mind                      // mind package (SIM-066): mental breaks
+	surg    *surgeryState                   // surgery.go
+	drugs   map[entity.EntityID]*drug.State // drugs.go
+	prison  *prison.Prison                  // prison package: prisoners, warden work
+	worldSt *worldState                     // world_state.go
+	areas   *area.Set                       // areas.go
+	history []historyEntry                  // history.go
+	streams rngStreams                      // rng_streams.go: never g.rng
 	// pw is the colony's electricity (power.go, PLAY-021); nil until the
 	// colony has a power device.
 	pw *powerState
@@ -849,7 +857,9 @@ func New(cfg Config) *Game {
 		lastHit:    make(map[entity.EntityID]hitRec),
 		streams:    rngStreams{seed: cfg.Seed},
 	}
-	g.care = care.New(newCareHost(g), carePrison{g}) // care_host.go, care_host_prison.go
+	g.care = care.New(newCareHost(g), care.Roles{Prison: carePrison{g}, Guests: careGuests{g}, Social: careSocial{g}, Gear: careGear{g}, Meals: careMeals{g}}) // care_host*.go
+	g.mind = mind.New(newMindHost(g))
+	g.prison = prison.New(newPrisonHost(g)) // prison_host.go
 	return g
 }
 
@@ -1099,7 +1109,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
-		pv.CarriedBy, pv.CarryingPawn, pv.Tended = cv.CarriedBy, cv.Carrying, cv.Tended
+		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
 		pv.Temperament = g.temperamentOf(id).String()
 		pr := g.prioOf(id)
@@ -1115,6 +1125,7 @@ func (g *Game) snapshot() []PawnView {
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()
 		}
+		pv.MentalTarget = g.mind.Target(id)
 		g.fillFleeView(pv, id)                             // an unarmed colonist running from a threat (flee.go)
 		if pv.RestWhenHurt = cv.RestWhenHurt; cv.BedRest { // PLAY-020: resting in bed
 			pv.BedRest, pv.Job = true, care.RestingLabel

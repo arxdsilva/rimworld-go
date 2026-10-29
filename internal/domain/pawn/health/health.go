@@ -57,6 +57,9 @@ const (
 	// destroyed a part the body cannot live without.
 	CauseHeartAttack
 	CauseCarcinoma
+	// CauseCatatonic (SIM-066): a catatonic breakdown; the pawn lies down
+	// until the break ends.
+	CauseCatatonic
 )
 
 func (c Cause) String() string {
@@ -95,6 +98,8 @@ func (c Cause) String() string {
 		return "heart attack"
 	case CauseCarcinoma:
 		return "carcinoma"
+	case CauseCatatonic:
+		return "catatonic breakdown"
 	default:
 		return ""
 	}

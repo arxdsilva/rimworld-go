@@ -125,12 +125,18 @@ func (g *Game) mineWorkAt(x, y int) int {
 	return MineWork
 }
 
+// stoneView is the geology view last handed out, built at ver.
+type stoneView struct {
+	stone, ore []uint8
+	ver        uint64
+}
+
 // stoneLayers is the shared read-only geology view (WorldView.StoneType,
 // Ore), rebuilt into fresh slices only when structVer has moved, so an
 // older view never changes under its reader.
 func (g *Game) stoneLayers() ([]uint8, []uint8) {
-	if g.viewStone != nil && g.viewVer == g.structVer {
-		return g.viewStone, g.viewOre
+	if v := g.stoneView; v.stone != nil && v.ver == g.structVer {
+		return v.stone, v.ore
 	}
 	w, h := g.terr.W, g.terr.H
 	st, ore := make([]uint8, w*h), make([]uint8, w*h)
@@ -141,7 +147,7 @@ func (g *Game) stoneLayers() ([]uint8, []uint8) {
 			ore[i] = uint8(g.geo.OreAt(x, y))
 		}
 	}
-	g.viewStone, g.viewOre, g.viewVer = st, ore, g.structVer
+	g.stoneView = stoneView{st, ore, g.structVer}
 	return st, ore
 }
 

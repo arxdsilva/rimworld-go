@@ -31,11 +31,11 @@ func (g *Game) applyHostCommand(c command.Command) {
 	case command.Arrest:
 		g.care.StartArrest(pawn, target, false) // care/capture.go
 	case command.SetPrisonerMode:
-		g.cmdSetPrisonerMode(target, c.Mode) // prisoners.go
+		g.prison.SetMode(target, c.Mode) // prison/prison.go
 	case command.SetBedForPrisoners:
 		g.cmdSetBedForPrisoners(target, c.Enabled) // prisoners.go
 	case command.ReleasePrisoner:
-		g.cmdReleasePrisoner(target) // prisoners.go
+		g.prison.Release(target, 0) // prison/prison.go: walks off the map
 	case command.FormCaravan:
 		g.cmdFormCaravan(c.Name, c.Count) // world_state.go
 	case command.CaravanReturn:

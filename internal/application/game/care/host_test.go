@@ -19,6 +19,7 @@ import (
 type fakeHost struct {
 	now       uint64
 	breaking  map[entity.EntityID]bool // Breaking (SIM-062)
+	hazard    map[entity.EntityID]bool // BedHazard (SIM-063)
 	pos       map[entity.EntityID][2]int
 	vital     map[entity.EntityID]health.Record
 	jobs      map[entity.EntityID]job.Record
@@ -244,3 +245,7 @@ func (h *fakeHost) Message(x, y int, text string)            { h.log = append(h.
 
 // Breaking: SIM-062 (the capture/arrest handler skips a colonist in a break).
 func (h *fakeHost) Breaking(id entity.EntityID) bool { return h.breaking[id] }
+
+// W3 contract (SIM-063/064): no hazards, feeding records the call.
+func (h *fakeHost) BedHazard(bed entity.EntityID) bool  { return h.hazard[bed] }
+func (h *fakeHost) Feed(patient, carry entity.EntityID) { h.log = append(h.log, "feed") }

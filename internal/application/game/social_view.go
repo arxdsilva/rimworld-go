@@ -138,6 +138,6 @@ func (g *Game) fillSocialPawn(pv *PawnView, target int) {
 	pv.Mood = g.smoothedMood(pv.ID, target)
 	pv.MoodLabel = mood.Label(pv.Mood)
 	pv.Interaction, pv.InteractTick = g.lastInteraction(pv.ID)
-	pv.SocialFight = g.inSocialFight(pv.ID) // social_fight.go (M6)
-	pv.Prisoner = g.isPrisoner(pv.ID)       // prisoners.go (M8)
+	pv.SocialFight = g.mind.InFight(pv.ID) // mind/fight.go (M6)
+	pv.Prisoner = g.prison.Is(pv.ID)       // prisoners.go (M8)
 }

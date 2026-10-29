@@ -277,10 +277,7 @@ func (c Right) openLetterView(l game.LetterView) {
 	if l.ID != 0 {
 		id = fmt.Sprintf("letter.%d", l.ID)
 	}
-	buttons := []uikit.ModalButton{{ID: "continue", Label: "Continue", Style: uikit.BtnPrimary, Closes: true}}
-	if letterHasPlace(l) {
-		buttons = append(buttons, uikit.ModalButton{ID: "jump", Label: "Jump to", Closes: true, OnClick: func() { c.jumpToLetter(l) }})
-	}
+	buttons := c.letterFooter(l)
 	c.kit().Push(uikit.Modal{
 		ID: id, Title: title, W: letterW, H: h,
 		Draw: func(body gfx.Rect) {
@@ -292,6 +289,26 @@ func (c Right) openLetterView(l game.LetterView) {
 		},
 		Buttons: buttons,
 	})
+}
+
+// letterFooter is the letter window's buttons: Continue, or, for a
+// rescued stranger's offer to join (SIM-063), Accept (command.AcceptLetter)
+// and Decline (command.DismissLetter); then "Jump to" when the letter has
+// a place.
+func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
+	buttons := []uikit.ModalButton{{ID: "continue", Label: "Continue", Style: uikit.BtnPrimary, Closes: true}}
+	if l.JoinOffer && l.ID != 0 {
+		buttons = []uikit.ModalButton{
+			{ID: "accept", Label: "Accept", Style: uikit.BtnPrimary, Closes: true, OnClick: func() {
+				c.sh.Enqueue(command.Command{Kind: command.AcceptLetter, Target: l.ID})
+			}},
+			{ID: "decline", Label: "Decline", Closes: true, OnClick: func() { c.dismissLetter(l.ID) }},
+		}
+	}
+	if letterHasPlace(l) {
+		buttons = append(buttons, uikit.ModalButton{ID: "jump", Label: "Jump to", Closes: true, OnClick: func() { c.jumpToLetter(l) }})
+	}
+	return buttons
 }
 
 // drawLetters paints the stack.

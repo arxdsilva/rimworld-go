@@ -9,14 +9,14 @@ fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 51  # the same de
 fields rimworld-go/internal/adapters/inbound/ebiten/wizard.Draft 42  # the same debt, moved with the type (ARCH-005 wave 5.2; was newGameState 43)
 fields rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 30  # the same debt, moved with the type (ARCH-003 wave 3.2; was uiState 32)
 methods rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 73  # moved from App with the kit (ARCH-003 wave 3.2); seams to split: text editing 14, modals 9, table 4, tooltip 3
-fields rimworld-go/internal/application/game.Game 149
+fields rimworld-go/internal/application/game.Game 148
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 33
-files rimworld-go/internal/application/game 183
-lines rimworld-go/internal/application/game 55891
+files rimworld-go/internal/application/game 182
+lines rimworld-go/internal/application/game 55844
 methods rimworld-go/internal/adapters/inbound/ebiten.App 244
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 71
-methods rimworld-go/internal/application/game.Game 2038
+methods rimworld-go/internal/application/game.Game 2010
 methods rimworld-go/internal/domain/pawn/body.Body 99
 
 # --- init(): registration from the composition root instead (SOLID_GO.md §4) ---

@@ -201,7 +201,7 @@ func (g *Game) migrateMedicalBeds() {
 		for _, c := range [2]uint64{b.Claimant, b.Claimant2} {
 			cid := entity.EntityID(c)
 			switch {
-			case c == 0 || g.isPrisoner(cid):
+			case c == 0 || g.prison.Is(cid):
 			case g.lyingInBed(cid, bid, b):
 				g.care.Rest.Hold(cid, bid)
 			default:

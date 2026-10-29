@@ -127,7 +127,9 @@ func BarStatuses(p game.PawnView, onFire, idle bool) []BarStatus {
 	var out []BarStatus
 	downed := p.Status == "downed"
 	if p.MentalBreak != "" {
-		out = append(out, stMental)
+		m := stMental
+		m.Label = "mental break: " + p.MentalBreak
+		out = append(out, m)
 	}
 	if downed {
 		out = append(out, stDowned)

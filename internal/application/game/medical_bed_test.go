@@ -158,6 +158,7 @@ func TestFreeBedForRanksMedicalFirst(t *testing.T) {
 	hosp := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 10, 5)
 	far := buildNow(t, g, construction.Bed, item.Wood, construction.South, 20, 5)
 	from := Position{X: 2, Y: 5}
+	g.InjureCut(patient, 5) // a wound to tend: medical beds first (SIM-063 ranks them so only for a patient that needs care)
 	if got := g.care.SafeBedFor(patient, from.X, from.Y, care.RescueBed); got != hosp {
 		t.Fatalf("a new hospital bed is medical and wins: got %v want %v", got, hosp)
 	}

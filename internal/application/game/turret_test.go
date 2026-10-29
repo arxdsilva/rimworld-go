@@ -168,10 +168,12 @@ func TestTurretIgnoresVisitorsPrisoners(t *testing.T) {
 	r.Leaving = true // a visitor or trader: on the raider list, not hostile
 	g.raiders[visitor] = r
 	pris := turretRaider(t, g, 22, 9)
-	if g.prisoners == nil {
-		g.prisoners = map[entity.EntityID]*prisoner.State{}
+	held := g.prison.Export()
+	if held == nil {
+		held = map[entity.EntityID]*prisoner.State{}
 	}
-	g.prisoners[pris] = &prisoner.State{}
+	held[pris] = &prisoner.State{}
+	g.prison.Import(held)
 	ada, err := g.SpawnNamedPawn(20, 8, "Ada")
 	if err != nil {
 		t.Fatal(err)

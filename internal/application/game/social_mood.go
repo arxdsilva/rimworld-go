@@ -20,7 +20,7 @@ const (
 // M5 adds the partner thoughts: feelings for the main partner (opinion/10,
 // clamped to +-10) and sleeping alone while that partner is on the map.
 func (g *Game) socialThoughts(id entity.EntityID) []mood.Thought {
-	out := g.prisonerThoughts(id)            // prisoner_life.go
+	out := g.prisonerThoughts(id)            // prisoners.go
 	out = append(out, g.bondThoughts(id)...) // bonds.go
 	if g.soc == nil {
 		return out

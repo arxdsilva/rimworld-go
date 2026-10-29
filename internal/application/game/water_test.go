@@ -497,6 +497,7 @@ func TestRescuePrefersHospitalBed(t *testing.T) {
 		t.Fatalf("only a plain bed: %v", got)
 	}
 	hosp := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 16, 8)
+	g.InjureCut(patient, 5) // a wound to tend: hospital beds first (SIM-063 ranks them so only for a patient that needs care)
 	if got := g.care.SafeBedFor(patient, 5, 5, care.RescueBed); got != hosp {
 		t.Fatalf("a far hospital bed should beat a near plain bed: got %v want %v", got, hosp)
 	}

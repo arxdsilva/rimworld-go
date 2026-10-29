@@ -684,7 +684,7 @@ understandable.
 
 -   [x] **Maximum medical care selector** (MED-03: five care buttons in the Health-tab header; Assign screen Medical column)
 -   [x] **Self-tend toggle** (MED-03: Health-tab checkbox for colonists)
--   [ ] **Bed-rest/medical-bed state**
+-   [x] **Bed-rest/medical-bed state** (SIM-063: the inspector shows "Resting in a medical bed" / "On bed rest", a guest's "Guest of <faction>" or "Stranger"; SIM-066: the mental break names its target)
 -   [ ] **Doctor/treatment status**
 
 ## 10.5 Operations

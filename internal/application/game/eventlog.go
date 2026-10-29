@@ -73,6 +73,9 @@ const (
 	logScarred   // ENG-003 M1: a wound left a scar (Name: the part)
 	logPutOn     // PLAY-017: put on a garment (Name: "parka")
 	logTookOff   // PLAY-017: took a garment off (Name: "duster")
+	logVisited   // SIM-065: a friend visited the bed (Name: the visitor)
+	logFedBy     // SIM-064: fed by Name (a doctor or warden)
+	logFed       // SIM-064: fed Name
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -220,6 +223,12 @@ func logText(e logEntry) string {
 		return "Put on a " + e.Name
 	case logTookOff:
 		return "Took off the " + e.Name
+	case logVisited:
+		return "Visited by " + e.Name
+	case logFedBy:
+		return "Fed by " + e.Name
+	case logFed:
+		return "Fed " + e.Name
 	case logSurgery, logScarred:
 		return e.Name
 	case logHit:

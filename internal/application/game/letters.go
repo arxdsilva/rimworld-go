@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -34,6 +35,9 @@ type savedLetter struct {
 	X, Y     int
 	Focus    entity.EntityID
 	Intro    bool
+	// Join: the rescued stranger whose offer to join this letter carries
+	// (0: none; SIM-063). AcceptLetter takes it in, dismissing declines.
+	Join entity.EntityID
 }
 
 // letterState is the stack, oldest first, and how many letters were ever
@@ -84,10 +88,33 @@ func (g *Game) markIntroLetter() {
 }
 
 // dismissLetter removes letter id from the stack; an unknown id is ignored.
+// Dismissing a join offer declines it: the stranger, still here, goes its
+// way.
 func (g *Game) dismissLetter(id uint64) {
 	if i := slices.IndexFunc(g.letters.list, func(l savedLetter) bool { return l.ID == id }); i >= 0 {
+		p := g.letters.list[i].Join
 		g.letters.list = slices.Delete(g.letters.list, i, i+1)
+		if p != 0 && g.visitor(p) {
+			careGuests{g}.Leave(p) // visitors.go
+		}
 	}
+}
+
+// acceptLetter accepts letter id's offer (command.AcceptLetter): a rescued
+// stranger still on the map joins the colony. A letter with no offer, or
+// an unknown id, is left as it is.
+func (g *Game) acceptLetter(id uint64) {
+	i := slices.IndexFunc(g.letters.list, func(l savedLetter) bool { return l.ID == id })
+	if i < 0 || g.letters.list[i].Join == 0 {
+		return
+	}
+	p := g.letters.list[i].Join
+	g.letters.list = slices.Delete(g.letters.list, i, i+1)
+	if v, _ := g.vital.Get(p); !g.visitor(p) || v.Status == health.Dead {
+		g.worldNote("%s is no longer here to join.", g.personName(p))
+		return
+	}
+	careGuests{g}.join(p) // visitors.go
 }
 
 // letterViews is the stack for the read model, oldest first (a copy).
@@ -98,7 +125,7 @@ func (g *Game) letterViews() []LetterView {
 	out := make([]LetterView, len(g.letters.list))
 	for i, l := range g.letters.list {
 		out[i] = LetterView{ID: l.ID, Tick: l.Tick, Kind: l.Kind, Title: l.Title, Text: l.Text,
-			X: l.X, Y: l.Y, Focus: l.Focus, Intro: l.Intro}
+			X: l.X, Y: l.Y, Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0}
 	}
 	return out
 }

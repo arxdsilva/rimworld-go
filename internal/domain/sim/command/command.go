@@ -221,6 +221,9 @@ const (
 	CommsRequestCaravan
 	CommsRequestAid
 	CloseComms
+	// AcceptLetter accepts the offer in letter Target (SIM-063: a rescued
+	// stranger asks to join); DismissLetter declines it.
+	AcceptLetter
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

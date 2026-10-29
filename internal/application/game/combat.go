@@ -288,7 +288,7 @@ func (g *Game) hurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind 
 	case v.Status == health.Alive && g.downsNow(target, v, b): // bleed.go: consciousness, moving or pain shock
 		g.down(target, health.CauseInjury)
 	}
-	g.fightOnDown(target) // social_fight.go: a downed brawler ends the fight
+	g.mind.Downed(target) // mind: a downed brawler ends the fight
 }
 
 // die kills pawn id with no known killer.
@@ -298,13 +298,14 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) { g.dieBy(id, cause, 
 func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.EntityID) {
 	g.stainDeath(id) // stains.go
 	g.interrupt(id, job.Cancelled)
+	g.care.Doctor.PatientDied(id) // care/rescue.go (SIM-063): a carrier drops a patient that died
 	g.releaseBed(id)
 	delete(g.draft, id)
 	g.logEvent(id, logEntry{Kind: logDied})
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)
-	g.fightOnDown(id) // social_fight.go
+	g.mind.Downed(id) // mind: the dead keep no break
 	g.spawnCorpse(id)
 	g.dropRaiderGear(id)        // the weapon falls beside the body
 	g.forbidRaidBody(id)        // forbid.go: a raider's body starts forbidden

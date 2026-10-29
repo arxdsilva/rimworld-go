@@ -1,6 +1,7 @@
 package care
 
 import (
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -24,7 +25,7 @@ func scene() (*Care, *fakeHost) {
 	h.pawn(doc, 0, 0)
 	h.pawn(patient, 5, 5)
 	h.doctors[doc] = true
-	return New(h, newFakePrison(h)), h
+	return New(h, Roles{Prison: newFakePrison(h)}), h
 }
 
 func TestOutranksTieBreak(t *testing.T) {
@@ -105,19 +106,23 @@ func TestRescueEnds(t *testing.T) {
 	}
 }
 
-func TestPlainBedReleasesTheOldOne(t *testing.T) {
+// TestPlainBedKeepsTheOldOne (SIM-063, was TestPlainBedReleasesTheOldOne):
+// laid in a bed not its own, the patient keeps its own claim and holds
+// this one only for the stay.
+func TestPlainBedKeepsTheOldOne(t *testing.T) {
 	c, h := scene()
 	h.downed(patient, 50)
 	h.bed(bedID, construction.Building{Kind: construction.Bed, X: 0, Y: 0})
 	c.Carry.Pick(doc, patient)
 	c.Doctor.DoRescue(doc, job.Record{Kind: job.Rescue, Target: patient, State: job.Do, Dest: bedID})
-	if c.Rest.HeldBed(patient) != 0 || h.log[0] != "release" {
-		t.Fatalf("a plain bed: its own bed released, nothing held: %v %v", c.Rest.HeldBed(patient), h.log)
+	if c.Rest.HeldBed(patient) != bedID || slices.Contains(h.log, "release") {
+		t.Fatalf("a plain bed: held for the stay, its own bed kept: %v %v", c.Rest.HeldBed(patient), h.log)
 	}
 }
 
 func TestSafeBedForRescueRanks(t *testing.T) {
 	c, h := scene()
+	h.downed(patient, 30) // needs tending: medical and hospital beds first (SIM-063)
 	h.bed(bedID, construction.Building{Kind: construction.Bed, X: 1, Y: 0})
 	if got := c.SafeBedFor(patient, 0, 0, RescueBed); got != bedID {
 		t.Fatalf("the only bed: %d", got)

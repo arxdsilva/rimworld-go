@@ -91,7 +91,7 @@ func TestForceTendFetchesMedicine(t *testing.T) {
 
 func TestForceLaterOrdersRefused(t *testing.T) {
 	c, _, _ := orderScene()
-	for _, o := range []command.Order{command.OrderFeedPatient, command.OrderStrip, command.OrderCarryToPrisonBed, command.OrderBuild} {
+	for _, o := range []command.Order{command.OrderBuild, command.OrderNone} { // a tile order is no pawn order; feed, strip and take-to-bed have their own tests
 		if why := c.Force(doc, o, patient); why != ReasonIncapable {
 			t.Errorf("order %d: %q, want %q", o, why, ReasonIncapable)
 		}
@@ -124,7 +124,7 @@ func TestForceStartFails(t *testing.T) {
 		{command.OrderTendPatient, job.Record{Kind: job.Tend, State: job.Fail, Fail: job.Unreachable}, job.Unreachable.String()},
 	} {
 		_, h, pr := orderScene()
-		c := New(refusingHost{h, tc.stored}, pr)
+		c := New(refusingHost{h, tc.stored}, Roles{Prison: pr})
 		if why := c.Force(doc, tc.o, patient); why != tc.want {
 			t.Errorf("order %d: %q, want %q", tc.o, why, tc.want)
 		}

@@ -546,7 +546,7 @@ func (g *Game) surgeryPatients(fn func(entity.EntityID) bool) {
 		}
 	}
 	for _, pid := range g.raiderIDs {
-		if g.isPrisoner(pid) && !fn(pid) {
+		if g.prison.Is(pid) && !fn(pid) {
 			return
 		}
 	}
@@ -953,8 +953,8 @@ func (g *Game) euthanize(surgeon, patient entity.EntityID, b *body.Body, v *heal
 	g.logEvent(patient, logEntry{Kind: logSurgery, Name: g.name(surgeon) + " euthanized " + g.name(patient)})
 	g.message(pp.X, pp.Y, "%s euthanized %s.", g.name(surgeon), g.name(patient))
 	g.dieBy(patient, health.CauseEuthanasia, surgeon) // combat.go
-	if g.isPrisoner(patient) {
-		delete(g.prisoners, patient)
+	if g.prison.Is(patient) {
+		g.prison.Drop(patient)
 	}
 }
 

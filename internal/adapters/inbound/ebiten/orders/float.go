@@ -204,12 +204,14 @@ func (c *Controller) RightClickTile(tx, ty int, sx, sy float32) {
 // hasPawnOrder reports an order aimed at a pawn among opts that makes a
 // drafted right-click open the menu: an emergency tend (MED-03) or a
 // Prioritize with a Target (rescue, capture, tend, feed, strip, carry;
-// SIM-062). Arrest alone does not: every standing colonist offers it, and
+// SIM-062), or an attack (a colonist in a berserk break is no hostile the
+// creature check sees; SIM-066). Arrest alone does not: every standing
+// colonist offers it, and
 // a drafted right-click onto one walks there; Arrest still shows whenever
 // the menu opens.
 func hasPawnOrder(opts []game.OrderOption) bool {
 	for _, o := range opts {
-		if o.Cmd.Kind == command.EmergencyTend ||
+		if o.Cmd.Kind == command.EmergencyTend || o.Cmd.Kind == command.Prioritize && o.Cmd.Order == command.OrderAttack ||
 			o.Cmd.Kind == command.Prioritize && o.Cmd.Target != 0 && o.Cmd.Order != command.OrderArrest {
 			return true
 		}

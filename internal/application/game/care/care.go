@@ -15,15 +15,41 @@ type Care struct {
 	Policy *Policy
 	Doctor *Doctor
 	Rest   *Rest
-	h      Host
-	pr     Prison
+	Feed   *Feeding // feed.go (SIM-064)
+	// PrisonBeds returns downed prisoners to bed (prisonbed.go, SIM-063);
+	// Guest looks after rescued visitors and strangers (guest.go, SIM-063);
+	// Visits and Strip are visiting the sick and stripping (SIM-065).
+	PrisonBeds *PrisonBeds
+	Guest      *Hospitality
+	Visits     *Visits
+	Strip      *Stripping
+	h          Host
+	pr         Prison
+	gu         Guests
+	so         Social
+	ge         Gear
 }
 
-// New builds the care cluster on host h; pr serves capture and arrest.
-func New(h Host, pr Prison) *Care {
-	c := &Care{Carry: NewCarries(), Policy: &Policy{}, h: h, pr: pr}
+// Roles are the host roles beyond Host, each its own consumer-owned
+// interface so Host stays at eight roles: Prison for capture and arrest
+// (SIM-062), Guests for rescuing visitors and strangers (SIM-063), Social
+// for visiting the sick and Gear for stripping (SIM-065).
+type Roles struct {
+	Prison Prison
+	Guests Guests
+	Social Social
+	Gear   Gear
+	Meals  Meals // feed.go (SIM-064)
+}
+
+// New builds the care cluster on host h with the extra roles r.
+func New(h Host, r Roles) *Care {
+	c := &Care{Carry: NewCarries(), Policy: &Policy{}, h: h, pr: r.Prison, gu: r.Guests, so: r.Social, ge: r.Gear}
 	c.Doctor = &Doctor{c: c, h: h, tendedUntil: make(map[entity.EntityID]uint64)}
 	c.Rest = &Rest{c: c, h: h}
+	c.Feed = newFeeding(c, h, r.Meals)
+	c.PrisonBeds, c.Guest = newPrisonBeds(c), newHospitality(c)
+	c.Visits, c.Strip = newVisits(c, r.Social), newStripping(c, r.Gear)
 	return c
 }
 
@@ -80,6 +106,7 @@ func (c *Care) FollowCarriers() {
 type CareView struct {
 	CarriedBy    entity.EntityID // the rescuer carrying it (0: none)
 	Carrying     entity.EntityID // the pawn it carries (0: none; SIM-062)
+	OnMedicalBed bool            // lying in a medical bed (SIM-063, UI 10.4)
 	Tended       bool            // a tend still shows (TendTicks)
 	BedRest      bool            // resting in bed to heal (PLAY-020)
 	CareLevel    medcare.Policy  // its care level (MED-03)
@@ -91,9 +118,16 @@ func (c *Care) View(id entity.EntityID, j job.Record) CareView {
 	return CareView{
 		CarriedBy:    c.Carry.Carrier(id),
 		Carrying:     c.Carry.Patient(id),
+		OnMedicalBed: onMedicalBed(c.h, id),
 		Tended:       c.h.Now() < c.Doctor.TendedUntil(id),
 		BedRest:      c.Rest.On(id) && j.Kind == job.Sleep && j.Active(),
 		CareLevel:    c.Level(id),
 		RestWhenHurt: !c.Rest.Off(id),
 	}
+}
+
+// onMedicalBed: id lies in a bed kept for the sick and injured.
+func onMedicalBed(h Host, id entity.EntityID) bool {
+	b, ok := h.Building(h.BedUnder(id))
+	return ok && IsMedicalBed(b)
 }

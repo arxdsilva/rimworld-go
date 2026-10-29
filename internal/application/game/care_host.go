@@ -56,15 +56,22 @@ type careRoster struct{ g *Game }
 
 func (h careRoster) PawnIDs() []entity.EntityID         { return h.g.pawnIDs }
 func (h careRoster) RaiderIDs() []entity.EntityID       { return h.g.raiderIDs }
-func (h careRoster) IsPrisoner(id entity.EntityID) bool { return h.g.isPrisoner(id) }
-func (h careRoster) IsColonist(id entity.EntityID) bool { return h.g.colonist(id) }
-func (h careRoster) Drafted(id entity.EntityID) bool    { return h.g.drafted(id) }
-func (h careRoster) Name(id entity.EntityID) string     { return h.g.name(id) }
+func (h careRoster) IsPrisoner(id entity.EntityID) bool { return h.g.prison.Is(id) }
+
+// IsColonist: one of the colony's own pawns. Visitors, traders, allies,
+// prisoners and released pawns all have a raiders entry (isRaider is false
+// for the leaving ones), colonists never do (SIM-063).
+func (h careRoster) IsColonist(id entity.EntityID) bool {
+	_, r := h.g.raiders[id]
+	return h.g.isPawn(id) && !r
+}
+func (h careRoster) Drafted(id entity.EntityID) bool { return h.g.drafted(id) }
+func (h careRoster) Name(id entity.EntityID) string  { return h.g.name(id) }
 func (h careRoster) CareGroup(id entity.EntityID) medcare.Group {
 	switch g := h.g; {
 	case g.isAnimal(id):
 		return medcare.Animals
-	case g.isPrisoner(id):
+	case g.prison.Is(id):
 		return medcare.Prisoners
 	case g.visitor(id):
 		return medcare.Guests

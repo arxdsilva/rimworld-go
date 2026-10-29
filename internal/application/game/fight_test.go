@@ -60,7 +60,7 @@ func fightOutcome(g *Game, from, subject entity.EntityID) (social.FightOutcome, 
 func runFight(t testing.TB, g *Game, a, b entity.EntityID, limit int) int {
 	t.Helper()
 	for i := 0; i < limit; i++ {
-		if !g.inSocialFight(a) && !g.inSocialFight(b) {
+		if !g.mind.InFight(a) && !g.mind.InFight(b) {
 			return i
 		}
 		g.Step(1)
@@ -124,13 +124,13 @@ func TestFightTriggersOnlyFromSlightOrInsult(t *testing.T) {
 			g.maybeSocialFight(a, b, k)
 		}
 	}
-	if g.inSocialFight(a) || g.inSocialFight(b) {
+	if g.mind.InFight(a) || g.mind.InFight(b) {
 		t.Fatal("a friendly interaction started a fight")
 	}
 	started := false
 	for i := 0; i < 3000 && !started; i++ {
 		g.maybeSocialFight(a, b, social.Insult)
-		started = g.inSocialFight(b)
+		started = g.mind.InFight(b)
 	}
 	if !started {
 		t.Fatal("3000 insults never started a fight")
@@ -186,12 +186,12 @@ func TestFightNonViolentNeverInitiatesNorStrikes(t *testing.T) {
 	for range 5000 {
 		g.maybeSocialFight(hawk, dove, social.Insult) // dove is the one who would start it
 	}
-	if g.inSocialFight(dove) {
+	if g.mind.InFight(dove) {
 		t.Fatal("a pacifist started a fight")
 	}
-	g.startSocialFight(hawk, dove)
+	g.mind.StartFight(hawk, dove)
 	hawkStruck := false
-	for i := 0; i < 2000 && g.inSocialFight(hawk); i++ {
+	for i := 0; i < 2000 && g.mind.InFight(hawk); i++ {
 		g.Step(1)
 		if _, ok := g.lastStrike[dove]; ok {
 			t.Fatal("a pacifist struck back in a brawl")
@@ -211,10 +211,10 @@ func TestBrawlFistsOnlyAndHarmedMe(t *testing.T) {
 	g, a, b := fightPair(t, 2)
 	g.equip[a] = item.Rifle
 	g.equip[b] = item.Club
-	g.startSocialFight(b, a)
+	g.mind.StartFight(b, a)
 	hits := map[entity.EntityID]bool{}
 	strikes := 0
-	for i := 0; i < 3000 && g.inSocialFight(a); i++ {
+	for i := 0; i < 3000 && g.mind.InFight(a); i++ {
 		g.Step(1)
 		for _, tr := range g.traces {
 			if tr.Attacker != a && tr.Attacker != b {
@@ -253,13 +253,13 @@ func TestBrawlFistsOnlyAndHarmedMe(t *testing.T) {
 func TestFightMinimumDurationThenEnds(t *testing.T) {
 	for seed := uint64(1); seed <= 6; seed++ {
 		g, a, b := fightPair(t, seed)
-		g.startSocialFight(b, a)
+		g.mind.StartFight(b, a)
 		for i := 0; i < social.FightMinTicks-1; i++ {
 			g.Step(1)
 			if !g.standingPawn(a) || !g.standingPawn(b) {
 				break
 			}
-			if !g.inSocialFight(a) || !g.inSocialFight(b) {
+			if !g.mind.InFight(a) || !g.mind.InFight(b) {
 				t.Fatalf("seed %d: fight ended after %d ticks, before the minimum", seed, i+1)
 			}
 		}
@@ -287,7 +287,7 @@ func TestFightOutcomesBothOccurIndependently(t *testing.T) {
 	differ, same := 0, 0
 	for seed := uint64(1); seed <= 30; seed++ {
 		g, a, b := fightPair(t, seed)
-		g.startSocialFight(b, a)
+		g.mind.StartFight(b, a)
 		runFight(t, g, a, b, 20000)
 		oa, okA := fightOutcome(g, a, b)
 		ob, okB := fightOutcome(g, b, a)
@@ -313,7 +313,7 @@ func TestFightOutcomesBothOccurIndependently(t *testing.T) {
 // A brawler takes no orders: drafting (and moving) is rejected mid-fight.
 func TestFightRejectsDrafting(t *testing.T) {
 	g, a, b := fightPair(t, 1)
-	g.startSocialFight(b, a)
+	g.mind.StartFight(b, a)
 	g.Step(10)
 	g.Apply(command.Command{Kind: command.DraftPawn, Pawn: uint64(a), Enabled: true})
 	g.Apply(command.Command{Kind: command.MovePawn, Pawn: uint64(b), X: 1, Y: 1})
@@ -321,7 +321,7 @@ func TestFightRejectsDrafting(t *testing.T) {
 	if g.drafted(a) {
 		t.Fatal("a brawler was drafted")
 	}
-	if !g.inSocialFight(a) || !g.inSocialFight(b) {
+	if !g.mind.InFight(a) || !g.mind.InFight(b) {
 		t.Fatal("an order ended the fight")
 	}
 	if j, _ := g.jobs.Get(b); j.Kind != job.Brawl {
@@ -335,7 +335,7 @@ func TestFightPairCooldownNoFlap(t *testing.T) {
 	g, a, b := fightPair(t, 4)
 	withTraits(g, a, true, trait.Bloodthirsty)
 	withTraits(g, b, true, trait.Bloodthirsty)
-	g.startSocialFight(b, a)
+	g.mind.StartFight(b, a)
 	runFight(t, g, a, b, 20000)
 	for _, id := range []entity.EntityID{a, b} {
 		v, _ := g.vital.Get(id)
@@ -347,7 +347,7 @@ func TestFightPairCooldownNoFlap(t *testing.T) {
 	for socNow(g) < end {
 		g.maybeSocialFight(a, b, social.Insult)
 		g.maybeSocialFight(b, a, social.Insult)
-		if g.inSocialFight(a) {
+		if g.mind.InFight(a) {
 			fights++
 			break
 		}
@@ -359,7 +359,7 @@ func TestFightPairCooldownNoFlap(t *testing.T) {
 	g.clock.Advance(int(end-socNow(g)) + 2)
 	for range 2000 {
 		g.maybeSocialFight(a, b, social.Insult)
-		if g.inSocialFight(a) {
+		if g.mind.InFight(a) {
 			fights++
 			break
 		}
@@ -376,8 +376,8 @@ func TestFightBystandersStayOut(t *testing.T) {
 	armed, _ := g.SpawnNamedPawn(7, 5, "Cy")
 	unarmed, _ := g.SpawnNamedPawn(5, 6, "Di")
 	g.equip[armed] = item.Club
-	g.startSocialFight(b, a)
-	for i := 0; i < 600 && g.inSocialFight(a); i++ {
+	g.mind.StartFight(b, a)
+	for i := 0; i < 600 && g.mind.InFight(a); i++ {
 		g.Step(1)
 		for _, id := range []entity.EntityID{armed, unarmed} {
 			if j, _ := g.jobs.Get(id); j.Kind == job.Attack || j.Kind == job.Brawl {
@@ -401,10 +401,10 @@ func TestFightBystandersStayOut(t *testing.T) {
 // Going down ends the fight at once, for both.
 func TestFightEndsWhenOneIsDowned(t *testing.T) {
 	g, a, b := fightPair(t, 1)
-	g.startSocialFight(b, a)
+	g.mind.StartFight(b, a)
 	g.Step(5)
 	g.hurt(a, downDamage(g, a), b)
-	if g.inSocialFight(a) || g.inSocialFight(b) {
+	if g.mind.InFight(a) || g.mind.InFight(b) {
 		t.Fatal("the fight went on with a fighter down")
 	}
 	if _, ok := fightOutcome(g, b, a); !ok {
@@ -417,14 +417,14 @@ func TestFightSaveLoadMidFightSameHash(t *testing.T) {
 	mk := func() (*Game, entity.EntityID, entity.EntityID) {
 		g, a, b := fightPair(t, 6)
 		g.positions.Set(b, Position{11, 5}) // they walk to each other first
-		g.startSocialFight(b, a)
+		g.mind.StartFight(b, a)
 		return g, a, b
 	}
 	straight, _, _ := mk()
 	straight.Step(800)
 	g, a, _ := mk()
 	g.Step(150)
-	if !g.inSocialFight(a) {
+	if !g.mind.InFight(a) {
 		t.Fatal("set-up: fight already over")
 	}
 	var buf bytes.Buffer
@@ -439,7 +439,7 @@ func TestFightSaveLoadMidFightSameHash(t *testing.T) {
 	if l.StateHash() != h {
 		t.Fatal("load changed the state hash")
 	}
-	if !l.inSocialFight(a) {
+	if !l.mind.InFight(a) {
 		t.Fatal("the fight did not survive the load")
 	}
 	l.Step(650)
@@ -451,9 +451,9 @@ func TestFightSaveLoadMidFightSameHash(t *testing.T) {
 // Brawl hit rolls never move the main stream.
 func TestFightRNGIsolation(t *testing.T) {
 	g, a, b := fightPair(t, 1)
-	g.startSocialFight(b, a)
+	g.mind.StartFight(b, a)
 	before, _ := g.rng.MarshalBinary()
-	for i := 0; i < 200 && g.inSocialFight(a); i++ {
+	for i := 0; i < 200 && g.mind.InFight(a); i++ {
 		g.phaseAI()
 		g.phaseJobs()
 	}

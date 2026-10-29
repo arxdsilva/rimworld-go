@@ -118,7 +118,7 @@ func TestSocialEventsPostLetters(t *testing.T) {
 	}
 
 	f, x, y := fightPair(t, 6)
-	f.startSocialFight(x, y)
+	f.mind.StartFight(x, y)
 	if !letterAbout(f, "Social fight", x) {
 		t.Fatal("no letter for the social fight")
 	}

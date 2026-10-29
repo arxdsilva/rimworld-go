@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
@@ -63,6 +64,9 @@ type visitorRec struct {
 	// Ally: a fighter sent as military aid (allies.go, PLAY-024); false
 	// for every ordinary visitor and in older saves.
 	Ally bool
+	// Down: it was down last tick, so a death now is a death while down
+	// (care.Hospitality.Died, SIM-063).
+	Down bool
 }
 
 // visitingFactions are the factions (1 + index) that may send visitors:
@@ -200,14 +204,18 @@ func (g *Game) setVisitorStay(id entity.EntityID, leaveAt uint64) {
 func (g *Game) visitorsTick(now uint64) {
 	w := g.worldSt
 	kept := w.visitors[:0]
-	for _, v := range w.visitors {
-		if g.visitorStep(&v, now) {
-			kept = append(kept, v)
-		} else {
-			g.traderVisitorGone(v.ID) // trade_caravan.go (PLAY-024): the trader's goods
-			if v.Ally {
-				g.allyGone(v) // allies.go: a letter for one who fell
-			}
+	for i := range w.visitors {
+		v := &w.visitors[i] // in place: careGuests.Leave updates the record mid-step
+		if g.visitorStep(v, now) {
+			kept = append(kept, *v)
+			continue
+		}
+		g.traderVisitorGone(v.ID) // trade_caravan.go (PLAY-024): the trader's goods
+		if v.Ally {
+			g.allyGone(*v) // allies.go: a letter for one who fell
+		}
+		if st, _ := g.vital.Get(v.ID); v.Down && st.Status == health.Dead {
+			g.care.Guest.Died(v.ID) // care/guest.go: died while down
 		}
 	}
 	clear(w.visitors[len(kept):])
@@ -218,7 +226,7 @@ func (g *Game) visitorsTick(now uint64) {
 // visitor on the map (gone, dead, taken prisoner).
 func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 	r, ok := g.raiders[v.ID]
-	if !ok || g.prisoners[v.ID] != nil {
+	if !ok || g.prison.Is(v.ID) {
 		return false
 	}
 	if p := g.personOf(v.ID); p == nil || p.Where != whereVisitor {
@@ -228,12 +236,15 @@ func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 	if st.Status == health.Dead {
 		return false
 	}
-	// thinkPrisoner walks a Leaving pawn out once RetryAt passes or it idled
+	// prison.Live walks a Leaving pawn out once RetryAt passes or it idled
 	// a day: the visit holds both off.
 	r.Leaving, r.Idle, r.RetryAt = true, now, math.MaxUint64
 	g.raiders[v.ID] = r
-	if st.Status != health.Alive {
+	if v.Down = st.Status != health.Alive; v.Down {
 		return true // down: it waits for help (or capture)
+	}
+	if g.care.Guest.Step(v.ID) {
+		return true // care/guest.go: rescued, it heals in the colony's bed
 	}
 	pos, _ := g.positions.Get(v.ID)
 	j, _ := g.jobs.Get(v.ID)
@@ -243,7 +254,7 @@ func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 		g.jobs.Set(v.ID, job.Record{})
 		j = job.Record{}
 	}
-	if v.Leaving && (g.nearBorder(pos) || j.Kind == job.Move && j.State == job.Complete || now >= v.LeaveAt+visitorGiveUp) {
+	if v.Leaving && (nearBorder(pos, g.grid.Width(), g.grid.Height()) || j.Kind == job.Move && j.State == job.Complete || now >= v.LeaveAt+visitorGiveUp) {
 		g.departVisitor(v.ID)
 		return false
 	}
@@ -257,8 +268,19 @@ func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 		j = job.Record{}
 		g.jobs.Set(v.ID, j)
 	}
-	if v.Leaving {
-		return g.visitorLeave(v, pos, j, now)
+	if v.Leaving { // walk to the nearest edge band; the check above sends it home there
+		if j.Active() || now < v.RetryAt {
+			return true
+		}
+		ex, ey := nearestEdge(pos, g.grid.Width(), g.grid.Height())
+		x, y, ok := g.insetLandNear(ex, ey, nil)
+		if !ok {
+			x, y, ok = g.walkableNear(ex, ey, visitorSpotR) // a wet edge: any way out
+		}
+		if !ok || !g.startJob(v.ID, job.Record{Kind: job.Move, TX: x, TY: y}) {
+			v.RetryAt = now + visitorRetry
+		}
+		return true
 	}
 	switch {
 	case j.Kind == job.Visit && j.State == job.Do:
@@ -273,29 +295,8 @@ func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 	return true
 }
 
-// visitorLeave walks a leaving visitor to the nearest edge band
-// (visitorStep sends it home once it is there).
-func (g *Game) visitorLeave(v *visitorRec, pos Position, j job.Record, now uint64) bool {
-	if j.Active() || now < v.RetryAt {
-		return true
-	}
-	ex, ey := nearestEdge(pos, g.grid.Width(), g.grid.Height())
-	x, y, ok := g.insetLandNear(ex, ey, nil)
-	if !ok {
-		x, y, ok = g.walkableNear(ex, ey, visitorSpotR) // a wet edge: any way out
-	}
-	if ok && g.startJob(v.ID, job.Record{Kind: job.Move, TX: x, TY: y}) {
-		return true
-	}
-	v.RetryAt = now + visitorRetry
-	return true
-}
-
-// nearBorder reports p is within visitorInset of the map border.
-func (g *Game) nearBorder(p Position) bool {
-	w, h := g.grid.Width(), g.grid.Height()
-	return min(p.X, p.Y, w-1-p.X, h-1-p.Y) <= visitorInset
-}
+// nearBorder reports p is within visitorInset of the border of a w x h map.
+func nearBorder(p Position, w, h int) bool { return min(p.X, p.Y, w-1-p.X, h-1-p.Y) <= visitorInset }
 
 // departVisitor: visitor id walks off the map; it stays a known person.
 func (g *Game) departVisitor(id entity.EntityID) {
@@ -377,4 +378,103 @@ func (g *Game) wandererJoins(now uint64) bool {
 	g.letter(letterGood, "Wanderer joins", g.personName(id)+", a wanderer, has asked to join the colony.", id)
 	g.addHistory("joined", g.personName(id)+" wandered in and joined the colony.", id)
 	return true
+}
+
+// careGuests is care.Guests (care/deps.go, SIM-063): the visitors on the
+// map (traders and allies too) are guests, one of no faction a stranger.
+// A recovered guest leaves by the visit's leave path; a stranger may ask
+// to join by letter (accept: command.AcceptLetter; dismiss: decline).
+type careGuests struct{ g *Game }
+
+const (
+	// joinUnsafeMargin: outdoor air this far (tenths of a degree) beyond a
+	// stranger's comfort band makes leaving unsafe (original tuning).
+	joinUnsafeMargin = 100
+	// joinOfferWait: a stranger who asked waits this long for an answer.
+	joinOfferWait = clock.TicksPerDay
+)
+
+func (h careGuests) IsGuest(id entity.EntityID) bool { return h.g.visitor(id) } // prisoners.go
+func (h careGuests) FactionOf(id entity.EntityID) uint64 {
+	if p := h.g.personOf(id); p != nil && p.Faction > 0 {
+		return uint64(p.Faction)
+	}
+	return 0
+}
+
+// FactionName is guest id's faction for the read model ("" for a stranger
+// or anyone who is no guest).
+func (h careGuests) FactionName(id entity.EntityID) string {
+	if f := h.g.factionOf(int(h.FactionOf(id))); f != nil && h.IsGuest(id) {
+		return f.Name
+	}
+	return ""
+}
+
+func (h careGuests) Goodwill(fac uint64, delta int, reason string) {
+	if f, g := h.g.factionOf(int(fac)), h.g; f != nil {
+		faction.Adjust(f, delta, fmt.Sprintf("Day %d: %s (%+d goodwill)", g.relDay(uint64(g.clock.Now()))+1, reason, delta))
+		g.worldNote("%s: %s (%+d goodwill).", f.Name, reason, delta)
+	}
+}
+
+// Leave turns recovered guest id for home now, with visitorGiveUp to walk
+// out before it slips away.
+func (h careGuests) Leave(id entity.EntityID) {
+	g, now := h.g, uint64(h.g.clock.Now())
+	for i := range g.worldS().visitors {
+		if v := &g.worldSt.visitors[i]; v.ID == id {
+			v.Leaving, v.RetryAt, v.LeaveAt = true, 0, now
+		}
+	}
+	g.reserve.ReleaseOwner(id)
+	g.jobs.Set(id, job.Record{})
+	pos, _ := g.positions.Get(id)
+	g.message(pos.X, pos.Y, "%s, back on their feet, sets off for home.", g.personName(id))
+}
+
+// JoinOffer: recovered stranger id asks to join (care.JoinAskSafe, or
+// JoinAskUnsafe when leaving is unsafe, rolled on the world stream): a
+// letter carries the offer and it waits joinOfferWait; else it leaves.
+func (h careGuests) JoinOffer(id entity.EntityID) {
+	g, ask := h.g, care.JoinAskSafe
+	if !h.leavingSafe(id) {
+		ask = care.JoinAskUnsafe
+	}
+	if g.stream(streamWorld).IntN(1000) >= ask {
+		h.Leave(id)
+		return
+	}
+	h.offerJoin(id)
+}
+
+// offerJoin keeps stranger id a day and posts its offer to join.
+func (h careGuests) offerJoin(id entity.EntityID) {
+	g := h.g
+	g.setVisitorStay(id, uint64(g.clock.Now())+joinOfferWait)
+	g.letter(letterInfo, "Stranger asks to join", g.personName(id)+", the stranger your colony took in and nursed back to health, asks to join you. "+
+		"Accept to welcome them; dismiss this letter and they will go their way.", id)
+	g.letters.list[len(g.letters.list)-1].Join = id
+}
+
+// leavingSafe: no hostile raider stands on the map and the outdoor air
+// where id stands is within joinUnsafeMargin of its comfort band.
+func (h careGuests) leavingSafe(id entity.EntityID) bool {
+	g := h.g
+	if slices.ContainsFunc(g.raiderIDs, g.standingRaider) {
+		return false
+	}
+	pos, _ := g.positions.Get(id)
+	t, b := int(g.climate.Outdoor(g.clock.Now())+g.weatherTempDelta(pos.X, pos.Y)), g.bandsOf(id)
+	return t >= b.Min-joinUnsafeMargin && t <= b.Max+joinUnsafeMargin
+}
+
+// join makes stranger p a colonist (prison_host.go: enlist).
+func (h careGuests) join(p entity.EntityID) {
+	g := h.g
+	g.enlist(p)
+	g.invalidateCreatures()
+	text := g.personName(p) + ", the stranger you nursed back to health, has joined the colony."
+	g.letter(letterGood, "Stranger joins", text, p)
+	g.addHistory("joined", text, p)
 }

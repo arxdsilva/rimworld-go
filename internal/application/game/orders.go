@@ -565,7 +565,10 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		if g.hasRanged(pawn) {
 			verb = "Shoot "
 		}
-		add(verb+"raider "+g.name(rid), command.OrderAttack, construction.LayerObject)
+		if g.isRaider(rid) {
+			verb += "raider " // a colonist in a berserk break is named plainly (SIM-066)
+		}
+		add(verb+g.name(rid), command.OrderAttack, construction.LayerObject)
 	}
 	if iid := g.itemAt(x, y); iid != 0 {
 		st, _ := g.stacks.Get(iid)

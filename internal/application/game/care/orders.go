@@ -1,6 +1,8 @@
 package care
 
 import (
+	"fmt"
+
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -16,16 +18,20 @@ type Option struct {
 }
 
 // pawnVerbs are the pawn-targeted Prioritize orders in menu order
-// (SIM-062: rescue, capture, arrest, tend), with their labels. The
-// drafted "Tend <name>" (an EmergencyTend) closes the list.
+// (SIM-062: rescue, capture, arrest, tend; SIM-063…065: feed, strip,
+// take a prisoner to bed), with their label formats (%s: the target's
+// name). The drafted "Tend <name>" (an EmergencyTend) closes the list.
 var pawnVerbs = [...]struct {
 	o     command.Order
 	label string
 }{
-	{command.OrderRescue, "Rescue "},
-	{command.OrderCapture, "Capture "},
-	{command.OrderArrest, "Arrest "},
-	{command.OrderTendPatient, "Prioritize tending "},
+	{command.OrderRescue, "Rescue %s"},
+	{command.OrderCapture, "Capture %s"},
+	{command.OrderArrest, "Arrest %s"},
+	{command.OrderTendPatient, "Prioritize tending %s"},
+	{command.OrderFeedPatient, "Feed %s"},
+	{command.OrderStrip, "Strip %s"},
+	{command.OrderCarryToPrisonBed, "Take %s to bed"},
 }
 
 // PawnOrders are the care entries of doer's menu at (x, y), for every
@@ -56,7 +62,7 @@ func (c *Care) PawnOrders(doer entity.EntityID, x, y int) []Option {
 			if !offer {
 				continue
 			}
-			out = append(out, Option{Label: v.label + c.personName(pid), Disabled: why != "", Reason: why,
+			out = append(out, Option{Label: fmt.Sprintf(v.label, c.personName(pid)), Disabled: why != "", Reason: why,
 				Cmd: command.Command{Kind: command.Prioritize, Order: v.o, Pawn: uint64(doer), Target: uint64(pid), X: x, Y: y}})
 		}
 	}

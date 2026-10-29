@@ -391,7 +391,7 @@ func TestLetterKindsAtPostSites(t *testing.T) {
 	t.Run("social fight", func(t *testing.T) {
 		t.Parallel()
 		f, x, y := fightPair(t, 6)
-		f.startSocialFight(x, y)
+		f.mind.StartFight(x, y)
 		if l := letterByTitle(t, f, "Social fight"); l.Kind != "caution" || l.Focus == 0 {
 			t.Fatalf("social fight: %+v", l)
 		}

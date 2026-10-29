@@ -144,7 +144,13 @@ func TestGrownGolden(t *testing.T) {
 	// every animal saves two new fields (Errand, StepGait). With the
 	// amble and the slow class set back to the old numbers only those
 	// two fields move the hash. Stable over -count=2.
-	const want uint64 = 0xde6fc9c905022773
+	// Re-pinned (SIM-063…066 pawn care and mental breaks): downed pawns get
+	// hungry and doctors feed them, every downed cause but collapse-asleep
+	// is rescued to a safer-ranked bed, friends visit the sick, and mental
+	// breaks follow the wiki tiers and MTBs with new kinds; the previous
+	// pin held through SIM-062 (the committed full suite), the benchmark
+	// fixtures' hashes moved with the same change set. Stable over -count=2.
+	const want uint64 = 0x73d615f22d9b245
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

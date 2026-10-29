@@ -108,7 +108,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 			g.assignSurgery(id) || g.assignTendAnimal(id) || // surgery.go, vet_animals.go
 			g.anyBillFor(work.Doctor) && g.assignBill(id, work.Mask(0).Set(work.Doctor, true))
 	case work.Warden:
-		return g.assignWarden(id) // prisoners.go
+		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
 		return g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || g.assignHaul(id) // fillTroughs: trough_feed.go
 	case work.Construct:

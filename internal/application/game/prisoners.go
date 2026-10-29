@@ -3,22 +3,26 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Prisoners (ENG-003, M8). g.prisoners holds each prisoner's state (nil
-// until the first capture; saved as Prisoners). A prisoner stays on
-// raiderIDs, out of the raid AI (thinkRaider hands it to thinkPrisoner):
-// it paths like a raider, so a closed door keeps it in its room, and no
-// colonist, guard or turret treats it as hostile (standingRaider). Its
-// person record says Where=Prisoner. Capture and arrest are
-// care/capture.go (through carePrison, care_host_prison.go), its life
-// prisoner_life.go, the warden prisoner_warden.go.
+// Prisoners (ENG-003, M8). The prison package holds each prisoner's state
+// (saved as Prisoners), its life and the warden's work (prison_host.go). A
+// prisoner stays on raiderIDs, out of the raid AI (thinkRaider hands it to
+// prison.Live): it paths like a raider, so a closed door keeps it in its
+// room, and no colonist, guard or turret treats it as hostile
+// (standingRaider). Its person record says Where=Prisoner. Capture and
+// arrest are care/capture.go (through carePrison, care_host_prison.go).
 
 // Values follow the published RimWorld wiki by explicit user decision (ENG-003 balance override).
 const (
@@ -32,24 +36,19 @@ const (
 	arrestBase      = 600
 	arrestPerSocial = 20
 	arrestMax       = 980
-	// prisonerVisitStagger spreads first visits over the interval by id.
-	prisonerVisitStagger = 7919
 )
 
-// isPrisoner reports whether id is the colony's prisoner.
-func (g *Game) isPrisoner(id entity.EntityID) bool { return g.prisoners[id] != nil }
-
 // exportPrisoners is the Prisoners save field in id order (nil: none).
-func (g *Game) exportPrisoners() []entry[prisoner.State] { return exportMap(g.prisoners) }
+func (g *Game) exportPrisoners() []entry[prisoner.State] { return exportMap(g.prison.Export()) }
 
 // importPrisoners restores exportPrisoners' state.
-func (g *Game) importPrisoners(es []entry[prisoner.State]) { g.prisoners = importMap(es) }
+func (g *Game) importPrisoners(es []entry[prisoner.State]) { g.prison.Import(importMap(es)) }
 
 // prisonerView builds prisoner id's tab: its mode, resistance in whole
 // points (rounded up: 0 only when broken), the warden who last came and
 // whether it lies in a prisoner bed.
 func (g *Game) prisonerView(id entity.EntityID) (PrisonerView, bool) {
-	st := g.prisoners[id]
+	st := g.prison.State(id)
 	if st == nil {
 		return PrisonerView{}, false
 	}
@@ -65,17 +64,6 @@ func (g *Game) prisonerView(id entity.EntityID) (PrisonerView, bool) {
 	return v, true
 }
 
-// cmdSetPrisonerMode sets prisoner's interaction mode: what its warden
-// does on the next visit (Release and Execute do not wait for the visit
-// interval).
-func (g *Game) cmdSetPrisonerMode(id entity.EntityID, mode uint8) {
-	st := g.prisoners[id]
-	if st == nil || prisoner.Mode(mode) > prisoner.Execute {
-		return
-	}
-	st.Mode = prisoner.Mode(mode)
-}
-
 // cmdSetBedForPrisoners marks bed for prisoners (or back for colonists);
 // sleepers of the other kind give it up.
 func (g *Game) cmdSetBedForPrisoners(bed entity.EntityID, on bool) {
@@ -85,37 +73,18 @@ func (g *Game) cmdSetBedForPrisoners(bed entity.EntityID, on bool) {
 	}
 	b.ForPrisoners = on
 	for _, c := range [2]uint64{b.Claimant, b.Claimant2} {
-		if c != 0 && g.isPrisoner(entity.EntityID(c)) != on {
+		if c != 0 && g.prison.Is(entity.EntityID(c)) != on {
 			b = b.Release(c)
 		}
 	}
 	g.bldgs.Set(bed, b)
 }
 
-// cmdReleasePrisoner frees prisoner at once: it walks off the map.
-func (g *Game) cmdReleasePrisoner(id entity.EntityID) {
-	if g.isPrisoner(id) {
-		g.releasePrisoner(id, 0)
-	}
-}
-
-// prisonBedFor is the nearest free prisoner bed for target (from: where
-// the carrier stands).
+// prisonBedFor is the safe prison bed for target (care/beds.go ranks it;
+// from: where the carrier stands).
 func (g *Game) prisonBedFor(target entity.EntityID, from Position) (entity.EntityID, bool) {
-	best, bestD := entity.EntityID(0), 1<<30
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || !b.ForPrisoners || !b.CanClaim(uint64(target)) {
-			continue
-		}
-		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != target {
-			continue
-		}
-		if d := manhattan(from.X, from.Y, b.X, b.Y); best == 0 || d < bestD {
-			best, bestD = bid, d
-		}
-	}
-	return best, best != 0
+	bid := care.PrisonBedFor(g.care, target, from.X, from.Y)
+	return bid, bid != 0
 }
 
 // withID is ids with id added in order, in a new array (the caller may be
@@ -176,6 +145,7 @@ func (g *Game) makePrisoner(target, captor entity.EntityID) {
 	g.ensurePerson(target)
 	if slices.Contains(g.pawnIDs, target) {
 		g.pawnIDs = withoutID(g.pawnIDs, target)
+		g.mind.End(target) // mind (SIM-066): an arrested breaker's break ends
 		delete(g.draft, target)
 		g.releaseBed(target)
 		g.raiderIDs = withID(g.raiderIDs, target)
@@ -187,14 +157,7 @@ func (g *Game) makePrisoner(target, captor entity.EntityID) {
 		r.Arrived = now
 	}
 	g.raiders[target] = r
-	if g.prisoners == nil {
-		g.prisoners = map[entity.EntityID]*prisoner.State{}
-	}
-	roll := int32(g.stream(streamPrison).IntN(1001))
-	g.prisoners[target] = &prisoner.State{
-		Mode: prisoner.Recruit, Resistance: prisoner.InitialResistance(roll),
-		NextVisit: now + uint64(target)*prisonerVisitStagger%prisoner.VisitInterval, Captor: uint64(captor),
-	}
+	g.prison.Take(target, captor, now) // prison/prison.go: a fresh resistance, Recruit
 	g.setWhere(target, wherePrisoner)
 	if _, ok := g.joy[target]; !ok {
 		g.joy[target] = recreation.Start
@@ -202,4 +165,108 @@ func (g *Game) makePrisoner(target, captor entity.EntityID) {
 	pos, _ := g.positions.Get(target)
 	g.message(pos.X, pos.Y, "%s is now the colony's prisoner.", g.personName(target))
 	g.addHistory("prisoner", g.personName(target)+" was taken prisoner.", target, captor)
+}
+
+// bedDeadlyMargin: air this far beyond everyday comfort is deadly
+// (tenths of a degree; wiki: Rescue, 90 °C).
+const bedDeadlyMargin = 900
+
+// BedHazard is care.Reach's (SIM-063): fire on or beside bed's anchor
+// (every bed's cells are within one tile of it), or deadly air there.
+func (h careReach) BedHazard(bed entity.EntityID) bool {
+	b, ok := h.g.bldgs.Get(bed)
+	t := int(h.g.temperatureAt(b.X, b.Y))
+	return !ok || h.g.fireNear(b.X, b.Y, 1) || t < exposure.Everyday.Min-bedDeadlyMargin || t > exposure.Everyday.Max+bedDeadlyMargin
+}
+
+// prisonerThoughts are a prisoner's own thoughts: being held (none for
+// anyone else).
+func (g *Game) prisonerThoughts(id entity.EntityID) []mood.Thought {
+	if !g.prison.Is(id) {
+		return nil
+	}
+	return mood.Active(nil, mood.Imprisoned)
+}
+
+// prisonerThoughtList is a prisoner's whole thought list: thoughts plus
+// prisonerThoughts unless thoughts already carry them.
+func (g *Game) prisonerThoughtList(id entity.EntityID) []mood.Thought {
+	ts := g.thoughts(id)
+	for _, t := range ts {
+		if t.Kind == mood.Imprisoned {
+			return ts
+		}
+	}
+	return append(ts, g.prisonerThoughts(id)...)
+}
+
+// prisonerMood is the mood a prisoner's resistance answers to.
+func (g *Game) prisonerMood(id entity.EntityID) int { return mood.Level(g.prisonerThoughtList(id)) }
+
+// prisonerBed is the bed prisoner id holds, if it still stands.
+func (g *Game) prisonerBed(id entity.EntityID) (entity.EntityID, bool) {
+	bid := g.sleptAt[id]
+	if bid == 0 {
+		return 0, false
+	}
+	b, ok := g.bldgs.Get(bid)
+	return bid, ok && b.SlotOf(uint64(id)) >= 0
+}
+
+// walkOut takes a released pawn to the map edge; there (or after a day
+// of trying) it goes home.
+func (g *Game) walkOut(id entity.EntityID, r raiderState, j job.Record, now uint64) {
+	pos, _ := g.positions.Get(id)
+	w, h := g.grid.Width(), g.grid.Height()
+	if pos.X == 0 || pos.Y == 0 || pos.X == w-1 || pos.Y == h-1 || now-r.Idle >= raiderGiveUp {
+		g.departReleased(id)
+		return
+	}
+	if j.Active() && j.Kind == job.Move || now < r.RetryAt {
+		return
+	}
+	ex, ey := nearestEdge(pos, w, h)
+	if x, y, ok := g.walkableNear(ex, ey, 3); ok && g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) {
+		return
+	}
+	r.RetryAt = now + raiderRetry
+	g.raiders[id] = r
+}
+
+// departReleased: a released pawn reached the edge. Its faction is
+// grateful, and it is off the map.
+func (g *Game) departReleased(id entity.EntityID) {
+	if p := g.personOf(id); p != nil {
+		if f := g.factionOf(p.Faction); f != nil {
+			faction.Adjust(f, releaseGoodwill, "prisoner released")
+		}
+	}
+	g.setWhere(id, whereOffMap)
+	g.addHistory("released", g.personName(id)+" was released and went home.", id)
+	g.removeRaider(id) // raids.go: off the map
+}
+
+// prisonerPawnView is the read model of a prisoner (or released pawn):
+// not hostile, Prisoner while held.
+func (g *Game) prisonerPawnView(id entity.EntityID) PawnView {
+	pos, _ := g.positions.Get(id)
+	name, _ := g.names.Get(id)
+	j, _ := g.jobs.Get(id)
+	v, _ := g.vital.Get(id)
+	n, _ := g.need.Get(id)
+	pv := PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(), Status: v.Status.String(), Reason: v.Cause.String(),
+		Hunger: needs.Percent(n.Hunger), Rest: needs.Percent(n.Rest), Health: v.HP() * 100 / health.MaxHP,
+		Weapon: weaponDefOf(g, id).Name, Prisoner: g.prison.Is(id), Visitor: g.visitor(id), Ally: g.isAlly(id), SleptInBed: g.sleptAt[id] != 0,
+		Recreation: g.joy[id] * 100 / recreation.Full}
+	ts := g.prisonerThoughtList(id)
+	pv.Mood = mood.Level(ts)
+	pv.MoodTarget, pv.MoodLabel, pv.Thoughts = pv.Mood, mood.Label(pv.Mood), thoughtViews(ts)
+	pv.Lying = v.Status != health.Alive || j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete)
+	pv.InBed = g.inBed(id)
+	cv := g.care.View(id, j)
+	pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
+	pv.GuestFaction = careGuests{g}.FactionName(id) // visitors.go (SIM-063)
+	pv.Infection, pv.Wounded = g.woundView(id)      // infection.go (MED-02)
+	g.fillPawnAction(&pv, id, j)
+	return pv
 }

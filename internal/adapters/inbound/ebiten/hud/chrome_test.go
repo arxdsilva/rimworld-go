@@ -135,3 +135,44 @@ func TestLetterRowsAndDismiss(t *testing.T) {
 		t.Fatal("letter kinds")
 	}
 }
+
+// Letters the sim emits for aggressive breaks and a stranger's join offer
+// reach the stack with their kind's colour and title.
+func TestBreakAndJoinLettersRender(t *testing.T) {
+	t.Parallel()
+	c, f := newFake()
+	f.w.Letters = []game.LetterView{
+		{ID: 1, Title: "Berserk: Eli", Kind: "threat"},
+		{ID: 2, Title: "Stranger wants to join", Kind: "good"},
+	}
+	f.lay.Letters = gfx.Rect{X: 900, Y: 400, W: 200, H: 200}
+	f.lay.LetterRows = 4
+	rows := c.Right().LetterRows(f.lay)
+	if len(rows) != 2 || LetterRowLabel(rows[0]) == "" || LetterRowLabel(rows[1]) == "" {
+		t.Fatalf("rows = %+v", rows)
+	}
+	if LetterColor("threat") == LetterColor("good") {
+		t.Fatal("break and join letters share a colour")
+	}
+}
+
+// A rescued stranger's join offer (SIM-063) has Accept and Decline in
+// place of Continue: Accept sends AcceptLetter, Decline DismissLetter.
+func TestJoinOfferLetterButtons(t *testing.T) {
+	t.Parallel()
+	c, f := newFake()
+	plain := c.Right().letterFooter(game.LetterView{ID: 3, X: -1, Y: -1})
+	if len(plain) != 1 || plain[0].ID != "continue" {
+		t.Fatalf("a plain letter: %+v", plain)
+	}
+	offer := c.Right().letterFooter(game.LetterView{ID: 4, JoinOffer: true, X: -1, Y: -1})
+	if len(offer) != 2 || offer[0].ID != "accept" || offer[1].ID != "decline" {
+		t.Fatalf("a join offer: %+v", offer)
+	}
+	offer[0].OnClick()
+	offer[1].OnClick()
+	if len(f.cmds) != 2 || f.cmds[0].Kind != command.AcceptLetter || f.cmds[0].Target != 4 ||
+		f.cmds[1].Kind != command.DismissLetter || f.cmds[1].Target != 4 {
+		t.Fatalf("accept then decline: %+v", f.cmds)
+	}
+}

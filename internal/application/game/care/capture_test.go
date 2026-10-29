@@ -29,7 +29,7 @@ func prisonScene() (*Care, *fakeHost, *fakePrison) {
 	pr := newFakePrison(h)
 	pr.raiders[captive] = true
 	pr.armed[captive] = true
-	return New(h, pr), h, pr
+	return New(h, Roles{Prison: pr}), h, pr
 }
 
 func TestCaptureCarriesToThePrisonBed(t *testing.T) {

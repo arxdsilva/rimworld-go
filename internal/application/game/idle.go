@@ -66,6 +66,9 @@ const (
 // assignIdle starts a free-time behaviour. It tries the colonist's
 // weighted pick first and falls back to wandering.
 func (g *Game) assignIdle(id entity.EntityID) bool {
+	if g.care.Visits.Assign(id) { // care/visit.go (SIM-065): a friend lying sick in bed first
+		return true
+	}
 	w := idleWeights[g.temperamentOf(id)]
 	total := w[0] + w[1] + w[2] + w[3]
 	roll := g.rng.IntN(total)
@@ -132,11 +135,8 @@ func (g *Game) idleChat(id entity.EntityID, linger int) bool {
 		if oid == id || !g.alive(oid) || g.drafted(oid) {
 			continue
 		}
-		if v, _ := g.vital.Get(oid); v.Status != health.Alive {
-			continue
-		}
 		oj, _ := g.jobs.Get(oid)
-		if oj.Kind == job.Sleep {
+		if v, _ := g.vital.Get(oid); v.Status != health.Alive && !(v.Status == health.Downed && g.lyingAwake(oid)) || oj.Kind == job.Sleep && !g.lyingAwake(oid) {
 			continue
 		}
 		op, _ := g.positions.Get(oid)

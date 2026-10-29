@@ -73,7 +73,7 @@ func TestMiserableColonistBreaksAndRecovers(t *testing.T) {
 		g.remember(id, k)
 	}
 	g.joy[id] = 0
-	if m := g.moodOf(id); m >= mentalbreak.Threshold {
+	if m := g.moodOf(id); m >= mentalbreak.DefaultThresholds().Major {
 		t.Fatalf("mood %d: set-up should be miserable", m)
 	}
 	broke := false
@@ -100,9 +100,10 @@ func TestMiserableColonistBreaksAndRecovers(t *testing.T) {
 	if j, _ := g.jobs.Get(id); j.Kind == job.Move {
 		t.Fatal("took a move order during a mental break")
 	}
-	g.Step(int(mentalbreak.DefOf(mentalbreak.HideInRoom).Duration) + 10)
+	b := g.breaks[id]
+	g.Step(int(b.until-uint64(g.clock.Now())) + 10) // its drawn duration (DurationFor)
 	if g.Breaking(id) != "" {
-		t.Fatal("the break should have ended")
+		t.Fatalf("the %s break should have ended", b.kind)
 	}
 	found := false
 	for _, th := range g.thoughts(id) {

@@ -650,3 +650,15 @@ func TestAnimalAlerts(t *testing.T) {
 		t.Error("no animals, no alerts")
 	}
 }
+
+// An aggressive break raises the red break alert naming the break.
+func TestAggressiveBreakAlert(t *testing.T) {
+	t.Parallel()
+	got := BuildAlerts([]game.PawnView{{ID: 5, Name: "Eli", Status: "alive", MentalBreak: "berserk", X: 2, Y: 2}}, game.WorldView{})
+	for _, al := range got {
+		if al.Key == "break" && al.Danger && strings.Contains(al.Label, "berserk") {
+			return
+		}
+	}
+	t.Fatalf("no berserk alert in %+v", got)
+}

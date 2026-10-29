@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -75,11 +76,11 @@ func fed(g *Game, ids ...entity.EntityID) {
 func capture(t *testing.T, g *Game, ada, bo, rid entity.EntityID) {
 	t.Helper()
 	g.Enqueue(command.Command{Kind: command.Capture, Pawn: uint64(ada), Target: uint64(rid)})
-	for i := 0; i < 2000 && !g.isPrisoner(rid); i++ {
+	for i := 0; i < 2000 && !g.prison.Is(rid); i++ {
 		g.Step(1)
 		fed(g, ada, bo)
 	}
-	if !g.isPrisoner(rid) {
+	if !g.prison.Is(rid) {
 		j, _ := g.jobs.Get(ada)
 		t.Fatalf("raider never became a prisoner (captor job %+v)", j)
 	}
@@ -89,7 +90,7 @@ func TestCaptureCarriesDownedRaiderToPrisonBed(t *testing.T) {
 	g, ada, bo, rid, bed := prisonGame(t)
 	g.Enqueue(command.Command{Kind: command.Capture, Pawn: uint64(ada), Target: uint64(rid)})
 	carried := false
-	for i := 0; i < 2000 && !g.isPrisoner(rid); i++ {
+	for i := 0; i < 2000 && !g.prison.Is(rid); i++ {
 		g.Step(1)
 		fed(g, ada, bo)
 		if g.care.Carry.Carrier(rid) == ada {
@@ -99,8 +100,8 @@ func TestCaptureCarriesDownedRaiderToPrisonBed(t *testing.T) {
 			}
 		}
 	}
-	if !carried || !g.isPrisoner(rid) {
-		t.Fatalf("capture: carried %v, prisoner %v", carried, g.isPrisoner(rid))
+	if !carried || !g.prison.Is(rid) {
+		t.Fatalf("capture: carried %v, prisoner %v", carried, g.prison.Is(rid))
 	}
 	if !g.inBed(rid) || g.sleptAt[rid] != bed {
 		t.Fatal("the prisoner lies in the prisoner bed")
@@ -108,7 +109,7 @@ func TestCaptureCarriesDownedRaiderToPrisonBed(t *testing.T) {
 	if p := g.personOf(rid); p == nil || p.Where != wherePrisoner {
 		t.Fatalf("registry: %+v", p)
 	}
-	st := g.prisoners[rid]
+	st := g.prison.State(rid)
 	if st.Mode != prisoner.Recruit || st.Resistance < prisoner.MinInitialResistance || st.Resistance > prisoner.MaxInitialResistance ||
 		st.Captor != uint64(ada) {
 		t.Fatalf("state %+v", *st)
@@ -176,10 +177,10 @@ func TestResistanceFactorEndpointsDriveAVisit(t *testing.T) {
 	}
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
-	st := g.prisoners[rid]
+	st := g.prison.State(rid)
 	st.Mode, st.Resistance = prisoner.Reduce, 20000
 	want := prisoner.Reduction(g.negotiation(bo), prisoner.ResistanceFactor(g.opinion(rid, bo), g.prisonerMood(rid)))
-	g.wardenChat(bo, rid, st, uint64(g.clock.Now()))
+	g.prison.Chat(bo, rid, uint64(g.clock.Now()))
 	if got := 20000 - st.Resistance; got != want || want <= 0 {
 		t.Fatalf("a visit takes %d, want %d", got, want)
 	}
@@ -187,7 +188,7 @@ func TestResistanceFactorEndpointsDriveAVisit(t *testing.T) {
 		t.Fatal("the next visit waits an interval")
 	}
 	if g.raiders[rid].Warden != 0 {
-		t.Fatal("wardenChat alone does not name the warden (doWarden does)")
+		t.Fatal("Chat alone does not name the warden (Do does)")
 	}
 }
 
@@ -195,7 +196,7 @@ func TestWardenVisitsOncePerIntervalNoFlap(t *testing.T) {
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	g.setPriority(bo, work.Warden, 1)
-	st := g.prisoners[rid]
+	st := g.prison.State(rid)
 	st.Mode, st.Resistance, st.NextVisit = prisoner.Reduce, prisoner.MaxInitialResistance, uint64(g.clock.Now())
 	visits, last := 0, st.Resistance
 	var lastKind job.Kind
@@ -229,22 +230,22 @@ func TestPrisonerFoodBandHysteresis(t *testing.T) {
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	band := func(h int) bool {
-		g.prisonerFoodBand(rid, needs.Pair{Hunger: h, Rest: needs.Full})
+		g.prison.FoodBand(rid, needs.Pair{Hunger: h, Rest: needs.Full})
 		return g.raiders[rid].Hungry
 	}
-	if band(prisonerFoodLow + 1) {
+	if band(prison.FoodLow + 1) {
 		t.Fatal("above the low line: no meal yet")
 	}
-	if !band(prisonerFoodLow) {
+	if !band(prison.FoodLow) {
 		t.Fatal("at the low line: wants a meal")
 	}
-	if !band(prisonerFoodFed - 1) {
+	if !band(prison.FoodFed - 1) {
 		t.Fatal("inside the band it keeps wanting until fed")
 	}
-	if band(prisonerFoodFed) {
+	if band(prison.FoodFed) {
 		t.Fatal("fed: no more")
 	}
-	if band(prisonerFoodFed - 1) {
+	if band(prison.FoodFed - 1) {
 		t.Fatal("inside the band after a meal: no new request")
 	}
 }
@@ -256,8 +257,8 @@ func TestWardenBringsFoodOnceNoFlap(t *testing.T) {
 	if _, err := g.SpawnStack(item.Meal, 5, 10, 10); err != nil {
 		t.Fatal(err)
 	}
-	g.prisoners[rid].NextVisit = 1 << 62 // food only
-	g.SetNeeds(rid, prisonerFoodLow-100, needs.Full)
+	g.prison.State(rid).NextVisit = 1 << 62 // food only
+	g.SetNeeds(rid, prison.FoodLow-100, needs.Full)
 	deliveries := 0
 	var last job.Kind
 	for i := 0; i < 3000; i++ {
@@ -269,7 +270,7 @@ func TestWardenBringsFoodOnceNoFlap(t *testing.T) {
 		}
 		last = j.Kind
 	}
-	if n, _ := g.need.Get(rid); n.Hunger < prisonerFoodFed {
+	if n, _ := g.need.Get(rid); n.Hunger < prison.FoodFed {
 		t.Fatalf("the prisoner should be fed: hunger %d", n.Hunger)
 	}
 	if deliveries != 1 || g.raiders[rid].Hungry {
@@ -284,15 +285,15 @@ func TestRecruitKeepsFamilyAndRemembersWarden(t *testing.T) {
 	capture(t, g, ada, bo, rid)
 	g.sk.skills[bo][skill.Social].Level = 20 // a sure recruit
 	g.setPriority(bo, work.Warden, 1)
-	st := g.prisoners[rid]
+	st := g.prison.State(rid)
 	st.Resistance, st.NextVisit = 0, uint64(g.clock.Now())
-	for i := 0; i < 2000 && g.isPrisoner(rid); i++ {
+	for i := 0; i < 2000 && g.prison.Is(rid); i++ {
 		g.Step(1)
 		fed(g, ada, bo)
 	}
-	if g.isPrisoner(rid) || !slices.Contains(g.pawnIDs, rid) || slices.Contains(g.raiderIDs, rid) {
+	if g.prison.Is(rid) || !slices.Contains(g.pawnIDs, rid) || slices.Contains(g.raiderIDs, rid) {
 		v, _ := g.vital.Get(rid)
-		t.Fatalf("the recruit should be a colonist: prisoner %v pawn %v raider %v vital %+v", g.isPrisoner(rid), slices.Contains(g.pawnIDs, rid), slices.Contains(g.raiderIDs, rid), v)
+		t.Fatalf("the recruit should be a colonist: prisoner %v pawn %v raider %v vital %+v", g.prison.Is(rid), slices.Contains(g.pawnIDs, rid), slices.Contains(g.raiderIDs, rid), v)
 	}
 	if !slices.IsSorted(g.pawnIDs) {
 		t.Fatal("pawnIDs stay ascending")
@@ -362,7 +363,7 @@ func TestExecutionGivesRelativesKillerOpinion(t *testing.T) {
 	capture(t, g, ada, bo, rid)
 	g.setPriority(bo, work.Warden, 1)
 	g.Enqueue(command.Command{Kind: command.SetPrisonerMode, Target: uint64(rid), Mode: uint8(prisoner.Execute)})
-	for i := 0; i < 2000 && g.isPrisoner(rid); i++ {
+	for i := 0; i < 2000 && g.prison.Is(rid); i++ {
 		g.Step(1)
 		fed(g, ada, bo)
 	}
@@ -395,19 +396,19 @@ func TestArrestSuccessAndFailure(t *testing.T) {
 	for i := 0; i < 600 && !failed; i++ {
 		g.Step(1)
 		fed(g, ada, bo)
-		failed = g.jobsOf(ada).Kind == job.Arrest && g.jobsOf(ada).State == job.Fail || g.inSocialFight(ada)
+		failed = g.jobsOf(ada).Kind == job.Arrest && g.jobsOf(ada).State == job.Fail || g.mind.InFight(ada)
 	}
-	if !failed || g.isPrisoner(bo) || !slices.Contains(g.pawnIDs, bo) {
+	if !failed || g.prison.Is(bo) || !slices.Contains(g.pawnIDs, bo) {
 		t.Fatalf("a failed arrest leaves Bo a colonist (failed %v)", failed)
 	}
-	if !g.inSocialFight(ada) || !g.inSocialFight(bo) {
+	if !g.mind.InFight(ada) || !g.mind.InFight(bo) {
 		t.Fatal("Bo fights off the failed arrest")
 	}
-	for i := 0; i < 20000 && (g.inSocialFight(ada) || g.inSocialFight(bo)); i++ {
+	for i := 0; i < 20000 && (g.mind.InFight(ada) || g.mind.InFight(bo)); i++ {
 		g.Step(1)
 		fed(g, ada, bo)
 	}
-	if g.inSocialFight(ada) || g.inSocialFight(bo) {
+	if g.mind.InFight(ada) || g.mind.InFight(bo) {
 		t.Fatal("the resisted-arrest fight never ended")
 	}
 	for _, id := range []entity.EntityID{ada, bo} { // patch them up for the second try
@@ -419,14 +420,14 @@ func TestArrestSuccessAndFailure(t *testing.T) {
 	}
 	g.sk.stats[ada].sheet[stat.ArrestSuccess] = 1000
 	g.sk.skills[ada][skill.Social].Level = 20 // 980 permille
-	for try := 0; try < 6 && !g.isPrisoner(bo); try++ {
+	for try := 0; try < 6 && !g.prison.Is(bo); try++ {
 		g.Enqueue(command.Command{Kind: command.Arrest, Pawn: uint64(ada), Target: uint64(bo)})
-		for i := 0; i < 600 && !g.isPrisoner(bo); i++ {
+		for i := 0; i < 600 && !g.prison.Is(bo); i++ {
 			g.Step(1)
 			fed(g, ada, bo)
 		}
 	}
-	if !g.isPrisoner(bo) || slices.Contains(g.pawnIDs, bo) || !slices.Contains(g.raiderIDs, bo) || !slices.IsSorted(g.raiderIDs) {
+	if !g.prison.Is(bo) || slices.Contains(g.pawnIDs, bo) || !slices.Contains(g.raiderIDs, bo) || !slices.IsSorted(g.raiderIDs) {
 		t.Fatal("an arrested colonist is the colony's prisoner, off the roster")
 	}
 	for i := 0; i < 2000 && !g.inBed(bo); i++ {
@@ -444,9 +445,9 @@ func TestArrestSuccessAndFailure(t *testing.T) {
 func TestSaveLoadKeepsPrisoners(t *testing.T) {
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
-	g.SetNeeds(rid, prisonerFoodLow-1, needs.Full)
+	g.SetNeeds(rid, prison.FoodLow-1, needs.Full)
 	g.Step(1)
-	st := *g.prisoners[rid]
+	st := *g.prison.State(rid)
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "prison"); err != nil {
 		t.Fatal(err)
@@ -455,8 +456,8 @@ func TestSaveLoadKeepsPrisoners(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !h.isPrisoner(rid) || *h.prisoners[rid] != st || !h.raiders[rid].Hungry {
-		t.Fatalf("loaded prisoner %+v / %+v", h.prisoners[rid], h.raiders[rid])
+	if !h.prison.Is(rid) || *h.prison.State(rid) != st || !h.raiders[rid].Hungry {
+		t.Fatalf("loaded prisoner %+v / %+v", h.prison.State(rid), h.raiders[rid])
 	}
 	if p := h.personOf(rid); p == nil || p.Where != wherePrisoner {
 		t.Fatal("the registry keeps the prisoner")

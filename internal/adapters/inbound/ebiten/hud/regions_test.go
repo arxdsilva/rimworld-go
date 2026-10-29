@@ -39,6 +39,7 @@ func TestBarStatuses(t *testing.T) {
 		{"drafted and fighting", with(func(p *game.PawnView) { p.Drafted, p.Action = true, game.ActionAim }), false, false, []string{"fighting", "drafted"}},
 		{"downed and burning", with(func(p *game.PawnView) { p.Status, p.Lying = "downed", true }), true, false, []string{"downed", "burning"}},
 		{"broken, fleeing, drafted", with(func(p *game.PawnView) { p.MentalBreak, p.Fleeing, p.Drafted = "x", true, true }), false, false, []string{"mental", "fleeing", "drafted"}},
+		{"berserk", with(func(p *game.PawnView) { p.MentalBreak = "berserk" }), false, false, []string{"mental"}},
 		// a downed colonist is not "sleeping" and not "idle"
 		{"downed is not asleep or idle", with(func(p *game.PawnView) { p.Status, p.Lying = "downed", true }), false, true, []string{"downed"}},
 	} {
@@ -137,5 +138,15 @@ func TestStackSplit(t *testing.T) {
 		if shown != c.shown || folded != c.folded {
 			t.Errorf("stackSplit(%d, %d, %d) = %d, %d; want %d, %d", c.total, c.rows, c.limit, shown, folded, c.shown, c.folded)
 		}
+	}
+}
+
+// The mental-break mark names the break and keeps the danger colour, which
+// is the hostile red.
+func TestBarStatusNamesBreak(t *testing.T) {
+	t.Parallel()
+	got := BarStatuses(game.PawnView{Status: "alive", MentalBreak: "berserk"}, false, false)
+	if len(got) != 1 || got[0].Label != "mental break: berserk" || got[0].tone != uikit.Danger {
+		t.Fatalf("marks = %+v", got)
 	}
 }
