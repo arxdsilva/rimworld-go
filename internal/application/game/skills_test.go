@@ -274,7 +274,7 @@ func TestViolenceIncapableNeverStrikes(t *testing.T) {
 			t.Fatal("a pacifist struck")
 		}
 	}
-	g.autoEngage(id)
+	g.combat.Strikes.AutoEngage(id)
 	if j, _ := g.jobs.Get(id); j.Kind == job.Attack && j.Active() {
 		t.Fatal("a pacifist engaged")
 	}

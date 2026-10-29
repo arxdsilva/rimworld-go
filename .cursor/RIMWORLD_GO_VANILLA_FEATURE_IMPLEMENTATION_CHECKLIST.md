@@ -514,7 +514,7 @@ This is the heart of autonomous colony behavior.
     -   Category tree.
     -   allowed/disallowed definitions.
     -   quality/condition filters where appropriate.
--   [ ] **Storage priorities**
+-   [x] **Storage priorities** (PLAY-023: Critical…Low per stockpile, re-hauling to a higher priority)
     -   Multiple priority levels.
     -   Haulers move goods from lower-priority to higher-priority valid
         storage.
@@ -610,13 +610,13 @@ This is the heart of autonomous colony behavior.
 -   [x] **Room detection**
     -   Enclosed connected spaces bounded by walls/doors.
     -   Outdoor/unroofed semantics.
--   [x] **Room statistics**
+-   [-] **Room statistics** (cleanliness and an ad-hoc impressiveness; missing: space, beauty, wealth and the vanilla impressiveness formula — BED-2)
     -   Space.
     -   beauty.
     -   cleanliness.
     -   wealth/value.
     -   impressiveness derived from room properties.
--   [x] **Room roles**
+-   [-] **Room roles** (general, bedroom, barracks, dining, workshop; missing: hospital, prison cell/barracks, rec room, kitchen — BED-2)
     -   Bedroom.
     -   barracks.
     -   dining room.
@@ -713,7 +713,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Rot progression** (per-stack rot ticks; full speed from 10C, slower when cool, none at 0C or below; merges average by quantity)
     -   Perishable food/corpses rot based on temperature and elapsed
         time.
--   [-] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; no cooler/freezer building yet)
+-   [-] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; a powered cooler holds a room at its thermostat target; no freezer building)
 -   [x] **Drying** (drying rack dries up to 25 of any perishable food per batch over ~1-2.5 days; dried food never rots)
     -   Cold slows or stops rot according to independently selected
         balance.
@@ -1346,7 +1346,7 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Melee weapons**
     -   Multiple attack verbs/damage profiles.
--   [x] **Ranged weapons**
+-   [-] **Ranged weapons** (rifle with range, accuracy falloff and cooldown; missing: burst, projectiles in flight, per-weapon warmup — DEF-1)
     -   Range.
     -   warmup.
     -   cooldown.
@@ -1397,7 +1397,7 @@ treatment, and surgery are major colony-management systems.
 ## 17.4 Ranged attack
 
 -   [ ] **Target acquisition**
--   [ ] **Warmup**
+-   [-] **Warmup** (a fixed aim of a third of the cooldown; not per weapon — DEF-1)
 -   [x] **Accuracy**
     -   Shooting skill.
     -   weapon.
@@ -1410,7 +1410,7 @@ treatment, and surgery are major colony-management systems.
     -   Can miss intended target and impact another valid cell/entity
         where design supports it.
 -   [ ] **Burst fire**
--   [ ] **Cooldown**
+-   [x] **Cooldown** (per weapon, `weapon.Def.Cooldown`)
 
 ## 17.5 Melee
 
@@ -1446,7 +1446,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Approach/ranged engagement**
 -   [x] **Melee closing**
 -   [ ] **Basic cover seeking**
--   [ ] **Flee behavior for appropriate human enemies**
+-   [x] **Flee behavior for appropriate human enemies** (raiders flee at half HP, half the group down, an idle hour or a day on the map)
 
 ------------------------------------------------------------------------
 
@@ -1891,13 +1891,13 @@ Use original names rather than copying RimWorld storyteller characters.
 -   [x] **Select hostile faction** (NG-1: a hostile human faction weighted by settlement count; none means no raid)
 -   [x] **Generate raider group from point budget** (wealth/40 + 30 per standing colonist + 2 per day; clubs 60, rifles 90; up to 8)
 -   [-] **Generate equipment based on faction/tech** (NG-1: neolithic factions field clubs only, industrial ones rifles)
--   [ ] **Map-edge arrival**
--   [ ] **Immediate attack**
+-   [x] **Map-edge arrival** (raids walk in from a map edge)
+-   [x] **Immediate attack** (the assault plan)
 -   [ ] **Prepare-before-attack behavior**
 
 ## 24.3 Raid tactics
 
--   [ ] **Basic assault**
+-   [x] **Basic assault** (assault plan: target the nearest colonist, ally or powered turret; breach when shut out)
 -   [x] **Sappers/breachers equivalent** (against an enclosed colony from day 10: tunnel through walls, doors and rock, step around traps)
     -   Attack walls/alternate route instead of blindly using normal
         entrance.
@@ -1912,7 +1912,7 @@ Use original names rather than copying RimWorld storyteller characters.
 
 -   [x] **Human raider flee threshold** (badly hurt raiders, or a group that has lost half its members, flee to the edge)
     -   Group may flee after sufficient casualties/damage.
--   [ ] **Kidnap behavior**
+-   [x] **Kidnap behavior** (raiders carry off downed colonists unless guarded; `kidnap.go`)
     -   Raiders can carry downed colonists away under suitable
         circumstances.
 -   [ ] **Steal behavior**
@@ -2309,7 +2309,7 @@ Use original narrative text and generated names.
 
 -   [ ] **Siege assault transition**
 
--   [ ] **Retreat**
+-   [x] **Retreat** (raiders leave at the flee thresholds)
 
     -   Human raid morale.
     -   carry stolen goods/kidnapped pawn if feasible.

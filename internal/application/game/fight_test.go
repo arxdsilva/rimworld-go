@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -392,7 +393,7 @@ func TestFightBystandersStayOut(t *testing.T) {
 		}
 	}
 	for _, f := range []entity.EntityID{a, b} {
-		if _, _, ok := g.threatTo(armed, f, Position{7, 5}, animalRelease, raiderRelease); ok {
+		if _, _, _, ok := g.combat.Guard.ThreatTo(armed, f, 7, 5, combat.AnimalRelease, combat.RaiderRelease); ok {
 			t.Fatal("a brawler counts as a threat to a bystander")
 		}
 	}

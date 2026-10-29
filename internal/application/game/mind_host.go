@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -160,7 +161,7 @@ type mindAggro struct{ g *Game }
 
 func (h mindAggro) CanViolence(id entity.EntityID) bool { return h.g.canViolence(id) }
 func (h mindAggro) Attackable(id entity.EntityID) bool {
-	_, ok := h.g.combatTarget(id)
+	_, _, ok := h.g.combat.Strikes.Target(id)
 	return ok && h.g.onMap(id)
 }
 func (h mindAggro) NearestCreature(id entity.EntityID, r int) entity.EntityID {
@@ -207,19 +208,20 @@ func (h mindAggro) Insult(a, b entity.EntityID) {
 func (h mindAggro) Assault(id, target entity.EntityID) bool {
 	g := h.g
 	j, _ := g.jobs.Get(id)
-	tp, ok := g.combatTarget(target)
+	tx, ty, ok := g.combat.Strikes.Target(target)
 	if ok {
 		if j.Kind == job.Attack && j.Target == target && j.Active() {
 			return true
 		}
-		return g.startJob(id, job.Record{Kind: job.Attack, Target: target, TX: tp.X, TY: tp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))})
+		return g.startJob(id, job.Record{Kind: job.Attack, Target: target, TX: tx, TY: ty, WorkLeft: combat.AimTicks(weaponDefOf(g, id))})
 	}
+	var tp Position
 	if tp, ok = g.positions.Get(target); !ok || !g.onMap(target) {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
 	d := weaponDefOf(g, id)
-	if !g.canHit(pos, d, tp) {
+	if !g.combat.Sight.CanHit(pos.X, pos.Y, d, tp.X, tp.Y) {
 		if j.Kind == job.Move && j.Active() && weapon.Distance(j.TX, j.TY, tp.X, tp.Y) <= 1 {
 			return true
 		}
@@ -229,7 +231,7 @@ func (h mindAggro) Assault(id, target entity.EntityID) bool {
 		g.interrupt(id, job.Cancelled)
 	}
 	if now := uint64(g.clock.Now()); (now+uint64(id))%uint64(max(d.Cooldown, 1)) == 0 {
-		g.strike(id, target, g.weaponOf(id))
+		g.combat.Strikes.Strike(id, target, g.weaponOf(id))
 	}
 	return true
 }
@@ -242,7 +244,7 @@ func (h mindBrawls) Job(id entity.EntityID) job.Record { j, _ := h.g.jobs.Get(id
 func (h mindBrawls) Brawl(id, foe entity.EntityID) {
 	fp, _ := h.g.positions.Get(foe)
 	h.g.jobs.Set(id, job.Record{Kind: job.Brawl, State: job.Goto, Target: foe, TX: fp.X, TY: fp.Y,
-		WorkLeft: aimTicks(weapon.DefOf(weapon.Fists))})
+		WorkLeft: combat.AimTicks(weapon.DefOf(weapon.Fists))})
 }
 func (h mindBrawls) SetJob(id entity.EntityID, j job.Record) { h.g.jobs.Set(id, j) }
 func (h mindBrawls) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
@@ -250,7 +252,7 @@ func (h mindBrawls) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool)
 }
 func (h mindBrawls) Fighter(id entity.EntityID) bool { return h.g.standingPawn(id) }
 func (h mindBrawls) Punch(id, foe entity.EntityID) {
-	h.g.strikeRoll(id, foe, weapon.Fists, h.g.stream(streamSocial).IntN) // combat.go
+	h.g.combat.Strikes.StrikeRoll(id, foe, weapon.Fists, h.g.stream(streamSocial).IntN) // combat/strike.go
 }
 func (h mindBrawls) PunchTicks(id entity.EntityID) int {
 	return h.g.aimTicksFor(id, weapon.DefOf(weapon.Fists).Cooldown)

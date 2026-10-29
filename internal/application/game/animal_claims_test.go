@@ -78,12 +78,12 @@ func TestTrapKillIsTheColonys(t *testing.T) {
 	bareGround(g)
 	placeBuilt(t, g, construction.SpikeTrap, construction.South, 12, 10)
 	deer, err := g.SpawnAnimal("deer", 12, 10)
-	if err != nil || g.trapAt(12, 10) == 0 {
+	if err != nil || g.combat.Traps.At(12, 10) == 0 {
 		t.Fatalf("a deer on a built trap: %v", err)
 	}
 	setAnimal(g, deer, func(a *animal.State) { a.Injury = animal.DefOf(animal.Deer).MaxHP - 1 })
 	for i := 0; i < 200 && animalAlive(g, deer); i++ {
-		g.springTrap(deer, 12, 10) // a missed roll leaves the trap set
+		g.combat.Traps.Spring(deer, 12, 10) // a missed roll leaves the trap set
 	}
 	if animalAlive(g, deer) {
 		t.Fatal("the trap never caught the deer")

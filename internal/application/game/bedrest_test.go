@@ -79,11 +79,11 @@ func sickPatient(t *testing.T) (g *Game, pat, bed entity.EntityID) {
 }
 
 // A patient turning hungry in bed used to be put straight back to bed
-// every tick: sleepDone woke it to eat, then patientRest (before the eat
+// every tick: rest.Sleep.done woke it to eat, then patientRest (before the eat
 // check) laid it down again, so it never ate.
 func TestHungryPatientEatsThenReturnsToBed(t *testing.T) {
 	g, pat, bed := sickPatient(t)
-	g.SetNeeds(pat, needs.CriticalHunger+1, needs.Full) // turns hungry asleep (doSleep)
+	g.SetNeeds(pat, needs.CriticalHunger+1, needs.Full) // turns hungry asleep (rest.Sleep.Do)
 	ate := stepUntil(g, 1500, func() bool {
 		n, _ := g.need.Get(pat)
 		return n.Hunger > needs.CriticalHunger+1000

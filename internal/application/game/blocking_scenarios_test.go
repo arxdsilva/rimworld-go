@@ -55,7 +55,7 @@ func blockingPair(g *Game, a, b entity.EntityID) bool { return !g.partner(a) || 
 // combatPair: two colonists, either in combat, both standing still (not
 // passing through): the pair decision 7 keeps apart.
 func combatPair(g *Game, a, b entity.EntityID) bool {
-	if !g.colonist(a) || !g.colonist(b) || !g.inCombat(a) && !g.inCombat(b) {
+	if !g.colonist(a) || !g.colonist(b) || !g.combat.Guard.InCombat(a) && !g.combat.Guard.InCombat(b) {
 		return false
 	}
 	_, wa := g.walkNext(a)

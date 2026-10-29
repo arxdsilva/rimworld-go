@@ -48,13 +48,13 @@ func TestCampfireCooksWithFuelOnly(t *testing.T) {
 		t.Fatal("campfire")
 	}
 	bid := g.layerBldgAt(8, 4, construction.LayerObject)
-	g.bills[bid] = []recipe.Bill{{Recipe: recipe.CampfireMeal, Mode: recipe.Forever, Target: 1}}
+	g.craft.Bills.Set(bid, []recipe.Bill{{Recipe: recipe.CampfireMeal, Mode: recipe.Forever, Target: 1}})
 	g.SpawnStack(item.Potatoes, 10, 3, 6)
 	g.Step(clock.TicksPerHour / 2)
 	if _, ok := stackOf(g, item.Meal); ok {
 		t.Fatal("an unlit campfire cooked a meal")
 	}
-	if bv := g.billViews(bid); bv[0].Status != BillNoFuel {
+	if bv := g.appendBillViews(nil, bid); bv[0].Status != BillNoFuel {
 		t.Fatalf("bill status %q", bv[0].Status)
 	}
 	g.FuelCampfire(8, 4)

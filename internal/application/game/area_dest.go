@@ -126,19 +126,6 @@ func (g *Game) areaStockpileCell(id entity.EntityID, k item.Kind, nearX, nearY i
 	return g.stockpileCellWhere(k, nearX, nearY, func(x, y int) bool { return g.refContains(r, x, y) })
 }
 
-// sleepFloorSpot is where pawn id at pos lies down with no bed: where it
-// stands, or, standing outside its area, the nearest cell inside.
-func (g *Game) sleepFloorSpot(id entity.EntityID, pos Position) (int, int) {
-	r := g.restrictedRef(id)
-	if r == 0 || g.refContains(r, pos.X, pos.Y) {
-		return pos.X, pos.Y
-	}
-	if x, y, ok := g.nearestRefCell(r, pos); ok {
-		return x, y
-	}
-	return pos.X, pos.Y
-}
-
 // huntGivenUp reports that hunter id's prey, at tp, has stayed outside
 // the hunter's area for huntOutTicks (a forced hunt never gives up). It
 // keeps the clock: the first tick seen outside, cleared once back in.

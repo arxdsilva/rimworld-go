@@ -69,3 +69,19 @@ func TestFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestFurnitureStats(t *testing.T) {
+	t.Parallel()
+	b := Base()
+	if b[Comfort] != 0 || b[Beauty] != 0 || b[RestEffectiveness] != 1000 {
+		t.Fatalf("furniture stat defaults %v %v %v", b[Comfort], b[Beauty], b[RestEffectiveness])
+	}
+	for id, want := range map[ID]string{Comfort: "Comfort", RestEffectiveness: "Rest effectiveness", Beauty: "Beauty"} {
+		if id.Label() != want {
+			t.Fatalf("label %d = %q", id, id.Label())
+		}
+	}
+	if ArrestSuccess+1 != Comfort || Comfort+1 != RestEffectiveness || RestEffectiveness+1 != Beauty || Beauty+1 != NumStats {
+		t.Fatal("append-only order")
+	}
+}

@@ -112,7 +112,7 @@ func (g *Game) bondDecide(id entity.EntityID, a *animal.State, pos Position, now
 // colonist that is; 0 for nobody. It looks only in the creature index.
 func (g *Game) bondCompanion(id entity.EntityID, a animal.State, pos Position) entity.EntityID {
 	near := func(c entity.EntityID, p Position) bool {
-		return g.bondable(c) && g.lineOfSight(pos.X, pos.Y, p.X, p.Y)
+		return g.bondable(c) && g.combat.Sight.Line(pos.X, pos.Y, p.X, p.Y)
 	}
 	if a.Master != 0 {
 		m := entity.EntityID(a.Master)

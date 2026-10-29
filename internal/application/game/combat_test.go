@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -123,11 +124,11 @@ func TestInjuryDownsThenHeals(t *testing.T) {
 func TestWallsBlockShots(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	from, to := Position{X: 2, Y: 4}, Position{X: 8, Y: 4}
-	if !g.lineOfSight(from.X, from.Y, to.X, to.Y) {
+	if !g.combat.Sight.Line(from.X, from.Y, to.X, to.Y) {
 		t.Fatal("open field has sight")
 	}
 	placeBuilt(t, g, construction.Wall, construction.South, 5, 4)
-	if g.lineOfSight(from.X, from.Y, to.X, to.Y) {
+	if g.combat.Sight.Line(from.X, from.Y, to.X, to.Y) {
 		t.Fatal("a wall blocks sight")
 	}
 }
@@ -291,7 +292,7 @@ func TestUnarmedColonistCalmsDown(t *testing.T) {
 	a, _ = g.animals.Get(wolf)
 	a.Target, a.Mode, a.NextThink, a.Path, a.PathI = 0, animal.Wander, 1<<40, nil, 0
 	g.animals.Set(wolf, a)
-	for uint64(g.clock.Now()) < start+fleeCalm-1 {
+	for uint64(g.clock.Now()) < start+combat.FleeCalm-1 {
 		g.Step(1)
 		g.SetNeeds(runner, needs.Full, needs.Full)
 		if j, _ := g.jobs.Get(runner); j.Kind != job.None && j.Kind != job.Move {

@@ -7,7 +7,6 @@ import (
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
@@ -522,27 +521,7 @@ func (g *Game) afterLoadAnimals() {
 			}
 		}
 	}
-	for bid, bills := range g.bills {
-		out, has := bills[:0:0], false
-		changed := false
-		for _, bl := range bills {
-			up := recipe.Upgrade(bl.Recipe)
-			if up != bl.Recipe {
-				changed = true
-				if has {
-					continue // one butcher-animal bill does them all
-				}
-				bl.Recipe = up
-			}
-			if bl.Recipe == recipe.ButcherAnimal {
-				has = true
-			}
-			out = append(out, bl)
-		}
-		if changed {
-			g.bills[bid] = out
-		}
-	}
+	g.craft.Bills.UpgradeLegacy() // craft/bills.go
 }
 
 // pluralLabel is a species' plural display name ("timber wolves").

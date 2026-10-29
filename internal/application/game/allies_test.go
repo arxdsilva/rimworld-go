@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -312,10 +313,10 @@ func TestTurretsIgnoreAllies(t *testing.T) {
 	}
 	place()
 	for i := 0; i < 120; i++ {
-		g.autoEngage(ada)
+		g.combat.Strikes.AutoEngage(ada)
 		g.Step(1)
 		place()
-		if tg := g.turrets.aims[tid].target; tg != 0 {
+		if tg := g.combat.Turrets.Aim(tid).Target; tg != 0 {
 			t.Fatalf("tick %d: the turret locked on %d (allies %v)", g.Tick(), tg, ids)
 		}
 		if j, _ := g.jobs.Get(ada); j.Kind == job.Attack {
@@ -323,11 +324,11 @@ func TestTurretsIgnoreAllies(t *testing.T) {
 		}
 	}
 	rid := turretRaider(t, g, 20, 14)
-	for i := 0; i < turretScanEvery+1 && g.turrets.aims[tid].target == 0; i++ {
+	for i := 0; i < combat.TurretScanEvery+1 && g.combat.Turrets.Aim(tid).Target == 0; i++ {
 		g.Step(1)
 		place()
 	}
-	if tg := g.turrets.aims[tid].target; tg != rid {
+	if tg := g.combat.Turrets.Aim(tid).Target; tg != rid {
 		t.Fatalf("the turret should pick the raider %d past the allies, got %d", rid, tg)
 	}
 }

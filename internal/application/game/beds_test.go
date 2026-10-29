@@ -31,14 +31,14 @@ func bedroom(t *testing.T) (g *Game, a, b, single1, single2, double entity.Entit
 func tireOut(g *Game, id entity.EntityID) {
 	g.SetNeeds(id, needs.Full, needs.CriticalRest-100)
 	g.interrupt(id, job.Interrupted)
-	g.assignSleep(id)
+	g.rest.Assign(id)
 }
 
 // A partnered colonist claims a free double bed; its partner joins the
 // free slot; both then keep it.
 func TestBedPartnersShareDoubleBed(t *testing.T) {
 	g, a, b, s1, _, double := bedroom(t)
-	g.cmdAssignBedOwner(s1, a, 0) // a owns a single bed
+	g.rest.Beds.AssignOwner(s1, a, 0) // a owns a single bed
 	tireOut(g, a)
 	if g.sleptAt[a] != double {
 		t.Fatalf("a sleeps in %d, want the double bed %d", g.sleptAt[a], double)
@@ -195,7 +195,7 @@ func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
 // clears the slot; a bad slot or a non-colonist is ignored.
 func TestBedAssignOwnerCommand(t *testing.T) {
 	g, a, b, s1, _, double := bedroom(t)
-	g.cmdAssignBedOwner(s1, a, 0)
+	g.rest.Beds.AssignOwner(s1, a, 0)
 	g.Enqueue(command.Command{Kind: command.AssignBedOwner, Target: uint64(double), Pawn: uint64(a), Index: 1})
 	g.Step(1)
 	db, _ := g.bldgs.Get(double)
@@ -205,14 +205,14 @@ func TestBedAssignOwnerCommand(t *testing.T) {
 	if sb, _ := g.bldgs.Get(s1); sb.SlotOf(uint64(a)) >= 0 {
 		t.Fatal("old bed kept")
 	}
-	g.cmdAssignBedOwner(double, b, 1) // b takes a's slot
+	g.rest.Beds.AssignOwner(double, b, 1) // b takes a's slot
 	db, _ = g.bldgs.Get(double)
 	if db.Claimant2 != uint64(b) || db.SlotOf(uint64(a)) >= 0 {
 		t.Fatalf("slot 1 = %d after reassigning", db.Claimant2)
 	}
-	g.cmdAssignBedOwner(double, 0, 1)
-	g.cmdAssignBedOwner(double, a, 5)
-	g.cmdAssignBedOwner(s1, a, 1) // a single bed has one slot
+	g.rest.Beds.AssignOwner(double, 0, 1)
+	g.rest.Beds.AssignOwner(double, a, 5)
+	g.rest.Beds.AssignOwner(s1, a, 1) // a single bed has one slot
 	db, _ = g.bldgs.Get(double)
 	sb, _ := g.bldgs.Get(s1)
 	if db.Claimant2 != 0 || db.Claimant != 0 || sb.Claimant != 0 {

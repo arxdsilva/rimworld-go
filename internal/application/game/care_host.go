@@ -126,8 +126,8 @@ func (h careJobs) GoEat(id entity.EntityID) bool {
 	}
 	return false
 }
-func (h careJobs) SleepInBed(id entity.EntityID) bool       { return h.g.sleepInBed(id) }
-func (h careJobs) SleepInPlace(id entity.EntityID)          { h.g.assignSleepInPlace(id) }
+func (h careJobs) SleepInBed(id entity.EntityID) bool       { return h.g.rest.Beds.SleepIn(id) } // rest/beds.go
+func (h careJobs) SleepInPlace(id entity.EntityID)          { h.g.rest.InPlace(id) }
 func (h careJobs) LieInHospitalBed(id entity.EntityID) bool { return h.g.lieInHospitalBed(id) } // surgery.go
 
 type careHealth struct{ g *Game }

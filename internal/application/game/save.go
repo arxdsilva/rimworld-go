@@ -10,6 +10,8 @@ import (
 	"io"
 	mathbits "math/bits"
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -173,7 +175,7 @@ type saveState struct {
 	GrowZones  []zone.GrowZone
 	LastMeal   map[entity.EntityID]item.Kind
 	Bills      map[entity.EntityID][]recipe.Bill
-	Racks      map[entity.EntityID]dryBatch
+	Racks      map[entity.EntityID]craft.Batch
 	Fuel       map[entity.EntityID]int
 	Exposure   map[entity.EntityID][2]int
 	NoComfort  map[entity.EntityID]uint64
@@ -356,10 +358,10 @@ type saveState struct {
 	// again (care/feed.go); nil when there is none (absent in older saves).
 	FeedRetry []care.Entry[uint64]
 	// PLAY-024: the trade state (trade.go) and the sentry turrets' aims
-	// (turret.go); nil when there is nothing to keep, so older saves and
-	// colonies without traders or turrets hash as before.
+	// (combat/turret.go); nil when there is nothing to keep, so older saves
+	// and colonies without traders or turrets hash as before.
 	Trade   *tradeSave
-	Turrets *turretSave
+	Turrets *combat.TurretSave
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -422,9 +424,9 @@ func (g *Game) Save(w io.Writer, name string) error {
 		ItemIDs: g.itemIDs, Stacks: exportStore(g.stacks), FrameIDs: g.frameIDs, Frames: exportStore(g.frames),
 		BldgIDs: g.bldgIDs, Bldgs: exportStore(g.bldgs), PlantIDs: g.plantIDs, Plants: exportStore(g.plants),
 		Terr: g.terr, Mines: g.mines,
-		LastMeal: g.lastMeal, Bills: g.bills, Racks: g.racks, Fuel: g.fuel,
+		LastMeal: g.lastMeal, Bills: g.craft.Bills.Export(), Racks: g.craft.Drying.Export(), Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
-		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
+		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.rest.Export(), Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
 		PrioList: exportPrios(g.prio), Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
@@ -482,7 +484,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Power = g.exportPower()          // power.go (PLAY-021): nil without power
 	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
 	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
-	s.Turrets = g.exportTurrets()      // turret.go (PLAY-024): nil while no turret aims
+	s.Turrets = g.combat.Turrets.Export()
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -562,15 +564,15 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.wl = s.Wildlife
 	setMap(&g.mines, s.Mines)
 	setMap(&g.lastMeal, s.LastMeal)
-	setMap(&g.bills, s.Bills)
-	setMap(&g.racks, s.Racks)
+	g.craft.Bills.Import(s.Bills)  // craft/bills.go
+	g.craft.Drying.Import(s.Racks) // craft/drying.go
 	setMap(&g.fuel, s.Fuel)
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.noFood, s.NoFood)
 	g.importPostponed(s.Postponed)
 	g.postponed.sweepAt = s.PostSweep
 	g.importOrders(s.PostOrders)
-	setMap(&g.restedFree, s.RestedFree)
+	g.rest.Import(s.RestedFree) // rest/sleep.go
 	setMap(&g.calm, s.Calm)
 	setMap(&g.banked, s.Banked)
 	setMap(&g.apparel, s.Apparel)
@@ -664,7 +666,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.med.animalIdxOK = false    // animal_health.go: rebuilt on first use
 	g.importPower(s.Power)       // power.go (PLAY-021)
 	g.importTrade(s.Trade)       // trade.go (PLAY-024): sessions close on load
-	g.importTurrets(s.Turrets)   // turret.go (PLAY-024)
+	g.combat.Turrets.Import(s.Turrets)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History

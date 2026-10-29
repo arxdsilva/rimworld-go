@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -243,16 +244,16 @@ func (g *Game) thinkSiege(id entity.EntityID, r raiderState, now uint64) bool {
 	}
 	// hold the camp; shoot anyone who comes in range
 	if j, _ := g.jobs.Get(id); j.Kind == job.Attack && j.Active() {
-		g.doCombat(id, j, now)
+		g.combat.Strikes.Do(id, j, now)
 		if j2, _ := g.jobs.Get(id); j2.State == job.Goto {
 			g.interrupt(id, job.Cancelled) // never leave the camp to chase
 		}
 		return true
 	}
-	if t, tp, ok := g.nearestColonist(pos); ok && g.canHit(pos, weaponDefOf(g, id), tp) {
+	if t, tp, ok := g.nearestColonist(pos); ok && g.combat.Sight.CanHit(pos.X, pos.Y, weaponDefOf(g, id), tp.X, tp.Y) {
 		g.reserve.ReleaseOwner(id)
 		g.jobs.Set(id, job.Record{Kind: job.Attack, Target: t, TX: tp.X, TY: tp.Y, State: job.Do,
-			WorkLeft: aimTicks(weaponDefOf(g, id))})
+			WorkLeft: combat.AimTicks(weaponDefOf(g, id))})
 	}
 	return true
 }

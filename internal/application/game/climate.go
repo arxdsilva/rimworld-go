@@ -101,7 +101,7 @@ func (g *Game) phaseClimate() {
 	g.heatRooms()
 	g.expose()
 	g.rotItems()
-	g.dryRacks() // frost: per chunk with the plants (plant_growth.go)
+	g.craft.Drying.Advance(climateInterval) // craft/drying.go; frost: per chunk with the plants (plant_growth.go)
 }
 
 // rotItems advances spoilage by the local temperature. Spoiled food is

@@ -3,7 +3,6 @@ package game
 import (
 	"slices"
 
-	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
@@ -117,7 +116,7 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DesignateSmooth:
 		g.markSmooth(c.X, c.Y, c.X2, c.Y2, true) // smooth.go
 	case command.AddBill, command.SetBill, command.RemoveBill:
-		g.applyBill(c)
+		g.craft.Bills.Apply(c) // craft/bills.go
 	case command.DesignateGrowZone:
 		if !g.cropLocked(plant.Species(c.Build)) {
 			g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
@@ -329,7 +328,7 @@ func (g *Game) phaseNeeds() {
 		if n.Exhausted() {
 			// collapse: drop and sleep right here, this tick
 			g.down(id, health.CauseNoBed)
-			g.assignSleepInPlace(id)
+			g.rest.InPlace(id)
 		}
 	}
 }
@@ -413,12 +412,12 @@ func (g *Game) phaseAI() {
 	for _, id := range g.pawnIDs {
 		act := g.activityOf(id)
 		if act != schedule.Sleep {
-			delete(g.restedFree, id) // free time ends with the Sleep block
+			g.rest.Unmark(id) // free time ends with the Sleep block
 		}
 		v, _ := g.vital.Get(id)
 		if v.Status == health.Dead {
 			delete(g.calm, id)
-			delete(g.restedFree, id)
+			g.rest.Unmark(id)
 			g.care.Rest.Clear(id) // care/rest.go
 			g.reserve.ReleaseOwner(id)
 			g.releaseDelivery(id)
@@ -428,7 +427,7 @@ func (g *Game) phaseAI() {
 			g.mind.Downed(id) // mind: a catatonic pawn recovers; a downed breaker calms
 			j, _ := g.jobs.Get(id)
 			if v.Cause == health.CauseNoBed && j.Kind != job.Sleep {
-				g.assignSleepInPlace(id)
+				g.rest.InPlace(id)
 			}
 			continue
 		}
@@ -458,7 +457,7 @@ func (g *Game) phaseAI() {
 		}
 		// an unarmed colonist runs from an attacker before its orders,
 		// work or sleep; queued orders wait for it to calm down (flee.go)
-		if !g.drafted(id) && !g.fightsBack(id) && g.defend(id, j) {
+		if !g.drafted(id) && !g.fightsBack(id) && g.combat.Guard.Defend(id, j) {
 			continue
 		}
 		if g.orderDue(id) && !g.followingOrder(id) && (g.drafted(id) || !needs.SleepScheduled(act)) {
@@ -469,11 +468,11 @@ func (g *Game) phaseAI() {
 			// drafted pawns only follow direct orders, but fire at
 			// hostiles in range when standing idle
 			if j.Kind == job.None || j.State == job.Idle {
-				g.autoEngage(id)
+				g.combat.Strikes.AutoEngage(id)
 			}
 			continue
 		}
-		if g.fightsBack(id) && g.defend(id, j) {
+		if g.fightsBack(id) && g.combat.Guard.Defend(id, j) {
 			continue
 		}
 		// Warmth only wakes a sleeper when the exposure turns dangerous, and
@@ -509,9 +508,9 @@ func (g *Game) phaseAI() {
 		// if it is hungry. Only drafting overrides it. One that already
 		// woke fully rested this block has free time until it tires.
 		if needs.SleepScheduled(act) && n.Rest >= needs.Full {
-			g.restedFree[id] = true
+			g.rest.MarkRested(id)
 		}
-		bedtime := needs.SleepScheduled(act) && (!g.restedFree[id] || n.Tired())
+		bedtime := needs.SleepScheduled(act) && (!g.rest.RestedFree(id) || n.Tired())
 		if bedtime && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
 			if busy {
 				g.interrupt(id, job.Interrupted)
@@ -519,7 +518,7 @@ func (g *Game) phaseAI() {
 			if n.Hungry() && g.seekFood(id) {
 				g.assignEat(id)
 			} else {
-				g.assignSleep(id)
+				g.rest.Assign(id)
 			}
 			continue
 		}
@@ -541,7 +540,7 @@ func (g *Game) phaseAI() {
 			}
 			if tired && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
 				g.interrupt(id, job.Interrupted)
-				g.assignSleep(id)
+				g.rest.Assign(id)
 				continue
 			}
 			g.dressInterrupt(id, j) // apparel.go: drop work for a better outfit
@@ -553,7 +552,7 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		if tired || bedtime {
-			g.assignSleep(id)
+			g.rest.Assign(id)
 			continue
 		}
 		// a free-time activity still running when work was looked for
@@ -756,66 +755,6 @@ func (g *Game) assignEat(id entity.EntityID) {
 	}
 }
 
-func (g *Game) assignSleepInPlace(id entity.EntityID) {
-	pos, _ := g.positions.Get(id)
-	g.sleptAt[id] = 0
-	fx, fy := g.sleepFloorSpot(id, pos) // area_dest.go: on the floor inside the allowed area
-	g.startJob(id, job.Record{Kind: job.Sleep, TX: fx, TY: fy, WorkLeft: needs.SleepWorkMin})
-}
-
-// assignSleep sends pawn id to bed (sleepInBed), or to sleep on the floor
-// when no bed can be had.
-func (g *Game) assignSleep(id entity.EntityID) {
-	if !g.alive(id) || !g.sleepInBed(id) {
-		g.assignSleepInPlace(id)
-	}
-}
-
-// sleepInBed sends pawn id to its partner's or its own bed, else the
-// nearest free bed it may claim (giving up the old one); false, with no
-// bed held, when there is none or it can't be reached. Medical beds are
-// left to patients (care/rest.go: restInMedicalBed holds them for a stay).
-func (g *Game) sleepInBed(id entity.EntityID) bool {
-	if bid, slot, ok := g.partnerBed(id); ok && g.sleepInPartnerBed(id, bid, slot) { // beds.go
-		return true
-	}
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || care.IsMedicalBed(b) { // prison beds: prisoners only
-			continue
-		}
-		if !g.areaAllows(id, b.X, b.Y) {
-			continue // areas.go: a bed outside the allowed area
-		}
-		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)
-		if b.SlotOf(uint64(id)) >= 0 {
-			d = -1 // its own bed first
-		}
-		if d < bestD || (d == bestD && bid < best) {
-			best, bestD = bid, d
-		}
-	}
-	if best != 0 {
-		b, _ := g.bldgs.Get(best)
-		if b.SlotOf(uint64(id)) < 0 {
-			g.releaseBed(id) // moving to a new bed gives up the old one
-		}
-		b = b.Claim(uint64(id))
-		g.bldgs.Set(best, b)
-		g.sleptAt[id] = best
-		sx, sy := g.sleepCellFor(id, b)
-		if !g.startJob(id, job.Record{Kind: job.Sleep, Target: best, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
-			g.bldgs.Set(best, b.Release(uint64(id)))
-			return false // the bed is out of reach
-		}
-		return true
-	}
-	return false
-}
-
 func (g *Game) assignHaul(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
 	for range workTries {
@@ -1001,7 +940,7 @@ func (g *Game) phaseJobs() {
 		j, _ := g.jobs.Get(id)
 		if j.Kind == job.Hunt || j.Kind == job.Attack {
 			if v.Status == health.Alive && (j.State == job.Goto || j.State == job.Do) {
-				g.doCombat(id, j, now)
+				g.combat.Strikes.Do(id, j, now)
 			}
 			continue
 		}
@@ -1016,7 +955,7 @@ func (g *Game) phaseJobs() {
 		case job.Eat:
 			g.doEat(id, j)
 		case job.Sleep:
-			g.doSleep(id, j, now)
+			g.rest.Do(id, j, now) // rest/sleep.go
 		case job.Haul:
 			g.doHaul(id, j)
 		case job.Bury:
@@ -1038,7 +977,7 @@ func (g *Game) phaseJobs() {
 		case job.Sow:
 			g.doSow(id, j)
 		case job.Bill:
-			g.doBill(id, j)
+			g.craft.Shop.Do(id, j) // craft/shop.go
 		case job.Equip:
 			g.doEquip(id, j)
 		case job.Rescue:
@@ -1164,70 +1103,6 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 	g.logEvent(id, logEntry{Kind: logAte, Name: st.Kind.String()})
 	j.State = job.Complete
 	g.jobs.Set(id, j)
-}
-
-func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
-	n, _ := g.need.Get(id)
-	n = needs.SleepTick(n, now)
-	g.need.Set(id, n)
-	j.WorkLeft--
-	if g.sleepDone(id, n, j) {
-		j.State = job.Complete
-		if g.sleptAt[id] != 0 {
-			g.logEvent(id, logEntry{Kind: logSleptBed})
-		} else {
-			g.logEvent(id, logEntry{Kind: logSleptGround})
-		}
-		g.afterSleep(id)
-	}
-	g.jobs.Set(id, j)
-}
-
-// sleepDone reports whether a sleeper gets up now. A collapsed colonist
-// sleeps to WakeRest whatever happens; a healthy one in a medical bed gets
-// up at once; otherwise it wakes to eat, stays while on bed rest, and
-// wakes at full rest in Sleep hours (the rest of the block is free time),
-// with the start of Work hours once over the tired line, and at WakeRest
-// in any other block. These gaps keep it from bouncing between bed and
-// work.
-func (g *Game) sleepDone(id entity.EntityID, n needs.Pair, j job.Record) bool {
-	if v, ok := g.vital.Get(id); ok && v.Status == health.Downed {
-		if v.Cause != health.CauseNoBed || n.Rest < needs.WakeRest {
-			return false
-		}
-		v.Status, v.Cause = health.Alive, health.CauseNone
-		g.vital.Set(id, v)
-	}
-	if j.Target != 0 {
-		if b, ok := g.bldgs.Get(j.Target); ok && care.IsMedicalBed(b) && !g.care.Rest.MayUseMedicalBed(id) {
-			return true // well again: medical beds are for patients (care/rest.go)
-		}
-	}
-	if n.Hungry() && g.seekFood(id) {
-		return true
-	}
-	if g.care.Rest.On(id) {
-		// care/rest.go: stays put until well; one only waiting for a
-		// surgeon who never came gets up after patientWait
-		if j.WorkLeft <= -patientWait && g.awaitingSurgery(id) {
-			g.surgeryGaveUp(id) // surgery.go: don't lie straight back down
-		}
-		return false
-	}
-	act := g.activityOf(id)
-	var done bool
-	switch {
-	case needs.SleepScheduled(act):
-		done = n.Rest >= needs.Full
-		if done {
-			g.restedFree[id] = true
-		}
-	case needs.SleepAllowed(act):
-		done = n.Rest >= needs.WakeRest
-	default: // Work hours
-		done = n.Rest > needs.CriticalRest && j.WorkLeft <= 0
-	}
-	return done
 }
 
 func (g *Game) doHaul(id entity.EntityID, j job.Record) {
@@ -1392,7 +1267,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.structVer++                                       // SIM-029: link/autotile caches
 	g.reorientFootprint(fr.Kind, fr.Facing, fr.X, fr.Y) // doors and gates beside it line up
 	g.autoHome(fr.Kind, fr.Facing, fr.X, fr.Y)          // home.go
-	g.defaultBills(id, fr.Kind)
+	g.craft.Bills.Defaults(id, fr.Kind)                 // craft/bills.go
 	// bushes and crops under the footprint are cleared below
 	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
 	g.clearPlanFootprint(fr.Kind, cells) // plan.go
@@ -1515,7 +1390,7 @@ func (g *Game) phaseMovement() {
 		}
 	}
 	g.care.FollowCarriers()
-	g.trapsUnderfoot(raiders)
+	g.combat.Traps.Underfoot(raiders)
 }
 
 // movePawn takes a colonist's or raider's next path step if it is due

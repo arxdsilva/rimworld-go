@@ -28,6 +28,10 @@ const (
 	NegotiationAbility
 	TradePriceImprovement
 	ArrestSuccess
+	// Beds and rooms (BED-1): furniture stats, all permille.
+	Comfort           // sitting/lying comfort of furniture
+	RestEffectiveness // how fast sleeping on it restores rest
+	Beauty            // tile beauty contribution, thousandths of a beauty point
 	NumStats
 )
 
@@ -73,6 +77,9 @@ var meta = [NumStats]struct {
 	NegotiationAbility:    {"Negotiation ability", unitRate},
 	TradePriceImprovement: {"Trade price improvement", unitRate},
 	ArrestSuccess:         {"Arrest success chance", unitRate},
+	Comfort:               {"Comfort", unitRate},
+	RestEffectiveness:     {"Rest effectiveness", unitRate},
+	Beauty:                {"Beauty", unitRate},
 }
 
 // Label is the display name of a stat.
@@ -87,7 +94,7 @@ func (id ID) Label() string {
 func Base() Sheet {
 	var s Sheet
 	for _, id := range []ID{WorkSpeed, MoveSpeed, HungerRate, RestRate, AimCooldown, LearnRate, RecreationRate,
-		SocialImpact, NegotiationAbility, TradePriceImprovement, ArrestSuccess} {
+		SocialImpact, NegotiationAbility, TradePriceImprovement, ArrestSuccess, RestEffectiveness} {
 		s[id] = 1000
 	}
 	return s

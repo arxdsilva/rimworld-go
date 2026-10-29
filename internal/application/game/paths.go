@@ -138,7 +138,7 @@ func (g *Game) checkThreatScan(id entity.EntityID, pos Position, animalR, raider
 	var want entity.EntityID
 	wantD := 0
 	for _, aid := range g.animalIDs {
-		if _, d, ok := g.threatTo(id, aid, pos, animalR, raiderR); ok && (want == 0 || d < wantD) {
+		if _, _, d, ok := g.combat.Guard.ThreatTo(id, aid, pos.X, pos.Y, animalR, raiderR); ok && (want == 0 || d < wantD) {
 			want, wantD = aid, d
 		}
 	}

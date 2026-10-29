@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -9,7 +10,8 @@ import (
 
 // Unarmed colonists flee (PLAY-010, decision 6): an undrafted colonist
 // with no weapon, or one who won't fight, runs from any animal coming for
-// it from fleeReach tiles off (fleeRelease once fleeing), ahead of its
+// it from combat.FleeReach tiles off (FleeRelease once fleeing; the
+// combat package's Guard), ahead of its
 // orders, its work and its sleep. The flight's goal is fleeDist tiles
 // away from the threat, turned by 45° and then 90° when that way is shut,
 // and always one the colonist can actually walk to.
@@ -22,20 +24,6 @@ const fleeDist = 8
 func (g *Game) fightsBack(id entity.EntityID) bool {
 	_, armed := g.equip[id]
 	return armed && g.canViolence(id)
-}
-
-// threatReach is how close an attacking animal or raider must be for
-// defend to react: armed colonists only meet close attackers, unarmed
-// ones run from far off, and a calm (fleeing) colonist keeps running
-// until the threat is past the wider release radius.
-func threatReach(armed, calm bool) (animalR, raiderR int) {
-	switch {
-	case armed:
-		return animalReach, raiderReach
-	case calm:
-		return fleeRelease, raiderRelease
-	}
-	return fleeReach, raiderReach
 }
 
 // fleeGoal picks where colonist id at pos runs from a threat at tp:
@@ -103,7 +91,7 @@ func (g *Game) fillFleeView(pv *PawnView, id entity.EntityID) {
 	j, _ := g.jobs.Get(id)
 	running := j.Kind == job.Move && j.State == job.Goto && !j.Forced
 	pos, _ := g.positions.Get(id)
-	threat, _, _ := g.nearestThreatTo(id, pos, fleeRelease+fleeViewSlack, raiderRelease+fleeViewSlack)
+	threat, _, _, _ := g.combat.Guard.NearestThreat(id, pos.X, pos.Y, combat.FleeRelease+fleeViewSlack, combat.RaiderRelease+fleeViewSlack)
 	switch {
 	case threat != 0:
 		pv.Job = "Fleeing from " + g.creatureName(threat)

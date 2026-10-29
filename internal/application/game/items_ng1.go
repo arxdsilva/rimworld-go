@@ -48,7 +48,7 @@ func supplyHave(fr construction.Frame, k item.Kind) int {
 	return fr.Wood
 }
 
-// Medicine tiers, the hospital bed and the tool cabinet (NG-1 §4.8).
+// Medicine tiers and the hospital bed (NG-1 §4.8).
 
 // severeInjury: an injury this bad, or any infection, is treated with
 // industrial medicine when there is some.
@@ -60,11 +60,6 @@ const (
 	// medical tend quality). Lying in it also heals faster
 	// (body.LieHospital, lyingHeal in infection.go).
 	hospitalTendOffset = 100
-	// cabinetPct is the bench work bonus of one tool cabinet; cabinetMax
-	// cabinets count; cabinetReach is how near (Chebyshev tiles) they must be.
-	cabinetPct   = 6
-	cabinetMax   = 2
-	cabinetReach = 6
 )
 
 // isMedicine reports a medicine item, either tier.
@@ -92,52 +87,19 @@ func (g *Game) inHospitalBed(patient entity.EntityID) bool {
 	return b.Kind == construction.HospitalBed
 }
 
-// cabinetState caches tool cabinet counts per bench, and each hospital
-// bed's vitals monitor (MED-06), for one structVer.
-type cabinetState struct {
+// monitorCache caches each hospital bed's vitals monitor (MED-06) for one
+// structVer.
+type monitorCache struct {
 	ver uint64
-	by  map[entity.EntityID]int
 	mon map[entity.EntityID]entity.EntityID
 }
 
-// fresh resets the caches when a building or terrain change moved
+// fresh resets the cache when a building or terrain change moved
 // structVer.
-func (c *cabinetState) fresh(ver uint64) {
-	if c.by == nil || c.ver != ver {
-		c.by, c.mon, c.ver = map[entity.EntityID]int{}, map[entity.EntityID]entity.EntityID{}, ver
+func (c *monitorCache) fresh(ver uint64) {
+	if c.mon == nil || c.ver != ver {
+		c.mon, c.ver = map[entity.EntityID]entity.EntityID{}, ver
 	}
-}
-
-// cabinetBonus is the percent bill-work bonus of bench from tool cabinets
-// within cabinetReach tiles (cabinetPct each, at most cabinetMax). It is
-// cached per bench until a building or terrain change moves structVer.
-func (g *Game) cabinetBonus(bench entity.EntityID) int {
-	c := &g.cabinets
-	c.fresh(g.structVer)
-	if pct, ok := c.by[bench]; ok {
-		return pct
-	}
-	pct := g.countCabinets(bench) * cabinetPct
-	c.by[bench] = pct
-	return pct
-}
-
-func (g *Game) countCabinets(bench entity.EntityID) int {
-	b, ok := g.bldgs.Get(bench)
-	if !ok {
-		return 0
-	}
-	n := 0
-	for _, bid := range g.bldgIDs {
-		o, ok := g.bldgs.Get(bid)
-		if !ok || o.Kind != construction.ToolCabinet || chebyshev(Position{X: o.X, Y: o.Y}, Position{X: b.X, Y: b.Y}) > cabinetReach {
-			continue
-		}
-		if n++; n == cabinetMax {
-			break
-		}
-	}
-	return n
 }
 
 // bedMonitor is the vitals monitor serving hospital bed bed: the lowest
@@ -145,7 +107,7 @@ func (g *Game) countCabinets(bench entity.EntityID) int {
 // It is cached per bed until a building or terrain change moves
 // structVer, so the scan runs once per bed after a build or deconstruct.
 func (g *Game) bedMonitor(bed entity.EntityID) entity.EntityID {
-	c := &g.cabinets
+	c := &g.monitors
 	c.fresh(g.structVer)
 	if m, ok := c.mon[bed]; ok {
 		return m

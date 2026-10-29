@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -142,7 +143,7 @@ func (g *Game) researchTry(id entity.EntityID, tried []entity.EntityID) (entity.
 		if !ok || construction.RecipeBench(b.Kind) != construction.ResearchBench || b.Deconstruct {
 			continue // PLAY-021: the electric research bench counts too
 		}
-		if electricBench(b.Kind) && !g.powered(bid) {
+		if craft.ElectricBench(b.Kind) && !g.powered(bid) {
 			continue // production.go: an electric bench works only on power
 		}
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
@@ -172,12 +173,12 @@ func (g *Game) doResearch(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if electricBench(b.Kind) && !g.powered(j.Target) {
+	if craft.ElectricBench(b.Kind) && !g.powered(j.Target) {
 		j.State, j.Fail = job.Fail, job.Blocked // PLAY-021: the power went (put off a while: postpone.go)
 		g.jobs.Set(id, j)
 		return
 	}
-	if u := g.workProgressPct(id, skIntellectual, true, 100+electricPct(b.Kind)); u > 0 && g.research.Add(g.researchCur, g.researchPoints(u)) { // skills.go
+	if u := g.workProgressPct(id, skIntellectual, true, 100+craft.ElectricPct(b.Kind)); u > 0 && g.research.Add(g.researchCur, g.researchPoints(u)) { // skills.go
 		d := research.DefOf(g.researchCur)
 		pos, _ := g.positions.Get(id)
 		msg := "Research finished: " + d.Label + "."

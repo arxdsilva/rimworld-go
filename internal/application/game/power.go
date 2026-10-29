@@ -341,7 +341,7 @@ func (g *Game) powerWant(id entity.EntityID, s power.Spec) int {
 		}
 		return s.Idle
 	case power.ClassDefense: // PLAY-024: a turret holding a target fires
-		if g.turretFiring(id) {
+		if g.combat.Turrets.Firing(id) {
 			return s.Draw
 		}
 		return s.Idle

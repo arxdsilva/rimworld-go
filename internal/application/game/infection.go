@@ -39,7 +39,7 @@ type legacyWound struct {
 
 const (
 	// patientWait caps how long a patient lies in bed waiting for a
-	// surgeon (sleepDone, surgeryGaveUp).
+	// surgeon (rest.Sleep.done, surgeryGaveUp).
 	patientWait = 6 * clock.TicksPerHour
 	// painInjury: injuries this bad hurt (mood) and send the colonist to
 	// bed (care/rest.go).

@@ -241,7 +241,7 @@ func (g *Game) combatStack(i int) {
 		if _, walking := g.walkNext(id); walking {
 			continue
 		}
-		c := g.inCombat(id)
+		c := g.combat.Guard.InCombat(id)
 		if stayed && (c || combat) {
 			o.moveOff = append(o.moveOff, id)
 			continue
@@ -538,9 +538,9 @@ func (g *Game) holderFor(id entity.EntityID, mp bool, c Position) entity.EntityI
 // combat; 0 when none.
 func (g *Game) combatHolder(id entity.EntityID, i int) entity.EntityID {
 	o := &g.occ
-	self := g.inCombat(id)
+	self := g.combat.Guard.InCombat(id)
 	keeps := func(p entity.EntityID) bool {
-		return p != 0 && p != id && g.colonist(p) && (self || g.inCombat(p))
+		return p != 0 && p != id && g.colonist(p) && (self || g.combat.Guard.InCombat(p))
 	}
 	if p := o.pfirst[i]; keeps(p) {
 		return p // the lowest ID

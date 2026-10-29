@@ -422,30 +422,30 @@ func TestToolCabinetBonusCap(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 12})
 	bench := buildNow(t, g, construction.Workbench, item.Wood, construction.South, 10, 5)
-	if got := g.cabinetBonus(bench); got != 0 {
+	if got := g.craft.Cabinets.Bonus(bench); got != 0 {
 		t.Fatalf("no cabinets: %d", got)
 	}
 	buildNow(t, g, construction.ToolCabinet, item.Steel, construction.South, 13, 2)
-	if got := g.cabinetBonus(bench); got != 6 {
+	if got := g.craft.Cabinets.Bonus(bench); got != 6 {
 		t.Fatalf("one cabinet: %d%%, want 6", got)
 	}
 	buildNow(t, g, construction.ToolCabinet, item.Steel, construction.South, 8, 8)
-	if got := g.cabinetBonus(bench); got != 12 {
+	if got := g.craft.Cabinets.Bonus(bench); got != 12 {
 		t.Fatalf("two cabinets: %d%%, want 12", got)
 	}
 	third := buildNow(t, g, construction.ToolCabinet, item.Steel, construction.South, 11, 8)
-	if got := g.cabinetBonus(bench); got != 12 {
+	if got := g.craft.Cabinets.Bonus(bench); got != 12 {
 		t.Fatalf("a third cabinet adds nothing: %d%%, want the cap of 12", got)
 	}
 	// out of reach (7 tiles away) does not count
 	far := buildNow(t, g, construction.Workbench, item.Wood, construction.South, 30, 5)
 	buildNow(t, g, construction.ToolCabinet, item.Steel, construction.South, 37, 5)
-	if got := g.cabinetBonus(far); got != 0 {
+	if got := g.craft.Cabinets.Bonus(far); got != 0 {
 		t.Fatalf("cabinet 7 tiles away: %d%%, want 0", got)
 	}
 	// the count follows the buildings (cache invalidated by the structure version)
 	g.removeBuilding(third)
-	if got := g.cabinetBonus(bench); got != 12 {
+	if got := g.craft.Cabinets.Bonus(bench); got != 12 {
 		t.Fatalf("after removing one of three: %d%%", got)
 	}
 }

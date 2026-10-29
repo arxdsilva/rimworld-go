@@ -83,10 +83,16 @@ const (
 	Dining
 	Workshop
 	Barracks
+	// Roles recognised by RoleOfFull only (RoleOf never returns them).
+	Hospital
+	PrisonCell
+	PrisonBarracks
+	RecRoom
+	Kitchen
 )
 
 func (r Role) String() string {
-	return [...]string{"room", "bedroom", "dining room", "workshop", "barracks"}[r]
+	return [...]string{"room", "bedroom", "dining room", "workshop", "barracks", "hospital", "prison cell", "prison barracks", "recreation room", "kitchen"}[r]
 }
 
 // RoleOf picks the dominant use.

@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -255,7 +256,7 @@ func attackSetup(t *testing.T, w item.Kind, dist int) (g *Game, att, tgt entity.
 	g.Arm(att, w)
 	g.jobs.Set(tgt, job.Record{Kind: job.Sleep, State: job.Do, WorkLeft: 1 << 20, TX: 5 + dist, TY: 5})
 	d := weapon.DefOf(weaponKindOf(w))
-	g.startJob(att, job.Record{Kind: job.Attack, Target: tgt, TX: 5 + dist, TY: 5, WorkLeft: aimTicks(d)})
+	g.startJob(att, job.Record{Kind: job.Attack, Target: tgt, TX: 5 + dist, TY: 5, WorkLeft: combat.AimTicks(d)})
 	return
 }
 
@@ -364,7 +365,7 @@ func TestTraceCarriesAttackerTargetWeapon(t *testing.T) {
 	g.RaidArmed(item.Club)
 	rid := g.raiderIDs[0]
 	g.positions.Set(rid, Position{X: 7, Y: 5})
-	g.doBreach(rid, job.Record{Kind: job.Breach, State: job.Do, Target: wall, DestX: 8, DestY: 5, TX: 7, TY: 5})
+	g.combat.Breach.Do(rid, job.Record{Kind: job.Breach, State: job.Do, Target: wall, DestX: 8, DestY: 5, TX: 7, TY: 5})
 	ts := g.World().Traces
 	if len(ts) == 0 {
 		t.Fatal("no breach trace")
@@ -422,7 +423,7 @@ func (g *Game) strikeUntilHit(t *testing.T, att, tgt entity.EntityID, wk weapon.
 	t.Helper()
 	for i := 0; i < 200; i++ {
 		before := len(g.traces)
-		g.strike(att, tgt, wk)
+		g.combat.Strikes.Strike(att, tgt, wk)
 		if len(g.traces) > before && g.traces[len(g.traces)-1].Hit {
 			return
 		}
@@ -436,7 +437,7 @@ func TestMissDoesNotStampVictim(t *testing.T) {
 	target, _ := g.SpawnNamedPawn(6, 5, "Bo")
 	for i := 0; i < 400; i++ {
 		before := g.lastHit[target]
-		g.strike(shooter, target, weapon.Fists)
+		g.combat.Strikes.Strike(shooter, target, weapon.Fists)
 		if !g.traces[len(g.traces)-1].Hit {
 			if g.lastHit[target] != before {
 				t.Fatal("a miss stamped the victim")

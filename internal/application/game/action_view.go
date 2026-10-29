@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -195,7 +196,7 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 	case job.Clean, job.ClearSnow:
 		return j.Count // set from the tile's filth (or snow) when the job starts
 	case job.Bill:
-		if bills := g.bills[j.Dest]; j.BillIndex < len(bills) {
+		if bills := g.craft.Bills.Of(j.Dest); j.BillIndex < len(bills) {
 			return recipe.DefOf(bills[j.BillIndex].Recipe).Work
 		}
 	}
@@ -250,7 +251,7 @@ func (g *Game) attackCycleOf(id entity.EntityID, j job.Record) float64 {
 			return 0
 		}
 		d := weaponDefOf(g, id)
-		total := aimTicks(d)
+		total := combat.AimTicks(d)
 		// Past the first aim the countdown is the weapon's cooldown.
 		if j.WorkLeft > total || struck && rec.Target == j.Target && now-rec.Tick <= uint64(d.Cooldown) {
 			total = d.Cooldown
@@ -258,7 +259,7 @@ func (g *Game) attackCycleOf(id entity.EntityID, j job.Record) float64 {
 		return cycle(j.WorkLeft, total)
 	case job.Breach:
 		if j.State == job.Do {
-			return cycle(j.WorkLeft, breachCooldown)
+			return cycle(j.WorkLeft, combat.BreachCooldown)
 		}
 	}
 	return 0

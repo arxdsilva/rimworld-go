@@ -3,22 +3,20 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/terrain"
 )
 
-// Combat: pawns wield a weapon (fists when unarmed), attacks resolve
-// instantly with a deterministic roll, and every attack leaves a short
-// trace for presentation. Hunting is a work type that needs a ranged
-// weapon; drafted pawns attack on order and fire at hostiles in range.
+// Combat's game side: weapons, wounds and death, hunting work, and the
+// attack traces' read model. Attack resolution, defending, traps,
+// breaching and turrets are the combat package (combat_host.go).
 
 // Order-menu reasons for combat.
 const (
@@ -70,9 +68,6 @@ func weaponDefOf(g *Game, id entity.EntityID) weapon.Def { return weapon.DefOf(g
 
 func (g *Game) hasRanged(id entity.EntityID) bool { return weaponDefOf(g, id).Ranged }
 
-// aimTicks is the warm-up before a pawn's first attack on a new target.
-func aimTicks(d weapon.Def) int { return d.Cooldown / 3 }
-
 // isPawn reports whether id is a colonist.
 func (g *Game) isPawn(id entity.EntityID) bool {
 	_, ok := g.names.Get(id)
@@ -83,155 +78,6 @@ func (g *Game) isPawn(id entity.EntityID) bool {
 func (g *Game) standingPawn(id entity.EntityID) bool {
 	v, ok := g.vital.Get(id)
 	return ok && v.Status == health.Alive && g.isPawn(id)
-}
-
-// combatTarget returns the position of a target that can still be
-// attacked: a living animal, a standing colonist or a sentry turret
-// (raiders turn on turrets: raids.go raiderTurret).
-func (g *Game) combatTarget(id entity.EntityID) (Position, bool) {
-	if a, ok := g.animals.Get(id); ok {
-		if a.Dead() {
-			return Position{}, false
-		}
-		return g.positions.Get(id)
-	}
-	if g.standingPawn(id) {
-		return g.positions.Get(id)
-	}
-	if b, ok := g.turretAt(id); ok { // turret.go (PLAY-024)
-		return Position{X: b.X, Y: b.Y}, true
-	}
-	return Position{}, false
-}
-
-// blocksSight: rock, walls and (closed) doors stop bullets.
-func (g *Game) blocksSight(x, y int) bool {
-	if terrain.IsRockWall(g.terr.At(x, y)) {
-		return true
-	}
-	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
-		b, _ := g.bldgs.Get(bid)
-		return b.Kind == construction.Wall || b.Kind == construction.Door
-	}
-	return false
-}
-
-// lineOfSight walks the Bresenham line between two tiles, endpoints
-// excluded.
-func (g *Game) lineOfSight(ax, ay, bx, by int) bool {
-	dx, dy := bx-ax, by-ay
-	sx, sy := 1, 1
-	if dx < 0 {
-		dx, sx = -dx, -1
-	}
-	if dy < 0 {
-		dy, sy = -dy, -1
-	}
-	err := dx - dy
-	x, y := ax, ay
-	for {
-		if x == bx && y == by {
-			return true
-		}
-		if !(x == ax && y == ay) && g.blocksSight(x, y) {
-			return false
-		}
-		e2 := 2 * err
-		if e2 > -dy {
-			err -= dy
-			x += sx
-		}
-		if e2 < dx {
-			err += dx
-			y += sy
-		}
-	}
-}
-
-// canHit reports whether attacker (with weapon d) can attack the target
-// at tp from where it stands.
-func (g *Game) canHit(from Position, d weapon.Def, tp Position) bool {
-	dist := weapon.Distance(from.X, from.Y, tp.X, tp.Y)
-	if !weapon.InRange(d, dist) {
-		return false
-	}
-	return !d.Ranged || dist <= 1 || g.lineOfSight(from.X, from.Y, tp.X, tp.Y)
-}
-
-// strike resolves one attack and records its trace.
-func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
-	g.strikeRoll(attacker, target, wk, g.rng.IntN)
-}
-
-// strikeRoll is strike with the hit rolled from roll (a brawl rolls from
-// the social stream: social_fight.go).
-func (g *Game) strikeRoll(attacker, target entity.EntityID, wk weapon.Kind, roll func(int) int) {
-	d := weapon.DefOf(wk)
-	if a, ok := g.animals.Get(attacker); ok { // a natural weapon hits as hard as its owner is big
-		ad := animal.DefOf(a.Species)
-		d.Damage, d.Accuracy = ad.Damage, ad.Accuracy
-	}
-	ap, _ := g.positions.Get(attacker)
-	if b, ok := g.turretAt(target); ok { // PLAY-024: a raider shooting a sentry turret
-		g.strikeBuilding(attacker, target, Position{X: b.X, Y: b.Y}, ap, d, roll)
-		return
-	}
-	tp, ok := g.positions.Get(target)
-	if !ok {
-		return
-	}
-	dist := weapon.Distance(ap.X, ap.Y, tp.X, tp.Y)
-	chance := weapon.HitChance(d, dist)
-	if _, beast := g.animals.Get(attacker); !beast {
-		chance = g.hitChanceFor(attacker, d.Ranged, chance) // skills.go: Shooting/Melee, accuracy stats
-		g.combatLearn(attacker, d.Ranged)
-	}
-	if d.Ranged {
-		chance = chance * (100 - g.coverFor(ap, tp)) / 100
-	}
-	hit := roll(100) < chance
-	tr := projectile.Trace{
-		FromX: ap.X, FromY: ap.Y, ToX: tp.X, ToY: tp.Y,
-		Tick: uint64(g.clock.Now()), Hit: hit, Melee: !d.Ranged,
-		Attacker: attacker, Target: target, Weapon: d.Name,
-	}
-	if hit {
-		tr.Damage = d.Damage
-	}
-	g.traces = append(g.traces, tr)
-	g.lastStrike[attacker] = strikeRec{Target: target, Tick: tr.Tick}
-	g.logStrike(attacker, target, wk, hit, tr.Damage)
-	if hit {
-		g.lastHit[target] = hitRec{Tick: tr.Tick, FromX: ap.X, FromY: ap.Y, Damage: d.Damage}
-		g.stainHit(target, ap, tp, d.Damage) // stains.go: before hurt, while the target exists
-		g.hurt(target, d.Damage, attacker)
-	}
-}
-
-// strikeBuilding is strikeRoll on building target at tp (a sentry
-// turret): the attacker's hit chance (no cover: the turret is the cover),
-// a trace marked Building, and damageBuilding on a hit (turret.go blows a
-// destroyed turret up).
-func (g *Game) strikeBuilding(attacker, target entity.EntityID, tp, ap Position, d weapon.Def, roll func(int) int) {
-	chance := weapon.HitChance(d, weapon.Distance(ap.X, ap.Y, tp.X, tp.Y))
-	if _, beast := g.animals.Get(attacker); !beast {
-		chance = g.hitChanceFor(attacker, d.Ranged, chance) // skills.go
-		g.combatLearn(attacker, d.Ranged)
-	}
-	hit := roll(100) < chance
-	tr := projectile.Trace{
-		FromX: ap.X, FromY: ap.Y, ToX: tp.X, ToY: tp.Y,
-		Tick: uint64(g.clock.Now()), Hit: hit, Melee: !d.Ranged, Building: true,
-		Attacker: attacker, Weapon: d.Name,
-	}
-	if hit {
-		tr.Damage = d.Damage
-	}
-	g.traces = append(g.traces, tr)
-	g.lastStrike[attacker] = strikeRec{Target: target, Tick: tr.Tick}
-	if hit {
-		g.damageBuilding(target, d.Damage)
-	}
 }
 
 // hurt applies damage to an animal or a colonist.
@@ -332,97 +178,6 @@ func (g *Game) heal(id entity.EntityID, v *health.Record, now uint64) {
 	}
 }
 
-// doCombat runs a Hunt or Attack job: close in until the target is in
-// range (and in sight for guns), then attack on cooldown.
-func (g *Game) doCombat(id entity.EntityID, j job.Record, now uint64) {
-	tp, ok := g.combatTarget(j.Target)
-	if ok && !g.canViolence(id) {
-		ok = false // incapable of violence: never attacks or hunts (skills.go)
-	}
-	if ok && j.Kind == job.Hunt {
-		a, _ := g.animals.Get(j.Target)
-		ok = a.Designated
-	}
-	if !ok {
-		g.clearHuntOut(id) // area_dest.go
-		j.State, j.Path = job.Complete, nil
-		g.jobs.Set(id, j)
-		return
-	}
-	if j.Kind == job.Hunt && g.huntGivenUp(id, j, tp, now) { // area_dest.go: the prey stayed out of the area
-		g.abandonHunt(id, j)
-		return
-	}
-	pos, _ := g.positions.Get(id)
-	wk := g.weaponOf(id)
-	d := weapon.DefOf(wk)
-	if j.WorkLeft > 0 {
-		j.WorkLeft--
-	}
-	if g.canHit(pos, d, tp) {
-		j.State, j.Path, j.PathI = job.Do, nil, 0
-		if j.WorkLeft == 0 {
-			g.strike(id, j.Target, wk)
-			j.WorkLeft = g.aimTicksFor(id, d.Cooldown) // skills.go: AimCooldown
-		}
-		g.jobs.Set(id, j)
-		return
-	}
-	stale := j.State != job.Goto || j.PathI >= len(j.Path) ||
-		weapon.Distance(j.TX, j.TY, tp.X, tp.Y) > 1 || (now+uint64(id))%60 == 0
-	if stale {
-		path, ok := g.pathTo(id, tp.X, tp.Y)
-		if !ok {
-			j.State, j.Fail, j.Path = job.Fail, job.Unreachable, nil
-			g.jobs.Set(id, j)
-			return
-		}
-		j.Path, j.PathI, j.TX, j.TY = path, 0, tp.X, tp.Y
-		j.State = job.Goto
-		if len(path) == 0 {
-			j.State = job.Do
-		}
-	}
-	g.jobs.Set(id, j)
-}
-
-// autoEngage makes an idle drafted pawn attack the nearest hostile it
-// can hit from where it stands.
-func (g *Game) autoEngage(id entity.EntityID) {
-	if !g.canViolence(id) {
-		return
-	}
-	pos, _ := g.positions.Get(id)
-	d := weaponDefOf(g, id)
-	best, bestD := entity.EntityID(0), 1<<30
-	for _, aid := range g.animalIDs {
-		a, ok := g.animals.Get(aid)
-		if !ok || !g.hostile(a) {
-			continue
-		}
-		ap, _ := g.positions.Get(aid)
-		dist := weapon.Distance(pos.X, pos.Y, ap.X, ap.Y)
-		if dist < bestD && g.canHit(pos, d, ap) {
-			best, bestD = aid, dist
-		}
-	}
-	for _, rid := range g.raiderIDs {
-		if !g.standingRaider(rid) {
-			continue
-		}
-		rp, _ := g.positions.Get(rid)
-		dist := weapon.Distance(pos.X, pos.Y, rp.X, rp.Y)
-		if dist < bestD && g.canHit(pos, d, rp) {
-			best, bestD = rid, dist
-		}
-	}
-	if best == 0 {
-		return
-	}
-	ap, _ := g.positions.Get(best)
-	g.startJob(id, job.Record{Kind: job.Attack, Target: best, TX: ap.X, TY: ap.Y, WorkLeft: aimTicks(d)})
-}
-
 // hostile: an animal currently attacking a colonist.
 func (g *Game) hostile(a animal.State) bool {
 	return !a.Tame && a.Mode == animal.Attack && a.Target != 0 && g.isPawn(a.Target) && !g.isRaider(a.Target)
@@ -472,7 +227,7 @@ func (g *Game) assignHunt(id entity.EntityID) bool {
 		if !g.hasRanged(id) {
 			return g.assignEquip(id, item.Rifle)
 		}
-		if g.startJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))}) {
+		if g.startJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}) {
 			return true
 		}
 		tried = append(tried, best)
@@ -539,134 +294,6 @@ func (g *Game) traceViews() []TraceView {
 			FromBuilding: t.FromBuilding, Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon})
 	}
 	return out
-}
-
-// Threat reach for defend: an animal attacking a colonist this close, or
-// a raider shooting at it from this far. The release radii apply while
-// a colonist is already fleeing (or fighting a target), so it gets well
-// clear before turning back to work (no work/flee flapping).
-const (
-	animalReach   = 4
-	raiderReach   = 14
-	animalRelease = 8
-	raiderRelease = 18
-	// fleeReach, fleeRelease: an unarmed colonist runs from an animal
-	// coming for it from this far off, and keeps running until it is
-	// past fleeRelease (PLAY-010; flee.go).
-	fleeReach   = 12
-	fleeRelease = 16
-	// fleeCalm is how long an unarmed colonist who fled holds back from
-	// work after it last saw the threat.
-	fleeCalm = 600
-	// switchMargin: an armed colonist only swaps targets for a threat
-	// this many tiles closer than the one it is fighting.
-	switchMargin = 3
-)
-
-// threatTo reports t's position and distance when it is attacking id
-// within reach (animals from close by, raiders from further off).
-func (g *Game) threatTo(id, t entity.EntityID, pos Position, animalR, raiderR int) (Position, int, bool) {
-	if a, ok := g.animals.Get(t); ok {
-		if a.Mode != animal.Attack || a.Target != id {
-			return Position{}, 0, false
-		}
-		ap, _ := g.positions.Get(t)
-		d := weapon.Distance(pos.X, pos.Y, ap.X, ap.Y)
-		return ap, d, d < animalR
-	}
-	rj, _ := g.jobs.Get(t)
-	if !g.isRaider(t) || !g.standingRaider(t) || rj.Kind != job.Attack || rj.Target != id {
-		return Position{}, 0, false
-	}
-	rp, _ := g.positions.Get(t)
-	d := weapon.Distance(pos.X, pos.Y, rp.X, rp.Y)
-	return rp, d, d < raiderR
-}
-
-// nearestThreatTo is the closest animal or raider attacking id within
-// reach (0: none).
-func (g *Game) nearestThreatTo(id entity.EntityID, pos Position, animalR, raiderR int) (entity.EntityID, Position, int) {
-	var threat entity.EntityID
-	var tp Position
-	best := 0
-	consider := func(t entity.EntityID) {
-		if p, d, ok := g.threatTo(id, t, pos, animalR, raiderR); ok && (threat == 0 || d < best) {
-			threat, tp, best = t, p, d
-		}
-	}
-	// attacking animals from the creature index (animal_index.go): the
-	// nearest within animalR, ties to the lower id — the first in
-	// animalIDs, which ascend
-	if animalR > 0 {
-		attacking := func(t entity.EntityID, _ Position) bool {
-			a, ok := g.animals.Get(t)
-			return ok && a.Mode == animal.Attack && a.Target == id
-		}
-		if aid, ap, ok := g.nearestWhere(pos.X, pos.Y, animalR-1, ckAnimal, attacking); ok {
-			threat, tp, best = aid, ap, weapon.Distance(pos.X, pos.Y, ap.X, ap.Y)
-		}
-	}
-	if selfCheck() {
-		g.checkThreatScan(id, pos, animalR, raiderR, threat, best) // paths.go
-	}
-	for _, rid := range g.raiderIDs {
-		consider(rid)
-	}
-	return threat, tp, best
-}
-
-// defend reacts to an animal or raider attacking an undrafted colonist:
-// armed colonists fight back, unarmed ones run (flee.go) and then hold
-// back from work and orders until they calm down. It reports whether it
-// acted.
-func (g *Game) defend(id entity.EntityID, j job.Record) bool {
-	pos, _ := g.positions.Get(id)
-	now := uint64(g.clock.Now())
-	armed := g.fightsBack(id) // a pacifist runs instead (skills.go)
-	calm := false
-	if until, ok := g.calm[id]; ok {
-		if calm = now < until && !armed; !calm {
-			delete(g.calm, id)
-		}
-	}
-	ar, rr := threatReach(armed, calm)
-	threat, tp, best := g.nearestThreatTo(id, pos, ar, rr)
-	if threat == 0 {
-		return calm // still shaken: hold position, start no work
-	}
-	if armed {
-		if j.Kind == job.Attack && j.State != job.Fail {
-			if j.Target == threat {
-				return true
-			}
-			// keep the current target (and its aim) unless the new one is much closer
-			if _, d, ok := g.threatTo(id, j.Target, pos, animalRelease, raiderRelease); ok && best > d-switchMargin {
-				return true
-			}
-		}
-		g.interrupt(id, job.Interrupted)
-		g.startJob(id, job.Record{Kind: job.Attack, Target: threat, TX: tp.X, TY: tp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))})
-		return true
-	}
-	if !calm {
-		g.logEvent(id, logEntry{Kind: logFled, Other: threat, Name: g.creatureName(threat)})
-	}
-	g.calm[id] = now + fleeCalm // calm down only once the threat is gone
-	running := calm && j.Kind == job.Move && j.State == job.Goto && !j.Forced
-	if running && (now+uint64(id))%30 != 0 {
-		return true // keep running
-	}
-	fx, fy, ok := g.fleeGoal(id, pos, tp)
-	if !ok {
-		// cornered: stay put rather than work, sleep or walk an order
-		if !running {
-			g.dropForFlight(id, j)
-		}
-		return true
-	}
-	g.dropForFlight(id, j)
-	g.startJob(id, job.Record{Kind: job.Move, TX: fx, TY: fy})
-	return true
 }
 
 // walkableNear clamps (x, y) to the map and finds a walkable tile within

@@ -5,29 +5,17 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
-	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/combat/projectile"
-	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/terrain"
 )
 
-// Defences. Buildings take damage and break. Raiders and wild animals
-// cannot open the colony's doors, so a closed-off colony makes raiders
-// bash through the nearest door or wall instead. Sandbags (and wall
-// corners) give cover to whoever stands right behind them. Spike traps
-// spring on raiders and predators, then are re-laid as blueprints.
+// Defences, game side. Buildings take damage, break and are mended.
+// Raiders and wild animals cannot open the colony's doors (hostileMap);
+// raiders shut out plan through breachMap. Cover, traps and breaching are
+// the combat package (combat/defense.go).
 
 const (
-	// breachCooldown is the ticks between blows on a door or wall.
-	breachCooldown = 60
-	// trapDamage is the injury a sprung spike trap deals.
-	trapDamage = 32
-	// trapChance is the percent chance a raider or predator springs a trap
-	// it walks over.
-	trapChance = 75
 	// repairPerTick is the hit points a builder mends per work tick.
 	repairPerTick = 1
 	// rebuildFirst: rebuild blueprints count as this many tiles closer
@@ -167,116 +155,6 @@ func (g *Game) doorAt(x, y int) bool {
 	return b.Kind == construction.Door
 }
 
-// startBreach sends a raider that cannot reach tp to break in: it plans
-// a route as if walls and doors were gone and attacks the first one on it.
-func (g *Game) startBreach(id entity.EntityID, tp Position) bool {
-	pos, _ := g.positions.Get(id)
-	breaks := g.buildingCells(construction.Wall, construction.Door)
-	if g.sapper(id) {
-		breaks = g.sapperBreaks() // sappers tunnel through rock too
-	}
-	bm := breachMap{g: g, breaks: breaks}
-	path, ok := g.searcher().Find(bm, pos.X, pos.Y, tp.X, tp.Y)
-	if !ok {
-		return false
-	}
-	q := g.pathQuery(id)
-	sx, sy := pos.X, pos.Y
-	for _, p := range path {
-		if !q.Walkable(p.X, p.Y) {
-			bid := g.layerBldgAt(p.X, p.Y, construction.LayerObject)
-			if bid == 0 && !terrain.IsRockWall(g.terr.At(p.X, p.Y)) {
-				return false // a trap in the way: plan again later
-			}
-			rec := job.Record{Kind: job.Breach, Target: bid, DestX: p.X, DestY: p.Y, TX: sx, TY: sy, WorkLeft: breachCooldown}
-			return g.startJob(id, rec)
-		}
-		sx, sy = p.X, p.Y
-	}
-	return false
-}
-
-// doBreach: a raider beside a door or wall hits it on cooldown.
-func (g *Game) doBreach(id entity.EntityID, j job.Record) {
-	if j.Target == 0 {
-		g.doDig(id, j)
-		return
-	}
-	b, ok := g.bldgs.Get(j.Target)
-	if !ok {
-		j.State = job.Complete
-		g.jobs.Set(id, j)
-		return
-	}
-	if j.State == job.Goto {
-		return // still walking up (movement advances it)
-	}
-	pos, _ := g.positions.Get(id)
-	if !g.touches(pos, b) {
-		j.State, j.Fail = job.Fail, job.Unreachable
-		g.jobs.Set(id, j)
-		return
-	}
-	if j.WorkLeft > 0 {
-		j.WorkLeft--
-		g.jobs.Set(id, j)
-		return
-	}
-	j.WorkLeft = breachCooldown
-	g.jobs.Set(id, j)
-	dmg := weapon.DefOf(g.weaponOf(id)).Damage
-	if g.hasRanged(id) {
-		dmg = 7 // rifle butt
-	}
-	g.traces = append(g.traces, projectile.Trace{FromX: pos.X, FromY: pos.Y, ToX: b.X, ToY: b.Y,
-		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true,
-		Attacker: id, Weapon: weaponDefOf(g, id).Name})
-	g.lastStrike[id] = strikeRec{Tick: uint64(g.clock.Now())}
-	g.damageBuilding(j.Target, dmg)
-}
-
-// doDig: a sapper beside a rock tile hacks at it on cooldown.
-func (g *Game) doDig(id entity.EntityID, j job.Record) {
-	if !terrain.IsRockWall(g.terr.At(j.DestX, j.DestY)) {
-		j.State = job.Complete
-		g.jobs.Set(id, j)
-		return
-	}
-	if j.State == job.Goto {
-		return
-	}
-	pos, _ := g.positions.Get(id)
-	if abs(pos.X-j.DestX) > 1 || abs(pos.Y-j.DestY) > 1 {
-		j.State, j.Fail = job.Fail, job.Unreachable
-		g.jobs.Set(id, j)
-		return
-	}
-	if j.WorkLeft > 0 {
-		j.WorkLeft--
-		g.jobs.Set(id, j)
-		return
-	}
-	j.WorkLeft = breachCooldown
-	g.jobs.Set(id, j)
-	dmg := max(10, weapon.DefOf(g.weaponOf(id)).Damage)
-	g.traces = append(g.traces, projectile.Trace{FromX: pos.X, FromY: pos.Y, ToX: j.DestX, ToY: j.DestY,
-		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true,
-		Attacker: id, Weapon: weaponDefOf(g, id).Name})
-	g.lastStrike[id] = strikeRec{Tick: uint64(g.clock.Now())}
-	g.digRock(j.DestX, j.DestY, dmg)
-}
-
-// touches reports p standing next to (or on) a building's footprint.
-func (g *Game) touches(p Position, b construction.Building) bool {
-	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-	for _, c := range cells {
-		if abs(c[0]-p.X) <= 1 && abs(c[1]-p.Y) <= 1 {
-			return true
-		}
-	}
-	return false
-}
-
 // damageBuilding harms a building, destroying it at zero hit points.
 func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 	b, ok := g.bldgs.Get(id)
@@ -298,9 +176,9 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 	}
 	g.removeBuilding(id)
 	if b.Kind == construction.SentryTurret {
-		// turret.go (PLAY-024): it blows up once it is gone and its
+		// combat/turret.go (PLAY-024): it blows up once it is gone and its
 		// blueprint laid, so the blast never finds it standing
-		defer g.turretBlast(id, b)
+		defer g.combat.Turrets.Blast(id, b)
 	}
 	if b.Ancient {
 		return // vault.go: an ancient piece leaves no blueprint to rebuild
@@ -360,28 +238,6 @@ func covers(cells [][2]int, x, y int) bool {
 	return false
 }
 
-// coverFor is the cover (percent) the target at tp has against a shot
-// from ap: the best of the buildings on the cells beside it, facing the
-// shooter.
-func (g *Game) coverFor(ap, tp Position) int {
-	if weapon.Distance(ap.X, ap.Y, tp.X, tp.Y) <= 1 {
-		return 0
-	}
-	sx, sy := sign(ap.X-tp.X), sign(ap.Y-tp.Y)
-	cells := [][2]int{{tp.X + sx, tp.Y + sy}}
-	if sx != 0 && sy != 0 {
-		cells = append(cells, [2]int{tp.X + sx, tp.Y}, [2]int{tp.X, tp.Y + sy})
-	}
-	best := 0
-	for _, c := range cells {
-		if bid := g.layerBldgAt(c[0], c[1], construction.LayerObject); bid != 0 {
-			b, _ := g.bldgs.Get(bid)
-			best = max(best, construction.CoverPct(b.Kind))
-		}
-	}
-	return best
-}
-
 func sign(v int) int {
 	switch {
 	case v > 0:
@@ -390,67 +246,6 @@ func sign(v int) int {
 		return -1
 	}
 	return 0
-}
-
-// trapAt is a built spike trap on (x, y).
-func (g *Game) trapAt(x, y int) entity.EntityID {
-	bid := g.layerBldgAt(x, y, construction.LayerObject)
-	if bid == 0 {
-		return 0
-	}
-	if b, _ := g.bldgs.Get(bid); b.Kind == construction.SpikeTrap {
-		return bid
-	}
-	return 0
-}
-
-// hasTraps is a cheap check before looking for traps under movers.
-func (g *Game) hasTraps() bool {
-	for _, id := range g.bldgIDs {
-		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.SpikeTrap {
-			return true
-		}
-	}
-	return false
-}
-
-// springTrap: a raider or predator stepped on (x, y).
-func (g *Game) springTrap(victim entity.EntityID, x, y int) {
-	tid := g.trapAt(x, y)
-	if tid == 0 || g.rng.IntN(100) >= trapChance {
-		return
-	}
-	t, _ := g.bldgs.Get(tid)
-	who := g.name(victim)
-	if a, ok := g.animals.Get(victim); ok {
-		who = "a " + a.Species.String()
-	}
-	g.message(x, y, "A spike trap caught %s.", who)
-	g.traces = append(g.traces, projectile.Trace{FromX: x, FromY: y, ToX: x, ToY: y,
-		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: trapDamage})
-	g.removeBuilding(tid)
-	g.placeFrameStuff(construction.SpikeTrap, t.Stuff, construction.South, x, y) // re-lay it
-	g.logEvent(victim, logEntry{Kind: logTrap, Amount: trapDamage})
-	g.hurt(victim, trapDamage, 0)
-}
-
-// trapsUnderfoot springs traps under raiders and predators that just
-// moved.
-func (g *Game) trapsUnderfoot(movers []entity.EntityID) {
-	if len(movers) == 0 || !g.hasTraps() {
-		return
-	}
-	for _, id := range movers {
-		if p, ok := g.positions.Get(id); ok {
-			g.springTrap(id, p.X, p.Y)
-		}
-	}
-}
-
-// trapVictim reports animals that spring traps: wild predators and
-// manhunters.
-func (g *Game) trapVictim(a animal.State) bool {
-	return !a.Tame && (animal.DefOf(a.Species).Predator || a.Enraged(uint64(g.clock.Now())))
 }
 
 // assignRepair sends a builder to mend the nearest damaged building, but

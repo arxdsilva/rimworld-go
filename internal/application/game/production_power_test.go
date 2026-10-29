@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -19,7 +20,7 @@ import (
 // benchStuff is what bench kind k is built of here: steel for an
 // electric bench, wood for the rest.
 func benchStuff(k construction.Kind) item.Kind {
-	if electricBench(k) {
+	if craft.ElectricBench(k) {
 		return item.Steel
 	}
 	return item.Wood
@@ -39,7 +40,7 @@ func cookGame(t *testing.T, k construction.Kind, powered bool) (g *Game, cook, s
 	g.SpawnStack(item.Berries, 6, 1, 4)
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.DoCount), Count: 1})
 	g.Step(1)
-	if len(g.bills[stove]) != 1 {
+	if len(g.craft.Bills.Of(stove)) != 1 {
 		t.Fatalf("%s takes no simple meal bill", k)
 	}
 	return g, cook, stove, gen
@@ -50,7 +51,7 @@ func cookGame(t *testing.T, k construction.Kind, powered bool) (g *Game, cook, s
 func cookTicks(t *testing.T, g *Game, cook, stove entity.EntityID) int {
 	t.Helper()
 	work := 0
-	for i := 0; i < 4000 && g.bills[stove][0].Done == 0; i++ {
+	for i := 0; i < 4000 && g.craft.Bills.Of(stove)[0].Done == 0; i++ {
 		if i%100 == 0 {
 			g.SetNeeds(cook, needs.Full, needs.Full)
 		}
@@ -59,7 +60,7 @@ func cookTicks(t *testing.T, g *Game, cook, stove entity.EntityID) int {
 			work++
 		}
 	}
-	if g.bills[stove][0].Done != 1 {
+	if g.craft.Bills.Of(stove)[0].Done != 1 {
 		t.Fatal("no meal cooked")
 	}
 	return work
@@ -72,12 +73,12 @@ func TestElectricStoveCooksFaster(t *testing.T) {
 	g, cook, stove, _ := cookGame(t, construction.Stove, false)
 	plain := cookTicks(t, g, cook, stove)
 	g, cook, stove, _ = cookGame(t, construction.ElectricStove, true)
-	if st := g.billViews(stove)[0].Status; st == BillNoPower {
+	if st := g.appendBillViews(nil, stove)[0].Status; st == BillNoPower {
 		t.Fatal("a powered electric stove shows no power")
 	}
 	fast := cookTicks(t, g, cook, stove)
 	t.Logf("simple meal: %d work ticks at a stove, %d at an electric stove", plain, fast)
-	if fast*100 > plain*100*100/(100+electricSpeedPct)+100 || fast*100 < plain*100*100/(100+electricSpeedPct)-100 {
+	if fast*100 > plain*100*100/(100+craft.ElectricSpeedPct)+100 || fast*100 < plain*100*100/(100+craft.ElectricSpeedPct)-100 {
 		t.Fatalf("electric stove %d work ticks, stove %d: want 40%% faster", fast, plain)
 	}
 }
@@ -94,7 +95,7 @@ func TestElectricStoveNeedsPower(t *testing.T) {
 			t.Fatal("a colonist took a bill at an unpowered electric stove")
 		}
 	}
-	if st := g.billViews(stove)[0].Status; st != BillNoPower {
+	if st := g.appendBillViews(nil, stove)[0].Status; st != BillNoPower {
 		t.Fatalf("bill status %q, want %q", st, BillNoPower)
 	}
 }
@@ -131,8 +132,8 @@ func TestElectricStovePowerCutMidBill(t *testing.T) {
 	if !g.postponedFor(cook, job.Bill, stove, 0, 0) {
 		t.Fatal("the unpowered stove is not put off")
 	}
-	if st := g.billViews(stove)[0].Status; st != BillNoPower || g.bills[stove][0].Done != 0 {
-		t.Fatalf("bill %+v, status %q", g.bills[stove][0], st)
+	if st := g.appendBillViews(nil, stove)[0].Status; st != BillNoPower || g.craft.Bills.Of(stove)[0].Done != 0 {
+		t.Fatalf("bill %+v, status %q", g.craft.Bills.Of(stove)[0], st)
 	}
 	if n := g.stockOf(item.Berries); n != 6 {
 		t.Fatalf("%d berries, want all 6", n)
@@ -189,7 +190,7 @@ func TestElectricResearchBench(t *testing.T) {
 	g, ada = researchGame(t, construction.ElectricResearchBench, true)
 	fast := researchPerTick(t, g, ada, 500)
 	t.Logf("500 ticks of study: %d points at a research bench, %d at an electric one", plain, fast)
-	if fast*100 < plain*(100+electricSpeedPct)-2*100 || fast*100 > plain*(100+electricSpeedPct)+2*100 {
+	if fast*100 < plain*(100+craft.ElectricSpeedPct)-2*100 || fast*100 > plain*(100+craft.ElectricSpeedPct)+2*100 {
 		t.Fatalf("electric research bench %d points, plain %d: want 40%% more", fast, plain)
 	}
 	g, ada = researchGame(t, construction.ElectricResearchBench, false)

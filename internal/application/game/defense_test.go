@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -68,10 +69,10 @@ func TestSandbagsGiveCover(t *testing.T) {
 		t.Fatal("build sandbags")
 	}
 	behind, shooter := Position{X: 10, Y: 5}, Position{X: 2, Y: 5}
-	if c := g.coverFor(shooter, behind); c != construction.CoverPct(construction.Sandbags) {
+	if c := g.combat.Sight.Cover(shooter.X, shooter.Y, behind.X, behind.Y); c != construction.CoverPct(construction.Sandbags) {
 		t.Fatalf("cover %d", c)
 	}
-	if c := g.coverFor(Position{X: 18, Y: 5}, behind); c != 0 {
+	if c := g.combat.Sight.Cover(18, 5, behind.X, behind.Y); c != 0 {
 		t.Fatalf("no cover from the open side, got %d", c)
 	}
 	if !g.grid.Walkable(9, 5) {
@@ -87,13 +88,13 @@ func TestSpikeTrapSpringsOnRaiderAndIsRelaid(t *testing.T) {
 	g.Raid(1)
 	rid := g.raiderIDs[0]
 	g.positions.Set(rid, Position{X: 10, Y: 5})
-	for i := 0; i < 20 && g.trapAt(10, 5) != 0; i++ {
-		g.springTrap(rid, 10, 5)
+	for i := 0; i < 20 && g.combat.Traps.At(10, 5) != 0; i++ {
+		g.combat.Traps.Spring(rid, 10, 5)
 	}
-	if g.trapAt(10, 5) != 0 {
+	if g.combat.Traps.At(10, 5) != 0 {
 		t.Fatal("the trap should have sprung")
 	}
-	if v, _ := g.vital.Get(rid); v.Injury < trapDamage {
+	if v, _ := g.vital.Get(rid); v.Injury < combat.TrapDamage {
 		t.Fatalf("injury %d", v.Injury)
 	}
 	if g.layerFrameAt(10, 5, construction.LayerObject) == 0 {

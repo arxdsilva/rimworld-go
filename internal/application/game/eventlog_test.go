@@ -51,7 +51,7 @@ func TestColonistHitAndMissLogged(t *testing.T) {
 		t.Fatalf("%v / %v", logTexts(g, a), logTexts(g, b))
 	}
 	for i := 0; i < 300 && !hasLog(g, a, "Missed Bo"); i++ {
-		g.strike(a, b, weapon.Knife)
+		g.combat.Strikes.Strike(a, b, weapon.Knife)
 	}
 	if !hasLog(g, a, "Missed Bo") || !hasLog(g, b, "Ada missed") {
 		t.Fatalf("%v / %v", logTexts(g, a), logTexts(g, b))
@@ -64,8 +64,8 @@ func TestTrapAndDownedLogged(t *testing.T) {
 	g.Raid(1)
 	rid := g.raiderIDs[0]
 	g.positions.Set(rid, Position{X: 10, Y: 5})
-	for i := 0; i < 20 && g.trapAt(10, 5) != 0; i++ {
-		g.springTrap(rid, 10, 5)
+	for i := 0; i < 20 && g.combat.Traps.At(10, 5) != 0; i++ {
+		g.combat.Traps.Spring(rid, 10, 5)
 	}
 	if !hasLog(g, rid, "Hurt by a trap (-") {
 		t.Fatalf("raider log %v", logTexts(g, rid))

@@ -221,7 +221,7 @@ func (g *Game) chase(id entity.EntityID, a *animal.State, now uint64) {
 				a.HuntSince = now // a strike: the hunt is still on (T5)
 			}
 			g.animals.Set(id, *a)
-			g.strike(id, a.Target, def.Attack)
+			g.combat.Strikes.Strike(id, a.Target, def.Attack)
 			if cur, ok := g.animals.Get(id); ok {
 				*a = cur // a kill updates this animal (hunger, target)
 			}

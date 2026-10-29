@@ -258,39 +258,6 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 // social layer smooths it (social_mood.go).
 func (g *Game) moodOf(id entity.EntityID) int { return g.smoothedMood(id, g.thoughtLevel(id)) }
 
-// afterSleep records how and where pawn id slept.
-func (g *Game) afterSleep(id entity.EntityID) {
-	pos, _ := g.positions.Get(id)
-	r := g.roomAt(pos.X, pos.Y)
-	onFloor := g.sleptAt[id] == 0
-	if b, ok := g.bldgs.Get(g.sleptAt[id]); ok && b.Kind == construction.SleepingSpot {
-		onFloor = true
-	}
-	if onFloor {
-		if r < 0 && g.underSky(pos.X, pos.Y) {
-			g.remember(id, mood.SleptOutside)
-		} else {
-			g.remember(id, mood.SleptOnGround)
-		}
-		return
-	}
-	g.remember(id, mood.SleptInBed)
-	if r < 0 {
-		if g.underSky(pos.X, pos.Y) {
-			g.remember(id, mood.SleptOutside)
-		}
-		return
-	}
-	switch s := g.roomScore(r); {
-	case s < 0:
-		g.remember(id, mood.SleptInAwfulRoom)
-	case s >= 12:
-		g.remember(id, mood.SleptInNiceRoom)
-	default:
-		g.memories[id] = g.memories[id].ForgetGroupOf(mood.SleptInNiceRoom)
-	}
-}
-
 // afterEat records what and where pawn id ate from stack st, and rolls
 // the meal's food poisoning (food_poison.go).
 func (g *Game) afterEat(id entity.EntityID, st item.Stack) {

@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
@@ -63,7 +64,7 @@ func TestDeconstructedRackReturnsBatch(t *testing.T) {
 		t.Fatal("could not build a drying rack")
 	}
 	bid := g.bldgIDs[len(g.bldgIDs)-1]
-	g.racks[bid] = dryBatch{Kind: item.Berries, Qty: 10, Left: item.Berries.DryTicks()}
+	g.craft.Drying.Set(bid, craft.Batch{Kind: item.Berries, Qty: 10, Left: item.Berries.DryTicks()})
 	g.removeBuilding(bid)
 	st, ok := stackOf(g, item.Berries)
 	if !ok || st.Qty != 10 || st.Dried {

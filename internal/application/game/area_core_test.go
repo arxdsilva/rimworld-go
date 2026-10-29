@@ -170,13 +170,13 @@ func TestAreaBedChoiceAndFloorFallback(t *testing.T) {
 	g, id := areaGame(t)
 	g.positions.Set(id, Position{8, 3})
 	out := buildNow(t, g, construction.Bed, item.Wood, construction.South, 12, 3)
-	g.assignSleep(id)
+	g.rest.Assign(id)
 	if j, _ := g.jobs.Get(id); j.Kind != job.Sleep || j.Target == out || !g.areas.Contains(0, j.TX, j.TY) {
 		t.Fatalf("sleep job %+v: the bed outside was chosen or the spot is outside", j)
 	}
 	in := buildNow(t, g, construction.Bed, item.Wood, construction.South, 3, 12)
 	g.jobs.Set(id, job.Record{})
-	g.assignSleep(id)
+	g.rest.Assign(id)
 	if j, _ := g.jobs.Get(id); j.Target != in {
 		t.Fatalf("sleep job %+v: want the bed inside (%d)", j, in)
 	}
@@ -184,11 +184,11 @@ func TestAreaBedChoiceAndFloorFallback(t *testing.T) {
 	g.bldgs.Set(in, construction.Building{})
 	g.positions.Set(id, Position{20, 5})
 	g.jobs.Set(id, job.Record{})
-	g.assignSleepInPlace(id)
+	g.rest.InPlace(id)
 	if j, _ := g.jobs.Get(id); j.Kind != job.Sleep || j.TX != 9 || j.TY != 5 {
 		t.Fatalf("floor sleep %+v: want the nearest cell inside (9, 5)", j)
 	}
-	if x, y := g.sleepFloorSpot(id, Position{4, 4}); x != 4 || y != 4 {
+	if x, y := (restBodies{g}).FloorSpot(id, 4, 4); x != 4 || y != 4 {
 		t.Fatal("inside its area it sleeps where it stands")
 	}
 	// a hospital bed is medical rest: exempt wherever it stands
@@ -297,7 +297,7 @@ func TestAreaHuntAbandon(t *testing.T) {
 	g.equip[id] = item.Rifle
 	g.worldS().huntOut[id] = huntOutRec{Pawn: id, Prey: prey, Since: 0}
 	g.jobs.Set(id, job.Record{Kind: job.Hunt, Target: prey, TX: 20, TY: 5, State: job.Goto})
-	g.doCombat(id, job.Record{Kind: job.Hunt, Target: prey, TX: 20, TY: 5, State: job.Goto}, 5000)
+	g.combat.Strikes.Do(id, job.Record{Kind: job.Hunt, Target: prey, TX: 20, TY: 5, State: job.Goto}, 5000)
 	if r, _ := g.jobs.Get(id); r.State != job.Fail || !g.postponedFor(id, job.Hunt, prey, 0, 0) {
 		t.Fatalf("hunt not abandoned: %+v", r)
 	}

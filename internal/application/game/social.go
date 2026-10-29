@@ -142,7 +142,7 @@ func (g *Game) canHear(a entity.EntityID, pa Position, ra int, b entity.EntityID
 	if !(ra >= 0 && ra == rb || ra == room.Outdoors && rb == room.Outdoors) {
 		return false
 	}
-	return g.lineOfSight(pa.X, pa.Y, pb.X, pb.Y)
+	return g.combat.Sight.Line(pa.X, pa.Y, pb.X, pb.Y)
 }
 
 // interact resolves one interaction a starts with b.

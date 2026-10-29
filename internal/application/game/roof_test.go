@@ -585,7 +585,7 @@ func TestSleptUnderRoofNotOutside(t *testing.T) {
 	g.ensureRooms()
 	under, open, bare := worker(t, g, 12, 5), worker(t, g, 3, 3), worker(t, g, 18, 5)
 	for _, id := range []entity.EntityID{under, open, bare} {
-		g.afterSleep(id)
+		g.rest.Waking.After(id)
 	}
 	if remembers(g, under, mood.SleptOutside) || !remembers(g, under, mood.SleptOnGround) {
 		t.Fatal("sleeping under a roof is on the ground, not outside")
@@ -601,7 +601,7 @@ func TestSleptUnderRoofNotOutside(t *testing.T) {
 	g.sleptAt[open] = g.layerBldgAt(5, 8, construction.LayerObject)
 	g.positions.Set(open, Position{X: 5, Y: 8})
 	g.memories[open] = nil
-	g.afterSleep(open)
+	g.rest.Waking.After(open)
 	if g.sleptAt[open] != 0 && !remembers(g, open, mood.SleptOutside) {
 		t.Fatal("a bed in the open is outside")
 	}

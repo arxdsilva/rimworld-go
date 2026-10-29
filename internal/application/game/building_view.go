@@ -170,8 +170,8 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 		bv.TroughFill, bv.TroughCap = g.troughFill(id), construction.TroughCapacity
 		bv.TroughFilter = troughFilterNames[min(int(g.troughs[id].Filter), len(troughFilterNames)-1)]
 	}
-	if rb := g.racks[id]; rb.Qty > 0 {
-		bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()
+	if rb := g.craft.Drying.Batch(id); rb.Qty > 0 {
+		bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.Percent()
 	}
 	bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = g.footprintOf(b.Kind, b.Facing, b.X, b.Y)
 	g.fillGraveView(bv, id, b)  // burial.go
@@ -183,7 +183,9 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	// (power_view.go)
 	bv.Glow, bv.GlowRadius = g.glowOf(id, b)
 	g.fillPowerBuilding(bv, id, b)
-	g.fillTurretView(bv, id, b, uint64(g.clock.Now())) // turret.go (PLAY-024)
+	if b.Kind == construction.SentryTurret { // combat/turret.go (PLAY-024)
+		bv.AimDir, bv.ShotAge = g.combat.Turrets.View(id, uint64(g.clock.Now()))
+	}
 }
 
 // equalBuildingView reports two views that read the same: every field

@@ -120,18 +120,18 @@ func TestMoveBedKeepsOwner(t *testing.T) {
 func TestMoveBenchKeepsBills(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "butcher table", "south", 3, 3)
-	if len(g.bills[bid]) == 0 {
+	if len(g.craft.Bills.Of(bid)) == 0 {
 		t.Fatal("butcher table should start with bills")
 	}
-	g.bills[bid][0].Done = 2
-	want := append(g.bills[bid][:0:0], g.bills[bid]...)
+	g.craft.Bills.Of(bid)[0].Done = 2
+	want := append(g.craft.Bills.Of(bid)[:0:0], g.craft.Bills.Of(bid)...)
 	moveCmd(g, bid, construction.South, 8, 5)
-	if !reflect.DeepEqual(g.bills[bid], want) {
+	if !reflect.DeepEqual(g.craft.Bills.Of(bid), want) {
 		t.Fatal("bills changed while pending")
 	}
 	finishMove(t, g, bid)
-	if !reflect.DeepEqual(g.bills[bid], want) {
-		t.Fatalf("bills %v, want %v", g.bills[bid], want)
+	if !reflect.DeepEqual(g.craft.Bills.Of(bid), want) {
+		t.Fatalf("bills %v, want %v", g.craft.Bills.Of(bid), want)
 	}
 	if b, _ := g.bldgs.Get(bid); b.X != 8 || b.Y != 5 {
 		t.Fatalf("bench at %d,%d", b.X, b.Y)

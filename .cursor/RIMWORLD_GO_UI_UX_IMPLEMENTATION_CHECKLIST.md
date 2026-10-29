@@ -862,7 +862,7 @@ understandable.
 
 ## 14.4 Bill explanation
 
--   [ ] **Missing ingredient reason**
+-   [x] **Missing ingredient reason** (the bill status reads "waiting for ingredients")
 -   [ ] **No valid worker reason**
 -   [x] **No power reason** (PLAY-021: not connected, brownout, switched off, solar flare, no fuel; in the warning colour, and a no-power badge on the map)
 -   [x] **Research locked reason** (architect tools, crops and bills greyed with "Needs research: X" on hover)

@@ -171,7 +171,7 @@ func (g *Game) gatherJoins(id entity.EntityID, j job.Record) bool {
 	if n.Tired() || n.Hungry() && g.seekFood(id) {
 		return false
 	}
-	return !(needs.SleepScheduled(g.activityOf(id)) && !g.restedFree[id])
+	return !(needs.SleepScheduled(g.activityOf(id)) && !g.rest.RestedFree(id))
 }
 
 // guestCell is where guest id waits: the free chair nearest the spot

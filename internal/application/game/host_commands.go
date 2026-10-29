@@ -17,7 +17,7 @@ func (g *Game) applyHostCommand(c command.Command) {
 	case command.SetDrugPolicy:
 		g.cmdSetDrugPolicy(pawn, c.Mode) // drugs.go
 	case command.AssignBedOwner:
-		g.cmdAssignBedOwner(target, pawn, c.Index) // beds.go
+		g.rest.Beds.AssignOwner(target, pawn, c.Index) // rest/beds.go
 	case command.SetAnimalMaster:
 		g.cmdSetAnimalMaster(target, pawn) // bonds.go
 	case command.SetAnimalFollow:

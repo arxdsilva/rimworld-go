@@ -1130,7 +1130,7 @@ func (g *Game) surgeryWait(patient entity.EntityID, op body.Operation) (string, 
 // helps the patient lying in it: tend quality +7 %, surgery ×105 %,
 // immunity gain +2 %. wiki: Vitals monitor. One monitor counts per bed;
 // the bed's monitor is cached until a building changes (structVer, as
-// cabinetBonus in items_ng1.go), and power is checked live.
+// the tool-cabinet bonus in craft/cabinet.go), and power is checked live.
 const (
 	monitorTendOffset = 70 // wiki: Vitals monitor (+7 % medical tend quality)
 	monitorImmunity   = 20 // wiki: Vitals monitor (+2 % immunity gain speed)

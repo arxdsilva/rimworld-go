@@ -724,8 +724,8 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 	m.stepped(now, g.weatherSlow(to.X, to.Y, a.StepCostAt(a.StepGait, isDiagonal(from, to))))
 	g.motion.Set(id, *m)
 	g.animals.Set(id, *a)
-	if g.trapVictim(*a) && g.hasTraps() && g.trapAt(to.X, to.Y) != 0 {
-		g.springTrap(id, to.X, to.Y)
+	if t := g.combat.Traps; t.Victim(*a) && t.Has() && t.At(to.X, to.Y) != 0 {
+		t.Spring(id, to.X, to.Y)
 	}
 }
 

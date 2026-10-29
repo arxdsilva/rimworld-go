@@ -202,6 +202,9 @@ rimworld-go/
 │   │
 │   ├── application/
 │   │   ├── game/
+│   │   │   ├── combat/      # strikes, line of sight and cover, defending, traps, breaching, turrets (DEF-0)
+│   │   │   ├── craft/       # bills, bench work, drying, tool cabinets; later quality and stuff (PRD-0)
+│   │   │   ├── rest/        # sleeping: where and when, bed claims, partner beds, waking thoughts (BED-0)
 │   │   │   ├── care/        # looking after pawns that can't look after themselves: carry, rescue, tend, bed rest, beds, pawn-targeted orders (SIM-061)
 │   │   │   ├── mind/        # mental breaks, including those that target others, and social fights (SIM-066)
 │   │   │   └── prison/      # prisoner state, a prisoner's life and warden work (SIM-066 budget move)

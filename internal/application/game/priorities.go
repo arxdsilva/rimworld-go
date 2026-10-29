@@ -2,7 +2,6 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/work"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -106,7 +105,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		// bills (refining medicine) at a bench
 		return g.care.Doctor.Assign(id) ||
 			g.assignSurgery(id) || g.assignTendAnimal(id) || // surgery.go, vet_animals.go
-			g.anyBillFor(work.Doctor) && g.assignBill(id, work.Mask(0).Set(work.Doctor, true))
+			g.craft.Bills.AnyFor(work.Doctor) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Doctor, true)) // craft package
 	case work.Warden:
 		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
@@ -115,7 +114,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
 			g.assignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go
 	case work.Cook, work.Craft:
-		return g.assignBill(id, work.Mask(0).Set(t, true))
+		return g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // craft/shop.go
 	case work.Hunt:
 		return g.assignHunt(id)
 	case work.Handle: // SIM-026: taming moved here from Hunt
@@ -166,20 +165,4 @@ func (g *Game) setSchedule(id entity.EntityID, hour int, a schedule.Activity) {
 	s := g.scheduleOf(id)
 	s[hour] = a
 	g.scheds[id] = s
-}
-
-// anyBillFor reports a bench holding a bill of work type t. It spares a
-// doctor with nothing to tend assignBill's full bench scan when no bench
-// has doctoring bills (the usual case). It ranges over the bills map, a
-// handful of benches, rather than every building: an existence check, so
-// the map's order never shows in the result.
-func (g *Game) anyBillFor(t work.Type) bool {
-	for _, bills := range g.bills {
-		for _, bl := range bills {
-			if recipe.DefOf(bl.Recipe).Skill == t {
-				return true
-			}
-		}
-	}
-	return false
 }

@@ -335,11 +335,11 @@ func TestOldSaveCorpsesConvert(t *testing.T) {
 	}
 	placeBuilt(t, g, construction.ButcherTable, construction.South, 8, 3)
 	bid := g.bldgIDs[0]
-	g.bills[bid] = []recipe.Bill{
+	g.craft.Bills.Set(bid, []recipe.Bill{
 		{Recipe: recipe.ButcherDustbuck, Mode: recipe.DoCount, Target: 4},
 		{Recipe: recipe.ButcherRidgewolf, Mode: recipe.Forever, Target: 1},
 		{Recipe: recipe.SimpleMeal, Mode: recipe.Forever, Target: 1},
-	}
+	})
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "old"); err != nil {
 		t.Fatal(err)
@@ -363,7 +363,7 @@ func TestOldSaveCorpsesConvert(t *testing.T) {
 			t.Fatalf("legacy corpse left: %+v", st)
 		}
 	}
-	bills := h.bills[bid]
+	bills := h.craft.Bills.Of(bid)
 	if len(bills) != 2 || bills[0].Recipe != recipe.ButcherAnimal || bills[0].Mode != recipe.DoCount ||
 		bills[0].Target != 4 || bills[1].Recipe != recipe.SimpleMeal {
 		t.Fatalf("legacy butcher bills fold into one butcher-animal bill: %+v", bills)

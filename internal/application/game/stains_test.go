@@ -102,7 +102,7 @@ func TestMissLeavesNoStain(t *testing.T) {
 	a, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b, _ := g.SpawnNamedPawn(6, 5, "Bo")
 	for i := 0; i < 400; i++ {
-		g.strike(a, b, weapon.Fists)
+		g.combat.Strikes.Strike(a, b, weapon.Fists)
 		if !g.traces[len(g.traces)-1].Hit {
 			if len(g.stains.tiles) != 0 {
 				t.Fatalf("a miss left %d stains", len(g.stains.tiles))

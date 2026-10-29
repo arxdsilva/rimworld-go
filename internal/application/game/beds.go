@@ -1,24 +1,18 @@
 package game
 
 import (
-	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
-	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Couples' beds and lovin' (ENG-003, M5). assignSleep asks partnerBed
-// first: a partnered colonist takes the free slot of the double bed its
-// partner holds, else keeps its own double bed, else claims a free double
-// bed for the two (the partner joins it on its next sleep); otherwise the
-// usual choice (its own bed, any bed) stands. Each rule keeps what the
-// couple already holds, so the choice never flips between nights.
+// Couples' lovin' (ENG-003, M5). Couples' beds and bed ownership live in
+// the rest package (rest/beds.go); lovin' stays here with the social
+// layer: its cooldown is saved with the gatherings and its roll is on the
+// social stream.
 //
 // Lovin': every lovinPeriod ticks, staggered by id, a couple lying asleep
 // in the same double bed may make love (an age-based mean interval sets
@@ -38,130 +32,6 @@ const (
 // lovinInterval is the mean ticks between a couple's lovin' by age: an
 // hour and a half up to 22, then rarer with the years.
 var lovinInterval = social.Curve{{X: 16, Y: 3750}, {X: 22, Y: 3750}, {X: 30, Y: 10000}, {X: 50, Y: 30000}, {X: 75, Y: 90000}}
-
-// slotOwner is who holds slot of bed b (0: free).
-func slotOwner(b construction.Building, slot int) uint64 {
-	if slot == 1 {
-		return b.Claimant2
-	}
-	return b.Claimant
-}
-
-// withSlot is b with slot held by id (0 frees it).
-func withSlot(b construction.Building, slot int, id uint64) construction.Building {
-	if slot == 1 {
-		b.Claimant2 = id
-	} else {
-		b.Claimant = id
-	}
-	return b
-}
-
-// partnerBed is the bed and slot pawn id should sleep in for its partner:
-// the partner's double bed, its own double bed, or a free one (nearest).
-func (g *Game) partnerBed(id entity.EntityID) (entity.EntityID, int, bool) {
-	if !g.romanceable(id) {
-		return 0, 0, false
-	}
-	p := g.partnerOf(id) // social_romance.go
-	if p == 0 || !g.onMap(p) || !g.romanceable(p) {
-		return 0, 0, false
-	}
-	pos, _ := g.positions.Get(id)
-	var own, free entity.EntityID
-	ownSlot, freeD := 0, 1<<30
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.DoubleBed || b.ForPrisoners || care.IsMedicalBed(b) {
-			continue // medical beds are for patients (care/rest.go)
-		}
-		if ps := b.SlotOf(uint64(p)); ps >= 0 {
-			if o := slotOwner(b, 1-ps); o == 0 || o == uint64(id) {
-				return bid, 1 - ps, true
-			}
-			continue
-		}
-		if s := b.SlotOf(uint64(id)); s >= 0 && own == 0 {
-			own, ownSlot = bid, s
-			continue
-		}
-		if b.Claimant == 0 && b.Claimant2 == 0 {
-			if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < freeD {
-				free, freeD = bid, d
-			}
-		}
-	}
-	switch {
-	case own != 0:
-		return own, ownSlot, true
-	case free != 0:
-		return free, 0, true
-	}
-	return 0, 0, false
-}
-
-// sleepInPartnerBed sends pawn id to slot of bed bid, giving up any other
-// bed; false (nothing changed) leaves assignSleep to choose as usual.
-func (g *Game) sleepInPartnerBed(id, bid entity.EntityID, slot int) bool {
-	b, ok := g.bldgs.Get(bid)
-	if !ok || slot < 0 || slot >= b.Kind.Sleepers() {
-		return false
-	}
-	if o := slotOwner(b, slot); o != 0 && o != uint64(id) {
-		return false
-	}
-	orig := b
-	prev, hadPrev := g.sleptAt[id]
-	b = withSlot(b.Release(uint64(id)), slot, uint64(id))
-	g.bldgs.Set(bid, b)
-	g.sleptAt[id] = bid
-	sx, sy := construction.SleepCell(b.Kind, b.Facing, b.X, b.Y, slot)
-	if !g.startJob(id, job.Record{Kind: job.Sleep, Target: bid, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
-		g.bldgs.Set(bid, orig)
-		if hadPrev {
-			g.sleptAt[id] = prev
-		} else {
-			delete(g.sleptAt, id)
-		}
-		return false
-	}
-	for _, other := range g.bldgIDs {
-		if other == bid {
-			continue
-		}
-		if ob, ok := g.bldgs.Get(other); ok && ob.SlotOf(uint64(id)) >= 0 {
-			g.bldgs.Set(other, ob.Release(uint64(id)))
-		}
-	}
-	return true
-}
-
-// cmdAssignBedOwner makes owner (0: nobody) hold slot of bed: the owner
-// gives up any other bed, and whoever held the slot loses it. A medical
-// bed has no owner (care/rest.go).
-func (g *Game) cmdAssignBedOwner(bed, owner entity.EntityID, slot int) {
-	b, ok := g.bldgs.Get(bed)
-	if !ok || !b.Kind.Sleeps() || slot < 0 || slot >= b.Kind.Sleepers() {
-		return
-	}
-	if owner != 0 {
-		if care.IsMedicalBed(b) {
-			return
-		}
-		if !g.colonist(owner) {
-			return
-		}
-		if v, ok := g.vital.Get(owner); !ok || v.Status == health.Dead {
-			return
-		}
-		if slotOwner(b, slot) == uint64(owner) {
-			return
-		}
-		g.releaseBed(owner) // tick.go
-		b, _ = g.bldgs.Get(bed)
-	}
-	g.bldgs.Set(bed, withSlot(b, slot, uint64(owner)))
-}
 
 // BedForPrisoners reports bed is marked for prisoners (the inspector's
 // toggle state; M8 owns the mark).

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -71,12 +72,40 @@ func turretRaider(t testing.TB, g *Game, x, y int) entity.EntityID {
 // holdFire keeps every turret from shooting (its next shot far off), so a
 // test of the lock alone keeps its target alive.
 func holdFire(g *Game) {
-	for id, a := range g.turrets.aims {
-		if a.target != 0 {
-			a.readyAt = math.MaxUint64 / 2
-			g.turrets.aims[id] = a
+	s := g.combat.Turrets.Export()
+	if s == nil {
+		return
+	}
+	for i := range s.Aims {
+		if s.Aims[i].Target != 0 {
+			s.Aims[i].ReadyAt = math.MaxUint64 / 2
 		}
 	}
+	g.combat.Turrets.Import(s)
+}
+
+// raiderTurret is the turret a raider at pos turns on instead of the
+// colonist cd tiles off (combat/turret.go ForRaider).
+func raiderTurret(g *Game, pos Position, cd int) (entity.EntityID, Position, bool) {
+	id, x, y, ok := g.combat.Turrets.ForRaider(pos.X, pos.Y, cd, sightRange)
+	return id, Position{X: x, Y: y}, ok
+}
+
+// turretAimList is every turret's aim, ascending (none: nil).
+func turretAimList(g *Game) []combat.AimSave {
+	if s := g.combat.Turrets.Export(); s != nil {
+		return s.Aims
+	}
+	return nil
+}
+
+// turretAims is the set of turrets holding an aim record.
+func turretAims(g *Game) map[entity.EntityID]bool {
+	m := map[entity.EntityID]bool{}
+	for _, a := range turretAimList(g) {
+		m[a.ID] = true
+	}
+	return m
 }
 
 // turretTraces counts the live traces a turret fired.
@@ -99,7 +128,7 @@ func TestTurretFiresOnlyWhenPowered(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		g.Step(1)
 		g.positions.Set(rid, Position{X: 20, Y: 12})
-		if turretTraces(g) != 0 || g.turretFiring(tid) {
+		if turretTraces(g) != 0 || g.combat.Turrets.Firing(tid) {
 			t.Fatalf("tick %d: an unpowered turret aimed or fired", g.Tick())
 		}
 	}
@@ -125,10 +154,10 @@ func TestTurretFiresOnlyWhenPowered(t *testing.T) {
 	// the power goes: it lets go at the next balance and fires no more
 	out = 0
 	g.Step(powerInterval)
-	shot := g.turrets.aims[tid].shotAt
+	shot := g.combat.Turrets.Aim(tid).ShotAt
 	for i := 0; i < 200; i++ {
 		g.Step(1)
-		if g.turretFiring(tid) || g.turrets.aims[tid].shotAt != shot {
+		if g.combat.Turrets.Firing(tid) || g.combat.Turrets.Aim(tid).ShotAt != shot {
 			t.Fatalf("tick %d: the turret kept firing without power", g.Tick())
 		}
 	}
@@ -144,17 +173,17 @@ func TestTurretNeedsLineOfSight(t *testing.T) {
 	for i := 0; i < 120; i++ {
 		g.Step(1)
 		g.positions.Set(rid, Position{X: 20, Y: 12})
-		if g.turretFiring(tid) {
+		if g.combat.Turrets.Firing(tid) {
 			t.Fatal("the turret locked on through a wall")
 		}
 	}
 	g.removeBuilding(wall)
-	for i := 0; i < turretScanEvery && !g.turretFiring(tid); i++ {
+	for i := 0; i < combat.TurretScanEvery && !g.combat.Turrets.Firing(tid); i++ {
 		g.Step(1)
 		g.positions.Set(rid, Position{X: 20, Y: 12})
 	}
-	if g.turrets.aims[tid].target != rid {
-		t.Fatalf("with the wall gone the turret should lock on within a scan: aim %+v", g.turrets.aims[tid])
+	if g.combat.Turrets.Aim(tid).Target != rid {
+		t.Fatalf("with the wall gone the turret should lock on within a scan: aim %+v", g.combat.Turrets.Aim(tid))
 	}
 }
 
@@ -199,17 +228,17 @@ func TestTurretIgnoresVisitorsPrisoners(t *testing.T) {
 	for i := 0; i < 120; i++ {
 		g.Step(1)
 		place()
-		if tg := g.turrets.aims[tid].target; tg != 0 {
+		if tg := g.combat.Turrets.Aim(tid).Target; tg != 0 {
 			t.Fatalf("tick %d: the turret locked on %d (visitor %d, prisoner %d, colonist %d, pet %d, wild %d)",
 				g.Tick(), tg, visitor, pris, ada, pet, wild)
 		}
 	}
 	rid := turretRaider(t, g, 20, 14)
-	for i := 0; i < turretScanEvery+1 && g.turrets.aims[tid].target == 0; i++ {
+	for i := 0; i < combat.TurretScanEvery+1 && g.combat.Turrets.Aim(tid).Target == 0; i++ {
 		g.Step(1)
 		place()
 	}
-	if tg := g.turrets.aims[tid].target; tg != rid {
+	if tg := g.combat.Turrets.Aim(tid).Target; tg != rid {
 		t.Fatalf("the turret should pick the raider %d past the others, got %d", rid, tg)
 	}
 }
@@ -221,13 +250,13 @@ func TestTurretAcquireCadenceStaggered(t *testing.T) {
 	g.Step(powerInterval)
 	rid := turretRaider(t, g, 19, 12)
 	got := map[entity.EntityID]uint64{}
-	for i := 0; i < 2*turretScanEvery && len(got) < len(ts); i++ {
+	for i := 0; i < 2*combat.TurretScanEvery && len(got) < len(ts); i++ {
 		now := g.Tick()
 		g.Step(1)
 		g.positions.Set(rid, Position{X: 19, Y: 12})
 		holdFire(g)
 		for _, id := range ts {
-			if _, seen := got[id]; !seen && g.turrets.aims[id].target != 0 {
+			if _, seen := got[id]; !seen && g.combat.Turrets.Aim(id).Target != 0 {
 				got[id] = uint64(now)
 			}
 		}
@@ -238,7 +267,7 @@ func TestTurretAcquireCadenceStaggered(t *testing.T) {
 		if !ok {
 			t.Fatalf("turret %d never locked on", id)
 		}
-		if (at+uint64(id))%turretScanEvery != 0 {
+		if (at+uint64(id))%combat.TurretScanEvery != 0 {
 			t.Fatalf("turret %d locked on at tick %d, off its slot", id, at)
 		}
 		slots[at] = true
@@ -258,19 +287,19 @@ func TestTurretTargetNoFlap(t *testing.T) {
 	at := func(dist int, ticks int) (lets int) {
 		t.Helper()
 		for i := 0; i < ticks; i++ {
-			had := g.turrets.aims[tid].target != 0
+			had := g.combat.Turrets.Aim(tid).Target != 0
 			g.positions.Set(rid, Position{X: 20, Y: 5 + dist})
 			g.invalidateCreatures()
 			g.Step(1)
 			holdFire(g)
-			if had && g.turrets.aims[tid].target == 0 {
+			if had && g.combat.Turrets.Aim(tid).Target == 0 {
 				lets++
 			}
 		}
 		return lets
 	}
-	at(9, turretScanEvery+1)
-	if g.turrets.aims[tid].target != rid {
+	at(9, combat.TurretScanEvery+1)
+	if g.combat.Turrets.Aim(tid).Target != rid {
 		t.Fatal("no lock on a raider 9 tiles off")
 	}
 	// wandering across the lock radius, inside the release radius: held
@@ -279,31 +308,31 @@ func TestTurretTargetNoFlap(t *testing.T) {
 			t.Fatalf("let go at %d tiles inside the release radius", 9+2*(k%2))
 		}
 	}
-	if !g.turretFiring(tid) {
+	if !g.combat.Turrets.Firing(tid) {
 		t.Fatal("the lock should hold across the band")
 	}
 	// past the release radius: let go, and not taken back from the band
-	if at(turretRelease+1, 1) != 1 {
+	if at(combat.TurretRelease+1, 1) != 1 {
 		t.Fatal("the turret should let go past the release radius")
 	}
-	at(turretLock+1, 3*turretScanEvery)
-	if g.turretFiring(tid) {
+	at(combat.TurretLock+1, 3*combat.TurretScanEvery)
+	if g.combat.Turrets.Firing(tid) {
 		t.Fatal("a target in the band should not be picked up again")
 	}
-	at(turretLock, turretScanEvery)
-	if g.turrets.aims[tid].target != rid {
+	at(combat.TurretLock, combat.TurretScanEvery)
+	if g.combat.Turrets.Aim(tid).Target != rid {
 		t.Fatal("back within the lock radius it should be picked up within a scan")
 	}
-	// out of sight for less than turretLost: held; for turretLost: let go
+	// out of sight for less than combat.TurretLost: held; for combat.TurretLost: let go
 	wall := buildNow(t, g, construction.Wall, item.Wood, construction.South, 20, 10)
-	if at(turretLock, turretLost-1) != 0 {
-		t.Fatal("let go before turretLost ticks out of sight")
+	if at(combat.TurretLock, combat.TurretLost-1) != 0 {
+		t.Fatal("let go before combat.TurretLost ticks out of sight")
 	}
 	g.removeBuilding(wall)
-	at(turretLock, 1)                                                        // seen again: the out-of-sight count starts over
+	at(combat.TurretLock, 1)                                                 // seen again: the out-of-sight count starts over
 	buildNow(t, g, construction.Wall, item.Wood, construction.South, 20, 11) // the refund lies on (20, 10)
-	if at(turretLock, turretLost) != 1 {
-		t.Fatal("a target out of sight for turretLost ticks should be let go")
+	if at(combat.TurretLock, combat.TurretLost) != 1 {
+		t.Fatal("a target out of sight for combat.TurretLost ticks should be let go")
 	}
 }
 
@@ -313,18 +342,18 @@ func TestRaiderTurretSwitchNoFlap(t *testing.T) {
 	g, ts := turretRig(t, 6, 50, 40, &out, 25)
 	tid := ts[0]
 	g.Step(powerInterval)
-	// the rule: within sight and at least switchMargin closer than the colonist
+	// the rule: within sight and at least combat.SwitchMargin closer than the colonist
 	for _, c := range []struct {
 		raider    Position
 		colonist  int
 		wantTower bool
 	}{
-		{Position{X: 25, Y: 13}, 8 + switchMargin, true},      // 8 off the turret
-		{Position{X: 25, Y: 13}, 8 + switchMargin - 1, false}, // not closer by the margin
-		{Position{X: 25, Y: 5 + sightRange + 1}, 40, false},   // out of sight
+		{Position{X: 25, Y: 13}, 8 + combat.SwitchMargin, true},      // 8 off the turret
+		{Position{X: 25, Y: 13}, 8 + combat.SwitchMargin - 1, false}, // not closer by the margin
+		{Position{X: 25, Y: 5 + sightRange + 1}, 40, false},          // out of sight
 		{Position{X: 25, Y: 5 + sightRange}, 40, true},
 	} {
-		id, _, ok := g.raiderTurret(c.raider, c.colonist)
+		id, _, ok := raiderTurret(g, c.raider, c.colonist)
 		if ok != c.wantTower || ok && id != tid {
 			t.Fatalf("raider at %+v, colonist %d off: turret %v (%d)", c.raider, c.colonist, ok, id)
 		}
@@ -414,7 +443,7 @@ func TestTurretDestroyedExplodes(t *testing.T) {
 	edge := turretRaider(t, g, 18, 6)
 	away := turretRaider(t, g, 20, 9)
 	ob, _ := g.bldgs.Get(other)
-	ob.Damage = construction.MaxHP(ob.Kind, ob.Stuff) - turretBlastBuilding // the blast finishes it: a chain
+	ob.Damage = construction.MaxHP(ob.Kind, ob.Stuff) - combat.TurretBlastBuilding // the blast finishes it: a chain
 	g.bldgs.Set(other, ob)
 
 	g.damageBuilding(tid, 10_000)
@@ -428,14 +457,14 @@ func TestTurretDestroyedExplodes(t *testing.T) {
 		t.Fatal("a destroyed turret leaves a rebuild blueprint")
 	}
 	for _, id := range []entity.EntityID{near, edge} {
-		if v, _ := g.vital.Get(id); v.Injury < turretBlastCreature {
+		if v, _ := g.vital.Get(id); v.Injury < combat.TurretBlastCreature {
 			t.Fatalf("raider %d within the blast: injury %d", id, v.Injury)
 		}
 	}
 	if v, _ := g.vital.Get(away); v.Injury != 0 {
 		t.Fatalf("a raider 4 tiles off was hurt: %d", v.Injury)
 	}
-	if b, _ := g.bldgs.Get(wall); b.Damage != turretBlastBuilding {
+	if b, _ := g.bldgs.Get(wall); b.Damage != combat.TurretBlastBuilding {
 		t.Fatalf("wall within the blast: damage %d", b.Damage)
 	}
 	if b, _ := g.bldgs.Get(far); b.Damage != 0 {
@@ -450,7 +479,7 @@ func TestTurretDestroyedExplodes(t *testing.T) {
 	if bursts != 2 {
 		t.Fatalf("turret bursts %d, want 2: %+v", bursts, g.World().Bursts)
 	}
-	if _, ok := g.turrets.aims[tid]; ok {
+	if turretAims(g)[tid] {
 		t.Fatal("a destroyed turret keeps no aim")
 	}
 }
@@ -476,7 +505,7 @@ func TestTurretSaveRoundTrip(t *testing.T) {
 	t.Parallel()
 	out := 0
 	bare, ts := turretRig(t, 10, 40, 30, &out, 20)
-	if bare.exportTurrets() != nil {
+	if bare.combat.Turrets.Export() != nil {
 		t.Fatal("a turret that never aimed saves nothing")
 	}
 	_ = ts
@@ -487,10 +516,10 @@ func TestTurretSaveRoundTrip(t *testing.T) {
 	tid := buildNow(t, g, construction.SentryTurret, item.Steel, construction.South, 20, 5)
 	turretRaider(t, g, 20, 12)
 	turretRaider(t, g, 24, 13)
-	for i := 0; i < 400 && g.turrets.aims[tid].shotAt == 0; i++ {
+	for i := 0; i < 400 && g.combat.Turrets.Aim(tid).ShotAt == 0; i++ {
 		g.Step(1)
 	}
-	if g.turrets.aims[tid].shotAt == 0 {
+	if g.combat.Turrets.Aim(tid).ShotAt == 0 {
 		t.Fatal("the turret never fired")
 	}
 	var buf bytes.Buffer
@@ -501,8 +530,8 @@ func TestTurretSaveRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s := g.exportTurrets(); s == nil || s.Version != turretSaveVersion || !reflect.DeepEqual(s, h.exportTurrets()) {
-		t.Fatalf("turret state %+v vs loaded %+v", s, h.exportTurrets())
+	if s := g.combat.Turrets.Export(); s == nil || s.Version != combat.TurretSaveVersion || !reflect.DeepEqual(s, h.combat.Turrets.Export()) {
+		t.Fatalf("turret state %+v vs loaded %+v", s, h.combat.Turrets.Export())
 	}
 	if g.StateHash() != h.StateHash() {
 		t.Fatal("hash differs after load")
@@ -534,8 +563,8 @@ func turretRun(t *testing.T, seed uint64, n int) (uint64, int) {
 	for i := 0; i < n; i++ {
 		g.Step(1)
 		fed(g, ada)
-		for _, a := range g.turrets.aims {
-			if a.shotAt == uint64(g.Tick())-1 {
+		for _, a := range turretAimList(g) {
+			if a.ShotAt == uint64(g.Tick())-1 {
 				shots++
 			}
 		}
@@ -552,22 +581,6 @@ func TestTurretSameSeed(t *testing.T) {
 	}
 	if s1 == 0 {
 		t.Fatal("the turrets never fired in the raid")
-	}
-}
-
-func TestAimFrame(t *testing.T) {
-	t.Parallel()
-	p := Position{X: 10, Y: 10}
-	for _, c := range []struct {
-		dx, dy int
-		want   int8
-	}{
-		{0, 5, 0}, {-5, 5, 2}, {-5, 0, 4}, {-5, -5, 6}, {0, -5, 8}, {5, -5, 10}, {5, 0, 12}, {5, 5, 14},
-		{-1, 5, 1}, {-2, 5, 1}, {1, 5, 15}, {0, 0, 7},
-	} {
-		if got := aimFrame(p, Position{X: 10 + c.dx, Y: 10 + c.dy}, 7); got != c.want {
-			t.Errorf("aim at (%d, %d): frame %d, want %d", c.dx, c.dy, got, c.want)
-		}
 	}
 }
 

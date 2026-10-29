@@ -140,7 +140,7 @@ func TestSleepBlockWakesAtFullThenFreeTime(t *testing.T) {
 		g.Step(1)
 		j, _ := g.jobs.Get(id)
 		n, _ := g.need.Get(id)
-		woke = j.Kind != job.Sleep && n.Rest >= needs.Full-needs.SleepGain && g.restedFree[id]
+		woke = j.Kind != job.Sleep && n.Rest >= needs.Full-needs.SleepGain && g.rest.RestedFree(id)
 	}
 	if !woke {
 		t.Fatal("never woke rested in the Sleep block")
@@ -392,7 +392,7 @@ func TestCampfireBankingHasABand(t *testing.T) {
 func TestAntiFlapStateSurvivesSave(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
-	g.restedFree[id] = true
+	g.rest.MarkRested(id)
 	g.noFood[id] = 1234
 	g.calm[id] = 5678
 	g.banked[99] = true
@@ -404,7 +404,7 @@ func TestAntiFlapStateSurvivesSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !h.restedFree[id] || h.noFood[id] != 1234 || h.calm[id] != 5678 || !h.banked[99] {
-		t.Fatalf("lost: restedFree %v noFood %v calm %v banked %v", h.restedFree, h.noFood, h.calm, h.banked)
+	if !h.rest.RestedFree(id) || h.noFood[id] != 1234 || h.calm[id] != 5678 || !h.banked[99] {
+		t.Fatalf("lost: restedFree %v noFood %v calm %v banked %v", h.rest.Export(), h.noFood, h.calm, h.banked)
 	}
 }

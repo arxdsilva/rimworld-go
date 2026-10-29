@@ -6,8 +6,11 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/prison"
+	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/world/biome"
@@ -21,7 +24,6 @@ import (
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/health"
@@ -631,8 +633,6 @@ type Game struct {
 
 	zones      *zone.Map // stockpiles, grow zones and pens (zones.go, ZONE-001)
 	lastMeal   map[entity.EntityID]item.Kind
-	bills      map[entity.EntityID][]recipe.Bill
-	racks      map[entity.EntityID]dryBatch // what each drying rack holds
 	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
 	weather    weather.State                // outdoor weather (weather.go, SIM-016)
 	weatherFix bool                         // dev: HoldWeather keeps the forced weather
@@ -645,7 +645,6 @@ type Game struct {
 	troughs    map[entity.EntityID]troughState
 	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
 	postponed  postState                  // work put off, orders followed (postpone.go, SIM-027)
-	restedFree map[entity.EntityID]bool   // woke fully rested in the current Sleep block: free time
 	calm       map[entity.EntityID]uint64 // fled a threat: holding back from work until this tick
 	banked     map[entity.EntityID]bool   // campfires banked by their room thermostat (heat.go)
 	orderQueue map[entity.EntityID][]queuedOrder
@@ -721,8 +720,8 @@ type Game struct {
 	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
 	// haul: in-flight material deliveries (haul_route.go, HAUL-001).
 	haul haulState
-	// cabinets: tool cabinet bonus per bench, per structVer (items_ng1.go), never saved.
-	cabinets cabinetState
+	// monitors: each hospital bed's vitals monitor, per structVer (items_ng1.go), never saved.
+	monitors monitorCache
 	// vents: steam vent cells per structVer (vents.go), never saved.
 	vents ventCache
 	// light: the simulation's artificial light grid (light.go), never saved.
@@ -778,9 +777,11 @@ type Game struct {
 	med     medState                        // patients.go (MED-00)
 	care    *care.Care                      // care package (SIM-061): carry, policy, doctor
 	mind    *mind.Mind                      // mind package (SIM-066): mental breaks
+	craft   *craft.Craft                    // craft package (PRD-0): bills, drying, tool cabinets
 	surg    *surgeryState                   // surgery.go
 	drugs   map[entity.EntityID]*drug.State // drugs.go
 	prison  *prison.Prison                  // prison package: prisoners, warden work
+	rest    *rest.Sleep                     // rest package (BED-0): beds, sleep, waking thoughts
 	worldSt *worldState                     // world_state.go
 	areas   *area.Set                       // areas.go
 	history []historyEntry                  // history.go
@@ -791,10 +792,11 @@ type Game struct {
 	// pwc: power nets and device lists per structVer (power.go), never saved.
 	pwc powerCache
 	// PLAY-024: traders, request cooldowns and the open trade or comms
-	// session (trade.go), and the sentry turrets' aims (turret.go); saved
-	// as the additive Trade and Turrets fields.
-	trade   tradeState
-	turrets turretState
+	// session (trade.go), saved as the additive Trade field.
+	trade tradeState
+	// combat package (DEF-0): sight, cover, sentry turrets (their aims
+	// saved as the additive Turrets field); combat_host.go.
+	combat *combat.Combat
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -821,8 +823,6 @@ func New(cfg Config) *Game {
 		smooths:    make(map[[2]int]bool),
 		geo:        geology.NewMap(cfg.Width, cfg.Height),
 		lastMeal:   make(map[entity.EntityID]item.Kind),
-		bills:      make(map[entity.EntityID][]recipe.Bill),
-		racks:      make(map[entity.EntityID]dryBatch),
 		fuel:       make(map[entity.EntityID]int),
 		exposure:   make(map[entity.EntityID]exposureState),
 		noComfort:  make(map[entity.EntityID]uint64),
@@ -831,7 +831,6 @@ func New(cfg Config) *Game {
 		troughs:    make(map[entity.EntityID]troughState),
 		noFood:     make(map[entity.EntityID]uint64),
 		postponed:  newPostState(),
-		restedFree: make(map[entity.EntityID]bool),
 		calm:       make(map[entity.EntityID]uint64),
 		banked:     make(map[entity.EntityID]bool),
 		orderQueue: make(map[entity.EntityID][]queuedOrder),
@@ -859,7 +858,10 @@ func New(cfg Config) *Game {
 	}
 	g.care = care.New(newCareHost(g), care.Roles{Prison: carePrison{g}, Guests: careGuests{g}, Social: careSocial{g}, Gear: careGear{g}, Meals: careMeals{g}}) // care_host*.go
 	g.mind = mind.New(newMindHost(g))
+	g.combat = newCombat(g)
+	g.craft = craft.New(newCraftHost(g))    // craft_host.go
 	g.prison = prison.New(newPrisonHost(g)) // prison_host.go
+	g.rest = rest.New(newRestHost(g))       // rest_host.go
 	return g
 }
 

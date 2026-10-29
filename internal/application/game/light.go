@@ -231,7 +231,7 @@ func (g *Game) stampLight(art []float32, sx, sy, rad int, strength float64) {
 			}
 			v := float32(strength * (float64(rad) + 1 - d) / (float64(rad) + 1))
 			i := y*w + x
-			if v <= art[i] || !g.lineOfSight(sx, sy, x, y) {
+			if v <= art[i] || !g.combat.Sight.Line(sx, sy, x, y) {
 				continue
 			}
 			art[i] = v

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -295,7 +296,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if r := g.busyBy(id, aid); r != "" {
 			return job.Record{}, r
 		}
-		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
+		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}, ""
 	case command.OrderAttack:
 		aid := g.animalAt(x, y)
 		if aid == 0 {
@@ -306,7 +307,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if aid == 0 {
 			return job.Record{}, ReasonGone
 		}
-		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
+		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}, ""
 	case command.OrderExtinguish:
 		return g.extinguishJob(id, x, y) // firefight.go
 	case command.OrderFlick:

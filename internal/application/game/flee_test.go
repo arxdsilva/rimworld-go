@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
@@ -158,7 +159,7 @@ func TestQueuedOrderWaitsForCalmThenResumes(t *testing.T) {
 	}
 	start := uint64(g.clock.Now())
 	releaseAttacker(g, wolf, 58, 18)
-	for uint64(g.clock.Now()) < start+fleeCalm-1 {
+	for uint64(g.clock.Now()) < start+combat.FleeCalm-1 {
 		g.Step(1)
 		fullNeeds(g, ada)
 		if j, _ := g.jobs.Get(ada); j.Forced {
@@ -186,7 +187,7 @@ func TestQueuedOrderWaitsForCalmThenResumes(t *testing.T) {
 func TestSleepingColonistWakesAndRuns(t *testing.T) {
 	g := New(Config{Seed: 3, Width: 50, Height: 20})
 	ada, _ := g.SpawnNamedPawn(25, 10, "Ada")
-	g.assignSleepInPlace(ada)
+	g.rest.InPlace(ada)
 	g.Step(1)
 	if j, _ := g.jobs.Get(ada); j.Kind != job.Sleep {
 		t.Fatalf("asleep first: %+v", j)
@@ -280,7 +281,7 @@ func TestFleeReachNoFlap(t *testing.T) {
 	if !fleeing(g2, bo).Fleeing {
 		t.Fatal("a threat 10 tiles off starts a flight")
 	}
-	for i := 0; i < 2*fleeCalm; i++ {
+	for i := 0; i < 2*combat.FleeCalm; i++ {
 		pos, _ := g2.positions.Get(bo)
 		holdAttacker(g2, w2, bo, min(pos.X+13+(i/10)%3, 89), pos.Y)
 		g2.Step(1)
@@ -311,7 +312,7 @@ func TestFleeViewWithoutThreatInSight(t *testing.T) {
 	if fleeing(g, ada).Fleeing {
 		t.Fatal("a calm colonist isn't fleeing")
 	}
-	g.calm[ada] = uint64(g.clock.Now()) + fleeCalm
+	g.calm[ada] = uint64(g.clock.Now()) + combat.FleeCalm
 	g.jobs.Set(ada, job.Record{Kind: job.Move, State: job.Goto, TX: 20, TY: 5})
 	if pv := fleeing(g, ada); !pv.Fleeing || pv.Job != "Fleeing" {
 		t.Fatalf("still running with the attacker out of sight: %+v", pv)

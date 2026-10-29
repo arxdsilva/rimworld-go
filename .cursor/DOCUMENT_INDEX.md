@@ -15,6 +15,9 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Ordered vanilla gameplay feature backlog | `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` |
 | Ordered player-facing UI/UX backlog | `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` |
 | Medical system gap analysis vs RimWorld, wiki constants, MED phases | `MEDICAL_GAP_ANALYSIS.md` |
+| Beds, rest and rooms gap analysis vs RimWorld, wiki constants, BED phases | `BEDS_GAP_ANALYSIS.md` |
+| Production (benches, bills, quality, recipes, stockpiles) gap analysis, wiki constants, PRD phases | `PRODUCTION_GAP_ANALYSIS.md` |
+| Defence and combat gap analysis, wiki constants, DEF phases | `DEFENCE_GAP_ANALYSIS.md` |
 | Pawn-to-pawn interaction gap analysis vs RimWorld (rescue, orders on a pawn, feeding patients, visiting, mental breaks), wiki constants, SIM-061…066 | `PAWN_INTERACTION_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |

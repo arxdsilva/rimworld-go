@@ -140,7 +140,7 @@ func TestSleptInAwfulRoomWhenFilthy(t *testing.T) {
 		t.Fatalf("fixture bedroom scores %d", s)
 	}
 	g.sleptAt[id] = bed
-	g.afterSleep(id)
+	g.rest.Waking.After(id)
 	if g.hasMemory(id, mood.SleptInAwfulRoom) {
 		t.Fatal("a clean bedroom is awful")
 	}
@@ -149,7 +149,7 @@ func TestSleptInAwfulRoomWhenFilthy(t *testing.T) {
 			g.addDirt(tileIdx(g, x, y), filth.Full)
 		}
 	}
-	g.afterSleep(id)
+	g.rest.Waking.After(id)
 	if !g.hasMemory(id, mood.SleptInAwfulRoom) {
 		t.Fatalf("a filthy bedroom (score %d) is not awful", g.roomScore(r))
 	}

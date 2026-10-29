@@ -313,7 +313,7 @@ func TestPyreCremateBill(t *testing.T) {
 	g, ada := burGame(t, 24, 12)
 	placeBuilt(t, g, construction.Pyre, construction.South, 12, 4)
 	pyre := g.layerBldgAt(12, 4, construction.LayerObject)
-	if bills := g.bills[pyre]; len(bills) != 1 || bills[0].Recipe != recipe.Cremate || bills[0].Mode != recipe.Forever {
+	if bills := g.craft.Bills.Of(pyre); len(bills) != 1 || bills[0].Recipe != recipe.Cremate || bills[0].Mode != recipe.Forever {
 		t.Fatalf("a new pyre cremates forever: %+v", bills)
 	}
 	g.SpawnStack(item.Wood, 10, 6, 8)
@@ -351,7 +351,7 @@ func TestPyreCremateBill(t *testing.T) {
 	if !burRemembers(g, ada, mood.LaidToRest) {
 		t.Fatal("cremating a friend lays them to rest")
 	}
-	if g.bills[pyre][0].Done != 1 {
+	if g.craft.Bills.Of(pyre)[0].Done != 1 {
 		t.Fatal("the bill counts the cremation")
 	}
 	// Bo's body is gone for good: loading the game does not bring it back

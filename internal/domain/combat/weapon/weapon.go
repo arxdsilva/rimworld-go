@@ -1,5 +1,10 @@
 package weapon
 
+import (
+	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/damage"
+)
+
 // Kind is an attack profile.
 type Kind uint8
 
@@ -35,24 +40,41 @@ type Def struct {
 	// weapons lose Falloff percent per tile of distance.
 	Accuracy int
 	Falloff  int
+
+	// Warmup is the aim time in ticks before a shot; the legacy value is
+	// Cooldown/3 (the game's aimTicks today).
+	Warmup int
+	// Burst is shots per trigger pull and BurstTicks the gap between
+	// them; legacy weapons fire one shot.
+	Burst      int
+	BurstTicks int
+	// ArmorPen is the armor penetration in permille; 0 for every legacy
+	// weapon (armor does not exist until DEF-1).
+	ArmorPen int
+	// DamageType picks the armor category that resists the hit.
+	DamageType damage.Type
+	// Bands is the vanilla accuracy curve. The zero value means the
+	// legacy formula Accuracy - Falloff*(dist-1), floored at
+	// MinHitChance; DEF-1 fills Bands and switches the game over.
+	Bands attack.Bands
 }
 
 var defs = [numKinds]Def{
-	Fists: {Name: "fists", Range: 1, Damage: 4, Cooldown: 90, Accuracy: 80},
-	Club:  {Name: "club", Range: 1, Damage: 11, Cooldown: 110, Accuracy: 85},
-	Rifle: {Name: "rifle", Ranged: true, Range: 12, Damage: 14, Cooldown: 150, Accuracy: 95, Falloff: 4},
-	Kick:  {Name: "hooves", Range: 1, Damage: 3, Cooldown: 120, Accuracy: 70},
-	Bite:  {Name: "bite", Range: 1, Damage: 9, Cooldown: 100, Accuracy: 80},
-	Knife: {Name: "knife", Range: 1, Damage: 8, Cooldown: 70, Accuracy: 90},
-	Spear: {Name: "spear", Range: 1, Damage: 13, Cooldown: 125, Accuracy: 85},
+	Fists: {Name: "fists", Range: 1, Damage: 4, Cooldown: 90, Accuracy: 80, Warmup: 30, Burst: 1, DamageType: damage.Blunt},
+	Club:  {Name: "club", Range: 1, Damage: 11, Cooldown: 110, Accuracy: 85, Warmup: 36, Burst: 1, DamageType: damage.Blunt},
+	Rifle: {Name: "rifle", Ranged: true, Range: 12, Damage: 14, Cooldown: 150, Accuracy: 95, Falloff: 4, Warmup: 50, Burst: 1, DamageType: damage.Sharp},
+	Kick:  {Name: "hooves", Range: 1, Damage: 3, Cooldown: 120, Accuracy: 70, Warmup: 40, Burst: 1, DamageType: damage.Blunt},
+	Bite:  {Name: "bite", Range: 1, Damage: 9, Cooldown: 100, Accuracy: 80, Warmup: 33, Burst: 1, DamageType: damage.Sharp},
+	Knife: {Name: "knife", Range: 1, Damage: 8, Cooldown: 70, Accuracy: 90, Warmup: 23, Burst: 1, DamageType: damage.Sharp},
+	Spear: {Name: "spear", Range: 1, Damage: 13, Cooldown: 125, Accuracy: 85, Warmup: 41, Burst: 1, DamageType: damage.Sharp},
 	// SIM-019 S1 tunes these; damage is scaled by the animal's size.
-	Claw:     {Name: "claws", Range: 1, Damage: 7, Cooldown: 110, Accuracy: 75},
-	Gore:     {Name: "horns", Range: 1, Damage: 9, Cooldown: 130, Accuracy: 70},
-	Headbutt: {Name: "head", Range: 1, Damage: 6, Cooldown: 130, Accuracy: 75},
-	Peck:     {Name: "beak", Range: 1, Damage: 2, Cooldown: 100, Accuracy: 80},
+	Claw:     {Name: "claws", Range: 1, Damage: 7, Cooldown: 110, Accuracy: 75, Warmup: 36, Burst: 1, DamageType: damage.Sharp},
+	Gore:     {Name: "horns", Range: 1, Damage: 9, Cooldown: 130, Accuracy: 70, Warmup: 43, Burst: 1, DamageType: damage.Sharp},
+	Headbutt: {Name: "head", Range: 1, Damage: 6, Cooldown: 130, Accuracy: 75, Warmup: 43, Burst: 1, DamageType: damage.Blunt},
+	Peck:     {Name: "beak", Range: 1, Damage: 2, Cooldown: 100, Accuracy: 80, Warmup: 33, Burst: 1, DamageType: damage.Sharp},
 	// PLAY-024 (our tuning, PLAY024_PLAN.md): quick, light bursts at
 	// medium range.
-	SentryGun: {Name: "sentry gun", Ranged: true, Range: 10, Damage: 9, Cooldown: 60, Accuracy: 75, Falloff: 3},
+	SentryGun: {Name: "sentry gun", Ranged: true, Range: 10, Damage: 9, Cooldown: 60, Accuracy: 75, Falloff: 3, Warmup: 20, Burst: 1, DamageType: damage.Sharp},
 }
 
 // DefOf returns the profile for k (fists for unknown kinds).
@@ -103,4 +125,18 @@ func Distance(ax, ay, bx, by int) int {
 		return dx
 	}
 	return dy
+}
+
+// Legacy reports whether d uses the pre-DEF-1 linear accuracy formula.
+func (d Def) Legacy() bool { return d.Bands.Zero() }
+
+// HitPermille is the hit chance in permille at dist with neutral
+// shooter, size, light and weather factors and no cover. Legacy weapons
+// reproduce HitChance exactly (percent times ten).
+func HitPermille(d Def, dist int) int {
+	if d.Legacy() {
+		return HitChance(d, dist) * 10
+	}
+	const n = 1000
+	return attack.HitChance(d.Bands, dist, attack.PerfectShooter, 0, n, n, n, n)
 }

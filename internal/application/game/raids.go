@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
@@ -114,8 +115,8 @@ func (g *Game) phaseThreats() {
 		g.thinkRaider(id, now)
 	}
 	g.raiderBuf = ids[:0]
-	g.phaseTurrets(now) // turret.go (PLAY-024): after the raiders move
-	g.vaultTick(now)    // vault.go (MAPGEN-3): approach warnings, clearing
+	g.combat.Turrets.Phase(now) // combat/turret.go (PLAY-024): after the raiders move
+	g.vaultTick(now)            // vault.go (MAPGEN-3): approach warnings, clearing
 }
 
 // scheduleThreats starts the storyteller (colonies, not bare test maps).
@@ -442,15 +443,15 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			return
 		}
 		if j.Kind == job.Attack && j.Active() {
-			g.doCombat(id, j, now)
+			g.combat.Strikes.Do(id, j, now)
 			return
 		}
 		if j.Kind == job.Breach && j.Active() {
 			// keep bashing unless a colonist (or ally) comes into reach
 			// (re-planning now and then in case a way in opened up)
 			_, tp, ok := g.raidTarget(pos) // allies.go
-			if (now+uint64(id))%300 != 0 && (!ok || !g.canHit(pos, weaponDefOf(g, id), tp)) {
-				g.doBreach(id, j)
+			if (now+uint64(id))%300 != 0 && (!ok || !g.combat.Sight.CanHit(pos.X, pos.Y, weaponDefOf(g, id), tp.X, tp.Y)) {
+				g.combat.Breach.Do(id, j)
 				return
 			}
 		}
@@ -467,16 +468,16 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			return
 		}
 		r.Idle = 0
-		// turret.go (PLAY-024): a powered turret in sight and well closer
-		// than the nearest colonist draws the raider's fire instead
-		if tid, bp, ok := g.raiderTurret(pos, weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)); ok {
-			target, tp = tid, bp
+		// combat/turret.go (PLAY-024): a powered turret in sight and well
+		// closer than the nearest colonist draws the raider's fire instead
+		if tid, bx, by, ok := g.combat.Turrets.ForRaider(pos.X, pos.Y, weapon.Distance(pos.X, pos.Y, tp.X, tp.Y), sightRange); ok {
+			target, tp = tid, Position{X: bx, Y: by}
 		}
 		if r.Mode == raidArrive && weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) > sightRange {
 			// walk in towards the colony
 			if !j.Active() || (now+uint64(id))%180 == 0 {
 				if x, y, ok := g.walkableNear(tp.X, tp.Y, 4); ok &&
-					!g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) && g.unreachable(id) && !g.startBreach(id, tp) {
+					!g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) && g.unreachable(id) && !g.combat.Breach.Start(id, tp.X, tp.Y) {
 					r.RetryAt = now + raiderRetry
 				}
 			}
@@ -486,14 +487,14 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		r.Mode = raidAssault
 		g.raiders[id] = r
 		d := weaponDefOf(g, id)
-		rec := job.Record{Kind: job.Attack, Target: target, TX: tp.X, TY: tp.Y, WorkLeft: aimTicks(d)}
-		if g.canHit(pos, d, tp) { // already in reach: no walking needed
+		rec := job.Record{Kind: job.Attack, Target: target, TX: tp.X, TY: tp.Y, WorkLeft: combat.AimTicks(d)}
+		if g.combat.Sight.CanHit(pos.X, pos.Y, d, tp.X, tp.Y) { // already in reach: no walking needed
 			g.reserve.ReleaseOwner(id)
 			rec.State = job.Do
 			g.jobs.Set(id, rec)
 			return
 		}
-		if !g.startJob(id, rec) && g.unreachable(id) && !g.startBreach(id, tp) {
+		if !g.startJob(id, rec) && g.unreachable(id) && !g.combat.Breach.Start(id, tp.X, tp.Y) {
 			r.RetryAt = now + raiderRetry
 			g.raiders[id] = r
 		}

@@ -886,7 +886,7 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	delete(g.banked, id)
 	if b.Kind == construction.DryingRack {
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-		g.emptyRack(id, spot[0], spot[1])
+		g.craft.Drying.Empty(id, spot[0], spot[1])
 	}
 	kept := g.bldgIDs[:0]
 	for _, bid := range g.bldgIDs {
@@ -905,7 +905,7 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	if construction.DefOf(b.Kind).Foundation {
 		g.foundationGone(b) // bridge_remove.go: footing, creatures and loose things
 	}
-	delete(g.bills, id)
+	g.craft.Bills.Forget(id)
 	g.markRoomsDirty()
 	g.structVer++ // SIM-029: link/autotile caches
 	g.reorientFootprint(b.Kind, b.Facing, b.X, b.Y)

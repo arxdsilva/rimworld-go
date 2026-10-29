@@ -7,7 +7,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/sim/entity"
 )
 
 // fieldsAllCompared fails unless eq tells base apart from a copy with any
@@ -122,7 +121,7 @@ func TestBuildingViewsKeepIdentity(t *testing.T) {
 	if !reflect.DeepEqual(a, before) {
 		t.Fatal("the old building list was rewritten")
 	}
-	g.bills[fire][0].Target++
+	g.craft.Bills.Of(fire)[0].Target++
 	c := g.buildingViews()
 	if sameSlice(b, c) || sameSlice(b[0].Bills, c[0].Bills) || c[0].Bills[0].Target != b[0].Bills[0].Target+1 {
 		t.Fatal("a bill change kept the list or the bills")
@@ -131,36 +130,6 @@ func TestBuildingViewsKeepIdentity(t *testing.T) {
 	g.views.on = false
 	if fresh := g.buildingViews(); !reflect.DeepEqual(fresh, c) {
 		t.Fatalf("memoised buildings differ from a fresh build:\n%+v\n%+v", c, fresh)
-	}
-}
-
-// TestTurretShotAgeSaturates: a turret's ShotAge counts up from its last
-// shot and stops at turretShotAgeMax (still past the renderer's 90-tick
-// engaged window), so a quiet turret's view stops changing.
-func TestTurretShotAgeSaturates(t *testing.T) {
-	g := New(Config{Seed: 1, Width: 10, Height: 10})
-	b := construction.Building{Kind: construction.SentryTurret}
-	const id = 7
-	g.turrets.aims = map[entity.EntityID]turretAim{}
-	view := func(now uint64) int {
-		var bv BuildingView
-		g.fillTurretView(&bv, id, b, now)
-		return bv.ShotAge
-	}
-	if got := view(500); got != -1 {
-		t.Fatalf("never fired: ShotAge %d, want -1", got)
-	}
-	g.turrets.aims[id] = turretAim{shotAt: 1000}
-	for _, c := range []struct {
-		now  uint64
-		want int
-	}{{1000, 0}, {1030, 30}, {1000 + turretShotAgeMax, turretShotAgeMax}, {1000 + turretShotAgeMax + 1, turretShotAgeMax}, {900000, turretShotAgeMax}} {
-		if got := view(c.now); got != c.want {
-			t.Errorf("tick %d: ShotAge %d, want %d", c.now, got, c.want)
-		}
-	}
-	if turretShotAgeMax < 90 {
-		t.Fatal("the cap cuts into the renderer's engaged window (turret_draw.go turretEngagedTicks)")
 	}
 }
 

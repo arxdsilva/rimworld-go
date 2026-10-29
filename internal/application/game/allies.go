@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -340,7 +341,7 @@ func (g *Game) alliesLeave(c *aidCall) {
 // colony like any visitor.
 func (g *Game) allyStep(v *visitorRec, pos Position, j job.Record, now uint64) bool {
 	if j.Kind == job.Attack && j.Active() {
-		g.doCombat(v.ID, j, now)
+		g.combat.Strikes.Do(v.ID, j, now)
 		return true
 	}
 	if j.State == job.Complete || j.State == job.Fail || j.State == job.Do && j.Kind != job.Visit {
@@ -368,15 +369,15 @@ func (g *Game) allyStep(v *visitorRec, pos Position, j job.Record, now uint64) b
 // as a turret picks them); it reports whether it went.
 func (g *Game) allyEngage(id entity.EntityID, pos Position, now uint64) bool {
 	foe, fp, ok := g.nearestWhere(pos.X, pos.Y, allySight, ckRaider|ckAnimal, func(t entity.EntityID, p Position) bool {
-		return g.turretTargetable(t, now) && g.lineOfSight(pos.X, pos.Y, p.X, p.Y) // turret.go
+		return g.combat.Turrets.Targetable(t, now) && g.combat.Sight.Line(pos.X, pos.Y, p.X, p.Y) // combat/turret.go
 	})
 	if !ok {
 		return false
 	}
 	g.reserve.ReleaseOwner(id)
 	d := weaponDefOf(g, id)
-	rec := job.Record{Kind: job.Attack, Target: foe, TX: fp.X, TY: fp.Y, WorkLeft: aimTicks(d)}
-	if g.canHit(pos, d, fp) { // already in reach: no walking needed
+	rec := job.Record{Kind: job.Attack, Target: foe, TX: fp.X, TY: fp.Y, WorkLeft: combat.AimTicks(d)}
+	if g.combat.Sight.CanHit(pos.X, pos.Y, d, fp.X, fp.Y) { // already in reach: no walking needed
 		rec.State = job.Do
 		g.jobs.Set(id, rec)
 		return true
