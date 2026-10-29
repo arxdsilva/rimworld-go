@@ -142,7 +142,7 @@ func (g *Game) caravanCare(c *caravanRec, now uint64) {
 		if !ok || v.Status == health.Dead {
 			continue
 		}
-		if id == medic && !g.selfTendAllowed(id) || id != medic && !g.careOf(id).Tends() {
+		if id == medic && !g.care.SelfTendAllowed(id) || id != medic && !g.care.Level(id).Tends() {
 			continue
 		}
 		if b.TendAll(g.caravanTendQuality(medic, id), now) > 0 {

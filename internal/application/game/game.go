@@ -5,6 +5,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/world/biome"
@@ -163,11 +164,13 @@ type PawnView struct {
 	Temperament string
 	Weapon      string // wielded weapon name ("fists" when unarmed)
 	// Lying: downed or asleep. InBed: lying in its claimed bed.
-	// CarriedBy: the rescuer carrying it (0 when not carried).
-	Lying     bool
-	InBed     bool
-	CarriedBy entity.EntityID
-	Tended    bool
+	// CarriedBy: the rescuer carrying it (0 when not carried);
+	// CarryingPawn: the pawn it carries (0 when none; filled from SIM-062).
+	Lying        bool
+	InBed        bool
+	CarriedBy    entity.EntityID
+	CarryingPawn entity.EntityID
+	Tended       bool
 	// PLAY-020 bed rest: BedRest while resting in bed to heal;
 	// RestWhenHurt is the colonist's setting (on unless the player turned
 	// it off).
@@ -675,8 +678,6 @@ type Game struct {
 	lastHit    map[entity.EntityID]hitRec
 	wild       bool // wildlife migrates in (generated colonies)
 
-	carrying    map[entity.EntityID]entity.EntityID // rescuer -> patient
-	tendedUntil map[entity.EntityID]uint64
 	// research progress and the current project (researchSet: one is picked)
 	research research.Progress
 	// rockDamage: rock tiles sappers are hacking through.
@@ -768,9 +769,8 @@ type Game struct {
 	people    *peopleRegistry                     // people.go
 	bodies    map[entity.EntityID]*body.Body      // body.go
 	med       medState                            // patients.go (MED-00)
-	care      careState                           // care.go (MED-03)
+	care      *care.Care                          // care package (SIM-061): carry, policy, doctor
 	surg      *surgeryState                       // surgery.go
-	rest      bedRestState                        // bedrest.go (PLAY-020)
 	drugs     map[entity.EntityID]*drug.State     // drugs.go
 	prisoners map[entity.EntityID]*prisoner.State // prisoners.go
 	worldSt   *worldState                         // world_state.go
@@ -791,66 +791,66 @@ type Game struct {
 
 // New builds a Game from cfg. Width/Height must be positive.
 func New(cfg Config) *Game {
-	return &Game{
-		clock:       clock.NewAt(clock.StartingMorning()),
-		grid:        grid.New(cfg.Width, cfg.Height),
-		entities:    entity.NewAllocator(),
-		rng:         randx.New(cfg.Seed),
-		sched:       schedule.DefaultColony(),
-		positions:   component.NewStore[Position](),
-		names:       component.NewStore[string](),
-		jobs:        component.NewStore[job.Record](),
-		need:        component.NewStore[needs.Pair](),
-		vital:       component.NewStore[health.Record](),
-		labor:       component.NewStore[work.Mask](),
-		stacks:      component.NewStore[item.Stack](),
-		frames:      component.NewStore[construction.Frame](),
-		bldgs:       component.NewStore[construction.Building](),
-		plants:      component.NewStore[plant.Wild](),
-		terr:        terrain.NewMap(cfg.Width, cfg.Height),
-		zones:       zone.NewMap(cfg.Width, cfg.Height),
-		mines:       make(map[[2]int]bool),
-		smooths:     make(map[[2]int]bool),
-		geo:         geology.NewMap(cfg.Width, cfg.Height),
-		lastMeal:    make(map[entity.EntityID]item.Kind),
-		bills:       make(map[entity.EntityID][]recipe.Bill),
-		racks:       make(map[entity.EntityID]dryBatch),
-		fuel:        make(map[entity.EntityID]int),
-		exposure:    make(map[entity.EntityID]exposureState),
-		noComfort:   make(map[entity.EntityID]uint64),
-		biome:       cfg.Biome,
-		climate:     biome.DefOf(cfg.Biome).Climate,
-		troughs:     make(map[entity.EntityID]troughState),
-		noFood:      make(map[entity.EntityID]uint64),
-		postponed:   newPostState(),
-		restedFree:  make(map[entity.EntityID]bool),
-		calm:        make(map[entity.EntityID]uint64),
-		banked:      make(map[entity.EntityID]bool),
-		orderQueue:  make(map[entity.EntityID][]queuedOrder),
-		apparel:     make(map[entity.EntityID]worn),
-		prio:        make(map[entity.EntityID]work.Priorities),
-		raiders:     make(map[entity.EntityID]raiderState),
-		scheds:      make(map[entity.EntityID]schedule.Grid),
-		joy:         make(map[entity.EntityID]int),
-		breaks:      make(map[entity.EntityID]breakState),
-		memories:    make(map[entity.EntityID]mood.Memories),
-		roomDirty:   true,
-		reserve:     reservation.NewTable(),
-		ateAt:       make(map[entity.EntityID]bool),
-		logs:        make(map[entity.EntityID][]logEntry),
-		draft:       make(map[entity.EntityID]bool),
-		sleptAt:     make(map[entity.EntityID]entity.EntityID),
-		animals:     component.NewStore[animal.State](),
-		equip:       make(map[entity.EntityID]item.Kind),
-		carrying:    make(map[entity.EntityID]entity.EntityID),
-		tendedUntil: make(map[entity.EntityID]uint64),
-		rockDamage:  make(map[[2]int]int),
-		research:    research.Complete(), // sandbox: everything known
-		motion:      component.NewStore[motionRec](),
-		lastStrike:  make(map[entity.EntityID]strikeRec),
-		lastHit:     make(map[entity.EntityID]hitRec),
-		streams:     rngStreams{seed: cfg.Seed},
+	g := &Game{
+		clock:      clock.NewAt(clock.StartingMorning()),
+		grid:       grid.New(cfg.Width, cfg.Height),
+		entities:   entity.NewAllocator(),
+		rng:        randx.New(cfg.Seed),
+		sched:      schedule.DefaultColony(),
+		positions:  component.NewStore[Position](),
+		names:      component.NewStore[string](),
+		jobs:       component.NewStore[job.Record](),
+		need:       component.NewStore[needs.Pair](),
+		vital:      component.NewStore[health.Record](),
+		labor:      component.NewStore[work.Mask](),
+		stacks:     component.NewStore[item.Stack](),
+		frames:     component.NewStore[construction.Frame](),
+		bldgs:      component.NewStore[construction.Building](),
+		plants:     component.NewStore[plant.Wild](),
+		terr:       terrain.NewMap(cfg.Width, cfg.Height),
+		zones:      zone.NewMap(cfg.Width, cfg.Height),
+		mines:      make(map[[2]int]bool),
+		smooths:    make(map[[2]int]bool),
+		geo:        geology.NewMap(cfg.Width, cfg.Height),
+		lastMeal:   make(map[entity.EntityID]item.Kind),
+		bills:      make(map[entity.EntityID][]recipe.Bill),
+		racks:      make(map[entity.EntityID]dryBatch),
+		fuel:       make(map[entity.EntityID]int),
+		exposure:   make(map[entity.EntityID]exposureState),
+		noComfort:  make(map[entity.EntityID]uint64),
+		biome:      cfg.Biome,
+		climate:    biome.DefOf(cfg.Biome).Climate,
+		troughs:    make(map[entity.EntityID]troughState),
+		noFood:     make(map[entity.EntityID]uint64),
+		postponed:  newPostState(),
+		restedFree: make(map[entity.EntityID]bool),
+		calm:       make(map[entity.EntityID]uint64),
+		banked:     make(map[entity.EntityID]bool),
+		orderQueue: make(map[entity.EntityID][]queuedOrder),
+		apparel:    make(map[entity.EntityID]worn),
+		prio:       make(map[entity.EntityID]work.Priorities),
+		raiders:    make(map[entity.EntityID]raiderState),
+		scheds:     make(map[entity.EntityID]schedule.Grid),
+		joy:        make(map[entity.EntityID]int),
+		breaks:     make(map[entity.EntityID]breakState),
+		memories:   make(map[entity.EntityID]mood.Memories),
+		roomDirty:  true,
+		reserve:    reservation.NewTable(),
+		ateAt:      make(map[entity.EntityID]bool),
+		logs:       make(map[entity.EntityID][]logEntry),
+		draft:      make(map[entity.EntityID]bool),
+		sleptAt:    make(map[entity.EntityID]entity.EntityID),
+		animals:    component.NewStore[animal.State](),
+		equip:      make(map[entity.EntityID]item.Kind),
+		rockDamage: make(map[[2]int]int),
+		research:   research.Complete(), // sandbox: everything known
+		motion:     component.NewStore[motionRec](),
+		lastStrike: make(map[entity.EntityID]strikeRec),
+		lastHit:    make(map[entity.EntityID]hitRec),
+		streams:    rngStreams{seed: cfg.Seed},
 	}
+	g.care = care.New(newCareHost(g)) // care_host.go
+	return g
 }
 
 // NewColony builds a generated map (terrain, trees, bushes) with the
@@ -1092,14 +1092,14 @@ func (g *Game) snapshot() []PawnView {
 		pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
 		pv.InfectionLosing, pv.UntendedHours = g.infectionLosing(id), g.untendedHours(id)
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
-		pv.CareLevel = uint8(g.careOf(id))                                         // care.go (MED-03)
+		cv := g.care.View(id, j)                                                   // care package: carry, tend, care level, bed rest
+		pv.CareLevel = uint8(cv.CareLevel)                                         // MED-03
 		pv.Disease = g.diseaseLabel(id)                                            // disease.go (MED-04)
 		pv.OverdosePct, pv.OverdoseStage = g.overdoseView(id)                      // drugs.go (MED-07)
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
-		pv.CarriedBy = g.carriedBy(id)
-		pv.Tended = g.tended(id)
+		pv.CarriedBy, pv.Tended = cv.CarriedBy, cv.Tended
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
 		pv.Temperament = g.temperamentOf(id).String()
 		pr := g.prioOf(id)
@@ -1115,8 +1115,10 @@ func (g *Game) snapshot() []PawnView {
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()
 		}
-		g.fillFleeView(pv, id)       // an unarmed colonist running from a threat (flee.go)
-		g.fillBedRestView(pv, id, j) // bedrest.go: "Rest when hurt", resting in bed
+		g.fillFleeView(pv, id)                             // an unarmed colonist running from a threat (flee.go)
+		if pv.RestWhenHurt = cv.RestWhenHurt; cv.BedRest { // PLAY-020: resting in bed
+			pv.BedRest, pv.Job = true, care.RestingLabel
+		}
 		b := g.bandsOf(id)
 		pv.ComfortMin, pv.ComfortMax = b.Min, b.Max
 		if j, _ := g.jobs.Get(id); j.Forced && j.Active() {

@@ -154,3 +154,35 @@ func TestDrawSmoke(t *testing.T) {
 	c.DrawSearch(img, 64)
 	DrawRoute(img, 16, game.PawnView{HasOrder: true, OrderX: 2, OrderY: 2}, 0, 0, func(x, y float64) (float32, float32) { return float32(x * 16), float32(y * 16) })
 }
+
+func TestHasPawnOrder(t *testing.T) {
+	t.Parallel()
+	opt := func(c command.Command) game.OrderOption { return game.OrderOption{Cmd: c} }
+	cases := []struct {
+		name string
+		opts []game.OrderOption
+		want bool
+	}{
+		{"emergency tend", []game.OrderOption{opt(command.Command{Kind: command.EmergencyTend})}, true},
+		{"prioritize with target", []game.OrderOption{opt(command.Command{Kind: command.Prioritize, Order: command.OrderRescue, Target: 7})}, true},
+		{"prioritize without target", []game.OrderOption{opt(command.Command{Kind: command.Prioritize})}, false},
+		{"empty", nil, false},
+	}
+	for _, tc := range cases {
+		if got := hasPawnOrder(tc.opts); got != tc.want {
+			t.Errorf("%s: got %v", tc.name, got)
+		}
+	}
+}
+
+func TestDraftedRightClickOnPawnOrderOpensMenu(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	f.selected, f.pawns = 1, []game.PawnView{{ID: 1, Drafted: true}}
+	f.opts = []game.OrderOption{{Label: "Rescue Ann", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderRescue, Pawn: 1, Target: 7}}}
+	c := New(f)
+	c.RightClickTile(4, 5, 10, 10)
+	if len(f.cmds) != 0 || !c.Float.Open {
+		t.Fatalf("a pawn-targeted option opens the menu: %+v open=%v", f.cmds, c.Float.Open)
+	}
+}

@@ -64,14 +64,14 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		}
 		return ""
 	case job.Rescue:
-		if working || active && g.carrying[id] != 0 {
+		if working || active && g.care.Carry.Patient(id) != 0 {
 			return ActionRescue
 		}
 	case job.Bill:
 		if working && j.Carry != 0 {
 			return g.billAction(j)
 		}
-	case job.Tend, job.EmergencyTend: // EmergencyTend: care.go (MED-03)
+	case job.Tend, job.EmergencyTend: // EmergencyTend: care/tend.go (MED-03)
 		if working && !(j.Dest != 0 && j.Carry == 0) {
 			return ActionTend
 		}
@@ -267,7 +267,7 @@ func (g *Game) attackCycleOf(id entity.EntityID, j job.Record) float64 {
 // carryingOf is the item kind held in the arms ("pawn" while carrying a
 // patient), "" when empty-handed.
 func (g *Game) carryingOf(id entity.EntityID, j job.Record) string {
-	if g.carrying[id] != 0 {
+	if g.care.Carry.Patient(id) != 0 {
 		return "pawn"
 	}
 	if j.Carry != 0 {

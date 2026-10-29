@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -242,8 +243,8 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok || !b.Kind.Sleeps() {
 			return job.Record{}, ReasonGone
 		}
-		if g.isMedicalBed(b) && !g.mayUseMedicalBed(id) {
-			return job.Record{}, ReasonMedicalBed // bedrest.go: for patients only
+		if care.IsMedicalBed(b) && !g.care.Rest.MayUseMedicalBed(id) {
+			return job.Record{}, ReasonMedicalBed // care/rest.go: for patients only
 		}
 		if !b.CanClaim(uint64(id)) {
 			return job.Record{}, ReasonOwned + g.name(entity.EntityID(b.Owner(uint64(id))))
@@ -424,9 +425,9 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		}
 	}
 	if o == command.OrderSleep {
-		if b, _ := g.bldgs.Get(rec.Target); g.isMedicalBed(b) {
+		if b, _ := g.bldgs.Get(rec.Target); care.IsMedicalBed(b) {
 			g.bldgs.Set(rec.Target, b.Claim(uint64(id)))
-			g.holdRestBed(id, rec.Target) // bedrest.go: a patient's stay; its own bed stays its own
+			g.care.Rest.Hold(id, rec.Target) // care/rest.go: a patient's stay; its own bed stays its own
 		} else {
 			g.releaseBed(id)
 			b, _ := g.bldgs.Get(rec.Target)
@@ -582,8 +583,10 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	if g.drafted(pawn) && g.fireAt(x, y) > 0 { // firefight.go: any fire, forced
 		add("Extinguish fire", command.OrderExtinguish, construction.LayerObject)
 	}
-	out = append(out, g.tendOrders(pawn, x, y)...) // care.go (MED-03): drafted "Tend <name>"
-	g.tradeOrders(add, x, y)                       // trade_session.go (PLAY-024): "Trade with <name>"
-	g.commsOrders(add, x, y)                       // comms.go (PLAY-024): "Use radio console"
+	for _, o := range g.care.PawnOrders(pawn, x, y) { // care/orders.go (MED-03): drafted "Tend <name>"
+		out = append(out, OrderOption(o))
+	}
+	g.tradeOrders(add, x, y) // trade_session.go (PLAY-024): "Trade with <name>"
+	g.commsOrders(add, x, y) // comms.go (PLAY-024): "Use radio console"
 	return out
 }

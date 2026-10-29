@@ -211,6 +211,12 @@ func PawnStatusLines(p game.PawnView, name func(entity.EntityID) string) []strin
 	if p.Drafted {
 		out = append(out, "Drafted")
 	}
+	if p.CarriedBy != 0 {
+		out = append(out, "Carried by "+carryName(name, p.CarriedBy))
+	}
+	if p.CarryingPawn != 0 {
+		out = append(out, "Carrying "+carryName(name, p.CarryingPawn))
+	}
 	if p.MentalBreak != "" {
 		out = append(out, "MENTAL BREAK: "+p.MentalBreak)
 	}
@@ -238,6 +244,15 @@ func PawnStatusLines(p game.PawnView, name func(entity.EntityID) string) []strin
 		out = append(out, TitleCase(ln))
 	}
 	return out
+}
+
+// carryName is the carried or carrying pawn's name, "someone" when the
+// read model cannot resolve it.
+func carryName(name func(entity.EntityID) string, id entity.EntityID) string {
+	if n := name(id); n != "" {
+		return n
+	}
+	return "someone"
 }
 
 // pawnLines are the pane's scrolling lines: the status, the job, what is

@@ -92,7 +92,7 @@ func TestCaptureCarriesDownedRaiderToPrisonBed(t *testing.T) {
 	for i := 0; i < 2000 && !g.isPrisoner(rid); i++ {
 		g.Step(1)
 		fed(g, ada, bo)
-		if g.carriedBy(rid) == ada {
+		if g.care.Carry.Carrier(rid) == ada {
 			carried = true
 			if pp, ap := g.positionOf(rid), g.positionOf(ada); pp != ap {
 				t.Fatal("a captive moves with its captor")

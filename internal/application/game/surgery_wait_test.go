@@ -209,7 +209,7 @@ func TestSurgeryWaitLyingDoesNotFlap(t *testing.T) {
 	if !g.awaitingSurgery(patient) {
 		t.Fatal("a free implant does")
 	}
-	g.lieDownForCare(patient)
+	g.care.Rest.LieDown(patient)
 	j, _ := g.jobs.Get(patient)
 	if j.Kind != job.Sleep {
 		t.Fatalf("the patient lies down: %+v", j)
@@ -304,7 +304,7 @@ func TestSurgeryPatientPrefersHospitalBed(t *testing.T) {
 		t.Fatal("beds placed")
 	}
 	addPegLeg(g, patient)
-	for i := 0; i < 200 && !g.lyingForCare(patient); i++ {
+	for i := 0; i < 200 && !g.care.Doctor.Lying(patient); i++ {
 		g.SetNeeds(patient, needs.Full, needs.Full)
 		g.SetNeeds(doc, needs.Full, needs.Full)
 		g.Step(5)

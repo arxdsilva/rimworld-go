@@ -152,9 +152,9 @@ func (g *Game) rebuildOccupancy() {
 	o.mixed, o.shared = o.mixed[:0], o.shared[:0]
 	o.dirty = false
 	o.carried = o.carried[:0]
-	for _, p := range g.carrying {
+	g.care.Carry.Each(func(_, p entity.EntityID) {
 		o.carried = append(o.carried, p) // order does not matter: membership only
-	}
+	})
 	for list, ids := range [3][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
 		for _, id := range ids {
 			if list < 2 && !g.standingWalker(id) || list == 2 && !g.standing(id) {
@@ -836,7 +836,7 @@ func (g *Game) arrivalOf(id entity.EntityID) arrival {
 	case job.Sleep, job.Relax, job.Bill, job.Research, job.Horseshoes:
 		return arriveExact
 	case job.Eat, job.Haul, job.Rescue:
-		if j.Carry != 0 || g.carrying[id] != 0 {
+		if j.Carry != 0 || g.care.Carry.Patient(id) != 0 {
 			return arriveExact
 		}
 	}

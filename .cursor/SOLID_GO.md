@@ -137,7 +137,7 @@ A consumer that needs two of them embeds both. `Simulation` shrinks to an embedd
 
 The mandatory rule is `HEXAGONAL_ARCHITECTURE.md` §6, with `GO_BEST_PRACTICES.md` §5, §6 and §73: ports are consumer-owned, and concrete types are constructed only at the composition root.
 
-This document adds one point. The `ebiten` sub-packages are consumers. They define what they need from the root, the root constructs them, and a sub-package never imports the root. The guard's `imports` rule enforces that edge.
+This document adds one point. Feature sub-packages (`ebiten/<sub>`, `application/game/<sub>`) are consumers. They define what they need from the root, the root constructs them, and a sub-package never imports the root. The guard's `imports` rule enforces that edge.
 
 In a draw or tick path the host interface's methods take values, not pointers to the caller's locals: an interface call hides the callee from escape analysis, so a `*game.WorldView` passed through one moves the whole frame's world to the heap (ARCH-004 wave 4.3: two allocations per frame until `render/env.Lists` passed the slices instead). Pass the slice or the field the method reads; benchmark `-benchmem` and `-gcflags=-m=2` after adding a host method.
 
@@ -154,7 +154,7 @@ In a draw or tick path the host interface's methods take values, not pointers to
 | `files` | ≤ 60 per package | Non-test Go files | Same reasoning as `lines`. |
 | `init` | 0 | `func init()` declarations | Registration is explicit (§4). |
 | `global` | 0 | Package-level `var` assigned at runtime; `sync` and `atomic` types are exempt | See §9. |
-| `imports` | forbidden edges | Domain → adapters, application, platform, ports, `ebiten`, `os`. Application and ports → adapters. Outbound → inbound. `inbound/ebiten/<sub>` → the `ebiten` root | `HEXAGONAL_ARCHITECTURE.md` §31 made executable. |
+| `imports` | forbidden edges | Domain → adapters, application, platform, ports, `ebiten`, `os`. Application and ports → adapters. Outbound → inbound. `inbound/ebiten/<sub>` → the `ebiten` root. `application/game/<sub>` → the `game` root | `HEXAGONAL_ARCHITECTURE.md` §31 made executable. |
 
 **Budget file.** `internal/arch/solid_budget.txt` holds lines of the form `rule key ceiling  # note`. Each line records today's measured number as a ceiling.
 
@@ -193,7 +193,7 @@ A test hook becomes a field on its owner, nil in production. It is not a global 
 7. Move the cluster's tests with it, in the same commit. Integration tests that drive the whole shell stay at the root.
 8. Lower the budget lines in the same commit.
 
-Use a sub-package only when the type has no back-reference to the root and imports go one way. Otherwise stay in the package.
+A cluster may become a sub-package of the god type's package when it owns state no other cluster writes and everything it needs from the root fits behind consumer-owned roles in its `deps.go`: each role at most 8 methods, composed by embedding, values only on tick and draw paths (§7). The root builds it, keeps one field, and implements the roles with small adapter types (at most 8 methods each) in `<sub>_host.go`; the sub-package never imports the root. New features of a package at its ceiling go into such a sub-package, never into the package itself. Keep the sub-package concise: one concept, several small types if the concept needs them, never one package per type and no `utils`. State that two clusters write stays on the root, behind a role. Examples: `internal/adapters/inbound/ebiten/<feature>` (ARCH-005), `internal/application/game/care` (SIM-061).
 
 ---
 

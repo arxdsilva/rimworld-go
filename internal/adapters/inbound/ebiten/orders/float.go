@@ -189,8 +189,8 @@ func (c *Controller) RightClickTile(tx, ty int, sx, sy float32) {
 		return
 	}
 	if p.Drafted && !c.creatureAt(tx, ty, p.ID) {
-		if opts := c.sh.OrdersAt(p.ID, tx, ty); hasTendOrder(opts) {
-			// MED-03: a wounded pawn here: the menu offers "Tend <name>"
+		if opts := c.sh.OrdersAt(p.ID, tx, ty); hasPawnOrder(opts) {
+			// MED-03 / SIM-062: a pawn here: the menu offers Tend, Rescue, Arrest...
 			c.openAt(opts, tx, ty, sx, sy)
 			return
 		}
@@ -201,11 +201,12 @@ func (c *Controller) RightClickTile(tx, ty int, sx, sy float32) {
 	c.OpenOrders(tx, ty, sx, sy)
 }
 
-// hasTendOrder reports an emergency tend among opts (a wounded colonist
-// or prisoner on the tile, MED-03).
-func hasTendOrder(opts []game.OrderOption) bool {
+// hasPawnOrder reports an order aimed at a pawn among opts: an emergency
+// tend (MED-03) or a Prioritize with a Target (rescue, capture, arrest,
+// tend, feed, strip, carry; SIM-062).
+func hasPawnOrder(opts []game.OrderOption) bool {
 	for _, o := range opts {
-		if o.Cmd.Kind == command.EmergencyTend {
+		if o.Cmd.Kind == command.EmergencyTend || (o.Cmd.Kind == command.Prioritize && o.Cmd.Target != 0) {
 			return true
 		}
 	}

@@ -214,7 +214,7 @@ func TestFoodPoisoningBedRestNoFlap(t *testing.T) {
 	v, _ := g.vital.Get(id)
 	b := g.ensureBody(id, &v)
 	b.Poison(uint64(g.clock.Now()))
-	if g.needsBedRest(id) {
+	if g.care.Rest.NeedsBedRest(id) {
 		t.Fatal("the initial stage needs no bed")
 	}
 	transitions, was := 0, false
@@ -223,9 +223,9 @@ func TestFoodPoisoningBedRestNoFlap(t *testing.T) {
 		g.clock.Advance(int(clock.TicksPerHour - now%clock.TicksPerHour))
 		b.StepFoodPoisoning(uint64(g.clock.Now()))
 		for i := 0; i < 4; i++ { // a few looks an hour, as phaseAI does every tick
-			g.updateBedRest(id)
+			g.care.Rest.Update(id)
 		}
-		on := g.onBedRest(id)
+		on := g.care.Rest.On(id)
 		c, still := b.Poisoned()
 		switch {
 		case still && c.Stage == body.FoodStageMajor && !on:
@@ -243,7 +243,7 @@ func TestFoodPoisoningBedRestNoFlap(t *testing.T) {
 	}
 	b.Poison(uint64(g.clock.Now()) - body.FoodPoisonInitialHours*clock.TicksPerHour)
 	b.StepFoodPoisoning(uint64(g.clock.Now()))
-	if !g.needsBedRest(id) {
+	if !g.care.Rest.NeedsBedRest(id) {
 		t.Fatal("a fresh major stage sends to bed")
 	}
 	if n := kindChanges(g, id, 300); n > 3 {

@@ -53,9 +53,9 @@ func (g *Game) applyHostCommand(c command.Command) {
 	case command.InvertArea:
 		g.cmdInvertArea(c.Index) // areas.go
 	case command.SetBedMedical:
-		g.cmdSetBedMedical(target, c.Enabled) // med_cmds.go (PLAY-020)
+		g.care.Rest.SetBedMedical(target, c.Enabled) // care/rest.go (PLAY-020)
 	case command.SetPawnBedRest:
-		g.cmdSetPawnBedRest(target, c.Enabled) // med_cmds.go
+		g.care.Rest.SetPawnBedRest(target, c.Enabled) // care/rest.go
 	case command.SetZoneSow:
 		g.cmdSetZoneSow(uint16(c.Target), c.Enabled) // zone_cmds.go (PLAY-020)
 	case command.SetZoneCut:
@@ -79,13 +79,13 @@ func (g *Game) applyHostCommand(c command.Command) {
 	case command.SetThermostat:
 		g.cmdSetThermostat(target, c.Count) // power_heat.go (PLAY-021)
 	case command.SetMedicalCare:
-		g.cmdSetMedicalCare(pawn, c.Mode) // care.go (MED-00 stub)
+		g.care.SetMedicalCare(pawn, c.Mode) // care package (MED-03)
 	case command.SetDefaultCare:
-		g.cmdSetDefaultCare(c.Index, c.Mode) // care.go
+		g.care.Policy.SetDefault(c.Index, c.Mode) // care package
 	case command.SetSelfTend:
-		g.cmdSetSelfTend(pawn, c.Enabled) // care.go
+		g.care.SetSelfTend(pawn, c.Enabled) // care package
 	case command.EmergencyTend:
-		g.cmdEmergencyTend(pawn, target) // care.go
+		g.care.Doctor.EmergencyTend(pawn, target) // care package
 	case command.ReorderOperation:
 		g.cmdReorderOperation(pawn, c.Index, c.Count) // surgery.go
 	case command.ProposeTrade:

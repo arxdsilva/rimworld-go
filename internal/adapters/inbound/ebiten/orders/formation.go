@@ -27,12 +27,12 @@ type Formation struct {
 // formationRadius bounds the search for free cells around a target.
 const formationRadius = 8
 
-// tendOrderAt reports the tile holds someone p can tend (MED-03): that
+// pawnOrderAt reports the tile holds a pawn p can act on (MED-03, SIM-062): that
 // right-click opens the order menu (float.go RightClickTile) instead of
 // starting a formation drag, which used to claim every drafted
 // right-click on a tile without a raider or animal (QA-001 finding).
-func (c *Controller) tendOrderAt(p game.PawnView, tx, ty int) bool {
-	return hasTendOrder(c.sh.OrdersAt(p.ID, tx, ty))
+func (c *Controller) pawnOrderAt(p game.PawnView, tx, ty int) bool {
+	return hasPawnOrder(c.sh.OrdersAt(p.ID, tx, ty))
 }
 
 func abs(v int) int {
@@ -266,7 +266,7 @@ func (c *Controller) HandleOrders() {
 		return
 	}
 	f.Take(inputframe.Right)
-	if drafted := draftedOf(pawns); len(drafted) > 0 && !c.creatureAt(tx, ty, 0) && !c.tendOrderAt(drafted[0], tx, ty) {
+	if drafted := draftedOf(pawns); len(drafted) > 0 && !c.creatureAt(tx, ty, 0) && !c.pawnOrderAt(drafted[0], tx, ty) {
 		c.CloseFloat()
 		c.Form = Formation{On: true, X0: tx, Y0: ty, X1: tx, Y1: ty}
 		return

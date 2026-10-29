@@ -247,8 +247,8 @@ func (g *Game) prisonerPawnView(id entity.EntityID) PawnView {
 	pv.MoodTarget, pv.MoodLabel, pv.Thoughts = pv.Mood, mood.Label(pv.Mood), thoughtViews(ts)
 	pv.Lying = v.Status != health.Alive || j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete)
 	pv.InBed = g.inBed(id)
-	pv.CarriedBy = g.carriedBy(id)
-	pv.Tended = g.tended(id)
+	cv := g.care.View(id, j)
+	pv.CarriedBy, pv.Tended = cv.CarriedBy, cv.Tended
 	pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
 	g.fillPawnAction(&pv, id, j)
 	return pv

@@ -261,7 +261,7 @@ func TestColdPatientDoesNotFlap(t *testing.T) {
 	g, id := warmHut(t)
 	g.SpawnNamedPawn(3, 10, "Doc")
 	g.Infect(id, 20) // sick until immune (MED-02)
-	if !g.patientRest(id) {
+	if !g.care.Rest.PatientRest(id) {
 		t.Fatal("setup: should be a patient")
 	}
 	if c := kindChanges(g, id, 300); c > 3 {

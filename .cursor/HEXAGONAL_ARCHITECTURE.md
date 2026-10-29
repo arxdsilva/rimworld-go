@@ -202,6 +202,8 @@ rimworld-go/
 │   │
 │   ├── application/
 │   │   ├── game/
+│   │   │   ├── care/        # looking after pawns that can't look after themselves: carry, rescue, tend, bed rest, beds, pawn-targeted orders (SIM-061)
+│   │   │   └── mind/        # mental breaks, including those that target others (SIM-066)
 │   │   ├── session/
 │   │   ├── commands/
 │   │   ├── scenario/

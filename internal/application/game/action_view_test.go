@@ -114,11 +114,11 @@ func TestActionRescueAndBenches(t *testing.T) {
 	if got := g.actionOf(id, job.Record{Kind: job.Rescue, State: job.Do}); got != ActionRescue {
 		t.Errorf("lifting a patient = %q", got)
 	}
-	g.carrying[id] = patient
+	g.care.Carry.Pick(id, patient)
 	if got := g.actionOf(id, job.Record{Kind: job.Rescue, State: job.Goto}); got != ActionRescue {
 		t.Errorf("carrying a patient to bed = %q", got)
 	}
-	delete(g.carrying, id)
+	g.care.Carry.Drop(id)
 	if got := g.actionOf(id, job.Record{Kind: job.Rescue, State: job.Goto}); got != "" {
 		t.Errorf("walking to the patient = %q", got)
 	}
@@ -504,7 +504,7 @@ func TestCarryingExposesItemKind(t *testing.T) {
 		t.Fatalf("Action = %q", pv.Action)
 	}
 	g.jobs.Set(id, job.Record{})
-	g.carrying[id] = patient
+	g.care.Carry.Pick(id, patient)
 	if got := pawnView(g, id).Carrying; got != "pawn" {
 		t.Fatalf("rescuing: Carrying = %q", got)
 	}

@@ -319,7 +319,7 @@ func TestDoctorTendsTheFastestBleederFirst(t *testing.T) {
 	}
 	addWound(t, g, near, body.Torso, 70, body.Bruise) // worse hurt, but not bleeding
 	addWound(t, g, far, body.Torso, 66, body.Cut)
-	if !g.assignDoctor(doc) {
+	if !g.care.Doctor.Assign(doc) {
 		t.Fatal("no doctor job")
 	}
 	if j, _ := g.jobs.Get(doc); j.Target != far {

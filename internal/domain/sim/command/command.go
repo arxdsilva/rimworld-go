@@ -280,6 +280,20 @@ const (
 	// OrderUseComms: work the radio console at X, Y and open comms.
 	OrderTrade
 	OrderUseComms
+	// Pawn-targeted orders (SIM-062…065) name the pawn in Command.Target;
+	// X, Y is the tile the player clicked. Rescue carries a downed
+	// non-hostile to a safe bed, Capture a downed pawn to a prison bed,
+	// Arrest takes a standing pawn prisoner, TendPatient is an undrafted
+	// "prioritize tending", FeedPatient brings a meal, Strip drops a
+	// pawn's apparel and weapon, CarryToPrisonBed returns a downed
+	// prisoner to its bed.
+	OrderRescue
+	OrderCapture
+	OrderArrest
+	OrderTendPatient
+	OrderFeedPatient
+	OrderStrip
+	OrderCarryToPrisonBed
 )
 
 // Command is applied on a simulation tick, never by the UI directly.
@@ -302,7 +316,9 @@ type Command struct {
 	// Queue adds a MovePawn/Prioritize order behind the pawn's current
 	// order instead of replacing it.
 	Queue bool
-	// Target is a building id (MoveBuilding).
+	// Target is a building id (MoveBuilding) or the pawn a pawn-targeted
+	// order acts on (EmergencyTend, Capture, Arrest, Prioritize with
+	// OrderRescue…OrderCarryToPrisonBed).
 	Target uint64
 	// Name carries a key for SetStoryteller / SetDifficulty.
 	Name string

@@ -159,7 +159,7 @@ func TestCarriedPawnDoesNotBlock(t *testing.T) {
 	a := mustPawn(t, g, 2, 5)
 	carrier := mustPawn(t, g, 3, 6)
 	patient := mustPawn(t, g, 3, 5)
-	g.carrying[carrier] = patient
+	g.care.Carry.Pick(carrier, patient)
 	walkTo(g, a, job.Move, straight(2, 6, 5)...)
 	rebuild(g)
 	if v, _ := g.enter(a, Position{2, 5}, Position{3, 5}); v != stepGo {

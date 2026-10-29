@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"slices"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -27,7 +28,7 @@ func areaExempt(k job.Kind) bool {
 	switch k {
 	case job.Move, job.Warm, job.Rescue, job.Tend, job.Surgery, job.Hide, job.Attack, job.Brawl,
 		job.Kidnap, job.ExitMap, job.Visit, job.Gather, job.Lovin, job.None,
-		job.EmergencyTend: // care.go (MED-03)
+		job.EmergencyTend: // care/policy.go (MED-03)
 		return true
 	}
 	return false
@@ -41,7 +42,7 @@ func (g *Game) areaExemptJob(id entity.EntityID, rec job.Record) bool {
 	}
 	if rec.Kind == job.Sleep && rec.Target != 0 {
 		b, ok := g.bldgs.Get(rec.Target)
-		return ok && g.isMedicalBed(b)
+		return ok && care.IsMedicalBed(b)
 	}
 	return false
 }

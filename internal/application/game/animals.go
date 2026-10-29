@@ -796,7 +796,7 @@ func (g *Game) removeAnimal(id entity.EntityID) {
 		g.reserve.ReleaseEntity(id, a.FeedClaim) // a tame eater's stack is free again
 	}
 	delete(g.logs, id)
-	delete(g.tendedUntil, id) // vet_animals.go
+	g.care.Doctor.Forget(id) // vet_animals.go
 	g.animals.Delete(id)
 	g.positions.Delete(id)
 	kept := g.animalIDs[:0]

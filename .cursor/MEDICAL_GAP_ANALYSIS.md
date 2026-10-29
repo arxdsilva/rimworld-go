@@ -4,6 +4,8 @@ Scope: bring the medical system (wounds, bleeding, tending, infection, diseases,
 
 ## Status (2026-10-26)
 
+Code locations moved on 2026-10-29: SIM-061 moved tending, rescue, the carry index, bed rest and the care policy from `game/medical.go`, `game/care.go`, `game/bedrest.go` and `game/med_cmds.go` into `internal/application/game/care` (`tend.go`, `rescue.go`, `carry.go`, `rest.go`, `policy.go`). File references below predate that move. Open pawn-to-pawn gaps are tracked in `PAWN_INTERACTION_GAP_ANALYSIS.md`.
+
 All phases MED-00 to MED-09 are implemented. Each has a handoff in
 `.cursor/handoffs/` (`MED-0N-*.md`); the art is in `ART-026-medical-items.md`.
 Sections 2 and 3 below describe the system **before** the overhaul and are

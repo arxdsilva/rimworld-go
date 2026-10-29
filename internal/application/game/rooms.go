@@ -353,7 +353,7 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 		}
 	case job.Horseshoes:
 		return "play horseshoes", j.DestX, j.DestY
-	case job.Tend, job.EmergencyTend: // EmergencyTend: care.go (MED-03)
+	case job.Tend, job.EmergencyTend: // EmergencyTend: care/tend.go (MED-03)
 		if p, ok := g.positions.Get(j.Target); ok {
 			return j.Kind.String(), p.X, p.Y
 		}

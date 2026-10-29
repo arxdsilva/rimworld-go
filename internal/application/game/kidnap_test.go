@@ -51,7 +51,7 @@ func stepUntil(g *Game, n int, cond func() bool) bool {
 func TestKidnapCarriesAColonistOffTheMap(t *testing.T) {
 	t.Parallel()
 	g, ada, bo, rid := kidnapGame(t)
-	if !stepUntil(g, 200, func() bool { return g.carrying[rid] == ada }) {
+	if !stepUntil(g, 200, func() bool { return g.care.Carry.Patient(rid) == ada }) {
 		j, _ := g.jobs.Get(rid)
 		t.Fatalf("the raider never picked Ada up: job %+v", j)
 	}
@@ -110,7 +110,7 @@ func TestKilledKidnapperDropsTheColonist(t *testing.T) {
 	t.Parallel()
 	for _, kill := range []bool{true, false} {
 		g, ada, _, rid := kidnapGame(t)
-		if !stepUntil(g, 200, func() bool { return g.carrying[rid] == ada }) {
+		if !stepUntil(g, 200, func() bool { return g.care.Carry.Patient(rid) == ada }) {
 			t.Fatal("the raider never picked Ada up")
 		}
 		g.Step(20) // on the way out
@@ -124,7 +124,7 @@ func TestKilledKidnapperDropsTheColonist(t *testing.T) {
 			}
 		}
 		g.Step(1)
-		if g.carrying[rid] != 0 || g.carriedBy(ada) != 0 {
+		if g.care.Carry.Patient(rid) != 0 || g.care.Carry.Carrier(ada) != 0 {
 			t.Fatalf("kill %v: Ada still carried", kill)
 		}
 		if ap, _ := g.positions.Get(ada); ap != rp {
@@ -154,7 +154,7 @@ func TestKidnapTargetDoesNotFlap(t *testing.T) {
 	starts := 0
 	last, _ := g.jobs.Get(rid)
 	for i := 0; i < 1200 && slices.Contains(g.raiderIDs, rid); i++ {
-		if i%30 == 0 && g.carrying[rid] == 0 {
+		if i%30 == 0 && g.care.Carry.Patient(rid) == 0 {
 			if (i/30)%2 == 0 {
 				g.positions.Set(bo, Position{X: 4, Y: 10})
 			} else {
@@ -190,7 +190,7 @@ func TestKidnapTargetDoesNotFlap(t *testing.T) {
 			t.Fatalf("kidnap retried %d ticks after a failure", i)
 		}
 	}
-	if g2.carrying[rid2] == ada2 {
+	if g2.care.Carry.Patient(rid2) == ada2 {
 		t.Fatal("picked up during the cooldown")
 	}
 }

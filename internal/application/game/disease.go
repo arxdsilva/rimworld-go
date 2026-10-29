@@ -32,7 +32,7 @@ import (
 // (a splash of dirt where the patient stands). A doctor tends a disease
 // once per tend window (body.TendDue), and a colonist rests in bed while
 // one is at its major stage or worse, getting up only once immune or
-// cured (bedrest.go).
+// cured (care/rest.go).
 
 const (
 	// vomitDirt is the dirt a vomit leaves on the patient's tile (enough

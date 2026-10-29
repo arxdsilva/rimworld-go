@@ -188,8 +188,8 @@ func (g *Game) Social(id entity.EntityID) (SocialView, bool) {
 // Health is colonist id's Health tab (ok false: nothing to show yet).
 func (g *Game) Health(id entity.EntityID) (HealthView, bool) {
 	hv, ok := g.healthView(id)
-	if ok { // care.go (MED-03): the care level and the self-tend toggle
-		hv.Care, hv.SelfTend = uint8(g.careOf(id)), !g.care.noSelfTend[id]
+	if ok { // care/policy.go (MED-03): the care level and the self-tend toggle
+		hv.Care, hv.SelfTend = uint8(g.care.Level(id)), !g.care.Policy.SelfTendOff(id)
 	}
 	return hv, ok
 }

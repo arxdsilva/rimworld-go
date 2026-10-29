@@ -29,7 +29,7 @@ const animalHealEvery = 10 * animal.DecideEvery
 func (g *Game) needsVet(id entity.EntityID, a *animal.State, now uint64) bool {
 	return a.Tame && !a.Dead() && !a.Enraged(now) && g.animalTendDue(id, a, now) && // animal_health.go
 		a.Mode != animal.Flee && a.Mode != animal.Attack && !a.Leaving &&
-		g.careOf(id).Tends() // care.go (MED-03): no care keeps the vet away
+		g.care.Level(id).Tends() // care/policy.go (MED-03): no care keeps the vet away
 }
 
 // assignTendAnimal sends doctor id to tend the nearest hurt tame animal.
@@ -61,7 +61,7 @@ func (g *Game) assignTendAnimal(id entity.EntityID) bool {
 	if !ok {
 		return false
 	}
-	rec := g.withMedicine(id, job.Record{Kind: job.TendAnimal, Target: best, TX: tx, TY: ty, WorkLeft: TendWork}) // infection.go
+	rec := g.care.Doctor.WithMedicine(id, job.Record{Kind: job.TendAnimal, Target: best, TX: tx, TY: ty, WorkLeft: TendWork}) // infection.go
 	if !g.startJob(id, rec) {
 		return false
 	}
@@ -105,7 +105,7 @@ func (g *Game) doTendAnimal(id entity.EntityID, j job.Record) {
 		j.Carry = 0
 	}
 	tendAnimalBody(&a, q, now) // animal_health.go: its wounds, or (no body) Injury
-	g.tendedUntil[j.Target] = now + TendTicks
+	g.care.Doctor.MarkTended(j.Target, now+TendTicks)
 	g.tryBond(j.Target, &a, id, training.BondTend) // bonds.go
 	g.animals.Set(j.Target, a)
 	j.State = job.Complete

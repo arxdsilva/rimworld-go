@@ -63,7 +63,7 @@ func TestRescueCarriesPatient(t *testing.T) {
 	g.hurt(patient, health.DownedInjury+10, 0)
 	for i := 0; i < 400; i++ {
 		g.Step(1)
-		if g.carriedBy(patient) == doc {
+		if g.care.Carry.Carrier(patient) == doc {
 			pp, _ := g.positions.Get(patient)
 			dp, _ := g.positions.Get(doc)
 			if pp != dp {

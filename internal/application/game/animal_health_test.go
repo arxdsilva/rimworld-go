@@ -214,8 +214,8 @@ func TestAnimalCarePolicySkipsNoCare(t *testing.T) {
 	g, ada, dog := bondYard(t, 43)
 	g.positions.Set(dog, Position{X: 12, Y: 6})
 	g.SpawnStack(item.HerbalMedicine, 3, 8, 3)
-	if g.careOf(dog) != medcare.Default(medcare.Animals) {
-		t.Fatalf("an animal starts at the Animals default: %v", g.careOf(dog))
+	if g.care.Level(dog) != medcare.Default(medcare.Animals) {
+		t.Fatalf("an animal starts at the Animals default: %v", g.care.Level(dog))
 	}
 	setCare(g, dog, medcare.NoCare)
 	cutAnimal(g, dog, 20)
@@ -227,7 +227,9 @@ func TestAnimalCarePolicySkipsNoCare(t *testing.T) {
 		t.Fatalf("No care: the wound stays untended: %+v", b)
 	}
 	// back to the group default, which the player set to No care
-	g.care.per = nil
+	ps := g.care.Policy.Export()
+	ps.Per = nil
+	g.care.Policy.Import(ps)
 	setDefaultCare(g, medcare.Animals, medcare.NoCare)
 	if runCare(g, 100, tendJob, ada) {
 		t.Fatal("Animals default No care: the vet stays away")
@@ -246,7 +248,7 @@ func TestAnimalCarePolicySkipsNoCare(t *testing.T) {
 }
 
 func setDefaultCare(g *Game, grp medcare.Group, p medcare.Policy) {
-	g.cmdSetDefaultCare(int(grp), uint8(p))
+	g.care.Policy.SetDefault(int(grp), uint8(p))
 }
 
 // A wounded, infected, half-bled animal loads back exactly, keeps being

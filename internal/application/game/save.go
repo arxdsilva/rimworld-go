@@ -9,6 +9,7 @@ import (
 	"hash/fnv"
 	"io"
 	mathbits "math/bits"
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -340,15 +341,15 @@ type saveState struct {
 	// BedRest (PLAY-020): "Rest when hurt" settings, who rests since
 	// when, who found no bed, and the medical beds held for a stay; nil
 	// when there is none (absent in older saves).
-	BedRest *bedRestSave
+	BedRest *care.RestSave
 	// Power (PLAY-021): the colony's electricity (power.go); nil without
 	// power devices, so saves without power hash as before (absent in
 	// older saves).
 	Power *powerSave
 	// Care (MED-03): medical care levels and self-tend settings
-	// (care.go); nil while all are at their defaults, so older saves
+	// (care/policy.go); nil while all are at their defaults, so older saves
 	// hash as before.
-	Care *careSave
+	Care *care.PolicySave
 	// PLAY-024: the trade state (trade.go) and the sentry turrets' aims
 	// (turret.go); nil when there is nothing to keep, so older saves and
 	// colonies without traders or turrets hash as before.
@@ -426,7 +427,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
-		Carrying: g.carrying, TendedUntil: g.tendedUntil,
+		Carrying: g.care.Carry.Export(), TendedUntil: g.care.Doctor.ExportTended(),
 		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
@@ -470,11 +471,11 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Social, s.People, s.World = g.exportSocial(), g.exportPeople(), g.exportWorld()
 	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
 	s.Surgery = g.exportSurgery()
-	s.BedRest = g.exportBedRest() // bedrest.go (PLAY-020)
-	s.Power = g.exportPower()     // power.go (PLAY-021): nil without power
-	s.Care = g.exportCare()       // care.go (MED-03): nil at the defaults
-	s.Trade = g.exportTrade()     // trade.go (PLAY-024): nil while there is nothing to keep
-	s.Turrets = g.exportTurrets() // turret.go (PLAY-024): nil while no turret aims
+	s.BedRest = g.care.Rest.Export() // care/rest.go (PLAY-020)
+	s.Power = g.exportPower()        // power.go (PLAY-021): nil without power
+	s.Care = g.care.Policy.Export()  // care package (MED-03): nil at the defaults
+	s.Trade = g.exportTrade()        // trade.go (PLAY-024): nil while there is nothing to keep
+	s.Turrets = g.exportTurrets()    // turret.go (PLAY-024): nil while no turret aims
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -583,8 +584,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.draft, s.Draft)
 	setMap(&g.sleptAt, s.SleptAt)
 	setMap(&g.equip, s.Equip)
-	setMap(&g.carrying, s.Carrying)
-	setMap(&g.tendedUntil, s.TendedUntil)
+	g.care.Carry.Import(s.Carrying)
+	g.care.Doctor.ImportTended(s.TendedUntil)
 	g.med.legacyWounds = s.Wounds // infection.go: migrated by migrateSave (v < 6)
 	g.research, g.researchCur, g.researchSet = research.FromV1(s.Research), s.ResearchCur, s.ResearchSet
 	if s.ResearchAll != nil {
@@ -649,11 +650,12 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importWorld(s.World)
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
-	g.importBedRest(s.BedRest)
-	g.importCare(s.Care)       // care.go (MED-03)
-	g.importPower(s.Power)     // power.go (PLAY-021)
-	g.importTrade(s.Trade)     // trade.go (PLAY-024): sessions close on load
-	g.importTurrets(s.Turrets) // turret.go (PLAY-024)
+	g.care.Rest.Import(s.BedRest)
+	g.care.Policy.Import(s.Care) // care/policy.go (MED-03)
+	g.med.animalIdxOK = false    // animal_health.go: rebuilt on first use
+	g.importPower(s.Power)       // power.go (PLAY-021)
+	g.importTrade(s.Trade)       // trade.go (PLAY-024): sessions close on load
+	g.importTurrets(s.Turrets)   // turret.go (PLAY-024)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History
@@ -683,7 +685,7 @@ func (g *Game) migrateSave(v int) {
 		g.migrateHarvestMarks() // plant_growth.go: ripe zone crops get their harvest mark
 		fallthrough
 	case v < 4:
-		g.migrateMedicalBeds() // bedrest.go (PLAY-020): hospital beds become medical
+		g.migrateMedicalBeds() // care/rest.go (PLAY-020): hospital beds become medical
 		fallthrough
 	case v < 5:
 		g.migrateLampsToTorches() // PLAY-021: lamps need power now

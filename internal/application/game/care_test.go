@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
@@ -65,7 +66,7 @@ func TestCarePolicyCapsMedicine(t *testing.T) {
 	}
 	for p := medcare.Policy(0); p < medcare.NumPolicies; p++ {
 		setCare(g, patient, p)
-		rec := g.withMedicine(doc, job.Record{Kind: job.Tend, Target: patient, TX: 13, TY: 6})
+		rec := g.care.Doctor.WithMedicine(doc, job.Record{Kind: job.Tend, Target: patient, TX: 13, TY: 6})
 		got := item.Kind(0)
 		if rec.Dest != 0 {
 			st, _ := g.stacks.Get(rec.Dest)
@@ -139,7 +140,7 @@ func TestDoctorPriorityOrder(t *testing.T) {
 	downed, _ := g.SpawnNamedPawn(4, 9, "Downed")
 	g.hurt(downed, health.DownedInjury+10, 0)
 	placeBuilt(t, g, construction.SleepingSpot, construction.South, 16, 9)
-	if _, ok := g.freeBedFor(downed, Position{X: 4, Y: 9}); !ok {
+	if g.care.SafeBedFor(downed, 4, 9, care.RescueBed) == 0 {
 		t.Fatal("fixture: a free bed for the downed colonist")
 	}
 	bleeder, _ := g.SpawnNamedPawn(8, 9, "Bleeder")
@@ -169,12 +170,6 @@ func TestDoctorPriorityOrder(t *testing.T) {
 		}
 		g.interrupt(doc, job.Cancelled)
 		g.reserve.TryEntity(held, s.target)
-	}
-	// tie-break: equal patients go nearest first, then lowest id
-	a := &patientRank{pid: 5, d: 3}
-	if !a.outranks(nil) || !(&patientRank{pid: 4, d: 3}).outranks(a) || (&patientRank{pid: 4, d: 4}).outranks(a) ||
-		!(&patientRank{pid: 9, bleed: 1}).outranks(a) || !(&patientRank{pid: 9, injury: 1}).outranks(a) {
-		t.Fatal("outranks: bleeding, injury, distance, id")
 	}
 }
 
@@ -253,7 +248,7 @@ func TestEmergencyTendWhileDrafted(t *testing.T) {
 		t.Fatalf("still drafted %v, used the herbal near by: herbal %d, industrial %d",
 			g.drafted(doc), g.countItem(item.HerbalMedicine), g.countItem(item.IndustrialMedicine))
 	}
-	if reason := g.canEmergencyTend(doc, patient); reason != ReasonNothingToTend {
+	if reason := g.care.Doctor.CanEmergencyTend(doc, patient); reason != care.ReasonNothingToTend {
 		t.Fatalf("tended: %q", reason)
 	}
 	// undrafting ends it
@@ -265,7 +260,7 @@ func TestEmergencyTendWhileDrafted(t *testing.T) {
 	if j, _ := g.jobs.Get(doc); j.Kind == job.EmergencyTend {
 		t.Fatal("undrafted: the emergency tend ends")
 	}
-	if opts := g.tendOrders(doc, 12, 6); opts != nil {
+	if opts := g.care.PawnOrders(doc, 12, 6); opts != nil {
 		t.Fatalf("no Tend order undrafted: %+v", opts)
 	}
 	// not drafted: the command does nothing
@@ -283,16 +278,16 @@ func TestDefaultCareForPrisoners(t *testing.T) {
 	if !g.isPrisoner(rid) {
 		t.Fatal("fixture: captured")
 	}
-	if g.careOf(ada) != medcare.Best || g.careOf(rid) != medcare.HerbalMax || g.careOf(dog) != medcare.HerbalMax {
-		t.Fatalf("defaults: colonist %v, prisoner %v, animal %v", g.careOf(ada), g.careOf(rid), g.careOf(dog))
+	if g.care.Level(ada) != medcare.Best || g.care.Level(rid) != medcare.HerbalMax || g.care.Level(dog) != medcare.HerbalMax {
+		t.Fatalf("defaults: colonist %v, prisoner %v, animal %v", g.care.Level(ada), g.care.Level(rid), g.care.Level(dog))
 	}
 	g.Enqueue(command.Command{Kind: command.SetDefaultCare, Index: int(medcare.Prisoners), Mode: uint8(medcare.NoMeds)})
 	g.Step(1)
-	if g.careOf(rid) != medcare.NoMeds || g.careOf(ada) != medcare.Best || g.DefaultCare()[medcare.Prisoners] != uint8(medcare.NoMeds) {
+	if g.care.Level(rid) != medcare.NoMeds || g.care.Level(ada) != medcare.Best || g.DefaultCare()[medcare.Prisoners] != uint8(medcare.NoMeds) {
 		t.Fatal("the prisoners' default applies to prisoners only")
 	}
 	setCare(g, rid, medcare.Best) // set by hand: wins over the default
-	if g.careOf(rid) != medcare.Best {
+	if g.care.Level(rid) != medcare.Best {
 		t.Fatal("a patient's own level wins")
 	}
 	for _, c := range []command.Command{ // ignored: bad group, bad level, not a patient
@@ -304,12 +299,12 @@ func TestDefaultCareForPrisoners(t *testing.T) {
 		g.Enqueue(c)
 	}
 	g.Step(1)
-	if g.careOf(rid) != medcare.Best || g.DefaultCare()[medcare.Colonists] != uint8(medcare.Best) || g.care.per[1<<30] != 0 {
+	if _, own := g.care.Policy.Own(1 << 30); g.care.Level(rid) != medcare.Best || g.DefaultCare()[medcare.Colonists] != uint8(medcare.Best) || own {
 		t.Fatal("bad care commands change nothing")
 	}
 	g.Enqueue(command.Command{Kind: command.SetDefaultCare, Index: int(medcare.Prisoners), Mode: uint8(medcare.HerbalMax)})
 	g.Step(1)
-	if g.care.custom {
+	if s := g.care.Policy.Export(); s != nil && s.Def != nil {
 		t.Fatal("back at the defaults: nothing custom left to save")
 	}
 }
@@ -318,19 +313,19 @@ func TestSelfTendToggle(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	addWound(t, g, id, body.ArmL, 6, body.Cut)
-	if !g.selfTendAllowed(id) {
+	if !g.care.SelfTendAllowed(id) {
 		t.Fatal("self-tend is on by default")
 	}
 	g.Enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(id), Enabled: false})
 	g.Step(1)
 	g.interrupt(id, job.Cancelled)
-	if g.assignTendOther(id) {
+	if g.care.Doctor.Assign(id) {
 		t.Fatal("self-tend off: a lone colonist leaves its wounds")
 	}
 	laidDown(g, id)
 	j, _ := g.jobs.Get(id)
 	j.WorkLeft = 0
-	if g.selfTendDue(id, j) {
+	if g.care.Rest.SelfTendDue(id, j) {
 		t.Fatal("self-tend off: no tend in bed either")
 	}
 	if hv, _ := g.Health(id); hv.SelfTend || hv.Care != uint8(medcare.Best) {
@@ -339,22 +334,22 @@ func TestSelfTendToggle(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(id), Enabled: true})
 	g.Step(1)
 	g.interrupt(id, job.Cancelled)
-	if !g.assignTendOther(id) {
+	if !g.care.Doctor.Assign(id) {
 		t.Fatal("self-tend on: it tends itself")
 	}
 	setCare(g, id, medcare.NoCare)
-	if g.selfTendAllowed(id) || g.Snapshot()[0].CareLevel != uint8(medcare.NoCare) {
+	if g.care.SelfTendAllowed(id) || g.Snapshot()[0].CareLevel != uint8(medcare.NoCare) {
 		t.Fatal("no care: no self-tend, and the pawn view shows it")
 	}
-	g.cmdSetSelfTend(1<<30, false) // not a colonist
-	if g.care.noSelfTend[1<<30] {
+	g.care.SetSelfTend(1<<30, false) // not a colonist
+	if g.care.Policy.SelfTendOff(1 << 30) {
 		t.Fatal("self-tend is for colonists")
 	}
 }
 
 func TestCareSurvivesSave(t *testing.T) {
 	g, doc, patient := careScene(t)
-	if g.exportCare() != nil {
+	if g.care.Policy.Export() != nil {
 		t.Fatal("all defaults: no Care save field (older saves hash as before)")
 	}
 	setCare(g, patient, medcare.NoMeds)
@@ -362,15 +357,24 @@ func TestCareSurvivesSave(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(doc), Enabled: false})
 	g.Step(1)
 	l := saveLoad(t, g)
-	if l.careOf(patient) != medcare.NoMeds || l.careOf(doc) != medcare.Best || l.selfTendAllowed(doc) ||
+	if l.care.Level(patient) != medcare.NoMeds || l.care.Level(doc) != medcare.Best || l.care.SelfTendAllowed(doc) ||
 		l.DefaultCare() != g.DefaultCare() || l.DefaultCare()[medcare.Animals] != uint8(medcare.NoCare) {
 		t.Fatalf("loaded care %+v, want %+v", l.care, g.care)
 	}
 	if l.StateHash() != g.StateHash() {
 		t.Fatal("the care settings hash the same after a load")
 	}
-	l.importCare(&careSave{Per: []entry[uint8]{{patient, 9}}, Def: []uint8{9, 0, 0, 0}})
-	if l.careOf(patient) != medcare.Best || l.DefaultCare()[medcare.Colonists] != uint8(medcare.Best) {
+	l.care.Policy.Import(&care.PolicySave{Per: []care.PolicyEntry{{ID: patient, V: 9}}, Def: []uint8{9, 0, 0, 0}})
+	if l.care.Level(patient) != medcare.Best || l.DefaultCare()[medcare.Colonists] != uint8(medcare.Best) {
 		t.Fatal("out-of-range saved levels fall back to the defaults")
+	}
+}
+
+// TestCareReasonsMatchGame: the care package repeats three of the game's
+// order reasons (it can't import them); they stay the same text.
+func TestCareReasonsMatchGame(t *testing.T) {
+	if care.ReasonIncapable != ReasonIncapable || care.ReasonBusyTarget != ReasonBusyTarget ||
+		care.ReasonUnreachable != ReasonUnreachable {
+		t.Fatal("care's reasons drifted from the game's")
 	}
 }

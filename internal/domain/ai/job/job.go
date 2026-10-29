@@ -123,6 +123,14 @@ const (
 	// console while the comms session is open.
 	Trade
 	UseComms
+	// SIM-064: a doctor brings a meal to a patient that cannot feed
+	// itself. SIM-065: a colonist strips a downed pawn or a prisoner; a
+	// colonist visits a bedridden friend for company. SIM-063: a warden
+	// carries a downed prisoner back to a prison bed.
+	FeedPatient
+	Strip
+	VisitSick
+	CarryToPrisonBed
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -246,6 +254,14 @@ func (k Kind) String() string {
 		return "trade"
 	case UseComms:
 		return "use radio console"
+	case FeedPatient:
+		return "feed patient"
+	case Strip:
+		return "strip"
+	case VisitSick:
+		return "visit the sick"
+	case CarryToPrisonBed:
+		return "take prisoner to bed"
 	default:
 		return "idle"
 	}

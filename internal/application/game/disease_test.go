@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
@@ -314,14 +315,14 @@ func TestDiseaseBedRestDoesNotFlap(t *testing.T) {
 	t.Run("minor: up and about", func(t *testing.T) {
 		g, _ := setup(t, 600, 0)
 		id := g.pawnIDs[0]
-		if g.needsBedRest(id) {
+		if g.care.Rest.NeedsBedRest(id) {
 			t.Fatal("a tended minor flu needs no bed")
 		}
 	})
 	t.Run("at the major line", func(t *testing.T) {
 		g, c := setup(t, 666, 0)
 		id := g.pawnIDs[0]
-		if !g.needsBedRest(id) {
+		if !g.care.Rest.NeedsBedRest(id) {
 			t.Fatal("major flu sends to bed")
 		}
 		if n := kindChanges(g, id, 300); n > 3 {
@@ -330,25 +331,25 @@ func TestDiseaseBedRestDoesNotFlap(t *testing.T) {
 		// severity falls back under the line (stage band and all): still
 		// in bed while not immune
 		c.Sev, c.Stage = 500, 0
-		g.rest.since[id] = uint64(g.clock.Now()) - restMin
-		g.updateBedRest(id)
-		if !g.onBedRest(id) {
+		g.care.Rest.Start(id, uint64(g.clock.Now())-care.RestMin)
+		g.care.Rest.Update(id)
+		if !g.care.Rest.On(id) {
 			t.Fatal("a minor flu not yet beaten keeps the patient in bed")
 		}
 		c.Immunity = infection.Full
-		g.updateBedRest(id)
-		if g.onBedRest(id) {
-			t.Fatal("immune: up once restMin has passed")
+		g.care.Rest.Update(id)
+		if g.care.Rest.On(id) {
+			t.Fatal("immune: up once care.RestMin has passed")
 		}
-		g.updateBedRest(id)
-		if g.onBedRest(id) || g.needsBedRest(id) {
+		g.care.Rest.Update(id)
+		if g.care.Rest.On(id) || g.care.Rest.NeedsBedRest(id) {
 			t.Fatal("an immune flu does not send it back to bed")
 		}
 	})
 	t.Run("immune at major, receding", func(t *testing.T) {
 		g, _ := setup(t, 700, infection.Full)
 		id := g.pawnIDs[0]
-		if g.needsBedRest(id) {
+		if g.care.Rest.NeedsBedRest(id) {
 			t.Fatal("an immune flu needs no bed")
 		}
 		if n := kindChanges(g, id, 300); n > 3 {

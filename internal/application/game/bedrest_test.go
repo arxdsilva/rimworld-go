@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -98,8 +99,8 @@ func TestHungryPatientEatsThenReturnsToBed(t *testing.T) {
 }
 
 // A colonist in pain goes to bed with a doctor about and stays there
-// until it is well (healing injury down to restWellInjury, at least
-// restMin), then gets up.
+// until it is well (healing injury down to care.RestWellInjury, at least
+// care.RestMin), then gets up.
 func TestInjuredColonistRestsUntilHealed(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	pat, _ := g.SpawnNamedPawn(4, 4, "Pat")
@@ -109,24 +110,24 @@ func TestInjuredColonistRestsUntilHealed(t *testing.T) {
 	if !restFedUntil(g, 600, func() bool { return restingIn(g, pat, bed) }) {
 		t.Fatal("a colonist in pain lies down in bed")
 	}
-	start := g.rest.since[pat]
-	for i := 0; i < 3*clock.TicksPerDay && g.onBedRest(pat); i++ { // MED-02: wounds heal about 20 HP a day in bed, tended
+	start, _ := g.care.Rest.Since(pat)
+	for i := 0; i < 3*clock.TicksPerDay && g.care.Rest.On(pat); i++ { // MED-02: wounds heal about 20 HP a day in bed, tended
 		v, _ := g.vital.Get(pat)
-		if g.healingInjury(pat, v) > restWellInjury && !restingIn(g, pat, bed) {
+		if healingInjury(g.bodies[pat], v) > care.RestWellInjury && !restingIn(g, pat, bed) {
 			j, _ := g.jobs.Get(pat)
-			t.Fatalf("tick %d: still hurt (%d) but out of bed (job %v %v)", i, g.healingInjury(pat, v), j.Kind, j.State)
+			t.Fatalf("tick %d: still hurt (%d) but out of bed (job %v %v)", i, healingInjury(g.bodies[pat], v), j.Kind, j.State)
 		}
 		restFed(g, 1)
 	}
-	if g.onBedRest(pat) {
+	if g.care.Rest.On(pat) {
 		t.Fatal("the rest never ended")
 	}
 	v, _ := g.vital.Get(pat)
-	if h := g.healingInjury(pat, v); h > restWellInjury || g.needsTending(pat) {
+	if h := healingInjury(g.bodies[pat], v); h > care.RestWellInjury || g.needsTending(pat) {
 		t.Fatalf("got up unwell: healing injury %d, needs tending %v", h, g.needsTending(pat))
 	}
-	if now := uint64(g.clock.Now()); now-start < restMin {
-		t.Fatalf("rested %d ticks, want at least %d", now-start, restMin)
+	if now := uint64(g.clock.Now()); now-start < care.RestMin {
+		t.Fatalf("rested %d ticks, want at least %d", now-start, care.RestMin)
 	}
 	if !restFedUntil(g, 300, func() bool { return !restingIn(g, pat, bed) }) {
 		t.Fatal("well again in Work hours, it gets up")
@@ -134,17 +135,17 @@ func TestInjuredColonistRestsUntilHealed(t *testing.T) {
 }
 
 // With no bed free a patient carries on and only looks again after
-// restRetry.
+// care.RestRetry.
 func TestNoBedPutsRestRetryInEffect(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	setInjury(g, id, 45, true)
 	restFed(g, 2)
 	now := uint64(g.clock.Now())
-	if g.onBedRest(id) || g.rest.retry[id] <= now || g.rest.retry[id] > now+restRetry {
-		t.Fatalf("no bed: resting %v, retry at %d (now %d)", g.onBedRest(id), g.rest.retry[id], now)
+	if g.care.Rest.On(id) || g.care.Rest.RetryAt(id) <= now || g.care.Rest.RetryAt(id) > now+care.RestRetry {
+		t.Fatalf("no bed: resting %v, retry at %d (now %d)", g.care.Rest.On(id), g.care.Rest.RetryAt(id), now)
 	}
-	if g.patientRest(id) {
+	if g.care.Rest.PatientRest(id) {
 		t.Fatal("no new rest before the retry")
 	}
 	if c := kindChanges(g, id, 300); c > 3 {
@@ -172,7 +173,7 @@ func TestNoBedPatientWaitsOnFloorForDoctor(t *testing.T) {
 	if !restFedUntil(g, 3000, func() bool { return g.tended(pat) }) {
 		t.Fatal("the doctor tends it where it lies")
 	}
-	if !restFedUntil(g, 300, func() bool { return !onFloor() }) || g.onBedRest(pat) {
+	if !restFedUntil(g, 300, func() bool { return !onFloor() }) || g.care.Rest.On(pat) {
 		t.Fatal("tended, with no bed to rest in, it carries on")
 	}
 	if c := kindChanges(g, pat, 300); c > 3 {
@@ -187,7 +188,7 @@ func TestRestWhenHurtToggle(t *testing.T) {
 	if !restFedUntil(g, 300, func() bool { return !restingIn(g, pat, bed) }) {
 		t.Fatal("turned off, the patient gets up")
 	}
-	if g.onBedRest(pat) || pawnView(g, pat).RestWhenHurt {
+	if g.care.Rest.On(pat) || pawnView(g, pat).RestWhenHurt {
 		t.Fatal("turned off: no rest, and the view shows it")
 	}
 	for i := 0; i < 600; i++ {
@@ -252,10 +253,10 @@ func TestPatientPrefersMedicalBedThenGivesItBack(t *testing.T) {
 		j, _ := g.jobs.Get(pat)
 		t.Fatalf("the patient rests in the medical bed (job %v %v target %v)", j.Kind, j.State, j.Target)
 	}
-	if b, _ := g.bldgs.Get(own); b.Claimant != uint64(pat) || g.rest.bed[pat] != med {
-		t.Fatalf("its own bed stays its own (claimant %d), the medical one is a stay (%v)", b.Claimant, g.rest.bed[pat])
+	if b, _ := g.bldgs.Get(own); b.Claimant != uint64(pat) || g.care.Rest.HeldBed(pat) != med {
+		t.Fatalf("its own bed stays its own (claimant %d), the medical one is a stay (%v)", b.Claimant, g.care.Rest.HeldBed(pat))
 	}
-	if !restFedUntil(g, 3*clock.TicksPerDay, func() bool { return !g.onBedRest(pat) && !restingIn(g, pat, med) }) { // MED-02: wiki healing rates
+	if !restFedUntil(g, 3*clock.TicksPerDay, func() bool { return !g.care.Rest.On(pat) && !restingIn(g, pat, med) }) { // MED-02: wiki healing rates
 		t.Fatal("well again, the patient gets up")
 	}
 	restFed(g, 2)
@@ -265,7 +266,7 @@ func TestPatientPrefersMedicalBedThenGivesItBack(t *testing.T) {
 	if b, _ := g.bldgs.Get(own); b.Claimant != uint64(pat) {
 		t.Fatal("its own bed is still its own")
 	}
-	if _, held := g.rest.bed[pat]; held {
+	if g.care.Rest.HeldBed(pat) != 0 {
 		t.Fatal("no stay left on record")
 	}
 }
@@ -282,7 +283,7 @@ func TestLonePatientTendsItselfInBed(t *testing.T) {
 	if !restFedUntil(g, 2000, func() bool { return g.tended(id) }) {
 		t.Fatal("alone, it tends itself in bed")
 	}
-	if !g.onBedRest(id) {
+	if !g.care.Rest.On(id) {
 		t.Fatal("tended during the rest")
 	}
 	if !restFedUntil(g, 600, func() bool { return restingIn(g, id, bed) }) {
@@ -299,14 +300,14 @@ func TestPermanentDamageDoesNotRest(t *testing.T) {
 	b := g.ensureBody(id, &v)
 	b.Missing |= 1<<body.LegL | 1<<body.FootL
 	g.bodyChanged(id, b, &v)
-	if v := g.VitalOf(id); v.Injury < painInjury || g.healingInjury(id, v) != 0 {
-		t.Fatalf("setup: injury %d (want >= %d), healing %d", v.Injury, painInjury, g.healingInjury(id, g.VitalOf(id)))
+	if v := g.VitalOf(id); v.Injury < painInjury || healingInjury(g.bodies[id], v) != 0 {
+		t.Fatalf("setup: injury %d (want >= %d), healing %d", v.Injury, painInjury, healingInjury(g.bodies[id], g.VitalOf(id)))
 	}
-	if g.needsBedRest(id) {
+	if g.care.Rest.NeedsBedRest(id) {
 		t.Fatal("a lost leg alone is no reason to rest")
 	}
 	restFed(g, 300)
-	if g.onBedRest(id) {
+	if g.care.Rest.On(id) {
 		t.Fatal("an amputee is not kept in bed")
 	}
 }
@@ -322,13 +323,13 @@ func TestBedRestDoesNotFlap(t *testing.T) {
 		{"just over the well line", func(g *Game, id entity.EntityID) {
 			setInjury(g, id, painInjury, false)
 			restFed(g, 300)
-			setInjury(g, id, restWellInjury+1, false)
+			setInjury(g, id, care.RestWellInjury+1, false)
 		}},
-		{"at the well line after restMin", func(g *Game, id entity.EntityID) {
+		{"at the well line after care.RestMin", func(g *Game, id entity.EntityID) {
 			setInjury(g, id, painInjury, false)
 			restFed(g, 300)
-			setInjury(g, id, restWellInjury, false)
-			g.rest.since[id] = uint64(g.clock.Now()) - restMin
+			setInjury(g, id, care.RestWellInjury, false)
+			g.care.Rest.Start(id, uint64(g.clock.Now())-care.RestMin)
 		}},
 		{"turning hungry", func(g *Game, id entity.EntityID) {
 			setInjury(g, id, painInjury, false)
@@ -355,8 +356,8 @@ func TestBedRestDoesNotFlap(t *testing.T) {
 func TestBedRestStateSurvivesSave(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
-	g.rest.ensure()
-	g.rest.off[id], g.rest.since[id], g.rest.retry[id], g.rest.bed[id] = true, 11, 22, 33
+	g.care.Rest.Import(&care.RestSave{Off: []entity.EntityID{id}, Since: []care.Entry[uint64]{{ID: id, V: 11}},
+		Retry: []care.Entry[uint64]{{ID: id, V: 22}}, Bed: []care.Entry[entity.EntityID]{{ID: id, V: 33}}})
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "t"); err != nil {
 		t.Fatal(err)
@@ -365,10 +366,10 @@ func TestBedRestStateSurvivesSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !h.rest.off[id] || h.rest.since[id] != 11 || h.rest.retry[id] != 22 || h.rest.bed[id] != 33 {
-		t.Fatalf("lost: %+v", h.rest)
+	if since, _ := h.care.Rest.Since(id); !h.care.Rest.Off(id) || since != 11 || h.care.Rest.RetryAt(id) != 22 || h.care.Rest.HeldBed(id) != 33 {
+		t.Fatalf("lost: %+v", h.care.Rest.Export())
 	}
-	if New(Config{Seed: 1, Width: 10, Height: 8}).exportBedRest() != nil {
+	if New(Config{Seed: 1, Width: 10, Height: 8}).care.Rest.Export() != nil {
 		t.Fatal("no rest: nothing saved (old hashes hold)")
 	}
 }
@@ -395,7 +396,7 @@ func TestBedRestView(t *testing.T) {
 	g, pat, _ := sickPatient(t)
 	g.Step(1)
 	pv := pawnView(g, pat)
-	if !pv.BedRest || pv.Job != restingLabel || !pv.RestWhenHurt {
+	if !pv.BedRest || pv.Job != care.RestingLabel || !pv.RestWhenHurt {
 		t.Fatalf("resting: BedRest %v, job %q, rest when hurt %v", pv.BedRest, pv.Job, pv.RestWhenHurt)
 	}
 	for _, p := range g.Snapshot() {
@@ -411,12 +412,11 @@ func TestRestingDoctorIsNoOtherDoctor(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	a, _ := g.SpawnNamedPawn(2, 2, "A")
 	b, _ := g.SpawnNamedPawn(4, 2, "B")
-	if g.prioOf(b)[work.Doctor] == 0 || !g.otherDoctor(a) {
+	if g.prioOf(b)[work.Doctor] == 0 || !g.care.Doctor.OtherDoctor(a) {
 		t.Fatal("setup: B doctors")
 	}
-	g.rest.ensure()
-	g.rest.since[b] = 1
-	if g.otherDoctor(a) {
+	g.care.Rest.Start(b, 1)
+	if g.care.Doctor.OtherDoctor(a) {
 		t.Fatal("a resting doctor tends no one")
 	}
 }

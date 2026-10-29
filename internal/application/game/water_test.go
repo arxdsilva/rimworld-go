@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -393,7 +394,7 @@ func TestMedicineChoiceNoFlap(t *testing.T) {
 	d, _ := h.SpawnNamedPawn(4, 6, "Doc")
 	h.SpawnStack(item.HerbalMedicine, 1, 6, 9)
 	h.Infect(p, 40)
-	rec := h.withMedicine(d, job.Record{Kind: job.Tend, Target: p, TX: 14, TY: 6})
+	rec := h.care.Doctor.WithMedicine(d, job.Record{Kind: job.Tend, Target: p, TX: 14, TY: 6})
 	if st, _ := h.stacks.Get(rec.Dest); rec.Dest == 0 || st.Kind != item.HerbalMedicine {
 		t.Fatalf("fallback dose %+v", st)
 	}
@@ -491,12 +492,12 @@ func TestRescuePrefersHospitalBed(t *testing.T) {
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(5, 5, "Patient")
 	near := buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 5)
-	got, ok := g.freeBedFor(patient, Position{X: 5, Y: 5})
-	if !ok || got != near {
-		t.Fatalf("only a plain bed: %v %v", got, ok)
+	got := g.care.SafeBedFor(patient, 5, 5, care.RescueBed)
+	if got != near {
+		t.Fatalf("only a plain bed: %v", got)
 	}
 	hosp := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 16, 8)
-	if got, ok := g.freeBedFor(patient, Position{X: 5, Y: 5}); !ok || got != hosp {
+	if got := g.care.SafeBedFor(patient, 5, 5, care.RescueBed); got != hosp {
 		t.Fatalf("a far hospital bed should beat a near plain bed: got %v want %v", got, hosp)
 	}
 }

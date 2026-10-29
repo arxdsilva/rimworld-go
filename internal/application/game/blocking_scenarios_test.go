@@ -21,9 +21,9 @@ func standingCreatures(g *Game) []entity.EntityID {
 	for _, ids := range [3][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
 		for _, id := range ids {
 			g.occ.carried = g.occ.carried[:0]
-			for _, p := range g.carrying {
+			g.care.Carry.Each(func(_, p entity.EntityID) {
 				g.occ.carried = append(g.occ.carried, p)
-			}
+			})
 			if g.standing(id) {
 				out = append(out, id)
 			}

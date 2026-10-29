@@ -70,6 +70,7 @@ var forbiddenImports = []struct {
 	{module + "/internal/ports/", prefix(module + "/internal/adapters/"), "ports must not know adapters"},
 	{module + "/internal/adapters/outbound/", prefix(module + "/internal/adapters/inbound/"), "outbound adapters must not know the UI"},
 	{module + "/internal/adapters/inbound/ebiten/", func(p string) bool { return p == module+"/internal/adapters/inbound/ebiten" }, "an ebiten sub-package is a consumer of the root, never its importer"},
+	{module + "/internal/application/game/", func(p string) bool { return p == module+"/internal/application/game" }, "a game sub-package is a consumer of the root, never its importer"},
 }
 
 func prefix(p string) func(string) bool {

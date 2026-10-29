@@ -104,7 +104,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		// MED-03: rescue, then tend the bleeding, then the other tends
 		// (medical.go), then operations, then animals, then doctoring
 		// bills (refining medicine) at a bench
-		return g.assignRescue(id) || g.assignTendBleeding(id) || g.assignTendOther(id) ||
+		return g.care.Doctor.Assign(id) ||
 			g.assignSurgery(id) || g.assignTendAnimal(id) || // surgery.go, vet_animals.go
 			g.anyBillFor(work.Doctor) && g.assignBill(id, work.Mask(0).Set(work.Doctor, true))
 	case work.Warden:

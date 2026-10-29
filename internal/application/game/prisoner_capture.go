@@ -154,13 +154,13 @@ func (g *Game) adjacent(a, b entity.EntityID) bool {
 func (g *Game) doCapture(id entity.EntityID, j job.Record) {
 	t := j.Target
 	if v, ok := g.vital.Get(t); !ok || v.Status == health.Dead || !g.capturable(t) && !g.isPrisoner(t) {
-		g.dropPatient(id)
+		g.care.DropPatient(id)
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return
 	}
 	if j.Dest == 0 {
-		if g.carrying[id] != t && !g.adjacent(id, t) {
+		if g.care.Carry.Patient(id) != t && !g.adjacent(id, t) {
 			j.State, j.Fail = job.Fail, job.TargetGone
 			g.jobs.Set(id, j)
 			return
@@ -186,7 +186,7 @@ func (g *Game) doCapture(id entity.EntityID, j job.Record) {
 			return
 		}
 		g.dropRaiderGear(t) // a captive's weapon stays where it was taken
-		g.carrying[id] = t
+		g.care.Carry.Pick(id, t)
 		j.Dest, j.TX, j.TY, j.Path, j.PathI = bid, sx, sy, path, 0
 		j.State = job.Goto
 		if len(path) == 0 {
@@ -199,12 +199,12 @@ func (g *Game) doCapture(id entity.EntityID, j job.Record) {
 	}
 	b, ok := g.bldgs.Get(j.Dest)
 	if !ok || !b.ForPrisoners {
-		g.dropPatient(id)
+		g.care.DropPatient(id)
 		j.State, j.Fail = job.Fail, job.TargetGone
 		g.jobs.Set(id, j)
 		return
 	}
-	delete(g.carrying, id)
+	g.care.Carry.Drop(id)
 	if !g.isPrisoner(t) {
 		g.makePrisoner(t, id)
 	}

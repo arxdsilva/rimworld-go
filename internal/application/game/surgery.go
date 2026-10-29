@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
@@ -257,10 +258,10 @@ func (g *Game) awaitingSurgery(id entity.EntityID) bool {
 	if g.surgeonComing(id, -1) {
 		return true // the surgeon is on the way (its implant is reserved)
 	}
-	if uint64(g.clock.Now()) < g.surg.rest[id] || !g.otherDoctor(id) {
+	if uint64(g.clock.Now()) < g.surg.rest[id] || !g.care.Doctor.OtherDoctor(id) {
 		return false
 	}
-	b, lying := g.viewBody(id), g.lyingForCare(id)
+	b, lying := g.viewBody(id), g.care.Doctor.Lying(id)
 	for _, op := range g.surg.ops[id] {
 		if why, _ := g.opBlocked(id, 0, b, op, lying); why == "" {
 			return true
@@ -318,7 +319,7 @@ func (g *Game) opBlocked(patient, doctor entity.EntityID, b *body.Body, op body.
 			return why, opFetch{}
 		}
 	}
-	if doctor == 0 && !g.otherDoctor(patient) {
+	if doctor == 0 && !g.care.Doctor.OtherDoctor(patient) {
 		return waitNoDoctor, opFetch{}
 	}
 	if lvl := body.MinSkill(op.Kind); lvl > 0 && !g.skilledSurgeon(patient, doctor, lvl) {
@@ -358,7 +359,7 @@ func medTier(k item.Kind) int { return slices.Index(surgeryMedTiers[:], k) }
 // doctors) can reach, cheapest kind first; or why there is none.
 func (g *Game) surgeryMedicine(patient, doctor entity.EntityID, op body.Operation) (entity.EntityID, string) {
 	qty, least := body.MedicineNeed(op.Kind)
-	pol := g.careOf(patient) // care.go (MED-03)
+	pol := g.care.Level(patient) // care package (MED-03)
 	from := doctor
 	if from == 0 {
 		from = patient
@@ -475,14 +476,14 @@ func (g *Game) implantResearch(k item.Kind) string {
 }
 
 // lieInHospitalBed puts a patient waiting for surgery in a free hospital
-// bed (freeBedFor ranks them first), claimed only for the stay: its own
+// bed (care.SafeBedFor ranks them first), claimed only for the stay: its own
 // bed stays its own, and leaveHospitalBed gives this one back once it is
 // up again. False when there is none free (or it can't be reached), and
 // nothing changes then.
 func (g *Game) lieInHospitalBed(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
-	bid, ok := g.freeBedFor(id, pos) // medical.go
-	if !ok {
+	bid := g.care.SafeBedFor(id, pos.X, pos.Y, care.RescueBed)
+	if bid == 0 {
 		return false
 	}
 	b, _ := g.bldgs.Get(bid)
@@ -568,10 +569,10 @@ func (g *Game) assignSurgery(id entity.EntityID) bool {
 	var bestMed entity.EntityID
 	bestD, found := 0, false
 	g.surgeryPatients(func(pid entity.EntityID) bool {
-		if pid == id || len(g.surg.ops[pid]) == 0 || g.carriedBy(pid) != 0 {
+		if pid == id || len(g.surg.ops[pid]) == 0 || g.care.Carry.Carrier(pid) != 0 {
 			return true
 		}
-		if v, _ := g.vital.Get(pid); v.Status == health.Dead || !g.lyingForCare(pid) {
+		if v, _ := g.vital.Get(pid); v.Status == health.Dead || !g.care.Doctor.Lying(pid) {
 			return true
 		}
 		if owner, taken := g.reserve.EntityOwner(pid); taken && owner != id {
@@ -666,7 +667,7 @@ func (g *Game) doSurgery(id entity.EntityID, j job.Record) {
 		return
 	}
 	pos, _ := g.positions.Get(id)
-	if pp, _ := g.positions.Get(patient); abs(pp.X-pos.X) > 1 || abs(pp.Y-pos.Y) > 1 || !g.lyingForCare(patient) {
+	if pp, _ := g.positions.Get(patient); abs(pp.X-pos.X) > 1 || abs(pp.Y-pos.Y) > 1 || !g.care.Doctor.Lying(patient) {
 		j.State, j.Fail = job.Fail, job.TargetGone // the patient got up
 		g.jobs.Set(id, j)
 		return
@@ -1115,7 +1116,7 @@ func (g *Game) surgeryWait(patient entity.EntityID, op body.Operation) (string, 
 	if g.surgeonComing(patient, opCode(op)) {
 		return waitOnTheWay, true
 	}
-	lying := g.lyingForCare(patient)
+	lying := g.care.Doctor.Lying(patient)
 	if why, _ := g.opBlocked(patient, 0, g.viewBody(patient), op, lying); why != "" {
 		return why, false
 	}

@@ -3,14 +3,12 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
-	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -27,7 +25,7 @@ import (
 // at the wiki rates (faster tended and lying down) and may scar. Rolls use
 // the medical stream (scars the body stream), never g.rng. Colonists,
 // prisoners and raiders are all treated alike. Sick, hurt or untended
-// colonists rest in bed until they are well again (bedrest.go); with no
+// colonists rest in bed until they are well again (care/rest.go); with no
 // one else to help, a colonist tends itself.
 
 // legacyWound is the per-pawn wound record saves up to version 5 wrote
@@ -44,8 +42,8 @@ const (
 	// surgeon (sleepDone, surgeryGaveUp).
 	patientWait = 6 * clock.TicksPerHour
 	// painInjury: injuries this bad hurt (mood) and send the colonist to
-	// bed (counting only injury that can still heal: bedrest.go).
-	painInjury = 40
+	// bed (care/rest.go).
+	painInjury = care.PainInjury
 	// cleanRoomRoofed is the roofed share (permille) a room needs to
 	// count as indoors for the infection room factor (original tuning).
 	cleanRoomRoofed = 750
@@ -86,95 +84,6 @@ func (g *Game) needsTending(id entity.EntityID) bool {
 		return b.TendDue(uint64(g.clock.Now())) || v.Injury > b.Damage()
 	}
 	return v.Injury > 0 && !g.tended(id)
-}
-
-// otherDoctor reports a standing colonist besides id who does Doctor work
-// and is not on bed rest itself (a resting doctor tends no one else).
-func (g *Game) otherDoctor(id entity.EntityID) bool {
-	for _, pid := range g.pawnIDs {
-		if pid != id && g.standingPawn(pid) && g.prioOf(pid)[work.Doctor] > 0 && !g.onBedRest(pid) {
-			return true
-		}
-	}
-	return false
-}
-
-// patientRest: colonist id should start bed rest (bedrest.go) — hurt
-// enough (needsBedRest), with "Rest when hurt" on and no recent failure
-// to find a bed. It needs no other doctor: a lone patient tends itself in
-// bed.
-func (g *Game) patientRest(id entity.EntityID) bool {
-	if g.rest.off[id] || uint64(g.clock.Now()) < g.rest.retry[id] {
-		return false
-	}
-	return g.needsBedRest(id)
-}
-
-// lieDownForCare puts a resting patient to bed (bedrest.go): one waiting
-// for surgery takes a free hospital bed when there is one (surgery.go,
-// SIM-049); then the nearest free medical bed, held for the stay; then its
-// own bed or the nearest free one it may claim (sleepInBed). With no bed
-// to be had, one waiting for a doctor or a surgeon lies down where it is
-// (as before beds were required), and looks for a bed again after
-// restRetry; anyone else is left as it was (false).
-func (g *Game) lieDownForCare(id entity.EntityID) bool {
-	if _, held := g.rest.bed[id]; !held && g.awaitingSurgery(id) && g.lieInHospitalBed(id) {
-		return true
-	}
-	if g.restInMedicalBed(id) || g.sleepInBed(id) {
-		return true
-	}
-	if !g.waitsForDoctor(id) {
-		return false
-	}
-	g.noRestBed(id)
-	g.assignSleepInPlace(id)
-	return true
-}
-
-// waitsForDoctor: patient id has an operation to wait for, or a wound or
-// an infection another colonist will come and tend (it can lie down on
-// the floor for them).
-func (g *Game) waitsForDoctor(id entity.EntityID) bool {
-	return g.awaitingSurgery(id) || g.needsTending(id) && g.otherDoctor(id)
-}
-
-// lyingForCare: the patient is down, in bed, or asleep (a doctor can work
-// on them where they lie).
-func (g *Game) lyingForCare(id entity.EntityID) bool {
-	v, _ := g.vital.Get(id)
-	if v.Status == health.Downed || g.inBed(id) {
-		return true
-	}
-	j, _ := g.jobs.Get(id)
-	return j.Kind == job.Sleep && j.State == job.Do
-}
-
-// withMedicine adds a fetch of medicine to a tend job (rec.Target is the
-// patient), if there is some to be had. The tier is chosen here, once, from
-// the patient's state: industrial for a severe injury or an infection,
-// herbal otherwise, each falling back to the other, and only what the
-// patient's care level allows (care.go, MED-03: none for "No care" and
-// "Care, no medicine"). The job carries the chosen dose, so the tier
-// cannot flap while the doctor works (NG-1 §4.8).
-func (g *Game) withMedicine(id entity.EntityID, rec job.Record) job.Record {
-	pol := g.careOf(rec.Target)
-	for _, k := range g.medicineTiers(rec.Target) {
-		if !medcare.Allows(pol, k) {
-			continue
-		}
-		sid, st := g.ingredientFor(id, recipe.Input{Kind: k, Qty: 1, Max: 1})
-		if sid == 0 {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(sid); taken {
-			continue
-		}
-		rec.Dest, rec.DestX, rec.DestY = sid, rec.TX, rec.TY
-		rec.TX, rec.TY = st.X, st.Y
-		return rec
-	}
-	return rec
 }
 
 // pickUpMedicine: the doctor reached the medicine; take one dose and head
@@ -298,7 +207,7 @@ func (g *Game) stepCare(now uint64) {
 // day per wound): a hospital bed, another bed, the ground, or none while
 // up. wiki: Injury.
 func (g *Game) lyingHeal(id entity.EntityID) int32 {
-	if !g.lyingForCare(id) {
+	if !g.care.Doctor.Lying(id) {
 		return 0
 	}
 	switch {

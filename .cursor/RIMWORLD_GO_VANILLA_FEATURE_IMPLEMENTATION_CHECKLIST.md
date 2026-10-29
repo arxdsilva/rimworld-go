@@ -743,7 +743,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   Schedule-aware.
     -   Select owned/assigned bed if available.
     -   Fall back to available sleeping location.
--   [-] **Beds** (SIM-042/045: partner double beds, owner assignment UI, prisoner beds; no comfort/medical; claim on Sleep; no comfort/medical/prisoner)
+-   [-] **Beds** (SIM-042/045, PLAY-020: partner double beds, owner assignment UI, prisoner beds, medical beds; claim on Sleep; missing: bed comfort and rest-effectiveness stats)
     -   Assign ownership.
     -   sleeping slots.
     -   rest effectiveness.

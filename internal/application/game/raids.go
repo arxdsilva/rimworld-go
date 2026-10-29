@@ -383,7 +383,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		}
 		return // its body stays until it is buried or cremated (burial.go)
 	case v.Status == health.Downed:
-		g.dropPatient(id) // kidnap.go: a downed kidnapper lets go
+		g.care.DropPatient(id) // kidnap.go: a downed kidnapper lets go
 		if r.Downed == 0 {
 			r.Downed = now
 			g.raiders[id] = r
@@ -566,7 +566,7 @@ func (g *Game) removeRaider(id entity.EntityID) {
 	if p := g.personOf(id); p != nil && p.Where == whereRaider {
 		p.Where = whereOffMap
 	}
-	g.dropPatient(id)
+	g.care.DropPatient(id)
 	g.reserve.ReleaseOwner(id)
 	g.positions.Delete(id)
 	g.names.Delete(id)

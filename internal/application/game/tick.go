@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
@@ -60,12 +61,12 @@ func (g *Game) applyOne(c command.Command) {
 		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
 		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
 		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)
-		command.SetBedMedical, command.SetPawnBedRest, // med_cmds.go (PLAY-020)
+		command.SetBedMedical, command.SetPawnBedRest, // care/rest.go (PLAY-020)
 		command.SetZoneSow, command.SetZoneCut, command.SetZoneHidden, command.RenameZone,
 		command.SetZoneCrop, command.ExpandZone, command.RemoveZoneCells, command.DeleteZone, // zone_cmds.go (PLAY-020)
 		command.SetPowerWanted, command.SetThermostat, // power_flick.go, power_heat.go (PLAY-021)
-		command.SetMedicalCare, command.SetDefaultCare, command.SetSelfTend, // care.go (MED-00)
-		command.EmergencyTend, command.ReorderOperation, // care.go, surgery.go
+		command.SetMedicalCare, command.SetDefaultCare, command.SetSelfTend, // care package (MED-00)
+		command.EmergencyTend, command.ReorderOperation, // care package, surgery.go
 		command.SetZonePriority, // haul_priority.go (PLAY-023)
 		command.ProposeTrade, command.CloseTrade, command.CommsCallTrader, command.CommsGift,
 		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms: // trade_session.go, comms.go (PLAY-024)
@@ -370,7 +371,7 @@ func (g *Game) interrupt(id entity.EntityID, reason job.FailReason) {
 		return
 	}
 	g.dropCarry(id)
-	g.dropPatient(id)
+	g.care.DropPatient(id)
 	g.reserve.ReleaseOwner(id)
 	g.releaseDelivery(id)
 	if j.Kind != job.None && j.State != job.Idle && j.State != job.Complete {
@@ -411,7 +412,7 @@ func (g *Game) phaseAI() {
 		if v.Status == health.Dead {
 			delete(g.calm, id)
 			delete(g.restedFree, id)
-			g.clearBedRest(id) // bedrest.go
+			g.care.Rest.Clear(id) // care/rest.go
 			g.reserve.ReleaseOwner(id)
 			g.releaseDelivery(id)
 			continue
@@ -430,14 +431,14 @@ func (g *Game) phaseAI() {
 				g.forcedJobEnded(id, j) // a blocked order goes back on the queue
 			}
 			g.dropCarry(id)
-			g.dropPatient(id)
+			g.care.DropPatient(id)
 			g.reserve.ReleaseOwner(id)
 			g.releaseDelivery(id)
 			g.jobs.Set(id, job.Record{})
 			j = job.Record{}
 		}
 		g.releaseStaleDelivery(id, j) // a delivery swapped out without an interrupt
-		g.updateBedRest(id)           // bedrest.go: starts and ends bed rest
+		g.care.Rest.Update(id)        // care/rest.go: starts and ends bed rest
 		if g.mentalBreakTick(id, j) {
 			continue // acting out: no orders, no work
 		}
@@ -482,8 +483,8 @@ func (g *Game) phaseAI() {
 			}
 			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
 		}
-		if g.onBedRest(id) {
-			if g.bedRestSlot(id, j) { // bedrest.go: in bed until well again
+		if g.care.Rest.On(id) {
+			if g.care.Rest.Slot(id, j) { // care/rest.go: in bed until well again
 				continue
 			}
 			j, _ = g.jobs.Get(id) // no bed to be had: it carries on
@@ -765,7 +766,7 @@ func (g *Game) assignSleep(id entity.EntityID) {
 // sleepInBed sends pawn id to its partner's or its own bed, else the
 // nearest free bed it may claim (giving up the old one); false, with no
 // bed held, when there is none or it can't be reached. Medical beds are
-// left to patients (bedrest.go: restInMedicalBed holds them for a stay).
+// left to patients (care/rest.go: restInMedicalBed holds them for a stay).
 func (g *Game) sleepInBed(id entity.EntityID) bool {
 	if bid, slot, ok := g.partnerBed(id); ok && g.sleepInPartnerBed(id, bid, slot) { // beds.go
 		return true
@@ -775,7 +776,7 @@ func (g *Game) sleepInBed(id entity.EntityID) bool {
 	bestD := 1 << 30
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || g.isMedicalBed(b) { // prison beds: prisoners only
+		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || care.IsMedicalBed(b) { // prison beds: prisoners only
 			continue
 		}
 		if !g.areaAllows(id, b.X, b.Y) {
@@ -1033,9 +1034,9 @@ func (g *Game) phaseJobs() {
 		case job.Equip:
 			g.doEquip(id, j)
 		case job.Rescue:
-			g.doRescue(id, j)
+			g.care.Doctor.DoRescue(id, j)
 		case job.Tend:
-			g.doTend(id, j)
+			g.care.Doctor.DoTend(id, j)
 		case job.Refuel:
 			g.doRefuel(id, j)
 		case job.Warm:
@@ -1092,7 +1093,7 @@ func (g *Game) phaseJobs() {
 		case job.Rope:
 			g.doRope(id, j) // rope.go
 		case job.EmergencyTend:
-			g.doEmergencyTend(id, j) // care.go (MED-03)
+			g.care.Doctor.DoEmergencyTend(id, j) // care package (MED-03)
 		case job.Trade:
 			g.doTrade(id, j) // trade_session.go (PLAY-024)
 		case job.UseComms:
@@ -1188,15 +1189,15 @@ func (g *Game) sleepDone(id entity.EntityID, n needs.Pair, j job.Record) bool {
 		g.vital.Set(id, v)
 	}
 	if j.Target != 0 {
-		if b, ok := g.bldgs.Get(j.Target); ok && g.isMedicalBed(b) && !g.mayUseMedicalBed(id) {
-			return true // well again: medical beds are for patients (bedrest.go)
+		if b, ok := g.bldgs.Get(j.Target); ok && care.IsMedicalBed(b) && !g.care.Rest.MayUseMedicalBed(id) {
+			return true // well again: medical beds are for patients (care/rest.go)
 		}
 	}
 	if n.Hungry() && g.seekFood(id) {
 		return true
 	}
-	if g.onBedRest(id) {
-		// bedrest.go: stays put until well; one only waiting for a
+	if g.care.Rest.On(id) {
+		// care/rest.go: stays put until well; one only waiting for a
 		// surgeon who never came gets up after patientWait
 		if j.WorkLeft <= -patientWait && g.awaitingSurgery(id) {
 			g.surgeryGaveUp(id) // surgery.go: don't lie straight back down
@@ -1503,7 +1504,7 @@ func (g *Game) phaseMovement() {
 			raiders = append(raiders, mv.id)
 		}
 	}
-	g.followCarriers()
+	g.care.FollowCarriers()
 	g.trapsUnderfoot(raiders)
 }
 

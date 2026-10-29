@@ -22,9 +22,16 @@ import (
 // medState is the medical system's runtime state. legacyWounds holds an
 // older save's per-pawn wound records between loading and migrating them
 // (migrateWoundInfections, infection.go); nil otherwise.
+//
+// animalPatients (MED-09, animal_health.go) is the sorted ids of animals
+// with a body, derived state never saved: animalIdxOK false (a new game,
+// or after a load) rebuilds it on first use.
 type medState struct {
 	patients     []entity.EntityID // sorted, unique
 	legacyWounds map[entity.EntityID]legacyWound
+
+	animalPatients []entity.EntityID
+	animalIdxOK    bool
 }
 
 // indexedPatient reports id in the patients index.

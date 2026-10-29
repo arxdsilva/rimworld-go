@@ -11,7 +11,7 @@ import (
 // Kidnapping (ENG-003, M9b). A raider running for the edge, or standing
 // about with no one left to fight, that finds a downed colonist within
 // kidnapRange which no standing colonist guards, picks it up (job.Kidnap,
-// g.carrying, as a rescue does) and carries it to the nearest map edge.
+// g.carry, as a rescue does) and carries it to the nearest map edge.
 // There both leave: the colonist is stashed (world_stash.go) for the
 // raider's faction, Where Kidnapped, out of every pawnIDs loop and of the
 // colony's losses; its relations grieve by the lost table (socialOnLost)
@@ -38,7 +38,7 @@ const (
 // one could not start this tick).
 func (g *Game) tryKidnap(id entity.EntityID, pos Position, now uint64) bool {
 	r := g.raiders[id]
-	if now < r.KidnapAt || (now+uint64(id))%kidnapScan != 0 || g.carrying[id] != 0 {
+	if now < r.KidnapAt || (now+uint64(id))%kidnapScan != 0 || g.care.Carry.Patient(id) != 0 {
 		return false
 	}
 	t, tp, ok := g.kidnapTarget(id, pos)
@@ -73,7 +73,7 @@ func (g *Game) kidnapTarget(id entity.EntityID, pos Position) (entity.EntityID, 
 			continue
 		}
 		d := weapon.Distance(pos.X, pos.Y, cp.X, cp.Y)
-		if d >= bestD || g.carriedBy(c) != 0 || g.guarded(c, cp) {
+		if d >= bestD || g.care.Carry.Carrier(c) != 0 || g.guarded(c, cp) {
 			continue
 		}
 		if owner, held := g.reserve.EntityOwner(c); held && owner != id {
@@ -110,8 +110,8 @@ func (g *Game) stepKidnap(id entity.EntityID, j job.Record, now uint64) {
 		g.endKidnap(id, now) // it got up, or died
 		return
 	}
-	if g.carrying[id] != t {
-		if c := g.carriedBy(t); c != 0 && c != id || g.isStashed(t) {
+	if g.care.Carry.Patient(id) != t {
+		if c := g.care.Carry.Carrier(t); c != 0 && c != id || g.isStashed(t) {
 			g.endKidnap(id, now) // someone else has it
 			return
 		}
@@ -146,7 +146,7 @@ func (g *Game) pickUpKidnapped(id, t entity.EntityID, j job.Record, now uint64) 
 		return
 	}
 	g.dropRaiderGear(t) // the colonist's weapon stays where it fell
-	g.carrying[id] = t
+	g.care.Carry.Pick(id, t)
 	j.TX, j.TY, j.Path, j.PathI, j.State = x, y, path, 0, job.Goto
 	if len(path) == 0 {
 		j.State = job.Do
@@ -158,7 +158,7 @@ func (g *Game) pickUpKidnapped(id, t entity.EntityID, j job.Record, now uint64) 
 // endKidnap ends raider id's kidnap (put down whoever it carries) and
 // starts its cooldown.
 func (g *Game) endKidnap(id entity.EntityID, now uint64) {
-	g.dropPatient(id)
+	g.care.DropPatient(id)
 	g.reserve.ReleaseOwner(id)
 	g.jobs.Set(id, job.Record{})
 	r := g.raiders[id]
@@ -169,7 +169,7 @@ func (g *Game) endKidnap(id entity.EntityID, now uint64) {
 // kidnapOff: raider id reached the edge with colonist t; both leave the
 // map, t held by the raider's faction.
 func (g *Game) kidnapOff(id, t entity.EntityID) {
-	delete(g.carrying, id)
+	g.care.Carry.Drop(id)
 	pos, _ := g.positions.Get(id)
 	g.positions.Set(t, pos)
 	fac := 0

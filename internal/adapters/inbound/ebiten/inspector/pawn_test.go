@@ -88,3 +88,19 @@ func logs(n int) []game.LogLineView {
 	}
 	return out
 }
+
+func TestPawnStatusShowsCarryLines(t *testing.T) {
+	t.Parallel()
+	names := map[entity.EntityID]string{3: "Ann", 4: "Bo"}
+	name := func(id entity.EntityID) string { return names[id] }
+	got := PawnStatusLines(game.PawnView{Status: "alive", CarriedBy: 3, CarryingPawn: 4}, name)
+	if !slices.Contains(got, "Carried by Ann") || !slices.Contains(got, "Carrying Bo") {
+		t.Fatalf("lines %v", got)
+	}
+	got = PawnStatusLines(game.PawnView{Status: "alive"}, name)
+	for _, l := range got {
+		if strings.HasPrefix(l, "Carr") {
+			t.Fatalf("no carry line for zero ids: %v", got)
+		}
+	}
+}

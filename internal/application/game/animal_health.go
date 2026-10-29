@@ -480,7 +480,7 @@ func (g *Game) stepAnimalConds(id entity.EntityID, a *animal.State, b *body.Body
 // care (animalPatient), built from the animals on first use (a new game,
 // or after a load reset the care state).
 func (g *Game) animalPatientIDs() []entity.EntityID {
-	c := &g.care
+	c := &g.med
 	if !c.animalIdxOK {
 		c.animalPatients = c.animalPatients[:0]
 		for _, id := range g.animalIDs {
@@ -498,7 +498,7 @@ func (g *Game) animalPatientIDs() []entity.EntityID {
 func (g *Game) markAnimalPatient(id entity.EntityID) {
 	ids := g.animalPatientIDs()
 	if i, found := slices.BinarySearch(ids, id); !found {
-		g.care.animalPatients = slices.Insert(ids, i, id)
+		g.med.animalPatients = slices.Insert(ids, i, id)
 	}
 }
 
@@ -513,7 +513,7 @@ func (g *Game) sweepAnimalPatients() {
 		}
 	}
 	clear(ids[len(kept):])
-	g.care.animalPatients = kept
+	g.med.animalPatients = kept
 }
 
 // ---- the read model ----
@@ -550,7 +550,7 @@ func animalParts(b *body.Body) []AnimalPartView {
 // headline, bleeding, blood loss, the worst infection, whether a tend is
 // due, and the care level.
 func (g *Game) fillAnimalHealth(av *AnimalView, id entity.EntityID, a animal.State, now uint64) {
-	av.CareLevel = uint8(g.careOf(id)) // care.go
+	av.CareLevel = uint8(g.care.Level(id)) // care package
 	av.BleedDeathHours = -1
 	av.HealthState = "Healthy"
 	av.MovingPct = 100

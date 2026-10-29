@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -79,7 +80,7 @@ func TestMedicalBedReleasesOwners(t *testing.T) {
 	if j, _ := g.jobs.Get(ada); j.Target == bed && j.Active() {
 		t.Fatal("and gets up out of it")
 	}
-	if bedOf(g, sick).Claimant != uint64(bo) || g.rest.bed[bo] != sick {
+	if bedOf(g, sick).Claimant != uint64(bo) || g.care.Rest.HeldBed(bo) != sick {
 		t.Fatal("a patient keeps its slot as a stay")
 	}
 }
@@ -157,16 +158,16 @@ func TestFreeBedForRanksMedicalFirst(t *testing.T) {
 	hosp := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 10, 5)
 	far := buildNow(t, g, construction.Bed, item.Wood, construction.South, 20, 5)
 	from := Position{X: 2, Y: 5}
-	if got, _ := g.freeBedFor(patient, from); got != hosp {
+	if got := g.care.SafeBedFor(patient, from.X, from.Y, care.RescueBed); got != hosp {
 		t.Fatalf("a new hospital bed is medical and wins: got %v want %v", got, hosp)
 	}
 	setMedical(g, hosp, false)
 	setMedical(g, far, true)
-	if got, _ := g.freeBedFor(patient, from); got != far {
+	if got := g.care.SafeBedFor(patient, from.X, from.Y, care.RescueBed); got != far {
 		t.Fatalf("a far medical bed beats a hospital bed that isn't: got %v want %v", got, far)
 	}
 	setMedical(g, far, false)
-	if got, _ := g.freeBedFor(patient, from); got != hosp {
+	if got := g.care.SafeBedFor(patient, from.X, from.Y, care.RescueBed); got != hosp {
 		t.Fatalf("no medical bed: the hospital kind, then distance: got %v want %v (near %v)", got, hosp, near)
 	}
 }
@@ -194,8 +195,8 @@ func TestRescueToMedicalBedKeepsOwnBed(t *testing.T) {
 	if !restFedUntil(g, 3000, func() bool { return g.bedUnder(pat) == hosp }) {
 		t.Fatal("the doctor carries the patient to the medical bed")
 	}
-	if bedOf(g, own).Claimant != uint64(pat) || g.rest.bed[pat] != hosp {
-		t.Fatalf("own bed kept (claimant %d), the medical bed a stay (%v)", bedOf(g, own).Claimant, g.rest.bed[pat])
+	if bedOf(g, own).Claimant != uint64(pat) || g.care.Rest.HeldBed(pat) != hosp {
+		t.Fatalf("own bed kept (claimant %d), the medical bed a stay (%v)", bedOf(g, own).Claimant, g.care.Rest.HeldBed(pat))
 	}
 }
 
@@ -263,7 +264,7 @@ func TestMigrateHospitalBedsFromV3(t *testing.T) {
 	if bedOf(l, owned).Claimant != 0 {
 		t.Fatal("an owner sleeping elsewhere gives the bed up")
 	}
-	if bedOf(l, lying).Claimant != uint64(bo) || l.rest.bed[bo] != lying {
+	if bedOf(l, lying).Claimant != uint64(bo) || l.care.Rest.HeldBed(bo) != lying {
 		t.Fatal("a colonist lying in it keeps it for the stay")
 	}
 	if c := loadAsVersion(t, g, SaveVersion); bedOf(c, owned).Medical {

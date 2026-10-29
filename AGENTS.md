@@ -25,7 +25,7 @@ Non-negotiable rules:
 - All external mutations enter as typed commands.
 - UI/rendering never mutates domain state directly.
 - Any code that depends on an adapter, or an adapter that depends on the application layer, must depend on a small, consumer-owned interface (the behavior it needs), never the concrete type directly — construct concrete types only at the composition root. This is SOLID's Dependency Inversion Principle; keep each such interface single-purpose per the Interface Segregation Principle. See `.cursor/HEXAGONAL_ARCHITECTURE.md` §6.
-- Type, interface and package size limits (`.cursor/SOLID_GO.md` §8: ≤40 methods per type, ≤25 fields on a type with behaviour, ≤8 methods per interface, ≤12k lines / 60 files per package) are enforced by `go test ./internal/arch/`. Never raise a line in `internal/arch/solid_budget.txt`, only lower or delete one; register nothing from `init()`; no package-level var assigned at runtime outside the documented exceptions.
+- Type, interface and package size limits (`.cursor/SOLID_GO.md` §8: ≤40 methods per type, ≤25 fields on a type with behaviour, ≤8 methods per interface, ≤12k lines / 60 files per package) are enforced by `go test ./internal/arch/`. Never raise a line in `internal/arch/solid_budget.txt`, only lower or delete one; new features of a package at its ceiling go into a concise sub-package behind a consumer-owned host (`.cursor/SOLID_GO.md` §10); register nothing from `init()`; no package-level var assigned at runtime outside the documented exceptions.
 - No global RNG or wall-clock time in authoritative gameplay.
 - Avoid global scans; use indexes, batching, sleeping, and invalidation.
 - Animals make full decisions every 60 ticks through the bucket index (`internal/application/game/animal_index.go`, `animal_needs.go`); never scan all creatures per tick. Biome data lives in `internal/domain/world/biome`, nature-event definitions in `internal/domain/incident`.
@@ -33,7 +33,7 @@ Non-negotiable rules:
 - Run relevant tests and benchmarks. Tests always run with `-race` (`make test`, CI, agents, one-off `go test`); keep the suite inside CI's 10-minute `-race` budget (tests that need real art index it lazily: `realArt`/`testArt`/`atlasArt` in the ebiten package).
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
-  Exception (ENG-003, extended 2026-10-26): the social/host-system feature set and the medical system (MED-*, `.cursor/MEDICAL_GAP_ANALYSIS.md`) use published RimWorld wiki numbers by explicit user decision; names and prose stay original.
+  Exception (ENG-003, extended 2026-10-26 and 2026-10-29): the social/host-system feature set, the medical system (MED-*, `.cursor/MEDICAL_GAP_ANALYSIS.md`) and pawn-to-pawn care and mental breaks (SIM-061…066, `.cursor/PAWN_INTERACTION_GAP_ANALYSIS.md`) use published RimWorld wiki numbers by explicit user decision; names and prose stay original.
 - Remove unused assets and resources in the same change that makes them unused: sprites, sounds, fonts, metadata, palette entries, vendor packs, generated files and their loaders. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it; delete it in the change that removes the last reader. `make art-check` fails on orphans not listed with a reason in `assets/metadata/orphan_allow.txt`.
 - Grass and plants (ground plants, bushes, crops, trees) never have a contour or outline.
 - Every scoped task must leave a concise handoff in `.cursor/handoffs/`.
