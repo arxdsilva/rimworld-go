@@ -41,10 +41,14 @@ var furniture = [kindCount]Furniture{
 	AnimalBed:          {Comfort: 750, RestEffectiveness: 1000},
 	EndTable:           {Beauty: 3000},
 	Dresser:            {Beauty: 5000},
-	// BED-3 seats, wiki: Stool, Armchair (Chair, the dining chair, has
-	// no row yet).
+	// BED-3 seats, wiki: Dining chair (Chair), Stool, Armchair.
+	Chair:    {Comfort: 700, Beauty: 8000},
 	Stool:    {Comfort: 500},
 	Armchair: {Comfort: 800, Beauty: 4000},
+	// PRD-3 sculptures, wiki: Sculpture (base beauty 50/100/400).
+	SmallSculpture: {Beauty: 50000},
+	LargeSculpture: {Beauty: 100000},
+	GrandSculpture: {Beauty: 400000},
 }
 
 // facilityComfort is an end table's or dresser's comfort offset by the

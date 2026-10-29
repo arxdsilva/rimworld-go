@@ -149,6 +149,54 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "structure/steam_vent"
 	case "pen marker":
 		return "structure/pen_marker"
+	case "crafting spot": // wave D
+		return "overlay/crafting_spot"
+	case "butchering spot":
+		return "overlay/butcher_spot"
+	case "wood-fired forge":
+		return "furniture/fueled_smithy_" + FacingOr(facing)
+	case "electric forge":
+		return "furniture/electric_smithy_" + FacingOr(facing)
+	case "machining table":
+		return "furniture/machining_table_" + FacingOr(facing)
+	case "fabrication bench":
+		return "furniture/fabrication_bench_" + FacingOr(facing)
+	case "sculpting bench":
+		return "furniture/art_bench_" + FacingOr(facing)
+	case "electric smelter":
+		return "furniture/electric_smelter_" + FacingOr(facing)
+	case "fuel refinery":
+		return "furniture/biofuel_refinery_" + FacingOr(facing)
+	case "fermenting barrel":
+		return "furniture/fermenting_barrel"
+	case "small sculpture":
+		return "furniture/sculpture_small"
+	case "large sculpture":
+		return "furniture/sculpture_large"
+	case "grand sculpture":
+		return "furniture/sculpture_grand"
+	case "stool":
+		return "furniture/stool"
+	case "armchair":
+		return "furniture/armchair_" + FacingOr(facing)
+	case "barricade":
+		return "defense/barricade"
+	case "blast charge":
+		return "defense/ied_high_explosive"
+	case "fire charge":
+		return "defense/ied_incendiary"
+	case "pulse charge":
+		return "defense/ied_emp"
+	case "smoke charge":
+		return "defense/ied_smoke"
+	case "autocannon":
+		return "defense/autocannon_base"
+	case "slug turret":
+		return "defense/slug_turret_base"
+	case "mortar":
+		return "defense/mortar_base"
+	case "powered door":
+		return "structure/autodoor_" + map[bool]string{true: "ew", false: "ns"}[ew] + "_" + map[bool]string{true: "open", false: "closed"}[open]
 	}
 	return PowerSprite(kind, facing, mask, open)
 }

@@ -23,6 +23,7 @@ type Host interface {
 	Crafters
 	Makers
 	Weathering
+	Workshop
 }
 
 // Benches reads the buildings benches, racks and cabinets are, and what
@@ -49,8 +50,6 @@ type Benches interface {
 type Stock interface {
 	// Stock is the colony's count of kind k.
 	Stock(k item.Kind) int
-	// DriedStock is the colony's count of dried food.
-	DriedStock() int
 	// FreeWood is the wood lying free (not carried, not forbidden).
 	FreeWood() int
 	// Ingredient is the nearest free stack id may take that feeds in on
@@ -63,9 +62,6 @@ type Stock interface {
 	// ItemIDs is every item stack's id (the host's slice, read only): the
 	// multi-stack ingredient search (PRD-1).
 	ItemIDs() []entity.EntityID
-	// Merge adds carried stack from to carried stack into (same kind)
-	// and deletes from: one load gathered from several stacks.
-	Merge(into, from entity.EntityID)
 }
 
 // Output is what a finished bill or batch leaves behind.
@@ -82,9 +78,6 @@ type Output interface {
 	Cremate(pyre, body entity.EntityID, d recipe.Def)
 	// Message posts a plain message at (x, y).
 	Message(x, y int, text string)
-	// PutDown sets carried stack id down at (x, y) as it is, never merged
-	// (an ingredient laid on its bench keeps its id and reservation).
-	PutDown(id entity.EntityID, x, y int)
 	// Store has carrier take the stack of kind k lying at (x, y) to the
 	// best stockpile (zone 0) or to stockpile zone: a haul job replacing
 	// its current one. False when there is no such stack or no room.
@@ -153,4 +146,25 @@ type Weathering interface {
 	Pos(id entity.EntityID) (x, y int, ok bool)
 	Outfit(id entity.EntityID) Outfit
 	SetOutfit(id entity.EntityID, o Outfit)
+}
+
+// Workshop is what bench work speed, forge fuel and sculptures read and
+// write (PRD-3).
+type Workshop interface {
+	// Light is the light on (x, y) in permille (1000: full daylight).
+	Light(x, y int) int
+	// Cleanliness is the cleanliness of the room at (x, y) in hundredths
+	// (room.CleanlinessLabel); indoors is false outside any room or under
+	// the open sky.
+	Cleanliness(x, y int) (hundredths int, indoors bool)
+	// UseFuel burns the fuel work units of forge work take (one log per
+	// WorkPerWood units).
+	UseFuel(id entity.EntityID, work int)
+	// CanInstall reports Install would set a building of kind k down at
+	// (x, y): the placement rule allows it there.
+	CanInstall(k construction.Kind, x, y int) bool
+	// Install sets a finished building of kind k in stuff, of stored
+	// quality q, down at (x, y) facing south; the caller has checked
+	// CanInstall (0: the footprint is taken after all).
+	Install(k construction.Kind, stuff item.Kind, q uint8, x, y int) entity.EntityID
 }

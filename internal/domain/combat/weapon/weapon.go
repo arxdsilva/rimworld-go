@@ -50,8 +50,21 @@ const (
 	EMPGrenade
 	IncendiaryLauncher
 	EMPLauncher
+	// DEF-3 (append only, saved in shots and logs): the heavy turrets'
+	// guns and the mortar, one kind per shell it lobs (all named
+	// "mortar"). Never carried: fired by their buildings.
+	Autocannon
+	SlugTurret
+	MortarHE
+	MortarIncendiary
+	MortarEMP
+	MortarSmoke
 	numKinds
 )
+
+// lastCatalogue is the last carried weapon of the DEF-2 catalogue (the
+// kinds after it are building guns).
+const lastCatalogue = EMPLauncher
 
 // Def is one attack profile. Range is in tiles (Chebyshev); melee
 // weapons reach adjacent tiles only. Cooldown is ticks between attacks.
@@ -93,6 +106,9 @@ type Def struct {
 	// ForcedMiss is an explosive's scatter radius at long range,
 	// thousandths of a tile (explosion.ForcedMiss).
 	ForcedMiss int
+	// MinRange is the nearest a target may be (tiles; 0: none): the heavy
+	// turrets and the mortar cannot shoot what is too close (DEF-3).
+	MinRange int
 }
 
 // The colony's weapons carry the wiki's numbers (ENG-003): the knife,
@@ -154,6 +170,60 @@ var defs = [numKinds]Def{
 	EMPGrenade:         explosive("EMP grenade", explosion.EMP, 3500, 50, 0, 90, 160, 12, 12),
 	IncendiaryLauncher: explosive("incendiary launcher", explosion.Flame, 1100, 10, 0, 210, 210, 23, 40),
 	EMPLauncher:        explosive("emp launcher", explosion.EMP, 1100, 50, 0, 210, 210, 23, 40),
+
+	// DEF-3 heavy turrets: damage, AP, no warmup, cooldown, range and
+	// minimum range (the wiki's x.9 floored), burst x gap, accuracy
+	// touch/short/medium/long (the slug turret's odd curve as published).
+	// The turrets fire at once (no projectile), like the sentry gun.
+	// wiki: Autocannon turret, Uranium slug turret
+	Autocannon: turretGun("autocannon", 27, 400, 210, 32, 8, 3, 17, 280, 720, 660, 500),
+	SlugTurret: turretGun("slug turret", 55, 820, 240, 45, 11, 1, 0, 220, 330, 440, 950),
+
+	// DEF-3 mortar: range 500 (wider than any map), minimum range 29.9,
+	// warmup 240, cooldown 1680, shells at 41 cells/s, forced-miss radius
+	// 9 tiles (scaled by the crew's skill, Mortars). Blasts: HE 50 bomb
+	// r 2.9, incendiary 10 flame r 2.9, EMP 50 r 8.9, smoke r 7.2. The HE
+	// shell's armor penetration is not in the notes: the frag grenade's
+	// 10 % (original assumption). wiki: Mortar, High-explosive shell,
+	// Incendiary shell, EMP shell, Smoke shell
+	MortarHE:         mortar(explosion.Def{Kind: explosion.Bomb, Radius: 2900, Damage: 50, Pen: 100}),
+	MortarIncendiary: mortar(explosion.Def{Kind: explosion.Flame, Radius: 2900, Damage: 10}),
+	MortarEMP:        mortar(explosion.Def{Kind: explosion.EMP, Radius: 8900, Damage: 50}),
+	MortarSmoke:      mortar(explosion.Def{Kind: explosion.Smoke, Radius: 7200}),
+}
+
+// turretGun is a heavy turret's gun: name, damage, armor penetration
+// (permille), cooldown, range and minimum range (tiles), burst shots and
+// the ticks between them, accuracy at touch/short/medium/long (permille).
+func turretGun(name string, dmg, pen, cooldown, rng, minRng, burst, gap, t, sh, m, l int) Def {
+	return Def{Name: name, Ranged: true, Range: rng, MinRange: minRng, Damage: dmg, ArmorPen: pen, Cooldown: cooldown,
+		Burst: burst, BurstTicks: gap, DamageType: damage.Sharp, Bands: attack.DefaultBands(t, sh, m, l)}
+}
+
+// The mortar's numbers. wiki: Mortar
+const (
+	MortarRange      = 500
+	MortarMinRange   = 29
+	mortarWarmup     = 240
+	mortarCooldown   = 1680
+	mortarCellsPerS  = 41
+	MortarForcedMiss = 9000 // thousandths of a tile, before the crew's skill
+)
+
+// mortar is the mortar lobbing a shell that bursts as b.
+func mortar(b explosion.Def) Def {
+	return Def{Name: "mortar", Ranged: true, Range: MortarRange, MinRange: MortarMinRange, Damage: b.Damage, ArmorPen: b.Pen,
+		Warmup: mortarWarmup, Cooldown: mortarCooldown, Burst: 1, Accuracy: 100, DamageType: b.Type(),
+		Speed: mortarCellsPerS * 1000 / 60, Blast: b, ForcedMiss: MortarForcedMiss}
+}
+
+// ForShell is the mortar weapon that lobs shell kind k (ok false: no
+// shell).
+func ForShell(k item.Kind) (Kind, bool) {
+	if !k.IsShell() {
+		return Fists, false
+	}
+	return MortarHE + Kind(k-item.MortarShells), true
 }
 
 // ranged is a banded gun or bow: name, damage, armor penetration
@@ -209,9 +279,9 @@ func HitChance(d Def, dist int) int {
 // attacked. Line of sight is the caller's concern.
 func InRange(d Def, dist int) bool {
 	if dist < 1 {
-		return true
+		return d.MinRange == 0
 	}
-	return dist <= d.Range
+	return dist <= d.Range && dist >= d.MinRange
 }
 
 // Distance is the Chebyshev tile distance used for ranges.

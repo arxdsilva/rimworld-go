@@ -151,22 +151,12 @@ func BuildingTitle(b game.BuildingView) string {
 	return materialTitle(b.Kind, b.Stuff) // "Wall", "Granite wall", "Steel door"
 }
 
-// recipeBenchName is the bench kind whose recipes a bench of kind works: an
-// electric bench takes its base bench's (construction.RecipeBench), any
-// other kind is its own.
-func RecipeBenchName(kind string) string {
-	if k, ok := construction.Parse(kind); ok {
-		return construction.RecipeBench(k).String()
-	}
-	return kind
-}
-
-// recipesFor lists the recipes a bench of kind can be given as bills.
+// recipesFor lists the recipes a bench of kind can be given as bills: its
+// own, its electric twin's and the ones it runs besides (PRD-3 RunsAt).
 func (a Building) RecipesFor(kind string) []game.RecipeView {
 	var out []game.RecipeView
-	bench := RecipeBenchName(kind)
 	for _, r := range game.Recipes() {
-		if r.Bench == bench {
+		if r.RunsAt(kind) {
 			out = append(out, r)
 		}
 	}

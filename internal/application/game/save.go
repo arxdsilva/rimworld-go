@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
+	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -177,6 +178,7 @@ type saveState struct {
 	LastMeal   map[entity.EntityID]item.Kind
 	Bills      map[entity.EntityID][]recipe.Bill
 	Racks      map[entity.EntityID]craft.Batch
+	Art        map[entity.EntityID]craft.Artwork // PRD-3: each sculpture's title seed and carver; absent in older saves
 	Fuel       map[entity.EntityID]int
 	Exposure   map[entity.EntityID][2]int
 	NoComfort  map[entity.EntityID]uint64
@@ -187,6 +189,8 @@ type saveState struct {
 	RestedFree map[entity.EntityID]bool       // absent in older saves
 	Calm       map[entity.EntityID]uint64     // absent in older saves
 	Banked     map[entity.EntityID]bool       // absent in older saves
+	// RestNeeds: comfort, beauty and outdoors needs (BED-3); absent in older saves
+	RestNeeds  map[entity.EntityID]rest.NeedRecord
 	OrderQueue map[entity.EntityID][]savedOrder
 	Apparel    map[entity.EntityID][3]item.Kind     // before PRD-2: kinds only (read when Worn is absent)
 	Worn       map[entity.EntityID]craft.OutfitSave // PRD-2: worn pieces with stuff, quality and wear
@@ -428,9 +432,9 @@ func (g *Game) Save(w io.Writer, name string) error {
 		ItemIDs: g.itemIDs, Stacks: exportStore(g.stacks), FrameIDs: g.frameIDs, Frames: exportStore(g.frames),
 		BldgIDs: g.bldgIDs, Bldgs: exportStore(g.bldgs), PlantIDs: g.plantIDs, Plants: exportStore(g.plants),
 		Terr: g.terr, Mines: g.mines,
-		LastMeal: g.lastMeal, Bills: g.craft.Bills.Export(), Racks: g.craft.Drying.Export(), Fuel: g.fuel,
+		LastMeal: g.lastMeal, Bills: g.craft.Bills.Export(), Racks: g.craft.Drying.Export(), Art: g.craft.Art.Export(), Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
-		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.rest.Export(), Calm: g.calm, Banked: g.banked,
+		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.rest.Export(), RestNeeds: g.rest.Needs.Export(), Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Worn: craft.ExportOutfits(g.apparel), Joy: g.joy,
 		PrioList: exportPrios(g.prio), Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
@@ -570,13 +574,15 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.lastMeal, s.LastMeal)
 	g.craft.Bills.Import(s.Bills)  // craft/bills.go
 	g.craft.Drying.Import(s.Racks) // craft/drying.go
+	g.craft.Art.Import(s.Art)      // craft/art.go (PRD-3)
 	setMap(&g.fuel, s.Fuel)
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.noFood, s.NoFood)
 	g.importPostponed(s.Postponed)
 	g.postponed.sweepAt = s.PostSweep
 	g.importOrders(s.PostOrders)
-	g.rest.Import(s.RestedFree) // rest/sleep.go
+	g.rest.Import(s.RestedFree)      // rest/sleep.go
+	g.rest.Needs.Import(s.RestNeeds) // rest/needs.go (BED-3)
 	setMap(&g.calm, s.Calm)
 	setMap(&g.banked, s.Banked)
 	g.apparel = craft.ImportOutfits(s.Worn, s.Apparel) // craft/garment.go (PRD-2)

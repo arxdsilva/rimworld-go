@@ -161,7 +161,13 @@ func TestGrownGolden(t *testing.T) {
 	// raiders carry kit weapons by tech (grenades and explosions); the
 	// previous pin held through wave B (the committed full suite). Stable
 	// over -count=2.
-	const want uint64 = 0xd0b720b4cfb779b1
+	// Re-pinned (BED/PRD/DEF wave D): new benches and research projects
+	// (the sandbox completes every project), work speed from light, room
+	// and facilities, the comfort, beauty and outdoors needs with sitting,
+	// wiki cover values (walls and doors 75 %), door open times and the
+	// door hooks in movement; the previous pin held through wave C (the
+	// committed full suite). Stable over -count=2.
+	const want uint64 = 0x7a86ab69fc2fc91a
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

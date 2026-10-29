@@ -58,7 +58,7 @@ func aidHere(t *testing.T, g *Game, f *faction.Faction) []entity.EntityID {
 // moveTo puts creature id on a free walkable tile near (x, y).
 func moveTo(t *testing.T, g *Game, id entity.EntityID, x, y int) Position {
 	t.Helper()
-	tx, ty, ok := g.walkableNear(x, y, 6)
+	tx, ty, ok := g.combat.Tiles.WalkableNear(x, y, 6)
 	if !ok {
 		t.Fatalf("no walkable tile near %d,%d", x, y)
 	}

@@ -2,6 +2,84 @@
   "version": 1,
   "sounds": [
     {
+      "id": "amb.bench_fabrication",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.25,
+      "files": [
+        "ambience/bench_fabrication.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.bench_fabrication",
+      "seed": 945,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.bench_machining",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.3,
+      "files": [
+        "ambience/bench_machining.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.bench_machining",
+      "seed": 941,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.bench_refinery",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.3,
+      "files": [
+        "ambience/bench_refinery.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.bench_refinery",
+      "seed": 943,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.bench_sculpt",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.3,
+      "files": [
+        "ambience/bench_sculpt.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.bench_sculpt",
+      "seed": 944,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.bench_smelter",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.35,
+      "files": [
+        "ambience/bench_smelter.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.bench_smelter",
+      "seed": 942,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.bench_smithy",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.4,
+      "files": [
+        "ambience/bench_smithy.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.bench_smithy",
+      "seed": 940,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "amb.campfire",
       "bus": "ambience",
       "loop": true,
@@ -4994,6 +5072,45 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.autocannon_shot",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/autocannon_shot_0.wav",
+        "sfx/autocannon_shot_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.autocannon_shot",
+      "seed": 930,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.autodoor_close",
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "sfx/autodoor_close_0.wav",
+        "sfx/autodoor_close_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.autodoor_close",
+      "seed": 937,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.autodoor_open",
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "sfx/autodoor_open_0.wav",
+        "sfx/autodoor_open_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.autodoor_open",
+      "seed": 936,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.blade_hit",
       "bus": "effects",
       "volume": 0.75,
@@ -5228,6 +5345,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.ied_arm",
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "sfx/ied_arm_0.wav",
+        "sfx/ied_arm_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.ied_arm",
+      "seed": 935,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.incendiary_burst",
       "bus": "effects",
       "volume": 0.8,
@@ -5313,6 +5443,32 @@
       "source": "procedural",
       "recipe": "sfx.minigun_shot",
       "seed": 916,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.mortar_incoming",
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "sfx/mortar_incoming_0.wav",
+        "sfx/mortar_incoming_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.mortar_incoming",
+      "seed": 933,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.mortar_launch",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/mortar_launch_0.wav",
+        "sfx/mortar_launch_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.mortar_launch",
+      "seed": 932,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5468,6 +5624,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.slug_turret_shot",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/slug_turret_shot_0.wav",
+        "sfx/slug_turret_shot_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.slug_turret_shot",
+      "seed": 931,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.smg_burst_shot",
       "bus": "effects",
       "volume": 0.6,
@@ -5569,6 +5738,19 @@
       "source": "procedural",
       "recipe": "sfx.tree_fall",
       "seed": 202,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.turret_rearm",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/turret_rearm_0.wav",
+        "sfx/turret_rearm_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.turret_rearm",
+      "seed": 934,
       "license": "original, made in code (CC0, this repo)"
     },
     {

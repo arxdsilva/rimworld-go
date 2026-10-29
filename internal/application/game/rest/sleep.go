@@ -26,6 +26,10 @@ type Sleep struct {
 	Animals *Animals
 	// Lovin is couples' lovin' in a shared double bed (lovin.go).
 	Lovin *Lovin
+	// Needs is the comfort, beauty and outdoors needs (needs.go, BED-3).
+	Needs *Needs
+	// Seats is where pawns sit: at a table, to rest (seats.go, BED-3).
+	Seats *Seats
 	// rested: woke fully rested in the current Sleep block, so it has
 	// free time until it tires (saved as RestedFree).
 	rested map[entity.EntityID]bool
@@ -34,8 +38,10 @@ type Sleep struct {
 // New builds a Sleep over h.
 func New(h Host) *Sleep {
 	st := &Stats{h: h}
+	nd := &Needs{h: h, stats: st, m: make(map[entity.EntityID]NeedRecord)}
+	nd.seats = &Seats{h: h, n: nd}
 	return &Sleep{h: h, Beds: &Beds{h: h}, Waking: &Waking{h: h}, Stats: st, Animals: &Animals{h: h, stats: st}, Lovin: &Lovin{h: h},
-		rested: make(map[entity.EntityID]bool)}
+		Needs: nd, Seats: nd.seats, rested: make(map[entity.EntityID]bool)}
 }
 
 // Assign sends pawn id to bed (Beds.SleepIn), or to sleep on the floor
@@ -62,6 +68,7 @@ func (s *Sleep) InPlace(id entity.EntityID) {
 func (s *Sleep) Do(id entity.EntityID, j job.Record, now uint64) {
 	n := needs.SleepTickAt(s.h.Needs(id), now, s.Stats.RestEffect(j.Target))
 	s.h.SetNeeds(id, n)
+	s.Needs.Tick(id, now) // comfort in bed, outdoors (BED-3)
 	j.WorkLeft--
 	if s.done(id, n, j) {
 		j.State = job.Complete

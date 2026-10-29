@@ -65,7 +65,7 @@ func (g *Game) isBoundary(x, y int) bool {
 // cooler standing in a wall gap (PLAY-021: it moves heat between the two
 // rooms it separates).
 func roomWall(k construction.Kind) bool {
-	return k == construction.Wall || k == construction.Door || k == construction.Cooler
+	return k == construction.Wall || k.IsDoor() || k == construction.Cooler
 }
 
 // ensureRooms rebuilds the rooms after a building or terrain change:

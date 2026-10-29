@@ -280,7 +280,7 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 // is not a replacement. A cooler (PLAY-021) fills a wall the same way,
 // and replaces nothing but a wall.
 func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
-	if k != construction.Door && k != construction.FenceGate && k != construction.Cooler {
+	if !k.IsDoor() && k != construction.FenceGate && k != construction.Cooler {
 		return 0
 	}
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
@@ -293,7 +293,7 @@ func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
 		if b.Kind == construction.Wall {
 			return bid
 		}
-	case b.Kind == construction.Wall, b.Kind == construction.Fence, b.Kind == construction.Door, b.Kind == construction.FenceGate:
+	case b.Kind == construction.Wall, b.Kind == construction.Fence, b.Kind.IsDoor(), b.Kind == construction.FenceGate:
 		return bid
 	}
 	return 0
@@ -347,14 +347,14 @@ func (g *Game) AutoFacingAt(kind, facing string, x, y int) string {
 // autoOriented: doors and fence gates face along their walls or fences; a
 // cooler (PLAY-021) faces across its wall, its cold side one of the two.
 func autoOriented(k construction.Kind) bool {
-	return k == construction.Door || k == construction.FenceGate || k == construction.Cooler
+	return k.IsDoor() || k == construction.FenceGate || k == construction.Cooler
 }
 
 // orientPiece: a piece a door or gate lines up with (wall, door, fence,
 // gate).
 func orientPiece(k construction.Kind) bool {
 	switch k {
-	case construction.Wall, construction.Door, construction.Fence, construction.FenceGate:
+	case construction.Wall, construction.Door, construction.Autodoor, construction.Fence, construction.FenceGate:
 		return true
 	}
 	return false
@@ -488,7 +488,7 @@ func (g *Game) reorientFootprint(k construction.Kind, f construction.Facing, x, 
 // Gates keep their player-chosen facing.
 func (g *Game) orientDoors() {
 	for _, id := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(id); ok && b.Kind == construction.Door {
+		if b, ok := g.bldgs.Get(id); ok && b.Kind.IsDoor() {
 			if f := g.autoFacing(b.Kind, b.X, b.Y, b.Facing); f != b.Facing {
 				b.Facing = f
 				g.bldgs.Set(id, b)
@@ -496,7 +496,7 @@ func (g *Game) orientDoors() {
 		}
 	}
 	for _, id := range g.frameIDs {
-		if fr, ok := g.frames.Get(id); ok && fr.Kind == construction.Door {
+		if fr, ok := g.frames.Get(id); ok && fr.Kind.IsDoor() {
 			if f := g.autoFacing(fr.Kind, fr.X, fr.Y, fr.Facing); f != fr.Facing {
 				fr.Facing = f
 				g.frames.Set(id, fr)
@@ -745,7 +745,7 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 	if !kind.Valid() || !construction.StuffOK(kind, stuff) {
 		return
 	}
-	if !construction.DefOf(kind).Rotatable && kind != construction.Door {
+	if !construction.DefOf(kind).Rotatable && !kind.IsDoor() {
 		f = construction.South // a door's facing is stored: it follows its walls (PLAY-011)
 	}
 	f = g.autoFacing(kind, x, y, f) // the player's facing only breaks a tie

@@ -600,7 +600,7 @@ func (g *Game) sendGnawsOff() {
 	gw.Gone = true
 	lead, _ := g.positions.Get(gw.IDs[0])
 	ex, ey := nearestEdge(lead, g.grid.Width(), g.grid.Height())
-	if x, y, ok := g.walkableNear(ex, ey, 4); ok {
+	if x, y, ok := g.combat.Tiles.WalkableNear(ex, ey, 4); ok {
 		ex, ey = x, y
 	}
 	for _, id := range gw.IDs {

@@ -2,6 +2,7 @@ package combat
 
 import (
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/cover"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -27,19 +28,43 @@ type Combat struct {
 	Shots *Shots
 	// Blasts are the explosions and their smoke (blast.go, DEF-2).
 	Blasts *Blasts
+	// DEF-3: Doors (door.go), Mortars (mortar.go), Rearms (rearm.go: the
+	// haul that loads a turret's barrel or a mortar's shells), Orders
+	// (orders.go: the defence commands and the buildings' read model) and
+	// Hunting and Tiles (hunt.go, tiles.go: assigning hunts and finding
+	// free ground, moved from the game).
+	Doors   *Doors
+	Mortars *Mortars
+	Rearms  *Rearms
+	Orders  *Orders
+	Hunting *Hunting
+	Tiles   *Tiles
 }
 
 // New builds the combat cluster on host h with the extra roles r.
 func New(h Host, r Roles) *Combat {
-	c := &Combat{Sight: &Sight{g: h}, Traps: &Traps{h: h}, Breach: &Breach{h: h, b: r.Breach}}
+	c := &Combat{Sight: &Sight{g: h, f: r.Field}, Breach: &Breach{h: h, b: r.Breach}}
+	c.Doors = &Doors{h: h, pw: r.Power}
+	c.Sight.doors = c.Doors
 	c.Turrets = newTurrets(h, r.Power, c.Sight)
 	c.Strikes = &Strikes{h: h, sight: c.Sight, turrets: c.Turrets, hunts: r.Hunts}
 	c.Blasts = &Blasts{h: h, sight: c.Sight, st: c.Strikes, turrets: c.Turrets}
 	c.Shots = &Shots{h: h, st: c.Strikes, blasts: c.Blasts}
-	c.Strikes.shots, c.Strikes.blasts = c.Shots, c.Blasts
+	c.Strikes.shots, c.Strikes.blasts, c.Turrets.st = c.Shots, c.Blasts, c.Strikes
+	c.Traps = &Traps{h: h, blasts: c.Blasts}
 	c.Guard = &Guard{h: h, fl: r.Flight}
+	c.Mortars = &Mortars{h: h, f: r.Field, turrets: c.Turrets, shots: c.Shots}
+	c.Rearms = &Rearms{h: h, sup: r.Supply, br: r.Breach, turrets: c.Turrets, mortars: c.Mortars}
+	c.Orders = &Orders{h: h, turrets: c.Turrets, mortars: c.Mortars, doors: c.Doors, rearms: c.Rearms}
+	c.Hunting, c.Tiles = &Hunting{h: h, hu: r.Hunts}, &Tiles{f: r.Field}
+	c.Turrets.after = [...]phaser{c.Traps, c.Doors, c.Mortars, c.Rearms}
+	c.Turrets.saved = saved{traps: c.Traps, doors: c.Doors, mortars: c.Mortars, rearms: c.Rearms}
 	return c
 }
+
+// phaser is a defence stepped once a tick after the turrets (Turrets.Phase,
+// the game's threat phase): IED fuses, doors, mortars and rearm hauls.
+type phaser interface{ phase(now uint64) }
 
 // SwitchMargin: a fighter (or a raider choosing between a colonist and a
 // turret) only swaps targets for one this many tiles closer than the one it
@@ -47,16 +72,39 @@ func New(h Host, r Roles) *Combat {
 const SwitchMargin = 3
 
 // Sight answers what a shot can reach: rock, walls and closed doors stop
-// bullets, and the buildings beside a target give it cover.
-type Sight struct{ g Ground }
+// bullets, and what stands beside a target gives it cover (DEF-3: the
+// cover domain's values for buildings, rock, trees and chunks).
+type Sight struct {
+	g     sightGround
+	f     Field // nil: no natural cover but rock (tests)
+	doors *Doors
+	// chunks is the loose stone chunks' tiles, rebuilt at most once in
+	// chunkEvery ticks (an item scan), chunkAt the tick it was built.
+	chunks  map[[2]int]struct{}
+	chunkAt uint64
+	chunkOK bool
+	chunkB  [][2]int
+}
 
-// blocks: rock, walls and (closed) doors stop bullets.
+// sightGround is the map and the clock (the chunk cache's age).
+type sightGround interface {
+	Ground
+	Now() uint64
+}
+
+// chunkEvery is how long the chunk tiles are trusted: chunks are mined,
+// hauled and cut slowly, and cover needs no tick-exact list. original
+// tuning.
+const chunkEvery = 250
+
+// blocks: rock, walls and closed doors stop bullets (an open door lets
+// them through, DEF-3).
 func (s *Sight) blocks(x, y int) bool {
 	if s.g.Rock(x, y) {
 		return true
 	}
 	if id, k := s.g.Object(x, y); id != 0 {
-		return k == construction.Wall || k == construction.Door
+		return k == construction.Wall || k.IsDoor() && !s.doors.isOpen(id)
 	}
 	return false
 }
@@ -104,32 +152,70 @@ func (s *Sight) CanHit(fx, fy int, d weapon.Def, tx, ty int) bool {
 	return !d.Ranged || dist <= 1 || s.Line(fx, fy, tx, ty)
 }
 
-// Cover is the cover (percent) the target at (tx, ty) has against a shot
-// from (ax, ay): the best of the buildings on the cells beside it, facing
-// the shooter.
+// Cover is the cover (permille) the target at (tx, ty) has against a
+// shot from (ax, ay): the best of what stands on the cells beside it,
+// facing the shooter (cover.BestAt); none point blank.
 func (s *Sight) Cover(ax, ay, tx, ty int) int {
-	_, _, _, pct := s.coverBy(ax, ay, tx, ty)
-	return pct
+	_, _, _, p := s.coverBy(ax, ay, tx, ty)
+	return p
 }
 
-// coverBy is Cover with the building that gives it and its tile (id 0:
-// no cover).
-func (s *Sight) coverBy(ax, ay, tx, ty int) (id entity.EntityID, x, y, pct int) {
+// coverBy is Cover with the building that gives it (0: natural cover or
+// none) and the cover's tile.
+func (s *Sight) coverBy(ax, ay, tx, ty int) (id entity.EntityID, x, y, p int) {
 	if weapon.Distance(ax, ay, tx, ty) <= 1 {
 		return 0, 0, 0, 0
 	}
-	sx, sy := sign(ax-tx), sign(ay-ty)
-	cells := [3][2]int{{tx + sx, ty + sy}}
-	n := 1
-	if sx != 0 && sy != 0 {
-		cells[1], cells[2], n = [2]int{tx + sx, ty}, [2]int{tx, ty + sy}, 3
+	k, p, x, y := cover.BestAt(s, ax, ay, tx, ty)
+	if k == cover.None {
+		return 0, 0, 0, 0
 	}
-	for _, c := range cells[:n] {
-		if bid, k := s.g.Object(c[0], c[1]); bid != 0 && construction.CoverPct(k) > pct {
-			id, x, y, pct = bid, c[0], c[1], construction.CoverPct(k)
+	if bid, bk := s.g.Object(x, y); bid != 0 && cover.OfBuilding(bk) == k {
+		id = bid
+	}
+	return id, x, y, p
+}
+
+// CoverAt is the cover kind on (x, y) (cover.Grid): a building's, else
+// rock, a grown tree, cactus or bush, or a stone chunk.
+func (s *Sight) CoverAt(x, y int) cover.Kind {
+	if id, k := s.g.Object(x, y); id != 0 {
+		if c := cover.OfBuilding(k); c != cover.None {
+			return c
 		}
 	}
-	return id, x, y, pct
+	if s.g.Rock(x, y) {
+		return cover.Rock
+	}
+	if s.f == nil {
+		return cover.None
+	}
+	if sp, grown, ok := s.f.Plant(x, y); ok {
+		if c := cover.OfPlant(sp, grown); c != cover.None {
+			return c
+		}
+	}
+	if s.chunk(x, y) {
+		return cover.Chunk
+	}
+	return cover.None
+}
+
+// chunk reports a loose stone chunk on (x, y), from the cached tiles.
+func (s *Sight) chunk(x, y int) bool {
+	if now := s.g.Now(); !s.chunkOK || now >= s.chunkAt+chunkEvery || now < s.chunkAt {
+		s.chunkB = s.f.AppendChunks(s.chunkB[:0])
+		if s.chunks == nil {
+			s.chunks = map[[2]int]struct{}{}
+		}
+		clear(s.chunks)
+		for _, c := range s.chunkB {
+			s.chunks[c] = struct{}{}
+		}
+		s.chunkAt, s.chunkOK = now, true
+	}
+	_, ok := s.chunks[[2]int{x, y}]
+	return ok
 }
 
 func sign(v int) int {

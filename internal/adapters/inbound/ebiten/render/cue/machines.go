@@ -98,6 +98,7 @@ func (b *Bus) Machines(rv *render.View, want map[string]Loop, w game.WorldView, 
 		count[h.id]++
 		want[h.key] = Loop{ID: h.id, Vol: h.vol, Pan: h.pan}
 	}
+	b.benchWork(rv, want, v) // crafters at their benches (structure_sounds.go)
 }
 
 // WaterOnScreen is the share of the visible tiles that are water (shallow

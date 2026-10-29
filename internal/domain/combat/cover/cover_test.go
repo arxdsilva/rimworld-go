@@ -49,3 +49,20 @@ func TestBestOnShooterSide(t *testing.T) {
 		t.Fatalf("tie order: %v", k)
 	}
 }
+
+func TestDefenceKinds(t *testing.T) {
+	t.Parallel()
+	want := map[Kind]int{Door: 750, Cactus: 350, Fence: 250, Bush: 200, Stool: 200, Table: 400, Chair: 350, Turret: 400, HeavyTurret: 500}
+	for k, p := range want {
+		if Permille(k) != p {
+			t.Errorf("kind %d: %d, want %d", k, Permille(k), p)
+		}
+	}
+	g := grid{{4, 5}: Chair, {4, 4}: Door}
+	if k, p, x, y := BestAt(g, 0, 0, 5, 5); k != Door || p != 750 || x != 4 || y != 4 {
+		t.Fatalf("BestAt: %v %d (%d,%d)", k, p, x, y)
+	}
+	if k, _, x, y := BestAt(grid{}, 0, 0, 5, 5); k != None || x != 5 || y != 5 {
+		t.Fatalf("BestAt none: %v (%d,%d)", k, x, y)
+	}
+}

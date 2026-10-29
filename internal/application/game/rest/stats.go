@@ -41,9 +41,11 @@ func (v BedView) Links() uint8 {
 	return l
 }
 
-// qualityOf is b's craft quality: Normal for every building until
-// quality lands on buildings (PRD-2).
-func qualityOf(construction.Building) quality.Level { return quality.Default }
+// qualityOf is b's craft quality (PRD-2; Normal when it has none).
+func qualityOf(b construction.Building) quality.Level {
+	q, _ := quality.FromStored(b.Quality)
+	return q
+}
 
 // RestEffect is how well a sleeper rests in bed (permille): the bed's
 // rest effectiveness, or the ground's when bed is 0 or no sleeping place.

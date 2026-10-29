@@ -46,7 +46,7 @@ func (g *Game) fleeGoal(id entity.EntityID, pos, tp Position) (int, int, bool) {
 	bx, by, found := 0, 0, false
 	for _, d := range dirs {
 		fx, fy := animal.FleeGoal(pos.X, pos.Y, pos.X-d[0], pos.Y-d[1], fleeDist)
-		fx, fy, ok := g.walkableNear(fx, fy, 3)
+		fx, fy, ok := g.combat.Tiles.WalkableNear(fx, fy, 3)
 		if !ok || fx == pos.X && fy == pos.Y || weapon.Distance(fx, fy, tp.X, tp.Y) < now ||
 			!g.reachable(id, fx, fy) {
 			continue

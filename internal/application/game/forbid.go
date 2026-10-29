@@ -21,6 +21,10 @@ func (g *Game) setForbidden(id entity.EntityID, on bool) {
 	if b, ok := g.bldgs.Get(id); ok {
 		b.Forbidden = on
 		g.bldgs.Set(id, b)
+		if b.Kind.IsDoor() { // DEF-3: a forbidden door is shut to colonists (bridge.go cellWalkable)
+			g.grid.SetWalkable(b.X, b.Y, g.cellWalkable(b.X, b.Y))
+			g.structVer++
+		}
 		return
 	}
 	st, ok := g.stacks.Get(id)

@@ -158,7 +158,7 @@ func (g *Game) casketExit(b construction.Building, v *vaultSave) (int, int, bool
 	if found {
 		return fallback[0], fallback[1], true
 	}
-	return g.walkableNear(b.X, b.Y, 3)
+	return g.combat.Tiles.WalkableNear(b.X, b.Y, 3)
 }
 
 // creatureOn reports a pawn, raider or animal standing on (x, y).

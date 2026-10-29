@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/room"
 )
 
@@ -75,6 +76,13 @@ type Claims interface {
 	// partner when both are colonists who may court and the partner is
 	// on the map (0: none).
 	Partner(id entity.EntityID) entity.EntityID
+	// Reachable: id can walk to (x, y) (BED-3 seats).
+	Reachable(id entity.EntityID, x, y int) bool
+	// TileFree: id may stand on (x, y): walkable, under no bed, and not
+	// reserved by another pawn.
+	TileFree(id entity.EntityID, x, y int) bool
+	// ReserveTile reserves (x, y) for id (one sitter per seat).
+	ReserveTile(id entity.EntityID, x, y int)
 }
 
 // Routine is the schedule and the meals that can wake a sleeper, and the
@@ -86,6 +94,9 @@ type Routine interface {
 	SeekFood(id entity.EntityID) bool
 	// Job is id's current job.
 	Job(id entity.EntityID) job.Record
+	// Band is id's comfortable temperature range given what it wears,
+	// tenths of a degree C (BED-3: slept in the cold or heat).
+	Band(id entity.EntityID) (lo, hi int)
 }
 
 // Patients is what sleep asks the care package about a sleeper.
@@ -114,6 +125,24 @@ type Rooms interface {
 	// TameAnimal: id is a tame animal on the map (one that may hold an
 	// animal bed).
 	TameAnimal(id entity.EntityID) bool
+	// TempAt is the air temperature at (x, y), tenths of a degree C.
+	TempAt(x, y int) int
+	// Roof is the roof over (x, y): any roof, and thick overhead rock.
+	Roof(x, y int) (roofed, thick bool)
+	// Tile is what lies on (x, y), for its beauty (BED-3).
+	Tile(x, y int) Tile
+}
+
+// Tile is what a cell holds for its beauty: the object-layer building on
+// it (0: none), its floor, whether it lies in a room, its dirt plus stain
+// (filth.Full a unit) and its plant (Planted false: none).
+type Tile struct {
+	Object          entity.EntityID
+	Floor           room.Floor
+	Indoors         bool
+	Filth           int
+	Plant           plant.Species
+	Planted, Mature bool
 }
 
 // Events records what sleep did, for logs and mood.

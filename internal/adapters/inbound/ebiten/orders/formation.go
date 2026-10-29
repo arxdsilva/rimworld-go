@@ -295,6 +295,7 @@ func (c *Controller) finishFormation() {
 
 // DrawFormation previews the cells while the right button is held.
 func (c *Controller) DrawFormation(screen *ebiten.Image) {
+	c.drawAim(screen) // mortar_aim.go
 	if !c.Form.On {
 		return
 	}

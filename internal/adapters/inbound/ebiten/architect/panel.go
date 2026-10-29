@@ -266,7 +266,7 @@ func (t *Tool) hint(d ToolDef) string {
 		PlaceFill:   "Drag to fill",
 		PlaceArea:   "Drag an area",
 	}[d.Mode]
-	if d.Build == "door" || d.Build == "fence gate" {
+	if d.Build == "door" || d.Build == "powered door" || d.Build == "fence gate" {
 		hint += "  faces along the wall or fence; " + t.rotateKeys() + " sets a free-standing one (" + FacingNames[t.Facing] + ")"
 	} else if bv, ok := Buildable(d.Build); ok && bv.Rotatable {
 		hint += "  " + t.rotateKeys() + " rotate (" + FacingNames[t.Facing] + ")"

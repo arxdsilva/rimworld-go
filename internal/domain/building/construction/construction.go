@@ -416,16 +416,16 @@ var defs = [kindCount]Def{
 	// 30 wood (+10 steel, not modelled); the wiki gives no work: ours.
 	FermentingBarrel: {Kind: FermentingBarrel, Name: "fermenting barrel", Wood: 3, Work: 60, Layer: LayerObject, BlocksMove: true,
 		Spot: [2]int{0, 1}, HasSpot: true},
-	// Sculptures are carved by a bench bill; these rows only make the
-	// placed piece a valid kind. Cost and work (50/150/400 stuff,
-	// 18000/30000/90000 work, scaled) are not in the research notes:
-	// P3 checks them against wiki: Sculpture.
+	// Sculptures are carved by a sculpting bench bill (recipe.SculptSmall
+	// and on: the bill takes Wood units of the chosen material and Work);
+	// these rows make the placed piece a valid kind. wiki: Sculpture
+	// (50/100/400 stuff, 18000/30000/105000 work, 1x1/1x1/2x2).
 	SmallSculpture: {Kind: SmallSculpture, Name: "small sculpture", Wood: 6, Work: 1800, Layer: LayerObject, BlocksMove: true,
 		StoneOK: true, MetalOK: true},
-	LargeSculpture: {Kind: LargeSculpture, Name: "large sculpture", Wood: 17, Work: 3000, Layer: LayerObject, BlocksMove: true,
+	LargeSculpture: {Kind: LargeSculpture, Name: "large sculpture", Wood: 11, Work: 3000, Layer: LayerObject, BlocksMove: true,
+		StoneOK: true, MetalOK: true},
+	GrandSculpture: {Kind: GrandSculpture, Name: "grand sculpture", Wood: 44, Work: 10500, Layer: LayerObject, BlocksMove: true,
 		Size: [2]int{2, 2}, StoneOK: true, MetalOK: true},
-	GrandSculpture: {Kind: GrandSculpture, Name: "grand sculpture", Wood: 44, Work: 9000, Layer: LayerObject, BlocksMove: true,
-		Size: [2]int{3, 3}, StoneOK: true, MetalOK: true},
 	// BED-3, wiki: Stool (25 stuff, 450 work), Armchair (110 fabric,
 	// 14000 work).
 	Stool: {Kind: Stool, Name: "stool", Wood: 3, Work: 45, Layer: LayerObject, StoneOK: true, MetalOK: true},
@@ -501,32 +501,27 @@ func MaxHP(k Kind, s item.Kind) int {
 	switch k {
 	case Wall:
 		hp = 160
-	case Door:
+	case Door, Autodoor: // wiki: Door, Autodoor (the same base)
 		hp = 110
-	case Sandbags:
+	case Sandbags, Barricade: // wiki: Sandbags, Barricade (both 300 base)
 		hp = 140
 	case SpikeTrap:
 		hp = 40
 	case SentryTurret:
 		hp = 100 // 140 in steel, its only material (PLAY-024)
+	// DEF-3, steel-built: wiki: Autocannon turret, Uranium slug turret
+	// (380), Mortar (180), divided by steel's 140 % so steel gives them.
+	case Autocannon, UraniumSlugTurret:
+		hp = 272
+	case Mortar:
+		hp = 129
 	}
 	pct, _ := StuffStats(s)
 	return hp * pct / 100
 }
 
-// CoverPct is how much a building on the shooter's side of a target cuts
-// the chance to hit it (percent).
-func CoverPct(k Kind) int {
-	switch k {
-	case Sandbags:
-		return 55
-	case Wall, Door:
-		return 40 // a corner peeked around
-	case SentryTurret:
-		return 30 // PLAY-024: a raider crouched behind a turret
-	}
-	return 0
-}
+// IsDoor reports a door: the plain door and the powered autodoor (DEF-3).
+func (k Kind) IsDoor() bool { return k == Door || k == Autodoor }
 
 // Sleeps reports whether k is something to sleep in.
 func (k Kind) Sleeps() bool {
@@ -636,7 +631,7 @@ func Covers(k Kind, f Facing, x, y, px, py int) bool {
 // generator (it only stands over a steam vent).
 func Movable(k Kind) bool {
 	switch k {
-	case Wall, Door, Fence, FenceGate, Grave, Bridge, SleeperCasket,
+	case Wall, Door, Autodoor, Fence, FenceGate, Grave, Bridge, SleeperCasket,
 		PowerConduit, HiddenConduit, Cooler, GeothermalGenerator:
 		return false
 	}

@@ -75,7 +75,7 @@ func (LinkKinds) Power(kind string) sprite.LinkCell { return PowerLink(kind) }
 // BuildingLink is the link cell of a building or frame kind.
 func BuildingLink(kind string) sprite.LinkCell {
 	switch kind {
-	case "wall", "door", CoolerKind: // a cooler fills a wall gap like a door
+	case "wall", "door", "powered door", CoolerKind: // a cooler fills a wall gap like a door
 		return sprite.WallLink
 	case sprite.FenceKind, sprite.GateKind:
 		return sprite.FenceLink
@@ -155,6 +155,9 @@ func poweredLook(b *game.BuildingView) bool {
 	return false
 }
 
+// FueledForgeKind is the wood-fired forge: it glows while lit (PRD-3).
+const FueledForgeKind = "wood-fired forge"
+
 // OwnsFlame reports a burning kind whose fire power_draw.go draws (the
 // torch's flame) or that shows none (the generator's firebox glows and
 // smokes): DrawFires and the campfire embers leave them alone.
@@ -207,10 +210,10 @@ func (o *Wiring) drawUnlitSprite(v *render.View, dst *ebiten.Image, key string, 
 // sprite (key, just drawn): the glow layer while it runs, then the
 // turbine's blades, the torch's flame or the battery's charge bar.
 func (o *Wiring) DrawPowerParts(v *render.View, ps sprite.Pass, ch *Chunks, dst *ebiten.Image, b *game.BuildingView, key string, tile float64, sw, sh int) {
-	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != TorchLampKind) {
+	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != TorchLampKind && b.Kind != FueledForgeKind) {
 		return
 	}
-	if poweredLook(b) {
+	if poweredLook(b) || (b.Kind == FueledForgeKind && (b.Burning || b.Glow)) {
 		if g := o.Parts.glowOf(key); v.Art.Has(g) && o.drawUnlitSprite(v, dst, g, float64(b.X), float64(b.Y), tile, sw, sh, sprite.NoCS) {
 			o.PowerTrace("glow", g)
 		}

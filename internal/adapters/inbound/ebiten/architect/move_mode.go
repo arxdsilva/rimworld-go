@@ -45,7 +45,7 @@ func MovableKind(kind string, floor bool) bool {
 		return false
 	}
 	switch kind {
-	case "wall", "door", "grave", "fence", "fence gate":
+	case "wall", "door", "powered door", "grave", "fence", "fence gate":
 		return false
 	}
 	return true

@@ -50,7 +50,7 @@ func TestTallyBuildingsAndRoles(t *testing.T) {
 	tl.AddBuilding(construction.Bed, item.Wood, quality.Default, 2)
 	tl.AddBuilding(construction.Chair, item.Wood, quality.Default, 1)
 	tl.AddBuilding(construction.Dresser, item.Wood, quality.Default, 2)
-	if tl.Impassable != 4 || tl.BeautyTenths != 10+50 {
+	if tl.Impassable != 4 || tl.BeautyTenths != 10+80+50 { // bed 1, dining chair 8 (BED-3), dresser 5
 		t.Fatalf("bedroom tally %+v", tl)
 	}
 	var fine Tally

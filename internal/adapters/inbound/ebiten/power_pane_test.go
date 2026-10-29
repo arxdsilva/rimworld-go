@@ -575,9 +575,6 @@ func TestElectricBenchesListTheirBaseRecipes(t *testing.T) {
 			}
 		}
 	}
-	if inspector.RecipeBenchName("heater") != "heater" || inspector.RecipeBenchName("stove") != "stove" || inspector.RecipeBenchName("nonsense") != "nonsense" {
-		t.Fatal("a kind with no base bench is its own")
-	}
 	if len(a.insp.Building().RecipesFor("heater")) != 0 {
 		t.Fatal("a heater is no bench")
 	}

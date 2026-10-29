@@ -59,7 +59,11 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 		recipe.MakeServoArm: 8, recipe.MakeServoLeg: 8, recipe.MakeOpticImplant: 8, recipe.MakeCochlearImplant: 8,
 		recipe.MakeSpinalBrace: 8, recipe.MakePumpHeart: 8, recipe.MakeSynthStomach: 8, recipe.MakeValveHeart: 5,
 		// MED-07: prophyl tablets ask for crafting 4.
-		recipe.PressProphyl: 4}
+		recipe.PressProphyl: 4,
+		// PRD-3 (wiki weapon pages): bows, the pila and the guns.
+		recipe.MakePila: 3, recipe.MakeShortBow: 2, recipe.MakeRecurveBow: 5, recipe.MakeGreatbow: 6,
+		recipe.MakeAutopistol: 4, recipe.MakeMachinePistol: 4, recipe.MakePumpShotgun: 5, recipe.MakeChainShotgun: 6,
+		recipe.MakeLMG: 6, recipe.MakeAssaultRifle: 6, recipe.MakeSniperRifle: 7, recipe.MakeMinigun: 7}
 	for _, d := range recipe.All() {
 		want, ok := skill.ForWork(d.Skill)
 		if !ok {

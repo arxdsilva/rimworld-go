@@ -212,7 +212,7 @@ func (s *Strikes) report(attacker entity.EntityID, ax, ay int, target entity.Ent
 		Shooter: 1000, Size: 1000, Light: attack.NoLightPenalty, Weather: attack.ClearFactor}
 	r.InSight = r.InRange && (!d.Ranged || dist <= 1 || s.sight.Line(ax, ay, tx, ty))
 	if d.Ranged && !building {
-		r.Cover = s.sight.Cover(ax, ay, tx, ty) * 10
+		r.Cover = s.sight.Cover(ax, ay, tx, ty)
 	}
 	if d.Ranged {
 		r.Weather = r.Weather * s.blasts.SmokeFactor(ax, ay, tx, ty) / 1000 // DEF-2: smoke in the way

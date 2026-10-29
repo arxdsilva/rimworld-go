@@ -30,6 +30,7 @@ func (w *Waking) Felt(id entity.EntityID, o Occasion) {
 // After records how and where pawn id slept.
 func (w *Waking) After(id entity.EntityID) {
 	x, y := w.h.Pos(id)
+	w.temperature(id, x, y)
 	r := w.h.RoomAt(x, y)
 	bed, _ := w.h.SleptAt(id)
 	b, inBed := w.h.Building(bed)
@@ -54,6 +55,20 @@ func (w *Waking) After(id entity.EntityID) {
 		w.h.RememberValue(id, k, v, label)
 	} else {
 		w.h.ForgetGroup(id, mood.SleptInBedroom) // a room with no ladder: no room thought
+	}
+}
+
+// temperature gives id the slept-in-the-cold or slept-in-the-heat
+// thought when the air where it lay, at waking, was outside its
+// comfortable range (wiki: Thoughts, -4 for a day; the range is the
+// pawn's own, its clothes included, as for waking thoughts).
+func (w *Waking) temperature(id entity.EntityID, x, y int) {
+	lo, hi := w.h.Band(id)
+	switch t := w.h.TempAt(x, y); {
+	case t < lo:
+		w.h.Remember(id, mood.SleptCold)
+	case t > hi:
+		w.h.Remember(id, mood.SleptHot)
 	}
 }
 

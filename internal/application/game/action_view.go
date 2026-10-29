@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -126,21 +127,11 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 	return ""
 }
 
-// billAction names the bench work by the bench the bill runs at.
+// billAction names the bench work by the bench the bill runs at
+// (craft.Action: an electric bench works as its base bench).
 func (g *Game) billAction(j job.Record) string {
-	if b, ok := g.bldgs.Get(j.Dest); ok {
-		switch construction.RecipeBench(b.Kind) { // an electric bench works its base bench's recipes
-		case construction.Stove, construction.Campfire, construction.DryingRack:
-			return ActionCook
-		case construction.TailoringBench:
-			return ActionTailor
-		case construction.ButcherTable:
-			return ActionButcher
-		case construction.Pyre:
-			return ActionCremate
-		}
-	}
-	return ActionCraft
+	b, _ := g.bldgs.Get(j.Dest) // a gone bench reads as a wall: crafting
+	return craft.Action(b.Kind)
 }
 
 // workTotal is the full work of the job as its content def defines it, 0

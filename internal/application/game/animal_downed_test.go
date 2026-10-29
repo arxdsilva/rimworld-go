@@ -168,7 +168,7 @@ func TestHunterFinishesDownedAnimal(t *testing.T) {
 	for _, id := range []entity.EntityID{near, down} {
 		setAnimal(g, id, func(a *animal.State) { a.Designated = true })
 	}
-	if !g.assignHunt(p) {
+	if !g.combat.Hunting.Assign(p) {
 		t.Fatal("the hunter takes a hunt")
 	}
 	if j, _ := g.jobs.Get(p); j.Target != down {

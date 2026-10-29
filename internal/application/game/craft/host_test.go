@@ -14,35 +14,36 @@ import (
 
 // fakeHost is a tiny in-memory simulation behind every craft role.
 type fakeHost struct {
-	ids        []entity.EntityID
-	bldgs      map[entity.EntityID]construction.Building
-	ver        uint64
-	unpower    map[entity.EntityID]bool
-	fuel       map[entity.EntityID]int
-	temp       int
-	items      []entity.EntityID
-	stacks     map[entity.EntityID]item.Stack
-	next       entity.EntityID
-	pawns      []entity.EntityID
-	jobs       map[entity.EntityID]job.Record
-	claims     map[entity.EntityID]entity.EntityID
-	unreach    bool
-	postp      map[[2]entity.EntityID]bool
-	locked     map[recipe.ID]bool
-	noSkill    bool
-	skills     map[entity.EntityID]uint8
-	names      map[entity.EntityID]string
-	now        uint64
-	scans      int // ItemIDs calls (the multi-stack search)
-	stored     []storeCall
-	startFail  job.FailReason // StartJob fails for this reason (FailNone: starts)
-	work       int            // BenchWork per call (0: pct, below 0: none)
-	lastPct    int
-	meals      int
-	cremated   int
-	msgs       []string
-	drops      []item.Stack
-	fakeMakers // condition_test.go (PRD-2): the craft dice, inspirations, weather and outfits
+	ids          []entity.EntityID
+	bldgs        map[entity.EntityID]construction.Building
+	ver          uint64
+	unpower      map[entity.EntityID]bool
+	fuel         map[entity.EntityID]int
+	temp         int
+	items        []entity.EntityID
+	stacks       map[entity.EntityID]item.Stack
+	next         entity.EntityID
+	pawns        []entity.EntityID
+	jobs         map[entity.EntityID]job.Record
+	claims       map[entity.EntityID]entity.EntityID
+	unreach      bool
+	postp        map[[2]entity.EntityID]bool
+	locked       map[recipe.ID]bool
+	noSkill      bool
+	skills       map[entity.EntityID]uint8
+	names        map[entity.EntityID]string
+	now          uint64
+	scans        int // ItemIDs calls (the multi-stack search)
+	stored       []storeCall
+	startFail    job.FailReason // StartJob fails for this reason (FailNone: starts)
+	work         int            // BenchWork per call (0: pct, below 0: none)
+	lastPct      int
+	meals        int
+	cremated     int
+	msgs         []string
+	drops        []item.Stack
+	fakeMakers   // condition_test.go (PRD-2): the craft dice, inspirations, weather and outfits
+	fakeWorkshop // fake_workshop_test.go (PRD-3): light, rooms, forge fuel, sculptures
 }
 
 func newFake() *fakeHost {

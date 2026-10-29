@@ -3,7 +3,7 @@ package item
 // Category is the heading the resource list files k under (PLAY-018):
 // one of "Food", "Materials", "Medicine" (drugs too), "Apparel",
 // "Weapons", "Manufactured" (components, carpets, prosthetics and
-// implants, natural organs),
+// implants, natural organs, mortar shells),
 // "Corpses" (bones too) or "Other". Every kind is placed on purpose; a
 // kind added later that is not listed here lands in "Other" and fails
 // TestCategoryOtherIsDeliberate until it is.
@@ -19,7 +19,7 @@ func (k Kind) Category() string {
 		return "Weapons"
 	case k.IsMedicine(), k.IsDrug():
 		return "Medicine"
-	case k == Components, k.IsCarpet(), k.IsImplant(), k.IsOrgan():
+	case k == Components, k.IsCarpet(), k.IsImplant(), k.IsOrgan(), k.IsShell():
 		return "Manufactured"
 	case k == Wood, k == Stone, IsChunk(k), IsStoneBlocks(k), IsMetal(k),
 		k == Leather, k == Cloth, k == Straw, k == Wool, k == EmberOil, k == AshleafLeaf:

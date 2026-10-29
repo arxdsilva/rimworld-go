@@ -198,7 +198,9 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DevStartFire:
 		g.devStartFire(c.X, c.Y) // fire.go (PLAY-015)
 	case command.SetDoorHoldOpen, command.SetMortarTarget, command.ClearMortarTarget, command.SetTurretHold:
-		// DEF-3: ignored until the combat package handles them (wave D).
+		if g.combat.Orders.Apply(c) { // combat/orders.go (DEF-3): doors, turrets, mortars
+			g.structVer++ // a door held open (or let close) changes the hostiles' way (defense.go shutDoors)
+		}
 	}
 }
 
@@ -320,7 +322,8 @@ func (g *Game) phaseNeeds() {
 		if j.Kind != job.Sleep || j.State != job.Do {
 			n = g.decayNeeds(id, n, now) // skills.go: HungerRate, RestRate
 			g.need.Set(id, n)
-			g.drainJoy(id, now) // skills.go: RecreationRate, passion work
+			g.drainJoy(id, now)        // skills.go: RecreationRate, passion work
+			g.rest.Needs.Tick(id, now) // rest/needs.go (BED-3): comfort, beauty, outdoors
 		}
 		g.skillsDaily(id, now) // skills.go: decay, age, birthdays
 		if n.Starving() {
@@ -1006,8 +1009,8 @@ func (g *Game) phaseJobs() {
 			g.doFightFire(id, j) // firefight.go
 		case job.Flick:
 			g.doFlick(id, j) // power_flick.go (PLAY-021)
-		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
-			g.doIdle(id, j)
+		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide, job.SitDown:
+			g.doIdle(id, j) // SitDown (BED-3): rest/seats.go ends it at the seat's comfort
 		// ENG-003: social and host-system jobs, each in its owner's file.
 		case job.Surgery:
 			g.doSurgery(id, j) // surgery.go
@@ -1049,6 +1052,8 @@ func (g *Game) phaseJobs() {
 			g.doTrade(id, j) // trade_session.go (PLAY-024)
 		case job.UseComms:
 			g.doUseComms(id, j) // comms.go (PLAY-024)
+		case job.ManMortar, job.RearmTurret:
+			g.combat.Orders.Do(id, j) // combat/orders.go (DEF-3): crew a mortar, rearm a turret or mortar
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -1427,6 +1432,9 @@ func (g *Game) movePawn(id entity.EntityID, m motionRec, now uint64) bool {
 			g.arrive(id, j)
 		}
 		return false
+	}
+	if g.combat.Doors.Wait(next.X, next.Y, now) > 0 {
+		return false // combat/door.go (DEF-3): the door ahead is still opening
 	}
 	from, _ := g.positions.Get(id)
 	to := Position{X: next.X, Y: next.Y}

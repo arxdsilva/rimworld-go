@@ -106,6 +106,7 @@ type PawnView struct {
 	// Dirt is the dirt on the pawn's boots, percent of filth.Full (SIM-021).
 	Dirt       int
 	SleptInBed bool
+	HasBed     bool // holds a bed (prison and medical ones too) or a free one is left for it (BED-3)
 	Drafted    bool
 	Mood       int
 	MoodLabel  string
@@ -776,7 +777,7 @@ type Game struct {
 	idx indexes
 	// cellSets and sapperSet: building/terrain cell sets cached per
 	// structVer (defense.go, raid_plans.go), never saved.
-	cellSets  map[uint64]*cellCache
+	cellSets  map[[4]uint64]*cellCache
 	sapperSet cellCache
 	// views, viewGen, viewTerr: read-model caches (indexes.go).
 	views    viewCache
@@ -1100,6 +1101,7 @@ func (g *Game) snapshot() []PawnView {
 	live := g.postponedTops(g.views.postBuf) // postpone.go: one pass for every colonist
 	g.views.postBuf = live
 	views := make([]PawnView, 0, len(g.pawnIDs))
+	beds := g.rest.Beds.Bedded(g.pawnIDs) // rest/beds.go (BED-3)
 	for _, id := range g.pawnIDs {
 		pos, _ := g.positions.Get(id)
 		name, _ := g.names.Get(id)
@@ -1137,6 +1139,7 @@ func (g *Game) snapshot() []PawnView {
 			Ate:           g.ateAt[id],
 			LastMeal:      lastMealName(g, id),
 			SleptInBed:    g.sleptAt[id] != 0,
+			HasBed:        beds[id],
 			Drafted:       g.draft[id],
 		})
 		ts := g.thoughts(id)
@@ -1177,6 +1180,7 @@ func (g *Game) snapshot() []PawnView {
 			pv.Inspiration, pv.InspirationTicks = in.Kind.String(), in.Until-uint64(g.clock.Now())
 		}
 		pv.Recreation = g.joy[id] * 100 / recreation.Full
+		pv.Comfort, pv.Beauty, pv.Outdoors = g.rest.Needs.Percents(id) // rest/needs.go (BED-3)
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()
 		}

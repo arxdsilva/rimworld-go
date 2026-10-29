@@ -101,12 +101,13 @@ type craftHost struct {
 	craftCrafters
 	craftMakers
 	craftWeather
+	craftShop
 }
 
 var _ craft.Host = craftHost{}
 
 func newCraftHost(g *Game) craftHost {
-	return craftHost{craftBenches{g}, craftStock{g}, craftOutput{g}, craftWorkers{g}, craftCrafters{g}, craftMakers{g}, craftWeather{g}}
+	return craftHost{craftBenches{g}, craftStock{g}, craftOutput{g}, craftWorkers{g}, craftCrafters{g}, craftMakers{g}, craftWeather{g}, craftShop{g}}
 }
 
 type craftBenches struct{ g *Game }
@@ -133,29 +134,12 @@ func (h craftBenches) TemperatureAt(x, y int) int      { return int(h.g.temperat
 type craftStock struct{ g *Game }
 
 func (h craftStock) Stock(k item.Kind) int { return h.g.stockOf(k) }
-func (h craftStock) DriedStock() int {
-	n := 0
-	for _, id := range h.g.itemIDs {
-		if st, ok := h.g.stacks.Get(id); ok && st.Dried {
-			n += st.Qty
-		}
-	}
-	return n
-}
-func (h craftStock) FreeWood() int { return h.g.freeWood() }
+func (h craftStock) FreeWood() int         { return h.g.freeWood() }
 func (h craftStock) Ingredient(id entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
 	return h.g.ingredientFor(id, in)
 }
 func (h craftStock) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
 func (h craftStock) ItemIDs() []entity.EntityID                  { return h.g.itemIDs }
-func (h craftStock) Merge(into, from entity.EntityID) {
-	a, b := h.g.stacks.Get(into)
-	if fs, ok := h.g.stacks.Get(from); b && ok {
-		a.Rot, a.Qty = item.MergeRot(a.Qty, a.Rot, fs.Qty, fs.Rot), a.Qty+fs.Qty
-		h.g.stacks.Set(into, a)
-		h.g.deleteItem(from)
-	}
-}
 func (h craftStock) Carry(carrier, stack entity.EntityID, take int) entity.EntityID {
 	g := h.g
 	st, _ := g.stacks.Get(stack)
@@ -183,12 +167,6 @@ func (h craftOutput) DropMeal(cook entity.EntityID, bench construction.Kind, k i
 }
 func (h craftOutput) Cremate(pyre, body entity.EntityID, d recipe.Def) { h.g.cremate(pyre, body, d) } // burial.go
 func (h craftOutput) Message(x, y int, text string)                    { h.g.message(x, y, "%s", text) }
-func (h craftOutput) PutDown(id entity.EntityID, x, y int) {
-	if st, ok := h.g.stacks.Get(id); ok {
-		st.Carrier, st.X, st.Y = 0, x, y
-		h.g.stacks.Set(id, st)
-	}
-}
 func (h craftOutput) Store(carrier entity.EntityID, k item.Kind, x, y int, z uint64) bool {
 	g := h.g
 	sid := g.itemAt(x, y)
@@ -272,3 +250,27 @@ func (h craftWeather) Pos(id entity.EntityID) (int, int, bool) {
 }
 func (h craftWeather) Outfit(id entity.EntityID) craft.Outfit       { return h.g.apparel[id] }
 func (h craftWeather) SetOutfit(id entity.EntityID, o craft.Outfit) { h.g.apparel[id] = o }
+
+// craftShop: bench light and room, forge fuel and sculptures (PRD-3).
+type craftShop struct{ g *Game }
+
+func (h craftShop) Light(x, y int) int { return h.g.cellLightPermil(x, y) } // light.go
+func (h craftShop) Cleanliness(x, y int) (int, bool) {
+	g, r := h.g, h.g.roomAt(x, y)
+	if r < 0 || r >= len(g.rooms) || g.underSky(x, y) {
+		return 0, false
+	}
+	sum, _ := g.roomFilth(r) // rooms.go
+	rs := g.rooms[r]
+	return rs.tally.Inputs(rs.contents.Cells, rs.contents.Floored-rs.tally.Covered, sum, 0).CleanlinessHundredths, true
+}
+func (h craftShop) UseFuel(id entity.EntityID, work int) {
+	h.g.setFuel(id, max(0, h.g.fuel[id]-work*TicksPerWood/craft.WorkPerWood)) // light.go
+}
+func (h craftShop) CanInstall(k construction.Kind, x, y int) bool {
+	ok, _ := h.g.canPlaceAt(k, construction.South, x, y)
+	return ok
+}
+func (h craftShop) Install(k construction.Kind, stuff item.Kind, q uint8, x, y int) entity.EntityID {
+	return h.g.placeGenerated(construction.Building{Kind: k, Stuff: stuff, X: x, Y: y, Quality: q}) // setup_mapgen.go
+}

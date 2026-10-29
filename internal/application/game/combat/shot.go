@@ -279,3 +279,18 @@ func (s *Shots) Export() []projectile.Shot {
 
 // Import restores saved shots.
 func (s *Shots) Import(saved []projectile.Shot) { s.live = append(s.live[:0], saved...) }
+
+// Lob launches a mortar shell (DEF-3) from (ax, ay), aimed at
+// (aimX, aimY) and landing on (lx, ly) (its forced miss): it arcs there and
+// bursts as its weapon's blast. The Fired trace points at the aim (the
+// launch sound plays at the muzzle, the whistle at the aim).
+func (s *Shots) Lob(owner entity.EntityID, wk weapon.Kind, ax, ay, aimX, aimY, lx, ly int) {
+	h := s.h
+	d := weapon.DefOf(wk)
+	sh := projectile.Shot{Owner: owner, Weapon: wk, Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Type: d.DamageType,
+		Fired: h.Now(), Aimed: lx == aimX && ly == aimY}
+	sh.Launch(ax, ay, lx, ly, d.Speed)
+	s.live = append(s.live, sh)
+	h.Trace(projectile.Trace{FromX: ax, FromY: ay, ToX: aimX, ToY: aimY, Tick: sh.Fired, Hit: sh.Aimed,
+		Attacker: owner, Weapon: d.Name, Stage: projectile.Fired})
+}

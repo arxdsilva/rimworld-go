@@ -4,7 +4,7 @@ Scope: bring beds, rest, room quality and the comfort, beauty and outdoors needs
 
 ## Status (2026-10-29)
 
-Wave C done for BED-2 (room stats, roles and thoughts; handoff `handoffs/BED-2-room-stats-roles-thoughts.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/rest` extraction, the domain packages and the wiki constants (BED-0). BED-3 has not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave D done for BED-3 (needs: comfort, beauty, outdoors; handoff `handoffs/BED-3-beauty-comfort-outdoors-needs.md`). Wave C done for BED-2 (room stats, roles and thoughts; handoff `handoffs/BED-2-room-stats-roles-thoughts.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/rest` extraction, the domain packages and the wiki constants (BED-0). Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -46,8 +46,8 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Rest gain while asleep scales with the bed's rest effectiveness and the pawn's rest rate. | `needs.SleepTick` scales the game's base gain by the bed's rest effectiveness (`domain/pawn/needs`); `Stats.RestEffect` supplies it. The base rate is kept and scaled, not the wiki's absolute 0.571 percent per 150 ticks. | None. | BED-1 | done |
 | Bed facilities (end table, dresser) beside a bed raise its comfort or rest effectiveness. | `EndTable` and `Dresser` buildings; `FacilityComfort` adds 0.05 comfort each (`construction/furniture.go`); `Stats.endTable`/`dresser` link by position and `DresserReach` (`rest/stats.go`); `BedView.Links`. | None. | BED-1 | done |
 | Medical beds heal faster and prevent infection by the bed's medical stats. | Unchanged: `body.HealRate` and `care/rest.go`; the hook is not yet used for per-bed stats. | Per-bed immunity and heal-speed stats. | BED-1 (hook only) | open |
-| Sleeping in a cold, hot or noisy place gives a thought; waking up well rested gives none. | `afterSleep` (`rooms.go`) remembers outside, ground, bed, awful room, nice room (`internal/domain/pawn/mood/mood.go` kinds `SleptOutside`..`SleptInNiceRoom`). | Slept-cold, slept-hot, slept-in-barracks, shared-bed and shared-bedroom thoughts (BED-2/3). | BED-2, BED-3 | open |
-| Colonists with no bed raise an alert. | No alert. | Alert data and text: "colonists need beds". | BED-3 | open |
+| Sleeping in a cold, hot or noisy place gives a thought; waking up well rested gives none. | `afterSleep` (`rest/waking.go`) remembers outside, ground, bed, awful room, nice room (mood kinds `SleptOutside`..`SleptInNiceRoom`), the BED-2 room ladders, and BED-3 `SleptCold` and `SleptHot` (-4 for a day against the pawn's comfort band). | No noisy-place thought. | BED-2, BED-3 | partial |
+| Colonists with no bed raise an alert. | `hud/alerts.go` key `nobed`: "Ada needs a bed" or "N colonists need beds" with an explanation; `PawnView.HasBed` from `rest/beds.go` (a held slot of any kind counts, else each free claimable slot goes to one bedless colonist in pawn order). Journey `TestJourneyColonistsNeedBedsAlert`. | None. | BED-3 | done |
 
 ### 3.3 Animals and beds
 
@@ -79,12 +79,12 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Comfort need that rises on comfortable seats and beds and falls elsewhere. | None. "Comfort" in code means the temperature band (`stat.ColdComfort`, `stat.HeatComfort`). | Need record, fall and rise rates, mood stages. | BED-3 | open |
-| Comfort furniture: stool, dining chair, armchair, couch. | `Chair` exists as room input only (`room.Contents.Chairs`). | Comfort stat per furniture, sitting jobs. | BED-3 | open |
-| Beauty of tiles: buildings, floors, filth, plants and art; the beauty need and thoughts. | None (`checklist 9.3` all `[ ]`). | Per-tile beauty read, perceived beauty, beauty need. | BED-3 | open |
-| Outdoors need and the cramped-indoors thoughts. | None. | Need, rates, and the roofed-time source. | BED-3 | open |
-| Slept cold or hot thoughts. | The temperature band already exists for waking pawns (`tick.go` thought states `Freezing`, `Cold`, `Hot`, `Sweltering`). | Sleep-time check against the bed's room temperature. | BED-3 | open |
-| Need bars for comfort, beauty and outdoors. | `Need bars`: food and rest only. | Bars and tooltips. | BED-3 | open |
+| Comfort need that rises on comfortable seats and beds and falls elsewhere. | `rest/needs.go` `NeedRecord` with comfort, beauty and outdoors; comfort rises 3.6 % per 150 ticks only while using furniture below its comfort, capped at the furniture comfort, falls 4 %/h otherwise; wiki ladder -3..+10, memory thoughts refreshed while the stage holds with a 2 % climb margin. | None. | BED-3 | done |
+| Comfort furniture: stool, dining chair, armchair, couch. | Stool, dining chair (0.7 comfort, 8 beauty) and armchair rows; SitDown job (`rest/seats.go`): starts below 30 % comfort outside Work hours, ends at min(70 %, seat comfort) or 1500 ticks, a failed seat search waits 2500 ticks, idle (work replaces it); idle Relax and meals prefer seats by comfort. | No couch kind. | BED-3 | partial |
+| Beauty of tiles: buildings, floors, filth, plants and art; the beauty need and thoughts. | `rest/beauty.go`: average tile beauty over 241 cells of the pawn's room (or open ground) every 250 ticks; a tile is floor, filth (outdoor 30 % of wiki), building once, plant, with sculpture beauty picked up; wiki ladder; target, drift, bare ground 0 and plant +1 are original. | No per-cell beauty cache (local sampling instead); beauty overlay is UI 16.6. | BED-3 | partial |
+| Outdoors need and the cramped-indoors thoughts. | Six places (in a room or not; open, roofed, thick rock) with wiki rates and ladder; losses x0.2 in bed. | Indoorsy and Undergrounder trait modifiers need the trait catalogue. | BED-3 | partial |
+| Slept cold or hot thoughts. | `SleptCold` and `SleptHot` at waking, -4 for a day, measured against the pawn's comfort band (`rest/waking.go`, test in `seats_test.go`). | Scaling with how extreme the temperature is (not published). | BED-3 | done |
+| Need bars for comfort, beauty and outdoors. | Inspector Needs tab has Comfort, Beauty and Outdoors bars (percent, from `PawnView.Comfort`/`Beauty`/`Outdoors`). | Threshold markers; recreation bar. | BED-3 | partial |
 
 ### 3.7 Already at fidelity (no work)
 

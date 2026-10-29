@@ -310,7 +310,7 @@ func (g *Game) arriveWalkIn(cx, cy int) {
 			continue
 		}
 		o := ringOffsets[i%len(ringOffsets)]
-		if tx, ty, ok := g.walkableNear(cx+o[0]/2, cy+o[1]/2, 3); ok {
+		if tx, ty, ok := g.combat.Tiles.WalkableNear(cx+o[0]/2, cy+o[1]/2, 3); ok {
 			g.cmdMove(id, tx, ty)
 		}
 	}

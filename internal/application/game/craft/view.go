@@ -1,7 +1,10 @@
 package craft
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/entity"
@@ -11,15 +14,22 @@ import (
 // game.BillView, game.BillIngredients and game.BillIngredientView): values only, built from
 // the bills and the host's roles, never a reference into the state.
 
-// RecipeView describes a recipe for the bills UI.
+// RecipeView describes a recipe for the bills UI. Bench is its first
+// bench; Benches every bench kind that runs it (PRD-3: a recipe can run at
+// several, electric twins included), in kind order.
 type RecipeView struct {
-	ID     uint8
-	Name   string
-	Label  string
-	Bench  string
-	Input  string // e.g. "2 raw food"; several ingredients joined with " + "
-	Output string
+	ID      uint8
+	Name    string
+	Label   string
+	Bench   string
+	Benches []string
+	Input   string // e.g. "2 raw food"; several ingredients joined with " + "
+	Output  string
 }
+
+// RunsAt reports a bench of kind name (construction.Kind.String) runs
+// the recipe.
+func (r RecipeView) RunsAt(kind string) bool { return slices.Contains(r.Benches, kind) }
 
 // BillView is a bench bill in the read model.
 type BillView struct {
@@ -135,8 +145,17 @@ func Recipes() []RecipeView {
 		if d.Legacy {
 			continue
 		}
-		out = append(out, RecipeView{ID: uint8(d.ID), Name: d.Name, Label: d.Label, Bench: d.Bench.String(),
-			Input: d.InputsLabel(), Output: d.Output.String()})
+		v := RecipeView{ID: uint8(d.ID), Name: d.Name, Label: d.Label, Bench: d.Bench.String(),
+			Input: d.InputsLabel(), Output: d.Output.String()}
+		if d.Builds != 0 {
+			v.Output = d.Builds.String()
+		}
+		for _, cd := range construction.All() {
+			if cd.Bench && d.At(cd.Kind) {
+				v.Benches = append(v.Benches, cd.Name)
+			}
+		}
+		out = append(out, v)
 	}
 	return out
 }

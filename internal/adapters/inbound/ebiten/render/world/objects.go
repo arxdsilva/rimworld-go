@@ -93,11 +93,16 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 			break
 		}
 		t := none
-		if (b.Kind == "bed" || b.Kind == "double bed") && len(l.cloth) > 0 {
+		if (b.Kind == "bed" || b.Kind == "double bed" || b.Kind == "armchair") && len(l.cloth) > 0 {
 			t = o.art().Tint("cloth", l.cloth[art.Mix64(uint64(b.ID))%uint64(len(l.cloth))])
 		}
-		// stone walls, fences and floors take their stone's tint
-		o.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, sprite.TintCS(o.stuffTint(b.Stuff)))
+		// stone walls, fences and floors take their stone's tint; the
+		// sculptures and the barricade carry a stone_tint mask instead
+		cs := sprite.TintCS(o.stuffTint(b.Stuff))
+		if stoneMaskKind(b.Kind) {
+			t, cs = o.stuffTint(b.Stuff), sprite.NoCS
+		}
+		o.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, cs)
 		chP := o.OverlayChunks()
 		o.Overlays.Wiring.DrawPowerParts(v, o.Pass(), &chP, dst, b, key, tile, sw, sh) // glow, blades, flame, charge
 		chD := o.OverlayChunks()
@@ -212,3 +217,13 @@ func (o *Objects) drawRackLoad(dst *ebiten.Image, b game.BuildingView, tile floa
 
 // rackSlatLift raises rack contents (in tiles) to sit on the slats.
 const rackSlatLift = 0.3
+
+// stoneMaskKind reports a wave D kind whose sprite has a stone_tint mask
+// (PRD-3 sculptures, DEF-3 barricade): the stuff's stone colours the mask.
+func stoneMaskKind(kind string) bool {
+	switch kind {
+	case "small sculpture", "large sculpture", "grand sculpture", "barricade":
+		return true
+	}
+	return false
+}

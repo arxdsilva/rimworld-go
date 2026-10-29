@@ -1,13 +1,10 @@
 package game
 
 import (
-	"slices"
-
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/attack"
-	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -25,25 +22,8 @@ const (
 	ReasonNoRanged = "needs a ranged weapon"
 )
 
-// TraceView is one recent attack for presentation. Age is ticks since
-// it happened (0..projectile.Lifetime).
-type TraceView struct {
-	FromX, FromY int
-	ToX, ToY     int
-	Age          int
-	Hit          bool
-	Melee        bool
-	Damage       int  // dealt on a hit
-	Building     bool // a blow on a door or wall
-	// FromBuilding: a sentry turret fired it (PLAY-024); Attacker is then
-	// the turret's building id.
-	FromBuilding bool
-	// Attacker and Target are the creatures involved (0 for a building
-	// target); Weapon is the attacker's weapon name.
-	Attacker, Target entity.EntityID
-	Weapon           string
-	Stage            projectile.Stage // DEF-1: Whole (melee, turret), or a shot's Fired and Landed
-}
+// TraceView is one recent attack for presentation (combat/trace.go).
+type TraceView = combat.TraceView
 
 func weaponKindOf(k item.Kind) weapon.Kind { return weapon.ForItem(k) }
 
@@ -179,67 +159,6 @@ func (g *Game) hostile(a animal.State) bool {
 	return !a.Tame && a.Mode == animal.Attack && a.Target != 0 && g.isPawn(a.Target) && !g.isRaider(a.Target)
 }
 
-// huntDownedFirst is added to a standing animal's distance in assignHunt,
-// so any downed one is nearer.
-const huntDownedFirst = 1 << 20
-
-// assignHunt sends a hunter after the nearest designated animal (a downed
-// one first: the hunter finishes it), first fetching a free ranged weapon
-// if it has none.
-// The next nearest animal is tried when one can't be started (out of
-// reach, postponed: SIM-027), at most workTries animals.
-func (g *Game) assignHunt(id entity.EntityID) bool {
-	if !g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.Designated && !a.Dead() }) {
-		return false // jobindex.go: nothing marked for hunting
-	}
-	pos, _ := g.positions.Get(id)
-	var tried []entity.EntityID
-	for range workTries {
-		best, bestD := entity.EntityID(0), 1<<30
-		var bp Position
-		for _, aid := range g.animalIDs {
-			a, ok := g.animals.Get(aid)
-			if !ok || !a.Designated || a.Dead() {
-				continue
-			}
-			if _, taken := g.reserve.EntityOwner(aid); taken {
-				continue
-			}
-			if slices.Contains(tried, aid) || g.postponedFor(id, job.Hunt, aid, 0, 0) {
-				continue
-			}
-			ap, _ := g.positions.Get(aid)
-			d := manhattan(pos.X, pos.Y, ap.X, ap.Y)
-			if !a.Downed {
-				d += huntDownedFirst // a downed animal is finished first (animal_health.go)
-			}
-			if d < bestD {
-				best, bestD, bp = aid, d, ap
-			}
-		}
-		if best == 0 {
-			return false
-		}
-		if !hasRanged(g, id) || weaponDefOf(g, id).Explosive() { // DEF-2: never hunt with explosives
-			return g.assignEquip(id, item.Rifle)
-		}
-		if g.startJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}) {
-			return true
-		}
-		tried = append(tried, best)
-	}
-	return false
-}
-
-// assignEquip walks to the nearest free weapon of kind k.
-func (g *Game) assignEquip(id entity.EntityID, k item.Kind) bool {
-	sid, x, y := g.nearestFree(id, k)
-	if sid == 0 {
-		return false
-	}
-	return g.startJob(id, job.Record{Kind: job.Equip, Target: sid, TX: x, TY: y})
-}
-
 // doEquip takes one weapon or garment from the stack and drops the old
 // one; a garment the player ordered ("Wear X") makes its slot theirs.
 func (g *Game) doEquip(id entity.EntityID, j job.Record) {
@@ -284,34 +203,5 @@ func (g *Game) Equipped(id entity.EntityID) string {
 	return ""
 }
 
-func (g *Game) traceViews() []TraceView {
-	now := uint64(g.clock.Now())
-	out := make([]TraceView, 0, len(g.traces))
-	for _, t := range g.traces {
-		if now-t.Tick >= projectile.Lifetime {
-			continue
-		}
-		out = append(out, TraceView{FromX: t.FromX, FromY: t.FromY, ToX: t.ToX, ToY: t.ToY,
-			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee, Damage: t.Damage, Building: t.Building,
-			FromBuilding: t.FromBuilding, Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon, Stage: t.Stage})
-	}
-	return out
-}
-
-// walkableNear clamps (x, y) to the map and finds a walkable tile within
-// r of it.
-func (g *Game) walkableNear(x, y, r int) (int, int, bool) {
-	x, y = clampInt(x, 0, g.grid.Width()-1), clampInt(y, 0, g.grid.Height()-1)
-	for d := 0; d <= r; d++ {
-		for dy := -d; dy <= d; dy++ {
-			for dx := -d; dx <= d; dx++ {
-				if g.dryWalkable(x+dx, y+dy) {
-					if _, taken := g.reserve.TileOwner(x+dx, y+dy); !taken {
-						return x + dx, y + dy, true
-					}
-				}
-			}
-		}
-	}
-	return 0, 0, false
-}
+// traceViews is the recent attacks for presentation (combat/trace.go).
+func (g *Game) traceViews() []TraceView { return combat.TraceViews(g.traces, uint64(g.clock.Now())) }

@@ -120,6 +120,21 @@ func SpecOf(k construction.Kind) Spec {
 		return consumer(ClassDefense, 120, 40)
 	case construction.RadioConsole: // PLAY-024: 150 W while worked, 15 W idle
 		return bench(150)
+	// Wave D (ENG-003, wiki watts; a bench idles at a tenth, our rule).
+	case construction.ElectricSmithy: // wiki: Electric smithy
+		return bench(210)
+	case construction.MachiningTable: // wiki: Machining table
+		return bench(350)
+	case construction.FabricationBench: // wiki: Fabrication bench
+		return bench(250)
+	case construction.ElectricSmelter: // wiki: Electric smelter
+		return bench(700)
+	case construction.BiofuelRefinery: // wiki: Biofuel refinery
+		return bench(170)
+	case construction.Autocannon, construction.UraniumSlugTurret: // wiki: Autocannon turret, Uranium slug turret (no idle figure: the same)
+		return consumer(ClassDefense, 150, 150)
+	case construction.Autodoor: // wiki: Autodoor (shed with the defences)
+		return consumer(ClassDefense, 50, 50)
 	}
 	return Spec{}
 }

@@ -269,6 +269,10 @@ func (a *App) handleColonyEscape() bool {
 		a.ord.Form = orders.Formation{}
 		return true
 	}
+	if a.ord.Aim.On {
+		a.ord.Aim.On = false // mortar targeting takes Esc alone
+		return true
+	}
 	if a.arch.Mover.State().On {
 		a.arch.Mover.State().On = false // Move mode takes Esc alone (UI-016)
 		return true
@@ -889,8 +893,9 @@ func (a *App) Update() error {
 			a.tools.State.Menu = false
 			a.in.Take(inputframe.Left)
 		}
-		moving := a.arch.Mover.Handle() // move_mode.go: placing a moved building
-		zoning := a.arch.Zones.Handle() // zone_select.go: a selected zone's Expand or Shrink tool
+		moving := a.arch.Mover.Handle()      // move_mode.go: placing a moved building
+		moving = a.ord.HandleAim() || moving // mortar_aim.go
+		zoning := a.arch.Zones.Handle()      // zone_select.go: a selected zone's Expand or Shrink tool
 		a.arch.HandleInput()
 		if a.arch.ToolID == "" && !moving && !zoning {
 			a.handleMapMouse() // selection.go / multiselect.go / formation.go

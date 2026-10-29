@@ -198,7 +198,7 @@ func TestNoHuntingWithExplosives(t *testing.T) {
 	g.equip[p] = item.FragGrenades
 	buck, _ := g.SpawnAnimal("dustbuck", 8, 8)
 	setAnimal(g, buck, func(a *animal.State) { a.Designated = true })
-	g.assignHunt(p)
+	g.combat.Hunting.Assign(p)
 	if j, _ := g.jobs.Get(p); j.Kind == job.Hunt {
 		t.Fatal("a grenadier went hunting")
 	}
@@ -206,7 +206,7 @@ func TestNoHuntingWithExplosives(t *testing.T) {
 		t.Fatalf("hunt order: %q, want %q", why, ReasonNoRanged)
 	}
 	g.equip[p] = item.Rifle
-	if !g.assignHunt(p) {
+	if !g.combat.Hunting.Assign(p) {
 		t.Fatal("with a rifle it hunts")
 	}
 }

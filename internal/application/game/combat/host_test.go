@@ -2,6 +2,7 @@ package combat
 
 import (
 	"fmt"
+	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -16,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 )
 
 // fakeHost is a small open map for combat's unit tests: every role, kept
@@ -76,6 +78,18 @@ type fakeHost struct {
 
 	worn map[entity.EntityID][]armor.Layer
 	aims map[entity.EntityID][2]int // per-tile ppm and offset; default a perfect shooter
+
+	// DEF-3: natural cover, the stock and the hunt reads
+	plants   map[[2]int]plant.Species
+	chunks   [][2]int
+	chunkN   int // AppendChunks calls
+	stock    map[entity.EntityID]item.Stack
+	nextID   entity.EntityID
+	spent    []entity.EntityID
+	marked   bool
+	reserved map[entity.EntityID]bool
+	postpone map[entity.EntityID]bool
+	free     map[item.Kind][3]int // NearestFree answers: id, x, y
 }
 
 func newFake(w, h int) *fakeHost {
@@ -89,11 +103,13 @@ func newFake(w, h int) *fakeHost {
 		struck: map[entity.EntityID]entity.EntityID{}, hits: map[entity.EntityID]int{},
 		powered: map[entity.EntityID]bool{}, calm: map[entity.EntityID]uint64{}, blocked: map[[2]int]bool{},
 		worn: map[entity.EntityID][]armor.Layer{}, aims: map[entity.EntityID][2]int{},
+		plants: map[[2]int]plant.Species{}, stock: map[entity.EntityID]item.Stack{}, nextID: 9000,
+		reserved: map[entity.EntityID]bool{}, postpone: map[entity.EntityID]bool{}, free: map[item.Kind][3]int{},
 	}
 }
 
 func (f *fakeHost) combat() *Combat {
-	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f})
+	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f})
 }
 
 func (f *fakeHost) pawn(id entity.EntityID, x, y int, wk weapon.Kind) {
@@ -173,9 +189,9 @@ func (f *fakeHost) Building(id entity.EntityID) (construction.Building, bool) {
 	b, ok := f.bldgs[id]
 	return b, ok
 }
-func (f *fakeHost) AnyBuilt(k construction.Kind) bool {
+func (f *fakeHost) AnyBuilt(match func(construction.Kind) bool) bool {
 	for _, b := range f.bldgs {
-		if b.Kind == k {
+		if match(b.Kind) {
 			return true
 		}
 	}
@@ -302,6 +318,69 @@ func (f *fakeHost) HuntGivenUp(entity.EntityID, job.Record, int, int, uint64) bo
 	return f.givenUp
 }
 func (f *fakeHost) AbandonHunt(entity.EntityID, job.Record) { f.abandoned++ }
+func (f *fakeHost) AnyMarked() bool                         { return f.marked }
+func (f *fakeHost) Reserved(id entity.EntityID) bool        { return f.reserved[id] }
+func (f *fakeHost) Postponed(_, prey entity.EntityID) bool  { return f.postpone[prey] }
+func (f *fakeHost) NearestFree(_ entity.EntityID, k item.Kind) (entity.EntityID, int, int) {
+	v := f.free[k]
+	return entity.EntityID(v[0]), v[1], v[2]
+}
+
+// Field
+func (f *fakeHost) Plant(x, y int) (plant.Species, bool, bool) {
+	s, ok := f.plants[[2]int{x, y}]
+	return s, ok, ok
+}
+func (f *fakeHost) AppendChunks(buf [][2]int) [][2]int {
+	f.chunkN++
+	return append(buf, f.chunks...)
+}
+func (f *fakeHost) AppendBuilt(match func(construction.Kind) bool, buf []entity.EntityID) []entity.EntityID {
+	for id, b := range f.bldgs {
+		if match(b.Kind) {
+			buf = append(buf, id)
+		}
+	}
+	slices.Sort(buf)
+	return buf
+}
+
+func (f *fakeHost) Size() (int, int) { return f.w, f.h }
+func (f *fakeHost) DryWalkable(x, y int) bool {
+	return f.InBounds(x, y) && fakeQuery{f}.Walkable(x, y)
+}
+func (f *fakeHost) TileTaken(x, y int) bool { return f.blocked[[2]int{x, y + 1000}] }
+
+// Supply
+func (f *fakeHost) Stock(_ entity.EntityID, k item.Kind, qty int) (entity.EntityID, int, int, bool) {
+	var best entity.EntityID
+	for id, st := range f.stock {
+		if st.Kind == k && st.Qty >= qty && st.Carrier == 0 && (best == 0 || id < best) {
+			best = id
+		}
+	}
+	st := f.stock[best]
+	return best, st.X, st.Y, best != 0
+}
+func (f *fakeHost) PickUp(id, stack entity.EntityID, qty int) (entity.EntityID, item.Kind, int, bool) {
+	st, ok := f.stock[stack]
+	if !ok || st.Carrier != 0 {
+		return 0, 0, 0, false
+	}
+	n := min(qty, st.Qty)
+	if st.Qty -= n; st.Qty == 0 {
+		delete(f.stock, stack)
+	} else {
+		f.stock[stack] = st
+	}
+	f.nextID++
+	f.stock[f.nextID] = item.Stack{Kind: st.Kind, Qty: n, Carrier: id}
+	return f.nextID, st.Kind, n, true
+}
+func (f *fakeHost) Spend(carry entity.EntityID) {
+	delete(f.stock, carry)
+	f.spent = append(f.spent, carry)
+}
 
 // Breaches
 func (f *fakeHost) BreachRoute(entity.EntityID, int, int) ([]pathing.Point, bool) {

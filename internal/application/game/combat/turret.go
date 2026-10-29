@@ -2,9 +2,11 @@ package combat
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -23,6 +25,12 @@ import (
 // idling (nor its power draw between 120 and 40 W): it locks on within
 // TurretLock tiles and lets go only past TurretRelease tiles, or once the
 // target has been out of its sight for TurretLost ticks.
+//
+// DEF-3 adds the heavy turrets (the autocannon and the uranium slug
+// turret: wiki guns with a minimum range, the same lock and release
+// margin), barrel wear (a barrel lasts a set number of rounds; a spent one
+// stops the turret until a rearm, rearm.go) and "hold fire" (the turret
+// neither looks nor shoots). The sentry turret keeps its PLAY-024 gun.
 
 const (
 	// TurretScanEvery: an idle turret looks for a target once in this
@@ -53,6 +61,81 @@ const (
 	TurretSaveVersion = 1
 )
 
+// Barrel life in rounds per turret kind. wiki: Mini-turret (60 rounds),
+// Autocannon turret (90), Uranium slug turret (30 slugs)
+const (
+	SentryBarrel     = 60
+	AutocannonBarrel = 90
+	SlugBarrel       = 30
+)
+
+// isTurret reports a kind the turret code runs: the sentry turret and the
+// two heavy turrets.
+func isTurret(k construction.Kind) bool {
+	return k == construction.SentryTurret || k == construction.Autocannon || k == construction.UraniumSlugTurret
+}
+
+// gunOf is the gun turret kind k fires.
+func gunOf(k construction.Kind) weapon.Kind {
+	switch k {
+	case construction.Autocannon:
+		return weapon.Autocannon
+	case construction.UraniumSlugTurret:
+		return weapon.SlugTurret
+	}
+	return weapon.SentryGun
+}
+
+// BarrelOf is the rounds a fresh barrel of turret kind k fires (0: no
+// barrel).
+func BarrelOf(k construction.Kind) int {
+	switch k {
+	case construction.SentryTurret:
+		return SentryBarrel
+	case construction.Autocannon:
+		return AutocannonBarrel
+	case construction.UraniumSlugTurret:
+		return SlugBarrel
+	}
+	return 0
+}
+
+// reachOf is the lock and release distances of turret kind k: the
+// sentry's PLAY-024 pair, a heavy turret its gun's range and the same
+// release margin past it.
+func reachOf(k construction.Kind) (lock, release int) {
+	if k == construction.SentryTurret {
+		return TurretLock, TurretRelease
+	}
+	r := weapon.DefOf(gunOf(k)).Range
+	return r, r + TurretRelease - TurretLock
+}
+
+// turretName is how a log or message names turret kind k.
+func turretName(k construction.Kind) string {
+	switch k {
+	case construction.Autocannon:
+		return "an autocannon"
+	case construction.UraniumSlugTurret:
+		return "a slug turret"
+	}
+	return TurretLogName
+}
+
+// Arm is a turret's barrel and orders (DEF-3): Fired rounds since its
+// barrel was last replaced and Hold, the player's "hold fire".
+type Arm struct {
+	Fired int
+	Hold  bool
+}
+
+// ArmSave is one Arm on disk.
+type ArmSave struct {
+	ID    entity.EntityID
+	Fired int
+	Hold  bool
+}
+
 // Aim is one turret's aim: the creature it holds (0: idle), its baked aim
 // frame (0..15, like the game's BuildingView.AimDir), the tick of its last
 // shot (0: never), the first tick it may fire again (the aim, then the
@@ -65,6 +148,8 @@ type Aim struct {
 	SeenAt  uint64
 	// StunnedUntil: an EMP knocked it out until this tick (DEF-2).
 	StunnedUntil uint64
+	// Burst is the shots of the current burst already fired (DEF-3).
+	Burst int8
 }
 
 // TurretSave is the saved turret state, nil while no turret ever held an
@@ -73,6 +158,13 @@ type Aim struct {
 type TurretSave struct {
 	Version int
 	Aims    []AimSave // ascending by turret
+	// DEF-3 (absent in older saves): barrels and hold fire, the mortars,
+	// held or open doors, IED fuses burning and rearm hauls under way.
+	Arms    []ArmSave
+	Mortars []MortarSave
+	Doors   []DoorSave
+	Fuses   []Fuse
+	Rearms  []Rearm
 }
 
 // AimSave is one Aim on disk.
@@ -81,6 +173,7 @@ type AimSave struct {
 	Dir                     int8
 	ShotAt, ReadyAt, SeenAt uint64
 	StunnedUntil            uint64 // DEF-2; absent in older saves
+	Burst                   int8   // DEF-3; absent in older saves
 }
 
 // Turrets are the sentry turrets' live aims per building and the derived
@@ -96,6 +189,22 @@ type Turrets struct {
 	idsOK bool
 	idsAt uint64
 	near  []Seen // target candidates, reused
+	// arms are the barrels and hold-fire orders (DEF-3), st the strikes
+	// (armor on a heavy turret's hit).
+	arms map[entity.EntityID]Arm
+	st   *Strikes
+	// after are the defences stepped after the turrets every tick, saved
+	// those whose state rides in the Turrets save block (DEF-3).
+	after [4]phaser
+	saved saved
+}
+
+// saved are the components whose state the Turrets save block carries.
+type saved struct {
+	traps   *Traps
+	doors   *Doors
+	mortars *Mortars
+	rearms  *Rearms
 }
 
 func newTurrets(h Host, pw Power, s *Sight) *Turrets {
@@ -111,51 +220,67 @@ func (t *Turrets) list() []entity.EntityID {
 		return t.ids
 	}
 	t.ids = t.pw.AppendDefense(t.ids[:0])
+	t.ids = slices.DeleteFunc(t.ids, func(id entity.EntityID) bool { // turrets only (an autodoor may draw too)
+		b, ok := t.h.Building(id)
+		return !ok || !isTurret(b.Kind)
+	})
 	t.idsOK, t.idsAt = true, gen
 	for id := range t.aims {
 		if _, ok := slices.BinarySearch(t.ids, id); !ok {
 			delete(t.aims, id)
 		}
 	}
+	for id := range t.arms {
+		if _, ok := slices.BinarySearch(t.ids, id); !ok {
+			delete(t.arms, id)
+		}
+	}
 	return t.ids
 }
 
 // Phase runs every turret's search, aim and shot (the game's threat
-// phase, after the raiders think).
+// phase, after the raiders think), then the other defences' tick (IED
+// fuses, doors, mortars, rearm hauls; DEF-3).
 func (t *Turrets) Phase(now uint64) {
-	if !t.pw.Wired() { // no power device on the map: no turret can be on
-		if len(t.aims) > 0 {
-			t.list() // drops the aims of turrets that are gone
+	if t.pw.Wired() {
+		for _, id := range t.list() {
+			b, ok := t.h.Building(id)
+			if !ok {
+				continue
+			}
+			t.step(id, b.Kind, b.X, b.Y, now)
 		}
-		return
+	} else if len(t.aims) > 0 { // no power device on the map: no turret can be on
+		t.list() // drops the aims of turrets that are gone
 	}
-	for _, id := range t.list() {
-		b, ok := t.h.Building(id)
-		if !ok {
-			continue
+	for _, p := range t.after {
+		if p != nil {
+			p.phase(now)
 		}
-		t.step(id, b.X, b.Y, now)
 	}
 }
 
 // step is one turret's tick at (x, y).
-func (t *Turrets) step(id entity.EntityID, x, y int, now uint64) {
+func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now uint64) {
 	a, had := t.aims[id]
 	if now < a.StunnedUntil { // EMP: dark until it recovers
 		return
 	}
-	if !t.pw.Powered(id) {
-		if had && a.Target != 0 { // no power: it lets go and stays dark
-			a.Target, a.ReadyAt = 0, 0
+	if !t.pw.Powered(id) || t.arms[id].Hold || t.Spent(id, k) {
+		if had && a.Target != 0 { // no power, held or spent: it lets go and stays quiet
+			a.Target, a.ReadyAt, a.Burst = 0, 0, 0
 			t.setAim(id, a)
 		}
 		return
 	}
+	wk := gunOf(k)
+	d := weapon.DefOf(wk)
+	lock, release := reachOf(k)
 	var tx, ty int
 	if a.Target != 0 {
 		var keep bool
-		if tx, ty, keep = t.holds(x, y, &a, now); !keep {
-			a.Target, a.ReadyAt = 0, 0
+		if tx, ty, keep = t.holds(x, y, &a, now, release, d.MinRange); !keep {
+			a.Target, a.ReadyAt, a.Burst = 0, 0, 0
 			t.setAim(id, a)
 		}
 	}
@@ -163,9 +288,9 @@ func (t *Turrets) step(id entity.EntityID, x, y int, now uint64) {
 		if (now+uint64(id))%TurretScanEvery != 0 {
 			return
 		}
-		t.near = t.h.Near(x, y, TurretLock, Raiders|Animals, t.near[:0])
+		t.near = t.h.Near(x, y, lock, Raiders|Animals, t.near[:0])
 		s, ok := nearest(t.near, x, y, func(s Seen) bool {
-			return t.Targetable(s.ID, now) && t.sight.Line(x, y, s.X, s.Y)
+			return weapon.Distance(x, y, s.X, s.Y) >= d.MinRange && t.Targetable(s.ID, now) && t.sight.Line(x, y, s.X, s.Y)
 		})
 		if !ok {
 			return
@@ -173,13 +298,70 @@ func (t *Turrets) step(id entity.EntityID, x, y int, now uint64) {
 		a.Target, a.ReadyAt, a.SeenAt, tx, ty = s.ID, now+turretAimTicks, now, s.X, s.Y
 	}
 	a.Dir = aimFrame(x, y, tx, ty, a.Dir)
-	d := weapon.DefOf(weapon.SentryGun)
 	if a.SeenAt == now && now >= a.ReadyAt && weapon.InRange(d, weapon.Distance(x, y, tx, ty)) {
-		t.shot(id, x, y, a.Target, tx, ty)
+		t.shot(id, k, wk, x, y, a.Target, tx, ty)
+		t.wear(id)
 		a.ShotAt, a.ReadyAt = now, now+uint64(d.Cooldown)
+		if a.Burst++; int(a.Burst) < d.Burst { // the rest of the burst
+			a.ReadyAt = now + uint64(d.BurstTicks)
+		} else {
+			a.Burst = 0
+		}
 	}
 	t.setAim(id, a)
 }
+
+// wear counts a round off turret id's barrel.
+func (t *Turrets) wear(id entity.EntityID) {
+	if t.arms == nil {
+		t.arms = map[entity.EntityID]Arm{}
+	}
+	r := t.arms[id]
+	r.Fired++
+	t.arms[id] = r
+}
+
+// Spent: turret id (of kind k) has fired its barrel out and stays quiet
+// until a rearm.
+func (t *Turrets) Spent(id entity.EntityID, k construction.Kind) bool {
+	return t.arms[id].Fired >= BarrelOf(k)
+}
+
+// Barrel is the life left in turret id's barrel, permille (1000 fresh).
+func (t *Turrets) Barrel(id entity.EntityID, k construction.Kind) int {
+	n := BarrelOf(k)
+	if n == 0 {
+		return 0
+	}
+	return max(0, n-t.arms[id].Fired) * 1000 / n
+}
+
+// Rearm fits turret id with a fresh barrel.
+func (t *Turrets) Rearm(id entity.EntityID) {
+	if r, ok := t.arms[id]; ok {
+		r.Fired = 0
+		t.arms[id] = r
+	}
+}
+
+// SetHold makes turret id hold fire (on) or fire at will. A held turret
+// lets go of its target at once and neither looks nor shoots; released, it
+// looks again on its next scan tick, so toggling never makes it flap.
+func (t *Turrets) SetHold(id entity.EntityID, on bool) {
+	if t.arms == nil {
+		t.arms = map[entity.EntityID]Arm{}
+	}
+	r := t.arms[id]
+	r.Hold = on
+	t.arms[id] = r
+	if a, ok := t.aims[id]; ok && on {
+		a.Target, a.ReadyAt, a.Burst = 0, 0, 0
+		t.setAim(id, a)
+	}
+}
+
+// Held reports turret id holding fire.
+func (t *Turrets) Held(id entity.EntityID) bool { return t.arms[id].Hold }
 
 // nearest is the creature in seen nearest to (x, y) that keep accepts,
 // ties to the lower id: the game's creature-index nearest search
@@ -210,11 +392,12 @@ func (t *Turrets) setAim(id entity.EntityID, a Aim) {
 
 // holds reports whether the turret at (x, y) keeps its target, with the
 // target's tile; it notes the tick it saw it. A target that can no longer
-// be shot at (down, dead, gone, calmed), is past TurretRelease, or has
-// been out of sight for TurretLost ticks is let go.
-func (t *Turrets) holds(x, y int, a *Aim, now uint64) (int, int, bool) {
+// be shot at (down, dead, gone, calmed), is past release (or inside the
+// gun's minimum range), or has been out of sight for TurretLost ticks is
+// let go.
+func (t *Turrets) holds(x, y int, a *Aim, now uint64, release, minRange int) (int, int, bool) {
 	tx, ty, ok := t.h.Pos(a.Target)
-	if !ok || !t.Targetable(a.Target, now) || weapon.Distance(x, y, tx, ty) > TurretRelease {
+	if d := weapon.Distance(x, y, tx, ty); !ok || !t.Targetable(a.Target, now) || d > release || d < minRange {
 		return tx, ty, false
 	}
 	if t.sight.Line(x, y, tx, ty) {
@@ -233,34 +416,52 @@ func (t *Turrets) Targetable(id entity.EntityID, now uint64) bool {
 	return t.h.StandingRaider(id)
 }
 
-// shot fires one round from the turret at (fx, fy) on target at (tx, ty):
-// the hit chance is a ranged strike's (weapon.HitChance less the target's
-// cover), rolled on the defence stream. A hit is HurtAs with no attacker,
-// so no animal or social reaction ever points at a building; the turret is
-// named in the target's log instead.
-func (t *Turrets) shot(id entity.EntityID, fx, fy int, target entity.EntityID, tx, ty int) {
-	d := weapon.DefOf(weapon.SentryGun)
+// shot fires one round of gun wk from the turret (of kind k) at (fx, fy)
+// on target at (tx, ty): the hit chance is a ranged strike's (the sentry
+// gun's flat chance, a heavy gun's accuracy band, less the target's
+// cover), rolled on the defence stream. A heavy gun's hit goes through
+// armor. A hit is HurtAs with no attacker, so no animal or social reaction
+// ever points at a building; the turret is named in the target's log
+// instead.
+func (t *Turrets) shot(id entity.EntityID, k construction.Kind, wk weapon.Kind, fx, fy int, target entity.EntityID, tx, ty int) {
+	d := weapon.DefOf(wk)
 	dist := weapon.Distance(fx, fy, tx, ty)
-	chance := weapon.HitChance(d, dist) * (100 - t.sight.Cover(fx, fy, tx, ty)) / 100
 	h := t.h
-	hit := h.DefenseRoll(100) < chance
+	cov := t.sight.Cover(fx, fy, tx, ty)
+	var hit bool
+	if d.Legacy() {
+		hit = h.DefenseRoll(100) < weapon.HitChance(d, dist)*(100-cov/10)/100
+	} else {
+		hit = h.DefenseRoll(1000) < weapon.HitPermille(d, dist)*(1000-cov)/1000
+	}
+	dmg, wound := d.Damage, body.Cut
+	if hit && !d.Legacy() && t.st != nil {
+		res := t.st.armorRoll(target, d.DamageType, d.Damage, weapon.Penetration(d, d.Damage), h.DefenseRoll)
+		if dmg = res.Damage; res.Type == damage.Blunt {
+			wound = body.Bruise
+		}
+	}
 	now := h.Now()
 	tr := projectile.Trace{
 		FromX: fx, FromY: fy, ToX: tx, ToY: ty, Tick: now, Hit: hit,
 		FromBuilding: true, Attacker: id, Target: target, Weapon: d.Name,
 	}
 	if hit {
-		tr.Damage = d.Damage
+		tr.Damage = dmg
 	}
 	h.Trace(tr)
+	name := turretName(k)
 	if !hit {
-		h.Shot(target, false, 0, TurretLogName)
+		h.Shot(target, false, 0, name)
 		return
 	}
-	h.Shot(target, true, d.Damage, TurretLogName)
-	h.Hit(target, now, fx, fy, d.Damage)
-	h.Stain(target, fx, fy, tx, ty, d.Damage) // before the hurt, while the target exists
-	h.HurtAs(target, d.Damage, 0, body.Cut, health.CauseInjury)
+	h.Shot(target, true, dmg, name)
+	if dmg <= 0 {
+		return // the armor stopped it
+	}
+	h.Hit(target, now, fx, fy, dmg)
+	h.Stain(target, fx, fy, tx, ty, dmg) // before the hurt, while the target exists
+	h.HurtAs(target, dmg, 0, wound, health.CauseInjury)
 }
 
 // Blast: turret b (already removed) blows up. Creatures within
@@ -269,9 +470,10 @@ func (t *Turrets) shot(id entity.EntityID, fx, fy int, target entity.EntityID, t
 // renderer gets a burst and the cell may catch fire (defence stream).
 func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 	delete(t.aims, id)
+	delete(t.arms, id)
 	h := t.h
 	h.Burst(b.X, b.Y, h.Now(), explosion.Def{})
-	h.Message(b.X, b.Y, "The sentry turret blew up!")
+	h.Message(b.X, b.Y, fmt.Sprintf("The %s blew up!", construction.DefOf(b.Kind).Name))
 	if h.DefenseRoll(100) < turretIgnitePct {
 		h.Ignite(b.X, b.Y)
 	}
@@ -320,10 +522,10 @@ func (t *Turrets) ForRaider(x, y, cd, sight int) (id entity.EntityID, bx, by int
 	return id, bx, by, id != 0
 }
 
-// At is the sentry turret with building id (ok false: none).
+// At is the turret (sentry or heavy) with building id (ok false: none).
 func (t *Turrets) At(id entity.EntityID) (construction.Building, bool) {
 	b, ok := t.h.Building(id)
-	if !ok || b.Kind != construction.SentryTurret {
+	if !ok || !isTurret(b.Kind) {
 		return construction.Building{}, false
 	}
 	return b, true
@@ -389,28 +591,51 @@ func (t *Turrets) View(id entity.EntityID, now uint64) (dir int8, shotAge int) {
 	return dir, shotAge
 }
 
-// Export is the Turrets save field (nil: no turret ever aimed).
+// Export is the Turrets save field (nil: no turret ever aimed and no
+// DEF-3 defence holds any state).
 func (t *Turrets) Export() *TurretSave {
-	if len(t.aims) == 0 {
-		return nil
-	}
-	s := &TurretSave{Version: TurretSaveVersion, Aims: make([]AimSave, 0, len(t.aims))}
+	s := &TurretSave{Version: TurretSaveVersion}
 	for id, a := range t.aims {
 		s.Aims = append(s.Aims, AimSave{ID: id, Target: a.Target, Dir: a.Dir, ShotAt: a.ShotAt, ReadyAt: a.ReadyAt, SeenAt: a.SeenAt,
-			StunnedUntil: a.StunnedUntil})
+			StunnedUntil: a.StunnedUntil, Burst: a.Burst})
 	}
 	slices.SortFunc(s.Aims, func(x, y AimSave) int { return cmp.Compare(x.ID, y.ID) })
+	for id, r := range t.arms {
+		s.Arms = append(s.Arms, ArmSave{ID: id, Fired: r.Fired, Hold: r.Hold})
+	}
+	slices.SortFunc(s.Arms, func(x, y ArmSave) int { return cmp.Compare(x.ID, y.ID) })
+	if v := t.saved; v.traps != nil {
+		s.Fuses, s.Doors, s.Mortars, s.Rearms = v.traps.export(), v.doors.export(), v.mortars.export(), v.rearms.export()
+	}
+	if len(s.Aims)+len(s.Arms)+len(s.Fuses)+len(s.Doors)+len(s.Mortars)+len(s.Rearms) == 0 {
+		return nil
+	}
 	return s
 }
 
 // Import restores Export's state (nil: none) and drops the derived list.
 func (t *Turrets) Import(s *TurretSave) {
-	t.aims, t.ids, t.idsOK, t.idsAt = nil, nil, false, 0
-	if s == nil || len(s.Aims) == 0 {
-		return
+	t.aims, t.arms, t.ids, t.idsOK, t.idsAt = nil, nil, nil, false, 0
+	if s == nil {
+		s = &TurretSave{}
 	}
-	t.aims = make(map[entity.EntityID]Aim, len(s.Aims))
+	if v := t.saved; v.traps != nil {
+		v.traps.importFuses(s.Fuses)
+		v.doors.importDoors(s.Doors)
+		v.mortars.importMortars(s.Mortars)
+		v.rearms.importRearms(s.Rearms)
+	}
+	if len(s.Aims) > 0 {
+		t.aims = make(map[entity.EntityID]Aim, len(s.Aims))
+	}
 	for _, a := range s.Aims {
-		t.aims[a.ID] = Aim{Target: a.Target, Dir: a.Dir, ShotAt: a.ShotAt, ReadyAt: a.ReadyAt, SeenAt: a.SeenAt, StunnedUntil: a.StunnedUntil}
+		t.aims[a.ID] = Aim{Target: a.Target, Dir: a.Dir, ShotAt: a.ShotAt, ReadyAt: a.ReadyAt, SeenAt: a.SeenAt, StunnedUntil: a.StunnedUntil,
+			Burst: a.Burst}
+	}
+	if len(s.Arms) > 0 {
+		t.arms = make(map[entity.EntityID]Arm, len(s.Arms))
+	}
+	for _, r := range s.Arms {
+		t.arms[r.ID] = Arm{Fired: r.Fired, Hold: r.Hold}
 	}
 }

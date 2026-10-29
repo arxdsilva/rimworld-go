@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/cover"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
@@ -69,7 +70,7 @@ func TestSandbagsGiveCover(t *testing.T) {
 		t.Fatal("build sandbags")
 	}
 	behind, shooter := Position{X: 10, Y: 5}, Position{X: 2, Y: 5}
-	if c := g.combat.Sight.Cover(shooter.X, shooter.Y, behind.X, behind.Y); c != construction.CoverPct(construction.Sandbags) {
+	if c := g.combat.Sight.Cover(shooter.X, shooter.Y, behind.X, behind.Y); c != cover.Permille(cover.Sandbags) { // DEF-3: permille, the cover domain's
 		t.Fatalf("cover %d", c)
 	}
 	if c := g.combat.Sight.Cover(18, 5, behind.X, behind.Y); c != 0 {

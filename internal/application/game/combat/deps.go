@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 )
 
 // Host is everything combat needs from the simulation, as consumer-owned
@@ -37,6 +38,10 @@ type Roles struct {
 	Flight Flight
 	Hunts  Hunts
 	Breach Breaches
+	// Field and Supply (DEF-3): natural cover and building lists; the
+	// stock a rearm or a mortar load fetches.
+	Field  Field
+	Supply Supply
 }
 
 // Creatures answers who a creature is and where.
@@ -103,8 +108,8 @@ type Ground interface {
 	Object(x, y int) (entity.EntityID, construction.Kind)
 	// Building is building id (ok false: gone).
 	Building(id entity.EntityID) (construction.Building, bool)
-	// AnyBuilt: a building of kind k stands somewhere.
-	AnyBuilt(k construction.Kind) bool
+	// AnyBuilt: a building whose kind match accepts stands somewhere.
+	AnyBuilt(match func(construction.Kind) bool) bool
 	RemoveBuilding(id entity.EntityID)
 	// PlaceFrame lays a blueprint of kind k in stuff.
 	PlaceFrame(k construction.Kind, stuff item.Kind, f construction.Facing, x, y int)
@@ -210,12 +215,54 @@ type Flight interface {
 	ForgetCalm(id entity.EntityID)
 }
 
-// Hunts are the hunting area's rules: a hunt is given up when the prey
-// stays out of the hunter's area.
+// Hunts are the hunting area's rules (a hunt is given up when the prey
+// stays out of the hunter's area) and what assigning a hunt reads.
 type Hunts interface {
 	ClearHuntOut(id entity.EntityID)
 	HuntGivenUp(id entity.EntityID, j job.Record, tx, ty int, now uint64) bool
 	AbandonHunt(id entity.EntityID, j job.Record)
+	// AnyMarked: an animal is marked for hunting and alive (the job
+	// index; no scan).
+	AnyMarked() bool
+	// Reserved: someone holds a reservation on entity id.
+	Reserved(id entity.EntityID) bool
+	// Postponed: hunter id put off hunting prey (SIM-027).
+	Postponed(id, prey entity.EntityID) bool
+	// NearestFree is the nearest free stack of k for id and its tile (0:
+	// none).
+	NearestFree(id entity.EntityID, k item.Kind) (entity.EntityID, int, int)
+}
+
+// Field is the map beyond buildings as cover sees it, and the building
+// lists the defences keep (DEF-3).
+type Field interface {
+	// Plant is the plant on (x, y) and whether it is grown enough to
+	// hide behind (ok false: none).
+	Plant(x, y int) (s plant.Species, grown, ok bool)
+	// AppendChunks appends the tiles of the stone chunks lying loose on
+	// the ground (an item scan: combat caches it).
+	AppendChunks(buf [][2]int) [][2]int
+	// AppendBuilt appends every building whose kind match accepts,
+	// ascending (a scan: combat caches it).
+	AppendBuilt(match func(construction.Kind) bool, buf []entity.EntityID) []entity.EntityID
+	// Size is the map's width and height; DryWalkable a tile a creature
+	// can stand on out of water; TileTaken a tile someone reserved.
+	Size() (w, h int)
+	DryWalkable(x, y int) bool
+	TileTaken(x, y int) bool
+}
+
+// Supply is the colony's stock as a hauler fetching for a turret or a
+// mortar sees it (DEF-3).
+type Supply interface {
+	// Stock is the nearest free, unforbidden stack of k holding at least
+	// qty for id, and its tile (ok false: none).
+	Stock(id entity.EntityID, k item.Kind, qty int) (stack entity.EntityID, x, y int, ok bool)
+	// PickUp puts up to qty of stack on id (split off when larger) and
+	// reports the carried stack, its kind and size (ok false: gone).
+	PickUp(id, stack entity.EntityID, qty int) (carry entity.EntityID, k item.Kind, n int, ok bool)
+	// Spend uses the carried stack up.
+	Spend(carry entity.EntityID)
 }
 
 // Breaches plans a raider's way in.

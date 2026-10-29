@@ -31,26 +31,44 @@ const (
 	digMin = 10
 )
 
-// Traps are the spike traps.
-type Traps struct{ h Host }
+// Traps are the spike traps and the buried charges (IEDs, DEF-3:
+// ied.go). The colony's own people never set them off: they know where
+// their traps are.
+type Traps struct {
+	h      Host
+	blasts *Blasts
+	fuses  []Fuse // charges burning down (saved)
+}
 
-// At is the built spike trap on (x, y) (0: none).
+// At is the built trap (spike trap or charge) on (x, y) (0: none).
 func (t *Traps) At(x, y int) entity.EntityID {
-	if bid, k := t.h.Object(x, y); bid != 0 && k == construction.SpikeTrap {
+	if bid, k := t.h.Object(x, y); bid != 0 && isTrap(k) {
 		return bid
 	}
 	return 0
 }
 
-// Has is a cheap check before looking for traps under movers.
-func (t *Traps) Has() bool { return t.h.AnyBuilt(construction.SpikeTrap) }
+// isTrap reports a trap kind: the spike trap and the four charges.
+func isTrap(k construction.Kind) bool { return k == construction.SpikeTrap || isIED(k) }
 
-// Spring: a raider or predator stepped on (x, y); a trap there catches it
-// on a roll of the main stream and is re-laid as a blueprint.
+// Has reports a trap built anywhere (a building scan: the animal step
+// checks it only for a trap victim).
+func (t *Traps) Has() bool { return t.h.AnyBuilt(isTrap) }
+
+// Spring: a raider or predator stepped on (x, y); a spike trap there
+// catches it on a roll of the main stream and is re-laid as a blueprint; a
+// charge lights its fuse (ied.go).
 func (t *Traps) Spring(victim entity.EntityID, x, y int) {
 	h := t.h
 	tid := t.At(x, y)
-	if tid == 0 || h.Roll(100) >= trapChance {
+	if tid == 0 {
+		return
+	}
+	if _, k := h.Object(x, y); isIED(k) {
+		t.light(tid, k, x, y)
+		return
+	}
+	if h.Roll(100) >= trapChance {
 		return
 	}
 	b, _ := h.Building(tid)
@@ -67,11 +85,9 @@ func (t *Traps) Spring(victim entity.EntityID, x, y int) {
 	h.Hurt(victim, TrapDamage, 0)
 }
 
-// Underfoot springs traps under raiders and predators that just moved.
+// Underfoot springs traps under raiders and predators that just moved
+// (one object lookup per mover: no building scan).
 func (t *Traps) Underfoot(movers []entity.EntityID) {
-	if len(movers) == 0 || !t.Has() {
-		return
-	}
 	for _, id := range movers {
 		if x, y, ok := t.h.Pos(id); ok {
 			t.Spring(id, x, y)

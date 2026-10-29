@@ -32,6 +32,9 @@ var value = [numKinds]int{
 	FragGrenades: 265, MolotovCocktails: 245, EMPGrenades: 315, IncendiaryLauncher: 340, EMPLauncher: 505,
 	FlakVest: 225, FlakPants: 225, FlakJacket: 290, PlateArmor: 460, MarineArmor: 2035,
 	MarineHelmet: 635, SimpleHelmet: 88, AdvancedHelmet: 260,
+	// DEF-3 shells: original tuning (the research notes carry no shell
+	// market values), about their steel, chemfuel and components.
+	MortarShells: 50, IncendiaryShells: 50, EMPShells: 60, SmokeShells: 40,
 }
 
 // Value is the market value of one unit of k.

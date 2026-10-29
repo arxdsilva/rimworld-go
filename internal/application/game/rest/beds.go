@@ -18,7 +18,49 @@ import (
 // one) stands. Each rule keeps what the couple already holds, so the
 // choice never flips between nights. Medical beds are left to patients
 // and prison beds to prisoners; a forbidden bed is nobody's (BED-1).
-type Beds struct{ h Host }
+type Beds struct {
+	h       Host
+	holders map[entity.EntityID]bool // Bedded's reused set
+}
+
+// Bedded is which of ids has a bed (BED-3, the read model's
+// PawnView.HasBed, behind the "colonists need beds" alert): a pawn holding
+// a slot of a bed, spot or bedroll (prison and medical beds included, so
+// patients and prisoners count), or a colonist (MayOwnBed) that a free
+// slot of a bed it could claim (not forbidden, not for prisoners, not
+// medical) is left for, one slot per colonist in ids order: two bedless
+// colonists and one free slot leave the second without. One pass over the
+// buildings and one over ids; the set is reused: read it before the next
+// call.
+func (r *Beds) Bedded(ids []entity.EntityID) map[entity.EntityID]bool {
+	if r.holders == nil {
+		r.holders = make(map[entity.EntityID]bool)
+	}
+	clear(r.holders)
+	free := 0
+	for _, bid := range r.h.BuildingIDs() {
+		b, ok := r.h.Building(bid)
+		if !ok || !b.Kind.Sleeps() {
+			continue
+		}
+		claimable := !b.Forbidden && !b.ForPrisoners && !care.IsMedicalBed(b)
+		for slot := range b.Kind.Sleepers() {
+			switch c := slotOwner(b, slot); {
+			case c != 0:
+				r.holders[entity.EntityID(c)] = true
+			case claimable:
+				free++
+			}
+		}
+	}
+	for _, id := range ids {
+		if free > 0 && !r.holders[id] && r.h.MayOwnBed(id) {
+			r.holders[id] = true
+			free--
+		}
+	}
+	return r.holders
+}
 
 // slotOwner is who holds slot of bed b (0: free).
 func slotOwner(b construction.Building, slot int) uint64 {

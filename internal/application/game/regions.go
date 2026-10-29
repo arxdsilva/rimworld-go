@@ -82,7 +82,7 @@ func (g *Game) regionsNow() *region.Map {
 func (g *Game) syncRegionFlags(f *fenceIndex) {
 	rs := &g.regs
 	w, n := g.grid.Width(), g.grid.Width()*g.grid.Height()
-	doors := g.buildingCells(construction.Door)
+	doors := g.shutDoors() // defense.go: held-open doors let hostiles through (DEF-3)
 	traps := g.buildingCells(construction.SpikeTrap)
 	var cells []int32
 	for _, s := range []tileSet{doors, traps} {

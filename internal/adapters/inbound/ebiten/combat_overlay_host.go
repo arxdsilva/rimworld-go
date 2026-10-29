@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"math"
+	"rimworld-go/internal/domain/combat/cover"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -116,7 +117,8 @@ func weaponReach(name string) overlay.WeaponReach {
 }
 
 // coverCells are the cover the buildings give near (x, y), by the sim's
-// own values (construction.CoverPct).
+// own values (DEF-3: the cover domain's, cover.OfBuilding; Value is in
+// percent, the permille / 10).
 func coverCells(out []overlay.CoverCell, bs []game.BuildingView, x, y int) []overlay.CoverCell {
 	for _, b := range bs {
 		if b.Floor || b.X < x-coverRadius || b.X > x+coverRadius || b.Y < y-coverRadius || b.Y > y+coverRadius {
@@ -126,8 +128,8 @@ func coverCells(out []overlay.CoverCell, bs []game.BuildingView, x, y int) []ove
 		if !ok {
 			continue
 		}
-		if pct := construction.CoverPct(k); pct > 0 {
-			out = append(out, overlay.CoverCell{X: b.X, Y: b.Y, Value: pct})
+		if p := cover.Permille(cover.OfBuilding(k)); p > 0 {
+			out = append(out, overlay.CoverCell{X: b.X, Y: b.Y, Value: p / 10})
 		}
 	}
 	return out

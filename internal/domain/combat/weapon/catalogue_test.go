@@ -15,7 +15,7 @@ import (
 func TestCatalogueComplete(t *testing.T) {
 	t.Parallel()
 	names := map[string]bool{}
-	for k := Mace; k < numKinds; k++ {
+	for k := Mace; k <= lastCatalogue; k++ {
 		d := DefOf(k)
 		if d.Name == "" || names[d.Name] || d.Damage <= 0 || d.ArmorPen < 0 || d.Cooldown <= 0 || d.Range < 1 || d.Burst < 1 {
 			t.Errorf("%d %q incomplete: %+v", k, d.Name, d)
@@ -84,8 +84,8 @@ func TestForItemCatalogue(t *testing.T) {
 		}
 		seen[w] = true
 	}
-	if len(seen) != int(numKinds-Mace) {
-		t.Fatalf("%d items for %d catalogue weapons", len(seen), numKinds-Mace)
+	if len(seen) != int(lastCatalogue-Mace+1) {
+		t.Fatalf("%d items for %d catalogue weapons", len(seen), lastCatalogue-Mace+1)
 	}
 	for _, c := range []struct {
 		k    item.Kind

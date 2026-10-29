@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
@@ -14,11 +16,13 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 )
 
@@ -41,7 +45,8 @@ var _ combat.Host = combatHost{}
 
 func newCombat(g *Game) *combat.Combat {
 	h := combatHost{combatCreatures{g}, combatRosters{g}, combatGround{g}, combatSkills{g}, combatJobs{g}, combatHarm{g}, combatEvents{g}, combatDice{g}}
-	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g}})
+	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g},
+		Field: combatField{g}, Supply: combatSupply{g}})
 }
 
 type combatCreatures struct{ g *Game }
@@ -111,9 +116,9 @@ func (h combatGround) Object(x, y int) (entity.EntityID, construction.Kind) {
 func (h combatGround) Building(id entity.EntityID) (construction.Building, bool) {
 	return h.g.bldgs.Get(id)
 }
-func (h combatGround) AnyBuilt(k construction.Kind) bool {
+func (h combatGround) AnyBuilt(match func(construction.Kind) bool) bool {
 	for _, id := range h.g.bldgIDs {
-		if b := h.g.bldgs.Ref(id); b != nil && b.Kind == k {
+		if b := h.g.bldgs.Ref(id); b != nil && match(b.Kind) {
 			return true
 		}
 	}
@@ -241,6 +246,77 @@ func (h combatHunts) HuntGivenUp(id entity.EntityID, j job.Record, tx, ty int, n
 	return h.g.huntGivenUp(id, j, Position{X: tx, Y: ty}, now) // area_dest.go
 }
 func (h combatHunts) AbandonHunt(id entity.EntityID, j job.Record) { h.g.abandonHunt(id, j) }
+func (h combatHunts) AnyMarked() bool { // jobindex.go
+	return h.g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.Designated && !a.Dead() })
+}
+func (h combatHunts) Reserved(id entity.EntityID) bool {
+	_, taken := h.g.reserve.EntityOwner(id)
+	return taken
+}
+func (h combatHunts) Postponed(id, prey entity.EntityID) bool {
+	return h.g.postponedFor(id, job.Hunt, prey, 0, 0) // postpone.go (SIM-027)
+}
+func (h combatHunts) NearestFree(id entity.EntityID, k item.Kind) (entity.EntityID, int, int) {
+	return h.g.nearestFree(id, k)
+}
+
+// combatField is natural cover and the building lists (DEF-3).
+type combatField struct{ g *Game }
+
+func (h combatField) Plant(x, y int) (plant.Species, bool, bool) {
+	if p := h.g.plants.Ref(h.g.plantAt(x, y)); p != nil { // grown: at least half way
+		return p.Species, 2*p.Growth >= plant.DefOf(p.Species).GrowTicks, true
+	}
+	return 0, false, false
+}
+func (h combatField) Size() (int, int)          { return h.g.grid.Width(), h.g.grid.Height() }
+func (h combatField) DryWalkable(x, y int) bool { return h.g.dryWalkable(x, y) } // water.go
+func (h combatField) TileTaken(x, y int) bool   { _, taken := h.g.reserve.TileOwner(x, y); return taken }
+func (h combatField) AppendChunks(buf [][2]int) [][2]int {
+	for _, id := range h.g.itemIDs {
+		if st := h.g.stacks.Ref(id); st != nil && st.Carrier == 0 && item.IsChunk(st.Kind) {
+			buf = append(buf, [2]int{st.X, st.Y})
+		}
+	}
+	return buf
+}
+func (h combatField) AppendBuilt(match func(construction.Kind) bool, buf []entity.EntityID) []entity.EntityID {
+	for _, id := range h.g.bldgIDs {
+		if b := h.g.bldgs.Ref(id); b != nil && match(b.Kind) {
+			buf = append(buf, id)
+		}
+	}
+	slices.Sort(buf)
+	return buf
+}
+
+// combatSupply is the stock a rearm haul fetches (DEF-3).
+type combatSupply struct{ g *Game }
+
+func (h combatSupply) Stock(id entity.EntityID, k item.Kind, qty int) (entity.EntityID, int, int, bool) {
+	sid, st := h.g.ingredientFor(id, recipe.Input{Kind: k, Qty: qty}) // craft_host.go
+	return sid, st.X, st.Y, sid != 0
+}
+func (h combatSupply) PickUp(id, stack entity.EntityID, qty int) (entity.EntityID, item.Kind, int, bool) {
+	g := h.g
+	st, ok := g.stacks.Get(stack)
+	if !ok || st.Carrier != 0 {
+		return 0, 0, 0, false
+	}
+	carry, take := stack, min(st.Qty, max(1, qty))
+	if st.Qty > take { // split off what is carried, as refuelling does (fuel.go)
+		st.Qty -= take
+		g.stacks.Set(stack, st)
+		carry = g.entities.Next()
+		g.itemIDs = append(g.itemIDs, carry)
+		g.stacks.Set(carry, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id})
+	} else {
+		st.Carrier = id
+		g.stacks.Set(stack, st)
+	}
+	return carry, st.Kind, take, true
+}
+func (h combatSupply) Spend(carry entity.EntityID) { h.g.deleteItem(carry) }
 
 type combatBreach struct{ g *Game }
 
@@ -249,7 +325,7 @@ type combatBreach struct{ g *Game }
 func (h combatBreach) BreachRoute(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 	g := h.g
 	pos, _ := g.positions.Get(id)
-	breaks := g.buildingCells(construction.Wall, construction.Door)
+	breaks := g.buildingCells(construction.Wall, construction.Door, construction.Autodoor)
 	if g.sapper(id) {
 		breaks = g.sapperBreaks() // sappers tunnel through rock too
 	}

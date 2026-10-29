@@ -67,7 +67,7 @@ const (
 // assignIdle starts a free-time behaviour. It tries the colonist's
 // weighted pick first and falls back to wandering.
 func (g *Game) assignIdle(id entity.EntityID) bool {
-	if g.care.Visits.Assign(id) { // care/visit.go (SIM-065): a friend lying sick in bed first
+	if g.care.Visits.Assign(id) || g.rest.Seats.SitDown(id, uint64(g.clock.Now())) { // care/visit.go (SIM-065): a sick friend first; rest/seats.go (BED-3): a seat for low comfort
 		return true
 	}
 	w := idleWeights[g.temperamentOf(id)]
@@ -226,10 +226,10 @@ func (g *Game) companyAt(self entity.EntityID, x, y int) bool {
 // socialCompany is how near a table or fire company must be.
 const socialCompany = 3
 
-// idleRelax sits on the nearest free chair.
+// idleRelax sits on the nearest free seat.
 func (g *Game) idleRelax(id entity.EntityID, linger int) bool {
 	return g.idleAt(id, linger, job.Relax, func(b construction.Building, bid entity.EntityID) bool {
-		return b.Kind == construction.Chair
+		return rest.IsSeat(b.Kind) // rest/seats.go: chair, stool, armchair (BED-3)
 	}, false)
 }
 

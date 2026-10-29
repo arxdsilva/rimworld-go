@@ -1,6 +1,7 @@
 package combat
 
 import (
+	"rimworld-go/internal/domain/combat/cover"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -64,8 +65,8 @@ func TestRangedStrikeAgainstCoverAndTurret(t *testing.T) {
 	f.raider(2, 10, 5, weapon.Fists)
 	f.build(3, construction.Sandbags, 9, 5)
 	d := weapon.DefOf(weapon.Rifle)
-	cover := construction.CoverPct(construction.Sandbags) * 10
-	f.rolls = []int{0, cover - 1} // the aim holds, the sandbags take it
+	cp := cover.Permille(cover.Sandbags)
+	f.rolls = []int{0, cp - 1} // the aim holds, the sandbags take it
 	c.Strikes.Strike(1, 2, weapon.Rifle)
 	for c.Shots.Len() > 0 {
 		c.Shots.Step()
@@ -73,7 +74,7 @@ func TestRangedStrikeAgainstCoverAndTurret(t *testing.T) {
 	if len(f.hurts) != 0 || f.damage[3] != d.Damage {
 		t.Fatalf("the cover takes the shot: hurts %v damage %v", f.hurts, f.damage)
 	}
-	f.rolls = []int{0, cover} // the aim holds, the cover lets it through
+	f.rolls = []int{0, cp} // the aim holds, the cover lets it through
 	c.Strikes.Strike(1, 2, weapon.Rifle)
 	for c.Shots.Len() > 0 {
 		c.Shots.Step()
@@ -81,7 +82,7 @@ func TestRangedStrikeAgainstCoverAndTurret(t *testing.T) {
 	if len(f.hurts) != 1 || f.damage[3] != d.Damage {
 		t.Fatalf("past the cover: hurts %v damage %v", f.hurts, f.damage)
 	}
-	if r, ok := c.Strikes.Report(1, 2); !ok || r.Cover != cover || r.Chance != r.Aim()*(1000-cover)/1000 {
+	if r, ok := c.Strikes.Report(1, 2); !ok || r.Cover != cp || r.Chance != r.Aim()*(1000-cp)/1000 {
 		t.Fatalf("report %+v", r)
 	}
 	f.build(4, construction.SentryTurret, 12, 5)

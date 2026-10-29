@@ -57,6 +57,8 @@ type Bus struct {
 	ThunderAt uint64
 	// Voice is the animals' sound memory (animal_sounds.go).
 	Voice Voice
+	// Struct is the structure cues' memory (structure_sounds.go).
+	Struct structureMemo
 	// SoundHas reports a sound id exists (the App wires Sound.Has; nil:
 	// all do).
 	SoundHas func(id string) bool

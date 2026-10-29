@@ -144,7 +144,7 @@ func (g *Game) fleeSpot(a *animal.State, pos, threat Position, dist int, mustMov
 	// gates shut to them unless led)
 	q := g.animalPathQuery(a.Tame && !animal.RosterOf(a.Species).Penned, false)
 	fx, fy := animal.FleeGoal(pos.X, pos.Y, threat.X, threat.Y, dist)
-	if x, y, ok := g.walkableNear(fx, fy, 3); ok && (x != pos.X || y != pos.Y) && q.Walkable(x, y) && g.layerReach(q, pos, x, y) {
+	if x, y, ok := g.combat.Tiles.WalkableNear(fx, fy, 3); ok && (x != pos.X || y != pos.Y) && q.Walkable(x, y) && g.layerReach(q, pos, x, y) {
 		return Position{X: x, Y: y}, true
 	}
 	if p, ok := fleeSearch(q, pos, threat); ok {

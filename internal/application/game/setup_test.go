@@ -546,7 +546,7 @@ func TestDisallowedBuildingRefused(t *testing.T) {
 	g := buildSetup(t, setupFor(t, "broken_hull", func(s *Setup) {
 		s.Scenario.Parts = append(s.Scenario.Parts, scenario.Part{Kind: scenario.PartDisallowBuilding, Building: construction.Bed})
 	}))
-	x, y, ok := g.walkableNear(g.Width()/2+8, g.Height()/2+8, 6)
+	x, y, ok := g.combat.Tiles.WalkableNear(g.Width()/2+8, g.Height()/2+8, 6)
 	if !ok {
 		t.Fatal("no free tile")
 	}

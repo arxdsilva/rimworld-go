@@ -220,7 +220,7 @@ func (g *Game) penStand(x, y int, doors tileSet) bool {
 func (g *Game) fillPen(x, y int) *penCache {
 	c := &penCache{x: x, y: y}
 	w, h := g.grid.Width(), g.grid.Height()
-	doors := g.buildingCells(construction.Door)
+	doors := g.buildingCells(construction.Door, construction.Autodoor)
 	if !g.grid.InBounds(x, y) || !g.penStand(x, y, doors) {
 		return c
 	}

@@ -23,8 +23,9 @@ const (
 )
 
 // weaponVoice is a ranged weapon's sound at the muzzle and, for a
-// launcher or grenade (its burst is cued by ListenBlasts, not here).
-type weaponVoice struct{ fire, land string }
+// launcher or grenade (its burst is cued by ListenBlasts, not here); a
+// mortar shell also whistles in over its target as it is fired.
+type weaponVoice struct{ fire, land, incoming string }
 
 // weaponVoices maps a weapon name (as game.TraceView.Weapon carries it)
 // to its voice, one line per weapon.
@@ -49,6 +50,9 @@ var weaponVoices = map[string]weaponVoice{
 	"EMP grenade":         {fire: "sfx.grenade_throw"},
 	"incendiary launcher": {fire: "sfx.gunshot"},
 	"emp launcher":        {fire: "sfx.gunshot"},
+	"autocannon":          {fire: "sfx.autocannon_shot"},
+	"slug turret":         {fire: "sfx.slug_turret_shot"},
+	"mortar":              {fire: "sfx.mortar_launch", incoming: "sfx.mortar_incoming"},
 }
 
 // heavyMelee are the melee weapons with the heavy hit sound.
@@ -80,6 +84,9 @@ func (b *Bus) combatTrace(t game.TraceView, voiced bool) bool {
 		default:
 			if v, ok := weaponVoices[t.Weapon]; ok {
 				b.Cue(v.fire, fx, fy, 1)
+				if v.incoming != "" {
+					b.Cue(v.incoming, tx, ty, 1)
+				}
 			} else {
 				b.Cue("sfx.gunshot", fx, fy, 1)
 			}
@@ -87,7 +94,7 @@ func (b *Bus) combatTrace(t game.TraceView, voiced bool) bool {
 		return true
 	case projectile.Landed: // the round arrived: miss, wall, flesh or armor
 		switch {
-		case weaponVoices[t.Weapon].fire == "sfx.grenade_throw" || t.Weapon == "incendiary launcher" || t.Weapon == "emp launcher":
+		case weaponVoices[t.Weapon].fire == "sfx.grenade_throw" || t.Weapon == "incendiary launcher" || t.Weapon == "emp launcher" || weaponVoices[t.Weapon].incoming != "":
 			// the blast is voiced by ListenBlasts, from the world's bursts
 		case !t.Hit:
 			b.Cue("sfx.bullet_miss", tx, ty, 1)
@@ -99,6 +106,8 @@ func (b *Bus) combatTrace(t game.TraceView, voiced bool) bool {
 		return true
 	}
 	switch {
+	case t.FromBuilding && !t.Melee && weaponVoices[t.Weapon].fire != "": // a heavy turret
+		b.Cue(weaponVoices[t.Weapon].fire, fx, fy, 1)
 	case t.Weapon == weaponSentry || t.FromBuilding && !t.Melee:
 		b.Cue("sfx.sentry_shot", fx, fy, 1)
 	case t.Weapon == weaponRifle:

@@ -1,10 +1,7 @@
 package game
 
 import (
-	"sort"
-
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -12,12 +9,8 @@ import (
 )
 
 // Dining: a hungry colonist picks up the portions it needs and carries
-// them to a nearby table, preferring a chair pulled up to it, instead of
-// eating where the food lies.
-
-// tableReach is how far (tiles, food to seat) a colonist carries a meal to
-// sit down with it.
-const tableReach = 30
+// them to a nearby table, preferring a seat pulled up to it (rest/seats.go
+// AtTable), instead of eating where the food lies.
 
 // nextToTable reports a table beside (x, y), diagonals included.
 func (g *Game) nextToTable(x, y int) bool {
@@ -33,54 +26,6 @@ func (g *Game) nextToTable(x, y int) bool {
 		}
 	}
 	return false
-}
-
-// tableSeat is the best free place to eat near (fx, fy): a chair next to a
-// table, else any free floor beside one.
-func (g *Game) tableSeat(id entity.EntityID, fx, fy int) (int, int, bool) {
-	type seat struct{ x, y, score int }
-	var seats []seat
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.Table {
-			continue
-		}
-		for _, d := range [4][2]int{{0, 1}, {1, 0}, {-1, 0}, {0, -1}} {
-			x, y := b.X+d[0], b.Y+d[1]
-			if !g.grid.Walkable(x, y) || g.bedCovering(x, y) {
-				continue
-			}
-			if owner, taken := g.reserve.TileOwner(x, y); taken && owner != id {
-				continue
-			}
-			s := pathing.Dist(fx, fy, x, y)
-			if s > tableReach {
-				continue
-			}
-			obj := g.layerBldgAt(x, y, construction.LayerObject)
-			if c, ok := g.bldgs.Get(obj); ok && c.Kind == construction.Chair {
-				s -= 6 // a chair is worth a few extra steps
-			} else if obj != 0 {
-				continue // something else stands there
-			}
-			seats = append(seats, seat{x, y, s})
-		}
-	}
-	sort.Slice(seats, func(i, j int) bool {
-		if seats[i].score != seats[j].score {
-			return seats[i].score < seats[j].score
-		}
-		return seats[i].y*g.grid.Width()+seats[i].x < seats[j].y*g.grid.Width()+seats[j].x
-	})
-	for i, s := range seats {
-		if i >= 8 {
-			break
-		}
-		if g.reachable(id, s.x, s.y) {
-			return s.x, s.y, true
-		}
-	}
-	return 0, 0, false
 }
 
 // portionsFor is how many items of kind k a colonist eats to be full.
@@ -105,7 +50,7 @@ func (g *Game) carryToTable(id entity.EntityID, j job.Record) bool {
 	if !ok || st.Carrier != 0 {
 		return false
 	}
-	sx, sy, ok := g.tableSeat(id, st.X, st.Y)
+	sx, sy, ok := g.rest.Seats.AtTable(id, st.X, st.Y) // rest/seats.go: a seat by a table
 	if !ok {
 		return false
 	}

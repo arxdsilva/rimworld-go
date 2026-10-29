@@ -200,10 +200,10 @@ func (g *Game) fireThreat(now uint64) {
 func (g *Game) edgeTile() (int, int, bool) {
 	w, h := g.grid.Width(), g.grid.Height()
 	hx, hy := g.home()
-	if x, y, ok := g.walkableNear(hx, hy, 6); ok {
+	if x, y, ok := g.combat.Tiles.WalkableNear(hx, hy, 6); ok {
 		hx, hy = x, y
 	}
-	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door)}
+	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door, construction.Autodoor)}
 	var fx, fy int
 	found, checks := false, 0
 	for try := 0; try < 200; try++ {
@@ -435,7 +435,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		}
 		if !j.Active() || (now+uint64(id))%120 == 0 && j.Kind != job.Move {
 			ex, ey := nearestEdge(pos, w, h)
-			if x, y, ok := g.walkableNear(ex, ey, 3); ok {
+			if x, y, ok := g.combat.Tiles.WalkableNear(ex, ey, 3); ok {
 				g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y})
 			}
 		}
@@ -477,7 +477,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		if r.Mode == raidArrive && weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) > sightRange {
 			// walk in towards the colony
 			if !j.Active() || (now+uint64(id))%180 == 0 {
-				if x, y, ok := g.walkableNear(tp.X, tp.Y, 4); ok &&
+				if x, y, ok := g.combat.Tiles.WalkableNear(tp.X, tp.Y, 4); ok &&
 					!g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) && g.unreachable(id) && !g.combat.Breach.Start(id, tp.X, tp.Y) {
 					r.RetryAt = now + raiderRetry
 				}

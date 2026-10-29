@@ -226,7 +226,7 @@ func (g *Game) walkOut(id entity.EntityID, r raiderState, j job.Record, now uint
 		return
 	}
 	ex, ey := nearestEdge(pos, w, h)
-	if x, y, ok := g.walkableNear(ex, ey, 3); ok && g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) {
+	if x, y, ok := g.combat.Tiles.WalkableNear(ex, ey, 3); ok && g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) {
 		return
 	}
 	r.RetryAt = now + raiderRetry

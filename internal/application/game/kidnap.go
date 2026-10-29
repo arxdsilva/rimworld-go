@@ -135,7 +135,7 @@ func (g *Game) pickUpKidnapped(id, t entity.EntityID, j job.Record, now uint64) 
 	}
 	pos, _ := g.positions.Get(id)
 	ex, ey := nearestEdge(pos, g.grid.Width(), g.grid.Height())
-	x, y, ok := g.walkableNear(ex, ey, kidnapEdgeR)
+	x, y, ok := g.combat.Tiles.WalkableNear(ex, ey, kidnapEdgeR)
 	if !ok {
 		g.endKidnap(id, now)
 		return

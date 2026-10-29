@@ -37,7 +37,7 @@ func (g *Game) newHabitat() *habitat {
 	lx, ly := g.landingSpot()
 	h := &habitat{g: g, reach: make([]bool, w*hgt), lx: lx, ly: ly}
 	if !g.grid.Walkable(lx, ly) {
-		x, y, ok := g.walkableNear(lx, ly, 6)
+		x, y, ok := g.combat.Tiles.WalkableNear(lx, ly, 6)
 		if !ok {
 			return h
 		}

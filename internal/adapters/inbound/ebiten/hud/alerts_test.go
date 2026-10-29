@@ -13,9 +13,9 @@ import (
 func TestBuildAlerts(t *testing.T) {
 	t.Parallel()
 	pawns := []game.PawnView{
-		{Name: "Ada", Status: "downed", Reason: "injured", X: 3, Y: 4},
-		{Name: "Bo", Status: "downed", Reason: "injured", InBed: true},
-		{Name: "Cora", Status: "alive", Mood: 20, X: 7, Y: 7},
+		{Name: "Ada", Status: "downed", Reason: "injured", X: 3, Y: 4, HasBed: true},
+		{Name: "Bo", Status: "downed", Reason: "injured", InBed: true, HasBed: true},
+		{Name: "Cora", Status: "alive", Mood: 20, X: 7, Y: 7, HasBed: true},
 	}
 	w := game.WorldView{Food: 2, Animals: []game.AnimalView{{Species: "ridge_wolf", Label: "ridge wolf", Hostile: true, X: 9, Y: 9}}}
 	got := BuildAlerts(pawns, w)
@@ -97,9 +97,9 @@ func TestHostileAlertNamesTheChasedColonist(t *testing.T) {
 // colonists in trouble, two raiders, a hostile wolf and little food.
 func rightWorld() (pawns []game.PawnView, world game.WorldView) {
 	pawns = []game.PawnView{
-		{ID: 1, Name: "Ada", Status: "downed", Reason: "injured", X: 3, Y: 4},
-		{ID: 2, Name: "Bo", Status: "downed", Reason: "no bed", X: 5, Y: 6},
-		{ID: 3, Name: "Cora", Status: "alive", Mood: 10, X: 7, Y: 7},
+		{ID: 1, Name: "Ada", Status: "downed", Reason: "injured", X: 3, Y: 4, HasBed: true},
+		{ID: 2, Name: "Bo", Status: "downed", Reason: "no bed", X: 5, Y: 6, HasBed: true},
+		{ID: 3, Name: "Cora", Status: "alive", Mood: 10, X: 7, Y: 7, HasBed: true},
 		{ID: 90, Name: "Reaver", Hostile: true, Status: "alive", X: 30, Y: 30},
 		{ID: 91, Name: "Reaver", Hostile: true, Status: "alive", X: 50, Y: 40},
 	}
@@ -661,4 +661,29 @@ func TestAggressiveBreakAlert(t *testing.T) {
 		}
 	}
 	t.Fatalf("no berserk alert in %+v", got)
+}
+
+func TestColonistsNeedBedsAlert(t *testing.T) {
+	t.Parallel()
+	ada := game.PawnView{ID: 1, Name: "Ada", Status: "alive", Mood: 80, X: 1, Y: 1}
+	bo := game.PawnView{ID: 2, Name: "Bo", Status: "alive", Mood: 80, X: 2, Y: 2, HasBed: true}
+	find := func(ps ...game.PawnView) (Alert, bool) {
+		for _, a := range BuildAlerts(ps, game.WorldView{}) {
+			if a.Key == "nobed" {
+				return a, true
+			}
+		}
+		return Alert{}, false
+	}
+	if a, ok := find(ada, bo); !ok || a.Label != "Ada needs a bed" || a.Danger {
+		t.Fatalf("one bedless colonist: %+v %v", a, ok)
+	}
+	ada.HasBed = true
+	if _, ok := find(ada, bo); ok {
+		t.Fatal("alert must clear once everyone has a bed")
+	}
+	ada.HasBed, bo.HasBed = false, false
+	if a, _ := find(ada, bo); a.Label != "2 colonists need beds" {
+		t.Fatalf("label = %q", a.Label)
+	}
 }

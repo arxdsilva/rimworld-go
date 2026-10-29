@@ -61,11 +61,15 @@ func TurretAimVec(i int) motion.Vec {
 // turretGunAt is where turret b's gun frame is drawn (its origin, in
 // world tiles): the frame's mount attachment on the base's mount.
 func turretGunAt(c *art.Catalog, b *game.BuildingView) (key string, wx, wy float64, ok bool) {
-	mx, my, ok := attachWorld(c, TurretBaseKey, "mount", float64(b.X), float64(b.Y))
+	spec, ok := gunOf(b.Kind)
 	if !ok {
 		return "", 0, 0, false
 	}
-	key = TurretGunKey(aimFrame(b.AimDir))
+	mx, my, ok := attachWorld(c, spec.base, "mount", float64(b.X), float64(b.Y))
+	if !ok {
+		return "", 0, 0, false
+	}
+	key = spec.frame[aimOf(b)]
 	g := c.Sprites[key]
 	if g == nil {
 		return "", 0, 0, false
@@ -124,14 +128,14 @@ func (o *Wiring) DrawDefenseParts(v *render.View, ps sprite.Pass, ch *Chunks, ds
 		return
 	}
 	switch b.Kind {
-	case SentryTurretKind:
+	case SentryTurretKind, AutocannonKind, SlugTurretKind, MortarKind:
 		gk, wx, wy, ok := turretGunAt(v.Art, b)
 		if !ok {
 			return
 		}
 		if !v.ReducedMotion {
 			if p := RecoilPush(b.ShotAge); p > 0 {
-				d := TurretAimVec(aimFrame(b.AimDir))
+				d := TurretAimVec(aimOf(b))
 				wx, wy = wx-d.X*p, wy-d.Y*p
 			}
 		}

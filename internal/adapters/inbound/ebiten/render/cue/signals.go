@@ -55,8 +55,9 @@ type Memo struct {
 // tile's terrain changed (a cancelled mark is silent).
 func (b *Bus) ListenWorld(v *render.View, w game.WorldView, pawns []game.PawnView) {
 	m := &b.Memo
-	b.Host.ListenCaskets(w) // vault_draw.go: a casket turning open
-	b.listenPower(v, w)     // switches thrown, short circuits, solar flares
+	b.Host.ListenCaskets(w)      // vault_draw.go: a casket turning open
+	b.listenPower(v, w)          // switches thrown, short circuits, solar flares
+	b.listenStructures(w, pawns) // crafters at work, new barrels, charges set
 	frames := make(map[entity.EntityID][2]int, len(w.Frames))
 	for _, f := range w.Frames {
 		frames[f.ID] = [2]int{f.X, f.Y}
@@ -86,11 +87,19 @@ func (b *Bus) ListenWorld(v *render.View, w game.WorldView, pawns []game.PawnVie
 		}
 	}
 	doors := map[[2]int]bool{}
+	var autos map[[2]int]bool // powered doors among them
 	built := map[[2]int]bool{}
 	for _, b := range w.Buildings {
 		built[[2]int{b.X, b.Y}] = true
-		if b.Kind == "door" {
+		switch b.Kind {
+		case "door":
 			doors[[2]int{b.X, b.Y}] = standing[[2]int{b.X, b.Y}]
+		case autodoorKind: // opens for anyone passing, or when held open
+			doors[[2]int{b.X, b.Y}] = standing[[2]int{b.X, b.Y}] || b.HoldOpen
+			if autos == nil {
+				autos = map[[2]int]bool{}
+			}
+			autos[[2]int{b.X, b.Y}] = true
 		}
 	}
 	notice := m.notice
@@ -125,7 +134,12 @@ func (b *Bus) ListenWorld(v *render.View, w game.WorldView, pawns []game.PawnVie
 		for t, open := range doors {
 			if was, ok := m.doorsOpen[t]; ok && was != open {
 				id := "sfx.door_close"
-				if open {
+				switch {
+				case open && autos[t]:
+					id = "sfx.autodoor_open"
+				case autos[t]:
+					id = "sfx.autodoor_close"
+				case open:
 					id = "sfx.door_open"
 				}
 				b.Cue(id, float64(t[0])+0.5, float64(t[1])+0.5, 1)

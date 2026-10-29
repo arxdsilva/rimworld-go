@@ -16,7 +16,8 @@ type Shop struct {
 	h        Host
 	bills    *Bills
 	drying   *Drying
-	cabinets *Cabinets
+	stations *Stations
+	art      *Art
 	quality  *Quality
 	p        planner
 	buf      planBuf // the ingredient search's scratch (the tick path)
@@ -53,8 +54,8 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 			if d.Dry && s.drying.busy(bid) {
 				continue // still drying the last batch
 			}
-			if b.Kind == construction.Campfire && h.Fuel(bid) <= 0 {
-				continue // no fire to cook over
+			if Fueled(b.Kind) && h.Fuel(bid) <= 0 {
+				continue // no fire to cook over or forge with
 			}
 			if ElectricBench(b.Kind) && !h.Powered(bid) {
 				continue // PLAY-021: an electric bench works only on power
@@ -190,14 +191,17 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 		s.fetch(id, j, d)
 		return
 	}
-	if ElectricBench(b.Kind) && !h.Powered(j.Dest) {
-		s.fail(id, j, job.Blocked) // PLAY-021: the power went (put off a while: postpone.go)
+	if ElectricBench(b.Kind) && !h.Powered(j.Dest) || b.Kind == construction.FueledSmithy && h.Fuel(j.Dest) <= 0 {
+		s.fail(id, j, job.Blocked) // PLAY-021: the power went, PRD-3: the forge burnt out (put off a while: postpone.go)
 		return
 	}
-	u := h.BenchWork(id, d.Learn, 100+s.cabinets.Bonus(j.Dest)+ElectricPct(b.Kind)) // tool cabinets
+	u := h.BenchWork(id, d.Learn, (s.stations.Speed(j.Dest)+5)/10) // PRD-3: facilities, light, room (station.go)
 	if u == 0 {
 		h.SetJob(id, j)
 		return
+	}
+	if b.Kind == construction.FueledSmithy {
+		h.UseFuel(j.Dest, u) // PRD-3: the forge burns while worked
 	}
 	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
@@ -206,6 +210,10 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 	}
 	if !s.laidOut(j) {
 		s.fail(id, j, job.TargetGone) // an ingredient left the bench
+		return
+	}
+	if d.Builds != 0 && !s.art.make(id, j, b, d) {
+		s.fail(id, j, job.Blocked) // PRD-3: no room beside the bench for the sculpture
 		return
 	}
 	stored := s.finish(id, j, b, d)
@@ -259,6 +267,8 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	case d.ID == recipe.Cremate:
 		h.Cremate(j.Dest, j.Carry, d) // burns the body and its wood
 		return false
+	case d.Builds != 0:
+		return false // PRD-3: art.make set the sculpture down and used the materials
 	}
 	for _, rid := range j.Route { // PRD-1: the other ingredients, laid on the bench
 		h.DeleteItem(rid)
@@ -268,6 +278,11 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 		if st, ok := h.Stack(j.Carry); ok {
 			out, extra = animal.Yield(animal.Species(st.Animal))
 			out, extra = h.ButcherYield(id, out), h.ButcherYield(id, extra)
+		}
+	}
+	if d.Input.Smelt { // PRD-3: a quarter of the steel back
+		if st, ok := h.Stack(j.Carry); ok {
+			out = recipe.SmeltYield(st)
 		}
 	}
 	stuff := item.Kind(0)

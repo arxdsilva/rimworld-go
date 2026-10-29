@@ -28,7 +28,7 @@ func (s *Shop) gather(id entity.EntityID, j job.Record, b construction.Building)
 	h := s.h
 	switch {
 	case j.Target == j.Dest && j.Carry != 0:
-		h.PutDown(j.Carry, b.X, b.Y)
+		putDown(h, j.Carry, b.X, b.Y)
 		h.Claim(id, j.Carry)
 		j.Route = append(j.Route[:len(j.Route):len(j.Route)], j.Carry) // a fresh array: copies never share it
 		j.Carry = 0
@@ -84,7 +84,7 @@ func (s *Shop) pickUp(id entity.EntityID, j *job.Record) bool {
 	if j.Carry == 0 {
 		j.Carry = c
 	} else {
-		h.Merge(j.Carry, c)
+		merge(h, j.Carry, c)
 	}
 	j.RouteI += 2
 	return true

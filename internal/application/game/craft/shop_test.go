@@ -46,7 +46,7 @@ func TestShopMakesAClub(t *testing.T) {
 	if j.State != job.Complete || f.Stock(item.Club) != 1 || f.Stock(item.Wood) != 6 {
 		t.Fatalf("job %v clubs %d wood %d", j.State, f.Stock(item.Club), f.Stock(item.Wood))
 	}
-	if f.lastPct != 100+cabinetPct {
+	if f.lastPct != 100+facilities[0].Pct {
 		t.Fatalf("bench pct %d", f.lastPct)
 	}
 	if f.claims[1] != pawn || c.Bills.Of(1)[0].Done != 1 {

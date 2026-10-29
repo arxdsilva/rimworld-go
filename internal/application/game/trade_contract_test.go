@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"reflect"
+	"rimworld-go/internal/domain/combat/cover"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -152,7 +153,7 @@ func TestPlay024BuildingsAndOrders(t *testing.T) {
 	}
 	tur := buildNow(t, g, construction.SentryTurret, item.Steel, construction.South, 2, 2)
 	buildNow(t, g, construction.RadioConsole, item.Steel, construction.South, 6, 2)
-	if construction.MaxHP(construction.SentryTurret, item.Steel) != 140 || construction.CoverPct(construction.SentryTurret) != 30 {
+	if construction.MaxHP(construction.SentryTurret, item.Steel) != 140 || cover.Permille(cover.OfBuilding(construction.SentryTurret)) != 400 { // DEF-3: wiki: Mini-turret
 		t.Fatal("turret hit points or cover")
 	}
 	var found bool

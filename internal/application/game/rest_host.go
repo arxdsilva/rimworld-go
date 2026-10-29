@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // restHost implements rest.Host (rest/deps.go) over the game: one small
@@ -103,6 +104,16 @@ func (h restClaims) Partner(id entity.EntityID) entity.EntityID {
 	return p
 }
 
+func (h restClaims) Reachable(id entity.EntityID, x, y int) bool { return h.g.reachable(id, x, y) }
+func (h restClaims) ReserveTile(id entity.EntityID, x, y int)    { h.g.reserve.TryTile(id, x, y) }
+func (h restClaims) TileFree(id entity.EntityID, x, y int) bool {
+	if !h.g.grid.Walkable(x, y) || h.g.bedCovering(x, y) {
+		return false
+	}
+	owner, taken := h.g.reserve.TileOwner(x, y)
+	return !taken || owner == id
+}
+
 type restRoutine struct{ g *Game }
 
 func (h restRoutine) Activity(id entity.EntityID) schedule.Activity { return h.g.activityOf(id) }
@@ -110,6 +121,11 @@ func (h restRoutine) SeekFood(id entity.EntityID) bool              { return h.g
 func (h restRoutine) Job(id entity.EntityID) job.Record {
 	j, _ := h.g.jobs.Get(id)
 	return j
+}
+
+func (h restRoutine) Band(id entity.EntityID) (int, int) {
+	b := h.g.bandsOf(id)
+	return b.Min, b.Max
 }
 
 type restPatients struct{ g *Game }
@@ -148,6 +164,27 @@ func (h restRooms) ObjectAt(x, y int) entity.EntityID {
 func (h restRooms) TameAnimal(id entity.EntityID) bool {
 	a, ok := h.g.animals.Get(id)
 	return ok && a.Tame && !a.Dead()
+}
+
+func (h restRooms) TempAt(x, y int) int { return int(h.g.temperatureAt(x, y)) }
+func (h restRooms) Roof(x, y int) (bool, bool) {
+	c := h.g.roofAt(x, y)
+	return c.Roofed(), c.Thick()
+}
+
+// Tile is what lies on (x, y), for its beauty (BED-3).
+func (h restRooms) Tile(x, y int) rest.Tile {
+	g := h.g
+	if !g.grid.InBounds(x, y) {
+		return rest.Tile{}
+	}
+	fb, floored := g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerFloor))
+	t := rest.Tile{Object: g.layerBldgAt(x, y, construction.LayerObject), Indoors: g.roomAt(x, y) >= 0,
+		Floor: room.FloorUnder(fb.Stuff, floored, g.terr.At(x, y) == terrain.StoneSmooth), Filth: g.filthTotal(y*g.grid.Width() + x)}
+	if p, ok := g.plants.Get(g.plantAt(x, y)); ok {
+		t.Plant, t.Planted, t.Mature = p.Species, true, p.Ripe()
+	}
+	return t
 }
 
 type restEvents struct{ g *Game }

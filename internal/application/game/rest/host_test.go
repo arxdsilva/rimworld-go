@@ -60,6 +60,17 @@ type fakeHost struct {
 	down    map[entity.EntityID]bool  // not Standing
 	pain    map[entity.EntityID]int32 // Hurt pain (with a body)
 	noBody  bool
+
+	// BED-3
+	unreachable map[[2]int]bool // Reachable false
+	taken       map[[2]int]entity.EntityID
+	blocked     map[[2]int]bool // not walkable
+	reserved    map[[2]int]entity.EntityID
+	band        [2]int
+	temp        int
+	roofs       map[[2]int][2]bool // roofed, thick
+	tiles       map[[2]int]Tile
+	tileReads   int
 }
 
 func newFake() *fakeHost {
@@ -73,8 +84,29 @@ func newFake() *fakeHost {
 		act: schedule.Anything, room: -1, tame: map[entity.EntityID]bool{}, rooms: map[[2]int]int{},
 		mate: map[entity.EntityID]entity.EntityID{}, opinion: map[[2]entity.EntityID]int32{}, age: map[entity.EntityID]int{},
 		lovinAt: map[entity.EntityID]uint64{}, withOf: map[entity.EntityID]entity.EntityID{}, down: map[entity.EntityID]bool{},
-		pain: map[entity.EntityID]int32{},
+		pain: map[entity.EntityID]int32{}, unreachable: map[[2]int]bool{}, taken: map[[2]int]entity.EntityID{},
+		blocked: map[[2]int]bool{}, reserved: map[[2]int]entity.EntityID{}, band: [2]int{80, 280}, temp: 200,
+		roofs: map[[2]int][2]bool{}, tiles: map[[2]int]Tile{},
 	}
+}
+
+func (f *fakeHost) Reachable(_ entity.EntityID, x, y int) bool { return !f.unreachable[[2]int{x, y}] }
+func (f *fakeHost) TileFree(id entity.EntityID, x, y int) bool {
+	o, ok := f.taken[[2]int{x, y}]
+	return !f.blocked[[2]int{x, y}] && (!ok || o == id)
+}
+func (f *fakeHost) ReserveTile(id entity.EntityID, x, y int) { f.reserved[[2]int{x, y}] = id }
+func (f *fakeHost) Band(entity.EntityID) (int, int)          { return f.band[0], f.band[1] }
+func (f *fakeHost) TempAt(int, int) int                      { return f.temp }
+func (f *fakeHost) Roof(x, y int) (bool, bool) {
+	r := f.roofs[[2]int{x, y}]
+	return r[0], r[1]
+}
+func (f *fakeHost) Tile(x, y int) Tile {
+	f.tileReads++
+	t := f.tiles[[2]int{x, y}]
+	t.Object = f.ObjectAt(x, y)
+	return t
 }
 
 // pawn adds a living colonist at (x, y).

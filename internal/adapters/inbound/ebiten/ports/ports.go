@@ -128,6 +128,12 @@ type CloseArchitect struct{}
 // facing (a building's Copy).
 type PresetBuildTool struct{ Kind, Stuff, Facing string }
 
+// AimMortar enters the mortar targeting mode for the mortar at (X, Y).
+type AimMortar struct {
+	ID   entity.EntityID
+	X, Y int
+}
+
 // ShowWindow opens a main-tab window ("work", "schedule", "research",
 // "animals", …), closing the Architect and any float menu.
 type ShowWindow struct{ Mode string }
@@ -150,6 +156,7 @@ type CenterOnPawn struct{ ID entity.EntityID }
 func (OpenArchitect) isIntent()   {}
 func (CloseArchitect) isIntent()  {}
 func (PresetBuildTool) isIntent() {}
+func (AimMortar) isIntent()       {}
 func (ShowWindow) isIntent()      {}
 func (CloseWindows) isIntent()    {}
 func (SelectPawn) isIntent()      {}

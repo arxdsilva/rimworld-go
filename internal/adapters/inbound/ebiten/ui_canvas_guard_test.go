@@ -133,6 +133,7 @@ var canvasExempt = map[string]string{
 	"orders/route.go:Dashed":                         "world: order route over the map (text goes through the canvas)",
 	"orders/route.go:DrawRoute":                      "world: order route over the map",
 	"orders/formation.go:DrawFormation":              "world: formation markers on tiles",
+	"orders/mortar_aim.go:drawAim":                   "world: the mortar and aimed tile outlines (the hint goes through the canvas)",
 	"architect/zone_tools.go:drawGhost":              "world: zone/drag ghost cells on the map (palette and labels use the canvas)",
 	"architect/move_mode.go:Draw":                    "world: move-mode footprint outline (hints use the canvas)",
 	"architect/zone_tools.go:drawToolGhost":          "world: the Expand and Shrink ghost cells on the map (the icon and hint use the canvas)",

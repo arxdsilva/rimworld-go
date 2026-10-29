@@ -1270,7 +1270,7 @@ resolve metadata conflicts, and update the catalog.
 
 -   [-] bed/table/chair (1×1 cot drawn in-game for the current single-cell bed; 1×2 bed, table, chair generated in 4 facings for when the domain has footprints/furniture)
 -   [x] food/crops/wild plants/trees (PLAY-010: restyled to §9.1/§9.2 without outlines; oak, birch, pine and jungle trees with visible trunks and _trunk/_canopy parts; grass tufts composed up to 9 per tile; 13 ground plants with young/mature/dormant looks incl. 7 new ones; PLAY-016 §9.3: 11 crops rebuilt as units in the §9.1 style (6 stages × 4 variants, no mound, muted pl_crop palette) composed several per tile over tilled furrows, cold/heat damage shown as tint, wilt, shrink and fade)
--   [ ] stove/butcher workstation
+-   [x] stove/butcher workstation (wave D, A3: family `workshop`, see the production/research benches line in Wave 4)
 -   [x] medicine (NG-1: industrial medicine stacks and the hospital bed; ART-026: nanomed kit, servo/implant parts, valve and pump hearts, synth stomach, organ jars, vitals monitor with glow, care-level icons)
 -   [x] blood/injury effects
 
@@ -1278,7 +1278,8 @@ resolve metadata conflicts, and update the catalog.
 
 -   [-] material variants (wood, five tinted stones and steel for walls; wood/stone floors; wood/steel doors; furniture wood only)
 -   [ ] furniture families
--   [ ] production/research benches
+-   [x] production/research benches (wave D, A3: family `workshop`, 161 sprites with `fortify`, glow masks for the burning forge and powered benches, stuff tint masks on sculptures (large and grand re-rendered at the wiki footprints) and armchair, icons for every kind; validator 5709 sprites 0 errors, `make art-check` clean incl. orphans; renderer in `render/world/objects.go`, `render/overlay/power_draw.go`)
+-   [x] fortify and turret guns (wave D, A3: family `fortify` with barricade (`stone_tint` mask), autocannon, slug turret and mortar guns drawn from a precomputed key table in `render/overlay/turret_draw.go`, powered door, four shell item icons)
 -   [ ] storage
 -   [x] generators/batteries/conduits/lamps (PLAY-021: `artlib/families/power.py`: a linked 16-mask conduit and a hidden-conduit overlay marking, power switch on/off, wood-fired, solar, wind (eight rotor frames) and geothermal generators, battery, heater, in-wall cooler; torch lamp and electric benches in furniture; lit parts as `<name>_glow` layers drawn only while powered, the standing lamp's bulb included (PLAY-022); review sheet `generated/power_buildings.png`)
 

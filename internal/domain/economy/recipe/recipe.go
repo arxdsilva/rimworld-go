@@ -86,6 +86,33 @@ const (
 	// MED-07: the medical drugs at the drug table, behind Pharmacology.
 	MakeNumbroot
 	PressProphyl
+	// PRD-3 (append only, saved): the smithy's blades and the pila, the
+	// crafting spot's bows, the machining table's guns, smelting at the
+	// electric smelter and the sculpting bench's sculptures (benches.go).
+	MakeMace
+	MakeGladius
+	MakeLongsword
+	MakePila
+	MakeShortBow
+	MakeRecurveBow
+	MakeGreatbow
+	MakeRevolver
+	MakeAutopistol
+	MakeMachinePistol
+	MakePumpShotgun
+	MakeChainShotgun
+	MakeHeavySMG
+	MakeLMG
+	MakeAssaultRifle
+	MakeSniperRifle
+	MakeMinigun
+	MakeIncendiaryLauncher
+	MakeEMPLauncher
+	MakeEMPGrenades
+	SmeltWeapon
+	SculptSmall
+	SculptLarge
+	SculptGrand
 	numRecipes
 )
 
@@ -104,6 +131,8 @@ type Input struct {
 	// instead (Kind is then the default material, AnyStoneBlocks ignored):
 	// the stack's kind becomes the product's Stack.Stuff.
 	Stuff item.StuffCategory
+	// Smelt (PRD-3) takes any item made with steel (SmeltYield > 0).
+	Smelt bool
 }
 
 // Take is how many items the input takes from a stack of qty.
@@ -144,13 +173,20 @@ type Def struct {
 	// Dry recipes don't produce on the spot: the work lays the batch out on
 	// the rack, which dries it over time into a dried stack of the same kind.
 	Dry bool
+	// Also (PRD-3) lists the other benches that run the recipe besides
+	// Bench (At; electric twins follow their base bench).
+	Also []construction.Kind
+	// Builds (PRD-3): the product is a building of this kind (a
+	// sculpture) set down beside the bench, not an item; Output is unused.
+	Builds construction.Kind
 }
 
 var defs = [numRecipes]Def{
 	SimpleMeal: {ID: SimpleMeal, Name: "simple_meal", Label: "Cook simple meal", Bench: construction.Stove,
 		Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1, Work: 120, Skill: work.Cook, Learn: skill.Cooking},
 	Club: {ID: Club, Name: "club", Label: "Make wooden club", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 4, Stuff: item.MadeFrom(item.Club)}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Wood, Qty: 4, Stuff: item.MadeFrom(item.Club)}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft, Learn: skill.Crafting,
+		Also: spotAndSmithy},
 	ButcherDustbuck: {ID: ButcherDustbuck, Name: "butcher_dustbuck", Label: "Butcher dustbuck", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, ExtraQty: 5, Legacy: true},
@@ -159,7 +195,7 @@ var defs = [numRecipes]Def{
 		Extra: item.Leather, ExtraQty: 4, Legacy: true},
 	ButcherAnimal: {ID: ButcherAnimal, Name: "butcher_animal", Label: "Butcher animal", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseAnimal, Qty: 1}, Output: item.Meat, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
-		Extra: item.Leather, BySpecies: true},
+		Extra: item.Leather, BySpecies: true, Also: []construction.Kind{construction.ButcherSpot}},
 	// Cooking over an open fire is half again as slow as at a stove.
 	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
 		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1,
@@ -173,11 +209,14 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Leather, Qty: 10, Stuff: item.MadeFrom(item.Duster)}, Output: item.Duster, OutQty: 1, Work: 700, Skill: work.Craft, Learn: skill.Crafting},
 	// A crude rifle: a long, careful job (needs Gunsmithing research).
 	MakeRifle: {ID: MakeRifle, Name: "make_rifle", Label: "Make crude rifle", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft, Learn: skill.Crafting,
+		Also: machining},
 	Knife: {ID: Knife, Name: "knife", Label: "Make stone knife", Bench: construction.Workbench,
-		Input: Input{Kind: item.GraniteBlocks, Qty: 3, Stuff: item.MadeFrom(item.Knife)}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.GraniteBlocks, Qty: 3, Stuff: item.MadeFrom(item.Knife)}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft, Learn: skill.Crafting,
+		Also: spotAndSmithy},
 	Spear: {ID: Spear, Name: "spear", Label: "Make wooden spear", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 5, Stuff: item.MadeFrom(item.Spear)}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Wood, Qty: 5, Stuff: item.MadeFrom(item.Spear)}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft, Learn: skill.Crafting,
+		Also: smithy},
 	Cremate: {ID: Cremate, Name: "cremate", Label: "Cremate corpse", Bench: construction.Pyre,
 		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Work: 300, Skill: work.Craft, Learn: skill.Crafting,
 		Extra: item.Wood, ExtraQty: 2},
@@ -203,7 +242,7 @@ var defs = [numRecipes]Def{
 	CutMarble:    cut(CutMarble, geology.Marble),
 	FabricateComponent: {ID: FabricateComponent, Name: "fabricate_component", Label: "Fabricate component",
 		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 12}, Output: item.Components, OutQty: 1,
-		Work: 1500, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 6},
+		Work: 1500, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 6, Also: fabrication},
 	// Refining medicine is a doctor's job, done at the workbench.
 	RefineMedicine: {ID: RefineMedicine, Name: "refine_medicine", Label: "Refine industrial medicine",
 		Bench: construction.Workbench, Input: Input{Kind: item.HerbalMedicine, Qty: 2}, Output: item.IndustrialMedicine,
@@ -220,10 +259,10 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Wood, Qty: 10}, Output: item.PegLeg, OutQty: 1, Work: 600, Skill: work.Craft, Learn: skill.Crafting},
 	MakeProstheticLeg: {ID: MakeProstheticLeg, Name: "make_prosthetic_leg", Label: "Make prosthetic leg",
 		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 20}, Output: item.ProstheticLeg, OutQty: 1,
-		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5},
+		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5, Also: machining},
 	MakeProstheticArm: {ID: MakeProstheticArm, Name: "make_prosthetic_arm", Label: "Make prosthetic arm",
 		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 20}, Output: item.ProstheticArm, OutQty: 1,
-		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5},
+		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5, Also: machining},
 	MakeWoodenHand: {ID: MakeWoodenHand, Name: "make_wooden_hand", Label: "Carve wooden hand", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 8}, Output: item.WoodenHand, OutQty: 1, Work: 500, Skill: work.Craft, Learn: skill.Crafting},
 	MakeDenture: {ID: MakeDenture, Name: "make_denture", Label: "Carve denture", Bench: construction.Workbench,
@@ -260,6 +299,32 @@ var defs = [numRecipes]Def{
 	PressProphyl: {ID: PressProphyl, Name: "press_prophyl", Label: "Press prophyl tablets", Bench: construction.DrugTable,
 		Input: Input{Kind: item.IndustrialMedicine, Qty: 1}, Output: item.ProphylTablet, OutQty: 2, Work: 700, Skill: work.Craft,
 		Learn: skill.Crafting, MinSkill: 4},
+	MakeMace:               smith(MakeMace, "make_mace", "Forge mace", item.Mace, 5, 600),
+	MakeGladius:            smith(MakeGladius, "make_gladius", "Forge gladius", item.Gladius, 5, 1200),
+	MakeLongsword:          smith(MakeLongsword, "make_longsword", "Forge longsword", item.Longsword, 10, 1800),
+	MakePila:               wooden(MakePila, "make_pila", "Make pila", item.Pila, construction.FueledSmithy, 7, 700, 3),
+	MakeShortBow:           wooden(MakeShortBow, "make_short_bow", "Make short bow", item.ShortBow, construction.CraftingSpot, 3, 240, 2),
+	MakeRecurveBow:         wooden(MakeRecurveBow, "make_recurve_bow", "Make recurve bow", item.RecurveBow, construction.CraftingSpot, 4, 500, 5),
+	MakeGreatbow:           wooden(MakeGreatbow, "make_greatbow", "Make greatbow", item.Greatbow, construction.CraftingSpot, 6, 900, 6),
+	MakeRevolver:           gun(MakeRevolver, "make_revolver", "Machine revolver", item.Revolver, 3, 2, 400, 0),
+	MakeAutopistol:         gun(MakeAutopistol, "make_autopistol", "Machine autopistol", item.Autopistol, 3, 2, 500, 4),
+	MakeMachinePistol:      gun(MakeMachinePistol, "make_machine_pistol", "Machine machine pistol", item.MachinePistol, 5, 3, 1100, 4),
+	MakePumpShotgun:        gun(MakePumpShotgun, "make_pump_shotgun", "Machine pump shotgun", item.PumpShotgun, 6, 3, 1200, 5),
+	MakeChainShotgun:       gun(MakeChainShotgun, "make_chain_shotgun", "Machine chain shotgun", item.ChainShotgun, 7, 5, 3100, 6),
+	MakeHeavySMG:           gun(MakeHeavySMG, "make_heavy_smg", "Machine heavy SMG", item.HeavySMG, 8, 4, 2400, 0),
+	MakeLMG:                gun(MakeLMG, "make_lmg", "Machine LMG", item.LMG, 8, 5, 3400, 6),
+	MakeAssaultRifle:       gun(MakeAssaultRifle, "make_assault_rifle", "Machine assault rifle", item.AssaultRifle, 6, 7, 4000, 6),
+	MakeSniperRifle:        gun(MakeSniperRifle, "make_sniper_rifle", "Machine sniper rifle", item.SniperRifle, 6, 8, 4500, 7),
+	MakeMinigun:            gun(MakeMinigun, "make_minigun", "Machine minigun", item.Minigun, 16, 20, 6000, 7),
+	MakeIncendiaryLauncher: gun(MakeIncendiaryLauncher, "make_incendiary_launcher", "Machine incendiary launcher", item.IncendiaryLauncher, 8, 4, 2000, 0),
+	MakeEMPLauncher:        gun(MakeEMPLauncher, "make_emp_launcher", "Machine EMP launcher", item.EMPLauncher, 8, 8, 3000, 0),
+	MakeEMPGrenades:        gun(MakeEMPGrenades, "make_emp_grenades", "Machine EMP grenades", item.EMPGrenades, 2, 6, 2400, 0),
+	// wiki: Electric smelter (1600 ticks, a quarter of the materials back).
+	SmeltWeapon: {ID: SmeltWeapon, Name: "smelt_weapon", Label: "Smelt metal weapons", Bench: construction.ElectricSmelter,
+		Input: Input{Smelt: true, Qty: 1}, Output: item.Steel, Work: 160, Skill: work.Craft, Learn: skill.Crafting},
+	SculptSmall: sculpt(SculptSmall, "sculpt_small", "Sculpt small sculpture", construction.SmallSculpture),
+	SculptLarge: sculpt(SculptLarge, "sculpt_large", "Sculpt large sculpture", construction.LargeSculpture),
+	SculptGrand: sculpt(SculptGrand, "sculpt_grand", "Sculpt grand sculpture", construction.GrandSculpture),
 }
 
 // servoSkill and servoWork are the servo tier's crafting level and work
@@ -273,7 +338,7 @@ const (
 // one out.
 func servo(id ID, name, label string, out item.Kind, comps int) Def {
 	return Def{ID: id, Name: name, Label: label, Bench: construction.Workbench, Input: Input{Kind: item.Components, Qty: comps},
-		Output: out, OutQty: 1, Work: servoWork, Skill: work.Craft, Learn: skill.Crafting, MinSkill: servoSkill}
+		Output: out, OutQty: 1, Work: servoWork, Skill: work.Craft, Learn: skill.Crafting, MinSkill: servoSkill, Also: fabrication}
 }
 
 // CutYield is how many blocks one chunk makes at the stonecutter table.
@@ -307,11 +372,11 @@ func Upgrade(id ID) ID {
 	return id
 }
 
-// For lists recipes a bench kind can run (legacy ones excluded).
+// For lists recipes a bench kind can run (legacy ones excluded; At).
 func For(bench construction.Kind) []Def {
 	var out []Def
 	for _, d := range defs {
-		if d.Bench == bench && !d.Legacy {
+		if d.At(bench) && !d.Legacy {
 			out = append(out, d)
 		}
 	}
@@ -323,6 +388,8 @@ func (in Input) Accepts(k item.Kind) bool {
 	switch {
 	case in.Stuff != 0:
 		return k.StuffCategory()&in.Stuff != 0
+	case in.Smelt:
+		return smeltable(k)
 	case in.AnyRaw:
 		return k.Raw()
 	case in.AnyDryable:
@@ -338,6 +405,9 @@ func (in Input) Accepts(k item.Kind) bool {
 func (in Input) AcceptsStack(s item.Stack) bool {
 	if in.AnyDryable {
 		return s.Dryable()
+	}
+	if in.Smelt {
+		return SmeltYield(s) > 0
 	}
 	return in.Accepts(s.Kind)
 }
@@ -386,6 +456,8 @@ func (in Input) Label() string {
 		name = in.Stuff.String()
 	case in.AnyStoneBlocks:
 		name = "any stone blocks"
+	case in.Smelt:
+		name = "metal weapon"
 	}
 	return strconv.Itoa(in.Qty) + " " + name
 }

@@ -128,7 +128,7 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 	out = append(out, AnimalAlerts(w)...)
 
 	var rescue, starving, collapsed, unhappy, bleeding, infected, untended, diseased []game.PawnView
-	var overdosed []game.PawnView // MED-07
+	var overdosed, bedless []game.PawnView // MED-07, BED-3
 	overdoseDanger := false
 	alive := 0
 	for _, p := range pawns {
@@ -148,6 +148,9 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 			overdosed = append(overdosed, p)
 			overdoseDanger = overdoseDanger || p.OverdoseStage >= overdoseExtremeStage
 		}
+		if p.Status != "dead" && !p.HasBed { // BED-3: HasBed is state, so the alert holds until a bed exists
+			bedless = append(bedless, p)
+		}
 		switch {
 		case p.Status == "dead":
 			continue
@@ -163,6 +166,7 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 			unhappy = append(unhappy, p)
 		}
 	}
+	group("nobed", false, bedless, func(n string) string { return n + " needs a bed" }, "colonists need beds")
 	group("bleeding", true, bleeding, func(n string) string { return n + " is bleeding out" }, "colonists are bleeding out")
 	group("infection", false, infected, func(n string) string { return n + " is losing to an infection" }, "colonists are losing to infections")
 	if len(diseased) == 1 { // MED-04: one patient names the disease
@@ -610,6 +614,7 @@ func WaitingFramesAlert(w game.WorldView) (Alert, bool) {
 var alertExplanations = map[string]string{
 	"tradeorbit":    "A trade ship is in radio range for a few more hours. Work the radio console to trade with it: goods within 6 tiles of a trade beacon are on offer, and purchases arrive by drop pod.",
 	"tradecaravan":  "A trader caravan is camped near the colony and leaves soon. Right-click the trader to send a colonist to trade; the caravan buys and sells goods from your stockpiles.",
+	"nobed":         "Some colonists have no bed of their own and sleep on the ground. Build a bed for each of them, or free one: sleeping rough costs rest and mood.",
 	"bleeding":      "A colonist will bleed to death within hours. Get a doctor to tend the wounds now: a tend stops the bleeding at once, with or without medicine.",
 	"infection":     "An infection is set to kill a colonist before their immunity builds. Keep it tended every 12 hours with the best medicine you have, by your most skilled doctor, ideally in a hospital bed.",
 	"disease":       "A colonist has caught a disease. Flu, plague, malaria and sleeping sickness race the body's immunity and can kill: keep the sick in bed and tended on time, with good medicine and your best doctor. Gut worms and muscle parasites never kill but stay until tended away.",

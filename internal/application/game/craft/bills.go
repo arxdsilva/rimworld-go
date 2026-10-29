@@ -60,7 +60,7 @@ func (b *Bills) Apply(c command.Command) {
 	switch c.Kind {
 	case command.AddBill:
 		d := recipe.DefOf(recipe.ID(c.Recipe))
-		if d.Name == "" || d.Bench != construction.RecipeBench(bench.Kind) || b.h.RecipeLocked(d.ID) {
+		if d.Name == "" || !d.At(bench.Kind) || b.h.RecipeLocked(d.ID) {
 			return
 		}
 		target := c.Count
@@ -104,11 +104,14 @@ func (b *Bills) benchAt(x, y int) (entity.EntityID, construction.Building, bool)
 }
 
 // Defaults gives a new bench the bills nearly everyone wants: a butcher
-// table butchers every carcass type and a drying rack dries any
+// table or spot butchers every carcass type and a drying rack dries any
 // perishable food, forever; a campfire cooks until there are 10 meals; a
 // funeral pyre cremates every body brought to it.
 func (b *Bills) Defaults(id entity.EntityID, k construction.Kind) {
 	k = construction.RecipeBench(k) // PLAY-021: an electric bench gets its base kind's bills
+	if k == construction.ButcherSpot {
+		k = construction.ButcherTable // PRD-3: the spot butchers like the table
+	}
 	if k == construction.Pyre {
 		b.list[id] = append(b.list[id], recipe.Bill{Recipe: recipe.Cremate, Mode: recipe.Forever, Target: 1})
 		return
@@ -169,12 +172,22 @@ func (b *Bills) UpgradeLegacy() {
 }
 
 // stock is the colony's stock of a bill's output: dried food for a
-// drying bill, otherwise the output kind.
+// drying bill, the standing pieces for a sculpture (PRD-3), otherwise
+// the output kind.
 func (b *Bills) stock(d recipe.Def) int {
-	if !d.Dry {
-		return b.h.Stock(d.Output)
+	switch {
+	case d.Dry:
+		return driedStock(b.h)
+	case d.Builds != 0:
+		n := 0
+		for _, id := range b.h.BuildingIDs() {
+			if o, ok := b.h.Building(id); ok && o.Kind == d.Builds {
+				n++
+			}
+		}
+		return n
 	}
-	return b.h.DriedStock()
+	return b.h.Stock(d.Output)
 }
 
 // Line is bill i of bench bid as the read model shows it: the bill with
@@ -194,8 +207,7 @@ func (b *Bills) Line(bid entity.EntityID, i int) (recipe.Bill, string) {
 		return bl, BillHaveEnough
 	case d.Dry && b.drying.busy(bid):
 		return bl, BillDrying
-	case d.Bench == construction.Campfire && b.h.Fuel(bid) <= 0,
-		d.ID == recipe.Cremate && b.h.FreeWood() < d.ExtraQty:
+	case b.unfueled(bid), d.ID == recipe.Cremate && b.h.FreeWood() < d.ExtraQty:
 		return bl, BillNoFuel
 	case b.unpowered(bid):
 		return bl, BillNoPower
@@ -208,6 +220,12 @@ func (b *Bills) Line(bid entity.EntityID, i int) (recipe.Bill, string) {
 		return bl, BillNoInput
 	}
 	return bl, BillActive
+}
+
+// unfueled: bid is a campfire or forge with no fuel in it (PRD-3).
+func (b *Bills) unfueled(bid entity.EntityID) bool {
+	bench, ok := b.h.Building(bid)
+	return ok && Fueled(bench.Kind) && b.h.Fuel(bid) <= 0
 }
 
 // unpowered: bid is an electric bench without power (PLAY-021).

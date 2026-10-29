@@ -57,7 +57,7 @@ func (a *App) colonyLive() bool {
 // toolActive reports a tool owns the pointer: Move mode, an Architect
 // tool, or a formation drag.
 func (a *App) toolActive() bool {
-	return a.arch.Mover.State().On || (a.arch.Open && a.arch.ToolID != "") || a.ord.Form.On
+	return a.arch.Mover.State().On || (a.arch.Open && a.arch.ToolID != "") || a.ord.Form.On || a.ord.Aim.On
 }
 
 // modalOpen reports a menu sits over the map.

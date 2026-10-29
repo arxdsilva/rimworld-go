@@ -4,7 +4,7 @@ Scope: bring ranged and melee combat, armor, cover, explosions, traps, turrets, 
 
 ## Status (2026-10-29)
 
-Wave C done for DEF-2 (weapons, armor, explosions; handoff `handoffs/DEF-2-weapons-armor-explosions.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). DEF-3..4 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave D done for DEF-3 (cover, IEDs, turrets, mortars, doors; handoff `handoffs/DEF-3-cover-traps-turrets-mortars-doors.md`). Wave C done for DEF-2 (weapons, armor, explosions; handoff `handoffs/DEF-2-weapons-armor-explosions.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). DEF-3..4 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -51,8 +51,8 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Cover on the shooter side of the target cuts the hit chance; objects have a cover value; shots can strike the cover. | `coverFor` takes the best building on the cells beside the target facing the shooter; `construction.CoverPct` gives sandbags 55, wall and door 40, sentry turret 30; ranged shots only, never at distance 1 (`defense.go`, `construction.go`). `internal/domain/combat/cover` is a stub. | Cover domain; shots that strike cover; trees, rocks, chunks and barricades as cover. | DEF-0 (domain), DEF-3 | open |
-| Barricades; natural cover from trees, rocks and chunks. | Sandbags only (`construction.Sandbags`). | Barricade building; natural cover read from the map. | DEF-3 | open |
+| Cover on the shooter side of the target cuts the hit chance; objects have a cover value; shots can strike the cover. | `Sight` reads permille cover from `domain/combat/cover`: buildings (`cover.OfBuilding`), rock, grown trees, cacti, bushes and stone chunks (chunk tiles cached 250 ticks). Wall and door 75 (wiki, was 40), barricade 55, turrets 40/50. `CoverPct` is deleted; the overlay uses `cover.OfBuilding`. | None. | DEF-0 (domain), DEF-3 | done |
+| Barricades; natural cover from trees, rocks and chunks. | Barricade building (55) and sandbags; natural cover from trees, rocks, cacti, bushes and chunks read from the map. | None. | DEF-3 | done |
 | Cover overlay for the player. | Shift+O toggles `Combat.Cover` (`ebiten/hotkeys.go`, `combat_overlay_host.go`); `Combat.DrawCover` (`render/overlay/combat_draw.go`). | None. | DEF-1 | done |
 
 ### 3.4 Weapons
@@ -75,10 +75,10 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
 | Spike traps. | `construction.SpikeTrap`; `springTrap` springs at `trapChance` percent for `trapDamage` and re-lays the frame; `trapsUnderfoot` checks movers; sappers step around traps (`sapperBreaks`). | None for the spike trap. | - | done |
-| IED traps (high explosive, incendiary, EMP, smoke). | None. | Four trap kinds on the explosion service. | DEF-3 | open |
-| Mini-turret needing rearm and barrel wear; autocannon; uranium slug turret. | One powered sentry gun: `stepTurret`, `turretShot`, `turretBlast`, `raiderTurret`; scan every 20 ticks, shed last in a brownout (`power.ClassDefense`). No ammo or barrel state. | Ammo and barrel state on the turret component, rearm job, new turret kinds. | DEF-3 | open |
-| Mortars: manned, shells, forced target, minimum range. | None. | Mortar building, manning job and target command (contract by the lead), shell item, shell flight on the projectile index. | DEF-3 | open |
-| Doors: hold open, opening speed by stuff, autodoor, forbid. | `construction.Door` (wood or metal): walkable for colonists, shut to raiders; raiders breach with `startBreach`/`doBreach` (`defense.go`). `internal/domain/building/door` has only a `doc.go`. | Door settings, autodoor kind, speed by stuff, forbid. | DEF-3 | open |
+| IED traps (high explosive, incendiary, EMP, smoke). | `game/combat/ied.go`: four kinds on the explosion service, 15-tick fuse (wiki), blast, re-laid blueprint. High explosive radius 3.9 (wiki); incendiary, EMP and smoke burst as their shell (original: no wiki page). | Bullets setting off IEDs, explosion chains, sappers avoiding IEDs (DEF-4). | DEF-3 | partial |
+| Mini-turret needing rearm and barrel wear; autocannon; uranium slug turret. | Autocannon and uranium slug turret with wiki stats (min range, bursts). Barrels 60/90/30 rounds (wiki); a spent barrel stops firing; `RearmTurret` haul by idle undrafted colonists (steel per barrel 9/20/7 = wiki cost / 9, scaling); Hold fire (`SetTurretHold`). | Uranium and reinforced barrel items (steel stands in). | DEF-3 | partial |
+| Mortars: manned, shells, forced target, minimum range. | Mortar building (180 HP), shell items (mortar, incendiary, EMP, smoke), 20 shells per barrel; range 29-500, warmup 240, cooldown 1680, forced miss radius 9 scaled by crew Shooting (wiki). Crew: drafted colonist on its spot, else `SetMortarTarget.Pawn`, else nearest idle drafted within 12 tiles; `ManMortar` job; `SetMortarTarget`/`ClearMortarTarget`. Journey `TestJourneyMortarForcedTarget`. | Raiders using mortars (DEF-4). | DEF-3 | partial |
+| Doors: hold open, opening speed by stuff, autodoor, forbid. | `domain/building/door`; `Kind.IsDoor()` (door or autodoor) at the game and adapter sites. Opening speed by stuff (wiki), powered autodoor faster, 45-tick open and 120-tick auto-close (original), never closes on someone; `SetDoorHoldOpen` lets hostiles through; open doors let shots through; Barred is unwalkable to colonists. | Door forbid UI (Forbid exists only on sleeping places). | DEF-3 | partial |
 | Building damage and repair. | `damageBuilding`, `assignRepair`, `doRepair`, `DamageAt` (`defense.go`). | None. | - | done |
 
 ### 3.7 Drafted behaviour

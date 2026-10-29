@@ -363,6 +363,8 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.arch.ClosePanel()
 	case ports.PresetBuildTool:
 		a.arch.Preset(it.Kind, it.Stuff, it.Facing)
+	case ports.AimMortar:
+		a.ord.Aim.Start(it.ID, it.X, it.Y)
 	case ports.ShowWindow:
 		a.win.Show(it.Mode)
 	case ports.CloseWindows:

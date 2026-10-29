@@ -120,7 +120,7 @@ func (g *Game) foundationGone(b construction.Building) {
 			if !ok || !covers(cells, pos.X, pos.Y) || g.grid.Walkable(pos.X, pos.Y) {
 				continue
 			}
-			if x, y, ok := g.walkableNear(pos.X, pos.Y, relocateR); ok {
+			if x, y, ok := g.combat.Tiles.WalkableNear(pos.X, pos.Y, relocateR); ok {
 				g.positions.Set(id, Position{X: x, Y: y})
 			}
 		}

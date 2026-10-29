@@ -63,22 +63,33 @@ func (c *cellCache) get(ver uint64, build func() tileSet) tileSet {
 // buildingCells indexes buildings of the given kinds (a shared cached
 // set: read only).
 func (g *Game) buildingCells(kinds ...construction.Kind) tileSet {
-	var mask uint64
+	var mask [4]uint64 // one bit per kind: every kind is cacheable
 	for _, k := range kinds {
-		if k >= 64 {
-			return g.scanBuildingCells(kinds) // not maskable: uncached
-		}
-		mask |= 1 << uint(k)
+		mask[k>>6] |= 1 << (uint(k) & 63)
 	}
+	return g.cellSet(mask).get(g.structVer, func() tileSet { return g.scanBuildingCells(kinds) })
+}
+
+// cellSet is the cache for key (a kind mask; bit 255, no kind, marks the
+// shut doors).
+func (g *Game) cellSet(key [4]uint64) *cellCache {
 	if g.cellSets == nil {
-		g.cellSets = map[uint64]*cellCache{}
+		g.cellSets = map[[4]uint64]*cellCache{}
 	}
-	c := g.cellSets[mask]
+	c := g.cellSets[key]
 	if c == nil {
 		c = &cellCache{}
-		g.cellSets[mask] = c
+		g.cellSets[key] = c
 	}
-	return c.get(g.structVer, func() tileSet { return g.scanBuildingCells(kinds) })
+	return c
+}
+
+// shutDoors is the doors not held open (DEF-3): shut to raiders and wild
+// animals (a shared cached set; holding a door open bumps structVer).
+func (g *Game) shutDoors() tileSet {
+	return g.cellSet([4]uint64{3: 1 << 63}).get(g.structVer, func() tileSet {
+		return g.combat.Doors.Shut(slices.Clone(g.buildingCells(construction.Door, construction.Autodoor)), g.grid.Width())
+	})
 }
 
 func (g *Game) scanBuildingCells(kinds []construction.Kind) tileSet {
@@ -103,14 +114,14 @@ func (g *Game) scanBuildingCells(kinds []construction.Kind) tileSet {
 }
 
 // hostileMap is the map as raiders and wild animals see it: the colony's
-// doors are shut to them.
+// doors are shut to them, unless held open (DEF-3).
 type hostileMap struct {
 	g     *Game
 	doors tileSet
 }
 
 func (g *Game) hostileMap() hostileMap {
-	return hostileMap{g: g, doors: g.buildingCells(construction.Door)}
+	return hostileMap{g: g, doors: g.shutDoors()}
 }
 
 func (h hostileMap) Width() int  { return h.g.grid.Width() }
@@ -146,14 +157,15 @@ func (g *Game) pathQuery(id entity.EntityID) pathing.Query {
 	return g.softPathQuery(id, g.grid) // area_soft.go: a restricted pawn prefers its area; fire costs
 }
 
-// doorAt reports a built door on (x, y).
+// doorAt reports a built door on (x, y) shut to hostiles: any door (or
+// autodoor) not held open (DEF-3, combat/door.go).
 func (g *Game) doorAt(x, y int) bool {
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
 	if bid == 0 {
 		return false
 	}
 	b, _ := g.bldgs.Get(bid)
-	return b.Kind == construction.Door
+	return b.Kind.IsDoor() && !g.combat.Doors.Held(bid)
 }
 
 // damageBuilding harms a building, destroying it at zero hit points.

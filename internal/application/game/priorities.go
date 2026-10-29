@@ -116,7 +116,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Cook, work.Craft:
 		return g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // craft/shop.go
 	case work.Hunt:
-		return g.assignHunt(id)
+		return g.combat.Hunting.Assign(id) // combat/hunt.go
 	case work.Handle: // SIM-026: taming moved here from Hunt
 		return g.assignRope(id) || g.assignTame(id) || g.assignTrain(id) || g.assignCollect(id) // rope.go, bonds.go, animal_products.go
 	case work.Grow:

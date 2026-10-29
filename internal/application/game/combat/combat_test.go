@@ -1,6 +1,7 @@
 package combat
 
 import (
+	"rimworld-go/internal/domain/combat/cover"
 	"testing"
 
 	"rimworld-go/internal/domain/animal"
@@ -63,7 +64,7 @@ func TestCoverFacesTheShooter(t *testing.T) {
 	f := newFake(20, 20)
 	s := f.combat().Sight
 	f.build(1, construction.Sandbags, 9, 10)
-	want := construction.CoverPct(construction.Sandbags)
+	want := cover.Permille(cover.Sandbags) // DEF-3: permille, the cover domain's value
 	if c := s.Cover(2, 10, 10, 10); c != want {
 		t.Fatalf("cover from the west %d, want %d", c, want)
 	}

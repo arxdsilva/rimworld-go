@@ -159,6 +159,13 @@ const (
 	MarineHelmet
 	SimpleHelmet
 	AdvancedHelmet
+	// DEF-3 (append only, saved): mortar shells, loaded into a mortar and
+	// buried in charges. "mortar shells" are the high-explosive ones.
+	// wiki: High-explosive shell, Incendiary shell, EMP shell, Smoke shell
+	MortarShells
+	IncendiaryShells
+	EMPShells
+	SmokeShells
 	numKinds
 )
 
@@ -181,7 +188,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"revolver", "autopistol", "machine pistol", "assault rifle", "sniper rifle", "pump shotgun", "chain shotgun",
 	"heavy smg", "lmg", "minigun", "frag grenades", "molotov cocktails", "EMP grenades",
 	"incendiary launcher", "emp launcher",
-	"flak vest", "flak pants", "flak jacket", "plate armor", "marine armor", "marine helmet", "simple helmet", "advanced helmet"}
+	"flak vest", "flak pants", "flak jacket", "plate armor", "marine armor", "marine helmet", "simple helmet", "advanced helmet",
+	"mortar shells", "incendiary shells", "EMP shells", "smoke shells"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -191,6 +199,9 @@ func (k Kind) IsWeapon() bool {
 // IsArmor reports apparel whose job is protection (DEF-2: flak, plate,
 // marine armor and helmets; armor.Apparel has the ratings).
 func (k Kind) IsArmor() bool { return k >= FlakVest && k <= AdvancedHelmet }
+
+// IsShell reports a mortar shell (DEF-3).
+func (k Kind) IsShell() bool { return k >= MortarShells && k <= SmokeShells }
 
 // IsCorpse reports an animal carcass.
 func (k Kind) IsCorpse() bool {

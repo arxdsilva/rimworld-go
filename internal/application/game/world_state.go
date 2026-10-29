@@ -297,7 +297,7 @@ func (g *Game) startExit(id entity.EntityID) bool {
 		return false
 	}
 	ex, ey := nearestEdge(pos, g.grid.Width(), g.grid.Height())
-	x, y, ok := g.walkableNear(ex, ey, 3)
+	x, y, ok := g.combat.Tiles.WalkableNear(ex, ey, 3)
 	if !ok {
 		return false
 	}
@@ -567,7 +567,7 @@ func (g *Game) caravanHome(c *caravanRec) {
 		}
 		x, y, ok := g.freeLandNear(ex, ey, 4, used)
 		if !ok {
-			if x, y, ok = g.walkableNear(ex, ey, 6); !ok {
+			if x, y, ok = g.combat.Tiles.WalkableNear(ex, ey, 6); !ok {
 				x, y = hx, hy
 			}
 		}
@@ -577,7 +577,7 @@ func (g *Game) caravanHome(c *caravanRec) {
 		}
 		names = append(names, g.personName(id))
 		o := ringOffsets[i%len(ringOffsets)]
-		if tx, ty, ok := g.walkableNear(hx+o[0]/2, hy+o[1]/2, 3); ok {
+		if tx, ty, ok := g.combat.Tiles.WalkableNear(hx+o[0]/2, hy+o[1]/2, 3); ok {
 			g.cmdMove(id, tx, ty)
 		}
 	}
@@ -652,11 +652,11 @@ func (g *Game) caravanTalk(c *caravanRec, now uint64) {
 func (g *Game) worldEdge() (int, int, bool) {
 	w, h := g.grid.Width(), g.grid.Height()
 	hx, hy := g.home()
-	if x, y, ok := g.walkableNear(hx, hy, 6); ok {
+	if x, y, ok := g.combat.Tiles.WalkableNear(hx, hy, 6); ok {
 		hx, hy = x, y
 	}
 	r := g.stream(streamWorld)
-	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door)}
+	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door, construction.Autodoor)}
 	var fx, fy int
 	found, checks := false, 0
 	for try := 0; try < 200; try++ {

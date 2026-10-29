@@ -64,6 +64,8 @@ type Controller struct {
 	Search Search
 	// Form is the drafted colonists' right drag.
 	Form Formation
+	// Aim is the mortar targeting mode (DEF-3).
+	Aim MortarAim
 }
 
 // New builds the feature over its shell.

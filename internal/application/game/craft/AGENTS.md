@@ -11,22 +11,28 @@ Production: every bench's bills and the bill commands, finding and doing bill wo
 - Gathering (haul.go, PRD-1): `job.HaulIngredients` carries its plan in the job record (`Route`: stack id, count pairs; `Count`; loads laid on the bench appended) and turns into a plain `job.Bill` with the last load in hand; the bill's finish deletes the laid loads too.
 - Read model (view.go): `RecipeView`, `BillView`, `BillIngredients` (a comparable allow list; `NewBillIngredients` for tests), `Recipes`, `Bills.AppendViews` with the settings, current worker, progress and `NoWorker*` reasons. game aliases the types.
 - `Drying` (drying.go): what each rack holds (`Batch`, saved), `Advance` on the climate tick, `Empty` when a rack is torn down.
-- `Cabinets` (cabinet.go): the tool-cabinet bonus per bench, cached per `StructVer`, never saved.
+- `Facilities` (facility.go, PRD-3): the bench facilities table (tool cabinet: +6 % each, two at most, reach 6), the bonus and the linked names per bench (`BuildingView.Linked`), cached per `StructVer`, never saved. Spots link nothing.
+- `Stations` (station.go, PRD-3): bench work speed in permille (`Speed`, `BuildingView.WorkSpeed`): the bench's own factor (crafting spot 0.5, butcher spot 0.7), facilities, an electric twin's +40 %, times light (0.8 in the dark, ramp to 30 %) and the room (cleanliness bands 0.85/0.9/0.95/1, outdoors 0.8); cached `speedEvery` ticks. `View` fills a bench's links and speed and a sculpture's title (in `Epitaph`).
+- `Art` (art.go, artgen.go, PRD-3): sculpting bench bills set a sculpture down beside the bench (`Workshop.CanInstall`/`Install`), quality rolled, title and description grown from a seed on the craft stream with original word lists; saved as `Game.Art` (`map[id]craft.Artwork{Seed, Maker}`). No minified items: the player moves a sculpture with the Move order.
+- Forge fuel (PRD-3): `Fueled` (campfire, wood-fired forge); the forge works only with fuel and burns one log per `WorkPerWood` work (`Workshop.UseFuel`); refuelling is the game's shared fuel table (`fuel.go`).
+- `Action` (action.go): the action word for bill work at a bench (game's `billAction`).
+- Stack moves (stockops.go): `driedStock`, `merge`, `putDown` over the host's plain stack reads and writes.
 
 ## Allowed Dependencies
-- Domain value types (`sim/entity`, `sim/command`, `ai/job`, `ai/work`, `ai/pathing`, `economy/recipe`, `economy/item`, `building/construction`, `building/power`, `pawn/skill`, `animal`).
+- Domain value types (`sim/entity`, `sim/command`, `ai/job`, `ai/work`, `ai/pathing`, `economy/recipe`, `economy/item`, `economy/quality`, `building/construction`, `building/power`, `pawn/skill`, `animal`).
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
 
 ## Forbidden Dependencies
 - `internal/application/game` (the guard's `imports` rule), adapters, platform, Ebitengine, global RNG, wall clock.
 
 ## Public Contracts
-- `deps.go`: `Host` embeds five value-only roles (Benches, Stock, Output, Workers, Crafters), each ≤ 8 methods (all five are full at PRD-1: a new need is a new role). The game implements them with adapter types in `craft_host.go`; none adds a method to `game.Game`. Fuel (`fuel.go`, shared with lamps and generators) and bench work speed (`workProgressPct`, skills.go) stay in game behind `Benches.Fuel` and `Crafters.BenchWork`.
+- `deps.go`: `Host` embeds value-only roles (Benches, Stock, Output, Workers, Crafters, Makers, Weathering, Workshop), each ≤ 8 methods (Benches, Workers and Crafters are full: a new need is a new role; PRD-3 moved DriedStock, Merge and PutDown into craft). The game implements them with adapter types in `craft_host.go`; none adds a method to `game.Game`. Fuel (`fuel.go`, shared with lamps and generators) and bench work speed (`workProgressPct`, skills.go) stay in game behind `Benches.Fuel` and `Crafters.BenchWork`.
 - The read model types live here (view.go); game re-exports them as aliases (`game.BillView`, `game.BillIngredients`, `game.BillIngredientView`, `game.RecipeView`, `game.Recipes`, `game.Bill*`), and `BillView` stays comparable (building views are diffed with `slices.Equal`).
-- Saved state keeps its gob names: `Game.Bills` (`map[EntityID][]recipe.Bill`) and `Game.Racks` (`map[EntityID]craft.Batch`, fields `Kind`, `Qty`, `Rot`, `Left`); a nil field keeps what is there, so older saves load.
+- Saved state keeps its gob names: `Game.Bills` (`map[EntityID][]recipe.Bill`), `Game.Racks` (`map[EntityID]craft.Batch`, fields `Kind`, `Qty`, `Rot`, `Left`) and `Game.Art` (`map[EntityID]craft.Artwork`, fields `Seed`, `Maker`; only standing sculptures are exported); a nil field keeps what is there, so older saves load.
+- `RecipeView.Benches` lists every bench kind running a recipe (`recipe.Def.At`: Bench, Also, electric twins); `RunsAt(kind)` is the UI's check.
 
 ## Invariants
-- No randomness (a meal's poison is rolled by the host in `Output.DropMeal`), no wall clock.
+- No randomness but the host's craft stream (`Makers.Roll`: quality and art seeds; a meal's poison is rolled by the host in `Output.DropMeal`), no wall clock.
 - Maps are ranged only for order-free work (`AnyFor` existence check, `UpgradeLegacy` per bench); everything ordered walks the host's building or pawn id slices.
 
 ## Tests

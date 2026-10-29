@@ -170,7 +170,7 @@ func (g *Game) campSpot(ex, ey int) (int, int) {
 		return ex, ey
 	}
 	x, y := hx+dx*siegeRange/d, hy+dy*siegeRange/d
-	if cx, cy, ok := g.walkableNear(x, y, 4); ok {
+	if cx, cy, ok := g.combat.Tiles.WalkableNear(x, y, 4); ok {
 		return cx, cy
 	}
 	return ex, ey
@@ -191,7 +191,7 @@ func (g *Game) thinkSiege(id entity.EntityID, r raiderState, now uint64) bool {
 	if !grp.Camped {
 		if weapon.Distance(pos.X, pos.Y, grp.CampX, grp.CampY) > 3 && now-grp.Started < siegeSetup {
 			if j, _ := g.jobs.Get(id); !j.Active() || (now+uint64(id))%180 == 0 {
-				if x, y, ok := g.walkableNear(grp.CampX+g.rng.IntN(5)-2, grp.CampY+g.rng.IntN(5)-2, 2); ok {
+				if x, y, ok := g.combat.Tiles.WalkableNear(grp.CampX+g.rng.IntN(5)-2, grp.CampY+g.rng.IntN(5)-2, 2); ok {
 					g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y})
 				}
 			}
@@ -241,7 +241,7 @@ func (g *Game) digIn(gi int, now uint64) {
 // doors and rock all give way; traps are stepped around.
 func (g *Game) sapperBreaks() tileSet {
 	return g.sapperSet.get(g.structVer, func() tileSet {
-		set := slices.Clone(g.buildingCells(construction.Wall, construction.Door))
+		set := slices.Clone(g.buildingCells(construction.Wall, construction.Door, construction.Autodoor))
 		w := g.grid.Width()
 		for y := 0; y < g.grid.Height(); y++ {
 			for x := 0; x < w; x++ {

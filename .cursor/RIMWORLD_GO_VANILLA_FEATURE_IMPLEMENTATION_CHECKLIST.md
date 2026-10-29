@@ -582,7 +582,7 @@ This is the heart of autonomous colony behavior.
     -   Block movement/vision/projectiles.
     -   Define rooms.
     -   Material-dependent stats.
--   [-] **Doors** (buildable, walkable for colonists, shut to raiders and wild animals, count as wall neighbours, drawn open when occupied; no opening delay)
+-   [-] **Doors** (buildable, walkable for colonists, shut to raiders and wild animals, count as wall neighbours, drawn open when occupied; DEF-3: opening delay by stuff, powered autodoor, hold open, open door lets shots through, `domain/building/door`; missing: door forbid UI)
     -   Open/closed states.
     -   Opening delay.
     -   faction/permission interaction.
@@ -597,7 +597,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; missing: chair comfort, joy, light effects (BED-3))
+-   [-] **Furniture** (bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; missing: couch, joy, light effects)
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -752,25 +752,25 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.2 Comfort
 
--   [ ] **Comfort need**
+-   [x] **Comfort need** (BED-3: `rest/needs.go`; rises sitting on stool, dining chair or armchair and asleep in a bed (end table and dresser count), falls otherwise; wiki ladder -3..+10; SitDown job in `rest/seats.go`; idle Relax and meals prefer seats)
     -   Current furniture/bed comfort drives a slowly changing need.
     -   Comfortable beds/chairs create positive psychological effect.
 
 ## 9.3 Beauty
 
--   [ ] **Tile beauty**
+-   [x] **Tile beauty** (BED-3: floor, filth (outdoor 30 % of wiki), building once, plant, sculpture beauty; `rest/beauty.go`)
     -   Buildings, items, filth, natural objects, art, and terrain
         contribute.
--   [ ] **Perceived beauty**
+-   [x] **Perceived beauty** (BED-3: average over 241 cells of the pawn's room or open ground every 250 ticks; local sampling, no per-cell cache)
     -   Pawn samples local surroundings.
     -   Cached/low-frequency evaluation.
--   [ ] **Beauty need**
+-   [x] **Beauty need** (BED-3: trends toward perceived beauty, wiki ladder; target and drift rates original)
     -   Gradually trends toward environmental perception.
     -   Generates positive/negative thoughts at thresholds.
 
 ## 9.4 Outdoors
 
--   [ ] **Outdoors need**
+-   [-] **Outdoors need** (BED-3: six places (room or not; open, roofed, thick rock), wiki rates and ladder -9..0, losses x0.2 in bed; missing: Indoorsy and Undergrounder trait modifiers)
     -   Tracks time spent roofed/indoors versus outdoors.
     -   Trait modifiers can alter preference.
 
@@ -805,7 +805,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   duration.
     -   stacking rules.
     -   situational versus memory-based.
--   [x] **Situational thoughts**
+-   [x] **Situational thoughts** (BED-3: slept cold and slept hot, -4 for a day against the pawn's comfort band, `rest/waking.go`)
     -   Hungry/tired.
     -   environment beauty.
     -   room quality.
@@ -1137,7 +1137,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Roof/indoor darkness** (ART-010, SIM-018: indoor ambient under roofs; MAPGEN-3: roofed cells are dark to plants unless lit; no work/mood effects)
 -   [x] **Artificial lights**
 -   [x] **Light affects plants** (MAPGEN-3: simulation cell light from daylight, lamps, campfires and glowing plants; moss needs light, duskmoss grows in the dark and withers in light; PLAY-017: every other plant, grass included, grows only with sun on unroofed cells or a strong lamp; campfires light only while burning)
--   [-] **Light can affect work/mood/accuracy where appropriate**
+-   [-] **Light can affect work/mood/accuracy where appropriate** (PRD-3: work part done, bench work speed 0.8 at 0 % light, wiki, ramp up to 30 % original; mood and accuracy parts still open)
 
 ## 12.5 Fire
 
@@ -1202,7 +1202,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.1 Generic workbench system
 
--   [-] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; PLAY-021: electric stove, tailoring and research benches work 40% faster and stop without power; no facilities)
+-   [x] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; PLAY-021: electric stove, tailoring and research benches work 40% faster and stop without power; PRD-3: 24 bench and building kinds with wiki footprints, wiki watts on the powered benches, recipes shared across benches (`recipe.Def.Also`, `RecipeView.RunsAt`), facilities (tool cabinet +6 %, `craft/facility.go`), work speed from bench factor, light, roof and cleanliness (`craft/station.go`, `BuildingView.Linked`/`WorkSpeed`), wood-fired forge fuel, 16 new research projects)
     -   Supported recipes.
     -   interaction cell.
     -   power requirement where applicable.
@@ -1241,9 +1241,9 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Butchering**
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
--   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear)
--   [-] **Machining/advanced fabrication equivalents** (NG-1: the Fabrication research unlocks one recipe, components, plus tool cabinet and hospital bed)
--   [-] **Drug production** (SIM-040: brewing bench (beer) and drug table (tea, tablets); no hard drugs)
+-   [x] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear; PRD-3: smithy blades and pila, crafting-spot bows, 13 machining-table guns, smelting metal weapons back to steel; `domain/economy/recipe/benches.go`)
+-   [-] **Machining/advanced fabrication equivalents** (NG-1: the Fabrication research unlocks one recipe, components, plus tool cabinet and hospital bed; PRD-3: machining table with 13 guns; missing: advanced components and the later fabrication chain (PRD-4))
+-   [-] **Drug production** (SIM-040: brewing bench (beer) and drug table (tea, tablets); no hard drugs; PRD-3: wort and fermenting-barrel beer and chemfuel (refinery) not done, they wait on PRD-4)
 -   [x] **Component production in late tech** (NG-1: Fabricate component, 12 steel into 1 at the workbench with Crafting 6; components also come from buried machinery ore)
 
 ## 14.4 Quality
@@ -1254,12 +1254,12 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.5 Art
 
--   [ ] **Artistic work**
+-   [x] **Artistic work** (PRD-3: art bench carves small, large and grand sculptures; quality rolled from the worker's skill and inspiration (PRD-2); beauty 50/100/400 wiki times the quality factor, read by the beauty need and room stats; maker named in the generated text; `craft/art.go`)
     -   Sculptures/art objects.
     -   quality.
     -   beauty.
     -   creator attribution.
--   [ ] **Art descriptions**
+-   [-] **Art descriptions** (PRD-3: original generated title (`BuildingView.Epitaph`) and description from a seeded grammar (`craft/artgen.go`, `ArtDescription`), shown in the completion message; missing: description not in the inspector, no minified item)
     -   Generate original procedural descriptions from structured
         events/grammar.
     -   Do not copy RimWorld text.
@@ -1387,10 +1387,10 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.3 Cover
 
--   [x] **Cover objects** (sandbags 55%, wall/door corners 40%)
+-   [x] **Cover objects** (sandbags 55%, wall/door 75%, barricade 55%, turrets 40/50; DEF-3: trees, rock, cacti, bushes and stone chunks too, `domain/combat/cover`)
     -   Walls, barricade/sandbag equivalents, chunks, trees, etc.
     -   Cover affects incoming ranged hit chance.
--   [-] **Cover calculation** (best cover on the cells beside the target facing the shooter; ranged shots only)
+-   [x] **Cover calculation** (best cover on the cells beside the target facing the shooter; ranged shots only; DEF-3: permille cover from buildings and natural objects in `Sight`)
     -   Relative shooter-target-cover geometry.
     -   Stable deterministic resolution.
 
@@ -2303,7 +2303,7 @@ Use original narrative text and generated names.
 
     -   Select wall/door targets when normal route unsuitable.
 
--   [-] **Siege construction** (sandbags in front of each besieger; no mortars)
+-   [-] **Siege construction** (sandbags in front of each besieger; player mortars exist (DEF-3), raiders do not use mortars (DEF-4))
 
 -   [ ] **Siege bombardment**
 

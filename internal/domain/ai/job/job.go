@@ -145,7 +145,7 @@ const (
 
 // IsIdle reports a free-time behaviour that any real work may replace.
 func (k Kind) IsIdle() bool {
-	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes || k == SocialRelax || k == Gather
+	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes || k == SocialRelax || k == Gather || k == SitDown
 }
 
 func (k Kind) String() string {

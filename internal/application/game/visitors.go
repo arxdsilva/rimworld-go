@@ -275,7 +275,7 @@ func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 		ex, ey := nearestEdge(pos, g.grid.Width(), g.grid.Height())
 		x, y, ok := g.insetLandNear(ex, ey, nil)
 		if !ok {
-			x, y, ok = g.walkableNear(ex, ey, visitorSpotR) // a wet edge: any way out
+			x, y, ok = g.combat.Tiles.WalkableNear(ex, ey, visitorSpotR) // a wet edge: any way out
 		}
 		if !ok || !g.startJob(v.ID, job.Record{Kind: job.Move, TX: x, TY: y}) {
 			v.RetryAt = now + visitorRetry
@@ -312,7 +312,7 @@ func (g *Game) startStroll(id entity.EntityID) bool {
 	rg := g.caravanStrollRange(id) // trade_caravan.go: a trader caravan camps closer
 	x := hx + r.IntN(2*rg+1) - rg
 	y := hy + r.IntN(2*rg+1) - rg
-	tx, ty, ok := g.walkableNear(x, y, 3)
+	tx, ty, ok := g.combat.Tiles.WalkableNear(x, y, 3)
 	if !ok || !g.inset(tx, ty) {
 		return false
 	}
@@ -372,7 +372,7 @@ func (g *Game) wandererJoins(now uint64) bool {
 	}
 	g.ensurePerson(id)
 	hx, hy := g.home()
-	if tx, ty, ok := g.walkableNear(hx, hy, 4); ok {
+	if tx, ty, ok := g.combat.Tiles.WalkableNear(hx, hy, 4); ok {
 		g.cmdMove(id, tx, ty)
 	}
 	g.letter(letterGood, "Wanderer joins", g.personName(id)+", a wanderer, has asked to join the colony.", id)

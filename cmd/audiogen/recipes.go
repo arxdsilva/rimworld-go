@@ -356,4 +356,4 @@ var sounds = append([]sound{
 		{Wave: s.Sine, Freq: 880, FreqEnd: 1760, Start: 0.05, Dur: 0.4, Attack: 0.15, Release: 0.1, Gain: 0.12},
 		{Wave: s.White, Start: 0.1, Dur: 0.35, HighPass: 4000, Grains: 30, Attack: 0.05, Release: 0.1, Gain: 0.18},
 	}}, 0.42},
-}, combatSounds()...)
+}, append(combatSounds(), structureSounds()...)...)

@@ -82,7 +82,7 @@ func (a *App) drawRoofToolGhost(screen *ebiten.Image, x0, y0, x1, y1 int) {
 	w := a.shell.World()
 	walls := map[[2]int]bool{}
 	for _, b := range w.Buildings {
-		if b.Kind == "wall" || b.Kind == "door" {
+		if b.Kind == "wall" || b.Kind == "door" || b.Kind == "powered door" {
 			walls[[2]int{b.X, b.Y}] = true
 		}
 	}

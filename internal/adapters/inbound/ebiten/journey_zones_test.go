@@ -29,6 +29,12 @@ func zoneJourney(t *testing.T) *journey {
 	if !j.g.SetGround(0, 0, 23, 23, "soil", "", "") {
 		t.Fatal("no soil")
 	}
+	// a bed for the colonist: the "needs a bed" alert's rows would cover
+	// the right-hand tiles the area tools drag over
+	if !j.g.BuildNow("sleeping spot", "", "south", 2, 21) {
+		t.Fatal("no sleeping spot")
+	}
+	j.update(1)
 	return j
 }
 

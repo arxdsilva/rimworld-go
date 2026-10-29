@@ -94,6 +94,15 @@ const (
 	RattyApparel
 	TatteredApparel
 	TaintedApparel
+	// Comfort, beauty and outdoors needs and the temperature slept in
+	// (BED-3, append only, saved): the need thoughts carry their stage's
+	// value and label in Memory.Value and Memory.Label (game/rest
+	// needs.go) and are refreshed while the stage holds.
+	ComfortMood
+	BeautyMood
+	OutdoorsMood
+	SleptCold
+	SleptHot
 	numKinds
 )
 
@@ -125,6 +134,10 @@ const (
 	groupDiningRoom // BED-2
 	groupRecRoom
 	groupSharedBed
+	groupComfort // BED-3
+	groupBeauty
+	groupOutdoors
+	groupSleptTemp
 )
 
 // day: remembered thoughts last one in-game day.
@@ -212,7 +225,18 @@ var defs = [numKinds]Def{
 	RattyApparel:    {"ratty apparel", -3, 0, groupNone, 0, 0},
 	TatteredApparel: {"tattered apparel", -5, 0, groupNone, 0, 0},
 	TaintedApparel:  {"wearing a dead man's clothes", -5, 0, groupNone, 0, 0},
+	// BED-3: need thoughts last an hour past their last refresh (values
+	// and labels per memory, wiki: Comfort, Beauty, Outdoors); slept in
+	// the cold or heat -4 for a day (wiki: Thoughts).
+	ComfortMood:  {"comfort", 0, needHour, groupComfort, 0, 0},
+	BeautyMood:   {"surroundings", 0, needHour, groupBeauty, 0, 0},
+	OutdoorsMood: {"time indoors", 0, needHour, groupOutdoors, 0, 0},
+	SleptCold:    {"slept in the cold", -4, day, groupSleptTemp, 0, 0},
+	SleptHot:     {"slept in the heat", -4, day, groupSleptTemp, 0, 0},
 }
+
+// needHour is how long a need thought outlasts its last refresh (BED-3).
+const needHour = uint64(clock.TicksPerHour)
 
 // harvestStack and harvestFactor stack the colony's harvest memories:
 // five at 75 % each further one. wiki: Human resources.

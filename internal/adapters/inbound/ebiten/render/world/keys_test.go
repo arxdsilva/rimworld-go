@@ -268,6 +268,7 @@ var waveCItems = []string{
 	"revolver", "autopistol", "machine pistol", "assault rifle", "sniper rifle", "pump shotgun", "chain shotgun",
 	"heavy smg", "lmg", "minigun", "frag grenades", "molotov cocktails", "EMP grenades",
 	"incendiary launcher", "emp launcher",
+	"mortar shells", "incendiary shells", "EMP shells", "smoke shells",
 	"flak vest", "flak pants", "flak jacket", "plate armor", "marine armor", "marine helmet", "simple helmet", "advanced helmet",
 }
 

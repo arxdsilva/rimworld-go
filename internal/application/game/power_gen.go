@@ -179,7 +179,7 @@ func (g *Game) windBlocked(x, y int) bool {
 	if g.roofAt(x, y).Roofed() || terrain.IsRockWall(g.terr.At(x, y)) || g.layerBlockerAt(x, y) != 0 {
 		return true
 	}
-	if b := g.bldgs.Ref(g.layerBldgAt(x, y, construction.LayerObject)); b != nil && (b.Kind == construction.Wall || b.Kind == construction.Door) {
+	if b := g.bldgs.Ref(g.layerBldgAt(x, y, construction.LayerObject)); b != nil && (b.Kind == construction.Wall || b.Kind.IsDoor()) {
 		return true
 	}
 	if p := g.plants.Ref(g.plantAt(x, y)); p != nil {

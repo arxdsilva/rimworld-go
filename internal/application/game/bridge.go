@@ -30,7 +30,7 @@ func (g *Game) cellWalkable(x, y int) bool {
 	if !g.terr.At(x, y).Walkable() && !g.bridged(x, y) {
 		return false
 	}
-	if g.layerBlockerAt(x, y) != 0 {
+	if g.layerBlockerAt(x, y) != 0 || g.combat.Doors.Barred(x, y) { // DEF-3: a forbidden door shuts the colony out
 		return false
 	}
 	return !g.filledGraveAt(x, y)

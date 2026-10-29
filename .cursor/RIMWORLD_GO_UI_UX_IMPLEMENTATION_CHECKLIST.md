@@ -404,7 +404,7 @@ the player's primary world-editing command surface.
     -   Security.
     -   Miscellaneous/endgame.
     -   Categories appear only when content exists/unlocked.
--   [-] **Build option cards/buttons** (icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice)
+-   [-] **Build option cards/buttons** (icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice; wave D U4: 24 new ToolDefs, production benches, furniture and security entries plus the powered door under Structure, with BuildSprite cases)
     -   Icon.
     -   name.
     -   material requirement.
@@ -597,7 +597,7 @@ interfaces.
 
 ## 9.1 Needs tab
 
--   [-] **Need bars** (food and rest 0–100; no recreation/comfort/beauty/outdoors)
+-   [-] **Need bars** (food and rest 0–100; BED-3: comfort, beauty and outdoors bars on the inspector Needs tab; no recreation bar)
     -   Food.
     -   rest.
     -   recreation.
@@ -806,7 +806,7 @@ understandable.
 -   [x] **Weapon range overlay** (DEF-1: the selected drafted colonist's weapon range ring)
 -   [x] **Line-of-sight line** (DEF-1: white when clear, red when blocked)
 -   [ ] **Target highlight**
--   [x] **Cover visualization** (DEF-1: Shift+O overlay of building cover near the selection)
+-   [x] **Cover visualization** (DEF-1: Shift+O overlay of building cover near the selection; DEF-3: values from `cover.OfBuilding`, percent)
 -   [x] **Hit-chance tooltip** (DEF-1: chance with each factor, from `Game.HitChance`)
     -   Break down shooter, weapon, range, cover, weather/light and
         target modifiers.
@@ -829,6 +829,8 @@ understandable.
 
 -   [x] **Power/operational state** (PLAY-021: the building pane says Uses/Produces N W, the grid balance and stored energy, a switch Closed/Open, a thermostat target and whether it works now, flick pending; the Power toggle (V))
 -   [-] **Interaction status** (work spot outlined on selection)
+-   [x] **Door, turret and mortar controls** (DEF-3 U4: `inspector/cmds_defence.go`: door Hold open, turret Hold fire, mortar Set target and Clear target; barrel, shells and target lines; mortar aim mode in `orders/mortar_aim.go`: next map click sends SetMortarTarget with the single selected colonist, right-click or Esc cancels, aim marker drawn)
+-   [x] **Facility link and work speed** (PRD-3: the bench pane lists linked facilities (`BuildingView.Linked`) and the work speed with its causes (`WorkSpeed`), set from bench factor, tool cabinets, light, roof and cleanliness)
 -   [x] **Current worker/progress** (PRD-1: [name progress%], gathering, or the no-worker reason)
 -   [x] **Bills list** (select a bench: bills with count/mode/status)
 
@@ -1254,7 +1256,7 @@ the player what just happened and what requires attention.
 -   [-] **Expandable details** (PLAY-018: a hover card left of the alert explains what is wrong and what to do; affected targets come by click cycling, not listed)
     -   Which pawns/items/rooms are affected.
 -   [x] **Click cycles affected targets** (click forward, right-click back)
--   [-] **Examples** (UI-014: animals hungry, wild animals eating crops, timbergnaws eating trees (N felled), pen full alerts)
+-   [-] **Examples** (UI-014: animals hungry, wild animals eating crops, timbergnaws eating trees (N felled), pen full alerts; BED-3: "colonists need beds" alert, `hud/alerts.go` key `nobed`)
     -   low food.
     -   colonist needs rescue.
     -   medical emergency.

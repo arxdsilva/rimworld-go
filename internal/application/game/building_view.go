@@ -182,13 +182,14 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	st := g.rest.Stats.Of(id)  // BED-1: comfort, rest effectiveness, beauty, facilities (rest/stats.go)
 	bv.Comfort, bv.RestEffect, bv.Beauty, bv.Facilities, bv.Forbidden = st.Comfort, st.RestEffect, st.Beauty, st.Links(), b.Forbidden
 	g.fillCasketView(bv, id, b) // casket.go (MAPGEN-3)
+	bv.Linked, bv.WorkSpeed, bv.Epitaph = g.craft.Stations.View(id, b, bv.Epitaph)
 	// PLAY-021: the light the renderer draws (light.go), then power
 	// (power_view.go)
 	bv.Glow, bv.GlowRadius = g.glowOf(id, b)
 	g.fillPowerBuilding(bv, id, b)
-	if b.Kind == construction.SentryTurret { // combat/turret.go (PLAY-024)
-		bv.AimDir, bv.ShotAge = g.combat.Turrets.View(id, uint64(g.clock.Now()))
-	}
+	df := g.combat.Orders.View(id, b, uint64(g.clock.Now())) // combat/orders.go: turrets, mortars, doors (PLAY-024, DEF-3)
+	bv.AimDir, bv.ShotAge, bv.HoldOpen, bv.HoldFire, bv.HasTarget = df.Dir, df.ShotAge, df.HoldOpen, df.HoldFire, df.HasTarget
+	bv.Barrel, bv.Shells, bv.TargetX, bv.TargetY = df.Barrel, df.Shells, df.TargetX, df.TargetY
 }
 
 // equalBuildingView reports two views that read the same: every field
