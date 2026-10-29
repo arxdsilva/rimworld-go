@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/room"
 )
 
 // Host is everything rest needs from the simulation, as consumer-owned
@@ -104,8 +105,9 @@ type Rooms interface {
 	// RoomAt is the room at (x, y) (negative: none, outdoors).
 	RoomAt(x, y int) int
 	UnderSky(x, y int) bool
-	// RoomScore is room r's quality score.
-	RoomScore(r int) int
+	// RoomQuality is room r's role and vanilla impressiveness in tenths
+	// (BED-2), read now: filth, items and bed flags as they are.
+	RoomQuality(r int) (role room.Role, impressTenths int)
 	// ObjectAt is the object-layer building covering (x, y) (0: none),
 	// from the host's cell index.
 	ObjectAt(x, y int) entity.EntityID
@@ -124,6 +126,9 @@ type Events interface {
 	Slept(id entity.EntityID, inBed bool)
 	// RememberWith gives id the thought k about other now (lovin.go).
 	RememberWith(id entity.EntityID, k mood.Kind, other entity.EntityID)
+	// RememberValue gives id the thought k now with its own value and
+	// label ("": the def's), e.g. a room's stage (BED-2).
+	RememberValue(id entity.EntityID, k mood.Kind, value int, label string)
 }
 
 // Couples is what lovin' reads and writes about a couple and whether each

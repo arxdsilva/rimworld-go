@@ -1,6 +1,10 @@
 package world
 
 import (
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
@@ -255,5 +259,36 @@ func TestCaveMouthFacing(t *testing.T) {
 	}
 	if CaveMouthFacing(w, 0, 0) != "" {
 		t.Fatal("rock is no mouth")
+	}
+}
+
+// waveCItems are the DEF-2 weapon and armor item kinds (item.Kind names).
+var waveCItems = []string{
+	"mace", "gladius", "longsword", "short bow", "recurve bow", "greatbow", "pila",
+	"revolver", "autopistol", "machine pistol", "assault rifle", "sniper rifle", "pump shotgun", "chain shotgun",
+	"heavy smg", "lmg", "minigun", "frag grenades", "molotov cocktails", "EMP grenades",
+	"incendiary launcher", "emp launcher",
+	"flak vest", "flak pants", "flak jacket", "plate armor", "marine armor", "marine helmet", "simple helmet", "advanced helmet",
+}
+
+// TestItemSpriteWaveCKinds (DEF-2): every new weapon and armor kind
+// resolves to the item sprite whose metadata names it.
+func TestItemSpriteWaveCKinds(t *testing.T) {
+	t.Parallel()
+	itemLine := regexp.MustCompile(`(?m)^item:\s*(.+)$`)
+	for _, kind := range waveCItems {
+		key := ItemSprite(kind)
+		raw, err := os.ReadFile(filepath.Join("../../../../../../assets/metadata", key+".yaml"))
+		if err != nil {
+			t.Errorf("ItemSprite(%q) = %q: no metadata (%v)", kind, key, err)
+			continue
+		}
+		m := itemLine.FindSubmatch(raw)
+		if m == nil || strings.Trim(strings.TrimSpace(string(m[1])), `"`) != kind {
+			t.Errorf("%s's metadata names %q, want %q", key, m, kind)
+		}
+	}
+	if got := ItemSprite("EMP grenades"); got != "item/emp_grenades" {
+		t.Errorf("EMP grenades -> %q", got)
 	}
 }

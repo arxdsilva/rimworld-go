@@ -172,15 +172,15 @@ func (g *Game) maxRaiders() int {
 func (g *Game) storyRaid(day, pct int) {
 	fi := faction.PickRaider(g.ng.factions, g.rng)
 	pts := g.threatPoints() * pct / 100
-	rifles := true
+	tech := faction.Industrial
 	if fi >= 0 {
 		d := faction.DefOf(g.ng.factions[fi].Type)
 		if d.PointsPct > 0 {
 			pts = pts * d.PointsPct / 100
 		}
-		rifles = d.Tech != faction.Neolithic
+		tech = d.Tech
 	}
-	kit := g.raidKitOf(pts, rifles)
+	kit := g.raidKitOf(pts, tech)
 	g.raidFrom(kit, g.pickPlan(day), fi+1)
 }
 

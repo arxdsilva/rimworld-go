@@ -45,6 +45,7 @@ type Memo struct {
 	notice    uint64                  // newest non-danger message heard
 	plantBuf  []int32                 // plantOn's PlantsIn buffer
 	Pods      map[[3]uint64]podSounds // arrival pods heard so far (listenArrivals)
+	blasts    map[BlastEvent]bool     // explosions already heard (ListenBlasts)
 	power     powerHeard              // the electric grid last frame (listenPower)
 }
 
@@ -135,7 +136,7 @@ func (b *Bus) ListenWorld(v *render.View, w game.WorldView, pawns []game.PawnVie
 		}
 	}
 	*m = Memo{init: true, frames: frames, cutPlants: cut, mines: mines, smooths: smooths, doorsOpen: doors,
-		notice: notice, plantBuf: m.plantBuf, Pods: m.Pods, power: m.power}
+		notice: notice, plantBuf: m.plantBuf, Pods: m.Pods, power: m.power, blasts: m.blasts}
 	b.ListenArrivals(v, w)
 }
 

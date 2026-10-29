@@ -290,7 +290,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !m.Enabled(work.Hunt) {
 			return job.Record{}, ReasonNoHunt
 		}
-		if !hasRanged(g, id) {
+		if !hasRanged(g, id) || weaponDefOf(g, id).Explosive() { // DEF-2: never hunt with explosives
 			return job.Record{}, ReasonNoRanged
 		}
 		if r := g.busyBy(id, aid); r != "" {

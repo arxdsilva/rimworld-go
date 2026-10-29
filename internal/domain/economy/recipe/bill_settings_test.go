@@ -13,11 +13,15 @@ func TestDefInputs(t *testing.T) {
 	if in := club.AppendInputs(nil); len(in) != 1 || in[0] != club.Input {
 		t.Fatalf("a single-input recipe: %v", in)
 	}
-	if club.InputsLabel() != "4 wood" || DefOf(SimpleMeal).InputsLabel() != "2 raw food" || DefOf(Knife).InputsLabel() != "3 any stone blocks" {
-		t.Fatalf("labels %q %q %q", club.InputsLabel(), DefOf(SimpleMeal).InputsLabel(), DefOf(Knife).InputsLabel())
+	// PRD-2: a stuffed recipe lists its material families.
+	if club.InputsLabel() != "4 wood, metal or stone blocks" || DefOf(SimpleMeal).InputsLabel() != "2 raw food" || DefOf(MakeParka).InputsLabel() != "14 fabric or leather" {
+		t.Fatalf("labels %q %q %q", club.InputsLabel(), DefOf(SimpleMeal).InputsLabel(), DefOf(MakeParka).InputsLabel())
 	}
-	if ks := club.InputKinds(); len(ks) != 1 || ks[0] != item.Wood {
+	if ks := club.InputKinds(); !slices.Equal(ks, item.Stuffs(item.Woody|item.Metallic|item.Stony)) || ks[0] != item.Wood {
 		t.Fatalf("club kinds %v", ks)
+	}
+	if ks := DefOf(Cremate).InputKinds(); len(ks) != 1 || ks[0] != item.CorpseHuman {
+		t.Fatalf("cremate kinds %v", ks)
 	}
 	meal := DefOf(SimpleMeal).InputKinds()
 	if !slices.Contains(meal, item.Berries) || !slices.Contains(meal, item.Meat) || slices.Contains(meal, item.Meal) || len(meal) > 32 {

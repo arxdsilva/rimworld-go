@@ -49,7 +49,7 @@ func configured(bl recipe.Bill, c command.Command) recipe.Bill {
 	}
 	bl.Worker = entity.EntityID(c.Worker)
 	bl.UnpauseAt = max(0, c.UnpauseAt)
-	return bl
+	return bl.PinStuff(recipe.DefOf(bl.Recipe), item.Kind(c.Stuff)) // PRD-2: 0 or a kind it doesn't take unpins
 }
 
 // reorder moves bill from to place to (clamped) in bench bid's bills, and

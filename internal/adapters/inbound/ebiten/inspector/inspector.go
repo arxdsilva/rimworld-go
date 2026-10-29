@@ -257,6 +257,15 @@ func drawGear(screen *ebiten.Image, p game.PawnView, in gfx.Rect, temp func(tent
 func (a Pawn) drawGearTab(screen *ebiten.Image, id entity.EntityID, r gfx.Rect) {
 	if p, ok := a.pawnView(id); ok {
 		drawGear(screen, p, r, a.shell.Temp)
+		lines := GearStatLines(p)
+		y := float64(r.Y) + float64(GearLayoutFor(len(GearRows(p))-1).Hint) + float64(gfx.LineStep(gfx.Small)) + 6
+		for _, l := range lines {
+			if float32(y)+gfx.LineStep(gfx.Small) > r.Bottom() {
+				break
+			}
+			gfx.Text(screen, gfx.Ellipsize(l, gfx.Small, float64(r.W)), float64(r.X), y, gfx.Small)
+			y += float64(gfx.LineStep(gfx.Small))
+		}
 	}
 }
 

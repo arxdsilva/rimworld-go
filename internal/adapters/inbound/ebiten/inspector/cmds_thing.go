@@ -393,7 +393,9 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 	if rot := itemRotLine(it); rot != "" { // right under the freshness line
 		lines = append(lines[:1:1], append([]string{rot}, lines[1:]...)...)
 	}
-	return Spec{Title: ItemTitle(it), Subtitle: ItemCategory(it), Lines: lines, Close: "item.close"}
+	title := QualifiedTitle(ItemTitle(it), it.Stuff, it.Quality)
+	lines = append(ItemFactLines(it), lines...)
+	return Spec{Title: title, Subtitle: ItemCategory(it), Lines: lines, Close: "item.close"}
 }
 
 // itemRotLine is how fast a spoiling stack rots where it lies: "" at the

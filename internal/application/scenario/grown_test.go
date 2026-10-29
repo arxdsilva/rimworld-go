@@ -155,7 +155,13 @@ func TestGrownGolden(t *testing.T) {
 	// projectiles with per-weapon warmup, bands and armor, and bills gather
 	// ingredients across stacks; the previous pin held through wave A
 	// (the committed full suite). Stable over -count=2.
-	const want uint64 = 0x1f3b4995d6ddfe70
+	// Re-pinned (BED/PRD/DEF wave C): crafted and built things roll quality
+	// and carry stuff, items wear outdoors and apparel turns ratty, rooms
+	// score the vanilla impressiveness with role thoughts on waking, and
+	// raiders carry kit weapons by tech (grenades and explosions); the
+	// previous pin held through wave B (the committed full suite). Stable
+	// over -count=2.
+	const want uint64 = 0xd0b720b4cfb779b1
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

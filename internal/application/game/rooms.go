@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -13,20 +14,23 @@ import (
 	"rimworld-go/internal/domain/world/terrain"
 )
 
-// RoomView is an enclosed room in the read model.
+// RoomView is an enclosed room in the read model. BED-2 stats: Space, Beauty, Impressiveness
+// in tenths, CleanStat hundredths, Wealth silver; Score is whole points, Label the stage.
 type RoomView struct {
-	ID    int
-	Cells int
-	Role  string
-	Score int
-	Label string // awful .. impressive
-	Lit   bool   // a light shines in it: a powered lamp, a burning torch lamp or campfire
-	Temp  int    // air temperature, tenths of a degree C
+	ID, Cells                            int
+	Role                                 string
+	Score                                int
+	Label                                string // awful .. wondrously impressive
+	Space, Beauty, Wealth, CleanStat     int
+	SpaceLabel, BeautyLabel, WealthLabel string
+	Impressiveness                       int
+	Lit                                  bool // a light shines in it: a powered lamp, a burning torch lamp or campfire
+	Temp                                 int  // air temperature, tenths of a degree C
 	// Roofed is the roofed share of the room's cells, 0..1 (SIM-018).
 	Roofed float64
 	// Filth is the average dirt plus stain per cell (0..filth.Full),
-	// Cleanliness its label and FilthPenalty the impressiveness it costs
-	// (already taken off Score) (SIM-021).
+	// Cleanliness the CleanStat label and FilthPenalty the impressiveness
+	// points the filth costs (already taken off Score) (SIM-021, BED-2).
 	Filth        int
 	Cleanliness  string
 	FilthPenalty int
@@ -38,10 +42,10 @@ type ThoughtView struct {
 	Value int
 }
 
+// roomStats is a rebuild's count per room (filth, items, bed flags: live).
 type roomStats struct {
 	contents room.Contents
-	score    int
-	role     room.Role
+	tally    room.Tally
 }
 
 func (g *Game) markRoomsDirty() { g.roomDirty = true; g.fenceDirty() } // fences.go: a building changed
@@ -92,39 +96,16 @@ func (g *Game) rebuildRoomsFull() {
 
 // roomStatsFull scores every room of a detected grid by a full scan.
 func (g *Game) roomStatsFull(grid []int, sizes []int) []roomStats {
-	w, h := g.grid.Width(), g.grid.Height()
+	w := g.grid.Width()
 	stats := make([]roomStats, len(sizes))
 	for i, n := range sizes {
 		stats[i].contents.Cells = n
 	}
 	g.countRoomBuildings(grid, stats) // rooms_index.go
-	// walls around each room (adjacency count; stone share matters)
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			r := grid[y*w+x]
-			if r < 0 {
-				continue
-			}
-			// SIM-029: a smooth stone floor counts as floored (once)
-			if g.terr.At(x, y) == terrain.StoneSmooth && g.layerBldgAt(x, y, construction.LayerFloor) == 0 {
-				stats[r].contents.Floored++
-			}
-			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-				nx, ny := x+d[0], y+d[1]
-				if nx < 0 || ny < 0 || nx >= w || ny >= h || grid[ny*w+nx] != room.Wall {
-					continue
-				}
-				stats[r].contents.TotalWalls++
-				bid := g.layerBldgAt(nx, ny, construction.LayerObject)
-				if b, ok := g.bldgs.Get(bid); ok && (item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone) || terrain.IsRockWall(g.terr.At(nx, ny)) {
-					stats[r].contents.StoneWalls++
-				}
-			}
+	for i, r := range grid {          // SIM-029: a smooth stone floor counts as floored (once)
+		if r >= 0 && g.terr.At(i%w, i/w) == terrain.StoneSmooth && g.layerBldgAt(i%w, i/w, construction.LayerFloor) == 0 {
+			stats[r].contents.Floored++
 		}
-	}
-	for i := range stats {
-		stats[i].score = room.Impressiveness(stats[i].contents)
-		stats[i].role = room.RoleOf(stats[i].contents)
 	}
 	return stats
 }
@@ -138,7 +119,7 @@ func (g *Game) roomAt(x, y int) int {
 	return g.roomGrid[y*g.grid.Width()+x]
 }
 
-// roomFilth is room r's dirt plus stain and the impressiveness it costs.
+// roomFilth is room r's dirt plus stain and its SIM-021 penalty.
 func (g *Game) roomFilth(r int) (sum, penalty int) {
 	if r < 0 || r >= len(g.rooms) || r >= len(g.filth.roomSum) {
 		return 0, 0
@@ -147,24 +128,21 @@ func (g *Game) roomFilth(r int) (sum, penalty int) {
 	return sum, filth.Penalty(sum, g.rooms[r].contents.Cells)
 }
 
-// roomScore is room r's impressiveness less what its filth costs (rooms
-// must be current).
-func (g *Game) roomScore(r int) int {
-	_, pen := g.roomFilth(r)
-	return g.rooms[r].score - pen
-}
-
 func (g *Game) roomViews() []RoomView {
 	g.ensureRooms()
+	facts := g.regs.rooms.countFacts(g)
 	out := make([]RoomView, len(g.rooms))
 	for i, r := range g.rooms {
-		sum, pen := g.roomFilth(i)
-		avg := sum / max(1, r.contents.Cells)
-		score := r.score - pen
-		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.role.String(), Score: score,
-			Label: room.Label(score), Temp: int(g.roomTemps[i]),
-			Roofed: float64(g.roomRoofed(i)) / 1000,
-			Filth:  avg, Cleanliness: filth.Label(avg), FilthPenalty: pen}
+		f := facts[i]
+		sum, _ := g.roomFilth(i)
+		st, clean := r.tally.Stats(r.contents, sum, f.Wealth), r.tally.Stats(r.contents, 0, f.Wealth)
+		imp := st.ImpressivenessTenths
+		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.tally.Role(r.contents, f.MedicalBeds, f.PrisonerBeds).String(),
+			Score: imp / 10, Label: room.ImpressivenessLabel(imp), Impressiveness: imp, Temp: int(g.roomTemps[i]),
+			Space: st.SpaceTenths, SpaceLabel: room.SpaceLabel(st.SpaceTenths), Beauty: st.BeautyTenths,
+			BeautyLabel: room.BeautyLabel(st.BeautyTenths), Wealth: st.Wealth, WealthLabel: room.WealthLabel(st.Wealth),
+			Roofed: float64(g.roomRoofed(i)) / 1000, Filth: sum / max(1, r.contents.Cells), CleanStat: st.CleanlinessHundredths,
+			Cleanliness: room.CleanlinessLabel(st.CleanlinessHundredths), FilthPenalty: (clean.ImpressivenessTenths - imp) / 10}
 	}
 	// PLAY-021: a room is lit by a light shining in it now (a powered
 	// lamp, a torch lamp or campfire burning, not doused by rain or snow)
@@ -271,6 +249,7 @@ func (g *Game) afterEat(id entity.EntityID, st item.Stack) {
 	pos, _ := g.positions.Get(id)
 	if g.nextToTable(pos.X, pos.Y) {
 		g.remember(id, mood.AteAtTable)
+		g.rest.Waking.Felt(id, rest.Ate) // BED-2: a fine dining room
 	} else {
 		g.remember(id, mood.AteWithoutTable)
 	}

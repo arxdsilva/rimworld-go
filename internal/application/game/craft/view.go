@@ -61,6 +61,13 @@ type BillView struct {
 	Progress      int
 	Gathering     bool
 	NoWorker      string
+	// PRD-2: Stuff is the material the bill is pinned to ("" any the
+	// recipe takes and Ingredients allows; StuffKind its item kind, set by
+	// ConfigureBill's Stuff), and Quality whether the product rolls a
+	// quality from the crafter's skill.
+	Stuff     string
+	StuffKind uint8
+	Quality   bool
 }
 
 // BillIngredientView is one ingredient kind a bill may use.
@@ -147,6 +154,10 @@ func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 			Store: uint8(bl.Store), StoreLabel: bl.Store.String(), StoreZone: bl.Zone, Radius: bl.Radius,
 			SkillMin: bl.SkillMin, SkillMax: bl.MaxSkill(), Worker: uint64(bl.Worker), UnpauseAt: bl.UnpauseAt,
 			Inputs: d.InputsLabel(), NoWorker: b.noWorker(bl, d),
+			StuffKind: uint8(bl.Stuff), Quality: item.HasQuality(d.Output),
+		}
+		if bl.Stuff != 0 {
+			v.Stuff = bl.Stuff.String()
 		}
 		if bl.Worker != 0 {
 			v.WorkerName = b.h.Name(bl.Worker)

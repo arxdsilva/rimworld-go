@@ -4,7 +4,7 @@ Scope: bring beds, rest, room quality and the comfort, beauty and outdoors needs
 
 ## Status (2026-10-29)
 
-Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/rest` extraction, the domain packages and the wiki constants (BED-0). BED-2..3 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave C done for BED-2 (room stats, roles and thoughts; handoff `handoffs/BED-2-room-stats-roles-thoughts.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/rest` extraction, the domain packages and the wiki constants (BED-0). BED-3 has not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -60,18 +60,20 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Room stats: beauty, space, wealth, cleanliness. Impressiveness is a function of those stats. | `room.Contents` and `room.Impressiveness` (`internal/domain/world/room/room.go`) score floors, lamps, tables, chairs, size and stone walls; `roomScore` subtracts filth (`rooms.go`). `RoomView` shows score and cleanliness. | The vanilla stats and formula, replacing the ad-hoc sum. The old checklist tick on 7.4 was wrong; the lead already marked it `[-]`. | BED-0 (domain), BED-2 (wiring) | open |
-| Room roles: bedroom, barracks, hospital, prison cell, prison barracks, dining room, recreation room, workshop, kitchen. | `room.Role` has `General`, `Bedroom`, `Dining`, `Workshop`, `Barracks`; `RoleOf` counts beds, benches and tables (`room.go`); built per room in `roomStatsFull` and `rooms_index.go`. | Hospital, prison cell and barracks, recreation room, kitchen (the role rules use medical flags, prisoner flags and joy furniture). | BED-2 | open |
+| Room stats: beauty, space, wealth, cleanliness. Impressiveness is a function of those stats. | `room.Tally` (`domain/world/room/tally.go`) is built at room rebuild: cells, building beauty (furniture x stuff + quality offset), floor beauty and cleanliness, building and floor value; filth (-15 beauty, -5 clean per unit), item value and medical/prisoner bed flags are read live (`rooms.go`, `rooms_index.go`); impressiveness stages in `room/stats.go`. The old ad-hoc score is gone. | None. | BED-0 (domain), BED-2 | done |
+| Room roles: bedroom, barracks, hospital, prison cell, prison barracks, dining room, recreation room, workshop, kitchen. | `room.Role` with the added hospital, prison cell, prison barracks, kitchen and recreation room, ruled by medical and prisoner flags and joy furniture (`room.go`, `rooms_index.go`). | None. | BED-2 | done |
 | Room caching and invalidation. | `roomTouch`, `roomInputs` (`rooms_index.go`). | Keep as is; new stats must reuse the dirty-room path. | - | done |
-| Room panel and overlay show beauty, space, wealth, impressiveness. | The G overlay tints rooms by impressiveness; the hover panel shows role, score, cleanliness. | Beauty, space and wealth lines (UI checklist 16.7). | BED-2 | open |
+| Room panel and overlay show beauty, space, wealth, impressiveness. | `RoomView` carries Space, Beauty, Wealth, CleanStat, Impressiveness and labels; `hud.RoomCardLines` shows role, impressiveness, space, beauty, wealth, cleanliness; `RoomTint` bands follow the stage thresholds (`hud/rooms.go`). | None. | BED-2 | done |
 
 ### 3.5 Room thoughts
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Bedroom impressiveness ladder (many stages from awful to wonderful), also for barracks, dining and recreation rooms. | One awful/nice pair for bedrooms: `SleptInAwfulRoom` below 0, `SleptInNiceRoom` at 12 or more (`afterSleep`, `rooms.go`). | Full ladders per role and the dining and recreation thoughts. | BED-2 | open |
-| Slept in barracks; shared bed; shared bedroom. | None. | Three thoughts, with trait exemptions. | BED-2 | open |
-| Traits that need their own bedroom. | None. | Trait effect on the shared-bedroom thought. | BED-2 | open |
+| Bedroom impressiveness ladder (many stages from awful to wonderful), also for barracks, dining and recreation rooms. | `rest/room_mood.go` with six new mood kinds: bedroom and prison cell -2, 0, +1..+8; barracks and prison barracks -7..+4; hospital -4, -2, none, none, +1..+6; dining and recreation +2..+8 from decent up. Each is read once per occasion (waking, meal, finished pastime), memory lasts a day, zero allocations. The old nice/awful pair is no longer awarded. | None. | BED-2 | done |
+| Slept in barracks; shared bed; shared bedroom. | Barracks ladder as above; shared bed -5 + opinion/20 clamped -10..0 (`rest/waking.go`). | A distinct shared-bedroom thought is not separate from the barracks one. | BED-2 | partial |
+| Traits that need their own bedroom. | Trait Fussy rekeyed to the new ladder. | Greedy and Jealous need the trait catalogue; Ascetic ladder not coded. | BED-2 | partial |
+| Shelves and storage count toward room wealth. | No shelf building. | Items on shelves in the room tally (PRD-4). | PRD-4 | open |
+| Colony wealth reuses room building value. | `Wealth()` is a separate sum. | Reuse `room.BuildingValue`. | BED-3 | open |
 
 ### 3.6 Needs: comfort, beauty, outdoors
 

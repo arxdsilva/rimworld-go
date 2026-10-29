@@ -45,6 +45,7 @@ type fakeHost struct {
 	targets           []entity.EntityID
 	recovered         []mentalbreak.Kind
 	punches           []pair
+	fakeMuses         // inspiration_test.go (PRD-2)
 }
 
 func newFake(ids ...entity.EntityID) *fakeHost {

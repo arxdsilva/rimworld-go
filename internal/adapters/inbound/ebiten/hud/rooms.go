@@ -20,29 +20,20 @@ import (
 // cleanliness, temperature, light, roof) from game.RoomView. Plus the
 // Alt-held detailed cell lines of the hover panel.
 
+// roomBands are the impressiveness points (Score) where the tint steps
+// (BED-2: 20/30/40/50/65/85/120/170/240).
+var roomBands = [...]float64{20, 30, 40, 50, 65, 85, 120, 170, 240}
+
 // RoomTint colours a room by impressiveness: red (awful) through amber
-// and yellow to green (impressive).
+// and yellow to green (impressive), one step per band.
 func RoomTint(score int) color.NRGBA {
-	stops := []struct {
-		at  float64
-		clr [3]float64
-	}{{-6, [3]float64{200, 50, 40}}, {3, [3]float64{220, 140, 50}}, {9, [3]float64{220, 210, 70}}, {18, [3]float64{70, 190, 80}}}
-	s := float64(score)
-	c := stops[len(stops)-1].clr
-	for i := 0; i+1 < len(stops); i++ {
-		lo, hi := stops[i], stops[i+1]
-		if s <= lo.at {
-			c = lo.clr
-			break
-		}
-		if s < hi.at {
-			t := (s - lo.at) / (hi.at - lo.at)
-			for k := range c {
-				c[k] = lo.clr[k] + (hi.clr[k]-lo.clr[k])*t
-			}
-			break
-		}
+	stops := [...][3]float64{{200, 50, 40}, {190, 90, 45}, {220, 140, 50}, {222, 175, 60}, {220, 210, 70},
+		{170, 205, 75}, {110, 195, 80}, {70, 190, 80}, {60, 185, 130}, {60, 170, 200}}
+	i := 0
+	for i < len(roomBands) && float64(score) >= roomBands[i] {
+		i++
 	}
+	c := stops[i]
 	return color.NRGBA{R: uint8(c[0]), G: uint8(c[1]), B: uint8(c[2]), A: 90}
 }
 
@@ -68,7 +59,8 @@ func (c RoomStats) DrawOverlay(screen *ebiten.Image) {
 	}
 }
 
-// RoomCardLines is the hover card for a room.
+// RoomCardLines is the hover card for a room: its role, impressiveness and
+// the four stats behind it, each with the label the simulation gives it.
 func RoomCardLines(rm game.RoomView) []string {
 	lit := "no"
 	if rm.Lit {
@@ -80,8 +72,11 @@ func RoomCardLines(rm game.RoomView) []string {
 	}
 	return []string{
 		titleCase(rm.Role),
-		fmt.Sprintf("Impressiveness %d (%s)", rm.Score, rm.Label),
-		fmt.Sprintf("Cleanliness: %s", clean),
+		fmt.Sprintf("Impressiveness %.1f (%s)", float64(rm.Impressiveness)/10, rm.Label),
+		fmt.Sprintf("Space %.1f (%s)", float64(rm.Space)/10, rm.SpaceLabel),
+		fmt.Sprintf("Beauty %+.1f (%s)", float64(rm.Beauty)/10, rm.BeautyLabel),
+		fmt.Sprintf("Wealth %d silver (%s)", rm.Wealth, rm.WealthLabel),
+		fmt.Sprintf("Cleanliness %+.2f (%s)", float64(rm.CleanStat)/100, clean),
 		"Temperature " + FmtTemp(rm.Temp),
 		fmt.Sprintf("Lit: %s   Roofed: %d%%", lit, int(math.Round(rm.Roofed*100))),
 		fmt.Sprintf("%d cells", rm.Cells),

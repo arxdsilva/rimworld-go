@@ -15,6 +15,10 @@ type Craft struct {
 	Shop     *Shop     // shop.go: finding and doing bill work
 	Drying   *Drying   // drying.go: drying racks
 	Cabinets *Cabinets // cabinet.go: the tool-cabinet bonus
+	// PRD-2: quality rolls (quality.go); rot, deterioration and worn
+	// apparel wear (condition.go).
+	Quality   *Quality
+	Condition *Condition
 }
 
 // New builds the production cluster on host h.
@@ -23,9 +27,11 @@ func New(h Host) *Craft {
 		Bills:    &Bills{h: h, p: planner{h}, list: make(map[entity.EntityID][]recipe.Bill)},
 		Drying:   &Drying{h: h, racks: make(map[entity.EntityID]Batch)},
 		Cabinets: &Cabinets{h: h},
+		Quality:  &Quality{h: h},
 	}
+	c.Condition = &Condition{h: h}
 	c.Bills.drying = c.Drying
-	c.Shop = &Shop{h: h, bills: c.Bills, drying: c.Drying, cabinets: c.Cabinets, p: planner{h}}
+	c.Shop = &Shop{h: h, bills: c.Bills, drying: c.Drying, cabinets: c.Cabinets, quality: c.Quality, p: planner{h}}
 	return c
 }
 

@@ -29,7 +29,7 @@ import (
 // gets the panel inset by paneInset, so every body also copes with less.
 const (
 	needsWantW, needsWantH       = 400, 260
-	gearWantW, gearWantH         = 400, 220
+	gearWantW, gearWantH         = 400, 320
 	logWantW, logWantH           = 400, 280
 	bioWantW, bioWantH           = 480, 404
 	healthWantW, healthWantH     = 480, 360
@@ -265,6 +265,9 @@ func carryName(name func(entity.EntityID) string, id entity.EntityID) string {
 // put off or queued, the weapon and clothes, then where the colonist is.
 func (a Pawn) PawnLines(p game.PawnView) []string {
 	out := PawnStatusLines(p, a.CreatureName)
+	if ln := InspirationLine(p.Inspiration); ln != "" {
+		out = append(out, ln)
+	}
 	job := p.Job
 	if job == "" {
 		job = "idle"

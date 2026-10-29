@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/projectile"
@@ -99,7 +100,7 @@ func TestApparelArmorInTheGame(t *testing.T) {
 	outcome := map[int]int{} // damage dealt by a hit -> count
 	for n := 0; n < 60; n++ {
 		tgt := sleeper(g, 6, 5, "Bo")
-		g.apparel[tgt] = worn{item.Body: item.Duster}
+		g.apparel[tgt] = worn{On: [craft.Slots]craft.Piece{item.Body: {Kind: item.Duster}}}
 		for i := 0; i < 8; i++ {
 			before := len(g.traces)
 			g.combat.Strikes.Strike(att, tgt, weapon.Knife)

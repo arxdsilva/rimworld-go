@@ -752,6 +752,9 @@ type Building struct {
 	// Forbidden (BED-1): nobody claims or uses it until allowed
 	// (command.SetForbidden on the building).
 	Forbidden bool
+	// Quality (PRD-2) is the building's quality, quality.Level+1 (0 = none
+	// or built before quality existed: read as Normal by the stats).
+	Quality uint8
 }
 
 // HP is the building's remaining hit points.

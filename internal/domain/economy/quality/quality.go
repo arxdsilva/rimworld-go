@@ -170,3 +170,15 @@ func Factor(l Level, s Stat) int {
 
 // Apply scales base by Factor(l, s).
 func Apply(base int, l Level, s Stat) int { return base * Factor(l, s) / 1000 }
+
+// Stored is l as the one-higher byte item stacks and buildings keep
+// (item.Stack.Quality, construction.Building.Quality): 0 means none.
+func Stored(l Level) uint8 { return uint8(l) + 1 }
+
+// FromStored reads a stored quality byte; ok is false for 0 (none).
+func FromStored(b uint8) (Level, bool) {
+	if b == 0 || !Level(b-1).Valid() {
+		return Default, false
+	}
+	return Level(b - 1), true
+}

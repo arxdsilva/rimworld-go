@@ -22,7 +22,9 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
+	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/projectile"
+	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/drug"
@@ -151,6 +153,12 @@ type PawnView struct {
 	ApparelForced          []bool
 	ChangingInto           string
 	ComfortMin, ComfortMax int
+	// Worn is each Apparel entry's material, quality and condition, and
+	// Inspiration the colonist's inspiration ("" when none) with
+	// InspirationTicks left of it (PRD-2).
+	Worn             []WornView
+	Inspiration      string
+	InspirationTicks uint64
 	// Priorities is the work priority per work.Type (0 off, 1 first .. 4);
 	// Schedule the activity per hour.
 	Priorities []int
@@ -167,6 +175,10 @@ type PawnView struct {
 	// (wanderer, social, homebody).
 	Temperament string
 	Weapon      string // wielded weapon name ("fists" when unarmed)
+	// WeaponStats are its numbers and ApparelArmor each Apparel entry's
+	// armor by its stuff and quality, permille (DEF-2: the gear tab).
+	WeaponStats  weapon.View
+	ApparelArmor []armor.Set
 	// Lying: downed or asleep. InBed: lying in its claimed bed.
 	// CarriedBy: the rescuer carrying it (0 when not carried);
 	// CarryingPawn: the pawn it carries (0 when none; filled from SIM-062).
@@ -279,6 +291,12 @@ type ItemView struct {
 	// PoisonPermille: a cooked meal's food-poisoning chance per meal
 	// eaten (WS-M, food_poison.go); 0 for anything else.
 	PoisonPermille int
+	// PRD-2: a made thing's Quality and material ("" when none), its hit
+	// points HP of MaxHP (MaxHP 0: no condition), and Tainted apparel
+	// (worn by someone who died in it).
+	Quality, Stuff string
+	HP, MaxHP      int
+	Tainted        bool
 }
 
 // LetterView is one letter in the right-side stack (PLAY-018).
@@ -344,6 +362,7 @@ type BuildingView struct {
 	Floor       bool
 	Deconstruct bool
 	Stuff       string
+	Quality     string // PRD-2: furniture and beds ("" when it has none)
 	// SwapTo is the material a pending in-place swap turns it into, with
 	// SwapPct of the work done (PLAY-011); "" when none.
 	SwapTo  string
@@ -1125,7 +1144,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.CareLevel = uint8(cv.CareLevel)                                         // MED-03
 		pv.Disease = g.diseaseLabel(id)                                            // disease.go (MED-04)
 		pv.OverdosePct, pv.OverdoseStage = g.overdoseView(id)                      // drugs.go (MED-07)
-		pv.Weapon = weaponDefOf(g, id).Name
+		pv.Weapon, pv.WeaponStats = weaponDefOf(g, id).Name, weapon.Stats(g.weaponOf(id))
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
@@ -1139,7 +1158,17 @@ func (g *Game) snapshot() []PawnView {
 		pv.Schedule = append([]schedule.Activity(nil), sg[:]...)
 		pv.Activity = g.activityOf(id)
 		pv.Apparel = g.Wearing(id)
+		for _, s := range wearSlots { // in Wearing's order
+			if p := g.apparel[id].On[s]; p.Kind != 0 {
+				l, _ := armor.Piece(p.Kind, p.Stuff, p.Quality)
+				pv.ApparelArmor = append(pv.ApparelArmor, l.Set)
+			}
+		}
 		pv.ApparelForced, pv.ChangingInto = g.wornForced(id), g.changingInto(id) // apparel.go
+		pv.Worn = g.apparel[id].Views()                                          // craft/garment.go (PRD-2)
+		if in, ok := g.mind.Inspire.Of(id); ok {                                 // mind/inspiration.go (PRD-2)
+			pv.Inspiration, pv.InspirationTicks = in.Kind.String(), in.Until-uint64(g.clock.Now())
+		}
 		pv.Recreation = g.joy[id] * 100 / recreation.Full
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()

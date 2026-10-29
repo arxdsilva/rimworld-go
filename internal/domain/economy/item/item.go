@@ -126,6 +126,39 @@ const (
 	// prophylactic against plague, malaria and sleeping sickness.
 	NumbrootTincture
 	ProphylTablet
+	// DEF-2 (append only, saved): the vanilla weapon catalogue (wiki:
+	// Weapons) — medieval blades, bows and the pila, firearms, grenades
+	// (one stack is the weapon) and launchers — and the armor (wiki: Armor).
+	Mace
+	Gladius
+	Longsword
+	ShortBow
+	RecurveBow
+	Greatbow
+	Pila
+	Revolver
+	Autopistol
+	MachinePistol
+	AssaultRifle
+	SniperRifle
+	PumpShotgun
+	ChainShotgun
+	HeavySMG
+	LMG
+	Minigun
+	FragGrenades
+	MolotovCocktails
+	EMPGrenades
+	IncendiaryLauncher
+	EMPLauncher
+	FlakVest
+	FlakPants
+	FlakJacket
+	PlateArmor
+	MarineArmor
+	MarineHelmet
+	SimpleHelmet
+	AdvancedHelmet
 	numKinds
 )
 
@@ -143,10 +176,21 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"prosthetic foot", "glass eye", "wooden nose",
 	"nanomed kit", "servo arm", "servo leg", "optic implant", "cochlear implant", "spinal brace", "pump heart",
 	"synth stomach", "valve heart", "kidney", "lung", "heart", "liver",
-	"numbroot tincture", "prophyl tablet"}
+	"numbroot tincture", "prophyl tablet",
+	"mace", "gladius", "longsword", "short bow", "recurve bow", "greatbow", "pila",
+	"revolver", "autopistol", "machine pistol", "assault rifle", "sniper rifle", "pump shotgun", "chain shotgun",
+	"heavy smg", "lmg", "minigun", "frag grenades", "molotov cocktails", "EMP grenades",
+	"incendiary launcher", "emp launcher",
+	"flak vest", "flak pants", "flak jacket", "plate armor", "marine armor", "marine helmet", "simple helmet", "advanced helmet"}
 
 // IsWeapon reports whether k can be equipped.
-func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
+func (k Kind) IsWeapon() bool {
+	return k == Club || k == Rifle || k == Knife || k == Spear || k >= Mace && k <= EMPLauncher
+}
+
+// IsArmor reports apparel whose job is protection (DEF-2: flak, plate,
+// marine armor and helmets; armor.Apparel has the ratings).
+func (k Kind) IsArmor() bool { return k >= FlakVest && k <= AdvancedHelmet }
 
 // IsCorpse reports an animal carcass.
 func (k Kind) IsCorpse() bool {
@@ -239,6 +283,7 @@ const (
 	NoSlot Slot = iota
 	Body        // outer layer over the shirt: parka, duster
 	Head
+	Legs // DEF-2: flak pants
 )
 
 func (s Slot) String() string {
@@ -247,6 +292,8 @@ func (s Slot) String() string {
 		return "body"
 	case Head:
 		return "head"
+	case Legs:
+		return "legs"
 	}
 	return ""
 }
@@ -266,6 +313,10 @@ var apparel = [numKinds]struct {
 	Duster: {Body, 40, 80},
 	// knitted wool traps more warmth than leather and breathes a little
 	WoolParka: {Body, 240, -20},
+	// DEF-2 armor, wiki insulation (Normal quality; helmets in steel).
+	FlakVest: {Body, 10, 0}, FlakPants: {Legs, 35, 10}, FlakJacket: {Body, 144, 30},
+	PlateArmor: {Body, 0, 0}, MarineArmor: {Body, 680, 100},
+	MarineHelmet: {Head, 40, 20}, SimpleHelmet: {Head, 4, 0}, AdvancedHelmet: {Head, 4, 0},
 }
 
 // IsApparel reports clothing that can be worn.
@@ -288,7 +339,10 @@ func (k Kind) Insulation() (cold, heat int) {
 }
 
 // Apparel lists every wearable kind.
-func Apparel() []Kind { return []Kind{Parka, Tuque, Duster, WoolParka} }
+func Apparel() []Kind {
+	return []Kind{Parka, Tuque, Duster, WoolParka,
+		FlakVest, FlakPants, FlakJacket, PlateArmor, MarineArmor, MarineHelmet, SimpleHelmet, AdvancedHelmet}
+}
 
 // IsStuff reports whether k is a building material.
 func (k Kind) IsStuff() bool { return k == Wood || IsStoneBlocks(k) || k == Steel }
@@ -340,6 +394,15 @@ type Stack struct {
 	// per meal eaten (set by the cook from skill and kitchen, WS-M); 0
 	// for everything else and for stacks from older saves.
 	Poison int16
+	// Quality (PRD-2) is the made item's quality stored as quality.Level+1
+	// (economy/quality: Stored/FromStored); 0 = none (raw materials, food).
+	Quality uint8
+	// Wear (PRD-2) is the hit points the stack has lost to use and weather
+	// (deterioration); 0 = pristine, so older saves load as new items.
+	Wear int
+	// Stuff (PRD-2) is the material a stuffed item is made of (a steel
+	// longsword, a cloth parka); 0 = none or its kind's default.
+	Stuff Kind
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
@@ -389,11 +452,13 @@ func DryRate(tenthsC int) int {
 // Rotten corpses never merge with fresh ones, one person's body (or
 // bones) never merges with another's, and animal corpses stack by species;
 // fertile eggs stack by species and by whose they are (Tame), and the
-// merged stack keeps the incubation of the one it joins.
+// merged stack keeps the incubation of the one it joins. Made items
+// stack only with their own quality, material and wear (PRD-2).
 func CanMerge(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
 		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal && a.Tame == b.Tame &&
-		a.Forbidden == b.Forbidden && a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked
+		a.Forbidden == b.Forbidden && a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked &&
+		a.Quality == b.Quality && a.Stuff == b.Stuff && a.Wear == b.Wear
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a

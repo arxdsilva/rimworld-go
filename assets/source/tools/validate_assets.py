@@ -168,12 +168,13 @@ TROT_FRAMES = tuple("walk%02d" % i for i in range(1, 9))
 ANIMAL_FACINGS = ("south", "east", "north")    # west is east mirrored by the renderer
 # Per-build layers (families/pawn.py BUILD_LAYERS): m_avg keeps the un-suffixed keys,
 # the rest are <layer>_<build>_<facing>. Hair, beards, the tuque and the scar are shared.
-BUILD_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
+BUILD_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather",
+                "flak_pants", "flak_vest", "flak_jacket", "plate_armor", "marine_armor")
 PAWN_BUILDS = ("m_thin", "m_avg", "m_heavy", "f_thin", "f_avg", "f_heavy")
 LEGACY_BUILD = "m_avg"
 HAIR_LAYERS = ("hair_short", "hair_crop", "hair_bun", "hair_long", "hair_braid", "hair_shaved", "hair_curls",
                "hair_tail", "beard_short", "beard_full", "beard_moustache")
-SHARED_LAYERS = HAIR_LAYERS + ("tuque_knit", "face_scar")
+SHARED_LAYERS = HAIR_LAYERS + ("tuque_knit", "face_scar", "simple_helmet", "advanced_helmet", "marine_helmet")
 PAWN_FACINGS = ("south", "east", "north")      # west is east mirrored by the renderer
 BODY_ATTACH = ("head", "hold", "back")
 GONE_ATTACH = ("hand", "hand_l")

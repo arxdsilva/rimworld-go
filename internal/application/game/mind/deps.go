@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -17,6 +18,7 @@ type Host interface {
 	Aggression
 	Brawls
 	Events
+	Muses
 }
 
 // Pawns answers who a pawn is, where and how it feels.
@@ -109,4 +111,14 @@ type Events interface {
 	// Outcome rolls f's memory of the fight with other (none for the
 	// dead).
 	Outcome(f, other entity.EntityID)
+}
+
+// Muses is what inspirations need (PRD-2, inspiration.go).
+type Muses interface {
+	// SkillLevel is id's level in sk (inspiration minimum skills).
+	SkillLevel(id entity.EntityID, sk skill.ID) uint8
+	// Inspired announces id's new inspiration (a letter, the log).
+	Inspired(id entity.EntityID, label string)
+	// InspirationEnded tells that id's unused inspiration faded.
+	InspirationEnded(id entity.EntityID, label string)
 }

@@ -17,6 +17,7 @@ type Shop struct {
 	bills    *Bills
 	drying   *Drying
 	cabinets *Cabinets
+	quality  *Quality
 	p        planner
 	buf      planBuf // the ingredient search's scratch (the tick path)
 }
@@ -269,10 +270,19 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 			out, extra = h.ButcherYield(id, out), h.ButcherYield(id, extra)
 		}
 	}
+	stuff := item.Kind(0)
+	if st, ok := h.Stack(j.Carry); ok {
+		stuff = st.Kind // PRD-2: a stuffed product is made of what it took
+	}
 	h.DeleteItem(j.Carry)
 	switch {
 	case out > 0 && d.Output == item.Meal: // the cook's poison chance
 		h.DropMeal(id, b.Kind, d.Output, out, j.DestX, j.DestY)
+	case out > 0 && item.HasQuality(d.Output): // PRD-2: each piece rolls its quality
+		for range out {
+			p, _ := s.quality.Product(id, d, stuff, j.DestX, j.DestY)
+			h.DropStackOf(p, j.DestX, j.DestY)
+		}
 	case out > 0:
 		h.DropStack(d.Output, out, j.DestX, j.DestY)
 	}

@@ -42,6 +42,9 @@ type Track struct {
 type Save struct {
 	Track map[entity.EntityID]Track
 	Calm  map[entity.EntityID]uint64
+	// PRD-2 (inspiration.go): inspirations and the calm after one.
+	Inspire     map[entity.EntityID]Inspiration
+	InspireCalm map[entity.EntityID]uint64
 }
 
 // Mind runs every colonist's mental breaks.
@@ -51,11 +54,13 @@ type Mind struct {
 	// calm: no new break before this tick (the catharsis after one).
 	calm map[entity.EntityID]uint64
 	buf  []entity.EntityID // victim candidates, reused
+	// Inspire is the inspiration component (inspiration.go, PRD-2).
+	Inspire *Inspirations
 }
 
 // New builds a Mind over h.
 func New(h Host) *Mind {
-	return &Mind{h: h, track: map[entity.EntityID]Track{}, calm: map[entity.EntityID]uint64{}}
+	return &Mind{h: h, track: map[entity.EntityID]Track{}, calm: map[entity.EntityID]uint64{}, Inspire: newInspirations(h)}
 }
 
 // Hostile reports a break that makes a colonist a fair target (colonists
@@ -73,13 +78,18 @@ func (m *Mind) Target(id entity.EntityID) entity.EntityID {
 }
 
 // Export is mind's state for the save.
-func (m *Mind) Export() Save { return Save{Track: maps.Clone(m.track), Calm: maps.Clone(m.calm)} }
+func (m *Mind) Export() Save {
+	s := Save{Track: maps.Clone(m.track), Calm: maps.Clone(m.calm)}
+	s.Inspire, s.InspireCalm = m.Inspire.export()
+	return s
+}
 
 // Import restores Export's state (empty: none, or an older save).
 func (m *Mind) Import(s Save) {
 	m.track, m.calm = map[entity.EntityID]Track{}, map[entity.EntityID]uint64{}
 	maps.Copy(m.track, s.Track)
 	maps.Copy(m.calm, s.Calm)
+	m.Inspire.load(s.Inspire, s.InspireCalm)
 }
 
 // Force starts break k on id now for its minimum duration (dev tools and
@@ -103,6 +113,7 @@ func (m *Mind) Tick(id entity.EntityID, j job.Record) bool {
 		if (now+uint64(id)*checkStagger)%clock.TicksPerHour != 0 {
 			return false
 		}
+		m.Inspire.Check(id) // inspiration.go (PRD-2)
 		return m.maybeBreak(id)
 	}
 	if k == mentalbreak.SocialFight {

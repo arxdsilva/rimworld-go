@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -55,6 +56,8 @@ type burstStamp struct {
 	Tick    uint64
 	Species animal.Species
 	Turret  bool // a destroyed sentry turret's blast (turret.go, PLAY-024)
+	Blast   explosion.Kind
+	Radius  int // DEF-2: an explosion's kind and radius (tenths of a tile)
 }
 
 // BurstView is a recent explosive death, for the renderer's flash and
@@ -64,7 +67,11 @@ type BurstView struct {
 	Tick    uint64
 	Species string
 	// Turret: a destroyed sentry turret's blast (PLAY-024); Species is "".
+	// Blast names an explosion ("bomb", "flame", "EMP", "smoke"; DEF-2)
+	// of Radius tenths of a tile; "" otherwise.
 	Turret bool
+	Blast  string
+	Radius int
 }
 
 const (
@@ -449,8 +456,8 @@ func (g *Game) fillWildlifeView(w *WorldView) {
 	}
 	w.Bursts = make([]BurstView, len(g.wl.Bursts))
 	for i, b := range g.wl.Bursts {
-		w.Bursts[i] = BurstView{X: b.X, Y: b.Y, Tick: b.Tick, Species: b.Species.String(), Turret: b.Turret}
-		if b.Turret {
+		w.Bursts[i] = BurstView{X: b.X, Y: b.Y, Tick: b.Tick, Species: b.Species.String(), Turret: b.Turret, Blast: b.Blast.String(), Radius: b.Radius}
+		if b.Turret || b.Blast != 0 {
 			w.Bursts[i].Species = ""
 		}
 	}

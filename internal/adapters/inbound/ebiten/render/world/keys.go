@@ -61,6 +61,8 @@ func ItemSprite(kind string) string {
 		return "item/club_wood"
 	case "rifle":
 		return "item/rifle_ground"
+	case "EMP grenades": // DEF-2: sprite names are lower case
+		return "item/emp_grenades"
 	case "dustbuck corpse":
 		return "item/corpse_dustbuck"
 	case "ridgewolf corpse":

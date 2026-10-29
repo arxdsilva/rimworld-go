@@ -19,6 +19,9 @@ type BurstEvent struct {
 	ID   entity.EntityID
 	X, Y int
 	Tick uint64
+	// Blast: a weapon's explosion (DEF-2), voiced by cue.Bus.ListenBursts,
+	// so it raises no creature bang of its own.
+	Blast bool
 }
 
 type burstKey struct {
@@ -56,7 +59,9 @@ func (t *BurstTracker) Emit(c *Set, v *render.View, events []BurstEvent) {
 func (c *Set) emitBurst(v *render.View, ev BurstEvent) {
 	x, y := float64(ev.X)+0.5, float64(ev.Y)+0.4
 	seed := uint64(ev.ID)*0x9E3779B1 ^ ev.Tick*0x85EBCA6B
-	c.Host.BurstCue(x, y) // the bang (render/cue)
+	if !ev.Blast {
+		c.Host.BurstCue(x, y) // the bang (render/cue)
+	}
 
 	// the flash: one big, short-lived ember that swells and fades
 	if len(*c.Parts) < MaxParticles {
@@ -83,9 +88,11 @@ func (c *Set) EmitWorldBursts(v *render.View, w game.WorldView) {
 	if len(w.Bursts) == 0 {
 		return
 	}
-	evs := make([]BurstEvent, 0, len(w.Bursts))
+	evs := c.burstBuf[:0] // reused each frame
 	for _, b := range w.Bursts {
-		evs = append(evs, BurstEvent{ID: entity.EntityID(uint64(uint32(b.X))<<32 | uint64(uint32(b.Y))), X: b.X, Y: b.Y, Tick: b.Tick})
+		evs = append(evs, BurstEvent{ID: entity.EntityID(uint64(uint32(b.X))<<32 | uint64(uint32(b.Y))), X: b.X, Y: b.Y, Tick: b.Tick,
+			Blast: b.Blast != ""})
 	}
+	c.burstBuf = evs
 	c.bursts.Emit(c, v, evs)
 }

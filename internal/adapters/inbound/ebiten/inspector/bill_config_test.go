@@ -1,10 +1,12 @@
 package inspector
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -268,5 +270,48 @@ func TestBedStatsLinesAndForbidToggle(t *testing.T) {
 	}
 	if !found {
 		t.Error("BuildingCommands lacks Forbid")
+	}
+}
+
+// TestBillStuffRoundTrip (PRD-2): the bill's pinned material survives
+// every ConfigureBill, a stuffed bill's dialog picks it, and other bills
+// show no picker.
+func TestBillStuffRoundTrip(t *testing.T) {
+	t.Parallel()
+	f, a := benchFixture(t)
+	steel, wood := uint8(item.Steel), uint8(item.Wood)
+	f.world.Buildings[0].Bills[1].StuffKind, f.world.Buildings[0].Bills[1].Stuff = steel, "steel"
+	b, _ := a.SelectedBuilding()
+	cfg := billSettings(b.Bills[1])
+	if cfg.Stuff != steel {
+		t.Fatalf("settings stuff = %d, want steel %d", cfg.Stuff, steel)
+	}
+	if c := billConfigCmd(b, 1, cfg); c.Stuff != steel {
+		t.Fatalf("ConfigureBill clears the pinned material: %+v", c)
+	}
+	cfg.Ingredients = []BillIngredient{{Item: wood, Label: "wood", Allowed: true}, {Item: steel, Label: "steel", Allowed: true}}
+	a.Bills().openBillConfigWith(b, 1, cfg)
+	f.frameOnce()
+	if !f.clickWidget("bill.cfg.radius.plus") || lastCmd(t, f).Stuff != steel {
+		t.Fatalf("another control dropped the material: %+v", lastCmd(t, f))
+	}
+	if !f.clickWidget("bill.cfg.stuff." + strconv.Itoa(int(wood))) {
+		t.Fatal("a stuffed bill has no material picker")
+	}
+	if c := lastCmd(t, f); c.Kind != command.ConfigureBill || c.Stuff != wood || c.Radius != 11 {
+		t.Fatalf("pin wood = %+v", c)
+	}
+	f.clickWidget("bill.cfg.stuff.0")
+	if c := lastCmd(t, f); c.Stuff != 0 {
+		t.Fatalf("any = %+v", c)
+	}
+	f.Kit().CloseTop()
+	openCfg(a, 0) // meat and plant: no materials
+	f.frameOnce()
+	if _, ok := f.Kit().Find("bill.cfg.stuff.0"); ok {
+		t.Error("a bill of ordinary ingredients offers a material picker")
+	}
+	if billMaterials([]BillIngredient{{Item: steel}}) != nil {
+		t.Error("one material is nothing to pick from")
 	}
 }

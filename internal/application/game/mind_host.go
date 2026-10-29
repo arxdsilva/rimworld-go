@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
@@ -43,12 +44,13 @@ type mindHost struct {
 	mindAggro
 	mindBrawls
 	mindEvents
+	mindMuses
 }
 
 var _ mind.Host = mindHost{}
 
 func newMindHost(g *Game) mindHost {
-	return mindHost{mindPawns{g}, mindBreaks{g}, mindActs{g}, mindAggro{g}, mindBrawls{g}, mindEvents{g}}
+	return mindHost{mindPawns{g}, mindBreaks{g}, mindActs{g}, mindAggro{g}, mindBrawls{g}, mindEvents{g}, mindMuses{g}}
 }
 
 type mindPawns struct{ g *Game }
@@ -311,4 +313,19 @@ func (h mindEvents) Recovered(id entity.EntityID, _ mentalbreak.Kind) {
 	pos, _ := g.positions.Get(id)
 	g.message(pos.X, pos.Y, "%s has calmed down and feels a little better.", g.name(id))
 	g.interrupt(id, job.Cancelled)
+}
+
+// mindMuses: inspirations' skills and news (mind/inspiration.go, PRD-2).
+type mindMuses struct{ g *Game }
+
+func (h mindMuses) SkillLevel(id entity.EntityID, sk skill.ID) uint8 {
+	return h.g.skillOf(id, sk).Level
+}
+func (h mindMuses) Inspired(id entity.EntityID, label string) {
+	h.g.letter(letterGood, "Inspiration", fmt.Sprintf("%s has %s: the next thing %s makes or builds turns out better.",
+		h.g.personName(id), label, h.g.personName(id)), id)
+}
+func (h mindMuses) InspirationEnded(id entity.EntityID, label string) {
+	p, _ := h.g.positions.Get(id)
+	h.g.message(p.X, p.Y, "%s's %s faded unused.", h.g.personName(id), label)
 }

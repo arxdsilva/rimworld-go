@@ -59,7 +59,7 @@ func TestParkaComesOffInSummer(t *testing.T) {
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
 	w := g.apparel[id]
-	w[item.Body] = item.Parka
+	w.On[item.Body].Kind = item.Parka
 	g.apparel[id] = w
 	g.Step(200)
 	if got := g.Wearing(id); len(got) != 0 {
@@ -125,7 +125,7 @@ func dressRun(g *Game, n int, done func() bool, pawns ...entity.EntityID) int {
 	return n
 }
 
-func wears(g *Game, id entity.EntityID, s item.Slot) item.Kind { return g.apparel[id][s] }
+func wears(g *Game, id entity.EntityID, s item.Slot) item.Kind { return g.apparel[id].Kind(s) }
 
 // A colonist busy mining on a cold day drops the work for a parka that
 // turns up, within one 60-tick bucket.
@@ -250,7 +250,7 @@ func TestDressComfortShiftCountsOnBothSides(t *testing.T) {
 		t.Fatalf("setup: thin shift %d", c)
 	}
 	w := g.apparel[id]
-	w[item.Body] = item.Parka
+	w.On[item.Body].Kind = item.Parka
 	g.apparel[id] = w
 	dressRun(g, 600, nil, id)
 	if wears(g, id, item.Body) != item.Parka {
@@ -279,7 +279,7 @@ func TestDressForcedSummerParkaStays(t *testing.T) {
 	if dressRun(g, 300, func() bool { return wears(g, id, item.Body) == item.Parka }, id); wears(g, id, item.Body) != item.Parka {
 		t.Fatal("the ordered parka never went on")
 	}
-	if !g.apparel[id].forced(item.Body) {
+	if !g.apparel[id].IsForced(item.Body) {
 		t.Fatal("an ordered garment marks its slot as the player's choice")
 	}
 	if pv := pawnView(g, id); len(pv.ApparelForced) != 1 || !pv.ApparelForced[0] {
@@ -298,7 +298,7 @@ func TestDressForcedSummerParkaStays(t *testing.T) {
 	if dressRun(g, 300, func() bool { return wears(g, id, item.Body) == item.Duster }, id); wears(g, id, item.Body) != item.Duster {
 		t.Fatal("a new order for the slot should replace the parka")
 	}
-	if !g.apparel[id].forced(item.Body) {
+	if !g.apparel[id].IsForced(item.Body) {
 		t.Fatal("the new choice is the player's too")
 	}
 }
@@ -383,7 +383,7 @@ func TestDressTakesOffWithoutStoppingWork(t *testing.T) {
 	t.Parallel()
 	g, id := dressGame(t, 16, 8, 250) // midsummer: the parka is too hot
 	w := g.apparel[id]
-	w[item.Body] = item.Parka
+	w.On[item.Body].Kind = item.Parka
 	g.apparel[id] = w
 	atBucket(g, id)
 	rec := job.Record{Kind: job.Mine, State: job.Goto, TX: 12, TY: 5, DestX: 13, DestY: 5}
@@ -448,7 +448,7 @@ func TestDressStateSurvivesSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !h.apparel[id].forced(item.Body) || h.apparel[id][item.Body] != item.Parka || !h.dressCooling(id, item.Body) {
+	if !h.apparel[id].IsForced(item.Body) || h.apparel[id].Kind(item.Body) != item.Parka || !h.dressCooling(id, item.Body) {
 		t.Fatalf("after load: worn %v, cooling %v", h.apparel[id], h.dressCooling(id, item.Body))
 	}
 	if got := h.Wearing(id); len(got) != 1 || got[0] != "parka" {

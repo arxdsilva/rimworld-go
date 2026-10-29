@@ -26,6 +26,7 @@ const (
 	// sentry turret shots and blasts (defenseSalt).
 	tradeSalt   = 0x7EAD3
 	defenseSalt = 0xDEF3A5
+	craftSalt   = 0xC2AF7 // PRD-2: quality rolls and worn apparel wear
 )
 
 // Stream names, the RNGStreams save keys.
@@ -40,6 +41,7 @@ const (
 	streamMedical = "medical"
 	streamTrade   = "trade"
 	streamDefense = "defense"
+	streamCraft   = "craft"
 )
 
 // streamSeedKey holds the base seed in the RNGStreams save map (8 bytes,
@@ -51,7 +53,7 @@ var streamSalts = map[string]uint64{
 	streamSocial: socialSalt, streamBody: bodySalt, streamDrug: drugSalt,
 	streamWorld: worldSalt, streamPrison: prisonSalt, streamBond: bondSalt,
 	streamPower: powerSalt, streamMedical: medSalt,
-	streamTrade: tradeSalt, streamDefense: defenseSalt,
+	streamTrade: tradeSalt, streamDefense: defenseSalt, streamCraft: craftSalt,
 }
 
 // rngStreams is the base seed and the streams created so far.

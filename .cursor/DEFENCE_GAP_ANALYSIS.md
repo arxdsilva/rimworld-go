@@ -4,7 +4,7 @@ Scope: bring ranged and melee combat, armor, cover, explosions, traps, turrets, 
 
 ## Status (2026-10-29)
 
-Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). DEF-2..4 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave C done for DEF-2 (weapons, armor, explosions; handoff `handoffs/DEF-2-weapons-armor-explosions.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). DEF-3..4 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -32,10 +32,10 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
 | Shots are projectiles in flight; misses can strike others in the line or the cover; allies can be hit. | `combat.Shots` (`game/combat/shot.go`: `fire`, `Step`, `fly`, `through`, `land`) flies `projectile.Shot` cell by cell; stray hits (`attack.StrayHit`), interception (`attack.InterceptChance`), friendly fire beyond 5 tiles (`attack.FriendlySafe`), save via `Export`/`Import`. Original tuning: an aimed shot hits its target only within `Tracking` (1 tile) of the aim point. | None; natural cover in DEF-3. | DEF-1 | done |
-| Each weapon has warmup, cooldown, burst count, range and an accuracy curve over touch, short, medium and long range. | `weapon.Def` carries `Warmup`, `Cooldown`, `Burst`, `BurstTicks` and `Bands`; `Strikes.Do`/`next` use warmup and cooldown (`combat/strike.go`, `AimTicks`, `CycleTicks`); `attack.DefaultBands` interpolates accuracy. Burst fire is not used yet. | Burst weapons (DEF-2). | DEF-0 (fields), DEF-1 (use) | partial |
+| Each weapon has warmup, cooldown, burst count, range and an accuracy curve over touch, short, medium and long range. | `weapon.Def` bands, warmup, cooldown, burst and burst ticks per weapon in the DEF-2 catalogue (`domain/combat/weapon`); `Strikes.Do`/`next` use them (`combat/strike.go`); burst weapons (assault rifle, machine pistol, LMG, minigun and others) fire bursts through `job.Count`. | None. | DEF-0, DEF-1, DEF-2 | done |
 | Armor penetration and damage types (sharp, blunt, heat, bomb, burn, EMP). | `Def.DamageType` and `Def.ArmorPen`; `Strikes.armorRoll` feeds `wound` (`combat/strike.go`). | None. | DEF-0 (domain), DEF-1 | done |
 | Hit chance takes shooter skill, target size, lighting and weather into account. | `Strikes.report` (`combat/strike.go`) multiplies band, per-tile shooter accuracy (`attack.ShooterFactor`), `attack.SizeFactor` and cover. Light and weather are fixed at `NoLightPenalty` and `ClearFactor`, not read from the map. | Light and weather factors from `light.go` and `climate.go`. | DEF-1 | partial |
-| Melee: adjacent attacks with cooldown, hit chance, weapon and body attacks. | Done for the existing weapons: `doCombat`, `strike` with `Range` 1; animals use their species damage. Checklist 16.3 **Melee weapons** and 17.5 are `[x]`/`[-]`. | A fuller melee list arrives with DEF-2. | DEF-2 | open |
+| Melee: adjacent attacks with cooldown, hit chance, weapon and body attacks. | Done for fists and animals; DEF-2 adds mace, gladius, longsword and pila beside club, knife and spear. | Melee weapons are not stuff-scaled and a wielded weapon loses its crafted quality on equip. | DEF-2 | partial |
 | Targets are chosen by threat and cover is sought. | `autoEngage` picks the nearest hostile it can hit (`combat.go`); `nearestThreatTo` and `defend` handle autonomous defence. No threat weighting, no cover seeking (checklist 17.8 **Hostile target selection**, **Basic cover seeking** are `[ ]`). | Threat-weighted choice; cover seeking for ranged raiders. | DEF-4 | open |
 | Combat log entries and records. | `logStrike`, `logEvent` (`eventlog.go`). | Combat records and threat history screens (UI 24.3). | DEF-4 | open |
 
@@ -43,9 +43,9 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Apparel has sharp, blunt and heat armor; a hit is deflected or reduced by the worn layers, with a quality and stuff effect. | `armor.Hit` resolves layers outermost first by region (`armor/apparel.go`, `RegionOf`, `Apparel`, `AppendWorn`); `Strikes.armorRoll` wires it into the wound path; sharp reduced past the layers becomes blunt. Quality and stuff effect arrive with PRD-2. | Quality and stuff effect (PRD-2); armor defs in DEF-2. | DEF-0 (domain), DEF-1 (wiring), DEF-2 (defs) | partial |
-| Armor catalogue: flak, plate, marine, helmets. | None. | Defs, art, recipes (PRD-4). | DEF-2 | open |
-| Armor stat shown in the gear tab and tooltips. | Unchanged: gear tab lists insulation. | Armor by damage category (UI 12.3). | DEF-1, DEF-2 | open |
+| Apparel has sharp, blunt and heat armor; a hit is deflected or reduced by the worn layers, with a quality and stuff effect. | `armor.Hit` resolves layers by region; `armor.AppendPiece` (`domain/combat/armor/apparel.go`) scales by stuff and quality (plate x0.9, simple helmet x0.5, advanced x0.7 of the stuff, steel fallback); `combat_host` reads the worn pieces; dressing handles the Legs slot. | Raiders wear no armor yet. | DEF-0, DEF-1, DEF-2, PRD-2 | done |
+| Armor catalogue: flak, plate, marine, helmets. | Flak pants, vest and jacket, plate armor, marine armor, simple and advanced helmets and the rest of the 30 weapon and armor item kinds; art in `assets/source/blender/artlib/families/armor.py`, drawn by `render/creature/worn.go` (layer order and stuff tints). | Recipes (PRD-4); raider armor. | DEF-2 | partial |
+| Armor stat shown in the gear tab and tooltips. | `PawnView.ApparelArmor []armor.Set` and `WeaponStats` drive `inspector/gear_facts.go` (`GearStatLines`); journey `TestJourneyGearTabWeaponStats`. | Hover tooltips (UI 12.3 tooltip rows stay partial). | DEF-1, DEF-2 | done |
 
 ### 3.3 Cover
 
@@ -59,16 +59,16 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Melee: knife, club, spear, mace, longsword. Ranged: bows, pistols, revolver, rifles, shotgun, machine gun, sniper. Thrown grenades. Single-use launchers. | `weapon.Kind`: fists, club, rifle, knife, spear, animal natural weapons, sentry gun. Item kinds `Club`, `Rifle`, `Knife`, `Spear` are equippable (`weaponKindOf`, `assignEquip`, `doEquip` in `combat.go`). | The catalogue and its defs, art, firing and impact sounds, recipes (PRD-4). | DEF-2 | open |
-| Thrown and explosive weapons; launchers. | None (checklist 16.3 **Thrown/explosive weapons**, **Single-use launchers** `[ ]`). | Grenade throw job and launcher items. | DEF-2 | open |
+| Melee: knife, club, spear, mace, longsword. Ranged: bows, pistols, revolver, rifles, shotgun, machine gun, sniper. Thrown grenades. Single-use launchers. | 30 item kinds and weapon defs (`domain/combat/weapon`, item catalogue); `domain/combat/kit` picks raider kits by faction tech and points. | Rocket launchers skipped; incendiary and EMP launchers exist but no single-use rule; recipes (PRD-4). | DEF-2 | partial |
+| Thrown and explosive weapons; launchers. | Frag grenades, molotov cocktails, EMP grenades and incendiary and EMP launchers as weapon kinds (the smoke blast kind exists in the explosion domain but no weapon uses it); grenades arc over cover and scatter at range; explosive weapons are blocked from hunting (`TestNoHuntingWithExplosives`). Raiders throw them via the kit. | Colonist grenade throw order (DEF-4); rocket launchers. | DEF-2, DEF-4 | partial |
 | No ammunition for ordinary guns. | True today. | None. | - | done |
 
 ### 3.5 Explosions and fire
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Explosions with radius, falloff, fire, EMP and smoke variants; they damage buildings, items and pawns, and chain. | One special case: a destroyed turret bursts (`turretBlast`, `turret.go`): fixed creature and building damage over a Chebyshev reach with a percent chance to ignite. Checklist 17.7 is all `[ ]`. | A general explosion service (cells, damage types, ignition through `fire.go`, EMP and smoke effects). | DEF-2 | open |
-| Explosion sound and visual. | Tracers and floating damage numbers only (`traceViews`). | Sounds, blast art. | DEF-2 | open |
+| Explosions with radius, falloff, fire, EMP and smoke variants; they damage buildings, items and pawns, and chain. | `domain/combat/explosion` and `combat/blast.go`: damage full at the centre to half at the rim (original tuning), line of sight from the centre, bomb x2 vs buildings, flame ignites through the host `Ignite`, EMP stuns turrets (`AimSave.StunnedUntil`), smoke cuts aim to 30 % (`Blasts.SmokeFactor`, saved as `Smoke`). | Items are not damaged; chain reactions not coded; bomb x4/x8 for plants and walls. | DEF-2 | partial |
+| Explosion sound and visual. | Sound: `ListenBlasts` plays by Blast kind; `BurstView.Blast`/`Radius` (tenths) and a Landed trace feed the renderer. | Renderer: `Bus.ListenBursts` (volume by radius) and the burst flash; no per-kind blast art (fire, EMP, smoke clouds). | DEF-2 | partial |
 
 ### 3.6 Traps, turrets, mortars, doors
 
@@ -94,7 +94,9 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Raid points from wealth and colonists, hostile faction chosen, group built from a budget. | `raidPoints`, `Wealth`, `raidKit` (`raid_plans.go`): clubs 60, rifles 90, up to eight raiders; checklist 24.1 **Wealth calculation** is `[ ]`. | Keep; kit follows the DEF-2 catalogue. | DEF-2 | open |
+| Raid points from wealth and colonists, hostile faction chosen, group built from a budget. | `raidPoints`, `Wealth`, `raidKit`: kit now picked by `kit.Pick` from faction tech and points over the DEF-2 catalogue. | Raiders wear no armor; checklist 24.1 Wealth calculation open. | DEF-2 | partial |
+| Raiders wear armor by tech level. | None. | Raider armor in the kit. | DEF-3 | open |
+| Colonist grenade throwing and rocket launchers. | Not implemented. | Throw order and job; rocket launcher kind. | DEF-4 | open |
 | Edge arrival and immediate assault. | `raidArrive`/`raidAssault`/`raidFlee` modes (`raids.go`); `planAssault`. | None. | - | done |
 | Siege: camp out of range, dig in, bombard with mortars, then storm. | `planSiege`: camp 18 tiles out, sandbags, shoot from cover, storm after 5 hours (`thinkSiege`, `digIn`, `raid_plans.go`). No mortars. | Mortar bombardment and the assault transition. | DEF-4 | open |
 | Sappers and breachers. | `planSappers`: tunnel through walls, doors and rock from day 10 (`sapperBreaks`, `digRock`). | None. | - | done |

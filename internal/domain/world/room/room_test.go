@@ -27,21 +27,8 @@ func TestDetectRoomsAndOutdoors(t *testing.T) {
 	}
 }
 
-func TestScoringAndRoles(t *testing.T) {
+func TestRoles(t *testing.T) {
 	t.Parallel()
-	bare := Contents{Cells: 9}
-	nice := Contents{Cells: 16, Floored: 16, Beds: 1, Tables: 1, Chairs: 2, Lamps: 1, StoneWalls: 16, TotalWalls: 16}
-	if !(Impressiveness(nice) > Impressiveness(bare)) {
-		t.Fatal("furnished floored room scores higher")
-	}
-	// a furnished, floored 3x3 hut is nice, not impressive
-	hut := Contents{Cells: 9, Floored: 9, Beds: 2, Tables: 1, Chairs: 1, Lamps: 1, TotalWalls: 16}
-	if got := Label(Impressiveness(hut)); got != "nice" {
-		t.Fatalf("3x3 hut label = %q (score %d), want nice", got, Impressiveness(hut))
-	}
-	if Label(Impressiveness(Contents{Cells: 3})) != "awful" || Label(Impressiveness(nice)) == "dull" {
-		t.Fatal("labels")
-	}
 	if RoleOf(Contents{Beds: 1}) != Bedroom || RoleOf(Contents{Beds: 3}) != Barracks ||
 		RoleOf(Contents{Tables: 1}) != Dining || RoleOf(Contents{Benches: 1, Beds: 1}) != Workshop {
 		t.Fatal("roles")

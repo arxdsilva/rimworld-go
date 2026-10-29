@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -9,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Bill status strings for the read model (craft/bills.go decides them).
@@ -30,6 +32,7 @@ type (
 	BillView           = craft.BillView
 	BillIngredientView = craft.BillIngredientView
 	BillIngredients    = craft.BillIngredients
+	WornView           = craft.WornView // PRD-2: PawnView.Worn
 )
 
 // Recipes lists every recipe.
@@ -72,7 +75,8 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 }
 
 // dropStackOf spawns a copy of st (kind, quantity, rot, dried, found and
-// marked) at (x, y), merging into a matching stack there.
+// marked; PRD-2: quality, wear, stuff, and the dead wearer of tainted
+// apparel) at (x, y), merging into a matching stack there.
 func (g *Game) dropStackOf(st item.Stack, x, y int) {
 	sid, err := g.SpawnStack(st.Kind, st.Qty, x, y)
 	if err != nil {
@@ -81,6 +85,7 @@ func (g *Game) dropStackOf(st item.Stack, x, y int) {
 	if s, ok := g.stacks.Get(sid); ok {
 		s.Rot, s.Dried = st.Rot, st.Dried
 		s.Unclaimed, s.HaulMarked = st.Unclaimed, st.HaulMarked
+		s.Quality, s.Wear, s.Stuff, s.Of = st.Quality, st.Wear, st.Stuff, st.Of
 		g.mergeOrSet(sid, s)
 	}
 }
@@ -94,12 +99,14 @@ type craftHost struct {
 	craftOutput
 	craftWorkers
 	craftCrafters
+	craftMakers
+	craftWeather
 }
 
 var _ craft.Host = craftHost{}
 
 func newCraftHost(g *Game) craftHost {
-	return craftHost{craftBenches{g}, craftStock{g}, craftOutput{g}, craftWorkers{g}, craftCrafters{g}}
+	return craftHost{craftBenches{g}, craftStock{g}, craftOutput{g}, craftWorkers{g}, craftCrafters{g}, craftMakers{g}, craftWeather{g}}
 }
 
 type craftBenches struct{ g *Game }
@@ -162,7 +169,7 @@ func (h craftStock) Carry(carrier, stack entity.EntityID, take int) entity.Entit
 	nid := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, nid)
 	g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: carrier, Rot: st.Rot, Dried: st.Dried,
-		Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal})
+		Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal, Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff})
 	return nid
 }
 
@@ -238,3 +245,30 @@ func (h craftCrafters) Name(id entity.EntityID) string {
 	}
 	return h.g.nameOf(id)
 }
+
+// craftMakers: quality dice on the craft stream (never g.rng) and the
+// creativity inspiration they spend (mind/inspiration.go, PRD-2).
+type craftMakers struct{ g *Game }
+
+func (h craftMakers) Roll(n int) int { return h.g.stream(streamCraft).IntN(n) }
+func (h craftMakers) UseInspiration(id entity.EntityID) bool {
+	return h.g.mind.Inspire.Use(id, mind.Creativity)
+}
+
+// craftWeather: what rot, deterioration and worn wear read (PRD-2).
+type craftWeather struct{ g *Game }
+
+func (h craftWeather) Exposed(x, y int) bool { return h.g.underSky(x, y) }
+func (h craftWeather) Raining() bool {
+	return h.g.weather.Kind.Falling() && !h.g.weather.Kind.Frozen()
+}
+func (h craftWeather) Wet(x, y int) bool {
+	return h.g.isWaterAt(x, y) || h.g.grid.InBounds(x, y) && h.g.terr.At(x, y) == terrain.Marsh
+}
+func (h craftWeather) SetStack(id entity.EntityID, st item.Stack) { h.g.stacks.Set(id, st) }
+func (h craftWeather) Pos(id entity.EntityID) (int, int, bool) {
+	p, ok := h.g.positions.Get(id)
+	return p.X, p.Y, ok
+}
+func (h craftWeather) Outfit(id entity.EntityID) craft.Outfit       { return h.g.apparel[id] }
+func (h craftWeather) SetOutfit(id entity.EntityID, o craft.Outfit) { h.g.apparel[id] = o }

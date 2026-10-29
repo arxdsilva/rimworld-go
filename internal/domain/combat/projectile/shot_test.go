@@ -88,3 +88,10 @@ func TestPruneKeepsRecentTraces(t *testing.T) {
 		t.Fatalf("pruned %+v", got)
 	}
 }
+
+func TestShotBlast(t *testing.T) {
+	t.Parallel()
+	if !(&Shot{Weapon: weapon.FragGrenade}).Blast() || (&Shot{Weapon: weapon.Rifle}).Blast() || (&Shot{Weapon: 250}).Blast() {
+		t.Fatal("only explosives burst")
+	}
+}

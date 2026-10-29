@@ -12,14 +12,14 @@ import (
 // stacks on the cell.
 func TestRoomLines(t *testing.T) {
 	t.Parallel()
-	rm := game.RoomView{ID: 4, Role: "bedroom", Score: 12, Label: "decent", Temp: 214, Lit: true, Roofed: 0.5, Cells: 20}
+	rm := game.RoomView{ID: 4, Role: "bedroom", Score: 12, Impressiveness: 120, Label: "decent", Temp: 214, Lit: true, Roofed: 0.5, Cells: 20}
 	got := strings.Join(RoomCardLines(rm), "|")
-	want := "Bedroom|Impressiveness 12 (decent)|Cleanliness: clean|Temperature 21C|Lit: yes   Roofed: 50%|20 cells"
+	want := "Bedroom|Impressiveness 12.0 (decent)|Space 0.0 ()|Beauty +0.0 ()|Wealth 0 silver ()|Cleanliness +0.00 (clean)|Temperature 21C|Lit: yes   Roofed: 50%|20 cells"
 	if got != want {
 		t.Fatalf("card = %q, want %q", got, want)
 	}
-	if RoomTint(-10).R <= RoomTint(30).R || RoomTint(30).G <= RoomTint(-10).G || RoomTint(5).A != 90 {
-		t.Fatalf("tints: %v %v %v", RoomTint(-10), RoomTint(5), RoomTint(30))
+	if RoomTint(0).R <= RoomTint(300).R || RoomTint(300).G <= RoomTint(0).G || RoomTint(5).A != 90 {
+		t.Fatalf("tints: %v %v %v", RoomTint(0), RoomTint(5), RoomTint(300))
 	}
 	w := game.WorldView{Items: []game.ItemView{{ID: 9, Kind: "rice", Qty: 3, X: 1, Y: 1, Forbidden: true}}}
 	if d := strings.Join(DetailLines(w, 1, 1), "|"); !strings.Contains(d, "Cell (1, 1)") || !strings.Contains(d, "#9 rice x 3 [forbidden]") {

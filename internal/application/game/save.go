@@ -30,6 +30,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -187,7 +188,8 @@ type saveState struct {
 	Calm       map[entity.EntityID]uint64     // absent in older saves
 	Banked     map[entity.EntityID]bool       // absent in older saves
 	OrderQueue map[entity.EntityID][]savedOrder
-	Apparel    map[entity.EntityID]worn
+	Apparel    map[entity.EntityID][3]item.Kind     // before PRD-2: kinds only (read when Worn is absent)
+	Worn       map[entity.EntityID]craft.OutfitSave // PRD-2: worn pieces with stuff, quality and wear
 	// Prio is the priorities as saved before animal handling (11 work
 	// types); Prios replaces it (SIM-026), with 12 types; PrioList (ENG-003)
 	// replaces that, as plain slices so appending a work type never breaks
@@ -363,6 +365,7 @@ type saveState struct {
 	Trade   *tradeSave
 	Turrets *combat.TurretSave
 	Shots   []projectile.Shot // DEF-1: projectiles in flight (nil: none)
+	Smoke   []explosion.Cloud // DEF-2: smoke clouds (nil: none)
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -428,7 +431,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		LastMeal: g.lastMeal, Bills: g.craft.Bills.Export(), Racks: g.craft.Drying.Export(), Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
 		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.rest.Export(), Calm: g.calm, Banked: g.banked,
-		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
+		OrderQueue: map[entity.EntityID][]savedOrder{}, Worn: craft.ExportOutfits(g.apparel), Joy: g.joy,
 		PrioList: exportPrios(g.prio), Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
 		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.roomTemps,
@@ -485,7 +488,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Power = g.exportPower()          // power.go (PLAY-021): nil without power
 	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
 	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
-	s.Turrets, s.Shots = g.combat.Turrets.Export(), g.combat.Shots.Export()
+	s.Turrets, s.Shots, s.Smoke = g.combat.Turrets.Export(), g.combat.Shots.Export(), g.combat.Blasts.Export()
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -576,7 +579,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.rest.Import(s.RestedFree) // rest/sleep.go
 	setMap(&g.calm, s.Calm)
 	setMap(&g.banked, s.Banked)
-	setMap(&g.apparel, s.Apparel)
+	g.apparel = craft.ImportOutfits(s.Worn, s.Apparel) // craft/garment.go (PRD-2)
 	switch {
 	case s.PrioList != nil:
 		g.prio = importPrios(s.PrioList)
@@ -669,6 +672,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importTrade(s.Trade)       // trade.go (PLAY-024): sessions close on load
 	g.combat.Turrets.Import(s.Turrets)
 	g.combat.Shots.Import(s.Shots)
+	g.combat.Blasts.Import(s.Smoke)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History

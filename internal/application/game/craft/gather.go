@@ -103,10 +103,17 @@ func acceptedBy(ins []recipe.Input, st item.Stack) bool {
 // takeFor picks input in's quantity from cands (nearest first), lowering
 // what is left of each so the next input doesn't count it twice.
 func takeFor(in recipe.Input, cands, out []pick) ([]pick, bool) {
+	only := item.Kind(0)
+	if in.Stuff != 0 { // PRD-2: one material only, the nearest there is enough of
+		var ok bool
+		if only, ok = enoughOf(in, cands); !ok {
+			return out, false
+		}
+	}
 	need := in.Qty
 	for i := range cands {
 		c := &cands[i]
-		if c.left <= 0 || !in.AcceptsStack(c.st) {
+		if c.left <= 0 || !in.AcceptsStack(c.st) || only != 0 && c.kind != only {
 			continue
 		}
 		if in.Max > 0 { // one stack, up to Max of it
@@ -127,6 +134,23 @@ func takeFor(in recipe.Input, cands, out []pick) ([]pick, bool) {
 		}
 	}
 	return out, false
+}
+
+// enoughOf is the material, nearest first, the candidates hold at least
+// in.Qty of (a stuffed product is made of one material).
+func enoughOf(in recipe.Input, cands []pick) (item.Kind, bool) {
+	var have [256]int
+	for _, c := range cands {
+		if c.left > 0 && in.AcceptsStack(c.st) {
+			have[c.kind] += c.left
+		}
+	}
+	for _, c := range cands {
+		if c.left > 0 && have[c.kind] >= in.Qty && in.AcceptsStack(c.st) {
+			return c.kind, true
+		}
+	}
+	return 0, false
 }
 
 // groupByKind orders picks so each kind's run is consecutive (kinds by
@@ -171,6 +195,7 @@ func (p planner) available(bl recipe.Bill, d recipe.Def, spot [2]int) bool {
 		return true
 	}
 	n := 0
+	var have [256]int // PRD-2: a stuffed input counts each material on its own
 	for _, sid := range p.h.ItemIDs() {
 		st, ok := p.h.Stack(sid)
 		if !ok || !in.AcceptsStack(st) || !p.usable(0, sid, st, bl, spot) {
@@ -178,6 +203,12 @@ func (p planner) available(bl recipe.Bill, d recipe.Def, spot [2]int) bool {
 		}
 		if in.Max > 0 { // one stack, up to Max of it
 			if st.Qty >= in.Qty {
+				return true
+			}
+			continue
+		}
+		if in.Stuff != 0 {
+			if have[st.Kind] += st.Qty; have[st.Kind] >= in.Qty {
 				return true
 			}
 			continue

@@ -150,9 +150,9 @@ var defs = [NumTraits]Def{
 		Desc:         "{name} has slept in ditches and eaten worse. Hardship barely registers.",
 		ThoughtScale: map[mood.Kind]int16{mood.SleptOutside: 25, mood.SleptOnGround: 25, mood.AteRaw: 25}},
 	Fussy: {Key: "fussy", Label: "Fussy", Group: GroupStandards,
-		Desc:         "{name} notices every draught, lump and stale crumb, and loves a well-kept room.",
-		ThoughtScale: map[mood.Kind]int16{mood.SleptOutside: 200, mood.SleptOnGround: 200, mood.AteRaw: 200},
-		AddThought:   map[mood.Kind]int8{mood.SleptInNiceRoom: 3}},
+		Desc: "{name} notices every draught, lump and stale crumb, and loves a well-kept room.",
+		ThoughtScale: map[mood.Kind]int16{mood.SleptOutside: 200, mood.SleptOnGround: 200, mood.AteRaw: 200,
+			mood.SleptInBedroom: 150}}, // BED-2: the bedroom ladder, both ways, replaces the nice-room bonus
 	DeliberateAim: {Key: "deliberate_aim", Label: "Deliberate aim", Group: GroupTrigger, Needs: backstory.Violence,
 		Desc: "{name} lines up every shot as if it were the last one {they} had.",
 		Mods: []stat.Mod{{Stat: stat.ShootAcc, Add: 12}, {Stat: stat.AimCooldown, Mul: 1200}}},

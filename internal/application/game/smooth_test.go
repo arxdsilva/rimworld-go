@@ -269,16 +269,17 @@ func TestSmoothedStoneMakesRoomsFinerAndCounts(t *testing.T) {
 		g.ensureRooms()
 		return g.rooms[g.roomGrid[4*g.Width()+4]]
 	}
-	before := r()
-	if before.contents.Floored != 0 || before.contents.StoneWalls == 0 || before.contents.StoneWalls != before.contents.TotalWalls {
+	score := func() int { _, imp := restRooms{g}.RoomQuality(g.roomGrid[4*g.Width()+4]); return imp }
+	before, beforeImp := r(), score()
+	if before.contents.Floored != 0 {
 		t.Fatalf("rough room %+v", before.contents)
 	}
 	if !g.SetGround(3, 3, 5, 5, "stone_smooth", "granite", "") || !g.SetGround(2, 2, 6, 2, "rock_smooth", "granite", "") {
 		t.Fatal("set ground")
 	}
-	after := r()
-	if after.contents.Floored != 9 || after.contents.StoneWalls != after.contents.TotalWalls || after.score <= before.score {
-		t.Fatalf("smoothed room %+v score %d (was %d)", after.contents, after.score, before.score)
+	after, afterImp := r(), score() // BED-2: smooth floor beauty +1 and cleanliness 0 (rough stone -1, -1)
+	if after.contents.Floored != 9 || afterImp <= beforeImp {
+		t.Fatalf("smoothed room %+v impressiveness %d (was %d)", after.contents, afterImp, beforeImp)
 	}
 }
 

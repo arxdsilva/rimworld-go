@@ -148,6 +148,12 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	g.socialOnDeath(id, killer) // social_grief.go: relations, grief, killer opinion
 	g.bondsOnDeath(id)          // bonds.go: bonded animals lose their master
 	g.mourn(id)
+	// PRD-2 (craft/garment.go): what the dead wore is tainted and falls
+	// beside the body (corpses are not stripped).
+	if o, ok := g.apparel[id]; ok {
+		g.apparel[id] = o.Taint(id)
+		careGear{g}.StripGear(id)
+	}
 }
 
 // heal: humanlikes heal by the wound, an hour at a time, in the medical
@@ -214,7 +220,7 @@ func (g *Game) assignHunt(id entity.EntityID) bool {
 		if best == 0 {
 			return false
 		}
-		if !hasRanged(g, id) {
+		if !hasRanged(g, id) || weaponDefOf(g, id).Explosive() { // DEF-2: never hunt with explosives
 			return g.assignEquip(id, item.Rifle)
 		}
 		if g.startJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}) {

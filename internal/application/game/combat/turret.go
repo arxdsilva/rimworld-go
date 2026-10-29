@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/pawn/body"
@@ -62,6 +63,8 @@ type Aim struct {
 	ShotAt  uint64
 	ReadyAt uint64
 	SeenAt  uint64
+	// StunnedUntil: an EMP knocked it out until this tick (DEF-2).
+	StunnedUntil uint64
 }
 
 // TurretSave is the saved turret state, nil while no turret ever held an
@@ -77,6 +80,7 @@ type AimSave struct {
 	ID, Target              entity.EntityID
 	Dir                     int8
 	ShotAt, ReadyAt, SeenAt uint64
+	StunnedUntil            uint64 // DEF-2; absent in older saves
 }
 
 // Turrets are the sentry turrets' live aims per building and the derived
@@ -137,6 +141,9 @@ func (t *Turrets) Phase(now uint64) {
 // step is one turret's tick at (x, y).
 func (t *Turrets) step(id entity.EntityID, x, y int, now uint64) {
 	a, had := t.aims[id]
+	if now < a.StunnedUntil { // EMP: dark until it recovers
+		return
+	}
 	if !t.pw.Powered(id) {
 		if had && a.Target != 0 { // no power: it lets go and stays dark
 			a.Target, a.ReadyAt = 0, 0
@@ -263,7 +270,7 @@ func (t *Turrets) shot(id entity.EntityID, fx, fy int, target entity.EntityID, t
 func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 	delete(t.aims, id)
 	h := t.h
-	h.Burst(b.X, b.Y, h.Now())
+	h.Burst(b.X, b.Y, h.Now(), explosion.Def{})
 	h.Message(b.X, b.Y, "The sentry turret blew up!")
 	if h.DefenseRoll(100) < turretIgnitePct {
 		h.Ignite(b.X, b.Y)
@@ -354,6 +361,16 @@ func aimFrame(px, py, qx, qy int, prev int8) int8 {
 	return int8(f % 16)
 }
 
+// Stun knocks turret id out until tick until (an EMP, DEF-2): it lets go
+// of its target and neither looks nor fires before then. A longer stun
+// already running is kept. Turrets never adapt to EMP. wiki: Mini-turret
+func (t *Turrets) Stun(id entity.EntityID, until uint64) {
+	a := t.aims[id]
+	a.Target, a.ReadyAt = 0, 0
+	a.StunnedUntil = max(a.StunnedUntil, until)
+	t.setAim(id, a)
+}
+
 // Firing reports turret id holding a target now: it draws its firing
 // power instead of its idle power.
 func (t *Turrets) Firing(id entity.EntityID) bool { return t.aims[id].Target != 0 }
@@ -379,7 +396,8 @@ func (t *Turrets) Export() *TurretSave {
 	}
 	s := &TurretSave{Version: TurretSaveVersion, Aims: make([]AimSave, 0, len(t.aims))}
 	for id, a := range t.aims {
-		s.Aims = append(s.Aims, AimSave{ID: id, Target: a.Target, Dir: a.Dir, ShotAt: a.ShotAt, ReadyAt: a.ReadyAt, SeenAt: a.SeenAt})
+		s.Aims = append(s.Aims, AimSave{ID: id, Target: a.Target, Dir: a.Dir, ShotAt: a.ShotAt, ReadyAt: a.ReadyAt, SeenAt: a.SeenAt,
+			StunnedUntil: a.StunnedUntil})
 	}
 	slices.SortFunc(s.Aims, func(x, y AimSave) int { return cmp.Compare(x.ID, y.ID) })
 	return s
@@ -393,6 +411,6 @@ func (t *Turrets) Import(s *TurretSave) {
 	}
 	t.aims = make(map[entity.EntityID]Aim, len(s.Aims))
 	for _, a := range s.Aims {
-		t.aims[a.ID] = Aim{Target: a.Target, Dir: a.Dir, ShotAt: a.ShotAt, ReadyAt: a.ReadyAt, SeenAt: a.SeenAt}
+		t.aims[a.ID] = Aim{Target: a.Target, Dir: a.Dir, ShotAt: a.ShotAt, ReadyAt: a.ReadyAt, SeenAt: a.SeenAt, StunnedUntil: a.StunnedUntil}
 	}
 }

@@ -436,7 +436,8 @@ func TestRoomStatsOverlayAndCard(t *testing.T) {
 		s.world.RoomGrid[i] = -1
 	}
 	s.world.RoomGrid[5*24+5] = 0
-	s.world.Rooms = []game.RoomView{{ID: 0, Role: "bedroom", Score: 14, Label: "nice", Lit: true, Temp: 215, Roofed: 1, Cleanliness: "clean", Cells: 12}}
+	s.world.Rooms = []game.RoomView{{ID: 0, Role: "bedroom", Score: 55, Impressiveness: 550, Label: "slightly impressive",
+		Space: 290, SpaceLabel: "rather tight", Beauty: 15, BeautyLabel: "neutral", Wealth: 1200, WealthLabel: "somewhat poor", Lit: true, Temp: 215, Roofed: 1, Cleanliness: "clean", Cells: 12}}
 	f.Key(t, a, "G", 0)
 	if !a.chrome.Rooms {
 		t.Fatal("G turns the room overlay on")
@@ -445,16 +446,21 @@ func TestRoomStatsOverlayAndCard(t *testing.T) {
 		t.Fatalf("HUD rooms button %+v", b)
 	}
 	lines := hud.RoomCardLines(s.world.Rooms[0])
-	want := []string{"Bedroom", "Impressiveness 14 (nice)", "Cleanliness: clean", "Temperature 21.5°C", "Lit: yes   Roofed: 100%"}
+	want := []string{"Bedroom", "Impressiveness 55.0 (slightly impressive)", "Space 29.0 (rather tight)",
+		"Beauty +1.5 (neutral)", "Wealth 1200 silver (somewhat poor)", "Cleanliness +0.00 (clean)",
+		"Temperature 21.5°C", "Lit: yes   Roofed: 100%", "12 cells"}
+	if len(lines) != len(want) {
+		t.Fatalf("card lines %q, want %d", lines, len(want))
+	}
 	for i, w := range want {
-		if i == 3 && !strings.HasPrefix(lines[i], "Temperature") {
+		if i == 6 && !strings.HasPrefix(lines[i], "Temperature") {
 			t.Fatalf("line %d = %q", i, lines[i])
 		}
-		if i != 3 && lines[i] != w {
+		if i != 6 && lines[i] != w {
 			t.Fatalf("line %d = %q, want %q", i, lines[i], w)
 		}
 	}
-	if lo, hi := hud.RoomTint(-5), hud.RoomTint(20); lo.R <= lo.G || hi.G <= hi.R {
+	if lo, hi := hud.RoomTint(-5), hud.RoomTint(240); lo.R <= lo.G || hi.G <= hi.R {
 		t.Fatalf("tints: awful %v impressive %v", lo, hi)
 	}
 }

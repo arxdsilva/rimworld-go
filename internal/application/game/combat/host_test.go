@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -51,6 +52,7 @@ type fakeHost struct {
 	logs   []string
 	msgs   []string
 	bursts int
+	blasts []explosion.Def
 	fires  int
 	frames []construction.Kind
 	dug    int
@@ -247,8 +249,11 @@ func (f *fakeHost) Trapped(v entity.EntityID, dmg int) {
 	f.logs = append(f.logs, fmt.Sprintf("trap %d %d", v, dmg))
 }
 func (f *fakeHost) Message(_, _ int, text string) { f.msgs = append(f.msgs, text) }
-func (f *fakeHost) Burst(int, int, uint64)        { f.bursts++ }
-func (f *fakeHost) Ignite(int, int)               { f.fires++ }
+func (f *fakeHost) Burst(_, _ int, _ uint64, b explosion.Def) {
+	f.bursts++
+	f.blasts = append(f.blasts, b)
+}
+func (f *fakeHost) Ignite(int, int) { f.fires++ }
 
 // Dice: queued rolls, 0 once they run out (a sure hit).
 func (f *fakeHost) Roll(int) int {

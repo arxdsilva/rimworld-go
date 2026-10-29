@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/room"
 )
 
 // fakeHost is a small in-memory simulation for rest's unit tests.
@@ -38,8 +39,11 @@ type fakeHost struct {
 
 	room    int
 	sky     bool
-	score   int
+	role    room.Role // RoomQuality answer
+	tenths  int
 	thought []mood.Kind
+	values  []int    // RememberValue values, by thought
+	labels  []string // RememberValue labels
 	forgot  []mood.Kind
 	logged  []bool
 
@@ -158,8 +162,11 @@ func (f *fakeHost) RoomAt(x, y int) int {
 	}
 	return f.room
 }
-func (f *fakeHost) UnderSky(int, int) bool                     { return f.sky }
-func (f *fakeHost) RoomScore(int) int                          { return f.score }
+func (f *fakeHost) UnderSky(int, int) bool           { return f.sky }
+func (f *fakeHost) RoomQuality(int) (room.Role, int) { return f.role, f.tenths }
+func (f *fakeHost) RememberValue(_ entity.EntityID, k mood.Kind, v int, label string) {
+	f.thought, f.values, f.labels = append(f.thought, k), append(f.values, v), append(f.labels, label)
+}
 func (f *fakeHost) Remember(_ entity.EntityID, k mood.Kind)    { f.thought = append(f.thought, k) }
 func (f *fakeHost) ForgetGroup(_ entity.EntityID, k mood.Kind) { f.forgot = append(f.forgot, k) }
 func (f *fakeHost) Slept(_ entity.EntityID, inBed bool)        { f.logged = append(f.logged, inBed) }

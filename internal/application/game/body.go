@@ -554,11 +554,12 @@ func missingPart(b *body.Body) bool {
 // bodyThoughts are id's body state thoughts: missing a part (no implant in
 // its place). Being disfigured has no thought of its own (others see it).
 func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
+	ts := g.apparel[id].AppendThoughts(nil) // craft/garment.go (PRD-2): ratty, tattered and tainted apparel
 	if !missingPart(g.bodies[id]) {
-		return nil
+		return ts
 	}
 	d := mood.DefOf(mood.MissingPart)
-	return []mood.Thought{{Kind: mood.MissingPart, Label: d.Label, Value: d.Value}}
+	return append(ts, mood.Thought{Kind: mood.MissingPart, Label: d.Label, Value: d.Value})
 }
 
 // woundKindLabels name body.WoundKind values for the Health tab.

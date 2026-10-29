@@ -49,6 +49,9 @@ func TestCutRecipes(t *testing.T) {
 	}
 }
 
+// TestKnifeAcceptsAnyBlocks: every stone's blocks feed a knife, and since
+// PRD-2 any metal or wood too (the knife is a stuffed product); chunks
+// and the legacy stone kind never do.
 func TestKnifeAcceptsAnyBlocks(t *testing.T) {
 	t.Parallel()
 	in := DefOf(Knife).Input
@@ -57,9 +60,14 @@ func TestKnifeAcceptsAnyBlocks(t *testing.T) {
 			t.Errorf("knife rejects %v", k)
 		}
 	}
-	for _, k := range []item.Kind{item.Stone, item.GraniteChunk, item.Steel, item.Wood} {
+	for _, k := range []item.Kind{item.Stone, item.GraniteChunk, item.Cloth, item.Leather} {
 		if in.Accepts(k) {
 			t.Errorf("knife accepts %v", k)
+		}
+	}
+	for _, k := range []item.Kind{item.Steel, item.Wood, item.Silver} {
+		if !in.Accepts(k) {
+			t.Errorf("knife rejects %v", k)
 		}
 	}
 	if in.Take(20) != 3 {

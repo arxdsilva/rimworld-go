@@ -36,6 +36,7 @@ type roomIndex struct {
 	out     []int      // the room grid it produced last (g.roomGrid unless replaced)
 	stamp   []uint32   // roof support scratch
 	gen     uint32
+	facts   []room.Fact // countFacts scratch, one per room
 }
 
 // bldgSig is what of a building the rooms read.
@@ -181,13 +182,9 @@ func (g *Game) rebuildRoomsIncremental() {
 	stats := make([]roomStats, n)
 	for r := range stats {
 		c := rm.Counts(r)
-		stats[r].contents = room.Contents{Cells: int(c.Cells), Floored: int(c.Smooth), TotalWalls: int(c.Walls), StoneWalls: int(c.StoneWalls)}
+		stats[r].contents = room.Contents{Cells: int(c.Cells), Floored: int(c.Smooth)}
 	}
 	g.countRoomBuildings(grid, stats)
-	for i := range stats {
-		stats[i].score = room.Impressiveness(stats[i].contents)
-		stats[i].role = room.RoleOf(stats[i].contents)
-	}
 	if selfCheck() {
 		g.checkRoomsAgainstDetect(grid, stats)
 	}
@@ -208,7 +205,7 @@ func (g *Game) rebuildRoomsIncremental() {
 }
 
 // countRoomBuildings adds what the buildings bring to each room (by the
-// room of a building's first footprint cell).
+// room of a building's first footprint cell; room.Add).
 func (g *Game) countRoomBuildings(grid []int, stats []roomStats) {
 	w := g.grid.Width()
 	for _, id := range g.bldgIDs {
@@ -221,22 +218,19 @@ func (g *Game) countRoomBuildings(grid []int, stats []roomStats) {
 		if r < 0 {
 			continue
 		}
-		c := &stats[r].contents
-		switch {
-		case b.Kind == construction.Floor:
-			c.Floored++
-		case b.Kind.Sleeps():
-			c.Beds++
-		case b.Kind == construction.Table:
-			c.Tables++
-		case b.Kind == construction.Chair:
-			c.Chairs++
-		case b.Kind == construction.Lamp, b.Kind == construction.TorchLamp:
-			c.Lamps++ // a light fitting, lit or not (rooms' Lit: roomViews)
-		case construction.DefOf(b.Kind).Bench:
-			c.Benches++
+		under := room.Bare
+		if b.Kind == construction.Carpet { // the floor beneath it
+			fb, ok := g.bldgs.Get(g.layerBldgAt(b.X, b.Y, construction.LayerFloor))
+			under = room.FloorUnder(fb.Stuff, ok, g.terr.At(b.X, b.Y) == terrain.StoneSmooth)
 		}
+		room.Add(&stats[r].contents, &stats[r].tally, b, len(cells), under)
 	}
+}
+
+// countFacts is room.CountFacts into reused scratch: per read, not tick.
+func (ri *roomIndex) countFacts(g *Game) []room.Fact {
+	ri.facts = room.CountFacts(ri.facts, g.roomGrid, g.grid.Width(), len(g.rooms), g.stacks, g.bldgs)
+	return ri.facts
 }
 
 // checkRoomsAgainstDetect, under the test self-check, proves an

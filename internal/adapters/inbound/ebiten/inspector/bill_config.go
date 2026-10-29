@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -52,6 +53,7 @@ type BillSettings struct {
 	Worker             uint64 // only this colonist; 0 anyone
 	UnpauseAt          int    // "until you have": resume below it; 0 the default
 	Ingredients        []BillIngredient
+	Stuff              uint8 // the pinned material's item kind (PRD-2); 0 any
 }
 
 // Bills is the bill dialog, reorder and copy/paste: a view of the Pane
@@ -64,7 +66,7 @@ func (a *Pane) Bills() Bills { return Bills{a} }
 // billSettings are bill bl's settings as the read model reports them.
 func billSettings(bl game.BillView) BillSettings {
 	s := BillSettings{Store: bl.Store, Zone: bl.StoreZone, Radius: bl.Radius, SkillMin: bl.SkillMin, SkillMax: bl.SkillMax,
-		Worker: bl.Worker, UnpauseAt: bl.UnpauseAt}
+		Worker: bl.Worker, UnpauseAt: bl.UnpauseAt, Stuff: bl.StuffKind}
 	for k := range bl.Ingredients.Len() {
 		in := bl.Ingredients.At(k)
 		s.Ingredients = append(s.Ingredients, BillIngredient{Item: in.Kind, Label: in.Label, Allowed: in.Allowed})
@@ -87,7 +89,22 @@ type BillClipboard struct{ Clip *BillClip }
 func billConfigCmd(b game.BuildingView, i int, s BillSettings) command.Command {
 	return command.Command{Kind: command.ConfigureBill, X: b.X, Y: b.Y, Index: i,
 		Store: s.Store, Zone: s.Zone, Radius: s.Radius, SkillMin: s.SkillMin, SkillMax: s.SkillMax,
-		Worker: s.Worker, UnpauseAt: s.UnpauseAt}
+		Worker: s.Worker, UnpauseAt: s.UnpauseAt, Stuff: s.Stuff}
+}
+
+// billMaterials are the ingredients of a stuffed recipe's bill, the
+// materials it may be made of: every ingredient a material and at least
+// two to pick from (nil otherwise, and the dialog shows no picker).
+func billMaterials(ings []BillIngredient) []BillIngredient {
+	if len(ings) < 2 {
+		return nil
+	}
+	for _, in := range ings {
+		if item.Kind(in.Item).StuffCategory() == 0 {
+			return nil
+		}
+	}
+	return ings
 }
 
 func billIngredientCmd(b game.BuildingView, i int, item uint8, allowed bool) command.Command {
@@ -146,7 +163,11 @@ func (a Bills) billConfigBody(body gfx.Rect, b game.BuildingView, i int, mode ui
 			colonists = append(colonists, p)
 		}
 	}
+	mats := billMaterials(cfg.Ingredients)
 	rowsH := a.billConfigHeight(len(zones), len(colonists), len(cfg.Ingredients), cfg.Store == StoreSpecific, mode == BillModeUntil)
+	if len(mats) > 0 {
+		rowsH += float32((len(mats)+4)/4)*(billCfgChipH+3) + billCfgRowH + 8
+	}
 	area := k.ScrollArea("bill.cfg.rows", body, rowsH, uikit.ScrollOpts{Step: billCfgRowH * 2})
 	x, w := area.View.X, area.View.W-uikit.ScrollBarW
 	y := area.View.Y - area.Off
@@ -214,6 +235,32 @@ func (a Bills) billConfigBody(body gfx.Rect, b game.BuildingView, i int, mode ui
 				cfg.Ingredients[j].Allowed = !cfg.Ingredients[j].Allowed
 				a.shell.Enqueue(billIngredientCmd(b, i, cfg.Ingredients[j].Item, cfg.Ingredients[j].Allowed))
 			})
+	}
+
+	if len(mats) > 0 { // PRD-2: pin the material, or let any allowed one do
+		label("Material")
+		chips(len(mats)+1, func(j int) string {
+			if j == 0 {
+				return "bill.cfg.stuff.0"
+			}
+			return "bill.cfg.stuff." + strconv.Itoa(int(mats[j-1].Item))
+		}, func(j int) string {
+			if j == 0 {
+				return "Any"
+			}
+			return Capitalize(mats[j-1].Label)
+		}, func(j int) bool {
+			if j == 0 {
+				return cfg.Stuff == 0
+			}
+			return cfg.Stuff == mats[j-1].Item
+		}, func(j int) {
+			cfg.Stuff = 0
+			if j > 0 {
+				cfg.Stuff = mats[j-1].Item
+			}
+			send()
+		})
 	}
 
 	label("Skill range")

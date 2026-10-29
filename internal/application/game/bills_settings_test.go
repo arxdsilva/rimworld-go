@@ -144,7 +144,9 @@ func TestBillRadiusAndIngredientFilter(t *testing.T) {
 	if done() {
 		t.Fatal("used forbidden wood")
 	}
-	if v := g.World().Buildings[0].Bills[0]; v.Ingredients.Len() != 1 || v.Ingredients.At(0).Allowed {
+	// PRD-2: a club takes any wood, metal or stone blocks; wood (first) is off
+	if v := g.World().Buildings[0].Bills[0]; v.Ingredients.Len() != len(item.Stuffs(item.MadeFrom(item.Club))) ||
+		v.Ingredients.At(0).Kind != uint8(item.Wood) || v.Ingredients.At(0).Allowed || !v.Ingredients.At(1).Allowed {
 		t.Fatalf("ingredients %+v", v.Ingredients)
 	}
 	forbid.Enabled = true

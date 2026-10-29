@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/filth"
+	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/internal/domain/world/stain"
 )
 
@@ -106,7 +107,7 @@ func TestRoomFilthLowersScore(t *testing.T) {
 	g := dirtGame(t)
 	box(t, g, 2, 2, 7, 7, [2]int{4, 7})
 	r0 := g.World().Rooms[0]
-	if r0.Filth != 0 || r0.Cleanliness != "clean" || r0.FilthPenalty != 0 {
+	if r0.Filth != 0 || r0.Cleanliness != room.CleanlinessLabel(r0.CleanStat) || r0.FilthPenalty != 0 {
 		t.Fatalf("clean room = %+v", r0)
 	}
 	for y := 3; y <= 6; y++ {
@@ -117,10 +118,11 @@ func TestRoomFilthLowersScore(t *testing.T) {
 	g.stamp(3, 3, stain.Blood, 800)
 	r1 := g.World().Rooms[0]
 	sum := 16*150 + 800
-	if r1.Filth != sum/16 || r1.Cleanliness != filth.Label(sum/16) || r1.Cleanliness != "filthy" {
+	// BED-2: filth costs beauty and cleanliness, so impressiveness
+	if r1.Filth != sum/16 || r1.CleanStat >= r0.CleanStat || r1.Beauty >= r0.Beauty || r1.Cleanliness != room.CleanlinessLabel(r1.CleanStat) {
 		t.Fatalf("filthy room = %+v", r1)
 	}
-	if r1.FilthPenalty != filth.Penalty(sum, 16) || r1.FilthPenalty == 0 || r1.Score != r0.Score-r1.FilthPenalty {
+	if r1.FilthPenalty == 0 || r1.FilthPenalty != (r0.Impressiveness-r1.Impressiveness)/10 || r1.Score >= r0.Score {
 		t.Fatalf("score %d (clean %d), penalty %d", r1.Score, r0.Score, r1.FilthPenalty)
 	}
 	if info, _ := g.RoomInfo(4, 4); info.Score != r1.Score {
@@ -128,29 +130,28 @@ func TestRoomFilthLowersScore(t *testing.T) {
 	}
 }
 
+// TestSleptInAwfulRoomWhenFilthy (BED-2): a furnished, floored bedroom
+// is not awful; filth on every cell makes it awful on the next waking.
 func TestSleptInAwfulRoomWhenFilthy(t *testing.T) {
 	t.Parallel()
 	g := dirtGame(t)
-	box(t, g, 2, 2, 7, 7, [2]int{4, 7})
-	placeBuilt(t, g, construction.Bed, construction.South, 3, 3)
-	bed := g.layerBldgAt(3, 3, construction.LayerObject)
+	bed := statBedroom(t, g)
+	furnish(t, g)
 	id, _ := g.SpawnNamedPawn(3, 3, "Ada")
-	r := g.roomAt(3, 3)
-	if s := g.roomScore(r); s < 0 || s >= filth.MaxPenalty {
-		t.Fatalf("fixture bedroom scores %d", s)
+	if l := roomView(t, g, 4, 4).Label; l == "awful" {
+		t.Fatalf("fixture bedroom is %s", l)
 	}
-	g.sleptAt[id] = bed
-	g.rest.Waking.After(id)
-	if g.hasMemory(id, mood.SleptInAwfulRoom) {
-		t.Fatal("a clean bedroom is awful")
+	wakeIn(g, id, bed)
+	if v, ok := memValue(g, id, mood.SleptInBedroom); !ok || v < 0 {
+		t.Fatalf("a clean bedroom thought %d %v", v, ok)
 	}
 	for y := 3; y <= 6; y++ {
 		for x := 3; x <= 6; x++ {
 			g.addDirt(tileIdx(g, x, y), filth.Full)
 		}
 	}
-	g.rest.Waking.After(id)
-	if !g.hasMemory(id, mood.SleptInAwfulRoom) {
-		t.Fatalf("a filthy bedroom (score %d) is not awful", g.roomScore(r))
+	wakeIn(g, id, bed)
+	if v, _ := memValue(g, id, mood.SleptInBedroom); v != -2 {
+		t.Fatalf("a filthy bedroom (%+v) thought %d, want the awful -2", roomView(t, g, 4, 4), v)
 	}
 }

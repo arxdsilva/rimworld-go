@@ -7,8 +7,10 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/terrain"
@@ -42,10 +44,8 @@ func (p raidPlan) String() string {
 
 const (
 	maxScaledRaiders = 8
-	clubCost         = 60
-	knifeCost        = 50
-	spearCost        = 70
-	rifleCost        = 90
+	// The colony weapons' raid prices (domain combat/kit keeps them).
+	clubCost, knifeCost, spearCost, rifleCost = 60, kit.Cheapest, 70, 90
 	// siegeHold is how long a siege camp holds before it storms the colony.
 	siegeHold = 5 * clock.TicksPerHour
 	// siegeSetup: raiders still not at the camp after this long dig in anyway.
@@ -94,40 +94,16 @@ func (g *Game) raidPoints(day int) int {
 	return g.Wealth()/40 + colonists*30 + day*2
 }
 
-// meleeKit is what a raider without a rifle may carry.
+// meleeKit are the old blades a casket's remains lie with (casket.go).
 var meleeKit = []item.Kind{item.Club, item.Knife, item.Spear}
 
-func meleeCost(k item.Kind) int {
-	switch k {
-	case item.Knife:
-		return knifeCost
-	case item.Spear:
-		return spearCost
-	}
-	return clubCost
-}
-
 // raidKit spends points on raiders' weapons (at least one raider).
-func (g *Game) raidKit(points int) []item.Kind { return g.raidKitOf(points, true) }
+func (g *Game) raidKit(points int) []item.Kind { return g.raidKitOf(points, faction.Industrial) }
 
-// raidKitOf is raidKit for a faction: rifles only when it has them (a
-// neolithic clan carries spears, clubs and knives), at most maxRaiders.
-func (g *Game) raidKitOf(points int, rifles bool) []item.Kind {
-	var kit []item.Kind
-	for limit := g.maxRaiders(); len(kit) < limit && (points >= knifeCost || len(kit) == 0); {
-		if rifles && points >= rifleCost && g.rng.IntN(100) < 55 {
-			kit = append(kit, item.Rifle)
-			points -= rifleCost
-			continue
-		}
-		k := meleeKit[g.rng.IntN(len(meleeKit))]
-		if cost := meleeCost(k); cost > points && len(kit) > 0 {
-			k = item.Knife // the cheapest blade fits what is left
-		}
-		kit = append(kit, k)
-		points -= meleeCost(k)
-	}
-	return kit
+// raidKitOf is raidKit for a faction of tech, at most maxRaiders: the
+// weapon catalogue by tech and points (domain combat/kit, DEF-2).
+func (g *Game) raidKitOf(points int, tech faction.Tech) []item.Kind {
+	return kit.Pick(points, g.maxRaiders(), tech, g.rng.IntN)
 }
 
 // scaledRaid is the storyteller's raid: sized by raid points, with a plan
@@ -182,21 +158,7 @@ func (g *Game) Sappers(n int) {
 	g.raidWith(g.kitOf(n), planSappers)
 }
 
-func (g *Game) kitOf(n int) []item.Kind {
-	kit := make([]item.Kind, n)
-	for i := range kit {
-		kit[i] = item.Club
-		switch g.rng.IntN(4) {
-		case 0, 1:
-			kit[i] = item.Rifle
-		case 2:
-			kit[i] = item.Knife
-		case 3:
-			kit[i] = item.Spear
-		}
-	}
-	return kit
-}
+func (g *Game) kitOf(n int) []item.Kind { return kit.Legacy(n, g.rng.IntN) }
 
 // campSpot is where a siege digs in: siegeRange tiles out from the
 // colony towards the raiders' edge.

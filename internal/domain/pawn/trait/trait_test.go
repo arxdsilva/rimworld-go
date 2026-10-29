@@ -81,7 +81,7 @@ func TestEffectsText(t *testing.T) {
 		Tireless:    {"Work speed +20%"},
 		Unhurried:   {"Work speed -20%", "Recreation drain -15%"},
 		Roughneck:   {"\"slept outside\" x0.25", "\"ate raw food\" x0.25"},
-		Fussy:       {"x2", "\"slept in a nice room\" +3"},
+		Fussy:       {"x2", "\"slept in my bedroom\" x1.5"},
 		HeartyEater: {"Hunger rate +25%", "\"ate a cooked meal\" +2"},
 		Bookish:     {"Intellectual speed +25%", "Intellectual learning x1.5"},
 		Gentle:      {"Social +3 levels", "Incapable: Violence"},

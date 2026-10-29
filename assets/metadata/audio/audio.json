@@ -4982,6 +4982,18 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.assault_rifle_shot",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/assault_rifle_shot_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.assault_rifle_shot",
+      "seed": 912,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.blade_hit",
       "bus": "effects",
       "volume": 0.75,
@@ -5005,6 +5017,18 @@
       "source": "procedural",
       "recipe": "sfx.blunt_hit",
       "seed": 905,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.bow_twang",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/bow_twang_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.bow_twang",
+      "seed": 917,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5125,6 +5149,43 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.emp_burst",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/emp_burst_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.emp_burst",
+      "seed": 922,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.explosion",
+      "bus": "effects",
+      "volume": 0.95,
+      "files": [
+        "sfx/explosion_0.wav",
+        "sfx/explosion_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.explosion",
+      "seed": 920,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.grenade_throw",
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "sfx/grenade_throw_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.grenade_throw",
+      "seed": 919,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.gunshot",
       "bus": "effects",
       "volume": 0.85,
@@ -5167,6 +5228,18 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.incendiary_burst",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/incendiary_burst_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.incendiary_burst",
+      "seed": 921,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.lightning_strike",
       "bus": "effects",
       "volume": 0.9,
@@ -5177,6 +5250,30 @@
       "source": "procedural",
       "recipe": "sfx.lightning_strike",
       "seed": 704,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.lmg_shot",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/lmg_shot_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.lmg_shot",
+      "seed": 915,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.melee_heavy",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/melee_heavy_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.melee_heavy",
+      "seed": 923,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5207,6 +5304,18 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.minigun_shot",
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "sfx/minigun_shot_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.minigun_shot",
+      "seed": 916,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.pick",
       "bus": "effects",
       "volume": 0.7,
@@ -5218,6 +5327,30 @@
       "source": "procedural",
       "recipe": "sfx.pick",
       "seed": 203,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.pila_throw",
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "sfx/pila_throw_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.pila_throw",
+      "seed": 918,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.pistol_shot",
+      "bus": "effects",
+      "volume": 0.75,
+      "files": [
+        "sfx/pistol_shot_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.pistol_shot",
+      "seed": 910,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5319,6 +5452,43 @@
       "source": "procedural",
       "recipe": "sfx.short_circuit",
       "seed": 807,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.shotgun_blast",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/shotgun_blast_0.wav",
+        "sfx/shotgun_blast_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.shotgun_blast",
+      "seed": 914,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.smg_burst_shot",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/smg_burst_shot_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.smg_burst_shot",
+      "seed": 911,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.sniper_shot",
+      "bus": "effects",
+      "volume": 0.95,
+      "files": [
+        "sfx/sniper_shot_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.sniper_shot",
+      "seed": 913,
       "license": "original, made in code (CC0, this repo)"
     },
     {

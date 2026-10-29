@@ -66,12 +66,12 @@ func Detect(w, h int, boundary func(x, y int) bool) (grid []int, sizes []int) {
 	return grid, sizes
 }
 
-// Contents is what a room contains, for scoring.
+// Contents is what a room contains, for its role. Floored counts floor
+// buildings and smooth stone cells.
 type Contents struct {
-	Cells, Floored         int
-	Beds, Tables, Chairs   int
-	Lamps, Benches         int
-	StoneWalls, TotalWalls int
+	Cells, Floored       int
+	Beds, Tables, Chairs int
+	Lamps, Benches       int
 }
 
 // Role is what a room is used for.
@@ -108,42 +108,4 @@ func RoleOf(c Contents) Role {
 		return Dining
 	}
 	return General
-}
-
-// Impressiveness is an integer room score; higher is better.
-func Impressiveness(c Contents) int {
-	if c.Cells <= 0 {
-		return 0
-	}
-	s := 12 * c.Floored / c.Cells
-	s += 3 * min(c.Lamps, 2)
-	s += 2 * min(c.Tables, 2)
-	s += min(c.Chairs, 4)
-	switch {
-	case c.Cells < 6:
-		s -= 6 // cramped
-	case c.Cells < 12:
-		s -= 4 // small
-	case c.Cells >= 16:
-		s += 3 // spacious
-	}
-	if c.TotalWalls > 0 && c.StoneWalls*2 >= c.TotalWalls {
-		s += 3
-	}
-	return s
-}
-
-// Label is a player-facing word for an impressiveness score.
-func Label(score int) string {
-	switch {
-	case score < 0:
-		return "awful"
-	case score < 6:
-		return "dull"
-	case score < 12:
-		return "decent"
-	case score < 18:
-		return "nice"
-	}
-	return "impressive"
 }

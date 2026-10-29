@@ -21,6 +21,8 @@ type Host interface {
 	Output
 	Workers
 	Crafters
+	Makers
+	Weathering
 }
 
 // Benches reads the buildings benches, racks and cabinets are, and what
@@ -125,4 +127,30 @@ type Crafters interface {
 	Name(id entity.EntityID) string
 	// Now is the current tick (a bill's ingredient retry cooldown).
 	Now() uint64
+}
+
+// Makers is the dice of made things and the inspiration they spend
+// (PRD-2).
+type Makers interface {
+	// Roll is a uniform draw in [0, n) from the host's craft stream.
+	Roll(n int) int
+	// UseInspiration ends id's creativity inspiration and reports whether
+	// it had one: the thing it makes rolls inspired.
+	UseInspiration(id entity.EntityID) bool
+}
+
+// Weathering is what rot and deterioration read and write (PRD-2), and
+// the worn outfits that wear out.
+type Weathering interface {
+	// Exposed: (x, y) lies under the open sky (no roof).
+	Exposed(x, y int) bool
+	// Raining: rain (not snow) is falling.
+	Raining() bool
+	// Wet: (x, y) is water or marsh.
+	Wet(x, y int) bool
+	SetStack(id entity.EntityID, st item.Stack)
+	// Pos is pawn id's tile (ok false when it has none).
+	Pos(id entity.EntityID) (x, y int, ok bool)
+	Outfit(id entity.EntityID) Outfit
+	SetOutfit(id entity.EntityID, o Outfit)
 }

@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -9,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -55,8 +57,11 @@ func (h combatCreatures) StandingPawn(id entity.EntityID) bool           { retur
 func (h combatCreatures) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h combatCreatures) Hostile(a animal.State) bool                    { return h.g.hostile(a) }
 func (h combatCreatures) Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer {
-	w := h.g.apparel[id]
-	return armor.AppendWorn(buf, w[item.Body], w[item.Head]) // apparel.go: the outer body layer first
+	w := h.g.apparel[id] // apparel.go: the outer body layer first; each piece by its stuff and quality
+	for _, p := range [...]craft.Piece{w.On[item.Body], w.On[item.Legs], w.On[item.Head]} {
+		buf = armor.AppendPiece(buf, p.Kind, p.Stuff, p.Quality)
+	}
+	return buf
 }
 
 type combatRosters struct{ g *Game }
@@ -184,8 +189,8 @@ func (h combatEvents) Trapped(victim entity.EntityID, dmg int) {
 	h.g.logEvent(victim, logEntry{Kind: logTrap, Amount: dmg})
 }
 func (h combatEvents) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
-func (h combatEvents) Burst(x, y int, tick uint64) {
-	h.g.wl.Bursts = append(h.g.wl.Bursts, burstStamp{X: x, Y: y, Tick: tick, Turret: true})
+func (h combatEvents) Burst(x, y int, tick uint64, b explosion.Def) { // a turret's: b zero
+	h.g.wl.Bursts = append(h.g.wl.Bursts, burstStamp{X: x, Y: y, Tick: tick, Turret: b.Zero(), Blast: b.Kind, Radius: b.Radius / 100})
 }
 func (h combatEvents) Ignite(x, y int) { h.g.igniteBurst(x, y) } // fire.go
 

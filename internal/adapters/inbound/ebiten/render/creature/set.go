@@ -54,6 +54,8 @@ type Set struct {
 	seenTrace map[[3]uint64]bool // traces whose effects already spawned
 	bursts    BurstTracker
 	layers    []Layer // FigureLayers' stack (mark and release)
+	worn      WornKeys
+	burstBuf  []BurstEvent // EmitWorldBursts' reused events
 	rectOp    ebiten.DrawImageOptions
 }
 
@@ -153,6 +155,11 @@ func (c *Set) solidRect(cl *Cull, dst *ebiten.Image, x, y, w, h float32, clr col
 func (c *Set) figureLayers(p game.PawnView, fs string) []Layer {
 	from := len(c.layers)
 	c.layers = c.Host.FigureLayers(c.layers, p, fs)
+	var cat *art.Catalog
+	if c.Paint != nil {
+		cat = c.Paint.Art
+	}
+	c.layers = c.worn.Dress(c.layers, from, cat, c.Paint, &p, fs) // worn.go: armor and helmets (DEF-2)
 	return c.layers[from:len(c.layers):len(c.layers)]
 }
 

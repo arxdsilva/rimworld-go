@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -166,9 +167,9 @@ type Events interface {
 	// Trapped: a spike trap dealt dmg to victim.
 	Trapped(victim entity.EntityID, dmg int)
 	Message(x, y int, text string)
-	// Burst is a destroyed turret's blast for the renderer; Ignite may set
-	// (x, y) alight.
-	Burst(x, y int, tick uint64)
+	// Burst is a blast for the renderer: a destroyed turret's (b zero) or
+	// an explosion's (DEF-2); Ignite may set (x, y) alight.
+	Burst(x, y int, tick uint64, b explosion.Def)
 	Ignite(x, y int)
 }
 

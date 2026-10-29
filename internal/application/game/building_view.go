@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/craft"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -156,7 +157,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	*bv = BuildingView{
 		ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant), Claimant2: entity.EntityID(b.Claimant2),
 		Facing: b.Facing.String(), Floor: construction.DefOf(b.Kind).Layer == construction.LayerFloor,
-		Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(),
+		Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(), Quality: craft.QualityLabel(b.Quality),
 		Bench: construction.DefOf(b.Kind).Bench,
 	}
 	bv.HPPct = b.HP() * 100 / max(1, construction.MaxHP(b.Kind, b.Stuff))
@@ -200,7 +201,7 @@ func equalBuildingView(a, b *BuildingView) bool {
 	}
 	return a.ID == b.ID && a.Kind == b.Kind && a.X == b.X && a.Y == b.Y &&
 		a.Claimant == b.Claimant && a.Claimant2 == b.Claimant2 && a.Facing == b.Facing &&
-		a.Floor == b.Floor && a.Deconstruct == b.Deconstruct && a.Stuff == b.Stuff &&
+		a.Floor == b.Floor && a.Deconstruct == b.Deconstruct && a.Stuff == b.Stuff && a.Quality == b.Quality &&
 		a.SwapTo == b.SwapTo && a.SwapPct == b.SwapPct && a.Ruin == b.Ruin && a.Medical == b.Medical &&
 		a.W == b.W && a.H == b.H && a.HasSpot == b.HasSpot && a.SpotX == b.SpotX && a.SpotY == b.SpotY &&
 		a.Bench == b.Bench && slices.Equal(a.Bills, b.Bills) &&

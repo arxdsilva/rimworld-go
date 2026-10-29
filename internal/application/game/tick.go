@@ -1233,6 +1233,10 @@ func (g *Game) doConstruct(id entity.EntityID, j job.Record) {
 		return
 	}
 	g.completeFrame(j.Target, fr)
+	if b, ok := g.bldgs.Get(j.Target); ok { // a new building (not a move or a swap): PRD-2 quality
+		b.Quality = g.craft.Quality.Built(id, b.Kind, b.X, b.Y)
+		g.bldgs.Set(j.Target, b)
+	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
@@ -1656,5 +1660,6 @@ func (g *Game) VitalOf(id entity.EntityID) health.Record {
 // keeps st's flags.
 func splitLoad(st item.Stack, take int) item.Stack {
 	return item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried,
-		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame, Poison: st.Poison}
+		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame, Poison: st.Poison,
+		Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff} // PRD-2: the same made thing
 }

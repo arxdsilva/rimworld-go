@@ -2,6 +2,7 @@ package combat
 
 import (
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
@@ -17,11 +18,17 @@ import (
 // there; any other shot strikes something in the cell half the time.
 // Every roll is on the main stream; Step runs once a tick and the slice is
 // reused, so a shot costs no allocation.
+//
+// An explosive (a grenade or a launcher's shell, DEF-2) never rolls to
+// hit: it is aimed at its target's tile, scattered by its forced-miss
+// radius at range, arcs over whatever lies between, and bursts where it
+// lands (Blasts).
 type Shots struct {
-	h    Host
-	st   *Strikes
-	live []projectile.Shot
-	seen []Seen // Near's reused buffer
+	h      Host
+	st     *Strikes
+	blasts *Blasts
+	live   []projectile.Shot
+	seen   []Seen // Near's reused buffer
 }
 
 // Tracking is how far (tiles) an aimed shot's target may have moved from
@@ -39,6 +46,11 @@ func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk we
 	dx, dy := tx, ty
 	aim := r.Aim()
 	switch {
+	case d.Explosive(): // thrown or lobbed at the tile, scattered at range
+		if rad := explosion.ForcedMiss(d.ForcedMiss, r.Dist); rad > 0 {
+			dx, dy = tx+h.Roll(2*rad+1)-rad, ty+h.Roll(2*rad+1)-rad
+		}
+		sh.Aimed = dx == tx && dy == ty
 	case h.Roll(1000) >= aim: // the aim failed: a wild shot
 		dx, dy = s.missAt(ax, ay, tx, ty, attack.MissRadius(aim))
 	case r.Cover > 0 && h.Roll(1000) < r.Cover: // the cover took it
@@ -81,6 +93,7 @@ func (s *Shots) Step() {
 	w += copy(s.live[w:], s.live[n:]) // fired while stepping: keep, in order
 	clear(s.live[w:])
 	s.live = s.live[:w]
+	s.blasts.prune(s.h.Now())
 }
 
 // fly moves sh one tick through the cells it enters; false once it is
@@ -91,6 +104,13 @@ func (s *Shots) fly(sh *projectile.Shot) bool {
 		if last {
 			s.land(sh, x, y)
 			return false
+		}
+		if sh.Blast() { // an explosive arcs over what lies between
+			if !s.h.InBounds(x, y) {
+				s.trace(sh, x, y, false, false, 0, 0)
+				return false
+			}
+			continue
 		}
 		if s.through(sh, x, y) {
 			return false
@@ -135,6 +155,11 @@ func (s *Shots) land(sh *projectile.Shot, x, y int) {
 	h := s.h
 	if !h.InBounds(x, y) {
 		s.miss(sh, x, y)
+		return
+	}
+	if sh.Blast() { // it bursts where it lands
+		s.trace(sh, x, y, true, false, 0, 0)
+		s.blasts.Explode(sh.Owner, sh.Weapon, x, y, weapon.DefOf(sh.Weapon).Blast)
 		return
 	}
 	if sh.Cover != 0 {

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/craft"
 	"slices"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -66,10 +67,12 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 		g.countStored(&t.stored, st)
 		out = append(out, ItemView{
 			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
-			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
+			FreshDays: craft.FreshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 			Catch:   filth.Catch(st.Kind) / 10, Forbidden: st.Forbidden,
 			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked, PoisonPermille: int(st.Poison),
+			Quality: craft.QualityLabel(st.Quality), Stuff: craft.StuffLabel(st.Kind, st.Stuff), // PRD-2
+			HP: st.HP(), MaxHP: st.MaxHP(), Tainted: st.Tainted(),
 		})
 		g.fillCorpseView(&out[len(out)-1], st) // burial.go
 		if st.Carrier != 0 {

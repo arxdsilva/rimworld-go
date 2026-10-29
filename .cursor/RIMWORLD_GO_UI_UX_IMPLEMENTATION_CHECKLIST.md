@@ -635,7 +635,7 @@ interfaces.
     -   What the pawn is doing.
     -   whether player control is unavailable.
     -   likely end condition/duration if knowable.
--   [ ] **Inspiration indicator**
+-   [-] **Inspiration indicator** (PRD-2: pawn status line shows the type; time left (InspirationTicks) is in the view but not shown)
     -   Type.
     -   effect.
     -   expiration/use state.
@@ -751,7 +751,7 @@ understandable.
     -   quality.
     -   condition.
     -   key combat stats.
--   [ ] **Worn apparel**
+-   [-] **Worn apparel** (BED/PRD-2, DEF-2: gear tab lists each worn piece with stuff, quality, condition flags and armor lines; layer coverage not drawn)
     -   Layer/body coverage.
     -   armor.
     -   insulation.
@@ -771,9 +771,9 @@ understandable.
 
 ## 12.3 Combat-stat tooltips
 
--   [ ] **Weapon accuracy/range/warmup/cooldown**
+-   [x] **Weapon accuracy/range/warmup/cooldown** (DEF-2: gear tab WeaponStats lines)
 -   [ ] **Melee damage/cooldown**
--   [ ] **Armor by damage category**
+-   [x] **Armor by damage category** (DEF-2: gear tab ApparelArmor lines (sharp, blunt, heat))
 -   [ ] **Temperature insulation**
 -   [ ] **Movement/work penalties from gear**
 
@@ -851,7 +851,7 @@ understandable.
 -   [ ] **Pause/resume thresholds if supported**
 -   [-] **Ingredient filter tree** (PRD-1: a flat allow/forbid per ingredient kind the recipe accepts; no category tree)
 -   [x] **Ingredient search radius** (PRD-1)
--   [ ] **Allowed material/stuff**
+-   [x] **Allowed material/stuff** (PRD-2: the ingredient filter allows or forbids each material; the bill's Material picker pins one, sent with every ConfigureBill)
 -   [ ] **Quality/condition restrictions**
 -   [x] **Worker skill range** (PRD-1)
 -   [x] **Specific worker** (PRD-1)
@@ -959,10 +959,10 @@ understandable.
 
 -   [-] **Room boundary** (UI-016: the G overlay tints each room by impressiveness; no outline)
 -   [x] **Room role**
--   [ ] **Space**
--   [ ] **beauty**
+-   [x] **Space** (BED-2: room card line)
+-   [x] **beauty** (BED-2: room card line)
 -   [x] **cleanliness** (SIM-021 room labels and hover panel; UI-016 room stats card)
--   [ ] **wealth**
+-   [x] **wealth** (BED-2: room card line)
 -   [x] **impressiveness**
 
 ------------------------------------------------------------------------

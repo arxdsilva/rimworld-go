@@ -24,6 +24,14 @@ var value = [numKinds]int{
 	Kidney: 900, Lung: 1000, Heart: 1200, Liver: 1200,
 	// MED-07: numbroot tincture original tuning; wiki: Penoxycyline (18).
 	NumbrootTincture: 16, ProphylTablet: 18,
+	// DEF-2, Normal quality (stuffed ones in steel). wiki: Weapons, Mace,
+	// Gladius, Longsword, Incendiary launcher, EMP launcher, Armor pages.
+	Mace: 117, Gladius: 138, Longsword: 255, ShortBow: 45, RecurveBow: 66, Greatbow: 104, Pila: 109,
+	Revolver: 135, Autopistol: 139, MachinePistol: 220, AssaultRifle: 480, SniperRifle: 530,
+	PumpShotgun: 255, ChainShotgun: 405, HeavySMG: 355, LMG: 425, Minigun: 1160,
+	FragGrenades: 265, MolotovCocktails: 245, EMPGrenades: 315, IncendiaryLauncher: 340, EMPLauncher: 505,
+	FlakVest: 225, FlakPants: 225, FlakJacket: 290, PlateArmor: 460, MarineArmor: 2035,
+	MarineHelmet: 635, SimpleHelmet: 88, AdvancedHelmet: 260,
 }
 
 // Value is the market value of one unit of k.

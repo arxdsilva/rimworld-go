@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/room"
 )
 
 // restHost implements rest.Host (rest/deps.go) over the game: one small
@@ -130,7 +131,17 @@ type restRooms struct{ g *Game }
 
 func (h restRooms) RoomAt(x, y int) int    { return h.g.roomAt(x, y) }
 func (h restRooms) UnderSky(x, y int) bool { return h.g.underSky(x, y) }
-func (h restRooms) RoomScore(r int) int    { return h.g.roomScore(r) }
+
+// RoomQuality reads the rebuild's tally with the live filth, items and
+// bed flags (BED-2).
+func (h restRooms) RoomQuality(r int) (room.Role, int) {
+	if h.g.ensureRooms(); r < 0 || r >= len(h.g.rooms) {
+		return room.General, 0
+	}
+	f, rs := h.g.regs.rooms.countFacts(h.g)[r], h.g.rooms[r]
+	sum, _ := h.g.roomFilth(r)
+	return rs.tally.Role(rs.contents, f.MedicalBeds, f.PrisonerBeds), rs.tally.Stats(rs.contents, sum, f.Wealth).ImpressivenessTenths
+}
 func (h restRooms) ObjectAt(x, y int) entity.EntityID {
 	return h.g.layerBldgAt(x, y, construction.LayerObject)
 }
@@ -145,6 +156,9 @@ func (h restEvents) RememberWith(id entity.EntityID, k mood.Kind, o entity.Entit
 	h.g.memories[id] = h.g.memories[id].AddFor(k, uint64(o), uint64(h.g.clock.Now()))
 }
 func (h restEvents) Remember(id entity.EntityID, k mood.Kind) { h.g.remember(id, k) }
+func (h restEvents) RememberValue(id entity.EntityID, k mood.Kind, v int, label string) {
+	h.g.memories[id] = h.g.memories[id].AddLabeled(k, 0, v, label, uint64(h.g.clock.Now()))
+}
 func (h restEvents) ForgetGroup(id entity.EntityID, k mood.Kind) {
 	h.g.memories[id] = h.g.memories[id].ForgetGroupOf(k)
 }

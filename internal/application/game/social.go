@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -319,7 +320,7 @@ type careGear struct{ g *Game }
 func (h careGear) HasGear(target entity.EntityID) bool {
 	_, armed := h.g.equip[target]
 	w := h.g.apparel[target]
-	return armed || w[item.Body] != 0 || w[item.Head] != 0
+	return armed || w.Kind(item.Body) != 0 || w.Kind(item.Head) != 0
 }
 
 // StripGear drops target's apparel and weapon where it lies.
@@ -330,12 +331,12 @@ func (h careGear) StripGear(target entity.EntityID) bool {
 	}
 	pos, _ := g.positions.Get(target)
 	for _, s := range wearSlots {
-		if k := g.apparel[target][s]; k != 0 {
-			w := g.apparel[target]
-			w[s] = 0
-			w.setForced(s, false)
+		if p := g.apparel[target].On[s]; p.Kind != 0 {
+			k, w := p.Kind, g.apparel[target]
+			w.On[s] = craft.Piece{}
+			w.SetForced(s, false)
 			g.apparel[target] = w
-			g.dropStack(k, 1, pos.X, pos.Y)
+			g.dropStackOf(p.Stack(pos.X, pos.Y), pos.X, pos.Y) // PRD-2: as it was, worn or tainted
 			g.dressChanged(target, s)
 			g.dressNote(target, logTookOff, k)
 		}

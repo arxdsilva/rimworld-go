@@ -25,6 +25,7 @@ type Strikes struct {
 	turrets *Turrets
 	hunts   Hunts
 	shots   *Shots
+	blasts  *Blasts
 	// layers is Armor's reused buffer.
 	layers []armor.Layer
 }
@@ -212,6 +213,9 @@ func (s *Strikes) report(attacker entity.EntityID, ax, ay int, target entity.Ent
 	r.InSight = r.InRange && (!d.Ranged || dist <= 1 || s.sight.Line(ax, ay, tx, ty))
 	if d.Ranged && !building {
 		r.Cover = s.sight.Cover(ax, ay, tx, ty) * 10
+	}
+	if d.Ranged {
+		r.Weather = r.Weather * s.blasts.SmokeFactor(ax, ay, tx, ty) / 1000 // DEF-2: smoke in the way
 	}
 	_, beast := h.Animal(attacker)
 	if d.Legacy() {

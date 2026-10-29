@@ -3,8 +3,6 @@ package game
 import (
 	"fmt"
 
-	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
 )
@@ -100,75 +98,7 @@ func (g *Game) phaseClimate() {
 	g.checkRoofSupport() // roof.go: unsupported roofs fall first
 	g.heatRooms()
 	g.expose()
-	g.rotItems()
-	g.craft.Drying.Advance(climateInterval) // craft/drying.go; frost: per chunk with the plants (plant_growth.go)
-}
-
-// rotItems advances spoilage by the local temperature. Spoiled food is
-// destroyed; a rotten corpse lingers unbutcherable until it has rotted as
-// long again, then decays away, except a human corpse, which becomes the
-// deceased's bones (SIM-017). Stacks being carried or reserved for a job
-// keep rotting but are only removed once they are free.
-func (g *Game) rotItems() {
-	type loss struct {
-		qty  int
-		x, y int
-	}
-	lost := map[item.Kind]*loss{}
-	var order []item.Kind
-	var drop map[entity.EntityID]bool // removed from itemIDs once, in order, after the pass
-	for _, id := range g.itemIDs {
-		st, ok := g.stacks.Get(id)
-		if !ok || st.Shelf() == 0 {
-			continue
-		}
-		x, y := st.X, st.Y
-		if st.Carrier != 0 {
-			if p, ok := g.positions.Get(st.Carrier); ok {
-				x, y = p.X, p.Y
-			}
-		}
-		st.Rot += climateInterval * item.RotRate(int(g.temperatureAt(x, y))) / 1000
-		if st.Kind == item.CorpseHuman && st.Rot >= 2*st.Shelf() {
-			st.Kind, st.Rot = item.Bones, 0 // same Of: whose bones they are
-		}
-		g.stacks.Set(id, st)
-		gone := st.Rotten() && !st.Kind.IsCorpse() || st.Kind.IsCorpse() && st.Rot >= 2*st.Shelf()
-		if !gone || st.Carrier != 0 {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(id); taken {
-			continue
-		}
-		g.stacks.Delete(id) // deleteItem, with the list compacted below
-		if drop == nil {
-			drop = map[entity.EntityID]bool{}
-		}
-		drop[id] = true
-		if lost[st.Kind] == nil {
-			lost[st.Kind] = &loss{x: x, y: y}
-			order = append(order, st.Kind)
-		}
-		lost[st.Kind].qty += st.Qty
-	}
-	if drop != nil {
-		g.itemIDs = dropIDs(g.itemIDs, func(id entity.EntityID) bool { return drop[id] })
-	}
-	for _, k := range order {
-		l := lost[k]
-		if k.IsCorpse() {
-			g.message(l.x, l.y, "A rotten %s decayed away", k)
-			continue
-		}
-		g.message(l.x, l.y, "%d %s rotted away", l.qty, k)
-	}
-}
-
-// FreshDays is how many days a perishable stack keeps at full rot speed
-// (room temperature); -1 for food that never spoils.
-func freshDays(st item.Stack) float64 {
-	if st.Shelf() == 0 {
-		return -1
-	}
-	return float64(st.FreshTicks()) / float64(clock.TicksPerDay)
+	g.craft.Condition.Rot(climateInterval)           // craft/condition.go
+	g.craft.Condition.Weather(uint64(g.clock.Now())) // PRD-2: deterioration and worn wear, hourly
+	g.craft.Drying.Advance(climateInterval)          // craft/drying.go; frost: per chunk with the plants (plant_growth.go)
 }

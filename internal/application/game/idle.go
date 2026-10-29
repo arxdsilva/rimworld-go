@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -301,6 +302,7 @@ func (g *Game) doIdle(id entity.EntityID, j job.Record) {
 		if j.Kind == job.Chat || j.Kind == job.SocialRelax {
 			g.learn(id, skSocial, chatXP) // skills.go
 		}
+		g.rest.Waking.Felt(id, rest.Enjoyed) // BED-2: a fine recreation room
 	}
 	g.jobs.Set(id, j)
 }

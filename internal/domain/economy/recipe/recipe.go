@@ -100,6 +100,10 @@ type Input struct {
 	AnyStoneBlocks bool
 	Qty            int
 	Max            int
+	// Stuff (PRD-2), when set, takes any material of these families
+	// instead (Kind is then the default material, AnyStoneBlocks ignored):
+	// the stack's kind becomes the product's Stack.Stuff.
+	Stuff item.StuffCategory
 }
 
 // Take is how many items the input takes from a stack of qty.
@@ -146,7 +150,7 @@ var defs = [numRecipes]Def{
 	SimpleMeal: {ID: SimpleMeal, Name: "simple_meal", Label: "Cook simple meal", Bench: construction.Stove,
 		Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1, Work: 120, Skill: work.Cook, Learn: skill.Cooking},
 	Club: {ID: Club, Name: "club", Label: "Make wooden club", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 4}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Wood, Qty: 4, Stuff: item.MadeFrom(item.Club)}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft, Learn: skill.Crafting},
 	ButcherDustbuck: {ID: ButcherDustbuck, Name: "butcher_dustbuck", Label: "Butcher dustbuck", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, ExtraQty: 5, Legacy: true},
@@ -162,18 +166,18 @@ var defs = [numRecipes]Def{
 		Work: 180, Skill: work.Cook, Learn: skill.Cooking},
 	// Tailoring: a parka takes the hides of about three deer.
 	MakeParka: {ID: MakeParka, Name: "make_parka", Label: "Sew leather parka", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 14}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Leather, Qty: 14, Stuff: item.MadeFrom(item.Parka)}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft, Learn: skill.Crafting},
 	MakeTuque: {ID: MakeTuque, Name: "make_tuque", Label: "Sew leather tuque", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 4}, Output: item.Tuque, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Leather, Qty: 4, Stuff: item.MadeFrom(item.Tuque)}, Output: item.Tuque, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
 	MakeDuster: {ID: MakeDuster, Name: "make_duster", Label: "Sew leather duster", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 10}, Output: item.Duster, OutQty: 1, Work: 700, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Leather, Qty: 10, Stuff: item.MadeFrom(item.Duster)}, Output: item.Duster, OutQty: 1, Work: 700, Skill: work.Craft, Learn: skill.Crafting},
 	// A crude rifle: a long, careful job (needs Gunsmithing research).
 	MakeRifle: {ID: MakeRifle, Name: "make_rifle", Label: "Make crude rifle", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft, Learn: skill.Crafting},
 	Knife: {ID: Knife, Name: "knife", Label: "Make stone knife", Bench: construction.Workbench,
-		Input: Input{AnyStoneBlocks: true, Qty: 3}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.GraniteBlocks, Qty: 3, Stuff: item.MadeFrom(item.Knife)}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft, Learn: skill.Crafting},
 	Spear: {ID: Spear, Name: "spear", Label: "Make wooden spear", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 5}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft, Learn: skill.Crafting},
+		Input: Input{Kind: item.Wood, Qty: 5, Stuff: item.MadeFrom(item.Spear)}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft, Learn: skill.Crafting},
 	Cremate: {ID: Cremate, Name: "cremate", Label: "Cremate corpse", Bench: construction.Pyre,
 		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Work: 300, Skill: work.Craft, Learn: skill.Crafting,
 		Extra: item.Wood, ExtraQty: 2},
@@ -317,6 +321,8 @@ func For(bench construction.Kind) []Def {
 // Accepts reports whether stack kind k can feed input in.
 func (in Input) Accepts(k item.Kind) bool {
 	switch {
+	case in.Stuff != 0:
+		return k.StuffCategory()&in.Stuff != 0
 	case in.AnyRaw:
 		return k.Raw()
 	case in.AnyDryable:
@@ -376,6 +382,8 @@ func (in Input) Label() string {
 	switch {
 	case in.AnyRaw:
 		name = "raw food"
+	case in.Stuff != 0:
+		name = in.Stuff.String()
 	case in.AnyStoneBlocks:
 		name = "any stone blocks"
 	}
@@ -445,6 +453,10 @@ type Bill struct {
 	// SearchAt is the tick before which the bill doesn't look for
 	// ingredients again after a search found none (the retry cooldown).
 	SearchAt uint64
+	// Stuff (PRD-2) pins a stuffed recipe's material: only that kind is
+	// taken (0: any material the recipe takes and Forbid allows). The
+	// allowed-stuff list is Forbid over the recipe's materials.
+	Stuff item.Kind
 }
 
 // StoreMode is where a finished bill's product goes.
@@ -495,8 +507,34 @@ func (b Bill) SkillOK(lvl uint8) bool { return lvl >= b.SkillMin && lvl <= b.Max
 
 // Allows reports an ingredient kind the bill doesn't forbid.
 func (b Bill) Allows(k item.Kind) bool {
+	if b.Stuff != 0 && k != b.Stuff && k.StuffCategory() != 0 {
+		return false // PRD-2: another material than the pinned one
+	}
 	_, found := slices.BinarySearch(b.Forbid, k)
 	return !found
+}
+
+// Stuffed reports a recipe whose product is made of a chosen material
+// (PRD-2: its product's Stack.Stuff is the material it took).
+func (d Def) Stuffed() bool { return d.Input.Stuff != 0 && len(d.Inputs) == 0 }
+
+// Materials lists the materials a stuffed recipe takes, in kind order
+// (nil for any other recipe).
+func (d Def) Materials() []item.Kind {
+	if !d.Stuffed() {
+		return nil
+	}
+	return item.Stuffs(d.Input.Stuff)
+}
+
+// PinStuff is b with its material pinned to k when recipe d takes it,
+// else unpinned (k 0, or a kind d does not take).
+func (b Bill) PinStuff(d Def, k item.Kind) Bill {
+	b.Stuff = 0
+	if k != 0 && d.Stuffed() && d.Input.Accepts(k) {
+		b.Stuff = k
+	}
+	return b
 }
 
 // SetAllowed allows or forbids ingredient kind k, keeping Forbid sorted.

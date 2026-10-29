@@ -79,6 +79,21 @@ const (
 	OrganHarvested
 	KnowOrganHarvested
 	KnowColonistOrganHarvested
+	// Room impressiveness (BED-2, append only, saved): the stage's value
+	// and label ride in Memory.Value and Memory.Label (game/rest
+	// RoomMood); sharing a bed carries its opinion-scaled value.
+	SleptInBedroom
+	SleptInBarracks
+	SleptInHospital
+	AteInDiningRoom
+	EnjoyedRecRoom
+	SharedBed
+	// Apparel condition (PRD-2, append only, saved): state thoughts of
+	// the worst worn piece's wear and of tainted pieces (craft/garment.go;
+	// TaintedApparel's value comes by count).
+	RattyApparel
+	TatteredApparel
+	TaintedApparel
 	numKinds
 )
 
@@ -107,6 +122,9 @@ const (
 	groupSoaked
 	groupSnowDay
 	groupLovesWork
+	groupDiningRoom // BED-2
+	groupRecRoom
+	groupSharedBed
 )
 
 // day: remembered thoughts last one in-game day.
@@ -181,6 +199,19 @@ var defs = [numKinds]Def{
 	OrganHarvested:             {"my organ was harvested", -30, 7 * day, groupNone, 0, 0},
 	KnowOrganHarvested:         {"someone's organ was harvested", -5, 6 * day, groupNone, harvestStack, harvestFactor},
 	KnowColonistOrganHarvested: {"a colonist's organ was harvested", -6, 6 * day, groupNone, harvestStack, harvestFactor},
+	// BED-2, wiki: Thoughts (room stage thoughts and sharing a bed last a
+	// day). Values come per memory; SharedBed's -5 is the opinion-0 value.
+	SleptInBedroom:  {"slept in my bedroom", 0, day, groupSleepRoom, 0, 0},
+	SleptInBarracks: {"slept in barracks", 0, day, groupSleepRoom, 0, 0},
+	SleptInHospital: {"lay in a hospital", 0, day, groupSleepRoom, 0, 0},
+	AteInDiningRoom: {"ate in a fine dining room", 0, day, groupDiningRoom, 0, 0},
+	EnjoyedRecRoom:  {"relaxed in a fine recreation room", 0, day, groupRecRoom, 0, 0},
+	SharedBed:       {"had to share a bed", -5, day, groupSharedBed, 0, 0},
+	// PRD-2, wiki: Apparel (ratty -3, tattered -5; tainted -5/-8/-11/-14
+	// by count, the value set per thought).
+	RattyApparel:    {"ratty apparel", -3, 0, groupNone, 0, 0},
+	TatteredApparel: {"tattered apparel", -5, 0, groupNone, 0, 0},
+	TaintedApparel:  {"wearing a dead man's clothes", -5, 0, groupNone, 0, 0},
 }
 
 // harvestStack and harvestFactor stack the colony's harvest memories:

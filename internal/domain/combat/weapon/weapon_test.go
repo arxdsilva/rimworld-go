@@ -69,7 +69,7 @@ func TestKnifeSpearStats(t *testing.T) {
 
 func TestLegacyWeaponsReproduceToday(t *testing.T) {
 	t.Parallel()
-	for k := Kind(0); k < numKinds; k++ {
+	for k := Kind(0); k < Mace; k++ { // the DEF-2 catalogue from Mace on: catalogue_test.go
 		d := DefOf(k)
 		if _, wiki := wikiStats[k]; wiki {
 			continue // TestKnifeSpearStats pins the wiki weapons

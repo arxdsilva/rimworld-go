@@ -42,7 +42,8 @@ const (
 	loadDrop     = 0.07 // a load's centre below the body centre: held at the chest, under the chin
 )
 
-// HeldWeaponKey maps a wielded weapon to its held sprite (fists: none).
+// HeldWeaponKey maps a wielded weapon (PawnView.Weapon, the def name) to
+// its held sprite (fists, bites and the sentry gun: none).
 func HeldWeaponKey(weapon string) (key string, ok bool) {
 	switch weapon {
 	case "rifle":
@@ -53,6 +54,53 @@ func HeldWeaponKey(weapon string) (key string, ok bool) {
 		return "weapon/spear", true
 	case "club":
 		return "weapon/club", true
+	// DEF-2 (wave C): every new weapon by its def name (weapon.Def.Name,
+	// singular: "frag grenade"), each key a literal so the per-frame
+	// lookup never builds a string.
+	case "mace":
+		return "weapon/mace", true
+	case "gladius":
+		return "weapon/gladius", true
+	case "longsword":
+		return "weapon/longsword", true
+	case "short bow":
+		return "weapon/short_bow", true
+	case "recurve bow":
+		return "weapon/recurve_bow", true
+	case "greatbow":
+		return "weapon/greatbow", true
+	case "pila":
+		return "weapon/pila", true
+	case "revolver":
+		return "weapon/revolver", true
+	case "autopistol":
+		return "weapon/autopistol", true
+	case "machine pistol":
+		return "weapon/machine_pistol", true
+	case "assault rifle":
+		return "weapon/assault_rifle", true
+	case "sniper rifle":
+		return "weapon/sniper_rifle", true
+	case "pump shotgun":
+		return "weapon/pump_shotgun", true
+	case "chain shotgun":
+		return "weapon/chain_shotgun", true
+	case "heavy smg":
+		return "weapon/heavy_smg", true
+	case "lmg":
+		return "weapon/lmg", true
+	case "minigun":
+		return "weapon/minigun", true
+	case "frag grenade":
+		return "weapon/frag_grenade", true
+	case "molotov cocktail":
+		return "weapon/molotov_cocktail", true
+	case "EMP grenade":
+		return "weapon/emp_grenade", true
+	case "incendiary launcher":
+		return "weapon/incendiary_launcher", true
+	case "emp launcher":
+		return "weapon/emp_launcher", true
 	}
 	return "", false
 }

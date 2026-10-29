@@ -483,12 +483,12 @@ This is the heart of autonomous colony behavior.
     -   stack limit.
     -   merge/split.
     -   no negative or duplicated quantity.
--   [ ] **Item quality**
+-   [-] **Item quality** (PRD-2: quality rolled from skill and inspiration on apparel, weapons, beds, bedrolls, animal bed, end table, dresser, table, chair and constructed buildings; grenades unrolled; art waits for PRD-3)
     -   Quality tiers for relevant crafted
         items/buildings/apparel/weapons/art.
     -   Quality affected by creator skill and other factors.
     -   Exact RimWorld probabilities need not be copied.
--   [ ] **Item hit points/deterioration**
+-   [x] **Item hit points/deterioration** (PRD-2: item HP, 2 HP/day outdoors (original tuning), rain x5, water x3, roofed 0, metal and stone immune, quality factor; no shelves yet (PRD-4))
     -   Items can take damage.
     -   Outdoor/unroofed or unsuitable storage can cause deterioration
         where applicable.
@@ -563,7 +563,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Construction frame** (delivered materials tracked per frame with in-flight amounts; UI-015 frame inspector shows them)
     -   Delivered materials are committed to a partially constructed
         entity.
--   [-] **Construction work** (NG-1: Construction skill scales the work speed; no quality or failed construction)
+-   [-] **Construction work** (NG-1: Construction skill scales the work speed; no quality or failed construction; PRD-2 now rolls building quality; still no failed construction)
     -   Construction skill affects speed and result.
     -   Failed construction may waste resources if independently chosen
         balance supports it.
@@ -610,13 +610,13 @@ This is the heart of autonomous colony behavior.
 -   [x] **Room detection**
     -   Enclosed connected spaces bounded by walls/doors.
     -   Outdoor/unroofed semantics.
--   [-] **Room statistics** (cleanliness and an ad-hoc impressiveness; missing: space, beauty, wealth and the vanilla impressiveness formula — BED-2)
+-   [x] **Room statistics** (cleanliness and an ad-hoc impressiveness; missing: space, beauty, wealth and the vanilla impressiveness formula — BED-2; BED-2: space, beauty, wealth, cleanliness and the wiki impressiveness formula, tallied at room rebuild with live filth and item value; RoomView carries them)
     -   Space.
     -   beauty.
     -   cleanliness.
     -   wealth/value.
     -   impressiveness derived from room properties.
--   [-] **Room roles** (general, bedroom, barracks, dining, workshop; missing: hospital, prison cell/barracks, rec room, kitchen — BED-2)
+-   [x] **Room roles** (general, bedroom, barracks, dining, workshop; missing: hospital, prison cell/barracks, rec room, kitchen — BED-2; BED-2: adds hospital, prison cell, prison barracks, kitchen and recreation room)
     -   Bedroom.
     -   barracks.
     -   dining room.
@@ -872,9 +872,9 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 10.2 Inspirations
 
--   [ ] **High-mood inspiration chance**
+-   [x] **High-mood inspiration chance** (PRD-2: mood >= 50 and Crafting or Construction >= 3, checked hourly, 1-day cooldown; mean-time curve is original tuning)
     -   Positive temporary state after sustained good mood.
--   [ ] **Inspiration types**
+-   [-] **Inspiration types** (PRD-2: creativity only; the other types are missing)
     -   Inspired creativity/quality.
     -   inspired recruitment.
     -   inspired trade.
@@ -954,7 +954,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.3 Injuries
 
--   [-] **Damage types** (SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage)
+-   [x] **Damage types** (SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage; DEF-1/DEF-2: armor resolution and bomb, flame and EMP explosion damage)
     -   Blunt.
     -   sharp.
     -   burn.
@@ -1143,7 +1143,7 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Flammability** (PLAY-015 SIM-058: grass, plants (trees, duskmoss), crops, wooden buildings and bridges, flammable items; stone, steel and terrain never burn)
     -   Terrain/buildings/items/plants define flammability.
--   [-] **Ignition** (PLAY-015: lightning strikes in storms, bursting animals, developer action; no weapon or overheat sources yet)
+-   [-] **Ignition** (PLAY-015: lightning strikes in storms, bursting animals, developer action; no weapon or overheat sources yet; DEF-2: flame explosions now ignite; still no overheat or weapon-fire source)
     -   Weapon/explosion/lightning/random event/overheat sources.
 -   [x] **Fire spread** (PLAY-015: active fires in per-chunk lists; spreads to flammable neighbours, downwind more, barely into roofed cells; rain and snow put outdoor fires out)
     -   Active-set simulation only.
@@ -1185,7 +1185,7 @@ treatment, and surgery are major colony-management systems.
     -   Home-area filth becomes indexed cleaning work.
 -   [x] **Blood trails** (SIM-020: bleeding colonists, raiders and animals drip every third tile; untended downed pawns pool)
     -   Bleeding moving pawns can create blood filth.
--   [ ] **Outdoor deterioration**
+-   [x] **Outdoor deterioration** (PRD-2: roof-aware, raw resources exempt)
     -   Eligible items deteriorate when exposed.
     -   Roof/storage protection matters.
 -   [ ] **Building breakdown**
@@ -1248,7 +1248,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.4 Quality
 
--   [ ] **Craft quality generation**
+-   [x] **Craft quality generation** (PRD-2: skill roll via domain/economy/quality; inspiration shifts +2; value and stat multipliers read the stored quality)
     -   Skill/inspiration influence.
     -   Quality affects market value and relevant item stats.
 
@@ -1322,7 +1322,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.2 Apparel
 
--   [-] **Wearable apparel** (body and head slots over everyday clothes; insulation shifts the comfort band; Wear order; Gear tab)
+-   [x] **Wearable apparel** (body and head slots over everyday clothes; insulation shifts the comfort band; Wear order; Gear tab; PRD-2/DEF-2: stuff, quality, hit points and armor per piece; four slots incl. legs; gear tab shows them)
     -   Body-part/layer coverage.
     -   material.
     -   armor.
@@ -1331,14 +1331,14 @@ treatment, and surgery are major colony-management systems.
     -   hit points.
 -   [ ] **Apparel compatibility**
     -   Conflicting body layers/slots cannot be worn together.
--   [ ] **Apparel deterioration**
+-   [x] **Apparel deterioration** (PRD-2: worn pieces lose 1 HP on 40 % of days; ratty at 50 % HP, tattered under 20 %)
     -   Worn apparel can lose condition.
 -   [-] **Apparel policy** (PLAY-017: colonists change straight into the best body and head outfit for their comfortable range, before work and by dropping interruptible work, with a 1 C dead band and a per-slot cooldown; a Wear order keeps its slot; changes logged on the colonist; no player policy screen)
     -   Allowed categories.
     -   minimum condition.
     -   quality filters.
     -   pawn automatically changes apparel when safe/appropriate.
--   [ ] **Tainted apparel**
+-   [x] **Tainted apparel** (PRD-2: dead pawn outfit is tainted and dropped; -5/-8/-11/-14 by count; auto-dress skips it)
     -   Apparel from a corpse can carry negative social/mood semantics
         for ordinary colonists.
 
@@ -1346,14 +1346,14 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Melee weapons**
     -   Multiple attack verbs/damage profiles.
--   [-] **Ranged weapons** (DEF-1: per-weapon warmup, cooldown, burst, accuracy bands and armor penetration; projectiles in flight; the rifle is the bolt-action; missing: the rest of the vanilla catalogue incl. burst weapons (DEF-2))
+-   [x] **Ranged weapons** (DEF-1: per-weapon warmup, cooldown, burst, accuracy bands and armor penetration; projectiles in flight; the rifle is the bolt-action; missing: the rest of the vanilla catalogue incl. burst weapons (DEF-2); DEF-2: bows, revolver, autopistol, assault and sniper rifles, shotguns, LMG, minigun; 30 weapon and armor item kinds; rocket launchers skipped)
     -   Range.
     -   warmup.
     -   cooldown.
     -   accuracy by distance.
     -   burst count where applicable.
     -   projectile definition.
--   [ ] **Thrown/explosive weapons**
+-   [-] **Thrown/explosive weapons** (DEF-2: frag, molotov and EMP grenades with blast radius, raiders only; colonist throw order is DEF-4)
     -   Grenade-like projectile.
     -   blast radius.
 -   [ ] **Single-use launchers**
@@ -1409,7 +1409,7 @@ treatment, and surgery are major colony-management systems.
     -   Logical projectile entity or deterministic trajectory.
     -   Can miss intended target and impact another valid cell/entity
         where design supports it.
--   [-] **Burst fire** (DEF-1: the mechanism, shots and ticks between from the weapon; no burst weapon until DEF-2)
+-   [x] **Burst fire** (DEF-1: the mechanism, shots and ticks between from the weapon; no burst weapon until DEF-2; DEF-2: burst weapons use it)
 -   [x] **Cooldown** (per weapon, `weapon.Def.Cooldown`)
 
 ## 17.5 Melee
@@ -1434,10 +1434,10 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.7 Explosions
 
--   [ ] **Blast cells**
--   [ ] **Radial damage**
--   [ ] **Fire chance**
--   [ ] **Building/item/pawn damage**
+-   [x] **Blast cells** (DEF-2: domain/combat/explosion, line of sight from centre)
+-   [x] **Radial damage** (DEF-2: full at centre to half at rim (original tuning))
+-   [x] **Fire chance** (DEF-2: flame blasts ignite the centre)
+-   [-] **Building/item/pawn damage** (DEF-2: pawns and buildings (bomb x2); items not damaged)
 -   [ ] **Chain reaction support for explosive content**
 
 ## 17.8 Combat AI

@@ -3,8 +3,9 @@
 // when a sleeper gets up, and the thoughts it wakes with (BED-0).
 //
 // The root type is Sleep, not Rest, so it never reads as care.Rest: bed
-// rest for patients stays in the care package (care/rest.go), and room
-// stats stay in the game package.
+// rest for patients stays in the care package (care/rest.go). Room stats
+// are domain/world/room's, fed by the game's room index; rest turns a
+// room's role and impressiveness into thoughts (room_mood.go, BED-2).
 //
 // It is a consumer sub-package of internal/application/game
 // (.cursor/SOLID_GO.md §10): it never imports the game package. Everything

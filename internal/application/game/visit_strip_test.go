@@ -112,7 +112,7 @@ func TestBedriddenAwakePatientIsAChatPartner(t *testing.T) {
 func TestStripDropsDownedColonistsGear(t *testing.T) {
 	g, doc, patient := careScene(t)
 	w := g.apparel[patient]
-	w[item.Body] = item.Parka
+	w.On[item.Body].Kind = item.Parka
 	if g.apparel == nil {
 		g.apparel = map[entity.EntityID]worn{}
 	}
@@ -130,7 +130,7 @@ func TestStripDropsDownedColonistsGear(t *testing.T) {
 		t.Fatal("the weapon drops as an item")
 	}
 	// the parka dropped too (a colonist may already have picked it up)
-	if g.apparel[patient][item.Body] != 0 {
+	if g.apparel[patient].Kind(item.Body) != 0 {
 		t.Fatal("nothing left worn")
 	}
 	took := false

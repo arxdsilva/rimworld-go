@@ -1262,6 +1262,7 @@ resolve metadata conflicts, and update the catalog.
 -   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
 -   [x] pawn base: original compositional pawns (ART-025: limbless round-headed figure, body/pants/shirt/vest/hair layers, S/E/N rendered with west mirrored, EntityID-stable tints; walk, work, lying/in-bed/carried motion are renderer transforms, no frames)
 -   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
+-   [-] held weapons and worn armor layers (DEF-2: 22 weapon sprites `weapon/<key>`, 8 armor pieces as `pawn/<layer>_<build>_<facing>` and helmets `pawn/<helmet>_<facing>`, stuff tint masks, validator clean; drawn from `PawnView.Worn` in `render/creature/worn.go` with stuff tints, held keys in `render/creature/held.go`, item keys in `render/world/keys.go`; missing: armor on portraits and the colonist bar, stuff tint on ground items)
 -   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet)
 -   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist)
 

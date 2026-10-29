@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/economy/item"
@@ -22,10 +23,6 @@ import (
 // player's until another garment is ordered for it.
 
 const (
-	// daySpan is the spread of the day's air around its mean (tenths of a
-	// degree C) an outfit is judged against: the day, not the hour, so
-	// clothes don't change at dawn.
-	daySpan = 100
 	// dressGain: a change must spare at least 1 C of discomfort.
 	dressGain = 10
 	// dressCool is how long a slot that changed stays as it is.
@@ -37,29 +34,18 @@ const (
 	dressTries = 3
 )
 
-// worn is what a colonist has on, indexed by item.Slot. worn[item.NoSlot]
-// never holds a garment: it keeps one bit per slot the player chose, so
-// the choice is saved with the set (older saves: none).
-type worn [3]item.Kind
+// worn is what a colonist has on, piece by piece with each garment's
+// material, quality and wear, and the slots the player chose
+// (craft/garment.go, PRD-2).
+type worn = craft.Outfit
 
 // wearSlots are the slots garments go in.
-var wearSlots = [...]item.Slot{item.Body, item.Head}
-
-// forced reports that the player chose what is worn in slot s.
-func (w worn) forced(s item.Slot) bool { return w[item.NoSlot]&(1<<s) != 0 }
-
-func (w *worn) setForced(s item.Slot, on bool) {
-	if on {
-		w[item.NoSlot] |= 1 << s
-	} else {
-		w[item.NoSlot] &^= 1 << s
-	}
-}
+var wearSlots = [...]item.Slot{item.Body, item.Head, item.Legs} // DEF-2: flak pants
 
 // bandsOf is a colonist's comfortable range given what it wears.
 func (g *Game) bandsOf(id entity.EntityID) exposure.Bands {
 	c, h := g.comfortShift(id)
-	return shifted(bandsWearing(g.apparel[id]), c, h)
+	return shifted(g.apparel[id].Bands(), c, h) // craft/garment.go
 }
 
 // shifted is b moved by a colonist's comfort shift: cold is added to the
@@ -71,28 +57,17 @@ func shifted(b exposure.Bands, cold, heat int) exposure.Bands {
 	return b
 }
 
-func bandsWearing(w worn) exposure.Bands {
-	b := exposure.Everyday
-	for _, s := range wearSlots {
-		if k := w[s]; k != 0 {
-			c, h := k.Insulation()
-			b = b.Wearing(c, h)
-		}
-	}
-	return b
-}
-
 // wear puts on the garment stack sid (one item), dropping whatever was in
 // that slot; forced: the player ordered it, and the slot becomes theirs.
 func (g *Game) wear(id, sid entity.EntityID, st item.Stack, forced bool) {
 	pos, _ := g.positions.Get(id)
 	w := g.apparel[id]
 	slot := st.Kind.Slot()
-	if old := w[slot]; old != 0 {
-		g.dropStack(old, 1, pos.X, pos.Y)
+	if old := w.On[slot]; old.Kind != 0 {
+		g.dropStackOf(old.Stack(pos.X, pos.Y), pos.X, pos.Y)
 	}
-	w[slot] = st.Kind
-	w.setForced(slot, forced)
+	w.On[slot] = craft.PieceOf(st)
+	w.SetForced(slot, forced)
 	g.apparel[id] = w
 	if st.Qty <= 1 {
 		g.deleteItem(sid)
@@ -116,7 +91,7 @@ func (g *Game) Wearing(id entity.EntityID) []string {
 	var out []string
 	w := g.apparel[id]
 	for _, s := range wearSlots {
-		if k := w[s]; k != 0 {
+		if k := w.Kind(s); k != 0 {
 			out = append(out, k.String())
 		}
 	}
@@ -129,8 +104,8 @@ func (g *Game) wornForced(id entity.EntityID) []bool {
 	var out []bool
 	w := g.apparel[id]
 	for _, s := range wearSlots {
-		if w[s] != 0 {
-			out = append(out, w.forced(s))
+		if w.Kind(s) != 0 {
+			out = append(out, w.IsForced(s))
 		}
 	}
 	return out
@@ -149,26 +124,6 @@ func (g *Game) changingInto(id entity.EntityID) string {
 	return ""
 }
 
-// fit scores bands b for the day: how much of its likely range (mean ±
-// daySpan) b leaves uncomfortable. Lower is better.
-func fit(b exposure.Bands, mean int) int {
-	lo, hi := mean-daySpan, mean+daySpan
-	miss := 0
-	if lo < b.Min {
-		miss += b.Min - lo
-	}
-	if hi > b.Max {
-		miss += hi - b.Max
-	}
-	return miss
-}
-
-// surplus is how far b reaches past the day's range: insulation the day
-// does not need.
-func surplus(b exposure.Bands, mean int) int {
-	return max(0, mean-daySpan-b.Min) + max(0, b.Max-mean-daySpan)
-}
-
 // wearOpt is one choice for a slot: kind (0: bare) from stack sid at
 // (x, y), d away; sid 0 is what the colonist has on now, or bare.
 type wearOpt struct {
@@ -179,7 +134,7 @@ type wearOpt struct {
 
 // outfit is one choice per slot and how it suits the day.
 type outfit struct {
-	pick                [3]wearOpt
+	pick                [craft.Slots]wearOpt
 	miss, surplus, walk int
 }
 
@@ -187,7 +142,7 @@ type outfit struct {
 func (o *outfit) worn() worn {
 	var w worn
 	for _, s := range wearSlots {
-		w[s] = o.pick[s].kind
+		w.On[s].Kind = o.pick[s].kind
 	}
 	return w
 }
@@ -230,11 +185,11 @@ const maxWearOpts = 8
 func (g *Game) dressPlan(id entity.EntityID, full bool) (outfit, bool) {
 	cur := g.apparel[id]
 	locked := g.dressLocked(id, cur)
-	var buf [3][maxWearOpts]wearOpt
-	var opts [3][]wearOpt
+	var buf [craft.Slots][maxWearOpts]wearOpt
+	var opts [craft.Slots][]wearOpt
 	for _, s := range wearSlots {
-		opts[s] = append(buf[s][:0], wearOpt{kind: cur[s]}) // keep it on
-		if cur[s] != 0 && !locked[s] {
+		opts[s] = append(buf[s][:0], wearOpt{kind: cur.Kind(s)}) // keep it on
+		if cur.Kind(s) != 0 && !locked[s] {
 			opts[s] = append(opts[s], wearOpt{}) // take it off
 		}
 	}
@@ -242,7 +197,7 @@ func (g *Game) dressPlan(id entity.EntityID, full bool) (outfit, bool) {
 		g.wearCandidates(id, cur, locked, &opts)
 	} else {
 		for _, k := range g.apparelKinds() {
-			if s := k.Slot(); !locked[s] && k != cur[s] {
+			if s := k.Slot(); !locked[s] && k != cur.Kind(s) {
 				opts[s] = append(opts[s], wearOpt{kind: k})
 			}
 		}
@@ -252,31 +207,33 @@ func (g *Game) dressPlan(id entity.EntityID, full bool) (outfit, bool) {
 	var best outfit
 	for i, b := range opts[item.Body] {
 		for j, hd := range opts[item.Head] {
-			var o outfit
-			o.pick[item.Body], o.pick[item.Head] = b, hd
-			bands := shifted(bandsWearing(o.worn()), c, h)
-			o.miss, o.surplus, o.walk = fit(bands, mean), surplus(bands, mean), b.d+hd.d
-			if i == 0 && j == 0 || o.better(&best) {
-				best = o
+			for k, lg := range opts[item.Legs] {
+				var o outfit
+				o.pick[item.Body], o.pick[item.Head], o.pick[item.Legs] = b, hd, lg
+				bands := shifted(o.worn().Bands(), c, h) // craft/garment.go: fit and surplus too
+				o.miss, o.surplus, o.walk = craft.DayFit(bands, mean), craft.DaySurplus(bands, mean), b.d+hd.d+lg.d
+				if i == 0 && j == 0 && k == 0 || o.better(&best) {
+					best = o
+				}
 			}
 		}
 	}
-	return best, fit(shifted(bandsWearing(cur), c, h), mean)-best.miss >= dressGain
+	return best, craft.DayFit(shifted(cur.Bands(), c, h), mean)-best.miss >= dressGain
 }
 
 // wearCandidates adds to opts, per slot, the nearest garment of each kind
 // colonist id could go and put on: lying free (not carried, forbidden,
 // reserved by another or put off), inside its allowed area and reachable.
 // Kinds it already wears and locked slots are skipped.
-func (g *Game) wearCandidates(id entity.EntityID, cur worn, locked [3]bool, opts *[3][]wearOpt) {
+func (g *Game) wearCandidates(id entity.EntityID, cur worn, locked [craft.Slots]bool, opts *[craft.Slots][]wearOpt) {
 	pos, _ := g.positions.Get(id)
 	for _, sid := range g.apparelStock(true) {
 		sp := g.stacks.Ref(sid)
-		if sp == nil || sp.Qty <= 0 || sp.Carrier != 0 || sp.Forbidden {
+		if sp == nil || sp.Qty <= 0 || sp.Carrier != 0 || sp.Forbidden || sp.Tainted() { // PRD-2: a dead man's clothes only by order
 			continue
 		}
 		s := sp.Kind.Slot()
-		if locked[s] || sp.Kind == cur[s] {
+		if locked[s] || sp.Kind == cur.Kind(s) {
 			continue
 		}
 		d := pathing.Dist(pos.X, pos.Y, sp.X, sp.Y)
@@ -302,12 +259,12 @@ func (g *Game) wearCandidates(id entity.EntityID, cur worn, locked [3]bool, opts
 // dressLocked reports the slots colonist id keeps as they are: the
 // player's choices, and slots in their cooldown unless it is freezing or
 // sweltering where it stands.
-func (g *Game) dressLocked(id entity.EntityID, cur worn) [3]bool {
-	var locked [3]bool
+func (g *Game) dressLocked(id entity.EntityID, cur worn) [craft.Slots]bool {
+	var locked [craft.Slots]bool
 	urgent, known := false, false
 	for _, s := range wearSlots {
 		switch {
-		case cur.forced(s):
+		case cur.IsForced(s):
 			locked[s] = true
 		case g.dressCooling(id, s):
 			if !known {
@@ -349,15 +306,16 @@ func (g *Game) dressChanged(id entity.EntityID, s item.Slot) {
 func (g *Game) undress(id entity.EntityID, o *outfit) {
 	for _, s := range wearSlots {
 		w := g.apparel[id]
-		k := w[s]
+		p := w.On[s]
+		k := p.Kind
 		if k == 0 || o.pick[s].kind != 0 {
 			continue
 		}
 		pos, _ := g.positions.Get(id)
-		w[s] = 0
-		w.setForced(s, false)
+		w.On[s] = craft.Piece{}
+		w.SetForced(s, false)
 		g.apparel[id] = w
-		g.dropStack(k, 1, pos.X, pos.Y)
+		g.dropStackOf(p.Stack(pos.X, pos.Y), pos.X, pos.Y)
 		g.dressChanged(id, s)
 		g.dressNote(id, logTookOff, k)
 	}

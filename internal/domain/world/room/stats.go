@@ -199,22 +199,38 @@ func lnMicro(x int64) int64 {
 	return k*ln2 + 2*sum
 }
 
-// ImpressivenessLabel names an impressiveness in tenths (wiki: Room).
-func ImpressivenessLabel(tenths int) string {
-	for _, s := range [...]struct {
-		below int
-		name  string
-	}{
-		{200, "awful"}, {300, "dull"}, {400, "mediocre"}, {500, "decent"},
-		{650, "slightly impressive"}, {850, "somewhat impressive"}, {1200, "very impressive"},
-		{1700, "extremely impressive"}, {2400, "unbelievably impressive"},
-	} {
-		if tenths < s.below {
-			return s.name
+// Stages is the number of impressiveness stages, awful (0) to
+// wondrously impressive (Stages-1).
+const Stages = 10
+
+// stageBelow is each stage's upper bound in tenths (wiki: Room); the last
+// stage has none.
+var stageBelow = [Stages - 1]int{200, 300, 400, 500, 650, 850, 1200, 1700, 2400}
+
+var stageNames = [Stages]string{"awful", "dull", "mediocre", "decent", "slightly impressive", "somewhat impressive",
+	"very impressive", "extremely impressive", "unbelievably impressive", "wondrously impressive"}
+
+// ImpressivenessStage is the stage 0..Stages-1 of an impressiveness in
+// tenths.
+func ImpressivenessStage(tenths int) int {
+	for i, b := range stageBelow {
+		if tenths < b {
+			return i
 		}
 	}
-	return "wondrously impressive"
+	return Stages - 1
 }
+
+// StageName names an impressiveness stage ("" out of range).
+func StageName(stage int) string {
+	if stage < 0 || stage >= Stages {
+		return ""
+	}
+	return stageNames[stage]
+}
+
+// ImpressivenessLabel names an impressiveness in tenths (wiki: Room).
+func ImpressivenessLabel(tenths int) string { return stageNames[ImpressivenessStage(tenths)] }
 
 // StatsOf computes every room statistic from plain inputs.
 func StatsOf(in Inputs) Stats {

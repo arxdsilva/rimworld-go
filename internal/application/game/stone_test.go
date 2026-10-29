@@ -162,7 +162,7 @@ func TestStonecutterBillCutsChunks(t *testing.T) {
 	if r := byName["cut_granite"]; r.Bench != "stonecutter table" || r.Input != "1 granite chunk" || r.Output != "granite blocks" {
 		t.Fatalf("cut recipe view %+v", r)
 	}
-	if r := byName["knife"]; r.Input != "3 any stone blocks" {
+	if r := byName["knife"]; r.Input != "3 wood, metal or stone blocks" { // PRD-2: a stuffed knife
 		t.Fatalf("knife recipe view %+v", r)
 	}
 }

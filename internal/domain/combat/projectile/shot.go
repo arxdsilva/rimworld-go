@@ -77,6 +77,10 @@ func (s *Shot) Step() (x, y int, last bool) {
 	return s.X, s.Y, s.Cell >= s.Steps
 }
 
+// Blast reports an explosive's shot (a grenade or a launcher's shell,
+// DEF-2): it arcs to its destination and bursts there.
+func (s *Shot) Blast() bool { return weapon.IsExplosive(s.Weapon) }
+
 // Arrived reports a shot standing on its destination (a zero-length shot
 // arrives at once).
 func (s *Shot) Arrived() bool { return s.Cell >= s.Steps }

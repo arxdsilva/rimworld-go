@@ -25,6 +25,8 @@ type Combat struct {
 	Turrets *Turrets
 	// Shots are the projectiles in flight (shot.go, DEF-1).
 	Shots *Shots
+	// Blasts are the explosions and their smoke (blast.go, DEF-2).
+	Blasts *Blasts
 }
 
 // New builds the combat cluster on host h with the extra roles r.
@@ -32,8 +34,9 @@ func New(h Host, r Roles) *Combat {
 	c := &Combat{Sight: &Sight{g: h}, Traps: &Traps{h: h}, Breach: &Breach{h: h, b: r.Breach}}
 	c.Turrets = newTurrets(h, r.Power, c.Sight)
 	c.Strikes = &Strikes{h: h, sight: c.Sight, turrets: c.Turrets, hunts: r.Hunts}
-	c.Shots = &Shots{h: h, st: c.Strikes}
-	c.Strikes.shots = c.Shots
+	c.Blasts = &Blasts{h: h, sight: c.Sight, st: c.Strikes, turrets: c.Turrets}
+	c.Shots = &Shots{h: h, st: c.Strikes, blasts: c.Blasts}
+	c.Strikes.shots, c.Strikes.blasts = c.Shots, c.Blasts
 	c.Guard = &Guard{h: h, fl: r.Flight}
 	return c
 }
