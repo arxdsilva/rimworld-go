@@ -42,7 +42,7 @@ func newArchitect(a *App) *architect.Tool {
 
 func (h architectHost) Env() architect.Env {
 	a := h.a
-	e := architect.Env{Art: a.art, Sel: a.sel, Keys: a.bindings(), Window: a.win.Mode, WinOpen: a.win.Open, UIHidden: a.hideUI}
+	e := architect.Env{Art: a.art, Sel: a.sel, Keys: a.bindings(), Window: a.win.Mode, WinOpen: a.win.Open, UIHidden: a.chrome.Hidden}
 	if a.renderer != nil {
 		e.Sim = a.renderer.game
 	}

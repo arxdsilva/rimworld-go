@@ -88,7 +88,7 @@ func pressCmd(a *App, c cmdButton) {
 	case c.Disabled:
 		a.hint = c.Reason
 	case c.Run != nil:
-		c.Run(a)
+		c.Run()
 	case len(c.Cmds) > 0:
 		for _, cmd := range c.Cmds {
 			a.renderer.enqueue(cmd)
@@ -276,7 +276,7 @@ func TestAreaChipOpensPicker(t *testing.T) {
 		t.Fatalf("pick command %+v, want AssignArea Pawn 1 Index 5", c)
 	}
 	// the chip is on the pane whatever tab is open
-	a.inspectTab = "needs"
+	a.insp.Tab = "needs"
 	f.Frame(t, a)
 	if !hasWidget(a, "inspector.area") {
 		t.Fatal("the area chip shows on every tab")
@@ -486,7 +486,7 @@ func TestPawnEquipCommandOptionsEnqueueOrderEquip(t *testing.T) {
 	if eq.Disabled || eq.Icon != "equip" || eq.Options == nil || eq.Run != nil || len(eq.Cmds) != 0 {
 		t.Fatalf("equip command %+v", eq)
 	}
-	opts := eq.Options(a)
+	opts := eq.Options()
 	if len(opts) == 0 {
 		t.Fatal("a rifle in reach is an option")
 	}
@@ -560,7 +560,7 @@ func TestPawnBioTabOpensThroughThePane(t *testing.T) {
 	click(t, a, "inspector.bio")
 	f.Frame(t, a)
 	if !a.bioTabOn() || !hasWidget(a, "bio.skill.0") {
-		t.Fatalf("tab %q: the Bio body is not declared", a.inspectTab)
+		t.Fatalf("tab %q: the Bio body is not declared", a.insp.Tab)
 	}
 	if exp := a.expandedRect(); exp.Empty() || !a.hud().PaneTabs.Contains(exp.X+1, exp.Bottom()+1) {
 		t.Fatalf("expanded %+v does not open upward from the tab strip %+v", exp, a.hud().PaneTabs)
@@ -592,7 +592,7 @@ func innerFor(sw, sh int, tb paneTab) rect { return expandedFor(sw, sh, tb).Inse
 func openPawnTab(t *testing.T, a *App, tab string) {
 	t.Helper()
 	a.selectPaneTab("inspector." + tab) // hud_inspect.go
-	a.inspectTab = tab                  // kept in step for the legacy readers
+	a.insp.Tab = tab                    // kept in step for the legacy readers
 }
 
 // tabFixture is a colony whose colonist 1 has data for every tab.
@@ -709,8 +709,8 @@ func TestPawnLogWheelScrollsInsideTheExpandedPanel(t *testing.T) {
 	if float32(x) < r.X || float32(y) < r.Y || float32(x+w) > r.Right() || float32(y+h) > r.Bottom() {
 		t.Fatalf("log text area %d,%d %dx%d outside the panel %+v", x, y, w, h, r)
 	}
-	if !a.scrollLogIn(r, x+5, y+5, -1) || a.logScroll == 0 {
-		t.Fatalf("wheel over the log must scroll it (scroll %d)", a.logScroll)
+	if !a.scrollLogIn(r, x+5, y+5, -1) || a.insp.LogScroll == 0 {
+		t.Fatalf("wheel over the log must scroll it (scroll %d)", a.insp.LogScroll)
 	}
 	if a.scrollLogIn(r, int(r.Right())+40, int(r.Bottom())+40, -1) {
 		t.Fatal("wheel outside the panel must not be taken")
@@ -733,8 +733,8 @@ func TestPawnLogWheelThroughThePane(t *testing.T) {
 	if w <= 0 || h <= 0 {
 		t.Fatalf("log text area %d,%d %dx%d", x, y, w, h)
 	}
-	if !a.scrollLogAt(x+5, y+5, -1) || a.logScroll == 0 {
-		t.Fatalf("wheel over the open Log must scroll it (scroll %d)", a.logScroll)
+	if !a.scrollLogAt(x+5, y+5, -1) || a.insp.LogScroll == 0 {
+		t.Fatalf("wheel over the open Log must scroll it (scroll %d)", a.insp.LogScroll)
 	}
 	click(t, a, "inspector.needs")
 	f.Frame(t, a)
@@ -782,8 +782,8 @@ func TestPrisonerTabDrawsInsideExpandedPanel(t *testing.T) {
 			t.Fatalf("the Prisoner tab draws outside its panel %+v (x%v): %s", r, scale, summarize(bad, 6))
 		}
 		for _, m := range prisonerModes {
-			if !hasWidget(a, prisonerModeID(m.mode)) {
-				t.Errorf("mode %s missing", m.label)
+			if !hasWidget(a, prisonerModeID(m.Mode)) {
+				t.Errorf("mode %s missing", m.Label)
 			}
 		}
 		if !hasWidget(a, prisonerRelease) {

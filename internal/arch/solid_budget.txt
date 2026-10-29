@@ -3,7 +3,7 @@
 # Lines only shrink: lower a ceiling when a split lands, delete a line when the debt is paid. Never add or raise one.
 
 # --- size rules ---
-fields rimworld-go/internal/adapters/inbound/ebiten.App 67
+fields rimworld-go/internal/adapters/inbound/ebiten.App 57
 fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 48
 fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 51  # the same debt, moved with the type (ARCH-003)
 fields rimworld-go/internal/adapters/inbound/ebiten/wizard.Draft 42  # the same debt, moved with the type (ARCH-005 wave 5.2; was newGameState 43)
@@ -12,18 +12,17 @@ methods rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 73  # moved from 
 fields rimworld-go/internal/application/game.Game 152
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 33
-files rimworld-go/internal/adapters/inbound/ebiten 107  # ARCH-002 raised 212 -> 213 for the seam itself, the only raise; ARCH-003/004/005 lower
+files rimworld-go/internal/adapters/inbound/ebiten 70  # ARCH-002 raised 212 -> 213 for the seam itself, the only raise; ARCH-003/004/005 lower
 files rimworld-go/internal/application/game 185
 iface rimworld-go/internal/adapters/inbound/ebiten.Simulation 32
-lines rimworld-go/internal/adapters/inbound/ebiten 24570  # ARCH-002 raised 64178 -> 64602 for the seam itself, the only raise; ARCH-003/004/005 lower
+lines rimworld-go/internal/adapters/inbound/ebiten 14617  # ARCH-002 raised 64178 -> 64602 for the seam itself, the only raise; ARCH-003/004/005 lower
 lines rimworld-go/internal/application/game 57019
-methods rimworld-go/internal/adapters/inbound/ebiten.App 732
+methods rimworld-go/internal/adapters/inbound/ebiten.App 607
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 334
 methods rimworld-go/internal/application/game.Game 2105
 methods rimworld-go/internal/domain/pawn/body.Body 99
 
 # --- init(): registration from the composition root instead (SOLID_GO.md §4) ---
-init rimworld-go/internal/adapters/inbound/ebiten/alerts_allies.go
 init rimworld-go/internal/domain/difficulty/difficulty.go
 init rimworld-go/internal/domain/faction/faction.go
 init rimworld-go/internal/domain/incident/incident.go
@@ -31,7 +30,6 @@ init rimworld-go/internal/domain/pawn/trait/trait.go
 init rimworld-go/internal/domain/world/biome/biome.go
 
 # --- runtime-assigned package state: becomes a field of its owner (SOLID_GO.md §9) ---
-global rimworld-go/internal/adapters/inbound/ebiten.alertExplanations
 global rimworld-go/internal/application/game.indexSelfCheck
 global rimworld-go/internal/application/game.regionsOffAll
 global rimworld-go/internal/application/game.selfCheckEvery

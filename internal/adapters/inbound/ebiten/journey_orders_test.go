@@ -320,7 +320,7 @@ func TestJourneyOrdersGizmoKeys(t *testing.T) {
 		j := newJourney(t)
 		id := ordColonists(j)[0]
 		ordPick(j, 0)
-		j.a.hst.cmds.testProducer = func(a *App, k selKind, _ entity.EntityID) []cmdButton {
+		j.a.insp.TestCommands = func(k selKind, _ entity.EntityID) []cmdButton {
 			cells := make([]cmdButton, len(keys))
 			for i := range cells {
 				cells[i] = cmdButton{ID: "cmd.test", Label: keys[i],

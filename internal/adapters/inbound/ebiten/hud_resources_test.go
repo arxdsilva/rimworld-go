@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 )
@@ -364,8 +364,8 @@ func TestRightClickOverTheResourcesIsTaken(t *testing.T) {
 func TestResourceRowsAreCachedPerView(t *testing.T) {
 	w := game.WorldView{Stored: htManyStored(30)}
 	a, _ := htResApp(t, w)
-	a.resourceRows()
-	if n := testing.AllocsPerRun(50, func() { a.resourceRows() }); n != 0 {
+	a.chrome.Res().Rows()
+	if n := testing.AllocsPerRun(50, func() { a.chrome.Res().Rows() }); n != 0 {
 		t.Fatalf("resourceRows allocates %v per call for an unchanged view", n)
 	}
 	// a changed view is rebuilt
@@ -373,19 +373,6 @@ func TestResourceRowsAreCachedPerView(t *testing.T) {
 	st.world = game.WorldView{Stored: htManyStored(5)}
 	if n := len(a.resourceRows()); n != 5 {
 		t.Fatalf("%d rows after the view changed, want 5", n)
-	}
-}
-
-func TestResourceIconKeys(t *testing.T) {
-	t.Parallel()
-	for kind, want := range map[string]string{
-		"wood":           "ui_icon/wood",
-		"granite blocks": "ui_icon/granite_blocks",
-		"cloth carpet":   "ui_icon/cloth_carpet",
-	} {
-		if got := resourceIconKey(kind); got != want {
-			t.Errorf("resourceIconKey(%q) = %q, want %q", kind, got, want)
-		}
 	}
 }
 

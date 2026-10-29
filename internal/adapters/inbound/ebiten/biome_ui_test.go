@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -99,20 +99,6 @@ func TestWorldStepSeedFieldAndDice(t *testing.T) {
 	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
 	if ng.World.SeedText != tinySeed || ng.Planet == nil {
 		t.Fatalf("generate: seed=%q planet=%v", ng.World.SeedText, ng.Planet != nil)
-	}
-}
-
-func TestTopBarNamesTheBiome(t *testing.T) {
-	t.Parallel()
-	got := seasonText(game.WorldView{Biome: "Boreal forest", BiomeKey: "boreal_forest", Season: "Spring", OutdoorTemp: -20})
-	if got != "Boreal forest | Spring  -2C outside" {
-		t.Fatalf("season text = %q", got)
-	}
-	if tip := strings.Join(biomeTooltip(game.WorldView{BiomeKey: "boreal_forest"}), "\n"); !strings.Contains(tip, "Growing days") || !strings.Contains(tip, "winter low") {
-		t.Fatalf("tooltip = %q", tip)
-	}
-	if biomeTooltip(game.WorldView{}) != nil {
-		t.Fatal("no biome key, no tooltip")
 	}
 }
 
@@ -256,7 +242,7 @@ func TestTroughFilterEmitsCommand(t *testing.T) {
 	if !ok || filter.Options == nil {
 		t.Fatal("the trough should offer its filter options")
 	}
-	opts := filter.Options(a)
+	opts := filter.Options()
 	if len(opts) != 3 || opts[0].Label != "Plants" || opts[1].Label != "Meat" || opts[2].Label != "Any" {
 		t.Fatalf("options = %+v", opts)
 	}
@@ -300,39 +286,6 @@ func TestPenAnimalsListsTheTroughsHerd(t *testing.T) {
 	}
 	if penAnimals(w, 8, 8) != nil {
 		t.Fatal("a trough by no pen has no herd")
-	}
-}
-
-func TestAnimalAlerts(t *testing.T) {
-	t.Parallel()
-	// PLAY-015: a 2x2 marker pen (cells 0, 1, 10, 11 of a 10-wide map), an
-	// open pen and a roaming cow
-	pen := game.PenView{ID: 3, Name: "Pen 1", Enclosed: true, Bits: []uint64{1<<0 | 1<<1 | 1<<10 | 1<<11}}
-	open := game.PenView{ID: 7, Name: "Pen 2", X: 6, Y: 6}
-	grow := game.ZoneView{ID: 4, Kind: game.ZoneGrow, Cells: [][2]int{{5, 5}}}
-	w := game.WorldView{
-		TerrainW: 10,
-		Zones:    []game.ZoneView{grow},
-		Pens:     []game.PenView{pen, open},
-		Animals: []game.AnimalView{
-			{ID: 1, Tame: true, State: "wandering", Food: 10, X: 0, Y: 0},
-			{ID: 2, Tame: true, State: "wandering", Food: 90, X: 1, Y: 0},
-			{ID: 3, Species: "deer", State: "feeding", X: 5, Y: 5},
-			{ID: 4, Species: "timbergnaw", X: 9, Y: 9},
-			{ID: 5, Species: "cow", Tame: true, Penned: true, Pen: "Roaming", Food: 90, X: 8, Y: 2},
-		},
-	}
-	keys := map[string]bool{}
-	for _, al := range animalAlerts(w) {
-		keys[al.key] = true
-	}
-	for _, want := range []string{"animalhungry", "cropraid", "timbergnaw", "penfull.3", "penopen.7", "unpenned"} {
-		if !keys[want] {
-			t.Errorf("missing alert %q in %v", want, keys)
-		}
-	}
-	if len(animalAlerts(game.WorldView{})) != 0 {
-		t.Error("no animals, no alerts")
 	}
 }
 

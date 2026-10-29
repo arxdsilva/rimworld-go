@@ -252,7 +252,7 @@ func TestInspectorAreaLine(t *testing.T) {
 		t.Fatalf("inspector pick %+v", c)
 	}
 	// PLAY-018: the chip is on the pane itself, so it shows whatever tab is open
-	a.inspectTab = "needs"
+	a.insp.Tab = "needs"
 	f.Frame(t, a)
 	if !hasWidget(a, "inspector.area") {
 		t.Fatal("the Area chip shows on every tab")

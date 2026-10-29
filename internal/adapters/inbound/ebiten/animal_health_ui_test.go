@@ -38,7 +38,7 @@ func TestAnimalInspectorHealthBlock(t *testing.T) {
 		t.Fatalf("Animals table cell %q", c)
 	}
 	care := thingCmd(t, a.animalCommands(an.ID), "cmd.animal.care")
-	if care.Label != "Care: Herbal" || care.Icon != "care_herbal" || len(care.Options(a)) != int(medcare.NumPolicies) {
+	if care.Label != "Care: Herbal" || care.Icon != "care_herbal" || len(care.Options()) != int(medcare.NumPolicies) {
 		t.Fatalf("care command %+v", care)
 	}
 	click(t, a, "cmd.animal.care")

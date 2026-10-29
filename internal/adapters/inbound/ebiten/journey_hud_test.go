@@ -72,7 +72,7 @@ func TestJourneyHudToggles(t *testing.T) {
 		{"hud.roof", r.roofOverlayOn},
 		{"hud.home", r.homeShown},
 		{"hud.plan", r.planShown},
-		{"hud.rooms", func() bool { return j.a.rooms }},
+		{"hud.rooms", func() bool { return j.a.chrome.Rooms }},
 		{"hud.learn", func() bool { return j.a.settings.Gameplay.ShowLearningHelper }},
 		{"hud.bar", func() bool { return j.a.settings.Gameplay.ShowColonistBar }},
 		{"hud.rescat", func() bool { return j.a.settings.Gameplay.CategorizedResources }},
@@ -133,11 +133,11 @@ func TestJourneyHudOverlayKeys(t *testing.T) {
 		t.Fatal("Shift+P again did not hide it")
 	}
 	j.key("G", 0)
-	if !j.a.rooms {
+	if !j.a.chrome.Rooms {
 		t.Fatal("G did not show room stats")
 	}
 	j.key("G", 0)
-	if j.a.rooms {
+	if j.a.chrome.Rooms {
 		t.Fatal("G again did not hide them")
 	}
 
@@ -228,9 +228,9 @@ func TestJourneyHudResourcesCollapse(t *testing.T) {
 		t.Fatal("no resource category header")
 	}
 	cat := strings.TrimPrefix(id, "res.cat.")
-	was := j.a.hst.res.collapsed[cat]
+	was := j.a.chrome.Res().Collapsed()[cat]
 	j.clickID(id)
-	if j.a.hst.res.collapsed[cat] == was {
+	if j.a.chrome.Res().Collapsed()[cat] == was {
 		t.Fatalf("clicking %s did not change its collapsed state", id)
 	}
 }

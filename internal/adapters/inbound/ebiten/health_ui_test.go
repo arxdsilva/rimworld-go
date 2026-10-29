@@ -197,18 +197,6 @@ func TestHealthTabBleeding(t *testing.T) {
 	}
 }
 
-func TestPawnStatusSaysBleeding(t *testing.T) {
-	t.Parallel()
-	name := func(entity.EntityID) string { return "" }
-	got := pawnStatusLines(game.PawnView{Status: "alive", Bleeding: true, BleedDeathHours: 7}, name)
-	if !slices.Contains(got, "Bleeding (death in 7h)") {
-		t.Fatalf("lines %v", got)
-	}
-	if got := pawnStatusLines(game.PawnView{Status: "dead", Bleeding: true}, name); slices.ContainsFunc(got, func(s string) bool { return strings.HasPrefix(s, "Bleeding") }) {
-		t.Fatalf("the dead do not bleed: %v", got)
-	}
-}
-
 // TestHealthTabConditions (MED-02): an infection gets a row under the
 // part rows with its severity and immunity, its tend marker and the
 // view's tooltip; the headline turns red while losing; a part tooltip

@@ -230,7 +230,7 @@ func TestPawnRestWhenHurtMergesInAGroup(t *testing.T) {
 		t.Fatalf("a group click turns both off: %+v", got)
 	}
 	s.pawns[1].RestWhenHurt = false
-	a.hst.cmds.memo = groupMemo{} // the live grid asks again each update
+	a.updates++ // a new Update: the live grid asks again
 	if c, _ = cmdByID(a.groupCommands(), id); !c.Mixed || c.On {
 		t.Fatalf("one of two rests when hurt: %+v", c)
 	}
@@ -320,7 +320,7 @@ func TestMedicalCommandsFitTheGridAtUIScales(t *testing.T) {
 				}
 			}
 			// the live layout agrees, and drawing the pane and grid does not panic
-			if got := len(a.commandCells()); got != len(cs) {
+			if got := len(a.insp.Commands().CommandCells()); got != len(cs) {
 				t.Errorf("scale %v %s: the live grid shows %d of %d commands", scale, c.name, got, len(cs))
 			}
 			img := ebiten.NewImage(sw, sh)

@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -437,25 +438,25 @@ func on(prefix string, run func(a *App, id string)) clickRoute {
 // (SOLID_GO.md §4); nothing here is reached from init().
 func clickRoutes() []clickRoute {
 	return []clickRoute{
-		exact(roofButtonID, func(a *App, _ string) { a.shell.ToggleRoof() }),
-		exact(homeButtonID, func(a *App, _ string) { a.shell.ToggleHome() }),
+		exact(hud.RoofButtonID, func(a *App, _ string) { a.shell.ToggleRoof() }),
+		exact(hud.HomeButtonID, func(a *App, _ string) { a.shell.ToggleHome() }),
 		exact(homeAutoButtonID, func(a *App, _ string) { a.toggleHomeAuto() }), // home_auto_ui.go
-		exact(planButtonID, func(a *App, _ string) { a.shell.TogglePlan() }),
-		exact(roomsButtonID, func(a *App, _ string) { a.rooms = !a.rooms }),
-		on(ids.PrefixLetter, (*App).applyLetterClick),                                     // hud_right.go
-		on(ids.PrefixSpeed, (*App).applySpeedClick),                                       // hud_global.go
-		on(ids.PrefixLearn, (*App).applyLearnClick),                                       // learn_ui.go
-		on(ids.PrefixRes, (*App).applyResourceClick),                                      // hud_resources.go
-		on(ids.PrefixCmd, (*App).applyCommandClick),                                       // hud_commands.go
-		on(ids.PrefixWin, func(a *App, id string) { a.win.Click(id) }),                    // hud_window.go
-		exact(ids.TabWildlife, func(a *App, _ string) { a.win.ToggleWildlife() }),         // hud_window.go
-		on(ids.PrefixGroup, (*App).applyGroupClick),                                       // multiselect.go
-		on(ids.PrefixSearch, (*App).applySearchClick),                                     // search_ui.go
-		on(ids.PrefixDev, (*App).applyDevClick),                                           // devmode.go
-		on(ids.PrefixBarPawn, clickBarPawn),                                               // hud_colonistbar.go
-		on(ids.PrefixResearchPick, func(a *App, id string) { a.win.Research().Pick(id) }), // research_ui.go
-		on(ids.PrefixAnimals, func(a *App, id string) { a.win.Animals().Click(id) }),      // animals_ui.go
-		{id: "tab.", prefix: true, run: clickMainTab},                                     // work, schedule, research, animals; others fall through
+		exact(hud.PlanButtonID, func(a *App, _ string) { a.shell.TogglePlan() }),
+		exact(hud.RoomsButtonID, func(a *App, _ string) { a.chrome.Rooms = !a.chrome.Rooms }),
+		on(ids.PrefixLetter, func(a *App, id string) { a.chrome.Right().LetterClick(id) }), // hud/letters.go
+		on(ids.PrefixSpeed, func(a *App, id string) { a.chrome.Global().SpeedClick(id) }),  // hud/global.go
+		on(ids.PrefixLearn, (*App).applyLearnClick),                                        // learn_ui.go
+		on(ids.PrefixRes, func(a *App, id string) { a.chrome.Res().Click(id) }),            // hud/resources.go
+		on(ids.PrefixCmd, (*App).applyCommandClick),                                        // hud_commands.go
+		on(ids.PrefixWin, func(a *App, id string) { a.win.Click(id) }),                     // hud_window.go
+		exact(ids.TabWildlife, func(a *App, _ string) { a.win.ToggleWildlife() }),          // hud_window.go
+		on(ids.PrefixGroup, (*App).applyGroupClick),                                        // multiselect.go
+		on(ids.PrefixSearch, (*App).applySearchClick),                                      // search_ui.go
+		on(ids.PrefixDev, (*App).applyDevClick),                                            // devmode.go
+		on(ids.PrefixBarPawn, clickBarPawn),                                                // hud/colonistbar.go
+		on(ids.PrefixResearchPick, func(a *App, id string) { a.win.Research().Pick(id) }),  // research_ui.go
+		on(ids.PrefixAnimals, func(a *App, id string) { a.win.Animals().Click(id) }),       // animals_ui.go
+		{id: "tab.", prefix: true, run: clickMainTab},                                      // work, schedule, research, animals; others fall through
 		on(ids.PrefixSchedBrush, func(a *App, id string) {
 			if v, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixSchedBrush)); err == nil {
 				a.win.Brush = schedule.Activity(v)
@@ -499,15 +500,15 @@ func clickRoutes() []clickRoute {
 			}
 		}),
 		on(ids.PrefixAnimal, (*App).applyAnimalClick),
-		on(ids.PrefixPlant, (*App).applyPlantClick),   // plant_inspector.go
-		on(ids.PrefixItem, (*App).applyItemClick),     // item_inspector.go
-		on(ids.PrefixFrame, (*App).applyFrameClick),   // frame_inspector.go
-		on(ids.PrefixZone, (*App).applyZoneClick),     // zone_select.go
-		on(ids.PrefixMsg, (*App).focusMessage),        // climate_ui.go
-		on(ids.PrefixAlert, (*App).focusAlert),        // alerts.go
-		on(ids.PrefixBldg, (*App).applyBuildingClick), // building_inspector.go
-		on(ids.PrefixBill, (*App).applyBuildingClick), // building_inspector.go
-		on(ids.PrefixWorkCell, (*App).toggleWorkCell), // app.go
+		on(ids.PrefixPlant, (*App).applyPlantClick),                                      // plant_inspector.go
+		on(ids.PrefixItem, (*App).applyItemClick),                                        // item_inspector.go
+		on(ids.PrefixFrame, (*App).applyFrameClick),                                      // frame_inspector.go
+		on(ids.PrefixZone, (*App).applyZoneClick),                                        // zone_select.go
+		on(ids.PrefixMsg, func(a *App, id string) { a.chrome.Right().FocusMessage(id) }), // hud/messages.go
+		on(ids.PrefixAlert, func(a *App, id string) { a.chrome.Alerts().Focus(id) }),     // hud/alerts.go
+		on(ids.PrefixBldg, (*App).applyBuildingClick),                                    // building_inspector.go
+		on(ids.PrefixBill, (*App).applyBuildingClick),                                    // building_inspector.go
+		on(ids.PrefixWorkCell, (*App).toggleWorkCell),                                    // app.go
 		exact(ids.TabMenu, func(a *App, _ string) { a.apply(intent{kind: intentPause}) }),
 		{id: ids.PrefixOptions, prefix: true, run: func(a *App, id string) bool { // screen_options.go
 			if id == ids.OptionsBack { // the screen intent, not an option
@@ -537,7 +538,7 @@ func clickBarPawn(a *App, id string) {
 		return
 	}
 	a.selectCand(selCand{Kind: selPawn, ID: pid}) // clears every other selection
-	if a.barDoubleClick(pid) {
+	if a.chrome.Bar().DoubleClick(pid) {
 		a.centreOnPawn(pid)
 	}
 }

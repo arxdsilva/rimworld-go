@@ -207,7 +207,7 @@ func TestJourneySelectHideUI(t *testing.T) {
 	s := float32(j.a.scale.S)
 	cx, cy := slots[0].Center()
 	j.key("F11", 0)
-	if !j.a.hideUI {
+	if !j.a.chrome.Hidden {
 		t.Fatal("F11 did not hide the interface")
 	}
 	j.f.clickAt(j.t, j.a, int(cx*s), int(cy*s))
@@ -215,7 +215,7 @@ func TestJourneySelectHideUI(t *testing.T) {
 		t.Fatal("a click on the hidden bar selected a colonist")
 	}
 	j.key("Escape", 0)
-	if j.a.hideUI {
+	if j.a.chrome.Hidden {
 		t.Fatal("Escape left the interface hidden")
 	}
 	if j.a.nav.overlay() == overlayPause {
@@ -227,7 +227,7 @@ func TestJourneySelectHideUI(t *testing.T) {
 	}
 	j.key("F11", 0)
 	j.key("F11", 0)
-	if j.a.hideUI {
+	if j.a.chrome.Hidden {
 		t.Fatal("F11 twice should show the interface")
 	}
 }
@@ -254,7 +254,7 @@ func TestJourneySelectEscapeChain(t *testing.T) {
 		name string
 		done func() bool
 	}{
-		{"hidden UI returns", func() bool { return !j.a.hideUI && j.a.arch.ToolID != "" }},
+		{"hidden UI returns", func() bool { return !j.a.chrome.Hidden && j.a.arch.ToolID != "" }},
 		{"Architect tool disarms", func() bool { return j.a.arch.Open && j.a.arch.ToolID == "" }},
 		{"Architect closes", func() bool { return !j.a.arch.Open && j.a.renderer.HasSelect() }},
 		{"selection clears", func() bool { return !j.a.renderer.HasSelect() && j.a.nav.overlay() != overlayPause }},
@@ -264,7 +264,7 @@ func TestJourneySelectEscapeChain(t *testing.T) {
 		j.key("Escape", 0)
 		if !s.done() {
 			t.Fatalf("Escape step %q: archOpen %v tool %q hideUI %v workOpen %v selected %v overlay %v",
-				s.name, j.a.arch.Open, j.a.arch.ToolID, j.a.hideUI, j.a.win.Open, j.a.renderer.HasSelect(), j.a.nav.overlay())
+				s.name, j.a.arch.Open, j.a.arch.ToolID, j.a.chrome.Hidden, j.a.win.Open, j.a.renderer.HasSelect(), j.a.nav.overlay())
 		}
 	}
 	j.key("Enter", 0) // dialog.accept: the pause overlay has no default button

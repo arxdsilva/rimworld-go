@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
@@ -131,31 +131,6 @@ func TestTreeSaysChop(t *testing.T) {
 	}
 }
 
-func TestPlantZoneLine(t *testing.T) {
-	t.Parallel()
-	got := plantLines(game.PlantView{Species: "potato", Growth: 10, Zone: "potato", Wilted: true, Cut: true})
-	want := []string{"Not ready (10%)", "Wilting: too cold", "In a growing zone (Potato)", "Marked to cut"}
-	if strings.Join(got, "|") != strings.Join(want, "|") {
-		t.Fatalf("lines = %v, want %v", got, want)
-	}
-	tree := plantLines(game.PlantView{Species: "tree", Zone: "tree"})
-	if len(tree) != 1 || tree[0] != "In a growing zone (Tree)" {
-		t.Fatalf("tree lines = %v", tree)
-	}
-	if plantCategory(game.PlantView{Species: "berry_bush"}) != "Wild plant" ||
-		plantTitle(game.PlantView{Species: "berry_bush"}) != "Berry bush" ||
-		plantCategory(game.PlantView{Species: "potato"}) != "Crop" {
-		t.Fatal("categories/titles wrong")
-	}
-	if plantStageWord(game.PlantView{Stage: 1}) != "sprouting" ||
-		plantStageWord(game.PlantView{Species: "corn", Harvestable: true, Stage: 3}) != "ready to harvest" {
-		t.Fatal("stage words wrong")
-	}
-	if got := plantLines(game.PlantView{Species: "corn", Harvestable: true, Designated: true}); got[1] != "Marked to harvest" {
-		t.Fatalf("lines = %v", got)
-	}
-}
-
 func TestPlantNowChips(t *testing.T) {
 	t.Parallel()
 	a, g, pawn := liveColony(t, 0)
@@ -165,7 +140,7 @@ func TestPlantNowChips(t *testing.T) {
 	if !ok || now.Disabled {
 		t.Fatalf("expected an enabled now command, got %+v", now)
 	}
-	opts := now.Options(a)
+	opts := now.Options()
 	if len(opts) == 0 || opts[0].Disabled || opts[0].Cmd == nil {
 		t.Fatalf("expected an enabled option, got %+v", opts)
 	}
@@ -204,73 +179,6 @@ func TestPlantPanelClosesWhenPlantGone(t *testing.T) {
 }
 
 // ---- growth state (PLAY-017) ----
-
-func TestPlantGrowCaption(t *testing.T) {
-	t.Parallel()
-	for _, c := range []struct {
-		name string
-		p    game.PlantView
-		gv   game.PlantGrowthView
-		want string
-	}{
-		{"no state", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{}, ""},
-		{"growing", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{State: "growing"}, "42% · growing"},
-		{"resting at night", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{State: "resting"}, "42% · resting (night)"},
-		{"dark", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{State: "dark"}, "too dark: needs sun or a lamp nearby"},
-		{"cold", game.PlantView{Species: "corn", Growth: 7}, game.PlantGrowthView{State: "cold"}, "7% · too cold"},
-		{"hot", game.PlantView{Species: "corn", Growth: 7}, game.PlantGrowthView{State: "hot"}, "7% · too hot"},
-		{"ripe crop", game.PlantView{Species: "corn", Growth: 100, Harvestable: true}, game.PlantGrowthView{State: "ripe"}, "ripe"},
-		{"full-grown tree", game.PlantView{Species: "tree", Growth: 100}, game.PlantGrowthView{State: "ripe"}, "fully grown"},
-		{"unknown state", game.PlantView{Species: "corn"}, game.PlantGrowthView{State: "weird"}, ""},
-	} {
-		if got := plantGrowCaption(c.p, c.gv); got != c.want {
-			t.Errorf("%s: caption %q, want %q", c.name, got, c.want)
-		}
-	}
-}
-
-func TestPlantRipeLine(t *testing.T) {
-	t.Parallel()
-	d := clock.TicksPerDay
-	for _, c := range []struct {
-		name   string
-		p      game.PlantView
-		ripeIn int
-		want   string
-	}{
-		{"unknown", game.PlantView{Species: "corn"}, -1, ""},
-		{"unset", game.PlantView{Species: "corn"}, 0, ""},
-		{"under two days: one decimal", game.PlantView{Species: "corn"}, d * 14 / 10, "Ripe in about 1.4 days"},
-		{"just under two reads as two", game.PlantView{Species: "corn"}, d*2 - 1, "Ripe in about 2 days"},
-		{"1.9 stays decimal", game.PlantView{Species: "corn"}, d * 19 / 10, "Ripe in about 1.9 days"},
-		{"two days and more: whole", game.PlantView{Species: "corn"}, d*3 + d/3, "Ripe in about 3 days"},
-		{"rounds", game.PlantView{Species: "corn"}, d*7 + d*6/10, "Ripe in about 8 days"},
-		{"an hour left", game.PlantView{Species: "corn"}, clock.TicksPerHour, "Ripe in about 0.1 days"},
-		{"a tree is fully grown, not ripe", game.PlantView{Species: "tree"}, d * 30, "Fully grown in about 30 days"},
-		{"moss is fully grown", game.PlantView{Species: "moss"}, d * 2, "Fully grown in about 2 days"},
-		{"a berry bush ripens", game.PlantView{Species: "berry_bush"}, d, "Ripe in about 1.0 days"},
-		{"nothing once harvestable", game.PlantView{Species: "corn", Harvestable: true}, d, ""},
-	} {
-		if got := plantRipeLine(c.p, game.PlantGrowthView{RipeIn: c.ripeIn}); got != c.want {
-			t.Errorf("%s: %q, want %q", c.name, got, c.want)
-		}
-	}
-}
-
-// TestPlantLinesCarryRipeIn: the ripening estimate sits right under the
-// progress line, and the old lines stay as they were.
-func TestPlantLinesCarryRipeIn(t *testing.T) {
-	t.Parallel()
-	got := plantBodyLines(game.PlantView{Species: "potato", Growth: 42, Zone: "potato"},
-		game.PlantGrowthView{State: "growing", RipeIn: clock.TicksPerDay * 3})
-	want := []string{"Not ready (42%)", "Ripe in about 3 days", "In a growing zone (Potato)"}
-	if strings.Join(got, "|") != strings.Join(want, "|") {
-		t.Fatalf("lines = %v, want %v", got, want)
-	}
-	if strings.Join(plantLines(game.PlantView{Species: "potato", Growth: 42, Zone: "potato"}), "|") != "Not ready (42%)|In a growing zone (Potato)" {
-		t.Fatal("the view-only lines carry an estimate")
-	}
-}
 
 // TestPlantPanelShowsLiveGrowthState: a crop sown in the colony shows the
 // state the game gives it (Simulation.PlantGrowth) and a ripening

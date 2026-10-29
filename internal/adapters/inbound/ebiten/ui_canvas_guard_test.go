@@ -125,9 +125,9 @@ var canvasExempt = map[string]string{
 	"render/overlay/turret_draw.go:DrawRangeRing":    "world: a selected turret's range ring on the map",
 	"render/world/labels.go:drawFightMarker":         "world: fight marker over colonists",
 	"render/world/labels.go:DrawHostileMarker":       "world: hostile chevron over raiders",
-	"building_inspector.go:drawBuildingSelection":    "world: the selected building's outline on the map (the pane uses the canvas)",
-	"room_stats.go:drawRoomOverlay":                  "mixed: the room tile tint is world (the hover card uses the canvas)",
-	"multiselect.go:drawGroupMarks":                  "world: group marks on tiles (the pane and the drag box use the canvas)",
+	"multiselect_render.go:drawBuildingSelection":    "world: the selected building's outline on the map (the pane uses the canvas)",
+	"hud/rooms.go:DrawOverlay":                       "mixed: the room tile tint is world (the hover card uses the canvas)",
+	"multiselect_render.go:drawGroupMarks":           "world: group marks on tiles (the pane and the drag box use the canvas)",
 	"orders/route.go:Dashed":                         "world: order route over the map (text goes through the canvas)",
 	"orders/route.go:DrawRoute":                      "world: order route over the map",
 	"orders/formation.go:DrawFormation":              "world: formation markers on tiles",
@@ -183,13 +183,13 @@ var worldPixelHelpers = map[string]bool{
 // hudFiles are the HUD, inspector, panel and screen files (globs): all
 // logical-pixel UI. They hold no raw draws and call no world pixel helper
 // (Rule 3). Files that mix in a world overlay (building_inspector.go,
-// room_stats.go, multiselect.go, order_queue_ui.go, architect.go,
+// hud/rooms.go, multiselect.go, order_queue_ui.go, architect.go,
 // move_mode.go, formation.go, labels.go, world_ui.go) are left out; Rules
 // 1 and 2 cover them per function.
 var hudFiles = []string{
-	"hud.go", "inspector.go", "*_inspector.go", "alerts.go", "status_chips.go",
-	"threat_ui.go", "climate_ui.go", "uikit/*.go",
-	"orders/search.go", "windows/*.go", "architect/*.go", "options/*.go", "dialogs/*.go", "learn/*.go", "devtools/*.go", "perf/*.go", "letters.go", "toast.go",
+	"hud/*.go", "inspector/*.go",
+	"threat_ui.go", "uikit/*.go",
+	"orders/search.go", "windows/*.go", "architect/*.go", "options/*.go", "dialogs/*.go", "learn/*.go", "devtools/*.go", "perf/*.go",
 	"screen_*.go", "ui_*.go", "*_ui.go", "portrait.go",
 	"hud_*.go", "cmds_*.go", // PLAY-018 HUD regions
 }
@@ -200,17 +200,12 @@ var hudFilesNot = []string{
 	"devtools/mapfields.go", // world: the dev map-field layer
 	"windows/world.go",      // globe overlay
 	"order_queue_ui.go",     // world route
-	"building_inspector.go",
+	"hud/rooms.go",          // mixed: the room tile tint is world
 }
 
 // hudCallsWorldHelper are HUD functions that call a world pixel helper on
 // purpose, with the reason it is right.
-var hudCallsWorldHelper = map[string]string{
-	"animal_inspector.go:drawAnimalMark": "marks the selected animal on the map with overlay/selection: world tile, physical pixels, like the map",
-	"frame_inspector.go:drawFrameMark":   "marks the selected frame's tiles on the map with overlay/selection: world tiles, physical pixels",
-	"item_inspector.go:drawItemMark":     "marks the selected stack on the map with overlay/selection: world tile, physical pixels",
-	"plant_inspector.go:drawPlantMark":   "marks the selected plant on the map with overlay/selection: world tile, physical pixels",
-}
+var hudCallsWorldHelper = map[string]string{}
 
 // funcScan is what the guard found in one function (all functions of one
 // name in one file, closures included).
@@ -589,15 +584,15 @@ func hudOnly() { drawText(dst, "x", 1, 2, st) }
 }
 
 func TestGuardRule3HUDFiles(t *testing.T) {
-	if !isHUDFile("hud.go") || !isHUDFile("screen_menu.go") || !isHUDFile("plant_inspector.go") || !isHUDFile("climate_ui.go") {
+	if !isHUDFile("hud/right.go") || !isHUDFile("screen_menu.go") || !isHUDFile("inspector/plant_inspector.go") || !isHUDFile("ui_x.go") {
 		t.Error("HUD/panel files not recognised")
 	}
-	if isHUDFile("gfx/canvas.go") || isHUDFile("renderer.go") || isHUDFile("building_inspector.go") || isHUDFile("order_queue_ui.go") {
+	if isHUDFile("gfx/canvas.go") || isHUDFile("renderer.go") || isHUDFile("multiselect_render.go") || isHUDFile("order_queue_ui.go") {
 		t.Error("canvas, world and mixed files are not HUD files")
 	}
 	src := "package p\nfunc bar(r R) { r.solidRect(dst, 1, 2, 3, 4, c); drawSprite(dst, k) }\nfunc ok(r R) { uiFillRect(dst, 1, 2, 3, 4, c, false) }\n"
-	got := guardOn(t, "hud.go", src, nil, nil)
-	if len(got) != 1 || !strings.Contains(got[0], "rule 3") || !strings.Contains(got[0], "hud.go:bar") ||
+	got := guardOn(t, "ui_x.go", src, nil, nil)
+	if len(got) != 1 || !strings.Contains(got[0], "rule 3") || !strings.Contains(got[0], "ui_x.go:bar") ||
 		!strings.Contains(got[0], "solidRect") || !strings.Contains(got[0], "drawSprite") {
 		t.Fatalf("violations = %q, want rule 3 for bar", got)
 	}
@@ -607,7 +602,7 @@ func TestGuardRule3HUDFiles(t *testing.T) {
 	}
 	// a HUD function must not be exempt from the canvas
 	src = guardHeader + "func p(dst I) { vector.FillRect(dst, 0, 0, 1, 1, c, false) }\n"
-	got = guardOn(t, "hud.go", src, map[string]string{"hud.go:p": "oops"}, nil)
+	got = guardOn(t, "ui_x.go", src, map[string]string{"ui_x.go:p": "oops"}, nil)
 	if len(got) != 1 || !strings.Contains(got[0], "rule 3") {
 		t.Errorf("an exempt HUD function = %q, want rule 3", got)
 	}

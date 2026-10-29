@@ -2,14 +2,13 @@ package ebiten
 
 import (
 	"fmt"
-	"image/color"
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"slices"
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
@@ -269,47 +268,6 @@ func TestBarSelectedSlotHasAnOutline(t *testing.T) {
 	}
 }
 
-func TestBarStatuses(t *testing.T) {
-	t.Parallel()
-	alive := game.PawnView{Status: "alive"}
-	with := func(f func(p *game.PawnView)) game.PawnView {
-		p := alive
-		f(&p)
-		return p
-	}
-	for _, tc := range []struct {
-		name   string
-		p      game.PawnView
-		onFire bool
-		idle   bool
-		want   []string
-	}{
-		{"nothing", alive, false, false, nil},
-		{"drafted", with(func(p *game.PawnView) { p.Drafted = true }), false, false, []string{"drafted"}},
-		{"asleep", with(func(p *game.PawnView) { p.Lying = true }), false, false, []string{"sleeping"}},
-		{"mental break", with(func(p *game.PawnView) { p.MentalBreak = "wander" }), false, false, []string{"mental"}},
-		{"downed", with(func(p *game.PawnView) { p.Status, p.Lying = "downed", true }), false, false, []string{"downed"}},
-		{"idle", alive, false, true, []string{"idle"}},
-		{"fighting (melee)", with(func(p *game.PawnView) { p.Action = game.ActionMelee }), false, false, []string{"fighting"}},
-		{"fighting (aim)", with(func(p *game.PawnView) { p.Action = game.ActionAim }), false, false, []string{"fighting"}},
-		{"fleeing", with(func(p *game.PawnView) { p.Fleeing = true }), false, false, []string{"fleeing"}},
-		{"burning", alive, true, false, []string{"burning"}},
-		{"drafted and fighting", with(func(p *game.PawnView) { p.Drafted, p.Action = true, game.ActionAim }), false, false, []string{"fighting", "drafted"}},
-		{"downed and burning", with(func(p *game.PawnView) { p.Status, p.Lying = "downed", true }), true, false, []string{"downed", "burning"}},
-		{"broken, fleeing, drafted", with(func(p *game.PawnView) { p.MentalBreak, p.Fleeing, p.Drafted = "x", true, true }), false, false, []string{"mental", "fleeing", "drafted"}},
-		// a downed colonist is not "sleeping" and not "idle"
-		{"downed is not asleep or idle", with(func(p *game.PawnView) { p.Status, p.Lying = "downed", true }), false, true, []string{"downed"}},
-	} {
-		var got []string
-		for _, s := range barStatuses(tc.p, tc.onFire, tc.idle) {
-			got = append(got, s.key)
-		}
-		if !slices.Equal(got, tc.want) {
-			t.Errorf("%s: statuses %v, want %v", tc.name, got, tc.want)
-		}
-	}
-}
-
 func TestBarStatusIconsAreDrawnInTheSlot(t *testing.T) {
 	ps := htPawns(3)
 	ps[0].Drafted = true
@@ -479,15 +437,6 @@ func TestBarShiftClickAndHoverStillWork(t *testing.T) {
 		}
 		if b.ID != barSlotID(2) && b.Selected {
 			t.Errorf("%s is marked selected", b.ID)
-		}
-	}
-}
-
-func TestBarMoodTokens(t *testing.T) {
-	t.Parallel()
-	for pct, want := range map[int]color.RGBA{0: uiMoodBad, 29: uiMoodBad, 30: uiMoodMid, 54: uiMoodMid, 55: uiMoodGood, 100: uiMoodGood} {
-		if got := moodToken(pct); got != want {
-			t.Errorf("moodToken(%d) = %v, want %v", pct, got, want)
 		}
 	}
 }

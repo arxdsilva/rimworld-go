@@ -41,7 +41,7 @@ func TestPerfOverlayDrawsOnlyWhenOn(t *testing.T) {
 func TestPerfOverlayShowsWithHiddenUI(t *testing.T) {
 	a, _ := perfApp(t, true)
 	a.seedPerfCapture()
-	a.hideUI = true
+	a.chrome.Hidden = true
 	if a.hud().Perf.Empty() {
 		t.Fatal("no rect")
 	}

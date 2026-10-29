@@ -81,7 +81,7 @@ func TestCaptureColonyStates(t *testing.T) {
 		}},
 		{"bio", 400, func(t *testing.T, a *App) {
 			if !a.bioTabOn() {
-				t.Fatalf("bio tab not showing: tab %q select %v", a.inspectTab, a.renderer.HasSelect())
+				t.Fatalf("bio tab not showing: tab %q select %v", a.insp.Tab, a.renderer.HasSelect())
 			}
 			if b, ok := a.renderer.game.Bio(a.renderer.Selected()); !ok || len(b.Skills) != 11 {
 				t.Fatalf("bio = %+v %v", b, ok)

@@ -182,8 +182,8 @@ func TestBioTabFields(t *testing.T) {
 	}
 	pressButton(t, a, f, "inspector.bio") // the pane's tab strip, the real mouse path
 	f.Frame(t, a)
-	if a.inspectTab != "bio" || a.paneOpenTab() != "inspector.bio" || !a.bioTabOn() {
-		t.Fatalf("tab = %q (pane %q), want bio", a.inspectTab, a.paneOpenTab())
+	if a.insp.Tab != "bio" || a.paneOpenTab() != "inspector.bio" || !a.bioTabOn() {
+		t.Fatalf("tab = %q (pane %q), want bio", a.insp.Tab, a.paneOpenTab())
 	}
 
 	b := s.bios[1]

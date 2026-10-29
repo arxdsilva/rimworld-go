@@ -135,10 +135,10 @@ func (a *App) captureColonyUI(ui string) {
 	if ui != "letter-intro" { // the intro letter would sit over every other shot
 		for _, m := range a.renderer.world().Messages {
 			if m.Letter {
-				if a.msgSeen == nil {
-					a.msgSeen = map[string]uint64{}
+				if a.chrome.MsgSeen == nil {
+					a.chrome.MsgSeen = map[string]uint64{}
 				}
-				a.msgSeen[a.letterKey(m)] = 0
+				a.chrome.MsgSeen[a.letterKey(m)] = 0
 			}
 		}
 	}

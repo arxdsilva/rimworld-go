@@ -723,7 +723,7 @@ func (a *App) captureInput(ui string, at func(tx, ty int) (int, int)) {
 		a.ord.Search.Text = "wo"
 		a.ord.Search.Idx = 1
 	case "rooms":
-		a.rooms = true
+		a.chrome.Rooms = true
 		x, y := at(cx-3, cy+1) // inside the walled room of captureOrders
 		a.cursor = &[2]int{x, y}
 	case "multiselect":
@@ -744,7 +744,7 @@ func (a *App) captureInput(ui string, at func(tx, ty int) (int, int)) {
 		x, y := at(cx+9, cy+1)
 		a.cursor = &[2]int{x, y}
 	case "hideui":
-		a.hideUI = true
+		a.chrome.Hidden = true
 	}
 }
 

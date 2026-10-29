@@ -2,12 +2,12 @@ package ebiten
 
 import (
 	"fmt"
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
@@ -84,16 +84,16 @@ func TestCommandClickRunsItsCommand(t *testing.T) {
 	enq := command.Command{Kind: command.DraftPawn, Pawn: 1, Enabled: true}
 	optRan := ""
 	a, s, _ := cmdColony(t, 1,
-		cmdButton{ID: "cmd.test.run", Label: "Run", Run: func(*App) { ran++ }},
+		cmdButton{ID: "cmd.test.run", Label: "Run", Run: func() { ran++ }},
 		cmdButton{ID: "cmd.test.cmds", Label: "Enqueue", Cmds: []command.Command{enq}},
-		cmdButton{ID: "cmd.test.opts", Label: "Pick", Options: func(*App) []cmdOption {
+		cmdButton{ID: "cmd.test.opts", Label: "Pick", Options: func() []cmdOption {
 			return []cmdOption{
-				{Label: "off", Disabled: true, Reason: "no", Run: func(*App) { optRan = "off" }},
-				{Label: "first", Run: func(*App) { optRan = "first" }},
-				{Label: "second", Run: func(*App) { optRan = "second" }},
+				{Label: "off", Disabled: true, Reason: "no", Run: func() { optRan = "off" }},
+				{Label: "first", Run: func() { optRan = "first" }},
+				{Label: "second", Run: func() { optRan = "second" }},
 			}
 		}},
-		cmdButton{ID: "cmd.test.off", Label: "Off", Disabled: true, Reason: "needs a bed", Run: func(*App) { ran += 100 }},
+		cmdButton{ID: "cmd.test.off", Label: "Off", Disabled: true, Reason: "needs a bed", Run: func() { ran += 100 }},
 	)
 	click(t, a, "cmd.test.run")
 	if ran != 1 {
@@ -132,7 +132,7 @@ func TestCommandHotkeysFollowDeclarationOrder(t *testing.T) {
 	t.Parallel()
 	var ran []string
 	mk := func(name string) cmdButton {
-		return cmdButton{ID: "cmd.test." + name, Label: name, Run: func(*App) { ran = append(ran, name) }}
+		return cmdButton{ID: "cmd.test." + name, Label: name, Run: func() { ran = append(ran, name) }}
 	}
 	a, _, f := cmdColony(t, 1, mk("a"), mk("b"), mk("c"))
 	key := func(i int) string { return a.bindings().Of(input.Gizmos[i])[0].Key }
@@ -159,7 +159,7 @@ func TestCommandHotkeysFollowDeclarationOrder(t *testing.T) {
 func TestCommandHotkeyOnADisabledCommandShowsTheReason(t *testing.T) {
 	t.Parallel()
 	ran := false
-	a, _, f := cmdColony(t, 1, cmdButton{ID: "cmd.test.x", Label: "X", Disabled: true, Reason: "nobody can reach it", Run: func(*App) { ran = true }})
+	a, _, f := cmdColony(t, 1, cmdButton{ID: "cmd.test.x", Label: "X", Disabled: true, Reason: "nobody can reach it", Run: func() { ran = true }})
 	f.Key(t, a, a.bindings().Of(input.Gizmos[0])[0].Key, 0)
 	if ran || a.hint != "nobody can reach it" {
 		t.Fatalf("ran=%v hint=%q", ran, a.hint)
@@ -224,14 +224,14 @@ func TestRightClickOpensTheOptionsMenu(t *testing.T) {
 	var picked string
 	enq := command.Command{Kind: command.DraftPawn, Pawn: 1, Enabled: true}
 	a, s, _ := cmdColony(t, 1,
-		cmdButton{ID: "cmd.test.opts", Label: "Pick", Options: func(*App) []cmdOption {
+		cmdButton{ID: "cmd.test.opts", Label: "Pick", Options: func() []cmdOption {
 			return []cmdOption{
 				{Label: "Ada", Cmd: &enq},
-				{Label: "Bo", Run: func(*App) { picked = "Bo" }},
+				{Label: "Bo", Run: func() { picked = "Bo" }},
 				{Label: "Cy", Disabled: true, Reason: "asleep"},
 			}
 		}},
-		cmdButton{ID: "cmd.test.plain", Label: "Plain", Run: func(*App) {}},
+		cmdButton{ID: "cmd.test.plain", Label: "Plain", Run: func() {}},
 	)
 	cells := a.hud().GridCells
 	cx, cy := cells[0].Center()
@@ -273,7 +273,7 @@ func TestRightClickOpensTheOptionsMenu(t *testing.T) {
 
 func TestOptionsArrowOpensTheMenuOnLeftClick(t *testing.T) {
 	t.Parallel()
-	a, _, _ := cmdColony(t, 1, cmdButton{ID: "cmd.test.opts", Label: "Pick", Options: func(*App) []cmdOption {
+	a, _, _ := cmdColony(t, 1, cmdButton{ID: "cmd.test.opts", Label: "Pick", Options: func() []cmdOption {
 		return []cmdOption{{Label: "one"}, {Label: "two"}}
 	}})
 	click(t, a, "cmd.options.0") // the corner arrow is its own hit target
@@ -356,7 +356,7 @@ func TestCommandGridDrawsInsideItsCells(t *testing.T) {
 		cmdButton{ID: "cmd.test.b", Label: "On", Toggle: true, On: true},
 		cmdButton{ID: "cmd.test.c", Label: "Some", Toggle: true, Mixed: true},
 		cmdButton{ID: "cmd.test.d", Label: "Off", Disabled: true, Reason: "no"},
-		cmdButton{ID: "cmd.test.e", Label: "Menu", Options: func(*App) []cmdOption { return nil }},
+		cmdButton{ID: "cmd.test.e", Label: "Menu", Options: func() []cmdOption { return nil }},
 	)
 	l := a.hud()
 	var rects []rect
@@ -376,34 +376,5 @@ func TestCommandGridDrawsInsideItsCells(t *testing.T) {
 		if !in {
 			t.Errorf("draw %+v lies outside every grid cell", r)
 		}
-	}
-}
-
-// A one-word label too wide for a command button ("Deconstruct") steps its
-// type down instead of breaking the word in two; it still fits the cell.
-func TestCommandLabelShrinksBeforeBreakingAWord(t *testing.T) {
-	maxW := float64(cmdCell - 2*cmdLabelPad)
-	for _, label := range []string{"Deconstruct", "Mark for hauling", "Cancel blueprint", "Draft"} {
-		st, lines := cmdLabelLines(label, maxW, false)
-		for _, ln := range lines {
-			if w, _ := measure(ln, st); w > maxW+0.01 {
-				t.Errorf("%q: line %q is %.1f wide, cell text room %.1f", label, ln, w, maxW)
-			}
-		}
-		for _, word := range strings.Fields(label) {
-			found := false
-			for _, ln := range lines {
-				found = found || strings.Contains(ln, word)
-			}
-			if !found {
-				t.Errorf("%q: word %q was broken across lines %q", label, word, lines)
-			}
-		}
-		if len(lines) > 2 {
-			t.Errorf("%q: %d lines, want at most 2", label, len(lines))
-		}
-	}
-	if st, _ := cmdLabelLines("Draft", maxW, false); st.Size != tsSmall.Size {
-		t.Errorf("a short label shrank to %v", st.Size)
 	}
 }

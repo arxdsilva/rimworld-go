@@ -1,10 +1,9 @@
 package ebiten
 
 import (
-	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
@@ -26,7 +25,7 @@ func TestItemEquipChipsPerColonist(t *testing.T) {
 	selectItemTile(t, a, id, 8, 8)
 	cs := a.itemCommands(id)
 	equip := thingCmd(t, cs, "cmd.item.equip")
-	opts := equip.Options(a)
+	opts := equip.Options()
 	if len(opts) < 2 {
 		t.Fatalf("want one Equip option per colonist, got %+v", opts)
 	}
@@ -46,26 +45,6 @@ func TestItemEquipChipsPerColonist(t *testing.T) {
 	}
 }
 
-func TestItemChipsDisabledWithReason(t *testing.T) {
-	t.Parallel()
-	equip := colonistOptions([]colonistAction{{Pawn: 1, Name: "Ada"}, {Pawn: 2, Name: "Bo", Disabled: true, Reason: "cannot reach"}})
-	haul := colonistOptions([]colonistAction{{Pawn: 1, Name: "Ada"}})
-	if b := equip[1]; !b.Disabled || b.Reason != "cannot reach" || b.Label != "Bo" || b.Cmd != nil {
-		t.Fatalf("option 1 = %+v", b)
-	}
-	// the Haul command sits after the Equip one in the grid
-	var ids []string
-	for _, v := range itemVerbs(game.ItemView{Kind: "rifle"}, false) {
-		ids = append(ids, v.id)
-	}
-	if strings.Join(ids, ",") != "cmd.item.equip,cmd.item.haul" {
-		t.Fatalf("verbs = %v", ids)
-	}
-	if n := len(equip) + len(haul); n != 3 {
-		t.Fatalf("options = %d", n)
-	}
-}
-
 func TestItemUnreachableColonistDisabled(t *testing.T) {
 	t.Parallel()
 	a, g, _ := liveColony(t, 0)
@@ -79,7 +58,7 @@ func TestItemUnreachableColonistDisabled(t *testing.T) {
 	id, _ := g.SpawnStack(item.Rifle, 1, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
 	equip := thingCmd(t, a.itemCommands(id), "cmd.item.equip")
-	opts := equip.Options(a)
+	opts := equip.Options()
 	if len(opts) == 0 {
 		t.Skip("walls were not built instantly")
 	}
@@ -115,48 +94,6 @@ func TestItemHaulOnlyWhenUnstored(t *testing.T) {
 	}
 	if itemCategory(it) != "material" {
 		t.Fatalf("category = %q", itemCategory(it))
-	}
-}
-
-func TestItemCorpseTitle(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		it    game.ItemView
-		title string
-		cat   string
-	}{
-		{game.ItemView{Kind: "human corpse", OfName: "Ada", Qty: 1}, "Body of Ada", "body"},
-		{game.ItemView{Kind: "bones", OfName: "Ada", Qty: 1}, "Bones of Ada", "body"},
-		{game.ItemView{Kind: "human corpse"}, "Body", "body"},
-		{game.ItemView{Kind: "bones"}, "Bones", "body"},
-		{game.ItemView{Kind: "rifle", Qty: 1}, "Rifle", "weapon"},
-		{game.ItemView{Kind: "wood", Qty: 25}, "Wood ×25", "material"},
-		{game.ItemView{Kind: "parka", Qty: 1}, "Parka", "apparel"},
-		{game.ItemView{Kind: "meal", Qty: 2}, "Meal ×2", "food"},
-		{game.ItemView{Kind: "dustbuck corpse", Qty: 1}, "Dustbuck corpse", "body"},
-	}
-	for _, c := range cases {
-		if got := itemTitle(c.it); got != c.title {
-			t.Errorf("title(%+v) = %q, want %q", c.it, got, c.title)
-		}
-		if got := itemCategory(c.it); got != c.cat {
-			t.Errorf("category(%s) = %q, want %q", c.it.Kind, got, c.cat)
-		}
-	}
-	for _, c := range []struct {
-		it   game.ItemView
-		want string
-	}{
-		{game.ItemView{Rotten: true}, "Rotten"},
-		{game.ItemView{Dried: true}, "Dried"},
-		{game.ItemView{FreshDays: 4}, "Fresh for 4 days"},
-	} {
-		if got := itemLines(c.it, true)[0]; got != c.want {
-			t.Errorf("condition = %q, want %q", got, c.want)
-		}
-	}
-	if got := itemLines(game.ItemView{FreshDays: -1}, true); len(got) != 1 {
-		t.Fatalf("non-spoiling item lines = %v", got)
 	}
 }
 
@@ -202,28 +139,5 @@ func TestInspectorsDrawWithoutArt(t *testing.T) {
 	a.drawItemMark(screen)
 	if got := capitalize(""); got != "" {
 		t.Fatalf("capitalize empty = %q", got)
-	}
-}
-
-// TestItemShowsPoisonChance: a cooked meal's pane names its food-poisoning
-// chance (WS-M); raw food and older stacks show none.
-func TestItemShowsPoisonChance(t *testing.T) {
-	t.Parallel()
-	has := func(lines []string) string {
-		for _, l := range lines {
-			if strings.HasPrefix(l, "Poison chance") {
-				return l
-			}
-		}
-		return ""
-	}
-	if l := has(itemLines(game.ItemView{Kind: "meal", Qty: 2, FreshDays: 3, PoisonPermille: 20}, true)); l != "Poison chance 2%" {
-		t.Fatalf("meal line %q", l)
-	}
-	if l := has(itemLines(game.ItemView{Kind: "meal", Qty: 1, FreshDays: 3, PoisonPermille: 15}, true)); l != "Poison chance 1.5%" {
-		t.Fatalf("meal line %q", l)
-	}
-	if l := has(itemLines(game.ItemView{Kind: "berries", Qty: 5, FreshDays: 3}, true)); l != "" {
-		t.Fatalf("raw food shows %q", l)
 	}
 }

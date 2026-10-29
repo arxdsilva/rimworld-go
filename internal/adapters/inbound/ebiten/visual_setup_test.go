@@ -233,7 +233,7 @@ func (s *visualScene) closeAll(t testing.TB) {
 	if a.nav.overlay() != overlayNone {
 		a.apply(intent{kind: intentResume})
 	}
-	a.inspectTab, a.opt.Tab = "character", ""
+	a.insp.Tab, a.opt.Tab = "character", ""
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone || len(a.uiSt().Modals) > 0 {
 		t.Fatalf("closeAll left %s/%s with %d modal(s)", a.nav.screen(), a.nav.overlay(), len(a.uiSt().Modals))
 	}

@@ -2,12 +2,12 @@ package ebiten
 
 import (
 	"fmt"
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -145,7 +145,7 @@ type overlayFlags struct{ roof, home, plan, rooms, learn, bar, rescat bool }
 
 func (a *App) overlayFlags() overlayFlags {
 	r, g := a.renderer, a.settings.Gameplay
-	return overlayFlags{r.overlays().Roof.On, r.overlays().Home.On, r.overlays().Plan.On, a.rooms, g.ShowLearningHelper, g.ShowColonistBar, g.CategorizedResources}
+	return overlayFlags{r.overlays().Roof.On, r.overlays().Home.On, r.overlays().Plan.On, a.chrome.Rooms, g.ShowLearningHelper, g.ShowColonistBar, g.CategorizedResources}
 }
 
 // Each toggle's own rect toggles its own overlay and nothing else; the
@@ -359,16 +359,6 @@ func TestGlobalTemperatureFollowsHoveredCell(t *testing.T) {
 	}
 }
 
-// Negative temperatures round away from zero like the rest of the HUD.
-func TestFmtDegrees(t *testing.T) {
-	t.Parallel()
-	for in, want := range map[int]string{0: "0 °C", 94: "9 °C", 95: "10 °C", 215: "22 °C", -4: "0 °C", -5: "-1 °C", -94: "-9 °C", -95: "-10 °C"} {
-		if got := fmtDegrees(in); got != want {
-			t.Errorf("fmtDegrees(%d) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 // Active conditions are one line each (the chips' successors), right
 // aligned in Global with the chips' tooltips.
 func TestGlobalConditionsAreLines(t *testing.T) {
@@ -512,7 +502,7 @@ func TestGlobalDrawsAtScales(t *testing.T) {
 			s.world.Extreme, s.world.Conditions = "heat_wave", []string{"ashfall_sky"}
 			s.world.Weather, s.world.WindX, s.world.WindY = "rain", 2, 1
 			a, _ := globalColony(t, s, sc.ui, sc.ww, sc.wh)
-			a.renderer.overlays().Roof.On, a.rooms = true, true
+			a.renderer.overlays().Roof.On, a.chrome.Rooms = true, true
 			a.bg.paused = true
 			screen := ebiten.NewImage(a.pw, a.ph)
 			a.drawGlobalControls(screen, a.sw, a.sh)
@@ -531,41 +521,6 @@ func TestGlobalConsumesClicks(t *testing.T) {
 		t.Fatal("Global's centre does not consume the click")
 	}
 	assertChromeIsTheLayout(t, a) // the layout covers Global: no legacy chrome
-}
-
-// More than eight toggles wrap into rows of eight, right-aligned, upward
-// from the bottom; the measured height grows by a row each time.
-func TestLayoutGlobalWrapsToggleRows(t *testing.T) {
-	t.Parallel()
-	g := rect{X: 1040, Y: 400, W: 232, H: 0}
-	var prev float32
-	for _, n := range []int{8, 9, 16, 17} {
-		h := globalStackHeight(globalPlan{}, n)
-		g.H = h
-		g.Y = 692 - hudMargin - h
-		rows := layoutGlobal(g, globalPlan{}, n)
-		if len(rows.Toggles) != n {
-			t.Fatalf("n=%d: %d toggle rects", n, len(rows.Toggles))
-		}
-		for i, r := range rows.Toggles {
-			if r.X < g.X || r.Right() > g.Right() || r.Y < g.Y || r.Bottom() > g.Bottom() {
-				t.Errorf("n=%d toggle %d %+v outside %+v", n, i, r, g)
-			}
-			if i >= globalPerRow && r.Y <= rows.Toggles[i-globalPerRow].Y {
-				t.Errorf("n=%d: toggle %d %+v should be below toggle %d %+v (rows run top to bottom)", n, i, r, i-globalPerRow, rows.Toggles[i-globalPerRow])
-			}
-		}
-		if last := rows.Toggles[n-1]; g.Right()-globalPad != last.Right() {
-			t.Errorf("n=%d: the last toggle ends at %v, want the inner right edge %v", n, last.Right(), g.Right()-globalPad)
-		}
-		if h < prev {
-			t.Errorf("n=%d: height %v shrank from %v", n, h, prev)
-		}
-		prev = h
-	}
-	if h8, h9 := globalStackHeight(globalPlan{}, 8), globalStackHeight(globalPlan{}, 9); h9-h8 != globalIconPx+globalIconGap {
-		t.Errorf("a second toggle row adds %v, want %v", h9-h8, globalIconPx+globalIconGap)
-	}
 }
 
 // The weather row's width follows the label: calm is plain text, wind has

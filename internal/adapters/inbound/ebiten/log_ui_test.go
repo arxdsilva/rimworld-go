@@ -1,10 +1,9 @@
 package ebiten
 
 import (
-	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -16,23 +15,6 @@ func logs(n int) []game.LogLineView {
 		out = append(out, game.LogLineView{Day: 3, Hour: 20 - i, Text: "event " + string(rune('A'+i))})
 	}
 	return out
-}
-
-func TestLogLineTextAndWrap(t *testing.T) {
-	t.Parallel()
-	if got := logLineText(game.LogLineView{Day: 2, Hour: 7, Text: "Ate a meal"}); got != "Day 2, 07h  Ate a meal" {
-		t.Fatalf("text = %q", got)
-	}
-	rows := wrapLogRows([]game.LogLineView{{Day: 1, Hour: 1, Text: strings.Repeat("x", 60)}}, 200)
-	if w, _ := measure(rows[0], logStyle); len(rows) < 2 || !strings.HasPrefix(rows[1], "  ") || w > 200 {
-		t.Fatalf("rows = %q", rows)
-	}
-	if got := wrapLogRows(logs(3), 300); len(got) != 3 || !strings.Contains(got[0], "event A") {
-		t.Fatalf("newest first: %q", got)
-	}
-	if clampLogScroll(99, 10, 4) != 6 || clampLogScroll(-1, 10, 4) != 0 {
-		t.Fatal("scroll clamp")
-	}
 }
 
 func TestLogTabButtonAndRendering(t *testing.T) {
@@ -50,7 +32,7 @@ func TestLogTabButtonAndRendering(t *testing.T) {
 	if r.X < 0 || r.Right() > 1280 || r.Y < 0 || r.Bottom() > 720 {
 		t.Fatalf("Log panel %+v is off the screen", r)
 	}
-	a.inspectTab = "log"
+	a.insp.Tab = "log"
 	p, _ := a.selectedPawn()
 	p.Log = logs(40)
 	// drawing (pixels cannot be read in tests) must not panic, with or
@@ -66,15 +48,15 @@ func TestLogTabButtonAndRendering(t *testing.T) {
 	}
 	// the wheel scrolls inside the panel, and not outside it
 	x, y, _, _ := logBodyRect(r)
-	if !a.scrollLogIn(r, x+5, y+5, -1) || a.logScroll == 0 {
-		t.Fatalf("wheel over the log must scroll it (scroll %d)", a.logScroll)
+	if !a.scrollLogIn(r, x+5, y+5, -1) || a.insp.LogScroll == 0 {
+		t.Fatalf("wheel over the log must scroll it (scroll %d)", a.insp.LogScroll)
 	}
 	if a.scrollLogIn(r, 1270, 710, -1) {
 		t.Fatal("wheel elsewhere must not be taken")
 	}
-	a.logFor = 0
+	a.insp.LogFor = 0
 	a.syncLogFor(p.ID)
-	if a.logScroll != 0 {
+	if a.insp.LogScroll != 0 {
 		t.Fatal("scroll resets on selection change")
 	}
 }

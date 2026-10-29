@@ -411,11 +411,11 @@ func TestF10WritesScreenshotF11HidesUI(t *testing.T) {
 		t.Fatalf("toasts = %+v", ts)
 	}
 	f.Key(t, a, "F11", 0)
-	if !a.hideUI || len(a.colonyButtons(a.size())) != 0 || a.colonyChromeHit(10, 5, 1280, 720) {
+	if !a.chrome.Hidden || len(a.colonyButtons(a.size())) != 0 || a.colonyChromeHit(10, 5, 1280, 720) {
 		t.Fatal("F11 hides every button and panel")
 	}
 	f.Key(t, a, "Escape", 0)
-	if a.hideUI || a.nav.overlay() != overlayNone {
+	if a.chrome.Hidden || a.nav.overlay() != overlayNone {
 		t.Fatal("Esc brings the interface back first")
 	}
 }
@@ -431,7 +431,7 @@ func TestRoomStatsOverlayAndCard(t *testing.T) {
 	s.world.RoomGrid[5*24+5] = 0
 	s.world.Rooms = []game.RoomView{{ID: 0, Role: "bedroom", Score: 14, Label: "nice", Lit: true, Temp: 215, Roofed: 1, Cleanliness: "clean", Cells: 12}}
 	f.Key(t, a, "G", 0)
-	if !a.rooms {
+	if !a.chrome.Rooms {
 		t.Fatal("G turns the room overlay on")
 	}
 	if b, ok := hasButton(a.colonyButtons(a.size()), roomsButtonID); !ok || !b.Selected || !strings.Contains(b.Tip, "[G]") {

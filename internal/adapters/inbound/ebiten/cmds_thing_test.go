@@ -2,12 +2,12 @@ package ebiten
 
 import (
 	"fmt"
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -53,7 +53,7 @@ func thingPick(a *App, o cmdOption) {
 	case o.Cmd != nil:
 		a.renderer.enqueue(*o.Cmd)
 	case o.Run != nil:
-		o.Run(a)
+		o.Run()
 	}
 }
 
@@ -65,13 +65,13 @@ func thingPress(a *App, c cmdButton) {
 	case c.Disabled:
 		a.hint = c.Reason
 	case c.Run != nil:
-		c.Run(a)
+		c.Run()
 	case len(c.Cmds) > 0:
 		for _, cmd := range c.Cmds {
 			a.renderer.enqueue(cmd)
 		}
 	case c.Options != nil:
-		for _, o := range c.Options(a) {
+		for _, o := range c.Options() {
 			if !o.Disabled {
 				thingPick(a, o)
 				return
@@ -461,7 +461,7 @@ func TestAnimalMasterOptions(t *testing.T) {
 	if master.Label != "Master" || master.Options == nil || master.Disabled || master.Desc == "" {
 		t.Fatalf("master = %+v", master)
 	}
-	opts := master.Options(a)
+	opts := master.Options()
 	if len(opts) != 3 || opts[0].Label != "Ada (master)" || opts[1].Label != "Bo" || opts[2].Label != "No master" {
 		t.Fatalf("options = %+v", opts)
 	}
@@ -684,7 +684,7 @@ func TestItemVerbCommands(t *testing.T) {
 		if cmd.Run != nil || cmd.Cmds != nil {
 			t.Errorf("%s: a new id lists options only", c.id)
 		}
-		opts := cmd.Options(a)
+		opts := cmd.Options()
 		if len(opts) != 2 || opts[0].Label != "Ada" || opts[1].Label != "Bo" {
 			t.Errorf("%s: options = %+v (nearest first)", c.id, opts)
 			continue
@@ -711,23 +711,6 @@ func TestItemVerbCommands(t *testing.T) {
 	}
 }
 
-func TestItemVerbOptionsCarryDisabledReasons(t *testing.T) {
-	t.Parallel()
-	opts := colonistOptions([]colonistAction{
-		{Pawn: 1, Name: "Ada", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderEquip, Pawn: 1}},
-		{Pawn: 2, Name: "Bo", Disabled: true, Reason: "cannot reach"},
-	})
-	if len(opts) != 2 || opts[0].Disabled || opts[0].Cmd == nil || opts[0].Cmd.Pawn != 1 {
-		t.Fatalf("options = %+v", opts)
-	}
-	if !opts[1].Disabled || opts[1].Reason != "cannot reach" || opts[1].Label != "Bo" {
-		t.Fatalf("the unreachable colonist's option = %+v", opts[1])
-	}
-	if got := colonistOptions(nil); len(got) != 0 {
-		t.Fatalf("no colonists: %+v", got)
-	}
-}
-
 func TestItemVerbDisabledWhenNobodyCan(t *testing.T) {
 	t.Parallel()
 	s := thingItemVerbSim(command.OrderEquip)
@@ -739,7 +722,7 @@ func TestItemVerbDisabledWhenNobodyCan(t *testing.T) {
 	if !equip.Disabled || equip.Reason != "cannot reach" {
 		t.Fatalf("equip = %+v", equip)
 	}
-	for _, o := range equip.Options(a) {
+	for _, o := range equip.Options() {
 		if !o.Disabled || o.Reason != "cannot reach" {
 			t.Errorf("option %+v should be disabled with the reason", o)
 		}
@@ -932,7 +915,7 @@ func TestPlantNowByOptions(t *testing.T) {
 	if now.Label != "Now by..." || now.Options == nil || now.Disabled || now.Run != nil || now.Cmds != nil || now.Desc == "" {
 		t.Fatalf("now = %+v", now)
 	}
-	opts := now.Options(a)
+	opts := now.Options()
 	if len(opts) != 2 || opts[0].Label != "Ada" || opts[1].Label != "Bo" || opts[0].Cmd == nil {
 		t.Fatalf("options = %+v", opts)
 	}

@@ -7,34 +7,6 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-type fakeAllies []game.AllyGroupView
-
-func (f fakeAllies) Allies() []game.AllyGroupView { return f }
-
-// TestAlliesAlert: standing allies raise "Allies on the map (N)" with
-// their spots as click targets; a lone leaving group says so; none
-// standing raises nothing. The trade alerts gather it too.
-func TestAlliesAlert(t *testing.T) {
-	t.Parallel()
-	got := allyAlertsFrom(fakeAllies{{Faction: "Ridge", Standing: 2, Total: 3, Spots: [][2]int{{4, 5}, {6, 7}}}})
-	if len(got) != 1 || got[0].key != "allies" || got[0].label != "Allies on the map (2)" || len(got[0].targets) != 2 || got[0].danger {
-		t.Fatalf("allies: %+v", got)
-	}
-	if alertExplain("allies") == alertExplain("nosuchalert") {
-		t.Fatal("the allies alert has no explanation")
-	}
-	got = allyAlerts([]game.AllyGroupView{{Standing: 3, Leaving: true}})
-	if len(got) != 1 || got[0].label != "Allies leaving (3)" {
-		t.Fatalf("leaving: %+v", got)
-	}
-	if got := allyAlerts([]game.AllyGroupView{{Total: 2}}); len(got) != 0 {
-		t.Fatalf("none standing: %+v", got)
-	}
-	if got := tradeAlertsFrom(fakeAllies{{Standing: 1}}); len(got) != 1 || got[0].key != "allies" {
-		t.Fatalf("through the trade alerts: %+v", got)
-	}
-}
-
 // TestAlliesNotInColonistBar: allies (visitor views) take no colonist bar
 // slot and are not counted for its layout.
 func TestAlliesNotInColonistBar(t *testing.T) {

@@ -17,14 +17,17 @@ import (
 // setTestPane makes every selection show spec (a spec with no Title is
 // "not migrated").
 func (a *App) setTestPane(spec paneSpec) {
-	a.hst.pane.testProducer = func(*App, selKind, entity.EntityID) paneSpec { return spec }
+	a.insp.TestPane = func(selKind, entity.EntityID) paneSpec { return spec }
 }
 
 // setTestCommands replaces the per-kind command producers (nil: the real
 // ones) and forgets any merged group commands.
 func (a *App) setTestCommands(fn func(*App, selKind, entity.EntityID) []cmdButton) {
-	a.hst.cmds.testProducer = fn
-	a.hst.cmds.memo = groupMemo{}
+	a.insp.TestCommands = nil
+	if fn != nil {
+		a.insp.TestCommands = func(k selKind, id entity.EntityID) []cmdButton { return fn(a, k, id) }
+	}
+	a.updates++ // a new Update forgets any merged group commands
 }
 
 func noCommands(*App, selKind, entity.EntityID) []cmdButton { return nil }
@@ -46,7 +49,7 @@ func fullPane(tabs ...paneTab) paneSpec {
 	return paneSpec{
 		Title:    "Ada",
 		Subtitle: "Colonist, 31",
-		Bars:     []paneBar{{"Health", 82, uiGood}, {"Mood", 55, uiWarning}, {"Food", 20, uiDanger}},
+		Bars:     []paneBar{{Label: "Health", Pct: 82, Color: uiGood}, {Label: "Mood", Pct: 55, Color: uiWarning}, {Label: "Food", Pct: 20, Color: uiDanger}},
 		Chips:    []paneChip{{ID: "pane.area", Label: "Area: Home zone", Tip: "Where Ada may go"}},
 		Lines:    []string{"Doing: hauling wood", "Resting soon"},
 		Tabs:     tabs,
@@ -291,12 +294,12 @@ func TestPaneBodyScrollsAndOwnsTheWheel(t *testing.T) {
 	a, _, f := paneColony(t, spec)
 	l := a.hud()
 	g := paneLayout(l.Pane, spec)
-	if g.contentH <= g.body.H {
-		t.Fatalf("40 lines must overflow the %v px body, content %v", g.body.H, g.contentH)
+	if g.ContentH <= g.Body.H {
+		t.Fatalf("40 lines must overflow the %v px body, content %v", g.Body.H, g.ContentH)
 	}
 	z := a.renderer.cam.Zoom
 	a.renderer.smooth.Instant = true
-	f.Cur.Mx, f.Cur.My = int(g.body.X+20), int(g.body.Y+20)
+	f.Cur.Mx, f.Cur.My = int(g.Body.X+20), int(g.Body.Y+20)
 	f.Cur.WheelY = -1
 	f.Frame(t, a)
 	if off := a.uiSt().Scroll[paneBodyID]; off <= 0 {
@@ -333,8 +336,8 @@ func TestPaneRowsAreClickableAndScroll(t *testing.T) {
 		t.Fatalf("only the rows in view are targets: %d of 30", len(vis))
 	}
 	for id, b := range vis {
-		if b.Y < g.body.Y-0.01 || b.Y+b.H > g.body.Bottom()+0.01 {
-			t.Errorf("%s %+v leaves the body %+v", id, b, g.body)
+		if b.Y < g.Body.Y-0.01 || b.Y+b.H > g.Body.Bottom()+0.01 {
+			t.Errorf("%s %+v leaves the body %+v", id, b, g.Body)
 		}
 	}
 	if _, ok := vis["pane.row.0"]; !ok {
@@ -402,13 +405,13 @@ func TestPaneLayoutDropsWhatDoesNotFit(t *testing.T) {
 	}
 	p := rect{X: 0, Y: 500, W: paneW, H: paneH}
 	g := paneLayout(p, spec)
-	for i, c := range g.chips {
+	for i, c := range g.Chips {
 		if c.Bottom() > p.Bottom()-4+0.01 {
 			t.Errorf("chip %d %+v runs out of the pane", i, c)
 		}
 	}
-	if !g.body.Empty() && g.body.Bottom() > p.Bottom() {
-		t.Errorf("body %+v runs out of the pane", g.body)
+	if !g.Body.Empty() && g.Body.Bottom() > p.Bottom() {
+		t.Errorf("body %+v runs out of the pane", g.Body)
 	}
 }
 
@@ -419,14 +422,14 @@ func TestSelectPaneTabOpensTheSelectionsTab(t *testing.T) {
 	a, _, _ := inputColony(t, [2]int{3, 3})
 	a.renderer.Select(1)
 	a.selectPaneTab("inspector.needs")
-	if a.inspectTab != "needs" || a.paneOpenTab() != "inspector.needs" {
-		t.Fatalf("the colonist's Needs tab: inspectTab=%q open=%q", a.inspectTab, a.paneOpenTab())
+	if a.insp.Tab != "needs" || a.paneOpenTab() != "inspector.needs" {
+		t.Fatalf("the colonist's Needs tab: inspectTab=%q open=%q", a.insp.Tab, a.paneOpenTab())
 	}
 	a.closePaneTab()
 	a.setTestPane(paneSpec{})
 	a.selectPaneTab("inspector.needs")
-	if a.inspectTab != "character" || a.paneOpenTab() != "" {
-		t.Fatalf("a pane without the tab took the click: inspectTab=%q open=%q", a.inspectTab, a.paneOpenTab())
+	if a.insp.Tab != "character" || a.paneOpenTab() != "" {
+		t.Fatalf("a pane without the tab took the click: inspectTab=%q open=%q", a.insp.Tab, a.paneOpenTab())
 	}
 }
 
@@ -439,7 +442,7 @@ func TestDrawPaneBodyWithRowsAndAMenu(t *testing.T) {
 	a, _, _ := paneColony(t, spec)
 	img := ebiten.NewImage(1280, 720)
 	g := paneLayout(a.hud().Pane, spec)
-	a.cursor = &[2]int{int(g.body.X) + 10, int(g.body.Y+g.rowsY0) + 5} // hover the first row
+	a.cursor = &[2]int{int(g.Body.X) + 10, int(g.Body.Y+g.RowsY0) + 5} // hover the first row
 	a.uiSt().Scroll[paneBodyID] = paneRowH
 	a.drawPane(img)
 	a.openPick(300, 300, false, pickEntries(), func(int) {})

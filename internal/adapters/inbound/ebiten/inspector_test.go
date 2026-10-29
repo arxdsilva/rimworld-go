@@ -1,30 +1,14 @@
 package ebiten
 
 import (
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
-
-func TestInspectorShowsWaitingFor(t *testing.T) {
-	names := map[entity.EntityID]string{7: "Dustbuck"}
-	lookup := func(id entity.EntityID) string { return names[id] }
-	if got := waitingForLine(7, lookup); got != "waiting for Dustbuck" {
-		t.Fatalf("got %q", got)
-	}
-	if got := waitingForLine(0, lookup); got != "" {
-		t.Fatalf("unblocked should show nothing, got %q", got)
-	}
-	if got := waitingForLine(9, lookup); got != "waiting for something" {
-		t.Fatalf("unknown blocker got %q", got)
-	}
-}
 
 // findButton finds id among what the selected colonist offers: its command
 // buttons (the label carries the live key, as the grid's badge does), the
@@ -43,7 +27,7 @@ func findButton(a *App, id string) (button, bool) {
 	for _, tb := range spec.Tabs {
 		if tb.ID == id {
 			return button{ID: tb.ID, Label: tb.Label, Disabled: tb.Disabled, Reason: tb.Reason,
-				Selected: a.inspectTab == strings.TrimPrefix(tb.ID, "inspector.")}, true
+				Selected: a.insp.Tab == strings.TrimPrefix(tb.ID, "inspector.")}, true
 		}
 	}
 	for _, c := range spec.Chips {
@@ -70,7 +54,7 @@ func equipOptions(t *testing.T, a *App) []cmdOption {
 	if !ok || b.Options == nil {
 		t.Fatalf("no Equip command with options: %+v ok=%v", b, ok)
 	}
-	return b.Options(a)
+	return b.Options()
 }
 
 // findCmd finds a command button of the selected colonist.
@@ -88,7 +72,7 @@ func TestPawnActionBar(t *testing.T) {
 	a, _, id := liveColony(t, 0)
 	selectPawn(t, a, id)
 	for _, tab := range []string{"character", "needs", "gear"} {
-		a.inspectTab = tab
+		a.insp.Tab = tab
 		for _, want := range []string{"pawn.draft", "pawn.clearorders"} {
 			if _, ok := findButton(a, want); !ok {
 				t.Fatalf("tab %s: no %s command", tab, want)
@@ -139,7 +123,7 @@ func TestEquipNearbyListsReachableWeapons(t *testing.T) {
 		t.Fatalf("far rifle should be listed: %+v", opts[1])
 	}
 	// the Gear tab no longer lists weapons: the Equip command does
-	a.inspectTab = "gear"
+	a.insp.Tab = "gear"
 	if _, ok := findButton(a, "pawn.equip."+eid(near)); ok {
 		t.Fatal("equip rows moved to the Equip command's options")
 	}
@@ -203,7 +187,7 @@ func TestDeadPawnActionsDisabled(t *testing.T) {
 	a, g, id := liveColony(t, 1)
 	g.SpawnStack(item.Rifle, 1, 5, 2)
 	selectPawn(t, a, id)
-	a.inspectTab = "gear"
+	a.insp.Tab = "gear"
 	g.Injure(id, 100000)
 	g.ApplyPending()
 	p, _ := a.selectedPawn()
@@ -220,32 +204,3 @@ func TestDeadPawnActionsDisabled(t *testing.T) {
 }
 
 func eid(id entity.EntityID) string { return strconv.FormatUint(uint64(id), 10) }
-
-func TestPostponedLine(t *testing.T) {
-	if postponedLine(nil) != "" {
-		t.Fatal("nothing put off: no line")
-	}
-	got := postponedLine([]string{"build wall: blocked, retry in 12 s", "haul wood: can't reach"})
-	if got != "put off: build wall: blocked, retry in 12 s (+1)" {
-		t.Fatalf("line %q", got)
-	}
-}
-
-// PLAY-017: the Gear tab marks the garments the player chose and names the
-// one the colonist is walking to put on; the layout below follows.
-func TestGearRows(t *testing.T) {
-	p := game.PawnView{Apparel: []string{"parka", "tuque"}, ApparelForced: []bool{true, false}, ChangingInto: "duster"}
-	rows := gearRows(p)
-	want := []string{"everyday clothes", "leather parka  (you chose this)", "knitted tuque  (warmer)", "Changing into: duster"}
-	if !slices.Equal(rows, want) {
-		t.Fatalf("rows %q\nwant %q", rows, want)
-	}
-	if got := gearRows(game.PawnView{}); !slices.Equal(got, []string{"everyday clothes"}) {
-		t.Fatalf("bare colonist rows %q", got)
-	}
-	// the comfort line (and the hint after it) sit below every Wearing row
-	g := gearLayoutFor(len(rows) - 1)
-	if last := g.clothes + float32(len(rows))*lineStep(tsSmall); g.comfort < last || g.hint <= g.comfort {
-		t.Fatalf("comfort at %v, hint at %v, want both below the last row ending at %v", g.comfort, g.hint, last)
-	}
-}

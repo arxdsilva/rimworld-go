@@ -2,12 +2,12 @@ package ebiten
 
 import (
 	"fmt"
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/application/game"
 )
 
@@ -55,7 +55,7 @@ func TestRightColumnCountsAreTheRealOnes(t *testing.T) {
 		t.Error("counts without a renderer")
 	}
 	// F11 hides the HUD, so it also hides the column's buttons
-	a.hideUI = true
+	a.chrome.Hidden = true
 	if len(a.rightColumnButtons(a.sw)) != 0 {
 		t.Error("buttons while the interface is hidden")
 	}
@@ -143,27 +143,6 @@ func TestRightHoverCardsForLettersAndFoldedRows(t *testing.T) {
 	b.uiPushModal(modal{ID: "x", Title: "x", W: 200, H: 120})
 	if _, _, ok := b.rightHover(lay); ok {
 		t.Error("card over a modal")
-	}
-}
-
-func TestStackSplit(t *testing.T) {
-	t.Parallel()
-	for _, c := range []struct {
-		total, rows, limit int
-		shown, folded      int
-	}{
-		{0, 5, 8, 0, 0},
-		{3, 0, 8, 0, 3},  // no room at all
-		{3, 5, 8, 3, 0},  // everything fits
-		{9, 9, 8, 8, 1},  // over the limit: the cap and a +N row
-		{10, 4, 8, 3, 7}, // cramped: the count takes a row
-		{5, 1, 5, 1, 0},  // one row has no room for a count
-		{12, 20, 99, 12, 0},
-	} {
-		shown, folded := stackSplit(c.total, c.rows, c.limit)
-		if shown != c.shown || folded != c.folded {
-			t.Errorf("stackSplit(%d, %d, %d) = %d, %d; want %d, %d", c.total, c.rows, c.limit, shown, folded, c.shown, c.folded)
-		}
 	}
 }
 

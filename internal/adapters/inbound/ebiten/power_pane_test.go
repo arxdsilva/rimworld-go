@@ -163,20 +163,6 @@ func TestPowerPaneGridLineVariants(t *testing.T) {
 	}
 }
 
-func TestPowerWarningLinesAreMarked(t *testing.T) {
-	t.Parallel()
-	for _, warn := range []string{"No power: brownout", "Not producing: no fuel", "Not connected: it makes power for nobody", "Brownout: some devices are shed"} {
-		if !paneLineWarns(warn) {
-			t.Errorf("%q should draw in the warning colour", warn)
-		}
-	}
-	for _, calm := range []string{"Uses 180 W", "Produces 0 W", "Grid: +350 W (800 W made, 450 W used)", "Closed (carries power)", "Out of fuel", ""} {
-		if paneLineWarns(calm) {
-			t.Errorf("%q should draw in the body colour", calm)
-		}
-	}
-}
-
 func TestBatteryPaneChargeBar(t *testing.T) {
 	t.Parallel()
 	a, _, _ := pwrApp(t, 0, pwrBattery())
@@ -410,7 +396,7 @@ func TestPowerToggleOverAGroup(t *testing.T) {
 	}
 	// all on: the toggle switches both off
 	s.world.Buildings[1].PowerWantOn, s.world.Buildings[1].PowerOn = true, true
-	a.hst.cmds.memo.ok = false
+	a.updates++ // a new Update forgets the merged commands
 	if c := merged(); !c.On || c.Mixed {
 		t.Fatalf("an all-on group: %+v", c)
 	}
@@ -538,11 +524,11 @@ func TestUnpoweredBenchBillsSayNoPower(t *testing.T) {
 		t.Fatalf("no Bills tab on an electric bench: %+v", p.Tabs)
 	}
 	body := billsBody(b, 500)
-	if len(body.labels) != 1 || !strings.Contains(strings.ToLower(body.labels[0].text), "no power") {
-		t.Fatalf("bills body labels = %+v", body.labels)
+	if len(body.Labels) != 1 || !strings.Contains(strings.ToLower(body.Labels[0].Text), "no power") {
+		t.Fatalf("bills body labels = %+v", body.Labels)
 	}
-	if len(body.fills) != 1 {
-		t.Fatalf("a held bill is marked: %+v", body.fills)
+	if len(body.Fills) != 1 {
+		t.Fatalf("a held bill is marked: %+v", body.Fills)
 	}
 	if !strings.Contains(bldLines(p), "No power: not connected") {
 		t.Fatalf("pane lines = %q", p.Lines)
@@ -624,15 +610,6 @@ func TestPaneDrawsThePowerWarning(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("ui %g: the pane does not draw the no-power line", ui)
-		}
-	}
-}
-
-func TestFmtTarget(t *testing.T) {
-	t.Parallel()
-	for tenths, want := range map[int]string{210: "21 °C", 215: "21.5 °C", 0: "0 °C", -50: "-5 °C", -55: "-5.5 °C", 5: "0.5 °C"} {
-		if got := fmtTarget(tenths); got != want {
-			t.Errorf("fmtTarget(%d) = %q, want %q", tenths, got, want)
 		}
 	}
 }

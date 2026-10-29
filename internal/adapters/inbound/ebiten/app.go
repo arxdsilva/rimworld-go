@@ -13,6 +13,8 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/learn"
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
@@ -23,7 +25,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
-	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
@@ -123,8 +124,6 @@ type App struct {
 	hst hudStates
 	// debt is the Update time budget's carried ticks (PERF-002).
 	debt tickDebt
-	// alerts memoises currentAlerts per update (alerts.go).
-	alerts alertsMemo
 	// ui is the widget kit's state (NG-1 §1.4, ui_state.go).
 	ui  uiState
 	cfg AppConfig
@@ -170,6 +169,8 @@ type App struct {
 	lrn        *learn.Helper
 	tools      *devtools.Panel
 	meter      *perf.Meter
+	insp       *inspector.Pane // the selection's inspector (ARCH-005 wave 5.4)
+	chrome     *hud.Chrome     // the colony HUD's regions (ARCH-005 wave 5.5)
 	sessionErr string
 	hint       string
 	shouldQuit bool
@@ -181,20 +182,14 @@ type App struct {
 	settings config.Settings
 	snd      soundDirector // what is heard (sound_director.go)
 
-	simsStarted          int
-	renderer             *Renderer
-	cursor               *[2]int          // capture-only synthetic cursor
-	sel                  *selection.Model // selection.Model owns what is selected (ARCH-005)
-	equipCache           equipCacheState  // the pawn Gear tab's nearby weapons (inspector.go)
-	alertCycle           map[string]int
-	inspectTab           string
-	logScroll            int // log_ui.go
-	logFor, animalLogFor entity.EntityID
-	capture              captureState
-	msgSeen              map[string]uint64 // message key -> frame first shown
-	now                  func() time.Time  // wall clock for alpha (injectable for tests)
-	lastTick             time.Time         // when the renderer last advanced
-	lastDraw             time.Time         // previous colony Draw: the per-Draw camera step
+	simsStarted int
+	renderer    *Renderer
+	cursor      *[2]int          // capture-only synthetic cursor
+	sel         *selection.Model // selection.Model owns what is selected (ARCH-005)
+	capture     captureState
+	now         func() time.Time // wall clock for alpha (injectable for tests)
+	lastTick    time.Time        // when the renderer last advanced
+	lastDraw    time.Time        // previous colony Draw: the per-Draw camera step
 
 	// Input (UI-016): the device source (a fake in tests), this Update's
 	// resolved frame, the live bindings and an Update counter.
@@ -203,12 +198,8 @@ type App struct {
 	binds   input.Bindings
 	updates uint64
 	bg      bgState      // Run in background (background.go)
-	barClk  barClick     // last colonist-bar click, for the double click (hud.go)
 	rebind  rebindState  // Options › Controls key capture (controls_ui.go)
 	midDrag midDragState // middle-mouse camera drag
-	toasts  []toast      // short notices (toast.go)
-	hideUI  bool         // F11: only the map is drawn
-	rooms   bool         // G: room stats overlay (room_stats.go)
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -273,6 +264,7 @@ func NewApp(cfg AppConfig) *App {
 	a.wiz = wizard.New(wizHost{a})
 	a.opt, a.win, a.arch, a.ord = newOptions(a), newWindows(a), newArchitect(a), newOrders(a)
 	a.deal, a.lrn, a.tools, a.meter = newDialogs(a), newLearn(a), newDevtools(a), newPerf(a)
+	a.insp, a.chrome = newInspector(a), newHud(a)
 	a.loadSettings()
 	a.applySettings()
 	return a
@@ -328,13 +320,13 @@ func (a *App) Update() error {
 				}
 			} else if a.colonyLive() && a.colonyChromeHit(mx, my, sw, sh) {
 				a.in.Take(mbLeft)
-			} else if a.colonyLive() && !a.hideUI && a.renderer.minimapClick(mx, my, colonyViewport(sw, sh), a.mapViewport()) {
+			} else if a.colonyLive() && !a.chrome.Hidden && a.renderer.minimapClick(mx, my, colonyViewport(sw, sh), a.mapViewport()) {
 				a.in.Take(mbLeft) // minimap (minimap.go): the camera moved
 			}
 		}
 	}
 
-	if a.colonyLive() && !a.hideUI && a.in.Clicked(mbRight) {
+	if a.colonyLive() && !a.chrome.Hidden && a.in.Clicked(mbRight) {
 		if mx, my := a.currentCursor(); a.hudRightClick(mx, my) { // hud.go: letters, alerts, command options
 			a.in.Take(mbRight)
 		}
@@ -386,8 +378,8 @@ func (a *App) handleColonyEscape() bool {
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		return false
 	}
-	if a.hideUI {
-		a.hideUI = false // Esc brings the interface back first
+	if a.chrome.Hidden {
+		a.chrome.Hidden = false // Esc brings the interface back first
 		return true
 	}
 	if a.ord.Float.Open {
@@ -637,7 +629,7 @@ func (a *App) startSession(sim Simulation) {
 	a.arch.Cat = ""
 	a.arch.Facing = 0
 	a.closeFloat()
-	a.inspectTab = "character"
+	a.insp.Tab = "character"
 	a.renderer = New(sim)
 	a.renderer.cueBus().SoundHas = a.cfg.Sound.Has // animal voices fall back by what exists
 	a.renderer.art = a.art
@@ -651,7 +643,7 @@ func (a *App) dropSession() {
 	a.arch.Open = false
 	a.arch.ToolID = ""
 	a.arch.Drag = false
-	a.inspectTab = "character"
+	a.insp.Tab = "character"
 }
 
 // Draw paints the current full screen and any overlay.
@@ -703,7 +695,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 			a.renderer.Draw(dst)
 			a.drawMapFields(dst) // mapfields_overlay.go: dev only
 			setTracePass("hud")
-			if !a.hideUI {
+			if !a.chrome.Hidden {
 				a.drawMapOverlays(dst) // hud.go: selection marks, ghosts, the drag box
 			}
 			if scaled {
@@ -714,7 +706,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		} else {
 			screen.Fill(uiSpace)
 		}
-		if !a.hideUI {
+		if !a.chrome.Hidden {
 			a.renderer.drawMinimap(screen, colonyViewport(sw, sh), a.mapViewport()) // minimap.go: big maps only
 			a.drawColonyHUD(screen, sw, sh)
 		}
@@ -747,7 +739,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 }
 
 // uiHidden reports F11 hid the interface (the colony map only).
-func (a *App) uiHidden() bool { return a.hideUI && a.nav.screen() == screenColony }
+func (a *App) uiHidden() bool { return a.chrome.Hidden && a.nav.screen() == screenColony }
 
 func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 	if a.uiHidden() {

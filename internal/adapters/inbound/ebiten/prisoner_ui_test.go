@@ -40,9 +40,9 @@ func TestPrisonerTabReplacesGearAndFits(t *testing.T) {
 	if r := expandedFor(1280, 720, pt); r.W < pt.WantW || r.W > expandMaxW {
 		t.Fatalf("Prisoner panel %+v for want %vx%v", r, pt.WantW, pt.WantH)
 	}
-	a.inspectTab = "prisoner"
+	a.insp.Tab = "prisoner"
 	if !a.prisonerTabOn() {
-		t.Fatalf("tab = %q", a.inspectTab)
+		t.Fatalf("tab = %q", a.insp.Tab)
 	}
 	if b, _ := findButton(a, prisonerTabID); !b.Selected {
 		t.Fatal("the Prisoner tab is the selected one")
@@ -65,12 +65,12 @@ func TestPrisonerTabModesAndRelease(t *testing.T) {
 	s := prisonerSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(2)
-	a.inspectTab = "prisoner"
+	a.insp.Tab = "prisoner"
 	f.Frame(t, a)
 	declarePrisonerTab(t, a)
 	for _, m := range prisonerModes {
-		if !hasWidget(a, prisonerModeID(m.mode)) {
-			t.Fatalf("mode %s missing", m.label)
+		if !hasWidget(a, prisonerModeID(m.Mode)) {
+			t.Fatalf("mode %s missing", m.Label)
 		}
 	}
 	if w, _ := a.uiSt().Find(prisonerRelease); w.Disabled {

@@ -26,7 +26,7 @@ func TestHealthSocialTabs(t *testing.T) {
 		openPawnTab(t, a, tab) // the pane's tab click
 		f.Frame(t, a)
 		if !a.kitTabOn() || a.bioTabOn() {
-			t.Fatalf("tab = %q after opening %s", a.inspectTab, id)
+			t.Fatalf("tab = %q after opening %s", a.insp.Tab, id)
 		}
 		tb, _ := paneTabByID(a.pawnPane(1), id)
 		tb.Declare(innerFor(1280, 720, tb)) // no data yet: the tab says so
@@ -48,12 +48,12 @@ func TestHealthSocialTabs(t *testing.T) {
 		t.Errorf("social lines = %q", so)
 	}
 	for _, tab := range []string{"health", "social"} {
-		a.inspectTab = tab
+		a.insp.Tab = tab
 		tb, _ := paneTabByID(a.pawnPane(1), "inspector."+tab)
 		tb.Declare(innerFor(1280, 720, tb)) // declares with data
 		drawFrame(t, a, f)
 	}
-	a.inspectTab = "character" // the pane itself: no tab open
+	a.insp.Tab = "character" // the pane itself: no tab open
 	if a.kitTabOn() {
 		t.Fatal("Character tab still shows the kit tab")
 	}

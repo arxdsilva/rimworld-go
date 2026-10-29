@@ -87,7 +87,7 @@ func penBody(t *testing.T, a *App) tabBody {
 
 func penBodyButtons(body tabBody) map[string]button {
 	ids := map[string]button{}
-	for _, b := range body.buttons {
+	for _, b := range body.Buttons {
 		ids[b.ID] = b
 	}
 	return ids
@@ -140,7 +140,7 @@ func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 	}
 	viewW := float32(penTabW - 2*paneInset - scrollBarW)
 	for _, b := range ids {
-		if b.Y+b.H > body.h || b.X+b.W > viewW || b.X < 0 || b.Y < 0 {
+		if b.Y+b.H > body.H || b.X+b.W > viewW || b.X < 0 || b.Y < 0 {
 			t.Errorf("button %s falls out of the tab body", b.ID)
 		}
 	}
@@ -202,25 +202,6 @@ func TestPenInspectorAllNone(t *testing.T) {
 		if sp, ok := penRow(ps, k); !ok || !sp.Allow || !sp.Male || !sp.Female {
 			t.Errorf("All sets %s: %+v", k, sp)
 		}
-	}
-}
-
-func TestPenFoodVerdict(t *testing.T) {
-	t.Parallel()
-	pv := game.PenView{Enclosed: true, GrazePerDay: 30, DemandPerDay: 45, TroughStock: 12}
-	got := strings.Join(penFoodLines(pv), "|")
-	for _, want := range []string{"30", "45", "12", "Short by 15 per day: add hay or expand"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("food lines %q lack %q", got, want)
-		}
-	}
-	pv.GrazePerDay = 45
-	if got := strings.Join(penFoodLines(pv), "|"); !strings.Contains(got, "Enough grazing") || strings.Contains(got, "Short") {
-		t.Errorf("enough grazing: %q", got)
-	}
-	pv.GrazePerDay, pv.DemandPerDay = 0, 0
-	if got := strings.Join(penFoodLines(pv), "|"); !strings.Contains(got, "Enough grazing") {
-		t.Errorf("an empty herd needs nothing: %q", got)
 	}
 }
 

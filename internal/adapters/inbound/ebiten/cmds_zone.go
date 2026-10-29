@@ -45,7 +45,7 @@ func (a *App) zoneCropCmd(z game.ZoneView) cmdButton {
 	zid, cur := z.ID, z.Crop
 	return cmdButton{ID: "cmd.zone.crop", Label: "Plant: " + zoneCropName(cur), Icon: a.zoneCropIcon(cur),
 		Desc: "Pick what this zone grows. Colonists harvest or cut the old plants and sow the new crop.",
-		Run: func(a *App) {
+		Run: func() {
 			x, y := a.zoneCmdAnchor("cmd.zone.crop")
 			entries, names := a.zoneCropEntries(cur)
 			a.openPick(x, y, true, entries, func(i int) { a.pickZoneCrop(zid, cur, names[i]) })
@@ -59,7 +59,7 @@ func (a *App) zonePriorityCmd(z game.ZoneView) cmdButton {
 	zid, cur := z.ID, zonePriorityName(z)
 	return cmdButton{ID: "cmd.zone.priority", Label: "Priority: " + cur, Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
 		Desc: "Haulers fill higher-priority storage first and carry things up from lower-priority storage when there is room.",
-		Run: func(a *App) {
+		Run: func() {
 			x, y := a.zoneCmdAnchor("cmd.zone.priority")
 			names := game.StoragePriorities()
 			entries := make([]game.OrderOption, len(names))
@@ -94,15 +94,7 @@ func (a *App) zoneCropIcon(crop string) string {
 
 // zoneCmdAnchor is where a command's menu opens: above the command's
 // button, else above the pointer.
-func (a *App) zoneCmdAnchor(id string) (x, y float32) {
-	for _, c := range a.commandCells() {
-		if c.cmd.ID == id {
-			return c.r.X, c.r.Y
-		}
-	}
-	mx, my := a.currentCursor()
-	return float32(mx), float32(my)
-}
+func (a *App) zoneCmdAnchor(id string) (x, y float32) { return a.insp.Commands().Anchor(id) }
 
 // zoneCropEntries are the picker's rows and the species name of each:
 // every crop and tree a zone can sow, those research has not unlocked
@@ -143,7 +135,7 @@ func (a *App) zoneSowCmd(z game.ZoneView) cmdButton {
 	zid, allowed := z.ID, !z.NoSow
 	c := cmdButton{ID: "cmd.zone.sow", Label: "Allow sowing", Icon: a.zoneIcon("zone_sow", "zone_grow"), Toggle: true, On: allowed,
 		Desc: "Colonists sow this zone. Turn it off to stop sowing here; harvesting goes on.",
-		Run: func(a *App) {
+		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.SetZoneSow, Target: uint64(zid), Enabled: !allowed})
 		}}
 	if !allowed {
@@ -157,7 +149,7 @@ func (a *App) zoneCutCmd(z game.ZoneView) cmdButton {
 	zid, allowed := z.ID, !z.NoCut
 	c := cmdButton{ID: "cmd.zone.cut", Label: "Allow cutting", Icon: a.zoneIcon("zone_cut", "order_cut"), Toggle: true, On: allowed,
 		Desc: "Growers cut the other plants in the way and chop trees here. Turn it off to leave them; their tiles stay unsown.",
-		Run: func(a *App) {
+		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.SetZoneCut, Target: uint64(zid), Enabled: !allowed})
 		}}
 	if !allowed {
@@ -171,7 +163,7 @@ func (a *App) zoneExpandCmd() cmdButton {
 	return cmdButton{ID: "cmd.zone.expand", Label: "Expand", Icon: a.zoneIcon("zone_expand", "zone_grow"),
 		Toggle: true, On: a.zoneToolOn(zoneToolExpand),
 		Desc: "Drag a rectangle to add tiles to this zone. Stays on until right-click or Esc.",
-		Run:  func(a *App) { a.startZoneTool(zoneToolExpand) }}
+		Run:  func() { a.startZoneTool(zoneToolExpand) }}
 }
 
 // zoneShrinkCmd starts the Shrink tool.
@@ -179,7 +171,7 @@ func (a *App) zoneShrinkCmd() cmdButton {
 	return cmdButton{ID: "cmd.zone.shrink", Label: "Shrink", Icon: a.zoneIcon("zone_shrink", "plan_clear"),
 		Toggle: true, On: a.zoneToolOn(zoneToolShrink),
 		Desc: "Drag a rectangle to remove this zone's tiles (a click removes one). Other zones are untouched. Stays on until right-click or Esc.",
-		Run:  func(a *App) { a.startZoneTool(zoneToolShrink) }}
+		Run:  func() { a.startZoneTool(zoneToolShrink) }}
 }
 
 // zoneDeleteCmd deletes the zone at once.
@@ -187,7 +179,7 @@ func (a *App) zoneDeleteCmd(z game.ZoneView) cmdButton {
 	zid := z.ID
 	return cmdButton{ID: "cmd.zone.delete", Label: "Delete", Icon: a.zoneIcon("zone_delete", "order_cancel"),
 		Desc: "Remove the whole zone. Its plants and items stay where they are.",
-		Run: func(a *App) {
+		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.DeleteZone, Target: uint64(zid)})
 			a.clearZone()
 		}}
@@ -198,7 +190,7 @@ func (a *App) zoneHideCmd(z game.ZoneView) cmdButton {
 	zid, hidden := z.ID, z.Hidden
 	c := cmdButton{ID: "cmd.zone.hide", Label: "Hide", Icon: a.zoneIcon("zone_hide", "order_forbid"), Toggle: true, On: hidden,
 		Desc: "Hide this zone's fill, outline and name on the map. It keeps working; click its tiles to select it.",
-		Run: func(a *App) {
+		Run: func() {
 			a.shell.Enqueue(command.Command{Kind: command.SetZoneHidden, Target: uint64(zid), Enabled: !hidden})
 		}}
 	if hidden {
@@ -211,7 +203,7 @@ func (a *App) zoneHideCmd(z game.ZoneView) cmdButton {
 func (a *App) zoneRenameCmd(z game.ZoneView) cmdButton {
 	return cmdButton{ID: "cmd.zone.rename", Label: "Rename", Icon: a.zoneIcon("zone_rename"),
 		Desc: "Give this zone a name of your own. It shows on the map and in this pane.",
-		Run:  func(a *App) { a.openZoneRename(z) }}
+		Run:  func() { a.openZoneRename(z) }}
 }
 
 // openZoneRename opens the name dialog for z: a text field holding the

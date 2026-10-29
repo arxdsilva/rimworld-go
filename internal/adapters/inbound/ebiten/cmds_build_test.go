@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -212,7 +212,7 @@ func TestTroughPaneAndFilterOptions(t *testing.T) {
 	if !ok || c.Options == nil {
 		t.Fatalf("trough filter command = %+v", c)
 	}
-	opts := c.Options(a)
+	opts := c.Options()
 	if len(opts) != 3 || opts[0].Label != "Plants" || opts[1].Label != "Meat" || opts[2].Label != "Any" {
 		t.Fatalf("options = %+v", opts)
 	}
@@ -621,31 +621,6 @@ func TestBillsTabScrollsLongLists(t *testing.T) {
 	}
 }
 
-func TestBillsBodyNotesAnEmptyBench(t *testing.T) {
-	t.Parallel()
-	b := game.BuildingView{ID: 77, Kind: "stove", Bench: true}
-	if body := billsBody(b, 400); len(body.buttons) != 0 || len(body.labels) != 1 || !strings.Contains(body.labels[0].text, "No bills yet") {
-		t.Fatalf("empty bench body = %+v", body)
-	}
-	b.Bills = threeBills()
-	body := billsBody(b, 400)
-	if len(body.buttons) != 5*len(b.Bills) {
-		t.Fatalf("buttons = %d, want %d", len(body.buttons), 5*len(b.Bills))
-	}
-	if body.h != float32(len(b.Bills))*billRowH {
-		t.Fatalf("content height = %v", body.h)
-	}
-	// the paused bill's pause button reads as pressed
-	for _, bt := range body.buttons {
-		if bt.ID == "bill.pause.2" && !bt.Selected {
-			t.Error("a suspended bill's pause button is selected")
-		}
-		if bt.ID == "bill.pause.0" && bt.Selected {
-			t.Error("a running bill's pause button is not selected")
-		}
-	}
-}
-
 // Ctrl, Shift and both scale a bill's quantity step x10, x100 and x1000
 // (UI-016), pressed on the tab's own buttons.
 func TestBillsTabQuantityModifiers(t *testing.T) {
@@ -720,8 +695,8 @@ func TestPenTabFitsItsWantedPanel(t *testing.T) {
 	tab, _ := bldTab(a.buildingPane(70), "inspector.pen")
 	inner := rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(paneInset)
 	body := penTabBody(a.renderer.world(), penSim().world.Pens[0], inner.W-scrollBarW)
-	if body.h > inner.H+0.01 {
-		t.Fatalf("pen body %v tall in an inner panel %v tall", body.h, inner.H)
+	if body.H > inner.H+0.01 {
+		t.Fatalf("pen body %v tall in an inner panel %v tall", body.H, inner.H)
 	}
 }
 

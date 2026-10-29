@@ -22,7 +22,7 @@ func (a *App) handleViewKeys() {
 		a.meter.Shot.Pending = true // taken after the next Draw (screenshot.go)
 	}
 	if a.in.Fired(input.HideUI) && a.nav.screen() == screenColony {
-		a.hideUI = !a.hideUI
+		a.chrome.Hidden = !a.chrome.Hidden
 	}
 }
 
@@ -121,7 +121,7 @@ func (a *App) handleMapKeys() {
 	case f.Fired(input.RoofOverlay):
 		a.renderer.toggleRoofOverlay()
 	case f.Fired(input.RoomStats):
-		a.rooms = !a.rooms
+		a.chrome.Rooms = !a.chrome.Rooms
 	case f.Fired(input.PowerOverlay):
 		a.renderer.togglePowerOverlay() // power_overlay.go (PLAY-021)
 	case f.Fired(input.Search):

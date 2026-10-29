@@ -32,7 +32,7 @@ func (a *App) syncTreeFocus() {
 	mx, my := a.currentCursor()
 	sw, sh := a.size()
 	var hover [2]int
-	hovered := !a.hideUI && !a.colonyChromeHit(mx, my, sw, sh)
+	hovered := !a.chrome.Hidden && !a.colonyChromeHit(mx, my, sw, sh)
 	if hovered {
 		hover[0], hover[1] = r.TileAt(a.mapCursor()) // the map is physical
 	}
