@@ -197,6 +197,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
 	case command.DevStartFire:
 		g.devStartFire(c.X, c.Y) // fire.go (PLAY-015)
+	case command.SetDoorHoldOpen, command.SetMortarTarget, command.ClearMortarTarget, command.SetTurretHold:
+		// DEF-3: ignored until the combat package handles them (wave D).
 	}
 }
 

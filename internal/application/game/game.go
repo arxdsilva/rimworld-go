@@ -139,11 +139,11 @@ type PawnView struct {
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
 	Temp                    int
-	// Recreation is the recreation need, percent; MentalBreak names a
-	// break in progress ("" when none).
-	Recreation   int
-	MentalBreak  string
-	MentalTarget entity.EntityID // whom a targeted break is aimed at (0: none; SIM-066)
+	// Recreation and (BED-3, 0 until filled) Comfort, Beauty and Outdoors
+	// are needs, percent; MentalBreak names a break ("" when none).
+	Recreation, Comfort, Beauty, Outdoors int
+	MentalBreak                           string
+	MentalTarget                          entity.EntityID // whom a targeted break is aimed at (0: none; SIM-066)
 	// Apparel is what the colonist wears over everyday clothes; ComfortMin
 	// and ComfortMax its comfortable range (tenths of a degree C).
 	// ApparelForced is, per Apparel entry, whether the player chose it
@@ -452,6 +452,13 @@ type BuildingView struct {
 	Beauty              int
 	Facilities          uint8
 	Forbidden           bool
+	// Wave D (0 until filled): HoldOpen, a door held open; a turret's or
+	// mortar's Barrel life left (permille, 0 none), Shells loaded, the
+	// mortar's forced TargetX, TargetY (HasTarget), HoldFire; a bench's
+	// Linked facilities and WorkSpeed (permille, 0 unknown).
+	HoldOpen, HasTarget, HoldFire               bool
+	Barrel, Shells, TargetX, TargetY, WorkSpeed int
+	Linked                                      []string
 }
 
 // Bed facility bits on BuildingView.Facilities (BED-1).

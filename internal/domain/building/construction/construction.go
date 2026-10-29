@@ -134,6 +134,44 @@ const (
 	AnimalBed
 	EndTable
 	Dresser
+	// Wave D contract (append only, saved). None is offered in the
+	// Architect until its feature agent adds the tool row
+	// (ebiten/architect/catalog.go) and the art.
+	//
+	// PRD-3 benches: two free 1x1 spots (crafting, butchering), the
+	// forges, machining and fabrication benches, a sculpting bench, a
+	// smelter, a fuel refinery and a fermenting barrel (not a bench: it
+	// holds a batch while it ferments). Sculptures are carved at the
+	// sculpting bench and set down where the player wants them.
+	CraftingSpot
+	FueledSmithy
+	ElectricSmithy
+	MachiningTable
+	FabricationBench
+	ArtBench
+	ElectricSmelter
+	BiofuelRefinery
+	ButcherSpot
+	FermentingBarrel
+	SmallSculpture
+	LargeSculpture
+	GrandSculpture
+	// BED-3 seats: a plain stool and a padded armchair (Chair is the
+	// dining chair).
+	Stool
+	Armchair
+	// DEF-3 defences: a barricade, four buried charges (blast, fire,
+	// pulse, smoke), two heavy turrets, a manned mortar and a powered door
+	// (SentryTurret is the light turret).
+	Barricade
+	IEDHighExplosive
+	IEDIncendiary
+	IEDEMP
+	IEDSmoke
+	Autocannon
+	UraniumSlugTurret
+	Mortar
+	Autodoor
 	kindCount
 )
 
@@ -344,6 +382,76 @@ var defs = [kindCount]Def{
 	EndTable:           {Kind: EndTable, Name: "end table", Wood: 3, Work: 100, Layer: LayerObject, StoneOK: true, MetalOK: true},
 	Dresser: {Kind: Dresser, Name: "dresser", Wood: 6, Work: 200, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	// Wave D rows (ENG-003). Costs and work are the wiki's scaled the way
+	// BED-1 scales them (material / 9 rounded, work / 10); components as
+	// the wiki. A 3x1 wiki bench is 2x1 here like every other bench
+	// (5x2 -> 3x2, 3x2 -> 2x2). Secondary materials (an art bench's
+	// steel, a fabrication bench's advanced components, a mortar's
+	// barrel) are not modelled yet.
+	// PRD-3, wiki: Crafting spot, Butcher spot, Fueled smithy, Electric
+	// smithy, Machining table, Fabrication bench, Art bench, Electric
+	// smelter, Biofuel refinery, Fermenting barrel.
+	CraftingSpot: {Kind: CraftingSpot, Name: "crafting spot", Layer: LayerObject, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	ButcherSpot:  {Kind: ButcherSpot, Name: "butchering spot", Layer: LayerObject, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	FueledSmithy: {Kind: FueledSmithy, Name: "wood-fired forge", Wood: 11, Work: 300, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true, MetalOK: true, MetalOnly: true},
+	// wiki: no build work for the electric smithy; the fueled smithy's.
+	ElectricSmithy: {Kind: ElectricSmithy, Name: "electric forge", Wood: 11, Work: 300, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		MetalOK: true, MetalOnly: true, Components: 3},
+	MachiningTable: {Kind: MachiningTable, Name: "machining table", Wood: 17, Work: 300, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		MetalOK: true, MetalOnly: true, Components: 5},
+	FabricationBench: {Kind: FabricationBench, Name: "fabrication bench", Wood: 22, Work: 500, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, Bench: true,
+		MetalOK: true, MetalOnly: true, Components: 12},
+	ArtBench: {Kind: ArtBench, Name: "sculpting bench", Wood: 8, Work: 250, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true, StoneOK: true, MetalOK: true},
+	ElectricSmelter: {Kind: ElectricSmelter, Name: "electric smelter", Wood: 19, Work: 350, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		MetalOK: true, MetalOnly: true, Components: 2},
+	BiofuelRefinery: {Kind: BiofuelRefinery, Name: "fuel refinery", Wood: 17, Work: 200, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 2}, Spot: [2]int{0, 2}, HasSpot: true, Bench: true,
+		MetalOK: true, MetalOnly: true, Components: 3},
+	// 30 wood (+10 steel, not modelled); the wiki gives no work: ours.
+	FermentingBarrel: {Kind: FermentingBarrel, Name: "fermenting barrel", Wood: 3, Work: 60, Layer: LayerObject, BlocksMove: true,
+		Spot: [2]int{0, 1}, HasSpot: true},
+	// Sculptures are carved by a bench bill; these rows only make the
+	// placed piece a valid kind. Cost and work (50/150/400 stuff,
+	// 18000/30000/90000 work, scaled) are not in the research notes:
+	// P3 checks them against wiki: Sculpture.
+	SmallSculpture: {Kind: SmallSculpture, Name: "small sculpture", Wood: 6, Work: 1800, Layer: LayerObject, BlocksMove: true,
+		StoneOK: true, MetalOK: true},
+	LargeSculpture: {Kind: LargeSculpture, Name: "large sculpture", Wood: 17, Work: 3000, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, StoneOK: true, MetalOK: true},
+	GrandSculpture: {Kind: GrandSculpture, Name: "grand sculpture", Wood: 44, Work: 9000, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{3, 3}, StoneOK: true, MetalOK: true},
+	// BED-3, wiki: Stool (25 stuff, 450 work), Armchair (110 fabric,
+	// 14000 work).
+	Stool: {Kind: Stool, Name: "stool", Wood: 3, Work: 45, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	Armchair: {Kind: Armchair, Name: "armchair", Wood: 12, Work: 1400, Layer: LayerObject, Rotatable: true,
+		Fabric: true},
+	// DEF-3, wiki: Barricade, IED trap, Autocannon turret, Uranium slug
+	// turret, Mortar, Autodoor. A charge costs two shells (Wood counts
+	// them, in steel until C3 adds the shell item); only the blast charge
+	// has a wiki page, the other three copy it.
+	Barricade: {Kind: Barricade, Name: "barricade", Wood: 1, Work: 32, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	IEDHighExplosive: {Kind: IEDHighExplosive, Name: "blast charge", Wood: 2, Work: 140, Layer: LayerObject,
+		MetalOK: true, MetalOnly: true},
+	IEDIncendiary: {Kind: IEDIncendiary, Name: "fire charge", Wood: 2, Work: 140, Layer: LayerObject,
+		MetalOK: true, MetalOnly: true},
+	IEDEMP: {Kind: IEDEMP, Name: "pulse charge", Wood: 2, Work: 140, Layer: LayerObject,
+		MetalOK: true, MetalOnly: true},
+	IEDSmoke: {Kind: IEDSmoke, Name: "smoke charge", Wood: 2, Work: 140, Layer: LayerObject,
+		MetalOK: true, MetalOnly: true},
+	Autocannon: {Kind: Autocannon, Name: "autocannon", Wood: 39, Work: 1500, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 6},
+	UraniumSlugTurret: {Kind: UraniumSlugTurret, Name: "slug turret", Wood: 33, Work: 1500, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 6},
+	// The crew stands at the spot, south of the tube.
+	Mortar: {Kind: Mortar, Name: "mortar", Wood: 6, Work: 200, Layer: LayerObject, BlocksMove: true,
+		Spot: [2]int{0, 1}, HasSpot: true, MetalOK: true, MetalOnly: true, Components: 6},
+	Autodoor: {Kind: Autodoor, Name: "powered door", Wood: 3, Work: 110, Layer: LayerObject, MetalOK: true, Components: 2},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an

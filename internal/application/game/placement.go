@@ -71,7 +71,7 @@ func Buildables() []BuildableView {
 		out = append(out, BuildableView{
 			ID: uint8(d.Kind), Kind: d.Name, Wood: d.Wood, Work: d.Work, Rotatable: d.Rotatable,
 			Floor: d.Layer == construction.LayerFloor, Blocks: d.BlocksMove, StoneOK: d.StoneOK,
-			W: max1(d.Size[0]), H: max1(d.Size[1]), Bench: d.Bench,
+			W: max(d.Size[0], 1), H: max(d.Size[1], 1), Bench: d.Bench,
 		})
 		for _, s := range construction.Stuffs(d.Kind) {
 			out[len(out)-1].Stuffs = append(out[len(out)-1].Stuffs, s.String())
@@ -92,13 +92,6 @@ func StuffID(name string) (uint8, bool) {
 		return 0, false
 	}
 	return uint8(k), true
-}
-
-func max1(v int) int {
-	if v < 1 {
-		return 1
-	}
-	return v
 }
 
 // CanPlace reports whether a south-facing blueprint of kind could be

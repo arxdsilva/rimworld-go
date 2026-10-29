@@ -134,6 +134,13 @@ const (
 	// HaulIngredients (PRD-1): a crafter gathers a bill's ingredients,
 	// possibly from several stacks, onto the bench before working it.
 	HaulIngredients
+	// Wave D contract (append only, saved): ManMortar, a colonist crews a
+	// mortar (DEF-3); RearmTurret, a colonist loads a turret's new barrel
+	// or ammunition (DEF-3); SitDown, a colonist sits in a seat to rest
+	// its comfort (BED-3). Sculpting is a bench bill (job Bill).
+	ManMortar
+	RearmTurret
+	SitDown
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -267,6 +274,12 @@ func (k Kind) String() string {
 		return "take prisoner to bed"
 	case HaulIngredients:
 		return "gather ingredients"
+	case ManMortar:
+		return "man mortar"
+	case RearmTurret:
+		return "rearm turret"
+	case SitDown:
+		return "sit down"
 	default:
 		return "idle"
 	}

@@ -51,9 +51,11 @@ func fieldsAllCompared[T any](t *testing.T, base T, clone func(T) T, eq func(a, 
 // TestBuildingViewEqual: equalBuildingView compares every field, Bills by
 // element and MovingTo by the cell it points at.
 func TestBuildingViewEqual(t *testing.T) {
-	base := BuildingView{ID: 3, Kind: "campfire", Bills: []BillView{{Recipe: "meal", Target: 10}}, MovingTo: &[2]int{4, 5}}
+	base := BuildingView{ID: 3, Kind: "campfire", Bills: []BillView{{Recipe: "meal", Target: 10}}, MovingTo: &[2]int{4, 5},
+		Linked: []string{"tool cabinet"}}
 	clone := func(v BuildingView) BuildingView {
 		v.Bills = append([]BillView(nil), v.Bills...)
+		v.Linked = append([]string(nil), v.Linked...)
 		if v.MovingTo != nil {
 			at := *v.MovingTo
 			v.MovingTo = &at

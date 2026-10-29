@@ -235,6 +235,16 @@ const (
 	ConfigureBill
 	SetBillIngredient
 	ReorderBill
+	// DEF-3 defences, on the building at X, Y (wave D contract; game
+	// ignores them until the combat package handles them):
+	// SetDoorHoldOpen holds the door open (Enabled) or lets it close;
+	// SetMortarTarget forces the mortar to fire at X2, Y2 and
+	// ClearMortarTarget drops that target; SetTurretHold makes the turret
+	// hold fire (Enabled) or fire at will.
+	SetDoorHoldOpen
+	SetMortarTarget
+	ClearMortarTarget
+	SetTurretHold
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

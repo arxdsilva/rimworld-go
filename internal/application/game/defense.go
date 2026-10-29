@@ -1,6 +1,7 @@
 package game
 
 import (
+	"cmp"
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -238,15 +239,7 @@ func covers(cells [][2]int, x, y int) bool {
 	return false
 }
 
-func sign(v int) int {
-	switch {
-	case v > 0:
-		return 1
-	case v < 0:
-		return -1
-	}
-	return 0
-}
+func sign(v int) int { return cmp.Compare(v, 0) }
 
 // assignRepair sends a builder to mend the nearest damaged building, but
 // not while raiders are still on their feet.
