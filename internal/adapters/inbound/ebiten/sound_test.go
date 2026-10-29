@@ -106,9 +106,9 @@ func TestDirectorPansAndCulls(t *testing.T) {
 	a, rec := soundApp(&stubSim{w: 200, h: 200})
 	cx, cy := centreTile(a)
 	r := a.renderer
-	r.cue("sfx.chop", cx, cy, 1)
-	r.cue("sfx.pick", cx+10, cy, 1)    // right of centre
-	r.cue("sfx.hammer", cx+500, cy, 1) // far off screen
+	r.cueBus().Cue("sfx.chop", cx, cy, 1)
+	r.cueBus().Cue("sfx.pick", cx+10, cy, 1)    // right of centre
+	r.cueBus().Cue("sfx.hammer", cx+500, cy, 1) // far off screen
 	a.colonyCues()
 	chop, pick := rec.played("sfx.chop"), rec.played("sfx.pick")
 	if len(chop) != 1 || math.Abs(chop[0].pan) > 0.05 {
@@ -127,14 +127,14 @@ func TestDirectorLimitsRepeats(t *testing.T) {
 	a, rec := soundApp(&stubSim{w: 200, h: 200})
 	cx, cy := centreTile(a)
 	for i := 0; i < 7; i++ {
-		a.renderer.cue("sfx.chop", cx+float64(i)*0.2, cy, 1)
+		a.renderer.cueBus().Cue("sfx.chop", cx+float64(i)*0.2, cy, 1)
 	}
 	a.colonyCues()
 	if n := len(rec.played("sfx.chop")); n != cue.MaxPerID {
 		t.Fatalf("%d chops in one frame, want %d", n, cue.MaxPerID)
 	}
 	a.snd.Frame++
-	a.renderer.cue("sfx.chop", cx, cy, 1)
+	a.renderer.cueBus().Cue("sfx.chop", cx, cy, 1)
 	a.colonyCues()
 	if n := len(rec.played("sfx.chop")); n != cue.MaxPerID {
 		t.Fatalf("a chop one frame later should wait for the gap, got %d plays", n)
@@ -148,9 +148,9 @@ func TestDoorAndTreeCues(t *testing.T) {
 	tree := game.PlantView{ID: 2, X: 8, Y: 8}
 	chopper := game.PawnView{ID: 3, X: 7, Y: 8, ActX: 8, ActY: 8, Action: game.ActionChop}
 	w := game.WorldView{Buildings: []game.BuildingView{door}, Plants: []game.PlantView{tree}}
-	r.listenWorld(w, []game.PawnView{chopper})
+	r.cueBus().ListenWorld(r.liveView(), w, []game.PawnView{chopper})
 	walker := game.PawnView{ID: 4, X: 4, Y: 4}
-	r.listenWorld(game.WorldView{Buildings: []game.BuildingView{door}}, []game.PawnView{walker})
+	r.cueBus().ListenWorld(r.liveView(), game.WorldView{Buildings: []game.BuildingView{door}}, []game.PawnView{walker})
 	ids := map[string]bool{}
 	for _, c := range r.cueBus().Take() {
 		ids[c.ID] = true
@@ -158,7 +158,7 @@ func TestDoorAndTreeCues(t *testing.T) {
 	if !ids["sfx.door_open"] || !ids["sfx.tree_fall"] {
 		t.Fatalf("want a door opening and a tree falling, got %v", ids)
 	}
-	r.listenWorld(game.WorldView{Buildings: []game.BuildingView{door}}, nil)
+	r.cueBus().ListenWorld(r.liveView(), game.WorldView{Buildings: []game.BuildingView{door}}, nil)
 	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.door_close" {
 		t.Fatalf("want the door closing, got %+v", c)
 	}
@@ -260,7 +260,7 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 		rec.plays = nil
 		a.snd.Frame += cueGap
 		cx, cy := centreTile(a)
-		r.cue("sfx.chop", cx+dx, cy, 1)
+		r.cueBus().Cue("sfx.chop", cx+dx, cy, 1)
 		a.colonyCues()
 		return rec.played("sfx.chop")
 	}
@@ -307,25 +307,25 @@ func TestMineAndSmoothCuesOnlyOnTerrainChange(t *testing.T) {
 	r := New(&stubSim{w: 4, h: 1})
 	mark := [][2]int{{1, 0}}
 	// cancelling a mine mark leaves the rock: no break sound
-	r.listenWorld(terrainWorld("rock", mark, nil), nil)
-	r.listenWorld(terrainWorld("rock", nil, nil), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("rock", mark, nil), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("rock", nil, nil), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("cancelled mine cued %+v", c)
 	}
 	// mined out: the rock is gone
-	r.listenWorld(terrainWorld("rock", mark, nil), nil)
-	r.listenWorld(terrainWorld("stone", nil, nil), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("rock", mark, nil), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("stone", nil, nil), nil)
 	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.rock_break" || c[0].X != 1.5 {
 		t.Fatalf("mined rock cues %+v", c)
 	}
 	// smoothing: silent when cancelled, a chisel strike when done
-	r.listenWorld(terrainWorld("rock", nil, mark), nil)
-	r.listenWorld(terrainWorld("rock", nil, nil), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("rock", nil, mark), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("rock", nil, nil), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("cancelled smoothing cued %+v", c)
 	}
-	r.listenWorld(terrainWorld("rock", nil, mark), nil)
-	r.listenWorld(terrainWorld("rock_smooth", nil, nil), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("rock", nil, mark), nil)
+	r.cueBus().ListenWorld(r.liveView(), terrainWorld("rock_smooth", nil, nil), nil)
 	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.pick" {
 		t.Fatalf("smoothed rock cues %+v", c)
 	}

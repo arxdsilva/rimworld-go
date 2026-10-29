@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -116,7 +117,7 @@ func TestFacings(t *testing.T) {
 	if RotateFacing(0, -1) != 3 || RotateFacing(3, 1) != 0 || RotateFacing(1, 2) != 3 {
 		t.Error("rotation wraps")
 	}
-	if FacingIndex("west") != 3 || FacingIndex("bogus") != 0 || FacingOr("") != "south" || FacingOr("east") != "east" {
+	if FacingIndex("west") != 3 || FacingIndex("bogus") != 0 || world.FacingOr("") != "south" || world.FacingOr("east") != "east" {
 		t.Error("facing names")
 	}
 	if Abs(-4) != 4 || Abs(3) != 3 {
@@ -124,21 +125,23 @@ func TestFacings(t *testing.T) {
 	}
 }
 
+// TestBuildSpriteKeys pins the build keys the Architect's previews draw
+// (render/world owns them).
 func TestBuildSpriteKeys(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct{ got, want string }{
-		{BuildSprite("wall", "", 5, false, false), "structure/wall_wood_05"},
-		{BuildSprite("door", "", 0, true, true), "structure/door_wood_ew_open"},
-		{BuildSprite("bed", "", 0, false, false), "furniture/bed_basic_south"},
-		{BuildSprite("grave", "west", 0, false, false), "furniture/grave_dug_east"},
-		{BuildSprite("fence gate", "east", 0, false, true), "structure/fence_gate_open_east"},
-		{BuildSprite("power switch", "", 0, false, true), "power/power_switch_off"},
-		{BuildSprite("battery", "north", 0, false, false), "power/battery_north"},
-		{BuildSpriteStuff("door", "steel", "", 0, false, false), "structure/door_steel_ns_closed"},
-		{BuildSpriteStuff("floor", "granite blocks", "", 0, false, false), "structure/floor_stone"},
-		{BuildSpriteStuff("carpet", "cloth carpet", "", 0, false, false), "furniture/carpet_cloth"},
-		{BuildSpriteStuff("carpet", "silk", "", 0, false, false), "furniture/carpet_straw"},
-		{BuildSprite("no such kind", "", 0, false, false), ""},
+		{world.BuildSprite("wall", "", 5, false, false), "structure/wall_wood_05"},
+		{world.BuildSprite("door", "", 0, true, true), "structure/door_wood_ew_open"},
+		{world.BuildSprite("bed", "", 0, false, false), "furniture/bed_basic_south"},
+		{world.BuildSprite("grave", "west", 0, false, false), "furniture/grave_dug_east"},
+		{world.BuildSprite("fence gate", "east", 0, false, true), "structure/fence_gate_open_east"},
+		{world.BuildSprite("power switch", "", 0, false, true), "power/power_switch_off"},
+		{world.BuildSprite("battery", "north", 0, false, false), "power/battery_north"},
+		{world.BuildSpriteStuff("door", "steel", "", 0, false, false), "structure/door_steel_ns_closed"},
+		{world.BuildSpriteStuff("floor", "granite blocks", "", 0, false, false), "structure/floor_stone"},
+		{world.BuildSpriteStuff("carpet", "cloth carpet", "", 0, false, false), "furniture/carpet_cloth"},
+		{world.BuildSpriteStuff("carpet", "silk", "", 0, false, false), "furniture/carpet_straw"},
+		{world.BuildSprite("no such kind", "", 0, false, false), ""},
 	} {
 		if c.got != c.want {
 			t.Errorf("key %q, want %q", c.got, c.want)

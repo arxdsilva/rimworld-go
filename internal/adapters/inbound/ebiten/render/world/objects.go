@@ -40,7 +40,7 @@ func (o *Objects) runDraw(dst *ebiten.Image, w *game.WorldView, d *ArtDraw, tile
 		it := &w.Items[d.I]
 		o.DrawForbiddenMark(dst, it.X, it.Y, tile, sw, sh)
 	case objAnimal:
-		o.Creatures.DrawAnimalFigure(o.v, o.pass(), dst, w.Animals[d.I], d.wx, d.wy, LodTile(tile))
+		o.Creatures.DrawAnimalFigure(o.v, o.Pass(), dst, w.Animals[d.I], d.wx, d.wy, LodTile(tile))
 	case objPawn:
 		o.DrawPawnArt(dst, o.v.Pawns[d.I], d.wx, d.wy, LodTile(tile), sw, sh)
 	}
@@ -66,9 +66,9 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 	}
 	switch b.Kind {
 	case "grave":
-		o.Creatures.DrawGrave(v, o.pass(), dst, *b, tile, sw, sh)
+		o.Creatures.DrawGrave(v, o.Pass(), dst, *b, tile, sw, sh)
 	case "funeral pyre":
-		o.Creatures.DrawPyre(v, o.pass(), dst, *b, tile, sw, sh)
+		o.Creatures.DrawPyre(v, o.Pass(), dst, *b, tile, sw, sh)
 	default:
 		if b.Kind == "wall" {
 			if wd, ok := o.Paint.LinkedSprite(sprite.WallPrefix(b.Stuff), b.X, b.Y, mask, corners, o.stuffTint(b.Stuff), sprite.NoCS); ok {
@@ -98,12 +98,12 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		}
 		// stone walls, fences and floors take their stone's tint
 		o.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, sprite.TintCS(o.stuffTint(b.Stuff)))
-		chP := o.overlayChunks()
-		o.Overlays.Wiring.DrawPowerParts(v, o.pass(), &chP, dst, b, key, tile, sw, sh) // glow, blades, flame, charge
-		chD := o.overlayChunks()
-		o.Overlays.Wiring.DrawDefenseParts(v, o.pass(), &chD, dst, b, key, tile, sw, sh) // gun, beacon light
+		chP := o.OverlayChunks()
+		o.Overlays.Wiring.DrawPowerParts(v, o.Pass(), &chP, dst, b, key, tile, sw, sh) // glow, blades, flame, charge
+		chD := o.OverlayChunks()
+		o.Overlays.Wiring.DrawDefenseParts(v, o.Pass(), &chD, dst, b, key, tile, sw, sh) // gun, beacon light
 	}
-	o.Env.DrawRuinOverlay(v, o.pass(), dst, b, tile, sw, sh)
+	o.Env.DrawRuinOverlay(v, o.Pass(), dst, b, tile, sw, sh)
 	if b.DryQty > 0 {
 		o.drawRackLoad(dst, *b, tile, sw, sh)
 	}
@@ -168,22 +168,22 @@ func (o *Objects) DrawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 			// PLAY-010 2.9: the trunk stays opaque, the canopy turns
 			// see-through over creatures behind it; one pose for both
 			o.layer("tree_trunk")
-			o.drawSpritePose(dst, trunk, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
+			o.DrawSpritePose(dst, trunk, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
 			if a := o.Env.Trees.TreeCanopyAlpha(v, p.X, p.Y, o.LOD.Creatures); a < 1 {
 				ps.Cs = sprite.MulCS(ps.Cs, sprite.ColorScale{1, 1, 1, a})
 			}
 			o.layer("tree_canopy")
-			o.drawSpritePose(dst, canopy, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
+			o.DrawSpritePose(dst, canopy, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
 			return
 		}
 	}
-	o.drawSpritePose(dst, key, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
+	o.DrawSpritePose(dst, key, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
 }
 
 // drawItemObj draws a ground stack (corpses and bones their own way).
 func (o *Objects) drawItemObj(dst *ebiten.Image, it *game.ItemView, tile float64, sw, sh int) {
 	if it.Kind == "human corpse" || it.Kind == "bones" {
-		o.Creatures.DrawCorpseItem(o.v, o.pass(), dst, *it, tile, sw, sh)
+		o.Creatures.DrawCorpseItem(o.v, o.Pass(), dst, *it, tile, sw, sh)
 		return
 	}
 	key := SizedItemKey(ItemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Qty)

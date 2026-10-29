@@ -246,7 +246,7 @@ func walkPast(t *testing.T, w game.WorldView, path []cell, px, py int, kind envp
 		with.advance()
 		ref.advance()
 		a, b := with.plantPose(px, py, kind, 0.055, 1), ref.plantPose(px, py, kind, 0.055, 1)
-		fn(f, with.pawnMotion(1), motionpkg.Pose{Skew: a.Skew - b.Skew, Sy: a.Sy - b.Sy}, with, ref)
+		fn(f, with.mo.PawnMotion(1, with.liveView().AnimT), motionpkg.Pose{Skew: a.Skew - b.Skew, Sy: a.Sy - b.Sy}, with, ref)
 	}
 }
 
@@ -881,7 +881,7 @@ func TestNoGroundCoverUnderRoof(t *testing.T) {
 		x, y int
 		open bool
 	}{{3, 3, false}, {31, 9, false}, {40, 5, false}, {40, 6, true}, {45, 9, true}} {
-		if got := r.envLayer().GroundOpen(w, c.x, c.y); got != c.open {
+		if got := r.pipe().Env.GroundOpen(w, c.x, c.y); got != c.open {
 			t.Errorf("groundOpen(%d,%d) = %v, want %v", c.x, c.y, got, c.open)
 		}
 	}

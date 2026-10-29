@@ -7,6 +7,8 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
@@ -156,7 +158,7 @@ func TestChaseLineEndsAtTheDrawnPositions(t *testing.T) {
 	r.view.Pawns, r.view.W = pawns, w
 	// both creatures are drawn off the tile the read model reports (as
 	// mid-step): the line follows what is drawn
-	r.mo.Tracks = map[entity.EntityID]*moTrack{
+	r.mo.Tracks = map[entity.EntityID]*motionpkg.Track[creature.Body]{
 		10: {X: 8, Y: 5},
 		1:  {X: 6, Y: 6},
 	}
@@ -189,8 +191,8 @@ func TestChaseLineSkippedOffScreenAndWithoutATarget(t *testing.T) {
 
 	// both ends far outside the view: culled
 	r.view.Pawns = pawns
-	r.lod.ViewSet = true
-	r.lod.VX0, r.lod.VY0, r.lod.VX1, r.lod.VY1 = 40, 40, 60, 60
+	r.pipe().LOD.ViewSet = true
+	r.pipe().LOD.VX0, r.pipe().LOD.VY0, r.pipe().LOD.VX1, r.pipe().LOD.VY1 = 40, 40, 60, 60
 	*marks = nil
 	r.drawAnimalOverlays(img, w, 64, 1024, 768)
 	if n := len(ofKind(*marks, "chase-line")); n != 0 {
@@ -198,7 +200,7 @@ func TestChaseLineSkippedOffScreenAndWithoutATarget(t *testing.T) {
 	}
 
 	// the colonist is in view though the wolf is not: the line is drawn
-	r.lod.VX0, r.lod.VY0, r.lod.VX1, r.lod.VY1 = 0, 0, 7, 10
+	r.pipe().LOD.VX0, r.pipe().LOD.VY0, r.pipe().LOD.VX1, r.pipe().LOD.VY1 = 0, 0, 7, 10
 	w.Animals[0].X = 16
 	r.view.W = w
 	*marks = nil

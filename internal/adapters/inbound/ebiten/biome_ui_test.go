@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
@@ -364,7 +363,7 @@ func TestNewBiomeKeysFallBackWithoutArt(t *testing.T) {
 	if k := world.TroughKey(game.BuildingView{TroughFill: 3, Facing: "east"}); k != "furniture/feeding_trough_full_east" {
 		t.Errorf("trough key = %q", k)
 	}
-	if architect.BuildSprite("feeding trough", "", 0, false, false) == "" {
+	if world.BuildSprite("feeding trough", "", 0, false, false) == "" {
 		t.Error("the trough ghost has a sprite")
 	}
 	for _, d := range game.Biomes() {

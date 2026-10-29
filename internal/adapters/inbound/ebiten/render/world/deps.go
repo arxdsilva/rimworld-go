@@ -64,18 +64,13 @@ type Hosts struct {
 	Casters light.Casters[creature.FigurePose]
 }
 
-// Shared is the renderer state the pipeline works on that root code not
-// yet moved still reads (ARCH-004: it moves here at the sweep): the
-// camera a bake moves, the shadow pass's cast and a figure's blood (the
-// sprite pass), the zoom tier with its bakes and chunk lists, the link
-// grid and the stone cache.
+// Shared is the renderer state the pipeline works on and the renderer
+// sets: the camera a bake moves, the shadow pass's cast and a figure's
+// blood (the sprite pass).
 type Shared struct {
 	Cam   *camera.Camera
 	Cast  **light.Cast
 	Blood *float32
-	LOD   *LOD
-	Links *overlay.Links
-	Stone *StoneArt
 }
 
 // base is what the pipeline's parts share: the layers, hosts and shared
@@ -91,6 +86,14 @@ type base struct {
 
 	draws      []ArtDraw         // the object queue, reused every frame
 	steamHeard map[[2]int]uint64 // each vent's last burst already cued
+
+	// LOD is the zoom tier, the chunk and whole-map bakes and the frame's
+	// chunk lists; Links the cached wall/rock/fence connectivity; Stone the
+	// stone tints, resolved linked keys and ground tiles. The pipeline owns
+	// all three (ARCH-006).
+	LOD   *LOD
+	Links *overlay.Links
+	Stone *StoneArt
 
 	// Bk, Ob and Lb are the pipeline's parts: the zoom tiers and bakes,
 	// the object pass and the labels and marks.
@@ -117,10 +120,16 @@ type Objects struct{ *base }
 type Labels struct{ *base }
 
 // New builds the pipeline over the renderer's layers, hosts and shared
-// state, reading v each frame and src for what no layer owns.
+// state, reading v each frame and src for what no layer owns. The
+// environment layer's grass and crop batches become the zoom state's
+// (LOD.Grass, LOD.Crops). A layer the caller builds after New draws with
+// the pipeline's painter (&Paint), so SetArt reaches it too.
 func New(l Layers, h Hosts, s Shared, v *render.View, src Source) *Pipeline {
-	b := &base{Layers: l, Hosts: h, Shared: s, v: v, src: src}
-	b.Paint = sprite.Painter{Lit: l.Lit, Stone: &s.Stone.StoneCache}
+	b := &base{Layers: l, Hosts: h, Shared: s, v: v, src: src, LOD: &LOD{}, Links: &overlay.Links{}, Stone: &StoneArt{}}
+	b.Paint = sprite.Painter{Lit: l.Lit, Stone: &b.Stone.StoneCache}
+	if l.Env != nil {
+		l.Env.Grass, l.Env.Crops = &b.LOD.Grass, &b.LOD.Crops
+	}
 	b.Bk, b.Ob, b.Lb = Bakes{b}, Objects{b}, Labels{b}
 	return &Pipeline{b}
 }

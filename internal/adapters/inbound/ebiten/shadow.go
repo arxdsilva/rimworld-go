@@ -2,7 +2,7 @@ package ebiten
 
 import (
 	"math"
-	"rimworld-go/internal/adapters/inbound/ebiten/architect"
+	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
@@ -24,41 +24,34 @@ import (
 // figure code that draws a silhouette. shadowHost hands those to the pass
 // as its light.Casters.
 
-// shadowHost is the renderer as the shadow pass's light.Casters.
+// shadowHost is the renderer as the shadow pass's light.Casters. The pass
+// runs inside the pipeline's frame (or a test's liveView), so it reads the
+// pipeline and the frame view as they are.
 type shadowHost struct{ r *Renderer }
-
-// Objects lists the frame's box and blob casters (shadowCasters).
-func (h shadowHost) Objects(w game.WorldView, pawns []game.PawnView) []lightpkg.Caster {
-	return h.r.shadowCasters(w, pawns)
-}
-
-// Creatures lists the frame's casting pawns and animals (creatureCasters).
-func (h shadowHost) Creatures(w game.WorldView, pawns []game.PawnView) []creatureCaster {
-	return h.r.creatureCasters(w, pawns)
-}
 
 // CastFigure draws c's figure onto dst in cast mode (r.cast set): every
 // draw of it becomes a silhouette in the shadow layer.
-func (h shadowHost) CastFigure(c *creatureCaster, cast *lightpkg.Cast, dst *ebiten.Image, tile float64) {
+func (h shadowHost) CastFigure(c *light.Creature[creature.FigurePose], cast *lightpkg.Cast, dst *ebiten.Image, tile float64) {
 	r := h.r
 	r.cast = cast
+	cr, v := r.wp.Creatures, &r.view
 	if c.Pawn != nil {
-		r.drawPawnFigure(dst, *c.Pawn, c.WX, c.WY, tile, c.Fig)
+		cr.DrawPawnFigure(v, r.wp.Pass(), dst, *c.Pawn, c.WX, c.WY, tile, c.Fig)
 	} else {
-		r.drawAnimalFigure(dst, *c.Animal, c.WX, c.WY, tile)
+		cr.DrawAnimalFigure(v, r.wp.Pass(), dst, *c.Animal, c.WX, c.WY, tile)
 	}
 	r.cast = nil
 }
 
 // VisibleTiles is the on-map tile range in view.
-func (h shadowHost) VisibleTiles() (x0, y0, x1, y1 int) { return h.r.visibleTiles() }
+func (h shadowHost) VisibleTiles() (x0, y0, x1, y1 int) { return h.r.wp.Env.VisibleTiles(&h.r.view) }
 
 // White is the environment's white texel.
 func (h shadowHost) White() *ebiten.Image { return h.r.env.WhiteImg() }
 
 // footprintOf is a sprite's footprint in tiles (1x1 when unknown).
-func (r *Renderer) footprintOf(key string) (float64, float64) {
-	if sp := r.art.Sprite(key); sp != nil && sp.Meta.Footprint[0] > 0 && sp.Meta.Footprint[1] > 0 {
+func footprintOf(c *artpkg.Catalog, key string) (float64, float64) {
+	if sp := c.Sprite(key); sp != nil && sp.Meta.Footprint[0] > 0 && sp.Meta.Footprint[1] > 0 {
 		return float64(sp.Meta.Footprint[0]), float64(sp.Meta.Footprint[1])
 	}
 	return 1, 1
@@ -70,11 +63,13 @@ func skyOpen(w game.WorldView, x, y int) bool {
 	return !overlay.Roofed(overlay.RoofCellAt(w, x, y))
 }
 
-// shadowCasters lists this frame's box and blob casters (buildings,
-// rocks, plants and items) standing on open-sky tiles within the view
-// (widened by the longest shadow). Pawns and animals cast their own
-// silhouettes (creatureCasters).
-func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []lightpkg.Caster {
+// Objects lists this frame's box and blob casters (buildings, rocks,
+// plants and items) standing on open-sky tiles within the view (widened by
+// the longest shadow). Pawns and animals cast their own silhouettes
+// (Creatures).
+func (h shadowHost) Objects(w game.WorldView, pawns []game.PawnView) []lightpkg.Caster {
+	r := h.r
+	wp, fv := r.wp, &r.view
 	st := &r.env.Shadow
 	out := st.Objects[:0]
 	v := r.env.View
@@ -102,7 +97,7 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []ligh
 		if b.Floor || b.Kind == "sleeping spot" || spritepkg.IsFenceKind(b.Kind) || !near(b.X, b.Y) {
 			return // fences cast no sun shadow (art: shadow kind none)
 		}
-		key := architect.BuildSpriteStuff(b.Kind, b.Stuff, b.Facing, 0, spritepkg.DoorAxisEW(b.Facing), false)
+		key := world.BuildSpriteStuff(b.Kind, b.Stuff, b.Facing, 0, spritepkg.DoorAxisEW(b.Facing), false)
 		addBox(key, float64(b.X), float64(b.Y), float64(max(b.W, 1)), float64(max(b.H, 1)), 1)
 	}
 	plant := func(p *game.PlantView) {
@@ -116,8 +111,8 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []ligh
 			}
 			scale *= f
 		}
-		key = r.seasonKey(key, w)
-		fw, fd := r.footprintOf(key)
+		key = wp.Env.SeasonKey(fv, key, w)
+		fw, fd := footprintOf(r.art, key)
 		addBox(key, float64(p.X), float64(p.Y), fw, fd, scale)
 	}
 	stack := func(it *game.ItemView) {
@@ -127,23 +122,23 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []ligh
 		key := world.ItemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
 		addBox(key, float64(it.X), float64(it.Y), 1, 1, 1)
 	}
-	if r.frameLists(env.ListsOf(&w)) { // only the chunks in view (lod.go)
-		for _, cv := range r.lod.Views {
+	if (envHost{r}).FrameLists(env.ListsOf(&w)) { // only the chunks in view (render/world lod.go)
+		for _, cv := range wp.LOD.Views {
 			for _, i := range cv.Buildings {
 				if int(i) < len(w.Buildings) {
 					building(&w.Buildings[i])
 				}
 			}
 		}
-		r.addRockCasters(w, addBox)
-		for _, cv := range r.lod.Views {
+		h.addRockCasters(w, addBox)
+		for _, cv := range wp.LOD.Views {
 			for _, i := range cv.Plants {
 				if int(i) < len(w.Plants) {
 					plant(&w.Plants[i])
 				}
 			}
 		}
-		for _, cv := range r.lod.Views {
+		for _, cv := range wp.LOD.Views {
 			for _, i := range cv.Items {
 				if int(i) < len(w.Items) {
 					stack(&w.Items[i])
@@ -154,7 +149,7 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []ligh
 		for i := range w.Buildings {
 			building(&w.Buildings[i])
 		}
-		r.addRockCasters(w, addBox)
+		h.addRockCasters(w, addBox)
 		for i := range w.Plants {
 			plant(&w.Plants[i])
 		}
@@ -168,7 +163,8 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []ligh
 
 // addRockCasters adds the rock tiles at an outcrop's edge (inner rock is
 // covered by its neighbours' sprites and casts nothing visible).
-func (r *Renderer) addRockCasters(w game.WorldView, add func(key string, x, y, fw, fd, scale float64)) {
+func (h shadowHost) addRockCasters(w game.WorldView, add func(key string, x, y, fw, fd, scale float64)) {
+	r := h.r
 	if w.TerrainW <= 0 || len(w.Terrain) == 0 {
 		return
 	}
@@ -196,11 +192,13 @@ func (r *Renderer) addRockCasters(w game.WorldView, add func(key string, x, y, f
 	}
 }
 
-// creatureCasters lists the pawns and animals in view (widened by the
-// longest shadow) that cast: not in bed, carried (the rescuer's figure
-// draws them), or an embodied corpse, and with art. Each pawn's figure
-// pose is resolved here, once per frame, for its silhouettes.
-func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []creatureCaster {
+// Creatures lists the pawns and animals in view (widened by the longest
+// shadow) that cast: not in bed, carried (the rescuer's figure draws
+// them), or an embodied corpse, and with art. Each pawn's figure pose is
+// resolved here, once per frame, for its silhouettes.
+func (h shadowHost) Creatures(w game.WorldView, pawns []game.PawnView) []light.Creature[creature.FigurePose] {
+	r := h.r
+	cr, fv := r.wp.Creatures, &r.view
 	st := &r.env.Shadow
 	out := st.Creatures[:0]
 	v := r.env.View
@@ -208,7 +206,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 	inView := func(x, y float64) bool {
 		return v.Empty() || x+1 >= v.X0-mg && y+1 >= v.Y0-mg && x <= v.X1+mg && y <= v.Y1+mg
 	}
-	add := func(c creatureCaster, key string, feetX, feetY float64) {
+	add := func(c light.Creature[creature.FigurePose], key string, feetX, feetY float64) {
 		sp := r.art.Sprite(key)
 		if sp == nil {
 			return // no art (the fallback marker casts nothing)
@@ -232,7 +230,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		if !inView(wx, wy) {
 			continue
 		}
-		add(creatureCaster{Pawn: p, WX: wx, WY: wy, Lying: creature.FigureLying(*p), Fig: r.pawnFigurePoseOf(*p)}, "pawn/body_south", creature.PawnFeetX, creature.PawnFeetY)
+		add(light.Creature[creature.FigurePose]{Pawn: p, WX: wx, WY: wy, Lying: creature.FigureLying(*p), Fig: cr.FigurePoseOf(fv, *p)}, "pawn/body_south", creature.PawnFeetX, creature.PawnFeetY)
 	}
 	// an animal's silhouette reaches past its cell by its body (PLAY-022:
 	// up to about 2.5 tiles for the longest canvases) before the shadow
@@ -248,11 +246,11 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 			(fx+1+motionpkg.DrawnReach < v.X0-ma || fy+1+motionpkg.DrawnReach < v.Y0-ma || fx-motionpkg.DrawnReach > v.X1+ma || fy-motionpkg.DrawnReach > v.Y1+ma) {
 			continue
 		}
-		wx, wy := r.interpAnimal(*an)
+		wx, wy := cr.AnimalAt(fv, *an)
 		if !v.Empty() && !(wx+1 >= v.X0-ma && wy+1 >= v.Y0-ma && wx <= v.X1+ma && wy <= v.Y1+ma) {
 			continue
 		}
-		add(creatureCaster{Animal: an, WX: wx, WY: wy}, r.animalBaseKey(*an), motionpkg.FigurePivotX, motionpkg.FigurePivotY)
+		add(light.Creature[creature.FigurePose]{Animal: an, WX: wx, WY: wy}, cr.AnimalBaseKey(fv, *an), motionpkg.FigurePivotX, motionpkg.FigurePivotY)
 	}
 	st.Creatures = out
 	return out

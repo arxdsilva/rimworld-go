@@ -6,6 +6,7 @@ import (
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"testing"
 
@@ -173,7 +174,7 @@ func TestTurretArtCoversRenderer(t *testing.T) {
 		keys = append(keys, overlay.TurretGunKey(i))
 	}
 	for _, f := range architect.FacingNames {
-		keys = append(keys, architect.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false), overlay.GlowKey(architect.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false)))
+		keys = append(keys, world.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false), overlay.GlowKey(world.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false)))
 	}
 	for _, tool := range archTools {
 		if tool.build == overlay.SentryTurretKind || tool.build == overlay.TradeBeaconKind || tool.build == overlay.RadioConsoleKind {

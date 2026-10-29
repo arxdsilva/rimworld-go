@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
@@ -36,7 +35,7 @@ func TestBridgeKeys(t *testing.T) {
 		if got := overlay.BridgeKey(c.mask); got != c.want {
 			t.Errorf("bridgeKey(%d) = %q, want %q", c.mask, got, c.want)
 		}
-		if got := architect.BuildSprite("bridge", "", c.mask, false, false); got != c.want {
+		if got := worldpkg.BuildSprite("bridge", "", c.mask, false, false); got != c.want {
 			t.Errorf("buildSprite(bridge, %d) = %q, want %q", c.mask, got, c.want)
 		}
 	}
@@ -47,9 +46,9 @@ func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
 	r.cam.Zoom = 32.0 / float64(camerapkg.TileSize)
 	r.art = &art.Catalog{} // no bridge sprites landed: the plain deck stands in
-	r.lod.Tier = worldpkg.Live
+	r.pipe().LOD.Tier = worldpkg.Live
 	w := bridgeWorld(8, 8, terrain.DeepWater, [2]int{3, 3})
-	r.lod.Views = []game.ChunkView{{Buildings: []int32{0}}}
+	r.pipe().LOD.Views = []game.ChunkView{{Buildings: []int32{0}}}
 	var order []string
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	tile := r.cam.Tile()
@@ -60,7 +59,7 @@ func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	}
 	// not in the live tier: baked elsewhere, nothing traced
 	order = nil
-	r.lod.Tier = worldpkg.Chunk
+	r.pipe().LOD.Tier = worldpkg.Chunk
 	r.drawFoundation(screen, w, 320, 320, tile)
 	if len(order) != 1 {
 		t.Errorf("baked tier trace = %v", order)

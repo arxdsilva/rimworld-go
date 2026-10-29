@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
 	"testing"
 
@@ -66,7 +66,7 @@ func TestLampRadiusFromMetadata(t *testing.T) {
 	if got := lightpkg.LampRadiusOf(nil); got != lightpkg.LampDefaultRadius || lightpkg.LampDefaultRadius != 6 {
 		t.Fatalf("default radius %v", got)
 	}
-	art := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{architect.BuildSprite("lamp", "", 0, false, false): {Meta: m}}}
+	art := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{world.BuildSprite("lamp", "", 0, false, false): {Meta: m}}}
 	if got := lightpkg.LampRadiusOf(art); got != 3 {
 		t.Fatalf("metadata radius %v, want 3", got)
 	}
@@ -161,7 +161,7 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 		return pos{int32(math.Round(float64(vx.DstX) / tile * 8)), int32(math.Round(float64(vx.DstY) / tile * 8))}
 	}
 	at := map[pos]float32{}
-	for _, vx := range r.lod.Verts {
+	for _, vx := range r.pipe().LOD.Verts {
 		if vx.Custom1 < 0 || vx.Custom1 > 1 {
 			t.Fatalf("ground vertex carries a packed lamp value %v; want a plain level", vx.Custom1)
 		}
@@ -220,7 +220,7 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 		}
 	}
 	// the dark east (x ≥ 12) merges: fewer quads than tiles
-	if quads, tiles := len(r.lod.Verts)/4, w*h; quads >= tiles/2 {
+	if quads, tiles := len(r.pipe().LOD.Verts)/4, w*h; quads >= tiles/2 {
 		t.Fatalf("%d quads for %d tiles: unlit runs did not merge", quads, tiles)
 	}
 }

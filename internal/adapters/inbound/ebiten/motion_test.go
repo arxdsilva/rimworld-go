@@ -153,11 +153,11 @@ func drive(r *Renderer, id entity.EntityID, tpf, updates int, alphas []float64) 
 		r.advance()
 		for _, a := range alphas {
 			r.mo.SetAlpha(a)
-			m := r.pawnMotion(id)
+			m := r.mo.PawnMotion(id, r.liveView().AnimT)
 			if isAnimal(r, id) {
-				m = r.animalMotion(id)
+				m = r.mo.AnimalMotion(id, r.liveView().AnimT)
 			}
-			out = append(out, drawSample{t: r.animT(), m: m})
+			out = append(out, drawSample{t: r.liveView().AnimT, m: m})
 		}
 	}
 	return out
@@ -467,7 +467,7 @@ func TestPausedFreezes(t *testing.T) {
 	r := New(sim)
 	drive(r, 1, 3, 15, []float64{0})
 	r.mo.SetAlpha(0.999)
-	before := r.pawnMotion(1)
+	before := r.mo.PawnMotion(1, r.liveView().AnimT)
 	tick := sim.tick
 	paused := drive(r, 1, 0, 20, []float64{0, 0.3, 0.7, 0.99})
 	if sim.tick != tick {
@@ -489,7 +489,7 @@ func TestPausedFreezes(t *testing.T) {
 	r.speed = speedNormal
 	r.advance()
 	r.mo.SetAlpha(0)
-	if d := dist(r.pawnMotion(1), ref.m); d > 1e-9 {
+	if d := dist(r.mo.PawnMotion(1, r.liveView().AnimT), ref.m); d > 1e-9 {
 		t.Fatalf("resume jumps %.4f", d)
 	}
 }
@@ -578,7 +578,7 @@ func TestInterpWorldFollowsMotion(t *testing.T) {
 	}
 	drive(r, 1, 1, 10, []float64{0.5})
 	p := sim.Snapshot()[0]
-	m := r.pawnMotion(1)
+	m := r.mo.PawnMotion(1, r.liveView().AnimT)
 	if x, y := r.interpWorld(p); x != m.X || y != m.Y || x <= 5 || x >= 6 {
 		t.Fatalf("interpWorld = %v,%v motion %v,%v", x, y, m.X, m.Y)
 	}
@@ -586,7 +586,7 @@ func TestInterpWorldFollowsMotion(t *testing.T) {
 	if x, _ := r.interpWorld(p); x != float64(p.X) {
 		t.Fatalf("settled pawn is drawn on its tile, got %v", x)
 	}
-	if (&Renderer{}).animT() != 0 {
+	if (&Renderer{}).liveView().AnimT != 0 {
 		t.Fatal("renderer without a sim has animT 0")
 	}
 }
@@ -647,7 +647,7 @@ func TestTracerFromInterpolatedShooter(t *testing.T) {
 	mv := &scriptMover{id: 1, path: line(5, 5, 1, 0, 4), start: 2}
 	r := New(newMotionSim(mv))
 	drive(r, 1, 1, 10, []float64{0.5})
-	m := r.pawnMotion(1)
+	m := r.mo.PawnMotion(1, r.liveView().AnimT)
 	w := r.game.World()
 	from, to := creature.TraceEnds(r.traceSpots(w), game.TraceView{FromX: 6, FromY: 5, ToX: 9, ToY: 9})
 	if from.X != m.X+0.5 || from.Y != m.Y+0.3 {
@@ -688,7 +688,7 @@ func TestRealSimStraightWalkConstantSpeed(t *testing.T) {
 			r.mo.SetAlpha(0)
 			for _, q := range g.Snapshot() {
 				if q.ID == p.ID {
-					fs = append(fs, frame{r.pawnMotion(p.ID), q})
+					fs = append(fs, frame{r.mo.PawnMotion(p.ID, r.liveView().AnimT), q})
 				}
 			}
 		}
@@ -736,17 +736,17 @@ func TestAnimTUsesSteppedTicks(t *testing.T) {
 	r.speed = speedFast
 	r.advance()
 	r.mo.SetAlpha(motionpkg.AlphaMax)
-	prev, prevTick := r.animT(), float64(r.game.Tick())
+	prev, prevTick := r.liveView().AnimT, float64(r.game.Tick())
 	if got := r.advanceTicks(3, func(done int) bool { return done < 2 }); got != 2 || r.mo.Stepped != 2 {
 		t.Fatalf("advanceTicks done %d stepped %d, want 2", got, r.mo.Stepped)
 	}
 	r.mo.SetAlpha(0)
-	if got, want := r.animT(), float64(r.game.Tick())-2; got != want {
+	if got, want := r.liveView().AnimT, float64(r.game.Tick())-2; got != want {
 		t.Fatalf("animT %v, want Tick-2 = %v", got, want)
 	}
 	// alpha 0 resumes exactly where alpha 1 would have left the last frame;
 	// alphaMax (< 1) leaves at most (1-alphaMax)*3 ticks between them.
-	if math.Abs(r.animT()-prevTick) > 1e-6 || r.animT()-prev > (1-motionpkg.AlphaMax)*3+1e-9 || r.animT() < prev {
-		t.Fatalf("animT jumped across a held advance: prev %v (tick %v) now %v", prev, prevTick, r.animT())
+	if math.Abs(r.liveView().AnimT-prevTick) > 1e-6 || r.liveView().AnimT-prev > (1-motionpkg.AlphaMax)*3+1e-9 || r.liveView().AnimT < prev {
+		t.Fatalf("animT jumped across a held advance: prev %v (tick %v) now %v", prev, prevTick, r.liveView().AnimT)
 	}
 }

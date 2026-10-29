@@ -370,12 +370,12 @@ func TestRipplesOnlyInPuddles(t *testing.T) {
 			switch {
 			case d.Kind == env.DropRipple && d.Age == 0:
 				ripples++
-				if p := r.envLayer().SnowC.PuddleAt(d.Gx, d.Gy); p < env.PuddleRippleMin {
+				if p := r.pipe().Env.SnowC.PuddleAt(d.Gx, d.Gy); p < env.PuddleRippleMin {
 					t.Fatalf("a ripple at (%.2f, %.2f) outside the water: cover %.2f", d.Gx, d.Gy, p)
 				}
 			case d.Kind == env.DropSplash && d.Age == 0:
 				splashes++
-				if p := r.envLayer().SnowC.PuddleAt(d.Gx, d.Gy); p >= env.PuddleRippleMin {
+				if p := r.pipe().Env.SnowC.PuddleAt(d.Gx, d.Gy); p >= env.PuddleRippleMin {
 					t.Fatalf("a splash at (%.2f, %.2f) inside a puddle: cover %.2f", d.Gx, d.Gy, p)
 				}
 			}
@@ -410,7 +410,7 @@ func TestPuddleVeilDrawsFlatLitAtEveryTier(t *testing.T) {
 			t.Fatalf("tile %v px: %d veil draws, %d lit calls", px, r.snowc.WetDraws, r.lit.Calls-before)
 		}
 		// lit flat like the ground: no normal map, a sky value per vertex
-		for _, v := range r.lod.Verts {
+		for _, v := range r.pipe().LOD.Verts {
 			if v.Custom2 != 0 || v.Custom0 <= 0 {
 				t.Fatalf("tile %v px: veil vertex %+v is not lit flat under the sky", px, v)
 			}

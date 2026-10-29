@@ -38,7 +38,7 @@ func zoneBatchRenderer(t *testing.T) (*Renderer, float64) {
 	g := game.NewColony(game.Config{Seed: 7, Width: 40, Height: 30})
 	r := New(g)
 	tile := 4.0
-	r.setView(640, 400, tile)
+	r.pipe().Env.SetView(r.liveView(), 640, 400, tile)
 	return r, tile
 }
 

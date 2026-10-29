@@ -23,9 +23,9 @@ import (
 // art is the catalog the painter draws from.
 func (b *base) art() *art.Catalog { return b.Paint.Art }
 
-// pass is the pass sprites draw in: the shadow pass's cast, a bake, a
+// Pass is the Pass sprites draw in: the shadow Pass's cast, a bake, a
 // figure's blood.
-func (b *base) pass() sprite.Pass {
+func (b *base) Pass() sprite.Pass {
 	return sprite.Pass{Cast: *b.Cast, Baking: b.LOD.Baking, Blood: *b.Blood}
 }
 
@@ -63,23 +63,23 @@ func (b *base) setView(sw, sh int, tile float64) { b.Env.SetView(b.v, sw, sh, ti
 func (b *base) layer(name string) { b.v.LayerDrawn(name) }
 
 func (b *base) drawSprite(dst *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int) {
-	b.Paint.Draw(b.v, b.pass(), dst, key, tint, wx, wy, tile, sw, sh)
+	b.Paint.Draw(b.v, b.Pass(), dst, key, tint, wx, wy, tile, sw, sh)
 }
 
 func (b *base) drawSpriteCS(dst *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int, cs sprite.ColorScale) {
-	b.Paint.DrawCS(b.v, b.pass(), dst, key, tint, wx, wy, tile, sw, sh, cs)
+	b.Paint.DrawCS(b.v, b.Pass(), dst, key, tint, wx, wy, tile, sw, sh, cs)
 }
 
 func (b *base) drawSpriteScaled(dst *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int, cs sprite.ColorScale, k float64) {
-	b.Paint.DrawScaled(b.v, b.pass(), dst, key, tint, wx, wy, tile, sw, sh, cs, k)
+	b.Paint.DrawScaled(b.v, b.Pass(), dst, key, tint, wx, wy, tile, sw, sh, cs, k)
 }
 
-func (b *base) drawSpritePose(dst *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps motion.Pose) {
-	b.Creatures.DrawSpritePose(b.v, b.pass(), dst, key, tint, wx, wy, tile, ps)
+func (b *base) DrawSpritePose(dst *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps motion.Pose) {
+	b.Creatures.DrawSpritePose(b.v, b.Pass(), dst, key, tint, wx, wy, tile, ps)
 }
 
 func (b *base) drawLinkedSprite(dst *ebiten.Image, d sprite.LinkedDraw, tile float64, sw, sh int) {
-	b.Paint.DrawLinkedSprite(b.v, b.pass(), dst, d, tile, sw, sh)
+	b.Paint.DrawLinkedSprite(b.v, b.Pass(), dst, d, tile, sw, sh)
 }
 
 func (b *base) stuffTint(stuff string) color.NRGBA { return b.Paint.StuffTint(stuff) }
@@ -98,23 +98,23 @@ func (b *base) interpWorld(p game.PawnView) (float64, float64) {
 	return m.X, m.Y
 }
 
-// overlayChunks is the frame's chunk lists and view as the overlays walk
+// OverlayChunks is the frame's chunk lists and view as the overlays walk
 // them.
-func (b *base) overlayChunks() overlay.Chunks {
+func (b *base) OverlayChunks() overlay.Chunks {
 	l := b.LOD
 	return overlay.Chunks{Views: l.Views, VX0: l.VX0, VY0: l.VY0, VX1: l.VX1, VY1: l.VY1, ViewSet: l.ViewSet,
 		Live: l.Tier == Live, WholeMap: l.Tier == Map, Baking: l.Baking}
 }
 
-// creatureCull is the frame's culling for the creature layer.
-func (b *base) creatureCull() creature.Cull {
+// CreatureCull is the frame's culling for the creature layer.
+func (b *base) CreatureCull() creature.Cull {
 	l := b.LOD
 	return creature.Cull{X0: l.VX0, Y0: l.VY0, X1: l.VX1, Y1: l.VY1, ViewSet: l.ViewSet,
 		MapTier: l.Tier == Map, MotionPad: MotionViewPad, MinTile: CreatureMinTile}
 }
 
 // MotionViewPad: animals within this many tiles of the last frame's view
-// keep a motion track (the renderer's motionViewPad).
+// keep a motion track (the renderer's syncAnimals).
 const MotionViewPad = env.ContactViewPad + 2
 
 // DrawTile draws an opaque, tileable 1x1 sprite snapped to whole pixels
@@ -191,7 +191,7 @@ func (b *base) drawGroundTile(dst *ebiten.Image, w *game.WorldView, x, y int, ti
 		b.drawSpriteCS(dst, ek, none, float64(x), float64(y), tile, sw, sh, ecs)
 	}
 	if ok && IsWaterCode[code] {
-		b.Env.DrawWaterEdges(b.v, b.pass(), dst, TerrainNames[code], nbPri, TerrainPriority["shallow_water"], x, y, tile, sw, sh, b.Stamp)
+		b.Env.DrawWaterEdges(b.v, b.Pass(), dst, TerrainNames[code], nbPri, TerrainPriority["shallow_water"], x, y, tile, sw, sh, b.Stamp)
 	}
 }
 

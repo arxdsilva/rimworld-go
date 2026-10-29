@@ -54,7 +54,7 @@ func TestHairFollowsHead(t *testing.T) {
 func TestCarryLiftEases(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{present: 50}
-	st := r.creatures()
+	st := r.pipe().Creatures
 	if k := st.CarryEase(7, 50); k != 0 {
 		t.Fatalf("lift starts on the ground: %v", k)
 	}
@@ -107,7 +107,7 @@ func TestDustAtFootOnContact(t *testing.T) {
 		}
 	}
 	r := &Renderer{}
-	st := r.creatures()
+	st := r.pipe().Creatures
 	m := walkingState
 	m.X, m.Y, m.Stride = 5, 5, 0.7
 	r.stepDust(st, 9, m, false) // first sighting: no puff
@@ -149,7 +149,7 @@ func TestCombatMinVisibleFrames(t *testing.T) {
 	}
 	// bookkeeping retains a trace after the sim drops it
 	r := &Renderer{present: 100}
-	st := r.creatures()
+	st := r.pipe().Creatures
 	st.TrackReactions([]game.TraceView{bite}, 1000, 100)
 	if got := st.Reactions(100, nil); len(got) != 1 {
 		t.Fatalf("tracked = %d", len(got))
@@ -207,7 +207,7 @@ func TestTrotEightFrames(t *testing.T) {
 func TestParticlesExpire(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{}
-	r.burst(creature.PartDust, 3, 3, 4, 99)
+	r.pipe().Creatures.Burst(r.liveView(), creature.PartDust, 3, 3, 4, 99)
 	if len(r.parts) != 4 {
 		t.Fatalf("burst = %d", len(r.parts))
 	}
@@ -217,7 +217,7 @@ func TestParticlesExpire(t *testing.T) {
 		t.Fatal("old particles are dropped")
 	}
 	for i := 0; i < creature.MaxParticles+50; i++ {
-		r.burst(creature.PartChip, 0, 0, 1, uint64(i))
+		r.pipe().Creatures.Burst(r.liveView(), creature.PartChip, 0, 0, 1, uint64(i))
 	}
 	if len(r.parts) != creature.MaxParticles {
 		t.Fatal("particle cap holds")
@@ -228,12 +228,12 @@ func TestItemPopAndSway(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{}
 	w := game.WorldView{Items: []game.ItemView{{ID: 1}}}
-	r.syncItems(w) // first sync: existing items never pop
+	r.pipe().Creatures.SyncItems(r.liveView(), w) // first sync: existing items never pop
 	if r.itemPop(1) != 1 {
 		t.Fatal("start items are settled")
 	}
 	r.present = 10
-	r.syncItems(game.WorldView{Items: []game.ItemView{{ID: 1}, {ID: 2}}})
+	r.pipe().Creatures.SyncItems(r.liveView(), game.WorldView{Items: []game.ItemView{{ID: 1}, {ID: 2}}})
 	if k := r.itemPop(2); k > 0.01 {
 		t.Fatalf("a new drop starts small: %v", k)
 	}

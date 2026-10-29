@@ -171,8 +171,8 @@ func TestArchitectHasGraveAndPyre(t *testing.T) {
 			t.Fatalf("%s builds unknown kind %q", id, tool.build)
 		}
 	}
-	if architect.BuildSprite("grave", "east", 0, false, false) != "furniture/grave_dug_east" ||
-		architect.BuildSprite("funeral pyre", "", 0, false, false) != "furniture/pyre" {
+	if world.BuildSprite("grave", "east", 0, false, false) != "furniture/grave_dug_east" ||
+		world.BuildSprite("funeral pyre", "", 0, false, false) != "furniture/pyre" {
 		t.Fatal("ghost sprites")
 	}
 }

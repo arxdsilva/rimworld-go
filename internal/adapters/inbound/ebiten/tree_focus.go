@@ -55,5 +55,5 @@ func (a *App) syncTreeFocus() {
 		_, ghost = a.previewCells()
 	}
 	a.treeFocus = treeFocusCells(a.treeFocus[:0], hover, hovered, a.treeSel, ghost)
-	r.SetTreeFocus(a.treeFocus)
+	r.pipe().Env.Trees.SetTreeFocus(a.treeFocus) // render/env tree_fade.go
 }

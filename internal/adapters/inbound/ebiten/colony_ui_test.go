@@ -8,6 +8,7 @@ import (
 	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
@@ -550,10 +551,10 @@ func TestNewBuildingCards(t *testing.T) {
 	if _, ok := architectpkg.KindID("tool cabinet"); !ok {
 		t.Fatal("the cabinet is not in the catalog")
 	}
-	if got := architectpkg.BuildSprite("tool cabinet", "south", 0, false, false); got != "furniture/tool_cabinet" {
+	if got := worldpkg.BuildSprite("tool cabinet", "south", 0, false, false); got != "furniture/tool_cabinet" {
 		t.Fatalf("cabinet sprite = %q", got)
 	}
-	if got := architectpkg.BuildSprite("hospital bed", "east", 0, false, false); got != "furniture/hospital_bed_east" {
+	if got := worldpkg.BuildSprite("hospital bed", "east", 0, false, false); got != "furniture/hospital_bed_east" {
 		t.Fatalf("bed sprite = %q", got)
 	}
 	// The tooltips carry the component cost beside the material.

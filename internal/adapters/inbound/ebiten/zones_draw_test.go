@@ -143,7 +143,7 @@ func TestZoneDrawsOverFloor(t *testing.T) {
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	screen := ebiten.NewImage(640, 400)
 	tile := r.cam.Tile()
-	r.setView(640, 400, tile)
+	r.pipe().Env.SetView(r.liveView(), 640, 400, tile)
 	r.drawArt(screen, 640, 400, tile)
 	// other traced layers (tree trunks and canopies, PLAY-010) may come
 	// and go; floors and zones each appear once, floors first
@@ -411,7 +411,7 @@ func TestZoneLabelDrawnOncePerZone(t *testing.T) {
 		rectZone(2, game.ZoneGrow, 9, 2, 13, 6),
 		rectZone(3, game.ZonePen, 2, 9, 6, 13),
 	}}
-	r.drawZoneLabels(ebiten.NewImage(64, 64), w, 1280, 720, r.cam.Tile())
+	r.overlays().Zones.DrawZoneLabels(r.liveView(), ebiten.NewImage(64, 64), w, 1280, 720, r.cam.Tile())
 	if texts := wlOfKind(*got, "text"); len(texts) != 3 {
 		t.Fatalf("%d labels for 3 zones: %+v", len(texts), texts)
 	}
@@ -466,7 +466,7 @@ func TestZoneLabelsDrawnAfterObjects(t *testing.T) {
 			t.Fatalf("drawZones drew label text %q; labels belong to drawZoneLabels", e.Text)
 		}
 	}
-	r.drawZoneLabels(ebiten.NewImage(64, 64), w, 1280, 720, tile)
+	r.overlays().Zones.DrawZoneLabels(r.liveView(), ebiten.NewImage(64, 64), w, 1280, 720, tile)
 	n := 0
 	for _, e := range *got {
 		if e.Kind == "text" {
@@ -487,7 +487,7 @@ func fillQuads(t *testing.T, art *artpkg.Catalog, w game.WorldView, zoom float64
 	r.art = art
 	r.cam.Zoom = zoom
 	tile := r.cam.Tile()
-	r.setView(640, 400, tile)
+	r.pipe().Env.SetView(r.liveView(), 640, 400, tile)
 	r.drawZones(ebiten.NewImage(640, 400), w, 640, 400, tile)
 	return r.overlays().Zones.FillQuads()
 }

@@ -108,15 +108,15 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 	v.Date = p.src.Date()
 	p.Env.DrawGroundCover(v, screen, w, sw, sh, tile, p.Stamp, p.Index)
-	chF := p.overlayChunks()
-	p.Overlays.DrawFoundation(v, p.pass(), &chF, screen, w, sw, sh, tile) // render/overlay: over the water, under floors
+	chF := p.OverlayChunks()
+	p.Overlays.DrawFoundation(v, p.Pass(), &chF, screen, w, sw, sh, tile) // render/overlay: over the water, under floors
 	p.DrawFloorLayers(screen, w, sw, sh, tile)
-	chC := p.overlayChunks()
-	p.Overlays.Wiring.DrawConduits(v, p.pass(), &chC, p.Links, screen, w, sw, sh, tile) // over floors, under zones and objects
+	chC := p.OverlayChunks()
+	p.Overlays.Wiring.DrawConduits(v, p.Pass(), &chC, p.Links, screen, w, sw, sh, tile) // over floors, under zones and objects
 	p.Overlays.Wiring.Parts.Prune(v.Present)
 	p.layer("zones")
-	chZ := p.overlayChunks()
-	p.Overlays.Zones.DrawZones(v, p.pass(), &chZ, screen, w, sw, sh, tile)
+	chZ := p.OverlayChunks()
+	p.Overlays.Zones.DrawZones(v, p.Pass(), &chZ, screen, w, sw, sh, tile)
 	p.setView(sw, sh, tile)
 	p.Overlays.DrawPlanOverlay(v, screen, w, sw, sh, tile)
 	p.setView(sw, sh, tile)
@@ -264,14 +264,14 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		p.Lb.drawStackCounts(screen, w, tile)
 	}
 	p.Lb.drawBuildingDamage(screen, w, tile)
-	clW := p.creatureCull()
+	clW := p.CreatureCull()
 	p.Creatures.DrawWorkProgress(v, &clW, screen, v.Pawns, tile) // bars over the work spots
-	chB := p.overlayChunks()
+	chB := p.OverlayChunks()
 	p.Overlays.Wiring.DrawNoPowerBadges(v, &chB, screen, &w, tile)
 	p.Lb.DrawChatBubbles(screen, tile)
 	p.Lb.drawBreakClouds(screen, tile)
 	p.src.DrawOrderRoute(screen, tile)
-	clP := p.creatureCull()
+	clP := p.CreatureCull()
 	p.Creatures.DrawParticles(v, &clP, screen, tile)
 	p.Overlays.DrawArrivals(v, screen, w, tile)
 	p.Lb.DrawSteamPuffs(screen, w, tile) // features_draw.go
@@ -312,17 +312,17 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			p.drawSpriteCS(screen, smoothKey, none, float64(m[0]), float64(m[1]), tile, sw, sh, smoothCS)
 		}
 	}
-	clM := p.creatureCull()
+	clM := p.CreatureCull()
 	clM.Pad, clM.PadS = p.AnimalPads(tile)
 	clM.White = l.WhiteImg()
-	p.Creatures.DrawAnimalOverlays(v, p.pass(), &clM, screen, w, tile)
+	p.Creatures.DrawAnimalOverlays(v, p.Pass(), &clM, screen, w, tile)
 	if v.HasSelect {
 		for _, pw := range v.Pawns {
 			if pw.ID == v.Selected {
 				wx, wy := p.interpWorld(pw)
 				wx, wy = CreatureAt(wx, wy, tile, ct)
 				k := 1 + 0.045*math.Sin(float64(v.Present)/7)
-				p.drawSpritePose(screen, "overlay/selection", none, wx, wy, ct, motion.Pose{Px: 0.5, Py: 0.5, Sx: k, Sy: k})
+				p.DrawSpritePose(screen, "overlay/selection", none, wx, wy, ct, motion.Pose{Px: 0.5, Py: 0.5, Sx: k, Sy: k})
 			}
 		}
 	}
@@ -401,7 +401,7 @@ func (p *Pipeline) drawTufts(screen *ebiten.Image, w game.WorldView, sw, sh int,
 		}
 		p.Env.GrassBatchOf(v, screen, &w, x0, y0, x1, y1, tile, sw, sh, limit, p.LOD.Baking)
 	}
-	p.Env.DrawGrassCutMarks(v, p.pass(), screen, &w, vx0, vy0, vx1, vy1, tile, sw, sh)
+	p.Env.DrawGrassCutMarks(v, p.Pass(), screen, &w, vx0, vy0, vx1, vy1, tile, sw, sh)
 }
 
 // addRockDraws queues the natural rock walls in view, padded one column
@@ -477,11 +477,11 @@ func (p *Pipeline) DrawFloorLayers(screen *ebiten.Image, w game.WorldView, sw, s
 	v := p.v
 	if len(w.Dirt) > 0 {
 		p.layer("dirt")
-		p.Overlays.DrawDirt(v, p.pass(), screen, w, sw, sh, tile)
+		p.Overlays.DrawDirt(v, p.Pass(), screen, w, sw, sh, tile)
 	}
 	if len(w.Stains) > 0 {
 		p.layer("stains")
-		p.Overlays.DrawStains(v, p.pass(), screen, w, sw, sh, tile)
-		p.Overlays.Fires.DrawAshStains(v, p.pass(), screen, w, sw, sh, tile)
+		p.Overlays.DrawStains(v, p.Pass(), screen, w, sw, sh, tile)
+		p.Overlays.Fires.DrawAshStains(v, p.Pass(), screen, w, sw, sh, tile)
 	}
 }

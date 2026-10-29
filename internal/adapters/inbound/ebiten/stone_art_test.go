@@ -158,7 +158,7 @@ func TestStonecutterCard(t *testing.T) {
 	if _, ok := architect.Buildable("stonecutter table"); !ok {
 		t.Fatal("the sim offers no stonecutter table")
 	}
-	if got := architect.BuildSprite("stonecutter table", "east", 0, false, false); got != "furniture/stonecutter_table_east" {
+	if got := world.BuildSprite("stonecutter table", "east", 0, false, false); got != "furniture/stonecutter_table_east" {
 		t.Fatal(got)
 	}
 }
@@ -175,7 +175,7 @@ func TestStoneItemTintAndFallback(t *testing.T) {
 	t.Parallel()
 	r := testStoneArt("item/stone_blocks", "item/steel_bars")
 	key, cs := r.pipe().StoneItem(world.ItemSprite("marble chunk"), "marble chunk", sprite.NoCS)
-	if key != "item/stone_blocks" || cs != sprite.TintCS(r.stuffTint("marble blocks")) || cs == sprite.NoCS {
+	if key != "item/stone_blocks" || cs != sprite.TintCS(r.pipe().Paint.StuffTint("marble blocks")) || cs == sprite.NoCS {
 		t.Fatalf("chunk without art: %s %v", key, cs)
 	}
 	if key, cs = r.pipe().StoneItem(world.ItemSprite("gold"), "gold", sprite.DriedCS); key != "item/steel_bars" || cs != sprite.DriedCS {
@@ -185,7 +185,7 @@ func TestStoneItemTintAndFallback(t *testing.T) {
 		t.Fatalf("wood: %s %v", key, cs)
 	}
 	a := r.carryPose(game.PawnView{ID: 1, Carrying: "granite chunk"}, motionpkg.MoveState{})
-	if a.Held.Key != "item/stone_blocks" || a.Held.Cs != sprite.TintCS(r.stuffTint("granite blocks")) {
+	if a.Held.Key != "item/stone_blocks" || a.Held.Cs != sprite.TintCS(r.pipe().Paint.StuffTint("granite blocks")) {
 		t.Fatalf("carried chunk = %+v", a.Held)
 	}
 }

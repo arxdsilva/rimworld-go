@@ -11,10 +11,12 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// The world draw order lives in render/world (ARCH-004 wave 4.4,
-// world_compat.go forwards the old entry points). What stays here is
-// bound to root types: the placement ghost takes the Architect's
-// ghostCell, and the figure layers are the portraits' (portrait.go).
+// The world draw order lives in render/world (ARCH-004 wave 4.4). What
+// stays here are the map previews the Architect and the selection draw
+// over the frame (architectMap, multiselect_render.go): the placement
+// ghost takes the Architect's ghostCell; the zone, range-ring and
+// power-link previews and the selection's sprites are the layers' draws
+// in the live frame view.
 
 // drawPlacementGhost previews a build tool: the real sprite per cell,
 // green when placeable, red when not. Walls and conduits autotile among
@@ -22,6 +24,8 @@ import (
 func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing string, cells []ghostCell) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.cam.Tile()
+	wp, v := r.pipe(), r.liveView()
+	links := wp.Links
 	link, power := overlay.BuildingLink(kind), false
 	if c := overlay.PowerLink(kind); c.Accepts != 0 { // conduits link on the power layer
 		link, power = c, true
@@ -32,14 +36,14 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 		if w.TerrainW == 0 {
 			w = r.world()
 		}
-		r.links.Sync(w, r.game.Width(), r.game.Height())
+		links.Sync(w, r.game.Width(), r.game.Height())
 		ghosts := make([]spritepkg.PlannedCell, len(cells))
 		for i, c := range cells {
 			ghosts[i] = spritepkg.PlannedCell{X: c.x, Y: c.y, Flags: link.Flags}
 		}
-		p = r.links.Plan(w.Frames, ghosts)
+		p = links.Plan(w.Frames, ghosts)
 	}
-	tint := r.stuffTint(stuff)
+	tint := wp.Paint.StuffTint(stuff)
 	for _, c := range cells {
 		cs := spritepkg.GhostOKCS
 		switch {
@@ -56,16 +60,16 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 		mask, corners := 0, 0
 		switch {
 		case p != nil && power:
-			mask = r.links.PowerMask(link.Accepts, c.x, c.y, p)
+			mask = links.PowerMask(link.Accepts, c.x, c.y, p)
 		case p != nil:
-			mask = r.links.PlannedMask(p, link.Accepts, c.x, c.y)
-			corners = r.links.PlannedCorners(p, link.Accepts, c.x, c.y)
+			mask = links.PlannedMask(p, link.Accepts, c.x, c.y)
+			corners = links.PlannedCorners(p, link.Accepts, c.x, c.y)
 		}
-		if kind == "wall" && r.drawLinked(screen, spritepkg.WallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
+		if kind == "wall" && wp.Paint.DrawLinked(v, wp.Pass(), screen, spritepkg.WallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
 			continue
 		}
 		cf := ghostFacing(c, facing)
-		key := r.pipe().BuildKey(kind, stuff, cf, mask, spritepkg.DoorAxisEW(cf), false)
+		key := wp.BuildKey(kind, stuff, cf, mask, spritepkg.DoorAxisEW(cf), false)
 		if !r.art.Has(key) {
 			sx, sy := r.worldToScreen(c.x, c.y)
 			if spritepkg.IsFenceKind(kind) {
@@ -75,7 +79,7 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), ghostFill(c), false)
 			continue
 		}
-		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, spritepkg.MulCS(spritepkg.TintCS(tint), cs))
+		wp.Paint.DrawCS(v, wp.Pass(), screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, spritepkg.MulCS(spritepkg.TintCS(tint), cs))
 	}
 }
 
@@ -100,16 +104,37 @@ func ghostFill(c ghostCell) color.RGBA {
 	return color.RGBA{90, 200, 90, 120}
 }
 
-// pawnFigureLayers lists p's sprites bottom first in art facing fs: its
-// own look (build, beard, hair; PawnView.Look) dressed in its apparel, a
-// raider's maroon clothes, and a disfigured pawn's face scar over the
-// hair (under a hat) when the art has one.
-func (r *Renderer) pawnFigureLayers(p game.PawnView, fs string) []portraitLayer {
-	return figureLayers(r.art, p.Look, fs, figureDress{Apparel: p.Apparel, Scarred: p.Disfigured, Raider: p.Hostile})
+// drawSprite draws a world sprite in the live frame (the selection's
+// marks, multiselect_render.go).
+func (r *Renderer) drawSprite(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int) {
+	p := r.pipe()
+	p.Paint.Draw(r.liveView(), p.Pass(), screen, key, tint, wx, wy, tile, sw, sh)
 }
 
-// pawnPortraitLayers is p's south-facing portrait, bottom first: the
-// colony figure's layers (pawnFigureLayers).
-func (r *Renderer) pawnPortraitLayers(p game.PawnView) []portraitLayer {
-	return r.pawnFigureLayers(p, "south")
+// drawZoneHighlight outlines zone z (render/overlay Zones).
+func (r *Renderer) drawZoneHighlight(screen *ebiten.Image, w game.WorldView, z game.ZoneView, sw, sh int, tile float64) {
+	p := r.pipe()
+	ch := p.OverlayChunks()
+	p.Overlays.Zones.DrawZoneHighlight(r.liveView(), &ch, screen, w, z, sw, sh, tile)
+}
+
+// drawZoneLabel draws zone z's name plate over its geometry g.
+func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, g *overlay.ZoneGeom, sw, sh int, tile float64) {
+	r.overlays().Zones.DrawZoneLabel(r.liveView(), screen, z, g, sw, sh, tile)
+}
+
+// zoneLabelAt is the zone whose name plate is under the physical point
+// (mx, my), among the zones shown.
+func (r *Renderer) zoneLabelAt(w game.WorldView, mx, my int, tile float64, shown uint16) (game.ZoneView, bool) {
+	return r.overlays().Zones.ZoneLabelAt(r.liveView(), w, mx, my, tile, shown)
+}
+
+// drawRangeRing draws a turret's or a lamp's range around (x, y).
+func (r *Renderer) drawRangeRing(dst *ebiten.Image, x, y int, radius float64, c color.NRGBA) {
+	r.overlays().Wiring.DrawRangeRing(r.liveView(), dst, x, y, radius, c)
+}
+
+// drawPowerLink draws a planned power connection from one cell to another.
+func (r *Renderer) drawPowerLink(dst *ebiten.Image, from, to [2]int, c color.NRGBA, tile float64) {
+	r.overlays().Wiring.DrawPowerLink(r.liveView(), dst, from, to, c, tile)
 }

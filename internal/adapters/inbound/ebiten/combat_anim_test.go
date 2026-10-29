@@ -117,7 +117,7 @@ func TestFireAnchoredToTrace(t *testing.T) {
 	}
 	// a fast sim cannot skip the shot: 2 frames after the first sighting
 	// it is still kicking even though 30 ticks went by
-	st := r.creatures()
+	st := r.pipe().Creatures
 	st.TrackReactions([]game.TraceView{shot(1, false)}, 100, 50)
 	r.game.(*stubSim).tick = 131
 	r.present = 52
@@ -217,7 +217,7 @@ func TestMuzzleFlashAtMuzzle(t *testing.T) {
 		t.Fatal("muzzle smoke")
 	}
 	screen := ebiten.NewImage(800, 600)
-	r.drawTraces(screen, w, 64)
+	r.pipe().Creatures.DrawTraces(r.liveView(), screen, w, r.game.Snapshot(), 64)
 	// without art the shot leaves from in front of the shooter's tile
 	r.art = nil
 	m, _ := r.shotPoints(tr, r.view.Pawns)
@@ -379,7 +379,7 @@ func TestPunch(t *testing.T) {
 	if pts := r.meleeTrail(tr); len(pts) < 2 || pts[1].X <= pts[0].X {
 		t.Fatalf("trail out along the punch: %v", pts)
 	}
-	r.drawTraces(ebiten.NewImage(800, 600), r.view.W, 64)
+	r.pipe().Creatures.DrawTraces(r.liveView(), ebiten.NewImage(800, 600), r.view.W, r.game.Snapshot(), 64)
 }
 
 func TestHitFlinchDirectional(t *testing.T) {
@@ -574,7 +574,7 @@ func TestAnimalFlinch(t *testing.T) {
 	// a sim without hit stamps: the trace knockback still applies
 	old := game.AnimalView{ID: 7, X: 6, Y: 5}
 	r = combatRenderer(100, nil, game.WorldView{})
-	r.creatures().TrackReactions([]game.TraceView{{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Hit: true}}, 100, r.present)
+	r.pipe().Creatures.TrackReactions([]game.TraceView{{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Hit: true}}, 100, r.present)
 	if ps := r.animalPose(old); ps.Dx <= 0 || ps.Flash <= 0 {
 		t.Fatalf("fallback knockback: %+v", ps)
 	}

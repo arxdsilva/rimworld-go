@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -15,10 +16,10 @@ import (
 func (r *Renderer) syncAnimals(w game.WorldView) {
 	tick := r.game.Tick()
 	running := r.mo.Stepped > 0
-	l := &r.lod
+	l := r.pipe().LOD
 	for i := range w.Animals {
 		an := &w.Animals[i]
-		if !l.InView(an.X, an.Y, motionViewPad, motionViewPad) {
+		if !l.InView(an.X, an.Y, world.MotionViewPad, world.MotionViewPad) {
 			// far off screen (a big map's wildlife): no motion track; it
 			// starts afresh, on its cell, when it nears the view again
 			delete(r.last, an.ID)

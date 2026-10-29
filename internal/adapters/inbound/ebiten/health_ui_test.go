@@ -1,8 +1,8 @@
 package ebiten
 
 import (
-	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"slices"
 	"strings"
@@ -455,7 +455,7 @@ func TestArchVitalsMonitor(t *testing.T) {
 		t.Fatalf("tool %+v", tool)
 	}
 	for _, f := range []string{"south", "east", "north", "west"} {
-		if got := architectpkg.BuildSprite("vitals monitor", f, 0, false, false); got != "furniture/vitals_monitor_"+f {
+		if got := worldpkg.BuildSprite("vitals monitor", f, 0, false, false); got != "furniture/vitals_monitor_"+f {
 			t.Fatalf("sprite %q", got)
 		}
 	}

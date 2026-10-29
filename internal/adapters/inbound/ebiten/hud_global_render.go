@@ -14,6 +14,16 @@ import (
 // camera jumps, and why the game paused itself. The HUD's regions live in
 // package hud and reach these through hudHost (hud_compat.go).
 
+// planOverlayOn reports the Plan overlay is showing (toggle or tool held).
+func (r *Renderer) planOverlayOn() bool { return r.overlays().Plan.Shown() }
+
+// togglePowerOverlayIfAny tolerates a nil renderer (menus).
+func (r *Renderer) togglePowerOverlayIfAny() {
+	if r != nil {
+		r.overlays().Power.Toggle()
+	}
+}
+
 // toggleRoofOverlayIfAny tolerates a nil renderer (menus).
 func (r *Renderer) toggleRoofOverlayIfAny() {
 	if r != nil {
@@ -78,13 +88,14 @@ func (a *App) drawRoofToolGhost(screen *ebiten.Image, x0, y0, x1, y1 int) {
 	}
 	tile := a.shell.TilePx()
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	ov, v := r.overlays(), r.liveView()
 	for _, c := range architect.PlacementCells(architect.PlaceArea, x0, y0, x1, y1) {
 		if !roofGhostUnsupported(overlaypkg.RoofCellAt(w, c[0], c[1]), walls[c]) {
 			continue
 		}
 		sx, sy := a.shell.WorldToScreen(c[0], c[1])
 		if sprite.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-			r.drawRoofUnsupported(screen, c[0], c[1], tile) // roof_draw.go
+			ov.DrawRoofUnsupported(v, screen, c[0], c[1], tile) // render/overlay roof_draw.go
 		}
 	}
 }
@@ -118,7 +129,40 @@ func (a *App) syncPlanForce() {
 }
 
 // minimapOn reports the layout should reserve the minimap's square.
-func (a *App) minimapOn() bool { return a.renderer != nil && a.renderer.minimapOn() }
+func (a *App) minimapOn() bool { return a.renderer.minimapOn() }
+
+// The minimap (render/minimap): the renderer holds the Map by value (its
+// zero value is a shown, empty minimap) and owns the camera a click moves.
+
+// minimapOn reports the minimap is shown; it tolerates a nil renderer.
+func (r *Renderer) minimapOn() bool { return r != nil && r.mini.On(r.game) }
+
+// toggleMinimap shows or hides the minimap; it tolerates a nil renderer.
+func (r *Renderer) toggleMinimap() {
+	if r != nil {
+		r.mini.Toggle()
+	}
+}
+
+// minimapClick centres the camera on the tile under the logical point
+// (sx, sy) when it is on the minimap (minimap.Map.Click returns the
+// offsets; the camera, smoothing and clamp stay the renderer's).
+func (r *Renderer) minimapClick(sx, sy int, ui, v camerapkg.Viewport) bool {
+	ok, ox, oy := r.mini.Click(r.liveView(), r.game, sx, sy, ui, v)
+	if !ok {
+		return false
+	}
+	r.cam.OffsetX, r.cam.OffsetY = ox, oy
+	r.smooth.Vx, r.smooth.Vy = 0, 0
+	r.ClampCamera(v)
+	return true
+}
+
+// drawMinimap draws the minimap in the UI viewport ui for the map
+// viewport v.
+func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v camerapkg.Viewport) {
+	r.mini.Draw(r.liveView(), screen, r.game, ui, v)
+}
 
 // speedReason says why the game is paused when the game did it itself: the
 // window went to the background, or a threat arrived. "" otherwise.

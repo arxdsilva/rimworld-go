@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
 	"testing"
 
@@ -39,10 +40,10 @@ func TestDoorAxisFollowsFacing(t *testing.T) {
 			t.Fatalf("doorAxisEW(%q) = %v, want %v", f, got, ew)
 		}
 	}
-	if got := architect.BuildSpriteStuff("door", "wood", "east", 0, sprite.DoorAxisEW("east"), false); got != "structure/door_wood_ns_closed" {
+	if got := world.BuildSpriteStuff("door", "wood", "east", 0, sprite.DoorAxisEW("east"), false); got != "structure/door_wood_ns_closed" {
 		t.Fatal(got)
 	}
-	if got := architect.BuildSpriteStuff("door", "steel", "south", 0, sprite.DoorAxisEW("south"), true); got != "structure/door_steel_ew_open" {
+	if got := world.BuildSpriteStuff("door", "steel", "south", 0, sprite.DoorAxisEW("south"), true); got != "structure/door_steel_ew_open" {
 		t.Fatal(got)
 	}
 }
@@ -87,7 +88,7 @@ func TestGhostDrawsEachCellWithItsOwnFacing(t *testing.T) {
 	want := []string{"structure/door_wood_ns_closed", "structure/door_wood_ew_closed", "structure/door_wood_ew_closed"}
 	for i, c := range cells {
 		f := ghostFacing(c, "south")
-		if got := architect.BuildSpriteStuff("door", "wood", f, 0, sprite.DoorAxisEW(f), false); got != want[i] {
+		if got := world.BuildSpriteStuff("door", "wood", f, 0, sprite.DoorAxisEW(f), false); got != want[i] {
 			t.Fatalf("cell %d key = %s, want %s", i, got, want[i])
 		}
 	}

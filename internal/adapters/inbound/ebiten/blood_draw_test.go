@@ -167,21 +167,21 @@ func TestFreshHitWetFades(t *testing.T) {
 	}
 	// through the renderer: a pawn hit 30 ticks ago is wet, one hit long ago is not
 	r := New(&stubSim{w: 16, h: 16, tick: 1000})
-	_, wet, _ := overlay.DecodeBlood(r.pawnBlood(game.PawnView{ID: 1, Health: 60, HitTick: 970}))
+	_, wet, _ := overlay.DecodeBlood(r.overlays().PawnBlood(r.liveView(), r.pipe().Pass(), game.PawnView{ID: 1, Health: 60, HitTick: 970}))
 	if wet != 11 {
 		t.Fatalf("hit 30 ticks ago: wet %d", wet)
 	}
-	cov, wet, _ := overlay.DecodeBlood(r.pawnBlood(game.PawnView{ID: 1, Health: 60, HitTick: 100}))
+	cov, wet, _ := overlay.DecodeBlood(r.overlays().PawnBlood(r.liveView(), r.pipe().Pass(), game.PawnView{ID: 1, Health: 60, HitTick: 100}))
 	if wet != 0 || math.Abs(cov-0.32) > 1e-5 {
 		t.Fatalf("old hit: %v %v", cov, wet)
 	}
-	if _, _, ichor := overlay.DecodeBlood(r.animalBlood(game.AnimalView{ID: 2, Species: "hive_brute", Health: 40})); !ichor {
+	if _, _, ichor := overlay.DecodeBlood(r.overlays().AnimalBlood(r.liveView(), r.pipe().Pass(), game.AnimalView{ID: 2, Species: "hive_brute", Health: 40})); !ichor {
 		t.Fatal("hive animals bleed ichor")
 	}
-	if r.animalBlood(game.AnimalView{ID: 2, Species: "muffalo", Health: 100}) != 0 {
+	if r.overlays().AnimalBlood(r.liveView(), r.pipe().Pass(), game.AnimalView{ID: 2, Species: "muffalo", Health: 100}) != 0 {
 		t.Fatal("healthy animal clean")
 	}
-	if r.pawnBlood(game.PawnView{ID: 3, Health: 10, CarriedBy: 1}) != 0 {
+	if r.overlays().PawnBlood(r.liveView(), r.pipe().Pass(), game.PawnView{ID: 3, Health: 10, CarriedBy: 1}) != 0 {
 		t.Fatal("a carried patient stays clean")
 	}
 }
@@ -213,7 +213,7 @@ func TestHairAndHeldStayClean(t *testing.T) {
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 30, Wounded: true, Weapon: "spear", Drafted: true, Status: "alive"}
 	patient := game.PawnView{ID: 2, X: 2, Y: 2, Health: 20, CarriedBy: 1, Status: "downed"}
 	r.view.Pawns = []game.PawnView{p, patient}
-	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, r.pawnFigurePoseOf(p))
+	r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, 64, r.pipe().Creatures.FigurePoseOf(r.liveView(), p))
 	want := overlay.EncodeBlood(0.75, 0, false)
 	var body, cloth, hair, held int
 	for k, vs := range got {
@@ -257,7 +257,7 @@ func TestHairAndHeldStayClean(t *testing.T) {
 		delete(got, k)
 	}
 	down := game.PawnView{ID: 3, X: 2, Y: 2, Health: 30, Lying: true, Status: "downed"}
-	r.drawPawnFigure(ebiten.NewImage(512, 512), down, 2, 2, 64, r.pawnFigurePoseOf(down))
+	r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), down, 2, 2, 64, r.pipe().Creatures.FigurePoseOf(r.liveView(), down))
 	bloody := 0
 	for k, vs := range got {
 		for _, v := range vs {
@@ -281,11 +281,11 @@ func TestNonFigureDrawsHaveNoBlood(t *testing.T) {
 	got := litLog(r)
 	dst := ebiten.NewImage(512, 512)
 	an := game.AnimalView{ID: 9, X: 3, Y: 3, Species: "muffalo", Health: 50}
-	r.drawAnimalFigure(dst, an, 3, 3, 64)
+	r.pipe().Creatures.DrawAnimalFigure(r.liveView(), r.pipe().Pass(), dst, an, 3, 3, 64)
 	if r.figureBlood != 0 {
 		t.Fatal("reset after the animal")
 	}
-	r.drawSpritePose(dst, "item/wood_pile", color.NRGBA{}, 1, 1, 64, motionpkg.Pose{})
+	r.pipe().DrawSpritePose(dst, "item/wood_pile", color.NRGBA{}, 1, 1, 64, motionpkg.Pose{})
 	var animal []float32
 	for k, vs := range got {
 		if strings.HasPrefix(k, "animal/") {
@@ -303,7 +303,7 @@ func TestNonFigureDrawsHaveNoBlood(t *testing.T) {
 		delete(got, k)
 	}
 	r.cast = &lightpkg.Cast{}
-	r.drawAnimalFigure(dst, an, 3, 3, 64)
+	r.pipe().Creatures.DrawAnimalFigure(r.liveView(), r.pipe().Pass(), dst, an, 3, 3, 64)
 	r.cast = nil
 	if len(got) != 0 || r.figureBlood != 0 {
 		t.Fatalf("cast mode: %v %v", got, r.figureBlood)

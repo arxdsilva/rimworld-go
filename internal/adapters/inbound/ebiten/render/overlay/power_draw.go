@@ -231,7 +231,7 @@ func (o *Wiring) DrawPowerParts(v *render.View, ps sprite.Pass, ch *Chunks, dst 
 
 // DrawConduits is the conduit pass: over the floors, under zones and
 // objects, every shown conduit of the chunks in view, linked to the
-// transmitters and devices beside it (linkGrid.conduitMask), then the
+// transmitters and devices beside it (overlay.Links.conduitMask), then the
 // conduit blueprints (linked with the planned set too) and their
 // deconstruct marks. A hidden conduit draws only its blueprint and mark
 // here; built, it shows in the power overlay alone. Not on the

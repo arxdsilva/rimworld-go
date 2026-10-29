@@ -69,12 +69,12 @@ func TestFemaleVariantByID(t *testing.T) {
 	r := combatRenderer(100, nil, game.WorldView{})
 	r.art.Sprites["animal/deer_south"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
 	doe := game.AnimalView{ID: 3, Species: "deer", Female: true, X: 2, Y: 2}
-	if got := r.animalBaseKey(doe); got != "animal/deer_south" {
+	if got := r.pipe().Creatures.AnimalBaseKey(r.liveView(), doe); got != "animal/deer_south" {
 		t.Fatalf("no female art: falls back to the male set, got %s", got)
 	}
 	r.art.Sprites["animal/deer_f_south"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
 	r.art.Sprites["animal/deer_f_south_graze1"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
-	if got := r.animalBaseKey(doe); got != "animal/deer_f_south" {
+	if got := r.pipe().Creatures.AnimalBaseKey(r.liveView(), doe); got != "animal/deer_f_south" {
 		t.Fatalf("female art: got %s", got)
 	}
 	doe.Action = game.ActionGraze
@@ -83,7 +83,7 @@ func TestFemaleVariantByID(t *testing.T) {
 	}
 	buck := doe
 	buck.Female = false
-	if got := r.animalBaseKey(buck); got != "animal/deer_south" {
+	if got := r.pipe().Creatures.AnimalBaseKey(r.liveView(), buck); got != "animal/deer_south" {
 		t.Fatalf("male keeps the plain set: %s", got)
 	}
 }

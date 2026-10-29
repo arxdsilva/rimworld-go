@@ -52,7 +52,7 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0 // the map's top-left corner
 	screen := ebiten.NewImage(640, 400)
 	r.drawGroundCover(screen, w, 640, 400, r.cam.Tile())
-	if x0, y0, x1, y1 := r.visibleTiles(); x0 > 1 || y0 > 0 || x1 < 7 || y1 < 6 {
+	if x0, y0, x1, y1 := r.pipe().Env.VisibleTiles(r.liveView()); x0 > 1 || y0 > 0 || x1 < 7 || y1 < 6 {
 		t.Fatalf("view %d,%d..%d,%d misses the block", x0, y0, x1, y1)
 	}
 	sc := &r.snowc

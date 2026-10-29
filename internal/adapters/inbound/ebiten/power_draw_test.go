@@ -59,11 +59,11 @@ func TestPowerSpriteKeys(t *testing.T) {
 		{"lamp", "", 0, false, "furniture/lamp_standing"},
 	}
 	for _, c := range cases {
-		if got := architect.BuildSprite(c.kind, c.facing, c.mask, false, c.open); got != c.want {
+		if got := worldpkg.BuildSprite(c.kind, c.facing, c.mask, false, c.open); got != c.want {
 			t.Errorf("buildSprite(%q, %q, %d, open %v) = %q, want %q", c.kind, c.facing, c.mask, c.open, got, c.want)
 		}
 		// steel is the only stuff electric pieces take: same key
-		if got := architect.BuildSpriteStuff(c.kind, "steel", c.facing, c.mask, false, c.open); got != c.want {
+		if got := worldpkg.BuildSpriteStuff(c.kind, "steel", c.facing, c.mask, false, c.open); got != c.want {
 			t.Errorf("buildSpriteStuff(%q, steel) = %q, want %q", c.kind, got, c.want)
 		}
 	}
@@ -124,7 +124,7 @@ func TestPowerArtCoversRenderer(t *testing.T) {
 					if m > 0 && !overlaypkg.IsConduitKind(kind) {
 						break
 					}
-					key := architect.BuildSprite(kind, f, m, false, open)
+					key := worldpkg.BuildSprite(kind, f, m, false, open)
 					meta, ok := pdMeta(t, root, key)
 					if !ok {
 						t.Errorf("%s (%s %s open %v mask %d): no generated sprite", key, kind, f, open, m)
@@ -153,7 +153,7 @@ func TestPowerArtCoversRenderer(t *testing.T) {
 			t.Errorf("%s: frames %s step %s, renderer assumes %d at %d°", overlaypkg.BladeKey(i), meta["frames"], meta["step_deg"], overlaypkg.TurbineFrames, overlaypkg.TurbineStepDeg)
 		}
 	}
-	torch, _ := pdMeta(t, root, architect.BuildSprite(overlaypkg.TorchLampKind, "", 0, false, false))
+	torch, _ := pdMeta(t, root, worldpkg.BuildSprite(overlaypkg.TorchLampKind, "", 0, false, false))
 	if v, err := strconv.ParseFloat(torch["flame_scale"], 64); err != nil || v != overlaypkg.TorchFlameScale {
 		t.Errorf("torch flame_scale %q, renderer draws %v", torch["flame_scale"], overlaypkg.TorchFlameScale)
 	}
@@ -164,8 +164,8 @@ func TestPowerArtCoversRenderer(t *testing.T) {
 	}
 	for _, f := range architect.FacingNames { // the attachments the parts hang on
 		for key, names := range map[string][]string{
-			architect.BuildSprite(overlaypkg.WindTurbineKind, f, 0, false, false): {"rotor"},
-			architect.BuildSprite(overlaypkg.BatteryKind, f, 0, false, false):     {"gauge0", "gauge1"},
+			worldpkg.BuildSprite(overlaypkg.WindTurbineKind, f, 0, false, false): {"rotor"},
+			worldpkg.BuildSprite(overlaypkg.BatteryKind, f, 0, false, false):     {"gauge0", "gauge1"},
 		} {
 			raw, err := os.ReadFile(filepath.Join(root, artpkg.MetadataRel, key+".yaml"))
 			if err != nil {
@@ -222,9 +222,9 @@ func pdWorld(rows ...string) (game.WorldView, int, int) {
 	return w, wd, h
 }
 
-func pdGrid(rows ...string) *linkGrid {
+func pdGrid(rows ...string) *overlaypkg.Links {
 	w, wd, h := pdWorld(rows...)
-	g := &linkGrid{}
+	g := &overlaypkg.Links{}
 	g.Sync(w, wd, h)
 	return g
 }
@@ -274,7 +274,7 @@ func TestConduitLinksToTransmittersAndDevices(t *testing.T) {
 	w, wd, h := pdWorld("WW.", "...")
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 99, Kind: overlaypkg.ConduitKind, X: 1, Y: 0, W: 1, H: 1})
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 98, Kind: overlaypkg.ConduitKind, X: 1, Y: 1, W: 1, H: 1})
-	under := &linkGrid{}
+	under := &overlaypkg.Links{}
 	under.Sync(w, wd, h)
 	if got := under.Mask(1, 0); got != artpkg.WallW {
 		t.Fatalf("wall over a conduit: mask %d, want the wall W only", got)
@@ -297,7 +297,7 @@ func TestConduitLinksToTransmittersAndDevices(t *testing.T) {
 func TestConduitFramesAndGhostsLink(t *testing.T) {
 	t.Parallel()
 	w, wd, h := pdWorld("C..", "...")
-	g := &linkGrid{}
+	g := &overlaypkg.Links{}
 	g.Sync(w, wd, h)
 	p := g.Plan([]game.FrameView{{Kind: overlaypkg.ConduitKind, X: 1, Y: 0, W: 1, H: 1}}, []spritepkg.PlannedCell{{X: 2, Y: 0, Flags: spritepkg.ConduitLink.Flags}})
 	if got := g.PowerMask(spritepkg.ConduitLink.Accepts, 1, 0, p); got != artpkg.WallE|artpkg.WallW {
@@ -352,7 +352,7 @@ func pdRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]string) {
 	r := New(&stubSim{w: 20, h: 12, world: w})
 	r.art = pdArt()
 	r.view.W = w
-	r.links.Sync(w, 20, 12)
+	r.pipe().Links.Sync(w, 20, 12)
 	cv := game.ChunkView{}
 	for i := range w.Buildings {
 		cv.Buildings = append(cv.Buildings, int32(i))
@@ -360,7 +360,7 @@ func pdRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]string) {
 	for i := range w.Frames {
 		cv.Frames = append(cv.Frames, int32(i))
 	}
-	r.lod.Views = []game.ChunkView{cv}
+	r.pipe().LOD.Views = []game.ChunkView{cv}
 	got := &[]string{}
 	r.overlays().Wiring.Parts.Trace = func(part, key string) { *got = append(*got, part+" "+key) }
 	return r, got
@@ -470,9 +470,9 @@ func TestGlowOnlyWhilePowered(t *testing.T) {
 	b := game.BuildingView{Kind: overlaypkg.HeaterKind, PowerRole: "consumer", Powered: true, X: 4, Y: 4, W: 1, H: 1}
 	w := game.WorldView{Buildings: []game.BuildingView{b}}
 	r, got := pdRenderer(t, w)
-	r.lod.Baking = true
+	r.pipe().LOD.Baking = true
 	r.drawBuildingObj(ebiten.NewImage(640, 400), &w.Buildings[0], r.cam.Tile(), 640, 400)
-	r.lod.Baking = false
+	r.pipe().LOD.Baking = false
 	if len(*got) != 0 {
 		t.Fatalf("a bake drew power parts: %v", *got)
 	}
@@ -527,7 +527,7 @@ func TestTurbineDrawsBladesAtTheRotor(t *testing.T) {
 	}
 	// the hub lands on the rotor: rotor (80, 127.7) - origin (16, 129) of
 	// the base, minus hub (109, 166.7) - origin (45, 168) of the blades
-	wx, wy, ok := r.bladeAt(&w.Buildings[0], architect.BuildSprite(overlaypkg.WindTurbineKind, "south", 0, false, false), overlaypkg.BladeKey(1))
+	wx, wy, ok := r.bladeAt(&w.Buildings[0], worldpkg.BuildSprite(overlaypkg.WindTurbineKind, "south", 0, false, false), overlaypkg.BladeKey(1))
 	if !ok || math.Abs(wx-4) > 1e-9 || math.Abs(wy-4) > 1e-9 {
 		t.Fatalf("blades at (%v, %v) ok %v, want (4, 4)", wx, wy, ok)
 	}
@@ -781,7 +781,7 @@ func TestWallsJoinCoolers(t *testing.T) {
 	t.Parallel()
 	w, wd, h := pdWorld("W.W", "...")
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 40, Kind: overlaypkg.CoolerKind, Facing: "east", X: 1, Y: 0, W: 1, H: 1, PowerRole: "consumer"})
-	g := &linkGrid{}
+	g := &overlaypkg.Links{}
 	g.Sync(w, wd, h)
 	if g.Mask(0, 0) != artpkg.WallE || g.Mask(2, 0) != artpkg.WallW {
 		t.Fatalf("walls beside a cooler: %d, %d", g.Mask(0, 0), g.Mask(2, 0))

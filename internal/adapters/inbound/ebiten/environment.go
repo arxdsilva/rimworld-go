@@ -16,68 +16,67 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/application/game"
 )
 
 // Environment presentation (ART §27.3, §16) is render/env's (ARCH-004):
 // wind, plants, contact springs, weather, ground cover, grass, crops,
 // water, puddles, snow, tree canopies, cave plants and map features
-// (env_compat.go forwards the renderer's old entry points). The root keeps
-// the renderer's half: envState, the layer with the states kept beside it
-// until their passes move, the roof-collapse dust and the autumn leaves
-// (particles are the renderer's), and the HUD's weather readout.
+// (env_host.go steps it and serves it). The root keeps the renderer's half:
+// envState, the layer with the states kept beside it until their passes
+// move, the roof-collapse dust and the autumn leaves (particles of the
+// creature layer), and the HUD's weather readout.
 
 // envState is the renderer's environment state: the env layer (its fields
 // and methods promoted) and the shadow pass and overlay states kept with
 // it.
 type envState struct {
 	env.Layer
-	Shadow    shadowState                   // the shadow pass (shadow.go)
-	Roof      overlaypkg.RoofDrawState      // eaves and the Roof overlay (roof_draw.go)
-	Home      overlaypkg.HomeDrawState      // the Home overlay's cached outline (home_draw.go)
-	SnowClear overlaypkg.SnowClearDrawState // the snow clearing area overlay (snow_clear_draw.go)
+	Shadow    light.Shadows[creature.FigurePose] // the shadow pass (render/light; its casters: shadow.go)
+	Roof      overlaypkg.RoofDrawState           // eaves and the Roof overlay (roof_draw.go)
+	Home      overlaypkg.HomeDrawState           // the Home overlay's cached outline (home_draw.go)
+	SnowClear overlaypkg.SnowClearDrawState      // the snow clearing area overlay (snow_clear_draw.go)
 	// collapses are the roof-collapse stamps already shown as dust.
 	collapses map[game.RoofCollapseView]bool
-	// paint is the sprite painter the layer draws with, refreshed from
-	// Renderer.painter by envLayer (the renderer builds it per call).
-	paint sprite.Painter
 }
 
 // stepCollapses puffs dust and debris once for every roof collapse stamp
 // not seen before (SIM-018); stamps the view no longer lists are forgotten.
-func (r *Renderer) stepCollapses(w game.WorldView) {
-	e := &r.env
+func (e *envState) stepCollapses(c *creature.Set, v *render.View, w game.WorldView) {
 	if len(w.RoofCollapses) == 0 {
 		e.collapses = nil
 		return
 	}
 	seen := make(map[game.RoofCollapseView]bool, len(w.RoofCollapses))
-	for _, c := range w.RoofCollapses {
-		if !e.collapses[c] {
-			seed := art.Mix64(c.Tick ^ uint64(envpkg.TileKey(c.X, c.Y))<<20 ^ 0xc011)
-			r.burst(creature.PartDust, float64(c.X)+0.5, float64(c.Y)+0.5, 12, seed)
-			r.burst(creature.PartChip, float64(c.X)+0.5, float64(c.Y)+0.4, 4, seed^0x5a)
+	for _, rc := range w.RoofCollapses {
+		if !e.collapses[rc] {
+			seed := art.Mix64(rc.Tick ^ uint64(envpkg.TileKey(rc.X, rc.Y))<<20 ^ 0xc011)
+			c.Burst(v, creature.PartDust, float64(rc.X)+0.5, float64(rc.Y)+0.5, 12, seed)
+			c.Burst(v, creature.PartChip, float64(rc.X)+0.5, float64(rc.Y)+0.4, 4, seed^0x5a)
 		}
-		seen[c] = true
+		seen[rc] = true
 	}
 	e.collapses = seen
 }
 
 var autumnLeaves = []color.RGBA{{214, 140, 52, 255}, {178, 74, 44, 255}, {226, 184, 74, 255}, {160, 104, 48, 255}}
 
-// dropLeaves lets one or two autumn leaves fall from a brushed tree
-// (env.Layer.Leaves lists them after a Step).
-func (r *Renderer) dropLeaves(x, y int) {
-	seed := spritepkg.TileHash(x, y) ^ r.present*0x9E3779B97F4A7C15
-	n := 1 + int(hash01(seed, 7)*2)
-	from := len(r.parts)
-	r.burst(creature.PartLeaf, float64(x)+0.5, float64(y)-0.55, n, seed)
-	for i := from; i < len(r.parts); i++ {
-		r.parts[i].Clr = autumnLeaves[int(hash01(seed, uint64(i), 9)*float64(len(autumnLeaves)))%len(autumnLeaves)]
-		r.parts[i].Life += 30 // leaves flutter down slowly
-		r.parts[i].G *= 0.5
+// dropLeaves lets one or two autumn leaves fall from a brushed tree at
+// (x, y) (env.Layer.Leaves lists them after a Step) as particles of c.
+func dropLeaves(c *creature.Set, v *render.View, x, y int) {
+	seed := spritepkg.TileHash(x, y) ^ v.Present*0x9E3779B97F4A7C15
+	n := 1 + int(motionpkg.Hash01(seed, 7)*2)
+	parts := c.Parts
+	from := len(*parts)
+	c.Burst(v, creature.PartLeaf, float64(x)+0.5, float64(y)-0.55, n, seed)
+	for i := from; i < len(*parts); i++ {
+		p := &(*parts)[i]
+		p.Clr = autumnLeaves[int(motionpkg.Hash01(seed, uint64(i), 9)*float64(len(autumnLeaves)))%len(autumnLeaves)]
+		p.Life += 30 // leaves flutter down slowly
+		p.G *= 0.5
 	}
 }
 

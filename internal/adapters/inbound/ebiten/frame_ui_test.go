@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"strings"
 	"testing"
 
@@ -261,26 +262,26 @@ func TestItemForbidToggle(t *testing.T) {
 
 func TestFenceSpriteKeys(t *testing.T) {
 	t.Parallel()
-	if got := architect.BuildSpriteStuff("fence", "wood", "", 5, false, false); got != "structure/fence_wood_05" {
+	if got := world.BuildSpriteStuff("fence", "wood", "", 5, false, false); got != "structure/fence_wood_05" {
 		t.Fatal(got)
 	}
-	if got := architect.BuildSpriteStuff("fence", "stone", "", 15, false, false); got != "structure/fence_stone_15" {
+	if got := world.BuildSpriteStuff("fence", "stone", "", 15, false, false); got != "structure/fence_stone_15" {
 		t.Fatal(got)
 	}
-	if got := architect.BuildSpriteStuff("fence gate", "stone", "east", 0, false, true); got != "structure/fence_gate_open_east" {
+	if got := world.BuildSpriteStuff("fence gate", "stone", "east", 0, false, true); got != "structure/fence_gate_open_east" {
 		t.Fatal(got)
 	}
-	if got := architect.BuildSpriteStuff("fence gate", "wood", "", 0, false, false); got != "structure/fence_gate_south" {
+	if got := world.BuildSpriteStuff("fence gate", "wood", "", 0, false, false); got != "structure/fence_gate_south" {
 		t.Fatal(got)
 	}
 	// the gate takes the sim's auto-oriented facing, never the links mask
-	if got := architect.BuildSpriteStuff("fence gate", "wood", "west", 15, sprite.DoorAxisEW("west"), false); got != "structure/fence_gate_west" {
+	if got := world.BuildSpriteStuff("fence gate", "wood", "west", 15, sprite.DoorAxisEW("west"), false); got != "structure/fence_gate_west" {
 		t.Fatal(got)
 	}
 	w := game.WorldView{
 		Buildings: []game.BuildingView{{Kind: "fence", X: 1, Y: 1}, {Kind: "fence gate", X: 2, Y: 1}, {Kind: "wall", X: 1, Y: 0}, {Kind: "bed", X: 0, Y: 1}},
 	}
-	var g linkGrid
+	var g overlay.Links
 	g.Sync(w, 3, 3)
 	if m := g.Mask(1, 1); m != art.WallN|art.WallE {
 		t.Fatalf("mask = %d, want N|E (wall above, gate right, bed ignored)", m)

@@ -55,13 +55,13 @@ func BenchmarkDrawPlants(b *testing.B) {
 		r.present++
 		r.mo.Stepped = 1
 		r.stepEnvironment(w, r.game.Snapshot())
-		r.setView(1280, 800, tile)
+		r.pipe().Env.SetView(r.liveView(), 1280, 800, tile)
 		for _, p := range w.Plants {
 			key, scale := world.PlantSprite(p)
 			key = r.seasonKey(key, w)
 			kind, amount := kindOf(p.Species)
 			ps := r.plantPose(p.X, p.Y, kind, amount, scale)
-			r.drawSpritePose(screen, key, none, float64(p.X), float64(p.Y), tile, ps)
+			r.pipe().DrawSpritePose(screen, key, none, float64(p.X), float64(p.Y), tile, ps)
 		}
 	}
 	for i := 0; i < 30; i++ { // walkers under way, caches warm

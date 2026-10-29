@@ -57,7 +57,7 @@ func benchDraw(b *testing.B, setup func(*game.Game)) {
 	frame := func() {
 		r.present++
 		r.advance()
-		r.setView(1280, 800, tile)
+		r.pipe().Env.SetView(r.liveView(), 1280, 800, tile)
 		r.drawArt(screen, 1280, 800, tile)
 	}
 	for i := 0; i < 5; i++ { // textures uploaded, caches warm
@@ -130,7 +130,7 @@ func benchDrawGrown(b *testing.B, side int) {
 			tile := r.cam.Tile()
 			frame := func() {
 				r.advance()
-				r.setView(sw, sh, tile)
+				r.pipe().Env.SetView(r.liveView(), sw, sh, tile)
 				r.drawArt(screen, sw, sh, tile)
 			}
 			for i := 0; i < 60; i++ { // textures uploaded, atlas pages cut, bakes made
@@ -144,7 +144,7 @@ func benchDrawGrown(b *testing.B, side int) {
 				b.StopTimer()
 				r.advance()
 				b.StartTimer()
-				r.setView(sw, sh, tile)
+				r.pipe().Env.SetView(r.liveView(), sw, sh, tile)
 				r.drawArt(screen, sw, sh, tile)
 			}
 			b.ReportMetric(float64(r.lit.Calls-calls)/float64(b.N), "draw-calls/op")

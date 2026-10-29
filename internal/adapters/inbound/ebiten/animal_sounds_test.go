@@ -34,7 +34,7 @@ func listen(r *Renderer, w game.WorldView, frames int) []heardCue {
 	var out []heardCue
 	for f := 0; f < frames; f++ {
 		r.mo.Stepped = r.speed.ticksPerFrame() // what advance stepped this frame
-		r.listenAnimals(w)
+		r.cueBus().ListenAnimals(r.liveView(), w, r.mo.Stepped)
 		for _, c := range r.cueBus().Take() {
 			out = append(out, heardCue{f, c})
 		}
@@ -163,7 +163,7 @@ func TestFleeingAnimalThatAppearsFleeingIsSilent(t *testing.T) {
 // them up.
 func primed(animals ...game.AnimalView) *Renderer {
 	r := voiceRenderer(1)
-	r.listenAnimals(game.WorldView{Animals: animals})
+	r.cueBus().ListenAnimals(r.liveView(), game.WorldView{Animals: animals}, r.mo.Stepped)
 	r.cueBus().Take()
 	return r
 }
@@ -239,13 +239,13 @@ func TestDeathCueWithCorpse(t *testing.T) {
 		Animals: []game.AnimalView{wanderer(8, "deer", 3, 3)},
 		Items:   []game.ItemView{{ID: 50, Kind: "corpse", Animal: "deer", X: 10, Y: 11}},
 	}
-	r.listenAnimals(w)
+	r.cueBus().ListenAnimals(r.liveView(), w, r.mo.Stepped)
 	cues := r.cueBus().Take()
 	if len(cues) != 1 || cues[0].ID != "animal.deer.die" || cues[0].Vol != cuepkg.VolDie || cues[0].X != 10.5 || cues[0].Y != 10.5 {
 		t.Fatalf("death cue = %+v, want animal.deer.die at 10.5,10.5 volume %v", cues, cuepkg.VolDie)
 	}
 	// once only
-	r.listenAnimals(w)
+	r.cueBus().ListenAnimals(r.liveView(), w, r.mo.Stepped)
 	if cues := r.cueBus().Take(); len(cues) != 0 {
 		t.Fatalf("the death sounded again: %+v", cues)
 	}
@@ -261,7 +261,7 @@ func TestNoDeathCueWithoutCorpse(t *testing.T) {
 	}
 	for name, items := range cases {
 		r := primed(wanderer(9, "deer", 10, 10))
-		r.listenAnimals(game.WorldView{Items: items})
+		r.cueBus().ListenAnimals(r.liveView(), game.WorldView{Items: items}, r.mo.Stepped)
 		if cues := r.cueBus().Take(); len(cues) != 0 {
 			t.Errorf("%s: died aloud: %+v", name, cues)
 		}
@@ -272,15 +272,15 @@ func TestBurstCue(t *testing.T) {
 	t.Parallel()
 	r := voiceRenderer(1)
 	w := game.WorldView{Bursts: []game.BurstView{{X: 4, Y: 5, Tick: 3, Species: "emberbuck"}}}
-	r.emitWorldBursts(w)
-	r.emitWorldBursts(w) // the same stamp again: still one bang
+	r.pipe().Creatures.EmitWorldBursts(r.liveView(), w)
+	r.pipe().Creatures.EmitWorldBursts(r.liveView(), w) // the same stamp again: still one bang
 	cues := r.cueBus().Take()
 	if len(cues) != 1 || cues[0].ID != cuepkg.VoiceBurst || cues[0].Vol != cuepkg.VolBurst ||
 		int(cues[0].X) != 4 || int(cues[0].Y) != 5 {
 		t.Fatalf("burst cues = %+v, want one animal.burst in tile 4,5", cues)
 	}
 	w.Bursts = append(w.Bursts, game.BurstView{X: 8, Y: 2, Tick: 9})
-	r.emitWorldBursts(w)
+	r.pipe().Creatures.EmitWorldBursts(r.liveView(), w)
 	if cues := r.cueBus().Take(); len(cues) != 1 || int(cues[0].X) != 8 {
 		t.Fatalf("a new stamp should add exactly one bang, got %+v", cues)
 	}

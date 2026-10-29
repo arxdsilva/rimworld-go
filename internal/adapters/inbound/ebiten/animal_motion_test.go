@@ -79,7 +79,7 @@ func driveGait(r *Renderer, tpf, updates int, alphas []float64) []gaitSample {
 		an := r.game.World().Animals[0]
 		for _, a := range alphas {
 			r.mo.SetAlpha(a)
-			out = append(out, gaitSample{t: r.animT(), m: r.animalMotion(an.ID), show: r.animalShow(an), frame: r.animalFrame(an)})
+			out = append(out, gaitSample{t: r.liveView().AnimT, m: r.mo.AnimalMotion(an.ID, r.liveView().AnimT), show: r.animalShow(an), frame: r.animalFrame(an)})
 		}
 	}
 	return out
@@ -226,7 +226,7 @@ func TestAnimalWalkHasNoRendererBob(t *testing.T) {
 	for i := 0; i < 150; i++ {
 		r.advance()
 		an := r.game.World().Animals[0]
-		m := r.animalMotion(an.ID)
+		m := r.mo.AnimalMotion(an.ID, r.liveView().AnimT)
 		ps := r.animalPose(an)
 		if m.Blend >= motionpkg.MinBlend && ps.Dy != 0 {
 			t.Fatalf("a walking animal bobs %v tiles", ps.Dy)

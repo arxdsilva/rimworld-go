@@ -124,7 +124,7 @@ func TestWorkDrawsNoTool(t *testing.T) {
 		}
 		var keys []string
 		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: art.FaceEast, Ps: ps, Held: h})
+		r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: art.FaceEast, Ps: ps, Held: h})
 		r.lit.OnDraw = nil
 		for _, k := range keys {
 			if !strings.HasPrefix(k, "pawn/") || k == staleHandKey {
@@ -402,7 +402,7 @@ func TestLoadBehindFacingNorth(t *testing.T) {
 		ps, h := r.standingPose(p, motionpkg.MoveState{Facing: f})
 		var keys []string
 		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: f, Ps: ps, Held: h})
+		r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: f, Ps: ps, Held: h})
 		r.lit.OnDraw = nil
 		body := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/body_") })
 		load := slices.Index(keys, "item/wood_pile")

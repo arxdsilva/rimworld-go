@@ -33,10 +33,10 @@ func ng1ArtKeys() []string {
 		keys = append(keys, "terrain/mud_edge_"+n, "terrain/shallow_water_edge_"+n, "terrain/shore_foam_edge_"+n)
 	}
 	for _, f := range architect.FacingNames {
-		keys = append(keys, "rock/cave_mouth_"+f, architect.BuildSprite("hospital bed", f, 0, false, false))
+		keys = append(keys, "rock/cave_mouth_"+f, world.BuildSprite("hospital bed", f, 0, false, false))
 	}
-	keys = append(keys, "effect/pod_fall", "effect/pod_dust", architect.BuildSprite("pod shell", "", 0, false, false),
-		architect.BuildSprite("tool cabinet", "", 0, false, false))
+	keys = append(keys, "effect/pod_fall", "effect/pod_dust", world.BuildSprite("pod shell", "", 0, false, false),
+		world.BuildSprite("tool cabinet", "", 0, false, false))
 	for _, k := range []string{"components", "industrial medicine"} {
 		for _, q := range []int{1, 8, 40} {
 			keys = append(keys, world.SizedItemKey(world.ItemSprite(k), q))
@@ -189,7 +189,7 @@ func TestWaterShaderCompiles(t *testing.T) {
 			shaderDraws++
 		}
 	}
-	r.setView(64, 64, 32)
+	r.pipe().Env.SetView(r.liveView(), 64, 64, 32)
 	r.drawWaterTile(dst, "shallow_water", 0, 0, 32, 64, 64, spritepkg.NoCS)
 	if r.water.Err != nil || shaderDraws != 1 {
 		t.Fatalf("water draw: err %v shader draws %d", r.water.Err, shaderDraws)
@@ -224,7 +224,7 @@ func TestWaterFallbackFramesAnimate(t *testing.T) {
 	if len(frames) != 1 {
 		t.Fatalf("Reduced Motion holds one frame, saw %d", len(frames))
 	}
-	if r.envLayer().Water.WaterShader() != nil {
+	if r.pipe().Env.Water.WaterShader() != nil {
 		t.Fatal("a failed compile is not retried: the baked frames stay")
 	}
 }
@@ -275,7 +275,7 @@ func TestArrivalsDrawWithRealArt(t *testing.T) {
 	r.art = art
 	screen := ebiten.NewImage(640, 400)
 	tile := r.cam.Tile()
-	r.setView(640, 400, tile)
+	r.pipe().Env.SetView(r.liveView(), 640, 400, tile)
 	w := g.World()
 	w.Arrivals = []game.ArrivalView{{X: 10, Y: 6, Tick: uint64(g.Tick()) + 10}}
 	r.drawArrivals(screen, w, tile) // falling

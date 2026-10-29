@@ -23,7 +23,6 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
@@ -146,11 +145,10 @@ type Renderer struct {
 	// keyed on its identity hold (split, App.alerts).
 	viewCached bool
 	split      pawnSplit
-	mo         motionState         // per-creature motion and the animT clock (motion.go)
-	anims      *creaturepkg.Set    // body-animation bookkeeping (anim.go)
-	smooth     camerapkgpkg.Smooth // eased pan and zoom (camera_smooth.go)
-	env        envState            // wind, contact springs and weather (environment.go)
-	lit        lightpkg.Lit        // sun, moon and lamp lighting (light.go)
+	mo         motionpkg.State[creaturepkg.Body] // per-creature motion and the animT clock (render/motion); each track carries its animal's body player
+	smooth     camerapkgpkg.Smooth               // eased pan and zoom (camera/smooth.go)
+	env        envState                          // wind, contact springs and weather (environment.go)
+	lit        lightpkg.Lit                      // sun, moon and lamp lighting (render/light)
 	// cast, while set, turns world sprite draws into shadow silhouettes
 	// (shadow_cast.go).
 	cast *lightpkg.Cast
@@ -165,11 +163,10 @@ type Renderer struct {
 	figureBlood float32
 	// stepTicks are single ticks the developer asked for while paused.
 	stepTicks int
-	ov        *overlay.Set    // the map overlays (render/overlay, overlay_compat.go)
-	wp        *world.Pipeline // the world draw order (render/world, world_compat.go)
+	// wp is the world draw order and every draw layer, the zoom state, the
+	// link grid and the stone cache (render/world, layers.go: pipe).
+	wp *world.Pipeline
 
-	gridClr   color.RGBA
-	pawnClr   color.RGBA
 	selectClr color.RGBA
 
 	// threats: pause when one arrives (option), remembering the newest
@@ -193,16 +190,7 @@ type Renderer struct {
 	lastDanger uint64
 	floaters   []creaturepkg.Floater
 
-	// links is the cached wall/rock/fence connectivity (sprite.LinkGrid);
-	// stoneArt memoises stone tints, resolved linked keys and the ground
-	// tiles (world.StoneArt). The pipeline (wp) works on both and on lod.
-	links    linkGrid
-	stoneArt worldpkg.StoneArt
-	// ENG-D fields
-	// lod is the zoom tier, the chunk and whole-map bakes and the frame's
-	// chunk lists (world.LOD); mini the minimap (minimap.go).
-	lod   worldpkg.LOD
-	mini  minimappkg.Map
+	mini  minimappkg.Map   // the minimap (render/minimap)
 	snowc envpkg.SnowCache // snow_cache.go: snow veil and wet masks per chunk
 }
 
@@ -227,8 +215,6 @@ func New(sim Simulation) *Renderer {
 		pauseOnThreat: true,
 		fx:            1,
 		last:          map[entity.EntityID]pawnVisual{},
-		gridClr:       color.RGBA{R: 40, G: 40, B: 40, A: 180},
-		pawnClr:       color.RGBA{R: 220, G: 60, B: 60, A: 255},
 		selectClr:     color.RGBA{R: 250, G: 220, B: 60, A: 255},
 	}
 }
@@ -270,14 +256,15 @@ func (r *Renderer) advanceTicks(want int, more func(done int) bool) (done int) {
 	w := r.game.World()
 	r.animate(w, r.game.Snapshot(), done > 0)
 	r.stepEnvironment(w, r.game.Snapshot())
-	r.emitWorldBursts(w) // animal_burst.go: explosive animal deaths
-	r.listenAnimals(w)   // animal_sounds.go: calls, flee cries, deaths
+	p, cb, v := r.pipe(), r.cueBus(), r.liveView()
+	p.Creatures.EmitWorldBursts(v, w)    // render/creature: explosive animal deaths
+	cb.ListenAnimals(v, w, r.mo.Stepped) // render/cue: calls, flee cries, deaths
 	r.watchThreats(w)
 	r.heard = w
 	if done > 0 {
-		r.listenWorld(w, r.game.Snapshot())
+		cb.ListenWorld(r.liveView(), w, r.game.Snapshot())
 	}
-	r.listenThunder()
+	cb.ListenThunder(r.liveView())
 	return done
 }
 
@@ -305,7 +292,7 @@ func (r *Renderer) syncPawns() {
 		r.last[p.ID] = v
 	}
 	r.syncAnimals(w)
-	r.syncItems(w)
+	r.pipe().Creatures.SyncItems(r.liveView(), w)
 	r.mo.EndSync()
 }
 
@@ -388,6 +375,25 @@ func (r *Renderer) applyCamera(v camerapkgpkg.Viewport, in camInput) {
 	}
 }
 
+// SyncDev adopts the screen's density (camera.Camera.SyncDev).
+func (r *Renderer) SyncDev() { r.cam.SyncDev(camerapkgpkg.ScreenDev(), &r.smooth) }
+
+// MinZoomFor is the furthest zoom-out for this map and viewport.
+func (r *Renderer) MinZoomFor(v camerapkgpkg.Viewport) float64 {
+	return r.cam.MinZoomFor(v, r.game.Width(), r.game.Height())
+}
+
+// ClampCamera keeps the zoom in range and the map in view.
+func (r *Renderer) ClampCamera(v camerapkgpkg.Viewport) {
+	r.SyncDev()
+	r.cam.Clamp(v, r.game.Width(), r.game.Height(), r.game.World().Landing)
+}
+
+// CamLimits are the smoothing bounds for this map and viewport.
+func (r *Renderer) CamLimits(v camerapkgpkg.Viewport) camerapkgpkg.Limits {
+	return r.cam.LimitsFor(v, r.game.Width(), r.game.Height())
+}
+
 // camMaxDt caps one camera step so a stall never jumps the view.
 const camMaxDt = 0.1
 
@@ -450,7 +456,11 @@ func (r *Renderer) screenToWorld(sx, sy int) (float64, float64) {
 // interpWorld is where a pawn is drawn: its motion at animT (ART §27.1),
 // or its tile before the first sync.
 func (r *Renderer) interpWorld(p game.PawnView) (float64, float64) {
-	m, ok := r.motionOf(p.ID)
+	t := 0.0
+	if r.game != nil {
+		t = r.mo.AnimT(r.game.Tick())
+	}
+	m, ok := r.mo.MotionOf(p.ID, t)
 	if !ok {
 		return float64(p.X), float64(p.Y)
 	}
@@ -471,81 +481,165 @@ func (r *Renderer) worldToScreenF(wx, wy float64) (float32, float32) {
 // Draw renders terrain, pawns, and selection. HUD chrome is App-owned.
 func (r *Renderer) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 28, G: 42, B: 32, A: 255})
-	r.SyncDev() // camera.go: the screen is physical
+	r.SyncDev() // the screen is physical
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.cam.Tile()
 	// this frame's context for the draw layers (render.View); the pipeline adds
 	// the world and pawns it reads
-	v := &r.view
+	v := r.liveView()
 	v.SW, v.SH, v.Tile = sw, sh, tile
-	v.Cam, v.Art = r.cam, r.art
 	v.Zoom, v.Dev = r.cam.Zoom, r.cam.Dev
-	v.MapW, v.MapH = r.game.Width(), r.game.Height()
-	v.Tick = r.game.Tick()
-	v.Present, v.AnimT, v.Alpha = r.present, r.animT(), r.mo.Alpha
+	v.Alpha = r.mo.Alpha
 	v.Paused = r.speed == speedPaused
-	v.Fx, v.ReducedMotion, v.ReducedFlashing, v.Cached = r.fx, r.reducedMotion, r.reducedFlashing, r.viewCached
-	v.Selected, v.HasSelect = r.selected, r.hasSelect
+	v.Cached = r.viewCached
 
+	p := r.pipe()
 	if r.art != nil {
-		r.pipeline().Draw(screen) // render/world, lit by render/light: no veil
-		r.drawRoofOverlay(screen, r.view.W, sw, sh, tile)
-		r.drawPowerOverlay(screen, &r.view.W, sw, sh, tile) // power_overlay.go (PLAY-021)
-		r.drawTraces(screen, r.game.World(), tile)
+		p.Draw(screen) // render/world, lit by render/light: no veil
+		w := r.game.World()
+		ch := p.OverlayChunks()
+		p.Env.SetView(v, sw, sh, tile)
+		p.Overlays.DrawRoofOverlay(v, screen, v.W, r.game.Areas, sw, sh, tile)
+		p.Overlays.DrawPowerOverlay(v, &ch, p.Links, screen, &v.W, sw, sh, tile) // render/overlay power (PLAY-021)
+		p.Creatures.DrawTraces(v, screen, w, r.game.Snapshot(), tile)
 		return
 	}
 
-	r.drawTerrain(screen, sw, sh, tile)
-	r.drawWorld(screen, sw, sh, tile)
-	r.drawGrid(screen)
+	// no art: plain coloured cells (tests, a missing asset tree)
+	v.W, v.Pawns = r.game.World(), r.game.Snapshot()
+	drawFallbackTerrain(screen, v)
+	drawFallbackWorld(screen, v, p)
+	drawFallbackGrid(screen, v)
+	drawFallbackPawns(screen, v, &r.mo, r.selectClr)
+	drawDaylight(screen, v)
+}
 
-	for _, p := range r.game.Snapshot() {
-		wx, wy := r.interpWorld(p)
-		sx, sy := r.worldToScreenF(wx, wy)
-		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile)*2, sw, sh) {
+// drawDaylight tints the map with the sky's light (no-art fallback; with
+// art render/light lights every sprite).
+func drawDaylight(screen *ebiten.Image, v *render.View) {
+	if c := lightpkg.SkyOverlay(v.Tick); c.A != 0 {
+		vector.FillRect(screen, 0, 0, float32(v.SW), float32(v.SH), c, false)
+	}
+}
+
+// drawFallbackPawns draws the frame's pawns (v.Pawns) as squares where
+// their motion puts them, the selected one boxed in sel.
+func drawFallbackPawns(screen *ebiten.Image, v *render.View, mo *motionpkg.State[creaturepkg.Body], sel color.RGBA) {
+	t := float32(v.Tile)
+	for _, pw := range v.Pawns {
+		wx, wy := float64(pw.X), float64(pw.Y)
+		if m, ok := mo.MotionOf(pw.ID, v.AnimT); ok {
+			wx, wy = m.X, m.Y
+		}
+		sx, sy := v.WorldToScreenF(wx, wy)
+		if !spritepkg.Visible(sx, sy, t, t*2, v.SW, v.SH) {
 			continue
 		}
-		r.drawPawn(screen, p, sx, sy, tile)
-		if r.hasSelect && p.ID == r.selected {
-			r.drawSelection(screen, sx, sy, tile)
+		vector.FillRect(screen, sx+2, sy+2, t-4, t-4, fallbackPawn, false)
+		if v.HasSelect && pw.ID == v.Selected {
+			vector.StrokeRect(screen, sx+1, sy+1, t-2, t-2, 2, sel, false)
 		}
 	}
-
-	r.drawDaylight(screen, sw, sh)
 }
 
-func (r *Renderer) drawDaylight(screen *ebiten.Image, sw, sh int) {
-	c := lightpkg.SkyOverlay(r.game.Tick())
-	if c.A == 0 {
-		return
-	}
-	vector.FillRect(screen, 0, 0, float32(sw), float32(sh), c, false)
-}
+// The no-art fallback's colours.
+var (
+	fallbackGround = color.RGBA{R: 74, G: 66, B: 50, A: 255}
+	fallbackGrid   = color.RGBA{R: 40, G: 40, B: 40, A: 180}
+	fallbackPawn   = color.RGBA{R: 220, G: 60, B: 60, A: 255}
+)
 
-func (r *Renderer) drawTerrain(screen *ebiten.Image, sw, sh int, tile float64) {
-	for y := 0; y < r.game.Height(); y++ {
-		for x := 0; x < r.game.Width(); x++ {
-			sx, sy := r.worldToScreen(x, y)
-			if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-				continue
+// drawFallbackTerrain fills every visible cell with the plain ground.
+func drawFallbackTerrain(screen *ebiten.Image, v *render.View) {
+	t := float32(v.Tile)
+	for y := 0; y < v.MapH; y++ {
+		for x := 0; x < v.MapW; x++ {
+			if sx, sy := v.WorldToScreen(x, y); spritepkg.Visible(sx, sy, t, t, v.SW, v.SH) {
+				vector.FillRect(screen, sx, sy, t, t, fallbackGround, false)
 			}
-			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), fallbackGround, false)
 		}
 	}
 }
 
-func (r *Renderer) drawGrid(screen *ebiten.Image) {
-	for x := 0; x <= r.game.Width(); x++ {
-		x0, y0 := r.worldToScreen(x, 0)
-		_, y1 := r.worldToScreen(x, r.game.Height())
-		vector.StrokeLine(screen, x0, y0, x0, y1, 1, r.gridClr, false)
+// drawFallbackGrid strokes the cell grid.
+func drawFallbackGrid(screen *ebiten.Image, v *render.View) {
+	for x := 0; x <= v.MapW; x++ {
+		x0, y0 := v.WorldToScreen(x, 0)
+		_, y1 := v.WorldToScreen(x, v.MapH)
+		vector.StrokeLine(screen, x0, y0, x0, y1, 1, fallbackGrid, false)
 	}
-	for y := 0; y <= r.game.Height(); y++ {
-		x0, y0 := r.worldToScreen(0, y)
-		x1, _ := r.worldToScreen(r.game.Width(), y)
-		vector.StrokeLine(screen, x0, y0, x1, y0, 1, r.gridClr, false)
+	for y := 0; y <= v.MapH; y++ {
+		x0, y0 := v.WorldToScreen(0, y)
+		x1, _ := v.WorldToScreen(v.MapW, y)
+		vector.StrokeLine(screen, x0, y0, x1, y0, 1, fallbackGrid, false)
 	}
+}
+
+// drawFallbackWorld draws the frame's world (v.W) as plain cells: floors,
+// the zones (render/overlay), plants, items, frames, buildings and the
+// zone labels over them.
+func drawFallbackWorld(screen *ebiten.Image, v *render.View, p *worldpkg.Pipeline) {
+	w, t, sw, sh := v.W, float32(v.Tile), v.SW, v.SH
+	visible := func(x, y int) (float32, float32, bool) {
+		sx, sy := v.WorldToScreen(x, y)
+		return sx, sy, spritepkg.Visible(sx, sy, t, t, sw, sh)
+	}
+	floorClr := color.RGBA{R: 90, G: 90, B: 95, A: 255}
+	for _, b := range w.Buildings { // floors lie under the zones
+		if sx, sy, ok := visible(b.X, b.Y); b.Floor && ok {
+			vector.FillRect(screen, sx+4, sy+4, t-8, t-8, floorClr, false)
+		}
+	}
+	ch := p.OverlayChunks()
+	p.Overlays.Zones.DrawZones(v, p.Pass(), &ch, screen, w, sw, sh, v.Tile)
+	plantClr := color.RGBA{R: 70, G: 150, B: 70, A: 220}
+	desigClr := color.RGBA{R: 240, G: 220, B: 40, A: 200}
+	for _, pl := range w.Plants {
+		sx, sy, ok := visible(pl.X, pl.Y)
+		if !ok {
+			continue
+		}
+		pad := t * 0.25
+		vector.FillRect(screen, sx+pad, sy+pad, t-2*pad, t-2*pad, plantClr, false)
+		if pl.Designated {
+			vector.StrokeRect(screen, sx+2, sy+2, t-4, t-4, 2, desigClr, false)
+		}
+	}
+	foodClr := color.RGBA{R: 200, G: 90, B: 40, A: 255}
+	woodClr := color.RGBA{R: 140, G: 90, B: 40, A: 255}
+	for _, it := range w.Items {
+		sx, sy, ok := visible(it.X, it.Y)
+		if it.Carried || !ok {
+			continue
+		}
+		c := foodClr
+		if it.Kind == "wood" {
+			c = woodClr
+		}
+		pad := t * 0.3
+		vector.FillRect(screen, sx+pad, sy+pad, t-2*pad, t-2*pad, c, false)
+	}
+	ghostClr := color.RGBA{R: 90, G: 180, B: 220, A: 120}
+	for _, f := range w.Frames {
+		if sx, sy, ok := visible(f.X, f.Y); ok {
+			vector.StrokeRect(screen, sx+3, sy+3, t-6, t-6, 2, ghostClr, false)
+		}
+	}
+	wallClr := color.RGBA{R: 90, G: 90, B: 95, A: 255}
+	bedClr := color.RGBA{R: 70, G: 90, B: 160, A: 255}
+	for _, b := range w.Buildings {
+		sx, sy, ok := visible(b.X, b.Y)
+		if b.Floor || !ok {
+			continue // floors are drawn before the zones
+		}
+		c := wallClr
+		if b.Kind == "bed" {
+			c = bedClr
+		}
+		vector.FillRect(screen, sx+4, sy+4, t-8, t-8, c, false)
+	}
+	p.Overlays.Zones.DrawZoneLabels(v, screen, w, sw, sh, v.Tile) // over the objects
 }
 
 func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present uint64) pawnVisual {
@@ -572,18 +666,6 @@ func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present u
 		v.fromX, v.fromY = x, y
 	}
 	return v
-}
-
-// fallbackGround is the terrain colour when no art is loaded.
-var fallbackGround = color.RGBA{R: 74, G: 66, B: 50, A: 255}
-
-// drawPawn is the no-art fallback: a plain coloured square.
-func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float32, tile float64) {
-	vector.FillRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, r.pawnClr, false)
-}
-
-func (r *Renderer) drawSelection(screen *ebiten.Image, sx, sy float32, tile float64) {
-	vector.StrokeRect(screen, sx+1, sy+1, float32(tile)-2, float32(tile)-2, 2, r.selectClr, false)
 }
 
 // Select marks id as the presentation selection.
@@ -627,7 +709,7 @@ type pawnSplit struct {
 func (r *Renderer) splitPawns() {
 	all := r.game.Snapshot()
 	s := &r.split
-	if r.viewCached && s.src != nil && len(all) == len(s.src) && litFirst(all) == litFirst(s.src) {
+	if r.viewCached && s.src != nil && len(all) == len(s.src) && lightpkg.First(all) == lightpkg.First(s.src) {
 		return
 	}
 	s.src = all
@@ -671,74 +753,6 @@ func (r *Renderer) enqueue(c command.Command) {
 func (r *Renderer) TileAt(sx, sy int) (int, int) {
 	wx, wy := r.screenToWorld(sx, sy)
 	return int(wx), int(wy)
-}
-
-func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
-	w := r.game.World()
-	floorClr := color.RGBA{R: 90, G: 90, B: 95, A: 255}
-	for _, b := range w.Buildings { // floors lie under the zones
-		if !b.Floor {
-			continue
-		}
-		if sx, sy := r.worldToScreen(b.X, b.Y); spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-			vector.FillRect(screen, sx+4, sy+4, float32(tile)-8, float32(tile)-8, floorClr, false)
-		}
-	}
-	r.drawZones(screen, w, sw, sh, tile)
-	plantClr := color.RGBA{R: 70, G: 150, B: 70, A: 220}
-	desigClr := color.RGBA{R: 240, G: 220, B: 40, A: 200}
-	for _, p := range w.Plants {
-		sx, sy := r.worldToScreen(p.X, p.Y)
-		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-			continue
-		}
-		pad := float32(tile) * 0.25
-		vector.FillRect(screen, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, plantClr, false)
-		if p.Designated {
-			vector.StrokeRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, 2, desigClr, false)
-		}
-	}
-	foodClr := color.RGBA{R: 200, G: 90, B: 40, A: 255}
-	woodClr := color.RGBA{R: 140, G: 90, B: 40, A: 255}
-	for _, it := range w.Items {
-		if it.Carried {
-			continue
-		}
-		sx, sy := r.worldToScreen(it.X, it.Y)
-		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-			continue
-		}
-		c := foodClr
-		if it.Kind == "wood" {
-			c = woodClr
-		}
-		pad := float32(tile) * 0.3
-		vector.FillRect(screen, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, c, false)
-	}
-	ghostClr := color.RGBA{R: 90, G: 180, B: 220, A: 120}
-	for _, f := range w.Frames {
-		sx, sy := r.worldToScreen(f.X, f.Y)
-		if spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-			vector.StrokeRect(screen, sx+3, sy+3, float32(tile)-6, float32(tile)-6, 2, ghostClr, false)
-		}
-	}
-	wallClr := color.RGBA{R: 90, G: 90, B: 95, A: 255}
-	bedClr := color.RGBA{R: 70, G: 90, B: 160, A: 255}
-	for _, b := range w.Buildings {
-		if b.Floor {
-			continue // drawn before the zones
-		}
-		sx, sy := r.worldToScreen(b.X, b.Y)
-		if !spritepkg.Visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-			continue
-		}
-		c := wallClr
-		if b.Kind == "bed" {
-			c = bedClr
-		}
-		vector.FillRect(screen, sx+4, sy+4, float32(tile)-8, float32(tile)-8, c, false)
-	}
-	r.drawZoneLabels(screen, w, sw, sh, tile) // zones_draw.go: over the objects
 }
 
 func (r *Renderer) drawGhostRect(screen *ebiten.Image, x0, y0, x1, y1 int) {

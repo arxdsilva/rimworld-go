@@ -141,7 +141,7 @@ func TestOverlayOnlyWhenToggledOrForced(t *testing.T) {
 	r := New(&stubSim{w: 9, h: 6})
 	r.overlays().Roof.On = true
 	r.drawRoofOverlay(screen, w, 640, 400, r.cam.Tile())
-	r.drawRoofUnsupported(screen, 2, 2, r.cam.Tile())
+	r.overlays().DrawRoofUnsupported(r.liveView(), screen, 2, 2, r.cam.Tile())
 	if r.overlays().RoofDraw.OverlayVerts == 0 {
 		t.Fatal("overlay drew nothing")
 	}

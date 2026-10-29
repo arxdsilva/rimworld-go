@@ -64,11 +64,10 @@ var canvasExempt = map[string]string{
 	// the world renderer
 	"renderer.go:drawDaylight":                         "world: the sky tint over the map",
 	"renderer.go:drawGhostRect":                        "world: the architect's drag ghost on tiles",
-	"renderer.go:drawGrid":                             "world: the no-art tile grid",
-	"renderer.go:drawPawn":                             "world: the no-art pawn square",
-	"renderer.go:drawSelection":                        "world: the no-art selection box",
-	"renderer.go:drawTerrain":                          "world: the no-art ground",
-	"renderer.go:drawWorld":                            "world: the no-art objects",
+	"renderer.go:drawFallbackGrid":                     "world: the no-art tile grid",
+	"renderer.go:drawFallbackPawns":                    "world: the no-art pawn squares and selection box",
+	"renderer.go:drawFallbackTerrain":                  "world: the no-art ground",
+	"renderer.go:drawFallbackWorld":                    "world: the no-art objects",
 	"render/world/objects.go:drawItemObj":              "world: ground items",
 	"draw_art.go:drawPlacementGhost":                   "world: the building ghost on tiles",
 	"render/sprite/sprite.go:DrawScaled":               "world: sprite blit at a tile position",
@@ -169,7 +168,7 @@ var logicalDraws = map[string]bool{"drawIconCS": true, "drawButton": true}
 // blits). A HUD function calling one with logical coordinates is the
 // portrait bug.
 var worldPixelHelpers = map[string]bool{
-	"drawSprite": true, "drawSpritePose": true, "drawSpriteScaled": true,
+	"drawSprite": true, "DrawSpritePose": true, "drawSpriteScaled": true,
 	"solidRect": true, "drawUnlit": true,
 }
 

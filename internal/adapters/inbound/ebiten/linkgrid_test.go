@@ -40,7 +40,7 @@ func TestLinkKindsClassify(t *testing.T) {
 		{Kind: spritepkg.FenceKind, X: 0, Y: 0, W: 1, H: 1}, {Kind: "wall", X: 1, Y: 0, W: 1, H: 1},
 		{Kind: overlay.ConduitKind, X: 0, Y: 1, W: 1, H: 1}, {Kind: overlay.BatteryKind, X: 1, Y: 1, W: 1, H: 1},
 	}}
-	var g linkGrid
+	var g overlay.Links
 	g.Sync(w, 3, 2)
 	if g.Mask(0, 0) != artpkg.WallE || g.Mask(1, 0) != 0 {
 		t.Fatalf("fence beside a wall: masks %d %d", g.Mask(0, 0), g.Mask(1, 0))
@@ -55,10 +55,10 @@ func TestGhostAndFrameWallsDrawWithArt(t *testing.T) {
 	art := testArt(t)
 	r := testStoneArt()
 	r.art, r.game = art, &stubSim{w: 8, h: 8}
-	if !r.drawLinked(ebiten.NewImage(256, 256), "structure/wall_stone", 2, 2, artpkg.WallE|artpkg.WallS, spritepkg.CornerSE, r.stuffTint("granite blocks"), spritepkg.GhostOKCS, 32, 256, 256) {
+	if !r.pipe().Paint.DrawLinked(r.liveView(), r.pipe().Pass(), ebiten.NewImage(256, 256), "structure/wall_stone", 2, 2, artpkg.WallE|artpkg.WallS, spritepkg.CornerSE, r.pipe().Paint.StuffTint("granite blocks"), spritepkg.GhostOKCS, 32, 256, 256) {
 		t.Fatal("a granite ghost wall has art")
 	}
-	if r.drawLinked(ebiten.NewImage(256, 256), "structure/no_such_family", 2, 2, 0, 0, color.NRGBA{}, spritepkg.NoCS, 32, 256, 256) {
+	if r.pipe().Paint.DrawLinked(r.liveView(), r.pipe().Pass(), ebiten.NewImage(256, 256), "structure/no_such_family", 2, 2, 0, 0, color.NRGBA{}, spritepkg.NoCS, 32, 256, 256) {
 		t.Fatal("unknown family draws nothing")
 	}
 }

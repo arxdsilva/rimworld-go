@@ -22,7 +22,7 @@ func (o *Objects) DrawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, til
 	v := o.v
 	o.Creatures.DropCarry(p.ID)
 	fp := o.Creatures.FigurePoseOf(v, p)
-	o.Creatures.DrawPawnFigure(v, o.pass(), screen, p, wx, wy, tile, fp)
+	o.Creatures.DrawPawnFigure(v, o.Pass(), screen, p, wx, wy, tile, fp)
 	if p.Lying {
 		return
 	}

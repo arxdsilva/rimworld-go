@@ -7,6 +7,7 @@ import (
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
@@ -42,7 +43,7 @@ func TestWallMask(t *testing.T) {
 	for _, c := range [][2]int{{1, 1}, {1, 0}, {2, 1}, {1, 2}, {0, 1}, {5, 5}} {
 		w.Buildings = append(w.Buildings, game.BuildingView{Kind: "wall", X: c[0], Y: c[1]})
 	}
-	var g linkGrid
+	var g overlay.Links
 	g.Sync(w, 8, 8)
 	if got := g.Mask(1, 1); got != artpkg.WallN|artpkg.WallE|artpkg.WallS|artpkg.WallW {
 		t.Fatalf("cross = %d", got)
@@ -167,7 +168,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		for _, f := range architect.FacingNames {
 			for _, open := range []bool{false, true} {
 				for _, ew := range []bool{false, true} {
-					keys = append(keys, architect.BuildSprite(t.build, f, 0, ew, open))
+					keys = append(keys, worldpkg.BuildSprite(t.build, f, 0, ew, open))
 				}
 			}
 		}
@@ -180,7 +181,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	}
 	for _, ew := range []bool{false, true} {
 		for _, open := range []bool{false, true} {
-			keys = append(keys, architect.BuildSpriteStuff("door", "steel", "", 0, ew, open))
+			keys = append(keys, worldpkg.BuildSpriteStuff("door", "steel", "", 0, ew, open))
 		}
 	}
 	for v := 0; v < worldpkg.SoilVariants; v++ {

@@ -28,7 +28,8 @@ const pickCover = 0.15
 // object pass draws it (drawn position, minimum creature size, juvenile
 // scale, west mirrored), without the passing pose of a lunge or a breath.
 func (r *Renderer) animalBodyRect(an game.AnimalView) (x0, y0, x1, y1 float64, ok bool) {
-	sp := r.art.Sprite(r.animalBaseKey(an)) // decoded at most once, for its box
+	c, v := r.pipe().Creatures, r.liveView()
+	sp := r.art.Sprite(c.AnimalBaseKey(v, an)) // decoded at most once, for its box
 	if sp == nil {
 		return 0, 0, 0, 0, false
 	}
@@ -37,14 +38,14 @@ func (r *Renderer) animalBodyRect(an game.AnimalView) (x0, y0, x1, y1 float64, o
 	p := m.PxPerTile()
 	// tiles from the drawn tile's top-left
 	x0, y0, x1, y1 = (bx0-m.Origin[0])/p, (by0-m.Origin[1])/p, (bx1-m.Origin[0])/p, (by1-m.Origin[1])/p
-	if r.animalMirrored(an) {
+	if c.AnimalMirrored(v, an) {
 		x0, x1 = 2*motionpkg.FigurePivotX-x1, 2*motionpkg.FigurePivotX-x0
 	}
 	if s := an.Scale; s > 0 && s < 1 {
 		x0, x1 = motionpkg.FigurePivotX+(x0-motionpkg.FigurePivotX)*s, motionpkg.FigurePivotX+(x1-motionpkg.FigurePivotX)*s
 		y0, y1 = motionpkg.FigurePivotY+(y0-motionpkg.FigurePivotY)*s, motionpkg.FigurePivotY+(y1-motionpkg.FigurePivotY)*s
 	}
-	wx, wy := r.interpAnimal(an)
+	wx, wy := c.AnimalAt(v, an)
 	tile := r.cam.Tile()
 	k := 1.0
 	if ct := worldpkg.LodTile(tile); tile > 0 && ct > tile {
@@ -52,6 +53,12 @@ func (r *Renderer) animalBodyRect(an game.AnimalView) (x0, y0, x1, y1 float64, o
 		k = ct / tile
 	}
 	return wx + x0*k, wy + y0*k, wx + x1*k, wy + y1*k, true
+}
+
+// animalPads is how far, in tiles, an animal's drawn body reaches past
+// its cell at tile px a tile (sideways and up, and down).
+func (r *Renderer) animalPads(tile float64) (pad, padS int) {
+	return worldpkg.AnimalPadsOf(r.art, tile)
 }
 
 // coversTile reports a body box overlapping tile (tx, ty) by pickCover.

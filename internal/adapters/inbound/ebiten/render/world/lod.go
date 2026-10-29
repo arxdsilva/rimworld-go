@@ -208,7 +208,7 @@ func (k *Bakes) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 
 					case b.Floor:
 						k.DrawTile(dst, k.BuildKey("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, sprite.TintCS(k.stuffTint(b.Stuff)))
 					case b.Kind == overlay.BridgeKind:
-						k.Overlays.DrawBridgeCell(k.v, k.pass(), dst, *w, k.Overlays.Bridges.Sync(*w), b, tile, sw, sh)
+						k.Overlays.DrawBridgeCell(k.v, k.Pass(), dst, *w, k.Overlays.Bridges.Sync(*w), b, tile, sw, sh)
 					case b.Kind == "sleeping spot":
 						k.drawSprite(dst, BuildSprite(b.Kind, b.Facing, 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
 					case b.Kind == "carpet":

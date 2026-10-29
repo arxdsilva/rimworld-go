@@ -62,7 +62,7 @@ func BenchmarkDrawArtLitAB(b *testing.B) {
 			frame := func() {
 				r.present++
 				r.advance()
-				r.setView(1280, 800, tile)
+				r.pipe().Env.SetView(r.liveView(), 1280, 800, tile)
 				r.drawArt(screen, 1280, 800, tile)
 			}
 			for i := 0; i < 5; i++ {

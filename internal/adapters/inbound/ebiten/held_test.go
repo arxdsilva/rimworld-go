@@ -126,7 +126,7 @@ func TestNoWeaponWhenOffDuty(t *testing.T) {
 	walking := motionpkg.MoveState{Blend: 1, Moving: true, Speed: 0.06}
 	for _, w := range []string{"rifle", "knife", "spear", "club", "fists"} {
 		for _, m := range []motionpkg.MoveState{{}, walking} {
-			if h := r.creatures().IdleHeld(game.PawnView{Weapon: w}, m); h.Key != "" {
+			if h := r.pipe().Creatures.IdleHeld(game.PawnView{Weapon: w}, m); h.Key != "" {
 				t.Fatalf("%s off duty: nothing held: %+v", w, h)
 			}
 		}
@@ -144,14 +144,14 @@ func TestNoWeaponWhenOffDuty(t *testing.T) {
 		{Weapon: "knife", Action: game.ActionMelee},
 	} {
 		want, _ := creature.HeldWeaponKey(q.Weapon)
-		if h := r.creatures().IdleHeld(q, motionpkg.MoveState{}); h.Key != want || h.Stance != creature.StanceCarried {
+		if h := r.pipe().Creatures.IdleHeld(q, motionpkg.MoveState{}); h.Key != want || h.Stance != creature.StanceCarried {
 			t.Fatalf("on duty (%+v) the weapon is carried: %+v", q, h)
 		}
 	}
-	if h := r.creatures().IdleHeld(game.PawnView{Weapon: "rifle", Hostile: true, Fleeing: true}, motionpkg.MoveState{}); h.Key != "" {
+	if h := r.pipe().Creatures.IdleHeld(game.PawnView{Weapon: "rifle", Hostile: true, Fleeing: true}, motionpkg.MoveState{}); h.Key != "" {
 		t.Fatal("a fleeing raider holds nothing")
 	}
-	if h := r.creatures().IdleHeld(game.PawnView{Weapon: "fists", Drafted: true}, motionpkg.MoveState{}); h.Key != "" {
+	if h := r.pipe().Creatures.IdleHeld(game.PawnView{Weapon: "fists", Drafted: true}, motionpkg.MoveState{}); h.Key != "" {
 		t.Fatal("fists: nothing held")
 	}
 	// the figure draw: body layers only
@@ -281,7 +281,7 @@ func TestCarriedWeaponBehindFacingNorth(t *testing.T) {
 		p := game.PawnView{ID: 1, X: 2, Y: 2, Weapon: "rifle", Drafted: true}
 		var keys []string
 		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: c.f, Ps: creature.StandPose(), Held: creature.ReadyHeld(p)})
+		r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: c.f, Ps: creature.StandPose(), Held: creature.ReadyHeld(p)})
 		body := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/body_") })
 		rifle := slices.Index(keys, "weapon/rifle_basic")
 		if body < 0 || rifle < 0 || (rifle < body) != c.behind {

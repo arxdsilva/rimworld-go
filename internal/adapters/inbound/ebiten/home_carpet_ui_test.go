@@ -352,11 +352,11 @@ func TestCarpetSpriteKeys(t *testing.T) {
 		"leather carpet": "furniture/carpet_leather", "cloth carpet": "furniture/carpet_cloth",
 		"": "furniture/carpet_straw", "bogus": "furniture/carpet_straw",
 	} {
-		if got := architect.BuildSpriteStuff("carpet", stuff, "south", 0, false, false); got != want {
+		if got := world.BuildSpriteStuff("carpet", stuff, "south", 0, false, false); got != want {
 			t.Errorf("sprite(%q) = %q, want %q", stuff, got, want)
 		}
 	}
-	if got := architect.BuildSprite("carpet", "south", 0, false, false); got != "furniture/carpet_straw" {
+	if got := world.BuildSprite("carpet", "south", 0, false, false); got != "furniture/carpet_straw" {
 		t.Errorf("default = %q", got)
 	}
 }

@@ -224,7 +224,15 @@ rimworld-go/
 │   │
 │   ├── adapters/
 │   │   ├── inbound/
-│   │   │   ├── ebiten/
+│   │   │   ├── ebiten/            # the client's composition root: App, Renderer, shell roles, nav, hotkeys, capture (ARCH-001…006)
+│   │   │   │   ├── ports/         # the roles a feature sees of the shell (Hinter, Sizer, World, View, …) and the Intents
+│   │   │   │   ├── ids/           # widget and click ids
+│   │   │   │   ├── gfx/           # canvas, text, rects, the one documented GPU state
+│   │   │   │   ├── camera/ art/ globe/ globemath/ inputframe/ hudlayout/ uikit/
+│   │   │   │   ├── render/        # View: one frame's context for the draw layers
+│   │   │   │   │   ├── motion/ light/ sprite/ env/ creature/ overlay/ cue/ minimap/ world/
+│   │   │   │   ├── selection/ mainmenu/ wizard/ options/ windows/ architect/ orders/
+│   │   │   │   ├── dialogs/ learn/ devtools/ perf/ inspector/ hud/   # one type per feature behind a Shell
 │   │   │   ├── cli/
 │   │   │   ├── debugui/
 │   │   │   └── future_net/
@@ -689,6 +697,8 @@ UI-only intent
 ```
 
 Renderer never calls entity stores to mutate game state.
+
+Inside the client the same rule repeats one level down (SOLID_GO.md §7, ARCH-004/005): the root `Renderer` fills one `render.View` per frame (camera, art, this frame's world and pawns, clocks, options) and the draw layers under `render/` (`motion`, `light`, `sprite`, `env`, `creature`, `overlay`, `cue`, `minimap`, `world`) read that view and each other's exported types, never the `Renderer`; each layer's needs of the simulation are a small consumer-owned interface (`env.Chunks`, `world.Source`) taking values, never a pointer to a frame local through an interface call. The App's features (`hud`, `inspector`, `architect`, `windows`, `orders`, …) see the shell only through the `ports` roles plus a small `Host` their `deps.go` declares, send cross-feature requests as `ports.Intent`s, and never import the root or one another; the root's `<pkg>_compat.go` holds the host adapters. The simulation reaches the root as the union `Simulation` of eight consumer groups (`sim_ports.go`), stored only at the composition root.
 
 Renderer-specific data such as sprite handles, camera transforms, screen pixels, and animation interpolation stay outside domain packages. Visual production (scale, pivots, palettes, sprites, icons, UI chrome, atlases) follows `ART_DIRECTION_AND_ASSET_PIPELINE.md`; named screens, windows, overlays, and HUD layout follow `MAIN_UI_SCREENS_SPECIFICATION.md`. Those specs do not move presentation ownership into the domain.
 

@@ -168,21 +168,21 @@ func TestSwitchClicksWhenPowerOnFlips(t *testing.T) {
 		b.PowerOn, b.PowerWantOn = on, on
 		return game.WorldView{Buildings: []game.BuildingView{b}}
 	}
-	r.listenWorld(sw(true), nil)
-	r.listenWorld(sw(true), nil)
+	r.cueBus().ListenWorld(r.liveView(), sw(true), nil)
+	r.cueBus().ListenWorld(r.liveView(), sw(true), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("an unchanged switch cued %+v", c)
 	}
-	r.listenWorld(sw(false), nil)
+	r.cueBus().ListenWorld(r.liveView(), sw(false), nil)
 	c := r.cueBus().Take()
 	if len(c) != 1 || c[0].ID != "sfx.switch_click" || c[0].X != 4.5 || c[0].Y != 6.5 || c[0].Global {
 		t.Fatalf("a switch thrown off clicks where it stands, got %+v", c)
 	}
-	r.listenWorld(sw(false), nil)
+	r.cueBus().ListenWorld(r.liveView(), sw(false), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the click is heard once, got %+v", c)
 	}
-	r.listenWorld(sw(true), nil)
+	r.cueBus().ListenWorld(r.liveView(), sw(true), nil)
 	if c := r.cueBus().Take(); len(c) != 1 || c[0].ID != "sfx.switch_click" {
 		t.Fatalf("a switch thrown on clicks too, got %+v", c)
 	}
@@ -203,18 +203,18 @@ func TestSwitchClickIgnoresEverythingElse(t *testing.T) {
 		}
 		return w
 	}
-	r.listenWorld(view(true, true, true, false), nil)
+	r.cueBus().ListenWorld(r.liveView(), view(true, true, true, false), nil)
 	// a colonist is on the way to flick it: wanted flips, the switch does not
-	r.listenWorld(view(true, false, true, false), nil)
+	r.cueBus().ListenWorld(r.liveView(), view(true, false, true, false), nil)
 	// a heater switched off at its own toggle is not a switch
-	r.listenWorld(view(true, false, false, false), nil)
+	r.cueBus().ListenWorld(r.liveView(), view(true, false, false, false), nil)
 	// a new switch built is not a click
-	r.listenWorld(view(true, false, false, true), nil)
+	r.cueBus().ListenWorld(r.liveView(), view(true, false, false, true), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("no switch changed state, got %+v", c)
 	}
 	// a switch deconstructed is not a click either
-	r.listenWorld(game.WorldView{}, nil)
+	r.cueBus().ListenWorld(r.liveView(), game.WorldView{}, nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a removed switch cued %+v", c)
 	}
@@ -236,35 +236,35 @@ func TestShortCircuitSoundsOnItsLetterNotOnDeconstruction(t *testing.T) {
 		}
 		return w
 	}
-	r.listenWorld(grid(3, 4, 5), nil)
+	r.cueBus().ListenWorld(r.liveView(), grid(3, 4, 5), nil)
 	// the player deconstructs a conduit: quiet
-	r.listenWorld(grid(3, 5), nil)
+	r.cueBus().ListenWorld(r.liveView(), grid(3, 5), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a deconstructed conduit cued %+v", c)
 	}
 	// a conduit burns out and its letter arrives with it
 	w := grid(3)
 	w.Letters = []game.LetterView{sndLetterAt(1, "Short circuit", 5, 5)}
-	r.listenWorld(w, nil)
+	r.cueBus().ListenWorld(r.liveView(), w, nil)
 	c := r.cueBus().Take()
 	if len(c) != 1 || c[0].ID != "sfx.short_circuit" || c[0].X != 5.5 || c[0].Y != 5.5 || c[0].Global {
 		t.Fatalf("a short circuit zaps where the conduit was, got %+v", c)
 	}
 	// the letter stays in the stack: it is heard once
-	r.listenWorld(w, nil)
-	r.listenWorld(w, nil)
+	r.cueBus().ListenWorld(r.liveView(), w, nil)
+	r.cueBus().ListenWorld(r.liveView(), w, nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the same letter cued again: %+v", c)
 	}
 	// other letters are not short circuits
 	w.Letters = append(w.Letters, sndLetterAt(2, "Solar flare", -1, -1), sndLetterAt(3, "Visitors", 2, 2))
-	r.listenWorld(w, nil)
+	r.cueBus().ListenWorld(r.liveView(), w, nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("another letter cued %+v", c)
 	}
 	// a second circuit later is heard again
 	w.Letters = append(w.Letters, sndLetterAt(4, "Short circuit", 3, 5))
-	r.listenWorld(w, nil)
+	r.cueBus().ListenWorld(r.liveView(), w, nil)
 	if c := r.cueBus().Take(); len(c) != 1 || c[0].X != 3.5 {
 		t.Fatalf("the next short circuit is heard, got %+v", c)
 	}
@@ -276,22 +276,22 @@ func TestShortCircuitLettersAlreadyThereAreSilent(t *testing.T) {
 	r := New(sim)
 	// a loaded game opens with an old short-circuit letter in the stack
 	old := game.WorldView{Letters: []game.LetterView{sndLetterAt(7, "Short circuit", 5, 5)}}
-	r.listenWorld(old, nil)
-	r.listenWorld(old, nil)
+	r.cueBus().ListenWorld(r.liveView(), old, nil)
+	r.cueBus().ListenWorld(r.liveView(), old, nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a letter from before the game was loaded cued %+v", c)
 	}
 	// a stale letter showing up late (an old save's stack) is silent too
 	stale := old
 	stale.Letters = append(stale.Letters, game.LetterView{ID: 8, Title: "Short circuit", X: 2, Y: 2, Tick: 10})
-	r.listenWorld(stale, nil)
+	r.cueBus().ListenWorld(r.liveView(), stale, nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a letter from long ago cued %+v", c)
 	}
 	// a letter without a place has nowhere to sound
 	nowhere := old
 	nowhere.Letters = append(nowhere.Letters, game.LetterView{ID: 9, Title: "Short circuit", X: -1, Y: -1, Tick: uint64(sim.tick)})
-	r.listenWorld(nowhere, nil)
+	r.cueBus().ListenWorld(r.liveView(), nowhere, nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a letter without a place cued %+v", c)
 	}
@@ -301,27 +301,27 @@ func TestSolarFlareBuzzesOncePerFlare(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 20, h: 20})
 	flare := func(on bool) game.WorldView { return game.WorldView{SolarFlare: on} }
-	r.listenWorld(flare(false), nil)
-	r.listenWorld(flare(false), nil)
+	r.cueBus().ListenWorld(r.liveView(), flare(false), nil)
+	r.cueBus().ListenWorld(r.liveView(), flare(false), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("calm sun cued %+v", c)
 	}
-	r.listenWorld(flare(true), nil)
+	r.cueBus().ListenWorld(r.liveView(), flare(true), nil)
 	c := r.cueBus().Take()
 	if len(c) != 1 || c[0].ID != "ui.solar_flare" || !c[0].Global {
 		t.Fatalf("the flare starts with one global buzz, got %+v", c)
 	}
 	for range 5 {
-		r.listenWorld(flare(true), nil)
+		r.cueBus().ListenWorld(r.liveView(), flare(true), nil)
 	}
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the buzz repeated during the flare: %+v", c)
 	}
-	r.listenWorld(flare(false), nil)
+	r.cueBus().ListenWorld(r.liveView(), flare(false), nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("the end of a flare is silent, got %+v", c)
 	}
-	r.listenWorld(flare(true), nil)
+	r.cueBus().ListenWorld(r.liveView(), flare(true), nil)
 	if c := r.cueBus().Take(); len(c) != 1 {
 		t.Fatalf("the next flare buzzes again, got %+v", c)
 	}
@@ -330,8 +330,8 @@ func TestSolarFlareBuzzesOncePerFlare(t *testing.T) {
 func TestSolarFlareAlreadyOnWhenLoadedIsSilent(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 20, h: 20})
-	r.listenWorld(game.WorldView{SolarFlare: true}, nil)
-	r.listenWorld(game.WorldView{SolarFlare: true}, nil)
+	r.cueBus().ListenWorld(r.liveView(), game.WorldView{SolarFlare: true}, nil)
+	r.cueBus().ListenWorld(r.liveView(), game.WorldView{SolarFlare: true}, nil)
 	if c := r.cueBus().Take(); len(c) != 0 {
 		t.Fatalf("a flare already under way when the game loaded cued %+v", c)
 	}
@@ -345,7 +345,7 @@ func TestPowerCuesReachTheSoundBus(t *testing.T) {
 	r := a.renderer
 	cx, cy := centreTile(a)
 	r.cam.Zoom = 1.5
-	r.cue("sfx.switch_click", cx+6, cy, 1)
+	r.cueBus().Cue("sfx.switch_click", cx+6, cy, 1)
 	r.cueBus().Global("ui.solar_flare")
 	a.colonyCues()
 	click, buzz := rec.played("sfx.switch_click"), rec.played("ui.solar_flare")

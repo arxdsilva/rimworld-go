@@ -30,7 +30,17 @@ func (r *Renderer) watchThreats(w game.WorldView) {
 	if r.pauseOnThreat && r.speed != speedPaused {
 		r.speed = speedPaused
 		r.threatPaused = true
-		r.onThreatPause(w, newest) // render/creature chase.go: show the player the chase
+		r.onThreatPause(w, newest) // show the player the chase
+	}
+}
+
+// onThreatPause brings an off-screen chase into the colony viewport when
+// its warning has just paused the game (render/creature chase.go finds it;
+// the camera is the renderer's).
+func (r *Renderer) onThreatPause(w game.WorldView, tick uint64) {
+	vp := r.cueBus().Voice.View
+	if x, y, ok := r.pipe().Creatures.OnThreatPause(r.liveView(), w, r.game.Snapshot(), tick, vp); ok {
+		r.centerOnView(x, y, vp, vp)
 	}
 }
 

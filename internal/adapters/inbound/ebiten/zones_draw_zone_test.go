@@ -58,7 +58,7 @@ func TestHiddenZoneDrawsNoLabelAndARenamedOneShowsItsName(t *testing.T) {
 	hidden := rectZone(2, game.ZoneStockpile, 12, 2, 18, 6)
 	hidden.Hidden = true
 	plain := rectZone(3, game.ZonePen, 2, 8, 8, 10)
-	r.drawZoneLabels(ebiten.NewImage(64, 64), game.WorldView{Zones: []game.ZoneView{named, hidden, plain}}, 1280, 720, r.cam.Tile())
+	r.overlays().Zones.DrawZoneLabels(r.liveView(), ebiten.NewImage(64, 64), game.WorldView{Zones: []game.ZoneView{named, hidden, plain}}, 1280, 720, r.cam.Tile())
 	var texts []string
 	for _, e := range wlOfKind(*got, "text") {
 		texts = append(texts, e.Text)

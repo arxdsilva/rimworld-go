@@ -78,7 +78,7 @@ func castAll(r *Renderer, p game.PawnView) map[string]int {
 	layer := ebiten.NewImage(512, 512)
 	r.cast = &lightpkg.Cast{Layer: layer, Alpha: 0.3, OnDraw: func(img *ebiten.Image) { got[keyOf(r.art, img)]++ }}
 	defer func() { r.cast = nil }()
-	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, castTile, r.pawnFigurePoseOf(p))
+	r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, castTile, r.pipe().Creatures.FigurePoseOf(r.liveView(), p))
 	return got
 }
 
@@ -126,7 +126,7 @@ func TestFigureDrawIsPure(t *testing.T) {
 	r.present = 100
 	r.view.Pawns = []game.PawnView{rescuer, patient, downed}
 	r.last[5] = pawnVisual{facing: artpkg.FaceEast, lyingSince: 90}
-	st := r.creatures()
+	st := r.pipe().Creatures
 	st.PrevStride[3] = 0.25
 	type snap struct {
 		carry, stride, work, recs, last, parts, floaters int

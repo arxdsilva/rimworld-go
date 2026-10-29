@@ -16,7 +16,7 @@ import (
 func TestStrikeFlashAndThunder(t *testing.T) {
 	r := &Renderer{present: 100}
 	r.overlays().Fires.OnSimStrike(5, 6, 4000)
-	if !r.envLayer().FlashSeen || r.envLayer().FlashAt != 100 {
+	if !r.pipe().Env.FlashSeen || r.pipe().Env.FlashAt != 100 {
 		t.Errorf("flash %+v", r.env)
 	}
 	if r.cueBus().ThunderAt <= 100 {
@@ -103,7 +103,7 @@ func TestDrawWorldFiresAndParticles(t *testing.T) {
 	w := game.WorldView{Fires: []game.FireView{{X: 3, Y: 3, Size: 90}, {X: 4, Y: 3, Size: 5}}}
 	for p := uint64(0); p < 200; p++ {
 		r.present = p
-		r.emitBlazeParticles(w)
+		r.overlays().Fires.EmitBlazeParticles(r.liveView(), w)
 	}
 	if len(r.parts) == 0 {
 		t.Error("a blaze emits no embers or smoke")
@@ -156,8 +156,8 @@ func TestShowStrikesOncePerStrikeAndNotOldOnes(t *testing.T) {
 	sim.tick = 5000
 	r := New(sim)
 	w := game.WorldView{Strikes: []game.StrikeView{{X: 1, Y: 1, Tick: 100}, {X: 2, Y: 3, Tick: 4990}}}
-	r.showStrikes(w)
-	r.showStrikes(w) // the same view again: no second crack
+	r.overlays().Fires.ShowStrikes(r.liveView(), w)
+	r.overlays().Fires.ShowStrikes(r.liveView(), w) // the same view again: no second crack
 	cues := r.cueBus().Take()
 	if len(cues) != 1 || cues[0].X != 2.5 || cues[0].Y != 3.5 {
 		t.Fatalf("cues %+v: want one crack, at the fresh strike", cues)

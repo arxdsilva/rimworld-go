@@ -202,7 +202,7 @@ func TestCarpetFramePass(t *testing.T) {
 	r.art = art
 	screen := ebiten.NewImage(640, 400)
 	tile := r.cam.Tile()
-	r.setView(640, 400, tile)
+	r.pipe().Env.SetView(r.liveView(), 640, 400, tile)
 	r.drawArt(screen, 640, 400, tile)
 }
 
@@ -245,7 +245,7 @@ func BenchmarkDrawDirt(b *testing.B) {
 	r.cam.Zoom = 0.6
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.cam.Tile()
-	r.setView(1280, 800, tile)
+	r.pipe().Env.SetView(r.liveView(), 1280, 800, tile)
 	r.view.W = r.game.World()
 	r.lit.Light = light.LightAt(12, summerDay, "clear", 0)
 	for i := 0; i < 5; i++ {

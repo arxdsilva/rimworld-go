@@ -62,7 +62,7 @@ func stainBench(b *testing.B) (*Renderer, *ebiten.Image) {
 func BenchmarkDrawStains(b *testing.B) {
 	r, screen := stainBench(b)
 	tile := r.cam.Tile()
-	r.setView(1280, 800, tile)
+	r.pipe().Env.SetView(r.liveView(), 1280, 800, tile)
 	r.view.W = r.game.World()
 	r.lit.Light = light.LightAt(12, summerDay, "clear", 0)
 	for i := 0; i < 5; i++ {
@@ -83,7 +83,7 @@ func BenchmarkDrawArtStains(b *testing.B) {
 	frame := func() {
 		r.present++
 		r.advance()
-		r.setView(1280, 800, tile)
+		r.pipe().Env.SetView(r.liveView(), 1280, 800, tile)
 		r.drawArt(screen, 1280, 800, tile)
 	}
 	for i := 0; i < 5; i++ {

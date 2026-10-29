@@ -384,5 +384,5 @@ func applyGraphicsKnobs(r *Renderer, g config.Graphics) {
 	r.env.Shadow.SetOff(!g.Shadows)
 	r.lit.Off = !g.Lighting
 	r.water.Simple = g.Water == config.WaterSimple
-	r.lod.Grass.Level = g.Grass
+	r.pipe().LOD.Grass.Level = g.Grass
 }

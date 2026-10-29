@@ -68,12 +68,12 @@ func TestWestMirrorsEast(t *testing.T) {
 	r.art.Sprites["animal/deer_east"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
 	r.last[7] = pawnVisual{facing: artpkg.FaceWest}
 	an := game.AnimalView{ID: 7, Species: "deer", X: 2, Y: 2}
-	if k := r.animalBaseKey(an); k != "animal/deer_east" || !r.animalMirrored(an) {
-		t.Fatalf("west animal: %s mirrored=%v", k, r.animalMirrored(an))
+	if k := r.pipe().Creatures.AnimalBaseKey(r.liveView(), an); k != "animal/deer_east" || !r.pipe().Creatures.AnimalMirrored(r.liveView(), an) {
+		t.Fatalf("west animal: %s mirrored=%v", k, r.pipe().Creatures.AnimalMirrored(r.liveView(), an))
 	}
 	var got []string
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { got = append(got, keyOf(r.art, img)) }
-	r.drawAnimalFigure(ebiten.NewImage(256, 256), an, 2, 2, 64)
+	r.pipe().Creatures.DrawAnimalFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(256, 256), an, 2, 2, 64)
 	r.lit.OnDraw = nil
 	if !slices.Equal(got, []string{"animal/deer_east"}) {
 		t.Fatalf("west animal drew %v", got)
@@ -86,7 +86,7 @@ func drawnKeys(r *Renderer, p game.PawnView, f artpkg.Facing) []string {
 	var keys []string
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	defer func() { r.lit.OnDraw = nil }()
-	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: f, Ps: creature.StandPose(), Held: r.creatures().IdleHeld(p, motionpkg.MoveState{})})
+	r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, 64, creature.FigurePose{Face: f, Ps: creature.StandPose(), Held: r.pipe().Creatures.IdleHeld(p, motionpkg.MoveState{})})
 	return keys
 }
 
@@ -122,7 +122,7 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 		t.Fatal("the rig is the build's body")
 	}
 	// raiders keep their look's build and hair in maroon and slate
-	raider := r.pawnFigureLayers(game.PawnView{Look: l, Hostile: true}, "south")
+	raider := pawnFigureLayers(r.art, game.PawnView{Look: l, Hostile: true}, "south")
 	byKey := map[string]color.NRGBA{}
 	for _, ly := range raider {
 		byKey[ly.Key] = ly.Tint
@@ -134,7 +134,7 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 		t.Fatalf("raider keeps its hair: %v", byKey)
 	}
 	// the colonist bar portrait shows the same layers
-	if got, want := r.pawnPortraitLayers(p), r.pawnFigureLayers(p, "south"); !slices.Equal(got, want) {
+	if got, want := pawnFigureLayers(r.art, p, "south"), pawnFigureLayers(r.art, p, "south"); !slices.Equal(got, want) {
 		t.Fatalf("portrait %v, figure %v", got, want)
 	}
 }

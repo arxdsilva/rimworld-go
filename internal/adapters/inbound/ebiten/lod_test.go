@@ -43,7 +43,7 @@ func lodFrame(r *Renderer, tile float64) {
 	r.cam.Zoom = tile / camerapkg.TileSize
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
-	r.setView(640, 400, r.cam.Tile())
+	r.pipe().Env.SetView(r.liveView(), 640, 400, r.cam.Tile())
 	r.drawArt(screen, 640, 400, r.cam.Tile())
 }
 
@@ -53,23 +53,23 @@ func TestLODSwitchesByZoom(t *testing.T) {
 	w := lodWorld(64, 64)
 	r, _ := lodRenderer(w, 64, 64)
 	lodFrame(r, 64)
-	if r.lod.Tier != worldpkg.Live || r.lod.Chunks.Bakes != 0 || r.lod.Pages.Pages != nil {
-		t.Fatalf("64 px: tier %d, %d chunk bakes, pages %v", r.lod.Tier, r.lod.Chunks.Bakes, r.lod.Pages.Pages != nil)
+	if r.pipe().LOD.Tier != worldpkg.Live || r.pipe().LOD.Chunks.Bakes != 0 || r.pipe().LOD.Pages.Pages != nil {
+		t.Fatalf("64 px: tier %d, %d chunk bakes, pages %v", r.pipe().LOD.Tier, r.pipe().LOD.Chunks.Bakes, r.pipe().LOD.Pages.Pages != nil)
 	}
 	lodFrame(r, 32)
-	if r.lod.Tier != worldpkg.Chunk || r.lod.Chunks.Bakes == 0 {
-		t.Fatalf("32 px: tier %d, %d chunk bakes", r.lod.Tier, r.lod.Chunks.Bakes)
+	if r.pipe().LOD.Tier != worldpkg.Chunk || r.pipe().LOD.Chunks.Bakes == 0 {
+		t.Fatalf("32 px: tier %d, %d chunk bakes", r.pipe().LOD.Tier, r.pipe().LOD.Chunks.Bakes)
 	}
 	// 640×400 at 32 px is 20×12.5 tiles: chunks (0,0) and (1,0)
-	if n := len(r.lod.Chunks.ByChunk); n != 2 {
+	if n := len(r.pipe().LOD.Chunks.ByChunk); n != 2 {
 		t.Fatalf("32 px baked %d chunks, want the 2 in view", n)
 	}
 	lodFrame(r, 8)
-	if r.lod.Tier != worldpkg.Map || r.lod.Pages.Pages == nil || r.lod.Pages.Pages[0] == nil {
-		t.Fatalf("8 px: tier %d, no map page", r.lod.Tier)
+	if r.pipe().LOD.Tier != worldpkg.Map || r.pipe().LOD.Pages.Pages == nil || r.pipe().LOD.Pages.Pages[0] == nil {
+		t.Fatalf("8 px: tier %d, no map page", r.pipe().LOD.Tier)
 	}
 	baked := 0
-	for _, b := range r.lod.Pages.Baked {
+	for _, b := range r.pipe().LOD.Pages.Baked {
 		if b {
 			baked++
 		}
@@ -84,27 +84,27 @@ func TestChunkBakeInvalidatedOnVersion(t *testing.T) {
 	w := lodWorld(64, 64)
 	r, sim := lodRenderer(w, 64, 64)
 	lodFrame(r, 24)
-	first := r.lod.Chunks.Bakes
+	first := r.pipe().LOD.Chunks.Bakes
 	if first == 0 {
 		t.Fatal("no chunk baked")
 	}
 	lodFrame(r, 24)
-	if r.lod.Chunks.Bakes != first {
-		t.Fatalf("an unchanged frame rebaked %d chunks", r.lod.Chunks.Bakes-first)
+	if r.pipe().LOD.Chunks.Bakes != first {
+		t.Fatalf("an unchanged frame rebaked %d chunks", r.pipe().LOD.Chunks.Bakes-first)
 	}
 	// new ground in chunk (0,0) only (well inside it): one rebake
 	t2 := append([]uint8(nil), w.Terrain...)
 	t2[8*64+8] = t2[2*64+2]
 	sim.world.Terrain, sim.world.StructVer = t2, 2
 	lodFrame(r, 24)
-	if got := r.lod.Chunks.Bakes - first; got != 1 {
+	if got := r.pipe().LOD.Chunks.Bakes - first; got != 1 {
 		t.Fatalf("one changed chunk rebaked %d", got)
 	}
 	// the bake budget spreads a full rebake over frames
 	r2, _ := lodRenderer(lodWorld(512, 512), 512, 512)
 	lodFrame(r2, 16) // 40×25 tiles: 3×2 chunks in view, padded to more
-	if r2.lod.Chunks.Bakes > worldpkg.BakeBudget {
-		t.Fatalf("one frame baked %d chunks, budget %d", r2.lod.Chunks.Bakes, worldpkg.BakeBudget)
+	if r2.pipe().LOD.Chunks.Bakes > worldpkg.BakeBudget {
+		t.Fatalf("one frame baked %d chunks, budget %d", r2.pipe().LOD.Chunks.Bakes, worldpkg.BakeBudget)
 	}
 }
 
@@ -181,7 +181,7 @@ func TestBigAnimalOffScreenStillDraws(t *testing.T) {
 	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = 1, 10*camerapkg.TileSize, 10*camerapkg.TileSize // the view starts at tile (10, 10)
 	screen := ebiten.NewImage(640, 400)
 	r.advance()
-	r.setView(640, 400, r.cam.Tile())
+	r.pipe().Env.SetView(r.liveView(), 640, 400, r.cam.Tile())
 	r.drawArt(screen, 640, 400, r.cam.Tile())
 	img := r.art.Sprites["animal/elephant_south"].Img
 	if img == nil || drawn[img] != 1 {

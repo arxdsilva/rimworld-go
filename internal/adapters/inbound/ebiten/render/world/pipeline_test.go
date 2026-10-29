@@ -71,7 +71,7 @@ func (h *fakeHosts) DrawTile(screen *ebiten.Image, key string, wx, wy, tile floa
 	h.p.DrawTile(screen, key, wx, wy, tile, sw, sh, cs)
 }
 func (h *fakeHosts) DrawSpritePose(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps motion.Pose) {
-	h.p.drawSpritePose(screen, key, tint, wx, wy, tile, ps)
+	h.p.DrawSpritePose(screen, key, tint, wx, wy, tile, ps)
 }
 func (h *fakeHosts) Objects(game.WorldView, []game.PawnView) []light.Caster { return nil }
 func (h *fakeHosts) Creatures(game.WorldView, []game.PawnView) []light.Creature[creature.FigurePose] {
@@ -140,9 +140,7 @@ func newRig(t *testing.T, w game.WorldView, mw, mh int, keys ...string) *rig {
 	}
 	lit := &light.Lit{Off: true}
 	paint := sprite.NewPainter(c, lit)
-	lod := &LOD{}
-	e := env.New(paint, lit)
-	e.Grass, e.Crops = &lod.Grass, &lod.Crops // the renderer's batches are the zoom state's
+	e := env.New(paint, lit) // New makes its grass and crop batches the zoom state's
 	cr := creature.New(paint, &motion.State[creature.Body]{}, lit)
 	cr.Host = figures{}
 	ov := overlay.New(paint, lit)
@@ -166,7 +164,7 @@ func newRig(t *testing.T, w game.WorldView, mw, mh int, keys ...string) *rig {
 	h := &fakeHosts{}
 	r.p = New(Layers{Lit: lit, Env: e, Creatures: cr, Overlays: ov, Cues: cue.New(), Shadows: &light.Shadows[creature.FigurePose]{}, Motion: &motion.State[creature.Body]{}},
 		Hosts{Index: h, Stamp: h, Casters: h},
-		Shared{Cam: cam, Cast: &cast, Blood: &blood, LOD: lod, Links: &overlay.Links{}, Stone: &StoneArt{}},
+		Shared{Cam: cam, Cast: &cast, Blood: &blood},
 		r.v, src)
 	h.p = r.p
 	r.p.SetArt(c)

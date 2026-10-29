@@ -28,7 +28,7 @@ func figureKeys(r *Renderer, p game.PawnView) []string {
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	defer func() { r.lit.OnDraw = nil }()
 	r.view.Pawns = []game.PawnView{p}
-	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, r.pawnFigurePoseOf(p))
+	r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, 64, r.pipe().Creatures.FigurePoseOf(r.liveView(), p))
 	return keys
 }
 
@@ -91,7 +91,7 @@ func TestPawnPortraitArtFaceScar(t *testing.T) {
 	r.art = scarArt()
 	keys := func(p game.PawnView) []string {
 		var out []string
-		for _, ly := range r.pawnPortraitLayers(p) {
+		for _, ly := range pawnFigureLayers(r.art, p, "south") {
 			out = append(out, ly.Key)
 		}
 		return out
@@ -125,11 +125,25 @@ func TestFallingFigureFaceScar(t *testing.T) {
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 0, Status: "alive", Lying: true, Disfigured: true}
 	var keys []string
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-	r.drawFigureIn(ebiten.NewImage(512, 512), p, artpkg.FaceWest, 2, 2, 64, creature.StandPose())
+	r.pipe().Creatures.DrawFigureIn(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, artpkg.FaceWest, 2, 2, 64, creature.StandPose())
 	r.lit.OnDraw = nil
 	scar := slices.IndexFunc(keys, func(k string) bool { return k == "pawn/face_scar_east" })
 	hair := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_") })
 	if scar < 0 || hair < 0 || scar < hair {
 		t.Fatalf("scar at %d, hair at %d: %v", scar, hair, keys)
 	}
+}
+
+// drawPawnPortraitArt draws the layered pawn (facing south, the portrait
+// crop of pawnCrops) fitted into the logical w x h box at (x, y), for HUD
+// chrome (the inspector); it draws through the UI canvas, so the art
+// scales with the UI like the names beside it (PLAY-017).
+func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
+	body := r.art.Sprite("pawn/body_south")
+	if body == nil {
+		return false
+	}
+	crop, _ := pawnCrops(body)
+	drawPawnCropped(screen, r.art, p, body, crop, x, y, w, h)
+	return true
 }
