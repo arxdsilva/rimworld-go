@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner; PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too)
+-   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner; PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too; SIM-062: rescue, capture, arrest and prioritize tending on the clicked pawn from the right-click menu)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -799,7 +799,7 @@ understandable.
 -   [ ] **Fire-at-will toggle**
 -   [ ] **Hold position behavior if implemented**
 -   [x] **Emergency tend** (MED-03: drafted right-click "Tend <name>" on a wounded colonist or prisoner)
--   [ ] **Rescue/capture contextual commands**
+-   [x] **Rescue/capture contextual commands** (SIM-062: select a colonist, right-click a pawn: "Rescue <name>", "Capture <name>", "Arrest <name>", "Prioritize tending <name>" (undrafted) or "Tend <name>" (drafted); disabled rows give the reason (no free bed, no free prisoner bed, carried by, cannot reach); Shift queues; journeys `TestJourneyOrders{RescueDowned,CaptureFromMenu,ArrestFromMenu,PrioritizeTend,RescueQueued}`)
 
 ## 13.3 Targeting feedback
 

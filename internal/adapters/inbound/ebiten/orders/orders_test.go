@@ -166,6 +166,8 @@ func TestHasPawnOrder(t *testing.T) {
 		{"emergency tend", []game.OrderOption{opt(command.Command{Kind: command.EmergencyTend})}, true},
 		{"prioritize with target", []game.OrderOption{opt(command.Command{Kind: command.Prioritize, Order: command.OrderRescue, Target: 7})}, true},
 		{"prioritize without target", []game.OrderOption{opt(command.Command{Kind: command.Prioritize})}, false},
+		// a standing pawn offers Arrest: a drafted right-click onto it still walks (SIM-062)
+		{"arrest alone", []game.OrderOption{opt(command.Command{Kind: command.Prioritize, Order: command.OrderArrest, Target: 7})}, false},
 		{"empty", nil, false},
 	}
 	for _, tc := range cases {

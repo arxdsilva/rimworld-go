@@ -8,8 +8,6 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/medcare"
-	"rimworld-go/internal/domain/sim/command"
-	"rimworld-go/internal/domain/sim/entity"
 )
 
 func TestPolicyLevels(t *testing.T) {
@@ -111,7 +109,7 @@ func TestEmergencyTend(t *testing.T) {
 	d.EmergencyTend(doc, patient)
 	j := h.jobs[doc]
 	if j.Kind != job.EmergencyTend || !j.Forced || j.Dest != herbal || j.WorkLeft != TendWork || h.owners[herbal] != doc ||
-		len(h.log) < 2 || h.log[0] != "clear" || h.log[1] != "interrupt" {
+		len(h.log) < 1 || h.log[0] != "interrupt" { // the queue is the game's (tick.go): a plain order replaced it already
 		t.Fatalf("emergency tend: %+v log %v", j, h.log)
 	}
 	h.drafted[doc] = false
@@ -162,33 +160,7 @@ func TestCareHelpers(t *testing.T) {
 	}
 }
 
-func TestPawnOrdersTend(t *testing.T) {
-	c, h := scene()
-	h.downed(patient, 30)
-	h.raiders = []entity.EntityID{other, 4}
-	h.pos[other], h.pos[4] = [2]int{5, 5}, [2]int{5, 5}
-	h.vital[other] = health.Record{Status: health.Downed}
-	h.tend[other], h.tend[4] = true, true
-	h.prisoners[other] = true // raider 4 is no prisoner
-	if c.PawnOrders(doc, 5, 5) != nil {
-		t.Fatal("undrafted: no Tend order")
-	}
-	h.drafted[doc] = true
-	opts := c.PawnOrders(doc, 5, 5)
-	if len(opts) != 2 || opts[0].Cmd.Kind != command.EmergencyTend || opts[0].Cmd.Target != uint64(patient) ||
-		opts[1].Cmd.Target != uint64(other) || opts[0].Disabled || opts[0].Label != "Tend "+h.Name(patient) {
-		t.Fatalf("Tend the colonist, then the prisoner: %+v", opts)
-	}
-	h.owners[other] = 7
-	c.Carry.Pick(8, patient)
-	opts = c.PawnOrders(doc, 5, 5)
-	if len(opts) != 1 || !opts[0].Disabled || opts[0].Reason != ReasonBusyTarget+h.Name(7) {
-		t.Fatalf("carried: no entry; held: disabled with the reason: %+v", opts)
-	}
-	if c.PawnOrders(doc, 1, 1) != nil {
-		t.Fatal("nobody there")
-	}
-}
+// raider 4 is no prisoner
 
 func TestSafeBedForRest(t *testing.T) {
 	c, h := scene()

@@ -108,7 +108,18 @@ func (g *Game) execOrder(id entity.EntityID, c command.Command) string {
 			return ReasonUnreachable
 		}
 		g.cmdMove(id, c.X, c.Y)
+	case command.EmergencyTend:
+		if reason := g.care.Doctor.CanEmergencyTend(id, entity.EntityID(c.Target)); reason != "" {
+			return reason
+		}
+		g.care.Doctor.EmergencyTend(id, entity.EntityID(c.Target))
 	case command.Prioritize:
+		if c.Order.TargetsPawn() {
+			if reason := g.care.Force(id, c.Order, entity.EntityID(c.Target)); reason != "" {
+				return reason
+			}
+			break
+		}
 		if c.Order != command.OrderMine && c.Order != command.OrderSmooth {
 			if _, reason := g.forcedJob(id, c.Order, c.X, c.Y, construction.Layer(c.Layer)); reason != "" {
 				return reason
@@ -128,7 +139,7 @@ func (g *Game) orderLabel(id entity.EntityID, c command.Command) string {
 		return fmt.Sprintf("Go to (%d, %d)", c.X, c.Y)
 	}
 	for _, o := range g.OrdersAt(id, c.X, c.Y) {
-		if o.Cmd.Kind == c.Kind && o.Cmd.Order == c.Order && o.Cmd.Layer == c.Layer {
+		if o.Cmd.Kind == c.Kind && o.Cmd.Order == c.Order && o.Cmd.Layer == c.Layer && o.Cmd.Target == c.Target {
 			return o.Label
 		}
 	}

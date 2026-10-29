@@ -2,7 +2,6 @@ package care
 
 import (
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -100,10 +99,10 @@ func (d *Doctor) bestPatient(id entity.EntityID, want func(pid entity.EntityID) 
 	return best
 }
 
-// rescuable: pid is a downed colonist (prisoners are tended where they
+// Rescuable: pid is a downed colonist (prisoners are tended where they
 // lie) out of bed with a free bed to be carried to. Its care level does
 // not matter: even "No care" is rescued.
-func (d *Doctor) rescuable(pid entity.EntityID) bool {
+func (d *Doctor) Rescuable(pid entity.EntityID) bool {
 	if !d.InjuredDowned(pid) || d.h.IsPrisoner(pid) || d.h.BedUnder(pid) != 0 {
 		return false
 	}
@@ -114,70 +113,19 @@ func (d *Doctor) rescuable(pid entity.EntityID) bool {
 // assignRescue carries the most urgent downed colonist to a bed.
 func (d *Doctor) assignRescue(id entity.EntityID) bool {
 	best := d.bestPatient(id, func(pid entity.EntityID) (job.Record, bool) {
-		return job.Record{Kind: job.Rescue, Target: pid}, d.rescuable(pid)
+		return job.Record{Kind: job.Rescue, Target: pid}, d.Rescuable(pid)
 	})
 	return best != nil && d.h.StartJob(id, best.rec)
 }
 
 // DoRescue runs rescue job j of doctor id: on reaching the patient pick
-// it up and head for a bed; on reaching the bed lay it in it.
+// it up and head for a bed; on reaching the bed lay it in it (carryToBed).
 func (d *Doctor) DoRescue(id entity.EntityID, j job.Record) {
-	h := d.h
 	if !d.InjuredDowned(j.Target) {
 		d.c.DropPatient(id)
 		j.State = job.Complete
-		h.SetJob(id, j)
+		d.h.SetJob(id, j)
 		return
 	}
-	x, y, _ := h.Pos(id)
-	if j.Dest == 0 {
-		bid := d.c.SafeBedFor(j.Target, x, y, RescueBed)
-		if bid == 0 || !h.Claim(id, bid) {
-			j.State, j.Fail = job.Fail, job.Reserved
-			h.SetJob(id, j)
-			return
-		}
-		b, _ := h.Building(bid)
-		sx, sy, ok := h.BesideSpot(id, b.X, b.Y)
-		var path []pathing.Point
-		if ok {
-			path, ok = h.PathTo(id, sx, sy)
-		}
-		if !ok {
-			j.State, j.Fail = job.Fail, job.Unreachable
-			h.SetJob(id, j)
-			return
-		}
-		d.c.Carry.Pick(id, j.Target)
-		j.Dest, j.TX, j.TY, j.Path, j.PathI = bid, sx, sy, path, 0
-		j.State = job.Goto
-		if len(path) == 0 {
-			j.State = job.Do
-		}
-		h.SetJob(id, j)
-		if j.State == job.Goto {
-			return
-		}
-	}
-	if _, ok := h.Building(j.Dest); !ok {
-		d.c.DropPatient(id)
-		j.State, j.Fail = job.Fail, job.TargetGone
-		h.SetJob(id, j)
-		return
-	}
-	if dest, _ := h.Building(j.Dest); IsMedicalBed(dest) {
-		d.c.Rest.Hold(j.Target, j.Dest) // held for the stay; its own bed stays its own
-	} else {
-		h.ReleaseBed(j.Target)
-	}
-	b, _ := h.Building(j.Dest)
-	b = b.Claim(uint64(j.Target))
-	h.SetBuilding(j.Dest, b)
-	d.c.Carry.Drop(id)
-	cx, cy := h.SleepCell(j.Target, b)
-	h.Place(j.Target, cx, cy)
-	h.SetSleptAt(j.Target, j.Dest)
-	h.Rescued(id, j.Target)
-	j.State = job.Complete
-	h.SetJob(id, j)
+	d.c.carryToBed(id, j, tripRescue)
 }

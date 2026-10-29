@@ -45,7 +45,7 @@ func (g *Game) applyOne(c command.Command) {
 			return // a colonist in a mental break won't take orders
 		}
 	}
-	if c.Kind == command.MovePawn || c.Kind == command.Prioritize {
+	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.EmergencyTend {
 		id := entity.EntityID(c.Pawn)
 		if c.Queue {
 			g.queueOrder(id, c)
@@ -155,6 +155,10 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DraftPawn:
 		g.setDraft(entity.EntityID(c.Pawn), c.Enabled)
 	case command.Prioritize:
+		if c.Order.TargetsPawn() { // care/forced.go (SIM-062): orders on a pawn
+			g.care.Force(entity.EntityID(c.Pawn), c.Order, entity.EntityID(c.Target))
+			return
+		}
 		g.prioritize(entity.EntityID(c.Pawn), c.Order, c.X, c.Y, construction.Layer(c.Layer))
 	case command.SetWorkEnabled:
 		t, ok := workTypeOf(c.Work)
@@ -1071,7 +1075,7 @@ func (g *Game) phaseJobs() {
 		case job.Brawl:
 			g.doBrawl(id, j) // social_fight.go
 		case job.Capture:
-			g.doCapture(id, j) // prisoners.go
+			g.care.DoCapture(id, j) // care/capture.go
 		case job.Warden:
 			g.doWarden(id, j) // prisoners.go
 		case job.DeliverFood:
@@ -1081,7 +1085,7 @@ func (g *Game) phaseJobs() {
 		case job.Train:
 			g.doTrain(id, j) // bonds.go
 		case job.Arrest:
-			g.doArrest(id, j) // prisoners.go
+			g.care.DoArrest(id, j) // care/capture.go
 		case job.Kidnap:
 			g.doKidnap(id, j) // world_state.go
 		case job.ExitMap:

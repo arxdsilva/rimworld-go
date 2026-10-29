@@ -3,7 +3,11 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/prisoner"
+	"rimworld-go/internal/domain/pawn/recreation"
+	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -13,8 +17,8 @@ import (
 // it paths like a raider, so a closed door keeps it in its room, and no
 // colonist, guard or turret treats it as hostile (standingRaider). Its
 // person record says Where=Prisoner. Capture and arrest are
-// prisoner_capture.go, its life prisoner_life.go, the warden
-// prisoner_warden.go.
+// care/capture.go (through carePrison, care_host_prison.go), its life
+// prisoner_life.go, the warden prisoner_warden.go.
 
 // Values follow the published RimWorld wiki by explicit user decision (ENG-003 balance override).
 const (
@@ -23,6 +27,13 @@ const (
 	releaseGoodwill = 15
 	// arrestGoodwill is what arresting a visitor costs with its faction.
 	arrestGoodwill = 25
+	// arrestBase is the arrest chance, permille, before the arrester's
+	// Social skill (arrestPerSocial a level) and ArrestSuccess stat.
+	arrestBase      = 600
+	arrestPerSocial = 20
+	arrestMax       = 980
+	// prisonerVisitStagger spreads first visits over the interval by id.
+	prisonerVisitStagger = 7919
 )
 
 // isPrisoner reports whether id is the colony's prisoner.
@@ -127,4 +138,68 @@ func withoutID(ids []entity.EntityID, id entity.EntityID) []entity.EntityID {
 	}
 	out := make([]entity.EntityID, 0, len(ids)-1)
 	return append(append(out, ids[:i]...), ids[i+1:]...)
+}
+
+// visitor reports id is a friendly visitor on the map (M9).
+func (g *Game) visitor(id entity.EntityID) bool {
+	p := g.personOf(id)
+	return p != nil && p.Where == whereVisitor && g.onMap(id)
+}
+
+// adjacent reports a and b stand within one tile of each other.
+func (g *Game) adjacent(a, b entity.EntityID) bool {
+	pa, _ := g.positions.Get(a)
+	pb, _ := g.positions.Get(b)
+	return abs(pa.X-pb.X) <= 1 && abs(pa.Y-pb.Y) <= 1
+}
+
+// arrestChance is the permille chance arrester takes target in: certain
+// when the target is down or asleep, else the base plus the arrester's
+// Social skill, times its ArrestSuccess stat.
+func (g *Game) arrestChance(arrester, target entity.EntityID) int {
+	v, _ := g.vital.Get(target)
+	tj, _ := g.jobs.Get(target)
+	if v.Status != health.Alive || tj.Kind == job.Sleep && tj.State == job.Do {
+		return 1000
+	}
+	c := int64(arrestBase + arrestPerSocial*int(g.skillOf(arrester, skSocial).Level))
+	c = c * int64(g.statOf(arrester, stat.ArrestSuccess)) / 1000
+	return int(min(max(c, 0), arrestMax))
+}
+
+// makePrisoner turns target into the colony's prisoner, taken by captor:
+// a colonist leaves the roster (keeping its relations and bio), every
+// prisoner joins raiderIDs out of the raid AI, with a fresh resistance
+// and the Recruit mode.
+func (g *Game) makePrisoner(target, captor entity.EntityID) {
+	now := uint64(g.clock.Now())
+	g.ensurePerson(target)
+	if slices.Contains(g.pawnIDs, target) {
+		g.pawnIDs = withoutID(g.pawnIDs, target)
+		delete(g.draft, target)
+		g.releaseBed(target)
+		g.raiderIDs = withID(g.raiderIDs, target)
+	}
+	r := g.raiders[target]
+	r.Leaving, r.Hungry, r.FoodRetry, r.Warden = false, false, 0, 0
+	r.Mode, r.Idle, r.RetryAt = raidArrive, 0, 0
+	if r.Arrived == 0 {
+		r.Arrived = now
+	}
+	g.raiders[target] = r
+	if g.prisoners == nil {
+		g.prisoners = map[entity.EntityID]*prisoner.State{}
+	}
+	roll := int32(g.stream(streamPrison).IntN(1001))
+	g.prisoners[target] = &prisoner.State{
+		Mode: prisoner.Recruit, Resistance: prisoner.InitialResistance(roll),
+		NextVisit: now + uint64(target)*prisonerVisitStagger%prisoner.VisitInterval, Captor: uint64(captor),
+	}
+	g.setWhere(target, wherePrisoner)
+	if _, ok := g.joy[target]; !ok {
+		g.joy[target] = recreation.Start
+	}
+	pos, _ := g.positions.Get(target)
+	g.message(pos.X, pos.Y, "%s is now the colony's prisoner.", g.personName(target))
+	g.addHistory("prisoner", g.personName(target)+" was taken prisoner.", target, captor)
 }

@@ -81,7 +81,7 @@ func (d *Doctor) Lying(id entity.EntityID) bool {
 // waiting to be rescued to a bed first. bleeding picks the patients
 // losing blood (true) or the rest (false).
 func (d *Doctor) tendable(pid entity.EntityID, bleeding bool) bool {
-	if !d.Lying(pid) || !d.h.NeedsTending(pid) || !d.c.Level(pid).Tends() || d.rescuable(pid) {
+	if !d.Lying(pid) || !d.h.NeedsTending(pid) || !d.c.Level(pid).Tends() || d.Rescuable(pid) {
 		return false
 	}
 	return (d.h.BleedPerDay(pid) > 0) == bleeding
@@ -200,25 +200,13 @@ func (d *Doctor) DoTend(id entity.EntityID, j job.Record) {
 }
 
 // CanEmergencyTend reports why drafted colonist doctor cannot tend
-// patient now ("" when it can).
+// patient now ("" when it can): tendWhy (forced.go, shared with
+// "Prioritize tending"), drafted.
 func (d *Doctor) CanEmergencyTend(doctor, patient entity.EntityID) string {
-	h := d.h
-	switch {
-	case !h.IsColonist(doctor) || h.DoctorBlocked(doctor) || !h.Drafted(doctor):
+	if !d.h.Drafted(doctor) {
 		return ReasonIncapable
-	case !h.NeedsTending(patient):
-		return ReasonNothingToTend
-	case doctor == patient && !d.c.SelfTendAllowed(doctor):
-		return ReasonNoSelfTend
 	}
-	if owner, taken := h.Owner(patient); taken && owner != doctor {
-		return ReasonBusyTarget + h.Name(owner)
-	}
-	px, py, _ := h.Pos(patient)
-	if _, _, ok := h.BesideSpot(doctor, px, py); !ok {
-		return ReasonUnreachable
-	}
-	return ""
+	return d.tendWhy(doctor, patient)
 }
 
 // EmergencyTend sends drafted doctor to tend patient now: it fetches the
@@ -237,8 +225,7 @@ func (d *Doctor) EmergencyTend(doctor, patient entity.EntityID) {
 	if doctor == patient {
 		wl = TendWork * 3 / 2
 	}
-	h.ClearOrders(doctor) // a plain order replaces the queue
-	h.Interrupt(doctor, job.Cancelled)
+	h.Interrupt(doctor, job.Cancelled) // a plain order already replaced the queue (tick.go)
 	rec := d.emergencyMedicine(doctor, job.Record{Kind: job.EmergencyTend, Target: patient, TX: sx, TY: sy,
 		WorkLeft: wl, Forced: true})
 	if h.StartJob(doctor, rec) && rec.Dest != 0 {

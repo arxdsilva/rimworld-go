@@ -433,10 +433,10 @@ This is the heart of autonomous colony behavior.
 
 ## 5.5 Forced orders
 
--   [x] **Right-click/context forced work** (`OrdersAt` menu: go here, build, supply wood, deconstruct, harvest, sleep in bed, eat, haul to stockpile; disabled entries give the reason; `Prioritize` command)
+-   [x] **Right-click/context forced work** (`OrdersAt` menu: go here, build, supply wood, deconstruct, harvest, sleep in bed, eat, haul to stockpile; disabled entries give the reason; `Prioritize` command; SIM-062: orders on a pawn — Rescue, Capture, Arrest, Prioritize tending, drafted Tend — with the target in `Command.Target`, from `care.PawnOrders`)
     -   Player can tell a selected pawn to perform a valid specific
         action immediately.
--   [x] **Queued forced jobs** (Shift queues up to 3 orders behind the current one; queue panel with Clear and numbered route on the map; invalid orders skipped with a message)
+-   [x] **Queued forced jobs** (Shift queues up to 3 orders behind the current one; queue panel with Clear and numbered route on the map; invalid orders skipped with a message; SIM-062: pawn-targeted orders and drafted Tend queue too, labelled by target)
     -   Support shift-style job queuing.
     -   Queue shown in pawn UI.
     -   Invalid queued tasks fail gracefully.
@@ -1010,7 +1010,7 @@ treatment, and surgery are major colony-management systems.
     -   Mark beds for medical use.
     -   injured/sick pawns seek treatment/rest.
 -   [x] **Bed rest** (PLAY-020: colonists in pain (healable injury 40+), with an untended wound, sick or waiting for surgery lie in bed until healed (15 or less, nothing to tend, at least 2 h), by default; a hungry patient eats and returns; no free bed retries after 6 h; self-tend in bed without another doctor; per-colonist "Rest when hurt"; no-flap tested)
--   [x] **Rescue**
+-   [-] **Rescue** (PLAY-010 autonomous Doctor rescue; SIM-062 "Rescue <name>" order, drafted or not, Shift-queued; capture shares the carry-to-bed driver. Missing: guests, allies and strangers, every downed cause, the safe-bed ranking (SIM-063))
     -   Carry downed friendly pawn to valid bed.
 
 ## 11.6 Infection

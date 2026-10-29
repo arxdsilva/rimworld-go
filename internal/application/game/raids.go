@@ -392,7 +392,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		}
 		// MED-01: no timer; it bleeds out unless captured and tended, and
 		// its wounds close slowly, so one that stops bleeding gets up again
-		if !g.beingCaptured(id) {
+		if !g.care.BeingCaptured(id) {
 			g.heal(id, &v, now) // combat.go: stands it up past the band (bleed.go)
 		}
 		return

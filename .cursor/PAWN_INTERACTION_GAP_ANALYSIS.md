@@ -4,7 +4,7 @@ Scope: bring colonist-to-colonist interaction (player orders on a target pawn, r
 
 ## Status (2026-10-29)
 
-SIM-061 (rule rewrite, guard, this document, care extraction) is done. SIM-062..066 are not started. Every row in section 3 is `open` except the ones that section 3.5 lists as already at fidelity. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+SIM-061 (rule rewrite, guard, this document, care extraction) and SIM-062 (orders on a pawn: rescue, capture, arrest, prioritize tending) are done. SIM-063..066 are not started. Every row in section 3 is `open` except the ones that section 3.5 lists as already at fidelity. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -29,17 +29,17 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | RimWorld behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| "Rescue X" on a downed non-hostile pawn, drafted or not. | Only the autonomous Doctor rescue: `assignRescue` (`care/rescue.go:115`). | Float-menu option and a forced job keyed by target id. | SIM-062 | open |
-| "Capture X" on a downed hostile or neutral pawn, carried to a prison bed. | `command.Capture` from the inspector button, always aimed at the nearest downed hostile (`internal/adapters/inbound/ebiten/inspector/prisoner_ui.go:117`). Visitors cannot be captured from the UI. | Option on the clicked pawn; the doer is the selected colonist. | SIM-062 | open |
-| "Arrest X" on a standing non-hostile (visitor, colonist in a break). | Inspector button on the target; the doer is auto-picked (`host_commands.go:31`, `cmdArrest` in `prisoners.go`). | Option with the selected doer. | SIM-062 | open |
-| "Prioritize tending X" by an undrafted doctor. | `PawnOrders` returns nothing when undrafted (`care/orders.go:23`). | Undrafted option (`OrderTendPatient`). | SIM-062 | open |
-| "Tend X" when drafted. | `EmergencyTend` works. The Shift queue is ignored: `tick.go:47-54` queues only `MovePawn` and `Prioritize`. | Honour `Queue` for `EmergencyTend`. | SIM-062 | open |
+| "Rescue X" on a downed non-hostile pawn, drafted or not. | SIM-062: "Rescue <name>" (`care.PawnOrders`, `care/orders.go`) starts a forced rescue through `Care.Force` (`care/forced.go`); the doer stays drafted; disabled with "no free bed" or "carried by". Downed colonists only until SIM-063. | — | SIM-062 | done |
+| "Capture X" on a downed hostile or neutral pawn, carried to a prison bed. | SIM-062: "Capture <name>" on any downed raider or visitor, the selected colonist as captor (`Care.StartCapture`, `care/capture.go`); disabled with "no free prisoner bed". The inspector button still picks the nearest downed hostile. | — | SIM-062 | done |
+| "Arrest X" on a standing non-hostile (visitor, colonist in a break). | SIM-062: "Arrest <name>" with the selected colonist as arrester (`Care.StartArrest`). | — | SIM-062 | done |
+| "Prioritize tending X" by an undrafted doctor. | SIM-062: "Prioritize tending <name>" (`OrderTendPatient`); Doctor priority never gates a forced order, incapability does. | — | SIM-062 | done |
+| "Tend X" when drafted. | `EmergencyTend` works and, since SIM-062, Shift queues it behind the current order (`tick.go`, `order_queue.go` `execOrder`). | — | SIM-062 | done |
 | "Feed X" for a downed or bedridden patient. | None. | Menu option and job. | SIM-064 | open |
 | "Strip X" for a downed pawn or a prisoner. | None. | Option and job; apparel and weapon drop as items. | SIM-065 | open |
 | "Carry X to a cryptosleep casket". | No casket building. | - | - | out of scope (needs a casket building) |
 | "Melee attack X" on a berserk colonist. | Attack targets only standing raiders and animals: `standingRaider` (`raids.go:95`). | Allow berserk colonists as targets. | SIM-066 | open |
-| The order queue names each order's target. | `orderLabel` matches kind, order and layer only (`order_queue.go:126`). | Match and print the target id, so "Rescue A" and "Rescue B" on one tile stay distinct. | SIM-062 | open |
-| A drafted right-click on any pawn with options opens the menu. | The UI test is `hasTendOrder` (`internal/adapters/inbound/ebiten/orders/float.go:192`, `:206`; `formation.go:35`), true only for an emergency tend. | Generalise to `hasPawnOrder`. | SIM-061 prep, SIM-062 | open |
+| The order queue names each order's target. | SIM-062: `orderLabel` also matches `Command.Target` (`order_queue.go`; `TestOrderLabelMatchesTarget`). | — | SIM-062 | done |
+| A drafted right-click on any pawn with options opens the menu. | SIM-061: `hasPawnOrder` (`internal/adapters/inbound/ebiten/orders/float.go`), true for `EmergencyTend` or `Prioritize` with a target. A drafted group still checks the first drafted pawn's options, which may differ from the primary pawn. | — | SIM-061, SIM-062 | done |
 
 ### 3.2 Rescue and bed choice
 
@@ -52,7 +52,7 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Safe bed: reachable, not burning, not forbidden, not deadly in temperature. A patient that needs care gets a medical bed, else their own bed, else any free bed. | Since SIM-061 one `SafeBedFor` (`care/beds.go:34`) reproduces the two old rankings (rescue: medical, hospital, nearest; bed rest: its own distance rule); `prisonBedFor` (`prisoners.go:93`) is still separate. `DoRescue` keeps the patient's own bed only when the target bed is medical; otherwise `ReleaseBed` drops it (`care/rescue.go:171`). No fire or temperature check. | One `SafeBedFor` ranking with a `BedHazard` check, keeping the own claim. | SIM-061 (merge), SIM-063 (rules) | open |
 | A carrier that is downed, drafted or fleeing drops the patient. | `DropPatient` exists (`care/care.go:60`); the interruption paths are unverified. | Verify each path and add one test per path. | SIM-063 | open |
 | The carry relation is cheap to query both ways. | `care.Carries` (`care/carry.go`): a two-way index replaced the `g.carrying` map and its linear scan. | — | SIM-061 | done |
-| Capture and rescue share one carry-to-bed flow. | `doCapture` (`prisoner_capture.go:154`) and `layInBed` (`:217`) duplicate the tail of `DoRescue` (`care/rescue.go:124`). | One shared driver in care. | SIM-062 | open |
+| Capture and rescue share one carry-to-bed flow. | SIM-062: `carryToBed` (`care/carrybed.go`) drives both `DoRescue` and `DoCapture`; the trip picks the bed (`SafeBedFor` or the prison bed) and the end action. | — | SIM-062 | done |
 
 ### 3.3 Needs of downed and bedridden pawns
 
@@ -70,7 +70,7 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Berserk (attacks anyone near) and murderous rage (hunts one target). | None. | Aggressive breaks. Colonists may attack or arrest the berserker. | SIM-066 | open |
 | Catatonic breakdown (downed until recovered, needs rescue and feeding). | None. | Reuses SIM-063 rescue and SIM-064 feeding. | SIM-066 | open |
 | Break severity tiers (minor, major, extreme) gate which breaks can fire. | Hourly roll below mood 20, no tiers or traits (checklist 10.1). | Tier table and a pure `Pick`. | SIM-061 (domain), SIM-066 | open |
-| Arrest a colonist in a break. | `command.Arrest` exists (`host_commands.go:31`). | Float-menu entry. | SIM-062 | open |
+| Arrest a colonist in a break. | SIM-062: "Arrest <name>" in the right-click menu (the target may be in a break; the arrester may not). | — | SIM-062 | done |
 
 ### 3.5 Already at fidelity (no work)
 

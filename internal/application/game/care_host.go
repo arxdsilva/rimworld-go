@@ -111,7 +111,7 @@ func (h careJobs) StartJob(id entity.EntityID, rec job.Record) bool { return h.g
 func (h careJobs) Interrupt(id entity.EntityID, reason job.FailReason) {
 	h.g.interrupt(id, reason)
 }
-func (h careJobs) ClearOrders(id entity.EntityID) { delete(h.g.orderQueue, id) }
+func (h careJobs) Breaking(id entity.EntityID) bool { return h.g.breaking(id) }
 func (h careJobs) GoEat(id entity.EntityID) bool {
 	if n, _ := h.g.need.Get(id); n.Hungry() && h.g.seekFood(id) {
 		h.g.assignEat(id)
@@ -186,3 +186,4 @@ func (h careEvents) Rescued(rescuer, patient entity.EntityID) {
 func (h careEvents) TendedBy(patient, doctor entity.EntityID) {
 	h.g.logPair(patient, doctor, logTendedBy, logTended, 0, 0)
 }
+func (h careEvents) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }

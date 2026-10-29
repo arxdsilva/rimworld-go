@@ -849,7 +849,7 @@ func New(cfg Config) *Game {
 		lastHit:    make(map[entity.EntityID]hitRec),
 		streams:    rngStreams{seed: cfg.Seed},
 	}
-	g.care = care.New(newCareHost(g)) // care_host.go
+	g.care = care.New(newCareHost(g), carePrison{g}) // care_host.go, care_host_prison.go
 	return g
 }
 
@@ -1099,7 +1099,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
-		pv.CarriedBy, pv.Tended = cv.CarriedBy, cv.Tended
+		pv.CarriedBy, pv.CarryingPawn, pv.Tended = cv.CarriedBy, cv.Carrying, cv.Tended
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
 		pv.Temperament = g.temperamentOf(id).String()
 		pr := g.prioOf(id)

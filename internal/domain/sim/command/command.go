@@ -296,6 +296,10 @@ const (
 	OrderCarryToPrisonBed
 )
 
+// TargetsPawn reports an order that acts on the pawn in Command.Target
+// rather than on the tile (SIM-062).
+func (o Order) TargetsPawn() bool { return o >= OrderRescue && o <= OrderCarryToPrisonBed }
+
 // Command is applied on a simulation tick, never by the UI directly.
 type Command struct {
 	Kind    Kind

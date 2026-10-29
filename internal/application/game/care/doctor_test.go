@@ -24,7 +24,7 @@ func scene() (*Care, *fakeHost) {
 	h.pawn(doc, 0, 0)
 	h.pawn(patient, 5, 5)
 	h.doctors[doc] = true
-	return New(h), h
+	return New(h, newFakePrison(h)), h
 }
 
 func TestOutranksTieBreak(t *testing.T) {
@@ -100,7 +100,7 @@ func TestRescueEnds(t *testing.T) {
 	}
 	h.vital[patient] = health.Record{Status: health.Downed, Cause: health.CauseInjury}
 	h.prisoners[patient] = true
-	if c.Doctor.rescuable(patient) {
+	if c.Doctor.Rescuable(patient) {
 		t.Fatal("prisoners are tended where they lie")
 	}
 }

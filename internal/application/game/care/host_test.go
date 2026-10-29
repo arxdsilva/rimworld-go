@@ -18,6 +18,7 @@ import (
 // reservation map and a record of what care asked the host to do.
 type fakeHost struct {
 	now       uint64
+	breaking  map[entity.EntityID]bool // Breaking (SIM-062)
 	pos       map[entity.EntityID][2]int
 	vital     map[entity.EntityID]health.Record
 	jobs      map[entity.EntityID]job.Record
@@ -173,7 +174,6 @@ func (h *fakeHost) Interrupt(id entity.EntityID, reason job.FailReason) {
 	h.log = append(h.log, "interrupt")
 	delete(h.jobs, id)
 }
-func (h *fakeHost) ClearOrders(id entity.EntityID)       { h.log = append(h.log, "clear") }
 func (h *fakeHost) NeedsTending(id entity.EntityID) bool { return h.tend[id] }
 func (h *fakeHost) Standing(id entity.EntityID) bool {
 	return h.vital[id].Status == health.Alive && slices.Contains(h.pawns, id)
@@ -240,3 +240,7 @@ func (h *fakeHost) ApplyTend(patient entity.EntityID, q int32) {
 }
 func (h *fakeHost) Rescued(rescuer, patient entity.EntityID) { h.log = append(h.log, "rescued") }
 func (h *fakeHost) TendedBy(patient, doctor entity.EntityID) { h.log = append(h.log, "tended") }
+func (h *fakeHost) Message(x, y int, text string)            { h.log = append(h.log, "message: "+text) }
+
+// Breaking: SIM-062 (the capture/arrest handler skips a colonist in a break).
+func (h *fakeHost) Breaking(id entity.EntityID) bool { return h.breaking[id] }

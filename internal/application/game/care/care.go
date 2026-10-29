@@ -16,11 +16,12 @@ type Care struct {
 	Doctor *Doctor
 	Rest   *Rest
 	h      Host
+	pr     Prison
 }
 
-// New builds the care cluster on host h.
-func New(h Host) *Care {
-	c := &Care{Carry: NewCarries(), Policy: &Policy{}, h: h}
+// New builds the care cluster on host h; pr serves capture and arrest.
+func New(h Host, pr Prison) *Care {
+	c := &Care{Carry: NewCarries(), Policy: &Policy{}, h: h, pr: pr}
 	c.Doctor = &Doctor{c: c, h: h, tendedUntil: make(map[entity.EntityID]uint64)}
 	c.Rest = &Rest{c: c, h: h}
 	return c
@@ -78,6 +79,7 @@ func (c *Care) FollowCarriers() {
 // CareView is a pawn's care in the read model.
 type CareView struct {
 	CarriedBy    entity.EntityID // the rescuer carrying it (0: none)
+	Carrying     entity.EntityID // the pawn it carries (0: none; SIM-062)
 	Tended       bool            // a tend still shows (TendTicks)
 	BedRest      bool            // resting in bed to heal (PLAY-020)
 	CareLevel    medcare.Policy  // its care level (MED-03)
@@ -88,6 +90,7 @@ type CareView struct {
 func (c *Care) View(id entity.EntityID, j job.Record) CareView {
 	return CareView{
 		CarriedBy:    c.Carry.Carrier(id),
+		Carrying:     c.Carry.Patient(id),
 		Tended:       c.h.Now() < c.Doctor.TendedUntil(id),
 		BedRest:      c.Rest.On(id) && j.Kind == job.Sleep && j.Active(),
 		CareLevel:    c.Level(id),

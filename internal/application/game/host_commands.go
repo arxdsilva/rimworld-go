@@ -27,9 +27,9 @@ func (g *Game) applyHostCommand(c command.Command) {
 	case command.GiftAnimal:
 		g.cmdGiftAnimal(target, pawn) // bonds.go
 	case command.Capture:
-		g.cmdCapture(pawn, target) // prisoners.go
+		g.care.StartCapture(pawn, target, false) // care/capture.go
 	case command.Arrest:
-		g.cmdArrest(pawn, target) // prisoners.go
+		g.care.StartArrest(pawn, target, false) // care/capture.go
 	case command.SetPrisonerMode:
 		g.cmdSetPrisonerMode(target, c.Mode) // prisoners.go
 	case command.SetBedForPrisoners:

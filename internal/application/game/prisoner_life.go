@@ -62,7 +62,7 @@ func (g *Game) thinkPrisoner(id entity.EntityID, now uint64) {
 		g.raiders[id] = r
 		return
 	}
-	if g.beingCaptured(id) {
+	if g.care.BeingCaptured(id) {
 		return // in a captor's arms
 	}
 	g.heal(id, &v, now) // combat.go: faster in bed and tended
@@ -248,7 +248,7 @@ func (g *Game) prisonerPawnView(id entity.EntityID) PawnView {
 	pv.Lying = v.Status != health.Alive || j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete)
 	pv.InBed = g.inBed(id)
 	cv := g.care.View(id, j)
-	pv.CarriedBy, pv.Tended = cv.CarriedBy, cv.Tended
+	pv.CarriedBy, pv.CarryingPawn, pv.Tended = cv.CarriedBy, cv.Carrying, cv.Tended
 	pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
 	g.fillPawnAction(&pv, id, j)
 	return pv

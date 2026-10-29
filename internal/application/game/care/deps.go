@@ -90,8 +90,8 @@ type Reach interface {
 type Jobs interface {
 	StartJob(id entity.EntityID, rec job.Record) bool
 	Interrupt(id entity.EntityID, reason job.FailReason)
-	// ClearOrders drops id's queued player orders.
-	ClearOrders(id entity.EntityID)
+	// Breaking: id is in a mental break (it takes no orders).
+	Breaking(id entity.EntityID) bool
 	// GoEat sends a hungry id to eat when there is food (false: not
 	// hungry, or nothing to eat).
 	GoEat(id entity.EntityID) bool
@@ -156,4 +156,31 @@ type Events interface {
 	Rescued(rescuer, patient entity.EntityID)
 	// TendedBy: doctor finished tending patient.
 	TendedBy(patient, doctor entity.EntityID)
+	// Message shows the player text at tile (x, y).
+	Message(x, y int, text string)
+}
+
+// Prison is what capture and arrest need from the simulation (SIM-062).
+// It is a second constructor argument, not a role of Host, so Host stays
+// at eight roles.
+type Prison interface {
+	// IsRaider: id is a raider on the map (prisoners included).
+	IsRaider(id entity.EntityID) bool
+	// IsVisitor: id is a friendly visitor on the map.
+	IsVisitor(id entity.EntityID) bool
+	// PersonName names anyone, colonist, raider or visitor.
+	PersonName(id entity.EntityID) string
+	// PrisonBedFor is the free prisoner bed nearest (x, y) target may be
+	// laid in.
+	PrisonBedFor(target entity.EntityID, x, y int) (entity.EntityID, bool)
+	// DropGear leaves target's weapon on the ground (a captive keeps none).
+	DropGear(target entity.EntityID)
+	// MakePrisoner turns target into the colony's prisoner, taken by
+	// captor; arrested marks an arrest (a visitor's faction resents it).
+	MakePrisoner(target, captor entity.EntityID, arrested bool)
+	// ArrestRoll rolls arrester's attempt on target on the host's prison
+	// stream: true when target gives in.
+	ArrestRoll(arrester, target entity.EntityID) bool
+	// StartFight starts a social fight: starter attacks other.
+	StartFight(starter, other entity.EntityID)
 }

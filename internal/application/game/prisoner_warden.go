@@ -68,7 +68,7 @@ func (g *Game) assignWarden(id entity.EntityID) bool {
 	bestD := 1 << 30
 	for _, p := range g.raiderIDs { // ascending: ties go to the lower id
 		st := g.prisoners[p]
-		if st == nil || g.beingCaptured(p) {
+		if st == nil || g.care.BeingCaptured(p) {
 			continue
 		}
 		if owner, held := g.reserve.EntityOwner(p); held && owner != id {

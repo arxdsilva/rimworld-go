@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -405,5 +406,173 @@ func TestJourneyOrdersCaptureAndArrest(t *testing.T) {
 	}
 	if c, ok := j.lastCmd(command.Arrest); !ok || c.Target != id {
 		t.Fatalf("Arrest sent %+v (%v), want target %d", c, ok, id)
+	}
+}
+
+// careDoerAndPatient puts two colonists on the map, downs the second and
+// returns (doer, patient) ids and the patient's tile.
+func careDoerAndPatient(j *journey) (doer, patient uint64, px, py int) {
+	j.t.Helper()
+	ids := ordColonists(j)
+	doer, patient = ids[0], ids[1]
+	careDown(j, patient)
+	p := j.pawn(patient)
+	return doer, patient, p.X, p.Y
+}
+
+// TestJourneyOrdersRescueDowned (SIM-062): select a colonist, right-click a
+// downed one, choose "Rescue <name>": the rescuer carries the patient to the
+// medical bed and the read model shows the carry.
+func TestJourneyOrdersRescueDowned(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{12, 6}))
+	bed := careBed(j, "hospital bed", 16, 2)
+	doer, patient, px, py := careDoerAndPatient(j)
+	name := j.pawn(patient).Name
+	ordPick(j, 0)
+	if got := uint64(j.a.renderer.Selected()); got != doer {
+		t.Fatalf("selected %d, want the first colonist %d", got, doer)
+	}
+	labels := careRightClick(j, px, py)
+	j.pick("Rescue " + name)
+	c, ok := j.lastCmd(command.Prioritize)
+	if !ok || c.Order != command.OrderRescue || c.Pawn != doer || c.Target != patient {
+		t.Fatalf("Rescue sent %+v (%v), want Prioritize/OrderRescue doer %d target %d; menu %q", c, ok, doer, patient, labels)
+	}
+	sawCarry := false
+	careRun(j, "Digit2", 6000, func() bool {
+		careFeed(j)
+		if j.pawn(patient).CarriedBy == entity.EntityID(doer) && j.pawn(doer).CarryingPawn == entity.EntityID(patient) {
+			sawCarry = true
+		}
+		return j.pawn(patient).InBed
+	})
+	if !sawCarry {
+		t.Fatal("the read model never showed CarriedBy/CarryingPawn during the carry")
+	}
+	for _, b := range j.world().Buildings {
+		if b.ID == bed && b.Claimant != entity.EntityID(patient) {
+			t.Fatalf("the patient is in a bed, but not the medical one (claimant %d)", b.Claimant)
+		}
+	}
+	if j.pawn(patient).CarriedBy != 0 {
+		t.Fatal("still carried after reaching the bed")
+	}
+}
+
+// TestJourneyOrdersCaptureFromMenu: "Capture <name>" on a downed raider
+// carries them to the prison bed.
+func TestJourneyOrdersCaptureFromMenu(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{9, 4}))
+	carePrisonBed(j, careBed(j, "sleeping spot", 14, 2))
+	j.g.Raid(1)
+	j.tick(2)
+	var raider uint64
+	for _, p := range j.g.Snapshot() {
+		if p.Hostile {
+			raider = uint64(p.ID)
+		}
+	}
+	if raider == 0 {
+		t.Fatal("the raid brought no raider")
+	}
+	careDown(j, raider)
+	ordPick(j, 0)
+	doer := uint64(j.a.renderer.Selected())
+	r := j.pawn(raider)
+	name := r.Name
+	labels := careRightClick(j, r.X, r.Y)
+	j.pick("Capture " + name)
+	c, ok := j.lastCmd(command.Prioritize)
+	if !ok || c.Order != command.OrderCapture || c.Pawn != doer || c.Target != raider {
+		t.Fatalf("Capture sent %+v (%v), want Prioritize/OrderCapture doer %d target %d; menu %q", c, ok, doer, raider, labels)
+	}
+	careRun(j, "Digit3", 8000, func() bool {
+		careFeed(j)
+		return j.pawn(raider).Prisoner
+	})
+}
+
+// TestJourneyOrdersArrestFromMenu: "Arrest <name>" on a standing colonist
+// sends OrderArrest and the arrester starts the arrest job (it may succeed
+// or be resisted).
+func TestJourneyOrdersArrestFromMenu(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{12, 6}))
+	carePrisonBed(j, careBed(j, "sleeping spot", 16, 2))
+	doer, target := ordColonists(j)[0], ordColonists(j)[1]
+	tp := j.pawn(target)
+	ordPick(j, 0)
+	labels := careRightClick(j, tp.X, tp.Y)
+	j.pick("Arrest " + tp.Name)
+	c, ok := j.lastCmd(command.Prioritize)
+	if !ok || c.Order != command.OrderArrest || c.Pawn != doer || c.Target != target {
+		t.Fatalf("Arrest sent %+v (%v), want Prioritize/OrderArrest doer %d target %d; menu %q", c, ok, doer, target, labels)
+	}
+	started := false
+	careRun(j, "Digit2", 3000, func() bool {
+		careFeed(j)
+		if strings.Contains(strings.ToLower(j.pawn(doer).Job), "arrest") {
+			started = true
+		}
+		return started
+	})
+}
+
+// TestJourneyOrdersPrioritizeTend: an undrafted colonist offered
+// "Prioritize tending <name>" goes and tends the wounded one.
+func TestJourneyOrdersPrioritizeTend(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{12, 6}))
+	ids := ordColonists(j)
+	doer, hurt := ids[0], ids[1]
+	j.g.InjureCut(entity.EntityID(hurt), 6)
+	j.update(1)
+	hp := j.pawn(hurt)
+	ordPick(j, 0)
+	labels := careRightClick(j, hp.X, hp.Y)
+	j.pick("Prioritize tending " + hp.Name)
+	c, ok := j.lastCmd(command.Prioritize)
+	if !ok || c.Order != command.OrderTendPatient || c.Pawn != doer || c.Target != hurt {
+		t.Fatalf("Prioritize tending sent %+v (%v), want OrderTendPatient doer %d target %d; menu %q", c, ok, doer, hurt, labels)
+	}
+	careRun(j, "Digit2", 3000, func() bool {
+		careFeed(j)
+		return j.pawn(hurt).Tended
+	})
+}
+
+// TestJourneyOrdersRescueQueued: Shift-choosing "Rescue <name>" behind a
+// walk order queues it under that label, and it runs after the walk.
+func TestJourneyOrdersRescueQueued(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{12, 6}))
+	careBed(j, "hospital bed", 16, 2)
+	doer, patient, px, py := careDoerAndPatient(j)
+	name := j.pawn(patient).Name
+	ordPick(j, 0)
+	j.clickTile(6, 7, inputframe.Right, 0)
+	j.pick("Go here")
+	if !j.pawn(doer).HasOrder {
+		t.Fatal("the walk order did not start")
+	}
+	careRightClick(j, px, py)
+	carePickShift(j, "Rescue "+name)
+	c, ok := j.lastCmd(command.Prioritize)
+	if !ok || c.Order != command.OrderRescue || !c.Queue || c.Target != patient {
+		t.Fatalf("Shift-Rescue sent %+v (%v), want a queued OrderRescue", c, ok)
+	}
+	j.update(1)
+	q := j.pawn(doer).QueuedOrders
+	if len(q) != 1 || q[0].Label != "Rescue "+name {
+		t.Fatalf("queued orders %+v, want one labelled %q", q, "Rescue "+name)
+	}
+	careRun(j, "Digit3", 8000, func() bool {
+		careFeed(j)
+		return j.pawn(patient).InBed
+	})
+	if len(j.pawn(doer).QueuedOrders) != 0 {
+		t.Fatal("the queue still holds the rescue after it ran")
 	}
 }
