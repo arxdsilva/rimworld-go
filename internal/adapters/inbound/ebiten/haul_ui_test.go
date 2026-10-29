@@ -35,12 +35,12 @@ func foundItems() []game.ItemView {
 func TestHaulToolEmitsDesignateHaul(t *testing.T) {
 	t.Parallel()
 	tool, ok := toolByID("haul")
-	if !ok || tool.category != "orders" || tool.icon != "order_haul" || tool.mode != architect.PlaceArea ||
-		tool.cmd != command.DesignateHaul || !tool.enable || tool.label != "Haul things" {
+	if !ok || tool.Category != "orders" || tool.Icon != "order_haul" || tool.Mode != architect.PlaceArea ||
+		tool.Cmd != command.DesignateHaul || !tool.Enable || tool.Label != "Haul things" {
 		t.Fatalf("haul tool = %+v", tool)
 	}
-	if want := "Mark things found on the map for hauling. Colonists haul the colony's own goods by themselves; anything else waits for this mark."; tool.desc != want {
-		t.Fatalf("desc = %q", tool.desc)
+	if want := "Mark things found on the map for hauling. Colonists haul the colony's own goods by themselves; anything else waits for this mark."; tool.Desc != want {
+		t.Fatalf("desc = %q", tool.Desc)
 	}
 	a, s := stubColony(t)
 	click(t, a, "tab.architect")
@@ -125,7 +125,7 @@ func TestItemInspectorKeepsForcedHaulChip(t *testing.T) {
 	s.orders = []game.OrderOption{{Label: "Haul", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderHaul, Pawn: 1}}}
 	a.sel.Select(selection.Cand{Kind: selection.Item, ID: 21})
 	it, _ := a.sel.SelectedItem()
-	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].id != "cmd.item.haul" {
+	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].ID != "cmd.item.haul" {
 		t.Fatalf("a found stack still offers the forced Haul command: %+v", vs)
 	}
 	click(t, a, "cmd.item.haul")

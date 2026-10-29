@@ -114,7 +114,7 @@ func TestJourneyArchitectRotateQE(t *testing.T) {
 	}
 }
 
-func mustTool(t *testing.T, id string) archTool {
+func mustTool(t *testing.T, id string) architect.ToolDef {
 	t.Helper()
 	tl, ok := toolByID(id)
 	if !ok {

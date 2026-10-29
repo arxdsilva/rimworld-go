@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
 )
@@ -21,16 +22,16 @@ func TestNotConnectedAlertFollowsTheRealGrid(t *testing.T) {
 		t.Skip("the heater did not build on the test map")
 	}
 	a.renderer.speed = speedPaused
-	has := func() (alert, bool) {
+	has := func() (hud.Alert, bool) {
 		for _, al := range a.currentAlerts() {
-			if al.key == "notconnected" {
+			if al.Key == "notconnected" {
 				return al, true
 			}
 		}
-		return alert{}, false
+		return hud.Alert{}, false
 	}
 	al, ok := has()
-	if !ok || al.label != "Heater not connected" || len(al.targets) != 1 || al.targets[0] != [2]int{8, 8} {
+	if !ok || al.Label != "Heater not connected" || len(al.Targets) != 1 || al.Targets[0] != [2]int{8, 8} {
 		t.Fatalf("alert = %+v ok=%v (alerts %+v)", al, ok, a.currentAlerts())
 	}
 	var heater game.BuildingView

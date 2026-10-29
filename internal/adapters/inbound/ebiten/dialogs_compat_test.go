@@ -5,10 +5,10 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-func tradeLines(rows []game.TradeRowView) []tradeLine {
-	var out []tradeLine
+func tradeLines(rows []game.TradeRowView) []dialogs.TradeLine {
+	var out []dialogs.TradeLine
 	for _, l := range dialogs.TradeLines(rows) {
-		out = append(out, tradeLine{head: l.Head, row: l.Row})
+		out = append(out, dialogs.TradeLine{Head: l.Head, Row: l.Row})
 	}
 	return out
 }

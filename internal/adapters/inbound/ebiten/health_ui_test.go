@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -70,11 +71,11 @@ func TestHealthTabListsPartsAndOperations(t *testing.T) {
 func TestHealthOptionsFollowTheBody(t *testing.T) {
 	t.Parallel()
 	opts := healthOptions(healthSimView())
-	labels := map[string]healthOption{}
+	labels := map[string]inspector.HealthOption{}
 	for _, o := range opts {
-		labels[o.label] = o
+		labels[o.Label] = o
 	}
-	if o, ok := labels["Install prosthetic leg (left leg)"]; !ok || o.op != body.InstallImplant || o.part != body.LegL || o.item != item.ProstheticLeg {
+	if o, ok := labels["Install prosthetic leg (left leg)"]; !ok || o.Op != body.InstallImplant || o.Part != body.LegL || o.Item != item.ProstheticLeg {
 		t.Fatalf("prosthetic leg option = %+v (%v)", o, ok)
 	}
 	if _, ok := labels["Install peg leg (left leg)"]; ok {
@@ -87,10 +88,10 @@ func TestHealthOptionsFollowTheBody(t *testing.T) {
 		t.Fatal("a limb can be amputated")
 	}
 	for _, o := range opts {
-		if o.part == body.Heart || o.part == body.Brain || o.part == body.Torso {
+		if o.Part == body.Heart || o.Part == body.Brain || o.Part == body.Torso {
 			t.Fatalf("vital parts are never amputated: %+v", o)
 		}
-		if o.part == body.FootL && o.op == body.InstallImplant && o.item != item.ProstheticFoot {
+		if o.Part == body.FootL && o.Op == body.InstallImplant && o.Item != item.ProstheticFoot {
 			t.Fatalf("only a prosthetic foot fits a missing foot: %+v", o)
 		}
 	}
@@ -110,7 +111,7 @@ func TestHealthPickerSendsAddOperation(t *testing.T) {
 	opts := healthOptions(s.health[1])
 	want := -1
 	for i, o := range opts {
-		if o.item == item.ProstheticLeg {
+		if o.Item == item.ProstheticLeg {
 			want = i
 		}
 	}
@@ -390,7 +391,7 @@ func TestHealthPickerSurgeryOptions(t *testing.T) {
 	press(t, a, f, inspector.HealthAddID)
 	f.Frame(t, a)
 	opts := pickerOptions(s.health[1])
-	if len(opts) != 4 || opts[1].reason != "no kidney in stock" || opts[3].reason == "" {
+	if len(opts) != 4 || opts[1].Reason != "no kidney in stock" || opts[3].Reason == "" {
 		t.Fatalf("options %+v", opts)
 	}
 	for i, want := range []string{"cannot", "kills", "Transplants", "woozy"} {
@@ -445,13 +446,13 @@ func TestHealthPrisonerQueuesOperations(t *testing.T) {
 // keys (the art pass renders them).
 func TestArchVitalsMonitor(t *testing.T) {
 	t.Parallel()
-	var tool *archTool
-	for i := range archTools {
-		if archTools[i].id == "vitals_monitor" {
-			tool = &archTools[i]
+	var tool *architectpkg.ToolDef
+	for i := range architectpkg.Tools {
+		if architectpkg.Tools[i].ID == "vitals_monitor" {
+			tool = &architectpkg.Tools[i]
 		}
 	}
-	if tool == nil || tool.build != "vitals monitor" || tool.icon != "vitals_monitor" || tool.category != "furniture" || !strings.Contains(tool.desc, "hospital bed") {
+	if tool == nil || tool.Build != "vitals monitor" || tool.Icon != "vitals_monitor" || tool.Category != "furniture" || !strings.Contains(tool.Desc, "hospital bed") {
 		t.Fatalf("tool %+v", tool)
 	}
 	for _, f := range []string{"south", "east", "north", "west"} {

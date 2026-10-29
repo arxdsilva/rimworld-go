@@ -16,8 +16,8 @@ func TestCropPickerListsTrees(t *testing.T) {
 	if !ok || b.Disabled {
 		t.Fatalf("tree entry missing or locked: %+v ok=%v", b, ok)
 	}
-	if td, _ := toolByID("grow"); len(td.desc) < 21 || td.desc[:21] != "Pick a crop or trees " {
-		t.Fatalf("desc = %q", td.desc)
+	if td, _ := toolByID("grow"); len(td.Desc) < 21 || td.Desc[:21] != "Pick a crop or trees " {
+		t.Fatalf("desc = %q", td.Desc)
 	}
 	// picking Tree sends the tree species through the zone command
 	click(t, a, "arch.crop.tree")

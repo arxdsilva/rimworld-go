@@ -31,7 +31,7 @@ import (
 func toolIDsIn(cat string) []string {
 	var out []string
 	for _, t := range toolsIn(cat) {
-		out = append(out, t.id)
+		out = append(out, t.ID)
 	}
 	return out
 }
@@ -39,24 +39,24 @@ func toolIDsIn(cat string) []string {
 func TestPowerArchitectTools(t *testing.T) {
 	t.Parallel()
 	listed := map[string]bool{}
-	for _, c := range archCategories {
-		listed[c.id] = true
+	for _, c := range architectpkg.Categories {
+		listed[c.ID] = true
 	}
 	if !listed[architectpkg.CatPower] {
 		t.Fatal("no Power category")
 	}
 	// A ninth category overflows the four-row panel: the heater and cooler
 	// sit in Misc (PLAY021_PLAN fallback), so Temperature stays unlisted.
-	if len(archCategories) > 8 || listed[architectpkg.CatTemperature] {
-		t.Fatalf("%d categories (Temperature listed %v): the panel holds eight", len(archCategories), listed[architectpkg.CatTemperature])
+	if len(architectpkg.Categories) > 8 || listed[architectpkg.CatTemperature] {
+		t.Fatalf("%d categories (Temperature listed %v): the panel holds eight", len(architectpkg.Categories), listed[architectpkg.CatTemperature])
 	}
 	want := []string{"conduit", "hidden_conduit", "power_switch", "wood_generator", "solar_panel", "wind_turbine", "geothermal", "battery"}
 	if got := toolIDsIn(architectpkg.CatPower); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("Power tools %v, want %v", got, want)
 	}
 	for _, id := range []string{"conduit", "hidden_conduit"} {
-		if tl, _ := toolByID(id); tl.mode != architectpkg.PlaceLine {
-			t.Errorf("%s places in mode %v, want a line", id, tl.mode)
+		if tl, _ := toolByID(id); tl.Mode != architectpkg.PlaceLine {
+			t.Errorf("%s places in mode %v, want a line", id, tl.Mode)
 		}
 	}
 	furn := strings.Join(toolIDsIn("furniture"), ",")
@@ -85,10 +85,10 @@ func TestPowerArchitectTools(t *testing.T) {
 	root := repoRoot(t)
 	descs := map[string]string{}
 	for _, tl := range allArchTools() {
-		if prev, dup := descs[tl.desc]; dup {
-			t.Errorf("%s and %s share a description", tl.id, prev)
+		if prev, dup := descs[tl.Desc]; dup {
+			t.Errorf("%s and %s share a description", tl.ID, prev)
 		}
-		descs[tl.desc] = tl.id
+		descs[tl.Desc] = tl.ID
 	}
 	for id, kind := range kinds {
 		tl, ok := toolByID(id)
@@ -96,17 +96,17 @@ func TestPowerArchitectTools(t *testing.T) {
 			t.Errorf("no tool %s", id)
 			continue
 		}
-		if tl.build != kind {
-			t.Errorf("%s builds %q, want %q", id, tl.build, kind)
+		if tl.Build != kind {
+			t.Errorf("%s builds %q, want %q", id, tl.Build, kind)
 		}
-		if _, ok := architectpkg.Buildable(tl.build); !ok {
-			t.Errorf("%s: %q is not in the buildable catalog", id, tl.build)
+		if _, ok := architectpkg.Buildable(tl.Build); !ok {
+			t.Errorf("%s: %q is not in the buildable catalog", id, tl.Build)
 		}
-		if len(tl.desc) < 30 {
-			t.Errorf("%s: desc %q is too thin", id, tl.desc)
+		if len(tl.Desc) < 30 {
+			t.Errorf("%s: desc %q is too thin", id, tl.Desc)
 		}
-		if _, err := os.Stat(filepath.Join(root, "assets", "metadata", "ui_icon", tl.icon+".yaml")); err != nil {
-			t.Errorf("%s: icon ui_icon/%s has no art: %v", id, tl.icon, err)
+		if _, err := os.Stat(filepath.Join(root, "assets", "metadata", "ui_icon", tl.Icon+".yaml")); err != nil {
+			t.Errorf("%s: icon ui_icon/%s has no art: %v", id, tl.Icon, err)
 		}
 	}
 }
@@ -172,7 +172,7 @@ func toolDesc(t *testing.T, id string) string {
 	if !ok {
 		t.Fatalf("no tool %s", id)
 	}
-	return tl.desc
+	return tl.Desc
 }
 
 // electricityLocked is the Locked map of a colony that has not researched
@@ -272,7 +272,7 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 			if a.overlayFlags() != before {
 				t.Errorf("the power toggle changed other overlays: %+v -> %+v", before, a.overlayFlags())
 			}
-			if a.globalPlan().legend == nil {
+			if a.globalPlan().Legend == nil {
 				t.Error("no legend while the power overlay is on")
 			}
 			f.Click(t, a, inputframe.Left, 0)
@@ -533,11 +533,11 @@ func TestPowerLegend(t *testing.T) {
 		t.Fatalf("legend %q", a.arch.Marks.PowerLegend())
 	}
 	a.renderer.overlays().Roof.On = true
-	all := strings.Join(a.globalPlan().legend, " ")
+	all := strings.Join(a.globalPlan().Legend, " ")
 	if !strings.HasPrefix(all, "Roof:") || !strings.Contains(all, "Power:") {
 		t.Errorf("legend %q, want the roof key then the power key", all)
 	}
-	for _, l := range a.globalPlan().legend {
+	for _, l := range a.globalPlan().Legend {
 		if gfx.TextW(l, gfx.Body) > hud.GlobalInnerW {
 			t.Errorf("legend line %q is wider than Global", l)
 		}
@@ -621,7 +621,7 @@ func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
 		PowerNets: []game.PowerNetView{{ID: 1}}}}
 	a, f := powerArch(t, s)
 	tl, _ := toolByID(tool)
-	a.arch.Cat = tl.category
+	a.arch.Cat = tl.Category
 	archPick(t, a, tool)
 	f.MoveTo(a, tx, ty)
 	f.Frame(t, a)
@@ -678,12 +678,12 @@ func TestCoolerGhostUsesCanPlace(t *testing.T) {
 	f.MoveTo(a, 5, 5)
 	f.Frame(t, a)
 	_, cells := a.previewCells()
-	if len(cells) != 1 || cells[0].ok || cells[0].reason != game.ReasonNeedsWall {
+	if len(cells) != 1 || cells[0].OK || cells[0].Reason != game.ReasonNeedsWall {
 		t.Fatalf("cells %+v, want one red cell with %q", cells, game.ReasonNeedsWall)
 	}
 	f.MoveTo(a, 7, 5)
 	f.Frame(t, a)
-	if _, cells = a.previewCells(); len(cells) != 1 || !cells[0].ok {
+	if _, cells = a.previewCells(); len(cells) != 1 || !cells[0].OK {
 		t.Fatalf("cells %+v, want the wall gap green", cells)
 	}
 }

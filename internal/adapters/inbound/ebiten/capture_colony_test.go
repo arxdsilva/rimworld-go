@@ -143,7 +143,7 @@ func TestCaptureColonyStates(t *testing.T) {
 			t.Fatal("no campfire card")
 		}},
 		{"chips", 60, func(t *testing.T, a *App) {
-			if chips := statusChips(a.renderer.world()); len(chips) != 1 || chips[0].label != "Ashfall sky" {
+			if chips := statusChips(a.renderer.world()); len(chips) != 1 || chips[0].Label != "Ashfall sky" {
 				t.Fatalf("chips = %+v, want the Ashfall sky condition", chips)
 			}
 		}},

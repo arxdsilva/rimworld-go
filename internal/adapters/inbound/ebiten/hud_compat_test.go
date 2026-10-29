@@ -19,61 +19,61 @@ func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h
 	}
 }
 
-func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
-	return toAlerts(hud.BuildAlerts(pawns, w))
+func buildAlerts(pawns []game.PawnView, w game.WorldView) []hud.Alert {
+	return hud.BuildAlerts(pawns, w)
 }
 
-func tradeAlertsFrom(src any) []alert { return toAlerts(hud.TradeAlertsFrom(src)) }
+func tradeAlertsFrom(src any) []hud.Alert { return hud.TradeAlertsFrom(src) }
 
-func fireAlert(w game.WorldView) (alert, bool) {
+func fireAlert(w game.WorldView) (hud.Alert, bool) {
 	a, ok := hud.FireAlert(w)
-	return toAlert(a), ok
+	return a, ok
 }
 
-func waitingFramesAlert(w game.WorldView) (alert, bool) {
+func waitingFramesAlert(w game.WorldView) (hud.Alert, bool) {
 	a, ok := hud.WaitingFramesAlert(w)
-	return toAlert(a), ok
+	return a, ok
 }
 
-func (a *App) currentAlerts() []alert { return toAlerts(a.chrome.Alerts().Current()) }
+func (a *App) currentAlerts() []hud.Alert { return a.chrome.Alerts().Current() }
 
-func alertRowLabel(r alertRow) string {
-	return hud.AlertRowLabel(hud.AlertRow{R: r.r, Al: fromAlert(r.al), More: r.more, Hidden: fromAlerts(r.hidden)})
+func alertRowLabel(r hud.AlertRow) string {
+	return hud.AlertRowLabel(hud.AlertRow{R: r.R, Al: r.Al, More: r.More, Hidden: r.Hidden})
 }
 
-func (a *App) alertRows(l hudlayout.Layout) []alertRow {
+func (a *App) alertRows(l hudlayout.Layout) []hud.AlertRow {
 	rows := a.chrome.Alerts().Rows(l)
 	if rows == nil {
 		return nil
 	}
-	out := make([]alertRow, len(rows))
+	out := make([]hud.AlertRow, len(rows))
 	for i, r := range rows {
-		out[i] = alertRow{r: r.R, al: toAlert(r.Al), more: r.More, hidden: toAlerts(r.Hidden)}
+		out[i] = hud.AlertRow{R: r.R, Al: r.Al, More: r.More, Hidden: r.Hidden}
 	}
 	return out
 }
 
-func layoutRightCard(c rightCard, anchor gfx.Rect, sw, sh int) (box gfx.Rect, title, body []string) {
-	return hud.LayoutRightCard(hud.RightCard{Title: c.title, Body: c.body, Clr: c.clr}, anchor, sw, sh)
+func layoutRightCard(c hud.RightCard, anchor gfx.Rect, sw, sh int) (box gfx.Rect, title, body []string) {
+	return hud.LayoutRightCard(hud.RightCard{Title: c.Title, Body: c.Body, Clr: c.Clr}, anchor, sw, sh)
 }
 
-func (a *App) rightHover(l hudlayout.Layout) (rightCard, gfx.Rect, bool) {
+func (a *App) rightHover(l hudlayout.Layout) (hud.RightCard, gfx.Rect, bool) {
 	c, r, ok := a.chrome.Right().Hover(l)
-	return rightCard{title: c.Title, body: c.Body, clr: c.Clr}, r, ok
+	return hud.RightCard{Title: c.Title, Body: c.Body, Clr: c.Clr}, r, ok
 }
 
-func letterRowLabel(r letterRow) string {
-	return hud.LetterRowLabel(hud.LetterRow{R: r.r, Letter: r.letter, Older: r.older})
+func letterRowLabel(r hud.LetterRow) string {
+	return hud.LetterRowLabel(hud.LetterRow{R: r.R, Letter: r.Letter, Older: r.Older})
 }
 
-func (a *App) letterRows(l hudlayout.Layout) []letterRow {
+func (a *App) letterRows(l hudlayout.Layout) []hud.LetterRow {
 	rows := a.chrome.Right().LetterRows(l)
 	if rows == nil {
 		return nil
 	}
-	out := make([]letterRow, len(rows))
+	out := make([]hud.LetterRow, len(rows))
 	for i, r := range rows {
-		out[i] = letterRow{r: r.R, letter: r.Letter, older: r.Older}
+		out[i] = hud.LetterRow{R: r.R, Letter: r.Letter, Older: r.Older}
 	}
 	return out
 }
@@ -93,27 +93,27 @@ var letterKinds = func() []struct {
 	return out
 }()
 
-func (a *App) messageRows(l hudlayout.Layout) []messageRow {
+func (a *App) messageRows(l hudlayout.Layout) []hud.MessageRow {
 	rows := a.chrome.Right().MessageRows(l)
 	if rows == nil {
 		return nil
 	}
-	out := make([]messageRow, len(rows))
+	out := make([]hud.MessageRow, len(rows))
 	for i, r := range rows {
-		out[i] = messageRow{r: r.R, msg: r.Msg, idx: r.Idx, alpha: r.Alpha}
+		out[i] = hud.MessageRow{R: r.R, Msg: r.Msg, Idx: r.Idx, Alpha: r.Alpha}
 	}
 	return out
 }
 
-func statusChips(w game.WorldView) []statusChip { return toChips(hud.StatusChips(w)) }
+func statusChips(w game.WorldView) []hud.StatusChip { return hud.StatusChips(w) }
 
-func (a *App) chipRects(chips []statusChip, sw int) []gfx.Rect {
-	return a.chrome.Global().ChipRects(fromChips(chips), sw)
+func (a *App) chipRects(chips []hud.StatusChip, sw int) []gfx.Rect {
+	return a.chrome.Global().ChipRects(chips, sw)
 }
 
-func (a *App) globalPlan() globalPlan {
+func (a *App) globalPlan() hud.GlobalPlan {
 	p := a.chrome.Global().Plan()
-	return globalPlan{reason: p.Reason, weather: p.Weather, chips: toChips(p.Chips), legend: p.Legend}
+	return hud.GlobalPlan{Reason: p.Reason, Weather: p.Weather, Chips: p.Chips, Legend: p.Legend}
 }
 
 // globalToggleList is hud.GlobalToggles as the root tests read it.
@@ -125,30 +125,30 @@ var globalToggleList = func() []struct{ id, icon, short string } {
 	return out
 }()
 
-func (a *App) liveToasts() []toast {
+func (a *App) liveToasts() []hud.Toast {
 	ts := a.chrome.LiveToasts()
 	if ts == nil {
 		return nil
 	}
-	out := make([]toast, len(ts))
+	out := make([]hud.Toast, len(ts))
 	for i, t := range ts {
-		out[i] = toast{text: t.Text, at: t.At}
+		out[i] = hud.Toast{Text: t.Text, At: t.At}
 	}
 	return out
 }
 
-func (a *App) resourceRows() []resRow {
+func (a *App) resourceRows() []hud.ResRow {
 	rows := a.chrome.Res().Rows()
 	if rows == nil {
 		return nil
 	}
-	out := make([]resRow, len(rows))
+	out := make([]hud.ResRow, len(rows))
 	for i, r := range rows {
-		out[i] = resRow{header: r.Header, cat: r.Cat, kind: r.Kind, label: r.Label, qty: r.Qty}
+		out[i] = hud.ResRow{Header: r.Header, Cat: r.Cat, Kind: r.Kind, Label: r.Label, Qty: r.Qty}
 	}
 	return out
 }
 
-func (a *App) barStatusesOf(p game.PawnView) []barStatus {
-	return toStatuses(a.chrome.Bar().StatusesOf(p))
+func (a *App) barStatusesOf(p game.PawnView) []hud.BarStatus {
+	return a.chrome.Bar().StatusesOf(p)
 }

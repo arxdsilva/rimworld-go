@@ -146,7 +146,7 @@ func TestCopyOpensArchitectPreset(t *testing.T) {
 	a, _, _ := bldgApp(t, "butcher table", "wood", "east")
 	a.insp.Building().ApplyBuildingClick("bldg.copy")
 	tool, ok := toolByID(a.arch.ToolID)
-	if !a.arch.Open || !ok || tool.build != "butcher table" {
+	if !a.arch.Open || !ok || tool.Build != "butcher table" {
 		t.Fatalf("architect open=%v tool=%q", a.arch.Open, a.arch.ToolID)
 	}
 	if a.arch.Facing != architectpkg.FacingIndex("east") {
@@ -160,7 +160,7 @@ func TestCopyOpensArchitectPreset(t *testing.T) {
 		w, _, _ := bldgApp(t, c.kind, c.stuff, "south")
 		w.insp.Building().ApplyBuildingClick("bldg.copy")
 		wt, _ := toolByID(w.arch.ToolID)
-		if wt.build != c.kind || w.toolStuff(wt) != c.want {
+		if wt.Build != c.kind || w.toolStuff(wt) != c.want {
 			t.Fatalf("%s %s copy: tool=%q stuff=%q", c.stuff, c.kind, w.arch.ToolID, w.arch.Stuff)
 		}
 	}

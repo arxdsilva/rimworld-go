@@ -188,7 +188,7 @@ func TestJourneyDialogsHealthOperations(t *testing.T) {
 	opts := pickerOptions(h1)
 	rows := []int{0}
 	for i, o := range opts {
-		if o.op != opts[0].op || o.part != opts[0].part {
+		if o.Op != opts[0].Op || o.Part != opts[0].Part {
 			rows = append(rows, i)
 			break
 		}
@@ -383,9 +383,9 @@ func tradeOne(t *testing.T, j *journey) {
 	var row game.TradeRowView
 	btn, delta := "", 0
 	for _, ln := range tradeLines(v.Rows) {
-		r := ln.row
+		r := ln.Row
 		switch {
-		case ln.head != "":
+		case ln.Head != "":
 		case r.WillSell && r.ColonyQty > 0 && delta != -1:
 			row, btn, delta = r, "give", -1
 		case r.WillBuy && r.TraderQty > 0 && delta == 0 && (row.Kind == "" || r.BuyC < row.BuyC):

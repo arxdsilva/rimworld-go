@@ -45,5 +45,5 @@ The immediate-mode widget kit (NG-1 §1.4): per-`Update` widget declarations wit
 
 ## Known Design Constraints
 - Root keeps `uiBegin`'s screen logic, the screen table dispatch, `ui_modal.go`'s `modal` type (41 call sites declare `Draw func(*App, rect)`; it wraps into `uikit.Modal`) and the window-kit coupling.
-- `uikit_compat.go` in the root holds the aliases, the colour vars and one-line wrappers; no other call file changed.
+- The root reaches the kit through `App.uiSt()` and `ports.Widgets.Kit()`; `uikit_compat.go` keeps only the root's widget-kit host adapter.
 - The difficulty widgets shared with `options` and `wizard` were lifted into `form.go` (ARCH-005 wave 5.2).

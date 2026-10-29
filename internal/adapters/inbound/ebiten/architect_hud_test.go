@@ -90,12 +90,12 @@ func TestArchitectCategoriesInTwoColumns(t *testing.T) {
 		t.Fatal("the layout has no ArchCats while the Architect is open")
 	}
 	cats := archButtonsWith(a, "arch.cat.")
-	if len(cats) != len(archCategories) {
-		t.Fatalf("%d category buttons, want %d", len(cats), len(archCategories))
+	if len(cats) != len(architect.Categories) {
+		t.Fatalf("%d category buttons, want %d", len(cats), len(architect.Categories))
 	}
 	cols := map[float32]bool{}
 	for i, b := range cats {
-		if want := "arch.cat." + archCategories[i].id; b.ID != want {
+		if want := "arch.cat." + architect.Categories[i].ID; b.ID != want {
 			t.Errorf("category %d id = %q, want %q (catalog order)", i, b.ID, want)
 		}
 		if !within(b, l.ArchCats) {
@@ -104,10 +104,10 @@ func TestArchitectCategoriesInTwoColumns(t *testing.T) {
 		if b.W < 92 || b.W > 104 || b.H != 28 {
 			t.Errorf("%s is %vx%v, want about 100x28", b.ID, b.W, b.H)
 		}
-		if b.Selected != (archCategories[i].id == a.arch.Cat) {
+		if b.Selected != (architect.Categories[i].ID == a.arch.Cat) {
 			t.Errorf("%s selected = %v with archCat %q", b.ID, b.Selected, a.arch.Cat)
 		}
-		if b.Label != archCategories[i].label {
+		if b.Label != architect.Categories[i].Label {
 			t.Errorf("%s label = %q", b.ID, b.Label)
 		}
 		cols[b.X] = true
@@ -223,25 +223,25 @@ func TestArchitectCategoryChangeDropsOtherCategoryTool(t *testing.T) {
 func TestArchitectToolsAreCommands(t *testing.T) {
 	t.Parallel()
 	a, _ := archColony(t)
-	for _, c := range archCategories {
-		a.arch.Cat = c.id
+	for _, c := range architect.Categories {
+		a.arch.Cat = c.ID
 		a.arch.ToolID = ""
 		cmds := a.archToolCommands()
 		sel := a.insp.Commands().SelectionCommands()
-		tools := toolsIn(c.id)
+		tools := toolsIn(c.ID)
 		if len(cmds) != len(tools) || len(sel) != len(tools) {
-			t.Fatalf("%s: %d commands (%d via selection), want %d", c.id, len(cmds), len(sel), len(tools))
+			t.Fatalf("%s: %d commands (%d via selection), want %d", c.ID, len(cmds), len(sel), len(tools))
 		}
 		for i, tool := range tools {
 			cb := cmds[i]
-			if cb.ID != "arch.tool."+tool.id || cb.Label != tool.label || cb.Icon != tool.icon {
-				t.Errorf("%s[%d] = {%q %q %q}, want {arch.tool.%s %q %q}", c.id, i, cb.ID, cb.Label, cb.Icon, tool.id, tool.label, tool.icon)
+			if cb.ID != "arch.tool."+tool.ID || cb.Label != tool.Label || cb.Icon != tool.Icon {
+				t.Errorf("%s[%d] = {%q %q %q}, want {arch.tool.%s %q %q}", c.ID, i, cb.ID, cb.Label, cb.Icon, tool.ID, tool.Label, tool.Icon)
 			}
-			if !strings.Contains(cb.Desc, tool.desc) {
-				t.Errorf("%s: Desc %q lacks the tool description", tool.id, cb.Desc)
+			if !strings.Contains(cb.Desc, tool.Desc) {
+				t.Errorf("%s: Desc %q lacks the tool description", tool.ID, cb.Desc)
 			}
-			if bv, ok := architect.Buildable(tool.build); ok && !strings.Contains(cb.Desc, "Cost: ") {
-				t.Errorf("%s: Desc %q lacks the cost of %s", tool.id, cb.Desc, bv.Kind)
+			if bv, ok := architect.Buildable(tool.Build); ok && !strings.Contains(cb.Desc, "Cost: ") {
+				t.Errorf("%s: Desc %q lacks the cost of %s", tool.ID, cb.Desc, bv.Kind)
 			}
 			if cb.Run != nil || len(cb.Cmds) > 0 || cb.Options != nil {
 				t.Errorf("%s: legacy ids go through applyClick, got Run/Cmds/Options", cb.ID)
@@ -343,7 +343,7 @@ func toolCategory(t *testing.T, id string) string {
 	if !ok {
 		t.Fatalf("no tool %q", id)
 	}
-	return tool.category
+	return tool.Category
 }
 
 func TestArchitectDescriptionHeightGrowsWithContent(t *testing.T) {
@@ -385,7 +385,7 @@ func TestArchitectDescriptionShowsNameCostDescriptionStock(t *testing.T) {
 	tool, _ := toolByID("hospital_bed")
 	text = strings.Join(archDescText(a), "\n")
 	for _, want := range []string{
-		tool.label,
+		tool.Label,
 		"Cost: 45 wood + 2 components",
 		"Only 7 wood in the colony", // 45 wood needed, 7 in stock
 		"Wood 7   Stone 3",
@@ -398,8 +398,8 @@ func TestArchitectDescriptionShowsNameCostDescriptionStock(t *testing.T) {
 		}
 	}
 	// The description wraps: its words are all there, in order.
-	if got := strings.Join(strings.Fields(text), " "); !strings.Contains(got, strings.Join(strings.Fields(tool.desc)[:6], " ")) {
-		t.Errorf("box lacks the start of the description %q\n%s", tool.desc, text)
+	if got := strings.Join(strings.Fields(text), " "); !strings.Contains(got, strings.Join(strings.Fields(tool.Desc)[:6], " ")) {
+		t.Errorf("box lacks the start of the description %q\n%s", tool.Desc, text)
 	}
 	if bv.Wood != 45 {
 		t.Fatalf("catalog changed: hospital bed costs %d wood", bv.Wood)
@@ -429,7 +429,7 @@ func TestArchitectDescriptionMaterialRow(t *testing.T) {
 		if !within(b, l.ArchDesc) {
 			t.Errorf("%s %+v outside ArchDesc %+v", b.ID, b, l.ArchDesc)
 		}
-		if b.Selected != (bv.Stuffs[i] == a.toolStuff(archTool{build: "wall"})) {
+		if b.Selected != (bv.Stuffs[i] == a.toolStuff(architect.ToolDef{Build: "wall"})) {
 			t.Errorf("%s selected = %v", b.ID, b.Selected)
 		}
 		for _, o := range stuffs[:i] {
@@ -440,13 +440,13 @@ func TestArchitectDescriptionMaterialRow(t *testing.T) {
 	}
 	// A tool with one material shows no row.
 	for _, tool := range allArchTools() {
-		if bv, ok := architect.Buildable(tool.build); !ok || len(bv.Stuffs) != 1 {
+		if bv, ok := architect.Buildable(tool.Build); !ok || len(bv.Stuffs) != 1 {
 			continue
 		}
-		a.arch.Cat = tool.category
-		archPick(t, a, tool.id)
+		a.arch.Cat = tool.Category
+		archPick(t, a, tool.ID)
 		if got := archButtonsWith(a, "arch.stuff."); len(got) != 0 {
-			t.Fatalf("%s builds from one material but offers %d buttons", tool.id, len(got))
+			t.Fatalf("%s builds from one material but offers %d buttons", tool.ID, len(got))
 		}
 		return
 	}
@@ -519,42 +519,42 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 	for _, sz := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		a.sw, a.sh = sz[0], sz[1]
 		for _, tool := range allArchTools() {
-			a.arch.Cat = tool.category
+			a.arch.Cat = tool.Category
 			a.arch.ToolID = ""
 			a.arch.Stuff = ""
-			archPick(t, a, tool.id)
-			if a.arch.ToolID != tool.id {
+			archPick(t, a, tool.ID)
+			if a.arch.ToolID != tool.ID {
 				continue // an allowed-area tool opens its area menu first
 			}
 			stuffs := []string{""}
-			if bv, ok := architect.Buildable(tool.build); ok && len(bv.Stuffs) > 1 {
+			if bv, ok := architect.Buildable(tool.Build); ok && len(bv.Stuffs) > 1 {
 				stuffs = bv.Stuffs
 			}
 			for _, s := range stuffs {
 				a.arch.Stuff = s
 				l := a.hud()
 				if l.ArchDesc.Empty() || l.ArchDesc.H != a.arch.DescHeight() {
-					t.Errorf("%dx%d %s/%s: box %+v is clamped (wants %v)", sz[0], sz[1], tool.id, s, l.ArchDesc, a.arch.DescHeight())
+					t.Errorf("%dx%d %s/%s: box %+v is clamped (wants %v)", sz[0], sz[1], tool.ID, s, l.ArchDesc, a.arch.DescHeight())
 				}
 				if l.ArchDesc.Y < 0 {
-					t.Errorf("%dx%d %s/%s: box above the screen: %+v", sz[0], sz[1], tool.id, s, l.ArchDesc)
+					t.Errorf("%dx%d %s/%s: box above the screen: %+v", sz[0], sz[1], tool.ID, s, l.ArchDesc)
 				}
 				for _, ln := range a.arch.Plan().Lines {
 					if w, _ := gfx.Measure(ln.Text, ln.Style); w > architect.InnerW+0.5 {
-						t.Errorf("%dx%d %s/%s: line %q is %.1f wide, the box holds %v", sz[0], sz[1], tool.id, s, ln.Text, w, float32(architect.InnerW))
+						t.Errorf("%dx%d %s/%s: line %q is %.1f wide, the box holds %v", sz[0], sz[1], tool.ID, s, ln.Text, w, float32(architect.InnerW))
 					}
 					if ln.Y+gfx.LineStep(ln.Style) > l.ArchDesc.H {
-						t.Errorf("%dx%d %s/%s: line %q at y=%v runs past the box (%v)", sz[0], sz[1], tool.id, s, ln.Text, ln.Y, l.ArchDesc.H)
+						t.Errorf("%dx%d %s/%s: line %q at y=%v runs past the box (%v)", sz[0], sz[1], tool.ID, s, ln.Text, ln.Y, l.ArchDesc.H)
 					}
 				}
 				for _, b := range archButtonsWith(a, "arch.stuff.") {
 					if !within(b, l.ArchDesc) {
-						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.id, b.ID, b, l.ArchDesc)
+						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
 					}
 				}
 				for _, b := range archButtonsWith(a, "arch.crop.") {
 					if !within(b, l.ArchDesc) {
-						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.id, b.ID, b, l.ArchDesc)
+						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
 					}
 				}
 			}
@@ -567,8 +567,8 @@ func TestArchitectLayoutKeepsRegionsApart(t *testing.T) {
 	a, _ := archColony(t)
 	for _, sz := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
 		a.sw, a.sh = sz[0], sz[1]
-		for _, c := range archCategories {
-			a.arch.Cat = c.id
+		for _, c := range architect.Categories {
+			a.arch.Cat = c.ID
 			a.arch.ToolID = ""
 			cmds := a.archToolCommands()
 			l := hudlayout.Compute(sz[0], sz[1], hudlayout.Inputs{ArchOpen: true, Commands: len(cmds), ArchDescH: a.arch.DescHeight(), Colonists: 6})
@@ -581,15 +581,15 @@ func TestArchitectLayoutKeepsRegionsApart(t *testing.T) {
 						continue
 					}
 					if p.X < q.Right() && q.X < p.Right() && p.Y < q.Bottom() && q.Y < p.Bottom() {
-						t.Errorf("%dx%d %s: region %d %+v overlaps region %d %+v", sz[0], sz[1], c.id, i, p, j, q)
+						t.Errorf("%dx%d %s: region %d %+v overlaps region %d %+v", sz[0], sz[1], c.ID, i, p, j, q)
 					}
 				}
 			}
 			if len(l.GridCells) != len(cmds) {
-				t.Errorf("%dx%d %s: %d grid cells for %d tools", sz[0], sz[1], c.id, len(l.GridCells), len(cmds))
+				t.Errorf("%dx%d %s: %d grid cells for %d tools", sz[0], sz[1], c.ID, len(l.GridCells), len(cmds))
 			}
 			if len(l.GridCells) > 0 && l.GridCells[0].X != l.ArchCats.Right()+hudlayout.HudMargin {
-				t.Errorf("%dx%d %s: grid starts at %v, want right of ArchCats (%v)", sz[0], sz[1], c.id, l.GridCells[0].X, l.ArchCats.Right()+hudlayout.HudMargin)
+				t.Errorf("%dx%d %s: grid starts at %v, want right of ArchCats (%v)", sz[0], sz[1], c.ID, l.GridCells[0].X, l.ArchCats.Right()+hudlayout.HudMargin)
 			}
 		}
 	}

@@ -44,10 +44,10 @@ func armed(t *testing.T, a *App, f *fakeInput, k architect.ZoneToolKind) {
 	}
 }
 
-func cellsOf(gs []ghostCell) [][2]int {
+func cellsOf(gs []architect.GhostCell) [][2]int {
 	var out [][2]int
 	for _, g := range gs {
-		out = append(out, [2]int{g.x, g.y})
+		out = append(out, [2]int{g.X, g.Y})
 	}
 	return out
 }
@@ -134,7 +134,7 @@ func TestExpandGhostIsPerCellGreenOrRedByTheZoneRules(t *testing.T) {
 	// Hovering shows the tile under the pointer.
 	f.MoveTo(a, 14, 3)
 	f.Frame(t, a)
-	if got := a.zoneToolCells(z); len(got) != 1 || got[0] != (ghostCell{x: 14, y: 3, ok: true}) {
+	if got := a.zoneToolCells(z); len(got) != 1 || got[0] != (architect.GhostCell{X: 14, Y: 3, OK: true}) {
 		t.Fatalf("hover ghost %+v, want the one valid tile", got)
 	}
 	// Mid-drag the ghost is the rectangle, each cell judged on its own.
@@ -147,8 +147,8 @@ func TestExpandGhostIsPerCellGreenOrRedByTheZoneRules(t *testing.T) {
 		t.Fatalf("drag ghost has %d cells, want 3 columns x 2 rows: %+v", len(got), got)
 	}
 	for _, g := range got {
-		if want := g.x != 15; g.ok != want {
-			t.Errorf("cell (%d,%d) ok=%v, want %v", g.x, g.y, g.ok, want)
+		if want := g.X != 15; g.OK != want {
+			t.Errorf("cell (%d,%d) ok=%v, want %v", g.X, g.Y, g.OK, want)
 		}
 	}
 	// Let go: one command for the whole rectangle (the sim skips the red cell).
@@ -191,8 +191,8 @@ func TestShrinkGhostAndCommandOnlyTouchTheSelectedZone(t *testing.T) {
 		t.Fatalf("shrink ghost %v, want only the grow zone's tiles %v", got, want)
 	}
 	for _, g := range a.zoneToolCells(z) {
-		if g.ok {
-			t.Errorf("cell (%d,%d) is drawn as an addition", g.x, g.y)
+		if g.OK {
+			t.Errorf("cell (%d,%d) is drawn as an addition", g.X, g.Y)
 		}
 	}
 	f.Cur.Down[inputframe.Left], f.Cur.Release[inputframe.Left] = false, true

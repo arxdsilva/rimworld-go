@@ -48,4 +48,4 @@ The client's drawing primitives, shared by the HUD and the renderer: the UI canv
 
 ## Known Design Constraints
 - `cur` is one package-level state; tests reset it through setters. A second global here is a rule violation.
-- `gfx` cannot depend on the root's `Renderer` or `App`; the root wraps every moved function in one-line compat wrappers (`gfx_compat.go`).
+- `gfx` cannot depend on the root's `Renderer` or `App`; the root and every package call `gfx` directly (the transition wrappers are gone, ARCH-006).

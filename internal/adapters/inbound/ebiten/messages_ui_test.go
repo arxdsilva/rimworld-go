@@ -42,14 +42,14 @@ func TestMessagesFillTheLayoutsRectRightAligned(t *testing.T) {
 		t.Fatalf("rows = %d, want %d", len(rows), hudlayout.MaxMsgs)
 	}
 	for i, r := range rows {
-		if r.r.H != hudlayout.MsgRowH || r.r.Y != l.Messages.Y+float32(i)*hudlayout.MsgStride {
-			t.Errorf("row %d at %+v, Messages %+v", i, r.r, l.Messages)
+		if r.R.H != hudlayout.MsgRowH || r.R.Y != l.Messages.Y+float32(i)*hudlayout.MsgStride {
+			t.Errorf("row %d at %+v, Messages %+v", i, r.R, l.Messages)
 		}
-		if r.r.Right() != l.Messages.Right() || r.r.X < l.Messages.X {
-			t.Errorf("row %d %+v is not right-aligned inside %+v", i, r.r, l.Messages)
+		if r.R.Right() != l.Messages.Right() || r.R.X < l.Messages.X {
+			t.Errorf("row %d %+v is not right-aligned inside %+v", i, r.R, l.Messages)
 		}
 	}
-	if got := rows[hudlayout.MaxMsgs-1].msg.Text; !strings.Contains(got, "number 7") {
+	if got := rows[hudlayout.MaxMsgs-1].Msg.Text; !strings.Contains(got, "number 7") {
 		t.Errorf("the newest message is last, got %q", got)
 	}
 	if l.Messages.Right() >= l.Right.X {
@@ -62,8 +62,8 @@ func TestMessagesFillTheLayoutsRectRightAligned(t *testing.T) {
 	}
 	for i, r := range rows {
 		b, ok := ids[fmt.Sprintf("msg.%d", i)]
-		if !ok || b.X != r.r.X || b.Y != r.r.Y || b.W != r.r.W || b.H != r.r.H {
-			t.Errorf("msg.%d button %+v (found %v), want %+v", i, b, ok, r.r)
+		if !ok || b.X != r.R.X || b.Y != r.R.Y || b.W != r.R.W || b.H != r.R.H {
+			t.Errorf("msg.%d button %+v (found %v), want %+v", i, b, ok, r.R)
 		}
 	}
 	before := a.renderer.cam
@@ -130,12 +130,12 @@ func TestMessageFadesOut(t *testing.T) {
 		t.Fatal("the message is not live")
 	}
 	rows := a.messageRows(a.hud())
-	if len(rows) != 1 || rows[0].alpha != 1 {
+	if len(rows) != 1 || rows[0].Alpha != 1 {
 		t.Fatalf("fresh row %+v", rows)
 	}
 	a.renderer.present += hud.MessageFrames - hud.MessageFadeFrames/2
 	rows = a.messageRows(a.hud())
-	if len(rows) != 1 || rows[0].alpha >= 0.7 || rows[0].alpha <= 0.3 {
+	if len(rows) != 1 || rows[0].Alpha >= 0.7 || rows[0].Alpha <= 0.3 {
 		t.Fatalf("half-faded row %+v", rows)
 	}
 	a.chrome.Right().Draw(ebiten.NewImage(a.sw, a.sh), a.sw, a.sh)

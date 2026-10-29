@@ -126,8 +126,8 @@ var layoutScreens = [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}}
 // command buttons the Architect lays out.
 func maxArchTools() int {
 	n := 0
-	for _, c := range archCategories {
-		n = max(n, len(toolsIn(c.id)))
+	for _, c := range architectpkg.Categories {
+		n = max(n, len(toolsIn(c.ID)))
 	}
 	return n
 }

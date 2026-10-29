@@ -19,12 +19,25 @@ Tools in the session scratchpad, all `go/types` over the root package with its t
 | `Simulation` | 32 methods | 8 embedded groups |
 | `DrawArt500/z1` | 1.00 ms, 418 draw calls, 3,826 allocs | the same |
 
-## Part 2 — what still stands in the root (next)
-- Converting shims whose lowercase fields root tests read (`archTool`, `ghostCell`, `rowRun`, `archCategories`/`archTools` in architect_compat; `alert`, `letterRow`, `messageRow`, `statusChip`, `toast`, `resRow`, `barStatus`, `globalPlan`, `globalToggleList`, `letterKinds`, `rightCard`, `alertRow` in hud_compat; `healthOption`, `itemVerb` in inspector_compat; `moTrack`, `setupBackdrop*`, `intentNone` group members): export-and-repoint the tests, then delete.
-- `Renderer.lod`/`links`/`stoneArt` belong to `world.Pipeline` (R9's part 3 in `scratchpad/w54/lead_edits_world.pl`); `architect/sprites.go` duplicates `render/world`'s build keys.
-- The remaining Renderer and App wrappers are non-pass-through (they add `&r.view`, the cast, the blood, a closure): each is inlined at its caller or becomes the layer's method.
-- `App` 57 fields and `Renderer` 48 stay budgeted: the screen/scale group, the session group and the twelve feature pointers are candidates for sub-structs.
-- Per-package `AGENTS.md` (33 packages), the root ebiten `AGENTS.md` rewrite, `HEXAGONAL_ARCHITECTURE.md` §4 tree and §21, `make fps` against PERF-002.
+## Part 2 — the renderer side, the shims, the docs (two commits)
+- R10 (opus): `Renderer.lod`/`links`/`stoneArt` moved into `world.Pipeline` (which allocates the zoom tiers, the link grid and the stone cache and wires the env grass and crop batches; `Shared` keeps the camera, the cast and the blood); `architect/sprites.go` deleted — architect reads `world.BuildSprite` and co; the ten renderer-side compat files became `layers.go` and three host adapters (`env_host.go`, `creature_host.go`, `cue_host.go`); every remaining Renderer wrapper was inlined at its caller or became a layer method. Renderer 153 → 71 methods, 48 → 40 fields; what is left is orchestration (`advance`, `syncPawns`, the camera, speed, selection, `Draw`), the layer construction (`pipe`, `overlays`, `cueBus`, `liveView`) and the methods the App side still calls (the architect previews, the sound director's loops, the shell's overlay toggles, the minimap, the selection helpers).
+- Lead: the sixteen converting shims became aliases of their package types (`architect.ToolDef`/`GhostCell`/`RowRun`, `inspector.HealthOption`/`ItemVerb`, `hud.Alert`/`AlertRow`/`RightCard`/`LetterRow`/`MessageRow`/`StatusChip`/`GlobalPlan`/`Toast`/`ResRow`/`BarStatus`, `dialogs.TradeLine`); the root tests' lowercase field reads were renamed by the compiler's own "but does have field X" hints in a loop (`fixhints.py`), the converters became identities and were inlined, then the aliases were repointed and deleted like the others. `archCategories`/`archTools` are `architect.Categories`/`Tools`.
+- S1 (haiku): an `AGENTS.md` per sub-package (33) from the §33 template and each package's `doc.go`/`deps.go`/imports/tests; the root ebiten `AGENTS.md` rewritten as the composition root's contract with a package map and a "where the presentation knowledge went" index; `HEXAGONAL_ARCHITECTURE.md` §4 shows the ebiten tree, §21 the layer and feature rules.
+
+| | before ARCH-006 | after |
+|---|---|---|
+| root non-test files / lines | 70 / 14,617 | 56 / 10,128 |
+| `App` methods / fields | 607 / 57 | 244 / 57 |
+| `Renderer` methods / fields | 334 / 48 | 71 / 40 |
+| `<pkg>_compat.go` | 29 files | 14 (each a feature's host adapter, shell composition and constructor, plus the few non-pass-through wrappers the composition still calls) |
+| `Simulation` | 32 methods | 8 embedded groups |
+| sub-packages / their AGENTS.md | 33 / 0 | 33 / 33 |
+| `DrawArt500/z1` | 1.00 ms, 418 draw calls, 3,826 allocs | the same |
+
+## Still budgeted (not hidden)
+- `App` 57 fields / 244 methods: the composition (`app.go` 28, `hotkeys.go` 15, `capture.go` 13, `input_frame.go` 11, `colony_compose.go` 9, `ui_scale.go` 9, `sound_director.go` 8), the zone commands (`cmds_zone.go` 16 — they belong with `architect.Zones`), the map-side selection draws (`multiselect_render.go` 13) and the wizard's screen-table wrappers (`wizard_compat.go` 20). The screen/scale group, the session group and the twelve feature pointers are the sub-struct candidates for the fields.
+- `Renderer` 40 fields / 71 methods, `uikit.Kit` 73/30, `wizard.Draft` 42 fields, `globe.View` 51, `render/creature.Set` 93 methods, `game.Game` 2105/152: every line in `internal/arch/solid_budget.txt` says so and only shrinks.
+- The `*_compat_test.go` files hold the helpers that let the root's integration tests reach into a feature (178 declarations moved there); a new test calls the feature directly.
 
 ## Findings
 - A pass-through wrapper is the only shape a textual repoint can retire safely: the mapper flags anything else (`nonpass`, `variadic`, a name shared by another receiver type — `Kit` was, and deleting it broke `uikit.Owner`).

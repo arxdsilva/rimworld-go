@@ -319,7 +319,7 @@ func TestBarBurningFromTheFiresUnderAColonist(t *testing.T) {
 		t.Errorf("colonist away from the fire: %v", got)
 	}
 	got := a.barStatusesOf(ps[1])
-	if len(got) != 1 || got[0].key != "burning" {
+	if len(got) != 1 || got[0].Key != "burning" {
 		t.Errorf("colonist in the fire: %v, want burning", got)
 	}
 }
@@ -329,7 +329,7 @@ func TestBarIdleIconWaitsOutShortGaps(t *testing.T) {
 	a, f := htApp(t, s, 1280, 720)
 	idle := func() bool {
 		for _, st := range a.barStatusesOf(s.pawns[0]) {
-			if st.key == "idle" {
+			if st.Key == "idle" {
 				return true
 			}
 		}

@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -28,8 +29,8 @@ func TestAlertClickCentresCamera(t *testing.T) {
 		t.Fatal("expected an alert for a starving/collapsed colonist")
 	}
 	before := a.renderer.cam
-	a.chrome.Alerts().Focus("alert." + als[0].key)
-	if a.renderer.cam == before && len(als[0].targets) > 0 {
+	a.chrome.Alerts().Focus("alert." + als[0].Key)
+	if a.renderer.cam == before && len(als[0].Targets) > 0 {
 		t.Fatal("clicking an alert moves the camera")
 	}
 }
@@ -68,11 +69,11 @@ func TestAlertRowsFillTheLayoutsAlertsRect(t *testing.T) {
 		t.Fatalf("alertCount() = %d, want %d", a.chrome.Alerts().Count(), len(rows))
 	}
 	for i, r := range rows {
-		if r.r.X != l.Alerts.X || r.r.W != l.Alerts.W || r.r.H != hudlayout.AlertRowH || r.r.Y != l.Alerts.Y+float32(i)*(hudlayout.AlertRowH+hudlayout.HudGap) {
-			t.Errorf("row %d at %+v, Alerts %+v", i, r.r, l.Alerts)
+		if r.R.X != l.Alerts.X || r.R.W != l.Alerts.W || r.R.H != hudlayout.AlertRowH || r.R.Y != l.Alerts.Y+float32(i)*(hudlayout.AlertRowH+hudlayout.HudGap) {
+			t.Errorf("row %d at %+v, Alerts %+v", i, r.R, l.Alerts)
 		}
-		if r.al.key != a.currentAlerts()[i].key {
-			t.Errorf("row %d is %q, want %q", i, r.al.key, a.currentAlerts()[i].key)
+		if r.Al.Key != a.currentAlerts()[i].Key {
+			t.Errorf("row %d is %q, want %q", i, r.Al.Key, a.currentAlerts()[i].Key)
 		}
 	}
 	// each row is a button with the legacy id
@@ -81,9 +82,9 @@ func TestAlertRowsFillTheLayoutsAlertsRect(t *testing.T) {
 		ids[b.ID] = b
 	}
 	for _, r := range rows {
-		b, ok := ids["alert."+r.al.key]
-		if !ok || b.X != r.r.X || b.Y != r.r.Y || b.W != r.r.W || b.H != r.r.H {
-			t.Errorf("alert.%s button = %+v (found %v), want the row %+v", r.al.key, b, ok, r.r)
+		b, ok := ids["alert."+r.Al.Key]
+		if !ok || b.X != r.R.X || b.Y != r.R.Y || b.W != r.R.W || b.H != r.R.H {
+			t.Errorf("alert.%s button = %+v (found %v), want the row %+v", r.Al.Key, b, ok, r.R)
 		}
 	}
 }
@@ -106,19 +107,19 @@ func TestAlertsPlusNMore(t *testing.T) {
 	}
 	last := rows[len(rows)-1]
 	shown := len(rows) - 1
-	if want := len(als) - shown; last.more != want {
-		t.Fatalf("last row counts %d more, want %d", last.more, want)
+	if want := len(als) - shown; last.More != want {
+		t.Fatalf("last row counts %d more, want %d", last.More, want)
 	}
 	if got := alertRowLabel(last); got != fmt.Sprintf("+%d more", len(als)-shown) {
 		t.Fatalf("last row reads %q", got)
 	}
 	for i, r := range rows[:shown] {
-		if r.more != 0 || r.al.key != als[i].key {
-			t.Errorf("row %d = %+v, want alert %q", i, r, als[i].key)
+		if r.More != 0 || r.Al.Key != als[i].Key {
+			t.Errorf("row %d = %+v, want alert %q", i, r, als[i].Key)
 		}
 	}
-	if len(last.hidden) != last.more {
-		t.Fatalf("hidden alerts %d, more %d", len(last.hidden), last.more)
+	if len(last.Hidden) != last.More {
+		t.Fatalf("hidden alerts %d, more %d", len(last.Hidden), last.More)
 	}
 	// the "+N more" row is not a button: only real alerts jump
 	for _, b := range a.chrome.Alerts().ButtonsIn(l) {
@@ -141,17 +142,17 @@ func TestAlertHoverCardSitsLeftOfTheAlert(t *testing.T) {
 				t.Fatal("no alert rows")
 			}
 			for i, row := range rows {
-				cursorOver(a, row.r)
+				cursorOver(a, row.R)
 				card, anchor, ok := a.rightHover(l)
-				if !ok || anchor != row.r {
-					t.Fatalf("row %d: hover = %+v %+v %v, want its row %+v", i, card, anchor, ok, row.r)
+				if !ok || anchor != row.R {
+					t.Fatalf("row %d: hover = %+v %+v %v, want its row %+v", i, card, anchor, ok, row.R)
 				}
-				if card.title != row.al.label || !strings.Contains(card.body, row.al.explain) {
-					t.Errorf("row %d card = %q / %q, want label %q and explanation %q", i, card.title, card.body, row.al.label, row.al.explain)
+				if card.Title != row.Al.Label || !strings.Contains(card.Body, row.Al.Explain) {
+					t.Errorf("row %d card = %q / %q, want label %q and explanation %q", i, card.Title, card.Body, row.Al.Label, row.Al.Explain)
 				}
 				box, _, _ := layoutRightCard(card, anchor, a.sw, a.sh)
-				if box.Right() > row.r.X {
-					t.Errorf("row %d: card %+v overlaps the alert %+v", i, box, row.r)
+				if box.Right() > row.R.X {
+					t.Errorf("row %d: card %+v overlaps the alert %+v", i, box, row.R)
 				}
 				if box.X < 0 || box.Y < 0 || box.Right() > float32(a.sw) || box.Bottom() > float32(a.sh) {
 					t.Errorf("row %d: card %+v off the %dx%d screen", i, box, a.sw, a.sh)
@@ -171,20 +172,20 @@ func TestAlertHoverCardSitsLeftOfTheAlert(t *testing.T) {
 func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, rightWorld())
-	var al alert
+	var al hud.Alert
 	for _, c := range a.currentAlerts() {
-		if c.key == "raid" {
+		if c.Key == "raid" {
 			al = c
 		}
 	}
-	if len(al.targets) != 2 {
-		t.Fatalf("raid alert targets = %v, want two raiders", al.targets)
+	if len(al.Targets) != 2 {
+		t.Fatalf("raid alert targets = %v, want two raiders", al.Targets)
 	}
 	l := a.hud()
 	var row gfx.Rect
 	for _, r := range a.alertRows(l) {
-		if r.al.key == "raid" {
-			row = r.r
+		if r.Al.Key == "raid" {
+			row = r.R
 		}
 	}
 	centre := func() [2]int { // the tile in the middle of the map viewport
@@ -192,7 +193,7 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 		x, y := a.renderer.TileAt(int((v.X0+v.X1)/2), int((v.Y0+v.Y1)/2))
 		return [2]int{x, y}
 	}
-	at := func(i int) [2]int { return al.targets[i] }
+	at := func(i int) [2]int { return al.Targets[i] }
 	near := func(got, want [2]int) bool {
 		return architect.Abs(got[0]-want[0]) <= 1 && architect.Abs(got[1]-want[1]) <= 1
 	}
@@ -225,10 +226,10 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 	}
 }
 
-func alertKeys(als []alert) []string {
+func alertKeys(als []hud.Alert) []string {
 	var out []string
 	for _, a := range als {
-		out = append(out, a.key)
+		out = append(out, a.Key)
 	}
 	return out
 }

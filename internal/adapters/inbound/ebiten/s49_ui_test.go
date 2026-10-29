@@ -25,7 +25,7 @@ func TestHealthPickerUsesViewOptionsAndShowsReasons(t *testing.T) {
 	}
 	h.Operations = []game.OperationView{{Label: "Install peg leg (left leg)", Slot: 0, Status: "no peg leg in stock"}}
 	s.health[1] = h
-	if got := pickerOptions(h); len(got) != 2 || got[0].reason != "no glass eye in stock" || got[1].reason != "" {
+	if got := pickerOptions(h); len(got) != 2 || got[0].Reason != "no glass eye in stock" || got[1].Reason != "" {
 		t.Fatalf("pickerOptions = %+v", got)
 	}
 	drawFrame(t, a, f) // status line under the queued row paints

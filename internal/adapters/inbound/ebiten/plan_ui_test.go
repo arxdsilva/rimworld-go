@@ -36,15 +36,15 @@ func TestPlanToolCatalog(t *testing.T) {
 	t.Parallel()
 	for id, icon := range map[string]string{"plan": "plan", "unplan": "plan_clear"} {
 		tool, ok := toolByID(id)
-		if !ok || tool.category != "orders" || tool.mode != architect.PlaceArea || tool.icon != icon || tool.cmd != command.DesignatePlan {
+		if !ok || tool.Category != "orders" || tool.Mode != architect.PlaceArea || tool.Icon != icon || tool.Cmd != command.DesignatePlan {
 			t.Fatalf("tool %q = %+v ok=%v", id, tool, ok)
 		}
 	}
-	if tool, _ := toolByID("plan"); tool.label != "Plan" {
-		t.Fatalf("label = %q", tool.label)
+	if tool, _ := toolByID("plan"); tool.Label != "Plan" {
+		t.Fatalf("label = %q", tool.Label)
 	}
-	if tool, _ := toolByID("unplan"); tool.label != "Remove plan" {
-		t.Fatalf("label = %q", tool.label)
+	if tool, _ := toolByID("unplan"); tool.Label != "Remove plan" {
+		t.Fatalf("label = %q", tool.Label)
 	}
 }
 

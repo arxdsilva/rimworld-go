@@ -77,7 +77,7 @@ func TestItemHaulOnlyWhenUnstored(t *testing.T) {
 	id, _ := g.SpawnStack(item.Wood, 25, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
 	it, _ := a.sel.SelectedItem()
-	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].label != "Haul" {
+	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].Label != "Haul" {
 		t.Fatalf("unstored wood verbs = %+v", vs)
 	}
 	if vs := itemVerbs(it, true); len(vs) != 0 {
@@ -104,13 +104,13 @@ func TestItemFoodAndApparelRows(t *testing.T) {
 	id, _ := g.SpawnStack(item.Meal, 2, 6, 6)
 	selectItemTile(t, a, id, 6, 6)
 	it, _ := a.sel.SelectedItem()
-	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].id != "cmd.item.eat" || vs[0].label != "Eat" {
+	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].ID != "cmd.item.eat" || vs[0].Label != "Eat" {
 		t.Fatalf("meal verbs = %+v", vs)
 	}
 	pid, _ := g.SpawnStack(item.Parka, 1, 7, 7)
 	selectItemTile(t, a, pid, 7, 7)
 	it, _ = a.sel.SelectedItem()
-	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].id != "cmd.item.wear" || vs[0].label != "Wear" {
+	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].ID != "cmd.item.wear" || vs[0].Label != "Wear" {
 		t.Fatalf("parka verbs = %+v", vs)
 	}
 	a.insp.Thing().ApplyItemClick("item.act.99")

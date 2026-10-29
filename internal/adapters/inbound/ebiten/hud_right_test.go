@@ -106,25 +106,25 @@ func TestRightHoverCardsForLettersAndFoldedRows(t *testing.T) {
 	a, _ := colonyApp(t, letterStub(nLetters(10)...))
 	l := a.hud()
 	rows := a.letterRows(l)
-	cursorOver(a, rows[0].r) // "+N older"
+	cursorOver(a, rows[0].R) // "+N older"
 	card, anchor, ok := a.rightHover(l)
 	// the count is what the folded row hides (alerts keep a few rows, so
 	// fewer letters may show)
-	if want := fmt.Sprintf("%d older letters", rows[0].older); !ok || rows[0].older < 2 || anchor != rows[0].r || card.title != want || card.body == "" {
+	if want := fmt.Sprintf("%d older letters", rows[0].Older); !ok || rows[0].Older < 2 || anchor != rows[0].R || card.Title != want || card.Body == "" {
 		t.Fatalf("older row card = %+v %+v %v", card, anchor, ok)
 	}
-	cursorOver(a, rows[len(rows)-1].r) // the newest letter
+	cursorOver(a, rows[len(rows)-1].R) // the newest letter
 	card, _, ok = a.rightHover(l)
-	last := rows[len(rows)-1].letter
-	if !ok || card.title != last.Title || card.clr != hud.LetterColor(last.Kind) || !strings.Contains(card.body, last.Text) {
+	last := rows[len(rows)-1].Letter
+	if !ok || card.Title != last.Title || card.Clr != hud.LetterColor(last.Kind) || !strings.Contains(card.Body, last.Text) {
 		t.Fatalf("letter card = %+v %v", card, ok)
 	}
 	// a long letter text is cut in the preview
 	s := a.renderer.game.(*stubSim)
 	s.world.Letters[9].Text = strings.Repeat("word ", 100)
 	card, _, _ = a.rightHover(l)
-	if len([]rune(card.body)) > 300 {
-		t.Errorf("preview is %d runes", len([]rune(card.body)))
+	if len([]rune(card.Body)) > 300 {
+		t.Errorf("preview is %d runes", len([]rune(card.Body)))
 	}
 
 	// folded alerts
@@ -132,12 +132,12 @@ func TestRightHoverCardsForLettersAndFoldedRows(t *testing.T) {
 	lay := hudlayout.Compute(1280, 720, hudlayout.Inputs{Alerts: len(b.currentAlerts()), Letters: 4, GlobalH: 380, LearnH: 28})
 	arows := b.alertRows(lay)
 	more := arows[len(arows)-1]
-	if more.more == 0 {
+	if more.More == 0 {
 		t.Fatalf("fixture: no folded row in %d rows", len(arows))
 	}
-	cursorOver(b, more.r)
+	cursorOver(b, more.R)
 	card, _, ok = b.rightHover(lay)
-	if !ok || card.title != fmt.Sprintf("%d more alerts", more.more) || !strings.Contains(card.body, more.hidden[0].label) {
+	if !ok || card.Title != fmt.Sprintf("%d more alerts", more.More) || !strings.Contains(card.Body, more.Hidden[0].Label) {
 		t.Fatalf("+N more card = %+v %v", card, ok)
 	}
 

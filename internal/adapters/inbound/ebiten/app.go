@@ -731,7 +731,7 @@ func (a *App) toggleWorkCell(id string) {
 	if err != nil {
 		return
 	}
-	wt, ok := workCommand(col)
+	wt, ok := windowspkg.WorkTypeForCol(col)
 	if !ok {
 		return
 	}
@@ -745,10 +745,6 @@ func (a *App) toggleWorkCell(id string) {
 }
 
 const work3 = 3
-
-func workCommand(col int) (command.WorkType, bool) {
-	return windowspkg.WorkTypeForCol(col)
-}
 
 // NewApp returns an App on the boot screen. Simulation is not created
 // until Start is pressed.

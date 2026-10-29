@@ -183,7 +183,7 @@ func TestWaitingBlueprintsAlert(t *testing.T) {
 	f1.Status, f2.Status, f2.X = "No wood in stock", "No straw carpet in stock: sew one at a tailoring bench", 5
 	w := game.WorldView{Frames: []game.FrameView{f1, f2, f3}}
 	al, ok := waitingFramesAlert(w)
-	if !ok || al.label != "Blueprints waiting for materials (2)" || len(al.targets) != 2 {
+	if !ok || al.Label != "Blueprints waiting for materials (2)" || len(al.Targets) != 2 {
 		t.Fatalf("alert = %+v ok=%v", al, ok)
 	}
 	if _, ok := waitingFramesAlert(game.WorldView{Frames: []game.FrameView{f3}}); ok {
@@ -195,14 +195,14 @@ func TestFenceAndForbidToolsEmit(t *testing.T) {
 	t.Parallel()
 	for _, id := range []string{"fence", "fence_gate"} {
 		tool, ok := toolByID(id)
-		if !ok || tool.category != "structure" || !strings.Contains(tool.desc, "Animals can't cross; colonists climb over (slow)") {
+		if !ok || tool.Category != "structure" || !strings.Contains(tool.Desc, "Animals can't cross; colonists climb over (slow)") {
 			t.Fatalf("tool %s = %+v", id, tool)
 		}
 	}
-	if g, _ := toolByID("fence_gate"); g.mode != architect.PlaceSingle {
+	if g, _ := toolByID("fence_gate"); g.Mode != architect.PlaceSingle {
 		t.Fatal("gate is a single placement")
 	}
-	if f, _ := toolByID("fence"); f.mode != architect.PlaceLine {
+	if f, _ := toolByID("fence"); f.Mode != architect.PlaceLine {
 		t.Fatal("fence draws lines")
 	}
 	a, s := stubColony(t)
@@ -298,7 +298,7 @@ func TestFenceFallbacksDoNotPanic(t *testing.T) {
 	sprite.DrawFenceVector(img, 0, 0, 64, "fence gate", 0, true, true, 140)
 	sprite.DrawFenceVector(img, 0, 0, 64, "fence gate", 0, false, false, 255)
 	a, _ := stubColony(t)
-	drawIconFallback(img, archTool{label: "Fence"}, 0, 0)
+	drawIconFallback(img, architect.ToolDef{Label: "Fence"}, 0, 0)
 	a.renderer.art = nil
 	a.renderer.drawForbiddenMark(img, 1, 1, 64, 128, 128) // nil catalog: vector ring
 }

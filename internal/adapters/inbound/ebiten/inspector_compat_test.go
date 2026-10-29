@@ -11,23 +11,23 @@ func bioSkillTip(s game.SkillView, week int) string {
 	return inspector.BioSkillTip(wizard.SkillTip(s), s, week)
 }
 
-func pickerOptions(h game.HealthView) []healthOption {
-	return toHealthOptions(inspector.PickerOptions(h))
+func pickerOptions(h game.HealthView) []inspector.HealthOption {
+	return inspector.PickerOptions(h)
 }
 
-func healthOptions(h game.HealthView) []healthOption {
-	return toHealthOptions(inspector.HealthOptions(h))
+func healthOptions(h game.HealthView) []inspector.HealthOption {
+	return inspector.HealthOptions(h)
 }
 
-func healthOptionTip(o healthOption) string {
-	return inspector.HealthOptionTip(inspector.HealthOption{Label: o.label, Op: o.op, Part: o.part, Item: o.item, Reason: o.reason})
+func healthOptionTip(o inspector.HealthOption) string {
+	return inspector.HealthOptionTip(inspector.HealthOption{Label: o.Label, Op: o.Op, Part: o.Part, Item: o.Item, Reason: o.Reason})
 }
 
-func itemVerbs(it game.ItemView, stored bool) []itemVerb {
+func itemVerbs(it game.ItemView, stored bool) []inspector.ItemVerb {
 	in := inspector.ItemVerbs(it, stored)
-	out := make([]itemVerb, len(in))
+	out := make([]inspector.ItemVerb, len(in))
 	for i, v := range in {
-		out[i] = itemVerb{v.ID, v.Label, v.Icon, v.Desc, v.Match}
+		out[i] = v
 	}
 	return out
 }

@@ -138,15 +138,15 @@ func (f fakeTradeStatus) TradeStatus() (game.OrbitalView, bool) { return f.o, f.
 func TestTradeAlerts(t *testing.T) {
 	t.Parallel()
 	got := tradeAlertsFrom(fakeTradeStatus{game.OrbitalView{Present: true, HoursLeft: 18, CaravanVisiting: true}, true})
-	if len(got) != 2 || got[0].label != "Trade ship in orbit (18h left)" || got[1].label != "Trader caravan visiting" {
+	if len(got) != 2 || got[0].Label != "Trade ship in orbit (18h left)" || got[1].Label != "Trader caravan visiting" {
 		t.Fatalf("alerts = %+v", got)
 	}
 	for _, a := range got {
-		if a.danger {
-			t.Errorf("%s should not be a danger", a.key)
+		if a.Danger {
+			t.Errorf("%s should not be a danger", a.Key)
 		}
-		if e := hud.AlertExplain(a.key); e == "Select this alert to look at the cause." {
-			t.Errorf("%s has no explanation", a.key)
+		if e := hud.AlertExplain(a.Key); e == "Select this alert to look at the cause." {
+			t.Errorf("%s has no explanation", a.Key)
 		}
 	}
 	if n := len(tradeAlertsFrom(fakeTradeStatus{})); n != 0 {
@@ -176,9 +176,9 @@ func TestTurretArtCoversRenderer(t *testing.T) {
 	for _, f := range architect.FacingNames {
 		keys = append(keys, world.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false), overlay.GlowKey(world.BuildSprite(overlay.RadioConsoleKind, f, 0, false, false)))
 	}
-	for _, tool := range archTools {
-		if tool.build == overlay.SentryTurretKind || tool.build == overlay.TradeBeaconKind || tool.build == overlay.RadioConsoleKind {
-			keys = append(keys, "ui_icon/"+tool.icon)
+	for _, tool := range architect.Tools {
+		if tool.Build == overlay.SentryTurretKind || tool.Build == overlay.TradeBeaconKind || tool.Build == overlay.RadioConsoleKind {
+			keys = append(keys, "ui_icon/"+tool.Icon)
 		}
 	}
 	for _, k := range keys {

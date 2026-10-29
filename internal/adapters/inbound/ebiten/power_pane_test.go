@@ -471,15 +471,15 @@ func TestSolarFlareChip(t *testing.T) {
 		t.Fatalf("no flare, yet chips %+v", chips)
 	}
 	chips := statusChips(game.WorldView{SolarFlare: true})
-	if len(chips) != 1 || chips[0].label != "Solar flare" || chips[0].edge != uikit.Warning {
+	if len(chips) != 1 || chips[0].Label != "Solar flare" || chips[0].Edge != uikit.Warning {
 		t.Fatalf("flare chip = %+v", chips)
 	}
-	if !strings.HasPrefix(chips[0].tip, "Solar flare\n") || !strings.Contains(chips[0].tip, "Batteries") {
-		t.Fatalf("flare tip = %q", chips[0].tip)
+	if !strings.HasPrefix(chips[0].Tip, "Solar flare\n") || !strings.Contains(chips[0].Tip, "Batteries") {
+		t.Fatalf("flare tip = %q", chips[0].Tip)
 	}
 	// with a heat wave and a permanent condition: the weather, the flare, then the conditions
 	all := statusChips(game.WorldView{Extreme: "heat_wave", SolarFlare: true, Conditions: []string{"ashfall_sky"}})
-	if len(all) != 3 || all[0].label != "Heat wave" || all[1].label != "Solar flare" || all[2].label != "Ashfall sky" {
+	if len(all) != 3 || all[0].Label != "Heat wave" || all[1].Label != "Solar flare" || all[2].Label != "Ashfall sky" {
 		t.Fatalf("chips = %+v", all)
 	}
 }

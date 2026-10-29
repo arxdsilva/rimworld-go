@@ -156,7 +156,7 @@ func (a *App) presetTool(id string) {
 		return
 	}
 	a.arch.OpenPanel()
-	a.arch.Cat = t.category
+	a.arch.Cat = t.Category
 	if a.arch.ToolID != id {
 		a.arch.SelectTool(id)
 	}

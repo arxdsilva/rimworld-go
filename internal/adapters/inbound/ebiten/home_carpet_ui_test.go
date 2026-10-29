@@ -102,15 +102,15 @@ func TestHomeToolCatalog(t *testing.T) {
 	t.Parallel()
 	for id, icon := range map[string]string{"home": "home", "unhome": "home_clear"} {
 		tool, ok := toolByID(id)
-		if !ok || tool.category != "zones" || tool.mode != architect.PlaceArea || tool.icon != icon || tool.cmd != command.DesignateHome {
+		if !ok || tool.Category != "zones" || tool.Mode != architect.PlaceArea || tool.Icon != icon || tool.Cmd != command.DesignateHome {
 			t.Fatalf("tool %q = %+v ok=%v", id, tool, ok)
 		}
 	}
-	if tool, _ := toolByID("home"); tool.label != "Expand home area" {
-		t.Fatalf("label = %q", tool.label)
+	if tool, _ := toolByID("home"); tool.Label != "Expand home area" {
+		t.Fatalf("label = %q", tool.Label)
 	}
-	if tool, _ := toolByID("unhome"); tool.label != "Clear home area" {
-		t.Fatalf("label = %q", tool.label)
+	if tool, _ := toolByID("unhome"); tool.Label != "Clear home area" {
+		t.Fatalf("label = %q", tool.Label)
 	}
 }
 
@@ -186,7 +186,7 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 	t.Parallel()
 	a, _ := stubColony(t)
 	tool, ok := toolByID("carpet")
-	if !ok || tool.category != "furniture" || tool.mode != architect.PlaceSingle || tool.build != "carpet" || tool.icon != "carpet" {
+	if !ok || tool.Category != "furniture" || tool.Mode != architect.PlaceSingle || tool.Build != "carpet" || tool.Icon != "carpet" {
 		t.Fatalf("carpet tool = %+v ok=%v", tool, ok)
 	}
 	click(t, a, "tab.architect")
@@ -269,7 +269,7 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	if strings.Join(door, ",") != "wood,steel" {
 		t.Fatalf("door should offer only wood and steel, got %q", door)
 	}
-	if got := a.toolStuff(archTool{build: "door"}); got != "wood" {
+	if got := a.toolStuff(architect.ToolDef{Build: "door"}); got != "wood" {
 		t.Fatalf("granite pick falls back to wood on a door: %q", got)
 	}
 }
@@ -285,7 +285,7 @@ func TestCarpetTooltipUsesSelectedMaterial(t *testing.T) {
 			t.Fatalf("tooltip for %s = %q, want line %q", s, lines, want)
 		}
 		for _, l := range lines {
-			if strings.Contains(l, "wood") && s != "wood carpet" && !strings.Contains(l, "inside a door") && l != tool.desc {
+			if strings.Contains(l, "wood") && s != "wood carpet" && !strings.Contains(l, "inside a door") && l != tool.Desc {
 				t.Fatalf("hard-coded wood in %q", l)
 			}
 		}
@@ -487,7 +487,7 @@ func TestCaptureHomeAndCarpetStates(t *testing.T) {
 				t.Fatalf("home capture: tool=%q shown=%v", a.arch.ToolID, a.renderer.homeShown())
 			}
 		case "carpet":
-			if a.arch.ToolID != "carpet" || a.toolStuff(archTool{build: "carpet"}) != "cloth carpet" {
+			if a.arch.ToolID != "carpet" || a.toolStuff(architect.ToolDef{Build: "carpet"}) != "cloth carpet" {
 				t.Fatalf("carpet capture: tool=%q", a.arch.ToolID)
 			}
 		}

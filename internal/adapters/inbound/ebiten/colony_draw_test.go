@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -85,8 +86,8 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 	// The Architect in every category with a card hovered.
 	f.Cur.Mx, f.Cur.My = -50, -50
 	a.arch.OpenPanel()
-	for _, c := range archCategories {
-		a.arch.SelectCategory(c.id)
+	for _, c := range architectpkg.Categories {
+		a.arch.SelectCategory(c.ID)
 		if cells := a.hud().GridCells; len(cells) > 0 { // hover the category's first tool
 			f.Cur.Mx, f.Cur.My = int(cells[0].X+cells[0].W/2), int(cells[0].Y+cells[0].H/2)
 		}

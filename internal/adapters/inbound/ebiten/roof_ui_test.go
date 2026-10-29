@@ -37,8 +37,8 @@ func TestArchitectHasRoofTools(t *testing.T) {
 		if !ok {
 			t.Fatalf("tool %q missing", id)
 		}
-		if tool.category != "zones" || tool.mode != architect.PlaceArea || tool.label != w.label ||
-			tool.desc != w.desc || tool.icon != w.icon || tool.cmd != w.cmd {
+		if tool.Category != "zones" || tool.Mode != architect.PlaceArea || tool.Label != w.label ||
+			tool.Desc != w.desc || tool.Icon != w.icon || tool.Cmd != w.cmd {
 			t.Fatalf("tool %q = %+v", id, tool)
 		}
 	}

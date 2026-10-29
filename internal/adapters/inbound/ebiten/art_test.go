@@ -160,15 +160,15 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		}
 		keys = append(keys, worldpkg.ItemSprite(c.Label), "ui_icon/"+strings.ReplaceAll(c.Label, " ", "_"))
 	}
-	for _, t := range archTools {
-		keys = append(keys, "ui_icon/"+t.icon)
-		if t.build == "" {
+	for _, t := range architect.Tools {
+		keys = append(keys, "ui_icon/"+t.Icon)
+		if t.Build == "" {
 			continue
 		}
 		for _, f := range architect.FacingNames {
 			for _, open := range []bool{false, true} {
 				for _, ew := range []bool{false, true} {
-					keys = append(keys, worldpkg.BuildSprite(t.build, f, 0, ew, open))
+					keys = append(keys, worldpkg.BuildSprite(t.Build, f, 0, ew, open))
 				}
 			}
 		}

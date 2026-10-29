@@ -545,7 +545,7 @@ func TestNewBuildingCards(t *testing.T) {
 	if !ok1 || !ok2 {
 		t.Fatal("the Architect needs a Tool cabinet and a Hospital bed card")
 	}
-	if cab.icon != "tool_cabinet" || bed.icon != "hospital_bed" || cab.build != "tool cabinet" || bed.build != "hospital bed" {
+	if cab.Icon != "tool_cabinet" || bed.Icon != "hospital_bed" || cab.Build != "tool cabinet" || bed.Build != "hospital bed" {
 		t.Fatalf("cards = %+v %+v", cab, bed)
 	}
 	if _, ok := architectpkg.KindID("tool cabinet"); !ok {
@@ -613,13 +613,13 @@ func TestStatusChipsFromWorld(t *testing.T) {
 	t.Parallel()
 	w := game.WorldView{Extreme: "heat_wave", Conditions: []string{"ashfall_sky", "nonsense"}}
 	chips := statusChips(w)
-	if len(chips) != 2 || chips[0].label != "Heat wave" || chips[1].label != "Ashfall sky" {
+	if len(chips) != 2 || chips[0].Label != "Heat wave" || chips[1].Label != "Ashfall sky" {
 		t.Fatalf("chips = %+v", chips)
 	}
-	if !strings.Contains(chips[1].tip, "-20% light") {
-		t.Fatalf("condition tip = %q", chips[1].tip)
+	if !strings.Contains(chips[1].Tip, "-20% light") {
+		t.Fatalf("condition tip = %q", chips[1].Tip)
 	}
-	if cold := statusChips(game.WorldView{Extreme: "cold_snap"}); len(cold) != 1 || cold[0].label != "Cold snap" {
+	if cold := statusChips(game.WorldView{Extreme: "cold_snap"}); len(cold) != 1 || cold[0].Label != "Cold snap" {
 		t.Fatalf("cold snap chips = %+v", cold)
 	}
 	if len(statusChips(game.WorldView{})) != 0 {

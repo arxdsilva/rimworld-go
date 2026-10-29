@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -12,7 +13,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/sim/command"
 )
 
 // architect.Tool owns this feature (ARCH-005); architectHost is the root's side
@@ -68,7 +68,7 @@ func (m architectMap) DrawAreaGhost(dst *ebiten.Image, x0, y0, x1, y1 int, roof 
 }
 
 func (m architectMap) DrawPlacementGhost(dst *ebiten.Image, kind, stuff, facing string, cells []architect.GhostCell) {
-	m.a.renderer.drawPlacementGhost(dst, kind, stuff, facing, ghostCells(cells))
+	m.a.renderer.drawPlacementGhost(dst, kind, stuff, facing, cells)
 }
 
 func (m architectMap) DrawRangeRing(dst *ebiten.Image, x, y int, radius float64, c color.NRGBA) {
@@ -134,9 +134,9 @@ func (a *App) archToolCommands() []inspector.Button {
 }
 
 // previewCells is what the current tool would affect right now.
-func (a *App) previewCells() (archTool, []ghostCell) {
+func (a *App) previewCells() (architectpkg.ToolDef, []architectpkg.GhostCell) {
 	d, cells := a.arch.PreviewCells()
-	return fromDef(d), ghostCells(cells)
+	return d, cells
 }
 
 // syncPowerForce keeps the power overlay forced on while a power tool is
@@ -181,74 +181,8 @@ func (a *App) areaChip(p game.PawnView) (inspector.Chip, bool) {
 // types' old lowercase fields. Each shim and converter goes with its last
 // lowercase reader.
 
-// archTool is architect.ToolDef with its old field names.
-type archTool struct {
-	id, label, category, icon, desc string
-	mode                            architect.PlaceMode
-	build                           string
-	cmd                             command.Kind
-	crop                            string
-	enable                          bool
-	variant                         uint8
-}
-
-// ghostCell is architect.GhostCell with its old field names.
-type ghostCell struct {
-	x, y     int
-	ok       bool
-	reason   string
-	replaces string
-	facing   string
-	same     bool
-}
-
-// rowRun is architect.RowRun with its old field names.
-type rowRun struct{ y, x0, x1 int }
-
-var (
-	archCategories = categoriesShim()
-	archTools      = fromDefs(architect.Tools)
-)
-
-func categoriesShim() []struct{ id, label string } {
-	out := make([]struct{ id, label string }, len(architect.Categories))
-	for i, c := range architect.Categories {
-		out[i].id, out[i].label = c.ID, c.Label
-	}
-	return out
-}
-
-func toDef(t archTool) architect.ToolDef {
-	return architect.ToolDef{ID: t.id, Label: t.label, Category: t.category, Icon: t.icon, Desc: t.desc,
-		Mode: t.mode, Build: t.build, Cmd: t.cmd, Crop: t.crop, Enable: t.enable, Variant: t.variant}
-}
-
-func fromDef(d architect.ToolDef) archTool {
-	return archTool{id: d.ID, label: d.Label, category: d.Category, icon: d.Icon, desc: d.Desc,
-		mode: d.Mode, build: d.Build, cmd: d.Cmd, crop: d.Crop, enable: d.Enable, variant: d.Variant}
-}
-
-func fromDefs(ds []architect.ToolDef) []archTool {
-	out := make([]archTool, len(ds))
-	for i, d := range ds {
-		out[i] = fromDef(d)
-	}
-	return out
-}
-
-func ghostCells(cs []architect.GhostCell) []ghostCell {
-	if cs == nil {
-		return nil
-	}
-	out := make([]ghostCell, len(cs))
-	for i, c := range cs {
-		out[i] = ghostCell{x: c.X, y: c.Y, ok: c.OK, reason: c.Reason, replaces: c.Replaces, facing: c.Facing, same: c.Same}
-	}
-	return out
-}
-
-func toolByID(id string) (archTool, bool) {
+func toolByID(id string) (architectpkg.ToolDef, bool) {
 	d, ok := architect.ToolByID(id)
-	return fromDef(d), ok
+	return d, ok
 }
-func allArchTools() []archTool { return fromDefs(architect.AllTools()) }
+func allArchTools() []architectpkg.ToolDef { return architect.AllTools() }

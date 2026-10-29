@@ -12,8 +12,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -158,7 +156,7 @@ func (a *App) socialTabsUI() {
 // hasBuildTool reports the Architect has a tool that builds kind.
 func hasBuildTool(kind string) bool {
 	for _, t := range allArchTools() {
-		if t.build == kind {
+		if t.Build == kind {
 			return true
 		}
 	}
@@ -167,28 +165,11 @@ func hasBuildTool(kind string) bool {
 
 // healthOption is inspector.HealthOption in its old field names (the root's
 // health and journey tests read them).
-type healthOption struct {
-	label  string
-	op     body.OpKind
-	part   body.Part
-	item   item.Kind
-	reason string
-}
-
-func toHealthOptions(in []inspector.HealthOption) []healthOption {
-	out := make([]healthOption, len(in))
-	for i, o := range in {
-		out[i] = healthOption{o.Label, o.Op, o.Part, o.Item, o.Reason}
-	}
-	return out
-}
+type healthOption = inspector.HealthOption
 
 // itemVerb is inspector.ItemVerb in its old field names (haul_ui_test.go,
 // item_inspector_test.go).
-type itemVerb struct {
-	id, label, icon, desc string
-	match                 func(game.OrderOption) bool
-}
+type itemVerb = inspector.ItemVerb
 
 // ---- aliases and wrappers
 

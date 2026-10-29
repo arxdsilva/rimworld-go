@@ -225,10 +225,10 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 		t.Fatal("Architect tab should open on a category")
 	}
 	seen := map[string]bool{}
-	for _, c := range archCategories {
-		click(t, a, "arch.cat."+c.id)
-		if a.arch.Cat != c.id {
-			t.Fatalf("category %s not selected", c.id)
+	for _, c := range architectpkg.Categories {
+		click(t, a, "arch.cat."+c.ID)
+		if a.arch.Cat != c.ID {
+			t.Fatalf("category %s not selected", c.ID)
 		}
 		// categories in ArchCats, the tools as command buttons in the grid
 		for _, b := range append(a.arch.Buttons(), a.insp.Commands().CommandGridButtons()...) {
@@ -236,12 +236,12 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 		}
 	}
 	for _, tool := range allArchTools() {
-		if !seen["arch.tool."+tool.id] {
-			t.Fatalf("tool %s is not reachable from any category", tool.id)
+		if !seen["arch.tool."+tool.ID] {
+			t.Fatalf("tool %s is not reachable from any category", tool.ID)
 		}
-		if tool.build != "" {
-			if _, ok := architectpkg.Buildable(tool.build); !ok {
-				t.Fatalf("tool %s builds unknown kind %q", tool.id, tool.build)
+		if tool.Build != "" {
+			if _, ok := architectpkg.Buildable(tool.Build); !ok {
+				t.Fatalf("tool %s builds unknown kind %q", tool.ID, tool.Build)
 			}
 		}
 	}

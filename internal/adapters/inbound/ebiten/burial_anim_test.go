@@ -164,11 +164,11 @@ func TestArchitectHasGraveAndPyre(t *testing.T) {
 		if !ok {
 			t.Fatalf("no %s tool", id)
 		}
-		if tool.category != "furniture" || tool.desc != desc {
+		if tool.Category != "furniture" || tool.Desc != desc {
 			t.Fatalf("%s: %+v", id, tool)
 		}
-		if _, ok := architect.Buildable(tool.build); !ok {
-			t.Fatalf("%s builds unknown kind %q", id, tool.build)
+		if _, ok := architect.Buildable(tool.Build); !ok {
+			t.Fatalf("%s builds unknown kind %q", id, tool.Build)
 		}
 	}
 	if world.BuildSprite("grave", "east", 0, false, false) != "furniture/grave_dug_east" ||

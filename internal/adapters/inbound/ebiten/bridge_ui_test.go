@@ -15,7 +15,7 @@ func TestBridgeArchitectToolInStructure(t *testing.T) {
 	if !ok {
 		t.Fatal("the Architect needs a Bridge tool")
 	}
-	if tool.category != "structure" || tool.mode != architect.PlaceFill || tool.build != "bridge" || tool.icon != "bridge" {
+	if tool.Category != "structure" || tool.Mode != architect.PlaceFill || tool.Build != "bridge" || tool.Icon != "bridge" {
 		t.Fatalf("bridge tool = %+v", tool)
 	}
 	if _, ok := architect.Buildable("bridge"); !ok {
@@ -23,7 +23,7 @@ func TestBridgeArchitectToolInStructure(t *testing.T) {
 	}
 	var floorAt, bridgeAt = -1, -1
 	for i, tl := range toolsIn("structure") {
-		switch tl.id {
+		switch tl.ID {
 		case "floor":
 			floorAt = i
 		case "bridge":

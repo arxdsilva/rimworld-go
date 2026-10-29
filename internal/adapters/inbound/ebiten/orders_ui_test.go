@@ -52,10 +52,10 @@ func TestArchitectDragPlacesOnlyValidBlueprints(t *testing.T) {
 	_, cells := a.previewCells()
 	bad := 0
 	for _, c := range cells {
-		if !c.ok {
+		if !c.OK {
 			bad++
-			if c.reason != game.ReasonItem {
-				t.Fatalf("reason = %q", c.reason)
+			if c.Reason != game.ReasonItem {
+				t.Fatalf("reason = %q", c.Reason)
 			}
 		}
 	}
@@ -177,10 +177,10 @@ func TestStoneMaterialReachesBlueprint(t *testing.T) {
 	click(t, a, "arch.cat.structure")
 	click(t, a, "arch.tool.wall")
 	click(t, a, "arch.stuff.granite blocks")
-	if a.toolStuff(archTool{build: "wall"}) != "granite blocks" {
+	if a.toolStuff(architect.ToolDef{Build: "wall"}) != "granite blocks" {
 		t.Fatal("granite blocks should be selected for walls")
 	}
-	if a.toolStuff(archTool{build: "door"}) != "wood" {
+	if a.toolStuff(architect.ToolDef{Build: "door"}) != "wood" {
 		t.Fatal("doors cannot be stone; they fall back to wood")
 	}
 	a.arch.Drag = true

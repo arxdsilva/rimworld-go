@@ -62,9 +62,3 @@ func (h dialogsHost) HoldSpeed(tier int) {
 		r.speed = speed(tier)
 	}
 }
-
-// tradeLine is one row of the trade table (test-only reach).
-type tradeLine struct {
-	head string
-	row  game.TradeRowView
-}

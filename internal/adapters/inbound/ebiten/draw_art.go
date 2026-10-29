@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -21,7 +22,7 @@ import (
 // drawPlacementGhost previews a build tool: the real sprite per cell,
 // green when placeable, red when not. Walls and conduits autotile among
 // the ghosts.
-func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing string, cells []ghostCell) {
+func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing string, cells []architect.GhostCell) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.cam.Tile()
 	wp, v := r.pipe(), r.liveView()
@@ -39,7 +40,7 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 		links.Sync(w, r.game.Width(), r.game.Height())
 		ghosts := make([]spritepkg.PlannedCell, len(cells))
 		for i, c := range cells {
-			ghosts[i] = spritepkg.PlannedCell{X: c.x, Y: c.y, Flags: link.Flags}
+			ghosts[i] = spritepkg.PlannedCell{X: c.X, Y: c.Y, Flags: link.Flags}
 		}
 		p = links.Plan(w.Frames, ghosts)
 	}
@@ -47,31 +48,31 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 	for _, c := range cells {
 		cs := spritepkg.GhostOKCS
 		switch {
-		case c.same:
+		case c.Same:
 			cs = spritepkg.GhostSameCS
-		case !c.ok:
+		case !c.OK:
 			cs = spritepkg.GhostBadCS
 		}
 		if r.art == nil {
-			sx, sy := r.worldToScreen(c.x, c.y)
+			sx, sy := r.worldToScreen(c.X, c.Y)
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), ghostFill(c), false)
 			continue
 		}
 		mask, corners := 0, 0
 		switch {
 		case p != nil && power:
-			mask = links.PowerMask(link.Accepts, c.x, c.y, p)
+			mask = links.PowerMask(link.Accepts, c.X, c.Y, p)
 		case p != nil:
-			mask = links.PlannedMask(p, link.Accepts, c.x, c.y)
-			corners = links.PlannedCorners(p, link.Accepts, c.x, c.y)
+			mask = links.PlannedMask(p, link.Accepts, c.X, c.Y)
+			corners = links.PlannedCorners(p, link.Accepts, c.X, c.Y)
 		}
-		if kind == "wall" && wp.Paint.DrawLinked(v, wp.Pass(), screen, spritepkg.WallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
+		if kind == "wall" && wp.Paint.DrawLinked(v, wp.Pass(), screen, spritepkg.WallPrefix(stuff), c.X, c.Y, mask, corners, tint, cs, tile, sw, sh) {
 			continue
 		}
 		cf := ghostFacing(c, facing)
 		key := wp.BuildKey(kind, stuff, cf, mask, spritepkg.DoorAxisEW(cf), false)
 		if !r.art.Has(key) {
-			sx, sy := r.worldToScreen(c.x, c.y)
+			sx, sy := r.worldToScreen(c.X, c.Y)
 			if spritepkg.IsFenceKind(kind) {
 				spritepkg.DrawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, spritepkg.IsStoneStuff(stuff), 170)
 				continue
@@ -79,26 +80,26 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), ghostFill(c), false)
 			continue
 		}
-		wp.Paint.DrawCS(v, wp.Pass(), screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, spritepkg.MulCS(spritepkg.TintCS(tint), cs))
+		wp.Paint.DrawCS(v, wp.Pass(), screen, key, color.NRGBA{}, float64(c.X), float64(c.Y), tile, sw, sh, spritepkg.MulCS(spritepkg.TintCS(tint), cs))
 	}
 }
 
 // ghostFacing is the facing a ghost cell draws with: the sim's
 // auto-orientation for that cell, else the tool's.
-func ghostFacing(c ghostCell, tool string) string {
-	if c.facing != "" {
-		return c.facing
+func ghostFacing(c architect.GhostCell, tool string) string {
+	if c.Facing != "" {
+		return c.Facing
 	}
 	return tool
 }
 
 // ghostFill is the plain fill of a ghost cell without art: green, red
 // when blocked, grey for a same-material cell that does nothing.
-func ghostFill(c ghostCell) color.RGBA {
+func ghostFill(c architect.GhostCell) color.RGBA {
 	switch {
-	case c.same:
+	case c.Same:
 		return color.RGBA{150, 150, 150, 110}
-	case !c.ok:
+	case !c.OK:
 		return color.RGBA{220, 70, 60, 120}
 	}
 	return color.RGBA{90, 200, 90, 120}

@@ -77,7 +77,7 @@ func TestZoneGhostCellsColourPerCell(t *testing.T) {
 		t.Fatalf("3x2 drag = %d cells", len(got))
 	}
 	for _, c := range got {
-		if c.ok != (c.x != 1) {
+		if c.OK != (c.X != 1) {
 			t.Errorf("cell %+v: ok must follow CanZoneAt", c)
 		}
 	}

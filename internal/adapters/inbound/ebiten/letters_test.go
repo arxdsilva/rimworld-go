@@ -49,17 +49,17 @@ func TestLettersStackFromTheReadModel(t *testing.T) {
 		t.Fatalf("rows %d, layout rows %d, count %d; want 3", len(rows), l.LetterRows, a.chrome.Right().LetterCount())
 	}
 	for i, r := range rows {
-		if r.letter.ID != uint64(11+i) {
-			t.Errorf("row %d is letter %d, want %d (oldest at the top)", i, r.letter.ID, 11+i)
+		if r.Letter.ID != uint64(11+i) {
+			t.Errorf("row %d is letter %d, want %d (oldest at the top)", i, r.Letter.ID, 11+i)
 		}
-		if r.r.H != hudlayout.LetterRowH || r.r.X != l.Letters.X || r.r.W != l.Letters.W {
-			t.Errorf("row %d rect %+v in Letters %+v", i, r.r, l.Letters)
+		if r.R.H != hudlayout.LetterRowH || r.R.X != l.Letters.X || r.R.W != l.Letters.W {
+			t.Errorf("row %d rect %+v in Letters %+v", i, r.R, l.Letters)
 		}
-		if i > 0 && r.r.Y-rows[i-1].r.Bottom() != hudlayout.HudGap {
-			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.r.Y-rows[i-1].r.Bottom(), i-1, hudlayout.HudGap)
+		if i > 0 && r.R.Y-rows[i-1].R.Bottom() != hudlayout.HudGap {
+			t.Errorf("row %d is %v below row %d, want the %d px gap", i, r.R.Y-rows[i-1].R.Bottom(), i-1, hudlayout.HudGap)
 		}
 	}
-	if got := rows[2].r.Bottom(); got != l.Letters.Bottom() {
+	if got := rows[2].R.Bottom(); got != l.Letters.Bottom() {
 		t.Errorf("newest row ends at %v, Letters ends at %v: the newest sits just above the controls", got, l.Letters.Bottom())
 	}
 	// every row is a button with the id letter.<ID>
@@ -68,9 +68,9 @@ func TestLettersStackFromTheReadModel(t *testing.T) {
 		ids[b.ID] = b
 	}
 	for _, r := range rows {
-		b, ok := ids[fmt.Sprintf("letter.%d", r.letter.ID)]
-		if !ok || b.X != r.r.X || b.Y != r.r.Y || b.W != r.r.W || b.H != r.r.H {
-			t.Errorf("letter.%d button %+v (found %v), want %+v", r.letter.ID, b, ok, r.r)
+		b, ok := ids[fmt.Sprintf("letter.%d", r.Letter.ID)]
+		if !ok || b.X != r.R.X || b.Y != r.R.Y || b.W != r.R.W || b.H != r.R.H {
+			t.Errorf("letter.%d button %+v (found %v), want %+v", r.Letter.ID, b, ok, r.R)
 		}
 	}
 	// kind colours
@@ -91,12 +91,12 @@ func TestLettersPlusNOlder(t *testing.T) {
 	if l.LetterRows != hudlayout.MaxLetters+1 || len(rows) != hudlayout.MaxLetters+1 {
 		t.Fatalf("rows %d (layout %d), want the %d newest and a +N row", len(rows), l.LetterRows, hudlayout.MaxLetters)
 	}
-	if rows[0].older != 3 || letterRowLabel(rows[0]) != "+3 older" {
+	if rows[0].Older != 3 || letterRowLabel(rows[0]) != "+3 older" {
 		t.Fatalf("top row = %+v (%q), want \"+3 older\"", rows[0], letterRowLabel(rows[0]))
 	}
 	for i, r := range rows[1:] {
-		if want := uint64(4 + i); r.letter.ID != want || r.older != 0 {
-			t.Errorf("row %d = letter %d, want %d", i+1, r.letter.ID, want)
+		if want := uint64(4 + i); r.Letter.ID != want || r.Older != 0 {
+			t.Errorf("row %d = letter %d, want %d", i+1, r.Letter.ID, want)
 		}
 	}
 	for _, b := range a.chrome.Right().Buttons(a.sw) {
@@ -108,7 +108,7 @@ func TestLettersPlusNOlder(t *testing.T) {
 	s := a.renderer.game.(*stubSim)
 	s.world.Letters = append(s.world.Letters[:5:5], s.world.Letters[6:]...) // drop letter 6
 	rows = a.letterRows(a.hud())
-	if rows[0].older != 2 || rows[1].letter.ID != 3 {
+	if rows[0].Older != 2 || rows[1].Letter.ID != 3 {
 		t.Fatalf("after a dismissal: top row %+v, next %+v", rows[0], rows[1])
 	}
 }
@@ -122,10 +122,10 @@ func TestLettersStackKeepsTheNewestWhenCramped(t *testing.T) {
 		t.Fatalf("fixture: %d rows", l.LetterRows)
 	}
 	rows := a.letterRows(l)
-	if len(rows) != l.LetterRows || rows[0].older != 6-(l.LetterRows-1) || rows[len(rows)-1].letter.ID != 6 {
+	if len(rows) != l.LetterRows || rows[0].Older != 6-(l.LetterRows-1) || rows[len(rows)-1].Letter.ID != 6 {
 		t.Fatalf("rows %d (layout %d): first %+v, last %+v", len(rows), l.LetterRows, rows[0], rows[len(rows)-1])
 	}
-	if got := rows[len(rows)-1].r.Bottom(); got != l.Letters.Bottom() {
+	if got := rows[len(rows)-1].R.Bottom(); got != l.Letters.Bottom() {
 		t.Errorf("newest ends at %v, want %v", got, l.Letters.Bottom())
 	}
 	if rows := a.letterRows(hudlayout.Layout{}); len(rows) != 0 {
@@ -210,7 +210,7 @@ func TestLetterRightClickEnqueuesDismissLetter(t *testing.T) {
 	if len(rows) != 2 {
 		t.Fatalf("rows %d", len(rows))
 	}
-	f.Cur.Mx, f.Cur.My = int(rows[0].r.X+rows[0].r.W/2), int(rows[0].r.Y+rows[0].r.H/2)
+	f.Cur.Mx, f.Cur.My = int(rows[0].R.X+rows[0].R.W/2), int(rows[0].R.Y+rows[0].R.H/2)
 	f.Click(t, a, inputframe.Right, 0)
 	got := cmdsOf(s, command.DismissLetter)
 	if len(got) != 1 || got[0].Target != 41 {
@@ -222,7 +222,7 @@ func TestLetterRightClickEnqueuesDismissLetter(t *testing.T) {
 	// the +N older row is not a letter
 	a2, f2 := colonyApp(t, letterStub(nLetters(10)...))
 	r2 := a2.letterRows(a2.hud())
-	f2.Cur.Mx, f2.Cur.My = int(r2[0].r.X+r2[0].r.W/2), int(r2[0].r.Y+r2[0].r.H/2)
+	f2.Cur.Mx, f2.Cur.My = int(r2[0].R.X+r2[0].R.W/2), int(r2[0].R.Y+r2[0].R.H/2)
 	f2.Click(t, a2, inputframe.Right, 0)
 	if got := cmdsOf(a2.renderer.game.(*stubSim), command.DismissLetter); len(got) != 0 {
 		t.Errorf("right-click on +N older dismissed %+v", got)

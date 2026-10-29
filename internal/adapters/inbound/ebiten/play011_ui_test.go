@@ -62,13 +62,13 @@ func TestGhostCellsCarryAutoFacingAndSame(t *testing.T) {
 	if len(cells) != 3 {
 		t.Fatalf("cells = %d", len(cells))
 	}
-	if cells[0].facing != "east" || cells[1].facing != "south" {
-		t.Fatalf("facings = %q %q", cells[0].facing, cells[1].facing)
+	if cells[0].Facing != "east" || cells[1].Facing != "south" {
+		t.Fatalf("facings = %q %q", cells[0].Facing, cells[1].Facing)
 	}
-	if !cells[1].same || cells[1].ok || cells[1].reason != "" {
+	if !cells[1].Same || cells[1].OK || cells[1].Reason != "" {
 		t.Fatalf("same cell = %+v", cells[1])
 	}
-	if cells[0].same || !cells[0].ok || cells[0].replaces != "wood wall → steel" {
+	if cells[0].Same || !cells[0].OK || cells[0].Replaces != "wood wall → steel" {
 		t.Fatalf("swap cell = %+v", cells[0])
 	}
 	a.arch.Submit()
@@ -84,7 +84,7 @@ func TestGhostCellsCarryAutoFacingAndSame(t *testing.T) {
 
 func TestGhostDrawsEachCellWithItsOwnFacing(t *testing.T) {
 	t.Parallel()
-	cells := []ghostCell{{facing: "east"}, {facing: "south"}, {}}
+	cells := []architect.GhostCell{{Facing: "east"}, {Facing: "south"}, {}}
 	want := []string{"structure/door_wood_ns_closed", "structure/door_wood_ew_closed", "structure/door_wood_ew_closed"}
 	for i, c := range cells {
 		f := ghostFacing(c, "south")
@@ -96,9 +96,9 @@ func TestGhostDrawsEachCellWithItsOwnFacing(t *testing.T) {
 
 func TestSameCellsAreNeutralAndFreeOfRed(t *testing.T) {
 	t.Parallel()
-	same := ghostFill(ghostCell{same: true})
-	bad := ghostFill(ghostCell{})
-	ok := ghostFill(ghostCell{ok: true})
+	same := ghostFill(architect.GhostCell{Same: true})
+	bad := ghostFill(architect.GhostCell{})
+	ok := ghostFill(architect.GhostCell{OK: true})
 	if same == bad || same == ok || same.R != same.G || same.G != same.B {
 		t.Fatalf("same %v bad %v ok %v", same, bad, ok)
 	}
@@ -108,8 +108,8 @@ func TestDoorGateHintsDropRotate(t *testing.T) {
 	t.Parallel()
 	for _, id := range []string{"door", "fence_gate"} {
 		tool, ok := toolByID(id)
-		if !ok || strings.Contains(tool.desc, "Q/E") {
-			t.Fatalf("%s desc = %q", id, tool.desc)
+		if !ok || strings.Contains(tool.Desc, "Q/E") {
+			t.Fatalf("%s desc = %q", id, tool.Desc)
 		}
 	}
 }

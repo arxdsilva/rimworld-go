@@ -192,7 +192,7 @@ func TestJourneyTabsReservedKeysToast(t *testing.T) {
 			j := newJourney(t)
 			j.key(k, 0)
 			toasts := j.a.liveToasts()
-			if len(toasts) == 0 || !strings.Contains(toasts[len(toasts)-1].text, "not implemented") {
+			if len(toasts) == 0 || !strings.Contains(toasts[len(toasts)-1].Text, "not implemented") {
 				t.Fatalf("%s toasted %+v, want a not-implemented notice", k, toasts)
 			}
 			if j.a.win.Open || j.a.uiModalTop() != "" {

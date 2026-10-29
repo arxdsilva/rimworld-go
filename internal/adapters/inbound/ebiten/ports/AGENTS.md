@@ -21,7 +21,7 @@ The contract between the ebiten client's shell (the root package: `App` and `Ren
 - New behaviour: this package is contract only (interfaces, intents, plain data). `Widgets` is the one struct, embedding the kit.
 
 ## Public Contracts
-- Roles are satisfied by the root's `App` and `Renderer` through `<pkg>_compat.go` shims and the root's `Host` adapters.
+- Roles are satisfied by the root's `App` and `Renderer` through the root's `shell` roles and its per-feature `Host` adapters (`<pkg>_compat.go`).
 - A new cross-feature request is a new `Intent` value, not a method on another feature.
 - A feature that needs something no role provides declares one local interface in its own `deps.go`.
 

@@ -190,7 +190,7 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 	for _, k := range []string{"F7", "T"} { // V is live since PLAY-021 (TestVHotkeyFlicksTheSelectedDevice)
 		f.Key(t, a, k, 0)
 		ts := a.liveToasts()
-		if len(ts) == 0 || !strings.Contains(ts[len(ts)-1].text, input.NotYet) {
+		if len(ts) == 0 || !strings.Contains(ts[len(ts)-1].Text, input.NotYet) {
 			t.Fatalf("%s should toast %q, got %+v", k, input.NotYet, ts)
 		}
 	}
@@ -414,7 +414,7 @@ func TestF10WritesScreenshotF11HidesUI(t *testing.T) {
 	if _, err := os.Stat(a.meter.Shot.Last); err != nil {
 		t.Fatal(err)
 	}
-	if ts := a.liveToasts(); len(ts) == 0 || ts[len(ts)-1].text != "Screenshot saved" {
+	if ts := a.liveToasts(); len(ts) == 0 || ts[len(ts)-1].Text != "Screenshot saved" {
 		t.Fatalf("toasts = %+v", ts)
 	}
 	f.Key(t, a, "F11", 0)
@@ -508,7 +508,7 @@ func TestShapeCellsStyles(t *testing.T) {
 		t.Fatalf("Ctrl keeps the drag direction: %d cells", n)
 	}
 	runs := rowRuns(oval)
-	if len(runs) != 5 || runs[0] != (rowRun{y: 0, x0: 1, x1: 3}) || runs[2] != (rowRun{y: 2, x0: 0, x1: 4}) {
+	if len(runs) != 5 || runs[0] != (architect.RowRun{Y: 0, X0: 1, X1: 3}) || runs[2] != (architect.RowRun{Y: 2, X0: 0, X1: 4}) {
 		t.Fatalf("row runs = %+v", runs)
 	}
 }

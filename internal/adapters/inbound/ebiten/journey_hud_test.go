@@ -305,7 +305,7 @@ func TestJourneyHudLetterClickAndDismiss(t *testing.T) {
 		t.Fatal("no letter rows")
 	}
 	s := float32(j.a.scale.S)
-	cx, cy := rows[len(rows)-1].r.Center()
+	cx, cy := rows[len(rows)-1].R.Center()
 	j.f.Cur.Mx, j.f.Cur.My = int(cx*s), int(cy*s)
 	j.f.Click(t, j.a, inputframe.Right, 0)
 	c, ok := j.lastCmd(command.DismissLetter)

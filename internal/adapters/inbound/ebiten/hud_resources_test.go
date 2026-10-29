@@ -35,13 +35,13 @@ func htResApp(t *testing.T, w game.WorldView) (*App, *fakeInput) {
 	return htApp(t, &stubSim{pawns: htPawns(2), world: w}, 1280, 720)
 }
 
-func htRowKinds(rows []resRow) []string {
+func htRowKinds(rows []hud.ResRow) []string {
 	var out []string
 	for _, r := range rows {
-		if r.header {
-			out = append(out, "#"+r.cat)
+		if r.Header {
+			out = append(out, "#"+r.Cat)
 		} else {
-			out = append(out, r.kind)
+			out = append(out, r.Kind)
 		}
 	}
 	return out
@@ -95,7 +95,7 @@ func TestResourceRowsFallBackToTheTotals(t *testing.T) {
 	if !slices.Equal(htRowKinds(got), want) {
 		t.Fatalf("fallback rows = %v, want %v", htRowKinds(got), want)
 	}
-	if got[1].qty != 40 || got[3].qty != 0 {
+	if got[1].Qty != 40 || got[3].Qty != 0 {
 		t.Fatalf("fallback quantities = %+v", got)
 	}
 	// precious metals join once the colony has some
@@ -173,7 +173,7 @@ func TestResourcesHeaderTotalsShowWhenFolded(t *testing.T) {
 	a.settings.Gameplay.CategorizedResources = true
 	click(t, a, "res.cat.Food")
 	rows := a.resourceRows()
-	if len(rows) != 1 || !rows[0].header || rows[0].qty != 15 {
+	if len(rows) != 1 || !rows[0].Header || rows[0].Qty != 15 {
 		t.Fatalf("folded rows = %+v, want one Food header totalling 15", rows)
 	}
 }

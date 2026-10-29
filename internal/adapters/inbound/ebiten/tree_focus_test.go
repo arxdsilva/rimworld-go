@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"slices"
 	"testing"
 )
@@ -12,7 +13,7 @@ import (
 func TestTreeFocusCells(t *testing.T) {
 	t.Parallel()
 	got := treeFocusCells(nil, [2]int{4, 5}, true, [][2]int{{9, 9}},
-		[]ghostCell{{x: 1, y: 1, ok: true}, {x: 2, y: 1}})
+		[]architect.GhostCell{{X: 1, Y: 1, OK: true}, {X: 2, Y: 1}})
 	want := [][2]int{{4, 5}, {9, 9}, {1, 1}, {2, 1}}
 	if !slices.Equal(got, want) {
 		t.Fatalf("focus = %v, want %v", got, want)
@@ -20,7 +21,7 @@ func TestTreeFocusCells(t *testing.T) {
 	if got := treeFocusCells(nil, [2]int{}, false, nil, nil); len(got) != 0 {
 		t.Fatalf("no hover, selection or ghost: %v", got)
 	}
-	big := make([]ghostCell, 500)
+	big := make([]architect.GhostCell, 500)
 	if got := treeFocusCells(nil, [2]int{}, false, nil, big); len(got) != treeFocusMaxGhost {
 		t.Fatalf("ghost focus not capped: %d", len(got))
 	}

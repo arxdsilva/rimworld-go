@@ -76,7 +76,7 @@ func TestZoneRefusalFallsBackWithoutReasons(t *testing.T) {
 func TestDumpingStockpileTool(t *testing.T) {
 	t.Parallel()
 	tool, ok := toolByID("dump")
-	if !ok || tool.category != "zones" || zoneKindOf(tool) != game.ZoneDump || tool.label != "Dumping stockpile" || tool.desc == "" {
+	if !ok || tool.Category != "zones" || zoneKindOf(tool) != game.ZoneDump || tool.Label != "Dumping stockpile" || tool.Desc == "" {
 		t.Fatalf("dump tool %+v", tool)
 	}
 	sp, _ := toolByID("stockpile")

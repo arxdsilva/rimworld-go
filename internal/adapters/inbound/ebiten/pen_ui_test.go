@@ -319,15 +319,15 @@ func TestArchitectPenMarkerToolReplacesPenZone(t *testing.T) {
 		t.Fatal("the old Animal pen zone tool is gone")
 	}
 	for _, tl := range toolsIn("zones") {
-		if tl.cmd == command.DesignatePen {
-			t.Fatalf("zones still paint pens: %s", tl.id)
+		if tl.Cmd == command.DesignatePen {
+			t.Fatalf("zones still paint pens: %s", tl.ID)
 		}
 	}
 	tl, ok := toolByID("pen_marker")
 	if !ok {
 		t.Fatal("Architect has a Pen marker tool")
 	}
-	if tl.category != "misc" || tl.icon != "pen_marker" || tl.build != "pen marker" || tl.mode != architect.PlaceSingle {
+	if tl.Category != "misc" || tl.Icon != "pen_marker" || tl.Build != "pen marker" || tl.Mode != architect.PlaceSingle {
 		t.Fatalf("pen marker tool %+v", tl)
 	}
 }

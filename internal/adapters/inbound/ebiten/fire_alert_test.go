@@ -18,12 +18,12 @@ func TestFireAlert(t *testing.T) {
 	}
 	w.Fires = append(w.Fires, game.FireView{X: 5, Y: 5, Size: 20})
 	al, ok := fireAlert(w)
-	if !ok || al.label != "Fire in the colony!" || !al.danger || len(al.targets) != 1 || al.targets[0] != [2]int{5, 5} {
+	if !ok || al.Label != "Fire in the colony!" || !al.Danger || len(al.Targets) != 1 || al.Targets[0] != [2]int{5, 5} {
 		t.Fatalf("alert %+v %v", al, ok)
 	}
 	found := false
 	for _, a := range buildAlerts(nil, w) {
-		found = found || a.key == "fire"
+		found = found || a.Key == "fire"
 	}
 	if !found {
 		t.Fatal("buildAlerts misses the fire alert")

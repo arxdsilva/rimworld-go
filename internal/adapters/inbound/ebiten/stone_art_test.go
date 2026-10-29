@@ -137,7 +137,7 @@ func TestSmoothToolSendsOneRect(t *testing.T) {
 	click(t, a, "arch.cat.orders")
 	click(t, a, "arch.tool.smooth")
 	tool, _ := toolByID("smooth")
-	if tool.icon != "order_smooth" || tool.mode != architect.PlaceArea {
+	if tool.Icon != "order_smooth" || tool.Mode != architect.PlaceArea {
 		t.Fatalf("smooth tool = %+v", tool)
 	}
 	a.arch.Drag = true
@@ -152,7 +152,7 @@ func TestSmoothToolSendsOneRect(t *testing.T) {
 func TestStonecutterCard(t *testing.T) {
 	t.Parallel()
 	tool, ok := toolByID("stonecutter")
-	if !ok || tool.category != "production" || tool.build != "stonecutter table" {
+	if !ok || tool.Category != "production" || tool.Build != "stonecutter table" {
 		t.Fatalf("stonecutter tool = %+v", tool)
 	}
 	if _, ok := architect.Buildable("stonecutter table"); !ok {
