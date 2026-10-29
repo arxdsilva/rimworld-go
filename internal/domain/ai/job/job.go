@@ -131,6 +131,9 @@ const (
 	Strip
 	VisitSick
 	CarryToPrisonBed
+	// HaulIngredients (PRD-1): a crafter gathers a bill's ingredients,
+	// possibly from several stacks, onto the bench before working it.
+	HaulIngredients
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -262,6 +265,8 @@ func (k Kind) String() string {
 		return "visit the sick"
 	case CarryToPrisonBed:
 		return "take prisoner to bed"
+	case HaulIngredients:
+		return "gather ingredients"
 	default:
 		return "idle"
 	}

@@ -56,3 +56,29 @@ func TestPercent(t *testing.T) {
 		t.Fatal("percent bounds")
 	}
 }
+
+// TestSleepTickAt: rest comes back in proportion to the bed's rest
+// effectiveness, exactly over a long sleep; 1000 is the old SleepTick.
+func TestSleepTickAt(t *testing.T) {
+	for _, re := range []int{0, 800, 950, 1000, 1250, 1600} {
+		p := Pair{Hunger: Full}
+		for now := uint64(1); now <= 5000; now++ {
+			p = SleepTickAt(p, now, re)
+		}
+		if want := 5000 * SleepGain * re / (SleepPeriod * 1000); p.Rest != want {
+			t.Errorf("re %d: rest %d after 5000 ticks, want %d", re, p.Rest, want)
+		}
+		if p.Hunger != Full-5000/HungerPeriod {
+			t.Errorf("re %d: hunger %d", re, p.Hunger)
+		}
+	}
+	for now := uint64(0); now < 50; now++ {
+		a, b := SleepTickAt(Pair{Rest: 10, Hunger: 10}, now, 1000), SleepTick(Pair{Rest: 10, Hunger: 10}, now)
+		if a != b {
+			t.Fatalf("tick %d: %+v vs %+v", now, a, b)
+		}
+	}
+	if p := SleepTickAt(Pair{Rest: Full}, 7, 1600); p.Rest != Full {
+		t.Fatalf("clamped: %d", p.Rest)
+	}
+}

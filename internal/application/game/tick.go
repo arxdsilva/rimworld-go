@@ -115,8 +115,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateSmooth:
 		g.markSmooth(c.X, c.Y, c.X2, c.Y2, true) // smooth.go
-	case command.AddBill, command.SetBill, command.RemoveBill:
-		g.craft.Bills.Apply(c) // craft/bills.go
+	case command.AddBill, command.SetBill, command.RemoveBill, command.ConfigureBill, command.SetBillIngredient, command.ReorderBill:
+		g.craft.Bills.Apply(c) // craft/bills.go, craft/settings.go (PRD-1)
 	case command.DesignateGrowZone:
 		if !g.cropLocked(plant.Species(c.Build)) {
 			g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
@@ -976,8 +976,8 @@ func (g *Game) phaseJobs() {
 			g.doSmooth(id, j) // smooth.go
 		case job.Sow:
 			g.doSow(id, j)
-		case job.Bill:
-			g.craft.Shop.Do(id, j) // craft/shop.go
+		case job.Bill, job.HaulIngredients:
+			g.craft.Shop.Do(id, j) // craft/shop.go, craft/haul.go (PRD-1)
 		case job.Equip:
 			g.doEquip(id, j)
 		case job.Rescue:
@@ -1012,7 +1012,7 @@ func (g *Game) phaseJobs() {
 		case job.Ingest:
 			g.doIngest(id, j) // drugs.go
 		case job.Lovin:
-			g.doLovin(id, j) // beds.go
+			g.rest.Lovin.Do(id, j) // rest/lovin.go
 		case job.Gather:
 			g.doGather(id, j) // gathering.go
 		case job.Brawl:

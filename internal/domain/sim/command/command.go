@@ -73,7 +73,7 @@ const (
 	// CancelFrame removes blueprint/frame Target, dropping its delivered
 	// materials back on the map (UI-015).
 	CancelFrame
-	// SetForbidden forbids (Enabled) or allows item stack Target: forbidden
+	// SetForbidden forbids (Enabled) or allows item stack or building Target (BED-1): forbidden
 	// stacks are left alone by haulers, eaters and builders (UI-016).
 	SetForbidden
 	// DesignateForbid forbids (Enabled) or allows every stack in X..X2,
@@ -224,6 +224,17 @@ const (
 	// AcceptLetter accepts the offer in letter Target (SIM-063: a rescued
 	// stranger asks to join); DismissLetter declines it.
 	AcceptLetter
+	// PRD-1 bill settings, on bill Index of the bench at X, Y:
+	// ConfigureBill sets Store (recipe.StoreMode) and Zone (the stockpile
+	// for "take to a specific stockpile"), Radius (ingredient search,
+	// tiles; 0 unlimited), SkillMin..SkillMax, Worker (only this colonist;
+	// 0 anyone) and UnpauseAt ("until you have": resume below it; 0 the
+	// default). SetBillIngredient allows (Enabled) or forbids ingredient
+	// kind Stuff. ReorderBill moves the bill by Count places (negative:
+	// up).
+	ConfigureBill
+	SetBillIngredient
+	ReorderBill
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an
@@ -329,4 +340,11 @@ type Command struct {
 	Target uint64
 	// Name carries a key for SetStoryteller / SetDifficulty.
 	Name string
+	// Bill settings for ConfigureBill (PRD-1).
+	Store              uint8
+	Zone               uint64
+	Radius             int
+	SkillMin, SkillMax uint8
+	Worker             uint64
+	UnpauseAt          int
 }

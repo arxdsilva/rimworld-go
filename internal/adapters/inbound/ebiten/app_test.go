@@ -14,6 +14,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
@@ -90,7 +91,10 @@ func (s *stubSim) Date() clock.Date           { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }
-func (s *stubSim) World() game.WorldView        { return s.world }
+func (s *stubSim) World() game.WorldView { return s.world }
+func (s *stubSim) HitChance(_, _ entity.EntityID) (attack.Report, bool) {
+	return attack.Report{}, false
+}
 func (s *stubSim) Wildlife() []game.WildlifeRow { return s.wild }
 func (s *stubSim) Factions() []game.FactionView { return s.factions }
 func (s *stubSim) Story() game.StoryView        { return s.story }

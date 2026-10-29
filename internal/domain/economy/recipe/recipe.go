@@ -1,10 +1,14 @@
 package recipe
 
 import (
+	"slices"
+	"strconv"
+
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/geology"
 )
 
@@ -108,11 +112,15 @@ func (in Input) Take(qty int) int {
 
 // Def is one recipe.
 type Def struct {
-	ID     ID
-	Name   string
-	Label  string
-	Bench  construction.Kind
-	Input  Input
+	ID    ID
+	Name  string
+	Label string
+	Bench construction.Kind
+	Input Input
+	// Inputs (PRD-1), when set, is every ingredient the recipe takes, each
+	// gathered on its own (Input is then Inputs[0] for the older callers).
+	// Unset, the recipe takes Input alone.
+	Inputs []Input
 	Output item.Kind
 	OutQty int
 	Work   int
@@ -328,6 +336,67 @@ func (in Input) AcceptsStack(s item.Stack) bool {
 	return in.Accepts(s.Kind)
 }
 
+// AppendInputs appends every ingredient d takes to dst: Inputs when set,
+// else Input alone (so a caller's stack buffer serves both).
+func (d Def) AppendInputs(dst []Input) []Input {
+	if len(d.Inputs) > 0 {
+		return append(dst, d.Inputs...)
+	}
+	return append(dst, d.Input)
+}
+
+// Accepts reports whether any of d's ingredients takes kind k.
+func (d Def) Accepts(k item.Kind) bool {
+	if len(d.Inputs) == 0 {
+		return d.Input.Accepts(k)
+	}
+	for _, in := range d.Inputs {
+		if in.Accepts(k) {
+			return true
+		}
+	}
+	return false
+}
+
+// InputKinds lists every item kind one of d's ingredients takes, in kind
+// order: the bill's ingredient allow list.
+func (d Def) InputKinds() []item.Kind {
+	var out []item.Kind
+	for k := item.Kind(0); k.String() != "unknown"; k++ {
+		if d.Accepts(k) {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
+// Label is the input as the bills UI shows it, e.g. "2 raw food".
+func (in Input) Label() string {
+	name := in.Kind.String()
+	switch {
+	case in.AnyRaw:
+		name = "raw food"
+	case in.AnyStoneBlocks:
+		name = "any stone blocks"
+	}
+	return strconv.Itoa(in.Qty) + " " + name
+}
+
+// InputsLabel is every ingredient's Label joined with " + ".
+func (d Def) InputsLabel() string {
+	if len(d.Inputs) == 0 {
+		return d.Input.Label()
+	}
+	s := ""
+	for i, in := range d.Inputs {
+		if i > 0 {
+			s += " + "
+		}
+		s += in.Label()
+	}
+	return s
+}
+
 // Mode is how many times a bill repeats.
 type Mode uint8
 
@@ -358,12 +427,94 @@ type Bill struct {
 	// Waiting: an "until you have" bill that reached its target and
 	// rests until the stock falls to ResumeAt (absent in older saves).
 	Waiting bool
+	// PRD-1 settings (append only; zero values are the defaults, so older
+	// saves load unchanged). Store is where the product goes and Zone the
+	// stockpile for StockpileZone. Radius limits the ingredient search to
+	// that many tiles from the bench (0: anywhere). SkillMin..SkillMax is
+	// the worker's allowed level in the recipe's skill (SkillMax 0: no
+	// cap). Worker: only this colonist (0: anyone). UnpauseAt: the "until
+	// you have" resume level (0, or not below Target: the default).
+	// Forbid lists the ingredient kinds the bill refuses, sorted.
+	Store              StoreMode
+	Zone               uint64
+	Radius             int
+	SkillMin, SkillMax uint8
+	Worker             entity.EntityID
+	UnpauseAt          int
+	Forbid             []item.Kind
+	// SearchAt is the tick before which the bill doesn't look for
+	// ingredients again after a search found none (the retry cooldown).
+	SearchAt uint64
+}
+
+// StoreMode is where a finished bill's product goes.
+type StoreMode uint8
+
+const (
+	BestStockpile StoreMode = iota // the crafter carries it to the best stockpile
+	DropOnFloor                    // left at the bench for haulers
+	StockpileZone                  // the crafter carries it to stockpile Bill.Zone
+	numStoreModes
+)
+
+// Valid reports a known store mode.
+func (m StoreMode) Valid() bool { return m < numStoreModes }
+
+func (m StoreMode) String() string {
+	switch m {
+	case DropOnFloor:
+		return "drop on floor"
+	case StockpileZone:
+		return "specific stockpile"
+	default:
+		return "best stockpile"
+	}
 }
 
 // ResumeAt is the stock an "until you have" bill waits for after reaching
-// its target, so one meal eaten doesn't send a cook back for one meal.
+// its target, so one meal eaten doesn't send a cook back for one meal:
+// UnpauseAt when the player set one below the target, else a fifth below.
 func (b Bill) ResumeAt() int {
+	if b.UnpauseAt > 0 && b.UnpauseAt < b.Target {
+		return b.UnpauseAt
+	}
 	return b.Target - max(1, b.Target/5)
+}
+
+// MaxSkill is the bill's effective skill cap (SkillMax, or the top level
+// when unset).
+func (b Bill) MaxSkill() uint8 {
+	if b.SkillMax == 0 {
+		return skill.MaxLevel
+	}
+	return b.SkillMax
+}
+
+// SkillOK reports a worker of skill level lvl inside the bill's range.
+func (b Bill) SkillOK(lvl uint8) bool { return lvl >= b.SkillMin && lvl <= b.MaxSkill() }
+
+// Allows reports an ingredient kind the bill doesn't forbid.
+func (b Bill) Allows(k item.Kind) bool {
+	_, found := slices.BinarySearch(b.Forbid, k)
+	return !found
+}
+
+// SetAllowed allows or forbids ingredient kind k, keeping Forbid sorted.
+// It builds a new slice, never writing through one a copy may share.
+func (b Bill) SetAllowed(k item.Kind, allow bool) Bill {
+	i, found := slices.BinarySearch(b.Forbid, k)
+	switch {
+	case allow && found:
+		out := make([]item.Kind, 0, len(b.Forbid)-1)
+		b.Forbid = append(append(out, b.Forbid[:i]...), b.Forbid[i+1:]...)
+		if len(b.Forbid) == 0 {
+			b.Forbid = nil
+		}
+	case !allow && !found:
+		out := make([]item.Kind, 0, len(b.Forbid)+1)
+		b.Forbid = append(append(append(out, b.Forbid[:i]...), k), b.Forbid[i:]...)
+	}
+	return b
 }
 
 // Update latches the "until you have" wait: it starts at the target and

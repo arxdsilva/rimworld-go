@@ -27,7 +27,7 @@ var powerSoundWant = map[string]struct {
 }
 
 // powerAudioBudget is the most the eight sounds may weigh together (WAV,
-// 48 kHz mono 16-bit, headers included): the repo's 20 MB audio budget is
+// 48 kHz mono 16-bit, headers included): the repo's audio budget (20 MB then, 30 MB since 2026-10-29) was
 // nearly spent, with about 290 KB left when these were made.
 const powerAudioBudget = 280_000
 

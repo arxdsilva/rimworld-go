@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -277,12 +278,12 @@ func TestAttackCycle(t *testing.T) {
 		g, att, tgt := attackSetup(t, tc.w, tc.dist)
 		d := weapon.DefOf(weaponKindOf(tc.w))
 		strikes, prev := 0, -1.0
-		for i := 0; i < 3*d.Cooldown && strikes < 3; i++ {
+		for i := 0; i < 3*combat.CycleTicks(d) && strikes < 3; i++ {
 			g.Step(1)
 			pv := pawnView(g, att)
 			struck := false
 			for _, tr := range g.World().Traces {
-				if tr.Attacker == att && tr.Target == tgt && tr.Age == 1 {
+				if tr.Attacker == att && tr.Target == tgt && tr.Age == 1 && tr.Stage != projectile.Landed { // DEF-1: the shot, not its impact
 					struck = true
 				}
 			}
@@ -383,7 +384,7 @@ func TestHitStampsVictim(t *testing.T) {
 	for i := 0; i < 600 && hitTick == 0; i++ {
 		g.Step(1)
 		for _, x := range g.World().Traces {
-			if x.Age == 1 && x.Hit && x.Target == tgt {
+			if x.Age == 1 && x.Hit && x.Target == tgt && x.Stage != projectile.Fired { // DEF-1: the bullet's impact
 				hitTick = uint64(g.clock.Now()) - 1
 			}
 		}
@@ -394,7 +395,7 @@ func TestHitStampsVictim(t *testing.T) {
 	pv := pawnView(g, tgt)
 	ap, _ := g.positions.Get(att)
 	if pv.HitTick != hitTick || pv.HitFromX != ap.X || pv.HitFromY != ap.Y || pv.HitDamage != weapon.DefOf(weapon.Rifle).Damage {
-		t.Fatalf("victim = %+v, want tick %d from (%d,%d) dmg 14", pv, hitTick, ap.X, ap.Y)
+		t.Fatalf("victim = %+v, want tick %d from (%d,%d) dmg %d", pv, hitTick, ap.X, ap.Y, weapon.DefOf(weapon.Rifle).Damage)
 	}
 	if pawnView(g, att).HitTick != 0 {
 		t.Fatal("the attacker was not hit")
@@ -413,7 +414,7 @@ func TestHitStampsVictim(t *testing.T) {
 		}
 	}
 	sp, _ := g.positions.Get(shooter)
-	if av.HitTick == 0 || av.HitFromX != sp.X || av.HitFromY != sp.Y || av.HitDamage != 14 {
+	if av.HitTick == 0 || av.HitFromX != sp.X || av.HitFromY != sp.Y || av.HitDamage != weapon.DefOf(weapon.Rifle).Damage {
 		t.Fatalf("animal = %+v", av)
 	}
 }
@@ -424,6 +425,9 @@ func (g *Game) strikeUntilHit(t *testing.T, att, tgt entity.EntityID, wk weapon.
 	for i := 0; i < 200; i++ {
 		before := len(g.traces)
 		g.combat.Strikes.Strike(att, tgt, wk)
+		for g.combat.Shots.Len() > 0 { // DEF-1: a shot flies, then lands
+			g.combat.Shots.Step()
+		}
 		if len(g.traces) > before && g.traces[len(g.traces)-1].Hit {
 			return
 		}

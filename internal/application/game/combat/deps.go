@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -53,16 +54,20 @@ type Creatures interface {
 	StandingRaider(id entity.EntityID) bool
 	// Hostile: animal a is attacking a colonist.
 	Hostile(a animal.State) bool
+	// Armor appends the garments id wears, outermost first, to buf (a
+	// slice combat owns) and returns it.
+	Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer
 }
 
 // Who picks the creatures Near collects.
 type Who uint8
 
-// The creature kinds Near can collect.
+// The creature kinds Near can collect (the same bits as the game's
+// creature index kinds).
 const (
-	Animals Who = 1 << iota
+	Pawns Who = 1 << iota
 	Raiders
-	Pawns
+	Animals
 	Everyone = Animals | Raiders | Pawns
 )
 
@@ -110,6 +115,9 @@ type Ground interface {
 type Skills interface {
 	// HitChance is base adjusted for id's Shooting or Melee and accuracy.
 	HitChance(id entity.EntityID, ranged bool, base int) int
+	// ShotAim is id's shooting accuracy per tile (ppm, from its Shooting
+	// skill) and its Shooting accuracy stat offset (permille).
+	ShotAim(id entity.EntityID) (perTilePPM, offset int)
 	// Learn gives id fighting experience for an attack.
 	Learn(id entity.EntityID, ranged bool)
 	// AimTicks is cooldown adjusted for id's aiming.

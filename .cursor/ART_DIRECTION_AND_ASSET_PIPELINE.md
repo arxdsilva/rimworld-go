@@ -982,7 +982,7 @@ with sidecar metadata.
     tool, prompt, credits, license and reviewer).
 -   Loudness: music about -16 LUFS, ambience about -20 LUFS, effects
     peak-normalized to -1 dBFS and balanced by their list volume.
--   Budget: 20 MB of audio in the repository (`make audio-check`).
+-   Budget: 30 MB of audio in the repository (`make audio-check`); raised from 20 MB by user decision on 2026-10-29 for the beds/production/defence sounds.
 -   Never import recordings or music from other games, and never prompt a
     generator to imitate a named game's soundtrack.
 

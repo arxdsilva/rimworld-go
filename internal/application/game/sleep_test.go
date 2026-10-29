@@ -43,8 +43,11 @@ func walledIn(t *testing.T, g *Game, x0, y0, x1, y1 int) {
 	}
 }
 
-// sleepTicks is how long resting from rest a to b takes.
-func sleepTicks(a, b int) int { return (b - a) / needs.SleepGain * needs.SleepPeriod }
+// sleepTicks is how long resting from rest a to b takes on the ground
+// (rest effectiveness construction.GroundRestEffectiveness, BED-1).
+func sleepTicks(a, b int) int {
+	return (b - a) * needs.SleepPeriod * 1000 / (needs.SleepGain * construction.GroundRestEffectiveness)
+}
 
 func TestCollapseSleepsWhereItStands(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 8})

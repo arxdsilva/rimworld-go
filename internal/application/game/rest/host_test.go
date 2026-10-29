@@ -42,6 +42,20 @@ type fakeHost struct {
 	thought []mood.Kind
 	forgot  []mood.Kind
 	logged  []bool
+
+	tame  map[entity.EntityID]bool
+	rooms map[[2]int]int // RoomAt overrides by cell
+
+	mate    map[entity.EntityID]entity.EntityID
+	opinion map[[2]entity.EntityID]int32
+	age     map[entity.EntityID]int
+	lovinAt map[entity.EntityID]uint64
+	roll    int // SocialRoll answer
+	rolls   int // SocialRoll calls
+	withOf  map[entity.EntityID]entity.EntityID
+	down    map[entity.EntityID]bool  // not Standing
+	pain    map[entity.EntityID]int32 // Hurt pain (with a body)
+	noBody  bool
 }
 
 func newFake() *fakeHost {
@@ -52,7 +66,10 @@ func newFake() *fakeHost {
 		slept: map[entity.EntityID]entity.EntityID{}, outside: map[[2]int]bool{},
 		colonists: map[entity.EntityID]bool{}, partner: map[entity.EntityID]entity.EntityID{},
 		bedRest: map[entity.EntityID]bool{}, medicalOK: map[entity.EntityID]bool{},
-		act: schedule.Anything, room: -1,
+		act: schedule.Anything, room: -1, tame: map[entity.EntityID]bool{}, rooms: map[[2]int]int{},
+		mate: map[entity.EntityID]entity.EntityID{}, opinion: map[[2]entity.EntityID]int32{}, age: map[entity.EntityID]int{},
+		lovinAt: map[entity.EntityID]uint64{}, withOf: map[entity.EntityID]entity.EntityID{}, down: map[entity.EntityID]bool{},
+		pain: map[entity.EntityID]int32{},
 	}
 }
 
@@ -135,11 +152,47 @@ func (f *fakeHost) SurgeryWait(_ entity.EntityID, workLeft int) {
 	f.surgeryRan = append(f.surgeryRan, workLeft)
 }
 
-func (f *fakeHost) RoomAt(int, int) int                        { return f.room }
+func (f *fakeHost) RoomAt(x, y int) int {
+	if r, ok := f.rooms[[2]int{x, y}]; ok {
+		return r
+	}
+	return f.room
+}
 func (f *fakeHost) UnderSky(int, int) bool                     { return f.sky }
 func (f *fakeHost) RoomScore(int) int                          { return f.score }
 func (f *fakeHost) Remember(_ entity.EntityID, k mood.Kind)    { f.thought = append(f.thought, k) }
 func (f *fakeHost) ForgetGroup(_ entity.EntityID, k mood.Kind) { f.forgot = append(f.forgot, k) }
 func (f *fakeHost) Slept(_ entity.EntityID, inBed bool)        { f.logged = append(f.logged, inBed) }
+
+func (f *fakeHost) ObjectAt(x, y int) entity.EntityID {
+	for _, id := range f.bldgIDs {
+		b := f.bldgs[id]
+		cells, n := construction.SmallFootprint(b.Kind, b.Facing, b.X, b.Y) // no allocation (TestStatsOfAllocatesNothing)
+		if slices.Contains(cells[:n], [2]int{x, y}) {
+			return id
+		}
+	}
+	return 0
+}
+func (f *fakeHost) TameAnimal(id entity.EntityID) bool { return f.tame[id] }
+
+func (f *fakeHost) Mate(id entity.EntityID) entity.EntityID  { return f.mate[id] }
+func (f *fakeHost) Opinion(a, b entity.EntityID) int32       { return f.opinion[[2]entity.EntityID{a, b}] }
+func (f *fakeHost) Age(id entity.EntityID) int               { return f.age[id] }
+func (f *fakeHost) LovinAt(id entity.EntityID) uint64        { return f.lovinAt[id] }
+func (f *fakeHost) SetLovinAt(id entity.EntityID, at uint64) { f.lovinAt[id] = at }
+func (f *fakeHost) SocialRoll(int) int                       { f.rolls++; return f.roll }
+func (f *fakeHost) RememberWith(id entity.EntityID, k mood.Kind, o entity.EntityID) {
+	f.thought = append(f.thought, k)
+	f.withOf[id] = o
+}
+func (f *fakeHost) Job(id entity.EntityID) job.Record { return f.jobs[id] }
+func (f *fakeHost) Standing(id entity.EntityID) bool  { return !f.down[id] }
+func (f *fakeHost) Hurt(id entity.EntityID) (int32, int32, bool) {
+	if f.noBody {
+		return 0, 0, false
+	}
+	return f.pain[id], 1000, true
+}
 
 var _ Host = (*fakeHost)(nil)

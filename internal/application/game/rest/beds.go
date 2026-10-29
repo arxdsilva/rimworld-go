@@ -17,7 +17,7 @@ import (
 // next sleep); otherwise the usual choice (its own bed, the nearest free
 // one) stands. Each rule keeps what the couple already holds, so the
 // choice never flips between nights. Medical beds are left to patients
-// and prison beds to prisoners.
+// and prison beds to prisoners; a forbidden bed is nobody's (BED-1).
 type Beds struct{ h Host }
 
 // slotOwner is who holds slot of bed b (0: free).
@@ -51,7 +51,7 @@ func (r *Beds) SleepIn(id entity.EntityID) bool {
 	bestD := 1 << 30
 	for _, bid := range r.h.BuildingIDs() {
 		b, ok := r.h.Building(bid)
-		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || care.IsMedicalBed(b) { // prison beds: prisoners only
+		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || b.Forbidden || care.IsMedicalBed(b) { // prison beds: prisoners only
 			continue
 		}
 		if !r.h.AreaAllows(id, b.X, b.Y) {
@@ -95,7 +95,7 @@ func (r *Beds) partnerBed(id entity.EntityID) (entity.EntityID, int, bool) {
 	ownSlot, freeD := 0, 1<<30
 	for _, bid := range r.h.BuildingIDs() {
 		b, ok := r.h.Building(bid)
-		if !ok || b.Kind != construction.DoubleBed || b.ForPrisoners || care.IsMedicalBed(b) {
+		if !ok || b.Kind.Sleepers() != 2 || b.ForPrisoners || b.Forbidden || care.IsMedicalBed(b) {
 			continue // medical beds are for patients (care/rest.go)
 		}
 		if ps := b.SlotOf(uint64(p)); ps >= 0 {

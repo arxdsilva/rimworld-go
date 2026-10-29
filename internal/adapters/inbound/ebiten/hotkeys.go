@@ -125,6 +125,8 @@ func (a *App) handleMapKeys() {
 		a.insp.Building().PowerSelection() // cmds_power.go (PLAY-021)
 	case f.Fired(input.RoofOverlay):
 		a.renderer.overlays().Roof.Toggle()
+	case f.Fired(input.CoverOverlay):
+		a.renderer.overlays().Combat.Cover.Toggle() // combat_overlay_host.go (DEF-1)
 	case f.Fired(input.RoomStats):
 		a.chrome.Rooms = !a.chrome.Rooms
 	case f.Fired(input.PowerOverlay):

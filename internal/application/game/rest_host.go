@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -22,12 +23,13 @@ type restHost struct {
 	restPatients
 	restRooms
 	restEvents
+	restCouples
 }
 
 var _ rest.Host = restHost{}
 
 func newRestHost(g *Game) restHost {
-	return restHost{restBodies{g}, restBedding{g}, restClaims{g}, restRoutine{g}, restPatients{g}, restRooms{g}, restEvents{g}}
+	return restHost{restBodies{g}, restBedding{g}, restClaims{g}, restRoutine{g}, restPatients{g}, restRooms{g}, restEvents{g}, restCouples{g}}
 }
 
 type restBodies struct{ g *Game }
@@ -104,6 +106,10 @@ type restRoutine struct{ g *Game }
 
 func (h restRoutine) Activity(id entity.EntityID) schedule.Activity { return h.g.activityOf(id) }
 func (h restRoutine) SeekFood(id entity.EntityID) bool              { return h.g.seekFood(id) }
+func (h restRoutine) Job(id entity.EntityID) job.Record {
+	j, _ := h.g.jobs.Get(id)
+	return j
+}
 
 type restPatients struct{ g *Game }
 
@@ -125,9 +131,19 @@ type restRooms struct{ g *Game }
 func (h restRooms) RoomAt(x, y int) int    { return h.g.roomAt(x, y) }
 func (h restRooms) UnderSky(x, y int) bool { return h.g.underSky(x, y) }
 func (h restRooms) RoomScore(r int) int    { return h.g.roomScore(r) }
+func (h restRooms) ObjectAt(x, y int) entity.EntityID {
+	return h.g.layerBldgAt(x, y, construction.LayerObject)
+}
+func (h restRooms) TameAnimal(id entity.EntityID) bool {
+	a, ok := h.g.animals.Get(id)
+	return ok && a.Tame && !a.Dead()
+}
 
 type restEvents struct{ g *Game }
 
+func (h restEvents) RememberWith(id entity.EntityID, k mood.Kind, o entity.EntityID) {
+	h.g.memories[id] = h.g.memories[id].AddFor(k, uint64(o), uint64(h.g.clock.Now()))
+}
 func (h restEvents) Remember(id entity.EntityID, k mood.Kind) { h.g.remember(id, k) }
 func (h restEvents) ForgetGroup(id entity.EntityID, k mood.Kind) {
 	h.g.memories[id] = h.g.memories[id].ForgetGroupOf(k)
@@ -138,4 +154,22 @@ func (h restEvents) Slept(id entity.EntityID, inBed bool) {
 	} else {
 		h.g.logEvent(id, logEntry{Kind: logSleptGround})
 	}
+}
+
+type restCouples struct{ g *Game }
+
+func (h restCouples) Mate(id entity.EntityID) entity.EntityID  { return h.g.partnerOf(id) }
+func (h restCouples) Opinion(from, to entity.EntityID) int32   { return h.g.opinion(from, to) }
+func (h restCouples) Age(id entity.EntityID) int               { return h.g.socialPerson(id).AgeYears }
+func (h restCouples) LovinAt(id entity.EntityID) uint64        { return h.g.gatherSt().lovinAt[id] }
+func (h restCouples) SetLovinAt(id entity.EntityID, at uint64) { h.g.gatherSt().lovinAt[id] = at }
+func (h restCouples) SocialRoll(n int) int                     { return h.g.stream(streamSocial).IntN(n) }
+func (h restCouples) Standing(id entity.EntityID) bool {
+	return h.g.alive(id) && !h.g.breaking(id) && !h.g.drafted(id)
+}
+func (h restCouples) Hurt(id entity.EntityID) (int32, int32, bool) {
+	if bd := h.g.bodies[id]; bd != nil {
+		return bd.Pain(), bd.Capacity(body.Consciousness), true
+	}
+	return 0, 0, false
 }

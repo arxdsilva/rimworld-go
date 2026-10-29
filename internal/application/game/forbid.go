@@ -15,8 +15,14 @@ func (g *Game) forbidden(id entity.EntityID) bool {
 	return ok && st.Forbidden
 }
 
-// setForbidden applies a SetForbidden command.
+// setForbidden applies a SetForbidden command: to a stack, or to a
+// building (BED-1: a forbidden bed or animal bed is nobody's, rest/).
 func (g *Game) setForbidden(id entity.EntityID, on bool) {
+	if b, ok := g.bldgs.Get(id); ok {
+		b.Forbidden = on
+		g.bldgs.Set(id, b)
+		return
+	}
 	st, ok := g.stacks.Get(id)
 	if !ok || st.Carrier != 0 {
 		return

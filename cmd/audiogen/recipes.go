@@ -71,7 +71,7 @@ func cat(parts ...[]s.Layer) []s.Layer {
 
 // sounds are every procedural effect (SND-002). Recipes are starting
 // points tuned by ear; change one, run make audio, listen.
-var sounds = []sound{
+var sounds = append([]sound{
 	// --- interface
 	{s.Recipe{ID: "ui.click", Seed: 101, Variants: 3, Jitter: 0.03, Layers: []s.Layer{
 		{Wave: s.Sine, Freq: 1800, FreqEnd: 1500, Dur: 0.06, Attack: 0.002, Decay: 0.03},
@@ -356,4 +356,4 @@ var sounds = []sound{
 		{Wave: s.Sine, Freq: 880, FreqEnd: 1760, Start: 0.05, Dur: 0.4, Attack: 0.15, Release: 0.1, Gain: 0.12},
 		{Wave: s.White, Start: 0.1, Dur: 0.35, HighPass: 4000, Grains: 30, Attack: 0.05, Release: 0.1, Gain: 0.18},
 	}}, 0.42},
-}
+}, combatSounds()...)

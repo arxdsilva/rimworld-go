@@ -1,8 +1,6 @@
 package game
 
 import (
-	"strconv"
-
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -25,68 +23,17 @@ const (
 	BillHaveEnough = craft.BillHaveEnough
 )
 
-// RecipeView describes a recipe for the bills UI.
-type RecipeView struct {
-	ID     uint8
-	Name   string
-	Label  string
-	Bench  string
-	Input  string // e.g. "2 raw food"
-	Output string
-}
-
-// BillView is a bench bill in the read model.
-type BillView struct {
-	Recipe    string
-	Label     string
-	Mode      string
-	ModeID    uint8
-	Target    int
-	Done      int
-	Suspended bool
-	Status    string
-	// Waiting: an "until you have" bill resting at its target until the
-	// stock falls to ResumeAt (BillHaveEnough status).
-	Waiting  bool
-	ResumeAt int
-}
+// The bills read model lives in craft (craft/view.go); these names keep
+// it in the game's API.
+type (
+	RecipeView         = craft.RecipeView
+	BillView           = craft.BillView
+	BillIngredientView = craft.BillIngredientView
+	BillIngredients    = craft.BillIngredients
+)
 
 // Recipes lists every recipe.
-func Recipes() []RecipeView {
-	var out []RecipeView
-	for _, d := range recipe.All() {
-		if d.Legacy {
-			continue // older saves' recipes, upgraded on load
-		}
-		in := d.Input.Kind.String()
-		switch {
-		case d.Input.AnyRaw:
-			in = "raw food"
-		case d.Input.AnyStoneBlocks:
-			in = "any stone blocks"
-		}
-		out = append(out, RecipeView{
-			ID: uint8(d.ID), Name: d.Name, Label: d.Label, Bench: d.Bench.String(),
-			Input: strconv.Itoa(d.Input.Qty) + " " + in, Output: d.Output.String(),
-		})
-	}
-	return out
-}
-
-// appendBillViews appends bench bid's bill views to out (buildingViews
-// builds every bench's into one reused buffer).
-func (g *Game) appendBillViews(out []BillView, bid entity.EntityID) []BillView {
-	for i := range g.craft.Bills.Of(bid) {
-		bl, st := g.craft.Bills.Line(bid, i)
-		d := recipe.DefOf(bl.Recipe)
-		out = append(out, BillView{
-			Recipe: d.Name, Label: d.Label, Mode: bl.Mode.String(), ModeID: uint8(bl.Mode),
-			Target: bl.Target, Done: bl.Done, Suspended: bl.Suspended, Status: st,
-			Waiting: bl.Waiting, ResumeAt: bl.ResumeAt(),
-		})
-	}
-	return out
-}
+func Recipes() []RecipeView { return craft.Recipes() }
 
 // stockOf is the colony's count of kind k.
 func (g *Game) stockOf(k item.Kind) int {
@@ -193,6 +140,15 @@ func (h craftStock) Ingredient(id entity.EntityID, in recipe.Input) (entity.Enti
 	return h.g.ingredientFor(id, in)
 }
 func (h craftStock) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
+func (h craftStock) ItemIDs() []entity.EntityID                  { return h.g.itemIDs }
+func (h craftStock) Merge(into, from entity.EntityID) {
+	a, b := h.g.stacks.Get(into)
+	if fs, ok := h.g.stacks.Get(from); b && ok {
+		a.Rot, a.Qty = item.MergeRot(a.Qty, a.Rot, fs.Qty, fs.Rot), a.Qty+fs.Qty
+		h.g.stacks.Set(into, a)
+		h.g.deleteItem(from)
+	}
+}
 func (h craftStock) Carry(carrier, stack entity.EntityID, take int) entity.EntityID {
 	g := h.g
 	st, _ := g.stacks.Get(stack)
@@ -220,6 +176,25 @@ func (h craftOutput) DropMeal(cook entity.EntityID, bench construction.Kind, k i
 }
 func (h craftOutput) Cremate(pyre, body entity.EntityID, d recipe.Def) { h.g.cremate(pyre, body, d) } // burial.go
 func (h craftOutput) Message(x, y int, text string)                    { h.g.message(x, y, "%s", text) }
+func (h craftOutput) PutDown(id entity.EntityID, x, y int) {
+	if st, ok := h.g.stacks.Get(id); ok {
+		st.Carrier, st.X, st.Y = 0, x, y
+		h.g.stacks.Set(id, st)
+	}
+}
+func (h craftOutput) Store(carrier entity.EntityID, k item.Kind, x, y int, z uint64) bool {
+	g := h.g
+	sid := g.itemAt(x, y)
+	st, ok := g.stacks.Get(sid)
+	if !ok || st.Kind != k {
+		return false
+	}
+	dx, dy, ok := g.areaStockpileCell(carrier, k, x, y) // area_dest.go
+	if z != 0 {
+		dx, dy, ok = g.stockpileCellWhere(k, x, y, func(cx, cy int) bool { id, in := g.zones.At(cx, cy); return in && uint64(id) == z })
+	}
+	return ok && g.startJob(carrier, job.Record{Kind: job.Haul, Target: sid, TX: x, TY: y, DestX: dx, DestY: dy})
+}
 
 type craftWorkers struct{ g *Game }
 
@@ -240,8 +215,8 @@ func (h craftWorkers) Claim(owner, target entity.EntityID) bool {
 
 type craftCrafters struct{ g *Game }
 
-func (h craftCrafters) MeetsMinSkill(id entity.EntityID, sk skill.ID, min uint8) bool {
-	return h.g.meetsMinSkill(id, sk, min)
+func (h craftCrafters) SkillLevel(id entity.EntityID, sk skill.ID) uint8 {
+	return h.g.skillOf(id, sk).Level
 }
 func (h craftCrafters) BenchWork(id entity.EntityID, sk skill.ID, pct int) int {
 	return h.g.workProgressPct(id, sk, true, pct) // skills.go
@@ -256,3 +231,10 @@ func (h craftCrafters) Postpone(id, bench entity.EntityID) {
 	h.g.postpone(postKey{Pawn: id, Kind: job.Bill, Target: bench}, job.Unreachable)
 }
 func (h craftCrafters) RecipeLocked(id recipe.ID) bool { return h.g.recipeLocked(id) }
+func (h craftCrafters) Now() uint64                    { return uint64(h.g.clock.Now()) }
+func (h craftCrafters) Name(id entity.EntityID) string {
+	if !h.g.colonist(id) || !h.g.alive(id) {
+		return ""
+	}
+	return h.g.nameOf(id)
+}

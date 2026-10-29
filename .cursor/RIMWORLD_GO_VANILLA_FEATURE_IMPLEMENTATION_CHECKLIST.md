@@ -526,8 +526,8 @@ This is the heart of autonomous colony behavior.
 
 -   [-] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first; PLAY-017: only the colony's own goods (made, brought, harvested, chopped, mined, hunted) are hauled by themselves, items found on the map (ruin and vault loot, map chunks, predator kills, wild eggs) wait for a Haul mark)
 -   [-] **Haul construction resources** (a full load of wood or stone feeds a route of up to 8 nearby frames; leftovers go to the nearest stockpile, or only the needed amount is carried when storage has no room (HAUL-001))
--   [ ] **Haul production ingredients**
--   [ ] **Haul finished products**
+-   [x] **Haul production ingredients** (PRD-1: a crafter gathers a bill's ingredients from several stacks within the bill's radius onto the bench, `job.HaulIngredients`)
+-   [x] **Haul finished products** (PRD-1: store mode best stockpile hauls the product; drop on floor leaves it; a specific stockpile)
 -   [x] **Haul corpses**
 -   [-] **Opportunistic/batched hauling where compatible** (batched for construction materials and refuelling; not yet for general goods)
     -   Performance-conscious without changing core player expectations.
@@ -597,7 +597,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; no comfort/joy/light effects)
+-   [-] **Furniture** (bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; missing: chair comfort, joy, light effects (BED-3))
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -734,7 +734,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.1 Rest
 
--   [-] **Rest need** (awake decay, sleep restore 20%->100% in 8 h, sleepers wake at 80% outside Sleep hours and 100% in them; at 0 the colonist collapses and sleeps where it drops until 80%; hunger 0 downs, not rest; no rest effectiveness by bed quality yet)
+-   [x] **Rest need** (awake decay, sleep restore 20%->100% in 8 h at rest effectiveness 100 %, scaled by the bed's rest effectiveness (BED-1: ground and spots 80 %); sleepers wake at 80% outside Sleep hours and 100% in them; at 0 the colonist collapses and sleeps where it drops until 80%)
     -   Decays while awake.
     -   Replenishes while sleeping.
     -   Severe exhaustion can force sleep.
@@ -743,7 +743,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   Schedule-aware.
     -   Select owned/assigned bed if available.
     -   Fall back to available sleeping location.
--   [-] **Beds** (SIM-042/045, PLAY-020: partner double beds, owner assignment UI, prisoner beds, medical beds; claim on Sleep; missing: bed comfort and rest-effectiveness stats)
+-   [x] **Beds** (SIM-042/045, PLAY-020: partner double beds, owner assignment UI, prisoner beds, medical beds; claim on Sleep; BED-1: comfort, rest effectiveness and beauty by kind × stuff × quality, end table and dresser links, bedrolls, animal beds, forbidding)
     -   Assign ownership.
     -   sleeping slots.
     -   rest effectiveness.
@@ -1224,13 +1224,13 @@ treatment, and surgery are major colony-management systems.
     -   Do X times.
     -   Do forever.
     -   Do until X inventory count.
--   [ ] **Ingredient radius**
+-   [x] **Ingredient radius** (PRD-1: per bill, tiles from the bench; 0 unlimited)
     -   Limit ingredient search area.
--   [ ] **Ingredient filters**
+-   [x] **Ingredient filters** (PRD-1: per-bill allow/forbid of each ingredient kind the recipe accepts)
     -   Restrict materials/categories.
--   [ ] **Worker restrictions**
+-   [x] **Worker restrictions** (PRD-1: skill range and a specific colonist)
     -   Skill range/specific pawn if desired for parity.
--   [ ] **Product destination**
+-   [x] **Product destination** (PRD-1: best stockpile, drop on floor, a specific stockpile)
     -   Drop on floor.
     -   take to best stockpile.
     -   specific storage destination where supported.
@@ -1346,7 +1346,7 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Melee weapons**
     -   Multiple attack verbs/damage profiles.
--   [-] **Ranged weapons** (rifle with range, accuracy falloff and cooldown; missing: burst, projectiles in flight, per-weapon warmup — DEF-1)
+-   [-] **Ranged weapons** (DEF-1: per-weapon warmup, cooldown, burst, accuracy bands and armor penetration; projectiles in flight; the rifle is the bolt-action; missing: the rest of the vanilla catalogue incl. burst weapons (DEF-2))
     -   Range.
     -   warmup.
     -   cooldown.
@@ -1397,7 +1397,7 @@ treatment, and surgery are major colony-management systems.
 ## 17.4 Ranged attack
 
 -   [ ] **Target acquisition**
--   [-] **Warmup** (a fixed aim of a third of the cooldown; not per weapon — DEF-1)
+-   [x] **Warmup** (DEF-1: per weapon, `weapon.Def.Warmup`)
 -   [x] **Accuracy**
     -   Shooting skill.
     -   weapon.
@@ -1405,11 +1405,11 @@ treatment, and surgery are major colony-management systems.
     -   target size.
     -   weather/light if modeled.
     -   cover.
--   [-] **Projectile flight**
+-   [x] **Projectile flight** (DEF-1: shots fly; walls stop them; creatures on the path may intercept; a missed shot can hit others, friendly fire beyond 5 tiles)
     -   Logical projectile entity or deterministic trajectory.
     -   Can miss intended target and impact another valid cell/entity
         where design supports it.
--   [ ] **Burst fire**
+-   [-] **Burst fire** (DEF-1: the mechanism, shots and ticks between from the weapon; no burst weapon until DEF-2)
 -   [x] **Cooldown** (per weapon, `weapon.Def.Cooldown`)
 
 ## 17.5 Melee
@@ -1423,11 +1423,11 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.6 Armor
 
--   [ ] **Armor coverage**
+-   [x] **Armor coverage** (DEF-1: apparel covers body regions; a hit rolls the region, then each layer)
     -   Apparel covers body parts.
--   [ ] **Armor categories**
+-   [x] **Armor categories** (DEF-1: sharp, blunt, heat; damage types map to them)
     -   Sharp/blunt/heat-style protection.
--   [ ] **Armor resolution**
+-   [x] **Armor resolution** (DEF-1: rating minus penetration; deflect below half, halve below the full value, halved sharp becomes blunt; wiki numbers)
     -   Attack penetration vs armor.
     -   Can reduce/deflect damage.
     -   Damage ultimately applies to selected anatomy.

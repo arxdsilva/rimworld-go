@@ -290,7 +290,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !m.Enabled(work.Hunt) {
 			return job.Record{}, ReasonNoHunt
 		}
-		if !g.hasRanged(id) {
+		if !hasRanged(g, id) {
 			return job.Record{}, ReasonNoRanged
 		}
 		if r := g.busyBy(id, aid); r != "" {
@@ -553,7 +553,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		a, _ := g.animals.Get(aid)
 		if g.drafted(pawn) {
 			verb := "Melee attack "
-			if g.hasRanged(pawn) {
+			if hasRanged(g, pawn) {
 				verb = "Shoot "
 			}
 			add(verb+a.Species.String(), command.OrderAttack, construction.LayerObject)
@@ -563,7 +563,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	}
 	if rid := g.raiderAt(x, y); rid != 0 && g.standingRaider(rid) && g.drafted(pawn) {
 		verb := "Melee attack "
-		if g.hasRanged(pawn) {
+		if hasRanged(g, pawn) {
 			verb = "Shoot "
 		}
 		if g.isRaider(rid) {

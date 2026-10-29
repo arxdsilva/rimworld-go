@@ -116,6 +116,7 @@ func (g *Game) phaseThreats() {
 	}
 	g.raiderBuf = ids[:0]
 	g.combat.Turrets.Phase(now) // combat/turret.go (PLAY-024): after the raiders move
+	g.combat.Shots.Step()       // combat/shot.go (DEF-1): projectiles in flight
 	g.vaultTick(now)            // vault.go (MAPGEN-3): approach warnings, clearing
 }
 

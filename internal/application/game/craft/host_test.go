@@ -14,28 +14,34 @@ import (
 
 // fakeHost is a tiny in-memory simulation behind every craft role.
 type fakeHost struct {
-	ids      []entity.EntityID
-	bldgs    map[entity.EntityID]construction.Building
-	ver      uint64
-	unpower  map[entity.EntityID]bool
-	fuel     map[entity.EntityID]int
-	temp     int
-	items    []entity.EntityID
-	stacks   map[entity.EntityID]item.Stack
-	next     entity.EntityID
-	pawns    []entity.EntityID
-	jobs     map[entity.EntityID]job.Record
-	claims   map[entity.EntityID]entity.EntityID
-	unreach  bool
-	postp    map[[2]entity.EntityID]bool
-	locked   map[recipe.ID]bool
-	noSkill  bool
-	work     int // BenchWork per call (0: pct, below 0: none)
-	lastPct  int
-	meals    int
-	cremated int
-	msgs     []string
-	drops    []item.Stack
+	ids       []entity.EntityID
+	bldgs     map[entity.EntityID]construction.Building
+	ver       uint64
+	unpower   map[entity.EntityID]bool
+	fuel      map[entity.EntityID]int
+	temp      int
+	items     []entity.EntityID
+	stacks    map[entity.EntityID]item.Stack
+	next      entity.EntityID
+	pawns     []entity.EntityID
+	jobs      map[entity.EntityID]job.Record
+	claims    map[entity.EntityID]entity.EntityID
+	unreach   bool
+	postp     map[[2]entity.EntityID]bool
+	locked    map[recipe.ID]bool
+	noSkill   bool
+	skills    map[entity.EntityID]uint8
+	names     map[entity.EntityID]string
+	now       uint64
+	scans     int // ItemIDs calls (the multi-stack search)
+	stored    []storeCall
+	startFail job.FailReason // StartJob fails for this reason (FailNone: starts)
+	work      int            // BenchWork per call (0: pct, below 0: none)
+	lastPct   int
+	meals     int
+	cremated  int
+	msgs      []string
+	drops     []item.Stack
 }
 
 func newFake() *fakeHost {
@@ -44,6 +50,7 @@ func newFake() *fakeHost {
 		fuel: map[entity.EntityID]int{}, stacks: map[entity.EntityID]item.Stack{}, next: 1000,
 		jobs: map[entity.EntityID]job.Record{}, claims: map[entity.EntityID]entity.EntityID{},
 		postp: map[[2]entity.EntityID]bool{}, locked: map[recipe.ID]bool{}, temp: 20,
+		skills: map[entity.EntityID]uint8{}, names: map[entity.EntityID]string{},
 	}
 }
 
@@ -142,6 +149,35 @@ func (f *fakeHost) Carry(carrier, stack entity.EntityID, take int) entity.Entity
 	return f.next
 }
 
+func (f *fakeHost) ItemIDs() []entity.EntityID {
+	f.scans++
+	return f.items
+}
+func (f *fakeHost) Merge(into, from entity.EntityID) {
+	a, b := f.stacks[into], f.stacks[from]
+	a.Qty += b.Qty
+	f.stacks[into] = a
+	f.DeleteItem(from)
+}
+func (f *fakeHost) PutDown(id entity.EntityID, x, y int) {
+	st := f.stacks[id]
+	st.Carrier, st.X, st.Y = 0, x, y
+	f.stacks[id] = st
+}
+
+// storeCall is one Store request.
+type storeCall struct {
+	carrier entity.EntityID
+	kind    item.Kind
+	x, y    int
+	zone    uint64
+}
+
+func (f *fakeHost) Store(carrier entity.EntityID, k item.Kind, x, y int, zone uint64) bool {
+	f.stored = append(f.stored, storeCall{carrier, k, x, y, zone})
+	return true
+}
+
 func (f *fakeHost) DeleteItem(id entity.EntityID) {
 	delete(f.stacks, id)
 	for i, iid := range f.items {
@@ -179,6 +215,11 @@ func (f *fakeHost) Job(id entity.EntityID) (job.Record, bool) {
 }
 func (f *fakeHost) SetJob(id entity.EntityID, j job.Record) { f.jobs[id] = j }
 func (f *fakeHost) StartJob(id entity.EntityID, rec job.Record) bool {
+	if f.startFail != job.FailNone {
+		rec.State, rec.Fail = job.Fail, f.startFail
+		f.jobs[id] = rec
+		return false
+	}
 	f.jobs[id] = rec
 	return true
 }
@@ -201,7 +242,17 @@ func (f *fakeHost) Claim(owner, target entity.EntityID) bool {
 	return true
 }
 
-func (f *fakeHost) MeetsMinSkill(id entity.EntityID, sk skill.ID, min uint8) bool { return !f.noSkill }
+func (f *fakeHost) SkillLevel(id entity.EntityID, sk skill.ID) uint8 {
+	if f.noSkill {
+		return 0
+	}
+	if l, ok := f.skills[id]; ok {
+		return l
+	}
+	return 10
+}
+func (f *fakeHost) Name(id entity.EntityID) string { return f.names[id] }
+func (f *fakeHost) Now() uint64                    { return f.now }
 func (f *fakeHost) BenchWork(id entity.EntityID, sk skill.ID, pct int) int {
 	f.lastPct = pct
 	if f.work < 0 {

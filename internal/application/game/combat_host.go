@@ -7,11 +7,15 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/power"
+	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -50,6 +54,10 @@ func (h combatCreatures) Weapon(id entity.EntityID) weapon.Kind          { retur
 func (h combatCreatures) StandingPawn(id entity.EntityID) bool           { return h.g.standingPawn(id) }
 func (h combatCreatures) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h combatCreatures) Hostile(a animal.State) bool                    { return h.g.hostile(a) }
+func (h combatCreatures) Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer {
+	w := h.g.apparel[id]
+	return armor.AppendWorn(buf, w[item.Body], w[item.Head]) // apparel.go: the outer body layer first
+}
 
 type combatRosters struct{ g *Game }
 
@@ -71,24 +79,11 @@ func (h combatRosters) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 }
 
 // Near reads the creature index (animal_index.go), as nearestWhere and
-// within do.
+// within do; combat.Who has the index's kind bits.
 func (h combatRosters) Near(x, y, r int, who combat.Who, buf []combat.Seen) []combat.Seen {
 	g := h.g
-	var kinds uint8
-	if who&combat.Pawns != 0 {
-		kinds |= ckPawn
-	}
-	if who&combat.Raiders != 0 {
-		kinds |= ckRaider
-	}
-	if who&combat.Animals != 0 {
-		kinds |= ckAnimal
-	}
 	g.creatures().grid.each(x, y, r+1, func(e idxEntry) bool {
-		if e.kind&kinds == 0 {
-			return true
-		}
-		if p, ok := g.positions.Get(e.id); ok && weapon.Distance(x, y, p.X, p.Y) <= r {
+		if p, ok := g.positions.Get(e.id); ok && e.kind&uint8(who) != 0 && weapon.Distance(x, y, p.X, p.Y) <= r {
 			buf = append(buf, combat.Seen{ID: e.id, X: p.X, Y: p.Y})
 		}
 		return true
@@ -129,6 +124,9 @@ type combatSkills struct{ g *Game }
 
 func (h combatSkills) HitChance(id entity.EntityID, ranged bool, base int) int {
 	return h.g.hitChanceFor(id, ranged, base)
+}
+func (h combatSkills) ShotAim(id entity.EntityID) (int, int) {
+	return attack.ShooterPerTile(int(h.g.skillOf(id, skill.Shooting).Level)), 10 * int(h.g.statOf(id, stat.ShootAcc))
 }
 func (h combatSkills) Learn(id entity.EntityID, ranged bool) { h.g.combatLearn(id, ranged) }
 func (h combatSkills) AimTicks(id entity.EntityID, cooldown int) int {

@@ -123,6 +123,17 @@ const (
 	SentryTurret
 	TradeBeacon
 	RadioConsole
+	// Beds and bed furniture (BED-1, append only, saved). Bedroll and
+	// DoubleBedroll are light sleeping places sewn from cloth or leather;
+	// AnimalSleepingSpot and AnimalBed are where tame animals sleep;
+	// EndTable and Dresser are facilities that make a nearby bed more
+	// comfortable (beds.go).
+	Bedroll
+	DoubleBedroll
+	AnimalSleepingSpot
+	AnimalBed
+	EndTable
+	Dresser
 	kindCount
 )
 
@@ -187,6 +198,9 @@ type Def struct {
 	// Foundation (MAPGEN-3): built over bridgeable terrain only (water,
 	// marsh, mud), in LayerFoundation, holding up light things.
 	Foundation bool
+	// Fabric (BED-1): sewn from cloth or leather only (Wood is then the
+	// fabric needed).
+	Fabric bool
 }
 
 // StoneWorkPct is the work multiplier (percent) for granite, the legacy
@@ -318,6 +332,18 @@ var defs = [kindCount]Def{
 	RadioConsole: {Kind: RadioConsole, Name: "radio console", Wood: 80, Work: 300, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
+	// BED-1, wiki: Bedroll, Double bedroll, Animal sleeping spot, Animal
+	// bed, End table, Dresser. Costs and work are the wiki's scaled the
+	// way the bed's are (cost / 9, work / 10); footprints as in the wiki.
+	Bedroll: {Kind: Bedroll, Name: "bedroll", Wood: 4, Work: 60, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{1, 2}, Fabric: true},
+	DoubleBedroll: {Kind: DoubleBedroll, Name: "double bedroll", Wood: 9, Work: 110, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{2, 2}, Fabric: true},
+	AnimalSleepingSpot: {Kind: AnimalSleepingSpot, Name: "animal sleeping spot", Layer: LayerObject},
+	AnimalBed:          {Kind: AnimalBed, Name: "animal bed", Wood: 4, Work: 40, Layer: LayerObject, Fabric: true},
+	EndTable:           {Kind: EndTable, Name: "end table", Wood: 3, Work: 100, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	Dresser: {Kind: Dresser, Name: "dresser", Wood: 6, Work: 200, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
@@ -396,13 +422,16 @@ func CoverPct(k Kind) int {
 
 // Sleeps reports whether k is something to sleep in.
 func (k Kind) Sleeps() bool {
-	return k == Bed || k == SleepingSpot || k == DoubleBed || k == HospitalBed
+	return k == Bed || k == SleepingSpot || k == DoubleBed || k == HospitalBed || k == Bedroll || k == DoubleBedroll
 }
+
+// AnimalSleeps reports a sleeping place for tame animals (BED-1).
+func (k Kind) AnimalSleeps() bool { return k == AnimalSleepingSpot || k == AnimalBed }
 
 // Sleepers is how many pawns a sleeping place holds side by side.
 func (k Kind) Sleepers() int {
 	switch {
-	case k == DoubleBed:
+	case k == DoubleBed || k == DoubleBedroll:
 		return 2
 	case k.Sleeps():
 		return 1
@@ -571,6 +600,9 @@ func StuffOK(k Kind, s item.Kind) bool {
 	if DefOf(k).Carpet || s.IsCarpet() {
 		return DefOf(k).Carpet && s.IsCarpet()
 	}
+	if DefOf(k).Fabric || IsFabric(s) {
+		return DefOf(k).Fabric && IsFabric(s)
+	}
 	switch {
 	case s == item.Wood:
 		return !DefOf(k).MetalOnly
@@ -590,8 +622,14 @@ func DefaultStuff(k Kind) item.Kind {
 	if DefOf(k).MetalOnly {
 		return item.Steel
 	}
+	if DefOf(k).Fabric {
+		return item.Cloth
+	}
 	return item.Wood
 }
+
+// IsFabric reports a material a Fabric kind is sewn from (BED-1).
+func IsFabric(s item.Kind) bool { return s == item.Cloth || s == item.Leather }
 
 // Stuffs lists the materials k may be built from, default first.
 func Stuffs(k Kind) []item.Kind {
@@ -601,6 +639,9 @@ func Stuffs(k Kind) []item.Kind {
 	}
 	if d.MetalOnly {
 		return []item.Kind{item.Steel}
+	}
+	if d.Fabric {
+		return []item.Kind{item.Cloth, item.Leather}
 	}
 	out := []item.Kind{item.Wood}
 	if d.StoneOK {
@@ -708,6 +749,9 @@ type Building struct {
 	// together.
 	Occupant    uint8
 	CasketGroup int
+	// Forbidden (BED-1): nobody claims or uses it until allowed
+	// (command.SetForbidden on the building).
+	Forbidden bool
 }
 
 // HP is the building's remaining hit points.

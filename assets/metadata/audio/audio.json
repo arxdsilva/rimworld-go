@@ -4969,6 +4969,45 @@
       "license": "original, composed in code (CC0, this repo)"
     },
     {
+      "id": "sfx.armor_deflect",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/armor_deflect_0.wav",
+        "sfx/armor_deflect_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.armor_deflect",
+      "seed": 909,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.blade_hit",
+      "bus": "effects",
+      "volume": 0.75,
+      "files": [
+        "sfx/blade_hit_0.wav",
+        "sfx/blade_hit_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.blade_hit",
+      "seed": 904,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.blunt_hit",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/blunt_hit_0.wav",
+        "sfx/blunt_hit_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.blunt_hit",
+      "seed": 905,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.build_done",
       "bus": "effects",
       "volume": 0.7,
@@ -4978,6 +5017,45 @@
       "source": "procedural",
       "recipe": "sfx.build_done",
       "seed": 206,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.bullet_flesh",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/bullet_flesh_0.wav",
+        "sfx/bullet_flesh_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.bullet_flesh",
+      "seed": 906,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.bullet_miss",
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "sfx/bullet_miss_0.wav",
+        "sfx/bullet_miss_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.bullet_miss",
+      "seed": 908,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.bullet_wall",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/bullet_wall_0.wav",
+        "sfx/bullet_wall_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.bullet_wall",
+      "seed": 907,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5116,6 +5194,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.melee_swing",
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "sfx/melee_swing_0.wav",
+        "sfx/melee_swing_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.melee_swing",
+      "seed": 903,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.pick",
       "bus": "effects",
       "volume": 0.7,
@@ -5166,6 +5257,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.rifle_shot",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/rifle_shot_0.wav",
+        "sfx/rifle_shot_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.rifle_shot",
+      "seed": 901,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.rock_break",
       "bus": "effects",
       "volume": 0.8,
@@ -5190,6 +5294,19 @@
       "source": "procedural",
       "recipe": "sfx.saw",
       "seed": 207,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.sentry_shot",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/sentry_shot_0.wav",
+        "sfx/sentry_shot_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.sentry_shot",
+      "seed": 902,
       "license": "original, made in code (CC0, this repo)"
     },
     {

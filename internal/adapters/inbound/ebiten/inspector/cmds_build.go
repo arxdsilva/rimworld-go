@@ -66,6 +66,9 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		out = append(out, a.troughCommands(b)...)
 		out = append(out, a.bedCommands(b)...)
 		out = append(out, a.CasketCommands(b)...)
+		if forbiddable(b) {
+			out = append(out, forbidCommand(b))
+		}
 		out = append(out, a.powerCommands(b)...) // cmds_power.go (PLAY-021)
 		out = append(out, a.MoveCommands(b)...)
 	}
@@ -166,6 +169,7 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 		add(moving)
 	}
 	add(a.bedLines(b)...)
+	add(bedStatLines(b)...)
 	add(a.troughLines(b)...)
 	return out
 }

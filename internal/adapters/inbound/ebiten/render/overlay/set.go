@@ -116,6 +116,7 @@ type Set struct {
 
 	Zones  Zones  // zones_draw.go: fills, outlines and labels
 	Fires  Fires  // fire.go, fire_world_draw.go: flames, ash, strikes
+	Combat Combat // combat_draw.go: weapon range, line of sight, cover, projectiles
 	Wiring Wiring // power_draw.go, power_overlay.go, turret_draw.go: the power layer
 }
 
@@ -148,7 +149,7 @@ type Wiring struct {
 // on (it shows by default).
 func New(p *sprite.Painter, lit *light.Lit) *Set {
 	b := &base{P: p, Lit: lit}
-	return &Set{base: b, Plan: Toggle{On: true}, Zones: Zones{base: b}, Fires: Fires{base: b}, Wiring: Wiring{base: b}}
+	return &Set{base: b, Plan: Toggle{On: true}, Zones: Zones{base: b}, Fires: Fires{base: b}, Wiring: Wiring{base: b}, Combat: Combat{base: b}}
 }
 
 // DrawPowerOverlay draws the power overlay when it is shown (Wiring.DrawOverlay).

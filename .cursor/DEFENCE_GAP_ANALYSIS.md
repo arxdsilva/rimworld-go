@@ -4,7 +4,7 @@ Scope: bring ranged and melee combat, armor, cover, explosions, traps, turrets, 
 
 ## Status (2026-10-29)
 
-Wave A done: the sub-package extraction, the domain packages and the wiki constants (phase 0 committed). Phase 0 (DEF-0, the `game/combat` extraction plus the combat domain packages and the weapon `Def` extension) is in progress, wave A. DEF-1..4 have not started. Every row in section 3 is `open` unless it says `done`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). DEF-2..4 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -31,10 +31,10 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Shots are projectiles in flight; misses can strike others in the line or the cover; allies can be hit. | Instant: `strikeRoll` (`combat.go`) rolls once, appends a `projectile.Trace` (a cosmetic record, `internal/domain/combat/projectile/projectile.go`) and calls `hurt` on a hit. A miss hits nothing. | Projectile entities with flight time, path hit tests, stray hits, friendly fire. | DEF-1 | open |
-| Each weapon has warmup, cooldown, burst count, range and an accuracy curve over touch, short, medium and long range. | `weapon.Def` has `Range`, `Damage`, `Cooldown`, `Accuracy`, `Falloff` (`internal/domain/combat/weapon/weapon.go`); `HitChance` falls off linearly per tile. Warmup is derived: `aimTicks` is `Cooldown/3`. | Warmup, burst count and shots, bands per weapon in the `Def`. | DEF-0 (fields), DEF-1 (use) | open |
-| Armor penetration and damage types (sharp, blunt, heat, bomb, burn, EMP). | `Def.Damage` is one integer; wounds are typed by body (`body.Cut`, `body.Burn` for the turret blast). | Damage type and penetration per weapon. | DEF-0 (domain), DEF-1 | open |
-| Hit chance takes shooter skill, target size, lighting and weather into account. | `hitChanceFor` applies skill and accuracy stats (`skills.go`); `coverFor` reduces ranged shots. No size, light or weather term; the light and weather fields exist (`light.go`, `climate.go`). | Target size, light and weather factors. | DEF-1 | open |
+| Shots are projectiles in flight; misses can strike others in the line or the cover; allies can be hit. | `combat.Shots` (`game/combat/shot.go`: `fire`, `Step`, `fly`, `through`, `land`) flies `projectile.Shot` cell by cell; stray hits (`attack.StrayHit`), interception (`attack.InterceptChance`), friendly fire beyond 5 tiles (`attack.FriendlySafe`), save via `Export`/`Import`. Original tuning: an aimed shot hits its target only within `Tracking` (1 tile) of the aim point. | None; natural cover in DEF-3. | DEF-1 | done |
+| Each weapon has warmup, cooldown, burst count, range and an accuracy curve over touch, short, medium and long range. | `weapon.Def` carries `Warmup`, `Cooldown`, `Burst`, `BurstTicks` and `Bands`; `Strikes.Do`/`next` use warmup and cooldown (`combat/strike.go`, `AimTicks`, `CycleTicks`); `attack.DefaultBands` interpolates accuracy. Burst fire is not used yet. | Burst weapons (DEF-2). | DEF-0 (fields), DEF-1 (use) | partial |
+| Armor penetration and damage types (sharp, blunt, heat, bomb, burn, EMP). | `Def.DamageType` and `Def.ArmorPen`; `Strikes.armorRoll` feeds `wound` (`combat/strike.go`). | None. | DEF-0 (domain), DEF-1 | done |
+| Hit chance takes shooter skill, target size, lighting and weather into account. | `Strikes.report` (`combat/strike.go`) multiplies band, per-tile shooter accuracy (`attack.ShooterFactor`), `attack.SizeFactor` and cover. Light and weather are fixed at `NoLightPenalty` and `ClearFactor`, not read from the map. | Light and weather factors from `light.go` and `climate.go`. | DEF-1 | partial |
 | Melee: adjacent attacks with cooldown, hit chance, weapon and body attacks. | Done for the existing weapons: `doCombat`, `strike` with `Range` 1; animals use their species damage. Checklist 16.3 **Melee weapons** and 17.5 are `[x]`/`[-]`. | A fuller melee list arrives with DEF-2. | DEF-2 | open |
 | Targets are chosen by threat and cover is sought. | `autoEngage` picks the nearest hostile it can hit (`combat.go`); `nearestThreatTo` and `defend` handle autonomous defence. No threat weighting, no cover seeking (checklist 17.8 **Hostile target selection**, **Basic cover seeking** are `[ ]`). | Threat-weighted choice; cover seeking for ranged raiders. | DEF-4 | open |
 | Combat log entries and records. | `logStrike`, `logEvent` (`eventlog.go`). | Combat records and threat history screens (UI 24.3). | DEF-4 | open |
@@ -43,9 +43,9 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Apparel has sharp, blunt and heat armor; a hit is deflected or reduced by the worn layers, with a quality and stuff effect. | `internal/domain/combat/armor` is a stub. Worn apparel gives insulation only (`apparel.go`; leather parka, tuque, duster, wool parka). `hurtAs` (`combat.go`) applies full damage. | Armor domain (resolve deflect or reduce), armor stats on apparel defs, coverage by body part, hook in `hurtAs`. | DEF-0 (domain), DEF-1 (wiring), DEF-2 (defs) | open |
+| Apparel has sharp, blunt and heat armor; a hit is deflected or reduced by the worn layers, with a quality and stuff effect. | `armor.Hit` resolves layers outermost first by region (`armor/apparel.go`, `RegionOf`, `Apparel`, `AppendWorn`); `Strikes.armorRoll` wires it into the wound path; sharp reduced past the layers becomes blunt. Quality and stuff effect arrive with PRD-2. | Quality and stuff effect (PRD-2); armor defs in DEF-2. | DEF-0 (domain), DEF-1 (wiring), DEF-2 (defs) | partial |
 | Armor catalogue: flak, plate, marine, helmets. | None. | Defs, art, recipes (PRD-4). | DEF-2 | open |
-| Armor stat shown in the gear tab and tooltips. | Gear tab lists insulation (UI 12.1). | Armor by damage category (UI 12.3). | DEF-1, DEF-2 | open |
+| Armor stat shown in the gear tab and tooltips. | Unchanged: gear tab lists insulation. | Armor by damage category (UI 12.3). | DEF-1, DEF-2 | open |
 
 ### 3.3 Cover
 
@@ -53,7 +53,7 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 |---|---|---|---|---|
 | Cover on the shooter side of the target cuts the hit chance; objects have a cover value; shots can strike the cover. | `coverFor` takes the best building on the cells beside the target facing the shooter; `construction.CoverPct` gives sandbags 55, wall and door 40, sentry turret 30; ranged shots only, never at distance 1 (`defense.go`, `construction.go`). `internal/domain/combat/cover` is a stub. | Cover domain; shots that strike cover; trees, rocks, chunks and barricades as cover. | DEF-0 (domain), DEF-3 | open |
 | Barricades; natural cover from trees, rocks and chunks. | Sandbags only (`construction.Sandbags`). | Barricade building; natural cover read from the map. | DEF-3 | open |
-| Cover overlay for the player. | None (UI 13.3 **Cover visualization** `[ ]`). | Overlay. | DEF-1 | open |
+| Cover overlay for the player. | Shift+O toggles `Combat.Cover` (`ebiten/hotkeys.go`, `combat_overlay_host.go`); `Combat.DrawCover` (`render/overlay/combat_draw.go`). | None. | DEF-1 | done |
 
 ### 3.4 Weapons
 
@@ -88,7 +88,7 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Draft, move, attack target order, melee order. | Done (checklist 17.1, UI 13.1, 13.2). | None. | - | done |
 | Fire-at-will toggle and hold position. | `autoEngage` always runs for an idle drafted pawn. Checklist 17.1 **Hold/fire-at-will behavior** and UI 13.2 **Fire-at-will toggle** are `[ ]`. | A drafted flag (command reserved by the lead in wave B), honoured in `autoEngage`; hold stops pursuit. | DEF-4 | open |
 | Grenade throw order. | None. | Throw command and job (after DEF-2). | DEF-4 | open |
-| Targeting feedback: range overlay, line-of-sight line, hit-chance tooltip, invalid shot explanation. | `canHit` and `lineOfSight` exist in the simulation; UI 13.3 items are all `[ ]`. | A hit-chance query on the read model and the overlays. | DEF-1 | open |
+| Targeting feedback: range overlay, line-of-sight line, hit-chance tooltip, invalid shot explanation. | `Game.HitChance` (`application/game/combat.go`) returns an `attack.Report`; `DrawWeaponRange`, `DrawShotFeedback`/`ShotLines` (hit chance, line of sight, why a shot is invalid) and `DrawProjectiles` in `render/overlay/combat_draw.go`, wired by `combat_overlay_host.go`. | None. | DEF-1 | done |
 
 ### 3.8 Raids, sieges, infestations, mechanoids
 

@@ -134,6 +134,7 @@ func (a *App) drawMapOverlays(dst *ebiten.Image) {
 	a.arch.Marks.DrawPenOutline(dst) // pen_draw.go: selected pen, or all while the Pen marker tool is held
 	a.arch.Mover.DrawMarkers(dst)    // move_mode.go: pending moves
 	a.arch.Mover.Draw(dst)
+	drawCombatOverlay(a, dst) // combat_overlay_host.go: range, hit chance, cover, projectiles
 	a.drawSelectionMarks(dst) // each kind's file: the map marker
 }
 

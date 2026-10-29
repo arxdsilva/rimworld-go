@@ -73,7 +73,7 @@ func TestElectricStoveCooksFaster(t *testing.T) {
 	g, cook, stove, _ := cookGame(t, construction.Stove, false)
 	plain := cookTicks(t, g, cook, stove)
 	g, cook, stove, _ = cookGame(t, construction.ElectricStove, true)
-	if st := g.appendBillViews(nil, stove)[0].Status; st == BillNoPower {
+	if st := g.craft.Bills.AppendViews(nil, stove)[0].Status; st == BillNoPower {
 		t.Fatal("a powered electric stove shows no power")
 	}
 	fast := cookTicks(t, g, cook, stove)
@@ -95,7 +95,7 @@ func TestElectricStoveNeedsPower(t *testing.T) {
 			t.Fatal("a colonist took a bill at an unpowered electric stove")
 		}
 	}
-	if st := g.appendBillViews(nil, stove)[0].Status; st != BillNoPower {
+	if st := g.craft.Bills.AppendViews(nil, stove)[0].Status; st != BillNoPower {
 		t.Fatalf("bill status %q, want %q", st, BillNoPower)
 	}
 }
@@ -132,7 +132,7 @@ func TestElectricStovePowerCutMidBill(t *testing.T) {
 	if !g.postponedFor(cook, job.Bill, stove, 0, 0) {
 		t.Fatal("the unpowered stove is not put off")
 	}
-	if st := g.appendBillViews(nil, stove)[0].Status; st != BillNoPower || g.craft.Bills.Of(stove)[0].Done != 0 {
+	if st := g.craft.Bills.AppendViews(nil, stove)[0].Status; st != BillNoPower || g.craft.Bills.Of(stove)[0].Done != 0 {
 		t.Fatalf("bill %+v, status %q", g.craft.Bills.Of(stove)[0], st)
 	}
 	if n := g.stockOf(item.Berries); n != 6 {

@@ -1,7 +1,8 @@
 // Package combat resolves fighting: line of sight and cover, strikes and
 // their hit rolls, defending against attackers, spike traps, breaching,
-// and the sentry turrets (DEF-0; later projectiles, armor, explosions and
-// mortars, per .cursor/DEFENCE_GAP_ANALYSIS.md).
+// the sentry turrets (DEF-0), and projectiles in flight with worn armor
+// (DEF-1; later explosions and mortars, per
+// .cursor/DEFENCE_GAP_ANALYSIS.md).
 //
 // It is a consumer sub-package of internal/application/game
 // (.cursor/SOLID_GO.md §10): it never imports the game package. What it

@@ -403,8 +403,13 @@ func (c *Set) drawInBed(v *render.View, pass sprite.Pass, screen *ebiten.Image, 
 		return
 	}
 	key := "furniture/bed_basic_blanket_" + facingOr(b.Facing)
-	if b.Kind == "double bed" {
+	switch b.Kind {
+	case "double bed":
 		key = "furniture/bed_double_blanket_" + facingOr(b.Facing)
+	case "bedroll": // BED-1
+		key = "furniture/bedroll_blanket_" + facingOr(b.Facing)
+	case "double bedroll":
+		key = "furniture/bedroll_double_blanket_" + facingOr(b.Facing)
 	}
 	bcs := cs
 	if k < 1 {

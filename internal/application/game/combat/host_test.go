@@ -7,6 +7,8 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -69,6 +71,9 @@ type fakeHost struct {
 	route     []pathing.Point
 	noRoute   bool
 	blocked   map[[2]int]bool
+
+	worn map[entity.EntityID][]armor.Layer
+	aims map[entity.EntityID][2]int // per-tile ppm and offset; default a perfect shooter
 }
 
 func newFake(w, h int) *fakeHost {
@@ -81,6 +86,7 @@ func newFake(w, h int) *fakeHost {
 		jobs: map[entity.EntityID]job.Record{}, damage: map[entity.EntityID]int{},
 		struck: map[entity.EntityID]entity.EntityID{}, hits: map[entity.EntityID]int{},
 		powered: map[entity.EntityID]bool{}, calm: map[entity.EntityID]uint64{}, blocked: map[[2]int]bool{},
+		worn: map[entity.EntityID][]armor.Layer{}, aims: map[entity.EntityID][2]int{},
 	}
 }
 
@@ -127,6 +133,9 @@ func (f *fakeHost) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 	}
 	p := f.pos[t]
 	return p[0], p[1], true
+}
+func (f *fakeHost) Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer {
+	return append(buf, f.worn[id]...)
 }
 func (f *fakeHost) Hostile(a animal.State) bool     { return a.Mode == animal.Attack && f.pawns[a.Target] }
 func (f *fakeHost) AnimalIDs() []entity.EntityID    { return f.animalIDs }
@@ -182,9 +191,15 @@ func (f *fakeHost) DigRock(_, _, dmg int) { f.dug += dmg }
 
 // Skills
 func (f *fakeHost) HitChance(_ entity.EntityID, _ bool, base int) int { return base }
-func (f *fakeHost) Learn(entity.EntityID, bool)                       { f.learn++ }
-func (f *fakeHost) AimTicks(_ entity.EntityID, cooldown int) int      { return cooldown }
-func (f *fakeHost) CanViolence(id entity.EntityID) bool               { return !f.pacific[id] }
+func (f *fakeHost) ShotAim(id entity.EntityID) (int, int) {
+	if a, ok := f.aims[id]; ok {
+		return a[0], a[1]
+	}
+	return attack.PerfectShooter, 0
+}
+func (f *fakeHost) Learn(entity.EntityID, bool)                  { f.learn++ }
+func (f *fakeHost) AimTicks(_ entity.EntityID, cooldown int) int { return cooldown }
+func (f *fakeHost) CanViolence(id entity.EntityID) bool          { return !f.pacific[id] }
 func (f *fakeHost) FightsBack(id entity.EntityID) bool {
 	return f.weapons[id] != weapon.Fists && !f.pacific[id]
 }

@@ -23,6 +23,7 @@ type Host interface {
 	Patients
 	Rooms
 	Events
+	Couples
 }
 
 // Bodies reads and writes a sleeper's place, vital record, needs and job.
@@ -75,12 +76,15 @@ type Claims interface {
 	Partner(id entity.EntityID) entity.EntityID
 }
 
-// Routine is the schedule and the meals that can wake a sleeper.
+// Routine is the schedule and the meals that can wake a sleeper, and the
+// job a pawn is on.
 type Routine interface {
 	// Activity is what id's schedule says for the current hour.
 	Activity(id entity.EntityID) schedule.Activity
 	// SeekFood: id should go looking for food now.
 	SeekFood(id entity.EntityID) bool
+	// Job is id's current job.
+	Job(id entity.EntityID) job.Record
 }
 
 // Patients is what sleep asks the care package about a sleeper.
@@ -94,13 +98,20 @@ type Patients interface {
 	SurgeryWait(id entity.EntityID, workLeft int)
 }
 
-// Rooms is what the thoughts on waking read about where a pawn slept.
+// Rooms is what the thoughts on waking read about where a pawn slept,
+// and what bed stats and animal beds read about the map (BED-1).
 type Rooms interface {
 	// RoomAt is the room at (x, y) (negative: none, outdoors).
 	RoomAt(x, y int) int
 	UnderSky(x, y int) bool
 	// RoomScore is room r's quality score.
 	RoomScore(r int) int
+	// ObjectAt is the object-layer building covering (x, y) (0: none),
+	// from the host's cell index.
+	ObjectAt(x, y int) entity.EntityID
+	// TameAnimal: id is a tame animal on the map (one that may hold an
+	// animal bed).
+	TameAnimal(id entity.EntityID) bool
 }
 
 // Events records what sleep did, for logs and mood.
@@ -111,4 +122,27 @@ type Events interface {
 	ForgetGroup(id entity.EntityID, k mood.Kind)
 	// Slept logs that id woke, in a bed or on the ground.
 	Slept(id entity.EntityID, inBed bool)
+	// RememberWith gives id the thought k about other now (lovin.go).
+	RememberWith(id entity.EntityID, k mood.Kind, other entity.EntityID)
+}
+
+// Couples is what lovin' reads and writes about a couple and whether each
+// is up to it (lovin.go). The cooldown is saved with the gatherings and
+// the roll is on the social stream, so both stay on the host.
+type Couples interface {
+	// Mate is id's main partner (0: none), whoever and wherever.
+	Mate(id entity.EntityID) entity.EntityID
+	// Opinion is from's opinion of to.
+	Opinion(from, to entity.EntityID) int32
+	// Age is id's age in years.
+	Age(id entity.EntityID) int
+	// LovinAt is the next tick id may make love (0: any time).
+	LovinAt(id entity.EntityID) uint64
+	SetLovinAt(id entity.EntityID, tick uint64)
+	// SocialRoll is the social stream's next draw in [0, n).
+	SocialRoll(n int) int
+	// Standing: alive, not in a mental break, not drafted.
+	Standing(id entity.EntityID) bool
+	// Hurt is id's pain and consciousness, permille (ok false: no body).
+	Hurt(id entity.EntityID) (pain, conscious int32, ok bool)
 }

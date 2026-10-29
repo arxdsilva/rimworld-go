@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -41,21 +42,10 @@ type TraceView struct {
 	// target); Weapon is the attacker's weapon name.
 	Attacker, Target entity.EntityID
 	Weapon           string
+	Stage            projectile.Stage // DEF-1: Whole (melee, turret), or a shot's Fired and Landed
 }
 
-func weaponKindOf(k item.Kind) weapon.Kind {
-	switch k {
-	case item.Club:
-		return weapon.Club
-	case item.Knife:
-		return weapon.Knife
-	case item.Spear:
-		return weapon.Spear
-	case item.Rifle:
-		return weapon.Rifle
-	}
-	return weapon.Fists
-}
+func weaponKindOf(k item.Kind) weapon.Kind { return weapon.ForItem(k) }
 
 func (g *Game) weaponOf(id entity.EntityID) weapon.Kind {
 	if k, ok := g.equip[id]; ok {
@@ -66,7 +56,7 @@ func (g *Game) weaponOf(id entity.EntityID) weapon.Kind {
 
 func weaponDefOf(g *Game, id entity.EntityID) weapon.Def { return weapon.DefOf(g.weaponOf(id)) }
 
-func (g *Game) hasRanged(id entity.EntityID) bool { return weaponDefOf(g, id).Ranged }
+func hasRanged(g *Game, id entity.EntityID) bool { return weaponDefOf(g, id).Ranged }
 
 // isPawn reports whether id is a colonist.
 func (g *Game) isPawn(id entity.EntityID) bool {
@@ -224,7 +214,7 @@ func (g *Game) assignHunt(id entity.EntityID) bool {
 		if best == 0 {
 			return false
 		}
-		if !g.hasRanged(id) {
+		if !hasRanged(g, id) {
 			return g.assignEquip(id, item.Rifle)
 		}
 		if g.startJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}) {
@@ -274,6 +264,12 @@ func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
+// HitChance is shooter's hit chance on target from where both stand, with
+// its factors (DEF-1: the hit-chance tooltip); ok false without positions.
+func (g *Game) HitChance(shooter, target entity.EntityID) (attack.Report, bool) {
+	return g.combat.Strikes.Report(shooter, target)
+}
+
 // Equipped returns the wielded weapon item kind name, "" when unarmed.
 func (g *Game) Equipped(id entity.EntityID) string {
 	if k, ok := g.equip[id]; ok {
@@ -291,7 +287,7 @@ func (g *Game) traceViews() []TraceView {
 		}
 		out = append(out, TraceView{FromX: t.FromX, FromY: t.FromY, ToX: t.ToX, ToY: t.ToY,
 			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee, Damage: t.Damage, Building: t.Building,
-			FromBuilding: t.FromBuilding, Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon})
+			FromBuilding: t.FromBuilding, Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon, Stage: t.Stage})
 	}
 	return out
 }

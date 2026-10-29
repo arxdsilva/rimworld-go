@@ -31,8 +31,9 @@ import (
 	"rimworld-go/pkg/sfxsynth"
 )
 
-// budget is the most audio the repo carries (SND-002).
-const budget = 20 << 20
+// budget is the most audio the repo carries (SND-002; raised from 20 MB
+// to 30 MB by user decision, 2026-10-29, for the BED/PRD/DEF sounds).
+const budget = 30 << 20
 
 const proceduralLicense = "original, made in code (CC0, this repo)"
 

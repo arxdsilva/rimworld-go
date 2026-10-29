@@ -23,6 +23,7 @@ const (
 // Bills is every bench's bills. Saved (Game.Bills) as the map itself.
 type Bills struct {
 	h      Host
+	p      planner
 	drying *Drying
 	list   map[entity.EntityID][]recipe.Bill
 }
@@ -47,8 +48,9 @@ func (b *Bills) Import(m map[entity.EntityID][]recipe.Bill) {
 	}
 }
 
-// Apply runs an AddBill, SetBill or RemoveBill command on the bench at
-// (c.X, c.Y).
+// Apply runs a bill command (AddBill, SetBill, RemoveBill; PRD-1's
+// ConfigureBill, SetBillIngredient, ReorderBill in settings.go) on the
+// bench at (c.X, c.Y).
 func (b *Bills) Apply(c command.Command) {
 	bid, bench, ok := b.benchAt(c.X, c.Y)
 	if !ok {
@@ -82,6 +84,11 @@ func (b *Bills) Apply(c command.Command) {
 			return
 		}
 		bills = append(bills[:c.Index:c.Index], bills[c.Index+1:]...)
+	case command.ConfigureBill, command.SetBillIngredient, command.ReorderBill:
+		if c.Index < 0 || c.Index >= len(bills) {
+			return
+		}
+		b.applySetting(bid, bills, c)
 	}
 	b.list[bid] = bills
 }
@@ -193,7 +200,11 @@ func (b *Bills) Line(bid entity.EntityID, i int) (recipe.Bill, string) {
 	case b.unpowered(bid):
 		return bl, BillNoPower
 	}
-	if sid, _ := b.h.Ingredient(0, d.Input); sid == 0 {
+	var spot [2]int // only the radius needs it
+	if bl.Radius > 0 {
+		spot = b.spot(bid)
+	}
+	if !b.p.available(bl, d, spot) {
 		return bl, BillNoInput
 	}
 	return bl, BillActive

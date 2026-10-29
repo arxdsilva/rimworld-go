@@ -194,7 +194,7 @@ func TestExhaustionForcesSleepOnGround(t *testing.T) {
 		t.Fatalf("inspector reason=%q, want no bed", p.Reason)
 	}
 	// a collapsed colonist sleeps where it dropped until WakeRest (80%)
-	for i := 0; i < needs.WakeRest/needs.SleepGain*needs.SleepPeriod+10 && p.Status != "alive"; i++ {
+	for i := 0; i < sleepTicks(0, needs.WakeRest)+10 && p.Status != "alive"; i++ {
 		g.Step(1)
 		p = pawn(t, g, id)
 	}

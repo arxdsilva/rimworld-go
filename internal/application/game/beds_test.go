@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -136,7 +137,7 @@ func asleepTogether(t *testing.T, g *Game, a, b, double entity.EntityID) {
 		ja, _ := g.jobs.Get(a)
 		jb, _ := g.jobs.Get(b)
 		if ja.Kind == job.Sleep && ja.State == job.Do && jb.Kind == job.Sleep && jb.State == job.Do {
-			if _, ok := g.lovinBed(a, b); ok {
+			if _, ok := g.rest.Lovin.Bed(a, b); ok {
 				return
 			}
 		}
@@ -154,7 +155,7 @@ func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
 	g.vital.Set(b, v)
 	lo := min(a, b)
 	for range 50 {
-		g.lovinCheck(lo, socNow(g))
+		g.rest.Lovin.Check(lo, socNow(g))
 		if ja, _ := g.jobs.Get(a); ja.Kind == job.Lovin {
 			t.Fatal("lovin' while downed")
 		}
@@ -162,7 +163,7 @@ func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
 	v.Status, v.Cause = health.Alive, health.CauseNone
 	g.vital.Set(b, v)
 	for range 50 {
-		g.lovinCheck(lo, socNow(g))
+		g.rest.Lovin.Check(lo, socNow(g))
 		if ja, _ := g.jobs.Get(a); ja.Kind == job.Lovin {
 			break
 		}
@@ -172,7 +173,7 @@ func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
 	if ja.Kind != job.Lovin || jb.Kind != job.Lovin || ja.Target != b || jb.Target != a {
 		t.Fatalf("no lovin': %v / %v", ja.Kind, jb.Kind)
 	}
-	for range lovinTicks + 5 {
+	for range rest.LovinTicks + 5 {
 		g.SetNeeds(a, needs.Full, needs.CriticalRest-100)
 		g.SetNeeds(b, needs.Full, needs.CriticalRest-100)
 		g.Step(1)
@@ -185,7 +186,7 @@ func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
 	if s := g.gatherSt(); s.lovinAt[a] <= socNow(g) {
 		t.Fatal("no lovin' cooldown")
 	}
-	g.lovinCheck(lo, socNow(g)) // cooldown: no second time at once
+	g.rest.Lovin.Check(lo, socNow(g)) // cooldown: no second time at once
 	if ja, _ := g.jobs.Get(a); ja.Kind == job.Lovin {
 		t.Fatal("lovin' again inside the cooldown")
 	}

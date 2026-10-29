@@ -81,6 +81,18 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/bed_basic_" + FacingOr(facing)
 	case "sleeping spot":
 		return "overlay/sleeping_spot_" + FacingOr(facing)
+	case "bedroll": // BED-1
+		return "furniture/bedroll_" + FacingOr(facing)
+	case "double bedroll":
+		return "furniture/bedroll_double_" + FacingOr(facing)
+	case "animal sleeping spot":
+		return "overlay/animal_sleeping_spot"
+	case "animal bed":
+		return "furniture/animal_bed"
+	case "end table":
+		return "furniture/end_table"
+	case "dresser":
+		return "furniture/dresser_" + FacingOr(facing)
 	case "marriage spot":
 		return "overlay/marriage_spot_" + FacingOr(facing)
 	case "party spot":

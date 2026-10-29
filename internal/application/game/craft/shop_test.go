@@ -75,7 +75,9 @@ func TestShopSkipsBench(t *testing.T) {
 		t.Fatal("took a bench reserved by another")
 	}
 	f, c = setup()
-	f.noSkill = true
+	f.noSkill = true // level 0: below FabricateComponent's minimum
+	f.put(51, item.Stack{Kind: item.Steel, Qty: 20})
+	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.FabricateComponent, Mode: recipe.Forever, Target: 1}})
 	if c.Shop.Assign(pawn, craftOnly) {
 		t.Fatal("below the minimum skill")
 	}

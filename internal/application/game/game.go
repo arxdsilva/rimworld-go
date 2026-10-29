@@ -423,7 +423,23 @@ type BuildingView struct {
 	// ticks since its last shot, -1 before the first (the muzzle flash).
 	AimDir  int8
 	ShotAge int
+	// Beds and bed furniture (BED-1, rest): Comfort and RestEffect are a
+	// sleeping place's comfort and rest effectiveness, permille, animal
+	// beds included (0 for anything else); Beauty is the piece's beauty
+	// in thousandths of a point; Facilities the linked bed facilities as a
+	// bitset (FacilityEndTable, FacilityDresser), kept a value so the view
+	// stays comparable. Forbidden: nobody uses it.
+	Comfort, RestEffect int
+	Beauty              int
+	Facilities          uint8
+	Forbidden           bool
 }
+
+// Bed facility bits on BuildingView.Facilities (BED-1).
+const (
+	FacilityEndTable uint8 = 1 << iota
+	FacilityDresser
+)
 
 // PlantView is a wild plant.
 type PlantView struct {
@@ -492,6 +508,7 @@ type WorldView struct {
 	// (tracers and swings) for presentation.
 	Animals []AnimalView
 	Traces  []TraceView
+	Shots   []projectile.View // DEF-1: projectiles in flight, oldest first (combat/shot.go)
 	// Climate: OutdoorTemp and IndoorTemp (enclosed rooms) in tenths of a
 	// degree C, and the season name.
 	OutdoorTemp, IndoorTemp int
@@ -1214,7 +1231,7 @@ func (g *Game) world() WorldView {
 	w.RoomGrid = g.roomGrid // shared read-only: ensureRooms replaces it, never writes in place
 	w.Rooms = g.roomViews()
 	w.Animals = g.animalViews()
-	w.Traces = g.traceViews()
+	w.Traces, w.Shots = g.traceViews(), g.combat.Shots.Views()
 	g.fillWorldWeather(&w) // weather.go
 	g.fillRoofView(&w)     // roof.go
 	g.fillWildlifeView(&w) // wildlife.go

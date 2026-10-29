@@ -64,11 +64,25 @@ func TestRangedStrikeAgainstCoverAndTurret(t *testing.T) {
 	f.raider(2, 10, 5, weapon.Fists)
 	f.build(3, construction.Sandbags, 9, 5)
 	d := weapon.DefOf(weapon.Rifle)
-	chance := weapon.HitChance(d, 8) * (100 - construction.CoverPct(construction.Sandbags)) / 100
-	f.rolls = []int{chance}
+	cover := construction.CoverPct(construction.Sandbags) * 10
+	f.rolls = []int{0, cover - 1} // the aim holds, the sandbags take it
 	c.Strikes.Strike(1, 2, weapon.Rifle)
-	if len(f.hurts) != 0 {
-		t.Fatal("a roll at the covered chance misses")
+	for c.Shots.Len() > 0 {
+		c.Shots.Step()
+	}
+	if len(f.hurts) != 0 || f.damage[3] != d.Damage {
+		t.Fatalf("the cover takes the shot: hurts %v damage %v", f.hurts, f.damage)
+	}
+	f.rolls = []int{0, cover} // the aim holds, the cover lets it through
+	c.Strikes.Strike(1, 2, weapon.Rifle)
+	for c.Shots.Len() > 0 {
+		c.Shots.Step()
+	}
+	if len(f.hurts) != 1 || f.damage[3] != d.Damage {
+		t.Fatalf("past the cover: hurts %v damage %v", f.hurts, f.damage)
+	}
+	if r, ok := c.Strikes.Report(1, 2); !ok || r.Cover != cover || r.Chance != r.Aim()*(1000-cover)/1000 {
+		t.Fatalf("report %+v", r)
 	}
 	f.build(4, construction.SentryTurret, 12, 5)
 	f.raider(5, 13, 5, weapon.Fists)
@@ -147,7 +161,8 @@ func TestDoClosesInThenStrikesOnCooldown(t *testing.T) {
 func TestDoHunt(t *testing.T) {
 	t.Parallel()
 	f := newFake(30, 10)
-	s := f.combat().Strikes
+	c := f.combat()
+	s := c.Strikes
 	f.pawn(1, 2, 5, weapon.Rifle)
 	f.beast(2, 8, 5, animal.State{Species: animal.Deer})
 	s.Do(1, job.Record{Kind: job.Hunt, Target: 2}, 1000)
@@ -162,14 +177,28 @@ func TestDoHunt(t *testing.T) {
 	}
 	f.givenUp = false
 	s.Do(1, job.Record{Kind: job.Hunt, Target: 2}, 1000)
-	if j := f.jobs[1]; j.State != job.Do || len(f.hurts) != 1 {
+	if j := f.jobs[1]; j.State != job.Do || c.Shots.Len() != 1 || len(f.hurts) != 0 {
 		t.Fatalf("the hunter shoots from range: %+v", j)
+	}
+	d := weapon.DefOf(weapon.Rifle)
+	if j := f.jobs[1]; j.WorkLeft != d.Cooldown+d.Warmup {
+		t.Fatalf("cooldown then the next aim: %d", j.WorkLeft)
+	}
+	c.Shots.Step() // 1166 milli-cells a tick: 6 tiles take 6 ticks
+	for i := 0; i < 5; i++ {
+		if len(f.hurts) != 0 {
+			t.Fatal("the bullet is still flying")
+		}
+		c.Shots.Step()
+	}
+	if len(f.hurts) != 1 || c.Shots.Len() != 0 {
+		t.Fatalf("the bullet lands: %v", f.hurts)
 	}
 }
 
 func TestAutoEngagePicksNearestHostile(t *testing.T) {
 	t.Parallel()
-	f := newFake(40, 20)
+	f := newFake(80, 20)
 	s := f.combat().Strikes
 	f.pawn(1, 10, 10, weapon.Rifle)
 	f.beast(2, 13, 10, animal.State{Species: animal.TimberWolf}) // not attacking
@@ -181,9 +210,9 @@ func TestAutoEngagePicksNearestHostile(t *testing.T) {
 	if len(f.started) != 1 || f.started[0].Target != 4 || f.started[0].WorkLeft != AimTicks(weapon.DefOf(weapon.Rifle)) {
 		t.Fatalf("started %+v", f.started)
 	}
-	f.raider(6, 30, 10, weapon.Fists)
+	f.raider(6, 47, 10, weapon.Fists) // 37 tiles: one past the rifle's range
 	delete(f.raiders, 4)
-	f.pos[3] = [2]int{39, 19}
+	f.pos[3] = [2]int{79, 19}
 	s.AutoEngage(1)
 	if len(f.started) != 1 {
 		t.Fatal("nothing in range: no attack")

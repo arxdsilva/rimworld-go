@@ -58,6 +58,12 @@ type Stock interface {
 	// Carry has carrier pick take of stack up: the whole stack, or a new
 	// stack split off it. It returns the carried stack's id.
 	Carry(carrier, stack entity.EntityID, take int) entity.EntityID
+	// ItemIDs is every item stack's id (the host's slice, read only): the
+	// multi-stack ingredient search (PRD-1).
+	ItemIDs() []entity.EntityID
+	// Merge adds carried stack from to carried stack into (same kind)
+	// and deletes from: one load gathered from several stacks.
+	Merge(into, from entity.EntityID)
 }
 
 // Output is what a finished bill or batch leaves behind.
@@ -74,6 +80,13 @@ type Output interface {
 	Cremate(pyre, body entity.EntityID, d recipe.Def)
 	// Message posts a plain message at (x, y).
 	Message(x, y int, text string)
+	// PutDown sets carried stack id down at (x, y) as it is, never merged
+	// (an ingredient laid on its bench keeps its id and reservation).
+	PutDown(id entity.EntityID, x, y int)
+	// Store has carrier take the stack of kind k lying at (x, y) to the
+	// best stockpile (zone 0) or to stockpile zone: a haul job replacing
+	// its current one. False when there is no such stack or no room.
+	Store(carrier entity.EntityID, k item.Kind, x, y int, zone uint64) bool
 }
 
 // Workers is pawns, their jobs, paths and reservations. The reservation
@@ -91,9 +104,12 @@ type Workers interface {
 	Claim(owner, target entity.EntityID) bool
 }
 
-// Crafters is skill, work speed and the bench work put off.
+// Crafters is skill, work speed, the bench work put off, the colonists'
+// names and the tick.
 type Crafters interface {
-	MeetsMinSkill(id entity.EntityID, sk skill.ID, min uint8) bool
+	// SkillLevel is id's level in sk (a recipe's MinSkill, a bill's
+	// skill range).
+	SkillLevel(id entity.EntityID, sk skill.ID) uint8
 	// BenchWork is the work id does this tick at a bench that works at
 	// pct percent (skills.go: work speed, skill, and its learning).
 	BenchWork(id entity.EntityID, sk skill.ID, pct int) int
@@ -105,4 +121,8 @@ type Crafters interface {
 	Postpone(id, bench entity.EntityID)
 	// RecipeLocked: research has not unlocked the recipe yet.
 	RecipeLocked(id recipe.ID) bool
+	// Name is colonist id's name ("" when id is no living colonist).
+	Name(id entity.EntityID) string
+	// Now is the current tick (a bill's ingredient retry cooldown).
+	Now() uint64
 }

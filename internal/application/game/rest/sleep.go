@@ -20,6 +20,12 @@ type Sleep struct {
 	// Waking gives a pawn its thoughts on how and where it slept
 	// (waking.go).
 	Waking *Waking
+	// Stats is beds' comfort, rest effectiveness and beauty (stats.go).
+	Stats *Stats
+	// Animals beds tame animals down in animal beds (animals.go).
+	Animals *Animals
+	// Lovin is couples' lovin' in a shared double bed (lovin.go).
+	Lovin *Lovin
 	// rested: woke fully rested in the current Sleep block, so it has
 	// free time until it tires (saved as RestedFree).
 	rested map[entity.EntityID]bool
@@ -27,7 +33,9 @@ type Sleep struct {
 
 // New builds a Sleep over h.
 func New(h Host) *Sleep {
-	return &Sleep{h: h, Beds: &Beds{h: h}, Waking: &Waking{h: h}, rested: make(map[entity.EntityID]bool)}
+	st := &Stats{h: h}
+	return &Sleep{h: h, Beds: &Beds{h: h}, Waking: &Waking{h: h}, Stats: st, Animals: &Animals{h: h, stats: st}, Lovin: &Lovin{h: h},
+		rested: make(map[entity.EntityID]bool)}
 }
 
 // Assign sends pawn id to bed (Beds.SleepIn), or to sleep on the floor
@@ -47,11 +55,12 @@ func (s *Sleep) InPlace(id entity.EntityID) {
 	s.h.StartJob(id, job.Record{Kind: job.Sleep, TX: fx, TY: fy, WorkLeft: needs.SleepWorkMin})
 }
 
-// Do runs one tick of sleeper id's sleep job j: rest comes back, and when
-// it gets up the job completes, its log notes where it slept and it
-// wakes with that night's thoughts.
+// Do runs one tick of sleeper id's sleep job j: rest comes back at the
+// bed's rest effectiveness (the ground's with no bed, BED-1), and when it
+// gets up the job completes, its log notes where it slept and it wakes
+// with that night's thoughts.
 func (s *Sleep) Do(id entity.EntityID, j job.Record, now uint64) {
-	n := needs.SleepTick(s.h.Needs(id), now)
+	n := needs.SleepTickAt(s.h.Needs(id), now, s.Stats.RestEffect(j.Target))
 	s.h.SetNeeds(id, n)
 	j.WorkLeft--
 	if s.done(id, n, j) {

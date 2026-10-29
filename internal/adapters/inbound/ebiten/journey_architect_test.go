@@ -76,15 +76,19 @@ func TestJourneyArchitectRotateQE(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
 	j.openArch("furniture", "bed")
-	row := 0
+	// Placements stay clear of the furniture menu (taller with the BED-1
+	// rows) at the lower left and the right column.
+	spots := [][2]int{{10, 2}, {10, 4}, {10, 6}, {13, 2}}
+	n := 0
 	face := func(key string, want uint8) {
 		t.Helper()
 		j.reset()
 		if key != "" {
 			j.key(key, 0)
 		}
-		row += 2
-		j.clickTile(10, row, inputframe.Left, 0)
+		at := spots[n]
+		n++
+		j.clickTile(at[0], at[1], inputframe.Left, 0)
 		c, ok := j.lastCmd(command.DesignateBuild)
 		if !ok || c.Facing != want {
 			t.Fatalf("after %q: %+v ok=%v, want facing %d", key, c, ok, want)

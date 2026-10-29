@@ -803,14 +803,14 @@ understandable.
 
 ## 13.3 Targeting feedback
 
--   [ ] **Weapon range overlay**
--   [ ] **Line-of-sight line**
+-   [x] **Weapon range overlay** (DEF-1: the selected drafted colonist's weapon range ring)
+-   [x] **Line-of-sight line** (DEF-1: white when clear, red when blocked)
 -   [ ] **Target highlight**
--   [ ] **Cover visualization**
--   [ ] **Hit-chance tooltip**
+-   [x] **Cover visualization** (DEF-1: Shift+O overlay of building cover near the selection)
+-   [x] **Hit-chance tooltip** (DEF-1: chance with each factor, from `Game.HitChance`)
     -   Break down shooter, weapon, range, cover, weather/light and
         target modifiers.
--   [ ] **Invalid shot explanation**
+-   [x] **Invalid shot explanation** (DEF-1: out of range, no line of sight)
 
 ## 13.4 Combat feedback
 
@@ -829,7 +829,7 @@ understandable.
 
 -   [x] **Power/operational state** (PLAY-021: the building pane says Uses/Produces N W, the grid balance and stored energy, a switch Closed/Open, a thermostat target and whether it works now, flick pending; the Power toggle (V))
 -   [-] **Interaction status** (work spot outlined on selection)
--   [ ] **Current worker/progress**
+-   [x] **Current worker/progress** (PRD-1: [name progress%], gathering, or the no-worker reason)
 -   [x] **Bills list** (select a bench: bills with count/mode/status)
 
 ## 14.2 Bill stack
@@ -837,10 +837,10 @@ understandable.
 -   [-] **Add bill** (one button per recipe for that bench; no search)
     -   Search/filter recipes.
     -   show research/material constraints.
--   [ ] **Reorder bills**
+-   [x] **Reorder bills** (PRD-1: up/down on each bill row)
 -   [x] **Suspend bill**
 -   [x] **Delete bill**
--   [ ] **Copy/paste bills**
+-   [x] **Copy/paste bills** (PRD-1: copy a bill, paste onto a bench that has the recipe)
 
 ## 14.3 Bill configuration
 
@@ -849,13 +849,13 @@ understandable.
 -   [x] **Do until X**
 -   [x] **Target count** (-/+ buttons)
 -   [ ] **Pause/resume thresholds if supported**
--   [ ] **Ingredient filter tree**
--   [ ] **Ingredient search radius**
+-   [-] **Ingredient filter tree** (PRD-1: a flat allow/forbid per ingredient kind the recipe accepts; no category tree)
+-   [x] **Ingredient search radius** (PRD-1)
 -   [ ] **Allowed material/stuff**
 -   [ ] **Quality/condition restrictions**
--   [ ] **Worker skill range**
--   [ ] **Specific worker**
--   [ ] **Product destination**
+-   [x] **Worker skill range** (PRD-1)
+-   [x] **Specific worker** (PRD-1)
+-   [x] **Product destination** (PRD-1)
     -   Drop.
     -   best stockpile.
     -   selected stockpile if supported.
@@ -863,7 +863,7 @@ understandable.
 ## 14.4 Bill explanation
 
 -   [x] **Missing ingredient reason** (the bill status reads "waiting for ingredients")
--   [ ] **No valid worker reason**
+-   [x] **No valid worker reason** (PRD-1)
 -   [x] **No power reason** (PLAY-021: not connected, brownout, switched off, solar flare, no fuel; in the warning colour, and a no-power badge on the map)
 -   [x] **Research locked reason** (architect tools, crops and bills greyed with "Needs research: X" on hover)
 -   [ ] **Output-count explanation**

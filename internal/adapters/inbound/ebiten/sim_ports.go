@@ -3,6 +3,7 @@ package ebiten
 import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
@@ -42,6 +43,10 @@ type SimWorld interface {
 	// (rooms, weather, vents, fire): the lower-right temperature line
 	// follows the cursor with it (PLAY-018).
 	TemperatureAt(x, y int) int
+	// HitChance is the shot query the combat overlay's hit-chance card asks
+	// (DEF-1): shooter's chance on target with its factors; ok false
+	// without positions.
+	HitChance(shooter, target entity.EntityID) (attack.Report, bool)
 }
 
 // SimPlacement is the read-only placement and order rules the Architect

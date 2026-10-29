@@ -38,9 +38,9 @@ func TestDoWakesAndThinks(t *testing.T) {
 	f := newFake()
 	s := New(f)
 	f.pawn(1, 0, 0)
-	f.need[1] = needs.Pair{Hunger: needs.Full, Rest: needs.WakeRest - needs.SleepGain}
+	f.need[1] = needs.Pair{Hunger: needs.Full, Rest: needs.WakeRest - 1}
 	j := job.Record{Kind: job.Sleep, State: job.Do, WorkLeft: 1}
-	s.Do(1, j, needs.SleepPeriod) // rest reaches WakeRest outside a Sleep block
+	s.Do(1, j, 4) // on the ground (rest effectiveness 0.8: 1 rest at tick 4) rest reaches WakeRest outside a Sleep block
 	if got := f.jobs[1]; got.State != job.Complete || got.WorkLeft != 0 {
 		t.Fatalf("did not wake: %+v", got)
 	}

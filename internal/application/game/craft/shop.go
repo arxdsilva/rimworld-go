@@ -17,6 +17,8 @@ type Shop struct {
 	bills    *Bills
 	drying   *Drying
 	cabinets *Cabinets
+	p        planner
+	buf      planBuf // the ingredient search's scratch (the tick path)
 }
 
 // Assign starts the first bill at the first bench, in building order,
@@ -38,7 +40,7 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 		spotOK, unreach := false, false
 		for i, bl := range s.bills.list[bid] {
 			d := recipe.DefOf(bl.Recipe)
-			if !m.Enabled(d.Skill) || !h.MeetsMinSkill(id, d.Learn, d.MinSkill) {
+			if !m.Enabled(d.Skill) || !s.workerOK(id, bl, d) {
 				continue
 			}
 			stock := s.bills.stock(d)
@@ -59,13 +61,17 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 			if d.ID == recipe.Cremate && h.FreeWood() < d.ExtraQty {
 				continue // no wood to burn the body with
 			}
-			sid, st := h.Ingredient(id, d.Input)
-			if sid == 0 {
-				continue
+			if bl.SearchAt > h.Now() {
+				continue // PRD-1: nothing to gather lately, retried after a cooldown
 			}
 			if !spotOK {
 				_, spot, _ = construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 				spotOK = true
+			}
+			rec, ok := s.plan(id, bl, d, spot)
+			if !ok {
+				s.bills.list[bid][i].SearchAt = h.Now() + IngredientRetry
+				continue
 			}
 			if unreach || !h.Reachable(id, spot[0], spot[1]) {
 				if !unreach { // SIM-027: searched once, put off
@@ -74,16 +80,68 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 				unreach = true
 				continue
 			}
-			rec := job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y, Dest: bid,
-				DestX: spot[0], DestY: spot[1], WorkLeft: d.Work, BillIndex: i}
-			if !h.StartJob(id, rec) {
-				continue
+			rec.Dest, rec.DestX, rec.DestY, rec.WorkLeft, rec.BillIndex = bid, spot[0], spot[1], d.Work, i
+			if s.start(id, rec) {
+				return true
 			}
-			h.Claim(id, bid)
-			return true
 		}
 	}
 	return false
+}
+
+// workerOK reports pawn id may take bill bl: the bill's own worker if it
+// names one, with the recipe's minimum skill and inside the bill's range.
+func (s *Shop) workerOK(id entity.EntityID, bl recipe.Bill, d recipe.Def) bool {
+	if bl.Worker != 0 && bl.Worker != id {
+		return false
+	}
+	if d.MinSkill == 0 && bl.SkillMin == 0 && bl.SkillMax == 0 {
+		return true
+	}
+	lvl := s.h.SkillLevel(id, d.Learn)
+	return lvl >= d.MinSkill && bl.SkillOK(lvl)
+}
+
+// plan finds bill bl's ingredients for pawn id: the nearest single stack
+// as ever (a plain bill job) when it will do, else stacks gathered from
+// around the work spot (a gather-ingredients job, PRD-1).
+func (s *Shop) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]int) (job.Record, bool) {
+	if len(d.Inputs) == 0 {
+		if sid, st := s.h.Ingredient(id, d.Input); sid != 0 && fits(bl, st, spot) {
+			return job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y}, true
+		}
+	}
+	picks, ok := s.p.plan(id, bl, d, spot, &s.buf)
+	if !ok {
+		return job.Record{}, false
+	}
+	if len(picks) == 1 && len(d.Inputs) == 0 {
+		return job.Record{Kind: job.Bill, Target: picks[0].id, TX: picks[0].x, TY: picks[0].y}, true
+	}
+	route := make([]entity.EntityID, 0, 2*len(picks))
+	for _, p := range picks {
+		route = append(route, p.id, entity.EntityID(p.take))
+	}
+	return job.Record{Kind: job.HaulIngredients, Target: picks[0].id, TX: picks[0].x, TY: picks[0].y,
+		Route: route, Count: len(route)}, true
+}
+
+// start starts bill job rec for pawn id and reserves the bench and every
+// stack a gathering takes from. A gathering that can't reach its first
+// stack puts the bench off (SIM-027), as a plain bill job's start does.
+func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
+	h := s.h
+	if !h.StartJob(id, rec) {
+		if j, _ := h.Job(id); rec.Kind == job.HaulIngredients && j.Fail == job.Unreachable {
+			h.Postpone(id, rec.Dest)
+		}
+		return false
+	}
+	h.Claim(id, rec.Dest)
+	for i := 2; i < rec.Count; i += 2 {
+		h.Claim(id, rec.Route[i])
+	}
+	return true
 }
 
 // pending is the output already being made for an "until you have" bill,
@@ -95,7 +153,7 @@ func (s *Shop) pending(bl recipe.Bill, d recipe.Def) int {
 	n := 0
 	for _, pid := range s.h.PawnIDs() {
 		j, ok := s.h.Job(pid)
-		if !ok || j.Kind != job.Bill || j.State == job.Complete || j.State == job.Fail {
+		if !ok || j.Kind != job.Bill && j.Kind != job.HaulIngredients || j.State == job.Complete || j.State == job.Fail {
 			continue
 		}
 		if bills := s.bills.list[j.Dest]; j.BillIndex < len(bills) && bills[j.BillIndex].Recipe == bl.Recipe {
@@ -111,7 +169,8 @@ func (s *Shop) fail(id entity.EntityID, j job.Record, why job.FailReason) {
 	s.h.SetJob(id, j)
 }
 
-// Do runs one tick of pawn id's bill job j.
+// Do runs one tick of pawn id's bill job j: gathering ingredients
+// (job.HaulIngredients, haul.go), fetching the one ingredient, working.
 func (s *Shop) Do(id entity.EntityID, j job.Record) {
 	h := s.h
 	b, ok := h.Building(j.Dest)
@@ -122,6 +181,10 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 	}
 	bl := bills[j.BillIndex]
 	d := recipe.DefOf(bl.Recipe)
+	if j.Kind == job.HaulIngredients {
+		s.gather(id, j, b)
+		return
+	}
 	if j.Carry == 0 {
 		s.fetch(id, j, d)
 		return
@@ -140,13 +203,20 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 		h.SetJob(id, j)
 		return
 	}
-	s.finish(id, j, b, d)
-	j.Carry = 0
+	if !s.laidOut(j) {
+		s.fail(id, j, job.TargetGone) // an ingredient left the bench
+		return
+	}
+	stored := s.finish(id, j, b, d)
+	j.Carry, j.Route = 0, nil
 	bl.Done++
 	bills[j.BillIndex] = bl
 	s.bills.list[j.Dest] = bills
 	j.State = job.Complete
 	h.SetJob(id, j)
+	if stored {
+		s.store(id, j, bl, d)
+	}
 }
 
 // fetch picks the ingredient up (splitting off what the recipe takes) and
@@ -172,9 +242,11 @@ func (s *Shop) fetch(id entity.EntityID, j job.Record, d recipe.Def) {
 	h.SetJob(id, j)
 }
 
-// finish turns the carried ingredient into the bill's product: a batch on
-// the rack, a cremation, or the output (and extra) on the work spot.
-func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building, d recipe.Def) {
+// finish turns the carried ingredient (and those laid on the bench) into
+// the bill's product: a batch on the rack, a cremation, or the output
+// (and extra) on the work spot. stored: an output was dropped there for
+// the bill's store mode to deal with.
+func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building, d recipe.Def) (stored bool) {
 	h := s.h
 	switch {
 	case d.Dry:
@@ -182,10 +254,13 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 			s.drying.racks[j.Dest] = Batch{Kind: st.Kind, Qty: st.Qty, Rot: st.Rot, Left: st.Kind.DryTicks()}
 		}
 		h.DeleteItem(j.Carry)
-		return
+		return false
 	case d.ID == recipe.Cremate:
 		h.Cremate(j.Dest, j.Carry, d) // burns the body and its wood
-		return
+		return false
+	}
+	for _, rid := range j.Route { // PRD-1: the other ingredients, laid on the bench
+		h.DeleteItem(rid)
 	}
 	out, extra := d.OutQty, d.ExtraQty
 	if d.BySpecies { // butchering: the yields come from the carcass's species
@@ -204,4 +279,5 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	if extra > 0 {
 		h.DropStack(d.Extra, extra, j.DestX, j.DestY)
 	}
+	return out > 0
 }

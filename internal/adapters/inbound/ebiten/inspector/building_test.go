@@ -15,8 +15,8 @@ func TestBillsBodyNotesAnEmptyBench(t *testing.T) {
 	}
 	b.Bills = threeBills()
 	body := BillsBody(b, 400)
-	if len(body.Buttons) != 5*len(b.Bills) {
-		t.Fatalf("buttons = %d, want %d", len(body.Buttons), 5*len(b.Bills))
+	if len(body.Buttons) != 9*len(b.Bills) {
+		t.Fatalf("buttons = %d, want %d", len(body.Buttons), 9*len(b.Bills))
 	}
 	if body.H != float32(len(b.Bills))*BillRowH {
 		t.Fatalf("content height = %v", body.H)

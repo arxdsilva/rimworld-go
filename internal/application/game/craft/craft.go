@@ -20,12 +20,12 @@ type Craft struct {
 // New builds the production cluster on host h.
 func New(h Host) *Craft {
 	c := &Craft{
-		Bills:    &Bills{h: h, list: make(map[entity.EntityID][]recipe.Bill)},
+		Bills:    &Bills{h: h, p: planner{h}, list: make(map[entity.EntityID][]recipe.Bill)},
 		Drying:   &Drying{h: h, racks: make(map[entity.EntityID]Batch)},
 		Cabinets: &Cabinets{h: h},
 	}
 	c.Bills.drying = c.Drying
-	c.Shop = &Shop{h: h, bills: c.Bills, drying: c.Drying, cabinets: c.Cabinets}
+	c.Shop = &Shop{h: h, bills: c.Bills, drying: c.Drying, cabinets: c.Cabinets, p: planner{h}}
 	return c
 }
 

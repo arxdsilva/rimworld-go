@@ -150,7 +150,12 @@ func TestGrownGolden(t *testing.T) {
 	// breaks follow the wiki tiers and MTBs with new kinds; the previous
 	// pin held through SIM-062 (the committed full suite), the benchmark
 	// fixtures' hashes moved with the same change set. Stable over -count=2.
-	const want uint64 = 0x73d615f22d9b245
+	// Re-pinned (BED/PRD/DEF wave B): rest gain scales with the bed's rest
+	// effectiveness (ground and sleeping spots 80 %), shots fly as
+	// projectiles with per-weapon warmup, bands and armor, and bills gather
+	// ingredients across stacks; the previous pin held through wave A
+	// (the committed full suite). Stable over -count=2.
+	const want uint64 = 0x1f3b4995d6ddfe70
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

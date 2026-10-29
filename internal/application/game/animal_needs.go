@@ -119,7 +119,7 @@ func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 	}
 	if lyingDown(*a) { // animal_health.go: asleep or downed
 		a.Food -= rateStep(now, animal.FoodPerDay/2, clock.TicksPerDay)
-		a.Rest = min(animal.Full, a.Rest+rateStep(now, animal.SleepPerHour, clock.TicksPerHour))
+		a.Rest = min(animal.Full, a.Rest+rateStep(now, g.rest.Animals.SleepRate(id, a.Tame, animal.SleepPerHour), clock.TicksPerHour)) // BED-1: rest/animals.go
 	} else {
 		a.Food -= rateStep(now, animal.FoodPerDay, clock.TicksPerDay)
 		a.Rest = max(0, a.Rest-rateStep(now, animal.RestPerDay, clock.TicksPerDay))
@@ -215,8 +215,14 @@ func (g *Game) nothingToEat(id entity.EntityID, a *animal.State, pos Position, n
 func (g *Game) startRest(id entity.EntityID, a *animal.State, pos Position) {
 	a.Mode, a.Path, a.PathI = animal.Rest, nil, 0
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
-	if a.Tame {
-		return // livestock sleep in their pen or where they roam; pets where they are
+	if penned(a) {
+		return // livestock sleep in their pen or where they roam
+	}
+	if a.Tame { // BED-1: a pet goes to its animal bed (rest/animals.go), else sleeps where it is
+		if bx, by, ok := g.rest.Animals.Bed(id, pos.X, pos.Y); ok {
+			g.animalGoTo(id, a, bx, by)
+		}
+		return
 	}
 	if a.Herd == 0 {
 		return

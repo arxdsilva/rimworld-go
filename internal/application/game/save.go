@@ -362,6 +362,7 @@ type saveState struct {
 	// and colonies without traders or turrets hash as before.
 	Trade   *tradeSave
 	Turrets *combat.TurretSave
+	Shots   []projectile.Shot // DEF-1: projectiles in flight (nil: none)
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -484,7 +485,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Power = g.exportPower()          // power.go (PLAY-021): nil without power
 	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
 	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
-	s.Turrets = g.combat.Turrets.Export()
+	s.Turrets, s.Shots = g.combat.Turrets.Export(), g.combat.Shots.Export()
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -667,6 +668,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importPower(s.Power)       // power.go (PLAY-021)
 	g.importTrade(s.Trade)       // trade.go (PLAY-024): sessions close on load
 	g.combat.Turrets.Import(s.Turrets)
+	g.combat.Shots.Import(s.Shots)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History

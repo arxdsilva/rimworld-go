@@ -106,6 +106,9 @@ func coversCell(k construction.Kind, f construction.Facing, x, y, px, py int) bo
 	if s := construction.DefOf(k).Size; s[0] <= 1 && s[1] <= 1 {
 		return x == px && y == py
 	}
+	if cells, n := construction.SmallFootprint(k, f, x, y); n > 0 { // up to four tiles, still no allocation (BED-1)
+		return slices.Contains(cells[:n], [2]int{px, py})
+	}
 	return construction.Covers(k, f, x, y, px, py)
 }
 

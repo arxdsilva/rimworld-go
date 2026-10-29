@@ -42,7 +42,7 @@ func (g *Game) buildingViews() []BuildingView {
 			out = append(out, BuildingView{})
 			bv := &out[len(out)-1]
 			g.fillBuildingView(bv, id, b)
-			bv.Bills = g.appendBillViews(nil, id)
+			bv.Bills = g.craft.Bills.AppendViews(nil, id)
 			if at, ok := reinstallOf(moves, id); ok {
 				bv.MovingTo = newCell(at)
 			}
@@ -67,7 +67,7 @@ func (g *Game) buildingViews() []BuildingView {
 			old = &m.views[i]
 		}
 		start := len(m.bills)
-		m.bills = g.appendBillViews(m.bills, id)
+		m.bills = g.craft.Bills.AppendViews(m.bills, id)
 		switch nb := m.bills[start:]; {
 		case len(nb) == 0:
 		case old != nil && slices.Equal(old.Bills, nb):
@@ -174,10 +174,12 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 		bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.Percent()
 	}
 	bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = g.footprintOf(b.Kind, b.Facing, b.X, b.Y)
-	g.fillGraveView(bv, id, b)  // burial.go
-	g.fillSwapView(bv, id)      // placement.go: pending material change (PLAY-011)
-	bv.Ruin = b.Ruin            // MAPGEN-2: an abandoned piece
-	bv.Medical = b.Medical      // PLAY-020: kept for the sick and injured
+	g.fillGraveView(bv, id, b) // burial.go
+	g.fillSwapView(bv, id)     // placement.go: pending material change (PLAY-011)
+	bv.Ruin = b.Ruin           // MAPGEN-2: an abandoned piece
+	bv.Medical = b.Medical     // PLAY-020: kept for the sick and injured
+	st := g.rest.Stats.Of(id)  // BED-1: comfort, rest effectiveness, beauty, facilities (rest/stats.go)
+	bv.Comfort, bv.RestEffect, bv.Beauty, bv.Facilities, bv.Forbidden = st.Comfort, st.RestEffect, st.Beauty, st.Links(), b.Forbidden
 	g.fillCasketView(bv, id, b) // casket.go (MAPGEN-3)
 	// PLAY-021: the light the renderer draws (light.go), then power
 	// (power_view.go)
@@ -215,5 +217,7 @@ func equalBuildingView(a, b *BuildingView) bool {
 		a.LinkX == b.LinkX && a.LinkY == b.LinkY && a.LinkFromX == b.LinkFromX && a.LinkFromY == b.LinkFromY &&
 		a.HasLink == b.HasLink && a.Glow == b.Glow && a.GlowRadius == b.GlowRadius &&
 		a.ThermoTarget == b.ThermoTarget && a.ThermoActive == b.ThermoActive && a.PowerMax == b.PowerMax &&
-		a.AimDir == b.AimDir && a.ShotAge == b.ShotAge
+		a.AimDir == b.AimDir && a.ShotAge == b.ShotAge &&
+		a.Comfort == b.Comfort && a.RestEffect == b.RestEffect && a.Beauty == b.Beauty &&
+		a.Facilities == b.Facilities && a.Forbidden == b.Forbidden
 }

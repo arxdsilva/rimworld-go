@@ -66,6 +66,24 @@ func SleepTick(p Pair, now uint64) Pair {
 	return p
 }
 
+// SleepTickAt is SleepTick in a place of rest effectiveness re (permille,
+// BED-1): rest comes back at SleepGain per SleepPeriod scaled by re,
+// spread exactly over the ticks (0 to Full in 25000 ticks at 1000, near
+// the wiki's 26250). At re 1000 it is SleepTick exactly.
+func SleepTickAt(p Pair, now uint64, re int) Pair {
+	if re == 1000 {
+		return SleepTick(p, now)
+	}
+	if re > 0 && now > 0 {
+		per, q := uint64(SleepGain*re), uint64(SleepPeriod*1000)
+		p.Rest = clamp(p.Rest + int(now*per/q-(now-1)*per/q))
+	}
+	if now%uint64(HungerPeriod) == 0 && p.Hunger > 0 {
+		p.Hunger--
+	}
+	return p
+}
+
 // Hungry reports a critical food interrupt.
 func (p Pair) Hungry() bool { return p.Hunger <= CriticalHunger }
 

@@ -48,7 +48,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		if !active {
 			return ""
 		}
-		if g.hasRanged(id) {
+		if hasRanged(g, id) {
 			return ActionAim
 		}
 		return ActionMelee
@@ -252,9 +252,9 @@ func (g *Game) attackCycleOf(id entity.EntityID, j job.Record) float64 {
 		}
 		d := weaponDefOf(g, id)
 		total := combat.AimTicks(d)
-		// Past the first aim the countdown is the weapon's cooldown.
-		if j.WorkLeft > total || struck && rec.Target == j.Target && now-rec.Tick <= uint64(d.Cooldown) {
-			total = d.Cooldown
+		// Past the first aim the countdown is the cooldown (and a gun's aim).
+		if c := combat.CycleTicks(d); j.WorkLeft > total || struck && rec.Target == j.Target && now-rec.Tick <= uint64(c) {
+			total = c
 		}
 		return cycle(j.WorkLeft, total)
 	case job.Breach:

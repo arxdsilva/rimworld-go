@@ -3,6 +3,7 @@ package combat
 import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Combat is the combat cluster's root: the game builds one with New and
@@ -22,6 +23,8 @@ type Combat struct {
 	Breach *Breach
 	// Turrets are the sentry turrets (turret.go, PLAY-024).
 	Turrets *Turrets
+	// Shots are the projectiles in flight (shot.go, DEF-1).
+	Shots *Shots
 }
 
 // New builds the combat cluster on host h with the extra roles r.
@@ -29,6 +32,8 @@ func New(h Host, r Roles) *Combat {
 	c := &Combat{Sight: &Sight{g: h}, Traps: &Traps{h: h}, Breach: &Breach{h: h, b: r.Breach}}
 	c.Turrets = newTurrets(h, r.Power, c.Sight)
 	c.Strikes = &Strikes{h: h, sight: c.Sight, turrets: c.Turrets, hunts: r.Hunts}
+	c.Shots = &Shots{h: h, st: c.Strikes}
+	c.Strikes.shots = c.Shots
 	c.Guard = &Guard{h: h, fl: r.Flight}
 	return c
 }
@@ -100,8 +105,15 @@ func (s *Sight) CanHit(fx, fy int, d weapon.Def, tx, ty int) bool {
 // from (ax, ay): the best of the buildings on the cells beside it, facing
 // the shooter.
 func (s *Sight) Cover(ax, ay, tx, ty int) int {
+	_, _, _, pct := s.coverBy(ax, ay, tx, ty)
+	return pct
+}
+
+// coverBy is Cover with the building that gives it and its tile (id 0:
+// no cover).
+func (s *Sight) coverBy(ax, ay, tx, ty int) (id entity.EntityID, x, y, pct int) {
 	if weapon.Distance(ax, ay, tx, ty) <= 1 {
-		return 0
+		return 0, 0, 0, 0
 	}
 	sx, sy := sign(ax-tx), sign(ay-ty)
 	cells := [3][2]int{{tx + sx, ty + sy}}
@@ -109,13 +121,12 @@ func (s *Sight) Cover(ax, ay, tx, ty int) int {
 	if sx != 0 && sy != 0 {
 		cells[1], cells[2], n = [2]int{tx + sx, ty}, [2]int{tx, ty + sy}, 3
 	}
-	best := 0
 	for _, c := range cells[:n] {
-		if id, k := s.g.Object(c[0], c[1]); id != 0 {
-			best = max(best, construction.CoverPct(k))
+		if bid, k := s.g.Object(c[0], c[1]); bid != 0 && construction.CoverPct(k) > pct {
+			id, x, y, pct = bid, c[0], c[1], construction.CoverPct(k)
 		}
 	}
-	return best
+	return id, x, y, pct
 }
 
 func sign(v int) int {

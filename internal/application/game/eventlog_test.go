@@ -87,7 +87,7 @@ func TestEatAndSleepLogged(t *testing.T) {
 		t.Fatalf("log %v", logTexts(g, id))
 	}
 	g.SetNeeds(id, 8000, 0)
-	g.Step(needs.WakeRest/needs.SleepGain*needs.SleepPeriod + 3000) // collapsed: sleeps to 80%
+	g.Step(sleepTicks(0, needs.WakeRest) + 3000) // collapsed: sleeps to 80% on the ground
 	if !hasLog(g, id, "Collapsed from exhaustion") || !hasLog(g, id, "Slept on the ground") {
 		t.Fatalf("log %v", logTexts(g, id))
 	}

@@ -54,7 +54,7 @@ func TestCampfireCooksWithFuelOnly(t *testing.T) {
 	if _, ok := stackOf(g, item.Meal); ok {
 		t.Fatal("an unlit campfire cooked a meal")
 	}
-	if bv := g.appendBillViews(nil, bid); bv[0].Status != BillNoFuel {
+	if bv := g.craft.Bills.AppendViews(nil, bid); bv[0].Status != BillNoFuel {
 		t.Fatalf("bill status %q", bv[0].Status)
 	}
 	g.FuelCampfire(8, 4)

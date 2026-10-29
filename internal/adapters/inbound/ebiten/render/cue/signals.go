@@ -164,6 +164,9 @@ func (b *Bus) TraceSound(t game.TraceView) {
 		tx, ty := float64(t.ToX)+0.5, float64(t.ToY)+0.5
 		voiced = b.CueAnimal(sp, VoiceHurt, tx, ty, VolHurt) || voiced
 	}
+	if b.combatTrace(t, voiced) {
+		return
+	}
 	switch {
 	case t.Hit && t.Building:
 		b.Cue("sfx.wood_hit", float64(t.ToX)+0.5, float64(t.ToY)+0.5, 1)

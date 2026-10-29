@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/look"
@@ -94,8 +95,8 @@ func (g *Game) socialDuty(id entity.EntityID, j job.Record) bool {
 		if (now+uint64(id)*weddingStagger)%social.Hour == 0 {
 			g.weddingCheck(id, now)
 		}
-		if (now+uint64(id)*lovinStagger)%lovinPeriod == 0 {
-			g.lovinCheck(id, now) // beds.go
+		if (now+uint64(id)*rest.LovinStagger)%rest.LovinPeriod == 0 {
+			g.rest.Lovin.Check(id, now) // rest/lovin.go
 		}
 		j, _ = g.jobs.Get(id)
 	}

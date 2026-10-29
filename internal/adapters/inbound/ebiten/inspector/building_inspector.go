@@ -176,9 +176,9 @@ func (a Building) RecipesFor(kind string) []game.RecipeView {
 // ---- the Bills tab -------------------------------------------------------
 
 const (
-	billsPanelW = 520 // the Bills tab's panel
+	billsPanelW = 560 // the Bills tab's panel: hudlayout.ExpandMaxW, the widest an expanded tab may be (the PRD-1 row controls fit)
 	billBtnH    = 22
-	billBtnsW   = 122 // minus, plus, mode, pause and delete
+	billBtnsW   = 224 // minus, plus, mode, pause, settings, copy, up, down and delete
 	billAddW    = 130
 )
 
@@ -187,6 +187,9 @@ const (
 func billsPanelH(n int) float32 {
 	return 2*PaneInset + float32(max(n, 1))*BillRowH + bodyGap + billBtnH
 }
+
+// billPasteX is where the Paste bill button sits, right of Add bill.
+const billPasteX = billAddW + 6
 
 // billsTab is the Bills tab of bench b.
 func (a Building) billsTab(b game.BuildingView) Tab {
@@ -205,6 +208,11 @@ func billsLayout(r gfx.Rect) (list, add gfx.Rect) {
 // billsBody lays out bench b's bills, viewW wide: a line of text and the
 // five buttons (fewer, more, mode, pause, delete) per bill.
 func BillsBody(b game.BuildingView, viewW float32) TabBody {
+	return BillsBodyWith(b, viewW, nil)
+}
+
+// BillsBodyWith is BillsBody with each bill's worker line (extra may be nil).
+func BillsBodyWith(b game.BuildingView, viewW float32, extra func(i int) BillExtra) TabBody {
 	var body TabBody
 	if len(b.Bills) == 0 {
 		body.Labels = []tabLabel{{Text: "No bills yet - add one below.", x: 8, y: 4, w: viewW - 8, st: gfx.Body}}
@@ -218,13 +226,28 @@ func BillsBody(b game.BuildingView, viewW float32) TabBody {
 		if bl.Status != "" {
 			body.Fills = append(body.Fills, tabFill{gfx.Rect{X: 0, Y: y, W: 4, H: billBtnH}, uikit.BtnDisabled})
 		}
-		body.Labels = append(body.Labels, tabLabel{Text: BillLine(bl), x: 8, y: y + 2, w: x - 8 - bodyGap, st: gfx.Body})
+		line := BillLine(bl)
+		if extra != nil {
+			line += extra(i).Line()
+		}
+		body.Labels = append(body.Labels, tabLabel{Text: line, x: 8, y: y + 2, w: x - 8 - bodyGap, st: gfx.Body})
+		up := uikit.Button{ID: "bill.up." + ix, Label: "^", X: x + 154, Y: y, W: 22, H: billBtnH, Tip: "Move up"}
+		dn := uikit.Button{ID: "bill.dn." + ix, Label: "v", X: x + 178, Y: y, W: 22, H: billBtnH, Tip: "Move down"}
+		if i == 0 {
+			up.Disabled, up.Reason = true, "Already first"
+		}
+		if i == len(b.Bills)-1 {
+			dn.Disabled, dn.Reason = true, "Already last"
+		}
 		body.Buttons = append(body.Buttons,
 			uikit.Button{ID: "bill.minus." + ix, Label: "-", X: x, Y: y, W: 22, H: billBtnH, Tip: "Fewer (Ctrl x10, Shift x100, both x1000)"},
 			uikit.Button{ID: "bill.plus." + ix, Label: "+", X: x + 24, Y: y, W: 22, H: billBtnH, Tip: "More (Ctrl x10, Shift x100, both x1000)"},
 			uikit.Button{ID: "bill.mode." + ix, Label: "M", X: x + 48, Y: y, W: 22, H: billBtnH},
 			uikit.Button{ID: "bill.pause." + ix, Label: "||", X: x + 72, Y: y, W: 26, H: billBtnH, Selected: bl.Suspended},
-			uikit.Button{ID: "bill.del." + ix, Label: "x", X: x + 100, Y: y, W: 22, H: billBtnH},
+			uikit.Button{ID: "bill.cfg." + ix, Label: "...", X: x + 100, Y: y, W: 26, H: billBtnH, Tip: "Bill settings\nStore mode, radius, skill range, worker, ingredients."},
+			uikit.Button{ID: "bill.copy." + ix, Label: "C", X: x + 128, Y: y, W: 22, H: billBtnH, Tip: "Copy this bill"},
+			up, dn,
+			uikit.Button{ID: "bill.del." + ix, Label: "x", X: x + 202, Y: y, W: 22, H: billBtnH},
 		)
 	}
 	body.H = float32(len(b.Bills)) * BillRowH
@@ -240,7 +263,12 @@ func (a Building) BillsTabUI(id entity.EntityID, r gfx.Rect) {
 		return
 	}
 	list, add := billsLayout(r)
-	a.declareTabBody("bill.rows", list, BillsBody(b, list.W-uikit.ScrollBarW), a.ApplyBuildingClick)
+	a.declareTabBody("bill.rows", list, BillsBodyWith(b, list.W-uikit.ScrollBarW, func(i int) BillExtra { return billExtra(b.Bills[i]) }), a.ApplyBuildingClick)
+	paste := gfx.Rect{X: add.X + billPasteX, Y: add.Y, W: billAddW, H: add.H}
+	block := a.Bills().pasteBlock(b)
+	if a.kit().Button(BillPasteBtn, paste, "Paste bill", uikit.BtnOpts{Disabled: block != "", Reason: block, Tip: "Paste bill\nAdd the copied bill with its settings."}) {
+		a.ApplyBuildingClick(BillPasteBtn)
+	}
 	if a.kit().Button(BillPickBtn, add, "+ Add bill", uikit.BtnOpts{Tip: "Add bill\nPick a recipe for this bench."}) {
 		a.ApplyBuildingClick(BillPickBtn)
 	}
@@ -327,9 +355,18 @@ func (a Building) ApplyBuildingClick(id string) {
 	case "bldg.cancelmove":
 		a.shell.Move(b, true)
 		return
+	case BuildingForbidID: // building_stats.go (BED-1)
+		for _, c := range forbidCommand(b).Cmds {
+			a.shell.Enqueue(c)
+		}
+		return
 	}
 	if id == BillPickBtn {
 		a.openBillPicker(b)
+		return
+	}
+	if id == BillPasteBtn {
+		a.Bills().pasteBill(b)
 		return
 	}
 	parts := strings.Split(id, ".")
@@ -346,6 +383,9 @@ func (a Building) ApplyBuildingClick(id string) {
 		return
 	}
 	if n < 0 || n >= len(b.Bills) {
+		return
+	}
+	if a.Bills().billVerb(parts[1], n, b) {
 		return
 	}
 	bl := b.Bills[n]
@@ -386,15 +426,15 @@ type bedPrisonReader interface {
 	BedForPrisoners(bed entity.EntityID) bool
 }
 
-// bedSlots is how many sleepers bed kind b holds (0: not a bed).
+// bedSlots is how many colonists bed kind b holds (0: not a colonist bed;
+// animal beds have no colonist owner). It follows the construction kind,
+// so every sleeping place (bedrolls included, BED-1) gets its owner slots.
 func bedSlots(b game.BuildingView) int {
-	switch b.Kind {
-	case "double bed":
-		return 2
-	case "bed", "hospital bed", "sleeping spot":
-		return 1
+	k, ok := construction.Parse(b.Kind)
+	if !ok {
+		return 0
 	}
-	return 0
+	return k.Sleepers()
 }
 
 // bedOwner is who holds slot of b (0: nobody).

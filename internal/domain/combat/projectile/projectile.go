@@ -2,7 +2,24 @@ package projectile
 
 import "rimworld-go/internal/domain/sim/entity"
 
-// Trace is one resolved attack.
+// Stage is what moment of an attack a trace records.
+type Stage uint8
+
+const (
+	// Whole: a blow and its impact at once (melee, a sentry turret's shot,
+	// a trap).
+	Whole Stage = iota
+	// Fired: a projectile left the muzzle. Hit says it was aimed at the
+	// target, To is where it is headed, Damage is 0.
+	Fired
+	// Landed: a projectile arrived. To is where it struck; Hit means it
+	// struck a creature or (Building) a wall, door, cover, turret or rock;
+	// Damage is what got through armor (Hit with Damage 0 on a creature:
+	// armor stopped it).
+	Landed
+)
+
+// Trace is one attack moment for presentation.
 type Trace struct {
 	FromX, FromY int
 	ToX, ToY     int
@@ -19,6 +36,8 @@ type Trace struct {
 	// building or a trap); Weapon is the attacker's weapon name.
 	Attacker, Target entity.EntityID
 	Weapon           string
+	// Stage is the moment it records (Whole for melee and instant shots).
+	Stage Stage
 }
 
 // Lifetime is how many ticks a trace stays visible.

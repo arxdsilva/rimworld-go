@@ -188,6 +188,8 @@ type Pane struct {
 	LogFor    entity.EntityID
 
 	animalLogFor entity.EntityID // the animal whose Log scroll is kept
+
+	billClip BillClipboard // the copied bill (the UI session's clipboard)
 }
 
 // New builds the inspector over its shell, with the producers of the

@@ -4,7 +4,7 @@ Scope: bring beds, rest, room quality and the comfort, beauty and outdoors needs
 
 ## Status (2026-10-29)
 
-Wave A done: the sub-package extraction, the domain packages and the wiki constants (phase 0 committed). Phase 0 (BED-0, the `game/rest` extraction plus the stat and room-formula domain work) is in progress, wave A. BED-1..3 have not started. Every row in section 3 is `open` unless it says `done`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/rest` extraction, the domain packages and the wiki constants (BED-0). BED-2..3 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -30,10 +30,10 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Sleeping spot, bedroll, double bedroll, bed, double bed, hospital bed, animal sleeping spot, animal bed. | `construction.Kind` has `Bed`, `SleepingSpot`, `DoubleBed`, `HospitalBed` (`internal/domain/building/construction/construction.go`; `Kind.Sleeps` is the predicate). | Bedrolls (pick-up-able), double bedroll, animal spot and animal bed. | BED-1 | open |
+| Sleeping spot, bedroll, double bedroll, bed, double bed, hospital bed, animal sleeping spot, animal bed. | `construction.Kind` adds `Bedroll`, `DoubleBedroll`, `AnimalSleepingSpot`, `AnimalBed`, `EndTable`, `Dresser`; `Kind.AnimalSleeps` is the predicate. | Bedrolls are not yet picked up as minified items. | BED-1 | partial |
 | A bed has an owner; couples share a double bed; an owner can be reassigned. | `Building.Claimant`/`Claimant2`; `partnerBed`, `sleepInPartnerBed`, `cmdAssignBedOwner` (`beds.go`). | None. | - | done |
 | Beds can be marked for prisoners or kept as medical beds. | `Building.ForPrisoners`; `Building.Medical` with `care.IsMedicalBed` (`care/beds.go`). Medical is a per-building flag, so any bed can be medical, not only the hospital bed. | None. | - | done |
-| A bed can be forbidden so nobody claims or uses it. | `forbidden`/`setForbidden` (`forbid.go`) handle item stacks only (`Stack.Forbidden`); `sleepInBed` (`tick.go`) never checks a building flag. | Building forbid flag, command and checks in the sleep choice. | BED-1 | open |
+| A bed can be forbidden so nobody claims or uses it. | `construction.Building.Forbidden` is checked in the sleep choice (`rest/beds.go` `SleepIn`, `rest/animals.go` `Bed`) and shown in `BuildingView.Forbidden`. Care, benches and doors do not check it. | Forbidden check in care, benches and doors. | BED-1 | partial |
 | Lovin' in a shared double bed. | `lovinCheck`, `lovinBed`, `doLovin` (`beds.go`). | None. | - | done |
 | Colonists may be told which bed to use, and a fresh bed is claimed on first sleep. | `sleepInBed` picks partner bed, own bed, else nearest free claimable bed inside the allowed area (`areaAllows`). | None. | - | done |
 | A pawn without a bed sleeps on the ground in a spot of its allowed area. | `assignSleepInPlace`, `sleepFloorSpot` (`area_dest.go`). | None. | - | done |
@@ -42,10 +42,10 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Each bed kind has base comfort, rest effectiveness and beauty; stuff and craft quality scale them. | Material only changes HP and work (`construction.StuffStats`); a bed carries no stat. | `Comfort`, `RestEffectiveness`, `Beauty` stat ids and per-kind tables; quality and stuff hooks (quality arrives with PRD-2). | BED-0 (ids), BED-1 (tables) | open |
-| Rest gain while asleep scales with the bed's rest effectiveness and the pawn's rest rate. | Flat: `needs.SleepTick` adds `needs.SleepGain` (2) every `needs.SleepPeriod` (5) ticks, whatever the bed (`internal/domain/pawn/needs/needs.go`). | Sleep tick takes an effectiveness factor from the bed. | BED-1 | open |
-| Bed facilities (end table, dresser) beside a bed raise its comfort or rest effectiveness. | No facility for beds. The only linked furniture is the tool cabinet beside benches (`cabinetBonus`, `items_ng1.go`) and the vitals monitor beside a hospital bed (`items_ng1.go`, `VitalsMonitor` scan). | End table and dresser buildings, a facility link rule (reach, at most N, orientation) and their stat bonus. | BED-1 | open |
-| Medical beds heal faster and prevent infection by the bed's medical stats. | Lying in a bed adds a heal bonus: `body.HealRate(w, lying)` (`internal/domain/pawn/body/tend.go`); bed rest and medical-bed holding live in `care/rest.go`. Hospital bed and vitals monitor exist. | Per-bed immunity and heal-speed stats (kept with the care package). | BED-1 (hook only) | open |
+| Each bed kind has base comfort, rest effectiveness and beauty; stuff and craft quality scale them. | `construction.FurnitureOf(kind, stuff, quality)` (`construction/furniture.go`) gives comfort, rest effectiveness and beauty; `rest.Stats.Of`/`RestEffect` (`rest/stats.go`). Quality is `quality.Default` (Normal) until PRD-2. Leather is rejected in the stuff picker. | Quality input (PRD-2); leather in the stuff picker. | BED-0 (ids), BED-1 (tables) | partial |
+| Rest gain while asleep scales with the bed's rest effectiveness and the pawn's rest rate. | `needs.SleepTick` scales the game's base gain by the bed's rest effectiveness (`domain/pawn/needs`); `Stats.RestEffect` supplies it. The base rate is kept and scaled, not the wiki's absolute 0.571 percent per 150 ticks. | None. | BED-1 | done |
+| Bed facilities (end table, dresser) beside a bed raise its comfort or rest effectiveness. | `EndTable` and `Dresser` buildings; `FacilityComfort` adds 0.05 comfort each (`construction/furniture.go`); `Stats.endTable`/`dresser` link by position and `DresserReach` (`rest/stats.go`); `BedView.Links`. | None. | BED-1 | done |
+| Medical beds heal faster and prevent infection by the bed's medical stats. | Unchanged: `body.HealRate` and `care/rest.go`; the hook is not yet used for per-bed stats. | Per-bed immunity and heal-speed stats. | BED-1 (hook only) | open |
 | Sleeping in a cold, hot or noisy place gives a thought; waking up well rested gives none. | `afterSleep` (`rooms.go`) remembers outside, ground, bed, awful room, nice room (`internal/domain/pawn/mood/mood.go` kinds `SleptOutside`..`SleptInNiceRoom`). | Slept-cold, slept-hot, slept-in-barracks, shared-bed and shared-bedroom thoughts (BED-2/3). | BED-2, BED-3 | open |
 | Colonists with no bed raise an alert. | No alert. | Alert data and text: "colonists need beds". | BED-3 | open |
 
@@ -53,8 +53,8 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Tamed animals sleep in animal beds or spots assigned by the player; medical animal beds heal them. | Animals bed down beside a herd mate (`herdBedRadius`, `animal_needs.go`, state `animal.Rest`); no building is involved. | Animal bed and spot kinds, an assignment rule, a `SleepAnimalBed` job kind (contract written by the lead), animal medical beds. | BED-1 | open |
-| Animals rest on the 60-tick bucket decision, never scanning all creatures. | `animal_index.go` and `animal_needs.go` bucket index. | Bed choice must run inside the existing bucket decision. | BED-1 | open |
+| Tamed animals sleep in animal beds or spots assigned by the player; medical animal beds heal them. | `rest.Animals.Bed` (`rest/animals.go`) picks a free, allowed animal bed or spot and claims it for the pet (`Claimant`); `Animals.SleepRate` scales rest by the bed. Medical animal beds and `AssignOwner` for animal beds are not done. | Medical animal beds; AssignOwner for animal beds. | BED-1 | partial |
+| Animals rest on the 60-tick bucket decision, never scanning all creatures. | The bed choice runs inside the existing bucket decision (`animal_needs.go` calling `rest.Animals.Bed`); no new scan. | None. | BED-1 | done |
 
 ### 3.4 Room statistics and roles
 
