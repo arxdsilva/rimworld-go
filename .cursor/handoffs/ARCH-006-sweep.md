@@ -34,6 +34,9 @@ Tools in the session scratchpad, all `go/types` over the root package with its t
 | sub-packages / their AGENTS.md | 33 / 0 | 33 / 33 |
 | `DrawArt500/z1` | 1.00 ms, 418 draw calls, 3,826 allocs | the same |
 
+## `make fps` against PERF-002
+`make fps SECONDS=30 TAG=arch006` at `b24b36709` on the 60 Hz display (the window focused): zoom 0.1 — avg 60.0 fps (display-pinned), 1 % low 29.9, frame p99 33.4 ms, update 2.23 ms / p99 3.26, draw 4.90 / 8.46, **work 7.13 ms / p99 11.72**; zoom 0.8 — 1 % low 54.4, frame p99 18.4 ms, update 1.97 / 3.06, draw 5.57 / 6.88, **work 7.55 / 9.94**; budget held 0 updates, heap 516 / 330 MiB. PERF-002 predicted work ≈ 8 ms average and ≈ 13 ms p99 at zoom 0.1 on this machine: the decomposition cost no frame time (the 1 % low at zoom 0.1 is the 60 Hz display's, as PERF-002 notes).
+
 ## Still budgeted (not hidden)
 - `App` 57 fields / 244 methods: the composition (`app.go` 28, `hotkeys.go` 15, `capture.go` 13, `input_frame.go` 11, `colony_compose.go` 9, `ui_scale.go` 9, `sound_director.go` 8), the zone commands (`cmds_zone.go` 16 — they belong with `architect.Zones`), the map-side selection draws (`multiselect_render.go` 13) and the wizard's screen-table wrappers (`wizard_compat.go` 20). The screen/scale group, the session group and the twelve feature pointers are the sub-struct candidates for the fields.
 - `Renderer` 40 fields / 71 methods, `uikit.Kit` 73/30, `wizard.Draft` 42 fields, `globe.View` 51, `render/creature.Set` 93 methods, `game.Game` 2105/152: every line in `internal/arch/solid_budget.txt` says so and only shrinks.
