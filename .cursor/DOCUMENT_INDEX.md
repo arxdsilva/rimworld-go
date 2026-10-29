@@ -18,7 +18,7 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Pawn-to-pawn interaction gap analysis vs RimWorld (rescue, orders on a pawn, feeding patients, visiting, mental breaks), wiki constants, SIM-061…066 | `PAWN_INTERACTION_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
-| Multi-area work across parallel agents | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |
+| Multi-area work across parallel agents; every multi-area plan includes its Parallel workers section (§0) | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |
 | New-game flow, globe, factions, storytellers, difficulty, colonist identity, water, big maps (plan of record) | `NG1_NEW_GAME_PLAN.md` |
 | Sentry turret, trade, radio console: contract, tuning table, phases and ownership (PLAY-024) | `PLAY024_PLAN.md` |
 | Cursor always-on recognition rules | `rules/` |

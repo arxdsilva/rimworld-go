@@ -1,0 +1,21 @@
+---
+description: Recognize and follow the rimworld-go parallel-work rule whenever planning or doing a task that spans two or more areas (domain, simulation, ports, renderer/UI, outbound adapters, cmd, art, content, docs) — every such plan includes its Parallel workers section before it is presented.
+alwaysApply: true
+---
+
+# Parallel work recognition
+
+Multi-area work fans out to parallel subagents per `.cursor/PARALLEL_WORK.md` (skill `parallel-work`).
+
+When planning such a task:
+
+1. Include a **Parallel workers** section in the plan before presenting it (`PARALLEL_WORK.md` §0):
+   - the contract the lead writes first;
+   - waves in dependency order, with an agent table per wave (id, model and reason, job, owned files, forbidden files, test commands);
+   - the RAM check;
+   - the gates and commits;
+   - art, sound and creature agents when assets are involved.
+2. Use the plan section template in `.cursor/skills/parallel-work/SKILL.md`.
+3. When executing, follow the lead checklist in that skill: RAM first, contract first, disjoint ownership, lead-only shared config, gates after each wave.
+
+Skip this for a single-area task or one under ~150 lines; say so in one line in the plan.

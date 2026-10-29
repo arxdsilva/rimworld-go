@@ -14,6 +14,24 @@ Split work across **parallel subagents** whenever a task touches two or more of 
 | content | `content/`, `mods/` |
 | docs / specs | `.cursor/*.md`, `docs/`, `README.md` |
 
+## 0. Every plan includes its parallel work (user decision, 2026-10-29)
+
+A plan for a multi-area task (plan mode, a plan file, or a written phase plan) is incomplete until it carries a **Parallel workers** section. Write it before presenting the plan, not after approval:
+
+- **Areas and contract.** The areas the task touches, and what the lead writes alone before any agent starts: interfaces, read models, typed commands, stubs, shared config.
+- **Waves in dependency order.** One table per wave with these columns:
+  - id;
+  - model and a one-line reason (§6);
+  - job;
+  - owned files;
+  - forbidden files;
+  - the targeted test commands the agent runs.
+- **RAM.** The `make agent-budget` check and each wave's size (§1).
+- **Integration.** The lead's gates after each wave (§5) and the commit points.
+- **Assets.** Art, sound and creature agents whenever assets are involved: art on `opus` with `rimworld-go-art-assets`, creatures per `rimworld-go-creatures`.
+
+A single-area task, or one under ~150 lines, states that in one line instead. The skill `parallel-work` has a template for the section.
+
 ## 1. The lead goes first, alone
 
 **RAM first (user decision, 2026-10-25).** Before launching any agent, and again before each later phase, run `make agent-budget` (`cmd/rambudget`). It reads the machine's total and free memory and prints the most agents of each kind that fit, from measured peaks:

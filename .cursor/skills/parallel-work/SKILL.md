@@ -5,7 +5,8 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 
 # Parallel work (lead checklist)
 
-0. **Check RAM.** Run `make agent-budget`; size the batch to what it prints (heavy and light agents), stagger the heavy ones, and give every agent `GOFLAGS=-p=2` for its tests. Re-check before each later phase (PARALLEL_WORK §1).
+0. **Writing a plan? Put the workers in it.** Before presenting any plan for a multi-area task, include its Parallel workers section (PARALLEL_WORK §0; template below): contract, waves with an agent table each, RAM, gates and commits, asset agents. A plan without it is incomplete.
+0b. **Check RAM.** Run `make agent-budget`; size the batch to what it prints (heavy and light agents), stagger the heavy ones, and give every agent `GOFLAGS=-p=2` for its tests. Re-check before each later phase (PARALLEL_WORK §1).
 1. **Map areas → agents.** List the areas the task touches (rule intro table); one agent per area/layer (hexagon). ≤ 15 running at once.
    1b. **Pick each agent's model** (rule §6): `haiku` for mechanical work, `sonnet` for implementation against a written contract, `opus` for determinism/pathing/jobs/saves/timing math. Escalate one tier after two failed gates.
 2. **Contract first (you, alone):**
@@ -19,6 +20,21 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 5. **Integrate and verify** yourself after each phase with the rule §5 gates (build, fmt/vet/lint, race tests, determinism, art-check, benchmarks, visual review). Route failures to the owner.
 6. **Write handoffs and update checklists** from the agent reports (agents never edit them).
 7. **Don't enter plan mode while agents run** (it pauses them); if you did, resume each with `SendMessage`.
+
+## Plan section template (PARALLEL_WORK §0)
+
+```
+## Parallel workers
+Areas: <domain / sim / UI / art / …>. Contract the lead writes first: <files, interfaces, stubs, commands>.
+RAM: make agent-budget → <light/heavy counts>; waves ≤ <n> agents.
+
+### Wave <X> — <goal>
+| id | model — reason | job | owns | must not touch | tests |
+|---|---|---|---|---|---|
+| <ID> | <opus|sonnet|haiku> — <why> | <scope> | <files/globs> | <files/globs> | <GOFLAGS=-p=2 go test -race … / make art FAMILIES=…> |
+
+Lead after the wave: <gates>, <budgets>, <commit message / handoff>.
+```
 
 ## Agent prompt template
 

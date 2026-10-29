@@ -55,6 +55,7 @@ Token/context policy is defined by `.cursor/AI_TOKEN_OPTIMIZATION.md`.
 | PR review, merge wave, architecture compliance | `rimworld-go-review-integration` |
 | ADR/system/package docs | `rimworld-go-documentation` |
 | Task spans 2+ areas (domain, sim, ports, renderer, adapters, cmd, art, content, docs) or the user asks for parallel agents | `parallel-work` |
+| Planning a multi-area task (plan mode, a plan file, a phase plan) | `parallel-work` (§0: the plan includes its Parallel workers section) |
 
 A normal task should use **1–3 skills**, not the full catalog.
 

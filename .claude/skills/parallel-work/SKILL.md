@@ -8,4 +8,6 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 The canonical playbook lives with the other project skills. Read and follow both:
 
 - `.cursor/PARALLEL_WORK.md` — the rule (ownership, phases, gates, model tiers)
-- `.cursor/skills/parallel-work/SKILL.md` — the lead checklist and agent prompt template
+- `.cursor/skills/parallel-work/SKILL.md` — the lead checklist, the plan section template and the agent prompt template
+
+Every plan for a multi-area task includes its Parallel workers section before it is presented (PARALLEL_WORK §0).
