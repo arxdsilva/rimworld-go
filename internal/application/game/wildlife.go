@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/economy/item"
@@ -43,6 +44,7 @@ type wildlifeState struct {
 	PopSettle uint64
 	Departs   []departure
 	Gnaw      gnawEvent
+	Forage    forage.Memory // FEED-001: tame animals' feeding memory (animal_needs.go)
 
 	// idx and food are the per-tick creature and food indexes
 	// (animal_index.go): derived, never saved.

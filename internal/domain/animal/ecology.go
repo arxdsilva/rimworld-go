@@ -20,9 +20,12 @@ const (
 	Omnivore               // both
 	Dendrovore             // living trees
 	NoDiet                 // hive insects: no needs
+	// StrictCarnivore eats only meat and carcasses: never kibble,
+	// pemmican or meals (FEED-001).
+	StrictCarnivore
 )
 
-var dietNames = [...]string{"plants", "meat", "plants and meat", "trees", ""}
+var dietNames = [...]string{"plants", "meat", "plants and meat", "trees", "", "meat only"}
 
 func (d Diet) String() string {
 	if int(d) < len(dietNames) {
@@ -36,7 +39,10 @@ func (d Diet) String() string {
 func (d Diet) Plants() bool { return d == Herbivore || d == Omnivore }
 
 // Meat reports a diet that eats carcasses and raw meat.
-func (d Diet) Meat() bool { return d == Carnivore || d == Omnivore }
+func (d Diet) Meat() bool { return d == Carnivore || d == Omnivore || d == StrictCarnivore }
+
+// MeatOnly reports a carnivore, strict or not: meat is its only raw food.
+func (d Diet) MeatOnly() bool { return d == Carnivore || d == StrictCarnivore }
 
 // Product is what a tame animal gives without being killed.
 type Product uint8
@@ -108,6 +114,9 @@ const (
 
 func in(ids ...biome.ID) biome.Set { return biome.Of(ids...) }
 
+// No roster species is on the wiki's strict-carnivore list (warg, ghoul,
+// vulture, wolverine: rimworldwiki.com/wiki/Animals); the dire wolf, our
+// ice-age hypercarnivore, is strict by our own design (FEED-001).
 var ecology = [numSpecies]Ecology{
 	Deer:             {Diet: Herbivore, Core: in(tf, bf, ts), Marginal: in(cb)},
 	TimberWolf:       {Diet: Carnivore, Core: in(tf, bf), Marginal: in(cb, tu)},
@@ -153,7 +162,7 @@ var ecology = [numSpecies]Ecology{
 	RedFox:           {Diet: Omnivore, Core: in(tf, bf), Marginal: in(as, tu), Nocturnal: true},
 	Snowhare:         {Diet: Herbivore, Core: in(tu, bf, cb)},
 	Squirrel:         {Diet: Herbivore, Core: in(tf, bf)},
-	DireWolf:         {Diet: Carnivore, Core: in(tu), Marginal: in(bf)},
+	DireWolf:         {Diet: StrictCarnivore, Core: in(tu), Marginal: in(bf)},
 	WildBoar:         {Diet: Omnivore, Core: in(tf, ts), Marginal: in(rf)},
 	YorkshireTerrier: {Diet: Omnivore},
 	Cassowary:        {Diet: Omnivore, Core: in(rf, ps), Eggs: FertileEggs},
@@ -463,18 +472,74 @@ const (
 )
 
 // FeedValue is what one item of k is worth to an animal of diet d before
-// its size (Meal): raw plant food and straw for plant eaters, raw meat for
-// meat eaters; 0 when it won't eat it.
+// its size (Meal); 0 when it won't eat it. The diet table follows the wiki
+// (FEED-001, ENG-003): kibble and pemmican feed every diet but strict
+// carnivores; meals and rations every diet but strict carnivores and tree
+// eaters; raw vegetables and berries plant and tree eaters; straw plant
+// eaters; raw meat meat eaters. Milk, eggs and medicine feed no animal.
 func FeedValue(d Diet, k item.Kind) int {
 	switch {
-	case k == item.Straw && d.Plants():
-		return HayFood
-	case k == item.Meat && d.Meat():
-		return k.Nutrition()
-	case d.Plants() && PlantFeed(k):
-		return k.Nutrition()
+	case d == NoDiet || d > StrictCarnivore:
+		return 0
+	case k == item.Straw:
+		if d.Plants() {
+			return HayFood
+		}
+	case k == item.Meat:
+		if d.Meat() {
+			return k.Nutrition()
+		}
+	case k == item.Kibble || k == item.Pemmican:
+		if d != StrictCarnivore {
+			return k.Nutrition()
+		}
+	case FoodTier(k) == TierMeal:
+		if d != StrictCarnivore && d != Dendrovore {
+			return k.Nutrition()
+		}
+	case PlantFeed(k):
+		if d.Plants() || d == Dendrovore {
+			return k.Nutrition()
+		}
 	}
 	return 0
+}
+
+// Tier orders a tame animal's food (FEED-001): it eats animal feed first,
+// a meal only when no feed is in reach.
+type Tier uint8
+
+const (
+	TierFeed Tier = iota // kibble, straw, raw food, pemmican, plants, carcasses, prey
+	TierMeal             // meals and packaged rations: the colonists' food
+)
+
+// FoodTier is item kind k's tier.
+func FoodTier(k item.Kind) Tier {
+	switch k {
+	case item.Meal, item.FineMeal, item.LavishMeal, item.SurvivalMeal, item.Food:
+		return TierMeal
+	}
+	return TierFeed
+}
+
+// Prepared reports food made in a kitchen or at a bench (meals, rations,
+// pemmican, kibble): a wild animal never takes it.
+func Prepared(k item.Kind) bool {
+	return FoodTier(k) == TierMeal || k == item.Kibble || k == item.Pemmican
+}
+
+// Made is what prepared food diet d eats, for the inspector: "kibble,
+// pemmican and meals", "kibble and pemmican" (tree eaters) or "" (strict
+// carnivores and the needless).
+func (d Diet) Made() string {
+	switch {
+	case FeedValue(d, item.Meal) > 0:
+		return "kibble, pemmican and meals"
+	case FeedValue(d, item.Kibble) > 0:
+		return "kibble and pemmican"
+	}
+	return ""
 }
 
 // PlantFeed reports raw plant food an animal eats (berries and raw
@@ -485,6 +550,22 @@ func PlantFeed(k item.Kind) bool {
 		return true
 	}
 	return false
+}
+
+// Starving search (FEED-001, original tuning): below StarveSearch a tame
+// animal looks for food across its whole allowed area or pen, past
+// FeedRadius; it stops once it has eaten or its food is back above
+// StarveSearchEnd. FarSearch is that band: was is whether it searched far
+// last time.
+const (
+	StarveSearch    = Full * 15 / 100
+	StarveSearchEnd = Full * 25 / 100
+)
+
+// FarSearch reports a tame animal with food searching far (hysteresis
+// between StarveSearch and StarveSearchEnd).
+func FarSearch(food int, was bool) bool {
+	return food < StarveSearch || was && food < StarveSearchEnd
 }
 
 // CarcassFood is a corpse of species s as a meal (its meat).

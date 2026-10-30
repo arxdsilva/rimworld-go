@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -192,6 +193,21 @@ func AnimalDietLine(an game.AnimalView) string {
 		return ""
 	}
 	return "Diet: " + an.Diet
+}
+
+// AnimalFeedLine is the prepared food a tame animal eats besides its
+// diet (FEED-001): "Also eats kibble, pemmican and meals" (meals only
+// when no feed is in reach), "Also eats kibble and pemmican" (tree
+// eaters), or "Eats no kibble or meals" (strict carnivores).
+func AnimalFeedLine(an game.AnimalView) string {
+	s, ok := animal.ParseSpecies(an.Species)
+	if !an.Tame || !ok || an.Diet == "" {
+		return ""
+	}
+	if made := animal.EcologyOf(s).Diet.Made(); made != "" {
+		return "Also eats " + made
+	}
+	return "Eats no kibble or meals"
 }
 
 // animalHuntLine is the note under a tame predator's diet (PLAY-017).

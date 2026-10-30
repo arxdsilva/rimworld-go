@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -185,52 +186,18 @@ func (g *Game) animalPathQuery(tame, phase bool) pathing.Query {
 	return c.q
 }
 
-// fenceReachable returns, while fences stand, a filter of the cells an
-// animal standing at pos could walk to (or stand beside, for cells it
-// cannot enter); nil when there are no fences (everything is a
-// candidate, as before fences existed).
+// fenceReachable returns, while fences stand, a filter of the cells a
+// wild animal standing at pos could walk to (or stand beside, for cells
+// it cannot enter); nil when there are no fences. Tame animals' food
+// search filters by reach always (findTameFeed, FEED-001).
 func (g *Game) fenceReachable(a *animal.State, pos Position) func(x, y int) bool {
 	f := g.fences()
 	if f.n == 0 {
-		return nil
-	}
-	if !g.grid.InBounds(pos.X, pos.Y) {
 		return nil
 	}
 	l := region.Wild // livestock (rope.go) feed inside their pen, like wild animals behind fences
 	if a.Tame && !animal.RosterOf(a.Species).Penned {
 		l = region.Tame
 	}
-	m := g.regionsNow()
-	w, h := g.grid.Width(), g.grid.Height()
-	own := m.Label(l, pos.X, pos.Y)
-	if own < 0 {
-		// standing on a fence cell (built around it): any neighbour's area
-		for _, d := range stepDirs {
-			if lb := m.Label(l, pos.X+d[0], pos.Y+d[1]); lb >= 0 {
-				own = lb
-				break
-			}
-		}
-	}
-	if own < 0 {
-		return func(int, int) bool { return false } // boxed in: nothing in reach
-	}
-	return func(x, y int) bool {
-		if x < 0 || y < 0 || x >= w || y >= h {
-			return false
-		}
-		if lb := m.Label(l, x, y); lb >= 0 {
-			return lb == own
-		}
-		if f.cells[y*w+x] != fenceNone {
-			return false // food on a fence cell is behind it
-		}
-		for _, d := range stepDirs { // a tree or trough: eaten from beside
-			if m.Label(l, x+d[0], y+d[1]) == own {
-				return true
-			}
-		}
-		return false
-	}
+	return forage.Reach(g.regionsNow(), l, pos.X, pos.Y, g.grid.Width(), g.grid.Height(), f.cells)
 }

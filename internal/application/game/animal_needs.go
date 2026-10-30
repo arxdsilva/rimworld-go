@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -8,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/region"
 )
 
 // Animal needs and the behaviour state machine (SIM-024, plan 2.3). Food
@@ -83,6 +85,9 @@ func (g *Game) CropRaids() []CropRaidView {
 }
 
 func (g *Game) pruneCropRaids(now uint64) {
+	if now%animal.DecideEvery == 0 { // FEED-001: tame animals' feeding memory (forage)
+		g.wl.Forage.Prune(now, func(id entity.EntityID) bool { return g.animals.Ref(id) != nil })
+	}
 	if len(g.wl.CropRaids) == 0 {
 		return
 	}
@@ -198,7 +203,7 @@ func (g *Game) decideAnimal(id entity.EntityID, a *animal.State, pos Position, n
 func (g *Game) nothingToEat(id entity.EntityID, a *animal.State, pos Position, now uint64) {
 	def := animal.DefOf(a.Species)
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
-	hunter := def.Predator || animal.EcologyOf(a.Species).Diet == animal.Carnivore
+	hunter := def.Predator || animal.EcologyOf(a.Species).Diet.MeatOnly()
 	if !a.Tame && hunter && a.Food < animal.FeedStart && !badlyHurt(*a) && now >= a.FleeUntil && g.grown(*a, now) { // T3 (never while hurt: T10; the young don't hunt)
 		if prey := g.findPrey(id, pos, def); prey != 0 {
 			a.Mode, a.Target, a.HuntSince = animal.Attack, prey, now
@@ -362,9 +367,15 @@ func (g *Game) pickFeed(id entity.EntityID, a *animal.State, pos Position, now u
 		}
 		return false
 	}
+	// a starving search (FEED-001) reaches the whole map, or a penned
+	// animal's pen and the troughs beside it
+	far := max(pos.X, g.grid.Width()-1-pos.X, pos.Y, g.grid.Height()-1-pos.Y)
 	if m, c := g.penAt(pos.X, pos.Y); m != 0 { // pens.go
+		if penned(a) {
+			far = min(far, max(pos.X-c.minX, c.maxX-pos.X, pos.Y-c.minY, c.maxY-pos.Y)+1)
+		}
 		inPen := func(x, y int) bool { return g.inPenCells(c, x, y) }
-		if g.tameMeal(id, a, pos, diet, inPen, now) {
+		if g.tameMeal(id, a, pos, diet, inPen, far, now) {
 			return true
 		}
 		if t, ok := g.penTrough(a, m, pos, diet); ok { // trough_feed.go
@@ -375,22 +386,22 @@ func (g *Game) pickFeed(id entity.EntityID, a *animal.State, pos Position, now u
 	if !penned(a) {
 		allow = func(x, y int) bool { return g.inArea(id, x, y) } // areas.go: an area animal eats inside it
 	}
-	return g.tameMeal(id, a, pos, diet, allow, now)
+	return g.tameMeal(id, a, pos, diet, allow, far, now)
 }
 
 // tameMeal sets a tame animal off for the meal findTameFeed picks: it
 // walks to food (holding a stack it will eat against others), or hunts.
-func (g *Game) tameMeal(id entity.EntityID, a *animal.State, pos Position, diet animal.Diet, allow func(x, y int) bool, now uint64) bool {
-	b := g.findTameFeed(id, a, pos, diet, allow, now)
+func (g *Game) tameMeal(id entity.EntityID, a *animal.State, pos Position, diet animal.Diet, allow func(x, y int) bool, far int, now uint64) bool {
+	b := g.findTameFeed(id, a, pos, diet, allow, far, now)
 	switch {
-	case !b.ok:
+	case !b.OK:
 		return false
-	case b.prey != 0:
-		a.Mode, a.Target, a.HuntSince = animal.Attack, b.prey, now
+	case b.Prey != 0:
+		a.Mode, a.Target, a.HuntSince = animal.Attack, b.Prey, now
 		a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
 		return true
 	}
-	g.startFeed(a, b.t, now)
+	g.startFeed(a, b.T, now)
 	g.syncFeedClaim(id, a)
 	return true
 }
@@ -450,7 +461,7 @@ func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow f
 			switch {
 			case st.Kind == item.CorpseAnimal && diet.Meat() && animal.Species(st.Animal) != a.Species && !animal.IsMech(animal.Species(st.Animal)):
 				carcass.offer(animal.FeedCarcass, iid, st.X, st.Y, d)
-			case !a.Tame && !st.Rotten() && animal.FeedValue(diet, st.Kind) > 0:
+			case !a.Tame && !st.Rotten() && !animal.Prepared(st.Kind) && animal.FeedValue(diet, st.Kind) > 0:
 				raw.offer(animal.FeedItem, iid, st.X, st.Y, d)
 			}
 			return true
@@ -505,123 +516,86 @@ func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow f
 
 // --- tame animals' food search (PLAY-017) --------------------------------
 
-// Tie ranks of a tame animal's meal sources (a full tie of distance and
-// meal goes to the lower rank, then the lower id).
-const (
-	rankCarcass = iota
-	rankItem
-	rankGrass
-	rankPlant
-	rankPrey
-)
-
-// tameBest is the best meal so far of a tame animal's food search: the
-// nearest, then the bigger meal (what it would eat of it, up to what it
-// needs), then the lower rank and id. prey is set for a hunt.
-type tameBest struct {
-	t          animal.FeedTarget
-	prey       entity.EntityID
-	d, v, rank int
-	id         entity.EntityID
-	ok         bool
-}
-
-func (b *tameBest) offer(t animal.FeedTarget, prey entity.EntityID, d, v, rank int) {
-	id := t.ID
-	if prey != 0 {
-		id = prey
-	}
-	if b.ok && (d > b.d || d == b.d && (v < b.v || v == b.v && (rank > b.rank || rank == b.rank && id >= b.id))) {
-		return
-	}
-	*b = tameBest{t: t, prey: prey, d: d, v: v, rank: rank, id: id, ok: true}
-}
-
-// within is the radius a source still has to be searched to: r, or the
-// best meal's distance once there is one (a tie may still win on size).
-func (b *tameBest) within(r int) int {
-	if b.ok {
-		return min(r, b.d)
-	}
-	return r
-}
-
-// findTameFeed is the meal a tame animal of diet picks within FeedRadius
-// of pos (only tiles allow accepts, when set; never behind a fence):
-//   - loose or stockpiled raw food its diet takes (animal.FeedValue:
-//     berries and raw vegetables, straw, raw meat; never meals, medicine,
-//     milk or eggs), not forbidden, rotten or held by anyone else;
-//   - carcasses (meat eaters), stockpiled ones too;
+// findTameFeed is the meal a tame animal of diet picks (forage.Pick):
+// animal feed first, a meal only when no feed is in reach (FEED-001),
+// within FeedRadius of pos, or far (its whole map or pen) while starving
+// (animal.FarSearch). Only tiles allow accepts (when set), the animal can
+// reach on its layer (doors and gates shut for unled livestock: rope.go
+// gatesOpen; never behind a fence) and it has not just given up on
+// (forage.Memory):
+//   - items its diet takes (animal.FeedValue: kibble, straw, raw food,
+//     pemmican; meals as the last resort), not forbidden, rotten or held
+//     by anyone else; carcasses (meat eaters); stockpiled ones too;
 //   - grass, and browse (berry bushes too) or living trees, never a plant
 //     in a growing zone or marked for harvest;
 //   - for a hungry, grown, unhurt tame predator, a wild animal to hunt
 //     (tamePrey) within its hunt radius.
 //
-// The nearest wins; a tie goes to the bigger meal. It draws no random
-// numbers and reads the food and creature indexes, never whole lists.
-func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, diet animal.Diet, allow func(x, y int) bool, now uint64) tameBest {
-	const r = animal.FeedRadius
-	reach := g.fenceReachable(a, pos) // fences.go: nothing behind a fence
-	ok := func(x, y int) bool { return (allow == nil || allow(x, y)) && (reach == nil || reach(x, y)) }
+// It draws no random numbers and reads the food and creature indexes,
+// never whole lists.
+func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, diet animal.Diet, allow func(x, y int) bool, far int, now uint64) forage.Best {
+	r := animal.FeedRadius
+	if g.wl.Forage.Searching(id, a.Food) {
+		r = max(r, far)
+	}
+	l, marks := region.Wild, g.wl.Forage.Marks(id)
+	if g.gatesOpen(id, a) {
+		l = region.Tame
+	}
+	reach := forage.Reach(g.regionsNow(), l, pos.X, pos.Y, g.grid.Width(), g.grid.Height(), g.fences().cells)
+	ok := func(x, y int) bool {
+		return (allow == nil || allow(x, y)) && (reach == nil || reach(x, y)) && !forage.Skips(marks, x, y, now)
+	}
 	need := max(1, animal.Full-a.Food)
 	meal := func(v int) int { return min(g.portion(a, now, animal.Meal(a.Species, v)), need) }
-	var b tameBest
+	var b forage.Pick
 	fx := g.food()
-	if diet.Meat() || diet.Plants() {
+	if diet != animal.NoDiet {
 		fx.items.each(pos.X, pos.Y, r, func(iid entity.EntityID) bool {
 			st, have := g.stacks.Get(iid)
-			if !have || st.Carrier != 0 || st.Qty <= 0 || st.Forbidden || !ok(st.X, st.Y) {
-				return true
-			}
-			d := weapon.Distance(pos.X, pos.Y, st.X, st.Y)
-			if d > r {
+			if !have || st.Carrier != 0 || st.Qty <= 0 || st.Forbidden || weapon.Distance(pos.X, pos.Y, st.X, st.Y) > r || !ok(st.X, st.Y) {
 				return true
 			}
 			if o, taken := g.reserve.EntityOwner(iid); taken && o != id {
 				return true
 			}
-			t := animal.FeedTarget{ID: iid, X: st.X, Y: st.Y}
+			d, t := weapon.Distance(pos.X, pos.Y, st.X, st.Y), animal.FeedTarget{ID: iid, X: st.X, Y: st.Y}
 			switch {
 			case st.Kind == item.CorpseAnimal && diet.Meat() && animal.Species(st.Animal) != a.Species && !animal.IsMech(animal.Species(st.Animal)):
 				t.Kind = animal.FeedCarcass
-				b.offer(t, 0, d, meal(min(animal.CarcassFood(animal.Species(st.Animal)), animal.Full)), rankCarcass)
+				b.Offer(animal.TierFeed, t, 0, d, meal(min(animal.CarcassFood(animal.Species(st.Animal)), animal.Full)), forage.RankCarcass)
 			case !st.Rotten() && animal.FeedValue(diet, st.Kind) > 0:
 				t.Kind = animal.FeedItem
 				per := g.portion(a, now, animal.Meal(a.Species, animal.FeedValue(diet, st.Kind)))
-				b.offer(t, 0, d, min(per*st.Qty, need), rankItem)
+				b.Offer(animal.FoodTier(st.Kind), t, 0, d, min(per*st.Qty, need), forage.RankItem)
 			}
 			return true
 		})
 	}
 	if diet.Plants() {
-		if x, y, found := g.nearestGrass(pos, b.within(r), ok); found {
-			b.offer(animal.FeedTarget{Kind: animal.FeedGrass, X: x, Y: y}, 0, weapon.Distance(pos.X, pos.Y, x, y),
-				meal(plant.GrassMeal(animal.GrazeFood, g.grassGrowthAt(x, y))), rankGrass)
+		if x, y, found := g.nearestGrass(pos, b.Within(r), ok); found {
+			b.Offer(animal.TierFeed, animal.FeedTarget{Kind: animal.FeedGrass, X: x, Y: y}, 0, weapon.Distance(pos.X, pos.Y, x, y),
+				meal(plant.GrassMeal(animal.GrazeFood, g.grassGrowthAt(x, y))), forage.RankGrass)
 		}
 	}
 	if diet.Plants() || diet == animal.Dendrovore {
-		pr := b.within(r)
+		pr := b.Within(r)
 		fx.plants.each(pos.X, pos.Y, pr, func(pid entity.EntityID) bool {
 			p, have := g.plants.Get(pid)
-			if !have || p.Zone || p.Designated || !ok(p.X, p.Y) {
+			if !have || p.Zone || p.Designated || weapon.Distance(pos.X, pos.Y, p.X, p.Y) > pr || !ok(p.X, p.Y) {
 				return true
 			}
-			d := weapon.Distance(pos.X, pos.Y, p.X, p.Y)
-			if d > pr {
-				return true
-			}
-			pd := plant.DefOf(p.Species)
-			t := animal.FeedTarget{ID: pid, X: p.X, Y: p.Y}
+			pd, t := plant.DefOf(p.Species), animal.FeedTarget{ID: pid, X: p.X, Y: p.Y}
 			switch {
 			case diet == animal.Dendrovore:
 				if pd.Trunk && p.Percent() >= 50 {
 					t.Kind = animal.FeedTree
-					b.offer(t, 0, d, meal(animal.TreeFood), rankPlant)
+					b.Offer(animal.TierFeed, t, 0, weapon.Distance(pos.X, pos.Y, p.X, p.Y), meal(animal.TreeFood), forage.RankPlant)
 				}
 			case pd.Browse && p.Percent() >= 30:
 				if _, zoned := g.zoneAt(p.X, p.Y); !zoned { // food.go: a growing zone's cell
 					t.Kind = animal.FeedPlant
-					b.offer(t, 0, d, meal(animal.BrowseFood), rankPlant)
+					b.Offer(animal.TierFeed, t, 0, weapon.Distance(pos.X, pos.Y, p.X, p.Y), meal(animal.BrowseFood), forage.RankPlant)
 				}
 			}
 			return true
@@ -630,17 +604,17 @@ func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, d
 	def := animal.DefOf(a.Species)
 	if def.Predator && a.Food < animal.FeedStart && !badlyHurt(*a) && now >= a.FleeUntil && g.grown(*a, now) &&
 		(a.Master == 0 || !g.drafted(entity.EntityID(a.Master))) { // not while its master is drafted
-		hr := b.within(min(r, huntRadius(def)))
+		hr := b.Within(min(r, huntRadius(def)))
 		prey, pp, found := g.nearestWhere(pos.X, pos.Y, hr, ckAnimal, func(o entity.EntityID, p Position) bool {
 			return ok(p.X, p.Y) && g.tamePrey(id, o, now) && g.reachesFoe(true, pos, p)
 		})
 		if found {
 			ps := g.animals.Ref(prey).Species
-			b.offer(animal.FeedTarget{}, prey, weapon.Distance(pos.X, pos.Y, pp.X, pp.Y),
-				meal(min(animal.CarcassFood(ps), animal.Full)), rankPrey)
+			b.Offer(animal.TierFeed, animal.FeedTarget{}, prey, weapon.Distance(pos.X, pos.Y, pp.X, pp.Y),
+				meal(min(animal.CarcassFood(ps), animal.Full)), forage.RankPrey)
 		}
 	}
-	return b
+	return b.Best()
 }
 
 // tamePrey: an animal a tame predator may hunt: a wild one it could take
@@ -693,16 +667,24 @@ func (g *Game) tameMayEat(a *animal.State, t animal.FeedTarget, st item.Stack) b
 }
 
 // tameFeedState is what a tame animal's view says it is eating:
-// "eating from the stockpile", "eating berries", or its mode.
-func (g *Game) tameFeedState(a animal.State) string {
+// "searching far for food" (starving, not there yet: FEED-001), "eating
+// a meal (no feed in reach)", "eating kibble", "eating hay", "eating
+// berries", "eating from the stockpile", or its mode.
+func (g *Game) tameFeedState(id entity.EntityID, a animal.State) string {
 	t := a.Feed
+	if p, _ := g.positions.Get(id); g.wl.Forage.IsFar(id) && weapon.Distance(p.X, p.Y, t.X, t.Y) > feedReach(t) {
+		return "searching far for food"
+	}
 	switch t.Kind {
 	case animal.FeedItem, animal.FeedCarcass:
-		if g.stockpiled(t.X, t.Y) {
+		st, ok := g.stacks.Get(t.ID)
+		switch {
+		case ok && t.Kind == animal.FeedItem && animal.FoodTier(st.Kind) == animal.TierMeal:
+			return "eating a meal (no feed in reach)"
+		case ok && (st.Kind == item.Kibble || st.Kind == item.Straw || st.Kind == item.Berries):
+			return "eating " + map[item.Kind]string{item.Kibble: "kibble", item.Straw: "hay", item.Berries: "berries"}[st.Kind]
+		case g.stockpiled(t.X, t.Y):
 			return "eating from the stockpile"
-		}
-		if st, ok := g.stacks.Get(t.ID); ok && st.Kind == item.Berries {
-			return "eating berries"
 		}
 	case animal.FeedPlant:
 		if p, ok := g.plants.Get(t.ID); ok && plant.DefOf(p.Species).Yields == item.Berries {
@@ -721,8 +703,9 @@ func (g *Game) tameFeedState(a animal.State) string {
 // in reach at all. That threshold is the hysteresis that keeps a grazer
 // off the tiles it just bared.
 func (g *Game) nearestGrass(pos Position, r int, ok func(x, y int) bool) (int, int, bool) {
+	cells, w, h := g.seedGrass().cells, g.grid.Width(), g.grid.Height() // hasGrass, unrolled: a starving search reads the whole map
 	try := func(x, y int) bool {
-		return g.grid.InBounds(x, y) && g.hasGrass(x, y) && g.grid.Walkable(x, y) && ok(x, y)
+		return uint(x) < uint(w) && uint(y) < uint(h) && cells[y*w+x] == 1 && g.grid.Walkable(x, y) && ok(x, y)
 	}
 	if g.grassSt().nGrowing == 0 { // every tile full: the nearest
 		var bx, by int
@@ -849,7 +832,10 @@ func (g *Game) feedStep(id entity.EntityID, a *animal.State, pos Position, now u
 	if weapon.Distance(pos.X, pos.Y, t.X, t.Y) > feedReach(t) {
 		switch {
 		case a.PathI < len(a.Path):
-		case now > a.NextFeed: // can't get there
+		case now > a.NextFeed: // can't get there: a tame one skips the spot a while (FEED-001)
+			if a.Tame {
+				g.wl.Forage.GaveUp(id, t.X, t.Y, now)
+			}
 			a.Mode, a.Feed, a.FeedLeft = animal.Wander, animal.FeedTarget{}, 0
 			a.NextFeed, a.NextDecide = now+animal.NoFoodRetry, now
 		case now >= a.RetryAt:
@@ -875,6 +861,7 @@ func (g *Game) feedStep(id entity.EntityID, a *animal.State, pos Position, now u
 // half the items.
 func (g *Game) eat(id entity.EntityID, a *animal.State, t animal.FeedTarget, now uint64) {
 	a.Feed, a.FeedLeft, a.NextDecide = animal.FeedTarget{}, 0, now
+	g.wl.Forage.Ate(id) // a far search ends with a meal (FEED-001)
 	diet := animal.EcologyOf(a.Species).Diet
 	gain := 0
 	switch t.Kind {
@@ -982,7 +969,9 @@ func (g *Game) fillAnimalNeeds(av *AnimalView, a animal.State) {
 			av.State = "hunting " + withArticle(p.Species.Label()) // "hunting a hare" (chase.go)
 		}
 	case a.Tame && a.Mode == animal.Feed:
-		av.State = g.tameFeedState(a) // "eating berries", "eating from the stockpile"
+		av.State = g.tameFeedState(av.ID, a) // "eating kibble", "eating from the stockpile"
+	case a.Tame && g.wl.Forage.IsFar(av.ID):
+		av.State = "searching far for food" // starving, nothing found yet (FEED-001)
 	}
 	av.Food, av.Rest = a.Food*100/animal.Full, a.Rest*100/animal.Full
 	if !a.HasSex || animal.NeedsFree(a.Species) {

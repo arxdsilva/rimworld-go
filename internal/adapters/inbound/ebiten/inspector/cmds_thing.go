@@ -211,6 +211,7 @@ func (a Animal) AnimalPaneLines(an game.AnimalView) []string {
 	add(AnimalPregLine(an))
 	add(AnimalDietLine(an))
 	add(AnimalHuntLine(an))
+	add(AnimalFeedLine(an)) // FEED-001
 	add(animalPenLine(an))
 	for _, r := range AnimalBondRows(an) {
 		add(r)
