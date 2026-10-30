@@ -96,8 +96,8 @@ func (r *Beds) SleepIn(id entity.EntityID) bool {
 		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || b.Forbidden || care.IsMedicalBed(b) { // prison beds: prisoners only
 			continue
 		}
-		if !r.h.AreaAllows(id, b.X, b.Y) {
-			continue // a bed outside the allowed area
+		if !r.h.AreaAllows(id, b.X, b.Y) || r.h.HeldByOther(id, bid) {
+			continue // a bed outside the allowed area, or one a carrier reserved for a patient (RES-1)
 		}
 		d := pathing.Dist(x, y, b.X, b.Y)
 		if b.SlotOf(uint64(id)) >= 0 {

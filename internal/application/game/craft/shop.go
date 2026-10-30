@@ -32,7 +32,7 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 		if !ok {
 			continue
 		}
-		if owner, taken := h.Owner(bid); taken && owner != id {
+		if owner, taken := h.Claims().EntityOwner(bid); taken && owner != id {
 			continue
 		}
 		if h.Postponed(id, bid) {
@@ -73,6 +73,9 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 				_, spot, _ = construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 				spotOK = true
 			}
+			if owner, held := h.Claims().TileOwner(spot[0], spot[1]); held && owner != id {
+				break // RES-1: another worker holds the work spot (a bench sharing it)
+			}
 			rec, ok := s.plan(id, bl, d, spot)
 			if !ok {
 				s.bills.list[bid][i].SearchAt = h.Now() + IngredientRetry
@@ -112,8 +115,9 @@ func (s *Shop) workerOK(id entity.EntityID, bl recipe.Bill, d recipe.Def) bool {
 // around the work spot (a gather-ingredients job, PRD-1).
 func (s *Shop) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]int) (job.Record, bool) {
 	if len(d.Inputs) == 0 {
-		if sid, st := s.h.Ingredient(id, d.Input); sid != 0 && fits(bl, st, spot) {
-			return job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y}, true
+		if sid, st := s.h.Ingredient(id, d.Input); sid != 0 && s.p.fits(bl, st, spot) {
+			free := s.h.Claims().FreeFor(id, sid, st.Qty) // RES-1: Count is the part the job claims
+			return job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y, Count: d.Input.Take(free)}, true
 		}
 	}
 	picks, ok := s.p.plan(id, bl, d, spot, &s.buf)
@@ -121,7 +125,7 @@ func (s *Shop) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]in
 		return job.Record{}, false
 	}
 	if len(picks) == 1 && len(d.Inputs) == 0 {
-		return job.Record{Kind: job.Bill, Target: picks[0].id, TX: picks[0].x, TY: picks[0].y}, true
+		return job.Record{Kind: job.Bill, Target: picks[0].id, TX: picks[0].x, TY: picks[0].y, Count: picks[0].take}, true
 	}
 	route := make([]entity.EntityID, 0, 2*len(picks))
 	for _, p := range picks {
@@ -131,9 +135,11 @@ func (s *Shop) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]in
 		Route: route, Count: len(route)}, true
 }
 
-// start starts bill job rec for pawn id and reserves the bench and every
-// stack a gathering takes from. A gathering that can't reach its first
-// stack puts the bench off (SIM-027), as a plain bill job's start does.
+// start starts bill job rec for pawn id and reserves the bench, its work
+// spot and the planned count of every stack a gathering takes from (the
+// job's start claims its first stack). A gathering that can't reach its
+// first stack puts the bench off (SIM-027), as a plain bill job's start
+// does.
 func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
 	h := s.h
 	if !h.StartJob(id, rec) {
@@ -142,9 +148,13 @@ func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
 		}
 		return false
 	}
-	h.Claim(id, rec.Dest)
-	for i := 2; i < rec.Count; i += 2 {
-		h.Claim(id, rec.Route[i])
+	cl := h.Claims()
+	cl.TryEntity(id, rec.Dest)
+	cl.TryTile(id, rec.DestX, rec.DestY)
+	for i := 2; rec.Kind == job.HaulIngredients && i+1 < rec.Count; i += 2 {
+		if st, ok := h.Stack(rec.Route[i]); ok {
+			cl.TryCount(id, rec.Route[i], int(rec.Route[i+1]), st.Qty)
+		}
 	}
 	return true
 }
@@ -240,11 +250,14 @@ func (s *Shop) fetch(id entity.EntityID, j job.Record, d recipe.Def) {
 		s.fail(id, j, job.TargetGone)
 		return
 	}
-	take := d.Input.Take(st.Qty)
+	// RES-1: never the part another pawn claimed
+	take := min(d.Input.Take(st.Qty), h.Claims().FreeFor(id, j.Target, st.Qty))
 	if d.Ferment { // PRD-4: no more than the barrel takes
 		take = min(take, max(1, s.drying.barrelRoom(j.Dest)))
 	}
-	j.Carry = h.Carry(id, j.Target, take)
+	if j.Carry = h.Carry(id, j.Target, take); j.Carry != j.Target {
+		h.Claims().ReleaseEntity(id, j.Target) // picked up: the rest of the stack is free
+	}
 	path, ok := h.PathTo(id, j.DestX, j.DestY)
 	if !ok {
 		s.fail(id, j, job.Unreachable)

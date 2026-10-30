@@ -170,6 +170,7 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 		add(moving)
 	}
 	add(defenceLines(b)...) // cmds_defence.go (DEF-3, PRD-3)
+	add(storageLines(a, b)...)
 	add(a.bedLines(b)...)
 	add(bedStatLines(b)...)
 	add(a.troughLines(b)...)

@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/haul"
+	"rimworld-go/internal/application/game/store"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -32,6 +33,7 @@ type haulState struct {
 	storedAt map[entity.EntityID]uint64
 	cands    []haul.Cand // HAUL-002 scratch (planGather): never saved
 	picks    []haul.Pick
+	store    store.Store // STO-2: storage buildings, urgent marks, the paste dispenser (game/store)
 }
 
 func (g *Game) exportIncoming() map[entity.EntityID]int { return g.haul.incoming }
@@ -123,8 +125,8 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 			continue
 		}
 		st := *sp // a candidate (the loop only reads)
-		if _, taken := g.reserve.EntityOwner(iid); taken {
-			continue
+		if st.Qty = g.reserve.FreeFor(id, iid, sp.Qty); st.Qty <= 0 {
+			continue // RES-1: a delivery takes what other pawns haven't claimed
 		}
 		if g.postponedFor(id, job.Haul, iid, 0, 0) {
 			continue // SIM-027: out of reach or blocked lately
@@ -197,7 +199,7 @@ func (g *Game) routeFrom(sid entity.EntityID, st item.Stack, first entity.Entity
 	rec := job.Record{Kind: job.Haul, Target: sid, TX: st.X, TY: st.Y, Dest: fid0, DestX: fr0.X, DestY: fr0.Y}
 	take := min(st.Qty, item.CarryLimit)
 	if take > sum {
-		if sx, sy, ok := g.stockpileCell(st.Kind, lx, ly); ok {
+		if sx, sy, ok := g.stockpileCell(st, lx, ly); ok {
 			rec.SpareX, rec.SpareY, rec.HasSpare = sx, sy, true
 		} else {
 			take = sum // nowhere to store the rest: just what is needed
@@ -402,7 +404,7 @@ func (g *Game) storeLeftover(id entity.EntityID, j job.Record, st item.Stack) {
 	if !j.HasSpare || x != j.SpareX || y != j.SpareY || !g.spareTakes(st, x, y) {
 		// no spare, out of reach or no longer taking it: the nearest cell
 		// that does (the reserved spare itself is never re-picked)
-		if cx, cy, ok := g.stockpileCell(st.Kind, x, y); ok && g.reserve.TryTile(id, cx, cy) {
+		if cx, cy, ok := g.stockpileCell(st, x, y); ok && g.reserve.TryTile(id, cx, cy) {
 			if path, ok := g.pathTo(id, cx, cy); ok && len(path) > 0 {
 				j.SpareX, j.SpareY, j.HasSpare = cx, cy, true
 				j.Dest, j.DestX, j.DestY = 0, cx, cy
@@ -421,7 +423,7 @@ func (g *Game) storeLeftover(id entity.EntityID, j job.Record, st item.Stack) {
 // spareTakes: the stockpile cell (x, y) still takes stack st (the zone
 // allows it, and the tile is empty or holds the same kind with room).
 func (g *Game) spareTakes(st item.Stack, x, y int) bool {
-	if !g.inMatchingStockpile(item.Stack{Kind: st.Kind, X: x, Y: y}) {
+	if z, ok := g.storageAt(x, y); !ok || !z.AllowsStack(st) { // STO-2: the special filters too
 		return false
 	}
 	oid := g.itemAt(x, y)

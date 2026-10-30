@@ -18,8 +18,8 @@ func allKinds() []item.Kind {
 	return out
 }
 
-// TestFilterTreeFilesEveryStorableKind: every kind but human corpses and
-// bones sits under exactly one category, categories precede their
+// TestFilterTreeFilesEveryStorableKind: every kind sits under exactly
+// one category (STO-2: human corpses and bones too), categories precede their
 // children, and each category's Kinds is the union of what lies under it.
 func TestFilterTreeFilesEveryStorableKind(t *testing.T) {
 	t.Parallel()
@@ -31,9 +31,6 @@ func TestFilterTreeFilesEveryStorableKind(t *testing.T) {
 	}
 	for _, k := range allKinds() {
 		want := 1
-		if k == item.CorpseHuman || k == item.Bones {
-			want = 0
-		}
 		if seen[k] != want || Storable(k) != (want == 1) {
 			t.Errorf("%s filed %d times (storable %v), want %d", k, seen[k], Storable(k), want)
 		}
@@ -64,7 +61,7 @@ func TestFilterTreeFilesEveryStorableKind(t *testing.T) {
 			t.Errorf("%s holds %d kinds, its subtree %d", n.Path, n.Kinds.Len(), under.Len())
 		}
 	}
-	if set, ok := Resolve("Food"); !ok || !set.Has(item.FineMeal) || !set.Has(item.Kibble) || set.Has(item.Wood) {
+	if set, ok := Resolve("Foods"); !ok || !set.Has(item.FineMeal) || !set.Has(item.Kibble) || set.Has(item.Wood) {
 		t.Fatal("Food resolves to the food kinds")
 	}
 	if set, ok := Resolve("wood"); !ok || set != filterOf(item.Wood) {
@@ -73,8 +70,11 @@ func TestFilterTreeFilesEveryStorableKind(t *testing.T) {
 	if _, ok := Resolve("Nonsense"); ok {
 		t.Fatal("an unknown node resolves")
 	}
-	if _, ok := Resolve("human corpse"); ok {
-		t.Fatal("an unstorable kind resolves")
+	if set, ok := Resolve(Root); !ok || set != sets.storable {
+		t.Fatal("the root resolves to every storable kind")
+	}
+	if depth := slices.MaxFunc(tree, func(a, b Node) int { return a.Depth - b.Depth }).Depth; depth != 3 {
+		t.Fatalf("the tree is %d deep, want 3 (Foods/Raw food/Meat/meat)", depth)
 	}
 }
 
@@ -137,10 +137,10 @@ func TestSetAllowedAndNames(t *testing.T) {
 	t.Parallel()
 	z := Zone{Kind: KindStockpile, Food: true, Wood: true, Stone: true}
 	before := z.Effective().Names()
-	if !slices.Contains(before, "Materials/Wood") || !slices.Contains(before, "Food") || slices.Contains(before, "wood") {
+	if !slices.Contains(before, "Raw resources/Wood") || !slices.Contains(before, "Foods") || slices.Contains(before, "wood") {
 		t.Fatalf("a new stockpile lists %v", before)
 	}
-	wood, _ := Resolve("Materials/Wood")
+	wood, _ := Resolve("Raw resources/Wood")
 	z.SetAllowed(wood, false)
 	if !z.Custom || z.Allows(item.Wood) || !z.Allows(item.Steel) || !z.Allows(item.Meal) {
 		t.Fatalf("after forbidding wood: %+v", z)
@@ -151,18 +151,21 @@ func TestSetAllowedAndNames(t *testing.T) {
 		}
 	}
 	steel, _ := Resolve("steel")
-	metals, _ := Resolve("Materials/Metals")
+	metals, _ := Resolve("Raw resources/Metals")
 	z.SetAllowed(metals, false)
 	z.SetAllowed(steel, true)
 	names := z.Effective().Names()
-	if !slices.Contains(names, "steel") || slices.Contains(names, "Materials/Metals") || slices.Contains(names, "gold") {
+	if !slices.Contains(names, "steel") || slices.Contains(names, "Raw resources/Metals") || slices.Contains(names, "gold") {
 		t.Fatalf("one metal allowed: %v", names)
 	}
-	none, _ := Resolve("Food")
+	none, _ := Resolve("Foods")
 	z.SetAllowed(none, true)
-	z.SetAllowed(filterOf(item.CorpseHuman), true) // never storable
 	if z.Allows(item.CorpseHuman) {
-		t.Fatal("human corpses stay out")
+		t.Fatal("a legacy stockpile's switches never take human corpses")
+	}
+	z.SetAllowed(filterOf(item.CorpseHuman), true) // STO-2: storable now
+	if !z.Allows(item.CorpseHuman) {
+		t.Fatal("human corpses can be allowed")
 	}
 	// paste copies filter, specials and priority
 	var dst Zone
@@ -185,8 +188,12 @@ func TestSetAllowedAndNames(t *testing.T) {
 func TestSpecialFilters(t *testing.T) {
 	t.Parallel()
 	z := Zone{Kind: KindStockpile, Food: true, Wood: true, Stone: true}
-	if got := z.Special.Names(); !slices.Equal(got, SpecialNames()) {
-		t.Fatalf("default specials %v", got)
+	var all []string
+	for _, tg := range Toggles() {
+		all = append(all, tg.Name)
+	}
+	if got := z.Special.Names(); len(got) != len(Toggles()) || !slices.Equal(got[:2], SpecialNames()) {
+		t.Fatalf("default specials %v, want every toggle %v", got, all)
 	}
 	rotten := item.Stack{Kind: item.Meat, Qty: 1, Rot: item.Meat.ShelfTicks()}
 	tainted := item.Stack{Kind: item.Parka, Qty: 1, Of: 9}
@@ -208,7 +215,7 @@ func TestSpecialFilters(t *testing.T) {
 	if !z.AllowsStack(item.Stack{Kind: item.Wood, Qty: 5}) || !z.AllowsStack(item.Stack{Kind: item.Parka, Qty: 1}) {
 		t.Fatal("no hit points or no quality: the ranges don't apply")
 	}
-	if got := z.Special.Names(); !slices.Equal(got, []string{"hp 50-100%", "quality 3-6"}) {
+	if got := z.Special.Names(); !slices.Equal(got[len(got)-2:], []string{"hp 50-100%", "quality 3-6"}) || slices.Contains(got, "allow rotten") {
 		t.Fatalf("names %v", got)
 	}
 	z.Special = z.Special.Set(SpecialHP, true, -5, 200).Set(SpecialQuality, true, 0, 9).Set(numSpecials, true, 1, 1)
@@ -256,7 +263,7 @@ func TestShelfZones(t *testing.T) {
 func TestRowsAndShelfDefaults(t *testing.T) {
 	t.Parallel()
 	z := Zone{Kind: KindStockpile, Food: true, Wood: true, Stone: true}
-	metals, _ := Resolve("Materials/Metals")
+	metals, _ := Resolve("Raw resources/Metals")
 	z.SetAllowed(metals, false)
 	z.SetAllowed(filterOf(item.Gold), true)
 	rows := Rows(append(z.Effective().Names(), "Nonsense"))
@@ -267,9 +274,10 @@ func TestRowsAndShelfDefaults(t *testing.T) {
 	for _, r := range rows {
 		state[r.Path] = r
 	}
-	if !state["gold"].On || state["steel"].On || !state["Materials/Metals"].Partial || !state["Materials"].Partial ||
-		!state["Food"].On || state["Food"].Partial || state["Food/Meals"].Depth != 1 || !state["meal"].Leaf {
-		t.Fatalf("rows: %+v %+v %+v", state["gold"], state["Materials/Metals"], state["Food"])
+	if !state["gold"].On || state["steel"].On || !state["Raw resources/Metals"].Partial || !state["Raw resources"].Partial ||
+		!state["Foods"].On || state["Foods"].Partial || state["Foods/Meals"].Depth != 1 || !state["meal"].Leaf ||
+		state["Foods/Raw food/Meat"].Depth != 2 || state["meat"].Depth != 3 {
+		t.Fatalf("rows: %+v %+v %+v", state["gold"], state["Raw resources/Metals"], state["Foods"])
 	}
 	sh := NewShelf()
 	if sh.Kind != KindShelf || !sh.Hidden || sh.Priority != PriorityPreferred || !sh.Custom ||

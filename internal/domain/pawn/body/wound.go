@@ -12,6 +12,10 @@ const (
 	Scratch
 	Burn
 	Surgical
+	// CBT-1 (append only): a point's wound and a gunshot (an arrow
+	// stabs), both bleeding as a cut does. wiki: Injury
+	Stab
+	Gunshot
 )
 
 // scarDmg is the residual damage a scar keeps.

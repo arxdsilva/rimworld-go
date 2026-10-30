@@ -106,6 +106,9 @@ func (h restClaims) Partner(id entity.EntityID) entity.EntityID {
 
 func (h restClaims) Reachable(id entity.EntityID, x, y int) bool { return h.g.reachable(id, x, y) }
 func (h restClaims) ReserveTile(id entity.EntityID, x, y int)    { h.g.reserve.TryTile(id, x, y) }
+func (h restClaims) HeldByOther(id, b entity.EntityID) bool {
+	return h.g.reserve.FreeFor(id, b, 1) == 0
+}
 func (h restClaims) TileFree(id entity.EntityID, x, y int) bool {
 	if !h.g.grid.Walkable(x, y) || h.g.bedCovering(x, y) {
 		return false

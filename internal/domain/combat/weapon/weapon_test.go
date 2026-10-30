@@ -1,6 +1,7 @@
 package weapon
 
 import (
+	"math"
 	"testing"
 
 	"rimworld-go/internal/domain/combat/attack"
@@ -128,6 +129,31 @@ func TestForItem(t *testing.T) {
 		item.RocketLauncher: RocketLauncher, item.ChargeLance: ChargeLance, item.Ikwa: Ikwa, item.ShieldBelt: Fists} {
 		if ForItem(k) != want {
 			t.Errorf("ForItem(%v) = %v", k, ForItem(k))
+		}
+	}
+}
+
+// TestEuclideanReach (CBT-2): a diagonal reaches as far as a straight
+// line; the wiki's x.9 range ends a range.
+func TestEuclideanReach(t *testing.T) {
+	t.Parallel()
+	r := DefOf(Rifle) // 36.9 tiles
+	if !Reaches(r, 36, 0) || Reaches(r, 37, 0) || !Reaches(r, 0, -36) {
+		t.Fatal("straight range")
+	}
+	if !Reaches(r, 26, 26) || Reaches(r, 27, 27) { // 36.8 and 38.2 tiles
+		t.Fatal("diagonal range is the straight one")
+	}
+	if Distance(0, 0, 27, 27) != 27 || Range(0, 0, 27, 27) != 38 || Range(0, 0, 3, 4) != 5 || Range(1, 1, 1, 1) != 0 || Range(0, 0, 1, 1) != 1 {
+		t.Fatal("Chebyshev distance and straight range")
+	}
+	k := DefOf(Knife)
+	if !Reaches(k, 1, 1) || !Reaches(k, -1, 0) || Reaches(k, 2, 0) || Reaches(k, 2, 1) || !ReachesAt(k, 5, 5, 6, 6) {
+		t.Fatal("melee reaches the eight tiles around")
+	}
+	for i := 0; i <= 200; i++ {
+		if got, want := isqrt(i), int(math.Sqrt(float64(i))); got != want {
+			t.Fatalf("isqrt(%d) = %d, want %d", i, got, want)
 		}
 	}
 }

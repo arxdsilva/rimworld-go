@@ -67,8 +67,8 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 	a.Hunger = animal.DefOf(animal.Ridgewolf).HungerTicks
 	g.animals.Set(wolf, a)
 
-	for i := 0; i < 10 && g.VitalOf(victim).Injury == 0; i++ {
-		g.Step(100) // the bait may wander off; the wolf runs it down
+	for i := 0; i < 30 && g.VitalOf(victim).Injury == 0; i++ {
+		g.Step(100) // the bait runs; the wolf runs it down (CBT-2: it hits 62 %, the bait may dodge)
 	}
 	if v := g.VitalOf(victim); v.Injury == 0 {
 		a, _ := g.animals.Get(wolf)
@@ -214,10 +214,12 @@ func TestBigStacksHaulInLoadsAndTopUp(t *testing.T) {
 	if _, err := g.SpawnNamedPawn(2, 4, "Hauler"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := g.SpawnStack(item.Wood, 900, 3, 4); err != nil {
+	// STO-2: wood stacks to 75 (wiki), so 140 loose and 10 stored fill
+	// exactly two stockpile cells when every load tops up first
+	if _, err := g.SpawnStack(item.Wood, 140, 3, 4); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := g.SpawnStack(item.Wood, 100, 12, 2); err != nil { // already stored
+	if _, err := g.SpawnStack(item.Wood, 10, 12, 2); err != nil { // already stored
 		t.Fatal(err)
 	}
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 12, Y: 2, X2: 13, Y2: 3})
@@ -236,24 +238,24 @@ func TestBigStacksHaulInLoadsAndTopUp(t *testing.T) {
 				stored += it.Qty
 			}
 		}
-		if stored == 1000 {
+		if stored == 150 {
 			break
 		}
 	}
-	if maxCarried == 0 || maxCarried > item.CarryLimit {
-		t.Fatalf("hauls go in loads of at most %d, saw %d", item.CarryLimit, maxCarried)
+	if maxCarried == 0 || maxCarried > min(item.CarryLimit, item.Wood.StackLimit()) {
+		t.Fatalf("hauls go in loads of at most %d, saw %d", item.Wood.StackLimit(), maxCarried)
 	}
 	total, stacks := 0, 0
 	for _, it := range g.World().Items {
 		if it.Kind == "wood" {
 			total += it.Qty
 			stacks++
-			if it.Qty > item.StackLimit {
+			if it.Qty > item.Wood.StackLimit() {
 				t.Fatalf("stack over the limit: %d", it.Qty)
 			}
 		}
 	}
-	if total != 1000 {
+	if total != 150 {
 		t.Fatalf("no wood lost or created: %d", total)
 	}
 	if stacks > 2 {

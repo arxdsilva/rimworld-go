@@ -1,0 +1,9 @@
+# STO-2/3 art: nutrient paste (the dispenser's tray and the paste meal,
+# families/paste.py) and the dispenser's green ready lamp. Original colours.
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+version: 1
+materials:
+  paste:         {light: "#d3d0a2", base: "#b8b583", shadow: "#8f8c62"}
+  paste_tray:    {light: "#a3acb0", base: "#899296", shadow: "#666e73"}
+emissive:
+  paste_ready_glow: "#b8f28a"

@@ -51,8 +51,8 @@ func (b *Bills) Import(m map[entity.EntityID][]recipe.Bill) {
 }
 
 // Apply runs a bill command (AddBill, SetBill, RemoveBill; PRD-1's
-// ConfigureBill, SetBillIngredient, ReorderBill in settings.go) on the
-// bench at (c.X, c.Y).
+// ConfigureBill, SetBillIngredient, ReorderBill and RES-1's
+// SetStorageSource in settings.go) on the bench at (c.X, c.Y).
 func (b *Bills) Apply(c command.Command) {
 	bid, bench, ok := b.benchAt(c.X, c.Y)
 	if !ok {
@@ -86,7 +86,7 @@ func (b *Bills) Apply(c command.Command) {
 			return
 		}
 		bills = append(bills[:c.Index:c.Index], bills[c.Index+1:]...)
-	case command.ConfigureBill, command.SetBillIngredient, command.ReorderBill:
+	case command.ConfigureBill, command.SetBillIngredient, command.ReorderBill, command.SetStorageSource:
 		if c.Index < 0 || c.Index >= len(bills) {
 			return
 		}

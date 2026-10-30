@@ -245,6 +245,8 @@ func (g *Game) afterEat(id entity.EntityID, st item.Stack) {
 		g.remember(id, mood.AteMeal)
 	case k.Raw():
 		g.remember(id, mood.AteRaw)
+	case k == item.NutrientPasteMeal: // STO-2
+		g.remember(id, mood.AtePaste)
 	}
 	pos, _ := g.positions.Get(id)
 	if g.nextToTable(pos.X, pos.Y) {

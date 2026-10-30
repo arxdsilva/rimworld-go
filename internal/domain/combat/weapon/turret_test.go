@@ -21,8 +21,12 @@ func TestTurretGuns(t *testing.T) {
 		sl.MinRange != 11 || sl.Burst != 1 || sl.Bands.Long.Acc != 950 {
 		t.Fatalf("slug turret %+v", sl)
 	}
-	if InRange(ac, 7) || !InRange(ac, 8) || !InRange(ac, 32) || InRange(ac, 33) || InRange(ac, 0) {
+	// CBT-2: the band is the wiki's 8.9..32.9 tiles, straight-line
+	if InRange(ac, 8) || !InRange(ac, 9) || !InRange(ac, 32) || InRange(ac, 33) || InRange(ac, 0) {
 		t.Fatal("autocannon range band")
+	}
+	if Reaches(ac, 6, 6) || !Reaches(ac, 7, 7) || !Reaches(ac, 23, 23) || Reaches(ac, 24, 24) {
+		t.Fatal("autocannon band on the diagonal")
 	}
 	if !InRange(DefOf(Rifle), 0) {
 		t.Fatal("no minimum range: point blank is in range")
@@ -50,7 +54,7 @@ func TestMortarShells(t *testing.T) {
 	if _, ok := ForShell(item.Steel); ok {
 		t.Fatal("steel is no shell")
 	}
-	if InRange(DefOf(MortarHE), 28) || !InRange(DefOf(MortarHE), 29) {
+	if InRange(DefOf(MortarHE), 29) || !InRange(DefOf(MortarHE), 30) {
 		t.Fatal("mortar minimum range")
 	}
 }

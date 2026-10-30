@@ -26,6 +26,9 @@ type fakeHost struct {
 	pawns        []entity.EntityID
 	jobs         map[entity.EntityID]job.Record
 	claims       map[entity.EntityID]entity.EntityID
+	counts       map[entity.EntityID]map[entity.EntityID]int // fake_claims_test.go (RES-1)
+	tiles        map[[2]int]entity.EntityID
+	sources      map[uint64][4]int // a bill source's rectangle (x1, y1, x2, y2)
 	unreach      bool
 	postp        map[[2]entity.EntityID]bool
 	locked       map[recipe.ID]bool
@@ -232,17 +235,6 @@ func (f *fakeHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) 
 	return []pathing.Point{{X: x, Y: y}}, true
 }
 func (f *fakeHost) Reachable(id entity.EntityID, x, y int) bool { return !f.unreach }
-func (f *fakeHost) Owner(target entity.EntityID) (entity.EntityID, bool) {
-	o, ok := f.claims[target]
-	return o, ok
-}
-func (f *fakeHost) Claim(owner, target entity.EntityID) bool {
-	if o, ok := f.claims[target]; ok && o != owner {
-		return false
-	}
-	f.claims[target] = owner
-	return true
-}
 
 func (f *fakeHost) SkillLevel(id entity.EntityID, sk skill.ID) uint8 {
 	if f.noSkill {

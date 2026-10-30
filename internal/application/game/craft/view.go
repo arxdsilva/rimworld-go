@@ -53,9 +53,13 @@ type BillView struct {
 	// allowed (0, "": anyone); UnpauseAt the resume level as set (0: the
 	// default; ResumeAt is the one used); Inputs the ingredients; and
 	// Ingredients every kind they take, allowed or forbidden.
-	Store              uint8
-	StoreLabel         string
-	StoreZone          uint64
+	Store      uint8
+	StoreLabel string
+	StoreZone  uint64
+	// Source is the storage zone or group the bill takes its ingredients
+	// from (RES-1; 0: anywhere in its radius), SourceName its name.
+	Source             uint64
+	SourceName         string
 	Radius             int
 	SkillMin, SkillMax uint8
 	Worker             uint64
@@ -180,6 +184,9 @@ func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 		}
 		if bl.Worker != 0 {
 			v.WorkerName = b.h.Name(bl.Worker)
+		}
+		if v.Source = bl.Source; bl.Source != 0 {
+			v.SourceName = b.h.SourceName(bl.Source)
 		}
 		for k := item.Kind(0); k.String() != "unknown"; k++ { // as d.InputKinds, allocating nothing
 			if d.Accepts(k) {

@@ -630,6 +630,10 @@ type Bill struct {
 	// taken (0: any material the recipe takes and Forbid allows). The
 	// allowed-stuff list is Forbid over the recipe's materials.
 	Stuff item.Kind
+	// Source (RES-1, "take ingredients from stockpile") is the storage
+	// zone or storage group the bill takes its ingredients from, besides
+	// the radius (0: anywhere).
+	Source uint64
 }
 
 // StoreMode is where a finished bill's product goes.

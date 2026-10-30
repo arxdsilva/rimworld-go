@@ -126,3 +126,34 @@ func TestOutfitViewsAndBands(t *testing.T) {
 		t.Fatal("day fit")
 	}
 }
+
+// TestHitWear (CBT-1): absorbed hits wear a garment a hit point per four
+// damage, through ratty and tattered, until it is destroyed.
+func TestHitWear(t *testing.T) {
+	t.Parallel()
+	var o Outfit
+	o.On[item.Body] = Piece{Kind: item.FlakVest}
+	o.SetForced(item.Body, true)
+	mx := o.On[item.Body].MaxHP()
+	if o.HitWear(item.Body, 10) != 0 || o.On[item.Body].Wear != 3 { // 10/4 rounds to 3
+		t.Fatalf("wear %d", o.On[item.Body].Wear)
+	}
+	if o.HitWear(item.Body, 1) != 0 || o.On[item.Body].Wear != 3 || o.HitWear(item.Head, 40) != 0 {
+		t.Fatal("a scratch or a bare slot wears nothing")
+	}
+	for o.On[item.Body].HP()*100 > item.RattyPct*mx {
+		o.HitWear(item.Body, 40)
+	}
+	if v := o.Views()[0]; !v.Ratty && !v.Tattered {
+		t.Fatalf("worn down but not ratty: %+v", v)
+	}
+	var gone item.Kind
+	for range mx {
+		if gone = o.HitWear(item.Body, 40); gone != 0 {
+			break
+		}
+	}
+	if gone != item.FlakVest || o.On[item.Body].Kind != 0 || o.IsForced(item.Body) {
+		t.Fatalf("destroyed %v outfit %+v", gone, o)
+	}
+}

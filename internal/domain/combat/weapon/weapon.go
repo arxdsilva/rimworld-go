@@ -81,8 +81,8 @@ const (
 // kinds after it are building and mechanoid guns).
 const lastCatalogue = EMPLauncher
 
-// Def is one attack profile. Range is in tiles (Chebyshev); melee
-// weapons reach adjacent tiles only. Cooldown is ticks between attacks.
+// Def is one attack profile. Range is in tiles, straight-line (Reaches);
+// melee weapons reach adjacent tiles only. Cooldown is ticks between attacks.
 type Def struct {
 	Name     string
 	Ranged   bool
@@ -298,16 +298,33 @@ func HitChance(d Def, dist int) int {
 	return c
 }
 
-// InRange reports whether a target dist tiles away (Chebyshev) can be
-// attacked. Line of sight is the caller's concern.
-func InRange(d Def, dist int) bool {
-	if dist < 1 {
+// InRange reports whether a target dist tiles away in a straight line
+// can be attacked (Reaches with the target dist tiles off along an axis).
+// Line of sight is the caller's concern.
+func InRange(d Def, dist int) bool { return Reaches(d, dist, 0) }
+
+// Reaches reports whether a target dx, dy tiles away lies within d's
+// range by straight-line (Euclidean) distance, so a diagonal reaches as
+// far as a straight line (CBT-2). The wiki's ranges end at x.9 tiles
+// (Range is the x, floored), and a minimum range is the x.9 the target
+// must lie at or beyond. wiki: Weapons (range)
+func Reaches(d Def, dx, dy int) bool {
+	sq := 100 * (dx*dx + dy*dy) // tenths of a tile, squared
+	if sq == 0 {
 		return d.MinRange == 0
 	}
-	return dist <= d.Range && dist >= d.MinRange
+	if r := 10*d.Range + 9; sq > r*r {
+		return false
+	}
+	m := 10*d.MinRange + 9
+	return d.MinRange == 0 || sq >= m*m
 }
 
-// Distance is the Chebyshev tile distance used for ranges.
+// ReachesAt is Reaches from (ax, ay) to (bx, by).
+func ReachesAt(d Def, ax, ay, bx, by int) bool { return Reaches(d, bx-ax, by-ay) }
+
+// Distance is the Chebyshev tile distance (a step, diagonal or straight,
+// is one tile): reach and nearness checks outside weapon ranges.
 func Distance(ax, ay, bx, by int) int {
 	dx, dy := ax-bx, ay-by
 	if dx < 0 {
@@ -320,6 +337,29 @@ func Distance(ax, ay, bx, by int) int {
 		return dx
 	}
 	return dy
+}
+
+// Range is the straight-line (Euclidean) distance between two tiles,
+// rounded to the nearest tile: what a shot's accuracy falls off with
+// (CBT-2). Integer arithmetic only.
+func Range(ax, ay, bx, by int) int {
+	dx, dy := ax-bx, ay-by
+	sq := 4 * (dx*dx + dy*dy) // round(sqrt(n)) = floor((sqrt(4n) + 1) / 2)
+	return (isqrt(sq) + 1) / 2
+}
+
+// isqrt is the floor of the square root of n >= 0.
+func isqrt(n int) int {
+	if n < 2 {
+		return n
+	}
+	x := n
+	y := (x + 1) / 2
+	for y < x {
+		x = y
+		y = (x + n/x) / 2
+	}
+	return x
 }
 
 // Legacy reports whether d uses the pre-DEF-1 linear accuracy formula.

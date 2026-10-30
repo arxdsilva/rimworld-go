@@ -360,7 +360,7 @@ func TestPawnCommandsDeclarationOrderAndHotkeys(t *testing.T) {
 			t.Errorf("command %s needs a label and a tooltip body", c.ID)
 		}
 	}
-	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", inspectorpkg.PrisonerCapture, inspectorpkg.PrisonerArrest}
+	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", inspectorpkg.PrisonerCapture, inspectorpkg.PrisonerArrest, inspectorpkg.DropWeaponID} // Drop weapon (STO-3) comes last, only for an armed colonist, so the hotkeys before it keep their order
 	if !slices.Equal(ids, want) {
 		t.Fatalf("commands %v, want %v", ids, want)
 	}

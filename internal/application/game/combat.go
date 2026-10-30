@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/hit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/attack"
@@ -50,18 +51,21 @@ func (g *Game) standingPawn(id entity.EntityID) bool {
 	return ok && v.Status == health.Alive && g.isPawn(id)
 }
 
-// hurt applies damage to an animal or a colonist.
+// hurt applies damage to an animal or a colonist (a bruise; hits come
+// through hurtHit, body.go).
 func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
-	g.hurtAs(target, dmg, by, woundByAttacker, health.CauseInjury)
+	g.hurtAs(target, dmg, by, body.Bruise, health.CauseInjury)
 }
-
-// woundByAttacker: hurtAs picks the wound kind from the attacker's weapon.
-const woundByAttacker body.WoundKind = 255
 
 // hurtAs is hurt with a wound kind for humanlikes (fire.go: burns) and the
 // cause of death should it kill.
 func (g *Game) hurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind body.WoundKind, cause health.Cause) {
-	now := uint64(g.clock.Now())
+	g.harm(target, hit.Blow{Dmg: dmg, Kind: kind}, by, cause)
+}
+
+// harm deals blow bl (body.go, game/hit) to target.
+func (g *Game) harm(target entity.EntityID, bl hit.Blow, by entity.EntityID, cause health.Cause) {
+	now, dmg, kind := uint64(g.clock.Now()), bl.Dmg, bl.Kind
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
 		g.woundAnimal(target, &a, dmg, kind, by, now) // animal_health.go (MED-09): a wound on its body
@@ -85,10 +89,7 @@ func (g *Game) hurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind 
 	}
 	b := g.ensureBody(target, &v) // body.go: a humanlike takes a wound on a part
 	if b != nil && dmg > 0 {
-		if kind == woundByAttacker {
-			kind = g.woundKindBy(by)
-		}
-		g.woundBody(b, dmg, kind, now)
+		g.woundBody(b, bl, now)
 		g.bodyChanged(target, b, &v) // Injury = the body's damage
 	} else {
 		v.Injury += dmg
@@ -114,6 +115,7 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) { g.dieBy(id, cause, 
 func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.EntityID) {
 	g.stainDeath(id) // stains.go
 	g.interrupt(id, job.Cancelled)
+	g.reserve.ReleaseTarget(id)   // RES-1: claims on the dead pawn end
 	g.care.Doctor.PatientDied(id) // care/rescue.go (SIM-063): a carrier drops a patient that died
 	g.releaseBed(id)
 	delete(g.draft, id)

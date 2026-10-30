@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/combat"
-	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -12,18 +11,19 @@ import (
 	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
-	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/internal/domain/world/weather"
 )
 
 // combatHost implements combat.Host (combat/deps.go) over the game: one
@@ -46,7 +46,7 @@ var _ combat.Host = combatHost{}
 func newCombat(g *Game) *combat.Combat {
 	h := combatHost{combatCreatures{g}, combatRosters{g}, combatGround{g}, combatSkills{g}, combatJobs{g}, combatHarm{g}, combatEvents{g}, combatDice{g}}
 	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g},
-		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}})
+		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}})
 }
 
 type combatCreatures struct{ g *Game }
@@ -61,18 +61,6 @@ func (h combatCreatures) Weapon(id entity.EntityID) weapon.Kind          { retur
 func (h combatCreatures) StandingPawn(id entity.EntityID) bool           { return h.g.standingPawn(id) }
 func (h combatCreatures) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h combatCreatures) Hostile(a animal.State) bool                    { return h.g.hostile(a) }
-func (h combatCreatures) Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer {
-	if a, ok := h.g.animals.Get(id); ok {
-		if m, mech := animal.MechOf(a.Species); mech {
-			return append(buf, m.Layer()) // DEF-4: a mechanoid's plating
-		}
-	}
-	w := h.g.apparel[id] // apparel.go: the outer body layer first; each piece by its stuff and quality
-	for _, p := range [...]craft.Piece{w.On[item.Body], w.On[item.Legs], w.On[item.Head]} {
-		buf = armor.AppendPiece(buf, p.Kind, p.Stuff, p.Quality)
-	}
-	return buf
-}
 
 type combatRosters struct{ g *Game }
 
@@ -80,6 +68,9 @@ func (h combatRosters) AnimalIDs() []entity.EntityID    { return h.g.animalIDs }
 func (h combatRosters) RaiderIDs() []entity.EntityID    { return h.g.raiderIDs }
 func (h combatRosters) Drafted(id entity.EntityID) bool { return h.g.drafted(id) }
 func (h combatRosters) Name(id entity.EntityID) string  { return h.g.name(id) }
+func (h combatRosters) Lying(id entity.EntityID) bool { // vital records are humanlikes'
+	return h.g.vital.Has(id) && h.g.vital.Ref(id).Status == health.Downed
+}
 
 // RaiderOn answers the threat scan's raider loop in one call (combat
 // defend.go ThreatTo): a raider on its feet with an attack job on id.
@@ -137,16 +128,14 @@ func (h combatGround) DigRock(x, y, dmg int) { h.g.raid.Rock.Dig(x, y, dmg) } //
 
 type combatSkills struct{ g *Game }
 
-func (h combatSkills) HitChance(id entity.EntityID, ranged bool, base int) int {
-	return h.g.hitChanceFor(id, ranged, base)
-}
+func (h combatSkills) Melee(id entity.EntityID) attack.Melee { return h.g.meleeOf(id) } // skills.go (CBT-2)
 func (h combatSkills) ShotAim(id entity.EntityID) (int, int) {
 	if a, ok := h.g.animals.Get(id); ok && animal.IsMech(a.Species) {
 		return attack.ShooterPerTile(animal.MechShootingSkill), 0 // DEF-4: wiki: Lancer (96 %)
 	}
 	return attack.ShooterPerTile(int(h.g.skillOf(id, skill.Shooting).Level)), 10 * int(h.g.statOf(id, stat.ShootAcc))
 }
-func (h combatSkills) Learn(id entity.EntityID, ranged bool) { h.g.combatLearn(id, ranged) }
+func (h combatSkills) Learn(id entity.EntityID, ranged bool, xp int) { h.g.combatLearn(id, ranged, xp) }
 func (h combatSkills) AimTicks(id entity.EntityID, cooldown int) int {
 	return h.g.aimTicksFor(id, cooldown)
 }
@@ -166,14 +155,12 @@ func (h combatJobs) ReleaseOwner(id entity.EntityID) { h.g.reserve.ReleaseOwner(
 
 type combatHarm struct{ g *Game }
 
-func (h combatHarm) Hurt(target entity.EntityID, dmg int, by entity.EntityID) {
-	up := h.g.standingPawn(target) && !h.g.isRaider(target)
-	h.g.hurt(target, dmg, by)
-	h.g.combat.Log.Down(target, up) // combat/log.go (DEF-4)
+func (h combatHarm) Absorb(target entity.EntityID, hit damage.Hit, roll func(int) int) armor.Landed {
+	return hits(h.g).Absorb(target, hit, roll) // body.go (CBT-1)
 }
-func (h combatHarm) HurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind body.WoundKind, cause health.Cause) {
+func (h combatHarm) HurtHit(target entity.EntityID, l armor.Landed, by entity.EntityID) {
 	up := h.g.standingPawn(target) && !h.g.isRaider(target)
-	h.g.hurtAs(target, dmg, by, kind, cause)
+	hits(h.g).HurtHit(target, l, by) // body.go (CBT-1)
 	h.g.combat.Log.Down(target, up)
 }
 func (h combatHarm) DamageBuilding(id entity.EntityID, dmg int) { h.g.damageBuilding(id, dmg) }
@@ -286,6 +273,8 @@ func (h combatField) Plant(x, y int) (plant.Species, bool, bool) {
 func (h combatField) Size() (int, int)          { return h.g.grid.Width(), h.g.grid.Height() }
 func (h combatField) DryWalkable(x, y int) bool { return h.g.dryWalkable(x, y) } // water.go
 func (h combatField) TileTaken(x, y int) bool   { _, taken := h.g.reserve.TileOwner(x, y); return taken }
+func (h combatField) Weather() weather.Kind     { return h.g.weather.Kind }
+func (h combatField) Roofed(x, y int) bool      { return h.g.roofAt(x, y).Roofed() }
 func (h combatField) AppendChunks(buf [][2]int) [][2]int {
 	for _, id := range h.g.itemIDs {
 		if st := h.g.stacks.Ref(id); st != nil && st.Carrier == 0 && item.IsChunk(st.Kind) {

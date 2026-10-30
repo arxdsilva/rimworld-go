@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/inventory"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -33,15 +34,24 @@ import (
 type Drafts struct {
 	h     Host
 	arms  Arms
+	draft Drafting // CBT-2: auto-undraft
 	shots *Shots
 	set   map[entity.EntityID]Draft // saved
 	queue []Throw                   // saved: orders waiting out the warmup
 }
 
-// Arms takes a colonist's spent weapon away.
+// Arms is a colonist's hands: what it wields.
 type Arms interface {
-	// Disarm leaves id unarmed (its last grenade thrown).
+	// Disarm leaves id unarmed (its last grenade thrown, a weapon put
+	// down).
 	Disarm(id entity.EntityID)
+	// Wielded is the item kind id wields (read only while it is armed:
+	// Creatures.Weapon is not fists); Wield puts kind k in its hands
+	// (CBT-2: its spare drawn).
+	Wielded(id entity.EntityID) item.Kind
+	Wield(id entity.EntityID, k item.Kind)
+	// DropAt puts n of kind k down on (x, y), the colony's.
+	DropAt(k item.Kind, n, x, y int)
 }
 
 // Draft is one colonist's drafted switches and its grenade belt. All
@@ -51,6 +61,12 @@ type Draft struct {
 	NoFire, Hold bool
 	// Grenades carried (0 with a grenade wielded from before belts: one).
 	Grenades int
+	// CBT-2 (append only): Spare is the weapon carried beside the one
+	// wielded (DropWeapon); QuietFrom the tick the colonist's quiet began
+	// (idle and drafted, no threat on the map) and IdleAt the last idle
+	// tick it was seen (the auto-undraft timer).
+	Spare             inventory.Slot
+	QuietFrom, IdleAt uint64
 }
 
 // DraftSave is one Draft on disk.
@@ -60,11 +76,13 @@ type DraftSave struct {
 }
 
 // Throw is a grenade order waiting out its warmup: colonist ID throws at
-// (X, Y) at tick At.
+// (X, Y) at tick At. Walk (CBT-2, append only): it is still walking into
+// range (At is set once it gets there).
 type Throw struct {
 	ID   entity.EntityID
 	X, Y int
 	At   uint64
+	Walk bool
 }
 
 // isGrenade reports a thrown grenade weapon.
@@ -173,9 +191,11 @@ func (d *Drafts) spend(id entity.EntityID, wk weapon.Kind) {
 }
 
 // Throw orders colonist id to throw a grenade at (x, y): it must carry
-// one and the cell lie within the grenade's range (wiki: Weapons, 12.9
-// tiles); it drops what it does and throws once the warmup is over. It
-// reports whether the order was taken.
+// one; it drops what it does and throws once the warmup is over. A cell
+// beyond the grenade's range (wiki: Weapons, 12.9 tiles) is walked
+// towards first (CBT-2: a forced move; the throw waits until it is in
+// range, and is dropped if another order replaces the walk). It reports
+// whether the order was taken.
 func (d *Drafts) Throw(id entity.EntityID, x, y int) bool {
 	h := d.h
 	px, py, ok := h.Pos(id)
@@ -184,17 +204,41 @@ func (d *Drafts) Throw(id entity.EntityID, x, y int) bool {
 		return false
 	}
 	def := weapon.DefOf(wk)
-	if !weapon.InRange(def, weapon.Distance(px, py, x, y)) {
-		h.Message(px, py, fmt.Sprintf("%s can't throw that far.", h.Name(id)))
-		return false
-	}
 	d.queue = slices.DeleteFunc(d.queue, func(t Throw) bool { return t.ID == id })
 	h.Interrupt(id, job.Cancelled)
+	if !weapon.ReachesAt(def, px, py, x, y) {
+		if !h.StartJob(id, job.Record{Kind: job.Move, TX: x, TY: y, Forced: true}) {
+			h.Message(px, py, fmt.Sprintf("%s can't get close enough to throw.", h.Name(id)))
+			return false
+		}
+		d.queue = append(d.queue, Throw{ID: id, X: x, Y: y, Walk: true})
+		return true
+	}
 	d.queue = append(d.queue, Throw{ID: id, X: x, Y: y, At: h.Now() + uint64(def.Warmup)})
 	return true
 }
 
-// phase throws the grenades whose warmup is over, in the order given.
+// walk advances a throw still walking into range: once there the walk
+// stops and the warmup starts; a walk another order replaced (or that
+// failed) drops the throw. It reports whether t is kept.
+func (d *Drafts) walk(t *Throw, now uint64) bool {
+	h := d.h
+	j, _ := h.Job(t.ID)
+	if j.Kind != job.Move || !j.Forced || j.TX != t.X || j.TY != t.Y || !j.Active() {
+		return false
+	}
+	px, py, ok := h.Pos(t.ID)
+	wk := h.Weapon(t.ID)
+	if !ok || !isGrenade(wk) || !weapon.ReachesAt(weapon.DefOf(wk), px, py, t.X, t.Y) {
+		return ok && isGrenade(wk)
+	}
+	h.Interrupt(t.ID, job.Cancelled) // in range: it stops and throws
+	t.Walk, t.At = false, now+uint64(weapon.DefOf(wk).Warmup)
+	return true
+}
+
+// phase throws the grenades whose warmup is over, in the order given, and
+// walks the others into range.
 func (d *Drafts) phase(now uint64) {
 	if len(d.queue) == 0 {
 		return
@@ -202,9 +246,14 @@ func (d *Drafts) phase(now uint64) {
 	keep := d.queue[:0]
 	var due []Throw
 	for _, t := range d.queue {
-		if t.At <= now {
+		switch {
+		case t.Walk:
+			if d.walk(&t, now) {
+				keep = append(keep, t)
+			}
+		case t.At <= now:
 			due = append(due, t)
-		} else {
+		default:
 			keep = append(keep, t)
 		}
 	}
@@ -224,8 +273,8 @@ func (d *Drafts) throw(t Throw) {
 		return
 	}
 	def := weapon.DefOf(wk)
-	dist := weapon.Distance(px, py, t.X, t.Y)
-	if !weapon.InRange(def, dist) {
+	dist := weapon.Range(px, py, t.X, t.Y)
+	if !weapon.ReachesAt(def, px, py, t.X, t.Y) {
 		return // it moved off
 	}
 	lx, ly := t.X, t.Y
@@ -255,6 +304,8 @@ func (d *Drafts) Apply(c command.Command) {
 		d.SetHold(id, c.Enabled)
 	case command.ThrowGrenade:
 		d.Throw(id, c.X, c.Y)
+	case command.DropWeapon:
+		d.DropWeapon(id, c.Enabled)
 	}
 }
 
@@ -280,4 +331,101 @@ func (d *Drafts) importDrafts(s []DraftSave, q []Throw) {
 	for _, v := range s {
 		d.put(v.ID, v.D)
 	}
+}
+
+// Auto-undraft (CBT-2). wiki: Drafting: a drafted colonist with no threat
+// on the map and no orders for AutoUndraft ticks is released. The quiet
+// starts over whenever the colonist has something to do (an order, an
+// attack it started itself) or a hostile is on the map (asked once in
+// threatEvery ticks, and again before the release); the release needs the whole stretch unbroken, and
+// nothing ever drafts a colonist again but the player, so it cannot flap.
+const (
+	AutoUndraft = 10_000
+	// threatEvery: original tuning (the wiki gives no cadence).
+	threatEvery = 60
+)
+
+// idle is drafted colonist id standing idle at now (Strikes.AutoEngage);
+// threat asks whether a hostile is on the map. It releases id from the
+// draft after AutoUndraft quiet ticks and reports that it did.
+func (d *Drafts) idle(id entity.EntityID, now uint64, threat func() bool) bool {
+	s := d.set[id]
+	switch {
+	case s.IdleAt+1 != now || s.QuietFrom == 0:
+		s.QuietFrom = now // busy since its last idle tick (or new): the quiet starts over
+	case (now+uint64(id))%threatEvery == 0 && threat():
+		s.QuietFrom = now
+	}
+	s.IdleAt = now
+	release := now-s.QuietFrom >= AutoUndraft && d.draft != nil
+	switch {
+	case release && threat(): // asked again at the end: a hostile just arrived
+		s.QuietFrom, release = now, false
+	case release:
+		s.QuietFrom, s.IdleAt = 0, 0
+	}
+	d.put(id, s)
+	if release {
+		d.draft.Undraft(id)
+	}
+	return release
+}
+
+// DropWeapon has colonist id let its weapon go (CBT-2, command
+// DropWeapon): on the ground where it stands (a grenade belt whole), then
+// it draws the spare weapon it carries, if any; with nothing wielded the
+// spare goes down instead. stow puts the wielded weapon in the spare slot
+// instead, drawing the spare it held (a swap). Raiders and animals take
+// no such order.
+func (d *Drafts) DropWeapon(id entity.EntityID, stow bool) {
+	h := d.h
+	x, y, ok := h.Pos(id)
+	if d.arms == nil || !ok || !h.StandingPawn(id) || h.StandingRaider(id) {
+		return
+	}
+	if _, beast := h.Animal(id); beast {
+		return
+	}
+	cur, armed := d.arms.Wielded(id), h.Weapon(id) != weapon.Fists
+	n := 0
+	if armed {
+		n = d.Drop(id, cur) // the belt is forgotten
+		d.arms.Disarm(id)
+	}
+	s := d.set[id]
+	spare := s.Spare
+	s.Spare = inventory.Slot{}
+	switch {
+	case armed && stow:
+		s.Spare.Put(cur, n)
+	case armed:
+		d.arms.DropAt(cur, n, x, y)
+	case !stow && !spare.Empty(): // unarmed: the spare goes down
+		d.arms.DropAt(spare.Kind, spare.Qty, x, y)
+		spare = inventory.Slot{}
+	}
+	d.put(id, s)
+	if k, q, ok := spare.Take(); ok {
+		d.arms.Wield(id, k)
+		d.belt(id, q, k)
+	}
+}
+
+// Spare is the weapon colonist id carries beside the one it wields (the
+// read model; ok false: none).
+func (d *Drafts) Spare(id entity.EntityID) (k item.Kind, qty int, ok bool) {
+	s := d.set[id].Spare
+	return s.Kind, s.Qty, !s.Empty()
+}
+
+// DropSpare puts colonist id's spare weapon down where it lies (it died).
+func (d *Drafts) DropSpare(id entity.EntityID) {
+	s := d.set[id]
+	x, y, ok := d.h.Pos(id)
+	if d.arms == nil || !ok || s.Spare.Empty() {
+		return
+	}
+	k, q, _ := s.Spare.Take()
+	d.put(id, s)
+	d.arms.DropAt(k, q, x, y)
 }

@@ -77,8 +77,14 @@ func TestCoverFacesTheShooter(t *testing.T) {
 	if c := s.Cover(18, 2, 10, 10); c != 0 {
 		t.Fatalf("diagonal shot from the north-east: nothing beside, got %d", c)
 	}
-	if c := s.Cover(2, 18, 10, 10); c != want {
-		t.Fatalf("diagonal shot from the south-west: the sandbags beside count, got %d", c)
+	if c := s.Cover(2, 18, 10, 10); c != want*cover.AngleFactor(2, 18, 10, 10, 9, 10)/1000 || c != want*400/1000 {
+		t.Fatalf("diagonal shot from the south-west: the sandbags beside count at 45 deg (40 %%), got %d", c)
+	}
+	if c := s.Cover(7, 10, 10, 10); c != want*cover.NearFactor/1000 {
+		t.Fatalf("one tile from the cover it holds two thirds, got %d", c)
+	}
+	if c := s.Cover(8, 10, 10, 10); c != want*cover.FrontFactor/1000 {
+		t.Fatalf("right in front of the cover it holds a third, got %d", c)
 	}
 }
 
@@ -115,7 +121,7 @@ func TestTrapsSpringAndRelay(t *testing.T) {
 	}
 	tr.Underfoot(nil)
 	tr.Underfoot([]entity.EntityID{9})
-	if tr.At(10, 5) != 0 || len(f.hurts) != 1 || f.hurts[0] != "9-32-0" || len(f.frames) != 1 || f.frames[0] != construction.SpikeTrap {
+	if tr.At(10, 5) != 0 || len(f.hurts) != 1 || f.hurts[0] != "9-32-0-stab" || len(f.frames) != 1 || f.frames[0] != construction.SpikeTrap {
 		t.Fatalf("sprung: hurts %v frames %v", f.hurts, f.frames)
 	}
 	if len(f.msgs) != 1 || f.msgs[0] != "A spike trap caught p9." {

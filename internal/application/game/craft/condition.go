@@ -149,7 +149,7 @@ func (c *Condition) wearOutfits(hour uint64) {
 
 // free reports a stack nobody holds reserved.
 func (c *Condition) free(id entity.EntityID) bool {
-	_, taken := c.h.Owner(id)
+	_, taken := c.h.Claims().EntityOwner(id)
 	return !taken
 }
 

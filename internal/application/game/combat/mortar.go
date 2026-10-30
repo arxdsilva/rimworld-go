@@ -200,7 +200,7 @@ func (m *Mortars) standDown(st *Mortar) {
 // inBand: (tx, ty) lies between the mortar's minimum and full range from
 // (x, y).
 func inBand(x, y, tx, ty int) bool {
-	return weapon.InRange(weapon.DefOf(weapon.MortarHE), weapon.Distance(x, y, tx, ty))
+	return weapon.ReachesAt(weapon.DefOf(weapon.MortarHE), x, y, tx, ty) // CBT-2: straight-line range
 }
 
 // aim is where mortar id aims now: its forced target in range, else the

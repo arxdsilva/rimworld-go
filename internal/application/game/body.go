@@ -5,8 +5,12 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/hit"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -26,8 +30,6 @@ import (
 // never g.rng. Saved as Bodies.
 
 const (
-	// maxSpill bounds how many parts one hit may spread over.
-	maxSpill = 8
 	// consciousRecover is the consciousness (permille) a pawn needs to be
 	// awake enough to talk to (a warden's visit).
 	consciousRecover = 300
@@ -52,111 +54,21 @@ func (g *Game) ensureBody(id entity.EntityID, v *health.Record) *body.Body {
 		b = &body.Body{}
 		g.bodies[id] = b
 	}
-	reconcileInjury(b, v.Injury, uint64(g.clock.Now()))
+	body.Reconcile(b, v.Injury, uint64(g.clock.Now()))
 	return b
 }
 
-// reconcileInjury makes b's damage match injury where wounds allow it.
-func reconcileInjury(b *body.Body, injury int, now uint64) {
-	d := b.Damage()
-	switch {
-	case injury > d:
-		b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: injury - d, Kind: body.Bruise, At: now})
-	case injury < d:
-		trimOpen(b, d-injury)
-	}
-}
-
-// trimOpen removes n points of open-wound damage, smallest wound first,
-// without scarring (an outside correction, not healing).
-func trimOpen(b *body.Body, n int) {
-	for n > 0 {
-		idx := -1
-		for i, w := range b.Wounds {
-			if !w.Permanent && (idx < 0 || w.Dmg < b.Wounds[idx].Dmg) {
-				idx = i
-			}
-		}
-		if idx < 0 {
-			return
-		}
-		w := &b.Wounds[idx]
-		if w.Dmg > n {
-			w.Dmg -= n
-			return
-		}
-		n -= w.Dmg
-		b.Wounds = slices.Delete(b.Wounds, idx, idx+1)
-	}
-}
-
-// partDmg is the wound damage on part p.
-func partDmg(b *body.Body, p body.Part) int {
-	n := 0
-	for _, w := range b.Wounds {
-		if w.Part == p {
-			n += w.Dmg
-		}
-	}
-	return n
-}
-
-// woundBody deals dmg of kind to b on parts picked by coverage. A part
-// whose loss would kill (a vital part, or since MED-05 the last organ of a
-// life capacity: body.LossKills) is never destroyed by a hit: what it
-// cannot take spills to the next pick, so the body's Damage rises by
-// exactly dmg and death still comes at health.MaxHP. Other parts may be
-// destroyed (lost).
-func (g *Game) woundBody(b *body.Body, dmg int, kind body.WoundKind, now uint64) {
+// woundBody deals bl to b on the body stream. A placed blow strikes its
+// part (body.Strike: overkill may destroy it, the brain and heart too,
+// and what the part cannot take is lost); any other is spread on parts
+// picked by coverage (body.Spread: death still comes at health.MaxHP).
+func (g *Game) woundBody(b *body.Body, bl hit.Blow, now uint64) {
 	rng := g.stream(streamBody)
-	left := dmg
-	for try := 0; left > 0 && try < maxSpill; try++ {
-		drawn := -1
-		roll := func(n int) int { // one draw, replayed so Hurt picks the same part
-			if drawn < 0 {
-				drawn = rng.IntN(n)
-			}
-			return drawn
-		}
-		p, ok := b.PickPart(roll)
-		if !ok {
-			break
-		}
-		hit := left
-		if room := body.DefOf(p).MaxHP - partDmg(b, p) - 1; hit > room && b.LossKills(p) {
-			if room <= 0 {
-				continue
-			}
-			hit = room
-		}
-		before := b.Damage()
-		b.Hurt(roll, hit, kind, now)
-		left -= b.Damage() - before
+	if bl.Placed {
+		body.Strike(b, bl.Part, bl.Dmg, bl.Kind, bl.Lo, bl.Hi, rng.IntN, now)
+		return
 	}
-	if left > 0 { // nothing left to take it: it all lands on the torso
-		b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: left, Kind: kind, At: now, Size: int32(left)})
-	}
-}
-
-// woundKindBy is the kind of wound attacker by deals (0: a trap, a burst
-// or a fixture, which bruise).
-func (g *Game) woundKindBy(by entity.EntityID) body.WoundKind {
-	if by == 0 {
-		return body.Bruise
-	}
-	wk := g.weaponOf(by)
-	if a, ok := g.animals.Get(by); ok {
-		wk = animal.DefOf(a.Species).Attack
-	}
-	switch wk {
-	case weapon.Knife, weapon.Spear, weapon.Rifle, weapon.Claw, weapon.Gore:
-		return body.Cut
-	case weapon.Bite:
-		return body.Bite
-	case weapon.Peck:
-		return body.Scratch
-	}
-	return body.Bruise
+	body.Spread(b, bl.Dmg, bl.Kind, rng.IntN, now)
 }
 
 // bodyKey is the capacities the stat sheet was built from: Moving,
@@ -367,7 +279,7 @@ func (g *Game) viewBody(id entity.EntityID) *body.Body {
 	}
 	b := &body.Body{}
 	if v, _ := g.vital.Get(id); v.Injury > 0 {
-		reconcileInjury(b, v.Injury, 0)
+		body.Reconcile(b, v.Injury, 0)
 	}
 	return b
 }
@@ -564,7 +476,7 @@ func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
 
 // woundKindLabels name body.WoundKind values for the Health tab.
 var woundKindLabels = [...]string{body.Cut: "cut", body.Bruise: "bruise", body.Bite: "bite", body.Scratch: "scratch",
-	body.Burn: "burn", body.Surgical: "surgical cut"}
+	body.Burn: "burn", body.Surgical: "surgical cut", body.Stab: "stab", body.Gunshot: "gunshot"}
 
 func woundKindLabel(k body.WoundKind) string {
 	if int(k) < len(woundKindLabels) {
@@ -716,4 +628,73 @@ func conditionTip(c body.Condition, d body.CondDef, cv ConditionView, tended boo
 		t += "\nWinning: immunity should build before it gets worse."
 	}
 	return t
+}
+
+// hits lands combat hits (game/hit, CBT-1) on g: a stateless value over
+// the adapters below (the stagger timer is the motion record's).
+func hits(g *Game) hit.Wounds { return hit.Wounds{B: hitBodies{g}, W: hitWardrobe{g}, H: hitHarm{g}} }
+
+// staggered reports id slowed by a stagger now (the read model).
+func staggered(g *Game, id entity.EntityID) bool {
+	m, _ := g.motion.Get(id)
+	return hit.Staggered(m.StaggerUntil, uint64(g.clock.Now()))
+}
+
+type hitBodies struct{ g *Game }
+
+func (h hitBodies) Body(id entity.EntityID) *body.Body {
+	v, ok := h.g.vital.Get(id)
+	if !ok || v.Status == health.Dead {
+		return nil
+	}
+	return h.g.ensureBody(id, &v)
+}
+func (h hitBodies) Plating(id entity.EntityID) (armor.Set, bool) {
+	if a, ok := h.g.animals.Get(id); ok {
+		if m, mech := animal.MechOf(a.Species); mech {
+			return m.Armor, true // DEF-4: a mechanoid's plating
+		}
+	}
+	return armor.Set{}, false
+}
+func (h hitBodies) Size(id entity.EntityID) int {
+	if a, ok := h.g.animals.Get(id); ok {
+		return combat.BodySize(a)
+	}
+	return 1000
+}
+func (h hitBodies) Roll(n int) int { return h.g.stream(streamBody).IntN(n) }
+
+type hitWardrobe struct{ g *Game }
+
+func (h hitWardrobe) Outfit(id entity.EntityID) craft.Outfit       { return h.g.apparel[id] }
+func (h hitWardrobe) SetOutfit(id entity.EntityID, o craft.Outfit) { h.g.apparel[id] = o }
+func (h hitWardrobe) Destroyed(id entity.EntityID, k item.Kind) {
+	pos, _ := h.g.positions.Get(id)
+	h.g.message(pos.X, pos.Y, "%s's %s was destroyed.", h.g.name(id), k)
+}
+
+type hitHarm struct{ g *Game }
+
+func (h hitHarm) Now() uint64 { return uint64(h.g.clock.Now()) }
+func (h hitHarm) Wound(id entity.EntityID, b hit.Blow, by entity.EntityID) {
+	h.g.harm(id, b, by, health.CauseInjury) // combat.go
+}
+func (h hitHarm) StaggerUntil(id entity.EntityID) uint64 {
+	m, _ := h.g.motion.Get(id)
+	return m.StaggerUntil
+}
+func (h hitHarm) SetStaggerUntil(id entity.EntityID, until uint64) {
+	m := h.g.motionOf(id)
+	m.StaggerUntil = until
+	h.g.motion.Set(id, m)
+}
+func (h hitHarm) Hold(id entity.EntityID, until uint64) {
+	m := h.g.motionOf(id)
+	m.NextMoveAt = max(m.NextMoveAt, until)
+	h.g.motion.Set(id, m)
+	if j, ok := h.g.jobs.Get(id); ok && (j.Kind == job.Attack || j.Kind == job.Hunt) {
+		j.WorkLeft = max(j.WorkLeft, int(until-h.Now()))
+		h.g.jobs.Set(id, j)
+	}
 }

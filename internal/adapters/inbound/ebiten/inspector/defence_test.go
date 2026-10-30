@@ -48,3 +48,34 @@ func TestDefenceCommandsToggle(t *testing.T) {
 		t.Errorf("wall buttons = %+v", got)
 	}
 }
+
+func TestDropWeaponCommand(t *testing.T) {
+	t.Parallel()
+	armed := dropWeaponCommand(game.PawnView{ID: 4, Status: "alive", Weapon: "rifle"})
+	if armed.Disabled || len(armed.Cmds) != 1 || armed.Cmds[0].Kind != command.DropWeapon || armed.Cmds[0].Pawn != 4 {
+		t.Errorf("armed = %+v", armed)
+	}
+	if c := dropWeaponCommand(game.PawnView{Status: "alive", Weapon: "fists"}); !c.Disabled {
+		t.Errorf("unarmed should be disabled: %+v", c)
+	}
+}
+
+func TestShelfUnlinkNeedsAGroup(t *testing.T) {
+	t.Parallel()
+	var a Building
+	b := game.BuildingView{ID: 9, Kind: "shelf"}
+	if c := unlinkCommand(a, b, game.ZoneView{}); !c.Disabled {
+		t.Errorf("alone: %+v", c)
+	}
+	c := unlinkCommand(a, b, game.ZoneView{Group: 2})
+	if c.Disabled || c.Cmds[0].Kind != command.UnlinkStorage || c.Cmds[0].Target != 9 {
+		t.Errorf("grouped: %+v", c)
+	}
+}
+
+func TestBillSourceIsZeroWithoutTheField(t *testing.T) {
+	t.Parallel()
+	if got := billSource(game.BillView{}); got != 0 {
+		t.Errorf("source = %d", got)
+	}
+}

@@ -285,7 +285,7 @@ func TestHoldPositionNeverChases(t *testing.T) {
 
 // TestGrenadeBelt: equipping takes the whole stack, a throw bursts at the
 // cell and spends one, the last leaves the colonist unarmed, and too far
-// is refused.
+// walks in first (CBT-2; the next order replaces the walk).
 func TestGrenadeBelt(t *testing.T) {
 	g, ada := def4Game(t, 40, 20, 10, 10)
 	sid, _ := g.SpawnStack(item.FragGrenades, 2, 11, 10)
@@ -297,8 +297,8 @@ func TestGrenadeBelt(t *testing.T) {
 		t.Fatal("the stack was taken whole")
 	}
 	g.draft[ada] = true
-	if g.combat.Drafts.Throw(ada, 30, 10) {
-		t.Fatal("a throw too far is refused")
+	if !g.combat.Drafts.Throw(ada, 30, 10) { // CBT-2: it walks into range first
+		t.Fatal("a throw too far walks in")
 	}
 	send(g, command.Command{Kind: command.ThrowGrenade, Pawn: uint64(ada), X: 16, Y: 10})
 	burst := false

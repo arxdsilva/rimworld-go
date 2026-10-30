@@ -102,6 +102,7 @@ func (g *Game) pickUpItem(id entity.EntityID, j *job.Record, accept func(item.Ki
 	} else {
 		carry := j.Dest
 		if st.Qty > 1 {
+			g.reserve.ReleaseEntity(id, j.Dest) // RES-1: picked up, the rest is free for other doctors
 			st.Qty--
 			g.putStack(j.Dest, st)
 			carry = g.entities.Next()

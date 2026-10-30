@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -262,19 +263,21 @@ func TestZoneSplitsWhenCut(t *testing.T) {
 }
 
 // TestDumpingZoneDefaults: the dumping stockpile tool paints a dump that
-// takes animal corpses and stone chunks only, on stockpile ground.
+// takes corpses (STO-2: human ones and bones too) and stone chunks only,
+// rotten ones included, on stockpile ground.
 func TestDumpingZoneDefaults(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	zoneCmd(g, command.DesignateStockpile, 2, 2, 4, 4, StockpileVariantDump)
 	v := zoneOwner(t, g, 3, 3)
-	if v.Kind != ZoneDump || !v.Corpses || !v.Chunks || v.Food || v.Wood || v.Stone || v.Priority != "Normal" {
+	if v.Kind != ZoneDump || !slices.Contains(v.Filter, "Corpses") || !slices.Contains(v.Filter, "Chunks") ||
+		!slices.Contains(v.Special, "allow rotten") || v.Priority != "Normal" {
 		t.Fatalf("dump %+v", v)
 	}
 	z, _ := g.zones.Zone(zone.ID(v.ID))
 	for k, want := range map[item.Kind]bool{
-		item.GraniteChunk: true, item.CorpseAnimal: true,
-		item.Wood: false, item.Steel: false, item.CorpseHuman: false, item.Bones: false, item.GraniteBlocks: false,
+		item.GraniteChunk: true, item.CorpseAnimal: true, item.CorpseHuman: true, item.Bones: true,
+		item.Wood: false, item.Steel: false, item.GraniteBlocks: false, item.Meal: false,
 	} {
 		if allows(z, k) != want {
 			t.Errorf("dump takes %v: %v, want %v", k, !want, want)
@@ -282,14 +285,14 @@ func TestDumpingZoneDefaults(t *testing.T) {
 	}
 	// a plain stockpile beside it stays apart and keeps its own filters
 	zoneCmd(g, command.DesignateStockpile, 5, 2, 6, 4, 0)
-	if s := zoneOwner(t, g, 5, 3); s.Kind != ZoneStockpile || s.ID == v.ID || !s.Food {
+	if s := zoneOwner(t, g, 5, 3); s.Kind != ZoneStockpile || s.ID == v.ID || !slices.Contains(s.Filter, "Foods") {
 		t.Fatalf("stockpile beside a dump: %+v", s)
 	}
 	// a chunk goes to the dump; wood to the stockpile
-	if x, _, ok := g.stockpileCell(item.GraniteChunk, 9, 3); !ok || x > 6 {
+	if x, _, ok := g.stockpileCell(item.Stack{Kind: item.GraniteChunk}, 9, 3); !ok || x > 6 {
 		t.Fatal("no cell for a chunk")
 	}
-	if x, _, ok := g.stockpileCell(item.Wood, 1, 3); !ok || x < 5 {
+	if x, _, ok := g.stockpileCell(item.Stack{Kind: item.Wood}, 1, 3); !ok || x < 5 {
 		t.Fatalf("wood goes to the stockpile, not the dump (x=%d)", x)
 	}
 	if g.ZoneRefusal(ZoneDump, 0, 3) != ZoneRefuseEdge {
@@ -310,7 +313,7 @@ func TestHaulPrefersHigherPriority(t *testing.T) {
 	if v := zoneOwner(t, g, 18, 2); v.Priority != "Critical" {
 		t.Fatalf("priority %q", v.Priority)
 	}
-	if x, _, ok := g.stockpileCell(item.Wood, 6, 3); !ok || x < 18 {
+	if x, _, ok := g.stockpileCell(item.Stack{Kind: item.Wood}, 6, 3); !ok || x < 18 {
 		t.Fatalf("the critical stockpile first, even far: x=%d", x)
 	}
 	if _, err := g.SpawnNamedPawn(2, 4, "Hauler"); err != nil {
@@ -456,7 +459,7 @@ func TestZoneSaveRoundTripPriorityAndDump(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := zoneOwner(t, h, 2, 2)
-	if v.Kind != ZoneDump || v.Priority != "Low" || !v.Corpses || !v.Chunks {
+	if v.Kind != ZoneDump || v.Priority != "Low" || !slices.Contains(v.Filter, "Corpses") || !slices.Contains(v.Filter, "Chunks") {
 		t.Fatalf("dump after load %+v", v)
 	}
 	if h.haul.storedAt[sid] != 7 {

@@ -49,6 +49,9 @@ type Items interface {
 // Moved records that a stack may have arrived on, or left, a cell.
 func (gr *Ground) Moved() { gr.gen++ }
 
+// Gen is Moved's count (read models cache on it, STO-2).
+func (gr *Ground) Gen() uint64 { return gr.gen }
+
 // Warm builds the lists now (no first-lookup spike after a load).
 func (gr *Ground) Warm(h Items) { gr.sync(h) }
 

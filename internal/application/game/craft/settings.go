@@ -27,6 +27,8 @@ func (b *Bills) applySetting(bid entity.EntityID, bills []recipe.Bill, c command
 	case command.ReorderBill:
 		b.reorder(bid, bills, c.Index, c.Index+c.Count)
 		return
+	case command.SetStorageSource: // RES-1: take ingredients only from this storage (0: anywhere)
+		bl.Source = c.Zone
 	}
 	bl.SearchAt = 0
 	bills[c.Index] = bl

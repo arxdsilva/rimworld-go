@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/architect"
@@ -93,7 +94,7 @@ func TestDumpingStockpileTool(t *testing.T) {
 	g.Step(1)
 	found := false
 	for _, z := range g.World().Zones {
-		if z.Kind == game.ZoneDump && len(z.Cells) == 6 && z.Corpses && z.Chunks {
+		if z.Kind == game.ZoneDump && len(z.Cells) == 6 && slices.Contains(z.Filter, "Corpses") && slices.Contains(z.Filter, "Chunks") {
 			found = true
 		}
 	}

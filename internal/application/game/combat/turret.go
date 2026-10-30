@@ -6,12 +6,11 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
-	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -305,7 +304,7 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 		a.Target, a.ReadyAt, a.SeenAt, tx, ty = s.ID, now+turretAimTicks, now, s.X, s.Y
 	}
 	a.Dir = aimFrame(x, y, tx, ty, a.Dir)
-	if a.SeenAt == now && now >= a.ReadyAt && weapon.InRange(d, weapon.Distance(x, y, tx, ty)) {
+	if a.SeenAt == now && now >= a.ReadyAt && weapon.ReachesAt(d, x, y, tx, ty) { // CBT-2: straight-line range
 		t.shot(id, k, wk, x, y, a.Target, tx, ty)
 		t.wear(id)
 		a.ShotAt, a.ReadyAt = now, now+uint64(d.Cooldown)
@@ -427,7 +426,7 @@ func (t *Turrets) Targetable(id entity.EntityID, now uint64) bool {
 // on target at (tx, ty): the hit chance is a ranged strike's (the sentry
 // gun's flat chance, a heavy gun's accuracy band, less the target's
 // cover), rolled on the defence stream. A heavy gun's hit goes through
-// armor. A hit is HurtAs with no attacker, so no animal or social reaction
+// armor. A hit is HurtHit with no attacker, so no animal or social reaction
 // ever points at a building; the turret is named in the target's log
 // instead.
 func (t *Turrets) shot(id entity.EntityID, k construction.Kind, wk weapon.Kind, fx, fy int, target entity.EntityID, tx, ty int) {
@@ -441,13 +440,11 @@ func (t *Turrets) shot(id entity.EntityID, k construction.Kind, wk weapon.Kind, 
 	} else {
 		hit = h.DefenseRoll(1000) < weapon.HitPermille(d, dist)*(1000-cov)/1000
 	}
-	dmg, wound := d.Damage, body.Cut
-	if hit && !d.Legacy() && t.st != nil {
-		res := t.st.armorRoll(target, d.DamageType, d.Damage, weapon.Penetration(d, d.Damage), h.DefenseRoll)
-		if dmg = res.Damage; res.Type == damage.Blunt {
-			wound = body.Bruise
-		}
+	var l armor.Landed
+	if hit { // CBT-1: the part, then the armor covering it (the sentry gun's legacy shot too)
+		l = h.Absorb(target, weapon.HitOf(wk, d), h.DefenseRoll)
 	}
+	dmg := l.Amount
 	now := h.Now()
 	tr := projectile.Trace{
 		FromX: fx, FromY: fy, ToX: tx, ToY: ty, Tick: now, Hit: hit,
@@ -468,7 +465,7 @@ func (t *Turrets) shot(id entity.EntityID, k construction.Kind, wk weapon.Kind, 
 	}
 	h.Hit(target, now, fx, fy, dmg)
 	h.Stain(target, fx, fy, tx, ty, dmg) // before the hurt, while the target exists
-	h.HurtAs(target, dmg, 0, wound, health.CauseInjury)
+	h.HurtHit(target, l, 0)
 }
 
 // Blast: turret b (already removed) blows up. Creatures within
@@ -489,7 +486,8 @@ func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 	slices.SortFunc(hit, func(p, q Seen) int { return cmp.Compare(p.ID, q.ID) })
 	for _, s := range hit {
 		if _, _, ok := h.Pos(s.ID); ok { // a chained blast may have taken it
-			h.HurtAs(s.ID, TurretBlastCreature, 0, body.Burn, health.CauseInjury)
+			blast := damage.Hit{Weapon: construction.DefOf(b.Kind).Name, Form: damage.FormFlame, Amount: TurretBlastCreature}
+			h.HurtHit(s.ID, h.Absorb(s.ID, blast, h.DefenseRoll), 0)
 		}
 	}
 	var near []entity.EntityID

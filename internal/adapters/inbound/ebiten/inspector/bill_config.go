@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
@@ -48,6 +49,7 @@ type BillIngredient struct {
 type BillSettings struct {
 	Store              uint8
 	Zone               uint64 // the stockpile for StoreSpecific
+	Source             uint64 // the storage the bench takes ingredients from (0: anywhere); sent as SetStorageSource
 	Radius             int    // ingredient search radius in tiles; 0 unlimited
 	SkillMin, SkillMax uint8
 	Worker             uint64 // only this colonist; 0 anyone
@@ -119,7 +121,26 @@ func zoneLabel(z game.ZoneView) string {
 	if z.Name != "" {
 		return z.Name
 	}
+	switch z.Kind {
+	case game.ZoneShelf:
+		return "Shelf " + strconv.Itoa(int(z.ID))
+	case game.ZoneDump:
+		return "Dumping stockpile " + strconv.Itoa(int(z.ID))
+	}
 	return "Stockpile " + strconv.Itoa(int(z.ID))
+}
+
+// billSource reads BillView.Source (the storage zone or group the bench
+// takes ingredients from, 0: anywhere) when the view has it.
+func billSource(bl game.BillView) uint64 {
+	f := reflect.ValueOf(bl).FieldByName("Source")
+	switch f.Kind() {
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return f.Uint()
+	case reflect.Int, reflect.Int64:
+		return uint64(f.Int())
+	}
+	return 0
 }
 
 func radiusText(r int) string {
@@ -140,6 +161,7 @@ func (a Bills) openBillConfig(b game.BuildingView, i int) {
 // openBillConfigWith opens bill i's dialog over settings cfg.
 func (a Bills) openBillConfigWith(b game.BuildingView, i int, cfg BillSettings) {
 	mode := b.Bills[i].ModeID
+	cfg.Source = billSource(b.Bills[i])
 	a.kit().Push(uikit.Modal{
 		ID: BillCfgModalID, Title: "Bill: " + b.Bills[i].Label, W: 460, H: 560,
 		Draw:    func(body gfx.Rect) { a.billConfigBody(body, b, i, mode, &cfg) },
@@ -153,7 +175,7 @@ func (a Bills) billConfigBody(body gfx.Rect, b game.BuildingView, i int, mode ui
 	send := func() { a.shell.Enqueue(billConfigCmd(b, i, *cfg)) }
 	var zones []game.ZoneView
 	for _, z := range a.shell.World().Zones {
-		if z.Kind == "stockpile" {
+		if z.Kind == game.ZoneStockpile || z.Kind == game.ZoneDump || z.Kind == game.ZoneShelf {
 			zones = append(zones, z)
 		}
 	}
@@ -226,6 +248,30 @@ func (a Bills) billConfigBody(body gfx.Rect, b game.BuildingView, i int, mode ui
 	if k.Button("bill.cfg.radius.unlimited", gfx.Rect{X: x, Y: y, W: 100, H: billCfgChipH}, "Unlimited", uikit.BtnOpts{Selected: cfg.Radius <= 0}) {
 		cfg.Radius = 0
 		send()
+	}
+	y += billCfgRowH
+	label("Take from")
+	src := cfg.Source
+	srcName := "Anywhere"
+	for _, z := range zones {
+		if uint64(z.ID) == src {
+			srcName = zoneLabel(z)
+		}
+	}
+	if k.Button("bill.cfg.source", gfx.Rect{X: x, Y: y, W: min(w, 240), H: billCfgChipH}, srcName+" v", uikit.BtnOpts{Tip: "Take ingredients only from this storage."}) {
+		entries := []game.OrderOption{{Label: "Anywhere"}}
+		for _, z := range zones {
+			entries = append(entries, game.OrderOption{Label: zoneLabel(z)})
+		}
+		mx, my := a.shell.Cursor()
+		a.shell.Pick(float32(mx), float32(my), false, entries, func(j int) {
+			var zid uint64
+			if j > 0 && j <= len(zones) {
+				zid = uint64(zones[j-1].ID)
+			}
+			cfg.Source = zid
+			a.shell.Enqueue(command.Command{Kind: command.SetStorageSource, X: b.X, Y: b.Y, Index: i, Zone: zid})
+		})
 	}
 	y += billCfgRowH
 	if len(cfg.Ingredients) > 0 {
@@ -326,6 +372,7 @@ func (a Bills) billConfigHeight(zones, colonists, ingredients int, specific, unt
 		h += chipRows(zones) + billCfgRowH
 	}
 	h += chipRows(ingredients) + chipRows(colonists+1) + 8
+	h += billCfgRowH // Take from
 	if until {
 		h += 2 * billCfgRowH
 	}

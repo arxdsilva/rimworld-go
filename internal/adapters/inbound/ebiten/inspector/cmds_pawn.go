@@ -68,7 +68,29 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 	if c, ok := a.bedRestCommand(p); ok {
 		out = append(out, c)
 	}
-	return append(out, a.Tabs().prisonerCommands(p)...) // prisoner_ui.go: Capture / Arrest
+	out = append(out, a.Tabs().prisonerCommands(p)...) // prisoner_ui.go: Capture / Arrest
+	if p.Weapon != "" && p.Weapon != "fists" {         // nothing to drop when unarmed
+		out = append(out, dropWeaponCommand(p))
+	}
+	return out
+}
+
+// DropWeaponID is the Gear tab's Drop weapon button (journeys press it).
+const DropWeaponID = "cmd.pawn.dropweapon"
+
+// dropWeaponCommand is Drop weapon: the colonist puts the weapon down where
+// they stand (DropWeapon), to be picked up again by anyone.
+func dropWeaponCommand(p game.PawnView) Button {
+	c := Button{ID: DropWeaponID, Label: "Drop weapon", Icon: "equip",
+		Desc: "Drop weapon\nPut the wielded weapon down where this colonist stands.",
+		Cmds: []command.Command{{Kind: command.DropWeapon, Pawn: uint64(p.ID)}}}
+	switch {
+	case p.Status != "alive":
+		c.Disabled, c.Reason = true, p.Status
+	case p.Weapon == "" || p.Weapon == "fists":
+		c.Disabled, c.Reason = true, "no weapon in hand"
+	}
+	return c
 }
 
 // bedRestCommand is the colonist's "Rest when hurt" toggle (PLAY-020): on,

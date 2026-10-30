@@ -120,13 +120,21 @@ import (
 // with its reason. The values below are those of commit 121821cac; the
 // STO-1 storage index and the STO/RES/CBT contract give the same values
 // (proved on a clean HEAD copy). The gate now runs it without -race.
+// Re-pinned (wave 2: RES-1, STO-2, CBT-1, CBT-2): partial-stack claims let
+// eaters, crafters and haulers share stacks; vanilla stockpile defaults
+// and wiki stack limits; body-part-first layered armor, gunshot and stab
+// wounds that bleed, vital-part overkill, apparel hit wear and stagger;
+// the wiki melee hit and dodge curves, melee tools, Euclidean ranges,
+// weather and cover-angle accuracy, auto-undraft and auto-engage. The two
+// 48x40 runs with no fighting keep their pins. Same-seed runs identical
+// (-count=2).
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0x565388fe1fac7806,
 	"48x40/seed7":    0x4758f9494ebbbcd7,
-	"48x40/seed42":   0x6b24e1bde9d1f9e9,
-	"120x120/seed1":  0xfb68611299c8f521,
-	"120x120/seed7":  0x55654325d7a0c404,
-	"120x120/seed42": 0x728ffefcacf56901,
+	"48x40/seed42":   0x5216138085762bc7,
+	"120x120/seed1":  0x16755bc956dfc82b,
+	"120x120/seed7":  0xbbebda14c6b18662,
+	"120x120/seed42": 0xb082e6fd5312f5f8,
 }
 
 const scaleGoldenTicks = 20000

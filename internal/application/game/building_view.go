@@ -175,6 +175,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 		bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.Percent()
 	}
 	bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = g.footprintOf(b.Kind, b.Facing, b.X, b.Y)
+	bv.Group, bv.Stored, bv.Capacity = g.storeView(id)
 	g.fillGraveView(bv, id, b) // burial.go
 	g.fillSwapView(bv, id)     // placement.go: pending material change (PLAY-011)
 	bv.Ruin = b.Ruin           // MAPGEN-2: an abandoned piece

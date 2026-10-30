@@ -45,8 +45,9 @@ func TestStockpileFilterHauling(t *testing.T) {
 	t.Parallel()
 	g := storedYard(t)
 	sp := zoneViewAt(t, g, 16, 1)
-	if !hasWood(sp.Filter) || !slices.Equal(sp.Special, StockpileSpecials()) {
-		t.Fatalf("a new stockpile: filter %v special %v", sp.Filter, sp.Special)
+	if !hasWood(sp.Filter) || slices.Contains(sp.Special, "allow rotten") || !slices.Contains(sp.Special, "allow tainted apparel") ||
+		slices.Contains(sp.Filter, "Chunks") || slices.Contains(sp.Filter, "Corpses") {
+		t.Fatalf("a new stockpile (STO-2: no corpses, chunks or rotten): filter %v special %v", sp.Filter, sp.Special)
 	}
 	stockCmd(g, command.Command{Kind: command.SetStockpileFilter, Target: uint64(sp.ID), Name: "wood", Enabled: false})
 	stockCmd(g, command.Command{Kind: command.SetStockpileFilter, Target: uint64(sp.ID), Name: "Nonsense", Enabled: false})
@@ -89,8 +90,10 @@ func TestStockpileFilterHauling(t *testing.T) {
 	}
 	// a special filter toggle and a range
 	stockCmd(g, command.Command{Kind: command.SetStockpileSpecial, Target: uint64(sp2.ID), Index: zone.SpecialRotten, Enabled: false})
+	stockCmd(g, command.Command{Kind: command.SetStockpileSpecial, Target: uint64(sp2.ID), Index: zone.SpecialTainted, Enabled: false})
 	stockCmd(g, command.Command{Kind: command.SetStockpileSpecial, Target: uint64(sp2.ID), Index: zone.SpecialHP, X: 50, X2: 100})
-	if got := zoneViewAt(t, g, 2, 9).Special; !slices.Equal(got, []string{"allow tainted apparel", "hp 50-100%"}) {
+	got := zoneViewAt(t, g, 2, 9).Special
+	if slices.Contains(got, "allow rotten") || slices.Contains(got, "allow tainted apparel") || got[len(got)-1] != "hp 50-100%" {
 		t.Fatalf("specials %v", got)
 	}
 	// the filter rows read the view back
@@ -99,12 +102,12 @@ func TestStockpileFilterHauling(t *testing.T) {
 	for _, r := range rows {
 		state[r.Path] = r
 	}
-	if state["wood"].On || !state["steel"].On || !state["Materials"].Partial || !state["Food"].On || state["Food"].Partial {
-		t.Fatalf("rows: wood %+v steel %+v materials %+v food %+v", state["wood"], state["steel"], state["Materials"], state["Food"])
+	if state["wood"].On || !state["steel"].On || !state["Raw resources"].Partial || !state["Foods"].On || state["Foods"].Partial {
+		t.Fatalf("rows: wood %+v steel %+v raw %+v food %+v", state["wood"], state["steel"], state["Raw resources"], state["Foods"])
 	}
 	// saved and loaded
 	g2 := saveLoad(t, g)
-	if z := zoneViewAt(t, g2, 2, 9); hasWood(z.Filter) || len(z.Special) != 2 {
+	if z := zoneViewAt(t, g2, 2, 9); hasWood(z.Filter) || !slices.Equal(z.Special, got) {
 		t.Fatalf("after a load: %v %v", z.Filter, z.Special)
 	}
 }
@@ -120,10 +123,10 @@ func TestSpecialFilterRefusesTainted(t *testing.T) {
 	if g.inMatchingStockpile(tainted) {
 		t.Fatal("a tainted parka counts as stored where tainted apparel is refused")
 	}
-	if _, _, ok := g.haulDest(0, item.Stack{Kind: item.Parka, Qty: 1, Of: 77, X: 3, Y: 3}); ok {
+	if _, _, ok := g.haulDest(0, item.Stack{Kind: item.Parka, Qty: 1, Of: 77, X: 3, Y: 3}, 0); ok {
 		t.Fatal("a destination was found for a tainted parka")
 	}
-	if _, _, ok := g.haulDest(0, item.Stack{Kind: item.Parka, Qty: 1, X: 3, Y: 3}); !ok {
+	if _, _, ok := g.haulDest(0, item.Stack{Kind: item.Parka, Qty: 1, X: 3, Y: 3}, 0); !ok {
 		t.Fatal("a clean parka finds a cell")
 	}
 }
@@ -148,7 +151,7 @@ func TestShelfStoresThreeStacksPerCell(t *testing.T) {
 	}
 	// three kinds go on one cell, the fourth to the other
 	for i, k := range []item.Kind{item.Wood, item.Steel, item.Cloth, item.Leather} {
-		x, y, ok := g.stockpileCell(k, 10, 6)
+		x, y, ok := g.stockpileCell(item.Stack{Kind: k}, 10, 6)
 		if !ok || !g.onShelf(x, y) {
 			t.Fatalf("%s: no shelf cell (%d, %d, %v)", k, x, y, ok)
 		}
@@ -177,7 +180,7 @@ func TestShelfStoresThreeStacksPerCell(t *testing.T) {
 		t.Fatal("a full shelf cell took a fourth stack")
 	}
 	// topping up a stack already there is fine
-	if x, y, ok := g.stockpileCell(item.Steel, 10, 6); !ok || x != 10 || y != 6 {
+	if x, y, ok := g.stockpileCell(item.Stack{Kind: item.Steel}, 10, 6); !ok || x != 10 || y != 6 {
 		t.Fatalf("topping up steel: (%d, %d, %v)", x, y, ok)
 	}
 	if (craftWeather{g}).Exposed(10, 6) || !(craftWeather{g}).Exposed(3, 3) {

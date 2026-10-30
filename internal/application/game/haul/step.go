@@ -9,9 +9,10 @@ import (
 // Gather drives the pickups of a stockpile haul (HAUL-002): with its
 // first pile in hand, the hauler walks to each pile left in the job's
 // Pickups, adds it to the stack it carries (rot and poison averaged by
-// quantity) and only then walks on to its storage cell. Every pile is
-// claimed for the hauler when the job starts; each claim is released as
-// the pile is taken or skipped. Interrupts need nothing here: the game
+// quantity) and only then walks on to its storage cell. The planned count
+// of every pile is claimed for the hauler when the job starts; each claim
+// is released as the pile is taken or skipped (the game releases the
+// first pile's once the load is split off it, RES-1). Interrupts need nothing here: the game
 // drops the carried load and frees the hauler's claims.
 type Gather struct{ h Host }
 

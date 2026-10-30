@@ -6,6 +6,8 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -70,8 +72,12 @@ func TestMechEMPAndWreck(t *testing.T) {
 	if mechView(t, g, id).Stunned {
 		t.Fatal("still stunned after the window")
 	}
-	if l := (combatCreatures{g}).Armor(id, nil); len(l) != 1 || l[0].Sharp != 400 {
-		t.Fatalf("plating %+v", l)
+	cut := damage.Hit{Form: damage.FormCut, Amount: 10}
+	if l := (combatHarm{g}).Absorb(id, cut, func(int) int { return 199 }); l.Outcome != armor.Deflected || l.Placed {
+		t.Fatalf("plating (sharp 400) deflects under 200: %+v", l)
+	}
+	if l := (combatHarm{g}).Absorb(id, cut, func(int) int { return 400 }); l.Amount != 10 {
+		t.Fatalf("and passes from 400: %+v", l)
 	}
 	if aim, _ := (combatSkills{g}).ShotAim(id); aim <= 950_000 {
 		t.Fatalf("a mechanoid aims at 96 %% a tile, got %d ppm", aim)

@@ -62,6 +62,10 @@ type Stock interface {
 	// ItemIDs is every item stack's id (the host's slice, read only): the
 	// multi-stack ingredient search (PRD-1).
 	ItemIDs() []entity.EntityID
+	// InSource reports (x, y) lies in storage zone or group src, a bill's
+	// ingredient source (RES-1); SourceName is src's name ("" none).
+	InSource(src uint64, x, y int) bool
+	SourceName(src uint64) string
 }
 
 // Output is what a finished bill or batch leaves behind.
@@ -93,10 +97,24 @@ type Workers interface {
 	StartJob(id entity.EntityID, rec job.Record) bool
 	PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool)
 	Reachable(id entity.EntityID, x, y int) bool
-	// Owner is who holds target reserved.
-	Owner(target entity.EntityID) (entity.EntityID, bool)
-	// Claim reserves target for owner.
-	Claim(owner, target entity.EntityID) bool
+	// Claims is the reservation table, asked afresh on every use.
+	Claims() Claims
+}
+
+// Claims is the reservation table (RES-1): a bench and the ingredients a
+// bill takes are claimed for its worker; an ingredient as a count, so
+// two crafters share a stack, and the bench's work spot as a tile.
+type Claims interface {
+	EntityOwner(target entity.EntityID) (entity.EntityID, bool)
+	TryEntity(owner, target entity.EntityID) bool
+	// TryCount claims n of stack target, which holds total.
+	TryCount(owner, target entity.EntityID, n, total int) bool
+	// FreeFor is how much of stack target (holding total) owner may still
+	// claim.
+	FreeFor(owner, target entity.EntityID, total int) int
+	ReleaseEntity(owner, target entity.EntityID)
+	TileOwner(x, y int) (entity.EntityID, bool)
+	TryTile(owner entity.EntityID, x, y int) bool
 }
 
 // Crafters is skill, work speed, the bench work put off, the colonists'

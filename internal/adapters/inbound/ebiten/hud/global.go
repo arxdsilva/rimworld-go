@@ -52,6 +52,7 @@ const (
 	HomeButtonID  = "hud.home"
 	PlanButtonID  = "hud.plan"
 	RoomsButtonID = "hud.rooms"
+	ZonesButtonID = "hud.zones"
 	// HomeAutoButtonID and PowerButtonID are the Architect's toggles
 	// (architect.HomeAutoButtonID, architect.PowerButtonID; the root's
 	// tests hold them equal).
@@ -129,6 +130,11 @@ var GlobalToggles = []GlobalToggle{
 		on:  func(c Global) bool { return c.sh.PowerShown() },
 		tip: func(c Global) string { _, tip := c.sh.Power(); return tip },
 		run: func(c Global) { c.sh.TogglePower() }},
+	{ID: ZonesButtonID, Icon: "zone_stockpile", Short: "Zones",
+		on: func(c Global) bool { return !c.ZonesOff },
+		tip: func(c Global) string {
+			return "Zones overlay" + stateSuffix(!c.ZonesOff) + c.sh.KeyHint(input.ZonesOverlay) + "\nShow or hide every zone on the map; each storage zone has its own colour."
+		}},
 }
 
 func stateSuffix(on bool) string {

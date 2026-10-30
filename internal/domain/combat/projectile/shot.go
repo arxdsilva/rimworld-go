@@ -41,6 +41,10 @@ type Shot struct {
 	Type   damage.Type
 	// Fired is the tick it left the muzzle.
 	Fired uint64
+	// Hit is the firing weapon's hit (CBT-2, append only): what strikes
+	// on landing, whatever the owner wields by then. Zero in older saves
+	// (Weapon, Damage, Pen and Type stand in).
+	Hit damage.Hit
 }
 
 // Launch sets s on its way from (fx, fy) to (tx, ty) at speed thousandths
@@ -98,6 +102,10 @@ type View struct {
 	Owner, Target entity.EntityID
 	// Fired is the tick it left the muzzle.
 	Fired uint64
+	// Hit is the firing weapon's hit (CBT-2, append only): what strikes
+	// on landing, whatever the owner wields by then. Zero in older saves
+	// (Weapon, Damage, Pen and Type stand in).
+	Hit damage.Hit
 }
 
 // View is s for presentation: its point on the straight segment from

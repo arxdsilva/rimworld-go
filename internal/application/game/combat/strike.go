@@ -8,8 +8,6 @@ import (
 	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
-	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -27,8 +25,8 @@ type Strikes struct {
 	shots   *Shots
 	blasts  *Blasts
 	drafts  *Drafts // DEF-4: fire at will and hold position
-	// layers is Armor's reused buffer.
-	layers []armor.Layer
+	// seen is AutoEngage's reused Near buffer (engage.go).
+	seen []Seen
 }
 
 // AimTicks is the warm-up before a first attack on a new target: the
@@ -47,7 +45,11 @@ func CycleTicks(d weapon.Def) int {
 // Target is the tile of a target that can still be attacked: a living
 // animal, a standing colonist or a sentry turret (raiders turn on
 // turrets).
-func (s *Strikes) Target(id entity.EntityID) (x, y int, ok bool) {
+func (s *Strikes) Target(id entity.EntityID) (x, y int, ok bool) { return s.target(id, false) }
+
+// target is Target; downed also accepts a humanlike lying downed (CBT-2:
+// only an ordered attack goes for one, as in vanilla).
+func (s *Strikes) target(id entity.EntityID, downed bool) (x, y int, ok bool) {
 	h := s.h
 	if a, ok := h.Animal(id); ok {
 		if a.Dead() {
@@ -55,7 +57,7 @@ func (s *Strikes) Target(id entity.EntityID) (x, y int, ok bool) {
 		}
 		return h.Pos(id)
 	}
-	if h.StandingPawn(id) {
+	if h.StandingPawn(id) || downed && h.Lying(id) {
 		return h.Pos(id)
 	}
 	if b, ok := s.turrets.At(id); ok {
@@ -67,96 +69,116 @@ func (s *Strikes) Target(id entity.EntityID) (x, y int, ok bool) {
 // Strike resolves one attack, rolled on the main stream, and records its
 // trace.
 func (s *Strikes) Strike(attacker, target entity.EntityID, wk weapon.Kind) {
-	s.StrikeRoll(attacker, target, wk, s.h.Roll)
+	s.strike(attacker, target, wk, s.h.Roll)
 }
 
 // def is attacker's profile with wk: an animal's natural weapon hits as
 // hard and as surely as its owner is big, with its attack's damage type.
 func (s *Strikes) def(attacker entity.EntityID, wk weapon.Kind) weapon.Def {
+	_, d := s.natural(attacker, wk)
+	return d
+}
+
+// natural is def with the weapon kind the blow is dealt with: an animal's
+// own attack (its hit's form), else wk.
+func (s *Strikes) natural(attacker entity.EntityID, wk weapon.Kind) (weapon.Kind, weapon.Def) {
 	d := weapon.DefOf(wk)
 	if a, ok := s.h.Animal(attacker); ok {
 		ad := animal.DefOf(a.Species)
 		d.Damage, d.Accuracy, d.DamageType = ad.Damage, ad.Accuracy, weapon.DefOf(ad.Attack).DamageType
+		return ad.Attack, d
 	}
-	return d
+	return wk, d
 }
 
 // StrikeRoll is Strike with the hit rolled from roll (a brawl rolls from
 // the social stream). A gun's shot is fired instead (Shots, rolled on the
 // main stream); a blow on a sentry turret stays instant.
 func (s *Strikes) StrikeRoll(attacker, target entity.EntityID, wk weapon.Kind, roll func(int) int) {
+	s.strike(attacker, target, wk, roll)
+}
+
+// strike is StrikeRoll, returning the profile the attack was made with (a
+// melee tool's, whose cooldown follows; a gun's when it fired). A
+// humanlike beside its target fights with a tool (melee.go): its melee
+// weapon's, or its gun's stock rather than a point-blank shot (CBT-2).
+func (s *Strikes) strike(attacker, target entity.EntityID, wk weapon.Kind, roll func(int) int) weapon.Def {
 	h := s.h
-	d := s.def(attacker, wk)
+	hk, d := s.natural(attacker, wk)
 	ax, ay, _ := h.Pos(attacker)
 	if b, ok := s.turrets.At(target); ok { // PLAY-024: a raider attacking a sentry turret
 		s.building(attacker, target, b.X, b.Y, ax, ay, d, roll)
-		return
+		return d
 	}
 	tx, ty, ok := h.Pos(target)
 	if !ok {
-		return
+		return d
+	}
+	if s.melee(attacker, wk, d, ax, ay, tx, ty) {
+		return s.blow(attacker, target, wk, hk, d, ax, ay, tx, ty, roll)
 	}
 	r := s.report(attacker, ax, ay, target, tx, ty, d, false)
-	if _, beast := h.Animal(attacker); !beast {
-		h.Learn(attacker, d.Ranged)
-	}
-	if d.Ranged && d.Speed > 0 {
+	if d.Speed > 0 {
 		s.shots.fire(attacker, target, ax, ay, tx, ty, wk, d, r)
-		return
+		return d
 	}
-	hit := s.rolls(d, r, roll)
-	res := armor.Result{}
-	if hit {
-		res = s.armorRoll(target, d.DamageType, d.Damage, weapon.Penetration(d, d.Damage), roll)
+	hit := s.rolls(d, r, roll) // an instant gun (none is carried today)
+	s.learn(attacker, d, hit)
+	s.land(attacker, target, ax, ay, tx, ty, wk, d, weapon.HitOf(hk, d), hit, roll)
+	return d
+}
+
+// land records an attack with d on target and, on a hit, runs hit
+// through its armor and wounds it.
+func (s *Strikes) land(attacker, target entity.EntityID, ax, ay, tx, ty int, wk weapon.Kind, d weapon.Def, hit damage.Hit, ok bool, roll func(int) int) {
+	h := s.h
+	var l armor.Landed
+	if ok {
+		l = h.Absorb(target, hit, roll) // CBT-1: part by coverage, then its garments
 	}
 	tr := projectile.Trace{
 		FromX: ax, FromY: ay, ToX: tx, ToY: ty,
-		Tick: h.Now(), Hit: hit, Melee: !d.Ranged, Damage: res.Damage,
+		Tick: h.Now(), Hit: ok, Melee: !d.Ranged, Damage: max(l.Amount, 0),
 		Attacker: attacker, Target: target, Weapon: d.Name,
 	}
 	h.Trace(tr)
 	h.Struck(attacker, target, tr.Tick)
-	h.LogStrike(attacker, target, wk, hit, tr.Damage)
-	if hit {
-		s.wound(attacker, target, ax, ay, tx, ty, d.DamageType, res)
+	h.LogStrike(attacker, target, wk, ok, tr.Damage)
+	if ok {
+		s.wound(attacker, target, ax, ay, tx, ty, l)
 	}
 }
 
-// rolls decides a hit at chance r: a legacy weapon on a percent roll, a
-// banded gun on a permille one.
+// learn gives a humanlike attacker the experience of one attack with d
+// (attack.CombatXP: by its cycle, a hit teaching more than a miss).
+func (s *Strikes) learn(attacker entity.EntityID, d weapon.Def, hit bool) {
+	if _, beast := s.h.Animal(attacker); beast {
+		return
+	}
+	s.h.Learn(attacker, d.Ranged, attack.CombatXP(hit, CycleTicks(d), attack.Burst{Shots: d.Burst}.Count()))
+}
+
+// rolls decides a hit at chance r: a legacy gun on a percent roll, a
+// banded gun or a melee blow on a permille one.
 func (s *Strikes) rolls(d weapon.Def, r attack.Report, roll func(int) int) bool {
-	if d.Legacy() {
+	if d.Legacy() && d.Ranged {
 		return roll(100) < r.Total()/10
 	}
 	return roll(attack.Permille(1000)) < r.Total()
 }
 
-// armorRoll runs a hit of amount (type t, penetration pen) through what
-// target wears: one roll for the body region it lands on, one per layer
-// covering it. A target wearing nothing draws no roll.
-func (s *Strikes) armorRoll(target entity.EntityID, t damage.Type, amount, pen int, roll func(int) int) armor.Result {
-	s.layers = s.h.Armor(target, s.layers[:0])
-	if len(s.layers) == 0 {
-		return armor.Result{Outcome: armor.Passed, Damage: amount, Type: t}
-	}
-	return armor.Hit(s.layers, armor.RegionOf(roll(armor.RollMax)), t, amount, armor.Permille(pen), roll)
-}
-
 // wound applies what got through armor to target, struck from (fx, fy)
-// at (tx, ty): the hit stamp, blood and the wound (a sharp hit that armor
-// turned blunt bruises). Nothing when armor stopped it.
-func (s *Strikes) wound(attacker, target entity.EntityID, fx, fy, tx, ty int, t damage.Type, res armor.Result) {
+// at (tx, ty): the hit stamp, blood and the wound its form leaves
+// (Wounds.HurtHit; a sharp hit armor halved bruises). Nothing when armor
+// stopped it.
+func (s *Strikes) wound(attacker, target entity.EntityID, fx, fy, tx, ty int, l armor.Landed) {
 	h := s.h
-	if res.Damage <= 0 {
+	if l.Stopped() {
 		return
 	}
-	h.Hit(target, h.Now(), fx, fy, res.Damage)
-	h.Stain(target, fx, fy, tx, ty, res.Damage) // before the hurt, while the target exists
-	if res.Type != t {
-		h.HurtAs(target, res.Damage, attacker, body.Bruise, health.CauseInjury)
-		return
-	}
-	h.Hurt(target, res.Damage, attacker)
+	h.Hit(target, h.Now(), fx, fy, l.Amount)
+	h.Stain(target, fx, fy, tx, ty, l.Amount) // before the hurt, while the target exists
+	h.HurtHit(target, l, attacker)
 }
 
 // building is StrikeRoll on building target at (tx, ty) (a sentry turret):
@@ -166,10 +188,8 @@ func (s *Strikes) wound(attacker, target entity.EntityID, fx, fy, tx, ty int, t 
 func (s *Strikes) building(attacker, target entity.EntityID, tx, ty, ax, ay int, d weapon.Def, roll func(int) int) {
 	h := s.h
 	r := s.report(attacker, ax, ay, target, tx, ty, d, true)
-	if _, beast := h.Animal(attacker); !beast {
-		h.Learn(attacker, d.Ranged)
-	}
 	hit := s.rolls(d, r, roll)
+	s.learn(attacker, d, hit)
 	tr := projectile.Trace{
 		FromX: ax, FromY: ay, ToX: tx, ToY: ty,
 		Tick: h.Now(), Hit: hit, Melee: !d.Ranged, Building: true,
@@ -197,35 +217,40 @@ func (s *Strikes) Report(shooter, target entity.EntityID) (attack.Report, bool) 
 		return attack.Report{}, false
 	}
 	_, turret := s.turrets.At(target)
-	return s.report(shooter, ax, ay, target, tx, ty, s.def(shooter, s.h.Weapon(shooter)), turret), true
+	wk := s.h.Weapon(shooter)
+	d := s.def(shooter, wk)
+	if !turret && s.melee(shooter, wk, d, ax, ay, tx, ty) {
+		d.Ranged, d.Bands = false, attack.Bands{} // a gun's stock beside its target
+	}
+	return s.report(shooter, ax, ay, target, tx, ty, d, turret), true
 }
 
 // report is the hit chance of attacker at (ax, ay) on target at (tx, ty)
-// with d. A melee weapon (or a legacy gun) hits at its flat accuracy,
-// adjusted for a humanlike's skill; a banded gun multiplies its band at
-// the distance, the shooter's accuracy per tile to the power of the
-// distance, the target's size, light and weather, and what the target's
-// cover lets through (none for a building: it is its own cover).
+// with d. A melee blow hits by the wiki's melee hit curve (attack.
+// HitChanceOf: skill, sight, manipulation; the dodge is rolled apart); a
+// legacy gun at its flat accuracy; a banded gun multiplies its band at the
+// straight-line distance, the shooter's accuracy per tile to the power of
+// that distance, the target's size, light, the weather under the open sky
+// and smoke, and what the target's cover lets through (none for a
+// building: it is its own cover).
 func (s *Strikes) report(attacker entity.EntityID, ax, ay int, target entity.EntityID, tx, ty int, d weapon.Def, building bool) attack.Report {
 	h := s.h
-	dist := weapon.Distance(ax, ay, tx, ty)
-	r := attack.Report{Dist: dist, InRange: weapon.InRange(d, dist), Melee: !d.Ranged,
+	dist := weapon.Range(ax, ay, tx, ty)
+	r := attack.Report{Dist: dist, InRange: weapon.ReachesAt(d, ax, ay, tx, ty), Melee: !d.Ranged,
 		Shooter: 1000, Size: 1000, Light: attack.NoLightPenalty, Weather: attack.ClearFactor}
-	r.InSight = r.InRange && (!d.Ranged || dist <= 1 || s.sight.Line(ax, ay, tx, ty))
+	r.InSight = r.InRange && (!d.Ranged || weapon.Distance(ax, ay, tx, ty) <= 1 || s.sight.Line(ax, ay, tx, ty))
 	if d.Ranged && !building {
 		r.Cover = s.sight.Cover(ax, ay, tx, ty)
 	}
 	if d.Ranged {
-		r.Weather = r.Weather * s.blasts.SmokeFactor(ax, ay, tx, ty) / 1000 // DEF-2: smoke in the way
+		r.Weather = s.sight.Weather(ax, ay, tx, ty) * s.blasts.SmokeFactor(ax, ay, tx, ty) / 1000 // DEF-2: smoke in the way
 	}
-	_, beast := h.Animal(attacker)
-	if d.Legacy() {
-		c := weapon.HitChance(d, dist)
-		if !beast {
-			c = h.HitChance(attacker, d.Ranged, c) // Melee (or Shooting), accuracy stats
-		}
-		r.Band = c * 10
-	} else {
+	switch {
+	case !d.Ranged:
+		r.Band = attack.HitChanceOf(h.Melee(attacker)) // CBT-2: wiki: Melee hit chance
+	case d.Legacy():
+		r.Band = weapon.HitChance(d, dist) * 10
+	default:
 		pt, off := h.ShotAim(attacker)
 		r.Band, r.Shooter, r.Offset = d.Bands.Accuracy(dist), attack.ShooterFactor(pt, dist), off
 		if !building {
@@ -246,6 +271,13 @@ func (s *Strikes) bodySize(id entity.EntityID) int {
 	if !ok {
 		return 1000
 	}
+	return BodySize(a)
+}
+
+// BodySize is animal a's body size, permille of a human's: its size
+// class's (sizeBody) trimmed by its roster's SizeTrim (1000 for an
+// unknown class).
+func BodySize(a animal.State) int {
 	r := animal.RosterOf(a.Species)
 	if int(r.Size) >= len(sizeBody) {
 		return 1000
@@ -254,10 +286,11 @@ func (s *Strikes) bodySize(id entity.EntityID) int {
 }
 
 // Do runs a Hunt or Attack job: close in until the target is in range
-// (and in sight for guns), then attack on cooldown.
+// (and in sight for guns), then attack on cooldown. Only an ordered
+// (Forced) attack goes on at a humanlike lying downed (CBT-2).
 func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 	h := s.h
-	tx, ty, ok := s.Target(j.Target)
+	tx, ty, ok := s.target(j.Target, j.Forced && j.Kind == job.Attack)
 	if ok && !h.CanViolence(id) {
 		ok = false // incapable of violence: never attacks or hunts
 	}
@@ -284,8 +317,11 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 	if s.sight.CanHit(px, py, d, tx, ty) {
 		j.State, j.Path, j.PathI = job.Do, nil, 0
 		if j.WorkLeft == 0 {
-			s.Strike(id, j.Target, wk)
-			j.WorkLeft = s.next(id, d, &j)
+			used := s.strike(id, j.Target, wk, h.Roll)
+			if !used.Ranged {
+				j.Count = 0 // a blow ends any burst (a gun's stock)
+			}
+			j.WorkLeft = s.next(id, used, &j)
 		}
 		h.SetJob(id, j)
 		return
@@ -328,48 +364,4 @@ func (s *Strikes) next(id entity.EntityID, d weapon.Def, j *job.Record) int {
 		return s.h.AimTicks(id, d.Cooldown)
 	}
 	return d.Cooldown + s.h.AimTicks(id, d.Warmup)
-}
-
-// AutoEngage makes an idle drafted pawn attack the nearest hostile it can
-// hit from where it stands.
-func (s *Strikes) AutoEngage(id entity.EntityID) {
-	h := s.h
-	if !h.CanViolence(id) || s.drafts != nil && !s.drafts.FireAtWill(id) {
-		return // DEF-4: fire at will off, it shoots only when ordered
-	}
-	px, py, _ := h.Pos(id)
-	d := weapon.DefOf(h.Weapon(id))
-	best, bestD := entity.EntityID(0), 1<<30
-	for _, aid := range h.AnimalIDs() {
-		a, ok := h.Animal(aid)
-		if !ok || !h.Hostile(a) {
-			continue
-		}
-		ax, ay, _ := h.Pos(aid)
-		dist := weapon.Distance(px, py, ax, ay)
-		if dist < bestD && s.sight.CanHit(px, py, d, ax, ay) {
-			best, bestD = aid, dist
-		}
-	}
-	for _, rid := range h.RaiderIDs() {
-		if !h.StandingRaider(rid) {
-			continue
-		}
-		rx, ry, _ := h.Pos(rid)
-		dist := weapon.Distance(px, py, rx, ry)
-		if dist < bestD && s.sight.CanHit(px, py, d, rx, ry) {
-			best, bestD = rid, dist
-		}
-	}
-	if best == 0 {
-		return
-	}
-	bx, by, _ := h.Pos(best)
-	rec := job.Record{Kind: job.Attack, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(d)}
-	if s.drafts != nil && s.drafts.Holding(id) {
-		rec.State = job.Do // in reach from its tile: no step towards it
-		h.SetJob(id, rec)
-		return
-	}
-	h.StartJob(id, rec)
 }

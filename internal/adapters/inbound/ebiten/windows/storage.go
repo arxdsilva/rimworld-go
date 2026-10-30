@@ -33,7 +33,12 @@ type storageState struct {
 	clip uint16          // the copied zone (0: none)
 	open map[string]bool // category paths shown expanded
 	name string          // the rename field's text
+	find string          // the search box's text
 }
+
+// storageQualities name the quality levels in ascending order (the
+// quality range reads these, not 0-6).
+var storageQualities = [...]string{"awful", "poor", "normal", "good", "excellent", "masterwork", "legendary"}
 
 // Range filters (SetStockpileSpecial Index 2 and 3): X..X2.
 const (
@@ -126,8 +131,27 @@ func (w Storage) body(body gfx.Rect) {
 	if w.kit().Button("storage.paste", pasteR, "Paste", paste) {
 		w.sh.Enqueue(command.Command{Kind: command.PasteStockpile, Target: uint64(zid), Zone: uint64(st.clip)})
 	}
-	list := gfx.Rect{X: body.X, Y: body.Y + storageHeadH, W: body.W, H: body.H - storageHeadH}
+	w.priorityRow(body, z)
+	row2 := body.Y + storageHeadH*2
+	allR := gfx.Rect{X: body.X, Y: row2, W: 80, H: 26}
+	clrR := gfx.Rect{X: allR.Right() + 6, Y: row2, W: 80, H: 26}
+	if w.kit().Button("storage.allow_all", allR, "Allow all", uikit.BtnOpts{Tip: "Allow every item kind in this storage."}) {
+		w.sendRoots(z.ID, true)
+	}
+	if w.kit().Button("storage.clear_all", clrR, "Clear all", uikit.BtnOpts{Tip: "Forbid every item kind in this storage."}) {
+		w.sendRoots(z.ID, false)
+	}
+	find := gfx.Rect{X: clrR.Right() + 6, Y: row2, W: body.Right() - clrR.Right() - 6, H: 26}
+	w.kit().TextField("storage.search", find, &st.find, uikit.TextFieldSpec{MaxLen: 24, Placeholder: "Search", Normalize: strings.TrimSpace})
+	w.storage.find = st.find
+	top := float32(storageHeadH*3 + 4)
+	list := gfx.Rect{X: body.X, Y: body.Y + top, W: body.W, H: body.H - top}
 	w.tree(list, z, st.open)
+}
+
+// sendRoots allows or forbids everything (the filter tree's root).
+func (w Storage) sendRoots(zid uint16, on bool) {
+	w.sh.Enqueue(command.Command{Kind: command.SetStockpileFilter, Target: uint64(zid), Name: game.FilterRoot, Enabled: on})
 }
 
 // treeRow is one visible line of the tree.
@@ -161,19 +185,18 @@ func rangeOf(special []string, name string, max int) (int, int) {
 // treeRows lists the visible lines: headings, special toggles, the two
 // range steppers and the filter tree (game.StockpileFilterRows, pre-order)
 // with the children of a collapsed category left out.
-func treeRows(z game.ZoneView, open map[string]bool) []treeRow {
-	rows := []treeRow{{id: "storage.h.special", label: "Special filters", head: true, special: -1}}
-	for i, s := range game.StockpileSpecials() {
-		rows = append(rows, treeRow{id: "storage.special." + s, label: s, special: i, on: storageHas(z.Special, s)})
-	}
-	hlo, hhi := rangeOf(z.Special, "hp", hpMax)
-	qlo, qhi := rangeOf(z.Special, "quality", qualityMax)
-	rows = append(rows,
-		treeRow{id: "storage.special.hp", label: "Hit points %", special: -1, rng: specialHP, lo: hlo, hi: hhi},
-		treeRow{id: "storage.special.quality", label: "Quality", special: -1, rng: specialQuality, lo: qlo, hi: qhi},
-		treeRow{id: "storage.h.items", label: "Allowed items", head: true, special: -1})
+func treeRows(z game.ZoneView, open map[string]bool, find string) []treeRow {
+	rows := []treeRow{{id: "storage.h.items", label: "Allowed items", head: true, special: -1}}
 	hide := -1 // depth of the collapsed category whose children are skipped
-	for _, r := range game.StockpileFilterRows(z.Filter) {
+	find = strings.ToLower(find)
+	for _, r := range game.StorageFilterRows(z.Kind, z.Filter) {
+		if find != "" { // a search lists the matching rows flat, at any depth
+			if strings.Contains(strings.ToLower(r.Label), find) {
+				rows = append(rows, treeRow{id: "storage.filter." + r.Path, label: r.Label, path: r.Path, special: -1,
+					leaf: true, on: r.On, partial: r.Partial})
+			}
+			continue
+		}
 		if hide >= 0 {
 			if r.Depth > hide {
 				continue
@@ -186,13 +209,28 @@ func treeRows(z game.ZoneView, open map[string]bool) []treeRow {
 			hide = r.Depth
 		}
 	}
+	if find != "" {
+		return rows // a search lists matching items only
+	}
+	rows = append(rows, treeRow{id: "storage.h.special", label: "Special filters", head: true, special: -1})
+	for _, t := range game.StorageSpecials() {
+		if t.Grave && z.Kind != game.ZoneGrave {
+			continue
+		}
+		rows = append(rows, treeRow{id: "storage.special." + t.Name, label: t.Name, special: t.Index, on: storageHas(z.Special, t.Name)})
+	}
+	hlo, hhi := rangeOf(z.Special, "hp", hpMax)
+	qlo, qhi := rangeOf(z.Special, "quality", qualityMax)
+	rows = append(rows,
+		treeRow{id: "storage.special.hp", label: "Hit points %", special: -1, rng: specialHP, lo: hlo, hi: hhi},
+		treeRow{id: "storage.special.quality", label: "Quality", special: -1, rng: specialQuality, lo: qlo, hi: qhi})
 	return rows
 }
 
 // tree declares the scrolling tree. Only rows wholly inside the view are
 // declared, so a checkbox never draws over the edge.
 func (w Storage) tree(r gfx.Rect, z game.ZoneView, open map[string]bool) {
-	rows := treeRows(z, open)
+	rows := treeRows(z, open, w.storage.find)
 	area := w.kit().ScrollArea("storage.list", r, float32(len(rows))*storageRowH, uikit.ScrollOpts{Step: storageRowH * 3, Focusable: true})
 	for i, row := range rows {
 		y := area.View.Y + float32(i)*storageRowH - area.Off
@@ -242,7 +280,11 @@ func (w Storage) sendNode(zid uint16, row treeRow, on bool) {
 // rangeRow declares a range line: the label and a - / + pair for each end.
 // A click sends SetStockpileSpecial with the new X..X2.
 func (w Storage) rangeRow(x, y, width float32, z game.ZoneView, row treeRow) {
-	w.kit().Label(x+4, y+4, fmt.Sprintf("%s  %d-%d", row.label, row.lo, row.hi), uikit.DimText())
+	text := fmt.Sprintf("%s  %d-%d", row.label, row.lo, row.hi)
+	if row.rng == specialQuality {
+		text = fmt.Sprintf("%s  %s - %s", row.label, storageQualities[row.lo], storageQualities[row.hi])
+	}
+	w.kit().Label(x+4, y+4, text, uikit.DimText())
 	step, max := 1, qualityMax
 	if row.rng == specialHP {
 		step, max = hpStep, hpMax
@@ -262,6 +304,25 @@ func (w Storage) rangeRow(x, y, width float32, z game.ZoneView, row treeRow) {
 		r := gfx.Rect{X: bx + float32(i)*24, Y: y, W: 22, H: storageRowH}
 		if w.kit().Button(row.id+"."+d.id, r, d.mark, uikit.BtnOpts{Disabled: !ok, Reason: "out of range"}) {
 			w.sh.Enqueue(command.Command{Kind: command.SetStockpileSpecial, Target: uint64(z.ID), Index: row.rng, X: lo, Y: 0, X2: hi})
+		}
+	}
+}
+
+// priorityRow declares the priority chips (SetZonePriority; a shelf or
+// a group of linked shelves is set the same way, the simulation spreads
+// it across the group).
+func (w Storage) priorityRow(body gfx.Rect, z game.ZoneView) {
+	names := game.StoragePriorities()
+	cur := z.Priority
+	if cur == "" {
+		cur = "Normal"
+	}
+	const cw = 76
+	w.kit().Label(body.X, body.Y+storageHeadH+6, "Priority", uikit.DimText())
+	for i, n := range names {
+		r := gfx.Rect{X: body.X + 56 + float32(i)*(cw+2), Y: body.Y + storageHeadH, W: cw, H: 24}
+		if w.kit().Button("storage.priority."+n, r, n, uikit.BtnOpts{Disabled: n == cur, Reason: "already " + strings.ToLower(n), Tip: "Haulers fill higher-priority storage first."}) {
+			w.sh.Enqueue(command.Command{Kind: command.SetZonePriority, Target: uint64(z.ID), Index: i})
 		}
 	}
 }

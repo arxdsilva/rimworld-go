@@ -133,19 +133,19 @@ func TestStockpileCellPicksNearest(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 10})
 	zoneCmd(g, command.DesignateStockpile, 1, 1, 3, 3, 0) // off the edge ring (PLAY-023)
 	zoneCmd(g, command.DesignateStockpile, 20, 4, 23, 7, 0)
-	if x, y, ok := g.stockpileCell(item.Wood, 24, 8); !ok || x != 23 || y != 7 {
+	if x, y, ok := g.stockpileCell(item.Stack{Kind: item.Wood}, 24, 8); !ok || x != 23 || y != 7 {
 		t.Fatalf("nearest from the east: %d,%d %v", x, y, ok)
 	}
-	if x, y, ok := g.stockpileCell(item.Wood, 10, 5); !ok || x != 3 || y != 1 {
+	if x, y, ok := g.stockpileCell(item.Stack{Kind: item.Wood}, 10, 5); !ok || x != 3 || y != 1 {
 		t.Fatalf("nearest from the middle (tie: lower y): %d,%d %v", x, y, ok)
 	}
 	if _, err := g.SpawnStack(item.Wood, 5, 1, 1); err != nil {
 		t.Fatal(err)
 	}
-	if x, y, ok := g.stockpileCell(item.Wood, 24, 8); !ok || x != 1 || y != 1 {
+	if x, y, ok := g.stockpileCell(item.Stack{Kind: item.Wood}, 24, 8); !ok || x != 1 || y != 1 {
 		t.Fatalf("top up the stack first: %d,%d %v", x, y, ok)
 	}
-	if x, y, ok := g.stockpileCell(item.GraniteBlocks, 2, 2); !ok || x != 2 || y != 2 {
+	if x, y, ok := g.stockpileCell(item.Stack{Kind: item.GraniteBlocks}, 2, 2); !ok || x != 2 || y != 2 {
 		t.Fatalf("another kind skips the stack's tile: %d,%d %v", x, y, ok)
 	}
 }

@@ -197,6 +197,7 @@ func (g *Game) removePlant(id entity.EntityID) {
 		g.plantLightChanged(p.Species) // light.go
 	}
 	g.dropPlant(id)
+	g.reserve.ReleaseTarget(id) // RES-1: its claimants' jobs find it gone
 	g.plantIDs = dropIDs(g.plantIDs, func(pid entity.EntityID) bool { return pid == id })
 	g.plantsChanged() // jobindex.go
 }

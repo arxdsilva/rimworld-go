@@ -3,38 +3,26 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/crops"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
-	"rimworld-go/internal/domain/world/terrain"
 )
 
 // SowWork is the labour to sow one cell of a growing zone.
 const SowWork = 20
 
 // CropID is the command value (Command.Build) for a crop name.
-func CropID(name string) (uint8, bool) {
-	s, ok := plant.Parse(name)
-	if !ok || !plant.DefOf(s).Crop {
-		return 0, false
-	}
-	return uint8(s), true
-}
+func CropID(name string) (uint8, bool) { return crops.ID(name) }
 
 // ZoneSpeciesID is the DesignateGrowZone command value (Command.Build) for
 // any species a growing zone can sow: crops and trees.
-func ZoneSpeciesID(name string) (uint8, bool) {
-	s, ok := plant.Parse(name)
-	if !ok || !plant.DefOf(s).ZoneSowable() {
-		return 0, false
-	}
-	return uint8(s), true
-}
+func ZoneSpeciesID(name string) (uint8, bool) { return crops.ZoneID(name) }
 
 func (g *Game) addGrowZone(x1, y1, x2, y2 int, crop uint8) {
 	s := plant.Species(crop)
@@ -259,11 +247,8 @@ func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
 		if st == nil || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
-		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
-			continue
-		}
-		if !g.inArea(id, st.X, st.Y) {
-			continue // areas.go: food outside the allowed area
+		if g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {
+			continue // RES-1: every portion claimed by other eaters; areas.go: outside the allowed area
 		}
 		pref := st.Kind.Preference()
 		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
@@ -274,64 +259,44 @@ func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
 	return best, bx, by
 }
 
+// claimJobTarget claims job rec's target for pawn id (RES-1): the part of
+// a stack it takes (the portions it eats, a planned haul load, a bill's
+// first ingredient) as a count claim, capped by what is unclaimed;
+// anything else whole. A tend also claims its dose of medicine.
+func claimJobTarget(g *Game, id entity.EntityID, rec job.Record) bool {
+	if med := g.stacks.Ref(rec.Dest); med != nil && (rec.Kind == job.Tend || rec.Kind == job.EmergencyTend) && !g.reserve.TryCount(id, rec.Dest, 1, med.Qty) {
+		return false // the one dose a tend fetches
+	}
+	st, n := g.stacks.Ref(rec.Target), 0
+	switch {
+	case st == nil:
+	case rec.Kind == job.Eat:
+		nd, _ := g.need.Get(id)
+		if n = portionsFor(nd.Hunger, st.Kind); rec.Count == bingeEat {
+			n += 2 // a binge eats two past full
+		}
+	case rec.Kind == job.HaulIngredients && len(rec.Route) > 1:
+		n = int(rec.Route[1])
+	case rec.Kind == job.Bill || rec.Kind == job.Haul && (rec.Dest == 0 || len(rec.Route) > 0):
+		n = rec.Count
+	}
+	if n <= 0 {
+		return g.reserve.TryEntity(id, rec.Target)
+	}
+	return g.reserve.TryCount(id, rec.Target, min(n, g.reserve.FreeFor(id, rec.Target, st.Qty)), st.Qty)
+}
+
 // LastMeal is what pawn id last ate (for mood/inspector).
 func (g *Game) lastMealKind(id entity.EntityID) (item.Kind, bool) {
 	k, ok := g.lastMeal[id]
 	return k, ok
 }
 
-// CropView describes a sowable crop for the UI (crop picker, hover).
-type CropView struct {
-	Name      string  // species name (zone crop / CropID key)
-	Label     string  // produce name
-	Days      float64 // days to harvest on plain soil, daylight growth
-	GravelDay float64 // days on poor (gravel) soil
-	RichDays  float64 // days on rich soil
-	Yield     int     // items per plant
-	Nutrition int     // per item (a colonist eats about 5000 a day)
-	Sens      int     // soil sensitivity, percent
-	// FrostKill is the air temperature (tenths of a degree C) that kills
-	// the crop; ShelfDays how long the produce keeps at room temperature
-	// (0 = forever). Days assume growing weather (10 C or warmer).
-	FrostKill int
-	ShelfDays float64
-	// Food: the produce is edible. Extra and ExtraQty: a by-product per
-	// harvest ("straw", 4) (SIM-021).
-	Food     bool
-	Extra    string
-	ExtraQty int
-}
+// CropView describes a sowable crop for the UI (game/crops).
+type CropView = crops.View
 
 // Crops lists the sowable crops, fastest first.
-func Crops() []CropView {
-	var out []CropView
-	for _, s := range plant.Crops() {
-		d := plant.DefOf(s)
-		out = append(out, CropView{
-			Name: d.Name, Label: d.Label, Days: plant.GrowDays(s, terrain.Soil.Fertility()),
-			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()), RichDays: plant.GrowDays(s, terrain.RichSoil.Fertility()),
-			Yield: d.Yield, Nutrition: d.Yields.Nutrition(), Sens: d.Sens,
-			FrostKill: d.FrostKill, ShelfDays: float64(d.Yields.ShelfTicks()) / clock.TicksPerDay,
-			Food: d.Yields.Nutrition() > 0,
-		})
-		if d.ExtraQty > 0 {
-			out[len(out)-1].Extra, out[len(out)-1].ExtraQty = d.Extra.String(), d.ExtraQty
-		}
-	}
-	return out
-}
+func Crops() []CropView { return crops.All() }
 
 // ZoneSpecies lists what a growing zone can sow: the crops, then trees.
-func ZoneSpecies() []CropView {
-	out := Crops()
-	for _, s := range []plant.Species{plant.Tree, plant.Pine, plant.JungleTree} { // tree zones (SIM-023)
-		d := plant.DefOf(s)
-		out = append(out, CropView{
-			Name: d.Name, Label: "wood", Days: plant.GrowDays(s, terrain.Soil.Fertility()),
-			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()),
-			RichDays:  plant.GrowDays(s, terrain.RichSoil.Fertility()),
-			Yield:     d.Wood, Sens: d.Sens,
-		})
-	}
-	return out
-}
+func ZoneSpecies() []CropView { return crops.ZoneSpecies() }

@@ -59,21 +59,45 @@ func (k Kind) Value() int {
 	return value[k]
 }
 
-// stackLimit is the wiki's per-kind stack limit for the wave E kinds
-// (PRD-4, wiki: each item's page): chemfuel, the hard drugs and reagent
-// 150, pemmican, kibble, uranium and plasteel 75, advanced components 50,
-// wort and the reinforced barrel 25, the meals 10. Every other kind keeps
-// StackLimit: shrinking the older kinds to their wiki limits would change
-// how much every stockpile tile holds (and every pinned game), so it
-// waits for its own change.
-var stackLimit = [numKinds]int{Chemfuel: 150, AshFlake: 150, Silverdust: 150, BattleTonic: 150, Reagent: 150,
-	Pemmican: 75, Kibble: 75, Uranium: 75, Plasteel: 75, AdvancedComponents: 50, Wort: 25, ReinforcedBarrel: 25,
-	FineMeal: 10, LavishMeal: 10, SurvivalMeal: 10,
-	// STO/CBT contract: the paste meal stacks like the other meals (wiki:
-	// Nutrient paste meal 10); gear and weapons one per stack, like a
-	// worn or wielded thing.
-	NutrientPasteMeal: 10, SmokepopPack: 1, ShieldBelt: 1, RocketLauncher: 1, TripleRocketLauncher: 1,
-	SmokeLauncher: 1, ChargeRifle: 1, ChargeLance: 1, Ikwa: 1}
+// stackLimit is the wiki's per-kind stack limit (PRD-4 for the wave E
+// kinds, STO-2 for the older ones; wiki: each item's page): silver and
+// gold 500; chemfuel, the hard drugs, reagent, ashleaf tea (psychite tea)
+// and the prophyl tablet (penoxycyline) 150; wood, stone blocks, steel,
+// plasteel, uranium, raw food, milk, eggs, textiles, kibble and pemmican
+// 75; components 50; medicine, beer, wort, shells and the reinforced
+// barrel 25; meals and fertilized eggs 10. A thing with no stack limit in
+// the game (weapons, apparel, body parts, corpses, chunks) is one per
+// stack. Original items take the limit of the vanilla item they stand
+// in for (original tuning): the ration and the paste meal a meal's,
+// ember oil chemfuel's, the spark tablet a hard drug's, the numbroot
+// tincture medicine's, bones a corpse's, ashleaf and brewgrain raw
+// plants', straw hay's (75). Carpets keep StackLimit (our items, no
+// vanilla counterpart).
+var stackLimit = func() (t [numKinds]int) {
+	for k := Kind(0); k < numKinds; k++ {
+		switch {
+		case k.IsWeapon(), k.IsContractWeapon(), k.IsApparel(), k.IsBelt(), k.IsCorpse(), IsChunk(k), k.IsImplant(), k.IsOrgan():
+			t[k] = 1
+		}
+	}
+	for k, n := range map[Kind]int{
+		Silver: 500, Gold: 500,
+		Chemfuel: 150, AshFlake: 150, Silverdust: 150, BattleTonic: 150, Reagent: 150, AshleafTea: 150, ProphylTablet: 150,
+		SparkTablet: 150, EmberOil: 150,
+		Wood: 75, Stone: 75, SandstoneBlocks: 75, GraniteBlocks: 75, LimestoneBlocks: 75, SlateBlocks: 75, MarbleBlocks: 75,
+		Steel: 75, Plasteel: 75, Uranium: 75, Berries: 75, Potatoes: 75, Corn: 75, Wheat: 75, Beans: 75, Lettuce: 75,
+		Radishes: 75, Pumpkins: 75, Brewgrain: 75, AshleafLeaf: 75, Meat: 75, Milk: 75, Egg: 75, Leather: 75, Cloth: 75,
+		Wool: 75, Straw: 75, Kibble: 75, Pemmican: 75,
+		Components: 50, AdvancedComponents: 50,
+		HerbalMedicine: 25, IndustrialMedicine: 25, NanomedKit: 25, NumbrootTincture: 25, Beer: 25, Wort: 25,
+		MortarShells: 25, IncendiaryShells: 25, EMPShells: 25, SmokeShells: 25, ReinforcedBarrel: 25,
+		Food: 10, Meal: 10, FineMeal: 10, LavishMeal: 10, SurvivalMeal: 10, NutrientPasteMeal: 10, FertileEgg: 10,
+		Bones: 1,
+	} {
+		t[k] = n
+	}
+	return t
+}()
 
 // StackLimit is how many items of kind k share a tile (StackLimit for a
 // kind without a wiki limit here).

@@ -369,12 +369,12 @@ This is the heart of autonomous colony behavior.
 
 ## 5.2 Reservations
 
--   [-] **Entity reservation** (exclusive pawn→entity; no quantity splits)
--   [-] **Tile reservation** (haul dest / move target; a delivery route reserves its spare stockpile tile)
--   [-] **Item quantity reservation** (in-flight material per frame/fuel user: haulers' shares are booked so a frame is never over-delivered (HAUL-001); no split reservations on a source stack)
--   [-] **Bed/patient reservation** (bed `Claimant` for Sleep; PLAY-020: patients take a medical bed for the length of their rest, and a sowing cell is held by one grower; no per-patient policy)
--   [ ] **Workstation reservation**
--   [-] **Automatic reservation cleanup** (complete/cancel/replace/death; no target-deletion index)
+-   [x] **Entity reservation** (exclusive pawn→entity; RES-1: `ReleaseTarget` frees every claim on a target)
+-   [x] **Tile reservation** (RES-1: `ReleaseTile`; haul dest / move target; a delivery route reserves its spare stockpile tile)
+-   [x] **Item quantity reservation** (RES-1: `TryCount`/`Free` count claims share a stack for eating, hauling pickups, bill ingredients and medicine, and a pickup releases the rest; in-flight material per frame/fuel user: haulers' shares are booked so a frame is never over-delivered (HAUL-001); HAUL-001 shares remain a separate book)
+-   [-] **Bed/patient reservation** (bed `Claimant` for Sleep; PLAY-020: patients take a medical bed for the length of their rest, and a sowing cell is held by one grower; RES-1: `SleepIn` skips a bed another pawn holds; no per-patient policy)
+-   [x] **Workstation reservation** (RES-1: a bill or research job claims the bench's work spot)
+-   [x] **Automatic reservation cleanup** (RES-1: `ReleaseTarget` hooks in `deleteItem`, `removeBuilding`, `removePlant`, `removeAnimal` and `dieBy`; complete/cancel/replace/death)
     -   Completion.
     -   cancellation.
     -   death/downing.
@@ -510,17 +510,21 @@ This is the heart of autonomous colony behavior.
 
 -   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (animal corpses and chunks), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
     -   Paint storage cells.
--   [x] **Storage filters** (PRD-4: `domain/building/zone/filter.go` category tree with 8 top categories and sub-categories, allowed and disallowed by item, special filters (rotten, tainted, HP range, quality range), copy and paste, names; stockpiles and shelves; zones without edits keep the old switches)
+-   [x] **Storage filters** (PRD-4 then STO-2: `domain/building/zone/filter.go` tree to depth 3 with human corpses, bones, body parts and unfinished categories; `FilterRoot` allow all/clear all; 10 special toggles in `special.go` (fresh, non-deadman's apparel, smeltable, burnable, grave colonist/stranger, rotten, tainted and others) plus HP and quality ranges; vanilla defaults for new stockpiles (no corpses, bones, chunks or rotten; dumps take corpses and chunks), old zones keep their switches; copy and paste, names; stockpiles and shelves)
     -   Category tree.
     -   allowed/disallowed definitions.
     -   quality/condition filters where appropriate.
--   [x] **Storage priorities** (PLAY-023: Critical…Low per stockpile, re-hauling to a higher priority)
+-   [x] **Storage priorities** (PLAY-023: Critical…Low per stockpile; STO-3: shelves, hoppers, sarcophagi and graves take a priority too; re-hauling to a higher priority)
     -   Multiple priority levels.
     -   Haulers move goods from lower-priority to higher-priority valid
         storage.
--   [ ] **Storage capacity/index**
+-   [x] **Storage capacity/index** (STO-1: `haul.Ground` per-cell index and `zone.Stores` by priority; state hashes unchanged)
     -   Efficiently find valid free cells.
     -   Avoid map-wide storage scans.
+-   [x] **Linked storage groups** (STO-2: `group.go` Link/Unlink, an edit reaches every member, `zone.Map.SameStore`, a group can be a bill source)
+-   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold raw food at Important and refill below half (original); missing: the `FillHopper` job is unused (fills run as a plain haul), wardens and doctors do not fetch paste for prisoners and patients)
+-   [x] **Graves and sarcophagi as storage** (STO-2: corpse filters and priority; sarcophagus holds colonists only)
+-   [x] **Wiki stack limits** (STO-2: every item kind; corpses and gear one per stack)
 
 ## 6.4 Hauling
 
@@ -529,6 +533,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Haul production ingredients** (PRD-1: a crafter gathers a bill's ingredients from several stacks within the bill's radius onto the bench, `job.HaulIngredients`)
 -   [x] **Haul finished products** (PRD-1: store mode best stockpile hauls the product; drop on floor leaves it; a specific stockpile)
 -   [x] **Haul corpses**
+-   [x] **Haul urgently** (STO-2: designator plus urgent mark in `game/store`)
 -   [x] **Opportunistic/batched hauling where compatible** (batched for construction materials and refuelling; HAUL-002: a stockpile haul or Haul order gathers nearby compatible piles (`item.SameLoad`, an 8-tile chain) up to the carry limit and the destination cell's room, then delivers once (`game/haul`))
     -   Performance-conscious without changing core player expectations.
 
@@ -954,7 +959,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.3 Injuries
 
--   [-] **Damage types** (wound kind comes from the attacker's current weapon at impact and most weapons bruise, so they never bleed: CBT-1 carries kind and type on the shot; SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage; DEF-1/DEF-2: armor resolution and bomb, flame and EMP explosion damage)
+-   [x] **Damage types** (CBT-1: `damage.Hit` carries weapon, form and stopping power from the shot, never the attacker's current weapon; forms Blunt, Cut, Stab, Bullet, Arrow, Scratch, Bite, Crush, Burn, Flame, Bomb, EMP, Stun; Stab and Gunshot wounds bleed; wiki overkill windows destroy parts, brain and heart kill; SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage; DEF-1/DEF-2: armor resolution and bomb, flame and EMP explosion damage)
     -   Blunt.
     -   sharp.
     -   burn.
@@ -1312,7 +1317,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.1 Equipment
 
--   [-] **Single equipped primary weapon** (no drop-weapon command and no spare-weapon slot; a wielded weapon loses its quality and stuff on equip: CBT-2 adds the command and slot, CBT-3 keeps quality and stuff)
+-   [-] **Single equipped primary weapon** (CBT-2: `DropWeapon` drops or stows into a spare slot, `domain/pawn/inventory`; missing: a wielded weapon still loses its quality and stuff on equip, fixed in CBT-3)
     -   Equip/drop.
     -   weapon stats.
     -   melee fallback for ranged weapons.
@@ -1374,6 +1379,7 @@ treatment, and surgery are major colony-management systems.
         orders.
 -   [x] **Drafted movement order**
 -   [x] **Attack target order**
+-   [x] **Auto-undraft** (CBT-2: released after 10,000 quiet ticks, re-checked before release; wiki: Drafting)
 -   [x] **Hold/fire-at-will behavior** (DEF-4: fire at will off stops a drafted colonist starting attacks of its own; hold position shoots from its tile and never chases; `combat/draft.go`)
 -   [x] **Drafted field tending** (MED-03: drafted "Tend <name>" order; the doctor brings the best allowed medicine within 15 tiles, or none)
     -   Allow emergency tending under appropriate conditions.
@@ -1390,7 +1396,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Cover objects** (sandbags 55%, wall/door 75%, barricade 55%, turrets 40/50; DEF-3: trees, rock, cacti, bushes and stone chunks too, `domain/combat/cover`)
     -   Walls, barricade/sandbag equivalents, chunks, trees, etc.
     -   Cover affects incoming ranged hit chance.
--   [x] **Cover calculation** (best cover on the cells beside the target facing the shooter; ranged shots only; DEF-3: permille cover from buildings and natural objects in `Sight`)
+-   [x] **Cover calculation** (CBT-2: angle bands, 33/67 % at close range, combined covers; best cover on the cells beside the target facing the shooter; ranged shots only; DEF-3: permille cover from buildings and natural objects in `Sight`)
     -   Relative shooter-target-cover geometry.
     -   Stable deterministic resolution.
 
@@ -1398,7 +1404,7 @@ treatment, and surgery are major colony-management systems.
 
 -   [ ] **Target acquisition**
 -   [x] **Warmup** (DEF-1: per weapon, `weapon.Def.Warmup`)
--   [x] **Accuracy**
+-   [x] **Accuracy** (CBT-2: Euclidean ranges, weather factors unless both ends are roofed)
     -   Shooting skill.
     -   weapon.
     -   distance.
@@ -1414,16 +1420,16 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.5 Melee
 
--   [-] **Adjacent melee combat** (a ranged weapon shoots point-blank instead of striking with its stock: CBT-2 adds melee-with-gun)
+-   [x] **Adjacent melee combat** (CBT-2: humans adjacent strike with a gun's stock, grip or limb)
     -   Pawns next to hostile target use melee even if holding ranged
         weapon, matching vanilla's core behavior. citeturn2search1
--   [x] **Melee hit chance**
--   [-] **Weapon/body attacks**
+-   [x] **Melee hit chance** (CBT-2: wiki hit curve, wiki dodge, damage x0.8-1.2)
+-   [x] **Weapon/body attacks** (CBT-2: wiki tools per melee weapon; humans fist, head, teeth; animals a second attack at original tuning)
 -   [x] **Melee cooldown**
 
 ## 17.6 Armor
 
--   [x] **Armor coverage** (DEF-1: apparel covers body regions; a hit rolls the region, then each layer)
+-   [x] **Armor coverage** (CBT-1: the body part is picked first, then armor from every garment covering its group, outermost first, with garment HP loss; replaces the DEF-1 region roll)
     -   Apparel covers body parts.
 -   [x] **Armor categories** (DEF-1: sharp, blunt, heat; damage types map to them)
     -   Sharp/blunt/heat-style protection.

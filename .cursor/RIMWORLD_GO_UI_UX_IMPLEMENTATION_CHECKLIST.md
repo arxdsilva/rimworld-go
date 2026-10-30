@@ -475,17 +475,21 @@ the player's primary world-editing command surface.
 
 -   [x] **Stockpile name** (wave E U5: rename field in the Storage settings window, `windows/storage.go`)
 -   [x] **Storage priority selector** (PLAY-023: Priority picker and pane line on stockpiles and dumps)
--   [-] **Allowed-items filter tree** (wave E U5: Storage settings window, categories open into item kinds with allow checkboxes, rows from `game.StockpileFilterRows`; opened from `cmd.zone.storage`; missing: allow all/disallow all buttons and search)
+-   [x] **Allowed-items filter tree** (wave E U5, then STO-3: Storage settings window, tree from `StorageFilterRows` to full depth, Allow all / Clear all (`FilterRoot`), search box; opened from `cmd.zone.storage`)
     -   Hierarchical categories.
     -   Allow all/disallow all.
     -   Search.
     -   Individual definitions.
 -   [x] **Quality range** (U5: quality stepper line in the Storage window)
 -   [x] **Hit-point/condition range** (U5: hit points % stepper in 10 % steps)
--   [x] **Special filters** (U5: rotten and tainted toggles via `SetStockpileSpecial`)
+-   [x] **Special filters** (U5 then STO-3: `StorageSpecials` toggles via `SetStockpileSpecial`, grave toggles only on graves, specials after the tree)
     -   Rotten/fresh, tainted/clean, etc. where relevant.
 -   [x] **Copy/paste settings** (U5: Copy and Paste buttons, `PasteStockpile`; disabled reasons)
     -   Important quality-of-life feature.
+-   [x] **Shelf and storage-building priority** (STO-3: `cmd.shelf.storage` opens the same window for shelves, hoppers, sarcophagi and graves; five priority buttons)
+-   [-] **Link storage** (STO-3: `cmd.shelf.link` picks one other shelf at a time, `cmd.shelf.unlink`, group naming via `RenameZone`; missing: shift multi-select, buildings cannot be multi-selected)
+-   [x] **Capacity readouts** (STO-3: "Stored x of y stacks" on zone and building panes; the Accepts line reads the real filter; dispenser pane lists hoppers and fill)
+-   [x] **Zones overlay toggle and colours** (STO-3: `overlay.zones` Shift+Z and `hud.zones`; storage zones outlined in a fixed palette by zone id)
 
 ## 6.3 Growing-zone configuration
 
@@ -763,8 +767,9 @@ understandable.
 
 ## 12.2 Gear actions
 
--   [ ] **Drop**
+-   [x] **Drop** (CBT-2/STO-3: `cmd.pawn.dropweapon`; drops or stows the weapon in the spare slot; `PawnView.Spare` is not exposed yet)
 -   [x] **Equip**
+-   [x] **Staggered status** (CBT-1: `Staggered` on `PawnView` and `AnimalView`; Health tab names stab and gunshot wounds)
 -   [ ] **Wear**
 -   [ ] **Consume/use where valid**
 -   [ ] **Inspect item**
@@ -860,6 +865,7 @@ understandable.
 -   [x] **Worker skill range** (PRD-1)
 -   [x] **Specific worker** (PRD-1)
 -   [x] **Product destination** (PRD-1)
+-   [x] **Take ingredients from** (RES-1/STO-3: `bill.cfg.source` float menu sends `SetStorageSource`; store targets list dumping stockpiles and shelves; `BillView.Source`)
     -   Drop.
     -   best stockpile.
     -   selected stockpile if supported.

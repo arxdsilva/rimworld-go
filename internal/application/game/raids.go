@@ -250,6 +250,7 @@ func (g *Game) dropRaiderGear(id entity.EntityID) {
 		}
 		delete(g.equip, id)
 	}
+	g.combat.Drafts.DropSpare(id) // combat/draft.go (CBT-2): the spare weapon falls too
 }
 
 // removeRaider takes raider (or visitor, prisoner) id off the map. A
@@ -609,4 +610,8 @@ const sapperKnowPct = 30 // wiki: Spike trap
 
 type combatArms struct{ g *Game }
 
-func (h combatArms) Disarm(id entity.EntityID) { delete(h.g.equip, id) }
+func (h combatArms) Disarm(id entity.EntityID)             { delete(h.g.equip, id) }
+func (h combatArms) Wielded(id entity.EntityID) item.Kind  { return h.g.equip[id] }
+func (h combatArms) Wield(id entity.EntityID, k item.Kind) { h.g.equip[id] = k }
+func (h combatArms) Undraft(id entity.EntityID)            { h.g.setDraft(id, false) } // CBT-2: combat.Drafting
+func (h combatArms) DropAt(k item.Kind, n, x, y int)       { h.g.dropStack(k, n, x, y) }

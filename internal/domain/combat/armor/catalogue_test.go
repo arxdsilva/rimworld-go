@@ -14,14 +14,14 @@ import (
 func TestArmorCatalogue(t *testing.T) {
 	t.Parallel()
 	for k, want := range map[item.Kind]Layer{
-		item.FlakVest:       {Set{1000, 360, 270}, Torso},
-		item.FlakPants:      {Set{550, 80, 100}, Legs},
-		item.FlakJacket:     {Set{550, 80, 100}, Torso},
-		item.PlateArmor:     {Set{810, 405, 540}, Torso | Legs},
-		item.MarineArmor:    {Set{1060, 450, 540}, Torso | Legs},
-		item.MarineHelmet:   {Set{1060, 450, 540}, Head},
-		item.SimpleHelmet:   {Set{450, 225, 300}, Head},
-		item.AdvancedHelmet: {Set{630, 315, 420}, Head},
+		item.FlakVest:       {Set{1000, 360, 270}, vestCover, middle},
+		item.FlakPants:      {Set{550, 80, 100}, Legs, middle},
+		item.FlakJacket:     {Set{550, 80, 100}, coatCover, outer},
+		item.PlateArmor:     {Set{810, 405, 540}, longCover, shell},
+		item.MarineArmor:    {Set{1060, 450, 540}, longCover, shell},
+		item.MarineHelmet:   {Set{1060, 450, 540}, Head, headgear},
+		item.SimpleHelmet:   {Set{450, 225, 300}, CoverUpperHead, headgear},
+		item.AdvancedHelmet: {Set{630, 315, 420}, CoverUpperHead, headgear},
 	} {
 		if got, ok := Apparel(k); !ok || got != want {
 			t.Errorf("%v = %+v %v, want %+v", k, got, ok, want)
@@ -72,12 +72,6 @@ func TestPieceStuffAndQuality(t *testing.T) {
 	if _, ok := Piece(item.Wood, 0, 0); ok {
 		t.Fatal("wood is no garment")
 	}
-	if got := AppendPiece(nil, item.FlakPants, 0, 0); len(got) != 1 || got[0].Covers != Legs {
-		t.Fatalf("AppendPiece %+v", got)
-	}
-	if got := AppendPiece(nil, item.Wood, 0, 0); len(got) != 0 {
-		t.Fatal("non-armor adds nothing")
-	}
 }
 
 // TestPlateDeflectsKnife: over every roll, plate armor stops more of a
@@ -87,8 +81,9 @@ func TestPlateDeflectsKnife(t *testing.T) {
 	plate, _ := Apparel(item.PlateArmor)
 	bare, armored := 0, 0
 	for r := 0; r < RollMax; r++ {
-		bare += Hit(nil, Torso, damage.Sharp, 12, 180, func(int) int { return r }).Damage
-		armored += Hit([]Layer{plate}, Torso, damage.Sharp, 12, 180, func(int) int { return r }).Damage
+		knife := damage.Hit{Form: damage.FormCut, Amount: 12, Pen: 180}
+		bare += Struck(nil, CoverTorso, knife, func(int) int { return r }, nil).Amount
+		armored += Struck([]Layer{plate}, CoverTorso, knife, func(int) int { return r }, nil).Amount
 	}
 	if armored*10 >= bare*6 { // A = 810-180: about half deflected or halved
 

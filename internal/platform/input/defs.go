@@ -67,6 +67,8 @@ const (
 	// PowerOverlay shows the power grid (PLAY-021).
 	PowerOverlay Action = "overlay.power"
 	RoomStats    Action = "overlay.rooms"
+	// ZonesOverlay shows or hides every zone on the map (STO-3).
+	ZonesOverlay Action = "overlay.zones"
 	// CoverOverlay shows the cover tiles give against fire (DEF-1).
 	CoverOverlay Action = "overlay.cover"
 	Beauty       Action = "overlay.beauty"
@@ -167,6 +169,7 @@ var defs = []Def{
 
 	{ID: RoofOverlay, Label: "Roof overlay", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("R")}},
 	{ID: PowerOverlay, Label: "Power grid", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("P")}},
+	{ID: ZonesOverlay, Label: "Zones overlay", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("Z")}},
 	{ID: CoverOverlay, Label: "Cover", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("O")}},
 	{ID: RoomStats, Label: "Room stats", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: keys("G")},
 	{ID: Beauty, Label: "Beauty", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: keys("T"), Reserved: NotYet},

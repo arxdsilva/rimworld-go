@@ -218,7 +218,7 @@ const (
 // leaves a scar.
 func ScarOdds(k WoundKind, dmg int) int32 {
 	switch k {
-	case Cut, Bite, Scratch, Burn:
+	case Cut, Bite, Scratch, Burn, Stab, Gunshot:
 	default:
 		return 0
 	}

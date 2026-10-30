@@ -6,14 +6,15 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/weather"
 )
 
 // Host is everything combat needs from the simulation, as consumer-owned
@@ -42,8 +43,17 @@ type Roles struct {
 	// stock a rearm or a mortar load fetches.
 	Field  Field
 	Supply Supply
-	// Arms (DEF-4) takes a colonist's last grenade's empty hand.
+	// Arms (DEF-4) takes a colonist's last grenade's empty hand; CBT-2
+	// puts weapons down and draws the spare.
 	Arms Arms
+	// Draft (CBT-2) releases a drafted colonist (auto-undraft).
+	Draft Drafting
+}
+
+// Drafting releases drafted colonists (CBT-2).
+type Drafting interface {
+	// Undraft releases colonist id from the draft.
+	Undraft(id entity.EntityID)
 }
 
 // Creatures answers who a creature is and where.
@@ -62,9 +72,6 @@ type Creatures interface {
 	StandingRaider(id entity.EntityID) bool
 	// Hostile: animal a is attacking a colonist.
 	Hostile(a animal.State) bool
-	// Armor appends the garments id wears, outermost first, to buf (a
-	// slice combat owns) and returns it.
-	Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer
 }
 
 // Who picks the creatures Near collects.
@@ -99,6 +106,9 @@ type Rosters interface {
 	// RaiderOn is raider t's tile when it is standing and attacking id
 	// (ok false otherwise): one call for the threat scan's raider loop.
 	RaiderOn(t, id entity.EntityID) (x, y int, ok bool)
+	// Lying: a living humanlike lying downed (CBT-2: an ordered attack
+	// may go for one).
+	Lying(id entity.EntityID) bool
 }
 
 // Ground is the map: rock, buildings and their changes.
@@ -121,13 +131,15 @@ type Ground interface {
 
 // Skills is a humanlike's fighting: skill, stats and capability.
 type Skills interface {
-	// HitChance is base adjusted for id's Shooting or Melee and accuracy.
-	HitChance(id entity.EntityID, ranged bool, base int) int
+	// Melee is id's melee numbers (CBT-2): what its melee hit and dodge
+	// chances are read from (attack.HitChanceOf, attack.DodgeChanceOf).
+	Melee(id entity.EntityID) attack.Melee
 	// ShotAim is id's shooting accuracy per tile (ppm, from its Shooting
 	// skill) and its Shooting accuracy stat offset (permille).
 	ShotAim(id entity.EntityID) (perTilePPM, offset int)
-	// Learn gives id fighting experience for an attack.
-	Learn(id entity.EntityID, ranged bool)
+	// Learn gives id xp of Shooting (ranged) or Melee experience for an
+	// attack (attack.CombatXP).
+	Learn(id entity.EntityID, ranged bool, xp int)
 	// AimTicks is cooldown adjusted for id's aiming.
 	AimTicks(id entity.EntityID, cooldown int) int
 	CanViolence(id entity.EntityID) bool
@@ -144,12 +156,22 @@ type Jobs interface {
 	PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool)
 }
 
+// Wounds is the hurt entry of a hit (CBT-1): where it lands, what armor
+// lets through, and the wound it leaves.
+type Wounds interface {
+	// Absorb picks the part hit lands on by coverage and runs it through
+	// every garment covering that part, outermost layer first (a garment
+	// that takes the hit wears); roll draws the part and armor rolls.
+	Absorb(target entity.EntityID, hit damage.Hit, roll func(int) int) armor.Landed
+	// HurtHit wounds target with what Absorb let through (by: the
+	// attacker, 0 for none): the wound kind comes from the hit's form,
+	// never from by's current weapon.
+	HurtHit(target entity.EntityID, l armor.Landed, by entity.EntityID)
+}
+
 // Harm applies what an attack does.
 type Harm interface {
-	// Hurt wounds target by dmg from by's weapon; HurtAs with a wound
-	// kind and a cause of death.
-	Hurt(target entity.EntityID, dmg int, by entity.EntityID)
-	HurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind body.WoundKind, cause health.Cause)
+	Wounds
 	// DamageBuilding harms building id (construction: it breaks and
 	// leaves a blueprint; a sentry turret then calls Turrets.Blast).
 	DamageBuilding(id entity.EntityID, dmg int)
@@ -252,6 +274,10 @@ type Field interface {
 	Size() (w, h int)
 	DryWalkable(x, y int) bool
 	TileTaken(x, y int) bool
+	// Weather is the sky now and Roofed a tile under a roof (CBT-2: the
+	// weather's accuracy factor holds under the open sky).
+	Weather() weather.Kind
+	Roofed(x, y int) bool
 }
 
 // Supply is the colony's stock as a hauler fetching for a turret or a

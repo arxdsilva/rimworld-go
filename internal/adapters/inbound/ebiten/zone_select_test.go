@@ -352,20 +352,20 @@ func TestZonePaneShowsSowingAndCuttingOff(t *testing.T) {
 func TestZonePaneLinesForStockpilesAndPens(t *testing.T) {
 	t.Parallel()
 	food := rectZone(2, game.ZoneStockpile, 0, 0, 2, 0)
-	food.Food, food.Stone = true, true
+	food.Filter, food.Stored, food.Capacity = []string{"Food", "Stone"}, 2, 9
 	plain := rectZone(3, game.ZoneStockpile, 5, 0, 5, 0)
 	pen := rectZone(4, game.ZonePen, 8, 0, 9, 1)
 	dump := rectZone(5, game.ZoneDump, 11, 0, 13, 1) // PLAY-023
-	dump.Corpses, dump.Chunks, dump.Priority = true, true, "Low"
+	dump.Filter, dump.Priority = []string{"Animal corpses", "Stone chunks"}, "Low"
 	a, _, _ := zoneApp(t, food, plain, pen, dump)
 	for _, c := range []struct {
 		z    game.ZoneView
 		want []string
 	}{
-		{food, []string{"3 tiles", "Priority: Normal", "Accepts: Food, Stone, other goods"}},
-		{plain, []string{"1 tile", "Priority: Normal", "Accepts: other goods"}},
+		{food, []string{"3 tiles", "Priority: Normal", "Stored: 2 of 9 stacks", "Accepts: Food, Stone"}},
+		{plain, []string{"1 tile", "Priority: Normal", "Stored: 0 of 0 stacks", "Accepts: nothing"}},
 		{pen, []string{"4 tiles"}},
-		{dump, []string{"6 tiles", "Priority: Low", "Accepts: Animal corpses, Stone chunks"}},
+		{dump, []string{"6 tiles", "Priority: Low", "Stored: 0 of 0 stacks", "Accepts: Animal corpses, Stone chunks"}},
 	} {
 		if got := a.arch.Zones.Lines(c.z); strings.Join(got, "|") != strings.Join(c.want, "|") {
 			t.Errorf("%s lines = %q, want %q", architect.ZoneKindName(c.z), got, c.want)

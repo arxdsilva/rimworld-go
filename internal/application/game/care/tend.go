@@ -112,16 +112,10 @@ func (d *Doctor) assignTendWhere(id entity.EntityID, bleeding bool) bool {
 }
 
 // startTend starts tend rec with a fetch of the medicine the patient's
-// care level allows (WithMedicine), holding the dose for the trip.
+// care level allows (WithMedicine); the job's start holds the one dose
+// for the trip (RES-1: a count claim, so doctors share a stack).
 func (d *Doctor) startTend(id entity.EntityID, rec job.Record) bool {
-	rec = d.WithMedicine(id, rec)
-	if !d.h.StartJob(id, rec) {
-		return false
-	}
-	if rec.Dest != 0 {
-		d.h.Claim(id, rec.Dest)
-	}
-	return true
+	return d.h.StartJob(id, d.WithMedicine(id, rec))
 }
 
 // WithMedicine adds a fetch of medicine to a tend job (rec.Target is the
@@ -136,11 +130,8 @@ func (d *Doctor) WithMedicine(id entity.EntityID, rec job.Record) job.Record {
 		if !medcare.Allows(pol, k) {
 			continue
 		}
-		sid, st := d.h.NearestStack(id, k)
+		sid, st := d.h.NearestStack(id, k) // a stack with a dose no other doctor claimed
 		if sid == 0 {
-			continue
-		}
-		if _, taken := d.h.Owner(sid); taken {
 			continue
 		}
 		rec.Dest, rec.DestX, rec.DestY = sid, rec.TX, rec.TY
@@ -228,9 +219,7 @@ func (d *Doctor) EmergencyTend(doctor, patient entity.EntityID) {
 	h.Interrupt(doctor, job.Cancelled) // a plain order already replaced the queue (tick.go)
 	rec := d.emergencyMedicine(doctor, job.Record{Kind: job.EmergencyTend, Target: patient, TX: sx, TY: sy,
 		WorkLeft: wl, Forced: true})
-	if h.StartJob(doctor, rec) && rec.Dest != 0 {
-		h.Claim(doctor, rec.Dest)
-	}
+	h.StartJob(doctor, rec) // the start holds the dose (RES-1)
 }
 
 // emergencyMedicine adds a fetch of the best medicine rec.Target's care
@@ -245,10 +234,7 @@ func (d *Doctor) emergencyMedicine(doctor entity.EntityID, rec job.Record) job.R
 		}
 		sid, st := d.h.NearestStack(doctor, k)
 		if sid == 0 || pathing.Dist(x, y, st.X, st.Y) > emergencyMedReach {
-			continue
-		}
-		if _, taken := d.h.Owner(sid); taken {
-			continue
+			continue // NearestStack: a dose no other doctor claimed
 		}
 		rec.Dest, rec.DestX, rec.DestY = sid, rec.TX, rec.TY
 		rec.TX, rec.TY = st.X, st.Y

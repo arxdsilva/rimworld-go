@@ -10,26 +10,27 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 var fragBlast = weapon.DefOf(weapon.FragGrenade).Blast
 
-// hurtOf is the damage hurts recorded for id (HurtAs lines) and the wound
-// kind of the last.
-func hurtOf(f *fakeHost, id entity.EntityID) (dmg int, kind body.WoundKind, n int) {
+// hurtOf is the damage hurts recorded for id (HurtHit lines) and the
+// damage form of the last.
+func hurtOf(f *fakeHost, id entity.EntityID) (dmg int, form string, n int) {
 	for _, h := range f.hurts {
-		var t, d, by, k int
-		if c, _ := fmt.Sscanf(h, "%d-%d-%d-%d", &t, &d, &by, &k); c == 4 && entity.EntityID(t) == id {
-			dmg, kind, n = dmg+d, body.WoundKind(k), n+1
+		var t, d, by int
+		var k string
+		if c, _ := fmt.Sscanf(h, "%d-%d-%d-%s", &t, &d, &by, &k); c == 4 && entity.EntityID(t) == id {
+			dmg, form, n = dmg+d, k, n+1
 		}
 	}
-	return dmg, kind, n
+	return dmg, form, n
 }
 
 // TestBlastDamageByDistance: everyone within the radius is wounded, the
@@ -45,8 +46,8 @@ func TestBlastDamageByDistance(t *testing.T) {
 	c.Blasts.Explode(9, weapon.FragGrenade, 10, 10, fragBlast)
 	d1, k1, _ := hurtOf(f, 1)
 	d2, _, _ := hurtOf(f, 2)
-	if d1 != 50 || k1 != body.Cut || d2 != fragBlast.At(1414) || d2 >= d1 || d2 < 25 {
-		t.Fatalf("centre %d (kind %d), diagonal %d", d1, k1, d2)
+	if d1 != 50 || k1 != damage.FormBomb.String() || d2 != fragBlast.At(1414) || d2 >= d1 || d2 < 25 {
+		t.Fatalf("centre %d (form %s), diagonal %d", d1, k1, d2)
 	}
 	if _, _, n := hurtOf(f, 3); n != 0 {
 		t.Fatal("two tiles out is past a 1.9 blast")
@@ -94,7 +95,7 @@ func TestBlastArmor(t *testing.T) {
 	f.pawn(1, 10, 10, weapon.Fists)
 	marine, _ := armor.Apparel(item.MarineArmor)
 	f.worn[1] = []armor.Layer{marine}
-	f.rolls = []int{500, 0} // the torso, then a deflecting roll
+	f.rolls = []int{0} // a deflecting roll (the part is the host's pick)
 	c.Blasts.Explode(9, weapon.FragGrenade, 10, 10, fragBlast)
 	if _, _, n := hurtOf(f, 1); n != 0 || f.stains != 0 {
 		t.Fatal("marine armor deflected the shrapnel")
@@ -114,8 +115,8 @@ func TestMolotovIgnitesAndBurns(t *testing.T) {
 	if f.fires != 1 {
 		t.Fatal("no fire")
 	}
-	if d, k, _ := hurtOf(f, 1); d == 0 || k != body.Burn {
-		t.Fatalf("burn %d kind %d", d, k)
+	if d, k, _ := hurtOf(f, 1); d == 0 || k != damage.FormFlame.String() {
+		t.Fatalf("burn %d form %s", d, k)
 	}
 	if _, _, n := hurtOf(f, 2); n != 0 {
 		t.Fatal("the diagonal is past 1.1")

@@ -14,11 +14,8 @@ import (
 // DEF-4 unit tests: drafted switches, grenade belts and throws, the
 // combat log, the raiders' mortars, IEDs set off by bullets and blasts.
 
-// Disarm is the fake's Arms role.
-func (f *fakeHost) Disarm(id entity.EntityID) { delete(f.weapons, id) }
-
 func (f *fakeHost) combatArmed() *Combat {
-	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Arms: f})
+	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Arms: fakeArms{f}, Draft: f})
 }
 
 // TestDraftSwitchesDoNotFlap: fire at will off stops the auto attack and
@@ -78,8 +75,8 @@ func TestDraftSwitchesDoNotFlap(t *testing.T) {
 	}
 	d.SetHold(1, false)
 	d.SetFireAtWill(1, true)
-	if len(d.set) != 0 {
-		t.Fatal("default switches keep no state")
+	if s := d.set[1]; s.NoFire || s.Hold || s.Grenades != 0 || len(d.set) != 1 {
+		t.Fatal("default switches keep no state (only the auto-undraft timer)")
 	}
 }
 
@@ -98,8 +95,8 @@ func TestGrenadeBeltAndThrow(t *testing.T) {
 	if n := d.Carry(1, item.FragGrenades, 2); n != 2 || d.Grenades(1) != 2 {
 		t.Fatalf("carry %d, belt %d", n, d.Grenades(1))
 	}
-	if d.Throw(1, 30, 5) || len(f.msgs) != 1 {
-		t.Fatal("too far is refused with a message")
+	if !d.Throw(1, 30, 5) || len(f.started) == 0 || f.started[len(f.started)-1].Kind != job.Move || !d.queue[0].Walk {
+		t.Fatal("too far: it walks towards the cell first (CBT-2)")
 	}
 	if !d.Throw(1, 10, 5) {
 		t.Fatal("a throw in range")

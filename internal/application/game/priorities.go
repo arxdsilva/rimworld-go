@@ -109,12 +109,12 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Warden:
 		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
-		return g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || g.assignHaul(id) // fillTroughs: trough_feed.go
+		return g.haulUrgent(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || g.assignHaul(id) // haul_priority.go, trough_feed.go
 	case work.Construct:
 		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
 			g.assignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go
 	case work.Cook, work.Craft:
-		return g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // craft/shop.go
+		return t == work.Cook && g.fillHoppers(id) || g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // haul_priority.go, craft/shop.go
 	case work.Hunt:
 		return g.combat.Hunting.Assign(id) // combat/hunt.go
 	case work.Handle: // SIM-026: taming moved here from Hunt

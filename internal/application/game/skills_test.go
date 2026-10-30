@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
@@ -94,8 +95,11 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 			t.Fatalf("need decay %v != %v", a, b)
 		}
 	}
-	if g.hitChanceFor(happy, true, 63) != 63 || g.hitChanceFor(happy, false, 41) != 41 {
-		t.Error("hit chance moved for a neutral pawn")
+	if m := g.meleeOf(happy); m.Offset != 0 || m.Sight != 1000 || m.Manip != 1000 || m.Moving != 1000 || !m.Skilled || m.Down {
+		t.Errorf("melee numbers moved for a neutral pawn: %+v", m)
+	}
+	if _, off := (combatSkills{g}).ShotAim(happy); off != 0 {
+		t.Error("shooting offset moved for a neutral pawn")
 	}
 	if g.paceStep(happy, 17) != 17 || g.aimTicksFor(happy, 90) != 90 {
 		t.Error("step or aim time moved for a neutral pawn")
@@ -169,7 +173,7 @@ func TestLearningSaturation(t *testing.T) {
 	}
 	shoot := g.skillOf(id, skill.Shooting)
 	g.learn(id, skill.Shooting, 500)
-	g.combatLearn(id, true)
+	g.combatLearn(id, true, 120)
 	if g.skillOf(id, skill.Shooting) != shoot {
 		t.Error("an incapable skill learned")
 	}
@@ -306,8 +310,10 @@ func TestAccuracyRisesWithSkill(t *testing.T) {
 	hits := func(id entity.EntityID) int {
 		r := randx.New(42)
 		n := 0
+		pt, off := (combatSkills{g}).ShotAim(id) // CBT-2: the banded aim at 10 tiles
+		c := attack.Report{Band: 550, Shooter: attack.ShooterFactor(pt, 10), Offset: off, Size: 1000, Weather: 1000, Light: 1000}.Aim()
 		for range 400 {
-			if r.IntN(100) < g.hitChanceFor(id, true, 55) {
+			if r.IntN(1000) < c {
 				n++
 			}
 		}

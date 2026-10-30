@@ -27,8 +27,8 @@ func weForbidWood(j *journey, id uint16) command.Command {
 	if wbFind(j, "storage.filter.") == "" {
 		j.clickID(weButton(j, "stockpile settings button", "cmd.zone.storage"))
 	}
-	if wbFind(j, "storage.filter.", "wood") == "" { // Wood sits under Materials
-		j.clickID(weButton(j, "materials expander", "storage.expand.", "materials"))
+	if wbFind(j, "storage.filter.", "wood") == "" { // Wood sits under Raw resources
+		j.clickID(weButton(j, "raw resources expander", "storage.expand.", "raw resources"))
 	}
 	j.clickID(weButton(j, "wood filter row", "storage.filter.", "wood"))
 	c, ok := j.lastCmd(command.SetStockpileFilter)
@@ -78,7 +78,10 @@ func TestJourneyStockpileFilterEdit(t *testing.T) {
 	}
 
 	// a special filter row toggles through SetStockpileSpecial
-	j.clickID(weButton(j, "special filter row", "special"))
+	if wbFind(j, "storage.special.") == "" { // the expanded wood group pushed the specials out of view
+		j.clickID(weButton(j, "raw resources expander", "storage.expand.", "raw resources"))
+	}
+	j.clickID(weButton(j, "special filter row", "storage.special."))
 	if c, ok := j.lastCmd(command.SetStockpileSpecial); !ok || c.Target != uint64(sp2.ID) {
 		t.Fatalf("SetStockpileSpecial %+v (sent %v), want zone %d", c, ok, sp2.ID)
 	}
@@ -342,17 +345,19 @@ func TestJourneyFireAtWillOffHoldsFire(t *testing.T) {
 	if c, ok := j.lastCmd(command.SetFireAtWill); !ok || !c.Enabled {
 		t.Fatalf("second press sent %+v (%v), want Enabled true", c, ok)
 	}
+	// with Fire at will back on the colonist engages: it shoots, or, once
+	// the raider is adjacent, strikes with the gun's stock (CBT-2: vanilla
+	// melee when adjacent), so any attack by the colonist counts
 	j.key("Digit3", 0)
-	for i := 0; i < 1500 && shots == 0; i++ {
+	attacked := false
+	for i := 0; i < 1500 && !attacked; i++ {
 		careFeed(j)
 		j.update(1)
-		if weFired(j, id) {
-			shots++
-		}
+		attacked = weFired(j, id) || weStruck(j, id)
 	}
 	j.key("Space", 0)
-	if shots == 0 {
-		t.Fatalf("no shot after Fire at will came back on; colonist %+v", j.pawn(id))
+	if !attacked {
+		t.Fatalf("the colonist never attacked after Fire at will came back on")
 	}
 }
 
@@ -557,4 +562,14 @@ func TestJourneyMechEMP(t *testing.T) {
 	if !wreck || meat {
 		t.Fatalf("the dead mech left wreck=%v meat=%v, want a wreck and no meat; items %+v", wreck, meat, j.world().Items)
 	}
+}
+
+// weStruck reports a melee attack by colonist id this update.
+func weStruck(j *journey, id uint64) bool {
+	for _, tr := range j.world().Traces {
+		if uint64(wcNum(j, tr, "Attacker")) == id && tr.Melee {
+			return true
+		}
+	}
+	return false
 }

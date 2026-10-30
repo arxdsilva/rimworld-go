@@ -108,7 +108,8 @@ func TestEmergencyTend(t *testing.T) {
 	h.stacks[herbal+1] = item.Stack{Kind: item.IndustrialMedicine, Qty: 1, X: 40, Y: 40} // out of reach
 	d.EmergencyTend(doc, patient)
 	j := h.jobs[doc]
-	if j.Kind != job.EmergencyTend || !j.Forced || j.Dest != herbal || j.WorkLeft != TendWork || h.owners[herbal] != doc ||
+	// RES-1: the game's job start holds the dose (a count claim), not care
+	if j.Kind != job.EmergencyTend || !j.Forced || j.Dest != herbal || j.WorkLeft != TendWork ||
 		len(h.log) < 1 || h.log[0] != "interrupt" { // the queue is the game's (tick.go): a plain order replaced it already
 		t.Fatalf("emergency tend: %+v log %v", j, h.log)
 	}

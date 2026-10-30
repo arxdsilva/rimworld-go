@@ -79,8 +79,8 @@ func TestForceTendFetchesMedicine(t *testing.T) {
 		j.Dest != herbal || j.TX != 2 || j.DestX != 6 || j.DestY != 5 {
 		t.Fatalf("a forced tend fetching the herbal medicine first: %+v", j)
 	}
-	if h.owners[herbal] != doc || h.owners[patient] != doc {
-		t.Fatalf("the dose and the patient reserved: %v", h.owners)
+	if h.owners[patient] != doc { // RES-1: the game's job start holds the dose (a count claim)
+		t.Fatalf("the patient reserved: %v", h.owners)
 	}
 	h.pos[doc] = [2]int{6, 5} // walked to the patient with the dose
 	c.Doctor.DoTend(doc, j)

@@ -116,8 +116,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateSmooth:
 		g.markSmooth(c.X, c.Y, c.X2, c.Y2, true) // smooth.go
-	case command.AddBill, command.SetBill, command.RemoveBill, command.ConfigureBill, command.SetBillIngredient, command.ReorderBill:
-		g.craft.Bills.Apply(c) // craft/bills.go, craft/settings.go (PRD-1)
+	case command.AddBill, command.SetBill, command.RemoveBill, command.ConfigureBill, command.SetBillIngredient, command.ReorderBill, command.SetStorageSource:
+		g.craft.Bills.Apply(c) // craft/bills.go, craft/settings.go (PRD-1; RES-1: a bill's ingredient source)
 	case command.DesignateGrowZone:
 		if !g.cropLocked(plant.Species(c.Build)) {
 			g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
@@ -202,12 +202,12 @@ func (g *Game) applyOne(c command.Command) {
 		if g.combat.Orders.Apply(c) { // combat/orders.go (DEF-3): doors, turrets, mortars
 			g.structVer++ // a door held open (or let close) changes the hostiles' way (defense.go shutDoors)
 		}
-	case command.SetStockpileFilter, command.SetStockpileSpecial, command.PasteStockpile:
-		g.cmdStockpile(c) // zones.go (PRD-4): storage filters
-	case command.SetFireAtWill, command.SetHoldPosition, command.ThrowGrenade:
-		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4): drafted control
-	case command.HaulUrgently, command.DropWeapon, command.LinkStorage, command.UnlinkStorage, command.SetStorageSource,
-		command.SetZoneOverlay: // STO/CBT contract: ignored until STO-2, STO-3 and CBT-2 handle them
+	case command.SetStockpileFilter, command.SetStockpileSpecial, command.PasteStockpile, command.HaulUrgently, command.LinkStorage,
+		command.UnlinkStorage:
+		g.cmdStockpile(c) // zones.go (PRD-4, STO-2): storage filters, groups, urgent hauls
+	case command.SetFireAtWill, command.SetHoldPosition, command.ThrowGrenade, command.DropWeapon:
+		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4, CBT-2): drafted control, drop or stow a weapon
+	case command.SetZoneOverlay: // STO-2: a view toggle the UI keeps (nothing simulated)
 	}
 }
 
@@ -489,7 +489,7 @@ func (g *Game) phaseAI() {
 		}
 		// Warmth only wakes a sleeper when the exposure turns dangerous, and
 		// nothing is interrupted unless a bearable spot was actually found.
-		if j.Kind != job.Warm && j.Kind != job.Eat && g.needsComfort(id) && !g.noComfortUntil(id) &&
+		if j.Kind != job.Warm && !j.Kind.Eating() && g.needsComfort(id) && !g.noComfortUntil(id) &&
 			(j.Kind != job.Sleep || g.exposureDanger(id)) {
 			if x, y, ok := g.warmSpot(id); ok {
 				if j.Kind != job.None && j.State != job.Idle {
@@ -523,7 +523,7 @@ func (g *Game) phaseAI() {
 			g.rest.MarkRested(id)
 		}
 		bedtime := needs.SleepScheduled(act) && (!g.rest.RestedFree(id) || n.Tired())
-		if bedtime && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
+		if bedtime && j.Kind != job.Sleep && !j.Kind.Eating() && j.Kind != job.Warm {
 			if busy {
 				g.interrupt(id, job.Interrupted)
 			}
@@ -545,12 +545,12 @@ func (g *Game) phaseAI() {
 			continue // player-prioritized: finish it first
 		}
 		if busy {
-			if n.Hungry() && j.Kind != job.Eat && g.seekFood(id) {
+			if n.Hungry() && !j.Kind.Eating() && g.seekFood(id) {
 				g.interrupt(id, job.Interrupted)
 				g.assignEat(id)
 				continue
 			}
-			if tired && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
+			if tired && j.Kind != job.Sleep && !j.Kind.Eating() && j.Kind != job.Warm {
 				g.interrupt(id, job.Interrupted)
 				g.rest.Assign(id)
 				continue
@@ -619,8 +619,8 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	if g.areaBypass(id, rec) { // areas.go: a forced or exempt job paths anywhere
 		defer g.endAreaBypass()
 	}
-	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !g.reserve.TryEntity(id, rec.Target) ||
-		!haul.ClaimAll(g.reserve, id, rec.Pickups) {
+	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !claimJobTarget(g, id, rec) ||
+		!haul.ClaimAll(g.reserve, haulHost{g}, id, rec.Pickups) {
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
 		g.jobs.Set(id, rec)
@@ -737,8 +737,8 @@ func (g *Game) hasEdible() bool {
 		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
-		if _, taken := g.reserve.EntityOwner(id); taken {
-			continue
+		if g.reserve.Free(id, st.Qty) <= 0 {
+			continue // RES-1: every portion claimed by eaters already on their way
 		}
 		return true
 	}
@@ -752,11 +752,16 @@ const foodRetry = 500
 
 // seekFood reports whether pawn id should go looking for food now.
 func (g *Game) seekFood(id entity.EntityID) bool {
-	return uint64(g.clock.Now()) >= g.noFood[id] && g.hasEdible()
+	return uint64(g.clock.Now()) >= g.noFood[id] && (g.hasEdible() || g.haul.store.Paste.Ready(haulHost{g}, haulHost{g}))
 }
 
 func (g *Game) assignEat(id entity.EntityID) {
 	best, bx, by := g.bestFood(id)
+	if st, _ := g.stacks.Get(best); best == 0 || st.Kind.Preference() < item.NutrientPasteMeal.Preference() { // STO-2: paste before raw food
+		if bid, sx, sy, ok := g.haul.store.Paste.Find(haulHost{g}, haulHost{g}, haulHost{g}, id); ok && g.startJob(id, g.haul.store.Paste.Job(bid, sx, sy)) {
+			return
+		}
+	}
 	if best == 0 {
 		g.noFood[id] = uint64(g.clock.Now()) + foodRetry // areas.go: all the food lies outside the allowed area
 		return
@@ -782,14 +787,16 @@ func (g *Game) assignHaul(id entity.EntityID) bool {
 			break // not out of reach: planning again picks the same load
 		}
 	}
-	return g.haulToStockpile(id, pos) // nothing to supply (or it fell through)
+	return g.haulToStockpile(id, pos, g.itemIDs, 0) // nothing to supply (or it fell through)
 }
 
 // haulToStockpile carries the nearest loose stack to a stockpile, trying
 // the next nearest when one can't be started (postponed or out of reach:
 // SIM-027), at most workTries stacks; kinds with no stockpile room are
-// skipped once found full.
-func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
+// skipped once found full. It looks among ids (every item, or the urgent
+// ones, STO-2) and with dest set only stores in zones of that kind (a
+// cook filling hoppers).
+func (g *Game) haulToStockpile(id entity.EntityID, pos Position, ids []entity.EntityID, dest zone.Kind) bool {
 	var tried []entity.EntityID
 	var full []item.Kind
 	var takes [256]int8 // filterMatches per kind (0 unknown, 1 yes, -1 no): zones don't change here
@@ -807,16 +814,17 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 		// one keeps the original order, so pruning is unchanged.
 		post := g.postponedTargets(id, job.Haul, postBuf[:0])
 		g.haul.cands = g.haul.cands[:0] // HAUL-002: the piles a load may gather
-		for _, iid := range g.itemIDs {
+		for _, iid := range ids {
 			st := g.stacks.Ref(iid) // read only: nothing below changes the store
-			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) {
+			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) || dest != 0 && !zone.Universe(dest).Has(st.Kind) {
 				continue // leftFound (haul_claim.go): found on the map, unmarked
 			}
 			off := len(post) > 0 && slices.Contains(post, iid)
 			if !off && g.staysStored(iid, st, &prio) {
 				continue
 			}
-			if _, taken := g.reserve.EntityOwner(iid); taken {
+			free := g.reserve.FreeFor(id, iid, st.Qty) // RES-1: the part other pawns haven't claimed
+			if free <= 0 {
 				continue
 			}
 			if slices.Contains(tried, iid) || slices.Contains(full, st.Kind) || off && g.postponedFor(id, job.Haul, iid, 0, 0) {
@@ -834,16 +842,17 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 			if takes[st.Kind] < 0 {
 				continue
 			}
-			g.haul.cands = append(g.haul.cands, haul.Cand{ID: iid, X: st.X, Y: st.Y, Qty: st.Qty})
+			g.haul.cands = append(g.haul.cands, haul.Cand{ID: iid, X: st.X, Y: st.Y, Qty: free})
 			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
 			if !found || d < bestD || (d == bestD && iid < bestID) {
 				found, bestD, bestID, best = true, d, iid, *st
+				best.Qty = free
 			}
 		}
 		if !found {
 			return false
 		}
-		dx, dy, ok := g.haulDest(id, best) // haul_priority.go: up a priority for a stored stack
+		dx, dy, ok := g.haulDest(id, best, dest) // haul_priority.go: up a priority for a stored stack
 		if !ok {
 			if g.inMatchingStockpileAt(best.Kind, best.X, best.Y) {
 				tried = append(tried, bestID) // a re-haul with no room above (its area): this stack only
@@ -898,8 +907,8 @@ func haulCands(g *Game, id entity.EntityID, k item.Kind) {
 		if st == nil || st.Kind != k || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) || g.staysStored(iid, st, &prio) {
 			continue
 		}
-		if _, taken := g.reserve.EntityOwner(iid); !taken && !g.postponedFor(id, job.Haul, iid, 0, 0) {
-			g.haul.cands = append(g.haul.cands, haul.Cand{ID: iid, X: st.X, Y: st.Y, Qty: st.Qty})
+		if free := g.reserve.FreeFor(id, iid, st.Qty); free > 0 && !g.postponedFor(id, job.Haul, iid, 0, 0) { // RES-1
+			g.haul.cands = append(g.haul.cands, haul.Cand{ID: iid, X: st.X, Y: st.Y, Qty: free})
 		}
 	}
 }
@@ -1129,6 +1138,8 @@ func (g *Game) phaseJobs() {
 			g.doTrade(id, j) // trade_session.go (PLAY-024)
 		case job.UseComms:
 			g.doUseComms(id, j) // comms.go (PLAY-024)
+		case job.DispensePaste:
+			g.haul.store.Paste.Do(haulHost{g}, haulHost{g}, haulHost{g}, id, j) // store/paste.go (STO-2)
 		case job.ManMortar, job.RearmTurret:
 			g.combat.Orders.Do(id, j) // combat/orders.go (DEF-3): crew a mortar, rearm a turret or mortar
 		default:
@@ -1161,7 +1172,7 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 	// ration does), never past full by more than half a portion
 	n, _ := g.need.Get(id)
 	nut := st.Kind.Nutrition()
-	for eaten := 0; st.Qty > 0 && eaten < 12; eaten++ {
+	for eaten, most := 0, min(12, g.reserve.FreeFor(id, j.Target, st.Qty)); st.Qty > 0 && eaten < most; eaten++ { // RES-1: not others' portions
 		st.Qty--
 		n.Hunger += nut
 		if j.Count == bingeEat && eaten < 2 {
@@ -1202,7 +1213,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 		}
 		take := min(st.Qty, item.CarryLimit, st.Kind.StackLimit()) // PRD-4: no more than a tile holds
 		if len(j.Route) > 0 || j.Dest == 0 && j.Count > 0 {
-			take = min(st.Qty, max(1, j.Count)) // the planned load (haul_route.go, planGather)
+			take = min(st.Qty, max(1, j.Count), g.reserve.FreeFor(id, j.Target, st.Qty)) // the planned load (haul_route.go, planGather), never another hauler's part (RES-1)
 		} else if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {
 			if need := fr.Need - fr.Wood; need > 0 && take > need {
 				take = need
@@ -1210,6 +1221,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 		}
 		carry := j.Target
 		if take < st.Qty { // split off one load, leave the rest
+			g.reserve.ReleaseEntity(id, j.Target) // RES-1: picked up, the rest is free for other haulers
 			st.Qty -= take
 			g.putStack(j.Target, st)
 			carry = g.entities.Next()
@@ -1615,6 +1627,7 @@ func (g *Game) putStack(id entity.EntityID, st item.Stack) {
 }
 
 func (g *Game) deleteItem(id entity.EntityID) {
+	g.reserve.ReleaseTarget(id) // RES-1: its claimants' jobs find it gone
 	g.idx.ground.Moved()
 	g.stacks.Delete(id)
 	g.itemIDs = dropIDs(g.itemIDs, func(iid entity.EntityID) bool { return iid == id })

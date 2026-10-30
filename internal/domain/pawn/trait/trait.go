@@ -147,8 +147,9 @@ var defs = [NumTraits]Def{
 		Desc: "{name} gets by on a few mouthfuls and forgets meals entirely when busy.",
 		Mods: []stat.Mod{{Stat: stat.HungerRate, Mul: 800}}},
 	Roughneck: {Key: "roughneck", Label: "Roughneck", Group: GroupStandards,
-		Desc:         "{name} has slept in ditches and eaten worse. Hardship barely registers.",
-		ThoughtScale: map[mood.Kind]int16{mood.SleptOutside: 25, mood.SleptOnGround: 25, mood.AteRaw: 25}},
+		Desc: "{name} has slept in ditches and eaten worse. Hardship barely registers.",
+		ThoughtScale: map[mood.Kind]int16{mood.SleptOutside: 25, mood.SleptOnGround: 25, mood.AteRaw: 25,
+			mood.AtePaste: 0}}, // STO-2: the wiki's ascetic minds no paste
 	Fussy: {Key: "fussy", Label: "Fussy", Group: GroupStandards,
 		Desc: "{name} notices every draught, lump and stale crumb, and loves a well-kept room.",
 		ThoughtScale: map[mood.Kind]int16{mood.SleptOutside: 200, mood.SleptOnGround: 200, mood.AteRaw: 200,

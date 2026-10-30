@@ -9,8 +9,6 @@ import (
 	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
-	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -77,9 +75,9 @@ func (b *Blasts) creatures(by entity.EntityID, wk weapon.Kind, x, y int, d explo
 			continue
 		}
 		dmg := d.At(explosion.Dist(s.X-x, s.Y-y))
-		res := b.st.armorRoll(s.ID, d.Type(), dmg, d.Pen, h.Roll)
-		h.LogStrike(by, s.ID, wk, true, res.Damage)
-		b.wound(by, s.ID, x, y, s.X, s.Y, d, res)
+		l := h.Absorb(s.ID, damage.Hit{Weapon: weapon.DefOf(wk).Name, Form: damage.FormOf(d.Type()), Amount: dmg, Pen: d.Pen}, h.Roll)
+		h.LogStrike(by, s.ID, wk, true, l.Amount)
+		b.wound(by, s.ID, x, y, s.X, s.Y, l)
 	}
 }
 
@@ -92,22 +90,16 @@ func (b *Blasts) alive(id entity.EntityID) bool {
 	return ok
 }
 
-// wound applies what got through armor: shrapnel cuts, flame burns.
-func (b *Blasts) wound(by, target entity.EntityID, x, y, tx, ty int, d explosion.Def, res armor.Result) {
+// wound applies what got through armor (CBT-1: the hit's form picks the
+// wound: shrapnel cuts, flame burns).
+func (b *Blasts) wound(by, target entity.EntityID, x, y, tx, ty int, l armor.Landed) {
 	h := b.h
-	if res.Damage <= 0 {
+	if l.Stopped() {
 		return
 	}
-	kind := body.Cut
-	switch {
-	case d.Type() == damage.Heat:
-		kind = body.Burn
-	case res.Type == damage.Blunt:
-		kind = body.Bruise
-	}
-	h.Hit(target, h.Now(), x, y, res.Damage)
-	h.Stain(target, x, y, tx, ty, res.Damage)
-	h.HurtAs(target, res.Damage, by, kind, health.CauseInjury)
+	h.Hit(target, h.Now(), x, y, l.Amount)
+	h.Stain(target, x, y, tx, ty, l.Amount)
+	h.HurtHit(target, l, by)
 }
 
 // buildings damages (or, for an EMP, stuns) the object-layer buildings

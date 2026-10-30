@@ -39,7 +39,7 @@ func woodGrid(t *testing.T) (*Game, entity.EntityID, []entity.EntityID) {
 func haulNow(t *testing.T, g *Game, id entity.EntityID) job.Record {
 	t.Helper()
 	pos, _ := g.positions.Get(id)
-	if !g.haulToStockpile(id, pos) {
+	if !g.haulToStockpile(id, pos, g.itemIDs, 0) {
 		t.Fatal("no haul started")
 	}
 	j, _ := g.jobs.Get(id)
@@ -68,8 +68,9 @@ func storedIn(g *Game, kind string, x0, y0, x1, y1 int) int {
 }
 
 // TestHaulerGathersNearbyPiles: 144 wood in twelve piles of 12 goes in
-// two trips, the first a full 100 (eight piles and 4 of a ninth), and all
-// of it lands in the stockpile.
+// two trips, the first a full 75 (STO-2: wood stacks to 75, so a cell
+// takes no more: six piles and 3 of a seventh), and all of it lands in
+// the stockpile.
 func TestHaulerGathersNearbyPiles(t *testing.T) {
 	t.Parallel()
 	g, id, _ := woodGrid(t)
@@ -89,8 +90,8 @@ func TestHaulerGathersNearbyPiles(t *testing.T) {
 	if got := storedIn(g, "wood", 20, 2, 21, 3); got != 144 {
 		t.Fatalf("stored %d of 144 wood", got)
 	}
-	if len(loads) != 2 || loads[0] != item.CarryLimit || loads[1] != 44 {
-		t.Fatalf("loads %v, want [100 44]", loads)
+	if len(loads) != 2 || loads[0] != item.Wood.StackLimit() || loads[1] != 144-item.Wood.StackLimit() {
+		t.Fatalf("loads %v, want [75 69]", loads)
 	}
 	if n := itemsOnGround(g, "wood"); n != 144 {
 		t.Fatalf("wood on the ground %d: none lost, none spilled outside", n)
@@ -118,11 +119,13 @@ func TestGatherLeavesPilesOutOfReach(t *testing.T) {
 
 // TestGatherKeepsLoadsAlike: piles of another quality or material never
 // join the load; forbidden piles and piles another pawn holds are skipped.
+// STO-2: a weapon stacks to one (wiki), so the piles are steel carrying
+// the quality and material marks SameLoad compares.
 func TestGatherKeepsLoadsAlike(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 8})
 	club := func(x int, q uint8, stuff item.Kind) entity.EntityID {
-		sid, _ := g.SpawnStack(item.Club, 2, x, 2)
+		sid, _ := g.SpawnStack(item.Steel, 2, x, 2)
 		st, _ := g.stacks.Get(sid)
 		st.Quality, st.Stuff = q, stuff
 		g.putStack(sid, st)
@@ -149,31 +152,33 @@ func TestGatherKeepsLoadsAlike(t *testing.T) {
 	}
 }
 
-// TestTwoHaulersSplitTheCluster: each pile is planned for one hauler only,
-// and together they store all of it.
+// TestTwoHaulersSplitTheCluster: the haulers plan every pile between
+// them, and together they store all of it. RES-1: a pile the first load
+// takes only part of is shared (count claims), so the second hauler may
+// plan its rest; no pile is ever planned past its quantity.
 func TestTwoHaulersSplitTheCluster(t *testing.T) {
 	t.Parallel()
 	g, a, piles := woodGrid(t)
 	b, _ := g.SpawnNamedPawn(1, 4, "Second")
-	ja, jb := haulNow(t, g, a), haulNow(t, g, b)
-	seen := map[entity.EntityID]entity.EntityID{}
-	for _, p := range []struct {
-		who entity.EntityID
-		j   job.Record
-	}{{a, ja}, {b, jb}} {
-		ids := []entity.EntityID{p.j.Target}
-		for i := 0; i < len(p.j.Pickups); i += 2 {
-			ids = append(ids, p.j.Pickups[i])
-		}
-		for _, sid := range ids {
-			if w, dup := seen[sid]; dup {
-				t.Fatalf("pile %d planned for %d and %d", sid, w, p.who)
-			}
-			seen[sid] = p.who
+	haulNow(t, g, a)
+	haulNow(t, g, b)
+	planned := map[entity.EntityID]int{} // what the claims hold of each pile
+	for _, c := range g.reserve.Export() {
+		if !c.Tile && c.Count > 0 {
+			planned[c.Target] += c.Count
+		} else if !c.Tile {
+			planned[c.Target] += 12
 		}
 	}
+	seen := map[entity.EntityID]bool{}
+	for sid, n := range planned {
+		if n > 12 {
+			t.Fatalf("pile %d planned %d of its 12", sid, n)
+		}
+		seen[sid] = true
+	}
 	if len(seen) != len(piles) {
-		t.Fatalf("%d of %d piles planned: 100 + 44 covers them all", len(seen), len(piles))
+		t.Fatalf("%d of %d piles planned: 75 + 69 covers them all", len(seen), len(piles))
 	}
 	for i := 0; i < 6000 && storedIn(g, "wood", 20, 2, 21, 3) < 144; i++ {
 		g.Step(10)
@@ -281,7 +286,7 @@ func TestForcedHaulGathers(t *testing.T) {
 	g, id, piles := woodGrid(t)
 	applyNow(g, command.Command{Kind: command.Prioritize, Pawn: uint64(id), X: 5, Y: 4, Order: command.OrderHaul})
 	j, _ := g.jobs.Get(id)
-	if j.Kind != job.Haul || !j.Forced || j.Target != piles[len(piles)-1] || loadOf(g, j) != item.CarryLimit {
+	if j.Kind != job.Haul || !j.Forced || j.Target != piles[len(piles)-1] || loadOf(g, j) != min(item.CarryLimit, item.Wood.StackLimit()) {
 		t.Fatalf("forced haul %+v, want a full load from the clicked pile", j)
 	}
 }

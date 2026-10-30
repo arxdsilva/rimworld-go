@@ -58,7 +58,7 @@ func WoundChance(kind body.WoundKind, tendQ int32, roomPct int32) int32 {
 	switch kind {
 	case body.Bite, body.Burn:
 		base = chanceBiteBurn
-	case body.Cut, body.Scratch, body.Surgical:
+	case body.Cut, body.Scratch, body.Surgical, body.Stab, body.Gunshot:
 		base = chanceBleeding
 	default:
 		return 0

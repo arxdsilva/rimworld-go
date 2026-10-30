@@ -180,12 +180,13 @@ func TestCorpseClaimsKeepApart(t *testing.T) {
 	if a.Unclaimed || !b.Unclaimed || a.Qty != 1 || b.Qty != 1 {
 		t.Fatalf("colony %+v found %+v", a, b)
 	}
-	// a second unclaimed carcass joins the unclaimed stack wherever it lies
+	// STO-2: a corpse is one per stack (wiki), so a second unclaimed
+	// carcass lies on its own, still unclaimed
 	again := g.dropCorpseAs(animal.Deer, b.X, b.Y, true)
-	if again != found {
-		t.Fatalf("merged into %d, want %d", again, found)
+	if st, _ := g.stacks.Get(again); again == found || !st.Unclaimed || st.Qty != 1 {
+		t.Fatalf("second carcass %d %+v", again, st)
 	}
-	if st, _ := g.stacks.Get(found); st.Qty != 2 {
+	if st, _ := g.stacks.Get(found); st.Qty != 1 {
 		t.Fatalf("unclaimed stack %+v", st)
 	}
 }

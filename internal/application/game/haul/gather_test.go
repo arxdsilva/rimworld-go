@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -98,25 +99,33 @@ func TestPickupsAndClaimAll(t *testing.T) {
 	if !slices.Equal(pu, []entity.EntityID{4, 12, 9, 3}) {
 		t.Fatalf("pickups = %v", pu)
 	}
-	c := fakeClaims{taken: map[entity.EntityID]bool{}}
-	if !ClaimAll(c, 1, pu) || !c.taken[4] || !c.taken[9] || c.taken[12] {
-		t.Fatalf("claims %v, want the pile ids only", c.taken)
+	c := fakeClaims{taken: map[entity.EntityID]int{}}
+	h := newFake()
+	h.stacks[4] = item.Stack{Kind: item.Meal, Qty: 20}
+	h.stacks[9] = item.Stack{Kind: item.Meal, Qty: 3}
+	if !ClaimAll(c, h, 1, pu) || c.taken[4] != 12 || c.taken[9] != 3 || len(c.taken) != 2 {
+		t.Fatalf("claims %v, want the planned count of each pile", c.taken)
 	}
-	c.refuse = 9
-	if ClaimAll(c, 1, pu) {
-		t.Fatal("a taken pile fails the claim")
+	delete(h.stacks, 9) // gone since: skipped, Next drops it
+	c = fakeClaims{taken: map[entity.EntityID]int{}}
+	if !ClaimAll(c, h, 1, pu) || len(c.taken) != 1 {
+		t.Fatalf("a gone pile is not claimed: %v", c.taken)
+	}
+	c.refuse = 4
+	if ClaimAll(c, h, 1, pu) {
+		t.Fatal("a pile with too little unclaimed fails the claim")
 	}
 }
 
 type fakeClaims struct {
-	taken  map[entity.EntityID]bool
+	taken  map[entity.EntityID]int
 	refuse entity.EntityID
 }
 
-func (f fakeClaims) TryEntity(_, target entity.EntityID) bool {
-	if target == f.refuse {
+func (f fakeClaims) TryCount(_, target entity.EntityID, n, total int) bool {
+	if target == f.refuse || n > total {
 		return false
 	}
-	f.taken[target] = true
+	f.taken[target] = n
 	return true
 }

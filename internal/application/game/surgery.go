@@ -374,7 +374,7 @@ func (g *Game) surgeryMedicine(patient, doctor entity.EntityID, op body.Operatio
 		if sid == 0 {
 			continue
 		}
-		if owner, taken := g.reserve.EntityOwner(sid); taken && owner != doctor {
+		if g.reserve.FreeFor(doctor, sid, st.Qty) < qty { // RES-1: doses other doctors claimed
 			continue
 		}
 		if !g.canFetch(patient, doctor, st.X, st.Y) {
@@ -567,7 +567,7 @@ func (g *Game) assignSurgery(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
 	var best job.Record
 	var bestMed entity.EntityID
-	bestD, found := 0, false
+	bestD, bestDoses, found := 0, 0, false
 	g.surgeryPatients(func(pid entity.EntityID) bool {
 		if pid == id || len(g.surg.ops[pid]) == 0 || g.care.Carry.Carrier(pid) != 0 {
 			return true
@@ -601,14 +601,17 @@ func (g *Game) assignSurgery(id entity.EntityID) bool {
 		rec.Dest, rec.DestX, rec.DestY = fetch, rec.TX, rec.TY
 		rec.TX, rec.TY = st.X, st.Y
 		best, bestMed, bestD, found = rec, f.med, d, true
+		bestDoses, _ = body.MedicineNeed(g.surg.ops[pid][slot].Kind)
 		return true
 	})
 	if !found || !g.startJob(id, best) {
 		return false
 	}
-	g.reserve.TryEntity(id, best.Dest)
 	if bestMed != best.Dest {
-		g.reserve.TryEntity(id, bestMed)
+		g.reserve.TryEntity(id, best.Dest) // the implant
+	}
+	if st, ok := g.stacks.Get(bestMed); ok {
+		g.reserve.TryCount(id, bestMed, max(1, bestDoses), st.Qty) // RES-1: only the doses it uses
 	}
 	return true
 }

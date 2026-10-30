@@ -79,6 +79,31 @@ func (o *Outfit) SetForced(s item.Slot, on bool) {
 	}
 }
 
+// hitWearPer is the damage reaching a garment that costs it one hit
+// point. wiki: Apparel (1 HP per 4 damage, deflected or halved alike).
+// original tuning: the share rounds to the nearest hit point.
+const hitWearPer = 4
+
+// HitWear wears the garment in slot s by a hit that reached it with dmg
+// (CBT-1): one hit point per hitWearPer, so ratty and tattered follow
+// from its hit points. A garment left with none is destroyed: the slot
+// empties, the player's choice for it is dropped, and its kind is
+// returned (0: it holds).
+func (o *Outfit) HitWear(s item.Slot, dmg int) item.Kind {
+	if int(s) >= Slots || o.On[s].Kind == 0 || dmg <= 0 {
+		return 0
+	}
+	p := &o.On[s]
+	p.Wear += (dmg + hitWearPer/2) / hitWearPer
+	if p.MaxHP() == 0 || p.HP() > 0 {
+		return 0
+	}
+	k := p.Kind
+	*p = Piece{}
+	o.SetForced(s, false)
+	return k
+}
+
 // Taint marks everything in o as worn by pawn of when it died.
 func (o Outfit) Taint(of entity.EntityID) Outfit {
 	for s := range o.On {

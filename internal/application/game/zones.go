@@ -2,10 +2,11 @@ package game
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 
-	"rimworld-go/internal/application/game/haul"
-	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/application/game/store"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
@@ -56,12 +57,14 @@ const (
 	ZoneStockpile = "stockpile"
 	ZoneGrow      = "grow"
 	ZonePen       = "pen"
-	ZoneDump      = "dump"  // a dumping stockpile (PLAY-023)
-	ZoneShelf     = "shelf" // a shelf's storage (PRD-4): laid by the shelf, never painted
+	ZoneDump      = "dump"   // a dumping stockpile (PLAY-023)
+	ZoneShelf     = "shelf"  // a shelf's storage (PRD-4): laid by the shelf, never painted
+	ZoneHopper    = "hopper" // STO-2, laid by their buildings: a hopper's raw food,
+	ZoneGrave     = "grave"  // a grave's or sarcophagus's settings (Shelf names the building)
 )
 
 var zoneKindNames = map[zone.Kind]string{zone.KindStockpile: ZoneStockpile, zone.KindGrow: ZoneGrow, zone.KindPen: ZonePen,
-	zone.KindDump: ZoneDump, zone.KindShelf: ZoneShelf}
+	zone.KindDump: ZoneDump, zone.KindShelf: ZoneShelf, zone.KindHopper: ZoneHopper, zone.KindGrave: ZoneGrave}
 
 func zoneKindOf(name string) (zone.Kind, bool) {
 	switch name {
@@ -82,13 +85,12 @@ func zoneKindOf(name string) (zone.Kind, bool) {
 const StockpileVariantDump = 1
 
 // stockpileProto is the settings a freshly painted storage zone starts
-// with: a stockpile takes food, wood and stone (and goods); a dumping
-// stockpile takes animal corpses and stone chunks only.
+// with: the vanilla defaults (STO-2, zone.NewStockpile, zone.NewDump).
 func stockpileProto(variant uint8) (zone.Kind, zone.Zone) {
 	if variant == StockpileVariantDump {
-		return zone.KindDump, zone.Zone{Corpses: true, Chunks: true}
+		return zone.KindDump, zone.NewDump()
 	}
-	return zone.KindStockpile, zone.Zone{Food: true, Wood: true, Stone: true}
+	return zone.KindStockpile, zone.NewStockpile()
 }
 
 // StoragePriorities lists the storage priority names, highest first (the
@@ -117,6 +119,9 @@ type zoneSave struct {
 	// below the best one taking it (the re-haul minimum stay); absent in
 	// older saves and empty while every zone has the same priority.
 	StoredAt map[entity.EntityID]uint64
+	// Store (STO-2): the stacks marked to haul urgently (game/store);
+	// absent in older saves and empty while none is.
+	Store store.Saved
 	// legacy rectangles of an older save (not encoded: Load fills them
 	// from the old saveState fields for migration).
 	legacy legacyZones
@@ -130,7 +135,7 @@ type legacyZones struct {
 
 func (g *Game) exportZones() zoneSave {
 	s := g.zones.Export()
-	out := zoneSave{W: s.W, H: s.H, Cells: s.Cells, Zones: s.Zones, Next: s.Next}
+	out := zoneSave{W: s.W, H: s.H, Cells: s.Cells, Zones: s.Zones, Next: s.Next, Store: g.haul.store.Export()}
 	if len(g.haul.storedAt) > 0 {
 		out.StoredAt = g.haul.storedAt
 	}
@@ -139,11 +144,14 @@ func (g *Game) exportZones() zoneSave {
 
 // importZones restores the zone map; an older save (no map) paints its
 // stockpile, grow zone and pen rectangles in saved order, so overlapping
-// rectangles resolve first-wins and touching ones merge.
+// rectangles resolve first-wins and touching ones merge. An older save's
+// graves get their storage settings (STO-2).
 func (g *Game) importZones(s zoneSave) {
 	g.haul.storedAt = s.StoredAt
+	g.haul.store.Import(s.Store)
 	if len(s.Cells) > 0 || len(s.Zones) > 0 || s.Next > 0 {
 		g.zones = zone.Import(zone.Saved{W: s.W, H: s.H, Cells: s.Cells, Zones: s.Zones, Next: s.Next})
+		g.haul.store.Buildings.LayMissing(g.zones, haulHost{g})
 		return
 	}
 	g.zones = zone.NewMap(g.Width(), g.Height())
@@ -254,29 +262,50 @@ func (g *Game) zoneOf(kind zone.Kind, x, y int) (zone.Zone, bool) {
 	return z, z.Kind == kind
 }
 
-// zoneMemo is the view cache's last zone list, per zone map and its Ver.
+// zoneMemo is the view cache's last zone list, per zone map and its Ver,
+// and that list with the storage readouts (STO-2), per item generation.
 type zoneMemo struct {
-	views []ZoneView // handed out, never written
-	src   *zone.Map
-	ver   uint64
-	ok    bool
+	views, counted []ZoneView // handed out, never written
+	src            *zone.Map
+	ver, gen       uint64
+	ok             bool
 }
 
 // zoneViews lists every zone in id order. With the view cache on the list
-// is shared and read only, rebuilt only when the zone map's Ver moves.
+// is shared and read only, rebuilt only when the zone map's Ver moves;
+// the readouts (Group, Stored, Capacity) when a stack moves too.
 func (g *Game) zoneViews() []ZoneView {
 	if !g.views.on {
-		return g.buildZoneViews()
+		return countZones(g, g.buildZoneViews(), nil)
 	}
 	m := &g.views.zones
 	if m.ok && m.src == g.zones && m.ver == g.zones.Ver() {
 		if selfCheck() && !reflect.DeepEqual(m.views, g.buildZoneViews()) {
 			panic("zoneViews: zones changed without a Ver bump")
 		}
-		return m.views
+	} else {
+		m.views, m.src, m.ver, m.ok, m.counted = g.buildZoneViews(), g.zones, g.zones.Ver(), true, nil
 	}
-	m.views, m.src, m.ver, m.ok = g.buildZoneViews(), g.zones, g.zones.Ver(), true
-	return m.views
+	if gen := g.idx.ground.Gen(); m.counted == nil || m.gen != gen {
+		m.counted, m.gen = countZones(g, m.views, m.counted), gen
+	}
+	return m.counted
+}
+
+// countZones is vs with each storage zone's readouts (store.Buildings.Fill),
+// or old when it already reads the same (shared views stay shared).
+func countZones(g *Game, vs, old []ZoneView) []ZoneView {
+	out := slices.Clone(vs)
+	for i := range out {
+		z, _ := g.zones.Zone(zone.ID(out[i].ID))
+		out[i].Group, out[i].Stored, out[i].Capacity = g.haul.store.Buildings.Fill(g.zones, haulHost{g}, z, g.graveFilled(entity.EntityID(out[i].Shelf)))
+	}
+	if old != nil && slices.EqualFunc(out, old, func(a, b ZoneView) bool {
+		return a.Group == b.Group && a.Stored == b.Stored && a.Capacity == b.Capacity
+	}) {
+		return old
+	}
+	return out
 }
 
 // buildZoneViews is a fresh zoneViews list.
@@ -290,9 +319,9 @@ func (g *Game) buildZoneViews() []ZoneView {
 			Cells: g.zones.Cells(z.ID), MinX: b.MinX, MinY: b.MinY, MaxX: b.MaxX, MaxY: b.MaxY,
 			NoSow: z.NoSow, NoCut: z.NoCut, Hidden: z.Hidden, Name: z.Name,
 		}
-		if z.Kind.Storage() {
+		if z.Kind.Settings() {
 			v.Priority, v.Corpses, v.Chunks = z.Priority.String(), z.Corpses, z.Chunks
-			v.Filter, v.Special, v.Shelf = z.Effective().Names(), z.Special.Names(), g.shelfOf(z) // stockpile_filter.go
+			v.Filter, v.Special, v.Shelf = z.Effective().Names(), z.Special.Names(), uint64(g.haul.store.Buildings.Of(g.zones, haulHost{g}, z))
 		}
 		if z.Kind == zone.KindGrow {
 			v.Crop = plant.Species(z.Crop).String()
@@ -362,20 +391,14 @@ func (g *Game) inMatchingStockpileAt(k item.Kind, x, y int) bool {
 // "any zone".
 const noPriority = zone.PriorityLow - 1
 
-// stockpileCell is where a load of kind k goes: in the highest-priority
-// storage zones taking k that have room (PLAY-023), nearest (nearX, nearY)
-// first (ties: lower y, then x), a tile whose same-kind stack still has
-// room (topping up), else an empty walkable tile with no item, planned or
-// built object, or reservation. A shelf tile (PRD-4) holds up to
-// zone.ShelfStacks stacks.
-func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) {
-	return g.storageCell(item.Stack{Kind: k}, nearX, nearY, nil, noPriority)
-}
-
-// stockpileCellWhere is stockpileCell over the cells keep admits (nil:
-// all; area_dest.go keeps a hauler to its allowed area).
-func (g *Game) stockpileCellWhere(k item.Kind, nearX, nearY int, keep func(x, y int) bool) (x, y int, ok bool) {
-	return g.storageCell(item.Stack{Kind: k}, nearX, nearY, keep, noPriority)
+// stockpileCell is where stack st goes: in the highest-priority storage
+// zones taking it (its kind and the special filters, STO-2) that have
+// room (PLAY-023), nearest (nearX, nearY) first (ties: lower y, then x),
+// a tile whose same-kind stack still has room (topping up), else an empty
+// walkable tile with no item, planned or built object, or reservation. A
+// shelf tile (PRD-4) holds up to zone.ShelfStacks stacks.
+func (g *Game) stockpileCell(st item.Stack, nearX, nearY int) (x, y int, ok bool) {
+	return g.storageCell(st, nearX, nearY, nil, noPriority)
 }
 
 // storageCell is stockpileCellWhere for stack st (its kind and the zones'
@@ -385,110 +408,20 @@ func (g *Game) stockpileCellWhere(k item.Kind, nearX, nearY int, keep func(x, y 
 // the nearest top-up cell, else the nearest free cell (STO-1: the storage
 // zones by priority from zone.Stores, the stacks from the ground index).
 func (g *Game) storageCell(st item.Stack, nearX, nearY int, keep func(x, y int) bool, floor zone.Priority) (x, y int, ok bool) {
-	s := storeSearch{g: g, h: haulHost{g}, st: st, nx: nearX, ny: nearY, keep: keep}
-	return s.run(floor)
+	return store.Search(haulHost{g}, st, nearX, nearY, keep, floor, false)
 }
 
-// storeSearch is one storageCell search: the best cell so far is the
-// minimum of (Chebyshev distance, y, x); any stops at the first cell.
-type storeSearch struct {
-	g      *Game
-	h      haulHost
-	st     item.Stack
-	nx, ny int
-	keep   func(x, y int) bool
-	any    bool
-	x, y   int
-	d      int
-	ok     bool
+// haulHost as store.Cells: the storage search's reads (STO-1 indexes).
+func (h haulHost) Stores(p zone.Priority) []zone.Store { return h.g.idx.stores.Of(h.g.zones, p) }
+func (h haulHost) Zones() *zone.Map                    { return h.g.zones }
+func (h haulHost) First(x, y int) (item.Stack, bool) {
+	return h.g.stacks.Get(h.g.idx.ground.First(h, x, y))
 }
-
-func (s *storeSearch) run(floor zone.Priority) (int, int, bool) {
-	for _, p := range zone.Priorities {
-		if p <= floor {
-			break
-		}
-		zs := s.g.idx.stores.Of(s.g.zones, p)
-		for top := 1; top >= 0; top-- { // top-up cells first, then free ones
-			for i := range zs {
-				if z := &zs[i]; z.AllowsStack(s.st) && !(s.ok && z.Box.Dist(s.nx, s.ny) > s.d) && !(s.any && s.ok) {
-					s.zone(z.ID, z.Kind == zone.KindShelf, top == 1)
-				}
-			}
-			if s.ok {
-				return s.x, s.y, true
-			}
-		}
-	}
-	return 0, 0, false
-}
-
-// zone visits zone id's cells (row-major), stopping below the rows that
-// could still hold a better cell.
-func (s *storeSearch) zone(id zone.ID, shelf, top bool) {
-	s.g.zones.EachCell(id, func(cx, cy int) bool {
-		if s.ok && (s.any || cy-s.ny > s.d) {
-			return false
-		}
-		if top {
-			s.topUp(cx, cy, shelf)
-		} else {
-			s.free(cx, cy, shelf)
-		}
-		return true
-	})
-}
-
-func (s *storeSearch) better(cx, cy int) bool {
-	d := pathing.Dist(s.nx, s.ny, cx, cy)
-	return !s.ok || d < s.d || d == s.d && (cy < s.y || cy == s.y && cx < s.x)
-}
-
-func (s *storeSearch) open(cx, cy int) bool {
-	_, taken := s.g.reserve.TileOwner(cx, cy)
-	return !taken && (s.keep == nil || s.keep(cx, cy))
-}
-
-func (s *storeSearch) take(cx, cy int) {
-	s.x, s.y, s.ok, s.d = cx, cy, true, pathing.Dist(s.nx, s.ny, cx, cy)
-}
-
-// topUp takes (cx, cy) when a stack there still takes a load of the
-// kind: its first stack on the ground, any of its stacks on a shelf.
-func (s *storeSearch) topUp(cx, cy int, shelf bool) {
-	if !s.better(cx, cy) {
-		return
-	}
-	gr, k := &s.g.idx.ground, s.st.Kind
-	if shelf {
-		if _, top := gr.Shelf(s.h, k, cx, cy); top && s.open(cx, cy) {
-			s.take(cx, cy)
-		}
-		return
-	}
-	if o := s.g.stacks.Ref(gr.First(s.h, cx, cy)); o != nil && o.Kind == k && haul.Toppable(*o) && s.open(cx, cy) {
-		s.take(cx, cy)
-	}
-}
-
-// free takes (cx, cy) when it has room for one more stack and nothing
-// planned or built stands in the way.
-func (s *storeSearch) free(cx, cy int, shelf bool) {
-	g, gr := s.g, &s.g.idx.ground
-	if !s.better(cx, cy) {
-		return
-	}
-	if shelf {
-		if n, _ := gr.Shelf(s.h, s.st.Kind, cx, cy); n >= zone.ShelfStacks {
-			return
-		}
-	} else if gr.First(s.h, cx, cy) != 0 {
-		return
-	}
-	if !g.grid.Walkable(cx, cy) || !s.open(cx, cy) || g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || !shelf && g.occupiedAt(cx, cy) {
-		return
-	}
-	s.take(cx, cy)
+func (h haulHost) Shelf(k item.Kind, x, y int) (int, bool) { return h.g.idx.ground.Shelf(h, k, x, y) }
+func (h haulHost) TileTaken(x, y int) bool                 { _, taken := h.g.reserve.TileOwner(x, y); return taken }
+func (h haulHost) Blocked(x, y int, building bool) bool {
+	g := h.g
+	return !g.grid.Walkable(x, y) || g.layerFrameAt(x, y, construction.LayerObject) != 0 || !building && g.occupiedAt(x, y)
 }
 
 // Pens: painted pen zones are legacy (older saves, the DesignatePen
@@ -503,9 +436,7 @@ func (s *storeSearch) free(cx, cy int, shelf bool) {
 
 // zoneBuilt re-checks the zoned cells under a finished building of kind.
 func (g *Game) zoneBuilt(kind construction.Kind, cells [][2]int) {
-	if kind == construction.Shelf {
-		g.layShelf(cells) // PRD-4: its storage
-	}
+	g.haul.store.Buildings.Lay(g.zones, haulHost{g}, kind, cells) // store (PRD-4, STO-2): a storage building's zone
 	g.zoneCellsChanged(cells, construction.DefOf(kind).Name+" built")
 }
 
@@ -579,35 +510,63 @@ func zoneLabel(z zone.Zone) string {
 	return "Stockpile"
 }
 
-// Storage filters and shelves (PRD-4). The filter tree, the special
-// filters and the legacy switches live in domain zone (filter.go); the
-// handlers below edit them through zone.Map.Update. A shelf lays a
-// KindShelf storage zone over its footprint when built (layShelf) and
-// lifts it when it goes (liftShelf); the haul search treats a shelf tile
-// as room for zone.ShelfStacks stacks.
+// Storage filters and storage buildings (PRD-4, STO-2). The filter
+// tree, the special filters, the legacy switches and storage groups live
+// in domain zone; the handlers below edit them through zone.Map (Update
+// reaches a whole group). Shelves, hoppers, graves and sarcophagi lay a
+// zone over their footprint (game/store Buildings); the haul search
+// treats a shelf tile as room for zone.ShelfStacks stacks.
 
 // FilterRow is one line of the stockpile filter tree for the settings
 // window (zone.Row: path, label, depth, leaf, On, Partial).
 type FilterRow = zone.Row
 
 // StockpileFilterRows is the filter tree in display order with each
-// line's state under filter (a ZoneView.Filter).
+// line's state under filter (a ZoneView.Filter). StorageFilterRows is
+// the same for a zone of kind (a ZoneView.Kind): a hopper's raw food or a
+// grave's bodies only. FilterRoot is the node SetStockpileFilter takes
+// for "allow all" (Enabled) and "clear all".
 func StockpileFilterRows(filter []string) []FilterRow { return zone.Rows(filter) }
+func StorageFilterRows(kind string, filter []string) []FilterRow {
+	for k, n := range zoneKindNames {
+		if n == kind {
+			return zone.RowsFor(k, filter)
+		}
+	}
+	return nil
+}
+
+const FilterRoot = zone.Root
 
 // StockpileSpecials names the special filter toggles by
 // SetStockpileSpecial's Index (zone.SpecialRotten, zone.SpecialTainted);
 // Index zone.SpecialHP and zone.SpecialQuality set the ranges from X..X2.
-func StockpileSpecials() []string { return zone.SpecialNames() }
+// StorageSpecials lists every toggle with its Index (STO-2; Grave: a
+// corpse filter only graves and sarcophagi use).
+func StockpileSpecials() []string    { return zone.SpecialNames() }
+func StorageSpecials() []zone.Toggle { return zone.Toggles() }
 
-// cmdStockpile handles the three storage-filter commands on storage zone
-// c.Target: SetStockpileFilter allows (Enabled) or forbids filter-tree
-// node c.Name, SetStockpileSpecial sets special filter c.Index (a toggle
-// by Enabled, a range by X..X2) and PasteStockpile copies zone c.Zone's
-// filter, special filters and priority. Unknown zones, nodes and
-// non-storage zones are ignored.
+// cmdStockpile handles the storage commands. On storage zone c.Target:
+// SetStockpileFilter allows (Enabled) or forbids filter-tree node c.Name
+// (FilterRoot: everything), SetStockpileSpecial sets special filter
+// c.Index (a toggle by Enabled, a range by X..X2) and PasteStockpile
+// copies zone c.Zone's filter, special filters and priority. On storage
+// buildings (STO-2): LinkStorage links building c.Target into building
+// c.Zone's group, UnlinkStorage takes it out. HaulUrgently marks
+// (Enabled) or unmarks the loose stacks in X..X2, Y..Y2. Unknown targets
+// are ignored.
 func (g *Game) cmdStockpile(c command.Command) {
+	st := &g.haul.store
+	switch c.Kind {
+	case command.LinkStorage:
+		st.Buildings.Link(g.zones, haulHost{g}, entity.EntityID(c.Target), entity.EntityID(c.Zone))
+	case command.UnlinkStorage:
+		st.Buildings.Unlink(g.zones, haulHost{g}, entity.EntityID(c.Target))
+	case command.HaulUrgently:
+		st.Urgent.MarkRect(haulHost{g}, c.X, c.Y, c.X2, c.Y2, c.Enabled)
+	}
 	z, ok := g.zones.Zone(zone.ID(c.Target))
-	if !ok || !z.Kind.Storage() {
+	if !ok || !z.Kind.Settings() {
 		return
 	}
 	switch c.Kind {
@@ -618,7 +577,7 @@ func (g *Game) cmdStockpile(c command.Command) {
 	case command.SetStockpileSpecial:
 		g.zones.Update(z.ID, func(z *zone.Zone) { z.Special = z.Special.Set(c.Index, c.Enabled, c.X, c.X2) })
 	case command.PasteStockpile:
-		if src, ok := g.zones.Zone(zone.ID(c.Zone)); ok && src.Kind.Storage() && src.ID != z.ID {
+		if src, ok := g.zones.Zone(zone.ID(c.Zone)); ok && src.Kind.Settings() && src.ID != z.ID {
 			g.zones.Update(z.ID, func(z *zone.Zone) { z.PasteFrom(src) })
 		}
 	}
@@ -641,58 +600,40 @@ func (g *Game) cellFull(id entity.EntityID, x, y int) bool {
 	return g.idx.ground.Others(haulHost{g}, id, x, y) >= slots
 }
 
-// shelfOf is the shelf building a shelf's storage zone z lies under (0
-// for any other zone).
-func (g *Game) shelfOf(z zone.Zone) uint64 {
-	if z.Kind != zone.KindShelf {
-		return 0
+// liftShelf takes a removed storage building's zone off its footprint.
+func (g *Game) liftShelf(b construction.Building) { g.haul.store.Buildings.Lift(g.zones, b) }
+
+// storeView is a storage building's readout (BuildingView Group, Stored,
+// Capacity; zeros for any other building).
+func (g *Game) storeView(id entity.EntityID) (uint64, int, int) {
+	z, ok := g.haul.store.Buildings.ZoneOf(g.zones, haulHost{g}, id)
+	if !ok {
+		return 0, 0, 0
 	}
-	var id entity.EntityID
-	g.zones.EachCell(z.ID, func(x, y int) bool { id = g.layerBldgAt(x, y, construction.LayerObject); return false })
-	if b := g.bldgs.Ref(id); b == nil || b.Kind != construction.Shelf {
-		return 0
-	}
-	return uint64(id)
+	return g.haul.store.Buildings.Fill(g.zones, haulHost{g}, z, g.graveFilled(id))
 }
 
-// layShelf lays a finished (or moved) shelf's storage over cells. Zones
-// under the footprint give up the cells; a shelf zone left without its
-// shelf (the shelf moved away) is lifted, and its settings go with the
-// shelf.
-func (g *Game) layShelf(cells [][2]int) {
-	proto := zone.NewShelf()
-	for _, c := range cells {
-		if z, ok := g.storageAt(c[0], c[1]); ok && z.Kind == zone.KindShelf {
-			proto = z // a move onto its own old cells
-		}
-	}
-	g.zones.RemoveTiles(cells)
-	var stale [][2]int
-	g.zones.Each(func(z zone.Zone) bool {
-		if z.Kind == zone.KindShelf && g.shelfOf(z) == 0 {
-			proto, stale = z, append(stale, g.zones.Cells(z.ID)...)
-		}
-		return true
-	})
-	g.zones.RemoveTiles(stale)
-	minX, minY, maxX, maxY := cells[0][0], cells[0][1], cells[0][0], cells[0][1]
-	for _, c := range cells {
-		minX, minY, maxX, maxY = min(minX, c[0]), min(minY, c[1]), max(maxX, c[0]), max(maxY, c[1])
-	}
-	g.zones.Paint(zone.KindShelf, proto, zone.Rect{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}, nil)
+// haulHost as game/store's Machines, Larder, Items and Diners (STO-2).
+func (h haulHost) BuildingIDs() []entity.EntityID { return h.g.bldgIDs }
+func (h haulHost) Building(id entity.EntityID) (construction.Building, bool) {
+	return h.g.bldgs.Get(id)
 }
-
-// liftShelf takes a removed shelf's storage off its footprint.
-func (g *Game) liftShelf(b construction.Building) {
-	if b.Kind != construction.Shelf {
-		return
-	}
-	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-	var gone [][2]int
-	for _, c := range cells {
-		if g.onShelf(c[0], c[1]) {
-			gone = append(gone, c)
-		}
-	}
-	g.zones.RemoveTiles(gone)
+func (h haulHost) ObjectAt(x, y int) entity.EntityID {
+	return h.g.layerBldgAt(x, y, construction.LayerObject)
+}
+func (h haulHost) Powered(id entity.EntityID) bool         { return h.g.powered(id) }
+func (h haulHost) ItemAt(x, y int) entity.EntityID         { return h.g.itemAt(x, y) }
+func (h haulHost) StacksAt(x, y int) int                   { return h.g.idx.ground.Others(h, 0, x, y) }
+func (h haulHost) SetJob(id entity.EntityID, j job.Record) { h.g.jobs.Set(id, j) }
+func (h haulHost) Claim(owner, target entity.EntityID) bool {
+	return h.g.reserve.TryEntity(owner, target)
+}
+func (h haulHost) Reachable(id entity.EntityID, x, y int) bool { return h.g.reachable(id, x, y) }
+func (h haulHost) Position(id entity.EntityID) (int, int) {
+	p, _ := h.g.positions.Get(id)
+	return p.X, p.Y
+}
+func (h haulHost) Spawn(k item.Kind, qty, x, y int) entity.EntityID {
+	id, _ := h.g.SpawnStack(k, qty, x, y)
+	return id
 }

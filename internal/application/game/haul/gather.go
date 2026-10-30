@@ -73,11 +73,14 @@ func abs(v int) int {
 	return v
 }
 
-// ClaimAll claims every pile in a job's Pickups for hauler id when the job
-// starts; false when one is taken.
-func ClaimAll(c Claimer, id entity.EntityID, pickups []entity.EntityID) bool {
+// ClaimAll claims, for hauler id when the job starts, the planned count
+// of every pile in a job's Pickups that still lies on the map (RES-1: a
+// count claim, so another hauler may take the rest of a pile); false
+// when one has too little left unclaimed.
+func ClaimAll(c Claimer, h Host, id entity.EntityID, pickups []entity.EntityID) bool {
 	for i := 0; i+1 < len(pickups); i += 2 {
-		if !c.TryEntity(id, pickups[i]) {
+		st, ok := h.Stack(pickups[i])
+		if ok && !c.TryCount(id, pickups[i], int(pickups[i+1]), st.Qty) {
 			return false
 		}
 	}

@@ -178,7 +178,13 @@ func TestGrownGolden(t *testing.T) {
 	// (8-tile chain, up to the carry limit and the destination cell's
 	// room) and deliver once; the previous pin held through wave E (the
 	// committed full suite). Stable over -count=2.
-	const want uint64 = 0x65452a93524e7998
+	// Re-pinned (wave 2: RES-1, STO-2, CBT-1, CBT-2): shared partial-stack
+	// claims, vanilla stockpile defaults and stack limits, layered armor,
+	// bleeding gunshot and stab wounds, overkill, the wiki melee curves,
+	// Euclidean ranges, weather and cover-angle accuracy; the previous pin
+	// held through FEED-001 and STO-1 (the committed full suite). Stable
+	// over -count=2.
+	const want uint64 = 0x34aec95d8067638c
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

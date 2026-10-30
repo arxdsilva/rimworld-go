@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
@@ -188,10 +189,13 @@ func (g *Game) retireRaider(of entity.EntityID) {
 func (g *Game) layInGrave(bid, cid entity.EntityID) {
 	st, ok := g.stacks.Get(cid)
 	b, isB := g.bldgs.Get(bid)
-	if !ok || !isB || !isBody(st.Kind) {
+	if !ok || !isB || !isBody(st.Kind) && st.Kind != item.CorpseAnimal {
 		return
 	}
 	rec := g.restRecord(st)
+	if st.Kind == item.CorpseAnimal { // STO-2: a grave set to take animals
+		rec = graveRec{Name: animal.Species(st.Animal).Label(), DiedDay: rec.BuriedDay, BuriedDay: rec.BuriedDay}
+	}
 	g.setGrave(bid, rec)
 	g.deleteItem(cid)
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -202,8 +206,10 @@ func (g *Game) layInGrave(bid, cid entity.EntityID) {
 		g.ejectPawns(c[0], c[1])
 	}
 	g.message(b.X, b.Y, "%s was laid to rest", rec.Name)
-	g.comfort()
-	g.retireRaider(rec.Occupant)
+	if rec.Occupant != 0 {
+		g.comfort()
+		g.retireRaider(rec.Occupant)
+	}
 }
 
 // cremate burns body stack cid on pyre bid with the recipe's wood.
@@ -279,12 +285,13 @@ func (g *Game) cremating(bid entity.EntityID) bool {
 func (g *Game) assignBury(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
 	var tried []entity.EntityID
+	animals := g.haul.store.Buildings.AnyGrave(g.zones, haulHost{g}, item.Stack{Kind: item.CorpseAnimal, Qty: 1}, false, g.graveFilled) // STO-2
 	for range workTries {
 		var cid entity.EntityID
 		var cst item.Stack
 		bestD := 1 << 30
 		g.stacks.All(func(iid entity.EntityID, st item.Stack) {
-			if !isBody(st.Kind) || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 {
+			if !isBody(st.Kind) && !(animals && st.Kind == item.CorpseAnimal) || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 {
 				return
 			}
 			if slices.Contains(tried, iid) || g.postponedFor(id, job.Bury, iid, 0, 0) {
@@ -301,7 +308,8 @@ func (g *Game) assignBury(id entity.EntityID) bool {
 		}
 		gid, sx, sy, ok := g.graveFor(id, cst)
 		if !ok {
-			return false // no free grave in reach
+			tried = append(tried, cid) // no free grave in reach takes this one
+			continue
 		}
 		rec := job.Record{Kind: job.Bury, Target: cid, TX: cst.X, TY: cst.Y, Dest: gid, DestX: sx, DestY: sy, WorkLeft: buryWork}
 		if g.startJob(id, rec) {
@@ -313,29 +321,32 @@ func (g *Game) assignBury(id entity.EntityID) bool {
 	return false
 }
 
-// graveFor is the empty, free grave nearest body st that hauler id can
-// reach, and the tile to fill it from.
+// graveFor is the empty, free grave or sarcophagus whose settings take
+// body st (STO-2: its filter, colonist or stranger, and priority, highest
+// first) nearest the body that hauler id can reach, and the tile to fill
+// it from.
 func (g *Game) graveFor(id entity.EntityID, st item.Stack) (entity.EntityID, int, int, bool) {
 	type cand struct {
-		id entity.EntityID
-		d  int
-		b  construction.Building
+		id   entity.EntityID
+		d, p int
+		b    construction.Building
 	}
 	var cs []cand
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.Grave || b.Deconstruct || g.graveFilled(bid) {
+		z, takes := g.graveSettings(bid, st)
+		if !ok || !takes || b.Deconstruct || b.Forbidden || g.graveFilled(bid) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(bid); taken {
 			continue
 		}
-		cs = append(cs, cand{bid, pathing.Dist(st.X, st.Y, b.X, b.Y), b})
+		cs = append(cs, cand{bid, pathing.Dist(st.X, st.Y, b.X, b.Y), int(z.Priority), b})
 	}
 	for len(cs) > 0 {
 		bi := 0
 		for i, c := range cs {
-			if c.d < cs[bi].d || c.d == cs[bi].d && c.id < cs[bi].id {
+			if c.p > cs[bi].p || c.p == cs[bi].p && (c.d < cs[bi].d || c.d == cs[bi].d && c.id < cs[bi].id) {
 				bi = i
 			}
 		}
@@ -383,13 +394,13 @@ func (g *Game) doBury(id entity.EntityID, j job.Record) {
 		j.State, j.Fail = job.Fail, r
 		g.jobs.Set(id, j)
 	}
-	if b, ok := g.bldgs.Get(j.Dest); !ok || b.Kind != construction.Grave || g.graveFilled(j.Dest) {
+	if b, ok := g.bldgs.Get(j.Dest); !ok || b.Kind != construction.Grave && b.Kind != construction.Sarcophagus || g.graveFilled(j.Dest) {
 		fail(job.TargetGone)
 		return
 	}
 	if j.Carry == 0 {
 		st, ok := g.stacks.Get(j.Target)
-		if !ok || st.Carrier != 0 || !isBody(st.Kind) {
+		if !ok || st.Carrier != 0 || !isBody(st.Kind) && st.Kind != item.CorpseAnimal {
 			fail(job.TargetGone)
 			return
 		}
@@ -427,6 +438,12 @@ func (g *Game) doBury(id entity.EntityID, j job.Record) {
 	j.Carry = 0
 	j.State = job.Complete
 	g.jobs.Set(id, j)
+}
+
+// graveSettings is grave or sarcophagus bid's settings and whether they
+// take body st (store.Buildings.Grave, STO-2).
+func (g *Game) graveSettings(bid entity.EntityID, st item.Stack) (zone.Zone, bool) {
+	return g.haul.store.Buildings.Grave(g.zones, haulHost{g}, bid, st, st.Of != 0 && slices.Contains(g.pawnIDs, st.Of))
 }
 
 // afterLoadBurial gives the dead of older saves (no body, never laid to
@@ -474,7 +491,7 @@ func (g *Game) fillCorpseView(iv *ItemView, st item.Stack) {
 // pyre's Burning.
 func (g *Game) fillGraveView(bv *BuildingView, id entity.EntityID, b construction.Building) {
 	switch b.Kind {
-	case construction.Grave:
+	case construction.Grave, construction.Sarcophagus:
 		if rec, ok := g.graves[id]; ok {
 			bv.Occupant, bv.Epitaph, bv.Headstone = rec.Name, epitaph(rec), rec.Headstone
 		}

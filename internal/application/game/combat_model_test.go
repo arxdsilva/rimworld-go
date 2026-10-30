@@ -114,12 +114,23 @@ func TestApparelArmorInTheGame(t *testing.T) {
 		g.invalidateCreatures()
 	}
 	// a knife (12 sharp, penetration 18 %) on a duster (sharp 24.3 %,
-	// torso and legs): A = 6.3 %, so about 3 % deflected, 3 % halved
-	knife := weapon.DefOf(weapon.Knife).Damage
-	if outcome[0] == 0 || outcome[knife/2] == 0 || outcome[knife] == 0 || len(outcome) != 3 {
+	// torso and legs): A = 6.3 %, so about 3 % deflected, 3 % halved.
+	// CBT-2: a blow is the blade, handle or point at x0.8..1.2, so a
+	// passed one deals at least 7 (the handle's 9 x 0.8) and a halved one
+	// at most 7 (the blade's 14 / 2): 1..6 can only be halved.
+	halved, passed := 0, 0
+	for dmg, n := range outcome {
+		switch {
+		case dmg >= 1 && dmg <= 6:
+			halved += n
+		case dmg >= 7:
+			passed += n
+		}
+	}
+	if outcome[0] == 0 || halved == 0 || passed == 0 {
 		t.Fatalf("deflected, halved and passed blows expected: %v", outcome)
 	}
-	if 10*(outcome[0]+outcome[knife/2]) > outcome[knife] {
+	if 10*(outcome[0]+halved) > passed {
 		t.Fatalf("most blows pass a 6 percent armor: %v", outcome)
 	}
 }

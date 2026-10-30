@@ -52,7 +52,7 @@ func TestNoStockpileStorageOnAVent(t *testing.T) {
 		return g.CanZoneAt(ZoneStockpile, x, y) && g.layerBldgAt(x, y, construction.LayerObject) == 0
 	})
 	g.paintZone(zone.KindStockpile, zone.Zone{Food: true, Wood: true, Stone: true}, x, y, x+1, y+1)
-	if cx, cy, ok := g.stockpileCellWhere(item.Wood, x, y, nil); ok {
+	if cx, cy, ok := g.stockpileCell(item.Stack{Kind: item.Wood}, x, y); ok {
 		t.Fatalf("a stockpile cell on the vent: %d,%d", cx, cy)
 	}
 }

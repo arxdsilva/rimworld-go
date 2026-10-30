@@ -275,7 +275,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if g.inMatchingStockpile(st) {
 			return job.Record{}, ReasonStored
 		}
-		dx, dy, ok := g.stockpileCell(st.Kind, x, y)
+		dx, dy, ok := g.stockpileCell(st, x, y)
 		if !ok || !g.filterMatches(st.Kind) {
 			return job.Record{}, ReasonNoStockpile
 		}
@@ -300,10 +300,8 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}, ""
 	case command.OrderAttack:
 		aid := g.animalAt(x, y)
-		if aid == 0 {
-			if rid := g.raiderAt(x, y); rid != 0 && g.standingRaider(rid) {
-				aid = rid
-			}
+		if rid := g.raiderAt(x, y); aid == 0 && rid != 0 && g.combat.Strikes.Ordered(rid) { // CBT-2: a downed one too
+			aid = rid
 		}
 		if aid == 0 {
 			return job.Record{}, ReasonGone
@@ -558,20 +556,13 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	if aid := g.animalAt(x, y); aid != 0 {
 		a, _ := g.animals.Get(aid)
 		if g.drafted(pawn) {
-			verb := "Melee attack "
-			if hasRanged(g, pawn) {
-				verb = "Shoot "
-			}
-			add(verb+a.Species.String(), command.OrderAttack, construction.LayerObject)
+			add(combat.AttackVerb(hasRanged(g, pawn))+a.Species.String(), command.OrderAttack, construction.LayerObject)
 		} else {
 			add("Hunt "+a.Species.String(), command.OrderHunt, construction.LayerObject)
 		}
 	}
-	if rid := g.raiderAt(x, y); rid != 0 && g.standingRaider(rid) && g.drafted(pawn) {
-		verb := "Melee attack "
-		if hasRanged(g, pawn) {
-			verb = "Shoot "
-		}
+	if rid := g.raiderAt(x, y); rid != 0 && g.combat.Strikes.Ordered(rid) && g.drafted(pawn) {
+		verb := combat.AttackVerb(hasRanged(g, pawn))
 		if g.isRaider(rid) {
 			verb += "raider " // a colonist in a berserk break is named plainly (SIM-066)
 		}

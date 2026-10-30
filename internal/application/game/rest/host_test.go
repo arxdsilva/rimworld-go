@@ -26,6 +26,7 @@ type fakeHost struct {
 	bldgIDs []entity.EntityID
 	bldgs   map[entity.EntityID]construction.Building
 	slept   map[entity.EntityID]entity.EntityID
+	held    map[entity.EntityID]entity.EntityID // HeldByOther: target -> holder (RES-1)
 
 	outside   map[[2]int]bool // AreaAllows false
 	colonists map[entity.EntityID]bool
@@ -96,8 +97,12 @@ func (f *fakeHost) TileFree(id entity.EntityID, x, y int) bool {
 	return !f.blocked[[2]int{x, y}] && (!ok || o == id)
 }
 func (f *fakeHost) ReserveTile(id entity.EntityID, x, y int) { f.reserved[[2]int{x, y}] = id }
-func (f *fakeHost) Band(entity.EntityID) (int, int)          { return f.band[0], f.band[1] }
-func (f *fakeHost) TempAt(int, int) int                      { return f.temp }
+func (f *fakeHost) HeldByOther(id, target entity.EntityID) bool {
+	o, ok := f.held[target]
+	return ok && o != id
+}
+func (f *fakeHost) Band(entity.EntityID) (int, int) { return f.band[0], f.band[1] }
+func (f *fakeHost) TempAt(int, int) int             { return f.temp }
 func (f *fakeHost) Roof(x, y int) (bool, bool) {
 	r := f.roofs[[2]int{x, y}]
 	return r[0], r[1]

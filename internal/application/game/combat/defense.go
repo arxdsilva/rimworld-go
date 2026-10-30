@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
@@ -82,7 +83,9 @@ func (t *Traps) Spring(victim entity.EntityID, x, y int) {
 	h.RemoveBuilding(tid)
 	h.PlaceFrame(construction.SpikeTrap, b.Stuff, construction.South, x, y) // re-lay it
 	h.Trapped(victim, TrapDamage)
-	h.Hurt(victim, TrapDamage, 0)
+	// CBT-1: the spikes stab, through whatever covers the part they strike
+	spikes := damage.Hit{Weapon: "spike trap", Form: damage.FormStab, Amount: TrapDamage, Pen: TrapDamage * weapon.PenPerDamage}
+	h.HurtHit(victim, h.Absorb(victim, spikes, h.Roll), 0)
 }
 
 // Underfoot springs traps under raiders and predators that just moved

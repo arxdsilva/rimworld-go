@@ -5,7 +5,9 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/backstory"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -32,8 +34,6 @@ const (
 	// learnCapDay is the most experience one skill can gain per day
 	// (saturation), so fast game speeds can't over-level.
 	learnCapDay = 4000
-	// combatXP is learned per attack (Shooting or Melee).
-	combatXP = 120
 	// chatXP is the Social experience of one finished chat.
 	chatXP = 40
 	// workingTicks: a pawn counts as doing skilled work (passion joy)
@@ -418,13 +418,14 @@ func (g *Game) LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int {
 	return out
 }
 
-// combatLearn trains the attack skill of a colonist that just struck.
-func (g *Game) combatLearn(id entity.EntityID, ranged bool) {
+// combatLearn trains the attack skill of a colonist that just struck by
+// xp (CBT-2: attack.CombatXP, a hit teaching more than a miss).
+func (g *Game) combatLearn(id entity.EntityID, ranged bool, xp int) {
+	sk := skill.Melee
 	if ranged {
-		g.learn(id, skill.Shooting, combatXP)
-	} else {
-		g.learn(id, skill.Melee, combatXP)
+		sk = skill.Shooting
 	}
+	g.learn(id, sk, xp)
 }
 
 // skillsDaily runs once a day at id's hour bucket (id % 24, as mental
@@ -524,20 +525,17 @@ func (g *Game) fumbled(id entity.EntityID) bool {
 	return g.rng.IntN(100) < (fumbleBelow-l)*6
 }
 
-// hitChanceFor is a colonist's or raider's hit chance with its attack
-// skill: ×clamp(100 + 4·(L−7), 50, 160)% plus the stat offset (ShootAcc
-// or MeleeAcc), clamped 0..100 (identity for a neutral pawn).
-func (g *Game) hitChanceFor(id entity.EntityID, ranged bool, chance int) int {
-	sk, acc := skill.Melee, stat.MeleeAcc
-	if ranged {
-		sk, acc = skill.Shooting, stat.ShootAcc
+// meleeOf is id's melee numbers for the wiki's hit and dodge curves
+// (CBT-2): its Melee level (a creature has none), Sight, Manipulation and
+// Moving, the MeleeAcc stat as a points offset after the curve (original
+// tuning), downed. The game has no Brawler or Nimble trait yet.
+func (g *Game) meleeOf(id entity.EntityID) attack.Melee {
+	k := keyOf(g.bodies[id]) // body.go: Moving, Manipulation, Sight (healthy without a body)
+	m := attack.Melee{Moving: int(k[0]), Manip: int(k[1]), Sight: int(k[2])}
+	if v, ok := g.vital.Get(id); ok {
+		m.Skill, m.Skilled, m.Offset, m.Down = int(g.skillOf(id, skill.Melee).Level), true, 10*int(g.statOf(id, stat.MeleeAcc)), v.Status != health.Alive
 	}
-	pct := g.skillPct(id, sk, 4, 50, 160)
-	off := int(g.statOf(id, acc))
-	if pct == 100 && off == 0 {
-		return chance
-	}
-	return min(max(chance*pct/100+off, 0), 100)
+	return m
 }
 
 // aimTicksFor scales an aim or cooldown time by the AimCooldown stat.

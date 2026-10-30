@@ -135,6 +135,8 @@ func SpecOf(k construction.Kind) Spec {
 		return consumer(ClassDefense, 150, 150)
 	case construction.Autodoor: // wiki: Autodoor (shed with the defences)
 		return consumer(ClassDefense, 50, 50)
+	case construction.NutrientPasteDispenser: // STO-2, wiki: Nutrient paste dispenser (200 W)
+		return consumer(ClassBench, 200, 200)
 	}
 	return Spec{}
 }

@@ -167,7 +167,8 @@ func TestTendFetchesMedicineAndTends(t *testing.T) {
 		t.Fatal("a downed patient with no bed: tended where it lies")
 	}
 	j := h.jobs[doc]
-	if j.Kind != job.Tend || j.Dest != herbal || j.TX != 2 || h.owners[herbal] != doc {
+	// RES-1: the game's job start holds the dose (a count claim), not care
+	if j.Kind != job.Tend || j.Dest != herbal || j.TX != 2 {
 		t.Fatalf("tend with a dose fetched first: %+v", j)
 	}
 	h.pos[doc] = [2]int{6, 5}

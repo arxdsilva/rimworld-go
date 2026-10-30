@@ -10,10 +10,10 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/body"
 )
 
 // settle flies every shot until none is left.
@@ -104,7 +104,7 @@ func TestAccuracyAtBandDistances(t *testing.T) {
 		t.Fatal("no target")
 	}
 	f.pawn(4, 13, 5, weapon.Knife)
-	if r, _ := s.Report(4, 2); !r.Melee || r.Chance != 900 || r.Dist != 1 {
+	if r, _ := s.Report(4, 2); !r.Melee || r.Chance != attack.HitChanceOf(f.Melee(4)) || r.Dist != 1 {
 		t.Fatalf("melee report %+v", r)
 	}
 }
@@ -270,31 +270,26 @@ func TestArmorDeflectHalvePass(t *testing.T) {
 	f.raider(2, 6, 5, weapon.Fists)
 	duster, _ := armor.Apparel(item.Duster)
 	f.worn[2] = []armor.Layer{duster} // A = 243 - 180 = 63
-	f.rolls = []int{0, 500, 10}       // hit, torso, deflected
+	f.rolls = []int{0, 0, 200, 10}    // the blade, a hit, x1.0, deflected (Wounds.Absorb: one roll per garment)
 	s.Strike(1, 2, weapon.Knife)
 	if tr := f.traces[0]; !tr.Hit || tr.Damage != 0 || len(f.hurts) != 0 || f.stains != 0 {
 		t.Fatalf("deflected: %+v %v", tr, f.hurts)
 	}
-	f.rolls = []int{0, 500, 40} // halved: a sharp blow bruises
+	f.rolls = []int{0, 0, 200, 40} // halved: a sharp blow turns blunt
 	s.Strike(1, 2, weapon.Knife)
-	if want := fmt.Sprintf("2-6-1-%d", body.Bruise); len(f.hurts) != 1 || f.hurts[0] != want || f.traces[1].Damage != 6 {
+	if want := fmt.Sprintf("2-6-1-%v", damage.FormBlunt); len(f.hurts) != 1 || f.hurts[0] != want || f.traces[1].Damage != 6 {
 		t.Fatalf("halved: %v want %s", f.hurts, want)
 	}
-	f.rolls = []int{0, 500, 63} // passed
+	f.rolls = []int{0, 0, 200, 63} // passed: the firing weapon's form
 	s.Strike(1, 2, weapon.Knife)
-	if len(f.hurts) != 2 || f.hurts[1] != "2-12-1" {
-		t.Fatalf("passed: %v", f.hurts)
-	}
-	f.rolls = []int{0, 50} // the head: nothing covers it, no layer roll
-	s.Strike(1, 2, weapon.Knife)
-	if len(f.hurts) != 3 || f.hurts[2] != "2-12-1" || len(f.rolls) != 0 {
-		t.Fatalf("uncovered head: %v", f.hurts)
+	if want := fmt.Sprintf("2-12-1-%v", weapon.HitOf(weapon.Knife, weapon.DefOf(weapon.Knife)).Form); len(f.hurts) != 2 || f.hurts[1] != want {
+		t.Fatalf("passed: %v want %s", f.hurts, want)
 	}
 	// a bullet's armor roll at landing: the rifle's 27 percent
 	// penetration beats the duster's sharp 24.3 percent
 	c := f.combat()
 	f.pawn(3, 1, 1, weapon.Rifle)
-	f.rolls = []int{0, 500}
+	f.rolls = []int{0}
 	c.Strikes.Strike(3, 2, weapon.Rifle)
 	settle(c)
 	if l := landed(f); l.Damage != weapon.DefOf(weapon.Rifle).Damage || len(f.rolls) != 0 {

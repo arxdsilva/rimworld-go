@@ -185,7 +185,7 @@ const zoneShelf = "shelf"
 // objects, so stacks and crops never cover a zone's name.
 func (o *Zones) DrawZoneLabels(v *render.View, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	for _, z := range w.Zones {
-		if z.Hidden || z.Kind == zoneShelf {
+		if o.Hide || z.Hidden || z.Kind == zoneShelf {
 			continue // a hidden zone shows no name (while selected, drawZoneSelection)
 		}
 		o.DrawZoneLabel(v, screen, z, o.ZoneGeomOf(z), sw, sh, tile)
@@ -201,8 +201,8 @@ func (o *Zones) DrawZones(v *render.View, ps sprite.Pass, ch *Chunks, screen *eb
 	none := color.NRGBA{}
 	planted := o.zonePlantCells(v, ch, &w)
 	for _, z := range w.Zones {
-		if z.Hidden || z.Kind == zoneShelf {
-			continue // a shelf's zone is never drawn; a hidden zone draws no fill or outline (while selected, drawZoneSelection)
+		if o.Hide || z.Hidden || z.Kind == zoneShelf {
+			continue // the zones overlay is off; a shelf's zone is never drawn; a hidden zone draws no fill or outline (while selected, drawZoneSelection)
 		}
 		key, fill := zoneSpriteKey(z.Kind)
 		var skip map[[2]int]bool
@@ -229,11 +229,40 @@ func (o *Zones) DrawZones(v *render.View, ps sprite.Pass, ch *Chunks, screen *eb
 		}
 		g := o.ZoneGeomOf(z)
 		for _, run := range g.Runs {
+			if z.Kind == game.ZoneStockpile || z.Kind == game.ZoneDump {
+				o.drawPaletteRun(v, run, ZoneColour(z.ID), sw, sh, tile) // each storage zone in its own colour
+				continue
+			}
 			o.DrawZoneRun(v, &o.Batch, z.Kind, run, sw, sh, tile)
 		}
 	}
 	// every outline of every zone in one draw, over all the fills
 	o.Batch.Flush(screen, o.whiteImg(), ebiten.Blend{})
+}
+
+// ZonePalette is the colour of each zone : the zone's id picks the entry, so a zone keeps its colour for
+// as long as it exists.
+var ZonePalette = [...]color.RGBA{
+	{R: 230, G: 90, B: 80, A: 255}, {R: 240, G: 170, B: 60, A: 255}, {R: 220, G: 210, B: 70, A: 255}, {R: 110, G: 200, B: 90, A: 255},
+	{R: 70, G: 190, B: 190, A: 255}, {R: 90, G: 140, B: 240, A: 255}, {R: 160, G: 110, B: 230, A: 255}, {R: 230, G: 110, B: 190, A: 255},
+}
+
+// ZoneColour is zone id's overlay colour (opaque; the fill uses ZoneFillAlpha).
+func ZoneColour(id uint16) color.RGBA { return ZonePalette[int(id)%len(ZonePalette)] }
+
+// drawPaletteRun is DrawZoneRun's dashed storage outline in colour c.
+func (o *Zones) drawPaletteRun(v *render.View, run EdgeRun, c color.RGBA, sw, sh int, tile float64) {
+	if !runVisible(v, run, sw, sh, 8) {
+		return
+	}
+	th := ZoneStroke(v.Cam.Zoom)
+	ax, ay := v.WorldToScreenF(float64(run.X0), float64(run.Y0))
+	bx, by := v.WorldToScreenF(float64(run.X1), float64(run.Y1))
+	off := th / 2
+	ax, ay = ax+float32(run.nx)*off, ay+float32(run.Ny)*off
+	bx, by = bx+float32(run.nx)*off, by+float32(run.Ny)*off
+	dash := float32(max(4*camera.ScreenDev(), tile*0.16))
+	DashedRun(&o.Batch, ax, ay, bx, by, th, dash, dash*0.8, c, sw, sh)
 }
 
 // zoneFill draws the zone sprite key on every visible cell not in skip as

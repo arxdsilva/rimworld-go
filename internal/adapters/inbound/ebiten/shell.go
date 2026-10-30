@@ -457,6 +457,7 @@ func clickRoutes() []clickRoute {
 		exact(hud.HomeButtonID, func(a *App, _ string) { a.shell.ToggleHome() }),
 		exact(architectpkg.HomeAutoButtonID, func(a *App, _ string) { a.arch.ToggleHomeAuto() }), // home_auto_ui.go
 		exact(hud.PlanButtonID, func(a *App, _ string) { a.shell.TogglePlan() }),
+		exact(hud.ZonesButtonID, func(a *App, _ string) { toggleZonesOverlay(a) }), // zones_overlay_ui.go
 		exact(hud.RoomsButtonID, func(a *App, _ string) { a.chrome.Rooms = !a.chrome.Rooms }),
 		on(ids.PrefixLetter, func(a *App, id string) { a.chrome.Right().LetterClick(id) }), // hud/letters.go
 		on(ids.PrefixSpeed, func(a *App, id string) { a.chrome.Global().SpeedClick(id) }),  // hud/global.go

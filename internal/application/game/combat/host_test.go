@@ -10,14 +10,14 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/weather"
 )
 
 // fakeHost is a small open map for combat's unit tests: every role, kept
@@ -76,6 +76,18 @@ type fakeHost struct {
 	noRoute   bool
 	blocked   map[[2]int]bool
 
+	// CBT-2: melee numbers (default a healthy skill-5 fighter: it never dodges), downed
+	// humanlikes, the sky and roofs, experience given, the hands and the
+	// released drafts.
+	melee     map[entity.EntityID]attack.Melee
+	lying     map[entity.EntityID]bool
+	sky       weather.Kind
+	roofed    map[[2]int]bool
+	xp        []int
+	wield     map[entity.EntityID]item.Kind
+	putDown   []string
+	undrafted []entity.EntityID
+
 	worn map[entity.EntityID][]armor.Layer
 	aims map[entity.EntityID][2]int // per-tile ppm and offset; default a perfect shooter
 
@@ -105,11 +117,13 @@ func newFake(w, h int) *fakeHost {
 		worn: map[entity.EntityID][]armor.Layer{}, aims: map[entity.EntityID][2]int{},
 		plants: map[[2]int]plant.Species{}, stock: map[entity.EntityID]item.Stack{}, nextID: 9000,
 		reserved: map[entity.EntityID]bool{}, postpone: map[entity.EntityID]bool{}, free: map[item.Kind][3]int{},
+		melee: map[entity.EntityID]attack.Melee{}, lying: map[entity.EntityID]bool{}, roofed: map[[2]int]bool{},
+		wield: map[entity.EntityID]item.Kind{},
 	}
 }
 
 func (f *fakeHost) combat() *Combat {
-	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f})
+	return New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f, Field: f, Supply: f, Draft: f})
 }
 
 func (f *fakeHost) pawn(id entity.EntityID, x, y int, wk weapon.Kind) {
@@ -151,9 +165,6 @@ func (f *fakeHost) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 	}
 	p := f.pos[t]
 	return p[0], p[1], true
-}
-func (f *fakeHost) Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer {
-	return append(buf, f.worn[id]...)
 }
 func (f *fakeHost) Hostile(a animal.State) bool     { return a.Mode == animal.Attack && f.pawns[a.Target] }
 func (f *fakeHost) AnimalIDs() []entity.EntityID    { return f.animalIDs }
@@ -208,14 +219,22 @@ func (f *fakeHost) PlaceFrame(k construction.Kind, _ item.Kind, _ construction.F
 func (f *fakeHost) DigRock(_, _, dmg int) { f.dug += dmg }
 
 // Skills
-func (f *fakeHost) HitChance(_ entity.EntityID, _ bool, base int) int { return base }
+func (f *fakeHost) Melee(id entity.EntityID) attack.Melee {
+	if m, ok := f.melee[id]; ok {
+		return m
+	}
+	if _, beast := f.animals[id]; beast {
+		return attack.Melee{Sight: 1000, Manip: 1000, Moving: 1000}
+	}
+	return attack.Fresh(5) // no dodge: score 5
+}
 func (f *fakeHost) ShotAim(id entity.EntityID) (int, int) {
 	if a, ok := f.aims[id]; ok {
 		return a[0], a[1]
 	}
 	return attack.PerfectShooter, 0
 }
-func (f *fakeHost) Learn(entity.EntityID, bool)                  { f.learn++ }
+func (f *fakeHost) Learn(_ entity.EntityID, _ bool, xp int)      { f.learn++; f.xp = append(f.xp, xp) }
 func (f *fakeHost) AimTicks(_ entity.EntityID, cooldown int) int { return cooldown }
 func (f *fakeHost) CanViolence(id entity.EntityID) bool          { return !f.pacific[id] }
 func (f *fakeHost) FightsBack(id entity.EntityID) bool {
@@ -239,11 +258,15 @@ func (f *fakeHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) 
 }
 
 // Harm
-func (f *fakeHost) Hurt(target entity.EntityID, dmg int, by entity.EntityID) {
-	f.hurts = append(f.hurts, fmt.Sprintf("%d-%d-%d", target, dmg, by))
+func (f *fakeHost) Absorb(target entity.EntityID, hit damage.Hit, roll func(int) int) armor.Landed {
+	var sets []armor.Set
+	for _, l := range f.worn[target] {
+		sets = append(sets, l.Set)
+	}
+	return armor.Absorb(sets, hit, roll)
 }
-func (f *fakeHost) HurtAs(target entity.EntityID, dmg int, by entity.EntityID, k body.WoundKind, _ health.Cause) {
-	f.hurts = append(f.hurts, fmt.Sprintf("%d-%d-%d-%d", target, dmg, by, k))
+func (f *fakeHost) HurtHit(target entity.EntityID, l armor.Landed, by entity.EntityID) {
+	f.hurts = append(f.hurts, fmt.Sprintf("%d-%d-%d-%v", target, l.Amount, by, l.Form))
 }
 func (f *fakeHost) DamageBuilding(id entity.EntityID, dmg int)          { f.damage[id] += dmg }
 func (f *fakeHost) Stain(entity.EntityID, int, int, int, int, int)      { f.stains++ }
@@ -350,6 +373,31 @@ func (f *fakeHost) DryWalkable(x, y int) bool {
 	return f.InBounds(x, y) && fakeQuery{f}.Walkable(x, y)
 }
 func (f *fakeHost) TileTaken(x, y int) bool { return f.blocked[[2]int{x, y + 1000}] }
+func (f *fakeHost) Weather() weather.Kind   { return f.sky }
+func (f *fakeHost) Roofed(x, y int) bool    { return f.roofed[[2]int{x, y}] }
+func (f *fakeHost) Lying(id entity.EntityID) bool {
+	return f.lying[id]
+}
+func (f *fakeHost) Undraft(id entity.EntityID) {
+	f.undrafted = append(f.undrafted, id)
+	delete(f.drafted, id)
+}
+
+// fakeArms is the colonists' hands (CBT-2): what they wield, the weapon
+// tracked in both wield (the item) and weapons (the profile).
+type fakeArms struct{ f *fakeHost }
+
+func (a fakeArms) Disarm(id entity.EntityID) {
+	delete(a.f.wield, id)
+	delete(a.f.weapons, id) // fists
+}
+func (a fakeArms) Wielded(id entity.EntityID) item.Kind { return a.f.wield[id] }
+func (a fakeArms) Wield(id entity.EntityID, k item.Kind) {
+	a.f.wield[id], a.f.weapons[id] = k, weapon.ForItem(k)
+}
+func (a fakeArms) DropAt(k item.Kind, n, x, y int) {
+	a.f.putDown = append(a.f.putDown, fmt.Sprintf("%d,%d:%v:%d", x, y, k, n))
+}
 
 // Supply
 func (f *fakeHost) Stock(_ entity.EntityID, k item.Kind, qty int) (entity.EntityID, int, int, bool) {

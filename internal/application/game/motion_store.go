@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"slices"
 
+	"rimworld-go/internal/application/game/hit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -28,6 +29,9 @@ type motionRec struct {
 	StepTicks    int
 	BlockedTicks int
 	BlockedBy    entity.EntityID
+	// StaggerUntil (CBT-1): a hit's stopping power slows its steps until
+	// this tick (game/hit Stagger). Zero in older saves.
+	StaggerUntil uint64
 }
 
 // motionOf is id's record. A creature without one (new, or from a save
@@ -51,6 +55,7 @@ func (g *Game) motionBlocked(id entity.EntityID) (ticks int, by entity.EntityID)
 
 // stepped records a step taken at tick now costing cost ticks.
 func (m *motionRec) stepped(now uint64, cost int) {
+	cost = hit.StepCost(cost, m.StaggerUntil, now) // game/hit (CBT-1): staggered, a sixth of its speed
 	m.StepTick, m.StepTicks, m.NextMoveAt = now, cost, now+uint64(cost)
 	m.BlockedTicks, m.BlockedBy = 0, 0
 }

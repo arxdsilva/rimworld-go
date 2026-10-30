@@ -37,23 +37,25 @@ type planner struct{ h Host }
 type planBuf struct{ cands, picks []pick }
 
 // fits reports a stack the single-stack search found that bill bl may
-// still use: not a forbidden kind, inside the bill's radius of spot.
-func fits(bl recipe.Bill, st item.Stack, spot [2]int) bool {
-	return bl.Allows(st.Kind) && (bl.Radius <= 0 || pathing.Dist(spot[0], spot[1], st.X, st.Y) <= bl.Radius)
+// still use: not a forbidden kind, inside the bill's radius of spot and
+// in its ingredient source, if it names one (RES-1).
+func (p planner) fits(bl recipe.Bill, st item.Stack, spot [2]int) bool {
+	return bl.Allows(st.Kind) && (bl.Radius <= 0 || pathing.Dist(spot[0], spot[1], st.X, st.Y) <= bl.Radius) &&
+		(bl.Source == 0 || p.h.InSource(bl.Source, st.X, st.Y))
 }
 
-// usable reports a stack pawn id may gather for bill bl: lying free, not
-// forbidden or spoilt (a rotten body still burns), allowed by the bill,
-// inside its radius and reserved by nobody else.
-func (p planner) usable(id, sid entity.EntityID, st item.Stack, bl recipe.Bill, spot [2]int) bool {
+// usable is how much of a stack pawn id may gather for bill bl (0: none):
+// lying free, not forbidden or spoilt (a rotten body still burns),
+// allowed by the bill, inside its radius and source; the part other
+// pawns haven't claimed (RES-1: two crafters share a stack).
+func (p planner) usable(id, sid entity.EntityID, st item.Stack, bl recipe.Bill, spot [2]int) int {
 	if st.Carrier != 0 || st.Forbidden || st.Qty <= 0 || st.Rotten() && st.Kind != item.CorpseHuman {
-		return false
+		return 0
 	}
-	if !fits(bl, st, spot) {
-		return false
+	if !p.fits(bl, st, spot) {
+		return 0
 	}
-	owner, taken := p.h.Owner(sid)
-	return !taken || owner == id
+	return p.h.Claims().FreeFor(id, sid, st.Qty)
 }
 
 // plan gathers d's ingredients for pawn id (0: anyone) from the stacks
@@ -69,10 +71,14 @@ func (p planner) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]
 	ins := d.AppendInputs(inBuf[:0])
 	for _, sid := range p.h.ItemIDs() {
 		st, ok := p.h.Stack(sid)
-		if !ok || !p.usable(id, sid, st, bl, spot) || !acceptedBy(ins, st) {
+		if !ok || !acceptedBy(ins, st) {
 			continue
 		}
-		cands = append(cands, pick{id: sid, kind: st.Kind, x: st.X, y: st.Y, left: st.Qty,
+		left := p.usable(id, sid, st, bl, spot)
+		if left <= 0 {
+			continue
+		}
+		cands = append(cands, pick{id: sid, kind: st.Kind, x: st.X, y: st.Y, left: left,
 			d: pathing.Dist(spot[0], spot[1], st.X, st.Y), st: st})
 	}
 	slices.SortFunc(cands, func(a, b pick) int {
@@ -191,29 +197,33 @@ func (p planner) available(bl recipe.Bill, d recipe.Def, spot [2]int) bool {
 		return ok
 	}
 	in := d.Input
-	if sid, st := p.h.Ingredient(0, in); sid != 0 && fits(bl, st, spot) {
+	if sid, st := p.h.Ingredient(0, in); sid != 0 && p.fits(bl, st, spot) {
 		return true
 	}
 	n := 0
 	var have [256]int // PRD-2: a stuffed input counts each material on its own
 	for _, sid := range p.h.ItemIDs() {
 		st, ok := p.h.Stack(sid)
-		if !ok || !in.AcceptsStack(st) || !p.usable(0, sid, st, bl, spot) {
+		if !ok || !in.AcceptsStack(st) {
+			continue
+		}
+		free := p.usable(0, sid, st, bl, spot)
+		if free <= 0 {
 			continue
 		}
 		if in.Max > 0 { // one stack, up to Max of it
-			if st.Qty >= in.Qty {
+			if free >= in.Qty && free == st.Qty {
 				return true
 			}
 			continue
 		}
 		if in.Stuff != 0 {
-			if have[st.Kind] += st.Qty; have[st.Kind] >= in.Qty {
+			if have[st.Kind] += free; have[st.Kind] >= in.Qty {
 				return true
 			}
 			continue
 		}
-		if n += st.Qty; n >= in.Qty {
+		if n += free; n >= in.Qty {
 			return true
 		}
 	}

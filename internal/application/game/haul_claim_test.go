@@ -35,6 +35,7 @@ func haulYard(t *testing.T) (*Game, entity.EntityID) {
 	onlyWork(g, ada, work.Haul)
 	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 16, Y: 1, X2: 22, Y2: 10})
 	g.Step(1)
+	allowAll(g, 16, 1) // STO-2: a new stockpile refuses chunks and corpses; this yard takes everything
 	return g, ada
 }
 
@@ -400,8 +401,9 @@ func TestHaulClaimMergeRules(t *testing.T) {
 	if moved != 5 {
 		t.Fatalf("clearItemsFrom keeps the claim: %d found wood", moved)
 	}
-	// set down on a stockpile that takes it, a found stack is stored
-	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 8, Y: 1, X2: 9, Y2: 2})
+	// set down on a stockpile that takes it, a found stack is stored (a
+	// dumping stockpile: STO-2's plain stockpile takes no chunks)
+	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 8, Y: 1, X2: 9, Y2: 2, Build: StockpileVariantDump})
 	g.ApplyPending()
 	g.spawnUnclaimed(item.GraniteChunk, 1, 8, 1, false)
 	if st, _ := g.stacks.Get(g.itemAt(8, 1)); st.Unclaimed || st.HaulMarked {
@@ -452,7 +454,8 @@ func TestWorkersLeaveTheirOutputToHaulers(t *testing.T) {
 	if !wok || !cok || g.inMatchingStockpile(wood) || g.inMatchingStockpile(chunk) || wood.Unclaimed || chunk.Unclaimed {
 		t.Fatalf("output lies at the work spots, the colony's: wood %+v %v, chunk %+v %v", wood, wok, chunk, cok)
 	}
-	// a hauler takes both in
+	// a hauler takes both in (STO-2: a stockpile set to take chunks too)
+	allowAll(g, 16, 1)
 	hauler, _ := g.SpawnNamedPawn(1, 10, "Cora")
 	onlyWork(g, hauler, work.Haul)
 	for range 150 {

@@ -72,7 +72,7 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 			Catch:   filth.Catch(st.Kind) / 10, Forbidden: st.Forbidden,
 			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked, PoisonPermille: int(st.Poison),
 			Quality: craft.QualityLabel(st.Quality), Stuff: craft.StuffLabel(st.Kind, st.Stuff), // PRD-2
-			HP: st.HP(), MaxHP: st.MaxHP(), Tainted: st.Tainted(),
+			HP: st.HP(), MaxHP: st.MaxHP(), Tainted: st.Tainted(), Urgent: g.haul.store.Urgent.Has(id), // STO-2
 		})
 		g.fillCorpseView(&out[len(out)-1], st) // burial.go
 		if st.Carrier != 0 {

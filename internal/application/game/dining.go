@@ -59,9 +59,10 @@ func (g *Game) carryToTable(id entity.EntityID, j job.Record) bool {
 		return false
 	}
 	n, _ := g.need.Get(id)
-	take := min(st.Qty, portionsFor(n.Hunger, st.Kind))
+	take := min(st.Qty, portionsFor(n.Hunger, st.Kind), g.reserve.FreeFor(id, j.Target, st.Qty)) // RES-1: never another eater's portions (it holds at least one)
 	carry := j.Target
 	if st.Qty > take {
+		g.reserve.ReleaseEntity(id, j.Target) // RES-1: picked up, the rest is free for other eaters
 		st.Qty -= take
 		g.putStack(j.Target, st)
 		carry = g.entities.Next()

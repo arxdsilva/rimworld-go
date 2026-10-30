@@ -875,6 +875,7 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	}
 	g.releaseSwap(id) // a pending material change becomes a new build
 	g.bldgs.Delete(id)
+	g.reserve.ReleaseTarget(id) // RES-1: its claimants' jobs find it gone
 	delete(g.fuel, id)
 	delete(g.banked, id)
 	if b.Kind == construction.DryingRack || b.Kind == construction.FermentingBarrel { // PRD-4: the barrel's wort too

@@ -87,6 +87,10 @@ const (
 	FlakArmor
 	Armoursmithing
 	PoweredArmor
+	// NutrientPaste (STO-2, append only, saved; wiki: Nutrient paste,
+	// needs Electricity, our cost) opens the hopper and the nutrient paste
+	// dispenser.
+	NutrientPaste
 	NumProjects
 )
 
@@ -198,7 +202,7 @@ var defs = [NumProjects]Def{
 		Desc: "A powered refinery that cooks wood and plant matter down to liquid fuel.", Unlocks: []string{"build:fuel refinery"}},
 	Upholstery: {Project: Upholstery, Name: "upholstery", Label: "Upholstery", Cost: 2000,
 		Desc:    "Padded, fabric-covered chairs fit for a long evening, and shelves that keep stored goods off the ground.",
-		Unlocks: []string{"build:armchair", "build:shelf"}}, // PRD-4: wiki Shelf (Complex furniture)
+		Unlocks: []string{"build:armchair", "build:shelf", "build:sarcophagus"}}, // PRD-4, STO-2: wiki Shelf, Sarcophagus (Complex furniture)
 	Charges: {Project: Charges, Name: "charges", Label: "Buried charges", Cost: 3000, Requires: []Project{Traps},
 		Desc:    "Shells wired to a trip line, buried where raiders will walk.",
 		Unlocks: []string{"build:blast charge", "build:fire charge", "build:pulse charge", "build:smoke charge"}},
@@ -234,6 +238,9 @@ var defs = [NumProjects]Def{
 		Requires: []Project{PrecisionFabrication, FlakArmor},
 		Desc:     "Sealed plasteel suits and helmets with their own servos.",
 		Unlocks:  []string{"recipe:make_marine_armor", "recipe:make_marine_helmet"}},
+	NutrientPaste: {Project: NutrientPaste, Name: "nutrient_paste", Label: "Nutrient paste", Cost: 2500, Requires: []Project{Electricity},
+		Desc:    "A powered machine that mashes raw food from the hoppers beside it into bland but filling paste meals.",
+		Unlocks: []string{"build:hopper", "build:nutrient paste dispenser"}},
 }
 
 // DefOf returns the definition of p.

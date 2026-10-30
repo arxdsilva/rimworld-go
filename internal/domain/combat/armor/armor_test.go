@@ -71,10 +71,10 @@ func TestSetAndType(t *testing.T) {
 	if got := s.Add(Set{1, 2, 3}); got != (Set{701, 302, 103}) {
 		t.Fatal("Add")
 	}
-	if r := ResolveType(s, damage.Bomb, 10, 0, 0); r.Outcome != Deflected {
+	if r := Absorb([]Set{s}, damage.Of(damage.Bomb, 10, 0), rolls(0)); r.Outcome != Deflected {
 		t.Fatal("bomb uses sharp armor")
 	}
-	if r := ResolveType(s, damage.EMP, 10, 0, 0); r.Outcome != Passed || r.Damage != 10 {
+	if r := Absorb([]Set{s}, damage.Of(damage.EMP, 10, 0), rolls(0)); r.Outcome != Passed || r.Amount != 10 {
 		t.Fatal("EMP ignores armor")
 	}
 	if got := (Set{Sharp: 1500}).Add(Set{Sharp: 900}); got.Sharp != MaxRating {
@@ -84,45 +84,41 @@ func TestSetAndType(t *testing.T) {
 
 func TestSharpHalvedBecomesBlunt(t *testing.T) {
 	t.Parallel()
-	s := Set{Sharp: 600, Blunt: 100}
-	if r := ResolveType(s, damage.Sharp, 10, 0, 400); r.Outcome != Halved || r.Damage != 5 || r.Type != damage.Blunt {
+	s := []Set{{Sharp: 600, Blunt: 100}}
+	bullet := damage.Hit{Form: damage.FormBullet, Amount: 10}
+	if r := Absorb(s, bullet, rolls(400)); r.Outcome != Halved || r.Amount != 5 || r.Form != damage.FormBlunt {
 		t.Fatalf("halved sharp: %+v", r)
 	}
-	if r := ResolveType(s, damage.Sharp, 10, 0, 900); r.Type != damage.Sharp || r.Damage != 10 {
+	if r := Absorb(s, bullet, rolls(900)); r.Form != damage.FormBullet || r.Amount != 10 {
 		t.Fatalf("passed sharp: %+v", r)
 	}
-	if r := ResolveType(s, damage.Sharp, 10, 0, 100); r.Outcome != Deflected || r.Type != damage.Sharp {
+	if r := Absorb(s, bullet, rolls(100)); r.Outcome != Deflected || r.Form != damage.FormBullet {
 		t.Fatalf("deflected sharp: %+v", r)
 	}
-	if r := ResolveType(Set{Blunt: 600}, damage.Blunt, 10, 0, 400); r.Type != damage.Blunt || r.Damage != 5 {
+	if r := Absorb([]Set{{Blunt: 600}}, damage.Of(damage.Blunt, 10, 0), rolls(400)); r.Form != damage.FormBlunt || r.Amount != 5 {
 		t.Fatalf("blunt: %+v", r)
 	}
 }
 
-func TestResolveLayers(t *testing.T) {
+func TestAbsorbLayers(t *testing.T) {
 	t.Parallel()
 	outer, inner := Set{Sharp: 400}, Set{Sharp: 800}
 	layers := []Set{outer, inner}
+	cut := func(n, pen int) damage.Hit { return damage.Hit{Form: damage.FormCut, Amount: n, Pen: pen} }
 	// outer halves 20 -> 10 (roll 300 in [200,400)); inner (A=800) halves 10 -> 5.
-	r := ResolveLayers(layers, damage.Sharp, 20, 0, []int{300, 500})
-	if r.Damage != 5 || r.Outcome != Halved || r.Type != damage.Blunt {
+	if r := Absorb(layers, cut(20, 0), rolls(300, 500)); r.Amount != 5 || r.Outcome != Halved || r.Form != damage.FormBlunt {
 		t.Fatalf("%+v", r)
 	}
 	// outer passes, inner deflects.
-	r = ResolveLayers(layers, damage.Sharp, 20, 0, []int{900, 100})
-	if r.Damage != 0 || r.Outcome != Deflected || r.Type != damage.Sharp {
+	if r := Absorb(layers, cut(20, 0), rolls(900, 100)); r.Amount != 0 || r.Outcome != Deflected || r.Form != damage.FormCut {
 		t.Fatalf("%+v", r)
 	}
-	// penetration is subtracted in every layer: A = 400-300 = 100.
-	r = ResolveLayers(layers, damage.Sharp, 20, 300, []int{40, 900})
-	if r.Damage != 0 && r.Outcome != Deflected {
+	// penetration is subtracted in every layer: A = 400-300 = 100; a
+	// deflected hit draws no further roll.
+	if r := Absorb(layers, cut(20, 300), rolls(40)); r.Amount != 0 || r.Outcome != Deflected {
 		t.Fatalf("%+v", r)
 	}
-	// no layers / short rolls pass.
-	if r := ResolveLayers(nil, damage.Sharp, 7, 0, nil); r.Damage != 7 || r.Outcome != Passed {
-		t.Fatalf("%+v", r)
-	}
-	if r := ResolveLayers(layers, damage.Sharp, 7, 0, []int{}); r.Damage != 7 {
+	if r := Absorb(nil, cut(7, 0), rolls()); r.Amount != 7 || r.Outcome != Passed || r.Stopped() {
 		t.Fatalf("%+v", r)
 	}
 }

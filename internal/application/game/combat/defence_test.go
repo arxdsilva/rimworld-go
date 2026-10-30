@@ -24,6 +24,7 @@ func TestNaturalCover(t *testing.T) {
 	f := newFake(30, 30)
 	s := f.combat().Sight
 	f.plants[[2]int{9, 10}] = plant.Tree
+	f.chunks = [][2]int{{10, 11}} // read on the first look (CBT-2 asks all eight tiles); beside every other shot
 	if c := s.Cover(2, 10, 10, 10); c != cover.Permille(cover.Tree) {
 		t.Fatalf("tree cover %d", c)
 	}
@@ -38,7 +39,6 @@ func TestNaturalCover(t *testing.T) {
 	if c := s.Cover(20, 10, 10, 10); c != cover.Permille(cover.Rock) {
 		t.Fatalf("rock cover %d", c)
 	}
-	f.chunks = [][2]int{{10, 11}}
 	if c := s.Cover(10, 20, 10, 10); c != cover.Permille(cover.Chunk) {
 		t.Fatalf("chunk cover %d", c)
 	}

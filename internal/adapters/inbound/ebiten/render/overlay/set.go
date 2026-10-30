@@ -123,11 +123,13 @@ type Set struct {
 // Zones draws the zones: their fills, outlines and labels.
 type Zones struct {
 	*base
-	geoms  map[uint16]*ZoneGeom // the outline cache
-	Batch  gfx.TriBatch         // every zone outline of a frame, one draw
-	plants map[[2]int]bool      // cells holding their zone's own plant, this frame (PLAY-020)
-	verts  []ebiten.Vertex      // zoneFill's reused batch
-	idx    []uint32
+	geoms   map[uint16]*ZoneGeom // the outline cache
+	Hide    bool                 // the zones overlay is off: no zone fill, outline or name
+	ShowAll bool                 // the zones overlay: every zone, hidden and shelf zones too, each in its palette colour
+	Batch   gfx.TriBatch         // every zone outline of a frame, one draw
+	plants  map[[2]int]bool      // cells holding their zone's own plant, this frame (PLAY-020)
+	verts   []ebiten.Vertex      // zoneFill's reused batch
+	idx     []uint32
 }
 
 // Fires draws the campfires and the burning cells, their ash and the sim's

@@ -153,8 +153,8 @@ func (g *Game) researchTry(id entity.EntityID, tried []entity.EntityID) (entity.
 			continue
 		}
 		_, spot, ok := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-		if !ok || !g.grid.Walkable(spot[0], spot[1]) {
-			continue
+		if o, held := g.reserve.TileOwner(spot[0], spot[1]); !ok || !g.grid.Walkable(spot[0], spot[1]) || held && o != id {
+			continue // RES-1: another worker holds the work spot (a bench sharing it)
 		}
 		if d := manhattan(pos.X, pos.Y, spot[0], spot[1]); d < bestD || (d == bestD && bid < best) {
 			best, bestD, bx, by = bid, d, spot[0], spot[1]
@@ -163,7 +163,8 @@ func (g *Game) researchTry(id entity.EntityID, tried []entity.EntityID) (entity.
 	if best == 0 {
 		return 0, false
 	}
-	return best, g.startJob(id, job.Record{Kind: job.Research, Target: best, TX: bx, TY: by, WorkLeft: researchSession})
+	return best, g.startJob(id, job.Record{Kind: job.Research, Target: best, TX: bx, TY: by, WorkLeft: researchSession}) &&
+		g.reserve.TryTile(id, bx, by) // RES-1: the work spot is the researcher's
 }
 
 func (g *Game) doResearch(id entity.EntityID, j job.Record) {

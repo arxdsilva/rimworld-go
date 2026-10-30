@@ -103,6 +103,9 @@ const (
 	OutdoorsMood
 	SleptCold
 	SleptHot
+	// AtePaste (STO-2, append only): ate a nutrient paste meal (wiki:
+	// -4 for a day, in the meal-kind group).
+	AtePaste
 	numKinds
 )
 
@@ -233,6 +236,7 @@ var defs = [numKinds]Def{
 	OutdoorsMood: {"time indoors", 0, needHour, groupOutdoors, 0, 0},
 	SleptCold:    {"slept in the cold", -4, day, groupSleptTemp, 0, 0},
 	SleptHot:     {"slept in the heat", -4, day, groupSleptTemp, 0, 0},
+	AtePaste:     {"ate nutrient paste", -4, day, groupMealKind, 0, 0},
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

@@ -2,6 +2,7 @@ package combat
 
 import (
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -46,7 +47,8 @@ const Tracking = 1
 func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk weapon.Kind, d weapon.Def, r attack.Report) {
 	h := s.h
 	sh := projectile.Shot{Owner: attacker, Target: target, Raider: h.StandingRaider(attacker), Weapon: wk,
-		Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Type: d.DamageType, Fired: h.Now()}
+		Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Type: d.DamageType, Fired: h.Now(),
+		Hit: weapon.HitOf(wk, d)} // the firing weapon's hit (CBT-2), carried and saved
 	dx, dy := tx, ty
 	aim := r.Aim()
 	switch {
@@ -67,6 +69,7 @@ func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk we
 	default:
 		sh.Aimed = true
 	}
+	s.st.learn(attacker, d, sh.Aimed || d.Explosive()) // CBT-2: an aim that held counts as a hit
 	sh.Launch(ax, ay, dx, dy, d.Speed)
 	s.live = append(s.live, sh)
 	h.Trace(projectile.Trace{FromX: ax, FromY: ay, ToX: dx, ToY: dy, Tick: sh.Fired, Hit: sh.Aimed,
@@ -179,8 +182,8 @@ func (s *Shots) land(sh *projectile.Shot, x, y int) {
 			return
 		}
 	}
-	if sh.Aimed { // a target that took a step while the shot flew still takes it
-		if tx, ty, ok := s.st.Target(sh.Target); ok && weapon.Distance(tx, ty, x, y) <= Tracking {
+	if sh.Aimed { // a target that took a step while the shot flew still takes it (one lying downed too: CBT-2)
+		if tx, ty, ok := s.st.target(sh.Target, true); ok && weapon.Distance(tx, ty, x, y) <= Tracking {
 			s.flesh(sh, sh.Target, tx, ty)
 			return
 		}
@@ -197,13 +200,28 @@ func (s *Shots) land(sh *projectile.Shot, x, y int) {
 	s.miss(sh, x, y)
 }
 
-// flesh is sh striking creature v on (x, y): armor, then the wound.
+// flesh is sh striking creature v on (x, y) with the hit it was fired
+// with: armor, then the wound.
 func (s *Shots) flesh(sh *projectile.Shot, v entity.EntityID, x, y int) {
 	h := s.h
-	res := s.st.armorRoll(v, sh.Type, sh.Damage, sh.Pen, h.Roll)
-	s.trace(sh, x, y, true, false, res.Damage, v)
-	h.LogStrike(sh.Owner, v, sh.Weapon, true, res.Damage)
-	s.st.wound(sh.Owner, v, sh.FromX, sh.FromY, x, y, sh.Type, res)
+	l := h.Absorb(v, shotHit(sh), h.Roll)
+	dmg := max(l.Amount, 0)
+	s.trace(sh, x, y, true, false, dmg, v)
+	h.LogStrike(sh.Owner, v, sh.Weapon, true, dmg)
+	s.st.wound(sh.Owner, v, sh.FromX, sh.FromY, x, y, l)
+}
+
+// shotHit is sh's hit: the one it was fired with, or (a shot saved before
+// CBT-2) the weapon's hit at the shot's own damage, penetration and type.
+func shotHit(sh *projectile.Shot) damage.Hit {
+	if sh.Hit.Amount > 0 || sh.Damage <= 0 {
+		return sh.Hit
+	}
+	d := weapon.DefOf(sh.Weapon)
+	d.Damage, d.DamageType = sh.Damage, sh.Type
+	hit := weapon.HitOf(sh.Weapon, d)
+	hit.Pen = sh.Pen
+	return hit
 }
 
 // building is sh striking what blocks (x, y): a building takes the
@@ -298,7 +316,7 @@ func (s *Shots) Lob(owner entity.EntityID, wk weapon.Kind, ax, ay, aimX, aimY, l
 	h := s.h
 	d := weapon.DefOf(wk)
 	sh := projectile.Shot{Owner: owner, Weapon: wk, Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Type: d.DamageType,
-		Fired: h.Now(), Aimed: lx == aimX && ly == aimY}
+		Fired: h.Now(), Aimed: lx == aimX && ly == aimY, Hit: weapon.HitOf(wk, d)}
 	sh.Launch(ax, ay, lx, ly, d.Speed)
 	s.live = append(s.live, sh)
 	h.Trace(projectile.Trace{FromX: ax, FromY: ay, ToX: aimX, ToY: aimY, Tick: sh.Fired, Hit: sh.Aimed,

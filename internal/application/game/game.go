@@ -133,6 +133,9 @@ type PawnView struct {
 	Bleeding        bool
 	CareLevel       uint8
 	BleedDeathHours int
+	// Staggered: a hit's stopping power has it moving at a sixth of its
+	// speed (CBT-1, body.go).
+	Staggered bool
 	// Disease names the pawn's diseases ("flu", "flu, gut worms"; "":
 	// none) (MED-04).
 	Disease string

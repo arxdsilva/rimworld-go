@@ -89,8 +89,9 @@ type AnimalView struct {
 	// Dormant (MAPGEN-3): a sealed vault's sleeping defender (vault.go).
 	Dormant bool
 	// Mech (DEF-4): a mechanoid, a hostile machine (raid/mech.go);
-	// Stunned: an EMP has it standing dead still.
-	Mech, Stunned bool
+	// Stunned: an EMP has it standing dead still. Staggered (CBT-1): a
+	// hit's stopping power slows it.
+	Mech, Stunned, Staggered bool
 	// PLAY-015: Penned livestock show Pen (the pen's name, "Roaming" or
 	// "Being roped"); other tame animals have an allowed area AreaRef
 	// (command.AreaUnrestricted, command.AreaHome or an area id).
@@ -796,6 +797,7 @@ func (g *Game) removeAnimal(id entity.EntityID) {
 	if a := g.animals.Ref(id); a != nil && a.FeedClaim != 0 {
 		g.reserve.ReleaseEntity(id, a.FeedClaim) // a tame eater's stack is free again
 	}
+	g.reserve.ReleaseTarget(id) // RES-1: claims on it (a tamer, a hunter) end
 	delete(g.logs, id)
 	g.care.Doctor.Forget(id) // vet_animals.go
 	g.raid.Mechs.Forget(id)  // raid/mech.go (DEF-4)
@@ -894,7 +896,7 @@ func (g *Game) animalViews() []AnimalView {
 		g.fillAnimalPen(av, id, &a)              // pens.go: Penned, Pen
 		g.fillAnimalHealth(av, id, a, now)       // animal_health.go (MED-09)
 		// raid/mech.go (DEF-4): a machine, perhaps stunned by an EMP
-		av.Mech, av.Stunned = animal.IsMech(a.Species), g.raid.Mechs.Stunned(id, now)
+		av.Mech, av.Stunned, av.Staggered = animal.IsMech(a.Species), g.raid.Mechs.Stunned(id, now), staggered(g, id)
 	}
 	return out
 }

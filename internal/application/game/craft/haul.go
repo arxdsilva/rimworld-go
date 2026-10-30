@@ -15,8 +15,8 @@ import (
 // stack to take from, the stack's id then the count to take, Count is the
 // length of those entries and RouteI the next one; the loads laid on the
 // bench are appended after them. Target is where the pawn is heading: the
-// next stack, or the bench (Dest) to lay a load down. Every stack is
-// reserved for the pawn while the job runs.
+// next stack, or the bench (Dest) to lay a load down. The planned count
+// of every stack is reserved for the pawn until it picks it up (RES-1).
 
 // gather runs one tick of gather-ingredients job j at bench b, on
 // arriving: at a stack it picks the planned count up (into the load it
@@ -29,7 +29,7 @@ func (s *Shop) gather(id entity.EntityID, j job.Record, b construction.Building)
 	switch {
 	case j.Target == j.Dest && j.Carry != 0:
 		putDown(h, j.Carry, b.X, b.Y)
-		h.Claim(id, j.Carry)
+		h.Claims().TryEntity(id, j.Carry)
 		j.Route = append(j.Route[:len(j.Route):len(j.Route)], j.Carry) // a fresh array: copies never share it
 		j.Carry = 0
 	case j.Target != j.Dest && !s.pickUp(id, &j):
@@ -81,6 +81,9 @@ func (s *Shop) pickUp(id entity.EntityID, j *job.Record) bool {
 		return false
 	}
 	c := h.Carry(id, sid, take)
+	if c != sid {
+		h.Claims().ReleaseEntity(id, sid) // RES-1: picked up, the rest is free for other crafters
+	}
 	if j.Carry == 0 {
 		j.Carry = c
 	} else {

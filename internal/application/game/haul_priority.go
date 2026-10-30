@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/store"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
@@ -66,8 +67,7 @@ func (h *haulPrio) roomAbove(g *Game, k item.Kind, p zone.Priority) bool {
 	if v, seen := h.room[key]; seen {
 		return v
 	}
-	s := storeSearch{g: g, h: haulHost{g}, st: item.Stack{Kind: k}, any: true}
-	_, _, ok := s.run(p)
+	_, _, ok := store.Search(haulHost{g}, item.Stack{Kind: k}, 0, 0, nil, p, true)
 	if h.room == nil {
 		h.room = map[haulPrioKey]bool{}
 	}
@@ -97,17 +97,45 @@ func (g *Game) staysStored(id entity.EntityID, st *item.Stack, h *haulPrio) bool
 // haulDest is where hauler id carries stack st: for a stack already in
 // storage (a re-haul) a cell in a strictly higher-priority zone, else the
 // best storage cell inside its area; either way one whose zone's special
-// filters take st (PRD-4).
-func (g *Game) haulDest(id entity.EntityID, st item.Stack) (int, int, bool) {
+// filters take st (PRD-4), and in a zone of kind dest when set (STO-2).
+func (g *Game) haulDest(id entity.EntityID, st item.Stack, dest zone.Kind) (int, int, bool) {
 	floor := zone.Priority(noPriority)
 	if z, ok := g.storageAt(st.X, st.Y); ok && z.AllowsStack(st) {
 		floor = z.Priority
 	}
-	var keep func(x, y int) bool
-	if r := g.restrictedRef(id); r != 0 {
-		keep = func(x, y int) bool { return g.refContains(r, x, y) }
+	r := g.restrictedRef(id)
+	keep := func(x, y int) bool {
+		z, _ := g.storageAt(x, y)
+		return (r == 0 || g.refContains(r, x, y)) && (dest == 0 || z.Kind == dest)
+	}
+	if r == 0 && dest == 0 {
+		keep = nil
 	}
 	return g.storageCell(st, st.X, st.Y, keep, floor)
+}
+
+// haulUrgent hauls the nearest stack marked to haul urgently (STO-2), the
+// first hauling a hauler looks at. Marks on stacks gone or lying in
+// storage that takes them are dropped first.
+func (g *Game) haulUrgent(id entity.EntityID) bool {
+	u := &g.haul.store.Urgent
+	if !u.Any() {
+		return false
+	}
+	u.Keep(func(iid entity.EntityID) bool {
+		st := g.stacks.Ref(iid)
+		return st != nil && (st.Carrier != 0 || !g.inMatchingStockpile(*st))
+	})
+	pos, _ := g.positions.Get(id)
+	return u.Any() && g.haulToStockpile(id, pos, u.IDs(), 0)
+}
+
+// fillHoppers is a cook's hopper filling (STO-2, wiki: Nutrient paste
+// dispenser: hauling and cooking fill hoppers): raw food carried to a
+// hopper with room, when the map has any.
+func (g *Game) fillHoppers(id entity.EntityID) bool {
+	pos, _ := g.positions.Get(id)
+	return store.HasHopper(haulHost{g}) && g.haulToStockpile(id, pos, g.itemIDs, zone.KindHopper)
 }
 
 // noteStored records when the stack now lying on (x, y) was set down
@@ -156,7 +184,7 @@ func (g *Game) pruneStored() {
 // ignored.
 func (g *Game) cmdSetZonePriority(id uint16, i int) {
 	z, ok := g.zones.Zone(zone.ID(id))
-	if !ok || !z.Kind.Storage() || i < 0 || i >= len(zone.Priorities) {
+	if !ok || !z.Kind.Settings() || i < 0 || i >= len(zone.Priorities) {
 		return
 	}
 	g.zones.Update(z.ID, func(z *zone.Zone) { z.Priority = zone.Priorities[i] })

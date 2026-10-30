@@ -305,7 +305,10 @@ func TestButcherYieldBySize(t *testing.T) {
 	}
 }
 
-func TestAnimalCorpsesStackBySpecies(t *testing.T) {
+// TestAnimalCorpsesNeverStack (STO-2, wiki: a corpse is one thing): each
+// carcass is its own stack of one, named by its species; a second one on
+// a taken tile lies beside it.
+func TestAnimalCorpsesNeverStack(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	g.dropCorpse(animal.Deer, 4, 4)
 	g.dropCorpse(animal.Deer, 4, 4)
@@ -313,14 +316,11 @@ func TestAnimalCorpsesStackBySpecies(t *testing.T) {
 	byLabel := map[string]int{}
 	for _, it := range g.World().Items {
 		byLabel[it.Kind] += it.Qty
-		if it.Kind == "deer corpse" && (it.Animal != "deer" || it.Qty != 2 || it.X != 4 || it.Y != 4) {
-			t.Fatalf("deer stack %+v", it)
-		}
-		if it.Kind == "timber wolf corpse" && it.Animal != "timber_wolf" {
-			t.Fatalf("wolf stack %+v", it)
+		if it.Qty != 1 || it.Kind == "deer corpse" && it.Animal != "deer" || it.Kind == "timber wolf corpse" && it.Animal != "timber_wolf" {
+			t.Fatalf("corpse stack %+v", it)
 		}
 	}
-	if byLabel["deer corpse"] != 2 || byLabel["timber wolf corpse"] != 1 || len(g.World().Items) != 2 {
+	if byLabel["deer corpse"] != 2 || byLabel["timber wolf corpse"] != 1 || len(g.World().Items) != 3 {
 		t.Fatalf("items %+v", g.World().Items)
 	}
 }
@@ -415,14 +415,17 @@ func TestAnimalStrikeScalesBySize(t *testing.T) {
 	g := New(Config{Seed: 3, Width: 20, Height: 10})
 	p, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	chick, _ := g.SpawnAnimal("chicken", 6, 5)
+	// CBT-2: a blow is the roster attack (scaled by size) or the second
+	// one at 60 % of it, each at x0.8..1.2
 	g.strikeUntilHit(t, chick, p, animal.DefOf(animal.Chicken).Attack)
-	if got := g.VitalOf(p).Injury; got != 2 {
-		t.Fatalf("a chicken pecks for 2, got %d", got)
+	peck := g.VitalOf(p).Injury
+	if peck < 1 || peck > 2 {
+		t.Fatalf("a chicken pecks for 1..2 (2 scaled), got %d", peck)
 	}
 	bear, _ := g.SpawnAnimal("grizzly_bear", 4, 5)
 	g.strikeUntilHit(t, bear, p, animal.DefOf(animal.GrizzlyBear).Attack)
-	if got := g.VitalOf(p).Injury; got != 2+11 {
-		t.Fatalf("a grizzly claws for 11, got %d", got-2)
+	if got := g.VitalOf(p).Injury - peck; got < 5 || got > 13 {
+		t.Fatalf("a grizzly strikes for 5..13 (11 scaled), got %d", got)
 	}
 }
 

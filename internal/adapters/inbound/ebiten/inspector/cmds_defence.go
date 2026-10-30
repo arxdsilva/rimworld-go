@@ -51,7 +51,7 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 		out = append(out, Button{ID: TurretHoldID, Label: "Hold fire", Toggle: true, On: b.HoldFire,
 			Desc: "Stop this turret shooting until you turn it off again.",
 			Cmds: []command.Command{{Kind: command.SetTurretHold, X: b.X, Y: b.Y, Enabled: !b.HoldFire}}})
-	case b.Kind == shelfKind:
+	case storageKinds[b.Kind]:
 		out = append(out, a.shelfStorageCommand(b)...)
 	case b.Kind == mortarKind:
 		bx, by, id := b.X, b.Y, b.ID
@@ -99,22 +99,4 @@ func defenceLines(b game.BuildingView) []string {
 		out = append(out, fmt.Sprintf("Work speed  %d%%", b.WorkSpeed/pctPerPermile))
 	}
 	return out
-}
-
-// StorageID is the shelf's "Storage" button (it opens the Storage window
-// on the shelf's zone; journeys press it by this id).
-const StorageID = "cmd.shelf.storage"
-
-// shelfStorageCommand is a shelf's Storage button: the shelf's own storage
-// zone (ZoneView.Shelf is the building id) opens in the Storage window.
-func (a Building) shelfStorageCommand(b game.BuildingView) []Button {
-	for _, z := range a.shell.World().Zones {
-		if uint64(z.Shelf) == uint64(b.ID) {
-			zid := z.ID
-			return []Button{{ID: StorageID, Label: "Storage", Icon: "zone_stockpile",
-				Desc: "Choose which items this shelf accepts, set special filters, and copy or paste settings.",
-				Run:  func() { a.shell.Do(ports.OpenStorage{Zone: zid}) }}}
-		}
-	}
-	return nil
 }

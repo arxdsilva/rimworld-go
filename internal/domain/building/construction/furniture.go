@@ -62,10 +62,16 @@ var facilityComfort = [...]int{40, 40, 50, 60, 60, 70, 90}
 // so it has none); a stone bed rests StoneRestPct as well. Kinds outside
 // the table are all zero.
 func FurnitureOf(k Kind, stuff item.Kind, q quality.Level) Furniture {
-	if k >= kindCount || furniture[k] == (Furniture{}) {
+	f := Furniture{}
+	if k < kindCount {
+		f = furniture[k]
+	}
+	if p, ok := item.StuffOf(stuff); ok && k == Sarcophagus { // STO-2, wiki: Sarcophagus (base 0; its stuff's beauty, as a wall's)
+		f.Beauty = p.BeautyOffset * 1000
+	}
+	if f == (Furniture{}) {
 		return Furniture{}
 	}
-	f := furniture[k]
 	if !k.Instant() {
 		f.Comfort = quality.Apply(f.Comfort, q, quality.Comfort)
 		f.RestEffectiveness = quality.Apply(f.RestEffectiveness, q, quality.RestEffectiveness)

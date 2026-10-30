@@ -21,7 +21,8 @@ type Host interface {
 	Release(owner, target entity.EntityID)
 }
 
-// Claimer claims target for owner (the game's reservation table).
+// Claimer claims n of stack target, which holds total, for owner (the
+// game's reservation table, RES-1).
 type Claimer interface {
-	TryEntity(owner, target entity.EntityID) bool
+	TryCount(owner, target entity.EntityID, n, total int) bool
 }

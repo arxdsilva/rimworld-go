@@ -53,7 +53,7 @@ func BloodStageLabel(s uint8) string {
 // never do). wiki: Injury.
 func bleeds(k WoundKind) bool {
 	switch k {
-	case Cut, Bite, Scratch, Surgical:
+	case Cut, Bite, Scratch, Surgical, Stab, Gunshot:
 		return true
 	}
 	return false

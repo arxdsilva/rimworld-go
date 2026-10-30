@@ -55,6 +55,8 @@ func ItemSprite(kind string) string {
 		return "item/duster_folded"
 	case "meal":
 		return "item/meal_simple"
+	case "nutrient paste meal":
+		return "item/nutrient_paste_meal"
 	case "steel":
 		return "item/steel_bars"
 	case "club":

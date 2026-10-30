@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -42,16 +43,15 @@ func TestHitKindsFollowTheWeapon(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	bo, _ := g.SpawnNamedPawn(3, 2, "Bo")
-	if k := g.woundKindBy(bo); k != body.Bruise {
-		t.Fatalf("fists bruise, got %d", k)
-	}
-	g.equip[bo] = item.Knife
-	if k := g.woundKindBy(bo); k != body.Cut {
-		t.Fatalf("a knife cuts, got %d", k)
-	}
-	g.hurt(ada, 5, bo)
+	knife := weapon.HitOf(weapon.Knife, weapon.DefOf(weapon.Knife))
+	knife.Amount = 5
+	g.equip[bo] = item.Rifle // CBT-1: the blow's own weapon decides, not what bo holds now
+	hits(g).HurtHit(ada, hits(g).Absorb(ada, knife, g.rng.IntN), bo)
 	if w := g.bodies[ada].Wounds; len(w) == 0 || w[0].Kind != body.Cut {
 		t.Fatalf("a knife hit leaves a cut: %+v", w)
+	}
+	if fists := weapon.HitOf(weapon.Fists, weapon.DefOf(weapon.Fists)); body.WoundOf(fists.Form) != body.Bruise {
+		t.Fatal("fists bruise")
 	}
 }
 

@@ -28,7 +28,7 @@ func (s Set) Of(c damage.Category) Permille {
 }
 
 // Add sums two sets rating by rating, capped at MaxRating. It is for
-// stat display; hits are resolved layer by layer with ResolveLayers.
+// stat display; hits are resolved layer by layer with Absorb and Struck.
 // wiki: Apparel
 func (s Set) Add(o Set) Set {
 	c := func(a, b Permille) Permille {
@@ -77,53 +77,4 @@ func Resolve(amount int, penetration, rating Permille, roll int) (Outcome, int) 
 		return Halved, (amount + 1) / 2
 	}
 	return Passed, amount
-}
-
-// Result is a hit after armor: the damage left and its (possibly
-// converted) type.
-type Result struct {
-	Outcome Outcome // worst outcome met on any layer (Deflected > Halved > Passed)
-	Damage  int
-	Type    damage.Type
-}
-
-// ResolveType resolves one layer for damage type t. A halved sharp hit
-// becomes blunt. wiki: Damage ("sharp halved becomes blunt")
-func ResolveType(s Set, t damage.Type, amount int, penetration Permille, roll int) Result {
-	o, d := Resolve(amount, penetration, s.Of(damage.Resisted(t)), roll)
-	if o == Halved && t == damage.Sharp {
-		t = damage.Blunt
-	}
-	return Result{Outcome: o, Damage: d, Type: t}
-}
-
-// ResolveLayers runs a hit through layers listed outermost first, one
-// roll per layer (missing rolls pass the layer). The damage left by a
-// layer enters the next with the full penetration, each layer rating
-// the original damage type; the sharp-to-blunt conversion applies to the
-// final result. wiki: Apparel (layer order), Damage
-func ResolveLayers(layers []Set, t damage.Type, amount int, penetration Permille, rolls []int) Result {
-	res := Result{Outcome: Passed, Damage: amount, Type: t}
-	cat := damage.Resisted(t)
-	halved := false
-	for i, l := range layers {
-		if res.Damage <= 0 || i >= len(rolls) {
-			break
-		}
-		o, d := Resolve(res.Damage, penetration, l.Of(cat), rolls[i])
-		res.Damage = d
-		switch o {
-		case Deflected:
-			res.Outcome = Deflected
-		case Halved:
-			halved = true
-			if res.Outcome == Passed {
-				res.Outcome = Halved
-			}
-		}
-	}
-	if halved && t == damage.Sharp {
-		res.Type = damage.Blunt
-	}
-	return res
 }

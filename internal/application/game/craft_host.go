@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -64,8 +65,8 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 			continue
 		}
 		st := *sp // a candidate (the loop only reads)
-		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
-			continue
+		if g.reserve.FreeFor(id, iid, sp.Qty) < in.Qty {
+			continue // RES-1: too little left that other pawns haven't claimed
 		}
 		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
 		if d < bestD || d == bestD && iid < best {
@@ -141,6 +142,16 @@ func (h craftStock) Ingredient(id entity.EntityID, in recipe.Input) (entity.Enti
 }
 func (h craftStock) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
 func (h craftStock) ItemIDs() []entity.EntityID                  { return h.g.itemIDs }
+func (h craftStock) InSource(src uint64, x, y int) bool {
+	z, ok := h.g.storageAt(x, y) // RES-1: the bill's storage zone, or a zone of its storage group
+	return ok && (uint64(z.ID) == src || uint64(z.Group) == src)
+}
+func (h craftStock) SourceName(src uint64) string {
+	if z, ok := h.g.zones.Zone(zone.ID(src)); ok {
+		return zoneLabel(z)
+	}
+	return ""
+}
 func (h craftStock) Carry(carrier, stack entity.EntityID, take int) entity.EntityID {
 	g := h.g
 	st, _ := g.stacks.Get(stack)
@@ -175,12 +186,11 @@ func (h craftOutput) Store(carrier entity.EntityID, k item.Kind, x, y int, z uin
 	if !ok || st.Kind != k {
 		return false
 	}
-	var dx, dy int
-	if z != 0 { // the bill's zone, else the nearest storage in the area (area_dest.go)
-		dx, dy, ok = g.stockpileCellWhere(k, x, y, func(cx, cy int) bool { id, in := g.zones.At(cx, cy); return in && uint64(id) == z })
-	} else {
-		dx, dy, ok = g.areaStockpileCell(carrier, k, x, y)
-	}
+	r := g.restrictedRef(carrier) // the bill's zone or its group (STO-2), else the nearest storage in the area; special filters too
+	dx, dy, ok := g.storageCell(st, x, y, func(cx, cy int) bool {
+		id, _ := g.zones.At(cx, cy)
+		return z != 0 && g.zones.SameStore(id, zone.ID(z)) || z == 0 && (r == 0 || g.refContains(r, cx, cy))
+	}, noPriority)
 	return ok && g.startJob(carrier, job.Record{Kind: job.Haul, Target: sid, TX: x, TY: y, DestX: dx, DestY: dy})
 }
 
@@ -194,12 +204,7 @@ func (h craftWorkers) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, boo
 	return h.g.pathTo(id, x, y)
 }
 func (h craftWorkers) Reachable(id entity.EntityID, x, y int) bool { return h.g.reachable(id, x, y) }
-func (h craftWorkers) Owner(target entity.EntityID) (entity.EntityID, bool) {
-	return h.g.reserve.EntityOwner(target)
-}
-func (h craftWorkers) Claim(owner, target entity.EntityID) bool {
-	return h.g.reserve.TryEntity(owner, target)
-}
+func (h craftWorkers) Claims() craft.Claims                        { return h.g.reserve } // never kept: replaced on load
 
 type craftCrafters struct{ g *Game }
 

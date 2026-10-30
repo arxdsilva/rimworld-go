@@ -29,14 +29,32 @@ const (
 	// shrink, delete, clear) leave it alone. A shelf cell holds
 	// ShelfStacks stacks.
 	KindShelf
+	// STO-2, laid by their buildings like KindShelf: KindHopper is a
+	// hopper's storage (one stack of raw food, for a nutrient paste
+	// dispenser); KindGrave a grave's or sarcophagus's settings (which
+	// bodies it takes, at what priority): burial fills it, never hauling.
+	KindHopper
+	KindGrave
 )
 
 // ShelfStacks is how many stacks one shelf cell holds (wiki: Shelf).
 const ShelfStacks = 3
 
 // Storage reports a kind haulers store things in: stockpiles, dumping
-// stockpiles and shelves.
-func (k Kind) Storage() bool { return k == KindStockpile || k == KindDump || k == KindShelf }
+// stockpiles, shelves and hoppers.
+func (k Kind) Storage() bool {
+	return k == KindStockpile || k == KindDump || k == KindShelf || k == KindHopper
+}
+
+// Settings reports a kind with storage settings (filter, special
+// filters, priority): every storage kind and graves.
+func (k Kind) Settings() bool { return k.Storage() || k == KindGrave }
+
+// Building reports a zone laid over a building's footprint (shelf,
+// hopper, grave): it never merges with a neighbour, the player's zone
+// tools leave it alone, and only RemoveTiles lifts it. Such zones may
+// link into a storage group (Link).
+func (k Kind) Building() bool { return k == KindShelf || k == KindHopper || k == KindGrave }
 
 // Stacks is how many stacks one cell of a storage zone of kind k holds.
 func (k Kind) Stacks() int {
@@ -115,6 +133,11 @@ type Zone struct {
 	Custom  bool
 	Filter  Filter
 	Special Special
+	// Group (STO-2) is the storage group a building's zone is linked into
+	// (0: none): every member shares the settings of the zone it was
+	// linked to (Link), and an edit to one (Update) reaches them all. A
+	// group's id is its first member's zone id, never reused.
+	Group ID
 }
 
 // compatible: two zones of these settings merge when they touch. Only the
@@ -123,7 +146,7 @@ type Zone struct {
 // settings of the surviving zone (Paint and Set: the lowest id; AddCells:
 // the zone being expanded).
 func compatible(a, b Zone) bool {
-	return a.Kind == b.Kind && a.Kind != KindShelf && (a.Kind != KindGrow || a.Crop == b.Crop)
+	return a.Kind == b.Kind && !a.Kind.Building() && (a.Kind != KindGrow || a.Crop == b.Crop)
 }
 
 // Rect is an inclusive tile rectangle (build it with Normalize).
@@ -477,7 +500,7 @@ func (m *Map) Clear(r Rect) {
 	for y := r.MinY; y <= r.MaxY; y++ {
 		for x := r.MinX; x <= r.MaxX; x++ {
 			c := y*m.w + x
-			if id := m.cell[c]; id != 0 && m.rec(id).z.Kind != KindShelf {
+			if id := m.cell[c]; id != 0 && !m.rec(id).z.Kind.Building() {
 				hit = appendID(hit, id)
 				m.cell[c] = 0
 			}
@@ -623,16 +646,17 @@ func (m *Map) Update(id ID, fn func(*Zone)) {
 	}
 	z := r.z
 	fn(&z)
-	z.ID, z.Kind, z.Cells, z.Crop = r.z.ID, r.z.Kind, r.z.Cells, r.z.Crop
+	z.ID, z.Kind, z.Cells, z.Crop, z.Group = r.z.ID, r.z.Kind, r.z.Cells, r.z.Crop, r.z.Group
 	r.z = z
+	m.share(r.z)
 }
 
 // Remove deletes zone id and unzones its tiles (its id is never reused).
 func (m *Map) Remove(id ID) {
 	m.ver++
 	r := m.rec(id)
-	if r == nil || r.z.Kind == KindShelf {
-		return // a shelf's storage goes with the shelf (RemoveTiles)
+	if r == nil || r.z.Kind.Building() {
+		return // a building's storage goes with the building (RemoveTiles)
 	}
 	for _, c := range r.idx {
 		m.cell[c] = 0
@@ -652,7 +676,7 @@ func (m *Map) Remove(id ID) {
 func (m *Map) AddCells(id ID, cells [][2]int) {
 	m.ver++
 	base := m.rec(id)
-	if base == nil || base.z.Kind == KindShelf {
+	if base == nil || base.z.Kind.Building() {
 		return
 	}
 	var free []int
@@ -730,7 +754,7 @@ func (m *Map) placeBlock(base *rec, block []int) {
 func (m *Map) RemoveCells(id ID, r Rect) {
 	m.ver++
 	z := m.rec(id)
-	if z == nil || z.z.Kind == KindShelf {
+	if z == nil || z.z.Kind.Building() {
 		return
 	}
 	r, inside := m.clip(r)

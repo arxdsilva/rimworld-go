@@ -115,22 +115,20 @@ func newAnimalBody(s animal.Species) *body.Body {
 }
 
 // woundAnimal gives animal id (state a, Injury already raised by dmg)
-// dmg of kind, or the attacker by's weapon's kind, on parts picked by
-// coverage (woundAnimalBody). It makes the body on the first wound,
+// dmg of kind on parts picked by
+// coverage (body.Spread: a part whose loss would kill is never taken
+// off by a hit). It makes the body on the first wound,
 // schedules the new wounds' infection roll and adds the animal to the
 // patients. A killing blow leaves no wound.
 func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind body.WoundKind, by entity.EntityID, now uint64) {
 	if dmg <= 0 || a.Dead() || animal.IsMech(a.Species) { // DEF-4: a machine takes damage, not wounds
 		return
 	}
-	if kind == woundByAttacker {
-		kind = g.woundKindBy(by) // body.go
-	}
 	if a.Body == nil {
 		a.Body = newAnimalBody(a.Species)
 	}
 	b := a.Body
-	g.woundAnimalBody(b, dmg, kind, now)
+	body.Spread(b, dmg, kind, g.stream(streamMedical).IntN, now) // the medical stream
 	if infection.WoundChance(kind, -1, infection.RoomOther) > 0 {
 		h := infection.DelayMin + g.stream(streamMedical).IntN(infection.DelaySpan+1)
 		for i := range b.Wounds { // the wounds this hit opened
@@ -142,43 +140,6 @@ func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind bo
 	reconcileAnimalBody(a)
 	if a.Body != nil {
 		g.markAnimalPatient(id)
-	}
-}
-
-// woundAnimalBody deals dmg of kind to animal body b on parts picked by
-// coverage with the medical stream, as woundBody does a colonist's: a part
-// whose loss would kill (the head, brain, heart, torso, the last lung:
-// body.LossKills) is never taken off by a hit, the rest spills to the
-// next pick; other parts (a leg, a wing, an eye) may be lost. What no
-// part takes lands on the root (the torso, a snake's body).
-func (g *Game) woundAnimalBody(b *body.Body, dmg int, kind body.WoundKind, now uint64) {
-	rng := g.stream(streamMedical)
-	left := dmg
-	for try := 0; left > 0 && try < maxSpill; try++ {
-		drawn := -1
-		roll := func(n int) int { // one draw, replayed so Hurt picks the same part
-			if drawn < 0 {
-				drawn = rng.IntN(n)
-			}
-			return drawn
-		}
-		p, ok := b.PickPart(roll)
-		if !ok {
-			break
-		}
-		hit := left
-		if room := b.PartDef(p).MaxHP - partDmg(b, p) - 1; hit > room && b.LossKills(p) {
-			if room <= 0 {
-				continue
-			}
-			hit = room
-		}
-		before := b.Damage()
-		b.Hurt(roll, hit, kind, now)
-		left -= b.Damage() - before
-	}
-	if left > 0 {
-		b.Wounds = append(b.Wounds, body.Wound{Part: b.Root(), Dmg: left, Kind: kind, At: now, Size: int32(left)})
 	}
 }
 
@@ -203,7 +164,7 @@ func reconcileAnimalBody(a *animal.State) {
 		return
 	}
 	if d := woundDmg(b); d > a.Injury {
-		trimOpen(b, d-max(a.Injury, 0)) // body.go
+		body.TrimOpen(b, d-max(a.Injury, 0))
 	}
 	if !needsCare(b) && b.Missing == 0 { // patients.go
 		a.Body = nil

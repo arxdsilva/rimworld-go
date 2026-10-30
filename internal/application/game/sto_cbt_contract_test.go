@@ -20,18 +20,12 @@ func TestStoCbtCommandsInert(t *testing.T) {
 	twin.Step(200)
 	before := g.StateHash()
 	pawn := uint64(g.Snapshot()[0].ID)
-	var zoneID, bldg uint64
+	var zoneID uint64
 	if w := g.World(); len(w.Zones) > 0 {
 		zoneID = uint64(w.Zones[0].ID)
 	}
-	if w := g.World(); len(w.Buildings) > 0 {
-		bldg = uint64(w.Buildings[0].ID)
-	}
 	for _, c := range []command.Command{
-		{Kind: command.HaulUrgently, X: 0, Y: 0, X2: cfg.Width - 1, Y2: cfg.Height - 1, Enabled: true},
 		{Kind: command.DropWeapon, Pawn: pawn},
-		{Kind: command.LinkStorage, Target: bldg, Zone: bldg},
-		{Kind: command.UnlinkStorage, Target: bldg},
 		{Kind: command.SetStorageSource, X: 1, Y: 1, Index: 0, Zone: zoneID},
 		{Kind: command.SetZoneOverlay, Enabled: true},
 	} {
@@ -53,18 +47,13 @@ func TestStoCbtCommandsInert(t *testing.T) {
 	}
 	w := g.World()
 	for _, it := range w.Items {
-		if k, _ := item.ParseKind(it.Kind); k >= item.NutrientPasteMeal || it.Urgent {
+		if k, _ := item.ParseKind(it.Kind); k >= item.NutrientPasteMeal { // STO-2: urgent marks are live (sto2_test.go)
 			t.Fatalf("contract item state on the map: %+v", it)
 		}
 	}
 	for _, b := range w.Buildings {
-		if k, _ := construction.Parse(b.Kind); k >= construction.Hopper || b.Group != 0 || b.Stored != 0 || b.Capacity != 0 {
+		if k, _ := construction.Parse(b.Kind); k >= construction.Hopper { // STO-2: storage readouts are live
 			t.Fatalf("contract building state on the map: %+v", b)
-		}
-	}
-	for _, z := range w.Zones {
-		if z.Group != 0 || z.Stored != 0 || z.Capacity != 0 {
-			t.Fatalf("zone %d: storage readouts filled before STO-2", z.ID)
 		}
 	}
 }

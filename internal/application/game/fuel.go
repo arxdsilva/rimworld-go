@@ -253,7 +253,7 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 			DestX: sx, DestY: sy, WorkLeft: refuelWork, Count: need}
 		if st.Qty > need {
 			// HAUL-001: a full load when a stockpile cell takes the rest
-			if px, py, ok := g.stockpileCell(fuel, b.X, b.Y); ok {
+			if px, py, ok := g.stockpileCell(st, b.X, b.Y); ok {
 				rec.Count = max(need, min(st.Qty, item.CarryLimit))
 				rec.Route, rec.SpareX, rec.SpareY, rec.HasSpare = []entity.EntityID{f.bid}, px, py, true
 			}

@@ -55,6 +55,7 @@ func (a *App) uiBegin() {
 	}
 	u.Begin()
 	a.deal.SyncDealings() // trade_ui.go: open/close the trade and comms dialogs
+	floatOverModal(a)
 	u.RunModals(a.uiCloseModal)
 	if a.nav.overlay() != overlayNone || a.nav.screen() == ports.ScreenBoot {
 		return
@@ -88,4 +89,20 @@ func (a *App) layoutHits(sw, sh int) []uikitpkg.Button {
 		out = append(out, a.layoutButtons(sw, sh)...)
 	}
 	return out
+}
+
+// floatOverModal lets a pick menu opened from a dialog (the bill's "Take
+// from") take a click on its rows before the modal swallows the press.
+func floatOverModal(a *App) {
+	u := a.uiSt()
+	if len(u.Modals) == 0 || !a.colonyLive() || !a.ord.Float.Open || !a.in.Clicked(inputframe.Left) {
+		return
+	}
+	mx, my := a.currentCursor()
+	if b, ok := uikitpkg.HitButton(a.ord.FloatButtons(), mx, my); ok {
+		a.in.Take(inputframe.Left)
+		if !b.Disabled {
+			a.applyClick(b.ID)
+		}
+	}
 }

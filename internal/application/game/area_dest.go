@@ -7,7 +7,6 @@ import (
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -115,16 +114,6 @@ func (g *Game) rejectOutOfArea(id entity.EntityID, rec job.Record) {
 		return
 	}
 	g.postpone(postKeyOf(id, rec), job.Unreachable) // postpone.go
-}
-
-// areaStockpileCell is stockpileCell for hauler id: the nearest stockpile
-// cell taking k inside its area.
-func (g *Game) areaStockpileCell(id entity.EntityID, k item.Kind, nearX, nearY int) (int, int, bool) {
-	r := g.restrictedRef(id)
-	if r == 0 {
-		return g.stockpileCell(k, nearX, nearY)
-	}
-	return g.stockpileCellWhere(k, nearX, nearY, func(x, y int) bool { return g.refContains(r, x, y) })
 }
 
 // huntGivenUp reports that hunter id's prey, at tp, has stayed outside

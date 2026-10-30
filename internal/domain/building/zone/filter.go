@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/quality"
 )
 
 // Storage filters (PRD-4). A storage zone takes the item kinds in its
@@ -13,7 +12,7 @@ import (
 // then it goes by the older Food, Wood, Stone, Corpses and Chunks
 // switches (Effective), so older saves and state hashes stay as they
 // were. The filter tree groups the kinds for the settings window: a node
-// is a category path ("Food/Meals") or an item kind's name. The tree's
+// is a category path ("Foods/Meals") or an item kind's name. The tree's
 // names and grouping are our own (the wiki publishes none).
 
 // Filter is a set of item kinds (one bit per item.Kind). The zero value
@@ -97,36 +96,52 @@ type category struct {
 	kinds []item.Kind
 }
 
-// categories is the filter tree's inner nodes. Every storable kind sits
-// under exactly one of them (TestFilterTreeFilesEveryStorableKind);
-// human corpses and bones are not storable (graves and pyres take them).
+// Root is the filter-tree node naming every kind a zone may take
+// (SetStockpileFilter's "allow all" and "clear all").
+const Root = "All"
+
+// categories is the filter tree's inner nodes, in the shape of the
+// vanilla storage tree (STO-2: Foods, Manufactured, Raw resources,
+// Items, Weapons, Apparel, Corpses, Chunks, Bones; the names and the
+// grouping below them are our own). Every storable kind sits under
+// exactly one of them (TestFilterTreeFilesEveryStorableKind). There are
+// no unfinished items, and a mechanoid wreck is an animal corpse kind
+// (Stack.Animal names the machine), so neither has a node of its own.
 func categories() []category {
 	return []category{
-		{path: "Food"},
-		{"Food/Meals", []item.Kind{item.Meal, item.FineMeal, item.LavishMeal, item.SurvivalMeal, item.Pemmican, item.Food,
+		{path: "Foods"},
+		{"Foods/Meals", []item.Kind{item.Meal, item.FineMeal, item.LavishMeal, item.SurvivalMeal, item.Pemmican, item.Food,
 			item.NutrientPasteMeal}},
-		{"Food/Plant food", []item.Kind{item.Berries, item.Potatoes, item.Corn, item.Wheat, item.Beans, item.Lettuce,
+		{path: "Foods/Raw food"},
+		{"Foods/Raw food/Plant matter", []item.Kind{item.Berries, item.Potatoes, item.Corn, item.Wheat, item.Beans, item.Lettuce,
 			item.Radishes, item.Pumpkins, item.Brewgrain}},
-		{"Food/Animal products", []item.Kind{item.Meat, item.Milk, item.Egg, item.FertileEgg}},
-		{"Food/Animal feed", []item.Kind{item.Kibble}},
-		{path: "Materials"},
-		{"Materials/Wood", []item.Kind{item.Wood}},
-		{"Materials/Stone chunks", []item.Kind{item.SandstoneChunk, item.GraniteChunk, item.LimestoneChunk, item.SlateChunk, item.MarbleChunk}},
-		{"Materials/Stone blocks", []item.Kind{item.SandstoneBlocks, item.GraniteBlocks, item.LimestoneBlocks, item.SlateBlocks,
-			item.MarbleBlocks, item.Stone}},
-		{"Materials/Metals", []item.Kind{item.Steel, item.Silver, item.Gold, item.Plasteel, item.Uranium}},
-		{"Materials/Textiles", []item.Kind{item.Leather, item.Cloth, item.Wool, item.Straw}},
-		{"Materials/Fuel and chemicals", []item.Kind{item.EmberOil, item.Chemfuel, item.Reagent}},
-		{"Materials/Brewing and leaves", []item.Kind{item.Wort, item.AshleafLeaf}},
+		{"Foods/Raw food/Meat", []item.Kind{item.Meat}},
+		{"Foods/Raw food/Animal products", []item.Kind{item.Milk, item.Egg, item.FertileEgg}},
+		{"Foods/Animal feed", []item.Kind{item.Kibble}},
 		{path: "Manufactured"},
+		{"Manufactured/Medicine", []item.Kind{item.HerbalMedicine, item.IndustrialMedicine, item.NanomedKit}},
+		{path: "Manufactured/Drugs"},
+		{"Manufactured/Drugs/Social drugs", []item.Kind{item.Beer, item.AshleafTea}},
+		{"Manufactured/Drugs/Hard drugs", []item.Kind{item.SparkTablet, item.AshFlake, item.Silverdust, item.BattleTonic}},
+		{"Manufactured/Drugs/Medical drugs", []item.Kind{item.NumbrootTincture, item.ProphylTablet}},
+		{"Manufactured/Textiles", []item.Kind{item.Leather, item.Cloth, item.Wool, item.Straw}},
 		{"Manufactured/Components", []item.Kind{item.Components, item.AdvancedComponents}},
-		{"Manufactured/Carpets", item.Carpets()},
-		{"Manufactured/Prosthetics", []item.Kind{item.PegLeg, item.ProstheticLeg, item.ProstheticArm, item.WoodenHand, item.Denture,
-			item.HearingTrumpet, item.ProstheticFoot, item.GlassEye, item.WoodenNose, item.ServoArm, item.ServoLeg, item.OpticImplant,
-			item.CochlearImplant, item.SpinalBrace, item.PumpHeart, item.SynthStomach, item.ValveHeart}},
-		{"Manufactured/Organs", []item.Kind{item.Kidney, item.Lung, item.Heart, item.Liver}},
-		{"Manufactured/Shells", []item.Kind{item.MortarShells, item.IncendiaryShells, item.EMPShells, item.SmokeShells}},
-		{"Manufactured/Parts", []item.Kind{item.ReinforcedBarrel}},
+		{path: "Manufactured/Body parts"},
+		{"Manufactured/Body parts/Prosthetics", []item.Kind{item.PegLeg, item.ProstheticLeg, item.ProstheticArm, item.WoodenHand,
+			item.Denture, item.HearingTrumpet, item.ProstheticFoot, item.GlassEye, item.WoodenNose, item.ServoArm, item.ServoLeg,
+			item.OpticImplant, item.CochlearImplant, item.SpinalBrace, item.PumpHeart, item.SynthStomach, item.ValveHeart}},
+		{"Manufactured/Body parts/Natural organs", []item.Kind{item.Kidney, item.Lung, item.Heart, item.Liver}},
+		{path: "Raw resources"},
+		{"Raw resources/Wood", []item.Kind{item.Wood}},
+		{"Raw resources/Stone blocks", []item.Kind{item.SandstoneBlocks, item.GraniteBlocks, item.LimestoneBlocks, item.SlateBlocks,
+			item.MarbleBlocks, item.Stone}},
+		{"Raw resources/Metals", []item.Kind{item.Steel, item.Silver, item.Gold, item.Plasteel, item.Uranium}},
+		{"Raw resources/Chemicals", []item.Kind{item.EmberOil, item.Chemfuel, item.Reagent}},
+		{"Raw resources/Brewing and leaves", []item.Kind{item.Wort, item.AshleafLeaf}},
+		{path: "Items"},
+		{"Items/Shells", []item.Kind{item.MortarShells, item.IncendiaryShells, item.EMPShells, item.SmokeShells}},
+		{"Items/Parts", []item.Kind{item.ReinforcedBarrel}},
+		{"Items/Carpets", item.Carpets()},
 		{path: "Weapons"},
 		{"Weapons/Melee", []item.Kind{item.Club, item.Knife, item.Spear, item.Mace, item.Gladius, item.Longsword, item.Ikwa}},
 		{"Weapons/Ranged", []item.Kind{item.ShortBow, item.RecurveBow, item.Greatbow, item.Pila, item.Rifle, item.Revolver,
@@ -139,18 +154,16 @@ func categories() []category {
 		{"Apparel/Armor", []item.Kind{item.FlakVest, item.FlakPants, item.FlakJacket, item.PlateArmor, item.MarineArmor}},
 		{"Apparel/Headgear", []item.Kind{item.SimpleHelmet, item.AdvancedHelmet, item.MarineHelmet}},
 		{"Apparel/Utility", []item.Kind{item.ShieldBelt, item.SmokepopPack}},
-		{"Medicine", []item.Kind{item.HerbalMedicine, item.IndustrialMedicine, item.NanomedKit}},
-		{path: "Drugs"},
-		{"Drugs/Social drugs", []item.Kind{item.Beer, item.AshleafTea}},
-		{"Drugs/Hard drugs", []item.Kind{item.SparkTablet, item.AshFlake, item.Silverdust, item.BattleTonic}},
-		{"Drugs/Medical drugs", []item.Kind{item.NumbrootTincture, item.ProphylTablet}},
 		{path: "Corpses"},
-		{"Corpses/Animal corpses", []item.Kind{item.CorpseAnimal, item.CorpseDustbuck, item.CorpseRidgewolf}},
+		{"Corpses/Human", []item.Kind{item.CorpseHuman}},
+		{"Corpses/Animal", []item.Kind{item.CorpseAnimal, item.CorpseDustbuck, item.CorpseRidgewolf}},
+		{"Chunks", []item.Kind{item.SandstoneChunk, item.GraniteChunk, item.LimestoneChunk, item.SlateChunk, item.MarbleChunk}},
+		{"Bones", []item.Kind{item.Bones}},
 	}
 }
 
 // Node is one line of the filter tree, in tree order: a category (Path
-// "Food/Meals", Kinds every kind under it at any depth) or a leaf (Kind
+// "Foods/Meals", Kinds every kind under it at any depth) or a leaf (Kind
 // set, Path the kind's name).
 type Node struct {
 	Path  string
@@ -184,20 +197,16 @@ func Tree() []Node {
 	return out
 }
 
-// Resolve is the kinds under filter-tree node name: a category path, a
-// top category's name or an item kind's name (ok false for none).
+// Resolve is the kinds under filter-tree node name: Root, a category
+// path, a top category's name or an item kind's name (ok false for none).
 func Resolve(name string) (Filter, bool) {
+	if name == Root {
+		return sets.storable, true
+	}
 	if k, ok := item.ParseKind(name); ok && Storable(k) {
 		return filterOf(k), true
 	}
-	var f Filter
-	found := false
-	for _, c := range categories() {
-		if c.path == name || strings.HasPrefix(c.path, name+"/") {
-			f, found = f.Or(filterOf(c.kinds...)), true
-		}
-	}
-	return f, found
+	return resolvePath(name)
 }
 
 // Storable is every kind the tree files (what storage may ever take).
@@ -236,11 +245,14 @@ func (f Filter) Names() []string {
 
 // The older switches' kinds (a zone's Effective filter before any edit):
 // a stockpile takes the Food, Wood and Stone kinds it allows and every
-// other storable kind (goods); a dumping stockpile takes animal corpses
-// (Corpses), stone chunks (Chunks) and what its Food, Wood and Stone
-// switches allow, never goods.
+// other storable kind of before STO-2 (goods); a dumping stockpile takes
+// animal corpses (Corpses), stone chunks (Chunks) and what its Food, Wood
+// and Stone switches allow, never goods. Human corpses and bones became
+// storable with STO-2 (Corpses/Human, Bones); the switches never take
+// them, so older zones store what they did.
 type kindSets struct {
-	storable, food, wood, stone, carcasses, chunks, goods Filter
+	storable, old, food, wood, stone, carcasses, chunks, goods Filter
+	corpses, rawFood, bodies                                   Filter
 }
 
 // sets is worked out once (Allows runs for every loose item in the
@@ -249,14 +261,31 @@ var sets = func() (s kindSets) {
 	for _, c := range categories() {
 		s.storable = s.storable.Or(filterOf(c.kinds...))
 	}
-	s.food = filterWhere(func(k item.Kind) bool { return k.IsFood() || k.IsCorpse() || k == item.FertileEgg }).And(s.storable)
+	s.bodies = filterOf(item.CorpseHuman, item.Bones)
+	s.old = s.storable.AndNot(s.bodies)
+	s.food = filterWhere(func(k item.Kind) bool { return k.IsFood() || k.IsCorpse() || k == item.FertileEgg }).And(s.old)
 	s.wood = filterOf(item.Wood)
 	s.stone = filterWhere(func(k item.Kind) bool { return k == item.Stone || item.IsChunk(k) || item.IsStoneBlocks(k) })
 	s.carcasses = filterWhere(func(k item.Kind) bool { return k.IsCorpse() && k != item.CorpseHuman })
 	s.chunks = filterWhere(item.IsChunk)
-	s.goods = s.storable.AndNot(s.food).AndNot(s.wood).AndNot(s.stone)
+	s.goods = s.old.AndNot(s.food).AndNot(s.wood).AndNot(s.stone)
+	s.corpses = filterWhere(item.Kind.IsCorpse).Or(s.bodies)
+	s.rawFood, _ = resolvePath("Foods/Raw food")
 	return s
 }()
+
+// resolvePath is the kinds under category path p (no kind names, no
+// Root), for the sets above.
+func resolvePath(p string) (Filter, bool) {
+	var f Filter
+	found := false
+	for _, c := range categories() {
+		if c.path == p || strings.HasPrefix(c.path, p+"/") {
+			f, found = f.Or(filterOf(c.kinds...)), true
+		}
+	}
+	return f, found
+}
 
 // And is every kind in both f and g.
 func (f Filter) And(g Filter) Filter {
@@ -264,6 +293,25 @@ func (f Filter) And(g Filter) Filter {
 		f[i] &= g[i]
 	}
 	return f
+}
+
+// Universe is every kind a storage zone of kind k may ever take: a
+// stockpile or dumping stockpile anything storable; a shelf no chunks,
+// corpses or bones (wiki: Shelf); a hopper raw food only (wiki: Hopper);
+// a grave or sarcophagus corpses and bones (wiki: Grave). Other kinds
+// take nothing.
+func Universe(k Kind) Filter {
+	switch k {
+	case KindStockpile, KindDump:
+		return sets.storable
+	case KindShelf:
+		return sets.storable.AndNot(sets.chunks).AndNot(sets.corpses)
+	case KindHopper:
+		return sets.rawFood
+	case KindGrave:
+		return sets.corpses
+	}
+	return Filter{}
 }
 
 // legacy is the filter a zone's older switches give (Effective before any
@@ -293,10 +341,10 @@ func legacy(z Zone) Filter {
 }
 
 // Effective is the kinds storage zone z takes: its Filter once edited,
-// else what its older switches give. Non-storage zones take nothing.
+// else what its older switches give. Zones without settings take nothing.
 func (z Zone) Effective() Filter {
 	switch {
-	case !z.Kind.Storage():
+	case !z.Kind.Settings():
 		return Filter{}
 	case z.Custom:
 		return z.Filter
@@ -305,9 +353,10 @@ func (z Zone) Effective() Filter {
 }
 
 // Allows reports storage zone z takes items of kind k (the kind alone;
-// AllowsStack adds the special filters).
+// AllowsStack adds the special filters). A grave's kinds are its
+// settings, not a hauling destination (Kind.Storage).
 func (z Zone) Allows(k item.Kind) bool {
-	if !z.Kind.Storage() {
+	if !z.Kind.Settings() {
 		return false
 	}
 	if z.Custom {
@@ -316,158 +365,23 @@ func (z Zone) Allows(k item.Kind) bool {
 	return legacy(z).Has(k)
 }
 
-// SetAllowed allows (on) or forbids every kind of set in z, turning the
-// zone's older switches into an explicit Filter first.
+// SetAllowed allows (on) or forbids every kind of set in z (within its
+// Universe), turning the zone's older switches into an explicit Filter
+// first. SetAllowed(Root's set, on) is "allow all" or "clear all".
 func (z *Zone) SetAllowed(set Filter, on bool) {
 	f := z.Effective()
 	if on {
-		f = f.Or(set.And(sets.storable))
+		f = f.Or(set.And(Universe(z.Kind)))
 	} else {
 		f = f.AndNot(set)
 	}
 	z.Filter, z.Custom = f, true
 }
 
-// PasteFrom copies src's filter, special filters and priority onto z.
+// PasteFrom copies src's filter (within z's Universe), special filters
+// and priority onto z.
 func (z *Zone) PasteFrom(src Zone) {
-	z.Filter, z.Custom, z.Special, z.Priority = src.Effective(), true, src.Special, src.Priority
-}
-
-// Special is a storage zone's special filters (PRD-4). The zero value
-// takes everything (today's behaviour): rotten stacks, tainted apparel,
-// any hit points and any quality.
-type Special struct {
-	// NoRotten refuses spoiled stacks; NoTainted apparel a dead body wore.
-	NoRotten, NoTainted bool
-	// HPMin..HPMax is the hit-point range in percent, for kinds with hit
-	// points (HPMax 0: 100).
-	HPMin, HPMax uint8
-	// QualityMin..QualityMax is the quality range, for kinds with a
-	// quality (QualityMax is stored one up: 0 is Legendary).
-	QualityMin, QualityMax uint8
-}
-
-// Special filter indexes (SetStockpileSpecial's Index): the two toggles
-// (Enabled allows) and the two ranges (low..high).
-const (
-	SpecialRotten = iota
-	SpecialTainted
-	SpecialHP
-	SpecialQuality
-	numSpecials
-)
-
-// SpecialNames are the toggles by index, as ZoneView.Special lists the
-// ones that are on.
-func SpecialNames() []string { return []string{"allow rotten", "allow tainted apparel"} }
-
-// HPRange is the allowed hit points in percent.
-func (s Special) HPRange() (lo, hi int) {
-	hi = 100
-	if s.HPMax > 0 {
-		hi = int(s.HPMax)
-	}
-	return int(s.HPMin), hi
-}
-
-// QualityRange is the allowed quality levels.
-func (s Special) QualityRange() (lo, hi quality.Level) {
-	hi = quality.Legendary
-	if s.QualityMax > 0 {
-		hi = quality.Level(s.QualityMax - 1)
-	}
-	return quality.Level(s.QualityMin), hi
-}
-
-// Set applies special filter i: a toggle allows (on) or refuses; a range
-// takes lo..hi (percent for hit points, quality levels for quality),
-// clamped and ordered. An unknown index changes nothing.
-func (s Special) Set(i int, on bool, lo, hi int) Special {
-	switch i {
-	case SpecialRotten:
-		s.NoRotten = !on
-	case SpecialTainted:
-		s.NoTainted = !on
-	case SpecialHP:
-		lo, hi = clampRange(lo, hi, 0, 100)
-		s.HPMin, s.HPMax = uint8(lo), uint8(max(hi, 1))
-		if hi == 100 {
-			s.HPMax = 0
-		}
-	case SpecialQuality:
-		lo, hi = clampRange(lo, hi, 0, int(quality.Legendary))
-		s.QualityMin, s.QualityMax = uint8(lo), uint8(hi+1)
-		if hi == int(quality.Legendary) {
-			s.QualityMax = 0
-		}
-	}
-	return s
-}
-
-func clampRange(lo, hi, floor, ceil int) (int, int) {
-	lo, hi = min(max(lo, floor), ceil), min(max(hi, floor), ceil)
-	if hi < lo {
-		lo, hi = hi, lo
-	}
-	return lo, hi
-}
-
-// Names lists the toggles that are on (SpecialNames), then each range
-// the player narrowed ("hp 50-100%", "quality 3-6": quality levels,
-// 0 awful to 6 legendary).
-func (s Special) Names() []string {
-	names := SpecialNames()
-	var out []string
-	if !s.NoRotten {
-		out = append(out, names[SpecialRotten])
-	}
-	if !s.NoTainted {
-		out = append(out, names[SpecialTainted])
-	}
-	if lo, hi := s.HPRange(); lo > 0 || hi < 100 {
-		out = append(out, "hp "+itoa(lo)+"-"+itoa(hi)+"%")
-	}
-	if lo, hi := s.QualityRange(); lo > quality.Awful || hi < quality.Legendary {
-		out = append(out, "quality "+itoa(int(lo))+"-"+itoa(int(hi)))
-	}
-	return out
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var b [4]byte
-	i := len(b)
-	for ; n > 0; n /= 10 {
-		i--
-		b[i] = byte('0' + n%10)
-	}
-	return string(b[i:])
-}
-
-// Takes reports stack st passes the special filters (the kind is checked
-// by Allows).
-func (s Special) Takes(st item.Stack) bool {
-	if s == (Special{}) {
-		return true
-	}
-	if s.NoRotten && st.Rotten() || s.NoTainted && st.Tainted() {
-		return false
-	}
-	if mhp := st.MaxHP(); mhp > 0 {
-		lo, hi := s.HPRange()
-		if pct := st.HP() * 100 / mhp; pct < lo || pct > hi {
-			return false
-		}
-	}
-	if l, ok := quality.FromStored(st.Quality); ok && item.HasQuality(st.Kind) {
-		lo, hi := s.QualityRange()
-		if l < lo || l > hi {
-			return false
-		}
-	}
-	return true
+	z.Filter, z.Custom, z.Special, z.Priority = src.Effective().And(Universe(z.Kind)), true, src.Special, src.Priority
 }
 
 // AllowsStack reports storage zone z takes stack st: its kind and its
@@ -486,26 +400,28 @@ type Row struct {
 
 // Rows is the filter tree in display order with each line's state under
 // names (Filter.Names, as ZoneView.Filter carries it).
-func Rows(names []string) []Row {
+func Rows(names []string) []Row { return RowsFor(KindStockpile, names) }
+
+// RowsFor is Rows for a storage zone of kind k: only the nodes holding a
+// kind of its Universe (a hopper's raw food, a grave's corpses), each
+// judged on those kinds alone.
+func RowsFor(k Kind, names []string) []Row {
 	var allowed Filter
 	for _, name := range names {
 		if set, ok := Resolve(name); ok {
 			allowed = allowed.Or(set)
 		}
 	}
+	u := Universe(k)
 	tree := Tree()
-	out := make([]Row, len(tree))
-	for i, n := range tree {
-		on := allowed.Covers(n.Kinds)
-		out[i] = Row{Path: n.Path, Label: n.Label, Depth: n.Depth, Leaf: n.Leaf, On: on, Partial: !on && allowed.Any(n.Kinds)}
+	out := make([]Row, 0, len(tree))
+	for _, n := range tree {
+		kinds := n.Kinds.And(u)
+		if kinds == (Filter{}) {
+			continue
+		}
+		on := allowed.Covers(kinds)
+		out = append(out, Row{Path: n.Path, Label: n.Label, Depth: n.Depth, Leaf: n.Leaf, On: on, Partial: !on && allowed.Any(kinds)})
 	}
 	return out
-}
-
-// NewShelf is a new shelf's storage (wiki: Shelf): Preferred priority,
-// every storable kind but stone chunks and corpses, its overlay hidden.
-func NewShelf() Zone {
-	z := Zone{Kind: KindShelf, Hidden: true, Priority: PriorityPreferred}
-	z.SetAllowed(sets.storable.AndNot(sets.chunks).AndNot(sets.carcasses), true)
-	return z
 }

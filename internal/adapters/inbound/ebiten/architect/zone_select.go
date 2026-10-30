@@ -238,8 +238,8 @@ func (z *Zones) Lines(zv game.ZoneView) []string {
 		if zv.NoCut {
 			out = append(out, "Cutting off")
 		}
-	case game.ZoneStockpile, game.ZoneDump:
-		out = append(out, "Priority: "+ZonePriorityName(zv), zoneFilterLine(zv))
+	case game.ZoneStockpile, game.ZoneDump, game.ZoneShelf:
+		out = append(out, "Priority: "+ZonePriorityName(zv), zoneStoredLine(zv), zoneFilterLine(zv))
 	}
 	return out
 }
@@ -261,34 +261,35 @@ func ZoneCropName(crop string) string {
 	return CropLabel(crop)
 }
 
-// zoneFilterLine is what a stockpile takes: its filters, then anything
-// else; a dumping stockpile names its corpses and chunks filters instead.
+// zoneFilterLine is what a storage takes, read from its real filter tree:
+// "everything", "nothing", or the allowed categories and items (the first
+// few, then a count). A dumping stockpile reads the same tree.
 func zoneFilterLine(z game.ZoneView) string {
-	if z.Kind == game.ZoneDump {
-		var parts []string
-		for _, f := range []struct {
-			on   bool
-			name string
-		}{{z.Corpses, "Animal corpses"}, {z.Chunks, "Stone chunks"}, {z.Food, "Food"}, {z.Wood, "Wood"}, {z.Stone, "Stone"}} {
-			if f.on {
-				parts = append(parts, f.name)
-			}
-		}
-		if len(parts) == 0 {
-			return "Accepts: nothing"
-		}
-		return "Accepts: " + strings.Join(parts, ", ")
-	}
-	var parts []string
-	for _, f := range []struct {
-		on   bool
-		name string
-	}{{z.Food, "Food"}, {z.Wood, "Wood"}, {z.Stone, "Stone"}} {
-		if f.on {
-			parts = append(parts, f.name)
+	rows := game.StorageFilterRows(z.Kind, z.Filter)
+	var names []string
+	all := true
+	for _, r := range rows {
+		if r.Depth == 0 {
+			all = all && r.On
 		}
 	}
-	return "Accepts: " + strings.Join(append(parts, "other goods"), ", ")
+	for _, name := range z.Filter {
+		names = append(names, name[strings.LastIndexByte(name, '/')+1:])
+	}
+	switch {
+	case all && len(rows) > 0:
+		return "Accepts: everything"
+	case len(names) == 0:
+		return "Accepts: nothing"
+	case len(names) > 4:
+		return "Accepts: " + strings.Join(names[:4], ", ") + fmt.Sprintf(" and %d more", len(names)-4)
+	}
+	return "Accepts: " + strings.Join(names, ", ")
+}
+
+// zoneStoredLine is the capacity readout of a storage zone or shelf.
+func zoneStoredLine(z game.ZoneView) string {
+	return fmt.Sprintf("Stored: %d of %d stacks", z.Stored, z.Capacity)
 }
 
 // growTempRange is the air temperature, in tenths of a degree C, at or

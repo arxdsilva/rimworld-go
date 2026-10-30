@@ -2,6 +2,7 @@ package combat
 
 import (
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/cover"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
@@ -61,7 +62,7 @@ func New(h Host, r Roles) *Combat {
 	c.Rearms = &Rearms{h: h, sup: r.Supply, br: r.Breach, turrets: c.Turrets, mortars: c.Mortars}
 	c.Orders = &Orders{h: h, turrets: c.Turrets, mortars: c.Mortars, doors: c.Doors, rearms: c.Rearms}
 	c.Hunting, c.Tiles = &Hunting{h: h, hu: r.Hunts}, &Tiles{f: r.Field}
-	c.Drafts, c.Log = &Drafts{h: h, arms: r.Arms, shots: c.Shots}, &Log{h: h}
+	c.Drafts, c.Log = &Drafts{h: h, arms: r.Arms, draft: r.Draft, shots: c.Shots}, &Log{h: h}
 	c.Shots.traps, c.Shots.drafts, c.Blasts.traps, c.Strikes.drafts = c.Traps, c.Drafts, c.Traps, c.Drafts
 	c.Turrets.after = [...]phaser{c.Traps, c.Doors, c.Mortars, c.Rearms, c.Drafts}
 	c.Turrets.saved = saved{traps: c.Traps, doors: c.Doors, mortars: c.Mortars, rearms: c.Rearms, drafts: c.Drafts, log: c.Log}
@@ -148,31 +149,42 @@ func (s *Sight) Line(ax, ay, bx, by int) bool {
 }
 
 // CanHit reports whether an attacker at (fx, fy) wielding d can attack the
-// target at (tx, ty) from where it stands: in range, and in sight for a
-// gun beyond touching distance.
+// target at (tx, ty) from where it stands: in range by straight-line
+// distance (CBT-2: weapon.Reaches), and in sight for a gun beyond touching
+// distance.
 func (s *Sight) CanHit(fx, fy int, d weapon.Def, tx, ty int) bool {
-	dist := weapon.Distance(fx, fy, tx, ty)
-	if !weapon.InRange(d, dist) {
+	if !weapon.ReachesAt(d, fx, fy, tx, ty) {
 		return false
 	}
-	return !d.Ranged || dist <= 1 || s.Line(fx, fy, tx, ty)
+	return !d.Ranged || weapon.Distance(fx, fy, tx, ty) <= 1 || s.Line(fx, fy, tx, ty)
+}
+
+// Weather is the accuracy factor (permille) the weather lays on a shot
+// from (ax, ay) at (tx, ty) (CBT-2: attack.WeatherFactor); none when both
+// stand under a roof, or without a field (tests).
+func (s *Sight) Weather(ax, ay, tx, ty int) int {
+	if s.f == nil || s.f.Roofed(ax, ay) && s.f.Roofed(tx, ty) {
+		return attack.ClearFactor
+	}
+	return attack.WeatherFactor(s.f.Weather())
 }
 
 // Cover is the cover (permille) the target at (tx, ty) has against a
-// shot from (ax, ay): the best of what stands on the cells beside it,
-// facing the shooter (cover.BestAt); none point blank.
+// shot from (ax, ay): what stands on the cells around it, each by its
+// angle to the shot and the shooter's range from it, combined (CBT-2:
+// cover.Effective); none point blank.
 func (s *Sight) Cover(ax, ay, tx, ty int) int {
 	_, _, _, p := s.coverBy(ax, ay, tx, ty)
 	return p
 }
 
-// coverBy is Cover with the building that gives it (0: natural cover or
-// none) and the cover's tile.
+// coverBy is Cover with the building that gives the strongest share (0:
+// natural cover or none) and that cover's tile.
 func (s *Sight) coverBy(ax, ay, tx, ty int) (id entity.EntityID, x, y, p int) {
 	if weapon.Distance(ax, ay, tx, ty) <= 1 {
 		return 0, 0, 0, 0
 	}
-	k, p, x, y := cover.BestAt(s, ax, ay, tx, ty)
+	p, k, x, y := cover.Effective(s, ax, ay, tx, ty)
 	if k == cover.None {
 		return 0, 0, 0, 0
 	}

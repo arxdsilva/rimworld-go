@@ -222,7 +222,7 @@ const rackSlatLift = 0.3
 // (PRD-3 sculptures, DEF-3 barricade): the stuff's stone colours the mask.
 func stoneMaskKind(kind string) bool {
 	switch kind {
-	case "small sculpture", "large sculpture", "grand sculpture", "barricade":
+	case "small sculpture", "large sculpture", "grand sculpture", "barricade", "sarcophagus":
 		return true
 	}
 	return false

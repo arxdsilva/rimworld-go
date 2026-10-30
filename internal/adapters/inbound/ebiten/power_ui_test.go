@@ -231,15 +231,21 @@ func powerArch(t *testing.T, s *stubSim) (*App, *fakeInput) {
 	return a, f
 }
 
-// The Power grid toggle is the ninth: it wraps to a second row, sits
-// inside Global at every UI scale, and flips only the power overlay.
+// The Power grid toggle wraps to a second row (STO-3's zones toggle now
+// follows it there), sits inside Global at every UI scale, and flips only
+// the power overlay.
 func TestPowerToggleWrapsAndToggles(t *testing.T) {
-	if n := len(globalToggleList); n <= hud.GlobalPerRow {
-		t.Fatalf("%d toggles: the power toggle should be the one that wraps", n)
+	at := -1
+	for i, tg := range globalToggleList {
+		if tg.id == architectpkg.PowerButtonID {
+			at = i
+			if tg.icon != "overlay_power" {
+				t.Fatalf("power toggle icon %q, want overlay_power", tg.icon)
+			}
+		}
 	}
-	last := globalToggleList[len(globalToggleList)-1]
-	if last.id != architectpkg.PowerButtonID || last.icon != "overlay_power" {
-		t.Fatalf("last toggle %s/%s, want %s/overlay_power", last.id, last.icon, architectpkg.PowerButtonID)
+	if at < hud.GlobalPerRow {
+		t.Fatalf("power toggle at %d of %d per row: it should wrap to the second row", at, hud.GlobalPerRow)
 	}
 	for _, sc := range globalScales {
 		t.Run(fmt.Sprintf("ui%d", sc.ui), func(t *testing.T) {
@@ -251,8 +257,9 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 				t.Fatal("no power toggle rect")
 			}
 			first, _ := a.chrome.Global().ToggleRect(hud.RoofButtonID)
-			if pr.Y <= first.Y || pr.Right() != g.Right()-hud.GlobalPad {
-				t.Errorf("power toggle %+v: want a second row, right-aligned below %+v in %+v", pr, first, g)
+			lastRect, _ := a.chrome.Global().ToggleRect(globalToggleList[len(globalToggleList)-1].id)
+			if pr.Y <= first.Y || pr.Y != lastRect.Y || lastRect.Right() != g.Right()-hud.GlobalPad {
+				t.Errorf("power toggle %+v: want it on a second, right-aligned row (last %+v) below %+v in %+v", pr, lastRect, first, g)
 			}
 			if pr.X < g.X || pr.Bottom() > g.Bottom() || pr.Y < g.Y {
 				t.Errorf("power toggle %+v outside Global %+v", pr, g)

@@ -274,6 +274,7 @@ func (g *Game) fillPawnAction(pv *PawnView, id entity.EntityID, j job.Record) {
 		}
 	}
 	pv.AttackCycle = g.attackCycleOf(id, j)
+	pv.Staggered = staggered(g, id) // body.go (CBT-1)
 	pv.Carrying = g.carryingOf(id, j)
 	if j.Carry != 0 {
 		if st, ok := g.stacks.Get(j.Carry); ok && st.Carrier == id && st.Kind == item.CorpseAnimal {

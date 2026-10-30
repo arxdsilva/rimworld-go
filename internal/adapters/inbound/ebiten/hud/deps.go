@@ -119,9 +119,10 @@ type Chrome struct {
 
 	// The state other root files read until the sweep (the lead moved
 	// these from App).
-	Hidden  bool              // F11: only the map is drawn
-	Rooms   bool              // G: room stats overlay
-	MsgSeen map[string]uint64 // message key -> frame first shown
+	Hidden   bool              // F11: only the map is drawn
+	Rooms    bool              // G: room stats overlay
+	ZonesOff bool              // Shift+Z: the zones overlay is off (STO-3)
+	MsgSeen  map[string]uint64 // message key -> frame first shown
 
 	res        resourcesState
 	bar        barState

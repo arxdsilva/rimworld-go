@@ -83,6 +83,9 @@ type Claims interface {
 	TileFree(id entity.EntityID, x, y int) bool
 	// ReserveTile reserves (x, y) for id (one sitter per seat).
 	ReserveTile(id entity.EntityID, x, y int)
+	// HeldByOther: a pawn other than id holds target in the reservation
+	// table (RES-1: a carrier taking a patient to that bed).
+	HeldByOther(id, target entity.EntityID) bool
 }
 
 // Routine is the schedule and the meals that can wake a sleeper, and the

@@ -131,7 +131,7 @@ func TestBillsDontOvershootWithTwoCooks(t *testing.T) {
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
 	placeBuilt(t, g, construction.Stove, construction.South, 8, 2)
 	g.SpawnStack(item.Meal, 9, 1, 4)
-	g.SpawnStack(item.Berries, 10, 1, 3) // one stack each: stacks are reserved
+	g.SpawnStack(item.Berries, 10, 1, 3) // RES-1: two cooks may share a stack (count claims); two stacks only shorten the walks
 	g.SpawnStack(item.Berries, 10, 2, 3)
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.UntilHave), Count: 10})
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 8, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.UntilHave), Count: 10})

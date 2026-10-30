@@ -150,6 +150,10 @@ const (
 	DispensePaste
 )
 
+// Eating reports a meal under way: eating, or taking a paste meal from
+// a dispenser to eat (STO-2), which no hunger check replaces.
+func (k Kind) Eating() bool { return k == Eat || k == DispensePaste }
+
 // IsIdle reports a free-time behaviour that any real work may replace.
 func (k Kind) IsIdle() bool {
 	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes || k == SocialRelax || k == Gather || k == SitDown

@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/weapon"
 )
 
@@ -16,11 +17,12 @@ func TestStrikeHitAndMiss(t *testing.T) {
 	s := f.combat().Strikes
 	f.pawn(1, 5, 5, weapon.Knife)
 	f.raider(2, 6, 5, weapon.Fists)
-	f.rolls = []int{99}
+	f.rolls = []int{0, 999} // the blade, a miss
 	s.Strike(1, 2, weapon.Knife)
 	if len(f.hurts) != 0 || len(f.traces) != 1 || f.traces[0].Hit || f.struck[1] != 2 || f.learn != 1 {
 		t.Fatalf("miss: hurts %v traces %+v", f.hurts, f.traces)
 	}
+	f.rolls = []int{0, 0, 200} // the blade, a hit, x1.0 damage
 	s.Strike(1, 2, weapon.Knife)
 	d := weapon.DefOf(weapon.Knife)
 	if len(f.hurts) != 1 || f.hits[2] != d.Damage || f.stains != 1 || !f.traces[1].Hit || f.traces[1].Damage != d.Damage || !f.traces[1].Melee {
@@ -40,8 +42,8 @@ func TestStrikeRollUsesItsRoll(t *testing.T) {
 	f.pawn(2, 6, 5, weapon.Fists)
 	n := 0
 	s.StrikeRoll(1, 2, weapon.Fists, func(int) int { n++; return 0 })
-	if n != 1 || len(f.hurts) != 1 {
-		t.Fatal("the given roll decides")
+	if n != 3 || len(f.hurts) != 1 || len(f.rolls) != 0 {
+		t.Fatalf("the given roll decides the tool, the hit and the damage: %d draws", n)
 	}
 }
 
@@ -52,7 +54,7 @@ func TestAnimalStrikesWithItsNaturalWeapon(t *testing.T) {
 	f.beast(1, 5, 5, animal.State{Species: animal.TimberWolf})
 	f.pawn(2, 6, 5, weapon.Fists)
 	s.Strike(1, 2, weapon.Fists)
-	if want := animal.DefOf(animal.TimberWolf).Damage; f.hits[2] != want || f.learn != 0 {
+	if want := attack.MeleeDamage(animal.DefOf(animal.TimberWolf).Damage, func(int) int { return 0 }); f.hits[2] != want || f.learn != 0 {
 		t.Fatalf("wolf bite %d, want %d (and no skill learnt)", f.hits[2], want)
 	}
 }
@@ -91,7 +93,7 @@ func TestRangedStrikeAgainstCoverAndTurret(t *testing.T) {
 	if f.damage[4] != weapon.DefOf(weapon.Fists).Damage || !f.traces[len(f.traces)-1].Building || f.struck[5] != 4 {
 		t.Fatalf("a blow on a turret damages the building: %v", f.damage)
 	}
-	f.rolls = []int{99}
+	f.rolls = []int{999}
 	c.Strikes.Strike(5, 4, weapon.Fists)
 	if f.damage[4] != weapon.DefOf(weapon.Fists).Damage {
 		t.Fatal("a miss leaves the turret alone")
@@ -133,11 +135,11 @@ func TestDoClosesInThenStrikesOnCooldown(t *testing.T) {
 	f.pos[1] = [2]int{9, 5}
 	j.WorkLeft = 1
 	s.Do(1, j, 1001)
-	if j = f.jobs[1]; j.State != job.Do || len(f.hurts) != 1 || j.WorkLeft != weapon.DefOf(weapon.Knife).Cooldown {
+	if j = f.jobs[1]; j.State != job.Do || len(f.hurts) != 1 || j.WorkLeft != weapon.ToolsOf(weapon.Knife)[0].Cooldown {
 		t.Fatalf("in reach the blow lands and the cooldown starts: %+v hurts %v", j, f.hurts)
 	}
 	s.Do(1, j, 1002)
-	if j = f.jobs[1]; len(f.hurts) != 1 || j.WorkLeft != weapon.DefOf(weapon.Knife).Cooldown-1 {
+	if j = f.jobs[1]; len(f.hurts) != 1 || j.WorkLeft != weapon.ToolsOf(weapon.Knife)[0].Cooldown-1 {
 		t.Fatalf("on cooldown: %+v", j)
 	}
 	f.pos[1] = [2]int{2, 5}
