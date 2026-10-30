@@ -20,6 +20,7 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 5. **Integrate and verify** yourself after each phase with the rule §5 gates (build, fmt/vet/lint, race tests, determinism, art-check, benchmarks, visual review). Route failures to the owner.
 6. **Write handoffs and update checklists** from the agent reports (agents never edit them).
 7. **Don't enter plan mode while agents run** (it pauses them); if you did, resume each with `SendMessage`.
+8. **Reuse, then clean up (PARALLEL_WORK §5a).** Send fixes and the same area's next wave to the agent that already owns it; keep one docs and one journey agent per programme. Do one-fact lookups and small edits yourself. Once a wave is committed, `TaskStop` every agent of that wave you won't resume; at the end of the programme stop them all. When the list passes about 50 and the work is committed, tell the user a new session starts clean.
 
 ## Plan section template (PARALLEL_WORK §0)
 

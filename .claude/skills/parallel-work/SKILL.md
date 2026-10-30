@@ -11,3 +11,5 @@ The canonical playbook lives with the other project skills. Read and follow both
 - `.cursor/skills/parallel-work/SKILL.md` — the lead checklist, the plan section template and the agent prompt template
 
 Every plan for a multi-area task includes its Parallel workers section before it is presented (PARALLEL_WORK §0).
+
+Reuse agents before spawning new ones, and `TaskStop` each agent once its work is committed and you won't resume it (PARALLEL_WORK §5a).

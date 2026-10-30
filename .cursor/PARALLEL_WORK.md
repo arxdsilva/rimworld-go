@@ -95,6 +95,25 @@ contract (spec §, read models, stubs) → **producers in parallel** (domain/sim
 
 **Plan mode pauses background agents.** Avoid entering it while agents run; if you must, resume each one with `SendMessage` afterwards.
 
+## 5a. Agent lifecycle: reuse, then clean up (user decision, 2026-10-30)
+
+Every spawned agent stays in Claude Code's agent list for the rest of the session. A long programme that spawned around 200 agents left the list full of finished ones. No tool removes a finished run from that list, so keep the count low at the source and close agents as soon as their work is in.
+
+| Do | Don't |
+| --- | --- |
+| Send follow-ups, fixes and the same area's next wave to the agent that already owns it (`SendMessage` resumes it with its context) | Spawn a fresh agent for a fix, a relay or a re-run in an area an existing agent owns |
+| Keep one docs agent and one journey agent per programme, resumed each wave | Spawn a new docs or journey agent every wave |
+| Do one-fact lookups, small edits and single test runs yourself | Spawn an agent for work under about 30 lines or one search |
+| Stop each agent with `TaskStop` once its work is integrated and committed and you won't resume it | Leave finished agents open "just in case" across commits |
+| Before each wave commit, stop every agent of that wave you won't resume; at the end of a programme, stop them all | Carry a programme's agents into unrelated work |
+| When the list has grown large (about 50 or more) and the work is committed, tell the user that a new session starts with a clean list | Claim `TaskStop` removes entries: it only marks them stopped |
+
+Notes:
+- **Stopped agents stay listed.** A stopped agent stays listed but is not running, and messaging it resumes it, so stopping costs nothing if you later need it.
+- **Clearing rows by hand:** the user can clear a failed or stopped row sooner with `x` in `/tasks`.
+- **Explore and Plan agents are one-shot.** Size their prompt to finish in one go.
+- **Running-agent limit:** Claude Code allows 20 running subagents by default (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`). This rule's limit of 15 or fewer, and `make agent-budget`, stay stricter.
+
 ## 6. Pick the cheapest competent model
 
 Every subagent runs on the **cheapest model that can do its job well**. Choose per agent, not per task.

@@ -17,5 +17,6 @@ When planning such a task:
    - art, sound and creature agents when assets are involved.
 2. Use the plan section template in `.cursor/skills/parallel-work/SKILL.md`.
 3. When executing, follow the lead checklist in that skill: RAM first, contract first, disjoint ownership, lead-only shared config, gates after each wave.
+4. Reuse agents with `SendMessage` before spawning new ones, and `TaskStop` every agent whose work is committed and won't be resumed (`PARALLEL_WORK.md` §5a); finished agents otherwise pile up in Claude Code's agent list.
 
 Skip this for a single-area task or one under ~150 lines; say so in one line in the plan.
