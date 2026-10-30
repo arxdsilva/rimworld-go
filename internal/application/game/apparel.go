@@ -73,7 +73,7 @@ func (g *Game) wear(id, sid entity.EntityID, st item.Stack, forced bool) {
 		g.deleteItem(sid)
 	} else {
 		st.Qty--
-		g.stacks.Set(sid, st)
+		g.putStack(sid, st)
 	}
 	g.dressChanged(id, slot)
 	g.dressNote(id, logPutOn, st.Kind)

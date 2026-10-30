@@ -46,6 +46,9 @@ type ZoneView struct {
 	// shelf's storage zone's building id (0: no shelf).
 	Filter, Special []string
 	Shelf           uint64
+	// STO/CBT contract (0 until STO-2): storage Group id, Stored stacks of Capacity.
+	Group            uint64
+	Stored, Capacity int
 }
 
 // Zone kinds in ZoneView.Kind and CanZoneAt.
@@ -378,101 +381,114 @@ func (g *Game) stockpileCellWhere(k item.Kind, nearX, nearY int, keep func(x, y 
 // storageCell is stockpileCellWhere for stack st (its kind and the zones'
 // special filters, PRD-4) over the zones whose priority is above floor
 // (noPriority: every zone; a re-haul passes the priority of the zone the
-// stack lies in). Priorities are tried highest first; with every zone at
-// one priority it is the plain two-pass search.
+// stack lies in). Priorities are tried highest first; within one it is
+// the nearest top-up cell, else the nearest free cell (STO-1: the storage
+// zones by priority from zone.Stores, the stacks from the ground index).
 func (g *Game) storageCell(st item.Stack, nearX, nearY int, keep func(x, y int) bool, floor zone.Priority) (x, y int, ok bool) {
-	var prios [len(zone.Priorities)]bool // by zone.Priorities index
-	found, shelves := false, false
-	g.zones.Each(func(z zone.Zone) bool {
-		if z.Kind.Storage() && z.Priority > floor && z.Priority.Valid() && z.AllowsStack(st) {
-			prios[priorityIndex(z.Priority)], found = true, true
-			shelves = shelves || z.Kind == zone.KindShelf
+	s := storeSearch{g: g, h: haulHost{g}, st: st, nx: nearX, ny: nearY, keep: keep}
+	return s.run(floor)
+}
+
+// storeSearch is one storageCell search: the best cell so far is the
+// minimum of (Chebyshev distance, y, x); any stops at the first cell.
+type storeSearch struct {
+	g      *Game
+	h      haulHost
+	st     item.Stack
+	nx, ny int
+	keep   func(x, y int) bool
+	any    bool
+	x, y   int
+	d      int
+	ok     bool
+}
+
+func (s *storeSearch) run(floor zone.Priority) (int, int, bool) {
+	for _, p := range zone.Priorities {
+		if p <= floor {
+			break
 		}
-		return true
-	})
-	if !found {
-		return 0, 0, false
-	}
-	// loose items on storage tiles, the first per tile (as itemAt; 0:
-	// none), in a reused per-tile scratch (jobindex.go)
-	loose := g.looseOnStockpiles()
-	defer g.releaseLoose()
-	var load map[int]shelfLoad
-	if shelves {
-		load = g.shelfLoads(st)
-	}
-	for i, p := range zone.Priorities {
-		if prios[i] {
-			if x, y, ok = g.storageCellAt(st, p, nearX, nearY, keep, loose, load); ok {
-				return x, y, true
+		zs := s.g.idx.stores.Of(s.g.zones, p)
+		for top := 1; top >= 0; top-- { // top-up cells first, then free ones
+			for i := range zs {
+				if z := &zs[i]; z.AllowsStack(s.st) && !(s.ok && z.Box.Dist(s.nx, s.ny) > s.d) && !(s.any && s.ok) {
+					s.zone(z.ID, z.Kind == zone.KindShelf, top == 1)
+				}
+			}
+			if s.ok {
+				return s.x, s.y, true
 			}
 		}
 	}
 	return 0, 0, false
 }
 
-// priorityIndex is p's index in zone.Priorities (highest first).
-func priorityIndex(p zone.Priority) int { return int(zone.PriorityCritical - p) }
-
-// storageCellAt is storageCell over the storage zones of priority p; load
-// is the shelf tiles' stacks (shelfLoads; nil when no shelf takes st).
-func (g *Game) storageCellAt(st item.Stack, p zone.Priority, nearX, nearY int, keep func(x, y int) bool,
-	loose []entity.EntityID, load map[int]shelfLoad) (x, y int, ok bool) {
-	w, k := g.Width(), st.Kind
-	bestD := 1 << 30
-	better := func(cx, cy int) bool {
-		d := pathing.Dist(nearX, nearY, cx, cy)
-		return !ok || d < bestD || d == bestD && (cy < y || cy == y && cx < x)
-	}
-	take := func(cx, cy int) { x, y, ok, bestD = cx, cy, true, pathing.Dist(nearX, nearY, cx, cy) }
-	free := func(cx, cy int) bool {
-		_, taken := g.reserve.TileOwner(cx, cy)
-		return !taken
-	}
-	g.eachStorageCell(st, p, func(cx, cy int, shelf bool) {
-		oid := loose[cy*w+cx]
-		if oid == 0 || !better(cx, cy) || keep != nil && !keep(cx, cy) {
-			return
+// zone visits zone id's cells (row-major), stopping below the rows that
+// could still hold a better cell.
+func (s *storeSearch) zone(id zone.ID, shelf, top bool) {
+	s.g.zones.EachCell(id, func(cx, cy int) bool {
+		if s.ok && (s.any || cy-s.ny > s.d) {
+			return false
 		}
-		if shelf {
-			if load[cy*w+cx].top && free(cx, cy) {
-				take(cx, cy)
-			}
-			return
-		}
-		o, _ := g.stacks.Get(oid)
-		if o.Kind == k && haul.Toppable(o) && free(cx, cy) {
-			take(cx, cy)
-		}
-	})
-	if ok {
-		return x, y, true
-	}
-	g.eachStorageCell(st, p, func(cx, cy int, shelf bool) {
-		if !shelf && loose[cy*w+cx] != 0 || shelf && load[cy*w+cx].n >= zone.ShelfStacks {
-			return
-		}
-		if !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) || keep != nil && !keep(cx, cy) {
-			return
-		}
-		if g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || !shelf && g.occupiedAt(cx, cy) {
-			return
-		}
-		take(cx, cy)
-	})
-	return x, y, ok
-}
-
-// eachStorageCell visits every tile of every storage zone of priority p
-// taking stack st, saying whether it is a shelf's.
-func (g *Game) eachStorageCell(st item.Stack, p zone.Priority, fn func(x, y int, shelf bool)) {
-	g.zones.Each(func(z zone.Zone) bool {
-		if z.Kind.Storage() && z.Priority == p && z.AllowsStack(st) {
-			shelf := z.Kind == zone.KindShelf
-			g.zones.EachCell(z.ID, func(x, y int) bool { fn(x, y, shelf); return true })
+		if top {
+			s.topUp(cx, cy, shelf)
+		} else {
+			s.free(cx, cy, shelf)
 		}
 		return true
 	})
+}
+
+func (s *storeSearch) better(cx, cy int) bool {
+	d := pathing.Dist(s.nx, s.ny, cx, cy)
+	return !s.ok || d < s.d || d == s.d && (cy < s.y || cy == s.y && cx < s.x)
+}
+
+func (s *storeSearch) open(cx, cy int) bool {
+	_, taken := s.g.reserve.TileOwner(cx, cy)
+	return !taken && (s.keep == nil || s.keep(cx, cy))
+}
+
+func (s *storeSearch) take(cx, cy int) {
+	s.x, s.y, s.ok, s.d = cx, cy, true, pathing.Dist(s.nx, s.ny, cx, cy)
+}
+
+// topUp takes (cx, cy) when a stack there still takes a load of the
+// kind: its first stack on the ground, any of its stacks on a shelf.
+func (s *storeSearch) topUp(cx, cy int, shelf bool) {
+	if !s.better(cx, cy) {
+		return
+	}
+	gr, k := &s.g.idx.ground, s.st.Kind
+	if shelf {
+		if _, top := gr.Shelf(s.h, k, cx, cy); top && s.open(cx, cy) {
+			s.take(cx, cy)
+		}
+		return
+	}
+	if o := s.g.stacks.Ref(gr.First(s.h, cx, cy)); o != nil && o.Kind == k && haul.Toppable(*o) && s.open(cx, cy) {
+		s.take(cx, cy)
+	}
+}
+
+// free takes (cx, cy) when it has room for one more stack and nothing
+// planned or built stands in the way.
+func (s *storeSearch) free(cx, cy int, shelf bool) {
+	g, gr := s.g, &s.g.idx.ground
+	if !s.better(cx, cy) {
+		return
+	}
+	if shelf {
+		if n, _ := gr.Shelf(s.h, s.st.Kind, cx, cy); n >= zone.ShelfStacks {
+			return
+		}
+	} else if gr.First(s.h, cx, cy) != 0 {
+		return
+	}
+	if !g.grid.Walkable(cx, cy) || !s.open(cx, cy) || g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || !shelf && g.occupiedAt(cx, cy) {
+		return
+	}
+	s.take(cx, cy)
 }
 
 // Pens: painted pen zones are legacy (older saves, the DesignatePen
@@ -608,32 +624,6 @@ func (g *Game) cmdStockpile(c command.Command) {
 	}
 }
 
-// shelfLoad is one shelf tile's stacks for a haul search: how many lie
-// there and whether one of them takes a load of the searched stack.
-type shelfLoad struct {
-	n   int
-	top bool
-}
-
-// shelfLoads counts the loose stacks on every shelf tile, noting where a
-// stack st could top up (one pass over the items, only when a shelf
-// takes st).
-func (g *Game) shelfLoads(st item.Stack) map[int]shelfLoad {
-	out := map[int]shelfLoad{}
-	w := g.Width()
-	for _, iid := range g.itemIDs {
-		o := g.stacks.Ref(iid)
-		if o == nil || o.Carrier != 0 || !g.onShelf(o.X, o.Y) {
-			continue
-		}
-		l := out[o.Y*w+o.X]
-		l.n++
-		l.top = l.top || o.Kind == st.Kind && haul.Toppable(*o) // as a plain cell: the kind decides
-		out[o.Y*w+o.X] = l
-	}
-	return out
-}
-
 // onShelf reports (x, y) lies under a shelf's storage.
 func (g *Game) onShelf(x, y int) bool {
 	z, ok := g.storageAt(x, y)
@@ -644,16 +634,11 @@ func (g *Game) onShelf(x, y int) bool {
 // may: one anywhere, zone.ShelfStacks on a shelf (mergeOrSet spills
 // from a full tile).
 func (g *Game) cellFull(id entity.EntityID, x, y int) bool {
-	if !g.onShelf(x, y) {
-		return g.otherStackAt(id, x, y)
+	slots := 1
+	if g.onShelf(x, y) {
+		slots = zone.ShelfStacks
 	}
-	n := 0
-	for _, oid := range g.itemIDs {
-		if o := g.stacks.Ref(oid); oid != id && o != nil && o.Carrier == 0 && o.X == x && o.Y == y {
-			n++
-		}
-	}
-	return n >= zone.ShelfStacks
+	return g.idx.ground.Others(haulHost{g}, id, x, y) >= slots
 }
 
 // shelfOf is the shelf building a shelf's storage zone z lies under (0

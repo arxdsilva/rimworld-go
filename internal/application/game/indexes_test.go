@@ -281,7 +281,7 @@ func TestSpillPingPongEnds(t *testing.T) {
 	for i, id := range []entity.EntityID{a, b} {
 		st, _ := g.stacks.Get(id)
 		st.Animal = uint8(i)
-		g.stacks.Set(id, st)
+		g.putStack(id, st)
 	}
 	c, _ := g.SpawnStack(item.CorpseAnimal, 1, 4, 4)
 	st, _ := g.stacks.Get(c)

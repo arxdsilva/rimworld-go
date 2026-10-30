@@ -180,6 +180,10 @@ type PawnView struct {
 	// (wanderer, social, homebody).
 	Temperament string
 	Weapon      string // wielded weapon name ("fists" when unarmed)
+	// STO/CBT contract (0 until CBT-3, CBT-5 fill them): the weapon's quality (stored, quality.Level+1) and stuff; combat records.
+	WeaponQuality      uint8
+	WeaponStuff        string
+	Kills, DamageDealt int
 	// WeaponStats are its numbers and ApparelArmor each Apparel entry's
 	// armor by its stuff and quality, permille (DEF-2: the gear tab).
 	WeaponStats  weapon.View
@@ -305,6 +309,7 @@ type ItemView struct {
 	Quality, Stuff string
 	HP, MaxHP      int
 	Tainted        bool
+	Urgent         bool // STO/CBT contract (false until STO-2): marked to haul urgently
 }
 
 // LetterView is one letter in the right-side stack (PLAY-018).
@@ -467,6 +472,9 @@ type BuildingView struct {
 	HoldOpen, HasTarget, HoldFire               bool
 	Barrel, Shells, TargetX, TargetY, WorkSpeed int
 	Linked                                      []string
+	// STO/CBT contract (0 until STO-2): storage Group id, Stored stacks of Capacity.
+	Group            uint64
+	Stored, Capacity int
 }
 
 // Bed facility bits on BuildingView.Facilities (BED-1).
@@ -971,7 +979,7 @@ func (g *Game) SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error
 	}
 	id := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, id)
-	g.stacks.Set(id, item.Stack{Kind: kind, Qty: qty, X: x, Y: y})
+	g.putStack(id, item.Stack{Kind: kind, Qty: qty, X: x, Y: y})
 	if kind.IsApparel() {
 		g.noteApparel(id) // apparel.go: the free-clothes index
 	}

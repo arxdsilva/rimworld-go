@@ -527,7 +527,7 @@ func (g *Game) afterLoadAnimals() {
 	for _, id := range g.itemIDs {
 		if st, ok := g.stacks.Get(id); ok {
 			if c, conv := item.ConvertLegacy(st); conv {
-				g.stacks.Set(id, c)
+				g.putStack(id, c)
 			}
 		}
 	}

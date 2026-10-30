@@ -354,7 +354,7 @@ func TestFertileEggHatches(t *testing.T) {
 	sid, _ := g.SpawnStack(item.FertileEgg, 2, 20, 10)
 	cs, _ := g.stacks.Get(sid)
 	cs.Animal, cs.Tame, cs.Hatch = uint8(animal.Chicken), true, animal.HatchTicks(animal.Chicken)-climateInterval
-	g.stacks.Set(sid, cs)
+	g.putStack(sid, cs)
 	g.Step(climateInterval + 1)
 	if _, ok := g.stacks.Get(sid); ok {
 		t.Fatal("the stack hatched")
@@ -382,7 +382,7 @@ func TestFrozenEggDies(t *testing.T) {
 	sid, _ := g.SpawnStack(item.FertileEgg, 3, 10, 10)
 	st, _ := g.stacks.Get(sid)
 	st.Animal, st.Tame, st.Hatch = uint8(animal.Chicken), true, 1000
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	g.Step(climateInterval + 1)
 	if _, _, ok := eggStack(g, item.FertileEgg); ok {
 		t.Fatal("a frozen egg dies")
@@ -508,7 +508,7 @@ func TestLifeSaveRoundTrip(t *testing.T) {
 	sid, _ := g.SpawnStack(item.FertileEgg, 2, 25, 15)
 	st, _ := g.stacks.Get(sid)
 	st.Animal, st.Tame, st.Hatch = uint8(animal.Chicken), true, animal.HatchTicks(animal.Chicken)-2*climateInterval
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "life"); err != nil {
 		t.Fatal(err)

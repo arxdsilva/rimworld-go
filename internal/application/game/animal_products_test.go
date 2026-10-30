@@ -210,7 +210,7 @@ func TestWoolParkaRecipe(t *testing.T) {
 	sid, _ := g.SpawnStack(item.Wool, 16, 8, 8)
 	st, _ := g.stacks.Get(sid)
 	st.Animal = uint8(animal.Sheep)
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	worn := 0 // the tailor may put it straight on
 	for i := 0; i < 100 && itemsOnGround(g, "wool parka")+worn == 0; i++ {
 		g.Step(50)

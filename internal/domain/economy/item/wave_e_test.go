@@ -13,7 +13,7 @@ func TestWaveECatalogue(t *testing.T) {
 		AshFlake: "Medicine", Silverdust: "Medicine", BattleTonic: "Medicine",
 		AdvancedComponents: "Manufactured", ReinforcedBarrel: "Manufactured",
 	}
-	for k := Chemfuel; k < numKinds; k++ {
+	for k := Chemfuel; k <= ReinforcedBarrel; k++ {
 		want, ok := cats[k]
 		if !ok {
 			t.Errorf("%s has no expected category here", k)

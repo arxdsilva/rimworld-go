@@ -415,7 +415,7 @@ func TestDroppedCarryIsTheColonys(t *testing.T) {
 	sid := foundAt(t, g, item.GraniteChunk, 1, 1, 1)
 	st, _ := g.stacks.Get(sid)
 	st.Carrier = ada // a bill's whole-stack carry
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	g.jobs.Set(ada, job.Record{Kind: job.Bill, Carry: sid, State: job.Goto})
 	g.interrupt(ada, job.Interrupted)
 	if st, _ := g.stacks.Get(sid); st.Carrier != 0 || st.Unclaimed || st.HaulMarked {
@@ -554,7 +554,7 @@ func TestMigrateClaimsFromV2(t *testing.T) {
 	carried, _ := g.SpawnStack(item.MarbleChunk, 1, 1, 1)
 	st, _ := g.stacks.Get(carried)
 	st.Carrier = ada
-	g.stacks.Set(carried, st)
+	g.putStack(carried, st)
 	reserved, _ := g.SpawnStack(item.SlateChunk, 1, 12, 5)
 	if !g.reserve.TryEntity(ada, reserved) {
 		t.Fatal("reserve")

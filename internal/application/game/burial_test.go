@@ -169,7 +169,7 @@ func TestCorpseRotsToBones(t *testing.T) {
 	bo := burKill(t, g, 8, 5, "Bo")
 	cid, st, _ := burBody(g, bo)
 	st.Rot = 2*st.Shelf() - 1
-	g.stacks.Set(cid, st)
+	g.putStack(cid, st)
 	g.Step(climateInterval)
 	_, st, ok := burBody(g, bo)
 	if !ok || st.Kind != item.Bones || st.Of != bo {
@@ -320,7 +320,7 @@ func TestPyreCremateBill(t *testing.T) {
 	bo := burKill(t, g, 8, 5, "Bo")
 	cid, st, _ := burBody(g, bo)
 	st.Rot = st.Shelf() + 1 // rotten bodies still burn
-	g.stacks.Set(cid, st)
+	g.putStack(cid, st)
 
 	burning, cremating := false, false
 	done := burRun(g, 4000, func() bool {
@@ -396,19 +396,19 @@ func TestUnburiedCorpseThought(t *testing.T) {
 		t.Fatal("a body 7 tiles off, both outdoors, is upsetting")
 	}
 	st.X = 12
-	g.stacks.Set(cid, st)
+	g.putStack(cid, st)
 	if burThinks(g, ada, mood.UnburiedCorpse) {
 		t.Fatal("9 tiles off is out of sight")
 	}
 	st.X, st.Kind = 5, item.Bones
-	g.stacks.Set(cid, st)
+	g.putStack(cid, st)
 	if burThinks(g, ada, mood.UnburiedCorpse) {
 		t.Fatal("bones are not a corpse")
 	}
 	// a room: the body inside, Ada outside the wall
 	box(t, g, 15, 1, 22, 8, [2]int{15, 4})
 	st.X, st.Y, st.Kind = 17, 4, item.CorpseHuman
-	g.stacks.Set(cid, st)
+	g.putStack(cid, st)
 	g.positions.Set(ada, Position{12, 4})
 	if burThinks(g, ada, mood.UnburiedCorpse) {
 		t.Fatal("a body in another room is out of sight")
@@ -485,7 +485,7 @@ func TestDigBuryCremateActions(t *testing.T) {
 		t.Fatalf("picking the body up is not filling yet: %q", pv.Action)
 	}
 	st.Carrier = ada
-	g.stacks.Set(cid, st)
+	g.putStack(cid, st)
 	g.jobs.Set(ada, job.Record{Kind: job.Bury, State: job.Goto, Target: cid, Carry: cid, Dest: gid, DestX: 14, DestY: 4, WorkLeft: buryWork})
 	if pv := pawnView(g, ada); pv.Action != ActionHaul || pv.Carrying != "human corpse" {
 		t.Fatalf("carrying a body: %q %q", pv.Action, pv.Carrying)
@@ -517,7 +517,7 @@ func TestSaveRoundTripGravesAndCorpses(t *testing.T) {
 	dee := burKill(t, g, 6, 9, "Dee")
 	did, st, _ := burBody(g, dee)
 	st.Kind = item.Bones
-	g.stacks.Set(did, st)
+	g.putStack(did, st)
 
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "graveyard"); err != nil {

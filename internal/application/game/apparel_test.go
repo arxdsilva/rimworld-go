@@ -409,7 +409,7 @@ func TestApparelIndex(t *testing.T) {
 	g.SpawnStack(item.Wood, 5, 6, 5)
 	split := g.entities.Next() // haul-style split
 	g.itemIDs = append(g.itemIDs, split)
-	g.stacks.Set(split, item.Stack{Kind: item.Parka, Qty: 1, X: 6, Y: 6})
+	g.putStack(split, item.Stack{Kind: item.Parka, Qty: 1, X: 6, Y: 6})
 	if got := g.apparelStock(true); !slices.Equal(got, []entity.EntityID{a, split}) {
 		t.Fatalf("index %v, want [%d %d]", got, a, split)
 	}

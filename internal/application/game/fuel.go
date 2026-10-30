@@ -287,13 +287,13 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 		carry := j.Target
 		if take := min(st.Qty, max(1, j.Count)); st.Qty > take {
 			st.Qty -= take
-			g.stacks.Set(j.Target, st)
+			g.putStack(j.Target, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			g.stacks.Set(carry, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id})
+			g.putStack(carry, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id})
 		} else {
 			st.Carrier = id
-			g.stacks.Set(j.Target, st)
+			g.putStack(j.Target, st)
 		}
 		j.Carry = carry
 		path, ok := g.pathTo(id, j.DestX, j.DestY)
@@ -324,7 +324,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 		give := min(st.Qty, g.fuelRoom(j.Dest, st.Kind))
 		g.setFuel(j.Dest, min(full, g.fuel[j.Dest]+give*fuelTicks(st.Kind)))
 		if st.Qty -= give; st.Qty > 0 {
-			g.stacks.Set(j.Carry, st)
+			g.putStack(j.Carry, st)
 			j.RouteI = len(j.Route)
 			if !g.routeWalk(id, &j, st.Kind) {
 				g.routeArrive(id, j)

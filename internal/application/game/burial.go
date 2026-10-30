@@ -257,7 +257,7 @@ func (g *Game) burnWood(x, y, n int) {
 		if bst.Qty -= take; bst.Qty <= 0 {
 			g.deleteItem(best)
 		} else {
-			g.stacks.Set(best, bst)
+			g.putStack(best, bst)
 		}
 	}
 }
@@ -394,7 +394,7 @@ func (g *Game) doBury(id entity.EntityID, j job.Record) {
 			return
 		}
 		st.Carrier = id
-		g.stacks.Set(j.Target, st)
+		g.putStack(j.Target, st)
 		j.Carry = j.Target
 		path, ok := g.pathTo(id, j.DestX, j.DestY)
 		if !ok {

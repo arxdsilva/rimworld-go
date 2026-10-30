@@ -175,7 +175,7 @@ func (g *Game) trimTroughLoad(pid entity.EntityID, j job.Record) {
 	rest := st
 	rest.Carrier, rest.X, rest.Y, rest.Qty = 0, pos.X, pos.Y, st.Qty-max(room, 1)
 	st.Qty = max(room, 1)
-	g.stacks.Set(j.Carry, st)
+	g.putStack(j.Carry, st)
 	rid := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, rid)
 	g.mergeOrSet(rid, rest)

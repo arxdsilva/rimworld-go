@@ -141,6 +141,13 @@ const (
 	ManMortar
 	RearmTurret
 	SitDown
+	// STO/CBT contract (append only, saved; nothing starts them before
+	// STO-2): FillHopper, a hauler carries raw food into a hopper beside
+	// a nutrient paste dispenser; DispensePaste, a colonist takes a paste
+	// meal from the dispenser to eat or store. Hunting needs no stalking
+	// job: a hunt already closes to its weapon's range before it shoots.
+	FillHopper
+	DispensePaste
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -280,6 +287,10 @@ func (k Kind) String() string {
 		return "rearm turret"
 	case SitDown:
 		return "sit down"
+	case FillHopper:
+		return "fill hopper"
+	case DispensePaste:
+		return "dispense paste"
 	default:
 		return "idle"
 	}

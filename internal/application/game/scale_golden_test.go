@@ -113,13 +113,20 @@ import (
 // two new fields (Errand, StepGait). With the amble and the slow class
 // set back to the old numbers only the two new fields move the hash, so
 // the rest is behaviour by design. Same-seed runs identical (-count=2).
+// Re-pinned (2026-10-30, stale pin): this test skips under -race and the
+// determinism gate's -run filter did not match it, so the pins went stale
+// across the intended behaviour changes of the SIM-06x, BED/PRD/DEF,
+// HAUL-002 and FEED-001 commits, each of which re-pinned TestGrownGolden
+// with its reason. The values below are those of commit 121821cac; the
+// STO-1 storage index and the STO/RES/CBT contract give the same values
+// (proved on a clean HEAD copy). The gate now runs it without -race.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x0aeb22c609b89cb6,
-	"48x40/seed7":    0xdd7b17b06d2bc9f5,
-	"48x40/seed42":   0x49ff6f61fb5dfbce,
-	"120x120/seed1":  0x701dd3cad45a6421,
-	"120x120/seed7":  0x5bc90ff648dfd1b7,
-	"120x120/seed42": 0x41903c2d3e70d98a,
+	"48x40/seed1":    0x565388fe1fac7806,
+	"48x40/seed7":    0x4758f9494ebbbcd7,
+	"48x40/seed42":   0x6b24e1bde9d1f9e9,
+	"120x120/seed1":  0xfb68611299c8f521,
+	"120x120/seed7":  0x55654325d7a0c404,
+	"120x120/seed42": 0x728ffefcacf56901,
 }
 
 const scaleGoldenTicks = 20000

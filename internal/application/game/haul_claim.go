@@ -73,7 +73,7 @@ func (g *Game) migrateClaims() {
 			continue
 		}
 		st.Unclaimed = true
-		g.stacks.Set(id, st)
+		g.putStack(id, st)
 	}
 }
 

@@ -59,13 +59,15 @@ func (h *haulPrio) topFor(g *Game, k item.Kind) (zone.Priority, bool) {
 }
 
 // roomAbove reports a storage zone above priority p that takes kind k and
-// has a free cell, through the search's cache.
+// has a free cell, through the search's cache (the search stops at the
+// first such cell).
 func (h *haulPrio) roomAbove(g *Game, k item.Kind, p zone.Priority) bool {
 	key := haulPrioKey{k, p}
 	if v, seen := h.room[key]; seen {
 		return v
 	}
-	_, _, ok := g.storageCell(item.Stack{Kind: k}, 0, 0, nil, p)
+	s := storeSearch{g: g, h: haulHost{g}, st: item.Stack{Kind: k}, any: true}
+	_, _, ok := s.run(p)
 	if h.room == nil {
 		h.room = map[haulPrioKey]bool{}
 	}

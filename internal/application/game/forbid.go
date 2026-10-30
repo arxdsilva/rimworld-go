@@ -54,6 +54,6 @@ func (g *Game) forbidRaidBody(id entity.EntityID) {
 	}
 	if cid, st, ok := g.bodyOf(id); ok && !st.Forbidden && st.Carrier == 0 {
 		st.Forbidden = true
-		g.stacks.Set(cid, st)
+		g.putStack(cid, st)
 	}
 }

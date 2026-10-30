@@ -63,16 +63,16 @@ func (g *Game) carryToTable(id entity.EntityID, j job.Record) bool {
 	carry := j.Target
 	if st.Qty > take {
 		st.Qty -= take
-		g.stacks.Set(j.Target, st)
+		g.putStack(j.Target, st)
 		carry = g.entities.Next()
 		g.itemIDs = append(g.itemIDs, carry)
 		cs := st
 		cs.Qty = take
 		cs.Carrier = id
-		g.stacks.Set(carry, cs)
+		g.putStack(carry, cs)
 	} else {
 		st.Carrier = id
-		g.stacks.Set(j.Target, st)
+		g.putStack(j.Target, st)
 	}
 	g.reserve.TryTile(id, sx, sy)
 	j.Carry, j.Target = carry, carry

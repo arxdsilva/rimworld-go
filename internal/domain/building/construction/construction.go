@@ -180,6 +180,13 @@ const (
 	// (no Architect row), it lands with the CrashedShipPart threat, its
 	// dormant mechanoid guards beside it (game/raid/shippart.go).
 	ShipPart
+	// STO/CBT contract (append only, saved; hidden from the Architect until
+	// STO-2 adds the tool rows and the art): a hopper that holds one stack
+	// of raw food for the nutrient paste dispenser beside it, and a
+	// sarcophagus, a grave above ground that keeps a body in state.
+	Hopper
+	NutrientPasteDispenser
+	Sarcophagus
 	kindCount
 )
 
@@ -468,6 +475,18 @@ var defs = [kindCount]Def{
 	// DEF-4, wiki: Defoliator ship (6x3, 1200 HP, deconstructs to
 	// nothing); placed whole by the threat, so no cost and no work.
 	ShipPart: {Kind: ShipPart, Name: "ship part", Layer: LayerObject, BlocksMove: true, Size: [2]int{6, 3}},
+	// STO/CBT contract, wiki: Hopper (15 steel, 300 work), Nutrient paste
+	// dispenser (3x4, 125 steel + 3 components, 2200 work; a colonist
+	// takes meals at the cell south of its middle), Sarcophagus (1x2, 60
+	// stuff, 2400 work). Scaled as the wave D rows; the dispenser keeps
+	// its wiki footprint (hoppers line its sides). A hopper and a
+	// sarcophagus are passed through, like the shelf; the dispenser blocks.
+	Hopper: {Kind: Hopper, Name: "hopper", Wood: 2, Work: 30, Layer: LayerObject, MetalOK: true, MetalOnly: true},
+	NutrientPasteDispenser: {Kind: NutrientPasteDispenser, Name: "nutrient paste dispenser", Wood: 14, Work: 220,
+		Layer: LayerObject, BlocksMove: true, Size: [2]int{3, 4}, Spot: [2]int{1, 4}, HasSpot: true,
+		MetalOK: true, MetalOnly: true, Components: 3},
+	Sarcophagus: {Kind: Sarcophagus, Name: "sarcophagus", Wood: 7, Work: 240, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{1, 2}, StoneOK: true, MetalOK: true},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
@@ -535,6 +554,14 @@ func MaxHP(k Kind, s item.Kind) int {
 		hp = 100
 	case ShipPart: // wiki: Defoliator ship
 		hp = 1200
+	// STO/CBT contract, steel-built ones divided by steel's 140 % as DEF-3:
+	// wiki: Hopper (100), Nutrient paste dispenser (350), Sarcophagus (250).
+	case Hopper:
+		hp = 71
+	case NutrientPasteDispenser:
+		hp = 250
+	case Sarcophagus:
+		hp = 250
 	}
 	pct, _ := StuffStats(s)
 	return hp * pct / 100

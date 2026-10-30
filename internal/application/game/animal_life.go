@@ -458,7 +458,7 @@ func (g *Game) incubate() {
 		}
 		st.Hatch += climateInterval
 		if st.Hatch < animal.HatchTicks(animal.Species(st.Animal)) {
-			g.stacks.Set(id, st)
+			g.putStack(id, st)
 			continue
 		}
 		g.hatch(id, st)

@@ -386,7 +386,7 @@ func (g *Game) routeArrive(id entity.EntityID, j job.Record) {
 			g.endDelivery(id, j)
 			return
 		}
-		g.stacks.Set(j.Carry, st)
+		g.putStack(j.Carry, st)
 		if g.routeWalk(id, &j, st.Kind) {
 			return
 		}

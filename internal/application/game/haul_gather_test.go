@@ -125,7 +125,7 @@ func TestGatherKeepsLoadsAlike(t *testing.T) {
 		sid, _ := g.SpawnStack(item.Club, 2, x, 2)
 		st, _ := g.stacks.Get(sid)
 		st.Quality, st.Stuff = q, stuff
-		g.stacks.Set(sid, st)
+		g.putStack(sid, st)
 		return sid
 	}
 	first := club(2, 3, item.Wood)
@@ -136,7 +136,7 @@ func TestGatherKeepsLoadsAlike(t *testing.T) {
 	held := club(7, 3, item.Wood)
 	st, _ := g.stacks.Get(forbid)
 	st.Forbidden = true
-	g.stacks.Set(forbid, st)
+	g.putStack(forbid, st)
 	g.reserve.TryEntity(999, held)
 	zoneCmd(g, command.DesignateStockpile, 20, 2, 21, 3, 0)
 	id, _ := g.SpawnNamedPawn(1, 2, "Hauler")

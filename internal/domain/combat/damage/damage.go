@@ -10,6 +10,9 @@ const (
 	Bomb              // explosions
 	Burn              // scorching, not open flame
 	EMP               // electromagnetic pulse
+	// Stun (STO/CBT contract, append only; CBT-1 deals it): stuns without
+	// wounding (20 ticks per point), resisted by no armor. wiki: Damage types
+	Stun
 	numTypes
 )
 
@@ -34,6 +37,7 @@ var resisted = [numTypes]Category{
 	Bomb:  ArmorSharp,
 	Burn:  ArmorHeat,
 	EMP:   NoArmor,
+	Stun:  NoArmor,
 }
 
 // Resisted returns the armor category that applies to t (NoArmor for
@@ -45,7 +49,7 @@ func Resisted(t Type) Category {
 	return resisted[t]
 }
 
-var names = [numTypes]string{"sharp", "blunt", "heat", "bomb", "burn", "EMP"}
+var names = [numTypes]string{"sharp", "blunt", "heat", "bomb", "burn", "EMP", "stun"}
 
 // String is the player-facing name.
 func (t Type) String() string {

@@ -953,7 +953,7 @@ func (g *Game) takeItems(id entity.EntityID, st item.Stack, n int) {
 		return
 	}
 	st.Qty -= n
-	g.stacks.Set(id, st)
+	g.putStack(id, st)
 }
 
 // fillAnimalNeeds fills the needs and life fields of an animal view.

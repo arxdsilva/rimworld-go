@@ -7,7 +7,9 @@ import (
 	"sync/atomic"
 	"unsafe"
 
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/component"
@@ -658,5 +660,7 @@ type seedCache struct {
 // indexes are the derived lookup structures above (never saved).
 type indexes struct {
 	plants, bldgs, frames cellSlots
-	jobs                  jobIndexes // jobindex.go
+	jobs                  jobIndexes  // jobindex.go
+	ground                haul.Ground // loose stacks per cell (STO-1)
+	stores                zone.Stores // storage zones by priority (STO-1)
 }

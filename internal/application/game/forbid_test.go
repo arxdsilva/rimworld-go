@@ -197,7 +197,7 @@ func TestForbidMergeRules(t *testing.T) {
 	// a carried stack can't be forbidden
 	st, _ := g.stacks.Get(f1)
 	st.Carrier, st.Forbidden = 99, false
-	g.stacks.Set(f1, st)
+	g.putStack(f1, st)
 	g.setForbidden(f1, true)
 	if st, _ := g.stacks.Get(f1); st.Forbidden {
 		t.Fatal("a carried stack was forbidden")

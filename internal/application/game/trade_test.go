@@ -491,7 +491,7 @@ func TestOrbitalGoodsOnlyNearBeacon(t *testing.T) {
 	fid, _ := g.SpawnStack(item.Steel, 5, 22, 16)
 	st, _ := g.stacks.Get(fid)
 	st.Forbidden = true
-	g.stacks.Set(fid, st)
+	g.putStack(fid, st)
 	openComms(t, g, pawn)
 	cv, _ := g.CommsView()
 	if !cv.Orbital.Present || cv.Orbital.CallOK || cv.Orbital.CallReason != ReasonNoBeacon || cv.BeaconSilver != 0 {

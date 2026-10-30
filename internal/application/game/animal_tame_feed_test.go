@@ -104,7 +104,7 @@ func TestTameDogEatsStockpiledMeat(t *testing.T) {
 	fb := stack(t, g, item.Meat, 5, 11, 12)
 	st, _ := g.stacks.Get(fb)
 	st.Forbidden = true
-	g.stacks.Set(fb, st)
+	g.putStack(fb, st)
 	dog := hungryTame(t, g, "husky", 10, 10, "Rex")
 	a := firstFeed(g, dog, 2*animal.DecideEvery)
 	if a.Feed.Kind != animal.FeedItem || a.Feed.ID != meat {
@@ -154,7 +154,7 @@ func TestTameFeedRechecksTheStack(t *testing.T) {
 	}
 	st, _ := g.stacks.Get(far)
 	st.Forbidden = true
-	g.stacks.Set(far, st)
+	g.putStack(far, st)
 	g.Step(2)
 	if a := animalOf(g, dog); a.Feed.ID == far {
 		t.Fatalf("a stack forbidden on the way is given up: %+v", a.Feed)

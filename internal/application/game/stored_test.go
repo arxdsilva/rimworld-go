@@ -49,7 +49,7 @@ func TestStoredCountsOnlyStockpiledUncarriedUnfogged(t *testing.T) {
 	}
 	st, _ := g.stacks.Get(carried)
 	st.Carrier = ada
-	g.stacks.Set(carried, st)
+	g.putStack(carried, st)
 	// a stack in unexplored fog neither shows nor counts
 	spawn(t, g, item.Steel, 77, 22, 9)
 	g.fog.hidden = make([]uint64, (24*12+63)/64)

@@ -124,7 +124,8 @@ func TestBandedWeaponUsesBands(t *testing.T) {
 
 func TestForItem(t *testing.T) {
 	t.Parallel()
-	for k, want := range map[item.Kind]Kind{item.Club: Club, item.Knife: Knife, item.Spear: Spear, item.Rifle: Rifle, item.Wood: Fists} {
+	for k, want := range map[item.Kind]Kind{item.Club: Club, item.Knife: Knife, item.Spear: Spear, item.Rifle: Rifle, item.Wood: Fists,
+		item.RocketLauncher: RocketLauncher, item.ChargeLance: ChargeLance, item.Ikwa: Ikwa, item.ShieldBelt: Fists} {
 		if ForItem(k) != want {
 			t.Errorf("ForItem(%v) = %v", k, ForItem(k))
 		}

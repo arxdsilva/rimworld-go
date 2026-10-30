@@ -80,12 +80,12 @@ func TestSurgeryWaitNoStockAndResearch(t *testing.T) {
 	sid, _ := g.SpawnStack(item.ProstheticLeg, 1, 3, 9)
 	st, _ := g.stacks.Get(sid)
 	st.Forbidden = true
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	if why, _ := waitOf(t, g, patient); why != "no prosthetic leg in stock" {
 		t.Fatalf("a forbidden one is not in stock: %q", why)
 	}
 	st.Forbidden = false
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	if why, ok := waitOf(t, g, patient); !ok || why != "waiting for the patient to lie down" {
 		t.Fatalf("in stock: %q %v", why, ok)
 	}
@@ -199,7 +199,7 @@ func TestSurgeryWaitLyingDoesNotFlap(t *testing.T) {
 		if on {
 			st.Carrier = doc // a hauler moving it
 		}
-		g.stacks.Set(sid, st)
+		g.putStack(sid, st)
 	}
 	hold(true)
 	if g.awaitingSurgery(patient) {

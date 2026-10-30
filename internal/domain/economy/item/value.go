@@ -43,6 +43,12 @@ var value = [numKinds]int{
 	Chemfuel: 2, Wort: 3, FineMeal: 20, LavishMeal: 40, Pemmican: 1, SurvivalMeal: 24, Kibble: 1,
 	AshFlake: 14, Silverdust: 21, BattleTonic: 53, Reagent: 6,
 	AdvancedComponents: 200, Uranium: 6, Plasteel: 9, ReinforcedBarrel: 600,
+	// STO/CBT contract, wiki market values (Normal quality; the ikwa in
+	// steel): Nutrient paste meal, Smokepop pack, Shield belt, Doomsday and
+	// Triple rocket launcher, Smoke launcher, Charge rifle, Charge lance,
+	// Ikwa.
+	NutrientPasteMeal: 10, SmokepopPack: 166, ShieldBelt: 390, RocketLauncher: 1000, TripleRocketLauncher: 1000,
+	SmokeLauncher: 380, ChargeRifle: 1010, ChargeLance: 1355, Ikwa: 113,
 }
 
 // Value is the market value of one unit of k.
@@ -62,7 +68,12 @@ func (k Kind) Value() int {
 // waits for its own change.
 var stackLimit = [numKinds]int{Chemfuel: 150, AshFlake: 150, Silverdust: 150, BattleTonic: 150, Reagent: 150,
 	Pemmican: 75, Kibble: 75, Uranium: 75, Plasteel: 75, AdvancedComponents: 50, Wort: 25, ReinforcedBarrel: 25,
-	FineMeal: 10, LavishMeal: 10, SurvivalMeal: 10}
+	FineMeal: 10, LavishMeal: 10, SurvivalMeal: 10,
+	// STO/CBT contract: the paste meal stacks like the other meals (wiki:
+	// Nutrient paste meal 10); gear and weapons one per stack, like a
+	// worn or wielded thing.
+	NutrientPasteMeal: 10, SmokepopPack: 1, ShieldBelt: 1, RocketLauncher: 1, TripleRocketLauncher: 1,
+	SmokeLauncher: 1, ChargeRifle: 1, ChargeLance: 1, Ikwa: 1}
 
 // StackLimit is how many items of kind k share a tile (StackLimit for a
 // kind without a wiki limit here).

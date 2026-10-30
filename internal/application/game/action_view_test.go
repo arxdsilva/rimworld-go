@@ -500,7 +500,7 @@ func TestCarryingExposesItemKind(t *testing.T) {
 	}
 	st, _ := g.stacks.Get(sid)
 	st.Carrier = id
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	g.jobs.Set(id, job.Record{Kind: job.Haul, State: job.Goto, Carry: sid, DestX: 9, DestY: 5, TX: 9, TY: 5})
 	if got := pawnView(g, id).Carrying; got != "wood" {
 		t.Fatalf("hauling wood: Carrying = %q", got)

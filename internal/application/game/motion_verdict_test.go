@@ -328,7 +328,7 @@ func carryingHauler(t *testing.T) (*Game, entity.EntityID) {
 	sid, _ := g.SpawnStack(item.Wood, 10, 2, 2)
 	st, _ := g.stacks.Get(sid)
 	st.Carrier = id
-	g.stacks.Set(sid, st)
+	g.putStack(sid, st)
 	path, ok := g.pathTo(id, 8, 2)
 	if !ok {
 		t.Fatal("no path to the drop cell")

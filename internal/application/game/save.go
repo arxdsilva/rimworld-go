@@ -971,7 +971,7 @@ func (g *Game) migrateLegacyStone() {
 	for _, id := range g.itemIDs {
 		if st, ok := g.stacks.Get(id); ok && st.Kind == item.Stone {
 			st.Kind = item.GraniteBlocks
-			g.stacks.Set(id, st)
+			g.putStack(id, st)
 		}
 	}
 	for _, id := range g.bldgIDs {

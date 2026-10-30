@@ -89,15 +89,15 @@ func (h careMeals) TakeFood(id, food, patient entity.EntityID) (entity.EntityID,
 	take := min(st.Qty, portionsFor(n.Hunger, st.Kind))
 	if st.Qty <= take {
 		st.Carrier = id
-		g.stacks.Set(food, st)
+		g.putStack(food, st)
 		return food, true
 	}
 	st.Qty -= take
-	g.stacks.Set(food, st)
+	g.putStack(food, st)
 	carry := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, carry)
 	st.Qty, st.Carrier = take, id
-	g.stacks.Set(carry, st)
+	g.putStack(carry, st)
 	return carry, true
 }
 

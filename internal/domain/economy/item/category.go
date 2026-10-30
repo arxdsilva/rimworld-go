@@ -13,9 +13,9 @@ func (k Kind) Category() string {
 		return "Food"
 	case k.IsCorpse(), k == Bones:
 		return "Corpses"
-	case k.IsApparel():
+	case k.IsApparel(), k.IsBelt():
 		return "Apparel"
-	case k.IsWeapon():
+	case k.IsWeapon(), k.IsContractWeapon():
 		return "Weapons"
 	case k.IsMedicine(), k.IsDrug():
 		return "Medicine"

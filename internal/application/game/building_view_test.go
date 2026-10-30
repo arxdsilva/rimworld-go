@@ -177,7 +177,7 @@ func TestItemViewsKeepIdentity(t *testing.T) {
 	}
 	st, _ := g.stacks.Get(wood) // loose wood outside the stockpile: no food, nothing stored
 	st.Qty = 25
-	g.stacks.Set(wood, st)
+	g.putStack(wood, st)
 	c := world()
 	if sameSlice(b.Items, c.Items) || c.Wood != 25 {
 		t.Fatal("a wood stack change kept the item list")
@@ -187,7 +187,7 @@ func TestItemViewsKeepIdentity(t *testing.T) {
 	}
 	st, _ = g.stacks.Get(berries)
 	st.Qty = 4
-	g.stacks.Set(berries, st)
+	g.putStack(berries, st)
 	d := world()
 	if sameMap(c.FoodByKind, d.FoodByKind) || sameSlice(c.Stored, d.Stored) || d.FoodByKind["berries"] != 4 || c.FoodByKind["berries"] != 10 {
 		t.Fatal("a food stack change kept the food totals, or rewrote the old ones")

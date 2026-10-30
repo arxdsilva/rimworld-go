@@ -263,6 +263,22 @@ const (
 	SetFireAtWill
 	SetHoldPosition
 	ThrowGrenade
+	// STO/CBT contract (game ignores them until STO-2, STO-3 and CBT-2
+	// handle them): HaulUrgently marks (Enabled) or unmarks every stack in
+	// X..X2, Y..Y2 to be hauled before other hauling; DropWeapon makes
+	// colonist Pawn drop its weapon where it stands; LinkStorage links
+	// storage building Target into building Zone's storage group (sharing
+	// its settings) and UnlinkStorage takes Target out of its group;
+	// SetStorageSource makes bill Index of the bench at X, Y take its
+	// ingredients only from storage zone or group Zone (0: anywhere in its
+	// radius); SetZoneOverlay shows every zone (Enabled) or only the
+	// selected one's.
+	HaulUrgently
+	DropWeapon
+	LinkStorage
+	UnlinkStorage
+	SetStorageSource
+	SetZoneOverlay
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

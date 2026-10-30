@@ -203,15 +203,7 @@ func (g *Game) progressOf(id entity.EntityID, j job.Record) float64 {
 	return clamp01(1 - float64(j.WorkLeft)/float64(total))
 }
 
-func clamp01(v float64) float64 {
-	switch {
-	case v < 0:
-		return 0
-	case v > 1:
-		return 1
-	}
-	return v
-}
+func clamp01(v float64) float64 { return min(max(v, 0), 1) }
 
 // cycle is progress through a countdown, kept below 1: only a resolved
 // strike reads exactly 1.

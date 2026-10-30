@@ -183,7 +183,7 @@ func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 		g.deleteItem(j.Target)
 	} else {
 		st.Qty -= n
-		g.stacks.Set(j.Target, st)
+		g.putStack(j.Target, st)
 	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)

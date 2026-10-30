@@ -643,15 +643,7 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	a.Path, a.PathI, a.GoalX, a.GoalY = path, 0, gx, gy
 }
 
-func clampInt(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
-}
+func clampInt(v, lo, hi int) int { return min(max(v, lo), hi) }
 
 // moveAnimal takes an animal's next path step if it is due and the way
 // is clear (the animal half of phaseMovement; m, its record, says it

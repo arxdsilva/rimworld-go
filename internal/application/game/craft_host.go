@@ -146,14 +146,14 @@ func (h craftStock) Carry(carrier, stack entity.EntityID, take int) entity.Entit
 	st, _ := g.stacks.Get(stack)
 	if st.Qty <= take {
 		st.Carrier = carrier
-		g.stacks.Set(stack, st)
+		g.putStack(stack, st)
 		return stack
 	}
 	st.Qty -= take
-	g.stacks.Set(stack, st)
+	g.putStack(stack, st)
 	nid := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, nid)
-	g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: carrier, Rot: st.Rot, Dried: st.Dried,
+	g.putStack(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: carrier, Rot: st.Rot, Dried: st.Dried,
 		Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal, Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff})
 	return nid
 }
@@ -175,9 +175,11 @@ func (h craftOutput) Store(carrier entity.EntityID, k item.Kind, x, y int, z uin
 	if !ok || st.Kind != k {
 		return false
 	}
-	dx, dy, ok := g.areaStockpileCell(carrier, k, x, y) // area_dest.go
-	if z != 0 {
+	var dx, dy int
+	if z != 0 { // the bill's zone, else the nearest storage in the area (area_dest.go)
 		dx, dy, ok = g.stockpileCellWhere(k, x, y, func(cx, cy int) bool { id, in := g.zones.At(cx, cy); return in && uint64(id) == z })
+	} else {
+		dx, dy, ok = g.areaStockpileCell(carrier, k, x, y)
 	}
 	return ok && g.startJob(carrier, job.Record{Kind: job.Haul, Target: sid, TX: x, TY: y, DestX: dx, DestY: dy})
 }
@@ -244,7 +246,7 @@ func (h craftWeather) Raining() bool {
 func (h craftWeather) Wet(x, y int) bool {
 	return h.g.isWaterAt(x, y) || h.g.grid.InBounds(x, y) && h.g.terr.At(x, y) == terrain.Marsh
 }
-func (h craftWeather) SetStack(id entity.EntityID, st item.Stack) { h.g.stacks.Set(id, st) }
+func (h craftWeather) SetStack(id entity.EntityID, st item.Stack) { h.g.putStack(id, st) }
 func (h craftWeather) Pos(id entity.EntityID) (int, int, bool) {
 	p, ok := h.g.positions.Get(id)
 	return p.X, p.Y, ok

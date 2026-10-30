@@ -284,7 +284,7 @@ func (g *Game) casketRemains(b construction.Building, v *vaultSave) {
 	g.die(id, health.CauseNone) // combat.go: the body, the weapon beside it
 	if cid, st, ok := g.bodyOf(id); ok {
 		st.Kind = item.Bones // long dead
-		g.stacks.Set(cid, st)
+		g.putStack(cid, st)
 	}
 	g.message(b.X, b.Y, "Old remains lie in the casket, with their gear.")
 }

@@ -187,6 +187,22 @@ const (
 	Uranium
 	Plasteel
 	ReinforcedBarrel
+	// STO/CBT contract (append only, saved; never spawned until STO-2 and
+	// CBT-3 use them). wiki: Nutrient paste meal, Smokepop pack, Shield
+	// belt, Doomsday rocket launcher, Triple rocket launcher, Smoke
+	// launcher, Charge rifle, Charge lance, Ikwa. The single-use rocket
+	// launcher is named plainly. The launchers, rifles and the ikwa are
+	// filed as weapons but IsWeapon (equipping, held sprites) waits for
+	// CBT-3's weapon defs and art; the two belts wait for its belt layer.
+	NutrientPasteMeal
+	SmokepopPack
+	ShieldBelt
+	RocketLauncher
+	TripleRocketLauncher
+	SmokeLauncher
+	ChargeRifle
+	ChargeLance
+	Ikwa
 	numKinds
 )
 
@@ -212,7 +228,9 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"flak vest", "flak pants", "flak jacket", "plate armor", "marine armor", "marine helmet", "simple helmet", "advanced helmet",
 	"mortar shells", "incendiary shells", "EMP shells", "smoke shells",
 	"chemfuel", "wort", "fine meal", "lavish meal", "pemmican", "packaged survival meal", "kibble",
-	"ash flake", "silverdust", "battle tonic", "reagent", "advanced components", "uranium", "plasteel", "reinforced barrel"}
+	"ash flake", "silverdust", "battle tonic", "reagent", "advanced components", "uranium", "plasteel", "reinforced barrel",
+	"nutrient paste meal", "smokepop pack", "shield belt", "rocket launcher", "triple rocket launcher", "smoke launcher",
+	"charge rifle", "charge lance", "ikwa"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -222,6 +240,14 @@ func (k Kind) IsWeapon() bool {
 // IsArmor reports apparel whose job is protection (DEF-2: flak, plate,
 // marine armor and helmets; armor.Apparel has the ratings).
 func (k Kind) IsArmor() bool { return k >= FlakVest && k <= AdvancedHelmet }
+
+// IsContractWeapon reports a weapon kind of the STO/CBT contract
+// (rocket launchers to the ikwa) that CBT-3 makes equippable.
+func (k Kind) IsContractWeapon() bool { return k >= RocketLauncher && k <= Ikwa }
+
+// IsBelt reports belt-layer apparel (the shield belt and the smokepop
+// pack) that CBT-3 makes wearable.
+func (k Kind) IsBelt() bool { return k == SmokepopPack || k == ShieldBelt }
 
 // IsShell reports a mortar shell (DEF-3).
 func (k Kind) IsShell() bool { return k >= MortarShells && k <= SmokeShells }
@@ -239,7 +265,8 @@ var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Meat: 2200, Meal: 6000,
 	Milk: 900, Egg: 700, Brewgrain: 1200,
 	// Wave E, wiki nutrition on the simple meal's scale (0.9 = 6000):
 	// fine and survival meals 0.9, lavish 1.0, pemmican and kibble 0.05.
-	FineMeal: 6000, LavishMeal: 6667, SurvivalMeal: 6000, Pemmican: 333, Kibble: 333}
+	FineMeal: 6000, LavishMeal: 6667, SurvivalMeal: 6000, Pemmican: 333, Kibble: 333,
+	NutrientPasteMeal: 6000} // wiki: Nutrient paste meal (0.9)
 
 // preference ranks food choice: higher is eaten first.
 // Raw grain, dry beans and raw potatoes are edible but unappealing.
@@ -247,7 +274,8 @@ var preference = [numKinds]int{Meal: 4, Food: 3, Berries: 2, Corn: 2, Lettuce: 2
 	Potatoes: 1, Beans: 1, Wheat: 1, Meat: 1, Milk: 2, Egg: 1, Brewgrain: 1,
 	// Wave E: the better the meal the sooner it is eaten; kibble (animal
 	// feed) is left to PRD-4.
-	LavishMeal: 6, FineMeal: 5, SurvivalMeal: 4, Pemmican: 3}
+	LavishMeal: 6, FineMeal: 5, SurvivalMeal: 4, Pemmican: 3,
+	NutrientPasteMeal: 3} // wiki: awful, below the simple meal, above raw food
 
 // Nutrition is the hunger restored by eating one unit of k (0 if inedible).
 func (k Kind) Nutrition() int {
@@ -268,13 +296,13 @@ func (k Kind) Preference() int {
 // Raw reports uncooked food (eating it is unpleasant): not a meal,
 // pemmican or kibble.
 func (k Kind) Raw() bool {
-	return k.IsFood() && k != Food && k != Meal && (k < FineMeal || k > Kibble)
+	return k.IsFood() && k != Food && k != Meal && k != NutrientPasteMeal && (k < FineMeal || k > Kibble)
 }
 
 // Foods lists every edible kind.
 func Foods() []Kind {
 	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg, Brewgrain,
-		FineMeal, LavishMeal, Pemmican, SurvivalMeal, Kibble}
+		FineMeal, LavishMeal, Pemmican, SurvivalMeal, Kibble, NutrientPasteMeal}
 }
 
 // IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
@@ -473,7 +501,7 @@ func (k Kind) Dryable() bool {
 // strips and leaves dry in about a day, juicy fruit, sliced roots and
 // squash take longer, and cooked meals are dried into hard travel cakes.
 var dryDays = [numKinds]float64{Meat: 1, Meal: 1, Lettuce: 0.75, Berries: 2, Radishes: 1.5,
-	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5, FineMeal: 1, LavishMeal: 1}
+	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5, FineMeal: 1, LavishMeal: 1, NutrientPasteMeal: 1}
 
 // DryTicks is how long a batch of k takes to dry at full speed.
 func (k Kind) DryTicks() int {
@@ -558,7 +586,8 @@ var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseR
 	Milk: 3, Egg: 10,
 	// Wave E, wiki days to rot: fine and lavish meals 4, pemmican 70, wort
 	// 5.6 (the survival meal and kibble never rot).
-	FineMeal: 4, LavishMeal: 4, Pemmican: 70, Wort: 5.6}
+	FineMeal: 4, LavishMeal: 4, Pemmican: 70, Wort: 5.6,
+	NutrientPasteMeal: 0.75} // wiki: Nutrient paste meal
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).
 func (k Kind) ShelfTicks() int {

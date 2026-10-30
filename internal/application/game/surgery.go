@@ -703,13 +703,13 @@ func (g *Game) topUpCarry(src, carry entity.EntityID, extra int) {
 	}
 	n := min(extra, s.Qty)
 	c.Qty += n
-	g.stacks.Set(carry, c)
+	g.putStack(carry, c)
 	if n == s.Qty {
 		g.deleteItem(src)
 		return
 	}
 	s.Qty -= n
-	g.stacks.Set(src, s)
+	g.putStack(src, s)
 }
 
 // surgeryDoses is the medicine an operation about to happen uses: the
@@ -741,7 +741,7 @@ func (g *Game) useDoses(id entity.EntityID, j *job.Record, med item.Stack, op bo
 		return
 	}
 	med.Qty -= qty
-	g.stacks.Set(sid, med)
+	g.putStack(sid, med)
 }
 
 // carryingKind reports the job carrying an item of kind k.

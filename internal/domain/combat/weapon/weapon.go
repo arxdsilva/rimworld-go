@@ -64,6 +64,16 @@ const (
 	MechBlades
 	PulseLance
 	NeedleCaster
+	// STO/CBT contract (append only, saved in shots and logs): the carried
+	// gear CBT-3 adds, one per item of the same name (item.RocketLauncher
+	// to item.Ikwa, ForItem). No def rows yet: CBT-3 writes them with the
+	// wiki numbers and flips item.IsWeapon, so nobody wields one before.
+	RocketLauncher
+	TripleRocketLauncher
+	SmokeLauncher
+	ChargeRifle
+	ChargeLance
+	Ikwa
 	numKinds
 )
 
@@ -354,6 +364,8 @@ func ForItem(k item.Kind) Kind {
 		return Rifle
 	case k >= item.Mace && k <= item.EMPLauncher:
 		return Mace + Kind(k-item.Mace)
+	case k.IsContractWeapon(): // same order in both enums
+		return RocketLauncher + Kind(k-item.RocketLauncher)
 	}
 	return Fists
 }

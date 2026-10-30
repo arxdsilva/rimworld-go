@@ -320,13 +320,13 @@ func (h combatSupply) PickUp(id, stack entity.EntityID, qty int) (entity.EntityI
 	carry, take := stack, min(st.Qty, max(1, qty))
 	if st.Qty > take { // split off what is carried, as refuelling does (fuel.go)
 		st.Qty -= take
-		g.stacks.Set(stack, st)
+		g.putStack(stack, st)
 		carry = g.entities.Next()
 		g.itemIDs = append(g.itemIDs, carry)
-		g.stacks.Set(carry, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id})
+		g.putStack(carry, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id})
 	} else {
 		st.Carrier = id
-		g.stacks.Set(stack, st)
+		g.putStack(stack, st)
 	}
 	return carry, st.Kind, take, true
 }

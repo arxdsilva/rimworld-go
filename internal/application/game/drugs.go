@@ -360,7 +360,7 @@ func (g *Game) doIngest(id entity.EntityID, j job.Record) {
 	if st.Qty <= 0 {
 		g.deleteItem(j.Target)
 	} else {
-		g.stacks.Set(j.Target, st)
+		g.putStack(j.Target, st)
 	}
 	if g.ingestDose(id, k) {
 		return // died of an overdose: die cancelled the job

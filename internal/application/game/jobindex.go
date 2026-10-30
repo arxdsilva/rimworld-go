@@ -30,10 +30,6 @@ type jobIndexes struct {
 	marks idSet
 	// cands, scanCands: nearestPlant scratch.
 	cands, scanCands []plantCand
-	// loose, looseCells: stockpileCell scratch (first loose item per
-	// stockpile tile, and the tiles written).
-	loose      []entity.EntityID
-	looseCells []int32
 	// plantGen counts changes to the plant list (spawnPlant, removePlant,
 	// the frost pass): the food index keeps its plant grid while it holds.
 	plantGen uint64
@@ -91,9 +87,7 @@ func (g *Game) warmIndexes(rooms bool) {
 	g.bldgIndex()
 	g.frameIndex()
 	g.plantMarks()
-	if n := g.grid.Width() * g.grid.Height(); len(g.idx.jobs.loose) != n {
-		g.idx.jobs.loose = make([]entity.EntityID, n) // stockpileCell's scratch
-	}
+	g.idx.ground.Warm(haulHost{g}) // the stacks per cell (game/haul)
 	if rooms {
 		g.ensureRooms()
 	}
@@ -205,42 +199,6 @@ func (g *Game) checkPlantCands(id entity.EntityID, k job.Kind, want func(plant.P
 	if !slices.Equal(cs, scan) {
 		panic(fmt.Sprintf("nearestPlant(%d, %v): index %v, scan %v", id, k, cs, scan))
 	}
-}
-
-// ---- stockpiles ----
-
-// looseOnStockpiles fills the per-tile scratch with the first loose
-// (uncarried) item on every stockpile tile, in item-list order (as
-// itemAt), and returns it; releaseLoose clears it again.
-func (g *Game) looseOnStockpiles() []entity.EntityID {
-	jx := &g.idx.jobs
-	w, n := g.grid.Width(), g.grid.Width()*g.grid.Height()
-	if len(jx.loose) != n {
-		jx.loose, jx.looseCells = make([]entity.EntityID, n), jx.looseCells[:0]
-	}
-	for _, iid := range g.itemIDs {
-		st := g.stacks.Ref(iid)
-		if st == nil || st.Carrier != 0 {
-			continue
-		}
-		if _, zoned := g.storageAt(st.X, st.Y); !zoned { // stockpiles and dumps (PLAY-023)
-			continue
-		}
-		c := st.Y*w + st.X
-		if uint(c) < uint(n) && jx.loose[c] == 0 {
-			jx.loose[c] = iid
-			jx.looseCells = append(jx.looseCells, int32(c))
-		}
-	}
-	return jx.loose
-}
-
-func (g *Game) releaseLoose() {
-	jx := &g.idx.jobs
-	for _, c := range jx.looseCells {
-		jx.loose[c] = 0
-	}
-	jx.looseCells = jx.looseCells[:0]
 }
 
 // ---- animals ----

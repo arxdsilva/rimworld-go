@@ -223,5 +223,6 @@ func equalBuildingView(a, b *BuildingView) bool {
 		a.Comfort == b.Comfort && a.RestEffect == b.RestEffect && a.Beauty == b.Beauty &&
 		a.Facilities == b.Facilities && a.Forbidden == b.Forbidden && a.HoldOpen == b.HoldOpen && a.HasTarget == b.HasTarget &&
 		a.HoldFire == b.HoldFire && a.Barrel == b.Barrel && a.Shells == b.Shells && a.TargetX == b.TargetX &&
-		a.TargetY == b.TargetY && a.WorkSpeed == b.WorkSpeed && slices.Equal(a.Linked, b.Linked)
+		a.TargetY == b.TargetY && a.WorkSpeed == b.WorkSpeed && slices.Equal(a.Linked, b.Linked) &&
+		a.Group == b.Group && a.Stored == b.Stored && a.Capacity == b.Capacity
 }

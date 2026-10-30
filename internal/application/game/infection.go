@@ -103,13 +103,13 @@ func (g *Game) pickUpItem(id entity.EntityID, j *job.Record, accept func(item.Ki
 		carry := j.Dest
 		if st.Qty > 1 {
 			st.Qty--
-			g.stacks.Set(j.Dest, st)
+			g.putStack(j.Dest, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			g.stacks.Set(carry, item.Stack{Kind: st.Kind, Qty: 1, X: st.X, Y: st.Y, Carrier: id})
+			g.putStack(carry, item.Stack{Kind: st.Kind, Qty: 1, X: st.X, Y: st.Y, Carrier: id})
 		} else {
 			st.Carrier = id
-			g.stacks.Set(j.Dest, st)
+			g.putStack(j.Dest, st)
 		}
 		j.Carry = carry
 	}

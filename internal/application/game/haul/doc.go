@@ -1,7 +1,8 @@
 // Package haul is stockpile hauling's own rules (HAUL-002): the load a
 // hauler gathers from nearby piles before it delivers (Plan, Gather), the
-// room a storage cell has for a load (Cell, Capacity, Toppable) and the
-// load split off a pile (SplitLoad).
+// room a storage cell has for a load (Cell, Capacity, Toppable), the load
+// split off a pile (SplitLoad) and the stacks lying on each cell (Ground,
+// STO-1).
 //
 // It is a consumer sub-package of internal/application/game
 // (.cursor/SOLID_GO.md §10): it never imports the game package. What it

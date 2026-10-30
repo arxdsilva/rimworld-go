@@ -206,6 +206,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.cmdStockpile(c) // zones.go (PRD-4): storage filters
 	case command.SetFireAtWill, command.SetHoldPosition, command.ThrowGrenade:
 		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4): drafted control
+	case command.HaulUrgently, command.DropWeapon, command.LinkStorage, command.UnlinkStorage, command.SetStorageSource,
+		command.SetZoneOverlay: // STO/CBT contract: ignored until STO-2, STO-3 and CBT-2 handle them
 	}
 }
 
@@ -904,16 +906,10 @@ func haulCands(g *Game, id entity.EntityID, k item.Kind) {
 
 // haulRoom is how much of kind k storage cell (x, y) still takes.
 func haulRoom(g *Game, k item.Kind, x, y int) int {
-	var c haul.Cell
-	for _, iid := range g.itemIDs {
-		if o := g.stacks.Ref(iid); o != nil && o.Carrier == 0 && o.X == x && o.Y == y {
-			c.Add(o.Kind == k, o.Qty)
-		}
-	}
 	if g.onShelf(x, y) {
-		return c.Room(k.StackLimit(), zone.ShelfStacks)
+		return g.idx.ground.Room(haulHost{g}, k, x, y, zone.ShelfStacks)
 	}
-	return c.Room(k.StackLimit(), 1)
+	return g.idx.ground.Room(haulHost{g}, k, x, y, 1)
 }
 
 // haulHost is game/haul's Host (HAUL-002).
@@ -921,7 +917,12 @@ type haulHost struct{ g *Game }
 
 func haulGather(g *Game) haul.Gather                           { return haul.NewGather(haulHost{g}) }
 func (h haulHost) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
-func (h haulHost) SetStack(id entity.EntityID, st item.Stack)  { h.g.stacks.Set(id, st) }
+func (h haulHost) SetStack(id entity.EntityID, st item.Stack)  { h.g.putStack(id, st) }
+func (h haulHost) ItemIDs() []entity.EntityID                  { return h.g.itemIDs }
+func (h haulHost) StackRef(id entity.EntityID) *item.Stack     { return h.g.stacks.Ref(id) }
+func (h haulHost) Store() any                                  { return h.g.stacks }
+func (h haulHost) MapSize() (int, int)                         { return h.g.grid.Width(), h.g.grid.Height() }
+func (h haulHost) SelfCheck() bool                             { return selfCheck() }
 func (h haulHost) DeleteItem(id entity.EntityID)               { h.g.deleteItem(id) }
 func (h haulHost) Release(owner, target entity.EntityID)       { h.g.reserve.ReleaseEntity(owner, target) }
 func (h haulHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
@@ -1174,7 +1175,7 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		g.deleteItem(j.Target)
 		j.Carry = 0
 	} else {
-		g.stacks.Set(j.Target, st) // leftovers: dropped where it ate
+		g.putStack(j.Target, st) // leftovers: dropped where it ate
 	}
 	g.lastMeal[id] = st.Kind
 	g.afterEat(id, st) // rooms.go: thoughts, and the meal's food poisoning roll
@@ -1210,14 +1211,14 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 		carry := j.Target
 		if take < st.Qty { // split off one load, leave the rest
 			st.Qty -= take
-			g.stacks.Set(j.Target, st)
+			g.putStack(j.Target, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
 			st = haul.SplitLoad(st, take)
 		}
 		st.Carrier = id
 		claim(&st) // haul_claim.go: picked up, the colony's
-		g.stacks.Set(carry, st)
+		g.putStack(carry, st)
 		j.Carry = carry
 		if len(j.Route) > 0 {
 			g.trimDelivery(id, take)
@@ -1286,7 +1287,7 @@ func (g *Game) finishHaulDrop(id entity.EntityID, j job.Record) {
 		} else {
 			pos, _ := g.positions.Get(id)
 			st.X, st.Y = pos.X, pos.Y
-			g.stacks.Set(j.Carry, st)
+			g.putStack(j.Carry, st)
 		}
 	} else {
 		g.mergeOrSet(j.Carry, st)
@@ -1586,7 +1587,7 @@ func (g *Game) stepPawn(id entity.EntityID, m *motionRec, carry entity.EntityID,
 	if carry != 0 {
 		if st, ok := g.stacks.Get(carry); ok {
 			st.X, st.Y = to.X, to.Y
-			g.stacks.Set(carry, st)
+			g.putStack(carry, st)
 		}
 	}
 }
@@ -1600,16 +1601,21 @@ func (g *Game) arrive(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
-func (g *Game) itemAt(x, y int) entity.EntityID {
-	for _, id := range g.itemIDs {
-		if st := g.stacks.Ref(id); st != nil && st.Carrier == 0 && st.X == x && st.Y == y {
-			return id
-		}
+// itemAt is the first stack lying loose on (x, y), in item-list order
+// (the ground index, game/haul).
+func (g *Game) itemAt(x, y int) entity.EntityID { return g.idx.ground.First(haulHost{g}, x, y) }
+
+// putStack stores stack id, telling the ground index when it spawns, is
+// set down, picked up or moved (every write to the item store).
+func (g *Game) putStack(id entity.EntityID, st item.Stack) {
+	if o := g.stacks.Ref(id); o == nil || (o.Carrier == 0) != (st.Carrier == 0) || st.Carrier == 0 && (o.X != st.X || o.Y != st.Y) {
+		g.idx.ground.Moved()
 	}
-	return 0
+	g.stacks.Set(id, st)
 }
 
 func (g *Game) deleteItem(id entity.EntityID) {
+	g.idx.ground.Moved()
 	g.stacks.Delete(id)
 	g.itemIDs = dropIDs(g.itemIDs, func(iid entity.EntityID) bool { return iid == id })
 }
@@ -1631,7 +1637,7 @@ type spillStep struct{ x, y, qty int }
 func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillStep) {
 	here := spillStep{st.X, st.Y, st.Qty}
 	if slices.Contains(seen, here) {
-		g.stacks.Set(id, st)
+		g.putStack(id, st)
 		return
 	}
 	seen = append(seen, here)
@@ -1647,12 +1653,12 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			return
 		}
 	}
-	for _, oid := range g.itemIDs {
+	for _, oid := range g.idx.ground.Loose(haulHost{g}, st.X, st.Y) { // CanMerge: a loose stack on the tile
 		if oid == id {
 			continue
 		}
 		op := g.stacks.Ref(oid)
-		if op == nil || !item.CanMerge(st, *op) {
+		if !item.CanMerge(st, *op) {
 			continue
 		}
 		other := *op // copied before the store changes below
@@ -1664,14 +1670,14 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			other.Rot = item.MergeRot(other.Qty, other.Rot, st.Qty, st.Rot)
 			other.Poison = item.MergePoison(other.Qty, other.Poison, st.Qty, st.Poison) // food_poison.go
 			other.Qty += st.Qty
-			g.stacks.Set(oid, other)
+			g.putStack(oid, other)
 			g.deleteItem(id)
 			return
 		}
 		other.Rot = item.MergeRot(other.Qty, other.Rot, room, st.Rot)
 		other.Poison = item.MergePoison(other.Qty, other.Poison, room, st.Poison)
 		other.Qty = other.Kind.StackLimit()
-		g.stacks.Set(oid, other)
+		g.putStack(oid, other)
 		st.Qty -= room
 		break
 	}
@@ -1682,19 +1688,7 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			return
 		}
 	}
-	g.stacks.Set(id, st)
-}
-
-func (g *Game) otherStackAt(id entity.EntityID, x, y int) bool {
-	for _, oid := range g.itemIDs {
-		if oid == id {
-			continue
-		}
-		if o := g.stacks.Ref(oid); o != nil && o.Carrier == 0 && o.X == x && o.Y == y {
-			return true
-		}
-	}
-	return false
+	g.putStack(id, st)
 }
 
 // spillTile is the nearest walkable tile around (x, y) with no stack or
