@@ -1,6 +1,9 @@
 package ebiten
 
 import (
+	"log"
+
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
@@ -106,7 +109,16 @@ func (s optionsSaver) Save(slot string) error {
 	if s.a.renderer == nil {
 		return nil
 	}
-	return s.a.saveHook()(s.a.renderer.game, slot)
+	if err := s.a.saveHook()(s.a.renderer.game, slot); err != nil {
+		return err
+	}
+	if h := s.a.cfg.Saves.SaveView; h != nil { // VIEW-001: the camera rides beside the save
+		v := s.a.renderer.cam.View(s.a.mapViewport())
+		if err := h(slot, v); err != nil {
+			log.Printf("save camera view: %v", err)
+		}
+	}
+	return nil
 }
 
 // List reads the save list.
@@ -120,6 +132,11 @@ func (s optionsSaver) Load(path string) (string, clock.Tick, error) {
 	}
 	s.a.dropSession()
 	s.a.startSession(sim)
+	if h := s.a.cfg.Saves.LoadView; h != nil && s.a.renderer != nil {
+		if v, ok := h(path); ok {
+			s.a.renderer.cam.Resume(v)
+		}
+	}
 	return slot, sim.Tick(), nil
 }
 
@@ -260,6 +277,10 @@ type SaveHooks struct {
 	// SaveCommit saves a commitment-mode colony to its one slot (NG-1 §2.13);
 	// nil falls back to Save.
 	SaveCommit func(sim Simulation, slot string) error
+	// SaveView and LoadView keep the camera beside a save (VIEW-001); nil
+	// leaves the camera to centre as before.
+	SaveView func(slot string, v camerapkg.View) error
+	LoadView func(path string) (camerapkg.View, bool)
 }
 
 // commitment reports a commitment colony is running (read through the

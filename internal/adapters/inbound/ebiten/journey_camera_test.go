@@ -7,6 +7,7 @@ import (
 
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -257,5 +258,39 @@ func TestJourneyCameraBarDoubleClickCentres(t *testing.T) {
 	sx, sy := r.worldToScreenF(float64(p.X)+0.5, float64(p.Y)+0.5)
 	if math.Abs(float64(sx)-(mv.X0+mv.X1)/2) > r.cam.Tile() || math.Abs(float64(sy)-(mv.Y0+mv.Y1)/2) > r.cam.Tile() {
 		t.Fatalf("after the double click the colonist is at (%v, %v), not the viewport centre (%v, %v)", sx, sy, (mv.X0+mv.X1)/2, (mv.Y0+mv.Y1)/2)
+	}
+}
+
+// TestJourneyCameraRestoredOnLoad: a save remembers where the camera looked
+// and how far in, and loading it puts the view back.
+func TestJourneyCameraRestoredOnLoad(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t, jSize(60, 60))
+	views := map[string]camerapkg.View{}
+	j.a.cfg.Saves = SaveHooks{
+		Save: func(Simulation, string) error { return nil },
+		Load: func(string) (Simulation, string, error) {
+			return game.New(game.Config{Seed: 1, Width: 60, Height: 60}), "s", nil
+		},
+		SaveView: func(slot string, v camerapkg.View) error { views[slot] = v; return nil },
+		LoadView: func(path string) (camerapkg.View, bool) { v, ok := views[path]; return v, ok },
+	}
+	j.draw(1)
+	r := j.a.renderer
+	r.cam.OffsetX += 200
+	r.cam.OffsetY += 150
+	j.draw(1)
+	want := r.cam.View(j.a.mapViewport())
+	if err := (optionsSaver{j.a}).Save("s"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := (optionsSaver{j.a}).Load("s"); err != nil {
+		t.Fatal(err)
+	}
+	j.update(1)
+	j.draw(2)
+	got := j.a.renderer.cam.View(j.a.mapViewport())
+	if math.Abs(got.CX-want.CX) > 0.01 || math.Abs(got.CY-want.CY) > 0.01 || got.Zoom != want.Zoom {
+		t.Fatalf("after load %+v, want %+v", got, want)
 	}
 }

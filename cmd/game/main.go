@@ -16,6 +16,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
+	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/outbound/ebitenaudio"
 	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/adapters/outbound/scenariofile"
@@ -575,6 +576,13 @@ func saveHooks() uiadapter.SaveHooks {
 				out = append(out, s)
 			}
 			return out, err
+		},
+		SaveView: func(slot string, v camerapkg.View) error {
+			return store.SaveView(slot, filesave.ViewFile{CX: v.CX, CY: v.CY, Zoom: v.Zoom})
+		},
+		LoadView: func(path string) (camerapkg.View, bool) {
+			f, ok := store.LoadView(path)
+			return camerapkg.View{CX: f.CX, CY: f.CY, Zoom: f.Zoom}, ok
 		},
 		Load: func(path string) (uiadapter.Simulation, string, error) {
 			g, info, err := store.Load(path)

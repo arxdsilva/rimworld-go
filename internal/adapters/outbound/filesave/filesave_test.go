@@ -129,3 +129,40 @@ func TestListAcceptsV1AndV2(t *testing.T) {
 		}
 	}
 }
+
+func TestViewSidecarRoundTrip(t *testing.T) {
+	s := Store{Dir: t.TempDir()}
+	g := game.NewColony(game.Config{Seed: 4, Width: 40, Height: 30})
+	path, err := s.Save(g, "My colony")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.LoadView(path); ok {
+		t.Fatal("an old save with no sidecar has no view")
+	}
+	if _, _, err := s.Load(path); err != nil {
+		t.Fatalf("a save without a sidecar loads: %v", err)
+	}
+	want := ViewFile{CX: 12.25, CY: 7.5, Zoom: 1.75}
+	if err := s.SaveView("My colony", want); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := s.LoadView(path); !ok || got != want {
+		t.Fatalf("view %+v %v, want %+v", got, ok, want)
+	}
+	slots, err := s.List()
+	if err != nil || len(slots) != 1 {
+		t.Fatalf("the sidecar is not a save: %+v %v", slots, err)
+	}
+	os.WriteFile(filepath.Join(s.Dir, "My-colony"+ViewExt), []byte("{bad"), 0o644)
+	if _, ok := s.LoadView(path); ok {
+		t.Fatal("a corrupt sidecar reads as missing")
+	}
+	os.WriteFile(filepath.Join(s.Dir, "My-colony"+ViewExt), []byte(`{"CX":1,"CY":1,"Zoom":0}`), 0o644)
+	if _, ok := s.LoadView(path); ok {
+		t.Fatal("a zero zoom is invalid")
+	}
+	if left, _ := filepath.Glob(filepath.Join(s.Dir, "*.tmp")); len(left) != 0 {
+		t.Fatalf("temp files left: %v", left)
+	}
+}

@@ -4,9 +4,11 @@
 package filesave
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -154,4 +156,67 @@ func (s Store) Load(path string) (*game.Game, game.SaveInfo, error) {
 	}
 	defer f.Close()
 	return game.Load(f)
+}
+
+// ViewExt is the extension of the camera sidecar written beside a save.
+const ViewExt = ".rwview"
+
+// ViewFile is the camera as the sidecar stores it: the world point at the
+// middle of the screen in tiles, and the zoom (never pixel offsets, so it
+// survives another window size or screen density).
+type ViewFile struct {
+	CX, CY, Zoom float64
+}
+
+func viewPath(savePath string) string {
+	return strings.TrimSuffix(savePath, Ext) + ViewExt
+}
+
+// SaveView writes the camera sidecar for slot atomically (temp file and
+// rename), replacing any earlier one.
+func (s Store) SaveView(slot string, v ViewFile) error {
+	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
+		return fmt.Errorf("create saves folder: %w", err)
+	}
+	slot = sanitize(slot)
+	data, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("encode view: %w", err)
+	}
+	tmp, err := os.CreateTemp(s.Dir, slot+ViewExt+"-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create view: %w", err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return fmt.Errorf("write view: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("write view: %w", err)
+	}
+	if err := os.Rename(tmp.Name(), filepath.Join(s.Dir, slot+ViewExt)); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("store view: %w", err)
+	}
+	return nil
+}
+
+// LoadView reads the camera sidecar beside the save at savePath. A missing,
+// unreadable or invalid file reports false: the save loads as it always did.
+func (s Store) LoadView(savePath string) (ViewFile, bool) {
+	data, err := os.ReadFile(viewPath(savePath))
+	if err != nil {
+		return ViewFile{}, false
+	}
+	var v ViewFile
+	if json.Unmarshal(data, &v) != nil {
+		return ViewFile{}, false
+	}
+	fin := func(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
+	if !fin(v.CX) || !fin(v.CY) || !fin(v.Zoom) || v.Zoom <= 0 {
+		return ViewFile{}, false
+	}
+	return v, true
 }

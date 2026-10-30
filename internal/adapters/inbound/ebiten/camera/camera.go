@@ -78,6 +78,43 @@ type Camera struct {
 	// multiplied by (PLAY-012: the map renders at physical resolution);
 	// 0 means 1, as in a bake's camera (lod.go withBake). SyncDev sets it.
 	Dev float64
+	// pend is a view Resume queued for the next Clamp (a loaded save's).
+	pend    View
+	hasPend bool
+}
+
+// View is where a camera looks, independent of pixel size, screen density
+// and window size: the world point at the middle of the viewport in tiles,
+// and the apparent zoom. It is what a save remembers (VIEW-001).
+type View struct{ CX, CY, Zoom float64 }
+
+// View is the world point at the middle of v, in tiles, with the zoom.
+func (c Camera) View(v Viewport) View {
+	t := c.Tile()
+	if t <= 0 {
+		return View{}
+	}
+	return View{
+		CX:   (c.OffsetX + (v.X0+v.X1)/2) / t,
+		CY:   (c.OffsetY + (v.Y0+v.Y1)/2) / t,
+		Zoom: c.Zoom,
+	}
+}
+
+// Valid reports the view is finite with a positive zoom.
+func (w View) Valid() bool {
+	ok := func(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
+	return ok(w.CX) && ok(w.CY) && ok(w.Zoom) && w.Zoom > 0
+}
+
+// Resume queues w for the next Clamp, which places the camera there
+// (clamped to the zoom limits and the map) instead of centring it. An
+// invalid view is ignored, leaving the usual centring.
+func (c *Camera) Resume(w View) {
+	if !w.Valid() {
+		return
+	}
+	c.pend, c.hasPend, c.Placed = w, true, false
 }
 
 // Tile is the on-screen size of one Tile in physical pixels.
@@ -305,9 +342,18 @@ func (c *Camera) Clamp(v Viewport, mapW, mapH int, landing [2]int) {
 	if mz := c.MinZoomFor(v, mapW, mapH); c.Zoom < mz {
 		c.Zoom = mz
 	}
+	if c.hasPend && !c.Placed {
+		c.Zoom = math.Max(c.MinZoomFor(v, mapW, mapH), math.Min(c.pend.Zoom, MaxZoom))
+	}
 	t := c.Tile()
 	mw, mh := float64(mapW)*t, float64(mapH)*t
-	if !c.Placed {
+	if !c.Placed && c.hasPend {
+		c.Placed, c.hasPend = true, false
+		cx := math.Max(0, math.Min(c.pend.CX, float64(mapW))) * t
+		cy := math.Max(0, math.Min(c.pend.CY, float64(mapH))) * t
+		c.OffsetX = cx - (v.X0+v.X1)/2
+		c.OffsetY = cy - (v.Y0+v.Y1)/2
+	} else if !c.Placed {
 		c.Placed = true
 		cx, cy := mw/2, mh/2
 		if landing != [2]int{} && landing != [2]int{mapW / 2, mapH / 2} {
