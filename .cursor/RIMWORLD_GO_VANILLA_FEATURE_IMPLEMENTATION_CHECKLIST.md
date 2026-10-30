@@ -488,7 +488,7 @@ This is the heart of autonomous colony behavior.
         items/buildings/apparel/weapons/art.
     -   Quality affected by creator skill and other factors.
     -   Exact RimWorld probabilities need not be copied.
--   [x] **Item hit points/deterioration** (PRD-2: item HP, 2 HP/day outdoors (original tuning), rain x5, water x3, roofed 0, metal and stone immune, quality factor; no shelves yet (PRD-4))
+-   [x] **Item hit points/deterioration** (PRD-2: item HP, 2 HP/day outdoors (original tuning), rain x5, water x3, roofed 0, metal and stone immune, quality factor; shelves hold items and stop deterioration since PRD-4)
     -   Items can take damage.
     -   Outdoor/unroofed or unsuitable storage can cause deterioration
         where applicable.
@@ -954,7 +954,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.3 Injuries
 
--   [x] **Damage types** (SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage; DEF-1/DEF-2: armor resolution and bomb, flame and EMP explosion damage)
+-   [-] **Damage types** (wound kind comes from the attacker's current weapon at impact and most weapons bruise, so they never bleed: CBT-1 carries kind and type on the shot; SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage; DEF-1/DEF-2: armor resolution and bomb, flame and EMP explosion damage)
     -   Blunt.
     -   sharp.
     -   burn.
@@ -1312,7 +1312,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.1 Equipment
 
--   [x] **Single equipped primary weapon**
+-   [-] **Single equipped primary weapon** (no drop-weapon command and no spare-weapon slot; a wielded weapon loses its quality and stuff on equip: CBT-2 adds the command and slot, CBT-3 keeps quality and stuff)
     -   Equip/drop.
     -   weapon stats.
     -   melee fallback for ranged weapons.
@@ -1414,7 +1414,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.5 Melee
 
--   [x] **Adjacent melee combat**
+-   [-] **Adjacent melee combat** (a ranged weapon shoots point-blank instead of striking with its stock: CBT-2 adds melee-with-gun)
     -   Pawns next to hostile target use melee even if holding ranged
         weapon, matching vanilla's core behavior. citeturn2search1
 -   [x] **Melee hit chance**
@@ -2909,7 +2909,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [-] Start with generated colonists and supplies. (Ada/Bo/Cora + food/wood/plants; wizard does not change kit)
 -   [-] Build shelter. (wood walls; no rooms/roofs) (SIM-018: roofed rooms now built)
 -   [-] Assign beds. (claim on Sleep)
--   [-] Create stockpile. (food+wood paint)
+-   [-] Create stockpile. (filter tree, names, copy/paste, shelves; deeper tree, specials, linked groups and hoppers: STO-2, STO-3)
 -   [x] Grow crops.
 -   [ ] Hunt animals.
 -   [ ] Cook food.

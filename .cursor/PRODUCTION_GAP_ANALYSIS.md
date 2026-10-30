@@ -135,6 +135,45 @@ Filled in wave A from the wiki research. Each row becomes a named constant with 
 
 **PRD-4, catalogue and stockpiles.** The full recipe catalogue (meals, weapons, apparel and armor from DEF-2 defs, drugs, smelting, chemfuel, advanced components) with item art. The stockpile filter tree, special filters, quality and HP ranges, copy and paste, names and shelves. Moves: vanilla 6.3 Storage filters, 14.3 entries above; UI 6.2.
 
+## 5a. Stockpile and storage gaps (STO-0..STO-3) and reservations (RES-1)
+
+Added 2026-10-30 after PRD-4. Programme: STO-1 storage index (behaviour-neutral, state hashes unchanged), RES-1 reservations, STO-2 stockpile simulation, STO-3 stockpile UI. ENG-003 applies: published wiki numbers, original names and prose. Paths are under `internal/` and `game/` is `application/game/`; find the function, since line numbers drift. Every row is `open` unless it says otherwise. Wiki pages used: Stockpile zone, Shelf, Hopper, Nutrient paste dispenser (the Shelf page gives the linked-storage facts; the others are thin).
+
+### 5a.1 Stockpile and storage rows
+
+| # | Vanilla behaviour | Today | Gap | Phase | State |
+|---|---|---|---|---|---|
+| 1 | Allow all and clear all buttons on a storage filter. | No bulk control in the storage window. | Two commands and two buttons. | STO-2 (command), STO-3 (UI) | open |
+| 2 | A search box filters the category tree. | None. | Text filter over the tree rows. | STO-3 | open |
+| 3 | Deep category tree (Foods > Raw food > Plant matter / Meat), plus human corpses, bones, body parts and unfinished items. | Depth 0..2 in `domain/building/zone/filter.go` (about lines 103-182); `categories()` says human corpses and bones are not storable (about lines 100-102, 252). | Deeper tree and the four missing categories. | STO-2, STO-3 | open |
+| 4 | Special filters: allow fresh, non-deadman's apparel, smeltable, burnable, grave corpse filters. | Only rotten, tainted, HP range and quality range (`filter.go` about lines 338-466). | Five specials. | STO-2, STO-3 | open |
+| 5 | Vanilla defaults for a new stockpile (check against the wiki: no corpses, no chunks, rotten off). | New stockpile is Food, Wood, Stone and all goods including corpses and chunks, rotten allowed (`game/zones.go` about line 88; `filter.go` about lines 268-290, 333-335). To verify. | Defaults for new zones, keeping old saves' settings. | STO-2 | open |
+| 6 | Shelf priority control. | None; the zone pane is unreachable for shelves. | Priority control for shelves and groups. | STO-3 | open |
+| 7 | Hopper and nutrient paste dispenser (wiki: raw food only, one stack per hopper, up to 13 hoppers per dispenser, default priority Important, steel 15, work 300; the dispenser makes paste meals). | Neither exists. | Two buildings, a paste meal item (original name), a dispenser feed rule, art. | STO-2, STO-3 | open |
+| 8 | Sarcophagus as corpse storage. | Not present. | Building plus corpse filter and priority. | STO-2, STO-3 | open |
+| 9 | Grave storage settings and priority. | `game/burial.go` (about lines 279-434) takes human bodies and bones only. | Filter and priority on graves. | STO-2, STO-3 | open |
+| 10 | Wiki stack limits per item kind. | `domain/economy/item/item.go` `StackLimit` 1000 (about line 403); only wave E kinds have wiki limits (`value.go` about lines 57-74). | Wiki limits for older kinds (golden re-pin). | STO-2 | open |
+| 11 | Full indicator, capacity readout, item counts per stockpile and shelf. | None on the zone pane. | Read-model fields and readouts. | STO-3 | open |
+| 12 | Haul urgently designation. | None. | Designator plus haul priority. | STO-2 | open |
+| 13 | Linked storage groups (wiki Shelf: shift-select, Link settings gizmo, shared settings of the first shelf, rename, bills can target a group). | None. | Group model, link and unlink commands, shared filter, name, bill target. | STO-2, STO-3 | open |
+| 14 | Bill takes ingredients from a chosen stockpile; dumping stockpiles and shelves as store targets. | `adapters/inbound/ebiten/inspector/bill_config.go` about lines 154-157 lists only "stockpile". | Source selector and wider store targets. | RES-1 (source and claims), STO-2, STO-3 | open |
+| 15 | Global zones overlay toggle and per-zone colours. | `zones_draw.go` about lines 147-168: one colour per zone kind. | Toggle action, palette. | STO-3 | open |
+| 16 | Fast storage lookup. | `game/zones.go` `storageCell` walks all zones; `looseOnStockpiles` (`jobindex.go`) is an O(items) scan; `shelfLoads` (`zones.go`) a second scan plus a map; per-tile O(items) scans in `itemAt`, `mergeOrSetFrom`, `otherStackAt`, `spillTile`, `cellFull`, `haulRoom`. No per-cell item index, no generation counter. Cheap wins: `roomAbove` runs a full `storageCell` only to test existence; `craftOutput.Store` computes twice when a bill names a zone. | Per-cell item index (the `indexes.go` cellSlots pattern), per-zone cell lists by priority keyed on `zone.Map.Ver()`; hashes in `TestScaleGolden` and `TestGrownGolden` stay unchanged. | STO-1 | open |
+| 17 | Bugs: UI and filters honest. | Zone pane "Accepts" line reads legacy flags (`zone_select.go` about lines 266-297); forced hauls, construction leftovers (`haul_route.go` about lines 200, 405, 421-433) and bill products (`craft_host.go` about lines 178-180) ignore special filters. | Read the real filter; honour specials on all three paths. | STO-2 (filters), STO-3 (Accepts line) | open |
+
+Shelf facts from the wiki (Shelf): 2x1, 3 stacks per tile, cannot hold chunks, minified things, plants or corpses above body size 0.75, protects from deterioration, beauty 0.5, cover 40 %, default priority Preferred. These already hold for PRD-4 shelves.
+
+### 5a.2 Reservations (RES-1)
+
+| # | Vanilla behaviour | Today | Gap | Phase | State |
+|---|---|---|---|---|---|
+| R1 | A pawn reserves only what it takes: several pawns share a stack, each claiming a count. | `domain/ai/reservation/reservation.go` (150 lines): `entityOwner` and `tileOwner` maps, `TryEntity`, `TryTile`, `Claim`, whole claims only. Whole-stack claims everywhere: `food.go` `bestFood`, `craft/gather.go`, `craft/shop.go` (bench plus route stacks), `haul/gather.go` `ClaimAll` (piles), `care/tend.go` and `surgery.go` (medicine). | Count claims (`TryCount`, `Free`) coexisting up to the stack quantity, a whole claim still excluding all; `Claim.Count` saved. Partial claims for eating, hauling pickups, bill ingredients, medicine; pickup releases the count. | RES-1 | open |
+| R2 | A workstation's interaction cell is reserved while a bill or research job runs. | The bench is claimed (refuel claims it, `fuel.go`); the interaction cell is occupancy only. | A bill or research job claims the interaction cell. | RES-1 | open |
+| R3 | A claim ends when its target disappears. | `deleteItem` (`tick.go`), `removeBuilding` (`placement.go`), `removePlant` (`world.go`), `removeAnimal` and a dead pawn do not release. Only `fire.go`, `frame_view.go` and `casket.go` do. No `ReleaseTarget` or `ReleaseTile`; `ReleaseEntity` is O(n). | `ReleaseTarget` and `ReleaseTile`, hooked on item deletion, building, plant and animal removal, and pawn death. | RES-1 | open |
+| R4 | Beds respect reservations: nobody sleeps in a bed a carrier is delivering to. | Construction `Claimant`/`Claimant2` sit outside the table; `rest/beds.go` `SleepIn` ignores table claims, so it races with `care/carrybed.go`. | `SleepIn` honours table claims. | RES-1 | open |
+| R5 | One reservation system. | Parallel claim systems: `haulState.incoming`/`deliveries` (frames), bed `Claimant`, `care.Rest.bed`, `surgeryState.hosp`, `care.Carries`, animal `FeedClaim`. | Fold into the table where it fits; document those that stay. | RES-1 | open |
+| R6 | Shared stacks do not make pawns flap between targets. | `startJob` (`game/tick.go` about lines 609-655) is the central gate (releases old claims, `TryEntity`, `haul.ClaimAll`, `TryTile`). | No-flap tests on shared stacks (hysteresis or retry cooldown) with the count claims. | RES-1 | open |
+
 ## 6. Checklist cross-reference
 
 Each phase ticks these items when its acceptance criteria are met. Titles are quoted exactly. The lead edits the checklists; this file does not.
