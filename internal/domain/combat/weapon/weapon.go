@@ -59,11 +59,16 @@ const (
 	MortarIncendiary
 	MortarEMP
 	MortarSmoke
+	// Wave E contract (append only): the mechanoids' built-in weapons,
+	// never carried or dropped. The heavy gunner mounts the minigun.
+	MechBlades
+	PulseLance
+	NeedleCaster
 	numKinds
 )
 
 // lastCatalogue is the last carried weapon of the DEF-2 catalogue (the
-// kinds after it are building guns).
+// kinds after it are building and mechanoid guns).
 const lastCatalogue = EMPLauncher
 
 // Def is one attack profile. Range is in tiles (Chebyshev); melee
@@ -190,6 +195,14 @@ var defs = [numKinds]Def{
 	MortarIncendiary: mortar(explosion.Def{Kind: explosion.Flame, Radius: 2900, Damage: 10}),
 	MortarEMP:        mortar(explosion.Def{Kind: explosion.EMP, Radius: 8900, Damage: 50}),
 	MortarSmoke:      mortar(explosion.Def{Kind: explosion.Smoke, Radius: 7200}),
+
+	// Wave E mechanoid weapons (ENG-003, our names). Blades: 20 sharp, 30
+	// % AP, 2 s (wiki: Scyther), our flat melee accuracy. The lance and
+	// the needle caster as ranged rows (wiki: Charge lance, Needle gun);
+	// projectile speeds are ours (the wiki gives none).
+	MechBlades:   {Name: "edge blades", Range: 1, Damage: 20, Cooldown: 120, Accuracy: 85, Burst: 1, ArmorPen: 300, DamageType: damage.Sharp},
+	PulseLance:   ranged("pulse lance", 30, 450, 102, 162, 32, 1, 0, 650, 850, 850, 750, 70),
+	NeedleCaster: ranged("needle caster", 15, 350, 150, 126, 44, 1, 0, 600, 800, 900, 850, 70),
 }
 
 // turretGun is a heavy turret's gun: name, damage, armor penetration

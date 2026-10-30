@@ -245,6 +245,24 @@ const (
 	SetMortarTarget
 	ClearMortarTarget
 	SetTurretHold
+	// Wave E contract (game ignores them until PRD-4 and DEF-4 handle
+	// them). PRD-4 storage, on storage zone Target: SetStockpileFilter
+	// allows (Enabled) or forbids the filter-tree node Name (a category
+	// path such as "Food/Meals" or an item kind name);
+	// SetStockpileSpecial allows (Enabled) or forbids special filter Index
+	// (allow rotten, fresh only, ...); PasteStockpile copies storage zone
+	// Zone's filter, special filters and priority onto Target (the copy
+	// itself is a UI clipboard holding the source zone). RenameZone
+	// names a stockpile too. DEF-4 drafted control, on Pawn:
+	// SetFireAtWill lets it shoot on its own (Enabled) or only when
+	// ordered; SetHoldPosition keeps it on its tile (Enabled), not
+	// chasing targets; ThrowGrenade throws its grenades at X, Y.
+	SetStockpileFilter
+	SetStockpileSpecial
+	PasteStockpile
+	SetFireAtWill
+	SetHoldPosition
+	ThrowGrenade
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/exposure"
@@ -18,7 +19,7 @@ import (
 
 // Prisoners (ENG-003, M8). The prison package holds each prisoner's state
 // (saved as Prisoners), its life and the warden's work (prison_host.go). A
-// prisoner stays on raiderIDs, out of the raid AI (thinkRaider hands it to
+// prisoner stays on raiderIDs, out of the raid AI (raid.Raiders.Think hands it to
 // prison.Live): it paths like a raider, so a closed door keeps it in its
 // room, and no colonist, guard or turret treats it as hostile
 // (standingRaider). Its person record says Where=Prisoner. Capture and
@@ -152,7 +153,7 @@ func (g *Game) makePrisoner(target, captor entity.EntityID) {
 	}
 	r := g.raiders[target]
 	r.Leaving, r.Hungry, r.FoodRetry, r.Warden = false, false, 0, 0
-	r.Mode, r.Idle, r.RetryAt = raidArrive, 0, 0
+	r.Mode, r.Idle, r.RetryAt = raid.Arriving, 0, 0
 	if r.Arrived == 0 {
 		r.Arrived = now
 	}
@@ -215,10 +216,10 @@ func (g *Game) prisonerBed(id entity.EntityID) (entity.EntityID, bool) {
 
 // walkOut takes a released pawn to the map edge; there (or after a day
 // of trying) it goes home.
-func (g *Game) walkOut(id entity.EntityID, r raiderState, j job.Record, now uint64) {
+func (g *Game) walkOut(id entity.EntityID, r raid.Raider, j job.Record, now uint64) {
 	pos, _ := g.positions.Get(id)
 	w, h := g.grid.Width(), g.grid.Height()
-	if pos.X == 0 || pos.Y == 0 || pos.X == w-1 || pos.Y == h-1 || now-r.Idle >= raiderGiveUp {
+	if pos.X == 0 || pos.Y == 0 || pos.X == w-1 || pos.Y == h-1 || now-r.Idle >= raid.RaiderGiveUp {
 		g.departReleased(id)
 		return
 	}
@@ -229,7 +230,7 @@ func (g *Game) walkOut(id entity.EntityID, r raiderState, j job.Record, now uint
 	if x, y, ok := g.combat.Tiles.WalkableNear(ex, ey, 3); ok && g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) {
 		return
 	}
-	r.RetryAt = now + raiderRetry
+	r.RetryAt = now + raid.RaiderRetry
 	g.raiders[id] = r
 }
 

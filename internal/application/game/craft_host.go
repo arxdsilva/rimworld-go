@@ -18,6 +18,7 @@ const (
 	BillActive     = craft.BillActive
 	BillNoInput    = craft.BillNoInput
 	BillDrying     = craft.BillDrying
+	BillFermenting = craft.BillFermenting
 	BillNoFuel     = craft.BillNoFuel
 	BillNoPower    = craft.BillNoPower
 	BillDone       = craft.BillDone
@@ -236,7 +237,7 @@ func (h craftMakers) UseInspiration(id entity.EntityID) bool {
 // craftWeather: what rot, deterioration and worn wear read (PRD-2).
 type craftWeather struct{ g *Game }
 
-func (h craftWeather) Exposed(x, y int) bool { return h.g.underSky(x, y) }
+func (h craftWeather) Exposed(x, y int) bool { return h.g.underSky(x, y) && !h.g.onShelf(x, y) } // PRD-4: shelves shelter
 func (h craftWeather) Raining() bool {
 	return h.g.weather.Kind.Falling() && !h.g.weather.Kind.Frozen()
 }

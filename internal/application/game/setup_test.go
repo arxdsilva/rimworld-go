@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
@@ -610,9 +611,9 @@ func TestScheduledAndDisabledIncidents(t *testing.T) {
 		}
 	}
 	// and a disabled threat is never picked
-	for roll := 0; roll < threatRolls; roll++ {
+	for roll := 0; roll < raid.ThreatRolls; roll++ {
 		for _, winter := range []bool{false, true} {
-			if k, ok := g.allowedThreat(roll, 30, winter); ok && k == threatManhunters {
+			if k, ok := g.allowedThreat(roll, 30, winter); ok && k == raid.ThreatManhunters {
 				t.Fatal("disabled manhunter pack picked")
 			}
 		}
@@ -786,10 +787,10 @@ func TestNoHostileFactionConvertsRaid(t *testing.T) {
 	t.Parallel()
 	g := buildSetup(t, setupFor(t, "ember_clan", nil))
 	hostileOnly(g.ng.factions, -1)
-	for roll := 0; roll < threatRolls; roll++ {
+	for roll := 0; roll < raid.ThreatRolls; roll++ {
 		for _, winter := range []bool{false, true} {
 			k, ok := g.allowedThreat(roll, 30, winter)
-			if !ok || k == threatRaid {
+			if !ok || k == raid.ThreatRaid {
 				t.Fatalf("roll %d winter %v: %v %v", roll, winter, k, ok)
 			}
 		}
@@ -797,8 +798,8 @@ func TestNoHostileFactionConvertsRaid(t *testing.T) {
 	// Wanderer: no raids, hives or packs at all
 	g.ng.setup.Difficulty = difficulty.Of(difficulty.Wanderer)
 	hostileOnly(g.ng.factions, 0)
-	for roll := 0; roll < threatRolls; roll++ {
-		if k, ok := g.allowedThreat(roll, 30, true); ok && k != threatManhunters && k != threatMad {
+	for roll := 0; roll < raid.ThreatRolls; roll++ {
+		if k, ok := g.allowedThreat(roll, 30, true); ok && k != raid.ThreatManhunters && k != raid.ThreatMad {
 			t.Fatalf("wanderer roll %d: %v", roll, k)
 		}
 	}

@@ -3,6 +3,7 @@ package craft
 import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -13,6 +14,7 @@ const (
 	BillActive     = ""
 	BillNoInput    = "waiting for ingredients"
 	BillDrying     = "drying a batch"
+	BillFermenting = "fermenting" // PRD-4: a barrel full or under way
 	BillNoFuel     = "fire needs wood"
 	BillNoPower    = "no power"
 	BillDone       = "done"
@@ -120,10 +122,13 @@ func (b *Bills) Defaults(id entity.EntityID, k construction.Kind) {
 		b.list[id] = append(b.list[id], recipe.Bill{Recipe: recipe.CampfireMeal, Mode: recipe.UntilHave, Target: 10})
 		return
 	}
-	if k != construction.ButcherTable && k != construction.DryingRack {
+	if k != construction.ButcherTable && k != construction.DryingRack && k != construction.FermentingBarrel {
 		return
 	}
 	for _, d := range recipe.For(k) {
+		if d.Output == item.Kibble {
+			continue // PRD-4: kibble is made to order, never by default
+		}
 		b.list[id] = append(b.list[id], recipe.Bill{Recipe: d.ID, Mode: recipe.Forever, Target: 1})
 	}
 }
@@ -207,6 +212,8 @@ func (b *Bills) Line(bid entity.EntityID, i int) (recipe.Bill, string) {
 		return bl, BillHaveEnough
 	case d.Dry && b.drying.busy(bid):
 		return bl, BillDrying
+	case d.Ferment && !b.drying.barrelOpen(bid):
+		return bl, BillFermenting
 	case b.unfueled(bid), d.ID == recipe.Cremate && b.h.FreeWood() < d.ExtraQty:
 		return bl, BillNoFuel
 	case b.unpowered(bid):

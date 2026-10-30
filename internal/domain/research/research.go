@@ -72,6 +72,21 @@ const (
 	HeavyTurrets
 	SlugTurrets
 	PoweredDoors
+	// PRD-4 (append only, saved; original names after the wiki research
+	// tree, our costs): TrailRations (wiki: Pemmican), SealedRations
+	// (Packaged survival meal), LeafRefining (Psychite refining) the ash
+	// flake and silverdust, TonicSynthesis (Go-juice production) battle
+	// tonic and reagent, PrecisionFabrication (Advanced fabrication)
+	// advanced components, FlakArmor (Flak armor), Armoursmithing (Plate
+	// armor) and PoweredArmor (Marine armor).
+	TrailRations
+	SealedRations
+	LeafRefining
+	TonicSynthesis
+	PrecisionFabrication
+	FlakArmor
+	Armoursmithing
+	PoweredArmor
 	NumProjects
 )
 
@@ -154,8 +169,9 @@ var defs = [NumProjects]Def{
 	// Microcircuits. The crafting and butcher spots, the sculpting bench,
 	// the stool, the barricade and the sculptures need no research (wiki).
 	Metalworking: {Project: Metalworking, Name: "metalworking", Label: "Metalworking", Cost: 3000,
-		Desc:    "A wood-fired forge to beat steel into maces, short swords and throwing spears.",
-		Unlocks: []string{"build:wood-fired forge", "build:electric forge", "recipe:make_mace", "recipe:make_gladius", "recipe:make_pila"}},
+		Desc: "A wood-fired forge to beat steel into maces, short swords and throwing spears.",
+		Unlocks: []string{"build:wood-fired forge", "build:electric forge", "recipe:make_mace", "recipe:make_gladius", "recipe:make_pila",
+			"recipe:make_simple_helmet"}}, // PRD-4: wiki Simple helmet (Smithing)
 	Bladesmithing: {Project: Bladesmithing, Name: "bladesmithing", Label: "Bladesmithing", Cost: 3500, Requires: []Project{Metalworking},
 		Desc: "The patience to forge a long, true blade.", Unlocks: []string{"recipe:make_longsword"}},
 	Bowcraft: {Project: Bowcraft, Name: "bowcraft", Label: "Bowcraft", Cost: 2500,
@@ -171,27 +187,53 @@ var defs = [NumProjects]Def{
 		Desc:    "Bleed the powder gas back to cycle heavier guns.",
 		Unlocks: []string{"recipe:make_chain_shotgun", "recipe:make_heavy_smg", "recipe:make_lmg"}},
 	RifledBarrels: {Project: RifledBarrels, Name: "rifled_barrels", Label: "Rifled barrels", Cost: 6000, Requires: []Project{GasOperated},
-		Desc: "Spiral grooves cut true enough for long, accurate shots.", Unlocks: []string{"recipe:make_assault_rifle", "recipe:make_sniper_rifle"}},
+		Desc: "Spiral grooves cut true enough for long, accurate shots.", Unlocks: []string{"recipe:make_assault_rifle", "recipe:make_sniper_rifle",
+			"recipe:make_advanced_helmet"}}, // PRD-4: wiki Flak helmet (Precision rifling)
 	RotaryGuns: {Project: RotaryGuns, Name: "rotary_guns", Label: "Rotary guns", Cost: 7000, Requires: []Project{GasOperated},
 		Desc: "A spinning cluster of barrels that never stops to cool.", Unlocks: []string{"recipe:make_minigun"}},
 	Microcircuits: {Project: Microcircuits, Name: "microcircuits", Label: "Microcircuits", Cost: 6000, Requires: []Project{Fabrication},
 		Desc: "Tiny circuits for pulse weapons that knock out machines.", Unlocks: []string{"recipe:make_emp_launcher",
-			"recipe:make_emp_grenades", "build:pulse charge"}},
+			"recipe:make_emp_grenades", "build:pulse charge", "recipe:make_emp_shells"}},
 	FuelRefining: {Project: FuelRefining, Name: "fuel_refining", Label: "Fuel refining", Cost: 3500, Requires: []Project{Electricity},
 		Desc: "A powered refinery that cooks wood and plant matter down to liquid fuel.", Unlocks: []string{"build:fuel refinery"}},
 	Upholstery: {Project: Upholstery, Name: "upholstery", Label: "Upholstery", Cost: 2000,
-		Desc: "Padded, fabric-covered chairs fit for a long evening.", Unlocks: []string{"build:armchair"}},
+		Desc:    "Padded, fabric-covered chairs fit for a long evening, and shelves that keep stored goods off the ground.",
+		Unlocks: []string{"build:armchair", "build:shelf"}}, // PRD-4: wiki Shelf (Complex furniture)
 	Charges: {Project: Charges, Name: "charges", Label: "Buried charges", Cost: 3000, Requires: []Project{Traps},
 		Desc:    "Shells wired to a trip line, buried where raiders will walk.",
 		Unlocks: []string{"build:blast charge", "build:fire charge", "build:pulse charge", "build:smoke charge"}},
 	Artillery: {Project: Artillery, Name: "artillery", Label: "Field artillery", Cost: 5000, Requires: []Project{Gunsmithing},
-		Desc: "A crewed tube that lobs shells far past the walls.", Unlocks: []string{"build:mortar"}},
+		Desc: "A crewed tube that lobs shells far past the walls.", Unlocks: []string{"build:mortar",
+			"recipe:make_he_shells", "recipe:make_incendiary_shells", "recipe:make_smoke_shells"}}, // PRD-4: wiki Mortars
 	HeavyTurrets: {Project: HeavyTurrets, Name: "heavy_turrets", Label: "Heavy turrets", Cost: 6000, Requires: []Project{Sentries},
 		Desc: "A powered cannon turret that fires bursts of explosive rounds.", Unlocks: []string{"build:autocannon"}},
 	SlugTurrets: {Project: SlugTurrets, Name: "slug_turrets", Label: "Slug turrets", Cost: 7000, Requires: []Project{HeavyTurrets},
 		Desc: "A long-barrelled turret that punches dense slugs through armor.", Unlocks: []string{"build:slug turret"}},
 	PoweredDoors: {Project: PoweredDoors, Name: "powered_doors", Label: "Powered doors", Cost: 2500, Requires: []Project{Electricity},
 		Desc: "Doors that slide open on their own, fast, while they have power.", Unlocks: []string{"build:powered door"}},
+	// PRD-4 (our costs).
+	TrailRations: {Project: TrailRations, Name: "trail_rations", Label: "Trail rations", Cost: 1500,
+		Desc: "Pound dried meat and plants into dense cakes that keep for months.", Unlocks: []string{"recipe:cook_pemmican"}},
+	SealedRations: {Project: SealedRations, Name: "sealed_rations", Label: "Sealed rations", Cost: 3000, Requires: []Project{TrailRations},
+		Desc: "Cooked meals sealed in packs that never spoil.", Unlocks: []string{"recipe:cook_survival_meal"}},
+	LeafRefining: {Project: LeafRefining, Name: "leaf_refining", Label: "Leaf refining", Cost: 3000, Requires: []Project{HerbalRemedies},
+		Desc: "Refine ashleaf into flake and the purer, stronger silverdust.", Unlocks: []string{"recipe:make_ash_flake", "recipe:make_silverdust"}},
+	TonicSynthesis: {Project: TonicSynthesis, Name: "tonic_synthesis", Label: "Tonic synthesis", Cost: 4500,
+		Requires: []Project{LeafRefining, FuelRefining},
+		Desc:     "Distil a chemical reagent and blend it into a tonic that lets a fighter shrug off pain and fatigue.",
+		Unlocks:  []string{"recipe:make_battle_tonic", "recipe:make_reagent"}},
+	PrecisionFabrication: {Project: PrecisionFabrication, Name: "precision_fabrication", Label: "Precision fabrication", Cost: 7000,
+		Requires: []Project{Fabrication, Microcircuits},
+		Desc:     "Layer plasteel, gold and components into advanced components.", Unlocks: []string{"recipe:fabricate_advanced"}},
+	FlakArmor: {Project: FlakArmor, Name: "flak_armor", Label: "Flak armor", Cost: 4000, Requires: []Project{MachineTools},
+		Desc:    "Vests, jackets and trousers of steel plates sewn into cloth.",
+		Unlocks: []string{"recipe:make_flak_vest", "recipe:make_flak_pants", "recipe:make_flak_jacket"}},
+	Armoursmithing: {Project: Armoursmithing, Name: "armoursmithing", Label: "Armoursmithing", Cost: 3500, Requires: []Project{Metalworking},
+		Desc: "Beat a full suit of plates for the whole body.", Unlocks: []string{"recipe:make_plate_armor"}},
+	PoweredArmor: {Project: PoweredArmor, Name: "powered_armor", Label: "Powered armor", Cost: 9000,
+		Requires: []Project{PrecisionFabrication, FlakArmor},
+		Desc:     "Sealed plasteel suits and helmets with their own servos.",
+		Unlocks:  []string{"recipe:make_marine_armor", "recipe:make_marine_helmet"}},
 }
 
 // DefOf returns the definition of p.

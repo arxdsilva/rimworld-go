@@ -140,10 +140,15 @@ type Set struct {
 
 	// focus cycles a Wild row's clicks through the animals of its species.
 	focus map[string]int
+
+	// storage is the Storage settings window's state (storage.go).
+	storage *storageState
+
+	histTab int // the History window's tab: 0 events, 1 combat
 }
 
 // New builds the feature over its shell.
-func New(sh Shell) *Set { return &Set{sh: sh} }
+func New(sh Shell) *Set { return &Set{sh: sh, storage: &storageState{}} }
 
 // The windows, each a view over the set.
 type (
@@ -163,6 +168,8 @@ type (
 	Factions struct{ *Set }
 	// World is the World tab: the planet and the caravans.
 	World struct{ *Set }
+	// Storage is the storage zone settings window (PRD-4).
+	Storage struct{ *Set }
 )
 
 func (w *Set) Work() Work         { return Work{w} }
@@ -173,6 +180,7 @@ func (w *Set) Research() Research { return Research{w} }
 func (w *Set) History() History   { return History{w} }
 func (w *Set) Factions() Factions { return Factions{w} }
 func (w *Set) World() World       { return World{w} }
+func (w *Set) Storage() Storage   { return Storage{w} }
 
 func (w *Set) kit() *uikit.Kit { return w.sh.Kit() }
 

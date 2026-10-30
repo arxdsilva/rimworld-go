@@ -30,7 +30,7 @@ Canonical sources (read by section, never paste whole files):
 
 ### 1. Roster and simulation
 - [ ] `animal.go`: append the `Roster` row — key, archetype, size (+ trim), behaviour, habitat, natural weapon (`AttackKind`), herd min/max, speed class, flags (dimorphic, explosive, small-prey; hive via behaviour).
-- [ ] Update the roster count test (`TestRosterHas61` → the new total) deliberately, in the same change.
+- [ ] Update the roster count test (`TestRosterHas65` → the new total) deliberately, in the same change.
 - [ ] Behaviour needs nothing else if it fits an existing class; a genuinely new behaviour gets its own SIM task (determinism skill) first.
 - [ ] Spawning: habitat/rarity are enough for wildlife; threats (packs, swarms, events) only via `wildlife.go`/`hive.go` rules.
 - [ ] Blood kind: hive behaviour → ichor; any other new fluid needs a `stain.Kind` and renderer colour (SIM-020 / ART §16.2).
@@ -60,7 +60,7 @@ Canonical sources (read by section, never paste whole files):
 ## Tests that enforce this (must stay green; never weaken)
 | Test | Catches |
 |---|---|
-| `TestRosterHas61` (count), `TestEveryDefComplete`, `TestSpeciesRules` (`internal/domain/animal`) | roster row missing or incomplete numbers |
+| `TestRosterHas65` (count), `TestEveryDefComplete`, `TestSpeciesRules` (`internal/domain/animal`) | roster row missing or incomplete numbers |
 | `TestEverySpeciesHasArt` (`ebiten/art_test.go`) + `validate_assets.py` roster check | missing sprites, frames, corpses, `_f` sets, icon |
 | `TestBlurbsForAll` | missing blurb |
 | `TestEveryRosterVoiceHasAGroup` | missing voice group |

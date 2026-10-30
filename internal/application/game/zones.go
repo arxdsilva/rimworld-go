@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
@@ -38,6 +39,12 @@ type ZoneView struct {
 	// Chunks a dumping stockpile's filters.
 	Priority        string
 	Corpses, Chunks bool
+	// PRD-4 storage filters (stockpile_filter.go): Filter is the allowed
+	// filter-tree nodes, compact (zone.Filter.Names); Special the special
+	// filters on and the narrowed ranges (zone.Special.Names). Shelf is a
+	// shelf's storage zone's building id (0: no shelf).
+	Filter, Special []string
+	Shelf           uint64
 }
 
 // Zone kinds in ZoneView.Kind and CanZoneAt.
@@ -45,11 +52,12 @@ const (
 	ZoneStockpile = "stockpile"
 	ZoneGrow      = "grow"
 	ZonePen       = "pen"
-	ZoneDump      = "dump" // a dumping stockpile (PLAY-023)
+	ZoneDump      = "dump"  // a dumping stockpile (PLAY-023)
+	ZoneShelf     = "shelf" // a shelf's storage (PRD-4): laid by the shelf, never painted
 )
 
 var zoneKindNames = map[zone.Kind]string{zone.KindStockpile: ZoneStockpile, zone.KindGrow: ZoneGrow, zone.KindPen: ZonePen,
-	zone.KindDump: ZoneDump}
+	zone.KindDump: ZoneDump, zone.KindShelf: ZoneShelf}
 
 func zoneKindOf(name string) (zone.Kind, bool) {
 	switch name {
@@ -280,6 +288,7 @@ func (g *Game) buildZoneViews() []ZoneView {
 		}
 		if z.Kind.Storage() {
 			v.Priority, v.Corpses, v.Chunks = z.Priority.String(), z.Corpses, z.Chunks
+			v.Filter, v.Special, v.Shelf = z.Effective().Names(), z.Special.Names(), g.shelfOf(z) // stockpile_filter.go
 		}
 		if z.Kind == zone.KindGrow {
 			v.Crop = plant.Species(z.Crop).String()
@@ -306,81 +315,16 @@ func (g *Game) ZoneRefusal(kind string, x, y int) string {
 
 // Stockpiles.
 
-// allows: storage zone s takes items of kind k. A stockpile goes by its
-// food, wood and stone filters and welcomes goods; a dumping stockpile
-// takes animal corpses (Corpses) and stone chunks (Chunks), and
-// otherwise only what its food, wood and stone filters name (all off by
-// default), never goods.
-func allows(s zone.Zone, k item.Kind) bool {
-	if s.Kind == zone.KindDump {
-		switch {
-		case isCarcass(k) && k != item.Bones:
-			return s.Corpses
-		case item.IsChunk(k):
-			return s.Chunks
-		case stockCats[k] == stockGoods:
-			return false
-		}
-	}
-	switch stockCats[k] {
-	case stockFood:
-		return s.Food
-	case stockWood:
-		return s.Wood
-	case stockStone:
-		return s.Stone
-	case stockGoods:
-		return true
-	}
-	return false
-}
-
-// stockCat is the stockpile filter an item kind falls under.
-type stockCat uint8
-
-const (
-	stockNone  stockCat = iota // never stored (the dead, unknown kinds)
-	stockFood                  // the Food filter
-	stockWood                  // the Wood filter
-	stockStone                 // the Stone filter
-	stockGoods                 // goods: always welcome
-)
-
-// stockCats is stockCatOf for every kind, worked out once (allows runs
-// for every loose item in the hauling search).
-var stockCats = func() (t [256]stockCat) {
-	for k := range t {
-		t[k] = stockCatOf(item.Kind(k))
-	}
-	return t
-}()
-
-func stockCatOf(k item.Kind) stockCat {
-	switch {
-	case k == item.CorpseHuman, k == item.Bones:
-		return stockNone // the dead go to graves and pyres, not shelves
-	case k.IsFood(), k.IsCorpse():
-		return stockFood
-	case k == item.Wood:
-		return stockWood
-	case k == item.Stone, item.IsChunk(k), item.IsStoneBlocks(k):
-		return stockStone
-	case k == item.FertileEgg: // SIM-026: kept with the food; they hatch in place
-		return stockFood
-	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon(),
-		k == item.Wool, k == item.EmberOil, item.IsMetal(k),
-		k == item.Components, k == item.IndustrialMedicine, k == item.NanomedKit, k.IsOrgan(),
-		k.IsDrug(), k.IsImplant(), k == item.AshleafLeaf: // ENG-003
-		return stockGoods
-	}
-	return stockNone
-}
+// allows: storage zone s takes items of kind k (zone.Zone.Allows: its
+// filter once the player edited it, else its Food, Wood, Stone, Corpses
+// and Chunks switches; PRD-4).
+func allows(s zone.Zone, k item.Kind) bool { return s.Allows(k) }
 
 // filterMatches: some storage zone takes kind k.
 func (g *Game) filterMatches(k item.Kind) bool {
 	found := false
 	g.zones.Each(func(z zone.Zone) bool {
-		found = z.Kind.Storage() && allows(z, k)
+		found = z.Allows(k)
 		return !found
 	})
 	return found
@@ -397,8 +341,11 @@ func (g *Game) storageAt(x, y int) (zone.Zone, bool) {
 	return z, z.Kind.Storage()
 }
 
+// inMatchingStockpile reports st lies in a storage zone that takes it,
+// special filters included (PRD-4).
 func (g *Game) inMatchingStockpile(st item.Stack) bool {
-	return g.inMatchingStockpileAt(st.Kind, st.X, st.Y)
+	z, ok := g.storageAt(st.X, st.Y)
+	return ok && z.AllowsStack(st)
 }
 
 // inMatchingStockpileAt reports a storage zone on (x, y) that takes kind k.
@@ -415,27 +362,30 @@ const noPriority = zone.PriorityLow - 1
 // storage zones taking k that have room (PLAY-023), nearest (nearX, nearY)
 // first (ties: lower y, then x), a tile whose same-kind stack still has
 // room (topping up), else an empty walkable tile with no item, planned or
-// built object, or reservation.
+// built object, or reservation. A shelf tile (PRD-4) holds up to
+// zone.ShelfStacks stacks.
 func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) {
-	return g.storageCell(k, nearX, nearY, nil, noPriority)
+	return g.storageCell(item.Stack{Kind: k}, nearX, nearY, nil, noPriority)
 }
 
 // stockpileCellWhere is stockpileCell over the cells keep admits (nil:
 // all; area_dest.go keeps a hauler to its allowed area).
 func (g *Game) stockpileCellWhere(k item.Kind, nearX, nearY int, keep func(x, y int) bool) (x, y int, ok bool) {
-	return g.storageCell(k, nearX, nearY, keep, noPriority)
+	return g.storageCell(item.Stack{Kind: k}, nearX, nearY, keep, noPriority)
 }
 
-// storageCell is stockpileCellWhere over the zones whose priority is above
-// floor (noPriority: every zone; a re-haul passes the priority of the zone
-// the stack lies in). Priorities are tried highest first; with every zone
-// at one priority it is the plain two-pass search.
-func (g *Game) storageCell(k item.Kind, nearX, nearY int, keep func(x, y int) bool, floor zone.Priority) (x, y int, ok bool) {
+// storageCell is stockpileCellWhere for stack st (its kind and the zones'
+// special filters, PRD-4) over the zones whose priority is above floor
+// (noPriority: every zone; a re-haul passes the priority of the zone the
+// stack lies in). Priorities are tried highest first; with every zone at
+// one priority it is the plain two-pass search.
+func (g *Game) storageCell(st item.Stack, nearX, nearY int, keep func(x, y int) bool, floor zone.Priority) (x, y int, ok bool) {
 	var prios [len(zone.Priorities)]bool // by zone.Priorities index
-	found := false
+	found, shelves := false, false
 	g.zones.Each(func(z zone.Zone) bool {
-		if z.Kind.Storage() && z.Priority > floor && z.Priority.Valid() && allows(z, k) {
+		if z.Kind.Storage() && z.Priority > floor && z.Priority.Valid() && z.AllowsStack(st) {
 			prios[priorityIndex(z.Priority)], found = true, true
+			shelves = shelves || z.Kind == zone.KindShelf
 		}
 		return true
 	})
@@ -446,9 +396,13 @@ func (g *Game) storageCell(k item.Kind, nearX, nearY int, keep func(x, y int) bo
 	// none), in a reused per-tile scratch (jobindex.go)
 	loose := g.looseOnStockpiles()
 	defer g.releaseLoose()
+	var load map[int]shelfLoad
+	if shelves {
+		load = g.shelfLoads(st)
+	}
 	for i, p := range zone.Priorities {
 		if prios[i] {
-			if x, y, ok = g.storageCellAt(k, p, nearX, nearY, keep, loose); ok {
+			if x, y, ok = g.storageCellAt(st, p, nearX, nearY, keep, loose, load); ok {
 				return x, y, true
 			}
 		}
@@ -459,9 +413,18 @@ func (g *Game) storageCell(k item.Kind, nearX, nearY int, keep func(x, y int) bo
 // priorityIndex is p's index in zone.Priorities (highest first).
 func priorityIndex(p zone.Priority) int { return int(zone.PriorityCritical - p) }
 
-// storageCellAt is storageCell over the storage zones of priority p.
-func (g *Game) storageCellAt(k item.Kind, p zone.Priority, nearX, nearY int, keep func(x, y int) bool, loose []entity.EntityID) (x, y int, ok bool) {
-	w := g.Width()
+// toppable: a load of o's kind still fits on o (a full load on a stack of
+// the plain limit; a kind with a smaller wiki limit, any room, PRD-4).
+func toppable(o item.Stack) bool {
+	lim := o.Kind.StackLimit()
+	return o.Qty+item.CarryLimit <= lim || lim < item.StackLimit && o.Qty < lim
+}
+
+// storageCellAt is storageCell over the storage zones of priority p; load
+// is the shelf tiles' stacks (shelfLoads; nil when no shelf takes st).
+func (g *Game) storageCellAt(st item.Stack, p zone.Priority, nearX, nearY int, keep func(x, y int) bool,
+	loose []entity.EntityID, load map[int]shelfLoad) (x, y int, ok bool) {
+	w, k := g.Width(), st.Kind
 	bestD := 1 << 30
 	better := func(cx, cy int) bool {
 		d := pathing.Dist(nearX, nearY, cx, cy)
@@ -472,24 +435,33 @@ func (g *Game) storageCellAt(k item.Kind, p zone.Priority, nearX, nearY int, kee
 		_, taken := g.reserve.TileOwner(cx, cy)
 		return !taken
 	}
-	g.eachStorageCell(k, p, func(cx, cy int) {
+	g.eachStorageCell(st, p, func(cx, cy int, shelf bool) {
 		oid := loose[cy*w+cx]
 		if oid == 0 || !better(cx, cy) || keep != nil && !keep(cx, cy) {
 			return
 		}
+		if shelf {
+			if load[cy*w+cx].top && free(cx, cy) {
+				take(cx, cy)
+			}
+			return
+		}
 		o, _ := g.stacks.Get(oid)
-		if o.Kind == k && o.Qty+item.CarryLimit <= item.StackLimit && free(cx, cy) {
+		if o.Kind == k && toppable(o) && free(cx, cy) {
 			take(cx, cy)
 		}
 	})
 	if ok {
 		return x, y, true
 	}
-	g.eachStorageCell(k, p, func(cx, cy int) {
-		if loose[cy*w+cx] != 0 || !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) || keep != nil && !keep(cx, cy) {
+	g.eachStorageCell(st, p, func(cx, cy int, shelf bool) {
+		if !shelf && loose[cy*w+cx] != 0 || shelf && load[cy*w+cx].n >= zone.ShelfStacks {
 			return
 		}
-		if g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || g.occupiedAt(cx, cy) {
+		if !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) || keep != nil && !keep(cx, cy) {
+			return
+		}
+		if g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || !shelf && g.occupiedAt(cx, cy) {
 			return
 		}
 		take(cx, cy)
@@ -498,11 +470,12 @@ func (g *Game) storageCellAt(k item.Kind, p zone.Priority, nearX, nearY int, kee
 }
 
 // eachStorageCell visits every tile of every storage zone of priority p
-// taking kind k.
-func (g *Game) eachStorageCell(k item.Kind, p zone.Priority, fn func(x, y int)) {
+// taking stack st, saying whether it is a shelf's.
+func (g *Game) eachStorageCell(st item.Stack, p zone.Priority, fn func(x, y int, shelf bool)) {
 	g.zones.Each(func(z zone.Zone) bool {
-		if z.Kind.Storage() && z.Priority == p && allows(z, k) {
-			g.zones.EachCell(z.ID, func(x, y int) bool { fn(x, y); return true })
+		if z.Kind.Storage() && z.Priority == p && z.AllowsStack(st) {
+			shelf := z.Kind == zone.KindShelf
+			g.zones.EachCell(z.ID, func(x, y int) bool { fn(x, y, shelf); return true })
 		}
 		return true
 	})
@@ -520,6 +493,9 @@ func (g *Game) eachStorageCell(k item.Kind, p zone.Priority, fn func(x, y int)) 
 
 // zoneBuilt re-checks the zoned cells under a finished building of kind.
 func (g *Game) zoneBuilt(kind construction.Kind, cells [][2]int) {
+	if kind == construction.Shelf {
+		g.layShelf(cells) // PRD-4: its storage
+	}
 	g.zoneCellsChanged(cells, construction.DefOf(kind).Name+" built")
 }
 
@@ -591,4 +567,153 @@ func zoneLabel(z zone.Zone) string {
 		return "Pen"
 	}
 	return "Stockpile"
+}
+
+// Storage filters and shelves (PRD-4). The filter tree, the special
+// filters and the legacy switches live in domain zone (filter.go); the
+// handlers below edit them through zone.Map.Update. A shelf lays a
+// KindShelf storage zone over its footprint when built (layShelf) and
+// lifts it when it goes (liftShelf); the haul search treats a shelf tile
+// as room for zone.ShelfStacks stacks.
+
+// FilterRow is one line of the stockpile filter tree for the settings
+// window (zone.Row: path, label, depth, leaf, On, Partial).
+type FilterRow = zone.Row
+
+// StockpileFilterRows is the filter tree in display order with each
+// line's state under filter (a ZoneView.Filter).
+func StockpileFilterRows(filter []string) []FilterRow { return zone.Rows(filter) }
+
+// StockpileSpecials names the special filter toggles by
+// SetStockpileSpecial's Index (zone.SpecialRotten, zone.SpecialTainted);
+// Index zone.SpecialHP and zone.SpecialQuality set the ranges from X..X2.
+func StockpileSpecials() []string { return zone.SpecialNames() }
+
+// cmdStockpile handles the three storage-filter commands on storage zone
+// c.Target: SetStockpileFilter allows (Enabled) or forbids filter-tree
+// node c.Name, SetStockpileSpecial sets special filter c.Index (a toggle
+// by Enabled, a range by X..X2) and PasteStockpile copies zone c.Zone's
+// filter, special filters and priority. Unknown zones, nodes and
+// non-storage zones are ignored.
+func (g *Game) cmdStockpile(c command.Command) {
+	z, ok := g.zones.Zone(zone.ID(c.Target))
+	if !ok || !z.Kind.Storage() {
+		return
+	}
+	switch c.Kind {
+	case command.SetStockpileFilter:
+		if set, ok := zone.Resolve(c.Name); ok {
+			g.zones.Update(z.ID, func(z *zone.Zone) { z.SetAllowed(set, c.Enabled) })
+		}
+	case command.SetStockpileSpecial:
+		g.zones.Update(z.ID, func(z *zone.Zone) { z.Special = z.Special.Set(c.Index, c.Enabled, c.X, c.X2) })
+	case command.PasteStockpile:
+		if src, ok := g.zones.Zone(zone.ID(c.Zone)); ok && src.Kind.Storage() && src.ID != z.ID {
+			g.zones.Update(z.ID, func(z *zone.Zone) { z.PasteFrom(src) })
+		}
+	}
+}
+
+// shelfLoad is one shelf tile's stacks for a haul search: how many lie
+// there and whether one of them takes a load of the searched stack.
+type shelfLoad struct {
+	n   int
+	top bool
+}
+
+// shelfLoads counts the loose stacks on every shelf tile, noting where a
+// stack st could top up (one pass over the items, only when a shelf
+// takes st).
+func (g *Game) shelfLoads(st item.Stack) map[int]shelfLoad {
+	out := map[int]shelfLoad{}
+	w := g.Width()
+	for _, iid := range g.itemIDs {
+		o := g.stacks.Ref(iid)
+		if o == nil || o.Carrier != 0 || !g.onShelf(o.X, o.Y) {
+			continue
+		}
+		l := out[o.Y*w+o.X]
+		l.n++
+		l.top = l.top || o.Kind == st.Kind && toppable(*o) // as a plain cell: the kind decides
+		out[o.Y*w+o.X] = l
+	}
+	return out
+}
+
+// onShelf reports (x, y) lies under a shelf's storage.
+func (g *Game) onShelf(x, y int) bool {
+	z, ok := g.storageAt(x, y)
+	return ok && z.Kind == zone.KindShelf
+}
+
+// cellFull reports tile (x, y) holds as many stacks besides id as it
+// may: one anywhere, zone.ShelfStacks on a shelf (mergeOrSet spills
+// from a full tile).
+func (g *Game) cellFull(id entity.EntityID, x, y int) bool {
+	if !g.onShelf(x, y) {
+		return g.otherStackAt(id, x, y)
+	}
+	n := 0
+	for _, oid := range g.itemIDs {
+		if o := g.stacks.Ref(oid); oid != id && o != nil && o.Carrier == 0 && o.X == x && o.Y == y {
+			n++
+		}
+	}
+	return n >= zone.ShelfStacks
+}
+
+// shelfOf is the shelf building a shelf's storage zone z lies under (0
+// for any other zone).
+func (g *Game) shelfOf(z zone.Zone) uint64 {
+	if z.Kind != zone.KindShelf {
+		return 0
+	}
+	var id entity.EntityID
+	g.zones.EachCell(z.ID, func(x, y int) bool { id = g.layerBldgAt(x, y, construction.LayerObject); return false })
+	if b := g.bldgs.Ref(id); b == nil || b.Kind != construction.Shelf {
+		return 0
+	}
+	return uint64(id)
+}
+
+// layShelf lays a finished (or moved) shelf's storage over cells. Zones
+// under the footprint give up the cells; a shelf zone left without its
+// shelf (the shelf moved away) is lifted, and its settings go with the
+// shelf.
+func (g *Game) layShelf(cells [][2]int) {
+	proto := zone.NewShelf()
+	for _, c := range cells {
+		if z, ok := g.storageAt(c[0], c[1]); ok && z.Kind == zone.KindShelf {
+			proto = z // a move onto its own old cells
+		}
+	}
+	g.zones.RemoveTiles(cells)
+	var stale [][2]int
+	g.zones.Each(func(z zone.Zone) bool {
+		if z.Kind == zone.KindShelf && g.shelfOf(z) == 0 {
+			proto, stale = z, append(stale, g.zones.Cells(z.ID)...)
+		}
+		return true
+	})
+	g.zones.RemoveTiles(stale)
+	minX, minY, maxX, maxY := cells[0][0], cells[0][1], cells[0][0], cells[0][1]
+	for _, c := range cells {
+		minX, minY, maxX, maxY = min(minX, c[0]), min(minY, c[1]), max(maxX, c[0]), max(maxY, c[1])
+	}
+	g.zones.Paint(zone.KindShelf, proto, zone.Rect{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}, nil)
+}
+
+// liftShelf takes a removed shelf's storage off its footprint.
+func (g *Game) liftShelf(b construction.Building) {
+	if b.Kind != construction.Shelf {
+		return
+	}
+	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+	var gone [][2]int
+	for _, c := range cells {
+		if g.onShelf(c[0], c[1]) {
+			gone = append(gone, c)
+		}
+	}
+	g.zones.RemoveTiles(gone)
 }

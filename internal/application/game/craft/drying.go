@@ -18,9 +18,13 @@ type Batch struct {
 	Left int
 }
 
-// Percent is how far the batch has dried, 0-100.
+// Percent is how far the batch has dried (a barrel's wort: fermented),
+// 0-100.
 func (b Batch) Percent() int {
 	total := b.Kind.DryTicks()
+	if b.Kind == item.Wort {
+		total = FermentTicks
+	}
 	if total <= 0 {
 		return 100
 	}
@@ -56,6 +60,10 @@ func (d *Drying) Advance(interval int) {
 			delete(d.racks, bid)
 			continue
 		}
+		if isBarrel(b.Kind) {
+			d.ferment(bid, b, rb, interval) // ferment.go (PRD-4)
+			continue
+		}
 		rb.Left -= interval * item.DryRate(d.h.TemperatureAt(b.X, b.Y)) / 1000
 		if rb.Left > 0 {
 			d.racks[bid] = rb
@@ -68,10 +76,14 @@ func (d *Drying) Advance(interval int) {
 	}
 }
 
-// Empty puts a torn-down rack's undried batch back on the ground at (x, y).
+// Empty puts a torn-down rack's undried batch (a barrel's wort) back on the
+// ground at (x, y).
 func (d *Drying) Empty(id entity.EntityID, x, y int) {
 	rb := d.racks[id]
 	delete(d.racks, id)
+	if rb.Kind == item.Wort {
+		rb.Rot = 0 // a barrel's Rot is its ruin time, not spoilage (ferment.go)
+	}
 	if rb.Qty > 0 {
 		d.h.DropStackOf(item.Stack{Kind: rb.Kind, Qty: rb.Qty, Rot: rb.Rot}, x, y)
 	}

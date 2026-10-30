@@ -479,7 +479,8 @@ func (g *Game) dropCorpseAs(s animal.Species, x, y int, unclaimed bool) entity.E
 		return 0
 	}
 	st, _ := g.stacks.Get(sid)
-	st.Animal, st.Unclaimed = uint8(s), unclaimed
+	// a mechanoid's wreck never rots (Dried: it keeps; DEF-4)
+	st.Animal, st.Unclaimed, st.Dried = uint8(s), unclaimed, animal.IsMech(s)
 	g.mergeOrSet(sid, st)
 	if _, ok := g.stacks.Get(sid); ok {
 		return sid

@@ -165,6 +165,11 @@ type TurretSave struct {
 	Doors   []DoorSave
 	Fuses   []Fuse
 	Rearms  []Rearm
+	// DEF-4 (absent in older saves): drafted switches and grenade belts,
+	// grenade orders in their warmup, the combat log.
+	Drafts []DraftSave
+	Throws []Throw
+	Log    []LogEntry
 }
 
 // AimSave is one Aim on disk.
@@ -195,7 +200,7 @@ type Turrets struct {
 	st   *Strikes
 	// after are the defences stepped after the turrets every tick, saved
 	// those whose state rides in the Turrets save block (DEF-3).
-	after [4]phaser
+	after [5]phaser
 	saved saved
 }
 
@@ -205,6 +210,8 @@ type saved struct {
 	doors   *Doors
 	mortars *Mortars
 	rearms  *Rearms
+	drafts  *Drafts
+	log     *Log
 }
 
 func newTurrets(h Host, pw Power, s *Sight) *Turrets {
@@ -607,7 +614,11 @@ func (t *Turrets) Export() *TurretSave {
 	if v := t.saved; v.traps != nil {
 		s.Fuses, s.Doors, s.Mortars, s.Rearms = v.traps.export(), v.doors.export(), v.mortars.export(), v.rearms.export()
 	}
-	if len(s.Aims)+len(s.Arms)+len(s.Fuses)+len(s.Doors)+len(s.Mortars)+len(s.Rearms) == 0 {
+	if v := t.saved; v.drafts != nil {
+		s.Drafts, s.Throws = v.drafts.export()
+		s.Log = v.log.export()
+	}
+	if len(s.Aims)+len(s.Arms)+len(s.Fuses)+len(s.Doors)+len(s.Mortars)+len(s.Rearms)+len(s.Drafts)+len(s.Throws)+len(s.Log) == 0 {
 		return nil
 	}
 	return s
@@ -624,6 +635,10 @@ func (t *Turrets) Import(s *TurretSave) {
 		v.doors.importDoors(s.Doors)
 		v.mortars.importMortars(s.Mortars)
 		v.rearms.importRearms(s.Rearms)
+	}
+	if v := t.saved; v.drafts != nil {
+		v.drafts.importDrafts(s.Drafts, s.Throws)
+		v.log.importLog(s.Log)
 	}
 	if len(s.Aims) > 0 {
 		t.aims = make(map[entity.EntityID]Aim, len(s.Aims))

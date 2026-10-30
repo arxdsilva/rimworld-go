@@ -1,4 +1,4 @@
-"""Animal roster (ART-011): the 61 species the animal family renders.
+"""Animal roster (ART-011): the 65 species the animal family renders.
 
 Mirrors internal/domain/animal (same keys and order); the Go test
 TestEverySpeciesHasArt and validate_assets.py check the two agree.
@@ -11,6 +11,8 @@ sizeLength mirrors it, and validate_assets.py checks each class median
 within 15% of its area. The sim footprint stays one tile; animals are
 only drawn bigger. Rows marked ORIGINAL replace RimWorld's invented
 creatures with our own designs (AGENTS.md: never copy proprietary art).
+The 'mech' archetype (wave E, DEF-4) is our own mechanical raiders, one
+rig builder with a spec per key; they leave wrecks as their corpses.
 Each species' features are the binding visual brief for its builder.
 """
 from collections import namedtuple
@@ -151,6 +153,14 @@ ROSTER = [
             'ORIGINAL (not a spelopede): long low segmented insect, about 9 repeating armoured segments banded ochre and black, many short legs, small head with curved pincers'),
     Species('glimmerstag', 'quadruped', 'XL', False,
             'ORIGINAL (not a thrumbo): giant pale ivory stag, long graceful neck, narrow elegant head, tall branching pale-blue crystal antlers (slightly emissive), a mossy green-grey mane over neck and shoulders, cool blue-grey shadows'),
+    Species('harrow', 'mech', 'M', False,
+            'ORIGINAL mechanical raider, fast blade unit: low lean four-legged chassis built like a running hound, gunmetal-grey plates over dark joints, narrow wedge sensor head with one amber slit lens, two long hooked cutting arms folded forward under the chest, a short stabiliser spine instead of a tail; no humanoid torso'),
+    Species('spindle', 'mech', 'M', False,
+            'ORIGINAL mechanical raider, mid-range sniper: tall thin tripod walker, three jointed stilt legs under a small drum body, a long slender rail barrel along its back reaching past the front, one large round cyan lens, pale bone-white plates with dark grey joints'),
+    Species('bulwark', 'mech', 'XL', False,
+            'ORIGINAL mechanical raider, slow heavy gunner: squat very wide armoured hull on six short thick legs, low turtle-like dome of overlapping slab plates, a rotary multi-barrel gun in a front turret ring, a row of small red sensor lights; dark olive and soot-black; one hull, not segmented'),
+    Species('quill', 'mech', 'M', False,
+            'ORIGINAL mechanical raider, long-range skirmisher: light four-legged walker with long thin legs and a small boxy body, a bundle of needle tubes on a raised back mount pointing forward, a single sensor stalk, dusty sand-brown plates with rust-orange stripes'),
 ]
 
 # Natural weapon per key (mirrors internal/domain/animal Def.Attack): the
@@ -168,7 +178,7 @@ ATTACK = {
     'wild_boar': 'gore', 'yorkshire_terrier': 'bite', 'cassowary': 'kick', 'chicken': 'peck', 'duck': 'peck',
     'emu': 'kick', 'goose': 'peck', 'ostrich': 'kick', 'turkey': 'peck', 'cobra': 'bite', 'iguana': 'bite',
     'tortoise': 'bite', 'hive_beetle': 'bite', 'hive_brute': 'claw', 'hive_crawler': 'bite',
-    'glimmerstag': 'gore',
+    'glimmerstag': 'gore', 'harrow': 'slash', 'spindle': 'shoot', 'bulwark': 'shoot', 'quill': 'shoot',
 }
 ROSTER = [s._replace(attack=ATTACK[s.key]) for s in ROSTER]
 

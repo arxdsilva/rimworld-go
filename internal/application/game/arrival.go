@@ -395,11 +395,12 @@ func (g *Game) introLetter() {
 
 // ArrivalView is one arrival pod for the renderer (NG-1 §2.11): it falls
 // as a streak until Tick, then lands in a dust burst where its shell
-// stands. Landed pods stay listed for an hour.
+// stands. Landed pods stay listed for an hour. Hostile (DEF-4, wave E):
+// a raid's drop pod.
 type ArrivalView struct {
-	X, Y   int
-	Tick   uint64
-	Landed bool
+	X, Y            int
+	Tick            uint64
+	Landed, Hostile bool
 }
 
 func (g *Game) arrivalViews(now uint64) []ArrivalView {

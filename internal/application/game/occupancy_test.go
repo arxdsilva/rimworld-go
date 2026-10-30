@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -239,7 +240,7 @@ func TestDraftedAndRaiderDoNotMakeWay(t *testing.T) {
 	if g.idleYieldable(b) {
 		t.Fatal("a drafted pawn must hold its cell")
 	}
-	g.raiders[b] = raiderState{}
+	g.raiders[b] = raid.Raider{}
 	g.draft[b] = false
 	if g.idleYieldable(b) {
 		t.Fatal("a raider never makes way")

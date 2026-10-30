@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
@@ -322,7 +323,7 @@ func TestRaiderBlocksDoorway(t *testing.T) {
 		}
 	}
 	col := draftedPawn(t, g, 3, 5)
-	g.raidWith(kitOfOne(g), planAssault)
+	g.raidWith(kitOfOne(g), raid.Assault)
 	if len(g.raiderIDs) != 1 {
 		t.Fatal("no raider")
 	}

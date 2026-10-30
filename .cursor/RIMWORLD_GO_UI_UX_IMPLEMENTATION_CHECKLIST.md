@@ -404,7 +404,7 @@ the player's primary world-editing command surface.
     -   Security.
     -   Miscellaneous/endgame.
     -   Categories appear only when content exists/unlocked.
--   [-] **Build option cards/buttons** (icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice; wave D U4: 24 new ToolDefs, production benches, furniture and security entries plus the powered door under Structure, with BuildSprite cases)
+-   [-] **Build option cards/buttons** (wave E U5: shelf under Furniture; icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice; wave D U4: 24 new ToolDefs, production benches, furniture and security entries plus the powered door under Structure, with BuildSprite cases)
     -   Icon.
     -   name.
     -   material requirement.
@@ -473,18 +473,18 @@ the player's primary world-editing command surface.
 
 ## 6.2 Stockpile configuration panel
 
--   [ ] **Stockpile name**
+-   [x] **Stockpile name** (wave E U5: rename field in the Storage settings window, `windows/storage.go`)
 -   [x] **Storage priority selector** (PLAY-023: Priority picker and pane line on stockpiles and dumps)
--   [ ] **Allowed-items filter tree**
+-   [-] **Allowed-items filter tree** (wave E U5: Storage settings window, categories open into item kinds with allow checkboxes, rows from `game.StockpileFilterRows`; opened from `cmd.zone.storage`; missing: allow all/disallow all buttons and search)
     -   Hierarchical categories.
     -   Allow all/disallow all.
     -   Search.
     -   Individual definitions.
--   [ ] **Quality range**
--   [ ] **Hit-point/condition range**
--   [ ] **Special filters**
+-   [x] **Quality range** (U5: quality stepper line in the Storage window)
+-   [x] **Hit-point/condition range** (U5: hit points % stepper in 10 % steps)
+-   [x] **Special filters** (U5: rotten and tainted toggles via `SetStockpileSpecial`)
     -   Rotten/fresh, tainted/clean, etc. where relevant.
--   [ ] **Copy/paste settings**
+-   [x] **Copy/paste settings** (U5: Copy and Paste buttons, `PasteStockpile`; disabled reasons)
     -   Important quality-of-life feature.
 
 ## 6.3 Growing-zone configuration
@@ -796,8 +796,10 @@ understandable.
     -   Hostile target.
 -   [x] **Melee attack**
 -   [x] **Ranged attack**
--   [ ] **Fire-at-will toggle**
--   [ ] **Hold position behavior if implemented**
+-   [x] **Fire-at-will toggle** (wave E U5: `cmd.pawn.fire.at.will` in the inspector, group-merged, `SetFireAtWill`; `TestJourneyFireAtWillOffHoldsFire`)
+-   [x] **Hold position behavior if implemented** (wave E U5: `cmd.pawn.hold.position`, `SetHoldPosition`; `TestJourneyHoldPosition`)
+-   [x] **Throw grenade** (wave E U5: `cmd.pawn.grenade` starts a grenade aim mode in `orders/mortar_aim.go`, next click throws, hint through the shell Hint; `TestJourneyThrowGrenade`)
+-   [x] **Combat log** (wave E U5: History window Combat tab, `windows/combat_log.go`, from `WorldView.CombatLog`, 64 entries)
 -   [x] **Emergency tend** (MED-03: drafted right-click "Tend <name>" on a wounded colonist or prisoner)
 -   [x] **Rescue/capture contextual commands** (SIM-062: select a colonist, right-click a pawn: "Rescue <name>", "Capture <name>", "Arrest <name>", "Prioritize tending <name>" (undrafted) or "Tend <name>" (drafted); disabled rows give the reason (no free bed, no free prisoner bed, carried by, cannot reach); Shift queues; journeys `TestJourneyOrders{RescueDowned,CaptureFromMenu,ArrestFromMenu,PrioritizeTend,RescueQueued}`)
 
@@ -1282,7 +1284,7 @@ the player what just happened and what requires attention.
 
 ## 24.1 History screen
 
--   [-] **Colony timeline** (UI-022: History tab (F9) lists major events with click-to-select; no category filter or date ordering controls)
+-   [-] **Colony timeline** (wave E U5: a Combat tab beside Events; UI-022: History tab (F9) lists major events with click-to-select; no category filter or date ordering controls)
     -   Major events ordered by game date.
     -   raids.
     -   deaths.
@@ -1307,7 +1309,7 @@ the player what just happened and what requires attention.
 
 ## 24.3 Pawn records
 
--   [ ] **Combat records**
+-   [-] **Combat records** (wave E U5: the colony-wide combat log on the History Combat tab; no per-pawn kill or damage records)
 -   [ ] **Kills**
 -   [ ] **Damage dealt/taken**
 -   [ ] **Work/production records**
@@ -2070,7 +2072,7 @@ Complete:
 -   [-] Placement preview.
 -   [-] Orders.
 -   [-] Zones.
--   [ ] Stockpile settings.
+-   [x] Stockpile settings. (wave E U5: Storage settings window, also for shelves)
 -   [x] Growing-zone settings. (PLAY-020: crop, allow sowing, allow cutting, hide, rename)
 -   [-] Work.
 -   [ ] Schedule.

@@ -1,7 +1,9 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/economy/item"
+	raiddef "rimworld-go/internal/domain/raid"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
@@ -92,7 +94,15 @@ func (g *Game) Arm(id entity.EntityID, k item.Kind) {
 // RaidArmed sends an assault raid carrying exactly these weapons.
 func (g *Game) RaidArmed(kit ...item.Kind) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	g.raidWith(kit, planAssault)
+	g.raidWith(kit, raid.Assault)
+}
+
+// RaidDropPods sends a drop-pod raid with that kit onto the colony (DEF-4).
+func (g *Game) RaidDropPods(kit ...item.Kind) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	if len(kit) > 0 {
+		podRaid(g, raid.Group{Size: len(kit), Plan: raid.Assault, Arrival: raiddef.DropPodCentre, FleeLoss: raiddef.FleeLossLegacy}, kit, nil)
+	}
 }
 
 // SpawnCrop places a plant of species at (x, y) grown to pct percent.

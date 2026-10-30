@@ -178,11 +178,14 @@ func ZoneLabelCap(tileL float64) float64 {
 	return min(ZoneLabelMax, max(ZoneLabelNear, zoneLabelCapArea/tileL))
 }
 
+// zoneShelf is a shelf building's own storage zone (PRD-4): no overlay.
+const zoneShelf = "shelf"
+
 // DrawZoneLabels names every zone once (DrawZoneLabel). It runs after the
 // objects, so stacks and crops never cover a zone's name.
 func (o *Zones) DrawZoneLabels(v *render.View, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	for _, z := range w.Zones {
-		if z.Hidden {
+		if z.Hidden || z.Kind == zoneShelf {
 			continue // a hidden zone shows no name (while selected, drawZoneSelection)
 		}
 		o.DrawZoneLabel(v, screen, z, o.ZoneGeomOf(z), sw, sh, tile)
@@ -198,8 +201,8 @@ func (o *Zones) DrawZones(v *render.View, ps sprite.Pass, ch *Chunks, screen *eb
 	none := color.NRGBA{}
 	planted := o.zonePlantCells(v, ch, &w)
 	for _, z := range w.Zones {
-		if z.Hidden {
-			continue // a hidden zone draws no fill or outline (while selected, drawZoneSelection)
+		if z.Hidden || z.Kind == zoneShelf {
+			continue // a shelf's zone is never drawn; a hidden zone draws no fill or outline (while selected, drawZoneSelection)
 		}
 		key, fill := zoneSpriteKey(z.Kind)
 		var skip map[[2]int]bool

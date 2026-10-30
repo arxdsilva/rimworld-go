@@ -166,6 +166,27 @@ const (
 	IncendiaryShells
 	EMPShells
 	SmokeShells
+	// Wave E contract (append only, saved): PRD-4's recipe catalogue.
+	// ENG-003: wiki numbers; the wiki's invented drug and reagent names are
+	// replaced by our own (ash flake for flake, silverdust for yayo,
+	// battle tonic for go-juice, reagent for neutroamine). Fuel and brewing
+	// (chemfuel, wort), the meal tiers and kibble (animal feed), the hard
+	// drugs, the high-tech materials and the mortar's reinforced barrel.
+	Chemfuel
+	Wort
+	FineMeal
+	LavishMeal
+	Pemmican
+	SurvivalMeal
+	Kibble
+	AshFlake
+	Silverdust
+	BattleTonic
+	Reagent
+	AdvancedComponents
+	Uranium
+	Plasteel
+	ReinforcedBarrel
 	numKinds
 )
 
@@ -189,7 +210,9 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"heavy smg", "lmg", "minigun", "frag grenades", "molotov cocktails", "EMP grenades",
 	"incendiary launcher", "emp launcher",
 	"flak vest", "flak pants", "flak jacket", "plate armor", "marine armor", "marine helmet", "simple helmet", "advanced helmet",
-	"mortar shells", "incendiary shells", "EMP shells", "smoke shells"}
+	"mortar shells", "incendiary shells", "EMP shells", "smoke shells",
+	"chemfuel", "wort", "fine meal", "lavish meal", "pemmican", "packaged survival meal", "kibble",
+	"ash flake", "silverdust", "battle tonic", "reagent", "advanced components", "uranium", "plasteel", "reinforced barrel"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -213,12 +236,18 @@ func (k Kind) IsCorpse() bool {
 // play: grains and dry beans are dense, leafy greens are light.
 var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Meat: 2200, Meal: 6000,
 	Potatoes: 1600, Corn: 1700, Wheat: 2400, Beans: 2400, Lettuce: 450, Radishes: 500, Pumpkins: 800,
-	Milk: 900, Egg: 700, Brewgrain: 1200}
+	Milk: 900, Egg: 700, Brewgrain: 1200,
+	// Wave E, wiki nutrition on the simple meal's scale (0.9 = 6000):
+	// fine and survival meals 0.9, lavish 1.0, pemmican and kibble 0.05.
+	FineMeal: 6000, LavishMeal: 6667, SurvivalMeal: 6000, Pemmican: 333, Kibble: 333}
 
 // preference ranks food choice: higher is eaten first.
 // Raw grain, dry beans and raw potatoes are edible but unappealing.
 var preference = [numKinds]int{Meal: 4, Food: 3, Berries: 2, Corn: 2, Lettuce: 2, Radishes: 2, Pumpkins: 2,
-	Potatoes: 1, Beans: 1, Wheat: 1, Meat: 1, Milk: 2, Egg: 1, Brewgrain: 1}
+	Potatoes: 1, Beans: 1, Wheat: 1, Meat: 1, Milk: 2, Egg: 1, Brewgrain: 1,
+	// Wave E: the better the meal the sooner it is eaten; kibble (animal
+	// feed) is left to PRD-4.
+	LavishMeal: 6, FineMeal: 5, SurvivalMeal: 4, Pemmican: 3}
 
 // Nutrition is the hunger restored by eating one unit of k (0 if inedible).
 func (k Kind) Nutrition() int {
@@ -236,18 +265,24 @@ func (k Kind) Preference() int {
 	return preference[k]
 }
 
-// Raw reports uncooked food (eating it is unpleasant).
-func (k Kind) Raw() bool { return k.IsFood() && k != Food && k != Meal }
+// Raw reports uncooked food (eating it is unpleasant): not a meal,
+// pemmican or kibble.
+func (k Kind) Raw() bool {
+	return k.IsFood() && k != Food && k != Meal && (k < FineMeal || k > Kibble)
+}
 
 // Foods lists every edible kind.
 func Foods() []Kind {
-	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg, Brewgrain}
+	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg, Brewgrain,
+		FineMeal, LavishMeal, Pemmican, SurvivalMeal, Kibble}
 }
 
 // IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
-// MED-07 adds the medical drugs (numbroot tincture, prophyl tablet).
+// MED-07 adds the medical drugs (numbroot tincture, prophyl tablet);
+// wave E the hard drugs (ash flake, silverdust, battle tonic).
 func (k Kind) IsDrug() bool {
-	return k == Beer || k == AshleafTea || k == SparkTablet || k == NumbrootTincture || k == ProphylTablet
+	return k == Beer || k == AshleafTea || k == SparkTablet || k == NumbrootTincture || k == ProphylTablet ||
+		k >= AshFlake && k <= BattleTonic
 }
 
 // IsImplant reports a prosthetic installed by surgery (ENG-003; the
@@ -429,14 +464,16 @@ func (s Stack) Shelf() int {
 func (s Stack) Dryable() bool { return s.Kind.Dryable() && !s.Dried && !s.Rotten() }
 
 // Dryable reports perishable food kinds (corpses are butchered, not dried;
-// milk and eggs don't dry).
-func (k Kind) Dryable() bool { return k.IsFood() && k.Perishable() && k != Milk && k != Egg }
+// milk and eggs don't dry; pemmican is dried already).
+func (k Kind) Dryable() bool {
+	return k.IsFood() && k.Perishable() && k != Milk && k != Egg && k != Pemmican
+}
 
 // dryDays is how long a rack batch takes to dry in warm air: thin meat
 // strips and leaves dry in about a day, juicy fruit, sliced roots and
 // squash take longer, and cooked meals are dried into hard travel cakes.
 var dryDays = [numKinds]float64{Meat: 1, Meal: 1, Lettuce: 0.75, Berries: 2, Radishes: 1.5,
-	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5}
+	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5, FineMeal: 1, LavishMeal: 1}
 
 // DryTicks is how long a batch of k takes to dry at full speed.
 func (k Kind) DryTicks() int {
@@ -512,7 +549,10 @@ func MergePoison(qa int, pa int16, qb int, pb int16) int16 {
 // and squash keep a season, and dried grain and beans keep indefinitely.
 var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5, CorpseAnimal: 2.5, CorpseHuman: 3,
 	Berries: 10, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 40, Pumpkins: 50,
-	Milk: 3, Egg: 10}
+	Milk: 3, Egg: 10,
+	// Wave E, wiki days to rot: fine and lavish meals 4, pemmican 70, wort
+	// 5.6 (the survival meal and kibble never rot).
+	FineMeal: 4, LavishMeal: 4, Pemmican: 70, Wort: 5.6}
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).
 func (k Kind) ShelfTicks() int {

@@ -41,3 +41,27 @@ func TestMortarAimRightClickCancels(t *testing.T) {
 		t.Fatalf("on=%v cmds=%v", m.On, s.got)
 	}
 }
+
+func TestGrenadeAimClickThrows(t *testing.T) {
+	var m MortarAim
+	s := &sink{}
+	m.StartGrenade(9)
+	m.Step(s, 0, 5, 5, true, true, false) // the opening click
+	m.Step(s, 0, 5, 5, false, true, false)
+	if !m.On || len(s.got) != 0 {
+		t.Fatal("the opening click and a chrome click must not throw")
+	}
+	m.Step(s, 0, 12, 7, true, true, false)
+	if m.On || len(s.got) != 1 {
+		t.Fatalf("on=%v cmds=%v", m.On, s.got)
+	}
+	if c := s.got[0]; c.Kind != command.ThrowGrenade || c.Pawn != 9 || c.X != 12 || c.Y != 7 {
+		t.Errorf("command = %+v", c)
+	}
+	m.StartGrenade(9)
+	m.Fresh = false
+	m.Step(s, 0, 1, 1, true, false, true)
+	if m.On || len(s.got) != 1 {
+		t.Fatal("cancel must leave without throwing")
+	}
+}

@@ -21,8 +21,9 @@ func TestOneButcherRecipeForEveryAnimal(t *testing.T) {
 		}
 		names = append(names, r.Name)
 	}
-	if len(names) != 1 || names[0] != "butcher_animal" {
-		t.Fatalf("a butcher table offers one butcher recipe: %v", names)
+	// PRD-4: kibble is made at the butcher table too (wiki: Kibble)
+	if len(names) != 2 || names[0] != "butcher_animal" || names[1] != "make_kibble" {
+		t.Fatalf("a butcher table offers one butcher recipe and kibble: %v", names)
 	}
 	for _, id := range []ID{ButcherDustbuck, ButcherRidgewolf} {
 		if !DefOf(id).Legacy || Upgrade(id) != ButcherAnimal {

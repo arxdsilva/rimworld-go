@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
@@ -267,7 +268,7 @@ func TestVaultDefendersDormantUntilBreach(t *testing.T) {
 	}
 	for id := range before {
 		a, _ := g.animals.Get(id)
-		if a.Dormant || a.Manhunter != hiveForever || a.Mode != animal.Attack {
+		if a.Dormant || a.Manhunter != raid.HiveForever || a.Mode != animal.Attack {
 			t.Fatalf("defender %d still asleep: %+v", id, a)
 		}
 	}
@@ -305,7 +306,7 @@ func TestVaultHurtDefenderWakes(t *testing.T) {
 	id := entity.EntityID(vaultByID(g, 1).Defenders[0])
 	g.hurt(id, 1, 0)
 	a, _ := g.animals.Get(id)
-	if a.Dormant || a.Manhunter != hiveForever {
+	if a.Dormant || a.Manhunter != raid.HiveForever {
 		t.Fatalf("hurt defender %+v", a)
 	}
 	if b := entity.EntityID(vaultByID(g, 1).Defenders[1]); b != 0 {

@@ -468,7 +468,7 @@ silhouettes.
 
 ### 11.1 Roster and builder (normative, ART-011)
 
-- **Roster:** 61 species, listed in `assets/source/blender/artlib/families/animal_roster.py`.
+- **Roster:** 65 species (61 plus the four wave E mechs), listed in `assets/source/blender/artlib/families/animal_roster.py`.
   - It mirrors `internal/domain/animal` (same keys and order).
   - Each row's `features` text is the binding visual brief: silhouette, proportions, palette and markings.
   - The species exaggerate their defining traits: the elephant's trunk and ears, the ibex's horns, the fennec's ears, the squirrel's tail.
@@ -498,6 +498,7 @@ silhouettes.
   | lizard | |
   | tortoise | |
   | beetle, brute, crawler | hive insects |
+  | mech | the four original mechanoids (harrow, spindle, bulwark, quill; wave E, `families/animals/mech.py`): hard-surfaced plate hulls over dark joints, `mech_*` materials in `palettes/materials_wave_e.yaml`; sets walk, graze, flinch, rest, slash or shoot; corpses are wrecks (v0-v2 on an oil pool) |
 
 - **Per species and rendered facing (south/east/north; west is east mirrored by the renderer; one canvas per facing, lean `ANIMAL_LEAN_DEG` 70):**
 
@@ -1280,7 +1281,10 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] furniture families
 -   [x] production/research benches (wave D, A3: family `workshop`, 161 sprites with `fortify`, glow masks for the burning forge and powered benches, stuff tint masks on sculptures (large and grand re-rendered at the wiki footprints) and armchair, icons for every kind; validator 5709 sprites 0 errors, `make art-check` clean incl. orphans; renderer in `render/world/objects.go`, `render/overlay/power_draw.go`)
 -   [x] fortify and turret guns (wave D, A3: family `fortify` with barricade (`stone_tint` mask), autocannon, slug turret and mortar guns drawn from a precomputed key table in `render/overlay/turret_draw.go`, powered door, four shell item icons)
--   [ ] storage
+-   [x] storage (wave E, A4: family `storage`, the shelf at its footprint; 5957 sprites in the validator, 0 errors)
+-   [x] goods (wave E, A4: family `goods`, 15 item sprites and `ui_icon` icons for the PRD-4 and DEF-4 kinds: meals, kibble, wort, drugs, chemfuel, components, uranium, plasteel, reinforced barrel)
+-   [x] mech (wave E, A4: four mechanoids with full sprite sets, wrecks and icons; see §11.1; voices are not art and are blocked, see the DEF-4 R2 handoff)
+-   [x] shippart (wave E, A4: family `shippart`, the 6x3 crashed ship part)
 -   [x] generators/batteries/conduits/lamps (PLAY-021: `artlib/families/power.py`: a linked 16-mask conduit and a hidden-conduit overlay marking, power switch on/off, wood-fired, solar, wind (eight rotor frames) and geothermal generators, battery, heater, in-wall cooler; torch lamp and electric benches in furniture; lit parts as `<name>_glow` layers drawn only while powered, the standing lamp's bulb included (PLAY-022); review sheet `generated/power_buildings.png`)
 
 ### ART Wave 5 --- Combat

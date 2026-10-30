@@ -1,7 +1,7 @@
 # combat package
 
 ## Package Purpose
-Fighting: line of sight and cover, attack resolution and the attack/hunt job, defending against attackers (fight or flee), spike traps, raiders breaching walls and doors, and the sentry turrets. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by DEF-0; the gap backlog is `.cursor/DEFENCE_GAP_ANALYSIS.md`. Raids themselves (`raids.go`, `raid_plans.go`, `hive.go`) stay in the game until DEF-4.
+Fighting: line of sight and cover, attack resolution and the attack/hunt job, defending against attackers (fight or flee), spike traps, raiders breaching walls and doors, and the sentry turrets. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by DEF-0; the gap backlog is `.cursor/DEFENCE_GAP_ANALYSIS.md`. Raids themselves are the sibling `game/raid` package (DEF-4), which reaches Strikes, Breach and Turrets through the game.
 
 ## Owned Concepts
 - `Combat` (combat.go): the root, built by `New(Host, Roles)`; components as exported fields and no methods of its own (a feature's entry points go on its component).
@@ -12,6 +12,8 @@ Fighting: line of sight and cover, attack resolution and the attack/hunt job, de
 - `Traps` and `Breach` (defense.go): `At`, `Has`, `Spring`, `Underfoot`, `Victim`; `Start` (plan through walls, doors and, for sappers, rock), `Do` (blows on cooldown; rifle butt; a sapper digs).
 - `Turrets` (turret.go, PLAY-024): `Phase`, `Targetable`, `Blast` (from the game's building damage), `ForRaider`, `At`, `Firing`, `Aim`, `View`, `Export`/`Import` (saved as `TurretSave`). DEF-3: the autocannon and slug turret (`gunOf`, wiki guns with a minimum range, bursts in `Aim.Burst`), barrel wear (`Arm.Fired`, `BarrelOf`, `Spent`, `Barrel`, `Rearm`), hold fire (`SetHold`, `Held`). `Phase` also steps the `after` phasers (fuses, doors, mortars, rearm hauls) every tick.
 - DEF-3 defences: `Sight.CoverAt`/`Cover` (permille, `domain/combat/cover`: buildings, rock, grown trees/cacti/bushes, stone chunks cached for `chunkEvery`); IEDs in `Traps` (ied.go: `IEDFuse` 15 ticks, then `Blasts.Explode` and a re-laid blueprint); `Doors` (door.go: open state from `domain/building/door`; the game hooks `Wait` (movement: a step into a shut door opens it and waits), `HeldOpen` (the shut-door set hostiles path with) and `Barred` (a forbidden door is unwalkable); `SetHold`; only open doors are stepped); `Mortars` (mortar.go: crew call, forced or nearest target in the wiki range band, warmup/cooldown, forced miss by the crew's Shooting, `Shots.Lob`); `Rearms` (rearm.go: idle colonist hauls steel or shells, job RearmTurret, advanced by `Do` from the game's job phase); `Orders` (orders.go: `Apply` for the four DEF-3 commands, `Do` for the two jobs, `View` = BuildingView facts); `Hunting` and `Tiles` (hunt.go, tiles.go: moved unchanged from the game for the package budget).
+
+- DEF-4 (R1): `Drafts` (draft.go: `SetFireAtWill`, `SetHold`, `FireAtWill`, `Holding`, `Apply` for the three drafted commands; grenade belts `Carry`, `Drop`, `Grenades`, `Throw` with the warmup queue stepped as a phaser; `Arms.Disarm` takes a spent belt). `Log` (log.go: `Add`, `Down`, `Entries`; 64 entries). Raiders' mortars in mortar.go (`Raise`, `Crew`, `Man`; `Mortar.Hostile`). `Traps.Struck` (a bullet on a charge) and `Traps.chain` (a blast lights the charges it reaches). Saved in the Turrets block as `Drafts`, `Throws`, `Log`.
 
 ## Allowed Dependencies
 - Domain value types (`combat/weapon`, `combat/projectile`, `combat/attack`, `combat/armor`, `combat/damage`, `building/construction`, `animal`, `pawn/body`, `pawn/health`, `economy/item`, `ai/job`, `ai/pathing`, `sim/entity`).
@@ -31,6 +33,7 @@ Fighting: line of sight and cover, attack resolution and the attack/hunt job, de
 - Every roll comes from `Dice`: strikes and traps on the game's main stream, turrets on the defence stream; a brawl passes its own social-stream roll to `StrikeRoll`. No wall clock.
 - DEF-1 changed behaviour on purpose: the raid/250 hash moved (grown and raid/500 have no fight in their 3000 ticks).
 - DEF-3 hysteresis: hold fire drops the target and a released turret looks again only on its scan tick (`TestTurretHoldDoesNotFlap`); a door closes `door.StayOpen` after its last user (`TestDoorsOpenForColonists`, domain `TestAutoCloseDoesNotFlap`); a mortar crew stays `MortarManMin` and stands down only after `MortarIdleRelease` without a target (`TestMortarCrewDoesNotFlap`); a rearm is asked at a quarter barrel or half a rack and fills to full.
+- DEF-4: fire at will and hold position change only on a command (`TestDraftSwitchesDoNotFlap`).
 - Hysteresis: a turret locks within `TurretLock` and lets go past `TurretRelease` or after `TurretLost` ticks out of sight; an armed colonist (or a raider choosing a turret) switches targets only for one `SwitchMargin` closer; a fleeing colonist keeps running to `FleeRelease` and holds back `FleeCalm` ticks.
 
 ## Tests

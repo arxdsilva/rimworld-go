@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -164,7 +165,7 @@ func TestCasketOccupants(t *testing.T) {
 			t.Fatalf("pawns %d raiders %d beasts %d", len(pawns), len(raiders), len(beasts))
 		}
 		for _, a := range beasts {
-			if a.Species != animal.HiveCrawler || a.Manhunter != hiveForever || a.Dormant {
+			if a.Species != animal.HiveCrawler || a.Manhunter != raid.HiveForever || a.Dormant {
 				t.Fatalf("crawler %+v", a)
 			}
 		}
@@ -178,7 +179,7 @@ func TestCasketOccupants(t *testing.T) {
 			t.Fatalf("pawns %d raiders %d beasts %d", len(pawns), len(raiders), len(beasts))
 		}
 		for _, a := range beasts {
-			if a.Species != animal.HiveBeetle || a.Manhunter != hiveForever || a.Mode != animal.Attack {
+			if a.Species != animal.HiveBeetle || a.Manhunter != raid.HiveForever || a.Mode != animal.Attack {
 				t.Fatalf("beetle %+v", a)
 			}
 		}

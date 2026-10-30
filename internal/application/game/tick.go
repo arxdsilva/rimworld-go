@@ -201,6 +201,10 @@ func (g *Game) applyOne(c command.Command) {
 		if g.combat.Orders.Apply(c) { // combat/orders.go (DEF-3): doors, turrets, mortars
 			g.structVer++ // a door held open (or let close) changes the hostiles' way (defense.go shutDoors)
 		}
+	case command.SetStockpileFilter, command.SetStockpileSpecial, command.PasteStockpile:
+		g.cmdStockpile(c) // zones.go (PRD-4): storage filters
+	case command.SetFireAtWill, command.SetHoldPosition, command.ThrowGrenade:
+		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4): drafted control
 	}
 }
 
@@ -1123,10 +1127,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.jobs.Set(id, j)
 			return
 		}
-		take := st.Qty
-		if take > item.CarryLimit {
-			take = item.CarryLimit
-		}
+		take := min(st.Qty, item.CarryLimit, st.Kind.StackLimit()) // PRD-4: no more than a tile holds
 		if len(j.Route) > 0 {
 			take = min(st.Qty, max(1, j.Count)) // the planned load (haul_route.go)
 		} else if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {
@@ -1578,7 +1579,7 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			continue
 		}
 		other := *op // copied before the store changes below
-		room := item.StackLimit - other.Qty
+		room := other.Kind.StackLimit() - other.Qty
 		if room <= 0 {
 			break
 		}
@@ -1592,12 +1593,12 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 		}
 		other.Rot = item.MergeRot(other.Qty, other.Rot, room, st.Rot)
 		other.Poison = item.MergePoison(other.Qty, other.Poison, room, st.Poison)
-		other.Qty = item.StackLimit
+		other.Qty = other.Kind.StackLimit()
 		g.stacks.Set(oid, other)
 		st.Qty -= room
 		break
 	}
-	if g.otherStackAt(id, st.X, st.Y) {
+	if g.cellFull(id, st.X, st.Y) { // zones.go: a shelf tile holds several (PRD-4)
 		if x, y, ok := g.spillTile(st.Kind, st.X, st.Y); ok {
 			st.X, st.Y = x, y
 			g.mergeOrSetFrom(id, st, seen)
@@ -1636,7 +1637,7 @@ func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
 				if oid == 0 {
 					return nx, ny, true
 				}
-				if o, _ := g.stacks.Get(oid); o.Kind == k && o.Qty < item.StackLimit {
+				if o, _ := g.stacks.Get(oid); o.Kind == k && o.Qty < k.StackLimit() {
 					return nx, ny, true
 				}
 			}

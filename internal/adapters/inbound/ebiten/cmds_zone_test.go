@@ -48,7 +48,7 @@ func TestZoneCommandsComeInRimWorldsOrderPerKind(t *testing.T) {
 		want string
 	}{
 		{1, "cmd.zone.crop cmd.zone.sow cmd.zone.cut" + tail},
-		{2, "cmd.zone.priority" + tail}, // PLAY-023: storage priority
+		{2, "cmd.zone.priority cmd.zone.storage" + tail}, // PLAY-023: storage priority
 		{3, strings.TrimSpace(tail)},
 	} {
 		cs := zoneCmdsOf(a, c.id)

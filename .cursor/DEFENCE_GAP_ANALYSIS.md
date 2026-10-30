@@ -4,7 +4,7 @@ Scope: bring ranged and melee combat, armor, cover, explosions, traps, turrets, 
 
 ## Status (2026-10-29)
 
-Wave D done for DEF-3 (cover, IEDs, turrets, mortars, doors; handoff `handoffs/DEF-3-cover-traps-turrets-mortars-doors.md`). Wave C done for DEF-2 (weapons, armor, explosions; handoff `handoffs/DEF-2-weapons-armor-explosions.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). DEF-3..4 have not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave D done for DEF-3 (cover, IEDs, turrets, mortars, doors; handoff `handoffs/DEF-3-cover-traps-turrets-mortars-doors.md`). Wave C done for DEF-2 (weapons, armor, explosions; handoff `handoffs/DEF-2-weapons-armor-explosions.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). Wave E done for DEF-4 (raids, drafted control, mechanoids, ship part; handoffs `handoffs/DEF-4-R1-raids-drafted-control.md` and `handoffs/DEF-4-R2-mechanoids-ship-part.md`). The programme's five waves are done; the gaps that remain are in section 3.10. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -36,8 +36,8 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Armor penetration and damage types (sharp, blunt, heat, bomb, burn, EMP). | `Def.DamageType` and `Def.ArmorPen`; `Strikes.armorRoll` feeds `wound` (`combat/strike.go`). | None. | DEF-0 (domain), DEF-1 | done |
 | Hit chance takes shooter skill, target size, lighting and weather into account. | `Strikes.report` (`combat/strike.go`) multiplies band, per-tile shooter accuracy (`attack.ShooterFactor`), `attack.SizeFactor` and cover. Light and weather are fixed at `NoLightPenalty` and `ClearFactor`, not read from the map. | Light and weather factors from `light.go` and `climate.go`. | DEF-1 | partial |
 | Melee: adjacent attacks with cooldown, hit chance, weapon and body attacks. | Done for fists and animals; DEF-2 adds mace, gladius, longsword and pila beside club, knife and spear. | Melee weapons are not stuff-scaled and a wielded weapon loses its crafted quality on equip. | DEF-2 | partial |
-| Targets are chosen by threat and cover is sought. | `autoEngage` picks the nearest hostile it can hit (`combat.go`); `nearestThreatTo` and `defend` handle autonomous defence. No threat weighting, no cover seeking (checklist 17.8 **Hostile target selection**, **Basic cover seeking** are `[ ]`). | Threat-weighted choice; cover seeking for ranged raiders. | DEF-4 | open |
-| Combat log entries and records. | `logStrike`, `logEvent` (`eventlog.go`). | Combat records and threat history screens (UI 24.3). | DEF-4 | open |
+| Targets are chosen by threat and cover is sought. | DEF-4 raiders: colonist or ally, a powered turret in sight (also with no colonist reachable, wiki: Raid), a rival faction's raider closer, then walls and doors (breach). | Threat weighting; cover seeking for ranged raiders. | DEF-4 | partial |
+| Combat log entries and records. | `logStrike`, `logEvent` (`eventlog.go`); DEF-4 `combat/log.go`: a 64-entry ring of fights and threats (raid arrived, drop pods, colonist struck down, raider downed or killed, retreat, theft, fires, siege), saved, read model `WorldView.CombatLog`. | Combat records and threat history screens (UI 24.3). | DEF-4 | partial |
 
 ### 3.2 Armor and apparel
 
@@ -75,9 +75,9 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
 | Spike traps. | `construction.SpikeTrap`; `springTrap` springs at `trapChance` percent for `trapDamage` and re-lays the frame; `trapsUnderfoot` checks movers; sappers step around traps (`sapperBreaks`). | None for the spike trap. | - | done |
-| IED traps (high explosive, incendiary, EMP, smoke). | `game/combat/ied.go`: four kinds on the explosion service, 15-tick fuse (wiki), blast, re-laid blueprint. High explosive radius 3.9 (wiki); incendiary, EMP and smoke burst as their shell (original: no wiki page). | Bullets setting off IEDs, explosion chains, sappers avoiding IEDs (DEF-4). | DEF-3 | partial |
+| IED traps (high explosive, incendiary, EMP, smoke). | `game/combat/ied.go`: four kinds on the explosion service, 15-tick fuse (wiki), blast, re-laid blueprint. High explosive radius 3.9 (wiki). DEF-4: a bullet landing on a charge lights it (wiki), a blast lights the charges it reaches (chains), sappers know 30 % of charges (wiki: Spike trap, fixed per charge). | None. | DEF-3, DEF-4 | done |
 | Mini-turret needing rearm and barrel wear; autocannon; uranium slug turret. | Autocannon and uranium slug turret with wiki stats (min range, bursts). Barrels 60/90/30 rounds (wiki); a spent barrel stops firing; `RearmTurret` haul by idle undrafted colonists (steel per barrel 9/20/7 = wiki cost / 9, scaling); Hold fire (`SetTurretHold`). | Uranium and reinforced barrel items (steel stands in). | DEF-3 | partial |
-| Mortars: manned, shells, forced target, minimum range. | Mortar building (180 HP), shell items (mortar, incendiary, EMP, smoke), 20 shells per barrel; range 29-500, warmup 240, cooldown 1680, forced miss radius 9 scaled by crew Shooting (wiki). Crew: drafted colonist on its spot, else `SetMortarTarget.Pawn`, else nearest idle drafted within 12 tiles; `ManMortar` job; `SetMortarTarget`/`ClearMortarTarget`. Journey `TestJourneyMortarForcedTarget`. | Raiders using mortars (DEF-4). | DEF-3 | partial |
+| Mortars: manned, shells, forced target, minimum range. | Mortar building (180 HP), shell items, 20 shells per barrel; range 29-500, warmup 240, cooldown 1680, forced miss radius 9 scaled by crew Shooting (wiki). Crew order, `ManMortar`, `SetMortarTarget`/`ClearMortarTarget`. DEF-4: a siege's raiders build two mortars (`Mortars.Raise`, 15 HE + 5 incendiary shells, original split) and crew them (`Mortars.Man`), aimed at colonists; colonists never man, order or rearm them. | None. | DEF-3, DEF-4 | done |
 | Doors: hold open, opening speed by stuff, autodoor, forbid. | `domain/building/door`; `Kind.IsDoor()` (door or autodoor) at the game and adapter sites. Opening speed by stuff (wiki), powered autodoor faster, 45-tick open and 120-tick auto-close (original), never closes on someone; `SetDoorHoldOpen` lets hostiles through; open doors let shots through; Barred is unwalkable to colonists. | Door forbid UI (Forbid exists only on sleeping places). | DEF-3 | partial |
 | Building damage and repair. | `damageBuilding`, `assignRepair`, `doRepair`, `DamageAt` (`defense.go`). | None. | - | done |
 
@@ -86,8 +86,8 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
 | Draft, move, attack target order, melee order. | Done (checklist 17.1, UI 13.1, 13.2). | None. | - | done |
-| Fire-at-will toggle and hold position. | `autoEngage` always runs for an idle drafted pawn. Checklist 17.1 **Hold/fire-at-will behavior** and UI 13.2 **Fire-at-will toggle** are `[ ]`. | A drafted flag (command reserved by the lead in wave B), honoured in `autoEngage`; hold stops pursuit. | DEF-4 | open |
-| Grenade throw order. | None. | Throw command and job (after DEF-2). | DEF-4 | open |
+| Fire-at-will toggle and hold position. | DEF-4 `combat/draft.go`: `SetFireAtWill` off: `AutoEngage` starts nothing (an auto attack under way is cancelled); `SetHoldPosition`: an auto attack starts in place and is dropped once out of reach (orders still walk). Saved in the defence block; `PawnView.FireAtWill`/`HoldPosition`. | None. | DEF-4 | done |
+| Grenade throw order. | DEF-4: equipping a grenade stack takes it whole (`Drafts.Carry`); `ThrowGrenade` waits the warmup (90, wiki) and lobs through `Shots.Lob` and the blast path, scattered by the wiki forced-miss curve; every colonist grenade thrown spends one, the last disarms; `PawnView.Grenades`. | Walking into range (a throw too far is refused with a message). | DEF-4 | done |
 | Targeting feedback: range overlay, line-of-sight line, hit-chance tooltip, invalid shot explanation. | `Game.HitChance` (`application/game/combat.go`) returns an `attack.Report`; `DrawWeaponRange`, `DrawShotFeedback`/`ShotLines` (hit chance, line of sight, why a shot is invalid) and `DrawProjectiles` in `render/overlay/combat_draw.go`, wired by `combat_overlay_host.go`. | None. | DEF-1 | done |
 
 ### 3.8 Raids, sieges, infestations, mechanoids
@@ -96,20 +96,35 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 |---|---|---|---|---|
 | Raid points from wealth and colonists, hostile faction chosen, group built from a budget. | `raidPoints`, `Wealth`, `raidKit`: kit now picked by `kit.Pick` from faction tech and points over the DEF-2 catalogue. | Raiders wear no armor; checklist 24.1 Wealth calculation open. | DEF-2 | partial |
 | Raiders wear armor by tech level. | None. | Raider armor in the kit. | DEF-3 | open |
-| Colonist grenade throwing and rocket launchers. | Not implemented. | Throw order and job; rocket launcher kind. | DEF-4 | open |
+| Colonist grenade throwing and rocket launchers. | Grenade throw order (DEF-4, above). | Rocket launcher kind. | DEF-4 | partial |
 | Edge arrival and immediate assault. | `raidArrive`/`raidAssault`/`raidFlee` modes (`raids.go`); `planAssault`. | None. | - | done |
-| Siege: camp out of range, dig in, bombard with mortars, then storm. | `planSiege`: camp 18 tiles out, sandbags, shoot from cover, storm after 5 hours (`thinkSiege`, `digIn`, `raid_plans.go`). No mortars. | Mortar bombardment and the assault transition. | DEF-4 | open |
+| Siege: camp out of range, dig in, bombard with mortars, then storm. | DEF-4: camp 32 tiles out (past the mortar minimum), sandbags, two raider-crewed mortars, storm after 1.5-3 days or on 8 % of hits (wiki: Raid); crews leave their guns to storm; the give-up day starts at the storm. | Resupply drops (12 meals). | DEF-4 | done |
 | Sappers and breachers. | `planSappers`: tunnel through walls, doors and rock from day 10 (`sapperBreaks`, `digRock`). | None. | - | done |
-| Drop pods: centre, edge, scatter variants; staging and assault trigger. | None (checklist 24.3 **Drop-pod assault**, **Center/scatter drop variants** `[ ]`). | Pod arrival kinds and staging. | DEF-4 | open |
-| Prepare-before-attack, target priority, steal and burn. | Raiders attack the nearest colonist, ally or powered turret (`raiderTurret`). No stealing or burning. | Priority list, steal and burn behaviours. | DEF-4 | open |
-| Retreat and kidnap. | Flee at half hit points, half the group down, an idle hour or a day (`raids.go`); `kidnap.go`. | None. | - | done |
-| Faction-on-faction hostility. | Factions have goodwill (`factions.go`), no inter-faction fights. | Hostility between factions that share the map. | DEF-4 | open |
-| Mechanoids (scyther, lancer, centipede, pikeman), EMP vulnerability, crashed ship parts. | None (checklist 24.5 `[ ]`). | Four original mechanoids as creatures, an EMP stun state, the ship-part threat; all four sounds each. | DEF-4 | open |
+| Drop pods: centre, edge, scatter variants; staging and assault trigger. | DEF-4 `raid/pods.go`, `raid/stage.go`: map entry 60/30 of 90 (wiki 45+15 walk-in, 30 pods), pods split evenly (original), tribes walk; pods fall 240 ticks (original), break the roof (15 crush, original; wiki: pods deal no damage themselves), leave a pod shell; `ArrivalView.Hostile`. Staged raids gather 10 tiles in, storm on a colonist in sight, gathered after 3 h or a 6-14 h limit (original; wiki: "usually under a day"). | None. | DEF-4 | done |
+| Prepare-before-attack, target priority, steal and burn. | DEF-4: staged raids; target priority (above); Steal raids take the nearest stack worth 50+ silver and run (dropped where they fall); Burn raids light up to 3 wooden buildings, then assault. Strategy bands on the old plan roll (original), `raiddef.Fit` (siege needs industrial and 300 points). | Opportunistic theft on retreat; burning crops. | DEF-4 | done |
+| Retreat and kidnap. | Flee at half hit points, at the group's rolled 40-70 % lost (DEF-4, wiki: Raid), an idle hour or a day (`raids.go`); `kidnap.go`. | The 10-15 h assault timer (wiki). | - | done |
+| Faction-on-faction hostility. | DEF-4: raid groups of two different hostile factions on the map fight each other (`raidMischief.Rival`, a once-a-tick rivalry pass). | Visitors and allies against raiders of other factions. | DEF-4 | done |
+| Mechanoids (scyther, lancer, centipede, pikeman), EMP vulnerability, crashed ship parts. | DEF-4 R2 (`game/raid/mech.go`, `shippart.go`): four original mechanoids (Harrow, Spindle, Bulwark, Quill) with wiki role stats and their own brain, EMP stun then 2200-tick immunity, no wound body, wrecks shredded at the machining table, `Mechs.Raid` from 300 points, the 6x3 ship part (1200 HP, plant blight 5 to 100 tiles over 20 days, guards that wake once, salvage on destruction, incident weight 2, 400-point gate). Art: full sets for all four. | Closed doors block mechs; mech groups do not use the pod hook; all four voices per mech (blocked, below). | DEF-4 | partial |
 | Infestations: hives, reproduction, dark and warm placement. | `hiveSwarm` (`hive.go`): three to six insects break out of the rock from day 12; hostile from spawn, never flee. No hive building. | Hive building, spawn rules, reproduction. | DEF-4 | open |
 
 ### 3.9 Already at fidelity (no work)
 
 Draft and move orders, attack orders, melee combat, line of sight, building damage and repair, spike trap, the powered sentry gun with lock hysteresis, assault, siege and sapper raids, flee and kidnap, manhunter packs, damage numbers and threat markers. State: `done`.
+
+### 3.10 Remaining after wave E
+
+| Vanilla behaviour | Today | Gap | Phase | State |
+|---|---|---|---|---|
+| Mechanoids pass doors. | Raiders bash closed doors; mechs do not. | Mechs open or bash doors. | later | open |
+| Mech groups arrive by pods. | `Mechs.Raid` lands at an arrival spot with no pod entity. | Use the pod landing hook. | later | open |
+| Mechanoid voices (`call`, `attack`, `hurt`, `die` each). | 16 prompts written; the insect voice group stands in; nothing generated. | Blocked on the user: the ElevenLabs key is missing and an open-source MOSS-SoundEffect model is under evaluation. Creature skill rule 5 is not met until then. | later | open [!] |
+| Raiders steal from stockpiles on their way out. | Steal raids take one stack and run. | Opportunistic theft on retreat. | later | open |
+| Raiders burn crops. | Burn raids light up to 3 wooden buildings. | Burning crops. | later | open |
+| Assault timer. | Staged raids wait 3 h (original). | The wiki's 10 to 15 h assault timer. | later | open |
+| Siege resupply. | Sieges are fixed at the start. | Resupply during a siege. | later | open |
+| Raiders avoid walking into grenade range. | Raiders do not weigh a grenade's reach. | Pathing and target weighting for it. | later | open |
+| Threat-weighted targeting and cover seeking (row 3.1). | Colonist or ally, turret, rival, then walls. | Weights and cover seeking. | later | open |
+| Weapon quality kept on equip; `Wealth()` shared value functions. | See `PRODUCTION_GAP_ANALYSIS.md` 3.7. | Shared with PRD. | later | open |
 
 ## 4. Wiki constants
 

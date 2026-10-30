@@ -49,6 +49,9 @@ const (
 	// radio range (it needs a powered radio console).
 	TraderCaravan
 	OrbitalTrader
+	// DEF-4 (Threat pool): a ship part crashes and its dormant mechanoid
+	// guards wake when disturbed (game/raid/shippart.go).
+	CrashedShipPart
 	NumIDs
 )
 
@@ -103,6 +106,10 @@ var defs = [NumIDs]Def{
 	// PLAY-024: original tuning (PLAY024_PLAN.md).
 	TraderCaravan: {Key: "trader_caravan", Name: "Trader caravan", Category: Nature, Weight: 14, Cooldown: 9, MinDay: 4},
 	OrbitalTrader: {Key: "orbital_trader", Name: "Orbital trader", Category: Nature, Weight: 12, Cooldown: 7, MinDay: 6},
+	// DEF-4, wiki: Events (base weight 2.00 against a raid's 7.40; it
+	// needs 400 raid points, the game's own check). Cooldown and first day
+	// are original tuning (the wiki gives none).
+	CrashedShipPart: {Key: "crashed_ship_part", Name: "Crashed ship part", Category: Threat, Weight: 2, Cooldown: 15, MinDay: 10},
 }
 
 func init() {

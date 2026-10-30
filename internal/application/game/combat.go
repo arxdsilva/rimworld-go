@@ -176,13 +176,13 @@ func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 	}
 	pos, _ := g.positions.Get(id)
 	if old, ok := g.equip[id]; ok {
-		g.dropStack(old, 1, pos.X, pos.Y)
+		g.dropStack(old, g.combat.Drafts.Drop(id, old), pos.X, pos.Y) // combat/draft.go (DEF-4): a grenade belt
 	}
 	g.equip[id] = st.Kind
-	if st.Qty == 1 {
+	if n := g.combat.Drafts.Carry(id, st.Kind, st.Qty); st.Qty <= n { // grenades: the whole stack
 		g.deleteItem(j.Target)
 	} else {
-		st.Qty--
+		st.Qty -= n
 		g.stacks.Set(j.Target, st)
 	}
 	j.State = job.Complete

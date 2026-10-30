@@ -26,6 +26,7 @@ type Strikes struct {
 	hunts   Hunts
 	shots   *Shots
 	blasts  *Blasts
+	drafts  *Drafts // DEF-4: fire at will and hold position
 	// layers is Armor's reused buffer.
 	layers []armor.Layer
 }
@@ -289,6 +290,11 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 		h.SetJob(id, j)
 		return
 	}
+	if !j.Forced && s.drafts != nil && s.drafts.Holding(id) && h.Drafted(id) {
+		j.State, j.Path = job.Complete, nil // holding position: never chases (DEF-4)
+		h.SetJob(id, j)
+		return
+	}
 	stale := j.State != job.Goto || j.PathI >= len(j.Path) ||
 		weapon.Distance(j.TX, j.TY, tx, ty) > 1 || (now+uint64(id))%60 == 0
 	if stale {
@@ -328,8 +334,8 @@ func (s *Strikes) next(id entity.EntityID, d weapon.Def, j *job.Record) int {
 // hit from where it stands.
 func (s *Strikes) AutoEngage(id entity.EntityID) {
 	h := s.h
-	if !h.CanViolence(id) {
-		return
+	if !h.CanViolence(id) || s.drafts != nil && !s.drafts.FireAtWill(id) {
+		return // DEF-4: fire at will off, it shoots only when ordered
 	}
 	px, py, _ := h.Pos(id)
 	d := weapon.DefOf(h.Weapon(id))
@@ -359,5 +365,11 @@ func (s *Strikes) AutoEngage(id entity.EntityID) {
 		return
 	}
 	bx, by, _ := h.Pos(best)
-	h.StartJob(id, job.Record{Kind: job.Attack, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(d)})
+	rec := job.Record{Kind: job.Attack, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(d)}
+	if s.drafts != nil && s.drafts.Holding(id) {
+		rec.State = job.Do // in reach from its tile: no step towards it
+		h.SetJob(id, rec)
+		return
+	}
+	h.StartJob(id, rec)
 }

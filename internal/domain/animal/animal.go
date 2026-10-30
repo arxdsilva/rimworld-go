@@ -78,6 +78,14 @@ const (
 	HiveBrute
 	HiveCrawler
 	Glimmerstag
+	// Wave E contract (DEF-4): four ORIGINAL mechanical raiders in the
+	// roles of a fast blade unit (Harrow), a mid-range sniper (Spindle), a
+	// slow heavy gunner (Bulwark) and a long-range skirmisher (Quill).
+	// Nothing spawns them yet; their wiki numbers are in mechs (mech.go).
+	Harrow
+	Spindle
+	Bulwark
+	Quill
 	numSpecies
 
 	// Dustbuck and Ridgewolf are the former names of Deer and TimberWolf.
@@ -98,6 +106,7 @@ const (
 	ArchBeetle
 	ArchBrute
 	ArchCrawler
+	ArchMech // a mechanoid: one rig builder, per-species specs (wave E)
 )
 
 // Anatomy is the medical body plan of archetype a (MED-13): quadrupeds,
@@ -150,6 +159,9 @@ const (
 	PackPredator
 	Hive
 	Legendary
+	// Mechanoid (wave E): a hostile machine; no needs, never tamed, never
+	// wild. DEF-4 gives it its behaviour.
+	Mechanoid
 )
 
 // Habitat is a bit set of the climates a species lives in.
@@ -173,9 +185,13 @@ const (
 	AttackGore
 	AttackHeadbutt
 	AttackPeck
+	// Wave E mechanoids: a blade cut and a mounted gun's shot (the weapon
+	// itself is the species' Mech.Weapon).
+	AttackSlash
+	AttackShoot
 )
 
-var attackNames = [...]string{"bite", "claw", "kick", "gore", "headbutt", "peck"}
+var attackNames = [...]string{"bite", "claw", "kick", "gore", "headbutt", "peck", "slash", "shoot"}
 
 func (a AttackKind) String() string {
 	if int(a) < len(attackNames) {
@@ -277,6 +293,10 @@ var roster = [numSpecies]Roster{
 	HiveBrute:        {Key: "hive_brute", Archetype: ArchBrute, Size: SizeL, Behaviour: Hive, Habitat: HabAny, Attack: AttackClaw, HerdMin: 0, HerdMax: 0},
 	HiveCrawler:      {Key: "hive_crawler", Archetype: ArchCrawler, Size: SizeM, Behaviour: Hive, Habitat: HabAny, Attack: AttackBite, HerdMin: 0, HerdMax: 0},
 	Glimmerstag:      {Key: "glimmerstag", Archetype: ArchQuadruped, Size: SizeXL, Behaviour: Legendary, Habitat: HabTemperate, Attack: AttackGore, HerdMin: 1, HerdMax: 1},
+	Harrow:           {Key: "harrow", Archetype: ArchMech, Size: SizeM, Behaviour: Mechanoid, Habitat: HabAny, Attack: AttackSlash, Speed: SpeedFast},
+	Spindle:          {Key: "spindle", Archetype: ArchMech, Size: SizeM, Behaviour: Mechanoid, Habitat: HabAny, Attack: AttackShoot, Speed: SpeedFast},
+	Bulwark:          {Key: "bulwark", Archetype: ArchMech, Size: SizeXL, Behaviour: Mechanoid, Habitat: HabAny, Attack: AttackShoot, Speed: SpeedSlow},
+	Quill:            {Key: "quill", Archetype: ArchMech, Size: SizeM, Behaviour: Mechanoid, Habitat: HabAny, Attack: AttackShoot, Speed: SpeedSlow},
 }
 
 // RosterOf is s's roster row.
@@ -371,6 +391,9 @@ type Def struct {
 	Hive      bool
 	Legendary bool
 	Explosive bool
+	// Mech (DEF-4): a mechanoid, a hostile machine (mech.go): no needs,
+	// never tamed, never wild, never downed; it leaves a wreck, not meat.
+	Mech bool
 }
 
 // Taming and manhunters.
@@ -458,6 +481,7 @@ var byBehaviour = [...]behaviourStats{
 	PackPredator: {tame: 15, revenge: 45, predator: true, wander: 6, hpPct: 100},
 	Hive:         {tame: 0, revenge: 0, wander: 5, hpPct: 100},
 	Legendary:    {tame: 5, revenge: 100, wander: 5, hpPct: 250},
+	Mechanoid:    {tame: 0, revenge: 0, wander: 5, hpPct: 100},
 }
 
 // Speed class step adjustments; fleeing runs at 60% of the step.
@@ -479,6 +503,7 @@ var hpOverride = map[Species]int{Tortoise: 150}
 var attackWeapon = [...]weapon.Kind{
 	AttackBite: weapon.Bite, AttackClaw: weapon.Claw, AttackKick: weapon.Kick,
 	AttackGore: weapon.Gore, AttackHeadbutt: weapon.Headbutt, AttackPeck: weapon.Peck,
+	AttackSlash: weapon.MechBlades, AttackShoot: weapon.PulseLance, // a mechanoid's own: mechs[s].Weapon
 }
 
 // scale is v adjusted by pct percent, rounded to nearest.
@@ -514,6 +539,9 @@ func buildDef(s Species, r Roster) Def {
 	}
 	if d.Explosive {
 		d.TameChance = explosiveTame
+	}
+	if r.Behaviour == Mechanoid {
+		applyMech(&d, mechs[s])
 	}
 	return d
 }
@@ -762,7 +790,7 @@ func (s State) Moving() int32 {
 // DownsNow reports a standing, living animal that is hurt, bled or
 // crippled enough to go down.
 func (s State) DownsNow() bool {
-	if s.Downed || s.Dead() {
+	if s.Downed || s.Dead() || IsMech(s.Species) { // a machine fights on until it breaks (DEF-4)
 		return false
 	}
 	return s.Injury*100 >= DefOf(s.Species).MaxHP*DownInjuryPct || s.bloodLoss() >= DownBloodLoss || s.Moving() < DownMoving

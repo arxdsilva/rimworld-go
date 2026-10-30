@@ -448,7 +448,7 @@ func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow f
 				return true
 			}
 			switch {
-			case st.Kind == item.CorpseAnimal && diet.Meat() && animal.Species(st.Animal) != a.Species:
+			case st.Kind == item.CorpseAnimal && diet.Meat() && animal.Species(st.Animal) != a.Species && !animal.IsMech(animal.Species(st.Animal)):
 				carcass.offer(animal.FeedCarcass, iid, st.X, st.Y, d)
 			case !a.Tame && !st.Rotten() && animal.FeedValue(diet, st.Kind) > 0:
 				raw.offer(animal.FeedItem, iid, st.X, st.Y, d)
@@ -582,7 +582,7 @@ func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, d
 			}
 			t := animal.FeedTarget{ID: iid, X: st.X, Y: st.Y}
 			switch {
-			case st.Kind == item.CorpseAnimal && diet.Meat() && animal.Species(st.Animal) != a.Species:
+			case st.Kind == item.CorpseAnimal && diet.Meat() && animal.Species(st.Animal) != a.Species && !animal.IsMech(animal.Species(st.Animal)):
 				t.Kind = animal.FeedCarcass
 				b.offer(t, 0, d, meal(min(animal.CarcassFood(animal.Species(st.Animal)), animal.Full)), rankCarcass)
 			case !st.Rotten() && animal.FeedValue(diet, st.Kind) > 0:

@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/prison"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
@@ -108,10 +109,13 @@ type PawnView struct {
 	SleptInBed bool
 	HasBed     bool // holds a bed (prison and medical ones too) or a free one is left for it (BED-3)
 	Drafted    bool
-	Mood       int
-	MoodLabel  string
-	Thoughts   []ThoughtView
-	Health     int // hit points left, percent
+	// Wave E (DEF-4 fills): FireAtWill (on unless ordered off), HoldPosition, Grenades carried.
+	FireAtWill, HoldPosition bool
+	Grenades                 int
+	Mood                     int
+	MoodLabel                string
+	Thoughts                 []ThoughtView
+	Health                   int // hit points left, percent
 	// RaidPlan is a raider\'s raid plan: "assault", "siege" or "sappers".
 	RaidPlan string
 	// Infection severity (0-100, 0: none); Wounded: an open, untended wound.
@@ -281,6 +285,9 @@ type ItemView struct {
 	Of     entity.EntityID
 	OfName string
 	Animal string // species key of a CorpseAnimal ("deer"), SIM-019
+	// Wreck (DEF-4): the CorpseAnimal is a mechanoid's wreck (Kind
+	// "harrow wreck"): it keeps, nothing eats it, it is shredded for salvage.
+	Wreck bool
 	// Catch: a carpet item's share of tracked dirt wiped, percent (SIM-021).
 	Catch int
 	// Forbidden: colonists leave this stack alone (UI-016).
@@ -625,6 +632,7 @@ type WorldView struct {
 	// (Tick is the landing tick), the permanent conditions' keys and the
 	// heat wave or cold snap in progress ("" when none).
 	Arrivals   []ArrivalView
+	CombatLog  []CombatEventView // DEF-4 (raids.go): recent fights and threats, oldest first
 	Conditions []string
 	Extreme    string
 	// Electricity (PLAY-021, power_view.go): every power net by id, the
@@ -696,8 +704,8 @@ type Game struct {
 	clothes    apparelIndex // free apparel stacks (apparel.go), never saved
 	prio       map[entity.EntityID]work.Priorities
 	raiderIDs  []entity.EntityID
-	raiders    map[entity.EntityID]raiderState
-	raidGroups []raidGroup
+	raiders    map[entity.EntityID]raid.Raider
+	raidGroups []raid.Group
 	nextThreat uint64
 	threatsOn  bool
 	scheds     map[entity.EntityID]schedule.Grid
@@ -730,8 +738,6 @@ type Game struct {
 
 	// research progress and the current project (researchSet: one is picked)
 	research research.Progress
-	// rockDamage: rock tiles sappers are hacking through.
-	rockDamage map[[2]int]int
 	// roofs: the roof state per tile (roof.go, SIM-018), row-major; empty
 	// until the first room rebuild. roofCollapses are recent collapses.
 	roofs         []roof.Cell
@@ -841,6 +847,7 @@ type Game struct {
 	// combat package (DEF-0): sight, cover, sentry turrets (their aims
 	// saved as the additive Turrets field); combat_host.go.
 	combat *combat.Combat
+	raid   *raid.Raid // raid package (DEF-4): raider AI, threats, hives, sappers' rock; raid_host.go
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -880,7 +887,7 @@ func New(cfg Config) *Game {
 		orderQueue: make(map[entity.EntityID][]queuedOrder),
 		apparel:    make(map[entity.EntityID]worn),
 		prio:       make(map[entity.EntityID]work.Priorities),
-		raiders:    make(map[entity.EntityID]raiderState),
+		raiders:    make(map[entity.EntityID]raid.Raider),
 		scheds:     make(map[entity.EntityID]schedule.Grid),
 		joy:        make(map[entity.EntityID]int),
 		breaks:     make(map[entity.EntityID]breakState),
@@ -893,7 +900,6 @@ func New(cfg Config) *Game {
 		sleptAt:    make(map[entity.EntityID]entity.EntityID),
 		animals:    component.NewStore[animal.State](),
 		equip:      make(map[entity.EntityID]item.Kind),
-		rockDamage: make(map[[2]int]int),
 		research:   research.Complete(), // sandbox: everything known
 		motion:     component.NewStore[motionRec](),
 		lastStrike: make(map[entity.EntityID]strikeRec),
@@ -903,6 +909,7 @@ func New(cfg Config) *Game {
 	g.care = care.New(newCareHost(g), care.Roles{Prison: carePrison{g}, Guests: careGuests{g}, Social: careSocial{g}, Gear: careGear{g}, Meals: careMeals{g}}) // care_host*.go
 	g.mind = mind.New(newMindHost(g))
 	g.combat = newCombat(g)
+	g.raid = newRaid(g)                     // raid_host.go
 	g.craft = craft.New(newCraftHost(g))    // craft_host.go
 	g.prison = prison.New(newPrisonHost(g)) // prison_host.go
 	g.rest = rest.New(newRestHost(g))       // rest_host.go
@@ -1141,6 +1148,7 @@ func (g *Game) snapshot() []PawnView {
 			SleptInBed:    g.sleptAt[id] != 0,
 			HasBed:        beds[id],
 			Drafted:       g.draft[id],
+			FireAtWill:    g.combat.Drafts.FireAtWill(id), HoldPosition: g.combat.Drafts.Holding(id), Grenades: g.combat.Drafts.Grenades(id), // DEF-4
 		})
 		ts := g.thoughts(id)
 		pv := &views[len(views)-1]
@@ -1283,6 +1291,7 @@ func (g *Game) world() WorldView {
 	g.fillPenView(&w)      // pens.go
 	g.fillPlanView(&w)     // plan.go
 	g.fillSetupView(&w)    // setup_view.go (NG-1)
+	fillRaidView(g, &w)    // raids.go (DEF-4): combat log, hostile drop pods
 	g.fillFogView(&w)      // fog_view.go (MAPGEN-2)
 	g.fillFireView(&w)     // fire.go (PLAY-015)
 	g.fillPowerView(&w)    // power_view.go (PLAY-021)

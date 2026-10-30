@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
@@ -214,7 +215,7 @@ func (g *Game) wakeDormant(a *animal.State) {
 	}
 	now := uint64(g.clock.Now())
 	a.Dormant = false
-	a.Manhunter, a.Mode = hiveForever, animal.Attack
+	a.Manhunter, a.Mode = raid.HiveForever, animal.Attack
 	a.NextThink, a.NextDecide = now, now
 }
 

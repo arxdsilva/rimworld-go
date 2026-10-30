@@ -49,6 +49,8 @@ var furniture = [kindCount]Furniture{
 	SmallSculpture: {Beauty: 50000},
 	LargeSculpture: {Beauty: 100000},
 	GrandSculpture: {Beauty: 400000},
+	// PRD-4, wiki: Shelf (beauty 0.5).
+	Shelf: {Beauty: 500},
 }
 
 // facilityComfort is an end table's or dresser's comfort offset by the

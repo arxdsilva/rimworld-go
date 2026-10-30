@@ -65,6 +65,8 @@ func ItemSprite(kind string) string {
 		return "item/emp_grenades"
 	case "mortar shells", "incendiary shells", "EMP shells", "smoke shells": // DEF-3
 		return "item/" + strings.ToLower(strings.ReplaceAll(kind, " ", "_"))
+	case "packaged survival meal": // wave E: the sprite is shorter than the kind
+		return "item/survival_meal"
 	case "dustbuck corpse":
 		return "item/corpse_dustbuck"
 	case "ridgewolf corpse":

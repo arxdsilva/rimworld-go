@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -9,8 +10,14 @@ import (
 
 func TestRecipesAndBills(t *testing.T) {
 	t.Parallel()
-	if len(For(construction.Stove)) != 1 || For(construction.Stove)[0].Output != item.Meal {
-		t.Fatal("stove cooks meals")
+	// the simple meal first, then PRD-4's fine, lavish, pemmican and
+	// survival meals
+	var outs []item.Kind
+	for _, d := range For(construction.Stove) {
+		outs = append(outs, d.Output)
+	}
+	if want := []item.Kind{item.Meal, item.FineMeal, item.LavishMeal, item.Pemmican, item.SurvivalMeal}; !slices.Equal(outs, want) {
+		t.Fatalf("stove cooks %v, want %v", outs, want)
 	}
 	meal := DefOf(SimpleMeal)
 	if !meal.Input.Accepts(item.Berries) || !meal.Input.Accepts(item.Meat) || meal.Input.Accepts(item.Meal) {

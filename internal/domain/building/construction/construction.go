@@ -172,6 +172,14 @@ const (
 	UraniumSlugTurret
 	Mortar
 	Autodoor
+	// Wave E contract (append only, saved; hidden from the Architect until
+	// PRD-4 adds the tool row and the art): a shelf, storage furniture
+	// that holds a few stacks per cell and keeps them from weathering.
+	Shelf
+	// ShipPart (DEF-4) is a crashed ship part: never built by the colony
+	// (no Architect row), it lands with the CrashedShipPart threat, its
+	// dormant mechanoid guards beside it (game/raid/shippart.go).
+	ShipPart
 	kindCount
 )
 
@@ -415,7 +423,7 @@ var defs = [kindCount]Def{
 		MetalOK: true, MetalOnly: true, Components: 3},
 	// 30 wood (+10 steel, not modelled); the wiki gives no work: ours.
 	FermentingBarrel: {Kind: FermentingBarrel, Name: "fermenting barrel", Wood: 3, Work: 60, Layer: LayerObject, BlocksMove: true,
-		Spot: [2]int{0, 1}, HasSpot: true},
+		Spot: [2]int{0, 1}, HasSpot: true, Bench: true}, // PRD-4: its fill bill (craft/ferment.go)
 	// Sculptures are carved by a sculpting bench bill (recipe.SculptSmall
 	// and on: the bill takes Wood units of the chosen material and Work);
 	// these rows make the placed piece a valid kind. wiki: Sculpture
@@ -452,6 +460,14 @@ var defs = [kindCount]Def{
 	Mortar: {Kind: Mortar, Name: "mortar", Wood: 6, Work: 200, Layer: LayerObject, BlocksMove: true,
 		Spot: [2]int{0, 1}, HasSpot: true, MetalOK: true, MetalOnly: true, Components: 6},
 	Autodoor: {Kind: Autodoor, Name: "powered door", Wood: 3, Work: 110, Layer: LayerObject, MetalOK: true, Components: 2},
+	// PRD-4, wiki: Shelf (2x1, 20 stuff, 500 work, research Complex
+	// furniture; it slows passage but does not block it; 3 stacks per
+	// cell, PRD-4's storage rule). Scaled as the wave D rows.
+	Shelf: {Kind: Shelf, Name: "shelf", Wood: 2, Work: 50, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1},
+		StoneOK: true, MetalOK: true},
+	// DEF-4, wiki: Defoliator ship (6x3, 1200 HP, deconstructs to
+	// nothing); placed whole by the threat, so no cost and no work.
+	ShipPart: {Kind: ShipPart, Name: "ship part", Layer: LayerObject, BlocksMove: true, Size: [2]int{6, 3}},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
@@ -515,6 +531,10 @@ func MaxHP(k Kind, s item.Kind) int {
 		hp = 272
 	case Mortar:
 		hp = 129
+	case Shelf: // wiki: Shelf (100 base)
+		hp = 100
+	case ShipPart: // wiki: Defoliator ship
+		hp = 1200
 	}
 	pct, _ := StuffStats(s)
 	return hp * pct / 100

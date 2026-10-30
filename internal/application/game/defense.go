@@ -150,7 +150,7 @@ func (b breachMap) Walkable(x, y int) bool {
 func (g *Game) pathQuery(id entity.EntityID) pathing.Query {
 	switch {
 	case g.sapper(id):
-		return sapperMap{hostileMap: g.hostileMap(), traps: g.buildingCells(construction.SpikeTrap)}
+		return sapperMap{hostileMap: g.hostileMap(), traps: sapperTraps(g)} // raids.go: spike traps, known IEDs (DEF-4)
 	case g.isRaider(id):
 		return g.hostileMap()
 	}
@@ -179,6 +179,9 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 		b, _ = g.bldgs.Get(id)
 	}
 	b.Damage += dmg
+	if b.Kind == construction.ShipPart { // raid/shippart.go (DEF-4): its guards wake; broken, it leaves salvage
+		defer g.raid.Ships.Hit(id, b.HP() <= 0, uint64(g.clock.Now()))
+	}
 	if b.HP() > 0 {
 		g.bldgs.Set(id, b)
 		return

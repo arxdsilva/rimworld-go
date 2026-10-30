@@ -44,6 +44,9 @@ var VoiceGroups = map[string]string{
 	"ostrich": "bird_large", "turkey": "bird_small", "cobra": "reptile", "iguana": "reptile",
 	"tortoise": "reptile", "hive_beetle": "insect", "hive_brute": "insect", "hive_crawler": "insect",
 	"glimmerstag": "large_mammal",
+	// wave E mechanoids: the insect chitter stands in until their own
+	// generated voices are approved
+	"harrow": "insect", "spindle": "insect", "bulwark": "insect", "quill": "insect",
 }
 
 // VoiceGroup is key's fallback voice group ("generic" when unlisted).

@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/incident"
@@ -176,6 +177,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.caravanFits(now) // trade_caravan.go (PLAY-024)
 	case incident.OrbitalTrader:
 		return g.orbitalFits(now) // trade_orbital.go (PLAY-024)
+	case incident.CrashedShipPart: // raid/shippart.go (DEF-4): one at a time, from 400 raid points
+		return g.raid.Ships.Parts() == 0 && g.raidPoints(int(now/clock.TicksPerDay)) >= raid.ShipPartMinPoints
 	}
 	return false
 }
@@ -212,6 +215,8 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		return g.caravanArrive(now) // trade_caravan.go (PLAY-024)
 	case incident.OrbitalTrader:
 		return g.orbitalArrive(now) // trade_orbital.go (PLAY-024)
+	case incident.CrashedShipPart:
+		return g.raid.Ships.Crash(g.raidPoints(int(now/clock.TicksPerDay)), now) // raid/shippart.go (DEF-4)
 	}
 	return false
 }
@@ -392,7 +397,7 @@ func (g *Game) strayJoins() bool {
 	if !ok {
 		return false
 	}
-	id, ok := g.spawnNear(s, x, y)
+	id, ok := g.raid.Hives.SpawnNear(s, x, y)
 	if !ok {
 		return false
 	}
@@ -419,7 +424,7 @@ func (g *Game) farmAnimals() bool {
 	n := farmMin + g.rng.IntN(farmMax-farmMin+1)
 	var ids []entity.EntityID
 	for i := 0; i < n; i++ {
-		id, ok := g.spawnNear(s, x, y)
+		id, ok := g.raid.Hives.SpawnNear(s, x, y)
 		if !ok {
 			continue
 		}
@@ -510,7 +515,7 @@ func (g *Game) timbergnaws(now uint64) bool {
 	herd := g.wl.LastHerd
 	ev := gnawEvent{Since: now}
 	for i := 0; i < n; i++ {
-		id, ok := g.spawnNear(animal.Timbergnaw, x, y)
+		id, ok := g.raid.Hives.SpawnNear(animal.Timbergnaw, x, y)
 		if !ok {
 			continue
 		}
@@ -642,7 +647,7 @@ func (g *Game) madCandidates(now uint64) []entity.EntityID {
 		if !ok || a.Tame || a.Leaving || a.Enraged(now) {
 			return
 		}
-		if d := animal.DefOf(a.Species); d.Hive || d.Legendary {
+		if d := animal.DefOf(a.Species); d.Hive || d.Legendary || d.Mech {
 			return
 		}
 		out = append(out, id)

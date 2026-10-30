@@ -65,6 +65,10 @@ var AnimalBlurbs = map[string]string{
 	"hive_brute":        "Hulking hive guardian. Tears through defenders.",
 	"hive_crawler":      "Fast, many-legged hive scout. Overwhelms in numbers.",
 	"glimmerstag":       "Legendary shining stag. Harm it and its herd will answer.",
+	"harrow":            "Fast mechanical raider. Closes in and cuts with hooked arms.",
+	"spindle":           "Tall tripod machine with a long lance. Strikes from mid range.",
+	"bulwark":           "Slow, heavily plated machine with a rotary gun. Shrugs off fire.",
+	"quill":             "Light walking machine. Peppers targets with needles from afar.",
 }
 
 // genericBlurb describes a species with no entry above.

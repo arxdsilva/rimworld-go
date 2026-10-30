@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -113,6 +114,45 @@ const (
 	SculptSmall
 	SculptLarge
 	SculptGrand
+	// PRD-4 (append only, saved): the wave C-E catalogue (wave_e.go):
+	// the better meals, pemmican and survival meals at the stove, kibble
+	// at the butcher table and spot, wort at the brewing bench and the
+	// barrel's fill, the hard drugs and reagent at the drug table,
+	// chemfuel at the refinery, advanced components at the fabrication
+	// bench, armour and apparel, grenades and mortar shells, and smelting
+	// metal apparel.
+	CookFineMeal
+	CookLavishMeal
+	CookPemmican
+	CookSurvivalMeal
+	MakeKibble
+	MakeKibbleSpot
+	BrewWort
+	FillBarrel
+	MakeAshFlake
+	MakeSilverdust
+	MakeBattleTonic
+	MakeReagent
+	RefineChemfuelWood
+	RefineChemfuelFood
+	FabricateAdvanced
+	SmeltApparel
+	MakeFlakVest
+	MakeFlakPants
+	MakeFlakJacket
+	MakePlateArmor
+	MakeSimpleHelmet
+	MakeAdvancedHelmet
+	MakeMarineArmor
+	MakeMarineHelmet
+	MakeFragGrenades
+	MakeMolotovs
+	MakeHEShells
+	MakeIncendiaryShells
+	MakeEMPShells
+	MakeSmokeShells
+	// ShredMech (DEF-4 wrecks) shreds a mechanoid's wreck for salvage.
+	ShredMech
 	numRecipes
 )
 
@@ -133,6 +173,13 @@ type Input struct {
 	Stuff item.StuffCategory
 	// Smelt (PRD-3) takes any item made with steel (SmeltYield > 0).
 	Smelt bool
+	// PRD-4: AnyVeg takes raw plant food, AnyMeat meat and animal
+	// products (milk, eggs); SmeltWear takes apparel made with steel.
+	AnyVeg, AnyMeat bool
+	SmeltWear       bool
+	// Wreck takes a mechanoid's wreck (a CorpseAnimal of a mechanoid);
+	// any other corpse input never does (butchering skips wrecks).
+	Wreck bool
 }
 
 // Take is how many items the input takes from a stack of qty.
@@ -179,6 +226,13 @@ type Def struct {
 	// Builds (PRD-3): the product is a building of this kind (a
 	// sculpture) set down beside the bench, not an item; Output is unused.
 	Builds construction.Kind
+	// Ferment (PRD-4): the work pours the input into the barrel, which
+	// ferments it into Output over days (craft.Fermenting); nothing is
+	// made on the spot.
+	Ferment bool
+	// Salvage: the yields (Output steel, Extra plasteel) come from the
+	// wreck's mechanoid (SalvageOf), not OutQty/ExtraQty.
+	Salvage bool
 }
 
 var defs = [numRecipes]Def{
@@ -325,6 +379,38 @@ var defs = [numRecipes]Def{
 	SculptSmall: sculpt(SculptSmall, "sculpt_small", "Sculpt small sculpture", construction.SmallSculpture),
 	SculptLarge: sculpt(SculptLarge, "sculpt_large", "Sculpt large sculpture", construction.LargeSculpture),
 	SculptGrand: sculpt(SculptGrand, "sculpt_grand", "Sculpt grand sculpture", construction.GrandSculpture),
+	// PRD-4 (wave_e.go).
+	CookFineMeal:         meal(CookFineMeal, "cook_fine_meal", "Cook fine meal", item.FineMeal, 1, 1, 1, 450, 6),
+	CookLavishMeal:       meal(CookLavishMeal, "cook_lavish_meal", "Cook lavish meal", item.LavishMeal, 2, 2, 1, 800, 8),
+	CookPemmican:         meal(CookPemmican, "cook_pemmican", "Make pemmican", item.Pemmican, 1, 1, 16, 700, 0),
+	CookSurvivalMeal:     meal(CookSurvivalMeal, "cook_survival_meal", "Cook packaged survival meal", item.SurvivalMeal, 1, 1, 1, 450, 8),
+	MakeKibble:           kibble(MakeKibble, "make_kibble", "Make kibble", construction.ButcherTable, 50),
+	MakeKibbleSpot:       kibble(MakeKibbleSpot, "make_kibble_spot", "Make kibble at the spot", construction.ButcherSpot, 35),
+	BrewWort:             brewWort(),
+	FillBarrel:           fillBarrel(),
+	MakeAshFlake:         drug(MakeAshFlake, "make_ash_flake", "Make ash flake", item.AshFlake, 250, 0, Input{Kind: item.AshleafLeaf, Qty: 4}),
+	MakeSilverdust:       drug(MakeSilverdust, "make_silverdust", "Make silverdust", item.Silverdust, 350, 0, Input{Kind: item.AshleafLeaf, Qty: 8}),
+	MakeBattleTonic:      drug(MakeBattleTonic, "make_battle_tonic", "Make battle tonic", item.BattleTonic, 600, 0, Input{Kind: item.Reagent, Qty: 2}, Input{Kind: item.Silverdust, Qty: 1}),
+	MakeReagent:          drug(MakeReagent, "make_reagent", "Distil reagent", item.Reagent, 700, 4, Input{Kind: item.Chemfuel, Qty: 4}, Input{Kind: item.AshleafLeaf, Qty: 2}),
+	RefineChemfuelWood:   refine(RefineChemfuelWood, "refine_chemfuel_wood", "Make chemfuel from wood", Input{Kind: item.Wood, Qty: 70}, 200),
+	RefineChemfuelFood:   refine(RefineChemfuelFood, "refine_chemfuel_food", "Make chemfuel from raw food", Input{AnyRaw: true, Qty: 14}, 250),
+	FabricateAdvanced:    made(FabricateAdvanced, "fabricate_advanced", "Fabricate advanced component", construction.FabricationBench, item.AdvancedComponents, 1000, 8, in(item.Components, 1), in(item.Steel, 2), in(item.Plasteel, 1), in(item.Gold, 1)),
+	SmeltApparel:         smeltWear(),
+	MakeFlakVest:         made(MakeFlakVest, "make_flak_vest", "Make flak vest", construction.MachiningTable, item.FlakVest, 900, 0, in(item.Steel, 6), in(item.Cloth, 3), in(item.Components, 1)),
+	MakeFlakPants:        made(MakeFlakPants, "make_flak_pants", "Make flak pants", construction.MachiningTable, item.FlakPants, 900, 0, in(item.Steel, 6), in(item.Cloth, 3), in(item.Components, 1)),
+	MakeFlakJacket:       made(MakeFlakJacket, "make_flak_jacket", "Make flak jacket", construction.MachiningTable, item.FlakJacket, 1400, 0, in(item.Steel, 7), in(item.Cloth, 5), in(item.Components, 1)),
+	MakePlateArmor:       smith(MakePlateArmor, "make_plate_armor", "Forge plate armor", item.PlateArmor, 17, 3800),
+	MakeSimpleHelmet:     smith(MakeSimpleHelmet, "make_simple_helmet", "Forge simple helmet", item.SimpleHelmet, 4, 320),
+	MakeAdvancedHelmet:   made(MakeAdvancedHelmet, "make_advanced_helmet", "Make advanced helmet", construction.MachiningTable, item.AdvancedHelmet, 800, 0, in(item.Steel, 4), in(item.Components, 2), in(item.Plasteel, 1)),
+	MakeMarineArmor:      made(MakeMarineArmor, "make_marine_armor", "Fabricate marine armor", construction.FabricationBench, item.MarineArmor, 6000, 8, in(item.Plasteel, 10), in(item.Uranium, 2), in(item.AdvancedComponents, 4)),
+	MakeMarineHelmet:     made(MakeMarineHelmet, "make_marine_helmet", "Fabricate marine helmet", construction.FabricationBench, item.MarineHelmet, 2100, 8, in(item.Plasteel, 4), in(item.AdvancedComponents, 1)),
+	MakeFragGrenades:     made(MakeFragGrenades, "make_frag_grenades", "Make frag grenades", construction.MachiningTable, item.FragGrenades, 1200, 0, in(item.Steel, 2), in(item.Chemfuel, 8)),
+	MakeMolotovs:         made(MakeMolotovs, "make_molotovs", "Make molotov cocktails", construction.MachiningTable, item.MolotovCocktails, 600, 0, in(item.Cloth, 3), in(item.Chemfuel, 8)),
+	MakeHEShells:         made(MakeHEShells, "make_he_shells", "Make high-explosive shell", construction.MachiningTable, item.MortarShells, 80, 0, in(item.Steel, 2), in(item.Chemfuel, 2)),
+	MakeIncendiaryShells: made(MakeIncendiaryShells, "make_incendiary_shells", "Make incendiary shell", construction.MachiningTable, item.IncendiaryShells, 80, 0, in(item.Steel, 1), in(item.Chemfuel, 2)),
+	MakeEMPShells:        made(MakeEMPShells, "make_emp_shells", "Make EMP shell", construction.MachiningTable, item.EMPShells, 80, 0, in(item.Steel, 2), in(item.Components, 2)),
+	ShredMech:            shredMech(),
+	MakeSmokeShells:      made(MakeSmokeShells, "make_smoke_shells", "Make smoke shell", construction.MachiningTable, item.SmokeShells, 80, 0, in(item.Steel, 3)),
 }
 
 // servoSkill and servoWork are the servo tier's crafting level and work
@@ -388,8 +474,12 @@ func (in Input) Accepts(k item.Kind) bool {
 	switch {
 	case in.Stuff != 0:
 		return k.StuffCategory()&in.Stuff != 0
-	case in.Smelt:
-		return smeltable(k)
+	case in.Smelt, in.SmeltWear:
+		return smeltable(k, in.SmeltWear)
+	case in.AnyVeg:
+		return plantFood(k)
+	case in.AnyMeat:
+		return animalFood(k)
 	case in.AnyRaw:
 		return k.Raw()
 	case in.AnyDryable:
@@ -406,8 +496,11 @@ func (in Input) AcceptsStack(s item.Stack) bool {
 	if in.AnyDryable {
 		return s.Dryable()
 	}
-	if in.Smelt {
-		return SmeltYield(s) > 0
+	if in.Smelt || in.SmeltWear {
+		return in.Accepts(s.Kind) && SmeltYield(s) > 0
+	}
+	if s.Kind == item.CorpseAnimal && animal.IsMech(animal.Species(s.Animal)) != in.Wreck {
+		return false // a wreck is shredded, never butchered (DEF-4)
 	}
 	return in.Accepts(s.Kind)
 }
@@ -458,6 +551,14 @@ func (in Input) Label() string {
 		name = "any stone blocks"
 	case in.Smelt:
 		name = "metal weapon"
+	case in.SmeltWear:
+		name = "metal apparel"
+	case in.AnyVeg:
+		name = "plant food"
+	case in.AnyMeat:
+		name = "meat or animal product"
+	case in.Wreck:
+		name = "mechanoid wreck"
 	}
 	return strconv.Itoa(in.Qty) + " " + name
 }

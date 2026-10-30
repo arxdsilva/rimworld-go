@@ -478,7 +478,7 @@ func (g *Game) spareTakes(st item.Stack, x, y int) bool {
 		return true
 	}
 	o, _ := g.stacks.Get(oid)
-	return o.Kind == st.Kind && o.Qty+st.Qty <= item.StackLimit
+	return o.Kind == st.Kind && o.Qty+st.Qty <= o.Kind.StackLimit()
 }
 
 // endDelivery completes a delivery whose load is all handed over.

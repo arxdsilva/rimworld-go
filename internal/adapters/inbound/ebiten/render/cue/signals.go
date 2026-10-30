@@ -212,6 +212,10 @@ func (b *Bus) ListenThunder(v *render.View) {
 // last note of the whistle.
 const PodFallLead = 84
 
+// RaidPodLead is the same for a raid's drop pod: its sfx.droppod_incoming
+// runs about two seconds, so it starts that long before the impact.
+const RaidPodLead = 120
+
 // podSounds is which of a pod's three sounds have been cued.
 type podSounds struct{ fell, landed, opened bool }
 
@@ -231,13 +235,17 @@ func (b *Bus) ListenArrivals(v *render.View, w game.WorldView) {
 			st = podSounds{fell: now >= p.Tick, landed: now >= p.Tick, opened: p.Landed}
 		}
 		x, y := float64(p.X)+0.5, float64(p.Y)+0.5
-		if !st.fell && now+PodFallLead >= p.Tick {
+		fall, land, lead := "sfx.pod_fall", "sfx.pod_land", uint64(PodFallLead)
+		if p.Hostile { // a raid's pod (DEF-4): its own descent and impact
+			fall, land, lead = "sfx.droppod_incoming", "sfx.droppod_impact", RaidPodLead
+		}
+		if !st.fell && now+lead >= p.Tick {
 			st.fell = true
-			b.Cue("sfx.pod_fall", x, y, 1)
+			b.Cue(fall, x, y, 1)
 		}
 		if !st.landed && now >= p.Tick {
 			st.landed = true
-			b.Cue("sfx.pod_land", x, y, 1)
+			b.Cue(land, x, y, 1)
 		}
 		if !st.opened && p.Landed {
 			st.opened = true

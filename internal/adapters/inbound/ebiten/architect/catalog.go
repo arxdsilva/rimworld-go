@@ -131,6 +131,8 @@ var Tools = []ToolDef{
 		Desc: "A proper two-tile bed. Q/E rotates."},
 	{ID: "double_bed", Label: "Double bed", Category: "furniture", Icon: "double_bed", Mode: PlaceSingle, Build: "double bed",
 		Desc: "A 2x2 bed two colonists share side by side. Q/E rotates."},
+	{ID: "shelf", Label: "Shelf", Category: "furniture", Icon: "shelf", Mode: PlaceSingle, Build: "shelf",
+		Desc: "Holds stacks of one filter on the tiles it covers. Set what it accepts from its pane. Q/E rotates."},
 	{ID: "hospital_bed", Label: "Hospital bed", Category: "furniture", Icon: "hospital_bed", Mode: PlaceSingle, Build: "hospital bed",
 		Desc: "A bed for patients: the sick and hurt go here first and are tended better. Q/E rotates."},
 	{ID: "vitals_monitor", Label: "Vitals monitor", Category: "furniture", Icon: "vitals_monitor", Mode: PlaceSingle, Build: "vitals monitor",

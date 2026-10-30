@@ -39,7 +39,10 @@ func (a *App) zoneCommands(id uint16) []inspector.Button {
 		out = append(out, a.zoneCropCmd(z), a.zoneSowCmd(z), a.zoneCutCmd(z))
 	}
 	if z.Kind == game.ZoneStockpile || z.Kind == game.ZoneDump {
-		out = append(out, a.zonePriorityCmd(z))
+		zid := z.ID
+		out = append(out, a.zonePriorityCmd(z), inspector.Button{ID: "cmd.zone.storage", Label: "Settings", Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
+			Desc: "Choose which items this storage accepts, set special filters, copy and paste settings, and rename it.",
+			Run:  func() { a.win.Storage().Open(zid) }})
 	}
 	return append(out, a.zoneExpandCmd(), a.zoneShrinkCmd(), a.zoneDeleteCmd(z), a.zoneHideCmd(z), a.zoneRenameCmd(z))
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
@@ -300,7 +301,7 @@ func TestMadAnimalGoesManhunter(t *testing.T) {
 	far, _ := g.SpawnAnimal("deer", 99, 99) // beyond madRadius of home
 	pet, _ := g.SpawnAnimal("labrador", 51, 51)
 	setAnimal(g, pet, func(a *animal.State) { a.Tame, a.Name = true, "Rex" })
-	if pickThreat(madRoll, 6, false) != threatMad || pickThreat(madRoll, 5, true) != threatRaid {
+	if raid.PickThreat(raid.MadRoll, 6, false) != raid.ThreatMad || raid.PickThreat(raid.MadRoll, 5, true) != raid.ThreatRaid {
 		t.Fatal("the mad animal joins the threat die from day 6")
 	}
 	now := uint64(g.clock.Now())

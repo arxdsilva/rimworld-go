@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/backstory"
@@ -18,7 +19,7 @@ import (
 // A legacy colony never reaches this file: raids.go keeps today's
 // scheduler for it. Here the chosen storyteller's Plan decides when the
 // next threat comes and how strong (the legacy profile makes exactly the
-// pre-NG-1 draws), pickThreat's die is filtered by the difficulty, the
+// pre-NG-1 draws), raid.PickThreat's die is filtered by the difficulty, the
 // scenario's disabled incidents and whether any hostile faction can raid,
 // and raid points come from difficulty.ThreatPoints with adaptation.
 // Colony time (rel, relDay) counts from the landing day.
@@ -73,9 +74,9 @@ func (g *Game) fireStoryThreat(now uint64) {
 		pct = 100
 	}
 	second := g.ng.plan.Second != storyteller.None
-	g.storyThreat(g.rng.IntN(threatRolls), day, winter, pct, now)
+	g.storyThreat(g.rng.IntN(raid.ThreatRolls), day, winter, pct, now)
 	if second {
-		g.storyThreat(g.rng.IntN(threatRolls), day, winter, pct, now)
+		g.storyThreat(g.rng.IntN(raid.ThreatRolls), day, winter, pct, now)
 	}
 	g.setPlan(storyteller.Plan(g.storyProfile(), &g.ng.story, g.rel(now), g.rng))
 }
@@ -87,34 +88,55 @@ func (g *Game) storyThreat(roll, day int, winter bool, pct int, now uint64) {
 		return
 	}
 	switch k {
-	case threatPack:
-		g.wolfPack(2 + g.rng.IntN(2))
-	case threatManhunters:
+	case raid.ThreatPack:
+		g.raid.Threats.WolfPack(2 + g.rng.IntN(2))
+	case raid.ThreatManhunters:
 		g.manhunterPack(3 + g.rng.IntN(3))
-	case threatHive:
-		g.hiveSwarm()
-	case threatMad:
-		if !g.madAnimal(now, false) && g.threatOK(threatRaid) { // incidents.go
+	case raid.ThreatHive:
+		g.raid.Hives.Swarm()
+	case raid.ThreatMad:
+		if !g.madAnimal(now, false) && g.threatOK(raid.ThreatRaid) { // incidents.go
 			g.storyRaid(day, pct)
 		}
 	default:
-		g.storyRaid(day, pct)
+		if !storyMajor(g, g.threatPoints()*pct/100, now) {
+			g.storyRaid(day, pct)
+		}
 	}
+}
+
+// storyMajor turns a raid face into a crashed ship part or a mechanoid raid
+// of pts by the wiki's big-threat weights (raid/threats.go Major, DEF-4);
+// false: a people raid comes instead.
+func storyMajor(g *Game, pts int, now uint64) bool {
+	humans := 0 // each hostile human faction weighs 1 as a raider (wiki: Events)
+	for _, f := range g.ng.factions {
+		if f.Type.Human() && f.Relation == faction.Hostile && !f.Defeated {
+			humans++
+		}
+	}
+	switch g.raid.Threats.Major(pts, humans) {
+	case raid.MajorShipPart:
+		return g.FireIncident("crashed_ship_part")
+	case raid.MajorMechs:
+		return g.raid.Threats.MechRaid(pts, now) > 0
+	}
+	return false
 }
 
 // allowedThreat is pickThreat filtered for the colony: a threat the
 // difficulty or scenario rules out (or a raid with no hostile faction to
 // send it) becomes a pack, manhunters or a hive swarm by the same die,
 // whichever is allowed first; ok is false when nothing is.
-func (g *Game) allowedThreat(roll, day int, winter bool) (threatKind, bool) {
-	k := pickThreat(roll, day, winter)
+func (g *Game) allowedThreat(roll, day int, winter bool) (raid.Threat, bool) {
+	k := raid.PickThreat(roll, day, winter)
 	if g.threatOK(k) {
 		return k, true
 	}
-	alts := [...]threatKind{threatPack, threatManhunters, threatHive}
+	alts := [...]raid.Threat{raid.ThreatPack, raid.ThreatManhunters, raid.ThreatHive}
 	for i := range alts {
 		a := alts[(roll+i)%len(alts)]
-		if a == threatHive && day < hiveFirstDay {
+		if a == raid.ThreatHive && day < raid.HiveFirstDay {
 			continue
 		}
 		if g.threatOK(a) {
@@ -125,16 +147,16 @@ func (g *Game) allowedThreat(roll, day int, winter bool) (threatKind, bool) {
 }
 
 // threatOK: the difficulty, the scenario and the factions allow threat k.
-func (g *Game) threatOK(k threatKind) bool {
+func (g *Game) threatOK(k raid.Threat) bool {
 	s := g.ng.setup.Difficulty
 	switch k {
-	case threatRaid:
+	case raid.ThreatRaid:
 		return s.BigThreats && !g.incidentDisabled("raid") && g.hostileRaider()
-	case threatHive:
+	case raid.ThreatHive:
 		return s.BigThreats && !g.incidentDisabled("hive_swarm")
-	case threatPack:
+	case raid.ThreatPack:
 		return s.PredatorsHuntColonists && !g.incidentDisabled("predator_pack")
-	case threatManhunters:
+	case raid.ThreatManhunters:
 		return !g.incidentDisabled("manhunter_pack")
 	}
 	return true
@@ -181,7 +203,7 @@ func (g *Game) storyRaid(day, pct int) {
 		tech = d.Tech
 	}
 	kit := g.raidKitOf(pts, tech)
-	g.raidFrom(kit, g.pickPlan(day), fi+1)
+	g.raidFrom(kit, g.raid.Threats.Plan(day), fi+1)
 }
 
 // raiderName is a generated name for a faction's raider (no g.rng draw).
@@ -214,16 +236,16 @@ func (g *Game) edgeDir(x, y int) string {
 }
 
 // raidMessage is the arrival message of a faction's raid.
-func (g *Game) raidMessage(ex, ey, n int, plan raidPlan, f *faction.Faction) {
+func (g *Game) raidMessage(ex, ey, n int, plan raid.Plan, f *faction.Faction) {
 	noun, verb := "raiders", "are"
 	if n == 1 {
 		noun, verb = "raider", "is"
 	}
 	from := g.edgeDir(ex, ey)
 	switch plan {
-	case planSiege:
+	case raid.Siege:
 		g.threat("Siege", ex, ey, "Raid! %d %s of %s %s coming from the %s. They look ready to dig in for a siege.", n, noun, f.Name, verb, from)
-	case planSappers:
+	case raid.Sappers:
 		g.threat("Sappers", ex, ey, "Sappers! %d %s of %s %s tunnelling in through the walls from the %s.", n, noun, f.Name, verb, from)
 	default:
 		g.threat("Raid", ex, ey, "Raid! %d %s of %s %s coming from the %s.", n, noun, f.Name, verb, from)
@@ -294,11 +316,11 @@ func (g *Game) fireScheduled(key string, now uint64) {
 	case "raid":
 		g.storyRaid(g.relDay(now), 100)
 	case "predator_pack":
-		g.wolfPack(2 + g.rng.IntN(2))
+		g.raid.Threats.WolfPack(2 + g.rng.IntN(2))
 	case "manhunter_pack":
 		g.manhunterPack(3 + g.rng.IntN(3))
 	case "hive_swarm":
-		g.hiveSwarm()
+		g.raid.Hives.Swarm()
 	default:
 		g.FireIncident(key) // incidents.go: nature events by key
 	}

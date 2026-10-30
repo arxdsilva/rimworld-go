@@ -29,6 +29,10 @@ type Shots struct {
 	blasts *Blasts
 	live   []projectile.Shot
 	seen   []Seen // Near's reused buffer
+	// traps: a bullet landing on a buried charge lights it (DEF-4);
+	// drafts: a colonist's thrown grenade comes off its belt.
+	traps  *Traps
+	drafts *Drafts
 }
 
 // Tracking is how far (tiles) an aimed shot's target may have moved from
@@ -47,6 +51,9 @@ func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk we
 	aim := r.Aim()
 	switch {
 	case d.Explosive(): // thrown or lobbed at the tile, scattered at range
+		if s.drafts != nil {
+			s.drafts.spend(attacker, wk)
+		}
 		if rad := explosion.ForcedMiss(d.ForcedMiss, r.Dist); rad > 0 {
 			dx, dy = tx+h.Roll(2*rad+1)-rad, ty+h.Roll(2*rad+1)-rad
 		}
@@ -161,6 +168,9 @@ func (s *Shots) land(sh *projectile.Shot, x, y int) {
 		s.trace(sh, x, y, true, false, 0, 0)
 		s.blasts.Explode(sh.Owner, sh.Weapon, x, y, weapon.DefOf(sh.Weapon).Blast)
 		return
+	}
+	if s.traps != nil {
+		s.traps.Struck(x, y) // wiki: IED trap, bullets and arrows set it off
 	}
 	if sh.Cover != 0 {
 		if b, ok := h.Building(sh.Cover); ok && b.X == x && b.Y == y {

@@ -88,6 +88,9 @@ type AnimalView struct {
 	Herd    uint32
 	// Dormant (MAPGEN-3): a sealed vault's sleeping defender (vault.go).
 	Dormant bool
+	// Mech (DEF-4): a mechanoid, a hostile machine (raid/mech.go);
+	// Stunned: an EMP has it standing dead still.
+	Mech, Stunned bool
 	// PLAY-015: Penned livestock show Pen (the pen's name, "Roaming" or
 	// "Being roped"); other tame animals have an allowed area AreaRef
 	// (command.AreaUnrestricted, command.AreaHome or an area id).
@@ -211,6 +214,7 @@ func (g *Game) phaseAnimals() {
 	g.troughDeliveries(now)                         // trough_feed.go: loads haulers brought this tick
 	g.lifePhase(now)                                // animal_life.go: eggs incubate
 	g.penTick(now)                                  // pens.go: unpenned days, open pens, auto-cut
+	g.raid.Ships.Tick(now)                          // raid/shippart.go (DEF-4): guards wake, the blight spreads
 	g.wl.ids = append(g.wl.ids[:0], g.animalIDs...) // the list changes as animals die or leave
 	for _, id := range g.wl.ids {
 		a, ok := g.animals.Get(id)
@@ -249,6 +253,10 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	a.Normalise(uint64(id))        // an older save's (or a fixture's) hunger counter
 	a.Errand = false               // set again below by the errands that are no mode (PLAY-022)
 	if g.downedThink(id, a, now) { // animal_health.go: a downed animal lies still
+		return
+	}
+	if animal.IsMech(a.Species) {
+		g.raid.Mechs.Think(id, a, now) // raid/mech.go (DEF-4): a machine, never the animal brain
 		return
 	}
 	def := animal.DefOf(a.Species)
@@ -778,7 +786,8 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
 	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony)
-	if k, ok := g.animals.Get(by); ok && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) {
+	k, ok := g.animals.Get(by)
+	if ok && !animal.IsMech(a.Species) && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) { // a wreck is no meal
 		if k.Tame && k.HuntSince != 0 { // a quiet line: the colony's hunter fed itself
 			g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf("%s hunted %s.", animalLabel(k), withArticle(a.Species.Label())),
 				X: pos.X, Y: pos.Y, Focus: by})
@@ -797,6 +806,7 @@ func (g *Game) removeAnimal(id entity.EntityID) {
 	}
 	delete(g.logs, id)
 	g.care.Doctor.Forget(id) // vet_animals.go
+	g.raid.Mechs.Forget(id)  // raid/mech.go (DEF-4)
 	g.animals.Delete(id)
 	g.positions.Delete(id)
 	kept := g.animalIDs[:0]
@@ -891,6 +901,8 @@ func (g *Game) animalViews() []AnimalView {
 		av.AreaRef = g.AreaOf(id)                // areas.go
 		g.fillAnimalPen(av, id, &a)              // pens.go: Penned, Pen
 		g.fillAnimalHealth(av, id, a, now)       // animal_health.go (MED-09)
+		// raid/mech.go (DEF-4): a machine, perhaps stunned by an EMP
+		av.Mech, av.Stunned = animal.IsMech(a.Species), g.raid.Mechs.Stunned(id, now)
 	}
 	return out
 }

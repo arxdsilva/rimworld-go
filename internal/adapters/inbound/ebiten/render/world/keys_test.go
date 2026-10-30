@@ -293,3 +293,31 @@ func TestItemSpriteWaveCKinds(t *testing.T) {
 		t.Errorf("EMP grenades -> %q", got)
 	}
 }
+
+// TestItemSpriteWaveEKinds: the wave E item kinds resolve to the sprite
+// whose metadata names them; a mechanoid wreck picks a corpse variant.
+func TestItemSpriteWaveEKinds(t *testing.T) {
+	t.Parallel()
+	itemLine := regexp.MustCompile(`(?m)^item:\s*(.+)$`)
+	for _, kind := range []string{"chemfuel", "wort", "fine meal", "lavish meal", "pemmican", "packaged survival meal", "kibble",
+		"ash flake", "silverdust", "battle tonic", "reagent", "advanced components", "uranium", "plasteel", "reinforced barrel"} {
+		key := ItemSprite(kind)
+		raw, err := os.ReadFile(filepath.Join("../../../../../../assets/metadata", key+".yaml"))
+		if err != nil {
+			t.Errorf("ItemSprite(%q) = %q: no metadata (%v)", kind, key, err)
+			continue
+		}
+		if m := itemLine.FindSubmatch(raw); m == nil || strings.Trim(strings.TrimSpace(string(m[1])), `"`) != kind {
+			t.Errorf("%s's metadata names %q, want %q", key, m, kind)
+		}
+	}
+	for _, sp := range []string{"harrow", "spindle", "bulwark", "quill"} {
+		key := ItemSpriteSpecies(sp+" wreck", sp, 3, 4)
+		if !strings.HasPrefix(key, "item/corpse_"+sp+"_v") {
+			t.Errorf("%s wreck -> %q", sp, key)
+		}
+		if _, err := os.Stat(filepath.Join("../../../../../../assets/metadata", key+".yaml")); err != nil {
+			t.Errorf("%s: %v", key, err)
+		}
+	}
+}

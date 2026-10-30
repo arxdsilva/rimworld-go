@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
@@ -20,7 +21,7 @@ import (
 // the colony for half a day (job.Visit: walk to a spot, linger) and walk
 // out again (a trader caravan, trade_caravan.go, stays longer and
 // closer). They are registered people (Where Visitor, their faction)
-// on raiderIDs as non-hostile pawns (raiderState.Leaving, as the colony's
+// on raiderIDs as non-hostile pawns (raid.Raider.Leaving, as the colony's
 // released prisoners are), so colonists can chat with them and capture or
 // arrest them (M8); the visit itself is driven from phaseWorld, out of
 // the raid and prisoner AI. Leaving is one-way: once a visitor turns for
@@ -182,7 +183,7 @@ func (g *Game) placeVisitor(id entity.EntityID, fac, x, y int, now uint64) {
 	g.jobs.Set(id, job.Record{})
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
-	g.raiders[id] = raiderState{Group: visitorGroup, Arrived: now, Leaving: true, Idle: now, RetryAt: math.MaxUint64}
+	g.raiders[id] = raid.Raider{Group: visitorGroup, Arrived: now, Leaving: true, Idle: now, RetryAt: math.MaxUint64}
 	w := g.worldS()
 	w.visitors = append(w.visitors, visitorRec{ID: id, Faction: fac, LeaveAt: now + visitorStay})
 	g.invalidateCreatures()

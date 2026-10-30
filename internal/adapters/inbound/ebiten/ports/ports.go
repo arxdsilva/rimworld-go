@@ -134,6 +134,14 @@ type AimMortar struct {
 	X, Y int
 }
 
+// AimGrenade enters the grenade targeting mode for the drafted colonist
+// Pawn: the next map click sends ThrowGrenade at that tile.
+type AimGrenade struct{ Pawn entity.EntityID }
+
+// OpenStorage opens the Storage settings window on storage zone Zone (a
+// shelf's own zone included).
+type OpenStorage struct{ Zone uint16 }
+
 // ShowWindow opens a main-tab window ("work", "schedule", "research",
 // "animals", …), closing the Architect and any float menu.
 type ShowWindow struct{ Mode string }
@@ -157,6 +165,8 @@ func (OpenArchitect) isIntent()   {}
 func (CloseArchitect) isIntent()  {}
 func (PresetBuildTool) isIntent() {}
 func (AimMortar) isIntent()       {}
+func (AimGrenade) isIntent()      {}
+func (OpenStorage) isIntent()     {}
 func (ShowWindow) isIntent()      {}
 func (CloseWindows) isIntent()    {}
 func (SelectPawn) isIntent()      {}

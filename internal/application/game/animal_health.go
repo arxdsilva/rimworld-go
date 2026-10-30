@@ -120,7 +120,7 @@ func newAnimalBody(s animal.Species) *body.Body {
 // schedules the new wounds' infection roll and adds the animal to the
 // patients. A killing blow leaves no wound.
 func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind body.WoundKind, by entity.EntityID, now uint64) {
-	if dmg <= 0 || a.Dead() {
+	if dmg <= 0 || a.Dead() || animal.IsMech(a.Species) { // DEF-4: a machine takes damage, not wounds
 		return
 	}
 	if kind == woundByAttacker {

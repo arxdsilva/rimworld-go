@@ -46,7 +46,7 @@ var _ combat.Host = combatHost{}
 func newCombat(g *Game) *combat.Combat {
 	h := combatHost{combatCreatures{g}, combatRosters{g}, combatGround{g}, combatSkills{g}, combatJobs{g}, combatHarm{g}, combatEvents{g}, combatDice{g}}
 	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g},
-		Field: combatField{g}, Supply: combatSupply{g}})
+		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}})
 }
 
 type combatCreatures struct{ g *Game }
@@ -62,6 +62,11 @@ func (h combatCreatures) StandingPawn(id entity.EntityID) bool           { retur
 func (h combatCreatures) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h combatCreatures) Hostile(a animal.State) bool                    { return h.g.hostile(a) }
 func (h combatCreatures) Armor(id entity.EntityID, buf []armor.Layer) []armor.Layer {
+	if a, ok := h.g.animals.Get(id); ok {
+		if m, mech := animal.MechOf(a.Species); mech {
+			return append(buf, m.Layer()) // DEF-4: a mechanoid's plating
+		}
+	}
 	w := h.g.apparel[id] // apparel.go: the outer body layer first; each piece by its stuff and quality
 	for _, p := range [...]craft.Piece{w.On[item.Body], w.On[item.Legs], w.On[item.Head]} {
 		buf = armor.AppendPiece(buf, p.Kind, p.Stuff, p.Quality)
@@ -128,7 +133,7 @@ func (h combatGround) RemoveBuilding(id entity.EntityID) { h.g.removeBuilding(id
 func (h combatGround) PlaceFrame(k construction.Kind, stuff item.Kind, f construction.Facing, x, y int) {
 	h.g.placeFrameStuff(k, stuff, f, x, y)
 }
-func (h combatGround) DigRock(x, y, dmg int) { h.g.digRock(x, y, dmg) }
+func (h combatGround) DigRock(x, y, dmg int) { h.g.raid.Rock.Dig(x, y, dmg) } // raid/rock.go
 
 type combatSkills struct{ g *Game }
 
@@ -136,6 +141,9 @@ func (h combatSkills) HitChance(id entity.EntityID, ranged bool, base int) int {
 	return h.g.hitChanceFor(id, ranged, base)
 }
 func (h combatSkills) ShotAim(id entity.EntityID) (int, int) {
+	if a, ok := h.g.animals.Get(id); ok && animal.IsMech(a.Species) {
+		return attack.ShooterPerTile(animal.MechShootingSkill), 0 // DEF-4: wiki: Lancer (96 %)
+	}
 	return attack.ShooterPerTile(int(h.g.skillOf(id, skill.Shooting).Level)), 10 * int(h.g.statOf(id, stat.ShootAcc))
 }
 func (h combatSkills) Learn(id entity.EntityID, ranged bool) { h.g.combatLearn(id, ranged) }
@@ -154,14 +162,19 @@ func (h combatJobs) Interrupt(id entity.EntityID, r job.FailReason) { h.g.interr
 func (h combatJobs) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
 	return h.g.pathTo(id, x, y)
 }
+func (h combatJobs) ReleaseOwner(id entity.EntityID) { h.g.reserve.ReleaseOwner(id) } // raid.Jobs
 
 type combatHarm struct{ g *Game }
 
 func (h combatHarm) Hurt(target entity.EntityID, dmg int, by entity.EntityID) {
+	up := h.g.standingPawn(target) && !h.g.isRaider(target)
 	h.g.hurt(target, dmg, by)
+	h.g.combat.Log.Down(target, up) // combat/log.go (DEF-4)
 }
 func (h combatHarm) HurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind body.WoundKind, cause health.Cause) {
+	up := h.g.standingPawn(target) && !h.g.isRaider(target)
 	h.g.hurtAs(target, dmg, by, kind, cause)
+	h.g.combat.Log.Down(target, up)
 }
 func (h combatHarm) DamageBuilding(id entity.EntityID, dmg int) { h.g.damageBuilding(id, dmg) }
 func (h combatHarm) Stain(target entity.EntityID, ax, ay, tx, ty, dmg int) {
@@ -196,6 +209,7 @@ func (h combatEvents) Trapped(victim entity.EntityID, dmg int) {
 func (h combatEvents) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
 func (h combatEvents) Burst(x, y int, tick uint64, b explosion.Def) { // a turret's: b zero
 	h.g.wl.Bursts = append(h.g.wl.Bursts, burstStamp{X: x, Y: y, Tick: tick, Turret: b.Zero(), Blast: b.Kind, Radius: b.Radius / 100})
+	h.g.raid.Mechs.EMP(x, y, b, tick) // raid/mech.go (DEF-4): an EMP stuns the mechanoids it reaches
 }
 func (h combatEvents) Ignite(x, y int) { h.g.igniteBurst(x, y) } // fire.go
 

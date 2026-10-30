@@ -54,6 +54,9 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 			if d.Dry && s.drying.busy(bid) {
 				continue // still drying the last batch
 			}
+			if d.Ferment && !s.drying.barrelOpen(bid) {
+				continue // PRD-4: full, or fermenting (ferment.go)
+			}
 			if Fueled(b.Kind) && h.Fuel(bid) <= 0 {
 				continue // no fire to cook over or forge with
 			}
@@ -149,7 +152,7 @@ func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
 // pending is the output already being made for an "until you have" bill,
 // so two cooks don't both start the last meal.
 func (s *Shop) pending(bl recipe.Bill, d recipe.Def) int {
-	if bl.Mode != recipe.UntilHave || d.Dry {
+	if bl.Mode != recipe.UntilHave || d.Dry || d.Ferment {
 		return 0
 	}
 	n := 0
@@ -237,7 +240,11 @@ func (s *Shop) fetch(id entity.EntityID, j job.Record, d recipe.Def) {
 		s.fail(id, j, job.TargetGone)
 		return
 	}
-	j.Carry = h.Carry(id, j.Target, d.Input.Take(st.Qty))
+	take := d.Input.Take(st.Qty)
+	if d.Ferment { // PRD-4: no more than the barrel takes
+		take = min(take, max(1, s.drying.barrelRoom(j.Dest)))
+	}
+	j.Carry = h.Carry(id, j.Target, take)
 	path, ok := h.PathTo(id, j.DestX, j.DestY)
 	if !ok {
 		s.fail(id, j, job.Unreachable)
@@ -264,6 +271,12 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 		}
 		h.DeleteItem(j.Carry)
 		return false
+	case d.Ferment: // PRD-4: poured into the barrel (ferment.go)
+		if st, ok := h.Stack(j.Carry); ok {
+			s.drying.pour(j.Dest, st, j.DestX, j.DestY)
+		}
+		h.DeleteItem(j.Carry)
+		return false
 	case d.ID == recipe.Cremate:
 		h.Cremate(j.Dest, j.Carry, d) // burns the body and its wood
 		return false
@@ -280,7 +293,12 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 			out, extra = h.ButcherYield(id, out), h.ButcherYield(id, extra)
 		}
 	}
-	if d.Input.Smelt { // PRD-3: a quarter of the steel back
+	if d.Salvage { // a mechanoid wreck: its type's salvage
+		if st, ok := h.Stack(j.Carry); ok {
+			out, extra = recipe.SalvageOf(st.Animal)
+		}
+	}
+	if d.Input.Smelt || d.Input.SmeltWear { // PRD-3, PRD-4: a quarter of the steel back
 		if st, ok := h.Stack(j.Carry); ok {
 			out = recipe.SmeltYield(st)
 		}
@@ -291,7 +309,7 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	}
 	h.DeleteItem(j.Carry)
 	switch {
-	case out > 0 && d.Output == item.Meal: // the cook's poison chance
+	case out > 0 && recipe.Cooked(d.Output): // the cook's poison chance (PRD-4: the better meals too)
 		h.DropMeal(id, b.Kind, d.Output, out, j.DestX, j.DestY)
 	case out > 0 && item.HasQuality(d.Output): // PRD-2: each piece rolls its quality
 		for range out {

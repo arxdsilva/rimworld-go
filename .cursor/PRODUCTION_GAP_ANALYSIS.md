@@ -4,7 +4,7 @@ Scope: bring benches, bills, recipes, item quality, materials, deterioration, ar
 
 ## Status (2026-10-29)
 
-Wave D done for PRD-3 (benches, work speed, art and sculptures; handoff `handoffs/PRD-3-benches-work-speed-sculptures.md`). Wave C done for PRD-2 (quality, stuff, condition, inspiration; handoff `handoffs/PRD-2-quality-stuff-condition.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/craft` extraction, the `quality` domain package and the wiki constants (PRD-0). PRD-4 has not started. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave D done for PRD-3 (benches, work speed, art and sculptures; handoff `handoffs/PRD-3-benches-work-speed-sculptures.md`). Wave C done for PRD-2 (quality, stuff, condition, inspiration; handoff `handoffs/PRD-2-quality-stuff-condition.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/craft` extraction, the `quality` domain package and the wiki constants (PRD-0). Wave E done for PRD-4 (recipe catalogue, stockpile filters, shelves, barrel; handoff `handoffs/PRD-4-catalogue-stockpiles-shelves.md`). The programme's five waves are done; the gaps that remain are in section 3.7. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -56,13 +56,13 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | Items have hit points and lose them outdoors, unroofed, over time; tattered apparel works worse; tainted apparel gives a mood penalty. | `item/condition.go` and `craft/condition.go`: 2 HP/day outdoors (original tuning, the wiki gives none), rain x5, water or marsh x3, roofed 0, metal and stone immune, raw resources exempt, quality factor. Worn apparel loses 1 HP on 40 % of days (`craft/garment.go`); ratty at 50 % HP (-3), tattered under 20 % (-5; Apparel page used over the 25 % on the Deterioration page); tainted -5/-8/-11/-14 by count; dead pawns drop a tainted outfit and auto-dress skips it. | Shelves (PRD-4); tattered apparel does not yet reduce armor beyond its HP. | PRD-2 | done |
 | Wielded weapons keep their quality and stuff; melee weapons scale with stuff. | `weaponKindOf`/`doEquip` store a kind only, so the crafted quality and stuff are lost on equip; melee weapons are not stuff-scaled. | Carry quality and stuff on the equipped weapon. | PRD-4 / DEF-4 | open |
 | Colony wealth counts item and building value. | `Wealth()` (raid points) is separate from `room.BuildingValue`/`item.StackValue`. | Reuse the shared value functions. | PRD-4 | open |
-| Stock filters and bills by quality and hit-point range. | `Bill.Forbid` is a flat kind list. | Quality and HP ranges on bills and stockpiles. | PRD-4 | open |
+| Stock filters and bills by quality and hit-point range. | `Bill.Forbid` is a flat kind list. | Quality and HP ranges on bills (stockpiles have them since PRD-4: `zone.Special`). | PRD-4 | partial |
 
 ### 3.3 Benches and facilities
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Benches: crafting spot, hand and electric tailor, fueled and electric stove, fueled and electric smithy, machining table, fabrication bench, art bench, electric smelter, biofuel refinery, drug lab, butcher spot and table, fermenting barrel, stonecutter. | 24 bench and building rows in `construction` and `recipe/benches.go`: crafting spot, butcher spot, wood-fired and electric forge (smithy), machining table, art bench, electric smelter, plus the 12 earlier kinds; wiki footprints, watts and research gating (16 new projects, a key under two projects needs both). Recipes at one bench can also run at another through `recipe.Def.Also` (`RecipeView.Benches`/`RunsAt`). | Missing: fabrication bench, biofuel refinery, drug lab, fermenting barrel (PRD-4). | PRD-3 | partial |
+| Benches: crafting spot, hand and electric tailor, fueled and electric stove, fueled and electric smithy, machining table, fabrication bench, art bench, electric smelter, biofuel refinery, drug lab, butcher spot and table, fermenting barrel, stonecutter. | 24 bench and building rows in `construction` and `recipe/benches.go` (PRD-3), wiki footprints, watts and research gating. PRD-4: fabrication bench, biofuel refinery, drug lab and fermenting barrel (a `Bench: true` kind with a fill bill) now carry recipes. Recipes at one bench can also run at another through `recipe.Def.Also`. | None for the bench list; the barrel is filled by cooks, the wiki uses haulers. | PRD-3 | done |
 | Work speed depends on light and room cleanliness at the bench. | `craft/station.go` multiplies bench factor (spots 0.5/0.7 wiki), tool cabinets, light (dark 0.8 wiki; ramp up to 30 % original), room (outdoors 0.8 wiki; cleanliness 0.85/0.9/0.95 original) into the percent argument of `workProgressPct`. | Temperature penalty bands (magnitudes not published). | PRD-3 | done |
 | Facilities linked to benches raise speed; the link is visible. | Tool cabinets (`craft/facility.go`) add +6 % each, up to the cap, by reach; `BuildingView.Linked` and `WorkSpeed` feed the inspector's link and speed lines. | Further facility kinds only where benches need them. | PRD-3 | done |
 | Art bench produces sculptures with quality and a generated description. | Art bench (3x1) carves small (1x1), large (1x1, 11 stuff) and grand (2x2, 10500 work) sculptures; beauty 50/100/400 wiki times the quality factor; quality via PRD-2; original generated title (`BuildingView.Epitaph`) and description (`craft/artgen.go`), the description only in the completion message; the BED-3 beauty need reads the beauty. The sculpture is set on the nearest free cell, since no minified-item path exists; the player moves it. | ArtDesc not shown in the inspector; no minified items. | PRD-3 | partial |
@@ -72,24 +72,34 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Meals: simple, fine, lavish, pemmican, packaged survival meal; kibble. | `SimpleMeal`, `CampfireMeal`, `DryFood` only. | The other meals and kibble, with multi-ingredient inputs. | PRD-4 | open |
-| Weapons and apparel including armor (flak, plate, marine, helmets, shirts, pants). | About 44 recipe ids (two legacy). Weapons: club, knife, spear, crude rifle. Apparel: leather parka, tuque, duster, wool parka. No armor. | Full list; armor values come from DEF-1/DEF-2 defs. | PRD-4 (with DEF-2) | open |
-| Drugs: beer, tea, tablets, hard drugs, medicine. | `BrewBeer`, `BrewTea`, `PressTablet`, `MakeNumbroot`, `PressProphyl`, `RefineMedicine`. | Hard drugs, wort to beer, drug lab recipes. | PRD-4 | open |
-| Smelting, chemfuel, advanced components, steel and plasteel work. | Electric smelter melts metal weapons back to steel (`Input.Smelt`, `SmeltYield`); `FabricateComponent` at the workbench. | Chemfuel (refinery) and advanced component tiers (PRD-4). | PRD-3, PRD-4 | partial |
+| Meals: simple, fine, lavish, pemmican, packaged survival meal; kibble. | PRD-4 (`domain/economy/recipe/wave_e.go`): fine meal, lavish meal, pemmican, packaged survival meal (any-veg and any-meat inputs) and kibble (butcher table 50, spot 35), with the wiki skills and yields. | None. | PRD-4 | done |
+| Weapons and apparel including armor (flak, plate, marine, helmets, shirts, pants). | PRD-4 adds marine armor and helmet (fabrication bench), flak vest, pants and jacket, the advanced helmet, frag grenades, molotovs and four mortar shells (machining table), plate armor and simple helmet (smithy); smelt metal apparel (smelter); shred mechanoid (DEF-4 R2 wrecks). 31 new ids in all. | Armor values stay with DEF-1/DEF-2 defs; no gaps in the list. | PRD-4 (with DEF-2) | done |
+| Drugs: beer, tea, tablets, hard drugs, medicine. | PRD-4: wort (brewing bench), beer by the fermenting barrel (25 wort, 6 days, 7 to 32 C; `craft/ferment.go`, `TestBarrelFillNoFlap`), ash flake, silverdust, battle tonic and reagent (drug table), chemfuel (refinery). | The barrel is filled by cooks (wiki: haulers); reagent recipe and barrel ruin time are original. | PRD-4 | partial |
+| Smelting, chemfuel, advanced components, steel and plasteel work. | PRD-4: chemfuel from wood or raw food, advanced components, smelt metal apparel, shredded wrecks, plasteel and uranium items. | None. | PRD-3, PRD-4 | done |
 | Butchering, stonecutting, prosthetics, implants, carpets. | `ButcherAnimal`, five `cut()` stone recipes, prosthetics and implants through `MakeServoArm` and others, carpets. | None. | - | done |
 
 ### 3.5 Stockpiles and shelves
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Full item-category filter tree with special filters, quality and condition ranges. | `zone.Zone` has `Food`, `Wood`, `Stone` booleans plus `Corpses` and `Chunks` for dumping zones (`internal/domain/building/zone/map.go`). | Category tree, special filters (allow rotten, fresh only), quality and HP ranges. | PRD-4 | open |
+| Full item-category filter tree with special filters, quality and condition ranges. | `domain/building/zone/filter.go`: `Filter` bitset, 8 top categories with sub-categories, `Resolve`, `Rows`, special filters (rotten, tainted, HP range, quality range), `SetAllowed`; `SetStockpileFilter` and `SetStockpileSpecial` commands; zones without edits keep their old switches. | Bill quality and hit-point ranges (bills still carry a flat kind list). | PRD-4 | done |
 | Storage priority and re-hauling. | `Zone.Priority`, `haul_priority.go`. Checklist 6.3 **Storage priorities** is now `[x]`. | None. | - | done |
-| Stockpile names, copy and paste settings. | `Zone.Name` exists; no copy and paste. | Clipboard commands and UI (UI 6.2). | PRD-4 | open |
-| Shelves hold items. | No shelf building. | Shelf kind, storage slot rule. | PRD-4 | open |
+| Stockpile names, copy and paste settings. | `RenameZone`, `PasteStockpile`; `ZoneView.Filter/Special`; the Storage settings window (U5). | None. | PRD-4 | done |
+| Shelves hold items. | `zone.KindShelf` storage zone laid over the shelf footprint (`zoneBuilt`), 3 stacks per cell, Preferred priority, no deterioration, beauty 0.5; a moved shelf keeps its settings; Architect row and art in wave E. | None. | PRD-4 | done |
 
 ### 3.6 Already at fidelity (no work)
 
 Bill queue, the three bill modes with resume, suspend, research gating, power-gated benches, drying racks, tool-cabinet bonus, butchering, stonecutting, carpets, prosthetics, work-type and minimum-skill gating, storage priorities. State: `done`.
+
+### 3.7 Remaining after wave E
+
+| Vanilla behaviour | Today | Gap | Phase | State |
+|---|---|---|---|---|
+| Bills filter by product quality and hit-point range. | `Bill.Forbid` is a flat kind list; only stockpiles have ranges. | Quality and HP ranges on bills. | later | open |
+| An equipped weapon keeps its crafted quality and stuff. | `doEquip` stores a kind only (row 3.2). | Carry quality and stuff on the equipped weapon. | later | open |
+| Colony wealth counts item and building value. | `Wealth()` is separate from `room.BuildingValue`/`item.StackValue` (row 3.2). | Reuse the shared value functions. | later | open |
+| Haulers fill the fermenting barrel. | Cooks fill it through the bill (`craft/ferment.go`). | Move the fill to the haul work type. | later | open |
+| Wiki stack limits for the older kinds. | They keep 1000 so saves and golden pins stay valid. | A deliberate re-pin. | later | open |
 
 ## 4. Wiki constants
 

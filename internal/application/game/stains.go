@@ -150,6 +150,9 @@ func stainWeaker(a, b stain.Stain) bool {
 // the attacker for heavy hits. Called before hurt (the target still
 // exists).
 func (g *Game) stainHit(target entity.EntityID, from, to Position, dmg int) {
+	if a, ok := g.animals.Get(target); ok && animal.IsMech(a.Species) {
+		return // DEF-4: a machine does not bleed
+	}
 	kind := g.stainKindOf(target)
 	amt := hitStain + hitStainPerDmg*dmg
 	g.stamp(to.X, to.Y, kind, amt)
@@ -173,6 +176,9 @@ func (g *Game) stainDeath(id entity.EntityID) {
 // stainAnimalDeath pools blood (or ichor) where an animal of species s
 // died at pos (called from killAnimal).
 func (g *Game) stainAnimalDeath(s animal.Species, pos Position) {
+	if animal.IsMech(s) {
+		return // DEF-4: a machine leaves its wreck, no blood
+	}
 	kind := stain.Blood
 	if animal.RosterOf(s).Behaviour == animal.Hive {
 		kind = stain.Ichor
@@ -185,7 +191,7 @@ func (g *Game) stainAnimalDeath(s animal.Species, pos Position) {
 // bleeds (MED-01: an untended cut, bite, scratch or fresh stump).
 func (g *Game) bleeding(id entity.EntityID) bool {
 	if a, ok := g.animals.Get(id); ok {
-		return a.HP()*2 < animal.DefOf(a.Species).MaxHP
+		return a.HP()*2 < animal.DefOf(a.Species).MaxHP && !animal.IsMech(a.Species) // DEF-4: a machine does not bleed
 	}
 	return g.bleedingNow(id) // bleed.go
 }

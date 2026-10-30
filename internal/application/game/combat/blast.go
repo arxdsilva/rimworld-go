@@ -32,6 +32,7 @@ type Blasts struct {
 	seen    []Seen            // Near's reused buffer
 	hit     []blastBuilding   // the buildings one blast reaches, reused
 	smoke   []explosion.Cloud // live smoke clouds (saved: Export)
+	traps   *Traps            // DEF-4: a blast lights the buried charges it reaches
 }
 
 // blastBuilding is a building a blast reaches and its distance
@@ -137,6 +138,9 @@ func (b *Blasts) buildings(x, y int, d explosion.Def, now uint64) {
 				b.turrets.Stun(o.id, now+uint64(d.StunTicks(o.dist)))
 			}
 			continue
+		}
+		if bd, ok := h.Building(o.id); ok && b.traps != nil && b.traps.chain(o.id, bd.Kind, bd.X, bd.Y) {
+			continue // DEF-4: a buried charge goes off in turn
 		}
 		h.DamageBuilding(o.id, d.Building(o.dist))
 	}

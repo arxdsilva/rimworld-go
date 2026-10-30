@@ -21,6 +21,14 @@ type MortarAim struct {
 	Bid   entity.EntityID
 	X, Y  int  // the mortar's tile
 	Fresh bool // entered this frame: ignore the click that opened it
+	// Grenade (DEF-4): the mode throws the drafted colonist Bid's grenade
+	// at the clicked tile (ThrowGrenade) instead of aiming a mortar.
+	Grenade bool
+}
+
+// StartGrenade enters the mode for drafted colonist id's grenade throw.
+func (m *MortarAim) StartGrenade(id entity.EntityID) {
+	*m = MortarAim{On: true, Bid: id, Fresh: true, Grenade: true}
 }
 
 // Start enters the mode for the mortar at (x, y).
@@ -39,6 +47,11 @@ func (m *MortarAim) Step(sh ports.Commands, crew entity.EntityID, tx, ty int, on
 		return true
 	}
 	if cancel {
+		m.On = false
+		return true
+	}
+	if left && onMap && m.Grenade {
+		sh.Enqueue(command.Command{Kind: command.ThrowGrenade, Pawn: uint64(m.Bid), X: tx, Y: ty})
 		m.On = false
 		return true
 	}
@@ -63,7 +76,11 @@ func (c *Controller) HandleAim() bool {
 	f.Take(inputframe.Left)
 	f.Take(inputframe.Right)
 	if c.Aim.Fresh { // once, as the mode opens (the hint draws through the canvas)
-		c.sh.Hint("Click a tile to target the mortar; Esc or right-click cancels")
+		if c.Aim.Grenade {
+			c.sh.Hint("Click a tile to throw the grenade; Esc or right-click cancels")
+		} else {
+			c.sh.Hint("Click a tile to target the mortar; Esc or right-click cancels")
+		}
 	}
 	var crew entity.EntityID // the selected colonist mans it
 	if ps := c.sh.Selection().SelectedPawns(); len(ps) == 1 {
@@ -79,8 +96,10 @@ func (c *Controller) drawAim(screen *ebiten.Image) {
 		return
 	}
 	tile := float32(c.sh.TilePx())
-	ox, oy := c.sh.WorldToScreen(c.Aim.X, c.Aim.Y)
-	vector.StrokeRect(screen, ox+1, oy+1, tile-2, tile-2, 1, uikit.Accent, false)
+	if !c.Aim.Grenade { // a grenade has no fixed tile to outline
+		ox, oy := c.sh.WorldToScreen(c.Aim.X, c.Aim.Y)
+		vector.StrokeRect(screen, ox+1, oy+1, tile-2, tile-2, 1, uikit.Accent, false)
+	}
 	mx, my := c.sh.Cursor()
 	if c.sh.ChromeHit(mx, my) {
 		return

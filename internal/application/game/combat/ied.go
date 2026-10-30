@@ -115,6 +115,24 @@ func (t *Traps) burst(f Fuse) {
 	h.PlaceFrame(f.Kind, b.Stuff, construction.South, f.X, f.Y) // re-lay it
 }
 
+// Struck lights the buried charge on (x, y), if any: a bullet or an
+// arrow landing on it (wiki: IED trap). One object lookup.
+func (t *Traps) Struck(x, y int) {
+	if id, k := t.h.Object(x, y); id != 0 && isIED(k) {
+		t.light(id, k, x, y)
+	}
+}
+
+// chain lights charge id (of kind k on (x, y)) reached by a blast:
+// explosions set off the charges in their radius in turn (DEF-4).
+func (t *Traps) chain(id entity.EntityID, k construction.Kind, x, y int) bool {
+	if !isIED(k) {
+		return false
+	}
+	t.light(id, k, x, y)
+	return true
+}
+
 // export is the burning fuses for the save (nil when none).
 func (t *Traps) export() []Fuse {
 	if len(t.fuses) == 0 {

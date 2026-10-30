@@ -74,6 +74,9 @@ type Mortar struct {
 	// smoke); Fired shells since its barrel was fitted.
 	Shells [4]int
 	Fired  int
+	// Hostile (DEF-4): a besieging raid's mortar, crewed by its raiders
+	// and aimed at the colonists; colonists never man or rearm it.
+	Hostile bool
 }
 
 // MortarSave is one Mortar on disk.
@@ -137,7 +140,7 @@ func (m *Mortars) set(id entity.EntityID, st Mortar) {
 func (m *Mortars) step(id entity.EntityID, b construction.Building, st *Mortar, now uint64) {
 	h := m.h
 	scan := (now+uint64(id))%TurretScanEvery == 0
-	if st.Crew != 0 && !m.crewing(st.Crew, id) {
+	if st.Crew != 0 && !m.crewing(st.Crew, id, st.Hostile) {
 		st.Crew, st.Aiming = 0, false
 	}
 	ax, ay, aim := m.aim(id, b, st, now, scan)
@@ -145,8 +148,8 @@ func (m *Mortars) step(id entity.EntityID, b construction.Building, st *Mortar, 
 		st.SeenAt = now
 	}
 	if st.Crew == 0 {
-		if !aim || !scan {
-			return
+		if !aim || !scan || st.Hostile {
+			return // a raiders' mortar waits for its raid to send a crew
 		}
 		sx, sy := spot(b)
 		m.call(id, st, sx, sy, now)
@@ -158,7 +161,7 @@ func (m *Mortars) step(id entity.EntityID, b construction.Building, st *Mortar, 
 	}
 	if !aim {
 		st.Aiming = false
-		if !st.Forced && now >= st.ManSince+MortarManMin && now >= st.SeenAt+MortarIdleRelease {
+		if !st.Forced && !st.Hostile && now >= st.ManSince+MortarManMin && now >= st.SeenAt+MortarIdleRelease {
 			m.standDown(st)
 		}
 		return
@@ -174,10 +177,15 @@ func (m *Mortars) step(id entity.EntityID, b construction.Building, st *Mortar, 
 	}
 }
 
-// crewing: colonist c is on its way to or manning mortar id.
-func (m *Mortars) crewing(c, id entity.EntityID) bool {
+// crewing: colonist c (a raider for a hostile mortar) is on its way to or
+// manning mortar id.
+func (m *Mortars) crewing(c, id entity.EntityID, hostile bool) bool {
 	j, ok := m.h.Job(c)
-	return ok && j.Kind == job.ManMortar && j.Target == id && (j.State == job.Goto || j.State == job.Do) && m.h.StandingPawn(c)
+	standing := m.h.StandingPawn(c)
+	if hostile {
+		standing = m.h.StandingRaider(c)
+	}
+	return ok && j.Kind == job.ManMortar && j.Target == id && (j.State == job.Goto || j.State == job.Do) && standing
 }
 
 // standDown ends the crew's job: it goes back to its day.
@@ -202,7 +210,8 @@ func (m *Mortars) aim(id entity.EntityID, b construction.Building, st *Mortar, n
 		return st.TX, st.TY, inBand(b.X, b.Y, st.TX, st.TY)
 	}
 	if st.Target != 0 {
-		if x, y, ok := m.h.Pos(st.Target); ok && m.turrets.Targetable(st.Target, now) && inBand(b.X, b.Y, x, y) {
+		if x, y, ok := m.h.Pos(st.Target); ok && (st.Hostile && m.colonist(st.Target) || !st.Hostile && m.turrets.Targetable(st.Target, now)) &&
+			inBand(b.X, b.Y, x, y) {
 			return x, y, true
 		}
 		st.Target = 0
@@ -210,9 +219,13 @@ func (m *Mortars) aim(id entity.EntityID, b construction.Building, st *Mortar, n
 	if !scan {
 		return 0, 0, false
 	}
-	m.near = m.h.Near(b.X, b.Y, mortarScanR, Raiders|Animals, m.near[:0])
+	who, hostile := Raiders|Animals, st.Hostile
+	if hostile {
+		who = Pawns
+	}
+	m.near = m.h.Near(b.X, b.Y, mortarScanR, who, m.near[:0])
 	s, ok := nearest(m.near, b.X, b.Y, func(s Seen) bool {
-		return inBand(b.X, b.Y, s.X, s.Y) && m.turrets.Targetable(s.ID, now)
+		return inBand(b.X, b.Y, s.X, s.Y) && (hostile && m.colonist(s.ID) || !hostile && m.turrets.Targetable(s.ID, now))
 	})
 	if !ok {
 		return 0, 0, false
@@ -315,9 +328,12 @@ func (m *Mortars) scatter(x, y, rad int) (int, int) {
 }
 
 // SetTarget forces mortar id to fire at (x, y); crew (0: none) is the
-// colonist to call to it.
+// colonist to call to it. A raiders' mortar takes no orders.
 func (m *Mortars) SetTarget(id entity.EntityID, x, y int, crew entity.EntityID) {
 	st := m.states[id]
+	if st.Hostile {
+		return
+	}
 	st.Forced, st.TX, st.TY, st.Aiming = true, x, y, false
 	if crew != 0 {
 		st.Assigned = crew
@@ -335,6 +351,53 @@ func (m *Mortars) ClearTarget(id entity.EntityID) {
 	m.set(id, st)
 }
 
+// Siege mortar shells (DEF-4). wiki: Raid, a siege bombards with high
+// explosive and incendiary shells; the split of one barrel's 20 is
+// original tuning.
+const (
+	SiegeHEShells         = 15
+	SiegeIncendiaryShells = 5
+)
+
+// Raise makes mortar id a besieging raid's, loaded for one barrel.
+func (m *Mortars) Raise(id entity.EntityID) {
+	st := m.states[id]
+	st.Hostile = true
+	st.Shells = [4]int{SiegeHEShells, SiegeIncendiaryShells, 0, 0}
+	m.set(id, st)
+	m.idsOK = false // a new mortar: list again
+}
+
+// Crew is who mans mortar id (0: nobody); ok false when it is gone.
+func (m *Mortars) Crew(id entity.EntityID) (entity.EntityID, bool) {
+	b, ok := m.h.Building(id)
+	if !ok || b.Kind != construction.Mortar {
+		return 0, false
+	}
+	return m.states[id].Crew, true
+}
+
+// Man sends raider c to crew the raiders' mortar id.
+func (m *Mortars) Man(c, id entity.EntityID) bool {
+	b, ok := m.h.Building(id)
+	st := m.states[id]
+	if !ok || b.Kind != construction.Mortar || !st.Hostile || st.Crew != 0 {
+		return false
+	}
+	sx, sy := spot(b)
+	if !m.h.StartJob(c, job.Record{Kind: job.ManMortar, Target: id, TX: sx, TY: sy}) {
+		return false
+	}
+	st.Crew, st.ManSince, st.SeenAt, st.Aiming = c, m.h.Now(), m.h.Now(), false
+	m.set(id, st)
+	return true
+}
+
+// colonist: a standing colonist (a raiders' mortar's mark).
+func (m *Mortars) colonist(id entity.EntityID) bool {
+	return m.h.StandingPawn(id) && !m.h.StandingRaider(id)
+}
+
 // State is mortar id's state (zero: none).
 func (m *Mortars) State(id entity.EntityID) Mortar { return m.states[id] }
 
@@ -350,6 +413,9 @@ func (m *Mortars) Barrel(id entity.EntityID) int {
 // shells while its rack is under half full; ok false: nothing.
 func (m *Mortars) wants(id entity.EntityID) (barrel bool, room int) {
 	st := m.states[id]
+	if st.Hostile {
+		return false, 0 // the raiders' own
+	}
 	if st.Fired >= MortarBarrel {
 		return true, 0
 	}

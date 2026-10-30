@@ -365,6 +365,10 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.arch.Preset(it.Kind, it.Stuff, it.Facing)
 	case ports.AimMortar:
 		a.ord.Aim.Start(it.ID, it.X, it.Y)
+	case ports.AimGrenade:
+		a.ord.Aim.StartGrenade(it.Pawn)
+	case ports.OpenStorage:
+		a.win.Storage().Open(it.Zone)
 	case ports.ShowWindow:
 		a.win.Show(it.Mode)
 	case ports.CloseWindows:

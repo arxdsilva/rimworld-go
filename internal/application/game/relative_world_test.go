@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/backstory"
@@ -53,7 +54,7 @@ func TestRaidRelativeLinkedToAColonist(t *testing.T) {
 	fac := hostileHuman(t, g)
 	var kin entity.EntityID
 	for i := 0; i < 80 && kin == 0; i++ {
-		g.raidFrom([]item.Kind{item.Rifle, item.Rifle}, planAssault, fac)
+		g.raidFrom([]item.Kind{item.Rifle, item.Rifle}, raid.Assault, fac)
 		for _, id := range g.raiderIDs {
 			if _, _, ok := g.closestKin(id); ok {
 				kin = id

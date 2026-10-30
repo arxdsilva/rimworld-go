@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
@@ -21,14 +22,14 @@ func TestSapperDigClearsOre(t *testing.T) {
 	if !g.SetGround(4, 4, 5, 4, "rock", "granite", "gold") || !g.SetGround(4, 6, 4, 6, "rock_smooth", "marble", "") {
 		t.Fatal("set ground")
 	}
-	g.digRock(4, 4, rockHP)
+	g.raid.Rock.Dig(4, 4, raid.RockHP)
 	if g.TerrainAt(4, 4) != "stone" || g.geo.OreAt(4, 4) != geology.NoOre || g.stoneAt(4, 4) != geology.Granite {
 		t.Fatalf("dug ore = %s ore %v stone %v", g.TerrainAt(4, 4), g.geo.OreAt(4, 4), g.stoneAt(4, 4))
 	}
 	if g.geo.OreAt(5, 4) != geology.Gold {
 		t.Fatal("the neighbouring ore stays")
 	}
-	g.digRock(4, 6, rockHP)
+	g.raid.Rock.Dig(4, 6, raid.RockHP)
 	if g.TerrainAt(4, 6) != "stone" || !g.grid.Walkable(4, 6) {
 		t.Fatalf("sappers dig smoothed rock too: %s", g.TerrainAt(4, 6))
 	}
@@ -185,14 +186,14 @@ func TestKnifeTakesAnyStoneBlocks(t *testing.T) {
 
 func TestStoneGoodsInStockpilesAndWealth(t *testing.T) {
 	t.Parallel()
-	stone := zone.Zone{Stone: true}
+	stone := zone.Zone{Kind: zone.KindStockpile, Stone: true} // PRD-4: only storage zones take things
 	for _, k := range []item.Kind{item.GraniteChunk, item.MarbleBlocks, item.Stone} {
-		if !allows(stone, k) || allows(zone.Zone{Wood: true}, k) {
+		if !allows(stone, k) || allows(zone.Zone{Kind: zone.KindStockpile, Wood: true}, k) {
 			t.Fatalf("%s: stone filter", k)
 		}
 	}
 	for _, k := range []item.Kind{item.Steel, item.Silver, item.Gold} {
-		if !allows(zone.Zone{}, k) {
+		if !allows(zone.Zone{Kind: zone.KindStockpile}, k) {
 			t.Fatalf("%s: metals are always welcome", k)
 		}
 	}

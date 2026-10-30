@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -32,7 +33,7 @@ func kidnapGame(t *testing.T) (g *Game, ada, bo, rid entity.EntityID) {
 	}
 	rid = spawnRaiderAt(t, g, 6, 10, 0)
 	r := g.raiders[rid]
-	r.Mode = raidFlee
+	r.Mode = raid.Fleeing
 	g.raiders[rid] = r
 	return g, ada, bo, rid
 }

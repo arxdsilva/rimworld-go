@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/prison"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -36,7 +37,7 @@ func spawnRaiderAt(t *testing.T, g *Game, x, y, fac int) entity.EntityID {
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
 	g.equip[id] = item.Rifle
-	g.raiders[id] = raiderState{Arrived: uint64(g.clock.Now())}
+	g.raiders[id] = raid.Raider{Arrived: uint64(g.clock.Now())}
 	g.raiderPerson(id, fac)
 	return id
 }

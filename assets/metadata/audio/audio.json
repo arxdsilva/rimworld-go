@@ -209,6 +209,19 @@
       "reviewed_by": "arxdsilva"
     },
     {
+      "id": "amb.ship_part_hum",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.3,
+      "files": [
+        "ambience/ship_part_hum.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.ship_part_hum",
+      "seed": 952,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "amb.water_river",
       "bus": "ambience",
       "loop": true,
@@ -5263,6 +5276,32 @@
       "source": "procedural",
       "recipe": "sfx.door_open",
       "seed": 301,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.droppod_impact",
+      "bus": "effects",
+      "volume": 0.95,
+      "files": [
+        "sfx/droppod_impact_0.wav",
+        "sfx/droppod_impact_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.droppod_impact",
+      "seed": 951,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.droppod_incoming",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/droppod_incoming_0.wav",
+        "sfx/droppod_incoming_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.droppod_incoming",
+      "seed": 950,
       "license": "original, made in code (CC0, this repo)"
     },
     {

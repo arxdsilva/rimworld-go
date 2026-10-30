@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/world/terrain"
@@ -34,7 +35,7 @@ func TestSiegeDigsInThenStorms(t *testing.T) {
 	g := New(Config{Seed: 2, Width: 60, Height: 30})
 	ada, _ := g.SpawnNamedPawn(30, 15, "Ada")
 	g.Siege(2)
-	if len(g.raiderIDs) != 2 || g.raidGroups[0].Plan != planSiege {
+	if len(g.raiderIDs) != 2 || g.raidGroups[0].Plan != raid.Siege {
 		t.Fatal("two besiegers")
 	}
 	for i := 0; i < 200 && !g.raidGroups[0].Camped; i++ {
@@ -58,7 +59,7 @@ func TestSiegeDigsInThenStorms(t *testing.T) {
 	if sandbags == 0 || !dug {
 		t.Fatalf("the camp throws up sandbags (%d) and is announced (%v)", sandbags, dug)
 	}
-	g.clock.Advance(siegeHold)
+	g.clock.Advance(raid.SiegeHoldMax)
 	g.Step(1)
 	if !g.raidGroups[0].Stormed {
 		t.Fatal("after holding the camp, the besiegers storm the colony")

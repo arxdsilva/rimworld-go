@@ -85,7 +85,7 @@ func BonesSprite(x, y int) string { return artKey("item", "bones", int(sprite.Ti
 // unnamed "animal corpse" draws the deer's. The former dustbuck and
 // ridgewolf corpse kinds keep their own art.
 func CorpseSprite(kind, species string, x, y int) (string, bool) {
-	if species != "" && strings.HasSuffix(kind, " corpse") && kind != "human corpse" {
+	if species != "" && (strings.HasSuffix(kind, " corpse") || strings.HasSuffix(kind, " wreck")) && kind != "human corpse" { // a mechanoid wreck draws like a corpse (DEF-4)
 		return fmt.Sprintf("item/corpse_%s_v%d", species, sprite.TileHash(x, y)%3), true
 	}
 	switch kind {

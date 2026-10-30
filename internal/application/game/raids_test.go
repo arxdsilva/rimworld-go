@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -60,7 +61,7 @@ func TestRaiderFleesWhenBadlyHurt(t *testing.T) {
 	rid := g.raiderIDs[0]
 	g.hurt(rid, health.MaxHP/2, 0)
 	g.Step(1)
-	if r, ok := g.raiders[rid]; ok && r.Mode != raidFlee {
+	if r, ok := g.raiders[rid]; ok && r.Mode != raid.Fleeing {
 		t.Fatal("a badly hurt raider should flee (or already be off the map)")
 	}
 	for i := 0; i < 40 && len(g.raiderIDs) > 0; i++ {

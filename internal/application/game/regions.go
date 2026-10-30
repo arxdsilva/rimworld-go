@@ -35,18 +35,8 @@ type regionState struct {
 	special   []specialCell // flagged cells, ascending
 	bits      [region.Layers][]uint64
 	bitsOK    [region.Layers]bool
-	hive      hiveExitCache // hive.go
-	rooms     roomIndex     // rooms_index.go
-	budget    searchBudget  // paths.go
-}
-
-// hiveExitCache is hiveExit's last answer and the structure it was for.
-type hiveExitCache struct {
-	ok                 bool
-	grid               *grid.Grid
-	gridVer, structVer uint64
-	hx, hy, x, y       int
-	found              bool
+	rooms     roomIndex    // rooms_index.go
+	budget    searchBudget // paths.go
 }
 
 type specialCell struct {

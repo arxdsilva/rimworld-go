@@ -19,7 +19,7 @@ const (
 // its base bench (recipe.Base).
 func Action(k construction.Kind) string {
 	switch recipe.Base(k) {
-	case construction.Stove, construction.Campfire, construction.DryingRack:
+	case construction.Stove, construction.Campfire, construction.DryingRack, construction.FermentingBarrel:
 		return ActionCook
 	case construction.TailoringBench:
 		return ActionTailor

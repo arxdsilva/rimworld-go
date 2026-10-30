@@ -23,11 +23,28 @@ const (
 	// KindDump is a dumping stockpile (PLAY-023): storage for corpses and
 	// stone chunks by default. Append only: kinds are saved.
 	KindDump
+	// KindShelf (PRD-4) is the storage of one shelf building, laid over
+	// its footprint when it is built and lifted when it goes: it never
+	// merges with a neighbour, and the player's zone tools (expand,
+	// shrink, delete, clear) leave it alone. A shelf cell holds
+	// ShelfStacks stacks.
+	KindShelf
 )
 
-// Storage reports a kind haulers store things in: stockpiles and
-// dumping stockpiles.
-func (k Kind) Storage() bool { return k == KindStockpile || k == KindDump }
+// ShelfStacks is how many stacks one shelf cell holds (wiki: Shelf).
+const ShelfStacks = 3
+
+// Storage reports a kind haulers store things in: stockpiles, dumping
+// stockpiles and shelves.
+func (k Kind) Storage() bool { return k == KindStockpile || k == KindDump || k == KindShelf }
+
+// Stacks is how many stacks one cell of a storage zone of kind k holds.
+func (k Kind) Stacks() int {
+	if k == KindShelf {
+		return ShelfStacks
+	}
+	return 1
+}
 
 // Priority is a storage zone's priority (PLAY-023): haulers fill the
 // highest-priority zone that takes a thing and has room, and move things
@@ -91,6 +108,13 @@ type Zone struct {
 	// chunks).
 	Priority        Priority
 	Corpses, Chunks bool
+	// PRD-4 storage filters, zero-safe like the above (filter.go): once
+	// the player edits the filter, Custom is set and Filter holds the
+	// kinds the zone takes (until then the switches above decide);
+	// Special is the special filters (zero takes everything).
+	Custom  bool
+	Filter  Filter
+	Special Special
 }
 
 // compatible: two zones of these settings merge when they touch. Only the
@@ -99,7 +123,7 @@ type Zone struct {
 // settings of the surviving zone (Paint and Set: the lowest id; AddCells:
 // the zone being expanded).
 func compatible(a, b Zone) bool {
-	return a.Kind == b.Kind && (a.Kind != KindGrow || a.Crop == b.Crop)
+	return a.Kind == b.Kind && a.Kind != KindShelf && (a.Kind != KindGrow || a.Crop == b.Crop)
 }
 
 // Rect is an inclusive tile rectangle (build it with Normalize).
@@ -453,7 +477,7 @@ func (m *Map) Clear(r Rect) {
 	for y := r.MinY; y <= r.MaxY; y++ {
 		for x := r.MinX; x <= r.MaxX; x++ {
 			c := y*m.w + x
-			if id := m.cell[c]; id != 0 {
+			if id := m.cell[c]; id != 0 && m.rec(id).z.Kind != KindShelf {
 				hit = appendID(hit, id)
 				m.cell[c] = 0
 			}
@@ -607,8 +631,8 @@ func (m *Map) Update(id ID, fn func(*Zone)) {
 func (m *Map) Remove(id ID) {
 	m.ver++
 	r := m.rec(id)
-	if r == nil {
-		return
+	if r == nil || r.z.Kind == KindShelf {
+		return // a shelf's storage goes with the shelf (RemoveTiles)
 	}
 	for _, c := range r.idx {
 		m.cell[c] = 0
@@ -628,7 +652,7 @@ func (m *Map) Remove(id ID) {
 func (m *Map) AddCells(id ID, cells [][2]int) {
 	m.ver++
 	base := m.rec(id)
-	if base == nil {
+	if base == nil || base.z.Kind == KindShelf {
 		return
 	}
 	var free []int
@@ -706,7 +730,7 @@ func (m *Map) placeBlock(base *rec, block []int) {
 func (m *Map) RemoveCells(id ID, r Rect) {
 	m.ver++
 	z := m.rec(id)
-	if z == nil {
+	if z == nil || z.z.Kind == KindShelf {
 		return
 	}
 	r, inside := m.clip(r)

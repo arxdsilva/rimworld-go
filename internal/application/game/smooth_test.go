@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/sim/command"
@@ -293,7 +294,7 @@ func TestSmoothStopsWhenTheWallIsDugOut(t *testing.T) {
 			break
 		}
 	}
-	g.digRock(10, 2, rockHP) // a sapper breaks through mid-job
+	g.raid.Rock.Dig(10, 2, raid.RockHP) // a sapper breaks through mid-job
 	stepFed(g, 5, id)
 	if j, _ := g.jobs.Get(id); j.Kind == job.Smooth && j.Active() {
 		t.Fatalf("still smoothing a dug-out wall: %+v", j)

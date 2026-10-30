@@ -119,7 +119,7 @@ func countsWild(a animal.State, now uint64) bool {
 		return false
 	}
 	d := animal.DefOf(a.Species)
-	return !d.Hive && !d.Legendary && animal.EcologyOf(a.Species).Diet != animal.Dendrovore
+	return !d.Hive && !d.Legendary && !d.Mech && animal.EcologyOf(a.Species).Diet != animal.Dendrovore
 }
 
 // wildCount is the number of wild animals counted against capacity. It is

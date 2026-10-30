@@ -478,7 +478,7 @@ This is the heart of autonomous colony behavior.
     -   drug.
     -   manufactured component.
     -   corpse/product categories.
--   [-] **Stackable items** (stack limit 1000, carry 100 per trip, merge/take, no negatives)
+-   [-] **Stackable items** (stack limit 1000, carry 100 per trip, merge/take, no negatives; PRD-4: `item.Kind.StackLimit` carries the wiki limit for the wave E kinds, hauling, merging and spilling stop at it; missing: the older kinds keep 1000 so saves and pins stay valid)
     -   Quantity.
     -   stack limit.
     -   merge/split.
@@ -510,7 +510,7 @@ This is the heart of autonomous colony behavior.
 
 -   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (animal corpses and chunks), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
     -   Paint storage cells.
--   [-] **Storage filters** (food and wood allowed; no category tree/quality)
+-   [x] **Storage filters** (PRD-4: `domain/building/zone/filter.go` category tree with 8 top categories and sub-categories, allowed and disallowed by item, special filters (rotten, tainted, HP range, quality range), copy and paste, names; stockpiles and shelves; zones without edits keep the old switches)
     -   Category tree.
     -   allowed/disallowed definitions.
     -   quality/condition filters where appropriate.
@@ -597,7 +597,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; missing: couch, joy, light effects)
+-   [-] **Furniture** (PRD-4: shelf, a storage zone over its footprint, 3 stacks per cell, Preferred, no deterioration, beauty 0.5; bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; missing: couch, joy, light effects)
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -674,7 +674,7 @@ This is the heart of autonomous colony behavior.
 ## 8.3 Cooking
 
 -   [x] **Cooking workstation** (stove)
--   [-] **Meal recipes** (simple meal at the stove, or slower over a fuelled campfire; no fine meal / multi-ingredient recipes yet)
+-   [x] **Meal recipes** (simple meal at the stove or slower over a campfire; PRD-4: fine meal, lavish meal, pemmican, packaged survival meal (multi-ingredient, any-veg and any-meat inputs, wiki skills and yields) and kibble at the butcher table and spot)
     -   Simple/standard meal classes sufficient to recreate vanilla
         progression.
     -   Ingredient filters.
@@ -1207,7 +1207,7 @@ treatment, and surgery are major colony-management systems.
     -   interaction cell.
     -   power requirement where applicable.
     -   facility/environment modifiers.
--   [-] **Recipe definition** (inputs incl. any-raw-food, work, work type, product; no research/quality)
+-   [-] **Recipe definition** (inputs incl. any-raw-food, any-veg, any-meat, smelt-wear and wreck inputs, work, work type, product, research gates; 31 PRD-4 recipes; missing: bill quality and hit-point ranges)
     -   ingredients.
     -   filters.
     -   work amount.
@@ -1242,8 +1242,8 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
 -   [x] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear; PRD-3: smithy blades and pila, crafting-spot bows, 13 machining-table guns, smelting metal weapons back to steel; `domain/economy/recipe/benches.go`)
--   [-] **Machining/advanced fabrication equivalents** (NG-1: the Fabrication research unlocks one recipe, components, plus tool cabinet and hospital bed; PRD-3: machining table with 13 guns; missing: advanced components and the later fabrication chain (PRD-4))
--   [-] **Drug production** (SIM-040: brewing bench (beer) and drug table (tea, tablets); no hard drugs; PRD-3: wort and fermenting-barrel beer and chemfuel (refinery) not done, they wait on PRD-4)
+-   [x] **Machining/advanced fabrication equivalents** (NG-1 components; PRD-3 machining table with 13 guns; PRD-4: fabrication bench makes advanced components and marine armor and helmet, machining table makes flak armor, grenades and four mortar shells, smithy plate armor, smelter smelts apparel, shred mechanoid; 8 research projects)
+-   [x] **Drug production** (SIM-040 beer, tea, tablets; PRD-4: wort at the brewing bench, fermenting barrel (25 wort, 6 days, 7-32 C, wiki), ash flake, silverdust, battle tonic and reagent at the drug table, chemfuel at the refinery; missing: the barrel is filled by cooks, wiki haulers)
 -   [x] **Component production in late tech** (NG-1: Fabricate component, 12 steel into 1 at the workbench with Crafting 6; components also come from buried machinery ore)
 
 ## 14.4 Quality
@@ -1374,7 +1374,7 @@ treatment, and surgery are major colony-management systems.
         orders.
 -   [x] **Drafted movement order**
 -   [x] **Attack target order**
--   [ ] **Hold/fire-at-will behavior**
+-   [x] **Hold/fire-at-will behavior** (DEF-4: fire at will off stops a drafted colonist starting attacks of its own; hold position shoots from its tile and never chases; `combat/draft.go`)
 -   [x] **Drafted field tending** (MED-03: drafted "Tend <name>" order; the doctor brings the best allowed medicine within 15 tiles, or none)
     -   Allow emergency tending under appropriate conditions.
 
@@ -1438,15 +1438,15 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Radial damage** (DEF-2: full at centre to half at rim (original tuning))
 -   [x] **Fire chance** (DEF-2: flame blasts ignite the centre)
 -   [-] **Building/item/pawn damage** (DEF-2: pawns and buildings (bomb x2); items not damaged)
--   [ ] **Chain reaction support for explosive content**
+-   [-] **Chain reaction support for explosive content** (DEF-4: a blast lights the IEDs in its radius, a bullet landing on one sets it off; stored shells and grenades do not cook off yet)
 
 ## 17.8 Combat AI
 
--   [ ] **Hostile target selection**
+-   [-] **Hostile target selection** (DEF-4: raiders take a colonist or ally, a powered turret in sight (also when no colonist is reachable), a rival faction's raider closer, then the walls and doors in the way; no threat weighting yet)
 -   [x] **Approach/ranged engagement**
 -   [x] **Melee closing**
 -   [ ] **Basic cover seeking**
--   [x] **Flee behavior for appropriate human enemies** (raiders flee at half HP, half the group down, an idle hour or a day on the map)
+-   [x] **Flee behavior for appropriate human enemies** (raiders flee at half HP, once the group has lost its rolled 40-70 % (wiki), an idle hour or a day on the map; a staged or besieging raid's day starts at its storm)
 
 ------------------------------------------------------------------------
 
@@ -1460,7 +1460,7 @@ children systems.
 
 ## 18.1 Species definitions
 
--   [x] **Animal species** (SIM-019: 61 species from size/behaviour classes; ten originals replace RimWorld-invented creatures)
+-   [x] **Animal species** (SIM-019: 61 species from size/behaviour classes; ten originals replace RimWorld-invented creatures; DEF-4 R2: four original mechanoids appended, 65 in all, with full art; their four voices each are blocked on the user, the insect group stands in [!])
     -   Anatomy.
     -   body size.
     -   movement.
@@ -1597,7 +1597,7 @@ change relationships, and settlements exist on the world map.
 
 ## 20.1 Faction definitions
 
--   [-] **Faction types** (NG-1 SIM-030: settlers, clans, drifters, freebooters, swarm and the player; no mechanoid or ancient factions)
+-   [-] **Faction types** (NG-1 SIM-030: settlers, clans, drifters, freebooters, swarm and the player; mechanoids act as a hostile raid source (DEF-4 R2) but are not a faction object; no ancient factions)
     -   Player colony.
     -   tribal-level human factions.
     -   industrial/outlander-like factions.
@@ -1704,9 +1704,9 @@ progression:
 -   [ ] **Cooling/temperature control**
 -   [ ] **Stoneworking**
 -   [ ] **Complex furniture**
--   [-] **Drug production** (SIM-040: Brewing, Herbal remedies and Prosthetics research; no hard-drug chain)
+-   [x] **Drug production** (SIM-040 research; PRD-4: TonicSynthesis, LeafRefining and the hard-drug chain)
 -   [ ] **Microelectronics/communications**
--   [ ] **Advanced fabrication**
+-   [x] **Advanced fabrication** (PRD-4: PrecisionFabrication, FlakArmor, Armoursmithing, PoweredArmor, TrailRations, SealedRations; gates on Upholstery, Metalworking, RifledBarrels, Microcircuits, Artillery)
 -   [ ] **Weapon technologies**
 -   [ ] **Armor/apparel technologies**
 -   [x] **Geothermal/advanced power** (MAPGEN-2: steam vents warm the air; PLAY-021: a geothermal generator stands exactly on a vent, 1800 W)
@@ -1893,7 +1893,7 @@ Use original names rather than copying RimWorld storyteller characters.
 -   [-] **Generate equipment based on faction/tech** (NG-1: neolithic factions field clubs only, industrial ones rifles)
 -   [x] **Map-edge arrival** (raids walk in from a map edge)
 -   [x] **Immediate attack** (the assault plan)
--   [ ] **Prepare-before-attack behavior**
+-   [x] **Prepare-before-attack behavior** (DEF-4 staged raids: gather 10 tiles in from the edge, storm on a colonist in sight, when gathered after 3 h, or at a 6-14 h limit; `raid/stage.go`)
 
 ## 24.3 Raid tactics
 
@@ -1901,32 +1901,32 @@ Use original names rather than copying RimWorld storyteller characters.
 -   [x] **Sappers/breachers equivalent** (against an enclosed colony from day 10: tunnel through walls, doors and rock, step around traps)
     -   Attack walls/alternate route instead of blindly using normal
         entrance.
--   [ ] **Drop-pod assault**
+-   [x] **Drop-pod assault** (DEF-4: industrial factions and up, 30 of 90 map-entry rolls (wiki); pods fall 240 ticks, break the roof they come through (it hurts whoever is beneath), leave a pod shell; `raid/pods.go`)
     -   Industrial factions can arrive from above.
--   [ ] **Center/scatter drop variants**
--   [x] **Siege** (from day 12: camp 18 tiles out, sandbags, shoot from cover, storm after 5h)
+-   [x] **Center/scatter drop variants** (DEF-4: on the colonist nearest home, together near an edge, or scattered over the map)
+-   [x] **Siege** (from day 12, industrial and 300+ points: camp 32 tiles out, sandbags, two mortars the raiders crew (15 high-explosive, 5 incendiary shells), storm after 1.5-3 days or at once on 8 % of hits (wiki))
     -   Raiders establish temporary siege position, receive/build
         artillery/supplies, bombard colony, then assault.
 
 ## 24.4 Raider morale
 
--   [x] **Human raider flee threshold** (badly hurt raiders, or a group that has lost half its members, flee to the edge)
+-   [x] **Human raider flee threshold** (badly hurt raiders, or a group that has lost its rolled 40-70 % (wiki), flee to the edge; logged once)
     -   Group may flee after sufficient casualties/damage.
 -   [x] **Kidnap behavior** (raiders carry off downed colonists unless guarded; `kidnap.go`)
     -   Raiders can carry downed colonists away under suitable
         circumstances.
--   [ ] **Steal behavior**
+-   [-] **Steal behavior** (DEF-4 Steal raids: take the nearest stack worth 50+ silver and run, dropping it where they fall; raiders of other strategies do not steal on retreat yet)
     -   Raiders may steal valuable reachable items when
         retreating/meeting goals.
 
 ## 24.5 Mechanoid threats
 
--   [ ] **Mechanoid pawn types**
+-   [-] **Mechanoid pawn types** (DEF-4 R2: Harrow, Spindle, Bulwark, Quill, original designs with wiki role stats; own brain (`game/raid/mech.go`), no needs, never tamed, never down or flee, EMP stun with adaptation, wrecks shredded for salvage; missing: closed doors block them, voices blocked on the user (insect group stands in) [!])
     -   Machine enemies with different weapon/range roles.
     -   No human mood/needs.
--   [ ] **Mechanoid raid**
+-   [-] **Mechanoid raid** (`Mechs.Raid` from 300 points at an arrival spot, storyteller face with 1/(hostile human factions + 1); missing: mech groups do not use the pod hook)
     -   Persistent hostile behavior; does not use ordinary human morale.
--   [ ] **Crashed ship-part threat**
+-   [x] **Crashed ship-part threat** (DEF-4 R2: `construction.ShipPart` 6x3, 1200 HP, plant blight 5 to 100 tiles over 20 days, sleeping mech guards that wake once, salvage on destruction, incident weight 2 with a 400-point gate)
     -   Psychic/defoliator-like hostile world object.
     -   Dormant/guarding mechanoids.
     -   Persistent map effect until destroyed.
@@ -2009,7 +2009,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Psychic drone-like mood event**
 -   [ ] **Volcanic-winter-like long climate event if part of target base
     version**
--   [ ] **Crashed hostile ship part**
+-   [x] **Crashed hostile ship part** (DEF-4 R2 incident `CrashedShipPart`, see 24.5; storyteller weight 40 vs people raids 74)
 -   [x] **Short circuit/battery discharge** (PLAY-021: see 15.2)
 -   [x] **Animal predator hunts colonist**
     -   May be AI-driven rather than storyteller incident.

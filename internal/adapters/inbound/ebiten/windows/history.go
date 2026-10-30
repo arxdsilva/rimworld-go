@@ -20,6 +20,7 @@ import (
 const (
 	HistoryModalID = "colony.history"
 	historyRowH    = 22
+	historyTabH    = 28
 	historyWhenW   = 120
 	historyEmpty   = "Nothing noteworthy has happened yet."
 )
@@ -67,6 +68,13 @@ func (w History) Launch() {
 // body declares the scrolling list of entries.
 func (w History) body(body gfx.Rect) {
 	if !w.live() {
+		return
+	}
+	strip := gfx.Rect{X: body.X, Y: body.Y, W: body.W, H: historyTabH}
+	w.kit().Tabs("history.tabs", strip, []string{"Events", "Combat"}, &w.histTab, uikit.TabsOpts{})
+	body = gfx.Rect{X: body.X, Y: body.Y + historyTabH + 6, W: body.W, H: body.H - historyTabH - 6}
+	if w.histTab == 1 {
+		w.combatList(body)
 		return
 	}
 	rows := HistoryRows(w.sh.Env().Game.History())

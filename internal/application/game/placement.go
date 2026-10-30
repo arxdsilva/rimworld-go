@@ -877,7 +877,7 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	g.bldgs.Delete(id)
 	delete(g.fuel, id)
 	delete(g.banked, id)
-	if b.Kind == construction.DryingRack {
+	if b.Kind == construction.DryingRack || b.Kind == construction.FermentingBarrel { // PRD-4: the barrel's wort too
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		g.craft.Drying.Empty(id, spot[0], spot[1])
 	}
@@ -899,6 +899,7 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 		g.foundationGone(b) // bridge_remove.go: footing, creatures and loose things
 	}
 	g.craft.Bills.Forget(id)
+	g.liftShelf(b) // zones.go (PRD-4): a shelf's storage goes with it
 	g.markRoomsDirty()
 	g.structVer++ // SIM-029: link/autotile caches
 	g.reorientFootprint(b.Kind, b.Facing, b.X, b.Y)

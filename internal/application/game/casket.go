@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -237,7 +238,7 @@ func (g *Game) casketHostile(b construction.Building, v *vaultSave, weapon item.
 		return 0
 	}
 	now := uint64(g.clock.Now())
-	g.raidGroups = append(g.raidGroups, raidGroup{Size: 1, Plan: planAssault})
+	g.raidGroups = append(g.raidGroups, raid.Group{Size: 1, Plan: raid.Assault})
 	id := g.entities.Next()
 	g.raiderIDs = append(g.raiderIDs, id)
 	g.positions.Set(id, Position{X: x, Y: y})
@@ -245,7 +246,7 @@ func (g *Game) casketHostile(b construction.Building, v *vaultSave, weapon item.
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
 	g.equip[id] = weapon
-	g.raiders[id] = raiderState{Group: len(g.raidGroups) - 1, Arrived: now}
+	g.raiders[id] = raid.Raider{Group: len(g.raidGroups) - 1, Arrived: now}
 	g.raiderPerson(id, 0) // people.go: a world person (relations, capture)
 	if p := g.personOf(id); p != nil {
 		g.names.Set(id, bioName(p.Bio))
@@ -264,7 +265,7 @@ func (g *Game) casketBeast(b construction.Building, v *vaultSave, s animal.Speci
 		return 0
 	}
 	a, _ := g.animals.Get(id)
-	a.Manhunter, a.Mode = hiveForever, animal.Attack
+	a.Manhunter, a.Mode = raid.HiveForever, animal.Attack
 	g.animals.Set(id, a)
 	g.noteVaultHostile(v, id)
 	return id

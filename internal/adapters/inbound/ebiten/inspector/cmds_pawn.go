@@ -64,6 +64,7 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 		clear.Disabled, clear.Reason = true, "no queued orders"
 	}
 	out := []Button{draft, clear, a.equipCommand(p)}
+	out = append(out, a.combatCommands(p)...) // cmds_combat.go: a drafted colonist's fire, hold, grenade
 	if c, ok := a.bedRestCommand(p); ok {
 		out = append(out, c)
 	}

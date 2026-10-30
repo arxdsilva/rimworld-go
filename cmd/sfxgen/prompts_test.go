@@ -11,7 +11,8 @@ import (
 
 // forbidden are RimWorld's creature names; prompts describe our creatures
 // in our own words (AGENTS.md).
-var forbidden = []string{"muffalo", "boomalope", "boomrat", "thrumbo", "alphabeaver", "megascarab", "megaspider", "spelopede", "warg", "megasloth", "rimworld"}
+var forbidden = []string{"muffalo", "boomalope", "boomrat", "thrumbo", "alphabeaver", "megascarab", "megaspider", "spelopede", "warg", "megasloth", "rimworld",
+	"scyther", "mechanoid"}
 
 var groupNames = []string{"small_mammal", "large_mammal", "canid", "felid", "bovid", "bird_small", "bird_large", "reptile", "insect"}
 
@@ -42,8 +43,8 @@ func TestPromptsCoverRoster(t *testing.T) {
 	for _, m := range regexp.MustCompile(`(?m)^\s+Species\('(\w+)',`).FindAllStringSubmatch(string(py), -1) {
 		inPy[m[1]] = true
 	}
-	if len(keys) != 61 || len(inPy) != 61 {
-		t.Fatalf("roster has %d species in Go and %d in animal_roster.py, want 61", len(keys), len(inPy))
+	if len(keys) != 65 || len(inPy) != 65 {
+		t.Fatalf("roster has %d species in Go and %d in animal_roster.py, want 65", len(keys), len(inPy))
 	}
 	for _, k := range keys {
 		if !inPy[k] {
@@ -94,7 +95,7 @@ func TestPromptsCoverRoster(t *testing.T) {
 			t.Errorf("%s prompt is too vague: %q", s.ID, s.Prompt)
 		}
 	}
-	if len(p.Sounds) != 61*4+9*4+1 {
-		t.Errorf("%d prompts, want %d", len(p.Sounds), 61*4+9*4+1)
+	if len(p.Sounds) != 65*4+9*4+1 {
+		t.Errorf("%d prompts, want %d", len(p.Sounds), 65*4+9*4+1)
 	}
 }

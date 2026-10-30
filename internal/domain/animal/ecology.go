@@ -170,6 +170,11 @@ var ecology = [numSpecies]Ecology{
 	HiveBrute:        {Diet: NoDiet},
 	HiveCrawler:      {Diet: NoDiet},
 	Glimmerstag:      {Diet: Herbivore},
+	// Wave E mechanoids: machines, no needs.
+	Harrow:  {Diet: NoDiet},
+	Spindle: {Diet: NoDiet},
+	Bulwark: {Diet: NoDiet},
+	Quill:   {Diet: NoDiet},
 }
 
 // EcologyOf is s's ecological row.
@@ -188,7 +193,7 @@ func Wild(s Species, b biome.ID) bool { return Weight(s, b) > 0 }
 var (
 	sizeWeight      = [...]int{SizeXS: 100, SizeS: 80, SizeM: 50, SizeL: 30, SizeXL: 15}
 	behaviourWeight = [...]int{Grazer: 100, Skittish: 100, Docile: 100, Domestic: 100, Pet: 100,
-		Territorial: 60, Predator: 25, PackPredator: 30, Hive: 0, Legendary: 0}
+		Territorial: 60, Predator: 25, PackPredator: 30, Hive: 0, Legendary: 0, Mechanoid: 0}
 )
 
 // Fit of a biome for a species, percent.
@@ -433,7 +438,7 @@ func (s *State) Normalise(id uint64) {
 }
 
 // NeedsFree reports a species that has no food or rest needs (hive
-// insects, legendaries).
+// insects, legendaries, mechanoids).
 func NeedsFree(s Species) bool {
 	d := DefOf(s)
 	return EcologyOf(s).Diet == NoDiet || d.Hive || d.Legendary

@@ -106,8 +106,8 @@ func TestEveryRosterVoiceHasAGroup(t *testing.T) {
 	t.Parallel()
 	groups := map[string]bool{"small_mammal": true, "large_mammal": true, "canid": true, "felid": true,
 		"bovid": true, "bird_small": true, "bird_large": true, "reptile": true, "insect": true}
-	if len(VoiceGroups) != 61 {
-		t.Fatalf("%d voice groups listed, want 61 species", len(VoiceGroups))
+	if len(VoiceGroups) != 65 {
+		t.Fatalf("%d voice groups listed, want 65 species", len(VoiceGroups))
 	}
 	for k, g := range VoiceGroups {
 		if !groups[g] {

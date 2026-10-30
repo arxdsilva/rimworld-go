@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -358,12 +359,12 @@ func TestBruisedRaiderGetsUpAndFlees(t *testing.T) {
 	}
 	for i := 0; i < 100; i++ { // MED-02: 6 HP at 12 a day lying on the ground: about 12 h
 		g.Step(clock.TicksPerHour / 4)
-		if r, ok := g.raiders[rid]; !ok || r.Mode == raidFlee {
+		if r, ok := g.raiders[rid]; !ok || r.Mode == raid.Fleeing {
 			break
 		}
 	}
 	v, _ := g.vital.Get(rid)
-	if r, ok := g.raiders[rid]; ok && (v.Status != health.Alive || r.Mode != raidFlee) {
+	if r, ok := g.raiders[rid]; ok && (v.Status != health.Alive || r.Mode != raid.Fleeing) {
 		t.Fatalf("raider %+v mode %v", v, r.Mode)
 	}
 }

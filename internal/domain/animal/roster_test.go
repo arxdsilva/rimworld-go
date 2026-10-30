@@ -7,11 +7,11 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 )
 
-func TestRosterHas61(t *testing.T) {
+func TestRosterHas65(t *testing.T) {
 	t.Parallel()
 	all := All()
-	if len(all) != 61 {
-		t.Fatalf("roster has %d species, want 61", len(all))
+	if len(all) != 65 { // wave E: +4 mechanoids
+		t.Fatalf("roster has %d species, want 65", len(all))
 	}
 	seen := map[string]bool{}
 	for _, s := range all {
@@ -57,13 +57,14 @@ func TestEveryDefComplete(t *testing.T) {
 		if d.MaxHP <= 0 || d.StepTicks <= 0 || d.FleeStep <= 0 || d.FleeStep >= d.StepTicks {
 			t.Errorf("%s: hp %d step %d flee %d", s, d.MaxHP, d.StepTicks, d.FleeStep)
 		}
-		if d.Damage <= 0 || d.Cooldown < 100 || d.Cooldown > 140 || d.Accuracy < 70 || d.Accuracy > 80 {
+		// DEF-4: a machine's attack and yields are its wiki row (TestMechDefs)
+		if !d.Mech && (d.Damage <= 0 || d.Cooldown < 100 || d.Cooldown > 140 || d.Accuracy < 70 || d.Accuracy > 80) {
 			t.Errorf("%s: damage %d cooldown %d accuracy %d", s, d.Damage, d.Cooldown, d.Accuracy)
 		}
-		if d.Meat <= 0 {
+		if !d.Mech && d.Meat <= 0 {
 			t.Errorf("%s: no meat", s)
 		}
-		if r.Size > SizeXS && d.Leather <= 0 {
+		if !d.Mech && r.Size > SizeXS && d.Leather <= 0 {
 			t.Errorf("%s: size %d gives no leather", s, r.Size)
 		}
 		if d.Corpse != item.CorpseAnimal {
@@ -75,7 +76,7 @@ func TestEveryDefComplete(t *testing.T) {
 		if d.Predator && (d.HuntRadius <= 0 || d.HungerTicks == 0 || d.AggroRadius <= 0) {
 			t.Errorf("%s: predator without hunt numbers %+v", s, d)
 		}
-		if r.Behaviour != Hive && r.Behaviour != Legendary && r.HerdMin <= 0 {
+		if r.Behaviour != Hive && r.Behaviour != Legendary && r.Behaviour != Mechanoid && r.HerdMin <= 0 {
 			t.Errorf("%s: no herd size", s)
 		}
 		if r.HerdMax < r.HerdMin {

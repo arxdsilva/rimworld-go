@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -375,7 +376,7 @@ func TestMinedRockLeavesNaturalRoof(t *testing.T) {
 		t.Fatalf("mined tile: %b", c)
 	}
 	// a sapper digging through rock leaves the same overhead rock
-	g.digRock(6, 6, rockHP)
+	g.raid.Rock.Dig(6, 6, raid.RockHP)
 	if !g.roofAt(6, 6).Has(roof.Natural) {
 		t.Fatal("sapper-dug tile should keep a natural roof")
 	}

@@ -42,6 +42,8 @@ type Roles struct {
 	// stock a rearm or a mortar load fetches.
 	Field  Field
 	Supply Supply
+	// Arms (DEF-4) takes a colonist's last grenade's empty hand.
+	Arms Arms
 }
 
 // Creatures answers who a creature is and where.

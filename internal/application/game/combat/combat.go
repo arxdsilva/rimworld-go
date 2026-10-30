@@ -39,6 +39,10 @@ type Combat struct {
 	Orders  *Orders
 	Hunting *Hunting
 	Tiles   *Tiles
+	// DEF-4: Drafts (draft.go: fire at will, hold position, grenade
+	// belts and throw orders) and Log (log.go: the combat log).
+	Drafts *Drafts
+	Log    *Log
 }
 
 // New builds the combat cluster on host h with the extra roles r.
@@ -57,8 +61,10 @@ func New(h Host, r Roles) *Combat {
 	c.Rearms = &Rearms{h: h, sup: r.Supply, br: r.Breach, turrets: c.Turrets, mortars: c.Mortars}
 	c.Orders = &Orders{h: h, turrets: c.Turrets, mortars: c.Mortars, doors: c.Doors, rearms: c.Rearms}
 	c.Hunting, c.Tiles = &Hunting{h: h, hu: r.Hunts}, &Tiles{f: r.Field}
-	c.Turrets.after = [...]phaser{c.Traps, c.Doors, c.Mortars, c.Rearms}
-	c.Turrets.saved = saved{traps: c.Traps, doors: c.Doors, mortars: c.Mortars, rearms: c.Rearms}
+	c.Drafts, c.Log = &Drafts{h: h, arms: r.Arms, shots: c.Shots}, &Log{h: h}
+	c.Shots.traps, c.Shots.drafts, c.Blasts.traps, c.Strikes.drafts = c.Traps, c.Drafts, c.Traps, c.Drafts
+	c.Turrets.after = [...]phaser{c.Traps, c.Doors, c.Mortars, c.Rearms, c.Drafts}
+	c.Turrets.saved = saved{traps: c.Traps, doors: c.Doors, mortars: c.Mortars, rearms: c.Rearms, drafts: c.Drafts, log: c.Log}
 	return c
 }
 

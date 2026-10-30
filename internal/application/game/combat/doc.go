@@ -12,8 +12,8 @@
 //
 // Applying harm (wounds, death, building damage and rebuild blueprints)
 // stays on the game, which every other cluster also calls; combat decides
-// who is hit and for how much, and calls Harm. Raids stay on the game too
-// (until DEF-4) and call Strikes, Breach and Turrets.
+// who is hit and for how much, and calls Harm. Raids (game/raid, DEF-4)
+// reach Strikes, Breach and Turrets through the game.
 //
 // Combat is deterministic: every roll comes from the host (the game's
 // main or defence stream, as before the extraction), time only from the

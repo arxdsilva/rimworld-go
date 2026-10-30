@@ -167,7 +167,14 @@ func TestGrownGolden(t *testing.T) {
 	// wiki cover values (walls and doors 75 %), door open times and the
 	// door hooks in movement; the previous pin held through wave C (the
 	// committed full suite). Stable over -count=2.
-	const want uint64 = 0x7a86ab69fc2fc91a
+	// Re-pinned (BED/PRD/DEF wave E): the recipe catalogue and research
+	// projects (the sandbox completes every project), wiki stack limits and
+	// the stockpile filter tree in hauling, the raid strategies and drop
+	// pods with the storyteller's big-threat face (ship parts, mechanoid
+	// raids); the previous pin held through wave D (the committed full
+	// suite), and the raid extraction alone kept the benchmark hashes.
+	// Stable over -count=2.
+	const want uint64 = 0x18fa18940a361aec
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

@@ -63,7 +63,11 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 		// PRD-3 (wiki weapon pages): bows, the pila and the guns.
 		recipe.MakePila: 3, recipe.MakeShortBow: 2, recipe.MakeRecurveBow: 5, recipe.MakeGreatbow: 6,
 		recipe.MakeAutopistol: 4, recipe.MakeMachinePistol: 4, recipe.MakePumpShotgun: 5, recipe.MakeChainShotgun: 6,
-		recipe.MakeLMG: 6, recipe.MakeAssaultRifle: 6, recipe.MakeSniperRifle: 7, recipe.MakeMinigun: 7}
+		recipe.MakeLMG: 6, recipe.MakeAssaultRifle: 6, recipe.MakeSniperRifle: 7, recipe.MakeMinigun: 7,
+		// PRD-4 (wiki: Fine meal 6, Lavish meal 8, Packaged survival meal 8,
+		// Advanced component 8; marine pieces and reagent original tuning).
+		recipe.CookFineMeal: 6, recipe.CookLavishMeal: 8, recipe.CookSurvivalMeal: 8, recipe.MakeReagent: 4,
+		recipe.FabricateAdvanced: 8, recipe.MakeMarineArmor: 8, recipe.MakeMarineHelmet: 8}
 	for _, d := range recipe.All() {
 		want, ok := skill.ForWork(d.Skill)
 		if !ok {

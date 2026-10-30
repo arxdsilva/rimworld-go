@@ -4,7 +4,7 @@ Scope: bring beds, rest, room quality and the comfort, beauty and outdoors needs
 
 ## Status (2026-10-29)
 
-Wave D done for BED-3 (needs: comfort, beauty, outdoors; handoff `handoffs/BED-3-beauty-comfort-outdoors-needs.md`). Wave C done for BED-2 (room stats, roles and thoughts; handoff `handoffs/BED-2-room-stats-roles-thoughts.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/rest` extraction, the domain packages and the wiki constants (BED-0). Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave D done for BED-3 (needs: comfort, beauty, outdoors; handoff `handoffs/BED-3-beauty-comfort-outdoors-needs.md`). Wave C done for BED-2 (room stats, roles and thoughts; handoff `handoffs/BED-2-room-stats-roles-thoughts.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/rest` extraction, the domain packages and the wiki constants (BED-0). The programme's five waves are done (wave E shipped PRD-4 and DEF-4 and left BED unchanged; the open BED rows stay as listed). Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 

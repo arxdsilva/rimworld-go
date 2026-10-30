@@ -26,7 +26,7 @@ func TestHiveSwarmEvent(t *testing.T) {
 				g.setTerrain(x, y, terrain.Rock)
 			}
 		}
-		g.hiveSwarm()
+		g.raid.Hives.Swarm()
 		n, brutes := 0, 0
 		for _, id := range g.animalIDs {
 			a, _ := g.animals.Get(id)
@@ -55,7 +55,7 @@ func TestHiveSwarmEvent(t *testing.T) {
 	// no rock: they come in at a map edge
 	g := New(Config{Seed: 3, Width: 30, Height: 20})
 	_, _ = g.SpawnNamedPawn(15, 10, "Ada")
-	g.hiveSwarm()
+	g.raid.Hives.Swarm()
 	if len(g.animalIDs) < 3 {
 		t.Fatalf("edge swarm: %d", len(g.animalIDs))
 	}
@@ -64,34 +64,6 @@ func TestHiveSwarmEvent(t *testing.T) {
 		if p.X > 2 && p.Y > 2 && p.X < 27 && p.Y < 17 {
 			t.Fatalf("edge insect at %v", p)
 		}
-	}
-}
-
-func TestThreatOdds(t *testing.T) {
-	t.Parallel()
-	count := func(winter bool, day int) map[threatKind]int {
-		out := map[threatKind]int{}
-		for roll := 0; roll < threatRolls; roll++ {
-			out[pickThreat(roll, day, winter)]++
-		}
-		return out
-	}
-	// SIM-025 turned one raid face into a mad animal from day 6, in every
-	// season (fireThreat falls back to a raid when none can go mad).
-	if c := count(false, 5); c[threatRaid] != threatRolls {
-		t.Fatalf("before day 6 only raids: %v", c)
-	}
-	if c := count(false, 7); c[threatMad] != 1 || c[threatRaid] != threatRolls-1 {
-		t.Fatalf("day 7: raids and a mad animal: %v", c)
-	}
-	if c := count(false, 10); c[threatManhunters] != 2 || c[threatHive] != 0 || c[threatMad] != 1 || c[threatRaid] != 5 {
-		t.Fatalf("day 10: %v", c)
-	}
-	if c := count(false, 12); c[threatManhunters] != 2 || c[threatHive] != 1 || c[threatMad] != 1 || c[threatRaid] != 4 {
-		t.Fatalf("day 12: %v", c)
-	}
-	if c := count(true, 12); c[threatPack] != 4 || c[threatHive] != 1 || c[threatMad] != 1 || c[threatRaid] != 2 {
-		t.Fatalf("winter: %v", c)
 	}
 }
 

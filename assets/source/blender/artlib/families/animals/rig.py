@@ -47,7 +47,7 @@ CX, CY = 0.5, -0.5
 LEAN_DEG = C.ANIMAL_LEAN_DEG   # animals lean less than people (contracts.ANIMAL_LEAN_DEG): the body stays long
 TROT_N = 8
 WALK_FRAMES = tuple("walk%02d" % i for i in range(1, TROT_N + 1))
-ATTACK_KINDS = ("bite", "claw", "kick", "gore", "headbutt", "peck")
+ATTACK_KINDS = ("bite", "claw", "kick", "gore", "headbutt", "peck", "slash", "shoot")   # slash/shoot: mech.py poses
 GRAZE = ("graze1", "graze2")
 FLINCH = ("flinch1", "flinch2")
 CORPSE_VARIANTS = 3
@@ -144,6 +144,7 @@ class Body:
     model: object = None                 # callable(spec, pose) builder (default quadruped)
     poses: dict = None                   # extra/override frames {name: Pose}
     corpse_scale: float = 1.0
+    pool: str = "blood_dried"            # the corpse's dried pool material; None = no pool (mech wrecks: oil)
     outline: int = None                  # outline px at contracts.PPT; None = contracts default. Thinner for XS/S.
     stride: float = None                 # walk stance sweep (body lengths); None = from the legs (gait())
     travel: float = None                 # ground travel per walk cycle (body lengths) for walks without feet
@@ -1173,8 +1174,9 @@ def frame_poses(spec, static=False):
         return out
     for i in range(1, TROT_N + 1):
         out["walk%02d" % i] = trot_pose(spec, i)
-    for i, p in enumerate(attack_poses(spec, spec.attack), 1):
-        out["%s%d" % (spec.attack, i)] = p
+    if not (spec.poses and "%s1" % spec.attack in spec.poses):   # archetypes may author their own set
+        for i, p in enumerate(attack_poses(spec, spec.attack), 1):
+            out["%s%d" % (spec.attack, i)] = p
     for name, p in zip(GRAZE, graze_poses(spec)):
         out[name] = p
     for name, p in zip(FLINCH, flinch_poses(spec)):
@@ -1363,9 +1365,10 @@ def _corpse(spec, v):
     S.transform(objs, Matrix.Translation((0.5 - (lo[0] + hi[0]) / 2, -0.5 - (lo[1] + hi[1]) / 2, -lo[2])))
     w, d = hi[0] - lo[0], hi[1] - lo[1]
     s = spec.length
-    pool = P.ell("pool", (0.5 + 0.04 * s * (v - 1), -0.5 + 0.02 * s, 0.0), (0.1 * s + 0.024, 0.066 * s + 0.018, 0.004),
-                 "blood_dried", segs=22, rings=6)
-    pool.material_slots[0].material = _translucent("blood_dried", POOL_ALPHA)
+    if spec.pool:
+        pool = P.ell("pool", (0.5 + 0.04 * s * (v - 1), -0.5 + 0.02 * s, 0.0),
+                     (0.1 * s + 0.024, 0.066 * s + 0.018, 0.004), spec.pool, segs=22, rings=6)
+        pool.material_slots[0].material = _translucent(spec.pool, POOL_ALPHA)
     return _extents()
 
 

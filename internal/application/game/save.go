@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -202,8 +203,8 @@ type saveState struct {
 	Prios      map[entity.EntityID]priorities12 // absent in older saves
 	PrioList   map[entity.EntityID][]uint8      // absent in older saves
 	RaiderIDs  []entity.EntityID
-	Raiders    map[entity.EntityID]raiderState
-	RaidGroups []raidGroup
+	Raiders    map[entity.EntityID]raid.Raider
+	RaidGroups []raid.Group
 	NextThreat uint64
 	ThreatsOn  bool
 	Scheds     map[entity.EntityID]schedule.Grid
@@ -370,6 +371,9 @@ type saveState struct {
 	Turrets *combat.TurretSave
 	Shots   []projectile.Shot // DEF-1: projectiles in flight (nil: none)
 	Smoke   []explosion.Cloud // DEF-2: smoke clouds (nil: none)
+	// DEF-4 (raid/mech.go): mechanoid stuns and guard posts, crashed ship
+	// parts; nil when there are none (absent in older saves).
+	Mechs *raid.MechSave
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -443,7 +447,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
 		Carrying: g.care.Carry.Export(), TendedUntil: g.care.Doctor.ExportTended(),
-		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
+		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.raid.Rock.Export(), Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 		DoorsOriented: true, // PLAY-011: door facings are stored
@@ -493,6 +497,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
 	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
 	s.Turrets, s.Shots, s.Smoke = g.combat.Turrets.Export(), g.combat.Shots.Export(), g.combat.Blasts.Export()
+	s.Mechs = g.raid.Mechs.Export() // raid/mech.go (DEF-4)
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -610,7 +615,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	if s.ResearchAll != nil {
 		g.research = research.FromSlice(s.ResearchAll)
 	}
-	setMap(&g.rockDamage, s.RockDamage)
+	g.raid.Rock.Import(s.RockDamage) // raid/rock.go
 	g.residual = s.Residual
 	g.motion = importStore(s.Motion) // a mover without a record reads motionOf's due-now default
 	setMap(&g.lastStrike, s.Strikes)
@@ -679,6 +684,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.combat.Turrets.Import(s.Turrets)
 	g.combat.Shots.Import(s.Shots)
 	g.combat.Blasts.Import(s.Smoke)
+	g.raid.Mechs.Import(s.Mechs) // raid/mech.go (DEF-4)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History

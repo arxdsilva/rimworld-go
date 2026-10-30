@@ -102,7 +102,8 @@ func (d Def) steelIn(stuff item.Kind) int {
 		return 0
 	}
 	for _, in := range d.AppendInputs(nil) {
-		if in.Kind == item.Steel && in.Stuff == 0 && !in.AnyRaw && !in.AnyDryable && !in.AnyStoneBlocks && !in.Smelt {
+		if in.Kind == item.Steel && in.Stuff == 0 && !in.AnyRaw && !in.AnyDryable && !in.AnyStoneBlocks && !in.Smelt &&
+			!in.SmeltWear && !in.AnyVeg && !in.AnyMeat {
 			return in.Qty
 		}
 	}
@@ -110,10 +111,10 @@ func (d Def) steelIn(stuff item.Kind) int {
 }
 
 // SmeltYield is the steel smelting stack s gives back: SmeltPct of the
-// steel its recipe takes (at least 1), for a weapon only (0: no steel in
-// it, or not a weapon). A stack of several gives it for each.
+// steel its recipe takes (at least 1), for a weapon or apparel only (0:
+// no steel in it, or neither). A stack of several gives it for each.
 func SmeltYield(s item.Stack) int {
-	if !s.Kind.IsWeapon() {
+	if !s.Kind.IsWeapon() && !s.Kind.IsApparel() {
 		return 0
 	}
 	for _, d := range defs {
@@ -126,10 +127,10 @@ func SmeltYield(s item.Stack) int {
 	return 0
 }
 
-// smeltable reports a kind some stack of could be smelted (a weapon a
-// recipe makes from steel, in some material).
-func smeltable(k item.Kind) bool {
-	if !k.IsWeapon() {
+// smeltable reports a kind some stack of could be smelted (a weapon, or
+// with wear apparel, a recipe makes from steel, in some material).
+func smeltable(k item.Kind, wear bool) bool {
+	if wear && !k.IsApparel() || !wear && !k.IsWeapon() {
 		return false
 	}
 	for _, d := range defs {

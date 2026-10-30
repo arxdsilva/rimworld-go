@@ -9,7 +9,7 @@ optional until A2 lands them) and returns {archetype: build}.
 """
 import importlib
 
-MODULES = ("quadruped", "bird", "reptile", "insect")
+MODULES = ("quadruped", "bird", "reptile", "insect", "mech")
 BUILDERS = {}
 
 

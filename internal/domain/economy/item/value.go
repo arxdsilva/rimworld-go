@@ -35,6 +35,14 @@ var value = [numKinds]int{
 	// DEF-3 shells: original tuning (the research notes carry no shell
 	// market values), about their steel, chemfuel and components.
 	MortarShells: 50, IncendiaryShells: 50, EMPShells: 60, SmokeShells: 40,
+	// Wave E, wiki market values rounded to whole silver (the wiki
+	// stack limits are stackLimit below). wiki: Chemfuel 2.3, Wort 2.5, Fine meal,
+	// Lavish meal, Pemmican 1.4, Packaged survival meal, Kibble 1.1, Flake,
+	// Yayo, Go-juice, Neutroamine, Advanced component, Uranium, Plasteel,
+	// Reinforced barrel.
+	Chemfuel: 2, Wort: 3, FineMeal: 20, LavishMeal: 40, Pemmican: 1, SurvivalMeal: 24, Kibble: 1,
+	AshFlake: 14, Silverdust: 21, BattleTonic: 53, Reagent: 6,
+	AdvancedComponents: 200, Uranium: 6, Plasteel: 9, ReinforcedBarrel: 600,
 }
 
 // Value is the market value of one unit of k.
@@ -43,4 +51,24 @@ func (k Kind) Value() int {
 		return 0
 	}
 	return value[k]
+}
+
+// stackLimit is the wiki's per-kind stack limit for the wave E kinds
+// (PRD-4, wiki: each item's page): chemfuel, the hard drugs and reagent
+// 150, pemmican, kibble, uranium and plasteel 75, advanced components 50,
+// wort and the reinforced barrel 25, the meals 10. Every other kind keeps
+// StackLimit: shrinking the older kinds to their wiki limits would change
+// how much every stockpile tile holds (and every pinned game), so it
+// waits for its own change.
+var stackLimit = [numKinds]int{Chemfuel: 150, AshFlake: 150, Silverdust: 150, BattleTonic: 150, Reagent: 150,
+	Pemmican: 75, Kibble: 75, Uranium: 75, Plasteel: 75, AdvancedComponents: 50, Wort: 25, ReinforcedBarrel: 25,
+	FineMeal: 10, LavishMeal: 10, SurvivalMeal: 10}
+
+// StackLimit is how many items of kind k share a tile (StackLimit for a
+// kind without a wiki limit here).
+func (k Kind) StackLimit() int {
+	if k < numKinds && stackLimit[k] > 0 {
+		return stackLimit[k]
+	}
+	return StackLimit
 }

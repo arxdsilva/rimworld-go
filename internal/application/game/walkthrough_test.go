@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/sim/entity"
@@ -112,7 +113,7 @@ func TestWildBoarAndRaiderStillBlock(t *testing.T) {
 	col := mustPawn(t, g, 2, 5)
 	boar := animalAt(t, g, "wild_boar", 3, 5, false)
 	dog := animalAt(t, g, "husky", 2, 7, true)
-	g.raidWith(kitOfOne(g), planAssault)
+	g.raidWith(kitOfOne(g), raid.Assault)
 	if len(g.raiderIDs) != 1 {
 		t.Fatal("no raider")
 	}

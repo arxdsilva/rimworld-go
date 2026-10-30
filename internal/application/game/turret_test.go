@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -62,7 +63,7 @@ func turretRig(t testing.TB, seed uint64, w, h int, out *int, xs ...int) (*Game,
 // turretRaider sends one rifle raider and puts it on (x, y).
 func turretRaider(t testing.TB, g *Game, x, y int) entity.EntityID {
 	t.Helper()
-	g.raidWith([]item.Kind{item.Rifle}, planAssault)
+	g.raidWith([]item.Kind{item.Rifle}, raid.Assault)
 	rid := g.raiderIDs[len(g.raiderIDs)-1]
 	g.positions.Set(rid, Position{X: x, Y: y})
 	g.invalidateCreatures()
@@ -87,7 +88,7 @@ func holdFire(g *Game) {
 // raiderTurret is the turret a raider at pos turns on instead of the
 // colonist cd tiles off (combat/turret.go ForRaider).
 func raiderTurret(g *Game, pos Position, cd int) (entity.EntityID, Position, bool) {
-	id, x, y, ok := g.combat.Turrets.ForRaider(pos.X, pos.Y, cd, sightRange)
+	id, x, y, ok := g.combat.Turrets.ForRaider(pos.X, pos.Y, cd, raid.SightRange)
 	return id, Position{X: x, Y: y}, ok
 }
 
@@ -350,8 +351,8 @@ func TestRaiderTurretSwitchNoFlap(t *testing.T) {
 	}{
 		{Position{X: 25, Y: 13}, 8 + combat.SwitchMargin, true},      // 8 off the turret
 		{Position{X: 25, Y: 13}, 8 + combat.SwitchMargin - 1, false}, // not closer by the margin
-		{Position{X: 25, Y: 5 + sightRange + 1}, 40, false},          // out of sight
-		{Position{X: 25, Y: 5 + sightRange}, 40, true},
+		{Position{X: 25, Y: 5 + raid.SightRange + 1}, 40, false},     // out of sight
+		{Position{X: 25, Y: 5 + raid.SightRange}, 40, true},
 	} {
 		id, _, ok := raiderTurret(g, c.raider, c.colonist)
 		if ok != c.wantTower || ok && id != tid {

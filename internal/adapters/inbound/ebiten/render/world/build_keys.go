@@ -179,6 +179,10 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/stool"
 	case "armchair":
 		return "furniture/armchair_" + FacingOr(facing)
+	case "shelf": // PRD-4
+		return "furniture/shelf_" + FacingOr(facing)
+	case "ship part": // DEF-4: not buildable, drawn where it crashed
+		return "defense/ship_part"
 	case "barricade":
 		return "defense/barricade"
 	case "blast charge":

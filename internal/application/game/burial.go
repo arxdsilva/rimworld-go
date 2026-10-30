@@ -459,6 +459,9 @@ func (g *Game) fillCorpseView(iv *ItemView, st item.Stack) {
 	if st.Kind == item.CorpseAnimal {
 		s := animal.Species(st.Animal)
 		iv.Kind, iv.Animal = s.Label()+" corpse", s.String()
+		if animal.IsMech(s) { // DEF-4: a mechanoid leaves a wreck
+			iv.Kind, iv.Wreck = s.Label()+" wreck", true
+		}
 		return
 	}
 	if !isBody(st.Kind) {

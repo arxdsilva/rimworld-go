@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -196,7 +197,7 @@ func TestAlliesFightRaiders(t *testing.T) {
 		moveTo(t, g, id, 3, 3)
 	}
 	ap := moveTo(t, g, ally, 30, 50)
-	g.raidWith([]item.Kind{item.Club}, planAssault)
+	g.raidWith([]item.Kind{item.Club}, raid.Assault)
 	a := g.raiderIDs[len(g.raiderIDs)-1]
 	moveTo(t, g, a, ap.X+8, ap.Y)
 	var b entity.EntityID
@@ -208,7 +209,7 @@ func TestAlliesFightRaiders(t *testing.T) {
 			if j.Kind != job.Attack || j.Target != a {
 				t.Fatalf("the ally is not on the raider: %+v", j)
 			}
-			g.raidWith([]item.Kind{item.Club}, planAssault)
+			g.raidWith([]item.Kind{item.Club}, raid.Assault)
 			b = g.raiderIDs[len(g.raiderIDs)-1]
 			p, _ := g.positions.Get(ally)
 			moveTo(t, g, b, p.X+2, p.Y+1)
@@ -242,7 +243,7 @@ func TestRaidersTargetAllies(t *testing.T) {
 		moveTo(t, g, id, 3, 3)
 	}
 	ap := moveTo(t, g, ally, 50, 50)
-	g.raidWith([]item.Kind{item.Club}, planAssault)
+	g.raidWith([]item.Kind{item.Club}, raid.Assault)
 	rid := g.raiderIDs[len(g.raiderIDs)-1]
 	rp := moveTo(t, g, rid, ap.X+3, ap.Y)
 	if tg, _, ok := g.raidTarget(rp); !ok || tg != ally {
@@ -345,7 +346,7 @@ func TestAlliesLeaveWhenQuiet(t *testing.T) {
 	c := g.aidOf(f.ID)
 	now := uint64(g.clock.Now())
 	c.Calm = now - allyQuiet + 5
-	g.raidWith([]item.Kind{item.Club}, planAssault)
+	g.raidWith([]item.Kind{item.Club}, raid.Assault)
 	rid := g.raiderIDs[len(g.raiderIDs)-1]
 	g.Step(10)
 	if c = g.aidOf(f.ID); c.Leaving || c.Calm != uint64(g.clock.Now())-1 {
@@ -365,7 +366,7 @@ func TestAlliesLeaveWhenQuiet(t *testing.T) {
 			t.Fatalf("ally %d is not leaving", v.ID)
 		}
 	}
-	g.raidWith([]item.Kind{item.Club}, planAssault)
+	g.raidWith([]item.Kind{item.Club}, raid.Assault)
 	for i := 0; i < 300; i++ {
 		g.Step(1)
 		for _, id := range g.allyIDs(f.ID) {
@@ -391,7 +392,7 @@ func TestAlliesLeaveWhenQuiet(t *testing.T) {
 	// the day cap
 	g2, f2 := aidGame(t)
 	aidHere(t, g2, f2)
-	g2.raidWith([]item.Kind{item.Club}, planAssault)
+	g2.raidWith([]item.Kind{item.Club}, raid.Assault)
 	c2 := g2.aidOf(f2.ID)
 	c2.LeaveAt = uint64(g2.clock.Now()) + 2
 	g2.Step(4)
@@ -435,7 +436,7 @@ func TestAidSurvivesSave(t *testing.T) {
 	if len(ids) == 0 {
 		t.Fatal("no allies")
 	}
-	g.raidWith([]item.Kind{item.Rifle}, planAssault)
+	g.raidWith([]item.Kind{item.Rifle}, raid.Assault)
 	g.Step(50)
 	g.trade.comms = nil // sessions close on load
 	before := g.StateHash()
@@ -463,7 +464,7 @@ func TestAidSameSeed(t *testing.T) {
 	run := func() (*Game, int) {
 		g, f := aidGame(t)
 		aidHere(t, g, f)
-		g.raidWith([]item.Kind{item.Rifle, item.Club, item.Rifle}, planAssault)
+		g.raidWith([]item.Kind{item.Rifle, item.Club, item.Rifle}, raid.Assault)
 		return g, f.ID
 	}
 	a, fa := run()

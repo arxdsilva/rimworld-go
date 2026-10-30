@@ -65,7 +65,7 @@ func (h *haulPrio) roomAbove(g *Game, k item.Kind, p zone.Priority) bool {
 	if v, seen := h.room[key]; seen {
 		return v
 	}
-	_, _, ok := g.storageCell(k, 0, 0, nil, p)
+	_, _, ok := g.storageCell(item.Stack{Kind: k}, 0, 0, nil, p)
 	if h.room == nil {
 		h.room = map[haulPrioKey]bool{}
 	}
@@ -80,7 +80,7 @@ func (h *haulPrio) roomAbove(g *Game, k item.Kind, p zone.Priority) bool {
 // never stays.
 func (g *Game) staysStored(id entity.EntityID, st *item.Stack, h *haulPrio) bool {
 	z, ok := g.storageAt(st.X, st.Y)
-	if !ok || !allows(z, st.Kind) {
+	if !ok || !z.AllowsStack(*st) { // PRD-4: special filters too
 		return false
 	}
 	if top, ok := h.topFor(g, st.Kind); !ok || z.Priority >= top {
@@ -94,17 +94,18 @@ func (g *Game) staysStored(id entity.EntityID, st *item.Stack, h *haulPrio) bool
 
 // haulDest is where hauler id carries stack st: for a stack already in
 // storage (a re-haul) a cell in a strictly higher-priority zone, else the
-// best storage cell inside its area.
+// best storage cell inside its area; either way one whose zone's special
+// filters take st (PRD-4).
 func (g *Game) haulDest(id entity.EntityID, st item.Stack) (int, int, bool) {
-	if z, ok := g.storageAt(st.X, st.Y); ok && allows(z, st.Kind) {
-		r := g.restrictedRef(id)
-		var keep func(x, y int) bool
-		if r != 0 {
-			keep = func(x, y int) bool { return g.refContains(r, x, y) }
-		}
-		return g.storageCell(st.Kind, st.X, st.Y, keep, z.Priority)
+	floor := zone.Priority(noPriority)
+	if z, ok := g.storageAt(st.X, st.Y); ok && z.AllowsStack(st) {
+		floor = z.Priority
 	}
-	return g.areaStockpileCell(id, st.Kind, st.X, st.Y) // area_dest.go
+	var keep func(x, y int) bool
+	if r := g.restrictedRef(id); r != 0 {
+		keep = func(x, y int) bool { return g.refContains(r, x, y) }
+	}
+	return g.storageCell(st, st.X, st.Y, keep, floor)
 }
 
 // noteStored records when the stack now lying on (x, y) was set down

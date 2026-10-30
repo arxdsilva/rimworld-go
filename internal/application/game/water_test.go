@@ -506,7 +506,7 @@ func TestRescuePrefersHospitalBed(t *testing.T) {
 func TestStockpilesTakeNewGoods(t *testing.T) {
 	t.Parallel()
 	for _, k := range []item.Kind{item.Components, item.IndustrialMedicine} {
-		if !allows(zone.Zone{}, k) {
+		if !allows(zone.Zone{Kind: zone.KindStockpile}, k) { // PRD-4: only storage zones take things
 			t.Errorf("a stockpile should take %v", k)
 		}
 	}

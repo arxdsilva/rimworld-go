@@ -1,0 +1,33 @@
+# Wave E art (DEF-4, PRD-4): the mechanoid raiders' plates, joints and
+# wreck oil (families/animals/mech.py), the new goods (families/goods.py)
+# and their lens and muzzle lights. Original colours. Merged over
+# materials.yaml by the palette loader (materials_*.yaml).
+# palette_mute: applied materials (sat=0.8 contrast=0.8 light=0.96 warm=8)
+version: 1
+materials:
+  # mechanoids: plates per unit, the shared dark joints, the wreck's oil pool
+  mech_gunmetal:  {light: "#828890", base: "#70767e", shadow: "#565963"}
+  mech_bone:      {light: "#e3ded4", base: "#ddd7c7", shadow: "#b3a99c"}
+  mech_olive:     {light: "#73785e", base: "#636850", shadow: "#4e503e"}
+  mech_soot:      {light: "#4d4b47", base: "#3d3b38", shadow: "#2d2b29"}
+  mech_sand:      {light: "#bcac8e", base: "#b09d7e", shadow: "#8a7661"}
+  mech_stripe:    {light: "#ce8e60", base: "#c27c50", shadow: "#976a3d"}
+  mech_joint:     {light: "#45474c", base: "#38393e", shadow: "#29292e"}
+  mech_oil:       {light: "#383430", base: "#2e2b28", shadow: "#24211e"}
+  # goods: chemfuel drum, pemmican, kibble, uranium, plasteel, silverdust
+  fuel_drum:      {light: "#c5815e", base: "#b87253", shadow: "#906342"}
+  pemmican_brown: {light: "#95705a", base: "#86614c", shadow: "#67503b"}
+  kibble_tan:     {light: "#bc996e", base: "#b08b60", shadow: "#8b6c4d"}
+  uranium_green:  {light: "#8f9c6e", base: "#7e8c5e", shadow: "#656b48"}
+  plasteel_blue:  {light: "#aebdc6", base: "#9fb0bd", shadow: "#7f949d"}
+  silverdust:     {light: "#d9dbe0", base: "#cccfd8", shadow: "#a2a4b2"}
+  wort_brown:     {light: "#8f6f4e", base: "#7f6141", shadow: "#614a32"}
+  tonic_red:      {light: "#c6746a", base: "#b45f56", shadow: "#8a5342"}
+  reagent_violet: {light: "#9e8db3", base: "#907ca6", shadow: "#735f81"}
+  ash_flake:      {light: "#bab5ae", base: "#aaa49c", shadow: "#87817a"}
+emissive:
+  mech_lens_amber: "#ffb347"
+  mech_lens_cyan:  "#7fe9ff"
+  mech_lens_red:   "#ff5a4a"
+  mech_lens_green: "#a8f28a"
+  mech_flash:      "#fff0b0"
