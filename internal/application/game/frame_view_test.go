@@ -106,7 +106,7 @@ func TestFrameStatusLines(t *testing.T) {
 	// 3 on the way: a hauler carries the last of it
 	sid, _ := g.SpawnStack(item.Wood, 2, 4, 4)
 	g.haul.incoming = map[entity.EntityID]int{fid: 3}
-	g.haul.deliveries = map[entity.EntityID][]haulShare{ada: {{fid, 3}}}
+	g.haul.deliveries = map[entity.EntityID][]haulShare{ada: {{Frame: fid, Qty: 3}}}
 	g.jobs.Set(ada, job.Record{Kind: job.Haul, State: job.Goto, Target: sid, Dest: fid, Route: []entity.EntityID{fid}})
 	fv, _ := frameView(g, fid)
 	if fv.Status != frameOnTheWay || fv.Incoming != 3 || len(fv.Haulers) != 1 || fv.Haulers[0] != "Ada (3 wood)" {

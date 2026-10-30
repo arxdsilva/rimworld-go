@@ -174,7 +174,11 @@ func TestGrownGolden(t *testing.T) {
 	// raids); the previous pin held through wave D (the committed full
 	// suite), and the raid extraction alone kept the benchmark hashes.
 	// Stable over -count=2.
-	const want uint64 = 0x18fa18940a361aec
+	// Re-pinned (HAUL-002): stockpile hauls gather nearby compatible piles
+	// (8-tile chain, up to the carry limit and the destination cell's
+	// room) and deliver once; the previous pin held through wave E (the
+	// committed full suite). Stable over -count=2.
+	const want uint64 = 0x65452a93524e7998
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -153,7 +154,7 @@ func TestAreaHaulDestination(t *testing.T) {
 	// a delivery route with a stop outside
 	g.placeFrameStuff(construction.Wall, item.Wood, construction.South, 15, 8)
 	fid := g.layerFrameAt(15, 8, construction.LayerObject)
-	rec.HasSpare, rec.Route = false, []entity.EntityID{slotKey(fid, item.Wood)}
+	rec.HasSpare, rec.Route = false, []entity.EntityID{haul.SlotKey(fid, item.Wood)}
 	if fid == 0 || !g.areaRejects(id, rec) {
 		t.Fatal("a route stop outside the area must be refused")
 	}

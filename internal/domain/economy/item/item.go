@@ -503,10 +503,16 @@ func DryRate(tenthsC int) int {
 // merged stack keeps the incubation of the one it joins. Made items
 // stack only with their own quality, material and wear (PRD-2).
 func CanMerge(a, b Stack) bool {
-	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
-		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal && a.Tame == b.Tame &&
-		a.Forbidden == b.Forbidden && a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked &&
-		a.Quality == b.Quality && a.Stuff == b.Stuff && a.Wear == b.Wear
+	return SameLoad(a, b) && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
+		a.Forbidden == b.Forbidden && a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked
+}
+
+// SameLoad reports whether a and b may be carried as one load (HAUL-002):
+// the same kind in the same state and make, wherever they lie. It is
+// CanMerge without the place, carrier and mark checks.
+func SameLoad(a, b Stack) bool {
+	return a.Kind == b.Kind && a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of &&
+		a.Animal == b.Animal && a.Tame == b.Tame && a.Quality == b.Quality && a.Stuff == b.Stuff && a.Wear == b.Wear
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a

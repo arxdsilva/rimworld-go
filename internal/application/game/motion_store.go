@@ -156,9 +156,10 @@ func (g *Game) decide(id entity.EntityID, from, to Position) (stepVerdict, Posit
 
 // walkTarget is where a walk is headed: once loaded (Carry set) every job
 // walks to DestX/DestY, the rule the pickups follow (a haul keeps TX/TY
-// on the pickup cell); otherwise to TX/TY.
+// on the pickup cell), unless piles are left to gather (HAUL-002: TX/TY,
+// the next pile); otherwise to TX/TY.
 func walkTarget(j job.Record) (int, int) {
-	if j.Carry != 0 {
+	if j.Carry != 0 && j.PickupI >= len(j.Pickups) {
 		return j.DestX, j.DestY
 	}
 	return j.TX, j.TY

@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -80,7 +81,7 @@ func (g *Game) areaRejects(id entity.EntityID, rec job.Record) bool {
 	}
 	if rec.Kind == job.Haul {
 		for _, key := range rec.Route {
-			fid, _ := slotFrame(key)
+			fid, _ := haul.SlotFrame(key)
 			if fr, ok := g.frames.Get(fid); ok && !g.refAllows(r, fr.X, fr.Y) {
 				return true
 			}

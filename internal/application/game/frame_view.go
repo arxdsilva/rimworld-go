@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -154,7 +155,7 @@ func (g *Game) fillFrameViews(views []FrameView) {
 		case job.Haul:
 			if shares := g.haul.deliveries[pid]; len(shares) > 0 {
 				for _, s := range shares {
-					fid, _ := slotFrame(s.Frame) // a components share names the frame too
+					fid, _ := haul.SlotFrame(s.Frame) // a components share names the frame too
 					haulers[fid] = append(haulers[fid], g.haulerLine(pid, s.Qty, s.Frame))
 				}
 			} else if _, isFrame := g.frames.Get(j.Dest); isFrame && j.Dest != 0 {
@@ -167,7 +168,7 @@ func (g *Game) fillFrameViews(views []FrameView) {
 		fr, _ := g.frames.Get(fv.ID)
 		fv.WorkTotal = frameWork(fr)
 		fv.Incoming = g.haul.incoming[fv.ID]
-		fv.Comp, fv.CompNeed, fv.CompIncoming = fr.Comp, fr.CompNeed, g.haul.incoming[fv.ID|compSlot]
+		fv.Comp, fv.CompNeed, fv.CompIncoming = fr.Comp, fr.CompNeed, g.haul.incoming[fv.ID|haul.CompSlot]
 		if s := stock[fr.Stuff]; s != nil {
 			fv.InStock, fv.Reserved = s.inStock, s.reserved
 		}
@@ -205,7 +206,7 @@ func (g *Game) haulQty(j job.Record) int {
 // haulerLine names a hauler's share: key is a frame id, or its
 // components slot (haul_route.go).
 func (g *Game) haulerLine(pid entity.EntityID, qty int, key entity.EntityID) string {
-	fid, comp := slotFrame(key)
+	fid, comp := haul.SlotFrame(key)
 	fr, _ := g.frames.Get(fid)
 	if comp {
 		return fmt.Sprintf(frameHaulerLine, g.name(pid), qty, item.Components.String())
@@ -296,12 +297,12 @@ func (g *Game) refundFrame(id entity.EntityID, fr construction.Frame) {
 		for _, pid := range g.pawnIDs {
 			if len(g.haul.deliveries[pid]) > 0 {
 				g.consumeShare(pid, id)
-				g.consumeShare(pid, id|compSlot)
+				g.consumeShare(pid, id|haul.CompSlot)
 			}
 		}
 	}
 	delete(g.haul.incoming, id)
-	delete(g.haul.incoming, id|compSlot)
+	delete(g.haul.incoming, id|haul.CompSlot)
 	if fr.Reinstall == 0 && fr.Wood > 0 {
 		g.dropStack(fr.Stuff, fr.Wood, fr.X, fr.Y)
 	}

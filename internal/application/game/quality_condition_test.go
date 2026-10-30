@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
@@ -263,7 +264,7 @@ func TestWornPiecesSurviveSaveAndHaul(t *testing.T) {
 		t.Fatalf("loaded %+v, want %+v", h.apparel[ada], w)
 	}
 	st := item.Stack{Kind: item.Club, Qty: 2, Quality: 3, Wear: 5, Stuff: item.Steel}
-	if got := splitLoad(st, 1); got.Quality != 3 || got.Wear != 5 || got.Stuff != item.Steel {
+	if got := haul.SplitLoad(st, 1); got.Quality != 3 || got.Wear != 5 || got.Stuff != item.Steel {
 		t.Fatalf("split %+v", got)
 	}
 }

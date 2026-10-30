@@ -524,12 +524,12 @@ This is the heart of autonomous colony behavior.
 
 ## 6.4 Hauling
 
--   [-] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first; PLAY-017: only the colony's own goods (made, brought, harvested, chopped, mined, hunted) are hauled by themselves, items found on the map (ruin and vault loot, map chunks, predator kills, wild eggs) wait for a Haul mark)
+-   [-] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first; PLAY-017: only the colony's own goods (made, brought, harvested, chopped, mined, hunted) are hauled by themselves, items found on the map (ruin and vault loot, map chunks, predator kills, wild eggs) wait for a Haul mark; HAUL-002: one trip gathers the nearby compatible piles)
 -   [-] **Haul construction resources** (a full load of wood or stone feeds a route of up to 8 nearby frames; leftovers go to the nearest stockpile, or only the needed amount is carried when storage has no room (HAUL-001))
 -   [x] **Haul production ingredients** (PRD-1: a crafter gathers a bill's ingredients from several stacks within the bill's radius onto the bench, `job.HaulIngredients`)
 -   [x] **Haul finished products** (PRD-1: store mode best stockpile hauls the product; drop on floor leaves it; a specific stockpile)
 -   [x] **Haul corpses**
--   [-] **Opportunistic/batched hauling where compatible** (batched for construction materials and refuelling; not yet for general goods)
+-   [x] **Opportunistic/batched hauling where compatible** (batched for construction materials and refuelling; HAUL-002: a stockpile haul or Haul order gathers nearby compatible piles (`item.SameLoad`, an 8-tile chain) up to the carry limit and the destination cell's room, then delivers once (`game/haul`))
     -   Performance-conscious without changing core player expectations.
 
 ------------------------------------------------------------------------

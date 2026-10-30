@@ -23,31 +23,6 @@ func refundStuff(b construction.Building) item.Kind {
 	return b.Stuff
 }
 
-// supplyKind is what a hand-ordered delivery to frame fr brings: its
-// material until that is in, then its components.
-func supplyKind(fr construction.Frame) item.Kind {
-	if fr.Wood >= fr.Need && fr.Comp < fr.CompNeed {
-		return item.Components
-	}
-	return fr.Stuff
-}
-
-// supplyNeed is how much of kind k frame fr still lacks.
-func supplyNeed(fr construction.Frame, k item.Kind) int {
-	if k == item.Components {
-		return fr.CompNeed - fr.Comp
-	}
-	return fr.Need - fr.Wood
-}
-
-// supplyHave is how much of kind k frame fr already holds.
-func supplyHave(fr construction.Frame, k item.Kind) int {
-	if k == item.Components {
-		return fr.Comp
-	}
-	return fr.Wood
-}
-
 // Medicine tiers and the hospital bed (NG-1 §4.8).
 
 // severeInjury: an injury this bad, or any infection, is treated with

@@ -347,6 +347,11 @@ type Record struct {
 	RouteI         int
 	SpareX, SpareY int
 	HasSpare       bool
+	// Pickups (HAUL-002) are the further piles a stockpile haul gathers
+	// into its load after Target, two entries per pile: the stack id, then
+	// the count to take. PickupI is the next pile's first entry.
+	Pickups []entity.EntityID
+	PickupI int
 }
 
 // Line is the inspector job summary.

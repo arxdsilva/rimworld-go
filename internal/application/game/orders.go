@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -151,7 +152,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if fr.Ready() {
 			return job.Record{}, ReasonSupplied
 		}
-		sk := supplyKind(fr) // items_ng1.go: the material, then the components
+		sk := haul.SupplyKind(fr) // items_ng1.go: the material, then the components
 		wid, wx, wy := g.nearestFree(id, sk)
 		if wid == 0 {
 			if sk != item.Wood {
@@ -442,10 +443,15 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		// then a route chained from it like any delivery
 		fr, _ := g.frames.Get(rec.Dest)
 		st, _ := g.stacks.Get(rec.Target)
-		route, shares := g.routeFrom(rec.Target, st, slotKey(rec.Dest, st.Kind), supplyNeed(fr, st.Kind))
+		route, shares := g.routeFrom(rec.Target, st, haul.SlotKey(rec.Dest, st.Kind), haul.SupplyNeed(fr, st.Kind))
 		route.Forced = true
 		g.startDelivery(id, route, shares)
 		return
+	}
+	if o == command.OrderHaul { // HAUL-002: a forced haul gathers too
+		st, _ := g.stacks.Get(rec.Target)
+		haulCands(g, id, st.Kind)
+		rec = planGather(g, id, rec, st)
 	}
 	rec.Forced = true
 	g.startJob(id, rec)
@@ -507,8 +513,8 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			if fr.Ready() {
 				add("Prioritize building "+fr.Kind.String(), command.OrderBuild, layer)
 			} else {
-				sk := supplyKind(fr)
-				add(fmt.Sprintf("Haul %s to %s (%d/%d)", sk, fr.Kind, supplyHave(fr, sk), supplyNeed(fr, sk)+supplyHave(fr, sk)), command.OrderSupply, layer)
+				sk := haul.SupplyKind(fr)
+				add(fmt.Sprintf("Haul %s to %s (%d/%d)", sk, fr.Kind, haul.SupplyHave(fr, sk), haul.SupplyNeed(fr, sk)+haul.SupplyHave(fr, sk)), command.OrderSupply, layer)
 			}
 		}
 		if bid := g.layerBldgAt(x, y, layer); bid != 0 {

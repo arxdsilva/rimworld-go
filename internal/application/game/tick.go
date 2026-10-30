@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
@@ -616,7 +617,8 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	if g.areaBypass(id, rec) { // areas.go: a forced or exempt job paths anywhere
 		defer g.endAreaBypass()
 	}
-	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !g.reserve.TryEntity(id, rec.Target) {
+	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !g.reserve.TryEntity(id, rec.Target) ||
+		!haul.ClaimAll(g.reserve, id, rec.Pickups) {
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
 		g.jobs.Set(id, rec)
@@ -802,6 +804,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 		// stacks already lie on a stockpile that takes them). A put-off
 		// one keeps the original order, so pruning is unchanged.
 		post := g.postponedTargets(id, job.Haul, postBuf[:0])
+		g.haul.cands = g.haul.cands[:0] // HAUL-002: the piles a load may gather
 		for _, iid := range g.itemIDs {
 			st := g.stacks.Ref(iid) // read only: nothing below changes the store
 			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) {
@@ -829,6 +832,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 			if takes[st.Kind] < 0 {
 				continue
 			}
+			g.haul.cands = append(g.haul.cands, haul.Cand{ID: iid, X: st.X, Y: st.Y, Qty: st.Qty})
 			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
 			if !found || d < bestD || (d == bestD && iid < bestID) {
 				found, bestD, bestID, best = true, d, iid, *st
@@ -846,14 +850,82 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 			}
 			continue
 		}
-		if g.startJob(id, job.Record{
-			Kind: job.Haul, Target: bestID, TX: best.X, TY: best.Y, DestX: dx, DestY: dy,
-		}) {
+		rec := job.Record{Kind: job.Haul, Target: bestID, TX: best.X, TY: best.Y, DestX: dx, DestY: dy}
+		if g.startJob(id, planGather(g, id, rec, best)) {
 			return true
 		}
 		tried = append(tried, bestID)
 	}
 	return false
+}
+
+// planGather is stockpile haul rec of stack first with its load planned
+// (HAUL-002, game/haul): Count caps the load by what the storage cell
+// still takes, and Pickups are the nearby piles of the same load among
+// the candidates the caller's search put in g.haul.cands; a pile in
+// storage joins only a load bound for a higher priority.
+func planGather(g *Game, id entity.EntityID, rec job.Record, first item.Stack) job.Record {
+	lim := first.Kind.StackLimit()
+	rec.Count = min(item.CarryLimit, lim)
+	if lim < item.StackLimit { // a plain kind's cell always takes a full load (haul.Toppable)
+		rec.Count = haul.Capacity(lim, haulRoom(g, first.Kind, rec.DestX, rec.DestY))
+	}
+	dz, _ := g.storageAt(rec.DestX, rec.DestY)
+	r, keep := g.restrictedRef(id), g.haul.cands[:0]
+	for _, c := range g.haul.cands {
+		st := g.stacks.Ref(c.ID)
+		if first.Qty >= rec.Count || st == nil || !item.SameLoad(first, *st) || !dz.AllowsStack(*st) || r != 0 && !g.refContains(r, c.X, c.Y) {
+			continue
+		}
+		if z, ok := g.storageAt(c.X, c.Y); !ok || !z.AllowsStack(*st) || z.Priority < dz.Priority {
+			keep = append(keep, c)
+		}
+	}
+	g.haul.picks = haul.Plan(g.haul.picks[:0], haul.Cand{ID: rec.Target, X: first.X, Y: first.Y, Qty: first.Qty}, keep, rec.Count, haul.Radius)
+	rec.Pickups = haul.Pickups(g.haul.picks)
+	return rec
+}
+
+// haulCands fills g.haul.cands with the free piles of kind k a forced haul
+// by pawn id may gather (orders.go; haulToStockpile fills it as it looks).
+func haulCands(g *Game, id entity.EntityID, k item.Kind) {
+	var prio haulPrio
+	g.haul.cands = g.haul.cands[:0]
+	for _, iid := range g.itemIDs {
+		st := g.stacks.Ref(iid)
+		if st == nil || st.Kind != k || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) || g.staysStored(iid, st, &prio) {
+			continue
+		}
+		if _, taken := g.reserve.EntityOwner(iid); !taken && !g.postponedFor(id, job.Haul, iid, 0, 0) {
+			g.haul.cands = append(g.haul.cands, haul.Cand{ID: iid, X: st.X, Y: st.Y, Qty: st.Qty})
+		}
+	}
+}
+
+// haulRoom is how much of kind k storage cell (x, y) still takes.
+func haulRoom(g *Game, k item.Kind, x, y int) int {
+	var c haul.Cell
+	for _, iid := range g.itemIDs {
+		if o := g.stacks.Ref(iid); o != nil && o.Carrier == 0 && o.X == x && o.Y == y {
+			c.Add(o.Kind == k, o.Qty)
+		}
+	}
+	if g.onShelf(x, y) {
+		return c.Room(k.StackLimit(), zone.ShelfStacks)
+	}
+	return c.Room(k.StackLimit(), 1)
+}
+
+// haulHost is game/haul's Host (HAUL-002).
+type haulHost struct{ g *Game }
+
+func haulGather(g *Game) haul.Gather                           { return haul.NewGather(haulHost{g}) }
+func (h haulHost) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
+func (h haulHost) SetStack(id entity.EntityID, st item.Stack)  { h.g.stacks.Set(id, st) }
+func (h haulHost) DeleteItem(id entity.EntityID)               { h.g.deleteItem(id) }
+func (h haulHost) Release(owner, target entity.EntityID)       { h.g.reserve.ReleaseEntity(owner, target) }
+func (h haulHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
+	return h.g.pathTo(id, x, y)
 }
 
 // assignConstruct builds the nearest ready frame or takes down the nearest
@@ -1128,8 +1200,8 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			return
 		}
 		take := min(st.Qty, item.CarryLimit, st.Kind.StackLimit()) // PRD-4: no more than a tile holds
-		if len(j.Route) > 0 {
-			take = min(st.Qty, max(1, j.Count)) // the planned load (haul_route.go)
+		if len(j.Route) > 0 || j.Dest == 0 && j.Count > 0 {
+			take = min(st.Qty, max(1, j.Count)) // the planned load (haul_route.go, planGather)
 		} else if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {
 			if need := fr.Need - fr.Wood; need > 0 && take > need {
 				take = need
@@ -1141,7 +1213,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.stacks.Set(j.Target, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			st = splitLoad(st, take)
+			st = haul.SplitLoad(st, take)
 		}
 		st.Carrier = id
 		claim(&st) // haul_claim.go: picked up, the colony's
@@ -1154,32 +1226,37 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			}
 			return
 		}
-		path, ok := g.pathTo(id, j.DestX, j.DestY)
-		if !ok {
-			st.Carrier = 0
-			st.X, st.Y = pos.X, pos.Y
-			g.mergeOrSet(carry, st)
-			j.Carry = 0
-			j.State = job.Fail
-			j.Fail = job.Unreachable
+		if haulGather(g).Next(id, &j) { // HAUL-002: on to the next pile
 			g.jobs.Set(id, j)
 			return
 		}
-		j.Path, j.PathI = path, 0
-		if len(path) == 0 {
-			g.jobs.Set(id, j)
-			g.finishHaulDrop(id, j)
-			return
-		}
-		j.State = job.Goto
+	} else if len(j.Route) > 0 {
+		g.routeArrive(id, j)
+		return
+	} else if j.PickupI >= len(j.Pickups) {
+		g.finishHaulDrop(id, j)
+		return
+	} else if haulGather(g).Arrive(id, &j) { // at a pile on the way
 		g.jobs.Set(id, j)
 		return
 	}
-	if len(j.Route) > 0 {
-		g.routeArrive(id, j)
+	path, ok := g.pathTo(id, j.DestX, j.DestY)
+	if !ok {
+		st, _ := g.stacks.Get(j.Carry)
+		st.Carrier, st.X, st.Y = 0, pos.X, pos.Y
+		g.mergeOrSet(j.Carry, st)
+		j.Carry, j.State, j.Fail = 0, job.Fail, job.Unreachable
+		g.jobs.Set(id, j)
 		return
 	}
-	g.finishHaulDrop(id, j)
+	j.Path, j.PathI = path, 0
+	if len(path) == 0 {
+		g.jobs.Set(id, j)
+		g.finishHaulDrop(id, j)
+		return
+	}
+	j.State = job.Goto
+	g.jobs.Set(id, j)
 }
 
 func (g *Game) finishHaulDrop(id entity.EntityID, j job.Record) {
@@ -1663,14 +1740,4 @@ func (g *Game) SleptInBed(id entity.EntityID) bool { return g.sleptAt[id] != 0 }
 func (g *Game) VitalOf(id entity.EntityID) health.Record {
 	v, _ := g.vital.Get(id)
 	return v
-}
-
-// splitLoad is the take-sized load split off stack st: same kind, place,
-// age and drying, and the same body (species, who, when) for corpses. It
-// is the colony's, allowed and unmarked (PLAY-017: picked up); the rest
-// keeps st's flags.
-func splitLoad(st item.Stack, take int) item.Stack {
-	return item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried,
-		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame, Poison: st.Poison,
-		Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff} // PRD-2: the same made thing
 }

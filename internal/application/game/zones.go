@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
@@ -413,13 +414,6 @@ func (g *Game) storageCell(st item.Stack, nearX, nearY int, keep func(x, y int) 
 // priorityIndex is p's index in zone.Priorities (highest first).
 func priorityIndex(p zone.Priority) int { return int(zone.PriorityCritical - p) }
 
-// toppable: a load of o's kind still fits on o (a full load on a stack of
-// the plain limit; a kind with a smaller wiki limit, any room, PRD-4).
-func toppable(o item.Stack) bool {
-	lim := o.Kind.StackLimit()
-	return o.Qty+item.CarryLimit <= lim || lim < item.StackLimit && o.Qty < lim
-}
-
 // storageCellAt is storageCell over the storage zones of priority p; load
 // is the shelf tiles' stacks (shelfLoads; nil when no shelf takes st).
 func (g *Game) storageCellAt(st item.Stack, p zone.Priority, nearX, nearY int, keep func(x, y int) bool,
@@ -447,7 +441,7 @@ func (g *Game) storageCellAt(st item.Stack, p zone.Priority, nearX, nearY int, k
 			return
 		}
 		o, _ := g.stacks.Get(oid)
-		if o.Kind == k && toppable(o) && free(cx, cy) {
+		if o.Kind == k && haul.Toppable(o) && free(cx, cy) {
 			take(cx, cy)
 		}
 	})
@@ -634,7 +628,7 @@ func (g *Game) shelfLoads(st item.Stack) map[int]shelfLoad {
 		}
 		l := out[o.Y*w+o.X]
 		l.n++
-		l.top = l.top || o.Kind == st.Kind && toppable(*o) // as a plain cell: the kind decides
+		l.top = l.top || o.Kind == st.Kind && haul.Toppable(*o) // as a plain cell: the kind decides
 		out[o.Y*w+o.X] = l
 	}
 	return out

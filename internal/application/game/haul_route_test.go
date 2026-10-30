@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -148,10 +149,10 @@ func TestDeliveryRouteLimits(t *testing.T) {
 	g.SpawnStack(item.Wood, 300, 3, 3)
 	id := hauler(t, g, 3, 4)
 	woodWalls(g, 6, 7, 10) // ten adjacent walls: only eight per load
-	g.placeFrameStuff(construction.Wall, item.Wood, construction.South, 15+routeReach+1, 7)
+	g.placeFrameStuff(construction.Wall, item.Wood, construction.South, 15+haul.RouteReach+1, 7)
 	pos, _ := g.positions.Get(id)
 	rec, shares, ok := g.planDelivery(id, pos)
-	if !ok || len(rec.Route) != routeFrames || len(shares) != routeFrames || rec.Count != 2*routeFrames {
+	if !ok || len(rec.Route) != haul.RouteFrames || len(shares) != haul.RouteFrames || rec.Count != 2*haul.RouteFrames {
 		t.Fatalf("route %v shares %v count %d", rec.Route, shares, rec.Count)
 	}
 	// a lone frame too far from the rest is a route of its own
@@ -159,7 +160,7 @@ func TestDeliveryRouteLimits(t *testing.T) {
 	g2.SpawnStack(item.Wood, 300, 3, 3)
 	id2 := hauler(t, g2, 3, 4)
 	g2.placeFrameStuff(construction.Wall, item.Wood, construction.South, 6, 7)
-	g2.placeFrameStuff(construction.Wall, item.Wood, construction.South, 6+routeReach+1, 7)
+	g2.placeFrameStuff(construction.Wall, item.Wood, construction.South, 6+haul.RouteReach+1, 7)
 	pos2, _ := g2.positions.Get(id2)
 	rec2, _, ok := g2.planDelivery(id2, pos2)
 	if !ok || len(rec2.Route) != 1 || rec2.Count != 2 {

@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"testing"
 
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -166,7 +167,7 @@ func TestPoisonSurvivesStackMerge(t *testing.T) {
 	if len(meals) != 1 || meals[0].Qty != 4 || meals[0].Poison != 25 {
 		t.Fatalf("merged meals %+v, want one stack of 4 at 25‰", meals)
 	}
-	if l := splitLoad(meals[0], 2); l.Poison != 25 {
+	if l := haul.SplitLoad(meals[0], 2); l.Poison != 25 {
 		t.Fatalf("a hauled load keeps %d‰, want 25‰", l.Poison)
 	}
 }
