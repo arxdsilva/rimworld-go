@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/terrain"
@@ -361,7 +362,9 @@ func TestRaiderTurretSwitchNoFlap(t *testing.T) {
 	}
 	// a raider just inside or just outside the switch rule: it picks one
 	// target and keeps to it while the distances change as it closes in
-	// (the attack job holds; turret fire held so it lives)
+	// (the attack job holds; turret fire held so it lives). CBT-4: targets
+	// are threat-weighted, so Ada carries a rifle (held, fire at will off)
+	// to outweigh the turret from row 17.
 	for _, c := range []struct {
 		y       int
 		turret0 bool // the first target is the turret
@@ -371,6 +374,9 @@ func TestRaiderTurretSwitchNoFlap(t *testing.T) {
 		g.Step(powerInterval)
 		ada, _ := g.SpawnNamedPawn(25, 30, "Ada")
 		g.draft[ada] = true // drafted: holds still instead of running
+		g.equip[ada] = item.Rifle
+		g.combat.Drafts.SetFireAtWill(ada, false)
+		g.combat.Drafts.SetHold(ada, true)
 		rid := turretRaider(t, g, 25, c.y)
 		var seq []entity.EntityID
 		for i := 0; i < 600; i++ {
@@ -432,56 +438,53 @@ func TestRaiderTargetsTurret(t *testing.T) {
 	}
 }
 
+// TestTurretDestroyedExplodes: a destroyed turret leaves a blueprint and
+// no aim, and half the time blows up with the mini-turret's bomb (CBT-3,
+// wiki: Mini-turret): what stands within 3.9 tiles is struck, nothing
+// further off.
 func TestTurretDestroyedExplodes(t *testing.T) {
 	t.Parallel()
-	out := 1000
-	g, ts := turretRig(t, 8, 40, 30, &out, 20, 22)
-	tid, other := ts[0], ts[1]
-	g.Step(powerInterval)
-	wall := buildNow(t, g, construction.Wall, item.Wood, construction.South, 18, 7)
-	far := buildNow(t, g, construction.Wall, item.Wood, construction.South, 26, 8)
-	near := turretRaider(t, g, 20, 6)
-	edge := turretRaider(t, g, 18, 6)
-	away := turretRaider(t, g, 20, 9)
-	ob, _ := g.bldgs.Get(other)
-	ob.Damage = construction.MaxHP(ob.Kind, ob.Stuff) - combat.TurretBlastBuilding // the blast finishes it: a chain
-	g.bldgs.Set(other, ob)
-
-	g.damageBuilding(tid, 10_000)
-	if _, ok := g.bldgs.Get(tid); ok {
-		t.Fatal("the turret should be gone")
-	}
-	if _, ok := g.bldgs.Get(other); ok {
-		t.Fatal("the neighbouring turret should go up with it")
-	}
-	if g.layerFrameAt(20, 5, construction.LayerObject) == 0 {
-		t.Fatal("a destroyed turret leaves a rebuild blueprint")
-	}
-	for _, id := range []entity.EntityID{near, edge} {
-		if v, _ := g.vital.Get(id); v.Injury < combat.TurretBlastCreature {
-			t.Fatalf("raider %d within the blast: injury %d", id, v.Injury)
+	blew, quiet := false, false
+	for seed := uint64(8); seed < 40 && !(blew && quiet); seed++ {
+		out := 1000
+		g, ts := turretRig(t, seed, 40, 30, &out, 20)
+		tid := ts[0]
+		g.Step(powerInterval)
+		wall := buildNow(t, g, construction.Wall, item.Wood, construction.South, 18, 7)
+		far := buildNow(t, g, construction.Wall, item.Wood, construction.South, 26, 8)
+		near := turretRaider(t, g, 20, 6)
+		away := turretRaider(t, g, 20, 10)
+		g.damageBuilding(tid, 10_000)
+		if _, ok := g.bldgs.Get(tid); ok || g.layerFrameAt(20, 5, construction.LayerObject) == 0 || turretAims(g)[tid] {
+			t.Fatal("the turret is gone, a rebuild blueprint stands, no aim is kept")
+		}
+		bomb := 0
+		for _, b := range g.World().Bursts {
+			if b.Blast == "bomb" && b.Radius == 39 {
+				bomb++
+			}
+		}
+		nv, _ := g.vital.Get(near)
+		av, _ := g.vital.Get(away)
+		fb, _ := g.bldgs.Get(far)
+		if av.Injury != 0 || fb.Damage != 0 {
+			t.Fatalf("seed %d: out of the blast: raider %d, wall %d", seed, av.Injury, fb.Damage)
+		}
+		if bomb == 0 {
+			quiet = true
+			if nv.Injury != 0 {
+				t.Fatalf("seed %d: no blast, yet the raider beside it was hurt", seed)
+			}
+			continue
+		}
+		blew = true
+		wb, standing := g.bldgs.Get(wall)
+		if bomb != 1 || nv.Injury == 0 && nv.Status == health.Alive || standing && wb.Damage == 0 {
+			t.Fatalf("seed %d: within the blast: bursts %d raider %+v wall %+v", seed, bomb, nv, wb)
 		}
 	}
-	if v, _ := g.vital.Get(away); v.Injury != 0 {
-		t.Fatalf("a raider 4 tiles off was hurt: %d", v.Injury)
-	}
-	if b, _ := g.bldgs.Get(wall); b.Damage != combat.TurretBlastBuilding {
-		t.Fatalf("wall within the blast: damage %d", b.Damage)
-	}
-	if b, _ := g.bldgs.Get(far); b.Damage != 0 {
-		t.Fatalf("wall out of the blast: damage %d", b.Damage)
-	}
-	bursts := 0
-	for _, b := range g.World().Bursts {
-		if b.Turret && b.Species == "" {
-			bursts++
-		}
-	}
-	if bursts != 2 {
-		t.Fatalf("turret bursts %d, want 2: %+v", bursts, g.World().Bursts)
-	}
-	if turretAims(g)[tid] {
-		t.Fatal("a destroyed turret keeps no aim")
+	if !blew || !quiet {
+		t.Fatalf("a turret blows up half the time: blew %v, quiet %v", blew, quiet)
 	}
 }
 

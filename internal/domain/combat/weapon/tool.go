@@ -27,7 +27,7 @@ func tool(name string, dmg int, f damage.Form, pen, cooldown, chance int) Tool {
 // blunt. The longsword's chances are not published: the gladius's split
 // (original assumption). The wiki's tables also give the wielder's fists
 // a share; a blow here always uses the weapon (their share is spread over
-// its tools). The main attack comes first. wiki: Knife, Club, Spear, Mace, Gladius, Longsword
+// its tools). The main attack comes first. wiki: Knife, Club, Spear, Mace, Gladius, Longsword, Ikwa
 var (
 	knifeTools = []Tool{
 		tool("blade", 12, damage.FormCut, 18, 90, 750),
@@ -56,6 +56,14 @@ var (
 		tool("blade", 23, damage.FormCut, 34, 156, 375),
 		tool("point", 23, damage.FormStab, 34, 156, 375),
 		tool("handle", 9, damage.FormBlunt, 13, 120, 83),
+	}
+	// The ikwa's head and edge (15 stab and cut, 22 %) and its handle
+	// (9 blunt, a blow and a poke). wiki: Ikwa
+	ikwaTools = []Tool{
+		tool("head", 15, damage.FormStab, 22, 120, 375),
+		tool("edge", 15, damage.FormCut, 22, 120, 375),
+		tool("handle", 9, damage.FormBlunt, 13, 120, 63),
+		tool("handle", 9, damage.FormBlunt, 13, 120, 63),
 	}
 	// A gun's stock and barrel, a pistol's grip, a bow's limb, the pila's
 	// shaft: 9 blunt, 13 %, 2 s each, chosen evenly. wiki: Assault rifle
@@ -92,6 +100,8 @@ func ToolsOf(k Kind) []Tool {
 		return gladiusTools
 	case Longsword:
 		return longswordTools
+	case Ikwa:
+		return ikwaTools
 	case Revolver, Autopistol, MachinePistol:
 		return pistolTools
 	case ShortBow, RecurveBow, Greatbow:

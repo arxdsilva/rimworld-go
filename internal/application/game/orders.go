@@ -153,7 +153,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 			return job.Record{}, ReasonSupplied
 		}
 		sk := haul.SupplyKind(fr) // items_ng1.go: the material, then the components
-		wid, wx, wy := g.nearestFree(id, sk)
+		wid, wx, wy := g.nearestFree(id, func(k item.Kind) bool { return k == sk })
 		if wid == 0 {
 			if sk != item.Wood {
 				return job.Record{}, ReasonNoStuff + sk.String()
@@ -336,14 +336,14 @@ func (g *Game) busyBy(id, target entity.EntityID) string {
 	return ""
 }
 
-func (g *Game) nearestFree(id entity.EntityID, k item.Kind) (entity.EntityID, int, int) {
+func (g *Game) nearestFree(id entity.EntityID, match func(item.Kind) bool) (entity.EntityID, int, int) {
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
 	var bx, by int
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
-		if !ok || st.Kind != k || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
+		if !ok || !match(st.Kind) || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {

@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/prison"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/health"
@@ -25,13 +26,14 @@ type prisonHost struct {
 	prisonLife
 	prisonWarden
 	prisonTalk
+	prisonEscapes
 }
 
 var _ prison.Host = prisonHost{}
 
 func newPrisonHost(g *Game) prisonHost {
 	return prisonHost{careBodies{g}, careRoster{g}, careReach{g}, careJobs{g}, careBeds{g}, careEvents{g}, carePrison{g},
-		prisonRoster{g}, prisonLife{g}, prisonWarden{g}, prisonTalk{g}}
+		prisonRoster{g}, prisonLife{g}, prisonWarden{g}, prisonTalk{g}, prisonEscapes{g}}
 }
 
 type prisonRoster struct{ g *Game }
@@ -91,9 +93,6 @@ func (h prisonLife) DownedHunger(id entity.EntityID, v health.Record, now uint64
 }
 func (h prisonLife) Down(id entity.EntityID, c health.Cause) { h.g.down(id, c) }
 func (h prisonLife) Die(id entity.EntityID, c health.Cause)  { h.g.die(id, c) }
-func (h prisonLife) WalkOut(id entity.EntityID, j job.Record, now uint64) {
-	h.g.walkOut(id, h.g.raiders[id], j, now) // prisoners.go
-}
 
 type prisonWarden struct{ g *Game }
 
@@ -166,3 +165,27 @@ func (g *Game) enlist(p entity.EntityID) {
 	}
 	g.refreshSig(p)
 }
+
+// prisonEscapes is a prison break (prison/escape.go, CBT-4).
+type prisonEscapes struct{ g *Game }
+
+func (h prisonEscapes) RoomOf(id entity.EntityID) int {
+	p, _ := h.g.positions.Get(id)
+	return h.g.roomAt(p.X, p.Y) + 1
+}
+func (h prisonEscapes) Escape(id entity.EntityID) {
+	r := h.g.raiders[id]
+	r.Mode, r.Escaping, r.Leaving = raid.Fleeing, true, false // raid/tactics.go: fights its way out
+	h.g.raiders[id] = r
+}
+func (h prisonEscapes) Breakout(id entity.EntityID, n int) {
+	p, _ := h.g.positions.Get(id)
+	h.g.threat("Prison break", p.X, p.Y, "%s started a prison break: %d prisoners are fighting their way out!", h.g.name(id), n)
+}
+func (h prisonEscapes) Exit(x, y int) (int, int, bool, bool) {
+	w, ht := h.g.grid.Width(), h.g.grid.Height()
+	ex, ey := raid.NearestEdge(x, y, w, ht)
+	tx, ty, ok := h.g.combat.Tiles.WalkableNear(ex, ey, 3)
+	return tx, ty, x == 0 || y == 0 || x == w-1 || y == ht-1, ok
+}
+func (h prisonEscapes) Depart(id entity.EntityID) { h.g.departReleased(id) } // prisoners.go

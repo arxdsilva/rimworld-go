@@ -19,11 +19,18 @@ const (
 	HiveForever = ^uint64(0)
 )
 
-// Hives sends hive swarms.
+// Hives sends hive swarms and runs the hive mounds (nest.go, CBT-4).
 type Hives struct {
 	h    Host
 	w    Wild
 	exit exitCache
+	// CBT-4: n places hive mounds and m tells a colonist near (nil:
+	// none); hives are the mounds standing, ascending ids (saved in
+	// MechSave).
+	n     Nest
+	m     MechHost
+	hives []Hive
+	now   uint64 // the tick Step last ran (an infestation's clock)
 }
 
 // exitCache is Exit's last answer and the structure it was for.
@@ -35,7 +42,9 @@ type exitCache struct {
 	found              bool
 }
 
-// Swarm is the threat itself (also the game's HiveSwarm dev hook).
+// Swarm is the threat itself (also the game's HiveSwarm dev hook). In a
+// dark, warm, roofed cave by the rock face a hive mound rises first and
+// the swarm is its brood (CBT-4, nest.go); it then breeds and spreads.
 func (hv *Hives) Swarm() {
 	n := hiveMin + hv.h.Roll(hiveMax-hiveMin+1)
 	x, y, ok := hv.Exit()
@@ -44,6 +53,11 @@ func (hv *Hives) Swarm() {
 			return
 		}
 	}
+	hive, nested := hv.infest(x, y, hv.now)
+	if nested {
+		x, y = hv.hives[hive].X, hv.hives[hive].Y
+	}
+	var brood []entity.EntityID
 	brutes, spawned := 0, 0
 	for i := 0; i < n; i++ {
 		s := animal.HiveBeetle
@@ -65,9 +79,13 @@ func (hv *Hives) Swarm() {
 			a.Manhunter, a.Mode = HiveForever, animal.Attack
 			hv.w.SetAnimal(id, a)
 			spawned++
+			brood = append(brood, id)
 		}
 	}
-	if spawned > 0 {
+	if nested {
+		hv.adopt(hive, brood)
+		hv.h.Threat("Infestation", x, y, "Insects have dug a hive into the rock and are pouring out! Destroy the hive mound to stop them breeding.")
+	} else if spawned > 0 {
 		hv.h.Threat("Hive swarm", x, y, "A hive swarm bursts from the rock!")
 	}
 }

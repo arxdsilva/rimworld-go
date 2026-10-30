@@ -256,7 +256,7 @@ func attackSetup(t *testing.T, w item.Kind, dist int) (g *Game, att, tgt entity.
 	tgt, _ = g.SpawnNamedPawn(5+dist, 5, "Bo")
 	g.Arm(att, w)
 	g.jobs.Set(tgt, job.Record{Kind: job.Sleep, State: job.Do, WorkLeft: 1 << 20, TX: 5 + dist, TY: 5})
-	d := weapon.DefOf(weaponKindOf(w))
+	d := weapon.DefOf(weapon.ForItem(w))
 	g.startJob(att, job.Record{Kind: job.Attack, Target: tgt, TX: 5 + dist, TY: 5, WorkLeft: combat.AimTicks(d)})
 	return
 }
@@ -276,7 +276,7 @@ func TestAttackCycle(t *testing.T) {
 		dist int
 	}{{item.Rifle, 5}, {item.Club, 1}, {item.Knife, 1}, {item.Spear, 1}} {
 		g, att, tgt := attackSetup(t, tc.w, tc.dist)
-		d := weapon.DefOf(weaponKindOf(tc.w))
+		d := weapon.DefOf(weapon.ForItem(tc.w))
 		strikes, prev := 0, -1.0
 		for i := 0; i < 3*combat.CycleTicks(d) && strikes < 3; i++ {
 			g.Step(1)
@@ -571,7 +571,7 @@ func TestAnimalActionAndCycle(t *testing.T) {
 }
 
 func TestKnifeSpearWeaponMapping(t *testing.T) {
-	if weaponKindOf(item.Knife) != weapon.Knife || weaponKindOf(item.Spear) != weapon.Spear {
+	if weapon.ForItem(item.Knife) != weapon.Knife || weapon.ForItem(item.Spear) != weapon.Spear {
 		t.Fatal("knife and spear map to their weapons")
 	}
 	g := New(Config{Seed: 1, Width: 10, Height: 8})

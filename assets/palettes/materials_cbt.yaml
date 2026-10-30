@@ -1,0 +1,9 @@
+# CBT-3/5 art: the shield belt's field (effect/shield_bubble), the EMP
+# flash (effect/emp_flash) and the lingering smoke cloud
+# (effect/smoke_cloud), families/effect.py. Original colours.
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+version: 1
+materials:
+  shield_field:  {light: "#e2f6ff", base: "#86d2f2", shadow: "#4a93c6"}
+  emp_arc:       {light: "#f4fbff", base: "#9cdcff", shadow: "#5a80e2"}
+  smoke_haze:    {light: "#d8d5ce", base: "#b7b3ab", shadow: "#8d8981"}

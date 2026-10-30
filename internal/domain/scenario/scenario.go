@@ -529,10 +529,10 @@ func essentialBuilding(k construction.Kind) bool {
 }
 
 // playerItem is an item a scenario may give: anything but carcasses, bones,
-// fertile eggs, the legacy "stone" and the STO/CBT contract kinds (no art
-// or use until STO-2 and CBT-3 lift this).
+// fertile eggs and the legacy "stone". The STO/CBT kinds (paste meals,
+// belts, the new weapons) have art and use since STO-2 and CBT-3.
 func playerItem(k item.Kind) bool {
-	if k.String() == "unknown" || k.IsCorpse() || k == item.NutrientPasteMeal || k.IsBelt() || k.IsContractWeapon() {
+	if k.String() == "unknown" || k.IsCorpse() {
 		return false
 	}
 	switch k {

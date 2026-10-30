@@ -443,10 +443,29 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 			}
 		}
 	}
-	// on the map beside the command grid, the drafted colonist moves
+	// on the map next to the command grid, the drafted colonist moves.
+	// With wave 3's Drop weapon, smokepop and threat buttons the grid
+	// reaches the Global panel, so there is no map to its right: step up
+	// from the last cell until the point is off every HUD region
 	beside := l.GridCells[len(l.GridCells)-1]
-	beside.X += hudlayout.CmdStride
+	offHUD := func(x, y int) bool {
+		for _, r := range regions {
+			if r.Hit(x, y) {
+				return false
+			}
+		}
+		return true
+	}
+	for i := 0; i < 8; i++ {
+		beside.Y -= hudlayout.CmdStride
+		if cx, cy := beside.Center(); offHUD(int(cx), int(cy)) {
+			break
+		}
+	}
 	bx, by := beside.Center()
+	if !offHUD(int(bx), int(by)) {
+		t.Fatalf("no map point near the command grid at (%v,%v)", bx, by)
+	}
 	s.cmds = nil
 	f.Cur.Mx, f.Cur.My = int(bx), int(by)
 	f.Click(t, a, inputframe.Right, 0)

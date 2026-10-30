@@ -184,8 +184,8 @@ func TestKidnapTargetDoesNotFlap(t *testing.T) {
 	g2, ada2, _, rid2 := kidnapGame(t)
 	g2.Step(1)
 	now := uint64(g2.clock.Now())
-	g2.endKidnap(rid2, now)
-	for i := 0; i < kidnapScan*3; i++ {
+	g2.raid.Kidnaps.End(rid2, now)
+	for i := 0; i < raid.KidnapScan*3; i++ {
 		g2.Step(1)
 		if j, _ := g2.jobs.Get(rid2); j.Kind == job.Kidnap {
 			t.Fatalf("kidnap retried %d ticks after a failure", i)

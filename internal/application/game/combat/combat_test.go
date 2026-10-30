@@ -2,11 +2,13 @@ package combat
 
 import (
 	"rimworld-go/internal/domain/combat/cover"
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -114,27 +116,41 @@ func TestTrapsSpringAndRelay(t *testing.T) {
 		t.Fatal("trap lookup")
 	}
 	f.raider(9, 10, 5, weapon.Fists)
-	f.rolls = []int{trapChance} // a miss leaves it set
-	tr.Underfoot([]entity.EntityID{9})
-	if tr.At(10, 5) == 0 || len(f.hurts) != 0 {
-		t.Fatal("a missed roll leaves the trap set")
-	}
+	f.rolls = []int{200} // the damage roll: x1.0
 	tr.Underfoot(nil)
 	tr.Underfoot([]entity.EntityID{9})
-	if tr.At(10, 5) != 0 || len(f.hurts) != 1 || f.hurts[0] != "9-32-0-stab" || len(f.frames) != 1 || f.frames[0] != construction.SpikeTrap {
-		t.Fatalf("sprung: hurts %v frames %v", f.hurts, f.frames)
+	spikes := []string{"9-20-0-stab", "9-20-0-stab", "9-20-0-stab", "9-20-0-stab", "9-20-0-stab"} // wiki: 5 stabs of 100/5 (steel)
+	if tr.At(10, 5) != 0 || !slices.Equal(f.hurts, spikes) || len(f.frames) != 1 || f.frames[0] != construction.SpikeTrap {
+		t.Fatalf("a raider always springs it: hurts %v frames %v", f.hurts, f.frames)
 	}
-	if len(f.msgs) != 1 || f.msgs[0] != "A spike trap caught p9." {
-		t.Fatalf("message %v", f.msgs)
+	if len(f.msgs) != 1 || f.msgs[0] != "A spike trap caught p9." || f.logs[len(f.logs)-1] != "trap 9 100" {
+		t.Fatalf("message %v logs %v", f.msgs, f.logs)
 	}
 	f.build(7, construction.SpikeTrap, 4, 4)
 	f.beast(20, 4, 4, animal.State{Species: animal.TimberWolf})
+	f.rolls = []int{trapWildPct} // a wild animal springs it only 20 % of the time
 	tr.Spring(20, 4, 4)
-	if f.msgs[1] != "A spike trap caught a "+animal.TimberWolf.String()+"." {
-		t.Fatalf("animal message %v", f.msgs)
+	if tr.At(4, 4) == 0 || len(f.msgs) != 1 {
+		t.Fatal("a missed roll leaves the trap set")
 	}
-	if !tr.Victim(animal.State{Species: animal.TimberWolf}) || tr.Victim(animal.State{Species: animal.Deer}) ||
-		!tr.Victim(animal.State{Species: animal.Deer, Manhunter: f.now + 1}) || tr.Victim(animal.State{Species: animal.TimberWolf, Tame: true}) {
-		t.Fatal("trap victims: wild predators and manhunters")
+	b := f.bldgs[7]
+	b.Stuff = item.Wood
+	f.bldgs[7] = b
+	f.hurts = nil
+	f.rolls = []int{trapWildPct - 1, 200}
+	tr.Spring(20, 4, 4)
+	if f.msgs[1] != "A spike trap caught a "+animal.TimberWolf.String()+"." || len(f.hurts) != 5 || f.hurts[0] != "20-8-0-stab" {
+		t.Fatalf("a wooden trap stabs 5 x 8: %v %v", f.msgs, f.hurts)
+	}
+	if !tr.Victim(animal.State{Species: animal.TimberWolf}) || !tr.Victim(animal.State{Species: animal.Deer}) ||
+		tr.Victim(animal.State{Species: animal.TimberWolf, Tame: true}) {
+		t.Fatal("trap victims: every wild animal")
+	}
+	f.build(8, construction.SpikeTrap, 6, 6)
+	f.beast(21, 6, 6, animal.State{Species: animal.Deer, Manhunter: f.now + 1})
+	f.rolls = []int{99}
+	tr.Spring(21, 6, 6)
+	if tr.At(6, 6) != 0 {
+		t.Fatal("a manhunter always springs it")
 	}
 }

@@ -44,6 +44,12 @@ type Combat struct {
 	// belts and throw orders) and Log (log.go: the combat log).
 	Drafts *Drafts
 	Log    *Log
+	// CBT-4: Tactics (tactics.go: cover seeking, grenade danger, raider
+	// target candidates, mechanoids' door bashing).
+	Tactics *Tactics
+	// CBT-3: Gear (gear.go: the wielded weapon's make, shield belts,
+	// smokepop packs and the fighters' records).
+	Gear *Gear
 }
 
 // New builds the combat cluster on host h with the extra roles r.
@@ -53,7 +59,7 @@ func New(h Host, r Roles) *Combat {
 	c.Sight.doors = c.Doors
 	c.Turrets = newTurrets(h, r.Power, c.Sight)
 	c.Strikes = &Strikes{h: h, sight: c.Sight, turrets: c.Turrets, hunts: r.Hunts}
-	c.Blasts = &Blasts{h: h, sight: c.Sight, st: c.Strikes, turrets: c.Turrets}
+	c.Blasts = &Blasts{h: h, sight: c.Sight, st: c.Strikes, turrets: c.Turrets, debris: r.Debris}
 	c.Shots = &Shots{h: h, st: c.Strikes, blasts: c.Blasts}
 	c.Strikes.shots, c.Strikes.blasts, c.Turrets.st = c.Shots, c.Blasts, c.Strikes
 	c.Traps = &Traps{h: h, blasts: c.Blasts}
@@ -64,8 +70,12 @@ func New(h Host, r Roles) *Combat {
 	c.Hunting, c.Tiles = &Hunting{h: h, hu: r.Hunts}, &Tiles{f: r.Field}
 	c.Drafts, c.Log = &Drafts{h: h, arms: r.Arms, draft: r.Draft, shots: c.Shots}, &Log{h: h}
 	c.Shots.traps, c.Shots.drafts, c.Blasts.traps, c.Strikes.drafts = c.Traps, c.Drafts, c.Traps, c.Drafts
+	c.Gear = &Gear{h: h, arms: r.Arms, belts: r.Belts, blasts: c.Blasts, drafts: c.Drafts}
+	c.Strikes.gear, c.Drafts.gear, c.Turrets.blasts = c.Gear, c.Gear, c.Blasts
+	c.Tactics = &Tactics{h: h, sight: c.Sight, f: r.Field, br: r.Breach, doors: c.Doors, shots: c.Shots, drafts: c.Drafts}
+	c.Guard.drafts, c.Guard.st, c.Guard.tac, c.Guard.tiles, c.Drafts.tac = c.Drafts, c.Strikes, c.Tactics, c.Tiles, c.Tactics // CBT-4
 	c.Turrets.after = [...]phaser{c.Traps, c.Doors, c.Mortars, c.Rearms, c.Drafts}
-	c.Turrets.saved = saved{traps: c.Traps, doors: c.Doors, mortars: c.Mortars, rearms: c.Rearms, drafts: c.Drafts, log: c.Log}
+	c.Turrets.saved = saved{traps: c.Traps, doors: c.Doors, mortars: c.Mortars, rearms: c.Rearms, drafts: c.Drafts, log: c.Log, gear: c.Gear}
 	return c
 }
 

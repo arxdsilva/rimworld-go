@@ -53,6 +53,7 @@ func (p *Prison) Take(target, captor entity.EntityID, now uint64) {
 	p.st[target] = &prisoner.State{
 		Mode: prisoner.Recruit, Resistance: prisoner.InitialResistance(roll),
 		NextVisit: now + uint64(target)*visitStagger%prisoner.VisitInterval, Captor: uint64(captor),
+		Calm: now + EscapeGrace, // escape.go: no break straight after the capture
 	}
 }
 

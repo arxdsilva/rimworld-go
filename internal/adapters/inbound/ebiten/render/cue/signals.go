@@ -58,6 +58,7 @@ func (b *Bus) ListenWorld(v *render.View, w game.WorldView, pawns []game.PawnVie
 	b.Host.ListenCaskets(w)      // vault_draw.go: a casket turning open
 	b.listenPower(v, w)          // switches thrown, short circuits, solar flares
 	b.listenStructures(w, pawns) // crafters at work, new barrels, charges set
+	b.listenWave3(w, pawns)      // staggers, tantrums, paste dispensing
 	frames := make(map[entity.EntityID][2]int, len(w.Frames))
 	for _, f := range w.Frames {
 		frames[f.ID] = [2]int{f.X, f.Y}

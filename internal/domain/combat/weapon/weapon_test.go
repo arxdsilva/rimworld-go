@@ -72,8 +72,8 @@ func TestLegacyWeaponsReproduceToday(t *testing.T) {
 	t.Parallel()
 	for k := Kind(0); k < Mace; k++ { // the DEF-2 catalogue from Mace on: catalogue_test.go
 		d := DefOf(k)
-		if _, wiki := wikiStats[k]; wiki {
-			continue // TestKnifeSpearStats pins the wiki weapons
+		if _, wiki := wikiStats[k]; wiki || k == SentryGun {
+			continue // TestKnifeSpearStats pins the wiki weapons, TestCBT3Defs the mini-turret's gun
 		}
 		if !d.Legacy() || d.Speed != 0 {
 			t.Errorf("%s has bands or a projectile", d.Name)
@@ -106,7 +106,7 @@ func TestLegacyWeaponsReproduceToday(t *testing.T) {
 	// the legacy table, value for value (unchanged since before DEF-1)
 	for k, w := range map[Kind][4]int{ // damage, cooldown, accuracy, range
 		Fists: {4, 90, 80, 1}, Kick: {3, 120, 70, 1}, Bite: {9, 100, 80, 1}, Claw: {7, 110, 75, 1},
-		Gore: {9, 130, 70, 1}, Headbutt: {6, 130, 75, 1}, Peck: {2, 100, 80, 1}, SentryGun: {9, 60, 75, 10},
+		Gore: {9, 130, 70, 1}, Headbutt: {6, 130, 75, 1}, Peck: {2, 100, 80, 1},
 	} {
 		if d := DefOf(k); [4]int{d.Damage, d.Cooldown, d.Accuracy, d.Range} != w {
 			t.Errorf("%s = %+v, want %v", d.Name, d, w)

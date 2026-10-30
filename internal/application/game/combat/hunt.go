@@ -62,8 +62,8 @@ func (hn *Hunting) Assign(id entity.EntityID) bool {
 		if best == 0 {
 			return false
 		}
-		if d := weapon.DefOf(h.Weapon(id)); !d.Ranged || d.Explosive() { // DEF-2: never hunt with explosives
-			return hn.Equip(id, item.Rifle)
+		if !Hunter(h.Weapon(id)) { // DEF-2: never hunt with explosives
+			return hn.Equip(id, huntArm)
 		}
 		if h.StartJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(weapon.DefOf(h.Weapon(id)))}) {
 			return true
@@ -73,9 +73,22 @@ func (hn *Hunting) Assign(id entity.EntityID) bool {
 	return false
 }
 
-// Equip walks to the nearest free weapon of kind k.
-func (hn *Hunting) Equip(id entity.EntityID, k item.Kind) bool {
-	sid, x, y := hn.hu.NearestFree(id, k)
+// Hunter reports a weapon a colonist hunts with (CBT-4, wiki: Hunting):
+// any ranged weapon but an explosive one.
+func Hunter(wk weapon.Kind) bool {
+	d := weapon.DefOf(wk)
+	return d.Ranged && !d.Explosive()
+}
+
+// huntArm accepts an item a hunter fetches: any ranged, non-explosive
+// weapon (CBT-4: not only a rifle).
+func huntArm(k item.Kind) bool {
+	return (k.IsWeapon() || k.IsContractWeapon()) && Hunter(weapon.ForItem(k))
+}
+
+// Equip walks to the nearest free weapon of a kind match accepts.
+func (hn *Hunting) Equip(id entity.EntityID, match func(item.Kind) bool) bool {
+	sid, x, y := hn.hu.NearestFree(id, match)
 	if sid == 0 {
 		return false
 	}

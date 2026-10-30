@@ -1291,6 +1291,7 @@ resolve metadata conflicts, and update the catalog.
 
 -   [x] melee family (knife, spear, club; stab, thrust, swing and punch pose sets)
 -   [-] pistol/rifle/shotgun/long-range weapon (rifle carried, aimed and firing, ART-027; no pistol, shotgun or long rifle)
+-   [x] arms additions, belt, effect and hive families (wave 3, CBT-3/CBT-5: `families/arms.py` rocket launcher, triple rocket launcher, smoke launcher, charge rifle, charge lance and ikwa, held and as items; `families/belt.py` shield belt and smokepop pack worn and as items; `families/effect.py` fire_burst, emp_flash, smoke_cloud and shield_bubble; `families/hive.py` hive mound; validator 6020 sprites, 0 errors; 10 procedural sounds in `wave3_recipes.go`)
 -   [ ] armor/helmets
 -   [-] projectiles/muzzle flash/impact/explosion (tracer, muzzle flash, smoke, casing, impact puff and blood; no explosions)
 -   [ ] fire/smoke

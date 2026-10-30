@@ -20,6 +20,9 @@ const (
 	Berserk        // attacks anyone nearby
 	MurderousRage  // hunts one colonist
 	Catatonic      // collapses and stays down until it recovers
+	// Tantrum (CBT-4, appended): a major break; it punches and smashes
+	// the buildings and items around it.
+	Tantrum
 	numKinds
 )
 
@@ -65,6 +68,8 @@ var defs = [numKinds]Def{
 	MurderousRage: def("murderous rage", "%s is out for someone's blood!", 100000, 100000, 100000, 10, Extreme),
 	// wiki: Mental_break
 	Catatonic: def("catatonic", "%s has collapsed into a catatonic state.", 100000, 100000, 300000, 10, Extreme),
+	// wiki: Mental_break (Tantrum: 8000..12000 ticks, commonality 0.333)
+	Tantrum: def("tantrum", "%s is throwing a tantrum and smashing things!", 10000, 8000, 12000, 3, Major),
 }
 
 // DefOf returns the break definition.
@@ -96,7 +101,7 @@ func RiskPerHour(m int) int {
 // AllMoodKinds lists every kind a low mood can cause, across all tiers
 // (Kinds is the legacy subset the simulation uses today).
 func AllMoodKinds() []Kind {
-	return []Kind{SadWander, FoodBinge, InsultingSpree, HideInRoom, TargetedInsult, Berserk, MurderousRage, Catatonic}
+	return []Kind{SadWander, FoodBinge, InsultingSpree, HideInRoom, TargetedInsult, Berserk, MurderousRage, Catatonic, Tantrum}
 }
 
 // Tier is a break's severity, set by how far mood has fallen.

@@ -24,6 +24,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/armor"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -183,10 +184,11 @@ type PawnView struct {
 	// (wanderer, social, homebody).
 	Temperament string
 	Weapon      string // wielded weapon name ("fists" when unarmed)
-	// STO/CBT contract (0 until CBT-3, CBT-5 fill them): the weapon's quality (stored, quality.Level+1) and stuff; combat records.
-	WeaponQuality      uint8
-	WeaponStuff        string
-	Kills, DamageDealt int
+	// CBT-3: the weapon's quality (stored, quality.Level+1) and stuff ("": the def's own), combat records, the spare weapon ("": none),
+	// shield belt charge (percent, 0 without one) and smokepop uses left.
+	WeaponQuality                            uint8
+	WeaponStuff, Spare, ThreatResponse       string // CBT-4: ThreatResponse is "default", "flee", "attack" or "ignore"
+	Kills, DamageDealt, ShieldPct, Smokepops int
 	// WeaponStats are its numbers and ApparelArmor each Apparel entry's
 	// armor by its stuff and quality, permille (DEF-2: the gear tab).
 	WeaponStats  weapon.View
@@ -554,6 +556,7 @@ type WorldView struct {
 	Animals []AnimalView
 	Traces  []TraceView
 	Shots   []projectile.View // DEF-1: projectiles in flight, oldest first (combat/shot.go)
+	Smoke   []explosion.Cloud // CBT-5: live smoke clouds, each until its Until (combat/blast.go)
 	// Climate: OutdoorTemp and IndoorTemp (enclosed rooms) in tenths of a
 	// degree C, and the season name.
 	OutdoorTemp, IndoorTemp int
@@ -1173,7 +1176,10 @@ func (g *Game) snapshot() []PawnView {
 		pv.CareLevel = uint8(cv.CareLevel)                                         // MED-03
 		pv.Disease = g.diseaseLabel(id)                                            // disease.go (MED-04)
 		pv.OverdosePct, pv.OverdoseStage = g.overdoseView(id)                      // drugs.go (MED-07)
-		pv.Weapon, pv.WeaponStats = weaponDefOf(g, id).Name, weapon.Stats(g.weaponOf(id))
+		pv.Weapon, pv.WeaponStats = weaponDefOf(g, id).Name, weapon.Stats(weaponOf(g, id))
+		gv := g.combat.Gear.View(id) // combat/gear.go (CBT-3)
+		pv.WeaponQuality, pv.WeaponStuff, pv.Spare, pv.ShieldPct, pv.Smokepops, pv.Kills, pv.DamageDealt = gv.Quality, gv.Stuff, gv.Spare, gv.ShieldPct, gv.Smokepops, gv.Kills, gv.Damage
+		pv.ThreatResponse = g.combat.Drafts.Response(id).String()
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
@@ -1187,12 +1193,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Schedule = append([]schedule.Activity(nil), sg[:]...)
 		pv.Activity = g.activityOf(id)
 		pv.Apparel = g.Wearing(id)
-		for _, s := range wearSlots { // in Wearing's order
-			if p := g.apparel[id].On[s]; p.Kind != 0 {
-				l, _ := armor.Piece(p.Kind, p.Stuff, p.Quality)
-				pv.ApparelArmor = append(pv.ApparelArmor, l.Set)
-			}
-		}
+		pv.ApparelArmor = g.apparel[id].Armor()                                  // craft/garment.go: in Wearing's order
 		pv.ApparelForced, pv.ChangingInto = g.wornForced(id), g.changingInto(id) // apparel.go
 		pv.Worn = g.apparel[id].Views()                                          // craft/garment.go (PRD-2)
 		if in, ok := g.mind.Inspire.Of(id); ok {                                 // mind/inspiration.go (PRD-2)
@@ -1290,7 +1291,7 @@ func (g *Game) world() WorldView {
 	w.RoomGrid = g.roomGrid // shared read-only: ensureRooms replaces it, never writes in place
 	w.Rooms = g.roomViews()
 	w.Animals = g.animalViews()
-	w.Traces, w.Shots = g.traceViews(), g.combat.Shots.Views()
+	w.Traces, w.Shots, w.Smoke = g.traceViews(), g.combat.Shots.Views(), g.combat.Blasts.Views()
 	g.fillWorldWeather(&w) // weather.go
 	g.fillRoofView(&w)     // roof.go
 	g.fillWildlifeView(&w) // wildlife.go

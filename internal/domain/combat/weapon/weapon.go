@@ -147,10 +147,10 @@ var defs = [numKinds]Def{
 	Gore:     {Name: "horns", Range: 1, Damage: 9, Cooldown: 130, Accuracy: 70, Warmup: 43, Burst: 1, DamageType: damage.Sharp},
 	Headbutt: {Name: "head", Range: 1, Damage: 6, Cooldown: 130, Accuracy: 75, Warmup: 43, Burst: 1, DamageType: damage.Blunt},
 	Peck:     {Name: "beak", Range: 1, Damage: 2, Cooldown: 100, Accuracy: 80, Warmup: 33, Burst: 1, DamageType: damage.Sharp},
-	// PLAY-024 (our tuning, PLAY024_PLAN.md): quick, light bursts at
-	// medium range. It fires instantly until DEF-3 gives turrets
-	// projectiles.
-	SentryGun: {Name: "sentry gun", Ranged: true, Range: 10, Damage: 9, Cooldown: 60, Accuracy: 75, Falloff: 3, Warmup: 20, Burst: 1, DamageType: damage.Sharp},
+	// CBT-3: the sentry turret's gun takes the wiki mini-turret's numbers
+	// (no warmup, a two-round burst, 70 cells/s projectiles). wiki:
+	// Mini-turret
+	SentryGun: turretGun("sentry gun", 12, 180, 288, 28, 0, 2, 8, 770, 700, 450, 240, 70),
 
 	// DEF-2 melee, steel at Normal quality, main attack (head, point,
 	// blade); no warmup. Accuracy is our flat melee base, as the club's.
@@ -189,10 +189,10 @@ var defs = [numKinds]Def{
 	// DEF-3 heavy turrets: damage, AP, no warmup, cooldown, range and
 	// minimum range (the wiki's x.9 floored), burst x gap, accuracy
 	// touch/short/medium/long (the slug turret's odd curve as published).
-	// The turrets fire at once (no projectile), like the sentry gun.
+	// CBT-3: their shots fly as projectiles at the wiki's speeds.
 	// wiki: Autocannon turret, Uranium slug turret
-	Autocannon: turretGun("autocannon", 27, 400, 210, 32, 8, 3, 17, 280, 720, 660, 500),
-	SlugTurret: turretGun("slug turret", 55, 820, 240, 45, 11, 1, 0, 220, 330, 440, 950),
+	Autocannon: turretGun("autocannon", 27, 400, 210, 32, 8, 3, 17, 280, 720, 660, 500, 88),
+	SlugTurret: turretGun("slug turret", 55, 820, 240, 45, 11, 1, 0, 220, 330, 440, 950, 120),
 
 	// DEF-3 mortar: range 500 (wider than any map), minimum range 29.9,
 	// warmup 240, cooldown 1680, shells at 41 cells/s, forced-miss radius
@@ -213,14 +213,44 @@ var defs = [numKinds]Def{
 	MechBlades:   {Name: "edge blades", Range: 1, Damage: 20, Cooldown: 120, Accuracy: 85, Burst: 1, ArmorPen: 300, DamageType: damage.Sharp},
 	PulseLance:   ranged("pulse lance", 30, 450, 102, 162, 32, 1, 0, 650, 850, 850, 750, 70),
 	NeedleCaster: ranged("needle caster", 15, 350, 150, 126, 44, 1, 0, 600, 800, 900, 850, 70),
+
+	// CBT-3 carried gear. The launchers fire rockets (50 cells/s, 50 bomb
+	// at 10 % AP; the doomsday's blast r 7.8 and miss 1.9, the triple's
+	// r 3.9 and miss 2.9 in a burst of 3, 20 ticks apart) and are used up
+	// by one trigger pull (SingleUse); the doomsday's three secondary 10
+	// flame blasts are left out. The smoke launcher lobs a smoke shell
+	// (r 2.4). The charge weapons are banded guns. wiki: Doomsday rocket
+	// launcher, Triple rocket launcher, Smoke launcher, Charge rifle,
+	// Charge lance, Ikwa
+	RocketLauncher:       launcher("rocket launcher", 7800, 1900, 1, 0),
+	TripleRocketLauncher: launcher("triple rocket launcher", 3900, 2900, 3, 20),
+	SmokeLauncher:        explosive("smoke launcher", explosion.Smoke, 2400, 0, 0, 210, 210, 23, 40),
+	ChargeRifle:          ranged("charge rifle", 16, 350, 60, 120, 27, 3, 12, 550, 640, 550, 450, 70),
+	ChargeLance:          ranged("charge lance", 30, 450, 102, 162, 32, 1, 0, 650, 850, 850, 750, 120),
+	// The ikwa's main attack is its head (15 stab, 22 %, 2 s; ikwaTools).
+	Ikwa: {Name: "ikwa", Range: 1, Damage: 15, Cooldown: 120, Accuracy: 85, Burst: 1, ArmorPen: 220, DamageType: damage.Sharp},
 }
 
-// turretGun is a heavy turret's gun: name, damage, armor penetration
+// launcher is a rocket launcher: its blast radius and forced-miss radius
+// (thousandths of a tile), rockets per trigger pull and the ticks between
+// them. wiki: Doomsday rocket launcher, Triple rocket launcher
+func launcher(name string, radius, miss, burst, gap int) Def {
+	d := explosive(name, explosion.Bomb, radius, 50, 100, 270, 270, 36, 50)
+	d.ForcedMiss, d.Burst, d.BurstTicks = miss, burst, gap
+	return d
+}
+
+// SingleUse reports a weapon used up by one trigger pull (its whole
+// burst): the rocket launchers. wiki: Doomsday rocket launcher
+func SingleUse(k Kind) bool { return k == RocketLauncher || k == TripleRocketLauncher }
+
+// turretGun is a turret's gun: name, damage, armor penetration
 // (permille), cooldown, range and minimum range (tiles), burst shots and
-// the ticks between them, accuracy at touch/short/medium/long (permille).
-func turretGun(name string, dmg, pen, cooldown, rng, minRng, burst, gap, t, sh, m, l int) Def {
+// the ticks between them, accuracy at touch/short/medium/long (permille)
+// and projectile speed (cells per second).
+func turretGun(name string, dmg, pen, cooldown, rng, minRng, burst, gap, t, sh, m, l, cps int) Def {
 	return Def{Name: name, Ranged: true, Range: rng, MinRange: minRng, Damage: dmg, ArmorPen: pen, Cooldown: cooldown,
-		Burst: burst, BurstTicks: gap, DamageType: damage.Sharp, Bands: attack.DefaultBands(t, sh, m, l)}
+		Burst: burst, BurstTicks: gap, DamageType: damage.Sharp, Bands: attack.DefaultBands(t, sh, m, l), Speed: cps * 1000 / 60}
 }
 
 // The mortar's numbers. wiki: Mortar
@@ -432,6 +462,10 @@ type View struct {
 	Melee            bool
 	Blast            string
 	BlastRadius      int
+	// MinRange is the nearest a target may be (tiles; 0: none) and
+	// SingleUse a weapon one trigger pull uses up (CBT-3).
+	MinRange  int
+	SingleUse bool
 }
 
 // Stats is weapon k's View.
@@ -439,7 +473,7 @@ func Stats(k Kind) View {
 	d := DefOf(k)
 	v := View{Name: d.Name, Damage: d.Damage, ArmorPen: Penetration(d, d.Damage), Warmup: d.Warmup, Cooldown: d.Cooldown,
 		Burst: attack.Burst{Shots: d.Burst}.Count(), Range: d.Range, Melee: !d.Ranged,
-		Blast: d.Blast.Kind.String(), BlastRadius: d.Blast.Radius / 100}
+		Blast: d.Blast.Kind.String(), BlastRadius: d.Blast.Radius / 100, MinRange: d.MinRange, SingleUse: SingleUse(k)}
 	if d.Ranged && !d.Explosive() {
 		for i, dist := range [4]int{3, 12, 25, 40} {
 			v.Accuracy[i] = HitPermille(d, dist)

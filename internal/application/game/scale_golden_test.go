@@ -128,12 +128,18 @@ import (
 // weather and cover-angle accuracy, auto-undraft and auto-engage. The two
 // 48x40 runs with no fighting keep their pins. Same-seed runs identical
 // (-count=2).
+// Re-pinned (wave 3: CBT-3, CBT-4, CBT-5): equipped weapons keep quality
+// and stuff, raiders spawn with armor kits, turret shots fly as
+// projectiles, raiders seek cover and target by threat, colonists follow
+// their threat response, explosions damage items and cook off stores.
+// 48x40/seed1, 48x40/seed7 and 120x120/seed42 keep their pins. Same-seed
+// runs identical (-count=2).
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0x565388fe1fac7806,
 	"48x40/seed7":    0x4758f9494ebbbcd7,
-	"48x40/seed42":   0x5216138085762bc7,
-	"120x120/seed1":  0x16755bc956dfc82b,
-	"120x120/seed7":  0xbbebda14c6b18662,
+	"48x40/seed42":   0x5afdda0e3dce5980,
+	"120x120/seed1":  0x59ead2da55cbcf86,
+	"120x120/seed7":  0x1d2a43ff36287990,
 	"120x120/seed42": 0xb082e6fd5312f5f8,
 }
 

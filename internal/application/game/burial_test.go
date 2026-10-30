@@ -654,7 +654,7 @@ func TestEpitaphNamesTheCause(t *testing.T) {
 		health.CauseOverdose: " of an overdose", health.CauseHeartAttack: " of a heart attack", health.CauseCarcinoma: " of a carcinoma", health.CauseNone: "",
 	}
 	for c, want := range cases {
-		if got := causePhrase(c.String()); got != want {
+		if got := health.CausePhrase(c.String()); got != want {
 			t.Errorf("%v: %q, want %q", c, got, want)
 		}
 	}

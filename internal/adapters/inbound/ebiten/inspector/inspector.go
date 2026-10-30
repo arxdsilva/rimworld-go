@@ -234,7 +234,7 @@ func drawGear(screen *ebiten.Image, p game.PawnView, in gfx.Rect, temp func(tent
 		return float32(fy+off+float64(gfx.LineStep(st))) <= in.Bottom()
 	}
 	gfx.Text(screen, "Weapon", fx, fy, head)
-	gfx.Text(screen, gfx.Ellipsize(p.Weapon, gfx.Small, float64(in.W)-12), fx+12, fy+float64(g.WeaponVal), gfx.Small)
+	gfx.Text(screen, gfx.Ellipsize(WeaponTitle(p), gfx.Small, float64(in.W)-12), fx+12, fy+float64(g.WeaponVal), gfx.Small)
 	gfx.Text(screen, "Wearing", fx, fy+float64(g.Wearing), head)
 	ly := fy + float64(g.Clothes)
 	for _, row := range rows {
@@ -249,23 +249,6 @@ func drawGear(screen *ebiten.Image, p game.PawnView, in gfx.Rect, temp func(tent
 	}
 	if fits(float64(g.Hint), gfx.Small) {
 		gfx.Text(screen, gfx.Ellipsize("Weapons and clothes lying nearby: the Equip command.", gfx.Small, float64(in.W)), fx, fy+float64(g.Hint), gfx.WithColor(gfx.Small, uikit.TextDim))
-	}
-}
-
-// drawGearTab is the Gear tab's body, drawn into r, the expanded panel's
-// inner rectangle.
-func (a Pawn) drawGearTab(screen *ebiten.Image, id entity.EntityID, r gfx.Rect) {
-	if p, ok := a.pawnView(id); ok {
-		drawGear(screen, p, r, a.shell.Temp)
-		lines := GearStatLines(p)
-		y := float64(r.Y) + float64(GearLayoutFor(len(GearRows(p))-1).Hint) + float64(gfx.LineStep(gfx.Small)) + 6
-		for _, l := range lines {
-			if float32(y)+gfx.LineStep(gfx.Small) > r.Bottom() {
-				break
-			}
-			gfx.Text(screen, gfx.Ellipsize(l, gfx.Small, float64(r.W)), float64(r.X), y, gfx.Small)
-			y += float64(gfx.LineStep(gfx.Small))
-		}
 	}
 }
 

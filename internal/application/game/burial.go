@@ -501,33 +501,5 @@ func (g *Game) fillGraveView(bv *BuildingView, id entity.EntityID, b constructio
 }
 
 func epitaph(r graveRec) string {
-	return fmt.Sprintf("%s. Died day %d%s; laid to rest day %d.", r.Name, r.DiedDay, causePhrase(r.Cause), r.BuriedDay)
-}
-
-func causePhrase(cause string) string {
-	switch cause {
-	case health.CauseInjury.String():
-		return " of wounds"
-	case health.CauseHypothermia.String():
-		return " of the cold"
-	case health.CauseHeatstroke.String():
-		return " of heatstroke"
-	case health.CauseInfection.String():
-		return " of infection"
-	case health.CauseNoFood.String():
-		return " of hunger"
-	case health.CauseBloodLoss.String():
-		return " of blood loss"
-	case health.CauseOrganFailure.String():
-		return " of organ failure"
-	case health.CauseDisease.String():
-		return " of disease"
-	case health.CauseOverdose.String():
-		return " of an overdose"
-	case health.CauseHeartAttack.String():
-		return " of a heart attack"
-	case health.CauseCarcinoma.String():
-		return " of a carcinoma"
-	}
-	return ""
+	return fmt.Sprintf("%s. Died day %d%s; laid to rest day %d.", r.Name, r.DiedDay, health.CausePhrase(r.Cause), r.BuriedDay)
 }

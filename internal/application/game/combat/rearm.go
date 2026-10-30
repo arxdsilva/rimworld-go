@@ -44,20 +44,24 @@ const (
 	rearmReach = 60
 )
 
-// BarrelSteel is the steel a new barrel costs for building kind k: the
-// wiki's 80 (mini-turret), 180 (autocannon) and 60 uranium (slug turret;
-// uranium is not an item yet, steel stands in) scaled by 9 as
-// construction costs are; the mortar's reinforced barrel is not an item
-// either (original: the mini-turret's). wiki: Mini-turret, Autocannon
-// turret, Uranium slug turret
-func BarrelSteel(k construction.Kind) int {
+// BarrelCost is what a new barrel costs for building kind k: the wiki's
+// 80 steel (mini-turret), 180 steel (autocannon) and 60 uranium (slug
+// turret), scaled by 9 as construction costs are; the mortar takes one
+// reinforced barrel (original count). Neither uranium nor reinforced
+// barrels have a source in the colony yet (no ore, recipe or trader), so
+// a rearm falls back on the mini-turret's steel when none is in stock
+// (barrel: original stand-in). wiki: Mini-turret, Autocannon turret,
+// Uranium slug turret
+func BarrelCost(k construction.Kind) (item.Kind, int) {
 	switch k {
 	case construction.Autocannon:
-		return 20
+		return item.Steel, 20
 	case construction.UraniumSlugTurret:
-		return 7
+		return item.Uranium, 7
+	case construction.Mortar:
+		return item.ReinforcedBarrel, 1
 	}
-	return 9
+	return item.Steel, 9
 }
 
 // shellOrder is the order shells are fetched in.
@@ -85,7 +89,7 @@ func (r *Rearms) scan(now uint64) {
 	for _, id := range r.turrets.list() {
 		b, ok := r.h.Building(id)
 		if ok && r.turrets.Barrel(id, b.Kind) <= 250 && !r.busy(id) {
-			r.start(id, b, item.Steel, BarrelSteel(b.Kind))
+			r.barrel(id, b)
 		}
 	}
 	for _, id := range r.mortars.list(now) {
@@ -95,7 +99,7 @@ func (r *Rearms) scan(now uint64) {
 		}
 		switch barrel, room := r.mortars.wants(id); {
 		case barrel:
-			r.start(id, b, item.Steel, BarrelSteel(b.Kind))
+			r.barrel(id, b)
 		case room > 0:
 			for _, k := range shellOrder {
 				if r.start(id, b, k, room) {
@@ -104,6 +108,19 @@ func (r *Rearms) scan(now uint64) {
 			}
 		}
 	}
+}
+
+// barrel starts a haul of building id's barrel material, else of steel
+// (BarrelCost: no source of the wiki's material yet).
+func (r *Rearms) barrel(id entity.EntityID, b construction.Building) {
+	k, n := BarrelCost(b.Kind)
+	if k != item.Steel && r.start(id, b, k, n) {
+		return
+	}
+	if k != item.Steel {
+		_, n = BarrelCost(construction.SentryTurret)
+	}
+	r.start(id, b, item.Steel, n)
 }
 
 // start sends the nearest free colonist to fetch qty of k (a barrel's
@@ -241,7 +258,7 @@ func (r *Rearms) apply(a Rearm, n int) {
 	switch {
 	case isTurret(b.Kind):
 		r.turrets.Rearm(a.Building)
-	case a.Kind == item.Steel:
+	case !a.Kind.IsShell(): // its barrel
 		r.mortars.rearm(a.Building)
 	default:
 		r.mortars.load(a.Building, a.Kind, n)

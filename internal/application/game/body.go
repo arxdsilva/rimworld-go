@@ -632,7 +632,9 @@ func conditionTip(c body.Condition, d body.CondDef, cv ConditionView, tended boo
 
 // hits lands combat hits (game/hit, CBT-1) on g: a stateless value over
 // the adapters below (the stagger timer is the motion record's).
-func hits(g *Game) hit.Wounds { return hit.Wounds{B: hitBodies{g}, W: hitWardrobe{g}, H: hitHarm{g}} }
+func hits(g *Game) hit.Wounds {
+	return hit.Wounds{B: hitBodies{g}, W: hitWardrobe{g}, H: hitHarm{g}, S: g.combat.Gear}
+}
 
 // staggered reports id slowed by a stagger now (the read model).
 func staggered(g *Game, id entity.EntityID) bool {

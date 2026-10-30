@@ -24,6 +24,8 @@ type TraceView struct {
 	Attacker, Target entity.EntityID
 	Weapon           string
 	Stage            projectile.Stage // DEF-1: Whole (melee, turret), or a shot's Fired and Landed
+	// Dodged (CBT-3): a melee blow the defender dodged (Hit false).
+	Dodged bool
 }
 
 // TraceViews is the traces younger than projectile.Lifetime at now, oldest
@@ -36,7 +38,7 @@ func TraceViews(traces []projectile.Trace, now uint64) []TraceView {
 		}
 		out = append(out, TraceView{FromX: t.FromX, FromY: t.FromY, ToX: t.ToX, ToY: t.ToY,
 			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee, Damage: t.Damage, Building: t.Building,
-			FromBuilding: t.FromBuilding, Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon, Stage: t.Stage})
+			FromBuilding: t.FromBuilding, Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon, Stage: t.Stage, Dodged: t.Dodged})
 	}
 	return out
 }

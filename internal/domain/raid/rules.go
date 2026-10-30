@@ -126,13 +126,11 @@ const (
 
 // Staging (StageThenAssault). wiki: Raid, the raiders stand around in a
 // small group near where they came in and attack when they see a colonist
-// nearby or a time limit passes ("usually less than one day"). The limit
-// and the gathering radii are original tuning.
+// nearby or their assault timer of 10 to 15 hours runs out (CBT-4). The
+// wander radius and the spot are original tuning.
 const (
-	StageMinHours   = 3  // the group waits at least this long when gathered
-	StageLimitMin   = 6  // the time limit, hours: 6..14
-	StageLimitRolls = 9  // hours added at random
-	StageGather     = 4  // within this many tiles of the spot counts as gathered
+	StageLimitMin   = 10 // the assault timer, hours: 10..15 (wiki)
+	StageLimitRolls = 6  // hours added at random
 	StageWander     = 7  // a raider further than this walks back to the spot
 	StageSpotIn     = 10 // the spot lies this many tiles in from the edge
 )

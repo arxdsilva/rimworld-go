@@ -6,8 +6,8 @@ import (
 
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/combat/weapon"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
@@ -226,7 +226,7 @@ func (g *Game) aidArrive(c *aidCall, now uint64) bool {
 		used = append(used, [2]int{x, y})
 		id := g.spawnVisitor(ref, f, x, y, now)
 		g.markAlly(id, now+allyStay)
-		g.equip[id] = allyWeapon(faction.DefOf(f.Type).Tech, k)
+		g.equip[id] = kit.Ally(faction.DefOf(f.Type).Tech, k) // domain combat/kit
 		ids = append(ids, id)
 	}
 	if len(ids) == 0 {
@@ -237,21 +237,6 @@ func (g *Game) aidArrive(c *aidCall, now uint64) bool {
 	g.letter(letterGood, "Military aid", fmt.Sprintf("%d fighters of %s have come to help defend the colony. They will fight any raiders and hostile animals, and go home once all is quiet, within a day.",
 		len(ids), f.Name), ids[0])
 	return true
-}
-
-// allyWeapon is the k-th fighter's weapon: neolithic peoples bring spears
-// and clubs, the others rifles with one knife among every three.
-func allyWeapon(tech faction.Tech, k int) item.Kind {
-	if tech == faction.Neolithic {
-		if k%2 == 0 {
-			return item.Spear
-		}
-		return item.Club
-	}
-	if k%3 == 2 {
-		return item.Knife
-	}
-	return item.Rifle
 }
 
 // markAlly makes visitor id an ally leaving at leaveAt.

@@ -863,7 +863,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   food binge.
     -   drug binge where available.
     -   hide-in-room style isolation.
--   [-] **Destructive/aggressive breaks** (SIM-066: insulting spree, targeted insulting spree, berserk, murderous rage; colonists may arrest or, drafted, attack a berserker. Missing: tantrum/object destruction, escape)
+-   [-] **Destructive/aggressive breaks** (SIM-066: insulting spree, targeted insulting spree, berserk, murderous rage; colonists may arrest or, drafted, attack a berserker. CBT-4: tantrum, Major tier, 8000-12000 ticks, smashes nearby objects; escape is 19.4)
     -   Insulting spree.
     -   tantrum/object destruction.
     -   berserk/aggression.
@@ -1317,7 +1317,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.1 Equipment
 
--   [-] **Single equipped primary weapon** (CBT-2: `DropWeapon` drops or stows into a spare slot, `domain/pawn/inventory`; missing: a wielded weapon still loses its quality and stuff on equip, fixed in CBT-3)
+-   [x] **Single equipped primary weapon** (CBT-2: `DropWeapon` drops or stows into a spare slot, `domain/pawn/inventory`; CBT-3: `combat.Gear` keeps quality, stuff and wear, saved in the Turrets block, drops and spares keep the make, old saves load as Normal steel)
     -   Equip/drop.
     -   weapon stats.
     -   melee fallback for ranged weapons.
@@ -1361,7 +1361,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Thrown/explosive weapons** (DEF-2: frag, molotov and EMP grenades with blast radius, raiders only; colonist throw order is DEF-4)
     -   Grenade-like projectile.
     -   blast radius.
--   [ ] **Single-use launchers**
+-   [x] **Single-use launchers** (CBT-3: rocket launcher and triple rocket launcher are consumed by one trigger pull; wiki numbers)
     -   Consumable weapon/equipment class if desired for vanilla parity.
 -   [ ] **No ammunition for ordinary guns**
     -   Base RimWorld's standard ranged weapons do not require ammo;
@@ -1442,16 +1442,22 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Blast cells** (DEF-2: domain/combat/explosion, line of sight from centre)
 -   [x] **Radial damage** (DEF-2: full at centre to half at rim (original tuning))
--   [x] **Fire chance** (DEF-2: flame blasts ignite the centre)
--   [-] **Building/item/pawn damage** (DEF-2: pawns and buildings (bomb x2); items not damaged)
--   [-] **Chain reaction support for explosive content** (DEF-4: a blast lights the IEDs in its radius, a bullet landing on one sets it off; stored shells and grenades do not cook off yet)
+-   [x] **Fire chance** (CBT-5: flame ignites every cell in the radius by flammability, a creature's cell 70 % (original), the centre always)
+-   [x] **Building/item/pawn damage** (CBT-5: bomb x2 passable buildings, x4 impassable and plants, x8 walls (wiki); bombs wear weapons and apparel and destroy them at 0 HP; burnable raw stacks destroyed by a hit of 50 or more, stone and metal immune (original thresholds); explosions do not yet count toward kill and damage records)
+-   [x] **Chain reaction support for explosive content** (DEF-4: a blast lights the IEDs in its radius, a bullet landing on one sets it off; CBT-5: shells and grenades in a bomb or flame blast or lying in fire go off 30 ticks later via the IED fuse queue, `Fuse.Stack` saved, at most 8 a tick, each stack once (original tuning))
 
 ## 17.8 Combat AI
 
--   [-] **Hostile target selection** (DEF-4: raiders take a colonist or ally, a powered turret in sight (also when no colonist is reachable), a rival faction's raider closer, then the walls and doors in the way; no threat weighting yet)
+-   [x] **Hostile target selection** (CBT-4: threat-weighted choice; DEF-4: raiders take a colonist or ally, a powered turret in sight (also when no colonist is reachable), a rival faction's raider closer, then the walls and doors in the way; no threat weighting yet)
 -   [x] **Approach/ranged engagement**
 -   [x] **Melee closing**
--   [ ] **Basic cover seeking**
+-   [x] **Basic cover seeking** (CBT-4: raiders and threat-responding colonists take cover and hold their spot, with hysteresis)
+-   [x] **Undrafted threat response** (CBT-4: Flee, Attack or Ignore per colonist, `SetThreatResponse`, `PawnView.ThreatResponse`)
+-   [x] **Grenade avoidance** (CBT-4: raiders step out of a thrown grenade's blast)
+-   [x] **Mechanoid doors and pods** (CBT-4: mechs bash walls, shut doors, arrive by drop pod and never retreat (wiki); EMP adaptation shared with turrets; mech voices are blocked on the creature skill's four-sound rule)
+-   [x] **Shield belt** (CBT-3: `game/hit` absorbs before armor; wiki energy, recharge and 3200-tick break; EMP breaks it; the wearer cannot shoot or throw)
+-   [x] **Smokepop pack** (CBT-3: 3 uses, `PopSmokepop`; raiders pop it when shot)
+-   [-] **Weapon catalogue extras** (CBT-3: smoke launcher, charge rifle, charge lance, ikwa with wiki numbers; missing: uranium for slug turrets and reinforced barrels for mortars have no source, so steel stands in)
 -   [x] **Flee behavior for appropriate human enemies** (raiders flee at half HP, once the group has lost its rolled 40-70 % (wiki), an idle hour or a day on the map; a staged or besieging raid's day starts at its storm)
 
 ------------------------------------------------------------------------
@@ -1581,7 +1587,7 @@ children systems.
 
 ## 19.4 Prison breaks
 
--   [ ] **Escape attempt**
+-   [x] **Escape attempt** (CBT-4: rooms join per the wiki rule; timing original: 60-day mean time between breaks, 3-day grace, 10-day calm; escaped prisoners fight their way out)
     -   Prisoner(s) can attempt to break out based on conditions.
 
 ## 19.5 Other recruitment
@@ -1896,13 +1902,14 @@ Use original names rather than copying RimWorld storyteller characters.
 
 -   [x] **Select hostile faction** (NG-1: a hostile human faction weighted by settlement count; none means no raid)
 -   [x] **Generate raider group from point budget** (wealth/40 + 30 per standing colonist + 2 per day; clubs 60, rifles 90; up to 8)
--   [-] **Generate equipment based on faction/tech** (NG-1: neolithic factions field clubs only, industrial ones rifles)
+-   [x] **Generate equipment based on faction/tech** (NG-1: neolithic factions field clubs only, industrial ones rifles; CBT-3: armor kits in `domain/combat/kit` by tech and weapon cost, wiki pawn kinds)
 -   [x] **Map-edge arrival** (raids walk in from a map edge)
 -   [x] **Immediate attack** (the assault plan)
 -   [x] **Prepare-before-attack behavior** (DEF-4 staged raids: gather 10 tiles in from the edge, storm on a colonist in sight, when gathered after 3 h, or at a 6-14 h limit; `raid/stage.go`)
 
 ## 24.3 Raid tactics
 
+-   [x] **Raid leftovers** (CBT-4: crop burning, siege resupply, a staged assault timer of 10-15 h in `domain/raid`)
 -   [x] **Basic assault** (assault plan: target the nearest colonist, ally or powered turret; breach when shut out)
 -   [x] **Sappers/breachers equivalent** (against an enclosed colony from day 10: tunnel through walls, doors and rock, step around traps)
     -   Attack walls/alternate route instead of blindly using normal
@@ -1921,7 +1928,7 @@ Use original names rather than copying RimWorld storyteller characters.
 -   [x] **Kidnap behavior** (raiders carry off downed colonists unless guarded; `kidnap.go`)
     -   Raiders can carry downed colonists away under suitable
         circumstances.
--   [-] **Steal behavior** (DEF-4 Steal raids: take the nearest stack worth 50+ silver and run, dropping it where they fall; raiders of other strategies do not steal on retreat yet)
+-   [x] **Steal behavior** (DEF-4 Steal raids: take the nearest stack worth 50+ silver and run, dropping it where they fall; CBT-4: other raiders grab loot on retreat)
     -   Raiders may steal valuable reachable items when
         retreating/meeting goals.
 
@@ -1941,12 +1948,12 @@ Use original names rather than copying RimWorld storyteller characters.
 ## 24.6 Insects
 
 -   [x] **Insect species** (SIM-019: hive beetle, hive brute, hive crawler; original designs)
--   [ ] **Hive**
+-   [x] **Hive** (CBT-4: construction `HiveMound`, wiki 130 HP, cap 30, spreads within 10 tiles, -17 C; breed and spread rates original)
     -   Spawns/maintains insect population.
--   [-] **Infestation incident** (SIM-019: hive swarm bursts from the rock nearest the colony from day 12; no hives or dark/warm rules)
+-   [-] **Infestation incident** (SIM-019: hive swarm bursts from the rock nearest the colony from day 12; hive mounds exist since CBT-4; the dark/warm placement rule is not verified)
     -   Can emerge in valid under-mountain/dark/warm areas according to
         independently implemented rules.
--   [ ] **Hive reproduction**
+-   [x] **Hive reproduction** (CBT-4: hive mounds breed and spread at original rates)
 -   [x] **Insect hostile AI** (SIM-019: hostile from spawn, never flee, never tameable)
 
 ## 24.7 Manhunter threat

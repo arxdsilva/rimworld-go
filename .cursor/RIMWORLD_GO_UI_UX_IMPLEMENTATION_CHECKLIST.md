@@ -769,6 +769,7 @@ understandable.
 
 -   [x] **Drop** (CBT-2/STO-3: `cmd.pawn.dropweapon`; drops or stows the weapon in the spare slot; `PawnView.Spare` is not exposed yet)
 -   [x] **Equip**
+-   [x] **Gear tab combat additions** (CBT-3/CBT-5: weapon quality and stuff, spare weapon, kills and damage, shield charge bar, smokepop Use button, threat response control)
 -   [x] **Staggered status** (CBT-1: `Staggered` on `PawnView` and `AnimalView`; Health tab names stab and gunshot wounds)
 -   [ ] **Wear**
 -   [ ] **Consume/use where valid**
@@ -777,7 +778,7 @@ understandable.
 ## 12.3 Combat-stat tooltips
 
 -   [x] **Weapon accuracy/range/warmup/cooldown** (DEF-2: gear tab WeaponStats lines)
--   [ ] **Melee damage/cooldown**
+-   [x] **Melee damage/cooldown** (CBT-5: gear tab tooltip for melee and ranged damage and cooldown; gun-stock blows carry the gun's name)
 -   [x] **Armor by damage category** (DEF-2: gear tab ApparelArmor lines (sharp, blunt, heat))
 -   [ ] **Temperature insulation**
 -   [ ] **Movement/work penalties from gear**
@@ -812,7 +813,9 @@ understandable.
 
 -   [x] **Weapon range overlay** (DEF-1: the selected drafted colonist's weapon range ring)
 -   [x] **Line-of-sight line** (DEF-1: white when clear, red when blocked)
--   [ ] **Target highlight**
+-   [x] **Target highlight** (CBT-5: ring on the hovered enemy or the last one shot)
+-   [x] **Minimum range ring** (CBT-5: from `WeaponStats.MinRange`)
+-   [x] **Natural cover overlay** (CBT-5: rock, grown trees, bushes, cacti and chunks, direction-aware with a hovered hostile, `AngleFactor` x `RangeFactor`)
 -   [x] **Cover visualization** (DEF-1: Shift+O overlay of building cover near the selection; DEF-3: values from `cover.OfBuilding`, percent)
 -   [x] **Hit-chance tooltip** (DEF-1: chance with each factor, from `Game.HitChance`)
     -   Break down shooter, weapon, range, cover, weather/light and
@@ -821,6 +824,9 @@ understandable.
 
 ## 13.4 Combat feedback
 
+-   [x] **Dodge floaters** (CBT-5: "dodged" from `TraceView.Dodged`)
+-   [x] **Blast effects** (CBT-5: fire 50 ticks, EMP 30, smoke 1200 fading over the last third, from `WorldView.Smoke` and blast events)
+-   [x] **Shield bubble** (CBT-5: drawn while `ShieldPct` > 0)
 -   [x] **Damage indicators** (floating -N over hit pawns, animals and buildings; "miss" for missed shots)
 -   [x] **Projectile/impact feedback**
 -   [x] **Downed/death feedback**
@@ -836,6 +842,7 @@ understandable.
 
 -   [x] **Power/operational state** (PLAY-021: the building pane says Uses/Produces N W, the grid balance and stored energy, a switch Closed/Open, a thermostat target and whether it works now, flick pending; the Power toggle (V))
 -   [-] **Interaction status** (work spot outlined on selection)
+-   [x] **Door forbid** (CBT-5: the door pane Forbid/Allow toggle, `bldg.forbid`)
 -   [x] **Door, turret and mortar controls** (DEF-3 U4: `inspector/cmds_defence.go`: door Hold open, turret Hold fire, mortar Set target and Clear target; barrel, shells and target lines; mortar aim mode in `orders/mortar_aim.go`: next map click sends SetMortarTarget with the single selected colonist, right-click or Esc cancels, aim marker drawn)
 -   [x] **Facility link and work speed** (PRD-3: the bench pane lists linked facilities (`BuildingView.Linked`) and the work speed with its causes (`WorkSpeed`), set from bench factor, tool cabinets, light, roof and cleanliness)
 -   [x] **Current worker/progress** (PRD-1: [name progress%], gathering, or the no-worker reason)
@@ -1315,7 +1322,7 @@ the player what just happened and what requires attention.
 
 ## 24.3 Pawn records
 
--   [-] **Combat records** (wave E U5: the colony-wide combat log on the History Combat tab; no per-pawn kill or damage records)
+-   [-] **Combat records** (wave E U5: the colony-wide combat log; CBT-5: History window Records tab with kills and damage per colonist; missing: explosions do not count toward records)
 -   [ ] **Kills**
 -   [ ] **Damage dealt/taken**
 -   [ ] **Work/production records**

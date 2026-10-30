@@ -35,6 +35,8 @@ const (
 type Track struct {
 	Target entity.EntityID
 	Next   uint64
+	// X, Y (CBT-4, absent in older saves) is a tantrum's target's tile.
+	X, Y int
 }
 
 // Save is mind's saved state: the tracks of breaks in progress, and the

@@ -39,15 +39,12 @@ func (s *Strikes) melee(attacker entity.EntityID, wk weapon.Kind, d weapon.Def, 
 func (s *Strikes) blow(attacker, target entity.EntityID, wk, hk weapon.Kind, d weapon.Def, ax, ay, tx, ty int, roll func(int) int) weapon.Def {
 	h := s.h
 	t := s.tool(attacker, wk, hk, d, roll)
-	m := t.Melee(d)
-	if d.Ranged {
-		m.Name = t.Name // a gun's stock is no gunshot (the trace's sound)
-	}
+	m := t.Melee(d) // a gun's stock keeps the gun's name: the trace is melee (its sound)
 	r := s.report(attacker, ax, ay, target, tx, ty, m, false)
-	hit := roll(1000) < r.Total()
+	hit, dodged := roll(1000) < r.Total(), false
 	if hit {
 		if c := attack.DodgeChanceOf(h.Melee(target)); c > 0 && roll(1000) < c {
-			hit = false // dodged
+			hit, dodged = false, true
 		}
 	}
 	s.learn(attacker, m, hit)
@@ -55,7 +52,7 @@ func (s *Strikes) blow(attacker, target entity.EntityID, wk, hk weapon.Kind, d w
 	if hit {
 		dh = t.Hit(d.Name, attack.MeleeDamage(t.Damage, roll))
 	}
-	s.land(attacker, target, ax, ay, tx, ty, wk, m, dh, hit, roll)
+	s.land(attacker, target, ax, ay, tx, ty, wk, m, dh, hit, dodged, roll)
 	return m
 }
 
@@ -69,7 +66,7 @@ func (s *Strikes) tool(attacker entity.EntityID, wk, hk weapon.Kind, d weapon.De
 		return weapon.Pick(ts[:n], roll)
 	}
 	if ts := weapon.ToolsOf(wk); len(ts) > 0 {
-		return weapon.Pick(ts, roll)
+		return s.gear.Make(attacker).Tool(weapon.Pick(ts, roll)) // CBT-3: by its stuff and quality
 	}
 	return weapon.Tool{Name: d.Name, Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Cooldown: d.Cooldown,
 		Form: weapon.HitOf(hk, d).Form, Chance: 1000}

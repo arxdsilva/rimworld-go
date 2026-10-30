@@ -42,3 +42,48 @@ func (a Pawn) combatCommands(p game.PawnView) []Button {
 	}
 	return out
 }
+
+// Button ids of the CBT-5 gear and stance controls (journeys press them).
+const (
+	SmokepopID = "cmd.pawn.smokepop"
+	ThreatID   = "cmd.pawn.threat"
+)
+
+// threatResponses are PawnView.ThreatResponse's values in command order
+// (SetThreatResponse X: 0 default, 1 flee, 2 attack, 3 ignore) with what
+// each does.
+var threatResponses = [...]struct{ name, tip string }{
+	{"default", "Fight when armed and flee when not, by the colonist's own judgement."},
+	{"flee", "Run from threats."},
+	{"attack", "Move to attack threats, armed or not."},
+	{"ignore", "Carry on with work and ignore threats."},
+}
+
+// threatCommand is the colonist's Threat response button: each click moves
+// to the next response (default, flee, attack, ignore). Colonists only.
+func threatCommand(p game.PawnView) []Button {
+	if p.Hostile || p.Prisoner || p.Visitor || p.Status != "alive" {
+		return nil
+	}
+	cur := 0
+	for i, r := range threatResponses {
+		if r.name == p.ThreatResponse {
+			cur = i
+		}
+	}
+	next := (cur + 1) % len(threatResponses)
+	return []Button{{ID: ThreatID, Label: "Threat: " + threatResponses[cur].name, Icon: "order_attack",
+		Desc: "Threat response: " + threatResponses[cur].tip + "\nClick for " + threatResponses[next].name + ": " + threatResponses[next].tip,
+		Cmds: []command.Command{{Kind: command.SetThreatResponse, Pawn: uint64(p.ID), X: next}}}}
+}
+
+// smokepopCommand is Use smokepop, for a colonist wearing a pack: the
+// colonist sets it off where it stands.
+func smokepopCommand(p game.PawnView) []Button {
+	if p.Smokepops <= 0 || p.Hostile || p.Status != "alive" {
+		return nil
+	}
+	return []Button{{ID: SmokepopID, Label: "Use smokepop", Icon: "order_attack",
+		Desc: fmt.Sprintf("Smokepop\nPop a smokepop pack where this colonist stands: the cloud blocks shots (%d left).", p.Smokepops),
+		Cmds: []command.Command{{Kind: command.PopSmokepop, Pawn: uint64(p.ID)}}}}
+}

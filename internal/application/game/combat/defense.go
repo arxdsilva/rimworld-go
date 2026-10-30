@@ -6,26 +6,33 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Defences. Raiders and wild animals cannot open the colony's doors, so a
 // closed-off colony makes raiders bash through the nearest door or wall
-// (Breach). Spike traps spring on raiders and predators, then are re-laid
+// (Breach). Spike traps spring on raiders and wild animals, then are re-laid
 // as blueprints (Traps). Sandbags and wall corners give cover through
 // Sight.Cover; building damage and repair stay on the game.
 
 const (
 	// BreachCooldown is the ticks between blows on a door, wall or rock.
 	BreachCooldown = 60
-	// TrapDamage is the injury a sprung spike trap deals.
-	TrapDamage = 32
-	// trapChance is the percent chance a raider or predator springs a trap
-	// it walks over.
-	trapChance = 75
+	// TrapDamage is a sprung steel spike trap's damage, all its spikes
+	// together, before the ×0.8..1.2 roll; TrapSpikes how many stab hits
+	// it is dealt in (each through armor on its own part). A trap's
+	// material scales it by its sharp damage factor. wiki: Spike trap
+	TrapDamage = 100
+	TrapSpikes = 5
+	// trapWildPct is the percent chance a wild animal that is not
+	// manhunting springs a trap it walks over; raiders and manhunters
+	// always do. wiki: Spike trap
+	trapWildPct = 20
 	// buttDamage is a gun's blow on a door or wall (rifle butt).
 	buttDamage = 7
 	// digMin is a sapper's least blow on rock.
@@ -56,9 +63,12 @@ func isTrap(k construction.Kind) bool { return k == construction.SpikeTrap || is
 // checks it only for a trap victim).
 func (t *Traps) Has() bool { return t.h.AnyBuilt(isTrap) }
 
-// Spring: a raider or predator stepped on (x, y); a spike trap there
-// catches it on a roll of the main stream and is re-laid as a blueprint; a
-// charge lights its fuse (ied.go).
+// Spring: a raider or a wild animal stepped on (x, y); a spike trap there
+// catches a raider or a manhunter always and any other wild animal
+// trapWildPct of the time (main stream), then is re-laid as a blueprint;
+// a charge lights its fuse (ied.go). The spikes deal TrapSpikes stab hits
+// of TrapDamage × the trap's sharp factor × 0.8..1.2 (rolled once)
+// shared out, each with the calculated penetration. wiki: Spike trap
 func (t *Traps) Spring(victim entity.EntityID, x, y int) {
 	h := t.h
 	tid := t.At(x, y)
@@ -69,23 +79,35 @@ func (t *Traps) Spring(victim entity.EntityID, x, y int) {
 		t.light(tid, k, x, y)
 		return
 	}
-	if h.Roll(100) >= trapChance {
-		return
-	}
-	b, _ := h.Building(tid)
 	who := h.Name(victim)
 	if a, ok := h.Animal(victim); ok {
 		who = "a " + a.Species.String()
+		if !a.Enraged(h.Now()) && h.Roll(100) >= trapWildPct {
+			return
+		}
 	}
+	b, _ := h.Building(tid)
+	per := attack.MeleeDamage(TrapDamage*trapSharp(b.Stuff)/1000, h.Roll) / TrapSpikes
 	h.Message(x, y, fmt.Sprintf("A spike trap caught %s.", who))
 	h.Trace(projectile.Trace{FromX: x, FromY: y, ToX: x, ToY: y,
-		Tick: h.Now(), Hit: true, Melee: true, Damage: TrapDamage})
+		Tick: h.Now(), Hit: true, Melee: true, Damage: per * TrapSpikes})
 	h.RemoveBuilding(tid)
 	h.PlaceFrame(construction.SpikeTrap, b.Stuff, construction.South, x, y) // re-lay it
-	h.Trapped(victim, TrapDamage)
-	// CBT-1: the spikes stab, through whatever covers the part they strike
-	spikes := damage.Hit{Weapon: "spike trap", Form: damage.FormStab, Amount: TrapDamage, Pen: TrapDamage * weapon.PenPerDamage}
-	h.HurtHit(victim, h.Absorb(victim, spikes, h.Roll), 0)
+	h.Trapped(victim, per*TrapSpikes)
+	spike := damage.Hit{Weapon: "spike trap", Form: damage.FormStab, Amount: per, Pen: per * weapon.PenPerDamage}
+	for range TrapSpikes { // CBT-1: each spike stabs through whatever covers the part it strikes
+		h.HurtHit(victim, h.Absorb(victim, spike, h.Roll), 0)
+	}
+}
+
+// trapSharp is a spike trap of stuff m's sharp damage factor (permille,
+// steel 1000; 1000 without a material row). wiki: Spike trap (per
+// material)
+func trapSharp(m item.Kind) int {
+	if p, ok := item.StuffOf(m); ok && m != 0 && p.SharpDamage > 0 {
+		return p.SharpDamage
+	}
+	return 1000
 }
 
 // Underfoot springs traps under raiders and predators that just moved
@@ -98,11 +120,9 @@ func (t *Traps) Underfoot(movers []entity.EntityID) {
 	}
 }
 
-// Victim reports animals that spring traps: wild predators and
-// manhunters.
-func (t *Traps) Victim(a animal.State) bool {
-	return !a.Tame && (animal.DefOf(a.Species).Predator || a.Enraged(t.h.Now()))
-}
+// Victim reports animals that may spring traps: every wild one (Spring
+// rolls for those not manhunting). wiki: Spike trap
+func (t *Traps) Victim(a animal.State) bool { return !a.Tame }
 
 // Breach is how raiders shut out of the colony break in.
 type Breach struct {

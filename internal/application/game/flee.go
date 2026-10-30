@@ -3,62 +3,21 @@ package game
 import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Unarmed colonists flee (PLAY-010, decision 6): an undrafted colonist
 // with no weapon, or one who won't fight, runs from any animal coming for
-// it from combat.FleeReach tiles off (FleeRelease once fleeing; the
-// combat package's Guard), ahead of its
-// orders, its work and its sleep. The flight's goal is fleeDist tiles
-// away from the threat, turned by 45° and then 90° when that way is shut,
-// and always one the colonist can actually walk to.
-
-// fleeDist is how far a flight's goal lies from the colonist.
-const fleeDist = 8
+// it from combat.FleeReach tiles off (FleeRelease once fleeing; combat's
+// Guard, which also picks the flight's goal), ahead of its orders, its
+// work and its sleep.
 
 // fightsBack reports a colonist that meets an attacker with a weapon
-// rather than running: armed and able to do violence (skills.go).
+// rather than running: armed, able to do violence (skills.go) and not set
+// to flee or ignore (CBT-4, combat/response.go).
 func (g *Game) fightsBack(id entity.EntityID) bool {
 	_, armed := g.equip[id]
-	return armed && g.canViolence(id)
-}
-
-// fleeGoal picks where colonist id at pos runs from a threat at tp:
-// straight away, then ±45°, then ±90°. A candidate must have a free
-// walkable tile within 3 that the colonist can reach and that is no
-// nearer the threat; of those, the first inside the home area wins, else
-// the first. ok is false when the colonist is cornered.
-func (g *Game) fleeGoal(id entity.EntityID, pos, tp Position) (int, int, bool) {
-	dx, dy := pos.X-tp.X, pos.Y-tp.Y
-	if dx == 0 && dy == 0 {
-		dx = 1
-	}
-	dirs := [...][2]int{
-		{dx, dy},
-		{dx - dy, dx + dy}, {dx + dy, dy - dx}, // ±45°
-		{-dy, dx}, {dy, -dx}, // ±90°
-	}
-	now := weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)
-	w := g.grid.Width()
-	bx, by, found := 0, 0, false
-	for _, d := range dirs {
-		fx, fy := animal.FleeGoal(pos.X, pos.Y, pos.X-d[0], pos.Y-d[1], fleeDist)
-		fx, fy, ok := g.combat.Tiles.WalkableNear(fx, fy, 3)
-		if !ok || fx == pos.X && fy == pos.Y || weapon.Distance(fx, fy, tp.X, tp.Y) < now ||
-			!g.reachable(id, fx, fy) {
-			continue
-		}
-		if g.inHome(fy*w + fx) {
-			return fx, fy, true
-		}
-		if !found {
-			bx, by, found = fx, fy, true
-		}
-	}
-	return bx, by, found
+	return g.combat.Drafts.Fights(id, armed && g.canViolence(id))
 }
 
 // dropForFlight stops colonist id's job j so it can run; a player order

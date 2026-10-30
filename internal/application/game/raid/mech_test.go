@@ -246,7 +246,8 @@ func TestMechTargetFalls(t *testing.T) {
 
 // TestEMPStunsThenAdapts (DEF-4): an EMP stuns the mechanoids it reaches
 // for its stun at their distance; a stunned one neither moves nor shoots;
-// for EMPAdaptTicks after a stun another EMP does nothing (no stun-lock);
+// for EMPAdaptTicks after it recovers another EMP does nothing (no
+// stun-lock; explosion.Adapted);
 // then it stuns again. Out of reach, behind a wall or a blast of another
 // kind: nothing.
 func TestEMPStunsThenAdapts(t *testing.T) {
@@ -279,7 +280,10 @@ func TestEMPStunsThenAdapts(t *testing.T) {
 	if ms.Stunned(id, stun+5) {
 		t.Fatal("an adapted mechanoid shrugs off the EMP")
 	}
-	again := uint64(1 + animal.EMPAdaptTicks)
+	if ms.EMP(10, 10, emp, stun+explosion.EMPAdaptTicks); ms.Stunned(id, stun+explosion.EMPAdaptTicks) {
+		t.Fatal("still adapted until EMPAdaptTicks after recovering")
+	}
+	again := 1 + stun + explosion.EMPAdaptTicks
 	ms.EMP(10, 10, emp, again)
 	if !ms.Stunned(id, again) {
 		t.Fatal("past its adaptation an EMP stuns it again")

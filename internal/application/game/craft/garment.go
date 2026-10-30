@@ -1,6 +1,7 @@
 package craft
 
 import (
+	"rimworld-go/internal/domain/combat/armor"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/quality"
 	"rimworld-go/internal/domain/pawn/exposure"
@@ -23,8 +24,8 @@ type Piece struct {
 }
 
 // Slots is how many slots an Outfit holds, indexed by item.Slot:
-// NoSlot (never a garment), Body, Head, Legs.
-const Slots = 4
+// NoSlot (never a garment), Body, Head, Legs, Belt (CBT-3).
+const Slots = 5
 
 // Outfit is what one pawn wears, by slot, and the slots the player chose
 // ("Wear X"), one bit per slot.
@@ -219,6 +220,19 @@ func (o Outfit) Views() []WornView {
 		st := item.StageOf(hp, mx)
 		out = append(out, WornView{Kind: p.Kind.String(), Stuff: StuffLabel(p.Kind, p.Stuff), Quality: QualityLabel(p.Quality),
 			HP: hp, MaxHP: mx, Tainted: p.Of != 0, Ratty: st == item.Ratty, Tattered: st == item.Tattered})
+	}
+	return out
+}
+
+// Armor is each worn piece's armor by its stuff and quality, in Views'
+// order (zero for a piece that is no armor; PawnView.ApparelArmor, CBT-3).
+func (o Outfit) Armor() []armor.Set {
+	var out []armor.Set
+	for _, p := range o.On {
+		if p.Kind != 0 {
+			l, _ := armor.Piece(p.Kind, p.Stuff, p.Quality)
+			out = append(out, l.Set)
+		}
 	}
 	return out
 }

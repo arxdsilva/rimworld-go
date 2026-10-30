@@ -205,7 +205,8 @@ func (g *Game) applyOne(c command.Command) {
 	case command.SetStockpileFilter, command.SetStockpileSpecial, command.PasteStockpile, command.HaulUrgently, command.LinkStorage,
 		command.UnlinkStorage:
 		g.cmdStockpile(c) // zones.go (PRD-4, STO-2): storage filters, groups, urgent hauls
-	case command.SetFireAtWill, command.SetHoldPosition, command.ThrowGrenade, command.DropWeapon:
+	case command.SetFireAtWill, command.SetHoldPosition, command.ThrowGrenade, command.DropWeapon, command.PopSmokepop,
+		command.SetThreatResponse:
 		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4, CBT-2): drafted control, drop or stow a weapon
 	case command.SetZoneOverlay: // STO-2: a view toggle the UI keeps (nothing simulated)
 	}

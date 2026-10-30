@@ -42,12 +42,15 @@ func iedBlast(k construction.Kind) (weapon.Kind, explosion.Def) {
 }
 
 // Fuse is a lit charge: building ID of kind Kind on (X, Y) bursts at tick
-// At. All fields are exported for the save (gob).
+// At. CBT-5: Stack marks a loose stack of shells or grenades cooking off
+// instead (ID is the stack; Kind unused). All fields are exported for the
+// save (gob).
 type Fuse struct {
-	ID   entity.EntityID
-	Kind construction.Kind
-	X, Y int
-	At   uint64
+	ID    entity.EntityID
+	Kind  construction.Kind
+	X, Y  int
+	At    uint64
+	Stack bool
 }
 
 // light starts charge id's fuse (once: a charge already burning keeps its
@@ -61,6 +64,13 @@ func (t *Traps) light(id entity.EntityID, k construction.Kind, x, y int) {
 	t.fuses = append(t.fuses, Fuse{ID: id, Kind: k, X: x, Y: y, At: t.h.Now() + IEDFuse})
 }
 
+// cook starts the cook-off of stack id on (x, y) (once: CBT-5).
+func (t *Traps) cook(id entity.EntityID, x, y int) {
+	if !t.Burning(id) {
+		t.fuses = append(t.fuses, Fuse{ID: id, X: x, Y: y, At: t.h.Now() + explosion.CookOffFuse, Stack: true})
+	}
+}
+
 // Burning reports charge id's fuse lit.
 func (t *Traps) Burning(id entity.EntityID) bool {
 	for _, f := range t.fuses {
@@ -71,7 +81,9 @@ func (t *Traps) Burning(id entity.EntityID) bool {
 	return false
 }
 
-// phase bursts the charges whose fuse ran out, in the order they were lit.
+// phase bursts the charges whose fuse ran out, in the order they were lit
+// (at most explosion.CookOffsPerTick cooking stacks: the rest wait a
+// tick).
 func (t *Traps) phase(now uint64) {
 	if len(t.fuses) == 0 {
 		return
@@ -86,9 +98,12 @@ func (t *Traps) phase(now uint64) {
 		return
 	}
 	fired := make([]Fuse, 0, due) // a burst may light other charges
-	keep := t.fuses[:0]
+	keep, cooked := t.fuses[:0], 0
 	for _, f := range t.fuses {
-		if f.At <= now {
+		if f.At <= now && (!f.Stack || cooked < explosion.CookOffsPerTick) {
+			if f.Stack {
+				cooked++
+			}
 			fired = append(fired, f)
 		} else {
 			keep = append(keep, f)
@@ -103,6 +118,10 @@ func (t *Traps) phase(now uint64) {
 // burst sets off charge f: the building goes, the blast bursts on its
 // tile and a blueprint is laid in its place.
 func (t *Traps) burst(f Fuse) {
+	if f.Stack {
+		t.blasts.cookOffNow(f)
+		return
+	}
 	h := t.h
 	b, ok := h.Building(f.ID)
 	if !ok {

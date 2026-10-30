@@ -6,10 +6,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/combat/armor"
-	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/explosion"
-	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -29,26 +26,35 @@ import (
 // turret: wiki guns with a minimum range, the same lock and release
 // margin), barrel wear (a barrel lasts a set number of rounds; a spent one
 // stops the turret until a rearm, rearm.go) and "hold fire" (the turret
-// neither looks nor shoots). The sentry turret keeps its PLAY-024 gun.
+// neither looks nor shoots).
+//
+// CBT-3: the sentry turret is the wiki's mini-turret (its gun, range and
+// barrel), every turret's round is a projectile (Shots.Turret: strays,
+// friendly fire and armor like a pawn's shot), and a destroyed turret
+// blows up half the time with the mini-turret's blast (Blast).
 
 const (
 	// TurretScanEvery: an idle turret looks for a target once in this
 	// many ticks, on the tick (now+id)%TurretScanEvery == 0.
 	TurretScanEvery = 20
-	// TurretLock is the reach a target is picked up in (the gun's range);
-	// TurretRelease the distance past which a held target is let go.
-	TurretLock    = 10
-	TurretRelease = 12
+	// TurretLock is the reach a target is picked up in (the sentry gun's
+	// range, wiki: Mini-turret 28.9); TurretRelease the distance past
+	// which a held target is let go (original margin).
+	TurretLock    = 28
+	TurretRelease = 30
 	// TurretLost: a held target out of sight this long is let go.
 	TurretLost = 20
 	// turretAimTicks is the aim before the first shot at a new target.
 	turretAimTicks = 30
-	// The blast of a destroyed turret: creature and building damage, its
-	// reach (Chebyshev) and the percent chance it sets the cell alight.
-	TurretBlastCreature = 12
-	TurretBlastBuilding = 25
-	turretBlastRadius   = 2
-	turretIgnitePct     = 50
+	// The blast of a destroyed turret: the percent chance it blows up,
+	// and its bomb (damage, radius in thousandths). wiki: Mini-turret
+	// (the heavy turrets take the same: original assumption). The wiki's
+	// 240-tick fuse lit below 20 % hit points is left out: it blows up as
+	// it is destroyed.
+	TurretBlastPct    = 50
+	TurretBlastDamage = 50
+	turretBlastRadius = 3900
+	turretBlastPen    = 100 // the other bombs' 10 % (original assumption, as the mortar's HE shell)
 	// ShotAgeMax caps a turret view's shot age: past it the renderer's
 	// recoil, flash and "engaged" read (turret_draw.go, 90 ticks) are long
 	// over, and a capped age lets a quiet turret's view stop changing every
@@ -99,13 +105,9 @@ func BarrelOf(k construction.Kind) int {
 	return 0
 }
 
-// reachOf is the lock and release distances of turret kind k: the
-// sentry's PLAY-024 pair, a heavy turret its gun's range and the same
-// release margin past it.
+// reachOf is the lock and release distances of turret kind k: its gun's
+// range (the sentry's is TurretLock) and the release margin past it.
 func reachOf(k construction.Kind) (lock, release int) {
-	if k == construction.SentryTurret {
-		return TurretLock, TurretRelease
-	}
 	r := weapon.DefOf(gunOf(k)).Range
 	return r, r + TurretRelease - TurretLock
 }
@@ -169,6 +171,9 @@ type TurretSave struct {
 	Drafts []DraftSave
 	Throws []Throw
 	Log    []LogEntry
+	// CBT-3 (absent in older saves): weapon makes, shield charges,
+	// smokepop uses and combat records.
+	Gear []KitSave
 }
 
 // AimSave is one Aim on disk.
@@ -194,9 +199,11 @@ type Turrets struct {
 	idsAt uint64
 	near  []Seen // target candidates, reused
 	// arms are the barrels and hold-fire orders (DEF-3), st the strikes
-	// (armor on a heavy turret's hit).
-	arms map[entity.EntityID]Arm
-	st   *Strikes
+	// (their shots fly as projectiles, CBT-3), blasts a destroyed
+	// turret's explosion.
+	arms   map[entity.EntityID]Arm
+	st     *Strikes
+	blasts *Blasts
 	// after are the defences stepped after the turrets every tick, saved
 	// those whose state rides in the Turrets save block (DEF-3).
 	after [5]phaser
@@ -211,6 +218,7 @@ type saved struct {
 	rearms  *Rearms
 	drafts  *Drafts
 	log     *Log
+	gear    *Gear // CBT-3
 }
 
 func newTurrets(h Host, pw Power, s *Sight) *Turrets {
@@ -305,7 +313,7 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 	}
 	a.Dir = aimFrame(x, y, tx, ty, a.Dir)
 	if a.SeenAt == now && now >= a.ReadyAt && weapon.ReachesAt(d, x, y, tx, ty) { // CBT-2: straight-line range
-		t.shot(id, k, wk, x, y, a.Target, tx, ty)
+		t.shot(id, wk, x, y, a.Target, tx, ty)
 		t.wear(id)
 		a.ShotAt, a.ReadyAt = now, now+uint64(d.Cooldown)
 		if a.Burst++; int(a.Burst) < d.Burst { // the rest of the burst
@@ -422,88 +430,27 @@ func (t *Turrets) Targetable(id entity.EntityID, now uint64) bool {
 	return t.h.StandingRaider(id)
 }
 
-// shot fires one round of gun wk from the turret (of kind k) at (fx, fy)
-// on target at (tx, ty): the hit chance is a ranged strike's (the sentry
-// gun's flat chance, a heavy gun's accuracy band, less the target's
-// cover), rolled on the defence stream. A heavy gun's hit goes through
-// armor. A hit is HurtHit with no attacker, so no animal or social reaction
-// ever points at a building; the turret is named in the target's log
-// instead.
-func (t *Turrets) shot(id entity.EntityID, k construction.Kind, wk weapon.Kind, fx, fy int, target entity.EntityID, tx, ty int) {
-	d := weapon.DefOf(wk)
-	dist := weapon.Distance(fx, fy, tx, ty)
-	h := t.h
-	cov := t.sight.Cover(fx, fy, tx, ty)
-	var hit bool
-	if d.Legacy() {
-		hit = h.DefenseRoll(100) < weapon.HitChance(d, dist)*(100-cov/10)/100
-	} else {
-		hit = h.DefenseRoll(1000) < weapon.HitPermille(d, dist)*(1000-cov)/1000
-	}
-	var l armor.Landed
-	if hit { // CBT-1: the part, then the armor covering it (the sentry gun's legacy shot too)
-		l = h.Absorb(target, weapon.HitOf(wk, d), h.DefenseRoll)
-	}
-	dmg := l.Amount
-	now := h.Now()
-	tr := projectile.Trace{
-		FromX: fx, FromY: fy, ToX: tx, ToY: ty, Tick: now, Hit: hit,
-		FromBuilding: true, Attacker: id, Target: target, Weapon: d.Name,
-	}
-	if hit {
-		tr.Damage = dmg
-	}
-	h.Trace(tr)
-	name := turretName(k)
-	if !hit {
-		h.Shot(target, false, 0, name)
-		return
-	}
-	h.Shot(target, true, dmg, name)
-	if dmg <= 0 {
-		return // the armor stopped it
-	}
-	h.Hit(target, now, fx, fy, dmg)
-	h.Stain(target, fx, fy, tx, ty, dmg) // before the hurt, while the target exists
-	h.HurtHit(target, l, 0)
+// shot fires one round of gun wk from turret id at (fx, fy) on target at
+// (tx, ty): a projectile (Shots.Turret, CBT-3), rolled on the defence
+// stream.
+func (t *Turrets) shot(id entity.EntityID, wk weapon.Kind, fx, fy int, target entity.EntityID, tx, ty int) {
+	t.st.shots.Turret(id, wk, fx, fy, target, tx, ty)
 }
 
-// Blast: turret b (already removed) blows up. Creatures within
-// turretBlastRadius take TurretBlastCreature, object-layer buildings
-// TurretBlastBuilding (a turret among them may blow up in turn); the
-// renderer gets a burst and the cell may catch fire (defence stream).
+// Blast: turret b (already removed) is destroyed and blows up
+// TurretBlastPct of the time (defence stream): a bomb of TurretBlastDamage
+// in turretBlastRadius through the blast path (armor, buildings, a
+// turret among them may blow up in turn). wiki: Mini-turret
 func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 	delete(t.aims, id)
 	delete(t.arms, id)
 	h := t.h
-	h.Burst(b.X, b.Y, h.Now(), explosion.Def{})
+	if h.DefenseRoll(100) >= TurretBlastPct || t.blasts == nil {
+		return
+	}
 	h.Message(b.X, b.Y, fmt.Sprintf("The %s blew up!", construction.DefOf(b.Kind).Name))
-	if h.DefenseRoll(100) < turretIgnitePct {
-		h.Ignite(b.X, b.Y)
-	}
-	// a fresh list: a chained blast runs inside this one
-	hit := h.Near(b.X, b.Y, turretBlastRadius, Everyone, nil)
-	slices.SortFunc(hit, func(p, q Seen) int { return cmp.Compare(p.ID, q.ID) })
-	for _, s := range hit {
-		if _, _, ok := h.Pos(s.ID); ok { // a chained blast may have taken it
-			blast := damage.Hit{Weapon: construction.DefOf(b.Kind).Name, Form: damage.FormFlame, Amount: TurretBlastCreature}
-			h.HurtHit(s.ID, h.Absorb(s.ID, blast, h.DefenseRoll), 0)
-		}
-	}
-	var near []entity.EntityID
-	for y := b.Y - turretBlastRadius; y <= b.Y+turretBlastRadius; y++ {
-		for x := b.X - turretBlastRadius; x <= b.X+turretBlastRadius; x++ {
-			if !h.InBounds(x, y) {
-				continue
-			}
-			if bid, _ := h.Object(x, y); bid != 0 && !slices.Contains(near, bid) {
-				near = append(near, bid)
-			}
-		}
-	}
-	for _, bid := range near {
-		h.DamageBuilding(bid, TurretBlastBuilding)
-	}
+	t.blasts.Explode(0, gunOf(b.Kind), b.X, b.Y, explosion.Def{Kind: explosion.Bomb, Radius: turretBlastRadius, Damage: TurretBlastDamage,
+		Pen: turretBlastPen})
 }
 
 // ForRaider is the powered turret a raider at (x, y) turns on instead of
@@ -616,7 +563,10 @@ func (t *Turrets) Export() *TurretSave {
 		s.Drafts, s.Throws = v.drafts.export()
 		s.Log = v.log.export()
 	}
-	if len(s.Aims)+len(s.Arms)+len(s.Fuses)+len(s.Doors)+len(s.Mortars)+len(s.Rearms)+len(s.Drafts)+len(s.Throws)+len(s.Log) == 0 {
+	if t.saved.gear != nil {
+		s.Gear = t.saved.gear.export()
+	}
+	if len(s.Aims)+len(s.Arms)+len(s.Fuses)+len(s.Doors)+len(s.Mortars)+len(s.Rearms)+len(s.Drafts)+len(s.Throws)+len(s.Log)+len(s.Gear) == 0 {
 		return nil
 	}
 	return s
@@ -637,6 +587,9 @@ func (t *Turrets) Import(s *TurretSave) {
 	if v := t.saved; v.drafts != nil {
 		v.drafts.importDrafts(s.Drafts, s.Throws)
 		v.log.importLog(s.Log)
+	}
+	if t.saved.gear != nil {
+		t.saved.gear.importGear(s.Gear)
 	}
 	if len(s.Aims) > 0 {
 		t.aims = make(map[entity.EntityID]Aim, len(s.Aims))

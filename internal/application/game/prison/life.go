@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -60,7 +61,10 @@ func (p *Prison) Live(id entity.EntityID, now uint64) {
 		return
 	}
 	if r.Leaving {
-		h.WalkOut(id, j, now)
+		p.walkOut(id, r, j, now)
+		return
+	}
+	if p.breakOut(id, now) { // escape.go (CBT-4)
 		return
 	}
 	p.FoodBand(id, n)
@@ -133,4 +137,33 @@ func (p *Prison) stroll(id entity.EntityID) {
 	if h.FreeInRoom(x, y, room) {
 		h.StartJob(id, job.Record{Kind: job.Move, TX: x, TY: y})
 	}
+}
+
+const (
+	// giveUp and retry are the raid package's RaiderGiveUp and
+	// RaiderRetry: a released pawn still on the map after a day goes
+	// home; one that found no way out waits before trying again.
+	giveUp = clock.TicksPerDay
+	retry  = 120
+)
+
+// walkOut takes a released pawn (or visitor, record r) to the map edge;
+// there, or after a day of trying, it goes home (moved from the game's
+// prisoners.go, CBT-4).
+func (p *Prison) walkOut(id entity.EntityID, r Held, j job.Record, now uint64) {
+	h := p.h
+	x, y, _ := h.Pos(id)
+	tx, ty, edge, ok := h.Exit(x, y)
+	if edge || now-r.Idle >= giveUp {
+		h.Depart(id)
+		return
+	}
+	if j.Active() && j.Kind == job.Move || now < r.RetryAt {
+		return
+	}
+	if ok && h.StartJob(id, job.Record{Kind: job.Move, TX: tx, TY: ty}) {
+		return
+	}
+	r.RetryAt = now + retry
+	h.SetHeld(id, r)
 }

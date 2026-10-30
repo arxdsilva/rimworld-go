@@ -189,7 +189,7 @@ func TestStrayHitAndMiss(t *testing.T) {
 		t.Fatalf("stray on sandbags: %+v %v", l, f.damage)
 	}
 	// a wild shot never lands on the target's own cell
-	if x, y := c.Shots.missAt(2, 5, 20, 5, 0); x != 21 || y != 5 {
+	if x, y := c.Shots.missAt(2, 5, 20, 5, 0, f.Roll); x != 21 || y != 5 {
 		t.Fatalf("missAt %d,%d", x, y)
 	}
 }

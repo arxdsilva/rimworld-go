@@ -274,7 +274,9 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	clP := p.CreatureCull()
 	p.Creatures.DrawParticles(v, &clP, screen, tile)
 	p.Overlays.DrawArrivals(v, screen, w, tile)
-	p.Lb.DrawSteamPuffs(screen, w, tile) // features_draw.go
+	p.Overlays.Combat.DrawBlasts(v, screen, w, tile) // blast sprites by kind (CBT-5)
+	p.Overlays.Combat.DrawShields(v, screen, tile)   // shield bubbles
+	p.Lb.DrawSteamPuffs(screen, w, tile)             // features_draw.go
 	p.Env.DrawWeather(v, screen, w, sw, sh, tile)
 	p.Overlays.Fires.ShowStrikes(v, w)
 	p.Env.DrawLightning(v, screen, sw, sh)

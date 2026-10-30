@@ -12,11 +12,11 @@ methods rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 73  # moved from 
 fields rimworld-go/internal/application/game.Game 147
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 33
-files rimworld-go/internal/application/game 180
-lines rimworld-go/internal/application/game 54283
+files rimworld-go/internal/application/game 179
+lines rimworld-go/internal/application/game 54182
 methods rimworld-go/internal/adapters/inbound/ebiten.App 244
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 71
-methods rimworld-go/internal/application/game.Game 1929
+methods rimworld-go/internal/application/game.Game 1922
 methods rimworld-go/internal/domain/pawn/body.Body 99
 
 # --- init(): registration from the composition root instead (SOLID_GO.md §4) ---

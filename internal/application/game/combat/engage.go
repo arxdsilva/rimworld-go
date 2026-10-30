@@ -3,7 +3,6 @@ package combat
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -23,7 +22,7 @@ func (s *Strikes) AutoEngage(id entity.EntityID) {
 		return // DEF-4: fire at will off, it shoots only when ordered
 	}
 	px, py, _ := h.Pos(id)
-	d := weapon.DefOf(h.Weapon(id))
+	d := s.gear.Reach(id, h.Weapon(id)) // CBT-3: as made; a shield belt's wearer only clubs
 	s.seen = h.Near(px, py, d.Range+1, Animals|Raiders, s.seen[:0])
 	best, bestSq := entity.EntityID(0), 1<<62
 	for _, c := range s.seen {
@@ -37,6 +36,9 @@ func (s *Strikes) AutoEngage(id entity.EntityID) {
 		return
 	}
 	bx, by, _ := h.Pos(best)
+	if s.drafts != nil && s.drafts.tac != nil && s.drafts.tac.TakeCover(id, best, px, py, d, bx, by) {
+		return // CBT-4: fire at will steps into adjacent cover first
+	}
 	rec := job.Record{Kind: job.Attack, Target: best, TX: bx, TY: by, WorkLeft: AimTicks(d)}
 	if s.drafts != nil && s.drafts.Holding(id) {
 		rec.State = job.Do // in reach from its tile: no step towards it

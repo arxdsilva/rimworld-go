@@ -45,16 +45,20 @@ type Raid struct {
 	// parts they guard (shippart.go).
 	Mechs *Mechs
 	Ships *ShipParts
+	// Kidnaps are raiders carrying off downed colonists (kidnap.go).
+	Kidnaps *Kidnaps
 }
 
 // New builds the raid cluster on host h with the extra roles r.
 func New(h Host, r Roles) *Raid {
-	hv := &Hives{h: h, w: r.Wild}
-	rs := &Raiders{h: h, m: r.Mischief, sg: r.Siege, ch: r.Chronicle}
+	hv := &Hives{h: h, w: r.Wild, n: r.Nest, m: r.Mech}
+	kid := &Kidnaps{h: h, k: r.Kidnap}
+	rs := &Raiders{h: h, m: r.Mischief, sg: r.Siege, ch: r.Chronicle, t: r.Tactics, a: r.Arrive, kid: kid}
 	ms, ships := newMechs(h, r) // mech.go
+	pods := &Pods{h: h, a: r.Arrive, ch: r.Chronicle, mechs: ms}
+	ms.hives, ms.drops = hv, pods // nest.go: saved with the mechanoids; their drop pods
 	return &Raid{Raiders: rs, Threats: &Threats{h: h, w: r.Wild, s: r.Story, hives: hv, mechs: ms}, Hives: hv,
-		Rock: &Rock{h: h, damage: make(map[[2]int]int)}, Pods: &Pods{h: h, a: r.Arrive, ch: r.Chronicle},
-		Mechs: ms, Ships: ships}
+		Rock: &Rock{h: h, damage: make(map[[2]int]int)}, Pods: pods, Mechs: ms, Ships: ships, Kidnaps: kid}
 }
 
 // Mode is what a raider is doing.
@@ -97,6 +101,14 @@ type Raider struct {
 	LootQty int
 	Hurt    int
 	Deeds   int
+	// CBT-4 (absent in older saves): CoverAt is the tick before which a
+	// raider under fire looks for cover again, walking to (CoverX,
+	// CoverY) when it found some (tactics.go); Escaping marks a prisoner
+	// breaking out (game/prison/escape.go): it fights its way out, then
+	// flees.
+	CoverAt        uint64
+	CoverX, CoverY int
+	Escaping       bool
 }
 
 // Group is one raid (the game's saved RaidGroups).
@@ -127,6 +139,9 @@ type Group struct {
 	Pods       []Pod
 	PodFaction int
 	Mortars    []entity.EntityID
+	// Supply (CBT-4, absent in older saves) is when a camped siege's next
+	// resupply pod lands (tactics.go).
+	Supply uint64
 }
 
 // Plan is how a raid comes at the colony: the domain's strategy (DEF-4;

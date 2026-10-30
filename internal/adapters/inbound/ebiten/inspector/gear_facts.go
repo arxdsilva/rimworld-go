@@ -97,7 +97,7 @@ func GearStatLines(p game.PawnView) []string {
 	for i := 0; i < n; i++ {
 		out = append(out, WornLine(p, i))
 	}
-	return out
+	return append(out, CombatExtraLines(p)...)
 }
 
 // InspirationLine is the pawn status line for an active inspiration

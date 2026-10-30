@@ -139,7 +139,7 @@ func (g *Game) socialOnLost(id entity.EntityID) {
 }
 
 // socialOnLostAs is socialOnLost with the history line (kind, text) that
-// says how id was lost (kidnap.go: "kidnapped").
+// says how id was lost (raid/kidnap.go: "kidnapped").
 func (g *Game) socialOnLostAs(id entity.EntityID, kind, text string) {
 	now := uint64(g.clock.Now())
 	g.ensurePerson(id)

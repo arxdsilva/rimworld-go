@@ -21,7 +21,7 @@ func TestRisk(t *testing.T) {
 
 func TestKindValuesAppendOnly(t *testing.T) {
 	want := map[Kind]uint8{None: 0, SadWander: 1, FoodBinge: 2, HideInRoom: 3, SocialFight: 4,
-		InsultingSpree: 5, TargetedInsult: 6, Berserk: 7, MurderousRage: 8, Catatonic: 9}
+		InsultingSpree: 5, TargetedInsult: 6, Berserk: 7, MurderousRage: 8, Catatonic: 9, Tantrum: 10}
 	for k, v := range want {
 		if uint8(k) != v {
 			t.Errorf("kind %q = %d, want %d", k, k, v)
@@ -184,7 +184,7 @@ func TestTargetsOthersAndDowns(t *testing.T) {
 
 func TestAllMoodKinds(t *testing.T) {
 	got := AllMoodKinds()
-	if len(got) != 8 {
+	if len(got) != 9 {
 		t.Fatalf("AllMoodKinds = %v", got)
 	}
 	for _, k := range got {
@@ -196,12 +196,19 @@ func TestAllMoodKinds(t *testing.T) {
 
 func TestPickFallsBackToLowerTier(t *testing.T) {
 	for roll := uint32(0); roll < 100; roll++ {
-		if k := Pick(Major, roll, nil); TierOf(k) != Minor {
+		if k := Pick(Major, roll, nil); k != Tantrum { // CBT-4: the tantrum is the one major break
+			t.Fatalf("Major picked %d", k)
+		}
+		if k := Pick(Major, roll, func(k Kind) bool { return k != Tantrum }); TierOf(k) != Minor {
 			t.Fatalf("Major fell back to %d", k)
 		}
 	}
 	noExtreme := func(k Kind) bool { return TierOf(k) != Extreme }
-	if k := Pick(Extreme, 3, noExtreme); k == None || TierOf(k) != Minor {
+	if k := Pick(Extreme, 3, noExtreme); k != Tantrum { // falls to Major first
+		t.Errorf("Extreme with none allowed gave %d", k)
+	}
+	noBig := func(k Kind) bool { return TierOf(k) == Minor }
+	if k := Pick(Extreme, 3, noBig); k == None || TierOf(k) != Minor {
 		t.Errorf("Extreme with none allowed gave %d", k)
 	}
 	if Pick(Extreme, 3, func(Kind) bool { return false }) != None {

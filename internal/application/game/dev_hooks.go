@@ -1,8 +1,12 @@
 package game
 
 import (
+	"fmt"
+
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/quality"
+	"rimworld-go/internal/domain/pawn/mentalbreak"
 	raiddef "rimworld-go/internal/domain/raid"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/geology"
@@ -83,12 +87,17 @@ func terrainByName(name string) (terrain.Type, bool) {
 // Dev hooks for set-piece scenarios (cmd/game -scenario). They change the
 // colony the same way gameplay would, only at once.
 
-// Arm puts weapon k in colonist id's hands (k must be a weapon).
-func (g *Game) Arm(id entity.EntityID, k item.Kind) {
-	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	if k.IsWeapon() {
-		g.equip[id] = k
+// Arm puts weapon k in colonist id's hands (k must be a weapon), Normal.
+func (g *Game) Arm(id entity.EntityID, k item.Kind) { _ = g.ArmQuality(id, k, quality.Normal) }
+
+// ArmQuality is Arm with a weapon of quality q (CBT-3).
+func (g *Game) ArmQuality(id entity.EntityID, k item.Kind, q quality.Level) error {
+	if g.viewGen++; !k.IsWeapon() { // view cache (indexes.go): this hook changes the state
+		return fmt.Errorf("%s is not a weapon", k)
 	}
+	g.equip[id] = k
+	g.combat.Gear.Hold(id, item.Stack{Kind: k, Qty: 1, Quality: quality.Stored(q)})
+	return nil
 }
 
 // RaidArmed sends an assault raid carrying exactly these weapons.
@@ -104,6 +113,16 @@ func (g *Game) RaidDropPods(kit ...item.Kind) {
 		podRaid(g, raid.Group{Size: len(kit), Plan: raid.Assault, Arrival: raiddef.DropPodCentre, FleeLoss: raiddef.FleeLossLegacy}, kit, nil)
 	}
 }
+
+// RaidMechs sends a mechanoid group worth points walking in from an edge
+// (CBT-4: mechanoids bash through shut doors).
+func (g *Game) RaidMechs(points int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.raid.Mechs.Raid(points, raiddef.WalkInEdge, uint64(g.clock.Now()))
+}
+
+// Tantrum throws colonist id into a tantrum now (CBT-4).
+func (g *Game) Tantrum(id entity.EntityID) { g.ForceBreak(id, mentalbreak.Tantrum) }
 
 // SpawnCrop places a plant of species at (x, y) grown to pct percent.
 func (g *Game) SpawnCrop(species string, x, y, pct int) (entity.EntityID, error) {

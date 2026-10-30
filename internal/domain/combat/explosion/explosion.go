@@ -30,19 +30,33 @@ func (k Kind) String() string {
 	return names[k]
 }
 
-// kinds: the damage type each kind deals and its damage against buildings
-// (permille of the blast's damage). wiki: Damage (bomb, flame, EMP types),
-// Frag grenades (bomb damage x2 against buildings; the x4/x8 against
-// impassable things and walls is left for DEF-3's structures).
+// Target is what a blast strikes besides creatures (CBT-5): its damage
+// is scaled by the kind of thing it lands on.
+type Target uint8
+
+const (
+	Passable   Target = iota // a building creatures walk through: doors, fences, furniture spots
+	Impassable               // a building that blocks movement: benches, turrets, batteries
+	Wall                     // a wall
+	Plant                    // a plant or tree
+	numTargets
+)
+
+// kinds: the damage type each kind deals, its damage against each target
+// (permille of the blast's damage) and whether it wounds creatures. wiki:
+// Damage types (bomb x2 against passable buildings, x4 against
+// impassable ones and plants, x8 in all against walls); flame x1 on
+// buildings and nothing on plants directly (the fire it lights burns
+// them); EMP and smoke harm no structure.
 var kinds = [numKinds]struct {
-	typ      damage.Type
-	building int
-	flesh    bool
+	typ     damage.Type
+	against [numTargets]int
+	flesh   bool
 }{
-	Bomb:  {damage.Bomb, 2000, true},
-	Flame: {damage.Heat, 1000, true},
-	EMP:   {damage.EMP, 0, false},
-	Smoke: {damage.Blunt, 0, false},
+	Bomb:  {damage.Bomb, [numTargets]int{Passable: 2000, Impassable: 4000, Wall: 8000, Plant: 4000}, true},
+	Flame: {damage.Heat, [numTargets]int{Passable: 1000, Impassable: 1000, Wall: 1000}, true},
+	EMP:   {damage.EMP, [numTargets]int{}, false},
+	Smoke: {damage.Blunt, [numTargets]int{}, false},
 }
 
 // Def is one blast: its kind, reach and punch. Radius is in thousandths
@@ -106,18 +120,33 @@ func (d Def) At(dist int) int {
 	return max(d.Damage*f/1000, 1)
 }
 
-// Building is the damage a building dist thousandths of a tile from the
-// centre takes: At scaled by the kind's damage against structures.
-func (d Def) Building(dist int) int {
-	if d.Kind >= numKinds || kinds[d.Kind].building == 0 {
+// Against is the damage target t, dist thousandths of a tile from the
+// centre, takes: At scaled by the kind's multiplier against it (0: the
+// blast leaves it whole).
+func (d Def) Against(dist int, t Target) int {
+	if d.Kind >= numKinds || t >= numTargets || kinds[d.Kind].against[t] == 0 {
 		return 0
 	}
-	return d.At(dist) * kinds[d.Kind].building / 1000
+	return d.At(dist) * kinds[d.Kind].against[t] / 1000
 }
 
+// Structural reports a blast that harms buildings at all.
+func (d Def) Structural() bool { return d.Against(0, Passable) > 0 }
+
 // StunPerDamage is the stun an EMP inflicts on a machine, ticks per point
-// of EMP damage (0.25 s). wiki: Damage (EMP)
-const StunPerDamage = 15
+// of EMP damage (half a second: 50 points stun for 1500 ticks). A machine
+// that has shaken off a stun is adapted for EMPAdaptTicks after it: a
+// pulse then leaves it running. wiki: Damage types (EMP)
+const (
+	StunPerDamage = 30
+	EMPAdaptTicks = 2200
+)
+
+// Adapted reports a machine stunned until tick until (0: never) that has
+// recovered and still shrugs off pulses at tick now.
+func Adapted(until, now uint64) bool {
+	return until != 0 && now >= until && now < until+EMPAdaptTicks
+}
 
 // StunTicks is how long a machine dist from the centre stays stunned (0
 // for a blast that is not an EMP).
@@ -127,6 +156,60 @@ func (d Def) StunTicks(dist int) int {
 	}
 	return d.At(dist) * StunPerDamage
 }
+
+// Item is the damage a loose stack dist thousandths of a tile from the
+// centre takes (CBT-5): a bomb's At, worn off its hit points; flame
+// reaches stacks through the fire it lights, EMP and smoke not at all.
+func (d Def) Item(dist int) int {
+	if d.Kind != Bomb {
+		return 0
+	}
+	return d.At(dist)
+}
+
+// LooseHP is the hit points of a stack with no condition of its own
+// (food, textiles, wood, corpses) that burns: one blast dealing at least
+// this much destroys it, a weaker one leaves it whole. Stacks that do not
+// burn (stone, metal) shrug blasts off. original tuning: the game keeps
+// no hit points on raw stacks, so one meal-sized figure stands for all.
+const LooseHP = 50
+
+// Plant hit points (original tuning: the wiki lists them per plant and
+// they are not transcribed): a bush, crop or grass tuft, and a tree.
+const (
+	PlantHP = 100
+	TreeHP  = 300
+)
+
+// PlantPct is the share of its life (percent, the plant's damage scale)
+// a plant dist from the centre loses: Against(Plant) over its hit points
+// (trunk: a tree's).
+func (d Def) PlantPct(dist int, trunk bool) int {
+	hp := PlantHP
+	if trunk {
+		hp = TreeHP
+	}
+	return d.Against(dist, Plant) * 100 / hp
+}
+
+// Lights reports a blast that sets off the explosives it reaches (a
+// bomb's shrapnel or a flame's heat); EMP and smoke leave them be.
+func (d Def) Lights() bool { return d.Kind == Bomb || d.Kind == Flame }
+
+// Cook-off (CBT-5): a stack of shells or grenades a blast reaches, or a
+// fire burns over, goes off in turn CookOffFuse ticks later as one of its
+// own blasts; no more than CookOffsPerTick stacks go off in one tick (the
+// rest wait a tick), so a packed stockpile chains over a few ticks
+// instead of in one. original tuning.
+const (
+	CookOffFuse     = 30
+	CookOffsPerTick = 8
+)
+
+// CreatureFlammability is the chance (permille) a flame blast sets a
+// creature it reaches on fire: its cell is lit even with nothing there to
+// burn. original tuning.
+const CreatureFlammability = 700
 
 // SmokeTicks is how long a smoke cloud lasts (about a minute). wiki: Smoke
 // shell

@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/health"
@@ -274,10 +275,10 @@ func (g *Game) casketBeast(b construction.Building, v *vaultSave, s animal.Speci
 // casketRemains: long-dead remains (bones of a stranger) with their old
 // weapon beside them.
 func (g *Game) casketRemains(b construction.Building, v *vaultSave) {
-	kit := meleeKit[int(g.entities.Peek())%len(meleeKit)]
-	id := g.casketHostile(b, v, kit)
+	blade := kit.Casket(int(g.entities.Peek())) // domain combat/kit
+	id := g.casketHostile(b, v, blade)
 	if id == 0 {
-		g.spawnUnclaimed(kit, 1, b.X, b.Y, false) // haul_claim.go: found, not the colony's
+		g.spawnUnclaimed(blade, 1, b.X, b.Y, false) // haul_claim.go: found, not the colony's
 		g.message(b.X, b.Y, "Old remains crumble in the casket, beside their gear.")
 		return
 	}

@@ -271,21 +271,28 @@ func TestHeavyTurretRangeBurstAndBarrel(t *testing.T) {
 	}
 }
 
-// TestSlugTurretArmor: a slug turret's hit goes through armor; its log
-// names it.
+// TestSlugTurretArmor: a slug turret's round flies (CBT-3) and its hit
+// goes through armor; its log names it.
 func TestSlugTurretArmor(t *testing.T) {
 	t.Parallel()
 	f := newFake(60, 60)
 	f.build(52, construction.UraniumSlugTurret, 10, 5)
 	f.wired, f.powered[52], f.defense, f.gen = true, true, []entity.EntityID{52}, 1
-	tu := f.combat().Turrets
+	c := f.combat()
+	tu := c.Turrets
 	f.raider(1, 10, 30, weapon.Rifle)
-	tu.shot(52, construction.UraniumSlugTurret, weapon.SlugTurret, 10, 5, 1, 10, 30)
-	if len(f.hurts) != 1 || f.logs[0] != "shot 1 true a slug turret" || f.traces[0].Weapon != "slug turret" {
+	tu.shot(52, weapon.SlugTurret, 10, 5, 1, 10, 30)
+	if len(f.hurts) != 0 || c.Shots.Len() != 1 || !f.traces[0].FromBuilding {
+		t.Fatalf("the slug flies: %v", f.hurts)
+	}
+	fly(c)
+	if len(f.hurts) != 1 || f.logs[0] != "shot 1 true a slug turret" || f.traces[1].Weapon != "slug turret" || !f.traces[1].FromBuilding {
 		t.Fatalf("slug hit: %v %v", f.hurts, f.logs)
 	}
-	f.droll = []int{999}
-	tu.shot(52, construction.UraniumSlugTurret, weapon.SlugTurret, 10, 5, 1, 10, 30)
+	f.droll = []int{999, 0, 0}
+	tu.shot(52, weapon.SlugTurret, 10, 5, 1, 10, 30)
+	f.rolls = []int{999, 999, 999, 999, 999, 999, 999, 999} // nothing on its way takes it
+	fly(c)
 	if f.logs[1] != "shot 1 false a slug turret" {
 		t.Fatalf("slug miss: %v", f.logs)
 	}
@@ -297,6 +304,13 @@ func TestSlugTurretArmor(t *testing.T) {
 	tu.Blast(52, b)
 	if f.msgs[0] != "The slug turret blew up!" {
 		t.Fatalf("blast message %q", f.msgs[0])
+	}
+}
+
+// fly steps every shot in flight until all have landed.
+func fly(c *Combat) {
+	for i := 0; c.Shots.Len() > 0 && i < 1000; i++ {
+		c.Shots.Step()
 	}
 }
 
@@ -517,7 +531,7 @@ func TestRearmHaul(t *testing.T) {
 	f.now = 250 * 10
 	r.phase(f.now)
 	j := f.jobs[1]
-	if len(r.jobs) != 1 || j.Kind != job.RearmTurret || j.Target != 600 || j.Dest != 50 || j.Count != BarrelSteel(construction.SentryTurret) ||
+	if len(r.jobs) != 1 || j.Kind != job.RearmTurret || j.Target != 600 || j.Dest != 50 || j.Count != 9 ||
 		r.Hauler(50) != 1 || r.Hauler(51) != 0 {
 		t.Fatalf("haul %+v job %+v", r.jobs, j)
 	}

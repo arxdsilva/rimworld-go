@@ -61,7 +61,7 @@ func TestBlastDamageByDistance(t *testing.T) {
 }
 
 // TestBlastBlockedByWall: a wall between the centre and a creature
-// shelters it, and takes the blast itself (bomb damage doubled).
+// shelters it, and takes the blast itself (bomb damage x8 on a wall).
 func TestBlastBlockedByWall(t *testing.T) {
 	t.Parallel()
 	f := newFake(20, 20)
@@ -82,8 +82,8 @@ func TestBlastBlockedByWall(t *testing.T) {
 	if _, _, n := hurtOf(f, 2); n != 1 {
 		t.Fatal("the open side is hit")
 	}
-	if f.damage[30] != big.At(1000)*2 {
-		t.Fatalf("wall took %d, want %d", f.damage[30], big.At(1000)*2)
+	if f.damage[30] != big.At(1000)*8 {
+		t.Fatalf("wall took %d, want %d", f.damage[30], big.At(1000)*8)
 	}
 }
 
@@ -107,13 +107,14 @@ func TestBlastArmor(t *testing.T) {
 func TestMolotovIgnitesAndBurns(t *testing.T) {
 	t.Parallel()
 	f := newFake(20, 20)
-	c := f.combat()
 	f.pawn(1, 11, 10, weapon.Fists)
 	f.pawn(2, 11, 11, weapon.Fists)
 	f.build(30, construction.Wall, 9, 10)
+	db := newFakeDebris()
+	c := newDebrisCombat(f, db)
 	c.Blasts.Explode(9, weapon.Molotov, 10, 10, weapon.DefOf(weapon.Molotov).Blast)
-	if f.fires != 1 {
-		t.Fatal("no fire")
+	if !db.lit[[2]int{10, 10}] {
+		t.Fatal("no fire at the centre")
 	}
 	if d, k, _ := hurtOf(f, 1); d == 0 || k != damage.FormFlame.String() {
 		t.Fatalf("burn %d form %s", d, k)

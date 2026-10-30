@@ -247,7 +247,7 @@ func TestPawnRestWhenHurtSitsAfterEquipBeforeThePrisonerCommands(t *testing.T) {
 	for _, c := range a.insp.Pawn().PawnCommands(1) {
 		ids = append(ids, c.ID)
 	}
-	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", inspector.PrisonerCapture, inspector.PrisonerArrest, inspector.DropWeaponID} // Drop weapon (STO-3): last, armed colonists only
+	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", inspector.PrisonerCapture, inspector.PrisonerArrest, inspector.DropWeaponID, inspector.ThreatID} // Threat response (CBT-5) last; Drop weapon (STO-3): last, armed colonists only
 	if !slices.Equal(ids, want) {
 		t.Fatalf("commands %v, want %v", ids, want)
 	}

@@ -29,6 +29,8 @@ func (m *Mind) act(id entity.EntityID, k mentalbreak.Kind, j job.Record, now, un
 		m.berserk(id, j, now)
 	case mentalbreak.MurderousRage:
 		m.rage(id, j, now)
+	case mentalbreak.Tantrum:
+		m.tantrum(id, j, now) // tantrum.go (CBT-4)
 	case mentalbreak.Catatonic:
 		if h.Standing(id) {
 			h.Down(id) // stood up early (a tend): it collapses again

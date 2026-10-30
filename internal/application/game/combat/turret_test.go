@@ -102,7 +102,11 @@ func scanTick(now uint64) uint64 {
 
 func TestTurretLocksAimsAndFires(t *testing.T) {
 	t.Parallel()
-	f, tu := turretRig(t)
+	f := newFake(40, 30)
+	f.build(50, construction.SentryTurret, 10, 5)
+	f.wired, f.powered[50], f.defense, f.gen = true, true, []entity.EntityID{50}, 1
+	c := f.combat()
+	tu := c.Turrets
 	f.raider(1, 10, 12, weapon.Rifle)
 	f.now = scanTick(f.now) + 1
 	tu.Phase(f.now)
@@ -119,15 +123,18 @@ func TestTurretLocksAimsAndFires(t *testing.T) {
 		f.now++
 		tu.Phase(f.now)
 	}
-	if a = tu.Aim(50); a.ShotAt != f.now || len(f.traces) != 1 || !f.traces[0].FromBuilding {
+	if a = tu.Aim(50); a.ShotAt != f.now || len(f.traces) != 1 || !f.traces[0].FromBuilding || c.Shots.Len() != 1 {
 		t.Fatalf("fired once aimed: %+v", a)
 	}
-	if len(f.hurts) != 1 || f.logs[0] != "shot 1 true "+TurretLogName {
-		t.Fatalf("hit: %v %v", f.hurts, f.logs)
+	fly(c) // CBT-3: the round flies
+	if len(f.hurts) != 1 || f.logs[0] != "shot 1 true "+TurretLogName || a.ReadyAt != f.now+8 {
+		t.Fatalf("hit: %v %v %+v", f.hurts, f.logs, a)
 	}
-	f.droll = []int{99}
+	f.droll = []int{999}
+	f.rolls = []int{999, 999, 999, 999, 999, 999, 999, 999, 999}
 	f.now = a.ReadyAt
-	tu.Phase(f.now)
+	tu.Phase(f.now) // the burst's second round
+	fly(c)
 	if f.logs[1] != "shot 1 false "+TurretLogName || len(f.hurts) != 1 {
 		t.Fatalf("a miss: %v", f.logs)
 	}
@@ -217,17 +224,18 @@ func TestTurretBlastAndChain(t *testing.T) {
 	tu.setAim(50, Aim{Target: 1})
 	b := f.bldgs[50]
 	f.RemoveBuilding(50)
+	f.droll = []int{TurretBlastPct} // half the time it does not blow up
 	tu.Blast(50, b)
-	if tu.Firing(50) || f.bursts != 1 || f.fires != 1 || len(f.msgs) != 1 {
-		t.Fatalf("blast: bursts %d fires %d msgs %v", f.bursts, f.fires, f.msgs)
+	if tu.Firing(50) || f.bursts != 0 || len(f.msgs) != 0 {
+		t.Fatalf("no blast: bursts %d msgs %v", f.bursts, f.msgs)
 	}
-	if len(f.hurts) != 1 || f.damage[61] != TurretBlastBuilding || f.damage[62] != 0 {
+	f.droll = []int{TurretBlastPct - 1}
+	tu.Blast(50, b)
+	if f.bursts != 1 || len(f.msgs) != 1 || f.blasts[0].Radius != 3900 || f.blasts[0].Damage != TurretBlastDamage {
+		t.Fatalf("blast: bursts %d msgs %v %+v", f.bursts, f.msgs, f.blasts)
+	}
+	if len(f.hurts) != 1 || f.damage[61] == 0 || f.damage[62] != 0 {
 		t.Fatalf("blast reach: hurts %v damage %v", f.hurts, f.damage)
-	}
-	f.droll = []int{turretIgnitePct}
-	tu.Blast(50, b)
-	if f.fires != 1 {
-		t.Fatal("a failed roll lights nothing")
 	}
 }
 

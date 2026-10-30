@@ -725,7 +725,7 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 	m.stepped(now, g.weatherSlow(to.X, to.Y, a.StepCostAt(a.StepGait, isDiagonal(from, to))))
 	g.motion.Set(id, *m)
 	g.animals.Set(id, *a)
-	if t := g.combat.Traps; t.Victim(*a) && t.Has() && t.At(to.X, to.Y) != 0 {
+	if t := g.combat.Traps; t.Victim(*a) && t.At(to.X, to.Y) != 0 { // one object lookup: no building scan
 		t.Spring(id, to.X, to.Y)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 )
 
@@ -31,6 +32,9 @@ type Combat struct {
 	Marks   []ProjectileMark
 	Cells   []CoverCell
 	Factors []ShotFactor
+	// Shields is the cue feed's scratch (the renderer refills it each
+	// step; no allocation in steady state).
+	Shields []cue.ShieldState
 }
 
 // WeaponReach is a selected colonist's weapon reach in tiles: Min is the
@@ -72,6 +76,7 @@ var (
 	losBlockColour  = color.NRGBA{232, 90, 70, 220}
 	coverBaseColour = [3]uint8{70, 150, 230}
 	tracerColour    = color.NRGBA{255, 226, 140, 255}
+	targetColour    = color.NRGBA{240, 70, 60, 230}
 )
 
 // minCoverShown is the cover value (percent) below which a tile is not marked.
@@ -90,6 +95,24 @@ func (c *Combat) DrawWeaponRange(v *render.View, dst *ebiten.Image, x, y int, r 
 	if r.Min > 0 && r.Min < r.Max {
 		vector.StrokeCircle(dst, cx, cy, float32(r.Min*t), th, rangeMinColour, true)
 	}
+}
+
+// DrawTargetMark rings the enemy standing on tile (x, y): the one the
+// cursor is on or the selected colonist is shooting at.
+func (c *Combat) DrawTargetMark(v *render.View, dst *ebiten.Image, x, y int) {
+	cx, cy := v.WorldToScreenF(float64(x)+0.5, float64(y)+0.5)
+	t := v.Cam.Tile()
+	if cx < -float32(t) || cy < -float32(t) || cx > float32(v.SW)+float32(t) || cy > float32(v.SH)+float32(t) {
+		return
+	}
+	r := float32(t * 0.62)
+	th := float32(max(1.5, t*0.06))
+	vector.StrokeCircle(dst, cx, cy, r, th, targetColour, true)
+	gap := r * 0.45 // four ticks crossing the ring: a crosshair
+	vector.StrokeLine(dst, cx-r-gap, cy, cx-r+gap, cy, th, targetColour, true)
+	vector.StrokeLine(dst, cx+r-gap, cy, cx+r+gap, cy, th, targetColour, true)
+	vector.StrokeLine(dst, cx, cy-r-gap, cx, cy-r+gap, th, targetColour, true)
+	vector.StrokeLine(dst, cx, cy+r-gap, cx, cy+r+gap, th, targetColour, true)
 }
 
 // ShotLines are the lines of the hit-chance card: the headline, then one

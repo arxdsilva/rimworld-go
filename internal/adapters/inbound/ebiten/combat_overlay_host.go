@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // DEF-1 combat feedback on the colony map: the weapon range ring and the
@@ -40,27 +41,62 @@ func drawCombatOverlay(a *App, dst *ebiten.Image) {
 	if !ok {
 		return
 	}
+	mx, my := a.mapCursor()
+	tx, ty := r.TileAt(mx, my)
+	hover, hovered := hostileAt(r.hostiles(), tx, ty)
 	if set.Cover.Shown() {
 		set.Cells = coverCells(set.Cells[:0], w.Buildings, sel.X, sel.Y)
+		set.Cells = naturalCoverCells(set.Cells, &w, sel.X, sel.Y)
+		if hovered {
+			aimCover(set.Cells, hover.X, hover.Y, sel.X, sel.Y)
+		}
 		set.DrawCover(v, dst, set.Cells)
+	}
+	if hovered {
+		set.DrawTargetMark(v, dst, hover.X, hover.Y)
+	} else if tgt, ok := targetedHostile(w.Traces, r.hostiles(), sel.ID); ok {
+		set.DrawTargetMark(v, dst, tgt.X, tgt.Y)
 	}
 	if !sel.Drafted {
 		return
 	}
 	set.DrawWeaponRange(v, dst, sel.X, sel.Y, weaponReach(sel.Weapon))
-	mx, my := a.mapCursor()
-	tx, ty := r.TileAt(mx, my)
-	for _, h := range r.hostiles() {
-		if h.X != tx || h.Y != ty {
-			continue
-		}
+	if hovered {
+		h := hover
 		if rep, ok := r.game.HitChance(sel.ID, h.ID); ok {
 			info := shotInfo(set.Factors[:0], rep, sel.X, sel.Y, h.X, h.Y)
 			set.Factors = info.Factors
 			set.DrawShotFeedback(v, dst, &info, mx, my)
 		}
-		break
 	}
+}
+
+// hostileAt is the hostile standing on (x, y).
+func hostileAt(hs []game.PawnView, x, y int) (game.PawnView, bool) {
+	for _, h := range hs {
+		if h.X == x && h.Y == y {
+			return h, true
+		}
+	}
+	return game.PawnView{}, false
+}
+
+// targetedHostile is the hostile the pawn shot or struck last (the newest
+// attack trace of it that names a living hostile).
+func targetedHostile(traces []game.TraceView, hs []game.PawnView, id entity.EntityID) (game.PawnView, bool) {
+	for i := len(traces) - 1; i >= 0; i-- {
+		t := &traces[i]
+		if t.Attacker != id || t.Target == 0 {
+			continue
+		}
+		for _, h := range hs {
+			if h.ID == t.Target {
+				return h, true
+			}
+		}
+		return game.PawnView{}, false
+	}
+	return game.PawnView{}, false
 }
 
 // selectedColonist is the selected colonist's view (a plain function:
@@ -110,7 +146,7 @@ func projectileMarks(out []overlay.ProjectileMark, shots []projectile.View, alph
 func weaponReach(name string) overlay.WeaponReach {
 	for k := weapon.Kind(0); k < 255; k++ {
 		if d := weapon.DefOf(k); d.Name == name {
-			return overlay.WeaponReach{Max: float64(d.Range)}
+			return overlay.WeaponReach{Min: float64(d.MinRange), Max: float64(d.Range)}
 		}
 	}
 	return overlay.WeaponReach{}

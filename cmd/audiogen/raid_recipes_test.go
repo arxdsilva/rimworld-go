@@ -31,3 +31,20 @@ func TestRaidSoundsRenderAndLoop(t *testing.T) {
 		}
 	}
 }
+
+// TestWave3SoundsRender: the ten wave 3 one-shots render, are short and not
+// looped.
+func TestWave3SoundsRender(t *testing.T) {
+	t.Parallel()
+	got := wave3Sounds()
+	if len(got) != 10 {
+		t.Fatalf("%d wave 3 sounds, want 10", len(got))
+	}
+	for _, snd := range got {
+		rc := snd.recipe
+		a := sfxsynth.Render(rc, 0)
+		if sec := float64(len(a)) / float64(sfxsynth.Rate); len(a) == 0 || sec > 1.5 || rc.Loop > 0 {
+			t.Errorf("%s: %.2f s, loop %v", rc.ID, sec, rc.Loop)
+		}
+	}
+}

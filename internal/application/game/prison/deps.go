@@ -18,6 +18,7 @@ type Host interface {
 	Wardens
 	Talk
 	Fate
+	Escapes
 }
 
 // Bodies reads and writes a pawn's place, vital record and job.
@@ -69,8 +70,6 @@ type Life interface {
 	DownedHunger(id entity.EntityID, v health.Record, now uint64) (needs.Pair, health.Record)
 	Down(id entity.EntityID, c health.Cause)
 	Die(id entity.EntityID, c health.Cause)
-	// WalkOut takes a released pawn (or visitor) towards the map edge.
-	WalkOut(id entity.EntityID, j job.Record, now uint64)
 }
 
 // Cells is where a held pawn goes: jobs, beds and its room.
@@ -124,4 +123,22 @@ type Fate interface {
 	Execute(p, w entity.EntityID)
 	PersonName(id entity.EntityID) string
 	Message(x, y int, text string)
+}
+
+// Escapes is a prison break (CBT-4, escape.go).
+type Escapes interface {
+	// RoomOf is the room id stands in (0: none, outdoors).
+	RoomOf(id entity.EntityID) int
+	// Escape turns id, no longer a prisoner, into a hostile breaking out:
+	// it fights its way out and flees (the raid roster's Escaping).
+	Escape(id entity.EntityID)
+	// Breakout announces a prison break of n started by id.
+	Breakout(id entity.EntityID, n int)
+	// Exit is a walkable tile by the map edge nearest (x, y) (ok false:
+	// none) and whether (x, y) is on the edge (CBT-4: a released pawn's
+	// walk out, moved from the game).
+	Exit(x, y int) (tx, ty int, edge, ok bool)
+	// Depart takes a released pawn that reached the edge off the map (its
+	// faction grateful).
+	Depart(id entity.EntityID)
 }

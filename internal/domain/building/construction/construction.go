@@ -187,6 +187,11 @@ const (
 	Hopper
 	NutrientPasteDispenser
 	Sarcophagus
+	// HiveMound (CBT-4, append only, saved) is an insect hive: never built
+	// by the colony (no Architect row), it rises in a dark, warm, roofed
+	// cave with an infestation, spawns insects and spreads
+	// (game/raid/nest.go).
+	HiveMound
 	kindCount
 )
 
@@ -487,6 +492,9 @@ var defs = [kindCount]Def{
 		MetalOK: true, MetalOnly: true, Components: 3},
 	Sarcophagus: {Kind: Sarcophagus, Name: "sarcophagus", Wood: 7, Work: 240, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{1, 2}, StoneOK: true, MetalOK: true},
+	// CBT-4, wiki: Hive (1x1, 130 HP, deconstructs to nothing); placed by
+	// the infestation, so no cost and no work.
+	HiveMound: {Kind: HiveMound, Name: "hive mound", Layer: LayerObject, BlocksMove: true},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
@@ -562,6 +570,8 @@ func MaxHP(k Kind, s item.Kind) int {
 		hp = 250
 	case Sarcophagus:
 		hp = 250
+	case HiveMound: // wiki: Hive
+		hp = 130
 	}
 	pct, _ := StuffStats(s)
 	return hp * pct / 100

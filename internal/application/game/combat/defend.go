@@ -32,6 +32,13 @@ type Guard struct {
 	h   Host
 	fl  Flight
 	buf []Seen // attacking animal candidates, reused
+	// CBT-4: the threat response (drafts), hostiles that are not
+	// attacking (st) and cover (tac); nil in tests without them.
+	drafts *Drafts
+	st     *Strikes
+	tac    *Tactics
+	tiles  *Tiles // free ground for a flight's goal
+	foes   []Seen // hostile candidates, reused
 }
 
 // Reach is how close an attacking animal or raider must be for Defend to
@@ -100,30 +107,43 @@ func (gd *Guard) Defend(id entity.EntityID, j job.Record) bool {
 	h, fl := gd.h, gd.fl
 	px, py, _ := h.Pos(id)
 	now := h.Now()
-	armed := h.FightsBack(id) // a pacifist runs instead
+	armed := h.FightsBack(id) // its threat response: a pacifist, or one set to flee, runs instead
 	calm := false
 	if until, ok := fl.Calm(id); ok {
-		if calm = now < until && !armed; !calm {
+		if calm = now < until && !armed && !gd.ignores(id); !calm {
 			fl.ForgetCalm(id)
 		}
 	}
+	if gd.ignores(id) {
+		return false // CBT-4: set to ignore threats, it carries on
+	}
 	ar, rr := Reach(armed, calm)
 	threat, tx, ty, best := gd.NearestThreat(id, px, py, ar, rr)
+	if threat == 0 && gd.st != nil && (calm || (now+uint64(id))%foeEvery == 0) {
+		threat, tx, ty, best = gd.nearestFoe(id, px, py, armed, calm, now)
+	}
 	if threat == 0 {
 		return calm // still shaken: hold position, start no work
 	}
 	if armed {
+		if gd.tac != nil && gd.tac.Covering(id, j) {
+			return true // CBT-4: stepping into cover
+		}
 		if j.Kind == job.Attack && j.State != job.Fail {
 			if j.Target == threat {
 				return true
 			}
 			// keep the current target (and its aim) unless the new one is much closer
-			if _, _, d, ok := gd.ThreatTo(id, j.Target, px, py, AnimalRelease, RaiderRelease); ok && best > d-SwitchMargin {
+			if d, ok := gd.holds(id, j.Target, px, py, now); ok && best > d-SwitchMargin {
 				return true
 			}
 		}
+		d := weapon.DefOf(h.Weapon(id))
+		if gd.tac != nil && gd.tac.TakeCover(id, threat, px, py, d, tx, ty) {
+			return true // CBT-4: a step into cover first
+		}
 		h.Interrupt(id, job.Interrupted)
-		h.StartJob(id, job.Record{Kind: job.Attack, Target: threat, TX: tx, TY: ty, WorkLeft: AimTicks(weapon.DefOf(h.Weapon(id)))})
+		h.StartJob(id, job.Record{Kind: job.Attack, Target: threat, TX: tx, TY: ty, WorkLeft: AimTicks(d)})
 		return true
 	}
 	if !calm {
@@ -134,7 +154,7 @@ func (gd *Guard) Defend(id entity.EntityID, j job.Record) bool {
 	if running && (now+uint64(id))%30 != 0 {
 		return true // keep running
 	}
-	fx, fy, ok := fl.FleeGoal(id, px, py, tx, ty)
+	fx, fy, ok := gd.FleeGoal(id, px, py, tx, ty)
 	if !ok {
 		// cornered: stay put rather than work, sleep or walk an order
 		if !running {
@@ -160,4 +180,85 @@ func (gd *Guard) InCombat(id entity.EntityID) bool {
 	}
 	until, ok := gd.fl.Calm(id)
 	return ok && h.Now() < until
+}
+
+// ignores reports a colonist set to ignore threats (CBT-4).
+func (gd *Guard) ignores(id entity.EntityID) bool {
+	return gd.drafts != nil && gd.drafts.Response(id) == RespondIgnore
+}
+
+// holds reports the current target t still worth fighting and its
+// distance: attacking id within release, or a hostile within the
+// engage reach and release margin.
+func (gd *Guard) holds(id, t entity.EntityID, x, y int, now uint64) (int, bool) {
+	if _, _, d, ok := gd.ThreatTo(id, t, x, y, AnimalRelease, RaiderRelease); ok {
+		return d, true
+	}
+	if gd.st == nil || !gd.st.foeID(t, now) {
+		return 0, false
+	}
+	tx, ty, ok := gd.h.Pos(t)
+	d := weapon.Distance(x, y, tx, ty)
+	return d, ok && d <= EngageReach(weapon.DefOf(gd.h.Weapon(id)).Range)+SwitchMargin
+}
+
+// nearestFoe is the nearest hostile in sight of colonist id at (x, y)
+// that is not (yet) attacking it (CBT-4, threat response): within the
+// engage reach of its weapon when armed (set to Attack), else within the
+// flight reach (the release reach while calm). Ties go to the lower id.
+func (gd *Guard) nearestFoe(id entity.EntityID, x, y int, armed, calm bool, now uint64) (entity.EntityID, int, int, int) {
+	h := gd.h
+	animalR, raiderR := FleeReach, RaiderReach
+	switch {
+	case armed:
+		animalR = EngageReach(weapon.DefOf(h.Weapon(id)).Range)
+		raiderR = animalR
+	case calm:
+		animalR, raiderR = FleeRelease, RaiderRelease
+	}
+	gd.foes = h.Near(x, y, max(animalR, raiderR), Animals|Raiders, gd.foes[:0])
+	s, ok := nearest(gd.foes, x, y, func(s Seen) bool {
+		r := raiderR
+		if _, beast := h.Animal(s.ID); beast {
+			r = animalR
+		}
+		return weapon.Distance(x, y, s.X, s.Y) <= r && gd.st.foeID(s.ID, now) && gd.st.sight.Line(x, y, s.X, s.Y)
+	})
+	if !ok {
+		return 0, 0, 0, 0
+	}
+	return s.ID, s.X, s.Y, weapon.Distance(x, y, s.X, s.Y)
+}
+
+// fleeDist is how far a flight's goal lies from the colonist.
+const fleeDist = 8
+
+// FleeGoal picks where colonist id at (x, y) runs from a threat at
+// (tx, ty) (moved from the game's flee.go, CBT-4): straight away, then
+// ±45°, then ±90°. A candidate must have a free walkable tile within 3
+// that the colonist can reach and that is no nearer the threat; of those,
+// the first inside the home area wins, else the first. ok is false when
+// the colonist is cornered.
+func (gd *Guard) FleeGoal(id entity.EntityID, x, y, tx, ty int) (int, int, bool) {
+	dx, dy := x-tx, y-ty
+	if dx == 0 && dy == 0 {
+		dx = 1
+	}
+	dirs := [...][2]int{{dx, dy}, {dx - dy, dx + dy}, {dx + dy, dy - dx}, {-dy, dx}, {dy, -dx}} // ahead, ±45°, ±90°
+	now := weapon.Distance(x, y, tx, ty)
+	bx, by, found := 0, 0, false
+	for _, d := range dirs {
+		fx, fy := animal.FleeGoal(x, y, x-d[0], y-d[1], fleeDist)
+		fx, fy, ok := gd.tiles.WalkableNear(fx, fy, 3)
+		if !ok || fx == x && fy == y || weapon.Distance(fx, fy, tx, ty) < now || !gd.fl.Reachable(id, fx, fy) {
+			continue
+		}
+		if gd.fl.InHome(fx, fy) {
+			return fx, fy, true
+		}
+		if !found {
+			bx, by, found = fx, fy, true
+		}
+	}
+	return bx, by, found
 }

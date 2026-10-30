@@ -234,7 +234,7 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
-	return k == Club || k == Rifle || k == Knife || k == Spear || k >= Mace && k <= EMPLauncher
+	return k == Club || k == Rifle || k == Knife || k == Spear || k >= Mace && k <= EMPLauncher || k.IsContractWeapon()
 }
 
 // IsArmor reports apparel whose job is protection (DEF-2: flak, plate,
@@ -242,11 +242,11 @@ func (k Kind) IsWeapon() bool {
 func (k Kind) IsArmor() bool { return k >= FlakVest && k <= AdvancedHelmet }
 
 // IsContractWeapon reports a weapon kind of the STO/CBT contract
-// (rocket launchers to the ikwa) that CBT-3 makes equippable.
+// (rocket launchers to the ikwa), equippable since CBT-3.
 func (k Kind) IsContractWeapon() bool { return k >= RocketLauncher && k <= Ikwa }
 
 // IsBelt reports belt-layer apparel (the shield belt and the smokepop
-// pack) that CBT-3 makes wearable.
+// pack), worn in the Belt slot since CBT-3.
 func (k Kind) IsBelt() bool { return k == SmokepopPack || k == ShieldBelt }
 
 // IsShell reports a mortar shell (DEF-3).
@@ -358,6 +358,7 @@ const (
 	Body        // outer layer over the shirt: parka, duster
 	Head
 	Legs // DEF-2: flak pants
+	Belt // CBT-3: the shield belt and the smokepop pack
 )
 
 func (s Slot) String() string {
@@ -368,6 +369,8 @@ func (s Slot) String() string {
 		return "head"
 	case Legs:
 		return "legs"
+	case Belt:
+		return "belt"
 	}
 	return ""
 }
@@ -391,6 +394,8 @@ var apparel = [numKinds]struct {
 	FlakVest: {Body, 10, 0}, FlakPants: {Legs, 35, 10}, FlakJacket: {Body, 144, 30},
 	PlateArmor: {Body, 0, 0}, MarineArmor: {Body, 680, 100},
 	MarineHelmet: {Head, 40, 20}, SimpleHelmet: {Head, 4, 0}, AdvancedHelmet: {Head, 4, 0},
+	// CBT-3 belts: no insulation.
+	ShieldBelt: {slot: Belt}, SmokepopPack: {slot: Belt},
 }
 
 // IsApparel reports clothing that can be worn.

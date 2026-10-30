@@ -101,6 +101,18 @@ func HeldWeaponKey(weapon string) (key string, ok bool) {
 		return "weapon/incendiary_launcher", true
 	case "emp launcher":
 		return "weapon/emp_launcher", true
+	case "rocket launcher":
+		return "weapon/rocket_launcher", true
+	case "triple rocket launcher":
+		return "weapon/triple_rocket_launcher", true
+	case "smoke launcher":
+		return "weapon/smoke_launcher", true
+	case "charge rifle":
+		return "weapon/charge_rifle", true
+	case "charge lance":
+		return "weapon/charge_lance", true
+	case "ikwa":
+		return "weapon/ikwa", true
 	}
 	return "", false
 }

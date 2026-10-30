@@ -59,6 +59,8 @@ type Bus struct {
 	Voice Voice
 	// Struct is the structure cues' memory (structure_sounds.go).
 	Struct structureMemo
+	// Wave3 is the stagger, tantrum, dispenser and shield cues memory (wave3_sounds.go).
+	Wave3 wave3Memo
 	// SoundHas reports a sound id exists (the App wires Sound.Has; nil:
 	// all do).
 	SoundHas func(id string) bool

@@ -4,8 +4,8 @@ import "testing"
 
 // TestStoCbtCatalogue (STO/CBT contract): the new kinds parse by name,
 // carry a wiki value and land in their categories; the paste meal is a
-// cooked, quickly rotting food; the gear is not equippable or wearable
-// until CBT-3 gives it weapon defs, a belt layer and art.
+// cooked, quickly rotting food; since CBT-3 the weapons equip and the
+// belts are worn in the belt slot.
 func TestStoCbtCatalogue(t *testing.T) {
 	t.Parallel()
 	cats := map[Kind]string{NutrientPasteMeal: "Food", SmokepopPack: "Apparel", ShieldBelt: "Apparel",
@@ -20,8 +20,8 @@ func TestStoCbtCatalogue(t *testing.T) {
 		if got, ok := ParseKind(k.String()); !ok || got != k || k.Value() <= 0 || k.Category() != want {
 			t.Errorf("%s: parse %v %v, value %d, category %q want %q", k, got, ok, k.Value(), k.Category(), want)
 		}
-		if k.IsWeapon() || k.IsApparel() {
-			t.Errorf("%s is equippable before CBT-3", k)
+		if want == "Weapons" && !k.IsWeapon() || want == "Apparel" && (!k.IsApparel() || k.Slot() != Belt) {
+			t.Errorf("%s is not equippable or wearable (slot %v)", k, k.Slot())
 		}
 	}
 	if NutrientPasteMeal.Raw() || !NutrientPasteMeal.Perishable() || NutrientPasteMeal.StackLimit() != 10 ||

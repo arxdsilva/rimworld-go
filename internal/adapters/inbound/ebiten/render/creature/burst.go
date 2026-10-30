@@ -22,6 +22,11 @@ type BurstEvent struct {
 	// Blast: a weapon's explosion (DEF-2), voiced by cue.Bus.ListenBursts,
 	// so it raises no creature bang of its own.
 	Blast bool
+	// Kind names the explosion ("bomb", "flame", "EMP", "smoke"; "": a
+	// creature's burst) and Radius its size in tenths of a tile: the
+	// effect drawn is the kind's (CBT-5).
+	Kind   string
+	Radius int
 }
 
 type burstKey struct {
@@ -68,6 +73,9 @@ func (c *Set) emitBurst(v *render.View, ev BurstEvent) {
 		*c.Parts = append(*c.Parts, Particle{Kind: PartEmber, X: x, Y: y, Born: v.Present,
 			Life: 9, Size: 0.3, Grow: 0.03, Clr: burstFlashClr})
 	}
+	if emitBlast(ev) {
+		return
+	}
 	spread := func(kind PartKind, n int, s uint64, speed float64) {
 		from := len(*c.Parts)
 		c.Burst(v, kind, x, y, n, s)
@@ -91,8 +99,19 @@ func (c *Set) EmitWorldBursts(v *render.View, w game.WorldView) {
 	evs := c.burstBuf[:0] // reused each frame
 	for _, b := range w.Bursts {
 		evs = append(evs, BurstEvent{ID: entity.EntityID(uint64(uint32(b.X))<<32 | uint64(uint32(b.Y))), X: b.X, Y: b.Y, Tick: b.Tick,
-			Blast: b.Blast != ""})
+			Blast: b.Blast != "", Kind: b.Blast, Radius: b.Radius})
 	}
 	c.burstBuf = evs
 	c.bursts.Emit(c, v, evs)
+}
+
+// emitBlast reports a weapon blast whose effect is a sprite, drawn by the
+// overlay (render/overlay blast_draw.go: fire, EMP and smoke), so it
+// throws no particles; the plain bomb keeps the generic burst: false.
+func emitBlast(ev BurstEvent) bool {
+	switch ev.Kind {
+	case "flame", "EMP", "smoke":
+		return true
+	}
+	return false
 }

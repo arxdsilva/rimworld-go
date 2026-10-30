@@ -36,6 +36,12 @@ type Roles struct {
 	Chronicle Chronicle
 	// Mech is the mechanoids' and ship parts' own role (mech.go).
 	Mech MechHost
+	// CBT-4: Tactics (tactics.go: cover, grenades, targets, crops,
+	// mechanoids' door bashing) and Nest (nest.go: hive mounds).
+	Tactics Tactics
+	Nest    Nest
+	// Kidnap (kidnap.go, moved from the game by CBT-4).
+	Kidnap Kidnap
 }
 
 // Roster is the raider records and raid groups, which stay on the game.
@@ -65,8 +71,6 @@ type Captives interface {
 	DropPatient(id entity.EntityID)
 	// BeingCaptured: a colonist is carrying id off to a prison bed.
 	BeingCaptured(id entity.EntityID) bool
-	TryKidnap(id entity.EntityID, x, y int, now uint64) bool
-	StepKidnap(id entity.EntityID, j job.Record, now uint64)
 }
 
 // Bodies is where creatures are and how they fare.

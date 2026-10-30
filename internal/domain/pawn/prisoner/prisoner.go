@@ -18,6 +18,9 @@ type State struct {
 	Resistance int32
 	NextVisit  uint64
 	Captor     uint64
+	// Calm (CBT-4, absent in older saves): no prison break is tried
+	// before this tick (game/prison/escape.go).
+	Calm uint64
 }
 
 // Tuning (wiki-derived curves per the ENG-003 balance override).

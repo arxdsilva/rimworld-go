@@ -12,6 +12,10 @@ presentation clock; animation never feeds the simulation.
   smoke, a few sparks. Origin = the head centre.
 - pod_dust: 256x192. A low, flat ring of dust puffs thrown outward on
   impact (three light/base/shadow bands, soft edge). Origin = its centre.
+- fire_burst, emp_flash, smoke_cloud (CBT-5 blast kinds): 256x256, origin
+  at the centre, scaled by the renderer to the blast radius.
+- shield_bubble (CBT-3): 224x256, the shield belt's field as it blocks a
+  hit, centred on the wearer.
 
     make art FAMILIES=effect
 """
@@ -227,6 +231,142 @@ def _fire(size, k):
                  {"effect": "fire_" + size, "frame": k, "frames": 4, "fps": 8})
 
 
+def _rings(w, h):
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32) + 0.5
+    cx, cy = w / 2, h / 2
+    return xx, yy, cx, cy
+
+
+def _fire_burst():
+    """A flame blast seen from above, 256x256, origin at its centre (the
+    renderer scales it to the blast radius and fades it): a white-hot core,
+    a ragged ring of flame tongues thrown outward, deep red tips and a thin
+    dark smoke rim with a few embers."""
+    core, body, tip, smk = _mat("fire_core"), _mat("fire_body"), _mat("fire_tip"), _mat("fire_smoke")
+    w = h = 256
+    xx, yy, cx, cy = _rings(w, h)
+    rng = np.random.RandomState(6061)
+    ang = np.arctan2(yy - cy, xx - cx)
+    rad = np.hypot(xx - cx, (yy - cy) * 1.08) / (w / 2)       # a touch flatter: ground-hugging
+    edge = np.ones_like(ang) * 0.0
+    for k in range(5):                                         # ragged outline: summed lobes
+        edge += rng.uniform(0.03, 0.07) * np.cos(ang * (5 + 2 * k) + rng.uniform(0, 6.28))
+    img = np.zeros((h, w, 4), np.float32)
+    img[..., :3] = body["base"]
+    _over(img, np.clip((0.95 + edge - rad) / 0.05, 0, 1), smk["base"], 0.55)
+    _over(img, np.clip((0.86 + edge - rad) / 0.05, 0, 1), tip["base"], 1.0)
+    _over(img, np.clip((0.74 + 0.8 * edge - rad) / 0.05, 0, 1), body["shadow"], 1.0)
+    _over(img, np.clip((0.62 + 0.7 * edge - rad) / 0.05, 0, 1), body["base"], 1.0)
+    _over(img, np.clip((0.42 + 0.5 * edge - rad) / 0.06, 0, 1), core["base"], 1.0)
+    _over(img, np.clip((0.22 - rad) / 0.08, 0, 1), core["light"], 1.0)
+    for _ in range(18):                                        # embers flung past the rim
+        a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0.7, 0.96)
+        ex, ey = cx + math.cos(a) * r * w / 2, cy + math.sin(a) * r * h / 2 / 1.08
+        _over(img, np.clip(1.4 - np.hypot(xx - ex, yy - ey) / rng.uniform(1.6, 2.8), 0, 1), body["light"], 0.95)
+    return _save("fire_burst", img, (int(cx), int(cy)), {"effect": "fire_burst"})
+
+
+def _emp_flash():
+    """An EMP pulse, 256x256, origin at its centre: a thin bright shock ring,
+    a soft blue glow inside it and jagged arcs crackling outward."""
+    arc = _mat("emp_arc")
+    w = h = 256
+    xx, yy, cx, cy = _rings(w, h)
+    rng = np.random.RandomState(7072)
+    rad = np.hypot(xx - cx, (yy - cy) * 1.08) / (w / 2)
+    img = np.zeros((h, w, 4), np.float32)
+    img[..., :3] = arc["base"]
+    _over(img, np.clip(1.0 - rad / 0.9, 0, 1) ** 1.5, arc["base"], 0.35)         # inner glow
+    _over(img, np.clip(1.0 - np.abs(rad - 0.86) / 0.05, 0, 1), arc["base"], 0.9)  # shock ring
+    _over(img, np.clip(1.0 - np.abs(rad - 0.86) / 0.018, 0, 1), arc["light"], 1.0)
+    for k in range(9):                                        # forked arcs
+        a = 2 * math.pi * (k + rng.uniform(-0.3, 0.3)) / 9
+        px, py, r = cx, cy, 0.0
+        while r < 0.84:
+            step = rng.uniform(0.06, 0.12)
+            a2 = a + rng.uniform(-0.55, 0.55)
+            nx, ny = px + math.cos(a2) * step * w / 2, py + math.sin(a2) * step * h / 2 / 1.08
+            # distance to the segment (px,py)-(nx,ny)
+            vx, vy = nx - px, ny - py
+            t = np.clip(((xx - px) * vx + (yy - py) * vy) / max(vx * vx + vy * vy, 1e-6), 0, 1)
+            d = np.hypot(xx - px - t * vx, yy - py - t * vy)
+            _over(img, np.clip(1.0 - d / 3.2, 0, 1), arc["base"], 0.8)
+            _over(img, np.clip(1.0 - d / 1.3, 0, 1), arc["light"], 1.0)
+            px, py, r = nx, ny, r + step
+    _over(img, np.clip((0.18 - rad) / 0.1, 0, 1), np.ones(3, np.float32), 1.0)    # white centre
+    return _save("emp_flash", img, (int(cx), int(cy)), {"effect": "emp_flash"})
+
+
+def _smoke_cloud():
+    """A lingering smoke screen, 256x256, origin at its centre: a dense mound
+    of overlapping pale grey puffs, lit toward the upper left, its edge soft
+    so overlapping clouds merge. The renderer scales it to the cloud radius
+    and fades it out as the smoke thins."""
+    cl = _mat("smoke_haze")
+    w = h = 256
+    xx, yy, cx, cy = _rings(w, h)
+    rng = np.random.RandomState(8083)
+    puffs = []
+    for k in range(16):                                       # an outer ring of billows
+        a = 2 * math.pi * (k + rng.uniform(-0.3, 0.3)) / 16
+        rad = rng.uniform(0.55, 0.7)
+        puffs.append((cx + math.cos(a) * rad * 100, cy + math.sin(a) * rad * 92, rng.uniform(20, 30)))
+    for _ in range(12):                                       # and a filled middle
+        a, rad = rng.uniform(0, 2 * math.pi), rng.uniform(0.0, 0.45)
+        puffs.append((cx + math.cos(a) * rad * 100, cy + math.sin(a) * rad * 92, rng.uniform(26, 38)))
+    rgb = np.empty((h, w, 3), np.float32)
+    rgb[:] = cl["base"]
+    cov = np.zeros((h, w), np.float32)
+    for px, py, r in sorted(puffs, key=lambda p: p[1]):       # back (top) to front (bottom)
+        dx, dy = (xx - px) / r, (yy - py) / r
+        d = np.hypot(dx, dy)
+        disc = np.clip((1.0 - d) * r / 1.5, 0, 1)
+        # a cel-shaded ball: shadow crescent lower right, lit cap upper left
+        sh = np.hypot(dx + 0.38, dy + 0.38) > 1.12
+        li = np.hypot(dx + 0.30, dy + 0.30) < 0.5
+        band = np.where(sh[..., None], cl["shadow"], np.where(li[..., None], cl["light"], cl["base"]))
+        rgb = rgb * (1 - disc[..., None]) + band * disc[..., None]
+        cov = np.maximum(cov, np.clip(1.15 - d, 0, 1))
+    img = np.zeros((h, w, 4), np.float32)
+    img[..., :3] = rgb
+    img[..., 3] = _smooth(0.0, 0.3, cov) * 0.86
+    return _save("smoke_cloud", img, (int(cx), int(cy)), {"effect": "smoke_cloud"})
+
+
+def _shield_bubble():
+    """The shield belt's field flaring as it stops a hit, 224x256, origin at
+    its centre (the renderer centres it on the wearer's body and fades it):
+    a faint blue sphere with a bright rim, a highlight arc toward the upper
+    left light and a faint hexagonal weave."""
+    sf = _mat("shield_field")
+    w, h = 224, 256
+    xx, yy, cx, cy = _rings(w, h)
+    rx, ry = w / 2 - 6, h / 2 - 6
+    rad = np.hypot((xx - cx) / rx, (yy - cy) / ry)
+    inside = (rad < 1.0).astype(np.float32)
+    img = np.zeros((h, w, 4), np.float32)
+    img[..., :3] = sf["base"]
+    # the sphere: thin in the middle, denser toward the rim (fresnel)
+    _over(img, inside * (0.10 + 0.35 * np.clip(rad, 0, 1) ** 4), sf["base"], 1.0)
+    # hexagonal weave: three line families 60 degrees apart, faded at the rim
+    u = xx - cx
+    v = yy - cy
+    cell = 18.0
+    weave = np.zeros_like(u)
+    for a in (0.0, math.pi / 3, 2 * math.pi / 3):
+        t = (u * math.cos(a) + v * math.sin(a)) / cell
+        weave = np.maximum(weave, np.clip(1.0 - np.abs(t - np.round(t)) * cell / 1.1, 0, 1))
+    _over(img, weave * inside * 0.16 * np.clip(1.2 - rad, 0, 1), sf["light"], 1.0)
+    # rim: a soft band and a crisp line
+    _over(img, np.clip(1.0 - np.abs(rad - 0.97) / 0.06, 0, 1), sf["shadow"], 0.55)
+    _over(img, np.clip(1.0 - np.abs(rad - 0.975) / 0.018, 0, 1), sf["light"], 0.9)
+    # highlight arc toward the upper-left key light
+    hl = np.hypot((xx - (cx - 0.38 * rx)) / (0.42 * rx), (yy - (cy - 0.42 * ry)) / (0.26 * ry))
+    _over(img, np.clip(1.0 - hl, 0, 1) ** 1.5 * inside, np.ones(3, np.float32), 0.5)
+    return _save("shield_bubble", img, (int(cx), int(cy)), {"effect": "shield_bubble"})
+
+
 def build():
     return [_pod_fall(), _pod_dust()] + [_steam_puff(k) for k in range(4)] \
-        + [_fire(sz, k) for sz in ("small", "medium", "large") for k in range(4)]
+        + [_fire(sz, k) for sz in ("small", "medium", "large") for k in range(4)] \
+        + [_fire_burst(), _emp_flash(), _smoke_cloud(), _shield_bubble()]

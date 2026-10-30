@@ -114,7 +114,10 @@ func TestStats(t *testing.T) {
 	if v := Stats(FragGrenade); v.Blast != "bomb" || v.BlastRadius != 19 || v.Accuracy != [4]int{} {
 		t.Fatalf("frag view %+v", v)
 	}
-	if v := Stats(SentryGun); v.Accuracy[0] != HitPermille(DefOf(SentryGun), 3) || v.ArmorPen != 9*PenPerDamage {
-		t.Fatalf("legacy gun view %+v", v)
+	if v := Stats(Fists); v.Accuracy != [4]int{} || v.ArmorPen != 4*PenPerDamage {
+		t.Fatalf("fists view %+v", v)
+	}
+	if v := Stats(Autocannon); v.MinRange != 8 || v.Range != 32 || v.SingleUse {
+		t.Fatalf("autocannon view %+v", v)
 	}
 }

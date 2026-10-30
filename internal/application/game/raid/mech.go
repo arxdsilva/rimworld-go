@@ -48,6 +48,9 @@ const (
 	mechWanderEvery = 240
 	// mechRepathEvery paces a chasing mechanoid's path to a moving target.
 	mechRepathEvery = 30
+	// mechBashGap is the least wait between a mechanoid's blows on a wall
+	// or door (the raiders' breach cooldown). original tuning
+	mechBashGap = 60
 )
 
 // mechKinds are the mechanoids a group is drawn from, cheapest last.
@@ -85,13 +88,18 @@ type MechHost interface {
 // MechSave). Field names are gob names: never rename.
 type MechRecord struct {
 	// StunUntil: an EMP stunned it until this tick; AdaptUntil: it shrugs
-	// off EMP until this tick (wiki: Mechanoid, 2200 ticks).
+	// off EMP until this tick, explosion.EMPAdaptTicks after it recovered
+	// (wiki: Mechanoid, 2200 ticks; explosion.Adapted, the turrets' rule).
 	StunUntil, AdaptUntil uint64
 	// Shots left in the burst under way (0: none).
 	Shots int
 	// Guard: a ship part's guard, posted at (PostX, PostY).
 	Guard        bool
 	PostX, PostY int
+	// Bash (CBT-4, absent in older saves) is the wall or shut door it is
+	// breaking through to reach its target, hit from (BashX, BashY).
+	Bash         entity.EntityID
+	BashX, BashY int
 }
 
 // Mechs runs the mechanoids.
@@ -102,11 +110,19 @@ type Mechs struct {
 	recs  map[entity.EntityID]MechRecord
 	ships *ShipParts
 	near  []entity.EntityID // EMP's reused buffer
+	// CBT-4: t bashes doors (nil: none); a lands drop pods; pods are a
+	// mechanoid raid's pods still falling (saved); hives the hive mounds,
+	// saved here (nest.go).
+	t     Tactics
+	a     Arrive
+	pods  []Pod
+	drops *Pods
+	hives *Hives
 }
 
 // newMechs builds the mechanoids and the ship parts that bring them.
 func newMechs(h Host, r Roles) (*Mechs, *ShipParts) {
-	ms := &Mechs{h: h, w: r.Wild, m: r.Mech, recs: make(map[entity.EntityID]MechRecord)}
+	ms := &Mechs{h: h, w: r.Wild, m: r.Mech, recs: make(map[entity.EntityID]MechRecord), t: r.Tactics, a: r.Arrive}
 	ms.ships = &ShipParts{h: h, w: r.Wild, m: r.Mech, mechs: ms}
 	return ms, ms.ships
 }
@@ -143,7 +159,7 @@ func (ms *Mechs) think(id entity.EntityID, a *animal.State, r *MechRecord, m ani
 		}
 	}
 	if a.Target == 0 {
-		ms.idle(id, a, x, y, *r, now)
+		ms.idle(id, a, x, y, r, wd, now)
 		return
 	}
 	tx, ty, ok := ms.targetAt(a.Target, x, y)
@@ -158,12 +174,43 @@ func (ms *Mechs) think(id entity.EntityID, a *animal.State, r *MechRecord, m ani
 		}
 		return
 	}
+	if r.Bash != 0 && ms.bash(id, a, r, wd, x, y, now) {
+		return // CBT-4: breaking through a wall or a shut door
+	}
 	if now < a.RetryAt && a.PathI >= len(a.Path) {
 		return // backing off after a failed path search
 	}
 	if a.PathI >= len(a.Path) || weapon.Distance(a.GoalX, a.GoalY, tx, ty) > 1 || (now+uint64(id))%mechRepathEvery == 0 {
 		*a = ms.m.GoTo(id, *a, tx, ty)
+		if a.PathI >= len(a.Path) && now < a.RetryAt && ms.t != nil { // shut out: bash a way in (CBT-4)
+			if b, sx, sy, ok := ms.t.Block(id, tx, ty); ok {
+				r.Bash, r.BashX, r.BashY = b, sx, sy
+			}
+		}
 	}
+}
+
+// bash runs a mechanoid at (x, y) breaking through r.Bash (CBT-4): it
+// walks to the tile it hits from, then strikes on its weapon's cycle
+// (a gun is swung). Once the wall or door is down, or it has a way round
+// (the door held open), it reports false and paths on.
+func (ms *Mechs) bash(id entity.EntityID, a *animal.State, r *MechRecord, wd weapon.Def, x, y int, now uint64) bool {
+	if a.Cooldown > 0 {
+		return true
+	}
+	if ms.t.Bash(id, r.Bash, wd) {
+		a.Path, a.PathI = nil, 0
+		a.Cooldown = max(wd.Cooldown, mechBashGap)
+		return true
+	}
+	if x == r.BashX && y == r.BashY || now < a.RetryAt && a.PathI >= len(a.Path) {
+		r.Bash, a.RetryAt = 0, 0 // broken through (or no way to it): path again
+		return false
+	}
+	if a.PathI >= len(a.Path) || a.GoalX != r.BashX || a.GoalY != r.BashY {
+		*a = ms.m.GoTo(id, *a, r.BashX, r.BashY)
+	}
+	return true
 }
 
 // fire is one shot (or blow) of the burst under way, then the wait: the
@@ -238,7 +285,10 @@ func (ms *Mechs) targetAt(t entity.EntityID, x, y int) (int, int, bool) {
 
 // idle walks a mechanoid with no one to fight: a guard back to its post,
 // a raider on to the colony.
-func (ms *Mechs) idle(id entity.EntityID, a *animal.State, x, y int, r MechRecord, now uint64) {
+func (ms *Mechs) idle(id entity.EntityID, a *animal.State, x, y int, r *MechRecord, wd weapon.Def, now uint64) {
+	if r.Bash != 0 && ms.bash(id, a, r, wd, x, y, now) {
+		return // CBT-4: breaking into the colony
+	}
 	if a.PathI < len(a.Path) || now < a.NextThink {
 		return
 	}
@@ -252,6 +302,11 @@ func (ms *Mechs) idle(id entity.EntityID, a *animal.State, x, y int, r MechRecor
 	hx, hy := ms.h.Home()
 	if weapon.Distance(x, y, hx, hy) > guardHome {
 		*a = ms.m.GoTo(id, *a, hx, hy)
+		if a.PathI >= len(a.Path) && now < a.RetryAt && ms.t != nil { // shut out of the colony: bash in
+			if b, sx, sy, ok := ms.t.Block(id, hx, hy); ok {
+				r.Bash, r.BashX, r.BashY = b, sx, sy
+			}
+		}
 	}
 }
 
@@ -274,10 +329,11 @@ func (ms *Mechs) EMP(x, y int, d explosion.Def, now uint64) {
 		}
 		ticks := d.StunTicks(explosion.Dist(mx-x, my-y))
 		r := ms.recs[id]
-		if ticks <= 0 || now < r.AdaptUntil {
+		if ticks <= 0 || now < r.StunUntil || explosion.Adapted(r.StunUntil, now) { // the turrets' rule (CBT-4/5)
 			continue
 		}
-		r.StunUntil, r.AdaptUntil, r.Shots = now+uint64(ticks), now+animal.EMPAdaptTicks, 0
+		r.StunUntil, r.Shots = now+uint64(ticks), 0
+		r.AdaptUntil = r.StunUntil + explosion.EMPAdaptTicks
 		ms.recs[id] = r
 		a := ms.w.Animal(id)
 		a.Path, a.PathI = nil, 0
@@ -338,6 +394,9 @@ func (ms *Mechs) Raid(points int, arr raiddef.Arrival, now uint64) int {
 	if !ok {
 		return 0
 	}
+	if arr != raiddef.WalkInEdge && ms.drops != nil && ms.a != nil {
+		return ms.podRaid(points, arr, now) // CBT-4: they come down in drop pods
+	}
 	n := 0
 	for _, s := range ms.Group(points) {
 		x, y := ex, ey
@@ -358,6 +417,59 @@ func (ms *Mechs) Raid(points int, arr raiddef.Arrival, now uint64) int {
 		ms.h.Threat("Mechanoid raid", ex, ey, "War machines are coming for the colony! An EMP blast will stun them for a while.")
 	}
 	return n
+}
+
+// podRaid plans a mechanoid group's drop pods by arrival arr (the people
+// raids' spots and spacing, pods.go), each to land one mechanoid at its
+// time (landPods). It returns how many pods come.
+func (ms *Mechs) podRaid(points int, arr raiddef.Arrival, now uint64) int {
+	h := ms.h
+	cx, cy, centred := ms.drops.spot(arr)
+	w, ht := h.Size()
+	n := 0
+	for _, s := range ms.Group(points) {
+		for try := 0; try < podTries; try++ {
+			px, py := h.Roll(w), h.Roll(ht)
+			if centred {
+				px, py = cx+h.Roll(2*raiddef.PodRadius+1)-raiddef.PodRadius, cy+h.Roll(2*raiddef.PodRadius+1)-raiddef.PodRadius
+			}
+			if ms.drops.free(ms.pods, px, py) {
+				ms.pods = append(ms.pods, Pod{X: px, Y: py, Land: now + raiddef.PodFallTicks + uint64(h.Roll(raiddef.PodStagger)), Mech: s})
+				n++
+				break
+			}
+		}
+	}
+	if n > 0 {
+		ms.h.Threat("Mechanoid raid", cx, cy, "Drop pods! War machines are falling on the colony. An EMP blast will stun them for a while.")
+	}
+	return n
+}
+
+// landPods lands the mechanoids' pods whose time has come and forgets
+// those landed over an hour ago (Pods.Step, once a tick).
+func (ms *Mechs) landPods(now uint64) {
+	last := uint64(0)
+	for i := range ms.pods {
+		p := &ms.pods[i]
+		last = max(last, p.Land)
+		if p.Landed || now < p.Land {
+			continue
+		}
+		p.Landed = true
+		sx, sy, ok := ms.a.Crash(p.X, p.Y)
+		if !ok {
+			continue
+		}
+		if id, err := ms.w.SpawnAnimal(p.Mech, sx, sy); err == nil {
+			a := ms.w.Animal(id)
+			a.Manhunter, a.Mode, a.NextDecide = HiveForever, animal.Attack, now
+			ms.w.SetAnimal(id, a)
+		}
+	}
+	if len(ms.pods) > 0 && podsLeft(ms.pods) == 0 && now >= last+podKeep {
+		ms.pods = nil
+	}
 }
 
 // scatterRange: scattered drop pods land this far round the colony.
@@ -393,14 +505,24 @@ func (ms *Mechs) spawnNear(s animal.Species, x, y int) (entity.EntityID, bool) {
 type MechSave struct {
 	Mechs map[entity.EntityID]MechRecord
 	Parts []ShipPart
+	// CBT-4 (absent in older saves): a mechanoid raid's pods and the
+	// hive mounds (nest.go).
+	Pods  []Pod
+	Hives []Hive
 }
 
 // Export is the state for the save (nil when there is none).
 func (ms *Mechs) Export() *MechSave {
-	if len(ms.recs) == 0 && len(ms.ships.parts) == 0 {
+	if len(ms.recs) == 0 && len(ms.ships.parts) == 0 && len(ms.pods) == 0 && (ms.hives == nil || len(ms.hives.hives) == 0) {
 		return nil
 	}
-	s := &MechSave{Parts: cloneParts(ms.ships.parts)}
+	s := &MechSave{Parts: cloneParts(ms.ships.parts), Pods: slices.Clone(ms.pods)}
+	if ms.hives != nil {
+		for _, hr := range ms.hives.hives {
+			hr.Brood = slices.Clone(hr.Brood)
+			s.Hives = append(s.Hives, hr)
+		}
+	}
 	if len(ms.recs) > 0 {
 		s.Mechs = make(map[entity.EntityID]MechRecord, len(ms.recs))
 		for id, r := range ms.recs {
@@ -413,9 +535,19 @@ func (ms *Mechs) Export() *MechSave {
 // Import restores saved state (nil: none, as an older save).
 func (ms *Mechs) Import(s *MechSave) {
 	clear(ms.recs)
-	ms.ships.parts = nil
+	ms.ships.parts, ms.pods = nil, nil
+	if ms.hives != nil {
+		ms.hives.hives = nil
+	}
 	if s == nil {
 		return
+	}
+	ms.pods = slices.Clone(s.Pods)
+	if ms.hives != nil {
+		for _, hr := range s.Hives {
+			hr.Brood = slices.Clone(hr.Brood)
+			ms.hives.hives = append(ms.hives.hives, hr)
+		}
 	}
 	for id, r := range s.Mechs {
 		ms.recs[id] = r

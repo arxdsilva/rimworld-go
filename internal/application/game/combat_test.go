@@ -62,6 +62,9 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 	victim, _ := g.SpawnNamedPawn(10, 6, "Bait")
 	shooter, _ := g.SpawnNamedPawn(4, 6, "Shooter")
 	g.equip[shooter] = item.Rifle
+	// CBT-4: set to ignore threats, the undrafted rifleman leaves the
+	// wolf be until drafted (by default it would shoot it on sight)
+	g.combat.Drafts.SetResponse(shooter, combat.RespondIgnore)
 	wolf, _ := g.SpawnAnimal("ridgewolf", 14, 6)
 	a, _ := g.animals.Get(wolf)
 	a.Hunger = animal.DefOf(animal.Ridgewolf).HungerTicks

@@ -3,6 +3,7 @@ package creature
 import (
 	"image/color"
 	"math"
+	"reflect"
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -30,13 +31,23 @@ var (
 	floatHit      = color.RGBA{255, 236, 210, 255}
 	floatBuilding = color.RGBA{230, 190, 120, 255}
 	floatMiss     = color.RGBA{190, 190, 190, 255}
+	floatDodge    = color.RGBA{150, 210, 255, 255}
 )
+
+// traceDodged reports a blow the target dodged (TraceView.Dodged, CBT-3;
+// read by name so the floater builds before the field exists).
+func traceDodged(t game.TraceView) bool {
+	f := reflect.ValueOf(&t).Elem().FieldByName("Dodged")
+	return f.IsValid() && f.Kind() == reflect.Bool && f.Bool()
+}
 
 // FloatTrace starts a floating number for a newly seen attack.
 func (c *Set) FloatTrace(v *render.View, t game.TraceView, seed uint64) {
 	jx := float64(seed%7)/20 - 0.15
 	f := Floater{X: float64(t.ToX) + 0.5 + jx, Y: float64(t.ToY) - 0.1, Born: v.Present}
 	switch {
+	case traceDodged(t):
+		f.Text, f.Clr = "dodged", floatDodge
 	case t.Hit && t.Damage > 0:
 		f.Text, f.Clr = "-"+strconv.Itoa(t.Damage), floatHit
 		if t.Building {

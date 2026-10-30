@@ -84,15 +84,15 @@ func TestListenBlastsCuesEachBurstOnce(t *testing.T) {
 
 // TestListenBurstsCuesEachNewBlastOnce (DEF-2): the world's bursts with
 // a Blast are heard once each, louder the wider they are, across frames
-// and ListenWorld's memo rebuild; animal and turret bursts are not.
+// and ListenWorld's memo rebuild; animal and turret bursts are not. Smoke hisses.
 func TestListenBurstsCuesEachNewBlastOnce(t *testing.T) { // not parallel: AllocsPerRun
 	r := newBus(1)
 	bursts := []game.BurstView{{X: 3, Y: 4, Tick: 9, Blast: "bomb", Radius: 19}, {X: 1, Y: 1, Tick: 9, Species: "emberbuck"},
 		{X: 2, Y: 2, Tick: 9, Turret: true}, {X: 6, Y: 6, Tick: 9, Blast: "EMP", Radius: 11}, {X: 7, Y: 7, Tick: 9, Blast: "smoke", Radius: 30}}
 	r.b.ListenBursts(bursts)
 	got := r.b.Take()
-	if len(got) != 2 || got[0].ID != "sfx.explosion" || got[1].ID != "sfx.emp_burst" {
-		t.Fatalf("cues %+v, want the bomb and the EMP", got)
+	if len(got) != 3 || got[0].ID != "sfx.explosion" || got[1].ID != "sfx.emp_burst" || got[2].ID != "sfx.smokepop_burst" {
+		t.Fatalf("cues %+v, want the bomb, the EMP and the smoke", got)
 	}
 	if got[0].X != 3.5 || got[0].Y != 4.5 || got[1].Vol >= got[0].Vol || got[0].Vol > 1 {
 		t.Errorf("placement or volume: %+v", got)
@@ -108,5 +108,30 @@ func TestListenBurstsCuesEachNewBlastOnce(t *testing.T) { // not parallel: Alloc
 	}
 	if n := testing.AllocsPerRun(50, func() { r.b.ListenBursts(bursts) }); n != 0 {
 		t.Errorf("hearing old bursts allocates %.1f times a frame", n)
+	}
+}
+
+// TestWave3WeaponCues: the CBT-3 launchers and energy weapons, a ranged
+// weapon swung in melee, and a launcher's landing left to its blast.
+func TestWave3WeaponCues(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		tr   game.TraceView
+		want []string
+	}{
+		{"rocket", game.TraceView{Weapon: "rocket launcher", Stage: projectile.Fired}, []string{"sfx.rocket_launch"}},
+		{"triple rocket", game.TraceView{Weapon: "triple rocket launcher", Stage: projectile.Fired}, []string{"sfx.rocket_launch"}},
+		{"smoke launcher", game.TraceView{Weapon: "smoke launcher", Stage: projectile.Fired}, []string{"sfx.smoke_launcher"}},
+		{"charge rifle", game.TraceView{Weapon: "charge rifle", Stage: projectile.Fired}, []string{"sfx.charge_rifle_shot"}},
+		{"charge lance", game.TraceView{Weapon: "charge lance", Stage: projectile.Fired}, []string{"sfx.charge_lance_shot"}},
+		{"rocket landing is the blast's", game.TraceView{Weapon: "rocket launcher", Stage: projectile.Landed, Hit: true, Damage: 3}, nil},
+		{"stock blow", game.TraceView{Weapon: "assault rifle", Melee: true, Hit: true, Damage: 3}, []string{"sfx.melee_swing", "sfx.gunstock_hit"}},
+		{"rifle stock blow", game.TraceView{Weapon: "rifle", Melee: true, Hit: true, Damage: 3}, []string{"sfx.melee_swing", "sfx.gunstock_hit"}},
+	}
+	for _, c := range cases {
+		if got := combatIDs(c.tr); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: cues %v, want %v", c.name, got, c.want)
+		}
 	}
 }

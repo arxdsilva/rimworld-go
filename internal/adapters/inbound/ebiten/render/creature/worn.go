@@ -15,7 +15,7 @@ import (
 // root's figure (Host.FigureLayers) in the order
 //
 //	shirt → flak pants → flak vest → [parka, duster] → flak jacket →
-//	plate / marine armor → beard → hair → helmet
+//	plate / marine armor → shield belt → smokepop pack → beard → hair → helmet
 //
 // Body pieces have one sprite per build and facing
 // (pawn/<layer>_<build>_<facing>, the male average build unsuffixed);
@@ -31,6 +31,8 @@ const (
 	wornFlakJacket
 	wornPlate
 	wornMarine
+	wornShieldBelt
+	wornSmokepopPack
 	numWornBody
 )
 
@@ -53,7 +55,7 @@ const (
 // wornBodyLayers and wornHelmetLayers are the sprite layer names; the
 // builds are look.Look.BuildKey's names in buildIndex order.
 var (
-	wornBodyLayers   = [numWornBody]string{"flak_pants", "flak_vest", "flak_jacket", "plate_armor", "marine_armor"}
+	wornBodyLayers   = [numWornBody]string{"flak_pants", "flak_vest", "flak_jacket", "plate_armor", "marine_armor", "shield_belt", "smokepop_pack"}
 	wornHelmetLayers = [numWornHelmets]string{"simple_helmet", "advanced_helmet", "marine_helmet"}
 	wornBuildKeys    = [numBuilds]string{"m_avg", "m_thin", "m_heavy", "f_avg", "f_thin", "f_heavy"}
 	wornFacings      = [numFacings]string{"south", "east", "north"}
@@ -72,6 +74,10 @@ func wornBodyPiece(kind string) (int, bool) {
 		return wornPlate, true
 	case "marine armor":
 		return wornMarine, true
+	case "shield belt":
+		return wornShieldBelt, true
+	case "smokepop pack":
+		return wornSmokepopPack, true
 	}
 	return 0, false
 }

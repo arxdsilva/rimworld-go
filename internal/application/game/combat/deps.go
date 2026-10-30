@@ -48,6 +48,11 @@ type Roles struct {
 	Arms Arms
 	// Draft (CBT-2) releases a drafted colonist (auto-undraft).
 	Draft Drafting
+	// Debris (CBT-5, blast.go): the loose stacks, plants and fuel a blast
+	// reaches.
+	Debris Debris
+	// Belts (CBT-3) is what creatures wear at the belt (gear.go).
+	Belts Belts
 }
 
 // Drafting releases drafted colonists (CBT-2).
@@ -226,8 +231,10 @@ type Power interface {
 // The window (the tick a colonist that fled holds back from work until)
 // stays on the game, which lying down and stashing also clear.
 type Flight interface {
-	// FleeGoal is a tile for id at (x, y) to run to from (tx, ty).
-	FleeGoal(id entity.EntityID, x, y, tx, ty int) (int, int, bool)
+	// Reachable: id can walk to (x, y); InHome: (x, y) lies in the home
+	// area (CBT-4: Guard.FleeGoal, moved from the game).
+	Reachable(id entity.EntityID, x, y int) bool
+	InHome(x, y int) bool
 	// DropForFlight puts j down (an order goes back on the queue).
 	DropForFlight(id entity.EntityID, j job.Record)
 	// CheckThreats cross-checks a threat scan in self-check builds.
@@ -252,9 +259,9 @@ type Hunts interface {
 	Reserved(id entity.EntityID) bool
 	// Postponed: hunter id put off hunting prey (SIM-027).
 	Postponed(id, prey entity.EntityID) bool
-	// NearestFree is the nearest free stack of k for id and its tile (0:
-	// none).
-	NearestFree(id entity.EntityID, k item.Kind) (entity.EntityID, int, int)
+	// NearestFree is the nearest free stack of a kind match accepts for
+	// id and its tile (0: none).
+	NearestFree(id entity.EntityID, match func(item.Kind) bool) (entity.EntityID, int, int)
 }
 
 // Field is the map beyond buildings as cover sees it, and the building

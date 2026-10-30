@@ -214,26 +214,6 @@ func (g *Game) prisonerBed(id entity.EntityID) (entity.EntityID, bool) {
 	return bid, ok && b.SlotOf(uint64(id)) >= 0
 }
 
-// walkOut takes a released pawn to the map edge; there (or after a day
-// of trying) it goes home.
-func (g *Game) walkOut(id entity.EntityID, r raid.Raider, j job.Record, now uint64) {
-	pos, _ := g.positions.Get(id)
-	w, h := g.grid.Width(), g.grid.Height()
-	if pos.X == 0 || pos.Y == 0 || pos.X == w-1 || pos.Y == h-1 || now-r.Idle >= raid.RaiderGiveUp {
-		g.departReleased(id)
-		return
-	}
-	if j.Active() && j.Kind == job.Move || now < r.RetryAt {
-		return
-	}
-	ex, ey := nearestEdge(pos, w, h)
-	if x, y, ok := g.combat.Tiles.WalkableNear(ex, ey, 3); ok && g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) {
-		return
-	}
-	r.RetryAt = now + raid.RaiderRetry
-	g.raiders[id] = r
-}
-
 // departReleased: a released pawn reached the edge. Its faction is
 // grateful, and it is off the map.
 func (g *Game) departReleased(id entity.EntityID) {

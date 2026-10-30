@@ -174,12 +174,12 @@ func TestPawnPaneSpec(t *testing.T) {
 	if !slices.Equal(ids, wantIDs) {
 		t.Fatalf("tabs %v, want %v", ids, wantIDs)
 	}
-	for _, id := range []string{"inspector.needs", "inspector.gear", "inspector.log"} {
+	for _, id := range []string{"inspector.needs", "inspector.log"} {
 		if tb, _ := paneTabByID(spec, id); tb.Draw == nil {
 			t.Errorf("%s is a legacy draw", id)
 		}
 	}
-	for _, id := range []string{"inspector.bio", "inspector.health", "inspector.social"} {
+	for _, id := range []string{"inspector.bio", "inspector.health", "inspector.social", "inspector.gear"} {
 		if tb, _ := paneTabByID(spec, id); tb.Declare == nil {
 			t.Errorf("%s is a widget-kit declare", id)
 		}
@@ -360,7 +360,7 @@ func TestPawnCommandsDeclarationOrderAndHotkeys(t *testing.T) {
 			t.Errorf("command %s needs a label and a tooltip body", c.ID)
 		}
 	}
-	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", inspectorpkg.PrisonerCapture, inspectorpkg.PrisonerArrest, inspectorpkg.DropWeaponID} // Drop weapon (STO-3) comes last, only for an armed colonist, so the hotkeys before it keep their order
+	want := []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", "cmd.pawn.bedrest", inspectorpkg.PrisonerCapture, inspectorpkg.PrisonerArrest, inspectorpkg.DropWeaponID, inspectorpkg.ThreatID} // Threat response (CBT-5) last; Drop weapon (STO-3) comes last, only for an armed colonist, so the hotkeys before it keep their order
 	if !slices.Equal(ids, want) {
 		t.Fatalf("commands %v, want %v", ids, want)
 	}

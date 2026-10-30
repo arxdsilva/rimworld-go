@@ -157,3 +157,16 @@ func TestHitWear(t *testing.T) {
 		t.Fatalf("destroyed %v outfit %+v", gone, o)
 	}
 }
+
+// TestOutfitArmor (CBT-3): each worn piece's armor in slot order, a
+// garment that is no armor as zero.
+func TestOutfitArmor(t *testing.T) {
+	t.Parallel()
+	var o Outfit
+	o.On[item.Body] = Piece{Kind: item.Parka}
+	o.On[item.Head] = Piece{Kind: item.SimpleHelmet}
+	got := o.Armor()
+	if len(got) != 2 || got[1].Sharp == 0 {
+		t.Fatalf("armor %+v", got)
+	}
+}

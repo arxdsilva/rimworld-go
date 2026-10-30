@@ -257,8 +257,11 @@ func (r *Renderer) advanceTicks(want int, more func(done int) bool) (done int) {
 	r.animate(w, r.game.Snapshot(), done > 0)
 	r.stepEnvironment(w, r.game.Snapshot())
 	p, cb, v := r.pipe(), r.cueBus(), r.liveView()
-	p.Creatures.EmitWorldBursts(v, w)    // render/creature: explosive animal deaths
-	cb.ListenBursts(w.Bursts)            // render/cue: grenade and launcher blasts (DEF-2)
+	p.Creatures.EmitWorldBursts(v, w) // render/creature: explosive animal deaths
+	cb.ListenBursts(w.Bursts)         // render/cue: grenade and launcher blasts (DEF-2)
+	set := &r.overlays().Combat
+	set.Shields = shieldStates(set.Shields[:0], r.game.Snapshot())
+	cb.ListenShields(set.Shields)        // render/cue: a shield belt pop (CBT-3)
 	cb.ListenAnimals(v, w, r.mo.Stepped) // render/cue: calls, flee cries, deaths
 	r.watchThreats(w)
 	r.heard = w

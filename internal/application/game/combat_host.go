@@ -46,7 +46,7 @@ var _ combat.Host = combatHost{}
 func newCombat(g *Game) *combat.Combat {
 	h := combatHost{combatCreatures{g}, combatRosters{g}, combatGround{g}, combatSkills{g}, combatJobs{g}, combatHarm{g}, combatEvents{g}, combatDice{g}}
 	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g},
-		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}})
+		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}, Belts: combatArms{g}, Debris: combatDebris{g}})
 }
 
 type combatCreatures struct{ g *Game }
@@ -57,7 +57,7 @@ func (h combatCreatures) Pos(id entity.EntityID) (int, int, bool) {
 	return p.X, p.Y, ok
 }
 func (h combatCreatures) Animal(id entity.EntityID) (animal.State, bool) { return h.g.animals.Get(id) }
-func (h combatCreatures) Weapon(id entity.EntityID) weapon.Kind          { return h.g.weaponOf(id) }
+func (h combatCreatures) Weapon(id entity.EntityID) weapon.Kind          { return weaponOf(h.g, id) }
 func (h combatCreatures) StandingPawn(id entity.EntityID) bool           { return h.g.standingPawn(id) }
 func (h combatCreatures) StandingRaider(id entity.EntityID) bool         { return h.g.standingRaider(id) }
 func (h combatCreatures) Hostile(a animal.State) bool                    { return h.g.hostile(a) }
@@ -224,9 +224,8 @@ func (h combatPower) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 
 type combatFlight struct{ g *Game }
 
-func (h combatFlight) FleeGoal(id entity.EntityID, x, y, tx, ty int) (int, int, bool) {
-	return h.g.fleeGoal(id, Position{X: x, Y: y}, Position{X: tx, Y: ty}) // flee.go
-}
+func (h combatFlight) Reachable(id entity.EntityID, x, y int) bool    { return h.g.reachable(id, x, y) }
+func (h combatFlight) InHome(x, y int) bool                           { return h.g.inHome(y*h.g.grid.Width() + x) }
 func (h combatFlight) DropForFlight(id entity.EntityID, j job.Record) { h.g.dropForFlight(id, j) }
 func (h combatFlight) Calm(id entity.EntityID) (uint64, bool) {
 	until, ok := h.g.calm[id]
@@ -257,8 +256,8 @@ func (h combatHunts) Reserved(id entity.EntityID) bool {
 func (h combatHunts) Postponed(id, prey entity.EntityID) bool {
 	return h.g.postponedFor(id, job.Hunt, prey, 0, 0) // postpone.go (SIM-027)
 }
-func (h combatHunts) NearestFree(id entity.EntityID, k item.Kind) (entity.EntityID, int, int) {
-	return h.g.nearestFree(id, k)
+func (h combatHunts) NearestFree(id entity.EntityID, match func(item.Kind) bool) (entity.EntityID, int, int) {
+	return h.g.nearestFree(id, match)
 }
 
 // combatField is natural cover and the building lists (DEF-3).
@@ -335,3 +334,26 @@ func (h combatBreach) BreachRoute(id entity.EntityID, tx, ty int) ([]pathing.Poi
 	return g.searcher().Find(breachMap{g: g, breaks: breaks}, pos.X, pos.Y, tx, ty)
 }
 func (h combatBreach) Query(id entity.EntityID) pathing.Query { return h.g.pathQuery(id) }
+
+// combatDebris is combat.Debris (CBT-5): the stacks, plants and fuel a
+// blast reaches, through the storage index's putStack/deleteItem paths.
+type combatDebris struct{ g *Game }
+
+func (h combatDebris) Loose(x, y int, buf []entity.EntityID) []entity.EntityID {
+	return append(buf, h.g.idx.ground.Loose(haulHost{h.g}, x, y)...)
+}
+func (h combatDebris) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
+func (h combatDebris) PutStack(id entity.EntityID, st item.Stack)  { h.g.putStack(id, st) }
+func (h combatDebris) DropStack(id entity.EntityID)                { h.g.deleteItem(id) }
+func (h combatDebris) Fuel(x, y int) int                           { return h.g.cellFuel(x, y, nil).Flammability }
+func (h combatDebris) Kindle(x, y int)                             { h.g.startFire(x, y, burstFireSize) } // fire.go
+func (h combatDebris) HarmPlant(x, y, pct int) {
+	if id := h.g.plantAt(x, y); id != 0 {
+		p, _ := h.g.plants.Get(id)
+		if p.Damage = uint8(min(int(p.Damage)+pct, plant.DamageDead)); p.Dead() {
+			h.g.removePlant(id)
+		} else {
+			h.g.setPlant(id, p)
+		}
+	}
+}

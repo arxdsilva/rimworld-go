@@ -51,7 +51,7 @@ func (m *Mind) allowed(id entity.EntityID, k mentalbreak.Kind) bool {
 		return len(m.others(id, false)) >= 2 // wiki: 2+ other colonists
 	case mentalbreak.TargetedInsult:
 		return len(m.others(id, false)) >= 1
-	case mentalbreak.Berserk:
+	case mentalbreak.Berserk, mentalbreak.Tantrum:
 		return h.CanViolence(id)
 	case mentalbreak.MurderousRage:
 		return h.CanViolence(id) && len(m.others(id, true)) > 0

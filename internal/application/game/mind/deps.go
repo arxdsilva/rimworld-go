@@ -19,6 +19,7 @@ type Host interface {
 	Brawls
 	Events
 	Muses
+	Smash
 }
 
 // Pawns answers who a pawn is, where and how it feels.
@@ -121,4 +122,16 @@ type Muses interface {
 	Inspired(id entity.EntityID, label string)
 	// InspirationEnded tells that id's unused inspiration faded.
 	InspirationEnded(id entity.EntityID, label string)
+}
+
+// Smash is what a tantrum breaks (CBT-4, tantrum.go).
+type Smash interface {
+	// Breakable is the building or item stack on (x, y) a tantrum may
+	// smash: the colony's, not a plant or a creature (ok false: none).
+	Breakable(x, y int) (entity.EntityID, bool)
+	// GoBeside walks id to a free tile beside (x, y) (false: no way).
+	GoBeside(id entity.EntityID, x, y int) bool
+	// Smash is one blow of id's fists on target (a building loses hit
+	// points, an item stack wears; false: it is gone).
+	Smash(id, target entity.EntityID) bool
 }

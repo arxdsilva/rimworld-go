@@ -21,6 +21,10 @@ type Arrive interface {
 	// Reach: (tx, ty) can be reached from (x, y) by breaking through walls
 	// and doors.
 	Reach(x, y, tx, ty int) bool
+	// Crash brings an empty pod down on (x, y) (the roof and the shell as
+	// Land) and reports the free tile beside it its cargo comes out on
+	// (CBT-4: siege supplies, mechanoids).
+	Crash(x, y int) (sx, sy int, ok bool)
 }
 
 // Mischief is what thieves, burners and rival raiders reach for.

@@ -40,7 +40,7 @@ const (
 type worn = craft.Outfit
 
 // wearSlots are the slots garments go in.
-var wearSlots = [...]item.Slot{item.Body, item.Head, item.Legs} // DEF-2: flak pants
+var wearSlots = [...]item.Slot{item.Body, item.Head, item.Legs, item.Belt} // DEF-2: flak pants; CBT-3: belts (only by order)
 
 // bandsOf is a colonist's comfortable range given what it wears.
 func (g *Game) bandsOf(id entity.EntityID) exposure.Bands {
@@ -209,7 +209,7 @@ func (g *Game) dressPlan(id entity.EntityID, full bool) (outfit, bool) {
 		for j, hd := range opts[item.Head] {
 			for k, lg := range opts[item.Legs] {
 				var o outfit
-				o.pick[item.Body], o.pick[item.Head], o.pick[item.Legs] = b, hd, lg
+				o.pick[item.Body], o.pick[item.Head], o.pick[item.Legs], o.pick[item.Belt] = b, hd, lg, opts[item.Belt][0]
 				bands := shifted(o.worn().Bands(), c, h) // craft/garment.go: fit and surplus too
 				o.miss, o.surplus, o.walk = craft.DayFit(bands, mean), craft.DaySurplus(bands, mean), b.d+hd.d+lg.d
 				if i == 0 && j == 0 && k == 0 || o.better(&best) {

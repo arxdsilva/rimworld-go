@@ -10,14 +10,12 @@ import (
 
 // Staged raids (DEF-4, StageThenAssault). wiki: Raid, the raiders stand
 // around in a small group near where they came in, and attack once they
-// see a colonist nearby or a time limit passes. Here the group gathers at
-// a spot raiddef.StageSpotIn tiles in from its edge; it storms when a
-// colonist comes within SightRange of a raider, when its time limit runs
-// out, or once everyone has gathered and it has waited
-// raiddef.StageMinHours. A raider walks back to the spot only past
-// raiddef.StageWander tiles and counts as gathered within
-// raiddef.StageGather, so it never shuffles to and fro; the storm is one
-// way.
+// see a colonist nearby or their assault timer (10 to 15 hours, CBT-4)
+// runs out. Here the group gathers at a spot raiddef.StageSpotIn tiles in
+// from its edge; it storms when a colonist comes within SightRange of a
+// raider or when the timer runs out. A raider walks back to the spot only
+// past raiddef.StageWander tiles, so it never shuffles to and fro; the
+// storm is one way.
 
 // stageEvery staggers the staging checks (a colonist in sight, gathered).
 const stageEvery = 30
@@ -38,9 +36,7 @@ func (rs *Raiders) stage(id entity.EntityID, r Raider, j job.Record, x, y int, n
 	}
 	if (now+uint64(id))%stageEvery == 0 {
 		_, cx, cy, seen := h.NearestColonist(x, y)
-		seen = seen && weapon.Distance(x, y, cx, cy) <= SightRange
-		ready := now-grp.Started >= raiddef.StageMinHours*clock.TicksPerHour && rs.gathered(r.Group)
-		if seen || ready || now >= grp.Until {
+		if seen && weapon.Distance(x, y, cx, cy) <= SightRange {
 			rs.storm(r.Group, x, y, now, "The gathered raiders are attacking!")
 			return false
 		}
@@ -68,22 +64,6 @@ func (rs *Raiders) stageSpot(x, y int) (int, int) {
 		return cx, cy
 	}
 	return x, y
-}
-
-// gathered: every standing raider of group gi is within StageGather of
-// the spot.
-func (rs *Raiders) gathered(gi int) bool {
-	h := rs.h
-	grp := h.Groups()[gi]
-	for _, id := range h.RaiderIDs() {
-		if h.Raider(id).Group != gi || !h.StandingRaider(id) {
-			continue
-		}
-		if x, y, _ := h.Pos(id); weapon.Distance(x, y, grp.CampX, grp.CampY) > raiddef.StageGather {
-			return false
-		}
-	}
-	return true
 }
 
 // storm turns a staged or besieging group onto the colony for good: Until

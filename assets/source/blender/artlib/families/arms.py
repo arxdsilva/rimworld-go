@@ -12,7 +12,7 @@ small pile ("frag grenades", "molotov cocktails", "EMP grenades").
 "Down" on a gun (grip, magazine) is -Y, as on the bolt-action rifle.
 Silhouettes keep the classes apart at gameplay zoom: pistol / revolver /
 SMG / rifle / shotgun / long rifle / machine gun / launcher / blade /
-blunt / bow / javelin. All shapes are original.
+blunt / bow / javelin / rocket tube / charge. All shapes are original.
     make art FAMILIES=arms          (RWG_ARMS=mace,lmg narrows a review build)
 """
 import math
@@ -443,6 +443,139 @@ def _emp_launcher():
     return _launcher("crystal_blue", housing=True)
 
 
+# ------------------------------------------- CBT-3 launchers and charge
+def _rocket_launcher():
+    """A disposable rocket tube: one long olive tube with flared end caps, a
+    flip-up sight, a trigger box with grip and a carry strap. No stock: the
+    rear cap rests on the shoulder."""
+    _rod(0.06, 0.98, 0.05, "fur_moss", z=0.055)
+    _rod(0.04, 0.10, 0.058, "metal_dark", z=0.055)
+    _rod(0.94, 1.00, 0.06, "metal_dark", z=0.055)
+    for x in (0.30, 0.72):
+        _rod(x, x + 0.025, 0.054, "fur_black", z=0.055)
+    S.box("warn", 0.80, Y - 0.052, 0.04, 0.86, Y + 0.052, 0.112, "corn_yellow", bevel=0.004)
+    S.box("trigger", 0.34, Y - 0.06, 0.0, 0.46, Y - 0.03, 0.06, "metal_dark", bevel=0.008)
+    _grip(0.38, w=0.06, drop=0.15, rake=0.03, material="fur_black", z1=0.05)
+    S.box("fgrip", 0.58, Y - 0.12, 0.0, 0.63, Y - 0.04, 0.05, "fur_black", bevel=0.01)
+    S.prism("sight", [(0.48, Y - 0.012), (0.54, Y - 0.012), (0.53, Y + 0.012), (0.49, Y + 0.012)], 0.1, 0.15,
+            "metal_dark", bevel=0.003)
+    S.box("sight_post", 0.505, Y - 0.006, 0.15, 0.515, Y + 0.006, 0.17, "corn_yellow", bevel=0.0)
+    S.prism("strap", [(0.14, Y + 0.05), (0.40, Y + 0.10), (0.66, Y + 0.10), (0.88, Y + 0.05), (0.88, Y + 0.065),
+                      (0.66, Y + 0.115), (0.40, Y + 0.115), (0.14, Y + 0.065)], 0.0, 0.014, "burlap", bevel=0.002)
+    return {"grip": (0.36, Y, 0.045), "support": (0.605, Y - 0.06, 0.04), "muzzle": (1.0, Y, 0.055),
+            "stock": (0.04, Y, 0.055)}
+
+
+def _triple_rocket_launcher():
+    """Three short rocket tubes bundled in a triangle by two steel clamps,
+    a rear trigger housing with a pistol grip and a box sight on top."""
+    for dy, z in ((-0.046, 0.042), (0.046, 0.042), (0.0, 0.112)):
+        _rod(0.22, 0.96, 0.04, "fur_steel" if z > 0.1 else "fur_moss", z=z, y=Y + dy)
+        _rod(0.93, 0.98, 0.046, "metal_dark", z=z, y=Y + dy)
+        _rod(0.20, 0.24, 0.044, "metal_dark", z=z, y=Y + dy)
+    for x in (0.36, 0.78):
+        S.box("clamp", x, Y - 0.095, 0.0, x + 0.04, Y + 0.095, 0.16, "metal_dark", bevel=0.012)
+    S.box("housing", 0.08, Y - 0.06, 0.0, 0.24, Y + 0.06, 0.12, "metal_dark", bevel=0.016)
+    S.box("pad", 0.06, Y - 0.065, 0.01, 0.09, Y + 0.065, 0.11, "fur_black", bevel=0.008)
+    _grip(0.28, w=0.065, drop=0.16, rake=0.04, material="fur_black")
+    _guard(0.30, 0.38)
+    S.box("fgrip", 0.60, Y - 0.14, 0.0, 0.65, Y - 0.08, 0.05, "fur_black", bevel=0.01)
+    S.box("sight", 0.50, Y - 0.03, 0.15, 0.60, Y + 0.03, 0.2, "metal_dark", bevel=0.008)
+    S.box("lens", 0.598, Y - 0.018, 0.16, 0.604, Y + 0.018, 0.19, "glass", bevel=0.0)
+    S.box("warn", 0.86, Y - 0.095, 0.15, 0.90, Y + 0.095, 0.162, "corn_yellow", bevel=0.003)
+    return {"grip": (0.26, Y, 0.05), "support": (0.625, Y - 0.1, 0.04), "muzzle": (0.98, Y, 0.08),
+            "stock": (0.06, Y, 0.06)}
+
+
+def _smoke_launcher():
+    """A stubby break-open launcher: a fat short barrel with a perforated
+    muzzle cup, a grey smoke band, a skeleton stock and a top handle."""
+    S.prism("frame", [(0.08, Y - 0.06), (0.12, Y - 0.06), (0.30, Y - 0.03), (0.30, Y + 0.0), (0.12, Y - 0.01),
+                      (0.12, Y + 0.02), (0.30, Y + 0.01), (0.30, Y + 0.035), (0.08, Y + 0.045)], 0.0, 0.05,
+            "metal_dark", bevel=0.006)
+    S.box("pad", 0.06, Y - 0.065, 0.0, 0.09, Y + 0.05, 0.055, "fur_black", bevel=0.006)
+    S.box("breech", 0.29, Y - 0.055, 0.0, 0.42, Y + 0.055, 0.1, "steel", bevel=0.014)
+    S.box("hinge", 0.40, Y - 0.06, 0.0, 0.44, Y + 0.06, 0.04, "metal_dark", bevel=0.006)
+    _grip(0.33, w=0.065, drop=0.14, material="bark")
+    _guard(0.35, 0.43)
+    _rod(0.42, 0.74, 0.06, "metal_dark", z=0.06)
+    _rod(0.50, 0.56, 0.064, "ash_grey", z=0.06)
+    _rod(0.74, 0.80, 0.068, "steel", z=0.06)
+    for k in range(3):
+        x = 0.748 + 0.016 * k
+        S.box("port%d" % k, x, Y - 0.02, 0.12, x + 0.008, Y + 0.02, 0.13, "fur_black", bevel=0.0)
+    for x in (0.49, 0.63):
+        S.box("post", x, Y - 0.01, 0.1, x + 0.02, Y + 0.01, 0.15, "metal_dark", bevel=0.003)
+    S.box("handle", 0.48, Y - 0.014, 0.12, 0.66, Y + 0.014, 0.16, "fur_black", bevel=0.008)
+    return {"grip": (0.31, Y, 0.045), "support": (0.57, Y, 0.06), "muzzle": (0.80, Y, 0.06),
+            "stock": (0.06, Y, 0.03)}
+
+
+def _charge_body(x1, cells, rail):
+    """The charge family: a slab-sided pale receiver with a dark spine,
+    glowing blue charge cells set in its flank and a shrouded emitter."""
+    S.prism("stock", [(0.05, Y - 0.07), (0.10, Y - 0.075), (0.28, Y - 0.04), (0.28, Y + 0.04), (0.16, Y + 0.04),
+                      (0.12, Y + 0.0), (0.06, Y + 0.0), (0.05, Y + 0.05)], 0.0, 0.06, "fur_ivory", bevel=0.012)
+    S.box("butt", 0.04, Y - 0.075, 0.0, 0.065, Y + 0.055, 0.065, "metal_dark", bevel=0.006)
+    S.prism("receiver", [(0.27, Y - 0.05), (0.60, Y - 0.05), (0.66, Y - 0.03), (0.66, Y + 0.03), (0.60, Y + 0.05),
+                         (0.27, Y + 0.05)], 0.0, 0.09, "fur_ivory", bevel=0.014)
+    S.box("spine", 0.28, Y - 0.016, 0.09, x1 - 0.04, Y + 0.016, 0.11, "metal_dark", bevel=0.004)
+    for k in range(cells):
+        x = 0.40 + 0.06 * k
+        S.box("cell%d" % k, x, Y - 0.054, 0.025, x + 0.04, Y + 0.054, 0.07, "crystal_blue", bevel=0.006)
+        for s in (-1, 1):
+            S.box("vent%d" % k, x, Y + s * 0.02 - 0.012, 0.086, x + 0.04, Y + s * 0.02 + 0.012, 0.1,
+                  "crystal_blue", bevel=0.003)
+    _grip(0.34, w=0.06, drop=0.13, material="metal_dark")
+    _guard(0.36, 0.44)
+    if rail:
+        # two prongs with a charge gap between them
+        for dy in (-0.032, 0.032):
+            S.box("prong", 0.64, Y + dy - 0.016, 0.01, x1, Y + dy + 0.016, 0.07, "fur_ivory", bevel=0.008)
+        S.box("gap", 0.66, Y - 0.012, 0.03, x1 - 0.02, Y + 0.012, 0.05, "crystal_blue", bevel=0.004)
+        for x in (0.74, 0.88):
+            S.box("brace", x, Y - 0.052, 0.0, x + 0.025, Y + 0.052, 0.08, "metal_dark", bevel=0.006)
+    else:
+        S.box("shroud", 0.64, Y - 0.038, 0.01, x1 - 0.06, Y + 0.038, 0.075, "metal_dark", bevel=0.012)
+        for k in range(3):
+            x = 0.68 + 0.04 * k
+            _rod(x, x + 0.016, 0.042, "crystal_blue", z=0.045)
+        _rod(x1 - 0.06, x1, 0.018, "steel", z=0.045)
+    S.box("optic", 0.28, Y - 0.022, 0.11, 0.39, Y + 0.022, 0.14, "metal_dark", bevel=0.008)
+    S.box("lens", 0.388, Y - 0.014, 0.115, 0.394, Y + 0.014, 0.135, "crystal_blue", bevel=0.0)
+
+
+def _charge_rifle():
+    _charge_body(0.92, 2, rail=False)
+    return {"grip": (0.33, Y, 0.045), "support": (0.70, Y, 0.045), "muzzle": (0.92, Y, 0.045),
+            "stock": (0.04, Y, 0.03)}
+
+
+def _charge_lance():
+    _charge_body(1.05, 3, rail=True)
+    S.box("pack", 0.30, Y - 0.12, 0.0, 0.40, Y - 0.05, 0.08, "metal_dark", bevel=0.01)
+    S.box("pack_glow", 0.32, Y - 0.115, 0.08, 0.38, Y - 0.06, 0.088, "crystal_blue", bevel=0.003)
+    return {"grip": (0.33, Y, 0.045), "support": (0.76, Y, 0.04), "muzzle": (1.05, Y, 0.04),
+            "stock": (0.04, Y, 0.03)}
+
+
+def _ikwa():
+    """A short stabbing spear: a stout haft bound in hide, a knob butt and a
+    long broad blade nearly as long as the haft."""
+    S.ellipsoid("knob", 0.12, Y, 0.03, 0.03, 0.03, 0.03, "bark", segs=10, rings=6)
+    _rod(0.13, 0.52, 0.02, "wood", r_top=0.018)
+    _wraps(0.20, 0.34, 0.022, 4, material="leather", alt="fur_tan")
+    S.box("socket", 0.50, Y - 0.024, 0.006, 0.56, Y + 0.024, 0.054, "leather", bevel=0.008)
+    S.prism("blade", [(0.55, Y - 0.02), (0.64, Y - 0.05), (0.80, Y - 0.052), (0.92, Y - 0.03), (1.0, Y),
+                      (0.92, Y + 0.03), (0.80, Y + 0.052), (0.64, Y + 0.05), (0.55, Y + 0.02)],
+            0.012, 0.042, "steel", bevel=0.005)
+    S.prism("ridge", [(0.56, Y - 0.008), (0.90, Y - 0.006), (0.97, Y), (0.90, Y + 0.006), (0.56, Y + 0.008)],
+            0.042, 0.05, "silver", bevel=0.002)
+    for s in (-1, 1):
+        S.prism("tuft", [(0.50, Y + s * 0.02), (0.53, Y + s * 0.07), (0.47, Y + s * 0.06)], 0.01, 0.04,
+                "fur_cream", bevel=0.004)
+
+
 # ------------------------------------------------------------- melee pts
 def _melee(fn, pts):
     def run():
@@ -479,9 +612,16 @@ WEAPONS = [
     ("emp_grenade", None, _emp_grenade, 0.16, 0),
     ("incendiary_launcher", "incendiary launcher", _incendiary_launcher, 0.16, 14),
     ("emp_launcher", "emp launcher", _emp_launcher, 0.16, -14),
+    ("rocket_launcher", "rocket launcher", _rocket_launcher, 0.18, 12),
+    ("triple_rocket_launcher", "triple rocket launcher", _triple_rocket_launcher, 0.21, -12),
+    ("smoke_launcher", "smoke launcher", _smoke_launcher, 0.17, 16),
+    ("charge_rifle", "charge rifle", _charge_rifle, 0.15, -14),
+    ("charge_lance", "charge lance", _charge_lance, 0.15, 12),
+    ("ikwa", "ikwa", _melee(_ikwa, {"grip": (0.28, Y, 0.03), "support": (0.42, Y, 0.03),
+                                    "tip": (1.0, Y, 0.03)}), 0.06, -18),
 ]
 
-LONG = ("longsword", "pila", "sniper_rifle", "lmg", "minigun", "greatbow")
+LONG = ("longsword", "pila", "sniper_rifle", "lmg", "minigun", "greatbow", "rocket_launcher", "charge_lance")
 
 
 def _held(key, fn, zmax):

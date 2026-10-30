@@ -201,8 +201,8 @@ func TestLive(t *testing.T) {
 	}
 	f.held[rid] = Held{Leaving: true}
 	p.Live(rid, 4)
-	if f.walked != 1 {
-		t.Fatal("a released pawn walks out")
+	if j := f.jobs[rid]; j.Kind != job.Move || j.TX != 0 || j.TY != 10 {
+		t.Fatalf("a released pawn walks out: %+v", j)
 	}
 	f.needs[rid] = needs.Pair{Hunger: 0, Rest: needs.Full}
 	p.Live(rid, 5)

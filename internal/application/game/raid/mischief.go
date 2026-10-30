@@ -83,6 +83,13 @@ func (rs *Raiders) burn(id entity.EntityID, r Raider, j job.Record, x, y int, no
 		return true
 	}
 	tx, ty, ok := rs.m.Flammable(x, y, burnReach)
+	reach := burnReach
+	if ok {
+		reach = weapon.Distance(x, y, tx, ty) - 1
+	}
+	if cx, cy, cok := rs.crop(x, y, reach); cok { // CBT-4: a nearer crop burns first
+		tx, ty, ok = cx, cy, true
+	}
 	if !ok {
 		r.RetryAt = now + RaiderRetry*5
 		h.SetRaider(id, r)
@@ -170,4 +177,22 @@ func (rs *Raiders) rival(r Raider, x, y, best int, now uint64) (entity.EntityID,
 		}
 	}
 	return tid, tx, ty, tid != 0
+}
+
+// crop is the nearest sown crop within r of (x, y), ring by ring (ok
+// false: none, or no Tactics role). wiki: Raid, burners set crops alight.
+func (rs *Raiders) crop(x, y, r int) (int, int, bool) {
+	if rs.t == nil {
+		return 0, 0, false
+	}
+	for d := 0; d <= r; d++ {
+		for dy := -d; dy <= d; dy++ {
+			for dx := -d; dx <= d; dx++ {
+				if max(dx, -dx, dy, -dy) == d && rs.h.InBounds(x+dx, y+dy) && rs.t.Crop(x+dx, y+dy) {
+					return x + dx, y + dy, true
+				}
+			}
+		}
+	}
+	return 0, 0, false
 }

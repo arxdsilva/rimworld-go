@@ -4561,9 +4561,384 @@ sprites:
       mask: generated/atlas/pawn_0_mask.png
     layer: plate_armor
     facing: south
+  shield_belt_east:
+    page: 0
+    rect: [3086, 492, 65, 32]
+    trim: [52, 169]
+    normal: true
+    id: "core:pawn/shield_belt_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.396
+      h: 0.11
+      d: 0.546
+    layer: shield_belt
+    facing: east
+  shield_belt_f_avg_east:
+    page: 0
+    rect: [3152, 492, 63, 32]
+    trim: [53, 169]
+    normal: true
+    id: "core:pawn/shield_belt_f_avg_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.384
+      h: 0.11
+      d: 0.524
+    layer: shield_belt
+    facing: east
+    build: f_avg
+  shield_belt_f_avg_north:
+    page: 0
+    rect: [3216, 492, 82, 30]
+    trim: [39, 171]
+    normal: true
+    id: "core:pawn/shield_belt_f_avg_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.524
+      h: 0.11
+      d: 0.384
+    layer: shield_belt
+    facing: north
+    build: f_avg
+  shield_belt_f_avg_south:
+    page: 0
+    rect: [3299, 492, 82, 30]
+    trim: [39, 170]
+    normal: true
+    id: "core:pawn/shield_belt_f_avg_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.524
+      h: 0.11
+      d: 0.384
+    layer: shield_belt
+    facing: south
+    build: f_avg
+  shield_belt_f_heavy_east:
+    page: 0
+    rect: [3382, 492, 75, 34]
+    trim: [48, 168]
+    normal: true
+    id: "core:pawn/shield_belt_f_heavy_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.47
+      h: 0.11
+      d: 0.612
+    layer: shield_belt
+    facing: east
+    build: f_heavy
+  shield_belt_f_heavy_north:
+    page: 0
+    rect: [3458, 492, 92, 30]
+    trim: [34, 171]
+    normal: true
+    id: "core:pawn/shield_belt_f_heavy_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.612
+      h: 0.11
+      d: 0.47
+    layer: shield_belt
+    facing: north
+    build: f_heavy
+  shield_belt_f_heavy_south:
+    page: 0
+    rect: [3551, 492, 92, 32]
+    trim: [34, 168]
+    normal: true
+    id: "core:pawn/shield_belt_f_heavy_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.612
+      h: 0.11
+      d: 0.47
+    layer: shield_belt
+    facing: south
+    build: f_heavy
+  shield_belt_f_thin_east:
+    page: 0
+    rect: [3644, 492, 59, 30]
+    trim: [55, 170]
+    normal: true
+    id: "core:pawn/shield_belt_f_thin_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.35
+      h: 0.11
+      d: 0.474
+    layer: shield_belt
+    facing: east
+    build: f_thin
+  shield_belt_f_thin_north:
+    page: 0
+    rect: [3704, 492, 74, 30]
+    trim: [43, 171]
+    normal: true
+    id: "core:pawn/shield_belt_f_thin_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.474
+      h: 0.11
+      d: 0.35
+    layer: shield_belt
+    facing: north
+    build: f_thin
+  shield_belt_f_thin_south:
+    page: 0
+    rect: [3779, 492, 74, 30]
+    trim: [43, 170]
+    normal: true
+    id: "core:pawn/shield_belt_f_thin_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.474
+      h: 0.11
+      d: 0.35
+    layer: shield_belt
+    facing: south
+    build: f_thin
+  shield_belt_m_heavy_east:
+    page: 0
+    rect: [3854, 492, 74, 34]
+    trim: [49, 168]
+    normal: true
+    id: "core:pawn/shield_belt_m_heavy_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.469
+      h: 0.11
+      d: 0.643
+    layer: shield_belt
+    facing: east
+    build: m_heavy
+  shield_belt_m_heavy_north:
+    page: 0
+    rect: [3929, 492, 96, 30]
+    trim: [32, 171]
+    normal: true
+    id: "core:pawn/shield_belt_m_heavy_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.643
+      h: 0.11
+      d: 0.469
+    layer: shield_belt
+    facing: north
+    build: m_heavy
+  shield_belt_m_heavy_south:
+    page: 0
+    rect: [0, 591, 96, 32]
+    trim: [32, 168]
+    normal: true
+    id: "core:pawn/shield_belt_m_heavy_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.643
+      h: 0.11
+      d: 0.469
+    layer: shield_belt
+    facing: south
+    build: m_heavy
+  shield_belt_m_thin_east:
+    page: 0
+    rect: [97, 591, 61, 31]
+    trim: [54, 169]
+    normal: true
+    id: "core:pawn/shield_belt_m_thin_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.365
+      h: 0.11
+      d: 0.489
+    layer: shield_belt
+    facing: east
+    build: m_thin
+  shield_belt_m_thin_north:
+    page: 0
+    rect: [159, 591, 76, 30]
+    trim: [42, 171]
+    normal: true
+    id: "core:pawn/shield_belt_m_thin_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.489
+      h: 0.11
+      d: 0.365
+    layer: shield_belt
+    facing: north
+    build: m_thin
+  shield_belt_m_thin_south:
+    page: 0
+    rect: [236, 591, 76, 30]
+    trim: [42, 170]
+    normal: true
+    id: "core:pawn/shield_belt_m_thin_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.489
+      h: 0.11
+      d: 0.365
+    layer: shield_belt
+    facing: south
+    build: m_thin
+  shield_belt_north:
+    page: 0
+    rect: [313, 591, 84, 30]
+    trim: [38, 171]
+    normal: true
+    id: "core:pawn/shield_belt_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.546
+      h: 0.11
+      d: 0.396
+    layer: shield_belt
+    facing: north
+  shield_belt_south:
+    page: 0
+    rect: [398, 591, 84, 31]
+    trim: [38, 169]
+    normal: true
+    id: "core:pawn/shield_belt_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.546
+      h: 0.11
+      d: 0.396
+    layer: shield_belt
+    facing: south
   shirt_basic_east:
     page: 0
-    rect: [3086, 492, 51, 56]
+    rect: [483, 591, 51, 56]
     trim: [57, 134]
     normal: true
     id: "core:pawn/shirt_basic_east"
@@ -4586,7 +4961,7 @@ sprites:
     facing: east
   shirt_basic_f_avg_east:
     page: 0
-    rect: [3138, 492, 52, 56]
+    rect: [535, 591, 52, 56]
     trim: [58, 134]
     normal: true
     id: "core:pawn/shirt_basic_f_avg_east"
@@ -4610,7 +4985,7 @@ sprites:
     build: f_avg
   shirt_basic_f_avg_north:
     page: 0
-    rect: [3191, 492, 62, 55]
+    rect: [588, 591, 62, 55]
     trim: [49, 135]
     normal: true
     id: "core:pawn/shirt_basic_f_avg_north"
@@ -4634,7 +5009,7 @@ sprites:
     build: f_avg
   shirt_basic_f_avg_south:
     page: 0
-    rect: [3254, 492, 62, 55]
+    rect: [651, 591, 62, 55]
     trim: [49, 134]
     normal: true
     id: "core:pawn/shirt_basic_f_avg_south"
@@ -4658,7 +5033,7 @@ sprites:
     build: f_avg
   shirt_basic_f_heavy_east:
     page: 0
-    rect: [3317, 492, 62, 58]
+    rect: [714, 591, 62, 58]
     trim: [54, 133]
     normal: true
     id: "core:pawn/shirt_basic_f_heavy_east"
@@ -4682,7 +5057,7 @@ sprites:
     build: f_heavy
   shirt_basic_f_heavy_north:
     page: 0
-    rect: [3380, 492, 74, 57]
+    rect: [777, 591, 74, 57]
     trim: [43, 133]
     normal: true
     id: "core:pawn/shirt_basic_f_heavy_north"
@@ -4706,7 +5081,7 @@ sprites:
     build: f_heavy
   shirt_basic_f_heavy_south:
     page: 0
-    rect: [3455, 492, 74, 57]
+    rect: [852, 591, 74, 57]
     trim: [43, 132]
     normal: true
     id: "core:pawn/shirt_basic_f_heavy_south"
@@ -4730,7 +5105,7 @@ sprites:
     build: f_heavy
   shirt_basic_f_thin_east:
     page: 0
-    rect: [3530, 492, 47, 55]
+    rect: [927, 591, 47, 55]
     trim: [60, 135]
     normal: true
     id: "core:pawn/shirt_basic_f_thin_east"
@@ -4754,7 +5129,7 @@ sprites:
     build: f_thin
   shirt_basic_f_thin_north:
     page: 0
-    rect: [3578, 492, 56, 53]
+    rect: [975, 591, 56, 53]
     trim: [52, 136]
     normal: true
     id: "core:pawn/shirt_basic_f_thin_north"
@@ -4778,7 +5153,7 @@ sprites:
     build: f_thin
   shirt_basic_f_thin_south:
     page: 0
-    rect: [3635, 492, 56, 53]
+    rect: [1032, 591, 56, 53]
     trim: [52, 135]
     normal: true
     id: "core:pawn/shirt_basic_f_thin_south"
@@ -4802,7 +5177,7 @@ sprites:
     build: f_thin
   shirt_basic_m_heavy_east:
     page: 0
-    rect: [3692, 492, 63, 58]
+    rect: [1089, 591, 63, 58]
     trim: [53, 133]
     normal: true
     id: "core:pawn/shirt_basic_m_heavy_east"
@@ -4826,7 +5201,7 @@ sprites:
     build: m_heavy
   shirt_basic_m_heavy_north:
     page: 0
-    rect: [3756, 492, 82, 57]
+    rect: [1153, 591, 82, 57]
     trim: [39, 133]
     normal: true
     id: "core:pawn/shirt_basic_m_heavy_north"
@@ -4850,7 +5225,7 @@ sprites:
     build: m_heavy
   shirt_basic_m_heavy_south:
     page: 0
-    rect: [3839, 492, 82, 57]
+    rect: [1236, 591, 82, 57]
     trim: [39, 132]
     normal: true
     id: "core:pawn/shirt_basic_m_heavy_south"
@@ -4874,7 +5249,7 @@ sprites:
     build: m_heavy
   shirt_basic_m_thin_east:
     page: 0
-    rect: [3922, 492, 47, 55]
+    rect: [1319, 591, 47, 55]
     trim: [59, 135]
     normal: true
     id: "core:pawn/shirt_basic_m_thin_east"
@@ -4898,7 +5273,7 @@ sprites:
     build: m_thin
   shirt_basic_m_thin_north:
     page: 0
-    rect: [3970, 492, 63, 55]
+    rect: [1367, 591, 63, 55]
     trim: [49, 135]
     normal: true
     id: "core:pawn/shirt_basic_m_thin_north"
@@ -4922,7 +5297,7 @@ sprites:
     build: m_thin
   shirt_basic_m_thin_south:
     page: 0
-    rect: [0, 591, 63, 55]
+    rect: [1431, 591, 63, 55]
     trim: [49, 134]
     normal: true
     id: "core:pawn/shirt_basic_m_thin_south"
@@ -4946,7 +5321,7 @@ sprites:
     build: m_thin
   shirt_basic_north:
     page: 0
-    rect: [64, 591, 68, 56]
+    rect: [1495, 591, 68, 56]
     trim: [46, 134]
     normal: true
     id: "core:pawn/shirt_basic_north"
@@ -4969,7 +5344,7 @@ sprites:
     facing: north
   shirt_basic_south:
     page: 0
-    rect: [133, 591, 68, 56]
+    rect: [1564, 591, 68, 56]
     trim: [46, 133]
     normal: true
     id: "core:pawn/shirt_basic_south"
@@ -4992,7 +5367,7 @@ sprites:
     facing: south
   simple_helmet_east:
     page: 0
-    rect: [202, 591, 71, 59]
+    rect: [1633, 591, 71, 59]
     trim: [47, 83]
     normal: true
     id: "core:pawn/simple_helmet_east"
@@ -5015,7 +5390,7 @@ sprites:
     facing: east
   simple_helmet_north:
     page: 0
-    rect: [274, 591, 74, 64]
+    rect: [1705, 591, 74, 64]
     trim: [43, 84]
     normal: true
     id: "core:pawn/simple_helmet_north"
@@ -5038,7 +5413,7 @@ sprites:
     facing: north
   simple_helmet_south:
     page: 0
-    rect: [349, 591, 74, 62]
+    rect: [1780, 591, 74, 62]
     trim: [43, 83]
     normal: true
     id: "core:pawn/simple_helmet_south"
@@ -5059,9 +5434,384 @@ sprites:
       mask: generated/atlas/pawn_0_mask.png
     layer: simple_helmet
     facing: south
+  smokepop_pack_east:
+    page: 0
+    rect: [1855, 591, 74, 42]
+    trim: [43, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.466
+      h: 0.189
+      d: 0.48
+    layer: smokepop_pack
+    facing: east
+  smokepop_pack_f_avg_east:
+    page: 0
+    rect: [1930, 591, 72, 42]
+    trim: [43, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_avg_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.452
+      h: 0.189
+      d: 0.483
+    layer: smokepop_pack
+    facing: east
+    build: f_avg
+  smokepop_pack_f_avg_north:
+    page: 0
+    rect: [2003, 591, 76, 38]
+    trim: [42, 161]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_avg_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.483
+      h: 0.189
+      d: 0.452
+    layer: smokepop_pack
+    facing: north
+    build: f_avg
+  smokepop_pack_f_avg_south:
+    page: 0
+    rect: [2080, 591, 76, 29]
+    trim: [42, 170]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_avg_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.483
+      h: 0.189
+      d: 0.452
+    layer: smokepop_pack
+    facing: south
+    build: f_avg
+  smokepop_pack_f_heavy_east:
+    page: 0
+    rect: [2157, 591, 83, 42]
+    trim: [39, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_heavy_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.537
+      h: 0.189
+      d: 0.564
+    layer: smokepop_pack
+    facing: east
+    build: f_heavy
+  smokepop_pack_f_heavy_north:
+    page: 0
+    rect: [2241, 591, 86, 40]
+    trim: [37, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_heavy_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.564
+      h: 0.189
+      d: 0.537
+    layer: smokepop_pack
+    facing: north
+    build: f_heavy
+  smokepop_pack_f_heavy_south:
+    page: 0
+    rect: [2328, 591, 86, 30]
+    trim: [37, 169]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_heavy_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.564
+      h: 0.189
+      d: 0.537
+    layer: smokepop_pack
+    facing: south
+    build: f_heavy
+  smokepop_pack_f_thin_east:
+    page: 0
+    rect: [2415, 591, 67, 42]
+    trim: [46, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_thin_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.42
+      h: 0.189
+      d: 0.429
+    layer: smokepop_pack
+    facing: east
+    build: f_thin
+  smokepop_pack_f_thin_north:
+    page: 0
+    rect: [2483, 591, 68, 38]
+    trim: [46, 161]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_thin_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.429
+      h: 0.189
+      d: 0.42
+    layer: smokepop_pack
+    facing: north
+    build: f_thin
+  smokepop_pack_f_thin_south:
+    page: 0
+    rect: [2552, 591, 68, 28]
+    trim: [46, 170]
+    normal: true
+    id: "core:pawn/smokepop_pack_f_thin_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.429
+      h: 0.189
+      d: 0.42
+    layer: smokepop_pack
+    facing: south
+    build: f_thin
+  smokepop_pack_m_heavy_east:
+    page: 0
+    rect: [2621, 591, 83, 42]
+    trim: [40, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_m_heavy_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.539
+      h: 0.189
+      d: 0.582
+    layer: smokepop_pack
+    facing: east
+    build: m_heavy
+  smokepop_pack_m_heavy_north:
+    page: 0
+    rect: [2705, 591, 88, 40]
+    trim: [36, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_m_heavy_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.582
+      h: 0.189
+      d: 0.539
+    layer: smokepop_pack
+    facing: north
+    build: m_heavy
+  smokepop_pack_m_heavy_south:
+    page: 0
+    rect: [2794, 591, 88, 30]
+    trim: [36, 169]
+    normal: true
+    id: "core:pawn/smokepop_pack_m_heavy_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.582
+      h: 0.189
+      d: 0.539
+    layer: smokepop_pack
+    facing: south
+    build: m_heavy
+  smokepop_pack_m_thin_east:
+    page: 0
+    rect: [2883, 591, 70, 42]
+    trim: [45, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_m_thin_east"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.435
+      h: 0.189
+      d: 0.426
+    layer: smokepop_pack
+    facing: east
+    build: m_thin
+  smokepop_pack_m_thin_north:
+    page: 0
+    rect: [2954, 591, 68, 38]
+    trim: [46, 161]
+    normal: true
+    id: "core:pawn/smokepop_pack_m_thin_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.426
+      h: 0.189
+      d: 0.435
+    layer: smokepop_pack
+    facing: north
+    build: m_thin
+  smokepop_pack_m_thin_south:
+    page: 0
+    rect: [3023, 591, 68, 28]
+    trim: [46, 170]
+    normal: true
+    id: "core:pawn/smokepop_pack_m_thin_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.426
+      h: 0.189
+      d: 0.435
+    layer: smokepop_pack
+    facing: south
+    build: m_thin
+  smokepop_pack_north:
+    page: 0
+    rect: [3092, 591, 76, 40]
+    trim: [42, 160]
+    normal: true
+    id: "core:pawn/smokepop_pack_north"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.48
+      h: 0.189
+      d: 0.466
+    layer: smokepop_pack
+    facing: north
+  smokepop_pack_south:
+    page: 0
+    rect: [3169, 591, 76, 29]
+    trim: [42, 170]
+    normal: true
+    id: "core:pawn/smokepop_pack_south"
+    image: generated/atlas/pawn_0.png
+    scale: 2
+    canvas: [160, 288]
+    footprint: [1, 1]
+    origin_px: [16, 144]
+    projection:
+      shear_k: 0.35
+    shadow:
+      kind: blob
+      w: 0.48
+      h: 0.189
+      d: 0.466
+    layer: smokepop_pack
+    facing: south
   tuque_knit_east:
     page: 0
-    rect: [424, 591, 65, 49]
+    rect: [3246, 591, 65, 49]
     trim: [50, 77]
     normal: true
     id: "core:pawn/tuque_knit_east"
@@ -5084,7 +5834,7 @@ sprites:
     facing: east
   tuque_knit_north:
     page: 0
-    rect: [490, 591, 68, 49]
+    rect: [3312, 591, 68, 49]
     trim: [46, 77]
     normal: true
     id: "core:pawn/tuque_knit_north"
@@ -5107,7 +5857,7 @@ sprites:
     facing: north
   tuque_knit_south:
     page: 0
-    rect: [559, 591, 68, 48]
+    rect: [3381, 591, 68, 48]
     trim: [46, 77]
     normal: true
     id: "core:pawn/tuque_knit_south"
@@ -5130,7 +5880,7 @@ sprites:
     facing: south
   vest_utility_east:
     page: 0
-    rect: [628, 591, 59, 67]
+    rect: [3450, 591, 59, 67]
     trim: [54, 128]
     normal: true
     id: "core:pawn/vest_utility_east"
@@ -5153,7 +5903,7 @@ sprites:
     facing: east
   vest_utility_f_avg_east:
     page: 0
-    rect: [688, 591, 58, 67]
+    rect: [3510, 591, 58, 67]
     trim: [55, 128]
     normal: true
     id: "core:pawn/vest_utility_f_avg_east"
@@ -5177,7 +5927,7 @@ sprites:
     build: f_avg
   vest_utility_f_avg_north:
     page: 0
-    rect: [747, 591, 68, 64]
+    rect: [3569, 591, 68, 64]
     trim: [46, 130]
     normal: true
     id: "core:pawn/vest_utility_f_avg_north"
@@ -5201,7 +5951,7 @@ sprites:
     build: f_avg
   vest_utility_f_avg_south:
     page: 0
-    rect: [816, 591, 68, 64]
+    rect: [3638, 591, 68, 64]
     trim: [46, 129]
     normal: true
     id: "core:pawn/vest_utility_f_avg_south"
@@ -5225,7 +5975,7 @@ sprites:
     build: f_avg
   vest_utility_f_heavy_east:
     page: 0
-    rect: [885, 591, 69, 68]
+    rect: [3707, 591, 69, 68]
     trim: [51, 128]
     normal: true
     id: "core:pawn/vest_utility_f_heavy_east"
@@ -5249,7 +5999,7 @@ sprites:
     build: f_heavy
   vest_utility_f_heavy_north:
     page: 0
-    rect: [955, 591, 80, 67]
+    rect: [3777, 591, 80, 67]
     trim: [40, 127]
     normal: true
     id: "core:pawn/vest_utility_f_heavy_north"
@@ -5273,7 +6023,7 @@ sprites:
     build: f_heavy
   vest_utility_f_heavy_south:
     page: 0
-    rect: [1036, 591, 80, 67]
+    rect: [3858, 591, 80, 67]
     trim: [40, 126]
     normal: true
     id: "core:pawn/vest_utility_f_heavy_south"
@@ -5297,7 +6047,7 @@ sprites:
     build: f_heavy
   vest_utility_f_thin_east:
     page: 0
-    rect: [1117, 591, 52, 65]
+    rect: [3939, 591, 52, 65]
     trim: [58, 129]
     normal: true
     id: "core:pawn/vest_utility_f_thin_east"
@@ -5321,7 +6071,7 @@ sprites:
     build: f_thin
   vest_utility_f_thin_north:
     page: 0
-    rect: [1170, 591, 62, 62]
+    rect: [3992, 591, 62, 62]
     trim: [49, 132]
     normal: true
     id: "core:pawn/vest_utility_f_thin_north"
@@ -5345,7 +6095,7 @@ sprites:
     build: f_thin
   vest_utility_f_thin_south:
     page: 0
-    rect: [1233, 591, 62, 62]
+    rect: [0, 660, 62, 62]
     trim: [49, 131]
     normal: true
     id: "core:pawn/vest_utility_f_thin_south"
@@ -5369,7 +6119,7 @@ sprites:
     build: f_thin
   vest_utility_m_heavy_east:
     page: 0
-    rect: [1296, 591, 68, 69]
+    rect: [63, 660, 68, 69]
     trim: [51, 127]
     normal: true
     id: "core:pawn/vest_utility_m_heavy_east"
@@ -5393,7 +6143,7 @@ sprites:
     build: m_heavy
   vest_utility_m_heavy_north:
     page: 0
-    rect: [1365, 591, 85, 68]
+    rect: [132, 660, 85, 68]
     trim: [38, 127]
     normal: true
     id: "core:pawn/vest_utility_m_heavy_north"
@@ -5417,7 +6167,7 @@ sprites:
     build: m_heavy
   vest_utility_m_heavy_south:
     page: 0
-    rect: [1451, 591, 85, 67]
+    rect: [218, 660, 85, 67]
     trim: [38, 126]
     normal: true
     id: "core:pawn/vest_utility_m_heavy_south"
@@ -5441,7 +6191,7 @@ sprites:
     build: m_heavy
   vest_utility_m_thin_east:
     page: 0
-    rect: [1537, 591, 55, 67]
+    rect: [304, 660, 55, 67]
     trim: [56, 128]
     normal: true
     id: "core:pawn/vest_utility_m_thin_east"
@@ -5465,7 +6215,7 @@ sprites:
     build: m_thin
   vest_utility_m_thin_north:
     page: 0
-    rect: [1593, 591, 68, 63]
+    rect: [360, 660, 68, 63]
     trim: [46, 131]
     normal: true
     id: "core:pawn/vest_utility_m_thin_north"
@@ -5489,7 +6239,7 @@ sprites:
     build: m_thin
   vest_utility_m_thin_south:
     page: 0
-    rect: [1662, 591, 68, 63]
+    rect: [429, 660, 68, 63]
     trim: [46, 130]
     normal: true
     id: "core:pawn/vest_utility_m_thin_south"
@@ -5513,7 +6263,7 @@ sprites:
     build: m_thin
   vest_utility_north:
     page: 0
-    rect: [1731, 591, 72, 65]
+    rect: [498, 660, 72, 65]
     trim: [44, 129]
     normal: true
     id: "core:pawn/vest_utility_north"
@@ -5536,7 +6286,7 @@ sprites:
     facing: north
   vest_utility_south:
     page: 0
-    rect: [1804, 591, 72, 65]
+    rect: [571, 660, 72, 65]
     trim: [44, 128]
     normal: true
     id: "core:pawn/vest_utility_south"

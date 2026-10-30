@@ -305,7 +305,7 @@ func (g *Game) startExit(id entity.EntityID) bool {
 }
 
 // doKidnap: kidnapping is a raider's job, run from the raid AI
-// (kidnap.go stepKidnap); a pawn on pawnIDs never kidnaps, so one found
+// (raid/kidnap.go Step); a pawn on pawnIDs never kidnaps, so one found
 // with the job just ends it.
 func (g *Game) doKidnap(id entity.EntityID, j job.Record) {
 	g.endStubJob(id, j)

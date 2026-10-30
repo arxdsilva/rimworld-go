@@ -184,7 +184,12 @@ func TestGrownGolden(t *testing.T) {
 	// Euclidean ranges, weather and cover-angle accuracy; the previous pin
 	// held through FEED-001 and STO-1 (the committed full suite). Stable
 	// over -count=2.
-	const want uint64 = 0x34aec95d8067638c
+	// Re-pinned (wave 3: CBT-3, CBT-4, CBT-5): weapons keep their make,
+	// raider armor kits, projectile turret shots, raider cover seeking and
+	// threat targeting, threat response, explosion item damage and
+	// cook-off; the previous pin held through wave 2 (the committed full
+	// suite). Stable over -count=2.
+	const want uint64 = 0xbed63e7bc8154c25
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

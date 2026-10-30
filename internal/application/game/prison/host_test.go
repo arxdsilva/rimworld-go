@@ -31,8 +31,10 @@ type fakeHost struct {
 	started             []job.Record
 	recruited, executed []entity.EntityID
 	chats, chases       int
-	walked, downs, dies int
+	downs, dies         int
 	messages            []string
+	fakeEscapes         // escape_test.go (CBT-4)
+	failStart           bool
 }
 
 func newFake() *fakeHost {
@@ -107,9 +109,11 @@ func (f *fakeHost) Die(id entity.EntityID, c health.Cause) {
 	f.dies++
 	f.vital[id] = health.Record{Status: health.Dead, Cause: c}
 }
-func (f *fakeHost) WalkOut(entity.EntityID, job.Record, uint64) { f.walked++ }
 
 func (f *fakeHost) StartJob(id entity.EntityID, rec job.Record) bool {
+	if f.failStart {
+		return false
+	}
 	f.started = append(f.started, rec)
 	f.jobs[id] = rec
 	return true

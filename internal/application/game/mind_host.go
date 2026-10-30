@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
@@ -45,12 +46,13 @@ type mindHost struct {
 	mindBrawls
 	mindEvents
 	mindMuses
+	mindSmash
 }
 
 var _ mind.Host = mindHost{}
 
 func newMindHost(g *Game) mindHost {
-	return mindHost{mindPawns{g}, mindBreaks{g}, mindActs{g}, mindAggro{g}, mindBrawls{g}, mindEvents{g}, mindMuses{g}}
+	return mindHost{mindPawns{g}, mindBreaks{g}, mindActs{g}, mindAggro{g}, mindBrawls{g}, mindEvents{g}, mindMuses{g}, mindSmash{g}}
 }
 
 type mindPawns struct{ g *Game }
@@ -178,12 +180,18 @@ func (h mindAggro) NearestCreature(id entity.EntityID, r int) entity.EntityID {
 // Approach sets id walking to the tile beside target (the two-pawn
 // pattern of mirrorChat and brawls: no reservation).
 func (h mindAggro) Approach(id, target entity.EntityID) bool {
+	tp, ok := h.g.positions.Get(target)
+	return ok && mindSmash(h).GoBeside(id, tp.X, tp.Y)
+}
+
+// mindSmash is what a tantrum breaks (mind/tantrum.go, CBT-4): the
+// colony's buildings and item stacks that wear.
+type mindSmash struct{ g *Game }
+
+// GoBeside walks id to a free tile beside (x, y) (no reservation).
+func (h mindSmash) GoBeside(id entity.EntityID, x, y int) bool {
 	g := h.g
-	tp, ok := g.positions.Get(target)
-	if !ok {
-		return false
-	}
-	sx, sy, ok := g.besideSpot(id, tp.X, tp.Y)
+	sx, sy, ok := g.besideSpot(id, x, y)
 	if !ok {
 		return false
 	}
@@ -233,7 +241,7 @@ func (h mindAggro) Assault(id, target entity.EntityID) bool {
 		g.interrupt(id, job.Cancelled)
 	}
 	if now := uint64(g.clock.Now()); (now+uint64(id))%uint64(max(d.Cooldown, 1)) == 0 {
-		g.combat.Strikes.Strike(id, target, g.weaponOf(id))
+		g.combat.Strikes.Strike(id, target, weaponOf(g, id))
 	}
 	return true
 }
@@ -328,4 +336,31 @@ func (h mindMuses) Inspired(id entity.EntityID, label string) {
 func (h mindMuses) InspirationEnded(id entity.EntityID, label string) {
 	p, _ := h.g.positions.Get(id)
 	h.g.message(p.X, p.Y, "%s's %s faded unused.", h.g.personName(id), label)
+}
+func (h mindSmash) Breakable(x, y int) (entity.EntityID, bool) {
+	g := h.g
+	if !g.grid.InBounds(x, y) {
+		return 0, false
+	}
+	if id := g.layerBldgAt(x, y, construction.LayerObject); id != 0 {
+		b, ok := g.bldgs.Get(id)
+		return id, ok && !notColonyPiece(b)
+	}
+	st, ok := g.stacks.Get(g.itemAt(x, y))
+	return g.itemAt(x, y), ok && st.MaxHP() > 0
+}
+func (h mindSmash) Smash(id, target entity.EntityID) bool {
+	g, dmg := h.g, weapon.DefOf(weapon.Fists).Damage
+	(combatHarm{g}).Struck(id, 0, uint64(g.clock.Now()))
+	if _, ok := g.bldgs.Get(target); ok {
+		g.damageBuilding(target, dmg)
+		return true
+	}
+	st, ok := g.stacks.Get(target)
+	if st.Wear += dmg; ok && st.WornOut() {
+		g.deleteItem(target)
+	} else if ok {
+		g.putStack(target, st)
+	}
+	return ok
 }

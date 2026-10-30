@@ -182,6 +182,7 @@ func spawnRaider(g *Game, id entity.EntityID, group int, k item.Kind, x, y int) 
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
 	g.equip[id] = k
+	g.apparel[id] = combat.KitOutfit(kit.Armor(k, kit.TechOf(f), uint64(id))) // CBT-3: flak and helmets by tech and points
 	g.raiders[id] = raid.Raider{Group: group, Arrived: uint64(g.clock.Now())}
 	if !known {
 		g.raiderPerson(id, fac) // people.go: a world person (relations, capture)
@@ -246,7 +247,7 @@ func (g *Game) dropRaiderGear(id entity.EntityID) {
 		case g.personOf(id) != nil && g.personOf(id).Where == whereVisitor: // a visitor's gear is not the colony's
 			g.spawnUnclaimed(k, 1, pos.X, pos.Y, false)
 		default:
-			g.dropStack(k, g.combat.Drafts.Drop(id, k), pos.X, pos.Y) // a grenade belt whole
+			g.dropStackOf(g.combat.Gear.Release(id, k, g.combat.Drafts.Drop(id, k)), pos.X, pos.Y) // a grenade belt whole, the make kept
 		}
 		delete(g.equip, id)
 	}
@@ -313,7 +314,7 @@ func (g *Game) raiderViews() []PawnView {
 		}
 		out = append(out, PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(), RaidPlan: plan,
 			Status: v.Status.String(), Reason: v.Cause.String(), Health: v.HP() * 100 / health.MaxHP,
-			Weapon: weaponDefOf(g, id).Name, Lying: v.Status != health.Alive, Hostile: true,
+			Weapon: weaponDefOf(g, id).Name, Lying: v.Status != health.Alive, Hostile: true, Apparel: g.Wearing(id), Worn: g.apparel[id].Views(), ApparelArmor: g.apparel[id].Armor(),
 			Fleeing: g.raiders[id].Mode == raid.Fleeing})
 		g.fillPawnAction(&out[len(out)-1], id, j)
 	}
@@ -388,9 +389,6 @@ func (g *Game) raidPoints(day int) int {
 	}
 	return g.Wealth()/40 + colonists*30 + day*2
 }
-
-// meleeKit are the old blades a casket's remains lie with (casket.go).
-var meleeKit = []item.Kind{item.Club, item.Knife, item.Spear}
 
 // raidKit spends points on raiders' weapons (at least one raider); Of for
 // a faction of tech, at most maxRaiders (domain combat/kit, DEF-2).
@@ -492,21 +490,23 @@ func (h raidArrive) Reach(x, y, tx, ty int) bool {
 }
 
 func (h raidArrive) Land(gi int, p raid.Pod) entity.EntityID {
+	if x, y, ok := h.Crash(p.X, p.Y); ok {
+		return spawnRaider(h.g, 0, gi, p.Kit, x, y)
+	}
+	return 0
+}
+func (h raidArrive) Crash(px, py int) (int, int, bool) {
 	g := h.g
-	if c := g.roofAt(p.X, p.Y); c.Roofed() && !c.Thick() {
-		g.setRoof(p.Y*g.grid.Width()+p.X, c&^(roof.Built|roof.Natural|roofPlans))
-		g.roofCollapses = append(g.roofCollapses, roofCollapse{x: p.X, y: p.Y, tick: uint64(g.clock.Now())})
-		for _, s := range (combatRosters{g}).Near(p.X, p.Y, 1, combat.Everyone, nil) {
+	if c := g.roofAt(px, py); c.Roofed() && !c.Thick() {
+		g.setRoof(py*g.grid.Width()+px, c&^(roof.Built|roof.Natural|roofPlans))
+		g.roofCollapses = append(g.roofCollapses, roofCollapse{x: px, y: py, tick: uint64(g.clock.Now())})
+		for _, s := range (combatRosters{g}).Near(px, py, 1, combat.Everyone, nil) {
 			g.hurtAs(s.ID, raiddef.RoofCrush, 0, body.Bruise, health.CauseInjury)
 		}
-		g.message(p.X, p.Y, "A drop pod crashed through the roof.")
+		g.message(px, py, "A drop pod crashed through the roof.")
 	}
-	g.BuildNow(construction.DefOf(construction.PodShell).Name, item.Steel.String(), "south", p.X, p.Y)
-	x, y, ok := g.freeLandNear(p.X, p.Y, 3, nil) // arrival.go
-	if !ok {
-		return 0
-	}
-	return spawnRaider(g, 0, gi, p.Kit, x, y)
+	g.BuildNow(construction.DefOf(construction.PodShell).Name, item.Steel.String(), "south", px, py)
+	return g.freeLandNear(px, py, 3, nil) // arrival.go
 }
 
 type raidMischief struct{ g *Game }
@@ -614,4 +614,7 @@ func (h combatArms) Disarm(id entity.EntityID)             { delete(h.g.equip, i
 func (h combatArms) Wielded(id entity.EntityID) item.Kind  { return h.g.equip[id] }
 func (h combatArms) Wield(id entity.EntityID, k item.Kind) { h.g.equip[id] = k }
 func (h combatArms) Undraft(id entity.EntityID)            { h.g.setDraft(id, false) } // CBT-2: combat.Drafting
-func (h combatArms) DropAt(k item.Kind, n, x, y int)       { h.g.dropStack(k, n, x, y) }
+func (h combatArms) DropAt(st item.Stack)                  { h.g.dropStackOf(st, st.X, st.Y) }
+func (h combatArms) Belt(id entity.EntityID) (item.Kind, uint8) { // CBT-3: combat.Belts
+	return h.g.apparel[id].On[item.Belt].Kind, h.g.apparel[id].On[item.Belt].Quality
+}

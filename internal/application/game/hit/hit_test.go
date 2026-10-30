@@ -59,7 +59,7 @@ func (f *fake) Wound(_ entity.EntityID, b Blow, _ entity.EntityID) {
 func (f *fake) StaggerUntil(id entity.EntityID) uint64       { return f.until[id] }
 func (f *fake) SetStaggerUntil(id entity.EntityID, u uint64) { f.until[id] = u }
 func (f *fake) Hold(id entity.EntityID, until uint64)        { f.held[id] = max(f.held[id], until) }
-func (f *fake) wounds() Wounds                               { return Wounds{f, f, f} }
+func (f *fake) wounds() Wounds                               { return Wounds{B: f, W: f, H: f} }
 func fixed(r int) func(int) int                              { return func(int) int { return r } }
 func placed(h damage.Hit, p body.Part) armor.Landed {
 	return armor.Landed{Hit: h, Part: uint8(p), Placed: true}
@@ -165,5 +165,27 @@ func TestStaggerNoFlap(t *testing.T) {
 	}
 	if StepCost(15, f.until[1], f.now) != 15*StaggerSlow || StepCost(15, f.until[1], f.until[1]) != 15 {
 		t.Fatal("StepCost")
+	}
+}
+
+// shieldFake stops every hit on its one target (CBT-3).
+type shieldFake struct{ on entity.EntityID }
+
+func (s shieldFake) Shield(target entity.EntityID, _ damage.Hit) bool { return target == s.on }
+
+// TestShieldStopsBeforeTheBody: a shield that takes the hit lets nothing
+// through and picks no part; anyone else is struck as before.
+func TestShieldStopsBeforeTheBody(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	w := f.wounds()
+	w.S = shieldFake{on: 1}
+	bullet := damage.Hit{Form: damage.FormBullet, Amount: 12}
+	f.bodies[1] = &body.Body{}
+	if l := w.Absorb(1, bullet, fixed(0)); !l.Stopped() || l.Placed || l.Outcome != armor.Deflected {
+		t.Fatalf("shielded %+v", l)
+	}
+	if l := w.Absorb(2, bullet, fixed(0)); l.Amount != 12 {
+		t.Fatalf("unshielded %+v", l)
 	}
 }

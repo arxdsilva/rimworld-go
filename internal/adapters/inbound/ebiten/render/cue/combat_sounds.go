@@ -27,6 +27,9 @@ const (
 // mortar shell also whistles in over its target as it is fired.
 type weaponVoice struct{ fire, land, incoming string }
 
+// blastLands marks a weaponVoice whose landing is voiced by ListenBlasts.
+const blastLands = "blast"
+
 // weaponVoices maps a weapon name (as game.TraceView.Weapon carries it)
 // to its voice, one line per weapon.
 var weaponVoices = map[string]weaponVoice{
@@ -53,10 +56,22 @@ var weaponVoices = map[string]weaponVoice{
 	"autocannon":          {fire: "sfx.autocannon_shot"},
 	"slug turret":         {fire: "sfx.slug_turret_shot"},
 	"mortar":              {fire: "sfx.mortar_launch", incoming: "sfx.mortar_incoming"},
+	// CBT-3 gear. The launchers' burst is cued by ListenBlasts (land marks it).
+	"rocket launcher":        {fire: "sfx.rocket_launch", land: blastLands},
+	"triple rocket launcher": {fire: "sfx.rocket_launch", land: blastLands},
+	"smoke launcher":         {fire: "sfx.smoke_launcher", land: blastLands},
+	"charge rifle":           {fire: "sfx.charge_rifle_shot"},
+	"charge lance":           {fire: "sfx.charge_lance_shot"},
 }
 
 // heavyMelee are the melee weapons with the heavy hit sound.
 var heavyMelee = map[string]bool{"mace": true, "gladius": true, "longsword": true}
+
+// gunStock reports whether a melee blow with weapon is a ranged weapon
+// used as a club (its holder is in melee range): the stock hits.
+func gunStock(weapon string) bool {
+	return weapon == weaponRifle || weaponVoices[weapon].fire != ""
+}
 
 // combatTrace cues the shot or swing and its impact, a bullet that
 // missed, or armor turning the blow, for a trace of a named weapon. It
@@ -94,7 +109,7 @@ func (b *Bus) combatTrace(t game.TraceView, voiced bool) bool {
 		return true
 	case projectile.Landed: // the round arrived: miss, wall, flesh or armor
 		switch {
-		case weaponVoices[t.Weapon].fire == "sfx.grenade_throw" || t.Weapon == "incendiary launcher" || t.Weapon == "emp launcher" || weaponVoices[t.Weapon].incoming != "":
+		case weaponVoices[t.Weapon].fire == "sfx.grenade_throw" || t.Weapon == "incendiary launcher" || t.Weapon == "emp launcher" || weaponVoices[t.Weapon].incoming != "" || weaponVoices[t.Weapon].land != "":
 			// the blast is voiced by ListenBlasts, from the world's bursts
 		case !t.Hit:
 			b.Cue("sfx.bullet_miss", tx, ty, 1)
@@ -110,11 +125,11 @@ func (b *Bus) combatTrace(t game.TraceView, voiced bool) bool {
 		b.Cue(weaponVoices[t.Weapon].fire, fx, fy, 1)
 	case t.Weapon == weaponSentry || t.FromBuilding && !t.Melee:
 		b.Cue("sfx.sentry_shot", fx, fy, 1)
-	case t.Weapon == weaponRifle:
+	case t.Weapon == weaponRifle && !t.Melee:
 		b.Cue("sfx.rifle_shot", fx, fy, 1)
 	case !t.Melee && weaponVoices[t.Weapon].fire != "":
 		b.Cue(weaponVoices[t.Weapon].fire, fx, fy, 1)
-	case t.Melee && (bladeWeapons[t.Weapon] || bluntWeapons[t.Weapon] || heavyMelee[t.Weapon]):
+	case t.Melee && (bladeWeapons[t.Weapon] || bluntWeapons[t.Weapon] || heavyMelee[t.Weapon] || gunStock(t.Weapon)):
 		b.Cue("sfx.melee_swing", fx, fy, 1)
 		vol := 1.0
 		if voiced {
@@ -126,6 +141,8 @@ func (b *Bus) combatTrace(t game.TraceView, voiced bool) bool {
 			impact("sfx.melee_heavy", vol)
 		} else if bladeWeapons[t.Weapon] {
 			impact("sfx.blade_hit", vol)
+		} else if gunStock(t.Weapon) {
+			impact("sfx.gunstock_hit", vol)
 		} else {
 			impact("sfx.blunt_hit", vol)
 		}
@@ -155,7 +172,7 @@ type BlastEvent struct {
 }
 
 // blastSounds is the sound of each blast kind.
-var blastSounds = map[string]string{"bomb": "sfx.explosion", "flame": "sfx.incendiary_burst", "EMP": "sfx.emp_burst"}
+var blastSounds = map[string]string{"bomb": "sfx.explosion", "flame": "sfx.incendiary_burst", "EMP": "sfx.emp_burst", "smoke": "sfx.smokepop_burst"}
 
 // ListenBlasts cues each new explosion once, at its tile.
 func (b *Bus) ListenBlasts(evs []BlastEvent) {

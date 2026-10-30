@@ -279,6 +279,12 @@ const (
 	UnlinkStorage
 	SetStorageSource
 	SetZoneOverlay
+	// CBT-3/CBT-4 (append only): PopSmokepop makes colonist Pawn set off a
+	// worn smokepop pack where it stands; SetThreatResponse sets colonist
+	// Pawn's undrafted threat response in X (0 default, 1 flee, 2 attack,
+	// 3 ignore).
+	PopSmokepop
+	SetThreatResponse
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

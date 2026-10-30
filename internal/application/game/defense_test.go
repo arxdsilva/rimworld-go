@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/cover"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -95,7 +95,7 @@ func TestSpikeTrapSpringsOnRaiderAndIsRelaid(t *testing.T) {
 	if g.combat.Traps.At(10, 5) != 0 {
 		t.Fatal("the trap should have sprung")
 	}
-	if v, _ := g.vital.Get(rid); v.Injury < combat.TrapDamage {
+	if v, _ := g.vital.Get(rid); v.Injury == 0 && v.Status == health.Alive { // CBT-3: five wooden spikes of about 8, through armor
 		t.Fatalf("injury %d", v.Injury)
 	}
 	if g.layerFrameAt(10, 5, construction.LayerObject) == 0 {

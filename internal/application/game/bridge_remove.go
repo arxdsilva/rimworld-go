@@ -94,15 +94,10 @@ func (g *Game) collapseBridge(b construction.Building) {
 	}
 }
 
-// looseAt lists the stacks lying (not carried) on (x, y), in list order.
+// looseAt lists the stacks lying (not carried) on (x, y), in list order
+// (the ground index; a copy the caller may hold while stacks move).
 func (g *Game) looseAt(x, y int) []entity.EntityID {
-	var out []entity.EntityID
-	for _, id := range g.itemIDs {
-		if st := g.stacks.Ref(id); st != nil && st.Carrier == 0 && st.X == x && st.Y == y {
-			out = append(out, id)
-		}
-	}
-	return out
+	return append([]entity.EntityID(nil), g.idx.ground.Loose(haulHost{g}, x, y)...)
 }
 
 // foundationGone runs after foundation b was removed (deconstructed or

@@ -25,6 +25,7 @@ type Strikes struct {
 	shots   *Shots
 	blasts  *Blasts
 	drafts  *Drafts // DEF-4: fire at will and hold position
+	gear    *Gear   // CBT-3: the weapon's make, shield belts, records
 	// seen is AutoEngage's reused Near buffer (engage.go).
 	seen []Seen
 }
@@ -80,7 +81,8 @@ func (s *Strikes) def(attacker entity.EntityID, wk weapon.Kind) weapon.Def {
 }
 
 // natural is def with the weapon kind the blow is dealt with: an animal's
-// own attack (its hit's form), else wk.
+// own attack (its hit's form), else wk as its wielder's weapon was made
+// (CBT-3: Gear.Def, quality and stuff).
 func (s *Strikes) natural(attacker entity.EntityID, wk weapon.Kind) (weapon.Kind, weapon.Def) {
 	d := weapon.DefOf(wk)
 	if a, ok := s.h.Animal(attacker); ok {
@@ -88,7 +90,7 @@ func (s *Strikes) natural(attacker entity.EntityID, wk weapon.Kind) (weapon.Kind
 		d.Damage, d.Accuracy, d.DamageType = ad.Damage, ad.Accuracy, weapon.DefOf(ad.Attack).DamageType
 		return ad.Attack, d
 	}
-	return wk, d
+	return wk, s.gear.Def(attacker, wk)
 }
 
 // StrikeRoll is Strike with the hit rolled from roll (a brawl rolls from
@@ -117,20 +119,24 @@ func (s *Strikes) strike(attacker, target entity.EntityID, wk weapon.Kind, roll 
 	if s.melee(attacker, wk, d, ax, ay, tx, ty) {
 		return s.blow(attacker, target, wk, hk, d, ax, ay, tx, ty, roll)
 	}
+	if s.gear.Shielded(attacker) {
+		return d // CBT-3: a shield belt's wearer cannot shoot out
+	}
 	r := s.report(attacker, ax, ay, target, tx, ty, d, false)
 	if d.Speed > 0 {
-		s.shots.fire(attacker, target, ax, ay, tx, ty, wk, d, r)
+		s.shots.fire(attacker, target, ax, ay, tx, ty, wk, d, r, false, h.Roll)
 		return d
 	}
 	hit := s.rolls(d, r, roll) // an instant gun (none is carried today)
 	s.learn(attacker, d, hit)
-	s.land(attacker, target, ax, ay, tx, ty, wk, d, weapon.HitOf(hk, d), hit, roll)
+	s.land(attacker, target, ax, ay, tx, ty, wk, d, weapon.HitOf(hk, d), hit, false, roll)
 	return d
 }
 
 // land records an attack with d on target and, on a hit, runs hit
-// through its armor and wounds it.
-func (s *Strikes) land(attacker, target entity.EntityID, ax, ay, tx, ty int, wk weapon.Kind, d weapon.Def, hit damage.Hit, ok bool, roll func(int) int) {
+// through its armor and wounds it; dodged: a blow the defender dodged
+// (CBT-3: the trace tells it from a miss).
+func (s *Strikes) land(attacker, target entity.EntityID, ax, ay, tx, ty int, wk weapon.Kind, d weapon.Def, hit damage.Hit, ok, dodged bool, roll func(int) int) {
 	h := s.h
 	var l armor.Landed
 	if ok {
@@ -139,7 +145,7 @@ func (s *Strikes) land(attacker, target entity.EntityID, ax, ay, tx, ty int, wk 
 	tr := projectile.Trace{
 		FromX: ax, FromY: ay, ToX: tx, ToY: ty,
 		Tick: h.Now(), Hit: ok, Melee: !d.Ranged, Damage: max(l.Amount, 0),
-		Attacker: attacker, Target: target, Weapon: d.Name,
+		Attacker: attacker, Target: target, Weapon: d.Name, Dodged: dodged,
 	}
 	h.Trace(tr)
 	h.Struck(attacker, target, tr.Tick)
@@ -169,8 +175,9 @@ func (s *Strikes) rolls(d weapon.Def, r attack.Report, roll func(int) int) bool 
 
 // wound applies what got through armor to target, struck from (fx, fy)
 // at (tx, ty): the hit stamp, blood and the wound its form leaves
-// (Wounds.HurtHit; a sharp hit armor halved bruises). Nothing when armor
-// stopped it.
+// (Wounds.HurtHit; a sharp hit armor halved bruises), counted in the
+// attacker's records (CBT-3: damage dealt, a kill when it was the killing
+// blow). Nothing when armor stopped it.
 func (s *Strikes) wound(attacker, target entity.EntityID, fx, fy, tx, ty int, l armor.Landed) {
 	h := s.h
 	if l.Stopped() {
@@ -178,7 +185,18 @@ func (s *Strikes) wound(attacker, target entity.EntityID, fx, fy, tx, ty int, l 
 	}
 	h.Hit(target, h.Now(), fx, fy, l.Amount)
 	h.Stain(target, fx, fy, tx, ty, l.Amount) // before the hurt, while the target exists
+	was := s.alive(target)
 	h.HurtHit(target, l, attacker)
+	s.gear.Count(attacker, target, l.Amount, was && !s.alive(target))
+}
+
+// alive: id is a living animal or a living humanlike (standing or lying
+// downed).
+func (s *Strikes) alive(id entity.EntityID) bool {
+	if a, ok := s.h.Animal(id); ok {
+		return !a.Dead()
+	}
+	return s.h.StandingPawn(id) || s.h.Lying(id)
 }
 
 // building is StrikeRoll on building target at (tx, ty) (a sentry turret):
@@ -310,7 +328,7 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 	}
 	px, py, _ := h.Pos(id)
 	wk := h.Weapon(id)
-	d := weapon.DefOf(wk)
+	d := s.gear.Reach(id, wk) // CBT-3: as made; a shield belt's wearer only clubs
 	if j.WorkLeft > 0 {
 		j.WorkLeft--
 	}
@@ -322,6 +340,9 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 				j.Count = 0 // a blow ends any burst (a gun's stock)
 			}
 			j.WorkLeft = s.next(id, used, &j)
+			if used.Ranged && j.Count == 0 && s.gear.Spend(id, wk) {
+				j.State = job.Complete // CBT-3: a rocket launcher's burst used it up
+			}
 		}
 		h.SetJob(id, j)
 		return

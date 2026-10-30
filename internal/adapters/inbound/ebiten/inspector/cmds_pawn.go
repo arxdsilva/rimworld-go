@@ -29,7 +29,7 @@ import (
 // gets the panel inset by paneInset, so every body also copes with less.
 const (
 	needsWantW, needsWantH       = 400, 260
-	gearWantW, gearWantH         = 400, 320
+	gearWantW, gearWantH         = 400, 360
 	logWantW, logWantH           = 400, 280
 	bioWantW, bioWantH           = 480, 404
 	healthWantW, healthWantH     = 480, 360
@@ -72,6 +72,8 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 	if p.Weapon != "" && p.Weapon != "fists" {         // nothing to drop when unarmed
 		out = append(out, dropWeaponCommand(p))
 	}
+	out = append(out, smokepopCommand(p)...)
+	out = append(out, threatCommand(p)...)
 	return out
 }
 
@@ -348,7 +350,7 @@ func (a Pawn) pawnTabs(p game.PawnView) []Tab {
 		bio.Disabled, bio.Reason = true, "No biography for this colonist"
 	}
 	gear := Tab{ID: "inspector.gear", Label: "Gear", WantW: gearWantW, WantH: gearWantH,
-		Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawGearTab(screen, id, r) }}
+		Declare: func(r gfx.Rect) { a.Tabs().gearTabBody(id, r) }}
 	if a.Tabs().isPrisoner(id) {
 		gear = Tab{ID: PrisonerTabID, Label: "Prisoner", WantW: prisonerWantW, WantH: prisonerWantH,
 			Declare: func(r gfx.Rect) { a.Tabs().prisonerTabBody(id, r) }}

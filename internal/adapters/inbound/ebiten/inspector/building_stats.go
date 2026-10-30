@@ -36,17 +36,25 @@ func bedStatLines(b game.BuildingView) []string {
 }
 
 // forbiddable reports a building the simulation leaves alone when it is
-// forbidden: today the sleeping places, colonists' and pets' (BED-1).
+// forbidden: the sleeping places, colonists' and pets' (BED-1), and doors (CBT-5:
+// a forbidden door stays shut to colonists).
 // Other buildings get the toggle when their users honour it.
 func forbiddable(b game.BuildingView) bool {
 	k, ok := construction.Parse(b.Kind)
-	return ok && (k.Sleeps() || k.AnimalSleeps())
+	return ok && (k.Sleeps() || k.AnimalSleeps() || k.IsDoor())
 }
 
 // forbidCommand is the Forbid toggle of building b: SetForbidden for the
 // building, the command an item stack uses.
 func forbidCommand(b game.BuildingView) Button {
-	return Button{ID: BuildingForbidID, Label: "Forbid", Icon: "order_forbid", Toggle: true, On: b.Forbidden,
+	c := Button{ID: BuildingForbidID, Label: "Forbid", Icon: "order_forbid", Toggle: true, On: b.Forbidden,
 		Desc: "Colonists leave it alone: no using, no work on it.",
 		Cmds: []command.Command{{Kind: command.SetForbidden, Target: uint64(b.ID), Enabled: !b.Forbidden}}}
+	if k, ok := construction.Parse(b.Kind); ok && k.IsDoor() { // a door: Forbid shuts it to colonists, Allow opens it again
+		c.Desc = "Forbid: colonists keep out and path around this door.\nAllow: colonists may use it again."
+		if b.Forbidden {
+			c.Label = "Allow"
+		}
+	}
+	return c
 }

@@ -28,3 +28,21 @@ func TestSlotHoldsOneSpare(t *testing.T) {
 		t.Fatalf("take: %v %d %v %+v", k, n, ok, s)
 	}
 }
+
+func TestSlotKeepsTheMake(t *testing.T) {
+	t.Parallel()
+	var s Slot
+	st := item.Stack{Kind: item.Mace, Qty: 1, Quality: 6, Stuff: item.Silver, Wear: 3}
+	if got := s.Stack(1, 2); got.Qty != 0 || got.X != 1 {
+		t.Fatalf("empty slot stack %+v", got)
+	}
+	if !s.Stow(st) || s.Stow(st) {
+		t.Fatal("one stow only")
+	}
+	if got := s.Stack(4, 5); got != (item.Stack{Kind: item.Mace, Qty: 1, X: 4, Y: 5, Quality: 6, Stuff: item.Silver, Wear: 3}) {
+		t.Fatalf("stack %+v", got)
+	}
+	if _, _, ok := s.Take(); !ok || !s.Empty() || s.Quality != 0 {
+		t.Fatalf("take clears the make: %+v", s)
+	}
+}

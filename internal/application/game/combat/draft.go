@@ -38,6 +38,8 @@ type Drafts struct {
 	shots *Shots
 	set   map[entity.EntityID]Draft // saved
 	queue []Throw                   // saved: orders waiting out the warmup
+	tac   *Tactics                  // CBT-4: a step into cover (engage.go)
+	gear  *Gear                     // CBT-3: the weapon's make goes with it
 }
 
 // Arms is a colonist's hands: what it wields.
@@ -50,8 +52,9 @@ type Arms interface {
 	// (CBT-2: its spare drawn).
 	Wielded(id entity.EntityID) item.Kind
 	Wield(id entity.EntityID, k item.Kind)
-	// DropAt puts n of kind k down on (x, y), the colony's.
-	DropAt(k item.Kind, n, x, y int)
+	// DropAt puts stack st down on its tile, the colony's (CBT-3: a
+	// weapon keeps its quality, stuff and wear).
+	DropAt(st item.Stack)
 }
 
 // Draft is one colonist's drafted switches and its grenade belt. All
@@ -67,6 +70,12 @@ type Draft struct {
 	// tick it was seen (the auto-undraft timer).
 	Spare             inventory.Slot
 	QuietFrom, IdleAt uint64
+	// CBT-4 (append only): Response is the undrafted threat response
+	// (response.go); CoverAt the tick before which it looks for cover
+	// again (tactics.go), stepping to (CoverX, CoverY).
+	Response       Response
+	CoverAt        uint64
+	CoverX, CoverY int
 }
 
 // DraftSave is one Draft on disk.
@@ -200,7 +209,8 @@ func (d *Drafts) Throw(id entity.EntityID, x, y int) bool {
 	h := d.h
 	px, py, ok := h.Pos(id)
 	wk := h.Weapon(id)
-	if !ok || !isGrenade(wk) || d.Grenades(id) == 0 || !h.StandingPawn(id) || !h.CanViolence(id) || !h.InBounds(x, y) {
+	if !ok || !isGrenade(wk) || d.Grenades(id) == 0 || !h.StandingPawn(id) || !h.CanViolence(id) || !h.InBounds(x, y) ||
+		d.gear.Shielded(id) { // CBT-3: a shield belt's wearer throws nothing out
 		return false
 	}
 	def := weapon.DefOf(wk)
@@ -306,6 +316,12 @@ func (d *Drafts) Apply(c command.Command) {
 		d.Throw(id, c.X, c.Y)
 	case command.DropWeapon:
 		d.DropWeapon(id, c.Enabled)
+	case command.PopSmokepop:
+		d.gear.Pop(id)
+	case command.SetThreatResponse:
+		if c.X >= int(RespondDefault) && c.X <= int(RespondIgnore) {
+			d.SetResponse(id, Response(c.X))
+		}
 	}
 }
 
@@ -387,9 +403,10 @@ func (d *Drafts) DropWeapon(id entity.EntityID, stow bool) {
 		return
 	}
 	cur, armed := d.arms.Wielded(id), h.Weapon(id) != weapon.Fists
-	n := 0
+	var st item.Stack
 	if armed {
-		n = d.Drop(id, cur) // the belt is forgotten
+		st = d.gear.Release(id, cur, d.Drop(id, cur)) // the belt is forgotten, the make kept
+		st.X, st.Y = x, y
 		d.arms.Disarm(id)
 	}
 	s := d.set[id]
@@ -397,17 +414,19 @@ func (d *Drafts) DropWeapon(id entity.EntityID, stow bool) {
 	s.Spare = inventory.Slot{}
 	switch {
 	case armed && stow:
-		s.Spare.Put(cur, n)
+		s.Spare.Stow(st)
 	case armed:
-		d.arms.DropAt(cur, n, x, y)
+		d.arms.DropAt(st)
 	case !stow && !spare.Empty(): // unarmed: the spare goes down
-		d.arms.DropAt(spare.Kind, spare.Qty, x, y)
+		d.arms.DropAt(spare.Stack(x, y))
 		spare = inventory.Slot{}
 	}
 	d.put(id, s)
-	if k, q, ok := spare.Take(); ok {
-		d.arms.Wield(id, k)
-		d.belt(id, q, k)
+	if !spare.Empty() {
+		drawn := spare.Stack(x, y)
+		d.arms.Wield(id, drawn.Kind)
+		d.belt(id, drawn.Qty, drawn.Kind)
+		d.gear.Hold(id, drawn)
 	}
 }
 
@@ -425,7 +444,8 @@ func (d *Drafts) DropSpare(id entity.EntityID) {
 	if d.arms == nil || !ok || s.Spare.Empty() {
 		return
 	}
-	k, q, _ := s.Spare.Take()
+	st := s.Spare.Stack(x, y)
+	s.Spare = inventory.Slot{}
 	d.put(id, s)
-	d.arms.DropAt(k, q, x, y)
+	d.arms.DropAt(st)
 }

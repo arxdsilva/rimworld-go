@@ -87,7 +87,7 @@ func TestGunStockWhenAdjacent(t *testing.T) {
 	f.rolls = []int{0, 0, 200} // the stock, a hit, x1.0
 	c.Strikes.Strike(1, 2, weapon.Rifle)
 	tr := f.traces[len(f.traces)-1]
-	if c.Shots.Len() != 0 || !tr.Melee || tr.Weapon != "stock" || tr.Damage != 9 || tr.Stage != projectile.Whole {
+	if c.Shots.Len() != 0 || !tr.Melee || tr.Weapon != "rifle" || tr.Damage != 9 || tr.Stage != projectile.Whole {
 		t.Fatalf("the stock: shots %d trace %+v", c.Shots.Len(), tr)
 	}
 	if h := f.hurts[len(f.hurts)-1]; h != "2-9-1-"+damage.FormBlunt.String() {

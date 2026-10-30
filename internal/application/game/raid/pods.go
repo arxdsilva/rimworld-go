@@ -3,6 +3,8 @@ package raid
 import (
 	"fmt"
 
+	"rimworld-go/internal/domain/animal"
+
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	raiddef "rimworld-go/internal/domain/raid"
@@ -18,9 +20,10 @@ import (
 // out. A landed pod is kept on its group for an hour for the dust and
 // sounds, then forgotten.
 type Pods struct {
-	h  Host
-	a  Arrive
-	ch Chronicle
+	h     Host
+	a     Arrive
+	ch    Chronicle
+	mechs *Mechs // CBT-4: a mechanoid raid's pods (mech.go)
 }
 
 // Pod is one drop pod of a group (the save's RaidGroups). Fields are gob
@@ -30,6 +33,9 @@ type Pod struct {
 	Land   uint64 // landing tick
 	Kit    item.Kind
 	Landed bool
+	// Mech (CBT-4, absent in older saves) is the mechanoid a mechanoid
+	// raid's pod carries (Mechs.pods; zero for a raider's pod).
+	Mech animal.Species
 }
 
 // PodView is a pod for the read model.
@@ -129,7 +135,8 @@ func podsLeft(pods []Pod) int {
 }
 
 // Step lands the pods whose time has come and forgets those landed over
-// an hour ago (the threat phase, once a tick).
+// an hour ago (the threat phase, once a tick); the mechanoids' pods and
+// the hive mounds step here too (CBT-4).
 func (p *Pods) Step(now uint64) {
 	groups := p.h.Groups()
 	for gi := range groups {
@@ -156,12 +163,25 @@ func (p *Pods) Step(now uint64) {
 			grp.Pods = nil
 		}
 	}
+	if p.mechs != nil && len(p.mechs.pods) > 0 {
+		p.mechs.landPods(now)
+	}
+	if p.mechs != nil && p.mechs.hives != nil && len(p.mechs.hives.hives) > 0 {
+		p.mechs.hives.Step(now) // nest.go (CBT-4): stepped with the pods, once a tick
+	} else if p.mechs != nil && p.mechs.hives != nil {
+		p.mechs.hives.now = now
+	}
 }
 
 // Views appends every pod still falling or landed within the hour.
 func (p *Pods) Views(buf []PodView) []PodView {
 	for _, grp := range p.h.Groups() {
 		for _, o := range grp.Pods {
+			buf = append(buf, PodView{X: o.X, Y: o.Y, Land: o.Land, Landed: o.Landed})
+		}
+	}
+	if p.mechs != nil {
+		for _, o := range p.mechs.pods {
 			buf = append(buf, PodView{X: o.X, Y: o.Y, Land: o.Land, Landed: o.Landed})
 		}
 	}

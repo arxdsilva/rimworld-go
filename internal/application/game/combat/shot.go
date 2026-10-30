@@ -44,11 +44,13 @@ const Tracking = 1
 
 // fire launches attacker's shot with d at target (attacker at (ax, ay),
 // target at (tx, ty)) with hit chance r, and records the Fired trace.
-func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk weapon.Kind, d weapon.Def, r attack.Report) {
+// building: a turret fired it (CBT-3; attacker is its building id), its
+// muzzle rolls on roll (the defence stream; a pawn's on the main one).
+func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk weapon.Kind, d weapon.Def, r attack.Report, building bool, roll func(int) int) {
 	h := s.h
 	sh := projectile.Shot{Owner: attacker, Target: target, Raider: h.StandingRaider(attacker), Weapon: wk,
 		Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Type: d.DamageType, Fired: h.Now(),
-		Hit: weapon.HitOf(wk, d)} // the firing weapon's hit (CBT-2), carried and saved
+		Hit: weapon.HitOf(wk, d), FromBuilding: building} // the firing weapon's hit (CBT-2), carried and saved
 	dx, dy := tx, ty
 	aim := r.Aim()
 	switch {
@@ -57,32 +59,71 @@ func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk we
 			s.drafts.spend(attacker, wk)
 		}
 		if rad := explosion.ForcedMiss(d.ForcedMiss, r.Dist); rad > 0 {
-			dx, dy = tx+h.Roll(2*rad+1)-rad, ty+h.Roll(2*rad+1)-rad
+			dx, dy = tx+roll(2*rad+1)-rad, ty+roll(2*rad+1)-rad
 		}
 		sh.Aimed = dx == tx && dy == ty
-	case h.Roll(1000) >= aim: // the aim failed: a wild shot
-		dx, dy = s.missAt(ax, ay, tx, ty, attack.MissRadius(aim))
-	case r.Cover > 0 && h.Roll(1000) < r.Cover: // the cover took it
+	case roll(1000) >= aim: // the aim failed: a wild shot
+		dx, dy = s.missAt(ax, ay, tx, ty, attack.MissRadius(aim), roll)
+	case r.Cover > 0 && roll(1000) < r.Cover: // the cover took it
 		var cid entity.EntityID
 		cid, dx, dy, _ = s.st.sight.coverBy(ax, ay, tx, ty)
 		sh.Cover = cid
 	default:
 		sh.Aimed = true
 	}
-	s.st.learn(attacker, d, sh.Aimed || d.Explosive()) // CBT-2: an aim that held counts as a hit
 	sh.Launch(ax, ay, dx, dy, d.Speed)
 	s.live = append(s.live, sh)
 	h.Trace(projectile.Trace{FromX: ax, FromY: ay, ToX: dx, ToY: dy, Tick: sh.Fired, Hit: sh.Aimed,
-		Attacker: attacker, Target: target, Weapon: d.Name, Stage: projectile.Fired})
-	h.Struck(attacker, target, sh.Fired)
+		FromBuilding: building, Attacker: attacker, Target: target, Weapon: d.Name, Stage: projectile.Fired})
+	if !building {
+		s.st.learn(attacker, d, sh.Aimed || d.Explosive()) // CBT-2: an aim that held counts as a hit
+		h.Struck(attacker, target, sh.Fired)
+	}
+}
+
+// Turret fires a round of turret id's gun wk from (fx, fy) at target on
+// (tx, ty) (CBT-3): a projectile like a pawn's shot. Its aim is the gun's
+// band at the straight-line distance (a turret aims as a perfect
+// shooter: weapon.HitPermille), the target's size, the weather and
+// smoke; then the target's cover may take it. It flies, may stray or
+// strike a colonist in its way beyond attack.FriendlySafe, and its hit
+// goes through armor. The muzzle rolls on the defence stream.
+func (s *Shots) Turret(id entity.EntityID, wk weapon.Kind, fx, fy int, target entity.EntityID, tx, ty int) {
+	d := weapon.DefOf(wk)
+	r := attack.Report{Dist: weapon.Range(fx, fy, tx, ty), InRange: true, InSight: true, Shooter: 1000, Size: 1000,
+		Light: attack.NoLightPenalty, Weather: s.st.sight.Weather(fx, fy, tx, ty) * s.blasts.SmokeFactor(fx, fy, tx, ty) / 1000,
+		Cover: attack.Permille(s.st.sight.Cover(fx, fy, tx, ty))}
+	r.Band = attack.Permille(weapon.HitPermille(d, r.Dist))
+	if !d.Legacy() {
+		r.Size = attack.SizeFactor(s.st.bodySize(target))
+	}
+	r.Chance = r.Total()
+	if d.Speed == 0 {
+		d.Speed = 1000 // a tile a tick: every turret's round flies
+	}
+	s.fire(id, target, fx, fy, tx, ty, wk, d, r, true, s.h.DefenseRoll)
+}
+
+// log records sh striking (or missing) v for the logs: a pawn's strike,
+// or the turret that fired it named in v's log.
+func (s *Shots) log(sh *projectile.Shot, v entity.EntityID, hit bool, dmg int) {
+	if !sh.FromBuilding {
+		s.h.LogStrike(sh.Owner, v, sh.Weapon, hit, dmg)
+		return
+	}
+	name := TurretLogName
+	if b, ok := s.st.turrets.At(sh.Owner); ok {
+		name = turretName(b.Kind)
+	}
+	s.h.Shot(v, hit, dmg, name)
 }
 
 // missAt is where a wild shot at (tx, ty) from (ax, ay) lands: a cell
 // within rad of the target, never the target's own (then one cell past
 // it).
-func (s *Shots) missAt(ax, ay, tx, ty, rad int) (int, int) {
-	mx := tx + s.h.Roll(2*rad+1) - rad
-	my := ty + s.h.Roll(2*rad+1) - rad
+func (s *Shots) missAt(ax, ay, tx, ty, rad int, roll func(int) int) (int, int) {
+	mx := tx + roll(2*rad+1) - rad
+	my := ty + roll(2*rad+1) - rad
 	if mx == tx && my == ty {
 		mx, my = tx+sign(tx-ax), ty+sign(ty-ay)
 	}
@@ -169,7 +210,11 @@ func (s *Shots) land(sh *projectile.Shot, x, y int) {
 	}
 	if sh.Blast() { // it bursts where it lands
 		s.trace(sh, x, y, true, false, 0, 0)
-		s.blasts.Explode(sh.Owner, sh.Weapon, x, y, weapon.DefOf(sh.Weapon).Blast)
+		b := weapon.DefOf(sh.Weapon).Blast
+		if b.Kind == explosion.EMP {
+			s.st.gear.EMP(x, y, b.Radius) // CBT-3: an EMP breaks the shield belts it reaches
+		}
+		s.blasts.Explode(sh.Owner, sh.Weapon, x, y, b)
 		return
 	}
 	if s.traps != nil {
@@ -178,7 +223,7 @@ func (s *Shots) land(sh *projectile.Shot, x, y int) {
 	if sh.Cover != 0 {
 		if b, ok := h.Building(sh.Cover); ok && b.X == x && b.Y == y {
 			s.building(sh, x, y)
-			h.LogStrike(sh.Owner, sh.Target, sh.Weapon, false, 0)
+			s.log(sh, sh.Target, false, 0)
 			return
 		}
 	}
@@ -207,8 +252,12 @@ func (s *Shots) flesh(sh *projectile.Shot, v entity.EntityID, x, y int) {
 	l := h.Absorb(v, shotHit(sh), h.Roll)
 	dmg := max(l.Amount, 0)
 	s.trace(sh, x, y, true, false, dmg, v)
-	h.LogStrike(sh.Owner, v, sh.Weapon, true, dmg)
-	s.st.wound(sh.Owner, v, sh.FromX, sh.FromY, x, y, l)
+	s.log(sh, v, true, dmg)
+	by := sh.Owner
+	if sh.FromBuilding {
+		by = 0 // no reaction ever points at a building
+	}
+	s.st.wound(by, v, sh.FromX, sh.FromY, x, y, l)
 }
 
 // shotHit is sh's hit: the one it was fired with, or (a shot saved before
@@ -242,7 +291,7 @@ func (s *Shots) building(sh *projectile.Shot, x, y int) {
 func (s *Shots) miss(sh *projectile.Shot, x, y int) {
 	s.trace(sh, x, y, false, false, 0, 0)
 	if sh.Target != 0 {
-		s.h.LogStrike(sh.Owner, sh.Target, sh.Weapon, false, 0)
+		s.log(sh, sh.Target, false, 0)
 	}
 }
 
@@ -250,7 +299,7 @@ func (s *Shots) miss(sh *projectile.Shot, x, y int) {
 func (s *Shots) trace(sh *projectile.Shot, x, y int, hit, building bool, dmg int, victim entity.EntityID) {
 	s.h.Trace(projectile.Trace{FromX: sh.FromX, FromY: sh.FromY, ToX: x, ToY: y, Tick: s.h.Now(),
 		Hit: hit, Building: building, Damage: dmg, Attacker: sh.Owner, Target: victim,
-		Weapon: weapon.DefOf(sh.Weapon).Name, Stage: projectile.Landed})
+		Weapon: weapon.DefOf(sh.Weapon).Name, Stage: projectile.Landed, FromBuilding: sh.FromBuilding})
 }
 
 // standing is the creature a shot can strike on (x, y), never owner: a

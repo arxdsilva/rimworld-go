@@ -358,6 +358,7 @@ func (g *Game) stepFires() {
 // the fire's size; the plant, grass and loose stacks burn away once the
 // fire has burned long enough for each, leaving ash.
 func (g *Game) burnCell(f fire.Fire, items []entity.EntityID) {
+	g.combat.Blasts.InFire(f.X, f.Y) // CBT-5: shells and grenades in it cook off
 	dmg := fire.BuildingDamage(int(f.Size))
 	for _, l := range fireLayers {
 		bid := g.layerBldgAt(f.X, f.Y, l)

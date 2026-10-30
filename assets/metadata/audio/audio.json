@@ -5225,6 +5225,32 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.charge_lance_shot",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/charge_lance_shot_0.wav",
+        "sfx/charge_lance_shot_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.charge_lance_shot",
+      "seed": 963,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.charge_rifle_shot",
+      "bus": "effects",
+      "volume": 0.75,
+      "files": [
+        "sfx/charge_rifle_shot_0.wav",
+        "sfx/charge_rifle_shot_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.charge_rifle_shot",
+      "seed": 962,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.chop",
       "bus": "effects",
       "volume": 0.8,
@@ -5353,6 +5379,19 @@
       "source": "procedural",
       "recipe": "sfx.gunshot",
       "seed": 305,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.gunstock_hit",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/gunstock_hit_0.wav",
+        "sfx/gunstock_hit_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.gunstock_hit",
+      "seed": 967,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5511,6 +5550,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.paste_dispense",
+      "bus": "effects",
+      "volume": 0.65,
+      "files": [
+        "sfx/paste_dispense_0.wav",
+        "sfx/paste_dispense_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.paste_dispense",
+      "seed": 968,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.pick",
       "bus": "effects",
       "volume": 0.7,
@@ -5611,6 +5663,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.rocket_launch",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/rocket_launch_0.wav",
+        "sfx/rocket_launch_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.rocket_launch",
+      "seed": 960,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.saw",
       "bus": "effects",
       "volume": 0.6,
@@ -5635,6 +5700,19 @@
       "source": "procedural",
       "recipe": "sfx.sentry_shot",
       "seed": 902,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.shield_pop",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/shield_pop_0.wav",
+        "sfx/shield_pop_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.shield_pop",
+      "seed": 964,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5688,6 +5766,32 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.smoke_launcher",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/smoke_launcher_0.wav",
+        "sfx/smoke_launcher_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.smoke_launcher",
+      "seed": 961,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.smokepop_burst",
+      "bus": "effects",
+      "volume": 0.65,
+      "files": [
+        "sfx/smokepop_burst_0.wav",
+        "sfx/smokepop_burst_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.smokepop_burst",
+      "seed": 965,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.sniper_shot",
       "bus": "effects",
       "volume": 0.95,
@@ -5711,6 +5815,19 @@
       "source": "procedural",
       "recipe": "sfx.soil",
       "seed": 209,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.stagger_thud",
+      "bus": "effects",
+      "volume": 0.75,
+      "files": [
+        "sfx/stagger_thud_0.wav",
+        "sfx/stagger_thud_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.stagger_thud",
+      "seed": 966,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5750,6 +5867,19 @@
       "source": "procedural",
       "recipe": "sfx.switch_click",
       "seed": 806,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.tantrum_smash",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/tantrum_smash_0.wav",
+        "sfx/tantrum_smash_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.tantrum_smash",
+      "seed": 969,
       "license": "original, made in code (CC0, this repo)"
     },
     {

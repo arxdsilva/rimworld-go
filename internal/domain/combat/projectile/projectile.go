@@ -38,6 +38,9 @@ type Trace struct {
 	Weapon           string
 	// Stage is the moment it records (Whole for melee and instant shots).
 	Stage Stage
+	// Dodged (CBT-3, append only): a melee blow that would have hit, but
+	// the defender dodged it (Hit is false).
+	Dodged bool
 }
 
 // Lifetime is how many ticks a trace stays visible.

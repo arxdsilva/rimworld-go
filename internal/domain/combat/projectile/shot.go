@@ -45,6 +45,9 @@ type Shot struct {
 	// on landing, whatever the owner wields by then. Zero in older saves
 	// (Weapon, Damage, Pen and Type stand in).
 	Hit damage.Hit
+	// FromBuilding (CBT-3, append only): a turret fired it; Owner is then
+	// the turret's building id.
+	FromBuilding bool
 }
 
 // Launch sets s on its way from (fx, fy) to (tx, ty) at speed thousandths

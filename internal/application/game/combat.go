@@ -7,7 +7,6 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/combat/weapon"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
@@ -26,16 +25,14 @@ const (
 // TraceView is one recent attack for presentation (combat/trace.go).
 type TraceView = combat.TraceView
 
-func weaponKindOf(k item.Kind) weapon.Kind { return weapon.ForItem(k) }
-
-func (g *Game) weaponOf(id entity.EntityID) weapon.Kind {
+func weaponOf(g *Game, id entity.EntityID) weapon.Kind {
 	if k, ok := g.equip[id]; ok {
-		return weaponKindOf(k)
+		return weapon.ForItem(k)
 	}
 	return weapon.Fists
 }
 
-func weaponDefOf(g *Game, id entity.EntityID) weapon.Def { return weapon.DefOf(g.weaponOf(id)) }
+func weaponDefOf(g *Game, id entity.EntityID) weapon.Def { return weapon.DefOf(weaponOf(g, id)) }
 
 func hasRanged(g *Game, id entity.EntityID) bool { return weaponDefOf(g, id).Ranged }
 
@@ -125,10 +122,11 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	g.vital.Set(id, v)
 	g.mind.Downed(id) // mind: the dead keep no break
 	g.spawnCorpse(id)
-	g.dropRaiderGear(id)        // the weapon falls beside the body
-	g.forbidRaidBody(id)        // forbid.go: a raider's body starts forbidden
-	g.socialOnDeath(id, killer) // social_grief.go: relations, grief, killer opinion
-	g.bondsOnDeath(id)          // bonds.go: bonded animals lose their master
+	g.dropRaiderGear(id)           // the weapon falls beside the body
+	g.combat.Gear.Died(id, killer) // combat/gear.go (CBT-3): a death of wounds is the last attacker's kill
+	g.forbidRaidBody(id)           // forbid.go: a raider's body starts forbidden
+	g.socialOnDeath(id, killer)    // social_grief.go: relations, grief, killer opinion
+	g.bondsOnDeath(id)             // bonds.go: bonded animals lose their master
 	g.mourn(id)
 	// PRD-2 (craft/garment.go): what the dead wore is tainted and falls
 	// beside the body (corpses are not stripped).
@@ -161,8 +159,8 @@ func (g *Game) hostile(a animal.State) bool {
 	return !a.Tame && a.Mode == animal.Attack && a.Target != 0 && g.isPawn(a.Target) && !g.isRaider(a.Target)
 }
 
-// doEquip takes one weapon or garment from the stack and drops the old
-// one; a garment the player ordered ("Wear X") makes its slot theirs.
+// doEquip takes one weapon (CBT-3: its make kept, combat.Gear) or garment
+// from the stack and drops the old one; a garment ordered ("Wear X") makes its slot theirs.
 func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 	st, ok := g.stacks.Get(j.Target)
 	if !ok || st.Qty <= 0 || st.Carrier != 0 || !st.Kind.IsWeapon() && !st.Kind.IsApparel() {
@@ -177,10 +175,11 @@ func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 		return
 	}
 	pos, _ := g.positions.Get(id)
-	if old, ok := g.equip[id]; ok {
-		g.dropStack(old, g.combat.Drafts.Drop(id, old), pos.X, pos.Y) // combat/draft.go (DEF-4): a grenade belt
+	if old, ok := g.equip[id]; ok { // combat/draft.go (DEF-4): a grenade belt
+		g.dropStackOf(g.combat.Gear.Release(id, old, g.combat.Drafts.Drop(id, old)), pos.X, pos.Y)
 	}
 	g.equip[id] = st.Kind
+	g.combat.Gear.Hold(id, st)
 	if n := g.combat.Drafts.Carry(id, st.Kind, st.Qty); st.Qty <= n { // grenades: the whole stack
 		g.deleteItem(j.Target)
 	} else {

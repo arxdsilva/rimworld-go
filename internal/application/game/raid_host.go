@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -33,8 +34,8 @@ var _ raid.Host = raidHost{}
 
 func newRaid(g *Game) *raid.Raid {
 	h := raidHost{raidRoster{g}, raidCaptives{g}, raidBodies{g}, combatJobs{g}, raidFight{g}, raidGround{g}, raidEvents{g}, combatDice{g}}
-	return raid.New(h, raid.Roles{Wild: raidWild{g}, Story: raidStory{g}, Mech: raidMech{g},
-		Arrive: raidArrive{g}, Mischief: raidMischief{g}, Siege: raidSiege{g}, Chronicle: raidChronicle{g}}) // raid_def4.go
+	return raid.New(h, raid.Roles{Wild: raidWild{g}, Story: raidStory{g}, Mech: raidMech{g}, Arrive: raidArrive{g},
+		Mischief: raidMischief{g}, Siege: raidSiege{g}, Chronicle: raidChronicle{g}, Tactics: raidTactics{g}, Nest: raidNest{g}, Kidnap: raidKidnap{g}})
 }
 
 type raidRoster struct{ g *Game }
@@ -53,12 +54,6 @@ func (h raidCaptives) Prisoner(id entity.EntityID) bool            { return h.g.
 func (h raidCaptives) LivePrisoner(id entity.EntityID, now uint64) { h.g.prison.Live(id, now) }
 func (h raidCaptives) DropPatient(id entity.EntityID)              { h.g.care.DropPatient(id) }
 func (h raidCaptives) BeingCaptured(id entity.EntityID) bool       { return h.g.care.BeingCaptured(id) }
-func (h raidCaptives) StepKidnap(id entity.EntityID, j job.Record, now uint64) {
-	h.g.stepKidnap(id, j, now)
-}
-func (h raidCaptives) TryKidnap(id entity.EntityID, x, y int, now uint64) bool {
-	return h.g.tryKidnap(id, Position{X: x, Y: y}, now) // kidnap.go
-}
 
 type raidBodies struct{ g *Game }
 
@@ -175,23 +170,30 @@ func (h raidMech) ColonistNear(x, y, r int) bool {
 	return ok
 }
 func (h raidMech) PlaceShipPart(x, y int) (entity.EntityID, bool) {
-	g := h.g
-	if ok, _ := g.canPlaceAt(construction.ShipPart, construction.South, x, y); !ok {
-		return 0, false
+	id := placeAncient(h.g, construction.ShipPart, x, y)
+	return id, id != 0
+}
+
+// placeAncient sets a building of kind k down whole with its anchor on
+// (x, y), instantly and no one's (no wealth, Home anchor, repair or
+// blueprint once broken): a ship part, a hive mound (0: no room).
+func placeAncient(g *Game, k construction.Kind, x, y int) entity.EntityID {
+	if ok, _ := g.canPlaceAt(k, construction.South, x, y); !ok {
+		return 0
 	}
-	g.placeFrameStuff(construction.ShipPart, item.Wood, construction.South, x, y) // instant: no cost, no work
-	cells, _, _ := construction.Footprint(construction.ShipPart, construction.South, x, y)
+	g.placeFrameStuff(k, item.Wood, construction.South, x, y) // instant: no cost, no work
+	cells, _, _ := construction.Footprint(k, construction.South, x, y)
 	if len(cells) == 0 {
-		return 0, false
+		return 0
 	}
 	id := g.layerBldgAt(cells[0][0], cells[0][1], construction.LayerObject)
 	b, ok := g.bldgs.Get(id)
-	if !ok || b.Kind != construction.ShipPart {
-		return 0, false
+	if !ok || b.Kind != k {
+		return 0
 	}
-	b.Ancient = true // not the colony's: no wealth, no Home anchor, no repair, no blueprint once broken
+	b.Ancient = true
 	g.bldgs.Set(id, b)
-	return id, true
+	return id
 }
 func (h raidMech) KillPlant(x, y int) {
 	if id := h.g.plantAt(x, y); id != 0 {
@@ -199,3 +201,94 @@ func (h raidMech) KillPlant(x, y int) {
 	}
 }
 func (h raidMech) Drop(kind item.Kind, qty, x, y int) { _, _ = h.g.SpawnStack(kind, qty, x, y) }
+
+// raidTactics is the raiders' and mechanoids' ground (raid/tactics.go,
+// CBT-4): combat's Tactics, crops, cargo and siege mortars.
+type raidTactics struct{ g *Game }
+
+func (h raidTactics) CoverSpot(id entity.EntityID, x, y, r int, d weapon.Def, tx, ty int) (int, int, int, int, bool) {
+	return h.g.combat.Tactics.BestCover(id, x, y, r, d, tx, ty)
+}
+func (h raidTactics) Danger(x, y int) (int, int, int, bool) { return h.g.combat.Tactics.Danger(x, y) }
+func (h raidTactics) Colonists(x, y, r int, buf []raid.Spot) []raid.Spot {
+	for _, s := range h.g.combat.Tactics.Colonists(x, y, r) {
+		buf = append(buf, raid.Spot(s))
+	}
+	return buf
+}
+func (h raidTactics) Block(id entity.EntityID, tx, ty int) (entity.EntityID, int, int, bool) {
+	return h.g.combat.Tactics.Block(id, tx, ty)
+}
+func (h raidTactics) Bash(id, b entity.EntityID, d weapon.Def) bool {
+	return h.g.combat.Tactics.Bash(id, b, d)
+}
+func (h raidTactics) Crop(x, y int) bool {
+	p := h.g.plants.Ref(h.g.plantAt(x, y))
+	return p != nil && p.Zone && h.g.fireAt(x, y) == 0
+}
+func (h raidTactics) Drop(k item.Kind, qty, x, y int) { _, _ = h.g.SpawnStack(k, qty, x, y) }
+func (h raidTactics) Restock(m entity.EntityID)       { h.g.combat.Mortars.Raise(m) }
+
+// raidNest places hive mounds (raid/nest.go, CBT-4): dark (below 30 %
+// light, original), warmer than -17 °C (wiki: Infestation) and roofed.
+type raidNest struct{ g *Game }
+
+func (h raidNest) HiveSpot(x, y int) bool {
+	g := h.g
+	return g.grid.InBounds(x, y) && g.roofAt(x, y).Roofed() && g.dryWalkable(x, y) && g.layerBldgAt(x, y, construction.LayerObject) == 0 &&
+		g.temperatureAt(x, y) > -170 && g.cellLightPermil(x, y) < 300
+}
+func (h raidNest) PlaceHive(x, y int) entity.EntityID {
+	return placeAncient(h.g, construction.HiveMound, x, y)
+}
+func (h raidNest) HiveStands(id entity.EntityID) bool {
+	b, ok := h.g.bldgs.Get(id)
+	return ok && b.Kind == construction.HiveMound
+}
+
+// raidKidnap is what kidnappers need (raid/kidnap.go, moved from the
+// game's kidnap.go by CBT-4).
+type raidKidnap struct{ g *Game }
+
+func (h raidKidnap) Colonists() []entity.EntityID { return h.g.pawnIDs }
+func (h raidKidnap) Carrier(t entity.EntityID) (entity.EntityID, bool) {
+	return h.g.care.Carry.Carrier(t), h.g.isStashed(t)
+}
+func (h raidKidnap) Carrying(id entity.EntityID) entity.EntityID { return h.g.care.Carry.Patient(id) }
+func (h raidKidnap) Pick(id, t entity.EntityID)                  { h.g.care.Carry.Pick(id, t) }
+func (h raidKidnap) Claimed(t, id entity.EntityID) bool {
+	owner, held := h.g.reserve.EntityOwner(t)
+	return held && owner != id
+}
+func (h raidKidnap) Beside(id entity.EntityID, x, y int) (int, int, bool) {
+	return h.g.besideSpot(id, x, y)
+}
+func (h raidKidnap) Path(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
+	return h.g.pathTo(id, x, y)
+}
+
+// Off: raider id reached the edge with colonist t; both leave the map, t
+// held by the raider's faction (a kidnapped pawn's stash holder is its
+// captor faction, 1 + index).
+func (h raidKidnap) Off(id, t entity.EntityID) {
+	g := h.g
+	g.care.Carry.Drop(id)
+	pos, _ := g.positions.Get(id)
+	g.positions.Set(t, pos)
+	fac := 0
+	if p := g.personOf(id); p != nil {
+		fac = p.Faction
+	}
+	by := "raiders"
+	if f := g.factionOf(fac); f != nil {
+		by = f.Name
+	}
+	if g.stashPawn(t, entity.EntityID(fac)) {
+		g.setWhere(t, whereKidnapped)
+		name := g.personName(t)
+		g.socialOnLostAs(t, "kidnapped", name+" was kidnapped by "+by+".") // social_grief.go
+		g.letter(letterThreat, "Kidnapped", name+" was kidnapped by "+by+".", t)
+	}
+	g.removeRaider(id) // raids.go: off the map, an off-map person again
+	g.invalidateCreatures()
+}

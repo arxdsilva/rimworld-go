@@ -22,6 +22,12 @@ type Raiders struct {
 	m  Mischief   // thieves, burners, rivals (nil: none)
 	sg SiegeWorks // siege mortars (nil: none)
 	ch Chronicle  // the combat log (nil: none)
+	// CBT-4 (tactics.go): cover, targets, grenades (nil: none); the
+	// supply pods' landing; the target candidates, reused.
+	t     Tactics
+	a     Arrive
+	spots []Spot
+	kid   *Kidnaps // kidnap.go
 	// rivalAt, rivalOK, rivals: whether rival factions' raiders stand on
 	// the map together, refreshed once a tick (mischief.go).
 	rivalAt         uint64
@@ -69,7 +75,7 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 	}
 	j, _ := h.Job(id)
 	if j.Kind == job.Kidnap {
-		h.StepKidnap(id, j, now) // kidnap.go: committed until it ends
+		rs.kid.Step(id, j, now) // kidnap.go: committed until it ends
 		return
 	}
 	if r.Arrived == 0 {
@@ -83,8 +89,14 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 		j = job.Record{}
 	}
 	x, y, _ := h.Pos(id)
+	if rs.dodge(id, j, x, y) { // tactics.go: out of a grenade's blast
+		return
+	}
 	if r.Mode != Fleeing {
 		rs.fight(id, r, j, v.Injury, x, y, now)
+		return
+	}
+	if r.Escaping && rs.escape(id, j, x, y, now) { // tactics.go: a prisoner breaking out
 		return
 	}
 	w, ht := h.Size()
@@ -95,7 +107,7 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 		h.RemoveRaider(id) // gone home
 		return
 	}
-	if h.TryKidnap(id, x, y, now) { // kidnap.go
+	if rs.kid.Try(id, x, y, now) || rs.grab(id, r, j, x, y, now) { // kidnap.go; tactics.go: loot on the way out
 		return
 	}
 	if !j.Active() || (now+uint64(id))%120 == 0 && j.Kind != job.Move {
@@ -117,8 +129,13 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 		return
 	}
 	if j.Kind == job.Attack && j.Active() {
-		h.Strike(id, j, now)
+		if tx, ty, ok := rs.targetAt(j, x, y); !ok || !rs.cover(id, &r, hurt, j.Target, x, y, tx, ty, now) {
+			h.Strike(id, j, now)
+		}
 		return
+	}
+	if covering(r, j, now) {
+		return // tactics.go: walking into cover
 	}
 	if j.Kind == job.Breach && j.Active() {
 		// keep bashing unless a colonist (or ally) comes into reach
@@ -132,11 +149,9 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 	if now < r.RetryAt && !j.Active() {
 		return // no way in last time: wait before planning again
 	}
-	target, tx, ty, ok := h.RaidTarget(x, y) // allies.go: colonists and allies (PLAY-024)
-	if !ok {
-		// wiki: Raid, a reachable powered turret is a target too
-		target, tx, ty, ok = h.TurretFor(x, y, 1<<20, 2*SightRange)
-	}
+	// tactics.go: threat-weighted, colonists and allies (PLAY-024) and
+	// powered turrets (wiki: Raid)
+	target, tx, ty, ok := rs.target(x, y, h.Weapon(id))
 	best := 1 << 20
 	if ok {
 		best = weapon.Distance(x, y, tx, ty)
@@ -149,16 +164,16 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 			r.Idle = now
 			h.SetRaider(id, r)
 		}
-		h.TryKidnap(id, x, y, now) // kidnap.go: no one left standing
+		rs.kid.Try(id, x, y, now) // kidnap.go: no one left standing
 		return
 	}
 	r.Idle = 0
-	// combat/turret.go (PLAY-024): a powered turret in sight and well
-	// closer than the nearest colonist draws the raider's fire instead
-	if tid, bx, by, ok := h.TurretFor(x, y, weapon.Distance(x, y, tx, ty), SightRange); ok {
-		target, tx, ty = tid, bx, by
-	}
 	if r.Mode == Arriving && weapon.Distance(x, y, tx, ty) > SightRange {
+		if rs.underFire(id, hurt, target, x, y, tx, ty) && rs.cover(id, &r, hurt, target, x, y, tx, ty, now) {
+			r.Mode = Assaulting // tactics.go: shot at, it fights from the cover it found
+			h.SetRaider(id, r)
+			return
+		}
 		// walk in towards the colony
 		if !j.Active() || (now+uint64(id))%180 == 0 {
 			if wx, wy, ok := h.WalkableNear(tx, ty, 4); ok &&
@@ -173,6 +188,9 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 	h.SetRaider(id, r)
 	d := h.Weapon(id)
 	rec := job.Record{Kind: job.Attack, Target: target, TX: tx, TY: ty, WorkLeft: h.AimTicks(d)}
+	if rs.cover(id, &r, hurt, target, x, y, tx, ty, now) {
+		return // tactics.go: into cover before it shoots
+	}
 	if h.CanHit(x, y, d, tx, ty) { // already in reach: no walking needed
 		h.ReleaseOwner(id)
 		rec.State = job.Do
@@ -183,6 +201,18 @@ func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y 
 		r.RetryAt = now + RaiderRetry
 		h.SetRaider(id, r)
 	}
+}
+
+// targetAt is the tile of attack j's target as a raider at (x, y) sees
+// it: a creature's, or the turret's in sight.
+func (rs *Raiders) targetAt(j job.Record, x, y int) (int, int, bool) {
+	if tx, ty, ok := rs.h.Pos(j.Target); ok {
+		return tx, ty, true
+	}
+	if b, bx, by, ok := rs.h.TurretFor(x, y, 1<<20, 2*SightRange); ok && b == j.Target {
+		return bx, by, true
+	}
+	return 0, 0, false
 }
 
 // unreachable reports that a mover's last job failed for want of a path.
@@ -277,6 +307,7 @@ func (rs *Raiders) siege(id entity.EntityID, r Raider, hurt int, now uint64) boo
 		}
 		rs.digIn(gi, now)
 	}
+	rs.resupply(grp, now) // tactics.go
 	if now >= grp.Until {
 		rs.storm(gi, x, y, now, "The besiegers are storming the colony!")
 		return false

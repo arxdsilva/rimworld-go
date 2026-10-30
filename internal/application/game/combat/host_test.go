@@ -321,12 +321,8 @@ func (f *fakeHost) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 }
 
 // Flight
-func (f *fakeHost) FleeGoal(_ entity.EntityID, x, y, tx, ty int) (int, int, bool) {
-	if f.cornered {
-		return 0, 0, false
-	}
-	return x + sign(x-tx)*8, y + sign(y-ty)*8, true
-}
+func (f *fakeHost) Reachable(entity.EntityID, int, int) bool  { return !f.cornered }
+func (f *fakeHost) InHome(int, int) bool                      { return false }
 func (f *fakeHost) DropForFlight(entity.EntityID, job.Record) { f.dropped++ }
 func (f *fakeHost) CheckThreats(entity.EntityID, int, int, int, int, entity.EntityID, int) {
 	f.checks++
@@ -344,9 +340,13 @@ func (f *fakeHost) AbandonHunt(entity.EntityID, job.Record) { f.abandoned++ }
 func (f *fakeHost) AnyMarked() bool                         { return f.marked }
 func (f *fakeHost) Reserved(id entity.EntityID) bool        { return f.reserved[id] }
 func (f *fakeHost) Postponed(_, prey entity.EntityID) bool  { return f.postpone[prey] }
-func (f *fakeHost) NearestFree(_ entity.EntityID, k item.Kind) (entity.EntityID, int, int) {
-	v := f.free[k]
-	return entity.EntityID(v[0]), v[1], v[2]
+func (f *fakeHost) NearestFree(_ entity.EntityID, match func(item.Kind) bool) (entity.EntityID, int, int) {
+	for k := item.Kind(0); k < 255; k++ { // ascending kinds: the first that matches and lies about
+		if v, ok := f.free[k]; ok && match(k) {
+			return entity.EntityID(v[0]), v[1], v[2]
+		}
+	}
+	return 0, 0, 0
 }
 
 // Field
@@ -395,8 +395,8 @@ func (a fakeArms) Wielded(id entity.EntityID) item.Kind { return a.f.wield[id] }
 func (a fakeArms) Wield(id entity.EntityID, k item.Kind) {
 	a.f.wield[id], a.f.weapons[id] = k, weapon.ForItem(k)
 }
-func (a fakeArms) DropAt(k item.Kind, n, x, y int) {
-	a.f.putDown = append(a.f.putDown, fmt.Sprintf("%d,%d:%v:%d", x, y, k, n))
+func (a fakeArms) DropAt(st item.Stack) {
+	a.f.putDown = append(a.f.putDown, fmt.Sprintf("%d,%d:%v:%d", st.X, st.Y, st.Kind, st.Qty))
 }
 
 // Supply

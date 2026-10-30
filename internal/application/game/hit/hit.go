@@ -84,17 +84,30 @@ type Blow struct {
 	Lo, Hi int
 }
 
-// Wounds lands hits: it is combat's Wounds role.
+// Shields may stop a hit before it reaches the body (CBT-3: a shield
+// belt; combat.Gear).
+type Shields interface {
+	// Shield reports that hit, about to strike target, was stopped.
+	Shield(target entity.EntityID, hit damage.Hit) bool
+}
+
+// Wounds lands hits: it is combat's Wounds role. S (nil: none) stops a
+// hit before its part is picked.
 type Wounds struct {
 	B Bodies
 	W Wardrobe
 	H Harm
+	S Shields
 }
 
 // Absorb is hit landing on target: on a humanlike, a part picked by
 // coverage and the garments covering it (LandOn); a mechanoid's plating
 // covers it whole; any other creature's body picks its own part when hurt.
 func (w Wounds) Absorb(target entity.EntityID, hit damage.Hit, roll func(int) int) armor.Landed {
+	if w.S != nil && w.S.Shield(target, hit) {
+		hit.Amount = 0
+		return armor.Landed{Hit: hit, Outcome: armor.Deflected} // a shield belt took it
+	}
 	if s, ok := w.B.Plating(target); ok {
 		return armor.Absorb([]armor.Set{s}, hit, roll)
 	}

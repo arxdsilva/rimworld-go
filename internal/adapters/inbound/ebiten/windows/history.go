@@ -71,10 +71,14 @@ func (w History) body(body gfx.Rect) {
 		return
 	}
 	strip := gfx.Rect{X: body.X, Y: body.Y, W: body.W, H: historyTabH}
-	w.kit().Tabs("history.tabs", strip, []string{"Events", "Combat"}, &w.histTab, uikit.TabsOpts{})
+	w.kit().Tabs("history.tabs", strip, []string{"Events", "Combat", "Records"}, &w.histTab, uikit.TabsOpts{})
 	body = gfx.Rect{X: body.X, Y: body.Y + historyTabH + 6, W: body.W, H: body.H - historyTabH - 6}
-	if w.histTab == 1 {
+	switch w.histTab {
+	case 1:
 		w.combatList(body)
+		return
+	case 2:
+		w.recordsList(body)
 		return
 	}
 	rows := HistoryRows(w.sh.Env().Game.History())
