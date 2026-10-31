@@ -542,6 +542,9 @@ func (g *Game) fillAnimalLife(av *AnimalView, a animal.State, now uint64) {
 		}
 	}
 	av.EggsFertile = animal.Layer(a.Species) && a.Mated > 0
+	if a.Tame {
+		av.FoodPolicy = g.sk.diet.Of(av.ID, true).Name // FOOD-4
+	}
 	w := animal.Wildness(a.Species) // FOOD-3: revenge, wildness, handling (wiki)
 	av.Revenge, av.Wildness, av.MinHandling = g.revengePct(animal.DefOf(a.Species).Revenge), w/10, animal.MinHandling(w)
 	if animal.Produces(a.Species, a.Female, av.Adult) {

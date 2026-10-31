@@ -148,7 +148,7 @@ func NewPart(k PartKind) Part {
 	case PartForcedCondition:
 		p.PawnCond, p.Chance = pawngen.OldFracture, 50
 	case PartStartItem:
-		p.Item, p.Qty = item.Food, 20
+		p.Item, p.Qty = item.SurvivalMeal, 20
 	case PartScatterItem:
 		p.Item, p.Qty, p.N, p.Near = item.Steel, 100, 1, true
 	case PartStartAnimal:

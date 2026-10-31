@@ -522,7 +522,7 @@ This is the heart of autonomous colony behavior.
     -   Efficiently find valid free cells.
     -   Avoid map-wide storage scans.
 -   [x] **Linked storage groups** (STO-2: `group.go` Link/Unlink, an edit reaches every member, `zone.Map.SameStore`, a group can be a bill source)
--   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold raw food at Important and refill below half (original); missing: the `FillHopper` job is unused (fills run as a plain haul), wardens and doctors do not fetch paste for prisoners and patients)
+-   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold raw food at Important and refill below half (original); FOOD-4: haulers and cooks fill hoppers through the `FillHopper` job, wardens and doctors fetch paste for patients and prisoners; missing: none known, kept partial for the dispenser's original hopper numbers)
 -   [x] **Graves and sarcophagi as storage** (STO-2: corpse filters and priority; sarcophagus holds colonists only)
 -   [x] **Wiki stack limits** (STO-2: every item kind; corpses and gear one per stack)
 
@@ -656,12 +656,12 @@ This is the heart of autonomous colony behavior.
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
--   [-] **Food search** (nearest edible stack; entity reserved; SIM-028: forbidden stacks skipped, animals never pick food behind fences; FOOD-1: a malnourished pawn eats animal carcasses too; no diet or food policies yet)
+-   [-] **Food search** (nearest edible stack; entity reserved; SIM-028: forbidden stacks skipped, animals never pick food behind fences; FOOD-1: a malnourished pawn eats animal carcasses too; FOOD-4: food policies filter the search, choice scores 300 - distance + mood worth with kibble and corpse penalties and a near-rot bonus (original numbers); missing: a vanilla optimality formula (not published))
     -   Prefer valid edible food according to restrictions and
         availability.
     -   Reserve food before fetching it.
     -   Respect forbidden/allowed area rules.
--   [x] **Eating job** (fetch the portions needed, carry them to a table seat - chair preferred - within 30 tiles, ingest, table/raw/meal thoughts)
+-   [x] **Eating job** (fetch the portions needed, carry them to a table seat - chair preferred - within 30 tiles, ingest; FOOD-4 thoughts: fine +5, lavish +12, raw -7, kibble -12, paste -4, no table -3; human and insect meat and butchered-human thoughts, the cannibal trait flips them; patients and prisoners get the thoughts too)
     -   Fetch.
     -   choose table/seat when reasonable.
     -   ingest over time.
@@ -670,7 +670,7 @@ This is the heart of autonomous colony behavior.
 
 ## 8.2 Raw food
 
--   [-] **Plant food** (harvest yield stacks; no meat/diet categories)
+-   [x] **Plant food** (harvest yield stacks; vegetarian and carnivore variants and policy categories by FOOD-4)
 -   [x] **Meat**
 -   [x] **Animal products** (SIM-026, FOOD-3: milk, wool and eggs per species with saturation scaling, fertile eggs edible, omnivores eat eggs and milk; Handle work type)
     -   Milk/eggs where species definitions support them.
@@ -679,13 +679,13 @@ This is the heart of autonomous colony behavior.
 ## 8.3 Cooking
 
 -   [x] **Cooking workstation** (stove)
--   [x] **Meal recipes** (simple meal at the stove or slower over a campfire; PRD-4: fine meal, lavish meal, pemmican, packaged survival meal (multi-ingredient, any-veg and any-meat inputs, wiki skills and yields) and kibble at the butcher table and spot)
+-   [x] **Meal recipes** (FOOD-4: recipes take nutrition per item, vegetarian and carnivore fine and lavish variants, batch x4 bills, ingredients recorded on every meal, fueled stoves burn wood, benches outside 10-35 C work at 70 %; simple meal at the stove or slower over a campfire; PRD-4: fine meal, lavish meal, pemmican, packaged survival meal (multi-ingredient, any-veg and any-meat inputs, wiki skills and yields) and kibble at the butcher table and spot)
     -   Simple/standard meal classes sufficient to recreate vanilla
         progression.
     -   Ingredient filters.
     -   nutrition conversion.
     -   work amount.
--   [x] **Food poisoning** (MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
+-   [x] **Food poisoning** (FOOD-4: wiki room-cleanliness and cook-skill rolls, a poisoned batch poisons all of it, fed patients roll too; missing: synth stomach halving; MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
     -   Chance influenced by cook skill and cleanliness/conditions.
     -   Health effect and mood consequences.
 -   [x] **Butchering** (FOOD-3: body-size formula by age, missing parts and damage, species-named meat, insect and human meat, rotten corpses give leather)
@@ -715,7 +715,7 @@ This is the heart of autonomous colony behavior.
 
 ## 8.5 Food spoilage
 
--   [x] **Rot progression** (per-stack rot ticks; full speed from 10C, slower when cool, none at 0C or below; merges average by quantity)
+-   [x] **Rot progression** (FOOD-4: wiki days to rot, food deteriorates unroofed with food HP, shelves protect, meals 50 HP; per-stack rot ticks; full speed from 10C, slower when cool, none at 0C or below; merges average by quantity)
     -   Perishable food/corpses rot based on temperature and elapsed
         time.
 -   [-] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; a powered cooler holds a room at its thermostat target; no freezer building)
@@ -1490,7 +1490,7 @@ children systems.
     -   Spawn species appropriate to biome/climate.
 -   [x] **Animal hunger/rest** (SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation; FOOD-1: daily need on the nutrition scale by size (cow 0.86, alpaca 0.44 a day), babies x0.4 and juveniles x0.75, products fill 100/50/25/0 % by saturation)
     -   Simpler needs than humans.
--   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens; SIM-038: grazers prefer fuller grass, meals scale with growth; PLAY-017: tame animals eat the nearest food their diet allows, stockpiles included, and tame predators hunt wild prey and eat it; FEED-001: the wiki diet table (kibble and pemmican for all but strict carnivores, meals for all but strict carnivores and tree eaters), animal feed before meals, only reachable food with a memory of unreachable targets, a whole-area search while starving (15/25 % band), kibble in troughs; missing: a per-animal food restriction policy)
+-   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens; SIM-038: grazers prefer fuller grass, meals scale with growth; PLAY-017: tame animals eat the nearest food their diet allows, stockpiles included, and tame predators hunt wild prey and eat it; FEED-001: the wiki diet table (kibble and pemmican for all but strict carnivores, meals for all but strict carnivores and tree eaters), animal feed before meals, only reachable food with a memory of unreachable targets, a whole-area search while starving (15/25 % band), kibble in troughs; FOOD-4: per-animal food policy, Animal feed default)
 -   [x] **Predation** (SIM-019: predators hunt prey no bigger than themselves; small-prey predators XS/S only; packs share targets)
     -   Predators select prey and hunt.
 -   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; PLAY-010 SIM-035: every animal hit by an attacker fights back or flees, one that can't fight back flees on every hit (penned ones inside the pen), predators may charge colonists within 3 tiles unless asleep (off on Wanderer/Gentle); SIM-036: unarmed undrafted colonists flee from an animal coming for them within 12 tiles, even mid-order or asleep; armed ones keep their target; PLAY-017: an animal starting to chase a colonist posts a danger message (once per chase) that auto-pauses the game)
@@ -2114,7 +2114,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 27.1 Assign tab
 
--   [ ] **Food restriction policy**
+-   [x] **Food restriction policy** (FOOD-4/FOOD-5: policies Lavish, Fine, Simple, Paste, Raw, Nothing and an Animal feed default for tame animals; Assign tab Food column and policy editor; `SetFoodPolicy` / `EditFoodPolicy`; food search respects them)
     -   Allowed food categories/items.
     -   Pawn food search respects policy.
 -   [ ] **Apparel policy**

@@ -36,7 +36,7 @@ type fakeHost struct {
 	skills       map[entity.EntityID]uint8
 	names        map[entity.EntityID]string
 	now          uint64
-	scans        int // ItemIDs calls (the multi-stack search)
+	scans        int // ItemIDs calls (Nearest's pass and the multi-stack search)
 	stored       []storeCall
 	startFail    job.FailReason // StartJob fails for this reason (FailNone: starts)
 	work         int            // BenchWork per call (0: pct, below 0: none)
@@ -63,6 +63,9 @@ func newFake() *fakeHost {
 func (f *fakeHost) build(id entity.EntityID, k construction.Kind, x, y int) {
 	f.ids = append(f.ids, id)
 	f.bldgs[id] = construction.Building{Kind: k, X: x, Y: y}
+	if k == construction.Stove {
+		f.fuel[id] = 1 << 20 // FOOD-4: the stove burns wood; built stocked (TestStoveBurnsWood empties it)
+	}
 	f.ver++
 }
 
@@ -126,15 +129,6 @@ func (f *fakeHost) DriedStock() int {
 	return n
 }
 func (f *fakeHost) FreeWood() int { return f.Stock(item.Wood) }
-func (f *fakeHost) Ingredient(id entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
-	for _, iid := range f.items {
-		st := f.stacks[iid]
-		if st.Carrier == 0 && st.Qty >= in.Qty && in.AcceptsStack(st) {
-			return iid, st
-		}
-	}
-	return 0, item.Stack{}
-}
 func (f *fakeHost) Stack(id entity.EntityID) (item.Stack, bool) {
 	st, ok := f.stacks[id]
 	return st, ok
@@ -202,9 +196,9 @@ func (f *fakeHost) DropStackOf(st item.Stack, x, y int) {
 	f.put(f.next, st)
 	f.drops = append(f.drops, st)
 }
-func (f *fakeHost) DropMeal(cook entity.EntityID, bench construction.Kind, k item.Kind, qty, x, y int) {
-	f.meals += qty
-	f.DropStack(k, qty, x, y)
+func (f *fakeHost) DropMeal(cook entity.EntityID, bench construction.Kind, st item.Stack, x, y int) {
+	f.meals += st.Qty
+	f.DropStackOf(st, x, y)
 }
 func (f *fakeHost) Cremate(pyre, body entity.EntityID, d recipe.Def) {
 	f.cremated++

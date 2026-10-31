@@ -91,7 +91,7 @@ func TestFirstPlayableHaulBedEatSleep(t *testing.T) {
 	}
 	foodInStock := false
 	for _, it := range world.Items {
-		if it.Kind == "food" && !it.Carried {
+		if it.Kind == item.SurvivalMeal.String() && !it.Carried { // FOOD-4: the start kit's food
 			for _, z := range zonesOf(world, ZoneStockpile) {
 				if inZone(z, it.X, it.Y) {
 					foodInStock = true

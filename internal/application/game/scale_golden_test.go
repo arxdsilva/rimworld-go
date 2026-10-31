@@ -134,18 +134,22 @@ import (
 // their threat response, explosions damage items and cook off stores.
 // 48x40/seed1, 48x40/seed7 and 120x120/seed42 keep their pins. Same-seed
 // runs identical (-count=2).
-// Re-pinned (FOOD-1..3): the vanilla nutrition scale and hunger bands with
+// Re-pinned (FOOD-4): recipes measured in nutrition, fueled stoves, the
+// bench temperature penalty, haulers filling hoppers and barrels, wiki rot
+// and outdoor deterioration, food policies, choice by preference and
+// distance, wiki meal moods and poisoning. Same-seed runs identical.
+// Before that, re-pinned (FOOD-1..3): the vanilla nutrition scale and hunger bands with
 // malnutrition, wiki crop, tree and wild-plant growth with night rest, the
 // 51 % light rule and partial harvests, butchering by body size, per-species
 // products, taming food and auto-slaughter. All six runs move. Same-seed
 // runs identical (-count=2).
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x1e31570e5db4c000,
-	"48x40/seed7":    0xc4f51a9ea1ba7cee,
-	"48x40/seed42":   0xcb110cb888780e80,
-	"120x120/seed1":  0x4c0a5bfe5d6fd3ea,
-	"120x120/seed7":  0xe205735fe589da37,
-	"120x120/seed42": 0xcf6538c9340ece3b,
+	"48x40/seed1":    0xd88a3e6ca5e163be,
+	"48x40/seed7":    0x2389f9c1a4b7f656,
+	"48x40/seed42":   0x1dc7b7127bb3b0c2,
+	"120x120/seed1":  0xf8ed06b4b6edc16b,
+	"120x120/seed7":  0xa56602f6e8e42865,
+	"120x120/seed42": 0x7fa7cf01e91baff3,
 }
 
 const scaleGoldenTicks = 20000

@@ -24,7 +24,7 @@ import (
 //   - Benches (wiki: Biofuel refinery, Advanced component, the armour,
 //     grenade and shell pages): material / 10 rounded up, components as
 //     the wiki, work / 10, as PRD-3. Food for chemfuel is the wiki's 3.5
-//     nutrition in raw units (14). The advanced helmet takes the flak
+//     nutrition (70 units of 0.05, FOOD-4). The advanced helmet takes the flak
 //     helmet's recipe (the wiki has no core advanced helmet).
 //   - The fermenting barrel (wiki: Fermenting barrel): it takes wort up
 //     to 25 and ferments it into as much beer (craft.Fermenting).
@@ -47,10 +47,13 @@ func meal(id ID, name, label string, out item.Kind, veg, meat, qty, wikiWork int
 }
 
 // kibble is animal feed (wiki: Kibble: 1 + 1 nutrition, 20 + 20 raw
-// units; 50 at the butcher table, 35 at the spot; 450 work).
+// units, the vegetable side hay too; 50 at the butcher table, 35 at the
+// spot; 450 work).
 func kibble(id ID, name, label string, bench construction.Kind, qty int) Def {
 	d := meal(id, name, label, item.Kibble, 20, 20, qty, 450, 0)
 	d.Bench = bench
+	d.Inputs[0].Hay = true
+	d.Input = d.Inputs[0]
 	return d
 }
 
@@ -72,10 +75,12 @@ const fillWork = 30
 
 // fillBarrel pours wort into a fermenting barrel, up to BarrelWort; the
 // barrel ferments it into beer (Output, so "until you have" counts beer).
+// FOOD-4: haulers fill barrels (wiki: Fermenting barrel), a chore that
+// trains no skill (Learn is unused).
 func fillBarrel() Def {
 	return Def{ID: FillBarrel, Name: "fill_barrel", Label: "Fill with wort", Bench: construction.FermentingBarrel,
 		Input: Input{Kind: item.Wort, Qty: 1, Max: BarrelWort}, Output: item.Beer, Work: fillWork,
-		Skill: work.Cook, Learn: skill.Cooking, Ferment: true}
+		Skill: work.Haul, Ferment: true}
 }
 
 // drug is one dose made at the drug table from ins (wiki: Drug lab).

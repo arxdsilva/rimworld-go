@@ -213,7 +213,8 @@ func (g *Game) applyOne(c command.Command) {
 	case command.SetZoneOverlay: // STO-2: a view toggle the UI keeps (nothing simulated)
 	case command.SetAutoSlaughter:
 		g.herdOf().Auto.Apply(c) // game/herd (FOOD-3)
-	case command.SetFoodPolicy, command.EditFoodPolicy: // FOOD-0 contract: FOOD-4 handles them
+	case command.SetFoodPolicy, command.EditFoodPolicy:
+		g.sk.diet.Apply(c, dietEaters{g}) // game/diet (FOOD-4): food policies
 	}
 }
 
@@ -627,7 +628,7 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	}
 	// a delivery route (HAUL-001) books frames through incoming shares
 	// and holds only its spare stockpile cell
-	if rec.Kind == job.Haul && len(rec.Route) == 0 && !g.reserve.TryTile(id, rec.DestX, rec.DestY) ||
+	if rec.Kind.Hauls() && len(rec.Route) == 0 && !g.reserve.TryTile(id, rec.DestX, rec.DestY) ||
 		rec.HasSpare && !g.reserve.TryTile(id, rec.SpareX, rec.SpareY) {
 		g.reserve.ReleaseOwner(id)
 		rec.State = job.Fail
@@ -749,13 +750,11 @@ func (g *Game) seekFood(id entity.EntityID) bool {
 }
 
 func (g *Game) assignEat(id entity.EntityID) {
-	best, bx, by := g.bestFood(id)
-	if st, _ := g.stacks.Get(best); best == 0 || st.Kind.Preference() < item.NutrientPasteMeal.Preference() { // STO-2: paste before raw food
-		if bid, sx, sy, ok := g.haul.store.Paste.Find(haulHost{g}, haulHost{g}, haulHost{g}, id); ok && g.startJob(id, g.haul.store.Paste.Job(bid, sx, sy)) {
-			return
-		}
+	best, bx, by, paste := mealFor(g, id, id) // food.go: a stack, or paste that scores better (STO-2)
+	if paste && g.startJob(id, g.haul.store.Paste.Job(best, bx, by)) {
+		return
 	}
-	if best == 0 {
+	if best == 0 || paste {
 		g.noFood[id] = uint64(g.clock.Now()) + foodRetry // areas.go: all the food lies outside the allowed area
 		return
 	}
@@ -854,7 +853,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position, ids []entity.En
 			}
 			continue
 		}
-		rec := job.Record{Kind: job.Haul, Target: bestID, TX: best.X, TY: best.Y, DestX: dx, DestY: dy}
+		rec := job.Record{Kind: job.HaulKind(dest == zone.KindHopper), Target: bestID, TX: best.X, TY: best.Y, DestX: dx, DestY: dy} // FOOD-4: FillHopper
 		if g.startJob(id, planGather(g, id, rec, best)) {
 			return true
 		}
@@ -1040,7 +1039,7 @@ func (g *Game) phaseJobs() {
 			g.doEat(id, j)
 		case job.Sleep:
 			g.rest.Do(id, j, now) // rest/sleep.go
-		case job.Haul:
+		case job.Haul, job.FillHopper: // FOOD-4: a hopper fill is a haul
 			g.doHaul(id, j)
 		case job.Bury:
 			g.doBury(id, j)
@@ -1178,10 +1177,8 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		g.putStack(j.Target, st) // leftovers: dropped where it ate
 	}
 	g.lastMeal[id] = st.Kind
-	g.afterEat(id, st) // rooms.go: thoughts, and the meal's food poisoning roll
-	if n.Hunger > needs.Full {
-		n.Hunger = needs.Full
-	}
+	g.afterEat(id, st, false) // rooms.go: thoughts, and the meal's food poisoning roll
+	n.Hunger = min(n.Hunger, needs.Full)
 	g.need.Set(id, n)
 	g.ateAt[id] = true
 	g.logEvent(id, logEntry{Kind: logAte, Name: st.Kind.String()})
@@ -1669,15 +1666,13 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			break
 		}
 		if st.Qty <= room {
-			other.Rot = item.MergeRot(other.Qty, other.Rot, st.Qty, st.Rot)
-			other.Poison = item.MergePoison(other.Qty, other.Poison, st.Qty, st.Poison) // food_poison.go
+			other = item.MergeFood(other, st, st.Qty) // rot, poison (food_poison.go), FOOD-4 ingredients
 			other.Qty += st.Qty
 			g.putStack(oid, other)
 			g.deleteItem(id)
 			return
 		}
-		other.Rot = item.MergeRot(other.Qty, other.Rot, room, st.Rot)
-		other.Poison = item.MergePoison(other.Qty, other.Poison, room, st.Poison)
+		other = item.MergeFood(other, st, room)
 		other.Qty = other.Kind.StackLimit()
 		g.putStack(oid, other)
 		st.Qty -= room

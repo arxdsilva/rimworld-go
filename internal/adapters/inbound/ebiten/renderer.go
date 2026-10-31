@@ -505,6 +505,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 		ch := p.OverlayChunks()
 		p.Env.SetView(v, sw, sh, tile)
 		p.Overlays.DrawRoofOverlay(v, screen, v.W, r.game.Areas, sw, sh, tile)
+		p.Overlays.DrawFertility(v, screen, v.W, sw, sh, tile)                   // render/overlay growing_draw.go (FOOD-5)
 		p.Overlays.DrawPowerOverlay(v, &ch, p.Links, screen, &v.W, sw, sh, tile) // render/overlay power (PLAY-021)
 		p.Creatures.DrawTraces(v, screen, w, r.game.Snapshot(), tile)
 		return

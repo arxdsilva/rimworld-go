@@ -46,7 +46,7 @@ func Builtins() []Def {
 				"A balanced start for learning how the colony works.",
 			Faction: faction.Settlers, People: 3, ChooseFrom: 8, Arrival: DropPods, Tech: faction.Industrial, Hardness: 2,
 			Parts: []Part{
-				startItem(item.Food, 40),
+				startItem(item.SurvivalMeal, 40),
 				startItem(item.Meal, 10),
 				startItem(item.IndustrialMedicine, 12),
 				startItem(item.HerbalMedicine, 6),
@@ -61,7 +61,7 @@ func Builtins() []Def {
 				startItem(item.Tuque, 1),
 				{Kind: PartStartAnimal, Random: true, N: 1},
 				scatter(item.Steel, 400, 4),
-				scatter(item.Food, 8, 1),
+				scatter(item.SurvivalMeal, 8, 1),
 				scatter(item.Components, 6, 1),
 				grant(research.FoodPreservation),
 				grant(research.Traps),
@@ -110,7 +110,7 @@ func Builtins() []Def {
 			Faction: faction.Settlers, People: 1, ChooseFrom: 6, Arrival: DropPods, Tech: faction.Industrial, Hardness: 3,
 			Parts: []Part{
 				startItem(item.Meal, 20),
-				startItem(item.Food, 20),
+				startItem(item.SurvivalMeal, 20),
 				startItem(item.IndustrialMedicine, 20),
 				startItem(item.Components, 30),
 				startItem(item.Steel, 400),

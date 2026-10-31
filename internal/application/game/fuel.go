@@ -64,7 +64,7 @@ func fuelSpec(k construction.Kind) (fuelDef, bool) {
 		return fuelDef{CapTicks: torchLogs * TicksPerWood, Below: torchLogs * TicksPerWood / 2, BurnPermil: torchBurn}, true
 	case construction.WoodGenerator:
 		return fuelDef{CapTicks: generatorLogs * TicksPerWood, Below: generatorLogs * TicksPerWood / 2, BurnPermil: generatorBurn}, true
-	case construction.FueledSmithy: // PRD-3, wiki: Fueled smithy (50 logs, scaled / 10); burns only while worked (craft.WorkPerWood)
+	case construction.FueledSmithy, construction.Stove: // PRD-3, FOOD-4, wiki: Fueled smithy, Fueled stove (50 logs, scaled / 10); burns only while worked (craft.WorkPerWood)
 		return fuelDef{CapTicks: 5 * TicksPerWood, Below: 5 * TicksPerWood / 2}, true
 	}
 	return fuelDef{}, false

@@ -17,10 +17,10 @@ func TestBuildAlerts(t *testing.T) {
 		{Name: "Bo", Status: "downed", Reason: "injured", InBed: true, HasBed: true},
 		{Name: "Cora", Status: "alive", Mood: 20, X: 7, Y: 7, HasBed: true},
 	}
-	w := game.WorldView{Food: 2, Animals: []game.AnimalView{{Species: "ridge_wolf", Label: "ridge wolf", Hostile: true, X: 9, Y: 9}}}
+	w := game.WorldView{Food: 2, FoodDays: 12, Animals: []game.AnimalView{{Species: "ridge_wolf", Label: "ridge wolf", Hostile: true, X: 9, Y: 9}}}
 	got := BuildAlerts(pawns, w)
 	// the label ("ridge wolf"), not the species key; no target, so generic
-	want := []string{"A ridge wolf is attacking!", "Ada needs rescue", "Low food (2 left)", "Cora is unhappy"}
+	want := []string{"A ridge wolf is attacking!", "Ada needs rescue", "Low food (1.2 days)", "Cora is unhappy"}
 	if len(got) != len(want) {
 		t.Fatalf("alerts = %+v", got)
 	}
@@ -246,7 +246,7 @@ func TestBleedingAlert(t *testing.T) {
 		{ID: 5, Name: "Krell", Status: "downed", Hostile: true, Lying: true, Bleeding: true, BleedDeathHours: 2},
 		{ID: 6, Name: "Eve", Status: "alive", Mood: 80, BleedDeathHours: 0}, // not bleeding: the zero hours mean nothing
 	}
-	got := BuildAlerts(pawns, game.WorldView{Food: 100})
+	got := BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100})
 	var bleed []Alert
 	for _, a := range got {
 		if a.Key == "bleeding" {
@@ -261,7 +261,7 @@ func TestBleedingAlert(t *testing.T) {
 		t.Fatalf("a danger sorts first: %v", alertKeys(got))
 	}
 	pawns[1].BleedDeathHours = 12
-	got = BuildAlerts(pawns, game.WorldView{Food: 100})
+	got = BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100})
 	for _, a := range got {
 		if a.Key == "bleeding" && a.Label != "2 colonists are bleeding out" {
 			t.Fatalf("two bleeding: %q", a.Label)
@@ -282,7 +282,7 @@ func TestInfectionAlert(t *testing.T) {
 		{ID: 5, Name: "Eve", Status: "alive", Mood: 80, Wounded: true, UntendedHours: 4, X: 5, Y: 6},
 		{ID: 6, Name: "Fin", Status: "alive", Mood: 80, Wounded: true, UntendedHours: 3},
 	}
-	got := BuildAlerts(pawns, game.WorldView{Food: 100})
+	got := BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100})
 	find := func(key string) []Alert {
 		var out []Alert
 		for _, a := range got {
@@ -303,7 +303,7 @@ func TestInfectionAlert(t *testing.T) {
 		t.Fatalf("untended alerts %+v (all %v)", un, alertKeys(got))
 	}
 	pawns[1].InfectionLosing = true
-	got = BuildAlerts(pawns, game.WorldView{Food: 100})
+	got = BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100})
 	if inf := find("infection"); len(inf) != 1 || inf[0].Label != "2 colonists are losing to infections" {
 		t.Fatalf("two losing: %+v", inf)
 	}
@@ -328,17 +328,17 @@ func TestDiseaseAlert(t *testing.T) {
 		}
 		return out
 	}
-	d := find(BuildAlerts(pawns, game.WorldView{Food: 100}))
+	d := find(BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100}))
 	if len(d) != 1 || d[0].Label != "Ada is sick: flu" || d[0].Danger || d[0].Sev != SevWarning ||
 		len(d[0].Targets) != 1 || d[0].Targets[0] != [2]int{3, 4} || d[0].Explain == AlertExplain("no-such-alert") {
 		t.Fatalf("disease alerts %+v", d)
 	}
 	pawns[1].Disease = "gut worms"
-	if d := find(BuildAlerts(pawns, game.WorldView{Food: 100})); len(d) != 1 || d[0].Label != "2 colonists are sick" || len(d[0].Targets) != 2 {
+	if d := find(BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100})); len(d) != 1 || d[0].Label != "2 colonists are sick" || len(d[0].Targets) != 2 {
 		t.Fatalf("two sick: %+v", d)
 	}
 	pawns[0].Disease, pawns[1].Disease = "", ""
-	if d := find(BuildAlerts(pawns, game.WorldView{Food: 100})); len(d) != 0 {
+	if d := find(BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100})); len(d) != 0 {
 		t.Fatalf("no one sick: %+v", d)
 	}
 }
@@ -363,18 +363,18 @@ func TestOverdoseAlert(t *testing.T) {
 		}
 		return out
 	}
-	d := find(BuildAlerts(pawns, game.WorldView{Food: 100}))
+	d := find(BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100}))
 	if len(d) != 1 || d[0].Label != "Ada has overdosed" || d[0].Danger || d[0].Sev != SevWarning ||
 		len(d[0].Targets) != 1 || d[0].Targets[0] != [2]int{3, 4} || d[0].Explain == AlertExplain("no-such-alert") {
 		t.Fatalf("overdose alerts %+v", d)
 	}
 	pawns[1].OverdosePct, pawns[1].OverdoseStage = 80, 2
-	d = find(BuildAlerts(pawns, game.WorldView{Food: 100}))
+	d = find(BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100}))
 	if len(d) != 1 || d[0].Label != "2 colonists have overdosed" || !d[0].Danger || len(d[0].Targets) != 2 {
 		t.Fatalf("an extreme overdose is a danger: %+v", d)
 	}
 	pawns[0].OverdoseStage, pawns[1].OverdoseStage = 0, 0
-	if d := find(BuildAlerts(pawns, game.WorldView{Food: 100})); len(d) != 0 {
+	if d := find(BuildAlerts(pawns, game.WorldView{Food: 100, FoodDays: 100})); len(d) != 0 {
 		t.Fatalf("below major: no alert: %+v", d)
 	}
 }

@@ -20,14 +20,16 @@ func driedStock(h Host) int {
 }
 
 // merge adds carried stack from to carried stack into (same kind, the
-// rot averaged) and deletes from: one load gathered from several stacks.
+// rot, poison and wear averaged, FOOD-4's ingredients unioned) and
+// deletes from: one load gathered from several stacks.
 func merge(h Host, into, from entity.EntityID) {
 	a, ok := h.Stack(into)
 	f, fok := h.Stack(from)
 	if !ok || !fok {
 		return
 	}
-	a.Rot, a.Qty = item.MergeRot(a.Qty, a.Rot, f.Qty, f.Rot), a.Qty+f.Qty
+	a = item.MergeFood(a, f, f.Qty)
+	a.Qty += f.Qty
 	h.SetStack(into, a)
 	h.DeleteItem(from)
 }

@@ -77,7 +77,7 @@ func TestMealInputs(t *testing.T) {
 		!meat.Accepts(item.Milk) || meat.Accepts(item.Corn) || veg.Accepts(item.Meal) {
 		t.Fatal("fine meal sides")
 	}
-	if veg.Label() != "5 plant food" || meat.Label() != "5 meat or animal product" || fine.MinSkill != 6 || fine.Work != 180 {
+	if veg.Label() != "0.25 nutrition of plant food" || meat.Label() != "0.25 nutrition of meat or animal product" || fine.MinSkill != 6 || fine.Work != 180 {
 		t.Fatalf("fine meal: %s, %s, skill %d, work %d", veg.Label(), meat.Label(), fine.MinSkill, fine.Work)
 	}
 	if DefOf(MakeKibble).OutQty != 50 || DefOf(MakeKibbleSpot).OutQty != 35 || !DefOf(MakeKibbleSpot).At(construction.ButcherSpot) {

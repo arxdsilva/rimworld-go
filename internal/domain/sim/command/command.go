@@ -334,6 +334,8 @@ const (
 	WorkWarden // prisoners (ENG-003)
 	// WorkFirefight (PLAY-015): beating out fires in Home.
 	WorkFirefight
+	// WorkPlantCut (FOOD-2): cutting marked plants and felling trees.
+	WorkPlantCut
 )
 
 // Order is a player-forced job for Prioritize.

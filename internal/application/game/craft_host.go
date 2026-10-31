@@ -56,28 +56,9 @@ func (g *Game) stockOf(k item.Kind) int {
 }
 
 // ingredientFor is the nearest free stack that can feed in on its own
-// (bills, refuelling, surgery, medicine).
+// (bills, refuelling, surgery, medicine; craft/gather.go).
 func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	var bst item.Stack
-	bestD := 1 << 30
-	for _, iid := range g.itemIDs {
-		sp := g.stacks.Ref(iid)
-		// a rotten body still burns on a pyre
-		if sp == nil || sp.Carrier != 0 || sp.Forbidden || sp.Qty < in.Qty || !in.AcceptsStack(*sp) || sp.Rotten() && sp.Kind != item.CorpseHuman {
-			continue
-		}
-		st := *sp // a candidate (the loop only reads)
-		if g.reserve.FreeFor(id, iid, sp.Qty) < in.Qty {
-			continue // RES-1: too little left that other pawns haven't claimed
-		}
-		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
-		if d < bestD || d == bestD && iid < best {
-			best, bst, bestD = iid, st, d
-		}
-	}
-	return best, bst
+	return g.craft.Shop.Nearest(id, in)
 }
 
 // dropStackOf spawns a copy of st (kind, quantity, rot, dried, found and
@@ -92,6 +73,7 @@ func (g *Game) dropStackOf(st item.Stack, x, y int) {
 		s.Rot, s.Dried = st.Rot, st.Dried
 		s.Unclaimed, s.HaulMarked = st.Unclaimed, st.HaulMarked
 		s.Quality, s.Wear, s.Stuff, s.Of, s.Animal = st.Quality, st.Wear, st.Stuff, st.Of, st.Animal
+		s.Poison, s.Ingredients, s.IngredientSpecies = st.Poison, st.Ingredients, st.IngredientSpecies // FOOD-4
 		g.mergeOrSet(sid, s)
 	}
 }
@@ -139,11 +121,8 @@ func (h craftBenches) TemperatureAt(x, y int) int      { return int(h.g.temperat
 
 type craftStock struct{ g *Game }
 
-func (h craftStock) Stock(k item.Kind) int { return h.g.stockOf(k) }
-func (h craftStock) FreeWood() int         { return h.g.freeWood() }
-func (h craftStock) Ingredient(id entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
-	return h.g.ingredientFor(id, in)
-}
+func (h craftStock) Stock(k item.Kind) int                       { return h.g.stockOf(k) }
+func (h craftStock) FreeWood() int                               { return h.g.freeWood() }
 func (h craftStock) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
 func (h craftStock) ItemIDs() []entity.EntityID                  { return h.g.itemIDs }
 func (h craftStock) InSource(src uint64, x, y int) bool {
@@ -169,7 +148,8 @@ func (h craftStock) Carry(carrier, stack entity.EntityID, take int) entity.Entit
 	nid := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, nid)
 	g.putStack(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: carrier, Rot: st.Rot, Dried: st.Dried,
-		Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal, Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff, Yield: st.Yield})
+		Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal, Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff, Yield: st.Yield,
+		Poison: st.Poison, Ingredients: st.Ingredients, IngredientSpecies: st.IngredientSpecies}) // FOOD-4
 	return nid
 }
 
@@ -178,19 +158,20 @@ type craftOutput struct{ g *Game }
 func (h craftOutput) DeleteItem(id entity.EntityID)        { h.g.deleteItem(id) }
 func (h craftOutput) DropStack(k item.Kind, qty, x, y int) { h.g.dropStack(k, qty, x, y) }
 func (h craftOutput) DropStackOf(st item.Stack, x, y int)  { h.g.dropStackOf(st, x, y) }
-func (h craftOutput) DropMeal(cook entity.EntityID, bench construction.Kind, k item.Kind, qty, x, y int) {
-	h.g.dropMeal(k, qty, x, y, h.g.mealPoison(cook, bench, x, y)) // food_poison.go (WS-M)
+func (h craftOutput) DropMeal(cook entity.EntityID, bench construction.Kind, st item.Stack, x, y int) {
+	st.Poison = h.g.mealPoison(cook, bench, x, y) // food_poison.go (WS-M); FOOD-4: with its ingredients
+	h.g.dropStackOf(st, x, y)
 }
 func (h craftOutput) Cremate(pyre, body entity.EntityID, d recipe.Def) { h.g.cremate(pyre, body, d) } // burial.go
 func (h craftOutput) Message(x, y int, text string)                    { h.g.message(x, y, "%s", text) }
 
 // ButcheredHuman: the butcher's stacking -6 and every other colonist's -6
 // (FOOD-3, wiki: Butcher table); cold-hearted and bloodthirsty colonists
-// (the psychopath and bloodlust roles) are immune. No cannibal trait yet.
+// (the psychopath and bloodlust roles) and cannibals (FOOD-4) are immune.
 func (h craftOutput) ButcheredHuman(butcher entity.EntityID) {
 	g := h.g
 	for _, id := range g.pawnIDs {
-		if bio, ok := g.personBio(id); ok && (slices.Contains(bio.Traits, trait.ColdHearted) || slices.Contains(bio.Traits, trait.Bloodthirsty)) {
+		if bio, ok := g.personBio(id); ok && (slices.Contains(bio.Traits, trait.ColdHearted) || slices.Contains(bio.Traits, trait.Bloodthirsty) || cannibal(g, id)) {
 			continue
 		}
 		k := mood.ObservedButchery

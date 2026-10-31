@@ -13,7 +13,8 @@ import (
 // A pawn that cannot feed itself, lying downed (from its wounds, a
 // collapse, starvation or a breakdown), is fed by a doctor once its food
 // falls to Hungry (FeedHungry, the wiki's 25%, needs.CriticalHunger):
-// the doctor fetches the best allowed food, carries enough for the
+// the doctor fetches the best food the patient's policy allows (or a
+// paste meal from a dispenser, FOOD-4), carries enough for the
 // patient's hunger and feeds it beside the patient, which eats until
 // nearly full. The band is wide: feeding starts at 25% and one meal
 // lifts the patient to about 100%, so it is not fed again before it has
@@ -49,9 +50,10 @@ const (
 type Meals interface {
 	// Hunger is id's food need, 0..needs.Full (needs.Full without one).
 	Hunger(id entity.EntityID) int
-	// BestFood is the best allowed free food stack id could fetch and
-	// its tile (0 when none): the warden's choice.
-	BestFood(id entity.EntityID) (food entity.EntityID, x, y int)
+	// BestFood is the best food feeder id could fetch for patient and
+	// its tile (0 when none): a stack by the patient's food policy and
+	// taste, or a paste dispenser whose meal is better (FOOD-4).
+	BestFood(id, patient entity.EntityID) (food entity.EntityID, x, y int)
 	// TakeFood: id, at stack food, picks up enough of it for patient's
 	// hunger (split off when bigger); false when the stack is gone or
 	// held.
@@ -171,7 +173,7 @@ func (f *Feeding) Start(id, p entity.EntityID, k job.Kind, forced bool) bool {
 	if f.m == nil {
 		return false
 	}
-	food, fx, fy := f.m.BestFood(id)
+	food, fx, fy := f.m.BestFood(id, p)
 	if food == 0 || !f.h.StartJob(id, job.Record{Kind: k, Target: food, TX: fx, TY: fy, Dest: p, Forced: forced}) {
 		return false
 	}
@@ -275,12 +277,12 @@ func (f *Feeding) judge(doer, target entity.EntityID) (bool, string) {
 	case f.m.Hunger(target) >= FeedOffer:
 		return false, ReasonNotHungry
 	}
-	return true, firstWhy(c.doerWhy(doer, true), c.holdWhy(doer, target), f.foodWhy(doer), c.reachWhy(doer, target))
+	return true, firstWhy(c.doerWhy(doer, true), c.holdWhy(doer, target), f.foodWhy(doer, target), c.reachWhy(doer, target))
 }
 
-// foodWhy: no food doer may fetch.
-func (f *Feeding) foodWhy(doer entity.EntityID) string {
-	if food, _, _ := f.m.BestFood(doer); food == 0 {
+// foodWhy: no food doer may fetch for target.
+func (f *Feeding) foodWhy(doer, target entity.EntityID) string {
+	if food, _, _ := f.m.BestFood(doer, target); food == 0 {
 		return ReasonNoFood
 	}
 	return ""

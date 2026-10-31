@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/entity"
@@ -141,10 +142,10 @@ func (h careHealth) HealingInjury(id entity.EntityID) int {
 	return healingInjury(h.g.bodies[id], v) // medical.go
 }
 func (h careHealth) SickRest(id entity.EntityID) bool { // disease.go, food_poison.go
-	return h.g.infectionSick(id) || h.g.diseaseRest(id) || h.g.foodPoisonRest(id)
+	return h.g.infectionSick(id) || h.g.diseaseRest(id) || body.FoodPoisonRest(h.g.bodies[id])
 }
 func (h careHealth) SickStill(id entity.EntityID) bool {
-	return h.g.infectionSick(id) || h.g.diseaseSick(id) || h.g.foodPoisonSick(id)
+	return h.g.infectionSick(id) || h.g.diseaseSick(id) || body.FoodPoisonSick(h.g.bodies[id])
 }
 func (h careHealth) AwaitingSurgery(id entity.EntityID) bool { return h.g.awaitingSurgery(id) } // surgery.go
 

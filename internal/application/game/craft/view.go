@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -23,7 +24,7 @@ type RecipeView struct {
 	Label   string
 	Bench   string
 	Benches []string
-	Input   string // e.g. "2 raw food"; several ingredients joined with " + "
+	Input   string // e.g. "0.5 nutrition of raw food"; several ingredients joined with " + "
 	Output  string
 }
 
@@ -242,4 +243,22 @@ func (b *Bills) noWorker(bl recipe.Bill, d recipe.Def) string {
 		}
 	}
 	return NoWorkerNone
+}
+
+// IngredientNames is meal st's ingredients as the UI names them (FOOD-4,
+// ItemView.Ingredients): "cow meat" for tagged meat, else the kind's
+// name; nil for a stack with none.
+func IngredientNames(st item.Stack) []string {
+	var out []string
+	for i, k := range st.Ingredients {
+		if k == 0 {
+			continue
+		}
+		name := animal.MeatLabel(item.Stack{Kind: k, Animal: st.IngredientSpecies[i]})
+		if name == "" {
+			name = k.String()
+		}
+		out = append(out, name)
+	}
+	return out
 }

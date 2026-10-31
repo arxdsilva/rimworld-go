@@ -75,7 +75,7 @@ func TestForbiddenFoodNotEaten(t *testing.T) {
 	if g.hasEdible(false) {
 		t.Fatal("forbidden food counts as edible")
 	}
-	if best, _, _ := g.bestFood(ada); best != 0 {
+	if best, _, _, _ := g.bestFood(ada, ada); best != 0 {
 		t.Fatalf("bestFood picked forbidden food %d", best)
 	}
 	for i := 0; i < 60; i++ {

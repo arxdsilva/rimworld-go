@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"rimworld-go/internal/application/game"
@@ -89,6 +90,12 @@ func ItemLines(it game.ItemView, stored bool) []string {
 	case it.FreshDays >= 0:
 		out = append(out, fmt.Sprintf("Fresh for %.0f days", it.FreshDays))
 	}
+	if l := IngredientsLine(it); l != "" {
+		out = append(out, l)
+	}
+	if it.Meat != "" {
+		out = append(out, "Butchered from: "+Capitalize(it.Meat))
+	}
 	if it.PoisonPermille > 0 {
 		out = append(out, "Poison chance "+poisonPct(it.PoisonPermille))
 	}
@@ -169,4 +176,22 @@ func (a Thing) ApplyItemClick(id string) {
 		}
 		return
 	}
+}
+
+// IngredientsLine is "Made with: rice, cow meat" for a cooked meal ("" for
+// anything else); repeats are counted once.
+func IngredientsLine(it game.ItemView) string {
+	if len(it.Ingredients) == 0 {
+		return ""
+	}
+	var seen []string
+	for _, k := range it.Ingredients {
+		if k != "" && !slices.Contains(seen, k) {
+			seen = append(seen, k)
+		}
+	}
+	if len(seen) == 0 {
+		return ""
+	}
+	return "Made with: " + strings.Join(seen, ", ")
 }

@@ -113,12 +113,12 @@ func TestMalnourishedEatsACorpse(t *testing.T) {
 	if g.seekFood(id) {
 		t.Fatal("a hungry colonist does not count a carcass as food")
 	}
-	if best, _, _ := g.bestFood(id); best != 0 {
+	if best, _, _, _ := g.bestFood(id, id); best != 0 {
 		t.Fatal("a hungry colonist picks no carcass")
 	}
 	g.SetNeeds(id, 0, needs.Full)
 	malnourish(g, id, 100)
-	if best, _, _ := g.bestFood(id); best != sid || !g.seekFood(id) {
+	if best, _, _, _ := g.bestFood(id, id); best != sid || !g.seekFood(id) {
 		t.Fatalf("a malnourished colonist eats the carcass: best %d", best)
 	}
 	g.Step(TicksPerCell*20 + needs.EatWorkTicks + 50)
@@ -152,6 +152,7 @@ func TestSimpleMealTakesTenRawUnits(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
+	g.FuelCampfire(5, 2) // FOOD-4: the stove burns wood
 	g.SpawnStack(item.Berries, 9, 1, 4)
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.DoCount), Count: 1})
 	cook := func() {

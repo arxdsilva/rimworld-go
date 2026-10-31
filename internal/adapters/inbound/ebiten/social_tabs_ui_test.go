@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -64,7 +65,7 @@ func TestHealthSocialTabs(t *testing.T) {
 // reads the Social skill.
 func TestWardenWorkColumn(t *testing.T) {
 	t.Parallel()
-	if len(windows.WorkColumns) != 13 || windows.WorkColumns[12] != "Ward" || windows.WorkHelp[12] == "" {
+	if len(windows.WorkColumns) != 14 || windows.WorkColumns[12] != "Ward" || windows.WorkHelp[12] == "" {
 		t.Fatalf("columns = %v", windows.WorkColumns)
 	}
 	if cmd, ok := windows.WorkTypeForCol(12); !ok || cmd != command.WorkWarden {
@@ -72,5 +73,15 @@ func TestWardenWorkColumn(t *testing.T) {
 	}
 	if !workColSkill[12].ok {
 		t.Fatal("warden column has no skill")
+	}
+	// FOOD-2: Plant cutting follows Warden, sends WorkPlantCut and reads Plants.
+	if windows.WorkColumns[13] != "Cut" || windows.WorkHelp[13] == "" {
+		t.Fatalf("columns = %v", windows.WorkColumns)
+	}
+	if cmd, ok := windows.WorkTypeForCol(13); !ok || cmd != command.WorkPlantCut {
+		t.Fatal("plant cutting column not live")
+	}
+	if s := workColSkill[13]; !s.ok || s.sk != skill.Plants {
+		t.Fatal("plant cutting column does not read Plants")
 	}
 }

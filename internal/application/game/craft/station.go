@@ -7,8 +7,8 @@ import (
 
 // Bench work speed (PRD-3, ENG-003). A bench works at its own factor
 // (wiki: Crafting spot 0.5, Butcher spot 0.7) plus its linked facilities
-// and an electric twin's bonus, times the light at its work spot and its
-// room's term.
+// and an electric twin's bonus, times the light at its work spot, the
+// air temperature there and its room's term.
 const (
 	// craftingSpotSpeed and butcherSpotSpeed are the spots' factors,
 	// permille (wiki: Crafting spot, Butcher spot).
@@ -24,8 +24,23 @@ const (
 	outdoorsSpeed = 800
 	// speedEvery is how many ticks a bench's speed is kept before it is
 	// worked out again (ours: light changes slowly; the view stays put).
+	// It is also the bad-temperature term's minimum stay: air wobbling
+	// around 10 C moves a bench's speed at most once per window.
 	speedEvery = 250
+	// FOOD-4 (wiki: Temperature): a bench works at badTempSpeed outside
+	// goodTempMin..goodTempMax C at its work spot.
+	goodTempMin  = 10
+	goodTempMax  = 35
+	badTempSpeed = 700
 )
+
+// tempSpeed is the air temperature factor, permille, at t whole degrees.
+func tempSpeed(t int) int {
+	if t < goodTempMin || t > goodTempMax {
+		return badTempSpeed
+	}
+	return 1000
+}
 
 // cleanSpeed is the room-cleanliness factor, permille, by the room's
 // cleanliness band (very dirty, dirty, slightly dirty; clean and sterile
@@ -98,7 +113,7 @@ func (s *Stations) Speed(bid entity.EntityID) int {
 }
 
 // compute is bench b's speed now: its factor, facilities and electric
-// bonus, then light and room at the work spot.
+// bonus, then light, air temperature (FOOD-4) and room at the work spot.
 func (s *Stations) compute(bid entity.EntityID, b construction.Building) int {
 	h := s.h
 	v := baseSpeed(b.Kind) + 10*(s.facilities.Bonus(bid)+ElectricPct(b.Kind))
@@ -107,7 +122,7 @@ func (s *Stations) compute(bid entity.EntityID, b construction.Building) int {
 		spot = [2]int{b.X, b.Y}
 	}
 	x, y := spot[0], spot[1]
-	v = v * lightSpeed(h.Light(x, y)) / 1000
+	v = v * lightSpeed(h.Light(x, y)) / 1000 * tempSpeed(h.TemperatureAt(x, y)) / 1000
 	if c, indoors := h.Cleanliness(x, y); indoors {
 		return v * cleanSpeed(c) / 1000
 	}

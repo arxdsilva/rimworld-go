@@ -49,13 +49,13 @@ func TestAnimalColumnsDropToFit(t *testing.T) {
 	}
 	// Doing and Training go first, then Preg., and the columns before a
 	// dropped one stay put
-	c := animalColsFor(1100, false)
+	c := animalColsFor(1100+dietW+6, false) // the Diet column (FOOD-5) is last to go, so the old widths shift by it
 	if c.shown(colDoing) || c.shown(colTrain) || !c.shown(colPreg) || c.at(colBtn) != colBtn-108-104 || c.at(colMaster) != colMaster {
-		t.Errorf("1100 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
+		t.Errorf("1226 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
 	}
-	c = animalColsFor(1032, false)
+	c = animalColsFor(1032+dietW+6, false)
 	if c.shown(colPreg) || c.at(colBtn) != colBtn-108-104-44 || c.at(colMaster) != colMaster-44 || c.at(colHealth) != colHealth-44 || c.at(colProduct) != colProduct {
-		t.Errorf("1032 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
+		t.Errorf("1158 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
 	}
 }
 
@@ -164,7 +164,7 @@ func TestHandDrawnWindowsButtonsAndClicks(t *testing.T) {
 	}
 	w.Research().Pick(bs[0].ID)
 	w.Show("animals")
-	if got := len(w.Buttons()); got != 2+3 { // Colony / Wild, then Master, Slaughter, Release
+	if got := len(w.Buttons()); got != 2+1+3 { // Colony / Wild, Auto-slaughter (FOOD-5), then Master, Slaughter, Release (the Diet column is dropped in this narrow window)
 		t.Fatalf("animals buttons %d", got)
 	}
 	w.Animals().Click("animals.release.50")

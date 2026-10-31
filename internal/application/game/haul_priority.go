@@ -130,9 +130,9 @@ func (g *Game) haulUrgent(id entity.EntityID) bool {
 	return u.Any() && g.haulToStockpile(id, pos, u.IDs(), 0)
 }
 
-// fillHoppers is a cook's hopper filling (STO-2, wiki: Nutrient paste
-// dispenser: hauling and cooking fill hoppers): raw food carried to a
-// hopper with room, when the map has any.
+// fillHoppers is hopper filling, hauling and cooking work both (wiki:
+// Hopper; FOOD-4: a FillHopper job): raw food carried to a hopper with
+// room, when the map has any.
 func (g *Game) fillHoppers(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
 	return store.HasHopper(haulHost{g}) && g.haulToStockpile(id, pos, g.itemIDs, zone.KindHopper)

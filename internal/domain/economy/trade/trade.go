@@ -172,7 +172,7 @@ type entry struct {
 var pools = [NumKinds][]entry{
 	BulkHauler: {
 		{item.Wood, 80, 200, 100}, {item.Steel, 40, 120, 100}, {item.Cloth, 40, 120, 100},
-		{item.Food, 20, 60, 100}, {item.Leather, 20, 60, 80}, {item.Potatoes, 30, 90, 80},
+		{item.SurvivalMeal, 20, 60, 100}, {item.Leather, 20, 60, 80}, {item.Potatoes, 30, 90, 80},
 		{item.Corn, 30, 90, 70}, {item.Wheat, 30, 90, 70}, {item.Beans, 20, 60, 60},
 		{item.Meat, 20, 60, 60}, {item.Wool, 20, 60, 50}, {item.HerbalMedicine, 5, 15, 90},
 		{item.Components, 2, 6, 70}, {item.SlateBlocks, 30, 100, 40},

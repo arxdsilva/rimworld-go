@@ -4,14 +4,17 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/crops"
+	"rimworld-go/internal/application/game/diet"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
-	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 )
@@ -242,29 +245,69 @@ func wantsHarvest(p plant.Plant) bool {
 	return p.HarvestableNow() && p.Designated // FOOD-2: from 65 % growth (wiki: Plants)
 }
 
-// bestFood picks the most preferred free food, nearest first; a
-// malnourished pawn eats anything, carcasses too (wiki: Malnutrition).
-func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
+// bestFood is the free food stack pawn id would fetch for eater (itself or
+// whom it feeds), its tile and optimality (game/diet, FOOD-4: the eater's
+// policy, taste and distance; a malnourished eater takes anything).
+func (g *Game) bestFood(id, eater entity.EntityID) (best entity.EntityID, bx, by, score int) {
 	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestPref, bestD := -1, 1<<30
-	var bx, by int
-	corpses := body.Malnutrition(g.bodies[id]) > 0
+	pick := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater))
 	for _, iid := range g.itemIDs {
 		st := g.stacks.Ref(iid) // read only: nothing below changes the store
-		if st == nil || !st.Kind.IsFood() && !(corpses && animal.EdibleCorpse(*st)) || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
-			continue
-		}
-		if g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {
+		if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || !pick.Takes(st) ||
+			g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {
 			continue // RES-1: every portion claimed by other eaters; areas.go: outside the allowed area
 		}
-		pref := st.Kind.Preference()
-		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
-		if pref > bestPref || pref == bestPref && (d < bestD || d == bestD && iid < best) {
-			best, bestPref, bestD, bx, by = iid, pref, d, st.X, st.Y
+		if s := pick.Score(st, pathing.Dist(pos.X, pos.Y, st.X, st.Y)); best == 0 || s > score || s == score && iid < best {
+			best, bx, by, score = iid, st.X, st.Y, s
 		}
 	}
-	return best, bx, by
+	return best, bx, by, score
+}
+
+// mealFor is what pawn id fetches for eater and its tile: the best food
+// stack, or a paste dispenser (paste, its spot) the eater's policy allows
+// whose meal scores higher (STO-2).
+func mealFor(g *Game, id, eater entity.EntityID) (food entity.EntityID, x, y int, paste bool) {
+	best, bx, by, score := g.bestFood(id, eater)
+	pick, meal := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)), item.Stack{Kind: item.NutrientPasteMeal}
+	if !pick.Allows(meal.Kind) || best != 0 && pick.Score(&meal, 0) <= score {
+		return best, bx, by, false // even at the door paste would lose
+	}
+	pos, _ := g.positions.Get(id)
+	if bid, sx, sy, ok := g.haul.store.Paste.Find(haulHost{g}, haulHost{g}, haulHost{g}, id); ok && (best == 0 || pick.Score(&meal, pathing.Dist(pos.X, pos.Y, sx, sy)) > score) {
+		return bid, sx, sy, true
+	}
+	return best, bx, by, false
+}
+
+// cannibal reports person id has the Cannibal trait (FOOD-4).
+func cannibal(g *Game, id entity.EntityID) bool {
+	bio, ok := g.personBio(id)
+	return ok && slices.Contains(bio.Traits, trait.Cannibal)
+}
+
+// dietEaters is diet.Eaters: colonists, prisoners and tame animals.
+type dietEaters struct{ g *Game }
+
+func (h dietEaters) Eater(id entity.EntityID) (bool, bool) {
+	a, beast := h.g.animals.Get(id)
+	v, ok := h.g.vital.Get(id)
+	return beast, beast && a.Tame && !a.Dead() || !beast && ok && v.Status != health.Dead && (h.g.colonist(id) && !h.g.visitor(id) || h.g.prison.Is(id))
+}
+
+// fillDietView fills the food policies and turns the nutrition item_view.go
+// left in w.FoodDays into days for colonists and prisoners (FOOD-4).
+func fillDietView(g *Game, w *WorldView) {
+	for _, p := range g.sk.diet.Named() {
+		w.FoodPolicies = append(w.FoodPolicies, FoodPolicyView{ID: p.ID, Name: p.Name, Allowed: p.Allowed})
+	}
+	eaters := 0
+	g.need.All(func(id entity.EntityID, _ needs.Pair) {
+		if a, ok := (dietEaters{g}).Eater(id); ok && !a {
+			eaters++
+		}
+	})
+	w.FoodDays = diet.Days(w.FoodDays, eaters)
 }
 
 // claimJobTarget claims job rec's target for pawn id (RES-1): the part of
@@ -285,19 +328,13 @@ func claimJobTarget(g *Game, id entity.EntityID, rec job.Record) bool {
 		}
 	case rec.Kind == job.HaulIngredients && len(rec.Route) > 1:
 		n = int(rec.Route[1])
-	case rec.Kind == job.Bill || rec.Kind == job.Haul && (rec.Dest == 0 || len(rec.Route) > 0):
+	case rec.Kind == job.Bill || rec.Kind.Hauls() && (rec.Dest == 0 || len(rec.Route) > 0): // FOOD-4: a hopper fill too
 		n = rec.Count
 	}
 	if n <= 0 {
 		return g.reserve.TryEntity(id, rec.Target)
 	}
 	return g.reserve.TryCount(id, rec.Target, min(n, g.reserve.FreeFor(id, rec.Target, st.Qty)), st.Qty)
-}
-
-// LastMeal is what pawn id last ate (for mood/inspector).
-func (g *Game) lastMealKind(id entity.EntityID) (item.Kind, bool) {
-	k, ok := g.lastMeal[id]
-	return k, ok
 }
 
 // CropView describes a sowable crop for the UI (game/crops).

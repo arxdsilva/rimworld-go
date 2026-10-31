@@ -262,7 +262,7 @@ func TestNoIngredientsRetriesAfterACooldown(t *testing.T) {
 			f.put(50, item.Stack{Kind: item.Wood, Qty: 10}) // wood arrives during the cooldown
 		}
 	}
-	if f.scans != 1 {
+	if f.scans != 2 { // one search: the single-stack pass (Nearest) and the gathering pass
 		t.Fatalf("searched %d times during one cooldown", f.scans)
 	}
 	if f.jobs[pawn].Kind != job.None {
@@ -278,7 +278,7 @@ func TestNoIngredientsRetriesAfterACooldown(t *testing.T) {
 	scans := f.scans
 	c.Bills.Apply(cmdAt(command.ConfigureBill, 0))
 	f.put(51, item.Stack{Kind: item.Wood, Qty: 10})
-	if !c.Shop.Assign(pawn, crafting) || f.scans != scans {
+	if !c.Shop.Assign(pawn, crafting) || f.scans != scans+1 { // found by the single-stack pass alone
 		t.Fatalf("a reconfigured bill searches again at once (scans %d → %d)", scans, f.scans)
 	}
 }
@@ -389,7 +389,7 @@ func TestBillViews(t *testing.T) {
 	}
 	v := vs[0]
 	if v.Worker != 8 || v.WorkerName != "Bo" || v.Store != uint8(recipe.StockpileZone) || v.StoreZone != 4 ||
-		v.StoreLabel != "specific stockpile" || v.Radius != 6 || v.SkillMax != 20 || v.Inputs != "10 raw food" || v.NoWorker != "" {
+		v.StoreLabel != "specific stockpile" || v.Radius != 6 || v.SkillMax != 20 || v.Inputs != "0.5 nutrition of raw food" || v.NoWorker != "" {
 		t.Fatalf("view %+v", v)
 	}
 	if v.CurrentWorker != "Bo" || v.Gathering || v.Progress != 75 {
@@ -422,7 +422,7 @@ func TestBillViews(t *testing.T) {
 	if vs = c.Bills.AppendViews(nil, 1); vs[2].NoWorker != "" {
 		t.Fatalf("Bo has the skill now: %q", vs[2].NoWorker)
 	}
-	if rv := Recipes(); len(rv) == 0 || rv[0].Input != "10 raw food" {
+	if rv := Recipes(); len(rv) == 0 || rv[0].Input != "0.5 nutrition of raw food" {
 		t.Fatalf("recipes %+v", rv)
 	}
 }

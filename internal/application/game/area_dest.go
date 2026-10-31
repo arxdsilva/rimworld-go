@@ -70,7 +70,7 @@ func (g *Game) areaRejects(id entity.EntityID, rec job.Record) bool {
 		return true
 	}
 	switch rec.Kind {
-	case job.Haul, job.Bill, job.Refuel, job.Bury:
+	case job.Haul, job.FillHopper, job.Bill, job.Refuel, job.Bury:
 		if !g.refAllows(r, rec.DestX, rec.DestY) {
 			return true
 		}

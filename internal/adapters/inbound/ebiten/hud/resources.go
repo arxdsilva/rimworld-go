@@ -40,7 +40,8 @@ type ResRow struct {
 	Cat    string // the category (a header's own name)
 	Kind   string // item kind key (rows)
 	Label  string
-	Qty    int // a header's qty is its group's total
+	Qty    int    // a header's qty is its group's total
+	Text   string // when set, the count text instead of Qty (the days-of-food row)
 }
 
 // resKey is what the rows were built from: the same key means the same rows.
@@ -50,6 +51,7 @@ type resKey struct {
 	cat                                    bool
 	ver                                    int
 	food, wood, stone, steel, silver, gold int
+	foodDays                               int
 }
 
 // resourcesState is this region's presentation state (Chrome.res).
@@ -61,6 +63,20 @@ type resourcesState struct {
 	built      bool
 	widths     map[string]float32 // count text widths (the plates), at widthScale
 	widthScale float64
+}
+
+// FoodDaysKind is the days-of-food row's kind (its icon is the food one).
+const FoodDaysKind = "food_days"
+
+// FoodDaysRow is the readout row of days (tenths): "3.4 d" with the hover
+// label "Days of food: 3.4"; ok is false while the colony has no food
+// reading (FoodDays 0 before the simulation fills it).
+func FoodDaysRow(tenths int) (ResRow, bool) {
+	if tenths <= 0 {
+		return ResRow{}, false
+	}
+	days := strconv.Itoa(tenths/10) + "." + strconv.Itoa(tenths%10)
+	return ResRow{Kind: FoodDaysKind, Label: "Days of food: " + days, Text: days + " d"}, true
 }
 
 // ---- rows ------------------------------------------------------------------
@@ -139,7 +155,7 @@ func (c Resources) Rows() []ResRow {
 	st := &c.res
 	k := resKey{
 		n: len(w.Stored), cat: c.sh.Settings().Gameplay.CategorizedResources, ver: st.ver,
-		food: w.Food, wood: w.Wood, stone: w.Stone, steel: w.Steel, silver: w.Silver, gold: w.Gold,
+		food: w.Food, wood: w.Wood, stone: w.Stone, steel: w.Steel, silver: w.Silver, gold: w.Gold, foodDays: w.FoodDays,
 	}
 	if len(w.Stored) > 0 {
 		k.first = &w.Stored[0]
@@ -152,6 +168,9 @@ func (c Resources) Rows() []ResRow {
 	}
 	st.key, st.built = k, true
 	st.rows = BuildResourceRows(w, k.cat, st.collapsed)
+	if r, ok := FoodDaysRow(w.FoodDays); ok {
+		st.rows = append([]ResRow{r}, st.rows...)
+	}
 	return st.rows
 }
 
@@ -260,6 +279,9 @@ func (c Resources) Icon(kind string) (*ebiten.Image, sprite.ColorScale) {
 	if cat == nil {
 		return nil, sprite.NoCS
 	}
+	if kind == FoodDaysKind {
+		kind = "food"
+	}
 	key, cs := ResourceIconKey(kind), sprite.NoCS
 	if !cat.Has(key) {
 		key, cs = c.sh.StoneItem(world.ItemSpriteSpecies(kind, "", 0, 0), kind, sprite.NoCS)
@@ -330,6 +352,9 @@ func resPlate(hover bool) color.RGBA {
 // is as wide as they need.
 func (c Resources) drawRow(dst *ebiten.Image, line gfx.Rect, row ResRow, hover bool) {
 	count := strconv.Itoa(row.Qty)
+	if row.Text != "" {
+		count = row.Text
+	}
 	plateW := min(line.W, resPad+resIconSize+resPad+c.width(count)+resPad+2)
 	gfx.FillRect(dst, line.X, line.Y+1, plateW, line.H-2, resPlate(hover), false)
 	ix, iy := line.X+resPad, line.Y+(line.H-resIconSize)/2

@@ -129,7 +129,7 @@ func (p *postState) reindex() {
 // postponable reports job kinds whose givers skip postponed targets.
 func postponable(k job.Kind) bool {
 	switch k {
-	case job.Haul, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
+	case job.Haul, job.FillHopper, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
 		job.Bill, job.Hunt, job.Refuel, job.Repair, job.Research, job.Clean, job.Bury,
 		job.Roof, job.Unroof, job.Equip:
 		return true
@@ -141,6 +141,9 @@ func postponable(k job.Kind) bool {
 // (the bench or fire for bills and refuelling; the frame, trough or load
 // once a haul is carrying), else the tile worked on.
 func postKeyOf(id entity.EntityID, j job.Record) postKey {
+	if j.Kind.Hauls() {
+		j.Kind = job.Haul // FOOD-4: a hopper fill is put off as a haul
+	}
 	target := j.Target
 	switch j.Kind {
 	case job.Refuel, job.Bill:

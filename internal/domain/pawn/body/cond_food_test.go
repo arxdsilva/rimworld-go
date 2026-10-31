@@ -34,8 +34,14 @@ func TestFoodPoisoningStagesByTime(t *testing.T) {
 			t.Fatalf("hour %d: %+v (present %v), want stage %d (present %v)", h, c, ok, ws, wok)
 		}
 	}
-	if FoodVomitEvery(FoodStageMajor) == 0 || FoodVomitEvery(FoodStageRecovering) != 0 || FoodVomitEvery(9) != 0 {
-		t.Fatal("vomit intervals")
+	// wiki: Ailments: vomit every 0.3 / 0.2 / 0.4 days; major 4-20 h
+	if FoodVomitEvery(FoodStageInitial) != 7 || FoodVomitEvery(FoodStageMajor) != 5 || FoodVomitEvery(FoodStageRecovering) != 10 ||
+		FoodVomitEvery(9) != 0 || FoodPoisonInitialHours != 4 || FoodPoisonMajorHours != 20 || FoodPoisonHours != 24 {
+		t.Fatal("vomit intervals and stage hours")
+	}
+	major := d.Stages[1]
+	if major.PainAdd != 400 || d.Stages[2].PainAdd != 200 || len(major.Mods) != 3 || major.Mods[0].Off != -500 {
+		t.Fatalf("stage effects: %+v", d.Stages)
 	}
 	var none *Body
 	if _, ok := none.Poisoned(); ok {

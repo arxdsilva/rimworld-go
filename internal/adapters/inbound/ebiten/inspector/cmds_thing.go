@@ -211,7 +211,10 @@ func (a Animal) AnimalPaneLines(an game.AnimalView) []string {
 	add(AnimalPregLine(an))
 	add(AnimalDietLine(an))
 	add(AnimalHuntLine(an))
-	add(AnimalFeedLine(an)) // FEED-001
+	add(AnimalFeedLine(an))                 // FEED-001
+	for _, l := range AnimalFoodLines(an) { // FOOD-5
+		add(l)
+	}
 	add(animalPenLine(an))
 	for _, r := range AnimalBondRows(an) {
 		add(r)
@@ -496,6 +499,15 @@ func (a Thing) PlantCommands(id entity.EntityID) []Button {
 		cut.Label, cut.Desc = "Cancel cut", "Take the mark off: nobody will cut it."
 	}
 	out = append(out, cut)
+	if p.Blighted || len(CutBlightCmds(a.shell.World().Plants)) > 0 {
+		cmds := CutBlightCmds(a.shell.World().Plants)
+		b := Button{ID: CutBlightID, Label: "Cut all blight", Icon: "order_cut", Cmds: cmds,
+			Desc: "Mark every blighted plant on the map for cutting, to stop the spread."}
+		if len(cmds) == 0 {
+			b.Disabled, b.Reason = true, "no blighted plants left to mark"
+		}
+		out = append(out, b)
+	}
 	return append(out, a.colonistVerbCmd("cmd.plant.now", "Now by...",
 		"", "Have a colonist do it right now. A click sends the nearest; right-click picks who.",
 		p.X, p.Y, plantNowMatch(p)))

@@ -79,6 +79,8 @@ type Larder interface {
 	Drop(st item.Stack)
 	// HaulToStorage starts id carrying stack sid to storage.
 	HaulToStorage(id, sid entity.EntityID) bool
+	// Policy is what tame animal aid's food policy lets it eat (FOOD-4).
+	Policy(aid entity.EntityID) func(item.Kind) bool
 }
 
 // Events are the game's side of an outcome: names, logs, bonds, rage.

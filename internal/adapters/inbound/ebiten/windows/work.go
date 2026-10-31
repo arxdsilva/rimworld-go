@@ -16,7 +16,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-var WorkColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl", "Ward"}
+var WorkColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl", "Ward", "Cut"}
 
 // WorkLive maps live work columns (indexes into workColumns, which follow
 // work.Type order) to their command and pawn flag.
@@ -35,8 +35,9 @@ var WorkLive = map[int]struct {
 	8:  {command.WorkResearch, func(p game.PawnView) bool { return p.WorkResearch }},
 	9:  {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
 	10: {command.WorkCraft, func(p game.PawnView) bool { return p.WorkCraft }},
-	11: {command.WorkHandle, func(p game.PawnView) bool { return false }}, // priorities carry it
-	12: {command.WorkWarden, func(p game.PawnView) bool { return false }}, // ENG-003: off by default
+	11: {command.WorkHandle, func(p game.PawnView) bool { return false }},   // priorities carry it
+	12: {command.WorkWarden, func(p game.PawnView) bool { return false }},   // ENG-003: off by default
+	13: {command.WorkPlantCut, func(p game.PawnView) bool { return false }}, // FOOD-2: priorities carry it
 }
 
 // WorkPriority is the colonist's priority for a work column (0 = off).
@@ -80,13 +81,14 @@ var WorkColSkill = [...]struct {
 	10: {skill.Crafting, true},
 	11: {skill.Animals, true},
 	12: {skill.Social, true},
+	13: {skill.Plants, true},
 }
 
 // WorkHelp is the header hover card of each work column.
 var WorkHelp = [...]string{
 	0:  "Firefighting\nBeat out fires inside the Home area and your allowed area. No skill.",
 	1:  "Doctor\nTend the wounded and the sick, and carry the downed to bed. Skill: Medicine.",
-	2:  "Growing\nSow, harvest and cut plants, and cut grass. Skill: Plants.",
+	2:  "Growing\nSow and harvest crops, and cut grass. Skill: Plants.",
 	3:  "Cooking\nCook meals at a stove or campfire and butcher animals. Skill: Cooking.",
 	4:  "Building\nBuild, deconstruct, repair, roof and smooth. Skill: Construction.",
 	5:  "Hunting\nHunt wild animals with a rifle, or a melee weapon. Skill: Shooting (Melee).",
@@ -97,6 +99,7 @@ var WorkHelp = [...]string{
 	10: "Crafting\nWork at benches: workbench, tailoring, stonecutting. Skill: Crafting.",
 	11: "Handling\nTame, milk, shear and collect from animals. Skill: Animals.",
 	12: "Warden\nChat with prisoners, recruit them and bring them food. Off unless you turn it on. Skill: Social.",
+	13: "Plant cutting\nCut marked plants, fell marked trees and clear blight. Skill: Plants.",
 }
 
 // incapable reports colonist p can never do work column col, and why

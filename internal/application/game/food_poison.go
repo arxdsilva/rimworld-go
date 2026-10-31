@@ -1,104 +1,41 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/filth"
-	"rimworld-go/internal/domain/world/room"
 )
 
-// Food poisoning (WS-M). Every cooked meal carries a poison chance
-// (item.Stack.Poison, permille per meal), set by the cook in doBill: a
-// base from its Cooking level, scaled by how clean the kitchen is, with a
-// floor for meals cooked over a campfire. Merged stacks average it by
-// quantity (item.MergePoison). Eating a meal rolls it once on the medical
-// stream (afterEat); a hit gives food poisoning (body/cond_food.go), which
-// runs a day by itself: initial, major, recovering. It vomits now and
-// then, gives the "sick" thought (feelsSick), and the major stage sends a
-// colonist to bed until it is recovering (bed rest: in at major, out at
-// recovering, so it never flaps). It never kills. Original tuning
-// throughout.
+// Food poisoning (WS-M; FOOD-4: the wiki's chances, game/diet poison.go):
+// a cooked meal carries its chance (item.Stack.Poison, merged stacks
+// average it); eating rolls it (raw food and carcasses their flat ones,
+// paste none) and a hit gives a day of it (body/cond_food.go): vomiting,
+// "sick", bed rest from the major stage until recovering (no flapping).
 
-const (
-	// poisonUnskilled and poisonMaster are a meal's base poison chance
-	// (permille) from a cook at Cooking 0 and at 20; it falls on a curve
-	// between them (a quarter of the way up the skill cuts it most).
-	poisonUnskilled = 50
-	poisonMaster    = 3
-	// poisonCampfire is the least poison chance of a campfire meal.
-	poisonCampfire = 15
-	// Kitchen factors (permille) by the cleanliness of the room the cook
-	// works in (filth.Label): clean halves it, filthy triples it, and no
-	// room at all (outdoors) makes it half again.
-	kitchenClean    = 500
-	kitchenSlight   = 1000
-	kitchenDirty    = 1800
-	kitchenFilthy   = 3000
-	kitchenOutdoors = 1500
-)
-
-// poisonBase is a meal's poison chance (permille) from a cook at Cooking
-// level lvl, before the kitchen.
-func poisonBase(lvl int) int {
-	d := 20 - min(max(lvl, 0), 20)
-	return poisonMaster + (poisonUnskilled-poisonMaster)*d*d/400
+// mealPoison is the poison chance (permille) of a meal cook makes
+// working at (x, y): the cook roll and the room's (or outdoor) roll.
+func (g *Game) mealPoison(cook entity.EntityID, _ construction.Kind, x, y int) int16 {
+	clean, indoors := craftShop{g}.Cleanliness(x, y) // craft_host.go: the room's wiki cleanliness
+	return diet.Permille(diet.MealChance(diet.CookChance(int(g.skillOf(cook, skill.Cooking).Level)), diet.KitchenChance(clean, indoors)))
 }
 
-// kitchenFactor is the poison factor (permille) of cooking at (x, y): the
-// cleanliness of the room there, or kitchenOutdoors with no room.
-func (g *Game) kitchenFactor(x, y int) int {
-	r := g.roomAt(x, y)
-	if r == room.Outdoors || r < 0 || r >= len(g.rooms) {
-		return kitchenOutdoors
-	}
-	sum, _ := g.roomFilth(r)
-	switch filth.Label(sum / max(1, g.rooms[r].contents.Cells)) {
-	case "clean":
-		return kitchenClean
-	case "slightly dirty":
-		return kitchenSlight
-	case "dirty":
-		return kitchenDirty
-	}
-	return kitchenFilthy
-}
-
-// mealPoison is the poison chance (permille) of a meal cook makes at a
-// bench of kind bench, working at (x, y).
-func (g *Game) mealPoison(cook entity.EntityID, bench construction.Kind, x, y int) int16 {
-	p := poisonBase(int(g.skillOf(cook, skill.Cooking).Level)) * g.kitchenFactor(x, y) / 1000
-	if bench == construction.Campfire {
-		p = max(p, poisonCampfire)
-	}
-	return int16(min(max(p, 1), 1000))
-}
-
-// dropMeal drops qty meals of kind k with poison chance poison at (x, y),
-// merging into a stack there (the chance averaged by quantity).
-func (g *Game) dropMeal(k item.Kind, qty, x, y int, poison int16) {
-	sid, err := g.SpawnStack(k, qty, x, y)
-	if err != nil {
-		return
-	}
-	if st, ok := g.stacks.Get(sid); ok {
-		st.Poison = poison
-		g.mergeOrSet(sid, st)
-	}
-}
-
-// rollFoodPoison rolls the poison chance of the meal id just ate from st
-// (afterEat): a hit gives it food poisoning (once: a second bad meal
-// changes nothing while it is still sick).
+// rollFoodPoison rolls the poison chance (basis points) of what id just
+// ate from st (afterEat): a hit gives it food poisoning (once: a second
+// bad meal changes nothing while it is still sick).
 func (g *Game) rollFoodPoison(id entity.EntityID, st item.Stack) {
-	if st.Poison <= 0 {
-		return // raw food, older stacks: no roll, the stream untouched
+	bp := int(st.Poison) * 10
+	switch {
+	case st.Kind == item.CorpseAnimal:
+		bp = diet.CorpseChance
+	case st.Kind.Raw():
+		bp = diet.RawChance
 	}
-	if g.stream(streamMedical).IntN(1000) >= int(st.Poison) {
-		return
+	if bp <= 0 || g.stream(streamMedical).IntN(10000) >= bp {
+		return // a clean meal (or paste): the stream untouched
 	}
 	v, ok := g.vital.Get(id)
 	if !ok || v.Status == health.Dead {
@@ -111,7 +48,7 @@ func (g *Game) rollFoodPoison(id entity.EntityID, st item.Stack) {
 	g.bodyChanged(id, b, &v) // body.go: stats follow, joins the patients
 	g.updateDowned(id, b, &v)
 	pos, _ := g.positions.Get(id)
-	g.message(pos.X, pos.Y, "%s has food poisoning from a badly cooked meal.", g.name(id))
+	g.message(pos.X, pos.Y, "%s has food poisoning from something eaten.", g.name(id))
 }
 
 // stepFoodPoison advances id's food poisoning to now (hourly, from
@@ -143,21 +80,6 @@ func (g *Game) foodVomit(id entity.EntityID, b *body.Body) {
 	if pos, on := g.positions.Get(id); on {
 		g.addDirt(pos.Y*g.grid.Width()+pos.X, vomitDirt) // filth.go
 	}
-}
-
-// foodPoisonRest reports id's food poisoning at its major stage: it goes
-// to bed (needsBedRest).
-func (g *Game) foodPoisonRest(id entity.EntityID) bool {
-	c, ok := g.bodies[id].Poisoned()
-	return ok && c.Stage == body.FoodPoisonRestStage
-}
-
-// foodPoisonSick reports id's food poisoning not yet recovering: a
-// patient in bed stays there until it is (restOver; hysteresis: in at
-// major, out at recovering).
-func (g *Game) foodPoisonSick(id entity.EntityID) bool {
-	c, ok := g.bodies[id].Poisoned()
-	return ok && c.Stage >= body.FoodPoisonRestStage
 }
 
 // poisoned reports id with food poisoning (the "sick" thought).

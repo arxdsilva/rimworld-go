@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -452,6 +453,7 @@ func TestTameFeedFirstThenMeal(t *testing.T) {
 	h := feedField(30, 20)
 	only := stack(t, h, item.FineMeal, 3, 14, 10)
 	doe := hungryTame(t, h, "deer", 10, 10, "Fern")
+	setPolicy(h, doe, diet.Lavish) // FOOD-4: Animal feed, the default, forbids meals
 	if a := firstFeed(h, doe, 2*animal.DecideEvery); a.Feed.ID != only {
 		t.Fatalf("no feed in reach: the meal: %+v", a.Feed)
 	}

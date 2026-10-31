@@ -11,7 +11,7 @@ import (
 type Kind uint8
 
 const (
-	Food Kind = iota // packaged survival ration
+	Food Kind = iota // legacy survival ration: loads as SurvivalMeal (ConvertLegacy, FOOD-4); never spawned
 	Wood
 	Stone    // stone blocks
 	Berries  // raw, foraged
@@ -537,6 +537,51 @@ type Stack struct {
 // MaxIngredients is how many ingredient kinds a meal remembers (FOOD-4).
 const MaxIngredients = 4
 
+// AddIngredient records raw kind k (meat with its species tag) on a meal,
+// unless it is there already or the list is full.
+func (s *Stack) AddIngredient(k Kind, species uint8) {
+	for i, have := range s.Ingredients {
+		switch {
+		case have == k && s.IngredientSpecies[i] == species:
+			return
+		case have == 0:
+			s.Ingredients[i], s.IngredientSpecies[i] = k, species
+			return
+		}
+	}
+}
+
+// AddIngredientsOf unions o's ingredients into s's (up to MaxIngredients).
+func (s *Stack) AddIngredientsOf(o Stack) {
+	for i, k := range o.Ingredients {
+		if k != 0 {
+			s.AddIngredient(k, o.IngredientSpecies[i])
+		}
+	}
+}
+
+// IngredientOf is the ingredient raw food stack st gives a meal: its kind
+// and, for meat, its species tag (animal.MeatTag, Stack.Animal).
+func IngredientOf(st Stack) (Kind, uint8) {
+	if st.Kind.IsMeat() {
+		return st.Kind, st.Animal
+	}
+	return st.Kind, 0
+}
+
+// MergeFood is stack into after n items of from join it (into.Qty not yet
+// counting them): the rot, poison and wear averaged by quantity and the
+// ingredients unioned (FOOD-4). The caller adds n to Qty.
+func MergeFood(into, from Stack, n int) Stack {
+	into.Rot = MergeRot(into.Qty, into.Rot, n, from.Rot)
+	into.Poison = MergePoison(into.Qty, into.Poison, n, from.Poison)
+	if into.Kind.IsFood() {
+		into.Wear = MergeRot(into.Qty, into.Wear, n, from.Wear)
+	}
+	into.AddIngredientsOf(from)
+	return into
+}
+
 // HasIngredient reports whether the meal was cooked with kind k.
 func (s Stack) HasIngredient(k Kind) bool {
 	for _, i := range s.Ingredients {
@@ -598,7 +643,8 @@ func DryRate(tenthsC int) int {
 // bones) never merges with another's, and animal corpses stack by species;
 // fertile eggs stack by species and by whose they are (Tame), and the
 // merged stack keeps the incubation of the one it joins. Made items
-// stack only with their own quality, material and wear (PRD-2).
+// stack only with their own quality, material and wear (PRD-2); food
+// stacks merge whatever their wear (MergeFood averages it, FOOD-4).
 func CanMerge(a, b Stack) bool {
 	return SameLoad(a, b) && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
 		a.Forbidden == b.Forbidden && a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked
@@ -609,15 +655,18 @@ func CanMerge(a, b Stack) bool {
 // CanMerge without the place, carrier and mark checks.
 func SameLoad(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of &&
-		a.Animal == b.Animal && a.Tame == b.Tame && a.Quality == b.Quality && a.Stuff == b.Stuff && a.Wear == b.Wear &&
+		a.Animal == b.Animal && a.Tame == b.Tame && a.Quality == b.Quality && a.Stuff == b.Stuff && (a.Wear == b.Wear || a.Kind.IsFood()) &&
 		a.Yield == b.Yield
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a
-// CorpseAnimal of the species that took its slot (deer 0, timber wolf 1);
-// ok is false (and s unchanged) for any other stack.
+// CorpseAnimal of the species that took its slot (deer 0, timber wolf 1),
+// and (FOOD-4) the legacy food ration into a packaged survival meal; ok
+// is false (and s unchanged) for any other stack.
 func ConvertLegacy(s Stack) (Stack, bool) {
 	switch s.Kind {
+	case Food:
+		s.Kind = SurvivalMeal
 	case CorpseDustbuck:
 		s.Kind, s.Animal = CorpseAnimal, 0
 	case CorpseRidgewolf:
@@ -648,19 +697,18 @@ func MergePoison(qa int, pa int16, qb int, pb int16) int16 {
 }
 
 // shelfDays is how long food keeps at room temperature (10 C or warmer)
-// before it spoils; 0 never spoils. Calibrated to real produce, squeezed for
-// play: fresh meat and cooked meals go off in days, greens in a week, roots
-// and squash keep a season, and dried grain and beans keep indefinitely.
+// before it spoils; 0 never spoils. FOOD-4, wiki days to rot (the Rot
+// page is 404; each food's own page): meat 2 (Meat; human and insect
+// meat as meat), simple, fine and lavish meals 4, nutrient paste 0.75,
+// pemmican 70, berries and strawberries 14, milk 14, eggs 15, rice and
+// corn 40 and 60, potatoes 30, hops 30, agave fruit 25, wort 5.6; the
+// survival meal, kibble and hay never rot. Lettuce, radishes, pumpkins,
+// beans, wheat and brewgrain are our own crops (original tuning), and
+// corpses rot as before (original tuning).
 var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5, CorpseAnimal: 2.5, CorpseHuman: 3,
-	Berries: 10, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 40, Pumpkins: 50,
-	Milk: 3, Egg: 10,
-	// Wave E, wiki days to rot: fine and lavish meals 4, pemmican 70, wort
-	// 5.6 (the survival meal and kibble never rot).
-	FineMeal: 4, LavishMeal: 4, Pemmican: 70, Wort: 5.6,
-	NutrientPasteMeal: 0.75, // wiki: Nutrient paste meal
-	// FOOD-0, wiki days to rot: rice 40, strawberries 14, agave fruit 25,
-	// human and insect meat as meat (2); hay keeps.
-	Rice: 40, Strawberries: 14, AgaveFruit: 25, HumanMeat: 2, InsectMeat: 2}
+	Berries: 14, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 60, Pumpkins: 50,
+	Milk: 14, Egg: 15, FineMeal: 4, LavishMeal: 4, Pemmican: 70, Wort: 5.6, NutrientPasteMeal: 0.75,
+	Rice: 40, Strawberries: 14, AgaveFruit: 25, HumanMeat: 2, InsectMeat: 2, Hops: 30}
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).
 func (k Kind) ShelfTicks() int {

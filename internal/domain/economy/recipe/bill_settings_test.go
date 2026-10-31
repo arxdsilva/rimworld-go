@@ -14,7 +14,7 @@ func TestDefInputs(t *testing.T) {
 		t.Fatalf("a single-input recipe: %v", in)
 	}
 	// PRD-2: a stuffed recipe lists its material families.
-	if club.InputsLabel() != "4 wood, metal or stone blocks" || DefOf(SimpleMeal).InputsLabel() != "10 raw food" || DefOf(MakeParka).InputsLabel() != "14 fabric or leather" {
+	if club.InputsLabel() != "4 wood, metal or stone blocks" || DefOf(SimpleMeal).InputsLabel() != "0.5 nutrition of raw food" || DefOf(MakeParka).InputsLabel() != "14 fabric or leather" {
 		t.Fatalf("labels %q %q %q", club.InputsLabel(), DefOf(SimpleMeal).InputsLabel(), DefOf(MakeParka).InputsLabel())
 	}
 	if ks := club.InputKinds(); !slices.Equal(ks, item.Stuffs(item.Woody|item.Metallic|item.Stony)) || ks[0] != item.Wood {

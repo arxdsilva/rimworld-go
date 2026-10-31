@@ -143,12 +143,14 @@ func (Paste) Job(bid entity.EntityID, sx, sy int) job.Record {
 }
 
 // Dispense takes PasteCost nutrition from dispenser bid's hoppers in draw
-// order; ok false (nothing taken) when it can't make a meal.
-func (p Paste) Dispense(m Machines, l Larder, bid entity.EntityID) bool {
+// order and is the paste meal it makes, with the raw food it took as its
+// ingredients (FOOD-4); ok false (nothing taken) when it can't make one.
+func (p Paste) Dispense(m Machines, l Larder, bid entity.EntityID) (meal item.Stack, ok bool) {
 	b, ok := p.usable(m, l, bid)
 	if !ok {
-		return false
+		return meal, false
 	}
+	meal = item.Stack{Kind: item.NutrientPasteMeal, Qty: 1}
 	hs, n := p.Hoppers(m, b)
 	need := PasteCost
 	for _, c := range hs[:n] {
@@ -158,6 +160,7 @@ func (p Paste) Dispense(m Machines, l Larder, bid entity.EntityID) bool {
 		}
 		nut := animal.StackNutrition(st) // eggs by species (FOOD-1)
 		take := min(st.Qty, (need+nut-1)/nut)
+		meal.AddIngredient(item.IngredientOf(st))
 		need -= take * nut
 		if st.Qty -= take; st.Qty <= 0 {
 			l.DeleteItem(id)
@@ -168,7 +171,7 @@ func (p Paste) Dispense(m Machines, l Larder, bid entity.EntityID) bool {
 			break
 		}
 	}
-	return true
+	return meal, true
 }
 
 // Do steps colonist id's DispensePaste job at the spot: after the work
@@ -181,12 +184,17 @@ func (p Paste) Do(m Machines, l Larder, d Diners, id entity.EntityID, j job.Reco
 		return
 	}
 	x, y := d.Position(id)
-	if !p.Dispense(m, l, j.Target) {
+	st, ok := p.Dispense(m, l, j.Target)
+	if !ok {
 		j.State, j.Fail = job.Fail, job.TargetGone
 		d.SetJob(id, j)
 		return
 	}
-	meal := l.Spawn(item.NutrientPasteMeal, 1, x, y)
+	meal := l.Spawn(st.Kind, st.Qty, x, y)
+	if got, ok := l.Stack(meal); ok {
+		got.Ingredients, got.IngredientSpecies = st.Ingredients, st.IngredientSpecies // FOOD-4
+		l.SetStack(meal, got)
+	}
 	eat := job.Record{Kind: job.Eat, Target: meal, TX: x, TY: y, WorkLeft: needs.EatWorkTicks, State: job.Do}
 	d.Release(id, j.Target) // the next colonist may use the dispenser
 	if meal == 0 || !d.Claim(id, meal) {

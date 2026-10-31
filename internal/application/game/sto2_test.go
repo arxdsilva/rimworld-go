@@ -139,7 +139,7 @@ func TestHopperRefillNoFlap(t *testing.T) {
 	take(30) // 45 left: over half
 	for range 60 {
 		runFed(g, 1, ada)
-		if j, _ := g.jobs.Get(ada); j.Kind == job.Haul && j.DestX == 4 && j.DestY == 4 {
+		if j, _ := g.jobs.Get(ada); j.Kind.Hauls() && j.DestX == 4 && j.DestY == 4 { // FOOD-4: a FillHopper job too
 			trips++
 		}
 	}

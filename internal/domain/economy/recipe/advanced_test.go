@@ -67,8 +67,14 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 		// PRD-4 (wiki: Fine meal 6, Lavish meal 8, Packaged survival meal 8,
 		// Advanced component 8; marine pieces and reagent original tuning).
 		recipe.CookFineMeal: 6, recipe.CookLavishMeal: 8, recipe.CookSurvivalMeal: 8, recipe.MakeReagent: 4,
-		recipe.FabricateAdvanced: 8, recipe.MakeMarineArmor: 8, recipe.MakeMarineHelmet: 8}
+		recipe.FabricateAdvanced: 8, recipe.MakeMarineArmor: 8, recipe.MakeMarineHelmet: 8,
+		// FOOD-4: the variants and batches keep their meal's level.
+		recipe.CookFineMealVeg: 6, recipe.CookFineMealMeat: 6, recipe.CookLavishMealVeg: 8, recipe.CookLavishMealMeat: 8,
+		recipe.CookFineMealBulk: 6, recipe.CookLavishMealBulk: 8, recipe.CookSurvivalMealBulk: 8}
 	for _, d := range recipe.All() {
+		if d.Skill == work.Haul && d.Ferment {
+			continue // FOOD-4: haulers fill the barrel, which trains no skill
+		}
 		want, ok := skill.ForWork(d.Skill)
 		if !ok {
 			t.Fatalf("%s: work type %v trains no skill", d.Name, d.Skill)

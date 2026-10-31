@@ -13,6 +13,7 @@ import (
 // quantity per kind (stored.go).
 type itemCounts struct {
 	food, wood, stone, steel, silver, gold int
+	nutrition                              int // loose food people eat (FOOD-4: WorldView.FoodDays)
 	foodBy                                 [256]int
 	foodHas                                [256]bool // a loose stack of that food kind was seen (FoodByKind lists it)
 	stored                                 [256]int
@@ -84,6 +85,7 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked, PoisonPermille: int(st.Poison),
 			Quality: craft.QualityLabel(st.Quality), Stuff: craft.StuffLabel(st.Kind, st.Stuff), // PRD-2
 			HP: st.HP(), MaxHP: st.MaxHP(), Tainted: st.Tainted(), Urgent: g.haul.store.Urgent.Has(id), // STO-2
+			Ingredients: craft.IngredientNames(st), // FOOD-4
 		})
 		g.fillCorpseView(&out[len(out)-1], st) // burial.go
 		if st.Carrier != 0 {
@@ -94,6 +96,9 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 			t.food += st.Qty
 			t.foodBy[st.Kind] += st.Qty
 			t.foodHas[st.Kind] = true
+			if st.Kind != item.Hay {
+				t.nutrition += st.Qty * st.Kind.Nutrition()
+			}
 		case st.Kind == item.Wood:
 			t.wood += st.Qty
 		case item.IsStoneBlocks(st.Kind) || st.Kind == item.Stone:
@@ -127,5 +132,5 @@ func (t *itemCounts) foodByKind() map[string]int {
 // apply copies the totals into w.
 func (t *itemCounts) apply(w *WorldView, foodByKind map[string]int, stored []StoredResourceView) {
 	w.Food, w.Wood, w.Stone, w.Steel, w.Silver, w.Gold = t.food, t.wood, t.stone, t.steel, t.silver, t.gold
-	w.FoodByKind, w.Stored = foodByKind, stored
+	w.FoodByKind, w.Stored, w.FoodDays = foodByKind, stored, t.nutrition // food.go fillDietView makes it days
 }

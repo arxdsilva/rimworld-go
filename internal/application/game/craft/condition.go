@@ -9,8 +9,9 @@ import (
 )
 
 // Condition is what time does to things (PRD-2): food rots by the local
-// temperature, made things left under the open sky deteriorate
-// (item.DeteriorationRate) and worn apparel wears out. Both passes walk
+// temperature, made things and (FOOD-4) food left under the open sky, off
+// a shelf, deteriorate (item.DeteriorationRate) and worn apparel wears
+// out. Both passes walk
 // the item list on the climate cadence, never the map.
 type Condition struct {
 	h    Host
@@ -87,7 +88,7 @@ func (c *Condition) deteriorate(hour uint64) {
 	rain := h.Raining()
 	for _, id := range h.ItemIDs() {
 		st, ok := h.Stack(id)
-		if !ok || !item.HasQuality(st.Kind) || st.Carrier != 0 || !h.Exposed(st.X, st.Y) {
+		if !ok || st.MaxHP() == 0 || st.Carrier != 0 || !h.Exposed(st.X, st.Y) { // FOOD-4: food too
 			continue
 		}
 		r := uint64(item.DeteriorationRate(st, rain, h.Wet(st.X, st.Y)))
@@ -105,7 +106,12 @@ func (c *Condition) deteriorate(hour uint64) {
 			c.remove(id, st.Kind, st.Qty, st.X, st.Y)
 		}
 	}
-	c.flush(func(l loss) string { return fmt.Sprintf("A %s left outside fell apart", l.kind) })
+	c.flush(func(l loss) string {
+		if l.kind.IsFood() {
+			return fmt.Sprintf("%d %s left outside went bad", l.qty, l.kind)
+		}
+		return fmt.Sprintf("A %s left outside fell apart", l.kind)
+	})
 }
 
 // wearOutfits rolls the daily wear of the garments of each living

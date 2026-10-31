@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
@@ -22,13 +23,13 @@ import (
 
 const (
 	AssignModalID = "colony.assign"
-	assignW       = 720
+	assignW       = 880
 	assignH       = 480
 	AssignRowH    = 30
-	assignNameW   = 220
+	assignNameW   = 180
 	assignHeadH   = 24
-	assignDrugW   = 200
-	assignCareW   = 170 // MED-03: the medical care column
+	assignDrugW   = 170
+	assignCareW   = 150 // MED-03: the medical care column
 )
 
 const assignCareTip = "Medical care\n" +
@@ -90,6 +91,7 @@ type assignRow struct {
 	policy drug.Preset
 	known  bool // the simulation reports policies
 	care   medcare.Policy
+	pawn   game.PawnView
 }
 
 // rows lists the living colonists and their drug policies.
@@ -100,7 +102,7 @@ func (w Assign) rows() []assignRow {
 		if p.Status == "dead" {
 			continue
 		}
-		r := assignRow{id: p.ID, name: w.sh.PawnLabel(p), known: known, care: medcare.Policy(p.CareLevel)}
+		r := assignRow{id: p.ID, name: w.sh.PawnLabel(p), known: known, care: medcare.Policy(p.CareLevel), pawn: p}
 		if known {
 			r.policy = drug.Preset(rd.DrugPolicy(p.ID))
 		}
@@ -142,8 +144,16 @@ func (w Assign) body(body gfx.Rect) {
 	careX := head.X + assignNameW + assignDrugW + 10
 	w.kit().Label(careX, head.Y, "Medical", hs)
 	w.kit().Tip("assign.head.care", gfx.Rect{X: careX, Y: head.Y, W: 120, H: head.H}, assignCareTip)
+	foodX := careX + assignCareW + 10
+	w.kit().Label(foodX, head.Y, "Food", hs)
+	w.kit().Tip("assign.head.food", gfx.Rect{X: foodX, Y: head.Y, W: 120, H: head.H}, assignFoodTip)
 	rest, foot := rest.SplitV(rest.H - 2*AssignRowH) // MED-03: the default care row
 	w.defaultCare(foot)
+	if w.kit().Button(AssignFoodEditID, gfx.Rect{X: head.Right() - 260, Y: head.Y - 2, W: 130, H: head.H}, "Food policies",
+		uikit.BtnOpts{Tip: "Food policies\nMake and edit what each colonist, prisoner and animal may eat."}) {
+		w.OpenFoodPolicies()
+		return
+	}
 	if w.kit().Button("assign.areas", gfx.Rect{X: head.Right() - 120, Y: head.Y - 2, W: 120, H: head.H}, "Manage areas",
 		uikit.BtnOpts{Tip: "Allowed areas\nMake, rename, invert and delete areas. Pick a colonist's area in the Schedule tab, an animal's in the Animals tab."}) {
 		w.sh.ManageAreas() // the Architect's area manager
@@ -163,6 +173,7 @@ func (w Assign) body(body gfx.Rect) {
 		}
 		w.kit().Label(rr.X, rr.Y+(rr.H-float32(gfx.LineH(gfx.Body)))/2, gfx.Ellipsize(r.name, gfx.Body, assignNameW-12), gfx.Body)
 		w.careButton(r, rr) // MED-03
+		w.foodButton(r.pawn, rr, rr.X+assignNameW+assignDrugW+10+assignCareW+10)
 		br := gfx.Rect{X: rr.X + assignNameW, Y: rr.Y, W: min(assignDrugW, rr.W-assignNameW), H: rr.H}
 		id := AssignDrugID(r.id)
 		if !r.known {

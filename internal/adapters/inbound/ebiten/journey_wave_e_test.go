@@ -164,10 +164,11 @@ func TestJourneyCraftFineMeal(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}))
 	wdBuild(j, "stove", 10, 5)
+	j.g.FuelCampfire(10, 5) // FOOD-4: the stove burns wood
 	var def recipe.Def
 	found := false
 	for _, d := range recipe.For(construction.Stove) {
-		if d.Output == item.FineMeal {
+		if d.Output == item.FineMeal && !found { // the plain fine meal, not FOOD-4's variants or batch
 			def, found = d, true
 		}
 	}

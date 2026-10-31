@@ -127,6 +127,8 @@ func (a *App) handleMapKeys() {
 		a.renderer.overlays().Roof.Toggle()
 	case f.Fired(input.CoverOverlay):
 		a.renderer.overlays().Combat.Cover.Toggle() // combat_overlay_host.go (DEF-1)
+	case f.Fired(input.FertilityOverlay):
+		a.renderer.overlays().Fertility.Toggle() // render/overlay growing_draw.go (FOOD-5)
 	case f.Fired(input.RoomStats):
 		a.chrome.Rooms = !a.chrome.Rooms
 	case f.Fired(input.ZonesOverlay):

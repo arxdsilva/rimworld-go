@@ -34,6 +34,7 @@ func cookGame(t *testing.T, k construction.Kind, powered bool) (g *Game, cook, s
 	g = New(Config{Seed: 1, Width: 16, Height: 8})
 	cook, _ = g.SpawnNamedPawn(1, 1, "Ada")
 	stove = buildNow(t, g, k, benchStuff(k), construction.South, 5, 2)
+	g.FuelCampfire(5, 2) // FOOD-4: the stove burns wood (an electric one takes none)
 	if powered {
 		gen = onPower(t, g, 5, 2, 8, 1)
 	}

@@ -51,5 +51,6 @@ func Capacity(lim, room int) int { return max(1, min(item.CarryLimit, lim, room)
 func SplitLoad(st item.Stack, take int) item.Stack {
 	return item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried,
 		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame, Poison: st.Poison,
-		Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff} // PRD-2: the same made thing
+		Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff, // PRD-2: the same made thing
+		Ingredients: st.Ingredients, IngredientSpecies: st.IngredientSpecies} // FOOD-4: the same meal
 }

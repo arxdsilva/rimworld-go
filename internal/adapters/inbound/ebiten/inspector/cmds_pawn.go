@@ -293,6 +293,7 @@ func carryName(name func(entity.EntityID) string, id entity.EntityID) string {
 // put off or queued, the weapon and clothes, then where the colonist is.
 func (a Pawn) PawnLines(p game.PawnView) []string {
 	out := PawnStatusLines(p, a.CreatureName)
+	out = append(out, PawnFoodLines(p)...) // FOOD-5
 	if ln := InspirationLine(p.Inspiration); ln != "" {
 		out = append(out, ln)
 	}
@@ -370,4 +371,17 @@ func (a Pawn) pawnTabs(p game.PawnView) []Tab {
 		{ID: "inspector.log", Label: "Log", WantW: logWantW, WantH: logWantH,
 			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawPawnLog(screen, id, r) }},
 	}
+}
+
+// PawnFoodLines are the colonist's food policy and last meal (empty until
+// the simulation fills them).
+func PawnFoodLines(p game.PawnView) []string {
+	var out []string
+	if p.FoodPolicy != "" {
+		out = append(out, "Food policy: "+p.FoodPolicy)
+	}
+	if p.LastMeal != "" {
+		out = append(out, "Last meal: "+p.LastMeal)
+	}
+	return out
 }

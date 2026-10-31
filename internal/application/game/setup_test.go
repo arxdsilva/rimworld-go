@@ -473,7 +473,7 @@ func TestScenarioKitSpawned(t *testing.T) {
 	tot := kitTotals(t, g, s) // without the ruins' and vaults' loot
 	want := map[item.Kind]int{
 		item.Steel: 300 + 400, item.Silver: 600, item.Components: 20 + 6, item.Rifle: 2, item.Knife: 1,
-		item.IndustrialMedicine: 12, item.Wood: 200, item.Meal: 10, item.Food: 40 + 8,
+		item.IndustrialMedicine: 12, item.Wood: 200, item.Meal: 10, item.SurvivalMeal: 40 + 8, // FOOD-4: the ration is a survival meal
 	}
 	for k, n := range want {
 		if tot[k] != n {

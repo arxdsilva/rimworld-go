@@ -45,9 +45,10 @@ type Alert struct {
 }
 
 const (
-	// lowFoodPerColonist: fewer ground food items per colonist than
-	// this raises "Low food".
-	lowFoodPerColonist = 4
+	// lowFoodDays: fewer days of food (WorldView.FoodDays, tenths) than
+	// this raises "Low food" (FOOD-4: vanilla's 4 nutrition a colonist,
+	// 2.5 days at 1.6 a day; the wiki's Alerts page was unavailable).
+	lowFoodDays = 25
 	// exposureAlert: hypothermia/heatstroke (permille) worth an alert.
 	exposureAlert = 200
 	// bleedAlertHours: a colonist this close to bleeding out raises the
@@ -180,8 +181,8 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 	group("rescue", true, rescue, func(n string) string { return n + " needs rescue" }, "colonists need rescue")
 	group("starving", true, starving, func(n string) string { return n + " is starving" }, "colonists are starving")
 	group("collapsed", false, collapsed, func(n string) string { return n + " collapsed from exhaustion" }, "colonists collapsed")
-	if alive > 0 && w.Food < lowFoodPerColonist*alive {
-		out = append(out, Alert{Key: "food", Label: fmt.Sprintf("Low food (%d left)", w.Food)})
+	if alive > 0 && w.FoodDays < lowFoodDays {
+		out = append(out, Alert{Key: "food", Label: fmt.Sprintf("Low food (%d.%d days)", w.FoodDays/10, w.FoodDays%10)})
 	}
 
 	if len(raiders) > 0 {

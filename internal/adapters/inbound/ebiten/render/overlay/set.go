@@ -104,6 +104,7 @@ type Set struct {
 	*base
 
 	Roof, Home, Plan, Power, SnowClear Toggle
+	Fertility                          Toggle // growing_draw.go: ground fertility and growing zones
 
 	Area     AreaOverlay        // the armed or hovered allowed area (area_overlay.go)
 	RoofDraw RoofDrawState      // eaves and the Roof overlay (roof_draw.go)

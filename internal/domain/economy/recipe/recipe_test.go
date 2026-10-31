@@ -11,12 +11,13 @@ import (
 func TestRecipesAndBills(t *testing.T) {
 	t.Parallel()
 	// the simple meal first, then PRD-4's fine, lavish, pemmican and
-	// survival meals
+	// survival meals, then FOOD-4's variants and batches
 	var outs []item.Kind
 	for _, d := range For(construction.Stove) {
 		outs = append(outs, d.Output)
 	}
-	if want := []item.Kind{item.Meal, item.FineMeal, item.LavishMeal, item.Pemmican, item.SurvivalMeal}; !slices.Equal(outs, want) {
+	if want := []item.Kind{item.Meal, item.FineMeal, item.LavishMeal, item.Pemmican, item.SurvivalMeal,
+		item.FineMeal, item.FineMeal, item.LavishMeal, item.LavishMeal, item.Meal, item.FineMeal, item.LavishMeal, item.SurvivalMeal, item.Pemmican}; !slices.Equal(outs, want) {
 		t.Fatalf("stove cooks %v, want %v", outs, want)
 	}
 	meal := DefOf(SimpleMeal)

@@ -274,7 +274,7 @@ func (b *builder) pen() {
 func (b *builder) stacks() {
 	x0, y0 := b.cx-20, b.cy+3
 	b.g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: x0, Y: y0, X2: x0 + 39, Y2: y0 + 9})
-	kinds := []item.Kind{item.Wood, item.GraniteBlocks, item.Berries, item.Meal, item.Leather, item.Steel, item.Food, item.Cloth}
+	kinds := []item.Kind{item.Wood, item.GraniteBlocks, item.Berries, item.Meal, item.Leather, item.Steel, item.SurvivalMeal, item.Cloth}
 	for i := 0; i < 1000; i++ {
 		x, y := x0+i%40, y0+i/40
 		if _, err := b.g.SpawnStack(kinds[i%len(kinds)], 5+i%26, x, y); err == nil {

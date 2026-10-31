@@ -366,7 +366,7 @@ func dressBreaks(j job.Record) bool {
 		return false
 	}
 	switch j.Kind {
-	case job.Haul, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
+	case job.Haul, job.FillHopper, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
 		job.Bill, job.Refuel, job.Repair, job.Research, job.Clean, job.Bury, job.Roof, job.Unroof,
 		job.Milk, job.Shear, job.ClearSnow:
 		return true

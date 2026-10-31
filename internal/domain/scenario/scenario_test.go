@@ -110,7 +110,8 @@ func TestKitsMatchTheSpec(t *testing.T) {
 		return n
 	}
 	hull := builtin(t, "broken_hull").Apply()
-	for k, want := range map[item.Kind]int{item.Food: 40, item.Meal: 10, item.IndustrialMedicine: 12, item.HerbalMedicine: 6,
+	for k, want := range map[item.Kind]int{item.SurvivalMeal: 40, item.Meal: 10, // FOOD-4: survival meals, not the legacy ration
+		item.IndustrialMedicine: 12, item.HerbalMedicine: 6,
 		item.Components: 20, item.Steel: 300, item.Wood: 200, item.Silver: 600, item.Rifle: 2, item.Knife: 1,
 		item.Parka: 1, item.Duster: 1, item.Tuque: 1} {
 		if got := qty(hull, k); got != want {
@@ -553,7 +554,7 @@ func TestCodecRoundTrip(t *testing.T) {
 	}
 	b, _ := Encode(custom)
 	text := string(b)
-	for _, want := range []string{`"version": 1`, `"trait": "sunny"`, `"item": "food"`, `"species": "goat"`,
+	for _, want := range []string{`"version": 1`, `"trait": "sunny"`, `"item": "packaged survival meal"`, `"species": "goat"`,
 		`"building": "horseshoe pin"`, `"project": "traps"`, `"condition": "ashfall_sky"`, `"faction": "clans"`,
 		`"arrival": "standing"`, `"tech": "spacer"`, `"pawn_condition": "old_fracture"`, `"who": "n_random"`} {
 		if !strings.Contains(text, want) {

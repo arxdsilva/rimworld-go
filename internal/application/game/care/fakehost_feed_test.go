@@ -29,7 +29,7 @@ func (m *fakeMeals) Hunger(id entity.EntityID) int {
 	}
 	return needs.Full
 }
-func (m *fakeMeals) BestFood(id entity.EntityID) (entity.EntityID, int, int) {
+func (m *fakeMeals) BestFood(id, _ entity.EntityID) (entity.EntityID, int, int) {
 	m.looks++
 	return m.food, m.fx, m.fy
 }

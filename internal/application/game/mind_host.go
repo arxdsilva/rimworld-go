@@ -102,11 +102,11 @@ func (h mindActs) Seize(id entity.EntityID) {
 }
 func (h mindActs) Wander(id entity.EntityID, linger int) bool { return h.g.idleWander(id, linger) }
 func (h mindActs) CanBinge(id entity.EntityID) bool {
-	best, _, _ := h.g.bestFood(id)
+	best, _, _, _ := h.g.bestFood(id, id)
 	return best != 0
 }
 func (h mindActs) Binge(id entity.EntityID) bool {
-	best, bx, by := h.g.bestFood(id)
+	best, bx, by, _ := h.g.bestFood(id, id)
 	return best != 0 && h.g.startJob(id, job.Record{Kind: job.Eat, Target: best, TX: bx, TY: by, WorkLeft: needs.EatWorkTicks, Count: bingeEat})
 }
 func (h mindActs) CanHide(id entity.EntityID) bool {

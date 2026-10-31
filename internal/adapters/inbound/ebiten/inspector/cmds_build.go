@@ -174,6 +174,7 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	add(a.bedLines(b)...)
 	add(bedStatLines(b)...)
 	add(a.troughLines(b)...)
+	add(GrowLines(b, w.Plants)...) // grow_lines.go (FOOD-5)
 	return out
 }
 

@@ -11,8 +11,8 @@ import (
 
 func TestCatalogue(t *testing.T) {
 	all := All()
-	if len(all) != 40 {
-		t.Fatalf("%d traits, want 40", len(all))
+	if len(all) != 41 { // FOOD-4: Cannibal
+		t.Fatalf("%d traits, want 41", len(all))
 	}
 	keys, labels := map[string]bool{}, map[string]bool{}
 	for i, d := range all {
@@ -82,7 +82,8 @@ func TestEffectsText(t *testing.T) {
 		Unhurried:   {"Work speed -20%", "Recreation drain -15%"},
 		Roughneck:   {"\"slept outside\" x0.25", "\"ate raw food\" x0.25"},
 		Fussy:       {"x2", "\"slept in my bedroom\" x1.5"},
-		HeartyEater: {"Hunger rate +25%", "\"ate a cooked meal\" +2"},
+		HeartyEater: {"Hunger rate +25%", "\"ate a fine meal\" +2", "\"ate a lavish meal\" +2"},
+		Cannibal:    {"Enjoys human flesh"},
 		Bookish:     {"Intellectual speed +25%", "Intellectual learning x1.5"},
 		Gentle:      {"Social +3 levels", "Incapable: Violence"},
 		ColdHardy:   {"Cold comfort -6 °C"},
@@ -116,7 +117,7 @@ func TestGenerated(t *testing.T) {
 	if len(legacy) != 19 || legacy[0] != Tireless || legacy[18] != Sturdy {
 		t.Fatalf("legacy = %v", legacy)
 	}
-	if len(all) != int(NumTraits)-1 || all[len(all)-1] != NaturalPurist {
+	if len(all) != int(NumTraits)-1 || all[len(all)-1] != Cannibal {
 		t.Fatalf("all = %v", all)
 	}
 	for i, id := range all {

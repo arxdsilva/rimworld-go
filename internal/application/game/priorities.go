@@ -40,6 +40,8 @@ func workTypeOf(c command.WorkType) (work.Type, bool) {
 		return work.Warden, true
 	case command.WorkFirefight:
 		return work.Firefight, true // firefight.go
+	case command.WorkPlantCut:
+		return work.PlantCut, true // FOOD-2
 	}
 	return 0, false
 }
@@ -109,7 +111,8 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Warden:
 		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
-		return g.haulUrgent(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || g.assignHaul(id) // haul_priority.go, trough_feed.go
+		return g.haulUrgent(id) || g.fillHoppers(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || // haul_priority.go, trough_feed.go
+			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || g.assignHaul(id) // FOOD-4: hoppers, barrels
 	case work.Construct:
 		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
 			g.assignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go

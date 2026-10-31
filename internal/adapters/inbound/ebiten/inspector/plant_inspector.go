@@ -155,6 +155,7 @@ func PlantBodyLines(p game.PlantView, gv game.PlantGrowthView) []string {
 	if p.Zone != "" {
 		out = append(out, "In a growing zone ("+Capitalize(p.Zone)+")")
 	}
+	out = append(out, FoodPlantLines(p)...)
 	out = append(out, env.PlantLightLines(p)...) // cave_plants_draw.go
 	if p.Designated {
 		out = append(out, "Marked to harvest")
@@ -221,5 +222,49 @@ func (a Thing) ApplyPlantClick(id string) {
 		}
 	case id == "plant.cut":
 		a.shell.Enqueue(PlantMarkCmd(p, false, p.Cut))
+	case id == CutBlightID: // FOOD-5: every blighted plant on the map
+		for _, c := range CutBlightCmds(a.shell.World().Plants) {
+			a.shell.Enqueue(c)
+		}
 	}
+}
+
+// FoodPlantLines are the FOOD-2 readouts of a plant: the soil's fertility
+// (a hydroponics basin reads 280%), the growing light it last had, the
+// share of its lifespan gone (a tree's or a perennial's), and blight.
+// Fields the simulation has not filled (0) give no line.
+func FoodPlantLines(p game.PlantView) []string {
+	var out []string
+	if p.Fertility > 0 {
+		l := fmt.Sprintf("Fertility %d%%", p.Fertility)
+		if p.Fertility >= 280 {
+			l += " (hydroponics)"
+		}
+		out = append(out, l)
+	}
+	if p.Light > 0 {
+		out = append(out, fmt.Sprintf("Growing light %d%%", p.Light))
+	}
+	if p.Lifespan > 0 {
+		out = append(out, fmt.Sprintf("Lifespan %d%% used", p.Lifespan))
+	}
+	if p.Blighted {
+		out = append(out, "Blighted: growth stopped, it spreads to plants within 4 tiles. Cut it down.")
+	}
+	return out
+}
+
+// CutBlightID is the plant pane's Cut all blight button.
+const CutBlightID = "plant.cutblight"
+
+// CutBlightCmds are the cut designations for every blighted plant not yet
+// marked (the existing DesignateCut, one per plant).
+func CutBlightCmds(plants []game.PlantView) []command.Command {
+	var out []command.Command
+	for _, q := range plants {
+		if q.Blighted && !q.Cut {
+			out = append(out, PlantMarkCmd(q, false, false))
+		}
+	}
+	return out
 }

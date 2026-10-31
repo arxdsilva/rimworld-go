@@ -550,11 +550,11 @@ func (g *Game) findTameFeed(id entity.EntityID, a *animal.State, pos Position, d
 	need := max(1, animal.Full-a.Food)
 	meal := func(v int) int { return min(g.portion(a, now, animal.Meal(a.Species, v)), need) }
 	var b forage.Pick
-	fx := g.food()
+	fx, menu := g.food(), g.sk.diet.Menu(id, true) // FOOD-4: the animal's food policy
 	if diet != animal.NoDiet {
 		fx.items.each(pos.X, pos.Y, r, func(iid entity.EntityID) bool {
 			st, have := g.stacks.Get(iid)
-			if !have || st.Carrier != 0 || st.Qty <= 0 || st.Forbidden || weapon.Distance(pos.X, pos.Y, st.X, st.Y) > r || !ok(st.X, st.Y) {
+			if !have || st.Carrier != 0 || st.Qty <= 0 || st.Forbidden || !menu.Has(st.Kind) || weapon.Distance(pos.X, pos.Y, st.X, st.Y) > r || !ok(st.X, st.Y) {
 				return true
 			}
 			if o, taken := g.reserve.EntityOwner(iid); taken && o != id {

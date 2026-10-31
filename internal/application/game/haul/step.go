@@ -75,8 +75,7 @@ func (g Gather) take(j *job.Record, sid entity.EntityID, st item.Stack) {
 	if j.Count > 0 {
 		n = min(n, j.Count-c.Qty)
 	}
-	c.Rot = item.MergeRot(c.Qty, c.Rot, n, st.Rot)
-	c.Poison = item.MergePoison(c.Qty, c.Poison, n, st.Poison)
+	c = item.MergeFood(c, st, n) // rot, poison, FOOD-4 ingredients
 	c.Qty += n
 	g.h.SetStack(j.Carry, c)
 	if n >= st.Qty {

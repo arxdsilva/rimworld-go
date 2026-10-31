@@ -42,7 +42,9 @@ const (
 	colArea    = 706 // area dropdown, or the pen's name
 	colTrain   = 828
 	colDoing   = 932
-	colBtn     = 1040 // Slaughter, then Release
+	colBtn     = 1040         // Slaughter, then Release
+	colDiet    = colBtn + 202 // FOOD-5: the food policy button
+	dietW      = 120
 )
 
 // Column x offsets of the Wild list.
@@ -68,12 +70,12 @@ type animalCol struct{ x, w int }
 // included). The ones kept are the ones the buttons need.
 var (
 	colonyDrops = []animalCol{{colDoing, colBtn - colDoing}, {colTrain, colDoing - colTrain}, {colPreg, colHealth - colPreg},
-		{colProduct, colPreg - colProduct}, {colAge, colFood - colAge}, {colSex, colAge - colSex}}
+		{colProduct, colPreg - colProduct}, {colAge, colFood - colAge}, {colSex, colAge - colSex}, {colDiet, dietW + 6}}
 	wildDrops = []animalCol{{wildMarks, wildBtn - wildMarks}, {wildMeat, wildMarks - wildMeat}, {wildDiet, wildPred - wildDiet}}
 )
 
 const (
-	colonyFullW = colBtn + 196 + 12
+	colonyFullW = colDiet + dietW + 12
 	wildFullW   = wildBtn + 272 + 12
 )
 
@@ -162,6 +164,10 @@ func (w Animals) Buttons() []uikit.Button {
 		{ID: "animals.view.colony", Label: "Colony", X: r.X + r.W - 190, Y: r.Y + 6, W: 84, H: 24, Selected: !w.Wild},
 		{ID: "animals.view.wild", Label: "Wild", X: r.X + r.W - 100, Y: r.Y + 6, W: 84, H: 24, Selected: w.Wild},
 	}
+	if !w.Wild {
+		out = append(out, uikit.Button{ID: AutoSlaughterBtnID, Label: "Auto-slaughter", X: r.X + r.W - 330, Y: r.Y + 6, W: 130, H: 24,
+			Tip: "Auto-slaughter\nKeep each tame species at a herd size: handlers slaughter the surplus once a day."})
+	}
 	if w.Wild {
 		for i, row := range w.wildlife() {
 			y := r.Y + animalsRowTop + float32(i*animalRowH)
@@ -193,6 +199,14 @@ func (w Animals) Buttons() []uikit.Button {
 			uikit.Button{ID: "animals.slaughter." + id, Label: slaughter, X: r.X + float32(cols.at(colBtn)), Y: y, W: 100, H: 24, Selected: an.Designated},
 			uikit.Button{ID: "animals.release." + id, Label: "Release", X: r.X + float32(cols.at(colBtn)) + 106, Y: y, W: 90, H: 24},
 		)
+		if cols.shown(colDiet) {
+			label := an.FoodPolicy
+			if label == "" {
+				label = "-"
+			}
+			out = append(out, uikit.Button{ID: AnimalDietID(an.ID), Label: label, X: r.X + float32(cols.at(colDiet)), Y: y, W: dietW, H: 24,
+				Tip: "Food policy\nWhat this animal may eat. A click picks the next policy."})
+		}
 		if an.CanFollow { // PLAY-015: follow the drafted master, on or off
 			out = append(out, uikit.Button{ID: "animals.follow." + id, Label: FollowCell(an), X: r.X + float32(cols.at(colFollow)) - 2, Y: y,
 				W: colArea - colFollow - 8, H: 24, Selected: an.Follows,
@@ -203,6 +217,10 @@ func (w Animals) Buttons() []uikit.Button {
 }
 
 func (w Animals) Click(id string) {
+	if id == AutoSlaughterBtnID {
+		w.OpenAutoSlaughter()
+		return
+	}
 	parts := strings.Split(id, ".")
 	if len(parts) < 3 || !w.live() {
 		return
@@ -239,6 +257,10 @@ func (w Animals) Click(id string) {
 			w.sh.Enqueue(c)
 		case "release":
 			w.sh.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n})
+		case "diet":
+			if next, ok := NextFoodPolicy(w.sh.World().FoodPolicies, an.FoodPolicy); ok {
+				w.sh.Enqueue(command.Command{Kind: command.SetFoodPolicy, Pawn: n, Index: next})
+			}
 		case "follow":
 			w.sh.Enqueue(command.Command{Kind: command.SetAnimalFollow, Target: n, Enabled: !an.Follows})
 		}
@@ -344,7 +366,7 @@ func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
 		x int
 		s string
 	}{{colName, "Name"}, {colSpecies, "Species"}, {colSex, "Sex"}, {colAge, "Age"}, {colFood, "Food"},
-		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colMaster, "Master"}, {colFollow, "Follow"}, {colArea, "Area / Pen"}, {colTrain, "Training"}, {colDoing, "Doing"}} {
+		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colMaster, "Master"}, {colFollow, "Follow"}, {colArea, "Area / Pen"}, {colTrain, "Training"}, {colDoing, "Doing"}, {colDiet, "Diet"}} {
 		if cols.shown(h.x) {
 			uikit.DrawLabel(screen, x0+cols.at(h.x), head, h.s)
 		}

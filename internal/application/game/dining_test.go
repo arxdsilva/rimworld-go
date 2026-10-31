@@ -20,11 +20,10 @@ func TestColonistCarriesMealToTable(t *testing.T) {
 	ate := false
 	for i := 0; i < 400 && !ate; i++ {
 		g.Step(1)
-		for _, th := range pawn(t, g, id).Thoughts {
-			if th.Label == "ate at a table" {
-				ate = true
-			}
-		}
+		_, ate = g.lastMeal[id]
+	}
+	for _, th := range pawn(t, g, id).Thoughts {
+		ate = ate && th.Label != "ate without a table" // FOOD-4: a table gives no thought, its lack -3
 	}
 	if !ate {
 		p := pawn(t, g, id)

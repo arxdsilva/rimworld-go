@@ -120,6 +120,10 @@ const (
 	ObservedButchery
 	Ravenous
 	Malnourished
+	// FOOD-4 (append only, saved): a cooked meal with human or insect
+	// meat among its ingredients (item.Stack.Ingredients).
+	AteHumanMeatCooked
+	AteInsectMeatCooked
 	numKinds
 )
 
@@ -166,9 +170,9 @@ var defs = [numKinds]Def{
 	SleptInBed:        {"slept in a bed", 2, day, groupSleepPlace, 0, 0},
 	SleptInAwfulRoom:  {"slept in an awful room", -4, day, groupSleepRoom, 0, 0},
 	SleptInNiceRoom:   {"slept in a nice room", 5, day, groupSleepRoom, 0, 0},
-	AteMeal:           {"ate a cooked meal", 4, day, groupMealKind, 0, 0},
-	AteRaw:            {"ate raw food", -5, day, groupMealKind, 0, 0},
-	AteAtTable:        {"ate at a table", 3, day, groupMealTable, 0, 0},
+	AteMeal:           {"ate a cooked meal", 0, day, groupMealKind, 0, 0}, // FOOD-4: retired (not vanilla), kept for older saves
+	AteRaw:            {"ate raw food", -7, day, groupMealKind, 0, 0},     // wiki: Food
+	AteAtTable:        {"ate at a table", 0, day, groupMealTable, 0, 0},   // FOOD-4: retired (not vanilla), kept for older saves
 	AteWithoutTable:   {"ate without a table", -3, day, groupMealTable, 0, 0},
 	Hungry:            {"hungry", -6, 0, groupNone, 0, 0}, // wiki: Saturation
 	Tired:             {"tired", -5, 0, groupNone, 0, 0},
@@ -252,18 +256,20 @@ var defs = [numKinds]Def{
 	SleptHot:     {"slept in the heat", -4, day, groupSleptTemp, 0, 0},
 	AtePaste:     {"ate nutrient paste", -4, day, groupMealKind, 0, 0},
 	// FOOD-0, wiki: Meals (fine +5, lavish +12), Kibble (-12), Saturation
-	// (ravenously hungry -12, malnourished -20), Cannibal (human meat eaten
-	// -20; butchered a human -6 and its knowledge -6, six days each). The
-	// insect meat value is original tuning (the wiki's rule wasn't found).
-	AteFineMeal:      {"ate a fine meal", 5, day, groupMealKind, 0, 0},
-	AteLavishMeal:    {"ate a lavish meal", 12, day, groupMealKind, 0, 0},
-	AteKibble:        {"ate kibble", -12, day, groupMealKind, 0, 0},
-	AteHumanMeat:     {"ate human flesh", -20, day, groupNone, 0, 0},
-	AteInsectMeat:    {"ate insect meat", -6, day, groupNone, 0, 0},
-	ButcheredHuman:   {"butchered a human body", -6, 6 * day, groupNone, stackLimit, stackFactor},
-	ObservedButchery: {"someone butchered a human", -6, 6 * day, groupNone, stackLimit, stackFactor},
-	Ravenous:         {"ravenously hungry", -12, 0, groupNone, 0, 0},
-	Malnourished:     {"malnourished", -20, 0, groupNone, 0, 0},
+	// (ravenously hungry -12, malnourished -20), Human meat (raw -20,
+	// cooked -15; butchered a human -6 and its knowledge -6, six days
+	// each), Insect meat (raw -6, cooked -3), all a day.
+	AteFineMeal:         {"ate a fine meal", 5, day, groupMealKind, 0, 0},
+	AteLavishMeal:       {"ate a lavish meal", 12, day, groupMealKind, 0, 0},
+	AteKibble:           {"ate kibble", -12, day, groupMealKind, 0, 0},
+	AteHumanMeat:        {"ate human flesh", -20, day, groupNone, 0, 0},
+	AteInsectMeat:       {"ate insect meat", -6, day, groupNone, 0, 0},
+	ButcheredHuman:      {"butchered a human body", -6, 6 * day, groupNone, stackLimit, stackFactor},
+	ObservedButchery:    {"someone butchered a human", -6, 6 * day, groupNone, stackLimit, stackFactor},
+	Ravenous:            {"ravenously hungry", -12, 0, groupNone, 0, 0},
+	Malnourished:        {"malnourished", -20, 0, groupNone, 0, 0},
+	AteHumanMeatCooked:  {"ate a meal of human flesh", -15, day, groupNone, 0, 0},
+	AteInsectMeatCooked: {"ate a meal with insect meat", -3, day, groupNone, 0, 0},
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

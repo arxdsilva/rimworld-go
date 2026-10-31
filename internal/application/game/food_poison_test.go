@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"testing"
 
+	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -34,39 +35,35 @@ func medicalHours(g *Game, hours int) {
 	}
 }
 
+// TestPoisonChanceFallsWithSkill (FOOD-4): the cook roll by skill and the
+// flat outdoor kitchen roll, combined, as the meal carries them.
 func TestPoisonChanceFallsWithSkill(t *testing.T) {
 	t.Parallel()
-	if poisonBase(0) != poisonUnskilled || poisonBase(20) != poisonMaster {
-		t.Fatalf("base at 0 = %d, at 20 = %d", poisonBase(0), poisonBase(20))
-	}
-	for lvl := 1; lvl <= 20; lvl++ {
-		if poisonBase(lvl) > poisonBase(lvl-1) {
-			t.Fatalf("base rose from %d to %d at level %d", poisonBase(lvl-1), poisonBase(lvl), lvl)
-		}
-	}
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(1, 1, "Cook")
 	var last int16 = 1001
-	for _, lvl := range []int{0, 5, 10, 15, 20} {
+	for _, lvl := range []int{0, 4, 8, 20} {
 		setCooking(g, id, lvl)
-		p := g.mealPoison(id, construction.Stove, 5, 5) // outdoors: ×1.5
-		if p >= last || p <= 0 {
-			t.Fatalf("level %d poison %d‰ (previous %d‰): must fall with skill", lvl, p, last)
+		p := g.mealPoison(id, construction.Stove, 5, 5) // outdoors: the flat 2 %
+		if want := diet.Permille(diet.MealChance(diet.CookChance(lvl), diet.OutdoorChance)); p >= last || p != want {
+			t.Fatalf("level %d poison %d‰ (previous %d‰), want %d‰", lvl, p, last, want)
 		}
 		last = p
 	}
-	setCooking(g, id, 20)
-	if p := g.mealPoison(id, construction.Campfire, 5, 5); p != poisonCampfire {
-		t.Fatalf("a master's campfire meal %d‰, want the floor %d‰", p, poisonCampfire)
+	if last != 21 { // 0.1 % and 2 %: 2.098 %
+		t.Fatalf("a master's outdoor meal %d‰, want 21‰", last)
 	}
 }
 
+// TestFilthyKitchenPoisonsMore (FOOD-4): a clean room adds no kitchen roll
+// (cleanliness -2 or better), a filthy one up to 5 %, outdoors a flat 2 %.
 func TestFilthyKitchenPoisonsMore(t *testing.T) {
 	t.Parallel()
 	g := dirtGame(t)
 	box(t, g, 2, 2, 7, 7, [2]int{4, 7})
+	roofOver(g, 3, 3, 6, 6) // dirt_test.go: under the sky is outdoors
 	id, _ := g.SpawnNamedPawn(4, 4, "Cook")
-	setCooking(g, id, 6)
+	setCooking(g, id, 6) // wiki: 0.5 %
 	outdoors := g.mealPoison(id, construction.Stove, 20, 10)
 	clean := g.mealPoison(id, construction.Stove, 4, 4)
 	for y := 3; y <= 6; y++ {
@@ -75,12 +72,12 @@ func TestFilthyKitchenPoisonsMore(t *testing.T) {
 		}
 	}
 	filthy := g.mealPoison(id, construction.Stove, 4, 4)
-	base := poisonBase(6)
-	if int(clean) != base*kitchenClean/1000 || int(filthy) != base*kitchenFilthy/1000 || int(outdoors) != base*kitchenOutdoors/1000 {
-		t.Fatalf("base %d‰: clean %d‰, filthy %d‰, outdoors %d‰", base, clean, filthy, outdoors)
+	c, _ := craftShop{g}.Cleanliness(4, 4)
+	if clean != 5 || outdoors != 25 || filthy != diet.Permille(diet.MealChance(50, diet.KitchenChance(c, true))) {
+		t.Fatalf("clean %d‰ (want 5), outdoors %d‰ (want 25), filthy %d‰ at cleanliness %d", clean, outdoors, filthy, c)
 	}
-	if !(clean < outdoors && outdoors < filthy) {
-		t.Fatalf("clean %d‰ < outdoors %d‰ < filthy %d‰ fails", clean, outdoors, filthy)
+	if !(clean < outdoors && clean < filthy) {
+		t.Fatalf("clean %d‰ < outdoors %d‰, filthy %d‰ fails", clean, outdoors, filthy)
 	}
 }
 
@@ -92,6 +89,7 @@ func TestCookedMealCarriesPoison(t *testing.T) {
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	setCooking(g, id, 0)
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
+	g.FuelCampfire(5, 2)                 // FOOD-4: the stove burns wood
 	g.SpawnStack(item.Berries, 30, 1, 4) // FOOD-1: 10 raw units a meal
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.DoCount), Count: 1})
 	for i := 0; i < 40 && g.World().FoodByKind["meal"] == 0; i++ {
@@ -156,8 +154,8 @@ func TestPoisonSurvivesStackMerge(t *testing.T) {
 		t.Fatalf("MergePoison(1×40, 3×20) = %d, want 25", p)
 	}
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
-	g.dropMeal(item.Meal, 1, 5, 5, 40)
-	g.dropMeal(item.Meal, 3, 5, 5, 20)
+	g.dropStackOf(item.Stack{Kind: item.Meal, Qty: 1, Poison: 40}, 5, 5) // the cook's drop (craft_host.go DropMeal)
+	g.dropStackOf(item.Stack{Kind: item.Meal, Qty: 3, Poison: 20}, 5, 5)
 	var meals []item.Stack
 	for _, sid := range g.itemIDs {
 		if st, ok := g.stacks.Get(sid); ok && st.Kind == item.Meal {

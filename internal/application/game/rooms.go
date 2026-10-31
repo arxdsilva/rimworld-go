@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
@@ -243,23 +244,19 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 // social layer smooths it (social_mood.go).
 func (g *Game) moodOf(id entity.EntityID) int { return g.smoothedMood(id, g.thoughtLevel(id)) }
 
-// afterEat records what and where pawn id ate from stack st, and rolls
-// the meal's food poisoning (food_poison.go).
-func (g *Game) afterEat(id entity.EntityID, st item.Stack) {
-	k := st.Kind
-	switch {
-	case k == item.Meal:
-		g.remember(id, mood.AteMeal)
-	case k.Raw():
-		g.remember(id, mood.AteRaw)
-	case k == item.NutrientPasteMeal: // STO-2
-		g.remember(id, mood.AtePaste)
+// afterEat records what pawn id ate from stack st (game/diet: the wiki's
+// meal thoughts) and where (no table -3; a patient or prisoner fed in bed
+// skips it), and rolls the food poisoning (food_poison.go).
+func (g *Game) afterEat(id entity.EntityID, st item.Stack, fed bool) {
+	var buf [3]diet.Thought
+	for _, t := range diet.AppendAte(buf[:0], st, cannibal(g, id)) {
+		g.memories[id] = g.memories[id].AddLabeled(t.Kind, 0, t.Value, t.Label, uint64(g.clock.Now()))
 	}
-	pos, _ := g.positions.Get(id)
-	if g.nextToTable(pos.X, pos.Y) {
-		g.remember(id, mood.AteAtTable)
+	switch pos, _ := g.positions.Get(id); {
+	case fed:
+	case g.nextToTable(pos.X, pos.Y):
 		g.rest.Waking.Felt(id, rest.Ate) // BED-2: a fine dining room
-	} else {
+	default:
 		g.remember(id, mood.AteWithoutTable)
 	}
 	g.rollFoodPoison(id, st)

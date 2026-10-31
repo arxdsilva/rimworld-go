@@ -58,6 +58,7 @@ func (h careTreat) Feed(patient, carry entity.EntityID) {
 		g.mergeOrSet(carry, st)
 	}
 	g.lastMeal[patient] = st.Kind
+	g.afterEat(patient, st, true) // rooms.go: the meal's thoughts and food poisoning (FOOD-4)
 	g.ateAt[patient] = true
 	g.logEvent(patient, logEntry{Kind: logAte, Name: item.Kind(st.Kind).String()})
 	if g.prison.Is(patient) {
@@ -75,12 +76,29 @@ func (h careMeals) Hunger(id entity.EntityID) int {
 	return needs.Full
 }
 
-func (h careMeals) BestFood(id entity.EntityID) (entity.EntityID, int, int) { return h.g.bestFood(id) }
+// BestFood: by the patient's policy and taste, a paste dispenser too (FOOD-4, food.go).
+func (h careMeals) BestFood(id, patient entity.EntityID) (entity.EntityID, int, int) {
+	food, x, y, _ := mealFor(h.g, id, patient)
+	return food, x, y
+}
 
 // TakeFood: feeder id at stack food picks up portions for patient's
-// hunger (dining.go: portionsFor), split off a bigger stack.
+// hunger (dining.go: portionsFor), split off a bigger stack; at a paste
+// dispenser it takes a fresh meal in hand (store/paste.go, FOOD-4).
 func (h careMeals) TakeFood(id, food, patient entity.EntityID) (entity.EntityID, bool) {
 	g := h.g
+	if _, isB := g.bldgs.Get(food); isB {
+		g.reserve.ReleaseEntity(id, food) // the next colonist may use the dispenser
+		meal, ok := g.haul.store.Paste.Dispense(haulHost{g}, haulHost{g}, food)
+		if !ok {
+			return 0, false
+		}
+		pos, _ := g.positions.Get(id)
+		meal.X, meal.Y, meal.Carrier, food = pos.X, pos.Y, id, g.entities.Next()
+		g.itemIDs = append(g.itemIDs, food)
+		g.putStack(food, meal)
+		return food, true
+	}
 	st, ok := g.stacks.Get(food)
 	if !ok || st.Carrier != 0 || st.Qty <= 0 {
 		return 0, false

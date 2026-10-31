@@ -79,9 +79,9 @@ func TestFragGrenadeWearsAndDestroysItems(t *testing.T) {
 	db := newFakeDebris()
 	c := newDebrisCombat(f, db)
 	db.put(1, item.Stack{Kind: item.Rifle, Qty: 1, X: 10, Y: 10})             // centre: 50 of its 100
-	db.put(2, item.Stack{Kind: item.Meal, Qty: 5, X: 10, Y: 10})              // centre: 50 >= LooseHP
+	db.put(2, item.Stack{Kind: item.Meal, Qty: 5, X: 10, Y: 10})              // centre: 50, all of a meal's 50 HP (FOOD-4)
 	db.put(3, item.Stack{Kind: item.Steel, Qty: 75, X: 10, Y: 10})            // metal shrugs it off
-	db.put(4, item.Stack{Kind: item.Meal, Qty: 5, X: 11, Y: 11})              // 1.41 tiles: 31 < LooseHP
+	db.put(4, item.Stack{Kind: item.Meal, Qty: 5, X: 11, Y: 11})              // 1.41 tiles: 31 of its 50 HP
 	db.put(5, item.Stack{Kind: item.Parka, Qty: 1, X: 11, Y: 11})             // worn by 31
 	db.put(6, item.Stack{Kind: item.Rifle, Qty: 1, X: 12, Y: 10})             // 2 tiles: out of 1.9
 	db.put(7, item.Stack{Kind: item.Rifle, Qty: 1, X: 10, Y: 9, Carrier: 99}) // carried: not loose
@@ -95,8 +95,8 @@ func TestFragGrenadeWearsAndDestroysItems(t *testing.T) {
 	if db.stacks[3].Wear != 0 || db.stacks[3].Qty != 75 {
 		t.Fatal("the steel took damage")
 	}
-	if _, ok := db.stacks[4]; !ok {
-		t.Fatal("the meals at 1.41 tiles were destroyed by a glancing blow")
+	if st, ok := db.stacks[4]; !ok || st.Wear != fragBlast.At(1414) {
+		t.Fatalf("the meals at 1.41 tiles: %+v (a glancing blow wears, never destroys)", st)
 	}
 	if w := db.stacks[5].Wear; w != fragBlast.At(1414) {
 		t.Fatalf("parka wear %d, want %d", w, fragBlast.At(1414))
@@ -108,7 +108,10 @@ func TestFragGrenadeWearsAndDestroysItems(t *testing.T) {
 	if _, ok := db.stacks[1]; ok {
 		t.Fatal("two grenades did not destroy the rifle")
 	}
-	if !slices.Equal(db.gone, []entity.EntityID{2, 1}) {
+	// FOOD-4: food has hit points (wiki: Simple meal, 50), so the second
+	// glancing 31 takes the meals at 1.41 tiles past their 50 as it does
+	// the rifle past its 100: damage adds up on every item with HP.
+	if !slices.Equal(db.gone, []entity.EntityID{2, 1, 4}) {
 		t.Fatalf("destroyed %v", db.gone)
 	}
 	if len(db.lit) != 0 {

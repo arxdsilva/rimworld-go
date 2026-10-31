@@ -52,9 +52,6 @@ type Stock interface {
 	Stock(k item.Kind) int
 	// FreeWood is the wood lying free (not carried, not forbidden).
 	FreeWood() int
-	// Ingredient is the nearest free stack id may take that feeds in on
-	// its own (0 when none; id 0 asks for any).
-	Ingredient(id entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack)
 	Stack(id entity.EntityID) (item.Stack, bool)
 	// Carry has carrier pick take of stack up: the whole stack, or a new
 	// stack split off it. It returns the carried stack's id.
@@ -75,9 +72,10 @@ type Output interface {
 	DropStack(k item.Kind, qty, x, y int)
 	// DropStackOf spawns a copy of st (rot, dried, claim) at (x, y).
 	DropStackOf(st item.Stack, x, y int)
-	// DropMeal drops qty meals cooked by cook at a bench of kind bench,
-	// with the cook's poison chance rolled by the host.
-	DropMeal(cook entity.EntityID, bench construction.Kind, k item.Kind, qty, x, y int)
+	// DropMeal drops meal stack st (kind, quantity and FOOD-4's
+	// ingredients) cooked by cook at a bench of kind bench, with the
+	// cook's poison chance rolled by the host.
+	DropMeal(cook entity.EntityID, bench construction.Kind, st item.Stack, x, y int)
 	// Cremate burns body on pyre with the recipe's wood.
 	Cremate(pyre, body entity.EntityID, d recipe.Def)
 	// Message posts a plain message at (x, y).

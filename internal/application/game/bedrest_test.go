@@ -66,7 +66,7 @@ func sickPatient(t *testing.T) (g *Game, pat, bed entity.EntityID) {
 	g.SpawnNamedPawn(16, 7, "Doc")
 	walledIn(t, g, 16, 7, 16, 7)
 	bed = buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 2)
-	if _, err := g.SpawnStack(item.Food, 10, 10, 4); err != nil {
+	if _, err := g.SpawnStack(item.SurvivalMeal, 10, 10, 4); err != nil {
 		t.Fatal(err)
 	}
 	g.Infect(pat, 40)
@@ -342,7 +342,7 @@ func TestBedRestDoesNotFlap(t *testing.T) {
 			id, _ := g.SpawnNamedPawn(4, 4, "Pat")
 			g.SpawnNamedPawn(12, 6, "Doc")
 			buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 2)
-			if _, err := g.SpawnStack(item.Food, 10, 10, 4); err != nil {
+			if _, err := g.SpawnStack(item.SurvivalMeal, 10, 10, 4); err != nil {
 				t.Fatal(err)
 			}
 			c.set(g, id)

@@ -21,14 +21,14 @@ func TestMaxHP(t *testing.T) {
 		{Stack{Kind: Club, Stuff: Steel}, 100},
 		{Stack{Kind: Rifle}, 100},
 		{Stack{Kind: Wood, Qty: 50}, 0},
-		{Stack{Kind: Meal}, 0},
+		{Stack{Kind: Meal}, 50}, // FOOD-4: food has hit points (wiki: Simple meal)
 	}
 	for _, c := range cases {
 		if got := c.s.MaxHP(); got != c.want {
 			t.Errorf("%v of %v: %d, want %d", c.s.Kind, c.s.Stuff, got, c.want)
 		}
 	}
-	if MaxHP(Meal) != 0 || !HasQuality(Club) || !HasQuality(Parka) || HasQuality(Wood) {
+	if MaxHP(Meal) != 50 || HasQuality(Meal) || !HasQuality(Club) || !HasQuality(Parka) || HasQuality(Wood) {
 		t.Fatal("which kinds have a condition")
 	}
 	s := Stack{Kind: Rifle, Wear: 30}

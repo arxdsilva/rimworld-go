@@ -58,6 +58,7 @@ func TestStoveCooksMealsFromRawFood(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
+	g.FuelCampfire(5, 2)                 // FOOD-4: the stove burns wood
 	g.SpawnStack(item.Berries, 30, 1, 4) // FOOD-1: 10 raw units a meal
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.DoCount), Count: 2})
 	g.Step(1)
@@ -113,6 +114,7 @@ func TestBillModesSuspendAndRemove(t *testing.T) {
 func TestBillWaitsForIngredients(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
+	g.FuelCampfire(5, 2)                // FOOD-4: the stove burns wood
 	g.SpawnStack(item.Berries, 1, 1, 4) // one short
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.Forever)})
 	g.Step(1)
@@ -129,7 +131,9 @@ func TestBillsDontOvershootWithTwoCooks(t *testing.T) {
 	a, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	b, _ := g.SpawnNamedPawn(2, 1, "Bo")
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
+	g.FuelCampfire(5, 2) // FOOD-4: the stove burns wood
 	placeBuilt(t, g, construction.Stove, construction.South, 8, 2)
+	g.FuelCampfire(8, 2) // FOOD-4: the stove burns wood
 	g.SpawnStack(item.Meal, 9, 1, 4)
 	g.SpawnStack(item.Berries, 10, 1, 3) // RES-1: two cooks may share a stack (count claims); two stacks only shorten the walks
 	g.SpawnStack(item.Berries, 10, 2, 3)

@@ -122,6 +122,9 @@ func (h herdHost) HaulToStorage(id, sid entity.EntityID) bool {
 }
 func (h herdHost) pos(id entity.EntityID) Position   { p, _ := h.g.positions.Get(id); return p }
 func (h herdHost) FedAnimal(id, aid entity.EntityID) { h.g.logPair(aid, id, logFedBy, logFed, 0, 0) }
+func (h herdHost) Policy(aid entity.EntityID) func(item.Kind) bool {
+	return h.g.sk.diet.Menu(aid, true).Has
+}
 
 // NearestFood is the nearest free, fresh food stack accept takes for id.
 func (h herdHost) NearestFood(id entity.EntityID, accept func(item.Kind) bool) (entity.EntityID, int, int) {

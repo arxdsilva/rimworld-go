@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/domain/animal"
 	"strings"
 
@@ -58,6 +59,7 @@ type skillState struct {
 	// research: fractional research points (hundredths) under a
 	// research speed or cost that is not 100%.
 	research int
+	diet     diet.Book // food policies and who holds which (game/diet, FOOD-4), saved
 }
 
 // pawnFx is everything derived from a bio: the stat sheet and the per

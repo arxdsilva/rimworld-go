@@ -239,7 +239,7 @@ func (g *Game) prisonerPawnView(id entity.EntityID) PawnView {
 	pv := PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(), Status: v.Status.String(), Reason: v.Cause.String(),
 		Hunger: needs.Percent(n.Hunger), Rest: needs.Percent(n.Rest), Health: v.HP() * 100 / health.MaxHP, Malnutrition: int(body.Malnutrition(g.bodies[id])) / 10,
 		Weapon: weaponDefOf(g, id).Name, Prisoner: g.prison.Is(id), Visitor: g.visitor(id), Ally: g.isAlly(id), SleptInBed: g.sleptAt[id] != 0,
-		Recreation: g.joy[id] * 100 / recreation.Full}
+		Recreation: g.joy[id] * 100 / recreation.Full, FoodPolicy: g.sk.diet.Of(id, false).Name}
 	ts := g.prisonerThoughtList(id)
 	pv.Mood = mood.Level(ts)
 	pv.MoodTarget, pv.MoodLabel, pv.Thoughts = pv.Mood, mood.Label(pv.Mood), thoughtViews(ts)

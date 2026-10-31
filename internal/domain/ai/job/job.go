@@ -154,6 +154,18 @@ const (
 	Slaughter
 )
 
+// Hauls reports a haul job: a plain haul, or FOOD-4's hopper fill, a
+// haul whose destination is a hopper (the haul machinery runs both).
+func (k Kind) Hauls() bool { return k == Haul || k == FillHopper }
+
+// HaulKind is the kind of a haul to storage: FillHopper into a hopper.
+func HaulKind(toHopper bool) Kind {
+	if toHopper {
+		return FillHopper
+	}
+	return Haul
+}
+
 // Eating reports a meal under way: eating, or taking a paste meal from
 // a dispenser to eat (STO-2), which no hunger check replaces.
 func (k Kind) Eating() bool { return k == Eat || k == DispensePaste }

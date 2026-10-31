@@ -193,7 +193,7 @@ func TestJourneyNutrientPasteDispenser(t *testing.T) {
 	d := wdBuilding(j, 10, 5)
 	var hx, hy = 9, 5
 	wdBuild(j, "hopper", hx, hy)
-	if _, err := j.g.SpawnStack(item.Berries, 40, hx, hy); err != nil {
+	if _, err := j.g.SpawnStack(item.Potatoes, 40, hx, hy); err != nil { // FOOD-4: raw berries (no raw-food thought) would beat paste
 		t.Fatal(err)
 	}
 	j.tick(240) // the generator lights and the dispenser comes online

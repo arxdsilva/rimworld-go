@@ -13,7 +13,10 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-var cookOnly = work.Mask(0).Set(work.Cook, true)
+var (
+	cookOnly = work.Mask(0).Set(work.Cook, true)
+	haulOnly = work.Mask(0).Set(work.Haul, true) // FOOD-4: haulers fill the barrel
+)
 
 // barrel is a fake with a fermenting barrel (id 1) and its default fill
 // bill, and wort lying about.
@@ -33,20 +36,24 @@ func barrel(t *testing.T, wort int) (*fakeHost, *Craft) {
 	return f, c
 }
 
-// TestBarrelFermentsWortIntoBeer (wiki: Fermenting barrel): a cook pours
-// up to 25 wort in; at 20 C it ferments into as much beer in 6 days,
-// set down on the barrel's spot; the bill status says fermenting.
+// TestBarrelFermentsWortIntoBeer (wiki: Fermenting barrel): a hauler
+// (FOOD-4; never a cook) pours up to 25 wort in; at 20 C it ferments into
+// as much beer in 6 days, set down on the barrel's spot; the bill status
+// says fermenting.
 func TestBarrelFermentsWortIntoBeer(t *testing.T) {
 	t.Parallel()
 	f, c := barrel(t, 40)
-	j := runBill(t, f, c, cookOnly, 200)
+	if c.Shop.Assign(pawn, cookOnly) {
+		t.Fatal("a cook filled the barrel")
+	}
+	j := runBill(t, f, c, haulOnly, 200)
 	if j.State != job.Complete || c.Drying.Batch(1).Qty != recipe.BarrelWort || f.Stock(item.Wort) != 15 {
 		t.Fatalf("job %v barrel %+v wort left %d", j.State, c.Drying.Batch(1), f.Stock(item.Wort))
 	}
 	if _, st := c.Bills.Line(1, 0); st != BillFermenting {
 		t.Fatalf("status %q", st)
 	}
-	if c.Shop.Assign(pawn, cookOnly) {
+	if c.Shop.Assign(pawn, haulOnly) {
 		t.Fatal("a full barrel took more wort")
 	}
 	c.Drying.Advance(FermentTicks / 2)
@@ -103,7 +110,7 @@ func TestBarrelTemperature(t *testing.T) {
 
 // TestBarrelFillNoFlap: the barrel takes wort while empty or barely
 // started; once fermenting past TopUpPct it stays closed until emptied,
-// however the stock of wort or beer moves, so cooks never flap between
+// however the stock of wort or beer moves, so haulers never flap between
 // topping up and waiting.
 func TestBarrelFillNoFlap(t *testing.T) {
 	t.Parallel()
@@ -138,6 +145,7 @@ func TestBarrelFillNoFlap(t *testing.T) {
 // TestFineMealTakesVegAndMeat (wiki: Fine meal): five plant food and
 // five meat or animal product units (0.25 + 0.25 nutrition, FOOD-1) make
 // a fine meal, which carries the cook's poison roll like the simple meal.
+// FOOD-4: by nutrition, so one chicken egg (0.25) is the meat side.
 func TestFineMealTakesVegAndMeat(t *testing.T) {
 	t.Parallel()
 	f := newFake()
@@ -148,7 +156,7 @@ func TestFineMealTakesVegAndMeat(t *testing.T) {
 	f.put(51, item.Stack{Kind: item.Egg, Qty: 7, X: 2, Y: 1})
 	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.CookFineMeal, Mode: recipe.DoCount, Target: 1}})
 	j := runBill(t, f, c, cookOnly, 400)
-	if j.State != job.Complete || f.Stock(item.FineMeal) != 1 || f.meals != 1 || f.Stock(item.Corn) != 2 || f.Stock(item.Egg) != 2 {
+	if j.State != job.Complete || f.Stock(item.FineMeal) != 1 || f.meals != 1 || f.Stock(item.Corn) != 2 || f.Stock(item.Egg) != 6 {
 		t.Fatalf("job %v fine %d meals %d corn %d egg %d", j.State, f.Stock(item.FineMeal), f.meals, f.Stock(item.Corn), f.Stock(item.Egg))
 	}
 }

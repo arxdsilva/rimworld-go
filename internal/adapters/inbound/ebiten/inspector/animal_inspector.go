@@ -474,3 +474,27 @@ func (a Animal) animalCareCmd(an game.AnimalView) Button {
 			a.shell.Pick(float32(mx), float32(my), true, orders, func(i int) { a.Commands().runOption(opts[i]) })
 		}}
 }
+
+// AnimalFoodLines are the FOOD-3/FOOD-4 readouts of an animal: a tame
+// one's food policy, and for a wild one the chance it turns on whoever
+// hurts it (the difficulty's revenge), its wildness and the Animals level
+// a handler needs to tame it. Fields the simulation has not filled give no
+// line.
+func AnimalFoodLines(an game.AnimalView) []string {
+	var out []string
+	if an.Tame && an.FoodPolicy != "" {
+		out = append(out, "Food policy: "+an.FoodPolicy)
+	}
+	if !an.Tame {
+		if an.Revenge > 0 {
+			out = append(out, fmt.Sprintf("Revenge chance %d%%: it may turn on whoever hurts it", an.Revenge))
+		}
+		if an.Wildness > 0 {
+			out = append(out, fmt.Sprintf("Wildness %d%%", an.Wildness))
+		}
+		if an.MinHandling > 0 {
+			out = append(out, fmt.Sprintf("Needs Animals %d to tame", an.MinHandling))
+		}
+	}
+	return out
+}

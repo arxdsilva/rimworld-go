@@ -273,7 +273,7 @@ func TestDiningRoomThought(t *testing.T) {
 	}
 	id, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	st := item.Stack{Kind: item.Meal, Qty: 1}
-	g.afterEat(id, st)
+	g.afterEat(id, st, false)
 	if v, ok := memValue(g, id, mood.AteInDiningRoom); !ok || v < 2 {
 		t.Fatalf("ate in a %s dining room: %d %v", r.Label, v, ok)
 	}

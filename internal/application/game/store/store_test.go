@@ -103,25 +103,27 @@ func TestDispense(t *testing.T) {
 	if food := p.Food(w, w, w.bldgs[d]); food != 6*item.Meat.Nutrition()+75*item.Potatoes.Nutrition() {
 		t.Fatalf("food %d", food)
 	}
-	if !p.Dispense(w, w, d) {
-		t.Fatal("dispense")
+	if meal, ok := p.Dispense(w, w, d); !ok || meal.Kind != item.NutrientPasteMeal || meal.Ingredients[0] != item.Meat || meal.Ingredients[1] != 0 {
+		t.Fatalf("dispense %+v (FOOD-4: the meat is its ingredient)", meal)
 	}
 	if _, ok := w.stacks[first]; ok || w.stacks[second].Qty != 75 {
 		t.Fatalf("the first hopper pays first: %+v %+v", w.stacks[first], w.stacks[second])
 	}
 	before := w.stacks[second].Qty
-	p.Dispense(w, w, d)
+	if meal, _ := p.Dispense(w, w, d); !meal.HasIngredient(item.Potatoes) || meal.HasIngredient(item.Meat) {
+		t.Fatalf("second meal %+v", meal)
+	}
 	per := (PasteCost + item.Potatoes.Nutrition() - 1) / item.Potatoes.Nutrition()
 	if w.stacks[second].Qty != before-per {
 		t.Fatalf("potatoes %d, want %d", w.stacks[second].Qty, before-per)
 	}
 	w.dark[d] = true
-	if p.Dispense(w, w, d) || p.Ready(w, w) {
+	if _, ok := p.Dispense(w, w, d); ok || p.Ready(w, w) {
 		t.Fatal("no power, no paste")
 	}
 	w.dark[d] = false
 	w.SetStack(second, item.Stack{Kind: item.Potatoes, Qty: per - 1, X: 9, Y: 10})
-	if p.Dispense(w, w, d) || w.stacks[second].Qty != per-1 {
+	if _, ok := p.Dispense(w, w, d); ok || w.stacks[second].Qty != per-1 {
 		t.Fatal("too little food takes nothing")
 	}
 	w.SetStack(second, item.Stack{Kind: item.Meal, Qty: 9, X: 9, Y: 10}) // not raw food
@@ -153,7 +155,8 @@ func TestDispensePasteJob(t *testing.T) {
 		p.Do(w, w, w, pawn, j)
 		j = w.jobs[pawn]
 	}
-	if j.Kind != job.Eat || j.State != job.Do || w.stacks[j.Target].Kind != item.NutrientPasteMeal || w.claims[j.Target] != pawn {
+	if j.Kind != job.Eat || j.State != job.Do || w.stacks[j.Target].Kind != item.NutrientPasteMeal || w.claims[j.Target] != pawn ||
+		!w.stacks[j.Target].HasIngredient(item.Meat) { // FOOD-4: the paste meal remembers its meat
 		t.Fatalf("after dispensing: %+v %+v", j, w.stacks[j.Target])
 	}
 	if _, held := w.claims[d]; held || w.stacks[w.ItemAt(10, 14)].Qty != 12 {

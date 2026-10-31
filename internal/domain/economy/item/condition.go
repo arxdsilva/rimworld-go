@@ -5,9 +5,9 @@ import "rimworld-go/internal/domain/economy/quality"
 // Item condition (PRD-2): made things (apparel and weapons) have a
 // quality, hit points and, when stuffed, a material. A stack keeps the
 // hit points it lost in Stack.Wear, so 0 is pristine and older saves load
-// as new. Raw resources and food have no condition: food rots instead,
-// and the wiki gives no per-item deterioration rate for the raw
-// resources, so they keep forever as before.
+// as new. Food (FOOD-4) has hit points too and deteriorates outdoors at
+// its wiki rate, apart from rotting; the other raw resources have no
+// condition (the wiki gives them no rate here), so they keep forever.
 
 // HasQuality reports a kind made with a quality roll and with hit points:
 // apparel and weapons (wiki: Quality; furniture and art are buildings),
@@ -32,8 +32,45 @@ var maxHP = [numKinds]int{Parka: 140, Tuque: 80, Duster: 200, WoolParka: 140,
 // (kinds added later).
 const defaultMaxHP = 100
 
+// foodCondition is a food's hit points and deterioration (milli-HP a
+// day outdoors, dry). FOOD-4, wiki item pages: meals and nutrient paste
+// 50 HP and 10 a day, the survival meal 50 and 0.25 (Packaged survival
+// meal, Deterioration), pemmican 60 and 2, kibble 60 and 6, meat 60 and
+// 6 (Meat), raw plant food 100 and 6 (Rice, Berries). Milk, eggs and hay
+// have no published row: animal products as meat, hay as plant food
+// (original tuning). The legacy ration is a survival meal.
+type foodCondition struct{ hp, perDay int }
+
+var (
+	mealCondition  = foodCondition{50, 10000}
+	meatCondition  = foodCondition{60, 6000}
+	plantCondition = foodCondition{100, 6000}
+)
+
+// foodConditionOf is food kind k's row (ok false: not food).
+func foodConditionOf(k Kind) (foodCondition, bool) {
+	switch {
+	case !k.IsFood():
+		return foodCondition{}, false
+	case k == SurvivalMeal || k == Food:
+		return foodCondition{50, 250}, true
+	case k == Pemmican:
+		return foodCondition{60, 2000}, true
+	case k == Kibble:
+		return foodCondition{60, 6000}, true
+	case k.Nutrition() >= 9000:
+		return mealCondition, true
+	case k.IsMeat() || k == Milk || k == Egg || k == FertileEgg:
+		return meatCondition, true
+	}
+	return plantCondition, true
+}
+
 // MaxHP is kind k's base hit points (0: it has no condition).
 func MaxHP(k Kind) int {
+	if c, ok := foodConditionOf(k); ok {
+		return c.hp
+	}
 	if !HasQuality(k) {
 		return 0
 	}
@@ -123,6 +160,9 @@ func DeteriorationRate(s Stack, rain, wet bool) int {
 		return 0
 	}
 	r := DeteriorationPerDay
+	if c, ok := foodConditionOf(s.Kind); ok {
+		r = c.perDay // FOOD-4: the food's wiki rate
+	}
 	if l, ok := s.QualityLevel(); ok {
 		r = quality.Apply(r, l, quality.Deterioration)
 	}

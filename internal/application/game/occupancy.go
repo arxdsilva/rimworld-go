@@ -835,7 +835,7 @@ func (g *Game) arrivalOf(id entity.EntityID) arrival {
 		return arriveNearest
 	case job.Sleep, job.Relax, job.Bill, job.Research, job.Horseshoes:
 		return arriveExact
-	case job.Eat, job.Haul, job.Rescue:
+	case job.Eat, job.Haul, job.FillHopper, job.Rescue:
 		if j.Carry != 0 && j.PickupI >= len(j.Pickups) || g.care.Carry.Patient(id) != 0 {
 			return arriveExact
 		}

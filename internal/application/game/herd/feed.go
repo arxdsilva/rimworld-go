@@ -29,9 +29,10 @@ func Due(a *animal.State) bool {
 	return a.Tame && a.Downed && !a.Dead() && a.Food < animal.FeedStart && !animal.NeedsFree(a.Species)
 }
 
-// feedable is food diet d eats at tier t.
-func feedable(d animal.Diet, t animal.Tier) func(item.Kind) bool {
-	return func(k item.Kind) bool { return animal.FeedValue(d, k) > 0 && animal.FoodTier(k) == t }
+// feedable is food diet d eats at tier t that the animal's food policy
+// allows (FOOD-4).
+func feedable(d animal.Diet, t animal.Tier, allowed func(item.Kind) bool) func(item.Kind) bool {
+	return func(k item.Kind) bool { return animal.FeedValue(d, k) > 0 && animal.FoodTier(k) == t && allowed(k) }
 }
 
 // Assign sends handler id to feed the nearest due animal no one holds.
@@ -49,9 +50,10 @@ func (f *Feed) Assign(id entity.EntityID) bool {
 	}
 	a, _ := h.Animal(aid)
 	diet := animal.EcologyOf(a.Species).Diet
-	food, fx, fy := h.NearestFood(id, feedable(diet, animal.TierFeed))
+	allowed := h.Policy(aid)
+	food, fx, fy := h.NearestFood(id, feedable(diet, animal.TierFeed, allowed))
 	if food == 0 {
-		food, fx, fy = h.NearestFood(id, feedable(diet, animal.TierMeal))
+		food, fx, fy = h.NearestFood(id, feedable(diet, animal.TierMeal, allowed))
 	}
 	if _, _, beside := h.BesideSpot(id, ax, ay); food == 0 || !beside {
 		f.failed(aid, now)

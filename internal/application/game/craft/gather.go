@@ -130,9 +130,9 @@ func takeFor(in recipe.Input, cands, out []pick) ([]pick, bool) {
 			c.take, c.left = in.Take(c.left), 0
 			return append(out, *c), true
 		}
-		take := min(need, c.left)
+		take := min(in.Items(c.st, need), c.left) // FOOD-4: food by nutrition (Weight)
 		c.left -= take
-		need -= take
+		need = max(0, need-take*in.Weight(c.st))
 		pk := *c
 		pk.take = take
 		out = append(out, pk)
@@ -187,6 +187,36 @@ func groupByKind(ps []pick) []pick {
 	return out
 }
 
+// Nearest is the nearest free stack pawn id may take (id 0: anyone) that
+// feeds in on its own, ties by id (0 when none): bills, and the game's
+// refuelling, surgery and medicine fetches.
+func (s *Shop) Nearest(id entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
+	return s.p.nearest(id, in)
+}
+
+// nearest is Nearest: lying free, not forbidden, enough of it unclaimed
+// by other pawns (RES-1), not rotten (a rotten body still burns on a
+// pyre).
+func (p planner) nearest(id entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
+	px, py, _ := p.h.Pos(id)
+	var best entity.EntityID
+	var bst item.Stack
+	bestD := 1 << 30
+	for _, iid := range p.h.ItemIDs() {
+		st, ok := p.h.Stack(iid)
+		if !ok || st.Carrier != 0 || st.Forbidden || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() && st.Kind != item.CorpseHuman {
+			continue
+		}
+		if p.h.Claims().FreeFor(id, iid, st.Qty) < in.Qty {
+			continue
+		}
+		if d := pathing.Dist(px, py, st.X, st.Y); d < bestD || d == bestD && iid < best {
+			best, bst, bestD = iid, st, d
+		}
+	}
+	return best, bst
+}
+
 // available reports whether bill bl at a bench with work spot spot can
 // have its ingredients now (the read model's "waiting for ingredients").
 // It allocates nothing for a single-input recipe: the read model asks
@@ -198,7 +228,7 @@ func (p planner) available(bl recipe.Bill, d recipe.Def, spot [2]int) bool {
 		return ok
 	}
 	in := d.Input
-	if sid, st := p.h.Ingredient(0, in); sid != 0 && p.fits(bl, st, spot) {
+	if sid, st := p.nearest(0, in); sid != 0 && p.fits(bl, st, spot) {
 		return true
 	}
 	n := 0
@@ -224,7 +254,7 @@ func (p planner) available(bl recipe.Bill, d recipe.Def, spot [2]int) bool {
 			}
 			continue
 		}
-		if n += free; n >= in.Qty {
+		if n += free * in.Weight(st); n >= in.Qty { // FOOD-4: food by nutrition
 			return true
 		}
 	}

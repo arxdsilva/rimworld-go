@@ -194,12 +194,15 @@ func TestGrownGolden(t *testing.T) {
 	// stockpiles allow every storable kind, so their filters gain the seven
 	// new food kinds' bits; with both hidden the previous pin comes back
 	// exactly. Stable over -count=2.
-	// Re-pinned (FOOD-1..3): vanilla nutrition and hunger with malnutrition,
-	// wiki crop and tree growth with night rest and the light rule,
+	// Re-pinned (FOOD-4): the start kit's legacy ration is now survival
+	// meals, recipes take nutrition, fueled stoves, food policies, wiki
+	// meal moods, rot and poisoning. Before that, re-pinned (FOOD-1..3):
+	// vanilla nutrition and hunger with malnutrition, wiki crop and tree
+	// growth with night rest and the light rule,
 	// butchering by body size, per-species animal products, taming food and
 	// auto-slaughter; the previous pin held through FOOD-0 (the committed
 	// full suite). Stable over -count=2.
-	const want uint64 = 0xb944008f031aeff4
+	const want uint64 = 0x960a909c5e05d6bd
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

@@ -1035,10 +1035,10 @@ func (g *Game) LoadStartKit() error {
 			return err
 		}
 	}
-	if _, err := g.SpawnStack(item.Food, 20, cx+2, cy+1); err != nil {
+	if _, err := g.SpawnStack(item.SurvivalMeal, 20, cx+2, cy+1); err != nil {
 		return err
 	}
-	if _, err := g.SpawnStack(item.Food, 10, cx+3, cy+1); err != nil {
+	if _, err := g.SpawnStack(item.SurvivalMeal, 10, cx+3, cy+1); err != nil {
 		return err
 	}
 	if _, err := g.SpawnStack(item.Wood, 30, cx+2, cy+3); err != nil {
@@ -1193,7 +1193,7 @@ func (g *Game) snapshot() []PawnView {
 		pv := &views[len(views)-1]
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 		g.fillSocialPawn(pv, pv.Mood) // social_view.go: smoothed mood, target, bubble (ENG-003)
-		pv.Health, pv.Malnutrition = v.HP()*100/health.MaxHP, int(body.Malnutrition(g.bodies[id]))/10
+		pv.Health, pv.Malnutrition, pv.FoodPolicy = v.HP()*100/health.MaxHP, int(body.Malnutrition(g.bodies[id]))/10, g.sk.diet.Of(id, false).Name
 		pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
 		pv.InfectionLosing, pv.UntendedHours = g.infectionLosing(id), g.untendedHours(id)
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
@@ -1302,6 +1302,7 @@ func (g *Game) world() WorldView {
 	// plant_view.go): with the view cache on, each keeps its last slice
 	// while it reads the same (PERF-002).
 	g.fillItemViews(&w)
+	fillDietView(g, &w) // food.go (FOOD-4): food policies, days of food
 	w.Frames = g.frameViews()
 	w.Buildings = g.buildingViews()
 	w.Plants = g.plantViews()
@@ -1339,7 +1340,7 @@ func (g *Game) world() WorldView {
 }
 
 func lastMealName(g *Game, id entity.EntityID) string {
-	if k, ok := g.lastMealKind(id); ok {
+	if k, ok := g.lastMeal[id]; ok {
 		return k.String()
 	}
 	return ""

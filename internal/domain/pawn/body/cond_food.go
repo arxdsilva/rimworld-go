@@ -6,7 +6,12 @@ import "rimworld-go/internal/domain/sim/clock"
 // It runs by time, not by a race, like the anaesthetic: initial for the
 // first FoodPoisonInitialHours, major to FoodPoisonMajorHours, recovering
 // to FoodPoisonHours, then gone. It never kills, builds no immunity and
-// takes no tending. Original tuning (not the wiki's).
+// takes no tending. wiki: Ailments, Food poisoning (FOOD-4): initial
+// 0-4 h, major 4-20 h, recovering 20-24 h; consciousness x0.6 / x0.5,
+// moving x0.8 / x0.5, manipulation x0.9 / x0.8 and pain +20 % / +40 %
+// (initial and recovering alike), as offsets on a full capacity; a vomit
+// every 0.3 / 0.2 / 0.4 days on average. The eating capacity and the
+// bionic stomach's halving are not modelled.
 //
 // The game steps it hourly (StepFoodPoisoning), setting Stage from the
 // hours since it was caught and Sev to the share still to run (1000 → 0)
@@ -20,22 +25,24 @@ var condsFood = []CondEntry{{CondFoodPoisoning, CondDef{
 	Label:      "food poisoning",
 	NoImmunity: true,
 	Stages: []Stage{
-		{At: 0, Label: "recovering", Mods: CapMods{off(Consciousness, -50)}},
-		{At: foodMajorAt, Label: "major", PainAdd: 100, Mods: CapMods{
-			off(Consciousness, -200), off(Moving, -100), off(Manipulation, -100)}},
-		{At: foodInitialAt, Label: "initial", Mods: CapMods{
-			off(Consciousness, -100), off(Moving, -50), off(Manipulation, -50)}},
+		{At: 0, Label: "recovering", PainAdd: 200, Mods: foodMild},
+		{At: foodMajorAt, Label: "major", PainAdd: 400, Mods: CapMods{
+			off(Consciousness, -500), off(Moving, -500), off(Manipulation, -200)}},
+		{At: foodInitialAt, Label: "initial", PainAdd: 200, Mods: foodMild},
 	},
 }}}
 
-// Food poisoning timing (hours), the severities its stages sit at, and
-// the mean hours between vomits per stage (0: none).
+// foodMild is the initial and recovering stages' capacities.
+var foodMild = CapMods{off(Consciousness, -400), off(Moving, -200), off(Manipulation, -100)}
+
+// Food poisoning timing (hours), the severities its stages sit at (the
+// share of the day still to run), and the stages.
 const (
 	FoodPoisonInitialHours = 4
-	FoodPoisonMajorHours   = 16
+	FoodPoisonMajorHours   = 20
 	FoodPoisonHours        = 24
-	foodMajorAt            = 300
-	foodInitialAt          = 800
+	foodMajorAt            = 167 // 4 of 24 h left
+	foodInitialAt          = 834 // 20 of 24 h left
 	FoodStageRecovering    = 0
 	FoodStageMajor         = 1
 	FoodStageInitial       = 2
@@ -43,8 +50,9 @@ const (
 	FoodPoisonRestStage = FoodStageMajor
 )
 
-// foodVomitEvery is each stage's mean hours between vomits.
-var foodVomitEvery = [...]int32{FoodStageRecovering: 0, FoodStageMajor: 4, FoodStageInitial: 8}
+// foodVomitEvery is each stage's mean hours between vomits (0.4, 0.2
+// and 0.3 days, rounded to hours).
+var foodVomitEvery = [...]int32{FoodStageRecovering: 10, FoodStageMajor: 5, FoodStageInitial: 7}
 
 // FoodVomitEvery is the mean hours between vomits at food-poisoning stage
 // s (0: none).
@@ -66,6 +74,14 @@ func (b *Body) Poisoned() (Condition, bool) {
 	}
 	return *c, true
 }
+
+// FoodPoisonRest reports b's food poisoning at its major stage: the
+// colonist goes to bed (bed rest: in at major, out at recovering).
+func FoodPoisonRest(b *Body) bool { c, ok := b.Poisoned(); return ok && c.Stage == FoodPoisonRestStage }
+
+// FoodPoisonSick reports b's food poisoning not yet recovering: a patient
+// in bed stays there until it is (FoodPoisonRest's hysteresis).
+func FoodPoisonSick(b *Body) bool { c, ok := b.Poisoned(); return ok && c.Stage >= FoodPoisonRestStage }
 
 // Poison gives the body fresh food poisoning at tick now; it reports
 // false when it already has some (a second bad meal changes nothing).

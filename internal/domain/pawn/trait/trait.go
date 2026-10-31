@@ -62,6 +62,9 @@ const (
 	Hedonist
 	AugmentFan
 	NaturalPurist
+	// Cannibal (FOOD-4, append only): delights in human flesh (game/diet
+	// flips the human meat thoughts) and is untroubled by butchering.
+	Cannibal
 	NumTraits
 )
 
@@ -142,7 +145,7 @@ var defs = [NumTraits]Def{
 	HeartyEater: {Key: "hearty_eater", Label: "Hearty eater", Group: GroupAppetite,
 		Desc:       "{name} eats like two people and enjoys a proper meal more than most.",
 		Mods:       []stat.Mod{{Stat: stat.HungerRate, Mul: 1250}},
-		AddThought: map[mood.Kind]int8{mood.AteMeal: 2}},
+		AddThought: map[mood.Kind]int8{mood.AteFineMeal: 2, mood.AteLavishMeal: 2}}, // FOOD-4: the simple-meal thought is gone
 	LightEater: {Key: "light_eater", Label: "Light eater", Group: GroupAppetite,
 		Desc: "{name} gets by on a few mouthfuls and forgets meals entirely when busy.",
 		Mods: []stat.Mod{{Stat: stat.HungerRate, Mul: 800}}},
@@ -221,6 +224,11 @@ var defs = [NumTraits]Def{
 		Desc: "{name} sees the body as a first draft and dreams of upgrades."},
 	NaturalPurist: {Key: "natural_purist", Label: "Natural purist", Group: GroupAugment, Note: "Unhappy with artificial parts",
 		Desc: "{name} would rather limp than walk on something made in a workshop."},
+	// wiki: Traits (Cannibal: commonality 0.6, here Rarity 2; raw human
+	// flesh +20 and a meal of it +15 instead of -20 and -15, no butchery
+	// thoughts).
+	Cannibal: {Key: "cannibal", Label: "Cannibal", Rarity: 2, Note: "Enjoys human flesh; untroubled by butchering people",
+		Desc: "{name} sees no reason to waste good meat just because it once had a name."},
 }
 
 // Generated lists the traits pawn generation may roll, in ID order: under

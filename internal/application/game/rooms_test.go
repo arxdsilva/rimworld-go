@@ -62,7 +62,7 @@ func TestRoomsDetectedAndScored(t *testing.T) {
 func TestMoodFromEatingAndSleeping(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	id, _ := g.SpawnNamedPawn(10, 5, "Ada")
-	g.SpawnStack(item.Berries, 2, 11, 5)
+	g.SpawnStack(item.Potatoes, 4, 11, 5) // FOOD-4: berries are exempt from the raw-food thought
 	g.SetNeeds(id, needs.CriticalHunger-1, needs.Full)
 	g.Step(TicksPerCell*10 + needs.EatWorkTicks + 5)
 	p := pawn(t, g, id)
@@ -76,11 +76,13 @@ func TestMoodFromEatingAndSleeping(t *testing.T) {
 	if p.Mood >= mood.Base || p.MoodLabel == "" {
 		t.Fatalf("raw food outdoors should lower mood: %d %s", p.Mood, p.MoodLabel)
 	}
-	// a cooked meal at a table cheers them up
+	// a fine meal at a table cheers them up (FOOD-4: the wiki's +5; a
+	// table adds nothing, its lack -3)
 	box(t, g, 2, 2, 7, 7, [2]int{4, 7})
 	placeBuilt(t, g, construction.Table, construction.South, 4, 4)
 	g.positions.Set(id, Position{X: 3, Y: 4})
-	g.SpawnStack(item.Meal, 1, 3, 4)
+	g.memories[id] = nil
+	g.SpawnStack(item.FineMeal, 1, 3, 4)
 	g.SetNeeds(id, needs.CriticalHunger-1, needs.Full)
 	g.Step(needs.EatWorkTicks + 10)
 	p = pawn(t, g, id)
@@ -88,7 +90,7 @@ func TestMoodFromEatingAndSleeping(t *testing.T) {
 	for _, th := range p.Thoughts {
 		labels[th.Label] = true
 	}
-	if !labels["ate a cooked meal"] || !labels["ate at a table"] || labels["ate without a table"] {
+	if !labels["ate a fine meal"] || labels["ate at a table"] || labels["ate without a table"] {
 		t.Fatalf("thoughts after meal = %+v", p.Thoughts)
 	}
 }

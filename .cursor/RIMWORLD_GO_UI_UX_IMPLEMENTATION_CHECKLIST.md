@@ -493,7 +493,7 @@ the player's primary world-editing command surface.
 
 ## 6.3 Growing-zone configuration
 
--   [-] **Crop selector** (the architect's crop picker and, PLAY-020, a selected zone's "Plant: <crop>" list with research locks; no search, skill, growth time, sensitivity or yield columns)
+-   [-] **Crop selector** (the architect's crop picker and, PLAY-020, a selected zone's "Plant: <crop>" list with research locks; FOOD-5: each crop button's hover card gives days on soil, gravel and rich soil, yield, Plants skill, hydroponics, frost and shelf life; no search, no numbers on the zone pane's list)
     -   Searchable plant list.
     -   required skill.
     -   growth time.
@@ -963,8 +963,8 @@ understandable.
 
 ## 16.5 Fertility overlay
 
--   [ ] **Terrain fertility**
--   [ ] **Growing-zone usefulness**
+-   [x] **Terrain fertility** (FOOD-5: Shift+F tints ground by fertility: poor amber, soil olive, rich green)
+-   [-] **Growing-zone usefulness** (FOOD-5: growing zone cells are marked under the same toggle; no per-zone yield estimate)
 
 ## 16.6 Beauty overlay
 
@@ -1008,8 +1008,8 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 17.3 Food policy editor
 
--   [ ] **Hierarchical food filter**
--   [ ] **Allow/disallow**
+-   [x] **Hierarchical food filter** (FOOD-5: Assign > Food policies; the Foods branch of the storage filter tree)
+-   [x] **Allow/disallow**
 -   [ ] **Search**
 -   [ ] **Food category explanation**
 

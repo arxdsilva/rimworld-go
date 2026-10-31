@@ -156,6 +156,17 @@ const (
 	// ButcherHuman (FOOD-3, append only, saved) butchers a human corpse
 	// into human meat; never a default bill (wiki: Butcher table).
 	ButcherHuman
+	// FOOD-4 (append only, saved): the vegetarian and carnivore fine and
+	// lavish meals and the x4 batch bills (wiki: Meals).
+	CookFineMealVeg
+	CookFineMealMeat
+	CookLavishMealVeg
+	CookLavishMealMeat
+	CookSimpleMealBulk
+	CookFineMealBulk
+	CookLavishMealBulk
+	CookSurvivalMealBulk
+	CookPemmicanBulk
 	numRecipes
 )
 
@@ -185,6 +196,8 @@ type Input struct {
 	Wreck bool
 	// Hops (FOOD-2) takes hops or brewgrain, the wort crops.
 	Hops bool
+	// Hay (FOOD-4) lets an AnyVeg input take hay too (wiki: Kibble).
+	Hay bool
 }
 
 // Take is how many items the input takes from a stack of qty.
@@ -256,10 +269,10 @@ var defs = [numRecipes]Def{
 	ButcherAnimal: {ID: ButcherAnimal, Name: "butcher_animal", Label: "Butcher animal", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseAnimal, Qty: 1}, Output: item.Meat, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, BySpecies: true, Also: []construction.Kind{construction.ButcherSpot}},
-	// Cooking over an open fire is half again as slow as at a stove.
+	// wiki: Simple meal: cooking over a campfire doubles the work (600).
 	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
 		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 10}, Output: item.Meal, OutQty: 1,
-		Work: 180, Skill: work.Cook, Learn: skill.Cooking},
+		Work: 240, Skill: work.Cook, Learn: skill.Cooking},
 	// Tailoring: a parka takes the hides of about three deer.
 	MakeParka: {ID: MakeParka, Name: "make_parka", Label: "Sew leather parka", Bench: construction.TailoringBench,
 		Input: Input{Kind: item.Leather, Qty: 14, Stuff: item.MadeFrom(item.Parka)}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft, Learn: skill.Crafting},
@@ -399,7 +412,7 @@ var defs = [numRecipes]Def{
 	MakeBattleTonic:      drug(MakeBattleTonic, "make_battle_tonic", "Make battle tonic", item.BattleTonic, 600, 0, Input{Kind: item.Reagent, Qty: 2}, Input{Kind: item.Silverdust, Qty: 1}),
 	MakeReagent:          drug(MakeReagent, "make_reagent", "Distil reagent", item.Reagent, 700, 4, Input{Kind: item.Chemfuel, Qty: 4}, Input{Kind: item.AshleafLeaf, Qty: 2}),
 	RefineChemfuelWood:   refine(RefineChemfuelWood, "refine_chemfuel_wood", "Make chemfuel from wood", Input{Kind: item.Wood, Qty: 70}, 200),
-	RefineChemfuelFood:   refine(RefineChemfuelFood, "refine_chemfuel_food", "Make chemfuel from raw food", Input{AnyRaw: true, Qty: 14}, 250),
+	RefineChemfuelFood:   refine(RefineChemfuelFood, "refine_chemfuel_food", "Make chemfuel from raw food", Input{AnyRaw: true, Qty: 70}, 250),
 	FabricateAdvanced:    made(FabricateAdvanced, "fabricate_advanced", "Fabricate advanced component", construction.FabricationBench, item.AdvancedComponents, 1000, 8, in(item.Components, 1), in(item.Steel, 2), in(item.Plasteel, 1), in(item.Gold, 1)),
 	SmeltApparel:         smeltWear(),
 	MakeFlakVest:         made(MakeFlakVest, "make_flak_vest", "Make flak vest", construction.MachiningTable, item.FlakVest, 900, 0, in(item.Steel, 6), in(item.Cloth, 3), in(item.Components, 1)),
@@ -422,6 +435,16 @@ var defs = [numRecipes]Def{
 	ButcherHuman: {ID: ButcherHuman, Name: "butcher_human", Label: "Butcher human", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Output: item.HumanMeat, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
 		BySpecies: true, Also: []construction.Kind{construction.ButcherSpot}},
+	// FOOD-4 (food4.go).
+	CookFineMealVeg:      oneSided(CookFineMealVeg, "cook_fine_meal_veg", "Cook fine meal (vegetarian)", item.FineMeal, Input{AnyVeg: true, Qty: 15}, 450, 6),
+	CookFineMealMeat:     oneSided(CookFineMealMeat, "cook_fine_meal_meat", "Cook fine meal (carnivore)", item.FineMeal, Input{AnyMeat: true, Qty: 15}, 450, 6),
+	CookLavishMealVeg:    oneSided(CookLavishMealVeg, "cook_lavish_meal_veg", "Cook lavish meal (vegetarian)", item.LavishMeal, Input{AnyVeg: true, Qty: 25}, 800, 8),
+	CookLavishMealMeat:   oneSided(CookLavishMealMeat, "cook_lavish_meal_meat", "Cook lavish meal (carnivore)", item.LavishMeal, Input{AnyMeat: true, Qty: 25}, 800, 8),
+	CookSimpleMealBulk:   bulkSimple(),
+	CookFineMealBulk:     bulk(CookFineMealBulk, "cook_fine_meal_bulk", "Cook 4 fine meals", item.FineMeal, 5, bulkFineWork, 6),
+	CookLavishMealBulk:   bulk(CookLavishMealBulk, "cook_lavish_meal_bulk", "Cook 4 lavish meals", item.LavishMeal, 10, bulkLavishWork, 8),
+	CookSurvivalMealBulk: bulk(CookSurvivalMealBulk, "cook_survival_meal_bulk", "Cook 4 packaged survival meals", item.SurvivalMeal, 6, bulkSurvivalWork, 8),
+	CookPemmicanBulk:     meal(CookPemmicanBulk, "cook_pemmican_bulk", "Make pemmican x4", item.Pemmican, 20, 20, 64, 2800, 0), // wiki: Pemmican
 }
 
 // servoSkill and servoWork are the servo tier's crafting level and work
@@ -488,7 +511,7 @@ func (in Input) Accepts(k item.Kind) bool {
 	case in.Smelt, in.SmeltWear:
 		return smeltable(k, in.SmeltWear)
 	case in.AnyVeg:
-		return plantFood(k)
+		return plantFood(k) || in.Hay && k == item.Hay
 	case in.AnyMeat:
 		return animalFood(k)
 	case in.AnyRaw:
@@ -566,12 +589,17 @@ func (in Input) Label() string {
 		name = "metal weapon"
 	case in.SmeltWear:
 		name = "metal apparel"
+	case in.AnyVeg && in.Hay:
+		name = "plant food or hay"
 	case in.AnyVeg:
 		name = "plant food"
 	case in.AnyMeat:
 		name = "meat or animal product"
 	case in.Wreck:
 		name = "mechanoid wreck"
+	}
+	if in.ByNutrition() { // FOOD-4: food counts nutrition, e.g. "0.5 nutrition of raw food"
+		return strconv.FormatFloat(float64(in.Qty*NutritionUnit)/10000, 'f', -1, 64) + " nutrition of " + name
 	}
 	return strconv.Itoa(in.Qty) + " " + name
 }

@@ -144,11 +144,14 @@ type Set struct {
 	// storage is the Storage settings window's state (storage.go).
 	storage *storageState
 
-	histTab int // the History window's tab: 0 events, 1 combat
+	histTab int // the History window's tab: 0 events, 1 combat, 2 records
+
+	// food is the Food policies window's state (foodpolicy.go).
+	food *foodState
 }
 
 // New builds the feature over its shell.
-func New(sh Shell) *Set { return &Set{sh: sh, storage: &storageState{}} }
+func New(sh Shell) *Set { return &Set{sh: sh, storage: &storageState{}, food: &foodState{}} }
 
 // The windows, each a view over the set.
 type (

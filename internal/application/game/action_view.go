@@ -53,7 +53,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 			return ActionAim
 		}
 		return ActionMelee
-	case job.Haul:
+	case job.Haul, job.FillHopper:
 		if active && j.Carry != 0 {
 			return ActionHaul
 		}

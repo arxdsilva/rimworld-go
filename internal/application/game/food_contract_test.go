@@ -15,16 +15,17 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 )
 
-// TestFoodContractCommandsAreInert (FOOD-0): the food policy commands
-// change nothing until FOOD-4 handles them: a colony that got them hashes
-// as its twin that didn't (FOOD-3 handles SetAutoSlaughter:
-// herd_food3_test.go).
-func TestFoodContractCommandsAreInert(t *testing.T) {
+// TestFoodContractCommandsRoute (FOOD-0, flipped by FOOD-4): the food
+// policy commands reach game/diet and the food views are filled (the
+// policy behaviour itself: diet_food4_test.go).
+func TestFoodContractCommandsRoute(t *testing.T) {
 	t.Parallel()
-	a, b := NewColony(Config{Seed: 7, Width: 40, Height: 40}), NewColony(Config{Seed: 7, Width: 40, Height: 40})
+	a := NewColony(Config{Seed: 7, Width: 40, Height: 40})
 	a.Step(30)
-	b.Step(30)
 	pawn := uint64(a.Snapshot()[0].ID)
+	if p := a.Snapshot()[0]; p.FoodPolicy != "Lavish" || len(a.World().FoodPolicies) != 7 {
+		t.Fatalf("defaults: pawn %q, policies %v", p.FoodPolicy, a.World().FoodPolicies)
+	}
 	for _, c := range []command.Command{
 		{Kind: command.SetFoodPolicy, Pawn: pawn, Index: 2},
 		{Kind: command.EditFoodPolicy, Index: 0, Mode: command.FoodPolicyAllow, Name: "Foods/Raw food", Enabled: false},
@@ -35,17 +36,9 @@ func TestFoodContractCommandsAreInert(t *testing.T) {
 		a.Enqueue(c)
 	}
 	a.ApplyPending()
-	a.Step(60)
-	b.Step(60)
-	if a.StateHash() != b.StateHash() {
-		t.Fatal("a FOOD-0 contract command changed the state")
-	}
 	w := a.World()
-	if w.FoodDays != 0 || w.FoodPolicies != nil {
-		t.Fatalf("food views filled before FOOD-4/5: %d %v", w.FoodDays, w.FoodPolicies)
-	}
-	if p := a.Snapshot()[0]; p.FoodPolicy != "" || p.Malnutrition != 0 {
-		t.Fatalf("pawn food views filled before FOOD-1/4: %q %d", p.FoodPolicy, p.Malnutrition)
+	if p := a.Snapshot()[0]; p.FoodPolicy != "Simple" || len(w.FoodPolicies) != 7 || w.FoodPolicies[6].Name != "vegetarian" || w.FoodDays <= 0 {
+		t.Fatalf("after the commands: pawn %q, policies %v, days %d", p.FoodPolicy, w.FoodPolicies, w.FoodDays)
 	}
 }
 
@@ -118,7 +111,8 @@ func TestFoodContractBuildingsAndKinds(t *testing.T) {
 	}
 	for k, v := range map[mood.Kind]int{mood.AteFineMeal: 5, mood.AteLavishMeal: 12, mood.AteKibble: -12,
 		mood.AteHumanMeat: -20, mood.ButcheredHuman: -6, mood.ObservedButchery: -6, mood.Ravenous: -12,
-		mood.Malnourished: -20, mood.AteInsectMeat: -6} {
+		mood.Malnourished: -20, mood.AteInsectMeat: -6, mood.AteRaw: -7, mood.AtePaste: -4, mood.AteWithoutTable: -3,
+		mood.AteHumanMeatCooked: -15, mood.AteInsectMeatCooked: -3} { // FOOD-4: wiki: Food, Human meat, Insect meat
 		if d := mood.DefOf(k); d.Value != v || d.Label == "" {
 			t.Errorf("mood %d: %q %d, want %d", k, d.Label, d.Value, v)
 		}

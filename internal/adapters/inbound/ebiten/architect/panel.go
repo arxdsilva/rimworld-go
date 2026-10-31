@@ -336,7 +336,7 @@ func (t *Tool) descButtons(r gfx.Rect) []uikit.Button {
 				ID: ids.PrefixArchCrop + c.Name, Label: CropLabel(c.Name),
 				X: r.X + archPad + float32(col)*(plan.cropW+archBtnGap),
 				Y: r.Y + plan.cropTop + float32(row)*(archBtnH+archBtnGap),
-				W: plan.cropW, H: archBtnH, Selected: c.Name == sel,
+				W: plan.cropW, H: archBtnH, Selected: c.Name == sel, Tip: CropTip(c),
 			}
 			if p := t.sh.LockedBy("crop:" + c.Name); p != "" {
 				b.Disabled, b.Reason, b.Selected, b.Quiet = true, "Needs research: "+p, false, true
@@ -350,3 +350,36 @@ func (t *Tool) descButtons(r gfx.Rect) []uikit.Button {
 // ZoneSpecies is what a growing zone can sow (game.ZoneSpecies), read
 // once: it is static and rebuilt on every call.
 var ZoneSpecies = sync.OnceValue(game.ZoneSpecies)
+
+// CropTip is a crop button's hover card with the published numbers: days
+// to ripen on plain, poor and rich soil, the yield per plant, the Plants
+// skill needed, whether a hydroponics basin grows it, the frost that kills
+// it and how long the produce keeps. Trees and other zero rows give just
+// what they have.
+func CropTip(c game.CropView) string {
+	var b strings.Builder
+	b.WriteString(CropLabel(c.Name))
+	b.WriteString("\n")
+	if c.Days > 0 {
+		fmt.Fprintf(&b, "Ripe in %.1f days on soil (%.1f on gravel, %.1f on rich soil).", c.Days, c.GravelDay, c.RichDays)
+	}
+	if c.Yield > 0 {
+		fmt.Fprintf(&b, " Yields %d %s per plant.", c.Yield, c.Label)
+	}
+	if c.MinSkill > 0 {
+		fmt.Fprintf(&b, " Needs Plants %d to sow.", c.MinSkill)
+	}
+	if c.Hydro {
+		b.WriteString(" Grows in a hydroponics basin.")
+	}
+	if c.FrostKill != 0 {
+		fmt.Fprintf(&b, " Killed by frost below %.0f C.", float64(c.FrostKill)/10)
+	}
+	if c.ShelfDays > 0 {
+		fmt.Fprintf(&b, " Keeps %.0f days.", c.ShelfDays)
+	}
+	if c.Lifespan > 0 {
+		fmt.Fprintf(&b, " Lives %.0f days.", c.Lifespan)
+	}
+	return b.String()
+}

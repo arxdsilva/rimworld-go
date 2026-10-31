@@ -25,6 +25,7 @@ type fakeHost struct {
 	jobs    map[entity.EntityID]job.Record
 	claims  map[entity.EntityID]entity.EntityID
 	next    entity.EntityID
+	banned  item.Kind // Policy forbids it (FOOD-4)
 	msgs    []string
 	killed  []entity.EntityID
 	tamed   []entity.EntityID
@@ -114,6 +115,9 @@ func (f *fakeHost) BesideSpot(_ entity.EntityID, x, y int) (int, int, bool) {
 }
 func (f *fakeHost) PathTo(entity.EntityID, int, int) ([]pathing.Point, bool) { return nil, true }
 func (f *fakeHost) Work(entity.EntityID) int                                 { return 1000 }
+func (f *fakeHost) Policy(entity.EntityID) func(item.Kind) bool {
+	return func(k item.Kind) bool { return k != f.banned || k == 0 }
+}
 func (f *fakeHost) NearestFood(_ entity.EntityID, accept func(item.Kind) bool) (entity.EntityID, int, int) {
 	ids := make([]entity.EntityID, 0, len(f.stacks))
 	for id := range f.stacks {
@@ -331,6 +335,12 @@ func TestFeedDownedAnimal(t *testing.T) {
 	}
 	f.now += FeedRetry
 	f.stacks[50] = item.Stack{Kind: item.Kibble, Qty: 80, X: 1, Y: 1}
+	f.banned = item.Kibble // FOOD-4: its food policy forbids kibble
+	if hd.Feed.Assign(handler) {
+		t.Fatal("the policy's forbidden food: no run")
+	}
+	f.now += FeedRetry
+	f.banned = 0
 	if !hd.AssignTame(handler) || f.jobs[handler].Kind != job.FeedPatient {
 		t.Fatalf("feed the downed dog first: %+v", f.jobs[handler])
 	}

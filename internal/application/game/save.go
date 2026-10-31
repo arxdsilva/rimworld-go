@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/rest"
@@ -377,6 +378,7 @@ type saveState struct {
 	// DEF-4 (raid/mech.go): mechanoid stuns and guard posts, crashed ship
 	// parts; nil when there are none (absent in older saves).
 	Mechs *raid.MechSave
+	Diet  *diet.Save // FOOD-4 (game/diet): food policies and holders; nil at the defaults (absent in older saves)
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -501,6 +503,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
 	s.Turrets, s.Shots, s.Smoke = g.combat.Turrets.Export(), g.combat.Shots.Export(), g.combat.Blasts.Export()
 	s.Mechs = g.raid.Mechs.Export() // raid/mech.go (DEF-4)
+	s.Diet = g.sk.diet.Export()     // game/diet (FOOD-4): nil at the defaults
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -693,6 +696,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.combat.Shots.Import(s.Shots)
 	g.combat.Blasts.Import(s.Smoke)
 	g.raid.Mechs.Import(s.Mechs) // raid/mech.go (DEF-4)
+	g.sk.diet.Import(s.Diet)     // game/diet (FOOD-4)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History

@@ -145,7 +145,7 @@ func (g *Game) fillPawnMotion(pv *PawnView) {
 		}
 		pv.GoalX, pv.GoalY = walkTarget(j)
 		pv.HasGoal = true
-		if j.Carry == 0 && (j.Kind == job.Haul || j.Kind == job.Refuel) {
+		if j.Carry == 0 && (j.Kind.Hauls() || j.Kind == job.Refuel) {
 			pv.DropX, pv.DropY, pv.HasDrop = j.DestX, j.DestY, true
 		}
 	}

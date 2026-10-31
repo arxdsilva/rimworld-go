@@ -115,9 +115,9 @@ func (s *Shop) workerOK(id entity.EntityID, bl recipe.Bill, d recipe.Def) bool {
 // around the work spot (a gather-ingredients job, PRD-1).
 func (s *Shop) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]int) (job.Record, bool) {
 	if len(d.Inputs) == 0 {
-		if sid, st := s.h.Ingredient(id, d.Input); sid != 0 && s.p.fits(bl, st, spot) {
+		if sid, st := s.p.nearest(id, d.Input); sid != 0 && s.p.fits(bl, st, spot) {
 			free := s.h.Claims().FreeFor(id, sid, st.Qty) // RES-1: Count is the part the job claims
-			return job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y, Count: d.Input.Take(free)}, true
+			return job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y, Count: min(free, d.Input.TakeFrom(st))}, true
 		}
 	}
 	picks, ok := s.p.plan(id, bl, d, spot, &s.buf)
@@ -204,17 +204,20 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 		s.fetch(id, j, d)
 		return
 	}
-	if ElectricBench(b.Kind) && !h.Powered(j.Dest) || b.Kind == construction.FueledSmithy && h.Fuel(j.Dest) <= 0 {
-		s.fail(id, j, job.Blocked) // PLAY-021: the power went, PRD-3: the forge burnt out (put off a while: postpone.go)
+	if ElectricBench(b.Kind) && !h.Powered(j.Dest) || BurnsWhileWorked(b.Kind) && h.Fuel(j.Dest) <= 0 {
+		s.fail(id, j, job.Blocked) // PLAY-021: the power went, PRD-3: the forge (FOOD-4: the stove) burnt out (put off a while: postpone.go)
 		return
 	}
-	u := h.BenchWork(id, d.Learn, (s.stations.Speed(j.Dest)+5)/10) // PRD-3: facilities, light, room (station.go)
+	u := 1 // FOOD-4: a hauling chore (filling a barrel) trains no skill
+	if d.Skill != work.Haul {
+		u = h.BenchWork(id, d.Learn, (s.stations.Speed(j.Dest)+5)/10) // PRD-3: facilities, light, temperature, room (station.go)
+	}
 	if u == 0 {
 		h.SetJob(id, j)
 		return
 	}
-	if b.Kind == construction.FueledSmithy {
-		h.UseFuel(j.Dest, u) // PRD-3: the forge burns while worked
+	if BurnsWhileWorked(b.Kind) {
+		h.UseFuel(j.Dest, u) // PRD-3: the forge (FOOD-4: the stove) burns while worked
 	}
 	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
@@ -246,12 +249,12 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 func (s *Shop) fetch(id entity.EntityID, j job.Record, d recipe.Def) {
 	h := s.h
 	st, ok := h.Stack(j.Target)
-	if !ok || st.Carrier != 0 || st.Qty < d.Input.Qty {
+	if !ok || st.Carrier != 0 || !d.Input.Enough(st, st.Qty) {
 		s.fail(id, j, job.TargetGone)
 		return
 	}
-	// RES-1: never the part another pawn claimed
-	take := min(d.Input.Take(st.Qty), h.Claims().FreeFor(id, j.Target, st.Qty))
+	// RES-1: never the part another pawn claimed; FOOD-4: food by nutrition
+	take := min(d.Input.TakeFrom(st), h.Claims().FreeFor(id, j.Target, st.Qty))
 	if d.Ferment { // PRD-4: no more than the barrel takes
 		take = min(take, max(1, s.drying.barrelRoom(j.Dest)))
 	}
@@ -296,6 +299,7 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	case d.Builds != 0:
 		return false // PRD-3: art.make set the sculpture down and used the materials
 	}
+	food := s.ingredients(j, d)   // FOOD-4: read before the ingredients go
 	for _, rid := range j.Route { // PRD-1: the other ingredients, laid on the bench
 		h.DeleteItem(rid)
 	}
@@ -330,7 +334,11 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	case out > 0 && d.BySpecies:
 		h.DropStackOf(meat, j.DestX, j.DestY)
 	case out > 0 && recipe.Cooked(d.Output): // the cook's poison chance (PRD-4: the better meals too)
-		h.DropMeal(id, b.Kind, d.Output, out, j.DestX, j.DestY)
+		food.Qty = out
+		h.DropMeal(id, b.Kind, food, j.DestX, j.DestY)
+	case out > 0 && food.Kind != 0: // FOOD-4: pemmican and kibble keep their ingredients
+		food.Qty = out
+		h.DropStackOf(food, j.DestX, j.DestY)
 	case out > 0 && item.HasQuality(d.Output): // PRD-2: each piece rolls its quality
 		for range out {
 			p, _ := s.quality.Product(id, d, stuff, j.DestX, j.DestY)
@@ -343,4 +351,24 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 		h.DropStack(d.Extra, extra, j.DestX, j.DestY)
 	}
 	return out > 0
+}
+
+// ingredients is the product of food bill j (recipe d) with the raw food
+// it was made from, carried and laid on the bench, as its ingredients
+// (FOOD-4); Kind 0 when d makes no food from food.
+func (s *Shop) ingredients(j job.Record, d recipe.Def) item.Stack {
+	if !d.Output.IsFood() || !d.Input.ByNutrition() {
+		return item.Stack{}
+	}
+	out := item.Stack{Kind: d.Output}
+	add := func(id entity.EntityID) {
+		if st, ok := s.h.Stack(id); ok {
+			out.AddIngredient(item.IngredientOf(st))
+		}
+	}
+	add(j.Carry)
+	for _, rid := range j.Route {
+		add(rid)
+	}
+	return out
 }
