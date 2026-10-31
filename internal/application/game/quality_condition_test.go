@@ -165,7 +165,7 @@ func TestTatteredApparelThought(t *testing.T) {
 	if !hasThought(g, id, mood.TatteredApparel, -5) || hasThought(g, id, mood.RattyApparel, -3) {
 		t.Fatalf("tattered: %v", g.thoughts(id))
 	}
-	if v := pawnView(g, id).Worn; len(v) != 1 || !v[0].Tattered || v[0].HP != 10 {
+	if v := pawnView(g, id).Worn; len(v) != 3 || !v[0].Tattered || v[0].HP != 10 || v[1].Tattered { // TEMP-4: over a fine T-shirt and pants
 		t.Fatalf("worn view %+v", v)
 	}
 }
@@ -194,14 +194,14 @@ func TestTaintedApparelThought(t *testing.T) {
 	if sid == 0 || !st.Tainted() || st.Of != ada || st.Quality != quality.Stored(quality.Good) {
 		t.Fatalf("dropped parka %+v", st)
 	}
-	if o, ok := g.dressPlan(bo, true); ok && o.pick[item.Body].sid == sid {
+	if o, ok := g.dressPlan(bo, true); ok && o.Pick[item.Body].Stack == sid {
 		t.Fatal("a colonist chose a dead man's parka")
 	}
 	g.wear(bo, sid, st, true)
 	if !hasThought(g, bo, mood.TaintedApparel, -5) {
 		t.Fatalf("tainted: %v", g.thoughts(bo))
 	}
-	if v := pawnView(g, bo).Worn; len(v) != 1 || !v[0].Tainted || v[0].Quality != "good" {
+	if v := pawnView(g, bo).Worn; len(v) != 3 || !v[0].Tainted || v[0].Quality != "good" { // TEMP-4: the parka over its T-shirt and pants
 		t.Fatalf("worn view %+v", v)
 	}
 }

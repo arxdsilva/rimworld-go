@@ -292,12 +292,11 @@ func (g *Game) checkLosses(now uint64) {
 	}
 }
 
-// dayRollover: adaptation, faction goodwill drift, extreme weather.
+// dayRollover: adaptation, faction goodwill drift.
 func (g *Game) dayRollover(now uint64) {
 	g.ng.adapt.Day(g.ng.setup.Difficulty, g.ng.lost)
 	g.ng.lost = false
-	g.factionsDay()   // factions.go
-	g.extremeDay(now) // weather_ng1.go
+	g.factionsDay() // factions.go
 }
 
 // scheduledIncidents fires the scenario's incidents due today.

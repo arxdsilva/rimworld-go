@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -246,7 +247,7 @@ func warmHut(t *testing.T) (*Game, entity.EntityID) {
 	g.FuelCampfire(9, 3)
 	g.Step(clock.TicksPerHour * 4) // the hut passes 8 C after about 3 h
 	id, _ := g.SpawnNamedPawn(2, 10, "Ada")
-	g.exposure[id] = exposureState{hypo: exposure.Mild + 50}
+	g.exposure[id] = bodytemp.Sev{Hypo: exposure.Mild + 50}
 	return g, id
 }
 
@@ -281,7 +282,7 @@ func TestNoWarmSpotDoesNotCutTheJob(t *testing.T) {
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(id), X: 21, Y: 2})
 	g.Step(2)
-	g.exposure[id] = exposureState{hypo: exposure.Mild + 50}
+	g.exposure[id] = bodytemp.Sev{Hypo: exposure.Mild + 50}
 	before, _ := g.jobs.Get(id)
 	g.Step(1)
 	after, _ := g.jobs.Get(id)

@@ -17,9 +17,10 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-// TestTempContractToggleVentInert (TEMP-0): ToggleVent routes to a no-op,
-// so a colony that gets it hashes as before and keeps in step with a twin
-// that did not; the temperature view fields stay zero.
+// TestTempContractToggleVentInert (TEMP-0, live since TEMP-1): ToggleVent
+// aimed at anything but a vent is ignored, so a colony that gets it hashes
+// as before and keeps in step with a twin that did not; the room model
+// runs (TempVer moves; thermo_wiki_test.go proves the vent itself).
 func TestTempContractToggleVentInert(t *testing.T) {
 	t.Parallel()
 	cfg := Config{Seed: 7, Width: 40, Height: 30}
@@ -34,7 +35,7 @@ func TestTempContractToggleVentInert(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.ToggleVent, Target: target, Enabled: true})
 	g.ApplyPending()
 	if g.StateHash() != before {
-		t.Fatal("ToggleVent changed the state before TEMP-1")
+		t.Fatal("ToggleVent at a non-vent changed the state")
 	}
 	g.Step(300)
 	twin.Step(300)
@@ -42,27 +43,12 @@ func TestTempContractToggleVentInert(t *testing.T) {
 		t.Fatal("the commanded colony drifted from its twin")
 	}
 	w := g.World()
-	if w.ClimateEvent != "" || w.ClimateEventEnds != 0 || w.TempVer != 0 {
-		t.Fatalf("climate view filled before TEMP-1/TEMP-2: %q %d %d", w.ClimateEvent, w.ClimateEventEnds, w.TempVer)
-	}
-	for _, r := range w.Rooms {
-		if r.ExposedWalls != 0 || r.DoubleWalls != 0 || r.HeatRate != 0 || r.RoofKind != "" {
-			t.Fatalf("room %d thermal fields filled before TEMP-1: %+v", r.ID, r)
-		}
+	if w.ClimateEvent != "" || w.ClimateEventEnds != 0 || w.TempVer == 0 {
+		t.Fatalf("climate view: event %q ends %d, TempVer %d (the room model runs)", w.ClimateEvent, w.ClimateEventEnds, w.TempVer)
 	}
 	for _, b := range w.Buildings {
-		if b.Open || b.HeatRate != 0 {
-			t.Fatalf("%s: vent or heat fields filled before TEMP-1", b.Kind)
-		}
-	}
-	for _, a := range w.Animals {
-		if a.ComfortMin != 0 || a.ComfortMax != 0 || a.Hypothermia != 0 || a.Heatstroke != 0 {
-			t.Fatalf("%s: animal temperature filled before TEMP-3", a.Label)
-		}
-	}
-	for _, p := range g.Snapshot() {
-		if p.Frostbite != 0 {
-			t.Fatalf("%s: frostbite before TEMP-3", p.Name)
+		if b.Open {
+			t.Fatalf("%s reads open: only a vent does", b.Kind)
 		}
 	}
 }
@@ -70,7 +56,8 @@ func TestTempContractToggleVentInert(t *testing.T) {
 // TestTempContractBuildings (TEMP-0): the passive cooler and the vent are
 // valid kinds; the vent fills a wall gap like the cooler (it bounds rooms,
 // is placed in a wall, faces across it and is never moved), and neither
-// draws power.
+// draws power (TEMP-1: the vent is a toggle off the grid, flicked open or
+// shut like a power switch).
 func TestTempContractBuildings(t *testing.T) {
 	t.Parallel()
 	for _, k := range []construction.Kind{construction.PassiveCooler, construction.Vent} {
@@ -79,8 +66,8 @@ func TestTempContractBuildings(t *testing.T) {
 			construction.MaxHP(k, item.Wood) <= 0 {
 			t.Errorf("%s: %+v", k, d)
 		}
-		if power.SpecOf(k) != (power.Spec{}) {
-			t.Errorf("%s draws power", k)
+		if s := power.SpecOf(k); s.Role != power.None || s.Draw != 0 || s.Idle != 0 || s.Toggle != (k == construction.Vent) {
+			t.Errorf("%s: power spec %+v", k, s)
 		}
 	}
 	v := construction.DefOf(construction.Vent)
@@ -93,47 +80,37 @@ func TestTempContractBuildings(t *testing.T) {
 	}
 }
 
-// TestTempContractGarments (TEMP-0): the seven garments parse, file as
-// apparel in the resource list and stack one to a tile, but are not worn,
-// stored, made, traded, valued or given by a scenario before TEMP-4; the
-// layer slots exist beside the four in use, and outfits keep five slots.
+// TestTempContractGarments (TEMP-0, live since TEMP-4): the seven
+// garments parse, file as apparel and stack one to a tile, and are worn
+// in their layer slot, stored, made, valued (wiki) and given by a
+// scenario; outfits hold all eight slots.
 func TestTempContractGarments(t *testing.T) {
 	t.Parallel()
-	garments := []item.Kind{item.TShirt, item.ButtonDownShirt, item.Pants, item.Jacket, item.CowboyHat, item.BowlerHat,
-		item.Tribalwear}
-	for _, k := range garments {
-		if got, ok := item.ParseKind(k.String()); !ok || got != k || !k.IsContractApparel() || k.Category() != "Apparel" ||
-			k.StackLimit() != 1 {
+	slot := map[item.Kind]item.Slot{item.TShirt: item.SkinTorso, item.ButtonDownShirt: item.SkinTorso, item.Pants: item.SkinLegs,
+		item.Jacket: item.Outer, item.CowboyHat: item.Head, item.BowlerHat: item.Head, item.Tribalwear: item.SkinTorso}
+	value := map[item.Kind]int{item.TShirt: 66, item.ButtonDownShirt: 77, item.Pants: 66, item.Jacket: 130, item.CowboyHat: 44,
+		item.BowlerHat: 37, item.Tribalwear: 97}
+	for k, s := range slot {
+		if got, ok := item.ParseKind(k.String()); !ok || got != k || k.Category() != "Apparel" || k.StackLimit() != 1 {
 			t.Errorf("%s: parse %v %v, category %q, stack %d", k, got, ok, k.Category(), k.StackLimit())
 		}
-		if k.IsApparel() || k.Slot() != item.NoSlot || k.Occupies() != 0 || k.Value() != 0 || zone.Storable(k) ||
-			slices.Contains(item.Apparel(), k) || slices.Contains(scenario.ItemChoices(), k) {
-			t.Errorf("%s is live before TEMP-4", k)
+		if !k.IsApparel() || k.Slot() != s || k.Value() != value[k] || !zone.Storable(k) ||
+			!slices.Contains(item.Apparel(), k) || !slices.Contains(scenario.ItemChoices(), k) {
+			t.Errorf("%s: slot %s value %d, not live", k, k.Slot(), k.Value())
+		}
+		if !slices.ContainsFunc(recipe.All(), func(r recipe.Def) bool { return r.Output == k && r.Bench == construction.TailoringBench }) {
+			t.Errorf("no tailoring recipe makes %s", k)
 		}
 	}
-	for _, r := range recipe.All() {
-		if r.Output.IsContractApparel() {
-			t.Errorf("recipe %s makes %s before TEMP-4", r.Name, r.Output)
-		}
-	}
-	if item.Parka.IsContractApparel() || item.Rice.IsContractApparel() {
-		t.Error("IsContractApparel takes only the seven garments")
-	}
-	if item.NumSlots != 8 || item.Outer != item.Body || craft.Slots != 5 || int(item.NumSlots) > 8 {
+	if item.NumSlots != 8 || item.Outer != item.Body || craft.Slots != 8 {
 		t.Fatalf("slots: %d (outer %s), outfit %d; Forced is a uint8", item.NumSlots, item.Outer, craft.Slots)
-	}
-	for _, s := range []item.Slot{item.SkinTorso, item.SkinLegs, item.Middle} {
-		if s.String() == "" || int(s) < craft.Slots {
-			t.Errorf("slot %d: %q, in an outfit before TEMP-4", s, s)
-		}
-		for _, k := range item.Apparel() {
-			if k.Slot() == s {
-				t.Errorf("%s worn in %s before TEMP-4", k, s)
-			}
-		}
 	}
 	if o := item.Parka.Occupies(); !o.Has(item.Outer) || o.Has(item.Middle) || item.ShieldBelt.Occupies() != 1<<item.Belt {
 		t.Errorf("Occupies: parka %b, shield belt %b", o, item.ShieldBelt.Occupies())
+	}
+	if o := item.Tribalwear.Occupies(); !o.Has(item.SkinTorso) || !o.Has(item.SkinLegs) || item.MarineArmor.Occupies().Has(item.Head) ||
+		!item.MarineArmor.Occupies().Has(item.Middle) || item.FlakVest.Slot() != item.Middle {
+		t.Errorf("Occupies: tribalwear %b, marine armor %b", o, item.MarineArmor.Occupies())
 	}
 }
 
@@ -142,7 +119,7 @@ func TestTempContractGarments(t *testing.T) {
 // wiki numbers, and nothing fires the events yet.
 func TestTempContractConditionsMoodsIncidents(t *testing.T) {
 	t.Parallel()
-	for _, k := range []body.CondKind{body.CondFrostbite, body.CondHypothermicSlowdown} {
+	for _, k := range []body.CondKind{body.CondHypothermia, body.CondHypothermicSlowdown, body.CondHeatstroke} { // TEMP-3: frostbite is a wound
 		if d := body.DefOfCond(k); d.Label == "" || d.Lethal || len(d.Stages) == 0 {
 			t.Errorf("condition %d: %+v", k, d)
 		}
@@ -165,11 +142,11 @@ func TestTempContractConditionsMoodsIncidents(t *testing.T) {
 	for id, key := range map[incident.ID]string{incident.HeatWave: "heat_wave", incident.ColdSnap: "cold_snap",
 		incident.VolcanicWinter: "volcanic_winter"} {
 		d := incident.DefOf(id)
-		if d.Key != key || d.Name == "" || d.Category != incident.Nature || d.Weight != 0 || d.WeightAt(100) != 0 || d.Cooldown <= 0 {
+		if d.Key != key || d.Name == "" || d.Category != incident.Nature || d.Weight <= 0 || d.Cooldown <= 0 {
 			t.Errorf("%s: %+v", key, d)
 		}
-		if g.incidentFits(id, now) || g.FireIncident(key) {
-			t.Errorf("%s fires before TEMP-2", key)
+		if _, on := g.incidents.ClimateView(now); on != 0 { // TEMP-2: climate_events_test.go fires them
+			t.Errorf("%s under way in a new colony", key)
 		}
 	}
 }

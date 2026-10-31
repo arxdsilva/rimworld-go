@@ -269,6 +269,12 @@ func (c Resources) RightClick(mx, my int) bool {
 // ResourceIconKey is the art key of kind's HUD icon ("granite blocks" ->
 // "ui_icon/granite_blocks").
 func ResourceIconKey(kind string) string {
+	switch kind { // TEMP-4: the icon names drop the hyphen
+	case "t-shirt":
+		return "ui_icon/tshirt"
+	case "button-down shirt":
+		return "ui_icon/button_down"
+	}
 	return "ui_icon/" + strings.ReplaceAll(kind, " ", "_")
 }
 

@@ -21,14 +21,15 @@ type Lamp struct{ X, Y int }
 // Sight reports whether (x, y) can see a light at (sx, sy).
 type Sight func(sx, sy, x, y int) bool
 
-// GrowLight is the growing light (permille) on (x, y): full daylight
+// GrowLight is the growing light (permille) on (x, y): the sky's
+// daylight sky (permille: full, or dimmed by a volcanic winter, TEMP-2)
 // under the open sky (the growing hours are daylight), the best sun lamp
 // in sight, and a plain lamp or fire's light art (0..1) at most
 // plant.LampGrowLight (wiki: Sun lamp; a standing lamp's 50 % grows
 // nothing).
-func GrowLight(roofed bool, art float64, lamps []Lamp, x, y int, sees Sight) int {
+func GrowLight(roofed bool, sky int, art float64, lamps []Lamp, x, y int, sees Sight) int {
 	if !roofed {
-		return plant.FullGrowLight
+		return sky * plant.FullGrowLight / 1000
 	}
 	l := min(int(art*1000+0.5), plant.LampGrowLight)
 	for _, s := range lamps {
@@ -47,7 +48,7 @@ func SowLit(roofed, tree bool, lamps []Lamp, x, y int, sees Sight) bool {
 	if !roofed {
 		return true
 	}
-	return !tree && GrowLight(true, 0, lamps, x, y, sees) >= plant.MinGrowLight
+	return !tree && GrowLight(true, 0, 0, lamps, x, y, sees) >= plant.MinGrowLight
 }
 
 // RipeIn is the calendar ticks a plant needs growing ticks of still

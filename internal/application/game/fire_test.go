@@ -356,13 +356,13 @@ func TestFireHeatsItsRoom(t *testing.T) {
 	g.ensureRooms()
 	r := g.roomAt(4, 4)
 	g.heatRooms()
-	before := g.roomTemps[r]
-	other := g.roomTemps[g.roomAt(13, 4)]
+	before := g.thermo.Temps[r]
+	other := g.thermo.Temps[g.roomAt(13, 4)]
 	g.startFire(4, 4, 100)
 	g.heatRooms()
-	ctrl := g.roomTemps[g.roomAt(13, 4)]
-	if g.roomTemps[r]-before <= ctrl-other {
-		t.Fatalf("the burning room warmed %v, the other %v", g.roomTemps[r]-before, ctrl-other)
+	ctrl := g.thermo.Temps[g.roomAt(13, 4)]
+	if g.thermo.Temps[r]-before <= ctrl-other {
+		t.Fatalf("the burning room warmed %v, the other %v", g.thermo.Temps[r]-before, ctrl-other)
 	}
 }
 

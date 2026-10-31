@@ -30,12 +30,8 @@ func TestFilterTreeFilesEveryStorableKind(t *testing.T) {
 		}
 	}
 	for _, k := range allKinds() {
-		want := 1
-		if k.IsContractApparel() {
-			want = 0 // TEMP-0 contract: TEMP-4 files the new garments (until then stockpile filters keep their bits)
-		}
-		if seen[k] != want || Storable(k) != (want == 1) {
-			t.Errorf("%s filed %d times (storable %v), want %d", k, seen[k], Storable(k), want)
+		if seen[k] != 1 || !Storable(k) {
+			t.Errorf("%s filed %d times (storable %v), want 1", k, seen[k], Storable(k))
 		}
 	}
 	tree := Tree()
@@ -86,7 +82,7 @@ func TestFilterTreeFilesEveryStorableKind(t *testing.T) {
 // 1 food, 2 wood, 3 stone, 4 goods.
 func legacyCat(k item.Kind) int {
 	switch {
-	case k == item.CorpseHuman, k == item.Bones, k.IsContractApparel(): // TEMP-0: the garments wait for TEMP-4
+	case k == item.CorpseHuman, k == item.Bones:
 		return 0
 	case k.IsFood(), k.IsCorpse(), k == item.FertileEgg:
 		return 1

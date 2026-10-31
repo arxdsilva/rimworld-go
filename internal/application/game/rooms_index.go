@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/world/region"
 	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/room"
-	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
 )
 
@@ -188,10 +187,10 @@ func (g *Game) rebuildRoomsIncremental() {
 	if selfCheck() {
 		g.checkRoomsAgainstDetect(grid, stats)
 	}
-	if full {
-		g.roomTemps = g.remapRoomTemps(grid, n)
+	if now := g.clock.Now(); full { // game/thermo carries the air across
+		g.thermo.Remap(g.roomGrid, grid, n, g.climate.Outdoor(now), g.climate.Indoor(now))
 	} else {
-		g.roomTemps = g.remapRoomTempsChanged(rm, grid, n)
+		g.thermo.RemapChanged(rm, g.roomGrid, grid, n, g.climate.Outdoor(now))
 	}
 	g.rebuildFilth(grid, n) // filth.go: tread and room filth sums
 	g.roomGrid, g.rooms, g.roomDirty = grid, stats, false
@@ -250,50 +249,6 @@ func (g *Game) checkRoomsAgainstDetect(grid []int, stats []roomStats) {
 			panic(fmt.Sprintf("rooms: room %d stats %+v, full rebuild %+v", r, stats[r], ws[r]))
 		}
 	}
-}
-
-// remapRoomTempsChanged is remapRoomTemps for an incremental rebuild: a
-// room with exactly an old room's cells keeps that room's air (the average
-// of identical values); a changed room averages over its cells as
-// remapRoomTemps does; cells that left a room for the outdoors keep their
-// air as residual. Cells of unchanged rooms hold no residual (it is only
-// ever kept for outdoor cells and dropped when a cell joins a room).
-func (g *Game) remapRoomTempsChanged(rm *region.Rooms, newGrid []int, n int) []temperature.Temp {
-	now := g.clock.Now()
-	old := g.roomGrid
-	out := make([]temperature.Temp, n)
-	outside := int(g.climate.Outdoor(now))
-	if g.residual == nil {
-		g.residual = map[int]temperature.Temp{}
-	}
-	rm.EachChanged(func(i int) {
-		if o := old[i]; newGrid[i] == room.Outdoors && o >= 0 && o < len(g.roomTemps) {
-			g.residual[i] = g.roomTemps[o] // a breached room keeps its air for a while
-		}
-	})
-	for r := 0; r < n; r++ {
-		if s := rm.Same(r); s >= 0 && s < len(g.roomTemps) {
-			out[r] = g.roomTemps[s]
-			continue
-		}
-		sum, cnt := 0, 0
-		rm.EachCell(r, func(i int) {
-			t := outside
-			switch o := old[i]; {
-			case o >= 0 && o < len(g.roomTemps):
-				t = int(g.roomTemps[o])
-			case g.residual[i] != 0:
-				t = int(g.residual[i])
-			}
-			delete(g.residual, i)
-			sum += t
-			cnt++
-		})
-		if cnt > 0 {
-			out[r] = temperature.Temp(sum / cnt)
-		}
-	}
-	return out
 }
 
 // refreshRoofSupportAround is refreshRoofSupport for the cells within

@@ -513,10 +513,14 @@ func TestSiteFromTile(t *testing.T) {
 		if s.Zero() || s.Biome != p.Biome[i] || s.Hills != p.Hill[i] || s.Caves != p.Caves[i] || s.Latitude != p.Lat[i] {
 			t.Fatalf("tile %d: site %+v does not mirror the tile", i, s)
 		}
-		c := s.Climate
-		if c.YearMean != int(p.Temp[i]) || c.DaySwing < swingWet || c.DaySwing > swingDry ||
-			c.Amplitude < ampEquator || c.Amplitude > ampPolar+ampInland {
-			t.Fatalf("tile %d climate %+v", i, c)
+		c, raw := s.Climate, p.climate(i)
+		if raw.YearMean != int(p.Temp[i]) || raw.DaySwing < swingWet || raw.DaySwing > swingDry ||
+			raw.Amplitude < ampEquator || raw.Amplitude > ampPolar+ampInland || c != biome.Fit(s.Biome, raw) {
+			t.Fatalf("tile %d climate %+v (raw %+v)", i, c, raw)
+		}
+		lo, hi := c.Range()
+		if blo, bhi := biome.DefOf(s.Biome).Climate.Range(); lo < blo || hi > bhi { // TEMP-2: inside the biome's wiki extremes
+			t.Fatalf("tile %d range %v..%v outside %v..%v", i, lo, hi, blo, bhi)
 		}
 		if len(s.Stones) < 2 || len(s.Stones) > 3 {
 			t.Fatalf("tile %d stones %v", i, s.Stones)

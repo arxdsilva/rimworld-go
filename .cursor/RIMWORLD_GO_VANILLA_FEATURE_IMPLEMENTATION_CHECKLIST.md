@@ -652,7 +652,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Nutrition values** (FOOD-1, wiki scale: a full bar is 1.0 = 10000; raw food, milk, pemmican and kibble 0.05 a unit, simple/fine/survival/paste meals 0.9, lavish 1.0, eggs by species 0.25-0.6, the legacy ration a survival meal; one meal or up to 20 raw units a sitting, overflow wasted)
     -   Foods provide nutrition.
     -   Pawns consume an amount based on hunger/body needs.
--   [x] **Food need** (FOOD-1: 1.6 nutrition a day for an adult, Fed/Hungry/Ravenous falls 100/50/25 %, thoughts Hungry -6, Ravenously hungry -12, Malnourished -20...-44 with a band hysteresis; eats at 30 % and keeps looking until 80 %, sleepers wake only ravenous; malnutrition at 0 % rises 1.51-2.27 %/h (rolled per pawn), recedes when fed, five stages with consciousness and hunger offsets, stops wound healing, kills at 100 %; `PawnView.Malnutrition`; FOOD-6: immunity gain x0.9 ravenous, x0.7 malnourished; wiki hunger formula, offsets (gut worms, malnutrition, stoned on the ashleaf stand-in +30 %) add before the gourmand multiplier; the wiki's -10/-40/-95 % is insect-only hypothermic slowdown, not modelled)
+-   [x] **Food need** (FOOD-1: 1.6 nutrition a day for an adult, Fed/Hungry/Ravenous falls 100/50/25 %, thoughts Hungry -6, Ravenously hungry -12, Malnourished -20...-44 with a band hysteresis; eats at 30 % and keeps looking until 80 %, sleepers wake only ravenous; malnutrition at 0 % rises 1.51-2.27 %/h (rolled per pawn), recedes when fed, five stages with consciousness and hunger offsets, stops wound healing, kills at 100 %; `PawnView.Malnutrition`; FOOD-6: immunity gain x0.9 ravenous, x0.7 malnourished; wiki hunger formula, offsets (gut worms, malnutrition, stoned on the ashleaf stand-in +30 %) add before the gourmand multiplier; the wiki's -10/-40/-95 % belongs to the insects' hypothermic slowdown (TEMP-3), and hive insects have no hunger here)
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
@@ -704,7 +704,7 @@ This is the heart of autonomous colony behavior.
     -   temperature/light requirements.
 -   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu; tree zones are planted, chopped when grown and replanted (UI-011); PLAY-017: growers first cut a wrong plant (wild, moss, bush, tree or another crop) off a zone cell, a ripe one is harvested)
     -   Growers plant designated crops in growing zones.
--   [x] **Plant growth** (FOOD-2: rest 19:00-06:00 in any light, 51 % light minimum, wiki temperature curve and cold death, 65 % partial harvest, lifespan 5 x grow days, hydroponics 280 %, sun lamp, blight; integer per-tick growth scaled by fertility x soil sensitivity x temperature; PLAY-016: cold and heat damage plants over hours, shown in the plant view and cutting the harvest; fire burns them via PLAY-015)
+-   [x] **Plant growth** (FOOD-2: rest 19:00-06:00 in any light, 51 % light minimum, wiki temperature curve and cold death (TEMP-2: per-plant -10..-18 C threshold from its id; crops die at once, healroot and wild plants lose their leaves for 24 h), 65 % partial harvest, lifespan 5 x grow days, hydroponics 280 %, sun lamp, blight; integer per-tick growth scaled by fertility x soil sensitivity x temperature; PLAY-016: cold and heat damage plants over hours, shown in the plant view and cutting the harvest; fire burns them via PLAY-015)
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
@@ -1036,7 +1036,7 @@ treatment, and surgery are major colony-management systems.
     -   symptoms/stat modifiers.
     -   tendable conditions.
     -   immunity where appropriate.
--   [-] **Representative vanilla disease classes** (MED-04: flu, plague, malaria, sleeping sickness, gut worms, muscle parasites at wiki rates; food poisoning (FOOD-4) and toxic buildup (FOOD-6, `body/cond_toxic.go`) are conditions of their own)
+-   [-] **Representative vanilla disease classes** (MED-04: flu, plague, malaria, sleeping sickness, gut worms, muscle parasites at wiki rates; food poisoning (FOOD-4), toxic buildup (FOOD-6, `body/cond_toxic.go`), hypothermia, heatstroke and the insects' hypothermic slowdown (TEMP-3, `body/cond_frostbite.go`) are conditions of their own)
     -   flu-like disease.
     -   plague-like severe disease.
     -   malaria-like tropical disease.
@@ -1095,20 +1095,20 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.1 Temperature
 
--   [-] **Outdoor temperature** (per-biome and per-planet-tile climate: yearly triangle wave plus day/night swing, snow and blizzard chill, heat wave and cold snap on the Extreme weather option; wiki biome extremes, ramped events and volcanic winter are TEMP-2)
+-   [x] **Outdoor temperature** (per-biome and per-planet-tile climate: yearly triangle wave plus day/night swing (original), TEMP-2: every biome reaches the wiki summer max / winter min, planet sites fitted inside them (`biome.Fit`); snow and blizzard chill; ramped heat wave, cold snap and volcanic winter offsets; WorldView OutdoorTemp/ClimateEvent)
     -   Driven by world tile climate, latitude/elevation/season/time,
         and weather.
--   [-] **Indoor room temperature** (per-room temperature drifting toward outside air by room size, kept across room rebuilds; no room-to-room or open-door exchange)
+-   [x] **Indoor room temperature** (TEMP-1: per-room temperature equalised every 120 ticks by exposed wall length (double wall halves), thin roof, overhead-mountain cooling, 25 % unroofed means outdoors, open doors and vents exchanging between rooms (original rates), kept across rebuilds; room stats show the terms are TEMP-5)
     -   Rooms have thermal state.
     -   Exchange heat with outdoors and neighboring rooms through
         openings/structures.
     -   Use efficient region/room approximation rather than per-cell
         fluid simulation.
--   [-] **Heat sources/sinks** (passive cooler not built, no vent, no production or body heat, original heat numbers: TEMP-1; wood campfire heats its room, banks at 20C and relights below 16C; haulers refuel it; PLAY-021: powered heater and in-wall cooler with a thermostat (21 C by default, hysteresis))
+-   [-] **Heat sources/sinks** (TEMP-1: wiki heater 21, cooler -21, passive cooler -11 with a 17 C floor, campfire 21 capped 28, torch 3.5 capped 23, smelter/stoves/generator, body heat; vent built. Missing: panes for vent, passive cooler and heat lines (TEMP-5), crematorium heat; wood campfire heats its room, banks at 20C and relights below 16C; haulers refuel it; PLAY-021: powered heater and in-wall cooler with a thermostat (21 C by default, hysteresis))
     -   Campfire/heater-like source.
     -   cooler/air-conditioner-like device.
     -   passive cooler equivalent.
--   [x] **Pawn temperature comfort** (per-colonist comfort band from worn apparel; cold/freezing/hot/sweltering thoughts, hypothermia/heatstroke down and kill, colonists seek a bearable room)
+-   [-] **Pawn temperature comfort** (missing: stage names in the health tab and animal temperature lines, TEMP-5; TEMP-3 wiki: 16-26 C base band widened by apparel; hypothermia/heatstroke past 10 C outside it at the wiki per-60-tick gain, heat curve and recovery, stages on consciousness/manipulation/moving/pain, downing through consciousness, death at 100 %; frostbite wounds on extremities (animals too); 4-rung thought ladders (original offsets: a rung per 10 C); slept-in-the-cold judged before apparel; prisoners, guests and raiders too; colonists seek a bearable room with hysteresis)
     -   Apparel and species stats define safe/comfortable range.
     -   extreme heat -\> heatstroke.
     -   extreme cold -\> hypothermia.
@@ -1163,8 +1163,8 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.6 Environmental events
 
--   [-] **Heat wave** (NG-1: colonies from the wizard with the Extreme weather setting on; +12 C for 2 to 4 days in summer, 6 % a day, 3-day cooldown; letter and top-strip chip)
--   [-] **Cold snap** (NG-1: same, -14 C in winter)
+-   [x] **Heat wave** (TEMP-2: storyteller incident `heat_wave`, wiki +17 C ramped in and out over 12,000 ticks, 1.5-3.5 days, needs a 20 C day, 30-day cooldown, excludes the other climate events; original weight 5, tripled by Extreme weather; caution letter; WorldView.ClimateEvent/Extreme and the chip with its card)
+-   [x] **Cold snap** (TEMP-2: incident `cold_snap`, wiki -20 C, same ramp, length and cooldown, needs a day mean between 0 and 15 C; letter, chip and card)
 -   [x] **Eclipse** (FOOD-6: incident `eclipse`, wiki weight and 15-day cooldown, 0.75-1.25 days; sky light 0: crops outdoors stop, solar panels give 0; caution letter; WorldView.SkyEvent)
     -   Reduces sunlight and solar generation; affects crops.
 -   [x] **Solar flare** (PLAY-021: every net goes down for 3-8 h, generators idle; letters at start and end, a status chip)
@@ -1245,7 +1245,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Stone cutting** (SIM-029: stonecutter table, one chunk of any of five stones cuts into 10 blocks of it)
 -   [x] **Butchering**
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
--   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
+-   [x] **Tailoring/apparel production** (tailoring bench sews parkas, tuques and dusters and, TEMP-4, T-shirts, button-down shirts, pants, jackets, cowboy and bowler hats and tribalwear (also at the crafting spot) from any fabric or leather, wiki stuff and work / 10, with quality; butchering yields leather)
 -   [x] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear; PRD-3: smithy blades and pila, crafting-spot bows, 13 machining-table guns, smelting metal weapons back to steel; `domain/economy/recipe/benches.go`)
 -   [x] **Machining/advanced fabrication equivalents** (NG-1 components; PRD-3 machining table with 13 guns; PRD-4: fabrication bench makes advanced components and marine armor and helmet, machining table makes flak armor, grenades and four mortar shells, smithy plate armor, smelter smelts apparel, shred mechanoid; 8 research projects)
 -   [x] **Drug production** (SIM-040 beer, tea, tablets; PRD-4: wort at the brewing bench, fermenting barrel (25 wort, 6 days, 7-32 C, wiki), ash flake, silverdust, battle tonic and reagent at the drug table, chemfuel at the refinery; missing: the barrel is filled by cooks, wiki haulers)
@@ -1327,18 +1327,18 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.2 Apparel
 
--   [x] **Wearable apparel** (body and head slots over everyday clothes; insulation shifts the comfort band; Wear order; Gear tab; PRD-2/DEF-2: stuff, quality, hit points and armor per piece; four slots incl. legs; gear tab shows them)
+-   [x] **Wearable apparel** (TEMP-4: layered slots, shirt and pants on the skin, a middle layer, the outer layer, headgear, flak pants and a belt (`item.Slot`, `craft.Slots` 8); wiki insulation = material x apparel factor x quality over every layer; T-shirt, button-down shirt, pants, jacket, tribalwear, cowboy and bowler hats; new colonists arrive in a T-shirt and pants (tribal: tribalwear; no-clothes scenarios: naked); Wear order; Gear tab; PRD-2/DEF-2: stuff, quality, hit points and armor per piece)
     -   Body-part/layer coverage.
     -   material.
     -   armor.
     -   insulation.
     -   quality.
     -   hit points.
--   [ ] **Apparel compatibility**
+-   [x] **Apparel compatibility** (TEMP-4: garments conflict only on the same layer over the same region, `item.Kind.Occupies`/`craft.Outfit.Conflicts`: tribalwear blocks the pants, plate and marine armor the flak vest and flak pants; wearing one drops what it displaces; the dress plan never pairs them)
     -   Conflicting body layers/slots cannot be worn together.
 -   [x] **Apparel deterioration** (PRD-2: worn pieces lose 1 HP on 40 % of days; ratty at 50 % HP, tattered under 20 %)
     -   Worn apparel can lose condition.
--   [-] **Apparel policy** (PLAY-017: colonists change straight into the best body and head outfit for their comfortable range, before work and by dropping interruptible work, with a 1 C dead band and a per-slot cooldown; a Wear order keeps its slot; changes logged on the colonist; no player policy screen)
+-   [-] **Apparel policy** (PLAY-017: colonists change straight into the best outfit for their comfortable range, before work and by dropping interruptible work, with a 1 C dead band and a per-slot cooldown; TEMP-4: every layer (`craft/dress.go`), covered before naked, nothing taken off just to spare insulation; a Wear order keeps its slot; changes logged on the colonist; no player policy screen)
     -   Allowed categories.
     -   minimum condition.
     -   quality filters.
@@ -1472,7 +1472,7 @@ children systems.
 
 ## 18.1 Species definitions
 
--   [x] **Animal species** (SIM-019: 61 species from size/behaviour classes; ten originals replace RimWorld-invented creatures; DEF-4 R2: four original mechanoids appended, 65 in all, with full art; their four voices each are blocked on the user, the insect group stands in [!])
+-   [x] **Animal species** (SIM-019: 61 species from size/behaviour classes; ten originals replace RimWorld-invented creatures; DEF-4 R2: four original mechanoids appended, 65 in all, with full art; their four voices each are blocked on the user, the insect group stands in [!]; TEMP-3: per-species comfortable ranges (wiki), hypothermia/heatstroke with death and frostbite, insects' hypothermic slowdown)
     -   Anatomy.
     -   body size.
     -   movement.
@@ -2013,15 +2013,15 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Blight** (FOOD-2: incident `crop_blight`, domesticated crops under 15 grow days, 4-tile spread, cut to clear; a Cut all blight command is FOOD-5)
     -   Crop disease spreads/destroys plants.
 -   [x] **Toxic fallout** (FOOD-6: see 12.6)
--   [-] **Heat wave** (NG-1: see 12.6; fired by the day rollover, not the storyteller schedule)
--   [-] **Cold snap** (NG-1: see 12.6)
+-   [x] **Heat wave** (TEMP-2: see 12.6; a storyteller nature event now)
+-   [x] **Cold snap** (TEMP-2: see 12.6)
 -   [x] **Eclipse** (FOOD-6: see 12.6)
 -   [x] **Solar flare** (PLAY-021: every net goes down for 3-8 h, generators idle; letters at start and end, a status chip)
 -   [ ] **Flashstorm**
 -   [ ] **Dry thunderstorm**
 -   [ ] **Psychic drone-like mood event**
--   [ ] **Volcanic-winter-like long climate event if part of target base
-    version**
+-   [-] **Volcanic-winter-like long climate event if part of target base
+    version** (TEMP-2: incident `volcanic_winter`, wiki -7 C ramped over 50,000 ticks, 7.5-40 days, from day 60, 140-day cooldown; sky light -30 % (cell light, solar power, growing light) and wildlife capacity halved; letter, WorldView.ClimateEvent. Missing: its chip and sky veil (TEMP-5))
 -   [x] **Crashed hostile ship part** (DEF-4 R2 incident `CrashedShipPart`, see 24.5; storyteller weight 40 vs people raids 74)
 -   [x] **Short circuit/battery discharge** (PLAY-021: see 15.2)
 -   [x] **Animal predator hunts colonist**
@@ -2926,7 +2926,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [x] Grow crops.
 -   [ ] Hunt animals.
 -   [ ] Cook food.
--   [-] Survive hunger/rest/temperature. (hunger: malnutrition (FOOD-1); rest: exhaustion; no temperature)
+-   [-] Survive hunger/rest/temperature. (hunger: malnutrition (FOOD-1); rest: exhaustion; temperature: wiki hypothermia/heatstroke and frostbite (TEMP-3); no end-to-end journey yet)
 -   [ ] Treat injuries/disease.
 -   [-] Manage mood.
 -   [ ] Survive mental breaks.

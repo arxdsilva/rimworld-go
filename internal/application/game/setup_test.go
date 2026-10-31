@@ -882,70 +882,6 @@ func TestDifficultyHooks(t *testing.T) {
 	}
 }
 
-func TestExtremeWeatherEvents(t *testing.T) {
-	t.Parallel()
-	g := bareSetupGame(difficulty.Seasoned)
-	base := g.climate
-	type span struct {
-		kind     uint8
-		from, to int
-	}
-	var spans []span
-	cur := extremeNone
-	for day := 1; day < 3000; day++ {
-		now := uint64(day) * clock.TicksPerDay
-		g.clock = clock.NewAt(clock.Tick(now))
-		g.extremeDay(now)
-		k := g.ng.extreme.Kind
-		switch {
-		case k != cur && k != extremeNone:
-			spans = append(spans, span{kind: k, from: day})
-			season := g.season(now)
-			if k == extremeHeat && season != "Summer" || k == extremeCold && season != "Winter" {
-				t.Fatalf("%d in %s", k, season)
-			}
-			if g.climate.YearMean == base.YearMean || g.World().Extreme == "" {
-				t.Fatal("an extreme event does not change the climate or the view")
-			}
-		case k != cur:
-			spans[len(spans)-1].to = day
-			if g.climate != base {
-				t.Fatalf("climate not restored: %+v", g.climate)
-			}
-		}
-		cur = k
-	}
-	heat, cold := 0, 0
-	for i, s := range spans {
-		if s.to == 0 {
-			continue
-		}
-		if d := s.to - s.from; d < extremeMinDays || d > extremeMinDays+extremeSpread-1 {
-			t.Fatalf("event lasted %d days", d)
-		}
-		if i > 0 && s.from-spans[i-1].to < extremeCool/clock.TicksPerDay {
-			t.Fatalf("events flapped: %d days apart", s.from-spans[i-1].to)
-		}
-		if s.kind == extremeHeat {
-			heat++
-		} else {
-			cold++
-		}
-	}
-	if heat == 0 || cold == 0 {
-		t.Fatalf("heat waves %d, cold snaps %d in 50 years", heat, cold)
-	}
-	off := bareSetupGame(difficulty.Wanderer) // extreme weather off
-	for day := 1; day < 3000; day++ {
-		now := uint64(day) * clock.TicksPerDay
-		off.clock = clock.NewAt(clock.Tick(now))
-		off.extremeDay(now)
-		if off.ng.extreme.Kind != extremeNone {
-			t.Fatal("extreme weather while off")
-		}
-	}
-}
-
 func TestSetStorytellerCommand(t *testing.T) {
 	t.Parallel()
 	g := buildSetup(t, setupFor(t, "ember_clan", nil))
@@ -1033,7 +969,6 @@ func TestSetupStateRoundTrip(t *testing.T) {
 	}))
 	g.Step(30)
 	g.ng.adapt = difficulty.Adapter{Days: 12, Value: 3}
-	g.ng.extreme = extremeEvent{Kind: extremeCold, Delta: coldSnapDelta, Until: 99}
 	st := g.exportSetupState()
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(st); err != nil {
@@ -1046,7 +981,7 @@ func TestSetupStateRoundTrip(t *testing.T) {
 	g2 := New(Config{Width: g.Width(), Height: g.Height()})
 	g2.importSetupState(back)
 	if g2.climate != g.climate || !reflect.DeepEqual(g2.ng.factions, g.ng.factions) || g2.ng.startDay != g.ng.startDay ||
-		g2.ng.story != g.ng.story || g2.ng.plan != g.ng.plan || g2.ng.adapt != g.ng.adapt || g2.ng.extreme != g.ng.extreme ||
+		g2.ng.story != g.ng.story || g2.ng.plan != g.ng.plan || g2.ng.adapt != g.ng.adapt || back.Extreme != (extremeEvent{}) ||
 		len(g2.ng.pods) != len(g.ng.pods) || g2.ng.setup.Scenario.Name != g.ng.setup.Scenario.Name ||
 		!reflect.DeepEqual(g2.ng.fx, g.ng.fx) || len(g2.ng.setup.Colonists) != 3 {
 		t.Fatal("setup state did not survive a gob round trip")

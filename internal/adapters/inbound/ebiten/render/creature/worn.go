@@ -177,18 +177,20 @@ func (w *WornKeys) bodyKey(c *art.Catalog, pc, b, f int) string {
 	return w.body[pc][avgBuild][f]
 }
 
-// isBaseClothes reports the root's body and base clothes, which the flak
-// pants and vest go over.
+// isBaseClothes reports the root's body and base clothes (TEMP-4: the
+// skin layer worn), which the flak pants and vest go over.
 func isBaseClothes(key string) bool {
 	return strings.HasPrefix(key, "pawn/body_") || strings.HasPrefix(key, "pawn/pants_basic") ||
-		strings.HasPrefix(key, "pawn/shirt_basic") || strings.HasPrefix(key, "pawn/vest_utility")
+		strings.HasPrefix(key, "pawn/shirt_basic") || strings.HasPrefix(key, "pawn/vest_utility") ||
+		strings.HasPrefix(key, "pawn/button_down") || strings.HasPrefix(key, "pawn/tribalwear") // TEMP-4 skin layers
 }
 
 // isHeadLayer reports the root's head layers (beard, hair, face scar,
 // hat), which every body piece goes under.
 func isHeadLayer(key string) bool {
 	return strings.HasPrefix(key, "pawn/beard_") || strings.HasPrefix(key, "pawn/hair_") ||
-		strings.HasPrefix(key, "pawn/face_scar_") || strings.HasPrefix(key, "pawn/tuque_")
+		strings.HasPrefix(key, "pawn/face_scar_") || strings.HasPrefix(key, "pawn/tuque_") ||
+		strings.HasPrefix(key, "pawn/cowboy_hat_") || strings.HasPrefix(key, "pawn/bowler_hat_") // TEMP-4 hats
 }
 
 // insertLayers inserts add into ls at index at.

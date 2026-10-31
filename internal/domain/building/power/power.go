@@ -104,10 +104,12 @@ func SpecOf(k construction.Kind) Spec {
 		return Spec{Role: Storage, CapWh: 1200}
 	case construction.Lamp:
 		return consumer(ClassLamp, 50, 50)
-	case construction.Heater:
-		return consumer(ClassHeater, 180, 20)
-	case construction.Cooler:
-		return consumer(ClassCooler, 220, 20)
+	case construction.Heater: // TEMP-1, wiki: Heater (175 W heating, 17 W idle)
+		return consumer(ClassHeater, 175, 17)
+	case construction.Cooler: // TEMP-1, wiki: Cooler (200 W, 20 W idle)
+		return consumer(ClassCooler, 200, 20)
+	case construction.Vent: // TEMP-1: flicked open or shut like a toggle; draws nothing
+		return Spec{Toggle: true}
 	case construction.ElectricStove:
 		return bench(250)
 	case construction.ElectricTailoringBench:

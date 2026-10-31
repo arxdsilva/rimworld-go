@@ -60,8 +60,8 @@ func (w *Waking) After(id entity.EntityID) {
 
 // temperature gives id the slept-in-the-cold or slept-in-the-heat
 // thought when the air where it lay, at waking, was outside its
-// comfortable range (wiki: Thoughts, -4 for a day; the range is the
-// pawn's own, its clothes included, as for waking thoughts).
+// comfortable range (wiki: Thoughts, -4 for a day; TEMP-3: the range
+// before apparel, as the wiki judges it, with the pawn's traits).
 func (w *Waking) temperature(id entity.EntityID, x, y int) {
 	lo, hi := w.h.Band(id)
 	switch t := w.h.TempAt(x, y); {

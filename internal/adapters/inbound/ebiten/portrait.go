@@ -98,12 +98,16 @@ func scarredLayers(art *artpkg.Catalog, l look.Look, scarred bool) []portraitLay
 	return figureLayers(art, l, "south", figureDress{Scarred: scarred})
 }
 
-// figureDress is what a figure wears beyond its look: outer apparel
-// (parka, duster, tuque), the face scar, and raider clothing.
+// figureDress is what a figure wears beyond its look: its apparel, the
+// face scar, and raider clothing. Worn: Apparel is the pawn's whole
+// outfit (TEMP-4), so the shirt and pants show only when worn; a look
+// preview (Worn false) shows the everyday clothes unless the look is
+// bare.
 type figureDress struct {
 	Apparel []string
 	Scarred bool
 	Raider  bool // hostile: maroon shirt and vest, slate trousers
+	Worn    bool
 }
 
 // figureLayers lists a pawn's sprites bottom first for look l in art
@@ -131,8 +135,27 @@ func figureLayers(art *artpkg.Catalog, l look.Look, fs string, d figureDress) []
 
 	out := make([]portraitLayer, 0, 9)
 	out = append(out, portraitLayer{key("body"), skin})
-	if !l.Bare {
-		out = append(out, portraitLayer{key("pants_basic"), pants}, portraitLayer{key("shirt_basic"), shirt})
+	under, top := "", "" // TEMP-4: the skin layer worn, legs then torso
+	if !d.Worn && !l.Bare || d.Raider {
+		under, top = "pants_basic", "shirt_basic"
+	}
+	for _, a := range d.Apparel {
+		switch a {
+		case "pants":
+			under = "pants_basic"
+		case "t-shirt":
+			top = "shirt_basic"
+		case "button-down shirt":
+			top = "button_down"
+		case "tribalwear": // a one-piece: torso and legs
+			under, top = "tribalwear", ""
+		}
+	}
+	if under != "" {
+		out = append(out, portraitLayer{key(under), pants})
+	}
+	if top != "" {
+		out = append(out, portraitLayer{key(top), shirt})
 		if l.Vest {
 			out = append(out, portraitLayer{key("vest_utility"), vest})
 		}
@@ -140,6 +163,12 @@ func figureLayers(art *artpkg.Catalog, l look.Look, fs string, d figureDress) []
 	hat := ""
 	for _, a := range d.Apparel { // outer garments go over shirt and vest
 		switch a {
+		case "jacket":
+			out = append(out, portraitLayer{key("jacket"), vest})
+		case "cowboy hat":
+			hat = "pawn/cowboy_hat_" + fs
+		case "bowler hat":
+			hat = "pawn/bowler_hat_" + fs
 		case "parka":
 			out = append(out, portraitLayer{key("parka_leather"), color.NRGBA{}})
 		case "wool parka": // the leather parka layer, tinted cream
@@ -214,7 +243,7 @@ func drawPortrait(dst *ebiten.Image, art *artpkg.Catalog, l look.Look, scarred b
 // raider's maroon clothes, and a disfigured pawn's face scar over the
 // hair (under a hat) when the art has one.
 func pawnFigureLayers(c *artpkg.Catalog, p game.PawnView, fs string) []portraitLayer {
-	return figureLayers(c, p.Look, fs, figureDress{Apparel: p.Apparel, Scarred: p.Disfigured, Raider: p.Hostile})
+	return figureLayers(c, p.Look, fs, figureDress{Apparel: p.Apparel, Scarred: p.Disfigured, Raider: p.Hostile, Worn: true})
 }
 
 // drawPawnBustArt draws the layered pawn's head and shoulders (the bust

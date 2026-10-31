@@ -1,16 +1,15 @@
 package game
 
 import (
-	"sort"
+	"slices"
 
+	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/room"
-	"rimworld-go/internal/domain/world/temperature"
 )
 
 // Campfire fuel and heat.
@@ -19,235 +18,151 @@ const (
 	CampfireCapacity = 20
 	// TicksPerWood is how long one log burns (about ten logs a day).
 	TicksPerWood = 6000
-	// campfireHeat is the heat a burning fire adds to its room per climate
-	// interval, in tenths of a degree times room cells: it can hold a
-	// 20-cell room about 30 C above the outside air.
-	campfireHeat = 160
 	// campfireBank: a fire banks down (burning no fuel, adding no heat)
-	// once the air around it reaches 20 C, and campfireRelight: it flares
-	// up again when the air cools below 16 C. The gap keeps it from
-	// flickering on and off every climate interval.
-	campfireBank    = 200
-	campfireRelight = 160
+	// once the air around it reaches 28 C (wiki: Campfire, it heats up to
+	// 28 C; game/thermo), and campfireRelight: it flares up again when the
+	// air cools below 18 C (original tuning). The wide gap, and banking
+	// only on the campfireBankEvery hour marks (4 h, a multiple of the
+	// climate interval), keep the wiki-strength fire from banking and
+	// flaring every hour even in a cold snap: at most 6 banks a day.
+	campfireBank      = 280
+	campfireRelight   = 180
+	campfireBankEvery = 10000
 	// warmWait is the longest a cold colonist waits in a warm spot.
 	warmWait = 2500
-	// residualLeak (permille per climate interval): a breached room's air
-	// loses about half its difference from the outside in an hour.
-	residualLeak = 60
 )
 
 // --- room temperature ----------------------------------------------------
 
-// remapRoomTemps carries room temperatures across a room rebuild: each new
-// room starts at the average of what its cells were (old room temperature,
-// or the outside air for cells that were outdoors).
-func (g *Game) remapRoomTemps(newGrid []int, n int) []temperature.Temp {
-	now := g.clock.Now()
-	out := make([]temperature.Temp, n)
-	if g.roomGrid == nil { // first build: rooms start sheltered
-		for i := range out {
-			out[i] = g.climate.Indoor(now)
-		}
-		return out
-	}
-	sum := make([]int, n)
-	cnt := make([]int, n)
-	outside := int(g.climate.Outdoor(now))
-	if g.residual == nil {
-		g.residual = map[int]temperature.Temp{}
-	}
-	for i, r := range newGrid {
-		old := room.Outdoors
-		if i < len(g.roomGrid) {
-			old = g.roomGrid[i]
-		}
-		if r < 0 {
-			// a breached room keeps its air for a while
-			if r == room.Outdoors && old >= 0 && old < len(g.roomTemps) {
-				g.residual[i] = g.roomTemps[old]
-			}
-			continue
-		}
-		t := outside
-		switch {
-		case old >= 0 && old < len(g.roomTemps):
-			t = int(g.roomTemps[old])
-		case g.residual[i] != 0:
-			t = int(g.residual[i])
-		}
-		delete(g.residual, i)
-		sum[r] += t
-		cnt[r]++
-	}
-	for r := range out {
-		if cnt[r] > 0 {
-			out[r] = temperature.Temp(sum[r] / cnt[r])
-		}
-	}
-	return out
-}
-
-// roomLeak is how fast (permille per climate interval) a room's air drifts
-// toward the outside: small rooms swing faster than big ones.
-func roomLeak(cells int) int {
-	k := 120 / isqrt(cells)
-	return max(10, min(80, k))
-}
-
-func isqrt(n int) int {
-	if n <= 1 {
-		return 1
-	}
-	r := 1
-	for (r+1)*(r+1) <= n {
-		r++
-	}
-	return r
-}
-
-// heatRooms moves each room toward the outside air and adds heat from its
-// burning campfires, which use up fuel while they burn (as torch lamps and
-// generators do, fuel.go).
+// heatRooms moves every room's air one equalisation step (game/thermo,
+// TEMP-1: walls, roofs, open doors and vents, heat sources).
 func (g *Game) heatRooms() {
 	g.ensureRooms()
-	now := g.clock.Now()
-	outside := g.climate.Outdoor(now) + temperature.IndoorBonus
-	heat := make([]int, len(g.rooms))
-	g.burnFuel(heat)       // fuel.go: campfires, torch lamps and generators burn; fires heat their room
-	g.fireRoomHeat(heat)   // fire.go (PLAY-015): a burning room heats like campfires
-	g.thermoRoomHeat(heat) // power_heat.go (PLAY-021): heaters and coolers
-	// breached rooms' air mixes with the outside over a few hours
-	raw := g.climate.Outdoor(now)
-	for i, t := range g.residual {
-		t += (raw - t) * residualLeak / 1000
-		if d := t - raw; d < 5 && d > -5 {
-			delete(g.residual, i)
-			continue
-		}
-		g.residual[i] = t
-	}
-	vents := g.ventRoomHeats(len(g.roomTemps)) // vents.go: nil without vents
-	for r := range g.roomTemps {
-		cells := max(1, g.rooms[r].contents.Cells)
-		t := g.roomTemps[r]
-		// an unroofed room loses the indoor bonus and leaks up to 5x as
-		// fast (SIM-018); fully roofed rooms are unchanged
-		target, leak := outside, temperature.Temp(roomLeak(cells))
-		if f := g.roomRoofed(r); f < 1000 {
-			target = raw + temperature.IndoorBonus*temperature.Temp(f)/1000
-			leak = min(1000, leak*temperature.Temp(1000+4*(1000-f))/1000)
-		}
-		if vents != nil {
-			target += vents[r] // a steam vent warms the room it stands in
-		}
-		t += (target - t) * leak / 1000
-		t += temperature.Temp(heat[r] / cells)
-		g.roomTemps[r] = t
-	}
+	g.thermo.Step()
 }
 
 // --- exposure ----------------------------------------------------------------
 
-// expose builds or relieves hypothermia and heatstroke from the air around
-// each colonist; serious exposure downs them, fatal exposure kills.
+// expose steps hypothermia and heatstroke (TEMP-3, the wiki's per-60-tick
+// rates: domain/pawn/exposure) for every colonist, prisoner, guest and
+// raider on the map, once a climate interval, and sets them on the body
+// (body.SetExposure), whose stages move the capacities: the extreme stage
+// downs through consciousness, and full severity kills. Hypothermia past
+// 37 % in air at or below 0 °C may frostbite an extremity (body stream).
+// Animals: game/bodytemp.
 func (g *Game) expose() {
-	for _, id := range g.pawnIDs {
+	now := uint64(g.clock.Now())
+	for _, id := range slices.Concat(g.pawnIDs, g.raiderIDs) {
 		v, ok := g.vital.Get(id)
-		if !ok || v.Status == health.Dead {
+		if !ok || v.Status == health.Dead || !g.onMap(id) {
 			continue
 		}
 		pos, _ := g.positions.Get(id)
-		t := int(g.temperatureAt(pos.X, pos.Y))
-		e := g.exposure[id]
-		e.hypo, e.heat = exposure.Step(e.hypo, e.heat, t, climateInterval, g.bandsOf(id))
-		g.exposure[id] = e
-		switch {
-		case e.hypo >= exposure.Fatal:
-			g.die(id, health.CauseHypothermia)
-			g.message(pos.X, pos.Y, "%s froze to death", g.nameOf(id))
-		case e.heat >= exposure.Fatal:
-			g.die(id, health.CauseHeatstroke)
-			g.message(pos.X, pos.Y, "%s died of heatstroke", g.nameOf(id))
-		case v.Status == health.Alive && e.hypo >= exposure.Serious:
-			g.logEvent(id, logEntry{Kind: logHypothermia})
-			g.down(id, health.CauseHypothermia)
-			g.message(pos.X, pos.Y, "%s collapsed from hypothermia", g.nameOf(id))
-		case v.Status == health.Alive && e.heat >= exposure.Serious:
-			g.logEvent(id, logEntry{Kind: logHeatstroke})
-			g.down(id, health.CauseHeatstroke)
-			g.message(pos.X, pos.Y, "%s collapsed from heatstroke", g.nameOf(id))
-		case v.Status == health.Downed && (v.Cause == health.CauseHypothermia && e.hypo < exposure.Recover ||
-			v.Cause == health.CauseHeatstroke && e.heat < exposure.Recover):
-			v.Status, v.Cause = health.Alive, health.CauseNone
-			g.vital.Set(id, v)
+		t, e := int(g.temperatureAt(pos.X, pos.Y)), g.exposure[id]
+		e.Hypo, e.Heat = exposure.Step(e.Hypo, e.Heat, t, climateInterval, g.bandsOf(id))
+		g.exposure.Set(id, e)
+		if e.Hypo >= exposure.Full || e.Heat >= exposure.Full {
+			cause, how := health.CauseHypothermia, "%s froze to death"
+			if e.Heat >= exposure.Full {
+				cause, how = health.CauseHeatstroke, "%s died of heatstroke"
+			}
+			delete(g.exposure, id)
+			g.die(id, cause)
+			g.message(pos.X, pos.Y, how, g.nameOf(id))
+			continue
+		}
+		if g.bodies[id] == nil && e == (bodytemp.Sev{}) {
+			continue
+		}
+		b := g.ensureBody(id, &v)
+		if b == nil {
+			continue
+		}
+		changed := body.SetExposure(b, body.CondHypothermia, exposure.Permille(e.Hypo))
+		changed = body.SetExposure(b, body.CondHeatstroke, exposure.Permille(e.Heat)) || changed
+		if p := exposure.FrostbiteChance(e.Hypo, bodytemp.FrostbiteFrom); p > 0 && t <= body.FrostbiteMaxTemp {
+			if rng := g.stream(streamBody); int32(rng.IntN(1_000_000)) < p*climateInterval/60 {
+				if part, _, ok := body.StrikeFrostbite(b, rng.IntN, now); ok {
+					g.woundOpened(id)                       // infection.go: its infection roll
+					if !g.isRaider(id) || g.prison.Is(id) { // a hostile's frostbite is no news
+						g.message(pos.X, pos.Y, "%s's %s is frostbitten.", g.nameOf(id), b.PartLabel(part))
+					}
+					changed = true
+				}
+			}
+		}
+		if changed {
+			g.bodyChanged(id, b, &v) // body.go: stats, patients
+			exposureDowned(g, id, b, v, e.Heat > e.Hypo)
 		}
 	}
 }
 
-type exposureState struct{ hypo, heat int }
+// exposureDowned downs a standing pawn its exposure incapacitated (the
+// capacity rule, bleed.go), or stands one lying from exposure once the
+// capacities recover past the band.
+func exposureDowned(g *Game, id entity.EntityID, b *body.Body, v health.Record, heat bool) {
+	cause, kind, how := health.CauseHypothermia, logHypothermia, "%s collapsed from hypothermia"
+	if heat {
+		cause, kind, how = health.CauseHeatstroke, logHeatstroke, "%s collapsed from heatstroke"
+	}
+	switch {
+	case v.Status == health.Alive && g.downsNow(id, v, b):
+		g.logEvent(id, logEntry{Kind: kind})
+		g.down(id, cause)
+		pos, _ := g.positions.Get(id)
+		g.message(pos.X, pos.Y, how, g.nameOf(id))
+	case v.Status == health.Downed && (v.Cause == health.CauseHypothermia || v.Cause == health.CauseHeatstroke) && g.standsUp(id, v):
+		v.Status, v.Cause = health.Alive, health.CauseNone
+		g.vital.Set(id, v)
+	}
+}
+
+// exposureView is a pawn's hypothermia and heatstroke (permille) and its
+// frostbitten parts, for the pawn views.
+func exposureView(g *Game, id entity.EntityID) (int, int, int) {
+	e := g.exposure[id]
+	return int(exposure.Permille(e.Hypo)), int(exposure.Permille(e.Heat)), body.FrostbiteParts(g.bodies[id])
+}
+
+// chillHost is bodytemp.AnimalHost: animal exposure's reach into the game.
+type chillHost struct{ g *Game }
+
+func (h chillHost) AirAt(id entity.EntityID) int {
+	pos, _ := h.g.positions.Get(id)
+	return int(h.g.temperatureAt(pos.X, pos.Y))
+}
+
+func (h chillHost) Roll(n int) int { return h.g.stream(streamBody).IntN(n) }
 
 func (g *Game) nameOf(id entity.EntityID) string {
 	n, _ := g.names.Get(id)
 	return n
 }
 
-// needsComfort reports a colonist suffering exposure where it stands.
+// needsComfort reports a colonist suffering exposure where it stands
+// (from the trivial stage: hysteresis with doWarm's stop at none left).
 func (g *Game) needsComfort(id entity.EntityID) bool {
 	e := g.exposure[id]
 	pos, _ := g.positions.Get(id)
 	t := int(g.temperatureAt(pos.X, pos.Y))
 	b := g.bandsOf(id)
-	return e.hypo >= exposure.Mild && t < b.Min || e.heat >= exposure.Mild && t > b.Max
+	return e.Hypo >= exposure.Mild && t < b.Min || e.Heat >= exposure.Mild && t > b.Max
 }
 
 // warmSpot finds the nearest reachable spot in a room with bearable air for
-// a colonist suffering exposure. ok is false when there is none.
+// a colonist suffering exposure (bodytemp.Spot). ok is false when there is
+// none.
 func (g *Game) warmSpot(id entity.EntityID) (int, int, bool) {
 	g.ensureRooms()
 	pos, _ := g.positions.Get(id)
-	cold := g.exposure[id].hypo >= g.exposure[id].heat
-	bands := g.bandsOf(id)
-	ok := func(r int) bool {
-		if r < 0 || r >= len(g.roomTemps) {
-			return false
-		}
-		t := int(g.roomTemps[r])
-		if cold {
-			return t >= bands.Min
-		}
-		return t <= bands.Max
-	}
-	type spot struct{ x, y, d int }
-	var spots []spot
-	w := g.grid.Width()
-	for i, r := range g.roomGrid {
-		if r == room.Wall || !ok(r) {
-			continue
-		}
-		x, y := i%w, i/w
-		if !g.grid.Walkable(x, y) || g.bedCovering(x, y) {
-			continue
-		}
-		if owner, taken := g.reserve.TileOwner(x, y); taken && owner != id {
-			continue
-		}
-		spots = append(spots, spot{x, y, pathing.Dist(pos.X, pos.Y, x, y)})
-	}
-	sort.Slice(spots, func(i, j int) bool {
-		if spots[i].d != spots[j].d {
-			return spots[i].d < spots[j].d
-		}
-		return spots[i].y*w+spots[i].x < spots[j].y*w+spots[j].x
-	})
-	for i, s := range spots {
-		if i >= 12 {
-			break
-		}
-		if g.reachable(id, s.x, s.y) {
-			return s.x, s.y, true
-		}
-	}
-	return 0, 0, false
+	cold, bands, temps := g.exposure[id].Hypo >= g.exposure[id].Heat, g.bandsOf(id), g.thermo.Temps
+	return bodytemp.Spot(g.roomGrid, g.grid.Width(), pos.X, pos.Y, func(r int) bool {
+		return r >= 0 && r < len(temps) && (cold && int(temps[r]) >= bands.Min || !cold && int(temps[r]) <= bands.Max)
+	}, func(x, y int) bool {
+		owner, taken := g.reserve.TileOwner(x, y)
+		return g.grid.Walkable(x, y) && !g.bedCovering(x, y) && (!taken || owner == id)
+	}, func(x, y int) bool { return g.reachable(id, x, y) })
 }
 
 // assignWarm walks pawn id to the nearest bearable spot, if any.
@@ -257,10 +172,10 @@ func (g *Game) assignWarm(id entity.EntityID) bool {
 }
 
 // exposureDanger: hypothermia or heatstroke bad enough to get a sleeper
-// out of bed (a little chill only matters once it is awake).
+// out of bed (the serious stage; a little chill only matters once awake).
 func (g *Game) exposureDanger(id entity.EntityID) bool {
 	e := g.exposure[id]
-	return e.hypo >= exposure.Recover || e.heat >= exposure.Recover
+	return e.Hypo >= exposure.Danger || e.Heat >= exposure.Danger
 }
 
 // warmRetry is how long a colonist that found no bearable spot waits
@@ -275,7 +190,7 @@ func (g *Game) noComfortUntil(id entity.EntityID) bool {
 func (g *Game) doWarm(id entity.EntityID, j job.Record) {
 	e := g.exposure[id]
 	j.WorkLeft--
-	if j.WorkLeft <= 0 || e.hypo == 0 && e.heat == 0 {
+	if j.WorkLeft <= 0 || e == (bodytemp.Sev{}) {
 		j.State = job.Complete
 	}
 	g.jobs.Set(id, j)

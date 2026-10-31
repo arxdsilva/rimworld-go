@@ -407,6 +407,9 @@ func (g *Game) prunePower(c *powerCache) {
 		if i, ok := c.powerNode(id); ok {
 			return c.specs[i]
 		}
+		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.Vent {
+			return power.SpecOf(b.Kind) // TEMP-1: a vent is a toggle off the grid
+		}
 		return power.Spec{}
 	}
 	for id := range pw.charge {

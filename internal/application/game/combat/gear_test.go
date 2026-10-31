@@ -316,12 +316,19 @@ func TestDropWeaponKeepsTheMake(t *testing.T) {
 	}
 }
 
-// TestKitOutfit: a raider's kit goes on slot by slot.
+// TestKitOutfit: a raider's kit goes on slot by slot (TEMP-4: the flak
+// vest on the middle layer), over a T-shirt and pants; a shell keeps its
+// legs free of the flak pants.
 func TestKitOutfit(t *testing.T) {
 	t.Parallel()
 	o := KitOutfit([]item.Kind{item.FlakVest, item.SimpleHelmet, item.ShieldBelt, item.Steel})
-	if o.Kind(item.Body) != item.FlakVest || o.Kind(item.Head) != item.SimpleHelmet || o.Kind(item.Belt) != item.ShieldBelt {
+	if o.Kind(item.Middle) != item.FlakVest || o.Kind(item.Head) != item.SimpleHelmet || o.Kind(item.Belt) != item.ShieldBelt ||
+		o.Kind(item.SkinTorso) != item.TShirt || o.Kind(item.SkinLegs) != item.Pants || o.Naked() {
 		t.Fatalf("kit outfit %+v", o)
+	}
+	o = KitOutfit([]item.Kind{item.MarineArmor, item.FlakPants})
+	if o.Kind(item.Body) != item.MarineArmor || o.Kind(item.Legs) != 0 {
+		t.Fatalf("shell kit %+v", o)
 	}
 }
 

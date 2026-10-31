@@ -57,7 +57,7 @@ func TestCampfireHeatsItsRoomInWinter(t *testing.T) {
 	g.Step(clock.TicksPerDay / 2)
 	warm, cold := int(g.temperatureAt(3, 5)), int(g.temperatureAt(13, 5))
 	out := int(temperature.Outdoor(g.clock.Now()))
-	if warm < exposure.ComfortMin+50 {
+	if warm < exposure.Everyday.Min+50 {
 		t.Errorf("heated room %v, want comfortable", temperature.Temp(warm))
 	}
 	if cold > out+80 || cold < out-80 {
@@ -93,18 +93,21 @@ func TestColdNightOutsideKillsWithoutShelter(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	jumpTo(g, 45, 0)
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
-	downed := false
-	for i := 0; i < 24; i++ {
+	downed, hours := false, 0.0
+	for i := 0; i < 72; i++ { // TEMP-3: the wiki rates kill in hours, not minutes
 		g.Step(clock.TicksPerHour / 2)
 		g.SetNeeds(id, needs.Full, needs.Full)
 		v, _ := g.vital.Get(id)
 		if v.Status == health.Downed && v.Cause == health.CauseHypothermia {
 			downed = true
 		}
+		if hours = float64(i+1) / 2; v.Status == health.Dead {
+			break
+		}
 	}
 	v, _ := g.vital.Get(id)
-	if !downed || v.Status != health.Dead || v.Cause != health.CauseHypothermia {
-		t.Fatalf("status %v cause %v downed %v: a winter night outdoors should be fatal", v.Status, v.Cause, downed)
+	if !downed || v.Status != health.Dead || v.Cause != health.CauseHypothermia || hours < 6 {
+		t.Fatalf("status %v cause %v downed %v after %.1f h: a winter day outdoors should be fatal, in hours", v.Status, v.Cause, downed, hours)
 	}
 }
 
@@ -127,8 +130,8 @@ func TestFreezingColonistSeeksWarmRoom(t *testing.T) {
 	if v.Status != health.Alive {
 		t.Fatalf("colonist %v (%v) at %d,%d: should have walked into the warm hut", v.Status, v.Cause, pos.X, pos.Y)
 	}
-	if g.roomAt(pos.X, pos.Y) < 0 && g.exposure[id].hypo > exposure.Mild {
-		t.Fatalf("still out in the cold at %d,%d with hypothermia %d", pos.X, pos.Y, g.exposure[id].hypo)
+	if g.roomAt(pos.X, pos.Y) < 0 && g.exposure[id].Hypo > exposure.Mild {
+		t.Fatalf("still out in the cold at %d,%d with hypothermia %d", pos.X, pos.Y, g.exposure[id].Hypo)
 	}
 }
 

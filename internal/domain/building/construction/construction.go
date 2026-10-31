@@ -377,11 +377,13 @@ var defs = [kindCount]Def{
 	Battery: {Kind: Battery, Name: "battery", Wood: 55, Work: 220, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 2},
 	TorchLamp: {Kind: TorchLamp, Name: "torch lamp", Wood: 3, Work: 30, Layer: LayerObject},
-	Heater: {Kind: Heater, Name: "heater", Wood: 35, Work: 110, Layer: LayerObject, BlocksMove: true,
+	// TEMP-1, wiki: Heater (50 steel + 1 component), Cooler (90 steel + 3
+	// components), scaled as the wave D rows (material / 9); work ours.
+	Heater: {Kind: Heater, Name: "heater", Wood: 6, Work: 110, Layer: LayerObject, BlocksMove: true,
 		MetalOK: true, MetalOnly: true, Components: 1},
 	// A cooler stands in a wall gap like a door; it faces its cold side.
-	Cooler: {Kind: Cooler, Name: "cooler", Wood: 45, Work: 130, Layer: LayerObject, BlocksMove: true, Rotatable: true,
-		MetalOK: true, MetalOnly: true, Components: 2},
+	Cooler: {Kind: Cooler, Name: "cooler", Wood: 10, Work: 130, Layer: LayerObject, BlocksMove: true, Rotatable: true,
+		MetalOK: true, MetalOnly: true, Components: 3},
 	ElectricStove: {Kind: ElectricStove, Name: "electric stove", Wood: 45, Work: 190, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 2},
@@ -515,9 +517,10 @@ var defs = [kindCount]Def{
 	HydroponicsBasin: {Kind: HydroponicsBasin, Name: "hydroponics basin", Wood: 11, Work: 280, Layer: LayerObject,
 		Rotatable: true, Size: [2]int{1, 4}, MetalOK: true, MetalOnly: true, Components: 1},
 	SunLamp: {Kind: SunLamp, Name: "sun lamp", Wood: 4, Work: 33, Layer: LayerObject, MetalOK: true, MetalOnly: true},
-	// TEMP-0 contract, wiki: Passive cooler (50 wood), Vent (30 steel,
-	// impassable). Scaled as the wave D rows; the work is original tuning
-	// until TEMP-1 sets the wiki's.
+	// TEMP-1, wiki: Passive cooler (50 wood; game/thermo cools, fuel.go
+	// burns its wood), Vent (30 steel, impassable; open or shut like a
+	// power toggle). Scaled as the wave D rows; the work is original
+	// tuning (the wiki gives none).
 	PassiveCooler: {Kind: PassiveCooler, Name: "passive cooler", Wood: 6, Work: 70, Layer: LayerObject, BlocksMove: true},
 	Vent: {Kind: Vent, Name: "vent", Wood: 3, Work: 80, Layer: LayerObject, BlocksMove: true, Rotatable: true,
 		MetalOK: true, MetalOnly: true},

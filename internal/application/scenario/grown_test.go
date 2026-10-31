@@ -194,6 +194,8 @@ func TestGrownGolden(t *testing.T) {
 	// stockpiles allow every storable kind, so their filters gain the seven
 	// new food kinds' bits; with both hidden the previous pin comes back
 	// exactly. Stable over -count=2.
+	// Re-pinned (TEMP-1..4): wiki room thermodynamics, wiki temperate
+	// climate (colder nights), wiki exposure and layered clothing.
 	// Re-pinned (FOOD-6): bounded food binges, 500-tick meals, wiki
 	// hunger offsets, per-species breeding, eclipse and toxic fallout.
 	// Re-pinned (FOOD-4): the start kit's legacy ration is now survival
@@ -204,7 +206,7 @@ func TestGrownGolden(t *testing.T) {
 	// butchering by body size, per-species animal products, taming food and
 	// auto-slaughter; the previous pin held through FOOD-0 (the committed
 	// full suite). Stable over -count=2.
-	const want uint64 = 0xea8037e3f428c8c1
+	const want uint64 = 0xbf871c58322626b
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

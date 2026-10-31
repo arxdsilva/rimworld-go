@@ -216,11 +216,10 @@ const (
 	HumanMeat
 	InsectMeat
 	AgaveFruit
-	// TEMP-0 contract (append only, saved; not apparel, craftable or
-	// spawned until TEMP-4 gives them slots, insulation, recipes and art:
-	// IsContractApparel). wiki: Apparel. The layered core clothing: two
-	// shirts and pants on the skin, a jacket over them, two hats and the
-	// tribal one-piece that covers torso and legs on the skin.
+	// TEMP-0 contract, worn since TEMP-4 (append only, saved). wiki:
+	// Apparel. The layered core clothing: two shirts and pants on the
+	// skin, a jacket over them, two hats and the tribal one-piece that
+	// covers torso and legs on the skin.
 	TShirt
 	ButtonDownShirt
 	Pants
@@ -271,10 +270,6 @@ func (k Kind) IsArmor() bool { return k >= FlakVest && k <= AdvancedHelmet }
 // IsContractWeapon reports a weapon kind of the STO/CBT contract
 // (rocket launchers to the ikwa), equippable since CBT-3.
 func (k Kind) IsContractWeapon() bool { return k >= RocketLauncher && k <= Ikwa }
-
-// IsContractApparel reports a garment of the TEMP-0 contract (the
-// T-shirt to the tribalwear): filed as apparel, worn from TEMP-4.
-func (k Kind) IsContractApparel() bool { return k >= TShirt && k <= Tribalwear }
 
 // IsBelt reports belt-layer apparel (the shield belt and the smokepop
 // pack), worn in the Belt slot since CBT-3.
@@ -410,37 +405,33 @@ func (k Kind) IsFood() bool { return k.Nutrition() > 0 }
 // Outfit.On, indexed by Slot) holds one garment per slot, and its Forced
 // bits are one per slot, so the values are saved: append only.
 //
-// Layers (TEMP-0 contract; TEMP-4 wears them, until then only Body, Head,
-// Legs and Belt hold garments). wiki: Apparel (layers Skin, Middle, Outer,
-// Belt, Headgear). A slot is a layer on a body region, matching the plies
-// of armor.Apparel:
-//   - SkinTorso: T-shirt, button-down shirt, tribalwear (which also
-//     Occupies SkinLegs).
+// Layers (TEMP-4). wiki: Apparel (layers Skin, Middle, Outer, Belt,
+// Headgear). A slot is a layer on a body region, matching the plies of
+// armor.Apparel, so two garments conflict only on the same layer with
+// overlapping coverage (Occupies):
+//   - SkinTorso: T-shirt, button-down shirt, tribalwear (a one-piece
+//     that also Occupies SkinLegs).
 //   - SkinLegs: pants.
-//   - Middle (torso): jacket; flak vest (TEMP-4 moves it from Body: its
-//     ply is middle, so it goes under a parka).
-//   - Legs (middle, legs): flak pants, over pants, as today.
-//   - Body, the Outer layer: parka, wool parka, duster, flak jacket; plate
-//     and marine armor (a shell: also Occupies Middle and Legs).
+//   - Middle (torso): the flak vest.
+//   - Legs (middle, legs): flak pants, over pants.
+//   - Body, the Outer layer: parka, wool parka, duster, jacket (wiki:
+//     outer, between a duster and a parka), flak jacket; plate and
+//     marine armor (a shell: also Occupies Middle and Legs).
 //   - Head: tuque, cowboy hat, bowler hat, helmets.
-//   - Belt: the shield belt and the smokepop pack, as today.
+//   - Belt: the shield belt and the smokepop pack.
 //
-// TEMP-4 grows craft.Slots from 5 to NumSlots (8): Outfit.On becomes
-// [NumSlots]Piece and Forced keeps its uint8 (bits 1..7). OutfitSave.On
-// stays a slice, so an older save's five entries copy into the first five
-// slots unchanged; ImportOutfits then moves a saved flak vest from Body to
-// Middle. Until then the new slots are out of range for Outfit (Kind,
-// HitWear and the dress plan check s < craft.Slots) and Occupies is a
-// garment's own Slot only.
+// craft.Slots is NumSlots (8). OutfitSave.On is a slice, so an older
+// save's five entries copy into the first five slots; ImportOutfits moves
+// a saved flak vest from Body to Middle.
 type Slot uint8
 
 const (
 	NoSlot Slot = iota
-	Body        // the outer layer over the shirt: parka, duster (TEMP-4: Outer)
+	Body        // the Outer layer: parka, duster, jacket
 	Head
 	Legs // DEF-2: flak pants (middle ply on the legs)
 	Belt // CBT-3: the shield belt and the smokepop pack
-	// TEMP-0 contract (append only; unused until TEMP-4).
+	// TEMP-0 contract, worn since TEMP-4 (append only).
 	SkinTorso
 	SkinLegs
 	Middle
@@ -477,37 +468,79 @@ type SlotSet uint8
 // Has reports slot s in ss.
 func (ss SlotSet) Has(s Slot) bool { return s < NumSlots && ss&(1<<s) != 0 }
 
-// Occupies is every slot apparel k takes: its own Slot and, from TEMP-4,
-// the slots a one-piece or a shell also blocks (see Slot). 0 for anything
-// that is not apparel.
+// Occupies is every slot apparel k takes: its own Slot and the slots a
+// one-piece (tribalwear) or a shell (plate and marine armor) also blocks.
+// 0 for anything that is not apparel.
 func (k Kind) Occupies() SlotSet {
 	if s := k.Slot(); s != NoSlot {
-		return 1 << s
+		return 1<<s | apparel[k].also
 	}
 	return 0
 }
 
-// apparel: slot, cold insulation and heat insulation in tenths of a
-// degree C. Cold insulation lowers the bottom of the wearer's comfortable
-// range; heat insulation raises the top (negative: the garment is hot to
-// wear). A leather parka is serious winter gear but sweltering in summer;
-// a knitted tuque keeps the head warm; a long leather duster shades the
-// wearer in heat and cuts the wind a little.
+// Cover is the body regions a garment covers, a bit each (wiki: Apparel,
+// body part groups; the Naked thought reads torso and legs).
+type Cover uint8
+
+const (
+	CoverTorso Cover = 1 << iota
+	CoverLegs
+	CoverHead
+)
+
+// Covers is the body regions apparel k covers (0: not apparel).
+func (k Kind) Covers() Cover {
+	if k >= numKinds {
+		return 0
+	}
+	return apparel[k].covers
+}
+
+// The slot sets one-pieces and shells block besides their own.
+const (
+	alsoSkinLegs = SlotSet(1 << SkinLegs)
+	alsoShell    = SlotSet(1<<Middle | 1<<Legs)
+	torsoLegs    = CoverTorso | CoverLegs
+)
+
+// apparel: slot, the other slots it blocks, the regions it covers, and
+// cold and heat insulation. wiki: Apparel, Temperature: a garment made
+// from a material (MadeFrom) carries its apparel factors, percent of the
+// material's insulation (parka 200/0, duster 60/85, tuque 50/0, jacket
+// 80/30, button-down 26/10, T-shirt 22/10, pants 20/8, tribalwear 55/55,
+// cowboy hat 10/50, bowler hat 10/40, simple helmet 15/0; plate armor
+// none; the advanced helmet, which the wiki does not give, the simple
+// helmet's); any other carries fixed tenths of a degree C (flak and marine
+// armor per the wiki). Cold insulation lowers the bottom of the wearer's
+// comfortable range, heat insulation raises the top. The wool parka is
+// our own garment, a parka knitted from sheep wool: the parka's factors
+// of wool's 26/10, fixed.
 var apparel = [numKinds]struct {
 	slot       Slot
+	also       SlotSet
+	covers     Cover
 	cold, heat int
 }{
-	Parka:  {Body, 200, -30},
-	Tuque:  {Head, 60, 0},
-	Duster: {Body, 40, 80},
-	// knitted wool traps more warmth than leather and breathes a little
-	WoolParka: {Body, 240, -20},
-	// DEF-2 armor, wiki insulation (Normal quality; helmets in steel).
-	FlakVest: {Body, 10, 0}, FlakPants: {Legs, 35, 10}, FlakJacket: {Body, 144, 30},
-	PlateArmor: {Body, 0, 0}, MarineArmor: {Body, 680, 100},
-	MarineHelmet: {Head, 40, 20}, SimpleHelmet: {Head, 4, 0}, AdvancedHelmet: {Head, 4, 0},
-	// CBT-3 belts: no insulation.
+	Parka:     {slot: Body, covers: CoverTorso, cold: 200, heat: 0},
+	Tuque:     {slot: Head, covers: CoverHead, cold: 50, heat: 0},
+	Duster:    {slot: Body, covers: torsoLegs, cold: 60, heat: 85},
+	WoolParka: {slot: Body, covers: CoverTorso, cold: 520, heat: 0},
+	// DEF-2 armor, wiki insulation (fixed, Normal quality).
+	FlakVest: {slot: Middle, covers: CoverTorso, cold: 10}, FlakPants: {slot: Legs, covers: CoverLegs, cold: 35, heat: 10},
+	FlakJacket: {slot: Body, covers: CoverTorso, cold: 144, heat: 30},
+	PlateArmor: {slot: Body, also: alsoShell, covers: torsoLegs}, MarineArmor: {slot: Body, also: alsoShell, covers: torsoLegs, cold: 680, heat: 100},
+	MarineHelmet: {slot: Head, covers: CoverHead, cold: 40, heat: 20},
+	SimpleHelmet: {slot: Head, covers: CoverHead, cold: 15}, AdvancedHelmet: {slot: Head, covers: CoverHead, cold: 15},
+	// CBT-3 belts: no insulation, no cover.
 	ShieldBelt: {slot: Belt}, SmokepopPack: {slot: Belt},
+	// TEMP-4, the layered core clothing (wiki factors).
+	TShirt:          {slot: SkinTorso, covers: CoverTorso, cold: 22, heat: 10},
+	ButtonDownShirt: {slot: SkinTorso, covers: CoverTorso, cold: 26, heat: 10},
+	Pants:           {slot: SkinLegs, covers: CoverLegs, cold: 20, heat: 8},
+	Jacket:          {slot: Body, covers: CoverTorso, cold: 80, heat: 30},
+	CowboyHat:       {slot: Head, covers: CoverHead, cold: 10, heat: 50},
+	BowlerHat:       {slot: Head, covers: CoverHead, cold: 10, heat: 40},
+	Tribalwear:      {slot: SkinTorso, also: alsoSkinLegs, covers: torsoLegs, cold: 55, heat: 55},
 }
 
 // IsApparel reports clothing that can be worn.
@@ -521,18 +554,15 @@ func (k Kind) Slot() Slot {
 	return apparel[k].slot
 }
 
-// Insulation is apparel k's cold and heat insulation (tenths of a degree).
-func (k Kind) Insulation() (cold, heat int) {
-	if k >= numKinds {
-		return 0, 0
-	}
-	return apparel[k].cold, apparel[k].heat
-}
+// Insulation is apparel k's cold and heat insulation (tenths of a degree)
+// at Normal quality in its default material.
+func (k Kind) Insulation() (cold, heat int) { return Insulation(k, 0, 0) }
 
 // Apparel lists every wearable kind.
 func Apparel() []Kind {
 	return []Kind{Parka, Tuque, Duster, WoolParka,
-		FlakVest, FlakPants, FlakJacket, PlateArmor, MarineArmor, MarineHelmet, SimpleHelmet, AdvancedHelmet}
+		FlakVest, FlakPants, FlakJacket, PlateArmor, MarineArmor, MarineHelmet, SimpleHelmet, AdvancedHelmet,
+		TShirt, ButtonDownShirt, Pants, Jacket, CowboyHat, BowlerHat, Tribalwear}
 }
 
 // IsStuff reports whether k is a building material.

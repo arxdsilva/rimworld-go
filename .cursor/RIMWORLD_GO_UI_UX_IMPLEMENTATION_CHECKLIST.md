@@ -780,7 +780,7 @@ understandable.
 -   [x] **Weapon accuracy/range/warmup/cooldown** (DEF-2: gear tab WeaponStats lines)
 -   [x] **Melee damage/cooldown** (CBT-5: gear tab tooltip for melee and ranged damage and cooldown; gun-stock blows carry the gun's name)
 -   [x] **Armor by damage category** (DEF-2: gear tab ApparelArmor lines (sharp, blunt, heat))
--   [ ] **Temperature insulation**
+-   [-] **Temperature insulation** (TEMP-4: the inspector's comfort range sums every worn layer's wiki insulation; the naked thought shows in the mood list; missing: per-garment insulation lines and the layer view in the gear tab, TEMP-5)
 -   [ ] **Movement/work penalties from gear**
 
 ------------------------------------------------------------------------

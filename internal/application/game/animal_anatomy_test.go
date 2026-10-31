@@ -39,7 +39,7 @@ func TestLegacyAnimalBodyMigrates(t *testing.T) {
 	}{{cow, animal.Cow, body.Quadruped, 30}, {snake, animal.Cobra, body.Snake, 4}} {
 		b := animalBody(l, c.id)
 		root := body.RootOf(c.an)
-		if b == nil || b.Anatomy != c.an || b.Scale != animalHealthScale(c.sp) {
+		if b == nil || b.Anatomy != c.an || b.Scale != animal.HealthScale(c.sp) {
 			t.Fatalf("%v: migrated body %+v", c.sp, b)
 		}
 		if len(b.Wounds) != 1 || b.Wounds[0].Part != root || b.Wounds[0].Dmg != c.dmg || b.Wounds[0].Kind != body.Bite {
@@ -68,7 +68,7 @@ func TestAnimalPartWoundSurvivesSave(t *testing.T) {
 	g := New(Config{Seed: 52, Width: 20, Height: 12})
 	wolf, _ := g.SpawnAnimal("timber_wolf", 10, 6)
 	setAnimal(g, wolf, func(a *animal.State) {
-		b := newAnimalBody(a.Species)
+		b := animal.NewBody(a.Species)
 		b.Wounds = []body.Wound{{Part: body.QLegFL, Dmg: 6, Kind: body.Bite, At: 1, Size: 6}}
 		b.Missing = 1 << body.QTail
 		a.Injury, a.Body = 6+b.PartDef(body.QTail).MaxHP, b
@@ -155,7 +155,7 @@ func TestAnimalLostPartKeepsBody(t *testing.T) {
 	g := New(Config{Seed: 54, Width: 20, Height: 12})
 	deer, _ := g.SpawnAnimal("deer", 10, 6)
 	setAnimal(g, deer, func(a *animal.State) {
-		b := newAnimalBody(a.Species)
+		b := animal.NewBody(a.Species)
 		b.Missing = 1<<body.QLegHL | 1<<body.QPawHL
 		b.Wounds = []body.Wound{{Part: body.QTorso, Dmg: 1, Kind: body.Bruise, At: 1, Size: 1}}
 		a.Injury, a.Body = 1, b
@@ -191,7 +191,7 @@ func TestAnimalViewListsParts(t *testing.T) {
 		t.Fatalf("whole: %+v %d", av.Parts, av.MovingPct)
 	}
 	setAnimal(g, dog, func(a *animal.State) {
-		b := newAnimalBody(a.Species)
+		b := animal.NewBody(a.Species)
 		b.Missing = 1<<body.QLegFR | 1<<body.QPawFR
 		b.Fresh = 1 << body.QLegFR
 		b.Wounds = []body.Wound{{Part: body.QEarL, Dmg: 2, Kind: body.Bruise, At: 1}, {Part: body.QTorso, Dmg: 3, Kind: body.Cut, At: 1}}
@@ -219,7 +219,7 @@ func TestAnimalSurgeryRefused(t *testing.T) {
 	t.Parallel()
 	g, _, dog := bondYard(t, 56)
 	setAnimal(g, dog, func(a *animal.State) {
-		a.Body = newAnimalBody(a.Species)
+		a.Body = animal.NewBody(a.Species)
 		a.Body.Missing = 1<<body.QLegFL | 1<<body.QPawFL
 	})
 	for k := body.OpKind(0); k < body.NumOps; k++ {

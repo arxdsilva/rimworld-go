@@ -247,8 +247,9 @@ func (g *Game) prisonerPawnView(id entity.EntityID) PawnView {
 	pv.InBed = g.inBed(id)
 	cv := g.care.View(id, j)
 	pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
-	pv.GuestFaction = careGuests{g}.FactionName(id) // visitors.go (SIM-063)
-	pv.Infection, pv.Wounded = g.woundView(id)      // infection.go (MED-02)
+	pv.GuestFaction = careGuests{g}.FactionName(id)                   // visitors.go (SIM-063)
+	pv.Infection, pv.Wounded = g.woundView(id)                        // infection.go (MED-02)
+	pv.Hypothermia, pv.Heatstroke, pv.Frostbite = exposureView(g, id) // heat.go (TEMP-3): prisoners and guests take exposure
 	g.fillPawnAction(&pv, id, j)
 	return pv
 }

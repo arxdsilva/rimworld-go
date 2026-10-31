@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
@@ -15,10 +16,10 @@ import (
 // setAir pins the air on (x, y) to tenths of a degree (the residual-heat
 // hook temperatureAt reads first; frostCrops never moves it).
 func setAir(g *Game, x, y, tenths int) {
-	if g.residual == nil {
-		g.residual = map[int]temperature.Temp{}
+	if g.thermo.Residual == nil {
+		g.thermo.Residual = map[int]temperature.Temp{}
 	}
-	g.residual[y*g.grid.Width()+x] = temperature.Temp(tenths)
+	g.thermo.Residual[y*g.grid.Width()+x] = temperature.Temp(tenths)
 }
 
 // frostFor runs the whole-map frost pass once a climate interval for
@@ -64,10 +65,10 @@ func nearDeath(g *Game, id entity.EntityID) {
 	g.plants.Set(id, p)
 }
 
-// TestFrostDamagesCropsOverHours: corn just past its frost limit is hurt
-// for about four hours (one warning, a damage readout) and then dies with
-// the batched kill notice.
-func TestFrostDamagesCropsOverHours(t *testing.T) {
+// TestColdKillsCropsAtOnce (TEMP-2, wiki: Plants): corn just below its
+// own cold threshold dies in the first window, with the batched kill
+// notice and no damage warning; corn at its threshold lives.
+func TestColdKillsCropsAtOnce(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 40, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 12) // summer: only the pinned tiles freeze
@@ -75,42 +76,25 @@ func TestFrostDamagesCropsOverHours(t *testing.T) {
 	var ids []entity.EntityID
 	for x := 2; x < 4; x++ {
 		id, _ := g.spawnPlant(plant.Corn, x, 3, 100)
-		setAir(g, x, 3, frostLimit(g, id)-1) // FOOD-2: each plant its own limit
+		setAir(g, x, 3, plant.ColdThreshold(uint64(id))-1) // each plant its own threshold, from its id
 		ids = append(ids, id)
 	}
-	warm, _ := g.spawnPlant(plant.Corn, 10, 3, 100)
-	frostFor(g, clock.TicksPerHour)
-	for _, id := range ids {
-		p, ok := g.plants.Get(id)
-		if !ok || p.Damage < 24 || p.Damage > 26 || !p.Damaging || p.DamageHeat {
-			t.Fatalf("an hour past the frost limit: %+v alive %v, want about 25%% cold damage", p, ok)
-		}
-		pv, _ := plantView(g, id)
-		if pv.Damage != int(p.Damage) || pv.DamageKind != "cold" {
-			t.Fatalf("view %d%% %q, plant %d%%", pv.Damage, pv.DamageKind, p.Damage)
-		}
-	}
-	if pv, _ := plantView(g, warm); pv.Damage != 0 || pv.DamageKind != "" {
-		t.Fatalf("warm corn reads %d%% %q", pv.Damage, pv.DamageKind)
-	}
-	if n := countText(g, "Frost is damaging the corn"); n != 1 {
-		t.Fatalf("%d frost warnings, want 1: %+v", n, g.messages)
-	}
-	frostFor(g, 3*clock.TicksPerHour-climateInterval)
-	if _, ok := g.plants.Get(ids[0]); !ok {
-		t.Fatal("corn died before four hours just past its limit")
-	}
+	edge, _ := g.spawnPlant(plant.Corn, 10, 3, 100)
+	setAir(g, 10, 3, plant.ColdThreshold(uint64(edge)))
 	frostFor(g, climateInterval)
 	for _, id := range ids {
 		if _, ok := g.plants.Get(id); ok {
-			t.Fatal("corn alive after four hours past its frost limit")
+			t.Fatal("corn alive a window below its cold threshold")
 		}
+	}
+	if p, ok := g.plants.Get(edge); !ok || p.Damage != 0 {
+		t.Fatalf("corn at its threshold: %+v alive %v", p, ok)
 	}
 	if m := g.messages[len(g.messages)-1].Text; m != "Frost killed the corn (2 plants)" {
 		t.Fatalf("kill notice %q", m)
 	}
-	if n := countText(g, "Frost is damaging the corn"); n != 1 {
-		t.Fatalf("%d frost warnings, want 1", n)
+	if n := countText(g, "Frost is damaging the corn"); n != 0 {
+		t.Fatalf("%d frost warnings, want none", n)
 	}
 	for _, id := range g.plantIDs {
 		if _, ok := g.plants.Get(id); !ok {
@@ -143,17 +127,18 @@ func TestHeatScorchesWildPlants(t *testing.T) {
 	}
 }
 
-// TestFrostDamageHealsAndWarnsOncePerDay: damage below 60% heals once
-// the air is safe again, a second frost the same day posts no second
-// warning, and a frost the next day warns again.
+// TestFrostDamageHealsAndWarnsOncePerDay: a wild plant's cold damage
+// (a jungle tree below its -8 C limit; crops die at once since TEMP-2)
+// below 60% heals once the air is safe again, a second frost the same
+// day posts no second warning, and a frost the next day warns again.
 func TestFrostDamageHealsAndWarnsOncePerDay(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 1)
 	g.SetWeather(weather.Clear, 0)
-	id, _ := g.spawnPlant(plant.Corn, 3, 3, 100)
+	id, _ := g.spawnPlant(plant.JungleTree, 3, 3, 100)
 	kill := frostLimit(g, id)
-	const warning = "Frost is damaging the corn"
+	warning := farm.HurtText(plant.JungleTree, false)
 	setAir(g, 3, 3, kill-1)
 	frostFor(g, 6*clock.TicksPerHour/4) // 1.5 h: about 37%
 	setAir(g, 3, 3, kill+plant.DamageStopMargin)
@@ -190,14 +175,14 @@ func TestFrostDamageHealsAndWarnsOncePerDay(t *testing.T) {
 	}
 }
 
-// TestFrostDamageNoFlap: air hovering at the frost limit keeps the crop
-// damaging from the first frosty window until it dies: one warning,
+// TestFrostDamageNoFlap: air hovering at a wild plant's cold limit keeps
+// it damaging from the first frosty window until it dies: one warning,
 // damage never falling.
 func TestFrostDamageNoFlap(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 1)
-	id, _ := g.spawnPlant(plant.Corn, 3, 3, 100)
+	id, _ := g.spawnPlant(plant.JungleTree, 3, 3, 100)
 	kill := frostLimit(g, id)
 	last := uint8(0)
 	for i := 0; i < 60; i++ {
@@ -213,35 +198,31 @@ func TestFrostDamageNoFlap(t *testing.T) {
 		last = p.Damage
 	}
 	if _, ok := g.plants.Get(id); ok {
-		t.Fatal("corn hovering at its frost limit never died")
+		t.Fatal("a jungle tree hovering at its cold limit never died")
 	}
-	if n := countText(g, "Frost is damaging the corn"); n != 1 {
+	if n := countText(g, farm.HurtText(plant.JungleTree, false)); n != 1 {
 		t.Fatalf("%d warnings, want 1", n)
 	}
 }
 
-// TestStaggeredFrostKillsOverHours: in a real temperate midwinter night
-// the chunked plant pass hurts corn everywhere on the map, and kills it
-// within a few hours rather than at once.
-func TestStaggeredFrostKillsOverHours(t *testing.T) {
+// TestStaggeredFrostKillsCrops: a real temperate midwinter night (TEMP-2:
+// down to -25 C, wiki: Biomes) is past every crop's cold threshold, and
+// the chunked plant pass kills corn everywhere on the map within one
+// climate interval.
+func TestStaggeredFrostKillsCrops(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 64, Height: 64})
 	bareGround(g)
-	g.climate.YearMean -= 100 // FOOD-2: a hard winter, crops die below -10..-18 °C (wiki)
-	jumpTo(g, 45, 0)
+	jumpTo(g, 45, 2)
 	g.SetWeather(weather.Clear, 0)
+	if out := g.climate.Outdoor(g.clock.Now()); out >= -180 {
+		t.Fatalf("midwinter night at %v", out)
+	}
 	a, _ := g.spawnPlant(plant.Corn, 1, 1, 100)
 	b, _ := g.spawnPlant(plant.Corn, 60, 60, 100)
-	g.Step(clock.TicksPerHour / 2)
-	for _, id := range []entity.EntityID{a, b} {
-		p, ok := g.plants.Get(id)
-		if !ok || p.Damage == 0 || p.Dead() {
-			t.Fatalf("half an hour of a midwinter night: %+v alive %v", p, ok)
-		}
-	}
-	g.Step(3 * clock.TicksPerHour)
+	g.Step(climateInterval)
 	for _, id := range []entity.EntityID{a, b} {
 		if _, ok := g.plants.Get(id); ok {
-			t.Fatal("corn alive after three and a half hours of a midwinter night")
+			t.Fatal("corn alive after a climate interval of a midwinter night")
 		}
 	}
 }
@@ -284,7 +265,7 @@ func TestPlantDamageSaveRoundTrip(t *testing.T) {
 		heat bool
 	}{{cold, 42, false}, {hot, 63, true}} {
 		p, _ := g.plants.Get(c.id)
-		p.Damage, p.DamageHeat, p.Damaging = c.dmg, c.heat, true
+		p.Damage, p.DamageHeat, p.Damaging, p.Bare = c.dmg, c.heat, true, 77777 // TEMP-2: leafless until
 		g.plants.Set(c.id, p)
 	}
 	h := saveLoad(t, g)

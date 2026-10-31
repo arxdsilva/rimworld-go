@@ -53,6 +53,10 @@ func ItemSprite(kind string) string {
 		return "item/tuque"
 	case "duster":
 		return "item/duster_folded"
+	case "t-shirt": // TEMP-4: the sprite names drop the hyphen
+		return "item/tshirt"
+	case "button-down shirt":
+		return "item/button_down"
 	case "meal":
 		return "item/meal_simple"
 	case "nutrient paste meal":

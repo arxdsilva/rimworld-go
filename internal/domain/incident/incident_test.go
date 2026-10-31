@@ -30,9 +30,11 @@ func TestPickDeterministic(t *testing.T) {
 	// warm and tropical lands). PLAY-024 added the trader caravan and the
 	// orbital trader (the game vetoes both until it can host them).
 	// FOOD-2 added crop blight (vetoed without blightable crops), FOOD-6
-	// the eclipse (toxic fallout waits for day 60).
-	if len(seen) != 18 {
-		t.Fatalf("picked %v, want all 18 temperate nature events", seen)
+	// the eclipse (toxic fallout waits for day 60), TEMP-2 the heat wave
+	// and the cold snap (the game vetoes them out of season; the volcanic
+	// winter waits for day 60).
+	if len(seen) != 20 {
+		t.Fatalf("picked %v, want all 20 temperate nature events", seen)
 	}
 }
 

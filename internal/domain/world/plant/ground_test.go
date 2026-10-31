@@ -7,7 +7,8 @@ import (
 )
 
 // TestGroundPlantDefs: the PLAY-010 wild ground plants are wild, low,
-// woodless and yield nothing, with our own numbers.
+// woodless and yield nothing, with our own numbers (cold limits retuned
+// below their home biomes' wiki winters in TEMP-2).
 func TestGroundPlantDefs(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
@@ -17,13 +18,13 @@ func TestGroundPlantDefs(t *testing.T) {
 		browse             bool
 		coldKill, heatKill int
 	}{
-		{Bramble, "bramble", 40000, 30, 150, true, -300, 450},
-		{Moss, "moss", 30000, 10, 0, true, -500, 350},
-		{Agave, "agave", wikiDays(6), 25, 0, false, -50, 650},
-		{BallCactus, "ball_cactus", 60000, 20, 0, false, -80, 700},
-		{ElephantEar, "elephant_ear", 30000, 15, 110, true, 50, 500},
+		{Bramble, "bramble", 40000, 30, 150, true, -450, 450},
+		{Moss, "moss", 30000, 10, 0, true, -600, 350},
+		{Agave, "agave", wikiDays(6), 25, 0, false, -350, 650},
+		{BallCactus, "ball_cactus", 60000, 20, 0, false, -350, 700},
+		{ElephantEar, "elephant_ear", 30000, 15, 110, true, -80, 500},
 		{FireLily, "fire_lily", 30000, 10, 0, true, 0, 450},
-		{Dandelion, "dandelion", 15000, 5, 0, true, -200, 400},
+		{Dandelion, "dandelion", 15000, 5, 0, true, -350, 400},
 	} {
 		d := DefOf(c.s)
 		if d.Species != c.s || c.s.String() != c.key {

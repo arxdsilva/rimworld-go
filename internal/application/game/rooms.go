@@ -37,8 +37,8 @@ type RoomView struct {
 	Filth        int
 	Cleanliness  string
 	FilthPenalty int
-	// TEMP-0 contract (zero until TEMP-1), the room stats line: wall cells with outdoor air beyond, single and double
-	// (half the loss); its sources' net heat (tenths of heat/s); RoofKind "thin", "thick" (mountain), "mixed" or "".
+	// TEMP-1 (game/thermo), the room stats line: wall faces with outdoor air beyond, single and double (half the
+	// loss); its sources' net heat (tenths of heat/s); RoofKind "thin", "thick" (mountain), "mixed" or "".
 	ExposedWalls, DoubleWalls, HeatRate int
 	RoofKind                            string
 }
@@ -95,8 +95,9 @@ func (g *Game) rebuildRoomsFull() {
 	w, h := g.grid.Width(), g.grid.Height()
 	grid, sizes := room.Detect(w, h, g.isBoundary)
 	stats := g.roomStatsFull(grid, sizes)
-	g.roomTemps = g.remapRoomTemps(grid, len(stats))
-	g.rebuildFilth(grid, len(stats)) // filth.go: tread and room filth sums
+	now := g.clock.Now()
+	g.thermo.Remap(g.roomGrid, grid, len(stats), g.climate.Outdoor(now), g.climate.Indoor(now)) // game/thermo
+	g.rebuildFilth(grid, len(stats))                                                            // filth.go: tread and room filth sums
 	g.roomGrid, g.rooms, g.roomDirty = grid, stats, false
 	g.afterRoomsRebuilt() // roof.go
 }
@@ -145,11 +146,16 @@ func (g *Game) roomViews() []RoomView {
 		st, clean := r.tally.Stats(r.contents, sum, f.Wealth), r.tally.Stats(r.contents, 0, f.Wealth)
 		imp := st.ImpressivenessTenths
 		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.tally.Role(r.contents, f.MedicalBeds, f.PrisonerBeds).String(),
-			Score: imp / 10, Label: room.ImpressivenessLabel(imp), Impressiveness: imp, Temp: int(g.roomTemps[i]),
+			Score: imp / 10, Label: room.ImpressivenessLabel(imp), Impressiveness: imp, Temp: int(g.thermo.Temps[i]),
 			Space: st.SpaceTenths, SpaceLabel: room.SpaceLabel(st.SpaceTenths), Beauty: st.BeautyTenths,
 			BeautyLabel: room.BeautyLabel(st.BeautyTenths), Wealth: st.Wealth, WealthLabel: room.WealthLabel(st.Wealth),
 			Roofed: float64(g.roomRoofed(i)) / 1000, Filth: sum / max(1, r.contents.Cells), CleanStat: st.CleanlinessHundredths,
 			Cleanliness: room.CleanlinessLabel(st.CleanlinessHundredths), FilthPenalty: (clean.ImpressivenessTenths - imp) / 10}
+		tr := g.thermo.RoomOf(i) // game/thermo (TEMP-1): the stats line
+		out[i].ExposedWalls, out[i].DoubleWalls, out[i].RoofKind = tr.ExposedWalls, tr.DoubleWalls, tr.RoofKind
+	}
+	for i, h := range g.thermo.RoomRates() {
+		out[i].HeatRate = h
 	}
 	// PLAY-021: a room is lit by a light shining in it now (a powered
 	// lamp, a torch lamp or campfire burning, not doused by rain or snow)
@@ -224,16 +230,11 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 		states = append(states, mood.InPain)
 	}
 	pos, _ := g.positions.Get(id)
-	b := g.bandsOf(id)
-	switch t := int(g.temperatureAt(pos.X, pos.Y)); {
-	case t < b.Freezing():
-		states = append(states, mood.Freezing)
-	case t < b.Min:
-		states = append(states, mood.Cold)
-	case t > b.Sweltering():
-		states = append(states, mood.Sweltering)
-	case t > b.Max:
-		states = append(states, mood.Hot)
+	if k, ok := g.bandsOf(id).Thought(int(g.temperatureAt(pos.X, pos.Y))); ok { // TEMP-3: the 4-rung ladders (exposure)
+		states = append(states, k)
+	}
+	if g.apparel[id].Naked() { // TEMP-4, craft/garment.go: no torso or leg cover (wiki: Naked)
+		states = append(states, mood.Naked)
 	}
 	if v, _ := g.vital.Get(id); v.Status != health.Dead && g.unburiedNear(pos) {
 		states = append(states, mood.UnburiedCorpse)

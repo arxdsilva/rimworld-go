@@ -401,13 +401,14 @@ func (g *Gear) importGear(s []KitSave) {
 }
 
 // KitOutfit is a raider's kit of apparel kinds as an outfit: each piece
-// in its slot, Normal and of its default material (domain combat/kit).
+// in its slot, Normal and of its default material (domain combat/kit),
+// over a T-shirt and pants where the kit leaves the skin free (TEMP-4).
 func KitOutfit(kinds []item.Kind) craft.Outfit {
 	var o craft.Outfit
 	for _, k := range kinds {
-		if s := k.Slot(); s != item.NoSlot && int(s) < craft.Slots {
+		if s := k.Slot(); s != item.NoSlot && o.Conflicts(k) == 0 {
 			o.On[s] = craft.Piece{Kind: k}
 		}
 	}
-	return o
+	return o.Everyday()
 }

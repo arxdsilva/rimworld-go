@@ -58,11 +58,14 @@ const (
 	// CondToxicBuildup is toxins from fallout under the open sky (FOOD-6,
 	// cond_toxic.go): the game steps it by the hour.
 	CondToxicBuildup
-	// TEMP-0 contract (cond_frostbite.go; never applied until TEMP-3):
-	// frostbite on an extremity, and the insects' hypothermic slowdown
-	// (hypothermia's stages without the death).
-	CondFrostbite
+	// Temperature exposure (TEMP-3, cond_frostbite.go): hypothermia, the
+	// insects' hypothermic slowdown (its stages without the death) and
+	// heatstroke, set by the game from its exposure severities. Frostbite
+	// is a wound (body.Frostbite). The TEMP-0 contract's CondFrostbite
+	// slot became CondHypothermia (never saved before TEMP-3).
+	CondHypothermia
 	CondHypothermicSlowdown
+	CondHeatstroke
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )

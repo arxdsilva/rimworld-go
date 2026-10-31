@@ -62,6 +62,10 @@ func visitorRecOf(g *Game, id entity.EntityID) (visitorRec, bool) {
 
 func TestDownedVisitorRescuedTendedAndLeaves(t *testing.T) {
 	g, doc, vis, fac := guestScene(t)
+	// TEMP-3: the bed stands in the open; a temperate spring's nights (about
+	// −1 °C) would give a guest lying there for days wiki hypothermia, which
+	// only recovers back inside 16–26 °C. Pin a mild 20 °C: this is about care.
+	g.climate = temperature.Climate{YearMean: 200}
 	g.hurt(vis, health.DownedInjury+10, 0)
 	g.Step(1)
 	if v, _ := g.vital.Get(vis); v.Status != health.Downed {

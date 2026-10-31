@@ -17,7 +17,7 @@ const typeSlots = 256
 
 // Terrain-rule numbers (plan §2.6), all our own.
 const (
-	coldMean       = -20  // Climate.YearMean below -2 °C: icy beaches
+	coldMean       = -100 // Climate.YearMean below -10 °C: icy beaches (tundra and colder; TEMP-2 wiki biome means)
 	shoreMarshWet  = 0.5  // a lake ring is marsh at or above, mud below
 	puddleWet      = 0.85 // cave floors this wet may hold shallow water
 	puddleCell     = 6.0

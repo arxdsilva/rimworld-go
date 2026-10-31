@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -127,7 +128,8 @@ func (h restRoutine) Job(id entity.EntityID) job.Record {
 }
 
 func (h restRoutine) Band(id entity.EntityID) (int, int) {
-	b := h.g.bandsOf(id)
+	c, ht := h.g.comfortShift(id) // TEMP-3: before apparel (wiki: Thoughts), traits and build kept
+	b := shifted(exposure.Everyday, c, ht)
 	return b.Min, b.Max
 }
 

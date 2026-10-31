@@ -116,12 +116,15 @@ func (g *Game) growState(p plant.Plant, now growNow) (string, int) {
 	if p.Ripe() {
 		return growStateRipe, -1
 	}
-	light := plant.FullGrowLight
+	light, at := plant.FullGrowLight, uint64(g.clock.Now())
+	if p.Leafless(at) { // TEMP-2: bare from the cold
+		return growStateCold, -1
+	}
 	if plant.OwnLightRules(p.Species) {
 		if !plant.LitEnough(p.Species, g.cellLightPermil(p.X, p.Y)) {
 			return growStateDark, -1
 		}
-	} else if light = farm.GrowLight(g.roofAt(p.X, p.Y).Roofed() || g.incidents.Eclipsed(uint64(g.clock.Now())), g.artificialLight(p.X, p.Y), now.lamps, p.X, p.Y, g.combat.Sight.Line); plant.LightFactor(light) == 0 {
+	} else if light = farm.GrowLight(g.roofAt(p.X, p.Y).Roofed() || g.incidents.Eclipsed(at), g.incidents.SkyPermil(at), g.artificialLight(p.X, p.Y), now.lamps, p.X, p.Y, g.combat.Sight.Line); plant.LightFactor(light) == 0 {
 		return growStateDark, -1
 	}
 	t := int(g.temperatureAt(p.X, p.Y))

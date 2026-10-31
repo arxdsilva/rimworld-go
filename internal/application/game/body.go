@@ -476,7 +476,7 @@ func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
 
 // woundKindLabels name body.WoundKind values for the Health tab.
 var woundKindLabels = [...]string{body.Cut: "cut", body.Bruise: "bruise", body.Bite: "bite", body.Scratch: "scratch",
-	body.Burn: "burn", body.Surgical: "surgical cut", body.Stab: "stab", body.Gunshot: "gunshot"}
+	body.Burn: "burn", body.Surgical: "surgical cut", body.Stab: "stab", body.Gunshot: "gunshot", body.Frostbite: "frostbite"}
 
 func woundKindLabel(k body.WoundKind) string {
 	if int(k) < len(woundKindLabels) {

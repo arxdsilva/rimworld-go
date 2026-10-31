@@ -60,11 +60,10 @@ const (
 	// sky for days.
 	Eclipse
 	ToxicFallout
-	// TEMP-0 contract (Nature pool; inert until TEMP-2: weight 0, and the
-	// game's situational check refuses them): a heat wave and a cold snap
-	// shift the outdoor temperature for days, a volcanic winter chills and
-	// darkens the sky for weeks. They exclude one another. Until TEMP-2
-	// the wizard's Extreme weather keeps driving game/weather_ng1.go.
+	// TEMP-2 (Nature pool, climate.go): a heat wave and a cold snap shift
+	// the outdoor temperature for days, a volcanic winter chills and
+	// darkens the sky for weeks. They exclude one another; the wizard's
+	// Extreme weather raises their weights (Odds.Climate).
 	HeatWave
 	ColdSnap
 	VolcanicWinter
@@ -86,6 +85,11 @@ type Def struct {
 	// (WeightAt).
 	Disease bool
 }
+
+// Odds scales two families' weights, percent (FullFreq keeps the
+// catalogue's): diseases by the difficulty's disease frequency, climate
+// events (IsClimate) by the wizard's Extreme weather.
+type Odds struct{ Disease, Climate int }
 
 var (
 	ice = biome.Of(biome.IceSheet, biome.SeaIce)
@@ -136,13 +140,14 @@ var defs = [NumIDs]Def{
 	// day is original tuning.
 	Eclipse:      {Key: "eclipse", Name: "Eclipse", Category: Nature, Weight: 12, Cooldown: 15, MinDay: 10},
 	ToxicFallout: {Key: "toxic_fallout", Name: "Toxic fallout", Category: Nature, Weight: 1, Cooldown: 90, MinDay: 60},
-	// TEMP-0 contract, wiki: Events (cooldowns 30, 30 and 140 days; a
-	// volcanic winter never before day 60). Weight 0 until TEMP-2 sets the
-	// weights (original tuning: the wiki's are unconfirmed); the keys
-	// match WorldView.Extreme's.
-	HeatWave:       {Key: "heat_wave", Name: "Heat wave", Category: Nature, Cooldown: 30},
-	ColdSnap:       {Key: "cold_snap", Name: "Cold snap", Category: Nature, Cooldown: 30},
-	VolcanicWinter: {Key: "volcanic_winter", Name: "Volcanic winter", Category: Nature, Cooldown: 140, MinDay: 60},
+	// TEMP-2, wiki: Events (cooldowns 30, 30 and 140 days; a volcanic
+	// winter never before day 60). The weights are original tuning (the
+	// wiki's are unconfirmed): a heat wave or cold snap a little rarer
+	// than the solar flare, a volcanic winter as rare as toxic fallout.
+	// The keys are WorldView.ClimateEvent's.
+	HeatWave:       {Key: "heat_wave", Name: "Heat wave", Category: Nature, Weight: 5, Cooldown: 30},
+	ColdSnap:       {Key: "cold_snap", Name: "Cold snap", Category: Nature, Weight: 5, Cooldown: 30},
+	VolcanicWinter: {Key: "volcanic_winter", Name: "Volcanic winter", Category: Nature, Weight: 1, Cooldown: 140, MinDay: 60},
 }
 
 func init() {
@@ -169,6 +174,10 @@ type State struct {
 	// EclipseUntil and FalloutUntil (FOOD-6, sky.go) are the absolute
 	// ticks the eclipse and the toxic fallout end (0: none; older saves).
 	EclipseUntil, FalloutUntil uint64
+	// Climate (TEMP-2, climate.go) is the climate event under way, from
+	// the absolute tick ClimateFrom to ClimateUntil (0: none).
+	Climate                   ID
+	ClimateFrom, ClimateUntil uint64
 }
 
 // Allowed reports whether d may fire at tick now in biome b, ignoring any
@@ -190,13 +199,24 @@ const FullFreq = 100
 // disease's weight scales with it, rounded, at least 1 while freqPct is
 // above 0, and 0 (never picked) at 0; any other event keeps its weight.
 func (d Def) WeightAt(freqPct int) int {
-	if !d.Disease {
-		return d.Weight
+	return d.WeightOdds(Odds{Disease: freqPct, Climate: FullFreq})
+}
+
+// WeightOdds is d's weight at odds o: a disease's scales with o.Disease
+// and a climate event's with o.Climate, rounded, at least 1 while the
+// percent is above 0, and 0 (never picked) at 0.
+func (d Def) WeightOdds(o Odds) int {
+	pct := FullFreq
+	switch {
+	case d.Disease:
+		pct = o.Disease
+	case IsClimate(d.ID):
+		pct = o.Climate
 	}
-	if freqPct <= 0 {
+	if pct <= 0 || d.Weight <= 0 {
 		return 0
 	}
-	return max((d.Weight*freqPct+FullFreq/2)/FullFreq, 1)
+	return max((d.Weight*pct+FullFreq/2)/FullFreq, 1)
 }
 
 // Pick chooses among the events of category c allowed now (and passing
@@ -211,8 +231,14 @@ func Pick(c Category, st State, now uint64, b biome.ID, roll int, ok func(ID) bo
 // PickAt is Pick with the diseases weighted at frequency freqPct
 // (WeightAt); roll is in [0, TotalAt).
 func PickAt(c Category, st State, now uint64, b biome.ID, freqPct, roll int, ok func(ID) bool) (ID, bool) {
-	for _, d := range eligible(c, st, now, b, freqPct, ok) {
-		w := d.WeightAt(freqPct)
+	return PickOdds(c, st, now, b, Odds{Disease: freqPct, Climate: FullFreq}, roll, ok)
+}
+
+// PickOdds is Pick with the weights at odds o (WeightOdds); roll is in
+// [0, TotalOdds).
+func PickOdds(c Category, st State, now uint64, b biome.ID, o Odds, roll int, ok func(ID) bool) (ID, bool) {
+	for _, d := range eligible(c, st, now, b, o, ok) {
+		w := d.WeightOdds(o)
 		if roll < w {
 			return d.ID, true
 		}
@@ -228,19 +254,25 @@ func Total(c Category, st State, now uint64, b biome.ID, ok func(ID) bool) int {
 
 // TotalAt is the summed weight of the events PickAt would choose among.
 func TotalAt(c Category, st State, now uint64, b biome.ID, freqPct int, ok func(ID) bool) int {
+	return TotalOdds(c, st, now, b, Odds{Disease: freqPct, Climate: FullFreq}, ok)
+}
+
+// TotalOdds is the summed weight of the events PickOdds would choose
+// among.
+func TotalOdds(c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) int {
 	t := 0
-	for _, d := range eligible(c, st, now, b, freqPct, ok) {
-		t += d.WeightAt(freqPct)
+	for _, d := range eligible(c, st, now, b, o, ok) {
+		t += d.WeightOdds(o)
 	}
 	return t
 }
 
-// eligible is the events of category c allowed now with a weight at
-// freqPct, passing ok (asked only for those).
-func eligible(c Category, st State, now uint64, b biome.ID, freqPct int, ok func(ID) bool) []Def {
+// eligible is the events of category c allowed now with a weight at odds
+// o, passing ok (asked only for those).
+func eligible(c Category, st State, now uint64, b biome.ID, o Odds, ok func(ID) bool) []Def {
 	var out []Def
 	for _, d := range defs {
-		if d.Category == c && d.WeightAt(freqPct) > 0 && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
+		if d.Category == c && d.WeightOdds(o) > 0 && d.Allowed(st, now, b) && (ok == nil || ok(d.ID)) {
 			out = append(out, d)
 		}
 	}

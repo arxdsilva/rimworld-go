@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
@@ -118,6 +119,19 @@ func sleeping(a animal.State) bool { return a.Mode == animal.Rest && a.PathI >= 
 // with no food left; false when the animal starved to death.
 func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 	a.Normalise(uint64(id))
+	if (now+uint64(id))%animal.DecideEvery == 0 { // TEMP-3: exposure on its decision tick (game/bodytemp; heat.go chillHost)
+		switch (bodytemp.Animals{H: chillHost{g}, L: g.exposure}).Step(id, a, now) {
+		case bodytemp.Died:
+			g.animalMedicalDeath(id, a) // animal_health.go
+			return false
+		case bodytemp.Changed:
+			reconcileAnimalBody(a)
+			g.checkAnimalDowned(id, a, now)
+			if a.Body != nil {
+				g.markAnimalPatient(id)
+			}
+		}
+	}
 	if animal.NeedsFree(a.Species) {
 		a.Food, a.Rest = animal.Full, animal.Full
 		return true

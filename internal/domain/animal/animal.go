@@ -765,6 +765,11 @@ const (
 	UpBloodLoss   = 300
 	DownMoving    = 150
 	UpMoving      = 300
+	// TEMP-3: consciousness (permille; extreme hypothermia or heatstroke
+	// caps it at 10 %) downs below DownConsciousness and stands at
+	// UpConsciousness. wiki: Consciousness (30 %); the band is original.
+	DownConsciousness = 300
+	UpConsciousness   = 350
 )
 
 // bloodLoss is the animal's blood loss, permille (0 without a body).
@@ -790,12 +795,14 @@ func (s State) DownsNow() bool {
 	if s.Downed || s.Dead() || IsMech(s.Species) { // a machine fights on until it breaks (DEF-4)
 		return false
 	}
-	return s.Injury*100 >= DefOf(s.Species).MaxHP*DownInjuryPct || s.bloodLoss() >= DownBloodLoss || s.Moving() < DownMoving
+	return s.Injury*100 >= DefOf(s.Species).MaxHP*DownInjuryPct || s.bloodLoss() >= DownBloodLoss || s.Moving() < DownMoving ||
+		s.Body != nil && s.Body.Capacity(body.Consciousness) < DownConsciousness
 }
 
 // StandsUp reports a downed animal well enough to stand again.
 func (s State) StandsUp() bool {
-	return s.Downed && s.Injury*100 <= DefOf(s.Species).MaxHP*UpInjuryPct && s.bloodLoss() < UpBloodLoss && s.Moving() >= UpMoving
+	return s.Downed && s.Injury*100 <= DefOf(s.Species).MaxHP*UpInjuryPct && s.bloodLoss() < UpBloodLoss && s.Moving() >= UpMoving &&
+		(s.Body == nil || s.Body.Capacity(body.Consciousness) >= UpConsciousness)
 }
 
 // Hungry reports whether a predator wants to hunt: its food is below

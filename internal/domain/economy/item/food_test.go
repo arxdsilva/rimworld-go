@@ -11,7 +11,7 @@ func TestFoodCatalogue(t *testing.T) {
 	t.Parallel()
 	cats := map[Kind]string{Rice: "Food", Strawberries: "Food", Hay: "Food", Hops: "Materials", HumanMeat: "Food",
 		InsectMeat: "Food", AgaveFruit: "Food"}
-	for k := Rice; k <= AgaveFruit; k++ { // the FOOD-0 kinds (TEMP-0's follow: temp_contract_test.go)
+	for k := Rice; k <= AgaveFruit; k++ { // the FOOD-0 kinds
 		want, ok := cats[k]
 		if !ok {
 			t.Errorf("%s has no expected category here", k)

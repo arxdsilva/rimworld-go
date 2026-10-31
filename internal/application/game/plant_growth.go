@@ -120,12 +120,12 @@ func (g *Game) growPlant(id entity.EntityID, p plant.Plant, now uint64, gp int, 
 		return
 	}
 	light := plant.FullGrowLight
-	if !plant.OwnLightRules(p.Species) { // FOOD-6: an eclipse leaves only the lamps (wiki: Eclipse)
-		light = farm.GrowLight(roofed || g.incidents.Eclipsed(now), g.artificialLight(p.X, p.Y), lamps, p.X, p.Y, g.combat.Sight.Line)
+	if !plant.OwnLightRules(p.Species) { // FOOD-6: an eclipse leaves only the lamps; TEMP-2: a volcanic winter dims the sky
+		light = farm.GrowLight(roofed || g.incidents.Eclipsed(now), g.incidents.SkyPermil(now), g.artificialLight(p.X, p.Y), lamps, p.X, p.Y, g.combat.Sight.Line)
 	}
 	p = p.Blighten(t0, now)
-	farm.Spread(plantField{g}, id, p, now) // plant_light.go
-	if !p.Ripe() && fed == basin {
+	farm.Spread(plantField{g}, id, p, now)             // plant_light.go
+	if !p.Ripe() && fed == basin && !p.Leafless(now) { // TEMP-2: no growth until the leaves are back
 		p = p.AddGrowth(plant.GrowSpan(g.growRate(p, t, gp, light), t0, now))
 	}
 	if p.Life = uint8(p.LifePct(now)); plant.GrowingHour(int(clock.HourOfDay(clock.Tick(now)))) {
@@ -177,7 +177,7 @@ func (g *Game) basinAt(x, y int) (basin, powered bool) {
 // PLAY-016) and is removed at 100%. The original tree and berry bush only
 // go dormant. It reports whether the plant died.
 func (g *Game) frostKills(id entity.EntityID, p *plant.Plant, t int, now uint64, fp *farm.Pass) bool {
-	q, started := p.Expose(t, now-min(now, climateInterval), now)
+	q, started := p.Expose(uint64(id), t, now-min(now, climateInterval), now) // TEMP-2: its own cold threshold, from its id
 	if started {
 		fp.Hurt = farm.Add(fp.Hurt, q, farm.DamageCause(q))
 	}

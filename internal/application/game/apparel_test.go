@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
@@ -40,8 +41,12 @@ func TestColonistDressesForWinterAndSurvives(t *testing.T) {
 	g.SpawnStack(item.Parka, 1, 6, 3)
 	g.SpawnStack(item.Tuque, 1, 8, 3)
 	g.Step(600)
-	if got := g.Wearing(id); len(got) != 2 {
-		t.Fatalf("wearing %v: should have put on the parka and tuque", got)
+	// TEMP-4: a wiki parka (-32 C in leather) covers the day alone, so the
+	// tuque is no longer needed; the outfit must leave nothing uncovered.
+	mean := int(g.climate.DailyMean(g.clock.Now()))
+	if wears(g, id, item.Body) != item.Parka || wears(g, id, item.SkinTorso) != item.TShirt ||
+		craft.DayFit(shifted(g.apparel[id].Bands(), 0, 0), mean) != 0 {
+		t.Fatalf("wearing %v: should have put on the parka over its T-shirt and cover the day", g.Wearing(id))
 	}
 	// a winter day and night outdoors with no shelter
 	for i := 0; i < 24; i++ {
@@ -53,6 +58,9 @@ func TestColonistDressesForWinterAndSurvives(t *testing.T) {
 	}
 }
 
+// TEMP-4: a parka is no longer hot to wear (wiki: heat factor 0), so it
+// comes off in summer for a duster, which shades (heat 85 %), not on its
+// own.
 func TestParkaComesOffInSummer(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	jumpTo(g, 15, 9)
@@ -61,9 +69,10 @@ func TestParkaComesOffInSummer(t *testing.T) {
 	w := g.apparel[id]
 	w.On[item.Body].Kind = item.Parka
 	g.apparel[id] = w
-	g.Step(200)
-	if got := g.Wearing(id); len(got) != 0 {
-		t.Fatalf("still wearing %v in midsummer", got)
+	g.SpawnStack(item.Duster, 1, 5, 3)
+	g.Step(600)
+	if got := wears(g, id, item.Body); got != item.Duster {
+		t.Fatalf("wearing %v in midsummer: want the duster", g.Wearing(id))
 	}
 	if st, ok := stackOf(g, item.Parka); !ok || st.Qty != 1 {
 		t.Fatal("the parka should be left on the ground")
@@ -85,7 +94,7 @@ func TestWearOrderInMenu(t *testing.T) {
 		t.Fatal("order menu should offer Wear duster")
 	}
 	g.Step(300)
-	if got := g.Wearing(id); len(got) != 1 || got[0] != "duster" {
+	if got := g.Wearing(id); len(got) != 3 || got[0] != "duster" { // over its T-shirt and pants
 		t.Fatalf("wearing %v after the order", got)
 	}
 	_ = command.Prioritize
@@ -166,7 +175,7 @@ func TestDressMidJobColonistFetchesParka(t *testing.T) {
 // (the cooldown holds a changed slot, not the next one).
 func TestDressWholeOutfitInOneGo(t *testing.T) {
 	t.Parallel()
-	g, id := dressGame(t, 16, 8, -100) // -10 C: a parka alone still misses 8 C
+	g, id := dressGame(t, 16, 8, -170) // -17 C: a parka over a T-shirt and pants (floor -23.5 C) still misses 3.5 C
 	g.SpawnStack(item.Parka, 1, 6, 3)
 	g.SpawnStack(item.Tuque, 1, 9, 3)
 	both := func() bool { return wears(g, id, item.Body) == item.Parka && wears(g, id, item.Head) == item.Tuque }
@@ -231,8 +240,9 @@ func withBio(g *Game, id entity.EntityID, b look.Build, traits ...trait.ID) {
 // help.
 func TestDressComfortShiftCountsOnBothSides(t *testing.T) {
 	t.Parallel()
-	// Cold-hardy: floor 2 C. Day 1..21 C: everyday clothes miss 1 C, a
-	// tuque (floor -4 C) misses nothing: worth 1 C, so it goes on.
+	// Cold-hardy: floor 2.5 C in a T-shirt and pants (TEMP-4: base 16 C
+	// less 3.9 and 3.6, less 6). Day 1..21 C: they miss 1.5 C, a tuque
+	// (floor -5.5 C) misses nothing: worth 1.5 C, so it goes on.
 	g, id := dressGame(t, 16, 8, 110)
 	withBio(g, id, look.Average, trait.ColdHardy)
 	if c, _ := g.comfortShift(id); c != -60 {
@@ -242,19 +252,24 @@ func TestDressComfortShiftCountsOnBothSides(t *testing.T) {
 	if dressRun(g, 400, func() bool { return wears(g, id, item.Head) != 0 }, id); wears(g, id, item.Head) != item.Tuque {
 		t.Fatalf("cold-hardy colonist wearing %v: the tuque is worth 1 C to it", g.Wearing(id))
 	}
-	// Thin: floor 10 C. Day 7.5..27.5 C in a parka (ceiling 25 C) misses
-	// 2.5 C; in everyday clothes (floor 10 C) also 2.5 C: no gain, kept.
-	g, id = dressGame(t, 16, 8, 175)
+	// TEMP-4: no garment is hot to wear any more (wiki), so the shift is
+	// proved on the cold side twice over. Thin: floor 10.5 C in a T-shirt
+	// and pants. Day 7.8..27.8 C: they miss 2.7 C, a tuque nothing: worth
+	// 2.7 C, so it goes on; an average colonist (floor 8.5 C) misses only
+	// 0.7 C, under the 1 C gain, and leaves it.
+	g, id = dressGame(t, 16, 8, 178)
 	withBio(g, id, look.Thin)
 	if c, _ := g.comfortShift(id); c != 20 {
 		t.Fatalf("setup: thin shift %d", c)
 	}
-	w := g.apparel[id]
-	w.On[item.Body].Kind = item.Parka
-	g.apparel[id] = w
-	dressRun(g, 600, nil, id)
-	if wears(g, id, item.Body) != item.Parka {
-		t.Fatal("thin colonist took off a parka that taking off does not help")
+	g.SpawnStack(item.Tuque, 1, 6, 3)
+	if dressRun(g, 400, func() bool { return wears(g, id, item.Head) != 0 }, id); wears(g, id, item.Head) != item.Tuque {
+		t.Fatalf("thin colonist wearing %v: the tuque is worth 2.7 C to it", g.Wearing(id))
+	}
+	g, id = dressGame(t, 16, 8, 178)
+	g.SpawnStack(item.Tuque, 1, 6, 3)
+	if dressRun(g, 600, nil, id); wears(g, id, item.Head) != 0 {
+		t.Fatal("an average colonist took a tuque worth 0.7 C")
 	}
 }
 
@@ -262,7 +277,7 @@ func TestDressComfortShiftCountsOnBothSides(t *testing.T) {
 // is the player's until another garment is ordered for it.
 func TestDressForcedSummerParkaStays(t *testing.T) {
 	t.Parallel()
-	g, id := dressGame(t, 16, 8, 250) // midsummer: a parka is too hot, a duster helps
+	g, id := dressGame(t, 16, 8, 250) // midsummer: a parka does not help (wiki heat 0), a duster does
 	g.SpawnStack(item.Parka, 1, 6, 3)
 	duster, _ := g.SpawnStack(item.Duster, 1, 4, 5)
 	wear := func(x, y int, label string) {
@@ -282,7 +297,7 @@ func TestDressForcedSummerParkaStays(t *testing.T) {
 	if !g.apparel[id].IsForced(item.Body) {
 		t.Fatal("an ordered garment marks its slot as the player's choice")
 	}
-	if pv := pawnView(g, id); len(pv.ApparelForced) != 1 || !pv.ApparelForced[0] {
+	if pv := pawnView(g, id); len(pv.ApparelForced) != 3 || !pv.ApparelForced[0] || pv.ApparelForced[1] { // the parka, not the T-shirt
 		t.Fatalf("view: forced %v", pv.ApparelForced)
 	}
 	dressRun(g, 3*clock.TicksPerHour, func() bool {
@@ -303,22 +318,28 @@ func TestDressForcedSummerParkaStays(t *testing.T) {
 	}
 }
 
-// No flapping: the daily mean swings across the parka's threshold every
-// half hour, with two equal parkas at hand. Clothes change at most once
-// per cooldown, and never from one parka into the other.
+// No flapping: the daily mean swings between a parka day and a duster day
+// every half hour, with two equal parkas and a duster at hand. Clothes
+// change at most once per cooldown, and never from one parka into the
+// other. TEMP-4: a parka no longer costs heat (wiki), so the warm side is
+// the duster's: over a T-shirt and pants (8.5..29.2 C), on a 2 C day
+// (-8..12 C) the duster misses 6.9 C and the parka nothing; on a 25 C day
+// (15..35 C) the parka misses 5.8 C and the duster nothing.
 func TestDressNoFlap(t *testing.T) {
 	t.Parallel()
-	const cold, warm = 20, 200 // 2 C: a parka saves 16 C; 20 C: it costs 3 C
+	const cold, warm = 20, 250
 	g, id := dressGame(t, 16, 8, cold)
 	g.SpawnStack(item.Parka, 1, 6, 3)
 	g.SpawnStack(item.Parka, 1, 7, 3)
+	g.SpawnStack(item.Duster, 1, 8, 3)
 	prev, last, changes := g.apparel[id], uint64(0), 0
 	for i := 0; i < 12*clock.TicksPerHour; i++ {
 		if i%(clock.TicksPerHour/2) == 0 {
 			g.climate.YearMean = cold + warm - g.climate.YearMean
 		}
 		dressRun(g, 1, nil, id)
-		if j, _ := g.jobs.Get(id); j.Kind == job.Equip && j.Active() && wears(g, id, item.Body) == item.Parka {
+		if j, _ := g.jobs.Get(id); j.Kind == job.Equip && j.Active() && wears(g, id, item.Body) == item.Parka &&
+			g.stacks.Ref(j.Target) != nil && g.stacks.Ref(j.Target).Kind == item.Parka {
 			t.Fatalf("tick %d: changing from one parka into another", i)
 		}
 		if w := g.apparel[id]; w != prev {
@@ -373,30 +394,41 @@ func TestDressNeverInterruptsNeedsOrDrafts(t *testing.T) {
 	g.SpawnStack(item.Parka, 1, 4, 2)
 	g.setDraft(id, true)
 	dressRun(g, 600, nil, id)
-	if w := g.Wearing(id); len(w) != 0 {
+	if w := g.Wearing(id); len(w) != 2 || wears(g, id, item.Body) != 0 { // its T-shirt and pants only
 		t.Fatalf("drafted colonist dressed in %v", w)
 	}
 }
 
-// A piece to take off comes off without stopping the work.
+// A piece the plan displaces comes off at once, before the walk, and is
+// dropped at the colonist's feet. TEMP-4: no garment is hot to wear any
+// more (wiki heat factors are never negative), so nothing comes off for
+// the weather alone (the take-off-only branch of dressInterrupt is kept
+// for safety); what comes off is what a chosen garment displaces. On a
+// 16 C day (6..26 C) a T-shirt and pants (floor 8.5 C) miss 2.5 C and
+// tribalwear (floor 6.1 C) 0.1 C: the pants it covers come off first.
 func TestDressTakesOffWithoutStoppingWork(t *testing.T) {
 	t.Parallel()
-	g, id := dressGame(t, 16, 8, 250) // midsummer: the parka is too hot
-	w := g.apparel[id]
-	w.On[item.Body].Kind = item.Parka
-	g.apparel[id] = w
+	g, id := dressGame(t, 16, 8, 160)
+	tribal, _ := g.SpawnStack(item.Tribalwear, 1, 9, 3)
+	if o, ok := g.dressPlan(id, true); !ok || o.Pick[item.SkinTorso].Stack != tribal || o.Pick[item.SkinLegs].Kind != 0 {
+		t.Fatalf("plan %+v (worth %v): tribalwear, pants off", o.Pick, ok)
+	}
 	atBucket(g, id)
-	rec := job.Record{Kind: job.Mine, State: job.Goto, TX: 12, TY: 5, DestX: 13, DestY: 5}
-	g.jobs.Set(id, rec)
-	g.dressInterrupt(id, rec)
-	if j, _ := g.jobs.Get(id); j.Kind != job.Mine {
-		t.Fatalf("now %v: taking a parka off should not stop the work", j.Kind)
+	g.dress(id)
+	if j, _ := g.jobs.Get(id); j.Kind != job.Equip || j.Target != tribal {
+		t.Fatalf("now %v: should be walking to the tribalwear", j.Kind)
 	}
-	if wears(g, id, item.Body) != 0 || !hasLogLine(g, id, "Took off the parka") {
-		t.Fatalf("wearing %v, messages %+v", g.Wearing(id), g.messages)
+	if wears(g, id, item.SkinLegs) != 0 || !hasLogLine(g, id, "Took off the pants") {
+		t.Fatalf("wearing %v, log %+v", g.Wearing(id), g.logLines(id))
 	}
-	if st, ok := stackOf(g, item.Parka); !ok || st.X != 2 || st.Y != 2 {
-		t.Fatal("the parka should be dropped at its feet")
+	if st, ok := stackOf(g, item.Pants); !ok || st.X != 2 || st.Y != 2 {
+		t.Fatal("the pants should be dropped at its feet")
+	}
+	if dressRun(g, 400, func() bool { return wears(g, id, item.SkinTorso) == item.Tribalwear }, id); wears(g, id, item.SkinTorso) != item.Tribalwear {
+		t.Fatalf("wearing %v: the tribalwear never went on", g.Wearing(id))
+	}
+	if wears(g, id, item.SkinLegs) != 0 || g.apparel[id].Naked() {
+		t.Fatalf("tribalwear covers torso and legs alone: %v", g.Wearing(id))
 	}
 }
 
@@ -451,7 +483,7 @@ func TestDressStateSurvivesSave(t *testing.T) {
 	if !h.apparel[id].IsForced(item.Body) || h.apparel[id].Kind(item.Body) != item.Parka || !h.dressCooling(id, item.Body) {
 		t.Fatalf("after load: worn %v, cooling %v", h.apparel[id], h.dressCooling(id, item.Body))
 	}
-	if got := h.Wearing(id); len(got) != 1 || got[0] != "parka" {
+	if got := h.Wearing(id); len(got) != 3 || got[0] != "parka" { // and its T-shirt and pants
 		t.Fatalf("Wearing %v: the forced bits are not a garment", got)
 	}
 }

@@ -144,11 +144,18 @@ func TestRandomSiteValidAndDeterministic(t *testing.T) {
 
 func TestAdvancedSeasonAuto(t *testing.T) {
 	t.Parallel()
+	// TEMP-2: the wiki temperate forest (35/-25 C) has a 5 C mid-spring,
+	// under Auto's 8 C, so it starts in Summer; a milder site (9 C
+	// mid-spring, the pre-TEMP-2 calibration) still starts in Spring.
 	temperate := temperature.Temperate
-	if got := wizard.AutoSeason(temperate); got != game.SeasonSpring {
-		t.Errorf("temperate: %v, want Spring (9 C and rising)", got)
+	if got := wizard.AutoSeason(temperate); got != game.SeasonSummer {
+		t.Errorf("temperate: %v, want Summer (a 5 C spring)", got)
 	}
-	south := temperate
+	mild := temperature.Climate{YearMean: 90, Amplitude: 150, PeakDay: 15, DaySwing: 60}
+	if got := wizard.AutoSeason(mild); got != game.SeasonSpring {
+		t.Errorf("mild: %v, want Spring (9 C and rising)", got)
+	}
+	south := mild
 	south.PeakDay = 45
 	if got := wizard.AutoSeason(south); got != game.SeasonSpring {
 		t.Errorf("southern: %v, want Spring (seasons are local)", got)

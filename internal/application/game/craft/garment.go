@@ -24,8 +24,9 @@ type Piece struct {
 }
 
 // Slots is how many slots an Outfit holds, indexed by item.Slot:
-// NoSlot (never a garment), Body, Head, Legs, Belt (CBT-3).
-const Slots = 5
+// NoSlot (never a garment), Body (the outer layer), Head, Legs, Belt
+// (CBT-3) and, since TEMP-4, SkinTorso, SkinLegs and Middle.
+const Slots = int(item.NumSlots)
 
 // Outfit is what one pawn wears, by slot, and the slots the player chose
 // ("Wear X"), one bit per slot.
@@ -142,7 +143,9 @@ func ExportOutfits(m map[entity.EntityID]Outfit) map[entity.EntityID]OutfitSave 
 }
 
 // ImportOutfits restores ExportOutfits' outfits; legacy is an older
-// save's kinds-only sets, read only when saved is nil.
+// save's kinds-only sets, read only when saved is nil. An outfit saved
+// before TEMP-4 (fewer than Slots entries) wore its flak vest in Body:
+// it moves to Middle, under the outer layer.
 func ImportOutfits(saved map[entity.EntityID]OutfitSave, legacy map[entity.EntityID][3]item.Kind) map[entity.EntityID]Outfit {
 	out := make(map[entity.EntityID]Outfit, max(len(saved), len(legacy)))
 	if saved == nil {
@@ -154,6 +157,13 @@ func ImportOutfits(saved map[entity.EntityID]OutfitSave, legacy map[entity.Entit
 	for id, s := range saved {
 		o := Outfit{Forced: s.Forced}
 		copy(o.On[:], s.On)
+		if len(s.On) < Slots && o.On[item.Body].Kind == item.FlakVest {
+			o.On[item.Middle], o.On[item.Body] = o.On[item.Body], Piece{}
+			if o.IsForced(item.Body) {
+				o.SetForced(item.Body, false)
+				o.SetForced(item.Middle, true)
+			}
+		}
 		out[id] = o
 	}
 	return out
@@ -254,8 +264,9 @@ func StuffLabel(k, stuff item.Kind) string {
 	return item.Stack{Kind: k, Stuff: stuff}.StuffOfStack().String()
 }
 
-// Bands is the comfortable range of a pawn in everyday clothes with o on
-// top: each garment's insulation by its material and quality.
+// Bands is the comfortable range of a pawn wearing o: its bare range
+// (exposure.Everyday) widened by each garment's insulation, every layer,
+// by its material and quality (wiki: Temperature).
 func (o Outfit) Bands() exposure.Bands {
 	b := exposure.Everyday
 	for _, p := range o.On[item.Body:] {
@@ -290,4 +301,50 @@ func DayFit(b exposure.Bands, mean int) int {
 // day does not need.
 func DaySurplus(b exposure.Bands, mean int) int {
 	return max(0, mean-DaySpan-b.Min) + max(0, b.Max-mean-DaySpan)
+}
+
+// Naked reports an outfit that leaves the torso or the legs uncovered,
+// any layer counting (wiki: Thoughts, Naked).
+func (o Outfit) Naked() bool {
+	var c item.Cover
+	for _, p := range o.On {
+		c |= p.Kind.Covers()
+	}
+	return c&(item.CoverTorso|item.CoverLegs) != item.CoverTorso|item.CoverLegs
+}
+
+// Conflicts is the slots holding a garment that k cannot be worn with:
+// one on the same layer over the same region (item.Kind.Occupies), so a
+// shell takes the flak vest's and flak pants' place and tribalwear the
+// pants'.
+func (o Outfit) Conflicts(k item.Kind) item.SlotSet {
+	var out item.SlotSet
+	occ := k.Occupies()
+	for s, p := range o.On {
+		if p.Kind != 0 && p.Kind.Occupies()&occ != 0 {
+			out |= 1 << s
+		}
+	}
+	return out
+}
+
+// Everyday is o with a T-shirt and pants (Normal, cloth) in free skin
+// slots: what a new colonist arrives in (TEMP-4), and what a colonist of
+// a save from before TEMP-4, when everyday clothes were implicit, is
+// given on load so it is not suddenly naked.
+func (o Outfit) Everyday() Outfit {
+	for _, k := range [...]item.Kind{item.TShirt, item.Pants} {
+		if o.Conflicts(k) == 0 {
+			o.On[k.Slot()] = Piece{Kind: k}
+		}
+	}
+	return o
+}
+
+// Tribal is what a new tribal colonist arrives in: tribalwear (Normal,
+// cloth; wiki: Tribalwear, the tribal start's skin layer).
+func Tribal() Outfit {
+	var o Outfit
+	o.On[item.Tribalwear.Slot()] = Piece{Kind: item.Tribalwear}
+	return o
 }

@@ -157,14 +157,14 @@ func TestRescueFidelityBedHazard(t *testing.T) {
 		t.Fatal("a burning bed is no safe bed")
 	}
 	pb, _ := g.bldgs.Get(plain)
-	if g.residual == nil {
-		g.residual = map[int]temperature.Temp{}
+	if g.thermo.Residual == nil {
+		g.thermo.Residual = map[int]temperature.Temp{}
 	}
-	g.residual[pb.Y*g.grid.Width()+pb.X] = 1300 // 130 °C: past comfort by more than 90 °C
+	g.thermo.Residual[pb.Y*g.grid.Width()+pb.X] = 1300 // 130 °C: past comfort by more than 90 °C
 	if !h.BedHazard(plain) || g.care.SafeBedFor(bo, 12, 6, care.RescueBed) != 0 {
 		t.Fatal("deadly heat: no safe bed")
 	}
-	g.residual[pb.Y*g.grid.Width()+pb.X] = -900 // -90 °C
+	g.thermo.Residual[pb.Y*g.grid.Width()+pb.X] = -900 // -90 °C
 	if !h.BedHazard(plain) {
 		t.Fatal("deadly cold: no safe bed")
 	}

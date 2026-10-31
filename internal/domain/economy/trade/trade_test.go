@@ -66,7 +66,7 @@ func TestPriceGoodwillMonotonic(t *testing.T) {
 		}
 		pb, ps = b, s
 	}
-	if Price(item.Parka, BulkHauler, Buy, Terms{Goodwill: 1000, Social: 20}) != 80*106 {
+	if Price(item.Parka, BulkHauler, Buy, Terms{Goodwill: 1000, Social: 20}) != item.Parka.Value()*106 { // TEMP-4: the wiki value
 		t.Fatal("buy floor is 6%")
 	}
 }

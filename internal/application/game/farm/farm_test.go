@@ -51,6 +51,7 @@ func TestGrowLight(t *testing.T) {
 		want   int
 	}{
 		{false, 0, nil, 0, all, 1000},
+		{false, 0.9, lamps, 10, all, 700}, // TEMP-2: a volcanic winter's 70 % sky
 		{true, 0.7, nil, 0, all, 500},
 		{true, 0.3, nil, 0, all, 300},
 		{true, 0.7, lamps, 15, all, 1000},
@@ -58,7 +59,11 @@ func TestGrowLight(t *testing.T) {
 		{true, 0, lamps, 18, all, 500},
 		{true, 0, lamps, 30, all, 0},
 	} {
-		if got := GrowLight(c.roofed, c.art, c.lamps, c.x, 10, c.sees); got != c.want {
+		sky := 1000
+		if c.want == 700 {
+			sky = 700
+		}
+		if got := GrowLight(c.roofed, sky, c.art, c.lamps, c.x, 10, c.sees); got != c.want {
 			t.Errorf("%+v: %d, want %d", c, got, c.want)
 		}
 	}

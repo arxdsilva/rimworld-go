@@ -58,18 +58,19 @@ func (p Plant) Rotted(now uint64) bool {
 }
 
 // ColdLimit is the air temperature (tenths of a degree C) below which p
-// takes cold damage, ok false when cold never hurts it. A crop's limit is
-// its own, a fixed pseudo-random one between FrostKill and 8 °C colder
-// (wiki: Plants, -18..-10 °C), or its FrostKill when ColdHardy.
+// takes cold damage over hours (damage.go), ok false when it never does:
+// a wild plant's ColdKill, a cold-resistant crop's FrostKill (healroot,
+// wiki: -29 °C). Any other crop dies at once below its own cold
+// threshold instead (Expose, ColdThreshold).
 func (p Plant) ColdLimit() (int, bool) {
 	d := DefOf(p.Species)
-	if !d.Crop {
+	switch {
+	case !d.Crop:
 		return d.ColdKill, d.ColdKill != 0
-	}
-	if d.ColdHardy {
+	case d.ColdHardy:
 		return d.FrostKill, true
 	}
-	return d.FrostKill - int(Roll(uint64(p.Species), uint64(p.X), uint64(p.Y))%81), true
+	return 0, false
 }
 
 // Growing light (wiki: Plants, Sun lamp), permille of full daylight: a

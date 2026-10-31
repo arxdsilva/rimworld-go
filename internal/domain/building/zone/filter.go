@@ -150,7 +150,8 @@ func categories() []category {
 			item.ChargeLance, item.RocketLauncher, item.TripleRocketLauncher}},
 		{"Weapons/Grenades", []item.Kind{item.FragGrenades, item.MolotovCocktails, item.EMPGrenades}},
 		{path: "Apparel"},
-		{"Apparel/Clothing", []item.Kind{item.Parka, item.WoolParka, item.Duster, item.Tuque}},
+		{"Apparel/Clothing", []item.Kind{item.Parka, item.WoolParka, item.Duster, item.Tuque,
+			item.TShirt, item.ButtonDownShirt, item.Pants, item.Jacket, item.Tribalwear, item.CowboyHat, item.BowlerHat}}, // TEMP-4
 		{"Apparel/Armor", []item.Kind{item.FlakVest, item.FlakPants, item.FlakJacket, item.PlateArmor, item.MarineArmor}},
 		{"Apparel/Headgear", []item.Kind{item.SimpleHelmet, item.AdvancedHelmet, item.MarineHelmet}},
 		{"Apparel/Utility", []item.Kind{item.ShieldBelt, item.SmokepopPack}},

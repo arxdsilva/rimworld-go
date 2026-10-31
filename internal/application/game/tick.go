@@ -210,7 +210,11 @@ func (g *Game) applyOne(c command.Command) {
 	case command.SetFireAtWill, command.SetHoldPosition, command.ThrowGrenade, command.DropWeapon, command.PopSmokepop,
 		command.SetThreatResponse:
 		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4, CBT-2): drafted control, drop or stow a weapon
-	case command.SetZoneOverlay, command.ToggleVent: // STO-2: a view toggle the UI keeps; TEMP-0 contract: TEMP-1 routes ToggleVent
+	case command.SetZoneOverlay: // STO-2: a view toggle the UI keeps
+	case command.ToggleVent: // TEMP-1: a colonist flicks the vent open or shut, like a power toggle (power_flick.go)
+		if b := g.bldgs.Ref(entity.EntityID(c.Target)); b != nil && b.Kind == construction.Vent {
+			g.cmdSetPowerWanted(entity.EntityID(c.Target), c.Enabled)
+		}
 	case command.SetAutoSlaughter:
 		g.herdOf().Auto.Apply(c) // game/herd (FOOD-3)
 	case command.SetFoodPolicy, command.EditFoodPolicy:

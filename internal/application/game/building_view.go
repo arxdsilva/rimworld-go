@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/thermo"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -166,6 +167,9 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	}
 	if pct, ok := g.fuelPct(id, b); ok { // campfire, torch lamp, wood-fired generator (fuel.go)
 		bv.Fuel, bv.FuelPct, bv.Burning = true, pct, g.burning(id, b)
+	}
+	if thermo.Heats(b.Kind) || b.Kind == construction.Vent { // game/thermo (TEMP-1): heat output, an open vent
+		bv.HeatRate, bv.Open = g.thermo.BuildingRate(id), b.Kind == construction.Vent && g.powerOn(id)
 	}
 	if b.Kind == construction.FeedingTrough {
 		bv.TroughFill, bv.TroughCap = g.troughFill(id), construction.TroughCapacity

@@ -97,8 +97,9 @@ type Routine interface {
 	SeekFood(id entity.EntityID) bool
 	// Job is id's current job.
 	Job(id entity.EntityID) job.Record
-	// Band is id's comfortable temperature range given what it wears,
-	// tenths of a degree C (BED-3: slept in the cold or heat).
+	// Band is id's comfortable temperature range before apparel (TEMP-3,
+	// wiki: Thoughts), tenths of a degree C (BED-3: slept in the cold or
+	// heat).
 	Band(id entity.EntityID) (lo, hi int)
 }
 

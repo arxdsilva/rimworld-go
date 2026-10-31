@@ -122,3 +122,54 @@ func TestConflicts(t *testing.T) {
 		t.Fatal("GroupOf")
 	}
 }
+
+// TestLayeredClothing (TEMP-4): the core clothing rates its material's
+// armor by the wiki factor (0.2, the jacket 0.3), so a cloth T-shirt and
+// pants absorb a little, as in vanilla; plies and groups keep the layers
+// apart: shirts conflict on the skin, not with pants or a parka;
+// tribalwear conflicts with both; the jacket with the parka.
+func TestLayeredClothing(t *testing.T) {
+	t.Parallel()
+	for k, want := range map[item.Kind]Layer{
+		item.TShirt: {Set{72, 0, 36}, teeCover, skin}, item.ButtonDownShirt: {Set{72, 0, 36}, coatCover, skin},
+		item.Pants: {Set{72, 0, 36}, CoverLegs, skin}, item.Tribalwear: {Set{72, 0, 36}, tribalCover, skin},
+		item.Jacket: {Set{108, 0, 54}, coatCover, outer}, item.CowboyHat: {Set{72, 0, 36}, CoverUpperHead, headgear},
+		item.BowlerHat: {Set{72, 0, 36}, CoverUpperHead, headgear},
+	} {
+		if got, ok := Apparel(k); !ok || got != want {
+			t.Errorf("%v = %+v %v, want %+v", k, got, ok, want)
+		}
+	}
+	if l, _ := Piece(item.Pants, item.Leather, 0); l.Set != (Set{162, 48, 300}) {
+		t.Errorf("leather pants %+v", l.Set)
+	}
+	everyday := []Layer{wear(item.TShirt), wear(item.Pants)}
+	cut := damage.Hit{Form: damage.FormCut, Amount: 10}
+	if l := Struck(everyday, GroupOf(body.Torso), cut, rolls(0), nil); l.Outcome != Deflected {
+		t.Fatalf("a T-shirt turns a weak cut on a lucky roll: %+v", l)
+	}
+	if l := Struck(everyday, GroupOf(body.LegL), cut, rolls(999), nil); l.Amount != 10 {
+		t.Fatalf("pants rarely stop a cut: %+v", l)
+	}
+	if l := Struck(everyday, GroupOf(body.Brain), cut, rolls(), nil); l.Amount != 10 {
+		t.Fatalf("nothing on the head: %+v", l)
+	}
+	conflict := func(a, b item.Kind) bool { return wear(a).Conflicts(wear(b)) }
+	if !conflict(item.TShirt, item.ButtonDownShirt) || !conflict(item.Tribalwear, item.Pants) || !conflict(item.Tribalwear, item.TShirt) ||
+		!conflict(item.Jacket, item.Parka) || !conflict(item.CowboyHat, item.Tuque) {
+		t.Fatal("same ply, overlapping groups conflict")
+	}
+	if conflict(item.TShirt, item.Pants) || conflict(item.TShirt, item.Parka) || conflict(item.ButtonDownShirt, item.FlakVest) ||
+		conflict(item.Pants, item.FlakPants) || conflict(item.Jacket, item.FlakVest) {
+		t.Fatal("different plies or groups do not")
+	}
+	for k := range map[item.Kind]bool{item.TShirt: true, item.Pants: true, item.Tribalwear: true, item.Jacket: true, item.Parka: true,
+		item.PlateArmor: true, item.FlakVest: true, item.FlakPants: true, item.CowboyHat: true} {
+		for o := range map[item.Kind]bool{item.TShirt: true, item.ButtonDownShirt: true, item.Pants: true, item.Tribalwear: true,
+			item.Jacket: true, item.Duster: true, item.MarineArmor: true, item.FlakVest: true, item.FlakPants: true, item.BowlerHat: true} {
+			if k != o && conflict(k, o) != (k.Occupies()&o.Occupies() != 0) {
+				t.Errorf("%v and %v: armor conflict %v, slots %b / %b", k, o, conflict(k, o), k.Occupies(), o.Occupies())
+			}
+		}
+	}
+}

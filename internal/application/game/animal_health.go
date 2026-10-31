@@ -6,7 +6,6 @@ import (
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -15,7 +14,7 @@ import (
 // Animal medicine (MED-09). A wounded animal gets a body
 // (animal.State.Body). Since MED-13 it has its species' anatomy
 // (animal.AnatomyOf: quadruped, bird, snake, lizard or insect parts,
-// their hit points scaled by the species' size, animalHealthScale): a hit
+// their hit points scaled by the species' size, animal.HealthScale): a hit
 // lands on a part picked by coverage, may take off a leg, a wing or an
 // eye, and a lost leg slows the animal (body.Capacity(Moving),
 // animal.State.Step). It is made on the first wound and dropped once
@@ -48,72 +47,6 @@ import (
 // stream (the part a hit lands on, the infection delay). Scars are left
 // out, so healing draws no random numbers.
 
-// Animal health scale bounds (permille of a human's hit points): the
-// smallest species bleeds at most 10x a human's rate, the largest at
-// least a tenth of it (original tuning).
-const (
-	animalScaleMin = 100
-	animalScaleMax = 10000
-)
-
-// animalHealthScale is species s's body size against a human's, from its
-// hit points (permille).
-func animalHealthScale(s animal.Species) int32 {
-	return min(max(int32(animal.DefOf(s).MaxHP)*1000/health.MaxHP, animalScaleMin), animalScaleMax)
-}
-
-// animalBleedPerDay is how fast an animal of species s with body b bleeds
-// (permille of its blood per day): the body's bleeding scaled by its size.
-func animalBleedPerDay(b *body.Body, s animal.Species) int32 {
-	if b == nil {
-		return 0
-	}
-	n := b.BleedPerDay()
-	if n <= 0 {
-		return 0
-	}
-	return max(n*1000/animalHealthScale(s), 1)
-}
-
-// hourShare is a daily permille rate's share of one hour, rounded to
-// nearest, never below 1 for a positive rate (body.StepBlood's rounding).
-func hourShare(perDay int32) int32 {
-	if perDay <= 0 {
-		return 0
-	}
-	return max((perDay+12)/24, 1)
-}
-
-// stepAnimalBlood advances an hour of blood loss on body b of species s:
-// the scaled bleeding, or the regeneration while nothing bleeds; the
-// stage follows with its hysteresis (body.BloodStage).
-func stepAnimalBlood(b *body.Body, s animal.Species) {
-	if bleed := animalBleedPerDay(b, s); bleed > 0 {
-		b.BloodLoss = min(b.BloodLoss+hourShare(bleed), body.BloodLossDeath)
-	} else if b.BloodLoss > 0 {
-		b.BloodLoss = max(b.BloodLoss-hourShare(body.BloodRegenPerDay), 0)
-	}
-	b.BloodStage = body.BloodStage(b.BloodLoss, b.BloodStage)
-}
-
-// animalBleedDeathHours is how many hours an animal of species s with
-// body b has before bleeding out at its current rate (-1: not bleeding).
-func animalBleedDeathHours(b *body.Body, s animal.Species) int {
-	bleed := animalBleedPerDay(b, s)
-	if bleed <= 0 {
-		return -1
-	}
-	left := max(body.BloodLossDeath-b.BloodLoss, 0)
-	h := hourShare(bleed)
-	return int((left + h - 1) / h)
-}
-
-// newAnimalBody is a whole body of species s: its anatomy, its parts
-// scaled to its hit points (MED-13).
-func newAnimalBody(s animal.Species) *body.Body {
-	return &body.Body{Anatomy: animal.AnatomyOf(s), Scale: animalHealthScale(s)}
-}
-
 // woundAnimal gives animal id (state a, Injury already raised by dmg)
 // dmg of kind on parts picked by
 // coverage (body.Spread: a part whose loss would kill is never taken
@@ -125,7 +58,7 @@ func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind bo
 		return
 	}
 	if a.Body == nil {
-		a.Body = newAnimalBody(a.Species)
+		a.Body = animal.NewBody(a.Species)
 	}
 	b := a.Body
 	body.Spread(b, dmg, kind, g.stream(streamMedical).IntN, now) // the medical stream
@@ -193,7 +126,7 @@ func (g *Game) migrateAnimalBodies() {
 // migrateAnimalBody is migrateAnimalBodies on one animal.
 func migrateAnimalBody(a *animal.State) {
 	old := a.Body
-	nb := newAnimalBody(a.Species)
+	nb := animal.NewBody(a.Species)
 	root := nb.Root()
 	nb.Wounds, nb.Conds = old.Wounds, old.Conds
 	nb.BloodLoss, nb.BloodStage = old.BloodLoss, old.BloodStage
@@ -256,7 +189,7 @@ func (g *Game) stepAnimalHealth(now uint64) {
 // animal died.
 func (g *Game) stepAnimalBody(id entity.EntityID, a *animal.State, now uint64) bool {
 	b := a.Body
-	stepAnimalBlood(b, a.Species)
+	animal.StepBlood(b, a.Species)
 	if b.BloodLoss >= body.BloodLossDeath {
 		g.animalMedicalDeath(id, a)
 		return true
@@ -526,8 +459,8 @@ func (g *Game) fillAnimalHealth(av *AnimalView, id entity.EntityID, a animal.Sta
 	av.Parts = animalParts(b)
 	av.MovingPct = int(b.Capacity(body.Moving)) / 10
 	av.NeedsTend = a.Tame && b.TendDue(now)
-	av.BleedPerDay = int(animalBleedPerDay(b, a.Species))
-	av.BleedDeathHours = animalBleedDeathHours(b, a.Species)
+	av.BleedPerDay = int(animal.BleedPerDay(b, a.Species))
+	av.BleedDeathHours = animal.BleedDeathHours(b, a.Species)
 	av.BloodLossPct = int(b.BloodLoss) / 10
 	av.BloodStage = body.BloodStageLabel(b.BloodStage)
 	for _, c := range b.Conds {

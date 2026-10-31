@@ -69,7 +69,7 @@ func TestCampfireBurnsOneIntervalPerClimateStep(t *testing.T) {
 	id := g.layerBldgAt(5, 5, construction.LayerObject)
 	full := g.fuel[id]
 	jumpTo(g, 45, 1) // a cold winter morning: the fire burns, never banks
-	g.heatRooms()
+	g.burnFuel()
 	if got := full - g.fuel[id]; got != climateInterval {
 		t.Fatalf("campfire burnt %d ticks of fuel in one interval, want %d", got, climateInterval)
 	}
@@ -81,7 +81,7 @@ func TestTorchLampBurnsLogsInPhaseClimate(t *testing.T) {
 	id := placeFuel(t, g, construction.TorchLamp, 6, 6)
 	spec, _ := fuelSpec(construction.TorchLamp)
 	g.setFuel(id, spec.CapTicks)
-	g.heatRooms()
+	g.burnFuel()
 	if want := spec.CapTicks - climateInterval*600/1000; g.fuel[id] != want {
 		t.Fatalf("one interval: fuel %d, want %d (600 permille)", g.fuel[id], want)
 	}
@@ -95,7 +95,7 @@ func TestTorchLampBurnsLogsInPhaseClimate(t *testing.T) {
 		t.Fatal("a fuelled torch in dry weather must burn")
 	}
 	g.setFuel(id, 100)
-	g.heatRooms()
+	g.burnFuel()
 	if g.fuel[id] != 0 {
 		t.Fatalf("the last of the fuel burns out to 0, got %d", g.fuel[id])
 	}
@@ -127,7 +127,7 @@ func TestRainPutsOutAnOutdoorTorchButNotARoofedOne(t *testing.T) {
 	if !g.burning(in, ib) {
 		t.Fatal("a torch under a roof keeps burning in the rain")
 	}
-	g.heatRooms()
+	g.burnFuel()
 	if g.fuel[out] != spec.CapTicks {
 		t.Fatalf("a doused torch burnt fuel: %d", g.fuel[out])
 	}
@@ -135,7 +135,7 @@ func TestRainPutsOutAnOutdoorTorchButNotARoofedOne(t *testing.T) {
 		t.Fatalf("the sheltered torch should burn 150, has %d", g.fuel[in])
 	}
 	g.SetWeather(weather.Clear, 0)
-	g.heatRooms()
+	g.burnFuel()
 	if g.fuel[out] != spec.CapTicks-150 {
 		t.Fatalf("the torch should burn again after the rain: %d", g.fuel[out])
 	}
@@ -183,16 +183,16 @@ func TestWoodGeneratorBurnsAndHaulerRefuelsIt(t *testing.T) {
 	if !g.generatorRunning(gid) {
 		t.Fatal("a fuelled generator runs by default")
 	}
-	g.heatRooms()
+	g.burnFuel()
 	if want := spec.CapTicks - climateInterval*1600/1000; g.fuel[gid] != want {
 		t.Fatalf("one interval: fuel %d, want %d (1600 permille)", g.fuel[gid], want)
 	}
 	g.setFuel(gid, 300)
-	g.heatRooms()
+	g.burnFuel()
 	if g.fuel[gid] != 0 {
 		t.Fatalf("burns out to exactly 0, got %d", g.fuel[gid])
 	}
-	g.heatRooms()
+	g.burnFuel()
 	if g.fuel[gid] != 0 || g.generatorRunning(gid) {
 		t.Fatal("an empty generator burns nothing and stops running")
 	}
@@ -274,7 +274,7 @@ func TestFuelUsersListIsCachedPerStructVerInBuildingOrder(t *testing.T) {
 	}
 	builds := g.vents.fuel.builds
 	_ = g.fuelUsers()
-	g.heatRooms()
+	g.burnFuel()
 	if g.vents.fuel.builds != builds {
 		t.Fatal("the fuel-user list was rebuilt without a structure change")
 	}

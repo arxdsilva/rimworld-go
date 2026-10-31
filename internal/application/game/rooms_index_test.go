@@ -65,7 +65,7 @@ func TestRoomsIncrementalMatchesFull(t *testing.T) {
 				compareRooms(t, inc, ful)
 			}
 		}
-		t.Logf("seed %d: %d rooms, %d residual cells, %d plans", seed, len(inc.rooms), len(inc.residual), len(inc.roofx.plans))
+		t.Logf("seed %d: %d rooms, %d residual cells, %d plans", seed, len(inc.rooms), len(inc.thermo.Residual), len(inc.roofx.plans))
 		if inc.StateHash() != ful.StateHash() {
 			t.Fatalf("seed %d: state hashes differ", seed)
 		}
@@ -81,10 +81,10 @@ func compareRooms(t *testing.T, a, b *Game) {
 		t.Fatal("room grids differ")
 	case !slices.Equal(a.rooms, b.rooms):
 		t.Fatalf("room stats differ:\n%+v\n%+v", a.rooms, b.rooms)
-	case !slices.Equal(a.roomTemps, b.roomTemps):
-		t.Fatalf("room temperatures differ:\n%v\n%v", a.roomTemps, b.roomTemps)
-	case !maps.Equal(a.residual, b.residual):
-		t.Fatalf("residual air differs: %d vs %d cells", len(a.residual), len(b.residual))
+	case !slices.Equal(a.thermo.Temps, b.thermo.Temps):
+		t.Fatalf("room temperatures differ:\n%v\n%v", a.thermo.Temps, b.thermo.Temps)
+	case !maps.Equal(a.thermo.Residual, b.thermo.Residual):
+		t.Fatalf("residual air differs: %d vs %d cells", len(a.thermo.Residual), len(b.thermo.Residual))
 	case !slices.Equal(a.roofs, b.roofs):
 		t.Fatal("roof cells differ")
 	case !slices.Equal(a.roofx.plans, b.roofx.plans):

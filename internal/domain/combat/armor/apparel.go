@@ -83,12 +83,18 @@ const (
 	vestCover   = CoverTorso | CoverNeck
 	capCover    = CoverUpperHead
 	helmetCover = CoverFullHead | CoverUpperHead | CoverEyes
+	// TEMP-4 (wiki: T-shirt torso and shoulders; Tribalwear torso and
+	// legs, not the neck, shoulders or arms; button-down and jacket as a
+	// coat; pants the legs; cowboy and bowler hats head and ears).
+	teeCover    = CoverTorso | CoverShoulders
+	tribalCover = CoverTorso | CoverLegs
 )
 
 // The plies the garments take. wiki: Apparel (parka, duster, flak jacket
 // outer; flak vest and flak pants middle; plate and marine armor middle
 // and outer; hats and helmets headgear).
 const (
+	skin     = 1 << PlySkin // TEMP-4: shirts, pants and tribalwear
 	outer    = 1 << PlyOuter
 	middle   = 1 << PlyMiddle
 	shell    = middle | outer
@@ -116,6 +122,17 @@ var apparel = map[item.Kind]garment{
 	item.MarineHelmet:   {fixed: Set{Sharp: 1060, Blunt: 450, Heat: 540}, covers: helmetCover, plies: headgear},
 	item.SimpleHelmet:   {covers: capCover, plies: headgear, factor: 500, stuff: item.Steel},
 	item.AdvancedHelmet: {covers: capCover, plies: headgear, factor: 700, stuff: item.Steel},
+
+	// TEMP-4, the layered core clothing. wiki: T-shirt, Button-down shirt,
+	// Pants, Tribalwear, Cowboy hat, Bowler hat (armor factor 0.2 of the
+	// material), Jacket (0.3); cloth by default, as item.DefaultStuff.
+	item.TShirt:          {covers: teeCover, plies: skin, factor: 200, stuff: item.Cloth},
+	item.ButtonDownShirt: {covers: coatCover, plies: skin, factor: 200, stuff: item.Cloth},
+	item.Pants:           {covers: CoverLegs, plies: skin, factor: 200, stuff: item.Cloth},
+	item.Tribalwear:      {covers: tribalCover, plies: skin, factor: 200, stuff: item.Cloth},
+	item.Jacket:          {covers: coatCover, plies: outer, factor: 300, stuff: item.Cloth},
+	item.CowboyHat:       {covers: capCover, plies: headgear, factor: 200, stuff: item.Cloth},
+	item.BowlerHat:       {covers: capCover, plies: headgear, factor: 200, stuff: item.Cloth},
 }
 
 // layer is g made of stuff m (0: its default).

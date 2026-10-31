@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/domain/animal"
 	"strings"
@@ -151,8 +152,12 @@ func (g *Game) spawnGenerated(p pawngen.Pawn, x, y int) (entity.EntityID, error)
 			g.need.Set(id, n)
 		}
 	}
-	// NoClothes (p.Look.Bare): colonists arrive with no worn apparel
-	// anyway; the bare look is the renderer's.
+	switch { // TEMP-4: SpawnNamedPawn dressed it in a T-shirt and pants
+	case p.Look.Bare: // NoClothes: it arrives naked
+		delete(g.apparel, id)
+	case backstory.DefOf(p.Childhood).Tags == backstory.TagNeolithic: // a tribal childhood: tribalwear
+		g.apparel[id] = craft.Tribal()
+	}
 	return id, nil
 }
 

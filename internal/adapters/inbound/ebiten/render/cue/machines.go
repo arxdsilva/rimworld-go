@@ -36,10 +36,14 @@ type machineLoop struct {
 }
 
 // thermostatWorking is a heater or cooler of kind k heating or cooling:
-// powered and drawing more than it does idling at its target.
+// powered and drawing nearer its working than its idle watts.
 func thermostatWorking(k construction.Kind) func(b game.BuildingView) bool {
-	idle := power.SpecOf(k).Idle
-	return func(b game.BuildingView) bool { return b.Powered && b.PowerUse > idle }
+	// working: drawing nearer its working than its idle watts (TEMP-1: the
+	// wiki's 17 W heater idle sits below the old 20 W, so a bare "above
+	// idle" test would hum at any small draw)
+	s := power.SpecOf(k)
+	mid := (s.Draw + s.Idle) / 2
+	return func(b game.BuildingView) bool { return b.Powered && b.PowerUse > mid }
 }
 
 // makingPower is a generator making power now.

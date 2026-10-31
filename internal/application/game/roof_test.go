@@ -393,13 +393,17 @@ func TestMinedRockLeavesNaturalRoof(t *testing.T) {
 
 // roomTempAt is the air of the room at (x, y).
 func roomTempAt(g *Game, x, y int) temperature.Temp {
-	return g.roomTemps[g.roomAt(x, y)]
+	return g.thermo.Temps[g.roomAt(x, y)]
 }
 
+// TestUnroofedRoomTracksOutdoors: an unroofed room is the outdoor air;
+// a roofed one lags behind the day's swing (TEMP-1: no shelter bonus, so
+// the control is read at dawn, when the outside has fallen below the
+// day's mean and the roofed room has not followed).
 func TestUnroofedRoomTracksOutdoors(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	g.HoldWeather()
-	jumpTo(g, 45, 10)       // a winter morning
+	jumpTo(g, 45, 5)        // a winter dawn
 	hut(t, g, 10, 1, 14, 5) // roofed control (RoofRooms roofs every plan)
 	hutWalls(t, g, 1, 1, 5, 5)
 	g.ensureRooms()
@@ -417,7 +421,10 @@ func TestUnroofedRoomTracksOutdoors(t *testing.T) {
 	}
 }
 
-func TestRoofedRoomUnchanged(t *testing.T) {
+// TestRoofedRoomFollowsWikiEqualisation: a closed, roofed 5x5 hut (20
+// single wall faces, 25 thin-roof cells) moves exactly as the wiki's wall
+// and roof rates say (temperature.Exposure, TEMP-1), step after step.
+func TestRoofedRoomFollowsWikiEqualisation(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	jumpTo(g, 45, 0)
 	hut(t, g, 1, 1, 7, 7)
@@ -426,17 +433,18 @@ func TestRoofedRoomUnchanged(t *testing.T) {
 	if g.roomRoofed(r) != 1000 || g.World().Rooms[r].Roofed != 1 {
 		t.Fatal("room should be fully roofed")
 	}
-	g.roomTemps[r] = 150
+	if v := g.World().Rooms[r]; v.ExposedWalls != 20 || v.DoubleWalls != 0 || v.RoofKind != "thin" {
+		t.Fatalf("stats line %d/%d %q, want 20 exposed walls under a thin roof", v.ExposedWalls, v.DoubleWalls, v.RoofKind)
+	}
+	e := temperature.Exposure{Cells: 25, Single: 20, Thin: 25}
+	g.thermo.Temps[r] = 150
+	m := temperature.Temp(150).Milli()
 	for i := 0; i < 12; i++ {
 		jumpTo(g, 45, i*2)
-		now := g.clock.Now()
-		outside := temperature.Outdoor(now) + temperature.IndoorBonus
-		cells := g.rooms[r].contents.Cells
-		t0 := g.roomTemps[r]
-		want := t0 + (outside-t0)*temperature.Temp(roomLeak(cells))/1000 // the pre-roof formula
+		m = e.Equalise(m, temperature.Outdoor(g.clock.Now()).Milli())
 		g.heatRooms()
-		if got := g.roomTemps[r]; got != want {
-			t.Fatalf("step %d: %v, want %v (old formula)", i, got, want)
+		if got := g.thermo.Temps[r]; got != m.Temp() {
+			t.Fatalf("step %d: %v, want %v", i, got, m.Temp())
 		}
 	}
 }
@@ -447,17 +455,17 @@ func TestHalfRoofedBetween(t *testing.T) {
 	jumpTo(g, 45, 0)
 	hutWalls(t, g, 1, 1, 7, 7)   // roofed
 	hutWalls(t, g, 10, 1, 16, 7) // bare
-	hutWalls(t, g, 19, 1, 25, 7) // half: rows 2..3 of 2..6 bare
+	hutWalls(t, g, 19, 1, 25, 7) // part: row 2 of 2..6 bare (20 %: below the wiki's 25 % outdoor line)
 	g.ensureRooms()
 	g.designateRoof(11, 2, 15, 6, false)
-	g.designateRoof(20, 2, 24, 3, false)
+	g.designateRoof(20, 2, 24, 2, false)
 	g.RoofRooms()
 	full, bare, half := g.roomAt(4, 4), g.roomAt(13, 4), g.roomAt(22, 4)
-	if g.roomRoofed(full) != 1000 || g.roomRoofed(bare) != 0 || g.roomRoofed(half) != 600 {
+	if g.roomRoofed(full) != 1000 || g.roomRoofed(bare) != 0 || g.roomRoofed(half) != 800 {
 		t.Fatalf("roofed %d %d %d", g.roomRoofed(full), g.roomRoofed(bare), g.roomRoofed(half))
 	}
 	g.Step(clock.TicksPerHour * 2)
-	tf, tb, th := g.roomTemps[full], g.roomTemps[bare], g.roomTemps[half]
+	tf, tb, th := g.thermo.Temps[full], g.thermo.Temps[bare], g.thermo.Temps[half]
 	if !(tb < th && th < tf) {
 		t.Fatalf("bare %v < half %v < full %v expected", tb, th, tf)
 	}

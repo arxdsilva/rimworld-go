@@ -247,6 +247,16 @@ func PowerSprite(kind, facing string, mask int, open bool) string {
 		return "power/heater"
 	case overlay.CoolerKind:
 		return "power/cooler_" + FacingOr(facing)
+	case "vent": // TEMP-1: open lets air through (BuildingView.Open)
+		if open {
+			return "furniture/vent_open_" + FacingOr(facing)
+		}
+		return "furniture/vent_closed_" + FacingOr(facing)
+	case "passive cooler": // TEMP-1: open is fuelled here
+		if open {
+			return "furniture/passive_cooler"
+		}
+		return "furniture/passive_cooler_empty"
 	case overlay.SentryTurretKind:
 		return overlay.TurretBaseKey
 	case overlay.TradeBeaconKind:

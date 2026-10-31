@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -379,14 +380,17 @@ func TestVentWarmsItsRoom(t *testing.T) {
 		t.Fatalf("rooms %d %d", a, b)
 	}
 	cold := g.climate.Outdoor(g.clock.Now()) - 300
-	g.roomTemps[a], g.roomTemps[b] = cold, cold
+	g.thermo.Temps[a], g.thermo.Temps[b] = cold, cold
 	for range 400 {
 		g.heatRooms()
 	}
-	if d := g.roomTemps[a] - g.roomTemps[b]; d < ventRoomHeat-3 || d > ventRoomHeat+3 {
-		t.Fatalf("the vent's room is %d warmer than its twin, want about %d", d, ventRoomHeat)
+	// TEMP-1: the vent is a steady heat source (game/thermo): its room
+	// settles as far above its twin as that heat holds it
+	want := thermo.Rise(g.thermo.RoomOf(a).Exposure, thermo.SteamVentRate).Temp()
+	if d := g.thermo.Temps[a] - g.thermo.Temps[b]; want < 5 || d < want-3 || d > want+3 {
+		t.Fatalf("the vent's room is %d warmer than its twin, want about %d", d, want)
 	}
-	if d := g.temperatureAt(4, 4) - g.temperatureAt(24, 4); d != g.roomTemps[a]-g.roomTemps[b] {
+	if d := g.temperatureAt(4, 4) - g.temperatureAt(24, 4); d != g.thermo.Temps[a]-g.thermo.Temps[b] {
 		t.Fatal("indoors the outdoor warming must not apply")
 	}
 }

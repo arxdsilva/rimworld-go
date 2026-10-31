@@ -134,7 +134,13 @@ import (
 // their threat response, explosions damage items and cook off stores.
 // 48x40/seed1, 48x40/seed7 and 120x120/seed42 keep their pins. Same-seed
 // runs identical (-count=2).
-// Re-pinned (FOOD-6): food binges bounded to one meal an hour, eating
+// Re-pinned (TEMP-1..4): wiki room equalisation through walls, roofs,
+// doors and vents with wiki heat sources and body heat; wiki biome
+// extremes and climate events; wiki exposure (16-26 C comfort, hypothermia
+// and heatstroke stages, frostbite) for colonists, prisoners, raiders and
+// animals; layered clothing (everyone starts in a T-shirt and pants).
+// Same-seed runs identical.
+// Before that, re-pinned (FOOD-6): food binges bounded to one meal an hour, eating
 // takes 500 ticks, wiki hunger offsets and immunity by hunger band,
 // per-species breeding, the butcher spot's yield, roofed sowing only
 // under sun lamps, eclipse and toxic fallout. Same-seed runs identical.
@@ -148,12 +154,12 @@ import (
 // products, taming food and auto-slaughter. All six runs move. Same-seed
 // runs identical (-count=2).
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x1d1e3bb44a6700e,
-	"48x40/seed7":    0x724c6bf2c20ce58c,
-	"48x40/seed42":   0x7ae3305361a58acb,
-	"120x120/seed1":  0x68aa4c513c829a3b,
-	"120x120/seed7":  0x9ef89936cdd595cf,
-	"120x120/seed42": 0xefe1c1356235e446,
+	"48x40/seed1":    0x3e5acab81c2a989d,
+	"48x40/seed7":    0x529de30845e69cf5,
+	"48x40/seed42":   0x43a6ab739bca6fe7,
+	"120x120/seed1":  0xde126bd6fc5f1289,
+	"120x120/seed7":  0x6986ce1c7a096a10,
+	"120x120/seed42": 0x7c1bc7e1562c0f08,
 }
 
 const scaleGoldenTicks = 20000

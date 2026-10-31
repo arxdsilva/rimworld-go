@@ -76,7 +76,7 @@ func (LinkKinds) Power(kind string) sprite.LinkCell { return PowerLink(kind) }
 // BuildingLink is the link cell of a building or frame kind.
 func BuildingLink(kind string) sprite.LinkCell {
 	switch kind {
-	case "wall", "door", "powered door", CoolerKind: // a cooler fills a wall gap like a door
+	case "wall", "door", "powered door", CoolerKind, "vent": // a cooler or vent fills a wall gap like a door
 		return sprite.WallLink
 	case sprite.FenceKind, sprite.GateKind:
 		return sprite.FenceLink

@@ -22,8 +22,9 @@ func TestSpecOf(t *testing.T) {
 		construction.GeothermalGenerator:    {Role: Producer, Peak: 1800, Toggle: true},
 		construction.Battery:                {Role: Storage, CapWh: 1200},
 		construction.Lamp:                   {Role: Consumer, Class: ClassLamp, Draw: 50, Idle: 50, Toggle: true},
-		construction.Heater:                 {Role: Consumer, Class: ClassHeater, Draw: 180, Idle: 20, Toggle: true},
-		construction.Cooler:                 {Role: Consumer, Class: ClassCooler, Draw: 220, Idle: 20, Toggle: true},
+		construction.Heater:                 {Role: Consumer, Class: ClassHeater, Draw: 175, Idle: 17, Toggle: true}, // TEMP-1, wiki: Heater
+		construction.Cooler:                 {Role: Consumer, Class: ClassCooler, Draw: 200, Idle: 20, Toggle: true}, // TEMP-1, wiki: Cooler
+		construction.Vent:                   {Toggle: true},                                                          // TEMP-1: open/shut, no draw
 		construction.ElectricStove:          {Role: Consumer, Class: ClassBench, Draw: 250, Idle: 25, Toggle: true},
 		construction.ElectricTailoringBench: {Role: Consumer, Class: ClassBench, Draw: 150, Idle: 15, Toggle: true},
 		construction.ElectricResearchBench:  {Role: Consumer, Class: ClassBench, Draw: 200, Idle: 20, Toggle: true},

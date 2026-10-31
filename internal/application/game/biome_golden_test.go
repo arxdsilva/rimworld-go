@@ -12,7 +12,9 @@ import (
 // and climate as they were before biomes (SIM-023): adding biomes must not
 // change a temperate game. Wildlife is left out on purpose.
 // Recompute only for a deliberate change to temperate generation.
-var goldenTemperate = map[uint64]uint64{1: 0x8a0746fb26740873, 7: 0x61d068445c5b205, 42: 0xc65b379b43b68321}
+// TEMP-2: wiki biome extremes (temperate 35/-25 C) moved only the climate
+// part; terrain, grass and plants hash as before.
+var goldenTemperate = map[uint64]uint64{1: 0x65ce86679a377794, 7: 0xa2d9fbbd56bd7382, 42: 0xe90d9897ae0bb1ce}
 
 func temperateHash(t *testing.T, seed uint64) uint64 {
 	t.Helper()

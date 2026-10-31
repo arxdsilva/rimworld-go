@@ -63,6 +63,10 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		mask, open = o.Links.Mask(b.X, b.Y), l.Creatures[[2]int{b.X, b.Y}]
 	case b.Kind == overlay.PowerSwitchKind:
 		open = !b.PowerOn // the actual state: an open switch is off
+	case b.Kind == "vent": // TEMP-1: open or shut (build_keys.go)
+		open = b.Open
+	case b.Kind == "passive cooler": // TEMP-1: fuelled or empty (build_keys.go)
+		open = b.FuelPct > 0
 	}
 	switch b.Kind {
 	case "grave":

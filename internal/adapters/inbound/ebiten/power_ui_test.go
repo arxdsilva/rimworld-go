@@ -135,8 +135,8 @@ func repoRoot(t *testing.T) string {
 func TestArchPowerLine(t *testing.T) {
 	t.Parallel()
 	cases := map[string]string{
-		overlaypkg.HeaterKind:        "Power: uses 180 W working, 20 W idle",
-		overlaypkg.CoolerKind:        "Power: uses 220 W working, 20 W idle",
+		overlaypkg.HeaterKind:        "Power: uses 175 W working, 17 W idle", // TEMP-1: wiki Heater watts
+		overlaypkg.CoolerKind:        "Power: uses 200 W working, 20 W idle", // TEMP-1: wiki Cooler watts
 		"lamp":                       "Power: uses 50 W",
 		"electric stove":             "Power: uses 250 W working, 25 W idle",
 		overlaypkg.WoodGeneratorKind: "Power: makes up to 800 W",
@@ -158,7 +158,7 @@ func TestArchPowerLine(t *testing.T) {
 	}
 	heater, _ := toolByID("heater")
 	lines := archTooltipLines(heater, "steel", 0, 0)
-	if !strings.Contains(strings.Join(lines, "\n"), "Power: uses 180 W working") {
+	if !strings.Contains(strings.Join(lines, "\n"), "Power: uses 175 W working") { // TEMP-1: wiki watts
 		t.Errorf("heater card %q lacks its power line", lines)
 	}
 	if power.ConnectRange != 3 || !strings.Contains(toolDesc(t, "conduit"), "within 3 tiles") {

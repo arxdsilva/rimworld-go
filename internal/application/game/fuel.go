@@ -13,10 +13,10 @@ import (
 // The shared fuel table (PLAY-021): everything that burns logs.
 //
 // A campfire heats and lights its room; a torch lamp is a small wood-burning
-// light; a wood-fired generator makes power. All three hold fuel as ticks of
-// burning in g.fuel (setFuel in light.go is its only writer), burn it in
-// phaseClimate (heatRooms), and are fed by haulers (assignRefuel and
-// doRefuel). Rain puts out whatever stands in the open and burns, except a
+// light; a wood-fired generator makes power; a passive cooler cools its room
+// (TEMP-1: their heat is game/thermo's). All hold fuel as ticks of burning in
+// g.fuel (setFuel in light.go is its only writer), burn it in phaseClimate
+// (burnFuel), and are fed by haulers (assignRefuel and doRefuel). Rain puts out whatever stands in the open and burns, except a
 // machine: a generator burns while it is running (generatorRunning).
 //
 // The users are listed once per structVer in building order, so a colony
@@ -48,9 +48,6 @@ type fuelDef struct {
 	BurnPermil int
 	// Banks: the fire banks down in warm air (campfires only).
 	Banks bool
-	// Heat is what burning adds to the room per climate interval, in
-	// tenths of a degree times room cells (0: none).
-	Heat int
 }
 
 // fuelSpec is kind k's fuel table row; ok is false for a kind that burns
@@ -59,13 +56,15 @@ func fuelSpec(k construction.Kind) (fuelDef, bool) {
 	switch k {
 	case construction.Campfire:
 		return fuelDef{CapTicks: CampfireCapacity * TicksPerWood, Below: refuelBelow, BurnPermil: 1000,
-			Banks: true, Heat: campfireHeat}, true
+			Banks: true}, true
 	case construction.TorchLamp:
 		return fuelDef{CapTicks: torchLogs * TicksPerWood, Below: torchLogs * TicksPerWood / 2, BurnPermil: torchBurn}, true
 	case construction.WoodGenerator:
 		return fuelDef{CapTicks: generatorLogs * TicksPerWood, Below: generatorLogs * TicksPerWood / 2, BurnPermil: generatorBurn}, true
 	case construction.FueledSmithy, construction.Stove: // PRD-3, FOOD-4, wiki: Fueled smithy, Fueled stove (50 logs, scaled / 10); burns only while worked (craft.WorkPerWood)
 		return fuelDef{CapTicks: 5 * TicksPerWood, Below: 5 * TicksPerWood / 2}, true
+	case construction.PassiveCooler: // TEMP-1, wiki: Passive cooler (50 wood, 10 a day: one per TicksPerWood)
+		return fuelDef{CapTicks: 50 * TicksPerWood, Below: 25 * TicksPerWood, BurnPermil: 1000}, true
 	}
 	return fuelDef{}, false
 }
@@ -146,10 +145,10 @@ func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
 	return g.fuel[bid] > 0 && !g.doused(bid) && !g.banked[bid]
 }
 
-// burnFuel burns one climate interval of fuel in every burner and adds the
-// heat of the ones that heat their room to heat (per room id). A campfire
-// banks down in warm air and flares up again in cool air.
-func (g *Game) burnFuel(heat []int) {
+// burnFuel burns one climate interval of fuel in every burner (game/thermo
+// reads which burn for their heat). A campfire banks down in warm air and
+// flares up again in cool air.
+func (g *Game) burnFuel() {
 	for _, bid := range g.fuelUsers() {
 		b, ok := g.bldgs.Get(bid)
 		if !ok || g.fuel[bid] <= 0 {
@@ -161,7 +160,7 @@ func (g *Game) burnFuel(heat []int) {
 		}
 		if spec.Banks {
 			switch t := g.temperatureAt(b.X, b.Y); {
-			case !g.banked[bid] && t >= campfireBank:
+			case !g.banked[bid] && t >= campfireBank && uint64(g.clock.Now())%campfireBankEvery == 0:
 				g.banked[bid] = true
 			case g.banked[bid] && t < campfireRelight:
 				delete(g.banked, bid)
@@ -171,11 +170,6 @@ func (g *Game) burnFuel(heat []int) {
 			continue // banked, doused by rain or snow, or switched off
 		}
 		g.setFuel(bid, max(0, g.fuel[bid]-climateInterval*spec.BurnPermil/1000)) // light.go: a burnt-out fire stops lighting
-		if spec.Heat > 0 {
-			if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(heat) {
-				heat[r] += spec.Heat
-			}
-		}
 	}
 }
 

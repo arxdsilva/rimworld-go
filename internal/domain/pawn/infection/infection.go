@@ -34,6 +34,8 @@ const (
 const (
 	chanceBiteBurn = 300 // bites and burns
 	chanceBleeding = 150 // other bleeding wounds
+	// chanceFrostbite: frostbite (TEMP-3). wiki: Frostbite (25 % untreated)
+	chanceFrostbite = 250
 )
 
 // Tend factor on the chance: 850 at 0 % tend quality falling linearly to
@@ -60,6 +62,8 @@ func WoundChance(kind body.WoundKind, tendQ int32, roomPct int32) int32 {
 		base = chanceBiteBurn
 	case body.Cut, body.Scratch, body.Surgical, body.Stab, body.Gunshot:
 		base = chanceBleeding
+	case body.Frostbite:
+		base = chanceFrostbite
 	default:
 		return 0
 	}

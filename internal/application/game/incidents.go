@@ -83,8 +83,9 @@ type gnawEvent struct {
 // herds and timbergnaws and, at the scheduled tick, rolls a nature event.
 func (g *Game) phaseIncidents() {
 	now := uint64(g.clock.Now())
-	g.trackFlare(now) // power_events.go: the solar flare's end (PLAY-021); a nil check without power
-	g.tradeTick(now)  // trade.go (PLAY-024): requested caravans, the ship, pods, sessions; returns at once without trade
+	g.trackFlare(now)  // power_events.go: the solar flare's end (PLAY-021); a nil check without power
+	g.climateTick(now) // weather_ng1.go (TEMP-2): the climate event's offset and end
+	g.tradeTick(now)   // trade.go (PLAY-024): requested caravans, the ship, pods, sessions; returns at once without trade
 	if !g.wild {
 		return
 	}
@@ -144,13 +145,13 @@ func (g *Game) pickNature(now uint64) (incident.ID, bool) {
 		}
 		return fit[id] == 1
 	}
-	rn := g.rel(now)       // setup.go: the catalogue's days count from the landing (now itself on a legacy colony)
-	freq := g.diseasePct() // disease.go (MED-04): the difficulty's disease frequency
-	total := incident.TotalAt(incident.Nature, g.incidents, rn, g.biome, freq, ok)
+	rn := g.rel(now)      // setup.go: the catalogue's days count from the landing (now itself on a legacy colony)
+	odds := natureOdds(g) // weather_ng1.go: disease frequency (MED-04), Extreme weather (TEMP-2)
+	total := incident.TotalOdds(incident.Nature, g.incidents, rn, g.biome, odds, ok)
 	if total <= 0 {
 		return 0, false
 	}
-	return incident.PickAt(incident.Nature, g.incidents, rn, g.biome, freq, g.rng.IntN(total), ok)
+	return incident.PickOdds(incident.Nature, g.incidents, rn, g.biome, odds, g.rng.IntN(total), ok)
 }
 
 // incidentFits is the map's situational check for event id.
@@ -189,6 +190,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return ok
 	case incident.Eclipse, incident.ToxicFallout: // FOOD-6: one of each at a time (StartSky)
 		return true
+	case incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter: // TEMP-2: the season's temperature
+		return climateFits(g, id, now) // weather_ng1.go
 	}
 	return false
 }
@@ -231,15 +234,12 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		o, n, ok := farm.Strike(plantField{g}, now)
 		g.threat("Blight", o.X, o.Y, "Blight has struck the %s (%d plants). Cut the blighted plants before it spreads.", farm.CropField(o.Species), n)
 		return ok
-	case incident.Eclipse, incident.ToxicFallout: // FOOD-6 (incident/sky.go)
-		ticks := incident.SkyTicks(id, g.rng.IntN(incident.SkySpan(id)+1))
-		if !g.incidents.StartSky(id, now, ticks) {
-			return false
+	case incident.Eclipse, incident.ToxicFallout, incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter: // FOOD-6, TEMP-2 (incident/sky.go, climate.go)
+		title, text, ok := g.incidents.StartTimed(id, now, g.rng.IntN)
+		if hx, hy := g.home(); ok {
+			g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letterCaution, Text: text})
 		}
-		hx, hy := g.home()
-		title, text := incident.SkyLetter(id, ticks)
-		g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letterCaution, Text: text})
-		return true
+		return ok
 	}
 	return false
 }
@@ -273,7 +273,7 @@ func (g *Game) climateFit(s animal.Species) bool {
 	if animal.Weight(s, g.biome) > 0 {
 		return true
 	}
-	return animal.RosterOf(s).Habitat&animal.ClimateBand(biome.DefOf(g.biome).Climate.YearMean) != 0
+	return animal.RosterOf(s).Habitat&animal.ClimateBand(biome.DefOf(g.biome).Warmth) != 0
 }
 
 // fitting is the climate-fit species of list.
@@ -730,7 +730,7 @@ func stepToxic(g *Game, now uint64) {
 			continue
 		}
 		if a.Body == nil {
-			a.Body = newAnimalBody(a.Species) // animal_health.go
+			a.Body = animal.NewBody(a.Species) // animal_health.go
 		}
 		if body.StepToxic(a.Body, out, body.ToxicResistAnimal, h, roll).Dead {
 			g.animalMedicalDeath(id, &a)

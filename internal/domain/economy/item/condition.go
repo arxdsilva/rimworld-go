@@ -23,10 +23,13 @@ func HasQuality(k Kind) bool {
 // 80, duster 200); the wool parka is our own garment and takes the
 // parka's; flak vest 200, flak jacket 260, plate armor 290, marine armor
 // 340. The wiki publishes no hit points for the weapons and the rest of
-// the armor here: 100, the common value (original tuning).
+// the armor here: 100, the common value (original tuning). TEMP-4: the
+// jacket 160, the cowboy and bowler hats 80, the shirts, pants and
+// tribalwear 100 (wiki: each garment's page).
 var maxHP = [numKinds]int{Parka: 140, Tuque: 80, Duster: 200, WoolParka: 140,
 	Club: 100, Knife: 100, Spear: 100, Rifle: 100,
-	FlakVest: 200, FlakJacket: 260, PlateArmor: 290, MarineArmor: 340}
+	FlakVest: 200, FlakJacket: 260, PlateArmor: 290, MarineArmor: 340,
+	TShirt: 100, ButtonDownShirt: 100, Pants: 100, Jacket: 160, CowboyHat: 80, BowlerHat: 80, Tribalwear: 100}
 
 // defaultMaxHP is a quality kind's hit points when the table has no row
 // (kinds added later).
@@ -211,13 +214,21 @@ func StackValue(s Stack) int {
 
 // Insulation is garment k's cold and heat insulation (tenths of a
 // degree) made of material m at quality stored q (0: none, read as
-// Normal): the kind's numbers scaled by the material's insulation against
-// the default material's, then by quality (wiki: Quality, insulation).
+// Normal). wiki: Temperature, Apparel: a garment made from a material is
+// its apparel factors (percent) of the material's insulation (m, else the
+// kind's default material); any other carries its fixed numbers; then
+// quality (wiki: Quality, insulation: poor x0.9 to legendary x1.8).
 func Insulation(k, m Kind, q uint8) (cold, heat int) {
-	cold, heat = k.Insulation()
-	if MadeFrom(k) != 0 && m != 0 {
-		cold = cold * StuffFactor(k, m, func(p StuffProps) int { return p.ColdInsulation }) / 1000
-		heat = heat * StuffFactor(k, m, func(p StuffProps) int { return p.HeatInsulation }) / 1000
+	if k >= numKinds {
+		return 0, 0
+	}
+	cold, heat = apparel[k].cold, apparel[k].heat
+	if MadeFrom(k) != 0 {
+		p, ok := StuffOf(m)
+		if !ok || m == 0 {
+			p, _ = StuffOf(DefaultStuff(k))
+		}
+		cold, heat = p.ColdInsulation*cold/100, p.HeatInsulation*heat/100
 	}
 	if l, ok := quality.FromStored(q); ok {
 		if cold > 0 {

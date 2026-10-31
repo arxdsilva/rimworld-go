@@ -218,7 +218,7 @@ func TestWeatherYearHasVariety(t *testing.T) {
 		season := temperature.Season(tick)
 		prev = Next(1, b, prev, mean, season)
 		seen[prev.Target]++
-		if prev.Target.Frozen() && season != "Winter" {
+		if prev.Target.Frozen() && season != "Winter" && mean > 0 { // TEMP-2: a late fall can freeze (wiki temperate -25 C winters)
 			t.Fatalf("block %d: %v in %s", b, prev.Target, season)
 		}
 	}

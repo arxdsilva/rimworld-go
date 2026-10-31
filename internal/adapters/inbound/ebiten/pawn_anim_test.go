@@ -108,7 +108,7 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 	l := look.Look{Sex: look.Female, Build: look.Heavy, Beard: 2, HairStyle: 3}
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Look: l}
 	for _, f := range []artpkg.Facing{artpkg.FaceSouth, artpkg.FaceEast, artpkg.FaceNorth, artpkg.FaceWest} {
-		keys := drawnKeys(r, game.PawnView{ID: 1, X: 2, Y: 2, Look: l, Weapon: "rifle", Drafted: true}, f)
+		keys := drawnKeys(r, game.PawnView{ID: 1, X: 2, Y: 2, Look: l, Weapon: "rifle", Drafted: true, Apparel: []string{"t-shirt", "pants"}}, f) // TEMP-4: worn
 		fs, _ := creature.FacingKey(f)
 		for _, want := range []string{"pawn/body_f_heavy_", "pawn/shirt_basic_f_heavy_", "pawn/beard_full_", "pawn/hair_long_"} {
 			if !slices.Contains(keys, want+fs) {
@@ -242,5 +242,53 @@ func TestMarkersFloatAboveHead(t *testing.T) {
 		if patient < 0 || hair < 0 || (patient < hair) != c.before {
 			t.Fatalf("%v: patient at %d, rescuer's hair at %d: %v", c.f, patient, hair, keys)
 		}
+	}
+}
+
+// TestFigureDrawsWornLayers (TEMP-4): the skin layer shows only when worn
+// (a naked colonist is its body, a raider keeps its clothes), a
+// button-down replaces the T-shirt, tribalwear replaces shirt and pants,
+// and the jacket and hats draw their own layers.
+func TestFigureDrawsWornLayers(t *testing.T) {
+	t.Parallel()
+	c := figureArt()
+	for _, k := range []string{"body_", "pants_basic_", "shirt_basic_", "button_down_", "tribalwear_", "jacket_", "cowboy_hat_", "bowler_hat_"} {
+		c.Sprites["pawn/"+k+"south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, map[string]pt{"head": {80, 122}})
+	}
+	keys := func(p game.PawnView) []string {
+		var out []string
+		for _, l := range pawnFigureLayers(c, p, "south") {
+			out = append(out, l.Key)
+		}
+		return out
+	}
+	for _, tc := range []struct {
+		apparel []string
+		hostile bool
+		want    []string
+		not     []string
+	}{
+		{nil, false, []string{"pawn/body_south"}, []string{"pawn/shirt_basic_south", "pawn/pants_basic_south"}},
+		{nil, true, []string{"pawn/shirt_basic_south", "pawn/pants_basic_south"}, nil},
+		{[]string{"t-shirt", "pants"}, false, []string{"pawn/shirt_basic_south", "pawn/pants_basic_south"}, nil},
+		{[]string{"button-down shirt", "pants", "jacket", "cowboy hat"}, false,
+			[]string{"pawn/button_down_south", "pawn/pants_basic_south", "pawn/jacket_south", "pawn/cowboy_hat_south"}, []string{"pawn/shirt_basic_south"}},
+		{[]string{"bowler hat", "tribalwear"}, false, []string{"pawn/tribalwear_south", "pawn/bowler_hat_south"},
+			[]string{"pawn/shirt_basic_south", "pawn/pants_basic_south"}},
+	} {
+		got := keys(game.PawnView{Apparel: tc.apparel, Hostile: tc.hostile})
+		for _, k := range tc.want {
+			if !slices.Contains(got, k) {
+				t.Errorf("%v (hostile %v): %s missing from %v", tc.apparel, tc.hostile, k, got)
+			}
+		}
+		for _, k := range tc.not {
+			if slices.Contains(got, k) {
+				t.Errorf("%v: %s drawn: %v", tc.apparel, k, got)
+			}
+		}
+	}
+	if got := keys(game.PawnView{Apparel: []string{"t-shirt", "pants"}}); len(got) != len(figureLayers(c, look.Look{}, "south", figureDress{})) {
+		t.Errorf("a dressed colonist draws %v: as many layers as the everyday look", got)
 	}
 }

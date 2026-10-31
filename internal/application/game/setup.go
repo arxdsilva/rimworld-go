@@ -47,8 +47,10 @@ type ng1State struct {
 	// death since the last day rollover (adaptation).
 	dead []entity.EntityID
 	lost bool
-	// extreme is the heat wave or cold snap in progress (weather_ng1.go).
-	extreme extremeEvent
+	// climateOff: the climate event's offset in g.climate (unsaved);
+	// legacyExtreme: an older save's event (weather_ng1.go, TEMP-2).
+	climateOff    int
+	legacyExtreme extremeEvent
 	// pods are the arrival's drop pods (arrival.go); introDone: the intro
 	// letter was posted.
 	pods      []podState
@@ -394,7 +396,7 @@ type SetupState struct {
 	StartDay  int
 	Dead      []entity.EntityID
 	Lost      bool
-	Extreme   extremeEvent
+	Extreme   extremeEvent // before TEMP-2 (v8): migrateExtreme; never written now
 	Pods      []podState
 	IntroDone bool
 }
@@ -410,8 +412,8 @@ func (g *Game) exportSetupState() *SetupState {
 	s.Colonists = slices.Clone(s.Colonists)
 	return &SetupState{
 		Setup: s, Factions: cloneFactionList(st.factions), Story: st.story, Plan: st.plan, Adapt: st.adapt,
-		Climate: g.climate, StartDay: st.startDay, Dead: slices.Clone(st.dead), Lost: st.lost,
-		Extreme: st.extreme, Pods: clonePods(st.pods), IntroDone: st.introDone,
+		Climate: baseClimate(g), StartDay: st.startDay, Dead: slices.Clone(st.dead), Lost: st.lost,
+		Pods: clonePods(st.pods), IntroDone: st.introDone,
 	}
 }
 
@@ -427,7 +429,7 @@ func (g *Game) importSetupState(s *SetupState) {
 	g.ng = ng1State{
 		setup: &setup, fx: setup.Scenario.Apply(), factions: cloneFactionList(s.Factions),
 		story: s.Story, plan: s.Plan, adapt: s.Adapt, startDay: s.StartDay,
-		dead: slices.Clone(s.Dead), lost: s.Lost, extreme: s.Extreme, pods: clonePods(s.Pods), introDone: s.IntroDone,
+		dead: slices.Clone(s.Dead), lost: s.Lost, legacyExtreme: s.Extreme, pods: clonePods(s.Pods), introDone: s.IntroDone,
 	}
 	if s.Climate != (temperature.Climate{}) {
 		g.climate = s.Climate

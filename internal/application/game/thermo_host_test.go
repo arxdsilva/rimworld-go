@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
@@ -35,74 +36,114 @@ func stepFuelled(g *Game, gen entity.EntityID, n int, each func(i int)) {
 }
 
 // TestHeaterWarmsColdRoomToTarget: in steady -10 °C air a powered heater
-// brings a cold 25-cell room up to its 21 °C target and then holds it
-// inside the thermostat's band: it switches on only below 20 °C and off
-// only above 21.5 °C, each state lasting at least two climate intervals,
-// at most 60 times a day (a thermostat with no band would switch every
-// interval: 240). Without power it adds nothing, though it still asks.
+// brings a cold 25-cell room up to its 21 °C target and holds it there.
+// TEMP-1: a working heater pushes its wiki 21 heat/s only up to its
+// target, so it no longer overshoots into the band and cycles: it stays
+// on (heating, 175 W) and the air sits at the target, inside the band.
+// The band's hysteresis is TestThermostatBandDoesNotFlap's. Without power
+// it adds nothing, though it still asks.
 func TestHeaterWarmsColdRoomToTarget(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	steadyAir(g, -100)
 	hut(t, g, 1, 1, 7, 7) // interior 2..6: 25 cells
-	heater := buildNow(t, g, construction.Heater, item.Steel, construction.South, 4, 3)
-	gen := onPower(t, g, 4, 3, 2, 5)
+	heater := buildNow(t, g, construction.Heater, item.Steel, construction.South, 6, 3)
+	gen := onPower(t, g, 6, 3, 9, 2) // TEMP-1: the generator outside (it heats its room now)
 	r := g.roomAt(4, 4)
 	if r < 0 || g.rooms[r].contents.Cells != 25 {
 		t.Fatalf("hut room %d", r)
 	}
-	g.roomTemps[r] = -70 // as cold as it settles unheated
+	g.thermo.Temps[r] = -70 // cold
 	target := g.thermoTarget(heater)
 	if target != 210 {
 		t.Fatalf("default target %d", target)
 	}
 	warmed := -1
 	stepFuelled(g, gen, 12*clock.TicksPerHour/climateInterval, func(i int) {
-		if warmed < 0 && int(g.roomTemps[r]) >= target-thermoLow {
+		if warmed < 0 && int(g.thermo.Temps[r]) >= target-thermo.BandLow {
 			warmed = i
 		}
 	})
 	if warmed < 0 {
-		t.Fatalf("the room reached %v in 12 h, want the target", g.roomTemps[r])
+		t.Fatalf("the room reached %v in 12 h, want the target", g.thermo.Temps[r])
 	}
 	t.Logf("warmed to the band in %d climate intervals", warmed+1)
 
-	flips, span, minSpan := 0, 0, 1<<30
-	lo, hi := int(g.roomTemps[r]), int(g.roomTemps[r])
+	flips := 0
+	lo, hi := int(g.thermo.Temps[r]), int(g.thermo.Temps[r])
 	was := g.thermoActive(heater)
 	stepFuelled(g, gen, clock.TicksPerDay/climateInterval, func(int) {
-		temp, on := int(g.roomTemps[r]), g.thermoActive(heater)
+		temp, on := int(g.thermo.Temps[r]), g.thermoActive(heater)
 		lo, hi = min(lo, temp), max(hi, temp)
-		span++
-		if on == was {
-			return
+		if on != was {
+			flips++
+			was = on
 		}
-		// the flag is set from the air before this interval's heat
-		flips++
-		minSpan = min(minSpan, span)
-		span = 0
-		was = on
 	})
-	t.Logf("a day at the target: %d switches, shortest state %d intervals, air %v..%v", flips, minSpan,
-		temperature.Temp(lo), temperature.Temp(hi))
-	if flips < 2 || flips > 60 {
-		t.Fatalf("%d thermostat switches in a day, want 2..60", flips)
+	t.Logf("a day at the target: %d switches, air %v..%v", flips, temperature.Temp(lo), temperature.Temp(hi))
+	if flips > 2 {
+		t.Fatalf("%d thermostat switches in a day holding a cold room, want it to stay on", flips)
 	}
-	if minSpan < 2 {
-		t.Fatalf("a thermostat state lasted %d climate interval(s)", minSpan)
+	if lo < target-thermo.BandLow || hi > target+thermo.BandHigh {
+		t.Fatalf("air %v..%v, want inside the %v..%v band", temperature.Temp(lo), temperature.Temp(hi),
+			temperature.Temp(target-thermo.BandLow), temperature.Temp(target+thermo.BandHigh))
 	}
-	// one interval of heat or leak past either edge at most
-	if lo < target-thermoLow-12 || hi > target+thermoHigh+12 {
-		t.Fatalf("air %v..%v, want about %v..%v", temperature.Temp(lo), temperature.Temp(hi),
-			temperature.Temp(target-thermoLow), temperature.Temp(target+thermoHigh))
+	if v := bldgViewOf(g, heater); v.HeatRate != 210 || !v.ThermoActive {
+		t.Fatalf("a working heater shows %d tenths of heat/s (active %v), want 210", v.HeatRate, v.ThermoActive)
 	}
 
 	// the generator runs dry: the room cools, the heater asks for power
 	g.setFuel(gen, 0)
 	g.Step(4 * clock.TicksPerHour)
-	if g.powered(heater) || !g.thermoActive(heater) || int(g.roomTemps[r]) >= target-thermoLow-20 {
-		t.Fatalf("unpowered heater: powered %v active %v, room %v", g.powered(heater), g.thermoActive(heater), g.roomTemps[r])
+	if g.powered(heater) || !g.thermoActive(heater) || int(g.thermo.Temps[r]) >= target-thermo.BandLow-20 {
+		t.Fatalf("unpowered heater: powered %v active %v, room %v", g.powered(heater), g.thermoActive(heater), g.thermo.Temps[r])
 	}
+	if v := bldgViewOf(g, heater); v.HeatRate != 0 {
+		t.Fatalf("an unpowered heater shows %d heat", v.HeatRate)
+	}
+}
+
+// TestThermostatBandDoesNotFlap: outdoor air swinging 17..25 °C around a
+// heater's 21 °C target. The heater switches on only below 20 °C and off
+// only above 21.5 °C, so it changes state a few times a day, each state
+// lasting several equalisation steps, never every step (no-flap).
+func TestThermostatBandDoesNotFlap(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 20, Height: 10})
+	steadyAir(g, 210)
+	g.climate.DaySwing = 40
+	hut(t, g, 1, 1, 7, 7)
+	heater := buildNow(t, g, construction.Heater, item.Steel, construction.South, 6, 3)
+	gen := onPower(t, g, 6, 3, 9, 2) // TEMP-1: the generator outside (it heats its room now)
+	stepFuelled(g, gen, clock.TicksPerDay/climateInterval, nil)
+	flips, span, minSpan := 0, 0, 1<<30
+	was := g.thermoActive(heater)
+	for range 2 * clock.TicksPerDay / temperature.EqualiseInterval {
+		g.setFuel(gen, g.fuelCap(gen))
+		g.Step(temperature.EqualiseInterval)
+		span++
+		if on := g.thermoActive(heater); on != was {
+			flips++
+			minSpan, span, was = min(minSpan, span), 0, on
+		}
+	}
+	t.Logf("2 days: %d switches, shortest state %d steps", flips, minSpan)
+	if flips < 2 || flips > 24 {
+		t.Fatalf("%d thermostat switches in 2 days, want 2..24", flips)
+	}
+	if minSpan < 3 {
+		t.Fatalf("a thermostat state lasted %d equalisation step(s)", minSpan)
+	}
+}
+
+// bldgViewOf is building id's view.
+func bldgViewOf(g *Game, id entity.EntityID) BuildingView {
+	for _, b := range g.World().Buildings {
+		if b.ID == id {
+			return b
+		}
+	}
+	return BuildingView{}
 }
 
 // TestHeaterTargetCommand: SetThermostat moves the target (clamped) and
@@ -112,8 +153,8 @@ func TestHeaterTargetCommand(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	steadyAir(g, -100)
 	hut(t, g, 1, 1, 7, 7)
-	heater := buildNow(t, g, construction.Heater, item.Steel, construction.South, 4, 3)
-	gen := onPower(t, g, 4, 3, 2, 5)
+	heater := buildNow(t, g, construction.Heater, item.Steel, construction.South, 6, 3)
+	gen := onPower(t, g, 6, 3, 9, 2) // TEMP-1: the generator outside (it heats its room now)
 	g.Enqueue(command.Command{Kind: command.SetThermostat, Target: uint64(heater), Count: 120})
 	g.Step(1)
 	if got := g.thermoTarget(heater); got != 120 {
@@ -123,9 +164,9 @@ func TestHeaterTargetCommand(t *testing.T) {
 	stepFuelled(g, gen, 8*clock.TicksPerHour/climateInterval, nil)
 	lo, hi := 1<<30, -1<<30
 	stepFuelled(g, gen, 4*clock.TicksPerHour/climateInterval, func(int) {
-		lo, hi = min(lo, int(g.roomTemps[r])), max(hi, int(g.roomTemps[r]))
+		lo, hi = min(lo, int(g.thermo.Temps[r])), max(hi, int(g.thermo.Temps[r]))
 	})
-	if lo < 120-thermoLow-12 || hi > 120+thermoHigh+12 {
+	if lo < 120-thermo.BandLow-12 || hi > 120+thermo.BandHigh+12 {
 		t.Fatalf("air %v..%v at a 12 °C target", temperature.Temp(lo), temperature.Temp(hi))
 	}
 	g.Enqueue(command.Command{Kind: command.SetThermostat, Target: uint64(heater), Count: 9999})
@@ -164,9 +205,13 @@ func coolerRooms(t *testing.T, g *Game) (cooler, gen entity.EntityID) {
 }
 
 // TestCoolerCoolsColdSideWarmsHotSide: in steady 35 °C air a powered
-// cooler brings its cold-side room down to its 21 °C band and pushes the
-// heat into the room behind it, which ends up hotter than the outside
-// keeps an unheated room. The cooler bounds both rooms like a wall.
+// cooler cools its cold-side room well below the outside and pushes the
+// heat into the room behind it, which ends up well above the outside. The
+// cooler bounds both rooms like a wall. TEMP-1: the hot side is a closed
+// room (with the generator in it), so it heats up and the cooler loses
+// output with the lift between its sides (game/thermo coolerLift): it no
+// longer reaches its 21 °C target, as a vanilla cooler venting into a
+// closed room doesn't.
 func TestCoolerCoolsColdSideWarmsHotSide(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
@@ -179,23 +224,23 @@ func TestCoolerCoolsColdSideWarmsHotSide(t *testing.T) {
 	if g.rooms[east].contents.Cells != 25 {
 		t.Fatalf("east room has %d cells", g.rooms[east].contents.Cells)
 	}
-	settle := temperature.Temp(350) + temperature.IndoorBonus
-	g.roomTemps[west], g.roomTemps[east] = settle, settle
+	settle := temperature.Temp(350)
+	g.thermo.Temps[west], g.thermo.Temps[east] = settle, settle
 	stepFuelled(g, gen, 12*clock.TicksPerHour/climateInterval, nil)
 	if !g.powered(cooler) {
 		t.Fatal("the cooler is not on power")
 	}
-	lo, hi := 1<<30, -1<<30
+	_, hi := 1<<30, -1<<30
 	stepFuelled(g, gen, 6*clock.TicksPerHour/climateInterval, func(int) {
-		lo, hi = min(lo, int(g.roomTemps[east])), max(hi, int(g.roomTemps[east]))
+		hi = max(hi, int(g.thermo.Temps[east]))
 	})
-	target := g.thermoTarget(cooler)
-	if lo < target-thermoLow-12 || hi > target+thermoHigh+12 {
-		t.Fatalf("cold side %v..%v, want about the %v band", temperature.Temp(lo), temperature.Temp(hi), temperature.Temp(target))
+	if hi > int(settle)-50 || !g.thermoActive(cooler) {
+		t.Fatalf("cold side up to %v (working %v), want well below the %v outside", temperature.Temp(hi), g.thermoActive(cooler), settle)
 	}
-	if w := g.roomTemps[west]; w < settle+50 {
+	if w := g.thermo.Temps[west]; w < settle+50 {
 		t.Fatalf("hot side %v, want well above the %v an unheated room keeps", w, settle)
 	}
+	t.Logf("cold side %v, hot side %v", temperature.Temp(hi), g.thermo.Temps[west])
 }
 
 // TestCoolerFacingOutdoorsDoesNothing: a cooler whose cold side is the
@@ -220,15 +265,15 @@ func TestCoolerFacingOutdoorsDoesNothing(t *testing.T) {
 	}
 	cooler := buildNow(t, g, construction.Cooler, item.Steel, construction.East, 7, 4)
 	g.RoofRooms()
-	gen := onPower(t, g, 7, 4, 4, 4)
+	gen := onPower(t, g, 7, 4, 9, 3) // TEMP-1: the generator outside (it heats its room now)
 	r := g.roomAt(4, 3)
-	settle := temperature.Temp(350) + temperature.IndoorBonus
-	g.roomTemps[r] = settle
+	settle := temperature.Temp(350)
+	g.thermo.Temps[r] = settle
 	stepFuelled(g, gen, 6*clock.TicksPerHour/climateInterval, nil)
 	if g.thermoActive(cooler) {
 		t.Fatal("a cooler blowing into the open air works")
 	}
-	if d := g.roomTemps[r] - settle; d > 5 || d < -5 {
+	if d := g.thermo.Temps[r] - settle; d > 5 || d < -5 {
 		t.Fatalf("the room behind an outdoor-facing cooler moved %v", d)
 	}
 }

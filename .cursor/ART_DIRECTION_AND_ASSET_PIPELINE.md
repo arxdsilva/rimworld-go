@@ -1563,3 +1563,30 @@ original, never traced from RimWorld.
   orbital deliveries, the rifle muzzle flash, bursts, the rifle shot
   sound. New sounds only with the user's spend approval.
 
+
+## 39. Climate buildings and layered clothing (TEMP)
+
+Generated 2026-10-31 by `make art FAMILIES="climate apparel"`. All designs
+original (§2). Renderer wiring belongs to the TEMP sim/UI agents.
+
+- **`climate` family** (`artlib/families/climate.py`, sprites in `furniture`):
+  - `furniture/passive_cooler` (fuelled: water, a soaked straw pad and ice
+    in a clay basin on a slatted plank cabinet) and
+    `furniture/passive_cooler_empty` (unfuelled: a dry, cracked basin). 1x1,
+    not rotatable.
+  - `furniture/vent_<open|closed>_<south|east|north|west>`: in a wall gap
+    like `power/cooler_<facing>` (clipped to join the walls, `in_wall`).
+    Open shows edge-on louvres with dark gaps, closed a shut panel; a red
+    damper handle slides along the facing edge (east end open, west end closed).
+  - Icons `ui_icon/passive_cooler`, `ui_icon/vent`.
+- **`apparel` family** (`artlib/families/apparel.py`, the pawn rig):
+  - Worn layers, all six builds (`m_avg` unsuffixed), S/E/N, with `_mask`
+    (`cloth` group, stuff tint): `pawn/button_down_*` and
+    `pawn/tribalwear_*` (skin; tribalwear covers torso and legs),
+    `pawn/jacket_*` (middle: over the shirts and inside the parka and
+    duster shells, so an outer layer hides it). Shared hats like the tuque:
+    `pawn/cowboy_hat_<facing>`, `pawn/bowler_hat_<facing>`. The t-shirt and
+    pants draw `shirt_basic` and `pants_basic`.
+  - Ground items `item/<tshirt|button_down|pants|jacket|tribalwear|cowboy_hat|bowler_hat>`
+    (neutral cloth plus mask) and `ui_icon/<same>`, cut from the item with
+    a `tints.cloth` preset multiplied in (the HUD draws icons untinted).

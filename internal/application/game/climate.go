@@ -36,10 +36,10 @@ type MessageView struct {
 // temperatureAt is the air temperature on a tile: enclosed rooms hold the
 // day's mean plus a little shelter warmth, everywhere else is outdoors.
 func (g *Game) temperatureAt(x, y int) temperature.Temp {
-	if r := g.roomAt(x, y); r >= 0 && r < len(g.roomTemps) {
-		return g.roomTemps[r]
+	if r := g.roomAt(x, y); r >= 0 && r < len(g.thermo.Temps) {
+		return g.thermo.Temps[r]
 	}
-	if t, ok := g.residual[y*g.grid.Width()+x]; ok {
+	if t, ok := g.thermo.Residual[y*g.grid.Width()+x]; ok {
 		return t // a freshly breached room still holds some warmth
 	}
 	return g.climate.Outdoor(g.clock.Now()) + g.weatherTempDelta(x, y) + g.ventWarmth(x, y) + g.fireWarmth(x, y) // vents.go, fire.go
@@ -58,8 +58,8 @@ const (
 // between sowMinTemp and sowMaxTemp.
 func (g *Game) growingSeason(x, y int) bool {
 	mean := g.climate.DailyMean(g.clock.Now())
-	if r := g.roomAt(x, y); r >= 0 && r < len(g.roomTemps) {
-		mean = g.roomTemps[r]
+	if r := g.roomAt(x, y); r >= 0 && r < len(g.thermo.Temps) {
+		mean = g.thermo.Temps[r]
 	}
 	return mean > sowMinTemp && mean < sowMaxTemp
 }
@@ -92,11 +92,14 @@ func (g *Game) post(m MessageView) {
 // phaseClimate rots perishable stacks, moves room temperatures and
 // exposure on (frostbitten crops die with the plant pass: plant_growth.go).
 func (g *Game) phaseClimate() {
+	if uint64(g.clock.Now())%temperature.EqualiseInterval == 0 {
+		g.heatRooms() // game/thermo (TEMP-1): the wiki's 120-tick room equalisation
+	}
 	if uint64(g.clock.Now())%climateInterval != 0 {
 		return
 	}
 	g.checkRoofSupport() // roof.go: unsupported roofs fall first
-	g.heatRooms()
+	g.burnFuel()         // fuel.go: the burners use their fuel
 	g.expose()
 	g.craft.Condition.Rot(climateInterval)           // craft/condition.go
 	g.craft.Condition.Weather(uint64(g.clock.Now())) // PRD-2: deterioration and worn wear, hourly

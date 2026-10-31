@@ -37,21 +37,18 @@ type Climate struct {
 	DaySwing  int
 }
 
-// Temperate is the temperate-forest calibration (the original map): a 9 C
-// annual mean, +-15 C over the year (summer days ~30 C, winter nights
-// ~-12 C) and +-6 C between night and afternoon. The colony lands in late
-// spring, so the first crops get a mild start and winter arrives around day
-// 34.
-var Temperate = Climate{YearMean: 90, Amplitude: 150, PeakDay: 15, DaySwing: 60}
+// Temperate is the temperate-forest calibration (the original map, TEMP-2
+// wiki: Biomes): summer afternoons up to 35 C and winter nights down to
+// -25 C, a 5 C annual mean (inside the wiki's 0..25 C average), +-24 C
+// over the year and +-6 C between night and afternoon (the day swing is
+// original tuning: unpublished). The colony lands in late spring at a
+// 5 C daily mean.
+var Temperate = Climate{YearMean: 50, Amplitude: 240, PeakDay: 15, DaySwing: 60}
 
 const (
 	peakDay     = 15 // the calendar's seasons centre on this day (Season)
 	coldestHour = 5
 	warmestHour = 15
-	// IndoorBonus is how much warmer an enclosed, unheated room keeps than
-	// the day's outdoor mean (body heat, shelter from wind); rooms also
-	// don't swing between day and night.
-	IndoorBonus = 30
 )
 
 // DailyMean is the outdoor mean for the day containing tick t.
@@ -71,8 +68,10 @@ func (c Climate) Outdoor(t clock.Tick) Temp {
 	return c.DailyMean(t) + c.diurnal(int(t%clock.TicksPerDay))
 }
 
-// Indoor is the temperature of an enclosed room with no heating or cooling.
-func (c Climate) Indoor(t clock.Tick) Temp { return c.DailyMean(t) + IndoorBonus }
+// Indoor is what an enclosed room with no heating or cooling settles
+// around: the day's outdoor mean (TEMP-1: its walls and roof smooth the
+// day's swing; there is no shelter bonus in the wiki's model).
+func (c Climate) Indoor(t clock.Tick) Temp { return c.DailyMean(t) }
 
 // Range is the coldest and warmest outdoor air of the year (winter night,
 // summer afternoon).

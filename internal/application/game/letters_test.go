@@ -350,10 +350,9 @@ func TestLetterKindsAtPostSites(t *testing.T) {
 	t.Run("extreme weather", func(t *testing.T) {
 		t.Parallel()
 		g := bareSetupGame(difficulty.Seasoned)
-		for day := 1; day < 3000 && len(g.World().Letters) == 0; day++ {
-			now := uint64(day) * clock.TicksPerDay
-			g.clock = clock.NewAt(clock.Tick(now))
-			g.extremeDay(now)
+		g.clock = clock.NewAt(clock.Tick(2 * clock.TicksPerDay)) // TEMP-2: a 5 C spring day suits a cold snap
+		if !g.FireIncident("cold_snap") {
+			t.Fatal("no cold snap")
 		}
 		ls := g.World().Letters
 		if len(ls) != 1 || ls[0].Kind != "caution" || ls[0].Intro {

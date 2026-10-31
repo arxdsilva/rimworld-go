@@ -9,7 +9,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/backstory"
-	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
@@ -104,7 +103,7 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	if g.paceStep(happy, 17) != 17 || g.aimTicksFor(happy, 90) != 90 {
 		t.Error("step or aim time moved for a neutral pawn")
 	}
-	if g.bandsOf(happy) != exposure.Everyday {
+	if g.bandsOf(happy) != g.apparel[happy].Bands() { // TEMP-4: its everyday clothes are garments now, no shift on top
 		t.Errorf("bands %v", g.bandsOf(happy))
 	}
 	if g.skillYield(happy, skill.Plants, 7) != 7 {

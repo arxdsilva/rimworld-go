@@ -15,25 +15,30 @@ const step = 250
 func exposeFor(p Plant, temp int, start, limit uint64) (Plant, uint64) {
 	t := start
 	for t-start < limit && !p.Dead() {
-		p, _ = p.Expose(temp, t, t+step)
+		p, _ = p.Expose(testSeed, temp, t, t+step)
 		t += step
 	}
 	return p, t - start
 }
 
-// cornAt0 is a corn plant at (0, 0) with its own frost limit (FOOD-2),
-// written into d.FrostKill so the numbers below read as before.
-func cornAt0() Def {
-	d := DefOf(Corn)
-	d.FrostKill, _ = Plant{Species: Corn}.ColdLimit()
+// testSeed is the plant id the damage tests expose with; the jungle
+// tree's cold limit (-8 °C) is above any cold threshold, so only the
+// damage model acts (TEMP-2: crops die at once, cold_test.go).
+const testSeed = 1
+
+// jungle is the jungle tree's definition with its cold limit written into
+// FrostKill so the numbers below read as they did for crops.
+func jungle() Def {
+	d := DefOf(JungleTree)
+	d.FrostKill = d.ColdKill
 	return d
 }
 
 func TestColdDamageKillsOverHours(t *testing.T) {
-	d := cornAt0()
+	d := jungle()
 	hour := uint64(clock.TicksPerHour)
 	// just below the frost limit: about four hours to die
-	p, took := exposeFor(Plant{Species: Corn}, d.FrostKill-1, 0, 10*hour)
+	p, took := exposeFor(Plant{Species: JungleTree}, d.FrostKill-1, 0, 10*hour)
 	if !p.Dead() || took < 37*hour/10 || took > 4*hour {
 		t.Fatalf("at the threshold: dead %v after %d ticks, want about 4 h", p.Dead(), took)
 	}
@@ -41,9 +46,9 @@ func TestColdDamageKillsOverHours(t *testing.T) {
 		t.Fatalf("cold damage flags: %+v", p)
 	}
 	// deeper is faster; a hard freeze kills in under two hours (the cap)
-	_, mid := exposeFor(Plant{Species: Corn}, d.FrostKill-30, 0, 10*hour)
-	_, hard := exposeFor(Plant{Species: Corn}, d.FrostKill-70, 0, 10*hour)
-	_, deep := exposeFor(Plant{Species: Corn}, d.FrostKill-300, 0, 10*hour)
+	_, mid := exposeFor(Plant{Species: JungleTree}, d.FrostKill-30, 0, 10*hour)
+	_, hard := exposeFor(Plant{Species: JungleTree}, d.FrostKill-70, 0, 10*hour)
+	_, deep := exposeFor(Plant{Species: JungleTree}, d.FrostKill-300, 0, 10*hour)
 	if mid >= took || hard >= mid || hard >= 2*hour || deep != hard {
 		t.Fatalf("death in %d (-0.1°), %d (-3°), %d (-7°), %d (-30°) ticks", took, mid, hard, deep)
 	}
@@ -86,12 +91,12 @@ func TestDormantPlantsTakeNoDamage(t *testing.T) {
 }
 
 func TestDamageHealsOnlyBelowDying(t *testing.T) {
-	d := DefOf(Corn)
+	d := jungle()
 	hour := uint64(clock.TicksPerHour)
 	warm := d.FrostKill + DamageStopMargin + 50
 	// 40% damage, then safe air: heals 10% an hour
-	p := Plant{Species: Corn, Damage: 40, Damaging: true}
-	p, _ = p.Expose(warm, 0, hour)
+	p := Plant{Species: JungleTree, Damage: 40, Damaging: true}
+	p, _ = p.Expose(testSeed, warm, 0, hour)
 	if p.Damaging || p.Damage != 30 {
 		t.Fatalf("an hour of safe air from 40%%: %+v, want 30%% and not damaging", p)
 	}
@@ -100,13 +105,13 @@ func TestDamageHealsOnlyBelowDying(t *testing.T) {
 		t.Fatalf("healed fully: %+v", p)
 	}
 	// from 60% on it keeps dying, warm or not
-	q := Plant{Species: Corn, Damage: DamageDying, Damaging: true}
+	q := Plant{Species: JungleTree, Damage: DamageDying, Damaging: true}
 	q, took := exposeFor(q, warm, 0, 10*hour)
 	if !q.Dead() || took > 2*hour {
 		t.Fatalf("a dying plant in warm air: %+v after %d ticks", q, took)
 	}
 	// just under it, it heals
-	r, _ := Plant{Species: Corn, Damage: DamageDying - 1}.Expose(warm, 0, hour)
+	r, _ := Plant{Species: JungleTree, Damage: DamageDying - 1}.Expose(testSeed, warm, 0, hour)
 	if r.Damage >= DamageDying-1 {
 		t.Fatalf("59%% in safe air did not heal: %+v", r)
 	}
@@ -116,8 +121,8 @@ func TestDamageHealsOnlyBelowDying(t *testing.T) {
 // plant damaging (it never starts and stops by turns), and air hovering
 // at the stop line keeps a recovering plant healing.
 func TestDamageDoesNotFlap(t *testing.T) {
-	d := cornAt0()
-	p := Plant{Species: Corn}
+	d := jungle()
+	p := Plant{Species: JungleTree}
 	flips, starts, was := 0, 0, false
 	at := uint64(0)
 	for i := 0; i < 60 && !p.Dead(); i++ {
@@ -126,7 +131,7 @@ func TestDamageDoesNotFlap(t *testing.T) {
 			temp = d.FrostKill + DamageStopMargin - 1
 		}
 		var started bool
-		p, started = p.Expose(temp, at, at+step)
+		p, started = p.Expose(testSeed, temp, at, at+step)
 		at += step
 		if started {
 			starts++
@@ -141,8 +146,8 @@ func TestDamageDoesNotFlap(t *testing.T) {
 	}
 	// stop line: once stopped (2 °C back), air just under it doesn't
 	// restart the damage; only the kill temperature does.
-	q := Plant{Species: Corn, Damage: 30, Damaging: true}
-	q, _ = q.Expose(d.FrostKill+DamageStopMargin, 0, step)
+	q := Plant{Species: JungleTree, Damage: 30, Damaging: true}
+	q, _ = q.Expose(testSeed, d.FrostKill+DamageStopMargin, 0, step)
 	if q.Damaging {
 		t.Fatalf("damage did not stop at the stop line: %+v", q)
 	}
@@ -150,7 +155,7 @@ func TestDamageDoesNotFlap(t *testing.T) {
 		temp := d.FrostKill + DamageStopMargin - 1 + 2*(i%2)
 		before := q.Damage
 		var started bool
-		q, started = q.Expose(temp, uint64(i)*step, uint64(i+1)*step)
+		q, started = q.Expose(testSeed, temp, uint64(i)*step, uint64(i+1)*step)
 		if started || q.Damaging || (before > 0 && q.Damage > before) {
 			t.Fatalf("restarted near the stop line at %d: %+v", temp, q)
 		}
@@ -161,21 +166,21 @@ func TestDamageDoesNotFlap(t *testing.T) {
 }
 
 func TestExposeStartsOnce(t *testing.T) {
-	p := Plant{Species: Corn}
-	cold := cornAt0().FrostKill - 5
-	p, started := p.Expose(cold, 0, step)
+	p := Plant{Species: JungleTree}
+	cold := jungle().FrostKill - 5
+	p, started := p.Expose(testSeed, cold, 0, step)
 	if !started || p.Damage == 0 {
 		t.Fatalf("first frosty window: started %v, %+v", started, p)
 	}
-	if _, again := p.Expose(cold, step, 2*step); again {
+	if _, again := p.Expose(testSeed, cold, step, 2*step); again {
 		t.Fatal("started again while damaging")
 	}
 	// windows add up to the whole span (the rate telescopes)
-	a := Plant{Species: Corn}
+	a := Plant{Species: JungleTree}
 	for at := uint64(0); at < 4000; at += step {
-		a, _ = a.Expose(cold, at, at+step)
+		a, _ = a.Expose(testSeed, cold, at, at+step)
 	}
-	b, _ := Plant{Species: Corn}.Expose(cold, 0, 4000)
+	b, _ := Plant{Species: JungleTree}.Expose(testSeed, cold, 0, 4000)
 	if a.Damage != b.Damage {
 		t.Fatalf("staggered windows %d vs one span %d", a.Damage, b.Damage)
 	}
@@ -189,29 +194,5 @@ func TestDamagedYield(t *testing.T) {
 		if got := (Plant{Damage: c.dmg}).DamagedYield(c.qty); got != c.at {
 			t.Fatalf("DamagedYield(%d) at %d%% = %d, want %d", c.qty, c.dmg, got, c.at)
 		}
-	}
-}
-
-// TestColdLimitPerPlant (FOOD-2, wiki: Plants): each crop dies of cold
-// below its own limit between -18 and -10 °C; healroot only below -29;
-// wild plants keep their biome limit.
-func TestColdLimitPerPlant(t *testing.T) {
-	t.Parallel()
-	seen := map[int]bool{}
-	for x := 0; x < 40; x++ {
-		lim, ok := Plant{Species: Rice, X: x, Y: 3}.ColdLimit()
-		if !ok || lim > -100 || lim < -180 {
-			t.Fatalf("rice at %d: limit %d", x, lim)
-		}
-		seen[lim] = true
-	}
-	if len(seen) < 10 {
-		t.Errorf("only %d different limits over 40 plants", len(seen))
-	}
-	if lim, _ := (Plant{Species: Healroot, X: 5}).ColdLimit(); lim != -290 {
-		t.Errorf("healroot limit %d, want -290", lim)
-	}
-	if lim, ok := (Plant{Species: Pine}).ColdLimit(); ok || lim != 0 {
-		t.Errorf("pine limit %d %v", lim, ok)
 	}
 }

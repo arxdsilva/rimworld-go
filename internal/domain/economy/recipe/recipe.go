@@ -167,6 +167,15 @@ const (
 	CookLavishMealBulk
 	CookSurvivalMealBulk
 	CookPemmicanBulk
+	// TEMP-4 (append only, saved): the layered core clothing at the
+	// tailoring bench, tribalwear at the crafting spot too (tailor.go).
+	MakeTShirt
+	MakeButtonDownShirt
+	MakePants
+	MakeJacket
+	MakeCowboyHat
+	MakeBowlerHat
+	MakeTribalwear
 	numRecipes
 )
 
@@ -276,13 +285,11 @@ var defs = [numRecipes]Def{
 	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
 		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 10}, Output: item.Meal, OutQty: 1,
 		Work: 240, Skill: work.Cook, Learn: skill.Cooking},
-	// Tailoring: a parka takes the hides of about three deer.
-	MakeParka: {ID: MakeParka, Name: "make_parka", Label: "Sew leather parka", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 14, Stuff: item.MadeFrom(item.Parka)}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft, Learn: skill.Crafting},
-	MakeTuque: {ID: MakeTuque, Name: "make_tuque", Label: "Sew leather tuque", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 4, Stuff: item.MadeFrom(item.Tuque)}, Output: item.Tuque, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
-	MakeDuster: {ID: MakeDuster, Name: "make_duster", Label: "Sew leather duster", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 10, Stuff: item.MadeFrom(item.Duster)}, Output: item.Duster, OutQty: 1, Work: 700, Skill: work.Craft, Learn: skill.Crafting},
+	// Tailoring (TEMP-4, tailor.go): wiki Parka 80 stuff / 8000 ticks,
+	// Tuque 20 / 1200, Duster 80 / 10000, scaled as every crafted gear.
+	MakeParka:  tailor(MakeParka, "make_parka", "Sew leather parka", item.Parka, 80, 8000),
+	MakeTuque:  tailor(MakeTuque, "make_tuque", "Sew leather tuque", item.Tuque, 20, 1200),
+	MakeDuster: tailor(MakeDuster, "make_duster", "Sew leather duster", item.Duster, 80, 10000),
 	// A crude rifle: a long, careful job (needs Gunsmithing research).
 	MakeRifle: {ID: MakeRifle, Name: "make_rifle", Label: "Make crude rifle", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft, Learn: skill.Crafting,
@@ -447,6 +454,13 @@ var defs = [numRecipes]Def{
 	CookFineMealBulk:     bulk(CookFineMealBulk, "cook_fine_meal_bulk", "Cook 4 fine meals", item.FineMeal, 5, bulkFineWork, 6),
 	CookLavishMealBulk:   bulk(CookLavishMealBulk, "cook_lavish_meal_bulk", "Cook 4 lavish meals", item.LavishMeal, 10, bulkLavishWork, 8),
 	CookSurvivalMealBulk: bulk(CookSurvivalMealBulk, "cook_survival_meal_bulk", "Cook 4 packaged survival meals", item.SurvivalMeal, 6, bulkSurvivalWork, 8),
+	MakeTShirt:           tailor(MakeTShirt, "make_tshirt", "Sew T-shirt", item.TShirt, 40, 1600),
+	MakeButtonDownShirt:  tailor(MakeButtonDownShirt, "make_button_down", "Sew button-down shirt", item.ButtonDownShirt, 45, 2700),
+	MakePants:            tailor(MakePants, "make_pants", "Sew pants", item.Pants, 40, 1600),
+	MakeJacket:           tailor(MakeJacket, "make_jacket", "Sew jacket", item.Jacket, 70, 7000),
+	MakeCowboyHat:        tailor(MakeCowboyHat, "make_cowboy_hat", "Sew cowboy hat", item.CowboyHat, 25, 1800),
+	MakeBowlerHat:        tailor(MakeBowlerHat, "make_bowler_hat", "Sew bowler hat", item.BowlerHat, 20, 1800),
+	MakeTribalwear:       tribal(),
 	CookPemmicanBulk:     meal(CookPemmicanBulk, "cook_pemmican_bulk", "Make pemmican x4", item.Pemmican, 20, 20, 64, 2800, 0), // wiki: Pemmican
 }
 

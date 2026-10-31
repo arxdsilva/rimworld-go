@@ -76,8 +76,8 @@ func TestAnimalBleedsAndIsTended(t *testing.T) {
 	if a.Injury != cut || b.Damage() != cut {
 		t.Fatalf("Injury %d and the wounds %d agree", a.Injury, b.Damage())
 	}
-	scale := animalHealthScale(a.Species)
-	if got, want := animalBleedPerDay(b, a.Species), int32(cut)*body.BleedPerHP*1000/scale; got != want || got <= int32(cut)*body.BleedPerHP {
+	scale := animal.HealthScale(a.Species)
+	if got, want := animal.BleedPerDay(b, a.Species), int32(cut)*body.BleedPerHP*1000/scale; got != want || got <= int32(cut)*body.BleedPerHP {
 		t.Fatalf("a dog smaller than a man bleeds faster: %d/day, want %d", got, want)
 	}
 	if !slices.Contains(g.animalPatientIDs(), dog) {
@@ -191,7 +191,7 @@ func TestAnimalWoundCanInfect(t *testing.T) {
 	id := cows[0]
 	a, _ := g.animals.Get(id)
 	if a.Body == nil {
-		a.Body = newAnimalBody(a.Species)
+		a.Body = animal.NewBody(a.Species)
 	}
 	a.Body.Conds = nil
 	a.Body.AddCond(body.Condition{Kind: body.CondInfection, Part: a.Body.Root(), Sev: infection.Full - 5})

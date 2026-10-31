@@ -128,12 +128,14 @@ func (g *Game) cellLight(x, y int) lighting.Level {
 	return lighting.Cell(skyLight(g), g.roofAt(x, y).Roofed(), g.artificialLight(x, y))
 }
 
-// skyLight is the daylight now, none in an eclipse (FOOD-6, wiki: Eclipse).
+// skyLight is the daylight now, none in an eclipse (FOOD-6, wiki: Eclipse),
+// 30 % dimmer in a volcanic winter (TEMP-2, wiki: Events).
 func skyLight(g *Game) lighting.Level {
-	if g.incidents.Eclipsed(uint64(g.clock.Now())) {
+	now := uint64(g.clock.Now())
+	if g.incidents.Eclipsed(now) {
 		return 0
 	}
-	return lighting.Outdoor(g.clock.Now())
+	return lighting.Outdoor(g.clock.Now()) * lighting.Level(g.incidents.SkyPermil(now)) / 1000
 }
 
 // cellLightPermil is cellLight in permille (rounded), for the plant rules.

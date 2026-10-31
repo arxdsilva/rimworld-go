@@ -182,6 +182,10 @@ var pools = [NumKinds][]entry{
 		{item.Parka, 1, 3, 90}, {item.Tuque, 2, 5, 90}, {item.Duster, 1, 3, 80}, {item.WoolParka, 1, 2, 60},
 		{item.IndustrialMedicine, 3, 8, 90}, {item.HerbalMedicine, 5, 12, 80},
 		{item.Components, 2, 6, 70}, {item.Steel, 20, 60, 60},
+		// TEMP-4: the layered core clothing, sold at the wiki market values
+		// (item.Value); counts and chances are original tuning.
+		{item.TShirt, 2, 5, 80}, {item.ButtonDownShirt, 1, 3, 60}, {item.Pants, 2, 5, 80}, {item.Jacket, 1, 2, 60},
+		{item.CowboyHat, 1, 2, 50}, {item.BowlerHat, 1, 2, 40}, {item.Tribalwear, 1, 3, 40},
 	},
 	CurioMerchant: {
 		{item.Gold, 20, 60, 100}, {item.NanomedKit, 2, 5, 90}, {item.ServoArm, 1, 1, 60},

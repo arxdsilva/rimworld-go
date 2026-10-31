@@ -81,15 +81,19 @@ type Def struct {
 	Sens    int
 	SowWork int    // ticks to sow one cell
 	Label   string // player-facing produce name
-	// FrostKill is the warmest air temperature (tenths of a degree C)
-	// below which a crop takes frost damage, dying within hours
-	// (damage.go); each plant's own limit is ColdLimit, up to 8 °C colder
-	// (wiki: Plants, -18..-10 °C). Only crops die of frost: wild trees and
-	// bushes go dormant.
+	// FrostKill is the warmest air temperature (tenths of a degree C) a
+	// crop can die of cold at: each plant dies at its own ColdThreshold,
+	// up to 8 °C colder (wiki: Plants, -18..-10 °C); a cold-resistant one
+	// (ColdHardy) only takes damage below its FrostKill. Wild plants lose
+	// their leaves at their threshold instead (damage.go).
 	FrostKill int
 	// ColdKill and HeatKill (tenths of a degree C, 0 = never) damage a
 	// wild biome plant out of its climate until it dies (damage.go); the
-	// original tree and bush only go dormant.
+	// original tree and bush only lose their leaves. Original tuning:
+	// TEMP-2 put every cold limit below its home biomes' wiki winter
+	// minimum and a blizzard's chill (a jungle tree survives a 0 C
+	// tropical night, a shrub the -50 C tundra), so only plants far from
+	// home die of cold.
 	ColdKill, HeatKill int
 	// Browse: grazing animals eat it down (bushes, shrubs, reeds). Trunk:
 	// a woody plant, chopped for wood and gnawed by tree-eating animals.
@@ -108,8 +112,9 @@ type Def struct {
 	Cave bool
 	// FOOD-2: MinSkill is the Plants level a grower needs to sow it;
 	// NoHydro keeps it out of a hydroponics basin (corn, haygrass, trees);
-	// ColdHardy: a crop whose cold-death limit is its FrostKill exactly
-	// (healroot), not a random one below the warmest.
+	// ColdHardy: a cold-resistant crop (wiki: Plants, healroot): it loses
+	// its leaves at its cold threshold rather than dying, and dies only of
+	// the damage below its FrostKill.
 	MinSkill  int
 	NoHydro   bool
 	ColdHardy bool
@@ -154,8 +159,8 @@ const (
 	treeSow     = 4000
 	treeSkill   = 6 // wiki: Oak tree, Pine tree (minimum Plants skill to sow)
 	// coldCrop is the warmest cold-death threshold of a crop, tenths of a
-	// degree (wiki: Plants, a random -18..-10 °C per plant).
-	coldCrop = -100
+	// degree (wiki: Plants, a random -18..-10 °C per plant: ColdThreshold).
+	coldCrop = ColdWarmest
 )
 
 // crop is a sown crop's definition from its wiki numbers: grow days, base
@@ -188,35 +193,36 @@ var defs = [numSpecies]Def{
 	// wood, pine 20 and 27, the jungle tree as teak 32.5 and 60.
 	Tree:       tree(Tree, "tree", 30, 46, 1400),
 	Pine:       with(tree(Pine, "pine", 20, 27, 800), func(d *Def) { d.HeatKill = 400 }),
-	JungleTree: with(tree(JungleTree, "jungle_tree", 32.5, 60, 1800), func(d *Def) { d.ColdKill = 20 }),
+	JungleTree: with(tree(JungleTree, "jungle_tree", 32.5, 60, 1800), func(d *Def) { d.ColdKill = -80 }),
 	// wiki: Saguaro cactus (5 grow days, 15 wood, 300 work, no fertility
 	// sensitivity).
-	Cactus: {Species: Cactus, Name: "cactus", GrowTicks: wikiDays(5), CutWork: 300, Wood: 15, ColdKill: -50, Trunk: true, Sens: 1},
+	Cactus: {Species: Cactus, Name: "cactus", GrowTicks: wikiDays(5), CutWork: 300, Wood: 15, ColdKill: -350, Trunk: true, Sens: 1},
 	// Shrub and reeds are hardy enough for every biome they grow wild in
-	// (tundra, cold bog), blizzards included. Our numbers.
-	Shrub: {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -400, HeatKill: 650, Browse: true},
+	// (tundra, cold bog), blizzards included. Our numbers (TEMP-2: below
+	// the wiki's -50 and -35 C winters).
+	Shrub: {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -600, HeatKill: 650, Browse: true},
 	Reeds: {Species: Reeds, Name: "reeds", Label: "straw", GrowTicks: 15000, HarvestWork: 25, Yield: 4, Yields: item.Straw,
-		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -300, Browse: true},
+		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -450, Browse: true},
 	// Wild ground plants (PLAY-010, our numbers): no wood, no yield.
-	Bramble: {Species: Bramble, Name: "bramble", GrowTicks: 40000, CutWork: 30, ColdKill: -300, HeatKill: 450,
+	Bramble: {Species: Bramble, Name: "bramble", GrowTicks: 40000, CutWork: 30, ColdKill: -450, HeatKill: 450,
 		Browse: true, WalkCost: 150, Ground: true},
-	Moss: {Species: Moss, Name: "moss", GrowTicks: 30000, CutWork: 10, ColdKill: -500, HeatKill: 350,
+	Moss: {Species: Moss, Name: "moss", GrowTicks: 30000, CutWork: 10, ColdKill: -600, HeatKill: 350,
 		Browse: true, Ground: true, MinLight: 35},
 	// Duskmoss (MAPGEN-3, our numbers): very slow, catches feet, a faint
 	// glow; needs darkness.
-	Duskmoss: {Species: Duskmoss, Name: "duskmoss", GrowTicks: growDays(40), CutWork: 12, ColdKill: -400, HeatKill: 450,
+	Duskmoss: {Species: Duskmoss, Name: "duskmoss", GrowTicks: growDays(40), CutWork: 12, ColdKill: -600, HeatKill: 450,
 		Browse: true, Ground: true, WalkCost: 125, DiesInLight: 45, Glow: 10, Cave: true},
 	// wiki: Agave (6 grow days, 10 agave fruit, 300 harvest work, back to
 	// 30 % when picked, sensitivity 50 %); never sown.
 	Agave: {Species: Agave, Name: "agave", GrowTicks: wikiDays(6), HarvestWork: 300, Yield: 10, Yields: item.AgaveFruit,
-		Regrows: true, RegrowTo: 30, CutWork: 25, ColdKill: -50, HeatKill: 650, Ground: true, Sens: 50},
-	BallCactus: {Species: BallCactus, Name: "ball_cactus", GrowTicks: 60000, CutWork: 20, ColdKill: -80, HeatKill: 700,
+		Regrows: true, RegrowTo: 30, CutWork: 25, ColdKill: -350, HeatKill: 650, Ground: true, Sens: 50},
+	BallCactus: {Species: BallCactus, Name: "ball_cactus", GrowTicks: 60000, CutWork: 20, ColdKill: -350, HeatKill: 700,
 		Ground: true},
-	ElephantEar: {Species: ElephantEar, Name: "elephant_ear", GrowTicks: 30000, CutWork: 15, ColdKill: 50, HeatKill: 500,
+	ElephantEar: {Species: ElephantEar, Name: "elephant_ear", GrowTicks: 30000, CutWork: 15, ColdKill: -80, HeatKill: 500,
 		Browse: true, WalkCost: 110, Ground: true},
 	FireLily: {Species: FireLily, Name: "fire_lily", GrowTicks: 30000, CutWork: 10, HeatKill: 450, Browse: true,
 		Ground: true},
-	Dandelion: {Species: Dandelion, Name: "dandelion", GrowTicks: 15000, CutWork: 5, ColdKill: -200, HeatKill: 400,
+	Dandelion: {Species: Dandelion, Name: "dandelion", GrowTicks: 15000, CutWork: 5, ColdKill: -350, HeatKill: 400,
 		Browse: true, Ground: true},
 	// Crops at the wiki's grow days, base yield and fertility
 	// sensitivity (wiki: Plants crop table and each plant's page).
@@ -388,6 +394,9 @@ type Plant struct {
 	// blight's severity, percent (0: healthy).
 	Sown                uint64
 	Life, Light, Blight uint8
+	// Bare (TEMP-2, damage.go) is the tick its leaves grow back after the
+	// cold took them (0, or past: in leaf); it grows only in leaf.
+	Bare uint64
 }
 
 // Wild is the historical name for Plant.

@@ -1,92 +1,75 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/temperature"
 )
 
-// Extreme weather (NG-1 §5.3, difficulty ExtremeWeather). On a summer day
-// a heat wave (+12 °C) and on a winter day a cold snap (-14 °C) may start,
-// extremePct percent per in-season day, rolled at midnight. It lasts 2-4
-// days, shifting the whole climate curve (so rooms, crops and the weather
-// follow), and no new one starts for extremeCool afterwards: the minimum
-// duration and the cooldown keep it from flapping (AGENTS.md hysteresis).
-// Setup colonies only; owned by SETUP.
+// Climate events (TEMP-2, incident/climate.go): storyteller nature events
+// (incidents.go). While one runs its ramped offset sits in the climate's
+// YearMean (g.ng.climateOff says how much), so rooms, crops, snow and the
+// weather follow one outdoor curve; saves write the curve without it.
 
-const (
-	extremePct     = 6
-	extremeMinDays = 2
-	extremeSpread  = 3 // days added at random: 2..4
-	extremeCool    = 3 * clock.TicksPerDay
-	heatWaveDelta  = 120
-	coldSnapDelta  = -140
-)
-
-// Extreme event kinds.
-const (
-	extremeNone uint8 = iota
-	extremeHeat
-	extremeCold
-)
-
-// extremeEvent is the heat wave or cold snap in progress (saved).
+// extremeEvent is a pre-TEMP-2 save's heat wave (Kind 1) or cold snap (2),
+// its Delta in the saved curve (SetupState.Extreme; migrateExtreme).
 type extremeEvent struct {
-	Kind  uint8
-	Delta int    // added to the climate's YearMean while it lasts
-	Until uint64 // tick it ends (checked at midnight)
-	Cool  uint64 // no new event before this tick
+	Kind        uint8
+	Delta       int
+	Until, Cool uint64
 }
 
-// extremeDay runs at midnight: end the event that is due, or maybe start
-// one that fits the season.
-func (g *Game) extremeDay(now uint64) {
-	e := &g.ng.extreme
-	if e.Kind != extremeNone {
-		if now < e.Until {
-			return
-		}
-		g.climate.YearMean -= e.Delta
-		msg := "The heat wave has broken."
-		if e.Kind == extremeCold {
-			msg = "The cold snap is over."
-		}
-		g.message(g.grid.Width()/2, g.grid.Height()/2, "%s", msg)
-		*e = extremeEvent{Cool: now + extremeCool}
-		return
+// climateTick (every tick) ends the climate event that is over and moves
+// the outdoor curve to the event's offset now.
+func (g *Game) climateTick(now uint64) {
+	if id, ended := g.incidents.EndClimate(now); ended {
+		hx, hy := g.home()
+		g.message(hx, hy, "%s", incident.ClimateEndText(id))
 	}
-	if !g.ng.setup.Difficulty.ExtremeWeather || now < e.Cool {
-		return
-	}
-	kind, delta, title, text := extremeNone, 0, "", ""
-	switch g.season(now) {
-	case "Summer":
-		kind, delta, title = extremeHeat, heatWaveDelta, "Heat wave"
-		text = "A heat wave has settled over the land. Keep everyone out of the midday sun and find somewhere cool to sleep."
-	case "Winter":
-		kind, delta, title = extremeCold, coldSnapDelta, "Cold snap"
-		text = "A bitter cold snap has come down from the north. Keep the fires fed and everyone indoors where you can."
-	default:
-		return
-	}
-	if g.rng.IntN(100) >= extremePct {
-		return
-	}
-	days := extremeMinDays + g.rng.IntN(extremeSpread)
-	*e = extremeEvent{Kind: kind, Delta: delta, Until: now + uint64(days)*clock.TicksPerDay}
-	g.climate.YearMean += delta
-	g.post(MessageView{Tick: now, Text: text, X: g.grid.Width() / 2, Y: g.grid.Height() / 2, Danger: true,
-		Letter: true, Title: title, Kind: letterCaution})
+	g.applyClimate(now)
 }
 
-// extremeKey names the event in progress for the view ("" when none).
-func (g *Game) extremeKey() string {
-	switch g.ng.extreme.Kind {
-	case extremeHeat:
-		return "heat_wave"
-	case extremeCold:
-		return "cold_snap"
+// applyClimate puts the climate event's offset at tick now in the curve.
+func (g *Game) applyClimate(now uint64) {
+	g.climate.YearMean += g.incidents.ClimateShift(now, &g.ng.climateOff)
+}
+
+// baseClimate is the outdoor curve without the climate event (saves).
+func baseClimate(g *Game) (c temperature.Climate) {
+	c = g.climate
+	c.YearMean -= g.ng.climateOff
+	return c
+}
+
+// climateFits: climate event id suits the season's temperature now.
+func climateFits(g *Game, id incident.ID, now uint64) bool {
+	return incident.ClimateFits(id, int(baseClimate(g).DailyMean(clock.Tick(now))))
+}
+
+// natureOdds is the nature pool's odds: the disease frequency
+// (disease.go); the wizard's Extreme weather triples the climate events.
+func natureOdds(g *Game) incident.Odds {
+	o := incident.Odds{Disease: g.diseasePct(), Climate: incident.FullFreq}
+	if g.hasSetup() && g.ng.setup.Difficulty.ExtremeWeather {
+		o.Climate = incident.ExtremeClimatePct
 	}
-	return ""
+	return o
+}
+
+// migrateExtreme (save v8) makes an older save's heat wave or cold snap
+// the climate event at full strength until its old end.
+func migrateExtreme(g *Game) {
+	e, now := g.ng.legacyExtreme, uint64(g.clock.Now())
+	if g.ng.legacyExtreme = (extremeEvent{}); e.Kind == 0 {
+		return
+	}
+	id := incident.HeatWave + incident.ID(min(e.Kind, 2)-1) // ColdSnap follows HeatWave
+	g.climate.YearMean -= e.Delta
+	if g.incidents.StartClimate(id, 0, e.Until) {
+		g.incidents.Fired(id, g.rel(now))
+	}
+	g.applyClimate(max(now, 1) - 1)
 }
 
 // weatherWet is the rain and snow odds (percent of temperate) for the

@@ -24,7 +24,7 @@ func TestBenchSpeedFollowsRoomTemperature(t *testing.T) {
 	id := g.layerBldgAt(4, 3, construction.LayerObject)
 	b, _ := g.bldgs.Get(id)
 	speed := func(air temperature.Temp) int {
-		g.roomTemps[r] = air
+		g.thermo.Temps[r] = air
 		g.structVer++ // drop the bench's kept speed
 		_, v, _ := g.craft.Stations.View(id, b, "")
 		return v

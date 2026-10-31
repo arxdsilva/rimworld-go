@@ -16,6 +16,9 @@ const (
 	// stabs), both bleeding as a cut does. wiki: Injury
 	Stab
 	Gunshot
+	// Frostbite (TEMP-3, cond_frostbite.go): cold damage on an extremity;
+	// it never bleeds. wiki: Frostbite
+	Frostbite
 )
 
 // scarDmg is the residual damage a scar keeps.

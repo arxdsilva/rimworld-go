@@ -196,10 +196,10 @@ var defs = [numKinds]Def{
 	AteWithoutTable:   {"ate without a table", -3, day, groupMealTable, 0, 0},
 	Hungry:            {"hungry", -6, 0, groupNone, 0, 0}, // wiki: Saturation
 	Tired:             {"tired", -5, 0, groupNone, 0, 0},
-	Cold:              {"cold", -4, 0, groupNone, 0, 0},
-	Freezing:          {"freezing", -10, 0, groupNone, 0, 0},
-	Hot:               {"hot", -4, 0, groupNone, 0, 0},
-	Sweltering:        {"sweltering", -10, 0, groupNone, 0, 0},
+	Cold:              {"cold", -4, 0, groupNone, 0, 0},        // TEMP-3: retired (the 4-rung ladders), kept for older saves
+	Freezing:          {"freezing", -10, 0, groupNone, 0, 0},   // TEMP-3: retired (the 4-rung ladders), kept for older saves
+	Hot:               {"hot", -4, 0, groupNone, 0, 0},         // TEMP-3: retired (the 4-rung ladders), kept for older saves
+	Sweltering:        {"sweltering", -10, 0, groupNone, 0, 0}, // TEMP-3: retired (the 4-rung ladders), kept for older saves
 	RecreationStarved: {"recreation-starved", -12, 0, groupNone, 0, 0},
 	Bored:             {"bored", -5, 0, groupNone, 0, 0},
 	Entertained:       {"entertained", 4, 0, groupNone, 0, 0},

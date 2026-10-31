@@ -3,7 +3,6 @@ package game
 import (
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -320,7 +319,7 @@ type careGear struct{ g *Game }
 func (h careGear) HasGear(target entity.EntityID) bool {
 	_, armed := h.g.equip[target]
 	w := h.g.apparel[target]
-	return armed || w.Kind(item.Body) != 0 || w.Kind(item.Head) != 0
+	return armed || w.On != [craft.Slots]craft.Piece{} // TEMP-4: every layer
 }
 
 // StripGear drops target's apparel and weapon where it lies.

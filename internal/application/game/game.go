@@ -5,6 +5,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
@@ -12,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/rest"
+	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/world/biome"
@@ -277,7 +279,7 @@ type PawnView struct {
 	FoodPolicy   string
 	Malnutrition int
 	ToxicBuildup int // FOOD-6: toxic buildup percent (body/cond_toxic.go)
-	Frostbite    int // TEMP-0 contract (0 until TEMP-3): frostbitten parts (body.CondFrostbite)
+	Frostbite    int // TEMP-3: parts with an open frostbite (body.Frostbite wounds)
 }
 
 // ItemView is a ground stack.
@@ -740,11 +742,11 @@ type Game struct {
 	weather    weather.State                // outdoor weather (weather.go, SIM-016)
 	weatherFix bool                         // dev: HoldWeather keeps the forced weather
 	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
-	exposure   map[entity.EntityID]exposureState
-	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
-	biome      biome.ID                   // the map's setting (SIM-023)
-	climate    temperature.Climate        // its outdoor temperature curve
-	incidents  incident.State             // the storyteller's nature events (SIM-025)
+	exposure   bodytemp.Ledger              // TEMP-3: hypothermia and heatstroke, pawns and animals
+	noComfort  map[entity.EntityID]uint64   // no warm/cool spot found until this tick
+	biome      biome.ID                     // the map's setting (SIM-023)
+	climate    temperature.Climate          // its outdoor temperature curve
+	incidents  incident.State               // the storyteller's nature events (SIM-025)
 	troughs    map[entity.EntityID]troughState
 	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
 	postponed  postState                  // work put off, orders followed (postpone.go, SIM-027)
@@ -762,7 +764,7 @@ type Game struct {
 	scheds     map[entity.EntityID]schedule.Grid
 	joy        map[entity.EntityID]int // recreation need, 0..recreation.Full
 	breaks     map[entity.EntityID]breakState
-	roomTemps  []temperature.Temp // per room id, kept across rebuilds
+	thermo     *thermo.Model // game/thermo (TEMP-1): the rooms' air and breached cells' residual
 	memories   map[entity.EntityID]mood.Memories
 	roomGrid   []int
 	rooms      []roomStats
@@ -796,13 +798,11 @@ type Game struct {
 	// grass is the ground cover layer (grass.go, UI-011).
 	grass grassState
 	// stains are blood and ichor on the ground (stains.go, SIM-020).
-	stains    stainState
-	filth     filthState // tracked-in dirt (SIM-021, filth.go)
-	homeArea  homeState  // the Home area (SIM-021, home.go)
-	planMarks planState  // PLAY-012 plan marks (plan.go)
-	roofx     roofIndex  // roof.go: derived plan index and roofed counts
-	// residual: air temperature of cells of a freshly breached room.
-	residual    map[int]temperature.Temp
+	stains      stainState
+	filth       filthState // tracked-in dirt (SIM-021, filth.go)
+	homeArea    homeState  // the Home area (SIM-021, home.go)
+	planMarks   planState  // PLAY-012 plan marks (plan.go)
+	roofx       roofIndex  // roof.go: derived plan index and roofed counts
 	researchCur research.Project
 	researchSet bool
 
@@ -926,7 +926,7 @@ func New(cfg Config) *Game {
 		geo:        geology.NewMap(cfg.Width, cfg.Height),
 		lastMeal:   make(map[entity.EntityID]item.Kind),
 		fuel:       make(map[entity.EntityID]int),
-		exposure:   make(map[entity.EntityID]exposureState),
+		exposure:   make(bodytemp.Ledger),
 		noComfort:  make(map[entity.EntityID]uint64),
 		biome:      cfg.Biome,
 		climate:    biome.DefOf(cfg.Biome).Climate,
@@ -964,6 +964,7 @@ func New(cfg Config) *Game {
 	g.craft = craft.New(newCraftHost(g))    // craft_host.go
 	g.prison = prison.New(newPrisonHost(g)) // prison_host.go
 	g.rest = rest.New(newRestHost(g))       // rest_host.go
+	g.thermo = thermo.New(newThermoHost(g)) // thermo_host.go
 	return g
 }
 
@@ -1010,7 +1011,8 @@ func (g *Game) SpawnNamedPawn(x, y int, name string) (entity.EntityID, error) {
 	g.labor.Set(id, g.prio[id].Mask())
 	g.scheds[id] = g.sched
 	g.joy[id] = recreation.Start
-	g.giveBio(id, legacyBio(id, name)) // skills.go: a neutral pawn (NG-1 §0.4)
+	g.giveBio(id, legacyBio(id, name))        // skills.go: a neutral pawn (NG-1 §0.4)
+	g.apparel[id] = craft.Outfit{}.Everyday() // TEMP-4: arrives in a T-shirt and pants
 	return id, nil
 }
 
@@ -1221,7 +1223,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
-		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
+		pv.Hypothermia, pv.Heatstroke, pv.Frostbite = exposureView(g, id) // heat.go (TEMP-3)
 		pv.Temperament = g.temperamentOf(id).String()
 		pr := g.prioOf(id)
 		for _, v := range pr {
@@ -1317,6 +1319,8 @@ func (g *Game) world() WorldView {
 	g.fillItemViews(&w)
 	fillDietView(g, &w) // food.go (FOOD-4): food policies, days of food
 	w.SkyEvent, w.SkyEventEnds = g.incidents.SkyView(uint64(g.clock.Now()))
+	w.ClimateEvent, w.ClimateEventEnds = g.incidents.ClimateView(uint64(g.clock.Now())) // TEMP-2 (incident/climate.go)
+	w.Extreme = w.ClimateEvent
 	w.Frames = g.frameViews()
 	w.Buildings = g.buildingViews()
 	w.Plants = g.plantViews()
@@ -1328,8 +1332,8 @@ func (g *Game) world() WorldView {
 	w.StoneType, w.Ore = g.stoneLayers()
 	w.StructVer = g.structVer
 	g.ensureRooms()
-	w.RoomGrid = g.roomGrid // shared read-only: ensureRooms replaces it, never writes in place
-	w.Rooms = g.roomViews()
+	w.RoomGrid = g.roomGrid                            // shared read-only: ensureRooms replaces it, never writes in place
+	w.Rooms, w.TempVer = g.roomViews(), g.thermo.Ver() // game/thermo (TEMP-1)
 	w.Animals = g.animalViews()
 	w.Traces, w.Shots, w.Smoke = g.traceViews(), g.combat.Shots.Views(), g.combat.Blasts.Views()
 	g.fillWorldWeather(&w) // weather.go

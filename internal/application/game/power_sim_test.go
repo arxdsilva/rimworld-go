@@ -641,7 +641,7 @@ func BenchmarkPhasePower(b *testing.B) {
 	}
 }
 
-// TestPowerDrawByKind: a heater draws its full 180 W only while its
+// TestPowerDrawByKind: a heater draws its full 175 W (TEMP-1, wiki) only while its
 // thermostat has it working, an electric bench its 250 W only while held
 // for work; each idles at its small draw otherwise.
 func TestPowerDrawByKind(t *testing.T) {
@@ -652,17 +652,17 @@ func TestPowerDrawByKind(t *testing.T) {
 	heater := buildNow(t, g, construction.Heater, item.Steel, construction.South, 8, 5)
 	stove := buildNow(t, g, construction.ElectricStove, item.Steel, construction.South, 11, 5)
 	g.Step(powerInterval)
-	if h, s := psView(t, g, heater), psView(t, g, stove); h.PowerUse != 20 || s.PowerUse != 25 || !h.Powered || !s.Powered {
+	if h, s := psView(t, g, heater), psView(t, g, stove); h.PowerUse != 17 || s.PowerUse != 25 || !h.Powered || !s.Powered {
 		t.Fatalf("idle: heater %d W, stove %d W", h.PowerUse, s.PowerUse)
 	}
 	g.setThermoActive(heater, true)
 	ada := psWorker(t, g, 5, 9)
 	g.reserve.TryEntity(ada, stove)
 	h, s := psView(t, g, heater), psView(t, g, stove)
-	if h.PowerUse != 180 || s.PowerUse != 250 {
+	if h.PowerUse != 175 || s.PowerUse != 250 {
 		t.Fatalf("working: heater %d W, stove %d W", h.PowerUse, s.PowerUse)
 	}
-	if n, _ := psNet(g.World(), h.PowerNet); n.Load != 430 || n.Gen != 800 {
+	if n, _ := psNet(g.World(), h.PowerNet); n.Load != 425 || n.Gen != 800 {
 		t.Fatalf("net %+v", n)
 	}
 }

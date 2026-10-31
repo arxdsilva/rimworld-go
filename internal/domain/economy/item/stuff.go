@@ -131,6 +131,11 @@ var madeOf = [numKinds]struct {
 	PlateArmor:     {Metallic | Woody, Steel},
 	SimpleHelmet:   {Metallic, Steel},
 	AdvancedHelmet: {Metallic, Steel},
+	// TEMP-4 (wiki: T-shirt, Button-down shirt, Pants, Jacket, Cowboy hat,
+	// Bowler hat, Tribalwear: leathery or fabric), cloth by default.
+	TShirt: {Leathery | Fabric, Cloth}, ButtonDownShirt: {Leathery | Fabric, Cloth}, Pants: {Leathery | Fabric, Cloth},
+	Jacket: {Leathery | Fabric, Cloth}, CowboyHat: {Leathery | Fabric, Cloth}, BowlerHat: {Leathery | Fabric, Cloth},
+	Tribalwear: {Leathery | Fabric, Cloth},
 }
 
 // MadeFrom is the material families stuffed product k takes (0: k is

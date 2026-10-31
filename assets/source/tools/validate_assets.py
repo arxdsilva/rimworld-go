@@ -169,12 +169,14 @@ ANIMAL_FACINGS = ("south", "east", "north")    # west is east mirrored by the re
 # Per-build layers (families/pawn.py BUILD_LAYERS): m_avg keeps the un-suffixed keys,
 # the rest are <layer>_<build>_<facing>. Hair, beards, the tuque and the scar are shared.
 BUILD_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather",
-                "flak_pants", "flak_vest", "flak_jacket", "plate_armor", "marine_armor", "shield_belt", "smokepop_pack")
+                "flak_pants", "flak_vest", "flak_jacket", "plate_armor", "marine_armor", "shield_belt", "smokepop_pack",
+                "button_down", "jacket", "tribalwear")
 PAWN_BUILDS = ("m_thin", "m_avg", "m_heavy", "f_thin", "f_avg", "f_heavy")
 LEGACY_BUILD = "m_avg"
 HAIR_LAYERS = ("hair_short", "hair_crop", "hair_bun", "hair_long", "hair_braid", "hair_shaved", "hair_curls",
                "hair_tail", "beard_short", "beard_full", "beard_moustache")
-SHARED_LAYERS = HAIR_LAYERS + ("tuque_knit", "face_scar", "simple_helmet", "advanced_helmet", "marine_helmet")
+SHARED_LAYERS = HAIR_LAYERS + ("tuque_knit", "face_scar", "simple_helmet", "advanced_helmet", "marine_helmet", "cowboy_hat",
+                                  "bowler_hat")
 PAWN_FACINGS = ("south", "east", "north")      # west is east mirrored by the renderer
 BODY_ATTACH = ("head", "hold", "back")
 GONE_ATTACH = ("hand", "hand_l")

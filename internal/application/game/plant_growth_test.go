@@ -13,8 +13,8 @@ import (
 
 // TestFrostNoticesMergeWithinAnInterval: kills of one species in one
 // climate interval read as one notice whose count adds up, whichever
-// passes (staggered chunks) they came from. The corn is left one window
-// from dying (PLAY-016: frost kills over hours).
+// passes (staggered chunks) they came from. A midwinter night is past
+// every crop's cold threshold (TEMP-2: crops die at once).
 func TestFrostNoticesMergeWithinAnInterval(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 40, Height: 16})
 	bareGround(g)

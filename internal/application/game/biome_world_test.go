@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
@@ -234,11 +235,20 @@ func TestBiomePlantsDieOutOfClimate(t *testing.T) {
 	d := New(Config{Seed: 1, Width: 16, Height: 16, Biome: biome.Desert})
 	pine, _ := d.spawnPlant(plant.Pine, 3, 3, 1000)
 	cactus, _ := d.spawnPlant(plant.Cactus, 5, 3, 1000)
-	jumpTo(d, 15, 15) // the hottest afternoon
+	jumpTo(d, 15, 15) // the hottest afternoon: 35 C (TEMP-2, wiki: Biomes), under the pine's 40
 	d.SetWeather(weather.Clear, 0)
 	frostFor(d, 2*clock.TicksPerHour)
+	if _, ok := d.plants.Get(pine); !ok {
+		t.Fatal("a pine lives through a plain desert summer")
+	}
+	now := uint64(d.clock.Now()) // a heat wave at full strength: +17 C
+	if !d.incidents.StartClimate(incident.HeatWave, now-incident.SnapRamp, 2*clock.TicksPerDay) {
+		t.Fatal("no heat wave")
+	}
+	d.applyClimate(now)
+	frostFor(d, 2*clock.TicksPerHour)
 	if _, ok := d.plants.Get(pine); ok {
-		t.Fatal("a pine should die in a desert summer")
+		t.Fatal("a pine should die in a desert heat wave")
 	}
 	if _, ok := d.plants.Get(cactus); !ok {
 		t.Fatal("the cactus is at home in the desert")

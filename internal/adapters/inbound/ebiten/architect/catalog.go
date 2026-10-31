@@ -276,6 +276,10 @@ var Tools = []ToolDef{
 		Desc: "Warms its room up to its thermostat target, then idles. Select it to set the target."},
 	{ID: "cooler", Label: "Cooler", Category: "misc", Icon: "cooler", Mode: PlaceSingle, Build: overlay.CoolerKind,
 		Desc: "Set into a wall gap, facing the room to cool: it pumps the heat out of its back. Select it to set the target. Q/E rotates."},
+	{ID: "passive_cooler", Label: "Passive cooler", Category: "misc", Icon: "passive_cooler", Mode: PlaceSingle, Build: "passive cooler",
+		Desc: "Cools its room without power, burning wood, down to 17 °C and no further. Haulers keep it fuelled (50 wood, about 5 days)."},
+	{ID: "vent", Label: "Vent", Category: "misc", Icon: "vent", Mode: PlaceSingle, Build: "vent",
+		Desc: "Set into a wall gap: while open it lets air through, evening out the temperatures on its two sides. Q/E rotates."},
 	// PLAY-021 power: the grid's pieces.
 	{ID: "conduit", Label: "Power conduit", Category: CatPower, Icon: "power_conduit", Mode: PlaceLine, Build: overlay.ConduitKind,
 		Desc: "Carries power along the line; generators, batteries and devices within 3 tiles join it. Drag to draw a line."},

@@ -29,8 +29,6 @@ const (
 	devFireSize       = 30
 	burstFireSize     = 20
 	lightningFireSize = 25
-	// fireHeatSize: a fire this big heats its room like one campfire.
-	fireHeatSize = 50
 	// fireOutdoorHeat is the outdoor warming per size point, tenths of a
 	// degree C, within fireWarmReach cells (a 5x5 patch): +20 C beside a
 	// full blaze.
@@ -458,16 +456,6 @@ func (g *Game) burnCreatures() {
 		g.hurtAs(id, dmg, 0, body.Burn, health.CauseBurns) // combat.go
 		if v, _ := g.vital.Get(id); v.Status == health.Dead && v.Cause == health.CauseBurns {
 			g.message(p.X, p.Y, "%s burned to death.", g.nameOf(id))
-		}
-	}
-}
-
-// fireRoomHeat adds each indoor fire's heat to heat (per room, like
-// heatRooms' campfires): a fire of fireHeatSize heats like one campfire.
-func (g *Game) fireRoomHeat(heat []int) {
-	for _, f := range g.fire.fires {
-		if r := g.roomAt(f.X, f.Y); r >= 0 && r < len(heat) {
-			heat[r] += campfireHeat * int(f.Size) / fireHeatSize
 		}
 	}
 }

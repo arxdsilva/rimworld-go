@@ -516,7 +516,8 @@ func (g *Game) fillAnimalLife(av *AnimalView, a animal.State, now uint64) {
 	}
 	w := animal.Wildness(a.Species) // FOOD-3: revenge, wildness, handling (wiki)
 	av.Revenge, av.Wildness, av.MinHandling = g.revengePct(animal.DefOf(a.Species).Revenge), w/10, animal.MinHandling(w)
-	av.ToxicBuildup = int(body.ToxicBuildup(a.Body)) / 10 // FOOD-6
+	av.ToxicBuildup = int(body.ToxicBuildup(a.Body)) / 10                                                 // FOOD-6
+	av.ComfortMin, av.ComfortMax, av.Hypothermia, av.Heatstroke = g.exposure.AnimalView(av.ID, a.Species) // game/bodytemp (TEMP-3)
 	if animal.Produces(a.Species, a.Female, av.Adult) {
 		av.Product = animal.EcologyOf(a.Species).Product.String()
 		av.ProductPct = a.Product * 100 / animal.ProductFull

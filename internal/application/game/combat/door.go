@@ -83,6 +83,10 @@ func (d *Doors) isOpen(id entity.EntityID) bool {
 	return ok && s.Open(d.h.Now(), d.openTicks(id, b))
 }
 
+// IsOpen is isOpen for the game (TEMP-1, game/thermo: an open door mixes
+// the air of the places it joins).
+func (d *Doors) IsOpen(id entity.EntityID) bool { return d.isOpen(id) }
+
 // SetHold holds door id open (on) or lets it close on its timer.
 func (d *Doors) SetHold(id entity.EntityID, on bool) {
 	s := d.states[id]

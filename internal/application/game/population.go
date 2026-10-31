@@ -76,7 +76,7 @@ func (g *Game) wildlifeCap() int {
 		}
 		c = c * pct / 100
 	}
-	return c
+	return c * g.incidents.WildlifePermil(uint64(g.clock.Now())) / 1000 // TEMP-2: a volcanic winter halves it (arrivals and the start target follow)
 }
 
 // wildCount is the number of wild animals counted against capacity. It is

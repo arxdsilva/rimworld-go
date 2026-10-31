@@ -9,6 +9,7 @@ import (
 	"hash/fnv"
 	"io"
 	mathbits "math/bits"
+	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
@@ -16,6 +17,7 @@ import (
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/rest"
+	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -78,10 +80,13 @@ import (
 // down-at-0 starvation with malnutrition: a pawn an older save has down
 // from hunger gets up (migrateStarvation). The bars keep their scale
 // (needs.Full is 1.0 nutrition), so stored hunger and animal food carry
-// over as they are. migrateSave runs the steps a save's version is missing.
+// over as they are. v8 (TEMP-*) makes everyday clothes real garments
+// (TEMP-4): an older save's colonists, who wore them implicitly, get a
+// T-shirt and pants where their skin slots are free (Outfit.Everyday).
+// migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 7
+const SaveVersion = 8
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -259,6 +264,7 @@ type saveState struct {
 	Pens        []pen
 	RockDamage  map[[2]int]int
 	Residual    map[int]temperature.Temp
+	Thermo      thermo.Save // TEMP-1: the rooms' air at working precision; absent in older saves
 	// Motion: step timing per creature on the map. A creature without a
 	// record (it never stepped, or an older save) is not given one on
 	// load: motionOf reads it as a due-now straight step, as before the save.
@@ -447,12 +453,12 @@ func (g *Game) Save(w io.Writer, name string) error {
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Worn: craft.ExportOutfits(g.apparel), Joy: g.joy,
 		PrioList: exportPrios(g.prio), Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
-		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.roomTemps,
+		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.thermo.Temps, Thermo: g.thermo.Export(),
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
 		Carrying: g.care.Carry.Export(), TendedUntil: g.care.Doctor.ExportTended(),
-		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.raid.Rock.Export(), Residual: g.residual,
+		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.raid.Rock.Export(), Residual: g.thermo.Residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 		DoorsOriented: true, // PLAY-011: door facings are stored
@@ -476,8 +482,10 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Fires = g.exportFires()   // fire.go (PLAY-015): nil while nothing burns
 	// pens.go (PLAY-015): marker settings, unpenned clocks
 	s.PenMarkers, s.PenAnimals = slices.Clone(g.pens), g.exportPenAnimals()
-	for id, e := range g.exposure {
-		s.Exposure[id] = [2]int{e.hypo, e.heat}
+	for id, e := range g.exposure { // TEMP-3: the wiki scale (bodytemp.Ledger); the dead drop out
+		if g.vital.Has(id) || g.animals.Has(id) {
+			s.Exposure[id] = [2]int{int(e.Hypo), int(e.Heat)}
+		}
 	}
 	// bridge.go (MAPGEN-3): the sea bitset, nil without a sea
 	s.Ocean = g.exportOcean()
@@ -574,7 +582,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.bldgIDs, g.bldgs = s.BldgIDs, importStore(s.Bldgs)
 	g.plantIDs, g.plants = s.PlantIDs, importStore(s.Plants)
 	g.terr = s.Terr
-	g.roomGrid, g.roomTemps, g.roomDirty = s.RoomGrid, s.RoomTemps, true
+	g.roomGrid, g.roomDirty = s.RoomGrid, true
+	g.thermo.Import(s.RoomTemps, s.Residual, s.Thermo) // game/thermo (TEMP-1)
 	g.reserve = reservation.Import(s.Claims)
 	g.pending = s.Pending
 	g.animalIDs, g.animals = s.AnimalIDs, importStore(s.Animals)
@@ -627,7 +636,6 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 		g.research = research.FromSlice(s.ResearchAll)
 	}
 	g.raid.Rock.Import(s.RockDamage) // raid/rock.go
-	g.residual = s.Residual
 	g.motion = importStore(s.Motion) // a mover without a record reads motionOf's due-now default
 	setMap(&g.lastStrike, s.Strikes)
 	setMap(&g.lastHit, s.Hits)
@@ -639,6 +647,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importGrassGrowth(s.GrassGrowth) // grass.go: older saves load full
 	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
 	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
+	g.applyClimate(uint64(max(s.Tick, 1) - 1))  // weather_ng1.go (TEMP-2): the climate event's offset as at the last tick
 	g.importLanding(s.Landing)                  // setup_mapgen.go: after importSetupState
 	g.importBios(s.Bios, s.Skills, s.WorkCarry) // skills.go: older saves get neutral bios
 	g.importSkillLive(s.SkillLive)
@@ -663,7 +672,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importOcean(s.Ocean)
 	g.seedGrass() // an older save: grass from terrain, bare under buildings
 	for id, e := range s.Exposure {
-		g.exposure[id] = exposureState{e[0], e[1]}
+		g.exposure[id] = bodytemp.Sev{Hypo: int32(e[0]), Heat: int32(e[1])}
 	}
 	for id, q := range s.OrderQueue {
 		for _, o := range q {
@@ -742,6 +751,13 @@ func (g *Game) migrateSave(v int) {
 				*p = p.FromLegacyGrowth()
 			}
 		}
+		fallthrough
+	case v < 8: // TEMP-*: one block for every temperature phase's step
+		for _, id := range g.pawnIDs { // TEMP-4: everyday clothes become garments
+			g.apparel[id] = g.apparel[id].Everyday() // craft/garment.go
+		}
+		migrateExtreme(g)            // weather_ng1.go (TEMP-2): a heat wave or cold snap becomes the climate event
+		g.exposure.MigratePermille() // game/bodytemp (TEMP-3): permille exposure moves to the wiki scale
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

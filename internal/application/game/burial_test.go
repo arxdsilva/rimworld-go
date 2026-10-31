@@ -537,7 +537,7 @@ func TestSaveRoundTripGravesAndCorpses(t *testing.T) {
 	for _, id := range []entity.EntityID{cy, dee} {
 		n := 0
 		for _, iid := range h.itemIDs {
-			if s, _ := h.stacks.Get(iid); s.Of == id {
+			if s, _ := h.stacks.Get(iid); s.Of == id && (s.Kind.IsCorpse() || s.Kind == item.Bones) { // TEMP-4: not its tainted clothes
 				n++
 			}
 		}

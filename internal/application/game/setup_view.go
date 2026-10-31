@@ -17,7 +17,6 @@ func (g *Game) fillSetupView(w *WorldView) {
 	for _, c := range g.ng.fx.Conditions {
 		w.Conditions = append(w.Conditions, c.Key())
 	}
-	w.Extreme = g.extremeKey()
 	w.Season = g.season(now)
 }
 

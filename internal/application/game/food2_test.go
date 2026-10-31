@@ -389,29 +389,29 @@ func TestWildPlantsRegrow(t *testing.T) {
 	}
 }
 
-// TestCropFrostLimitNoFlap: air hovering at a crop's own frost limit starts
-// the damage once and keeps it going; it stops only 2 °C back (the damage
-// hysteresis, per plant since FOOD-2).
-func TestCropFrostLimitNoFlap(t *testing.T) {
+// TestColdResistantCropNoFlap (TEMP-2, wiki: Plants): air hovering
+// either side of healroot's cold threshold takes its leaves once and
+// keeps them off (the 24 h timer is re-armed, never cleared early); the
+// cold-resistant crop neither dies nor takes damage.
+func TestColdResistantCropNoFlap(t *testing.T) {
 	t.Parallel()
 	g := mildLight(t)
-	id, _ := g.spawnPlant(plant.Rice, 10, 10, 1000)
-	p, _ := g.plants.Get(id)
-	lim, _ := p.ColdLimit()
+	id, _ := g.spawnPlant(plant.Healroot, 10, 10, 1000)
+	th := plant.ColdThreshold(uint64(id))
 	flips, was := 0, false
-	for i := 0; i < 16 && plantAlive(g, id); i++ {
-		setAir(g, 10, 10, lim-1+2*(i%2)) // just past it, then just short of the stop line
+	for i := 0; i < 16; i++ {
+		setAir(g, 10, 10, th-1+2*(i%2)) // just past it, then just short of it
 		frostFor(g, climateInterval)
-		p, _ = g.plants.Get(id)
-		if p.Damaging != was {
+		p, ok := g.plants.Get(id)
+		if !ok || p.Damage != 0 {
+			t.Fatalf("healroot hurt by %d air: %+v alive %v", th, p, ok)
+		}
+		if l := p.Leafless(uint64(g.clock.Now())); l != was {
 			flips++
-			was = p.Damaging
+			was = l
 		}
 	}
-	if flips != 1 {
-		t.Fatalf("frost damage flipped %d times at the limit", flips)
-	}
-	if countText(g, farm.HurtText(plant.Rice, false)) != 1 {
-		t.Fatal("the frost warning repeated")
+	if flips != 1 || !was {
+		t.Fatalf("leaf loss flipped %d times at the threshold", flips)
 	}
 }

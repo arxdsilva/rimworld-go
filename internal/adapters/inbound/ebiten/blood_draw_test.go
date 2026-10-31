@@ -210,7 +210,8 @@ func TestHairAndHeldStayClean(t *testing.T) {
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
 	r.art = bloodArt()
 	got := litLog(r)
-	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 30, Wounded: true, Weapon: "spear", Drafted: true, Status: "alive"}
+	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 30, Wounded: true, Weapon: "spear", Drafted: true, Status: "alive",
+		Apparel: []string{"t-shirt", "pants"}} // TEMP-4: the shirt and pants show when worn
 	patient := game.PawnView{ID: 2, X: 2, Y: 2, Health: 20, CarriedBy: 1, Status: "downed"}
 	r.view.Pawns = []game.PawnView{p, patient}
 	r.pipe().Creatures.DrawPawnFigure(r.liveView(), r.pipe().Pass(), ebiten.NewImage(512, 512), p, 2, 2, 64, r.pipe().Creatures.FigurePoseOf(r.liveView(), p))

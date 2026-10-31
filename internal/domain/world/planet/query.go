@@ -107,7 +107,7 @@ func (p *Planet) Site(i int) site.Site {
 	}
 	s := site.Site{
 		Biome:    p.Biome[i],
-		Climate:  p.climate(i),
+		Climate:  biome.Fit(p.Biome[i], p.climate(i)), // TEMP-2: inside the biome's wiki extremes
 		Hills:    p.Hill[i],
 		Caves:    p.Caves[i],
 		Latitude: p.Lat[i],
