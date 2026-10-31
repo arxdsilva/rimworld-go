@@ -6,7 +6,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/lighting"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
@@ -70,7 +69,7 @@ func permil(f float64) int { return int(math.Round(f * 1000)) }
 // by the weather's share of the sun and the share of its footprint open
 // to the sky (walls and roofs cover).
 func (g *Game) solarOutput(b construction.Building) int {
-	sun := max(0, permil(float64(lighting.Outdoor(g.clock.Now())))-solarNightPermil)
+	sun := max(0, permil(float64(skyLight(g)))-solarNightPermil) // light.go: none in an eclipse (FOOD-6)
 	if sun == 0 {
 		return 0
 	}

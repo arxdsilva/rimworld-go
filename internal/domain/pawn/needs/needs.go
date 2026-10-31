@@ -37,8 +37,12 @@ const (
 	SleepPeriod = 5
 	// WakeRest is a reasonable sleep: tired sleepers outside a Sleep
 	// block, and collapsed ones, rest to here before getting up.
-	WakeRest     = 8000
-	EatWorkTicks = 20
+	WakeRest = 8000
+	// EatWorkTicks is one sitting's eating time (FOOD-6): 500 ticks, 12
+	// in-game minutes. The wiki publishes no ingestion time for food (its
+	// Ingestion Time property lists drugs only; Eating Speed only scales
+	// it): original tuning, the same for every food.
+	EatWorkTicks = 500
 	SleepWorkMin = 40
 )
 

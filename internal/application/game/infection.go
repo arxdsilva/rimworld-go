@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -251,9 +252,10 @@ func (g *Game) rollInfections(id entity.EntityID, b *body.Body, now uint64) {
 }
 
 // immunityGain is id's immunity gain (permille; vitals monitors and
-// organs change it from MED-05/06).
+// organs change it from MED-05/06; hunger from FOOD-6, wiki: Saturation).
 func (g *Game) immunityGain(id entity.EntityID) int32 {
-	return g.organImmunityGain(id) + g.monitorImmunityGain(id) // organs.go (MED-05), surgery.go (MED-06)
+	n, _ := g.need.Get(id)                                                                           // ravenous x0.9, malnourished x0.7 (needs.ImmunityGain)
+	return (g.organImmunityGain(id) + g.monitorImmunityGain(id)) * needs.ImmunityGain(n.Band) / 1000 // organs.go (MED-05), surgery.go (MED-06)
 }
 
 // stepConds advances an hour of every condition race on id; it reports

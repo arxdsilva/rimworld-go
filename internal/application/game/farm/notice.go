@@ -17,6 +17,7 @@ const (
 	Rot                   // FOOD-2: outlived its lifespan (wiki: "died from rotting")
 	Starved               // FOOD-2: an unpowered hydroponics basin
 	Withered              // too much light (duskmoss): its own notice, per patch
+	Toxic                 // FOOD-6: toxic fallout (the event's letter warned; no notice)
 )
 
 // Kill is one species' deaths of one cause in a growth pass (a notice
@@ -43,7 +44,7 @@ func (fp *Pass) Died(id entity.EntityID, p plant.Plant, cause Cause) {
 		fp.Gone = map[entity.EntityID]bool{}
 	}
 	fp.Gone[id] = true
-	if cause != Withered {
+	if cause != Withered && cause != Toxic {
 		fp.Kills = Add(fp.Kills, p, cause)
 	}
 }

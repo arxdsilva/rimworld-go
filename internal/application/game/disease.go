@@ -280,20 +280,10 @@ func (g *Game) stepDisease(id entity.EntityID, b *body.Body, v *health.Record, n
 }
 
 // diseaseNeedRates scales id's hunger and rest rates (permille) by its
-// diseases: gut worms double the hunger, muscle parasites the awake rest
-// fall (decayNeeds, skills.go).
+// conditions (gut worms, malnutrition, muscle parasites) and an ashleaf
+// high (FOOD-6, wiki: Saturation; decayNeeds, skills.go).
 func (g *Game) diseaseNeedRates(id entity.EntityID, hr, rr int32) (int32, int32) {
-	b := g.bodies[id]
-	if b == nil || len(b.Conds) == 0 {
-		return hr, rr
-	}
-	for _, c := range b.Conds {
-		hr = hr * body.HungerMul(c) / 1000 // a disease's, malnutrition's (FOOD-1)
-		if dz, ok := body.DiseaseOf(c.Kind); ok {
-			rr = rr * dz.RestMul / 1000
-		}
-	}
-	return hr, rr
+	return body.NeedRates(g.bodies[id], hr, rr, g.drugs[id].Stoned(uint64(g.clock.Now())))
 }
 
 // infectionSick reports id fighting a condition other than a disease it

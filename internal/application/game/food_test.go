@@ -63,7 +63,7 @@ func TestPawnsPreferMealsAndNutritionDiffers(t *testing.T) {
 	g.SpawnStack(item.Berries, 3, 2, 2) // closer
 	g.SpawnStack(item.Meal, 1, 9, 2)    // further but preferred
 	g.SetNeeds(id, needs.CriticalHunger-1, needs.Full)
-	g.Step(TicksPerCell*30 + needs.EatWorkTicks + 5)
+	g.Step(TicksPerCell*30 + 2*needs.EatWorkTicks + 5) // ravenous: the berries on the way, then the meal
 	p := pawn(t, g, id)
 	if p.LastMeal != "meal" {
 		t.Fatalf("ate %q, want meal", p.LastMeal)

@@ -276,6 +276,7 @@ type PawnView struct {
 	// FOOD-0 contract ("" and 0 until FOOD-4 and FOOD-1): food policy name, malnutrition percent.
 	FoodPolicy   string
 	Malnutrition int
+	ToxicBuildup int // FOOD-6: toxic buildup percent (body/cond_toxic.go)
 }
 
 // ItemView is a ground stack.
@@ -667,6 +668,10 @@ type WorldView struct {
 	FoodDays      int
 	FoodPolicies  []FoodPolicyView
 	AutoSlaughter []AutoSlaughterView
+	// FOOD-6 (incident/sky.go): the sky event under way ("toxic fallout",
+	// "eclipse" or "") and its end tick (0: none).
+	SkyEvent     string
+	SkyEventEnds uint64
 }
 
 // FoodPolicyView is one food policy: its id, name and allowed kind names.
@@ -1194,7 +1199,8 @@ func (g *Game) snapshot() []PawnView {
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 		g.fillSocialPawn(pv, pv.Mood) // social_view.go: smoothed mood, target, bubble (ENG-003)
 		pv.Health, pv.Malnutrition, pv.FoodPolicy = v.HP()*100/health.MaxHP, int(body.Malnutrition(g.bodies[id]))/10, g.sk.diet.Of(id, false).Name
-		pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
+		pv.ToxicBuildup = int(body.ToxicBuildup(g.bodies[id])) / 10 // FOOD-6
+		pv.Infection, pv.Wounded = g.woundView(id)                  // infection.go (MED-02)
 		pv.InfectionLosing, pv.UntendedHours = g.infectionLosing(id), g.untendedHours(id)
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
 		cv := g.care.View(id, j)                                                   // care package: carry, tend, care level, bed rest
@@ -1303,6 +1309,7 @@ func (g *Game) world() WorldView {
 	// while it reads the same (PERF-002).
 	g.fillItemViews(&w)
 	fillDietView(g, &w) // food.go (FOOD-4): food policies, days of food
+	w.SkyEvent, w.SkyEventEnds = g.incidents.SkyView(uint64(g.clock.Now()))
 	w.Frames = g.frameViews()
 	w.Buildings = g.buildingViews()
 	w.Plants = g.plantViews()

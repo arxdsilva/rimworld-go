@@ -61,3 +61,34 @@ func TestButcherHuman(t *testing.T) {
 		t.Fatalf("job %v human meat %d butchered %v", j.State, f.Stock(item.HumanMeat), f.butchered)
 	}
 }
+
+// TestButcherSpotYield (FOOD-6, wiki: Butcher spot, Butcher table): the
+// spot gives 70 % of the table's meat and leather, the bill's work is
+// 450 ticks, and the spot's default bills butcher animals, never humans.
+func TestButcherSpotYield(t *testing.T) {
+	t.Parallel()
+	if recipe.DefOf(recipe.ButcherAnimal).Work != 450 || recipe.DefOf(recipe.ButcherHuman).Work != 450 {
+		t.Fatal("butchering is 450 ticks of work")
+	}
+	f := newFake()
+	c := New(f)
+	f.pawns = []entity.EntityID{pawn}
+	f.build(2, construction.ButcherSpot, 8, 4)
+	c.Bills.Defaults(2, construction.ButcherSpot)
+	animals := false
+	for _, b := range c.Bills.Of(2) {
+		animals = animals || b.Recipe == recipe.ButcherAnimal
+		if b.Recipe == recipe.ButcherHuman {
+			t.Fatal("butchering humans is never a default bill")
+		}
+	}
+	if !animals {
+		t.Fatal("the spot butchers animals by default")
+	}
+	f.put(50, item.Stack{Kind: item.CorpseAnimal, Qty: 1, Animal: uint8(animal.Cow), Yield: 500, X: 1, Y: 1})
+	c.Bills.Set(2, []recipe.Bill{{Recipe: recipe.ButcherAnimal, Mode: recipe.DoCount, Target: 1}})
+	j := runBill(t, f, c, work.Mask(0).Set(work.Cook, true), 800)
+	if j.State != job.Complete || f.Stock(item.Meat) != 168*ButcherSpotYield/1000 || f.Stock(item.Leather) != 48*ButcherSpotYield/1000 {
+		t.Fatalf("job %v meat %d leather %d", j.State, f.Stock(item.Meat), f.Stock(item.Leather))
+	}
+}

@@ -55,6 +55,11 @@ const (
 	// CropBlight (FOOD-2, Nature pool): blight strikes one crop species in
 	// one room (game/plant_blight.go).
 	CropBlight
+	// FOOD-6 (Nature pool, sky.go): an eclipse takes the sunlight away
+	// for about a day; toxic fallout poisons everything under the open
+	// sky for days.
+	Eclipse
+	ToxicFallout
 	NumIDs
 )
 
@@ -117,6 +122,12 @@ var defs = [NumIDs]Def{
 	// against our flare's 6; it does not recur for 30 days). The first day
 	// is original tuning.
 	CropBlight: {Key: "crop_blight", Name: "Blight", Category: Nature, Weight: 10, Cooldown: 30, MinDay: 10},
+	// FOOD-6, wiki: Events (chance 3 and 0.25 against the flare's 1.5, so
+	// 12 and 1 against our flare's 6; an eclipse does not recur for 15
+	// days, fallout for 90 and never before day 60). The eclipse's first
+	// day is original tuning.
+	Eclipse:      {Key: "eclipse", Name: "Eclipse", Category: Nature, Weight: 12, Cooldown: 15, MinDay: 10},
+	ToxicFallout: {Key: "toxic_fallout", Name: "Toxic fallout", Category: Nature, Weight: 1, Cooldown: 90, MinDay: 60},
 }
 
 func init() {
@@ -140,6 +151,9 @@ func All() []Def { return append([]Def(nil), defs[:]...) }
 type State struct {
 	NextNature uint64        // tick of the next nature roll (0: not scheduled)
 	Last       map[ID]uint64 // tick each event last fired
+	// EclipseUntil and FalloutUntil (FOOD-6, sky.go) are the absolute
+	// ticks the eclipse and the toxic fallout end (0: none; older saves).
+	EclipseUntil, FalloutUntil uint64
 }
 
 // Allowed reports whether d may fire at tick now in biome b, ignoring any

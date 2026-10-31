@@ -134,7 +134,11 @@ import (
 // their threat response, explosions damage items and cook off stores.
 // 48x40/seed1, 48x40/seed7 and 120x120/seed42 keep their pins. Same-seed
 // runs identical (-count=2).
-// Re-pinned (FOOD-4): recipes measured in nutrition, fueled stoves, the
+// Re-pinned (FOOD-6): food binges bounded to one meal an hour, eating
+// takes 500 ticks, wiki hunger offsets and immunity by hunger band,
+// per-species breeding, the butcher spot's yield, roofed sowing only
+// under sun lamps, eclipse and toxic fallout. Same-seed runs identical.
+// Before that, re-pinned (FOOD-4): recipes measured in nutrition, fueled stoves, the
 // bench temperature penalty, haulers filling hoppers and barrels, wiki rot
 // and outdoor deterioration, food policies, choice by preference and
 // distance, wiki meal moods and poisoning. Same-seed runs identical.
@@ -144,12 +148,12 @@ import (
 // products, taming food and auto-slaughter. All six runs move. Same-seed
 // runs identical (-count=2).
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xd88a3e6ca5e163be,
-	"48x40/seed7":    0x2389f9c1a4b7f656,
-	"48x40/seed42":   0x1dc7b7127bb3b0c2,
-	"120x120/seed1":  0xf8ed06b4b6edc16b,
-	"120x120/seed7":  0xa56602f6e8e42865,
-	"120x120/seed42": 0x7fa7cf01e91baff3,
+	"48x40/seed1":    0x1d1e3bb44a6700e,
+	"48x40/seed7":    0x724c6bf2c20ce58c,
+	"48x40/seed42":   0x7ae3305361a58acb,
+	"120x120/seed1":  0x68aa4c513c829a3b,
+	"120x120/seed7":  0x9ef89936cdd595cf,
+	"120x120/seed42": 0xefe1c1356235e446,
 }
 
 const scaleGoldenTicks = 20000

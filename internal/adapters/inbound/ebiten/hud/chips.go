@@ -1,12 +1,15 @@
 package hud
 
 import (
+	"fmt"
 	"image/color"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"strings"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/scenario"
+	"rimworld-go/internal/domain/sim/clock"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
@@ -84,4 +87,33 @@ func drawConditionLines(screen *ebiten.Image, chips []StatusChip, rs []gfx.Rect)
 func (c Global) DrawChips(screen *ebiten.Image, sw int) {
 	chips := StatusChips(c.sh.World())
 	drawConditionLines(screen, chips, c.ChipRects(chips, sw))
+}
+
+// SkyChip is the active sky event's condition line ("Eclipse, 5.2 h left")
+// with its hover card; ok is false when there is none. now is the current
+// simulation tick, ends the event's last tick (WorldView.SkyEventEnds).
+func SkyChip(event string, ends, now uint64) (StatusChip, bool) {
+	if event == "" {
+		return StatusChip{}, false
+	}
+	left := ""
+	if ends > now {
+		hours := float64(ends-now) / float64(clock.TicksPerHour)
+		left = fmt.Sprintf(", %.1f h left", hours)
+	}
+	switch event {
+	case "eclipse":
+		return StatusChip{"Eclipse" + left, "Eclipse\nThe sun is blotted out: no sunlight reaches the ground, so plants stop growing in daylight and solar panels give nothing. Lamps and batteries still work.", uikit.LetterInfo}, true
+	case "toxic fallout":
+		return StatusChip{"Toxic fallout" + left, "Toxic fallout\nPoisonous dust falls over the colony. Unroofed colonists and animals build up toxic poisoning, and outdoor plants die over the event. Get everyone under a roof.", uikit.Danger}, true
+	}
+	return StatusChip{Capitalize1(event) + left, Capitalize1(event) + "\nA sky event is under way.", uikit.Warning}, true
+}
+
+// Capitalize1 upper-cases the first letter of s.
+func Capitalize1(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }

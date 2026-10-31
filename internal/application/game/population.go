@@ -1,7 +1,6 @@
 package game
 
 import (
-	"math"
 	"sort"
 
 	"rimworld-go/internal/domain/animal"
@@ -69,7 +68,7 @@ type departure struct {
 // density over the map's area, cut in winter.
 func (g *Game) wildlifeCap() int {
 	bd := biome.DefOf(g.biome)
-	c := wildlifeCapacity(bd.Wildlife, g.grid.Width()*g.grid.Height())
+	c := animal.WildlifeCapacity(bd.Wildlife, g.grid.Width()*g.grid.Height())
 	if temperature.Season(g.clock.Now()) == "Winter" {
 		pct := winterMildPct
 		if bd.Climate.YearMean <= 0 {
@@ -78,48 +77,6 @@ func (g *Game) wildlifeCap() int {
 		c = c * pct / 100
 	}
 	return c
-}
-
-// Wildlife capacity curve (NG-1 §6.6, D15): linear in area up to 120²,
-// then with the square root of the area (a 500² map is not seventeen
-// times as crowded), never above wildlifeMax.
-const (
-	wildlifeLinearArea = 120 * 120
-	wildlifeMax        = 300
-)
-
-// wildlifeCapacity is a biome density (animals per 10 000 tiles) over a
-// map of area tiles, before the winter cut: density × area/10 000 up to
-// 120², else density × 1.44 × √(area/120²), capped at wildlifeMax. Integer
-// arithmetic (deterministic): 1.44·√(area/14 400) = 12·√(100·area)/10 000.
-func wildlifeCapacity(density, area int) int {
-	if area <= wildlifeLinearArea {
-		return density * area / 10000
-	}
-	return min(wildlifeMax, density*12*floorSqrt(100*area)/10000)
-}
-
-// floorSqrt is ⌊√n⌋ for n >= 0, exact (the float estimate is corrected).
-func floorSqrt(n int) int {
-	r := int(math.Sqrt(float64(n)))
-	for r > 0 && r*r > n {
-		r--
-	}
-	for (r+1)*(r+1) <= n {
-		r++
-	}
-	return r
-}
-
-// countsWild: an animal counted against capacity. Tame animals, leavers
-// (herd crossers among them) and event animals are not: manhunters, hive
-// insects, legendaries and tree-eaters, which only come with events.
-func countsWild(a animal.State, now uint64) bool {
-	if a.Tame || a.Leaving || a.Enraged(now) || a.Dead() {
-		return false
-	}
-	d := animal.DefOf(a.Species)
-	return !d.Hive && !d.Legendary && !d.Mech && animal.EcologyOf(a.Species).Diet != animal.Dendrovore
 }
 
 // wildCount is the number of wild animals counted against capacity. It is
@@ -139,7 +96,7 @@ func (g *Game) wildCount() int {
 func (g *Game) recountWild(now uint64) int {
 	n, preds := 0, 0
 	for _, id := range g.animalIDs {
-		if a, ok := g.animals.Get(id); ok && countsWild(a, now) {
+		if a, ok := g.animals.Get(id); ok && animal.CountsWild(a, now) {
 			n++
 			if isPredator(a.Species) {
 				preds++
@@ -244,7 +201,7 @@ func (g *Game) herdLeaves(n, capacity int) (int, bool) {
 	var order []uint32
 	for _, id := range g.animalIDs {
 		a, ok := g.animals.Get(id)
-		if !ok || a.Herd == 0 || !countsWild(a, now) {
+		if !ok || a.Herd == 0 || !animal.CountsWild(a, now) {
 			continue
 		}
 		if _, seen := herds[a.Herd]; !seen {
@@ -317,7 +274,7 @@ func (g *Game) trackDepartures() {
 		case d.Left == 1:
 			g.message(d.ExitX, d.ExitY, "A %s has left the area.", d.Species.Label())
 		case d.Left > 1:
-			g.message(d.ExitX, d.ExitY, "A group of %d %s has left the area.", d.Left, pluralLabel(d.Species))
+			g.message(d.ExitX, d.ExitY, "A group of %d %s has left the area.", d.Left, animal.Plural(d.Species))
 		}
 	}
 	g.wl.Departs = kept

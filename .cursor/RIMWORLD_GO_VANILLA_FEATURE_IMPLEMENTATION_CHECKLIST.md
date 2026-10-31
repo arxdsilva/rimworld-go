@@ -596,7 +596,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Floors** (buildable/deconstructable separate layer; SIM-028: may go under any furniture, not on rock, walls, fences/gates or dug graves; no movement/beauty/cleanliness stats)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
--   [-] **Roofs** (SIM-018; no deterioration, toxic fallout or collapse injuries)
+-   [-] **Roofs** (SIM-018; FOOD-6: a roof shelters pawns, animals and plants from toxic fallout; no deterioration or collapse injuries)
     -   Roof cells.
     -   roof construction/removal jobs.
     -   support rules.
@@ -636,7 +636,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.5 Specialized zones
 
--   [x] **Growing zones** (painted tiles sowing the chosen crop; same-crop neighbours merge; cancel clears tiles; resow after harvest (ZONE-001); PLAY-023: only on soil, rich soil, gravel or marsh, never on floors, bridges, water, sand, mud or ice, fog or the map edge; a floor or building over a cell removes it; sowing only while the growing temperature is between 0 and 50 °C)
+-   [x] **Growing zones** (painted tiles sowing the chosen crop; same-crop neighbours merge; cancel clears tiles; resow after harvest (ZONE-001); PLAY-023: only on soil, rich soil, gravel or marsh, never on floors, bridges, water, sand, mud or ice, fog or the map edge; a floor or building over a cell removes it; sowing only while the growing temperature is between 0 and 58 °C; FOOD-6: a roofed cell is sown only within a powered sun lamp's 51 % reach, never with a tree)
 -   [x] **Home area** (SIM-021; PLAY-015: auto-expansion toggle, grows around buildings, new zones and pen markers; bounds cleaning, repairs and firefighting together with the pawn's area)
     -   Influences firefighting/cleaning/repair behavior.
 -   [x] **Roof build/remove areas** (SIM-018)
@@ -652,7 +652,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Nutrition values** (FOOD-1, wiki scale: a full bar is 1.0 = 10000; raw food, milk, pemmican and kibble 0.05 a unit, simple/fine/survival/paste meals 0.9, lavish 1.0, eggs by species 0.25-0.6, the legacy ration a survival meal; one meal or up to 20 raw units a sitting, overflow wasted)
     -   Foods provide nutrition.
     -   Pawns consume an amount based on hunger/body needs.
--   [-] **Food need** (FOOD-1: 1.6 nutrition a day for an adult, Fed/Hungry/Ravenous falls 100/50/25 %, thoughts Hungry -6, Ravenously hungry -12, Malnourished -20...-44 with a band hysteresis; eats at 30 % and keeps looking until 80 %, sleepers wake only ravenous; malnutrition at 0 % rises 1.51-2.27 %/h (rolled per pawn), recedes when fed, five stages with consciousness and hunger offsets, stops wound healing, kills at 100 %; `PawnView.Malnutrition`; missing: the bands' immunity effects, smokeleaf/hypothermia hunger factors)
+-   [x] **Food need** (FOOD-1: 1.6 nutrition a day for an adult, Fed/Hungry/Ravenous falls 100/50/25 %, thoughts Hungry -6, Ravenously hungry -12, Malnourished -20...-44 with a band hysteresis; eats at 30 % and keeps looking until 80 %, sleepers wake only ravenous; malnutrition at 0 % rises 1.51-2.27 %/h (rolled per pawn), recedes when fed, five stages with consciousness and hunger offsets, stops wound healing, kills at 100 %; `PawnView.Malnutrition`; FOOD-6: immunity gain x0.9 ravenous, x0.7 malnourished; wiki hunger formula, offsets (gut worms, malnutrition, stoned on the ashleaf stand-in +30 %) add before the gourmand multiplier; the wiki's -10/-40/-95 % is insect-only hypothermic slowdown, not modelled)
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
@@ -685,10 +685,10 @@ This is the heart of autonomous colony behavior.
     -   Ingredient filters.
     -   nutrition conversion.
     -   work amount.
--   [x] **Food poisoning** (FOOD-4: wiki room-cleanliness and cook-skill rolls, a poisoned batch poisons all of it, fed patients roll too; missing: synth stomach halving; MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
+-   [x] **Food poisoning** (FOOD-4: wiki room-cleanliness and cook-skill rolls, a poisoned batch poisons all of it, fed patients roll too; FOOD-6: wiki stage effects incl. blood filtration, an eating speed factor (`body.FoodPoisonEatSpeed`, read by the eat step), a synth stomach halves the chance; MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
     -   Chance influenced by cook skill and cleanliness/conditions.
     -   Health effect and mood consequences.
--   [x] **Butchering** (FOOD-3: body-size formula by age, missing parts and damage, species-named meat, insect and human meat, rotten corpses give leather)
+-   [x] **Butchering** (FOOD-3: body-size formula by age, missing parts and damage, species-named meat, insect and human meat, rotten corpses give leather; FOOD-6: 450 ticks of work, the butcher spot yields 70 %, default bills butcher animals only)
     -   Corpse -\> meat + leather/other products.
     -   Yield affected by species and skill/stat.
 
@@ -1036,7 +1036,7 @@ treatment, and surgery are major colony-management systems.
     -   symptoms/stat modifiers.
     -   tendable conditions.
     -   immunity where appropriate.
--   [-] **Representative vanilla disease classes** (MED-04: flu, plague, malaria, sleeping sickness, gut worms, muscle parasites at wiki rates; no food poisoning or toxic buildup yet)
+-   [-] **Representative vanilla disease classes** (MED-04: flu, plague, malaria, sleeping sickness, gut worms, muscle parasites at wiki rates; food poisoning (FOOD-4) and toxic buildup (FOOD-6, `body/cond_toxic.go`) are conditions of their own)
     -   flu-like disease.
     -   plague-like severe disease.
     -   malaria-like tropical disease.
@@ -1165,11 +1165,11 @@ treatment, and surgery are major colony-management systems.
 
 -   [-] **Heat wave** (NG-1: colonies from the wizard with the Extreme weather setting on; +12 C for 2 to 4 days in summer, 6 % a day, 3-day cooldown; letter and top-strip chip)
 -   [-] **Cold snap** (NG-1: same, -14 C in winter)
--   [ ] **Eclipse**
+-   [x] **Eclipse** (FOOD-6: incident `eclipse`, wiki weight and 15-day cooldown, 0.75-1.25 days; sky light 0: crops outdoors stop, solar panels give 0; caution letter; WorldView.SkyEvent)
     -   Reduces sunlight and solar generation; affects crops.
 -   [x] **Solar flare** (PLAY-021: every net goes down for 3-8 h, generators idle; letters at start and end, a status chip)
     -   Temporarily disables relevant electrical devices.
--   [ ] **Toxic fallout**
+-   [x] **Toxic fallout** (FOOD-6: incident `toxic_fallout`, from day 60, 90-day cooldown, 2.5-10.5 days; open-sky plants die (57.5 damage an hour), unroofed pawns gain toxic buildup 40 %/day and animals 20 %, with wiki stages, vomiting, dementia and carcinoma; roofs shelter; -5 thought outdoors; a body dying with buildup rots at once with a chance equal to its severity)
     -   Outdoor exposure builds toxic condition; damages/kills plants
         over time.
 -   [ ] **Flashstorm**
@@ -1305,7 +1305,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 15.3 Variable generation
 
--   [-] **Solar day/weather output** (PLAY-021: follows daylight and roofs; PLAY-022: weather dims it (shared sun factor with the renderer: cloudy 70 %, rain 45 %, storm 35 %, snow 40 %, blizzard 25 %); eclipses not yet)
+-   [-] **Solar day/weather output** (PLAY-021: follows daylight and roofs; PLAY-022: weather dims it (shared sun factor with the renderer: cloudy 70 %, rain 45 %, storm 35 %, snow 40 %, blizzard 25 %); FOOD-6: an eclipse stops it)
 -   [x] **Wind turbine output** (PLAY-021: wind speed times the clear share of a band beside it; walls, rock, roofs and trees block)
     -   Wind state and obstruction rules.
 -   [x] **Fuel consumption** (PLAY-021: one fuel table for campfires, torch lamps and wood-fired generators, refuelled by haulers; a generator burns only while running)
@@ -1540,7 +1540,7 @@ children systems.
 
 ## 18.8 Reproduction
 
--   [x] **Mating/pregnancy** (SIM-026: daily 35% mating check, pregnancy and litters, ageing, juveniles follow the mother, old-age death)
+-   [x] **Mating/pregnancy** (SIM-026: daily 35% mating check, pregnancy and litters, ageing, juveniles follow the mother, old-age death; FOOD-6: wiki gestation, litter range, juvenile and maturity ages and life expectancy per species, `animal/breeding.go`)
 -   [x] **Birth/hatching** (SIM-026: litters, tame young named, fertile eggs hatch)
 -   [-] **Population control policies if included in target vanilla
     version** (SIM-025: per-biome carrying capacity with arrivals/departures and predator cap; no player policy; slaughter/hunt only)
@@ -2012,10 +2012,10 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Disease outbreak** (MED-04: six Nature incidents from day 15, biome-gated (malaria warm, sleeping sickness tropical), weights scaled by Disease frequency (0 = none), one or several victims, caution letter)
 -   [x] **Blight** (FOOD-2: incident `crop_blight`, domesticated crops under 15 grow days, 4-tile spread, cut to clear; a Cut all blight command is FOOD-5)
     -   Crop disease spreads/destroys plants.
--   [ ] **Toxic fallout**
+-   [x] **Toxic fallout** (FOOD-6: see 12.6)
 -   [-] **Heat wave** (NG-1: see 12.6; fired by the day rollover, not the storyteller schedule)
 -   [-] **Cold snap** (NG-1: see 12.6)
--   [ ] **Eclipse**
+-   [x] **Eclipse** (FOOD-6: see 12.6)
 -   [x] **Solar flare** (PLAY-021: every net goes down for 3-8 h, generators idle; letters at start and end, a status chip)
 -   [ ] **Flashstorm**
 -   [ ] **Dry thunderstorm**

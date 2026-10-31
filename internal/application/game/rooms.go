@@ -234,6 +234,9 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	if v, _ := g.vital.Get(id); v.Status != health.Dead && g.unburiedNear(pos) {
 		states = append(states, mood.UnburiedCorpse)
 	}
+	if g.incidents.Fallout(uint64(g.clock.Now())) && !g.roofAt(pos.X, pos.Y).Roofed() { // FOOD-6, wiki: Toxic fallout
+		states = append(states, mood.ToxicFallout)
+	}
 	ts := g.traitThoughts(id, mood.AppendActive(dst, g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
 	ts = append(ts, g.bodyThoughts(id)...)                                                                    // body.go
 	ts = append(ts, g.drugThoughts(id)...)                                                                    // drugs.go

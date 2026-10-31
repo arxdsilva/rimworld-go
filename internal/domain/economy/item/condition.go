@@ -143,9 +143,9 @@ func StageOf(hp, maxHP int) Stage {
 // DeteriorationPerDay is original tuning. Worn apparel instead loses one
 // hit point on WornWearChance permille of days (wiki: Apparel).
 const (
-	DeteriorationPerDay = 2000 // milli-HP per day outdoors, dry, Normal quality
-	RainFactor          = 5
-	WetFactor           = 3
+	DeteriorationPerDay = 2000 // milli-HP per day outdoors, dry, Normal quality (original tuning)
+	RainFactor          = 5    // wiki: Deterioration, "being in rain (x5)"
+	WetFactor           = 3    // wiki: Deterioration, "x3 on marsh or any water tile"
 	WornWearChance      = 400
 )
 

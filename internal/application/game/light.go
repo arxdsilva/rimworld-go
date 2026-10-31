@@ -125,7 +125,15 @@ func (g *Game) rainDouses() bool {
 // cellLight is the simulation's light on (x, y): daylight on unroofed
 // cells, the brightest artificial light anywhere.
 func (g *Game) cellLight(x, y int) lighting.Level {
-	return lighting.Cell(lighting.Outdoor(g.clock.Now()), g.roofAt(x, y).Roofed(), g.artificialLight(x, y))
+	return lighting.Cell(skyLight(g), g.roofAt(x, y).Roofed(), g.artificialLight(x, y))
+}
+
+// skyLight is the daylight now, none in an eclipse (FOOD-6, wiki: Eclipse).
+func skyLight(g *Game) lighting.Level {
+	if g.incidents.Eclipsed(uint64(g.clock.Now())) {
+		return 0
+	}
+	return lighting.Outdoor(g.clock.Now())
 }
 
 // cellLightPermil is cellLight in permille (rounded), for the plant rules.

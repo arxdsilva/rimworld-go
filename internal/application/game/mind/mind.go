@@ -26,6 +26,11 @@ const (
 	repathTicks = 60
 	// checkStagger spreads the hourly break checks over the hour.
 	checkStagger = 977
+	// BingeGap: a food binger sits down to eat at most once an hour
+	// (FOOD-6). The wiki's Food binge gives the break's length (25 000 to
+	// 45 000 ticks) but no eating rate: original tuning, so a whole binge
+	// eats roughly 6 to 16 sittings, never an unbounded stream.
+	BingeGap = clock.TicksPerHour
 )
 
 // Track is what mind keeps about one break: whom it is aimed at (the

@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/social"
 	"slices"
 
@@ -75,6 +76,7 @@ func (g *Game) spawnCorpse(id entity.EntityID) {
 	cid := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, cid)
 	g.mergeOrSet(cid, item.Stack{Kind: item.CorpseHuman, Qty: 1, X: pos.X, Y: pos.Y, Of: id, DiedAt: uint64(g.clock.Now())})
+	toxicRot(g, cid, body.ToxicBuildup(g.bodies[id])) // incidents.go (FOOD-6)
 }
 
 // bodyOf is the corpse (or bones) of pawn of.

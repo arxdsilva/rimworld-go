@@ -1,13 +1,13 @@
 package game
 
 import (
-	"fmt"
 	"rimworld-go/internal/application/game/herd"
 	"strings"
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -139,7 +139,7 @@ func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
 	g.logEvent(id, logEntry{Kind: logOldAge})
 	g.endMating(id, a)
 	g.removeAnimal(id)
-	g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, animal.CorpseYieldOf(*a, now, true)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
+	toxicRot(g, g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, animal.CorpseYieldOf(*a, now, true)), body.ToxicBuildup(a.Body)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
 	if animal.DefOf(a.Species).Explosive {
 		g.burst(a.Species, pos)
 	}
@@ -297,9 +297,9 @@ func (g *Game) giveBirth(id entity.EntityID, a *animal.State, now uint64) {
 	if born == 0 {
 		return
 	}
-	g.logEvent(id, logEntry{Kind: logGaveBirth, Amount: born, Name: youngName(a.Species, born)})
+	g.logEvent(id, logEntry{Kind: logGaveBirth, Amount: born, Name: animal.YoungName(a.Species, born)})
 	if a.Tame {
-		g.message(pos.X, pos.Y, "%s gave birth to %s.", a.Name, youngPhrase(a.Species, born))
+		g.message(pos.X, pos.Y, "%s gave birth to %s.", a.Name, animal.YoungPhrase(a.Species, born))
 	}
 }
 
@@ -331,37 +331,6 @@ func (g *Game) birthSpot(x, y int) (int, int, bool) {
 		}
 	}
 	return x, y, g.grid.Walkable(x, y)
-}
-
-// youngName is n young of s for a log line ("2 goat kids").
-func youngName(s animal.Species, n int) string {
-	w := animal.YoungWord(s)
-	if n != 1 {
-		w = pluralYoung(w)
-	}
-	return s.Label() + " " + w
-}
-
-// youngPhrase is n young of s in a sentence ("a goat kid", "2 goat
-// kids").
-func youngPhrase(s animal.Species, n int) string {
-	if n != 1 {
-		return fmt.Sprintf("%d %s", n, youngName(s, n))
-	}
-	if strings.ContainsRune("aeiou", rune(s.Label()[0])) {
-		return "an " + youngName(s, 1)
-	}
-	return "a " + youngName(s, 1)
-}
-
-func pluralYoung(w string) string {
-	switch {
-	case w == "young":
-		return w
-	case strings.HasSuffix(w, "calf"):
-		return w[:len(w)-1] + "ves"
-	}
-	return w + "s"
 }
 
 // --- eggs -------------------------------------------------------------------
@@ -502,10 +471,10 @@ func (g *Game) hatch(id entity.EntityID, st item.Stack) {
 		return
 	}
 	if n == 1 {
-		g.message(st.X, st.Y, "%s hatched.", capitalise(youngPhrase(s, 1)))
+		g.message(st.X, st.Y, "%s hatched.", capitalise(animal.YoungPhrase(s, 1)))
 		return
 	}
-	g.message(st.X, st.Y, "%s hatched.", youngPhrase(s, n))
+	g.message(st.X, st.Y, "%s hatched.", animal.YoungPhrase(s, n))
 }
 
 // wildHerdNear is the herd of the nearest wild grown animal of s within
@@ -547,6 +516,7 @@ func (g *Game) fillAnimalLife(av *AnimalView, a animal.State, now uint64) {
 	}
 	w := animal.Wildness(a.Species) // FOOD-3: revenge, wildness, handling (wiki)
 	av.Revenge, av.Wildness, av.MinHandling = g.revengePct(animal.DefOf(a.Species).Revenge), w/10, animal.MinHandling(w)
+	av.ToxicBuildup = int(body.ToxicBuildup(a.Body)) / 10 // FOOD-6
 	if animal.Produces(a.Species, a.Female, av.Adult) {
 		av.Product = animal.EcologyOf(a.Species).Product.String()
 		av.ProductPct = a.Product * 100 / animal.ProductFull

@@ -228,21 +228,23 @@ func Weight(s Species, b biome.ID) int {
 	return sizeWeight[r.Size] * behaviourWeight[r.Behaviour] * fit / 10000
 }
 
-// Life is a species' life numbers by size (our own).
+// Life is a species' life numbers: the size defaults below (our own),
+// overridden by the species' published row (breeding.go, FOOD-6).
 type Life struct {
+	JuvenileDays         int // the baby stage ends (FOOD-6)
 	AdultDays, LifeDays  int
-	GestDays             int
+	GestCenti            int // gestation, hundredths of a day (0: lays eggs)
 	LitterMin, LitterMax int
 	ProductDays          int // days to fill the product once
 	ProductYield         int // items per collection
 }
 
 var lifeBySize = [...]Life{
-	SizeXS: {AdultDays: 6, LifeDays: 120, GestDays: 5, LitterMin: 1, LitterMax: 4},
-	SizeS:  {AdultDays: 10, LifeDays: 240, GestDays: 8, LitterMin: 1, LitterMax: 3},
-	SizeM:  {AdultDays: 18, LifeDays: 480, GestDays: 14, LitterMin: 1, LitterMax: 2},
-	SizeL:  {AdultDays: 25, LifeDays: 720, GestDays: 20, LitterMin: 1, LitterMax: 1},
-	SizeXL: {AdultDays: 30, LifeDays: 900, GestDays: 25, LitterMin: 1, LitterMax: 1},
+	SizeXS: {AdultDays: 6, LifeDays: 120, GestCenti: 500, LitterMin: 1, LitterMax: 4},
+	SizeS:  {AdultDays: 10, LifeDays: 240, GestCenti: 800, LitterMin: 1, LitterMax: 3},
+	SizeM:  {AdultDays: 18, LifeDays: 480, GestCenti: 1400, LitterMin: 1, LitterMax: 2},
+	SizeL:  {AdultDays: 25, LifeDays: 720, GestCenti: 2000, LitterMin: 1, LitterMax: 1},
+	SizeXL: {AdultDays: 30, LifeDays: 900, GestCenti: 2500, LitterMin: 1, LitterMax: 1},
 }
 
 // Products: milk and wool per species from the wiki (husbandry.go
@@ -273,6 +275,8 @@ var lives = func() (out [numSpecies]Life) {
 // buildLife works s's life numbers out from its size, body and products.
 func buildLife(s Species) Life {
 	l := lifeBySize[RosterOf(s).Size]
+	l.JuvenileDays = l.AdultDays / 3
+	l = breedLife(s, l) // breeding.go (FOOD-6): the wiki's numbers
 	e := EcologyOf(s)
 	switch e.Product {
 	case Milk:

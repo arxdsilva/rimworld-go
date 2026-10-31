@@ -34,7 +34,7 @@ func (g *Game) rollFoodPoison(id entity.EntityID, st item.Stack) {
 	case st.Kind.Raw():
 		bp = diet.RawChance
 	}
-	if bp <= 0 || g.stream(streamMedical).IntN(10000) >= bp {
+	if bp = bp * int(body.FoodPoisonChance(g.bodies[id])) / 1000; bp <= 0 || g.stream(streamMedical).IntN(10000) >= bp { // a synth stomach halves it (FOOD-6)
 		return // a clean meal (or paste): the stream untouched
 	}
 	v, ok := g.vital.Get(id)

@@ -4,11 +4,11 @@ import (
 	"rimworld-go/internal/application/game/herd"
 	"slices"
 	"sort"
-	"strings"
 
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/explosion"
+	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -102,61 +102,12 @@ const (
 	legendaryChance  = 2
 )
 
-// Season weights in permille.
-const (
-	weightFavoured = 3000
-	weightNormal   = 1000
-	weightShunned  = 300
-	weightAnyHab   = 600
-)
-
-// habitatWeight is how welcome one habitat is in season.
-func habitatWeight(h animal.Habitat, season string) int {
-	switch h {
-	case animal.HabCold:
-		switch season {
-		case "Winter":
-			return weightFavoured
-		case "Summer":
-			return weightShunned
-		}
-	case animal.HabHot:
-		switch season {
-		case "Summer":
-			return weightFavoured
-		case "Winter":
-			return weightShunned
-		}
-	}
-	return weightNormal
-}
-
-// seasonWeight is how much season favours species s (permille): the mean
-// over its habitats, an any-climate species at 0.6.
-func seasonWeight(s animal.Species, season string) int {
-	r := animal.RosterOf(s)
-	if r.Habitat == animal.HabAny {
-		return weightAnyHab
-	}
-	w, n := 0, 0
-	for _, h := range []animal.Habitat{animal.HabTemperate, animal.HabCold, animal.HabHot} {
-		if r.Habitat&h != 0 {
-			w += habitatWeight(h, season)
-			n++
-		}
-	}
-	if n == 0 {
-		return weightNormal
-	}
-	return w / n
-}
-
 // wildWeight is species s's chance to be drawn as a wild herd in biome b
 // in season: how common it is there (animal.Weight; 0 for domestic, pet,
 // event and hive animals and for species of other biomes) times the
 // season's welcome.
 func wildWeight(s animal.Species, b biome.ID, season string) int {
-	return animal.Weight(s, b) * seasonWeight(s, season)
+	return animal.Weight(s, b) * animal.SeasonWeight(s, season)
 }
 
 // pickSpecies draws one species of the map's biome passing keep, weighted
@@ -412,16 +363,8 @@ func (g *Game) rallyLegendaries(id entity.EntityID, who entity.EntityID, now uin
 	})
 }
 
-func chebyshev(a, b Position) int {
-	dx, dy := a.X-b.X, a.Y-b.Y
-	if dx < 0 {
-		dx = -dx
-	}
-	if dy < 0 {
-		dy = -dy
-	}
-	return max(dx, dy)
-}
+// chebyshev is the king-move distance between a and b.
+func chebyshev(a, b Position) int { return weapon.Distance(a.X, a.Y, b.X, b.Y) }
 
 // burst: an explosive animal dying at pos hurts every creature within 1.5
 // tiles (15 beside it, 10 diagonally) and leaves a stamp for the renderer;
@@ -542,25 +485,4 @@ func (g *Game) afterLoadAnimals() {
 		}
 	}
 	g.craft.Bills.UpgradeLegacy() // craft/bills.go
-}
-
-// pluralLabel is a species' plural display name ("timber wolves").
-func pluralLabel(s animal.Species) string {
-	l := s.Label()
-	switch {
-	case strings.HasSuffix(l, "wolf"):
-		return l[:len(l)-1] + "ves"
-	case strings.HasSuffix(l, "goose"):
-		return l[:len(l)-4] + "eese"
-	case strings.HasSuffix(l, "x"), strings.HasSuffix(l, "ch"):
-		return l + "es"
-	case strings.HasSuffix(l, "deer"), strings.HasSuffix(l, "sheep"), strings.HasSuffix(l, "bison"),
-		strings.HasSuffix(l, "elk"), strings.HasSuffix(l, "caribou"):
-		return l
-	case strings.HasSuffix(l, "y") && !strings.HasSuffix(l, "ey") && !strings.HasSuffix(l, "ay"):
-		return l[:len(l)-1] + "ies"
-	case strings.HasSuffix(l, "s"):
-		return l + "es"
-	}
-	return l + "s"
 }

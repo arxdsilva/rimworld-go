@@ -399,7 +399,11 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 	}
 	title := QualifiedTitle(ItemTitle(it), it.Stuff, it.Quality)
 	lines = append(ItemFactLines(it), lines...)
-	return Spec{Title: title, Subtitle: ItemCategory(it), Lines: lines, Close: "item.close"}
+	var bars []Bar
+	if b, ok := RotBar(it); ok { // FOOD-5: how much shelf life is left
+		bars = append(bars, b)
+	}
+	return Spec{Title: title, Subtitle: ItemCategory(it), Bars: bars, Lines: lines, Close: "item.close"}
 }
 
 // itemRotLine is how fast a spoiling stack rots where it lies: "" at the

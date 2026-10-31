@@ -18,4 +18,4 @@ Wave 2 of the FOOD programme. Read-only views and typed commands only; no domain
 ## Open
 - A rot progress bar (rot shows as "Fresh for N days").
 - No search or food-category explanation in the policy editor; no per-zone yield estimate; no numbers on the zone pane's crop list; no overlay HUD button.
-- Real-game proof (a colony feeding itself through a year) was not run.
+- Real-game proof: FOOD-6 added `scenario/year_test.go` (60 days, not a full year); see `FOOD-6-close-out.md`.

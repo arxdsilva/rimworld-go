@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -60,8 +61,9 @@ type AnimalView struct {
 	HitFromX, HitFromY int
 	HitDamage          int
 	// Log (LOG-001) is what happened to the animal, newest first.
-	Log        []LogLineView
-	FoodPolicy string // FOOD-0 contract ("" until FOOD-4): the tame animal's food policy
+	Log          []LogLineView
+	FoodPolicy   string // FOOD-0 contract ("" until FOOD-4): the tame animal's food policy
+	ToxicBuildup int    // FOOD-6: toxic buildup percent (body/cond_toxic.go)
 	// FOOD-3 (wiki): the percent chance a wild one turns on whoever hurts
 	// it (the difficulty's), its wildness percent and the Animals level a
 	// handler needs to tame it.
@@ -784,7 +786,8 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
 	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony, animal.CorpseYieldOf(a, uint64(g.clock.Now()), g.herdOf().Careful(id)))
-	g.herdOf().Killed(by, id, corpse) // game/herd (FOOD-3): a hunter carries its kill to storage
+	toxicRot(g, corpse, body.ToxicBuildup(a.Body)) // incidents.go (FOOD-6)
+	g.herdOf().Killed(by, id, corpse)              // game/herd (FOOD-3): a hunter carries its kill to storage
 	k, ok := g.animals.Get(by)
 	if ok && !animal.IsMech(a.Species) && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) { // a wreck is no meal
 		if k.Tame && k.HuntSince != 0 { // a quiet line: the colony's hunter fed itself

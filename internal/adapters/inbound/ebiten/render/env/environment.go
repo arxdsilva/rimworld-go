@@ -991,9 +991,36 @@ func (e *Sky) DrawWeather(v *render.View, screen *ebiten.Image, w game.WorldView
 	if fog.A > 0 {
 		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), fog, false)
 	}
+	if sky := SkyEventVeil(w, uint64(v.Tick)); sky.A > 0 {
+		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), sky, false)
+	}
 	if len(e.Drops) > 0 {
 		e.drawDrops(v, screen, sw, sh, tile)
 	}
+}
+
+// skyFadeTicks is how long before an event ends its tint fades out.
+const skyFadeTicks = 600
+
+// SkyEventVeil is the full-screen tint of the sky event in progress
+// (WorldView.SkyEvent): a dim blue-black for an eclipse, a sickly green
+// for toxic fallout, premultiplied; transparent with none. It fades out
+// over the last skyFadeTicks of the event. Procedural: no sprite.
+func SkyEventVeil(w game.WorldView, now uint64) color.RGBA {
+	var r, g, b uint8
+	var a float64
+	switch w.SkyEvent {
+	case "eclipse":
+		r, g, b, a = 10, 12, 30, 0.50
+	case "toxic fallout":
+		r, g, b, a = 96, 128, 36, 0.30
+	default:
+		return color.RGBA{}
+	}
+	if w.SkyEventEnds > now && w.SkyEventEnds-now < skyFadeTicks {
+		a *= float64(w.SkyEventEnds-now) / skyFadeTicks
+	}
+	return color.RGBA{uint8(float64(r) * a), uint8(float64(g) * a), uint8(float64(b) * a), uint8(255 * a)}
 }
 
 // maxFlashReduced caps the lightning flash with Reduced flashing on.

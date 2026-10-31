@@ -250,6 +250,21 @@ func (s *State) Protected(now uint64) bool {
 	return false
 }
 
+// Stoned reports the high of ashleaf tea, the smokeleaf stand-in (the
+// ashleaf plant stands in for smokeleaf), still acting at tick now: the
+// hunger rate rises (needs.StonedHunger, wiki: Saturation). FOOD-6.
+func (s *State) Stoned(now uint64) bool {
+	if s == nil {
+		return false
+	}
+	for _, h := range s.Highs {
+		if h.Drug == item.AshleafTea && h.Until > now {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *State) addiction(k item.Kind) *Addiction {
 	for i := range s.Addictions {
 		if s.Addictions[i].Drug == k {

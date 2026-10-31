@@ -2,6 +2,8 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
 	"slices"
 	"strings"
 
@@ -194,4 +196,24 @@ func IngredientsLine(it game.ItemView) string {
 		return ""
 	}
 	return "Made with: " + strings.Join(seen, ", ")
+}
+
+// RotBar is the freshness bar of a spoiling stack: the share of its shelf
+// life left (the days it keeps over the kind's full shelf days), green
+// while fresh and red near spoiling. ok is false for what never spoils, is
+// dried, rotten or carried.
+func RotBar(it game.ItemView) (Bar, bool) {
+	if it.FreshDays < 0 || it.Rotten || it.Dried || it.Carried {
+		return Bar{}, false
+	}
+	total := it.FreshDays
+	if k, ok := item.ParseKind(it.Kind); ok {
+		total = max(total, float64(k.ShelfTicks())/float64(clock.TicksPerDay))
+	}
+	pct := 100
+	if total > 0 {
+		pct = int(it.FreshDays / total * 100)
+	}
+	pct = max(0, min(100, pct))
+	return Bar{Label: "Freshness", Pct: pct, Color: HealthColor(pct)}, true
 }

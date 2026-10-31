@@ -2,12 +2,16 @@ package game
 
 import (
 	"fmt"
+	"slices"
 
 	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/incident"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
@@ -183,6 +187,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 	case incident.CropBlight: // farm (FOOD-2): a healthy zone crop to strike
 		_, ok := farm.Origin(plantField{g}, now)
 		return ok
+	case incident.Eclipse, incident.ToxicFallout: // FOOD-6: one of each at a time (StartSky)
+		return true
 	}
 	return false
 }
@@ -225,6 +231,15 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		o, n, ok := farm.Strike(plantField{g}, now)
 		g.threat("Blight", o.X, o.Y, "Blight has struck the %s (%d plants). Cut the blighted plants before it spreads.", farm.CropField(o.Species), n)
 		return ok
+	case incident.Eclipse, incident.ToxicFallout: // FOOD-6 (incident/sky.go)
+		ticks := incident.SkyTicks(id, g.rng.IntN(incident.SkySpan(id)+1))
+		if !g.incidents.StartSky(id, now, ticks) {
+			return false
+		}
+		hx, hy := g.home()
+		title, text := incident.SkyLetter(id, ticks)
+		g.post(MessageView{Tick: now, X: hx, Y: hy, Letter: true, Title: title, Kind: letterCaution, Text: text})
+		return true
 	}
 	return false
 }
@@ -252,30 +267,13 @@ func (g *Game) notice(x, y int, focus entity.EntityID, format string, args ...an
 
 // --- climate fit and species -----------------------------------------------
 
-// Bands of a biome's yearly mean (tenths of a degree C) for climate fit.
-const (
-	coldMeanMax = 20  // at or below: a cold land
-	hotMeanMin  = 200 // at or above: a hot land
-)
-
-// climateBand is the habitat a yearly mean temperature calls for.
-func climateBand(mean int) animal.Habitat {
-	switch {
-	case mean <= coldMeanMax:
-		return animal.HabCold
-	case mean >= hotMeanMin:
-		return animal.HabHot
-	}
-	return animal.HabTemperate
-}
-
 // climateFit: species s can live in the map's biome: it lives wild there,
 // or its habitat suits the biome's climate (domestic and pet species).
 func (g *Game) climateFit(s animal.Species) bool {
 	if animal.Weight(s, g.biome) > 0 {
 		return true
 	}
-	return animal.RosterOf(s).Habitat&climateBand(biome.DefOf(g.biome).Climate.YearMean) != 0
+	return animal.RosterOf(s).Habitat&animal.ClimateBand(biome.DefOf(g.biome).Climate.YearMean) != 0
 }
 
 // fitting is the climate-fit species of list.
@@ -357,7 +355,7 @@ func (g *Game) herdCrossing() bool {
 		g.startLeaving(id, bx, by)
 		g.logEvent(id, logEntry{Kind: logLeaving})
 	}
-	g.notice(ax, ay, ids[0], "A herd of %d %s is crossing the land.", len(ids), pluralLabel(s))
+	g.notice(ax, ay, ids[0], "A herd of %d %s is crossing the land.", len(ids), animal.Plural(s))
 	return true
 }
 
@@ -455,7 +453,7 @@ func (g *Game) farmAnimals() bool {
 	case 1:
 		g.notice(x, y, ids[0], "A %s has wandered in and stayed.", s.Label())
 	default:
-		g.notice(x, y, ids[0], "%d %s have wandered in and stayed.", len(ids), pluralLabel(s))
+		g.notice(x, y, ids[0], "%d %s have wandered in and stayed.", len(ids), animal.Plural(s))
 	}
 	return true
 }
@@ -554,7 +552,7 @@ func (g *Game) trackGnaw(now uint64) {
 	ids, chew := gw.IDs[:0], gw.Chew[:0]
 	for i, id := range gw.IDs {
 		if pid := gw.Chew[i]; pid != 0 {
-			if _, stands := g.plants.Get(pid); !stands && !containsID(counted, pid) {
+			if _, stands := g.plants.Get(pid); !stands && !slices.Contains(counted, pid) {
 				counted = append(counted, pid)
 				gw.Felled++
 			}
@@ -636,15 +634,6 @@ func (g *Game) Timbergnaws() (count, felled int) {
 	return count, g.wl.Gnaw.Felled
 }
 
-func containsID(ids []entity.EntityID, id entity.EntityID) bool {
-	for _, o := range ids {
-		if o == id {
-			return true
-		}
-	}
-	return false
-}
-
 // madCandidates are the wild animals near home that may go mad, in id
 // order.
 func (g *Game) madCandidates(now uint64) []entity.EntityID {
@@ -682,4 +671,86 @@ func (g *Game) madAnimal(now uint64, force bool) bool {
 	g.animals.Set(id, a)
 	g.incidents.Fired(incident.MadAnimal, g.rel(now))
 	return true
+}
+
+// stepToxic is an hour of toxic buildup (FOOD-6, body/cond_toxic.go): in
+// toxic fallout every pawn and animal under the open sky gains it (an
+// animal at half the rate, hive insects and machines never), and it
+// recedes on everyone sheltered. Animals are walked only while the
+// fallout lasts; after it the poisoned ones are animal patients.
+func stepToxic(g *Game, now uint64) {
+	fallout, h, roll := g.incidents.Fallout(now), now/clock.TicksPerHour, g.stream(streamMedical).IntN
+	var ids []entity.EntityID
+	g.need.All(func(id entity.EntityID, _ needs.Pair) {
+		if fallout || body.ToxicBuildup(g.bodies[id]) > 0 {
+			ids = append(ids, id)
+		}
+	})
+	for _, id := range ids {
+		v, ok := g.vital.Get(id)
+		pos, _ := g.positions.Get(id)
+		out := fallout && g.onMap(id) && !g.roofAt(pos.X, pos.Y).Roofed()
+		if !ok || v.Status == health.Dead || !out && body.ToxicBuildup(g.bodies[id]) == 0 {
+			continue
+		}
+		b := g.ensureBody(id, &v)
+		if b == nil {
+			continue
+		}
+		switch st := body.StepToxic(b, out, 0, h, roll); {
+		case st.Dead:
+			g.message(pos.X, pos.Y, "%s died of toxic buildup.", g.name(id))
+			g.dieMedical(id, health.CauseDisease) // caravan_medical.go
+			g.clearPatient(id)
+		default:
+			if st.Changed {
+				g.bodyChanged(id, b, &v) // body.go: stats follow, joins the patients
+				g.updateDowned(id, b, &v)
+			}
+			if st.Vomit && g.onMap(id) {
+				g.addDirt(pos.Y*g.grid.Width()+pos.X, vomitDirt) // filth.go
+			}
+			if st.Dementia {
+				g.developAging(id, body.CondDementia, int(body.Brain), now) // aging.go
+			}
+			if st.Carcinoma {
+				g.developAging(id, body.CondCarcinoma, -1, now)
+			}
+		}
+	}
+	ids = g.animalPatientIDs()
+	if fallout {
+		ids = g.animalIDs
+	}
+	for _, id := range slices.Clone(ids) { // a death touches the stores
+		a, ok := g.animals.Get(id)
+		pos, _ := g.positions.Get(id)
+		out := fallout && !g.roofAt(pos.X, pos.Y).Roofed()
+		if !ok || a.Dead() || animal.IsMech(a.Species) || animal.DefOf(a.Species).Hive || !out && body.ToxicBuildup(a.Body) == 0 {
+			continue
+		}
+		if a.Body == nil {
+			a.Body = newAnimalBody(a.Species) // animal_health.go
+		}
+		if body.StepToxic(a.Body, out, body.ToxicResistAnimal, h, roll).Dead {
+			g.animalMedicalDeath(id, &a)
+			continue
+		}
+		reconcileAnimalBody(&a)
+		g.checkAnimalDowned(id, &a, now)
+		g.animals.Set(id, a)
+		if a.Body != nil {
+			g.markAnimalPatient(id)
+		}
+	}
+}
+
+// toxicRot rots a body that died with toxic buildup sev (permille) at
+// once, with a chance equal to sev (FOOD-6, wiki: Toxic buildup, Toxic
+// fallout). A carcass merged into others on its tile is left alone.
+func toxicRot(g *Game, corpse entity.EntityID, sev int32) {
+	if st, ok := g.stacks.Get(corpse); ok && st.Qty == 1 && sev > 0 && int32(g.stream(streamMedical).IntN(1000)) < sev {
+		st.Rot = st.Shelf()
+		g.stacks.Set(corpse, st)
+	}
 }

@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -185,7 +186,7 @@ func TestActionProgress(t *testing.T) {
 	}
 	totals := map[string]int{
 		"cut": plant.DefOf(plant.BerryBush).CutWork, "harvest": plant.DefOf(plant.BerryBush).HarvestWork, "mine": MineWork, "sow": SowWork, "research": researchSession,
-		"tend": TendWork, "tame": animal.TameWork, "construct": fr.WorkLeft, "bill": recipe.DefOf(recipe.Club).Work, "eat": 20,
+		"tend": TendWork, "tame": animal.TameWork, "construct": fr.WorkLeft, "bill": recipe.DefOf(recipe.Club).Work, "eat": needs.EatWorkTicks,
 	}
 	for _, c := range cases {
 		c.j.State = job.Do

@@ -118,8 +118,9 @@ func FertileEgg(s Species, mated int) bool {
 // the wiki interval of its species, phase by id).
 func LaysToday(s Species, id uint64, day int) bool { return EggsToday(s, id, day) > 0 }
 
-// GestTicks is a live bearer's pregnancy.
-func GestTicks(s Species) uint64 { return uint64(LifeOf(s).GestDays) * clock.TicksPerDay }
+// GestTicks is a live bearer's pregnancy (wiki: the species' gestation
+// period; a layer's 0 never comes up, it lays eggs instead).
+func GestTicks(s Species) uint64 { return uint64(LifeOf(s).GestCenti) * clock.TicksPerDay / 100 }
 
 // awakeHours is how many hours a day every animal is up (SleepHours
 // sleeps the other 8).

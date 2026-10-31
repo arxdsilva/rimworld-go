@@ -18,7 +18,7 @@ func TestColonistCarriesMealToTable(t *testing.T) {
 	placeBuilt(t, g, construction.Chair, construction.South, 12, 6)
 	g.SetNeeds(id, needs.CriticalHunger-1, needs.Full)
 	ate := false
-	for i := 0; i < 400 && !ate; i++ {
+	for i := 0; i < 400+needs.EatWorkTicks && !ate; i++ {
 		g.Step(1)
 		_, ate = g.lastMeal[id]
 	}

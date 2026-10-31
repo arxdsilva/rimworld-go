@@ -18,8 +18,8 @@ func TestAnimalDailyNeed(t *testing.T) {
 	if a := perDay(Alpaca); a < 4350 || a > 4450 {
 		t.Fatalf("alpaca eats %d a day, want about 4400", a)
 	}
-	a := LifeOf(Cow).AdultDays
-	if AgeHunger(Cow, 0) != 400 || AgeHunger(Cow, a/2) != 750 || AgeHunger(Cow, a) != 1000 {
+	j, a := LifeOf(Cow).JuvenileDays, LifeOf(Cow).AdultDays
+	if AgeHunger(Cow, j-1) != 400 || AgeHunger(Cow, j) != 750 || AgeHunger(Cow, a) != 1000 {
 		t.Fatal("life-stage hunger: baby 40 %, juvenile 75 %, adult 100 %")
 	}
 }

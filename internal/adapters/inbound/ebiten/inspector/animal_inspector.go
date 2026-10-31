@@ -482,6 +482,9 @@ func (a Animal) animalCareCmd(an game.AnimalView) Button {
 // line.
 func AnimalFoodLines(an game.AnimalView) []string {
 	var out []string
+	if an.ToxicBuildup > 0 { // FOOD-6: toxic fallout
+		out = append(out, fmt.Sprintf("Toxic buildup %d%%", an.ToxicBuildup))
+	}
 	if an.Tame && an.FoodPolicy != "" {
 		out = append(out, "Food policy: "+an.FoodPolicy)
 	}

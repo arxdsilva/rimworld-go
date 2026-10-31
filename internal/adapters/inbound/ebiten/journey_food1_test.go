@@ -363,8 +363,10 @@ func TestJourneyButcherYield(t *testing.T) {
 		t.Fatalf("no meat after butchering; items %+v", j.world().Items)
 	case !named:
 		t.Fatalf("the meat stack does not carry the cow (ItemView.Meat): %+v", fdItems(j, "meat"))
-	case meat < 150 || meat > 340:
-		t.Fatalf("a cow gave %d meat, want the wiki 336 scaled by butcher efficiency (75%% + 2.5%% a level) and age: about 150 to 340", meat)
+	case meat < 105 || meat > 340:
+		// FOOD-6: a butchering spot yields 70 % (wiki: Butcher spot), so the
+		// floor is the table's 150 x 0.7.
+		t.Fatalf("a cow gave %d meat, want the wiki 336 scaled by butcher efficiency (75%% + 2.5%% a level), age and the spot's 70 %%: about 105 to 340", meat)
 	}
 	t.Logf("cow meat yield %d", meat)
 }

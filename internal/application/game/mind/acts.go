@@ -16,9 +16,7 @@ func (m *Mind) act(id entity.EntityID, k mentalbreak.Kind, j job.Record, now, un
 			h.Wander(id, 200+h.Roll(300))
 		}
 	case mentalbreak.FoodBinge:
-		if !(j.Active() && j.Kind == job.Wander) && !h.Binge(id) {
-			h.Wander(id, 300) // nothing to eat: wanders, looks again after
-		}
+		m.binge(id, j, now)
 	case mentalbreak.HideInRoom:
 		if !(j.Active() && j.Kind == job.Hide) {
 			h.Hide(id, int(until-now))
@@ -36,6 +34,21 @@ func (m *Mind) act(id entity.EntityID, k mentalbreak.Kind, j job.Record, now, un
 			h.Down(id) // stood up early (a tend): it collapses again
 		}
 	}
+}
+
+// binge runs a food binge (FOOD-6): one sitting at a time, at most one
+// every BingeGap, strolling in between; with nothing to eat it wanders
+// and looks again after.
+func (m *Mind) binge(id entity.EntityID, j job.Record, now uint64) {
+	if j.Active() && j.Kind == job.Wander {
+		return
+	}
+	if t := m.track[id]; now >= t.Next && m.h.Binge(id) {
+		t.Next = now + BingeGap
+		m.track[id] = t
+		return
+	}
+	m.h.Wander(id, 300)
 }
 
 // wander keeps id strolling unless it already is.

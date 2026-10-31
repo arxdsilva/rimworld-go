@@ -6,14 +6,17 @@ import (
 )
 
 // Bench work speed (PRD-3, ENG-003). A bench works at its own factor
-// (wiki: Crafting spot 0.5, Butcher spot 0.7) plus its linked facilities
+// (wiki: Crafting spot 0.5; the butcher spot works at full speed, its
+// 70 % is yield: ButcherSpotYield) plus its linked facilities
 // and an electric twin's bonus, times the light at its work spot, the
 // air temperature there and its room's term.
 const (
-	// craftingSpotSpeed and butcherSpotSpeed are the spots' factors,
-	// permille (wiki: Crafting spot, Butcher spot).
+	// craftingSpotSpeed is the crafting spot's factor, permille (wiki:
+	// Crafting spot).
 	craftingSpotSpeed = 500
-	butcherSpotSpeed  = 700
+	// ButcherSpotYield is the butcher spot's meat and leather, permille of
+	// the table's (FOOD-6, wiki: Butcher spot: 70 % work efficiency).
+	ButcherSpotYield = 700
 	// darkLight is the light (permille) below which work slows, down to
 	// darkSpeed in full dark (wiki: Light: dark below 30 %, 0.8 at 0 %;
 	// the straight ramp between is ours).
@@ -71,8 +74,6 @@ func baseSpeed(k construction.Kind) int {
 	switch k {
 	case construction.CraftingSpot:
 		return craftingSpotSpeed
-	case construction.ButcherSpot:
-		return butcherSpotSpeed
 	}
 	return 1000
 }

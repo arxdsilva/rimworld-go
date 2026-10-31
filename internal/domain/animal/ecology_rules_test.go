@@ -95,7 +95,7 @@ func TestFeedValues(t *testing.T) {
 	if FeedValue(Herbivore, item.Berries) != item.Berries.Nutrition() || FeedValue(Carnivore, item.Berries) != 0 || !PlantFeed(item.Corn) || PlantFeed(item.Meat) {
 		t.Error("raw plant food feeds plant eaters")
 	}
-	if CarcassFood(Deer) < item.Meat.Nutrition() || GestTicks(Deer) != uint64(LifeOf(Deer).GestDays)*clock.TicksPerDay {
+	if CarcassFood(Deer) < item.Meat.Nutrition() || GestTicks(Deer) != uint64(LifeOf(Deer).GestCenti)*clock.TicksPerDay/100 {
 		t.Error("a carcass is its meat; gestation is days")
 	}
 }

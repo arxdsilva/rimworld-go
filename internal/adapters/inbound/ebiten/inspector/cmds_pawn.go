@@ -260,6 +260,9 @@ func PawnStatusLines(p game.PawnView, name func(entity.EntityID) string) []strin
 	if p.Malnutrition > 0 { // FOOD-1
 		out = append(out, fmt.Sprintf("Malnutrition %d%%", p.Malnutrition))
 	}
+	if p.ToxicBuildup > 0 { // FOOD-6: toxic fallout
+		out = append(out, fmt.Sprintf("Toxic buildup %d%%", p.ToxicBuildup))
+	}
 	if p.Bleeding && p.Status != "dead" { // MED-01
 		out = append(out, fmt.Sprintf("Bleeding (death in %dh)", p.BleedDeathHours))
 	}

@@ -55,6 +55,9 @@ const (
 	// CondMalnutrition is starvation at 0 % food (FOOD-1,
 	// cond_malnutrition.go): the game steps it by the hour.
 	CondMalnutrition
+	// CondToxicBuildup is toxins from fallout under the open sky (FOOD-6,
+	// cond_toxic.go): the game steps it by the hour.
+	CondToxicBuildup
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -66,7 +69,7 @@ type CondEntry struct {
 }
 
 // condTables lists every phase's definition table (one line per phase).
-var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood, condsMalnutrition}
+var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood, condsMalnutrition, condsToxic}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)

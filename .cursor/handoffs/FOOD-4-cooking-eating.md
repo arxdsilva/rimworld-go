@@ -24,6 +24,6 @@ Wave 2 of the FOOD programme (ENG-003 extended to food). Two agents: C1 (cooking
 Shipped in FOOD-5 (see `FOOD-5-food-ui.md`).
 
 ## Open
-- Synth stomach poisoning halving; eating capacity.
+- Eating capacity (FOOD-6 closed the synth stomach halving).
 - Immunity effects of the Ravenous and Malnourished bands, smokeleaf and hypothermia hunger factors (carried over from FOOD-1).
-- Real-game proof not run: "a colony feeds itself through a year with farms, hydroponics and livestock" was not executed; only the unit and journey tests above ran.
+- Real-game proof: FOOD-6 added `scenario/year_test.go` (60 days, not a full year); see `FOOD-6-close-out.md`.

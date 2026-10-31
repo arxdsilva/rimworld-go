@@ -139,3 +139,17 @@ func TestSprout(t *testing.T) {
 		}
 	}
 }
+
+// TestSowLit (FOOD-6, wiki: Growing zone, Sun lamp): open sky always; a
+// roofed cell only within a sun lamp's 51 % reach, never a tree.
+func TestSowLit(t *testing.T) {
+	t.Parallel()
+	sees := func(_, _, _, _ int) bool { return true }
+	lamps := []Lamp{{X: 10, Y: 10}}
+	if !SowLit(false, true, nil, 0, 0, sees) || SowLit(true, false, nil, 0, 0, sees) {
+		t.Fatal("open sky sows, a dark roof does not")
+	}
+	if !SowLit(true, false, lamps, 12, 11, sees) || SowLit(true, true, lamps, 12, 11, sees) || SowLit(true, false, lamps, 18, 10, sees) {
+		t.Fatal("a crop near the lamp sows; a tree or a far cell does not")
+	}
+}

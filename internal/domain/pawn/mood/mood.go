@@ -124,6 +124,9 @@ const (
 	// meat among its ingredients (item.Stack.Ingredients).
 	AteHumanMeatCooked
 	AteInsectMeatCooked
+	// FOOD-6 (append only, saved): under the open sky in toxic fallout
+	// (a state thought).
+	ToxicFallout
 	numKinds
 )
 
@@ -270,6 +273,7 @@ var defs = [numKinds]Def{
 	Malnourished:        {"malnourished", -20, 0, groupNone, 0, 0},
 	AteHumanMeatCooked:  {"ate a meal of human flesh", -15, day, groupNone, 0, 0},
 	AteInsectMeatCooked: {"ate a meal with insect meat", -3, day, groupNone, 0, 0},
+	ToxicFallout:        {"outdoors in toxic fallout", -5, 0, groupNone, 0, 0}, // FOOD-6, wiki: Toxic fallout
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

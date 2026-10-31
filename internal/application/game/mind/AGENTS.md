@@ -19,7 +19,7 @@ Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds
 ## Public Contracts
 - `deps.go` (CBT-4 adds Smash (3)): `Host` embeds six roles, each ≤ 8 value-only methods: Pawns (8), Breaks (4), Acts (8), Aggression (6), Brawls (8), Events (4). The game implements them in `internal/application/game/mind_host.go`; none adds a method to `game.Game`.
 - The break record (kind, until) stays on the game (`g.breaks`, saved as `Breaks`), since dementia writes it too; mind's own state is the save's `Mind` field.
-- Numbers: thresholds 35/20/5, MTB 4/0.8/0.5 days, durations and weights come from `mentalbreak` (wiki, ENG-003 extended). `RetargetTicks`, `InsultGap`, `InsultRange`, `BerserkRadius` are original tuning.
+- Numbers: thresholds 35/20/5, MTB 4/0.8/0.5 days, durations and weights come from `mentalbreak` (wiki, ENG-003 extended). `RetargetTicks`, `InsultGap`, `InsultRange`, `BerserkRadius` and `BingeGap` (FOOD-6: a food binger sits down at most once an hour, one meal a sitting) are original tuning.
 
 ## Invariants
 - Every roll comes from `Host.Roll` (the game's social stream); no wall clock; no map iteration.

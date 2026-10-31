@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 func TestFoodPlantAndGrowLines(t *testing.T) {
@@ -56,5 +57,31 @@ func TestFoodReadouts(t *testing.T) {
 	}
 	if got := PawnFoodLines(game.PawnView{FoodPolicy: "Anything", LastMeal: "fine meal"}); len(got) != 2 {
 		t.Errorf("pawn lines %q", got)
+	}
+}
+
+func TestRotBar(t *testing.T) {
+	t.Parallel()
+	b, ok := RotBar(game.ItemView{Kind: "meal", FreshDays: 2}) // a meal keeps 4 days
+	if !ok || b.Pct != 50 || b.Label != "Freshness" {
+		t.Fatalf("bar %+v %v", b, ok)
+	}
+	if b, _ := RotBar(game.ItemView{Kind: "meal", FreshDays: 40}); b.Pct != 100 {
+		t.Errorf("never above full: %d", b.Pct)
+	}
+	for _, it := range []game.ItemView{{FreshDays: -1}, {FreshDays: 3, Rotten: true}, {FreshDays: 3, Dried: true}, {FreshDays: 3, Carried: true}} {
+		if _, ok := RotBar(it); ok {
+			t.Errorf("%+v has no bar", it)
+		}
+	}
+}
+
+func TestToxicBuildupLines(t *testing.T) {
+	t.Parallel()
+	if got := strings.Join(PawnStatusLines(game.PawnView{Status: "alive", ToxicBuildup: 35}, func(entity.EntityID) string { return "" }), "|"); !strings.Contains(got, "Toxic buildup 35%") {
+		t.Errorf("pawn lines %q", got)
+	}
+	if got := strings.Join(AnimalFoodLines(game.AnimalView{ToxicBuildup: 20}), "|"); got != "Toxic buildup 20%" {
+		t.Errorf("animal lines %q", got)
 	}
 }

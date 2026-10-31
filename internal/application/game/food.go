@@ -57,14 +57,14 @@ func (g *Game) sowable(x, y int) bool {
 }
 
 // sowableIgnoringPlant is sowable for a cell that may still hold a plant:
-// the season, soil, walkability and buildings allow sowing once the plant
-// is gone (assignZoneClear cuts only on such cells).
+// the season, soil, light, walkability and buildings allow sowing once the
+// plant is gone (assignZoneClear cuts only on such cells).
 func (g *Game) sowableIgnoringPlant(x, y int) bool {
 	if basin, _ := g.basinAt(x, y); basin { // FOOD-2: a hydroponic crop on any ground (wiki: Hydroponics basin)
 		z, in := g.zoneAt(x, y)
 		return in && plant.Hydroponic(plant.Species(z.Crop)) && g.growingSeason(x, y) && g.layerFrameAt(x, y, construction.LayerObject) == 0
 	}
-	if g.terr.At(x, y).Fertility() <= 0 || !g.grid.Walkable(x, y) || !g.growingSeason(x, y) {
+	if g.terr.At(x, y).Fertility() <= 0 || !g.grid.Walkable(x, y) || !g.growingSeason(x, y) || !sowLit(g, x, y) {
 		return false
 	}
 	return !g.occupiedAt(x, y) && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
@@ -324,7 +324,7 @@ func claimJobTarget(g *Game, id entity.EntityID, rec job.Record) bool {
 	case rec.Kind == job.Eat:
 		nd, _ := g.need.Get(id)
 		if n = portionsFor(nd.Hunger, *st); rec.Count == bingeEat {
-			n += 2 // a binge eats two past full
+			n = portionsFor(0, *st) // a binge eats a whole stomach (FOOD-6)
 		}
 	case rec.Kind == job.HaulIngredients && len(rec.Route) > 1:
 		n = int(rec.Route[1])

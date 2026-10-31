@@ -37,15 +37,13 @@ func EdibleCorpse(st item.Stack) bool {
 }
 
 // AgeHunger is the hunger rate (permille) of an animal of species s aged
-// days: a baby (the first third of growing up) 400, a juvenile 750, an
-// adult 1000. wiki: Saturation (life-stage factors; the stage split is
-// original tuning).
+// days: a baby 400, a juvenile 750, an adult 1000. wiki: Saturation
+// (life-stage factors); the stages are the species' (breeding.go).
 func AgeHunger(s Species, days int) int {
-	a := LifeOf(s).AdultDays
 	switch {
-	case days >= a:
+	case Adult(s, days):
 		return 1000
-	case days*3 < a:
+	case !Juvenile(s, days):
 		return 400
 	}
 	return 750

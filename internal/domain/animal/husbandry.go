@@ -72,9 +72,8 @@ const (
 	// starvation. A slaughter and death of old age are careful.
 	NotCareful = 660
 	// Life-stage body sizes, permille of the adult's (wiki: Animals): a
-	// baby bird 10 %, any other baby 20 %, a juvenile 50 %. The stage
-	// split (a baby for the first third of growing up) is FOOD-1's
-	// (AgeHunger).
+	// baby bird 10 %, any other baby 20 %, a juvenile 50 %. The stages
+	// are the species' juvenile and maturity ages (breeding.go).
 	babyBirdSize = 100
 	babySize     = 200
 	juvenileSize = 500
@@ -141,11 +140,10 @@ func CorpseYield(s Species, yield int) (meat, leather int) {
 // StageSize is the body size of an animal of s days old, permille of its
 // adult size (wiki: Animals).
 func StageSize(s Species, days int) int {
-	a := LifeOf(s).AdultDays
 	switch {
-	case days >= a:
+	case Adult(s, days):
 		return 1000
-	case days*3 >= a:
+	case Juvenile(s, days):
 		return juvenileSize
 	case RosterOf(s).Archetype == ArchBird:
 		return babyBirdSize

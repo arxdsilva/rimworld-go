@@ -1148,7 +1148,9 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		}
 		j.Count = 2 // no table in reach: eat right here
 	}
-	j.WorkLeft--
+	if s, now := uint64(body.FoodPoisonEatSpeed(g.bodies[id])), uint64(g.clock.Now()); (now+1)*s/1000 != now*s/1000 {
+		j.WorkLeft-- // food poisoning slows eating: work x1000/speed (wiki: Food poisoning)
+	}
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
@@ -1165,7 +1167,7 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 	n, _ := g.need.Get(id)
 	most := portionsFor(n.Hunger, st) // dining.go
 	if j.Count == bingeEat {
-		most += 2 // binge: stuffs itself well past full
+		most = portionsFor(0, st) // binge: a whole stomach whatever its fullness, the food's most per sitting (FOOD-6)
 	}
 	eat := min(most, st.Qty, g.reserve.FreeFor(id, j.Target, st.Qty)) // RES-1: not others' portions
 	st.Qty -= eat

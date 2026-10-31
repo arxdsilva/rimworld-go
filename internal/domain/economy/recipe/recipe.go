@@ -253,6 +253,9 @@ type Def struct {
 	Salvage bool
 }
 
+// butcherWork is butchering's work, ticks (wiki: Butcher table, 450).
+const butcherWork = 450
+
 var defs = [numRecipes]Def{
 	// wiki: Meals: a simple meal is 0.5 nutrition of raw food, 10 units.
 	SimpleMeal: {ID: SimpleMeal, Name: "simple_meal", Label: "Cook simple meal", Bench: construction.Stove,
@@ -261,13 +264,13 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Wood, Qty: 4, Stuff: item.MadeFrom(item.Club)}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft, Learn: skill.Crafting,
 		Also: spotAndSmithy},
 	ButcherDustbuck: {ID: ButcherDustbuck, Name: "butcher_dustbuck", Label: "Butcher dustbuck", Bench: construction.ButcherTable,
-		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
+		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: butcherWork, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, ExtraQty: 5, Legacy: true},
 	ButcherRidgewolf: {ID: ButcherRidgewolf, Name: "butcher_ridgewolf", Label: "Butcher ridgewolf", Bench: construction.ButcherTable,
-		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
+		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: butcherWork, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, ExtraQty: 4, Legacy: true},
 	ButcherAnimal: {ID: ButcherAnimal, Name: "butcher_animal", Label: "Butcher animal", Bench: construction.ButcherTable,
-		Input: Input{Kind: item.CorpseAnimal, Qty: 1}, Output: item.Meat, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
+		Input: Input{Kind: item.CorpseAnimal, Qty: 1}, Output: item.Meat, Work: butcherWork, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, BySpecies: true, Also: []construction.Kind{construction.ButcherSpot}},
 	// wiki: Simple meal: cooking over a campfire doubles the work (600).
 	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
@@ -433,7 +436,7 @@ var defs = [numRecipes]Def{
 	// FOOD-3: a human corpse into human meat (wiki: Butcher table; the
 	// yield is the body's, like an animal's).
 	ButcherHuman: {ID: ButcherHuman, Name: "butcher_human", Label: "Butcher human", Bench: construction.ButcherTable,
-		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Output: item.HumanMeat, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
+		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Output: item.HumanMeat, Work: butcherWork, Skill: work.Cook, Learn: skill.Cooking,
 		BySpecies: true, Also: []construction.Kind{construction.ButcherSpot}},
 	// FOOD-4 (food4.go).
 	CookFineMealVeg:      oneSided(CookFineMealVeg, "cook_fine_meal_veg", "Cook fine meal (vegetarian)", item.FineMeal, Input{AnyVeg: true, Qty: 15}, 450, 6),

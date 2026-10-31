@@ -87,7 +87,7 @@ func (g *Game) chunkPlants(cg chunk.Grid, c int, fn func(entity.EntityID, plant.
 // growPlant runs plant id through the window that ends now (FOOD-2,
 // wiki: Plants): a crop past its lifespan rots away; one in an unpowered
 // hydroponics basin withers; frost and heat damage it (plant.Expose,
-// PLAY-016); blight worsens and spreads; then it grows in the growing
+// PLAY-016), and toxic fallout under the open sky (FOOD-6); blight worsens and spreads; then it grows in the growing
 // hours at its soil's, the air's and its growing light's factors. A crop
 // that ripens on a growing-zone cell is marked for harvest (PLAY-017).
 func (g *Game) growPlant(id entity.EntityID, p plant.Plant, now uint64, gp int, lamps []farm.Lamp, fp *farm.Pass) {
@@ -109,12 +109,19 @@ func (g *Game) growPlant(id entity.EntityID, p plant.Plant, now uint64, gp int, 
 	case g.frostKills(id, &p, t, now, fp):
 		return
 	}
+	roofed := g.roofAt(p.X, p.Y).Roofed()
+	if !roofed && g.incidents.Fallout(now) { // FOOD-6 (wiki: Toxic fallout)
+		if p = p.Fallout(t0, now); p.Dead() {
+			g.plantDied(id, p, farm.Toxic, fp)
+			return
+		}
+	}
 	if !g.lightGrows(id, &p, fp) { // plant_light.go (MAPGEN-3)
 		return
 	}
 	light := plant.FullGrowLight
-	if !plant.OwnLightRules(p.Species) {
-		light = farm.GrowLight(g.roofAt(p.X, p.Y).Roofed(), g.artificialLight(p.X, p.Y), lamps, p.X, p.Y, g.combat.Sight.Line)
+	if !plant.OwnLightRules(p.Species) { // FOOD-6: an eclipse leaves only the lamps (wiki: Eclipse)
+		light = farm.GrowLight(roofed || g.incidents.Eclipsed(now), g.artificialLight(p.X, p.Y), lamps, p.X, p.Y, g.combat.Sight.Line)
 	}
 	p = p.Blighten(t0, now)
 	farm.Spread(plantField{g}, id, p, now) // plant_light.go

@@ -27,7 +27,8 @@ type breakState struct {
 	until uint64
 }
 
-// bingeEat marks an Eat job that ignores fullness (j.Count).
+// bingeEat marks an Eat job that ignores fullness (j.Count): a binge's
+// sitting eats a whole stomach, at most one meal (wiki: Maximum To Ingest).
 const bingeEat = 3
 
 // Breaking names a colonist's mental break ("" when none).
@@ -102,17 +103,14 @@ func (h mindActs) Seize(id entity.EntityID) {
 }
 func (h mindActs) Wander(id entity.EntityID, linger int) bool { return h.g.idleWander(id, linger) }
 func (h mindActs) CanBinge(id entity.EntityID) bool {
-	best, _, _, _ := h.g.bestFood(id, id)
-	return best != 0
+	b, _, _, _ := h.g.bestFood(id, id)
+	return b != 0
 }
 func (h mindActs) Binge(id entity.EntityID) bool {
 	best, bx, by, _ := h.g.bestFood(id, id)
 	return best != 0 && h.g.startJob(id, job.Record{Kind: job.Eat, Target: best, TX: bx, TY: by, WorkLeft: needs.EatWorkTicks, Count: bingeEat})
 }
-func (h mindActs) CanHide(id entity.EntityID) bool {
-	_, ok := hideSpot(h.g, id)
-	return ok
-}
+func (h mindActs) CanHide(id entity.EntityID) bool { _, ok := hideSpot(h.g, id); return ok }
 
 // Hide shuts id away for ticks, or wanders when it has nowhere to go.
 func (h mindActs) Hide(id entity.EntityID, ticks int) {

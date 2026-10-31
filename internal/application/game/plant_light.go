@@ -121,7 +121,7 @@ func (g *Game) growState(p plant.Plant, now growNow) (string, int) {
 		if !plant.LitEnough(p.Species, g.cellLightPermil(p.X, p.Y)) {
 			return growStateDark, -1
 		}
-	} else if light = farm.GrowLight(g.roofAt(p.X, p.Y).Roofed(), g.artificialLight(p.X, p.Y), now.lamps, p.X, p.Y, g.combat.Sight.Line); plant.LightFactor(light) == 0 {
+	} else if light = farm.GrowLight(g.roofAt(p.X, p.Y).Roofed() || g.incidents.Eclipsed(uint64(g.clock.Now())), g.artificialLight(p.X, p.Y), now.lamps, p.X, p.Y, g.combat.Sight.Line); plant.LightFactor(light) == 0 {
 		return growStateDark, -1
 	}
 	t := int(g.temperatureAt(p.X, p.Y))
@@ -148,6 +148,11 @@ func (g *Game) sunLamps(now uint64) []farm.Lamp {
 	if !plant.SunLampOn(now) {
 		return nil
 	}
+	return poweredSunLamps(g)
+}
+
+// poweredSunLamps is every powered sun lamp, shining or not (its hours).
+func poweredSunLamps(g *Game) []farm.Lamp {
 	var out []farm.Lamp
 	for _, id := range g.lightSources().ids { // light.go
 		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.SunLamp && g.powered(id) {
@@ -155,6 +160,16 @@ func (g *Game) sunLamps(now uint64) []farm.Lamp {
 		}
 	}
 	return out
+}
+
+// sowLit: a growing-zone cell's light lets its crop be sown (FOOD-6,
+// farm.SowLit): open sky, or a powered sun lamp's reach and no tree.
+func sowLit(g *Game, x, y int) bool {
+	if !g.roofAt(x, y).Roofed() {
+		return true
+	}
+	z, _ := g.zoneAt(x, y)
+	return farm.SowLit(true, plant.DefOf(plant.Species(z.Crop)).Trunk, poweredSunLamps(g), x, y, g.combat.Sight.Line)
 }
 
 // shortOdds: a powered sun lamp under the open sky in rain or snow shorts

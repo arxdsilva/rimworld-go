@@ -77,12 +77,12 @@ func TestMalnutritionRecovers(t *testing.T) {
 // multiplier kept, the mood stages, and wounds that don't heal.
 func TestMalnutritionEffects(t *testing.T) {
 	t.Parallel()
-	if HungerMul(Condition{Kind: CondMalnutrition}) != 1500 || HungerMul(Condition{Kind: CondMalnutrition, Stage: 3}) != 1600 ||
-		HungerMul(Condition{Kind: CondFoodPoisoning}) != 1000 {
+	if HungerOffset(Condition{Kind: CondMalnutrition}) != 500 || HungerOffset(Condition{Kind: CondMalnutrition, Stage: 3}) != 600 ||
+		HungerOffset(Condition{Kind: CondFoodPoisoning}) != 0 {
 		t.Fatal("hunger offsets: +50 % trivial, +60 % after")
 	}
-	if dz, _ := DiseaseOf(CondGutWorms); HungerMul(Condition{Kind: CondGutWorms}) != dz.HungerMul {
-		t.Fatal("a disease keeps its hunger multiplier")
+	if dz, _ := DiseaseOf(CondGutWorms); HungerOffset(Condition{Kind: CondGutWorms}) != dz.HungerMul-1000 {
+		t.Fatal("a disease keeps its hunger offset")
 	}
 	for sev, want := range map[int32]int{0: -20, 200: -26, 450: -32, 650: -38, 999: -44} {
 		if got := MalnourishedMood(sev); got != want {

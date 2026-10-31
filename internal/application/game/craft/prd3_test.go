@@ -48,7 +48,7 @@ func TestFacilities(t *testing.T) {
 	}
 }
 
-// TestBenchSpeed: the spots' own factors, facilities and an electric
+// TestBenchSpeed: the crafting spot's own factor, facilities and an electric
 // twin's bonus, then light (0.8 in the dark, a straight ramp to 30 %),
 // the room's cleanliness and outdoors 0.8; kept speedEvery ticks.
 func TestBenchSpeed(t *testing.T) {
@@ -61,7 +61,7 @@ func TestBenchSpeed(t *testing.T) {
 	f.build(4, construction.ElectricSmithy, 18, 4)
 	f.build(5, construction.MachiningTable, 22, 4)
 	f.build(6, construction.ToolCabinet, 5, 6)
-	want := map[entity.EntityID]int{1: 1060, 2: 500, 3: 700, 4: 1400, 5: 1000}
+	want := map[entity.EntityID]int{1: 1060, 2: 500, 3: 1000, 4: 1400, 5: 1000} // FOOD-6: the butcher spot works at full speed (its 70 % is yield)
 	for id, w := range want {
 		if got := s.Speed(id); got != w {
 			t.Errorf("bench %d: %d, want %d", id, got, w)

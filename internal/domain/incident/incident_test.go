@@ -29,9 +29,10 @@ func TestPickDeterministic(t *testing.T) {
 	// worms and muscle parasites (malaria and sleeping sickness keep to
 	// warm and tropical lands). PLAY-024 added the trader caravan and the
 	// orbital trader (the game vetoes both until it can host them).
-	// FOOD-2 added crop blight (vetoed without blightable crops).
-	if len(seen) != 17 {
-		t.Fatalf("picked %v, want all 17 temperate nature events", seen)
+	// FOOD-2 added crop blight (vetoed without blightable crops), FOOD-6
+	// the eclipse (toxic fallout waits for day 60).
+	if len(seen) != 18 {
+		t.Fatalf("picked %v, want all 18 temperate nature events", seen)
 	}
 }
 

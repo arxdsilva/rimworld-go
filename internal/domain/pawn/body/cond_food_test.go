@@ -40,7 +40,7 @@ func TestFoodPoisoningStagesByTime(t *testing.T) {
 		t.Fatal("vomit intervals and stage hours")
 	}
 	major := d.Stages[1]
-	if major.PainAdd != 400 || d.Stages[2].PainAdd != 200 || len(major.Mods) != 3 || major.Mods[0].Off != -500 {
+	if major.PainAdd != 400 || d.Stages[2].PainAdd != 200 || len(major.Mods) != 4 || major.Mods[0].Off != -500 {
 		t.Fatalf("stage effects: %+v", d.Stages)
 	}
 	var none *Body

@@ -1,5 +1,7 @@
 package body
 
+import "rimworld-go/internal/domain/pawn/needs"
+
 // Malnutrition (FOOD-1, wiki: Malnutrition): at 0 % food a pawn grows
 // malnourished. Its severity rises by the pawn's own rate, rolled once
 // when it sets in (1.51 to 2.27 % an hour), falls at the same rate once
@@ -29,11 +31,11 @@ const (
 )
 
 // malnourishedMood is the Malnourished thought per stage, and
-// malnutritionHunger the hunger rate (permille) per stage. wiki:
-// Malnutrition, Saturation.
+// malnutritionHunger the hunger rate factor offset (permille) per stage.
+// wiki: Malnutrition, Saturation (trivial +50 %, the rest +60 %).
 var (
 	malnourishedMood   = [...]int{-20, -26, -32, -38, -44}
-	malnutritionHunger = [...]int32{1500, 1600, 1600, 1600, 1600}
+	malnutritionHunger = [...]int32{500, 600, 600, 600, 600}
 )
 
 // Malnutrition is body b's malnutrition severity (permille; 0: none or
@@ -54,16 +56,39 @@ func MalnourishedMood(sev int32) int {
 	return malnourishedMood[DefOfCond(CondMalnutrition).StageAt(sev)]
 }
 
-// HungerMul is the hunger rate (permille) condition c sets: a disease's
-// HungerMul, malnutrition's by stage, 1000 for anything else.
-func HungerMul(c Condition) int32 {
+// HungerOffset is the hunger rate factor offset (permille) condition c
+// adds: malnutrition's by stage, a disease's HungerMul above neutral (gut
+// worms +100 %), 0 for anything else. wiki: Saturation.
+func HungerOffset(c Condition) int32 {
 	if c.Kind == CondMalnutrition && int(c.Stage) < len(malnutritionHunger) {
 		return malnutritionHunger[c.Stage]
 	}
 	if dz, ok := DiseaseOf(c.Kind); ok {
-		return dz.HungerMul
+		return dz.HungerMul - 1000
 	}
-	return 1000
+	return 0
+}
+
+// NeedRates is hunger rate hr and awake rest rate rr (permille, the
+// stats' multipliers such as gourmand x1.5 already in them) under body
+// b's conditions and, when stoned, the smokeleaf stand-in's high. wiki:
+// Saturation: the hunger offsets (gut worms, malnutrition, stoned) add up
+// before they scale the rate (needs.HungerRate); a disease's RestMul
+// (muscle parasites) multiplies the rest rate. b may be nil.
+func NeedRates(b *Body, hr, rr int32, stoned bool) (int32, int32) {
+	var off int32
+	if stoned {
+		off = needs.StonedHunger
+	}
+	if b != nil {
+		for _, c := range b.Conds {
+			off += HungerOffset(c)
+			if dz, ok := DiseaseOf(c.Kind); ok {
+				rr = rr * dz.RestMul / 1000
+			}
+		}
+	}
+	return needs.HungerRate(hr, off), rr
 }
 
 // StepMalnutrition advances body b's malnutrition by the hour of index

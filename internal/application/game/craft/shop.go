@@ -309,6 +309,9 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 		if st, ok := h.Stack(j.Carry); ok {
 			meat, extra = animal.Butcher(st)
 			out, extra = h.ButcherYield(id, meat.Qty), h.ButcherYield(id, extra)
+			if b.Kind == construction.ButcherSpot { // FOOD-6: the spot's 70 % (wiki: Butcher spot)
+				out, extra = out*ButcherSpotYield/1000, extra*ButcherSpotYield/1000
+			}
 			meat.Qty = out
 			if st.Kind == item.CorpseHuman {
 				h.ButcheredHuman(id) // the moods (wiki: Butcher table)

@@ -92,22 +92,22 @@ func TestStartWildlifeBySeason(t *testing.T) {
 // never wild now instead of rare).
 func TestWildlifeWeights(t *testing.T) {
 	t.Parallel()
-	if w := seasonWeight(animal.Caribou, "Winter"); w != 3000 {
+	if w := animal.SeasonWeight(animal.Caribou, "Winter"); w != 3000 {
 		t.Errorf("cold species in winter %d", w)
 	}
-	if w := seasonWeight(animal.Caribou, "Summer"); w != 300 {
+	if w := animal.SeasonWeight(animal.Caribou, "Summer"); w != 300 {
 		t.Errorf("cold species in summer %d", w)
 	}
-	if w := seasonWeight(animal.Gazelle, "Summer"); w != 3000 {
+	if w := animal.SeasonWeight(animal.Gazelle, "Summer"); w != 3000 {
 		t.Errorf("hot species in summer %d", w)
 	}
-	if w := seasonWeight(animal.Deer, "Winter"); w != 1000 {
+	if w := animal.SeasonWeight(animal.Deer, "Winter"); w != 1000 {
 		t.Errorf("temperate %d", w)
 	}
-	if w := seasonWeight(animal.Rat, "Summer"); w != 600 {
+	if w := animal.SeasonWeight(animal.Rat, "Summer"); w != 600 {
 		t.Errorf("any-habitat %d", w)
 	}
-	if w := seasonWeight(animal.Ibex, "Winter"); w != 2000 { // cold|temperate: the mean
+	if w := animal.SeasonWeight(animal.Ibex, "Winter"); w != 2000 { // cold|temperate: the mean
 		t.Errorf("mixed habitat %d", w)
 	}
 	if w := wildWeight(animal.Deer, biome.TemperateForest, "Winter"); w != animal.Weight(animal.Deer, biome.TemperateForest)*1000 {

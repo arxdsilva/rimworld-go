@@ -445,7 +445,7 @@ func (g *Game) manhunterPack(n int) {
 	if spawned == 0 {
 		return
 	}
-	name := pluralLabel(s)
+	name := animal.Plural(s)
 	if spawned == 1 {
 		name = s.Label()
 	}

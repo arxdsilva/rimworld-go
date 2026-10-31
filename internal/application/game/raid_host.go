@@ -134,7 +134,7 @@ func (h raidWild) SpawnAnimal(s animal.Species, x, y int) (entity.EntityID, erro
 }
 func (h raidWild) Animal(id entity.EntityID) animal.State       { a, _ := h.g.animals.Get(id); return a }
 func (h raidWild) SetAnimal(id entity.EntityID, a animal.State) { h.g.animals.Set(id, a) }
-func (h raidWild) Plural(s animal.Species) string               { return pluralLabel(s) }
+func (h raidWild) Plural(s animal.Species) string               { return animal.Plural(s) }
 func (h raidWild) EdgeTile() (int, int, bool)                   { return h.g.edgeTile() }
 
 type raidStory struct{ g *Game }

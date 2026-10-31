@@ -39,6 +39,17 @@ func GrowLight(roofed bool, art float64, lamps []Lamp, x, y int, sees Sight) int
 	return l
 }
 
+// SowLit reports a growing-zone cell fit to sow for its light (FOOD-6,
+// wiki: Growing zone, Plants): any cell under the open sky; a roofed one
+// only within a sun lamp's 51 % reach (whatever the hour), and never with
+// a tree.
+func SowLit(roofed, tree bool, lamps []Lamp, x, y int, sees Sight) bool {
+	if !roofed {
+		return true
+	}
+	return !tree && GrowLight(true, 0, lamps, x, y, sees) >= plant.MinGrowLight
+}
+
 // RipeIn is the calendar ticks a plant needs growing ticks of still
 // takes: plants grow only in the GrowFromHour..GrowToHour hours.
 func RipeIn(active int) int {
