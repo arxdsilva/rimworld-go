@@ -49,6 +49,9 @@ var value = [numKinds]int{
 	// Ikwa.
 	NutrientPasteMeal: 10, SmokepopPack: 166, ShieldBelt: 390, RocketLauncher: 1000, TripleRocketLauncher: 1000,
 	SmokeLauncher: 380, ChargeRifle: 1010, ChargeLance: 1355, Ikwa: 113,
+	// FOOD-0: whole silver like the other raw foods (wiki: Rice, Strawberry,
+	// Hay, Hops, Human meat, Insect meat, Agave all value about one silver).
+	Rice: 1, Strawberries: 1, Hay: 1, Hops: 1, HumanMeat: 1, InsectMeat: 1, AgaveFruit: 1,
 }
 
 // Value is the market value of one unit of k.
@@ -88,6 +91,7 @@ var stackLimit = func() (t [numKinds]int) {
 		Steel: 75, Plasteel: 75, Uranium: 75, Berries: 75, Potatoes: 75, Corn: 75, Wheat: 75, Beans: 75, Lettuce: 75,
 		Radishes: 75, Pumpkins: 75, Brewgrain: 75, AshleafLeaf: 75, Meat: 75, Milk: 75, Egg: 75, Leather: 75, Cloth: 75,
 		Wool: 75, Straw: 75, Kibble: 75, Pemmican: 75,
+		Rice: 75, Strawberries: 75, Hay: 75, Hops: 75, HumanMeat: 75, InsectMeat: 75, AgaveFruit: 75, // FOOD-0
 		Components: 50, AdvancedComponents: 50,
 		HerbalMedicine: 25, IndustrialMedicine: 25, NanomedKit: 25, NumbrootTincture: 25, Beer: 25, Wort: 25,
 		MortarShells: 25, IncendiaryShells: 25, EMPShells: 25, SmokeShells: 25, ReinforcedBarrel: 25,

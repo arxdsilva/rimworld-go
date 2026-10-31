@@ -559,7 +559,7 @@ func (g *Game) postLabel(k postKey) string {
 		}
 	case job.Harvest, job.Cut:
 		if pl, ok := g.plants.Get(t); ok {
-			return k.Kind.String() + " " + plantLabel(pl.Species)
+			return k.Kind.String() + " " + pl.Species.DisplayName()
 		}
 		if t == 0 && k.Kind == job.Cut {
 			return "cut grass"

@@ -91,6 +91,9 @@ const (
 	// needs Electricity, our cost) opens the hopper and the nutrient paste
 	// dispenser.
 	NutrientPaste
+	// Hydroponics (FOOD-0, append only, saved; wiki: Hydroponics, needs
+	// Electricity, our cost) opens the hydroponics basin.
+	Hydroponics
 	NumProjects
 )
 
@@ -127,7 +130,8 @@ var defs = [NumProjects]Def{
 		Desc:    "Refine herbal medicine into stronger industrial medicine, numbroot painkiller and prophyl tablets.",
 		Unlocks: []string{"recipe:refine_medicine", "recipe:make_numbroot", "recipe:press_prophyl"}}, // MED-07: the medical drugs
 	Brewing: {Project: Brewing, Name: "brewing", Label: "Brewing", Cost: 2500,
-		Desc: "Grow brewgrain and brew it into beer.", Unlocks: []string{"crop:brewgrain", "build:brewing bench", "build:fermenting barrel"}},
+		Desc: "Grow brewgrain and brew it into beer.", Unlocks: []string{"crop:brewgrain", "build:brewing bench", "build:fermenting barrel",
+			"crop:hops"}}, // FOOD-0, wiki: Hop plant (Brewing)
 	HerbalRemedies: {Project: HerbalRemedies, Name: "herbal_remedies", Label: "Herbal remedies", Cost: 3500,
 		Requires: []Project{Herbalism},
 		Desc:     "Grow ashleaf and steep or press it into stimulants.",
@@ -144,7 +148,8 @@ var defs = [NumProjects]Def{
 		Desc: "Conduits, switches and a wood-fired generator to run lamps, heaters, coolers and electric benches.",
 		Unlocks: []string{"build:power conduit", "build:hidden conduit", "build:power switch", "build:wood-fired generator",
 			"build:lamp", "build:heater", "build:cooler", "build:electric stove", "build:electric tailoring bench",
-			"build:electric research bench", "build:electric forge", "build:electric smelter"}},
+			"build:electric research bench", "build:electric forge", "build:electric smelter",
+			"build:sun lamp"}}, // FOOD-0, wiki: Sun lamp (Electricity)
 	Batteries: {Project: Batteries, Name: "batteries", Label: "Batteries", Cost: 2500, Requires: []Project{Electricity},
 		Desc: "Store spare power for the night and for lean hours.", Unlocks: []string{"build:battery"}},
 	SolarPower: {Project: SolarPower, Name: "solar_power", Label: "Solar power", Cost: 4000, Requires: []Project{Electricity},
@@ -241,6 +246,9 @@ var defs = [NumProjects]Def{
 	NutrientPaste: {Project: NutrientPaste, Name: "nutrient_paste", Label: "Nutrient paste", Cost: 2500, Requires: []Project{Electricity},
 		Desc:    "A powered machine that mashes raw food from the hoppers beside it into bland but filling paste meals.",
 		Unlocks: []string{"build:hopper", "build:nutrient paste dispenser"}},
+	Hydroponics: {Project: Hydroponics, Name: "hydroponics", Label: "Hydroponics", Cost: 3000, Requires: []Project{Electricity},
+		Desc:    "Powered basins of nutrient-rich water that grow crops far faster than soil, indoors under a sun lamp.",
+		Unlocks: []string{"build:hydroponics basin"}},
 }
 
 // DefOf returns the definition of p.

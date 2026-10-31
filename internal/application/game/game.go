@@ -273,6 +273,9 @@ type PawnView struct {
 	Ally bool
 	// Disfigured: a scar on the face (body.Disfigured); the renderer draws it.
 	Disfigured bool
+	// FOOD-0 contract ("" and 0 until FOOD-4 and FOOD-1): food policy name, malnutrition percent.
+	FoodPolicy   string
+	Malnutrition int
 }
 
 // ItemView is a ground stack.
@@ -314,7 +317,8 @@ type ItemView struct {
 	Quality, Stuff string
 	HP, MaxHP      int
 	Tainted        bool
-	Urgent         bool // STO/CBT contract (false until STO-2): marked to haul urgently
+	Urgent         bool     // STO/CBT contract (false until STO-2): marked to haul urgently
+	Ingredients    []string // FOOD-0 contract (nil until FOOD-4): a meal's ingredient kind names
 }
 
 // LetterView is one letter in the right-side stack (PLAY-018).
@@ -510,6 +514,9 @@ type PlantView struct {
 	// DamageKind "cold", "heat" or "".
 	Damage     int
 	DamageKind string
+	// FOOD-0 contract (0 until FOOD-2): soil fertility, light and lifespan used, percent; blighted.
+	Fertility, Light, Lifespan int
+	Blighted                   bool
 	// Why it is or isn't growing now (PLAY-017) is Game.PlantGrowth: it
 	// follows the clock, so it stays off this per-plant view.
 }
@@ -655,6 +662,23 @@ type WorldView struct {
 	PowerNets  []PowerNetView
 	SolarFlare bool
 	PowerVer   uint64
+	// FOOD-0 contract (zero until FOOD-4/5): days of food (tenths), food policies, auto-slaughter caps.
+	FoodDays      int
+	FoodPolicies  []FoodPolicyView
+	AutoSlaughter []AutoSlaughterView
+}
+
+// FoodPolicyView is one food policy: its id, name and allowed kind names.
+type FoodPolicyView struct {
+	ID      int
+	Name    string
+	Allowed []string
+}
+
+// AutoSlaughterView is one species' herd caps (-1: none).
+type AutoSlaughterView struct {
+	Species                        string
+	MaxMales, MaxFemales, MaxYoung int
 }
 
 // Game holds all authoritative simulation state.

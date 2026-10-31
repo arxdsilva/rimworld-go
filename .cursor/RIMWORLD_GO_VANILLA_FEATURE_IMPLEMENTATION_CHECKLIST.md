@@ -652,7 +652,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Nutrition values** (per-kind table: ration 4000, berries 1500, amberroot 2000, meat 2200, meal 6000)
     -   Foods provide nutrition.
     -   Pawns consume an amount based on hunger/body needs.
--   [-] **Food need** (permille decay; 0 downs then starvation death; no mood)
+-   [-] **Food need** (permille decay; 0 downs then starvation death; a Hungry thought at 25 % and below, no ravenous or malnourished stages: FOOD-1)
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
@@ -694,9 +694,9 @@ This is the heart of autonomous colony behavior.
 
 ## 8.4 Farming
 
--   [x] **Fertility**
+-   [-] **Fertility** (hover text only in `hud/cellinfo.go`; no painted fertility overlay: FOOD-5)
     -   Terrain fertility affects plant growth.
--   [-] **Crop definitions** (7 crops: grow days, yield, soil sensitivity, frost-kill temperature, shelf life; no minimum skill)
+-   [-] **Crop definitions** (11 crops: grow days, yield, soil sensitivity, frost-kill temperature, shelf life; no minimum skill)
     -   Growth time.
     -   fertility sensitivity.
     -   yield.
@@ -1118,7 +1118,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Year and quadrum/season cycle** (seasons centred on the temperature curve; crops grow 0-10C ramp, full 10-35C, frost kills tender crops)
     -   Seasonal temperature/growing changes.
     -   Hemisphere/world position can affect seasons.
--   [ ] **Growing period**
+-   [x] **Growing period** (the landing screen shows the growing period, `wizard/screen_landing.go`)
     -   World tile communicates expected crop-growing season.
 
 ## 12.3 Weather

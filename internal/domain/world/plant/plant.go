@@ -3,6 +3,8 @@
 package plant
 
 import (
+	"strings"
+
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -46,6 +48,14 @@ const (
 	// Duskmoss (MAPGEN-3, append only, saved): blue-grey moss of dark
 	// caves; grows without light and withers in it.
 	Duskmoss
+	// FOOD-0 contract (append only, saved): the vanilla crops still
+	// missing. Never sown or spawned until FOOD-2 adds them to Crops (and
+	// retunes every crop); placeholder numbers below, wiki growDays,
+	// yield and sensitivity. Hops is sown after Brewing (wiki: Hop plant).
+	Rice
+	Strawberry
+	Haygrass
+	Hops
 	numSpecies
 )
 
@@ -144,7 +154,10 @@ var defs = [numSpecies]Def{
 	// glow; needs darkness.
 	Duskmoss: {Species: Duskmoss, Name: "duskmoss", GrowTicks: growDays(40), CutWork: 12, ColdKill: -400, HeatKill: 450,
 		Browse: true, Ground: true, WalkCost: 125, DiesInLight: 45, Glow: 10, Cave: true},
-	Agave: {Species: Agave, Name: "agave", GrowTicks: 50000, CutWork: 25, ColdKill: -50, HeatKill: 650, Ground: true},
+	// Agave fruits (FOOD-0: Yields only; FOOD-2 sets its wiki Yield, so
+	// it stays unharvested until then).
+	Agave: {Species: Agave, Name: "agave", GrowTicks: 50000, CutWork: 25, ColdKill: -50, HeatKill: 650, Ground: true,
+		Yields: item.AgaveFruit},
 	BallCactus: {Species: BallCactus, Name: "ball_cactus", GrowTicks: 60000, CutWork: 20, ColdKill: -80, HeatKill: 700,
 		Ground: true},
 	ElephantEar: {Species: ElephantEar, Name: "elephant_ear", GrowTicks: 30000, CutWork: 15, ColdKill: 50, HeatKill: 500,
@@ -190,6 +203,17 @@ var defs = [numSpecies]Def{
 		Yields: item.Brewgrain, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80},
 	Ashleaf: {Species: Ashleaf, Name: "ashleaf", Label: "ashleaf", GrowTicks: growDays(7), HarvestWork: 40, Yield: 2,
 		Yields: item.AshleafLeaf, CutWork: 8, Crop: true, Sens: 80, SowWork: 35, FrostKill: -20},
+	// FOOD-0 placeholders (FOOD-2 retunes): wiki: Rice (3 days, 6, 1.0),
+	// Strawberry (4.6, 8, 1.0), Haygrass (7, 18, 0.6), Hop plant (5, 8,
+	// 0.7); work and frost as the existing crops.
+	Rice: {Species: Rice, Name: "rice", Label: "rice", GrowTicks: growDays(3), HarvestWork: 30, Yield: 6,
+		Yields: item.Rice, CutWork: 10, Crop: true, Sens: 100, SowWork: 20, FrostKill: -10},
+	Strawberry: {Species: Strawberry, Name: "strawberry", Label: "strawberries", GrowTicks: growDays(4.6), HarvestWork: 30,
+		Yield: 8, Yields: item.Strawberries, CutWork: 10, Crop: true, Sens: 100, SowWork: 25, FrostKill: -20},
+	Haygrass: {Species: Haygrass, Name: "haygrass", Label: "hay", GrowTicks: growDays(7), HarvestWork: 30, Yield: 18,
+		Yields: item.Hay, CutWork: 10, Crop: true, Sens: 60, SowWork: 20, FrostKill: -50},
+	Hops: {Species: Hops, Name: "hops", Label: "hops", GrowTicks: growDays(5), HarvestWork: 35, Yield: 8,
+		Yields: item.Hops, CutWork: 10, Crop: true, Sens: 70, SowWork: 25, FrostKill: -20},
 }
 
 // Growth temperature, tenths of a degree C: nothing grows at or below
@@ -258,6 +282,25 @@ func GrowDays(s Species, fertility int) float64 {
 		return 0
 	}
 	return float64(DefOf(s).GrowTicks) * 100 / float64(r) / (float64(clock.TicksPerDay) * growHours / 24)
+}
+
+// DisplayName is species s as players read it ("desert rosette", "ground
+// moss"): a few wild plants have a descriptive name, the rest their
+// definition name with spaces.
+func (s Species) DisplayName() string {
+	switch s {
+	case BerryBush:
+		return "berry bush"
+	case Bramble:
+		return "bramble thicket"
+	case Moss:
+		return "ground moss"
+	case Agave:
+		return "desert rosette"
+	case Dandelion:
+		return "dandelions"
+	}
+	return strings.ReplaceAll(s.String(), "_", " ")
 }
 
 // DefOf returns the definition for s.

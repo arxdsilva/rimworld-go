@@ -224,7 +224,7 @@ func (g *Game) hurtNotice(k frostKill) {
 // hurtText is the warning that frost (or heat, hot) is hurting species s:
 // "Frost is damaging the corn", "Heat is scorching the pine plants".
 func hurtText(s plant.Species, hot bool) string {
-	name := strings.ReplaceAll(plantLabel(s), "_", " ") + " plants"
+	name := strings.ReplaceAll(s.DisplayName(), "_", " ") + " plants"
 	if plant.DefOf(s).Crop {
 		name = cropField(s)
 	}
@@ -261,7 +261,7 @@ func frostText(s plant.Species, n int, hot bool) string {
 	if hot {
 		cause = "heat"
 	}
-	name := strings.ReplaceAll(plantLabel(s), "_", " ")
+	name := strings.ReplaceAll(s.DisplayName(), "_", " ")
 	if n == 1 {
 		return "The " + cause + " killed a " + name
 	}

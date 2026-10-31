@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"strings"
 
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
@@ -18,24 +17,6 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 )
-
-func plantLabel(s plant.Species) string {
-	switch s {
-	case plant.BerryBush:
-		return "berry bush"
-	case plant.Tree:
-		return "tree"
-	case plant.Bramble:
-		return "bramble thicket"
-	case plant.Moss:
-		return "ground moss"
-	case plant.Agave:
-		return "desert rosette"
-	case plant.Dandelion:
-		return "dandelions"
-	}
-	return strings.ReplaceAll(s.String(), "_", " ")
-}
 
 // OrderOption is one entry of a pawn's right-click menu at a tile. When
 // Disabled, Reason says why; Cmd is still the command it would issue.
@@ -543,7 +524,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	}
 	if pid := g.plantAt(x, y); pid != 0 {
 		p, _ := g.plants.Get(pid)
-		name := plantLabel(p.Species)
+		name := p.Species.DisplayName()
 		if plant.DefOf(p.Species).Yield > 0 {
 			add("Harvest "+name, command.OrderHarvest, construction.LayerObject)
 		}

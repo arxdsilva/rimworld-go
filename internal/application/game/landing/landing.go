@@ -1,4 +1,7 @@
-package game
+// Package landing builds the new-game landing picker's biome cards:
+// read-only views of the biome definitions, usable before any colony
+// exists (moved out of package game, FOOD-0).
+package landing
 
 import (
 	"sort"
@@ -37,8 +40,8 @@ func Biomes() []BiomeInfo {
 	return out
 }
 
-// BiomeInfoOf is biome id's picker card.
-func BiomeInfoOf(id biome.ID) BiomeInfo { return biomeInfo(biome.DefOf(id)) }
+// Of is biome id's picker card.
+func Of(id biome.ID) BiomeInfo { return biomeInfo(biome.DefOf(id)) }
 
 func biomeInfo(d biome.Def) BiomeInfo {
 	lo, hi := d.Climate.Range()
@@ -68,7 +71,7 @@ func biomeInfo(d biome.Def) BiomeInfo {
 	plants := append([]biome.PlantDensity(nil), d.Plants...)
 	sort.SliceStable(plants, func(i, j int) bool { return plants[i].Permil > plants[j].Permil })
 	for _, p := range plants {
-		info.Plants = append(info.Plants, plantLabel(p.Species)) // orders.go: "ground moss", "desert rosette"
+		info.Plants = append(info.Plants, p.Species.DisplayName()) // "ground moss", "desert rosette"
 	}
 	type sp struct {
 		label string

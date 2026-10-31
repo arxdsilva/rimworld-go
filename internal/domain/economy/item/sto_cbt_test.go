@@ -11,7 +11,7 @@ func TestStoCbtCatalogue(t *testing.T) {
 	cats := map[Kind]string{NutrientPasteMeal: "Food", SmokepopPack: "Apparel", ShieldBelt: "Apparel",
 		RocketLauncher: "Weapons", TripleRocketLauncher: "Weapons", SmokeLauncher: "Weapons", ChargeRifle: "Weapons",
 		ChargeLance: "Weapons", Ikwa: "Weapons"}
-	for k := NutrientPasteMeal; k < numKinds; k++ {
+	for k := NutrientPasteMeal; k <= Ikwa; k++ { // the STO/CBT kinds (FOOD-0's follow: food_test.go)
 		want, ok := cats[k]
 		if !ok {
 			t.Errorf("%s has no expected category here", k)

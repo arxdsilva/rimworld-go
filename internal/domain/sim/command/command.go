@@ -285,6 +285,27 @@ const (
 	// 3 ignore).
 	PopSmokepop
 	SetThreatResponse
+	// FOOD-0 contract (append only; game ignores them until FOOD-3 and
+	// FOOD-4 handle them). SetFoodPolicy gives colonist, prisoner or
+	// animal Pawn food policy Index (a policy id). EditFoodPolicy edits
+	// policy Index by Mode: FoodPolicyAllow allows (Enabled) or forbids
+	// Name, an item kind name or a filter-tree category path ("Foods/Raw
+	// food"); FoodPolicyCreate adds a policy named Name (Index: the policy
+	// to copy, -1 none); FoodPolicyRename names it Name; FoodPolicyDelete
+	// removes it (its users fall back to the default policy).
+	// SetAutoSlaughter caps tame animals of species Name (animal key): X
+	// adult males, Y adult females, X2 young (-1: no cap).
+	SetFoodPolicy
+	EditFoodPolicy
+	SetAutoSlaughter
+)
+
+// EditFoodPolicy modes (Command.Mode), FOOD-0.
+const (
+	FoodPolicyAllow uint8 = iota
+	FoodPolicyCreate
+	FoodPolicyRename
+	FoodPolicyDelete
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

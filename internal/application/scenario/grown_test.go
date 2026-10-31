@@ -189,7 +189,12 @@ func TestGrownGolden(t *testing.T) {
 	// threat targeting, threat response, explosion item damage and
 	// cook-off; the previous pin held through wave 2 (the committed full
 	// suite). Stable over -count=2.
-	const want uint64 = 0xbed63e7bc8154c25
+	// Re-pinned (FOOD-0 contract, no behaviour change): the sandbox's
+	// CompleteResearch also completes the new Hydroponics project, and new
+	// stockpiles allow every storable kind, so their filters gain the seven
+	// new food kinds' bits; with both hidden the previous pin comes back
+	// exactly. Stable over -count=2.
+	const want uint64 = 0xeff98faf129e490a
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

@@ -203,6 +203,19 @@ const (
 	ChargeRifle
 	ChargeLance
 	Ikwa
+	// FOOD-0 contract (append only, saved; never spawned until FOOD-2 and
+	// FOOD-3 grow and butcher them). wiki: Rice, Strawberry, Hay, Hops,
+	// Human meat, Insect meat, Agave. Raw foods on the current nutrition
+	// scale (FOOD-1 moves every raw food to the wiki's 0.05); hay is
+	// animal feed (eaten last, never cooked: not Raw, like kibble) and
+	// hops are a brewing material, not food.
+	Rice
+	Strawberries
+	Hay
+	Hops
+	HumanMeat
+	InsectMeat
+	AgaveFruit
 	numKinds
 )
 
@@ -230,7 +243,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"chemfuel", "wort", "fine meal", "lavish meal", "pemmican", "packaged survival meal", "kibble",
 	"ash flake", "silverdust", "battle tonic", "reagent", "advanced components", "uranium", "plasteel", "reinforced barrel",
 	"nutrient paste meal", "smokepop pack", "shield belt", "rocket launcher", "triple rocket launcher", "smoke launcher",
-	"charge rifle", "charge lance", "ikwa"}
+	"charge rifle", "charge lance", "ikwa",
+	"rice", "strawberries", "hay", "hops", "human meat", "insect meat", "agave fruit"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -266,7 +280,10 @@ var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Meat: 2200, Meal: 6000,
 	// Wave E, wiki nutrition on the simple meal's scale (0.9 = 6000):
 	// fine and survival meals 0.9, lavish 1.0, pemmican and kibble 0.05.
 	FineMeal: 6000, LavishMeal: 6667, SurvivalMeal: 6000, Pemmican: 333, Kibble: 333,
-	NutrientPasteMeal: 6000} // wiki: Nutrient paste meal (0.9)
+	NutrientPasteMeal: 6000, // wiki: Nutrient paste meal (0.9)
+	// FOOD-0: rice as wheat, strawberries and agave fruit as berries, both
+	// meats as meat; hay 0.05 like kibble (wiki: Hay).
+	Rice: 2400, Strawberries: 1500, AgaveFruit: 1500, HumanMeat: 2200, InsectMeat: 2200, Hay: 333}
 
 // preference ranks food choice: higher is eaten first.
 // Raw grain, dry beans and raw potatoes are edible but unappealing.
@@ -275,7 +292,10 @@ var preference = [numKinds]int{Meal: 4, Food: 3, Berries: 2, Corn: 2, Lettuce: 2
 	// Wave E: the better the meal the sooner it is eaten; kibble (animal
 	// feed) is left to PRD-4.
 	LavishMeal: 6, FineMeal: 5, SurvivalMeal: 4, Pemmican: 3,
-	NutrientPasteMeal: 3} // wiki: awful, below the simple meal, above raw food
+	NutrientPasteMeal: 3, // wiki: awful, below the simple meal, above raw food
+	// FOOD-0: hay and human meat rank with kibble, last (wiki: desperate
+	// only); FOOD-4's food policies refine the choice.
+	Rice: 1, Strawberries: 2, AgaveFruit: 2, InsectMeat: 1}
 
 // Nutrition is the hunger restored by eating one unit of k (0 if inedible).
 func (k Kind) Nutrition() int {
@@ -294,15 +314,25 @@ func (k Kind) Preference() int {
 }
 
 // Raw reports uncooked food (eating it is unpleasant): not a meal,
-// pemmican or kibble.
+// pemmican, kibble or hay.
 func (k Kind) Raw() bool {
-	return k.IsFood() && k != Food && k != Meal && k != NutrientPasteMeal && (k < FineMeal || k > Kibble)
+	return k.IsFood() && k != Food && k != Meal && k != NutrientPasteMeal && (k < FineMeal || k > Kibble) && k != Hay
 }
+
+// RawPenaltyFree reports raw food eaten without the raw-food thought
+// (wiki: Raw food: milk, berries and strawberries are exempt). FOOD-4
+// applies it; nothing reads it before.
+func (k Kind) RawPenaltyFree() bool { return k == Berries || k == Strawberries || k == Milk }
+
+// IsMeat reports raw meat of any origin (FOOD-0; FOOD-3 tags meat stacks
+// with their species).
+func (k Kind) IsMeat() bool { return k == Meat || k == HumanMeat || k == InsectMeat }
 
 // Foods lists every edible kind.
 func Foods() []Kind {
 	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg, Brewgrain,
-		FineMeal, LavishMeal, Pemmican, SurvivalMeal, Kibble, NutrientPasteMeal}
+		FineMeal, LavishMeal, Pemmican, SurvivalMeal, Kibble, NutrientPasteMeal,
+		Rice, Strawberries, AgaveFruit, HumanMeat, InsectMeat, Hay}
 }
 
 // IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
@@ -506,7 +536,8 @@ func (k Kind) Dryable() bool {
 // strips and leaves dry in about a day, juicy fruit, sliced roots and
 // squash take longer, and cooked meals are dried into hard travel cakes.
 var dryDays = [numKinds]float64{Meat: 1, Meal: 1, Lettuce: 0.75, Berries: 2, Radishes: 1.5,
-	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5, FineMeal: 1, LavishMeal: 1, NutrientPasteMeal: 1}
+	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5, FineMeal: 1, LavishMeal: 1, NutrientPasteMeal: 1,
+	Rice: 1.5, Strawberries: 2, AgaveFruit: 2, HumanMeat: 1, InsectMeat: 1}
 
 // DryTicks is how long a batch of k takes to dry at full speed.
 func (k Kind) DryTicks() int {
@@ -592,7 +623,10 @@ var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseR
 	// Wave E, wiki days to rot: fine and lavish meals 4, pemmican 70, wort
 	// 5.6 (the survival meal and kibble never rot).
 	FineMeal: 4, LavishMeal: 4, Pemmican: 70, Wort: 5.6,
-	NutrientPasteMeal: 0.75} // wiki: Nutrient paste meal
+	NutrientPasteMeal: 0.75, // wiki: Nutrient paste meal
+	// FOOD-0, wiki days to rot: rice 40, strawberries 14, agave fruit 25,
+	// human and insect meat as meat (2); hay keeps.
+	Rice: 40, Strawberries: 14, AgaveFruit: 25, HumanMeat: 2, InsectMeat: 2}
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).
 func (k Kind) ShelfTicks() int {

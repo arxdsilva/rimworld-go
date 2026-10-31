@@ -106,6 +106,20 @@ const (
 	// AtePaste (STO-2, append only): ate a nutrient paste meal (wiki:
 	// -4 for a day, in the meal-kind group).
 	AtePaste
+	// FOOD-0 contract (append only, saved; nothing remembers them before
+	// FOOD-1 and FOOD-4): the better meals and kibble (meal-kind group),
+	// eating human or insect meat, butchering a human (the butcher) and
+	// knowing one was butchered (everyone else), and the hunger stages
+	// below Hungry (state thoughts).
+	AteFineMeal
+	AteLavishMeal
+	AteKibble
+	AteHumanMeat
+	AteInsectMeat
+	ButcheredHuman
+	ObservedButchery
+	Ravenous
+	Malnourished
 	numKinds
 )
 
@@ -237,6 +251,19 @@ var defs = [numKinds]Def{
 	SleptCold:    {"slept in the cold", -4, day, groupSleptTemp, 0, 0},
 	SleptHot:     {"slept in the heat", -4, day, groupSleptTemp, 0, 0},
 	AtePaste:     {"ate nutrient paste", -4, day, groupMealKind, 0, 0},
+	// FOOD-0, wiki: Meals (fine +5, lavish +12), Kibble (-12), Saturation
+	// (ravenously hungry -12, malnourished -20), Cannibal (human meat eaten
+	// -20; butchered a human -6 and its knowledge -6, six days each). The
+	// insect meat value is original tuning (the wiki's rule wasn't found).
+	AteFineMeal:      {"ate a fine meal", 5, day, groupMealKind, 0, 0},
+	AteLavishMeal:    {"ate a lavish meal", 12, day, groupMealKind, 0, 0},
+	AteKibble:        {"ate kibble", -12, day, groupMealKind, 0, 0},
+	AteHumanMeat:     {"ate human flesh", -20, day, groupNone, 0, 0},
+	AteInsectMeat:    {"ate insect meat", -6, day, groupNone, 0, 0},
+	ButcheredHuman:   {"butchered a human body", -6, 6 * day, groupNone, stackLimit, stackFactor},
+	ObservedButchery: {"someone butchered a human", -6, 6 * day, groupNone, stackLimit, stackFactor},
+	Ravenous:         {"ravenously hungry", -12, 0, groupNone, 0, 0},
+	Malnourished:     {"malnourished", -20, 0, groupNone, 0, 0},
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

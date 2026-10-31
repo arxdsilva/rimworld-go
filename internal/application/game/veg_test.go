@@ -150,8 +150,8 @@ func TestGroundPlantLabels(t *testing.T) {
 		plant.BallCactus: "ball cactus", plant.ElephantEar: "elephant ear", plant.FireLily: "fire lily",
 		plant.Dandelion: "dandelions", plant.BerryBush: "berry bush", plant.JungleTree: "jungle tree",
 	} {
-		if got := plantLabel(s); got != want {
-			t.Errorf("plantLabel(%s) = %q, want %q", s, got, want)
+		if got := s.DisplayName(); got != want {
+			t.Errorf("%s.DisplayName() = %q, want %q", s, got, want)
 		}
 	}
 	has := func(l []string, s string) bool {

@@ -192,6 +192,12 @@ const (
 	// cave with an infestation, spawns insects and spreads
 	// (game/raid/nest.go).
 	HiveMound
+	// FOOD-0 contract (append only, saved; hidden from the Architect until
+	// FOOD-2 adds the tool rows, the power draw and the art): a
+	// hydroponics basin, a powered bed of very fertile ground for crops,
+	// and a sun lamp, a powered lamp bright enough to grow crops by.
+	HydroponicsBasin
+	SunLamp
 	kindCount
 )
 
@@ -495,6 +501,12 @@ var defs = [kindCount]Def{
 	// CBT-4, wiki: Hive (1x1, 130 HP, deconstructs to nothing); placed by
 	// the infestation, so no cost and no work.
 	HiveMound: {Kind: HiveMound, Name: "hive mound", Layer: LayerObject, BlocksMove: true},
+	// FOOD-0 contract, wiki: Hydroponics basin (1x4, 100 steel + 1
+	// component, 2800 work), Sun lamp (40 steel, 330 work). Scaled as the
+	// wave D rows; the basin is passed through, like the shelf.
+	HydroponicsBasin: {Kind: HydroponicsBasin, Name: "hydroponics basin", Wood: 11, Work: 280, Layer: LayerObject,
+		Rotatable: true, Size: [2]int{1, 4}, MetalOK: true, MetalOnly: true, Components: 1},
+	SunLamp: {Kind: SunLamp, Name: "sun lamp", Wood: 4, Work: 33, Layer: LayerObject, MetalOK: true, MetalOnly: true},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an

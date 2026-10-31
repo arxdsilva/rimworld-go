@@ -41,7 +41,7 @@ func (g *Game) fillItemViews(w *WorldView) {
 	}
 	m := &g.views.items
 	m.scratch = g.appendItemViews(m.scratch[:0], &t)
-	if !m.ok || !slices.Equal(m.scratch, m.views) {
+	if !m.ok || !slices.EqualFunc(m.scratch, m.views, sameItemView) {
 		m.views = make([]ItemView, len(m.scratch))
 		copy(m.views, m.scratch)
 	}
@@ -54,6 +54,17 @@ func (g *Game) fillItemViews(w *WorldView) {
 	m.totals, m.ok = t, true
 	w.Items = m.views
 	t.apply(w, m.foodByKind, m.stored)
+}
+
+// sameItemView is a == b field by field (Ingredients keeps ItemView from
+// ==); TestSameItemViewSeesEveryField fails on a field left out.
+func sameItemView(a, b ItemView) bool {
+	return a.ID == b.ID && a.Kind == b.Kind && a.Qty == b.Qty && a.X == b.X && a.Y == b.Y && a.Carried == b.Carried &&
+		a.FreshDays == b.FreshDays && a.Rotten == b.Rotten && a.RotRate == b.RotRate && a.Dried == b.Dried && a.Of == b.Of &&
+		a.OfName == b.OfName && a.Animal == b.Animal && a.Wreck == b.Wreck && a.Catch == b.Catch && a.Forbidden == b.Forbidden &&
+		a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked && a.PoisonPermille == b.PoisonPermille &&
+		a.Quality == b.Quality && a.Stuff == b.Stuff && a.HP == b.HP && a.MaxHP == b.MaxHP && a.Tainted == b.Tainted &&
+		a.Urgent == b.Urgent && slices.Equal(a.Ingredients, b.Ingredients)
 }
 
 // appendItemViews appends every visible stack's view to out and counts it

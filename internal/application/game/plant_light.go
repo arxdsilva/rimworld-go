@@ -73,7 +73,7 @@ func (g *Game) witherAway(id entity.EntityID, p plant.Plant, fp *frostPass) {
 
 // witherText is the notice for a plant of species s withered by light.
 func witherText(s plant.Species) string {
-	name := strings.ReplaceAll(plantLabel(s), "_", " ")
+	name := strings.ReplaceAll(s.DisplayName(), "_", " ")
 	if name == "" {
 		return "A plant withered in the light"
 	}

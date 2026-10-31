@@ -209,6 +209,7 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetThreatResponse:
 		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4, CBT-2): drafted control, drop or stow a weapon
 	case command.SetZoneOverlay: // STO-2: a view toggle the UI keeps (nothing simulated)
+	case command.SetFoodPolicy, command.EditFoodPolicy, command.SetAutoSlaughter: // FOOD-0 contract: FOOD-3/4 handle them
 	}
 }
 

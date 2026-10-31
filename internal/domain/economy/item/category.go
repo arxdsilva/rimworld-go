@@ -23,7 +23,7 @@ func (k Kind) Category() string {
 		return "Manufactured"
 	case k == Wood, k == Stone, IsChunk(k), IsStoneBlocks(k), IsMetal(k),
 		k == Leather, k == Cloth, k == Straw, k == Wool, k == EmberOil, k == AshleafLeaf,
-		k == Chemfuel, k == Wort, k == Reagent, k == Uranium, k == Plasteel:
+		k == Chemfuel, k == Wort, k == Reagent, k == Uranium, k == Plasteel, k == Hops:
 		return "Materials"
 	}
 	return "Other"

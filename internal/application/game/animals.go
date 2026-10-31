@@ -60,7 +60,8 @@ type AnimalView struct {
 	HitFromX, HitFromY int
 	HitDamage          int
 	// Log (LOG-001) is what happened to the animal, newest first.
-	Log []LogLineView
+	Log        []LogLineView
+	FoodPolicy string // FOOD-0 contract ("" until FOOD-4): the tame animal's food policy
 	// Needs and life (SIM-024..026). State is the behaviour ("wandering",
 	// "feeding", "resting", "hunting", "attacking", "fleeing", "leaving");
 	// Food and Rest are percent. Stage is "young" or "adult" (or the

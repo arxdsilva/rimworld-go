@@ -148,6 +148,10 @@ const (
 	// job: a hunt already closes to its weapon's range before it shoots.
 	FillHopper
 	DispensePaste
+	// Slaughter (FOOD-0 contract, append only, saved; nothing starts it
+	// before FOOD-3): a handler kills a tame animal marked for slaughter
+	// in melee, no weapon needed (Handling work).
+	Slaughter
 )
 
 // Eating reports a meal under way: eating, or taking a paste meal from
@@ -295,6 +299,8 @@ func (k Kind) String() string {
 		return "fill hopper"
 	case DispensePaste:
 		return "dispense paste"
+	case Slaughter:
+		return "slaughter"
 	default:
 		return "idle"
 	}

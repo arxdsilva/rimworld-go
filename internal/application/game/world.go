@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"rimworld-go/internal/application/game/landing"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/economy/item"
@@ -457,6 +458,13 @@ var soilLabels = map[string]string{
 	"rock_smooth": "Smoothed rock wall", "stone_smooth": "Smooth stone floor",
 	"shallow_water": "Shallow water", "deep_water": "Deep water", "mud": "Mud", "track": "Dirt track",
 }
+
+// BiomeInfo is a new-game landing picker card (game/landing); Biomes
+// lists every card in picker order, BiomeInfoOf biome id's card.
+type BiomeInfo = landing.BiomeInfo
+
+func Biomes() []BiomeInfo               { return landing.Biomes() }
+func BiomeInfoOf(id biome.ID) BiomeInfo { return landing.Of(id) }
 
 // Soils lists every ground type, indexed by the WorldView.Terrain code.
 func Soils() []SoilView {

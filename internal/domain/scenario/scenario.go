@@ -530,9 +530,10 @@ func essentialBuilding(k construction.Kind) bool {
 
 // playerItem is an item a scenario may give: anything but carcasses, bones,
 // fertile eggs and the legacy "stone". The STO/CBT kinds (paste meals,
-// belts, the new weapons) have art and use since STO-2 and CBT-3.
+// belts, the new weapons) have art and use since STO-2 and CBT-3; the
+// FOOD-0 kinds (rice to agave fruit) wait for their art.
 func playerItem(k item.Kind) bool {
-	if k.String() == "unknown" || k.IsCorpse() {
+	if k.String() == "unknown" || k.IsCorpse() || k >= item.Rice && k <= item.AgaveFruit {
 		return false
 	}
 	switch k {

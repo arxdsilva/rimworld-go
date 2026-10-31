@@ -113,8 +113,9 @@ func smeltWear() Def {
 // plantFood is raw plant food (the fine meal's vegetable side).
 func plantFood(k item.Kind) bool { return k.Raw() && !animalFood(k) }
 
-// animalFood is raw meat or an animal product (the meat side).
-func animalFood(k item.Kind) bool { return k == item.Meat || k == item.Milk || k == item.Egg }
+// animalFood is raw meat (FOOD-0: human and insect meat too) or an
+// animal product (the meat side).
+func animalFood(k item.Kind) bool { return k.IsMeat() || k == item.Milk || k == item.Egg }
 
 // Cooked reports a meal a cook makes, which carries the cook's poison
 // chance (the simple meal and PRD-4's better meals).
