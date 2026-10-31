@@ -215,7 +215,7 @@ func TestBiomePlantsDieOutOfClimate(t *testing.T) {
 	jungle, _ := g.spawnPlant(plant.JungleTree, 3, 3, 1000)
 	oak, _ := g.spawnPlant(plant.Tree, 5, 3, 1000)
 	jumpTo(g, 15, 14) // midsummer
-	g.frostCrops()
+	frostCrops(g)
 	if _, ok := g.plants.Get(jungle); !ok {
 		t.Fatal("a jungle tree lives through a temperate summer")
 	}

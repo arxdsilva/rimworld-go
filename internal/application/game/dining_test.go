@@ -34,7 +34,7 @@ func TestColonistCarriesMealToTable(t *testing.T) {
 	if p.X != 12 || p.Y != 6 {
 		t.Fatalf("ate at (%d,%d), want the chair at (12,6)", p.X, p.Y)
 	}
-	want := 5 - portionsFor(needs.CriticalHunger-1, item.Meal)
+	want := 5 - portionsFor(needs.CriticalHunger-1, item.Stack{Kind: item.Meal})
 	if st, ok := stackOf(g, item.Meal); !ok || st.Qty != want || st.X != 3 {
 		t.Fatalf("only the portions eaten should be taken (%d left where they were): %+v", want, st)
 	}

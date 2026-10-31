@@ -5,8 +5,6 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
-	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
@@ -303,17 +301,4 @@ func (g *Game) ClearPlants(x0, y0, x1, y1 int) {
 			g.removePlant(id)
 		}
 	}
-}
-
-// woodLow reports the colony short of wood: less on the ground than two
-// days of burning for every campfire, or under 20 logs.
-func (g *Game) woodLow() bool {
-	fires := 0
-	for _, bid := range g.bldgIDs {
-		if b := g.bldgs.Ref(bid); b != nil && b.Kind == construction.Campfire {
-			fires++
-		}
-	}
-	want := max(20, fires*2*clock.TicksPerDay/TicksPerWood)
-	return g.stockOf(item.Wood) < want
 }

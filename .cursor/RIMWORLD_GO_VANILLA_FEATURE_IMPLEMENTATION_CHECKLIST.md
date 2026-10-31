@@ -649,14 +649,14 @@ This is the heart of autonomous colony behavior.
 
 ## 8.1 Nutrition
 
--   [x] **Nutrition values** (per-kind table: ration 4000, berries 1500, amberroot 2000, meat 2200, meal 6000)
+-   [x] **Nutrition values** (FOOD-1, wiki scale: a full bar is 1.0 = 10000; raw food, milk, pemmican and kibble 0.05 a unit, simple/fine/survival/paste meals 0.9, lavish 1.0, eggs by species 0.25-0.6, the legacy ration a survival meal; one meal or up to 20 raw units a sitting, overflow wasted)
     -   Foods provide nutrition.
     -   Pawns consume an amount based on hunger/body needs.
--   [-] **Food need** (permille decay; 0 downs then starvation death; a Hungry thought at 25 % and below, no ravenous or malnourished stages: FOOD-1)
+-   [-] **Food need** (FOOD-1: 1.6 nutrition a day for an adult, Fed/Hungry/Ravenous falls 100/50/25 %, thoughts Hungry -6, Ravenously hungry -12, Malnourished -20...-44 with a band hysteresis; eats at 30 % and keeps looking until 80 %, sleepers wake only ravenous; malnutrition at 0 % rises 1.51-2.27 %/h (rolled per pawn), recedes when fed, five stages with consciousness and hunger offsets, stops wound healing, kills at 100 %; `PawnView.Malnutrition`; missing: the bands' immunity effects, smokeleaf/hypothermia hunger factors)
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
--   [-] **Food search** (nearest edible stack; entity reserved; SIM-028: forbidden stacks skipped, animals never pick food behind fences; no diet)
+-   [-] **Food search** (nearest edible stack; entity reserved; SIM-028: forbidden stacks skipped, animals never pick food behind fences; FOOD-1: a malnourished pawn eats animal carcasses too; no diet or food policies yet)
     -   Prefer valid edible food according to restrictions and
         availability.
     -   Reserve food before fetching it.
@@ -672,7 +672,7 @@ This is the heart of autonomous colony behavior.
 
 -   [-] **Plant food** (harvest yield stacks; no meat/diet categories)
 -   [x] **Meat**
--   [-] **Animal products** (SIM-026: milk, wool, plain and fertile eggs, ember oil; Handle work type, Milk/Shear jobs; young give no reduced meat, no per-species yield tuning UI)
+-   [x] **Animal products** (SIM-026, FOOD-3: milk, wool and eggs per species with saturation scaling, fertile eggs edible, omnivores eat eggs and milk; Handle work type)
     -   Milk/eggs where species definitions support them.
 -   [ ] **Food categories and diet compatibility**
 
@@ -688,7 +688,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Food poisoning** (MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
     -   Chance influenced by cook skill and cleanliness/conditions.
     -   Health effect and mood consequences.
--   [x] **Butchering**
+-   [x] **Butchering** (FOOD-3: body-size formula by age, missing parts and damage, species-named meat, insect and human meat, rotten corpses give leather)
     -   Corpse -\> meat + leather/other products.
     -   Yield affected by species and skill/stat.
 
@@ -696,7 +696,7 @@ This is the heart of autonomous colony behavior.
 
 -   [-] **Fertility** (hover text only in `hud/cellinfo.go`; no painted fertility overlay: FOOD-5)
     -   Terrain fertility affects plant growth.
--   [-] **Crop definitions** (11 crops: grow days, yield, soil sensitivity, frost-kill temperature, shelf life; no minimum skill)
+-   [x] **Crop definitions** (FOOD-2: 15 crops incl. rice, strawberry, haygrass, hops at wiki grow days, yields and sensitivity; sow 170 / harvest 200 work; minimum sowing skill for healroot, strawberry, hops and trees; devilstrand, smokeleaf and psychoid are out of food scope; picker numbers FOOD-5)
     -   Growth time.
     -   fertility sensitivity.
     -   yield.
@@ -704,7 +704,7 @@ This is the heart of autonomous colony behavior.
     -   temperature/light requirements.
 -   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu; tree zones are planted, chopped when grown and replanted (UI-011); PLAY-017: growers first cut a wrong plant (wild, moss, bush, tree or another crop) off a zone cell, a ripe one is harvested)
     -   Growers plant designated crops in growing zones.
--   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; PLAY-017: in the sun window on unroofed cells, or at any hour under a strong lamp (50 % light); PLAY-016: cold and heat damage plants over hours (25%/h at the threshold, faster beyond, healing below 60% once safe, dying from 60%), shown in the plant view and cutting the harvest; no other plant health (blight, fire burns them via PLAY-015))
+-   [x] **Plant growth** (FOOD-2: rest 19:00-06:00 in any light, 51 % light minimum, wiki temperature curve and cold death, 65 % partial harvest, lifespan 5 x grow days, hydroponics 280 %, sun lamp, blight; integer per-tick growth scaled by fertility x soil sensitivity x temperature; PLAY-016: cold and heat damage plants over hours, shown in the plant view and cutting the harvest; fire burns them via PLAY-015)
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
@@ -1488,7 +1488,7 @@ children systems.
 
 -   [x] **Biome wildlife population** (SIM-023/025: per-biome wildlife density and spawn weights; start population sized to the biome's carrying capacity; arrivals below 70%, herds leave above 130%, predator cap)
     -   Spawn species appropriate to biome/climate.
--   [x] **Animal hunger/rest** (SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation)
+-   [x] **Animal hunger/rest** (SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation; FOOD-1: daily need on the nutrition scale by size (cow 0.86, alpaca 0.44 a day), babies x0.4 and juveniles x0.75, products fill 100/50/25/0 % by saturation)
     -   Simpler needs than humans.
 -   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens; SIM-038: grazers prefer fuller grass, meals scale with growth; PLAY-017: tame animals eat the nearest food their diet allows, stockpiles included, and tame predators hunt wild prey and eat it; FEED-001: the wiki diet table (kibble and pemmican for all but strict carnivores, meals for all but strict carnivores and tree eaters), animal feed before meals, only reachable food with a memory of unreachable targets, a whole-area search while starving (15/25 % band), kibble in troughs; missing: a per-animal food restriction policy)
 -   [x] **Predation** (SIM-019: predators hunt prey no bigger than themselves; small-prey predators XS/S only; packs share targets)
@@ -1507,8 +1507,8 @@ children systems.
 
 -   [x] **Tame designation** (Orders > Tame or the animal inspector; hunters tame)
 -   [-] **Animal-handling interaction** (SIM-026: taming moved from Hunt to the Handle work type, also used for Milk/Shear; no separate trust/nuzzle interaction)
--   [ ] **Food requirement**
--   [ ] **Success chance based on skill/wildness**
+-   [x] **Food requirement** (FOOD-3: taming costs food)
+-   [x] **Success chance based on skill/wildness** (FOOD-3: wildness, skill and a minimum skill; wiki Taming numbers)
 -   [x] **Tame animal joins colony** (named; chance per try by species (deer 60%, timber wolf 25%); a botched try may enrage it; tame young are named at birth)
 
 ## 18.5 Training
@@ -2010,7 +2010,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Manhunter pack**
 -   [x] **Animal insanity** (SIM-025: mad animal, a single manhunter)
 -   [x] **Disease outbreak** (MED-04: six Nature incidents from day 15, biome-gated (malaria warm, sleeping sickness tropical), weights scaled by Disease frequency (0 = none), one or several victims, caution letter)
--   [ ] **Blight**
+-   [x] **Blight** (FOOD-2: incident `crop_blight`, domesticated crops under 15 grow days, 4-tile spread, cut to clear; a Cut all blight command is FOOD-5)
     -   Crop disease spreads/destroys plants.
 -   [ ] **Toxic fallout**
 -   [-] **Heat wave** (NG-1: see 12.6; fired by the day rollover, not the storyteller schedule)
@@ -2926,7 +2926,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [x] Grow crops.
 -   [ ] Hunt animals.
 -   [ ] Cook food.
--   [-] Survive hunger/rest/temperature. (hunger/rest downed+starve/exhaustion; no temperature)
+-   [-] Survive hunger/rest/temperature. (hunger: malnutrition (FOOD-1); rest: exhaustion; no temperature)
 -   [ ] Treat injuries/disease.
 -   [-] Manage mood.
 -   [ ] Survive mental breaks.

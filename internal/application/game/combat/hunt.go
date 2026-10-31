@@ -24,9 +24,10 @@ const huntDownedFirst = 1 << 20
 // hunter tries before giving up for this pass.
 const huntTries = 8
 
-// Assign sends a hunter after the nearest designated animal (a downed one
-// first: the hunter finishes it), first fetching a free ranged weapon if
-// it has none.
+// Assign sends a hunter after the nearest designated wild animal (a
+// downed one first: the hunter finishes it), first fetching a free ranged
+// weapon if it has none. After the kill the hunter carries the body to
+// storage (FOOD-3, wiki: Hunt; Strikes.Do through Hunts.CarryKill).
 // The next nearest animal is tried when one can't be started (out of
 // reach, postponed: SIM-027), at most huntTries animals.
 func (hn *Hunting) Assign(id entity.EntityID) bool {
@@ -41,8 +42,8 @@ func (hn *Hunting) Assign(id entity.EntityID) bool {
 		var bx, by int
 		for _, aid := range h.AnimalIDs() {
 			a, ok := h.Animal(aid)
-			if !ok || !a.Designated || a.Dead() {
-				continue
+			if !ok || !a.Designated || a.Dead() || a.Tame {
+				continue // FOOD-3: a marked tame animal is a handler's slaughter (game/herd)
 			}
 			if hn.hu.Reserved(aid) {
 				continue

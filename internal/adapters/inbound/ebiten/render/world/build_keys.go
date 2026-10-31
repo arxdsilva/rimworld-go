@@ -187,6 +187,10 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/nutrient_paste_dispenser"
 	case "sarcophagus":
 		return "furniture/sarcophagus_" + FacingOr(facing)
+	case "hydroponics basin": // FOOD-2: faced; its glow layer comes from DrawPowerParts
+		return "furniture/hydroponics_basin_" + FacingOr(facing)
+	case "sun lamp":
+		return "furniture/sun_lamp"
 	case "hive mound": // CBT-4
 		return "structure/hive_mound"
 	case "ship part": // DEF-4: not buildable, drawn where it crashed

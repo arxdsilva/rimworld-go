@@ -231,6 +231,9 @@ func ScarOdds(k WoundKind, dmg int) int32 {
 // made (Size; Dmg for wounds older than MED-02) and either becomes a
 // scar or goes. It reports the parts that scarred (nil: none).
 func (b *Body) HealHour(roll func(int) int, lying int32) (scarred []Part) {
+	if Malnutrition(b) > 0 {
+		return nil // wiki: Malnutrition: wounds don't heal
+	}
 	kept := b.Wounds[:0]
 	for _, w := range b.Wounds {
 		if w.Permanent || w.Dmg <= 0 {

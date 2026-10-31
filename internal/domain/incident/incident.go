@@ -52,6 +52,9 @@ const (
 	// DEF-4 (Threat pool): a ship part crashes and its dormant mechanoid
 	// guards wake when disturbed (game/raid/shippart.go).
 	CrashedShipPart
+	// CropBlight (FOOD-2, Nature pool): blight strikes one crop species in
+	// one room (game/plant_blight.go).
+	CropBlight
 	NumIDs
 )
 
@@ -110,6 +113,10 @@ var defs = [NumIDs]Def{
 	// needs 400 raid points, the game's own check). Cooldown and first day
 	// are original tuning (the wiki gives none).
 	CrashedShipPart: {Key: "crashed_ship_part", Name: "Crashed ship part", Category: Threat, Weight: 2, Cooldown: 15, MinDay: 10},
+	// FOOD-2, wiki: Events (chance 2.5 against the solar flare's 1.5, so 10
+	// against our flare's 6; it does not recur for 30 days). The first day
+	// is original tuning.
+	CropBlight: {Key: "crop_blight", Name: "Blight", Category: Nature, Weight: 10, Cooldown: 30, MinDay: 10},
 }
 
 func init() {

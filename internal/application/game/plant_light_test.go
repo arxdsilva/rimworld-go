@@ -1,6 +1,8 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/farm"
+
 	"math"
 	"testing"
 
@@ -281,7 +283,7 @@ func TestWitherNoFlap(t *testing.T) {
 	flips, was := 0, false
 	pass := func(v float32) {
 		art[i] = v
-		var fp frostPass
+		var fp farm.Pass
 		p, _ := g.plants.Get(id)
 		g.lightGrows(id, &p, &fp)
 		p, _ = g.plants.Get(id)
@@ -394,57 +396,37 @@ func TestRoofedCropWithoutLampDoesNotGrow(t *testing.T) {
 	}
 }
 
-// TestLampGrowsCropRoundTheClock: a lamp one tile away (0.6) grows a
-// roofed crop in every hour of the day; four tiles away (0.3) it does not.
-func TestLampGrowsCropRoundTheClock(t *testing.T) {
+// TestLampGrowsNoCropAtAnyHour (FOOD-2, wiki: Sun lamp): a plain lamp's
+// light is under the 51 % crops need, so a roofed crop one tile from a lit
+// lamp stands still through a whole day and night.
+func TestLampGrowsNoCropAtAnyHour(t *testing.T) {
 	g := mildLight(t)
 	_, gen := litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
 	near1, _ := g.spawnPlant(plant.Potato, 11, 10, 0)
-	far4, _ := g.spawnPlant(plant.Potato, 14, 10, 0)
 	if l := float64(g.cellLight(11, 10)); l < plant.StrongGrowLight {
 		t.Fatalf("lamp light one tile away %.2f", l)
 	}
-	if l := float64(g.cellLight(14, 10)); l >= plant.StrongGrowLight {
-		t.Fatalf("lamp light four tiles away %.2f", l)
-	}
-	rate := plainRate(t, g, plant.Potato, 11, 10)
-	jumpTo(g, 10, 20) // dusk: the sun is done for the day
-	prev := 0
-	for h := 0; h < 24; h += 4 { // night and day alike
+	for h := 0; h < 24; h += 4 {
 		g.setFuel(gen, g.fuelCap(gen)) // a tank lasts under a day
 		g.Step(4 * clock.TicksPerHour)
-		p, _ := growthOf(t, g, uint64(near1))
-		if p.Growth <= prev {
-			t.Fatalf("lamp-lit crop stood still in the 4 h before hour %d (%d -> %d)", (20+h+4)%24, prev, p.Growth)
-		}
-		prev = p.Growth
 	}
-	// a whole day at the rate, give or take the window the plant was found in
-	want := rate * clock.TicksPerDay / 100
-	if d := prev - want; d < -rate*climateInterval/100-1 || d > rate*climateInterval/100+1 {
-		t.Fatalf("lamp-lit crop grew %d in a day, want about %d", prev, want)
-	}
-	if p, _ := growthOf(t, g, uint64(far4)); p.Growth != 0 {
-		t.Fatalf("crop four tiles from the lamp grew %d", p.Growth)
+	if p, _ := growthOf(t, g, uint64(near1)); p.Growth != 0 {
+		t.Fatalf("a lamp-lit roofed crop grew %d in a day", p.Growth)
 	}
 }
 
-// TestLampBeatsNightOutdoors: under the open sky a strong lamp still grows
-// the crop through the night (max of the sun's and the lamp's hours).
-func TestLampBeatsNightOutdoors(t *testing.T) {
+// TestLampDoesNotGrowCropsAtNight (FOOD-2, wiki: Plants, rest 19:00-06:00
+// in any light): under the open sky a lamp no longer grows the crop
+// through the night.
+func TestLampDoesNotGrowCropsAtNight(t *testing.T) {
 	g := mildLight(t)
 	g.setRoof(11*40+10, 0)
-	g.setRoof(30*40+30, 0)
 	litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
 	lit, _ := g.spawnPlant(plant.Potato, 10, 11, 0)
-	dark, _ := g.spawnPlant(plant.Potato, 30, 30, 0)
 	jumpTo(g, 10, 21)
 	g.Step(6 * clock.TicksPerHour) // 21:00 to 03:00
-	if p, _ := growthOf(t, g, uint64(lit)); p.Growth <= 0 {
-		t.Fatal("an outdoor crop beside a lamp stood still at night")
-	}
-	if p, _ := growthOf(t, g, uint64(dark)); p.Growth != 0 {
-		t.Fatalf("an outdoor crop grew %d at night with no lamp", p.Growth)
+	if p, _ := growthOf(t, g, uint64(lit)); p.Growth != 0 {
+		t.Fatalf("an outdoor crop beside a lamp grew %d at night", p.Growth)
 	}
 }
 
@@ -532,9 +514,10 @@ func TestUnfuelledCampfireGivesNoLight(t *testing.T) {
 	}
 }
 
-// TestBurningCampfireGrowsNearbyCrop: a crop beside a burning campfire
-// grows on a dark roofed night; the same crop beside a cold one does not.
-func TestBurningCampfireGrowsNearbyCrop(t *testing.T) {
+// TestBurningCampfireGrowsNoCrop (FOOD-2): a fire's light is under the
+// 51 % crops need, so neither the crop beside a burning campfire nor the
+// one beside a cold one grows on a dark roofed night.
+func TestBurningCampfireGrowsNoCrop(t *testing.T) {
 	g := mildLight(t)
 	placeBuilt(t, g, construction.Campfire, construction.South, 30, 30)
 	placeBuilt(t, g, construction.Campfire, construction.South, 10, 10)
@@ -543,8 +526,8 @@ func TestBurningCampfireGrowsNearbyCrop(t *testing.T) {
 	cold, _ := g.spawnPlant(plant.Potato, 11, 10, 0)
 	jumpTo(g, 10, 22)
 	g.Step(2 * clock.TicksPerHour)
-	if p, _ := growthOf(t, g, uint64(lit)); p.Growth <= 0 {
-		t.Fatal("crop beside a burning campfire did not grow")
+	if p, _ := growthOf(t, g, uint64(lit)); p.Growth != 0 {
+		t.Fatalf("crop beside a burning campfire grew %d", p.Growth)
 	}
 	if p, _ := growthOf(t, g, uint64(cold)); p.Growth != 0 {
 		t.Fatalf("crop beside a cold campfire grew %d", p.Growth)
@@ -574,7 +557,7 @@ func TestPlantGrowthState(t *testing.T) {
 	g.setRoof(35*40+35, 0)
 	setAir(g, 33, 33, -50)
 	cold, _ := g.spawnPlant(plant.Potato, 33, 33, 0)
-	setAir(g, 35, 35, 480)
+	setAir(g, 35, 35, 600) // FOOD-2: growth stops at 58 °C (wiki)
 	hot, _ := g.spawnPlant(plant.Potato, 35, 35, 0)
 	jumpTo(g, 10, 10)
 	gt := plant.DefOf(plant.Potato).GrowTicks
@@ -587,7 +570,7 @@ func TestPlantGrowthState(t *testing.T) {
 	}{
 		{"open sky by day", uint64(open), "growing"},
 		{"under a roof, no lamp", uint64(roofed), "dark"},
-		{"beside a lamp", uint64(lit), "growing"},
+		{"beside a lamp", uint64(lit), "dark"}, // FOOD-2: a lamp's 50 % is too little
 		{"ripe", uint64(ripe), "ripe"},
 		{"moss in a dark roofed cave", uint64(moss), "dark"},
 		{"freezing air", uint64(cold), "cold"},
@@ -597,31 +580,27 @@ func TestPlantGrowthState(t *testing.T) {
 			t.Errorf("%s: State %q, want %q", c.name, got, c.state)
 		}
 	}
-	// the sun grows a crop 14 h of every 24: the estimate stretches by 24/14
-	if got, want := growthNow(g, uint64(open)).RipeIn, gt*100/rate*24/14; got < want-24 || got > want+24 {
+	// plants grow 13 h of every 24 (FOOD-2, wiki: Plants): the estimate stretches by 24/13
+	if got, want := growthNow(g, uint64(open)).RipeIn, gt*100/rate*24/13; got < want-24 || got > want+24 {
 		t.Errorf("open sky RipeIn %d, want about %d", got, want)
 	}
-	// a strong lamp grows it round the clock
-	if got, want := growthNow(g, uint64(lit)).RipeIn, gt*100/rate; got < want-2 || got > want+2 {
-		t.Errorf("lamp-lit RipeIn %d, want about %d", got, want)
-	}
-	for _, id := range []uint64{uint64(roofed), uint64(ripe), uint64(moss), uint64(cold), uint64(hot)} {
+	for _, id := range []uint64{uint64(roofed), uint64(lit), uint64(ripe), uint64(moss), uint64(cold), uint64(hot)} {
 		if got := growthNow(g, id).RipeIn; got != -1 {
 			t.Errorf("plant %d RipeIn %d, want -1 (not growing)", id, got)
 		}
 	}
 	// half grown: half the time left
 	g.plants.Set(open, plant.Plant{Species: plant.Potato, X: 25, Y: 25, Growth: gt / 2})
-	if got, want := growthNow(g, uint64(open)).RipeIn, gt/2*100/rate*24/14; got < want-24 || got > want+24 {
+	if got, want := growthNow(g, uint64(open)).RipeIn, gt/2*100/rate*24/13; got < want-24 || got > want+24 {
 		t.Errorf("half-grown RipeIn %d, want about %d", got, want)
 	}
-	// night under the open sky: resting, still counting down; the lamp-lit
-	// crop never rests
+	// night under the open sky: resting, still counting down; the
+	// lamp-lit crop is still too dark to grow at all
 	jumpTo(g, 10, 23)
 	if v := growthNow(g, uint64(open)); v.State != "resting" || v.RipeIn <= 0 {
 		t.Errorf("open sky by night: %q, RipeIn %d", v.State, v.RipeIn)
 	}
-	if v := growthNow(g, uint64(lit)); v.State != "growing" {
+	if v := growthNow(g, uint64(lit)); v.State != "dark" {
 		t.Errorf("lamp by night: %q", v.State)
 	}
 	if v := growthNow(g, uint64(roofed)); v.State != "dark" {
@@ -650,8 +629,8 @@ func TestPlantGrowthFollowsTheClock(t *testing.T) {
 	if after := g.plantViews(); len(after) == 0 || &after[0] != &before[0] {
 		t.Fatal("the plant list changed identity with the hour")
 	}
-	litLamp(t, g, 24, 25, 21, 24) // PLAY-021: a lamp on power
-	if v := growthNow(g, uint64(id)); v.State != "growing" {
+	litLamp(t, g, 24, 25, 21, 24)                            // PLAY-021: a lamp on power
+	if v := growthNow(g, uint64(id)); v.State != "resting" { // FOOD-2: plants rest at night in any light
 		t.Fatalf("lamp lit beside it: %q", v.State)
 	}
 	if _, ok := g.PlantGrowth(entity.EntityID(1 << 40)); ok {

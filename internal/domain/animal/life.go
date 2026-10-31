@@ -35,12 +35,11 @@ const (
 	// permille at the full lifespan.
 	OldAgeFrom = 80
 	OldAgeMax  = 100
-	// Incubation (tenths of a degree C): a fertile egg hatches only while
-	// HatchMin <= temperature <= HatchMax, and dies (a plain egg) below
-	// EggFreeze.
-	HatchMin  = 0
-	HatchMax  = 450
-	EggFreeze = -50
+	// Incubation (tenths of a degree C): a fertile egg incubates while
+	// HatchMin <= temperature <= HatchMax and dies (a plain egg) outside
+	// it (wiki: Eggs, 0-50 C).
+	HatchMin = 0
+	HatchMax = 500
 	// FollowNear: a young animal keeps within this many tiles of its
 	// mother; MotherRadius is how far it looks for her.
 	FollowNear   = 2
@@ -78,13 +77,16 @@ func Produces(s Species, female, adult bool) bool {
 }
 
 // ProductPerDay is the permille a producing animal's product fills per
-// day at food f: 1000/ProductDays when fed, half when hungry, nothing
-// when starving.
+// day at food f: 1000/ProductDays when fed, half when hungry, a quarter
+// when ravenously hungry (below half of ProductFedFood), nothing when
+// malnourished (wiki: Saturation: 100 / 50 / 25 / 0 %).
 func ProductPerDay(s Species, f int) int {
 	d := LifeOf(s).ProductDays
 	switch {
 	case d <= 0 || f <= 0:
 		return 0
+	case f < ProductFedFood/2:
+		return ProductFull / d / 4
 	case f < ProductFedFood:
 		return ProductFull / d / 2
 	}
@@ -112,18 +114,9 @@ func FertileEgg(s Species, mated int) bool {
 	return true
 }
 
-// LaysToday reports a layer of s that lays on day (a plain layer every
-// day, a fertile layer every EggDays, phase by id).
-func LaysToday(s Species, id uint64, day int) bool {
-	e := LifeOf(s).EggDays
-	if e <= 1 {
-		return true
-	}
-	return (uint64(day)+id)%uint64(e) == 0
-}
-
-// HatchTicks is how long a fertile egg of s incubates.
-func HatchTicks(s Species) int { return LifeOf(s).HatchDays * clock.TicksPerDay }
+// LaysToday reports a layer of s that lays on day (EggsToday, FOOD-3:
+// the wiki interval of its species, phase by id).
+func LaysToday(s Species, id uint64, day int) bool { return EggsToday(s, id, day) > 0 }
 
 // GestTicks is a live bearer's pregnancy.
 func GestTicks(s Species) uint64 { return uint64(LifeOf(s).GestDays) * clock.TicksPerDay }

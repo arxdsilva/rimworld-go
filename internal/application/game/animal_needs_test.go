@@ -177,6 +177,8 @@ func TestWolfEatsItsKill(t *testing.T) {
 func TestStarvingAnimalDies(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	bareGround(g)
+	g.ClearPlants(0, 0, 19, 11)
+	g.biome = biome.IceSheet // FOOD-2: no wild plants sprout back to feed it
 	deer, _ := g.SpawnAnimal("deer", 10, 6)
 	g.TameAnimal(deer, "Clover")
 	setAnimal(g, deer, func(a *animal.State) { a.Food = 1 })

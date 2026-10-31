@@ -1,6 +1,8 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/skill"
 	"strings"
 	"testing"
 
@@ -15,8 +17,11 @@ func TestHunterTamesMarkedAnimal(t *testing.T) {
 	g := New(Config{Seed: 6, Width: 24, Height: 14})
 	ada, _ := g.SpawnNamedPawn(4, 7, "Ada")
 	buck, _ := g.SpawnAnimal("dustbuck", 16, 7)
+	// FOOD-3: a deer (wildness 75 %) needs Animals 7 and costs food per try
+	setSkill(g, ada, skill.Animals, 20)
+	spawn(t, g, item.Potatoes, 75, 4, 9)
 	g.Enqueue(command.Command{Kind: command.DesignateTame, X: 16, Y: 7, X2: 16, Y2: 7})
-	for i := 0; i < 300; i++ {
+	for i := 0; i < 600; i++ {
 		g.Step(50)
 		g.SetNeeds(ada, 1<<20, 1<<20)
 		if a, _ := g.animals.Get(buck); a.Tame {
@@ -69,7 +74,7 @@ func TestProvokedAnimalsSometimesGoManhunter(t *testing.T) {
 	for seed := uint64(1); seed <= 30; seed++ {
 		g := New(Config{Seed: seed, Width: 20, Height: 10})
 		ada, _ := g.SpawnNamedPawn(3, 5, "Ada")
-		buck, _ := g.SpawnAnimal("elk", 15, 5) // a grazer (revenge 10, as the dustbuck had; deer are skittish now)
+		buck, _ := g.SpawnAnimal("caribou", 15, 5) // FOOD-3: a caribou turns 10 % of the time (wiki); deer and elk never
 		g.hurt(buck, 5, ada)
 		if a, _ := g.animals.Get(buck); a.Enraged(uint64(g.clock.Now())) {
 			enraged++

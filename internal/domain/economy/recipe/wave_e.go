@@ -37,27 +37,28 @@ func in(k item.Kind, qty int) Input { return Input{Kind: k, Qty: qty} }
 const cookWorkPct = 40
 
 // meal is a cooked food at the stove from veg plant food and meat meat or
-// animal products (raw units), out of it, the wiki's work and minimum
-// Cooking.
+// animal products (raw units of 0.05 nutrition, FOOD-1: the wiki's fine
+// 0.25 + 0.25 is 5 + 5, lavish 10 + 10, survival 0.3 + 0.3 is 6 + 6,
+// pemmican 5 + 5), out of it, the wiki's work and minimum Cooking.
 func meal(id ID, name, label string, out item.Kind, veg, meat, qty, wikiWork int, minSkill uint8) Def {
 	ins := []Input{{AnyVeg: true, Qty: veg}, {AnyMeat: true, Qty: meat}}
 	return Def{ID: id, Name: name, Label: label, Bench: construction.Stove, Input: ins[0], Inputs: ins,
 		Output: out, OutQty: qty, Work: wikiWork * cookWorkPct / 100, Skill: work.Cook, Learn: skill.Cooking, MinSkill: minSkill}
 }
 
-// kibble is animal feed (wiki: Kibble: 1 + 1 nutrition, 4 + 4 raw units
-// here; 50 at the butcher table, 35 at the spot; 450 work).
+// kibble is animal feed (wiki: Kibble: 1 + 1 nutrition, 20 + 20 raw
+// units; 50 at the butcher table, 35 at the spot; 450 work).
 func kibble(id ID, name, label string, bench construction.Kind, qty int) Def {
-	d := meal(id, name, label, item.Kibble, 4, 4, qty, 450, 0)
+	d := meal(id, name, label, item.Kibble, 20, 20, qty, 450, 0)
 	d.Bench = bench
 	return d
 }
 
 // brewWort is wort at the brewing bench (wiki: Brewery, 25 hops make 5
-// wort in 1000 ticks; brewgrain is our hops).
+// wort in 1000 ticks; brewgrain brews as hops do, FOOD-2).
 func brewWort() Def {
 	return Def{ID: BrewWort, Name: "brew_wort", Label: "Brew wort", Bench: construction.BrewingBench,
-		Input: in(item.Brewgrain, 25), Output: item.Wort, OutQty: 5, Work: 1000 * cookWorkPct / 100,
+		Input: Input{Kind: item.Hops, Hops: true, Qty: 25}, Output: item.Wort, OutQty: 5, Work: 1000 * cookWorkPct / 100,
 		Skill: work.Cook, Learn: skill.Cooking}
 }
 
@@ -114,8 +115,10 @@ func smeltWear() Def {
 func plantFood(k item.Kind) bool { return k.Raw() && !animalFood(k) }
 
 // animalFood is raw meat (FOOD-0: human and insect meat too) or an
-// animal product (the meat side).
-func animalFood(k item.Kind) bool { return k.IsMeat() || k == item.Milk || k == item.Egg }
+// animal product (the meat side; FOOD-3: fertilized eggs too).
+func animalFood(k item.Kind) bool {
+	return k.IsMeat() || k == item.Milk || k == item.Egg || k == item.FertileEgg
+}
 
 // Cooked reports a meal a cook makes, which carries the cook's poison
 // chance (the simple meal and PRD-4's better meals).

@@ -1,9 +1,9 @@
 package game
 
 import (
-	"strconv"
-	"strings"
+	"rimworld-go/internal/application/game/farm"
 
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/chunk"
@@ -24,36 +24,33 @@ import (
 // A plant sown during a window grows for the whole window it is first
 // seen in (at most climateInterval ticks early, a tenth of an hour).
 
-// frostKill is one species' kills in a pass (a notice per species).
-type frostKill struct {
-	species plant.Species
-	n       int
-	x, y    int
-	hot     bool
-}
-
-// frostPass collects one pass's kills (the ids to drop from plantIDs and
-// the notices to post) and the species frost or heat began to hurt (a
-// warning each, at the first such plant).
-type frostPass struct {
-	gone  map[entity.EntityID]bool
-	kills []frostKill
-	hurt  []frostKill
-}
-
 // growChunks grows (and frosts) the plants of the chunks whose phase is
-// this tick.
+// this tick, and sprouts wild plants back in them (FOOD-2).
 func (g *Game) growChunks() {
 	now := uint64(g.clock.Now())
 	cg := chunk.New(g.grid.Width(), g.grid.Height())
 	n := cg.Count()
 	ph := int(now % climateInterval)
-	var fp frostPass
+	var fp farm.Pass
+	var lamps []farm.Lamp
 	gp := g.growthPct() // setup.go: a scenario's permanent conditions (Ashfall)
+	if ph == 0 {
+		g.sunLampTick(now) // plant_light.go: the lamps' hours, short circuits
+	}
 	for c := (ph*n + climateInterval - 1) / climateInterval; c < n && c*climateInterval/n == ph; c++ {
+		if lamps == nil {
+			lamps = append(g.sunLamps(now), farm.Lamp{X: -1 << 20}) // the sentinel is never in reach
+		}
+		wild := 0
 		g.chunkPlants(cg, c, func(id entity.EntityID, p plant.Plant) {
-			g.growPlant(id, p, now, gp, &fp)
+			if !p.Zone {
+				wild++
+			}
+			g.growPlant(id, p, now, gp, lamps, &fp)
 		})
+		if plant.GrowingHour(int(clock.HourOfDay(clock.Tick(now)))) {
+			g.sproutWild(cg, c, wild, now) // plant_light.go: in the growing hours only
+		}
 		g.growGrassChunk(c, now) // grass.go: regrowing grass fills out (PLAY-010)
 	}
 	g.endFrostPass(&fp)
@@ -87,34 +84,83 @@ func (g *Game) chunkPlants(cg chunk.Grid, c int, fn func(entity.EntityID, plant.
 	}
 }
 
-// growPlant damages plant id if the air is out of its range (removing it
-// at 100%), then grows it over the window that ends now: for the hours the
-// sun or a strong lamp gives it (growSpan, plant_light.go). A crop that
-// ripens on a growing-zone cell is marked for harvest (PLAY-017).
-func (g *Game) growPlant(id entity.EntityID, p plant.Plant, now uint64, gp int, fp *frostPass) {
+// growPlant runs plant id through the window that ends now (FOOD-2,
+// wiki: Plants): a crop past its lifespan rots away; one in an unpowered
+// hydroponics basin withers; frost and heat damage it (plant.Expose,
+// PLAY-016); blight worsens and spreads; then it grows in the growing
+// hours at its soil's, the air's and its growing light's factors. A crop
+// that ripens on a growing-zone cell is marked for harvest (PLAY-017).
+func (g *Game) growPlant(id entity.EntityID, p plant.Plant, now uint64, gp int, lamps []farm.Lamp, fp *farm.Pass) {
+	was, t0 := p, now-min(now, climateInterval)
+	if p.Sown == 0 && plant.Lifespan(p.Species) > 0 {
+		p.Sown = now // its lifespan counts from the first pass that sees it
+	}
 	t := int(g.temperatureAt(p.X, p.Y))
-	if g.frostKills(id, &p, t, now, fp) || !g.lightGrows(id, &p, fp) || p.Ripe() { // plant_light.go (MAPGEN-3)
+	basin, fed := g.basinAt(p.X, p.Y)
+	switch {
+	case p.Rotted(now):
+		g.plantDied(id, p, farm.Rot, fp)
+		return
+	case basin && !fed:
+		if p = p.Starve(t0, now); p.Dead() {
+			g.plantDied(id, p, farm.Starved, fp)
+			return
+		}
+	case g.frostKills(id, &p, t, now, fp):
 		return
 	}
-	if n := g.growSpan(p, g.growRate(p, t, gp), now-min(now, climateInterval), now); n > 0 {
-		q := p.AddGrowth(n)
-		g.setPlant(id, q)
-		if q.Ripe() {
+	if !g.lightGrows(id, &p, fp) { // plant_light.go (MAPGEN-3)
+		return
+	}
+	light := plant.FullGrowLight
+	if !plant.OwnLightRules(p.Species) {
+		light = farm.GrowLight(g.roofAt(p.X, p.Y).Roofed(), g.artificialLight(p.X, p.Y), lamps, p.X, p.Y, g.combat.Sight.Line)
+	}
+	p = p.Blighten(t0, now)
+	farm.Spread(plantField{g}, id, p, now) // plant_light.go
+	if !p.Ripe() && fed == basin {
+		p = p.AddGrowth(plant.GrowSpan(g.growRate(p, t, gp, light), t0, now))
+	}
+	if p.Life = uint8(p.LifePct(now)); plant.GrowingHour(int(clock.HourOfDay(clock.Tick(now)))) {
+		p.Light = uint8(light / 10) // the readout keeps the day's light through the night
+	}
+	if p != was {
+		g.setPlant(id, p)
+		if p.Ripe() && !was.Ripe() {
 			g.markRipeHarvest(id) // food.go: zone crops are harvested through the mark
 		}
 	}
 }
 
-// growRate is the growth speed (percent, 100: one growth tick per tick of
-// growing time) of plant p in air t: its soil, the temperature and the
-// scenario's growth percent gp.
-func (g *Game) growRate(p plant.Plant, t, gp int) int {
-	rate := plant.Rate(p.Species, plant.Fertility(p.Species, g.terr.At(p.X, p.Y))) // stone feeds cave plants
-	rate = rate * plant.TempFactor(t) / 1000
-	if gp != 100 {
-		rate = rate * gp / 100
+// growRate is the growth speed (percent, 100: one growth unit per tick of
+// growing time) of plant p in air t at growing light (permille): its
+// soil, the temperature, the light (not for moss and duskmoss, which keep
+// their own rules) and the scenario's growth percent gp.
+func (g *Game) growRate(p plant.Plant, t, gp, light int) int {
+	rate := plant.Rate(p.Species, plantFertility(g, p)) * plant.TempFactor(t) / 1000
+	if !plant.OwnLightRules(p.Species) {
+		rate = rate * plant.LightFactor(light) / 1000
 	}
-	return rate
+	return rate * gp / 100
+}
+
+// plantFertility is the fertility (percent) plant p grows at: a
+// hydroponics basin's under it, else its ground's (stone feeds cave
+// plants).
+func plantFertility(g *Game, p plant.Plant) int {
+	if basin, _ := g.basinAt(p.X, p.Y); basin {
+		return plant.HydroFertile
+	}
+	return plant.Fertility(p.Species, g.terr.At(p.X, p.Y))
+}
+
+// basinAt reports a hydroponics basin on (x, y) and whether it has power.
+func (g *Game) basinAt(x, y int) (basin, powered bool) {
+	id := g.layerBldgAt(x, y, construction.LayerObject)
+	if b := g.bldgs.Ref(id); b == nil || b.Kind != construction.HydroponicsBasin {
+		return false, false
+	}
+	return true, g.powered(id)
 }
 
 // frostKills applies the air t to plant id over the window that ends now
@@ -123,10 +169,10 @@ func (g *Game) growRate(p plant.Plant, t, gp int) int {
 // a pine in a desert summer), takes damage over hours (plant.Expose,
 // PLAY-016) and is removed at 100%. The original tree and berry bush only
 // go dormant. It reports whether the plant died.
-func (g *Game) frostKills(id entity.EntityID, p *plant.Plant, t int, now uint64, fp *frostPass) bool {
+func (g *Game) frostKills(id entity.EntityID, p *plant.Plant, t int, now uint64, fp *farm.Pass) bool {
 	q, started := p.Expose(t, now-min(now, climateInterval), now)
 	if started {
-		fp.hurt = addKill(fp.hurt, q)
+		fp.Hurt = farm.Add(fp.Hurt, q, farm.DamageCause(q))
 	}
 	if q == *p {
 		return false
@@ -136,154 +182,62 @@ func (g *Game) frostKills(id entity.EntityID, p *plant.Plant, t int, now uint64,
 		g.setPlant(id, q)
 		return false
 	}
-	g.dropPlant(id)   // removePlant, with the list compacted by endFrostPass
-	g.plantsChanged() // jobindex.go
-
-	g.plantLightChanged(q.Species) // light.go: a glowing plant gone
-	if fp.gone == nil {
-		fp.gone = map[entity.EntityID]bool{}
-	}
-	fp.gone[id] = true
-	fp.kills = addKill(fp.kills, q)
+	g.plantDied(id, q, farm.DamageCause(q), fp)
 	return true
 }
 
-// addKill counts plant p in ks: one entry per species and cause, at the
-// first plant's spot.
-func addKill(ks []frostKill, p plant.Plant) []frostKill {
-	for i := range ks {
-		if ks[i].species == p.Species && ks[i].hot == p.DamageHeat {
-			ks[i].n++
-			return ks
-		}
-	}
-	return append(ks, frostKill{species: p.Species, n: 1, x: p.X, y: p.Y, hot: p.DamageHeat})
+// plantDied removes plant id (p), dead of cause in this pass: the list is
+// compacted and the notices posted by endFrostPass.
+func (g *Game) plantDied(id entity.EntityID, p plant.Plant, cause farm.Cause, fp *farm.Pass) {
+	g.dropPlant(id)
+	g.plantsChanged()              // jobindex.go
+	g.plantLightChanged(p.Species) // light.go: a glowing plant gone
+	fp.Died(id, p, cause)
 }
 
-// frostCrops runs the frost pass over the whole map for the window that
-// ends now (tests, and the reference for the staggered pass).
-func (g *Game) frostCrops() {
-	cg := chunk.New(g.grid.Width(), g.grid.Height())
+// endFrostPass warns of the species frost or heat began to hurt (once a
+// day per species and cause), drops the dead plants from plantIDs (once,
+// in order) and posts a notice per species and cause. Deaths of one
+// species in one climate interval share a notice: a later pass in the
+// same interval adds its count to it, so a frost that sweeps the
+// staggered chunks still reads as one event, whatever tick a save was
+// taken on.
+func (g *Game) endFrostPass(fp *farm.Pass) {
 	now := uint64(g.clock.Now())
-	var fp frostPass
-	for c := 0; c < cg.Count(); c++ {
-		g.chunkPlants(cg, c, func(id entity.EntityID, p plant.Plant) {
-			g.frostKills(id, &p, int(g.temperatureAt(p.X, p.Y)), now, &fp)
-		})
+	for _, k := range fp.Hurt {
+		noticeOnce(g, k.X, k.Y, farm.HurtText(k.Species, k.Cause == farm.Heat), now-min(now, clock.TicksPerDay-1), 1<<30)
 	}
-	g.endFrostPass(&fp)
-}
-
-// endFrostPass warns of the species frost or heat began to hurt
-// (hurtNotice), drops the killed plants from plantIDs (once, in order)
-// and posts a notice per species. Kills of one species in one climate
-// interval share a notice: a later pass in the same interval adds its
-// count to it, so a frost that sweeps the staggered chunks still reads as
-// one event, whatever tick a save was taken on.
-func (g *Game) endFrostPass(fp *frostPass) {
-	for _, k := range fp.hurt {
-		g.hurtNotice(k)
-	}
-	if fp.gone == nil {
+	if fp.Gone == nil {
 		return
 	}
-	g.plantIDs = dropIDs(g.plantIDs, func(id entity.EntityID) bool { return fp.gone[id] })
-	now := uint64(g.clock.Now())
+	g.plantIDs = dropIDs(g.plantIDs, func(id entity.EntityID) bool { return fp.Gone[id] })
 	from := now - now%climateInterval
-	for _, k := range fp.kills {
+	for _, k := range fp.Kills {
 		g.frostNotice(k, from)
 	}
 }
 
 // frostNotice posts k's notice, or adds k to this interval's notice for
 // the same species and cause.
-func (g *Game) frostNotice(k frostKill, from uint64) {
+func (g *Game) frostNotice(k farm.Kill, from uint64) {
 	for i := len(g.messages) - 1; i >= 0 && g.messages[i].Tick >= from; i-- {
-		if n, ok := frostCount(g.messages[i].Text, k.species, k.hot); ok {
-			g.messages[i].Text = frostText(k.species, n+k.n, k.hot)
+		if n, ok := farm.KillCount(g.messages[i].Text, k.Species, k.Cause); ok {
+			g.messages[i].Text = farm.KillText(k.Species, n+k.N, k.Cause)
 			return
 		}
 	}
-	g.message(k.x, k.y, "%s", frostText(k.species, k.n, k.hot))
+	g.message(k.X, k.Y, "%s", farm.KillText(k.Species, k.N, k.Cause))
 }
 
-// hurtNotice warns that frost or heat began to hurt k's species: once a
-// day per species and cause (a warning of the last day, still among the
-// recent messages, covers it).
-func (g *Game) hurtNotice(k frostKill) {
-	text := hurtText(k.species, k.hot)
-	now := uint64(g.clock.Now())
-	for i := len(g.messages) - 1; i >= 0 && g.messages[i].Tick+clock.TicksPerDay > now; i-- {
-		if g.messages[i].Text == text {
+// noticeOnce posts text at (x, y) unless a message with the same text
+// from tick since on, within reach tiles (Chebyshev), already says it.
+func noticeOnce(g *Game, x, y int, text string, since uint64, reach int) {
+	for i := len(g.messages) - 1; i >= 0 && g.messages[i].Tick >= since; i-- {
+		if m := g.messages[i]; m.Text == text && max(abs(m.X-x), abs(m.Y-y)) <= reach {
 			return
 		}
 	}
-	g.message(k.x, k.y, "%s", text)
-}
-
-// hurtText is the warning that frost (or heat, hot) is hurting species s:
-// "Frost is damaging the corn", "Heat is scorching the pine plants".
-func hurtText(s plant.Species, hot bool) string {
-	name := strings.ReplaceAll(s.DisplayName(), "_", " ") + " plants"
-	if plant.DefOf(s).Crop {
-		name = cropField(s)
-	}
-	if hot {
-		return "Heat is scorching the " + name
-	}
-	return "Frost is damaging the " + name
-}
-
-// cropField is a crop's name as a field of it ("the potatoes").
-func cropField(s plant.Species) string {
-	switch s {
-	case plant.Potato:
-		return "potatoes"
-	case plant.Radish:
-		return "radishes"
-	case plant.Pumpkin:
-		return "pumpkins"
-	}
-	return s.String()
-}
-
-// frostText is the notice for n plants of species s killed by frost (a
-// crop) or by cold or heat (a wild plant).
-func frostText(s plant.Species, n int, hot bool) string {
-	d := plant.DefOf(s)
-	switch {
-	case d.Crop && n == 1:
-		return "Frost killed a " + s.String() + " plant"
-	case d.Crop:
-		return "Frost killed the " + d.Label + " (" + strconv.Itoa(n) + " plants)"
-	}
-	cause := "cold"
-	if hot {
-		cause = "heat"
-	}
-	name := strings.ReplaceAll(s.DisplayName(), "_", " ")
-	if n == 1 {
-		return "The " + cause + " killed a " + name
-	}
-	return "The " + cause + " killed " + strconv.Itoa(n) + " " + name + " plants"
-}
-
-// frostCount is the plant count of a notice frostText wrote for s and
-// hot (false if text is not one).
-func frostCount(text string, s plant.Species, hot bool) (int, bool) {
-	if text == frostText(s, 1, hot) {
-		return 1, true
-	}
-	const mark = 987654321 // a count no notice holds: splits the plural text
-	pre, post, _ := strings.Cut(frostText(s, mark, hot), strconv.Itoa(mark))
-	if !strings.HasPrefix(text, pre) || !strings.HasSuffix(text, post) || len(text) <= len(pre)+len(post) {
-		return 0, false
-	}
-	n, err := strconv.Atoi(text[len(pre) : len(text)-len(post)])
-	if err != nil || n < 2 {
-		return 0, false
-	}
-	return n, true
+	g.message(x, y, "%s", text)
 }
 
 // plantWalkCost is the step time (percent) of the plant on (x, y), 0 for

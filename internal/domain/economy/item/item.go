@@ -271,19 +271,28 @@ func (k Kind) IsCorpse() bool {
 	return k == CorpseAnimal || k == CorpseDustbuck || k == CorpseRidgewolf || k == CorpseHuman
 }
 
-// nutrition is hunger restored per unit eaten (needs.Full = 10000).
-// Produce values follow real energy density per portion, rounded for
-// play: grains and dry beans are dense, leafy greens are light.
-var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Meat: 2200, Meal: 6000,
-	Potatoes: 1600, Corn: 1700, Wheat: 2400, Beans: 2400, Lettuce: 450, Radishes: 500, Pumpkins: 800,
-	Milk: 900, Egg: 700, Brewgrain: 1200,
-	// Wave E, wiki nutrition on the simple meal's scale (0.9 = 6000):
-	// fine and survival meals 0.9, lavish 1.0, pemmican and kibble 0.05.
-	FineMeal: 6000, LavishMeal: 6667, SurvivalMeal: 6000, Pemmican: 333, Kibble: 333,
-	NutrientPasteMeal: 6000, // wiki: Nutrient paste meal (0.9)
-	// FOOD-0: rice as wheat, strawberries and agave fruit as berries, both
-	// meats as meat; hay 0.05 like kibble (wiki: Hay).
-	Rice: 2400, Strawberries: 1500, AgaveFruit: 1500, HumanMeat: 2200, InsectMeat: 2200, Hay: 333}
+// nutrition is hunger restored per unit eaten, on the wiki's scale
+// (FOOD-1; needs.Full = 10000 is a full adult bar, 1.0 nutrition). wiki:
+// Nutrition, Meals: every raw food (crops, berries, meat, milk, hay) is
+// 0.05 a unit; simple, fine, survival and paste meals 0.9, lavish 1.0;
+// pemmican and kibble 0.05; an egg 0.25 (a chicken's: the species' egg
+// is animal.StackNutrition). The legacy ration is a survival meal.
+var nutrition = [numKinds]int{Food: 9000, Berries: 500, Meat: 500, Meal: 9000,
+	Potatoes: 500, Corn: 500, Wheat: 500, Beans: 500, Lettuce: 500, Radishes: 500, Pumpkins: 500,
+	Milk: 500, Egg: 2500, Brewgrain: 500,
+	FineMeal: 9000, LavishMeal: 10000, SurvivalMeal: 9000, Pemmican: 500, Kibble: 500, NutrientPasteMeal: 9000,
+	Rice: 500, Strawberries: 500, AgaveFruit: 500, HumanMeat: 500, InsectMeat: 500, Hay: 500,
+	FertileEgg: 2500} // FOOD-3: a fertilized egg is edible (wiki: Eggs; by species: animal.StackNutrition)
+
+// MaxEatAtOnce is how many units of k a pawn eats in one sitting: one
+// meal, ration or paste meal, up to 20 of anything else (original
+// tuning: the wiki publishes no per-food cap).
+func (k Kind) MaxEatAtOnce() int {
+	if k.Nutrition() >= 9000 {
+		return 1
+	}
+	return 20
+}
 
 // preference ranks food choice: higher is eaten first.
 // Raw grain, dry beans and raw potatoes are edible but unappealing.
@@ -332,7 +341,7 @@ func (k Kind) IsMeat() bool { return k == Meat || k == HumanMeat || k == InsectM
 func Foods() []Kind {
 	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg, Brewgrain,
 		FineMeal, LavishMeal, Pemmican, SurvivalMeal, Kibble, NutrientPasteMeal,
-		Rice, Strawberries, AgaveFruit, HumanMeat, InsectMeat, Hay}
+		Rice, Strawberries, AgaveFruit, HumanMeat, InsectMeat, Hay, FertileEgg}
 }
 
 // IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
@@ -483,9 +492,15 @@ type Stack struct {
 	// the tick it died.
 	Of     entity.EntityID
 	DiedAt uint64
-	// Animal is the species (animal.Species value) of a CorpseAnimal, a
-	// FertileEgg or a Wool stack.
+	// Animal is the species (animal.Species value) of a CorpseAnimal, an
+	// Egg, a FertileEgg or a Wool stack; on Meat the species plus one
+	// (animal.MeatTag, FOOD-3; 0: untagged meat).
 	Animal uint8
+	// Yield (FOOD-3) is an animal corpse's butcher yield, permille of a
+	// whole adult's carefully slaughtered body (animal.CorpseYieldOf: its
+	// size at its age, the parts it still has, how it died); 0 means a
+	// whole adult (older saves).
+	Yield uint16
 	// Hatch is a fertile egg's incubation so far (ticks); Tame: laid by a
 	// tame mother, so the hatchling joins the colony.
 	Hatch int
@@ -512,6 +527,24 @@ type Stack struct {
 	// Stuff (PRD-2) is the material a stuffed item is made of (a steel
 	// longsword, a cloth parka); 0 = none or its kind's default.
 	Stuff Kind
+	// Ingredients (FOOD-4) are the raw kinds a meal was cooked from, in
+	// the order first used; 0 entries are unused. Meat kinds keep their
+	// species in IngredientSpecies (animal.MeatTag, as Animal on Meat).
+	Ingredients       [MaxIngredients]Kind
+	IngredientSpecies [MaxIngredients]uint8
+}
+
+// MaxIngredients is how many ingredient kinds a meal remembers (FOOD-4).
+const MaxIngredients = 4
+
+// HasIngredient reports whether the meal was cooked with kind k.
+func (s Stack) HasIngredient(k Kind) bool {
+	for _, i := range s.Ingredients {
+		if i == k && k != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
@@ -576,7 +609,8 @@ func CanMerge(a, b Stack) bool {
 // CanMerge without the place, carrier and mark checks.
 func SameLoad(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of &&
-		a.Animal == b.Animal && a.Tame == b.Tame && a.Quality == b.Quality && a.Stuff == b.Stuff && a.Wear == b.Wear
+		a.Animal == b.Animal && a.Tame == b.Tame && a.Quality == b.Quality && a.Stuff == b.Stuff && a.Wear == b.Wear &&
+		a.Yield == b.Yield
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a

@@ -5,8 +5,10 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
@@ -191,8 +193,13 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	n, _ := g.need.Get(id)
 	var stateBuf [12]mood.Kind
 	states := stateBuf[:0]
-	if n.Hungry() {
+	switch n.Settle().Band { // FOOD-1, wiki: Saturation (with hysteresis)
+	case needs.Hungry:
 		states = append(states, mood.Hungry)
+	case needs.Ravenous:
+		states = append(states, mood.Ravenous)
+	case needs.Malnourished: // its mood by the malnutrition stage
+		dst = append(dst, mood.Thought{Kind: mood.Malnourished, Label: mood.DefOf(mood.Malnourished).Label, Value: body.MalnourishedMood(body.Malnutrition(g.bodies[id]))})
 	}
 	if n.Tired() {
 		states = append(states, mood.Tired)

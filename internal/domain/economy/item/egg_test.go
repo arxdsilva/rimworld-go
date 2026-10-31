@@ -17,7 +17,7 @@ func TestFertileEggsStackBySpeciesAndOwner(t *testing.T) {
 	if CanMerge(a, b) {
 		t.Fatal("eggs stack by species")
 	}
-	if FertileEgg.IsFood() || !Egg.Raw() || !Milk.Raw() {
-		t.Fatal("fertile eggs are not food; eggs and milk are raw food")
+	if !FertileEgg.IsFood() || !FertileEgg.Raw() || !Egg.Raw() || !Milk.Raw() {
+		t.Fatal("fertile eggs (FOOD-3, wiki: Eggs), eggs and milk are raw food")
 	}
 }

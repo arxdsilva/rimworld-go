@@ -246,6 +246,7 @@ func (h combatHunts) HuntGivenUp(id entity.EntityID, j job.Record, tx, ty int, n
 	return h.g.huntGivenUp(id, j, Position{X: tx, Y: ty}, now) // area_dest.go
 }
 func (h combatHunts) AbandonHunt(id entity.EntityID, j job.Record) { h.g.abandonHunt(id, j) }
+func (h combatHunts) CarryKill(id entity.EntityID) bool            { return h.g.herdOf().CarryKill(id) }
 func (h combatHunts) AnyMarked() bool { // jobindex.go
 	return h.g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.Designated && !a.Dead() })
 }

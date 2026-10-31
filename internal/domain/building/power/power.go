@@ -137,6 +137,10 @@ func SpecOf(k construction.Kind) Spec {
 		return consumer(ClassDefense, 50, 50)
 	case construction.NutrientPasteDispenser: // STO-2, wiki: Nutrient paste dispenser (200 W)
 		return consumer(ClassBench, 200, 200)
+	case construction.HydroponicsBasin: // FOOD-2, wiki: Hydroponics basin (70 W day and night)
+		return consumer(ClassBench, 70, 70)
+	case construction.SunLamp: // FOOD-2, wiki: Sun lamp (2,900 W, only 06:00-19:12: the game's powerWant)
+		return consumer(ClassLamp, 2900, 0)
 	}
 	return Spec{}
 }

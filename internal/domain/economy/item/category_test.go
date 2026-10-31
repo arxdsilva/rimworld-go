@@ -41,7 +41,7 @@ func TestCategoryCoversEveryKind(t *testing.T) {
 // purpose.
 func TestCategoryOtherIsDeliberate(t *testing.T) {
 	t.Parallel()
-	deliberate := map[Kind]bool{FertileEgg: true}
+	deliberate := map[Kind]bool{} // FOOD-3: fertile eggs are food now
 	for k := Kind(0); k < numKinds; k++ {
 		if k.Category() == "Other" && !deliberate[k] {
 			t.Errorf("%s falls through to Other", k)

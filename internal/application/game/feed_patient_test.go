@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -38,9 +39,13 @@ func feedGame(t *testing.T, hunger int, doctor bool) (g *Game, ann, doc entity.E
 }
 
 // TestDownedColonistStarvesWithNobodyToFeedIt: alone, a downed colonist
-// grows hungry (it used to stay frozen), starves and dies.
+// grows hungry (it used to stay frozen), grows malnourished and dies of it
+// (FOOD-1).
 func TestDownedColonistStarvesWithNobodyToFeedIt(t *testing.T) {
 	g, ann, _ := feedGame(t, 600, false)
+	if _, st, ok := mealStack(g); ok { // nothing to eat should it get up (a patient's downing is re-judged)
+		g.deleteItem(st)
+	}
 	g.Step(needs.HungerPeriod * 300)
 	if n, _ := g.need.Get(ann); n.Hunger > 300 {
 		t.Fatalf("a downed colonist grows hungry: %d", n.Hunger)
@@ -48,13 +53,14 @@ func TestDownedColonistStarvesWithNobodyToFeedIt(t *testing.T) {
 	if n, _ := g.need.Get(ann); n.Rest != needs.Full {
 		t.Fatalf("rest stays as it is while downed: %d", n.Rest)
 	}
-	g.Step(needs.HungerPeriod*300 + 10)
-	if v, _ := g.vital.Get(ann); v.Status != health.Downed || v.Cause != health.CauseNoFood {
-		t.Fatalf("out of food: starving, %+v", v)
+	g.Step(needs.HungerPeriod*300 + 3*2500)
+	if body.Malnutrition(g.bodies[ann]) <= 0 {
+		t.Fatal("out of food: malnourished")
 	}
-	g.Step(health.StarvationTicks + 10)
-	if v, _ := g.vital.Get(ann); v.Status != health.Dead {
-		t.Fatalf("nobody fed it: dead of starvation, %+v", v)
+	malnourish(g, ann, 990) // food1_test.go: its last hours
+	g.Step(2500)
+	if v, _ := g.vital.Get(ann); v.Status != health.Dead || v.Cause != health.CauseNoFood {
+		t.Fatalf("nobody fed it: dead of malnutrition, %+v", v)
 	}
 }
 
@@ -82,23 +88,27 @@ func TestDoctorFeedsDownedColonist(t *testing.T) {
 	}
 }
 
-// TestStarvingDownedColonistFedGetsUp: a colonist down from starvation
-// that is fed gets up again.
-func TestStarvingDownedColonistFedGetsUp(t *testing.T) {
+// TestMalnourishedDownedColonistFedRecovers (FOOD-1): a downed colonist
+// at 0 % food and malnourished is fed by the doctor and its malnutrition
+// recedes.
+func TestMalnourishedDownedColonistFedRecovers(t *testing.T) {
 	g, ann, doc := feedGame(t, 0, true)
-	g.Step(1)
-	if v, _ := g.vital.Get(ann); v.Cause != health.CauseNoFood {
-		t.Fatalf("starving: %+v", v)
-	}
-	for i := 0; i < health.StarvationTicks-10; i++ {
+	malnourish(g, ann, 150)
+	for i := 0; i < 3000; i++ {
 		g.Step(1)
 		fed(g, doc)
-		if v, _ := g.vital.Get(ann); v.Status == health.Alive {
-			return
-		}
 	}
-	v, _ := g.vital.Get(ann)
-	t.Fatalf("fed in time, it should stand up: %+v", v)
+	if n, _ := g.need.Get(ann); n.Hunger < needs.Full/2 {
+		t.Fatalf("not fed: hunger %d", n.Hunger)
+	}
+	sev := body.Malnutrition(g.bodies[ann])
+	if sev >= 150 {
+		t.Fatalf("fed, its malnutrition should recede: %d", sev)
+	}
+	g.Step(12 * 2500)
+	if body.Malnutrition(g.bodies[ann]) != 0 {
+		t.Fatalf("still malnourished half a day after eating: %d", body.Malnutrition(g.bodies[ann]))
+	}
 }
 
 // TestFeedPatientOrder: "Feed Ann" from the menu feeds a downed colonist
@@ -208,4 +218,14 @@ func TestFeedPatientDoesNotFlap(t *testing.T) {
 	if r := g2.care.Feed.RetryAt(ann2); r <= first {
 		t.Fatalf("after the retry the doctor looks again (retry %d, was %d)", r, first)
 	}
+}
+
+// mealStack is the first meal stack on the map.
+func mealStack(g *Game) (item.Stack, entity.EntityID, bool) {
+	for _, id := range g.itemIDs {
+		if st, ok := g.stacks.Get(id); ok && st.Kind == item.Meal {
+			return st, id, true
+		}
+	}
+	return item.Stack{}, 0, false
 }

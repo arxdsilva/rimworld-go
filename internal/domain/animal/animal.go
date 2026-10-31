@@ -355,7 +355,8 @@ type Def struct {
 	Corpse    item.Kind
 	StepTicks int
 	FleeStep  int
-	// Meat and Leather are what butchering the corpse yields.
+	// Meat and Leather are what butchering an adult's whole, carefully
+	// slaughtered corpse yields (FOOD-3, wiki: Meat amount).
 	Meat    int
 	Leather int
 	// Attack is the natural weapon; Damage, Cooldown and Accuracy its
@@ -379,7 +380,8 @@ type Def struct {
 	// TameChance: percent chance a taming attempt succeeds.
 	TameChance int
 	// Revenge: percent chance a wild animal hurt by a colonist goes
-	// manhunter; TameRevenge the same for a botched taming.
+	// manhunter; TameRevenge the same for a botched taming (FOOD-3: the
+	// species' wiki chances, husbandry.go).
 	Revenge     int
 	TameRevenge int
 	// Pack predators spawn and hunt together; SmallPrey ones take only
@@ -449,39 +451,40 @@ var defs = func() (out [numSpecies]Def) {
 
 // sizeStats are a size class's base numbers (SIM-019: our own formulas).
 type sizeStats struct {
-	hp, step, meat, leather, damage, cooldown, accuracy int
+	hp, step, damage, cooldown, accuracy int
 }
 
 var bySize = [...]sizeStats{
-	SizeXS: {hp: 12, step: 16, meat: 2, leather: 0, damage: 2, cooldown: 100, accuracy: 80},
-	SizeS:  {hp: 28, step: 14, meat: 6, leather: 2, damage: 4, cooldown: 110, accuracy: 78},
-	SizeM:  {hp: 55, step: 16, meat: 14, leather: 5, damage: 7, cooldown: 120, accuracy: 75},
-	SizeL:  {hp: 100, step: 18, meat: 30, leather: 10, damage: 11, cooldown: 130, accuracy: 72},
-	SizeXL: {hp: 170, step: 22, meat: 55, leather: 16, damage: 16, cooldown: 140, accuracy: 70},
+	SizeXS: {hp: 12, step: 16, damage: 2, cooldown: 100, accuracy: 80},
+	SizeS:  {hp: 28, step: 14, damage: 4, cooldown: 110, accuracy: 78},
+	SizeM:  {hp: 55, step: 16, damage: 7, cooldown: 120, accuracy: 75},
+	SizeL:  {hp: 100, step: 18, damage: 11, cooldown: 130, accuracy: 72},
+	SizeXL: {hp: 170, step: 22, damage: 16, cooldown: 140, accuracy: 70},
 }
 
-// behaviourStats are a behaviour class's temperament.
+// behaviourStats are a behaviour class's temperament (the revenge
+// chances are per species since FOOD-3: husbandry.go).
 type behaviourStats struct {
-	tame, revenge int
-	fleeRadius    int  // flees threats this close (0: only when hurt)
-	flees         bool // runs when hurt
-	predator      bool
-	wander        int
-	hpPct         int // percent of the size's hit points
+	tame       int
+	fleeRadius int  // flees threats this close (0: only when hurt)
+	flees      bool // runs when hurt
+	predator   bool
+	wander     int
+	hpPct      int // percent of the size's hit points
 }
 
 var byBehaviour = [...]behaviourStats{
-	Grazer:       {tame: 40, revenge: 10, fleeRadius: 3, flees: true, wander: 4, hpPct: 100},
-	Skittish:     {tame: 30, revenge: 0, fleeRadius: 5, flees: true, wander: 4, hpPct: 100},
-	Docile:       {tame: 50, revenge: 5, flees: true, wander: 3, hpPct: 100},
-	Domestic:     {tame: 75, revenge: 5, flees: true, wander: 4, hpPct: 100},
-	Pet:          {tame: 70, revenge: 3, flees: true, wander: 4, hpPct: 100},
-	Territorial:  {tame: 15, revenge: 50, wander: 4, hpPct: 100},
-	Predator:     {tame: 15, revenge: 45, predator: true, wander: 6, hpPct: 100},
-	PackPredator: {tame: 15, revenge: 45, predator: true, wander: 6, hpPct: 100},
-	Hive:         {tame: 0, revenge: 0, wander: 5, hpPct: 100},
-	Legendary:    {tame: 5, revenge: 100, wander: 5, hpPct: 250},
-	Mechanoid:    {tame: 0, revenge: 0, wander: 5, hpPct: 100},
+	Grazer:       {tame: 40, fleeRadius: 3, flees: true, wander: 4, hpPct: 100},
+	Skittish:     {tame: 30, fleeRadius: 5, flees: true, wander: 4, hpPct: 100},
+	Docile:       {tame: 50, flees: true, wander: 3, hpPct: 100},
+	Domestic:     {tame: 75, flees: true, wander: 4, hpPct: 100},
+	Pet:          {tame: 70, flees: true, wander: 4, hpPct: 100},
+	Territorial:  {tame: 15, wander: 4, hpPct: 100},
+	Predator:     {tame: 15, predator: true, wander: 6, hpPct: 100},
+	PackPredator: {tame: 15, predator: true, wander: 6, hpPct: 100},
+	Hive:         {tame: 0, wander: 5, hpPct: 100},
+	Legendary:    {tame: 5, wander: 5, hpPct: 250},
+	Mechanoid:    {tame: 0, wander: 5, hpPct: 100},
 }
 
 // Speed class step adjustments; fleeing runs at 60% of the step.
@@ -527,10 +530,9 @@ func buildDef(s Species, r Roster) Def {
 	d := Def{
 		MaxHP:  scale(z.hp, r.SizeTrim) * hpPct / 100,
 		Corpse: item.CorpseAnimal, StepTicks: step, FleeStep: (step*fleePermill + 500) / 1000,
-		Meat: scale(z.meat, r.SizeTrim), Leather: scale(z.leather, r.SizeTrim),
 		Attack: attackWeapon[r.Attack], Damage: scale(z.damage, r.SizeTrim), Cooldown: z.cooldown, Accuracy: z.accuracy,
 		Predator: b.predator, Skittish: b.flees, FleeRadius: b.fleeRadius, WanderRadius: b.wander,
-		TameChance: b.tame, Revenge: b.revenge, TameRevenge: b.revenge * 2 / 3,
+		TameChance: b.tame, Revenge: Revenge(s), TameRevenge: TameRevenge(s),
 		Pack: r.Behaviour == PackPredator, SmallPrey: r.SmallPrey, Hive: r.Behaviour == Hive,
 		Legendary: r.Behaviour == Legendary, Explosive: r.Explosive,
 	}
@@ -540,16 +542,11 @@ func buildDef(s Species, r Roster) Def {
 	if d.Explosive {
 		d.TameChance = explosiveTame
 	}
+	d.Meat, d.Leather = Yield(s) // FOOD-3: the wiki's body-size yields (husbandry.go)
 	if r.Behaviour == Mechanoid {
 		applyMech(&d, mechs[s])
 	}
 	return d
-}
-
-// Yield is the meat and leather butchering one fresh corpse of s gives.
-func Yield(s Species) (meat, leather int) {
-	d := DefOf(s)
-	return d.Meat, d.Leather
 }
 
 // DefOf returns the definition for s.

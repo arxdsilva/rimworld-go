@@ -89,7 +89,7 @@ func TestZoneClearsWrongPlantsThenSows(t *testing.T) {
 			drawZone(t, g, "potato", 4, 2, 4, 2)
 
 			gone := false
-			for i := 0; i < 1500 && !(gone && g.plantAt(4, 2) != 0); i++ {
+			for i := 0; i < 3000 && !(gone && g.plantAt(4, 2) != 0); i++ { // FOOD-2: a tree takes 1,400 to cut (wiki)
 				g.Step(1)
 				if !gone && !alive(g, orig) {
 					gone = true

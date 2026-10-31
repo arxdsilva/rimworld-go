@@ -3,6 +3,7 @@ package store
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
@@ -23,8 +24,9 @@ import (
 
 const (
 	// PasteCost is the raw-food nutrition one paste meal takes: 0.3
-	// nutrition for a 0.9 meal (wiki), a third of the meal's.
-	PasteCost = 2000
+	// nutrition for a 0.9 meal (wiki; FOOD-1 scale, needs.Full = 1.0), six
+	// units of raw food.
+	PasteCost = 3000
 	// MaxHoppers is how many hoppers one dispenser draws from (wiki:
 	// Hopper; its 3x4 sides less the spot hold exactly that many).
 	MaxHoppers = 13
@@ -91,7 +93,7 @@ func (p Paste) Food(m Machines, l Larder, b construction.Building) int {
 	sum := 0
 	for _, c := range hs[:n] {
 		if _, st, ok := hopperFood(l, c); ok {
-			sum += st.Qty * st.Kind.Nutrition()
+			sum += st.Qty * animal.StackNutrition(st)
 		}
 	}
 	return sum
@@ -154,7 +156,7 @@ func (p Paste) Dispense(m Machines, l Larder, bid entity.EntityID) bool {
 		if !ok {
 			continue
 		}
-		nut := st.Kind.Nutrition()
+		nut := animal.StackNutrition(st) // eggs by species (FOOD-1)
 		take := min(st.Qty, (need+nut-1)/nut)
 		need -= take * nut
 		if st.Qty -= take; st.Qty <= 0 {

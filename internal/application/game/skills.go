@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/animal"
 	"strings"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -481,29 +482,11 @@ func (g *Game) skillYield(id entity.EntityID, sk skill.ID, qty int) int {
 	return max(1, qty*pct/100)
 }
 
-// butcherYield scales a butchering yield (meat, leather) by Cooking and
-// the difficulty's butcher yield.
+// butcherYield scales a butchering yield (meat, leather) by the butcher's
+// efficiency (FOOD-3, wiki: Butchery efficiency, by Cooking) and the
+// difficulty's butcher yield, rounded to nearest.
 func (g *Game) butcherYield(id entity.EntityID, qty int) int {
-	return g.skillYield(id, skill.Cooking, g.diffYield(DiffButcher, qty))
-}
-
-// tameChance is a tame attempt's chance: ×(100 + 6·(L−7))% for Animals
-// and ×(100 + 2·(L−7))% for Social (identity for a neutral pawn).
-func (g *Game) tameChance(id entity.EntityID, chance int) int {
-	a, s := g.skillPct(id, skill.Animals, 6, 0, 1000), g.skillPct(id, skill.Social, 2, 0, 1000)
-	if a == 100 && s == 100 {
-		return chance
-	}
-	return chance * a / 100 * s / 100
-}
-
-// productYield scales a milk/wool/egg yield ±3% per Animals level.
-func (g *Game) productYield(id entity.EntityID, qty int) int {
-	pct := g.skillPct(id, skill.Animals, 3, 0, 1000)
-	if pct == 100 || qty <= 0 {
-		return qty
-	}
-	return max(1, qty*pct/100)
+	return (g.diffYield(DiffButcher, qty)*animal.ButcheryEfficiency(int(g.skillOf(id, skill.Cooking).Level)) + 500) / 1000
 }
 
 // meetsMinSkill reports whether id may take a bill needing level min of
@@ -617,24 +600,12 @@ func (g *Game) breakOffset(id entity.EntityID) int { return int(g.statOf(id, sta
 // (needs.Decay itself for neutral rates).
 func (g *Game) decayNeeds(id entity.EntityID, n needs.Pair, now uint64) needs.Pair {
 	hr, rr := g.statOf(id, stat.HungerRate), g.statOf(id, stat.RestRate)
-	hr, rr = g.diseaseNeedRates(id, hr, rr) // disease.go (MED-04): gut worms, muscle parasites
+	hr, rr = g.diseaseNeedRates(id, hr, rr) // disease.go (MED-04): gut worms, muscle parasites, malnutrition
 	if hr == 1000 && rr == 1000 {
 		return needs.Decay(n, now)
 	}
 	c := g.needCarryOf(id)
-	if now%uint64(needs.HungerPeriod) == 0 {
-		c.hunger += hr
-		for ; c.hunger >= 1000; c.hunger -= 1000 {
-			n.Hunger = max(n.Hunger-1, 0)
-		}
-	}
-	if now%uint64(needs.RestAwakePeriod) == 0 {
-		c.rest += rr
-		for ; c.rest >= 1000; c.rest -= 1000 {
-			n.Rest = max(n.Rest-1, 0)
-		}
-	}
-	return n
+	return needs.DecayRated(n, now, hr, rr, &c.hunger, &c.rest)
 }
 
 // drainJoy is one awake tick of recreation drain: RecreationRate, less
@@ -705,7 +676,7 @@ var orderWork = map[command.Order]work.Type{
 	command.OrderHaul:        work.Haul,
 	command.OrderHarvest:     work.Grow,
 	command.OrderSow:         work.Grow,
-	command.OrderCut:         work.Grow,
+	command.OrderCut:         work.PlantCut, // FOOD-2
 	command.OrderMine:        work.Mine,
 	command.OrderHunt:        work.Hunt,
 }

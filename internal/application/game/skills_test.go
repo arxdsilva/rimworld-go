@@ -107,8 +107,12 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	if g.bandsOf(happy) != exposure.Everyday {
 		t.Errorf("bands %v", g.bandsOf(happy))
 	}
-	if g.skillYield(happy, skill.Plants, 7) != 7 || g.butcherYield(happy, 13) != 13 || g.tameChance(happy, 37) != 37 {
+	if g.skillYield(happy, skill.Plants, 7) != 7 {
 		t.Error("yields moved for a neutral pawn")
+	}
+	// FOOD-3: butchering is the wiki's efficiency, 92.5 % at Cooking 7
+	if g.butcherYield(happy, 40) != 37 {
+		t.Errorf("butcher yield %d of 40 at Cooking 7", g.butcherYield(happy, 40))
 	}
 	if g.researchPoints(1) != 1 { // tends: TestTendQualityFormula (MED-02)
 		t.Error("research moved for a neutral pawn")

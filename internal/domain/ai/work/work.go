@@ -22,6 +22,10 @@ const (
 	// Warden is talking to prisoners: chats, recruiting, feeding
 	// (ENG-003). Appended and off by default; older saves load it at 0.
 	Warden
+	// PlantCut is cutting marked plants and felling marked trees, split
+	// from Grow (FOOD-2, wiki: Plants). Appended: an older save gives it
+	// its Grow priority on load.
+	PlantCut
 	NumTypes
 )
 
@@ -44,6 +48,7 @@ func DefaultColonist() Mask {
 	m = m.Set(Research, true)
 	m = m.Set(Clean, true)
 	m = m.Set(Handle, true)
+	m = m.Set(PlantCut, true)
 	return m
 }
 
@@ -102,4 +107,4 @@ func (p Priorities) Set(t Type, v int) Priorities {
 }
 
 // Order is the tie-break among work types sharing a priority.
-var Order = []Type{Firefight, Doctor, Warden, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, Mine, Research, Clean}
+var Order = []Type{Firefight, Doctor, Warden, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, PlantCut, Mine, Research, Clean}

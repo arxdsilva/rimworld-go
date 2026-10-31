@@ -31,10 +31,11 @@ func (g *Game) phaseMedical() {
 	}
 	g.stepOrganFailure() // organs.go (MED-05)
 	g.stepBloodLoss()
-	g.stepCare(now)     // infection.go (MED-02): infections, races, healing
-	g.stepDiseases(now) // disease.go (MED-04)
-	g.stepAging(now)    // aging.go (MED-08): chronic conditions, heart attacks, the daily onset roll
-	g.sweepPatients()   // patients.go (MED-00): the well and the dead leave the index
+	g.stepCare(now)          // infection.go (MED-02): infections, races, healing
+	stepMalnutrition(g, now) // care_host_prison.go (FOOD-1)
+	g.stepDiseases(now)      // disease.go (MED-04)
+	g.stepAging(now)         // aging.go (MED-08): chronic conditions, heart attacks, the daily onset roll
+	g.sweepPatients()        // patients.go (MED-00): the well and the dead leave the index
 	g.stepAnimalHealth(now)
 }
 

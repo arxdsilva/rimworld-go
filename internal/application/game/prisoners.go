@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -236,7 +237,7 @@ func (g *Game) prisonerPawnView(id entity.EntityID) PawnView {
 	v, _ := g.vital.Get(id)
 	n, _ := g.need.Get(id)
 	pv := PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(), Status: v.Status.String(), Reason: v.Cause.String(),
-		Hunger: needs.Percent(n.Hunger), Rest: needs.Percent(n.Rest), Health: v.HP() * 100 / health.MaxHP,
+		Hunger: needs.Percent(n.Hunger), Rest: needs.Percent(n.Rest), Health: v.HP() * 100 / health.MaxHP, Malnutrition: int(body.Malnutrition(g.bodies[id])) / 10,
 		Weapon: weaponDefOf(g, id).Name, Prisoner: g.prison.Is(id), Visitor: g.visitor(id), Ally: g.isAlly(id), SleptInBed: g.sleptAt[id] != 0,
 		Recreation: g.joy[id] * 100 / recreation.Full}
 	ts := g.prisonerThoughtList(id)

@@ -47,6 +47,7 @@ const (
 	GeothermalKind    = "geothermal generator"
 	BatteryKind       = "battery"
 	TorchLampKind     = "torch lamp"
+	SunLampKind       = "sun lamp"
 	HeaterKind        = "heater"
 	CoolerKind        = "cooler"
 )
@@ -144,6 +145,9 @@ func (p *PowerDraw) glowOf(key string) string {
 // lights: a consumer while Powered, a producer while it makes power, a
 // battery while it holds charge on a net. Never while unpowered.
 func poweredLook(b *game.BuildingView) bool {
+	if b.Kind == SunLampKind { // lit only by day and while powered: the sim's Glow, not Powered
+		return b.Glow
+	}
 	switch b.PowerRole {
 	case "consumer":
 		return b.Powered
@@ -210,7 +214,7 @@ func (o *Wiring) drawUnlitSprite(v *render.View, dst *ebiten.Image, key string, 
 // sprite (key, just drawn): the glow layer while it runs, then the
 // turbine's blades, the torch's flame or the battery's charge bar.
 func (o *Wiring) DrawPowerParts(v *render.View, ps sprite.Pass, ch *Chunks, dst *ebiten.Image, b *game.BuildingView, key string, tile float64, sw, sh int) {
-	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != TorchLampKind && b.Kind != FueledForgeKind) {
+	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != SunLampKind && b.Kind != TorchLampKind && b.Kind != FueledForgeKind) {
 		return
 	}
 	if poweredLook(b) || (b.Kind == FueledForgeKind && (b.Burning || b.Glow)) {

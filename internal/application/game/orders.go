@@ -165,7 +165,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !m.Enabled(work.Grow) {
 			return job.Record{}, ReasonNoGrow
 		}
-		if !p.Harvestable() {
+		if !p.HarvestableNow() { // FOOD-2: from 65 % growth
 			return job.Record{}, ReasonNotRipe
 		}
 		if r := g.busyBy(id, pid); r != "" {
@@ -196,7 +196,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok {
 			return job.Record{}, ReasonGone
 		}
-		if !m.Enabled(work.Grow) {
+		if !m.Enabled(work.PlantCut) { // FOOD-2: its own work type
 			return job.Record{}, ReasonNoGrow
 		}
 		if r := g.busyBy(id, pid); r != "" {

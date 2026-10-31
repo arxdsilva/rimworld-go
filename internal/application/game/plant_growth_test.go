@@ -3,7 +3,10 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/chunk"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/weather"
 )
@@ -21,7 +24,7 @@ func TestFrostNoticesMergeWithinAnInterval(t *testing.T) {
 		id, _ := g.spawnPlant(plant.Corn, x, 3, 100)
 		nearDeath(g, id)
 	}
-	g.frostCrops()
+	frostCrops(g)
 	n := len(g.messages)
 	if m := g.messages[n-1].Text; m != "Frost killed the corn (2 plants)" {
 		t.Fatalf("first pass: %q", m)
@@ -30,29 +33,18 @@ func TestFrostNoticesMergeWithinAnInterval(t *testing.T) {
 		id, _ := g.spawnPlant(plant.Corn, x, 3, 100)
 		nearDeath(g, id)
 	}
-	g.frostCrops()
+	frostCrops(g)
 	if len(g.messages) != n || g.messages[n-1].Text != "Frost killed the corn (5 plants)" {
 		t.Fatalf("second pass: %d messages, last %q", len(g.messages), g.messages[len(g.messages)-1].Text)
 	}
 	g.clock.Advance(climateInterval) // the next interval gets its own notice
 	id, _ := g.spawnPlant(plant.Corn, 30, 3, 100)
 	nearDeath(g, id)
-	g.frostCrops()
+	frostCrops(g)
 	if len(g.messages) != n+1 || g.messages[n].Text != "Frost killed a corn plant" {
 		t.Fatalf("next interval: %d messages, last %q", len(g.messages), g.messages[len(g.messages)-1].Text)
 	}
-	for _, s := range []plant.Species{plant.Corn, plant.JungleTree, plant.Pine} {
-		for _, hot := range []bool{false, true} {
-			for _, k := range []int{1, 2, 37} {
-				if got, ok := frostCount(frostText(s, k, hot), s, hot); !ok || got != k {
-					t.Fatalf("frostCount(frostText(%v, %d, %v)) = %d, %v", s, k, hot, got, ok)
-				}
-			}
-		}
-	}
-	if _, ok := frostCount("Frost killed the corn (5 plants)", plant.Wheat, false); ok {
-		t.Fatal("another species' notice matched")
-	}
+	// the count round trip is farm's (farm_test.go TestKillCountRoundTrip)
 }
 
 // TestStaggeredGrowthMatchesSpan: plants grow whichever chunk (phase)
@@ -81,4 +73,18 @@ func TestStaggeredGrowthMatchesSpan(t *testing.T) {
 	if uint64(clock.TicksPerHour) < 4*climateInterval {
 		t.Fatal("test assumes the windows fall in daylight")
 	}
+}
+
+// frostCrops runs the frost pass over the whole map for the window that
+// ends now (tests, and the reference for the staggered pass).
+func frostCrops(g *Game) {
+	cg := chunk.New(g.grid.Width(), g.grid.Height())
+	now := uint64(g.clock.Now())
+	var fp farm.Pass
+	for c := 0; c < cg.Count(); c++ {
+		g.chunkPlants(cg, c, func(id entity.EntityID, p plant.Plant) {
+			g.frostKills(id, &p, int(g.temperatureAt(p.X, p.Y)), now, &fp)
+		})
+	}
+	g.endFrostPass(&fp)
 }

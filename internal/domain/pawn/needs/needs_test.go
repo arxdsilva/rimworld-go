@@ -68,7 +68,7 @@ func TestSleepTickAt(t *testing.T) {
 		if want := 5000 * SleepGain * re / (SleepPeriod * 1000); p.Rest != want {
 			t.Errorf("re %d: rest %d after 5000 ticks, want %d", re, p.Rest, want)
 		}
-		if p.Hunger != Full-5000/HungerPeriod {
+		if p.Hunger != Full-5000/HungerPeriod*HungerLoss(Full) {
 			t.Errorf("re %d: hunger %d", re, p.Hunger)
 		}
 	}

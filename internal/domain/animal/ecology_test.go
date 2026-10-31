@@ -55,8 +55,8 @@ func TestEcologyRows(t *testing.T) {
 		if e.Eggs != NoEggs && r.Archetype != ArchBird && r.Archetype != ArchSnake && r.Archetype != ArchLizard && r.Archetype != ArchTortoise {
 			t.Errorf("%s lays eggs but is a %d", s, r.Archetype)
 		}
-		if e.Eggs != NoEggs && l.HatchDays == 0 {
-			t.Errorf("%s: eggs with no hatch time", s)
+		if e.Eggs != NoEggs && (HatchTicks(s) == 0 || EggsToday(s, 1, 30)+EggsToday(s, 1, 31)+EggsToday(s, 1, 32)+EggsToday(s, 1, 33)+EggsToday(s, 1, 34)+EggsToday(s, 1, 35)+EggsToday(s, 1, 36)+EggsToday(s, 1, 37)+EggsToday(s, 1, 38)+EggsToday(s, 1, 39)+EggsToday(s, 1, 40) == 0) {
+			t.Errorf("%s: eggs with no hatch time or interval", s)
 		}
 		if e.Product != NoProduct && (l.ProductDays == 0 || l.ProductYield == 0 || e.Product.Item() == 0) {
 			t.Errorf("%s: product %s without numbers", s, e.Product)

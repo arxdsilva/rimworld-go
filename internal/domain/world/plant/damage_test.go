@@ -21,8 +21,16 @@ func exposeFor(p Plant, temp int, start, limit uint64) (Plant, uint64) {
 	return p, t - start
 }
 
-func TestColdDamageKillsOverHours(t *testing.T) {
+// cornAt0 is a corn plant at (0, 0) with its own frost limit (FOOD-2),
+// written into d.FrostKill so the numbers below read as before.
+func cornAt0() Def {
 	d := DefOf(Corn)
+	d.FrostKill, _ = Plant{Species: Corn}.ColdLimit()
+	return d
+}
+
+func TestColdDamageKillsOverHours(t *testing.T) {
+	d := cornAt0()
 	hour := uint64(clock.TicksPerHour)
 	// just below the frost limit: about four hours to die
 	p, took := exposeFor(Plant{Species: Corn}, d.FrostKill-1, 0, 10*hour)
@@ -108,7 +116,7 @@ func TestDamageHealsOnlyBelowDying(t *testing.T) {
 // plant damaging (it never starts and stops by turns), and air hovering
 // at the stop line keeps a recovering plant healing.
 func TestDamageDoesNotFlap(t *testing.T) {
-	d := DefOf(Corn)
+	d := cornAt0()
 	p := Plant{Species: Corn}
 	flips, starts, was := 0, 0, false
 	at := uint64(0)
@@ -154,7 +162,7 @@ func TestDamageDoesNotFlap(t *testing.T) {
 
 func TestExposeStartsOnce(t *testing.T) {
 	p := Plant{Species: Corn}
-	cold := DefOf(Corn).FrostKill - 5
+	cold := cornAt0().FrostKill - 5
 	p, started := p.Expose(cold, 0, step)
 	if !started || p.Damage == 0 {
 		t.Fatalf("first frosty window: started %v, %+v", started, p)
@@ -181,5 +189,29 @@ func TestDamagedYield(t *testing.T) {
 		if got := (Plant{Damage: c.dmg}).DamagedYield(c.qty); got != c.at {
 			t.Fatalf("DamagedYield(%d) at %d%% = %d, want %d", c.qty, c.dmg, got, c.at)
 		}
+	}
+}
+
+// TestColdLimitPerPlant (FOOD-2, wiki: Plants): each crop dies of cold
+// below its own limit between -18 and -10 °C; healroot only below -29;
+// wild plants keep their biome limit.
+func TestColdLimitPerPlant(t *testing.T) {
+	t.Parallel()
+	seen := map[int]bool{}
+	for x := 0; x < 40; x++ {
+		lim, ok := Plant{Species: Rice, X: x, Y: 3}.ColdLimit()
+		if !ok || lim > -100 || lim < -180 {
+			t.Fatalf("rice at %d: limit %d", x, lim)
+		}
+		seen[lim] = true
+	}
+	if len(seen) < 10 {
+		t.Errorf("only %d different limits over 40 plants", len(seen))
+	}
+	if lim, _ := (Plant{Species: Healroot, X: 5}).ColdLimit(); lim != -290 {
+		t.Errorf("healroot limit %d, want -290", lim)
+	}
+	if lim, ok := (Plant{Species: Pine}).ColdLimit(); ok || lim != 0 {
+		t.Errorf("pine limit %d %v", lim, ok)
 	}
 }

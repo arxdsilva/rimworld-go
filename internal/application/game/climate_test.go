@@ -51,7 +51,8 @@ func TestMeatRotsAwayInSummer(t *testing.T) {
 
 func TestWinterFreezesFoodAndKillsCrops(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 8, Height: 6})
-	jumpTo(g, 45, 0) // mid-winter
+	g.climate.YearMean -= 100 // FOOD-2: a hard winter, crops die below -10..-18 °C (wiki)
+	jumpTo(g, 45, 0)          // mid-winter
 	if _, err := g.SpawnStack(item.Meat, 20, 2, 2); err != nil {
 		t.Fatal(err)
 	}

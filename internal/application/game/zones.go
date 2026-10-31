@@ -221,7 +221,7 @@ func (g *Game) zoneCellRefusal(kind zone.Kind, x, y int) string {
 		return ZoneRefuseRock
 	}
 	bridged := g.bridged(x, y)
-	if kind == zone.KindGrow {
+	if basin, _ := g.basinAt(x, y); kind == zone.KindGrow && !basin { // FOOD-2: a basin is soil on any ground
 		switch {
 		case terrain.IsWater(t) && !bridged:
 			return ZoneRefuseWater

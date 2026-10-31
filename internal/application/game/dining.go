@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -28,14 +29,10 @@ func (g *Game) nextToTable(x, y int) bool {
 	return false
 }
 
-// portionsFor is how many items of kind k a colonist eats to be full.
-func portionsFor(hunger int, k item.Kind) int {
-	nut := k.Nutrition()
-	if nut <= 0 {
-		return 1
-	}
-	n := (needs.Full - hunger + nut - 1) / nut
-	return max(1, min(12, n))
+// portionsFor is how many items of stack st a pawn at food level hunger
+// eats in one sitting (needs.Portions; eggs and carcasses by species).
+func portionsFor(hunger int, st item.Stack) int {
+	return needs.Portions(hunger, animal.StackNutrition(st), st.Kind.MaxEatAtOnce())
 }
 
 // carryToTable starts the walk from the food to a table: it picks up the
@@ -59,7 +56,7 @@ func (g *Game) carryToTable(id entity.EntityID, j job.Record) bool {
 		return false
 	}
 	n, _ := g.need.Get(id)
-	take := min(st.Qty, portionsFor(n.Hunger, st.Kind), g.reserve.FreeFor(id, j.Target, st.Qty)) // RES-1: never another eater's portions (it holds at least one)
+	take := min(st.Qty, portionsFor(n.Hunger, st), g.reserve.FreeFor(id, j.Target, st.Qty)) // RES-1: never another eater's portions (it holds at least one)
 	carry := j.Target
 	if st.Qty > take {
 		g.reserve.ReleaseEntity(id, j.Target) // RES-1: picked up, the rest is free for other eaters

@@ -76,7 +76,7 @@ var bitInfo = [numBits]struct {
 	{"Intellectual", []work.Type{work.Research}, []skill.ID{skill.Intellectual}},
 	{"Animals", []work.Type{work.Handle}, []skill.ID{skill.Animals}},
 	{"Cooking", []work.Type{work.Cook}, []skill.ID{skill.Cooking}},
-	{"Plants", []work.Type{work.Grow}, []skill.ID{skill.Plants}},
+	{"Plants", []work.Type{work.Grow, work.PlantCut}, []skill.ID{skill.Plants}},
 	{"Mining", []work.Type{work.Mine}, []skill.ID{skill.Mining}},
 	{"Crafting", []work.Type{work.Craft}, []skill.ID{skill.Crafting}},
 	{"Construction", []work.Type{work.Construct}, []skill.ID{skill.Construction}},

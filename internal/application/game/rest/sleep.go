@@ -81,7 +81,8 @@ func (s *Sleep) Do(id entity.EntityID, j job.Record, now uint64) {
 
 // done reports whether a sleeper gets up now. A collapsed colonist sleeps
 // to WakeRest whatever happens; a healthy one in a medical bed gets up at
-// once; otherwise it wakes to eat, stays while on bed rest, and wakes at
+// once; otherwise it wakes to eat once ravenously hungry (FOOD-1: the
+// 30 % eat line waits for morning), stays while on bed rest, and wakes at
 // full rest in Sleep hours (the rest of the block is free time), with the
 // start of Work hours once over the tired line, and at WakeRest in any
 // other block. These gaps keep it from bouncing between bed and work.
@@ -98,7 +99,7 @@ func (s *Sleep) done(id entity.EntityID, n needs.Pair, j job.Record) bool {
 			return true // well again: medical beds are for patients (care/rest.go)
 		}
 	}
-	if n.Hungry() && s.h.SeekFood(id) {
+	if n.Hunger <= needs.RavenousAt && s.h.SeekFood(id) {
 		return true
 	}
 	if s.h.OnBedRest(id) {

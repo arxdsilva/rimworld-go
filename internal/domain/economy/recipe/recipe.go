@@ -153,6 +153,9 @@ const (
 	MakeSmokeShells
 	// ShredMech (DEF-4 wrecks) shreds a mechanoid's wreck for salvage.
 	ShredMech
+	// ButcherHuman (FOOD-3, append only, saved) butchers a human corpse
+	// into human meat; never a default bill (wiki: Butcher table).
+	ButcherHuman
 	numRecipes
 )
 
@@ -180,6 +183,8 @@ type Input struct {
 	// Wreck takes a mechanoid's wreck (a CorpseAnimal of a mechanoid);
 	// any other corpse input never does (butchering skips wrecks).
 	Wreck bool
+	// Hops (FOOD-2) takes hops or brewgrain, the wort crops.
+	Hops bool
 }
 
 // Take is how many items the input takes from a stack of qty.
@@ -236,8 +241,9 @@ type Def struct {
 }
 
 var defs = [numRecipes]Def{
+	// wiki: Meals: a simple meal is 0.5 nutrition of raw food, 10 units.
 	SimpleMeal: {ID: SimpleMeal, Name: "simple_meal", Label: "Cook simple meal", Bench: construction.Stove,
-		Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1, Work: 120, Skill: work.Cook, Learn: skill.Cooking},
+		Input: Input{AnyRaw: true, Qty: 10}, Output: item.Meal, OutQty: 1, Work: 120, Skill: work.Cook, Learn: skill.Cooking},
 	Club: {ID: Club, Name: "club", Label: "Make wooden club", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 4, Stuff: item.MadeFrom(item.Club)}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft, Learn: skill.Crafting,
 		Also: spotAndSmithy},
@@ -252,7 +258,7 @@ var defs = [numRecipes]Def{
 		Extra: item.Leather, BySpecies: true, Also: []construction.Kind{construction.ButcherSpot}},
 	// Cooking over an open fire is half again as slow as at a stove.
 	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
-		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1,
+		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 10}, Output: item.Meal, OutQty: 1,
 		Work: 180, Skill: work.Cook, Learn: skill.Cooking},
 	// Tailoring: a parka takes the hides of about three deer.
 	MakeParka: {ID: MakeParka, Name: "make_parka", Label: "Sew leather parka", Bench: construction.TailoringBench,
@@ -380,10 +386,10 @@ var defs = [numRecipes]Def{
 	SculptLarge: sculpt(SculptLarge, "sculpt_large", "Sculpt large sculpture", construction.LargeSculpture),
 	SculptGrand: sculpt(SculptGrand, "sculpt_grand", "Sculpt grand sculpture", construction.GrandSculpture),
 	// PRD-4 (wave_e.go).
-	CookFineMeal:         meal(CookFineMeal, "cook_fine_meal", "Cook fine meal", item.FineMeal, 1, 1, 1, 450, 6),
-	CookLavishMeal:       meal(CookLavishMeal, "cook_lavish_meal", "Cook lavish meal", item.LavishMeal, 2, 2, 1, 800, 8),
-	CookPemmican:         meal(CookPemmican, "cook_pemmican", "Make pemmican", item.Pemmican, 1, 1, 16, 700, 0),
-	CookSurvivalMeal:     meal(CookSurvivalMeal, "cook_survival_meal", "Cook packaged survival meal", item.SurvivalMeal, 1, 1, 1, 450, 8),
+	CookFineMeal:         meal(CookFineMeal, "cook_fine_meal", "Cook fine meal", item.FineMeal, 5, 5, 1, 450, 6),
+	CookLavishMeal:       meal(CookLavishMeal, "cook_lavish_meal", "Cook lavish meal", item.LavishMeal, 10, 10, 1, 800, 8),
+	CookPemmican:         meal(CookPemmican, "cook_pemmican", "Make pemmican", item.Pemmican, 5, 5, 16, 700, 0),
+	CookSurvivalMeal:     meal(CookSurvivalMeal, "cook_survival_meal", "Cook packaged survival meal", item.SurvivalMeal, 6, 6, 1, 450, 8),
 	MakeKibble:           kibble(MakeKibble, "make_kibble", "Make kibble", construction.ButcherTable, 50),
 	MakeKibbleSpot:       kibble(MakeKibbleSpot, "make_kibble_spot", "Make kibble at the spot", construction.ButcherSpot, 35),
 	BrewWort:             brewWort(),
@@ -411,6 +417,11 @@ var defs = [numRecipes]Def{
 	MakeEMPShells:        made(MakeEMPShells, "make_emp_shells", "Make EMP shell", construction.MachiningTable, item.EMPShells, 80, 0, in(item.Steel, 2), in(item.Components, 2)),
 	ShredMech:            shredMech(),
 	MakeSmokeShells:      made(MakeSmokeShells, "make_smoke_shells", "Make smoke shell", construction.MachiningTable, item.SmokeShells, 80, 0, in(item.Steel, 3)),
+	// FOOD-3: a human corpse into human meat (wiki: Butcher table; the
+	// yield is the body's, like an animal's).
+	ButcherHuman: {ID: ButcherHuman, Name: "butcher_human", Label: "Butcher human", Bench: construction.ButcherTable,
+		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Output: item.HumanMeat, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
+		BySpecies: true, Also: []construction.Kind{construction.ButcherSpot}},
 }
 
 // servoSkill and servoWork are the servo tier's crafting level and work
@@ -486,6 +497,8 @@ func (in Input) Accepts(k item.Kind) bool {
 		return k.Dryable()
 	case in.AnyStoneBlocks:
 		return item.IsStoneBlocks(k)
+	case in.Hops:
+		return k == item.Hops || k == item.Brewgrain
 	}
 	return k == in.Kind
 }

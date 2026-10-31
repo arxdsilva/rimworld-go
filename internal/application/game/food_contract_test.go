@@ -15,9 +15,10 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 )
 
-// TestFoodContractCommandsAreInert (FOOD-0): the food policy and
-// auto-slaughter commands change nothing until FOOD-3 and FOOD-4 handle
-// them: a colony that got them hashes as its twin that didn't.
+// TestFoodContractCommandsAreInert (FOOD-0): the food policy commands
+// change nothing until FOOD-4 handles them: a colony that got them hashes
+// as its twin that didn't (FOOD-3 handles SetAutoSlaughter:
+// herd_food3_test.go).
 func TestFoodContractCommandsAreInert(t *testing.T) {
 	t.Parallel()
 	a, b := NewColony(Config{Seed: 7, Width: 40, Height: 40}), NewColony(Config{Seed: 7, Width: 40, Height: 40})
@@ -30,7 +31,6 @@ func TestFoodContractCommandsAreInert(t *testing.T) {
 		{Kind: command.EditFoodPolicy, Index: -1, Mode: command.FoodPolicyCreate, Name: "vegetarian"},
 		{Kind: command.EditFoodPolicy, Index: 1, Mode: command.FoodPolicyRename, Name: "meat only"},
 		{Kind: command.EditFoodPolicy, Index: 1, Mode: command.FoodPolicyDelete},
-		{Kind: command.SetAutoSlaughter, Name: "cow", X: 2, Y: 6, X2: 3},
 	} {
 		a.Enqueue(c)
 	}
@@ -41,17 +41,17 @@ func TestFoodContractCommandsAreInert(t *testing.T) {
 		t.Fatal("a FOOD-0 contract command changed the state")
 	}
 	w := a.World()
-	if w.FoodDays != 0 || w.FoodPolicies != nil || w.AutoSlaughter != nil {
-		t.Fatalf("food views filled before FOOD-4/5: %d %v %v", w.FoodDays, w.FoodPolicies, w.AutoSlaughter)
+	if w.FoodDays != 0 || w.FoodPolicies != nil {
+		t.Fatalf("food views filled before FOOD-4/5: %d %v", w.FoodDays, w.FoodPolicies)
 	}
 	if p := a.Snapshot()[0]; p.FoodPolicy != "" || p.Malnutrition != 0 {
 		t.Fatalf("pawn food views filled before FOOD-1/4: %q %d", p.FoodPolicy, p.Malnutrition)
 	}
 }
 
-// TestFoodContractSpeciesStayOut (FOOD-0): the new crops are defined but
-// not offered or spawned before FOOD-2, and the agave names its fruit
-// without a yield, so nothing harvests it yet.
+// TestFoodContractSpeciesStayOut (FOOD-0, flipped by FOOD-2): the new
+// crops are offered in the crop menu and the zone picker now, still never
+// spawn wild, and the agave fruits (wiki: Agave, 10 fruit).
 func TestFoodContractSpeciesStayOut(t *testing.T) {
 	t.Parallel()
 	added := map[plant.Species]item.Kind{plant.Rice: item.Rice, plant.Strawberry: item.Strawberries,
@@ -64,13 +64,15 @@ func TestFoodContractSpeciesStayOut(t *testing.T) {
 		if got, ok := plant.Parse(d.Name); !ok || got != s {
 			t.Errorf("%s does not parse", d.Name)
 		}
-		if slices.Contains(plant.Crops(), s) {
-			t.Errorf("%s is offered before FOOD-2", s)
+		if !slices.Contains(plant.Crops(), s) {
+			t.Errorf("%s is not offered (FOOD-2)", s)
 		}
+		inPicker := false
 		for _, v := range crops.ZoneSpecies() {
-			if v.Name == d.Name {
-				t.Errorf("%s is in the zone crop picker before FOOD-2", s)
-			}
+			inPicker = inPicker || v.Name == d.Name
+		}
+		if !inPicker {
+			t.Errorf("%s is not in the zone crop picker (FOOD-2)", s)
 		}
 		for _, bd := range biome.All() {
 			for _, p := range bd.Plants {
@@ -80,8 +82,8 @@ func TestFoodContractSpeciesStayOut(t *testing.T) {
 			}
 		}
 	}
-	if d := plant.DefOf(plant.Agave); d.Yields != item.AgaveFruit || d.Yield != 0 {
-		t.Errorf("agave: yields %s x%d, want agave fruit x0 until FOOD-2", d.Yields, d.Yield)
+	if d := plant.DefOf(plant.Agave); d.Yields != item.AgaveFruit || d.Yield != 10 {
+		t.Errorf("agave: yields %s x%d, want agave fruit x10 (FOOD-2)", d.Yields, d.Yield)
 	}
 	g := NewColony(Config{Seed: 3, Width: 20, Height: 20})
 	if p := g.lockedBy("crop:hops"); p != "Brewing" {

@@ -1,0 +1,16 @@
+# FOOD programme art (families/food.py, crops_food.py): crop accents for
+# strawberry, hops and agave fruit, the human and insect meat items and the
+# sun lamp's daylight glow. Original colours; crop accents stay no more
+# saturated than pl_fire / pl_dandelion (ART spec 9.3).
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+version: 1
+materials:
+  pl_crop_strawberry: {light: "#c26a5a", base: "#b65b4d", shadow: "#954b40"}
+  pl_crop_hop:        {light: "#d4d6a2", base: "#c8cb92", shadow: "#acae7a"}
+  pl_agave_fruit:     {light: "#c7ab6c", base: "#bc9e60", shadow: "#9c8150"}
+  meat_pale:          {light: "#d9a194", base: "#cb8e80", shadow: "#a6705f"}
+  meat_fat:           {light: "#efe3cf", base: "#e5d6bf", shadow: "#c4b39b"}
+  meat_insect:        {light: "#b9b27a", base: "#aaa36b", shadow: "#888253"}
+  chitin:             {light: "#5f5a3e", base: "#4d4932", shadow: "#383524"}
+emissive:
+  sun_white: "#fff3d2"

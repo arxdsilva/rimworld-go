@@ -52,6 +52,9 @@ const (
 	// CondFoodPoisoning is food poisoning from a badly cooked meal (WS-M,
 	// cond_food.go): it runs its course by time.
 	CondFoodPoisoning
+	// CondMalnutrition is starvation at 0 % food (FOOD-1,
+	// cond_malnutrition.go): the game steps it by the hour.
+	CondMalnutrition
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -63,7 +66,7 @@ type CondEntry struct {
 }
 
 // condTables lists every phase's definition table (one line per phase).
-var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood}
+var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood, condsMalnutrition}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)

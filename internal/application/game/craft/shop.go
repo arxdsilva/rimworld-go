@@ -300,10 +300,15 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 		h.DeleteItem(rid)
 	}
 	out, extra := d.OutQty, d.ExtraQty
-	if d.BySpecies { // butchering: the yields come from the carcass's species
+	var meat item.Stack // FOOD-3: butchered meat keeps its kind and species
+	if d.BySpecies {    // butchering: the yields come from the body (animal.Butcher: size, age, parts, death)
 		if st, ok := h.Stack(j.Carry); ok {
-			out, extra = animal.Yield(animal.Species(st.Animal))
-			out, extra = h.ButcherYield(id, out), h.ButcherYield(id, extra)
+			meat, extra = animal.Butcher(st)
+			out, extra = h.ButcherYield(id, meat.Qty), h.ButcherYield(id, extra)
+			meat.Qty = out
+			if st.Kind == item.CorpseHuman {
+				h.ButcheredHuman(id) // the moods (wiki: Butcher table)
+			}
 		}
 	}
 	if d.Salvage { // a mechanoid wreck: its type's salvage
@@ -322,6 +327,8 @@ func (s *Shop) finish(id entity.EntityID, j job.Record, b construction.Building,
 	}
 	h.DeleteItem(j.Carry)
 	switch {
+	case out > 0 && d.BySpecies:
+		h.DropStackOf(meat, j.DestX, j.DestY)
 	case out > 0 && recipe.Cooked(d.Output): // the cook's poison chance (PRD-4: the better meals too)
 		h.DropMeal(id, b.Kind, d.Output, out, j.DestX, j.DestY)
 	case out > 0 && item.HasQuality(d.Output): // PRD-2: each piece rolls its quality

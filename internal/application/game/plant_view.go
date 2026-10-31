@@ -87,7 +87,7 @@ func (g *Game) appendPlantViews(out []PlantView, m *plantMemo) []PlantView {
 				ID: id, X: p.X, Y: p.Y, Designated: p.Designated, Harvestable: p.Harvestable(),
 				Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
 			}
-			fillPlantLight(&pv, p) // plant_light.go (MAPGEN-3)
+			fillPlantLight(&pv, p, plantFertility(g, p)) // plant_light.go (MAPGEN-3, FOOD-2)
 			fillPlantDamage(&pv, p)
 		}
 		g.fillPlantWeather(&pv, p) // weather.go

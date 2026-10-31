@@ -21,23 +21,6 @@ import (
 // (SIM-066); this file rolls whether one starts.
 // Hit, recovery and outcome rolls come from the social stream.
 
-// hungerBand maps food to the malnutrition bands MalnutritionMult takes:
-// 0 fed (above needs.CriticalHunger), 1 hungry, 2 very hungry (half of
-// it), 3 ravenous (a quarter), 4 starving (empty).
-func hungerBand(hunger int) int {
-	switch {
-	case hunger > needs.CriticalHunger:
-		return 0
-	case hunger > needs.CriticalHunger/2:
-		return 1
-	case hunger > needs.CriticalHunger/4:
-		return 2
-	case hunger > 0:
-		return 3
-	}
-	return 4
-}
-
 // fightChanceFor is the permille chance that b, on the receiving end of
 // interaction k, starts a fight: the base chance scaled by its
 // Bloodthirsty trait, its hunger band and its drink (alcohol band and
@@ -56,7 +39,7 @@ func (g *Game) fightChanceFor(b entity.EntityID, k social.Interaction) int32 {
 		}
 	}
 	n, _ := g.need.Get(b)
-	mults = append(mults, social.MalnutritionMult(hungerBand(n.Hunger)))
+	mults = append(mults, social.MalnutritionMult(needs.FightBand(n.Hunger)))
 	if s := g.drugs[b]; s != nil {
 		mults = append(mults, s.FightMultiplier())
 	}

@@ -389,7 +389,7 @@ func TestBillViews(t *testing.T) {
 	}
 	v := vs[0]
 	if v.Worker != 8 || v.WorkerName != "Bo" || v.Store != uint8(recipe.StockpileZone) || v.StoreZone != 4 ||
-		v.StoreLabel != "specific stockpile" || v.Radius != 6 || v.SkillMax != 20 || v.Inputs != "2 raw food" || v.NoWorker != "" {
+		v.StoreLabel != "specific stockpile" || v.Radius != 6 || v.SkillMax != 20 || v.Inputs != "10 raw food" || v.NoWorker != "" {
 		t.Fatalf("view %+v", v)
 	}
 	if v.CurrentWorker != "Bo" || v.Gathering || v.Progress != 75 {
@@ -422,7 +422,7 @@ func TestBillViews(t *testing.T) {
 	if vs = c.Bills.AppendViews(nil, 1); vs[2].NoWorker != "" {
 		t.Fatalf("Bo has the skill now: %q", vs[2].NoWorker)
 	}
-	if rv := Recipes(); len(rv) == 0 || rv[0].Input != "2 raw food" {
+	if rv := Recipes(); len(rv) == 0 || rv[0].Input != "10 raw food" {
 		t.Fatalf("recipes %+v", rv)
 	}
 }

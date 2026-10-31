@@ -72,7 +72,7 @@ func TestForbiddenFoodNotEaten(t *testing.T) {
 	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	sid, _ := g.SpawnStack(item.Berries, 10, 6, 4)
 	g.setForbidden(sid, true)
-	if g.hasEdible() {
+	if g.hasEdible(false) {
 		t.Fatal("forbidden food counts as edible")
 	}
 	if best, _, _ := g.bestFood(ada); best != 0 {

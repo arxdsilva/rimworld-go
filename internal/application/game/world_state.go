@@ -30,8 +30,8 @@ import (
 //
 // Away, a member's needs are frozen while the caravan has food (they eat
 // and rest on the road); once FoodDays run out its hunger drains at the
-// usual rate and a starving member dies (dieBy, no corpse on the map), so
-// the colony grieves. Members talk among themselves every few hours (the
+// usual rate and a member dying of malnutrition dies away (dieBy, no
+// corpse on the map), so the colony grieves. Members talk among themselves every few hours (the
 // caravan is one room): a chitchat or a deep talk, with its joy.
 //
 // The planet is not saved: it is rebuilt lazily from the setup's World
@@ -57,8 +57,6 @@ const (
 	// is still on the map caravanFormLimit after the order stays behind.
 	caravanFormCheck = 60
 	caravanFormLimit = clock.TicksPerDay
-	// caravanStarvePerHour is a starving member's hunger loss per hour.
-	caravanStarvePerHour = clock.TicksPerHour / needs.HungerPeriod
 )
 
 // worldState is the world beyond the map: caravans, the pawns away on
@@ -586,16 +584,13 @@ func (g *Game) caravanHome(c *caravanRec) {
 	}
 }
 
-// caravanStarve: with the food gone, members go hungry; one starving dies.
+// caravanStarve: with the food gone, members go hungry at the Fed rate;
+// at 0 % malnutrition sets in (stepMalnutrition, FOOD-1).
 func (g *Game) caravanStarve(c *caravanRec) {
-	for _, m := range slices.Clone(c.C.Members) {
-		id := entity.EntityID(m)
-		n, _ := g.need.Get(id)
-		n.Hunger = max(n.Hunger-caravanStarvePerHour, 0)
-		g.need.Set(id, n)
-		if n.Starving() {
-			g.dieAway(id, health.CauseNoFood)
-		}
+	for _, m := range c.C.Members {
+		n, _ := g.need.Get(entity.EntityID(m))
+		n.Hunger = max(n.Hunger-needs.HungerPerHour, 0)
+		g.need.Set(entity.EntityID(m), n.Settle())
 	}
 }
 

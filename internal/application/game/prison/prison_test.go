@@ -206,15 +206,11 @@ func TestLive(t *testing.T) {
 	}
 	f.needs[rid] = needs.Pair{Hunger: 0, Rest: needs.Full}
 	p.Live(rid, 5)
-	if f.downs != 1 {
-		t.Fatal("a starving prisoner goes down")
+	if f.vital[rid].Status != health.Alive {
+		t.Fatal("a starving prisoner stays up: its malnutrition is the game's (FOOD-1)")
 	}
-	f.vital[rid] = health.Record{Status: health.Downed, Cause: health.CauseNoFood}
-	p.Live(rid, health.StarvationTicks)
-	if f.dies != 1 {
-		t.Fatal("down from hunger long enough: it dies")
-	}
-	p.Live(rid, health.StarvationTicks+1)
+	f.vital[rid] = health.Record{Status: health.Dead, Cause: health.CauseNoFood}
+	p.Live(rid, 6)
 	if p.Is(rid) || f.Held(rid).Leaving {
 		t.Fatal("the dead are no prisoners, and walk nowhere")
 	}

@@ -48,10 +48,9 @@ const (
 	// Duskmoss (MAPGEN-3, append only, saved): blue-grey moss of dark
 	// caves; grows without light and withers in it.
 	Duskmoss
-	// FOOD-0 contract (append only, saved): the vanilla crops still
-	// missing. Never sown or spawned until FOOD-2 adds them to Crops (and
-	// retunes every crop); placeholder numbers below, wiki growDays,
-	// yield and sensitivity. Hops is sown after Brewing (wiki: Hop plant).
+	// FOOD-0 contract, sown since FOOD-2 (append only, saved): the vanilla
+	// crops rice, strawberries, haygrass and hops (wiki numbers). Hops is
+	// sown after Brewing (wiki: Hop plant).
 	Rice
 	Strawberry
 	Haygrass
@@ -82,10 +81,11 @@ type Def struct {
 	Sens    int
 	SowWork int    // ticks to sow one cell
 	Label   string // player-facing produce name
-	// FrostKill is the air temperature (tenths of a degree C) below which a
-	// crop takes frost damage, dying within hours (damage.go). Tender
-	// summer crops suffer at the first frost; hardy ones shrug off a few
-	// degrees. Only crops die of frost: wild trees and bushes go dormant.
+	// FrostKill is the warmest air temperature (tenths of a degree C)
+	// below which a crop takes frost damage, dying within hours
+	// (damage.go); each plant's own limit is ColdLimit, up to 8 °C colder
+	// (wiki: Plants, -18..-10 °C). Only crops die of frost: wild trees and
+	// bushes go dormant.
 	FrostKill int
 	// ColdKill and HeatKill (tenths of a degree C, 0 = never) damage a
 	// wild biome plant out of its climate until it dies (damage.go); the
@@ -106,6 +106,13 @@ type Def struct {
 	MinLight, DiesInLight, Glow int
 	// Cave: grows wild on cave floor (stone counts as CaveFertility).
 	Cave bool
+	// FOOD-2: MinSkill is the Plants level a grower needs to sow it;
+	// NoHydro keeps it out of a hydroponics basin (corn, haygrass, trees);
+	// ColdHardy: a crop whose cold-death limit is its FrostKill exactly
+	// (healroot), not a random one below the warmest.
+	MinSkill  int
+	NoHydro   bool
+	ColdHardy bool
 }
 
 // CaveFertility is the fertility (percent) stone cave floor gives a Cave
@@ -115,33 +122,78 @@ const CaveFertility = 40
 // ZoneSowable reports whether a growing zone may sow this species.
 func (d Def) ZoneSowable() bool { return d.Crop || d.Sowable }
 
-// Plants grow only in daylight, GrowFromHour to GrowToHour.
+// Plants grow from GrowFromHour to GrowToHour and rest the other hours,
+// whatever the light (wiki: Plants, "all plants rest from hour 19 through
+// hour 5"): 13 growing hours a day, so a crop's real days are its grow
+// days / 0.5417.
 const (
 	GrowFromHour = 6
-	GrowToHour   = 20
+	GrowToHour   = 19
 	growHours    = GrowToHour - GrowFromHour
 )
 
 // GrowingHour reports whether plants grow at this hour of the day.
 func GrowingHour(h int) bool { return h >= GrowFromHour && h < GrowToHour }
 
-// growDays converts calendar days to daylight growth ticks on plain soil.
+// wikiDays is a plant's growth units from its wiki grow days: a day of
+// growth at 100 % is TicksPerDay units, and growth only accrues in the
+// growing hours, so it ripens in days / 0.5417 calendar days.
+func wikiDays(days float64) int { return int(days * float64(clock.TicksPerDay)) }
+
+// growDays converts calendar days at the old 14 h daylight rule to growth
+// units (the wild plants' original tuning, kept).
 func growDays(days float64) int {
-	return int(days * float64(clock.TicksPerDay) * growHours / 24)
+	return int(days * float64(clock.TicksPerDay) * 14 / 24)
+}
+
+// Field work (wiki: each crop's page). Most crops take 170 ticks to sow
+// and 200 to harvest or cut; healroot 800 and 400; trees 4,000 to sow.
+const (
+	cropSow     = 170 // wiki: Rice plant, Potato plant, Corn plant (sow work)
+	cropHarvest = 200 // wiki: Rice plant, Potato plant, Corn plant (harvest work)
+	treeSow     = 4000
+	treeSkill   = 6 // wiki: Oak tree, Pine tree (minimum Plants skill to sow)
+	// coldCrop is the warmest cold-death threshold of a crop, tenths of a
+	// degree (wiki: Plants, a random -18..-10 °C per plant).
+	coldCrop = -100
+)
+
+// crop is a sown crop's definition from its wiki numbers: grow days, base
+// yield and fertility sensitivity (percent).
+func crop(s Species, name, label string, days float64, yield int, yields item.Kind, sens int) Def {
+	return Def{Species: s, Name: name, Label: label, GrowTicks: wikiDays(days), HarvestWork: cropHarvest, Yield: yield,
+		Yields: yields, CutWork: cropHarvest, Crop: true, Sens: sens, SowWork: cropSow, FrostKill: coldCrop}
+}
+
+// tree is a sowable tree from its wiki numbers: grow days, wood, harvest
+// (cut) work; fertility sensitivity 50 % and Plants 6 to sow (wiki: Oak
+// tree, Pine tree, Teak tree).
+func tree(s Species, name string, days float64, wood, cut int) Def {
+	return Def{Species: s, Name: name, GrowTicks: wikiDays(days), CutWork: cut, Wood: wood, Sowable: true,
+		SowWork: treeSow, MinSkill: treeSkill, Sens: 50, NoHydro: true, Trunk: true}
+}
+
+// with returns d changed by f (a table row's extras).
+func with(d Def, f func(*Def)) Def {
+	f(&d)
+	return d
 }
 
 var defs = [numSpecies]Def{
-	BerryBush: {Species: BerryBush, Name: "berry_bush", GrowTicks: 12000, HarvestWork: 30, Yield: 5, Yields: item.Berries,
-		CutWork: 20, Regrows: true, RegrowTo: 35, Browse: true},
-	Tree: {Species: Tree, Name: "tree", GrowTicks: 60000, CutWork: 90, Wood: 8, Sowable: true, SowWork: 40, Trunk: true},
-	// Biome plants (SIM-023, our numbers).
-	Pine: {Species: Pine, Name: "pine", GrowTicks: 70000, CutWork: 90, Wood: 10, Sowable: true, SowWork: 40,
-		HeatKill: 400, Trunk: true},
-	JungleTree: {Species: JungleTree, Name: "jungle_tree", GrowTicks: 60000, CutWork: 100, Wood: 12, Sowable: true,
-		SowWork: 40, ColdKill: 20, Trunk: true},
-	Cactus: {Species: Cactus, Name: "cactus", GrowTicks: 90000, CutWork: 40, Wood: 2, ColdKill: -50, Trunk: true},
+	// wiki: Berry bush (6 grow days, 10 berries, 250 harvest work, back to
+	// 30 % when picked, sensitivity 50 %).
+	BerryBush: {Species: BerryBush, Name: "berry_bush", GrowTicks: wikiDays(6), HarvestWork: 250, Yield: 10, Yields: item.Berries,
+		CutWork: 250, Regrows: true, RegrowTo: 30, Browse: true, Sens: 50},
+	// Trees (wiki: Plants tree table): the oak-like tree 30 days and 46
+	// wood, pine 20 and 27, the jungle tree as teak 32.5 and 60.
+	Tree:       tree(Tree, "tree", 30, 46, 1400),
+	Pine:       with(tree(Pine, "pine", 20, 27, 800), func(d *Def) { d.HeatKill = 400 }),
+	JungleTree: with(tree(JungleTree, "jungle_tree", 32.5, 60, 1800), func(d *Def) { d.ColdKill = 20 }),
+	// wiki: Saguaro cactus (5 grow days, 15 wood, 300 work, no fertility
+	// sensitivity).
+	Cactus: {Species: Cactus, Name: "cactus", GrowTicks: wikiDays(5), CutWork: 300, Wood: 15, ColdKill: -50, Trunk: true, Sens: 1},
 	// Shrub and reeds are hardy enough for every biome they grow wild in
-	// (tundra, cold bog), blizzards included.
+	// (tundra, cold bog), blizzards included. Our numbers.
 	Shrub: {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -400, HeatKill: 650, Browse: true},
 	Reeds: {Species: Reeds, Name: "reeds", Label: "straw", GrowTicks: 15000, HarvestWork: 25, Yield: 4, Yields: item.Straw,
 		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -300, Browse: true},
@@ -154,10 +206,10 @@ var defs = [numSpecies]Def{
 	// glow; needs darkness.
 	Duskmoss: {Species: Duskmoss, Name: "duskmoss", GrowTicks: growDays(40), CutWork: 12, ColdKill: -400, HeatKill: 450,
 		Browse: true, Ground: true, WalkCost: 125, DiesInLight: 45, Glow: 10, Cave: true},
-	// Agave fruits (FOOD-0: Yields only; FOOD-2 sets its wiki Yield, so
-	// it stays unharvested until then).
-	Agave: {Species: Agave, Name: "agave", GrowTicks: 50000, CutWork: 25, ColdKill: -50, HeatKill: 650, Ground: true,
-		Yields: item.AgaveFruit},
+	// wiki: Agave (6 grow days, 10 agave fruit, 300 harvest work, back to
+	// 30 % when picked, sensitivity 50 %); never sown.
+	Agave: {Species: Agave, Name: "agave", GrowTicks: wikiDays(6), HarvestWork: 300, Yield: 10, Yields: item.AgaveFruit,
+		Regrows: true, RegrowTo: 30, CutWork: 25, ColdKill: -50, HeatKill: 650, Ground: true, Sens: 50},
 	BallCactus: {Species: BallCactus, Name: "ball_cactus", GrowTicks: 60000, CutWork: 20, ColdKill: -80, HeatKill: 700,
 		Ground: true},
 	ElephantEar: {Species: ElephantEar, Name: "elephant_ear", GrowTicks: 30000, CutWork: 15, ColdKill: 50, HeatKill: 500,
@@ -166,64 +218,45 @@ var defs = [numSpecies]Def{
 		Ground: true},
 	Dandelion: {Species: Dandelion, Name: "dandelion", GrowTicks: 15000, CutWork: 5, ColdKill: -200, HeatKill: 400,
 		Browse: true, Ground: true},
-	// Crops: growth follows real days-to-harvest at roughly twelve real
-	// days per game day; yields are per plant, balanced so a colonist
-	// eats from about three tiles of potatoes.
-	//            real days | game days | yield | soil sensitivity
-	//   radish        25        2          3        40%
-	//   lettuce       45        3.75       4        90%
-	//   beans         60        5          4        60%
-	//   potato        90        7.5        8        30%
-	//   corn          95        8          7       100%
-	//   pumpkin      100        8.5       12        70%
-	//   wheat        120       10          8        80%
-	Potato: {Species: Potato, Name: "potato", Label: "potatoes", GrowTicks: growDays(7.5), HarvestWork: 35, Yield: 8,
-		Yields: item.Potatoes, CutWork: 10, Crop: true, Sens: 30, SowWork: 30, FrostKill: -20},
-	Corn: {Species: Corn, Name: "corn", Label: "corn", GrowTicks: growDays(8), HarvestWork: 40, Yield: 7,
-		Yields: item.Corn, CutWork: 14, Crop: true, Sens: 100, SowWork: 25, FrostKill: -10},
-	Wheat: {Species: Wheat, Name: "wheat", Label: "wheat", GrowTicks: growDays(10), HarvestWork: 35, Yield: 8,
-		Yields: item.Wheat, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80,
-		Extra: item.Straw, ExtraQty: 4},
-	Beans: {Species: Beans, Name: "beans", Label: "beans", GrowTicks: growDays(5), HarvestWork: 30, Yield: 4,
-		Yields: item.Beans, CutWork: 10, Crop: true, Sens: 60, SowWork: 25, FrostKill: -10},
-	Lettuce: {Species: Lettuce, Name: "lettuce", Label: "lettuce", GrowTicks: growDays(3.75), HarvestWork: 18, Yield: 4,
-		Yields: item.Lettuce, CutWork: 8, Crop: true, Sens: 90, SowWork: 20, FrostKill: -30},
-	Radish: {Species: Radish, Name: "radish", Label: "radishes", GrowTicks: growDays(2), HarvestWork: 15, Yield: 3,
-		Yields: item.Radishes, CutWork: 8, Crop: true, Sens: 40, SowWork: 15, FrostKill: -50},
-	Pumpkin: {Species: Pumpkin, Name: "pumpkin", Label: "pumpkins", GrowTicks: growDays(8.5), HarvestWork: 30, Yield: 12,
-		Yields: item.Pumpkins, CutWork: 12, Crop: true, Sens: 70, SowWork: 30, FrostKill: -10},
-	// Healroot: slow and fussy about soil, two doses of medicine a plant.
-	Healroot: {Species: Healroot, Name: "healroot", Label: "herbal medicine", GrowTicks: growDays(6.5), HarvestWork: 40,
-		Yield: 2, Yields: item.HerbalMedicine, CutWork: 8, Crop: true, Sens: 80, SowWork: 35, FrostKill: -20},
-	// Cotton: a warm-season fibre crop; five bolls of cloth a plant.
-	Cotton: {Species: Cotton, Name: "cotton", Label: "cloth", GrowTicks: growDays(9), HarvestWork: 40, Yield: 5,
-		Yields: item.Cloth, CutWork: 10, Crop: true, Sens: 70, SowWork: 25, FrostKill: -10},
-	// ENG-003: brewgrain grows like wheat, ashleaf like healroot.
-	Brewgrain: {Species: Brewgrain, Name: "brewgrain", Label: "brewgrain", GrowTicks: growDays(11), HarvestWork: 35, Yield: 8,
-		Yields: item.Brewgrain, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80},
-	Ashleaf: {Species: Ashleaf, Name: "ashleaf", Label: "ashleaf", GrowTicks: growDays(7), HarvestWork: 40, Yield: 2,
-		Yields: item.AshleafLeaf, CutWork: 8, Crop: true, Sens: 80, SowWork: 35, FrostKill: -20},
-	// FOOD-0 placeholders (FOOD-2 retunes): wiki: Rice (3 days, 6, 1.0),
-	// Strawberry (4.6, 8, 1.0), Haygrass (7, 18, 0.6), Hop plant (5, 8,
-	// 0.7); work and frost as the existing crops.
-	Rice: {Species: Rice, Name: "rice", Label: "rice", GrowTicks: growDays(3), HarvestWork: 30, Yield: 6,
-		Yields: item.Rice, CutWork: 10, Crop: true, Sens: 100, SowWork: 20, FrostKill: -10},
-	Strawberry: {Species: Strawberry, Name: "strawberry", Label: "strawberries", GrowTicks: growDays(4.6), HarvestWork: 30,
-		Yield: 8, Yields: item.Strawberries, CutWork: 10, Crop: true, Sens: 100, SowWork: 25, FrostKill: -20},
-	Haygrass: {Species: Haygrass, Name: "haygrass", Label: "hay", GrowTicks: growDays(7), HarvestWork: 30, Yield: 18,
-		Yields: item.Hay, CutWork: 10, Crop: true, Sens: 60, SowWork: 20, FrostKill: -50},
-	Hops: {Species: Hops, Name: "hops", Label: "hops", GrowTicks: growDays(5), HarvestWork: 35, Yield: 8,
-		Yields: item.Hops, CutWork: 10, Crop: true, Sens: 70, SowWork: 25, FrostKill: -20},
+	// Crops at the wiki's grow days, base yield and fertility
+	// sensitivity (wiki: Plants crop table and each plant's page).
+	Potato: crop(Potato, "potato", "potatoes", 5.8, 11, item.Potatoes, 40),
+	Corn:   with(crop(Corn, "corn", "corn", 11.3, 22, item.Corn, 100), func(d *Def) { d.NoHydro = true }),
+	Rice:   crop(Rice, "rice", "rice", 3, 6, item.Rice, 100),
+	Strawberry: with(crop(Strawberry, "strawberry", "strawberries", 4.6, 8, item.Strawberries, 100),
+		func(d *Def) { d.MinSkill = 5 }),
+	Haygrass: with(crop(Haygrass, "haygrass", "hay", 7, 18, item.Hay, 60), func(d *Def) { d.NoHydro = true }),
+	Cotton:   crop(Cotton, "cotton", "cloth", 8, 10, item.Cloth, 100),
+	Hops:     with(crop(Hops, "hops", "hops", 5, 8, item.Hops, 70), func(d *Def) { d.MinSkill = 3 }),
+	// wiki: Healroot (7 days, 1 medicine, 800 sow and 400 harvest work,
+	// Plants 8; survives -29 °C).
+	Healroot: with(crop(Healroot, "healroot", "herbal medicine", 7, 1, item.HerbalMedicine, 100), func(d *Def) {
+		d.SowWork, d.HarvestWork, d.CutWork, d.MinSkill, d.FrostKill, d.ColdHardy = 800, 400, 400, 8, -290, true
+	}),
+	// The original crops on vanilla-style numbers (our tuning, about two
+	// items a grow day like the wiki's staples; the old soil sensitivity):
+	// radish fast, lettuce, beans, pumpkin and wheat slower. Brewgrain grows
+	// like wheat; ashleaf stands in for smokeleaf (wiki: Smokeleaf plant,
+	// 7.5 days, 9 leaves, Plants 4).
+	Radish:  crop(Radish, "radish", "radishes", 3.2, 6, item.Radishes, 40),
+	Lettuce: crop(Lettuce, "lettuce", "lettuce", 4, 7, item.Lettuce, 90),
+	Beans:   crop(Beans, "beans", "beans", 5.5, 10, item.Beans, 60),
+	Pumpkin: crop(Pumpkin, "pumpkin", "pumpkins", 9, 17, item.Pumpkins, 70),
+	Wheat: with(crop(Wheat, "wheat", "wheat", 10, 19, item.Wheat, 80),
+		func(d *Def) { d.Extra, d.ExtraQty = item.Straw, 4 }),
+	Brewgrain: crop(Brewgrain, "brewgrain", "brewgrain", 10.5, 19, item.Brewgrain, 80),
+	Ashleaf:   with(crop(Ashleaf, "ashleaf", "ashleaf", 7.5, 9, item.AshleafLeaf, 100), func(d *Def) { d.MinSkill = 4 }),
 }
 
-// Growth temperature, tenths of a degree C: nothing grows at or below
-// growMinTemp, growth ramps up to full speed at growFullTemp, holds there
-// to growHotTemp and fades out by growMaxTemp in extreme heat.
+// Growth temperature, tenths of a degree C (wiki: Plants): full speed
+// from growFullTemp to growHotTemp, nothing at or below growMinTemp or at
+// or above growMaxTemp; below 6 °C the factor is T/6, above 42 °C
+// (58 - T)/16.
 const (
 	growMinTemp  = 0
-	growFullTemp = 100
-	growHotTemp  = 350
-	growMaxTemp  = 450
+	growFullTemp = 60
+	growHotTemp  = 420
+	growMaxTemp  = 580
 )
 
 // TempFactor is growth speed in permille at air temperature tenthsC.
@@ -240,8 +273,9 @@ func TempFactor(tenthsC int) int {
 	}
 }
 
-// Frostbitten reports whether a crop of species s is past its frost
-// limit at air temperature tenthsC: it takes cold damage (Expose).
+// Frostbitten reports whether a crop of species s is past the warmest
+// frost limit of its kind at air temperature tenthsC (each plant's own
+// limit is ColdLimit, colder still).
 func Frostbitten(s Species, tenthsC int) bool {
 	d := DefOf(s)
 	return d.Crop && tenthsC < d.FrostKill
@@ -255,10 +289,11 @@ func Killed(s Species, tenthsC int) bool {
 	return d.ColdKill != 0 && tenthsC < d.ColdKill || d.HeatKill != 0 && tenthsC > d.HeatKill
 }
 
-// Crops lists the farm crops in menu order (fastest first); ashleaf and
-// brewgrain (ENG-003) are research-gated like healroot.
+// Crops lists the farm crops in menu order (fastest first); ashleaf,
+// brewgrain and hops are research-gated like healroot.
 func Crops() []Species {
-	return []Species{Radish, Lettuce, Beans, Healroot, Ashleaf, Potato, Corn, Pumpkin, Cotton, Wheat, Brewgrain}
+	return []Species{Rice, Radish, Lettuce, Strawberry, Hops, Beans, Potato, Haygrass, Healroot, Ashleaf, Cotton, Pumpkin,
+		Wheat, Brewgrain, Corn}
 }
 
 // Rate is the growth speed in percent on soil of the given fertility
@@ -347,6 +382,12 @@ type Plant struct {
 	Damage     uint8
 	DamageHeat bool
 	Damaging   bool
+	// FOOD-2 (farm.go): Sown is the tick it was sown or first seen growing
+	// (0: not yet seen), for its lifespan; Life the share of its lifespan
+	// gone and Light the growing light it last had, percent; Blight the
+	// blight's severity, percent (0: healthy).
+	Sown                uint64
+	Life, Light, Blight uint8
 }
 
 // Wild is the historical name for Plant.

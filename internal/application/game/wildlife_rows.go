@@ -9,15 +9,18 @@ import (
 // WildlifeRow is one wild species on the map, for the Animals tab's Wild
 // list (UI checklist 19.4).
 type WildlifeRow struct {
-	Species    string // key
-	Label      string
-	Count      int
-	Diet       string
-	Predator   bool
-	TameChance int // percent per attempt
-	Meat       int // per animal
-	Hunted     int // marked for hunting
-	TameMarked int // marked for taming
+	Species     string // key
+	Label       string
+	Count       int
+	Diet        string
+	Predator    bool
+	TameChance  int // percent per attempt
+	Revenge     int // FOOD-3: percent a hurt one turns on its hunter (wiki, the difficulty's)
+	Wildness    int // FOOD-3: percent (wiki); MinHandling the Animals level taming needs
+	MinHandling int
+	Meat        int // per animal
+	Hunted      int // marked for hunting
+	TameMarked  int // marked for taming
 }
 
 // Wildlife lists the wild species on the map, most numerous first (ties
@@ -33,7 +36,8 @@ func (g *Game) Wildlife() []WildlifeRow {
 		if r == nil {
 			d := animal.DefOf(a.Species)
 			r = &WildlifeRow{Species: a.Species.String(), Label: a.Species.Label(),
-				Diet: animal.EcologyOf(a.Species).Diet.String(), Predator: d.Predator, TameChance: d.TameChance, Meat: d.Meat}
+				Diet: animal.EcologyOf(a.Species).Diet.String(), Predator: d.Predator, TameChance: d.TameChance, Meat: d.Meat,
+				Revenge: g.revengePct(d.Revenge), Wildness: animal.Wildness(a.Species) / 10, MinHandling: animal.MinHandling(animal.Wildness(a.Species))}
 			rows[a.Species] = r
 		}
 		r.Count++

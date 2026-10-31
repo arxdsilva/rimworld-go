@@ -297,6 +297,7 @@ type ItemView struct {
 	Of     entity.EntityID
 	OfName string
 	Animal string // species key of a CorpseAnimal ("deer"), SIM-019
+	Meat   string // FOOD-3: the species key a meat stack was butchered from ("cow": "cow meat"; "" untagged)
 	// Wreck (DEF-4): the CorpseAnimal is a mechanoid's wreck (Kind
 	// "harrow wreck"): it keeps, nothing eats it, it is shredded for salvage.
 	Wreck bool
@@ -1192,7 +1193,7 @@ func (g *Game) snapshot() []PawnView {
 		pv := &views[len(views)-1]
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 		g.fillSocialPawn(pv, pv.Mood) // social_view.go: smoothed mood, target, bubble (ENG-003)
-		pv.Health = v.HP() * 100 / health.MaxHP
+		pv.Health, pv.Malnutrition = v.HP()*100/health.MaxHP, int(body.Malnutrition(g.bodies[id]))/10
 		pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
 		pv.InfectionLosing, pv.UntendedHours = g.infectionLosing(id), g.untendedHours(id)
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)

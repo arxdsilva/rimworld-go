@@ -72,8 +72,8 @@ func TestCremateBurnsAHumanCorpseOnAPyre(t *testing.T) {
 		t.Fatal("a pyre only cremates")
 	}
 	for _, r := range For(construction.ButcherTable) {
-		if r.Input.Accepts(item.CorpseHuman) {
-			t.Fatal("human corpses are never butchered")
+		if r.Input.Accepts(item.CorpseHuman) != (r.ID == ButcherHuman) {
+			t.Fatal("human corpses are butchered only by Butcher human (FOOD-3)")
 		}
 	}
 }

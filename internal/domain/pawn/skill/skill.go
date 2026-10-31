@@ -103,7 +103,7 @@ func ForWork(t work.Type) (ID, bool) {
 		return Mining, true
 	case work.Cook:
 		return Cooking, true
-	case work.Grow:
+	case work.Grow, work.PlantCut:
 		return Plants, true
 	case work.Handle:
 		return Animals, true

@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"rimworld-go/internal/application/game/herd"
 	"strings"
 
 	"rimworld-go/internal/domain/animal"
@@ -35,14 +36,15 @@ import (
 //     young, random sex, her herd and her tameness (named when tame).
 //     A pregnancy dies with its mother.
 //   - Eggs: a layer lays at its own tick of the day (animal.LayTick) when
-//     fed (LayFood): a fertile egg while mated (every EggDays), and tame
-//     chickens, ducks and geese a plain egg every day besides (every
-//     third egg of a mating fertile). Wild plain layers lay only their
+//     fed (LayFood), its species' wiki interval and clutch apart
+//     (animal.EggsToday, FOOD-3): fertile eggs while mated, and tame
+//     chickens, ducks and geese plain eggs besides (every third egg of a
+//     mating fertile). Wild plain layers lay only their
 //     fertile eggs, so the wild map is not strewn with eggs. Tame layers
 //     lay in their pen beside its trough when they are in one.
 //   - Hatching: every climate interval each fertile egg stack on the
-//     ground incubates while 0 C <= air <= 45 C; below -5 C it dies (a
-//     plain egg). At HatchTicks the whole stack hatches at once.
+//     ground incubates while 0 C <= air <= 50 C and dies (a plain egg)
+//     outside it (wiki: Eggs). At HatchTicks the whole stack hatches.
 
 // lifeEvery: a product fills in steps of this many ticks (staggered by
 // id), so the per-tick cost of life is a few compares.
@@ -97,10 +99,14 @@ func rateSpan(now uint64, per, period, span int) int {
 }
 
 // lifePhase is the phase-level part of life (phaseAnimals, once a tick):
-// fertile eggs incubate every climate interval.
+// fertile eggs incubate every climate interval; the auto-slaughter check
+// runs once a day.
 func (g *Game) lifePhase(now uint64) {
 	if now%climateInterval == 0 {
 		g.incubate()
+	}
+	if herd.CheckTick(now) {
+		g.herdOf().Auto.Check() // game/herd (FOOD-3): auto-slaughter, once a day
 	}
 }
 
@@ -133,7 +139,7 @@ func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
 	g.logEvent(id, logEntry{Kind: logOldAge})
 	g.endMating(id, a)
 	g.removeAnimal(id)
-	g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame) // wildlife.go: a wild one's is unclaimed (PLAY-017)
+	g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, animal.CorpseYieldOf(*a, now, true)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
 	if animal.DefOf(a.Species).Explosive {
 		g.burst(a.Species, pos)
 	}
@@ -362,10 +368,18 @@ func pluralYoung(w string) string {
 
 // layEgg: a grown female layer's egg of the day, if she lays today.
 func (g *Game) layEgg(id entity.EntityID, a *animal.State, now uint64) {
-	day := int(now / clock.TicksPerDay)
-	if a.Food < animal.LayFood || a.Leaving || !animal.LaysToday(a.Species, uint64(id), day) {
+	n := animal.EggsToday(a.Species, uint64(id), int(now/clock.TicksPerDay)) // FOOD-3: the species' wiki interval
+	if a.Food < animal.LayFood || a.Leaving {
 		return
 	}
+	for range n {
+		g.layOne(id, a)
+	}
+}
+
+// layOne lays one egg of a's: fertile while mated, else a plain one (tame
+// plain layers only).
+func (g *Game) layOne(id entity.EntityID, a *animal.State) {
 	fertile := false
 	if a.Mated > 0 {
 		fertile = animal.FertileEgg(a.Species, a.Mated)
@@ -391,8 +405,9 @@ func (g *Game) layEgg(id entity.EntityID, a *animal.State, now uint64) {
 		return
 	}
 	st, _ := g.stacks.Get(sid)
+	st.Animal = uint8(a.Species) // FOOD-1: an egg feeds by its species (animal.StackNutrition)
 	if fertile {
-		st.Animal, st.Tame = uint8(a.Species), a.Tame
+		st.Tame = a.Tame
 	}
 	st.Unclaimed = !a.Tame // a wild mother's egg waits for a haul mark (PLAY-017)
 
@@ -447,13 +462,9 @@ func (g *Game) incubate() {
 		if !ok || st.Kind != item.FertileEgg {
 			continue // merged away
 		}
-		t := int(g.temperatureAt(st.X, st.Y))
-		switch {
-		case t < animal.EggFreeze:
-			st.Kind, st.Animal, st.Tame, st.Hatch = item.Egg, 0, false, 0
+		if t := int(g.temperatureAt(st.X, st.Y)); t < animal.HatchMin || t > animal.HatchMax {
+			st.Kind, st.Tame, st.Hatch = item.Egg, false, 0 // wiki: Eggs: ruined outside 0-50 C (FOOD-3); the species stays: its nutrition (FOOD-1)
 			g.mergeOrSet(id, st)
-			continue
-		case t < animal.HatchMin || t > animal.HatchMax:
 			continue
 		}
 		st.Hatch += climateInterval
@@ -531,6 +542,8 @@ func (g *Game) fillAnimalLife(av *AnimalView, a animal.State, now uint64) {
 		}
 	}
 	av.EggsFertile = animal.Layer(a.Species) && a.Mated > 0
+	w := animal.Wildness(a.Species) // FOOD-3: revenge, wildness, handling (wiki)
+	av.Revenge, av.Wildness, av.MinHandling = g.revengePct(animal.DefOf(a.Species).Revenge), w/10, animal.MinHandling(w)
 	if animal.Produces(a.Species, a.Female, av.Adult) {
 		av.Product = animal.EcologyOf(a.Species).Product.String()
 		av.ProductPct = a.Product * 100 / animal.ProductFull

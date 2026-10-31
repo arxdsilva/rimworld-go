@@ -3,11 +3,14 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -45,7 +48,7 @@ func (g *Game) markTame(x1, y1, x2, y2 int, on bool) {
 }
 
 // beingTamed: a handler has claimed this animal for a taming, milking,
-// shearing or training job, or a doctor for tending it.
+// shearing, training, slaughter or feeding job, or a doctor for tending it.
 func (g *Game) beingTamed(id entity.EntityID) bool {
 	owner, ok := g.reserve.EntityOwner(id)
 	if !ok {
@@ -56,103 +59,139 @@ func (g *Game) beingTamed(id entity.EntityID) bool {
 	case job.Tame, job.Milk, job.Shear, job.Train, job.TendAnimal, job.Rope:
 		return j.Target == id
 	}
-	return false
+	return herd.Holds(j, id) // FOOD-3: a slaughter or a feeding holds it too
 }
 
-// assignTame sends a hunter to the nearest animal marked for taming.
-func (g *Game) assignTame(id entity.EntityID) bool {
-	if !g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.TameMark && !a.Tame }) {
-		return false // jobindex.go: nothing marked for taming
+// herdOf is the herd (game/herd, FOOD-3: taming, milking and shearing,
+// slaughter, auto-slaughter, feeding downed animals, hunters' kills),
+// built on first use over the settings saved in the wildlife state (a
+// load replaces both).
+func (g *Game) herdOf() *herd.Herd {
+	if g.wl.herd == nil {
+		g.wl.herd = herd.New(herdHost{g}, &g.wl.Herd)
 	}
-	now := uint64(g.clock.Now())
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	for _, aid := range g.animalIDs {
-		a, ok := g.animals.Get(aid)
-		if !ok || !a.TameMark || a.Tame || a.Enraged(now) || now < a.TameRetry || animal.DefOf(a.Species).TameChance == 0 {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(aid); taken {
-			continue
-		}
-		p, _ := g.positions.Get(aid)
-		if d := pathing.Dist(pos.X, pos.Y, p.X, p.Y); d < bestD || (d == bestD && aid < best) {
-			best, bestD = aid, d
-		}
-	}
-	if best == 0 {
-		return false
-	}
-	p, _ := g.positions.Get(best)
-	tx, ty, ok := g.besideSpot(id, p.X, p.Y)
-	if !ok {
-		return false
-	}
-	return g.startJob(id, job.Record{Kind: job.Tame, Target: best, TX: tx, TY: ty, WorkLeft: animal.TameWork})
+	return g.wl.herd
 }
 
-func (g *Game) doTame(id entity.EntityID, j job.Record) {
-	a, ok := g.animals.Get(j.Target)
+// herdHost implements herd.Host over the game.
+type herdHost struct{ g *Game }
+
+func (h herdHost) Now() uint64                    { return uint64(h.g.clock.Now()) }
+func (h herdHost) Roll(n int) int                 { return h.g.rng.IntN(n) }
+func (h herdHost) Message(x, y int, text string)  { h.g.message(x, y, "%s", text) }
+func (h herdHost) Name(id entity.EntityID) string { return h.g.name(id) }
+func (h herdHost) Animals(id entity.EntityID) int { return int(h.g.skillOf(id, skill.Animals).Level) }
+func (h herdHost) AnimalIDs() []entity.EntityID   { return h.g.animalIDs }
+func (h herdHost) Animal(id entity.EntityID) (animal.State, bool) {
+	return h.g.animals.Get(id)
+}
+func (h herdHost) SetAnimal(id entity.EntityID, a animal.State) { h.g.animals.Set(id, a) }
+func (h herdHost) Pos(id entity.EntityID) (int, int, bool) {
+	p, ok := h.g.positions.Get(id)
+	return p.X, p.Y, ok
+}
+func (h herdHost) AnyAnimal(keep func(entity.EntityID, *animal.State) bool) bool {
+	return h.g.anyAnimal(keep) // jobindex.go
+}
+func (h herdHost) Nearest(id entity.EntityID, keep func(entity.EntityID, *animal.State) bool) (entity.EntityID, int, int, bool) {
+	g := h.g
 	pos, _ := g.positions.Get(id)
-	ap, _ := g.positions.Get(j.Target)
-	switch {
-	case !ok || a.Tame || !a.TameMark:
-		j.State = job.Complete
-		g.jobs.Set(id, j)
-		return
-	case weapon.Distance(pos.X, pos.Y, ap.X, ap.Y) > 1:
-		j.State, j.Fail = job.Fail, job.TargetGone
-		g.jobs.Set(id, j)
-		return
+	aid, p, ok := g.nearestWhere(pos.X, pos.Y, max(g.grid.Width(), g.grid.Height()), ckAnimal, func(o entity.EntityID, _ Position) bool {
+		a := g.animals.Ref(o)
+		return a != nil && keep(o, a)
+	})
+	return aid, p.X, p.Y, ok
+}
+func (h herdHost) Kill(aid, by entity.EntityID)                     { h.g.killAnimal(aid, by) }
+func (h herdHost) StartJob(id entity.EntityID, rec job.Record) bool { return h.g.startJob(id, rec) }
+func (h herdHost) SetJob(id entity.EntityID, j job.Record)          { h.g.jobs.Set(id, j) }
+func (h herdHost) Job(id entity.EntityID) (job.Record, bool)        { return h.g.jobs.Get(id) }
+func (h herdHost) Owner(t entity.EntityID) (entity.EntityID, bool)  { return h.g.reserve.EntityOwner(t) }
+func (h herdHost) Claim(id, t entity.EntityID) bool                 { return h.g.reserve.TryEntity(id, t) }
+func (h herdHost) BesideSpot(id entity.EntityID, x, y int) (int, int, bool) {
+	return h.g.besideSpot(id, x, y)
+}
+func (h herdHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
+	return h.g.pathTo(id, x, y)
+}
+func (h herdHost) Work(id entity.EntityID) int                  { return h.g.workProgress(id, skAnimals, true) }
+func (h herdHost) Stack(sid entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(sid) }
+func (h herdHost) Delete(sid entity.EntityID)                   { h.g.deleteItem(sid) }
+func (h herdHost) HaulToStorage(id, sid entity.EntityID) bool {
+	return h.g.haulToStockpile(id, h.pos(id), []entity.EntityID{sid}, 0)
+}
+func (h herdHost) pos(id entity.EntityID) Position   { p, _ := h.g.positions.Get(id); return p }
+func (h herdHost) FedAnimal(id, aid entity.EntityID) { h.g.logPair(aid, id, logFedBy, logFed, 0, 0) }
+
+// NearestFood is the nearest free, fresh food stack accept takes for id.
+func (h herdHost) NearestFood(id entity.EntityID, accept func(item.Kind) bool) (entity.EntityID, int, int) {
+	g := h.g
+	return g.nearestFree(id, func(k item.Kind) bool { return k.IsFood() && accept(k) }) // orders.go
+}
+
+// Take: id, at stack sid, picks up qty of it, split off a bigger stack.
+func (h herdHost) Take(id, sid entity.EntityID, qty int) (entity.EntityID, bool) {
+	g := h.g
+	st, ok := g.stacks.Get(sid)
+	if !ok || st.Carrier != 0 || st.Qty <= 0 || st.Rotten() {
+		return 0, false
 	}
-	u := g.workProgress(id, skAnimals, true) // skills.go
-	if u == 0 {
-		return
+	if st.Qty <= qty {
+		st.Carrier = id
+		g.putStack(sid, st)
+		return sid, true
 	}
-	if j.WorkLeft -= u; j.WorkLeft > 0 {
-		g.jobs.Set(id, j)
-		return
+	st.Qty -= qty
+	g.putStack(sid, st)
+	carry := g.entities.Next()
+	g.itemIDs = append(g.itemIDs, carry)
+	st.Qty, st.Carrier = qty, id
+	g.putStack(carry, st)
+	return carry, true
+}
+
+// Drop spawns st at its tile, onto any stack it merges with.
+func (h herdHost) Drop(st item.Stack) {
+	g := h.g
+	if sid, err := g.SpawnStack(st.Kind, st.Qty, st.X, st.Y); err == nil {
+		s, _ := g.stacks.Get(sid)
+		s.Animal = st.Animal
+		g.mergeOrSet(sid, s)
 	}
-	def := animal.DefOf(a.Species)
+}
+
+// Tamed: handler id tamed animal aid: it joins the colony, named, and may
+// bond with its tamer.
+func (h herdHost) Tamed(id, aid entity.EntityID) {
+	g := h.g
+	a, _ := g.animals.Get(aid)
+	ap, _ := g.positions.Get(aid)
+	a.Tame, a.TameMark, a.Designated = true, false, false
+	a.Name = petNames[g.rng.IntN(len(petNames))]
+	a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
+	g.message(ap.X, ap.Y, "%s tamed a %s. Its name is %s.", g.name(id), a.Species.Label(), a.Name)
+	g.logEvent(aid, logEntry{Kind: logTamedBy, Other: id, Name: g.name(id)})
+	g.logEvent(id, logEntry{Kind: logTamed, Other: aid, Name: a.Name + " the " + a.Species.Label()})
+	g.animals.Set(aid, a)
+	g.onTamed(id, aid) // bonds.go: a chance of a bond with the tamer
+}
+
+// TameFailed: id failed to tame aid, which waits out its retry and may
+// go manhunter at its species' wiki chance (story.go: the difficulty).
+func (h herdHost) TameFailed(id, aid entity.EntityID) {
+	g := h.g
+	a, _ := g.animals.Get(aid)
+	ap, _ := g.positions.Get(aid)
 	now := uint64(g.clock.Now())
-	tamed := g.rng.IntN(100) < tameChanceOf(g.tameChance(id, def.TameChance), a) // skills.go
-	if tamed {
-		a.Tame, a.TameMark, a.Designated = true, false, false
-		a.Name = petNames[g.rng.IntN(len(petNames))]
-		a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
-		g.message(ap.X, ap.Y, "%s tamed a %s. Its name is %s.", g.name(id), a.Species.Label(), a.Name)
-		g.logEvent(j.Target, logEntry{Kind: logTamedBy, Other: id, Name: g.name(id)})
-		g.logEvent(id, logEntry{Kind: logTamed, Other: j.Target, Name: a.Name + " the " + a.Species.Label()})
+	a.TameRetry = now + animal.TameRetryTicks
+	g.logEvent(aid, logEntry{Kind: logResistedTaming, Other: id, Name: g.name(id)})
+	g.logEvent(id, logEntry{Kind: logFailedTame, Other: aid, Name: a.Species.Label()})
+	if g.rng.IntN(100) < g.revengePct(animal.DefOf(a.Species).TameRevenge) {
+		g.enrage(aid, &a, id, now)
 	} else {
-		a.TameRetry = now + animal.TameRetryTicks
-		g.logEvent(j.Target, logEntry{Kind: logResistedTaming, Other: id, Name: g.name(id)})
-		g.logEvent(id, logEntry{Kind: logFailedTame, Other: j.Target, Name: a.Species.Label()})
-		if g.rng.IntN(100) < g.revengePct(def.TameRevenge) { // story.go: difficulty (NG-1)
-			g.enrage(j.Target, &a, id, now)
-		} else {
-			g.message(ap.X, ap.Y, "%s failed to tame the %s.", g.name(id), a.Species.Label())
-		}
+		g.message(ap.X, ap.Y, "%s failed to tame the %s.", g.name(id), a.Species.Label())
 	}
-	g.animals.Set(j.Target, a)
-	if tamed {
-		g.onTamed(id, j.Target) // bonds.go: a chance of a bond with the tamer
-	}
-	j.State = job.Complete
-	g.jobs.Set(id, j)
-}
-
-// downedTameMul multiplies the chance of taming a downed animal: too weak
-// to resist the handler (original tuning).
-const downedTameMul = 2
-
-// tameChanceOf is the percent chance a taming of animal a succeeds, from
-// the handler's chance: doubled for a downed animal (at most 100).
-func tameChanceOf(chance int, a animal.State) int {
-	if a.Downed {
-		return min(chance*downedTameMul, 100)
-	}
-	return chance
+	g.animals.Set(aid, a)
 }
 
 // enrage turns a wild animal manhunter for a day, going for who; a

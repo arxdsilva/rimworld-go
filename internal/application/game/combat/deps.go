@@ -262,6 +262,9 @@ type Hunts interface {
 	// NearestFree is the nearest free stack of a kind match accepts for
 	// id and its tile (0: none).
 	NearestFree(id entity.EntityID, match func(item.Kind) bool) (entity.EntityID, int, int)
+	// CarryKill starts hunter id carrying its kill to storage (FOOD-3,
+	// wiki: Hunt); false when it has none to carry.
+	CarryKill(id entity.EntityID) bool
 }
 
 // Field is the map beyond buildings as cover sees it, and the building

@@ -114,11 +114,6 @@ type Record struct {
 	Injury int
 }
 
-const (
-	// StarvationTicks after downed-from-hunger until death.
-	StarvationTicks = 2500
-)
-
 // Injury thresholds (hit points out of MaxHP). Humanlikes with a body
 // go down by their capacities (BodyDowns, MED-01); DownedInjury and
 // RecoverInjury remain the legacy rule for a pawn with no body (until the

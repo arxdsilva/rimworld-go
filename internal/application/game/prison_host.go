@@ -87,12 +87,9 @@ func (h prisonLife) Heal(id entity.EntityID, v health.Record, now uint64) health
 func (h prisonLife) Decay(id entity.EntityID, n needs.Pair, now uint64) needs.Pair {
 	return h.g.decayNeeds(id, n, now) // skills.go
 }
-func (h prisonLife) DownedHunger(id entity.EntityID, v health.Record, now uint64) (needs.Pair, health.Record) {
-	n := h.g.downedHunger(id, &v, now, false)
-	return n, v
+func (h prisonLife) DownedHunger(id entity.EntityID, now uint64) needs.Pair {
+	return h.g.downedHunger(id, now, false)
 }
-func (h prisonLife) Down(id entity.EntityID, c health.Cause) { h.g.down(id, c) }
-func (h prisonLife) Die(id entity.EntityID, c health.Cause)  { h.g.die(id, c) }
 
 type prisonWarden struct{ g *Game }
 

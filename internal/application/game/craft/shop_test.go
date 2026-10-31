@@ -98,7 +98,7 @@ func TestShopCookingWaitsForFireAndPower(t *testing.T) {
 	f.pawns = []entity.EntityID{pawn}
 	f.build(1, construction.Campfire, 4, 4)
 	f.build(2, construction.ElectricStove, 8, 4)
-	f.put(50, item.Stack{Kind: item.Berries, Qty: 10})
+	f.put(50, item.Stack{Kind: item.Berries, Qty: 20})
 	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.CampfireMeal, Mode: recipe.Forever, Target: 1}})
 	c.Bills.Set(2, []recipe.Bill{{Recipe: recipe.SimpleMeal, Mode: recipe.Forever, Target: 1}})
 	f.unpower[2] = true

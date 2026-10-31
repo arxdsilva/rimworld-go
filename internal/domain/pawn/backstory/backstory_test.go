@@ -18,7 +18,7 @@ func TestWorkMaskTable(t *testing.T) {
 		Intellectual: {work.Research},
 		Animals:      {work.Handle},
 		Cooking:      {work.Cook},
-		Plants:       {work.Grow},
+		Plants:       {work.Grow, work.PlantCut},
 		Mining:       {work.Mine},
 		Crafting:     {work.Craft},
 		Construction: {work.Construct},

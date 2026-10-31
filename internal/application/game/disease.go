@@ -288,8 +288,8 @@ func (g *Game) diseaseNeedRates(id entity.EntityID, hr, rr int32) (int32, int32)
 		return hr, rr
 	}
 	for _, c := range b.Conds {
+		hr = hr * body.HungerMul(c) / 1000 // a disease's, malnutrition's (FOOD-1)
 		if dz, ok := body.DiseaseOf(c.Kind); ok {
-			hr = hr * dz.HungerMul / 1000
 			rr = rr * dz.RestMul / 1000
 		}
 	}

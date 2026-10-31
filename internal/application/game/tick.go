@@ -7,9 +7,11 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -91,7 +93,7 @@ func (g *Game) applyOne(c command.Command) {
 		minX, minY, maxX, maxY := zone.Normalize(c.X, c.Y, c.X2, c.Y2)
 		for _, id := range g.plantIDs {
 			p, ok := g.plants.Get(id)
-			if !ok || !p.Harvestable() || g.fogged(p.X, p.Y) {
+			if !ok || !p.HarvestableNow() || g.fogged(p.X, p.Y) { // FOOD-2: from 65 % growth
 				continue
 			}
 			if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
@@ -209,7 +211,9 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetThreatResponse:
 		g.combat.Drafts.Apply(c) // combat/draft.go (DEF-4, CBT-2): drafted control, drop or stow a weapon
 	case command.SetZoneOverlay: // STO-2: a view toggle the UI keeps (nothing simulated)
-	case command.SetFoodPolicy, command.EditFoodPolicy, command.SetAutoSlaughter: // FOOD-0 contract: FOOD-3/4 handle them
+	case command.SetAutoSlaughter:
+		g.herdOf().Auto.Apply(c) // game/herd (FOOD-3)
+	case command.SetFoodPolicy, command.EditFoodPolicy: // FOOD-0 contract: FOOD-4 handles them
 	}
 }
 
@@ -312,18 +316,7 @@ func (g *Game) phaseNeeds() {
 		if v.Status == health.Downed {
 			g.stainDowned(id, now) // stains.go: an untended body pools
 			dj, _ := g.jobs.Get(id)
-			n := g.downedHunger(id, &v, now, dj.Kind == job.Sleep && dj.State == job.Do) // care_host_prison.go (SIM-064)
-			if n.Starving() && v.Cause != health.CauseNoFood {
-				v.Cause = health.CauseNoFood
-				v.DownedTick = now
-				g.vital.Set(id, v)
-			}
-			if v.Cause == health.CauseNoFood && now-v.DownedTick >= health.StarvationTicks {
-				v.Status = health.Dead
-				g.vital.Set(id, v)
-				g.interrupt(id, job.Cancelled)
-				g.releaseBed(id)
-			}
+			g.downedHunger(id, now, dj.Kind == job.Sleep && dj.State == job.Do) // care_host_prison.go (SIM-064)
 			continue
 		}
 		j, _ := g.jobs.Get(id)
@@ -335,10 +328,6 @@ func (g *Game) phaseNeeds() {
 			g.rest.Needs.Tick(id, now) // rest/needs.go (BED-3): comfort, beauty, outdoors
 		}
 		g.skillsDaily(id, now) // skills.go: decay, age, birthdays
-		if n.Starving() {
-			g.down(id, health.CauseNoFood)
-			continue
-		}
 		if n.Exhausted() {
 			// collapse: drop and sleep right here, this tick
 			g.down(id, health.CauseNoBed)
@@ -547,7 +536,7 @@ func (g *Game) phaseAI() {
 			continue // player-prioritized: finish it first
 		}
 		if busy {
-			if n.Hungry() && !j.Kind.Eating() && g.seekFood(id) {
+			if n.Hungry() && !j.Kind.Eating() && (j.Kind != job.Sleep || n.Hunger <= needs.RavenousAt) && g.seekFood(id) { // FOOD-1: sleepers wake ravenous
 				g.interrupt(id, job.Interrupted)
 				g.assignEat(id)
 				continue
@@ -733,10 +722,12 @@ func (g *Game) pathToVia(id entity.EntityID, tx, ty int, regions bool) ([]pathin
 	return best, bestOK
 }
 
-func (g *Game) hasEdible() bool {
+// hasEdible reports free food anywhere; corpses count for a pawn that
+// eats them (malnourished, FOOD-1).
+func (g *Game) hasEdible(corpses bool) bool {
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
-		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
+		if !ok || !st.Kind.IsFood() && !(corpses && animal.EdibleCorpse(st)) || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
 		if g.reserve.Free(id, st.Qty) <= 0 {
@@ -754,7 +745,7 @@ const foodRetry = 500
 
 // seekFood reports whether pawn id should go looking for food now.
 func (g *Game) seekFood(id entity.EntityID) bool {
-	return uint64(g.clock.Now()) >= g.noFood[id] && (g.hasEdible() || g.haul.store.Paste.Ready(haulHost{g}, haulHost{g}))
+	return uint64(g.clock.Now()) >= g.noFood[id] && (g.hasEdible(body.Malnutrition(g.bodies[id]) > 0) || g.haul.store.Paste.Ready(haulHost{g}, haulHost{g}))
 }
 
 func (g *Game) assignEat(id entity.EntityID) {
@@ -1085,10 +1076,8 @@ func (g *Game) phaseJobs() {
 			g.doRepair(id, j)
 		case job.Research:
 			g.doResearch(id, j)
-		case job.Tame:
-			g.doTame(id, j)
-		case job.Milk, job.Shear:
-			g.doCollect(id, j) // animal_products.go
+		case job.Tame, job.Milk, job.Shear, job.Slaughter:
+			g.herdOf().Do(id, j) // game/herd (FOOD-3): taming, milking, shearing, slaughter
 		case job.ClearSnow:
 			g.doClearSnow(id, j) // snow_clear.go
 		case job.Clean:
@@ -1113,7 +1102,9 @@ func (g *Game) phaseJobs() {
 		case job.Capture:
 			g.care.DoCapture(id, j) // care/capture.go
 		case job.FeedPatient, job.Strip, job.VisitSick, job.CarryToPrisonBed:
-			g.care.Do(id, j) // care (SIM-063…065): feed, strip, visit, carry to a prison bed
+			if !g.herdOf().Do(id, j) { // FOOD-3: a handler feeding a downed animal
+				g.care.Do(id, j) // care (SIM-063…065): feed, strip, visit, carry to a prison bed
+			}
 		case job.Warden:
 			g.prison.Do(id, j) // prison/warden.go
 		case job.DeliverFood:
@@ -1170,20 +1161,16 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	// eat portions until satisfied (several lettuces make a meal; one
-	// ration does), never past full by more than half a portion
+	// eat the portions that fill it best (several lettuces make a meal;
+	// one meal does); the excess is wasted (wiki: Saturation)
 	n, _ := g.need.Get(id)
-	nut := st.Kind.Nutrition()
-	for eaten, most := 0, min(12, g.reserve.FreeFor(id, j.Target, st.Qty)); st.Qty > 0 && eaten < most; eaten++ { // RES-1: not others' portions
-		st.Qty--
-		n.Hunger += nut
-		if j.Count == bingeEat && eaten < 2 {
-			continue // binge: stuffs itself well past full
-		}
-		if n.Hunger+nut/2 > needs.Full {
-			break
-		}
+	most := portionsFor(n.Hunger, st) // dining.go
+	if j.Count == bingeEat {
+		most += 2 // binge: stuffs itself well past full
 	}
+	eat := min(most, st.Qty, g.reserve.FreeFor(id, j.Target, st.Qty)) // RES-1: not others' portions
+	st.Qty -= eat
+	n.Hunger += eat * animal.StackNutrition(st) // eggs by species, carcasses (FOOD-1)
 	if st.Qty <= 0 {
 		g.deleteItem(j.Target)
 		j.Carry = 0
@@ -1456,10 +1443,10 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 		pos, _ := g.positions.Get(id)
 		g.message(pos.X, pos.Y, "%s fumbled the harvest.", g.name(id))
 	} else {
-		// a frost- or heat-damaged plant yields (100 - Damage)% (PLAY-016)
-		g.dropStack(d.Yields, p.DamagedYield(g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield))), p.X, p.Y)
+		// a frost- or heat-damaged plant yields (100 - Damage)% (PLAY-016), from 65 % growth (FOOD-2)
+		g.dropStack(d.Yields, p.HarvestYield(g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield))), p.X, p.Y)
 	}
-	if n := p.DamagedYield(d.ExtraQty); n > 0 {
+	if n := p.HarvestYield(d.ExtraQty); n > 0 { // FOOD-2: half at 65 % growth, none blighted
 		g.dropStack(d.Extra, n, p.X, p.Y) // a by-product: straw with wheat
 	}
 	if d.Regrows {

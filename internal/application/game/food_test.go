@@ -68,7 +68,7 @@ func TestPawnsPreferMealsAndNutritionDiffers(t *testing.T) {
 	if p.LastMeal != "meal" {
 		t.Fatalf("ate %q, want meal", p.LastMeal)
 	}
-	if p.Hunger < needs.Percent(needs.CriticalHunger-1+item.Meal.Nutrition())-2 {
+	if p.Hunger < min(100, needs.Percent(needs.CriticalHunger-1+item.Meal.Nutrition()))-2 {
 		t.Fatalf("hunger after a meal = %d", p.Hunger)
 	}
 }

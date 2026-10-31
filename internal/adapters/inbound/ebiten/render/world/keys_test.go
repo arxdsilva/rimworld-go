@@ -321,3 +321,24 @@ func TestItemSpriteWaveEKinds(t *testing.T) {
 		}
 	}
 }
+
+// TestFoodItemsAndBuildingsResolve (FOOD-2 art): the new food items take the
+// default item path (spaces to underscores), the basin is faced and the sun
+// lamp is a single sprite.
+func TestFoodItemsAndBuildingsResolve(t *testing.T) {
+	t.Parallel()
+	for kind, want := range map[string]string{
+		"rice": "item/rice", "strawberries": "item/strawberries", "hay": "item/hay", "hops": "item/hops",
+		"agave fruit": "item/agave_fruit", "human meat": "item/human_meat", "insect meat": "item/insect_meat",
+	} {
+		if got := ItemSprite(kind); got != want {
+			t.Errorf("ItemSprite(%q) = %q, want %q", kind, got, want)
+		}
+	}
+	if got := BuildSprite("hydroponics basin", "east", 0, false, false); got != "furniture/hydroponics_basin_east" {
+		t.Errorf("basin %q", got)
+	}
+	if got := BuildSprite("sun lamp", "", 0, false, false); got != "furniture/sun_lamp" {
+		t.Errorf("sun lamp %q", got)
+	}
+}

@@ -4,7 +4,7 @@ import "rimworld-go/internal/domain/sim/clock"
 
 // Cold and heat damage (PLAY-016, our numbers). Out of its climate a
 // plant is hurt over hours instead of dying at once: past its kill
-// temperature (a crop's FrostKill, a wild plant's ColdKill, HeatKill on
+// temperature (a crop's ColdLimit, a wild plant's ColdKill, HeatKill on
 // the hot side) Damage grows by DamageRate an in-game hour plus
 // DamagePerTenth for every tenth of a degree further, at most
 // DamageRateMax, and the plant dies at DamageDead. Rates are tenths of a
@@ -31,16 +31,6 @@ func damageRate(excess int) int {
 	return min(DamageRate+DamagePerTenth*max(excess, 0), DamageRateMax)
 }
 
-// coldLimit is the air temperature (tenths of a degree C) below which
-// species d takes cold damage: a crop's FrostKill, a wild plant's
-// ColdKill; ok is false when cold never hurts it (it goes dormant).
-func coldLimit(d Def) (limit int, ok bool) {
-	if d.Crop {
-		return d.FrostKill, true
-	}
-	return d.ColdKill, d.ColdKill != 0
-}
-
 // Dead reports p has died of cold or heat damage.
 func (p Plant) Dead() bool { return p.Damage >= DamageDead }
 
@@ -52,8 +42,8 @@ func (p Plant) Dead() bool { return p.Damage >= DamageDead }
 // that damage began this window (the once-a-day warning).
 func (p Plant) Expose(tenthsC int, t0, t1 uint64) (q Plant, started bool) {
 	d := DefOf(p.Species)
-	cold, hasCold := coldLimit(d)
-	excess, hot := 0, false // tenths of a degree past the kill temperature
+	cold, hasCold := p.ColdLimit() // farm.go: a crop's own limit
+	excess, hot := 0, false        // tenths of a degree past the kill temperature
 	switch {
 	case hasCold && tenthsC < cold:
 		excess = cold - tenthsC

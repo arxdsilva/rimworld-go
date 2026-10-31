@@ -194,9 +194,13 @@ func TestCaravanDeathAwayGrieves(t *testing.T) {
 	c := formCaravan(t, g, dest, b)
 	c.C.FoodDays = 0
 	n, _ := g.need.Get(b)
-	n.Hunger = 400
+	n.Hunger = 0
 	g.need.Set(b, n)
-	worldForward(g, 3*2500)
+	malnourish(g, b, 990) // food1_test.go: on its last hours (FOOD-1)
+	for range 3 {
+		worldForward(g, 2500)
+		stepMalnutrition(g, uint64(g.clock.Now())) // the hourly medical phase's step
+	}
 	v, _ := g.vital.Get(b)
 	if v.Status != health.Dead || g.isStashed(b) {
 		t.Fatalf("the starving member is %v (stashed %v)", v.Status, g.isStashed(b))

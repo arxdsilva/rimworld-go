@@ -64,7 +64,7 @@ func sameItemView(a, b ItemView) bool {
 		a.OfName == b.OfName && a.Animal == b.Animal && a.Wreck == b.Wreck && a.Catch == b.Catch && a.Forbidden == b.Forbidden &&
 		a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked && a.PoisonPermille == b.PoisonPermille &&
 		a.Quality == b.Quality && a.Stuff == b.Stuff && a.HP == b.HP && a.MaxHP == b.MaxHP && a.Tainted == b.Tainted &&
-		a.Urgent == b.Urgent && slices.Equal(a.Ingredients, b.Ingredients)
+		a.Urgent == b.Urgent && slices.Equal(a.Ingredients, b.Ingredients) && a.Meat == b.Meat
 }
 
 // appendItemViews appends every visible stack's view to out and counts it

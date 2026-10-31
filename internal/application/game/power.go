@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 )
 
 // PLAY-021 electricity (POWERSIM owns this file): the colony's power
@@ -345,6 +346,10 @@ func (g *Game) powerWant(id entity.EntityID, s power.Spec) int {
 			return s.Draw
 		}
 		return s.Idle
+	case power.ClassLamp: // FOOD-2: a sun lamp draws only in its hours (wiki: Sun lamp)
+		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.SunLamp && !plant.SunLampOn(uint64(g.clock.Now())) {
+			return s.Idle
+		}
 	}
 	return s.Draw
 }

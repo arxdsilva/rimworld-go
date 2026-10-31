@@ -92,7 +92,7 @@ func TestCookedMealCarriesPoison(t *testing.T) {
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	setCooking(g, id, 0)
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
-	g.SpawnStack(item.Berries, 6, 1, 4)
+	g.SpawnStack(item.Berries, 30, 1, 4) // FOOD-1: 10 raw units a meal
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.DoCount), Count: 1})
 	for i := 0; i < 40 && g.World().FoodByKind["meal"] == 0; i++ {
 		g.SetNeeds(id, needs.Full, needs.Full)

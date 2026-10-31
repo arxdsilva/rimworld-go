@@ -7,9 +7,11 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 )
@@ -55,6 +57,10 @@ func (g *Game) sowable(x, y int) bool {
 // the season, soil, walkability and buildings allow sowing once the plant
 // is gone (assignZoneClear cuts only on such cells).
 func (g *Game) sowableIgnoringPlant(x, y int) bool {
+	if basin, _ := g.basinAt(x, y); basin { // FOOD-2: a hydroponic crop on any ground (wiki: Hydroponics basin)
+		z, in := g.zoneAt(x, y)
+		return in && plant.Hydroponic(plant.Species(z.Crop)) && g.growingSeason(x, y) && g.layerFrameAt(x, y, construction.LayerObject) == 0
+	}
 	if g.terr.At(x, y).Fertility() <= 0 || !g.grid.Walkable(x, y) || !g.growingSeason(x, y) {
 		return false
 	}
@@ -151,8 +157,8 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 		var bx, by int
 		found := false
 		g.zones.Each(func(z zone.Zone) bool {
-			if z.Kind != zone.KindGrow || z.NoSow { // PLAY-020: sowing turned off
-				return true
+			if z.Kind != zone.KindGrow || z.NoSow || int(g.skillOf(id, skPlants).Level) < plant.DefOf(plant.Species(z.Crop)).MinSkill {
+				return true // PLAY-020: sowing turned off; FOOD-2: the crop needs more Plants skill (wiki)
 			}
 			g.zones.EachCell(z.ID, func(x, y int) bool {
 				d := pathing.Dist(pos.X, pos.Y, x, y)
@@ -233,18 +239,20 @@ func (g *Game) markRipeHarvest(id entity.EntityID) {
 // theirs when they ripen or when a zone is drawn over them
 // (markRipeHarvest), so "Cancel harvest" cancels until the next ripening.
 func wantsHarvest(p plant.Plant) bool {
-	return p.Harvestable() && p.Designated
+	return p.HarvestableNow() && p.Designated // FOOD-2: from 65 % growth (wiki: Plants)
 }
 
-// bestFood picks the most preferred free food, nearest first.
+// bestFood picks the most preferred free food, nearest first; a
+// malnourished pawn eats anything, carcasses too (wiki: Malnutrition).
 func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestPref, bestD := -1, 1<<30
 	var bx, by int
+	corpses := body.Malnutrition(g.bodies[id]) > 0
 	for _, iid := range g.itemIDs {
 		st := g.stacks.Ref(iid) // read only: nothing below changes the store
-		if st == nil || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
+		if st == nil || !st.Kind.IsFood() && !(corpses && animal.EdibleCorpse(*st)) || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
 		if g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {
@@ -272,7 +280,7 @@ func claimJobTarget(g *Game, id entity.EntityID, rec job.Record) bool {
 	case st == nil:
 	case rec.Kind == job.Eat:
 		nd, _ := g.need.Get(id)
-		if n = portionsFor(nd.Hunger, st.Kind); rec.Count == bingeEat {
+		if n = portionsFor(nd.Hunger, *st); rec.Count == bingeEat {
 			n += 2 // a binge eats two past full
 		}
 	case rec.Kind == job.HaulIngredients && len(rec.Route) > 1:

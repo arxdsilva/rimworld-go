@@ -63,7 +63,7 @@ func TestTwoEatersShareAMealStack(t *testing.T) {
 	if ja.Kind != job.Eat || jb.Kind != job.Eat || ja.Target != meal || jb.Target != meal {
 		t.Fatalf("both should eat from the one stack: %+v / %+v", ja, jb)
 	}
-	want := portionsFor(needs.CriticalHunger-500, item.Meal)
+	want := portionsFor(needs.CriticalHunger-500, item.Stack{Kind: item.Meal})
 	if free := g.reserve.Free(meal, 10); free != 10-2*want {
 		t.Fatalf("free %d, want %d (each claims %d portions)", free, 10-2*want, want)
 	}

@@ -97,10 +97,10 @@ func TestDispense(t *testing.T) {
 	w, d := dispenserWorld(t)
 	w.build(construction.Hopper, 10, 14)
 	w.build(construction.Hopper, 9, 10)
-	first := w.put(item.Meat, 1, 10, 14) // 2200: one meat makes a meal alone
+	first := w.put(item.Meat, 6, 10, 14) // 6 x 0.05 = 0.3: six meat make a meal alone (FOOD-1)
 	second := w.put(item.Potatoes, 75, 9, 10)
 	p := Paste{}
-	if food := p.Food(w, w, w.bldgs[d]); food != item.Meat.Nutrition()+75*item.Potatoes.Nutrition() {
+	if food := p.Food(w, w, w.bldgs[d]); food != 6*item.Meat.Nutrition()+75*item.Potatoes.Nutrition() {
 		t.Fatalf("food %d", food)
 	}
 	if !p.Dispense(w, w, d) {
@@ -137,7 +137,7 @@ func TestDispensePasteJob(t *testing.T) {
 	t.Parallel()
 	w, d := dispenserWorld(t)
 	w.build(construction.Hopper, 10, 14)
-	w.put(item.Meat, 3, 10, 14)
+	w.put(item.Meat, 18, 10, 14)
 	pawn := entity.EntityID(7)
 	w.pos[pawn] = [2]int{11, 20}
 	p := Paste{}
@@ -156,8 +156,8 @@ func TestDispensePasteJob(t *testing.T) {
 	if j.Kind != job.Eat || j.State != job.Do || w.stacks[j.Target].Kind != item.NutrientPasteMeal || w.claims[j.Target] != pawn {
 		t.Fatalf("after dispensing: %+v %+v", j, w.stacks[j.Target])
 	}
-	if _, held := w.claims[d]; held || w.stacks[w.ItemAt(10, 14)].Qty != 2 {
-		t.Fatal("the dispenser is free again and one meat was used")
+	if _, held := w.claims[d]; held || w.stacks[w.ItemAt(10, 14)].Qty != 12 {
+		t.Fatal("the dispenser is free again and six meat were used")
 	}
 	w.walls = true
 	if _, _, _, ok := p.Find(w, w, w, pawn); ok {

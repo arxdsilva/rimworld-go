@@ -135,17 +135,17 @@ func TestBarrelFillNoFlap(t *testing.T) {
 	}
 }
 
-// TestFineMealTakesVegAndMeat (wiki: Fine meal): one plant food and one
-// meat or animal product make a fine meal, which carries the cook's
-// poison roll like the simple meal.
+// TestFineMealTakesVegAndMeat (wiki: Fine meal): five plant food and
+// five meat or animal product units (0.25 + 0.25 nutrition, FOOD-1) make
+// a fine meal, which carries the cook's poison roll like the simple meal.
 func TestFineMealTakesVegAndMeat(t *testing.T) {
 	t.Parallel()
 	f := newFake()
 	c := New(f)
 	f.pawns = []entity.EntityID{pawn}
 	f.build(1, construction.Stove, 4, 4)
-	f.put(50, item.Stack{Kind: item.Corn, Qty: 3, X: 1, Y: 1})
-	f.put(51, item.Stack{Kind: item.Egg, Qty: 3, X: 2, Y: 1})
+	f.put(50, item.Stack{Kind: item.Corn, Qty: 7, X: 1, Y: 1})
+	f.put(51, item.Stack{Kind: item.Egg, Qty: 7, X: 2, Y: 1})
 	c.Bills.Set(1, []recipe.Bill{{Recipe: recipe.CookFineMeal, Mode: recipe.DoCount, Target: 1}})
 	j := runBill(t, f, c, cookOnly, 400)
 	if j.State != job.Complete || f.Stock(item.FineMeal) != 1 || f.meals != 1 || f.Stock(item.Corn) != 2 || f.Stock(item.Egg) != 2 {

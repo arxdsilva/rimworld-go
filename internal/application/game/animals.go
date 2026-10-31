@@ -62,6 +62,10 @@ type AnimalView struct {
 	// Log (LOG-001) is what happened to the animal, newest first.
 	Log        []LogLineView
 	FoodPolicy string // FOOD-0 contract ("" until FOOD-4): the tame animal's food policy
+	// FOOD-3 (wiki): the percent chance a wild one turns on whoever hurts
+	// it (the difficulty's), its wildness percent and the Animals level a
+	// handler needs to tame it.
+	Revenge, Wildness, MinHandling int
 	// Needs and life (SIM-024..026). State is the behaviour ("wandering",
 	// "feeding", "resting", "hunting", "attacking", "fleeing", "leaving");
 	// Food and Rest are percent. Stage is "young" or "adult" (or the
@@ -779,7 +783,8 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	g.onAnimalDied(id, by) // bonds.go: the bonded colonist's grief, before the state goes
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
-	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony)
+	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony, animal.CorpseYieldOf(a, uint64(g.clock.Now()), g.herdOf().Careful(id)))
+	g.herdOf().Killed(by, id, corpse) // game/herd (FOOD-3): a hunter carries its kill to storage
 	k, ok := g.animals.Get(by)
 	if ok && !animal.IsMech(a.Species) && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) { // a wreck is no meal
 		if k.Tame && k.HuntSince != 0 { // a quiet line: the colony's hunter fed itself

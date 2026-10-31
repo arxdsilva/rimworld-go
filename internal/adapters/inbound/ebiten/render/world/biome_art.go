@@ -96,7 +96,7 @@ func AddGroundPlantKeys(t *env.PlantKeyTable) map[string]*GroundKeys {
 	for _, name := range groundPlants {
 		g := &GroundKeys{}
 		ground[name] = g
-		berry := name == "berry_bush"
+		berry := name == "berry_bush" || name == "agave" // FOOD-2: agave bears fruit too
 		for v := 0; v < GroundVariants; v++ {
 			key := func(stage string) string { return fmt.Sprintf("plant/%s_%s_v%d", name, stage, v) }
 			v0 := func(stage string) []string {

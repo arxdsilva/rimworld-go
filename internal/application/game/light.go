@@ -75,7 +75,7 @@ type lightSrcList struct {
 // isLightSource reports a kind that can give light: a lamp, a torch lamp
 // or a campfire.
 func isLightSource(k construction.Kind) bool {
-	return k == construction.Lamp || k == construction.TorchLamp || k == construction.Campfire
+	return k == construction.Lamp || k == construction.TorchLamp || k == construction.Campfire || k == construction.SunLamp
 }
 
 // lightSources is the cached list of light sources; callers must not keep
@@ -110,6 +110,8 @@ func (g *Game) shining(id entity.EntityID, b construction.Building) (bool, int, 
 		return g.burning(id, b), torchRadius, torchLight
 	case construction.Campfire:
 		return g.burning(id, b), campfireRadius, campfireLight
+	case construction.SunLamp: // FOOD-2: plant_light.go bumps the grid at its hours
+		return g.powered(id) && plant.SunLampOn(uint64(g.clock.Now())), plant.SunLampReach, 1
 	}
 	return false, 0, 0
 }

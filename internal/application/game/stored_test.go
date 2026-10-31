@@ -88,15 +88,14 @@ func TestStoredRowsLabelledAndSorted(t *testing.T) {
 	spawn(t, g, item.Components, 2, 16, 2)
 	spawn(t, g, item.FertileEgg, 1, 17, 2)
 	spawn(t, g, item.Tuque, 1, 18, 2)
-	want := []StoredResourceView{
-		{"meal", "Meal", "Food", 4}, {"meat", "Meat", "Food", 6},
+	want := []StoredResourceView{ // FOOD-3: a fertile egg is food
+		{"fertile egg", "Fertile egg", "Food", 1}, {"meal", "Meal", "Food", 4}, {"meat", "Meat", "Food", 6},
 		{"steel", "Steel", "Materials", 3}, {"wood", "Wood", "Materials", 5},
 		{"herbal medicine", "Herbal medicine", "Medicine", 7},
 		{"tuque", "Tuque", "Apparel", 1},
 		{"rifle", "Rifle", "Weapons", 1},
 		{"components", "Components", "Manufactured", 2},
 		{"human corpse", "Human corpse", "Corpses", 1},
-		{"fertile egg", "Fertile egg", "Other", 1},
 	}
 	if got := g.World().Stored; !reflect.DeepEqual(got, want) {
 		t.Fatalf("stored\n got %+v\nwant %+v", got, want)

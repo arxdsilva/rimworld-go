@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
@@ -9,7 +11,9 @@ import (
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -87,7 +91,7 @@ func (g *Game) dropStackOf(st item.Stack, x, y int) {
 	if s, ok := g.stacks.Get(sid); ok {
 		s.Rot, s.Dried = st.Rot, st.Dried
 		s.Unclaimed, s.HaulMarked = st.Unclaimed, st.HaulMarked
-		s.Quality, s.Wear, s.Stuff, s.Of = st.Quality, st.Wear, st.Stuff, st.Of
+		s.Quality, s.Wear, s.Stuff, s.Of, s.Animal = st.Quality, st.Wear, st.Stuff, st.Of, st.Animal
 		g.mergeOrSet(sid, s)
 	}
 }
@@ -165,7 +169,7 @@ func (h craftStock) Carry(carrier, stack entity.EntityID, take int) entity.Entit
 	nid := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, nid)
 	g.putStack(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: carrier, Rot: st.Rot, Dried: st.Dried,
-		Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal, Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff})
+		Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal, Quality: st.Quality, Wear: st.Wear, Stuff: st.Stuff, Yield: st.Yield})
 	return nid
 }
 
@@ -179,6 +183,23 @@ func (h craftOutput) DropMeal(cook entity.EntityID, bench construction.Kind, k i
 }
 func (h craftOutput) Cremate(pyre, body entity.EntityID, d recipe.Def) { h.g.cremate(pyre, body, d) } // burial.go
 func (h craftOutput) Message(x, y int, text string)                    { h.g.message(x, y, "%s", text) }
+
+// ButcheredHuman: the butcher's stacking -6 and every other colonist's -6
+// (FOOD-3, wiki: Butcher table); cold-hearted and bloodthirsty colonists
+// (the psychopath and bloodlust roles) are immune. No cannibal trait yet.
+func (h craftOutput) ButcheredHuman(butcher entity.EntityID) {
+	g := h.g
+	for _, id := range g.pawnIDs {
+		if bio, ok := g.personBio(id); ok && (slices.Contains(bio.Traits, trait.ColdHearted) || slices.Contains(bio.Traits, trait.Bloodthirsty)) {
+			continue
+		}
+		k := mood.ObservedButchery
+		if id == butcher {
+			k = mood.ButcheredHuman
+		}
+		g.remember(id, k)
+	}
+}
 func (h craftOutput) Store(carrier entity.EntityID, k item.Kind, x, y int, z uint64) bool {
 	g := h.g
 	sid := g.itemAt(x, y)

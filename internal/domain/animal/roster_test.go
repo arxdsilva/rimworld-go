@@ -64,7 +64,7 @@ func TestEveryDefComplete(t *testing.T) {
 		if !d.Mech && d.Meat <= 0 {
 			t.Errorf("%s: no meat", s)
 		}
-		if !d.Mech && r.Size > SizeXS && d.Leather <= 0 {
+		if !d.Mech && r.Size > SizeXS && d.Leather <= 0 && r.Behaviour != Hive {
 			t.Errorf("%s: size %d gives no leather", s, r.Size)
 		}
 		if d.Corpse != item.CorpseAnimal {
@@ -95,22 +95,24 @@ func TestStatsFromClasses(t *testing.T) {
 		hp, step, flee, meat, leather, dmg int
 		attack                             weapon.Kind
 	}{
-		// M, normal pace: the size row as is; flee = round(16 * 0.6)
-		{Deer, 55, 16, 10, 14, 5, 7, weapon.Kick},
+		// M, normal pace: the size row as is; flee = round(16 * 0.6).
+		// FOOD-3: meat and leather are the wiki's (140 and 40 per unit of
+		// body size, small bodies through the curve): deer 1.2.
+		{Deer, 55, 16, 10, 168, 48, 7, weapon.Kick},
 		// S+ (+15%), fast: round(28*1.15)=32, round(14*1.15)-4=12, flee round(7.2)
-		{Gazelle, 32, 12, 7, 7, 2, 5, weapon.Kick},
+		{Gazelle, 32, 12, 7, 98, 31, 5, weapon.Kick},
 		// S, slow, with its shell: 28*1.5 = 42 hp, 14+12 = 26 step, flee round(15.6)
 		// (PLAY-022: the slow class widened from +6 to +12 so a tortoise is clearly slow)
-		{Tortoise, 42, 26, 16, 6, 2, 4, weapon.Bite},
-		// XS: no leather
-		{Chicken, 12, 16, 10, 2, 0, 2, weapon.Peck},
+		{Tortoise, 42, 26, 16, 70, 25, 4, weapon.Bite},
+		// wiki: a chicken gives no leather
+		{Chicken, 12, 16, 10, 42, 0, 2, weapon.Peck},
 		// XL legendary: hp x2.5
-		{Glimmerstag, 425, 22, 13, 55, 16, 16, weapon.Gore},
+		{Glimmerstag, 425, 22, 13, 560, 160, 16, weapon.Gore},
 		// L slow: 18+12 = 30 step, flee 18 (PLAY-022: the slow class widened from +6 to +12)
-		{Cow, 100, 30, 18, 30, 10, 11, weapon.Headbutt},
+		{Cow, 100, 30, 18, 336, 96, 11, weapon.Headbutt},
 		// L- (-15%): round(100*0.85) = 85
-		{DireWolf, 85, 15, 9, 26, 9, 9, weapon.Bite},
-		{GrizzlyBear, 100, 18, 11, 30, 10, 11, weapon.Claw},
+		{DireWolf, 85, 15, 9, 196, 56, 9, weapon.Bite},
+		{GrizzlyBear, 100, 18, 11, 301, 86, 11, weapon.Claw},
 	}
 	for _, c := range cases {
 		d := DefOf(c.s)
@@ -126,15 +128,16 @@ func TestStatsFromClasses(t *testing.T) {
 		skittish, predator    bool
 		hive, legend, explode bool
 	}{
-		{Cow, 75, 5, 0, true, false, false, false, false},
-		{Labrador, 70, 3, 0, true, false, false, false, false},
+		// FOOD-3: revenge is the species' wiki hunting chance
+		{Cow, 75, 0, 0, true, false, false, false, false},
+		{Labrador, 70, 0, 0, true, false, false, false, false},
 		{Caribou, 40, 10, 3, true, false, false, false, false},
 		{Hare, 30, 0, 5, true, false, false, false, false},
-		{Tortoise, 50, 5, 0, true, false, false, false, false},
-		{Bison, 15, 50, 0, false, false, false, false, false},
-		{TimberWolf, 15, 45, 0, false, true, false, false, false},
-		{Cougar, 15, 45, 0, false, true, false, false, false},
-		{HiveBrute, 0, 0, 0, false, false, true, false, false},
+		{Tortoise, 50, 0, 0, true, false, false, false, false},
+		{Bison, 15, 10, 0, false, false, false, false, false},
+		{TimberWolf, 15, 100, 0, false, true, false, false, false},
+		{Cougar, 15, 50, 0, false, true, false, false, false},
+		{HiveBrute, 0, 50, 0, false, false, true, false, false},
 		{Glimmerstag, 5, 100, 0, false, false, false, true, false},
 		{Emberbuck, 30, 10, 3, true, false, false, false, true},
 		{CinderRat, 30, 0, 5, true, false, false, false, true},

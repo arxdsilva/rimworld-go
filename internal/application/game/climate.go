@@ -45,12 +45,12 @@ func (g *Game) temperatureAt(x, y int) temperature.Temp {
 	return g.climate.Outdoor(g.clock.Now()) + g.weatherTempDelta(x, y) + g.ventWarmth(x, y) + g.fireWarmth(x, y) // vents.go, fire.go
 }
 
-// Sowing temperatures (PLAY-023, original values), tenths of a degree C:
+// Sowing temperatures (PLAY-023; FOOD-2 wiki: Plants, the 0-58 °C growing range), tenths of a degree C:
 // growers sow only while the growing temperature is above sowMinTemp and
 // below sowMaxTemp. Seedlings would freeze below and scorch above.
 const (
 	sowMinTemp = 0
-	sowMaxTemp = 500
+	sowMaxTemp = 580
 )
 
 // growingSeason reports whether the growing temperature on (x, y) lets

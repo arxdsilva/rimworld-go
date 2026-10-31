@@ -132,25 +132,6 @@ func TestFreezingColonistSeeksWarmRoom(t *testing.T) {
 	}
 }
 
-func TestShortOfWoodCuttingComesFirst(t *testing.T) {
-	g := New(Config{Seed: 1, Width: 14, Height: 8})
-	if !g.woodLow() {
-		t.Fatal("no wood at all should be low")
-	}
-	if _, err := g.SpawnStack(item.Wood, 50, 2, 2); err != nil {
-		t.Fatal(err)
-	}
-	if g.woodLow() {
-		t.Fatal("50 logs and no fires is plenty")
-	}
-	g.BuildNow("campfire", "wood", "south", 6, 3)
-	g.BuildNow("campfire", "wood", "south", 8, 3)
-	g.BuildNow("campfire", "wood", "south", 10, 3)
-	if !g.woodLow() {
-		t.Fatal("three fires need more than 50 logs on hand")
-	}
-}
-
 func TestUnreachableTreeIsSkipped(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(1, 4, "Ada")
@@ -168,7 +149,7 @@ func TestUnreachableTreeIsSkipped(t *testing.T) {
 		t.Fatal(err)
 	}
 	g.markCut(0, 0, 13, 7, true)
-	g.Step(1200)
+	g.Step(2400) // FOOD-2: a tree takes 1,400 to cut (wiki: Oak tree)
 	trees := 0
 	for _, pid := range g.plantIDs {
 		if p, _ := g.plants.Get(pid); p.X == 11 {

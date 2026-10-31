@@ -318,6 +318,9 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 	}
 	if !ok {
 		s.hunts.ClearHuntOut(id)
+		if j.Kind == job.Hunt && s.hunts.CarryKill(id) {
+			return // FOOD-3: the prey is down for good; the hunter hauls it
+		}
 		j.State, j.Path = job.Complete, nil
 		h.SetJob(id, j)
 		return

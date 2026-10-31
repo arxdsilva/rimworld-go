@@ -57,7 +57,7 @@ type Roster interface {
 	Roll(n int) int
 }
 
-// Life is a held pawn's body: needs, healing, going down and dying.
+// Life is a held pawn's body: needs and healing.
 type Life interface {
 	Needs(id entity.EntityID) needs.Pair
 	SetNeeds(id entity.EntityID, n needs.Pair)
@@ -66,10 +66,8 @@ type Life interface {
 	// Decay is one awake tick of needs.
 	Decay(id entity.EntityID, n needs.Pair, now uint64) needs.Pair
 	// DownedHunger is one tick of a downed pawn's food; it returns the
-	// stored needs and the updated record.
-	DownedHunger(id entity.EntityID, v health.Record, now uint64) (needs.Pair, health.Record)
-	Down(id entity.EntityID, c health.Cause)
-	Die(id entity.EntityID, c health.Cause)
+	// stored needs (starving is the game's malnutrition, FOOD-1).
+	DownedHunger(id entity.EntityID, now uint64) needs.Pair
 }
 
 // Cells is where a held pawn goes: jobs, beds and its room.

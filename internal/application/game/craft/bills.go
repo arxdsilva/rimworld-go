@@ -126,8 +126,8 @@ func (b *Bills) Defaults(id entity.EntityID, k construction.Kind) {
 		return
 	}
 	for _, d := range recipe.For(k) {
-		if d.Output == item.Kibble {
-			continue // PRD-4: kibble is made to order, never by default
+		if d.Output == item.Kibble || d.Output == item.HumanMeat {
+			continue // PRD-4: kibble is made to order, never by default; FOOD-3: nor is butchering humans
 		}
 		b.list[id] = append(b.list[id], recipe.Bill{Recipe: d.ID, Mode: recipe.Forever, Target: 1})
 	}

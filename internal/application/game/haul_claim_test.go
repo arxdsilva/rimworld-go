@@ -430,7 +430,7 @@ func TestWorkersLeaveTheirOutputToHaulers(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	chopper, _ := g.SpawnNamedPawn(1, 2, "Ada")
 	miner, _ := g.SpawnNamedPawn(1, 6, "Bo")
-	onlyWork(g, chopper, work.Grow)
+	onlyWork(g, chopper, work.PlantCut) // FOOD-2: its own work type
 	onlyWork(g, miner, work.Mine)
 	g.SpawnPlantSpecies("tree", 6, 2, plant.DefOf(plant.Tree).GrowTicks)
 	g.setTerrain(8, 6, terrain.Rock)

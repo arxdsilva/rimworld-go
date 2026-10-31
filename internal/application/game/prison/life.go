@@ -43,9 +43,7 @@ func (p *Prison) Live(id entity.EntityID, now uint64) {
 	v = h.Heal(id, v, now) // faster in bed and tended
 	n := h.Needs(id)
 	if v.Status == health.Downed {
-		n, v = h.DownedHunger(id, v, now)
-		p.starve(id, v, n, now)
-		p.FoodBand(id, n)
+		p.FoodBand(id, h.DownedHunger(id, now))
 		return
 	}
 	j, _ := h.Job(id)
@@ -56,10 +54,6 @@ func (p *Prison) Live(id entity.EntityID, now uint64) {
 		n = h.Decay(id, n, now)
 	}
 	h.SetNeeds(id, n)
-	if n.Starving() {
-		h.Down(id, health.CauseNoFood)
-		return
-	}
 	if r.Leaving {
 		p.walkOut(id, r, j, now)
 		return
@@ -83,17 +77,6 @@ func (p *Prison) Live(id entity.EntityID, now uint64) {
 		if _, held := h.Owner(id); !held { // a warden is on the way: stay put
 			p.stroll(id)
 		}
-	}
-}
-
-// starve is the starvation of a downed prisoner.
-func (p *Prison) starve(id entity.EntityID, v health.Record, n needs.Pair, now uint64) {
-	if n.Starving() && v.Cause != health.CauseNoFood {
-		v.Cause, v.DownedTick = health.CauseNoFood, now
-		p.h.SetVital(id, v)
-	}
-	if v.Cause == health.CauseNoFood && now-v.DownedTick >= health.StarvationTicks {
-		p.h.Die(id, health.CauseNoFood)
 	}
 }
 

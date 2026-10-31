@@ -58,7 +58,7 @@ func TestStoveCooksMealsFromRawFood(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
-	g.SpawnStack(item.Berries, 6, 1, 4)
+	g.SpawnStack(item.Berries, 30, 1, 4) // FOOD-1: 10 raw units a meal
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.DoCount), Count: 2})
 	g.Step(1)
 	if bl := g.World().Buildings[0].Bills; len(bl) != 1 || bl[0].Label != "Cook simple meal" {
@@ -69,7 +69,7 @@ func TestStoveCooksMealsFromRawFood(t *testing.T) {
 		g.Step(TicksPerCell * 10)
 	}
 	w := g.World()
-	if w.FoodByKind["meal"] != 2 || w.FoodByKind["berries"] != 2 {
+	if w.FoodByKind["meal"] != 2 || w.FoodByKind["berries"] != 10 {
 		t.Fatalf("food after cooking = %v", w.FoodByKind)
 	}
 	if bl := w.Buildings[0].Bills[0]; bl.Done != 2 || bl.Status != BillDone {

@@ -70,9 +70,12 @@ func TestTameAnimalsHealNaturally(t *testing.T) {
 	if d.Injury != 9 || w.Injury != 10 {
 		t.Fatalf("after one period: tame %d (want 9), wild %d (want 10)", d.Injury, w.Injury)
 	}
-	d.Food = 0
-	g.animals.Set(dog, d)
-	g.Step(animalHealEvery)
+	for range 10 { // kept starving through the period (it would graze back over FeedStart)
+		d, _ = g.animals.Get(dog)
+		d.Food = 0
+		g.animals.Set(dog, d)
+		g.Step(animalHealEvery / 10)
+	}
 	if d2, _ := g.animals.Get(dog); d2.Injury < 9 {
 		t.Fatalf("a starving animal does not heal: %d", d2.Injury)
 	}

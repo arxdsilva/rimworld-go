@@ -2,6 +2,7 @@ package game
 
 import (
 	"bytes"
+	"rimworld-go/internal/domain/pawn/skill"
 	"strings"
 	"testing"
 
@@ -99,6 +100,8 @@ func TestTamingLoggedOnBothSides(t *testing.T) {
 		g := New(Config{Seed: seed, Width: 24, Height: 14})
 		ada, _ := g.SpawnNamedPawn(4, 7, "Ada")
 		buck, _ := g.SpawnAnimal("dustbuck", 16, 7)
+		setSkill(g, ada, skill.Animals, 10)  // FOOD-3: a deer needs Animals 7
+		spawn(t, g, item.Potatoes, 30, 4, 9) // and the handler brings food
 		g.Enqueue(command.Command{Kind: command.DesignateTame, X: 16, Y: 7, X2: 16, Y2: 7})
 		for i := 0; i < 300; i++ {
 			g.Step(50)

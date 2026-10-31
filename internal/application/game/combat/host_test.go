@@ -340,6 +340,8 @@ func (f *fakeHost) AbandonHunt(entity.EntityID, job.Record) { f.abandoned++ }
 func (f *fakeHost) AnyMarked() bool                         { return f.marked }
 func (f *fakeHost) Reserved(id entity.EntityID) bool        { return f.reserved[id] }
 func (f *fakeHost) Postponed(_, prey entity.EntityID) bool  { return f.postpone[prey] }
+func (f *fakeHost) CarryKill(entity.EntityID) bool          { return false }
+
 func (f *fakeHost) NearestFree(_ entity.EntityID, match func(item.Kind) bool) (entity.EntityID, int, int) {
 	for k := item.Kind(0); k < 255; k++ { // ascending kinds: the first that matches and lies about
 		if v, ok := f.free[k]; ok && match(k) {

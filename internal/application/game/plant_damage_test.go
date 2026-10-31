@@ -26,7 +26,7 @@ func setAir(g *Game, x, y, tenths int) {
 func frostFor(g *Game, ticks int) {
 	for i := 0; i < ticks/climateInterval; i++ {
 		g.clock.Advance(climateInterval)
-		g.frostCrops()
+		frostCrops(g)
 	}
 }
 
@@ -50,6 +50,13 @@ func plantView(g *Game, id entity.EntityID) (PlantView, bool) {
 	return PlantView{}, false
 }
 
+// frostLimit is plant id's own frost limit (FOOD-2, plant.ColdLimit).
+func frostLimit(g *Game, id entity.EntityID) int {
+	p, _ := g.plants.Get(id)
+	lim, _ := p.ColdLimit()
+	return lim
+}
+
 // nearDeath leaves plant id one window from dying of frost.
 func nearDeath(g *Game, id entity.EntityID) {
 	p, _ := g.plants.Get(id)
@@ -65,11 +72,10 @@ func TestFrostDamagesCropsOverHours(t *testing.T) {
 	bareGround(g)
 	jumpTo(g, 10, 12) // summer: only the pinned tiles freeze
 	g.SetWeather(weather.Clear, 0)
-	kill := plant.DefOf(plant.Corn).FrostKill
 	var ids []entity.EntityID
 	for x := 2; x < 4; x++ {
 		id, _ := g.spawnPlant(plant.Corn, x, 3, 100)
-		setAir(g, x, 3, kill-1)
+		setAir(g, x, 3, frostLimit(g, id)-1) // FOOD-2: each plant its own limit
 		ids = append(ids, id)
 	}
 	warm, _ := g.spawnPlant(plant.Corn, 10, 3, 100)
@@ -145,8 +151,8 @@ func TestFrostDamageHealsAndWarnsOncePerDay(t *testing.T) {
 	bareGround(g)
 	jumpTo(g, 10, 1)
 	g.SetWeather(weather.Clear, 0)
-	kill := plant.DefOf(plant.Corn).FrostKill
 	id, _ := g.spawnPlant(plant.Corn, 3, 3, 100)
+	kill := frostLimit(g, id)
 	const warning = "Frost is damaging the corn"
 	setAir(g, 3, 3, kill-1)
 	frostFor(g, 6*clock.TicksPerHour/4) // 1.5 h: about 37%
@@ -191,8 +197,8 @@ func TestFrostDamageNoFlap(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 1)
-	kill := plant.DefOf(plant.Corn).FrostKill
 	id, _ := g.spawnPlant(plant.Corn, 3, 3, 100)
+	kill := frostLimit(g, id)
 	last := uint8(0)
 	for i := 0; i < 60; i++ {
 		setAir(g, 3, 3, kill-1+2*(i%2)) // 0.1 °C either side of the limit
@@ -220,6 +226,7 @@ func TestFrostDamageNoFlap(t *testing.T) {
 func TestStaggeredFrostKillsOverHours(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 64, Height: 64})
 	bareGround(g)
+	g.climate.YearMean -= 100 // FOOD-2: a hard winter, crops die below -10..-18 °C (wiki)
 	jumpTo(g, 45, 0)
 	g.SetWeather(weather.Clear, 0)
 	a, _ := g.spawnPlant(plant.Corn, 1, 1, 100)

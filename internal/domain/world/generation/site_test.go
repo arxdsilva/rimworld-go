@@ -38,15 +38,19 @@ func mapHash(res Result) uint64 {
 // the terrain hash, start clearing and cave layer unchanged in every
 // entry; only Plants changed (new species, and the old species' cells
 // shifted with the extra rolls). Temperate and sea ice hold.
+// Re-pinned (FOOD-2, 2026-10-30): plants spawn with a share of their
+// grow time, and FOOD-2 moved every crop, tree and bush to the wiki grow
+// days (trees about 30 days instead of 2), so the generated growth values
+// change; terrain and plant placement are unchanged.
 var goldenLegacy = map[string]uint64{
-	"temperate_forest/1":     0xf9556ebe8dd7f667,
-	"temperate_forest/42":    0xe7ef9051bfe51cdc,
-	"boreal_forest/1":        0x418cf6f6f99c9753,
-	"cold_bog/42":            0x849a4147c11d811,
+	"temperate_forest/1":     0x9f1e581aa0799aba,
+	"temperate_forest/42":    0x863a4b3d37f62c54,
+	"boreal_forest/1":        0xb008c16dce5f0701,
+	"cold_bog/42":            0xebd63693187d33c2,
 	"sea_ice/1":              0x9e4f0547fb0fc925,
-	"tropical_rainforest/42": 0x8b9f446db2663c45,
-	"desert/1":               0x7679fc5c5eb66e01,
-	"extreme_desert/42":      0x833490ba976e44a1,
+	"tropical_rainforest/42": 0xbca3c8b58f3fa295,
+	"desert/1":               0xce20b477c9fe040d,
+	"extreme_desert/42":      0x0402a074568c490e,
 }
 
 func TestZeroSiteMatchesLegacy(t *testing.T) {

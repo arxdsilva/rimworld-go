@@ -16,7 +16,7 @@ from .plant_base import _asset
 STAGES = ("sown", "sprout", "young", "mature", "harvestable", "wilted")
 VARIANTS = 4
 # low crops render with flat normals so the renderer may mirror them
-FLAT = {"lettuce", "radish", "potato", "beans", "ashleaf", "healroot"}
+FLAT = {"lettuce", "radish", "potato", "beans", "ashleaf", "healroot", "strawberry"}
 UNIT_M = (0.15, 0.15, 0.1, 0.12)
 
 

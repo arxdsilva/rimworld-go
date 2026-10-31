@@ -161,7 +161,7 @@ func (g *Game) spawnPlant(s plant.Species, x, y, growth int) (entity.EntityID, e
 	}
 	id := g.entities.Next()
 	g.plantIDs = append(g.plantIDs, id)
-	p := plant.Plant{Species: s, X: x, Y: y, Growth: growth}
+	p := plant.Plant{Species: s, X: x, Y: y, Growth: growth, Sown: uint64(g.clock.Now())} // FOOD-2: its lifespan
 	g.setPlant(id, p)
 	g.notePlant(id, p) // indexes.go
 	g.plantsChanged()  // jobindex.go
@@ -327,7 +327,10 @@ func (g *Game) doCut(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	wood := p.WoodYield()
+	wood, d := p.WoodYield(), plant.DefOf(p.Species)
+	if n := p.HarvestYield(g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield))); n > 0 {
+		g.dropStack(d.Yields, n, p.X, p.Y) // FOOD-2: a crop cut from 65 % gives its harvest (wiki: Plants)
+	}
 	g.removePlant(j.Target)
 	if wood > 0 {
 		g.dropStack(item.Wood, wood, p.X, p.Y)

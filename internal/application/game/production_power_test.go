@@ -37,7 +37,7 @@ func cookGame(t *testing.T, k construction.Kind, powered bool) (g *Game, cook, s
 	if powered {
 		gen = onPower(t, g, 5, 2, 8, 1)
 	}
-	g.SpawnStack(item.Berries, 6, 1, 4)
+	g.SpawnStack(item.Berries, 30, 1, 4) // FOOD-1: 10 raw units a meal
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.DoCount), Count: 1})
 	g.Step(1)
 	if len(g.craft.Bills.Of(stove)) != 1 {
@@ -135,8 +135,8 @@ func TestElectricStovePowerCutMidBill(t *testing.T) {
 	if st := g.craft.Bills.AppendViews(nil, stove)[0].Status; st != BillNoPower || g.craft.Bills.Of(stove)[0].Done != 0 {
 		t.Fatalf("bill %+v, status %q", g.craft.Bills.Of(stove)[0], st)
 	}
-	if n := g.stockOf(item.Berries); n != 6 {
-		t.Fatalf("%d berries, want all 6", n)
+	if n := g.stockOf(item.Berries); n != 30 {
+		t.Fatalf("%d berries, want all 30", n)
 	}
 	for _, id := range g.itemIDs {
 		if st, ok := g.stacks.Get(id); ok && st.Carrier != 0 {

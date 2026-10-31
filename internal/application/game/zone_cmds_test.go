@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -193,7 +194,13 @@ func TestSowingOffStopsTreeZonesReplanting(t *testing.T) {
 		t.Fatalf("%d saplings planted with sowing off", n)
 	}
 	zcmd(g, command.SetZoneSow, id, true)
-	g.Step(TicksPerCell*40 + 4*plant.DefOf(plant.Tree).SowWork)
+	for i := 0; i < 24; i++ { // FOOD-2: four saplings at 4,000 work each (wiki), Ada kept fed, sleeping at night
+		g.SetNeeds(g.pawnIDs[0], needs.Full, needs.Full)
+		g.Step(TicksPerCell*5 + plant.DefOf(plant.Tree).SowWork)
+		if n, _ := treesAt(g); n == 4 {
+			break
+		}
+	}
 	if n, z := treesAt(g); n != 4 || z != 4 {
 		t.Fatalf("saplings = %d (zone %d), want 4", n, z)
 	}
@@ -262,6 +269,7 @@ func TestSetZoneCutOffLeavesWildPlantsAndTheirCellsUnsown(t *testing.T) {
 func TestSetZoneCutOffStopsZoneTreeChopping(t *testing.T) {
 	g, pid := ripeZoneTree(t)
 	zcmd(g, command.SetZoneCut, zoneID(t, g, 4, 2), false)
+	zcmd(g, command.SetZoneSow, zoneID(t, g, 4, 2), false) // FOOD-2: sowing a sapling takes 4,000 (wiki), keep Ada free
 	span := TicksPerCell*40 + plant.DefOf(plant.Tree).CutWork + 60
 	g.Step(span)
 	if !alive(g, pid) {

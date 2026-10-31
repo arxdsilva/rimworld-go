@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
@@ -206,22 +207,22 @@ func TestExhaustionForcesSleepOnGround(t *testing.T) {
 	}
 }
 
-func TestNoFoodReachesDownedThenDeath(t *testing.T) {
+// TestNoFoodMalnutritionThenDeath (FOOD-1): at 0 % food a colonist stays
+// up but grows malnourished, and dies of it at full severity.
+func TestNoFoodMalnutritionThenDeath(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	id, err := g.SpawnNamedPawn(2, 2, "Ada")
 	if err != nil {
 		t.Fatal(err)
 	}
 	g.SetNeeds(id, 8, 9000)
-	g.Step(needs.HungerPeriod*20 + 50)
+	g.Step(needs.HungerPeriod*20 + 2*2500)
 	v := g.VitalOf(id)
-	if v.Status != health.Downed {
-		t.Fatalf("status=%s reason=%s, want downed", v.Status, v.Cause)
+	if v.Status != health.Alive || pawn(t, g, id).Malnutrition <= 0 {
+		t.Fatalf("status=%s reason=%s malnutrition %d%%, want up and malnourished", v.Status, v.Cause, pawn(t, g, id).Malnutrition)
 	}
-	if v.Cause != health.CauseNoFood {
-		t.Fatalf("cause=%s, want no food", v.Cause)
-	}
-	g.Step(health.StarvationTicks + 5)
+	malnourish(g, id, 995) // food1_test.go
+	g.Step(2500 + 5)
 	v = g.VitalOf(id)
 	if v.Status != health.Dead {
 		t.Fatalf("status=%s, want dead", v.Status)
@@ -232,20 +233,18 @@ func TestNoFoodReachesDownedThenDeath(t *testing.T) {
 	}
 }
 
-func TestStarvationDownsWhileSleeping(t *testing.T) {
+// TestStarvationMalnourishesWhileSleeping (FOOD-1): hunger runs out
+// while asleep too, and malnutrition sets in.
+func TestStarvationMalnourishesWhileSleeping(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	id, err := g.SpawnNamedPawn(2, 2, "Ada")
 	if err != nil {
 		t.Fatal(err)
 	}
 	g.SetNeeds(id, 5, needs.CriticalRest)
-	g.Step(needs.HungerPeriod*10 + needs.SleepWorkMin)
-	v := g.VitalOf(id)
-	if v.Status != health.Downed {
-		t.Fatalf("status=%s cause=%s job=%s, want downed while/after sleep", v.Status, v.Cause, pawn(t, g, id).Job)
-	}
-	if v.Cause != health.CauseNoFood {
-		t.Fatalf("cause=%s, want no food", v.Cause)
+	g.Step(needs.HungerPeriod*10 + needs.SleepWorkMin + 2500)
+	if body.Malnutrition(g.bodies[id]) <= 0 {
+		t.Fatalf("status=%s job=%s: want malnourished while/after sleep", g.VitalOf(id).Status, pawn(t, g, id).Job)
 	}
 }
 
@@ -268,8 +267,9 @@ func TestDeadPawnReleasesBed(t *testing.T) {
 		t.Fatalf("expected bed claim before death; buildings=%v job=%s", g.World().Buildings, pawn(t, g, id).Job)
 	}
 	g.SetNeeds(id, 0, 5000)
+	malnourish(g, id, 995) // food1_test.go (FOOD-1)
 	g.Step(2)
-	g.Step(health.StarvationTicks + 5)
+	g.Step(2500 + 5)
 	if g.VitalOf(id).Status != health.Dead {
 		t.Fatalf("status=%s, want dead", g.VitalOf(id).Status)
 	}

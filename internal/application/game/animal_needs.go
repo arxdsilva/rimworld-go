@@ -113,20 +113,21 @@ func rateStep(now uint64, per, period int) int {
 // sleeping: an animal lying down (resting and not walking to its bed).
 func sleeping(a animal.State) bool { return a.Mode == animal.Rest && a.PathI >= len(a.Path) }
 
-// tickNeeds drains food and rest (rest refills while asleep, food then
-// drains at half speed) and starves an animal with no food left. It
-// reports false when the animal starved to death.
+// tickNeeds drains food (less for the young, FOOD-1) and rest (rest
+// refills asleep, food then drains at half speed) and starves an animal
+// with no food left; false when the animal starved to death.
 func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 	a.Normalise(uint64(id))
 	if animal.NeedsFree(a.Species) {
 		a.Food, a.Rest = animal.Full, animal.Full
 		return true
 	}
+	food := animal.FoodPerDay * animal.AgeHunger(a.Species, animal.AgeDays(a.Born, now, a.Species)) / 1000
 	if lyingDown(*a) { // animal_health.go: asleep or downed
-		a.Food -= rateStep(now, animal.FoodPerDay/2, clock.TicksPerDay)
+		a.Food -= rateStep(now, food/2, clock.TicksPerDay)
 		a.Rest = min(animal.Full, a.Rest+rateStep(now, g.rest.Animals.SleepRate(id, a.Tame, animal.SleepPerHour), clock.TicksPerHour)) // BED-1: rest/animals.go
 	} else {
-		a.Food -= rateStep(now, animal.FoodPerDay, clock.TicksPerDay)
+		a.Food -= rateStep(now, food, clock.TicksPerDay)
 		a.Rest = max(0, a.Rest-rateStep(now, animal.RestPerDay, clock.TicksPerDay))
 	}
 	if a.Food > 0 {

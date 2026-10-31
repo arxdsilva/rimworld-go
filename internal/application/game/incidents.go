@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -179,6 +180,9 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.orbitalFits(now) // trade_orbital.go (PLAY-024)
 	case incident.CrashedShipPart: // raid/shippart.go (DEF-4): one at a time, from 400 raid points
 		return g.raid.Ships.Parts() == 0 && g.raidPoints(int(now/clock.TicksPerDay)) >= raid.ShipPartMinPoints
+	case incident.CropBlight: // farm (FOOD-2): a healthy zone crop to strike
+		_, ok := farm.Origin(plantField{g}, now)
+		return ok
 	}
 	return false
 }
@@ -217,6 +221,10 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		return g.orbitalArrive(now) // trade_orbital.go (PLAY-024)
 	case incident.CrashedShipPart:
 		return g.raid.Ships.Crash(g.raidPoints(int(now/clock.TicksPerDay)), now) // raid/shippart.go (DEF-4)
+	case incident.CropBlight: // farm (FOOD-2, wiki: Blight)
+		o, n, ok := farm.Strike(plantField{g}, now)
+		g.threat("Blight", o.X, o.Y, "Blight has struck the %s (%d plants). Cut the blighted plants before it spreads.", farm.CropField(o.Species), n)
+		return ok
 	}
 	return false
 }

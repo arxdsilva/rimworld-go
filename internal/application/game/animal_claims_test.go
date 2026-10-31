@@ -170,8 +170,8 @@ func TestStarvedAndOldCorpsesClaim(t *testing.T) {
 func TestCorpseClaimsKeepApart(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
-	colony := g.dropCorpseAs(animal.Deer, 10, 10, false)
-	found := g.dropCorpseAs(animal.Deer, 10, 10, true)
+	colony := g.dropCorpseAs(animal.Deer, 10, 10, false, 0)
+	found := g.dropCorpseAs(animal.Deer, 10, 10, true, 0)
 	if colony == 0 || found == 0 || colony == found {
 		t.Fatalf("separate stacks: %d %d", colony, found)
 	}
@@ -182,7 +182,7 @@ func TestCorpseClaimsKeepApart(t *testing.T) {
 	}
 	// STO-2: a corpse is one per stack (wiki), so a second unclaimed
 	// carcass lies on its own, still unclaimed
-	again := g.dropCorpseAs(animal.Deer, b.X, b.Y, true)
+	again := g.dropCorpseAs(animal.Deer, b.X, b.Y, true, 0)
 	if st, _ := g.stacks.Get(again); again == found || !st.Unclaimed || st.Qty != 1 {
 		t.Fatalf("second carcass %d %+v", again, st)
 	}

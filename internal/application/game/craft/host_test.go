@@ -45,8 +45,9 @@ type fakeHost struct {
 	cremated     int
 	msgs         []string
 	drops        []item.Stack
-	fakeMakers   // condition_test.go (PRD-2): the craft dice, inspirations, weather and outfits
-	fakeWorkshop // fake_workshop_test.go (PRD-3): light, rooms, forge fuel, sculptures
+	butchered    []entity.EntityID // FOOD-3: ButcheredHuman calls
+	fakeMakers                     // condition_test.go (PRD-2): the craft dice, inspirations, weather and outfits
+	fakeWorkshop                   // fake_workshop_test.go (PRD-3): light, rooms, forge fuel, sculptures
 }
 
 func newFake() *fakeHost {
@@ -209,6 +210,7 @@ func (f *fakeHost) Cremate(pyre, body entity.EntityID, d recipe.Def) {
 	f.cremated++
 	f.DeleteItem(body)
 }
+func (f *fakeHost) ButcheredHuman(b entity.EntityID) { f.butchered = append(f.butchered, b) }
 func (f *fakeHost) Message(x, y int, text string) {
 	f.msgs = append(f.msgs, fmt.Sprintf("%d,%d %s", x, y, text))
 }

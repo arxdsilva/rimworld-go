@@ -31,7 +31,7 @@ func TestFeedValueDietTable(t *testing.T) {
 	}
 	// a strict carnivore: meat only (carcasses through CarcassFood)
 	for _, k := range item.Foods() {
-		if eats(StrictCarnivore, k) != (k == item.Meat) {
+		if eats(StrictCarnivore, k) != k.IsMeat() { // FOOD-3: any meat
 			t.Errorf("a strict carnivore and %v", k)
 		}
 	}
@@ -39,9 +39,15 @@ func TestFeedValueDietTable(t *testing.T) {
 	if !eats(Dendrovore, item.Potatoes) || !eats(Dendrovore, item.Berries) || eats(Dendrovore, item.Straw) || eats(Dendrovore, item.Meat) {
 		t.Error("tree eater table")
 	}
-	for _, k := range []item.Kind{item.Milk, item.Egg, item.HerbalMedicine, item.Brewgrain} {
+	for _, k := range []item.Kind{item.FertileEgg, item.HerbalMedicine, item.Brewgrain} {
 		if eats(Omnivore, k) {
 			t.Errorf("no animal eats %v", k)
+		}
+	}
+	// FOOD-3 (wiki: Animals): omnivores, and only they, eat eggs and milk
+	for _, k := range []item.Kind{item.Milk, item.Egg} {
+		if !eats(Omnivore, k) || eats(Herbivore, k) || eats(Carnivore, k) {
+			t.Errorf("only omnivores eat %v", k)
 		}
 	}
 }

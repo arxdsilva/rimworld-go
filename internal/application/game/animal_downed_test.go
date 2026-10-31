@@ -3,11 +3,13 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -203,14 +205,17 @@ func TestPredatorPrefersDownedPrey(t *testing.T) {
 // Taming a downed wild animal is twice as likely (at most certain).
 func TestDownedWildAnimalTamesEasier(t *testing.T) {
 	t.Parallel()
-	up, down := animal.State{}, animal.State{Downed: true}
-	if tameChanceOf(30, up) != 30 || tameChanceOf(30, down) != 60 || tameChanceOf(70, down) != 100 {
-		t.Fatalf("tame chance: up %d, down %d, capped %d", tameChanceOf(30, up), tameChanceOf(30, down), tameChanceOf(70, down))
+	up, down, cow := animal.State{Species: animal.Deer}, animal.State{Species: animal.Deer, Downed: true}, animal.State{Species: animal.Cow, Downed: true}
+	if herd.Chance(10, up) != 170 || herd.Chance(10, down) != 340 || herd.Chance(20, cow) != 1000 {
+		t.Fatalf("tame chance: up %d, down %d, capped %d", herd.Chance(10, up), herd.Chance(10, down), herd.Chance(20, cow))
 	}
-	// a downed animal holds still for the handler, who tames it
+	// a downed animal holds still for the handler, who tames it with the
+	// food it brings (FOOD-3)
 	g := New(Config{Seed: 67, Width: 30, Height: 12})
 	bareGround(g)
-	g.SpawnNamedPawn(4, 6, "Handler")
+	h, _ := g.SpawnNamedPawn(4, 6, "Handler")
+	setSkill(g, h, skill.Animals, 10)
+	spawn(t, g, item.Potatoes, 75, 3, 6)
 	deer, _ := g.SpawnAnimal("deer", 10, 6)
 	bruiseDown(t, g, deer)
 	setAnimal(g, deer, func(a *animal.State) { a.TameMark = true })

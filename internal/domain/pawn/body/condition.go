@@ -23,6 +23,9 @@ type Condition struct {
 	Sev, Immunity, TendQ, TendSum int32
 	TendUntil, Since              uint64
 	Stage                         uint8
+	// Rate is a condition's own hourly rate where the game steps it (the
+	// malnutrition rate rolled per pawn, tenths of a permille); 0 else.
+	Rate int32
 }
 
 // CapMod changes one capacity: Off permille is added and, with HasMax, the

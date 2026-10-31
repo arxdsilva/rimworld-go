@@ -30,8 +30,13 @@ func TestFoodKinds(t *testing.T) {
 	if !Meal.IsFood() || Wood.IsFood() || Stone.IsFood() {
 		t.Fatal("food classification")
 	}
-	if !(Meal.Nutrition() > Potatoes.Nutrition() && Potatoes.Nutrition() > Berries.Nutrition() && Wheat.Nutrition() > Lettuce.Nutrition()) {
-		t.Fatal("meals are the most nourishing, berries the least")
+	// FOOD-1, wiki: Nutrition: raw food 0.05 a unit, meals 0.9, lavish 1.0.
+	if Meal.Nutrition() != 9000 || LavishMeal.Nutrition() != 10000 || Potatoes.Nutrition() != 500 || Berries.Nutrition() != 500 ||
+		Milk.Nutrition() != 500 || Pemmican.Nutrition() != 500 || Food.Nutrition() != SurvivalMeal.Nutrition() {
+		t.Fatal("the wiki's nutrition scale")
+	}
+	if Meal.MaxEatAtOnce() != 1 || Potatoes.MaxEatAtOnce() != 20 {
+		t.Fatal("one meal, or up to 20 raw units, a sitting")
 	}
 	if !(Meal.Preference() > Food.Preference() && Food.Preference() > Meat.Preference()) {
 		t.Fatal("preference: meal > ration > raw meat")

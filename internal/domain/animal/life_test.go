@@ -36,17 +36,25 @@ func TestEggRules(t *testing.T) {
 	if MatedEggsOf(Turkey) != MatedEggs || !FertileEgg(Turkey, 1) || FertileEgg(Turkey, 0) {
 		t.Fatal("a fertile layer lays MatedEggs fertile eggs")
 	}
-	days := 0
-	for d := 0; d < 40; d++ {
-		if LaysToday(Turkey, 7, d) {
-			days++
+	// wiki: Eggs: a turkey lays every 1.333 days, a tortoise 2 eggs every
+	// 6.66 days, a cobra 1.5 eggs every 10.
+	for _, c := range []struct {
+		s    Species
+		want int
+	}{{Turkey, 30}, {Chicken, 40}, {Goose, 20}, {Tortoise, 12}, {Cobra, 6}} {
+		eggs := 0
+		for d := 0; d < 40; d++ {
+			eggs += EggsToday(c.s, 7, d)
+		}
+		if eggs < c.want-1 || eggs > c.want+1 {
+			t.Fatalf("%s: %d eggs in 40 days, want about %d", c.s, eggs, c.want)
 		}
 	}
-	if e := LifeOf(Turkey).EggDays; days != 40/e {
-		t.Fatalf("an egg every %d days: %d in 40", e, days)
+	if !LaysToday(Chicken, 7, 3) {
+		t.Fatal("a chicken lays every day")
 	}
-	if HatchTicks(Chicken) != 6*clock.TicksPerDay || HatchTicks(Tortoise) != 10*clock.TicksPerDay {
-		t.Fatal("birds hatch in 6 days, reptiles in 10")
+	if HatchTicks(Chicken) != 35*clock.TicksPerDay/10 || HatchTicks(Ostrich) != 8*clock.TicksPerDay || HatchTicks(Cow) != 0 {
+		t.Fatal("wiki: a chicken's egg hatches in 3.5 days, an ostrich's in 8")
 	}
 }
 
@@ -69,7 +77,7 @@ func TestProductsAndYoung(t *testing.T) {
 	if !Produces(Sheep, false, true) || Produces(Deer, true, true) {
 		t.Fatal("wool: grown animals of either sex; deer give nothing")
 	}
-	if ProductPerDay(Goat, Full) != ProductFull/2 || ProductPerDay(Goat, ProductFedFood-1) != ProductFull/4 || ProductPerDay(Goat, 0) != 0 {
+	if ProductPerDay(Cow, Full) != ProductFull || ProductPerDay(Cow, ProductFedFood-1) != ProductFull/2 || ProductPerDay(Cow, 0) != 0 {
 		t.Fatal("product rate by food")
 	}
 	if YoungWord(Goat) != "kid" || YoungWord(Capybara) != "young" || YoungWord(Emu) != "chick" {
@@ -77,5 +85,24 @@ func TestProductsAndYoung(t *testing.T) {
 	}
 	if Breeds(HiveBeetle) || Breeds(Glimmerstag) || !Breeds(Deer) {
 		t.Fatal("hive insects and legendaries don't breed")
+	}
+}
+
+// TestProductsPerSpecies: milk and wool intervals and amounts are the
+// wiki's per species (FOOD-3, wiki: Milk, Wool).
+func TestProductsPerSpecies(t *testing.T) {
+	for _, c := range []struct {
+		s         Species
+		days, qty int
+	}{
+		{Cow, 1, 14}, {Goat, 3, 12}, {Caribou, 2, 10}, {Dromedary, 2, 18}, {Yak, 1, 11}, {Elk, 1, 11},
+		{Sheep, 10, 45}, {Alpaca, 10, 45}, {Woolhorn, 15, 120}, {Bison, 15, 120}, {GroundSloth, 20, 200},
+	} {
+		if l := LifeOf(c.s); l.ProductDays != c.days || l.ProductYield != c.qty {
+			t.Errorf("%s: %d every %d days, want %d every %d", c.s, l.ProductYield, l.ProductDays, c.qty, c.days)
+		}
+	}
+	if ProductPerDay(Goat, Full) != ProductFull/3 || ProductPerDay(Caribou, Full) != ProductFull/2 {
+		t.Fatal("a goat fills in 3 days, a caribou in 2")
 	}
 }

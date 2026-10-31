@@ -19,7 +19,7 @@ func TestGroundPlantDefs(t *testing.T) {
 	}{
 		{Bramble, "bramble", 40000, 30, 150, true, -300, 450},
 		{Moss, "moss", 30000, 10, 0, true, -500, 350},
-		{Agave, "agave", 50000, 25, 0, false, -50, 650},
+		{Agave, "agave", wikiDays(6), 25, 0, false, -50, 650},
 		{BallCactus, "ball_cactus", 60000, 20, 0, false, -80, 700},
 		{ElephantEar, "elephant_ear", 30000, 15, 110, true, 50, 500},
 		{FireLily, "fire_lily", 30000, 10, 0, true, 0, 450},
@@ -38,7 +38,8 @@ func TestGroundPlantDefs(t *testing.T) {
 		if d.ColdKill != c.coldKill || d.HeatKill != c.heatKill {
 			t.Errorf("%s: kills %d/%d, want %d/%d", c.key, d.ColdKill, d.HeatKill, c.coldKill, c.heatKill)
 		}
-		if !d.Ground || d.Crop || d.Sowable || d.ZoneSowable() || d.Trunk || d.Wood != 0 || d.Yield != 0 || d.Regrows {
+		fruit := c.s == Agave // FOOD-2, wiki: Agave (10 fruit, back to 30 %)
+		if !d.Ground || d.Crop || d.Sowable || d.ZoneSowable() || d.Trunk || d.Wood != 0 || (d.Yield != 0 || d.Regrows) != fruit {
 			t.Errorf("%s: must be a wild, woodless, yieldless ground plant: %+v", c.key, d)
 		}
 	}

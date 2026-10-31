@@ -473,6 +473,9 @@ func (g *Game) fillPawnDeath(pv *PawnView) {
 // and names an animal corpse by its species (Kind "deer corpse", Animal
 // "deer", SIM-019).
 func (g *Game) fillCorpseView(iv *ItemView, st item.Stack) {
+	if s, ok := animal.MeatSpecies(st); ok {
+		iv.Meat = s.String() // FOOD-3: "cow meat"
+	}
 	if st.Kind == item.CorpseAnimal {
 		s := animal.Species(st.Animal)
 		iv.Kind, iv.Animal = s.Label()+" corpse", s.String()

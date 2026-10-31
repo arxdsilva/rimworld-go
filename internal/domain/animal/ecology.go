@@ -233,35 +233,24 @@ type Life struct {
 	AdultDays, LifeDays  int
 	GestDays             int
 	LitterMin, LitterMax int
-	EggDays              int // fertile layers: days between eggs while mated
-	HatchDays            int
 	ProductDays          int // days to fill the product once
 	ProductYield         int // items per collection
 }
 
 var lifeBySize = [...]Life{
-	SizeXS: {AdultDays: 6, LifeDays: 120, GestDays: 5, LitterMin: 1, LitterMax: 4, EggDays: 4},
-	SizeS:  {AdultDays: 10, LifeDays: 240, GestDays: 8, LitterMin: 1, LitterMax: 3, EggDays: 4},
-	SizeM:  {AdultDays: 18, LifeDays: 480, GestDays: 14, LitterMin: 1, LitterMax: 2, EggDays: 8},
-	SizeL:  {AdultDays: 25, LifeDays: 720, GestDays: 20, LitterMin: 1, LitterMax: 1, EggDays: 8},
-	SizeXL: {AdultDays: 30, LifeDays: 900, GestDays: 25, LitterMin: 1, LitterMax: 1, EggDays: 8},
+	SizeXS: {AdultDays: 6, LifeDays: 120, GestDays: 5, LitterMin: 1, LitterMax: 4},
+	SizeS:  {AdultDays: 10, LifeDays: 240, GestDays: 8, LitterMin: 1, LitterMax: 3},
+	SizeM:  {AdultDays: 18, LifeDays: 480, GestDays: 14, LitterMin: 1, LitterMax: 2},
+	SizeL:  {AdultDays: 25, LifeDays: 720, GestDays: 20, LitterMin: 1, LitterMax: 1},
+	SizeXL: {AdultDays: 30, LifeDays: 900, GestDays: 25, LitterMin: 1, LitterMax: 1},
 }
 
-// product numbers by size (our own): milk every 2 days, wool every 12,
-// ember oil every 2.
-var (
-	milkYield = [...]int{SizeXS: 2, SizeS: 4, SizeM: 6, SizeL: 10, SizeXL: 15}
-	woolYield = [...]int{SizeXS: 8, SizeS: 20, SizeM: 35, SizeL: 70, SizeXL: 110}
-)
-
+// Products: milk and wool per species from the wiki (husbandry.go
+// milkRows, woolRows); ember oil (a boomalope's role) every 2 days, 6 a
+// time (original tuning).
 const (
-	milkDays     = 2
-	woolDays     = 12
 	emberOilDays = 2
 	emberOilQty  = 6
-	birdHatch    = 6
-	reptileHatch = 10
-	plainEggDays = 1
 )
 
 // LifeOf is s's life numbers (from a table built once: it is read every
@@ -283,22 +272,13 @@ var lives = func() (out [numSpecies]Life) {
 
 // buildLife works s's life numbers out from its size, body and products.
 func buildLife(s Species) Life {
-	r, e := RosterOf(s), EcologyOf(s)
-	l := lifeBySize[r.Size]
-	switch r.Archetype {
-	case ArchBird:
-		l.HatchDays = birdHatch
-	case ArchSnake, ArchLizard, ArchTortoise:
-		l.HatchDays = reptileHatch
-	}
-	if e.Eggs == PlainEggs {
-		l.EggDays = plainEggDays
-	}
+	l := lifeBySize[RosterOf(s).Size]
+	e := EcologyOf(s)
 	switch e.Product {
 	case Milk:
-		l.ProductDays, l.ProductYield = milkDays, milkYield[r.Size]
+		l.ProductDays, l.ProductYield = milkRows[s].days, milkRows[s].qty
 	case Wool:
-		l.ProductDays, l.ProductYield = woolDays, woolYield[r.Size]
+		l.ProductDays, l.ProductYield = woolRows[s].days, woolRows[s].qty
 	case EmberOil:
 		l.ProductDays, l.ProductYield = emberOilDays, emberOilQty
 	}
@@ -309,13 +289,15 @@ func buildLife(s Species) Life {
 // threshold is deliberate: animals must not flap between two states.
 const (
 	Full = 10000
-	// FoodPerDay drains a full animal empty in under two days.
+	// FoodPerDay drains a full adult animal empty in under two days; the
+	// bar holds 1/FoodPerDay of the species' daily need (sizeMeal).
 	FoodPerDay = 6000
 	// FeedStart: an animal looks for food below this; FeedStop: it eats
 	// until this.
 	FeedStart = 4000
 	FeedStop  = 9500
-	// GrazeFood is one grass tile for a medium animal (GrazeTicks to eat).
+	// GrazeFood is one grass tile's nutrition (GrazeTicks to eat); wiki:
+	// Grass (0.15, FOOD-1 scale: needs.Full = 1.0).
 	GrazeFood  = 1500
 	GrazeTicks = 120
 	// TreeTicks is how long a tree-eater takes over one tree.
@@ -347,11 +329,14 @@ const (
 	ThreatEvery = 15
 )
 
-// sizeMeal is how much one grazed tile (and any other meal) means to a
-// body this size, percent of a medium animal's.
-var sizeMeal = [...]int{SizeXS: 300, SizeS: 200, SizeM: 100, SizeL: 60, SizeXL: 40}
+// sizeMeal is the bar an adult of this size fills per unit of nutrition
+// (percent): FoodPerDay*100/sizeMeal is its daily need. FOOD-1, wiki:
+// Alpaca (0.44 a day, medium) and Cow (0.86, large); the other sizes are
+// interpolated (original tuning): 0.12, 0.24 and 1.76 a day.
+var sizeMeal = [...]int{SizeXS: 500, SizeS: 250, SizeM: 136, SizeL: 70, SizeXL: 34}
 
-// Meal scales a food's nutrition to species s (big bodies need more).
+// Meal scales a food's nutrition (needs.Full = 1.0) to species s's bar
+// (big bodies need more).
 func Meal(s Species, nutrition int) int { return nutrition * sizeMeal[RosterOf(s).Size] / 100 }
 
 // SleepHours reports whether hour h is when s sleeps: diurnal animals
@@ -462,13 +447,13 @@ const (
 	CropFood     = 2 * GrazeFood
 	CropBite     = 40
 	CropDies     = 20
-	TreeFood     = 6000
+	TreeFood     = 6000 // 0.6 nutrition (original tuning)
 	ItemTicks    = 90
 	CarcassTicks = 300
 	// FeedRadius bounds every food search (tiles, Chebyshev).
 	FeedRadius = 30
-	// HayFood is one straw's worth to a plant eater.
-	HayFood = 900
+	// HayFood is one straw's worth to a plant eater; wiki: Hay (0.05).
+	HayFood = 500
 )
 
 // FeedValue is what one item of k is worth to an animal of diet d before
@@ -476,7 +461,8 @@ const (
 // (FEED-001, ENG-003): kibble and pemmican feed every diet but strict
 // carnivores; meals and rations every diet but strict carnivores and tree
 // eaters; raw vegetables and berries plant and tree eaters; straw plant
-// eaters; raw meat meat eaters. Milk, eggs and medicine feed no animal.
+// eaters; raw meat meat eaters; eggs and milk omnivores (FOOD-3). Fertile
+// eggs and medicine feed no animal.
 func FeedValue(d Diet, k item.Kind) int {
 	switch {
 	case d == NoDiet || d > StrictCarnivore:
@@ -485,8 +471,12 @@ func FeedValue(d Diet, k item.Kind) int {
 		if d.Plants() {
 			return HayFood
 		}
-	case k == item.Meat:
+	case k.IsMeat(): // FOOD-3: human and insect meat too
 		if d.Meat() {
+			return k.Nutrition()
+		}
+	case k == item.Egg || k == item.Milk: // FOOD-3, wiki: Animals: omnivores eat eggs and milk
+		if d == Omnivore {
 			return k.Nutrition()
 		}
 	case k == item.Kibble || k == item.Pemmican:

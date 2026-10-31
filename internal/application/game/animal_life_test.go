@@ -376,7 +376,7 @@ func TestFertileEggHatches(t *testing.T) {
 func TestFrozenEggDies(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 20, Biome: biome.IceSheet})
 	jumpTo(g, seasonDay(t, "Winter", 1), 2)
-	if tc := g.TemperatureAt(10, 10); tc >= animal.EggFreeze {
+	if tc := g.TemperatureAt(10, 10); tc >= animal.HatchMin {
 		t.Fatalf("not cold enough: %d", tc)
 	}
 	sid, _ := g.SpawnStack(item.FertileEgg, 3, 10, 10)
@@ -387,7 +387,7 @@ func TestFrozenEggDies(t *testing.T) {
 	if _, _, ok := eggStack(g, item.FertileEgg); ok {
 		t.Fatal("a frozen egg dies")
 	}
-	if _, e, ok := eggStack(g, item.Egg); !ok || e.Qty != 3 || e.Animal != 0 || e.Tame || e.Hatch != 0 {
+	if _, e, ok := eggStack(g, item.Egg); !ok || e.Qty != 3 || e.Animal != uint8(animal.Chicken) || e.Tame || e.Hatch != 0 {
 		t.Fatalf("it becomes a plain egg: %+v", e)
 	}
 }

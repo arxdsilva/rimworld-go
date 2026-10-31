@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/pawn/skill"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -77,9 +78,11 @@ func TestRescueCarriesPatient(t *testing.T) {
 
 func TestButcherTableTurnsCorpsesIntoMeat(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
-	if _, err := g.SpawnNamedPawn(2, 5, "Cook"); err != nil {
+	cook, err := g.SpawnNamedPawn(2, 5, "Cook")
+	if err != nil {
 		t.Fatal(err)
 	}
+	setSkill(g, cook, skill.Cooking, 10) // FOOD-3: butchery efficiency 100 % (wiki)
 	placeBuilt(t, g, construction.ButcherTable, construction.South, 6, 3)
 	if w := g.World(); len(w.Buildings) != 1 || len(w.Buildings[0].Bills) != 1 || w.Buildings[0].Bills[0].Recipe != "butcher_animal" {
 		t.Fatalf("butcher table starts with the butcher bill: %+v", w.Buildings)

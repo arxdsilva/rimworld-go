@@ -4,11 +4,33 @@ package needs
 import "rimworld-go/internal/domain/pawn/schedule"
 
 const (
-	Full            = 10000
-	CriticalHunger  = 2500
+	// Full is a full adult food bar, 1.0 nutrition (wiki: Nutrition): item
+	// nutrition is on the same scale (a meal 9000, raw food 500 a unit).
+	Full = 10000
+	// The saturation bands (wiki: Saturation): Fed above HungryAt, Hungry
+	// down to RavenousAt, Ravenously hungry above 0, Malnourished at 0.
+	HungryAt   = 2500
+	RavenousAt = 1250
+	// CriticalHunger is the top of the Hungry band (care feeding, prison
+	// food bands and social fights read it).
+	CriticalHunger = HungryAt
+	// EatAt: a colonist goes to eat at 30 % (wiki: Saturation) and keeps
+	// wanting food until SatedAt (hysteresis, Pair.Seeking).
+	EatAt   = 3000
+	SatedAt = 8000
+	// BandGap: a pawn leaves a worse band only once its food is this far
+	// past the band's edge (the hunger thoughts never flap).
+	BandGap = 100
+	// HungerPeriod and the band losses: an adult loses fedLoss of Full per
+	// HungerPeriod while Fed, 1.6 nutrition a day (wiki: Nutrition), half
+	// that while Hungry and a quarter while Ravenously hungry (wiki:
+	// Saturation): a full bar empties in 0.625 day at the Fed rate.
+	HungerPeriod = 15
+	fedLoss      = 4
+	// HungerPerHour is the Fed loss over an hour (caravans on the road).
+	HungerPerHour   = 2500 * fedLoss / HungerPeriod
 	CriticalRest    = 2000
-	HungerPeriod    = 12 // ticks per 1 hunger lost while not eating
-	RestAwakePeriod = 4  // ticks per 1 rest lost while awake
+	RestAwakePeriod = 4 // ticks per 1 rest lost while awake
 	// SleepGain rest is restored every SleepPeriod ticks asleep: 0.4 a
 	// tick, so 20% -> 100% (or 0 -> 80%) takes 8 in-game hours.
 	SleepGain   = 2
@@ -16,15 +38,29 @@ const (
 	// WakeRest is a reasonable sleep: tired sleepers outside a Sleep
 	// block, and collapsed ones, rest to here before getting up.
 	WakeRest     = 8000
-	EatRestore   = 4000
 	EatWorkTicks = 20
 	SleepWorkMin = 40
 )
 
-// Pair is a pawn's food and rest.
+// Band is a saturation band (wiki: Saturation).
+type Band uint8
+
+const (
+	Fed Band = iota
+	Hungry
+	Ravenous
+	Malnourished
+)
+
+// Pair is a pawn's food and rest. Band is the hunger band with hysteresis
+// (the hunger thoughts) and Seeking the eat latch (on at EatAt, off at
+// SatedAt); Settle keeps both, and saves from before FOOD-1 load them as
+// Fed and not seeking, which the next tick corrects.
 type Pair struct {
-	Hunger int
-	Rest   int
+	Hunger  int
+	Rest    int
+	Band    Band
+	Seeking bool
 }
 
 // NewFull returns fully fed and rested needs.
@@ -42,28 +78,90 @@ func clamp(v int) int {
 	return v
 }
 
-// Decay applies one awake tick of hunger/rest loss.
-func Decay(p Pair, now uint64) Pair {
-	if now%uint64(HungerPeriod) == 0 && p.Hunger > 0 {
-		p.Hunger--
+// bandOf is the band of food level h, without hysteresis.
+func bandOf(h int) Band {
+	switch {
+	case h > HungryAt:
+		return Fed
+	case h > RavenousAt:
+		return Hungry
+	case h > 0:
+		return Ravenous
 	}
-	if now%uint64(RestAwakePeriod) == 0 && p.Rest > 0 {
-		p.Rest--
+	return Malnourished
+}
+
+// Settle brings Band and Seeking up to date with Hunger: a worse band at
+// once, a better one only BandGap past its edge; seeking from EatAt until
+// SatedAt.
+func (p Pair) Settle() Pair {
+	if b := bandOf(p.Hunger); b >= p.Band {
+		p.Band = b
+	} else {
+		p.Band = bandOf(p.Hunger - BandGap)
 	}
-	p.Hunger = clamp(p.Hunger)
-	p.Rest = clamp(p.Rest)
+	switch {
+	case p.Hunger <= EatAt:
+		p.Seeking = true
+	case p.Hunger >= SatedAt:
+		p.Seeking = false
+	}
 	return p
 }
 
-// SleepTick restores rest. Hunger still decays slowly while asleep.
+// HungerLoss is what food level h loses per HungerPeriod at the neutral
+// rate: the Fed, Hungry and Ravenous falls (wiki: Saturation).
+func HungerLoss(h int) int {
+	switch bandOf(h) {
+	case Fed:
+		return fedLoss
+	case Hungry:
+		return fedLoss / 2
+	case Ravenous:
+		return fedLoss / 4
+	}
+	return 0
+}
+
+// hungerTick is one tick of hunger at the neutral rate.
+func hungerTick(p Pair, now uint64) Pair {
+	if now%uint64(HungerPeriod) == 0 {
+		p.Hunger = clamp(p.Hunger - HungerLoss(p.Hunger))
+	}
+	return p.Settle()
+}
+
+// Decay applies one awake tick of hunger/rest loss.
+func Decay(p Pair, now uint64) Pair {
+	if now%uint64(RestAwakePeriod) == 0 && p.Rest > 0 {
+		p.Rest--
+	}
+	p.Rest = clamp(p.Rest)
+	return hungerTick(p, now)
+}
+
+// DecayRated is Decay at hunger rate hr and rest rate rr (permille, 1000
+// neutral), the fractions of a point carried in ch and cr.
+func DecayRated(p Pair, now uint64, hr, rr int32, ch, cr *int32) Pair {
+	if now%uint64(HungerPeriod) == 0 {
+		*ch += int32(HungerLoss(p.Hunger)) * hr
+		p.Hunger = max(p.Hunger-int(*ch/1000), 0)
+		*ch %= 1000
+	}
+	if now%uint64(RestAwakePeriod) == 0 {
+		*cr += rr
+		p.Rest = max(p.Rest-int(*cr/1000), 0)
+		*cr %= 1000
+	}
+	return p.Settle()
+}
+
+// SleepTick restores rest. Hunger still decays while asleep.
 func SleepTick(p Pair, now uint64) Pair {
 	if now%uint64(SleepPeriod) == 0 {
 		p.Rest = clamp(p.Rest + SleepGain)
 	}
-	if now%uint64(HungerPeriod) == 0 && p.Hunger > 0 {
-		p.Hunger--
-	}
-	return p
+	return hungerTick(p, now)
 }
 
 // SleepTickAt is SleepTick in a place of rest effectiveness re (permille,
@@ -78,14 +176,23 @@ func SleepTickAt(p Pair, now uint64, re int) Pair {
 		per, q := uint64(SleepGain*re), uint64(SleepPeriod*1000)
 		p.Rest = clamp(p.Rest + int(now*per/q-(now-1)*per/q))
 	}
-	if now%uint64(HungerPeriod) == 0 && p.Hunger > 0 {
-		p.Hunger--
-	}
-	return p
+	return hungerTick(p, now)
 }
 
-// Hungry reports a critical food interrupt.
-func (p Pair) Hungry() bool { return p.Hunger <= CriticalHunger }
+// Portions is how many units of nutrition nut a pawn at food level hunger
+// eats in one sitting: the units nearest to filling it (at least one, at
+// most most); what overflows the bar is wasted (wiki: Saturation).
+func Portions(hunger, nut, most int) int {
+	if nut <= 0 {
+		return 1
+	}
+	n := (Full - hunger + nut/2) / nut
+	return max(1, min(most, n))
+}
+
+// Hungry reports a pawn that wants food: at or below EatAt, or still
+// seeking (Settle) short of SatedAt.
+func (p Pair) Hungry() bool { return p.Hunger <= EatAt || p.Seeking && p.Hunger < SatedAt }
 
 // Tired reports a critical rest interrupt.
 func (p Pair) Tired() bool { return p.Rest <= CriticalRest }
@@ -118,4 +225,21 @@ func SleepAllowed(a schedule.Activity) bool {
 // WorkScheduled is true when autonomous labor is allowed.
 func WorkScheduled(a schedule.Activity) bool {
 	return a == schedule.Work || a == schedule.Anything
+}
+
+// FightBand maps food level h to the social-fight hunger bands
+// (social.MalnutritionMult): 0 fed (above CriticalHunger), 1 hungry, 2
+// very hungry (half of it), 3 ravenous (a quarter), 4 starving (empty).
+func FightBand(h int) int {
+	switch {
+	case h > CriticalHunger:
+		return 0
+	case h > CriticalHunger/2:
+		return 1
+	case h > CriticalHunger/4:
+		return 2
+	case h > 0:
+		return 3
+	}
+	return 4
 }

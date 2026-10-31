@@ -73,11 +73,14 @@ import (
 // become torch lamps (the v < 5 step). v6 (MED-02) makes infections body
 // conditions racing immunity: an older save's per-pawn infections
 // (Wounds, now read only) become infection conditions on each pawn's
-// worst open wound (migrateWoundInfections). migrateSave runs the steps a
-// save's version is missing.
+// worst open wound (migrateWoundInfections). v7 (FOOD-1) replaces the
+// down-at-0 starvation with malnutrition: a pawn an older save has down
+// from hunger gets up (migrateStarvation). The bars keep their scale
+// (needs.Full is 1.0 nutrition), so stored hunger and animal food carry
+// over as they are. migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 6
+const SaveVersion = 7
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -599,6 +602,11 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	default:
 		g.migrateHandling(s.Prio)
 	}
+	for id, p := range g.prio { // FOOD-2: plant cutting's enable bit follows its priority (older saves)
+		if m, ok := g.labor.Get(id); ok {
+			g.labor.Set(id, m.Set(work.PlantCut, p[work.PlantCut] > 0))
+		}
+	}
 	setMap(&g.raiders, s.Raiders)
 	g.raiderIDs, g.raidGroups, g.nextThreat, g.threatsOn = s.RaiderIDs, s.RaidGroups, s.NextThreat, s.ThreatsOn
 	setMap(&g.scheds, s.Scheds)
@@ -721,6 +729,15 @@ func (g *Game) migrateSave(v int) {
 		fallthrough
 	case v < 6:
 		g.migrateWoundInfections() // infection.go (MED-02): infections become conditions
+		fallthrough
+	case v < 7:
+		g.need.All(func(id entity.EntityID, _ needs.Pair) { migrateStarvation(g, id) }) // care_host_prison.go (FOOD-1)
+		// FOOD-2: plant growth units are the wiki's grow days now
+		for _, id := range g.plantIDs {
+			if p := g.plants.Ref(id); p != nil {
+				*p = p.FromLegacyGrowth()
+			}
+		}
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }
@@ -899,6 +916,9 @@ func importPrios(m map[entity.EntityID][]uint8) map[entity.EntityID]work.Priorit
 	for id, l := range m {
 		var p work.Priorities
 		copy(p[:], l)
+		if len(l) <= int(work.PlantCut) {
+			p[work.PlantCut] = p[work.Grow] // FOOD-2: split from growing
+		}
 		out[id] = p
 	}
 	return out
@@ -910,6 +930,7 @@ func (g *Game) migrateWarden(old map[entity.EntityID]priorities12) {
 	for id, op := range old {
 		var p work.Priorities
 		copy(p[:], op[:])
+		p[work.PlantCut] = p[work.Grow] // FOOD-2
 		g.prio[id] = p
 	}
 }
@@ -921,7 +942,7 @@ func (g *Game) migrateHandling(old map[entity.EntityID]legacyPriorities) {
 	for id, lp := range old {
 		var p work.Priorities
 		copy(p[:], lp[:])
-		p[work.Handle] = p[work.Hunt]
+		p[work.Handle], p[work.PlantCut] = p[work.Hunt], p[work.Grow]
 		g.prio[id] = p
 	}
 	for _, id := range g.pawnIDs {

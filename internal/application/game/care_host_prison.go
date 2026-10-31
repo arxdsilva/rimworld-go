@@ -1,10 +1,13 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -34,8 +37,8 @@ func (h carePrison) ArrestRoll(arrester, target entity.EntityID) bool {
 func (h carePrison) StartFight(starter, other entity.EntityID) { h.g.mind.StartFight(starter, other) }
 
 // Feed is care.Treatment's (SIM-064): patient eats the carried stack
-// carry, portions while they still fit under full, leftovers dropped
-// where it lies. A prisoner's food band follows.
+// carry, the portions that fill it best (the excess wasted), leftovers
+// dropped where it lies. A prisoner's food band follows.
 func (h careTreat) Feed(patient, carry entity.EntityID) {
 	g := h.g
 	st, ok := g.stacks.Get(carry)
@@ -43,12 +46,9 @@ func (h careTreat) Feed(patient, carry entity.EntityID) {
 		return
 	}
 	n, _ := g.need.Get(patient)
-	nut := st.Kind.Nutrition()
-	for st.Qty > 0 && n.Hunger+nut/2 <= needs.Full {
-		st.Qty--
-		n.Hunger += nut
-	}
-	n.Hunger = min(n.Hunger, needs.Full)
+	eat := min(st.Qty, portionsFor(n.Hunger, st)) // dining.go
+	st.Qty -= eat
+	n.Hunger = min(n.Hunger+eat*animal.StackNutrition(st), needs.Full)
 	g.need.Set(patient, n)
 	if st.Qty <= 0 {
 		g.deleteItem(carry)
@@ -86,7 +86,7 @@ func (h careMeals) TakeFood(id, food, patient entity.EntityID) (entity.EntityID,
 		return 0, false
 	}
 	n, _ := g.need.Get(patient)
-	take := min(st.Qty, portionsFor(n.Hunger, st.Kind))
+	take := min(st.Qty, portionsFor(n.Hunger, st))
 	if st.Qty <= take {
 		st.Carrier = id
 		g.putStack(food, st)
@@ -107,10 +107,9 @@ func (h careMeals) FedBy(patient, feeder entity.EntityID) {
 
 // downedHunger is one tick of a downed pawn's food (SIM-064): it grows
 // hungry at the awake rate (the wiki publishes no downed rate) unless
-// asleep, whose SleepTick already counts it; rest stays as it is. A pawn
-// down from starvation that was fed gets up, or, still incapacitated by
-// its body, lies on from its wounds. It returns the needs, stored.
-func (g *Game) downedHunger(id entity.EntityID, v *health.Record, now uint64, asleep bool) needs.Pair {
+// asleep, whose SleepTick already counts it; rest stays as it is. It
+// returns the needs, stored.
+func (g *Game) downedHunger(id entity.EntityID, now uint64, asleep bool) needs.Pair {
 	n, _ := g.need.Get(id)
 	if !asleep {
 		rest := n.Rest
@@ -118,12 +117,45 @@ func (g *Game) downedHunger(id entity.EntityID, v *health.Record, now uint64, as
 		n.Rest = rest
 		g.need.Set(id, n)
 	}
-	if v.Cause == health.CauseNoFood && !n.Starving() {
-		v.Status, v.Cause = health.Alive, health.CauseNone
-		if g.downsNow(id, *v, g.bodies[id]) { // bleed.go
-			v.Status, v.Cause = health.Downed, health.CauseInjury
-		}
-		g.vital.Set(id, *v)
-	}
 	return n
+}
+
+// migrateStarvation (save v7, FOOD-1) gets pawn id up if an older save has
+// it down from hunger, unless its body still downs it (bleed.go).
+func migrateStarvation(g *Game, id entity.EntityID) {
+	if v, _ := g.vital.Get(id); v.Status == health.Downed && v.Cause == health.CauseNoFood {
+		v.Status, v.Cause = health.Alive, health.CauseNone
+		g.vital.Set(id, v)
+		g.updateDowned(id, g.bodies[id], &v)
+	}
+}
+
+// stepMalnutrition is an hour of malnutrition (FOOD-1,
+// body/cond_malnutrition.go) on every pawn with needs that is at 0 % food
+// or still malnourished, in store order: it sets in, rises, recedes once
+// fed and kills at full severity (the old down-and-die rule is gone).
+func stepMalnutrition(g *Game, now uint64) {
+	var ids []entity.EntityID
+	g.need.All(func(id entity.EntityID, n needs.Pair) {
+		if n.Starving() || body.Malnutrition(g.bodies[id]) > 0 {
+			ids = append(ids, id)
+		}
+	})
+	for _, id := range ids {
+		v, ok := g.vital.Get(id)
+		b := g.ensureBody(id, &v)
+		if !ok || v.Status == health.Dead || b == nil {
+			continue
+		}
+		changed, dead := body.StepMalnutrition(b, g.need.Ref(id).Starving(), now/clock.TicksPerHour, g.stream(streamMedical).IntN)
+		if dead {
+			pos, _ := g.positions.Get(id)
+			g.message(pos.X, pos.Y, "%s starved to death.", g.name(id))
+			g.dieMedical(id, health.CauseNoFood) // caravan_medical.go
+			g.clearPatient(id)
+		} else if changed {
+			g.bodyChanged(id, b, &v) // body.go: stats follow, joins the patients
+			g.updateDowned(id, b, &v)
+		}
+	}
 }

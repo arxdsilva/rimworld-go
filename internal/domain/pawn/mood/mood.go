@@ -170,7 +170,7 @@ var defs = [numKinds]Def{
 	AteRaw:            {"ate raw food", -5, day, groupMealKind, 0, 0},
 	AteAtTable:        {"ate at a table", 3, day, groupMealTable, 0, 0},
 	AteWithoutTable:   {"ate without a table", -3, day, groupMealTable, 0, 0},
-	Hungry:            {"hungry", -8, 0, groupNone, 0, 0},
+	Hungry:            {"hungry", -6, 0, groupNone, 0, 0}, // wiki: Saturation
 	Tired:             {"tired", -5, 0, groupNone, 0, 0},
 	Cold:              {"cold", -4, 0, groupNone, 0, 0},
 	Freezing:          {"freezing", -10, 0, groupNone, 0, 0},

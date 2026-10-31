@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
@@ -194,7 +195,7 @@ func TestBerryBushRegrowsAfterHarvest(t *testing.T) {
 	g.SpawnNamedPawn(1, 2, "Ada")
 	g.SpawnPlant(5, 2)
 	g.Enqueue(command.Command{Kind: command.DesignateHarvest, X: 5, Y: 2, X2: 5, Y2: 2})
-	g.Step(TicksPerCell*20 + 60)
+	g.Step(TicksPerCell*20 + plant.DefOf(plant.BerryBush).HarvestWork + 30)
 	w := g.World()
 	regrow := plant.DefOf(plant.BerryBush).RegrowTo
 	if len(w.Plants) != 1 || w.Plants[0].Harvestable || w.Plants[0].Growth < regrow || w.Plants[0].Growth > regrow+5 {
@@ -203,7 +204,10 @@ func TestBerryBushRegrowsAfterHarvest(t *testing.T) {
 	if w.Food != plant.DefOf(plant.BerryBush).Yield {
 		t.Fatalf("food = %d", w.Food)
 	}
-	g.Step(plant.DefOf(plant.BerryBush).GrowTicks)
+	// FOOD-2: growth counts 13 hours a day (wiki: Plants); summer days
+	for i := 0; i < 2*plant.DefOf(plant.BerryBush).GrowTicks*24/13/clock.TicksPerHour && !g.World().Plants[0].Harvestable; i++ {
+		g.Step(clock.TicksPerHour)
+	}
 	if !g.World().Plants[0].Harvestable {
 		t.Fatal("bush should ripen again")
 	}

@@ -40,7 +40,8 @@ type planBuf struct{ cands, picks []pick }
 // still use: not a forbidden kind, inside the bill's radius of spot and
 // in its ingredient source, if it names one (RES-1).
 func (p planner) fits(bl recipe.Bill, st item.Stack, spot [2]int) bool {
-	return bl.Allows(st.Kind) && (bl.Radius <= 0 || pathing.Dist(spot[0], spot[1], st.X, st.Y) <= bl.Radius) &&
+	// FOOD-3: a rotten body only burns (wiki: Corpse)
+	return bl.Allows(st.Kind) && (!st.Rotten() || bl.Recipe == recipe.Cremate) && (bl.Radius <= 0 || pathing.Dist(spot[0], spot[1], st.X, st.Y) <= bl.Radius) &&
 		(bl.Source == 0 || p.h.InSource(bl.Source, st.X, st.Y))
 }
 

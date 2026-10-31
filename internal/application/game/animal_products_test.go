@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -46,6 +47,7 @@ func TestMilkJob(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	onlyWork(g, ada, work.Handle)
+	setSkill(g, ada, skill.Animals, 8) // FOOD-3: a gather yield of 100 % never wastes the milk
 	bess := spawnSexed(t, g, "cow", 15, 10, true, true, "Bess")
 	bull := spawnSexed(t, g, "cow", 20, 10, false, true, "Bull")
 	setAnimal(g, bess, func(a *animal.State) { a.Product = animal.ProductFull })
@@ -73,8 +75,8 @@ func TestMilkJob(t *testing.T) {
 	if animalOf(g, bess).Product != 0 {
 		t.Fatal("the cow is milked")
 	}
-	if n := itemsOnGround(g, "milk"); n != animal.LifeOf(animal.Cow).ProductYield || n != 10 {
-		t.Fatalf("milk %d, want a large animal's 10", n)
+	if n := itemsOnGround(g, "milk"); n != animal.LifeOf(animal.Cow).ProductYield || n != 14 {
+		t.Fatalf("milk %d, want a cow's 14 (wiki: Milk)", n)
 	}
 	if !sawHold || !sawAction {
 		t.Fatalf("the cow holds still (%v); the handler milks (%v)", sawHold, sawAction)
@@ -91,13 +93,14 @@ func TestShearJob(t *testing.T) {
 		s       animal.Species
 		want    int
 	}{
-		{"sheep", animal.Sheep, 20},   // small
-		{"alpaca", animal.Alpaca, 35}, // medium
-		{"bison", animal.Bison, 70},   // large
+		{"sheep", animal.Sheep, 45}, // FOOD-3, wiki: Wool
+		{"alpaca", animal.Alpaca, 45},
+		{"bison", animal.Bison, 120},
 	} {
 		g := New(Config{Seed: 1, Width: 30, Height: 20})
 		ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 		onlyWork(g, ada, work.Handle)
+		setSkill(g, ada, skill.Animals, 8)
 		id := spawnSexed(t, g, c.species, 15, 10, false, true, "Woolly")
 		setAnimal(g, id, func(a *animal.State) { a.Product = animal.ProductFull })
 		if v := viewOf(g, id); v.Product != "wool" {
@@ -149,15 +152,16 @@ func TestHungryAnimalsProduceSlower(t *testing.T) {
 		setAnimal(g, thin, func(a *animal.State) { a.Food = animal.ProductFedFood - 1 })
 		g.Step(100)
 	}
-	// milk fills in two days: half a day's worth when hungry
+	// a goat's milk fills in three days (wiki: Milk): half a day's worth
+	// when hungry
 	f, h := animalOf(g, fed).Product, animalOf(g, thin).Product
-	if f < 490 || f > 510 || h < 240 || h > 260 {
+	if f < 323 || f > 343 || h < 156 || h > 176 {
 		t.Fatalf("a day's milk: fed %d, hungry %d", f, h)
 	}
 	if animalOf(g, young).Product != 0 {
 		t.Fatal("the young produce nothing")
 	}
-	g.Step(clock.TicksPerDay * 2)
+	g.Step(clock.TicksPerDay * 3)
 	if p := animalOf(g, fed).Product; p != animal.ProductFull {
 		t.Fatalf("capped full: %d", p)
 	}
@@ -232,6 +236,7 @@ func TestHandleWorkTypeAndTamingMoved(t *testing.T) {
 		ada, _ := g.SpawnNamedPawn(4, 7, "Ada")
 		onlyWork(g, ada, types...)
 		goat, _ := g.SpawnAnimal("goat", 16, 7)
+		spawn(t, g, item.Potatoes, 60, 4, 9) // FOOD-3: taming costs food
 		g.Enqueue(command.Command{Kind: command.DesignateTame, X: 16, Y: 7, X2: 16, Y2: 7})
 		for i := 0; i < 600; i++ { // a failed try waits TameRetryTicks
 			g.Step(50)

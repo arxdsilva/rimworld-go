@@ -430,7 +430,7 @@ func TestSowOnlyInGrowingTemperature(t *testing.T) {
 	for _, c := range []struct {
 		temp int
 		sow  bool
-	}{{-50, false}, {0, false}, {1, true}, {250, true}, {499, true}, {500, false}, {600, false}} {
+	}{{-50, false}, {0, false}, {1, true}, {250, true}, {579, true}, {580, false}, {600, false}} { // FOOD-2: 0-58 °C (wiki: Plants)
 		g.roomTemps[r] = temperature.Temp(c.temp)
 		if got := g.growingSeason(4, 4); got != c.sow {
 			t.Errorf("room at %d tenths °C: sow %v, want %v", c.temp, got, c.sow)

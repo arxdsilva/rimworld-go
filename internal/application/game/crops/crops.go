@@ -30,6 +30,12 @@ type View struct {
 	Food     bool
 	Extra    string
 	ExtraQty int
+	// FOOD-2: MinSkill is the Plants level a grower needs to sow it;
+	// Hydro: a hydroponics basin can grow it; Lifespan its days from
+	// sowing (0: none).
+	MinSkill int
+	Hydro    bool
+	Lifespan float64
 }
 
 // All lists the sowable crops, fastest first.
@@ -42,7 +48,8 @@ func All() []View {
 			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()), RichDays: plant.GrowDays(s, terrain.RichSoil.Fertility()),
 			Yield: d.Yield, Nutrition: d.Yields.Nutrition(), Sens: d.Sens,
 			FrostKill: d.FrostKill, ShelfDays: float64(d.Yields.ShelfTicks()) / clock.TicksPerDay,
-			Food: d.Yields.Nutrition() > 0,
+			Food: d.Yields.Nutrition() > 0, MinSkill: d.MinSkill, Hydro: plant.Hydroponic(s),
+			Lifespan: float64(plant.Lifespan(s)) / clock.TicksPerDay,
 		})
 		if d.ExtraQty > 0 {
 			out[len(out)-1].Extra, out[len(out)-1].ExtraQty = d.Extra.String(), d.ExtraQty
@@ -60,7 +67,7 @@ func ZoneSpecies() []View {
 			Name: d.Name, Label: "wood", Days: plant.GrowDays(s, terrain.Soil.Fertility()),
 			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()),
 			RichDays:  plant.GrowDays(s, terrain.RichSoil.Fertility()),
-			Yield:     d.Wood, Sens: d.Sens,
+			Yield:     d.Wood, Sens: d.Sens, MinSkill: d.MinSkill,
 		})
 	}
 	return out

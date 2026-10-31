@@ -21,8 +21,9 @@ func TestOneButcherRecipeForEveryAnimal(t *testing.T) {
 		}
 		names = append(names, r.Name)
 	}
-	// PRD-4: kibble is made at the butcher table too (wiki: Kibble)
-	if len(names) != 2 || names[0] != "butcher_animal" || names[1] != "make_kibble" {
+	// PRD-4: kibble is made at the butcher table too (wiki: Kibble);
+	// FOOD-3: so is butchering a human
+	if len(names) != 3 || names[0] != "butcher_animal" || names[1] != "make_kibble" || names[2] != "butcher_human" {
 		t.Fatalf("a butcher table offers one butcher recipe and kibble: %v", names)
 	}
 	for _, id := range []ID{ButcherDustbuck, ButcherRidgewolf} {

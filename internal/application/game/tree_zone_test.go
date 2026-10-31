@@ -15,6 +15,7 @@ func treeZoneGame(t *testing.T) (*Game, entity.EntityID) {
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
+	setSkill(g, id, skPlants, 8) // FOOD-2: trees need Plants 6 to sow (wiki: Oak tree)
 	g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: 4, Y: 2, X2: 5, Y2: 3, Build: uint8(plant.Tree)})
 	return g, id
 }
@@ -125,7 +126,7 @@ func TestTreesNeverFrostKilled(t *testing.T) {
 		t.Fatal("trees must not be frost-killed")
 	}
 	g, pid := ripeZoneTree(t)
-	g.frostCrops()
+	frostCrops(g)
 	if _, ok := g.plants.Get(pid); !ok {
 		t.Fatal("frostCrops removed a tree")
 	}

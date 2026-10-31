@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 	"reflect"
+	"rimworld-go/internal/domain/pawn/skill"
 	"strings"
 	"testing"
 
@@ -278,11 +279,13 @@ func TestButcherYieldBySize(t *testing.T) {
 	for _, c := range []struct {
 		species       string
 		meat, leather int
-	}{{"chicken", 2, 0}, {"cow", 30, 10}} {
+	}{{"chicken", 42, 0}, {"cow", 336, 96}} { // FOOD-3: the wiki's body-size yields
 		g := New(Config{Seed: 1, Width: 16, Height: 10})
-		if _, err := g.SpawnNamedPawn(2, 5, "Cook"); err != nil {
+		cook, err := g.SpawnNamedPawn(2, 5, "Cook")
+		if err != nil {
 			t.Fatal(err)
 		}
+		setSkill(g, cook, skill.Cooking, 10) // butchery efficiency 100 %
 		placeBuilt(t, g, construction.ButcherTable, construction.South, 6, 3)
 		s, _ := animal.ParseSpecies(c.species)
 		g.dropCorpse(s, 3, 7)

@@ -291,7 +291,7 @@ func TestZonePaneLinesForAGrowingZone(t *testing.T) {
 	want := []string{
 		"4 tiles",
 		"Plant: Potato",
-		"Growing now: 18C (grows between 0C and 45C)",
+		"Growing now: 18C (grows between 0C and 58C)", // FOOD-2, wiki: Plants
 		"Sown 3 of 4 · ripe 1 · growth 70%",
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
@@ -324,8 +324,8 @@ func TestZonePaneSaysWhenItIsTooColdOrTooHot(t *testing.T) {
 		{-30, "Too cold to grow: -3C (needs above 0C)"},
 		{0, "Too cold to grow: 0C (needs above 0C)"},
 		{150, "Growing now: 15C"},
-		{450, "Too hot to grow: 45C (needs below 45C)"},
-		{500, "Too hot to grow: 50C (needs below 45C)"},
+		{580, "Too hot to grow: 58C (needs below 58C)"}, // FOOD-2, wiki: Plants
+		{600, "Too hot to grow: 60C (needs below 58C)"},
 	} {
 		s.temp = c.temp
 		if got := a.arch.Zones.Lines(z)[2]; !strings.HasPrefix(got, c.want) {

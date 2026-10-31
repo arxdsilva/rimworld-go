@@ -86,6 +86,9 @@ type Output interface {
 	// best stockpile (zone 0) or to stockpile zone: a haul job replacing
 	// its current one. False when there is no such stack or no room.
 	Store(carrier entity.EntityID, k item.Kind, x, y int, zone uint64) bool
+	// ButcheredHuman: butcher cut up a human body (FOOD-3: the butcher's
+	// and the onlookers' moods).
+	ButcheredHuman(butcher entity.EntityID)
 }
 
 // Workers is pawns, their jobs, paths and reservations. The reservation

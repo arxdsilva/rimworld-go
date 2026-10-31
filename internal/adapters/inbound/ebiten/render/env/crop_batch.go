@@ -105,10 +105,20 @@ func CropFit(dy, above, below float64) (root, f float64) {
 	return min(max(dy, above*f), min(CropRootMax, 1-below*f)), f
 }
 
+// A hydroponics basin cell's plant reads this fertility (PlantView.Fertility,
+// 280% of soil) and is drawn raised by the basin's bed_height in tiles
+// (the furniture/hydroponics_basin metadata; its slot0..3 are the cell
+// centres, where the crop units already stand).
+const (
+	BasinFertility = 280
+	BasinBedHeight = 0.33
+)
+
 // cropUnitsPerTile is how many unit sprites a crop's tile shows.
 var cropUnitsPerTile = map[string]int{
 	"corn": 2, "wheat": 4, "brewgrain": 4, "cotton": 3, "potato": 3, "beans": 3,
 	"healroot": 3, "ashleaf": 3, "lettuce": 4, "radish": 4, "pumpkin": 1,
+	"rice": 4, "haygrass": 4, "strawberry": 3, "hops": 2, // FOOD-2
 }
 
 // CropUnitCount is the units a tile of this crop draws (1 for others).
@@ -762,6 +772,9 @@ func (e *Layer) DrawCropObj(v *render.View, dst *ebiten.Image, w *game.WorldView
 	sky, lamp := e.Lit.LightTile(v, p.X, p.Y)
 	tx, ty := v.WorldToScreenF(float64(p.X), float64(p.Y))
 	tl := float32(tile)
+	if p.Fertility == BasinFertility { // a plant in a hydroponics basin stands on its bed, raised
+		ty -= BasinBedHeight * tl
+	}
 	fsw, fsh := float32(dst.Bounds().Dx()), float32(dst.Bounds().Dy())
 	for i := range units {
 		u := &units[i]

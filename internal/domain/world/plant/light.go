@@ -8,9 +8,9 @@ import (
 // Light rules (MAPGEN-3). Light is in permille of full daylight (the
 // simulation's cell light × 1000), compared against the Def's percents.
 
-// StrongGrowLight is the artificial light (0..1) that grows a plant at any
-// hour (PLAY-017): a lamp within two tiles, or a burning campfire beside
-// it. Dimmer lamps give no growth; the sun does the rest by day.
+// StrongGrowLight is the artificial light (0..1) that regrows grass at
+// night (PLAY-017): a lamp within two tiles, or a burning campfire beside
+// it. Plants rest at night whatever the light (FOOD-2, farm.go).
 const StrongGrowLight = 0.5
 
 // strongLightEps lets a light rounded through the float32 light grid
@@ -27,18 +27,6 @@ func StrongLight(l float64) bool { return l >= StrongGrowLight-strongLightEps }
 func OwnLightRules(s Species) bool {
 	d := DefOf(s)
 	return d.MinLight > 0 || d.DiesInLight > 0 || d.Cave
-}
-
-// RoundClockSpan is the growth (ticks) a plant growing at rate percent
-// gains over the ticks t0+1 .. t1 counting every hour: what a strong lamp
-// gives (GrowSpan counts only the sun's hours, so this is never less). It
-// telescopes like GrowSpan.
-func RoundClockSpan(rate int, t0, t1 uint64) int {
-	if rate <= 0 || t1 <= t0 {
-		return 0
-	}
-	f := uint64(rate)
-	return int(t1*f/100 - t0*f/100)
 }
 
 // WitherStopLight (percent) is the light a withering plant must fall

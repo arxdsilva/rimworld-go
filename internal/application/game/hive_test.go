@@ -76,7 +76,7 @@ func TestHiveNeverTameable(t *testing.T) {
 	if a, _ := g.animals.Get(id); a.TameMark {
 		t.Fatal("a hive insect cannot be marked for taming")
 	}
-	if g.assignTame(p) {
+	if g.herdOf().Taming.Assign(p) {
 		t.Fatal("no taming job for a hive insect")
 	}
 	g.hurt(id, 3, p)

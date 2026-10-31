@@ -31,7 +31,6 @@ type fakeHost struct {
 	started             []job.Record
 	recruited, executed []entity.EntityID
 	chats, chases       int
-	downs, dies         int
 	messages            []string
 	fakeEscapes         // escape_test.go (CBT-4)
 	failStart           bool
@@ -98,17 +97,7 @@ func (f *fakeHost) Decay(_ entity.EntityID, n needs.Pair, _ uint64) needs.Pair {
 	n.Hunger--
 	return n
 }
-func (f *fakeHost) DownedHunger(id entity.EntityID, v health.Record, _ uint64) (needs.Pair, health.Record) {
-	return f.needs[id], v
-}
-func (f *fakeHost) Down(id entity.EntityID, c health.Cause) {
-	f.downs++
-	f.vital[id] = health.Record{Status: health.Downed, Cause: c}
-}
-func (f *fakeHost) Die(id entity.EntityID, c health.Cause) {
-	f.dies++
-	f.vital[id] = health.Record{Status: health.Dead, Cause: c}
-}
+func (f *fakeHost) DownedHunger(id entity.EntityID, _ uint64) needs.Pair { return f.needs[id] }
 
 func (f *fakeHost) StartJob(id entity.EntityID, rec job.Record) bool {
 	if f.failStart {
