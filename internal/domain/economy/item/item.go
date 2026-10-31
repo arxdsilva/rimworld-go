@@ -216,6 +216,18 @@ const (
 	HumanMeat
 	InsectMeat
 	AgaveFruit
+	// TEMP-0 contract (append only, saved; not apparel, craftable or
+	// spawned until TEMP-4 gives them slots, insulation, recipes and art:
+	// IsContractApparel). wiki: Apparel. The layered core clothing: two
+	// shirts and pants on the skin, a jacket over them, two hats and the
+	// tribal one-piece that covers torso and legs on the skin.
+	TShirt
+	ButtonDownShirt
+	Pants
+	Jacket
+	CowboyHat
+	BowlerHat
+	Tribalwear
 	numKinds
 )
 
@@ -244,7 +256,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"ash flake", "silverdust", "battle tonic", "reagent", "advanced components", "uranium", "plasteel", "reinforced barrel",
 	"nutrient paste meal", "smokepop pack", "shield belt", "rocket launcher", "triple rocket launcher", "smoke launcher",
 	"charge rifle", "charge lance", "ikwa",
-	"rice", "strawberries", "hay", "hops", "human meat", "insect meat", "agave fruit"}
+	"rice", "strawberries", "hay", "hops", "human meat", "insect meat", "agave fruit",
+	"t-shirt", "button-down shirt", "pants", "jacket", "cowboy hat", "bowler hat", "tribalwear"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -258,6 +271,10 @@ func (k Kind) IsArmor() bool { return k >= FlakVest && k <= AdvancedHelmet }
 // IsContractWeapon reports a weapon kind of the STO/CBT contract
 // (rocket launchers to the ikwa), equippable since CBT-3.
 func (k Kind) IsContractWeapon() bool { return k >= RocketLauncher && k <= Ikwa }
+
+// IsContractApparel reports a garment of the TEMP-0 contract (the
+// T-shirt to the tribalwear): filed as apparel, worn from TEMP-4.
+func (k Kind) IsContractApparel() bool { return k >= TShirt && k <= Tribalwear }
 
 // IsBelt reports belt-layer apparel (the shield belt and the smokepop
 // pack), worn in the Belt slot since CBT-3.
@@ -389,16 +406,50 @@ func ParseKind(name string) (Kind, bool) {
 // IsFood reports whether k can be eaten.
 func (k Kind) IsFood() bool { return k.Nutrition() > 0 }
 
-// Slot is where a piece of apparel is worn.
+// Slot is where a piece of apparel is worn. An outfit (game/craft
+// Outfit.On, indexed by Slot) holds one garment per slot, and its Forced
+// bits are one per slot, so the values are saved: append only.
+//
+// Layers (TEMP-0 contract; TEMP-4 wears them, until then only Body, Head,
+// Legs and Belt hold garments). wiki: Apparel (layers Skin, Middle, Outer,
+// Belt, Headgear). A slot is a layer on a body region, matching the plies
+// of armor.Apparel:
+//   - SkinTorso: T-shirt, button-down shirt, tribalwear (which also
+//     Occupies SkinLegs).
+//   - SkinLegs: pants.
+//   - Middle (torso): jacket; flak vest (TEMP-4 moves it from Body: its
+//     ply is middle, so it goes under a parka).
+//   - Legs (middle, legs): flak pants, over pants, as today.
+//   - Body, the Outer layer: parka, wool parka, duster, flak jacket; plate
+//     and marine armor (a shell: also Occupies Middle and Legs).
+//   - Head: tuque, cowboy hat, bowler hat, helmets.
+//   - Belt: the shield belt and the smokepop pack, as today.
+//
+// TEMP-4 grows craft.Slots from 5 to NumSlots (8): Outfit.On becomes
+// [NumSlots]Piece and Forced keeps its uint8 (bits 1..7). OutfitSave.On
+// stays a slice, so an older save's five entries copy into the first five
+// slots unchanged; ImportOutfits then moves a saved flak vest from Body to
+// Middle. Until then the new slots are out of range for Outfit (Kind,
+// HitWear and the dress plan check s < craft.Slots) and Occupies is a
+// garment's own Slot only.
 type Slot uint8
 
 const (
 	NoSlot Slot = iota
-	Body        // outer layer over the shirt: parka, duster
+	Body        // the outer layer over the shirt: parka, duster (TEMP-4: Outer)
 	Head
-	Legs // DEF-2: flak pants
+	Legs // DEF-2: flak pants (middle ply on the legs)
 	Belt // CBT-3: the shield belt and the smokepop pack
+	// TEMP-0 contract (append only; unused until TEMP-4).
+	SkinTorso
+	SkinLegs
+	Middle
+	// NumSlots counts the slots, NoSlot included (keep last).
+	NumSlots
 )
+
+// Outer is the outer layer: the Body slot under its layer name (TEMP-0).
+const Outer = Body
 
 func (s Slot) String() string {
 	switch s {
@@ -410,8 +461,30 @@ func (s Slot) String() string {
 		return "legs"
 	case Belt:
 		return "belt"
+	case SkinTorso:
+		return "shirt"
+	case SkinLegs:
+		return "pants"
+	case Middle:
+		return "middle"
 	}
 	return ""
+}
+
+// SlotSet is a set of slots, a bit per Slot (as craft.Outfit.Forced).
+type SlotSet uint8
+
+// Has reports slot s in ss.
+func (ss SlotSet) Has(s Slot) bool { return s < NumSlots && ss&(1<<s) != 0 }
+
+// Occupies is every slot apparel k takes: its own Slot and, from TEMP-4,
+// the slots a one-piece or a shell also blocks (see Slot). 0 for anything
+// that is not apparel.
+func (k Kind) Occupies() SlotSet {
+	if s := k.Slot(); s != NoSlot {
+		return 1 << s
+	}
+	return 0
 }
 
 // apparel: slot, cold insulation and heat insulation in tenths of a

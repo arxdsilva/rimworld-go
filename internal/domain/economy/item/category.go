@@ -13,7 +13,7 @@ func (k Kind) Category() string {
 		return "Food"
 	case k.IsCorpse(), k == Bones:
 		return "Corpses"
-	case k.IsApparel(), k.IsBelt():
+	case k.IsApparel(), k.IsBelt(), k.IsContractApparel():
 		return "Apparel"
 	case k.IsWeapon(), k.IsContractWeapon():
 		return "Weapons"

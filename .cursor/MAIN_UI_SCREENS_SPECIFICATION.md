@@ -2174,7 +2174,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left over the animated colony diorama, actions right rail)
 -   [-] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts)
 -   [x] camera (WASD/arrows pan with Shift fast pan, edge pan, middle-drag, keyboard/wheel zoom, centre on colonist)
--   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; no temperature/weather)
+-   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; cursor temperature, biome chip, season and weather chips present; no temperature overlay, TEMP-5)
 -   [-] selection (click pawn or colonist bar; inspector Character/Needs)
 -   [-] Generic Inspector (name, job, status, reason, food/rest bars; Health/Social/Gear disabled)
 -   [-] colonist bar (snapshot slots, click selects, idle portrait, display name; no status icons, no double-click center)

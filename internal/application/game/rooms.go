@@ -37,6 +37,10 @@ type RoomView struct {
 	Filth        int
 	Cleanliness  string
 	FilthPenalty int
+	// TEMP-0 contract (zero until TEMP-1), the room stats line: wall cells with outdoor air beyond, single and double
+	// (half the loss); its sources' net heat (tenths of heat/s); RoofKind "thin", "thick" (mountain), "mixed" or "".
+	ExposedWalls, DoubleWalls, HeatRate int
+	RoofKind                            string
 }
 
 // ThoughtView is one line of a pawn's mood.
@@ -65,10 +69,10 @@ func (g *Game) isBoundary(x, y int) bool {
 }
 
 // roomWall reports a building that bounds rooms: a wall, a door, or a
-// cooler standing in a wall gap (PLAY-021: it moves heat between the two
-// rooms it separates).
+// cooler or vent standing in a wall gap (PLAY-021, TEMP-0: they move heat
+// or air between the two rooms they separate).
 func roomWall(k construction.Kind) bool {
-	return k == construction.Wall || k.IsDoor() || k == construction.Cooler
+	return k == construction.Wall || k.IsDoor() || k.WallMounted()
 }
 
 // ensureRooms rebuilds the rooms after a building or terrain change:

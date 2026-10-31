@@ -37,9 +37,10 @@ const (
 	badTempSpeed = 700
 )
 
-// tempSpeed is the air temperature factor, permille, at t whole degrees.
+// tempSpeed is the air temperature factor, permille, at t tenths of a
+// degree.
 func tempSpeed(t int) int {
-	if t < goodTempMin || t > goodTempMax {
+	if t < goodTempMin*10 || t > goodTempMax*10 {
 		return badTempSpeed
 	}
 	return 1000

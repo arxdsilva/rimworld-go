@@ -42,7 +42,7 @@ type Benches interface {
 	// Fuel is the fuel a fueled building holds (fuel.go: lamps and
 	// generators share it).
 	Fuel(id entity.EntityID) int
-	// TemperatureAt is the air temperature at (x, y), whole degrees.
+	// TemperatureAt is the air temperature at (x, y), tenths of a degree C.
 	TemperatureAt(x, y int) int
 }
 

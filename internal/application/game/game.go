@@ -277,6 +277,7 @@ type PawnView struct {
 	FoodPolicy   string
 	Malnutrition int
 	ToxicBuildup int // FOOD-6: toxic buildup percent (body/cond_toxic.go)
+	Frostbite    int // TEMP-0 contract (0 until TEMP-3): frostbitten parts (body.CondFrostbite)
 }
 
 // ItemView is a ground stack.
@@ -486,6 +487,8 @@ type BuildingView struct {
 	// STO/CBT contract (0 until STO-2): storage Group id, Stored stacks of Capacity.
 	Group            uint64
 	Stored, Capacity int
+	Open             bool // TEMP-0 contract (false until TEMP-1): a vent letting air through (command.ToggleVent)
+	HeatRate         int  // TEMP-0 contract (0 until TEMP-1): heat into its room, tenths of heat/s (signed: cooling < 0)
 }
 
 // Bed facility bits on BuildingView.Facilities (BED-1).
@@ -672,6 +675,10 @@ type WorldView struct {
 	// "eclipse" or "") and its end tick (0: none).
 	SkyEvent     string
 	SkyEventEnds uint64
+	// TEMP-0 contract (zero until TEMP-2, TEMP-1): the climate event under way (its incident key or "") and end tick;
+	// TempVer, the temperature overlay's cache key: it changes whenever a cell's air may have (game/thermo).
+	ClimateEvent              string
+	ClimateEventEnds, TempVer uint64
 }
 
 // FoodPolicyView is one food policy: its id, name and allowed kind names.

@@ -298,6 +298,10 @@ const (
 	SetFoodPolicy
 	EditFoodPolicy
 	SetAutoSlaughter
+	// TEMP-0 contract (append only; game ignores it until TEMP-1 handles
+	// it): ToggleVent wants vent building Target open (Enabled) or closed;
+	// like a power toggle (SetPowerWanted), a colonist then flicks it.
+	ToggleVent
 )
 
 // EditFoodPolicy modes (Command.Mode), FOOD-0.

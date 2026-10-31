@@ -198,6 +198,14 @@ const (
 	// and a sun lamp, a powered lamp bright enough to grow crops by.
 	HydroponicsBasin
 	SunLamp
+	// TEMP-0 contract (append only, saved; hidden from the Architect until
+	// TEMP-1 adds the tool rows, the fuel, the heat and the art): a
+	// passive cooler, a wood-fed basin of evaporating water that cools
+	// its room, and a vent, a steel louvre set in a wall gap like the
+	// cooler (WallMounted, so it bounds rooms) that lets air through
+	// while open (BuildingView.Open, command.ToggleVent).
+	PassiveCooler
+	Vent
 	kindCount
 )
 
@@ -507,6 +515,12 @@ var defs = [kindCount]Def{
 	HydroponicsBasin: {Kind: HydroponicsBasin, Name: "hydroponics basin", Wood: 11, Work: 280, Layer: LayerObject,
 		Rotatable: true, Size: [2]int{1, 4}, MetalOK: true, MetalOnly: true, Components: 1},
 	SunLamp: {Kind: SunLamp, Name: "sun lamp", Wood: 4, Work: 33, Layer: LayerObject, MetalOK: true, MetalOnly: true},
+	// TEMP-0 contract, wiki: Passive cooler (50 wood), Vent (30 steel,
+	// impassable). Scaled as the wave D rows; the work is original tuning
+	// until TEMP-1 sets the wiki's.
+	PassiveCooler: {Kind: PassiveCooler, Name: "passive cooler", Wood: 6, Work: 70, Layer: LayerObject, BlocksMove: true},
+	Vent: {Kind: Vent, Name: "vent", Wood: 3, Work: 80, Layer: LayerObject, BlocksMove: true, Rotatable: true,
+		MetalOK: true, MetalOnly: true},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
@@ -587,6 +601,30 @@ func MaxHP(k Kind, s item.Kind) int {
 	}
 	pct, _ := StuffStats(s)
 	return hp * pct / 100
+}
+
+// WallMounted reports a building set in a wall gap that bounds rooms like
+// a wall: the cooler (PLAY-021) and the vent (TEMP-0).
+func (k Kind) WallMounted() bool { return k == Cooler || k == Vent }
+
+// WallFacing is the facing of a cooler (PLAY-021) or vent (TEMP-0) with h
+// solid neighbours east and west and v north and south: across the wall it
+// stands in (a cooler's cold side). Walls east and west of it (h > v) give
+// north or south, walls north and south of it (v > h) east or west. A facing across the wall is kept (prefer is the current
+// or the player's choice); another turns on, in the rotation order south,
+// east, north, west, to the next one across, so rotating through all four
+// still reaches both. With no clear wall axis prefer stays.
+func WallFacing(h, v int, prefer Facing) Facing {
+	if h == v {
+		return prefer
+	}
+	across := func(f Facing) bool {
+		return (f == North || f == South) == (h > v)
+	}
+	for i := 0; i < 4 && !across(prefer); i++ {
+		prefer = (prefer + 1) % 4
+	}
+	return prefer
 }
 
 // IsDoor reports a door: the plain door and the powered autodoor (DEF-3).
@@ -696,12 +734,12 @@ func Covers(k Kind, f Facing, x, y, px, py int) bool {
 // everything but walls, doors, fences, fence gates, floors and graves
 // (PLAY-011: fixed pieces change material in place instead). Conduits are
 // fixed too (PLAY-021: cheap, laid in lines, rebuilt rather than moved),
-// as are a cooler (it fills a wall gap, like a door) and a geothermal
-// generator (it only stands over a steam vent).
+// as are a cooler and a vent (they fill a wall gap, like a door) and a
+// geothermal generator (it only stands over a steam vent).
 func Movable(k Kind) bool {
 	switch k {
 	case Wall, Door, Autodoor, Fence, FenceGate, Grave, Bridge, SleeperCasket,
-		PowerConduit, HiddenConduit, Cooler, GeothermalGenerator:
+		PowerConduit, HiddenConduit, Cooler, Vent, GeothermalGenerator:
 		return false
 	}
 	return DefOf(k).Layer != LayerFloor

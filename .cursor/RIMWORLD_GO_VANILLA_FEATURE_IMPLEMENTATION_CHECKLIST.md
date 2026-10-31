@@ -1095,7 +1095,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.1 Temperature
 
--   [-] **Outdoor temperature** (temperate calendar: yearly triangle wave 9C +-15C peaking day 15, +-6C day/night swing; no weather/latitude)
+-   [-] **Outdoor temperature** (per-biome and per-planet-tile climate: yearly triangle wave plus day/night swing, snow and blizzard chill, heat wave and cold snap on the Extreme weather option; wiki biome extremes, ramped events and volcanic winter are TEMP-2)
     -   Driven by world tile climate, latitude/elevation/season/time,
         and weather.
 -   [-] **Indoor room temperature** (per-room temperature drifting toward outside air by room size, kept across room rebuilds; no room-to-room or open-door exchange)
@@ -1104,7 +1104,7 @@ treatment, and surgery are major colony-management systems.
         openings/structures.
     -   Use efficient region/room approximation rather than per-cell
         fluid simulation.
--   [x] **Heat sources/sinks** (wood campfire heats its room, banks at 20C and relights below 16C; haulers refuel it; PLAY-021: powered heater and in-wall cooler with a thermostat (21 C by default, hysteresis))
+-   [-] **Heat sources/sinks** (passive cooler not built, no vent, no production or body heat, original heat numbers: TEMP-1; wood campfire heats its room, banks at 20C and relights below 16C; haulers refuel it; PLAY-021: powered heater and in-wall cooler with a thermostat (21 C by default, hysteresis))
     -   Campfire/heater-like source.
     -   cooler/air-conditioner-like device.
     -   passive cooler equivalent.

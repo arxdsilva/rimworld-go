@@ -79,7 +79,8 @@ func (k Kind) Value() int {
 var stackLimit = func() (t [numKinds]int) {
 	for k := Kind(0); k < numKinds; k++ {
 		switch {
-		case k.IsWeapon(), k.IsContractWeapon(), k.IsApparel(), k.IsBelt(), k.IsCorpse(), IsChunk(k), k.IsImplant(), k.IsOrgan():
+		case k.IsWeapon(), k.IsContractWeapon(), k.IsApparel(), k.IsBelt(), k.IsContractApparel(), k.IsCorpse(), IsChunk(k),
+			k.IsImplant(), k.IsOrgan():
 			t[k] = 1
 		}
 	}

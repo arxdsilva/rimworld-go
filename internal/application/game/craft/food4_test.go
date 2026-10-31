@@ -166,13 +166,13 @@ func TestStoveBurnsWood(t *testing.T) {
 // 10 C or above 35 C at its work spot.
 func TestBenchTemperature(t *testing.T) {
 	t.Parallel()
-	for _, c := range []struct{ temp, want int }{{20, 1000}, {10, 1000}, {35, 1000}, {9, 700}, {36, 700}, {-20, 700}, {50, 700}} {
+	for _, c := range []struct{ temp, want int }{{200, 1000}, {100, 1000}, {350, 1000}, {99, 700}, {351, 700}, {-200, 700}, {500, 700}} {
 		f := newFake()
 		cr := New(f)
 		f.build(1, construction.Workbench, 4, 4)
 		f.temp = c.temp
 		if got := cr.Stations.Speed(1); got != c.want {
-			t.Errorf("%d C: speed %d, want %d", c.temp, got, c.want)
+			t.Errorf("%d tenths C: speed %d, want %d", c.temp, got, c.want)
 		}
 	}
 }
@@ -187,7 +187,7 @@ func TestBenchTemperatureNoFlap(t *testing.T) {
 	changes, last := 0, c.Stations.Speed(1)
 	for i := range speedEvery * 4 {
 		f.now = uint64(i)
-		f.temp = 9 + i%3 // 9, 10, 11, 9, ...
+		f.temp = 90 + 10*(i%3) // 9, 10, 11, 9, ... C
 		if v := c.Stations.Speed(1); v != last {
 			changes++
 			last = v

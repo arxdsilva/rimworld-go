@@ -64,6 +64,8 @@ type AnimalView struct {
 	Log          []LogLineView
 	FoodPolicy   string // FOOD-0 contract ("" until FOOD-4): the tame animal's food policy
 	ToxicBuildup int    // FOOD-6: toxic buildup percent (body/cond_toxic.go)
+	// TEMP-0 contract (0 until TEMP-3): comfortable range (tenths of a degree C), hypothermia and heatstroke percent.
+	ComfortMin, ComfortMax, Hypothermia, Heatstroke int
 	// FOOD-3 (wiki): the percent chance a wild one turns on whoever hurts
 	// it (the difficulty's), its wildness percent and the Animals level a
 	// handler needs to tame it.

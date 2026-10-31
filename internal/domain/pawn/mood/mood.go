@@ -127,6 +127,21 @@ const (
 	// FOOD-6 (append only, saved): under the open sky in toxic fallout
 	// (a state thought).
 	ToxicFallout
+	// TEMP-0 contract (append only, saved; nothing thinks them before
+	// TEMP-3 and TEMP-4): the four-stage cold and hot ladders (state
+	// thoughts; a pawn holds at most one rung of each, groupTempCold and
+	// groupTempHot) and wearing nothing on torso or legs. TEMP-3 moves the
+	// temperature thoughts (rooms.go) from the two-stage Cold, Freezing,
+	// Hot and Sweltering, which stay valid kinds for older saves, to these.
+	Chilly
+	Shivering
+	NumbingCold
+	AbsolutelyFreezing
+	Sweaty
+	Overheated
+	Baking
+	BlisteringHot
+	Naked
 	numKinds
 )
 
@@ -162,6 +177,8 @@ const (
 	groupBeauty
 	groupOutdoors
 	groupSleptTemp
+	groupTempCold // TEMP-0
+	groupTempHot
 )
 
 // day: remembered thoughts last one in-game day.
@@ -274,6 +291,18 @@ var defs = [numKinds]Def{
 	AteHumanMeatCooked:  {"ate a meal of human flesh", -15, day, groupNone, 0, 0},
 	AteInsectMeatCooked: {"ate a meal with insect meat", -3, day, groupNone, 0, 0},
 	ToxicFallout:        {"outdoors in toxic fallout", -5, 0, groupNone, 0, 0}, // FOOD-6, wiki: Toxic fallout
+	// TEMP-0, wiki: Thoughts (cold -4/-8/-12/-16, hot the same; the
+	// trigger temperatures are unpublished: TEMP-3's original tuning),
+	// Apparel (naked -6). Labels are our own.
+	Chilly:             {"chilly", -4, 0, groupTempCold, 0, 0},
+	Shivering:          {"shivering", -8, 0, groupTempCold, 0, 0},
+	NumbingCold:        {"numbing cold", -12, 0, groupTempCold, 0, 0},
+	AbsolutelyFreezing: {"freezing to the bone", -16, 0, groupTempCold, 0, 0},
+	Sweaty:             {"sweaty", -4, 0, groupTempHot, 0, 0},
+	Overheated:         {"overheated", -8, 0, groupTempHot, 0, 0},
+	Baking:             {"baking in the heat", -12, 0, groupTempHot, 0, 0},
+	BlisteringHot:      {"blistering hot", -16, 0, groupTempHot, 0, 0},
+	Naked:              {"naked", -6, 0, groupNone, 0, 0},
 }
 
 // needHour is how long a need thought outlasts its last refresh (BED-3).

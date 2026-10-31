@@ -261,8 +261,8 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 	} else if rep == 0 && !g.grid.Walkable(x, y) {
 		return false, ReasonBlocked
 	}
-	if k == construction.Cooler && rep == 0 && !g.wallGapAt(x, y) {
-		return false, ReasonNeedsWall // a cooler fills a wall (or a gap in one), like a door
+	if k.WallMounted() && rep == 0 && !g.wallGapAt(x, y) {
+		return false, ReasonNeedsWall // a cooler or vent fills a wall (or a gap in one), like a door
 	}
 	if pid := g.plantAt(x, y); pid != 0 {
 		if p, _ := g.plants.Get(pid); plant.DefOf(p.Species).Trunk && p.Species != plant.Cactus {
@@ -277,10 +277,10 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 
 // replaceTarget is the wall, fence, door or gate a door or gate of kind
 // k placed at (x, y) would replace (0: none). Same kind over same kind
-// is not a replacement. A cooler (PLAY-021) fills a wall the same way,
-// and replaces nothing but a wall.
+// is not a replacement. A cooler or vent (WallMounted) fills a wall the
+// same way, and replaces nothing but a wall.
 func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
-	if !k.IsDoor() && k != construction.FenceGate && k != construction.Cooler {
+	if !k.IsDoor() && k != construction.FenceGate && !k.WallMounted() {
 		return 0
 	}
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
@@ -289,7 +289,7 @@ func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
 		return 0
 	}
 	switch {
-	case k == construction.Cooler:
+	case k.WallMounted():
 		if b.Kind == construction.Wall {
 			return bid
 		}
@@ -345,9 +345,9 @@ func (g *Game) AutoFacingAt(kind, facing string, x, y int) string {
 }
 
 // autoOriented: doors and fence gates face along their walls or fences; a
-// cooler (PLAY-021) faces across its wall, its cold side one of the two.
+// cooler (PLAY-021) or vent (TEMP-0) faces across its wall (WallFacing).
 func autoOriented(k construction.Kind) bool {
-	return k.IsDoor() || k == construction.FenceGate || k == construction.Cooler
+	return k.IsDoor() || k == construction.FenceGate || k.WallMounted()
 }
 
 // orientPiece: a piece a door or gate lines up with (wall, door, fence,
@@ -404,34 +404,14 @@ func (g *Game) autoFacing(k construction.Kind, x, y int, prefer construction.Fac
 	if g.solidAt(x-1, y) {
 		h++
 	}
-	if k == construction.Cooler {
-		return coolerFacing(h, v, prefer)
+	if k.WallMounted() {
+		return construction.WallFacing(h, v, prefer)
 	}
 	switch {
 	case h > v:
 		return construction.South
 	case v > h:
 		return construction.East
-	}
-	return prefer
-}
-
-// coolerFacing is the facing of a cooler (PLAY-021): the direction of its
-// cold side, which lies across the wall it stands in. Walls east and west
-// of it (h > v) give north or south, walls north and south of it (v > h)
-// east or west. A facing across the wall is kept (prefer is the current
-// or the player's choice); another turns on, in the rotation order south,
-// east, north, west, to the next one across, so rotating through all four
-// still reaches both. With no clear wall axis prefer stays.
-func coolerFacing(h, v int, prefer construction.Facing) construction.Facing {
-	if h == v {
-		return prefer
-	}
-	across := func(f construction.Facing) bool {
-		return (f == construction.North || f == construction.South) == (h > v)
-	}
-	for i := 0; i < 4 && !across(prefer); i++ {
-		prefer = (prefer + 1) % 4
 	}
 	return prefer
 }

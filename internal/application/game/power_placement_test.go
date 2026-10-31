@@ -219,8 +219,8 @@ func TestCoolerFacingTable(t *testing.T) {
 		{2, 2, construction.North, construction.North},
 	}
 	for _, c := range cases {
-		if got := coolerFacing(c.h, c.v, c.prefer); got != c.want {
-			t.Errorf("coolerFacing(%d,%d,%s) = %s, want %s", c.h, c.v, c.prefer, got, c.want)
+		if got := construction.WallFacing(c.h, c.v, c.prefer); got != c.want {
+			t.Errorf("WallFacing(%d,%d,%s) = %s, want %s", c.h, c.v, c.prefer, got, c.want)
 		}
 	}
 }

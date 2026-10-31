@@ -75,12 +75,12 @@ func TestBarrelTemperature(t *testing.T) {
 	t.Parallel()
 	f, c := barrel(t, 0)
 	c.Drying.pour(1, item.Stack{Kind: item.Wort, Qty: 10}, 4, 5)
-	f.temp = 3 // paused
+	f.temp = 30 // 3 C: paused
 	c.Drying.Advance(FermentTicks)
 	if b := c.Drying.Batch(1); b.Left != FermentTicks || b.Rot != 0 {
 		t.Fatalf("paused barrel %+v", b)
 	}
-	f.temp = 20
+	f.temp = 200
 	c.Drying.Advance(FermentTicks / 20) // 5 %
 	c.Drying.pour(1, item.Stack{Kind: item.Wort, Qty: 10}, 4, 5)
 	if b := c.Drying.Batch(1); b.Qty != 20 || b.Left <= FermentTicks*95/100 || b.Left >= FermentTicks {
@@ -90,7 +90,7 @@ func TestBarrelTemperature(t *testing.T) {
 	if c.Drying.Batch(1).Qty != recipe.BarrelWort || f.Stock(item.Wort) != 4 {
 		t.Fatalf("overfill: %+v, %d left on the spot", c.Drying.Batch(1), f.Stock(item.Wort))
 	}
-	f.temp = 40
+	f.temp = 400
 	c.Drying.Advance(RuinTicks - 1)
 	if c.Drying.Batch(1).Qty == 0 {
 		t.Fatal("ruined too soon")

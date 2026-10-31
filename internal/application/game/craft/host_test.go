@@ -55,7 +55,7 @@ func newFake() *fakeHost {
 		bldgs: map[entity.EntityID]construction.Building{}, unpower: map[entity.EntityID]bool{},
 		fuel: map[entity.EntityID]int{}, stacks: map[entity.EntityID]item.Stack{}, next: 1000,
 		jobs: map[entity.EntityID]job.Record{}, claims: map[entity.EntityID]entity.EntityID{},
-		postp: map[[2]entity.EntityID]bool{}, locked: map[recipe.ID]bool{}, temp: 20,
+		postp: map[[2]entity.EntityID]bool{}, locked: map[recipe.ID]bool{}, temp: 200,
 		skills: map[entity.EntityID]uint8{}, names: map[entity.EntityID]string{},
 	}
 }
@@ -108,7 +108,7 @@ func (f *fakeHost) ObjectAt(x, y int) entity.EntityID {
 func (f *fakeHost) StructVer() uint64               { return f.ver }
 func (f *fakeHost) Powered(id entity.EntityID) bool { return !f.unpower[id] }
 func (f *fakeHost) Fuel(id entity.EntityID) int     { return f.fuel[id] }
-func (f *fakeHost) TemperatureAt(x, y int) int      { return f.temp }
+func (f *fakeHost) TemperatureAt(x, y int) int      { return f.temp } // tenths, as the game host
 
 func (f *fakeHost) Stock(k item.Kind) int {
 	n := 0

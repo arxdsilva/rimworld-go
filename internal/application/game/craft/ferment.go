@@ -77,11 +77,11 @@ func (d *Drying) pour(id entity.EntityID, st item.Stack, x, y int) {
 // air temperature: it ferments, pauses or spoils; a finished batch is set
 // down as beer on the spot, a ruined one is lost.
 func (d *Drying) ferment(bid entity.EntityID, b construction.Building, rb Batch, interval int) {
-	t := d.h.TemperatureAt(b.X, b.Y)
+	t := d.h.TemperatureAt(b.X, b.Y) // tenths of a degree
 	switch {
-	case t >= FermentMinC && t <= FermentMaxC:
+	case t >= FermentMinC*10 && t <= FermentMaxC*10:
 		rb.Left -= interval
-	case t < SpoilMinC || t > FermentMaxC:
+	case t < SpoilMinC*10 || t > FermentMaxC*10:
 		rb.Rot += interval
 	}
 	_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)

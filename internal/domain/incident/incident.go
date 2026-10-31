@@ -60,6 +60,14 @@ const (
 	// sky for days.
 	Eclipse
 	ToxicFallout
+	// TEMP-0 contract (Nature pool; inert until TEMP-2: weight 0, and the
+	// game's situational check refuses them): a heat wave and a cold snap
+	// shift the outdoor temperature for days, a volcanic winter chills and
+	// darkens the sky for weeks. They exclude one another. Until TEMP-2
+	// the wizard's Extreme weather keeps driving game/weather_ng1.go.
+	HeatWave
+	ColdSnap
+	VolcanicWinter
 	NumIDs
 )
 
@@ -128,6 +136,13 @@ var defs = [NumIDs]Def{
 	// day is original tuning.
 	Eclipse:      {Key: "eclipse", Name: "Eclipse", Category: Nature, Weight: 12, Cooldown: 15, MinDay: 10},
 	ToxicFallout: {Key: "toxic_fallout", Name: "Toxic fallout", Category: Nature, Weight: 1, Cooldown: 90, MinDay: 60},
+	// TEMP-0 contract, wiki: Events (cooldowns 30, 30 and 140 days; a
+	// volcanic winter never before day 60). Weight 0 until TEMP-2 sets the
+	// weights (original tuning: the wiki's are unconfirmed); the keys
+	// match WorldView.Extreme's.
+	HeatWave:       {Key: "heat_wave", Name: "Heat wave", Category: Nature, Cooldown: 30},
+	ColdSnap:       {Key: "cold_snap", Name: "Cold snap", Category: Nature, Cooldown: 30},
+	VolcanicWinter: {Key: "volcanic_winter", Name: "Volcanic winter", Category: Nature, Cooldown: 140, MinDay: 60},
 }
 
 func init() {

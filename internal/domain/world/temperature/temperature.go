@@ -12,16 +12,19 @@ type Temp int
 // C builds a Temp from whole degrees.
 func C(deg int) Temp { return Temp(deg * 10) }
 
-// String renders whole degrees, e.g. "-3C" or "18C".
-func (t Temp) String() string {
+// Whole is t in whole degrees, rounded to the nearest (half away from 0).
+func (t Temp) Whole() int {
 	d := int(t)
 	if d < 0 {
 		d -= 5
 	} else {
 		d += 5
 	}
-	return fmt.Sprintf("%dC", d/10)
+	return d / 10
 }
+
+// String renders whole degrees, e.g. "-3C" or "18C".
+func (t Temp) String() string { return fmt.Sprintf("%dC", t.Whole()) }
 
 // Climate is a map's outdoor temperature curve (SIM-023: one per biome). The
 // year is a triangle wave between a mid-summer peak and a mid-winter trough;

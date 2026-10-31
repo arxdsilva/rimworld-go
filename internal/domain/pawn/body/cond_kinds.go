@@ -58,6 +58,11 @@ const (
 	// CondToxicBuildup is toxins from fallout under the open sky (FOOD-6,
 	// cond_toxic.go): the game steps it by the hour.
 	CondToxicBuildup
+	// TEMP-0 contract (cond_frostbite.go; never applied until TEMP-3):
+	// frostbite on an extremity, and the insects' hypothermic slowdown
+	// (hypothermia's stages without the death).
+	CondFrostbite
+	CondHypothermicSlowdown
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -69,7 +74,8 @@ type CondEntry struct {
 }
 
 // condTables lists every phase's definition table (one line per phase).
-var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood, condsMalnutrition, condsToxic}
+var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood, condsMalnutrition, condsToxic,
+	condsFrostbite}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)
