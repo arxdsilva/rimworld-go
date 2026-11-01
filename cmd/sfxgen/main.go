@@ -1,19 +1,45 @@
-// Command sfxgen makes the animal voices (SND-003): it sends the prompts in
-// assets/source/audio/animal_prompts.json to ElevenLabs text-to-sound-effects,
-// logs every take in the ledger, turns the raw takes into game-ready Ogg files
-// (ffmpeg + oggenc), writes a review page and, once a person has listened,
-// lists the approved clips in the sound list (assets/metadata/audio/audio.json).
+// Command sfxgen makes the animal voices (SND-003): it turns the prompts in
+// assets/source/audio/animal_prompts.json into takes, logs every take in the
+// ledger, turns the raw takes into game-ready Ogg files (ffmpeg + oggenc),
+// writes a review page and, once a person has listened, lists the approved
+// clips in the sound list (assets/metadata/audio/audio.json).
 //
-//	sfxgen -dry-run                      what a run would send and cost (no network, no key)
-//	sfxgen [-only ids] [-max-credits N]  generate (paid; key from $ELEVENLABS_API_KEY only)
-//	sfxgen -process [-only ids]          raw takes -> sfx/animals/<key>_<event>.ogg (+ _b)
-//	sfxgen -review -o page.html          a page with a player for every processed clip
-//	sfxgen -approve ids / -reject ids    record the listener's verdict (ledger + sound list)
+// Two backends make the takes (-backend):
 //
-// The key is read from the environment and is never printed, logged or saved.
+//   - moss (the default, user decision 2026-10-31): the open-source
+//     MOSS-SoundEffect v2.0 model (Apache-2.0) run locally through
+//     cmd/sfxgen/moss/generate.py. Free; each take is processed to Ogg at
+//     once. A take needs about 4 min and 16-22 GB of memory on an Apple
+//     M-series GPU, so takes run one at a time and wait until
+//     -moss-min-free-gb is free.
+//   - elevenlabs: the paid text-to-sound-effects API, only with
+//     user-approved spending (dry-run, approval, ledger, reserve).
+//
+// MOSS setup, outside the repo (defaults under $XDG_CACHE_HOME/rimworld-go/moss,
+// else ~/.cache/rimworld-go/moss; override with -moss-python/-moss-model or
+// $SFXGEN_MOSS_PYTHON/$SFXGEN_MOSS_MODEL):
+//
+//	python3.12 -m venv ~/.cache/rimworld-go/moss/venv
+//	~/.cache/rimworld-go/moss/venv/bin/pip install <MOSS-TTS repo checkout> soundfile
+//	huggingface-cli download OpenMOSS-Team/MOSS-SoundEffect-v2.0 \
+//	    --local-dir ~/.cache/rimworld-go/moss/MOSS-SoundEffect-v2.0
+//
+// Usage:
+//
+//	sfxgen -dry-run [-only ids]            the plan (moss: time and command; elevenlabs: credits)
+//	sfxgen [-only ids]                     generate with MOSS and process (free, local)
+//	sfxgen -backend elevenlabs [-only ids] [-max-credits N]
+//	                                       paid; key from $ELEVENLABS_API_KEY only
+//	sfxgen -process [-only ids]            raw takes -> sfx/animals/<key>_<event>.ogg (+ _b)
+//	sfxgen -review -o page.html            a page with a player for every processed clip
+//	sfxgen -approve ids / -reject ids      record the listener's verdict (ledger + sound list)
+//
+// Every take records its backend in the ledger. The ElevenLabs key is read
+// from the environment and is never printed, logged or saved.
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -22,6 +48,12 @@ import (
 	"os"
 	"time"
 )
+
+// defaultOut is where raw takes go by backend (both gitignored).
+var defaultOut = map[string]string{
+	backendMoss:       "assets/source/audio/moss/raw",
+	backendElevenLabs: "assets/source/audio/elevenlabs/raw",
+}
 
 // keyEnv is the only place the API key may come from.
 const keyEnv = "ELEVENLABS_API_KEY"
@@ -37,6 +69,8 @@ type config struct {
 	reviewOut, approve, reject, reviewer  string
 	replace                               bool
 	backoff                               time.Duration
+	backend                               string
+	moss                                  mossConfig
 }
 
 // app is one run: the config plus what tests replace.
@@ -50,6 +84,11 @@ type app struct {
 	// ffmpeg and oggenc are the tool names; lufs measures a file (ffmpeg by default).
 	ffmpeg, oggenc string
 	lufs           func(path string) (float64, error)
+	// runMoss runs one MOSS command line; freeGB reads free memory; sleep
+	// waits between memory checks.
+	runMoss func(ctx context.Context, argv []string) ([]byte, error)
+	freeGB  func() (float64, bool)
+	sleep   func(time.Duration)
 }
 
 func main() {
@@ -75,7 +114,8 @@ func newApp(args []string, getenv func(string) string, stdout, stderr io.Writer)
 	fs.StringVar(&c.prompts, "prompts", "assets/source/audio/animal_prompts.json", "prompt list")
 	fs.StringVar(&c.only, "only", "", "comma-separated ids or globs (animal.cow.*) to act on")
 	fs.BoolVar(&c.dryRun, "dry-run", false, "print what a run would send and cost; no network calls except -budget-from-api")
-	fs.StringVar(&c.out, "out", "assets/source/audio/elevenlabs/raw", "where raw takes are saved")
+	fs.StringVar(&c.backend, "backend", backendMoss, "who makes the takes: moss (local, free) or elevenlabs (paid, user-approved spending)")
+	fs.StringVar(&c.out, "out", "", "where raw takes are saved (default assets/source/audio/<backend>/raw)")
 	fs.StringVar(&c.ledger, "ledger", "assets/source/audio/elevenlabs/ledger.json", "take ledger")
 	fs.StringVar(&c.assets, "assets", "assets", "assets directory (sound list and generated audio)")
 	fs.IntVar(&c.maxCredits, "max-credits", 0, "hard stop: most credits this run may spend (0: no cap)")
@@ -94,14 +134,34 @@ func newApp(args []string, getenv func(string) string, stdout, stderr io.Writer)
 	fs.BoolVar(&c.replace, "replace", false, "-approve: replace a sound-list entry that is not from ElevenLabs (e.g. a placeholder)")
 	fs.StringVar(&c.baseURL, "base-url", "https://api.elevenlabs.io", "API base URL (tests point it at httptest)")
 	fs.DurationVar(&c.backoff, "backoff", 2*time.Second, "first wait before retrying a 429/5xx (doubles each time)")
+	python, model := mossDefaults(getenv)
+	m := &c.moss
+	fs.StringVar(&m.python, "moss-python", python, "Python of the MOSS virtualenv (env "+mossPythonEnv+")")
+	fs.StringVar(&m.model, "moss-model", model, "MOSS-SoundEffect v2.0 snapshot directory (env "+mossModelEnv+")")
+	fs.StringVar(&m.runner, "moss-runner", "cmd/sfxgen/moss/generate.py", "the MOSS runner script")
+	fs.StringVar(&m.device, "moss-device", "auto", "torch device: auto, mps, cuda or cpu")
+	fs.IntVar(&m.steps, "moss-steps", 100, "diffusion steps per take")
+	fs.Float64Var(&m.cfgScale, "moss-cfg", 4.0, "classifier-free guidance scale")
+	fs.Int64Var(&m.seed, "moss-seed", 0, "seed for every take (0: a stable hash of id and take number)")
+	fs.Float64Var(&m.minFreeGB, "moss-min-free-gb", 24, "wait until this much memory is free + inactive before a take (0: never wait)")
+	fs.DurationVar(&m.poll, "moss-poll", 30*time.Second, "how often to recheck free memory")
+	fs.DurationVar(&m.maxWait, "moss-max-wait", 30*time.Minute, "give up when memory stays short this long")
+	fs.DurationVar(&m.timeout, "moss-timeout", 20*time.Minute, "longest one take may run")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil, nil
 		}
 		return nil, err
 	}
+	if _, ok := defaultOut[c.backend]; !ok {
+		return nil, fmt.Errorf("-backend %q: want %s or %s", c.backend, backendMoss, backendElevenLabs)
+	}
+	if c.out == "" {
+		c.out = defaultOut[c.backend]
+	}
 	a := &app{cfg: c, key: getenv(keyEnv), stdout: stdout, stderr: stderr,
-		client: &http.Client{Timeout: 2 * time.Minute}, now: time.Now, ffmpeg: "ffmpeg", oggenc: "oggenc"}
+		client: &http.Client{Timeout: 2 * time.Minute}, now: time.Now, ffmpeg: "ffmpeg", oggenc: "oggenc",
+		runMoss: execMoss, freeGB: freeMemoryGB, sleep: time.Sleep}
 	a.lufs = a.measureLUFS
 	return a, nil
 }

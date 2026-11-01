@@ -31,8 +31,15 @@ const (
 const (
 	SourceProcedural = "procedural" // effects: cmd/audiogen recipes
 	SourceComposed   = "composed"   // music: cmd/audiogen -music scores
-	SourceElevenLabs = "elevenlabs"
+	SourceElevenLabs = "elevenlabs" // cmd/sfxgen -backend elevenlabs (paid, user-approved)
+	SourceMOSS       = "moss"       // cmd/sfxgen -backend moss (local MOSS-SoundEffect model)
 )
+
+// Generated reports whether a source is a generator take that cmd/sfxgen
+// may replace with a newer approved take.
+func Generated(source string) bool {
+	return source == SourceElevenLabs || source == SourceMOSS
+}
 
 // Entry is one sound.
 type Entry struct {

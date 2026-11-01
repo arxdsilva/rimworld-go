@@ -13,8 +13,10 @@ type skip struct{ id, why string }
 
 // decide splits the selection into what to generate and what to skip. The
 // money rules live here: an approved or still-unheard sound is never
-// regenerated, and a rejected one gets exactly one retry (-retry).
-func decide(sel []Sound, l *Ledger, retry bool) (todo []Sound, skips []skip) {
+// regenerated, and a rejected one gets exactly one paid retry (-retry).
+// A free (local) take has no retry cap: a rejected sound is simply made
+// again, and -retry still limits a run to the rejected ones.
+func decide(sel []Sound, l *Ledger, retry, free bool) (todo []Sound, skips []skip) {
 	for _, s := range sel {
 		rejected := 0
 		why := ""
@@ -32,6 +34,10 @@ func decide(sel []Sound, l *Ledger, retry bool) (todo []Sound, skips []skip) {
 		}
 		switch {
 		case why != "":
+		case free:
+			if retry && rejected == 0 {
+				why = "-retry only repeats rejected sounds"
+			}
 		case rejected >= 2:
 			why = "rejected twice: use the group sound"
 		case rejected == 1 && !retry:
@@ -77,7 +83,11 @@ func (a *app) generate() error {
 	if err != nil {
 		return err
 	}
-	todo, skips := decide(sel, l, a.cfg.retry)
+	if a.cfg.backend == backendMoss {
+		todo, skips := decide(sel, l, a.cfg.retry, true)
+		return a.generateMoss(p, todo, skips, l)
+	}
+	todo, skips := decide(sel, l, a.cfg.retry, false)
 	ctx := context.Background()
 	var sub subscription
 	var subp *subscription
@@ -141,7 +151,7 @@ func (a *app) generate() error {
 		if err := os.WriteFile(raw, audio, 0o644); err != nil {
 			return err
 		}
-		l.Takes = append(l.Takes, Take{ID: s.ID, Take: n, File: a.ledgerPath(raw), Tool: "text_to_sound_effects",
+		l.Takes = append(l.Takes, Take{ID: s.ID, Take: n, File: a.ledgerPath(raw), Tool: elevenLabsTool, Backend: backendElevenLabs,
 			Seconds: s.Seconds, Credits: credits, Date: a.now().Format("2006-01-02"), Prompt: p.text(s)})
 		if err := l.save(a.cfg.ledger); err != nil {
 			return err
@@ -155,12 +165,22 @@ func (a *app) generate() error {
 }
 
 // ledgerPath is raw as the ledger records it: relative to the ledger's
-// directory when it sits below it.
+// directory when it sits below it or both paths are relative (a sibling
+// such as ../moss/raw), else as given. rawPath reads it back.
 func (a *app) ledgerPath(raw string) string {
-	if rel, err := filepath.Rel(filepath.Dir(a.cfg.ledger), raw); err == nil && filepath.IsLocal(rel) {
+	if rel, err := filepath.Rel(filepath.Dir(a.cfg.ledger), raw); err == nil && (filepath.IsLocal(rel) || !filepath.IsAbs(raw)) {
 		return filepath.ToSlash(rel)
 	}
 	return filepath.ToSlash(raw)
+}
+
+// rawPath is where a take's file is on disk.
+func (a *app) rawPath(t Take) string {
+	f := filepath.FromSlash(t.File)
+	if filepath.IsAbs(f) {
+		return f
+	}
+	return filepath.Join(filepath.Dir(a.cfg.ledger), f)
 }
 
 func (a *app) dryRun(todo []Sound, skips []skip, l *Ledger, remaining int) {

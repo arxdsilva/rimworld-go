@@ -254,7 +254,7 @@ func (a *app) processTakes() error {
 		if i < 0 {
 			continue
 		}
-		raw := filepath.Join(filepath.Dir(a.cfg.ledger), filepath.FromSlash(l.Takes[i].File))
+		raw := a.rawPath(l.Takes[i])
 		la, lb, err := a.processClip(raw, id)
 		if err != nil {
 			return fmt.Errorf("%s: %w", id, err)

@@ -10,13 +10,16 @@ import (
 	"strings"
 )
 
-// Take is one ElevenLabs generation, approved or not (ledger.json).
+// Take is one generation, approved or not (ledger.json), by either
+// backend; Seed is the MOSS seed that makes the take again.
 type Take struct {
 	ID       string  `json:"id"`
 	Take     int     `json:"take"`
 	Part     string  `json:"part"`
 	File     string  `json:"file,omitempty"`
 	Tool     string  `json:"tool"`
+	Backend  string  `json:"backend,omitempty"`
+	Seed     int64   `json:"seed,omitempty"`
 	Seconds  float64 `json:"seconds"`
 	Loop     bool    `json:"loop,omitempty"`
 	Credits  int     `json:"credits"`
@@ -40,6 +43,15 @@ const (
 	stateApproved = "approved"
 	stateFailed   = "failed" // a refused call, never audio
 )
+
+// backend is who made the take; the takes logged before MOSS have none
+// and came from ElevenLabs.
+func (t Take) backend() string {
+	if t.Backend == "" {
+		return backendElevenLabs
+	}
+	return t.Backend
+}
 
 // state classifies Approved: "" and "pending ..." are waiting for a
 // listener, "refused ..." is a call that produced nothing.

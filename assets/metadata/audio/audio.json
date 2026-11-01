@@ -730,6 +730,73 @@
       "reviewed_by": "arxdsilva"
     },
     {
+      "id": "animal.bulwark.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/bulwark_attack.ogg",
+        "sfx/animals/bulwark_attack_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1302,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a heavy robotic minigun spins up with a rising mechanical whir and fires a short loud burst of metallic shots, close-up, dry, no music, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.bulwark.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/bulwark_call.ogg",
+        "sfx/animals/bulwark_call_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1301,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a huge heavy war machine, a deep low electric hum, heavy hydraulic hiss and slow grinding servo motors, metal creaking, close-up, dry, no music, no voice",
+      "seconds": 3,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.bulwark.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/bulwark_die.ogg"
+      ],
+      "source": "moss",
+      "seed": 1304,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a giant war machine collapses, deep power-down drone falling in pitch, hydraulic hiss, heavy steel crashing to the ground, close-up, dry, no music, no voice",
+      "seconds": 3,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.bulwark.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/bulwark_hurt.ogg",
+        "sfx/animals/bulwark_hurt_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1303,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a massive armored robot is hit, a deep heavy metal clang, a low electrical buzz and a straining hydraulic groan, close-up, dry, no music, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
       "id": "animal.burst",
       "bus": "effects",
       "volume": 1,
@@ -2808,6 +2875,73 @@
       "reviewed_by": "arxdsilva"
     },
     {
+      "id": "animal.harrow.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/harrow_attack.ogg",
+        "sfx/animals/harrow_attack_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1102,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a fast robotic arm slashes with a metal blade, a hissing pneumatic snap and a bright steel swish, quick servo whir, close-up, dry, no music, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.harrow.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/harrow_call.ogg",
+        "sfx/animals/harrow_call_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1101,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a small agile combat robot emits a sharp rising servo whine and two quick electronic chirps, metallic, close-up, dry, no music, no background noise, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.harrow.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/harrow_die.ogg"
+      ],
+      "source": "moss",
+      "seed": 2104,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a small combat robot shuts down, a loud continuous servo whine sliding down in pitch with crackling sparks throughout, ending in a metal clatter, close-up, dry, no music, no voice",
+      "seconds": 2.5,
+      "generated": "2026-10-31",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.harrow.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/harrow_hurt.ogg",
+        "sfx/animals/harrow_hurt_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 2103,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a small combat robot is hit and glitches, a loud harsh electric buzz and a grinding stuttering servo, steady and dense, metallic, close-up, dry, no music, no voice",
+      "seconds": 1,
+      "generated": "2026-10-31",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
       "id": "animal.hive_beetle.attack",
       "bus": "effects",
       "volume": 0.85,
@@ -3880,6 +4014,73 @@
       "reviewed_by": "arxdsilva"
     },
     {
+      "id": "animal.quill.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/quill_attack.ogg",
+        "sfx/animals/quill_attack_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1402,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a light robot launches a small rocket, a short whoosh with a pop and a quick electronic launch chirp, close-up, dry, no music, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.quill.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/quill_call.ogg",
+        "sfx/animals/quill_call_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1401,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a light hovering drone robot, a soft high electric hum with quick fluttering rotor whir and three short digital beeps, close-up, dry, no music, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.quill.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/quill_die.ogg"
+      ],
+      "source": "moss",
+      "seed": 2404,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a small hovering drone fails, a loud continuous rotor whine spinning down in pitch with glitchy electronic sputter throughout, ending in a light metal crash, close-up, dry, no music, no voice",
+      "seconds": 2.5,
+      "generated": "2026-10-31",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.quill.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/quill_hurt.ogg",
+        "sfx/animals/quill_hurt_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 2403,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a light drone robot gets hit, a loud wobbling rotor whine with sputtering electric sparks, steady and dense, close-up, dry, no music, no voice",
+      "seconds": 1,
+      "generated": "2026-10-31",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
       "id": "animal.raccoon.attack",
       "bus": "effects",
       "volume": 0.85,
@@ -4414,6 +4615,73 @@
       "generated": "2026-10-23",
       "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
       "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.spindle.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/spindle_attack.ogg",
+        "sfx/animals/spindle_attack_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1202,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a robotic energy rifle charges with a short rising hum then fires one sharp electric crack with a metallic snap, close-up, dry, no music, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.spindle.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/spindle_call.ogg",
+        "sfx/animals/spindle_call_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 1201,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a sleek robot scans its target, a soft electronic ping, a thin rising synthetic tone and a lens servo focusing click, close-up, dry, no music, no voice",
+      "seconds": 2,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.spindle.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/spindle_die.ogg"
+      ],
+      "source": "moss",
+      "seed": 1204,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a robot powers down, a descending synthetic tone, an electric hum fading out, a final click and a metal body thudding down, close-up, dry, no music, no voice",
+      "seconds": 3,
+      "generated": "2026-10-29",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
+    },
+    {
+      "id": "animal.spindle.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/spindle_hurt.ogg",
+        "sfx/animals/spindle_hurt_b.ogg"
+      ],
+      "source": "moss",
+      "seed": 2203,
+      "tool": "moss_soundeffect_v2",
+      "prompt": "a medium robot takes a hit, a loud continuous burst of crackling electrical static and a buzzing distorted alarm tone, close-up, dry, no music, no voice",
+      "seconds": 1,
+      "generated": "2026-10-31",
+      "license": "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally",
+      "reviewed_by": "agent V (metrics checked; user to listen)"
     },
     {
       "id": "animal.squirrel.attack",

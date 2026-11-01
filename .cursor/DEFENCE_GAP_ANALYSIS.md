@@ -117,7 +117,7 @@ Draft and move orders, attack orders, melee combat, line of sight, building dama
 |---|---|---|---|---|
 | Mechanoids pass doors. | Raiders bash closed doors; mechs do not. | Mechs open or bash doors. | later | open |
 | Mech groups arrive by pods. | `Mechs.Raid` lands at an arrival spot with no pod entity. | Use the pod landing hook. | later | open |
-| Mechanoid voices (`call`, `attack`, `hurt`, `die` each). | 16 prompts written; the insect voice group stands in; nothing generated. | Blocked on the user: the ElevenLabs key is missing and an open-source MOSS-SoundEffect model is under evaluation. Creature skill rule 5 is not met until then. | later | open [!] |
+| Mechanoid voices (`call`, `attack`, `hurt`, `die` each). | Done 2026-10-31 (SND-004): all 16 generated locally with MOSS-SoundEffect v2.0 (`cmd/sfxgen -backend moss`), processed, approved into `audio.json` (`source: moss`); the four mechs map to their own `mech` voice group, not the insect stand-in. | The user still listens to them on the review page and can `-reject` any. | done | done |
 | Raiders steal from stockpiles on their way out. | Steal raids take one stack and run. | Opportunistic theft on retreat. | later | open |
 | Raiders burn crops. | Burn raids light up to 3 wooden buildings. | Burning crops. | later | open |
 | Assault timer. | Staged raids wait 3 h (original). | The wiki's 10 to 15 h assault timer. | later | open |

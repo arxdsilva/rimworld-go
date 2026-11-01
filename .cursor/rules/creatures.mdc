@@ -11,10 +11,10 @@ When that work is in scope:
 
 1. Add the roster row in Go (`internal/domain/animal/animal.go`) **and** its mirror in `assets/source/blender/artlib/families/animal_roster.py` — same snake_case key, same order, append-only.
 2. Build its art with the animal rig (full sprite set, corpses, icon, `_f` set if dimorphic) and review it.
-3. **Create all four sounds** — `animal.<key>.call`, `.attack`, `.hurt`, `.die` — as prompts in `assets/source/audio/animal_prompts.json`, map its voice group, then generate them with `cmd/sfxgen` (dry-run → user-approved spend → process → review page → user approval → `-approve`). A creature is never done with only placeholder voices.
+3. **Create all four sounds** — `animal.<key>.call`, `.attack`, `.hurt`, `.die` — as prompts in `assets/source/audio/animal_prompts.json`, map its voice group, then generate them with `cmd/sfxgen` — the local MOSS-SoundEffect backend by default (user decision 2026-10-31: dry-run → generate + process → review page → user approval → `-approve`), ElevenLabs only with user-approved spending (`-backend elevenlabs`). A creature is never done with only placeholder voices.
 4. Add its original blurb; keep the renderer data-driven (no per-species switches).
 5. Originals only: never reproduce RimWorld-invented creatures, names, sounds or balance numbers.
 6. Keep the enforcing tests green (roster count, art coverage, blurbs, voice groups, prompt coverage, `make audio-check`) and never weaken them.
-7. Never print, log or commit API keys; every paid generation is logged in the ElevenLabs ledger and stays above the credit reserve.
+7. Never print, log or commit API keys or the MOSS model/venv; every take (MOSS or paid) is logged in the ledger with its backend, and paid generation stays above the credit reserve.
 
 Skip this for tasks that don't touch any species.

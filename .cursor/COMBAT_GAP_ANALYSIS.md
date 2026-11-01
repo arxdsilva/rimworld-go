@@ -226,7 +226,6 @@ About 20 of the inventory's evidence lines were checked by grep. The facts held 
 | Uranium (slug turret) and reinforced barrel (mortar) have no trade or crafting source; steel stands in | rearm, future production |
 | Explosions do not count toward kill and damage records | `combat/log.go`, records |
 | Stalking while hunting is skipped (the wiki page was missing; not in core) | hunting |
-| Mech voices are blocked | creature skill |
 | Light accuracy factor, multi-part cut table and miss-radius table not verified | CBT follow-up |
 | Wardens and doctors do not fetch paste (STO-2) | care |
 | Original tuning to review: prison break timing, hive rates, cover numbers, cook-off limits, item destruction thresholds, tantrum length | handoffs |

@@ -330,8 +330,8 @@ func generateAnimals(assets string, enc encoder) (int, error) {
 	made := 0
 	for _, snd := range all {
 		rc := snd.recipe
-		// an approved ElevenLabs take replaces its placeholder for good
-		if old, ok := m.Lookup(rc.ID); ok && old.Source == audiomanifest.SourceElevenLabs {
+		// an approved generated take (ElevenLabs or MOSS) replaces its placeholder for good
+		if old, ok := m.Lookup(rc.ID); ok && audiomanifest.Generated(old.Source) {
 			continue
 		}
 		made++

@@ -13,6 +13,7 @@ import (
 
 type reviewRow struct {
 	ID, Prompt, Status string
+	Backend            string
 	Take               int
 	Seconds            float64
 	Credits            int
@@ -33,12 +34,12 @@ audio{width:14rem;height:2rem}
 <h1>Animal voices: review</h1>
 <p>Listen to every row (A and B), tick approve or reject, then copy the commands below.</p>
 <table>
-<tr><th>id</th><th>prompt</th><th>A</th><th>B (pitched)</th><th>seconds</th><th>LUFS A / B</th><th>credits</th><th>status</th><th>approve</th><th>reject</th></tr>
+<tr><th>id</th><th>prompt</th><th>A</th><th>B (pitched)</th><th>seconds</th><th>LUFS A / B</th><th>backend</th><th>credits</th><th>status</th><th>approve</th><th>reject</th></tr>
 {{range .}}<tr data-id="{{.ID}}">
 <td class="id">{{.ID}} (take {{.Take}})</td><td class="prompt">{{.Prompt}}</td>
 <td>{{if .A}}<audio controls preload="none" src="{{.A}}"></audio>{{end}}</td>
 <td>{{if .B}}<audio controls preload="none" src="{{.B}}"></audio>{{end}}</td>
-<td>{{printf "%.1f" .Seconds}}</td><td>{{.LufsA}} / {{.LufsB}}</td><td>{{.Credits}}</td><td>{{.Status}}</td>
+<td>{{printf "%.1f" .Seconds}}</td><td>{{.LufsA}} / {{.LufsB}}</td><td>{{.Backend}}</td><td>{{.Credits}}</td><td>{{.Status}}</td>
 <td><input type="checkbox" class="ok"></td><td><input type="checkbox" class="no"></td></tr>
 {{end}}</table>
 <pre id="cmds"></pre>
@@ -83,7 +84,7 @@ func (a *app) writeReview() error {
 			continue
 		}
 		t := l.Takes[i]
-		row := reviewRow{ID: id, Prompt: t.Prompt, Take: t.Take, Seconds: t.Seconds, Credits: t.Credits, Status: t.state(),
+		row := reviewRow{ID: id, Prompt: t.Prompt, Backend: t.backend(), Take: t.Take, Seconds: t.Seconds, Credits: t.Credits, Status: t.state(),
 			A: a.playerSrc(aFile), LufsA: lufsText(a.lufs(aFile))}
 		if t.state() == stateApproved {
 			row.Status = "approved by " + t.Approved

@@ -79,13 +79,16 @@ func (a *app) approveIDs(list string) error {
 		e := audiomanifest.Entry{ID: id, Bus: audiomanifest.BusEffects, Volume: spec.volume, Files: files,
 			Source: audiomanifest.SourceElevenLabs, Tool: elevenLabsTool, Prompt: t.Prompt, Seconds: t.Seconds,
 			Credits: credits, Date: t.Date, License: elevenLabsLicense, Review: a.cfg.reviewer}
+		if t.backend() == backendMoss {
+			e.Source, e.Tool, e.License, e.Seed = audiomanifest.SourceMOSS, mossTool, mossLicense, uint64(t.Seed)
+		}
 		replaced := false
 		for k := range m.Sounds {
 			if m.Sounds[k].ID != id {
 				continue
 			}
-			if m.Sounds[k].Source != audiomanifest.SourceElevenLabs && !a.cfg.replace {
-				return fmt.Errorf("%s: the sound list already has a %s entry; -replace swaps it for the ElevenLabs sound", id, m.Sounds[k].Source)
+			if !audiomanifest.Generated(m.Sounds[k].Source) && !a.cfg.replace {
+				return fmt.Errorf("%s: the sound list already has a %s entry; -replace swaps it for the generated sound", id, m.Sounds[k].Source)
 			}
 			m.Sounds[k], replaced = e, true
 		}

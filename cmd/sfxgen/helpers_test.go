@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // fakeKey is a stand-in; the tests assert it never reaches any output.
@@ -96,8 +98,12 @@ type env struct {
 	t                                 *testing.T
 	dir, prompts, ledger, raw, assets string
 	key                               string
+	backend                           string // -backend; the ElevenLabs tests run on "elevenlabs"
 	api                               *fakeAPI
 	lufs                              func(string) (float64, error)
+	runMoss                           func(context.Context, []string) ([]byte, error)
+	ffmpeg                            string // replaces the ffmpeg tool name when set
+	freeGB                            func() (float64, bool)
 }
 
 type row struct {
@@ -110,7 +116,7 @@ func newEnv(t *testing.T, rows ...row) *env {
 	dir := t.TempDir()
 	e := &env{t: t, dir: dir, prompts: filepath.Join(dir, "prompts.json"),
 		ledger: filepath.Join(dir, "elevenlabs", "ledger.json"), raw: filepath.Join(dir, "elevenlabs", "raw"),
-		assets: filepath.Join(dir, "assets"), key: fakeKey}
+		assets: filepath.Join(dir, "assets"), key: fakeKey, backend: backendElevenLabs}
 	var sounds []map[string]any
 	for _, r := range rows {
 		sounds = append(sounds, map[string]any{"id": r.id, "seconds": r.sec, "prompt": "prompt for " + r.id})
@@ -143,7 +149,7 @@ func (e *env) readLedger() *Ledger {
 // cli runs sfxgen against the env and returns stdout and stderr.
 func (e *env) cli(args ...string) (string, string, error) {
 	e.t.Helper()
-	base := []string{"-prompts", e.prompts, "-ledger", e.ledger, "-out", e.raw, "-assets", e.assets, "-backoff", "1ms"}
+	base := []string{"-prompts", e.prompts, "-ledger", e.ledger, "-out", e.raw, "-assets", e.assets, "-backoff", "1ms", "-backend", e.backend}
 	if e.api != nil {
 		base = append(base, "-base-url", e.api.URL)
 	}
@@ -158,6 +164,21 @@ func (e *env) cli(args ...string) (string, string, error) {
 	if err == nil && a != nil {
 		if e.lufs != nil {
 			a.lufs = e.lufs
+		}
+		a.runMoss = func(context.Context, []string) ([]byte, error) {
+			e.t.Error("a test ran the real MOSS command")
+			return nil, nil
+		}
+		if e.runMoss != nil {
+			a.runMoss = e.runMoss
+		}
+		a.freeGB = func() (float64, bool) { return 64, true }
+		if e.freeGB != nil {
+			a.freeGB = e.freeGB
+		}
+		a.sleep = func(time.Duration) {}
+		if e.ffmpeg != "" {
+			a.ffmpeg = e.ffmpeg
 		}
 		err = a.dispatch()
 	}

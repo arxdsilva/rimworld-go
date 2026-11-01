@@ -240,7 +240,7 @@ func TestLedgerAppendsEveryTake(t *testing.T) {
 		t.Fatalf("the existing ledger was not preserved: %+v", l)
 	}
 	got := l.Takes[1]
-	want := Take{ID: "animal.cow.call", Take: 1, File: "raw/animal.cow.call_t1.mp3", Tool: "text_to_sound_effects",
+	want := Take{ID: "animal.cow.call", Take: 1, File: "raw/animal.cow.call_t1.mp3", Tool: "text_to_sound_effects", Backend: backendElevenLabs,
 		Seconds: 2, Credits: 20, Prompt: "prompt for animal.cow.call, dry"}
 	got.Date = ""
 	if got != want {
