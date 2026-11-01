@@ -83,16 +83,6 @@ func prettyKey(s string) string {
 
 func itemLabel(k item.Kind) string { return prettyKey(k.String()) }
 
-func techLabel(t faction.Tech) string {
-	switch t {
-	case faction.Neolithic:
-		return "Neolithic"
-	case faction.Spacer:
-		return "Spacer"
-	}
-	return "Industrial"
-}
-
 func arrivalLabel(a scenario.Arrival) string {
 	switch a {
 	case scenario.Standing:
@@ -164,7 +154,7 @@ func scenarioLines(d scenario.Def) []DetailLine {
 	}
 	out = append(out, kvLine("Starting people", people))
 	out = append(out, kvLine("Arrival", arrivalLabel(d.Arrival)))
-	out = append(out, kvLine("Tech level", techLabel(d.Tech)))
+	out = append(out, kvLine("Tech level", research.LevelOf(d.Tech).String()))
 	out = append(out, kvLine("Research cost", fmt.Sprintf("%d%% of normal", e.ResearchCostPct)))
 	if len(e.Research) > 0 {
 		out = append(out, headingLine("Research granted"))

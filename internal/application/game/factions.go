@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/storyteller"
 	"rimworld-go/pkg/randx"
 )
@@ -30,7 +31,7 @@ func factionView(f faction.Faction) FactionView {
 	case faction.Friendly:
 		rel = "friendly"
 	}
-	tech := techLabel(d.Tech)
+	tech := research.LevelOf(d.Tech).String() // RSCH-0: the research scale names the level
 	if f.Type == faction.Swarm {
 		tech = "—"
 	}

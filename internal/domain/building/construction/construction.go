@@ -110,6 +110,9 @@ const (
 	Cooler
 	ElectricStove
 	ElectricTailoringBench
+	// ElectricResearchBench is the hi-tech research bench (RSCH-0: the
+	// kind and its Name stay, being the save, art, power and unlock key;
+	// RSCH-1 shows it as "hi-tech research bench").
 	ElectricResearchBench
 	// VitalsMonitor (MED-06) stands beside a hospital bed: while powered it
 	// raises tend quality, surgery success and immunity gain for the
@@ -206,6 +209,11 @@ const (
 	// while open (BuildingView.Open, command.ToggleVent).
 	PassiveCooler
 	Vent
+	// RSCH-0 contract (append only, saved; hidden from the Architect
+	// until RSCH-1 adds the tool row, the power draw, the link and the
+	// art): a multi-analyzer, a powered facility that a hi-tech research
+	// bench (ElectricResearchBench) links to for the hardest projects.
+	MultiAnalyzer
 	kindCount
 )
 
@@ -524,6 +532,12 @@ var defs = [kindCount]Def{
 	PassiveCooler: {Kind: PassiveCooler, Name: "passive cooler", Wood: 6, Work: 70, Layer: LayerObject, BlocksMove: true},
 	Vent: {Kind: Vent, Name: "vent", Wood: 3, Work: 80, Layer: LayerObject, BlocksMove: true, Rotatable: true,
 		MetalOK: true, MetalOnly: true},
+	// RSCH-0 contract, wiki: Multi-analyzer (2x2, 40 steel + 50 plasteel
+	// + 20 gold + 8 components, 10000 work). Scaled as the wave D rows
+	// (steel / 9 rounded, work / 10, components as the wiki); the plasteel
+	// and gold are secondary materials, not modelled yet.
+	MultiAnalyzer: {Kind: MultiAnalyzer, Name: "multi-analyzer", Wood: 4, Work: 1000, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 8},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an

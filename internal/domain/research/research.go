@@ -108,6 +108,14 @@ type Def struct {
 	Cost     int
 	Requires []Project
 	Unlocks  []string
+	// RSCH-0 contract (zero until RSCH-1 fills the wiki table): the
+	// project's TechLevel (its cost grows for a faction below it), the
+	// Bench tier that can work it, and Hidden prerequisites (wiki: listed
+	// in the description, never drawn in the tree; they gate like
+	// Requires once RSCH-1 reads them).
+	TechLevel TechLevel
+	Bench     BenchTier
+	Hidden    []Project
 }
 
 var defs = [NumProjects]Def{

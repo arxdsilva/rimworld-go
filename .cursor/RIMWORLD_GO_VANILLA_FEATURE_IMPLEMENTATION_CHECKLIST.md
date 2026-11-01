@@ -1683,7 +1683,7 @@ have prerequisites, and technologies unlock buildings/gear.
 
 ## 21.1 Research definitions
 
--   [x] **Research project** (5 projects: food preservation, herbalism, tailoring, traps, gunsmithing)
+-   [x] **Research project** (45 projects with flat hand-tuned costs; no tech level or bench tier yet; RSCH-1 moves to wiki costs, `.cursor/RESEARCH_GAP_ANALYSIS.md`)
     -   Cost.
     -   prerequisites.
     -   tech level.

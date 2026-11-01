@@ -489,8 +489,10 @@ type BuildingView struct {
 	// STO/CBT contract (0 until STO-2): storage Group id, Stored stacks of Capacity.
 	Group            uint64
 	Stored, Capacity int
-	Open             bool // TEMP-0 contract (false until TEMP-1): a vent letting air through (command.ToggleVent)
-	HeatRate         int  // TEMP-0 contract (0 until TEMP-1): heat into its room, tenths of heat/s (signed: cooling < 0)
+	Open             bool   // TEMP-0 contract (false until TEMP-1): a vent letting air through (command.ToggleVent)
+	HeatRate         int    // TEMP-0 contract (0 until TEMP-1): heat into its room, tenths of heat/s (signed: cooling < 0)
+	ResearchSpeed    int    // RSCH-0 contract (0 until RSCH-1): a research bench's building factor, permille
+	Analyzer         uint64 // RSCH-0 contract (0 until RSCH-1): the multi-analyzer a hi-tech research bench links (building id)
 }
 
 // Bed facility bits on BuildingView.Facilities (BED-1).
@@ -681,6 +683,8 @@ type WorldView struct {
 	// TempVer, the temperature overlay's cache key: it changes whenever a cell's air may have (game/thermo).
 	ClimateEvent              string
 	ClimateEventEnds, TempVer uint64
+	ResearchAlert             bool   // RSCH-0 contract (false until RSCH-1): no project picked while a bench and a researcher are free
+	TechLevel                 string // RSCH-0 contract ("" until RSCH-1): the colony's tech level (research.TechLevel's name)
 }
 
 // FoodPolicyView is one food policy: its id, name and allowed kind names.

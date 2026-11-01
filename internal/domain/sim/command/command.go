@@ -302,6 +302,11 @@ const (
 	// it): ToggleVent wants vent building Target open (Enabled) or closed;
 	// like a power toggle (SetPowerWanted), a colonist then flicks it.
 	ToggleVent
+	// RSCH-0 contract (append only; game ignores it until RSCH-1 handles
+	// it): DevFinishResearch finishes the current research project at
+	// once, as if its last point went in (developer mode; the Research
+	// tab's dev finish button).
+	DevFinishResearch
 )
 
 // EditFoodPolicy modes (Command.Mode), FOOD-0.

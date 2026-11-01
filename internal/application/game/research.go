@@ -2,6 +2,7 @@ package game
 
 import (
 	"slices"
+	"strings"
 
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/ai/job"
@@ -35,23 +36,33 @@ type ResearchView struct {
 	Current   bool
 	Requires  []string // labels of unfinished prerequisites
 	Unlocks   []string // player-facing: "drying rack", "healroot crop", ...
+	// RSCH-0 contract (zero until RSCH-1): tech level and bench tier in words, CostNow at the colony's tech level, Hidden prerequisites'
+	// labels, BenchMissing why no bench can work it ("" when one can), ETAHours at today's rate (0 unknown).
+	TechLevel, Bench, BenchMissing string
+	CostNow, ETAHours              int
+	Hidden                         []string
 }
 
 func (g *Game) researchViews() []ResearchView {
 	var out []ResearchView
 	for _, d := range research.All() {
 		v := ResearchView{ID: uint8(d.Project), Name: d.Name, Label: d.Label, Desc: d.Desc, Cost: d.Cost,
-			Progress: g.research[d.Project], Done: g.research.Done(d.Project),
+			Progress: g.research[d.Project], Done: g.research.Done(d.Project), Unlocks: unlockLabels(d),
 			Available: g.research.Available(d.Project), Current: g.researchSet && g.researchCur == d.Project}
 		for _, r := range d.Requires {
 			if !g.research.Done(r) {
 				v.Requires = append(v.Requires, research.DefOf(r).Label)
 			}
 		}
-		for _, u := range d.Unlocks {
-			v.Unlocks = append(v.Unlocks, unlockLabel(u))
-		}
 		out = append(out, v)
+	}
+	return out
+}
+
+// unlockLabels is d's unlocks in words (nil: none).
+func unlockLabels(d research.Def) (out []string) {
+	for _, u := range d.Unlocks {
+		out = append(out, unlockLabel(u))
 	}
 	return out
 }
@@ -184,14 +195,7 @@ func (g *Game) doResearch(id entity.EntityID, j job.Record) {
 		pos, _ := g.positions.Get(id)
 		msg := "Research finished: " + d.Label + "."
 		if len(d.Unlocks) > 0 {
-			msg += " Unlocked:"
-			for i, u := range d.Unlocks {
-				if i > 0 {
-					msg += ","
-				}
-				msg += " " + unlockLabel(u)
-			}
-			msg += "."
+			msg += " Unlocked: " + strings.Join(unlockLabels(d), ", ") + "."
 		}
 		g.message(pos.X, pos.Y, "%s", msg)
 		g.researchSet = false
