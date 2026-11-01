@@ -31,7 +31,7 @@ func (r *Renderer) pipe() *world.Pipeline {
 		wp := world.New(
 			world.Layers{Lit: &r.lit, Env: &r.env.Layer, Cues: r.cueBus(), Shadows: &r.env.Shadow, Motion: &r.mo},
 			world.Hosts{Index: envHost{r}, Stamp: envHost{r}, Casters: shadowHost{r}},
-			world.Shared{Cam: &r.cam, Cast: &r.cast, Blood: &r.figureBlood},
+			world.Shared{Cam: &r.cam, Blood: &r.figureBlood},
 			&r.view, pipeSource{r})
 		p := &wp.Paint
 		e := &r.env.Layer

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [150, 110]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.303
-  h: 1.583
-  d: 0.96
 ppt: 86
 species: rhinoceros
 facing: east

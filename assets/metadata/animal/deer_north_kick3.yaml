@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-12, 186]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.493
-  h: 1.362
-  d: 1.955
 ppt: 128
 species: deer
 facing: north

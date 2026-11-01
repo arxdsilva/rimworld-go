@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-16, 98]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.572
-  h: 1.071
-  d: 1.841
 ppt: 128
 species: dire_wolf
 facing: south

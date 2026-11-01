@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-34, 106]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.309
-  h: 1.179
-  d: 1.143
 ppt: 128
 species: squirrel
 facing: north

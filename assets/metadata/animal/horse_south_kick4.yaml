@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-20, 186]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.518
-  h: 1.641
-  d: 2.168
 ppt: 128
 species: horse
 facing: south

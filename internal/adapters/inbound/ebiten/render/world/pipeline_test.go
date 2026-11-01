@@ -74,13 +74,8 @@ func (h *fakeHosts) DrawSpritePose(screen *ebiten.Image, key string, tint color.
 	h.p.DrawSpritePose(screen, key, tint, wx, wy, tile, ps)
 }
 func (h *fakeHosts) Objects(game.WorldView, []game.PawnView) []light.Caster { return nil }
-func (h *fakeHosts) Creatures(game.WorldView, []game.PawnView) []light.Creature[creature.FigurePose] {
-	return nil
-}
-func (h *fakeHosts) CastFigure(*light.Creature[creature.FigurePose], *light.Cast, *ebiten.Image, float64) {
-}
-func (h *fakeHosts) VisibleTiles() (x0, y0, x1, y1 int) { return h.p.visibleTiles() }
-func (h *fakeHosts) White() *ebiten.Image               { return h.p.LOD.WhiteImg() }
+func (h *fakeHosts) VisibleTiles() (x0, y0, x1, y1 int)                     { return h.p.visibleTiles() }
+func (h *fakeHosts) White() *ebiten.Image                                   { return h.p.LOD.WhiteImg() }
 
 // figures is the creature layer's host: plain figures, no blood, no cues.
 type figures struct{}
@@ -156,15 +151,14 @@ func newRig(t *testing.T, w game.WorldView, mw, mh int, keys ...string) *rig {
 	}
 	src := &fakeSource{w: w, mw: mw, mh: mh}
 	cam := &camera.Camera{Zoom: 1}
-	var cast *light.Cast
 	var blood float32
 	r := &rig{cam: cam, src: src, screen: ebiten.NewImage(640, 400)}
 	r.v = &render.View{Cam: *cam, Art: c, MapW: mw, MapH: mh, Present: 1, Fx: 1, Tick: 1,
 		Trace: &render.Trace{Layer: func(name string) { r.layers = append(r.layers, name) }}}
 	h := &fakeHosts{}
-	r.p = New(Layers{Lit: lit, Env: e, Creatures: cr, Overlays: ov, Cues: cue.New(), Shadows: &light.Shadows[creature.FigurePose]{}, Motion: &motion.State[creature.Body]{}},
+	r.p = New(Layers{Lit: lit, Env: e, Creatures: cr, Overlays: ov, Cues: cue.New(), Shadows: &light.Shadows{}, Motion: &motion.State[creature.Body]{}},
 		Hosts{Index: h, Stamp: h, Casters: h},
-		Shared{Cam: cam, Cast: &cast, Blood: &blood},
+		Shared{Cam: cam, Blood: &blood},
 		r.v, src)
 	h.p = r.p
 	r.p.SetArt(c)
@@ -279,17 +273,17 @@ func TestPipelineQueueReusesItsBuffer(t *testing.T) {
 func TestBakeRestoresTheCamera(t *testing.T) {
 	r := newRig(t, rigWorld(16, 16), 16, 16)
 	r.frame(64)
-	before, cast := *r.cam, *r.p.Cast
+	before, cast := *r.cam, r.p.Cast
 	dst := ebiten.NewImage(64, 64)
 	r.p.Bk.WithBake(dst, 4, 2, 3, 1, 1, func(sw, sh int, tile float64) {
-		if tile != 4 || sw != 64 || sh != 64 || !r.p.LOD.Baking || *r.p.Cast == nil {
+		if tile != 4 || sw != 64 || sh != 64 || !r.p.LOD.Baking || r.p.Cast == nil {
 			t.Fatalf("bake: tile %v, %d×%d, baking %v", tile, sw, sh, r.p.LOD.Baking)
 		}
 		if r.cam.OffsetX != 2*4-1 || r.cam.OffsetY != 3*4-1 || r.v.Cam != *r.cam {
 			t.Fatalf("bake camera %+v, view camera %+v", *r.cam, r.v.Cam)
 		}
 	})
-	if *r.cam != before || r.v.Cam != before || r.p.LOD.Baking || *r.p.Cast != cast {
+	if *r.cam != before || r.v.Cam != before || r.p.LOD.Baking || r.p.Cast != cast {
 		t.Fatal("the bake left its camera, its cast or the baking flag behind")
 	}
 }

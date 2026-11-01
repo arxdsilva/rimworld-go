@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-30, 54]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.348
-  h: 0.799
-  d: 1.36
 ppt: 128
 species: labrador
 facing: north

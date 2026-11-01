@@ -329,9 +329,8 @@ func xlArt() *artpkg.Catalog {
 }
 
 // A sprite baked at 64 px per tile covers the same screen box as one at
-// 128 (artOrigin, spritePoseGeo), posed, mirrored and shrunk alike; its
-// silhouette's κ and height match too (shadow_cast.go), and a carried
-// carcass baked at 64 sits and scales like one at 128 (held.go).
+// 128 (artOrigin, spritePoseGeo), posed, mirrored and shrunk alike, and
+// a carried carcass baked at 64 sits and scales like one at 128 (held.go).
 func TestAnimalDensityKeepsTileSize(t *testing.T) {
 	t.Parallel()
 	hi := artpkg.Meta{Canvas: [2]int{512, 384}, Origin: pt{128, 256}, PPT: 128}
@@ -350,12 +349,6 @@ func TestAnimalDensityKeepsTileSize(t *testing.T) {
 				t.Fatalf("pose %+v: ppt 128 box %v, ppt 64 box %v", ps, a, b)
 			}
 		}
-	}
-	if k1, k2 := light.SpriteKappa(1.6, 200, 128), light.SpriteKappa(1.6, 100, 64); math.Abs(k1-k2) > 1e-12 {
-		t.Fatalf("kappa %v at 128 ppt, %v at 64", k1, k2)
-	}
-	if a, b := light.ShadowFallback("animal/x", &hi), light.ShadowFallback("animal/x", &lo); a != b {
-		t.Fatalf("fallback caster %+v at 128 ppt, %+v at 64", a, b)
 	}
 	r := artRenderer()
 	r.art.Sprites["item/corpse_hi"] = &artpkg.Sprite{Meta: artpkg.Meta{Canvas: [2]int{384, 160}, Origin: pt{128, 16}, PPT: 128}}

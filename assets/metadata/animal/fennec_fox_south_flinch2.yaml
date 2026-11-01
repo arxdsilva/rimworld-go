@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-34, 56]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.298
-  h: 0.807
-  d: 1.475
 ppt: 128
 species: fennec_fox
 facing: south

@@ -1,6 +1,7 @@
 package light
 
 import (
+	_ "embed"
 	"image"
 	"image/color"
 	"math"
@@ -27,6 +28,13 @@ import (
 // is the exact sweep of its footprint along the shadow (the convex hull of
 // the footprint and its shifted copy) with a feathered skirt, so adjacent
 // walls merge seamlessly under the max blend.
+//
+// Creatures (pawns, animals and mechanoids) cast no shadow at all: no
+// sun or moon silhouette, no campfire or lamp silhouette and no contact
+// pool under the feet (user decision, 2026-10-31).
+
+//go:embed shadow_blur.kage
+var shadowBlurKage []byte
 
 // ShadowKind is a caster's shape: none, a blob or a box.
 type ShadowKind uint8
@@ -61,8 +69,8 @@ const (
 // tilts bluer at low sun (ShadowTint).
 var ShadowColor = [3]float32{18, 20, 30}
 
-// shadowRGB is the layer colour of shapes with no height (boxes, blobs
-// and contact pools): R holds height for the penumbra blur, so 0.
+// shadowRGB is the layer colour of every shape (boxes and blobs); the
+// blur reads alpha only.
 var shadowRGB = color.RGBA{0, 255, 255, 255}
 
 // ShadowBlend is the layer's blend: the max of source and destination, so
@@ -130,9 +138,7 @@ func ShadowFallback(key string, m *art.Meta) ShadowSpec {
 		return ShadowSpec{Kind: ShadowBox, W: fw, H: 1, D: fd}
 	case "plant":
 		return ShadowSpec{Kind: ShadowBlob, W: 0.7 * fw, H: canvasH * 0.8, D: 0.4}
-	case "pawn":
-		return ShadowSpec{Kind: ShadowBlob, W: 0.55, H: 1.7, D: 0.35}
-	case "animal", "item":
+	case "item":
 		return ShadowSpec{Kind: ShadowBlob, W: 0.55, H: canvasH * 0.7, D: 0.35}
 	}
 	return ShadowSpec{}
@@ -233,26 +239,13 @@ func ShadowCompositeScale(l State) [4]float32 {
 
 // --- the pass ----------------------------------------------------------------------
 
-// Rect is the visible world rectangle in tiles (the renderer's setView).
-type Rect struct{ X0, Y0, X1, Y1 float64 }
-
-// Empty reports no view (nothing set yet): nothing is culled.
-func (v Rect) Empty() bool { return v.X1 <= v.X0 || v.Y1 <= v.Y0 }
-
 // Casters is what the shadow pass needs from the renderer each frame: the
-// casters in view (their sprite keys, chunk lists and creature motion are
-// the renderer's), a figure drawn as a silhouette, the on-map tiles in
-// view and a white texel. F is the renderer's figure pose per creature
-// (Creature.Fig), resolved once per frame when it lists the creatures.
-type Casters[F any] interface {
+// casters in view (their sprite keys and chunk lists are the renderer's),
+// the on-map tiles in view and a white texel.
+type Casters interface {
 	// Objects lists this frame's box and blob casters (buildings, rocks,
 	// plants and items) on open-sky tiles in view.
 	Objects(w game.WorldView, pawns []game.PawnView) []Caster
-	// Creatures lists the pawns and animals in view that cast a silhouette.
-	Creatures(w game.WorldView, pawns []game.PawnView) []Creature[F]
-	// CastFigure draws c's figure onto dst with cast as the renderer's
-	// cast state, so every draw of it lands in the layer as a silhouette.
-	CastFigure(c *Creature[F], cast *Cast, dst *ebiten.Image, tile float64)
 	// VisibleTiles is the on-map tile range in view.
 	VisibleTiles() (x0, y0, x1, y1 int)
 	// White is a white texel for solid fills.
@@ -260,44 +253,35 @@ type Casters[F any] interface {
 }
 
 // Shadows is the shadow pass's reusable state (kept on the renderer's
-// environment). F is the renderer's figure pose (Casters).
-type Shadows[F any] struct {
-	Layer *ebiten.Image // screen-sized, reallocated on resize
-	// Scratch is screen-sized too: the blur's target, and before that the
-	// discard target of figure draws in cast mode (anything a figure
-	// draws directly, such as a hit flash, lands there and is overwritten).
-	Scratch  *ebiten.Image
-	blobImg  *ebiten.Image // procedural fallback for overlay/shadow_blob
-	boxes    gfx.TriBatch
-	blobs    gfx.TriBatch
-	clear    gfx.TriBatch
-	Contacts gfx.TriBatch
-	// scale is the layer's size relative to the screen this frame (0.5 on
-	// a high-DPI display, else 1); the draws and the blur radii follow it.
-	scale float64
-	// Objects and Creatures are the renderer's reused caster lists
-	// (Casters fills them).
+// environment).
+type Shadows struct {
+	Layer   *ebiten.Image // screen-sized, reallocated on resize
+	Scratch *ebiten.Image // screen-sized too: the blur's target
+	blobImg *ebiten.Image // procedural fallback for overlay/shadow_blob
+	boxes   gfx.TriBatch
+	blobs   gfx.TriBatch
+	clear   gfx.TriBatch
+	// Objects is the renderer's reused caster list (Casters fills it).
 	Objects    []Caster
-	Creatures  []Creature[F]
-	plans      []Plan
-	lights     []PointLight
-	vis        []PointLight // the lights reaching the creature being planned
-	cast       Cast
-	castInit   bool
 	blur       *ebiten.Shader
 	blurErr    error
 	BlurOpts   ebiten.DrawRectShaderOptions
 	specs      map[string]ShadowSpec
 	specsArt   *art.Catalog
 	Composites int // layer composites, for tests
-	Casts      int // creature silhouettes drawn, for tests
 	// Off skips the whole shadow pass (Options > Graphics, PLAY-019).
 	Off bool
 }
 
+// Cast, while set on a sprite pass (render/sprite Pass.Cast), marks draws
+// that are not the frame's lit sprites: the pipeline sets it during a
+// bake, and the overlays skip a figure's stains then. It no longer draws
+// anything itself: creatures cast no silhouettes (2026-10-31).
+type Cast struct{}
+
 // SetOff turns the shadow pass off or on. Turning it off frees the two
 // screen-sized layers; they come back on the first frame with shadows on.
-func (st *Shadows[F]) SetOff(off bool) {
+func (st *Shadows) SetOff(off bool) {
 	st.Off = off
 	if !off {
 		return
@@ -311,7 +295,7 @@ func (st *Shadows[F]) SetOff(off bool) {
 }
 
 // SpecOf is the cached caster for sprite key in catalog c.
-func (st *Shadows[F]) SpecOf(c *art.Catalog, key string) ShadowSpec {
+func (st *Shadows) SpecOf(c *art.Catalog, key string) ShadowSpec {
 	if st.specs == nil || st.specsArt != c {
 		st.specs, st.specsArt = map[string]ShadowSpec{}, c
 	}
@@ -370,7 +354,7 @@ func RoofRuns(w game.WorldView, x0, y0, x1, y1 int, out [][3]int) [][3]int {
 
 // blobTexture is overlay/shadow_blob, or a soft procedural ellipse until
 // the art has one.
-func (st *Shadows[F]) blobTexture(c *art.Catalog) *ebiten.Image {
+func (st *Shadows) blobTexture(c *art.Catalog) *ebiten.Image {
 	if c.Has("overlay/shadow_blob") {
 		if img := c.Image("overlay/shadow_blob", color.NRGBA{}); img != nil {
 			return img
@@ -452,45 +436,34 @@ func AddBox(v *render.View, b *gfx.TriBatch, c Caster, l State, a float64) {
 }
 
 // Draw draws the frame's shadow layer onto screen. The layer holds
-// absolute alpha (max-blended, so overlaps never double-darken) and the
-// caster height in red:
-//
-//	(a) box and blob casters at the sun or moon's shadow alpha
-//	(b) creature silhouettes for the sun or moon (open sky only)
-//	    -- roofed tiles cleared --
-//	(c) creature silhouettes for campfires and lamps (kept indoors; the
-//	    sun washes them out on open sky only)
-//	(d) contact pools under every creature
-//
-// then one contact-hardening blur into scratch and one composite. w is
-// the frame's world (v.W) and view the visible rectangle in tiles; the
-// light is lit's (its grid synced to v gives the point lights), and host
-// lists the casters and draws the figures.
-func (st *Shadows[F]) Draw(v *render.View, lit *Lit, host Casters[F], view Rect, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
+// absolute alpha, max-blended so overlaps never double-darken: the box
+// and blob casters at the sun or moon's shadow alpha, then the roofed
+// tiles cleared, then one blur into scratch and one composite. Creatures
+// cast nothing. w is the frame's world (v.W) and view the visible
+// rectangle in tiles; the light is lit's, and host lists the casters.
+func (st *Shadows) Draw(v *render.View, lit *Lit, host Casters, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	if sw <= 0 || sh <= 0 || st.Off {
 		return
 	}
 	l := lit.Light
-	sa := 0.0
-	if l.ShadowLen != nil {
-		sa = float64(ShadowCompositeScale(l)[3])
+	if l.ShadowLen == nil {
+		return
 	}
-	var casters []Caster
-	if sa > 0 {
-		casters = host.Objects(w, v.Pawns)
+	sa := float64(ShadowCompositeScale(l)[3])
+	if sa <= 0 {
+		return
 	}
-	creatures := host.Creatures(w, v.Pawns)
-	if len(casters) == 0 && len(creatures) == 0 {
+	casters := host.Objects(w, v.Pawns)
+	if len(casters) == 0 {
 		return
 	}
 	k := ShadowLayerScale(v.Cam.Dev)
-	st.scale = k
 	lw, lh := int(math.Ceil(float64(sw)*k)), int(math.Ceil(float64(sh)*k))
 	st.Layer = gfx.FitLayer(st.Layer, lw, lh)
 	st.Layer.Clear()
 	st.Scratch = gfx.FitLayer(st.Scratch, lw, lh)
 	k32 := float32(k)
-	st.boxes.K, st.blobs.K, st.clear.K, st.Contacts.K = k32, k32, k32, k32
+	st.boxes.K, st.blobs.K, st.clear.K = k32, k32, k32
 	tex := st.blobTexture(v.Art)
 	white := host.White()
 	st.boxes.Reset()
@@ -505,30 +478,6 @@ func (st *Shadows[F]) Draw(v *render.View, lit *Lit, host Casters[F], view Rect,
 	st.boxes.Flush(st.Layer, white, ShadowBlend)
 	st.blobs.Flush(st.Layer, tex, ShadowBlend)
 
-	sunEl := SunElevation(l)
-	daylight := DaylightOf(sunEl)
-	lights := st.PointLights(v, lit, view)
-	plans := st.plans[:0]
-	for i := range creatures {
-		c := &creatures[i]
-		// the sun washes out point-light shadows on open sky only; under a
-		// roof lamps cast by day too (PLAY-020 §3b)
-		dl := 0.0
-		if c.Sky {
-			dl = daylight
-		}
-		var near []PointLight
-		if dl < 1 { // full daylight on open sky: no point-light shadow to plan
-			near = st.creatureLights(&lit.Grid, c.Tx, c.Ty, lights)
-		}
-		plans = append(plans, PlanCreature(c.Px, c.Py, c.H, c.Sky, l, dl, near))
-	}
-	st.plans = plans
-	for i := range creatures {
-		if plans[i].Sun {
-			st.castCreature(v, host, &creatures[i], plans[i].SunCast, tile)
-		}
-	}
 	// nothing from the sky falls on roofed ground
 	x0, y0, x1, y1 := host.VisibleTiles()
 	var runs [][3]int
@@ -542,22 +491,12 @@ func (st *Shadows[F]) Draw(v *render.View, lit *Lit, host Casters[F], view Rect,
 		}
 		st.clear.Flush(st.Layer, white, ebiten.BlendDestinationOut)
 	}
-	st.Contacts.Reset()
-	for i := range creatures {
-		c := &creatures[i]
-		for j := 0; j < plans[i].Np; j++ {
-			st.castCreature(v, host, c, plans[i].Points[j], tile)
-		}
-		st.addContact(v, c, plans[i].Contact, tex)
-	}
-	st.Contacts.Flush(st.Layer, tex, ShadowBlend)
 
 	maxEl := SeasonMaxEl(w.DayOfYear) * math.Pi / 180
-	ratio := gfx.Clamp01(sunEl / maxEl)
+	ratio := gfx.Clamp01(SunElevation(l) / maxEl)
 	out := st.Layer
 	if bs := st.shadowBlurShader(); bs != nil {
-		r0, r1 := BlurRadii(tile*k/camera.TileSize, ratio)
-		st.BlurOpts.Uniforms["R0"], st.BlurOpts.Uniforms["R1"] = float32(r0), float32(r1)
+		st.BlurOpts.Uniforms["R0"] = float32(BlurRadius(tile * k / camera.TileSize))
 		st.BlurOpts.Images[0] = st.Layer
 		st.BlurOpts.Blend = ebiten.BlendCopy
 		st.Scratch.DrawRectShader(lw, lh, bs, &st.BlurOpts)
@@ -586,10 +525,28 @@ func ShadowLayerScale(dev float64) float64 {
 
 // shadowBlurShader is shadow_blur.kage, compiled on first use; nil when
 // it failed (the layer is then composited unblurred).
-func (st *Shadows[F]) shadowBlurShader() *ebiten.Shader {
+func (st *Shadows) shadowBlurShader() *ebiten.Shader {
 	if st.blur == nil && st.blurErr == nil {
 		st.blur, st.blurErr = ebiten.NewShader(shadowBlurKage)
 		st.BlurOpts.Uniforms = map[string]any{}
 	}
 	return st.blur
+}
+
+// SunElevation is the sun's elevation (radians) in l, 0 below the
+// horizon: SunL is LightDir's unit vector, y foreshortened by ProjShearK.
+func SunElevation(l State) float64 {
+	if l.SunL[2] <= 0 {
+		return 0
+	}
+	return math.Atan2(float64(l.SunL[2]), math.Hypot(float64(l.SunL[0]), float64(l.SunL[1])/ProjShearK))
+}
+
+// BlurRadius is the shadow blur's radius in screen px at a zoom (tile px
+// over TileSize).
+func BlurRadius(zoom float64) float64 { return 0.6 * zoom }
+
+// ShadowTint is the shadow colour (0..255): bluer at low sun.
+func ShadowTint(ratio float64) [3]float32 {
+	return [3]float32{ShadowColor[0], ShadowColor[1], 34 - 4*float32(gfx.Clamp01(ratio))}
 }

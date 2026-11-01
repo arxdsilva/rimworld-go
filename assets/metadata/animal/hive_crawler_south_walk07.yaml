@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [8, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.752
-  h: 0.291
-  d: 2.126
 ppt: 128
 species: hive_crawler
 facing: south

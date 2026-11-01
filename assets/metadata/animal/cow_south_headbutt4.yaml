@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-14, 140]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.616
-  h: 1.167
-  d: 2.05
 ppt: 128
 species: cow
 facing: south

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-22, 30]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.374
-  h: 0.51
-  d: 1.168
 ppt: 128
 species: duck
 facing: north

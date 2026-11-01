@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-30, 140]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.363
-  h: 1.034
-  d: 1.314
 ppt: 128
 species: emberbuck
 facing: north

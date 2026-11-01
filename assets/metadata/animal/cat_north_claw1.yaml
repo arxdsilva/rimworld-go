@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-36, 72]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.282
-  h: 0.689
-  d: 1.408
 ppt: 128
 species: cat
 facing: north

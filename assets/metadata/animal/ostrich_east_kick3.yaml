@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [106, 246]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.312
-  h: 2.223
-  d: 1.47
 ppt: 128
 species: ostrich
 facing: east

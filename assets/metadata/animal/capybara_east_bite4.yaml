@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [76, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.433
-  h: 0.512
-  d: 0.387
 ppt: 128
 species: capybara
 facing: east

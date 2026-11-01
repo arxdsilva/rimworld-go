@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [108, 138]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.893
-  h: 1.325
-  d: 0.971
 ppt: 128
 species: woolhorn
 facing: east

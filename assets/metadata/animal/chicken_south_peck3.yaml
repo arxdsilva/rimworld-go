@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-18, 66]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.485
-  h: 0.554
-  d: 1.303
 ppt: 128
 species: chicken
 facing: south

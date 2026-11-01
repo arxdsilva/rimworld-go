@@ -406,9 +406,12 @@ def _clip(img, origin, footprint, clip, zclip):
     return img
 
 
-SHADOW_KINDS = {"pawn": "blob", "animal": "blob", "plant": "blob", "item": "blob", "gear": "blob",
+SHADOW_KINDS = {"plant": "blob", "item": "blob", "gear": "blob",
                 "structure": "box", "furniture": "box", "rock": "box",
                 "terrain": "none", "overlay": "none", "weather": "none"}
+# Creatures cast no shadow (user decision, 2026-10-31): their sprites
+# carry no shadow: block at all.
+NO_SHADOW_FAMILIES = ("pawn", "animal")
 FLAT_H = 0.05   # tiles: casters this low cast no shadow
 
 
@@ -484,7 +487,8 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
     (left, right, top, bottom) beyond the footprint/overhang.
     shadow: bake a UI-art drop shadow (world sprites never do; the game
     casts sun shadows from the `shadow:` metadata). shadow_kind overrides
-    the per-family caster kind (blob|box|none).
+    the per-family caster kind (blob|box|none). Pawn and animal sprites
+    (NO_SHADOW_FAMILIES) get no shadow: block.
     ppt: pixels per tile for this sprite (PLAY-022, animals and corpses);
     written to the metadata. Its margins are exact pixel counts and may be
     negative (a canvas tighter than the tile: origin_px outside it). None
@@ -492,7 +496,7 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
     unchanged.
     """
     sc = stage()
-    shadow_meta = _shadow_meta(family, name, shadow_kind, footprint)
+    shadow_meta = None if family in NO_SHADOW_FAMILIES else _shadow_meta(family, name, shadow_kind, footprint)
     w, h = footprint
     ml, mr, mt, mb = margins or (C.DEFAULT_MARGIN,) * 4
     d = C.PPT if ppt is None else ppt
@@ -531,8 +535,9 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
         "footprint": [w, h],
         "origin_px": [left, top],
         "projection": {"shear_k": C.SHEAR_K},
-        "shadow": shadow_meta,
     }
+    if shadow_meta is not None:
+        data["shadow"] = shadow_meta
     if ppt is not None:
         data["ppt"] = int(ppt)
     if groups and tint:

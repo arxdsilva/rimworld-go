@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-24, 52]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.332
-  h: 0.484
-  d: 1.069
 ppt: 128
 species: snowhare
 facing: north

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [18, 92]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.132
-  h: 0.962
-  d: 1.369
 ppt: 128
 species: turkey
 facing: south

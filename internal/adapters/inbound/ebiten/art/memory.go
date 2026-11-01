@@ -272,7 +272,7 @@ func (c *Catalog) keepsCPUPixels(key string) bool {
 }
 
 // release frees sp's CPU pixels once its GPU image and normal map exist
-// (the game's catalog only): its opaque height is measured first, and its
+// (the game's catalog only): its opaque box is measured first, and its
 // tint mask shrinks to its coverage box (TintNRGBA and the GPU bake read
 // nothing outside it).
 func (c *Catalog) release(key string, sp *Sprite) {
@@ -285,7 +285,7 @@ func (c *Catalog) release(key string, sp *Sprite) {
 		c.mem.keptBytes.Add(n)
 		return
 	}
-	sp.OpaqueHeightPx()
+	sp.OpaqueBox()
 	if sp.Mask != nil {
 		m := MaskCoverage(sp.Mask)
 		n += int64(len(sp.Mask.Pix) - len(m.Pix))

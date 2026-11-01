@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 88]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.015
-  h: 1.047
-  d: 0.273
 ppt: 128
 species: monkey
 facing: east

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-30, 8]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.389
-  h: 0.449
-  d: 1.149
 ppt: 128
 species: guinea_pig
 facing: south

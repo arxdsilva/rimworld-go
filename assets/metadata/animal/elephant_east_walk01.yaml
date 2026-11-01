@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [150, 138]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 3.213
-  h: 1.691
-  d: 1.664
 ppt: 84
 species: elephant
 facing: east

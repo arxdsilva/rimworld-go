@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.386
-  h: 0.515
-  d: 0.436
 tint:
   group: hair
   mask: generated/world/pawn/hair_tail_north_mask.png

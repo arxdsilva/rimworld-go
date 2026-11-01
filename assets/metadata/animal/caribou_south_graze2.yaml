@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [14, 298]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.008
-  h: 1.245
-  d: 2.377
 ppt: 128
 species: caribou
 facing: south

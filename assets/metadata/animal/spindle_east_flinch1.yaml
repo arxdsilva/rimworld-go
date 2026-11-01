@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [132, 166]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.07
-  h: 1.76
-  d: 1.243
 ppt: 116
 species: spindle
 facing: east

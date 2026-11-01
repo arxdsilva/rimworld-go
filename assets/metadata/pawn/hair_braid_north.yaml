@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.394
-  h: 0.604
-  d: 0.385
 tint:
   group: hair
   mask: generated/world/pawn/hair_braid_north_mask.png

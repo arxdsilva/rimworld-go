@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-24, 188]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.456
-  h: 1.663
-  d: 2.132
 ppt: 128
 species: dromedary
 facing: north

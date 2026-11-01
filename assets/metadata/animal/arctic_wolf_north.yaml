@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-26, 92]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.43
-  h: 0.99
-  d: 1.746
 ppt: 128
 species: arctic_wolf
 facing: north

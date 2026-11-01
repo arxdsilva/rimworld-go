@@ -145,8 +145,9 @@ func TestBoxVsBlobByMetadata(t *testing.T) {
 		{"furniture/table_2x1", meta("", 2, 1, 198), ShadowBox, 1},
 		{"rock/rock_wall_00", nil, ShadowBox, 1},
 		{"plant/tree_oak_00", meta("", 1, 1, 512), ShadowBlob, 512.0 / art.TilePx * 0.8},
-		{"pawn/body_south", meta("", 1, 1, 250), ShadowBlob, 1.7},
-		{"animal/dustbuck_east", meta("", 1, 1, 256), ShadowBlob, 256.0 / art.TilePx * 0.7},
+		// creatures cast nothing (2026-10-31): no family fallback
+		{"pawn/body_south", meta("", 1, 1, 250), ShadowNone, 0},
+		{"animal/dustbuck_east", meta("", 1, 1, 256), ShadowNone, 0},
 		{"item/wood_pile", meta("", 1, 1, 128), ShadowBlob, 0.7},
 		{"overlay/stockpile", meta("", 1, 1, 128), ShadowNone, 0},
 		{"weather/raindrop", nil, ShadowNone, 0},

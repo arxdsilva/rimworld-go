@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [88, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.128
-  h: 1.401
-  d: 0.447
 ppt: 128
 species: alpaca
 facing: east

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [88, 142]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.281
-  h: 1.378
-  d: 0.374
 ppt: 128
 species: goat
 facing: east

@@ -9,8 +9,9 @@ contract (one standing sprite per layer and facing, attachments, canvas).
     python3 assets/source/tools/validate_assets.py [--no-light]
 
 Every sprite must also have a normal map <name>_n.png of the same size
-and alpha (make normals) and a shadow: block in its metadata (ART §6.1);
---no-light skips those two checks.
+and alpha (make normals) and a shadow: block in its metadata (ART §6.1),
+except pawn and animal sprites, which must carry none (creatures cast no
+shadow); --no-light skips those two checks.
 """
 import os
 import re
@@ -47,6 +48,8 @@ ID = re.compile(r"^core:[a-z_]+/[a-z0-9_]+$")
 errors = []
 LIGHT = "--no-light" not in sys.argv[1:]
 SHADOW_KINDS = ("blob", "box", "none")
+# creatures cast no shadow (user decision, 2026-10-31): no shadow: block
+NO_SHADOW_FAMILIES = ("pawn", "animal")
 
 
 def err(msg):
@@ -122,6 +125,10 @@ def check_light(family, name, path, md, img):
             err("%s/%s: normal map size %s != %s" % (family, name, n.size, img.size))
         elif n.convert("RGBA").getchannel("A").tobytes() != img.getchannel("A").tobytes():
             err("%s/%s: normal map alpha differs from the sprite" % (family, name))
+    if family in NO_SHADOW_FAMILIES:
+        if re.search(r"^shadow:", md, re.M):
+            err("%s/%s: creatures cast no shadow; remove the shadow: block" % (family, name))
+        return
     m = re.search(r"^shadow:\n  kind: (\w+)\n  w: ([\d.]+)\n  h: ([\d.]+)\n  d: ([\d.]+)$", md, re.M)
     if not m:
         err("%s/%s: missing shadow: block (kind, w, h, d)" % (family, name))

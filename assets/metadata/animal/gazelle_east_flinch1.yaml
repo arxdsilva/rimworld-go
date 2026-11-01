@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [66, 172]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.308
-  h: 1.694
-  d: 0.329
 ppt: 128
 species: gazelle
 facing: east

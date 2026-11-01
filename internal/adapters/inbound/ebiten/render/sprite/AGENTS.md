@@ -5,7 +5,7 @@ Draws one world sprite (by key, tint, colour scale and scale), lit through `rend
 
 ## Owned Concepts
 - `Painter` (11 methods) built by `NewPainter(c *art.Catalog, lit *light.Lit)`: `Draw`, `DrawCS`, `DrawScaled` (take `Pass{Cast, Baking, Blood}`), `DrawLinked*`, the stone cache.
-- `Pass` (cast, baking, blood flags for one draw).
+- `Pass` (cast, baking, blood flags for one draw). `Cast` is only the bake marker now (the overlays skip stains on it): creatures cast no silhouettes since 2026-10-31.
 - `ColorScale` ([4]float32) with `TintCS`, `ItemCS`, `LerpCS`, `MulCS`, `GrassTint`, and the stone and stuff tints (`StoneTint*`, `StuffTint`).
 - `LinkGrid[K Kinds]` (16 methods) over `Kinds` (2 methods: `Building`, `Power`) returning `LinkCell`; `LinkFlag`, `LinkedDraw`, `LinkKey`.
 

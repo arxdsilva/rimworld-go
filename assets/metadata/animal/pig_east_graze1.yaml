@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [82, 44]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.396
-  h: 0.699
-  d: 0.416
 ppt: 128
 species: pig
 facing: east

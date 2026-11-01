@@ -99,14 +99,10 @@ func YoungPose(ps motion.Pose, scale float64) motion.Pose {
 	return ps
 }
 
-// DrawAnimalFigure draws one animal's body, posed, at (wx, wy): the same
-// call in the object pass and in the shadow pass (pass.Cast set). It has no
+// DrawAnimalFigure draws one animal's body, posed, at (wx, wy). It has no
 // side effects beyond drawing.
 func (c *Set) DrawAnimalFigure(v *render.View, pass sprite.Pass, dst *ebiten.Image, an game.AnimalView, wx, wy, tile float64) {
 	if !v.Art.Has(c.AnimalBaseKey(v, an)) {
-		if pass.Cast != nil {
-			return // no art, no silhouette
-		}
 		sx, sy := v.WorldToScreenF(wx, wy)
 		vector.FillCircle(dst, sx+float32(tile)/2, sy+float32(tile)/2, float32(tile)*0.3, color.RGBA{150, 120, 80, 255}, false)
 		return

@@ -25,9 +25,9 @@ func (r *rig) litSource(img *ebiten.Image) (*ebiten.Image, float32, bool) {
 	return r.lit.SourceOf(&r.view, img)
 }
 
-// drawLit is a lit draw outside a bake and the shadow pass, bloodless.
+// drawLit is a lit draw outside a bake, bloodless.
 func (r *rig) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs [4]float32, wx, wy float64) {
-	r.lit.Draw(&r.view, dst, img, geo, cs, wx, wy, nil, false, 0)
+	r.lit.Draw(&r.view, dst, img, geo, cs, wx, wy, false, 0)
 }
 
 // unit is (x, y) normalised.

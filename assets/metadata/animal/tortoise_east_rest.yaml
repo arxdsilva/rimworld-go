@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [96, 42]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.407
-  h: 0.638
-  d: 0.933
 ppt: 128
 species: tortoise
 facing: east

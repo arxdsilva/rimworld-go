@@ -50,7 +50,7 @@ type Layers struct {
 	Creatures *creature.Set
 	Overlays  *overlay.Set
 	Cues      *cue.Bus
-	Shadows   *light.Shadows[creature.FigurePose]
+	Shadows   *light.Shadows
 	Motion    *motion.State[creature.Body]
 }
 
@@ -61,15 +61,13 @@ type Hosts struct {
 	Index   env.Chunks
 	Stamp   env.Stamp
 	Movers  env.Movers
-	Casters light.Casters[creature.FigurePose]
+	Casters light.Casters
 }
 
 // Shared is the renderer state the pipeline works on and the renderer
-// sets: the camera a bake moves, the shadow pass's cast and a figure's
-// blood (the sprite pass).
+// sets: the camera a bake moves and a figure's blood (the sprite pass).
 type Shared struct {
 	Cam   *camera.Camera
-	Cast  **light.Cast
 	Blood *float32
 }
 
@@ -84,7 +82,10 @@ type base struct {
 	v     *render.View
 	src   Source
 
-	draws      []ArtDraw         // the object queue, reused every frame
+	draws []ArtDraw // the object queue, reused every frame
+	// Cast is set while a bake draws (WithBake): the sprite pass's marker
+	// (sprite.Pass.Cast) that the overlays skip a figure's stains on.
+	Cast       *light.Cast
 	steamHeard map[[2]int]uint64 // each vent's last burst already cued
 
 	// LOD is the zoom tier, the chunk and whole-map bakes and the frame's

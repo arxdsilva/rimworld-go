@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-10, 194]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.644
-  h: 1.658
-  d: 1.502
 ppt: 128
 species: emu
 facing: north

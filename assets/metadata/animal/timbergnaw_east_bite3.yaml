@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [110, 32]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.083
-  h: 0.57
-  d: 0.477
 ppt: 128
 species: timbergnaw
 facing: east

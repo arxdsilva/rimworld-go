@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-30, 140]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.368
-  h: 1.067
-  d: 1.442
 ppt: 128
 species: lynx
 facing: south

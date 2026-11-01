@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [32, 132]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.097
-  h: 0.833
-  d: 0.983
 ppt: 128
 species: quill
 facing: north

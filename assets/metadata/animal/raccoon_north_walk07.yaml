@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-32, 36]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.348
-  h: 0.621
-  d: 1.409
 ppt: 128
 species: raccoon
 facing: north

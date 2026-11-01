@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-30, 54]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.329
-  h: 0.755
-  d: 1.879
 ppt: 128
 species: red_fox
 facing: south

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [42, 50]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.979
-  h: 0.561
-  d: 0.349
 ppt: 128
 species: yorkshire_terrier
 facing: east

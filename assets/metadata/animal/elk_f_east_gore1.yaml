@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [124, 202]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.923
-  h: 1.571
-  d: 0.647
 ppt: 128
 species: elk
 facing: east

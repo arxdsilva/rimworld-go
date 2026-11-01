@@ -32,10 +32,10 @@ func NewPainter(c *art.Catalog, lit *light.Lit) *Painter {
 	return &Painter{Art: c, Lit: lit, Stone: &StoneCache{}}
 }
 
-// Pass is the pass a sprite is drawn in, the renderer's to say: Cast,
-// while set, turns draws into shadow silhouettes; Baking draws the plain
-// albedo into a bake (lit when the bake is drawn); Blood stains the
-// figure layer being drawn (light.Lit.Draw).
+// Pass is the pass a sprite is drawn in, the renderer's to say: Cast is
+// set while a bake draws (the overlays skip a figure's stains then);
+// Baking draws the plain albedo into a bake (lit when the bake is drawn);
+// Blood stains the figure layer being drawn (light.Lit.Draw).
 type Pass struct {
 	Cast   *light.Cast
 	Baking bool
@@ -81,10 +81,10 @@ func (p *Painter) DrawScaled(v *render.View, ps Pass, dst *ebiten.Image, key str
 	op.Filter = ebiten.FilterLinear
 	if !strings.HasPrefix(key, "overlay/") { // zones and markers stay unlit
 		if light.IsGroundKey(key) { // terrain edges: the lamp light ramps like the tile under them
-			p.Lit.DrawGround(v, dst, img, op.GeoM, cs, wx, wy, ps.Cast, ps.Baking, ps.Blood)
+			p.Lit.DrawGround(v, dst, img, op.GeoM, cs, wx, wy, ps.Baking, ps.Blood)
 			return
 		}
-		p.Lit.Draw(v, dst, img, op.GeoM, cs, wx, wy, ps.Cast, ps.Baking, ps.Blood)
+		p.Lit.Draw(v, dst, img, op.GeoM, cs, wx, wy, ps.Baking, ps.Blood)
 		return
 	}
 	if cs != NoCS {

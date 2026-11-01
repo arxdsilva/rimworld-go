@@ -320,7 +320,7 @@ func (c *Set) DrawHeld(v *render.View, pass sprite.Pass, screen *ebiten.Image, r
 		cs = h.Cs
 	}
 	if img := v.Art.Image(pl.Key, color.NRGBA{}); img != nil {
-		c.lit.Draw(v, screen, img, pl.G, cs, wx, wy, pass.Cast, pass.Baking, pass.Blood)
+		c.lit.Draw(v, screen, img, pl.G, cs, wx, wy, pass.Baking, pass.Blood)
 	}
 }
 

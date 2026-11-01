@@ -137,9 +137,10 @@ Outline contract (ART-025; was 4 px, darken 0.32, saturate 1.25):
 - Toon bands use `RAMP_INTERP = "EASE"` (`RAMP_SOFT` 0.06) so band edges are soft; `SHADOW_T` 0.30 and `LIGHT_T` 0.80 set the band thresholds.
 - Grass and plants (ground plants, bushes, crops, trees) are never outlined.
 
-Sprites carry **no baked drop shadow** (ART-010): shadows are cast at
-runtime by the sun and moon (§6.1). The upper-left toon banding stays as
-the restrained baked form cue.
+Sprites carry **no baked drop shadow** (ART-010): buildings, plants,
+items and rock cast their shadows at runtime from the sun and moon
+(§6.1); creatures cast none. The upper-left toon banding stays as the
+restrained baked form cue.
 
 ### 6.1 Dynamic light and shadows (normative, ART-010)
 
@@ -182,15 +183,8 @@ The light comes from the sim clock only, so it is presentation and deterministic
   - All shadows go into one offscreen layer with max blending, composited once, so overlaps never double-darken.
   - **No sun or moon shadows** are cast on or from roofed tiles.
   - Textures: `overlay/shadow_blob` and `overlay/shadow_box`, for buildings, plants, items and rocks.
-- **Creature shadows (ART-012):** pawns and animals cast **their own silhouette**: every pawn layer (body, apparel, hair, held weapon or tool, carried item), and the animal's current trot, attack or graze frame.
-  - **How they're drawn:** by the same figure code with a cast flag. The figure code is pure, with no state writes.
-  - **Projection:** affine, about the feet pivot. Height above the feet maps to `ShadowDir·m·z`, where `m` is the light's length per tile of height. Width runs across the shadow. Lying poses project at a quarter of the height.
-  - **Softness:** the silhouette encodes height (0 at the feet, 1 at the top), and a contact-hardening blur (`shadow_blur.kage`) softens it with distance from the feet. It's crisp at contact and soft at the tip.
-  - **Contact pools:** a soft dark pool sits under every creature, also indoors, at night and in storms.
-  - **Point lights:** burning campfires (height 0.5 tile, reach 4.5) and lamps in lit rooms (1.6, 6) cast shadows away from the light.
-    - Each creature takes its 2 nearest lights.
-    - Length follows point-light geometry `d·h/(H−h)`, clamped `[0.3h, 3]`.
-    - Alpha is `0.30·falloff·(1−daylight)`; campfire light flickers.
+- **Creatures cast no shadow** (user decision, 2026-10-31; this retires ART-012's silhouettes): pawns, animals and mechanoids get no sun or moon shadow, no campfire or lamp shadow and no contact pool under the feet, outdoors or indoors. Their sprites carry no `shadow:` metadata block (`stage.NO_SHADOW_FAMILIES`; `make art-check` rejects one); the Options **Shadows** toggle covers only the box and blob casters above.
+  - The shadow layer carries alpha only. `shadow_blur.kage` softens it by a fixed radius (0.6 px at zoom 1, `BlurRadius`); the height-driven contact-hardening term went with the silhouettes.
 
 ## 7. Palette and Materials
 
@@ -428,7 +422,6 @@ Pawns are compositional, not one flattened sprite per colonist.
 Conceptual layers:
 
 ``` text
-ground shadow
 body
 skin/head
 hair-back
@@ -514,7 +507,7 @@ silhouettes.
   - Corpses are `item/corpse_<key>_v0..v2`, three lying poses.
   - The icon is `ui_icon/<key>`.
 - **Dimorphic species** (deer, elk, chicken) add a full female set, `animal/<key>_f_<facing>[_frame]`. The renderer picks it by `AnimalView.Female`.
-- **Style:** fixed palette materials (no tint masks), dark outlines, toon bands, restrained 3–6 tones per species, tiny eyes. No baked shadow: shadows are cast at runtime (§6.1).
+- **Style:** fixed palette materials (no tint masks), dark outlines, toon bands, restrained 3–6 tones per species, tiny eyes. No baked shadow, and animals cast none at runtime (§6.1).
 - **QA:**
   - A 64 px silhouette sheet of all 61 species, where each must be identifiable by its signature features.
   - A gameplay-zoom contact sheet.
@@ -944,9 +937,9 @@ atlas coordinates.
 
 Light pipeline (ART-010):
 - World sprites render without a baked drop shadow.
-- `stage.render_asset` writes each sprite's `shadow:` caster block from its staged bounds.
+- `stage.render_asset` writes each sprite's `shadow:` caster block from its staged bounds (none for pawns and animals, which cast no shadow).
 - `make normals` (`cmd/normalgen`, after Blender in `make art`) writes `<sprite>_n.png`. Masks, normal maps and `ui/` are skipped, and up-to-date maps are kept.
-- `validate_assets.py` (`make art-check`) requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite.
+- `validate_assets.py` (`make art-check`) requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite except pawns and animals (which must have none).
 
 Housekeeping (PLAY-010, normative):
 - Remove unused assets and resources in the same change that makes them unused: sprites with their `_n` maps and metadata, sounds, fonts, palette entries, vendor packs, generated files and the code that loads them. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it.
@@ -973,14 +966,17 @@ with sidecar metadata.
     first). Each take is reviewed by a person before import, and every
     take is recorded in `assets/source/audio/elevenlabs/ledger.json`.
 -   **Animal voices** (call, attack, hurt, die per species, the 9 voice
-    groups and the hive burst) are generated with ElevenLabs by
-    `cmd/sfxgen` from `assets/source/audio/animal_prompts.json`, processed
-    to mono 48 kHz Ogg with a ±4% pitched B variant, and listed only after
-    a person approves them (SND-003). `animal.generic.*` stays the
-    code-made last fallback.
+    groups and the hive burst) are generated by `cmd/sfxgen` from
+    `assets/source/audio/animal_prompts.json`: with the local open-source
+    MOSS-SoundEffect v2.0 model by default (`-backend moss`, user decision
+    2026-10-31; model and venv outside the repo), or with ElevenLabs only
+    with user-approved spending (`-backend elevenlabs`). Every take is
+    logged with its backend in the ledger, processed to mono 48 kHz Ogg
+    with a ±4% pitched B variant, and listed only after a person approves
+    it (SND-003). `animal.generic.*` stays the code-made last fallback.
 -   **The sound list** `assets/metadata/audio/audio.json` records, per id,
     the bus, loop flag, volume, files and provenance (recipe and seed, or
-    tool, prompt, credits, license and reviewer).
+    tool, prompt, seed or credits, license and reviewer).
 -   Loudness: music about -16 LUFS, ambience about -20 LUFS, effects
     peak-normalized to -1 dBFS and balanced by their list volume.
 -   Budget: 30 MB of audio in the repository (`make audio-check`); raised from 20 MB by user decision on 2026-10-29 for the beds/production/defence sounds.
@@ -1283,7 +1279,7 @@ resolve metadata conflicts, and update the catalog.
 -   [x] fortify and turret guns (wave D, A3: family `fortify` with barricade (`stone_tint` mask), autocannon, slug turret and mortar guns drawn from a precomputed key table in `render/overlay/turret_draw.go`, powered door, four shell item icons)
 -   [x] storage (wave E, A4: family `storage`, the shelf at its footprint; 5957 sprites in the validator, 0 errors)
 -   [x] goods (wave E, A4: family `goods`, 15 item sprites and `ui_icon` icons for the PRD-4 and DEF-4 kinds: meals, kibble, wort, drugs, chemfuel, components, uranium, plasteel, reinforced barrel)
--   [x] mech (wave E, A4: four mechanoids with full sprite sets, wrecks and icons; see §11.1; voices are not art and are blocked, see the DEF-4 R2 handoff)
+-   [x] mech (wave E, A4: four mechanoids with full sprite sets, wrecks and icons; see §11.1; voices are not art; generated with MOSS in SND-004)
 -   [x] shippart (wave E, A4: family `shippart`, the 6x3 crashed ship part)
 -   [x] generators/batteries/conduits/lamps (PLAY-021: `artlib/families/power.py`: a linked 16-mask conduit and a hidden-conduit overlay marking, power switch on/off, wood-fired, solar, wind (eight rotor frames) and geothermal generators, battery, heater, in-wall cooler; torch lamp and electric benches in furniture; lit parts as `<name>_glow` layers drawn only while powered, the standing lamp's bulb included (PLAY-022); review sheet `generated/power_buildings.png`)
 

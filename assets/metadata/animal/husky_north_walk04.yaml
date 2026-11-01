@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-34, 66]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.318
-  h: 0.786
-  d: 1.247
 ppt: 128
 species: husky
 facing: north

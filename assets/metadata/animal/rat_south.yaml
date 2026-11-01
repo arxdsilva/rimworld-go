@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-38, 4]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.247
-  h: 0.397
-  d: 1.751
 ppt: 128
 species: rat
 facing: south

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.422
-  h: 0.248
-  d: 0.397
 tint:
   group: cloth
   mask: generated/world/pawn/tuque_knit_north_mask.png

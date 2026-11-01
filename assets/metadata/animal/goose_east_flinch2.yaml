@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [86, 86]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.078
-  h: 1.011
-  d: 0.419
 ppt: 128
 species: goose
 facing: east

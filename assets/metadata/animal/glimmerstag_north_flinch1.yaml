@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [36, 318]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.543
-  h: 3.781
-  d: 2.625
 ppt: 90
 species: glimmerstag
 facing: north

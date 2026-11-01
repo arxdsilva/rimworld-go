@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-32, 50]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.406
-  h: 0.765
-  d: 0.949
 ppt: 128
 species: hare
 facing: south

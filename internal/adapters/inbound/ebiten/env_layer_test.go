@@ -80,7 +80,7 @@ func (r *Renderer) waterFrameKey(t string, x, y int) string {
 
 func (r *Renderer) drawWaterTile(screen *ebiten.Image, t string, x, y int, tile float64, sw, sh int, cs spritepkg.ColorScale) {
 	v := r.liveView()
-	r.pipe().Env.DrawWaterTile(v, screen, t, x, y, tile, sw, sh, cs, r.cast != nil, envHost{r})
+	r.pipe().Env.DrawWaterTile(v, screen, t, x, y, tile, sw, sh, cs, r.pipe().LOD.Baking, envHost{r})
 }
 
 func (r *Renderer) foamCS(x, y int) spritepkg.ColorScale {

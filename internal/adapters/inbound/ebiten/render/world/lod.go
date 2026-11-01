@@ -95,8 +95,8 @@ type LOD struct {
 	cornerTop, cornerBot []float32             // drawBaked's lamp levels at a row's tile corners
 	groundRows           [3][]light.GroundTile // drawBaked's tile levels: the rows above and below a corner row
 	white                *ebiten.Image
-	Baking               bool // lit draws draw unlit albedo (a bake)
-	bakeCast             light.Cast
+	Baking               bool           // lit draws draw unlit albedo (a bake)
+	bakeCast             light.Cast     // base.Cast while a bake draws
 	Grass                env.GrassBatch // render/env: tuft atlas, mask, batch buffers
 	Crops                env.CropBatch  // render/env: crop unit atlas, batches, furrows
 	// budget is how many chunk bakes this frame may still do.
@@ -154,15 +154,15 @@ func (l *LOD) InView(x, y, pad, padS int) bool {
 // frame. sw and sh are dst's extent for culling.
 func (k *Bakes) WithBake(dst *ebiten.Image, px float64, x0, y0 int, ox, oy float64, fn func(sw, sh int, tile float64)) {
 	v := k.v
-	cam, frame, view, cast := *k.Cam, v.Cam, k.Env.View, *k.Cast
+	cam, frame, view, cast := *k.Cam, v.Cam, k.Env.View, k.Cast
 	bake := camera.Camera{Zoom: px / camera.TileSize, OffsetX: float64(x0)*px - ox, OffsetY: float64(y0)*px - oy, Placed: true}
 	*k.Cam, v.Cam = bake, bake
 	b := dst.Bounds()
 	k.setView(b.Max.X, b.Max.Y, px)
 	k.LOD.Baking = true
-	*k.Cast = &k.LOD.bakeCast // render/env draws the water's baked frame, not the shader
+	k.Cast = &k.LOD.bakeCast // the overlays skip figure stains in a bake
 	defer func() {
-		*k.Cam, v.Cam, k.Env.View, *k.Cast = cam, frame, view, cast
+		*k.Cam, v.Cam, k.Env.View, k.Cast = cam, frame, view, cast
 		k.LOD.Baking = false
 	}()
 	fn(b.Max.X, b.Max.Y, px)

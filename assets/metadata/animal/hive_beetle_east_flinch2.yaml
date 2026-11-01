@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [106, 54]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.451
-  h: 0.699
-  d: 0.976
 ppt: 128
 species: hive_beetle
 facing: east

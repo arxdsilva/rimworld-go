@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-4, 94]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.672
-  h: 0.866
-  d: 1.747
 ppt: 128
 species: harrow
 facing: south

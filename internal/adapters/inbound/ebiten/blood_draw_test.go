@@ -299,16 +299,6 @@ func TestNonFigureDrawsHaveNoBlood(t *testing.T) {
 	if v := got["item/wood_pile"]; len(v) != 1 || v[0] != 0 {
 		t.Fatalf("items carry no blood: %v", v)
 	}
-	// the shadow pass draws silhouettes: no lit draws, no blood
-	for k := range got {
-		delete(got, k)
-	}
-	r.cast = &lightpkg.Cast{}
-	r.pipe().Creatures.DrawAnimalFigure(r.liveView(), r.pipe().Pass(), dst, an, 3, 3, 64)
-	r.cast = nil
-	if len(got) != 0 || r.figureBlood != 0 {
-		t.Fatalf("cast mode: %v %v", got, r.figureBlood)
-	}
 }
 
 func TestDrawLitWritesCustom3(t *testing.T) {

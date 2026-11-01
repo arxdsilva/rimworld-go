@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.467
-  h: 0.363
-  d: 0.44
 tint:
   group: cloth
   mask: generated/world/pawn/simple_helmet_south_mask.png

@@ -102,16 +102,6 @@ func TestNoShadowsUnderRoof(t *testing.T) {
 	if got[[2]int{12, 3}] != 0 || got[[2]int{9, 3}] != 0 || got[[2]int{13, 3}] != 0 {
 		t.Fatalf("floors or pawns cast a box or blob: %v", got)
 	}
-	// pawns cast silhouettes instead (with art), roofed or not; the
-	// embodied one is a corpse item now
-	r.art.Sprites["pawn/body_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
-	sky := map[int]bool{}
-	for _, c := range r.creatureCasters(w, pawns) {
-		sky[int(c.Pawn.ID)] = c.Sky
-	}
-	if len(sky) != 2 || sky[1] || !sky[2] {
-		t.Fatalf("creature casters (id: open sky) %v", sky)
-	}
 	// off-screen casters (beyond the longest shadow) are skipped
 	r.env.View = env.Rect{X0: 0, Y0: 0, X1: 2, Y1: 2}
 	far := game.WorldView{TerrainW: w.TerrainW, Items: []game.ItemView{{Kind: "wood", X: 1, Y: 1}, {Kind: "wood", X: 19, Y: 11}}}
@@ -220,7 +210,7 @@ func TestShadowLayerHalfResolution(t *testing.T) {
 		if r.env.Shadow.Composites != 1 {
 			t.Fatalf("dev %v: composites %d, want 1", dev, r.env.Shadow.Composites)
 		}
-		return r, r.env.Shadow.BlurOpts.Uniforms["R1"].(float32)
+		return r, r.env.Shadow.BlurOpts.Uniforms["R0"].(float32)
 	}
 	r1, r1dev1 := run(1)
 	if b := r1.env.Shadow.Layer.Bounds(); b.Dx() != 641 || b.Dy() != 401 {
@@ -237,7 +227,7 @@ func TestShadowLayerHalfResolution(t *testing.T) {
 	}
 	// at dev 2 the same zoom is twice the tile px, then halved by the layer
 	if math.Abs(float64(r1dev2-r1dev1)) > 1e-4 {
-		t.Fatalf("R1 dev2 %v vs dev1 %v: radii are px at the layer's zoom", r1dev2, r1dev1)
+		t.Fatalf("R0 dev2 %v vs dev1 %v: radii are px at the layer's zoom", r1dev2, r1dev1)
 	}
 }
 
@@ -286,4 +276,86 @@ func TestShadowHalfResolutionKeepsWorldPlacement(t *testing.T) {
 		t.Fatalf("layer %v, want 320x200", b)
 	}
 	_ = screen
+}
+
+// TestCreaturesCastNoShadow: pawns and animals (with art, standing in the
+// sun, by a lit lamp at night and in a lamp-lit roofed room at noon) cast
+// nothing (user decision, 2026-10-31): alone they leave the shadow pass
+// idle (no layer, no composite), and beside a wall and a lamp the pass
+// lists the same casters and draws the same as without them, with no lit
+// draw of a figure.
+func TestCreaturesCastNoShadow(t *testing.T) {
+	t.Parallel()
+	creatureArt := func(r *Renderer) {
+		r.art.Sprites["pawn/body_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+		for _, f := range []string{"south", "east", "north"} {
+			r.art.Sprites["animal/dustbuck_"+f] = fakeSprite([2]int{128, 128}, pt{64, 110}, nil)
+		}
+	}
+	pawns := []game.PawnView{{ID: 1, X: 4, Y: 3}, {ID: 2, X: 9, Y: 6}, {ID: 3, X: 15, Y: 2}, {ID: 4, X: 6, Y: 8, Lying: true}}
+	animals := []game.AnimalView{{ID: 7, Species: "dustbuck", X: 5, Y: 5}, {ID: 8, Species: "dustbuck", X: 10, Y: 6}}
+	roofs := map[int]uint8{}
+	for x := 13; x < 18; x++ { // a roofed room around (15, 2)
+		for y := 1; y <= 3; y++ {
+			roofs[y*20+x] = overlay.RoofBuilt
+		}
+	}
+	for _, c := range []struct {
+		name  string
+		light lightpkg.State
+	}{
+		{"noon sun", lightpkg.LightAt(12, 15, "clear", 0)},
+		{"low sun", testLight(0.4, 0.3, 0.32)},
+		{"moon and lamps", lightpkg.LightAt(23, 15, "clear", 0)},
+	} {
+		if c.light.ShadowAlpha <= 0 {
+			t.Fatalf("%s: fixture casts no shadows at all", c.name)
+		}
+		// creatures alone: the pass never runs
+		w := shadowWorld(roofs)
+		w.Animals = animals
+		r := shadowRenderer(t, w)
+		creatureArt(r)
+		r.lit.Light = c.light
+		r.view.Pawns = pawns
+		lit := 0
+		r.lit.OnDraw = func(*ebiten.Image, float32) { lit++ }
+		r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
+		if r.env.Shadow.Composites != 0 || r.env.Shadow.Layer != nil || lit != 0 {
+			t.Fatalf("%s: creatures alone drew a shadow layer (composites %d, lit draws %d)", c.name, r.env.Shadow.Composites, lit)
+		}
+
+		// beside a wall and lamps (outdoors and in the roofed room): the
+		// same casters and composites as the same world without creatures
+		frame := func(withCreatures bool) (casters []lightpkg.Caster, composites, litDraws int) {
+			w := shadowWorld(roofs)
+			w.Buildings = []game.BuildingView{{Kind: "wall", X: 2, Y: 2, W: 1, H: 1}, lampBuilding(20, 8, 5), lampBuilding(21, 14, 2)}
+			var ps []game.PawnView
+			if withCreatures {
+				w.Animals, ps = animals, pawns
+			}
+			r := shadowRenderer(t, w)
+			creatureArt(r)
+			r.lit.Light = c.light
+			r.view.W, r.view.Pawns = w, ps
+			n := 0
+			r.lit.OnDraw = func(*ebiten.Image, float32) { n++ }
+			r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.cam.Tile())
+			return append([]lightpkg.Caster(nil), r.env.Shadow.Objects...), r.env.Shadow.Composites, n
+		}
+		bare, bareN, _ := frame(false)
+		got, gotN, litDraws := frame(true)
+		if len(bare) == 0 || bareN != 1 {
+			t.Fatalf("%s: fixture: %d casters, %d composites without creatures", c.name, len(bare), bareN)
+		}
+		if len(got) != len(bare) || gotN != bareN || litDraws != 0 {
+			t.Fatalf("%s: with creatures %d casters, %d composites, %d lit draws; without %d casters, %d composites",
+				c.name, len(got), gotN, litDraws, len(bare), bareN)
+		}
+		for i := range bare {
+			if got[i] != bare[i] {
+				t.Fatalf("%s: caster %d is %+v with creatures, %+v without", c.name, i, got[i], bare[i])
+			}
+		}
+	}
 }

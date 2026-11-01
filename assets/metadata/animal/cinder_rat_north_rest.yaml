@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-38, 6]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.247
-  h: 0.322
-  d: 1.632
 ppt: 128
 species: cinder_rat
 facing: north

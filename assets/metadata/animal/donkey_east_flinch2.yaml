@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [104, 158]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.567
-  h: 1.563
-  d: 0.453
 ppt: 128
 species: donkey
 facing: east

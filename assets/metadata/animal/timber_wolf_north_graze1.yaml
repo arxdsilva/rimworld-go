@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-30, 92]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.358
-  h: 0.863
-  d: 1.577
 ppt: 128
 species: timber_wolf
 facing: north

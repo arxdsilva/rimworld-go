@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [112, -2]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.832
-  h: 0.446
-  d: 0.852
 ppt: 128
 species: iguana
 facing: east

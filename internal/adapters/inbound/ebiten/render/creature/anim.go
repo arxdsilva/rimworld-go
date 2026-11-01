@@ -37,9 +37,8 @@ func (c *Set) DrawSpritePose(v *render.View, pass sprite.Pass, screen *ebiten.Im
 	sx, sy := v.WorldToScreenF(wx, wy)
 	geo := SpritePoseGeo(*m, float64(sx), float64(sy), tile, ps)
 	// cull on the posed canvas itself (PLAY-022: an XL body reaches 2+
-	// tiles past its cell). A silhouette (pass.Cast) is projected away from
-	// the sprite, so its caster list culls instead (creatureCasters).
-	if pass.Cast == nil && !geoVisible(geo, float64(m.Canvas[0]), float64(m.Canvas[1]), screen.Bounds()) {
+	// tiles past its cell)
+	if !geoVisible(geo, float64(m.Canvas[0]), float64(m.Canvas[1]), screen.Bounds()) {
 		return
 	}
 	img := v.Art.Image(key, tint)
@@ -57,7 +56,7 @@ func (c *Set) DrawSpritePose(v *render.View, pass sprite.Pass, screen *ebiten.Im
 		}
 		screen.DrawImage(img, op)
 	} else {
-		c.lit.Draw(v, screen, img, geo, cs, wx, wy, pass.Cast, pass.Baking, pass.Blood)
+		c.lit.Draw(v, screen, img, geo, cs, wx, wy, pass.Baking, pass.Blood)
 	}
 	if ps.Flash > 0 {
 		f := ps.Flash

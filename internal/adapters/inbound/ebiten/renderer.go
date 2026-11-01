@@ -149,9 +149,6 @@ type Renderer struct {
 	smooth     camerapkgpkg.Smooth               // eased pan and zoom (camera/smooth.go)
 	env        envState                          // wind, contact springs and weather (environment.go)
 	lit        lightpkg.Lit                      // sun, moon and lamp lighting (render/light)
-	// cast, while set, turns world sprite draws into shadow silhouettes
-	// (shadow_cast.go).
-	cast *lightpkg.Cast
 	// bursts remembers which explosive deaths already burst (animal_burst.go).
 	// voice is the animals' sound memory (animal_sounds.go); soundHas
 	// reports a sound id exists (the App wires Sound.Has; nil: all do).

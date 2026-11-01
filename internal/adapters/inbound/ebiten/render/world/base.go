@@ -23,10 +23,10 @@ import (
 // art is the catalog the painter draws from.
 func (b *base) art() *art.Catalog { return b.Paint.Art }
 
-// Pass is the Pass sprites draw in: the shadow Pass's cast, a bake, a
+// Pass is the Pass sprites draw in: a bake (with its Cast marker), a
 // figure's blood.
 func (b *base) Pass() sprite.Pass {
-	return sprite.Pass{Cast: *b.Cast, Baking: b.LOD.Baking, Blood: *b.Blood}
+	return sprite.Pass{Cast: b.Cast, Baking: b.LOD.Baking, Blood: *b.Blood}
 }
 
 // lightView is the view a light draw reads: the camera the renderer draws
@@ -135,7 +135,7 @@ func (b *base) DrawTile(dst *ebiten.Image, key string, wx, wy, tile float64, sw,
 	geo := ebiten.GeoM{}
 	geo.Scale(k, k)
 	geo.Translate(x0, y0)
-	b.Lit.DrawGround(b.lightView(), dst, img, geo, cs, wx, wy, *b.Cast, b.LOD.Baking, *b.Blood)
+	b.Lit.DrawGround(b.lightView(), dst, img, geo, cs, wx, wy, b.LOD.Baking, *b.Blood)
 }
 
 // drawGroundTile draws tile (x, y)'s ground: its terrain tile (water
@@ -156,7 +156,7 @@ func (b *base) drawGroundTile(dst *ebiten.Image, w *game.WorldView, x, y int, ti
 	}
 	if ok && IsWaterCode[code] {
 		b.Lit.Calls++
-		b.Env.DrawWaterTile(b.v, dst, TerrainNames[code], x, y, tile, sw, sh, tcs, *b.Cast != nil, b.Stamp)
+		b.Env.DrawWaterTile(b.v, dst, TerrainNames[code], x, y, tile, sw, sh, tcs, b.LOD.Baking, b.Stamp)
 	} else {
 		b.DrawTile(dst, key, float64(x), float64(y), tile, sw, sh, tcs)
 	}

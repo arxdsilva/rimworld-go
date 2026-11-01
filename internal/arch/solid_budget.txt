@@ -4,7 +4,7 @@
 
 # --- size rules ---
 fields rimworld-go/internal/adapters/inbound/ebiten.App 57
-fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 40
+fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 39
 fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 51  # the same debt, moved with the type (ARCH-003)
 fields rimworld-go/internal/adapters/inbound/ebiten/wizard.Draft 42  # the same debt, moved with the type (ARCH-005 wave 5.2; was newGameState 43)
 fields rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 30  # the same debt, moved with the type (ARCH-003 wave 3.2; was uiState 32)

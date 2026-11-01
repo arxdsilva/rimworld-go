@@ -121,24 +121,6 @@ func (g *Grid) lampAt(k, x, y int) float32 {
 	return lampFalloff(d, s.Radius)
 }
 
-// lampReaches reports whether source k (a lamp) lights tile (x, y), or, on
-// a boundary tile (a creature in a doorway), one of its neighbours.
-func (g *Grid) lampReaches(k, x, y int) bool {
-	if g.lampAt(k, x, y) > 0 {
-		return true
-	}
-	rg := g.view.RoomGrid
-	if x < 0 || y < 0 || x >= g.w || y >= g.h || len(rg) < g.w*g.h || rg[y*g.w+x] != room.Wall {
-		return false
-	}
-	for _, d := range [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
-		if g.lampAt(k, x+d[0], y+d[1]) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // sees reports whether the line from tile (x0, y0) to (x1, y1) crosses no
 // boundary tile strictly between them (Bresenham), and never slips
 // diagonally between two boundary tiles touching at a corner.

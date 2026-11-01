@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-12, 114]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.619
-  h: 1.185
-  d: 2.173
 ppt: 128
 species: yak
 facing: north

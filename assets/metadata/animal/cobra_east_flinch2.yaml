@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [68, 70]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.03
-  h: 0.851
-  d: 0.711
 ppt: 128
 species: cobra
 facing: east

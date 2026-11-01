@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-30, 104]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.361
-  h: 0.821
-  d: 2.032
 ppt: 128
 species: cougar
 facing: north

@@ -249,3 +249,25 @@ func TestItemPopAndSway(t *testing.T) {
 		t.Fatalf("sway varies by tile and stays bounded: %v %v", a, b)
 	}
 }
+
+// figureArt is the combat art plus the apparel and hair layers a figure
+// draws.
+func figureArt() *art.Catalog {
+	c := fakeCombatArt()
+	for f := art.FaceSouth; f <= art.FaceWest; f++ {
+		for _, k := range []string{"pants_basic_", "shirt_basic_", "vest_utility_", "hair_short_", "hair_crop_", "hair_bun_"} {
+			c.Sprites["pawn/"+k+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+		}
+	}
+	return c
+}
+
+// keyOf maps a drawn image back to its sprite key.
+func keyOf(c *art.Catalog, img *ebiten.Image) string {
+	for k, sp := range c.Sprites {
+		if sp.Img == img {
+			return k
+		}
+	}
+	return "?"
+}

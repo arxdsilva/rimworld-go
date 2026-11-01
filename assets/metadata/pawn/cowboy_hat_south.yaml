@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.605
-  h: 0.184
-  d: 0.532
 tint:
   group: cloth
   mask: generated/world/pawn/cowboy_hat_south_mask.png

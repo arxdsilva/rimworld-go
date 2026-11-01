@@ -212,8 +212,7 @@ func (c *Set) StandingPose(v *render.View, p game.PawnView, m motion.MoveState) 
 }
 
 // FigurePose is everything a pawn's figure draw needs this frame,
-// resolved once (from read-only state) so the object pass and every
-// light of the shadow pass draw the same figure.
+// resolved once from read-only state.
 type FigurePose struct {
 	Vis  Visual      // the presentation state (lying pawns read it)
 	Face art.Facing  // the facing (west draws the east art mirrored)
@@ -235,24 +234,16 @@ func (c *Set) FigurePoseOf(v *render.View, p game.PawnView) FigurePose {
 	return fp
 }
 
-// FigureLying reports a pawn lying on the bare ground (downed, dead or
-// asleep there), whose silhouette lies flat; one in bed casts none.
-func FigureLying(p game.PawnView) bool { return p.Lying && !p.InBed }
-
 // DrawPawnFigure draws only the pawn's figure: body, apparel, hair, the
 // held item, and what it carries (a load or a
 // rescued patient), in pose and facing. It writes no layer state and
-// draws no labels, bars, rings or flashes of its own, so the shadow pass
-// (pass.Cast set) calls it to draw the pawn's silhouette.
+// draws no labels, bars, rings or flashes of its own.
 func (c *Set) DrawPawnFigure(v *render.View, pass sprite.Pass, dst *ebiten.Image, p game.PawnView, wx, wy, tile float64, fp FigurePose) {
 	if p.Lying {
 		c.DrawLyingPawn(v, pass, dst, p, fp.Vis, wx, wy, tile)
 		return
 	}
 	ps, item := fp.Ps, fp.Held
-	if pass.Cast != nil {
-		ps.Flash = 0 // a light effect, not part of the shape
-	}
 	mark := c.mark()
 	rig := c.rigOf(v, p, fp.Face)
 	if rig.Mirror {
@@ -320,9 +311,6 @@ func (c *Set) DrawLyingPawn(v *render.View, pass sprite.Pass, screen *ebiten.Ima
 		cs = DeadCS
 	}
 	if p.InBed {
-		if pass.Cast != nil {
-			return // the bed casts the shadow
-		}
 		if b, ok := BedUnder(v.W, p.X, p.Y); ok {
 			c.drawInBed(v, pass, screen, p, b, vis.LyingSince, tile, cs)
 			return
@@ -330,9 +318,6 @@ func (c *Set) DrawLyingPawn(v *render.View, pass sprite.Pass, screen *ebiten.Ima
 	}
 	ps := c.FallPose(v, p, vis)
 	ps.Cs = cs
-	if pass.Cast != nil {
-		ps.Flash = 0
-	}
 	c.DrawFigure(v, pass, screen, p, wx, wy, tile, ps)
 }
 
@@ -461,12 +446,7 @@ func CarryPoses(c *art.Catalog, f art.Facing) (ground, slung motion.Pose) {
 // lifted from the ground over easeFrames.
 func (c *Set) drawCarried(v *render.View, pass sprite.Pass, screen *ebiten.Image, q game.PawnView, f art.Facing, wx, wy, tile float64) {
 	ground, slung := CarryPoses(v.Art, f)
-	var k float64
-	if pass.Cast == nil {
-		k = c.CarryEase(q.ID, v.Present) // the first sighting starts the lift
-	} else if born, ok := c.CarryBorn[q.ID]; ok {
-		k = motion.SmoothEase(v.Present, born, motion.EaseFrames) // shadow pass: read only
-	}
+	k := c.CarryEase(q.ID, v.Present) // the first sighting starts the lift
 	c.DrawFigure(v, pass, screen, q, wx, wy, tile, motion.LerpPose(ground, slung, k))
 }
 

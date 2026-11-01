@@ -1,10 +1,10 @@
 // Package light is the renderer's sun, moon and lamp lighting: the light
 // grid (sky exposure and lamp light per tile), the lit-sprite shader
-// (lit.kage) and its pair images, the light sources, contact and cast
-// shadows with their blur, daylight and the no-art sky overlay. It reads
-// the frame's *render.View and its own state, never the renderer
-// (SOLID_GO.md §7); the shadow pass asks the renderer for its casters and
-// figure silhouettes through Casters.
+// (lit.kage) and its pair images, the light sources, the box and blob
+// shadows of buildings, rock, plants and items with their blur (creatures
+// cast none), daylight and the no-art sky overlay. It reads the frame's
+// *render.View and its own state, never the renderer (SOLID_GO.md §7);
+// the shadow pass asks the renderer for its casters through Casters.
 package light
 
 import (
@@ -983,9 +983,9 @@ func (l *Lit) SyncUniforms() {
 // DrawGround is Draw for a ground plane (terrain tiles and edges,
 // floors): flat on the ground, its lamp light ramps per vertex
 // (GroundLamp) like the bakes', instead of one level per tile.
-func (l *Lit) DrawGround(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [4]float32, wx, wy float64, cast *Cast, baking bool, blood float32) {
+func (l *Lit) DrawGround(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [4]float32, wx, wy float64, baking bool, blood float32) {
 	l.ground = true
-	l.Draw(v, dst, img, geo, cs, wx, wy, cast, baking, blood)
+	l.Draw(v, dst, img, geo, cs, wx, wy, baking, blood)
 }
 
 // noCS is the identity colour scale.
@@ -998,10 +998,9 @@ var noCS = [4]float32{1, 1, 1, 1}
 // shader and uniforms; per-sprite light rides in vertex attributes, so
 // Ebiten merges consecutive draws from one atlas page into one batch.
 // The renderer's pass decides the rest: baking (a chunk or map bake: the
-// unlit albedo, lit when the bake is drawn), cast (the shadow pass: a
-// silhouette into the shadow layer, not a lit sprite) and blood (a
-// figure's stain, Custom3; 0 for everything else).
-func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [4]float32, wx, wy float64, cast *Cast, baking bool, blood float32) {
+// unlit albedo, lit when the bake is drawn) and blood (a figure's stain,
+// Custom3; 0 for everything else).
+func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [4]float32, wx, wy float64, baking bool, blood float32) {
 	ground := l.ground
 	l.ground = false
 	if baking { // a bake: unlit albedo, lit when it is drawn
@@ -1012,10 +1011,6 @@ func (l *Lit) Draw(v *render.View, dst, img *ebiten.Image, geo ebiten.GeoM, cs [
 			op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
 		}
 		dst.DrawImage(img, op)
-		return
-	}
-	if cast != nil { // the shadow pass: a silhouette, not a lit sprite
-		cast.Silhouette(img, geo)
 		return
 	}
 	if l.OnDraw != nil {

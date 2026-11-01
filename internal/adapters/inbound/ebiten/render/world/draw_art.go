@@ -151,7 +151,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 
 	if lt != Map { // no shadows on the whole-map bake
 		p.setView(sw, sh, tile)
-		p.Shadows.Draw(p.lightView(), p.Lit, p.Casters, p.shadowRect(), screen, w, sw, sh, tile) // under every object
+		p.Shadows.Draw(p.lightView(), p.Lit, p.Casters, screen, w, sw, sh, tile) // under every object
 		p.setView(sw, sh, tile)
 		p.Overlays.DrawEaves(v, screen, w, sw, sh, tile)
 	}
@@ -337,13 +337,6 @@ func (b *base) frameViews(w *game.WorldView) []game.ChunkView {
 		return nil
 	}
 	return b.LOD.Views
-}
-
-// shadowRect is the environment's visible rectangle as the shadow pass
-// reads it.
-func (b *base) shadowRect() light.Rect {
-	r := b.Env.View
-	return light.Rect{X0: r.X0, Y0: r.Y0, X1: r.X1, Y1: r.Y1}
 }
 
 // resetCells empties a reused per-frame tile set.

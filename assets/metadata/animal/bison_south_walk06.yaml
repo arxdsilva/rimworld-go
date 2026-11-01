@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-8, 130]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.694
-  h: 1.351
-  d: 1.965
 ppt: 128
 species: bison
 facing: south

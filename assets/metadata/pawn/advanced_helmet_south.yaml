@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.458
-  h: 0.336
-  d: 0.423
 tint:
   group: cloth
   mask: generated/world/pawn/advanced_helmet_south_mask.png

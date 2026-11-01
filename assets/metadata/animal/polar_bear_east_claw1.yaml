@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [134, 186]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.222
-  h: 1.479
-  d: 0.776
 ppt: 118
 species: polar_bear
 facing: east

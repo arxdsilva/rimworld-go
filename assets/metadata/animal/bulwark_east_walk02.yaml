@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [156, 94]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 3.333
-  h: 1.544
-  d: 2.992
 ppt: 74
 species: bulwark
 facing: east

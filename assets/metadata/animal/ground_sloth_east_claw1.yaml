@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [132, 218]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.465
-  h: 1.741
-  d: 1.193
 ppt: 120
 species: ground_sloth
 facing: east

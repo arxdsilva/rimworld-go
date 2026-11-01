@@ -3,9 +3,7 @@ package ebiten
 import (
 	"math"
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
-	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
@@ -19,29 +17,15 @@ import (
 
 // The shadow pass lives in render/light (Shadows.Draw). What casts stays
 // here, because it is the renderer's to know: the sprite keys and
-// footprints of buildings, plants, items and rock, the chunk lists in
-// view, the creatures' interpolated positions and figure poses, and the
-// figure code that draws a silhouette. shadowHost hands those to the pass
-// as its light.Casters.
+// footprints of buildings, plants, items and rock, and the chunk lists in
+// view. shadowHost hands those to the pass as its light.Casters.
+// Creatures (pawns, animals, mechanoids) cast no shadow (user decision,
+// 2026-10-31).
 
 // shadowHost is the renderer as the shadow pass's light.Casters. The pass
 // runs inside the pipeline's frame (or a test's liveView), so it reads the
 // pipeline and the frame view as they are.
 type shadowHost struct{ r *Renderer }
-
-// CastFigure draws c's figure onto dst in cast mode (r.cast set): every
-// draw of it becomes a silhouette in the shadow layer.
-func (h shadowHost) CastFigure(c *light.Creature[creature.FigurePose], cast *lightpkg.Cast, dst *ebiten.Image, tile float64) {
-	r := h.r
-	r.cast = cast
-	cr, v := r.wp.Creatures, &r.view
-	if c.Pawn != nil {
-		cr.DrawPawnFigure(v, r.wp.Pass(), dst, *c.Pawn, c.WX, c.WY, tile, c.Fig)
-	} else {
-		cr.DrawAnimalFigure(v, r.wp.Pass(), dst, *c.Animal, c.WX, c.WY, tile)
-	}
-	r.cast = nil
-}
 
 // VisibleTiles is the on-map tile range in view.
 func (h shadowHost) VisibleTiles() (x0, y0, x1, y1 int) { return h.r.wp.Env.VisibleTiles(&h.r.view) }
@@ -65,8 +49,7 @@ func skyOpen(w game.WorldView, x, y int) bool {
 
 // Objects lists this frame's box and blob casters (buildings, rocks,
 // plants and items) standing on open-sky tiles within the view (widened by
-// the longest shadow). Pawns and animals cast their own silhouettes
-// (Creatures).
+// the longest shadow). Pawns and animals cast nothing.
 func (h shadowHost) Objects(w game.WorldView, pawns []game.PawnView) []lightpkg.Caster {
 	r := h.r
 	wp, fv := r.wp, &r.view
@@ -190,68 +173,4 @@ func (h shadowHost) addRockCasters(w game.WorldView, add func(key string, x, y, 
 			add("rock/rock_wall_00", float64(x), float64(y), 1, 1, 1)
 		}
 	}
-}
-
-// Creatures lists the pawns and animals in view (widened by the longest
-// shadow) that cast: not in bed, carried (the rescuer's figure draws
-// them), or an embodied corpse, and with art. Each pawn's figure pose is
-// resolved here, once per frame, for its silhouettes.
-func (h shadowHost) Creatures(w game.WorldView, pawns []game.PawnView) []light.Creature[creature.FigurePose] {
-	r := h.r
-	cr, fv := r.wp.Creatures, &r.view
-	st := &r.env.Shadow
-	out := st.Creatures[:0]
-	v := r.env.View
-	mg := lightpkg.ShadowMaxLen + 1
-	inView := func(x, y float64) bool {
-		return v.Empty() || x+1 >= v.X0-mg && y+1 >= v.Y0-mg && x <= v.X1+mg && y <= v.Y1+mg
-	}
-	add := func(c light.Creature[creature.FigurePose], key string, feetX, feetY float64) {
-		sp := r.art.Sprite(key)
-		if sp == nil {
-			return // no art (the fallback marker casts nothing)
-		}
-		s := st.SpecOf(r.art, key)
-		if s.H <= 0 {
-			return
-		}
-		c.W, c.H, c.Opaque, c.PPT = s.W, s.H, sp.OpaqueHeightPx(), sp.Meta.PxPerTile()
-		c.Px, c.Py = c.WX+feetX, c.WY+feetY
-		c.Tx, c.Ty = int(math.Floor(c.WX+0.5)), int(math.Floor(c.WY+0.5))
-		c.Sky = skyOpen(w, c.Tx, c.Ty)
-		out = append(out, c)
-	}
-	for i := range pawns {
-		p := &pawns[i]
-		if p.Embodied || p.CarriedBy != 0 || p.Lying && p.InBed {
-			continue
-		}
-		wx, wy := r.interpWorld(*p)
-		if !inView(wx, wy) {
-			continue
-		}
-		add(light.Creature[creature.FigurePose]{Pawn: p, WX: wx, WY: wy, Lying: creature.FigureLying(*p), Fig: cr.FigurePoseOf(fv, *p)}, "pawn/body_south", creature.PawnFeetX, creature.PawnFeetY)
-	}
-	// an animal's silhouette reaches past its cell by its body (PLAY-022:
-	// up to about 2.5 tiles for the longest canvases) before the shadow
-	// itself
-	e := r.art.AnimalExtent()
-	ma := mg + max(e.Side, e.Up, e.Down)
-	for i := range w.Animals {
-		an := &w.Animals[i]
-		// cull on the cell first: the drawn position stays within a few
-		// tiles of it (interpolation and corrections), and most of a big
-		// map's animals are far off screen
-		if fx, fy := float64(an.X), float64(an.Y); !v.Empty() &&
-			(fx+1+motionpkg.DrawnReach < v.X0-ma || fy+1+motionpkg.DrawnReach < v.Y0-ma || fx-motionpkg.DrawnReach > v.X1+ma || fy-motionpkg.DrawnReach > v.Y1+ma) {
-			continue
-		}
-		wx, wy := cr.AnimalAt(fv, *an)
-		if !v.Empty() && !(wx+1 >= v.X0-ma && wy+1 >= v.Y0-ma && wx <= v.X1+ma && wy <= v.Y1+ma) {
-			continue
-		}
-		add(light.Creature[creature.FigurePose]{Animal: an, WX: wx, WY: wy}, cr.AnimalBaseKey(fv, *an), motionpkg.FigurePivotX, motionpkg.FigurePivotY)
-	}
-	st.Creatures = out
-	return out
 }

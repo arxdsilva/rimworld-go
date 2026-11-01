@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-18, 78]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.56
-  h: 0.914
-  d: 1.305
 ppt: 128
 species: sheep
 facing: north

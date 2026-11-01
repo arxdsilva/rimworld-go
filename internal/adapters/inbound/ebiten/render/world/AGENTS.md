@@ -7,7 +7,7 @@ The renderer's world pipeline: the draw order of one frame (ground, floors, zone
 - `Pipeline` (9 methods): the draw order, copied line for line from the root.
 - `Bakes` (11 methods): zoom tiers, chunk and whole-map bakes, the frame's chunk lists.
 - `Objects` (9), `Labels` (9), `LOD` (3): the tier selection.
-- `base` (33 methods) shared by the parts; `Shared` points at the renderer's camera, cast, blood, `lod`, `links` and `stoneArt`.
+- `base` (33 methods) shared by the parts; `Shared` points at the renderer's camera and blood; `base.Cast` is the bake marker (`WithBake`), `lod`, `links` and `stoneArt`.
 - `Source` (6 methods, values only): `World`, `Snapshot`, `Date`, `ChunkLayer`, `PlantsIn`, `DrawOrderRoute`. The simulation is reached only through it.
 - `NewPlantKey(p, h)`: plant art key.
 

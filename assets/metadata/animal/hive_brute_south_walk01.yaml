@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [48, 250]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.606
-  h: 1.617
-  d: 2.287
 ppt: 128
 species: hive_brute
 facing: south

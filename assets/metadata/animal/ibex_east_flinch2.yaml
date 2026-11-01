@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [90, 144]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.217
-  h: 1.395
-  d: 0.424
 ppt: 128
 species: ibex
 facing: east

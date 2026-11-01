@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [104, 102]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.853
-  h: 0.76
-  d: 0.361
 ppt: 128
 species: panther
 facing: east

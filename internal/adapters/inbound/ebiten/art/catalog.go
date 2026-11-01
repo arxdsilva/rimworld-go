@@ -10,7 +10,6 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -281,11 +280,9 @@ type Sprite struct {
 	// filled guards the one lazy fill from src or file, so catalogs shared
 	// across goroutines (tests) stay race-free.
 	filled sync.Once
-	// opaqueH caches opaqueHeightPx and opaqueBx opaqueBox (x0, y0, x1,
-	// y1 canvas px), measured once in the same pass (measured: catalogs
-	// are shared across parallel tests).
+	// opaqueBx caches OpaqueBox (x0, y0, x1, y1 canvas px), measured once
+	// (measured: catalogs are shared across parallel tests).
 	measured sync.Once
-	opaqueH  float64
 	opaqueBx [4]float64
 	// maskImg is the tint mask's coverage box on the GPU (maskBox, in the
 	// sprite's pixels) for tint bakes (bakeTint), made on the first bake;
@@ -299,19 +296,11 @@ type Sprite struct {
 // a sprite's body when measuring it (faint glow and anti-aliasing don't).
 const opaqueAlphaMin = 32
 
-// OpaqueHeightPx is the height of the sprite's opaque part, from its
-// alpha bounds, in canvas (source) pixels: measured once and cached. A
-// sprite without opaque pixels reports its canvas height. It calibrates
-// a creature's shadow (ART-012: κ = shadow.h / opaque height).
-func (sp *Sprite) OpaqueHeightPx() float64 {
-	sp.measured.Do(sp.measureOpaque)
-	return sp.opaqueH
-}
-
-// OpaqueBox is the box of the sprite's opaque pixels (alpha bounds, as
-// opaqueHeightPx) in canvas px: x0, y0 inclusive, x1, y1 exclusive. A
-// sprite without pixels or opaque ones reports its whole canvas. Measured
-// with the height, so a released sprite (art_memory.go) keeps it.
+// OpaqueBox is the box of the sprite's opaque pixels (alpha bounds: a
+// pixel counts from opaqueAlphaMin) in canvas px: x0, y0 inclusive, x1,
+// y1 exclusive. A sprite without pixels or opaque ones reports its whole
+// canvas. Measured once and cached, before release frees the pixels
+// (memory.go), so a released sprite keeps it.
 func (sp *Sprite) OpaqueBox() (x0, y0, x1, y1 float64) {
 	sp.measured.Do(sp.measureOpaque)
 	return sp.opaqueBx[0], sp.opaqueBx[1], sp.opaqueBx[2], sp.opaqueBx[3]
@@ -362,7 +351,6 @@ func (sp *Sprite) measureOpaque() {
 		}
 	}
 	sp.opaqueBx = box
-	sp.opaqueH = math.Max(box[3]-box[1], 1)
 }
 
 type TintKey struct {

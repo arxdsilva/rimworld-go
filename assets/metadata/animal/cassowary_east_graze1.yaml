@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [128, 266]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.302
-  h: 1.31
-  d: 0.901
 ppt: 128
 species: cassowary
 facing: east

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-26, 32]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.417
-  h: 0.608
-  d: 1.122
 ppt: 128
 species: chinchilla
 facing: south

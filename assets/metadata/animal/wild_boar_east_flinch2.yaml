@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [70, 64]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.422
-  h: 0.877
-  d: 0.381
 ppt: 128
 species: wild_boar
 facing: east

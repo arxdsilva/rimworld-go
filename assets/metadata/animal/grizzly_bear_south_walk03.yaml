@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [-8, 154]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.682
-  h: 1.168
-  d: 1.76
 ppt: 128
 species: grizzly_bear
 facing: south

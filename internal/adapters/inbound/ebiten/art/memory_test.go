@@ -217,8 +217,8 @@ func TestImageReleasesCPUPixels(t *testing.T) {
 		if sp.Pix != nil {
 			t.Fatalf("%s: CPU pixels kept after upload", k)
 		}
-		if h := sp.OpaqueHeightPx(); h != 6 {
-			t.Fatalf("%s: opaque height %v after release, want 6", k, h)
+		if _, y0, _, y1 := sp.OpaqueBox(); y1-y0 != 6 {
+			t.Fatalf("%s: opaque height %v after release, want 6", k, y1-y0)
 		}
 		if sp.NormalPath != "" && c.NormalOf(sp.Img) == nil {
 			t.Fatalf("%s: normal map not linked before release", k)
