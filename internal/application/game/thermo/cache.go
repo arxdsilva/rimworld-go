@@ -15,6 +15,16 @@ type cache struct {
 	exp                   []temperature.Exposure // per room
 	links                 []link
 	sites                 []site
+	// outCells and outOpen are the outdoor area's cells and unroofed
+	// cells (room.Outdoors: every cell open to the map edge), for its
+	// outdoors judgements (outdoors.go).
+	outCells, outOpen int
+	// cells lists every room's cells, room by room in cell order: room
+	// r's are cells[start[r]:start[r+1]]; box is each room's bounding box
+	// (x0, y0, x1, y1). TEMP-6: the warmth-seeking search and the hot
+	// rooms walk these instead of the map.
+	start, cells []int32
+	box          [][4]int32
 }
 
 // link is a door or vent between two sides, each a room id or
@@ -47,6 +57,7 @@ func (m *Model) ensure() {
 		return
 	}
 	c.exp = exposures(c.exp, h, grid, w, gh, len(m.Temps))
+	c.index(h, grid, w)
 	at := func(x, y int) int {
 		if x < 0 || y < 0 || x >= w || y >= gh {
 			return room.Outdoors
@@ -121,6 +132,40 @@ func exposures(out []temperature.Exposure, h Map, grid []int, w, gh, n int) []te
 		}
 	}
 	return out
+}
+
+// index lists every room's cells and box (one pass over the grid, on a
+// recount only) and counts the outdoor area's cells and open sky.
+func (c *cache) index(h Map, grid []int, w int) {
+	n := len(c.exp)
+	c.start, c.box = c.start[:0], c.box[:0]
+	at := int32(0)
+	for _, e := range c.exp {
+		c.start = append(c.start, at)
+		c.box = append(c.box, [4]int32{1 << 30, 1 << 30, -1, -1})
+		at += int32(e.Cells)
+	}
+	c.start = append(c.start, at)
+	if cap(c.cells) < int(at) {
+		c.cells = make([]int32, at)
+	}
+	c.cells = c.cells[:at]
+	next := append([]int32(nil), c.start[:n]...)
+	c.outCells, c.outOpen = 0, 0
+	for i, r := range grid {
+		switch {
+		case r == room.Outdoors:
+			c.outCells++
+			if !h.Roof(i).Roofed() {
+				c.outOpen++
+			}
+		case r >= 0 && r < n:
+			c.cells[next[r]] = int32(i)
+			next[r]++
+			x, y, b := int32(i%w), int32(i/w), &c.box[r]
+			b[0], b[1], b[2], b[3] = min(b[0], x), min(b[1], y), max(b[2], x), max(b[3], y)
+		}
+	}
 }
 
 // doorSides is the two sides a door on (x, y) joins: across it east to

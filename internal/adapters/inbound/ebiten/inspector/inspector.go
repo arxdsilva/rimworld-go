@@ -297,13 +297,18 @@ func (a Pawn) drawNeedsTab(screen *ebiten.Image, id entity.EntityID, r gfx.Rect)
 // what it does), and the garment the colonist is walking to put on.
 func GearRows(p game.PawnView) []string {
 	rows := []string{"everyday clothes"}
-	for i, a := range p.Apparel {
-		l := GearLine(a)
+	for _, i := range GearLayerOrder(p.Apparel) { // temp_ui.go (TEMP-5): skin to outer, then head and belt
+		l := GearLine(p.Apparel[i])
 		if i < len(p.ApparelForced) && p.ApparelForced[i] {
 			name, _, _ := strings.Cut(l, " (")
 			l = strings.TrimSpace(name) + "  (you chose this)"
 		}
-		rows = append(rows, l)
+		if i < len(p.Worn) {
+			if ins := InsulationLine(p.Apparel[i], p.Worn[i].Stuff, p.Worn[i].Quality); ins != "" {
+				l += "  " + strings.TrimPrefix(ins, "Insulation: ")
+			}
+		}
+		rows = append(rows, GearLayerTag(p.Apparel[i])+l)
 	}
 	if p.ChangingInto != "" {
 		rows = append(rows, "Changing into: "+p.ChangingInto)

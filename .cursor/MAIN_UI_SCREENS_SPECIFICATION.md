@@ -839,7 +839,7 @@ maintenance.
 
 -   [x] crop (PLAY-020: "Plant: <crop>" on the selected zone, the architect's list and research locks);
 -   [x] sowing toggle (PLAY-020: Allow sowing; harvest goes on; plus Allow cutting);
--   [-] plant requirements (the pane says growing now, too cold or too hot with the zone's temperature; no fertility or light lines);
+-   [-] plant requirements (the pane says growing now, growing slowly, too cold or too hot with the zone's temperature and the 6-42 C full-speed range; no fertility or light lines);
 -   [-] growth/yield information (sown and ripe counts and average growth; no yield estimate).
 -   [x] PLAY-020, as RimWorld does: a selected zone also offers Expand and Shrink (drag-rectangle tools for that zone only, active until right-click or Esc), Delete, Hide (the overlay shows again while selected) and Rename (the label shows the name).
 
@@ -2174,7 +2174,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left over the animated colony diorama, actions right rail)
 -   [-] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts)
 -   [x] camera (WASD/arrows pan with Shift fast pan, edge pan, middle-drag, keyboard/wheel zoom, centre on colonist)
--   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; cursor temperature, biome chip, season and weather chips present; no temperature overlay, TEMP-5)
+-   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; cursor temperature, biome chip, season, weather and climate event chips present; Shift+T temperature overlay, TEMP-5)
 -   [-] selection (click pawn or colonist bar; inspector Character/Needs)
 -   [-] Generic Inspector (name, job, status, reason, food/rest bars; Health/Social/Gear disabled)
 -   [-] colonist bar (snapshot slots, click selects, idle portrait, display name; no status icons, no double-click center)
@@ -2207,7 +2207,7 @@ Agents should implement screens approximately in this dependency order.
 -   [ ] Research
 -   [ ] Assign/Policies
 -   [ ] combat controls/targeting on Main Colony
--   [ ] environmental overlays
+-   [-] environmental overlays (roof, power, fertility, cover and Shift+T temperature done; beauty and room overlays missing)
 
 ## Wave UI-5 --- Colony ecosystem
 

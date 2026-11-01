@@ -28,13 +28,16 @@ const (
 	refuelWork  = 30
 	// oilWood: one ember oil burns as long as this many logs (SIM-026).
 	oilWood = 3
-	// torchLogs and generatorLogs are how many logs a full tank takes.
-	torchLogs     = 8
-	generatorLogs = 15
+	// torchLogs and generatorLogs are how many logs a full tank takes
+	// (wiki: Torch lamp 20, Wood-fired generator 75; unscaled, like the
+	// campfire's 20).
+	torchLogs     = 20
+	generatorLogs = 75
 	// torchBurn and generatorBurn are the ticks of fuel used per 1000 ticks
-	// of burning (campfire: 1000, one for one).
-	torchBurn     = 600
-	generatorBurn = 1600
+	// of burning (campfire: 1000, one for one, its wiki 10 logs a day):
+	// wiki: Torch lamp 2 logs a day, Wood-fired generator 22 a day.
+	torchBurn     = 200
+	generatorBurn = 2200
 )
 
 // fuelDef is how one kind of building holds and burns fuel.

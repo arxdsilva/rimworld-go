@@ -338,7 +338,7 @@ func (a Tabs) healthConds(r gfx.Rect, conds []game.ConditionView) {
 		if due != "" {
 			label += ", " + due
 		}
-		u.Add(uikit.Widget{ID: HealthCondID(i), R: gfx.Rect{X: r.X, Y: y, W: r.W, H: healthCondRowH - 2}, Label: label, Tip: c.Tip})
+		u.Add(uikit.Widget{ID: HealthCondID(i), R: gfx.Rect{X: r.X, Y: y, W: r.W, H: healthCondRowH - 2}, Label: label, Tip: strings.TrimSpace(c.Tip + "\n" + ExposureTip(c.Label))})
 		y += healthCondRowH
 	}
 }

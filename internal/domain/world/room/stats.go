@@ -19,6 +19,8 @@ type FullContents struct {
 // equals RoleOf.
 func RoleOfFull(c FullContents) Role {
 	switch {
+	case c.Cells > MaxCells: // TEMP-6: no room past the cap
+		return General
 	case c.PrisonerBeds >= 2:
 		return PrisonBarracks
 	case c.PrisonerBeds == 1:

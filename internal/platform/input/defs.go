@@ -73,10 +73,12 @@ const (
 	CoverOverlay Action = "overlay.cover"
 	// FertilityOverlay shows ground fertility and growing zones (FOOD-5).
 	FertilityOverlay Action = "overlay.fertility"
-	Beauty           Action = "overlay.beauty"
-	Detail           Action = "overlay.detail"
-	Search           Action = "overlay.search"
-	Minimap          Action = "overlay.minimap"
+	// TempOverlay shows air temperature per tile (TEMP-5).
+	TempOverlay Action = "overlay.temperature"
+	Beauty      Action = "overlay.beauty"
+	Detail      Action = "overlay.detail"
+	Search      Action = "overlay.search"
+	Minimap     Action = "overlay.minimap"
 
 	Queue   Action = "orders.queue"
 	Qty10   Action = "qty.x10"
@@ -174,6 +176,7 @@ var defs = []Def{
 	{ID: ZonesOverlay, Label: "Zones overlay", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("Z")}},
 	{ID: CoverOverlay, Label: "Cover", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("O")}},
 	{ID: FertilityOverlay, Label: "Fertility overlay", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("F")}},
+	{ID: TempOverlay, Label: "Temperature overlay", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("T")}},
 	{ID: RoomStats, Label: "Room stats", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: keys("G")},
 	{ID: Beauty, Label: "Beauty", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: keys("T"), Reserved: NotYet},
 	{ID: Detail, Label: "Detailed cell info (hold)", Category: "Overlays", Context: CtxMap, Kind: Modifier, Fixed: true, Defaults: keys(KeyAlt)},

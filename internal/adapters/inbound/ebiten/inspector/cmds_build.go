@@ -71,6 +71,7 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 			out = append(out, forbidCommand(b))
 		}
 		out = append(out, a.powerCommands(b)...) // cmds_power.go (PLAY-021)
+		out = append(out, ventCommands(b)...)    // temp_ui.go (TEMP-5)
 		out = append(out, a.MoveCommands(b)...)
 	}
 	if !b.Deconstruct {
@@ -161,6 +162,7 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	add(fuelLine(b))
 	add(overlay.TurretLine(b))
 	add(PowerLines(b, w)...)
+	add(TempLines(b)...) // temp_ui.go (TEMP-5)
 	if b.DryQty > 0 {
 		add(fmt.Sprintf("Drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct))
 	}

@@ -267,7 +267,7 @@ type craftShop struct{ g *Game }
 func (h craftShop) Light(x, y int) int { return h.g.cellLightPermil(x, y) } // light.go
 func (h craftShop) Cleanliness(x, y int) (int, bool) {
 	g, r := h.g, h.g.roomAt(x, y)
-	if r < 0 || r >= len(g.rooms) || g.underSky(x, y) {
+	if r < 0 || r >= len(g.rooms) || g.thermo.PsychOutdoors(r) { // TEMP-6 (wiki: Rooms): the room feels outdoors
 		return 0, false
 	}
 	sum, _ := g.roomFilth(r) // rooms.go

@@ -190,6 +190,8 @@ func fuelLine(b game.BuildingView) string {
 		return ""
 	case b.FuelPct == 0:
 		return "Out of fuel"
+	case b.Kind == passiveCoolerKind:
+		return "" // TempLines (temp_ui.go)
 	case b.Burning:
 		return "Burning"
 	case b.Kind == "campfire":

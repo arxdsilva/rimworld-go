@@ -311,6 +311,19 @@ var growTempRange = sync.OnceValues(func() (lo, hi int) {
 	return lo, hi
 })
 
+// growFullRange is the air temperature range, tenths of a degree C, where
+// plants grow at full speed (TEMP-5: read off plant.TempFactor like
+// growTempRange; wiki Plants: 6 to 42 C).
+var growFullRange = sync.OnceValues(func() (lo, hi int) {
+	lo, hi = 1<<30, -1<<30
+	for t := -500; t < 1500; t++ {
+		if plant.TempFactor(t) >= 1000 {
+			lo, hi = min(lo, t), max(hi, t)
+		}
+	}
+	return lo, hi
+})
+
 // climateLine says whether the zone's plants grow in the air at its
 // middle: "Growing now", "Too cold" or "Too hot", with the temperature and
 // the range plants grow in.
@@ -324,6 +337,9 @@ func (z *Zones) climateLine(zv game.ZoneView) string {
 		return fmt.Sprintf("Too cold to grow: %s (needs above %s)", fmtTemp(t), fmtTemp(lo))
 	case t >= hi:
 		return fmt.Sprintf("Too hot to grow: %s (needs below %s)", fmtTemp(t), fmtTemp(hi))
+	}
+	if fl, fh := growFullRange(); t < fl || t > fh {
+		return fmt.Sprintf("Growing slowly: %s (full speed between %s and %s)", fmtTemp(t), fmtTemp(fl), fmtTemp(fh))
 	}
 	return fmt.Sprintf("Growing now: %s (grows between %s and %s)", fmtTemp(t), fmtTemp(lo), fmtTemp(hi))
 }

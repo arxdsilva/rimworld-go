@@ -4,8 +4,11 @@ import (
 	"math"
 	"slices"
 
+	"rimworld-go/internal/application/game/thermo"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/chunk"
@@ -23,7 +26,8 @@ import (
 // step scans the map.
 
 const (
-	fireSalt = 0xF12E5EED
+	fireSalt   = 0xF12E5EED
+	igniteSalt = 0x16A1735 // TEMP-6: spontaneous ignition rolls (scorch)
 	// Sizes a fire starts at: from the developer action, a bursting
 	// animal and a lightning strike.
 	devFireSize       = 30
@@ -443,19 +447,62 @@ func (g *Game) burnCreatures() {
 				}
 			}
 		}
-		if dmg == 0 {
-			continue
-		}
-		if _, animal := g.animals.Get(id); animal {
-			g.hurt(id, dmg, 0)
-			continue
-		}
-		if v, ok := g.vital.Get(id); !ok || v.Status == health.Dead {
-			continue
-		}
-		g.hurtAs(id, dmg, 0, body.Burn, health.CauseBurns) // combat.go
-		if v, _ := g.vital.Get(id); v.Status == health.Dead && v.Cause == health.CauseBurns {
-			g.message(p.X, p.Y, "%s burned to death.", g.nameOf(id))
+		burnCreature(g, id, p, dmg)
+	}
+}
+
+// burnCreature burns creature id at p for dmg (none: nothing): a
+// colonist or raider takes a burn wound, an animal injury.
+func burnCreature(g *Game, id entity.EntityID, p Position, dmg int) {
+	if _, animal := g.animals.Get(id); animal && dmg > 0 {
+		g.hurt(id, dmg, 0)
+		return
+	}
+	if v, ok := g.vital.Get(id); !ok || v.Status == health.Dead || dmg <= 0 {
+		return
+	}
+	g.hurtAs(id, dmg, 0, body.Burn, health.CauseBurns) // combat.go
+	if v, _ := g.vital.Get(id); v.Status == health.Dead && v.Cause == health.CauseBurns {
+		g.message(p.X, p.Y, "%s burned to death.", g.nameOf(id))
+	}
+}
+
+// scorch (TEMP-6, wiki: Temperature, Fire) follows each room step:
+// flammables in air at thermo.IgniteAt or hotter may catch fire (rolled
+// per cell from a hash, as spread; one at a time, then thermo's
+// cooldown), and a creature in air more than exposure.BurnMargin over its
+// comfortable maximum is burned once per exposure.BurnEvery ticks. Nothing
+// is walked while the hottest air is short of the margin.
+func scorch(g *Game) {
+	if g.thermo.Hottest() <= exposure.BurnMargin {
+		return
+	}
+	now, w, seed := uint64(g.clock.Now()), g.grid.Width(), g.streams.seed^igniteSalt
+	for _, r := range g.thermo.HotRooms(nil, thermo.IgniteAt) {
+		c := thermo.IgniteChance(g.thermo.Temps[r])
+		g.thermo.EachCell(r, func(i int) bool {
+			if g.thermo.MayIgnite(now) && spreadRoll(seed, now, i, i) < c && g.fireIndex(i%w, i/w) < 0 && g.ignite(i%w, i/w, fire.IgniteSize) {
+				g.thermo.Ignited(now)
+			}
+			return g.thermo.MayIgnite(now)
+		})
+	}
+	for _, ids := range [3][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
+		for _, id := range ids {
+			p, ok := g.positions.Get(id)
+			if !ok || (now+uint64(id))%exposure.BurnEvery >= temperature.EqualiseInterval {
+				continue
+			}
+			a, beast := g.animals.Get(id)
+			hi := 0
+			if beast {
+				_, hi, ok = animal.Comfort(a.Species)
+			} else {
+				hi, ok = g.bandsOf(id).Max, g.onMap(id)
+			}
+			if ok && !(beast && a.Dead()) {
+				burnCreature(g, id, p, exposure.BurnDamage(int(g.temperatureAt(p.X, p.Y)), hi))
+			}
 		}
 	}
 }

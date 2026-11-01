@@ -150,8 +150,8 @@ func (h restPatients) SurgeryWait(id entity.EntityID, workLeft int) {
 
 type restRooms struct{ g *Game }
 
-func (h restRooms) RoomAt(x, y int) int    { return h.g.roomAt(x, y) }
-func (h restRooms) UnderSky(x, y int) bool { return h.g.underSky(x, y) }
+func (h restRooms) RoomAt(x, y int) int   { return h.g.roomAt(x, y) }
+func (h restRooms) Outside(x, y int) bool { return h.g.thermo.PsychOutdoors(h.g.roomAt(x, y)) } // TEMP-6
 
 // RoomQuality reads the rebuild's tally with the live filth, items and
 // bed flags (BED-2).

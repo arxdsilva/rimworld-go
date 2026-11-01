@@ -21,7 +21,6 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/room"
 )
 
 // Surgery (ENG-003 M1; surgery v2, MED-06). The player queues operations
@@ -778,11 +777,11 @@ func (g *Game) surgeryInput(surgeon, patient entity.EntityID, op body.OpKind, me
 // the room at (x, y) for surgery, from the rooms index and the room's
 // filth total (no scan): −2 per filth permille a cell on average, and
 // −100 for a room left on bare ground, never below −500 (original
-// tuning of how our filth maps onto the wiki's cleanliness). Outdoors
-// reports true.
+// tuning of how our filth maps onto the wiki's cleanliness). Outdoors,
+// or a room outdoors for work (TEMP-6, wiki: Rooms), reports true.
 func (g *Game) surgeryCleanliness(x, y int) (int32, bool) {
 	r := g.roomAt(x, y)
-	if r == room.Outdoors || r < 0 || r >= len(g.rooms) {
+	if r < 0 || r >= len(g.rooms) || g.thermo.OutdoorsForWork(r) {
 		return 0, true
 	}
 	c := g.rooms[r].contents

@@ -730,6 +730,8 @@ func (k Kind) DryTicks() int {
 
 // DryRate is drying speed in permille at air temperature tenthsC: full
 // speed from 20 C, slower in cool air, and a slow freeze-dry below 0 C.
+// Original tuning (TEMP-6 check): vanilla core has no drying rack, so the
+// wiki gives no rule.
 func DryRate(tenthsC int) int {
 	switch {
 	case tenthsC >= 200:

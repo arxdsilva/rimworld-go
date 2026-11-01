@@ -70,7 +70,7 @@ func RoomCardLines(rm game.RoomView) []string {
 	if clean == "" {
 		clean = "clean"
 	}
-	return []string{
+	out := []string{
 		titleCase(rm.Role),
 		fmt.Sprintf("Impressiveness %.1f (%s)", float64(rm.Impressiveness)/10, rm.Label),
 		fmt.Sprintf("Space %.1f (%s)", float64(rm.Space)/10, rm.SpaceLabel),
@@ -81,6 +81,33 @@ func RoomCardLines(rm game.RoomView) []string {
 		fmt.Sprintf("Lit: %s   Roofed: %d%%", lit, int(math.Round(rm.Roofed*100))),
 		fmt.Sprintf("%d cells", rm.Cells),
 	}
+	return append(out[:7], append(RoomHeatLines(rm), out[7:]...)...)
+}
+
+// RoomHeatLines are the card's thermal lines (TEMP-5): the walls open to
+// the outside air (a double wall loses half as much), the roof, and the net
+// heat of the sources inside. Nothing for a room with none of it.
+func RoomHeatLines(rm game.RoomView) []string {
+	var out []string
+	if rm.ExposedWalls > 0 {
+		l := fmt.Sprintf("Exposed walls %d", rm.ExposedWalls)
+		if rm.DoubleWalls > 0 {
+			l += fmt.Sprintf(" (%d double)", rm.DoubleWalls)
+		}
+		if rm.RoofKind != "" {
+			l += ", " + rm.RoofKind + " roof"
+		}
+		out = append(out, l)
+	} else if rm.RoofKind != "" {
+		out = append(out, titleCase(rm.RoofKind)+" roof")
+	}
+	if rm.Cells > 0 && rm.Roofed < 0.75 { // wiki: Rooms, 25 % or more unroofed counts as outdoors
+		out = append(out, "Counts as outdoors (under 75% roofed)")
+	}
+	if rm.HeatRate != 0 {
+		out = append(out, fmt.Sprintf("Heat %+.1f/s", float64(rm.HeatRate)/10))
+	}
+	return out
 }
 
 // DrawCard shows the hovered room's card beside the cursor.
@@ -96,14 +123,20 @@ func (c RoomStats) DrawCard(screen *ebiten.Image) {
 	w := c.sh.World()
 	tx, ty := c.sh.TileAt(c.sh.MapCursor())
 	id := overlay.RoomIDAt(w, tx, ty)
-	if id < 0 || id >= len(w.Rooms) {
-		return
+	pinned := false
+	if id < 0 || id >= len(w.Rooms) { // TEMP-5: off any room, the selected colonist's room stays on the card
+		if id, pinned = c.selectedRoom(w); !pinned {
+			return
+		}
 	}
 	lines := RoomCardLines(w.Rooms[id])
 	wid := int(gfx.MaxTextW(lines, gfx.Body))
 	rowH := int(gfx.LineStep(gfx.Body))
 	pw, ph := wid+24, len(lines)*rowH+12
 	x, y := min(mx+18, sw-pw-4), min(my+18, int(c.sh.Layout().Tabs.Y)-ph-4)
+	if pinned {
+		x, y = 12, 96
+	}
 	uikit.DrawPanel(screen, float32(x), float32(y), float32(pw), float32(ph))
 	gfx.FillRect(screen, float32(x)+1, float32(y)+1, 4, float32(ph)-2, opaque(RoomTint(w.Rooms[id].Score)), false)
 	for i, l := range lines {
@@ -164,4 +197,24 @@ func DetailLines(w game.WorldView, x, y int) []string {
 		out = append(out, s)
 	}
 	return out
+}
+
+// selectedRoom is the room id of the selected colonist, ok when it stands
+// in a room.
+func (c RoomStats) selectedRoom(w game.WorldView) (int, bool) {
+	sel, ok := c.sh.Selected()
+	if !ok {
+		return 0, false
+	}
+	g := c.sh.Env().Game
+	if g == nil {
+		return 0, false
+	}
+	for _, p := range g.Snapshot() {
+		if p.ID == sel {
+			id := overlay.RoomIDAt(w, p.X, p.Y)
+			return id, id >= 0 && id < len(w.Rooms)
+		}
+	}
+	return 0, false
 }

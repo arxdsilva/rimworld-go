@@ -207,7 +207,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012: creatures cast their own animated silhouette shadows; MAPGEN-2: fog of war over unexplored tiles, black on the minimap; PLAY-022: animals drawn at their body's area and picked by any tile of it, walking with planted feet)
+-   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012: creature shadows removed by user decision on 2026-10-31, so creatures cast none while buildings, plants, items and rock keep theirs; MAPGEN-2: fog of war over unexplored tiles, black on the minimap; PLAY-022: animals drawn at their body's area and picked by any tile of it, walking with planted feet)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
@@ -780,7 +780,7 @@ understandable.
 -   [x] **Weapon accuracy/range/warmup/cooldown** (DEF-2: gear tab WeaponStats lines)
 -   [x] **Melee damage/cooldown** (CBT-5: gear tab tooltip for melee and ranged damage and cooldown; gun-stock blows carry the gun's name)
 -   [x] **Armor by damage category** (DEF-2: gear tab ApparelArmor lines (sharp, blunt, heat))
--   [-] **Temperature insulation** (TEMP-4: the inspector's comfort range sums every worn layer's wiki insulation; the naked thought shows in the mood list; missing: per-garment insulation lines and the layer view in the gear tab, TEMP-5)
+-   [-] **Temperature insulation** (TEMP-4: the inspector's comfort range sums every worn layer's wiki insulation; the naked thought shows in the mood list; TEMP-5: the gear tab lists garments by layer, skin to outer; missing: per-garment insulation lines)
 -   [ ] **Movement/work penalties from gear**
 
 ------------------------------------------------------------------------
@@ -948,11 +948,11 @@ understandable.
 
 ## 16.3 Temperature overlay
 
--   [ ] **Room temperatures**
--   [ ] **Outdoor temperature**
--   [ ] **Heat/cold gradient or labels**
--   [ ] **Selected room thermal details**
--   [ ] **Dangerous temperature highlighting**
+-   [x] **Room temperatures** (TEMP-5: Shift+T "Temperature overlay" tints every room tile by its air, cached on WorldView.TempVer)
+-   [x] **Outdoor temperature** (TEMP-5: open ground is tinted by the outdoor air)
+-   [x] **Heat/cold gradient or labels** (TEMP-5: a blue to green to red ramp, faint at comfortable, and a degree label on each visible room)
+-   [-] **Selected room thermal details** (TEMP-5: the G room card shows temperature, exposed and double walls, roof kind and net heat for the hovered room; no selected-room panel)
+-   [x] **Dangerous temperature highlighting** (TEMP-5: tiles at or below 0 C or at or above 40 C get a blue or orange frame)
 
 ## 16.4 Roof overlay
 
@@ -2116,7 +2116,7 @@ Complete:
 -   [ ] Bills.
 -   [ ] Research.
 -   [x] Power overlay. (PLAY-021)
--   [-] Temperature/roof overlays. (SIM-018: roof overlay done; temperature overlay missing)
+-   [x] Temperature/roof overlays. (SIM-018: roof overlay; TEMP-5: Shift+T temperature overlay)
 -   [ ] Drafted combat.
 -   [ ] Hit/cover feedback.
 -   [ ] Assign/policies.

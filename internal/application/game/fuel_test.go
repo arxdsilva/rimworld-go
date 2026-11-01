@@ -45,11 +45,11 @@ func TestFuelSpecTable(t *testing.T) {
 		t.Fatalf("campfire spec changed: %+v %v", camp, ok)
 	}
 	torch, ok := fuelSpec(construction.TorchLamp)
-	if !ok || torch.CapTicks != 8*TicksPerWood || torch.BurnPermil != 600 || torch.Below <= 0 || torch.Below >= torch.CapTicks {
+	if !ok || torch.CapTicks != 20*TicksPerWood || torch.BurnPermil != 200 /* wiki: Torch lamp */ || torch.Below <= 0 || torch.Below >= torch.CapTicks {
 		t.Fatalf("torch spec: %+v %v", torch, ok)
 	}
 	gen, ok := fuelSpec(construction.WoodGenerator)
-	if !ok || gen.CapTicks != 15*TicksPerWood || gen.BurnPermil != 1600 || gen.Below <= 0 || gen.Below >= gen.CapTicks {
+	if !ok || gen.CapTicks != 75*TicksPerWood || gen.BurnPermil != 2200 /* wiki: Wood-fired generator */ || gen.Below <= 0 || gen.Below >= gen.CapTicks {
 		t.Fatalf("wood generator spec: %+v %v", gen, ok)
 	}
 	for _, k := range []construction.Kind{construction.Table, construction.Lamp, construction.SolarPanel, construction.Bed} {
@@ -82,19 +82,19 @@ func TestTorchLampBurnsLogsInPhaseClimate(t *testing.T) {
 	spec, _ := fuelSpec(construction.TorchLamp)
 	g.setFuel(id, spec.CapTicks)
 	g.burnFuel()
-	if want := spec.CapTicks - climateInterval*600/1000; g.fuel[id] != want {
-		t.Fatalf("one interval: fuel %d, want %d (600 permille)", g.fuel[id], want)
+	if want := spec.CapTicks - climateInterval*200/1000; g.fuel[id] != want {
+		t.Fatalf("one interval: fuel %d, want %d (200 permille)", g.fuel[id], want)
 	}
 	before := g.fuel[id]
 	g.Step(4 * climateInterval) // phaseClimate burns it on its own
-	if burnt := before - g.fuel[id]; burnt < 3*150 || burnt%150 != 0 {
-		t.Fatalf("torch burnt %d in four intervals, want 3-4 steps of 150", burnt)
+	if burnt := before - g.fuel[id]; burnt < 3*50 || burnt%50 != 0 {
+		t.Fatalf("torch burnt %d in four intervals, want 3-4 steps of 50", burnt)
 	}
 	b, _ := g.bldgs.Get(id)
 	if !g.burning(id, b) {
 		t.Fatal("a fuelled torch in dry weather must burn")
 	}
-	g.setFuel(id, 100)
+	g.setFuel(id, 40) // less than one interval's 50
 	g.burnFuel()
 	if g.fuel[id] != 0 {
 		t.Fatalf("the last of the fuel burns out to 0, got %d", g.fuel[id])
@@ -131,12 +131,12 @@ func TestRainPutsOutAnOutdoorTorchButNotARoofedOne(t *testing.T) {
 	if g.fuel[out] != spec.CapTicks {
 		t.Fatalf("a doused torch burnt fuel: %d", g.fuel[out])
 	}
-	if g.fuel[in] != spec.CapTicks-150 {
-		t.Fatalf("the sheltered torch should burn 150, has %d", g.fuel[in])
+	if g.fuel[in] != spec.CapTicks-climateInterval*200/1000 {
+		t.Fatalf("the sheltered torch should burn %d, has %d", climateInterval*200/1000, g.fuel[in])
 	}
 	g.SetWeather(weather.Clear, 0)
 	g.burnFuel()
-	if g.fuel[out] != spec.CapTicks-150 {
+	if g.fuel[out] != spec.CapTicks-climateInterval*200/1000 {
 		t.Fatalf("the torch should burn again after the rain: %d", g.fuel[out])
 	}
 }
@@ -157,8 +157,8 @@ func TestHaulerRefuelsTorchLamp(t *testing.T) {
 	if g.fuel[tid] < spec.CapTicks-TicksPerWood {
 		t.Fatalf("torch fuel = %d after refuelling, cap %d", g.fuel[tid], spec.CapTicks)
 	}
-	if st, _ := stackOf(g, item.Wood); st.Qty != 22 {
-		t.Fatalf("wood left = %d, want 22 (a torch takes 8 logs)", st.Qty)
+	if st, _ := stackOf(g, item.Wood); st.Qty != 10 {
+		t.Fatalf("wood left = %d, want 10 (a torch takes 20 logs)", st.Qty)
 	}
 	if g.fuel[tid] > spec.CapTicks {
 		t.Fatalf("torch overfilled: %d", g.fuel[tid])
@@ -175,7 +175,7 @@ func TestWoodGeneratorBurnsAndHaulerRefuelsIt(t *testing.T) {
 	gid := placeFuel(t, g, construction.WoodGenerator, 8, 3)
 	spec, _ := fuelSpec(construction.WoodGenerator)
 
-	// burning: 1600 permille of an interval, only while fuelled
+	// burning: 2200 permille of an interval, only while fuelled
 	if g.generatorRunning(gid) {
 		t.Fatal("an empty generator is not running")
 	}
@@ -184,8 +184,8 @@ func TestWoodGeneratorBurnsAndHaulerRefuelsIt(t *testing.T) {
 		t.Fatal("a fuelled generator runs by default")
 	}
 	g.burnFuel()
-	if want := spec.CapTicks - climateInterval*1600/1000; g.fuel[gid] != want {
-		t.Fatalf("one interval: fuel %d, want %d (1600 permille)", g.fuel[gid], want)
+	if want := spec.CapTicks - climateInterval*2200/1000; g.fuel[gid] != want {
+		t.Fatalf("one interval: fuel %d, want %d (2200 permille)", g.fuel[gid], want)
 	}
 	g.setFuel(gid, 300)
 	g.burnFuel()
@@ -198,15 +198,16 @@ func TestWoodGeneratorBurnsAndHaulerRefuelsIt(t *testing.T) {
 	}
 
 	// refuelling: a hauler brings logs until it holds a full tank
-	if _, err := g.SpawnStack(item.Wood, 40, 2, 5); err != nil {
+	if _, err := g.SpawnStack(item.Wood, 90, 2, 5); err != nil {
 		t.Fatal(err)
 	}
-	g.Step(2500)
-	if g.fuel[gid] < spec.CapTicks-TicksPerWood {
+	g.Step(5000)
+	// full once, then running: up to 5000 ticks of burn since
+	if g.fuel[gid] < spec.CapTicks-TicksPerWood-5000*generatorBurn/1000 {
 		t.Fatalf("generator fuel = %d after refuelling, cap %d", g.fuel[gid], spec.CapTicks)
 	}
-	if st, _ := stackOf(g, item.Wood); st.Qty != 25 {
-		t.Fatalf("wood left = %d, want 25 (a generator takes 15 logs)", st.Qty)
+	if st, _ := stackOf(g, item.Wood); st.Qty != 15 {
+		t.Fatalf("wood left = %d, want 15 (a generator takes 75 logs)", st.Qty)
 	}
 }
 

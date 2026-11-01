@@ -621,7 +621,7 @@ This is the heart of autonomous colony behavior.
     -   cleanliness.
     -   wealth/value.
     -   impressiveness derived from room properties.
--   [x] **Room roles** (general, bedroom, barracks, dining, workshop; missing: hospital, prison cell/barracks, rec room, kitchen — BED-2; BED-2: adds hospital, prison cell, prison barracks, kitchen and recreation room)
+-   [x] **Room roles** (general, bedroom, barracks, dining, workshop; missing: hospital, prison cell/barracks, rec room, kitchen — BED-2; BED-2: adds hospital, prison cell, prison barracks, kitchen and recreation room; TEMP-6: past the wiki cap of 5184 tiles an enclosed area takes no role)
     -   Bedroom.
     -   barracks.
     -   dining room.
@@ -718,8 +718,8 @@ This is the heart of autonomous colony behavior.
 -   [x] **Rot progression** (FOOD-4: wiki days to rot, food deteriorates unroofed with food HP, shelves protect, meals 50 HP; per-stack rot ticks; full speed from 10C, slower when cool, none at 0C or below; merges average by quantity)
     -   Perishable food/corpses rot based on temperature and elapsed
         time.
--   [-] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; a powered cooler holds a room at its thermostat target; no freezer building)
--   [x] **Drying** (drying rack dries up to 25 of any perishable food per batch over ~1-2.5 days; dried food never rots)
+-   [x] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; a powered cooler holds a room at its thermostat target; TEMP-6 proof: meat in a cooler-held room at -5 C stops rotting (`TestFreezerKeepsMeatFrozen`, RIMWORLD_PROBE freezer probe); vanilla has no freezer building either, wiki: coolers are the only way)
+-   [x] **Drying** (drying rack dries up to 25 of any perishable food per batch over ~1-2.5 days; dried food never rots; TEMP-6 check: not a vanilla core building (no wiki rule), its numbers are original tuning)
     -   Cold slows or stops rot according to independently selected
         balance.
 -   [x] **Rotten state** (spoiled food is destroyed with a message; rotten corpses can't be butchered and decay away)
@@ -1098,7 +1098,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Outdoor temperature** (per-biome and per-planet-tile climate: yearly triangle wave plus day/night swing (original), TEMP-2: every biome reaches the wiki summer max / winter min, planet sites fitted inside them (`biome.Fit`); snow and blizzard chill; ramped heat wave, cold snap and volcanic winter offsets; WorldView OutdoorTemp/ClimateEvent)
     -   Driven by world tile climate, latitude/elevation/season/time,
         and weather.
--   [x] **Indoor room temperature** (TEMP-1: per-room temperature equalised every 120 ticks by exposed wall length (double wall halves), thin roof, overhead-mountain cooling, 25 % unroofed means outdoors, open doors and vents exchanging between rooms (original rates), kept across rebuilds; room stats show the terms are TEMP-5)
+-   [x] **Indoor room temperature** (TEMP-1: per-room temperature equalised every 120 ticks by exposed wall length (double wall halves), thin roof, overhead-mountain cooling, 25 % unroofed means outdoors, open doors and vents exchanging between rooms (original rates), kept across rebuilds; room stats show the terms are TEMP-5; TEMP-6: wiki OutdoorsForWork (surgery) and psychologically outdoors (bench speed, slept outside) per room)
     -   Rooms have thermal state.
     -   Exchange heat with outdoors and neighboring rooms through
         openings/structures.
@@ -1148,13 +1148,13 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Flammability** (PLAY-015 SIM-058: grass, plants (trees, duskmoss), crops, wooden buildings and bridges, flammable items; stone, steel and terrain never burn)
     -   Terrain/buildings/items/plants define flammability.
--   [-] **Ignition** (PLAY-015: lightning strikes in storms, bursting animals, developer action; no weapon or overheat sources yet; DEF-2: flame explosions now ignite; still no overheat or weapon-fire source)
+-   [-] **Ignition** (PLAY-015: lightning strikes in storms, bursting animals, developer action; DEF-2: flame explosions now ignite; TEMP-6: overheat, flammables in room air at 235 C or more catch fire (wiki), with a cooldown; missing: weapon-fire sources such as incendiary shots)
     -   Weapon/explosion/lightning/random event/overheat sources.
 -   [x] **Fire spread** (PLAY-015: active fires in per-chunk lists; spreads to flammable neighbours, downwind more, barely into roofed cells; rain and snow put outdoor fires out)
     -   Active-set simulation only.
     -   nearby flammable objects.
     -   weather/rain influences.
--   [x] **Fire damage** (PLAY-015: buildings (bridge collapse cascade), plants, grass, items destroyed, pawns take burn wounds, ash left behind; fires heat rooms and warm the air)
+-   [x] **Fire damage** (PLAY-015: buildings (bridge collapse cascade), plants, grass, items destroyed, pawns take burn wounds, ash left behind; fires heat rooms and warm the air; TEMP-6: air more than 150 C over a creature's comfortable maximum burns it every 480 ticks (wiki threshold, original rate))
     -   Buildings/items/plants/pawns take burn damage.
 -   [x] **Firefighting work** (PLAY-015: Firefight work type on by default; fires inside Home and the pawn's area; drafted Extinguish order anywhere; pawns and animals avoid and flee flames)
     -   Pawns extinguish fire in home area/urgent contexts.
@@ -1472,7 +1472,7 @@ children systems.
 
 ## 18.1 Species definitions
 
--   [x] **Animal species** (SIM-019: 61 species from size/behaviour classes; ten originals replace RimWorld-invented creatures; DEF-4 R2: four original mechanoids appended, 65 in all, with full art; their four voices each are blocked on the user, the insect group stands in [!]; TEMP-3: per-species comfortable ranges (wiki), hypothermia/heatstroke with death and frostbite, insects' hypothermic slowdown)
+-   [x] **Animal species** (SIM-019: 61 species from size/behaviour classes; ten originals replace RimWorld-invented creatures; DEF-4 R2: four original mechanoids appended, 65 in all, with full art and their own four MOSS voices each (SND-004, 2026-10-31); TEMP-3: per-species comfortable ranges (wiki), hypothermia/heatstroke with death and frostbite, insects' hypothermic slowdown)
     -   Anatomy.
     -   body size.
     -   movement.
@@ -1934,7 +1934,7 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.5 Mechanoid threats
 
--   [-] **Mechanoid pawn types** (DEF-4 R2: Harrow, Spindle, Bulwark, Quill, original designs with wiki role stats; own brain (`game/raid/mech.go`), no needs, never tamed, never down or flee, EMP stun with adaptation, wrecks shredded for salvage; missing: closed doors block them, voices blocked on the user (insect group stands in) [!])
+-   [-] **Mechanoid pawn types** (DEF-4 R2: Harrow, Spindle, Bulwark, Quill, original designs with wiki role stats; own brain (`game/raid/mech.go`), no needs, never tamed, never down or flee, EMP stun with adaptation, wrecks shredded for salvage; voices generated with MOSS and installed 2026-10-31 (SND-004); missing: closed doors block them)
     -   Machine enemies with different weapon/range roles.
     -   No human mood/needs.
 -   [-] **Mechanoid raid** (`Mechs.Raid` from 300 points at an arrival spot, storyteller face with 1/(hostile human factions + 1); missing: mech groups do not use the pod hook)

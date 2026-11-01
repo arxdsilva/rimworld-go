@@ -323,7 +323,9 @@ func TestZonePaneSaysWhenItIsTooColdOrTooHot(t *testing.T) {
 	}{
 		{-30, "Too cold to grow: -3C (needs above 0C)"},
 		{0, "Too cold to grow: 0C (needs above 0C)"},
+		{30, "Growing slowly: 3C (full speed between 6C and 42C)"}, // TEMP-5, wiki: Plants
 		{150, "Growing now: 15C"},
+		{500, "Growing slowly: 50C (full speed between 6C and 42C)"},
 		{580, "Too hot to grow: 58C (needs below 58C)"}, // FOOD-2, wiki: Plants
 		{600, "Too hot to grow: 60C (needs below 58C)"},
 	} {

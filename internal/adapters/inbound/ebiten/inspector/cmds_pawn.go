@@ -251,13 +251,8 @@ func PawnStatusLines(p game.PawnView, name func(entity.EntityID) string) []strin
 	if ln := bedStateLine(p); ln != "" {
 		out = append(out, ln)
 	}
-	if p.Hypothermia > 0 {
-		out = append(out, fmt.Sprintf("Hypothermia %d%%", p.Hypothermia/10))
-	}
-	if p.Heatstroke > 0 {
-		out = append(out, fmt.Sprintf("Heatstroke %d%%", p.Heatstroke/10))
-	}
-	if p.Malnutrition > 0 { // FOOD-1
+	out = append(out, ExposureLines(p)...) // temp_ui.go (TEMP-5): stages and frostbite
+	if p.Malnutrition > 0 {                // FOOD-1
 		out = append(out, fmt.Sprintf("Malnutrition %d%%", p.Malnutrition))
 	}
 	if p.ToxicBuildup > 0 { // FOOD-6: toxic fallout

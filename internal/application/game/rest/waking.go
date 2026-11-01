@@ -35,7 +35,7 @@ func (w *Waking) After(id entity.EntityID) {
 	bed, _ := w.h.SleptAt(id)
 	b, inBed := w.h.Building(bed)
 	if !inBed || b.Kind == construction.SleepingSpot {
-		if r < 0 && w.h.UnderSky(x, y) {
+		if w.h.Outside(x, y) {
 			w.h.Remember(id, mood.SleptOutside)
 		} else {
 			w.h.Remember(id, mood.SleptOnGround)
@@ -44,10 +44,10 @@ func (w *Waking) After(id entity.EntityID) {
 	}
 	w.h.Remember(id, mood.SleptInBed)
 	w.sharedBed(id, b)
+	if w.h.Outside(x, y) {
+		w.h.Remember(id, mood.SleptOutside)
+	}
 	if r < 0 {
-		if w.h.UnderSky(x, y) {
-			w.h.Remember(id, mood.SleptOutside)
-		}
 		return
 	}
 	role, tenths := w.h.RoomQuality(r)

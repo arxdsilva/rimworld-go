@@ -119,7 +119,9 @@ type Patients interface {
 type Rooms interface {
 	// RoomAt is the room at (x, y) (negative: none, outdoors).
 	RoomAt(x, y int) int
-	UnderSky(x, y int) bool
+	// Outside: the room or open ground at (x, y) is psychologically
+	// outdoors (TEMP-6, wiki: Rooms; thermo.PsychOutdoors).
+	Outside(x, y int) bool
 	// RoomQuality is room r's role and vanilla impressiveness in tenths
 	// (BED-2), read now: filth, items and bed flags as they are.
 	RoomQuality(r int) (role room.Role, impressTenths int)

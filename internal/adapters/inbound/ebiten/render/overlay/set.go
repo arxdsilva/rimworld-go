@@ -105,12 +105,14 @@ type Set struct {
 
 	Roof, Home, Plan, Power, SnowClear Toggle
 	Fertility                          Toggle // growing_draw.go: ground fertility and growing zones
+	Temp                               Toggle // temp_draw.go: air temperature per tile (TEMP-5)
 
 	Area     AreaOverlay        // the armed or hovered allowed area (area_overlay.go)
 	RoofDraw RoofDrawState      // eaves and the Roof overlay (roof_draw.go)
 	HomeDraw HomeDrawState      // the Home overlay's cached outline (home_draw.go)
 	PlanDraw PlanDrawState      // the Plan overlay's cached geometry (plan_draw.go)
 	SnowDraw SnowClearDrawState // the snow clearing overlay (snow_clear_draw.go)
+	TempDraw TempDrawState      // the Temperature overlay's per-room cache (temp_draw.go)
 	Fog      FogCache           // fog_draw.go
 	Bridges  BridgeCache        // bridge_draw.go: the foundation layer's cell set
 	Caskets  CasketMemo         // vault_draw.go: sealed state seen last frame

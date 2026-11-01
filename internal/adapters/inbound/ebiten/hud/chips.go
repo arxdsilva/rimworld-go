@@ -37,6 +37,8 @@ func StatusChips(w game.WorldView) []StatusChip {
 		out = append(out, StatusChip{"Heat wave", "Heat wave\nA spell of extreme heat: up to about 17 C hotter than the season, for a few days. Keep everyone out of the midday sun.", uikit.Warning})
 	case "cold_snap":
 		out = append(out, StatusChip{"Cold snap", "Cold snap\nA spell of extreme cold: up to about 20 C colder than the season, for a few days. Keep the fires fed.", uikit.LetterInfo})
+	case "volcanic_winter":
+		out = append(out, StatusChip{"Volcanic winter", "Volcanic winter\nAsh veils the sky for weeks: about 7 C colder than the season, 30% less sunlight (solar panels, plants and grow lamps) and half the wildlife. Stock food and fuel and keep everyone dressed.", uikit.LetterInfo})
 	}
 	if w.SolarFlare {
 		out = append(out, StatusChip{"Solar flare", "Solar flare\nA burst from the sun has knocked out every electrical device for a few hours. Batteries keep what they hold; torches and campfires still burn.", uikit.Warning})

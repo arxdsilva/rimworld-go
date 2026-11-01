@@ -92,6 +92,9 @@ func ItemLines(it game.ItemView, stored bool) []string {
 	case it.FreshDays >= 0:
 		out = append(out, fmt.Sprintf("Fresh for %.0f days", it.FreshDays))
 	}
+	if l := InsulationLine(it.Kind, it.Stuff, it.Quality); l != "" { // temp_ui.go (TEMP-5)
+		out = append(out, l)
+	}
 	if l := IngredientsLine(it); l != "" {
 		out = append(out, l)
 	}

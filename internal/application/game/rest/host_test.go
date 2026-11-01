@@ -199,7 +199,7 @@ func (f *fakeHost) RoomAt(x, y int) int {
 	}
 	return f.room
 }
-func (f *fakeHost) UnderSky(int, int) bool           { return f.sky }
+func (f *fakeHost) Outside(int, int) bool            { return f.sky }
 func (f *fakeHost) RoomQuality(int) (room.Role, int) { return f.role, f.tenths }
 func (f *fakeHost) RememberValue(_ entity.EntityID, k mood.Kind, v int, label string) {
 	f.thought, f.values, f.labels = append(f.thought, k), append(f.values, v), append(f.labels, label)

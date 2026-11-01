@@ -1004,7 +1004,7 @@ const skyFadeTicks = 600
 
 // SkyEventVeil is the full-screen tint of the sky event in progress
 // (WorldView.SkyEvent): a dim blue-black for an eclipse, a sickly green
-// for toxic fallout, premultiplied; transparent with none. It fades out
+// for toxic fallout, a grey ash haze for a volcanic winter (ClimateEvent), premultiplied; transparent with none. It fades out
 // over the last skyFadeTicks of the event. Procedural: no sprite.
 func SkyEventVeil(w game.WorldView, now uint64) color.RGBA {
 	var r, g, b uint8
@@ -1015,6 +1015,13 @@ func SkyEventVeil(w game.WorldView, now uint64) color.RGBA {
 	case "toxic fallout":
 		r, g, b, a = 96, 128, 36, 0.30
 	default:
+		if w.ClimateEvent == "volcanic_winter" { // TEMP-5: a grey ash haze over the ramp's dimmed sky
+			r, g, b, a = 78, 74, 80, 0.22
+			if w.ClimateEventEnds > now && w.ClimateEventEnds-now < skyFadeTicks {
+				a *= float64(w.ClimateEventEnds-now) / skyFadeTicks
+			}
+			return color.RGBA{uint8(float64(r) * a), uint8(float64(g) * a), uint8(float64(b) * a), uint8(255 * a)}
+		}
 		return color.RGBA{}
 	}
 	if w.SkyEventEnds > now && w.SkyEventEnds-now < skyFadeTicks {

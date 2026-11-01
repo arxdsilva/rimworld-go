@@ -25,6 +25,9 @@ type Model struct {
 	dirty bool
 	gen   uint64 // room rebuilds so far (cache key)
 	c     cache
+	// igniteAt is the tick the spontaneous ignition cooldown ends
+	// (scorch.go; saved).
+	igniteAt uint64
 	// step scratch: the creatures and fires, heat per room
 	bodies []Body
 	fires  []Fire
@@ -194,6 +197,8 @@ func atOr(s []int, i int) int {
 type Save struct {
 	Fine []int32
 	Ver  uint64
+	// IgniteAt is the ignition cooldown's end (TEMP-6; 0 in older saves).
+	IgniteAt uint64
 }
 
 // Export is the model's Save.
@@ -203,13 +208,13 @@ func (m *Model) Export() Save {
 	for i, t := range m.fine {
 		out[i] = int32(t)
 	}
-	return Save{Fine: out, Ver: m.ver}
+	return Save{Fine: out, Ver: m.ver, IgniteAt: m.igniteAt}
 }
 
 // Import restores the saved air: temps and residual as saved, fine from
 // the save when it matches temps (an older save: from temps).
 func (m *Model) Import(temps []temperature.Temp, residual map[int]temperature.Temp, s Save) {
-	m.Temps, m.Residual, m.fine, m.ver = temps, residual, nil, s.Ver
+	m.Temps, m.Residual, m.fine, m.ver, m.igniteAt = temps, residual, nil, s.Ver, s.IgniteAt
 	if len(s.Fine) == len(temps) {
 		m.fine = make([]temperature.Milli, len(s.Fine))
 		for i, t := range s.Fine {

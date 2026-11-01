@@ -39,6 +39,7 @@ const (
 func (g *Game) heatRooms() {
 	g.ensureRooms()
 	g.thermo.Step()
+	scorch(g) // fire.go (TEMP-6): ignition and burns in air past 235 C or 150 C over the comfortable range
 }
 
 // --- exposure ----------------------------------------------------------------
@@ -151,13 +152,13 @@ func (g *Game) needsComfort(id entity.EntityID) bool {
 }
 
 // warmSpot finds the nearest reachable spot in a room with bearable air for
-// a colonist suffering exposure (bodytemp.Spot). ok is false when there is
-// none.
+// a colonist suffering exposure (thermo.Spot: the cached room cells). ok is
+// false when there is none.
 func (g *Game) warmSpot(id entity.EntityID) (int, int, bool) {
 	g.ensureRooms()
 	pos, _ := g.positions.Get(id)
 	cold, bands, temps := g.exposure[id].Hypo >= g.exposure[id].Heat, g.bandsOf(id), g.thermo.Temps
-	return bodytemp.Spot(g.roomGrid, g.grid.Width(), pos.X, pos.Y, func(r int) bool {
+	return g.thermo.Spot(pos.X, pos.Y, func(r int) bool {
 		return r >= 0 && r < len(temps) && (cold && int(temps[r]) >= bands.Min || !cold && int(temps[r]) <= bands.Max)
 	}, func(x, y int) bool {
 		owner, taken := g.reserve.TileOwner(x, y)

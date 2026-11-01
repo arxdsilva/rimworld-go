@@ -95,9 +95,17 @@ func (r Role) String() string {
 	return [...]string{"room", "bedroom", "dining room", "workshop", "barracks", "hospital", "prison cell", "prison barracks", "recreation room", "kitchen"}[r]
 }
 
-// RoleOf picks the dominant use.
+// MaxCells is the largest room (TEMP-6, wiki: Rooms: 36 regions, at most
+// 5184 tiles). A larger enclosed area is an indoor space but no room: it
+// takes no role, so no room thought, while its air still behaves as a
+// room's (temperature has no cap).
+const MaxCells = 5184
+
+// RoleOf picks the dominant use (General past MaxCells).
 func RoleOf(c Contents) Role {
 	switch {
+	case c.Cells > MaxCells:
+		return General
 	case c.Beds >= 2 && c.Benches == 0:
 		return Barracks
 	case c.Beds == 1 && c.Benches == 0:

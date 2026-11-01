@@ -51,7 +51,7 @@ func TestPostponedLine(t *testing.T) {
 func TestGearRows(t *testing.T) {
 	p := game.PawnView{Apparel: []string{"parka", "tuque"}, ApparelForced: []bool{true, false}, ChangingInto: "duster"}
 	rows := GearRows(p)
-	want := []string{"everyday clothes", "leather parka  (you chose this)", "knitted tuque  (warmer)", "Changing into: duster"}
+	want := []string{"everyday clothes", "Outer: leather parka  (you chose this)", "Head: knitted tuque  (warmer)", "Changing into: duster"}
 	if !slices.Equal(rows, want) {
 		t.Fatalf("rows %q\nwant %q", rows, want)
 	}

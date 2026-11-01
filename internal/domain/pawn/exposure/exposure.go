@@ -176,3 +176,27 @@ const (
 	frostLo = 2000
 	frostHi = 30000
 )
+
+// Heat burns (TEMP-6, wiki: Temperature: a creature takes burn damage in
+// air more than 150 °C above its comfortable maximum).
+const (
+	// BurnMargin is how far past the comfortable maximum (tenths) the air
+	// burns.
+	BurnMargin = 1500
+	// BurnEvery is how often (ticks) a creature in such air is burned, and
+	// burnStep and burnMax how hard: 1 hit point, one more per 40 °C
+	// further, at most 6 (original tuning: the wiki gives no rate).
+	BurnEvery = 480
+	burnStep  = 400
+	burnMax   = 6
+)
+
+// BurnDamage is the burn a creature whose comfortable maximum is hi
+// takes from air t once per BurnEvery ticks (0: the air doesn't burn).
+func BurnDamage(t, hi int) int {
+	over := t - hi - BurnMargin
+	if over <= 0 {
+		return 0
+	}
+	return min(burnMax, 1+over/burnStep)
+}

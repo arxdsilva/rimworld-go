@@ -521,7 +521,7 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 			TendPct: int(c.TendQ) / 10, Losing: infection.Losing(c, d, tended, imm)}
 		aging := body.IsAging(c.Kind) // aging.go (MED-08): its own label and card
 		if aging {
-			cv.Label, cv.Losing = g.agingLabel(id, c, d), c.Kind == body.CondHeartAttack
+			cv.Label, cv.Losing = body.AgingLabel(c, d, g.agingSalt(id)), c.Kind == body.CondHeartAttack
 		}
 		if d.TendEvery > 0 {
 			if tended {
@@ -532,15 +532,15 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 		}
 		cv.Tip = conditionTip(c, d, cv, tended)
 		if aging {
-			cv.Tip = g.agingTip(id, c, cv.Label)
+			cv.Tip = body.AgingTip(c, cv.Label, g.agingSalt(id))
 		}
 		losing = losing || cv.Losing
 		hv.Conditions = append(hv.Conditions, cv)
 	}
 	switch {
 	case hv.BleedPerDay != 0 || hv.State == "Dead":
-	case agingHeads(b): // aging.go (MED-08): a heart attack, or only age conditions
-		hv.State = agingHeadline(b, hv.State, now)
+	case body.AgingHeads(b): // body/aging_text.go (MED-08): a heart attack, or only age conditions
+		hv.State = body.AgingHeadline(b, hv.State, now)
 	default:
 		hv.State = conditionHeadline(b, losing)
 	}

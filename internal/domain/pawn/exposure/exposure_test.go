@@ -109,3 +109,20 @@ func TestFrostbiteChance(t *testing.T) {
 		t.Error("permille conversions")
 	}
 }
+
+// TestBurnDamage (TEMP-6, wiki: Temperature): air burns only more than
+// 150 C over the comfortable maximum, harder the hotter, capped.
+func TestBurnDamage(t *testing.T) {
+	hi := Everyday.Max
+	cases := []struct{ t, want int }{
+		{hi + BurnMargin, 0}, {hi + BurnMargin + 1, 1}, {hi + BurnMargin + burnStep, 2}, {hi + 5000, burnMax}, {-500, 0},
+	}
+	for _, c := range cases {
+		if got := BurnDamage(c.t, hi); got != c.want {
+			t.Errorf("air %d: burn %d, want %d", c.t, got, c.want)
+		}
+	}
+	if BurnDamage(hi+BurnMargin+100, hi+200) != 0 {
+		t.Error("heat insulation doesn't raise the burn line")
+	}
+}

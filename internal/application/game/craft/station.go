@@ -22,8 +22,8 @@ const (
 	// the straight ramp between is ours).
 	darkLight = 300
 	darkSpeed = 800
-	// outdoorsSpeed is a bench outside any room or under the open sky
-	// (wiki: Cleanliness: a production bench with no roof works at 0.8).
+	// outdoorsSpeed is a bench outside any room or in a room that feels
+	// outdoors (wiki: Cleanliness, 0.8; wiki: Rooms, PsychologicallyOutdoors).
 	outdoorsSpeed = 800
 	// speedEvery is how many ticks a bench's speed is kept before it is
 	// worked out again (ours: light changes slowly; the view stays put).

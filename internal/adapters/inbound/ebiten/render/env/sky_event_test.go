@@ -20,3 +20,19 @@ func TestSkyEventVeil(t *testing.T) {
 		t.Errorf("fades out at the end: %v vs %v", end, ec)
 	}
 }
+
+func TestVolcanicWinterVeil(t *testing.T) {
+	t.Parallel()
+	w := game.WorldView{ClimateEvent: "volcanic_winter", ClimateEventEnds: 100000}
+	if v := SkyEventVeil(w, 100); v.A == 0 || v.R == 0 {
+		t.Fatalf("no ash haze in a volcanic winter: %v", v)
+	}
+	w.ClimateEvent = "heat_wave"
+	if SkyEventVeil(w, 100).A != 0 {
+		t.Fatal("a heat wave has no veil")
+	}
+	w.ClimateEvent = "volcanic_winter"
+	if end := SkyEventVeil(w, w.ClimateEventEnds-10); end.A >= SkyEventVeil(w, 100).A {
+		t.Fatal("the haze fades out before the event ends")
+	}
+}

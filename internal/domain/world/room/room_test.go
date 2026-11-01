@@ -34,3 +34,22 @@ func TestRoles(t *testing.T) {
 		t.Fatal("roles")
 	}
 }
+
+// TestRoomCapTakesNoRole (TEMP-6, wiki: Rooms): an enclosed area past
+// MaxCells (5184 tiles) is no room: a bed in it makes no bedroom, a
+// prisoner bed no cell, a stove no kitchen.
+func TestRoomCapTakesNoRole(t *testing.T) {
+	t.Parallel()
+	at, over := Contents{Cells: MaxCells, Beds: 1}, Contents{Cells: MaxCells + 1, Beds: 1}
+	if RoleOf(at) != Bedroom || RoleOf(over) != General {
+		t.Fatalf("at the cap %v, past it %v", RoleOf(at), RoleOf(over))
+	}
+	for _, c := range []FullContents{{Contents: over, PrisonerBeds: 1}, {Contents: over, Stoves: 1}, {Contents: over, MedicalBeds: 1}} {
+		if r := RoleOfFull(c); r != General {
+			t.Errorf("%+v: role %v past the cap", c, r)
+		}
+	}
+	if r := RoleOfFull(FullContents{Contents: at, PrisonerBeds: 1}); r != PrisonCell {
+		t.Errorf("at the cap a prisoner bed makes %v", r)
+	}
+}

@@ -587,7 +587,7 @@ func TestDoorUnderRoofNotSoaked(t *testing.T) {
 	}
 }
 
-func TestSleptUnderRoofNotOutside(t *testing.T) {
+func TestSleptOutsideIsPsychologicallyOutdoors(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	pavilion(t, g)
 	hutWalls(t, g, 15, 2, 21, 8)
@@ -596,14 +596,16 @@ func TestSleptUnderRoofNotOutside(t *testing.T) {
 	for _, id := range []entity.EntityID{under, open, bare} {
 		g.rest.Waking.After(id)
 	}
-	if remembers(g, under, mood.SleptOutside) || !remembers(g, under, mood.SleptOnGround) {
-		t.Fatal("sleeping under a roof is on the ground, not outside")
+	// TEMP-6 (wiki: Rooms, PsychologicallyOutdoors): a pavilion roof over
+	// the edge-open outdoors is still outdoors to a sleeper
+	if !remembers(g, under, mood.SleptOutside) || remembers(g, under, mood.SleptOnGround) {
+		t.Fatal("sleeping under a pavilion open to the map is sleeping outside")
 	}
 	if !remembers(g, open, mood.SleptOutside) {
 		t.Fatal("sleeping under the sky is outside")
 	}
 	if remembers(g, bare, mood.SleptOutside) || !remembers(g, bare, mood.SleptOnGround) {
-		t.Fatal("a room, roofed or not, is not outside")
+		t.Fatal("a small room, roofed or not, is not outside")
 	}
 	// in a bed under the sky (no room) it is still outside
 	g.BuildNow("bed", "wood", "south", 5, 8)

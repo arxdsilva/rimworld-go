@@ -173,8 +173,8 @@ type Workshop interface {
 	// Light is the light on (x, y) in permille (1000: full daylight).
 	Light(x, y int) int
 	// Cleanliness is the cleanliness of the room at (x, y) in hundredths
-	// (room.CleanlinessLabel); indoors is false outside any room or under
-	// the open sky.
+	// (room.CleanlinessLabel); indoors is false outside any room or in a
+	// room that feels outdoors (TEMP-6, wiki: Rooms: PsychologicallyOutdoors).
 	Cleanliness(x, y int) (hundredths int, indoors bool)
 	// UseFuel burns the fuel work units of forge work take (one log per
 	// WorkPerWood units).

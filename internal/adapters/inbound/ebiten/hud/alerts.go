@@ -224,6 +224,12 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 	}
 	group("hypothermia", true, hypo, func(n string) string { return n + " has hypothermia" }, "colonists have hypothermia")
 	group("heatstroke", true, heat, func(n string) string { return n + " has heatstroke" }, "colonists have heatstroke")
+	if al, ok := NeedWarmClothesAlert(pawns, w); ok { // alerts_temp.go (TEMP-5)
+		out = append(out, al)
+	}
+	if al, ok := ColdAnimalAlert(w); ok {
+		out = append(out, al)
+	}
 	if al, ok := noFuelAlert(w); ok { // alerts_power.go: campfires, torches, generators
 		out = append(out, al)
 	}
@@ -635,6 +641,8 @@ var alertExplanations = map[string]string{
 	"food":          "There is little food for the number of colonists. Plant and harvest crops, hunt, or stop food going to waste before anyone starves.",
 	"raid":          "Armed raiders are on the map. Draft your fighters, take cover near your defences and hold a line.",
 	"break":         "A colonist is having a mental break and may act on their own. Keep others out of the way, then work on lifting their mood.",
+	"warmclothes":   "Winter is coming and these colonists would be cold in what they wear. Make or buy warm clothes (a parka, a tuque, a jacket) and let them dress; an outfit that allows them helps.",
+	"animalcold":    "Tame animals are too cold. Shelter them in a heated room or pen, or bring them indoors beside a fire.",
 	"hypothermia":   "Colonists are freezing. Bring them indoors beside a fire and give them warm clothes.",
 	"heatstroke":    "Colonists are overheating. Move them into shade or a cool room and keep them off heavy work.",
 	"nofuel":        "A campfire, torch lamp or wood-fired generator has burned out of wood. Haulers refill them from the stockpile, so keep logs in stock; a generator makes no power until then.",

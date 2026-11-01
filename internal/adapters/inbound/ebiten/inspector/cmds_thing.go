@@ -215,6 +215,9 @@ func (a Animal) AnimalPaneLines(an game.AnimalView) []string {
 	for _, l := range AnimalFoodLines(an) { // FOOD-5
 		add(l)
 	}
+	for _, l := range AnimalTempLines(an) { // temp_ui.go (TEMP-5)
+		add(l)
+	}
 	add(animalPenLine(an))
 	for _, r := range AnimalBondRows(an) {
 		add(r)

@@ -130,22 +130,6 @@ func TestMigratePermilleKeepsMeaning(t *testing.T) {
 	}
 }
 
-func TestSpotNearestReachable(t *testing.T) {
-	// a 5x1 strip: rooms 0 (cells 0,1), wall, room 1 (cells 3,4)
-	rooms := []int{0, 0, -2, 1, 1}
-	warm := func(r int) bool { return r == 1 }
-	all := func(int, int) bool { return true }
-	if x, _, ok := Spot(rooms, 5, 0, 0, warm, all, all); !ok || x != 3 {
-		t.Errorf("nearest warm cell %d %v", x, ok)
-	}
-	if x, _, ok := Spot(rooms, 5, 0, 0, warm, all, func(x, _ int) bool { return x == 4 }); !ok || x != 4 {
-		t.Errorf("skips the unreachable: %d %v", x, ok)
-	}
-	if _, _, ok := Spot(rooms, 5, 0, 0, func(int) bool { return false }, all, all); ok {
-		t.Error("none bearable")
-	}
-}
-
 // TestAnimalFrostbite: a cow at 90 % hypothermia in −30 °C air takes
 // frostbite on its extremities in the end (paws, ears, nose, tail), as
 // hit points, with an infection roll; above 0 °C, or as an insect, never.
