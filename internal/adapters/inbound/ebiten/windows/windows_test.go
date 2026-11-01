@@ -159,10 +159,16 @@ func TestHandDrawnWindowsButtonsAndClicks(t *testing.T) {
 	w.Schedule().Paint(ids.PrefixSchedCell + "2.5")
 	w.Show("research")
 	bs := w.Buttons()
-	if len(bs) != 2 || bs[0].Disabled || !bs[1].Disabled {
+	if len(bs) != 2 || bs[0].ID != ids.PrefixResearchPick+"3" || bs[0].Disabled || bs[1].Disabled { // every box selects, even a done one (RSCH-2)
 		t.Fatalf("research buttons %+v", bs)
 	}
+	w.Research().Pick(bs[1].ID)
+	w.Research().start() // a done project does not start
 	w.Research().Pick(bs[0].ID)
+	if id, ok := w.Research().Selected(); !ok || id != 3 {
+		t.Fatalf("picking %s selected %v (%v)", bs[0].ID, id, ok)
+	}
+	w.Research().start()
 	w.Show("animals")
 	if got := len(w.Buttons()); got != 2+1+3 { // Colony / Wild, Auto-slaughter (FOOD-5), then Master, Slaughter, Release (the Diet column is dropped in this narrow window)
 		t.Fatalf("animals buttons %d", got)

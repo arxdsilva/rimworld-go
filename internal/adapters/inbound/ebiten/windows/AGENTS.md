@@ -5,7 +5,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 
 ## Owned Concepts
 - `Set` (30 methods, 24 exported): the kit window, `Want`, `Rect`, `Anchor`, `Buttons`, `Click`, `Show`, `Declare`, `Draw`, and the wild-row focus cycle (`focus`).
-- Eight window types, each `struct{*Set}`: `Work`, `Schedule`, `Assign`, `Animals` (14 methods), `Research` (8), `History`, `Factions`, `World`. The launch method is `Launch`, not `Open`, so it does not hide the field.
+- Eight window types, each `struct{*Set}`: `Work`, `Schedule`, `Assign`, `Animals` (14 methods), `Research` (16: the RSCH-2 tech tree; its state is `researchState` in `research_tree.go`, the layout `layoutTree` in `research_layout.go`, the info panel in `research_panel.go`), `History`, `Factions`, `World`. The launch method is `Launch`, not `Open`, so it does not hide the field.
 - Interfaces: `Reader` (`Wildlife`, `History`, `WorldMap`, `IncapableReason`), `Labels` (8: `PawnLabel`, `AnimalLabel`, `AnimalHealth`, `CareShort`, `Caravan`, `Factions`, `DrawAnimalIcon`, `DrawPassion`), `Host` (8: `Env`, `WindowRect`, `CenterOnMap`, `AreaDropdown`, `ManageAreas`, `Float`, `FormCaravan`, `FactionsTable`).
 - `Shell` = `Sizer + Commands + World + PawnSel + Widgets + Dispatcher + Labels + Host`.
 
@@ -25,6 +25,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - Window actions leave as `command.Command` through `ports.Commands`, or as `ports.Intent` (`ShowWindow`, `CloseWindows`) for navigation.
 
 ## Invariants
+- Research tab (RSCH-2): the tree's layout and texts are rebuilt only when `World().Research` hands out a different slice or the projects' set changes (`TestResearchTreeCachesAndDoesNotAllocatePerFrame`); a box click selects (`research.pick.<id>`), only Start research (`research.start`) sends SetResearch; everything draws clipped to the window (`TestResearchTreeDrawsInsideAtEveryOffset`, root).
 - Every window declares its widgets once per `Update` (`TestKitWindowOpensTogglesAndCloses`).
 - Animal columns drop to fit the width (`TestAnimalColumnsDropToFit`); presets cycle (`TestNextPresetCycles`); the World tab charts the planet once (`TestWorldTabChartsThePlanetOnce`).
 - `Set` has 30 methods and stays under the 40-method limit.

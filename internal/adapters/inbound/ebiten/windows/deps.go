@@ -148,6 +148,8 @@ type Set struct {
 
 	// food is the Food policies window's state (foodpolicy.go).
 	food *foodState
+
+	research *researchState // the Research tab's tree, selection and caches (research_tree.go, RSCH-2)
 }
 
 // New builds the feature over its shell.
@@ -163,7 +165,7 @@ type (
 	Assign struct{ *Set }
 	// Animals is the Animals tab and its Wild list.
 	Animals struct{ *Set }
-	// Research is the Research tab: the project list.
+	// Research is the Research tab: the tech tree and its info panel.
 	Research struct{ *Set }
 	// History is the History tab: the colony's notable events.
 	History struct{ *Set }

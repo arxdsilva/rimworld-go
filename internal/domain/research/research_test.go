@@ -6,7 +6,7 @@ func TestTreeAndUnlocks(t *testing.T) {
 	t.Parallel()
 	var pr Progress
 	if !pr.Available(Traps) || pr.Available(Gunsmithing) {
-		t.Fatal("gunsmithing needs traps first")
+		t.Fatal("gunsmithing needs machine tools first")
 	}
 	if p, ok := pr.Locks("build:spike trap"); !ok || p != Traps {
 		t.Fatal("traps lock spike traps")
@@ -20,8 +20,9 @@ func TestTreeAndUnlocks(t *testing.T) {
 	if !pr.Add(Traps, DefOf(Traps).Cost) || !pr.Done(Traps) || pr[Traps] != DefOf(Traps).Cost {
 		t.Fatal("finishing caps at the cost")
 	}
+	pr.Add(MachineTools, DefOf(MachineTools).Cost)
 	if _, ok := pr.Locks("build:spike trap"); ok || !pr.Available(Gunsmithing) {
-		t.Fatal("traps researched: spike traps open, gunsmithing available")
+		t.Fatal("traps researched: spike traps open; machine tools done: gunsmithing available")
 	}
 	full := Complete()
 	for _, d := range All() {

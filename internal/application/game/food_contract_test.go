@@ -79,7 +79,7 @@ func TestFoodContractSpeciesStayOut(t *testing.T) {
 		t.Errorf("agave: yields %s x%d, want agave fruit x10 (FOOD-2)", d.Yields, d.Yield)
 	}
 	g := NewColony(Config{Seed: 3, Width: 20, Height: 20})
-	if p := g.lockedBy("crop:hops"); p != "Brewing" {
+	if p := g.lab.LockedBy("crop:hops"); p != "Brewing" {
 		t.Errorf("hops locked by %q, want Brewing", p)
 	}
 	if g.cropLocked(plant.Rice) || g.cropLocked(plant.Strawberry) || g.cropLocked(plant.Haygrass) {
@@ -93,10 +93,10 @@ func TestFoodContractSpeciesStayOut(t *testing.T) {
 func TestFoodContractBuildingsAndKinds(t *testing.T) {
 	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 20, Height: 20})
-	if p := g.lockedBy("build:hydroponics basin"); p != "Hydroponics" {
+	if p := g.lab.LockedBy("build:hydroponics basin"); p != "Hydroponics" {
 		t.Errorf("hydroponics basin locked by %q", p)
 	}
-	if p := g.lockedBy("build:sun lamp"); p != "Electricity" {
+	if p := g.lab.LockedBy("build:sun lamp"); p != "Electricity" {
 		t.Errorf("sun lamp locked by %q", p)
 	}
 	basin := construction.DefOf(construction.HydroponicsBasin)

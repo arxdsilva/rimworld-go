@@ -63,3 +63,18 @@ func (b BenchTier) String() string {
 	}
 	return benchNames[b]
 }
+
+// CostPct is what a project of level project costs a faction of level
+// faction, in percent of its base cost (wiki: Research, tech level cost
+// multiplier: a tribe pays 150 % for Medieval projects and 200 % for
+// Industrial and later ones; a faction at or above the level pays 100 %).
+// The formula is original tuning that reproduces those published values:
+// 100 + 50 per level the project (capped at Industrial) is above the
+// faction.
+func CostPct(project, faction TechLevel) int {
+	project = min(project, Industrial)
+	if project <= faction {
+		return 100
+	}
+	return 100 + 50*int(project-faction)
+}

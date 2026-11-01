@@ -174,7 +174,11 @@ func TestElectricityKinds(t *testing.T) {
 	}
 	for k, base := range map[Kind]Kind{ElectricStove: Stove, ElectricTailoringBench: TailoringBench, ElectricResearchBench: ResearchBench} {
 		d, b := DefOf(k), DefOf(base)
-		if RecipeBench(k) != base || d.Size != b.Size || d.Spot != b.Spot || d.HasSpot != b.HasSpot || d.Bench != b.Bench ||
+		same := d.Size == b.Size && d.Spot == b.Spot
+		if k == ElectricResearchBench { // RSCH-1, wiki: the hi-tech bench is 5x2, the simple one 3x2, both worked from the south middle
+			same = d.Size == [2]int{5, 2} && d.Spot == [2]int{2, 2} && b.Size == [2]int{3, 2} && b.Spot == [2]int{1, 2}
+		}
+		if RecipeBench(k) != base || !same || d.HasSpot != b.HasSpot || d.Bench != b.Bench ||
 			d.Rotatable != b.Rotatable || !d.MetalOnly || d.Components < 1 {
 			t.Errorf("%s vs %s: %+v", d.Name, b.Name, d)
 		}

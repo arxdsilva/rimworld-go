@@ -463,7 +463,7 @@ func (g *Game) implantResearch(k item.Kind) string {
 		if r.Output != k {
 			continue
 		}
-		p := g.lockedBy("recipe:" + r.Name) // research.go
+		p := g.lab.LockedBy("recipe:" + r.Name) // game/research
 		if p == "" {
 			return ""
 		}

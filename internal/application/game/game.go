@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/prison"
 	"rimworld-go/internal/application/game/raid"
+	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/incident"
@@ -491,8 +492,8 @@ type BuildingView struct {
 	Stored, Capacity int
 	Open             bool   // TEMP-0 contract (false until TEMP-1): a vent letting air through (command.ToggleVent)
 	HeatRate         int    // TEMP-0 contract (0 until TEMP-1): heat into its room, tenths of heat/s (signed: cooling < 0)
-	ResearchSpeed    int    // RSCH-0 contract (0 until RSCH-1): a research bench's building factor, permille
-	Analyzer         uint64 // RSCH-0 contract (0 until RSCH-1): the multi-analyzer a hi-tech research bench links (building id)
+	ResearchSpeed    int    // RSCH-1: a research bench's factor now, permille (game/research Factor)
+	Analyzer         uint64 // RSCH-1: the multi-analyzer a hi-tech research bench links (building id, 0 none)
 }
 
 // Bed facility bits on BuildingView.Facilities (BED-1).
@@ -683,8 +684,8 @@ type WorldView struct {
 	// TempVer, the temperature overlay's cache key: it changes whenever a cell's air may have (game/thermo).
 	ClimateEvent              string
 	ClimateEventEnds, TempVer uint64
-	ResearchAlert             bool   // RSCH-0 contract (false until RSCH-1): no project picked while a bench and a researcher are free
-	TechLevel                 string // RSCH-0 contract ("" until RSCH-1): the colony's tech level (research.TechLevel's name)
+	ResearchAlert             bool   // RSCH-1: no project picked while one is open, a bench stands and a colonist can research
+	TechLevel                 string // RSCH-1: the colony's tech level (research.TechLevel's name; it prices projects)
 }
 
 // FoodPolicyView is one food policy: its id, name and allowed kind names.
@@ -793,8 +794,7 @@ type Game struct {
 	lastHit    map[entity.EntityID]hitRec
 	wild       bool // wildlife migrates in (generated colonies)
 
-	// research progress and the current project (researchSet: one is picked)
-	research research.Progress
+	lab *rlab.Lab // game/research (RSCH-1): progress, the current project, the bench job
 	// roofs: the roof state per tile (roof.go, SIM-018), row-major; empty
 	// until the first room rebuild. roofCollapses are recent collapses.
 	roofs         []roof.Cell
@@ -802,13 +802,11 @@ type Game struct {
 	// grass is the ground cover layer (grass.go, UI-011).
 	grass grassState
 	// stains are blood and ichor on the ground (stains.go, SIM-020).
-	stains      stainState
-	filth       filthState // tracked-in dirt (SIM-021, filth.go)
-	homeArea    homeState  // the Home area (SIM-021, home.go)
-	planMarks   planState  // PLAY-012 plan marks (plan.go)
-	roofx       roofIndex  // roof.go: derived plan index and roofed counts
-	researchCur research.Project
-	researchSet bool
+	stains    stainState
+	filth     filthState // tracked-in dirt (SIM-021, filth.go)
+	homeArea  homeState  // the Home area (SIM-021, home.go)
+	planMarks planState  // PLAY-012 plan marks (plan.go)
+	roofx     roofIndex  // roof.go: derived plan index and roofed counts
 
 	// motion: per-creature step timing (motion_store.go); moverBuf is
 	// scratch for the ascending-ID mover list.
@@ -955,7 +953,6 @@ func New(cfg Config) *Game {
 		sleptAt:    make(map[entity.EntityID]entity.EntityID),
 		animals:    component.NewStore[animal.State](),
 		equip:      make(map[entity.EntityID]item.Kind),
-		research:   research.Complete(), // sandbox: everything known
 		motion:     component.NewStore[motionRec](),
 		lastStrike: make(map[entity.EntityID]strikeRec),
 		lastHit:    make(map[entity.EntityID]hitRec),
@@ -969,6 +966,8 @@ func New(cfg Config) *Game {
 	g.prison = prison.New(newPrisonHost(g)) // prison_host.go
 	g.rest = rest.New(newRestHost(g))       // rest_host.go
 	g.thermo = thermo.New(newThermoHost(g)) // thermo_host.go
+	g.lab = rlab.New(researchHost{g})       // research.go
+	g.lab.Prog = research.Complete()        // sandbox: everything known
 	return g
 }
 
@@ -984,7 +983,7 @@ func NewColony(cfg Config) *Game {
 	g.startHome() // home.go: a 13x13 Home around the landing spot (SIM-021)
 	g.spawnWildlife()
 	g.scheduleThreats()
-	g.research = research.Progress{} // a new colony knows nothing yet
+	g.lab.Prog = research.Progress{} // a new colony knows nothing yet
 	g.warmIndexes(false)             // jobindex.go: not on the first tick
 	return g
 }
@@ -1313,7 +1312,8 @@ func (g *Game) world() WorldView {
 		Zones:       g.zoneViews(),
 		Schedule:    g.scheduleView(),
 	}
-	w.Research, w.Locked = g.researchLists()
+	w.Research, w.Locked = g.lab.Lists(g.views.on) // game/research
+	w.ResearchAlert, w.TechLevel = g.lab.Alert(), researchHost{g}.Tech().String()
 	if n, felled := g.Timbergnaws(); n > 0 {
 		w.TreesFelled = felled
 	}

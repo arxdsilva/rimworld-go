@@ -11,7 +11,7 @@ import (
 
 func TestResearchUnlocksSpikeTraps(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
-	g.research = research.Progress{} // a fresh colony
+	g.lab.Prog = research.Progress{} // a fresh colony
 	if !g.BuildNow("research bench", "wood", "south", 4, 4) {
 		t.Fatal("build research bench")
 	}
@@ -23,29 +23,30 @@ func TestResearchUnlocksSpikeTraps(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: trap, X: 12, Y: 2})
 	g.Enqueue(command.Command{Kind: command.SetResearch, Build: uint8(research.Gunsmithing)}) // not available yet
 	g.Step(1)
-	if len(g.frameIDs) != 0 || g.researchSet {
+	if len(g.frameIDs) != 0 || g.lab.Set {
 		t.Fatal("locked: no blueprint, and gunsmithing can't be picked before traps")
 	}
 	g.Enqueue(command.Command{Kind: command.SetResearch, Build: uint8(research.Traps)})
+	g.lab.Prog[research.Traps] = research.DefOf(research.Traps).Cost - 5 // RSCH-1: wiki costs take days; the last points here
 	studied := false
-	for i := 0; i < 400 && !g.research.Done(research.Traps); i++ {
+	for i := 0; i < 400 && !g.lab.Prog.Done(research.Traps); i++ {
 		g.Step(50)
 		g.SetNeeds(ada, 1<<20, 1<<20)
 		if j, _ := g.jobs.Get(ada); j.Kind.String() == "research" {
 			studied = true
 		}
 	}
-	if !studied || !g.research.Done(research.Traps) {
-		t.Fatalf("Ada should research traps at the bench (progress %d)", g.research[research.Traps])
+	if !studied || !g.lab.Prog.Done(research.Traps) {
+		t.Fatalf("Ada should research traps at the bench (progress %d)", g.lab.Prog[research.Traps])
 	}
 	found := false
 	for _, m := range g.World().Messages {
-		if strings.Contains(m.Text, "Research finished: Traps") {
+		if m.Letter && m.Title == "Research complete: Traps" && strings.HasPrefix(m.Text, research.DefOf(research.Traps).Desc) {
 			found = true
 		}
 	}
-	if !found || g.researchSet {
-		t.Fatal("finishing posts a message and clears the current project")
+	if !found || g.lab.Set {
+		t.Fatal("finishing posts a letter with the description and clears the current project")
 	}
 	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: trap, X: 12, Y: 2})
 	g.Step(1)
@@ -53,7 +54,7 @@ func TestResearchUnlocksSpikeTraps(t *testing.T) {
 		t.Fatal("researched: spike traps can be placed")
 	}
 	views := g.World().Research
-	if len(views) != int(research.NumProjects) || !views[research.Traps].Done || !views[research.Gunsmithing].Available {
+	if len(views) != int(research.NumProjects) || !views[research.Traps].Done || !views[research.Bridges].Available {
 		t.Fatalf("views %+v", views)
 	}
 	if _, locked := g.World().Locked["recipe:make_rifle"]; !locked {

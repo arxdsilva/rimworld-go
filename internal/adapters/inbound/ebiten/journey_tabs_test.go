@@ -135,7 +135,8 @@ func TestJourneyTabsAssignCareAndPolicies(t *testing.T) {
 	}
 }
 
-// TestJourneyTabsResearchPick: F6 lists projects; the first available one is chosen.
+// TestJourneyTabsResearchPick: F6 shows the tech tree; clicking an
+// available project selects it and Start research starts it (RSCH-2).
 func TestJourneyTabsResearchPick(t *testing.T) {
 	t.Parallel()
 	// game.New is a sandbox that knows everything; a new colony knows nothing.
@@ -144,20 +145,46 @@ func TestJourneyTabsResearchPick(t *testing.T) {
 	if !j.a.win.Open || j.a.win.Mode != "research" {
 		t.Fatalf("F6 left mode %q", j.a.win.Mode)
 	}
+	avail := map[string]bool{}
+	for _, p := range j.a.renderer.game.World().Research {
+		if p.Available && !p.Current {
+			avail["research.pick."+strconv.Itoa(int(p.ID))] = true
+		}
+	}
 	var pick string
 	for _, b := range j.a.win.Research().Buttons() {
-		if !b.Disabled && !b.Selected {
+		if avail[b.ID] && !b.Selected {
 			pick = b.ID
 			break
 		}
 	}
 	if pick == "" {
-		t.Fatalf("no available research project: %+v", j.a.win.Research().Buttons())
+		t.Fatalf("no available research project in view: %+v", j.a.win.Research().Buttons())
 	}
 	j.clickID(pick)
+	if _, ok := j.lastCmd(command.SetResearch); ok {
+		t.Fatalf("selecting %s started it", pick)
+	}
+	j.clickID("research.start")
 	c, ok := j.lastCmd(command.SetResearch)
 	if !ok || "research.pick."+strconv.Itoa(int(c.Build)) != pick {
-		t.Fatalf("picking %s sent %+v (%v)", pick, c, ok)
+		t.Fatalf("starting %s sent %+v (%v)", pick, c, ok)
+	}
+}
+
+// TestJourneyTabsResearchDevFinish: in developer mode the research
+// panel's Finish now finishes the selected project (RSCH-2).
+func TestJourneyTabsResearchDevFinish(t *testing.T) {
+	t.Parallel()
+	j := newJourney(t, jGame(game.NewColony(game.Config{Seed: 1, Width: 64, Height: 64})))
+	j.a.settings.Gameplay.DevMode = true // as journey_time_test.go: developer mode is a setting, not a journey step
+	j.key("F6", 0)
+	if !j.clickID("research.devfinish") {
+		t.Fatal("Finish now is disabled on the opening selection")
+	}
+	c, ok := j.lastCmd(command.DevFinishResearch)
+	if id, sel := j.a.win.Research().Selected(); !ok || !sel || c.Build != id {
+		t.Fatalf("Finish now sent %+v (%v) for selection %v", c, ok, id)
 	}
 }
 

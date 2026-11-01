@@ -382,7 +382,7 @@ func TestScenarioDetailsFromParts(t *testing.T) {
 	for _, want := range []string{
 		"Player faction\tSettlers", "Starting people\t3, chosen from 8 candidates", "Arrival\tDrop pods",
 		"Tech level\tIndustrial", "Research cost\t100% of normal",
-		"## Research granted\nFood preservation\nTraps", "## Starting equipment and supplies",
+		"## Research granted\nPassive cooling\nStonecutting\nTailoring", // RSCH-1, wiki: Crashlanded's start "## Starting equipment and supplies",
 		"Rifle ×2", "Industrial medicine ×12", "Silver ×600",
 		"## Starting animals\n1 random pet", "## Scattered on the map", "Steel ×400 in 4 piles, near the start",
 	} {
@@ -404,7 +404,7 @@ func TestScenarioDetailsFromParts(t *testing.T) {
 	}
 
 	ember, _ := scenario.Builtin("ember_clan")
-	if got := text(wizardpkg.ScenarioLines(ember)); !strings.Contains(got, "Player faction\tClan") || !strings.Contains(got, "Research cost\t150% of normal") || !strings.Contains(got, "Arrival\tStanding") {
+	if got := text(wizardpkg.ScenarioLines(ember)); !strings.Contains(got, "Player faction\tClan") || !strings.Contains(got, "Research cost\t100% of normal") /* RSCH-1: the tech level prices projects */ || !strings.Contains(got, "Arrival\tStanding") {
 		t.Errorf("Ember Clan details:\n%s", got)
 	}
 	bare, _ := scenario.Builtin("bare_hands")

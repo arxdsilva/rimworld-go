@@ -269,6 +269,8 @@ func PowerSprite(kind, facing string, mask int, open bool) string {
 		return "furniture/electric_tailoring_bench_" + FacingOr(facing)
 	case "electric research bench":
 		return "furniture/electric_research_bench_" + FacingOr(facing)
+	case "multi-analyzer": // RSCH-3: 2x2 facility, one facing; its glow is the on state
+		return "furniture/multi_analyzer"
 	}
 	return ""
 }

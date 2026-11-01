@@ -9,9 +9,9 @@ func TestFabricationAndPharmacology(t *testing.T) {
 		name string
 		cost int
 		req  Project
-	}{{Fabrication, "fabrication", 5000, Gunsmithing}, {Pharmacology, "pharmacology", 4000, Herbalism}} {
+	}{{Fabrication, "fabrication", 4000, MultiAnalysis}, {Pharmacology, "pharmacology", 1500, HerbalRemedies}} {
 		d := DefOf(c.p)
-		if d.Project != c.p || d.Name != c.name || d.Cost != c.cost || len(d.Requires) != 1 || d.Requires[0] != c.req ||
+		if d.Project != c.p || d.Name != c.name || d.Cost != c.cost || len(d.Requires) == 0 || d.Requires[0] != c.req ||
 			d.Label == "" || d.Desc == "" || len(d.Unlocks) == 0 {
 			t.Fatalf("%s = %+v", c.name, d)
 		}
@@ -51,10 +51,10 @@ func TestProgressSliceAndV1RoundTrip(t *testing.T) {
 // every power building gated (the lamp joins with the torch lamp).
 func TestElectricityTree(t *testing.T) {
 	t.Parallel()
-	if d := DefOf(Electricity); d.Cost != 3000 || len(d.Requires) != 0 || d.Name != "electricity" {
+	if d := DefOf(Electricity); d.Cost != 1600 || len(d.Requires) != 0 || d.Name != "electricity" {
 		t.Fatalf("electricity %+v", d)
 	}
-	for p, c := range map[Project]int{Batteries: 2500, SolarPower: 4000, WindPower: 3500, GeothermalPower: 5000} {
+	for p, c := range map[Project]int{Batteries: 400, SolarPower: 600, WindPower: 600, GeothermalPower: 3200} {
 		d := DefOf(p)
 		if d.Cost != c || len(d.Requires) != 1 || d.Requires[0] != Electricity || len(d.Unlocks) != 1 || d.Label == "" || d.Desc == "" {
 			t.Errorf("%s = %+v", d.Name, d)

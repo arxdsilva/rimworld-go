@@ -16,8 +16,12 @@ type facility struct {
 // facilities is every bench facility. wiki: Tool cabinet (+6 % work
 // speed each, at most two); the reach is ours (the wiki gives none).
 var facilities = [...]facility{
-	{Kind: construction.ToolCabinet, Pct: 6, Max: 2, Reach: 6},
+	{Kind: construction.ToolCabinet, Pct: 6, Max: 2, Reach: FacilityReach},
 }
+
+// FacilityReach is how far (Chebyshev tiles) a facility links a bench;
+// game/research links a multi-analyzer by the same reach (RSCH-1).
+const FacilityReach = 6
 
 // links reports a bench of kind k takes facilities: every bench but the
 // spots (wiki: a crafting or butcher spot links nothing).

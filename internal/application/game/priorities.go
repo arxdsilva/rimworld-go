@@ -129,7 +129,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Mine:
 		return g.assignMine(id)
 	case work.Research:
-		return g.assignResearch(id)
+		return g.lab.Assign(id, workTries) // game/research
 	case work.Clean:
 		return g.assignClean(id) || g.assignClearSnow(id) // clean.go, snow_clear.go
 	}

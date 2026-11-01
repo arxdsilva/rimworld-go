@@ -42,7 +42,8 @@ const (
 	// SpikeTrap is a hidden frame of sharpened stakes that springs on
 	// hostiles walking over it, then has to be rebuilt.
 	SpikeTrap
-	// ResearchBench is a 2x1 desk where colonists research.
+	// ResearchBench is the simple research bench, a 3x2 desk where
+	// colonists research (RSCH-1).
 	ResearchBench
 	// Grave is a dug 1x2 plot that holds one body under a headstone;
 	// Pyre is a 2x1 log stack where bodies are cremated (SIM-017).
@@ -329,8 +330,12 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	Sandbags:  {Kind: Sandbags, Name: "sandbags", Wood: 2, Work: 60, Layer: LayerObject, StoneOK: true},
 	SpikeTrap: {Kind: SpikeTrap, Name: "spike trap", Wood: 4, Work: 80, Layer: LayerObject},
-	ResearchBench: {Kind: ResearchBench, Name: "research bench", Wood: 8, Work: 180, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true},
+	// RSCH-1, wiki: Simple research bench (3x2, 75 stuff + 25 steel, 2800
+	// work). Scaled as the wave D rows (stuff / 9, work / 10); the steel is
+	// a secondary material, not modelled yet. The researcher sits at the
+	// middle of the south edge.
+	ResearchBench: {Kind: ResearchBench, Name: "research bench", Wood: 8, Work: 280, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, StoneOK: true, MetalOK: true},
 	// A campfire is also a (slow) cooking spot; the cook stands south of it.
 	Campfire: {Kind: Campfire, Name: "campfire", Wood: 5, Work: 60, Layer: LayerObject, BlocksMove: true,
 		Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
@@ -398,9 +403,12 @@ var defs = [kindCount]Def{
 	ElectricTailoringBench: {Kind: ElectricTailoringBench, Name: "electric tailoring bench", Wood: 55, Work: 210, Layer: LayerObject,
 		BlocksMove: true, Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 2},
-	ElectricResearchBench: {Kind: ElectricResearchBench, Name: "electric research bench", Wood: 65, Work: 250, Layer: LayerObject,
-		BlocksMove: true, Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true,
-		MetalOK: true, MetalOnly: true, Components: 3},
+	// RSCH-1, wiki: Hi-tech research bench (5x2, 150 metal + 100 steel +
+	// 10 components, 5000 work; 250 W in power.go). Scaled as the wave D
+	// rows; the 100 steel is a secondary material, not modelled yet.
+	ElectricResearchBench: {Kind: ElectricResearchBench, Name: "electric research bench", Wood: 17, Work: 500, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{5, 2}, Spot: [2]int{2, 2}, HasSpot: true,
+		MetalOK: true, MetalOnly: true, Components: 10},
 	// wiki: Vitals monitor (6000 work against the hospital bed's 4000):
 	// 1.5 times our hospital bed's work. The steel is original tuning.
 	VitalsMonitor: {Kind: VitalsMonitor, Name: "vitals monitor", Wood: 40, Work: 300, Layer: LayerObject, BlocksMove: true,

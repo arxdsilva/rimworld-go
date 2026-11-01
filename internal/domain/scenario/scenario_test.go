@@ -2,6 +2,7 @@ package scenario
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -121,7 +122,9 @@ func TestKitsMatchTheSpec(t *testing.T) {
 	if len(hull.Scatter) != 3 || hull.Scatter[0].Kind != item.Steel || hull.Scatter[0].Qty != 400 || hull.Scatter[0].Piles != 4 || !hull.Scatter[0].Near {
 		t.Errorf("hull scatter: %+v", hull.Scatter)
 	}
-	if len(hull.Research) != 2 || hull.Research[0] != research.FoodPreservation || hull.Research[1] != research.Traps {
+	// RSCH-1, wiki: Scenario system (Crashlanded's starting research)
+	if !slices.Equal(hull.Research, []research.Project{research.PassiveCooling, research.Stonecutting, research.Tailoring,
+		research.Upholstery, research.Electricity, research.AirConditioning, research.NutrientPaste}) {
 		t.Errorf("hull research: %v", hull.Research)
 	}
 	if len(hull.Animals) != 1 || !containsSpecies(PetSet(), hull.Animals[0]) {
@@ -134,18 +137,19 @@ func TestKitsMatchTheSpec(t *testing.T) {
 			t.Errorf("ember %s: %d, want %d", k, got, want)
 		}
 	}
-	if ember.ResearchCostPct != 150 || len(ember.Research) != 0 || len(ember.Animals) != 2 {
+	if ember.ResearchCostPct != 100 || !slices.Equal(ember.Research, []research.Project{research.PassiveCooling, research.Bowcraft,
+		research.Herbalism, research.TrailRations}) || len(ember.Animals) != 2 { // RSCH-1: the tech level prices projects instead
 		t.Errorf("ember: cost %d research %v animals %v", ember.ResearchCostPct, ember.Research, ember.Animals)
 	}
 	if ember.Rules.Tech != backstory.TagNeolithic {
 		t.Error("clan backstories are neolithic")
 	}
 	gilded := builtin(t, "gilded_expedition").Apply()
-	if qty(gilded, item.Silver) != 3000 || qty(gilded, item.Gold) != 30 || qty(gilded, item.Components) != 30 || len(gilded.Research) != 5 {
+	if qty(gilded, item.Silver) != 3000 || qty(gilded, item.Gold) != 30 || qty(gilded, item.Components) != 30 || len(gilded.Research) != 12 {
 		t.Errorf("gilded: %+v", gilded)
 	}
 	bare := builtin(t, "bare_hands").Apply()
-	if len(bare.StartItems) != 0 || !bare.Rules.NoClothes || bare.Rules.ForcedCond != pawngen.Exhausted || bare.Rules.CondChance != 100 || len(bare.Research) != 0 {
+	if len(bare.StartItems) != 0 || !bare.Rules.NoClothes || bare.Rules.ForcedCond != pawngen.Exhausted || bare.Rules.CondChance != 100 || !slices.Equal(bare.Research, hull.Research) {
 		t.Errorf("bare hands: %+v", bare)
 	}
 }
@@ -393,22 +397,17 @@ func TestApplyFlattens(t *testing.T) {
 	if len(e.Research) != 2 || e.Research[0] != research.Herbalism || e.Research[1] != research.Traps {
 		t.Errorf("research: %v", e.Research)
 	}
-	// Spacer 80% x 150% x 50%.
-	if e.ResearchCostPct != 60 {
-		t.Errorf("cost pct %d, want 60", e.ResearchCostPct)
+	// 150% x 50% (RSCH-1: the tech level prices each project, not this)
+	if e.ResearchCostPct != 75 {
+		t.Errorf("cost pct %d, want 75", e.ResearchCostPct)
 	}
 	if e.Intro != "first" {
 		t.Errorf("intro %q", e.Intro)
 	}
-	// The empty scenario still has usable maps and the tech cost.
+	// The empty scenario still has usable maps and the base cost.
 	z := (Def{}).Apply()
-	if z.Disabled == nil || z.Disallowed == nil || z.ResearchCostPct != 150 {
+	if z.Disabled == nil || z.Disallowed == nil || z.ResearchCostPct != 100 {
 		t.Errorf("zero def: %+v", z)
-	}
-	for tech, want := range map[faction.Tech]int{faction.Neolithic: 150, faction.Industrial: 100, faction.Spacer: 80} {
-		if TechCostPct(tech) != want {
-			t.Errorf("tech %d cost %d", tech, TechCostPct(tech))
-		}
 	}
 	// A forced trait never exceeds what its chance allows.
 	if forcedChance(Part{Chance: 100, Who: WhoNRandom, N: 9}, 3) != 100 {

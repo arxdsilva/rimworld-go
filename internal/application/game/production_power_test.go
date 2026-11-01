@@ -147,14 +147,15 @@ func TestElectricStovePowerCutMidBill(t *testing.T) {
 }
 
 // researchGame is a researcher and a research bench of kind k at (4, 4)
-// (on power when powered), studying Electricity in a fresh colony.
+// (on power when powered: a generator above it at (6, 2)), studying
+// Electricity in a fresh colony.
 func researchGame(t *testing.T, k construction.Kind, powered bool) (*Game, entity.EntityID) {
 	t.Helper()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	g.ResetResearch()
 	buildNow(t, g, k, benchStuff(k), construction.South, 4, 4)
 	if powered {
-		onPower(t, g, 4, 4, 7, 3)
+		onPower(t, g, 4, 4, 6, 2)
 	}
 	ada, _ := g.SpawnNamedPawn(10, 8, "Ada")
 	g.Enqueue(command.Command{Kind: command.SetResearch, Build: uint8(research.Electricity)})
@@ -163,7 +164,8 @@ func researchGame(t *testing.T, k construction.Kind, powered bool) (*Game, entit
 }
 
 // researchPerTick steps g until the researcher has studied n ticks at
-// the bench (at most 6000 ticks) and returns the points gained.
+// the bench (at most 6000 ticks) and returns the points gained, in
+// billionths (game/research carries the fraction).
 func researchPerTick(t *testing.T, g *Game, ada entity.EntityID, n int) int {
 	t.Helper()
 	studied := 0
@@ -179,20 +181,21 @@ func researchPerTick(t *testing.T, g *Game, ada entity.EntityID, n int) int {
 	if studied < n {
 		t.Fatalf("studied %d ticks, want %d", studied, n)
 	}
-	return g.research[research.Electricity]
+	return g.lab.Prog[research.Electricity]*1_000_000_000 + g.lab.Carry
 }
 
-// TestElectricResearchBench: on power the electric research bench is a
-// research bench that studies 40% faster; without power nobody uses it.
+// TestElectricResearchBench (RSCH-1, wiki: Research): on power the
+// hi-tech research bench (factor 1.0) studies a third faster than the
+// simple one (0.75) in the same spot; without power nobody uses it.
 func TestElectricResearchBench(t *testing.T) {
 	t.Parallel()
 	g, ada := researchGame(t, construction.ResearchBench, false)
 	plain := researchPerTick(t, g, ada, 500)
 	g, ada = researchGame(t, construction.ElectricResearchBench, true)
 	fast := researchPerTick(t, g, ada, 500)
-	t.Logf("500 ticks of study: %d points at a research bench, %d at an electric one", plain, fast)
-	if fast*100 < plain*(100+craft.ElectricSpeedPct)-2*100 || fast*100 > plain*(100+craft.ElectricSpeedPct)+2*100 {
-		t.Fatalf("electric research bench %d points, plain %d: want 40%% more", fast, plain)
+	t.Logf("500 ticks of study: %d nano-points at a research bench, %d at a hi-tech one", plain, fast)
+	if plain <= 0 || fast*750 < plain*1000-plain*20 || fast*750 > plain*1000+plain*20 {
+		t.Fatalf("hi-tech research bench %d points, simple %d: want 1.0/0.75 of it", fast, plain)
 	}
 	g, ada = researchGame(t, construction.ElectricResearchBench, false)
 	for i := 0; i < 20; i++ {

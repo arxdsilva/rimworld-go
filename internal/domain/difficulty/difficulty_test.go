@@ -23,9 +23,9 @@ func TestPresetValues(t *testing.T) {
 		pain                   int
 	}
 	rows := []row{
-		{Wanderer, 5, false, 0, false, 100, 130, 130, 120, 130, 12, 40, 0, 50, false, false, 10},
-		{Gentle, 35, true, 12, true, 60, 115, 115, 110, 115, 8, 60, 50, 70, false, true, 5},
-		{Settled, 65, true, 8, true, 80, 105, 105, 100, 105, 4, 80, 75, 85, true, true, 0},
+		{Wanderer, 5, false, 0, false, 100, 130, 130, 120, 120, 12, 40, 0, 50, false, false, 10},
+		{Gentle, 35, true, 12, true, 60, 115, 115, 110, 120, 8, 60, 50, 70, false, true, 5},
+		{Settled, 65, true, 8, true, 80, 105, 105, 100, 100, 4, 80, 75, 85, true, true, 0},
 		{Seasoned, 100, true, 6, true, 100, 100, 100, 100, 100, 0, 100, 100, 100, true, true, 0},
 		{Grim, 145, true, 4, true, 100, 90, 90, 90, 95, -4, 115, 120, 115, true, true, 0},
 		{Merciless, 200, true, 3, true, 100, 80, 80, 80, 90, -8, 130, 150, 130, true, true, -5},

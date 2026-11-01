@@ -92,7 +92,7 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 }
 
 // TestFabricateNeedsSkillAndResearch (domain part): fabricating is locked
-// behind Fabrication (after Gunsmithing) and asks for crafting 6;
+// behind Fabrication (after the multi-analyzer) and asks for crafting 6;
 // refining behind Pharmacology (after Herbalism) and medicine 4.
 func TestFabricateNeedsSkillAndResearch(t *testing.T) {
 	t.Parallel()
@@ -102,22 +102,20 @@ func TestFabricateNeedsSkillAndResearch(t *testing.T) {
 		t.Fatalf("fabricate locked by %v %v", p, ok)
 	}
 	if pr.Available(research.Fabrication) {
-		t.Fatal("fabrication needs gunsmithing first")
+		t.Fatal("fabrication needs the multi-analyzer first")
 	}
-	pr.Add(research.Traps, research.DefOf(research.Traps).Cost)
-	pr.Add(research.Gunsmithing, research.DefOf(research.Gunsmithing).Cost)
+	pr.Add(research.MultiAnalysis, research.DefOf(research.MultiAnalysis).Cost) // RSCH-1, wiki: Fabrication
 	if !pr.Available(research.Fabrication) || !pr.Add(research.Fabrication, research.DefOf(research.Fabrication).Cost) {
-		t.Fatal("fabrication researchable after gunsmithing")
+		t.Fatal("fabrication researchable after the multi-analyzer")
 	}
 	if _, ok := pr.Locks(key); ok {
 		t.Fatal("fabrication researched: components unlocked")
 	}
-	for _, b := range []construction.Kind{construction.ToolCabinet, construction.HospitalBed} {
-		if _, ok := (research.Progress{}).Locks("build:" + b.String()); !ok {
-			t.Errorf("%s is not behind research", b)
-		}
-		if _, ok := pr.Locks("build:" + b.String()); ok {
-			t.Errorf("%s still locked after fabrication", b)
+	// wiki: the tool cabinet is Complex furniture, the hospital bed its own project
+	for b, p := range map[construction.Kind]research.Project{construction.ToolCabinet: research.Upholstery,
+		construction.HospitalBed: research.HospitalBeds} {
+		if got, ok := (research.Progress{}).Locks("build:" + b.String()); !ok || got != p {
+			t.Errorf("%s is behind %v %v, want %v", b, got, ok, p)
 		}
 	}
 	refine := "recipe:" + recipe.DefOf(recipe.RefineMedicine).Name

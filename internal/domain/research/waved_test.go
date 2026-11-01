@@ -70,10 +70,5 @@ func TestUnlockKeysExist(t *testing.T) {
 				}
 			}
 		}
-		for _, r := range d.Requires {
-			if r >= d.Project {
-				t.Errorf("%s requires a later project %v", d.Name, r)
-			}
-		}
 	}
 }

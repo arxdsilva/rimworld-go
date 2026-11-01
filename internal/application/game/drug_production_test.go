@@ -19,7 +19,7 @@ func brewBench(t *testing.T, researched bool, k construction.Kind, r recipe.ID, 
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	placeBuilt(t, g, k, construction.South, 5, 2) // New is a sandbox that knows everything
 	if !researched {
-		g.research = research.Progress{}
+		g.lab.Prog = research.Progress{}
 	}
 	g.SpawnStack(in, qty, 1, 4)
 	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(r), Mode: uint8(recipe.DoCount), Count: 1})

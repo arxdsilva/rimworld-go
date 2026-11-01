@@ -1,226 +1,154 @@
 package game
 
 import (
-	"slices"
-	"strings"
+	"fmt"
 
-	"rimworld-go/internal/application/game/craft"
+	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/research"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 )
 
-// Research. The player picks a project; colonists with Research work sit
-// at a research bench (or a powered electric one, 40% faster: PLAY-021)
-// and put a point a working tick into it. Finished projects unlock
-// buildings, crops and recipes. Sandbox games (New) start with everything
-// researched; colonies (NewColony) start with nothing.
-
-// researchSession is how long one sitting at the bench lasts.
-const researchSession = 2 * clock.TicksPerHour
+// Research lives in game/research (RSCH-1: the wiki's speed, costs, bench
+// tiers, analyzer link, letter and alert); this file is its adapter.
+// Sandbox games (New) start with everything researched; colonies
+// (NewColony) with their scenario's starting research.
 
 // ResearchView is one project for the Research tab.
-type ResearchView struct {
-	ID        uint8
-	Name      string
-	Label     string
-	Desc      string
-	Cost      int
-	Progress  int
-	Done      bool
-	Available bool
-	Current   bool
-	Requires  []string // labels of unfinished prerequisites
-	Unlocks   []string // player-facing: "drying rack", "healroot crop", ...
-	// RSCH-0 contract (zero until RSCH-1): tech level and bench tier in words, CostNow at the colony's tech level, Hidden prerequisites'
-	// labels, BenchMissing why no bench can work it ("" when one can), ETAHours at today's rate (0 unknown).
-	TechLevel, Bench, BenchMissing string
-	CostNow, ETAHours              int
-	Hidden                         []string
+type ResearchView = rlab.View
+
+// researchHost is game/research's roles (game/research/deps.go).
+type researchHost struct{ g *Game }
+
+func (h researchHost) StructVer() uint64              { return h.g.structVer }
+func (h researchHost) BuildingIDs() []entity.EntityID { return h.g.bldgIDs }
+func (h researchHost) Building(id entity.EntityID) (construction.Building, bool) {
+	return h.g.bldgs.Get(id)
 }
-
-func (g *Game) researchViews() []ResearchView {
-	var out []ResearchView
-	for _, d := range research.All() {
-		v := ResearchView{ID: uint8(d.Project), Name: d.Name, Label: d.Label, Desc: d.Desc, Cost: d.Cost,
-			Progress: g.research[d.Project], Done: g.research.Done(d.Project), Unlocks: unlockLabels(d),
-			Available: g.research.Available(d.Project), Current: g.researchSet && g.researchCur == d.Project}
-		for _, r := range d.Requires {
-			if !g.research.Done(r) {
-				v.Requires = append(v.Requires, research.DefOf(r).Label)
-			}
-		}
-		out = append(out, v)
-	}
-	return out
+func (h researchHost) Powered(id entity.EntityID) bool { return h.g.powered(id) }
+func (h researchHost) Room(x, y int) (int, bool) {
+	r := h.g.roomAt(x, y)
+	return r, r >= 0 && r < len(h.g.rooms) && !h.g.thermo.PsychOutdoors(r) // TEMP-6: a room that feels outdoors
 }
-
-// unlockLabels is d's unlocks in words (nil: none).
-func unlockLabels(d research.Def) (out []string) {
-	for _, u := range d.Unlocks {
-		out = append(out, unlockLabel(u))
-	}
-	return out
+func (h researchHost) Cleanliness(r int) int {
+	sum, _ := h.g.roomFilth(r) // rooms.go, as craftShop.Cleanliness
+	rs := h.g.rooms[r]
+	return rs.tally.Inputs(rs.contents.Cells, rs.contents.Floored-rs.tally.Covered, sum, 0).CleanlinessHundredths
 }
-
-// unlockLabel turns an unlock key into words.
-func unlockLabel(key string) string {
-	for _, p := range []struct{ prefix, suffix string }{{"build:", ""}, {"crop:", " crop"}, {"recipe:", ""}} {
-		if len(key) > len(p.prefix) && key[:len(p.prefix)] == p.prefix {
-			name := key[len(p.prefix):]
-			if p.prefix == "recipe:" {
-				for _, r := range recipe.All() {
-					if r.Name == name {
-						return r.Label
-					}
-				}
-			}
-			return name + p.suffix
-		}
-	}
-	return key
+func (h researchHost) Contents(r int) (int, int) {
+	return h.g.rooms[r].contents.Beds, h.g.rooms[r].contents.Benches
 }
-
-// lockedBy names the project gating an unlock key ("" when usable).
-func (g *Game) lockedBy(key string) string {
-	if p, ok := g.research.Locks(key); ok {
-		return research.DefOf(p).Label
-	}
-	return ""
+func (h researchHost) TemperatureAt(x, y int) int { return int(h.g.temperatureAt(x, y)) }
+func (h researchHost) Pos(id entity.EntityID) (int, int) {
+	p, _ := h.g.positions.Get(id)
+	return p.X, p.Y
 }
-
-// Locked maps every still-locked unlock key to the project that opens it
-// (the UI greys these out).
-func (g *Game) lockedKeys() map[string]string {
-	out := map[string]string{}
-	for _, d := range research.All() {
-		if g.research.Done(d.Project) {
-			continue
-		}
-		for _, u := range d.Unlocks {
-			out[u] = d.Label
-		}
-	}
-	return out
-}
-
-func (g *Game) buildLocked(k construction.Kind) bool { return g.lockedBy("build:"+k.String()) != "" }
-
-func (g *Game) cropLocked(s plant.Species) bool { return g.lockedBy("crop:"+plant.DefOf(s).Name) != "" }
-
-func (g *Game) recipeLocked(id recipe.ID) bool {
-	return g.lockedBy("recipe:"+recipe.DefOf(id).Name) != ""
-}
-
-// setResearch picks the current project (ignored unless available).
-func (g *Game) setResearch(p research.Project) {
-	if !g.research.Available(p) {
-		return
-	}
-	g.researchCur, g.researchSet = p, true
-}
-
-// assignResearch sends a researcher to the nearest free research bench,
-// trying the next nearest when one can't be started (out of reach,
-// postponed: SIM-027), at most workTries benches.
-func (g *Game) assignResearch(id entity.EntityID) bool {
-	if !g.researchSet || !g.research.Available(g.researchCur) {
+func (h researchHost) Free(worker, bench entity.EntityID, sx, sy int) bool {
+	g := h.g
+	if owner, taken := g.reserve.EntityOwner(bench); taken && owner != worker || g.postponedFor(worker, job.Research, bench, 0, 0) {
 		return false
 	}
-	var tried []entity.EntityID
-	for range workTries {
-		bid, ok := g.researchTry(id, tried)
-		if ok || bid == 0 {
-			return ok
+	o, held := g.reserve.TileOwner(sx, sy)
+	return g.grid.Walkable(sx, sy) && (!held || o == worker) // RES-1: another worker holds the work spot
+}
+func (h researchHost) Start(worker, bench entity.EntityID, sx, sy, ticks int) bool {
+	return h.g.startJob(worker, job.Record{Kind: job.Research, Target: bench, TX: sx, TY: sy, WorkLeft: ticks}) &&
+		h.g.reserve.TryTile(worker, sx, sy) // RES-1: the work spot is the researcher's
+}
+func (h researchHost) Work(id entity.EntityID) bool {
+	ok := h.g.workTick(id)
+	h.g.workProgress(id, skIntellectual, true) // skills.go: trains Intellectual
+	return ok
+}
+func (h researchHost) Speed(id entity.EntityID) rlab.Pawn {
+	g, manip, sight, trait := h.g, int32(1000), int32(1000), 100
+	if b := g.bodies[id]; b != nil {
+		manip, sight = b.Capacity(body.Manipulation), b.Capacity(body.Sight)
+	}
+	ws := int(g.statOf(id, stat.WorkSpeed))
+	if manip != 1000 { // body.go: WorkSpeed carries manipulation at full weight; research counts it at half
+		ws = ws * 1000 / int(max(manip, 1))
+	}
+	if fx := g.sk.stats[id]; fx != nil {
+		trait = int(fx.workPct[skIntellectual])
+	}
+	return rlab.Pawn{Intellectual: g.skillOf(id, skIntellectual).Level, GlobalWork: ws, Manipulation: int(manip), Sight: int(sight),
+		TraitPct: trait}
+}
+func (h researchHost) Researcher() bool {
+	for _, id := range h.g.pawnIDs {
+		m, _ := h.g.labor.Get(id)
+		if h.g.colonist(id) && h.g.alive(id) && !h.g.prison.Is(id) && m.Enabled(work.Research) && !h.g.incapableWork(id).Enabled(work.Research) {
+			return true
 		}
-		tried = append(tried, bid)
 	}
 	return false
 }
+func (h researchHost) Tech() research.TechLevel {
+	if !h.g.hasSetup() {
+		return research.Industrial
+	}
+	return research.LevelOf(h.g.ng.fx.Tech)
+}
+func (h researchHost) CostPct() int {
+	if !h.g.hasSetup() || h.g.ng.fx.ResearchCostPct <= 0 {
+		return 100
+	}
+	return h.g.ng.fx.ResearchCostPct
+}
+func (h researchHost) Difficulty() int {
+	if !h.g.hasSetup() {
+		return 100
+	}
+	return h.g.ng.setup.Difficulty.ResearchSpeed
+}
+func (h researchHost) Now() uint64 { return uint64(h.g.clock.Now()) }
+func (h researchHost) Letter(title, text string, x, y int) {
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
+}
+func (h researchHost) Changed() { h.g.viewGen++ } // view cache (indexes.go)
 
-// researchTry starts research at the nearest bench not in tried; it
-// returns the bench tried (0: none left).
-func (g *Game) researchTry(id entity.EntityID, tried []entity.EntityID) (entity.EntityID, bool) {
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	var bx, by int
-	bestD := 1 << 30
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || construction.RecipeBench(b.Kind) != construction.ResearchBench || b.Deconstruct {
-			continue // PLAY-021: the electric research bench counts too
-		}
-		if craft.ElectricBench(b.Kind) && !g.powered(bid) {
-			continue // production.go: an electric bench works only on power
-		}
-		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
-			continue
-		}
-		if slices.Contains(tried, bid) || g.postponedFor(id, job.Research, bid, 0, 0) {
-			continue
-		}
-		_, spot, ok := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-		if o, held := g.reserve.TileOwner(spot[0], spot[1]); !ok || !g.grid.Walkable(spot[0], spot[1]) || held && o != id {
-			continue // RES-1: another worker holds the work spot (a bench sharing it)
-		}
-		if d := manhattan(pos.X, pos.Y, spot[0], spot[1]); d < bestD || (d == bestD && bid < best) {
-			best, bestD, bx, by = bid, d, spot[0], spot[1]
-		}
-	}
-	if best == 0 {
-		return 0, false
-	}
-	return best, g.startJob(id, job.Record{Kind: job.Research, Target: best, TX: bx, TY: by, WorkLeft: researchSession}) &&
-		g.reserve.TryTile(id, bx, by) // RES-1: the work spot is the researcher's
+func (g *Game) buildLocked(k construction.Kind) bool {
+	return g.lab.LockedBy("build:"+k.String()) != ""
+}
+
+func (g *Game) cropLocked(s plant.Species) bool {
+	return g.lab.LockedBy("crop:"+plant.DefOf(s).Name) != ""
+}
+
+func (g *Game) recipeLocked(id recipe.ID) bool {
+	return g.lab.LockedBy("recipe:"+recipe.DefOf(id).Name) != ""
 }
 
 func (g *Game) doResearch(id entity.EntityID, j job.Record) {
-	b, ok := g.bldgs.Get(j.Target)
-	if !ok || !g.researchSet {
+	switch g.lab.Work(id, j.Target) {
+	case rlab.Stop:
 		j.State = job.Complete
-		g.jobs.Set(id, j)
-		return
-	}
-	if craft.ElectricBench(b.Kind) && !g.powered(j.Target) {
+	case rlab.Blocked:
 		j.State, j.Fail = job.Fail, job.Blocked // PLAY-021: the power went (put off a while: postpone.go)
-		g.jobs.Set(id, j)
-		return
-	}
-	if u := g.workProgressPct(id, skIntellectual, true, 100+craft.ElectricPct(b.Kind)); u > 0 && g.research.Add(g.researchCur, g.researchPoints(u)) { // skills.go
-		d := research.DefOf(g.researchCur)
-		pos, _ := g.positions.Get(id)
-		msg := "Research finished: " + d.Label + "."
-		if len(d.Unlocks) > 0 {
-			msg += " Unlocked: " + strings.Join(unlockLabels(d), ", ") + "."
+	default:
+		if j.WorkLeft--; j.WorkLeft <= 0 {
+			j.State = job.Complete
 		}
-		g.message(pos.X, pos.Y, "%s", msg)
-		g.researchSet = false
-		j.State = job.Complete
-		g.jobs.Set(id, j)
-		return
-	}
-	j.WorkLeft--
-	if j.WorkLeft <= 0 {
-		j.State = job.Complete
 	}
 	g.jobs.Set(id, j)
 }
 
 // CompleteResearch finishes every project (dev hook).
-func (g *Game) CompleteResearch() {
-	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	g.research = research.Complete()
-}
+func (g *Game) CompleteResearch() { g.lab.Complete() }
 
 // AddResearch puts points into a project by name (dev scenarios).
 func (g *Game) AddResearch(name string, pts int) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if p, ok := research.Parse(name); ok {
-		g.research.Add(p, pts)
+		g.lab.Prog.Add(p, pts)
 	}
 }
 
@@ -228,12 +156,72 @@ func (g *Game) AddResearch(name string, pts int) {
 func (g *Game) PickResearch(name string) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if p, ok := research.Parse(name); ok {
-		g.setResearch(p)
+		g.lab.Pick(p)
 	}
 }
 
 // ResetResearch forgets all research (fixtures: a fresh colony's tree).
-func (g *Game) ResetResearch() {
-	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	g.research, g.researchSet = research.Progress{}, false
+func (g *Game) ResetResearch() { g.lab.Reset() }
+
+// migrateResearchBenches (save v9, RSCH-1): the simple research bench
+// grew from 2x1 to 3x2 and the hi-tech one to 5x2. A bench whose new
+// footprint and work spot still fit (in bounds, standable ground, no other
+// object or blueprint) keeps its place and blocks its new cells; any other
+// is taken down and its old materials refunded in full, with a message.
+// Their blueprints are cancelled (delivered materials drop): the player
+// places them again at the new size.
+func (g *Game) migrateResearchBenches() {
+	changed := false
+	for _, id := range append([]entity.EntityID(nil), g.frameIDs...) {
+		if fr, ok := g.frames.Get(id); ok && construction.RecipeBench(fr.Kind) == construction.ResearchBench {
+			g.cancelFrame(id) // frame_view.go
+			changed = true
+		}
+	}
+	for _, id := range append([]entity.EntityID(nil), g.bldgIDs...) {
+		b, ok := g.bldgs.Get(id)
+		if !ok || construction.RecipeBench(b.Kind) != construction.ResearchBench {
+			continue
+		}
+		changed = true
+		cells, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+		if g.benchFits(id, append(cells, spot)) {
+			for _, c := range cells {
+				g.grid.SetWalkable(c[0], c[1], false)
+			}
+			continue
+		}
+		g.removeBuildingAs(id, false)
+		wood, stuff, comps := 8, b.Stuff, 0 // the 2x1 benches' costs (save v8)
+		if b.Kind == construction.ElectricResearchBench {
+			wood, stuff, comps = 65, item.Steel, 3
+		}
+		g.dropStack(stuff, wood, b.X, b.Y)
+		if comps > 0 {
+			g.dropStack(item.Components, comps, b.X, b.Y)
+		}
+		g.message(b.X, b.Y, "%s", fmt.Sprintf("The %s no longer fits at its larger size; it was taken down and its materials returned.",
+			map[bool]string{true: rlab.HiTechLabel, false: "research bench"}[b.Kind == construction.ElectricResearchBench]))
+	}
+	if changed {
+		g.markRoomsDirty()
+		g.structVer++
+	}
+}
+
+// benchFits reports every cell in bounds, on standable ground, clear of
+// any other object-layer building and of blueprints.
+func (g *Game) benchFits(self entity.EntityID, cells [][2]int) bool {
+	for _, c := range cells {
+		if !g.grid.InBounds(c[0], c[1]) || !g.terr.At(c[0], c[1]).Walkable() && !g.bridged(c[0], c[1]) || g.blockingFrameAt(c[0], c[1]) != 0 {
+			return false
+		}
+		for _, oid := range g.bldgIDs {
+			o, ok := g.bldgs.Get(oid)
+			if ok && oid != self && construction.DefOf(o.Kind).Layer == construction.LayerObject && construction.Covers(o.Kind, o.Facing, o.X, o.Y, c[0], c[1]) {
+				return false
+			}
+		}
+	}
+	return true
 }

@@ -4,14 +4,14 @@ Scope: research speed and cost, tech levels, the project table, research benches
 
 ## Status (2026-11-01)
 
-RSCH-0 (this analysis, ENG-003 extension, stale checklist row) is done. RSCH-1 to RSCH-3 are open.
+RSCH-0 (this analysis, ENG-003 extension, stale checklist row) and RSCH-1 (simulation, `handoffs/RSCH-1-research-simulation.md`) are done; see the RSCH-2 and RSCH-3 rows.
 
 | Phase | Delivers | State |
 |---|---|---|
 | RSCH-0 | This analysis; ENG-003 extended; inert contract (tech level and bench tier on `Def`, command and view fields, hi-tech bench and multi-analyzer names); stale checklist row corrected | done (`handoffs/RSCH-0-gap-analysis-and-contract.md`) |
-| RSCH-1 | Simulation: wiki cost, tech-level cost multiplier, research speed stat, bench factor, difficulty factor, project table, bench gating, hi-tech bench and multi-analyzer facility, starting research, save migration | open |
-| RSCH-2 | Research tab UI (tech tree graph, info panel, search), "Need research project" alert, research-complete letter, bench inspector progress, tab tooltip | open |
-| RSCH-3 | Art: hi-tech bench, simple bench resize, multi-analyzer, project and tree chrome | open |
+| RSCH-1 | Simulation: wiki cost, tech-level cost multiplier, research speed stat, bench factor, difficulty factor, project table, bench gating, hi-tech bench and multi-analyzer facility, starting research, save migration | done (`handoffs/RSCH-1-research-simulation.md`; `game/research`) |
+| RSCH-2 | Research tab UI (tech tree graph, info panel, search), "Need research project" alert, research-complete letter, bench inspector progress, tab tooltip | done (UI side; `handoffs/RSCH-2-research-tab.md`): the alert and letter content come from RSCH-1 |
+| RSCH-3 | Art: hi-tech bench, simple bench resize, multi-analyzer, project and tree chrome | done: simple bench 3x2 and hi-tech bench 5x2 in four facings, multi-analyzer 2x2 with its glow (on) layer, Architect icons and the renderer key (`handoffs/RSCH-3-research-bench-art.md`); RSCH-1 footprints match; tree chrome is the RSCH-2 tab's procedural drawing (vanilla nodes are text boxes, no project icons) |
 
 ## 1. Decision record
 
@@ -46,62 +46,91 @@ State legend: `done`, `partial`, `missing`. `Today` evidence is `file:line` from
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
 | A pawn with Research work works at a bench toward the one active project; any number of researchers and benches stack with no penalty; switching projects keeps progress (wiki: Research). | One current project (`researchCur`/`researchSet`, `G game.go:806-807`); `setResearch` accepts Available only (`G research.go:109`). Progress is a per-project array (`D :276-314`) so switching keeps progress. Several pawns can use different benches. | None beyond the sitting rules below. | none | done |
-| Points per tick = 0.00825 x pawn research speed x building factor x difficulty factor; skill 8 gives 20.625 points per hour of 2,500 ticks (wiki: Research speed). | `doResearch` multiplies WorkSpeed x skill SpeedPermil x trait factor x bench % (`G research.go:170-207`, `skills.go:294-327`); `researchPoints` (`skills.go:654`) then x difficulty. Not the wiki constant. | Replace with the wiki formula in a research sub-package. | RSCH-1 | missing |
-| Research speed stat: Intellectual 8 % + 11.5 % per level (0 gives 8 %, 8 gives 100 %, 20 gives 238 %); manipulation and sight at 50 % importance, capped at 110 %; global work speed; minimum 10 % (wiki: Research speed). | `skill.SpeedPermil` is 1000 + 60 x (level - 7) (`skill.go:123-128`); WorkSpeed is manipulation only (`body.go:99`). | Intellectual curve, sight factor at 50 % importance, caps, minimum. | RSCH-1 | missing |
-| Difficulty factor: Peaceful and Community Builder x1.2; Adventure Story and Strive to Survive x1.0; Blood and Dust x0.95; Losing is Fun x0.9 (wiki: Research). | `difficulty.ResearchSpeed` 25-300 % (`difficulty.go:75,106-126`). | Map our difficulty presets to the wiki factors; keep any slider as an extra multiplier only if the preset system has one. | RSCH-1 | partial |
-| Building factor: simple x0.75, hi-tech x1.0, +0.10 with a linked multi-analyzer (wiki: Research, benches). | Electric bench is +40 % over the plain one (`craft/craft.go:46,57`). No analyzer. | Bench factor per bench kind; analyzer link term. | RSCH-1 | partial |
-| Not in a Laboratory room x0.8; cleanliness very dirty (<= -5) x0.75, clean x1, sterile (0.6) x1.09; outdoors counts as x0.75 and x0.9 [MEM]; temperature below 10 C or above 35 C x0.7 (wiki: Research). | None: no light, cleanliness, room or temperature term (`facilities.Bonus` is bills-only, `craft/station.go:121`). Room cleanliness and temperature exist (TEMP). | Room-role "Laboratory" test, cleanliness read, outdoors flag, temperature band with hysteresis. The outdoors x0.9 is original tuning (marked [MEM]). | RSCH-1 | missing |
-| A sitting at the bench: not specified beyond the work job (wiki silent). | `assignResearch`/`researchTry` pick the nearest free bench and reserve the spot; a sitting lasts 2 h (`G research.go:119-168`, `researchSession :23`; tick `tick.go:1080`). Unpowered electric bench skipped. | Keep; bench choice must skip benches that cannot work the current project (section 3.4). | RSCH-1 | partial |
-| Cleanliness research effects (vanilla checklist L1185 notes them missing). | Missing. | Covered by the building-factor row. | RSCH-1 | missing |
+| Points per tick = 0.00825 x pawn research speed x building factor x difficulty factor; skill 8 gives 20.625 points per hour of 2,500 ticks (wiki: Research speed). | `doResearch` multiplies WorkSpeed x skill SpeedPermil x trait factor x bench % (`G research.go:170-207`, `skills.go:294-327`); `researchPoints` (`skills.go:654`) then x difficulty. Not the wiki constant. | Replace with the wiki formula in a research sub-package. | RSCH-1 | done (RSCH-1) |
+| Research speed stat: Intellectual 8 % + 11.5 % per level (0 gives 8 %, 8 gives 100 %, 20 gives 238 %); manipulation and sight at 50 % importance, capped at 110 %; global work speed; minimum 10 % (wiki: Research speed). | `skill.SpeedPermil` is 1000 + 60 x (level - 7) (`skill.go:123-128`); WorkSpeed is manipulation only (`body.go:99`). | Intellectual curve, sight factor at 50 % importance, caps, minimum. | RSCH-1 | done (RSCH-1) |
+| Difficulty factor: Peaceful and Community Builder x1.2; Adventure Story and Strive to Survive x1.0; Blood and Dust x0.95; Losing is Fun x0.9 (wiki: Research). | `difficulty.ResearchSpeed` 25-300 % (`difficulty.go:75,106-126`). | Map our difficulty presets to the wiki factors; keep any slider as an extra multiplier only if the preset system has one. | RSCH-1 | done (RSCH-1) |
+| Building factor: simple x0.75, hi-tech x1.0, +0.10 with a linked multi-analyzer (wiki: Research, benches). | Electric bench is +40 % over the plain one (`craft/craft.go:46,57`). No analyzer. | Bench factor per bench kind; analyzer link term. | RSCH-1 | done (RSCH-1) |
+| Not in a Laboratory room x0.8; cleanliness very dirty (<= -5) x0.75, clean x1, sterile (0.6) x1.09; outdoors counts as x0.75 and x0.9 [MEM]; temperature below 10 C or above 35 C x0.7 (wiki: Research). | None: no light, cleanliness, room or temperature term (`facilities.Bonus` is bills-only, `craft/station.go:121`). Room cleanliness and temperature exist (TEMP). | Room-role "Laboratory" test, cleanliness read, outdoors flag, temperature band with hysteresis. The outdoors x0.9 is original tuning (marked [MEM]). | RSCH-1 | done (RSCH-1) |
+| A sitting at the bench: not specified beyond the work job (wiki silent). | `assignResearch`/`researchTry` pick the nearest free bench and reserve the spot; a sitting lasts 2 h (`G research.go:119-168`, `researchSession :23`; tick `tick.go:1080`). Unpowered electric bench skipped. | Keep; bench choice must skip benches that cannot work the current project (section 3.4). | RSCH-1 | done (RSCH-1) |
+| Cleanliness research effects (vanilla checklist L1185 notes them missing). | Missing. | Covered by the building-factor row. | RSCH-1 | done (RSCH-1) |
 
 ### 3.2 Tech levels and cost
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Every project has a tech level (Neolithic, Medieval, Industrial, Spacer; Ultra has none in core) (wiki: Research). | `Def` has no tech level (`D :103-111`). | Add `TechLevel` to `Def`; the tree columns and cost multiplier read it. | RSCH-0 contract, RSCH-1 values | missing |
-| Cost multiplier by faction tech level: tribal pays Medieval x1.5 and Industrial or higher x2; an Industrial faction pays base. [MEM] formula: 1 + 0.5 x (min(projectTech, Industrial) - factionTech) when the project is above the faction's level, else 1 (wiki: Research). | Flat scenario `TechCostPct`: Neolithic 150 %, Industrial 100 %, Spacer 80 % (`scenario.go:204-212`, `setup.go:348`). | Replace by the per-project multiplier. The formula is [MEM], so it is original tuning that reproduces the two published tribal values. | RSCH-1 | partial |
-| Base costs follow the wiki table (200 - 6,000). | Flat hand-tuned costs 1,500-9,000, total 179,000 (`D :113-252`). | Rewrite costs from the project table (section 4); migrate saved progress as a fraction of cost. | RSCH-1 | missing |
-| Hidden prerequisites are listed in the description but not drawn as tree lines (wiki: Research). | Prerequisites are one `Requires` list, all drawn (`D :103-111`). | A hidden-prerequisite list on `Def`, enforced for availability, named in the description, skipped by the tree lines. | RSCH-0 contract, RSCH-1 | missing |
+| Every project has a tech level (Neolithic, Medieval, Industrial, Spacer; Ultra has none in core) (wiki: Research). | `Def` has no tech level (`D :103-111`). | Add `TechLevel` to `Def`; the tree columns and cost multiplier read it. | RSCH-0 contract, RSCH-1 values | done (RSCH-1) |
+| Cost multiplier by faction tech level: tribal pays Medieval x1.5 and Industrial or higher x2; an Industrial faction pays base. [MEM] formula: 1 + 0.5 x (min(projectTech, Industrial) - factionTech) when the project is above the faction's level, else 1 (wiki: Research). | Flat scenario `TechCostPct`: Neolithic 150 %, Industrial 100 %, Spacer 80 % (`scenario.go:204-212`, `setup.go:348`). | Replace by the per-project multiplier. The formula is [MEM], so it is original tuning that reproduces the two published tribal values. | RSCH-1 | done (RSCH-1) |
+| Base costs follow the wiki table (200 - 6,000). | Flat hand-tuned costs 1,500-9,000, total 179,000 (`D :113-252`). | Rewrite costs from the project table (section 4); migrate saved progress as a fraction of cost. | RSCH-1 | done (RSCH-1) |
+| Hidden prerequisites are listed in the description but not drawn as tree lines (wiki: Research). | Prerequisites are one `Requires` list, all drawn (`D :103-111`). | A hidden-prerequisite list on `Def`, enforced for availability, named in the description, skipped by the tree lines. | RSCH-0 contract, RSCH-1 | done (RSCH-1) |
 
 ### 3.3 Bench and facility requirements
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Simple research bench: 75 stuff + 25 steel, work 2,800, 3x2, factor 0.75, cannot link an analyzer, handles only simple-tier projects (wiki: Simple research bench). | `ResearchBench` 2x1, 8 wood (`G construction.go:324`). | Resize to 3x2, wiki cost per the construction cost-scaling convention; old-save rule (refund when it no longer fits). | RSCH-1 | partial |
-| Hi-tech research bench: needs Microelectronics, 150 metal + 100 steel + 10 components, work 5,000, Construction 6, 5x2, 250 W, factor 1.0 (wiki: Hi-tech research bench). | `ElectricResearchBench`: 65 metal, 3 components, 200 W, unlocked by Electricity (`construction.go:393`, `power.go:117`). Vanilla checklist L1699 "advanced bench" is unchecked. | The electric bench becomes the hi-tech bench (rename on the label only, gob and kind name kept); new size, cost, power, unlock. | RSCH-1 | partial |
-| Multi-analyzer: 40 steel + 50 plasteel + 20 gold + 8 components, work 10,000, Construction 8, 2x2, 200 W, +0.10 to the linked bench; one analyzer serves many benches, each bench links one; link range unconfirmed (4 or 8 tiles) (wiki: Multi-analyzer). | None. | New facility kind using the existing facility link mechanism; link radius original tuning (reuse the existing radius). | RSCH-1 | missing |
-| A project needing a hi-tech bench is never worked at a simple bench; H+MA needs a hi-tech bench with a linked analyzer (wiki: Research). | `RecipeBench == ResearchBench` is the only filter (`G research.go:119-168`). `Def` has no bench tier. | Bench tier on `Def` (S, H, H+MA); `researchTry` skips benches that cannot work the current project; the current-project card says what is missing. | RSCH-0 contract, RSCH-1 | missing |
+| Simple research bench: 75 stuff + 25 steel, work 2,800, 3x2, factor 0.75, cannot link an analyzer, handles only simple-tier projects (wiki: Simple research bench). | `ResearchBench` 2x1, 8 wood (`G construction.go:324`). | Resize to 3x2, wiki cost per the construction cost-scaling convention; old-save rule (refund when it no longer fits). | RSCH-1 | done (RSCH-1) |
+| Hi-tech research bench: needs Microelectronics, 150 metal + 100 steel + 10 components, work 5,000, Construction 6, 5x2, 250 W, factor 1.0 (wiki: Hi-tech research bench). | `ElectricResearchBench`: 65 metal, 3 components, 200 W, unlocked by Electricity (`construction.go:393`, `power.go:117`). Vanilla checklist L1699 "advanced bench" is unchecked. | The electric bench becomes the hi-tech bench (rename on the label only, gob and kind name kept); new size, cost, power, unlock. | RSCH-1 | done (RSCH-1) |
+| Multi-analyzer: 40 steel + 50 plasteel + 20 gold + 8 components, work 10,000, Construction 8, 2x2, 200 W, +0.10 to the linked bench; one analyzer serves many benches, each bench links one; link range unconfirmed (4 or 8 tiles) (wiki: Multi-analyzer). | None. | New facility kind using the existing facility link mechanism; link radius original tuning (reuse the existing radius). | RSCH-1 | done (RSCH-1) |
+| A project needing a hi-tech bench is never worked at a simple bench; H+MA needs a hi-tech bench with a linked analyzer (wiki: Research). | `RecipeBench == ResearchBench` is the only filter (`G research.go:119-168`). `Def` has no bench tier. | Bench tier on `Def` (S, H, H+MA); `researchTry` skips benches that cannot work the current project; the current-project card says what is missing. | RSCH-0 contract, RSCH-1 | done (RSCH-1) |
 
 ### 3.4 Selection, alerts and letters
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
 | No queue (not vanilla); research stops when a project finishes (wiki: Research). | Same: completion sets `researchSet=false` (`G research.go:197`). | None. | none | done |
-| A research-complete letter with the project description [MEM]. | A plain `g.message` "Research finished: X. Unlocked: ..." (`G research.go:184-196`); threats already use `Letter:true` (`G climate.go:75-80`). Vanilla checklist L2743 unchecked. | Emit a letter carrying the description and unlock list. | RSCH-1 logic, RSCH-2 view | missing |
-| A "Need research project" alert when nothing is selected while the colony has a bench and a researcher [MEM]. | None (UI/UX checklist L1282, vanilla L2040 unchecked). The "No researcher" warning exists (`G candidates.go:236,288`). | Alert with a start and a stop threshold (a one-minute minimum) so it does not flap; no-flap test. | RSCH-2 | missing |
+| A research-complete letter with the project description [MEM]. | A plain `g.message` "Research finished: X. Unlocked: ..." (`G research.go:184-196`); threats already use `Letter:true` (`G climate.go:75-80`). Vanilla checklist L2743 unchecked. | Emit a letter carrying the description and unlock list. | RSCH-1 logic, RSCH-2 view | done (RSCH-1) |
+| A "Need research project" alert when nothing is selected while the colony has a bench and a researcher [MEM]. | None (UI/UX checklist L1282, vanilla L2040 unchecked). The "No researcher" warning exists (`G candidates.go:236,288`). | Alert with a start and a stop threshold (a one-minute minimum) so it does not flap; no-flap test. | RSCH-2 | done (RSCH-2 UI: `hud/alerts.go` key `research` from `WorldView.ResearchAlert`, click opens the tab; RSCH-1 raises it from discrete inputs only (a pick, a finish, a bench built or lost, Research work toggled), so it cannot flicker and needs no threshold; `game/research/view.go` Alert) |
 | Project choice by command. | `command.SetResearch` uses the `Build` field as the project id (`command.go:46-47`, `tick.go:128`). | Keep the command; add a typed id field only if the contract needs it. | RSCH-0 | done |
-| Unlocks gate building, crop and recipe lazily. | `lockedBy`/`buildLocked`/`cropLocked`/`recipeLocked` (`G research.go:77-106`); unlock strings `build:`, `crop:`, `recipe:` (`D`). | Unlock lists re-pointed at the new rows; hi-tech bench unlock moves from Electricity to Microelectronics. | RSCH-1 | partial |
+| Unlocks gate building, crop and recipe lazily. | `lockedBy`/`buildLocked`/`cropLocked`/`recipeLocked` (`G research.go:77-106`); unlock strings `build:`, `crop:`, `recipe:` (`D`). | Unlock lists re-pointed at the new rows; hi-tech bench unlock moves from Electricity to Microelectronics. | RSCH-1 | done (RSCH-1) |
 
 ### 3.5 UI
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Tech tree graph in tech-level columns with prerequisite lines; box colours green done, dark available, grey unavailable; scrollable (wiki: Research, Menus). | A scrolling list, 760 px wide, 58 px rows, auto-revealing the current project (`UI windows/research.go:30-111`). MAIN_UI section 24 describes a graph; UI/UX checklist L894 and L925 unchecked; Wave UI-4 `[ ] Research` (L2207). | Graph layout from the DAG by tech level, edges, pan and scroll. | RSCH-2 | missing |
-| Left info panel: name, description, X / Y, prerequisites, bench and facility (red if missing), unlocks, Start research, dev finish [MEM] (wiki: Menus). | Rows carry a 220 px button, a 120 px bar, status text, description and unlocks (`windows/research.go:113-192`). `ResearchView` has ID, Name, Label, Desc, Cost, Progress, Done, Available, Current, Requires, Unlocks; no tech level, bench or ETA (`G research.go:26-38`). UI/UX L914-917 unchecked. | Panel plus view fields: tech level, bench tier, bench and facility present, hidden prerequisites, ETA. | RSCH-0 view fields, RSCH-2 | partial |
-| Selecting a node highlights its prerequisites; search box [MEM]. | Disabled button text "Needs X first" (`windows/research.go:113-133`); UI/UX L1983 search unchecked. | Highlight and search. | RSCH-2 | missing |
-| The Research button doubles as the current project's progress bar; the bench inspect pane shows progress. | Tab tooltip with name and percent and an accent fill (`hud/tabs.go:64-68,80-118`); "Needs research: X" in `inspector/building_inspector.go:51`. | Add progress and the missing-bench reason to the bench inspector. | RSCH-2 | partial |
-| Header warning when no suitable bench exists. | "No bench" warning (`windows/research.go:150-152`, `HasBench :205`). | Make it tier-aware (simple versus hi-tech versus analyzer). | RSCH-2 | partial |
-| Dev finish. | Dev hooks `CompleteResearch`, `AddResearch`, `PickResearch`, `ResetResearch` (`G research.go:209-235`). | Button in the info panel. | RSCH-2 | partial |
-| Lesson and hotkey. | Hotkey `hotkeys.go:84`; lesson `learn/lessons.go:134-139`. | Update lesson text for the tree. | RSCH-2 | partial |
+| Tech tree graph in tech-level columns with prerequisite lines; box colours green done, dark available, grey unavailable; scrollable (wiki: Research, Menus). | A scrolling list, 760 px wide, 58 px rows, auto-revealing the current project (`UI windows/research.go:30-111`). MAIN_UI section 24 describes a graph; UI/UX checklist L894 and L925 unchecked; Wave UI-4 `[ ] Research` (L2207). | Graph layout from the DAG by tech level, edges, pan and scroll. | RSCH-2 | done (RSCH-2: `windows/research_layout.go` layered DAG layout per tech level, barycentre crossing reduction; `research_tree.go` lines, colours, pan) |
+| Left info panel: name, description, X / Y, prerequisites, bench and facility (red if missing), unlocks, Start research, dev finish [MEM] (wiki: Menus). | Rows carry a 220 px button, a 120 px bar, status text, description and unlocks (`windows/research.go:113-192`). `ResearchView` has ID, Name, Label, Desc, Cost, Progress, Done, Available, Current, Requires, Unlocks; no tech level, bench or ETA (`G research.go:26-38`). UI/UX L914-917 unchecked. | Panel plus view fields: tech level, bench tier, bench and facility present, hidden prerequisites, ETA. | RSCH-0 view fields, RSCH-2 | done (RSCH-2: `windows/research_panel.go`) |
+| Selecting a node highlights its prerequisites; search box [MEM]. | Disabled button text "Needs X first" (`windows/research.go:113-133`); UI/UX L1983 search unchecked. | Highlight and search. | RSCH-2 | done (RSCH-2: chain highlight; search dims non-matches, Enter jumps) |
+| The Research button doubles as the current project's progress bar; the bench inspect pane shows progress. | Tab tooltip with name and percent and an accent fill (`hud/tabs.go:64-68,80-118`); "Needs research: X" in `inspector/building_inspector.go:51`. | Add progress and the missing-bench reason to the bench inspector. | RSCH-2 | done (RSCH-2: tab fill uses CostNow; `inspector/research_lines.go` project, speed, analyzer link) |
+| Header warning when no suitable bench exists. | "No bench" warning (`windows/research.go:150-152`, `HasBench :205`). | Make it tier-aware (simple versus hi-tech versus analyzer). | RSCH-2 | done (RSCH-2: header warning when no bench; tier reasons from `BenchMissing` in red in the panel) |
+| Dev finish. | Dev hooks `CompleteResearch`, `AddResearch`, `PickResearch`, `ResetResearch` (`G research.go:209-235`). | Button in the info panel. | RSCH-2 | done (RSCH-2: "Debug: finish now" sends SetResearch then DevFinishResearch) |
+| Lesson and hotkey. | Hotkey `hotkeys.go:84`; lesson `learn/lessons.go:134-139`. | Update lesson text for the tree. | RSCH-2 | done (RSCH-2: lesson text speaks of the tree and Start research) |
 
 ### 3.6 Scenarios
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Crashlanded and Naked Brutality (Industrial) start with: passive cooler, stonecutting, complex clothing, complex furniture, electricity, air conditioning, nutrient paste (wiki: Scenario system). | Starting research per scenario in `G setup.go:246` (our own sets). | Map to the nearest projects in our table; entries without content are skipped. | RSCH-1 | partial |
-| Lost Tribe (Neolithic): passive cooler, tree sowing, recurve bow, psychoid brewing, pemmican. | As above. | Same. | RSCH-1 | partial |
-| Rich Explorer: the Crashlanded set plus smithing, machining, gunsmithing, blowback operation, gun turrets (unconfirmed). | As above. | Same, marked [MEM]. | RSCH-1 | partial |
-| Tech cost per scenario. | `TechCostPct` (see 3.2). | Removed with 3.2. | RSCH-1 | partial |
+| Crashlanded and Naked Brutality (Industrial) start with: passive cooler, stonecutting, complex clothing, complex furniture, electricity, air conditioning, nutrient paste (wiki: Scenario system). | Starting research per scenario in `G setup.go:246` (our own sets). | Map to the nearest projects in our table; entries without content are skipped. | RSCH-1 | done (RSCH-1) |
+| Lost Tribe (Neolithic): passive cooler, tree sowing, recurve bow, psychoid brewing, pemmican. | As above. | Same. | RSCH-1 | done (RSCH-1) |
+| Rich Explorer: the Crashlanded set plus smithing, machining, gunsmithing, blowback operation, gun turrets (unconfirmed). | As above. | Same, marked [MEM]. | RSCH-1 | done (RSCH-1) |
+| Tech cost per scenario. | `TechCostPct` (see 3.2). | Removed with 3.2. | RSCH-1 | done (RSCH-1) |
+
+### 3.7 RSCH-1 notes (2026-11-01)
+
+- **Speed:** `game/research/speed.go`. Points are carried in billionths. A tick earns `PointsNano(Speed, Factor, Difficulty)`, divided by the project's `research.CostPct` and the scenario's cost parts. Progress stays at base cost; the view's `CostNow` is the price at the colony's tech level.
+- **Original tuning:** the outdoors x0.9 ([MEM]); the laboratory rule (no bed, and research benches x30 at least bill benches x27); the temperature hysteresis (bad below 10 C or above 35 C, good again from 12 C up to 33 C, saved as `ResearchCold`); the analyzer reach, which is the tool cabinet's 6 tiles (`craft.FacilityReach`, first analyzer in building order); the tech-cost formula ([MEM]: 100 + 50 per level the project is above the faction, capped at Industrial).
+- **Difficulty:** the presets' `ResearchSpeed` is the wiki factor: Wanderer and Gentle 120, Settled and Seasoned 100, Grim 95, Merciless 90. Old saves on a moved preset read the preset again.
+- **Benches:** the simple bench is 3x2 (8 stuff, 280 work, wood, stone or steel). The hi-tech bench is 5x2 (17 steel, 10 components, 500 work, 250 W), unlocked by Microcircuits. The multi-analyzer draws 200 W and has an Architect row. Secondary materials (the 25 and 100 steel, the analyzer's plasteel and gold) are not modelled, following the wave D convention.
+- **Save v9:** progress keeps its fraction of the cost (a project already at exactly its new cost counts as done). Research-bench blueprints are cancelled. A bench whose new footprint and spot still fit (in bounds, standable, no other object or blueprint) stays and blocks its new cells; any other is taken down, its old materials (8 stuff, or 65 steel and 3 components) are refunded in full, and a message is posted.
+- **Final mapping (fixes section 4's tentative pairing):**
+  - Herbalism maps to Psychoid brewing (Neolithic, 500): healroot is ungated in vanilla, and the Lost Tribe start grants it.
+  - Herbal remedies maps to Drug production, since the drug table is the drug lab.
+  - Food preservation maps to Pemmican's row (own project).
+  - Microcircuits is Microelectronics: it gains the hi-tech bench and needs Electricity only.
+  - Powered armor maps to Marine armor, whose Recon prerequisites (Fabrication, hidden Complex clothing) stand in.
+  - Bowcraft is Recurve bow only.
+- **New projects:**
+  - Multi-analyzer (`multi_analyzer`).
+  - Passive cooling, Stonecutting, Air conditioning (the cooler moves off Electricity).
+  - Hospital beds and Vitals monitors (both off Fabrication; the hidden Sterile materials is not in the game).
+  - Carpet making (carpets and their five recipes).
+  - Greatbows (off Bowcraft).
+  - Prophyl pressing (Penoxycyline production, off Pharmacology).
+  - Complex furniture (Upholstery) gains the tool cabinet (off Fabrication), vent, dresser and end table (wiki).
+- **Kept deliberately:**
+  - Radio (the comms console and trade beacon; vanilla puts them under Microelectronics) stays our own cheap Advanced lights row, so early trade stays reachable.
+  - The wind turbine stays on our Wind power project (vanilla: Electricity).
+  - Beds and double beds stay free (vanilla: Complex furniture) so a tribe and every fixture keep a buildable bed.
+  - The frag grenades and molotovs need only their bench.
+- **Scenarios:** Broken Hull and Bare Hands start with the Crashlanded set; Ember Clan with the Lost Tribe set, without tree sowing (not in the game); Gilded Expedition with the Rich Explorer set ([MEM]). `scenario.TechCostPct` is gone and `ResearchCostPct` starts at 100.
 
 ## 4. Project table
 

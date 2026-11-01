@@ -382,7 +382,7 @@ func TestBridgeDeconstructRefusedWhileInUse(t *testing.T) {
 func TestBridgeResearchLock(t *testing.T) {
 	t.Parallel()
 	g := riverGame(t)
-	g.research = research.Progress{}
+	g.lab.Prog = research.Progress{}
 	if ok, why := g.CanPlaceAt("bridge", "wood", "south", 7, 3); ok || why != "needs research: Bridges" {
 		t.Fatalf("locked bridge: %v %q", ok, why)
 	}
@@ -391,7 +391,7 @@ func TestBridgeResearchLock(t *testing.T) {
 	if g.layerFrameAt(7, 3, construction.LayerFoundation) != 0 {
 		t.Fatal("a locked bridge was planned")
 	}
-	g.research = research.Complete()
+	g.lab.Prog = research.Complete()
 	g.Apply(command.Command{Kind: command.DesignateBuild, Build: uint8(construction.Bridge), X: 7, Y: 3})
 	g.ApplyPending()
 	if g.layerFrameAt(7, 3, construction.LayerFoundation) == 0 {

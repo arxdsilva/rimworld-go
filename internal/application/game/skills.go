@@ -57,10 +57,7 @@ type skillState struct {
 	learned   map[entity.EntityID]*learnLog    // saturation and weekly learning
 	working   map[entity.EntityID]workingRec   // last skilled work (transient)
 	carry     map[entity.EntityID]*needCarry   // fractional need drains
-	// research: fractional research points (hundredths) under a
-	// research speed or cost that is not 100%.
-	research int
-	diet     diet.Book // food policies and who holds which (game/diet, FOOD-4), saved
+	diet      diet.Book                        // food policies and who holds which (game/diet, FOOD-4), saved
 }
 
 // pawnFx is everything derived from a bio: the stat sheet and the per
@@ -646,20 +643,6 @@ func (g *Game) needCarryOf(id entity.EntityID) *needCarry {
 		g.sk.carry[id] = c
 	}
 	return c
-}
-
-// researchPoints converts units of research work to project points: ×
-// the difficulty's research speed ÷ the scenario's research cost, with
-// the fraction carried (exactly units at 100%/100%).
-func (g *Game) researchPoints(units int) int {
-	cost := g.researchCostPct()
-	scaled := g.diffScale(DiffResearch, units*10000) / max(cost, 1) // hundredths of a point
-	if scaled == units*100 && g.sk.research == 0 {
-		return units
-	}
-	total := g.sk.research + scaled
-	g.sk.research = total % 100
-	return total / 100
 }
 
 // --- incapability ----------------------------------------------------

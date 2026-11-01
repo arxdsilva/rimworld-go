@@ -3,18 +3,18 @@ version: 1
 id: "core:furniture/electric_research_bench_east"
 image: generated/world/furniture/electric_research_bench_east.png
 scale: 2
-canvas: [160, 339]
-footprint: [1, 2]
-origin_px: [16, 67]
+canvas: [288, 732]
+footprint: [2, 5]
+origin_px: [16, 76]
 projection:
   shear_k: 0.35
 shadow:
   kind: box
-  w: 0.92
-  h: 1.1
-  d: 1.92
+  w: 1.93
+  h: 1.315
+  d: 4.92
 attachments:
-  worker: [0.5, 1.15]
+  worker: [2.5, 2.15]
 building: electric research bench
 recipes: research bench
 rotatable: true

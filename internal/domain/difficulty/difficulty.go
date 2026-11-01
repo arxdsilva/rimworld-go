@@ -97,21 +97,25 @@ type Named struct {
 	Settings Settings
 }
 
-// presets is the §3.3 table. AdaptStrength is kept at 100 where adaptation
+// presets is the §3.3 table. ResearchSpeed is the wiki's research
+// difficulty factor (RSCH-1, wiki: Research): Peaceful and Community
+// Builder (Wanderer, Gentle) 1.2, Adventure Story and Strive to Survive
+// (Settled, Seasoned) 1.0, Blood and Dust (Grim) 0.95, Losing is Fun
+// (Merciless) 0.9. AdaptStrength is kept at 100 where adaptation
 // is off so that switching it on in the custom editor starts sensibly;
 // EscPerYear likewise holds the editor's default.
 var presets = [Custom]Named{
 	Wanderer: {Desc: "Build in peace — no raids or packs.", Settings: Settings{
 		ThreatScale: 5, BigThreats: false, PeacefulDays: 0, Adaptation: false, AdaptStrength: 100, EscPerYear: 25,
-		CropYield: 130, MineYield: 130, ButcherYield: 120, ResearchSpeed: 130, MoodOffset: 12,
+		CropYield: 130, MineYield: 130, ButcherYield: 120, ResearchSpeed: 120, MoodOffset: 12,
 		Infection: 40, DiseaseFreq: 0, AnimalRevenge: 50, PredatorsHuntColonists: false, ExtremeWeather: false, PainTolerance: 10}},
 	Gentle: {Desc: "Rare, small threats; room to learn.", Settings: Settings{
 		ThreatScale: 35, BigThreats: true, PeacefulDays: 12, Adaptation: true, AdaptStrength: 60, EscPerYear: 25,
-		CropYield: 115, MineYield: 115, ButcherYield: 110, ResearchSpeed: 115, MoodOffset: 8,
+		CropYield: 115, MineYield: 115, ButcherYield: 110, ResearchSpeed: 120, MoodOffset: 8,
 		Infection: 60, DiseaseFreq: 50, AnimalRevenge: 70, PredatorsHuntColonists: false, ExtremeWeather: true, PainTolerance: 5}},
 	Settled: {Desc: "Fair challenge with time to recover.", Settings: Settings{
 		ThreatScale: 65, BigThreats: true, PeacefulDays: 8, Adaptation: true, AdaptStrength: 80, EscPerYear: 25,
-		CropYield: 105, MineYield: 105, ButcherYield: 100, ResearchSpeed: 105, MoodOffset: 4,
+		CropYield: 105, MineYield: 105, ButcherYield: 100, ResearchSpeed: 100, MoodOffset: 4,
 		Infection: 80, DiseaseFreq: 75, AnimalRevenge: 85, PredatorsHuntColonists: true, ExtremeWeather: true, PainTolerance: 0}},
 	Seasoned: {Desc: "The intended challenge.", Settings: Settings{
 		ThreatScale: 100, BigThreats: true, PeacefulDays: 6, Adaptation: true, AdaptStrength: 100, EscPerYear: 25,

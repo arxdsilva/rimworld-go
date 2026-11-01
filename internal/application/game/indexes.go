@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/pawn/schedule"
-	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -473,7 +472,6 @@ type viewCache struct {
 	messages listMemo[MessageView]
 	sched    listMemo[schedule.Activity]
 	letters  letterMemo
-	research researchMemo
 	// feet memoises footprint shapes per kind and facing (building_view.go).
 	feet map[[2]int]footShape
 }
@@ -543,31 +541,6 @@ func (g *Game) sharedLetters() []LetterView {
 	}
 	m.src, m.views, m.ok = slices.Clone(g.letters.list), g.letterViews(), true
 	return m.views
-}
-
-// researchMemo is the last Research and Locked lists, per research
-// progress and current project (all they read).
-type researchMemo struct {
-	prog   research.Progress
-	cur    research.Project
-	set    bool
-	views  []ResearchView
-	locked map[string]string
-	ok     bool
-}
-
-// researchLists are World().Research and World().Locked, the last ones
-// while the progress and the current project are unchanged.
-func (g *Game) researchLists() ([]ResearchView, map[string]string) {
-	if !g.views.on {
-		return g.researchViews(), g.lockedKeys()
-	}
-	m := &g.views.research
-	if !m.ok || m.prog != g.research || m.cur != g.researchCur || m.set != g.researchSet {
-		m.views, m.locked = g.researchViews(), g.lockedKeys()
-		m.prog, m.cur, m.set, m.ok = g.research, g.researchCur, g.researchSet, true
-	}
-	return m.views, m.locked
 }
 
 // SetViewCache turns the read-model cache on or off (see viewCache). The

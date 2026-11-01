@@ -1,6 +1,7 @@
 package game
 
 import (
+	rlab "rimworld-go/internal/application/game/research"
 	"strings"
 	"testing"
 
@@ -113,8 +114,9 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	if g.butcherYield(happy, 40) != 37 {
 		t.Errorf("butcher yield %d of 40 at Cooking 7", g.butcherYield(happy, 40))
 	}
-	if g.researchPoints(1) != 1 { // tends: TestTendQualityFormula (MED-02)
-		t.Error("research moved for a neutral pawn")
+	if (researchHost{g}).Speed(happy) != (rlab.Pawn{Intellectual: g.skillOf(happy, skIntellectual).Level, GlobalWork: 1000,
+		Manipulation: 1000, Sight: 1000, TraitPct: 100}) { // game/research (RSCH-1)
+		t.Error("research inputs moved for a neutral pawn")
 	}
 	if g.breakOffset(happy) != 0 || g.painShockAt(happy) != health.PainShock {
 		t.Error("break or downed threshold moved")

@@ -114,8 +114,10 @@ func SpecOf(k construction.Kind) Spec {
 		return bench(250)
 	case construction.ElectricTailoringBench:
 		return bench(150)
-	case construction.ElectricResearchBench:
-		return bench(200)
+	case construction.ElectricResearchBench: // RSCH-1, wiki: Hi-tech research bench (250 W)
+		return bench(250)
+	case construction.MultiAnalyzer: // RSCH-1, wiki: Multi-analyzer (200 W, drawn all the time)
+		return consumer(ClassBench, 200, 200)
 	case construction.VitalsMonitor: // wiki: Vitals monitor (80 W)
 		return consumer(ClassBench, 80, 80)
 	case construction.SentryTurret: // PLAY-024 (our numbers): 120 W firing, 40 W idle

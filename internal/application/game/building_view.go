@@ -188,6 +188,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	bv.Comfort, bv.RestEffect, bv.Beauty, bv.Facilities, bv.Forbidden = st.Comfort, st.RestEffect, st.Beauty, st.Links(), b.Forbidden
 	g.fillCasketView(bv, id, b) // casket.go (MAPGEN-3)
 	bv.Linked, bv.WorkSpeed, bv.Epitaph = g.craft.Stations.View(id, b, bv.Epitaph)
+	bv.ResearchSpeed, bv.Analyzer = g.lab.Factor(id), uint64(g.lab.Analyzer(id)) // game/research (RSCH-1)
 	// PLAY-021: the light the renderer draws (light.go), then power
 	// (power_view.go)
 	bv.Glow, bv.GlowRadius = g.glowOf(id, b)

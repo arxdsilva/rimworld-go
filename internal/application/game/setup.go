@@ -185,7 +185,7 @@ func newSetupGame(cfg Config, s *Setup) *Game {
 	g.climate = withConditions(g.climate, g.ng.fx.Conditions)
 	g.ng.startDay = seasonStartDay(g.climate.PeakDay, s.Season)
 	g.clock = clock.NewAt(clock.Tick(g.ng.startDay*clock.TicksPerDay + clock.StartHour*clock.TicksPerHour))
-	g.research = research.Progress{} // a new colony knows nothing yet
+	g.lab.Prog = research.Progress{} // a new colony knows nothing yet
 	return g
 }
 
@@ -244,22 +244,10 @@ func (g *Game) finishSetup() {
 	g.initFog()    // fog.go: the map is unexplored beyond the landing spot
 	g.startHome()  // home.go: around the landing spot
 	for _, p := range g.ng.fx.Research {
-		g.grantResearch(p)
+		g.lab.Grant(p) // game/research: with its prerequisites, hidden ones too
 	}
 	g.scheduleThreats() // raids.go: the storyteller's first plan
 	g.seedFamilies()    // people.go: the founders' relations
-}
-
-// grantResearch finishes project p and everything it requires.
-func (g *Game) grantResearch(p research.Project) {
-	if p >= research.NumProjects || g.research.Done(p) {
-		return
-	}
-	d := research.DefOf(p)
-	for _, r := range d.Requires {
-		g.grantResearch(r)
-	}
-	g.research[p] = d.Cost
 }
 
 // --- helpers for the rest of the package -----------------------------------
@@ -305,11 +293,10 @@ const (
 	DiffCrop = iota
 	DiffMine
 	DiffButcher
-	DiffResearch
 )
 
 // diffScale scales a yield base by the difficulty's percent for field
-// (DiffCrop, DiffMine, DiffButcher, DiffResearch). A legacy colony gets
+// (DiffCrop, DiffMine, DiffButcher). A legacy colony gets
 // base unchanged; a mine yield of at least 1 stays at least 1.
 func (g *Game) diffScale(field, base int) int {
 	if !g.hasSetup() {
@@ -324,8 +311,6 @@ func (g *Game) diffScale(field, base int) int {
 		pct = s.MineYield
 	case DiffButcher:
 		pct = s.ButcherYield
-	case DiffResearch:
-		pct = s.ResearchSpeed
 	}
 	v := difficulty.Scale(pct, base)
 	if field == DiffMine && base > 0 {
@@ -341,15 +326,6 @@ func (g *Game) moodOffset() int {
 		return 0
 	}
 	return g.ng.setup.Difficulty.MoodOffset
-}
-
-// researchCostPct is the scenario's research cost in percent (tech level
-// times research-cost parts); 100 for a legacy colony.
-func (g *Game) researchCostPct() int {
-	if !g.hasSetup() || g.ng.fx.ResearchCostPct <= 0 {
-		return 100
-	}
-	return g.ng.fx.ResearchCostPct
 }
 
 // growthPct is plant growth speed in percent under the permanent

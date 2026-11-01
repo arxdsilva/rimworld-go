@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -244,8 +245,15 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 		out = append(out, al)
 	}
 	group("unhappy", false, unhappy, func(n string) string { return n + " is unhappy" }, "colonists are unhappy")
+	if w.ResearchAlert { // RSCH-2: the game raises it (a bench and a researcher, no project)
+		out = append(out, Alert{Key: ResearchAlertKey, Label: "Need research project"})
+	}
 	return out
 }
+
+// ResearchAlertKey is the "Need research project" alert; a click on it
+// opens the Research tab instead of moving the camera.
+const ResearchAlertKey = "research"
 
 // hostileAlert is the "hostile" alert for animals attacking colonists: one
 // animal says what it is and, when it is chasing someone, whom ("A timber
@@ -460,7 +468,14 @@ func (c Alerts) DrawIn(screen *ebiten.Image, l hudlayout.Layout) {
 }
 
 // Focus centres the camera on the alert's next target.
-func (c Alerts) Focus(id string) { c.cycle(strings.TrimPrefix(id, ids.PrefixAlert), 1) }
+func (c Alerts) Focus(id string) {
+	key := strings.TrimPrefix(id, ids.PrefixAlert)
+	if d, ok := c.sh.(ports.Dispatcher); ok && key == ResearchAlertKey {
+		d.Do(ports.ShowWindow{Mode: "research"})
+		return
+	}
+	c.cycle(key, 1)
+}
 
 // cycle centres the camera on the alert's next target (dir 1) or
 // previous one (dir -1), wrapping round. alertCycle holds one more than
@@ -650,6 +665,7 @@ var alertExplanations = map[string]string{
 	"notconnected":  "Some electrical devices have no grid in reach. Run conduit to within three tiles of each one, or place a power switch or battery on the line.",
 	"spoiling":      "Stored food is about to rot. Eat it, or move it somewhere cool, before it is lost.",
 	"waitingframes": "Some blueprints need materials that are not in stock. Gather or make what they need, or cancel the blueprints.",
+	"research":      "A research bench and a colonist who does research are ready, but no project is picked. Open the Research tab, select a project and press Start research.",
 	"unhappy":       "Colonists are in a poor mood and close to breaking. Look at what drags it down: hunger, rest, comfort and room to breathe.",
 	"allies":        "Fighters sent by a friendly faction are helping defend the colony. They fight raiders and hostile animals on their own and go home once all is quiet, within a day. Turrets and colonists never shoot them.",
 }

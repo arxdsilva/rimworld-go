@@ -200,17 +200,6 @@ var petSet = []animal.Species{animal.Cat, animal.Labrador, animal.Husky, animal.
 // PetSet lists the species a random starting pet is drawn from.
 func PetSet() []animal.Species { return append([]animal.Species(nil), petSet...) }
 
-// TechCostPct is the research cost percent a tech level implies.
-func TechCostPct(t faction.Tech) int {
-	switch t {
-	case faction.Neolithic:
-		return 150
-	case faction.Spacer:
-		return 80
-	}
-	return 100
-}
-
 // backstoryTag maps a tech level to the backstory fit tag.
 func backstoryTag(t faction.Tech) backstory.Tag {
 	switch t {
@@ -230,7 +219,7 @@ const salt = 0x7363656e // "scen"
 func (d Def) Apply() Effects {
 	e := Effects{
 		People: d.People, ChooseFrom: d.ChooseFrom, Arrival: d.Arrival, Tech: d.Tech, Faction: d.Faction,
-		ResearchCostPct: TechCostPct(d.Tech),
+		ResearchCostPct: 100, // RSCH-1: the faction's tech level prices each project (research.CostPct); parts scale this
 		Disabled:        map[string]bool{},
 		Disallowed:      map[construction.Kind]bool{},
 		Rules:           pawngen.Rules{Tech: backstoryTag(d.Tech)},

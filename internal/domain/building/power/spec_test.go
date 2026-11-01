@@ -27,7 +27,8 @@ func TestSpecOf(t *testing.T) {
 		construction.Vent:                   {Toggle: true},                                                          // TEMP-1: open/shut, no draw
 		construction.ElectricStove:          {Role: Consumer, Class: ClassBench, Draw: 250, Idle: 25, Toggle: true},
 		construction.ElectricTailoringBench: {Role: Consumer, Class: ClassBench, Draw: 150, Idle: 15, Toggle: true},
-		construction.ElectricResearchBench:  {Role: Consumer, Class: ClassBench, Draw: 200, Idle: 20, Toggle: true},
+		construction.ElectricResearchBench:  {Role: Consumer, Class: ClassBench, Draw: 250, Idle: 25, Toggle: true},  // RSCH-1, wiki
+		construction.MultiAnalyzer:          {Role: Consumer, Class: ClassBench, Draw: 200, Idle: 200, Toggle: true}, // RSCH-1, wiki
 		construction.VitalsMonitor:          {Role: Consumer, Class: ClassBench, Draw: 80, Idle: 80, Toggle: true},
 		construction.NutrientPasteDispenser: {Role: Consumer, Class: ClassBench, Draw: 200, Idle: 200, Toggle: true}, // STO-2
 		construction.HydroponicsBasin:       {Role: Consumer, Class: ClassBench, Draw: 70, Idle: 70, Toggle: true},   // FOOD-2

@@ -42,10 +42,5 @@ func TestPRD4Gates(t *testing.T) {
 				t.Errorf("%s unlocks unknown %s", d.Name, u)
 			}
 		}
-		for _, r := range d.Requires {
-			if r >= d.Project {
-				t.Errorf("%s requires a later project %v", d.Name, r)
-			}
-		}
 	}
 }

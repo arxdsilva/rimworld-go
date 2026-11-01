@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 	"math"
+	rlab "rimworld-go/internal/application/game/research"
 	"testing"
 
 	"rimworld-go/internal/application/game/combat"
@@ -185,7 +186,7 @@ func TestActionProgress(t *testing.T) {
 		{"eat", job.Record{Kind: job.Eat}},
 	}
 	totals := map[string]int{
-		"cut": plant.DefOf(plant.BerryBush).CutWork, "harvest": plant.DefOf(plant.BerryBush).HarvestWork, "mine": MineWork, "sow": SowWork, "research": researchSession,
+		"cut": plant.DefOf(plant.BerryBush).CutWork, "harvest": plant.DefOf(plant.BerryBush).HarvestWork, "mine": MineWork, "sow": SowWork, "research": rlab.Session,
 		"tend": TendWork, "tame": animal.TameWork, "construct": fr.WorkLeft, "bill": recipe.DefOf(recipe.Club).Work, "eat": needs.EatWorkTicks,
 	}
 	for _, c := range cases {

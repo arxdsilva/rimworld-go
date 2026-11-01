@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
+	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -164,7 +165,7 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		}
 		return SowWork
 	case job.Research:
-		return researchSession
+		return rlab.Session
 	case job.Tend, job.EmergencyTend:
 		if j.Target == id {
 			return TendWork * 3 / 2

@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/raid"
+	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/difficulty"
@@ -83,10 +84,13 @@ import (
 // over as they are. v8 (TEMP-*) makes everyday clothes real garments
 // (TEMP-4): an older save's colonists, who wore them implicitly, get a
 // T-shirt and pants where their skin slots are free (Outfit.Everyday).
+// v9 (RSCH-1) moves research to the wiki costs: each project keeps its
+// fraction of the cost, and the resized research benches keep their place
+// where they still fit or are refunded (migrateResearchBenches).
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 8
+const SaveVersion = 9
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -261,10 +265,13 @@ type saveState struct {
 	SkillLive   *savedSkillLive
 	ResearchCur research.Project
 	ResearchSet bool
-	Pens        []pen
-	RockDamage  map[[2]int]int
-	Residual    map[int]temperature.Temp
-	Thermo      thermo.Save // TEMP-1: the rooms' air at working precision; absent in older saves
+	// ResearchCold (v9, RSCH-1): research benches in the bad temperature
+	// band (game/research's hysteresis).
+	ResearchCold []entity.EntityID
+	Pens         []pen
+	RockDamage   map[[2]int]int
+	Residual     map[int]temperature.Temp
+	Thermo       thermo.Save // TEMP-1: the rooms' air at working precision; absent in older saves
 	// Motion: step timing per creature on the map. A creature without a
 	// record (it never stepped, or an older save) is not given one on
 	// load: motionOf reads it as a due-now straight step, as before the save.
@@ -458,7 +465,8 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
 		Carrying: g.care.Carry.Export(), TendedUntil: g.care.Doctor.ExportTended(),
-		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.raid.Rock.Export(), Residual: g.thermo.Residual,
+		Research: g.lab.Prog.V1(), ResearchAll: g.lab.Prog.Slice(), NG1: g.exportSetupState(), ResearchCur: g.lab.Cur, ResearchSet: g.lab.Set,
+		ResearchCold: g.lab.ColdList(), RockDamage: g.raid.Rock.Export(), Residual: g.thermo.Residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 		DoorsOriented: true, // PLAY-011: door facings are stored
@@ -631,10 +639,11 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.care.Carry.Import(s.Carrying)
 	g.care.Doctor.ImportTended(s.TendedUntil)
 	g.med.legacyWounds = s.Wounds // infection.go: migrated by migrateSave (v < 6)
-	g.research, g.researchCur, g.researchSet = research.FromV1(s.Research), s.ResearchCur, s.ResearchSet
+	g.lab.Prog, g.lab.Cur, g.lab.Set = research.FromV1(s.Research), s.ResearchCur, s.ResearchSet
 	if s.ResearchAll != nil {
-		g.research = research.FromSlice(s.ResearchAll)
+		g.lab.Prog = research.FromSlice(s.ResearchAll)
 	}
+	g.lab.SetCold(s.ResearchCold)
 	g.raid.Rock.Import(s.RockDamage) // raid/rock.go
 	g.motion = importStore(s.Motion) // a mover without a record reads motionOf's due-now default
 	setMap(&g.lastStrike, s.Strikes)
@@ -758,6 +767,13 @@ func (g *Game) migrateSave(v int) {
 		}
 		migrateExtreme(g)            // weather_ng1.go (TEMP-2): a heat wave or cold snap becomes the climate event
 		g.exposure.MigratePermille() // game/bodytemp (TEMP-3): permille exposure moves to the wiki scale
+		fallthrough
+	case v < 9: // RSCH-1: wiki research costs (progress kept as a fraction), preset factors, bigger benches
+		g.lab.Migrate()
+		if g.hasSetup() {
+			g.ng.setup.Difficulty = rlab.MigrateDifficulty(g.ng.setup.Difficulty)
+		}
+		g.migrateResearchBenches() // research.go
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }
@@ -812,7 +828,8 @@ func (g *Game) migrateLampsToTorches() {
 }
 
 // savedSkillLive mirrors the skill state skills.go keeps beside the bios
-// (skillState's learned, carry, working and research).
+// (skillState's learned, carry and working; Research is game/research's
+// carried fraction of a point, billionths from v9, hundredths before).
 type savedSkillLive struct {
 	Learned   map[entity.EntityID]savedLearn
 	NeedCarry map[entity.EntityID]savedNeedCarry
@@ -838,10 +855,10 @@ type savedWorking struct {
 // (nil when there is none).
 func (g *Game) exportSkillLive() *savedSkillLive {
 	sk := &g.sk
-	if len(sk.learned) == 0 && len(sk.carry) == 0 && len(sk.working) == 0 && sk.research == 0 {
+	if len(sk.learned) == 0 && len(sk.carry) == 0 && len(sk.working) == 0 && g.lab.Carry == 0 {
 		return nil
 	}
-	out := &savedSkillLive{Research: sk.research}
+	out := &savedSkillLive{Research: g.lab.Carry}
 	if len(sk.learned) > 0 {
 		out.Learned = make(map[entity.EntityID]savedLearn, len(sk.learned))
 		for id, l := range sk.learned {
@@ -878,7 +895,7 @@ func (g *Game) importSkillLive(s *savedSkillLive) {
 	for id, w := range s.Working {
 		g.sk.working[id] = workingRec{w.Skill, w.Tick}
 	}
-	g.sk.research = s.Research
+	g.lab.Carry = s.Research
 }
 
 // blockedTiles is the blocked tile list, from whichever field the save

@@ -225,7 +225,7 @@ func TestUnreachableFrameDoesNotHideReachableOnes(t *testing.T) {
 	})
 	t.Run("research", func(t *testing.T) {
 		g := New(Config{Seed: 1, Width: 30, Height: 14})
-		g.research = research.Progress{}
+		g.lab.Prog = research.Progress{}
 		if !g.BuildNow("research bench", "wood", "south", 4, 4) || !g.BuildNow("research bench", "wood", "south", 25, 4) {
 			t.Fatal("build research benches")
 		}
@@ -245,7 +245,7 @@ func TestUnreachableFrameDoesNotHideReachableOnes(t *testing.T) {
 				}
 			}
 		}
-		g.setResearch(research.Traps)
+		g.lab.Pick(research.Traps)
 		bob := postWorker(t, g, 4, 12, "Bob", work.Research)
 		far := g.layerBldgAt(25, 4, construction.LayerObject)
 		studied := false

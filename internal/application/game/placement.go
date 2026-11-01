@@ -115,7 +115,7 @@ func (g *Game) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
 	if !ok || !construction.StuffOK(k, s) {
 		return false, ReasonStuff
 	}
-	if p := g.lockedBy("build:" + k.String()); p != "" {
+	if p := g.lab.LockedBy("build:" + k.String()); p != "" {
 		return false, "needs research: " + p
 	}
 	return g.canPlaceStuffAt(k, s, parseFacingName(facing), x, y)

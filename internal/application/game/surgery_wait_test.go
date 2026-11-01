@@ -38,12 +38,12 @@ func firstStack(g *Game, k item.Kind) entity.EntityID {
 
 func studyAll(g *Game) {
 	for p := research.Project(0); p < research.NumProjects; p++ {
-		g.research[p] = research.DefOf(p).Cost
+		g.lab.Prog[p] = research.DefOf(p).Cost
 	}
 }
 
 func studyProsthetics(g *Game) {
-	g.research[research.Prosthetics] = research.DefOf(research.Prosthetics).Cost
+	g.lab.Prog[research.Prosthetics] = research.DefOf(research.Prosthetics).Cost
 }
 
 // waitOf is the status of patient's first queued operation, read twice
@@ -64,7 +64,7 @@ func waitOf(t *testing.T, g *Game, patient entity.EntityID) (string, bool) {
 
 func TestSurgeryWaitNoStockAndResearch(t *testing.T) {
 	g, patient, _ := legless(t, 10)
-	g.research = research.Progress{} // a new colony knows nothing yet
+	g.lab.Prog = research.Progress{} // a new colony knows nothing yet
 	queueOp(g, patient, body.InstallImplant, body.LegL, item.ProstheticLeg)
 	if why, ok := waitOf(t, g, patient); ok || why != "needs research: Prosthetics" {
 		t.Fatalf("locked prosthetic: %q %v", why, ok)
@@ -96,7 +96,7 @@ func TestSurgeryWaitNoStockAndResearch(t *testing.T) {
 
 func TestSurgeryWaitResearchIgnoredWithStock(t *testing.T) {
 	g, patient, _ := legless(t, 10)
-	g.research = research.Progress{}
+	g.lab.Prog = research.Progress{}
 	g.SpawnStack(item.ProstheticLeg, 1, 3, 9) // traded, or from the dev menu
 	queueOp(g, patient, body.InstallImplant, body.LegL, item.ProstheticLeg)
 	if why, ok := waitOf(t, g, patient); !ok || why != "waiting for the patient to lie down" {
@@ -333,7 +333,7 @@ func TestSurgeryPatientPrefersHospitalBed(t *testing.T) {
 
 func TestHealthOptions(t *testing.T) {
 	g, patient, _ := legless(t, 10) // left leg and foot gone, a peg leg in stock
-	g.research = research.Progress{}
+	g.lab.Prog = research.Progress{}
 	hv, _ := g.Health(patient)
 	opt := func(label string) (OperationOptionView, bool) {
 		i := slices.IndexFunc(hv.Options, func(o OperationOptionView) bool { return o.Label == label })

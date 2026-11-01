@@ -1,8 +1,7 @@
 package windows
 
 import (
-	"fmt"
-	"math"
+	"image/color"
 	"strconv"
 	"strings"
 
@@ -10,32 +9,32 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/sim/command"
 )
 
-// Research tab: the project list. Click an available project to research
-// it; colonists with Research work then study at a research bench.
+// Research tab (RSCH-2, MAIN_UI §24; wiki: Research): RimWorld's research
+// screen. The right side is the tech tree: every project a box in its tech
+// level's columns, prerequisite lines between them (hidden prerequisites
+// are not drawn), done boxes green, available ones dark, unavailable ones
+// grey and the project under way outlined with its progress filling it.
+// The graph pans with a drag on empty space (or a middle drag), the wheel
+// and Shift+wheel; the search field dims the boxes that do not match and
+// Enter jumps to the first match. Clicking a box selects it: its
+// prerequisite chain lights up and the left panel shows it (research_panel
+// .go), with Start research (command.SetResearch) and, in developer mode,
+// Finish now (command.DevFinishResearch). Colonists with Research work
+// then study it at a bench that can work it. There is no queue (vanilla):
+// research stops when a project finishes.
 //
-// The list scrolls (PLAY-021: sixteen projects need about 980 px, more than
-// the window has at 1280x720). It shows whole rows only: the scroll view is
-// researchScrollID over the rows below the header, the wheel, the scroll bar
-// and a click on its track move it a row at a time, and the offset is kept
-// on whole rows so a project's button is never cut by the window's edge. The
-// project being researched is brought into view when the window opens and
-// when the project changes, never while the player scrolls.
+// research_tree.go keeps the state and caches, research_layout.go lays
+// the prerequisite graph out.
 
-const (
-	researchRowH      = 58
-	researchTop       = 44 // the header above the rows
-	researchBottomPad = 8
-	researchScrollID  = "research.scroll"
-	// researchCurKey is the scroll map's note of the project last revealed
-	// (its index + 1; absent while the window is closed).
-	researchCurKey = "research.scroll.cur"
-)
+// researchWant is the window's wanted size: as much of the screen as the
+// layout gives (it clamps to the room above the tab strip).
+const researchWantW, researchWantH = 1600, 1000
 
 // LockedBy is the research project still gating an unlock key ("" if none).
 func (w Research) LockedBy(key string) string {
@@ -45,168 +44,196 @@ func (w Research) LockedBy(key string) string {
 	return w.sh.World().Locked[key]
 }
 
-// want is the Research window's wanted size: a row per project.
-func (w Research) want() (float32, float32) {
-	n := 0
-	if w.live() {
-		n = len(w.sh.World().Research)
+// want is the Research window's wanted size.
+func (w Research) want() (float32, float32) { return researchWantW, researchWantH }
+
+// storyReader is the optional reader of the colony's story settings (a
+// commitment colony has no developer tools).
+type storyReader interface{ Story() game.StoryView }
+
+// devMode reports developer mode is on (Finish now shows): the setting,
+// and not a commitment colony.
+func (w Research) devMode() bool {
+	s, ok := w.sh.(ports.Settings)
+	if !ok || !s.Settings().Gameplay.DevMode {
+		return false
 	}
-	return 760, float32(max(160, researchTop+n*researchRowH+researchBottomPad))
+	if sr, ok := w.sh.Env().Game.(storyReader); ok && sr.Story().Commitment {
+		return false
+	}
+	return true
 }
 
-// researchShown is how many whole rows of n projects the window r shows
-// (at least one).
-func researchShown(r uikit.Button, n int) int {
-	rows := max(1, int((r.H-researchTop-researchBottomPad)/researchRowH))
-	return min(rows, n)
+// geometry is the window's regions this frame.
+func (w Research) geometry() researchGeom {
+	r := w.Rect()
+	return researchGeometry(gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: r.H}, w.devMode())
 }
 
-// first is the index of the first project shown: the scroll
-// offset in whole rows, kept inside the list.
-func (w Research) first(n, shown int) int {
-	off := w.kit().Scroll[researchScrollID]
-	return max(0, min(n-shown, int(math.Round(float64(off)/researchRowH))))
+// sync brings the caches up to this frame's research list and buildings.
+func (w Research) sync(st *researchState) {
+	world := w.sh.World()
+	st.refresh(world.Research)
+	bs := world.Buildings
+	if !st.benchSrc.same(bs) {
+		st.hasBench = false
+		for _, b := range bs {
+			if isResearchBench(b.Kind) {
+				st.hasBench = true
+				break
+			}
+		}
+	}
 }
 
-// researchList is the rows' rectangle in the window r.
-func researchList(r uikit.Button, shown int) gfx.Rect {
-	return gfx.Rect{X: r.X, Y: r.Y + researchTop, W: r.W, H: float32(shown) * researchRowH}
-}
-
-// Declare declares the project list's scroll view (the wheel, the bar,
-// track clicks) and snaps its offset to whole rows. It also reveals the
-// project being researched when the window opens or that project changes.
+// Declare declares the window's widgets once per Update: the search field,
+// the graph (its wheel and drag pan it) and the panel's links and buttons.
+// A fresh opening selects the project under way (else the first available
+// one) and centres the graph on it.
 func (w Research) Declare(sw, sh int) {
-	u := w.kit()
+	st := w.rs()
 	if !w.live() || !w.Open || w.Mode != "research" {
-		delete(u.Scroll, researchCurKey) // the next opening starts afresh
-		delete(u.Scroll, researchScrollID)
+		st.close()
 		return
 	}
-	views := w.sh.World().Research
 	r := w.Rect()
-	if len(views) == 0 || r.W <= 0 {
+	if r.W <= 0 || r.H <= 0 {
 		return
 	}
-	shown := researchShown(r, len(views))
-	list := researchList(r, shown)
-	cur := -1
-	for i, p := range views {
-		if p.Current {
-			cur = i
-			break
+	w.sync(st)
+	g := w.geometry()
+	st.view = g.view
+	if !st.open {
+		st.opened(g.view)
+	}
+	k := w.kit()
+	fr := k.Host().Frame()
+	mx, my := w.sh.Cursor()
+	modal := len(k.Modals) > 0
+	if !g.search.Empty() {
+		before := st.query
+		changed, committed := k.TextField(researchSearchID, g.search, &st.query, uikit.TextFieldSpec{MaxLen: 32, Placeholder: "Search"})
+		// typing edits st.query in the kit's text input, before this call,
+		// so the value alone cannot tell a change: trust the field's events
+		if changed || committed || st.query != before {
+			st.searchAgain()
+		}
+		if committed {
+			if i := st.firstMatch(); i >= 0 {
+				st.jump(i)
+			}
 		}
 	}
-	if note := float32(cur + 1); u.Scroll[researchCurKey] != note {
-		if u.Scroll == nil {
-			u.Scroll = map[string]float32{}
-		}
-		u.Scroll[researchCurKey] = note
-		if cur >= 0 {
-			w.kit().ScrollReveal(researchScrollID, list.H, float32(cur)*researchRowH, float32(cur+1)*researchRowH)
-		}
-	}
-	area := w.kit().ScrollArea(researchScrollID, list, float32(len(views))*researchRowH, uikit.ScrollOpts{Step: researchRowH})
-	u.Scroll[researchScrollID] = float32(math.Round(float64(area.Off)/researchRowH)) * researchRowH
+	k.Add(uikit.Widget{ID: researchTreeID, R: g.view, Wheel: true})
+	st.pan(fr, g.view, mx, my, modal)
+	w.declarePanel(st, g, w.devMode(), fr, mx, my)
 }
 
+// Buttons are the graph's boxes shown in the view (research.pick.<id>),
+// each clipped to it; a click selects the project. The slice is reused
+// from frame to frame.
 func (w Research) Buttons() []uikit.Button {
-	r := w.Rect()
-	views := w.sh.World().Research
-	shown := researchShown(r, len(views))
-	first := w.first(len(views), shown)
-	var out []uikit.Button
-	for i := first; i < first+shown; i++ {
-		p := views[i]
-		y := r.Y + researchTop + float32((i-first)*researchRowH)
-		b := uikit.Button{ID: ids.PrefixResearchPick + strconv.Itoa(int(p.ID)), X: r.X + 12, Y: y, W: 220, H: researchRowH - 8,
-			Label: p.Label, Selected: p.Current, Quiet: true}
-		switch {
-		case p.Done:
-			b.Disabled, b.Reason = true, p.Label+" is already researched"
-		case !p.Available:
-			b.Disabled, b.Reason = true, "Needs "+strings.Join(p.Requires, ", ")+" first"
-		}
-		out = append(out, b)
+	st := w.rs()
+	if !w.live() {
+		return nil
 	}
-	return out
+	w.sync(st)
+	g := w.geometry()
+	st.btns = st.btns[:0]
+	for i := range st.nodes {
+		n := &st.nodes[i]
+		r := st.nodeAt(g.view, i).Intersect(g.view)
+		if r.Empty() {
+			continue
+		}
+		st.btns = append(st.btns, uikit.Button{ID: n.idStr, X: r.X, Y: r.Y, W: r.W, H: r.H, Label: n.v.Label, Tip: n.tip,
+			Selected: i == st.sel})
+	}
+	return st.btns
 }
 
+// Pick handles a research.pick.<id> click: select that project.
 func (w Research) Pick(id string) {
 	n, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixResearchPick))
 	if err != nil || !w.live() {
 		return
 	}
-	w.sh.Enqueue(command.Command{Kind: command.SetResearch, Build: uint8(n)})
+	st := w.rs()
+	w.sync(st)
+	for i := range st.nodes {
+		if int(st.nodes[i].id) == n {
+			st.selectNode(i)
+			return
+		}
+	}
+}
+
+// Selected is the selected project's id (ok false: none).
+func (w Research) Selected() (uint8, bool) {
+	st := w.rs()
+	if st.sel < 0 || st.sel >= len(st.nodes) {
+		return 0, false
+	}
+	return st.nodes[st.sel].id, true
 }
 
 func (w Research) draw(screen *ebiten.Image, sw, sh int) {
+	st := w.rs()
+	w.sync(st)
 	r := w.Rect()
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
+	g := w.geometry()
+	mx, my := w.sh.Cursor()
 	gfx.Text(screen, "Research", float64(r.X)+12, float64(r.Y)+6, gfx.WithColor(gfx.Label, uikit.Heading))
 	hintX := float64(r.X) + 12 + float64(gfx.TextW("Research", gfx.Label)) + 16
-	gfx.Text(screen, gfx.Ellipsize("pick a project; colonists with Research work study it at a research bench", gfx.Small, float64(r.X+r.W)-12-hintX),
-		hintX, float64(r.Y)+6+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
-	if !w.HasBench() {
-		gfx.Text(screen, "No research bench yet: build one from Architect > Production.", float64(r.X)+12, float64(r.Y)+25, gfx.WithColor(gfx.Small, uikit.Warning))
+	hint, c := w.headline(st)
+	if right := float64(r.X+r.W) - 12; right-hintX > 40 {
+		gfx.Text(screen, gfx.Ellipsize(hint, gfx.Small, right-hintX), hintX, float64(r.Y)+6+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2,
+			gfx.WithColor(gfx.Small, c))
 	}
-	mx, my := w.sh.Cursor()
-	views := w.sh.World().Research
-	shown := researchShown(r, len(views))
-	first := w.first(len(views), shown)
-	right := float64(r.X+r.W) - 12
-	if len(views) > shown {
-		right -= uikit.ScrollBarW // the scroll bar's lane
-	}
-	for k, b := range w.Buttons() {
-		p := views[first+k]
-		uikit.DrawButton(screen, b, b.Contains(mx, my) && !b.Disabled)
-		x, y := int(b.X+b.W)+14, int(b.Y)
-		status := "available"
-		switch {
-		case p.Done:
-			status = "done"
-		case p.Current:
-			status = "researching"
-		case !p.Available:
-			status = "needs " + strings.Join(p.Requires, ", ")
+	if st.qlow != "" && !g.search.Empty() {
+		s := "no match"
+		if st.matches > 0 {
+			s = strconv.Itoa(st.matches) + " found"
 		}
-		maxW := right - float64(x)
-		drawResearchBar(screen, float32(x), float32(y+6), 120, 10, p)
-		gfx.Text(screen, gfx.Ellipsize(fmt.Sprintf("%d / %d  %s", p.Progress, p.Cost, status), gfx.Body, maxW-130), float64(x+130), float64(y), gfx.Body)
-		gfx.Text(screen, gfx.Ellipsize(p.Desc, gfx.Small, maxW), float64(x), float64(y)+20, gfx.Small)
-		gfx.Text(screen, gfx.Ellipsize("Unlocks: "+strings.Join(p.Unlocks, ", "), gfx.Small, maxW), float64(x), float64(y)+37, gfx.WithColor(gfx.Small, uikit.TextDim))
+		if tw := gfx.TextW(s, gfx.Small); g.search.X-tw-8 > g.right.X {
+			gfx.Text(screen, s, float64(g.search.X-tw-8), float64(g.search.Y)+(rtSearchH-gfx.LineH(gfx.Small))/2,
+				gfx.WithColor(gfx.Small, uikit.TextDim))
+		}
 	}
+	st.drawTree(screen, g, mx, my)
+	w.drawPanel(screen, st, g, w.devMode(), mx, my)
 }
 
-func drawResearchBar(screen *ebiten.Image, x, y, w, h float32, p game.ResearchView) {
-	gfx.FillRect(screen, x, y, w, h, uikit.Field, false)
-	c := uikit.SliderFill
-	if p.Done {
-		c = uikit.Good
+// headline is the title row's note: no bench, nothing picked, or the
+// project under way.
+func (w Research) headline(st *researchState) (string, color.RGBA) {
+	if !st.hasBench {
+		return "No research bench yet: build one from Architect > Production.", uikit.Warning
 	}
-	if p.Cost > 0 {
-		gfx.FillRect(screen, x, y, w*float32(min(p.Progress, p.Cost))/float32(p.Cost), h, c, false)
+	for i := range st.nodes {
+		if v := st.nodes[i].v; v.Current {
+			return st.nodes[i].sub, uikit.TextDim
+		}
 	}
-	gfx.StrokeRect(screen, x, y, w, h, 1, uikit.PanelBorder, false)
+	return "No project under way: select one and press Start research.", uikit.Warning
 }
 
-// benchName is the bench a building kind works recipes at
-// ("research bench"; an unknown kind is its own name).
-func benchName(kind string) string {
+// isResearchBench reports the building kind is a research bench of any
+// tier (its recipe bench is the research bench).
+func isResearchBench(kind string) bool {
 	if k, ok := construction.Parse(kind); ok {
-		return construction.RecipeBench(k).String()
-	}
-	return kind
-}
-
-// HasBench reports a research bench stands: the plain one or the
-// electric one (which works the same research, powered).
-func (w Research) HasBench() bool {
-	for _, b := range w.sh.World().Buildings {
-		if benchName(b.Kind) == "research bench" {
-			return true
-		}
+		return construction.RecipeBench(k) == construction.ResearchBench
 	}
 	return false
+}
+
+// HasBench reports a research bench of any tier stands.
+func (w Research) HasBench() bool {
+	if !w.live() {
+		return false
+	}
+	st := w.rs()
+	w.sync(st)
+	return st.hasBench
 }

@@ -523,6 +523,7 @@ ICONS = {
     "electric_stove": ("furniture", "electric_stove_south"),
     "electric_tailoring_bench": ("furniture", "electric_tailoring_bench_south"),
     "electric_research_bench": ("furniture", "electric_research_bench_south"),
+    "multi_analyzer": ("furniture", "multi_analyzer"),
     # MED-05 medical tier (ART-026)
     "nanomed_kit": ("item", "nanomed_kit"),
     "servo_arm": ("item", "servo_arm"),

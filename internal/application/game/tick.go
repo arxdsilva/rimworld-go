@@ -126,7 +126,9 @@ func (g *Game) applyOne(c command.Command) {
 			g.autoHomeRect(c.X, c.Y, c.X2, c.Y2) // home.go
 		}
 	case command.SetResearch:
-		g.setResearch(research.Project(c.Build))
+		g.lab.Pick(research.Project(c.Build)) // game/research
+	case command.DevFinishResearch:
+		g.lab.DevFinish() // game/research (RSCH-1): the Research tab's dev finish
 	case command.DesignateTame:
 		g.markTame(c.X, c.Y, c.X2, c.Y2, true)
 	case command.SetPenSettings:

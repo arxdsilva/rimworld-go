@@ -317,28 +317,69 @@ def _horseshoe_pin():
 
 
 def _research_bench():
-    """2 x 1 research desk: a plank top on trestles, stacked books, an open
-    journal, a glass flask on a stand and a candle. The researcher sits on
-    the south side."""
-    import math
-    for i, x in enumerate([0.12, 1.88]):
-        for j, y in enumerate([-0.18, -0.82]):
-            S.box("leg%d%d" % (i, j), x - 0.05, y - 0.05, 0.0, x + 0.05, y + 0.05, 0.52, "wood", bevel=0.015)
-    S.box("top", 0.04, -0.96, 0.52, 1.96, -0.04, 0.60, "wood_plank", bevel=0.03)
-    S.box("shelf", 0.10, -0.90, 0.16, 1.90, -0.60, 0.20, "wood", bevel=0.015)
-    for k, (h, mat) in enumerate([(0.06, "leather"), (0.05, "food_red"), (0.07, "bark")]):
-        z = 0.60 + sum((0.06, 0.05, 0.07)[:k])
-        S.box("book%d" % k, 0.16 + 0.01 * k, -0.86, z, 0.46 - 0.02 * k, -0.62, z + h, mat, bevel=0.012)
-    S.box("journal_l", 0.70, -0.56, 0.60, 0.92, -0.26, 0.625, "ceramic", bevel=0.008)
-    S.box("journal_r", 0.93, -0.56, 0.60, 1.15, -0.26, 0.625, "ceramic", bevel=0.008)
-    S.box("spine", 0.915, -0.57, 0.595, 0.935, -0.25, 0.63, "leather", bevel=0.004)
-    S.cyl("stand", 1.55, -0.70, 0.10, 0.60, 0.64, "metal_dark", segs=10)
-    S.ellipsoid("flask", 1.55, -0.70, 0.74, 0.09, 0.09, 0.09, "glass", segs=14, rings=8)
-    S.cyl("neck", 1.55, -0.70, 0.03, 0.80, 0.92, "glass", segs=8, bevel=0.0)
-    S.cyl("candle", 1.78, -0.30, 0.035, 0.60, 0.72, "ceramic", segs=8)
-    S.cyl("flame", 1.78, -0.30, 0.015, 0.72, 0.76, "lamp_warm", segs=6, r_top=0.002, bevel=0.0)
-    S.cyl("quill", 1.20, -0.40, 0.008, 0.62, 0.64, "fur_cream", segs=4, bevel=0.0)
-    return (2, 1), 0.92
+    """3 x 2 research desk (RSCH-3): a broad plank table on six trestle legs,
+    a book rack along the back, an open journal with quill and ink pot,
+    a book stack, a rolled chart, a seedling in a clay pot, a flask on its
+    stand and a candle. The researcher sits on the south side."""
+    for i, x in enumerate([0.12, 1.50, 2.88]):
+        for j, y in enumerate([-0.14, -1.86]):
+            S.box("leg%d%d" % (i, j), x - 0.055, y - 0.055, 0.0, x + 0.055, y + 0.055, 0.52, "wood", bevel=0.015)
+    S.box("stretcher", 0.10, -1.05, 0.14, 2.90, -0.95, 0.20, "wood", bevel=0.015)
+    S.box("top", 0.04, -1.96, 0.52, 2.96, -0.04, 0.60, "wood_plank", bevel=0.03)
+    for k, x in enumerate((0.99, 2.01)):
+        S.box("seam%d" % k, x - 0.01, -1.95, 0.595, x + 0.01, -0.05, 0.602, "wood", bevel=0.0)
+    # open book rack on the back edge: end boards and a back rail, a row of
+    # standing books whose coloured tops read from above, one lying flat
+    for k, x in enumerate((0.08, 1.46, 2.84)):
+        S.box("rack_end%d" % k, x, -0.46, 0.60, x + 0.08, -0.06, 0.88, "wood", bevel=0.015)
+    S.box("rack_back", 0.08, -0.12, 0.60, 2.92, -0.06, 0.92, "wood", bevel=0.012)
+    mats = ("leather", "food_red", "bark", "jacket_navy", "sheet_teal", "pumpkin", "leather", "mug_blue", "bark")
+    k = 0
+    for bay, (x0, x1) in enumerate(((0.18, 1.42), (1.56, 2.24))):
+        x = x0
+        while x < x1 - 0.07:
+            w = 0.07 + 0.02 * ((k * 7) % 3)
+            h = 0.18 + 0.03 * ((k * 5) % 3)
+            if k % 7 == 4:   # a gap in the row
+                x += 0.12
+                k += 1
+                continue
+            S.box("book%d" % k, x, -0.42 + 0.02 * (k % 2), 0.60, min(x + w, x1), -0.14, 0.60 + h,
+                  mats[k % len(mats)], bevel=0.01)
+            x += w + 0.01
+            k += 1
+    S.box("tome", 2.30, -0.44, 0.60, 2.74, -0.16, 0.66, "leather", bevel=0.012)
+    # loose notes on the desk
+    S.box("note0", 0.98, -1.80, 0.60, 1.16, -1.58, 0.605, "ceramic", bevel=0.0)
+    S.box("note1", 2.14, -1.82, 0.60, 2.36, -1.62, 0.605, "ceramic", bevel=0.0)
+    # work surface: open journal, quill, ink pot
+    S.box("journal_l", 1.18, -1.62, 0.60, 1.48, -1.18, 0.625, "ceramic", bevel=0.008)
+    S.box("journal_r", 1.50, -1.62, 0.60, 1.80, -1.18, 0.625, "ceramic", bevel=0.008)
+    S.box("spine", 1.48, -1.63, 0.595, 1.50, -1.17, 0.632, "leather", bevel=0.004)
+    for k in range(4):
+        y = -1.28 - 0.07 * k
+        S.box("ink_line%d" % k, 1.22, y - 0.008, 0.625, 1.42 - 0.05 * (k % 2), y + 0.008, 0.628, "metal_dark",
+              bevel=0.0)
+    S.cyl("ink_pot", 1.98, -1.30, 0.05, 0.60, 0.68, "glass", segs=12, bevel=0.005)
+    S.cyl("ink", 1.98, -1.30, 0.035, 0.68, 0.69, "jacket_navy", segs=10, bevel=0.0)
+    S.box("quill", 1.86, -1.48, 0.625, 2.14, -1.46, 0.64, "fur_cream", bevel=0.004)
+    # left: stacked books and a rolled chart
+    for k, (h, mat) in enumerate([(0.07, "leather"), (0.05, "food_red"), (0.06, "bark")]):
+        z = 0.60 + sum((0.07, 0.05, 0.06)[:k])
+        S.box("stack%d" % k, 0.22 + 0.015 * k, -1.06, z, 0.60 - 0.02 * k, -0.74, z + h, mat, bevel=0.012)
+    S.box("chart", 0.20, -1.62, 0.60, 0.88, -1.48, 0.68, "ceramic", bevel=0.038, segments=3)
+    S.box("chart_tie", 0.52, -1.63, 0.60, 0.56, -1.47, 0.685, "leather", bevel=0.01)
+    # right: seedling in a pot, a flask on its stand, a candle
+    S.cyl("pot", 2.30, -0.80, 0.09, 0.60, 0.72, "ceramic", r_top=0.11, segs=14)
+    S.cyl("pot_soil", 2.30, -0.80, 0.095, 0.715, 0.725, "soil", segs=14, bevel=0.0)
+    for k, (dx, dy, s) in enumerate(((0.0, 0.0, 0.06), (-0.05, 0.03, 0.045), (0.05, -0.02, 0.05))):
+        S.ellipsoid("leaf%d" % k, 2.30 + dx, -0.80 + dy, 0.80 + 0.03 * k, s, s, s * 0.7, "vegetation", segs=10, rings=6)
+    S.cyl("stand", 2.66, -1.10, 0.10, 0.60, 0.64, "metal_dark", segs=10)
+    S.ellipsoid("flask", 2.66, -1.10, 0.74, 0.09, 0.09, 0.09, "glass", segs=14, rings=8)
+    S.cyl("neck", 2.66, -1.10, 0.03, 0.80, 0.92, "glass", segs=8, bevel=0.0)
+    S.cyl("candle", 2.70, -1.66, 0.035, 0.60, 0.72, "ceramic", segs=8)
+    S.cyl("flame", 2.70, -1.66, 0.015, 0.72, 0.76, "lamp_warm", segs=6, r_top=0.002, bevel=0.0)
+    return (3, 2), 0.96
 
 
 def _sandbags():
@@ -507,40 +548,130 @@ def _electric_tailoring_bench():
 
 
 def _electric_research_bench():
-    """2 x 1 electric research bench: a steel desk with a terminal (screen
-    glows), a keyboard, an analyzer with status lamps (glow), a microscope
-    and a rack of sample tubes. The researcher sits on the south side."""
-    for i, x in enumerate([0.12, 1.88]):
-        for j, y in enumerate([-0.18, -0.82]):
-            S.box("leg%d%d" % (i, j), x - 0.045, y - 0.045, 0.0, x + 0.045, y + 0.045, 0.52, "steel_dark", bevel=0.012)
-    S.box("top", 0.04, -0.96, 0.52, 1.96, -0.04, 0.58, "steel", bevel=0.03)
-    S.box("shelf", 0.10, -0.90, 0.16, 1.90, -0.60, 0.20, "steel_dark", bevel=0.012)
-    # terminal: stand, casing, screen on its south face
-    S.box("stand", 0.64, -0.30, 0.58, 0.80, -0.18, 0.68, "metal_dark", bevel=0.01)
-    S.box("monitor", 0.34, -0.32, 0.66, 1.10, -0.16, 1.10, "steel_dark", bevel=0.03)
-    P.glow(S.box("screen", 0.40, -0.335, 0.72, 1.04, -0.315, 1.04, "backdrop", bevel=0.005), "indicator")
-    S.box("keyboard", 0.42, -0.66, 0.58, 1.02, -0.46, 0.605, "metal_dark", bevel=0.01)
-    S.box("keys", 0.45, -0.635, 0.605, 0.99, -0.485, 0.612, "pod_hull", bevel=0.0)
-    # analyzer cabinet on the right with three lamps and a sample slot
-    S.box("analyzer", 1.30, -0.42, 0.58, 1.88, -0.10, 0.96, "ceramic", bevel=0.03)
-    S.box("slot", 1.38, -0.435, 0.68, 1.62, -0.415, 0.74, "backdrop", bevel=0.004)
-    for k, x in enumerate((1.68, 1.75, 1.82)):
-        P.glow(S.box("lamp%d" % k, x - 0.022, -0.435, 0.86, x + 0.022, -0.415, 0.90, "backdrop", bevel=0.003),
+    """5 x 2 hi-tech research bench (RSCH-3; kind and key stay the electric
+    research bench): a long steel desk on two drawer pedestals. Along the
+    back a server tower, a twin-screen terminal and an analyzer cabinet
+    (screens and lamps glow); in front a keyboard, a holo pad, a sample
+    rack, a data slate, a centrifuge and a microscope. The researcher
+    sits south."""
+    for k, x0 in enumerate((0.10, 4.20)):   # drawer pedestals
+        S.box("pedestal%d" % k, x0, -1.90, 0.0, x0 + 0.70, -0.10, 0.52, "steel_dark", bevel=0.02)
+        for d in range(3):
+            z = 0.06 + d * 0.15
+            S.box("drawer%d_%d" % (k, d), x0 + 0.06, -1.915, z, x0 + 0.64, -1.89, z + 0.12, "pod_hull", bevel=0.008)
+            S.box("pull%d_%d" % (k, d), x0 + 0.27, -1.93, z + 0.08, x0 + 0.43, -1.91, z + 0.10, "metal_dark",
+                  bevel=0.003)
+    for k, x in enumerate((1.80, 3.20)):
+        S.box("leg%d" % k, x - 0.05, -1.86, 0.0, x + 0.05, -1.76, 0.52, "steel_dark", bevel=0.012)
+    S.box("modesty", 0.80, -0.20, 0.10, 4.20, -0.12, 0.50, "steel_dark", bevel=0.01)
+    S.box("top", 0.04, -1.96, 0.52, 4.96, -0.04, 0.58, "steel", bevel=0.03)
+    S.box("trim", 0.04, -1.97, 0.53, 4.96, -1.94, 0.57, "pod_paint", bevel=0.005)
+    # terminal: two monitors on a shared arm, screens on their south faces
+    S.box("arm_base", 2.36, -0.36, 0.58, 2.64, -0.16, 0.62, "metal_dark", bevel=0.01)
+    S.box("arm_post", 2.46, -0.28, 0.62, 2.54, -0.20, 0.80, "metal_dark", bevel=0.008)
+    for k, (x0, x1) in enumerate(((1.30, 2.46), (2.54, 3.70))):
+        S.box("monitor%d" % k, x0, -0.34, 0.74, x1, -0.18, 1.22, "steel_dark", bevel=0.03)
+        P.glow(S.box("screen%d" % k, x0 + 0.06, -0.355, 0.80, x1 - 0.06, -0.335, 1.16, "backdrop", bevel=0.005),
                "indicator")
-    P.glow(S.box("top_lamp", 1.40, -0.30, 0.96, 1.62, -0.24, 0.975, "backdrop", bevel=0.004), "indicator")
-    # microscope (front right): foot, pillar, stage, head and tube
-    S.box("scope_foot", 1.42, -0.84, 0.58, 1.66, -0.62, 0.62, "metal_dark", bevel=0.012)
-    S.box("scope_pillar", 1.56, -0.70, 0.62, 1.62, -0.64, 0.86, "metal_dark", bevel=0.008)
-    S.box("scope_stage", 1.44, -0.80, 0.68, 1.60, -0.66, 0.70, "steel", bevel=0.005)
-    S.box("scope_head", 1.46, -0.74, 0.84, 1.62, -0.66, 0.90, "ceramic", bevel=0.012)
-    S.cyl("scope_tube", 1.52, -0.72, 0.03, 0.70, 0.96, "steel", segs=10, bevel=0.0)
+    S.box("keyboard", 2.10, -0.92, 0.58, 2.90, -0.66, 0.605, "metal_dark", bevel=0.01)
+    S.box("keys", 2.13, -0.895, 0.605, 2.87, -0.685, 0.612, "pod_hull", bevel=0.0)
+    S.box("mouse", 3.02, -0.86, 0.58, 3.10, -0.74, 0.62, "metal_dark", bevel=0.02)
+    # server tower on the back left: vents, a lamp column and a roof lamp
+    S.box("tower", 0.14, -0.66, 0.58, 0.96, -0.10, 1.30, "steel_dark", bevel=0.03)
+    for k in range(5):
+        z = 0.66 + 0.09 * k
+        S.box("vent%d" % k, 0.22, -0.675, z, 0.70, -0.655, z + 0.04, "metal_dark", bevel=0.0)
+    for k in range(4):
+        z = 0.70 + 0.12 * k
+        P.glow(S.box("rack_lamp%d" % k, 0.78, -0.675, z, 0.86, -0.655, z + 0.05, "backdrop", bevel=0.003), "indicator")
+    P.glow(S.box("tower_lamp", 0.30, -0.44, 1.30, 0.80, -0.32, 1.315, "backdrop", bevel=0.004), "indicator")
+    # analyzer cabinet on the back right, a sample slot and status lamps
+    S.box("analyzer", 4.00, -0.58, 0.58, 4.86, -0.10, 1.02, "ceramic", bevel=0.03)
+    S.box("slot", 4.08, -0.595, 0.70, 4.40, -0.575, 0.76, "backdrop", bevel=0.004)
+    for k, x in enumerate((4.52, 4.62, 4.72)):
+        P.glow(S.box("lamp%d" % k, x - 0.025, -0.595, 0.88, x + 0.025, -0.575, 0.93, "backdrop", bevel=0.003),
+               "indicator")
+    P.glow(S.box("top_lamp", 4.14, -0.40, 1.02, 4.50, -0.30, 1.035, "backdrop", bevel=0.004), "indicator")
+    # holo pad (front left of the keyboard): a dark disc ringed in teal light
+    S.cyl("holo_base", 1.40, -1.30, 0.22, 0.58, 0.62, "metal_dark", segs=20, bevel=0.01)
+    P.glow(S.cyl("holo_ring", 1.40, -1.30, 0.17, 0.62, 0.635, "backdrop", segs=20, bevel=0.0), "med_teal_glow")
+    S.cyl("holo_core", 1.40, -1.30, 0.11, 0.62, 0.64, "steel_dark", segs=16, bevel=0.0)
     # sample rack (front left)
-    S.box("rack", 0.10, -0.86, 0.58, 0.34, -0.66, 0.64, "steel_dark", bevel=0.01)
-    for k, (x, mat) in enumerate(((0.15, "med_blue"), (0.22, "circuit"), (0.29, "med_red"))):
-        S.cyl("tube%d" % k, x, -0.76, 0.024, 0.60, 0.76, "glass", segs=10, bevel=0.0)
-        S.cyl("liquid%d" % k, x, -0.76, 0.02, 0.62, 0.68, mat, segs=10, bevel=0.0)
-    S.box("cable", 1.00, -0.12, 0.0, 1.06, -0.04, 0.66, "fur_black", bevel=0.01)
-    return (2, 1), 1.12
+    S.box("rack", 0.30, -1.66, 0.58, 0.90, -1.40, 0.64, "steel_dark", bevel=0.01)
+    for k, (x, mat) in enumerate(((0.38, "med_blue"), (0.50, "circuit"), (0.62, "med_red"), (0.74, "reagent_violet"),
+                                  (0.84, "med_blue"))):
+        S.cyl("tube%d" % k, x, -1.53, 0.026, 0.60, 0.78, "glass", segs=10, bevel=0.0)
+        S.cyl("liquid%d" % k, x, -1.53, 0.022, 0.62, 0.70, mat, segs=10, bevel=0.0)
+    # data slate and a stylus beside the keyboard
+    S.box("slate", 2.30, -1.66, 0.58, 2.76, -1.32, 0.60, "steel_dark", bevel=0.01)
+    S.box("slate_face", 2.34, -1.62, 0.60, 2.72, -1.36, 0.605, "pod_hull", bevel=0.0)
+    S.box("stylus", 2.82, -1.60, 0.58, 2.85, -1.38, 0.60, "steel", bevel=0.005)
+    # bench centrifuge (mid right): a squat drum with a lid and a lamp
+    S.cyl("centrifuge", 3.40, -1.10, 0.20, 0.58, 0.76, "ceramic", segs=20, bevel=0.02)
+    S.cyl("centrifuge_lid", 3.40, -1.10, 0.16, 0.76, 0.79, "pod_hull", segs=20, bevel=0.01)
+    P.glow(S.box("centrifuge_lamp", 3.34, -1.315, 0.64, 3.46, -1.295, 0.68, "backdrop", bevel=0.003), "indicator")
+    # microscope (front right): foot, pillar, stage, head and tube
+    S.box("scope_foot", 3.70, -1.70, 0.58, 3.98, -1.44, 0.62, "metal_dark", bevel=0.012)
+    S.box("scope_pillar", 3.86, -1.54, 0.62, 3.93, -1.47, 0.90, "metal_dark", bevel=0.008)
+    S.box("scope_stage", 3.72, -1.66, 0.70, 3.90, -1.50, 0.72, "steel", bevel=0.005)
+    S.box("scope_head", 3.74, -1.58, 0.86, 3.93, -1.49, 0.93, "ceramic", bevel=0.012)
+    S.cyl("scope_tube", 3.81, -1.56, 0.032, 0.72, 1.00, "steel", segs=10, bevel=0.0)
+    S.box("cable", 2.50, -0.12, 0.0, 2.56, -0.04, 0.66, "fur_black", bevel=0.01)
+    return (5, 2), 1.32
+
+
+def _multi_analyzer():
+    """2 x 2 multi-analyzer (RSCH-3): a facility a hi-tech research bench
+    links to. A white enamel base on a plinth carries an instrument column
+    with a read-out screen, a slim signal tower and a glass-domed sample
+    carousel; the screen, lamps and carousel ring glow while powered."""
+    import math
+    S.box("plinth", 0.06, -1.94, 0.0, 1.94, -0.06, 0.10, "steel_dark", bevel=0.015)
+    S.box("base", 0.12, -1.88, 0.10, 1.88, -0.12, 0.62, "ceramic", bevel=0.04, segments=2)
+    S.box("base_top", 0.10, -1.90, 0.60, 1.90, -0.10, 0.64, "steel", bevel=0.02)
+    S.box("stripe", 0.13, -1.895, 0.46, 1.87, -1.875, 0.52, "pod_paint", bevel=0.0)
+    # front panel: sample drawer, keypad and vents
+    S.box("drawer", 0.26, -1.905, 0.18, 0.98, -1.88, 0.40, "pod_hull", bevel=0.01)
+    S.box("drawer_pull", 0.50, -1.925, 0.33, 0.74, -1.90, 0.36, "metal_dark", bevel=0.004)
+    for k in range(3):
+        for j in range(2):
+            S.box("key%d%d" % (k, j), 1.18 + 0.09 * k, -1.90, 0.24 + 0.08 * j, 1.25 + 0.09 * k, -1.88,
+                  0.30 + 0.08 * j, "metal_dark", bevel=0.003)
+    for k in range(3):
+        z = 0.16 + 0.05 * k
+        S.box("vent%d" % k, 1.50, -1.895, z, 1.80, -1.88, z + 0.025, "metal_dark", bevel=0.0)
+    P.glow(S.box("panel_lamp", 1.52, -1.905, 0.36, 1.78, -1.885, 0.40, "backdrop", bevel=0.003), "indicator")
+    # instrument column (back left) with a read-out on its south face
+    S.box("column", 0.18, -0.92, 0.64, 1.10, -0.18, 1.28, "pod_hull", bevel=0.035, segments=2)
+    S.box("bezel", 0.24, -0.935, 0.76, 1.04, -0.915, 1.16, "steel_dark", bevel=0.01)
+    P.glow(S.box("readout", 0.28, -0.95, 0.80, 1.00, -0.93, 1.12, "backdrop", bevel=0.004), "indicator")
+    S.box("column_cap", 0.16, -0.94, 1.26, 1.12, -0.16, 1.31, "steel", bevel=0.015)
+    P.glow(S.box("cap_lamp", 0.34, -0.62, 1.31, 0.94, -0.48, 1.325, "backdrop", bevel=0.004), "indicator")
+    # slim signal tower (back right): a lamp strip south, vents on top
+    S.box("tower", 1.40, -0.62, 0.64, 1.80, -0.20, 1.16, "steel_dark", bevel=0.025)
+    for k in range(4):
+        z = 0.72 + 0.10 * k
+        P.glow(S.box("tower_lamp%d" % k, 1.54, -0.635, z, 1.66, -0.615, z + 0.05, "backdrop", bevel=0.003),
+               "med_teal_glow")
+    for k in range(3):
+        x = 1.47 + 0.10 * k
+        S.box("roof_vent%d" % k, x, -0.56, 1.16, x + 0.06, -0.26, 1.175, "metal_dark", bevel=0.0)
+    # open sample carousel (front right) on a ringed turntable
+    cx, cy = 1.30, -1.28
+    S.cyl("turntable", cx, cy, 0.42, 0.64, 0.70, "metal_dark", segs=28, bevel=0.01)
+    P.glow(S.cyl("ring", cx, cy, 0.40, 0.70, 0.712, "backdrop", segs=28, bevel=0.0), "med_teal_glow")
+    S.cyl("deck", cx, cy, 0.34, 0.70, 0.73, "steel", segs=24, bevel=0.005)
+    liquids = ("med_blue", "med_red", "circuit", "reagent_violet", "med_amber", "med_blue")
+    for k, mat in enumerate(liquids):
+        a = k / len(liquids) * 2 * math.pi + 0.3
+        x, y = cx + 0.22 * math.cos(a), cy + 0.22 * math.sin(a)
+        S.cyl("vial%d" % k, x, y, 0.04, 0.73, 0.94, "glass", segs=10, bevel=0.0)
+        S.cyl("vial_fill%d" % k, x, y, 0.034, 0.75, 0.86, mat, segs=10, bevel=0.0)
+    S.cyl("spindle", cx, cy, 0.05, 0.73, 1.00, "steel", segs=12, bevel=0.005)
+    S.cyl("hub", cx, cy, 0.08, 1.00, 1.04, "metal_dark", segs=12, bevel=0.01)
+    # power trunk into the back left corner
+    S.box("cable", 0.14, -0.14, 0.0, 0.22, -0.06, 0.64, "fur_black", bevel=0.01)
+    return (2, 2), 1.33
 
 
 def _vitals_monitor():
@@ -882,7 +1013,7 @@ BUILDERS = {
     "feeding_trough_full": (lambda: _trough(True), {"building": "feeding trough", "state": "full"}),
     "horseshoe_pin": (_horseshoe_pin, {}),
     "sandbags": (_sandbags, {}),
-    "research_bench": (_research_bench, {"attachments": {"worker": [0.5, 1.15]}}),
+    "research_bench": (_research_bench, {"attachments": {"worker": [1.5, 2.15]}}),
     "spike_trap": (_spike_trap, {}),
     "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]}}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
@@ -909,10 +1040,12 @@ BUILDERS = {
     "electric_tailoring_bench": (_electric_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]},
                                                              "building": "electric tailoring bench",
                                                              "recipes": "tailoring bench"}),
-    "electric_research_bench": (_electric_research_bench, {"attachments": {"worker": [0.5, 1.15]},
+    "electric_research_bench": (_electric_research_bench, {"attachments": {"worker": [2.5, 2.15]},
                                                            "building": "electric research bench",
                                                            "recipes": "research bench"}),
     "vitals_monitor": (_vitals_monitor, {"building": "vitals monitor"}),
+    # RSCH-3: the multi-analyzer facility (one facing; its glow is the on state)
+    "multi_analyzer": (_multi_analyzer, {"building": "multi-analyzer"}),
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
 ROTATABLE = {"hospital_bed", "grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stonecutter_table", "stove_basic", "butcher_table",

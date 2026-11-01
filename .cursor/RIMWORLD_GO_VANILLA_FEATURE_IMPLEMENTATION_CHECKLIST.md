@@ -1182,7 +1182,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Filth entities/layers** (SIM-020: blood and ichor stains that fade over 7 days and wash off in rain and snow; SIM-021: dirt tracked in on boots from outdoor ground and field work, kept indoors until cleaned; no vomit or trash, animals track no dirt)
     -   Dirt, blood, vomit, trash-like filth.
     -   Created by movement/events/injuries/animals as appropriate.
--   [-] **Cleanliness** (SIM-021: room filth from dirt and stains costs up to 10 impressiveness, shown in room labels; floor properties and medical/cooking/research effects missing)
+-   [-] **Cleanliness** (SIM-021: room filth from dirt and stains costs up to 10 impressiveness, shown in room labels; RSCH-1: research benches use the wiki cleanliness factor; floor properties and medical/cooking effects missing)
     -   Room cleanliness derived from filth/floor properties.
     -   Influences medical/cooking/research or other vanilla-equivalent
         systems.
@@ -1207,7 +1207,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.1 Generic workbench system
 
--   [x] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; PLAY-021: electric stove, tailoring and research benches work 40% faster and stop without power; PRD-3: 24 bench and building kinds with wiki footprints, wiki watts on the powered benches, recipes shared across benches (`recipe.Def.Also`, `RecipeView.RunsAt`), facilities (tool cabinet +6 %, `craft/facility.go`), work speed from bench factor, light, roof and cleanliness (`craft/station.go`, `BuildingView.Linked`/`WorkSpeed`), wood-fired forge fuel, 16 new research projects)
+-   [x] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; PLAY-021: electric stove and tailoring bench work 40% faster and stop without power (RSCH-1: the hi-tech research bench uses the wiki bench factor instead); PRD-3: 24 bench and building kinds with wiki footprints, wiki watts on the powered benches, recipes shared across benches (`recipe.Def.Also`, `RecipeView.RunsAt`), facilities (tool cabinet +6 %, `craft/facility.go`), work speed from bench factor, light, roof and cleanliness (`craft/station.go`, `BuildingView.Linked`/`WorkSpeed`), wood-fired forge fuel, 16 new research projects)
     -   Supported recipes.
     -   interaction cell.
     -   power requirement where applicable.
@@ -1683,25 +1683,25 @@ have prerequisites, and technologies unlock buildings/gear.
 
 ## 21.1 Research definitions
 
--   [x] **Research project** (45 projects with flat hand-tuned costs; no tech level or bench tier yet; RSCH-1 moves to wiki costs, `.cursor/RESEARCH_GAP_ANALYSIS.md`)
+-   [x] **Research project** (RSCH-1: 54 projects at wiki base costs, tech levels, bench tiers (simple, hi-tech, hi-tech + multi-analyzer) and drawn plus hidden prerequisites, mapped onto our content; the tech-level cost multiplier (a tribe pays 1.5x Medieval, 2x Industrial+); `.cursor/RESEARCH_GAP_ANALYSIS.md` §4)
     -   Cost.
     -   prerequisites.
     -   tech level.
     -   required bench/facilities.
     -   unlocked definitions.
--   [x] **Research DAG** (prerequisites; gunsmithing after traps)
+-   [x] **Research DAG** (prerequisites per the wiki tree, hidden ones gate too; an acyclicity test, `domain/research/rsch1_test.go`)
     -   Validate no invalid cycles.
     -   UI layout can derive from prerequisite graph.
 
 ## 21.2 Research work
 
--   [x] **Simple research bench**
--   [ ] **Advanced research bench**
--   [x] **Research job** (Research work type; two-hour sittings at the nearest free bench)
+-   [x] **Simple research bench** (RSCH-1: 3x2, factor 0.75, basic projects only)
+-   [x] **Advanced research bench** (RSCH-1: the hi-tech research bench, 5x2, 250 W, needs Microelectronics (our Microcircuits); a multi-analyzer (2x2, 200 W) within 6 tiles adds +0.10 and opens the analyzer projects)
+-   [x] **Research job** (Research work type; two-hour sittings at the nearest free bench that can work the project; RSCH-1: wiki research speed (Intellectual 8 % + 11.5 %/level, manipulation and sight at half weight, global work speed), bench factor (laboratory, cleanliness, outdoors, temperature with hysteresis), difficulty factor; `game/research`)
     -   Intellectual skill.
     -   bench speed.
     -   room/environment modifiers as appropriate.
--   [x] **Research progress** (one point per working tick; finish message; saved)
+-   [x] **Research progress** (RSCH-1: 0.00825 points a tick x speed x bench x difficulty, fraction carried; research-complete letter with the description; no queue; saved, v9 migration keeps each project's fraction of its cost)
     -   Player selects active project.
     -   Researchers contribute points.
     -   completion unlocks content.
@@ -2037,7 +2037,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [-] **Message system** (short notices under the colonist bar that fade; no rate limiting yet)
     -   Short transient notices.
     -   Rate-limit repeated low-value messages.
--   [-] **Alert system** (persistent alerts for low food, rescue, starving, collapsed, break risk, hypothermia/heatstroke, fuel, spoiling, waiting blueprints, unhappy, raids, fire, animals; PLAY-018: severity order, hover explanation, click/right-click cycling; no research/idle/unburied/beds alerts yet)
+-   [-] **Alert system** (persistent alerts for low food, rescue, starving, collapsed, break risk, hypothermia/heatstroke, fuel, spoiling, waiting blueprints, unhappy, raids, fire, animals; PLAY-018: severity order, hover explanation, click/right-click cycling; no idle/unburied/beds alerts yet; RSCH-2: "Need research project" shows from `WorldView.ResearchAlert`, which RSCH-1 raises)
     -   Persistent colony problems:
         -   low food;
         -   colonist needs rescue;
@@ -2814,7 +2814,7 @@ agent-developed. citeturn0search4
 -   [ ] **Set time**
 -   [ ] **Damage/heal pawn**
 -   [ ] **Add/remove health condition**
--   [ ] **Finish research**
+-   [-] **Finish research** (RSCH-1: `command.DevFinishResearch` finishes the current project; the Research tab's button is RSCH-2)
 -   [ ] **Change goodwill**
 -   [ ] **Teleport pawn**
 -   [ ] **Reveal path**

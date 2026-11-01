@@ -7,18 +7,21 @@ import (
 	"rimworld-go/internal/domain/research"
 )
 
-// TestVitalsMonitorNeedsFabrication: the vitals monitor is behind
-// Fabrication like the hospital bed.
+// TestVitalsMonitorNeedsFabrication (RSCH-1, wiki: Research): the vitals
+// monitor is behind its own project, which needs the multi-analyzer and
+// hospital beds.
 func TestVitalsMonitorNeedsFabrication(t *testing.T) {
 	key := "build:" + construction.VitalsMonitor.String()
-	if p, ok := (research.Progress{}).Locks(key); !ok || p != research.Fabrication {
+	if p, ok := (research.Progress{}).Locks(key); !ok || p != research.VitalsMonitors {
 		t.Fatalf("locked by %v %v", p, ok)
 	}
+	if d := research.DefOf(research.VitalsMonitors); len(d.Requires) != 2 || d.Requires[0] != research.MultiAnalysis ||
+		d.Requires[1] != research.HospitalBeds {
+		t.Fatalf("vitals monitors require %v", d.Requires)
+	}
 	var pr research.Progress
-	pr.Add(research.Traps, research.DefOf(research.Traps).Cost)
-	pr.Add(research.Gunsmithing, research.DefOf(research.Gunsmithing).Cost)
-	pr.Add(research.Fabrication, research.DefOf(research.Fabrication).Cost)
+	pr.Add(research.VitalsMonitors, research.DefOf(research.VitalsMonitors).Cost)
 	if _, ok := pr.Locks(key); ok {
-		t.Fatal("still locked after fabrication")
+		t.Fatal("still locked after the project")
 	}
 }

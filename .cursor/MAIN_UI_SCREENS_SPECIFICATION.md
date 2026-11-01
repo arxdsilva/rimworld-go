@@ -1046,6 +1046,8 @@ power; - research lock; - inaccessible materials.
 
 # 24. Research Screen
 
+**RSCH-2 (implemented):** the Research tab (F6) is RimWorld's research screen: a left info panel (name, tech level, description, "X / Y" with ETA, prerequisite links, hidden prerequisites as text, bench and facility in red while missing, unlocks, Start research, "Debug: finish now" in developer mode) and the tech tree on the right (tech-level columns, prerequisite lines, done green, available dark, unavailable grey, the current project outlined and filling with progress; drag, middle-drag, wheel and Shift+wheel pan; search dims non-matches and Enter jumps to the first). Selecting a box lights its prerequisite chain. Code: `windows/research*.go`; widget ids `research.pick.<id>`, `research.tree`, `research.search`, `research.info`, `research.start`, `research.devfinish`, `research.prereq.<id>`.
+
 ## Purpose
 
 Understand and control technological progression.
@@ -2204,7 +2206,7 @@ Agents should implement screens approximately in this dependency order.
 ## Wave UI-4 --- Production and defense
 
 -   [ ] Bills
--   [ ] Research
+-   [x] Research (RSCH-2)
 -   [ ] Assign/Policies
 -   [ ] combat controls/targeting on Main Colony
 -   [-] environmental overlays (roof, power, fertility, cover and Shift+T temperature done; beauty and room overlays missing)

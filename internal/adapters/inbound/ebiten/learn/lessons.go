@@ -132,8 +132,8 @@ var Catalog = []Lesson{
 		}},
 
 	{ID: "research", Title: "Start research", Goal: "Pick a research project.", Body: func(key KeyFunc) string {
-		return fmt.Sprintf("Open the Research tab with %s and pick a project from the list. "+
-			"Research needs a research bench and a colonist with Research work turned on. "+
+		return fmt.Sprintf("Open the Research tab with %s, select a project in the tree and press Start research. "+
+			"Research needs a research bench that can work it and a colonist with Research work turned on. "+
 			"Finished projects open up new options.", key(input.TabResearch))
 	},
 		OnCmd: func(_ *Memo, c command.Command) bool { return cmdIn(c, command.SetResearch) }},

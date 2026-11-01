@@ -22,6 +22,34 @@ func animalPart(s animal.Species, n uint8) Part {
 
 func grant(p research.Project) Part { return Part{Kind: PartResearch, Project: p} }
 
+// Starting research (RSCH-1, wiki: Scenario system), mapped onto our
+// projects; rows with no content here (tree sowing) are left out.
+var (
+	// Crashlanded and Naked Brutality: passive cooler, stonecutting,
+	// complex clothing, complex furniture, electricity, air conditioning,
+	// nutrient paste.
+	crashStart = []research.Project{research.PassiveCooling, research.Stonecutting, research.Tailoring, research.Upholstery,
+		research.Electricity, research.AirConditioning, research.NutrientPaste}
+	// Lost Tribe: passive cooler, recurve bow, psychoid brewing (our
+	// herbalism), pemmican.
+	tribeStart = []research.Project{research.PassiveCooling, research.Bowcraft, research.Herbalism, research.TrailRations}
+	// Rich Explorer adds smithing, machining, gunsmithing, blowback
+	// operation and gun turrets to the Crashlanded set ([MEM]: unconfirmed,
+	// so original tuning until verified).
+	explorerStart = []research.Project{research.Metalworking, research.MachineTools, research.Gunsmithing, research.SelfLoading,
+		research.Sentries}
+)
+
+// grantAll is one research part per project, as a part list spliced in
+// by the caller.
+func grantAll(ps []research.Project) []Part {
+	out := make([]Part, len(ps))
+	for i, p := range ps {
+		out[i] = grant(p)
+	}
+	return out
+}
+
 func intro(text string) Part { return Part{Kind: PartIntro, Text: text} }
 
 // Built-in seeds are fixed so a built-in scenario's own random parts
@@ -36,6 +64,17 @@ const (
 // Builtins are the four built-in scenarios in display order (NG-1 §3.1).
 // Every call returns fresh copies the caller may edit.
 func Builtins() []Def {
+	ds := builtinDefs()
+	for i, starts := range [][][]research.Project{{crashStart}, {tribeStart}, {crashStart, explorerStart}, {crashStart}} {
+		for _, ps := range starts {
+			ds[i].Parts = append(ds[i].Parts, grantAll(ps)...)
+		}
+	}
+	return ds
+}
+
+// builtinDefs is the four scenarios before their starting research.
+func builtinDefs() []Def {
 	return []Def{
 		{
 			Key: "broken_hull", Name: "Broken Hull", Builtin: true, Seed: seedBrokenHull,
@@ -63,8 +102,6 @@ func Builtins() []Def {
 				scatter(item.Steel, 400, 4),
 				scatter(item.SurvivalMeal, 8, 1),
 				scatter(item.Components, 6, 1),
-				grant(research.FoodPreservation),
-				grant(research.Traps),
 				intro("The alarms are still ringing in your ears when the lifeboats strike the ground. " +
 					"Hatches pop one after another, and the three of you tumble out into cold, clean air. " +
 					"Behind you the sky is full of falling hull plates, some of them burning. " +
@@ -120,11 +157,6 @@ func Builtins() []Def {
 				startItem(item.Knife, 1),
 				startItem(item.Parka, 1),
 				startItem(item.Duster, 1),
-				grant(research.FoodPreservation),
-				grant(research.Herbalism),
-				grant(research.Tailoring),
-				grant(research.Traps),
-				grant(research.Gunsmithing),
 				intro("The pod's door opens with a soft pneumatic sigh, and sunlight pours in across a crate of silver you have no way to spend. " +
 					"For the first time in a long career, nobody is taking notes. " +
 					"You came here to see something no one has mapped, and you were certain you could manage it alone. " +

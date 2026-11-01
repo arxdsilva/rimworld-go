@@ -38,8 +38,8 @@ func TestServoRecipesNeedResearch(t *testing.T) {
 	}
 
 	d := research.DefOf(research.ServoReplacements)
-	if len(d.Requires) != 2 || d.Requires[0] != research.Prosthetics || d.Requires[1] != research.Fabrication {
-		t.Fatalf("servo replacements requires %v", d.Requires)
+	if len(d.Requires) != 1 || d.Requires[0] != research.Fabrication || len(d.Hidden) != 1 || d.Hidden[0] != research.Prosthetics {
+		t.Fatalf("servo replacements requires %v hidden %v (wiki: Bionic replacements)", d.Requires, d.Hidden)
 	}
 	if pr.Available(research.ServoReplacements) {
 		t.Fatal("servo replacements needs its prerequisites")

@@ -235,8 +235,8 @@ func TestRoomLitFollowsTheLights(t *testing.T) {
 func TestLampLockedBeforeElectricity(t *testing.T) {
 	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 48, Height: 40})
-	if !g.buildLocked(construction.Lamp) || g.lockedBy("build:lamp") != "Electricity" {
-		t.Fatalf("lamp locked %v by %q, want Electricity", g.buildLocked(construction.Lamp), g.lockedBy("build:lamp"))
+	if !g.buildLocked(construction.Lamp) || g.lab.LockedBy("build:lamp") != "Electricity" {
+		t.Fatalf("lamp locked %v by %q, want Electricity", g.buildLocked(construction.Lamp), g.lab.LockedBy("build:lamp"))
 	}
 	if g.buildLocked(construction.TorchLamp) {
 		t.Fatal("the torch lamp is locked")

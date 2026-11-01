@@ -891,7 +891,7 @@ understandable.
 
 ## 15.1 Research screen
 
--   [ ] **Technology graph/tree**
+-   [-] **Technology graph/tree** (RSCH-2: tech-level columns, boxes, prerequisite lines (hidden ones not drawn), drag/wheel/Shift+wheel pan, search that dims non-matches and jumps on Enter, selection lights the prerequisite chain; no zoom, which vanilla does not have either)
     -   Nodes.
     -   prerequisites.
     -   dependency lines.
@@ -903,26 +903,26 @@ understandable.
     -   selected.
     -   in progress.
     -   completed.
--   [ ] **Current project**
+-   [x] **Current project** (RSCH-2: the box fills with progress and says "Researching N%"; the panel shows "X / Y" at the colony's tech-level cost and the ETA at today's pace; the window opens on it)
     -   progress.
     -   cost.
     -   estimated work context where useful.
 
 ## 15.2 Project detail panel
 
--   [ ] **Name/description**
--   [ ] **Prerequisites**
--   [ ] **Required bench/facilities**
--   [ ] **Unlock list**
+-   [x] **Name/description** (RSCH-2 info panel: name, tech level, description)
+-   [x] **Prerequisites** (RSCH-2: each a link that selects and centres it, finished ones green; hidden prerequisites as text)
+-   [x] **Required bench/facilities** (RSCH-2: bench and facility lines, red while missing, with the simulation's reason)
+-   [x] **Unlock list** (RSCH-2: the project's unlocks in words)
     -   Buildings.
     -   recipes.
     -   items.
     -   systems.
--   [x] **Select research command** (click a project in the Research tab)
+-   [x] **Select research command** (RSCH-2: a click selects a box; Start research sends SetResearch, disabled with "Needs X first" while locked)
 
 ## 15.3 Plugin support
 
--   [ ] **Dynamic graph layout**
+-   [x] **Dynamic graph layout** (RSCH-2: layered layout computed from the prerequisite DAG and tech levels, barycentre ordering to avoid crossings, cached per research-list change; no hardcoded coordinates)
     -   Plugin projects must integrate without hardcoded coordinates
         where possible.
 -   [ ] **Namespaced provenance in developer mode**
@@ -1271,7 +1271,7 @@ the player what just happened and what requires attention.
 -   [-] **Expandable details** (PLAY-018: a hover card left of the alert explains what is wrong and what to do; affected targets come by click cycling, not listed)
     -   Which pawns/items/rooms are affected.
 -   [x] **Click cycles affected targets** (click forward, right-click back)
--   [-] **Examples** (UI-014: animals hungry, wild animals eating crops, timbergnaws eating trees (N felled), pen full alerts; BED-3: "colonists need beds" alert, `hud/alerts.go` key `nobed`)
+-   [-] **Examples** (UI-014: animals hungry, wild animals eating crops, timbergnaws eating trees (N felled), pen full alerts; BED-3: "colonists need beds" alert, `hud/alerts.go` key `nobed`; RSCH-2: "Need research project", key `research`, from `WorldView.ResearchAlert`, a click opens the Research tab)
     -   low food.
     -   colonist needs rescue.
     -   medical emergency.
@@ -1904,7 +1904,7 @@ source and intended for AI-assisted development.
 -   [-] **Trigger incident** (UI-016: herd crossing, farm animals, mad animal)
 -   [ ] **Set weather**
 -   [ ] **Change time**
--   [ ] **Finish research**
+-   [x] **Finish research** (RSCH-2: "Debug: finish now" in the research panel in developer mode, DevFinishResearch; hidden in commitment colonies)
 -   [ ] **Change goodwill**
 -   [x] **Generate raid** (UI-016)
 -   [ ] **Force job**
@@ -1980,7 +1980,7 @@ manageable beyond vanilla-scale colonies.
 -   [x] **Pawn search** (UI-016: Z)
 -   [x] **Animal search** (name or species)
 -   [-] **Item/storage search** (items by kind on the map; buildings, plants and blueprints too; no storage contents yet)
--   [ ] **Research search**
+-   [x] **Research search** (RSCH-2: the Research tab's search field matches labels and unlocks)
 -   [ ] **Build menu search**
 -   [ ] **Quest search**
 -   [ ] **Plugin search**
@@ -2114,7 +2114,7 @@ fail, suffer, or break.
 Complete:
 
 -   [ ] Bills.
--   [ ] Research.
+-   [x] Research. (RSCH-2)
 -   [x] Power overlay. (PLAY-021)
 -   [x] Temperature/roof overlays. (SIM-018: roof overlay; TEMP-5: Shift+T temperature overlay)
 -   [ ] Drafted combat.

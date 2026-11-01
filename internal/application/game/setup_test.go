@@ -167,7 +167,7 @@ func TestSetupNilIsLegacy(t *testing.T) {
 	if g.Factions() == nil && len(g.Factions()) != 0 || len(g.Factions()) != 0 {
 		t.Fatal("a legacy colony has no factions")
 	}
-	if g.diffScale(DiffCrop, 7) != 7 || g.moodOffset() != 0 || g.researchCostPct() != 100 || g.growthPct() != 100 {
+	if g.diffScale(DiffCrop, 7) != 7 || g.moodOffset() != 0 || (researchHost{g}).CostPct() != 100 || g.growthPct() != 100 {
 		t.Fatal("legacy hooks must be neutral")
 	}
 }
@@ -268,7 +268,7 @@ func TestSetupBuildsChosenMap(t *testing.T) {
 	if len(stones) == 0 {
 		t.Fatal("no stone at all")
 	}
-	if !g.research.Done(research.FoodPreservation) || g.research.Done(research.Herbalism) {
+	if !g.lab.Prog.Done(research.PassiveCooling) || g.lab.Prog.Done(research.FoodPreservation) {
 		t.Fatal("research: grants only")
 	}
 	// southern hemisphere: the season still starts as chosen
@@ -512,33 +512,43 @@ func TestScenarioKitSpawned(t *testing.T) {
 func TestResearchGrantsAndCostPct(t *testing.T) {
 	t.Parallel()
 	g := buildSetup(t, setupFor(t, "gilded_expedition", nil))
-	for _, p := range []research.Project{research.FoodPreservation, research.Herbalism, research.Tailoring, research.Traps, research.Gunsmithing} {
-		if !g.research.Done(p) {
+	// RSCH-1, wiki: Scenario system (Rich Explorer: the Crashlanded set
+	// plus smithing, machining, gunsmithing, blowback and gun turrets)
+	for _, p := range []research.Project{research.PassiveCooling, research.Stonecutting, research.Tailoring, research.Upholstery,
+		research.Electricity, research.AirConditioning, research.NutrientPaste, research.Metalworking, research.MachineTools,
+		research.Gunsmithing, research.SelfLoading, research.Sentries} {
+		if !g.lab.Prog.Done(p) {
 			t.Fatalf("%s not granted", research.DefOf(p).Label)
 		}
-		for _, r := range research.DefOf(p).Requires {
-			if !g.research.Done(r) {
+		for _, r := range slices.Concat(research.DefOf(p).Requires, research.DefOf(p).Hidden) {
+			if !g.lab.Prog.Done(r) {
 				t.Fatalf("%s granted without its prerequisite", research.DefOf(p).Label)
 			}
 		}
 	}
-	if g.researchCostPct() != 100 {
-		t.Fatalf("industrial cost %d%%", g.researchCostPct())
+	if (researchHost{g}).CostPct() != 100 || (researchHost{g}).Tech() != research.Industrial {
+		t.Fatalf("industrial cost %d%%", (researchHost{g}).CostPct())
 	}
 	e := buildSetup(t, setupFor(t, "ember_clan", nil))
-	if e.researchCostPct() != 150 {
-		t.Fatalf("neolithic cost %d%%", e.researchCostPct())
+	if (researchHost{e}).CostPct() != 100 || (researchHost{e}).Tech() != research.Neolithic {
+		t.Fatalf("neolithic cost %d%%", (researchHost{e}).CostPct())
 	}
+	tribe := []research.Project{research.PassiveCooling, research.Bowcraft, research.Herbalism, research.TrailRations}
 	for p := research.Project(0); p < research.NumProjects; p++ {
-		if e.research.Done(p) {
-			t.Fatalf("ember clan knows %s", research.DefOf(p).Label)
+		if e.lab.Prog.Done(p) != slices.Contains(tribe, p) {
+			t.Fatalf("ember clan knows %s: %v", research.DefOf(p).Label, e.lab.Prog.Done(p))
 		}
+	}
+	// wiki: a tribe pays 1.5x for Medieval and 2x for Industrial projects
+	views := e.World().Research
+	if views[research.Tailoring].CostNow != 900 || views[research.Electricity].CostNow != 3200 || views[research.Brewing].CostNow != 400 {
+		t.Fatalf("tribal costs: %d %d %d", views[research.Tailoring].CostNow, views[research.Electricity].CostNow, views[research.Brewing].CostNow)
 	}
 	c := buildSetup(t, setupFor(t, "ember_clan", func(s *Setup) {
 		s.Scenario.Parts = append(s.Scenario.Parts, scenario.Part{Kind: scenario.PartResearchCost, Percent: 200})
 	}))
-	if c.researchCostPct() != 300 {
-		t.Fatalf("neolithic x200%%: %d%%", c.researchCostPct())
+	if (researchHost{c}).CostPct() != 200 {
+		t.Fatalf("neolithic x200%%: %d%%", (researchHost{c}).CostPct())
 	}
 }
 
@@ -844,13 +854,13 @@ func TestDifficultyHooks(t *testing.T) {
 		infection50, revenge50, infection90 int
 		huntColonists                       bool
 	}{
-		{difficulty.Wanderer, 13, 13, 12, 13, 12, 200, 25, 360, false},
+		{difficulty.Wanderer, 13, 13, 12, 12, 12, 200, 25, 360, false}, // RSCH-1: research x1.2 (wiki)
 		{difficulty.Seasoned, 10, 10, 10, 10, 0, 500, 50, 900, true},
 		{difficulty.Merciless, 8, 8, 8, 9, -8, 650, 65, 1000, true},
 	}
 	for _, c := range cases {
 		g := bareSetupGame(c.preset)
-		got := []int{g.diffScale(DiffCrop, 10), g.diffScale(DiffMine, 10), g.diffScale(DiffButcher, 10), g.diffScale(DiffResearch, 10), g.moodOffset()}
+		got := []int{g.diffScale(DiffCrop, 10), g.diffScale(DiffMine, 10), g.diffScale(DiffButcher, 10), (researchHost{g}).Difficulty() / 10, g.moodOffset()}
 		want := []int{c.crop, c.mine, c.butcher, c.research, c.mood}
 		if !slices.Equal(got, want) {
 			t.Fatalf("%s yields/mood %v, want %v", c.preset, got, want)
