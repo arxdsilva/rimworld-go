@@ -107,6 +107,7 @@ Every spawned agent stays in Claude Code's agent list for the rest of the sessio
 | Stop each agent with `TaskStop` once its work is integrated and committed and you won't resume it | Leave finished agents open "just in case" across commits |
 | Before each wave commit, stop every agent of that wave you won't resume; at the end of a programme, stop them all | Carry a programme's agents into unrelated work |
 | When the list has grown large (about 50 or more) and the work is committed, tell the user that a new session starts with a clean list | Claim `TaskStop` removes entries: it only marks them stopped |
+| Split or stop a worker before about 200 API calls, handing the rest to a fresh agent with a short summary (every call re-reads its whole context; the top 50 of 395 workers were 52% of subagent cache reads) | Keep one worker going for a whole programme |
 
 Notes:
 - **Stopped agents stay listed.** A stopped agent stays listed but is not running, and messaging it resumes it, so stopping costs nothing if you later need it.
@@ -132,3 +133,5 @@ Every subagent runs on the **cheapest model that can do its job well**. Choose p
 | Escalate one tier when an agent fails its gate twice or reports it is stuck; relaunch with the reason | Keep retrying a stuck agent on the same tier |
 | State the model and a one-line reason in every launch, and add a Model column to every phase table | Leave the model implicit (it then inherits the lead's) |
 | Keep the lead on the session's model | Use other models (e.g. `fable`) unless the user asks for it |
+
+**Enforced by hooks (`.claude/settings.json`).** `.claude/hooks/agent_model_guard.py` denies a `general-purpose` or untyped spawn with no `model`, so the tier is always a choice. Forks and agent types with their own model are exempt. `Explore` runs on `haiku` through `.claude/agents/Explore.md`: it locates code, and judgement stays with the lead or an `opus` agent. An explicit `model` on a spawn still overrides it.

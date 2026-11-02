@@ -219,6 +219,8 @@ Never store chain-of-thought.
 
 # 9. Interface Summaries
 
+> **Not built:** `.cursor/interfaces/` does not exist. Read the package's interface with a ranged Read or use the LSP tool.
+
 When another agent depends on a package, prefer a generated/summarized interface file instead of the entire package.
 
 Example:
@@ -242,6 +244,8 @@ This can save thousands of tokens.
 ---
 
 # 10. Context Index
+
+> **Not built:** `.cursor/CONTEXT_INDEX.md` does not exist. Use `.cursor/DOCUMENT_INDEX.md` and skill `rimworld-go-router`.
 
 Create:
 
@@ -421,6 +425,8 @@ Do not create alternatives such as `ActorID`, `SimTick`, `GridPos`, etc. unless 
 
 # 19. Generated Repository Maps
 
+> **Not built:** `.cursor/REPO_MAP.md` does not exist. Package `AGENTS.md` files and `grep` cover this.
+
 Maintain a lightweight generated file:
 
 ```text
@@ -441,6 +447,8 @@ This is cheaper than exploratory reads.
 ---
 
 # 20. Symbol Index
+
+> **Not built, and not planned:** the LSP tool (`gopls`) and `grep -n` give symbol lookup.
 
 Optional tooling can generate:
 
@@ -502,6 +510,8 @@ Otherwise context/merge cost exceeds benefit.
 ---
 
 # 23. Task Dependency Graph
+
+> **Not built:** `.cursor/TASK_GRAPH.md` does not exist. Use the checklists and each plan's Parallel workers section.
 
 Maintain:
 
@@ -714,6 +724,24 @@ Use metrics to identify:
 
 ---
 
+# 32a. Enforcement and Measurement
+
+Advisory rules in this guide did not hold: most subagent work ran on the lead's model and most code reading went through the shell. These parts are enforced instead:
+
+| Rule | Where | Limit |
+| --- | --- | --- |
+| Long shell views go through ranged Read | `.claude/hooks/read_guard.py` | Over 150 lines per command (`READ_GUARD_MAX_VIEW_LINES`) |
+| Big files are read in ranges | `.claude/hooks/read_guard.py` | Whole-file Read over 500 lines (`READ_GUARD_MIN_LINES`) |
+| `general-purpose` agents name a model | `.claude/hooks/agent_model_guard.py` | Any spawn with no `model` |
+| `Explore` runs on Haiku | `.claude/agents/Explore.md` | Explicit `model` overrides it |
+| Context stays small | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in `.claude/settings.json` | Auto-compact at 300k |
+
+Small shell views stay allowed on purpose. Through Read they print the same text, so denying them only adds a call, and every call re-reads the whole context. `READ_GUARD=off` disables the read guard.
+
+Measure with `python3 scripts/token_report.py --since <date>`. Before changing a guard rule, run `--last 400 --replay` to see what it would deny, and run `python3 .claude/hooks/test_hooks.py`. The baseline and expected results are in `.cursor/handoffs/TOKEN-001-usage-guards.md`.
+
+---
+
 # 33. High Token Usage Usually Signals a Problem
 
 Repeated very large prompts can indicate:
@@ -811,6 +839,8 @@ At completion:
 
 # 39. Recommended Automation Tooling
 
+> **Not built, and not planned:** none of these `tools/` exist. The tooling in use is in §32a.
+
 Create helper tools:
 
 ```text
@@ -833,6 +863,8 @@ go run ./tools/handofflint .cursor/handoffs/PATH-021.md
 ---
 
 # 40. Context Pack Manifest
+
+> **Not built, and not planned:** this depends on `contextpack` (§39).
 
 Each subsystem can have:
 
