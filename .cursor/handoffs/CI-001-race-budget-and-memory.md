@@ -1,6 +1,6 @@
 # CI-001: the `-race` suite within CI's time and memory
 
-`test` and `release` failed on `main` after about 14 minutes (`FAIL`, exit 1). The failing line was never seen: job logs need auth, and the pasted tail doesn't show it. The two causes below are what reproduces in a throttled Linux replay, so confirm on the next real run.
+`test` and `release` failed on `main` after about 14 minutes (`FAIL`, exit 1). The failing line was never seen: job logs need auth, and the pasted tail doesn't show it. The two causes below are what reproduced in a throttled Linux replay. Both workflows then passed on `7920f11d3` (v0.1.19).
 
 ## What was wrong
 - **Time.** `application/game` ran 1042 tests serially (346 s at 4 cores), and CI's wall time is about suite CPU / 4 on slower cores. `game` and the ebiten root starved each other towards the 10-minute per-binary timeout.
@@ -27,5 +27,5 @@ Replay: `docker run --cpuset-cpus 0-3 --cpus 2.2 --memory 7500m`, CI's command. 
 
 ## Gaps
 - `game` still uses about 570 s of CPU. At `-p 4` it took 567 s in the replay, so `-p 2` is what buys the margin. Next candidates, if it tightens: `TestViewCacheMatchesFresh` (48 s), `TestPopulationStableTenDays`. They were left alone because cutting them would reduce coverage.
-- A cold build at `-p 2` wasn't timed (the replay's cache was warm); `test.yml`'s job limit is 25 minutes.
+- The test step took 15m21 on real CI, against `test.yml`'s 25-minute job limit. Per-binary times need the job log, which needs auth.
 - No HUD change: this is test and CI work only.
