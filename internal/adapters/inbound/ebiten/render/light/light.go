@@ -1,10 +1,10 @@
 // Package light is the renderer's sun, moon and lamp lighting: the light
 // grid (sky exposure and lamp light per tile), the lit-sprite shader
-// (lit.kage) and its pair images, the light sources, the box and blob
-// shadows of buildings, rock, plants and items with their blur (creatures
-// cast none), daylight and the no-art sky overlay. It reads the frame's
-// *render.View and its own state, never the renderer (SOLID_GO.md §7);
-// the shadow pass asks the renderer for its casters through Casters.
+// (lit.kage) and its pair images, the light sources, the colonists' drop
+// shadows (the only shadows: nothing else casts one), daylight and the
+// no-art sky overlay. It reads the frame's *render.View and its own
+// state, never the renderer (SOLID_GO.md §7); the pipeline hands the
+// shadow pass its colonists' feet.
 package light
 
 import (

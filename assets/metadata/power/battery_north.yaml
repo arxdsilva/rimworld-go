@@ -8,11 +8,6 @@ footprint: [1, 2]
 origin_px: [16, 52]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.84
-  h: 0.77
-  d: 1.84
 rotatable: true
 facing: north
 building: battery

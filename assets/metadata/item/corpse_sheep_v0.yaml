@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [30, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.304
-  h: 0.57
-  d: 0.952
 ppt: 128
 item: sheep corpse
 species: sheep

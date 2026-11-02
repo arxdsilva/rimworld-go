@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [40, 34]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.474
-  h: 1.115
-  d: 0.937
 ppt: 128
 item: turkey corpse
 species: turkey

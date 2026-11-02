@@ -3,18 +3,13 @@ version: 1
 id: "core:furniture/fueled_smithy_west"
 image: generated/world/furniture/fueled_smithy_west.png
 scale: 2
-canvas: [160, 349]
-footprint: [1, 2]
+canvas: [160, 477]
+footprint: [1, 3]
 origin_px: [16, 77]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.909
-  h: 1.34
-  d: 1.904
 attachments:
-  worker: [0.5, 1.15]
+  worker: [1.5, 1.15]
 building: wood-fired forge
 fuel: wood
 rotatable: true

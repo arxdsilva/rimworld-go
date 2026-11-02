@@ -8,11 +8,6 @@ footprint: [3, 3]
 origin_px: [16, 76]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 2.88
-  h: 1.245
-  d: 2.755
 rotatable: false
 facing: south
 building: solar panel

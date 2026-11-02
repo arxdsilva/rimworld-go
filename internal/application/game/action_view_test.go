@@ -114,7 +114,7 @@ func TestActionRescueAndBenches(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	patient, _ := g.SpawnNamedPawn(6, 5, "Bo")
-	// (benches are placed along y=1, x=2..16)
+	// (3x1 benches are placed along y=1 and y=8, x=2..18)
 	if got := g.actionOf(id, job.Record{Kind: job.Rescue, State: job.Do}); got != ActionRescue {
 		t.Errorf("lifting a patient = %q", got)
 	}
@@ -129,22 +129,22 @@ func TestActionRescueAndBenches(t *testing.T) {
 
 	benches := []struct {
 		kind construction.Kind
-		x    int
+		x, y int
 		want string
 	}{
-		{construction.Workbench, 2, ActionCraft},
-		{construction.Stove, 4, ActionCook},
-		{construction.Campfire, 6, ActionCook},
-		{construction.DryingRack, 8, ActionCook},
-		{construction.TailoringBench, 10, ActionTailor},
-		{construction.ButcherTable, 12, ActionButcher},
+		{construction.Workbench, 2, 1, ActionCraft},
+		{construction.Stove, 6, 1, ActionCook},
+		{construction.Campfire, 10, 1, ActionCook},
+		{construction.DryingRack, 14, 1, ActionCook},
+		{construction.TailoringBench, 18, 1, ActionTailor},
+		{construction.ButcherTable, 2, 8, ActionButcher},
 		// PLAY-021: an electric bench works its base bench's recipes
-		{construction.ElectricStove, 14, ActionCook},
-		{construction.ElectricTailoringBench, 16, ActionTailor},
+		{construction.ElectricStove, 6, 8, ActionCook},
+		{construction.ElectricTailoringBench, 10, 8, ActionTailor},
 	}
 	for _, b := range benches {
-		placeBuilt(t, g, b.kind, construction.South, b.x, 1)
-		bid := g.layerBldgAt(b.x, 1, construction.LayerObject)
+		placeBuilt(t, g, b.kind, construction.South, b.x, b.y)
+		bid := g.layerBldgAt(b.x, b.y, construction.LayerObject)
 		if bid == 0 {
 			t.Fatalf("%v not placed", b.kind)
 		}

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 44]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.81
-  h: 0.632
-  d: 0.805
 building: hopper
 rotatable: false
 facing: south

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [40, 98]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.484
-  h: 1.11
-  d: 2.301
 ppt: 128
 item: spindle corpse
 species: spindle

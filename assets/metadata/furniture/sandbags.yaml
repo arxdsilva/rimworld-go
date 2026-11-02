@@ -8,10 +8,5 @@ footprint: [1, 1]
 origin_px: [16, 32]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.0
-  h: 0.32
-  d: 0.64
 rotatable: false
 facing: south

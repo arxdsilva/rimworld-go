@@ -30,7 +30,7 @@ func (r *Renderer) pipe() *world.Pipeline {
 		r.lit.Blaze = overlay.BlazeLight // a burning cell's reach and strength live with the fires
 		wp := world.New(
 			world.Layers{Lit: &r.lit, Env: &r.env.Layer, Cues: r.cueBus(), Shadows: &r.env.Shadow, Motion: &r.mo},
-			world.Hosts{Index: envHost{r}, Stamp: envHost{r}, Casters: shadowHost{r}},
+			world.Hosts{Index: envHost{r}, Stamp: envHost{r}},
 			world.Shared{Cam: &r.cam, Blood: &r.figureBlood},
 			&r.view, pipeSource{r})
 		p := &wp.Paint

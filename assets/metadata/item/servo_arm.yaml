@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 25]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.824
-  h: 0.185
-  d: 0.466
 item: servo arm

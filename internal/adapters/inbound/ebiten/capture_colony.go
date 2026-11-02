@@ -181,12 +181,12 @@ func (a *App) captureColonyUI(ui string) {
 		cardAt("hospital_bed")
 	case "arch-cabinet":
 		a.arch.OpenPanel()
-		a.arch.SelectCategory("production")
+		a.arch.SelectCategory("misc")
 		a.arch.SelectTool("tool_cabinet")
 		cardAt("tool_cabinet")
 	case "arch-locked":
 		a.arch.OpenPanel()
-		a.arch.SelectCategory("furniture")
+		a.arch.SelectCategory("temperature")
 		cardAt("campfire")
 	}
 }

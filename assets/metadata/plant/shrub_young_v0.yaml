@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.37
-  h: 0.167
-  d: 0.419
 species: shrub
 stage: young
 variant: 0

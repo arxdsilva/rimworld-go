@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [44, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.536
-  h: 0.643
-  d: 0.943
 ppt: 128
 item: hive beetle corpse
 species: hive_beetle

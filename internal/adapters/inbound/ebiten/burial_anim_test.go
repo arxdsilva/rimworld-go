@@ -164,7 +164,7 @@ func TestArchitectHasGraveAndPyre(t *testing.T) {
 		if !ok {
 			t.Fatalf("no %s tool", id)
 		}
-		if tool.Category != "furniture" || tool.Desc != desc {
+		if tool.Category != "misc" || tool.Desc != desc { // STK-AG: vanilla Misc
 			t.Fatalf("%s: %+v", id, tool)
 		}
 		if _, ok := architect.Buildable(tool.Build); !ok {

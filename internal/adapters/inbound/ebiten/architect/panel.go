@@ -43,8 +43,9 @@ const (
 // Cards are the open category's tools as command buttons, in catalog
 // order. They keep the legacy click ids (arch.tool.<id>), so a click
 // reaches SelectTool through the shell's click routes; the selected tool
-// is On and a tool the scenario or the research forbids is disabled with
-// the reason.
+// is On, a tool the scenario or the research forbids is disabled with
+// the reason, and a placeholder (planned.go) is disabled as not in this
+// game yet.
 func (t *Tool) Cards() []Card {
 	if !t.Open {
 		return nil
@@ -59,6 +60,11 @@ func (t *Tool) Cards() []Card {
 	}
 	out := make([]Card, 0, len(tools))
 	for _, d := range tools {
+		if d.Planned { // a greyed placeholder: its sentence, and why it cannot be used
+			out = append(out, Card{ID: ids.PrefixArchTool + d.ID, Label: d.Label, Icon: d.Icon, Desc: d.Desc,
+				Disabled: true, Reason: PlannedReason})
+			continue
+		}
 		b := Card{ID: ids.PrefixArchTool + d.ID, Label: d.Label, Icon: d.Icon, Toggle: true}
 		stuff := t.ToolStuff(d)
 		stock := 0

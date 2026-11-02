@@ -28,24 +28,24 @@ func placeBuilt(t *testing.T, g *Game, k construction.Kind, f construction.Facin
 
 func TestMultiTilePlacementAndBlocking(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 6})
-	if ok, r := g.CanPlaceAt("workbench", "wood", "south", 8, 2); !ok {
-		t.Fatalf("bench at 8,2: %q", r)
+	if ok, r := g.CanPlaceAt("workbench", "wood", "south", 7, 2); !ok { // STK-BN: 3x1, cells 7..9
+		t.Fatalf("bench at 7,2: %q", r)
 	}
-	if ok, r := g.CanPlaceAt("workbench", "wood", "south", 9, 2); ok || r != ReasonOutside {
+	if ok, r := g.CanPlaceAt("workbench", "wood", "south", 8, 2); ok || r != ReasonOutside {
 		t.Fatalf("bench hanging off the map: %v %q", ok, r)
 	}
 	if ok, r := g.CanPlaceAt("workbench", "wood", "south", 4, 5); ok || r != ReasonSpot {
 		t.Fatalf("work spot off the map: %v %q", ok, r)
 	}
 	placeBuilt(t, g, construction.Workbench, construction.South, 3, 2)
-	if g.grid.Walkable(3, 2) || g.grid.Walkable(4, 2) || !g.grid.Walkable(3, 3) {
-		t.Fatal("bench blocks its two cells, work spot stays open")
+	if g.grid.Walkable(3, 2) || g.grid.Walkable(4, 2) || g.grid.Walkable(5, 2) || !g.grid.Walkable(4, 3) {
+		t.Fatal("bench blocks its three cells, work spot stays open")
 	}
-	if ok, r := g.CanPlaceAt("wall", "wood", "south", 3, 3); ok || r != ReasonSpot {
+	if ok, r := g.CanPlaceAt("wall", "wood", "south", 4, 3); ok || r != ReasonSpot {
 		t.Fatalf("wall on the work spot: %v %q", ok, r)
 	}
 	b := g.World().Buildings[0]
-	if b.W != 2 || b.H != 1 || !b.HasSpot || b.SpotX != 3 || b.SpotY != 3 || !b.Bench {
+	if b.W != 3 || b.H != 1 || !b.HasSpot || b.SpotX != 4 || b.SpotY != 3 || !b.Bench {
 		t.Fatalf("bench view = %+v", b)
 	}
 	placeBuilt(t, g, construction.Bed, construction.East, 6, 4)

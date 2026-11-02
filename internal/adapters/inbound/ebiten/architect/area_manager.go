@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/area"
 )
 
 // The allowed-area manager (PLAY-015 §1.3): a centred modal listing the
@@ -28,9 +29,9 @@ const (
 	areasH       = 460
 	areasRowH    = 34
 	// AreasMax is the colony's area cap (area.MaxAreas).
-	AreasMax    = 10
+	AreasMax    = area.MaxAreas
 	areasEmpty  = "No areas: add one to restrict where colonists go."
-	areasCapWhy = "A colony has at most 10 areas."
+	areasCapWhy = "A colony has at most 8 allowed areas (Home is not one)."
 	// AreasConfirm is the delete confirmation's modal id.
 	AreasConfirm = "colony.areas.confirm"
 )

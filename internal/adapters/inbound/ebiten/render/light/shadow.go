@@ -1,318 +1,93 @@
 package light
 
 import (
-	_ "embed"
 	"image"
 	"image/color"
 	"math"
-	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
-	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/world/roof"
 )
 
-// Moving shadows (ART §6.1): every caster (metadata shadow.kind blob or
-// box) on open-sky ground casts a soft shadow away from the sun (or the
-// moon), long at dawn and dusk, short at noon. Shadows are drawn into one
-// offscreen layer and composited at a single alpha, so overlaps never
-// double-darken, after floors and zones and before every object.
+// Colonist drop shadows (user decision, 2026-11-01): only colonists cast a
+// shadow, and only while they stand on an unroofed tile. Nothing else
+// casts one: no buildings, walls, rock, plants, items, roofs or bridges,
+// and no animals, mechanoids, raiders, visitors or prisoners.
 //
-// The geometry is in world tiles and pure (tested without a GPU): a blob
-// is the shadow_blob texture on a quad stretched along the shadow; a box
-// is the exact sweep of its footprint along the shadow (the convex hull of
-// the footprint and its shifted copy) with a feathered skirt, so adjacent
-// walls merge seamlessly under the max blend.
-//
-// Creatures (pawns, animals and mechanoids) cast no shadow at all: no
-// sun or moon silhouette, no campfire or lamp silhouette and no contact
-// pool under the feet (user decision, 2026-10-31).
+// A colonist's shadow is a soft ellipse under the feet, stretched and
+// offset along the sun's (or, at night, the moon's) shadow direction and
+// faded with the light's height: long and faint at dawn and dusk, short
+// and dark at noon, a faint blob under the moon. Every blob of a frame
+// goes to the screen in one batched draw, after the floors and zones and
+// before every object; the blob texture is made once.
 
-//go:embed shadow_blur.kage
-var shadowBlurKage []byte
-
-// ShadowKind is a caster's shape: none, a blob or a box.
-type ShadowKind uint8
-
+// Colonist blob sizes in tiles: colonistW across the shadow, colonistD
+// along it at a high light; colonistH is the height that sets the
+// stretch, clamped to colonistMaxLen.
 const (
-	ShadowNone ShadowKind = iota
-	ShadowBlob
-	ShadowBox
-)
-
-// ShadowSpec is a caster's shape in tiles: footprint width w, height above
-// ground h and depth d.
-type ShadowSpec struct {
-	Kind    ShadowKind
-	W, H, D float64
-}
-
-// Caster is one caster this frame: for a blob, (x, y) is its ground
-// pivot; for a box, the top-left of its ground footprint (w x d).
-type Caster struct {
-	Spec ShadowSpec
-	X, Y float64
-}
-
-const (
-	ShadowMaxLen  = 3.0  // tiles: the longest shadow (ART §6.1 clamp)
-	shadowFeather = 0.09 // tiles: the soft edge of box shadows
-	blobMinDepth  = 0.35
+	colonistW      = 0.62
+	colonistD      = 0.34
+	colonistH      = 1.0
+	colonistMaxLen = 1.2
+	// colonistGain scales the light's shadow alpha: the blob is drawn
+	// straight onto the screen, so it is a touch lighter than a cast
+	// layer would be.
+	colonistGain = 0.8
 )
 
 // ShadowColor is the shadow's dark cool tint at noon (ART §6.1); it
 // tilts bluer at low sun (ShadowTint).
 var ShadowColor = [3]float32{18, 20, 30}
 
-// shadowRGB is the layer colour of every shape (boxes and blobs); the
-// blur reads alpha only.
-var shadowRGB = color.RGBA{0, 255, 255, 255}
-
-// ShadowBlend is the layer's blend: the max of source and destination, so
-// overlapping casters never darken twice.
-var ShadowBlend = ebiten.Blend{
-	BlendFactorSourceRGB:        ebiten.BlendFactorOne,
-	BlendFactorSourceAlpha:      ebiten.BlendFactorOne,
-	BlendFactorDestinationRGB:   ebiten.BlendFactorOne,
-	BlendFactorDestinationAlpha: ebiten.BlendFactorOne,
-	BlendOperationRGB:           ebiten.BlendOperationMax,
-	BlendOperationAlpha:         ebiten.BlendOperationMax,
+// Foot is one colonist's shadow this frame: its ground pivot in world
+// tiles and its size scale (creatures keep a minimum size when zoomed
+// far out).
+type Foot struct {
+	X, Y, Scale float64
 }
 
-// ShadowSpecFor is the caster for sprite key: its metadata shadow block,
-// or, until the art carries one, a fallback by family (m may be nil).
-func ShadowSpecFor(key string, m *art.Meta) ShadowSpec {
-	fb := ShadowFallback(key, m)
-	if m == nil || m.Shadow.Kind == "" {
-		return fb
-	}
-	s := ShadowSpec{W: m.Shadow.W, H: m.Shadow.H, D: m.Shadow.D}
-	switch m.Shadow.Kind {
-	case "blob":
-		s.Kind = ShadowBlob
-	case "box":
-		s.Kind = ShadowBox
-	default:
-		return ShadowSpec{}
-	}
-	if s.W <= 0 {
-		s.W = fb.W
-	}
-	if s.H <= 0 {
-		s.H = fb.H
-	}
-	if s.D <= 0 {
-		s.D = fb.D
-	}
-	if s.W <= 0 || s.H <= 0 { // nothing to fall back on
-		s.W, s.H, s.D = max(s.W, 0.55), max(s.H, 1), max(s.D, blobMinDepth)
-	}
-	return s
-}
-
-// ShadowFallback is the family default for sprites without a shadow block.
-func ShadowFallback(key string, m *art.Meta) ShadowSpec {
-	fam, name, _ := strings.Cut(key, "/")
-	fw, fd, canvasH := 1.0, 1.0, 1.0
-	if m != nil {
-		if m.Footprint[0] > 0 {
-			fw = float64(m.Footprint[0])
-		}
-		if m.Footprint[1] > 0 {
-			fd = float64(m.Footprint[1])
-		}
-		if m.Canvas[1] > 0 {
-			canvasH = float64(m.Canvas[1]) / m.PxPerTile()
-		}
-	}
-	switch fam {
-	case "structure", "furniture", "rock":
-		if strings.HasPrefix(name, "floor") {
-			return ShadowSpec{}
-		}
-		return ShadowSpec{Kind: ShadowBox, W: fw, H: 1, D: fd}
-	case "plant":
-		return ShadowSpec{Kind: ShadowBlob, W: 0.7 * fw, H: canvasH * 0.8, D: 0.4}
-	case "item":
-		return ShadowSpec{Kind: ShadowBlob, W: 0.55, H: canvasH * 0.7, D: 0.35}
-	}
-	return ShadowSpec{}
-}
-
-// shadowVec is where the top of a caster of height h lands, relative to
-// its base, in tiles.
-func shadowVec(l State, h float64) (float64, float64) {
-	if l.ShadowLen == nil {
-		return 0, 0
-	}
-	n := l.ShadowLen(h)
-	return l.ShadowDir[0] * n, l.ShadowDir[1] * n
-}
-
-// BlobQuad is the blob's textured quad in world tiles (corners in texture
-// order: top-left, top-right, bottom-left, bottom-right): w*1.1 across
-// the shadow and max(d, 0.35)*0.8 along it, stretched along the shadow by
-// its length and centred half that length away from the pivot. Texture x
-// runs along the shadow.
-func BlobQuad(px, py float64, s ShadowSpec, l State) [4][2]float64 {
-	vx, vy := shadowVec(l, s.H)
-	n := math.Hypot(vx, vy)
-	ux, uy := 1.0, 0.0
-	if n > 1e-9 {
-		ux, uy = vx/n, vy/n
-	}
-	// the caster's silhouette is w wide whichever way the light comes
-	// from; its depth runs along the shadow, which the length stretches
-	along := math.Max(s.D, blobMinDepth)*0.8 + n
-	across := s.W * 1.1
-	cx, cy := px+vx/2, py+vy/2
-	hx, hy := ux*along/2, uy*along/2    // half along
-	qx, qy := -uy*across/2, ux*across/2 // half across
-	return [4][2]float64{
-		{cx - hx - qx, cy - hy - qy},
-		{cx + hx - qx, cy + hy - qy},
-		{cx - hx + qx, cy - hy + qy},
-		{cx + hx + qx, cy + hy + qy},
-	}
-}
-
-// BoxHull is the box's shadow in world tiles: the footprint (x, y, w, d)
-// swept along the shadow, i.e. the convex hull of the footprint and its
-// copy shifted by the shadow vector, counter-clockwise in (x, y). It
-// returns n of the up to 6 points used.
-func BoxHull(x, y, w, d float64, s ShadowSpec, l State) (pts [8][2]float64, n int) {
-	vx, vy := shadowVec(l, s.H)
-	var in [8][2]float64
-	c := [4][2]float64{{x, y}, {x + w, y}, {x + w, y + d}, {x, y + d}}
-	for i, p := range c {
-		in[i] = p
-		in[i+4] = [2]float64{p[0] + vx, p[1] + vy}
-	}
-	for i := 1; i < len(in); i++ { // insertion sort by x, then y
-		for j := i; j > 0 && (in[j][0] < in[j-1][0] || in[j][0] == in[j-1][0] && in[j][1] < in[j-1][1]); j-- {
-			in[j], in[j-1] = in[j-1], in[j]
-		}
-	}
-	cross := func(o, a, b [2]float64) float64 {
-		return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0])
-	}
-	var h [16][2]float64
-	k := 0
-	for _, p := range in { // lower hull
-		for k >= 2 && cross(h[k-2], h[k-1], p) <= 1e-12 {
-			k--
-		}
-		h[k] = p
-		k++
-	}
-	lo := k + 1
-	for i := len(in) - 2; i >= 0; i-- { // upper hull
-		p := in[i]
-		for k >= lo && cross(h[k-2], h[k-1], p) <= 1e-12 {
-			k--
-		}
-		h[k] = p
-		k++
-	}
-	n = min(k-1, len(pts))
-	copy(pts[:n], h[:n])
-	return pts, n
-}
-
-// BoxFootprint places a box caster's footprint (spec w x d) centred in
-// the sprite's footprint (fw x fd) at tile (x, y).
-func BoxFootprint(x, y, fw, fd float64, s ShadowSpec) (float64, float64) {
-	return x + (fw-s.W)/2, y + (fd-s.D)/2
-}
-
-// ShadowCompositeScale is the colour scale the layer is composited with:
-// the shadow colour at the light's shadow alpha (premultiplied).
-func ShadowCompositeScale(l State) [4]float32 {
-	a := float32(gfx.Clamp01(l.ShadowAlpha))
-	return [4]float32{ShadowColor[0] / 255 * a, ShadowColor[1] / 255 * a, ShadowColor[2] / 255 * a, a}
-}
-
-// --- the pass ----------------------------------------------------------------------
-
-// Casters is what the shadow pass needs from the renderer each frame: the
-// casters in view (their sprite keys and chunk lists are the renderer's),
-// the on-map tiles in view and a white texel.
-type Casters interface {
-	// Objects lists this frame's box and blob casters (buildings, rocks,
-	// plants and items) on open-sky tiles in view.
-	Objects(w game.WorldView, pawns []game.PawnView) []Caster
-	// VisibleTiles is the on-map tile range in view.
-	VisibleTiles() (x0, y0, x1, y1 int)
-	// White is a white texel for solid fills.
-	White() *ebiten.Image
-}
-
-// Shadows is the shadow pass's reusable state (kept on the renderer's
-// environment).
+// Shadows is the colonist shadow pass's reusable state (kept on the
+// renderer's environment).
 type Shadows struct {
-	Layer   *ebiten.Image // screen-sized, reallocated on resize
-	Scratch *ebiten.Image // screen-sized too: the blur's target
-	blobImg *ebiten.Image // procedural fallback for overlay/shadow_blob
-	boxes   gfx.TriBatch
-	blobs   gfx.TriBatch
-	clear   gfx.TriBatch
-	// Objects is the renderer's reused caster list (Casters fills it).
-	Objects    []Caster
-	blur       *ebiten.Shader
-	blurErr    error
-	BlurOpts   ebiten.DrawRectShaderOptions
-	specs      map[string]ShadowSpec
-	specsArt   *art.Catalog
-	Composites int // layer composites, for tests
-	// Off skips the whole shadow pass (Options > Graphics, PLAY-019).
+	// Feet is the pipeline's reused list of this frame's casters.
+	Feet    []Foot
+	batch   gfx.TriBatch
+	blobImg *ebiten.Image
+	// Drawn is how many blobs the last Draw queued; Flushes counts the
+	// batched draws (tests).
+	Drawn, Flushes int
+	// Off skips the pass (Options > Graphics, PLAY-019).
 	Off bool
 }
 
 // Cast, while set on a sprite pass (render/sprite Pass.Cast), marks draws
 // that are not the frame's lit sprites: the pipeline sets it during a
-// bake, and the overlays skip a figure's stains then. It no longer draws
-// anything itself: creatures cast no silhouettes (2026-10-31).
+// bake, and the overlays skip a figure's stains then.
 type Cast struct{}
 
-// SetOff turns the shadow pass off or on. Turning it off frees the two
-// screen-sized layers; they come back on the first frame with shadows on.
-func (st *Shadows) SetOff(off bool) {
-	st.Off = off
-	if !off {
-		return
-	}
-	for _, img := range []**ebiten.Image{&st.Layer, &st.Scratch} {
-		if *img != nil {
-			(*img).Deallocate()
-			*img = nil
-		}
-	}
+// SetOff turns the shadow pass off or on.
+func (st *Shadows) SetOff(off bool) { st.Off = off }
+
+// Colonist reports pw is one of the colony's own living people: not a
+// raider, prisoner, visitor, ally or another faction's guest, not a body
+// and not being carried.
+func Colonist(pw *game.PawnView) bool {
+	return !pw.Hostile && !pw.Prisoner && !pw.Visitor && !pw.Ally && pw.GuestFaction == "" &&
+		!pw.Embodied && pw.CarriedBy == 0
 }
 
-// SpecOf is the cached caster for sprite key in catalog c.
-func (st *Shadows) SpecOf(c *art.Catalog, key string) ShadowSpec {
-	if st.specs == nil || st.specsArt != c {
-		st.specs, st.specsArt = map[string]ShadowSpec{}, c
-	}
-	if s, ok := st.specs[key]; ok {
-		return s
-	}
-	var m *art.Meta
-	if sp := c.Sprite(key); sp != nil {
-		m = &sp.Meta
-	}
-	s := ShadowSpecFor(key, m)
-	st.specs[key] = s
-	return s
+// Casts reports pw casts a shadow on w: a colonist standing on a tile
+// with no built or natural roof (a planned roof is no roof yet).
+func Casts(pw *game.PawnView, w *game.WorldView) bool {
+	return Colonist(pw) && !roofed(roofCellAt(w, pw.X, pw.Y))
 }
 
 // roofCellAt is the roof flags at (x, y) of w; 0 out of bounds.
-func roofCellAt(w game.WorldView, x, y int) uint8 {
+func roofCellAt(w *game.WorldView, x, y int) uint8 {
 	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
 		return 0
 	}
@@ -326,40 +101,63 @@ func roofCellAt(w game.WorldView, x, y int) uint8 {
 // roofed reports a built or natural roof.
 func roofed(c uint8) bool { return c&uint8(roof.Built|roof.Natural) != 0 }
 
-// RoofRuns are the horizontal runs of roofed tiles (y, x0, x1 exclusive)
-// in the tile range, where shadows are cleared.
-func RoofRuns(w game.WorldView, x0, y0, x1, y1 int, out [][3]int) [][3]int {
-	out = out[:0]
-	if len(w.RoofCells) == 0 {
-		return out
+// shadowVec is where the shadow of a caster of height h ends, relative
+// to its foot, in tiles, at most colonistMaxLen long.
+func shadowVec(l State, h float64) (float64, float64) {
+	if l.ShadowLen == nil {
+		return 0, 0
 	}
-	for y := y0; y <= y1; y++ {
-		for x := x0; x <= x1; {
-			if !roofed(roofCellAt(w, x, y)) {
-				x++
-				continue
-			}
-			end := x + 1
-			for end <= x1 && roofed(roofCellAt(w, end, y)) {
-				end++
-			}
-			out = append(out, [3]int{y, x, end})
-			x = end
-		}
-	}
-	return out
+	n := min(l.ShadowLen(h), colonistMaxLen)
+	return l.ShadowDir[0] * n, l.ShadowDir[1] * n
 }
 
-// --- drawing -------------------------------------------------------------------------
-
-// blobTexture is overlay/shadow_blob, or a soft procedural ellipse until
-// the art has one.
-func (st *Shadows) blobTexture(c *art.Catalog) *ebiten.Image {
-	if c.Has("overlay/shadow_blob") {
-		if img := c.Image("overlay/shadow_blob", color.NRGBA{}); img != nil {
-			return img
-		}
+// ColonistQuad is f's blob in world tiles (corners in texture order:
+// top-left, top-right, bottom-left, bottom-right): colonistW across the
+// shadow and colonistD plus its length along it, centred half that
+// length away from the feet. Texture x runs along the shadow.
+func ColonistQuad(f Foot, l State) [4][2]float64 {
+	k := f.Scale
+	if k <= 0 {
+		k = 1
 	}
+	vx, vy := shadowVec(l, colonistH*k)
+	n := math.Hypot(vx, vy)
+	ux, uy := 1.0, 0.0
+	if n > 1e-9 {
+		ux, uy = vx/n, vy/n
+	}
+	along := colonistD*k + n
+	across := colonistW * k
+	cx, cy := f.X+vx/2, f.Y+vy/2
+	hx, hy := ux*along/2, uy*along/2    // half along
+	qx, qy := -uy*across/2, ux*across/2 // half across
+	return [4][2]float64{
+		{cx - hx - qx, cy - hy - qy},
+		{cx + hx - qx, cy + hy - qy},
+		{cx - hx + qx, cy - hy + qy},
+		{cx + hx + qx, cy + hy + qy},
+	}
+}
+
+// ColonistAlpha is the blob's alpha in light l on day dayOfYear: the
+// light's shadow alpha (0 when the sun and moon are down or too low),
+// times colonistGain, fading from full at the season's highest sun to
+// half at the horizon and under the moon.
+func ColonistAlpha(l State, dayOfYear int) float64 {
+	if l.ShadowLen == nil || l.ShadowAlpha <= 0 {
+		return 0
+	}
+	return gfx.Clamp01(l.ShadowAlpha) * colonistGain * (0.5 + 0.5*sunRatio(l, dayOfYear))
+}
+
+// sunRatio is the sun's elevation over the season's highest (0..1); 0 at
+// night.
+func sunRatio(l State, dayOfYear int) float64 {
+	return gfx.Clamp01(SunElevation(l) / (SeasonMaxEl(dayOfYear) * math.Pi / 180))
+}
+
+// blobTexture is a soft white ellipse (alpha only), made on first use.
+func (st *Shadows) blobTexture() *ebiten.Image {
 	if st.blobImg == nil {
 		const bw, bh = 64, 32
 		src := image.NewNRGBA(image.Rect(0, 0, bw, bh))
@@ -376,161 +174,39 @@ func (st *Shadows) blobTexture(c *art.Catalog) *ebiten.Image {
 	return st.blobImg
 }
 
-// addTexQuad queues the whole of tex on a quad (world tiles, corners in
-// texture order) at alpha a, with no height, placed by v's camera.
-func addTexQuad(v *render.View, b *gfx.TriBatch, q [4][2]float64, tex *ebiten.Image, a float64) {
+// Draw draws the frame's colonist shadows (feet, from Casts) onto screen
+// in light l, placed by v's camera, in one batched draw. dayOfYear sets
+// the season's highest sun.
+func (st *Shadows) Draw(v *render.View, l State, screen *ebiten.Image, feet []Foot, dayOfYear int) {
+	st.Drawn = 0
+	if st.Off || len(feet) == 0 {
+		return
+	}
+	a := ColonistAlpha(l, dayOfYear)
+	if a <= 0 {
+		return
+	}
+	t := ShadowTint(sunRatio(l, dayOfYear))
+	c := color.RGBA{uint8(t[0]), uint8(t[1]), uint8(t[2]), 255}
+	tex := st.blobTexture()
 	tw, th := float64(tex.Bounds().Dx()), float64(tex.Bounds().Dy())
-	ox, oy := float64(tex.Bounds().Min.X), float64(tex.Bounds().Min.Y)
-	uv := [4][2]float64{{ox, oy}, {ox + tw, oy}, {ox, oy + th}, {ox + tw, oy + th}}
-	var i uint32
-	for k, p := range q {
-		sx, sy := v.WorldToScreenF(p[0], p[1])
-		j := b.Vert(float64(sx), float64(sy), uv[k][0], uv[k][1], shadowRGB, a)
-		if k == 0 {
-			i = j
+	uv := [4][2]float64{{0, 0}, {tw, 0}, {0, th}, {tw, th}}
+	st.batch.Reset()
+	for _, f := range feet {
+		var i uint32
+		for k, p := range ColonistQuad(f, l) {
+			sx, sy := v.WorldToScreenF(p[0], p[1])
+			j := st.batch.Vert(float64(sx), float64(sy), uv[k][0], uv[k][1], c, a)
+			if k == 0 {
+				i = j
+			}
 		}
+		st.batch.Tri(i, i+1, i+2)
+		st.batch.Tri(i+1, i+3, i+2)
+		st.Drawn++
 	}
-	b.Tri(i, i+1, i+2)
-	b.Tri(i+1, i+3, i+2)
-}
-
-// AddBox queues a box caster's swept footprint with a feathered skirt,
-// its core at alpha a, placed by v's camera.
-func AddBox(v *render.View, b *gfx.TriBatch, c Caster, l State, a float64) {
-	pts, n := BoxHull(c.X, c.Y, c.Spec.W, c.Spec.D, c.Spec, l)
-	if n < 3 {
-		return
-	}
-	white := shadowRGB
-	f := shadowFeather
-	base := uint32(len(b.Verts))
-	for i := 0; i < n; i++ {
-		sx, sy := v.WorldToScreenF(pts[i][0], pts[i][1])
-		b.Vert(float64(sx), float64(sy), 1.5, 1.5, white, a)
-	}
-	for i := 1; i+1 < n; i++ {
-		b.Tri(base, base+uint32(i), base+uint32(i+1))
-	}
-	outer := base + uint32(n) // two outer vertices per edge
-	for i := 0; i < n; i++ {
-		p, q := pts[i], pts[(i+1)%n]
-		dx, dy := q[0]-p[0], q[1]-p[1]
-		ln := math.Hypot(dx, dy)
-		if ln == 0 {
-			ln = 1
-		}
-		nx, ny := dy/ln*f, -dx/ln*f // outward for a counter-clockwise hull
-		a, bb := v.WorldToScreenF(p[0]+nx, p[1]+ny)
-		c2, d2 := v.WorldToScreenF(q[0]+nx, q[1]+ny)
-		b.Vert(float64(a), float64(bb), 1.5, 1.5, white, 0)
-		b.Vert(float64(c2), float64(d2), 1.5, 1.5, white, 0)
-	}
-	for i := 0; i < n; i++ {
-		pi, qi := base+uint32(i), base+uint32((i+1)%n)
-		po, qo := outer+uint32(2*i), outer+uint32(2*i+1)
-		b.Tri(pi, qi, po)
-		b.Tri(qi, qo, po)
-		prevOuter := outer + uint32(2*((i+n-1)%n)+1) // corner wedge at pi
-		b.Tri(pi, prevOuter, po)
-	}
-}
-
-// Draw draws the frame's shadow layer onto screen. The layer holds
-// absolute alpha, max-blended so overlaps never double-darken: the box
-// and blob casters at the sun or moon's shadow alpha, then the roofed
-// tiles cleared, then one blur into scratch and one composite. Creatures
-// cast nothing. w is the frame's world (v.W) and view the visible
-// rectangle in tiles; the light is lit's, and host lists the casters.
-func (st *Shadows) Draw(v *render.View, lit *Lit, host Casters, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	if sw <= 0 || sh <= 0 || st.Off {
-		return
-	}
-	l := lit.Light
-	if l.ShadowLen == nil {
-		return
-	}
-	sa := float64(ShadowCompositeScale(l)[3])
-	if sa <= 0 {
-		return
-	}
-	casters := host.Objects(w, v.Pawns)
-	if len(casters) == 0 {
-		return
-	}
-	k := ShadowLayerScale(v.Cam.Dev)
-	lw, lh := int(math.Ceil(float64(sw)*k)), int(math.Ceil(float64(sh)*k))
-	st.Layer = gfx.FitLayer(st.Layer, lw, lh)
-	st.Layer.Clear()
-	st.Scratch = gfx.FitLayer(st.Scratch, lw, lh)
-	k32 := float32(k)
-	st.boxes.K, st.blobs.K, st.clear.K = k32, k32, k32
-	tex := st.blobTexture(v.Art)
-	white := host.White()
-	st.boxes.Reset()
-	st.blobs.Reset()
-	for _, c := range casters {
-		if c.Spec.Kind == ShadowBox {
-			AddBox(v, &st.boxes, c, l, sa)
-		} else {
-			addTexQuad(v, &st.blobs, BlobQuad(c.X, c.Y, c.Spec, l), tex, sa)
-		}
-	}
-	st.boxes.Flush(st.Layer, white, ShadowBlend)
-	st.blobs.Flush(st.Layer, tex, ShadowBlend)
-
-	// nothing from the sky falls on roofed ground
-	x0, y0, x1, y1 := host.VisibleTiles()
-	var runs [][3]int
-	runs = RoofRuns(w, x0, y0, x1, y1, runs)
-	if len(runs) > 0 {
-		st.clear.Reset()
-		for _, run := range runs {
-			sx0, sy0 := v.WorldToScreen(run[1], run[0])
-			sx1, sy1 := v.WorldToScreen(run[2], run[0]+1)
-			st.clear.Rect(float64(sx0), float64(sy0), float64(sx1-sx0), float64(sy1-sy0), color.RGBA{255, 255, 255, 255}, 1, 1, 1, 1)
-		}
-		st.clear.Flush(st.Layer, white, ebiten.BlendDestinationOut)
-	}
-
-	maxEl := SeasonMaxEl(w.DayOfYear) * math.Pi / 180
-	ratio := gfx.Clamp01(SunElevation(l) / maxEl)
-	out := st.Layer
-	if bs := st.shadowBlurShader(); bs != nil {
-		st.BlurOpts.Uniforms["R0"] = float32(BlurRadius(tile * k / camera.TileSize))
-		st.BlurOpts.Images[0] = st.Layer
-		st.BlurOpts.Blend = ebiten.BlendCopy
-		st.Scratch.DrawRectShader(lw, lh, bs, &st.BlurOpts)
-		out = st.Scratch
-	}
-	tint := ShadowTint(ratio)
-	op := &ebiten.DrawImageOptions{}
-	op.ColorScale.Scale(tint[0]/255, tint[1]/255, tint[2]/255, 1)
-	if lw != sw || lh != sh {
-		op.GeoM.Scale(float64(sw)/float64(lw), float64(sh)/float64(lh))
-		op.Filter = ebiten.FilterLinear
-	}
-	screen.DrawImage(out, op)
-	st.Composites++
-}
-
-// ShadowLayerScale is the shadow layer's size relative to the screen: half
-// on a display whose device scale is 2 or more (the blur hides the lost
-// detail), full otherwise.
-func ShadowLayerScale(dev float64) float64 {
-	if dev >= 2 {
-		return 0.5
-	}
-	return 1
-}
-
-// shadowBlurShader is shadow_blur.kage, compiled on first use; nil when
-// it failed (the layer is then composited unblurred).
-func (st *Shadows) shadowBlurShader() *ebiten.Shader {
-	if st.blur == nil && st.blurErr == nil {
-		st.blur, st.blurErr = ebiten.NewShader(shadowBlurKage)
-		st.BlurOpts.Uniforms = map[string]any{}
-	}
-	return st.blur
+	st.batch.Flush(screen, tex, ebiten.BlendSourceOver)
+	st.Flushes++
 }
 
 // SunElevation is the sun's elevation (radians) in l, 0 below the
@@ -541,10 +217,6 @@ func SunElevation(l State) float64 {
 	}
 	return math.Atan2(float64(l.SunL[2]), math.Hypot(float64(l.SunL[0]), float64(l.SunL[1])/ProjShearK))
 }
-
-// BlurRadius is the shadow blur's radius in screen px at a zoom (tile px
-// over TileSize).
-func BlurRadius(zoom float64) float64 { return 0.6 * zoom }
 
 // ShadowTint is the shadow colour (0..255): bluer at low sun.
 func ShadowTint(ratio float64) [3]float32 {

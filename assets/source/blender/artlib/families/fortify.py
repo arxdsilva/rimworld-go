@@ -421,7 +421,7 @@ def build(only=None):
                         extra={"building": building, "gun_layer": "%s/%s_%s" % (FAMILY, prefix, layer),
                                "frames": GUN_FRAMES})
         for i in range(GUN_FRAMES):
-            out += P.render("%s_%s_%02d" % (prefix, layer, i), gun(i), family=FAMILY, shadow_kind="none",
+            out += P.render("%s_%s_%02d" % (prefix, layer, i), gun(i), family=FAMILY,
                             extra={"layer": layer, "of": "%s/%s_base" % (FAMILY, prefix), "frame": i,
                                    "frames": GUN_FRAMES, "step_deg": GUN_STEP})
     for name, (item, mats) in SHELLS.items():
@@ -433,7 +433,7 @@ def build(only=None):
             for open_ in (False, True):
                 state = "open" if open_ else "closed"
                 out += P.render("autodoor_%s_%s" % (axis, state), _autodoor(axis, open_), family="structure",
-                                shadow_kind=None, clip=("W", "E") if axis == "ew" else ("N", "S"),
+                                clip=("W", "E") if axis == "ew" else ("N", "S"),
                                 extra={"building": "powered door", "axis": axis, "state": state})
     if not only:
         out += _icons()

@@ -232,22 +232,25 @@ func (g *Game) nearestColonist(p Position) (entity.EntityID, Position, bool) {
 
 // dropRaiderGear leaves a dead pawn's (raider's, visitor's or colonist's)
 // weapon where it fell: a stranger's is found, not the colony's
-// (haul_claim.go), and a raider's starts forbidden too.
+// (haul_claim.go); outside the home area it starts forbidden (game/allow).
 func (g *Game) dropRaiderGear(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
+	out := forbids(g).DropForbidden(pos.X, pos.Y)
 	if r := g.raiders[id]; r.LootQty > 0 { // a thief's haul stays where it fell (DEF-4)
-		g.dropStack(r.Loot, r.LootQty, pos.X, pos.Y)
+		g.dropGoods(r.Loot, r.LootQty, pos.X, pos.Y, out)
 		r.Loot, r.LootQty = 0, 0
 		g.raiders[id] = r
 	}
 	if k, ok := g.equip[id]; ok {
 		switch {
 		case g.isRaider(id):
-			g.spawnUnclaimed(k, 1, pos.X, pos.Y, true)
+			g.spawnUnclaimed(k, 1, pos.X, pos.Y, out)
 		case g.personOf(id) != nil && g.personOf(id).Where == whereVisitor: // a visitor's gear is not the colony's
-			g.spawnUnclaimed(k, 1, pos.X, pos.Y, false)
+			g.spawnUnclaimed(k, 1, pos.X, pos.Y, out)
 		default:
-			g.dropStackOf(g.combat.Gear.Release(id, k, g.combat.Drafts.Drop(id, k)), pos.X, pos.Y) // a grenade belt whole, the make kept
+			st := g.combat.Gear.Release(id, k, g.combat.Drafts.Drop(id, k)) // a grenade belt whole, the make kept
+			st.Forbidden = out
+			g.dropStackOf(st, pos.X, pos.Y)
 		}
 		delete(g.equip, id)
 	}

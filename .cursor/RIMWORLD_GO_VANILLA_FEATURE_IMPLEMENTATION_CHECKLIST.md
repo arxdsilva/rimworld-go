@@ -454,7 +454,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.7 Allowed areas
 
--   [x] **Named allowed areas** (SIM-046; PLAY-015 SIM-055: up to 10 areas with stable ids and colours; paint, clear, rename, invert, delete (users fall back to Unrestricted); Home as an area choice; colonists and tame non-penned animals; coloured overlay)
+-   [x] **Named allowed areas** (SIM-046; PLAY-015 SIM-055: up to 8 areas (STK-AL, wiki; Home not counted) with stable ids and colours; paint, clear, rename, invert, delete (users fall back to Unrestricted); Home as an area choice; colonists and tame non-penned animals; coloured overlay)
     -   Paint cells.
     -   invert/clear.
     -   assign pawn.
@@ -492,7 +492,7 @@ This is the heart of autonomous colony behavior.
     -   Items can take damage.
     -   Outdoor/unroofed or unsuitable storage can cause deterioration
         where applicable.
--   [x] **Item forbidden state** (SIM-028: `Stack.Forbidden`; haul, eat, equip, bills, refuel, troughs and burial skip it; raid weapons and bodies drop forbidden; Forbid/Allow area tools, item toggle, F key; follow-ups: forced Prioritize on a forbidden item is allowed, stacks forbidden mid-haul are not interrupted)
+-   [x] **Item forbidden state** (SIM-028: `Stack.Forbidden`; haul, eat, equip, bills, refuel, troughs and burial skip it; Forbid/Allow area tools, item toggle, F key; follow-ups: stacks forbidden mid-haul are not interrupted; STK-AL (`game/allow`, `.cursor/ALLOW_GAP_ANALYSIS.md`): bodies, weapons and a thief's haul dropped at a death start forbidden outside the home area (any faction), animal carcasses too unless a hunter or predator takes the kill, map loot (ruins, vaults, caskets) starts forbidden, an order (eat, haul, equip/wear) on a forbidden item allows it, a binge ignores forbidding)
     -   Player can forbid/unforbid items.
     -   Autonomous hauling/use ignores forbidden targets unless
         explicitly ordered where appropriate.
@@ -508,7 +508,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.3 Stockpile zones
 
--   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (animal corpses and chunks), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
+-   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (STK-ST vanilla parity: corpses and chunks, rotting ones too, Normal priority, own icon; `.cursor/STORAGE_GAP_ANALYSIS.md`), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
     -   Paint storage cells.
 -   [x] **Storage filters** (PRD-4 then STO-2: `domain/building/zone/filter.go` tree to depth 3 with human corpses, bones, body parts and unfinished categories; `FilterRoot` allow all/clear all; 10 special toggles in `special.go` (fresh, non-deadman's apparel, smeltable, burnable, grave colonist/stranger, rotten, tainted and others) plus HP and quality ranges; vanilla defaults for new stockpiles (no corpses, bones, chunks or rotten; dumps take corpses and chunks), old zones keep their switches; copy and paste, names; stockpiles and shelves)
     -   Category tree.
@@ -522,9 +522,9 @@ This is the heart of autonomous colony behavior.
     -   Efficiently find valid free cells.
     -   Avoid map-wide storage scans.
 -   [x] **Linked storage groups** (STO-2: `group.go` Link/Unlink, an edit reaches every member, `zone.Map.SameStore`, a group can be a bill source)
--   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold raw food at Important and refill below half (original); FOOD-4: haulers and cooks fill hoppers through the `FillHopper` job, wardens and doctors fetch paste for patients and prisoners; missing: none known, kept partial for the dispenser's original hopper numbers)
+-   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold one 75 raw-food stack (wiki; STK-ST `zone.HopperStack`) at Important and refill below half (original); FOOD-4: haulers and cooks fill hoppers through the `FillHopper` job, wardens and doctors fetch paste for patients and prisoners; missing: none known, kept partial for the dispenser's original hopper numbers)
 -   [x] **Graves and sarcophagi as storage** (STO-2: corpse filters and priority; sarcophagus holds colonists only)
--   [x] **Wiki stack limits** (STO-2: every item kind; corpses and gear one per stack)
+-   [x] **Stack limits** (STO-2 wiki limits, then STK-ST by user decision: every stackable kind stacks to 1000 per tile; weapons, apparel, belts, corpses, implants, organs and stone chunks one per stack; a hopper keeps one 75 raw-food stack (wiki); haulers top up any room; `.cursor/STORAGE_GAP_ANALYSIS.md`)
 
 ## 6.4 Hauling
 
@@ -551,7 +551,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Hunt designation**
 -   [x] **Plan designation** (PLAY-012 UI-023: Plan / Remove plan paint visual layout marks with no gameplay effect; a mark clears when any building is finished on its tile; Plans button hides the overlay)
 -   [-] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))
--   [x] **Forbid/unforbid designation/action** (SIM-028 Forbid/Allow area tools and item toggle; UI-016 F key)
+-   [x] **Forbid/unforbid designation/action** (SIM-028 Forbid/Allow area tools and item toggle; UI-016 F key; STK-AL: Haul things and Mark for hauling allow what they mark, F on a selected door or bed)
 
 ## 7.2 Construction lifecycle
 
@@ -587,7 +587,7 @@ This is the heart of autonomous colony behavior.
     -   Block movement/vision/projectiles.
     -   Define rooms.
     -   Material-dependent stats.
--   [-] **Doors** (buildable, walkable for colonists, shut to raiders and wild animals, count as wall neighbours, drawn open when occupied; DEF-3: opening delay by stuff, powered autodoor, hold open, open door lets shots through, `domain/building/door`; missing: door forbid UI)
+-   [-] **Doors** (buildable, walkable for colonists, shut to raiders and wild animals, count as wall neighbours, drawn open when occupied; DEF-3: opening delay by stuff, powered autodoor, hold open, open door lets shots through, `domain/building/door`; CBT-5/STK-AL: forbid toggle, F key and marker; missing: visitors, traders and breaking colonists passing a forbidden door (one shared path grid))
     -   Open/closed states.
     -   Opening delay.
     -   faction/permission interaction.
@@ -1207,7 +1207,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.1 Generic workbench system
 
--   [x] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; PLAY-021: electric stove and tailoring bench work 40% faster and stop without power (RSCH-1: the hi-tech research bench uses the wiki bench factor instead); PRD-3: 24 bench and building kinds with wiki footprints, wiki watts on the powered benches, recipes shared across benches (`recipe.Def.Also`, `RecipeView.RunsAt`), facilities (tool cabinet +6 %, `craft/facility.go`), work speed from bench factor, light, roof and cleanliness (`craft/station.go`, `BuildingView.Linked`/`WorkSpeed`), wood-fired forge fuel, 16 new research projects)
+-   [x] **Workstation** (rotatable footprints with an interaction cell, block movement; STK-BN: the 14 production benches are 3x1 as in the wiki, the fabrication bench 5x2, the fuel refinery and radio console 3x2, each worked from the cell in front of its middle; save v10 keeps a resized bench in place or refunds it with a message; PLAY-021: electric stove and tailoring bench work 40% faster and stop without power (RSCH-1: the hi-tech research bench uses the wiki bench factor instead); PRD-3: 24 bench and building kinds with wiki footprints, wiki watts on the powered benches, recipes shared across benches (`recipe.Def.Also`, `RecipeView.RunsAt`), facilities (tool cabinet +6 %, `craft/facility.go`), work speed from bench factor, light, roof and cleanliness (`craft/station.go`, `BuildingView.Linked`/`WorkSpeed`), wood-fired forge fuel, 16 new research projects)
     -   Supported recipes.
     -   interaction cell.
     -   power requirement where applicable.
@@ -1665,7 +1665,7 @@ change relationships, and settlements exist on the world map.
 
 ## 20.5 Orbital trade
 
--   [x] **Communications console** (PLAY-024: powered radio console behind Radio relay research: faction list, gifts, caravan requests, call trade ship, military aid)
+-   [x] **Communications console** (PLAY-024: powered radio console (3x2, wiki, STK-BN) behind Radio relay research: faction list, gifts, caravan requests, call trade ship, military aid)
 -   [x] **Orbital trade beacon** (PLAY-024: goods within 6 tiles are tradable with ships; purchases land by drop pod)
     -   Defines tradeable nearby storage.
 -   [x] **Orbital trader event** (PLAY-024: a ship in radio range for 1.5 days when a powered console exists; letter and alert)
@@ -2447,14 +2447,19 @@ the player-facing system.
 
 ## 34.1 Architect/build menu
 
--   [ ] **Orders**
--   [ ] **Zone/area**
--   [ ] **Structure**
--   [ ] **Production**
--   [ ] **Furniture**
--   [x] **Power** (PLAY-021: conduit, hidden conduit, switch, four generators, battery)
--   [ ] **Security**
--   [ ] **Misc/ship**
+STK-AG: every core vanilla item has a card in its vanilla category (`.cursor/ARCHITECT_GAP_ANALYSIS.md`); missing ones are greyed placeholders.
+
+-   [-] **Orders** (13 of 18 work, Chop wood through Cut plants; missing Uninstall, Slaughter, Claim, Strip, Open)
+-   [-] **Zone/area** (12 of 15; missing Delete zone and the two roof-area clear tools)
+-   [-] **Structure** (6 of 9; missing Ornate door, Column, Animal flap)
+-   [-] **Production** (23 of 25; missing Deep drill, Electric crematorium)
+-   [-] **Furniture** (21 of 35; missing large tables, couch, bookcases, small shelf, wall lamps, flood light, plant pot, urn, double sleeping spot, animal sleeping box)
+-   [-] **Power** (PLAY-021: conduit, hidden conduit, switch, four generators, battery; missing waterproof conduit, chemfuel generator, watermill)
+-   [-] **Security** (11 of 15; missing firefoam and antigrain IEDs, foam turret, rocketswarm launcher)
+-   [-] **Misc/ship** (Misc 10 of 21; Ship 0 of 6, all placeholders)
+-   [-] **Floors** (STK-AG: wood floor, stone-block floors, entrance carpet, Smooth; missing straw matting, concrete, the metal and sterile tiles, flagstones, Remove floor)
+-   [-] **Recreation** (STK-AG: horseshoe pin only; 9 placeholders)
+-   [x] **Temperature** (STK-AG: campfire, heater, cooler, passive cooler, vent)
     -   Categories may use original naming.
 
 ## 34.2 Overlays
@@ -2532,7 +2537,7 @@ the player-facing system.
 -   [-] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood sprays scaled by damage, bloodied bodies, floor stains, falls; burning-building fire not implemented)
 -   [ ] **Selection/targeting feedback**
 -   [ ] **Weather visual effects**
--   [x] **Day/night presentation** (ART-010: every sprite lit by a moving sun, a cool moon, indoor ambient under roofs and lamp light; moving shadows; the old fullscreen veil is retired)
+-   [x] **Day/night presentation** (ART-010: every sprite lit by a moving sun, a cool moon, indoor ambient under roofs and lamp light; a moving sun/moon shadow under colonists outdoors only (STK-SH, 2026-11-01); the old fullscreen veil is retired)
 
 All assets must be original or appropriately licensed.
 

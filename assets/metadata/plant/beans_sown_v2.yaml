@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.105
-  h: 0.02
-  d: 0.042
 species: beans
 growth: sown
 variant: 2

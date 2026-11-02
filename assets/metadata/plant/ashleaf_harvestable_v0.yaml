@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 21]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.311
-  h: 0.114
-  d: 0.301
 species: ashleaf
 growth: harvestable
 variant: 0

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.094
-  h: 0.011
-  d: 0.069
 species: haygrass
 growth: sown
 variant: 0

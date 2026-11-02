@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 24]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.395
-  h: 0.212
-  d: 0.37
 species: potato
 growth: harvestable
 variant: 1

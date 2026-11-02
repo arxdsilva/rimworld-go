@@ -337,10 +337,15 @@ func (t *Tool) SelectCategory(id string) {
 }
 
 // SelectTool arms tool id (the armed card again disarms it); an
-// allowed-area tool opens its area submenu instead.
+// allowed-area tool opens its area submenu instead. A placeholder is
+// never armed: it only says why.
 func (t *Tool) SelectTool(id string) {
 	d, ok := ToolByID(id)
 	if !ok {
+		return
+	}
+	if d.Planned {
+		t.sh.Hint(PlannedReason)
 		return
 	}
 	if t.Areas.toolPick(id) { // area_menu.go: the allowed-area tools open a submenu
@@ -549,7 +554,7 @@ func (t *Tool) Submit() {
 		return
 	}
 	d, cells := t.PreviewCells()
-	if d.ID == "" {
+	if d.ID == "" || d.Planned { // a placeholder never places anything
 		return
 	}
 	if d.Mode == PlaceArea {
@@ -687,7 +692,7 @@ func cursorTip(screen *ebiten.Image, msg string, mx, my, sw int) {
 // panel's Copy does. False when no tool builds kind.
 func (t *Tool) Preset(kind, stuff, facing string) bool {
 	for _, d := range AllTools() {
-		if d.Build != kind {
+		if d.Planned || d.Build != kind {
 			continue
 		}
 		t.OpenPanel()

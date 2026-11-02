@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.904
-  h: 0.06
-  d: 0.139
 weapon: ikwa
 rotatable: true
 points: east

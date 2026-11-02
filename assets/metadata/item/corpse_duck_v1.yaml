@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, -8]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.093
-  h: 0.521
-  d: 0.527
 ppt: 128
 item: duck corpse
 species: duck

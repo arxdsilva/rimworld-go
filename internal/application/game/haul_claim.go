@@ -33,29 +33,13 @@ func claim(st *item.Stack) { st.Unclaimed, st.HaulMarked = false, false }
 // the map and not marked for hauling.
 func leftFound(st *item.Stack) bool { return st.Unclaimed && !st.HaulMarked }
 
-// setHaulMark applies a SetHaulMark command: it marks (or unmarks) a found
-// ground stack for hauling; the colony's own stacks take no mark.
-func (g *Game) setHaulMark(id entity.EntityID, on bool) {
-	st, ok := g.stacks.Get(id)
-	if !ok || st.Carrier != 0 || !st.Unclaimed || st.HaulMarked == on {
-		return
-	}
-	st.HaulMarked = on
-	g.mergeOrSet(id, st)
-}
+// setHaulMark applies a SetHaulMark command: it marks (or unmarks) a
+// ground stack for hauling, allowing it too (game/allow).
+func (g *Game) setHaulMark(id entity.EntityID, on bool) { forbids(g).Mark(id, on) }
 
-// markHaul marks or unmarks every visible found ground stack in the
-// rectangle (DesignateHaul; cancelRect unmarks).
-func (g *Game) markHaul(x1, y1, x2, y2 int, on bool) {
-	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
-	for _, id := range append([]entity.EntityID(nil), g.itemIDs...) {
-		st, ok := g.stacks.Get(id)
-		if ok && st.Unclaimed && st.HaulMarked != on && st.X >= minX && st.X <= maxX && st.Y >= minY && st.Y <= maxY &&
-			(!on || !g.fogged(st.X, st.Y)) {
-			g.setHaulMark(id, on)
-		}
-	}
-}
+// markHaul is the Haul things tool (DesignateHaul; cancelRect unmarks):
+// every visible ground stack in the rectangle allowed, found ones marked.
+func (g *Game) markHaul(x1, y1, x2, y2 int, on bool) { forbids(g).HaulRect(x1, y1, x2, y2, on) }
 
 // migrateClaims marks an older save's loose stone chunks and animal
 // carcasses unclaimed: those lying outside any stockpile, not carried and

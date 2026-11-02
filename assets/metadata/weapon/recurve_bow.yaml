@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.536
-  h: 0.06
-  d: 0.78
 weapon: recurve_bow
 rotatable: true
 points: east

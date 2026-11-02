@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/area"
 )
 
 // areaGame is a bare 30x20 map with one colonist at (3, 3) restricted to
@@ -49,8 +50,8 @@ func TestAreaCommandsAndViews(t *testing.T) {
 		g.Enqueue(command.Command{Kind: command.CreateArea})
 	}
 	g.ApplyPending()
-	if n := len(g.Areas()); n != 10 {
-		t.Fatalf("%d areas, the cap is 10", n)
+	if n := len(g.Areas()); n != area.MaxAreas || area.MaxAreas != 8 { // STK-AL: wiki, Home not counted
+		t.Fatalf("%d areas, the cap is 8", n)
 	}
 }
 

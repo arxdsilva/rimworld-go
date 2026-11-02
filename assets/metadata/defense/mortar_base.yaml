@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 53]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.758
-  h: 0.2
-  d: 0.738
 rotatable: false
 facing: south
 building: mortar

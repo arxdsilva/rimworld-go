@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [60, 20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.791
-  h: 0.328
-  d: 1.024
 ppt: 128
 item: gazelle corpse
 species: gazelle

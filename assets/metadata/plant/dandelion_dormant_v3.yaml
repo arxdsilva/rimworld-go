@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 21]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.235
-  h: 0.063
-  d: 0.233
 species: dandelion
 stage: dormant
 variant: 3

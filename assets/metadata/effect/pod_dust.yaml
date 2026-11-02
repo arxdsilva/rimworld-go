@@ -7,9 +7,4 @@ canvas: [256, 192]
 footprint: [0, 0]
 origin_px: [128, 96]
 particle: true
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0
 effect: pod_dust

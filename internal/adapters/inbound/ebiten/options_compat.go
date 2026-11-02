@@ -398,7 +398,7 @@ func (a *App) syncRenderer() {
 }
 
 // applyGraphicsKnobs sets the renderer's detail knobs from the graphics
-// settings (PLAY-019): the cast-shadow pass, the normal-map lighting, the
+// settings (PLAY-019): the colonist shadows, the normal-map lighting, the
 // water ripple and the grass tufts per tile. Each is read live, so an
 // Options change shows on the next frame.
 func applyGraphicsKnobs(r *Renderer, g config.Graphics) {

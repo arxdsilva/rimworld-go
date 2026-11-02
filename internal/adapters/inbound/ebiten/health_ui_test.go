@@ -452,7 +452,7 @@ func TestArchVitalsMonitor(t *testing.T) {
 			tool = &architectpkg.Tools[i]
 		}
 	}
-	if tool == nil || tool.Build != "vitals monitor" || tool.Icon != "vitals_monitor" || tool.Category != "furniture" || !strings.Contains(tool.Desc, "hospital bed") {
+	if tool == nil || tool.Build != "vitals monitor" || tool.Icon != "vitals_monitor" || tool.Category != "misc" || !strings.Contains(tool.Desc, "hospital bed") {
 		t.Fatalf("tool %+v", tool)
 	}
 	for _, f := range []string{"south", "east", "north", "west"} {

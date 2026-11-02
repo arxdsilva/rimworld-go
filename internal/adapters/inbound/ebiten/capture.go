@@ -605,7 +605,7 @@ func (a *App) captureUI(ui string) {
 	case "carpet":
 		// the Carpet tool with its four material buttons, cloth picked
 		a.arch.OpenPanel()
-		a.arch.SelectCategory("furniture")
+		a.arch.SelectCategory(architectpkg.CatFloors)
 		a.arch.SelectTool("carpet")
 		a.arch.Stuff = "cloth carpet"
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2

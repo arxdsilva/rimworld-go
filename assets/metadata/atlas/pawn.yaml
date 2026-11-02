@@ -17,11 +17,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.423
-      h: 0.336
-      d: 0.458
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -40,11 +35,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.458
-      h: 0.336
-      d: 0.423
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -63,11 +53,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.458
-      h: 0.336
-      d: 0.423
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -86,11 +71,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.188
-      h: 0.257
-      d: 0.402
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -109,11 +89,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.402
-      h: 0.257
-      d: 0.188
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -132,11 +107,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.402
-      h: 0.257
-      d: 0.188
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -155,11 +125,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.134
-      h: 0.116
-      d: 0.34
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -178,11 +143,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.34
-      h: 0.116
-      d: 0.134
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -201,11 +161,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.34
-      h: 0.116
-      d: 0.134
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -224,11 +179,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.157
-      h: 0.152
-      d: 0.378
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -247,11 +197,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.378
-      h: 0.152
-      d: 0.157
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -270,11 +215,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.378
-      h: 0.152
-      d: 0.157
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -293,11 +233,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.322
-      h: 0.865
-      d: 0.386
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -320,11 +255,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.317
-      h: 0.862
-      d: 0.415
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -348,11 +278,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.415
-      h: 0.862
-      d: 0.317
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -376,11 +301,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.415
-      h: 0.862
-      d: 0.322
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -404,11 +324,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.358
-      h: 0.86
-      d: 0.489
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -432,11 +347,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.489
-      h: 0.86
-      d: 0.358
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -460,11 +370,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.489
-      h: 0.86
-      d: 0.358
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -488,11 +393,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.328
-      h: 0.868
-      d: 0.359
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -516,11 +416,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.359
-      h: 0.868
-      d: 0.328
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -544,11 +439,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.359
-      h: 0.868
-      d: 0.334
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -572,11 +462,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.347
-      h: 0.86
-      d: 0.49
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -600,11 +485,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.49
-      h: 0.86
-      d: 0.347
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -628,11 +508,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.49
-      h: 0.86
-      d: 0.347
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -656,11 +531,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.332
-      h: 0.87
-      d: 0.36
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -684,11 +554,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.36
-      h: 0.87
-      d: 0.332
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -712,11 +577,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.36
-      h: 0.87
-      d: 0.337
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -740,11 +600,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.386
-      h: 0.865
-      d: 0.322
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -767,11 +622,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.386
-      h: 0.865
-      d: 0.327
     tint:
       group: skin
       mask: generated/atlas/pawn_0_mask.png
@@ -794,11 +644,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.431
-      h: 0.221
-      d: 0.457
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -817,11 +662,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.457
-      h: 0.221
-      d: 0.431
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -840,11 +680,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.457
-      h: 0.221
-      d: 0.431
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -863,11 +698,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.302
-      h: 0.359
-      d: 0.421
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -886,11 +716,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.315
-      h: 0.359
-      d: 0.409
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -910,11 +735,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.409
-      h: 0.359
-      d: 0.315
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -934,11 +754,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.409
-      h: 0.359
-      d: 0.315
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -958,11 +773,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.391
-      h: 0.359
-      d: 0.494
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -982,11 +792,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.494
-      h: 0.359
-      d: 0.391
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1006,11 +811,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.494
-      h: 0.359
-      d: 0.391
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1030,11 +830,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.274
-      h: 0.359
-      d: 0.357
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1054,11 +849,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.357
-      h: 0.359
-      d: 0.274
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1078,11 +868,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.357
-      h: 0.359
-      d: 0.274
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1102,11 +887,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.39
-      h: 0.359
-      d: 0.525
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1126,11 +906,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.525
-      h: 0.359
-      d: 0.39
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1150,11 +925,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.525
-      h: 0.359
-      d: 0.39
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1174,11 +944,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.271
-      h: 0.359
-      d: 0.383
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1198,11 +963,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.383
-      h: 0.359
-      d: 0.271
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1222,11 +982,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.383
-      h: 0.359
-      d: 0.271
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1246,11 +1001,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.421
-      h: 0.359
-      d: 0.302
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1269,11 +1019,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.421
-      h: 0.359
-      d: 0.302
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1292,11 +1037,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.532
-      h: 0.184
-      d: 0.605
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1315,11 +1055,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.605
-      h: 0.184
-      d: 0.532
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1338,11 +1073,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.605
-      h: 0.184
-      d: 0.532
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -1361,11 +1091,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.436
-      h: 0.54
-      d: 0.565
     layer: duster_leather
     facing: east
   duster_leather_f_avg_east:
@@ -1381,11 +1106,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.434
-      h: 0.54
-      d: 0.593
     layer: duster_leather
     facing: east
     build: f_avg
@@ -1402,11 +1122,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.593
-      h: 0.54
-      d: 0.434
     layer: duster_leather
     facing: north
     build: f_avg
@@ -1423,11 +1138,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.593
-      h: 0.54
-      d: 0.434
     layer: duster_leather
     facing: south
     build: f_avg
@@ -1444,11 +1154,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.498
-      h: 0.54
-      d: 0.667
     layer: duster_leather
     facing: east
     build: f_heavy
@@ -1465,11 +1170,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.667
-      h: 0.54
-      d: 0.498
     layer: duster_leather
     facing: north
     build: f_heavy
@@ -1486,11 +1186,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.667
-      h: 0.54
-      d: 0.498
     layer: duster_leather
     facing: south
     build: f_heavy
@@ -1507,11 +1202,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.397
-      h: 0.54
-      d: 0.537
     layer: duster_leather
     facing: east
     build: f_thin
@@ -1528,11 +1218,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.537
-      h: 0.54
-      d: 0.397
     layer: duster_leather
     facing: north
     build: f_thin
@@ -1549,11 +1234,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.537
-      h: 0.54
-      d: 0.397
     layer: duster_leather
     facing: south
     build: f_thin
@@ -1570,11 +1250,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.482
-      h: 0.54
-      d: 0.649
     layer: duster_leather
     facing: east
     build: m_heavy
@@ -1591,11 +1266,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.649
-      h: 0.54
-      d: 0.482
     layer: duster_leather
     facing: north
     build: m_heavy
@@ -1612,11 +1282,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.649
-      h: 0.54
-      d: 0.482
     layer: duster_leather
     facing: south
     build: m_heavy
@@ -1633,11 +1298,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.405
-      h: 0.54
-      d: 0.513
     layer: duster_leather
     facing: east
     build: m_thin
@@ -1654,11 +1314,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.513
-      h: 0.54
-      d: 0.405
     layer: duster_leather
     facing: north
     build: m_thin
@@ -1675,11 +1330,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.513
-      h: 0.54
-      d: 0.405
     layer: duster_leather
     facing: south
     build: m_thin
@@ -1696,11 +1346,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.565
-      h: 0.54
-      d: 0.436
     layer: duster_leather
     facing: north
   duster_leather_south:
@@ -1716,11 +1361,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.565
-      h: 0.54
-      d: 0.436
     layer: duster_leather
     facing: south
   face_scar_east:
@@ -1736,11 +1376,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.06
-      h: 0.154
-      d: 0.085
     layer: face_scar
     facing: east
   face_scar_north:
@@ -1756,11 +1391,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.092
-      h: 0.154
-      d: 0.051
     layer: face_scar
     facing: north
   face_scar_south:
@@ -1776,11 +1406,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.092
-      h: 0.154
-      d: 0.051
     layer: face_scar
     facing: south
   flak_jacket_east:
@@ -1796,11 +1421,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.35
-      h: 0.442
-      d: 0.528
     layer: flak_jacket
     facing: east
   flak_jacket_f_avg_east:
@@ -1816,11 +1436,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.365
-      h: 0.442
-      d: 0.501
     layer: flak_jacket
     facing: east
     build: f_avg
@@ -1837,11 +1452,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.501
-      h: 0.442
-      d: 0.365
     layer: flak_jacket
     facing: north
     build: f_avg
@@ -1858,11 +1468,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.501
-      h: 0.442
-      d: 0.365
     layer: flak_jacket
     facing: south
     build: f_avg
@@ -1879,11 +1484,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.45
-      h: 0.442
-      d: 0.575
     layer: flak_jacket
     facing: east
     build: f_heavy
@@ -1900,11 +1500,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.575
-      h: 0.442
-      d: 0.45
     layer: flak_jacket
     facing: north
     build: f_heavy
@@ -1921,11 +1516,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.575
-      h: 0.442
-      d: 0.45
     layer: flak_jacket
     facing: south
     build: f_heavy
@@ -1942,11 +1532,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.321
-      h: 0.442
-      d: 0.445
     layer: flak_jacket
     facing: east
     build: f_thin
@@ -1963,11 +1548,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.445
-      h: 0.442
-      d: 0.321
     layer: flak_jacket
     facing: north
     build: f_thin
@@ -1984,11 +1564,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.445
-      h: 0.442
-      d: 0.321
     layer: flak_jacket
     facing: south
     build: f_thin
@@ -2005,11 +1580,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.435
-      h: 0.442
-      d: 0.597
     layer: flak_jacket
     facing: east
     build: m_heavy
@@ -2026,11 +1596,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.597
-      h: 0.442
-      d: 0.435
     layer: flak_jacket
     facing: north
     build: m_heavy
@@ -2047,11 +1612,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.597
-      h: 0.442
-      d: 0.435
     layer: flak_jacket
     facing: south
     build: m_heavy
@@ -2068,11 +1628,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.319
-      h: 0.442
-      d: 0.495
     layer: flak_jacket
     facing: east
     build: m_thin
@@ -2089,11 +1644,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.495
-      h: 0.442
-      d: 0.319
     layer: flak_jacket
     facing: north
     build: m_thin
@@ -2110,11 +1660,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.495
-      h: 0.442
-      d: 0.319
     layer: flak_jacket
     facing: south
     build: m_thin
@@ -2131,11 +1676,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.528
-      h: 0.442
-      d: 0.35
     layer: flak_jacket
     facing: north
   flak_jacket_south:
@@ -2151,11 +1691,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.528
-      h: 0.442
-      d: 0.35
     layer: flak_jacket
     facing: south
   flak_pants_east:
@@ -2171,11 +1706,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.339
-      h: 0.293
-      d: 0.488
     layer: flak_pants
     facing: east
   flak_pants_f_avg_east:
@@ -2191,11 +1721,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.327
-      h: 0.293
-      d: 0.516
     layer: flak_pants
     facing: east
     build: f_avg
@@ -2212,11 +1737,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.516
-      h: 0.293
-      d: 0.327
     layer: flak_pants
     facing: north
     build: f_avg
@@ -2233,11 +1753,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.516
-      h: 0.293
-      d: 0.327
     layer: flak_pants
     facing: south
     build: f_avg
@@ -2254,11 +1769,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.42
-      h: 0.293
-      d: 0.59
     layer: flak_pants
     facing: east
     build: f_heavy
@@ -2275,11 +1785,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.59
-      h: 0.293
-      d: 0.42
     layer: flak_pants
     facing: north
     build: f_heavy
@@ -2296,11 +1801,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.59
-      h: 0.293
-      d: 0.42
     layer: flak_pants
     facing: south
     build: f_heavy
@@ -2317,11 +1817,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.291
-      h: 0.293
-      d: 0.46
     layer: flak_pants
     facing: east
     build: f_thin
@@ -2338,11 +1833,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.46
-      h: 0.293
-      d: 0.291
     layer: flak_pants
     facing: north
     build: f_thin
@@ -2359,11 +1849,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.46
-      h: 0.293
-      d: 0.291
     layer: flak_pants
     facing: south
     build: f_thin
@@ -2380,11 +1865,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.419
-      h: 0.293
-      d: 0.572
     layer: flak_pants
     facing: east
     build: m_heavy
@@ -2401,11 +1881,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.572
-      h: 0.293
-      d: 0.419
     layer: flak_pants
     facing: north
     build: m_heavy
@@ -2422,11 +1897,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.572
-      h: 0.293
-      d: 0.419
     layer: flak_pants
     facing: south
     build: m_heavy
@@ -2443,11 +1913,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.308
-      h: 0.293
-      d: 0.436
     layer: flak_pants
     facing: east
     build: m_thin
@@ -2464,11 +1929,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.436
-      h: 0.293
-      d: 0.308
     layer: flak_pants
     facing: north
     build: m_thin
@@ -2485,11 +1945,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.436
-      h: 0.293
-      d: 0.308
     layer: flak_pants
     facing: south
     build: m_thin
@@ -2506,11 +1961,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.488
-      h: 0.293
-      d: 0.339
     layer: flak_pants
     facing: north
   flak_pants_south:
@@ -2526,11 +1976,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.488
-      h: 0.293
-      d: 0.339
     layer: flak_pants
     facing: south
   flak_vest_east:
@@ -2546,11 +1991,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.381
-      h: 0.377
-      d: 0.488
     layer: flak_vest
     facing: east
   flak_vest_f_avg_east:
@@ -2566,11 +2006,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.38
-      h: 0.377
-      d: 0.475
     layer: flak_vest
     facing: east
     build: f_avg
@@ -2587,11 +2022,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.475
-      h: 0.377
-      d: 0.38
     layer: flak_vest
     facing: north
     build: f_avg
@@ -2608,11 +2038,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.475
-      h: 0.377
-      d: 0.38
     layer: flak_vest
     facing: south
     build: f_avg
@@ -2629,11 +2054,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.468
-      h: 0.377
-      d: 0.56
     layer: flak_vest
     facing: east
     build: f_heavy
@@ -2650,11 +2070,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.56
-      h: 0.377
-      d: 0.468
     layer: flak_vest
     facing: north
     build: f_heavy
@@ -2671,11 +2086,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.56
-      h: 0.377
-      d: 0.468
     layer: flak_vest
     facing: south
     build: f_heavy
@@ -2692,11 +2102,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.339
-      h: 0.377
-      d: 0.423
     layer: flak_vest
     facing: east
     build: f_thin
@@ -2713,11 +2118,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.423
-      h: 0.377
-      d: 0.339
     layer: flak_vest
     facing: north
     build: f_thin
@@ -2734,11 +2134,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.423
-      h: 0.377
-      d: 0.339
     layer: flak_vest
     facing: south
     build: f_thin
@@ -2755,11 +2150,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.468
-      h: 0.377
-      d: 0.589
     layer: flak_vest
     facing: east
     build: m_heavy
@@ -2776,11 +2166,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.589
-      h: 0.377
-      d: 0.468
     layer: flak_vest
     facing: north
     build: m_heavy
@@ -2797,11 +2182,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.589
-      h: 0.377
-      d: 0.468
     layer: flak_vest
     facing: south
     build: m_heavy
@@ -2818,11 +2198,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.35
-      h: 0.377
-      d: 0.441
     layer: flak_vest
     facing: east
     build: m_thin
@@ -2839,11 +2214,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.441
-      h: 0.377
-      d: 0.35
     layer: flak_vest
     facing: north
     build: m_thin
@@ -2860,11 +2230,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.441
-      h: 0.377
-      d: 0.35
     layer: flak_vest
     facing: south
     build: m_thin
@@ -2881,11 +2246,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.488
-      h: 0.377
-      d: 0.381
     layer: flak_vest
     facing: north
   flak_vest_south:
@@ -2901,11 +2261,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.488
-      h: 0.377
-      d: 0.381
     layer: flak_vest
     facing: south
   hair_braid_east:
@@ -2921,11 +2276,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.385
-      h: 0.604
-      d: 0.394
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -2944,11 +2294,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.394
-      h: 0.604
-      d: 0.385
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -2967,11 +2312,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.394
-      h: 0.604
-      d: 0.385
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -2990,11 +2330,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.407
-      h: 0.343
-      d: 0.39
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3013,11 +2348,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.39
-      h: 0.343
-      d: 0.407
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3036,11 +2366,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.39
-      h: 0.343
-      d: 0.407
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3059,11 +2384,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.329
-      h: 0.262
-      d: 0.372
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3082,11 +2402,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.372
-      h: 0.262
-      d: 0.329
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3105,11 +2420,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.372
-      h: 0.262
-      d: 0.329
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3128,11 +2438,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.407
-      h: 0.387
-      d: 0.447
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3151,11 +2456,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.447
-      h: 0.387
-      d: 0.407
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3174,11 +2474,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.447
-      h: 0.387
-      d: 0.407
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3197,11 +2492,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.372
-      h: 0.475
-      d: 0.403
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3220,11 +2510,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.403
-      h: 0.475
-      d: 0.372
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3243,11 +2528,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.403
-      h: 0.475
-      d: 0.372
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3266,11 +2546,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.327
-      h: 0.251
-      d: 0.364
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3289,11 +2564,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.364
-      h: 0.251
-      d: 0.327
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3312,11 +2582,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.364
-      h: 0.251
-      d: 0.327
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3335,11 +2600,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.362
-      h: 0.332
-      d: 0.396
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3358,11 +2618,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.396
-      h: 0.332
-      d: 0.362
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3381,11 +2636,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.396
-      h: 0.332
-      d: 0.362
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3404,11 +2654,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.436
-      h: 0.515
-      d: 0.386
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3427,11 +2672,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.386
-      h: 0.515
-      d: 0.436
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3450,11 +2690,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.386
-      h: 0.515
-      d: 0.436
     tint:
       group: hair
       mask: generated/atlas/pawn_0_mask.png
@@ -3473,11 +2708,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.309
-      h: 0.414
-      d: 0.434
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3496,11 +2726,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.325
-      h: 0.414
-      d: 0.459
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3520,11 +2745,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.459
-      h: 0.414
-      d: 0.325
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3544,11 +2764,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.459
-      h: 0.414
-      d: 0.325
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3568,11 +2783,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.407
-      h: 0.414
-      d: 0.534
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3592,11 +2802,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.534
-      h: 0.414
-      d: 0.407
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3616,11 +2821,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.534
-      h: 0.414
-      d: 0.407
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3640,11 +2840,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.282
-      h: 0.414
-      d: 0.404
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3664,11 +2859,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.404
-      h: 0.414
-      d: 0.282
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3688,11 +2878,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.404
-      h: 0.414
-      d: 0.282
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3712,11 +2897,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.39
-      h: 0.414
-      d: 0.533
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3736,11 +2916,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.533
-      h: 0.414
-      d: 0.39
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3760,11 +2935,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.533
-      h: 0.414
-      d: 0.39
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3784,11 +2954,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.278
-      h: 0.414
-      d: 0.391
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3808,11 +2973,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.391
-      h: 0.414
-      d: 0.278
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3832,11 +2992,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.391
-      h: 0.414
-      d: 0.278
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3856,11 +3011,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.434
-      h: 0.414
-      d: 0.309
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3879,11 +3029,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.434
-      h: 0.414
-      d: 0.309
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -3902,11 +3047,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.48
-      h: 0.635
-      d: 0.672
     layer: marine_armor
     facing: east
   marine_armor_f_avg_east:
@@ -3922,11 +3062,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.485
-      h: 0.635
-      d: 0.619
     layer: marine_armor
     facing: east
     build: f_avg
@@ -3943,11 +3078,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.619
-      h: 0.635
-      d: 0.485
     layer: marine_armor
     facing: north
     build: f_avg
@@ -3964,11 +3094,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.619
-      h: 0.635
-      d: 0.485
     layer: marine_armor
     facing: south
     build: f_avg
@@ -3985,11 +3110,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.558
-      h: 0.635
-      d: 0.691
     layer: marine_armor
     facing: east
     build: f_heavy
@@ -4006,11 +3126,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.691
-      h: 0.635
-      d: 0.558
     layer: marine_armor
     facing: north
     build: f_heavy
@@ -4027,11 +3142,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.691
-      h: 0.635
-      d: 0.558
     layer: marine_armor
     facing: south
     build: f_heavy
@@ -4048,11 +3158,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.447
-      h: 0.635
-      d: 0.576
     layer: marine_armor
     facing: east
     build: f_thin
@@ -4069,11 +3174,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.576
-      h: 0.635
-      d: 0.447
     layer: marine_armor
     facing: north
     build: f_thin
@@ -4090,11 +3190,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.576
-      h: 0.635
-      d: 0.447
     layer: marine_armor
     facing: south
     build: f_thin
@@ -4111,11 +3206,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.549
-      h: 0.635
-      d: 0.74
     layer: marine_armor
     facing: east
     build: m_heavy
@@ -4132,11 +3222,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.74
-      h: 0.635
-      d: 0.549
     layer: marine_armor
     facing: north
     build: m_heavy
@@ -4153,11 +3238,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.74
-      h: 0.635
-      d: 0.549
     layer: marine_armor
     facing: south
     build: m_heavy
@@ -4174,11 +3254,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.449
-      h: 0.635
-      d: 0.639
     layer: marine_armor
     facing: east
     build: m_thin
@@ -4195,11 +3270,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.639
-      h: 0.635
-      d: 0.449
     layer: marine_armor
     facing: north
     build: m_thin
@@ -4216,11 +3286,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.639
-      h: 0.635
-      d: 0.449
     layer: marine_armor
     facing: south
     build: m_thin
@@ -4237,11 +3302,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.672
-      h: 0.635
-      d: 0.48
     layer: marine_armor
     facing: north
   marine_armor_south:
@@ -4257,11 +3317,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.672
-      h: 0.635
-      d: 0.48
     layer: marine_armor
     facing: south
   marine_helmet_east:
@@ -4277,11 +3332,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.43
-      h: 0.478
-      d: 0.451
     layer: marine_helmet
     facing: east
   marine_helmet_north:
@@ -4297,11 +3347,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.451
-      h: 0.478
-      d: 0.43
     layer: marine_helmet
     facing: north
   marine_helmet_south:
@@ -4317,11 +3362,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.451
-      h: 0.478
-      d: 0.43
     layer: marine_helmet
     facing: south
   pants_basic_east:
@@ -4337,11 +3377,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.3
-      h: 0.262
-      d: 0.429
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4360,11 +3395,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.29
-      h: 0.262
-      d: 0.443
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4384,11 +3414,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.443
-      h: 0.262
-      d: 0.29
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4408,11 +3433,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.443
-      h: 0.262
-      d: 0.29
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4432,11 +3452,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.389
-      h: 0.262
-      d: 0.517
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4456,11 +3471,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.517
-      h: 0.262
-      d: 0.389
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4480,11 +3490,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.517
-      h: 0.262
-      d: 0.389
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4504,11 +3509,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.255
-      h: 0.262
-      d: 0.387
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4528,11 +3528,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.387
-      h: 0.262
-      d: 0.255
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4552,11 +3547,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.387
-      h: 0.262
-      d: 0.255
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4576,11 +3566,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.386
-      h: 0.262
-      d: 0.531
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4600,11 +3585,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.531
-      h: 0.262
-      d: 0.386
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4624,11 +3604,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.531
-      h: 0.262
-      d: 0.386
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4648,11 +3623,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.269
-      h: 0.262
-      d: 0.372
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4672,11 +3642,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.372
-      h: 0.262
-      d: 0.269
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4696,11 +3661,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.372
-      h: 0.262
-      d: 0.269
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4720,11 +3680,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.429
-      h: 0.262
-      d: 0.3
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4743,11 +3698,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.429
-      h: 0.262
-      d: 0.3
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -4766,11 +3716,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.379
-      h: 0.501
-      d: 0.473
     layer: parka_leather
     facing: east
   parka_leather_f_avg_east:
@@ -4786,11 +3731,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.373
-      h: 0.501
-      d: 0.501
     layer: parka_leather
     facing: east
     build: f_avg
@@ -4807,11 +3747,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.501
-      h: 0.501
-      d: 0.373
     layer: parka_leather
     facing: north
     build: f_avg
@@ -4828,11 +3763,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.501
-      h: 0.501
-      d: 0.373
     layer: parka_leather
     facing: south
     build: f_avg
@@ -4849,11 +3779,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.445
-      h: 0.501
-      d: 0.575
     layer: parka_leather
     facing: east
     build: f_heavy
@@ -4870,11 +3795,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.575
-      h: 0.501
-      d: 0.445
     layer: parka_leather
     facing: north
     build: f_heavy
@@ -4891,11 +3811,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.575
-      h: 0.501
-      d: 0.445
     layer: parka_leather
     facing: south
     build: f_heavy
@@ -4912,11 +3827,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.335
-      h: 0.501
-      d: 0.445
     layer: parka_leather
     facing: east
     build: f_thin
@@ -4933,11 +3843,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.445
-      h: 0.501
-      d: 0.335
     layer: parka_leather
     facing: north
     build: f_thin
@@ -4954,11 +3859,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.445
-      h: 0.501
-      d: 0.335
     layer: parka_leather
     facing: south
     build: f_thin
@@ -4975,11 +3875,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.453
-      h: 0.501
-      d: 0.559
     layer: parka_leather
     facing: east
     build: m_heavy
@@ -4996,11 +3891,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.559
-      h: 0.501
-      d: 0.453
     layer: parka_leather
     facing: north
     build: m_heavy
@@ -5017,11 +3907,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.559
-      h: 0.501
-      d: 0.453
     layer: parka_leather
     facing: south
     build: m_heavy
@@ -5038,11 +3923,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.348
-      h: 0.501
-      d: 0.421
     layer: parka_leather
     facing: east
     build: m_thin
@@ -5059,11 +3939,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.421
-      h: 0.501
-      d: 0.348
     layer: parka_leather
     facing: north
     build: m_thin
@@ -5080,11 +3955,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.421
-      h: 0.501
-      d: 0.348
     layer: parka_leather
     facing: south
     build: m_thin
@@ -5101,11 +3971,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.473
-      h: 0.501
-      d: 0.379
     layer: parka_leather
     facing: north
   parka_leather_south:
@@ -5121,11 +3986,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.473
-      h: 0.501
-      d: 0.379
     layer: parka_leather
     facing: south
   plate_armor_east:
@@ -5141,11 +4001,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.39
-      h: 0.598
-      d: 0.607
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5164,11 +4019,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.399
-      h: 0.598
-      d: 0.554
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5188,11 +4038,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.554
-      h: 0.598
-      d: 0.399
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5212,11 +4057,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.554
-      h: 0.598
-      d: 0.399
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5236,11 +4076,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.48
-      h: 0.598
-      d: 0.625
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5260,11 +4095,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.625
-      h: 0.598
-      d: 0.48
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5284,11 +4114,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.625
-      h: 0.598
-      d: 0.48
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5308,11 +4133,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.356
-      h: 0.598
-      d: 0.512
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5332,11 +4152,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.512
-      h: 0.598
-      d: 0.356
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5356,11 +4171,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.512
-      h: 0.598
-      d: 0.356
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5380,11 +4190,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.477
-      h: 0.598
-      d: 0.675
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5404,11 +4209,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.675
-      h: 0.598
-      d: 0.477
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5428,11 +4228,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.675
-      h: 0.598
-      d: 0.477
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5452,11 +4247,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.359
-      h: 0.598
-      d: 0.575
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5476,11 +4266,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.575
-      h: 0.598
-      d: 0.359
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5500,11 +4285,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.575
-      h: 0.598
-      d: 0.359
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5524,11 +4304,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.607
-      h: 0.598
-      d: 0.39
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5547,11 +4322,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.607
-      h: 0.598
-      d: 0.39
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5570,11 +4340,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.396
-      h: 0.11
-      d: 0.546
     layer: shield_belt
     facing: east
   shield_belt_f_avg_east:
@@ -5590,11 +4355,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.384
-      h: 0.11
-      d: 0.524
     layer: shield_belt
     facing: east
     build: f_avg
@@ -5611,11 +4371,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.524
-      h: 0.11
-      d: 0.384
     layer: shield_belt
     facing: north
     build: f_avg
@@ -5632,11 +4387,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.524
-      h: 0.11
-      d: 0.384
     layer: shield_belt
     facing: south
     build: f_avg
@@ -5653,11 +4403,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.47
-      h: 0.11
-      d: 0.612
     layer: shield_belt
     facing: east
     build: f_heavy
@@ -5674,11 +4419,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.612
-      h: 0.11
-      d: 0.47
     layer: shield_belt
     facing: north
     build: f_heavy
@@ -5695,11 +4435,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.612
-      h: 0.11
-      d: 0.47
     layer: shield_belt
     facing: south
     build: f_heavy
@@ -5716,11 +4451,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.35
-      h: 0.11
-      d: 0.474
     layer: shield_belt
     facing: east
     build: f_thin
@@ -5737,11 +4467,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.474
-      h: 0.11
-      d: 0.35
     layer: shield_belt
     facing: north
     build: f_thin
@@ -5758,11 +4483,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.474
-      h: 0.11
-      d: 0.35
     layer: shield_belt
     facing: south
     build: f_thin
@@ -5779,11 +4499,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.469
-      h: 0.11
-      d: 0.643
     layer: shield_belt
     facing: east
     build: m_heavy
@@ -5800,11 +4515,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.643
-      h: 0.11
-      d: 0.469
     layer: shield_belt
     facing: north
     build: m_heavy
@@ -5821,11 +4531,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.643
-      h: 0.11
-      d: 0.469
     layer: shield_belt
     facing: south
     build: m_heavy
@@ -5842,11 +4547,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.365
-      h: 0.11
-      d: 0.489
     layer: shield_belt
     facing: east
     build: m_thin
@@ -5863,11 +4563,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.489
-      h: 0.11
-      d: 0.365
     layer: shield_belt
     facing: north
     build: m_thin
@@ -5884,11 +4579,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.489
-      h: 0.11
-      d: 0.365
     layer: shield_belt
     facing: south
     build: m_thin
@@ -5905,11 +4595,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.546
-      h: 0.11
-      d: 0.396
     layer: shield_belt
     facing: north
   shield_belt_south:
@@ -5925,11 +4610,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.546
-      h: 0.11
-      d: 0.396
     layer: shield_belt
     facing: south
   shirt_basic_east:
@@ -5945,11 +4625,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.293
-      h: 0.317
-      d: 0.421
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5968,11 +4643,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.299
-      h: 0.317
-      d: 0.376
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -5992,11 +4662,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.376
-      h: 0.317
-      d: 0.299
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6016,11 +4681,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.376
-      h: 0.317
-      d: 0.299
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6040,11 +4700,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.372
-      h: 0.317
-      d: 0.47
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6064,11 +4719,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.47
-      h: 0.317
-      d: 0.372
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6088,11 +4738,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.47
-      h: 0.317
-      d: 0.372
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6112,11 +4757,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.26
-      h: 0.317
-      d: 0.327
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6136,11 +4776,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.327
-      h: 0.317
-      d: 0.26
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6160,11 +4795,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.327
-      h: 0.317
-      d: 0.26
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6184,11 +4814,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.383
-      h: 0.317
-      d: 0.525
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6208,11 +4833,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.525
-      h: 0.317
-      d: 0.383
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6232,11 +4852,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.525
-      h: 0.317
-      d: 0.383
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6256,11 +4871,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.262
-      h: 0.317
-      d: 0.383
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6280,11 +4890,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.383
-      h: 0.317
-      d: 0.262
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6304,11 +4909,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.383
-      h: 0.317
-      d: 0.262
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6328,11 +4928,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.421
-      h: 0.317
-      d: 0.293
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6351,11 +4946,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.421
-      h: 0.317
-      d: 0.293
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6374,11 +4964,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.44
-      h: 0.363
-      d: 0.467
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6397,11 +4982,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.467
-      h: 0.363
-      d: 0.44
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6420,11 +5000,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.467
-      h: 0.363
-      d: 0.44
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6443,11 +5018,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.466
-      h: 0.189
-      d: 0.48
     layer: smokepop_pack
     facing: east
   smokepop_pack_f_avg_east:
@@ -6463,11 +5033,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.452
-      h: 0.189
-      d: 0.483
     layer: smokepop_pack
     facing: east
     build: f_avg
@@ -6484,11 +5049,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.483
-      h: 0.189
-      d: 0.452
     layer: smokepop_pack
     facing: north
     build: f_avg
@@ -6505,11 +5065,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.483
-      h: 0.189
-      d: 0.452
     layer: smokepop_pack
     facing: south
     build: f_avg
@@ -6526,11 +5081,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.537
-      h: 0.189
-      d: 0.564
     layer: smokepop_pack
     facing: east
     build: f_heavy
@@ -6547,11 +5097,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.564
-      h: 0.189
-      d: 0.537
     layer: smokepop_pack
     facing: north
     build: f_heavy
@@ -6568,11 +5113,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.564
-      h: 0.189
-      d: 0.537
     layer: smokepop_pack
     facing: south
     build: f_heavy
@@ -6589,11 +5129,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.42
-      h: 0.189
-      d: 0.429
     layer: smokepop_pack
     facing: east
     build: f_thin
@@ -6610,11 +5145,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.429
-      h: 0.189
-      d: 0.42
     layer: smokepop_pack
     facing: north
     build: f_thin
@@ -6631,11 +5161,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.429
-      h: 0.189
-      d: 0.42
     layer: smokepop_pack
     facing: south
     build: f_thin
@@ -6652,11 +5177,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.539
-      h: 0.189
-      d: 0.582
     layer: smokepop_pack
     facing: east
     build: m_heavy
@@ -6673,11 +5193,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.582
-      h: 0.189
-      d: 0.539
     layer: smokepop_pack
     facing: north
     build: m_heavy
@@ -6694,11 +5209,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.582
-      h: 0.189
-      d: 0.539
     layer: smokepop_pack
     facing: south
     build: m_heavy
@@ -6715,11 +5225,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.435
-      h: 0.189
-      d: 0.426
     layer: smokepop_pack
     facing: east
     build: m_thin
@@ -6736,11 +5241,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.426
-      h: 0.189
-      d: 0.435
     layer: smokepop_pack
     facing: north
     build: m_thin
@@ -6757,11 +5257,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.426
-      h: 0.189
-      d: 0.435
     layer: smokepop_pack
     facing: south
     build: m_thin
@@ -6778,11 +5273,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.48
-      h: 0.189
-      d: 0.466
     layer: smokepop_pack
     facing: north
   smokepop_pack_south:
@@ -6798,11 +5288,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.48
-      h: 0.189
-      d: 0.466
     layer: smokepop_pack
     facing: south
   tribalwear_east:
@@ -6818,11 +5303,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.318
-      h: 0.55
-      d: 0.429
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6841,11 +5321,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.324
-      h: 0.55
-      d: 0.45
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6865,11 +5340,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.45
-      h: 0.55
-      d: 0.324
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6889,11 +5359,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.45
-      h: 0.55
-      d: 0.324
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6913,11 +5378,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.412
-      h: 0.55
-      d: 0.524
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6937,11 +5397,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.524
-      h: 0.55
-      d: 0.412
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6961,11 +5416,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.524
-      h: 0.55
-      d: 0.412
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -6985,11 +5435,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.282
-      h: 0.55
-      d: 0.394
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7009,11 +5454,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.394
-      h: 0.55
-      d: 0.282
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7033,11 +5473,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.394
-      h: 0.55
-      d: 0.282
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7057,11 +5492,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.403
-      h: 0.55
-      d: 0.532
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7081,11 +5511,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.532
-      h: 0.55
-      d: 0.403
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7105,11 +5530,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.532
-      h: 0.55
-      d: 0.403
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7129,11 +5549,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.288
-      h: 0.55
-      d: 0.39
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7153,11 +5568,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.39
-      h: 0.55
-      d: 0.288
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7177,11 +5587,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.39
-      h: 0.55
-      d: 0.288
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7201,11 +5606,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.429
-      h: 0.55
-      d: 0.318
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7224,11 +5624,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.429
-      h: 0.55
-      d: 0.318
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7247,11 +5642,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.397
-      h: 0.248
-      d: 0.422
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7270,11 +5660,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.422
-      h: 0.248
-      d: 0.397
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7293,11 +5678,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.422
-      h: 0.248
-      d: 0.397
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7316,11 +5696,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.346
-      h: 0.345
-      d: 0.451
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7339,11 +5714,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.34
-      h: 0.345
-      d: 0.423
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7363,11 +5733,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.423
-      h: 0.345
-      d: 0.34
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7387,11 +5752,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.423
-      h: 0.345
-      d: 0.34
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7411,11 +5771,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.427
-      h: 0.345
-      d: 0.513
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7435,11 +5790,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.513
-      h: 0.345
-      d: 0.427
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7459,11 +5809,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.513
-      h: 0.345
-      d: 0.427
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7483,11 +5828,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.304
-      h: 0.345
-      d: 0.373
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7507,11 +5847,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.373
-      h: 0.345
-      d: 0.304
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7531,11 +5866,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.373
-      h: 0.345
-      d: 0.304
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7555,11 +5885,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.42
-      h: 0.345
-      d: 0.555
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7579,11 +5904,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.555
-      h: 0.345
-      d: 0.42
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7603,11 +5923,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.555
-      h: 0.345
-      d: 0.42
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7627,11 +5942,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.315
-      h: 0.345
-      d: 0.415
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7651,11 +5961,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.415
-      h: 0.345
-      d: 0.315
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7675,11 +5980,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.415
-      h: 0.345
-      d: 0.315
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7699,11 +5999,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.451
-      h: 0.345
-      d: 0.346
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png
@@ -7722,11 +6017,6 @@ sprites:
     origin_px: [16, 144]
     projection:
       shear_k: 0.35
-    shadow:
-      kind: blob
-      w: 0.451
-      h: 0.345
-      d: 0.346
     tint:
       group: cloth
       mask: generated/atlas/pawn_0_mask.png

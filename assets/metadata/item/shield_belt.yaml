@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 23]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.68
-  h: 0.098
-  d: 0.583
 item: shield belt

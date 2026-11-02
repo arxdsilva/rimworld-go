@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [46, -8]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.576
-  h: 0.396
-  d: 0.505
 ppt: 128
 item: fennec fox corpse
 species: fennec_fox

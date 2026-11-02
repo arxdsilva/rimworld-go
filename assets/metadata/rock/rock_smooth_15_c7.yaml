@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 44]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1
-  h: 0.59
-  d: 1
 autotile: rock
 mask: 15
 corners: 7

@@ -75,7 +75,8 @@ func (g *Game) spawnCorpse(id entity.EntityID) {
 	}
 	cid := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, cid)
-	g.mergeOrSet(cid, item.Stack{Kind: item.CorpseHuman, Qty: 1, X: pos.X, Y: pos.Y, Of: id, DiedAt: uint64(g.clock.Now())})
+	g.mergeOrSet(cid, item.Stack{Kind: item.CorpseHuman, Qty: 1, X: pos.X, Y: pos.Y, Of: id, DiedAt: uint64(g.clock.Now()),
+		Forbidden: forbids(g).DropForbidden(pos.X, pos.Y)}) // game/allow: outside the home area
 	toxicRot(g, cid, body.ToxicBuildup(g.bodies[id])) // incidents.go (FOOD-6)
 }
 

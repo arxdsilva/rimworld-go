@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 30]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.516
-  h: 0.298
-  d: 0.52
 item: heart

@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 21]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.846
-  h: 0.088
-  d: 0.332
 item: pump shotgun

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.065
-  h: 0.007
-  d: 0.027
 species: brewgrain
 growth: sown
 variant: 2

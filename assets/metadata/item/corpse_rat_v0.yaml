@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [58, -20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.739
-  h: 0.267
-  d: 0.409
 ppt: 128
 item: rat corpse
 species: rat

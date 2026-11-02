@@ -32,7 +32,7 @@ const (
 	DryingRack
 	// Campfire burns wood to heat (and light) its room.
 	Campfire
-	// TailoringBench is a 2x1 table where clothes are sewn.
+	// TailoringBench is a 3x1 table where clothes are sewn.
 	TailoringBench
 	// HorseshoePin is a stake in a patch of sand for pitching horseshoes.
 	HorseshoePin
@@ -69,7 +69,7 @@ const (
 	// never designated, walkable, and salvaged for steel.
 	PodShell
 	// Social and host systems (ENG-003, append only, saved): a brewing
-	// bench and a drug table (2x1 benches), and two free floor markings
+	// bench and a drug table (3x1 benches), and two free floor markings
 	// placed instantly like a sleeping spot: a 2x1 marriage spot where
 	// weddings are held and a 1x1 party spot where parties gather.
 	BrewingBench
@@ -122,7 +122,7 @@ const (
 	// Defence and trade (PLAY-024, append only, saved). SentryTurret is a
 	// powered 1x1 gun post that shoots hostiles in range; TradeBeacon is
 	// an unpowered post that marks the goods an orbital trader can reach;
-	// RadioConsole is a powered 2x1 desk a colonist works to call
+	// RadioConsole is a powered 3x2 desk a colonist works to call
 	// factions and ships.
 	SentryTurret
 	TradeBeacon
@@ -317,17 +317,20 @@ var defs = [kindCount]Def{
 	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true, MetalOK: true},
 	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
 	SleepingSpot: {Kind: SleepingSpot, Name: "sleeping spot", Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
+	// STK-BN, wiki: every production bench below is 3x1 (Workbench, Stove,
+	// Butcher table, ...): the worker stands south of the middle cell
+	// (Spot {1, 1}), and Footprint turns both with the facing.
 	Workbench: {Kind: Workbench, Name: "workbench", Wood: 6, Work: 160, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	Stove: {Kind: Stove, Name: "stove", Wood: 5, Work: 140, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	DoubleBed: {Kind: DoubleBed, Name: "double bed", Wood: 9, Work: 150, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 2}, MetalOK: true},
 	ButcherTable: {Kind: ButcherTable, Name: "butcher table", Wood: 5, Work: 120, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	HorseshoePin: {Kind: HorseshoePin, Name: "horseshoe pin", Wood: 3, Work: 50, Layer: LayerObject},
 	TailoringBench: {Kind: TailoringBench, Name: "tailoring bench", Wood: 7, Work: 150, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	Sandbags:  {Kind: Sandbags, Name: "sandbags", Wood: 2, Work: 60, Layer: LayerObject, StoneOK: true},
 	SpikeTrap: {Kind: SpikeTrap, Name: "spike trap", Wood: 4, Work: 80, Layer: LayerObject},
 	// RSCH-1, wiki: Simple research bench (3x2, 75 stuff + 25 steel, 2800
@@ -352,16 +355,16 @@ var defs = [kindCount]Def{
 	Fence:     {Kind: Fence, Name: "fence", Wood: 1, Work: 20, Layer: LayerObject, StoneOK: true, AnimalBlock: true},
 	FenceGate: {Kind: FenceGate, Name: "fence gate", Wood: 3, Work: 40, Layer: LayerObject, Rotatable: true, AnimalBlock: true, Gate: true},
 	StonecutterTable: {Kind: StonecutterTable, Name: "stonecutter table", Wood: 6, Work: 160, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	ToolCabinet: {Kind: ToolCabinet, Name: "tool cabinet", Wood: 30, Work: 120, Layer: LayerObject, BlocksMove: true,
 		MetalOK: true, MetalOnly: true, Components: 1},
 	HospitalBed: {Kind: HospitalBed, Name: "hospital bed", Wood: 45, Work: 200, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{1, 2}, MetalOK: true, Components: 2},
 	PodShell: {Kind: PodShell, Name: "pod shell", Layer: LayerObject, MetalOK: true, MetalOnly: true, Placed: true, Salvage: 6},
 	BrewingBench: {Kind: BrewingBench, Name: "brewing bench", Wood: 8, Work: 150, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	DrugTable: {Kind: DrugTable, Name: "drug table", Wood: 8, Work: 180, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true},
 	MarriageSpot: {Kind: MarriageSpot, Name: "marriage spot", Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}},
 	PartySpot:    {Kind: PartySpot, Name: "party spot", Layer: LayerObject},
 	SteamVent: {Kind: SteamVent, Name: "steam vent", Layer: LayerFoundation, Placed: true, Natural: true,
@@ -398,10 +401,10 @@ var defs = [kindCount]Def{
 	Cooler: {Kind: Cooler, Name: "cooler", Wood: 10, Work: 130, Layer: LayerObject, BlocksMove: true, Rotatable: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
 	ElectricStove: {Kind: ElectricStove, Name: "electric stove", Wood: 45, Work: 190, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 2},
 	ElectricTailoringBench: {Kind: ElectricTailoringBench, Name: "electric tailoring bench", Wood: 55, Work: 210, Layer: LayerObject,
-		BlocksMove: true, Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		BlocksMove: true, Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 2},
 	// RSCH-1, wiki: Hi-tech research bench (5x2, 150 metal + 100 steel +
 	// 10 components, 5000 work; 250 W in power.go). Scaled as the wave D
@@ -414,13 +417,14 @@ var defs = [kindCount]Def{
 	VitalsMonitor: {Kind: VitalsMonitor, Name: "vitals monitor", Wood: 40, Work: 300, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, MetalOK: true, MetalOnly: true, Components: 1},
 	// PLAY-024 (our costs, PLAY024_PLAN.md): steel pieces (Wood is the
-	// steel). The console's operator stands at its spot, south of the desk.
+	// steel). The console's operator stands at its spot, south of the desk's
+	// middle (STK-BN, wiki: Comms console, 3x2).
 	SentryTurret: {Kind: SentryTurret, Name: "sentry turret", Wood: 90, Work: 400, Layer: LayerObject, BlocksMove: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
 	TradeBeacon: {Kind: TradeBeacon, Name: "trade beacon", Wood: 40, Work: 120, Layer: LayerObject,
 		MetalOK: true, MetalOnly: true},
 	RadioConsole: {Kind: RadioConsole, Name: "radio console", Wood: 80, Work: 300, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true,
+		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
 	// BED-1, wiki: Bedroll, Double bedroll, Animal sleeping spot, Animal
 	// bed, End table, Dresser. Costs and work are the wiki's scaled the
@@ -436,8 +440,9 @@ var defs = [kindCount]Def{
 		Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
 	// Wave D rows (ENG-003). Costs and work are the wiki's scaled the way
 	// BED-1 scales them (material / 9 rounded, work / 10); components as
-	// the wiki. A 3x1 wiki bench is 2x1 here like every other bench
-	// (5x2 -> 3x2, 3x2 -> 2x2). Secondary materials (an art bench's
+	// the wiki. Footprints are the wiki's (STK-BN: 3x1 production benches,
+	// a 5x2 fabrication bench, a 3x2 fuel refinery; the worker stands in
+	// front of the middle). Secondary materials (an art bench's
 	// steel, a fabrication bench's advanced components, a mortar's
 	// barrel) are not modelled yet.
 	// PRD-3, wiki: Crafting spot, Butcher spot, Fueled smithy, Electric
@@ -446,24 +451,24 @@ var defs = [kindCount]Def{
 	CraftingSpot: {Kind: CraftingSpot, Name: "crafting spot", Layer: LayerObject, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	ButcherSpot:  {Kind: ButcherSpot, Name: "butchering spot", Layer: LayerObject, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	FueledSmithy: {Kind: FueledSmithy, Name: "wood-fired forge", Wood: 11, Work: 300, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true, MetalOK: true, MetalOnly: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true, MetalOK: true, MetalOnly: true},
 	// wiki: no build work for the electric smithy; the fueled smithy's.
 	ElectricSmithy: {Kind: ElectricSmithy, Name: "electric forge", Wood: 11, Work: 300, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
 	MachiningTable: {Kind: MachiningTable, Name: "machining table", Wood: 17, Work: 300, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 5},
 	FabricationBench: {Kind: FabricationBench, Name: "fabrication bench", Wood: 22, Work: 500, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, Bench: true,
+		Rotatable: true, Size: [2]int{5, 2}, Spot: [2]int{2, 2}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 12},
 	ArtBench: {Kind: ArtBench, Name: "sculpting bench", Wood: 8, Work: 250, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true, StoneOK: true, MetalOK: true},
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true, StoneOK: true, MetalOK: true},
 	ElectricSmelter: {Kind: ElectricSmelter, Name: "electric smelter", Wood: 19, Work: 350, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		Rotatable: true, Size: [2]int{3, 1}, Spot: [2]int{1, 1}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 2},
 	BiofuelRefinery: {Kind: BiofuelRefinery, Name: "fuel refinery", Wood: 17, Work: 200, Layer: LayerObject, BlocksMove: true,
-		Rotatable: true, Size: [2]int{2, 2}, Spot: [2]int{0, 2}, HasSpot: true, Bench: true,
+		Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, Bench: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
 	// 30 wood (+10 steel, not modelled); the wiki gives no work: ours.
 	FermentingBarrel: {Kind: FermentingBarrel, Name: "fermenting barrel", Wood: 3, Work: 60, Layer: LayerObject, BlocksMove: true,

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 79]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.3
-  h: 1.4
-  d: 0.3
 layer: glow
 of: furniture/lamp_standing
 emissive: lamp_warm

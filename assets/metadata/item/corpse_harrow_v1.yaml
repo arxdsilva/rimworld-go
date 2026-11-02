@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [6, 98]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.945
-  h: 1.199
-  d: 1.641
 ppt: 128
 item: harrow corpse
 species: harrow

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 34]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.462
-  h: 0.431
-  d: 0.459
 species: cotton
 growth: wilted
 variant: 3

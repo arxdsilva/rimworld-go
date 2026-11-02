@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [38, 10]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.443
-  h: 0.421
-  d: 0.853
 ppt: 128
 item: goat corpse
 species: goat

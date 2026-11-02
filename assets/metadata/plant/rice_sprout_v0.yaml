@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 22]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.219
-  h: 0.156
-  d: 0.233
 species: rice
 growth: sprout
 variant: 0

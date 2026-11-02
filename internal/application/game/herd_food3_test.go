@@ -72,6 +72,7 @@ func TestCowButchersByAge(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 4, Width: 30, Height: 14})
 	bareGround(g)
+	g.paintHome(0, 0, 29, 13, true) // STK-AL: a carcass outside Home starts forbidden
 	cook, _ := g.SpawnNamedPawn(4, 7, "Cook")
 	onlyWork(g, cook, work.Handle, work.Cook)
 	setSkill(g, cook, skill.Cooking, 10)
@@ -293,7 +294,7 @@ func TestAutoSlaughterCapsSurviveASave(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 9, Width: 20, Height: 10})
 	applyNow(g, command.Command{Kind: command.SetAutoSlaughter, Name: "goat", X: 1, Y: 3, X2: 0})
-	sid := g.dropCorpseAs(animal.Cow, 5, 5, false, 500)
+	sid := g.dropCorpseAs(animal.Cow, 5, 5, false, false, 500)
 	l := saveLoad(t, g)
 	if v := l.World().AutoSlaughter; len(v) != 1 || v[0] != (AutoSlaughterView{Species: "goat", MaxMales: 1, MaxFemales: 3, MaxYoung: 0}) {
 		t.Fatalf("caps after a load: %+v", v)

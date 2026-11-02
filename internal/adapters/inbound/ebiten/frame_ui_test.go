@@ -160,7 +160,7 @@ func TestCarpetMaterialButtonsShowCounts(t *testing.T) {
 		{ID: 2, Kind: "cloth carpet", Qty: 5, X: 2, Y: 1, Forbidden: true},
 	}}
 	click(t, a, "tab.architect")
-	click(t, a, "arch.cat.furniture")
+	click(t, a, "arch.cat.floors")
 	click(t, a, "arch.tool.carpet")
 	bs := a.arch.Buttons()
 	if b, _ := hasButton(bs, "arch.stuff.straw carpet"); b.Label != "Straw (0)" {

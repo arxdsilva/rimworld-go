@@ -304,7 +304,7 @@ func (o *Set) BuildStains(v *render.View, b *StainBatch, w game.WorldView, sw, s
 }
 
 // DrawStains draws the world's blood and ichor stains in one lit batch,
-// after the ground cover and before shadows and objects. Off-screen
+// after the ground cover and before the colonist shadows and objects. Off-screen
 // stains are skipped.
 func (o *Set) DrawStains(v *render.View, ps sprite.Pass, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	if len(w.Stains) == 0 || ps.Cast != nil {
@@ -395,7 +395,7 @@ func IsHiveSpecies(key string) bool {
 }
 
 // PawnBlood is the Custom3 value for p's body and apparel this frame (0
-// in the shadow pass and for a patient being carried).
+// in a bake and for a patient being carried).
 func (o *Set) PawnBlood(v *render.View, ps sprite.Pass, p game.PawnView) float32 {
 	if ps.Cast != nil || p.CarriedBy != 0 {
 		return 0

@@ -8,10 +8,5 @@ footprint: [1, 1]
 origin_px: [16, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.667
-  h: 0.197
-  d: 0.671
 item: hops
 stack: true

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 23]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 1.04
-  h: 0.147
-  d: 0.178
 weapon: sniper_rifle
 rotatable: true
 points: east

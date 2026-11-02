@@ -125,7 +125,7 @@ func TestCaptureColonyStates(t *testing.T) {
 			captureCursorOnTool(t, a, "hospital_bed")
 		}},
 		{"arch-cabinet", 60, func(t *testing.T, a *App) {
-			if !a.arch.Open || a.arch.Cat != "production" || a.cursor == nil {
+			if !a.arch.Open || a.arch.Cat != "misc" || a.cursor == nil {
 				t.Fatalf("architect open %v cat %q cursor %v", a.arch.Open, a.arch.Cat, a.cursor)
 			}
 			captureCursorOnTool(t, a, "tool_cabinet")

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [6, 4]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.944
-  h: 0.513
-  d: 0.704
 ppt: 128
 item: hare corpse
 species: hare

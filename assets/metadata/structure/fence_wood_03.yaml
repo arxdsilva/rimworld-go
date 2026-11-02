@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 48]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.77
-  h: 0.7
-  d: 0.77
 autotile: fence
 mask: 3
 material: wood

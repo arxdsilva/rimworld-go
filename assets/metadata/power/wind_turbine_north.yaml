@@ -8,11 +8,6 @@ footprint: [1, 2]
 origin_px: [16, 95]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.76
-  h: 1.745
-  d: 1.77
 rotatable: true
 facing: north
 building: wind turbine

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.92
-  h: 0.2
-  d: 0.255
 weapon: triple_rocket_launcher
 rotatable: true
 points: east

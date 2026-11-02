@@ -7,10 +7,5 @@ canvas: [128, 192]
 footprint: [0, 0]
 origin_px: [64, 182]
 particle: true
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0
 effect: steam_puff
 frame: 0

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.62
-  h: 0.306
-  d: 0.667
 species: rice
 growth: wilted
 variant: 3

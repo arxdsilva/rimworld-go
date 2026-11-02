@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.1
-  h: 0.015
-  d: 0.081
 species: pumpkin
 growth: sown
 variant: 3

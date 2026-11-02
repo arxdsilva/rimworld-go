@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.93
-  h: 0.168
-  d: 0.84
 building: pod shell
 walkable: true
 salvage: steel

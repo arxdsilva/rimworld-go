@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 58]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.79
-  h: 0.92
-  d: 0.78
 tint:
   group: cloth
   mask: generated/world/furniture/armchair_south_mask.png

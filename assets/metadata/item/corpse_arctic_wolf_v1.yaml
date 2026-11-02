@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [46, 8]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.578
-  h: 0.428
-  d: 0.757
 ppt: 128
 item: arctic wolf corpse
 species: arctic_wolf

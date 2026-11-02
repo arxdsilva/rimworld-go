@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 1.007
-  h: 0.062
-  d: 0.064
 weapon: pila
 rotatable: true
 points: east

@@ -440,12 +440,9 @@ func (a Thing) ItemCommands(id entity.EntityID) []Button {
 	out := []Button{forbid}
 	if it.Unclaimed {
 		mark := Button{ID: "item.haulmark", Label: "Mark for hauling", Icon: "order_haul", Toggle: true, On: it.HaulMarked,
-			Desc: "Colonists will haul it to a stockpile."}
-		switch {
-		case it.HaulMarked:
+			Desc: "Colonists will haul it to a stockpile. Marking a forbidden stack allows it."}
+		if it.HaulMarked {
 			mark.Label, mark.Desc = "Unmark", "Colonists leave it where it lies."
-		case it.Forbidden: // colonists never haul a forbidden stack
-			mark.Disabled, mark.Reason = true, "forbidden: allow it first"
 		}
 		out = append(out, mark)
 	}

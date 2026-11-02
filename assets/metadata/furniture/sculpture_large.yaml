@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 64]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.697
-  h: 0.949
-  d: 0.697
 tint:
   group: stone_tint
   mask: generated/world/furniture/sculpture_large_mask.png

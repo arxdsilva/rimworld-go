@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.011
-  h: 0.226
-  d: 0.769
 species: bramble
 stage: mature
 variant: 0

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 52]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.07
-  h: 0.31
-  d: 0.035
 layer: glow
 of: defense/sentry_turret_base
 emissive: sentry_lamp_glow

@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/platform/input"
 )
 
 // Bed stats and the building Forbid toggle (BED-1), read from
@@ -47,14 +48,22 @@ func forbiddable(b game.BuildingView) bool {
 // forbidCommand is the Forbid toggle of building b: SetForbidden for the
 // building, the command an item stack uses.
 func forbidCommand(b game.BuildingView) Button {
-	c := Button{ID: BuildingForbidID, Label: "Forbid", Icon: "order_forbid", Toggle: true, On: b.Forbidden,
+	c := Button{ID: BuildingForbidID, Label: "Forbid", Icon: "order_forbid", Toggle: true, On: b.Forbidden, Hotkey: input.Forbid,
 		Desc: "Colonists leave it alone: no using, no work on it.",
 		Cmds: []command.Command{{Kind: command.SetForbidden, Target: uint64(b.ID), Enabled: !b.Forbidden}}}
 	if k, ok := construction.Parse(b.Kind); ok && k.IsDoor() { // a door: Forbid shuts it to colonists, Allow opens it again
 		c.Desc = "Forbid: colonists keep out and path around this door.\nAllow: colonists may use it again."
-		if b.Forbidden {
-			c.Label = "Allow"
-		}
+	}
+	if b.Forbidden { // STK-AL: the toggle reads what a click does, as an item's does
+		c.Label, c.Icon = "Allow", "order_allow"
 	}
 	return c
+}
+
+// ForbidSelection is F on a selected door or sleeping place (STK-AL):
+// its Forbid toggle flips.
+func (a Building) ForbidSelection() {
+	if b, ok := a.SelectedBuilding(); ok && forbiddable(b) {
+		a.shell.Enqueue(forbidCommand(b).Cmds[0])
+	}
 }

@@ -1,6 +1,7 @@
 package construction
 
 import (
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -58,22 +59,20 @@ func TestRefundAndFacing(t *testing.T) {
 
 func TestFootprintRotation(t *testing.T) {
 	t.Parallel()
-	cells, spot, ok := Footprint(Workbench, South, 5, 5)
-	if len(cells) != 2 || cells[0] != [2]int{5, 5} || cells[1] != [2]int{6, 5} || !ok || spot != [2]int{5, 6} {
-		t.Fatalf("south bench cells=%v spot=%v", cells, spot)
-	}
-	cells, spot, _ = Footprint(Workbench, East, 5, 5)
-	// vertical 1x2, front faces east
-	if len(cells) != 2 || !Covers(Workbench, East, 5, 5, 5, 6) || spot[0] != 6 {
-		t.Fatalf("east bench cells=%v spot=%v", cells, spot)
-	}
-	_, spot, _ = Footprint(Workbench, North, 5, 5)
-	if spot[1] != 4 {
-		t.Fatalf("north bench spot=%v", spot)
-	}
-	_, spot, _ = Footprint(Workbench, West, 5, 5)
-	if spot[0] != 4 {
-		t.Fatalf("west bench spot=%v", spot)
+	for _, c := range []struct {
+		f     Facing
+		cells [][2]int
+		spot  [2]int
+	}{ // STK-BN: a 3x1 bench, the worker in front of the middle cell
+		{South, [][2]int{{5, 5}, {6, 5}, {7, 5}}, [2]int{6, 6}},
+		{East, [][2]int{{5, 7}, {5, 6}, {5, 5}}, [2]int{6, 6}},
+		{North, [][2]int{{7, 5}, {6, 5}, {5, 5}}, [2]int{6, 4}},
+		{West, [][2]int{{5, 5}, {5, 6}, {5, 7}}, [2]int{4, 6}},
+	} {
+		cells, spot, ok := Footprint(Workbench, c.f, 5, 5)
+		if !ok || spot != c.spot || !slices.Equal(cells, c.cells) {
+			t.Fatalf("%v bench cells=%v spot=%v", c.f, cells, spot)
+		}
 	}
 	if c, _, ok := Footprint(Wall, East, 2, 3); len(c) != 1 || c[0] != [2]int{2, 3} || ok {
 		t.Fatal("walls are 1x1 without a spot")
@@ -81,6 +80,46 @@ func TestFootprintRotation(t *testing.T) {
 	if c, _, _ := Footprint(Bed, East, 0, 0); len(c) != 2 || c[1][0] != 1 {
 		t.Fatalf("east bed = %v", c)
 	}
+}
+
+// TestWikiBenchFootprints pins STK-BN's wiki footprints: every production
+// bench 3x1, the fabrication bench 5x2, the fuel refinery and radio console
+// 3x2, each worked from the cell in front of its middle in every facing.
+func TestWikiBenchFootprints(t *testing.T) {
+	t.Parallel()
+	sizes := map[Kind][2]int{FabricationBench: {5, 2}, BiofuelRefinery: {3, 2}, RadioConsole: {3, 2}}
+	for _, k := range []Kind{Workbench, Stove, ButcherTable, TailoringBench, StonecutterTable, BrewingBench, DrugTable,
+		ElectricStove, ElectricTailoringBench, FueledSmithy, ElectricSmithy, MachiningTable, ArtBench, ElectricSmelter} {
+		sizes[k] = [2]int{3, 1}
+	}
+	for k, size := range sizes {
+		if d := DefOf(k); d.Size != size || !d.HasSpot || !d.Rotatable {
+			t.Fatalf("%v: size %v spot %v, want %v", k, d.Size, d.HasSpot, size)
+		}
+		for f := South; f <= West; f++ {
+			cells, spot, _ := Footprint(k, f, 10, 10)
+			if len(cells) != size[0]*size[1] || spot != frontMiddle(cells, f) {
+				t.Fatalf("%v %v: cells %v spot %v, want %v", k, f, cells, spot, frontMiddle(cells, f))
+			}
+		}
+	}
+}
+
+// frontMiddle is the cell just outside cells' facing edge, at its middle.
+func frontMiddle(cells [][2]int, f Facing) [2]int {
+	x0, y0, x1, y1 := cells[0][0], cells[0][1], cells[0][0], cells[0][1]
+	for _, c := range cells {
+		x0, y0, x1, y1 = min(x0, c[0]), min(y0, c[1]), max(x1, c[0]), max(y1, c[1])
+	}
+	switch f {
+	case East:
+		return [2]int{x1 + 1, (y0 + y1) / 2}
+	case North:
+		return [2]int{(x0 + x1) / 2, y0 - 1}
+	case West:
+		return [2]int{x0 - 1, (y0 + y1) / 2}
+	}
+	return [2]int{(x0 + x1) / 2, y1 + 1}
 }
 
 func TestDoubleBedHoldsTwo(t *testing.T) {

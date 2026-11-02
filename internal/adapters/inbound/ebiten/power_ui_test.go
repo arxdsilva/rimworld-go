@@ -45,12 +45,18 @@ func TestPowerArchitectTools(t *testing.T) {
 	if !listed[architectpkg.CatPower] {
 		t.Fatal("no Power category")
 	}
-	// A ninth category overflows the four-row panel: the heater and cooler
-	// sit in Misc (PLAY021_PLAN fallback), so Temperature stays unlisted.
-	if len(architectpkg.Categories) > 8 || listed[architectpkg.CatTemperature] {
-		t.Fatalf("%d categories (Temperature listed %v): the panel holds eight", len(architectpkg.Categories), listed[architectpkg.CatTemperature])
+	// STK-AG: the panel grew to the twelve vanilla categories; the heater
+	// and cooler sit in Temperature.
+	if !listed[architectpkg.CatTemperature] {
+		t.Fatal("no Temperature category")
 	}
-	want := []string{"conduit", "hidden_conduit", "power_switch", "wood_generator", "solar_panel", "wind_turbine", "geothermal", "battery"}
+	for _, id := range []string{"heater", "cooler"} {
+		if tl, _ := toolByID(id); tl.Category != architectpkg.CatTemperature {
+			t.Errorf("%s sits in %q, want Temperature", id, tl.Category)
+		}
+	}
+	want := []string{"conduit", "hidden_conduit", "power_switch", "wood_generator", "solar_panel", "wind_turbine", "geothermal", "battery",
+		"planned_waterproof_conduit", "planned_chemfuel_generator", "planned_watermill"} // STK-AG placeholders follow the working cards
 	if got := toolIDsIn(architectpkg.CatPower); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("Power tools %v, want %v", got, want)
 	}
@@ -63,12 +69,12 @@ func TestPowerArchitectTools(t *testing.T) {
 	if !strings.Contains(furn, "lamp,torch_lamp") {
 		t.Errorf("Furniture %s: the torch lamp belongs beside the lamp", furn)
 	}
-	if !strings.Contains(furn, "campfire") {
-		t.Errorf("Furniture %s lost the campfire", furn)
+	temp := strings.Join(toolIDsIn(architectpkg.CatTemperature), ",") // STK-AG: vanilla Temperature
+	if !strings.Contains(temp, "campfire") {
+		t.Errorf("Temperature %s lost the campfire", temp)
 	}
-	misc := strings.Join(toolIDsIn("misc"), ",")
-	if !strings.Contains(misc, "heater") || !strings.Contains(misc, "cooler") {
-		t.Errorf("Misc %s lacks the heater and cooler", misc)
+	if !strings.Contains(temp, "heater") || !strings.Contains(temp, "cooler") {
+		t.Errorf("Temperature %s lacks the heater and cooler", temp)
 	}
 	prod := strings.Join(toolIDsIn("production"), ",")
 	for _, pair := range []string{"stove,electric_stove", "tailor,electric_tailor", "research,electric_research"} {
@@ -207,7 +213,7 @@ func TestPowerToolsLockedBeforeElectricity(t *testing.T) {
 	check(architectpkg.CatPower, "conduit", "Needs research: Electricity")
 	check(architectpkg.CatPower, "battery", "Needs research: Batteries")
 	check(architectpkg.CatPower, "geothermal", "Needs research: Geothermal power")
-	check("misc", "heater", "Needs research: Electricity")
+	check(architectpkg.CatTemperature, "heater", "Needs research: Electricity")
 	check("furniture", "lamp", "Needs research: Electricity")
 	check("furniture", "torch_lamp", "")
 	check("production", "electric_stove", "Needs research: Electricity")
@@ -318,7 +324,7 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 		forced    bool
 	}{
 		{architectpkg.CatPower, "conduit", true}, {architectpkg.CatPower, "hidden_conduit", true}, {architectpkg.CatPower, "power_switch", true},
-		{architectpkg.CatPower, "battery", true}, {"misc", "heater", true}, {"misc", "cooler", true}, {"furniture", "lamp", true},
+		{architectpkg.CatPower, "battery", true}, {architectpkg.CatTemperature, "heater", true}, {architectpkg.CatTemperature, "cooler", true}, {"furniture", "lamp", true},
 		{"production", "electric_research", true}, {"furniture", "torch_lamp", false}, {"structure", "wall", false},
 		{"misc", "party_spot", false},
 	} {
@@ -680,7 +686,7 @@ func TestCoolerGhostUsesCanPlace(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	a.arch.OpenPanel()
-	a.arch.Cat = "misc"
+	a.arch.Cat = architectpkg.CatTemperature // STK-AG
 	archPick(t, a, "cooler")
 	f.MoveTo(a, 5, 5)
 	f.Frame(t, a)

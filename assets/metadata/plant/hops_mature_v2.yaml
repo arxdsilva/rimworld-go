@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 64]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.355
-  h: 1.089
-  d: 0.343
 species: hops
 growth: mature
 variant: 2

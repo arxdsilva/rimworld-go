@@ -124,7 +124,7 @@ func TestLightsComeOnlyFromLightSources(t *testing.T) {
 			t.Errorf("%s tests Kind == \"lamp\": take lights from lightSources (light_sources.go)", f)
 		}
 		switch f {
-		case "render/light/light.go", "render/light/shadow.go", "shadow.go":
+		case "render/light/light.go", "render/light/shadow.go":
 		default:
 			continue
 		}

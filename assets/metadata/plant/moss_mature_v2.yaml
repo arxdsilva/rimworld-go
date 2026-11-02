@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 21]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.555
-  h: 0.032
-  d: 0.485
 species: moss
 stage: mature
 variant: 2

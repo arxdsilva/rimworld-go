@@ -122,7 +122,7 @@ def glow_layer(family, name, footprint, zmax, of, lit, clip=(), margins=None):
     out) as `name`, the glow layer of sprite `of`."""
     _light_up()
     p = S.render_asset(family, name, footprint=footprint, zmax=zmax, margins=margins, outline=False,
-                       tint=False, shadow_kind="none", clip=clip,
+                       tint=False, clip=clip,
                        extra={"layer": "glow", "of": of, "emissive": lit})
     if S._read_png(p)[..., 3].max() <= 0.0:
         raise ValueError("%s: every emissive part is hidden in this facing; add one on a face it shows" % name)
@@ -154,7 +154,7 @@ def turn(pt, facing, footprint):
     return (v.x, v.y, v.z)
 
 
-def render(name, builder, facing=None, extra=None, shadow_kind="box", clip=(), family=FAMILY,
+def render(name, builder, facing=None, extra=None, clip=(), family=FAMILY,
            margins=None, after=None):
     """Build, face and render one sprite (+ its glow layer when any part
     glows). builder() returns (footprint, zmax[, {attachment: (x, y, z)}]);
@@ -177,7 +177,7 @@ def render(name, builder, facing=None, extra=None, shadow_kind="box", clip=(), f
         ex["emissive"] = lits[0]
         ex["glow"] = "%s/%s" % (family, gname)
     out = [S.render_asset(family, name, footprint=fp, zmax=zmax, margins=margins, extra=ex,
-                          shadow_kind=shadow_kind, clip=clip)]
+                          clip=clip)]
     if lits:
         builder()
         if facing:
@@ -310,7 +310,6 @@ def _hidden_conduit(mask):
     S.write_png(img, path)
     meta.write(FAMILY, name, {"image": "generated/world/%s/%s.png" % (FAMILY, name), "scale": C.SCALE,
                               "canvas": [n, n], "footprint": [1, 1], "origin_px": [0, 0],
-                              "shadow": {"kind": "none", "w": 0.0, "h": 0.0, "d": 0.0},
                               "autotile": "hidden_conduit", "mask": mask, "overlay": "power",
                               "net_colour": True})
     return path
@@ -627,74 +626,93 @@ def _cooler():
 
 
 # ------------------------------------------------- PLAY-024 radio and beacon
-RADIO_MAST = (1.80, -0.26, 1.62)   # antenna tip (lamp)
-RADIO_PANEL = (-0.56, 0.64)        # the sloped panel's front-bottom edge (y, z)
+RADIO_MAST = (2.74, -0.26, 1.62)   # antenna tip (lamp)
+RADIO_PANEL = (-1.06, 0.64)        # the sloped panel's front-bottom edge (y, z)
 RADIO_SLOPE = 52                   # degrees the panel leans back from upright
 
 
 def _radio_console():
-    """2 x 1 radio console, authored facing south (the operator stands on
-    the tile south of it): a steel desk on two drawer pedestals, an enamel
-    radio set on its back half with a screen tracing a green waveform
-    (glow), a lit frequency strip and dials, a speaker, a handset on its
-    cradle, and an antenna mast at the north-east corner whose tip lamp
-    (glow) shows in every facing."""
-    for x0, x1 in ((0.10, 0.52), (1.48, 1.90)):                     # drawer pedestals
-        S.box("pedestal", x0, -0.86, 0.0, x1, -0.16, 0.46, "steel_dark", bevel=0.025)
+    """3 x 2 radio console (STK-AR, wiki size), authored facing south (the
+    operator stands on the tile south of the middle cell): a deep steel desk
+    on two drawer pedestals; on its back half an enamel radio set in the
+    middle with a screen tracing a green waveform (glow), a lit frequency
+    strip and dials, a relay rack with lamps (glow) west and a speaker
+    east; on the front half a handset on its cradle, a desk microphone, a
+    notepad and a log book; an antenna mast at the north-east corner whose
+    tip lamp (glow) shows in every facing."""
+    for x0, x1 in ((0.10, 0.70), (2.30, 2.90)):                     # drawer pedestals
+        S.box("pedestal", x0, -1.86, 0.0, x1, -0.16, 0.46, "steel_dark", bevel=0.025)
         for z in (0.12, 0.30):
-            S.box("drawer", x0 + 0.05, -0.875, z, x1 - 0.05, -0.855, z + 0.12, "steel", bevel=0.008)
-            S.box("pull", (x0 + x1) / 2 - 0.05, -0.89, z + 0.05, (x0 + x1) / 2 + 0.05, -0.87, z + 0.07,
+            S.box("drawer", x0 + 0.05, -1.875, z, x1 - 0.05, -1.855, z + 0.12, "steel", bevel=0.008)
+            S.box("pull", (x0 + x1) / 2 - 0.05, -1.89, z + 0.05, (x0 + x1) / 2 + 0.05, -1.87, z + 0.07,
                   "metal_dark", bevel=0.0)
-    S.box("modesty", 0.52, -0.30, 0.10, 1.48, -0.18, 0.46, "metal_dark", bevel=0.01)
-    S.box("desk", 0.06, -0.92, 0.46, 1.94, -0.10, 0.52, "steel", bevel=0.02)
+    S.box("modesty", 0.70, -0.30, 0.10, 2.30, -0.18, 0.46, "metal_dark", bevel=0.01)
+    S.box("desk", 0.06, -1.92, 0.46, 2.94, -0.10, 0.52, "steel", bevel=0.02)
     # the set: an enamel cabinet whose front panel slopes back, so the
     # screen, frequency strip and dials face the operator and the sky
-    S.box("set_lip", 0.24, -0.58, 0.52, 1.34, -0.30, RADIO_PANEL[1], "radio_enamel", bevel=0.02)
-    S.box("set_back", 0.24, -0.34, 0.52, 1.34, -0.14, 0.98, "radio_enamel", bevel=0.03)
-    S.box("set_lid", 0.22, -0.36, 0.98, 1.36, -0.12, 1.02, "steel_dark", bevel=0.015)
-    for x in (0.40, 0.52, 0.64, 0.76):
-        S.box("vent", x, -0.32, 1.02, x + 0.06, -0.16, 1.03, "metal_dark", bevel=0.0)
+    x0, x1 = 0.95, 2.05
     yp, zp = RADIO_PANEL
+    S.box("set_lip", x0, yp - 0.02, 0.52, x1, yp + 0.26, zp, "radio_enamel", bevel=0.02)
+    S.box("set_back", x0, yp + 0.22, 0.52, x1, -0.14, 0.98, "radio_enamel", bevel=0.03)
+    S.box("set_lid", x0 - 0.02, yp + 0.20, 0.98, x1 + 0.02, -0.12, 1.02, "steel_dark", bevel=0.015)
+    for x in (1.11, 1.23, 1.35, 1.47):
+        S.box("vent", x, yp + 0.30, 1.02, x + 0.06, -0.20, 1.03, "metal_dark", bevel=0.0)
     n0 = len(S.objects())
-    S.box("panel", 0.24, yp, zp, 1.34, yp + 0.26, zp + 0.30, "radio_enamel", bevel=0.02)
-    S.box("bezel", 0.30, yp - 0.012, zp + 0.03, 0.86, yp + 0.01, zp + 0.27, "metal_dark", bevel=0.01)
-    S.box("screen", 0.34, yp - 0.02, zp + 0.05, 0.82, yp, zp + 0.25, "backdrop", bevel=0.004)
-    wave = [(0.36, 0.15), (0.42, 0.15), (0.46, 0.22), (0.51, 0.08), (0.56, 0.23), (0.61, 0.09), (0.66, 0.20),
-            (0.70, 0.15), (0.80, 0.15)]
+    S.box("panel", x0, yp, zp, x1, yp + 0.26, zp + 0.30, "radio_enamel", bevel=0.02)
+    S.box("bezel", x0 + 0.06, yp - 0.012, zp + 0.03, x0 + 0.62, yp + 0.01, zp + 0.27, "metal_dark", bevel=0.01)
+    S.box("screen", x0 + 0.10, yp - 0.02, zp + 0.05, x0 + 0.58, yp, zp + 0.25, "backdrop", bevel=0.004)
+    wave = [(0.12, 0.15), (0.18, 0.15), (0.22, 0.22), (0.27, 0.08), (0.32, 0.23), (0.37, 0.09), (0.42, 0.20),
+            (0.46, 0.15), (0.56, 0.15)]
     for k in range(len(wave) - 1):
-        (x0, z0), (x1, z1) = wave[k], wave[k + 1]
-        glow(_rod("wave%d" % k, (x0, yp - 0.026, zp + z0), (x1, yp - 0.026, zp + z1), 0.02, "circuit", segs=6,
-                  bevel=0.0), "radio_screen_glow")
-    glow(S.box("freq", 0.92, yp - 0.018, zp + 0.19, 1.28, yp, zp + 0.26, "backdrop", bevel=0.004), "lamp_warm")
-    for k, x in enumerate((0.98, 1.10, 1.22)):
+        (wx0, wz0), (wx1, wz1) = wave[k], wave[k + 1]
+        glow(_rod("wave%d" % k, (x0 + wx0, yp - 0.026, zp + wz0), (x0 + wx1, yp - 0.026, zp + wz1), 0.02, "circuit",
+                  segs=6, bevel=0.0), "radio_screen_glow")
+    glow(S.box("freq", x0 + 0.68, yp - 0.018, zp + 0.19, x0 + 1.04, yp, zp + 0.26, "backdrop", bevel=0.004),
+         "lamp_warm")
+    for k, x in enumerate((x0 + 0.74, x0 + 0.86, x0 + 0.98)):
         _rod("dial%d" % k, (x, yp - 0.04, zp + 0.11), (x, yp, zp + 0.11), 0.045, "ceramic", segs=14, bevel=0.006)
         S.box("dial_mark%d" % k, x - 0.006, yp - 0.045, zp + 0.11, x + 0.006, yp - 0.04, zp + 0.155, "fur_black",
               bevel=0.0)
-    for k, x in enumerate((0.98, 1.10)):
+    for k, x in enumerate((x0 + 0.74, x0 + 0.86)):
         glow(_rod("led%d" % k, (x, yp - 0.03, zp + 0.035), (x, yp, zp + 0.035), 0.02, "backdrop", segs=8,
                   bevel=0.0), "indicator")
     _spin(_since(n0), (0.0, yp, zp), "X", -RADIO_SLOPE)
-    # speaker on the desk, east of the set
-    S.box("speaker", 1.42, -0.50, 0.52, 1.72, -0.20, 0.80, "steel_dark", bevel=0.025)
-    for z in (0.58, 0.63, 0.68, 0.73):
-        S.box("grille", 1.47, -0.51, z, 1.67, -0.495, z + 0.025, "metal_dark", bevel=0.0)
-    # handset on its cradle at the front west of the desk, cord to the set
-    S.box("cradle", 0.12, -0.84, 0.52, 0.42, -0.62, 0.56, "metal_dark", bevel=0.01)
-    S.box("handset", 0.14, -0.78, 0.56, 0.40, -0.70, 0.60, "fur_black", bevel=0.025)
-    for x in (0.15, 0.39):
-        S.ellipsoid("cup", x, -0.74, 0.60, 0.045, 0.055, 0.03, "fur_black", segs=12, rings=6)
-    _rod("cord", (0.27, -0.70, 0.56), (0.30, -0.52, 0.60), 0.012, "fur_black", segs=6, bevel=0.0)
-    # a notepad by the operator
-    S.box("pad", 0.64, -0.84, 0.52, 0.82, -0.68, 0.53, "numbroot_label", bevel=0.004)
+    # west: a relay rack with a column of lamps on its south face and top
+    S.box("rack", 0.14, -0.86, 0.52, 0.78, -0.14, 1.16, "steel_dark", bevel=0.03)
+    S.box("rack_lid", 0.12, -0.88, 1.16, 0.80, -0.12, 1.20, "metal_dark", bevel=0.015)
+    for k in range(4):
+        z = 0.62 + 0.12 * k
+        S.box("rack_unit%d" % k, 0.20, -0.875, z, 0.56, -0.86, z + 0.09, "metal_dark", bevel=0.004)
+        glow(S.box("rack_lamp%d" % k, 0.62, -0.875, z + 0.02, 0.70, -0.86, z + 0.07, "backdrop", bevel=0.003),
+             "indicator")
+    glow(S.box("rack_top_lamp", 0.30, -0.56, 1.20, 0.62, -0.44, 1.215, "backdrop", bevel=0.004), "indicator")
+    # east: the speaker
+    S.box("speaker", 2.20, -0.80, 0.52, 2.56, -0.40, 0.84, "steel_dark", bevel=0.025)
+    for z in (0.58, 0.63, 0.68, 0.73, 0.78):
+        S.box("grille", 2.25, -0.81, z, 2.51, -0.795, z + 0.025, "metal_dark", bevel=0.0)
+    # front half: handset west, microphone and notepad at the operator, log east
+    S.box("cradle", 0.30, -1.70, 0.52, 0.60, -1.48, 0.56, "metal_dark", bevel=0.01)
+    S.box("handset", 0.32, -1.64, 0.56, 0.58, -1.56, 0.60, "fur_black", bevel=0.025)
+    for x in (0.33, 0.57):
+        S.ellipsoid("cup", x, -1.60, 0.60, 0.045, 0.055, 0.03, "fur_black", segs=12, rings=6)
+    _rod("cord", (0.45, -1.56, 0.56), (0.66, -1.40, 0.53), 0.012, "fur_black", segs=6, bevel=0.0)
+    S.box("jack", 0.62, -1.46, 0.52, 0.74, -1.34, 0.58, "metal_dark", bevel=0.01)
+    S.cyl("mic_base", 1.80, -1.30, 0.08, 0.52, 0.55, "metal_dark", segs=14, bevel=0.006)
+    _rod("mic_stem", (1.80, -1.30, 0.55), (1.76, -1.40, 0.76), 0.012, "steel", segs=6, bevel=0.0)
+    S.ellipsoid("mic_head", 1.76, -1.42, 0.78, 0.04, 0.035, 0.05, "fur_black", segs=12, rings=8)
+    S.box("pad", 1.30, -1.78, 0.52, 1.56, -1.52, 0.53, "numbroot_label", bevel=0.004)
+    S.box("pencil", 1.60, -1.76, 0.53, 1.62, -1.54, 0.545, "corn_yellow", bevel=0.0)
+    S.box("log", 2.18, -1.70, 0.52, 2.62, -1.36, 0.58, "leather", bevel=0.012)
+    S.cyl("mug", 2.54, -1.06, 0.055, 0.52, 0.64, "mug_blue", segs=12, bevel=0.01)
     # antenna mast at the north-east corner: guy collar, two crossbars, lamp
     mx, my, top = RADIO_MAST
     S.box("mast_foot", mx - 0.07, my - 0.07, 0.52, mx + 0.07, my + 0.07, 0.58, "metal_dark", bevel=0.01)
     S.cyl("mast", mx, my, 0.025, 0.58, top - 0.04, "steel", r_top=0.016, segs=10, bevel=0.0)
     for z, half in ((1.20, 0.16), (1.40, 0.11)):
         _rod("crossbar", (mx - half, my, z), (mx + half, my, z), 0.012, "steel", segs=6, bevel=0.0)
-    _rod("feedline", (mx, my - 0.02, 0.60), (1.30, -0.30, 0.90), 0.010, "fur_black", segs=6, bevel=0.0)
+    _rod("feedline", (mx, my - 0.02, 0.60), (2.05, -0.40, 0.90), 0.010, "fur_black", segs=6, bevel=0.0)
     glow(S.ellipsoid("tip", mx, my, top, 0.04, 0.04, 0.04, "med_red", segs=12, rings=8), "sentry_lamp_glow")
-    return (2, 1), top + 0.06
+    return (3, 2), top + 0.06
 
 
 BEACON_TOP = 1.24
@@ -750,17 +768,11 @@ def _clip_for(facing):
     return ("W", "E") if facing in ("south", "north") else ("N", "S")
 
 
-def _cooler_shadow(facing):
-    w, d = (1.0, 0.84) if facing in ("south", "north") else (0.84, 1.0)
-    return {"kind": "box", "w": w, "h": 1.0, "d": d}
-
-
 def build():
     out = []
     for mask in range(16):
         con = _conduit(mask)
         out.append(S.render_asset(FAMILY, "power_conduit_%02d" % mask, zmax=0.16, clip=tuple(sorted(con)),
-                                  shadow_kind="none",
                                   extra={"autotile": "conduit", "mask": mask, "building": "power conduit"}))
         out.append(_hidden_conduit(mask))
     for on in (True, False):
@@ -776,9 +788,9 @@ def build():
                              "frames": ROTOR_FRAMES})
         out += render("battery_" + f, _battery, facing=f, extra={"building": "battery"})
         out += render("cooler_" + f, _cooler, facing=f, clip=_clip_for(f),
-                      extra={"building": "cooler", "cold_side": f, "in_wall": True, "shadow": _cooler_shadow(f)})
+                      extra={"building": "cooler", "cold_side": f, "in_wall": True})
     for i in range(ROTOR_FRAMES):
-        out += render("wind_turbine_blades_%02d" % (i + 1), _rotor(i), shadow_kind="none", margins=ROTOR_MARGINS,
+        out += render("wind_turbine_blades_%02d" % (i + 1), _rotor(i), margins=ROTOR_MARGINS,
                       extra={"layer": "rotor", "of": "power/wind_turbine", "frame": i + 1,
                              "frames": ROTOR_FRAMES, "step_deg": ROTOR_STEP})
     out += render("heater", _heater, extra={"building": "heater"})

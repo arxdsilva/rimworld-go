@@ -8,11 +8,6 @@ footprint: [4, 1]
 origin_px: [16, 40]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 3.915
-  h: 0.53
-  d: 0.91
 rotatable: true
 facing: east
 building: hydroponics basin

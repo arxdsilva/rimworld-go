@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [34, 20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.378
-  h: 0.439
-  d: 0.913
 ppt: 128
 item: wild boar corpse
 species: wild_boar

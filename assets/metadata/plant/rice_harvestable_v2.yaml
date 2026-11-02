@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 36]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.674
-  h: 0.478
-  d: 0.625
 species: rice
 growth: harvestable
 variant: 2

@@ -110,8 +110,7 @@ def build():
             state = "open" if is_open else "closed"
             out += P.render("vent_%s_%s" % (state, f), _vent(is_open), facing=f, family=FAMILY,
                             clip=P._clip_for(f),
-                            extra={"building": "vent", "state": state, "in_wall": True,
-                                   "shadow": P._cooler_shadow(f)})
+                            extra={"building": "vent", "state": state, "in_wall": True})
     from . import overlay as O
     for name, sprite in (("passive_cooler", "passive_cooler"), ("vent", "vent_open_south")):
         p = O._icon(name, FAMILY, sprite)

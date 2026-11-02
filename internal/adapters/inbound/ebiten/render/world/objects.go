@@ -48,8 +48,8 @@ func (o *Objects) runDraw(dst *ebiten.Image, w *game.WorldView, d *ArtDraw, tile
 
 // DrawBuildingObj draws a building in the object pass (or the map bake):
 // linked walls, doors and fences, troughs, graves, pyres and the rest,
-// with its power and defense parts (render/overlay), a drying rack's load
-// and the deconstruct mark.
+// with its power and defense parts (render/overlay), a drying rack's load,
+// the deconstruct mark and the forbidden marker.
 func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile float64, sw, sh int) {
 	none := color.NRGBA{}
 	l := o.LOD
@@ -118,6 +118,9 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 	}
 	if b.Deconstruct {
 		o.drawSprite(dst, "overlay/designation_deconstruct", none, float64(b.X), float64(b.Y), tile, sw, sh)
+	}
+	if b.Forbidden { // STK-AL: a forbidden door or bed wears the item's marker
+		o.DrawForbiddenMark(dst, b.X, b.Y, tile, sw, sh)
 	}
 }
 

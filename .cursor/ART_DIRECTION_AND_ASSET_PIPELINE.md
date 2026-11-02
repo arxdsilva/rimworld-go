@@ -137,10 +137,9 @@ Outline contract (ART-025; was 4 px, darken 0.32, saturate 1.25):
 - Toon bands use `RAMP_INTERP = "EASE"` (`RAMP_SOFT` 0.06) so band edges are soft; `SHADOW_T` 0.30 and `LIGHT_T` 0.80 set the band thresholds.
 - Grass and plants (ground plants, bushes, crops, trees) are never outlined.
 
-Sprites carry **no baked drop shadow** (ART-010): buildings, plants,
-items and rock cast their shadows at runtime from the sun and moon
-(§6.1); creatures cast none. The upper-left toon banding stays as the
-restrained baked form cue.
+Sprites carry **no baked drop shadow** (ART-010), and nothing but a
+colonist outdoors casts one at runtime (§6.1). The upper-left toon
+banding stays as the restrained baked form cue.
 
 ### 6.1 Dynamic light and shadows (normative, ART-010)
 
@@ -173,18 +172,13 @@ The light comes from the sim clock only, so it is presentation and deterministic
   - Every world sprite is drawn by `lit.kage`, with sky exposure and lamp light as per-vertex values so draws still batch.
   - A sprite without a normal map is lit flat.
   - Zone and marker overlays, weather particles, UI and HUD are unlit.
-- **Shadows:**
-  - Casters are described in metadata as `shadow: {kind: blob|box|none, w, h, d}` in tiles.
-  - They fall away from the active light, length `clamp(h·cot el, 0.25·h, 3)` tiles: long at dawn and dusk, short at noon.
-  - **Alpha is physical:** a shadow removes the light's direct share of flat ground, `0.95·S/(A+S)`. `S` is the light's colour times its height `L.z`, and `A` is the sky ambient.
-    - Floor 0.34 (moon 0.12), scaled by how much weather lets through. Cap 0.62 (moon 0.30).
-    - It fades over the first and last half hour of the light.
-  - Colour `(18, 20, 30)`.
-  - All shadows go into one offscreen layer with max blending, composited once, so overlaps never double-darken.
-  - **No sun or moon shadows** are cast on or from roofed tiles.
-  - Textures: `overlay/shadow_blob` and `overlay/shadow_box`, for buildings, plants, items and rocks.
-- **Creatures cast no shadow** (user decision, 2026-10-31; this retires ART-012's silhouettes): pawns, animals and mechanoids get no sun or moon shadow, no campfire or lamp shadow and no contact pool under the feet, outdoors or indoors. Their sprites carry no `shadow:` metadata block (`stage.NO_SHADOW_FAMILIES`; `make art-check` rejects one); the Options **Shadows** toggle covers only the box and blob casters above.
-  - The shadow layer carries alpha only. `shadow_blur.kage` softens it by a fixed radius (0.6 px at zoom 1, `BlurRadius`); the height-driven contact-hardening term went with the silhouettes.
+- **Shadows: only colonists cast one** (user decision, 2026-11-01; this retires ART-010's box and blob casters and ART-012's creature shadows):
+  - A colonist (the player faction's humanlike pawns; not prisoners, slaves, visitors, allies, guests, raiders or animals) casts a shadow only while standing on a tile with no built or natural roof (`light.Casts`). Nothing else casts one: no buildings, walls, rock, mountains, plants, trees, items, roofs, eaves or bridges, and no animals or mechanoids.
+  - The shadow is a soft procedural ellipse under the feet (`creature.PawnFeetX/Y`), 0.62 tiles across and 0.34 deep, offset and stretched along the active light's shadow direction by `clamp(h·cot el, 0.25·h, 1.2)` tiles (h = 1 tile).
+  - **Alpha** is the light's physical shadow alpha (`0.95·S/(A+S)`, floor 0.34 / moon 0.12 scaled by weather, cap 0.62 / moon 0.30, faded over the first and last half hour of the light) × 0.8, × `0.5 + 0.5·el/el_max`: dark at noon, faint at dawn and dusk, a faint blob under the moon, none when neither is up. Colour `(18, 20, 30)`, bluer at low sun.
+  - Every blob of a frame is one batched draw straight onto the screen, after floors and zones and before every object; no layer, blur or per-colonist image. None on the whole-map bake.
+  - The Options **Shadows** toggle turns it off.
+  - No sprite metadata carries a `shadow:` block (`make art-check` rejects one); there are no shadow textures.
 
 ## 7. Palette and Materials
 
@@ -350,7 +344,7 @@ no contour; creatures and items stay readable on top.
   **Jungle:** tall trunk, broad flatter crown.
 - **Parts:** `_trunk` (trunk and lowest limbs) and `_canopy` (leaves and
   upper limbs) share the full sprite's canvas and origin. The renderer
-  draws trunk then canopy; the canopy (never the trunk or shadow) fades
+  draws trunk then canopy; the canopy (never the trunk) fades
   to 40% opacity while a creature stands on the tree's tile, the tile
   above or the two tiles diagonally above, or the hovered/selected
   thing is there, easing over about 0.2 s (instant with Reduced
@@ -552,6 +546,11 @@ Workstations must communicate category by shape rather than color alone:
 stove, butcher table, tailoring, smithing, machining, fabrication,
 research, etc.
 
+Production benches use the vanilla proportions (3x1 for most benches;
+STK-AR). The main work item (vise, burners, hearth, lathe, mash tub)
+sits on the cell the worker stands in front of, which is the middle one,
+and supporting tools and stock go on the side cells.
+
 Power producers have clear mechanical identity. Conduits remain subtle
 normally and become legible in the power overlay. Powered/unpowered
 state should preferably use emissive masks, lights, animation, or
@@ -638,7 +637,6 @@ Weather (family `weather`, driven by `WorldView.Weather`,
 
 Roofs and interiors (§16.1, SIM-018): roofs are never drawn as tiles.
 - A roofed tile reads as indoors through light (§6.1): indoor ambient, lamp warmth, and no sun, moon, shadows, rain or snow.
-- Soft eave shadows run inside walls that bound roofed tiles (6 px, 10 px under top walls).
 - The Roof overlay (R or the HUD button, forced on with a roof tool) shows:
 
   | Roof | Overlay style |
@@ -676,7 +674,7 @@ bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
   - Rotated and offset by a hash of the tile.
   - **Alpha = amount**, so fading is smooth.
   - Colour dries over a day: blood #7a1414 to #4a1d1a, ichor #a8a030 to #5c5a1c.
-  - Drawn lit, after the ground cover and floors and before shadows.
+  - Drawn lit, after the ground cover and floors and before the colonist shadows.
 - **On creatures:**
   - Blood blotches spread with lost health (`lit.kage` Custom3 coverage). For colonists it's stronger while a wound is open, and it clears as they heal.
   - A fresh hit adds a wet sheen for 2 s.
@@ -937,9 +935,9 @@ atlas coordinates.
 
 Light pipeline (ART-010):
 - World sprites render without a baked drop shadow.
-- `stage.render_asset` writes each sprite's `shadow:` caster block from its staged bounds (none for pawns and animals, which cast no shadow).
+- Sprite metadata carries no `shadow:` block (only colonists cast a shadow, drawn by the renderer; 2026-11-01).
 - `make normals` (`cmd/normalgen`, after Blender in `make art`) writes `<sprite>_n.png`. Masks, normal maps and `ui/` are skipped, and up-to-date maps are kept.
-- `validate_assets.py` (`make art-check`) requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite except pawns and animals (which must have none).
+- `validate_assets.py` (`make art-check`) requires a normal map with the sprite's size and alpha for every world sprite, and rejects any `shadow:` block.
 
 Housekeeping (PLAY-010, normative):
 - Remove unused assets and resources in the same change that makes them unused: sprites with their `_n` maps and metadata, sounds, fonts, palette entries, vendor packs, generated files and the code that loads them. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it.
@@ -1275,7 +1273,7 @@ resolve metadata conflicts, and update the catalog.
 
 -   [-] material variants (wood, five tinted stones and steel for walls; wood/stone floors; wood/steel doors; furniture wood only)
 -   [ ] furniture families
--   [x] production/research benches (wave D, A3: family `workshop`, 161 sprites with `fortify`, glow masks for the burning forge and powered benches, stuff tint masks on sculptures (large and grand re-rendered at the wiki footprints) and armchair, icons for every kind; validator 5709 sprites 0 errors, `make art-check` clean incl. orphans; renderer in `render/world/objects.go`, `render/overlay/power_draw.go`)
+-   [x] production/research benches (wave D, A3: family `workshop`, 161 sprites with `fortify`, glow masks for the burning forge and powered benches, stuff tint masks on sculptures (large and grand re-rendered at the wiki footprints) and armchair, icons for every kind; validator 5709 sprites 0 errors, `make art-check` clean incl. orphans; renderer in `render/world/objects.go`, `render/overlay/power_draw.go`; STK-AR 2026-11-01: the 14 production benches (workbench, stove, butcher, tailoring, stonecutter, brewing, drug, electric stove and tailoring, both forges, machining, sculpting, smelter) redrawn at the wiki 3x1 with the work surface on the middle cell, the fabrication bench at 5x2, the fuel refinery and radio console at 3x2, all four facings, glow layers and icons re-cut, keys unchanged; `ui_icon/planned` (greyed Architect placeholder) and `ui_icon/zone_dump`)
 -   [x] fortify and turret guns (wave D, A3: family `fortify` with barricade (`stone_tint` mask), autocannon, slug turret and mortar guns drawn from a precomputed key table in `render/overlay/turret_draw.go`, powered door, four shell item icons)
 -   [x] storage (wave E, A4: family `storage`, the shelf at its footprint; 5957 sprites in the validator, 0 errors)
 -   [x] goods (wave E, A4: family `goods`, 15 item sprites and `ui_icon` icons for the PRD-4 and DEF-4 kinds: meals, kibble, wort, drugs, chemfuel, components, uranium, plasteel, reinforced barrel)

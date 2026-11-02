@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 49]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.477
-  h: 0.745
-  d: 0.492
 species: wheat
 growth: mature
 variant: 3

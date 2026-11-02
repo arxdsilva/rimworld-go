@@ -39,7 +39,7 @@ func TestHaulToolEmitsDesignateHaul(t *testing.T) {
 		tool.Cmd != command.DesignateHaul || !tool.Enable || tool.Label != "Haul things" {
 		t.Fatalf("haul tool = %+v", tool)
 	}
-	if want := "Mark things found on the map for hauling. Colonists haul the colony's own goods by themselves; anything else waits for this mark."; tool.Desc != want {
+	if want := "Mark things found on the map for hauling. Colonists haul the colony's own goods by themselves; anything else waits for this mark. Marking also allows forbidden things."; tool.Desc != want {
 		t.Fatalf("desc = %q", tool.Desc)
 	}
 	a, s := stubColony(t)

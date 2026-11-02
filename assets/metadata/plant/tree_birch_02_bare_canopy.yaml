@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [46, 110]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.61
-  h: 1.968
-  d: 0.739
 species: tree
 kind: birch
 variant: 2

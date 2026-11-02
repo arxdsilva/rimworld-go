@@ -278,7 +278,7 @@ func (g *Game) casketRemains(b construction.Building, v *vaultSave) {
 	blade := kit.Casket(int(g.entities.Peek())) // domain combat/kit
 	id := g.casketHostile(b, v, blade)
 	if id == 0 {
-		g.spawnUnclaimed(blade, 1, b.X, b.Y, false) // haul_claim.go: found, not the colony's
+		g.spawnUnclaimed(blade, 1, b.X, b.Y, true) // haul_claim.go: found, not the colony's; forbidden (game/allow)
 		g.message(b.X, b.Y, "Old remains crumble in the casket, beside their gear.")
 		return
 	}

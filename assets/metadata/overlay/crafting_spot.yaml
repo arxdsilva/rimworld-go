@@ -10,8 +10,3 @@ overlay: crafting_spot
 building: crafting spot
 marking: true
 rotatable: false
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0

@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 22]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.88
-  h: 0.07
-  d: 0.175
 item: rifle

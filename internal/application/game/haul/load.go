@@ -2,13 +2,10 @@ package haul
 
 import "rimworld-go/internal/domain/economy/item"
 
-// Toppable reports a load of o's kind still fits on stack o: a full load
-// on a stack of the plain limit; for a kind with a smaller wiki limit,
-// any room (PRD-4; Capacity then caps the load).
-func Toppable(o item.Stack) bool {
-	lim := o.Kind.StackLimit()
-	return o.Qty+item.CarryLimit <= lim || lim < item.StackLimit && o.Qty < lim
-}
+// Toppable reports stack o still takes more of its kind: it is below
+// its stack limit (STK-ST: one load tops a stack up to whatever room is
+// left; Capacity caps the load).
+func Toppable(o item.Stack) bool { return o.Qty < o.Kind.StackLimit() }
 
 // Cell tallies the stacks lying on one storage cell for Room: how many,
 // and the smallest of the hauled kind.

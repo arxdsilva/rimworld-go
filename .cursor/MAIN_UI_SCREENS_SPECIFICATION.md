@@ -775,20 +775,33 @@ Primary interface for changing the colony's physical environment.
 
 ## Categories
 
+STK-AG: all twelve vanilla categories are always shown, in the vanilla
+order, as six rows of two buttons (`.cursor/ARCHITECT_GAP_ANALYSIS.md`
+lists every core item and its card):
+
 -   Orders;
 -   Zones/Areas;
 -   Structure;
--   Furniture;
 -   Production;
+-   Furniture;
 -   Power (PLAY-021, implemented: conduit and hidden conduit as line tools, switch, wood-fired, solar, wind and geothermal generators, battery; each card names its draw or output and its research lock; while a powered building is in hand the ghost links to the nearest conduit within 3 tiles or says "Not connected");
 -   Security;
--   Miscellaneous (PLAY-021: heater, cooler);
--   endgame categories when unlocked.
+-   Miscellaneous (grave, sarcophagus, tool cabinet, multi-analyzer, vitals monitor, spots, comms);
+-   Floors (wood floor, carpet, Smooth);
+-   Recreation (horseshoe pin);
+-   Ship (placeholders only);
+-   Temperature (campfire, heater, cooler, passive cooler, vent).
+
+A vanilla item this game does not have yet is a greyed placeholder card
+in its category (icon `ui_icon/planned`): its tooltip gives one original
+sentence and "Not in this game yet", and it can never be armed or
+placed. Working cards come before placeholders, so a small screen's grid
+never hides a working tool.
 
 ## Build cards
 
 Show: - icon; - name; - resource cost; - research lock; - short
-description.
+description; - for a placeholder, "Not in this game yet".
 
 ## Placement mode
 
@@ -812,7 +825,7 @@ maintenance.
 ## Zone modes
 
 -   stockpile;
--   dumping stockpile (PLAY-023: animal corpses and stone chunks by default);
+-   dumping stockpile (PLAY-023, STK-ST: corpses and stone chunks by default, rotting ones too, Normal priority, own `zone_dump` icon);
 -   growing;
 -   home;
 -   allowed areas.
@@ -847,7 +860,7 @@ maintenance.
 
 -   **Entry:** Architect → Zones → Areas, and a per-pawn "Area" picker
     on the Schedule/Assign screen.
--   **Regions:** list of up to 10 areas (name, cell count), paint/clear
+-   **Regions:** list of up to 8 areas (STK-AL, wiki; Home is not one) (name, cell count), paint/clear
     tools, rename field.
 -   **Information:** `Simulation.Areas()` → `[]game.AreaView`
     (`Index`, `Name`, `Cells`).

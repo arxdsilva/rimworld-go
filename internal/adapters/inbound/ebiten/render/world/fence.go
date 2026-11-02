@@ -41,7 +41,8 @@ func FenceLabelAt(w game.WorldView, x, y int) string {
 	return ""
 }
 
-// ForbiddenKey is the red no-entry chip drawn over a forbidden stack.
+// ForbiddenKey is the red no-entry chip drawn over a forbidden stack or
+// building (STK-AL).
 const ForbiddenKey = "overlay/forbidden"
 
 // DrawForbiddenMark draws the forbidden marker on tile (wx, wy): the

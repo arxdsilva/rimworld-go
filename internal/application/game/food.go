@@ -253,9 +253,9 @@ func (g *Game) bestFood(id, eater entity.EntityID) (best entity.EntityID, bx, by
 	pick := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater))
 	for _, iid := range g.itemIDs {
 		st := g.stacks.Ref(iid) // read only: nothing below changes the store
-		if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || !pick.Takes(st) ||
+		if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden && !g.breaking(id) || !pick.Takes(st) ||
 			g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {
-			continue // RES-1: every portion claimed by other eaters; areas.go: outside the allowed area
+			continue // RES-1: every portion claimed by other eaters; areas.go: outside the allowed area; a break ignores forbidding (STK-AL)
 		}
 		if s := pick.Score(st, pathing.Dist(pos.X, pos.Y, st.X, st.Y)); best == 0 || s > score || s == score && iid < best {
 			best, bx, by, score = iid, st.X, st.Y, s

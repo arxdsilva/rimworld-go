@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [92, 80]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.295
-  h: 1.022
-  d: 1.704
 ppt: 128
 item: rhinoceros corpse
 species: rhinoceros

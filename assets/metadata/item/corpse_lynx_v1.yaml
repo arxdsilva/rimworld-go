@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [34, 10]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.388
-  h: 0.457
-  d: 0.781
 ppt: 128
 item: lynx corpse
 species: lynx

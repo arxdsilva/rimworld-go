@@ -24,8 +24,8 @@ func TestStoCbtCatalogue(t *testing.T) {
 			t.Errorf("%s is not equippable or wearable (slot %v)", k, k.Slot())
 		}
 	}
-	if NutrientPasteMeal.Raw() || !NutrientPasteMeal.Perishable() || NutrientPasteMeal.StackLimit() != 10 ||
+	if NutrientPasteMeal.Raw() || !NutrientPasteMeal.Perishable() || NutrientPasteMeal.StackLimit() != StackLimit ||
 		NutrientPasteMeal.Preference() >= Meal.Preference() || NutrientPasteMeal.Nutrition() != Meal.Nutrition() {
-		t.Error("the paste meal: cooked, rots, stacks to 10, less liked than a simple meal, as filling")
+		t.Error("the paste meal: cooked, rots, stacks to 1000 (STK-ST), less liked than a simple meal, as filling")
 	}
 }

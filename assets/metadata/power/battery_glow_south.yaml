@@ -8,11 +8,6 @@ footprint: [1, 2]
 origin_px: [16, 52]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.08
-  h: 0.68
-  d: 0.08
 layer: glow
 of: power/battery_south
 emissive: indicator

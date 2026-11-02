@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [4, 108]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.913
-  h: 1.578
-  d: 1.435
 ppt: 128
 item: quill corpse
 species: quill

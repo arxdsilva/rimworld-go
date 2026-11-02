@@ -31,11 +31,11 @@ import (
 // creature layer), and the HUD's weather readout.
 
 // envState is the renderer's environment state: the env layer (its fields
-// and methods promoted) and the shadow pass and overlay states kept with
+// and methods promoted) and the colonist shadow and overlay states kept with
 // it.
 type envState struct {
 	env.Layer
-	Shadow    light.Shadows                 // the shadow pass (render/light; its casters: shadow.go)
+	Shadow    light.Shadows                 // the colonist shadows (render/light; feet: world.Pipeline.ShadowFeet)
 	Roof      overlaypkg.RoofDrawState      // eaves and the Roof overlay (roof_draw.go)
 	Home      overlaypkg.HomeDrawState      // the Home overlay's cached outline (home_draw.go)
 	SnowClear overlaypkg.SnowClearDrawState // the snow clearing area overlay (snow_clear_draw.go)

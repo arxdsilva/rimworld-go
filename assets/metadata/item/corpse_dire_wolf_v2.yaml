@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [44, 22]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.53
-  h: 0.569
-  d: 1.087
 ppt: 128
 item: dire wolf corpse
 species: dire_wolf

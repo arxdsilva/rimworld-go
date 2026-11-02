@@ -68,9 +68,9 @@ func storedIn(g *Game, kind string, x0, y0, x1, y1 int) int {
 }
 
 // TestHaulerGathersNearbyPiles: 144 wood in twelve piles of 12 goes in
-// two trips, the first a full 75 (STO-2: wood stacks to 75, so a cell
-// takes no more: six piles and 3 of a seventh), and all of it lands in
-// the stockpile.
+// two trips, the first a full carry of 100 (STK-ST: wood stacks to 1000,
+// so the carry limit caps the load: eight piles and 4 of a ninth), and
+// all of it lands in the stockpile.
 func TestHaulerGathersNearbyPiles(t *testing.T) {
 	t.Parallel()
 	g, id, _ := woodGrid(t)
@@ -90,8 +90,8 @@ func TestHaulerGathersNearbyPiles(t *testing.T) {
 	if got := storedIn(g, "wood", 20, 2, 21, 3); got != 144 {
 		t.Fatalf("stored %d of 144 wood", got)
 	}
-	if len(loads) != 2 || loads[0] != item.Wood.StackLimit() || loads[1] != 144-item.Wood.StackLimit() {
-		t.Fatalf("loads %v, want [75 69]", loads)
+	if len(loads) != 2 || loads[0] != item.CarryLimit || loads[1] != 144-item.CarryLimit {
+		t.Fatalf("loads %v, want [100 44]", loads)
 	}
 	if n := itemsOnGround(g, "wood"); n != 144 {
 		t.Fatalf("wood on the ground %d: none lost, none spilled outside", n)
@@ -178,7 +178,7 @@ func TestTwoHaulersSplitTheCluster(t *testing.T) {
 		seen[sid] = true
 	}
 	if len(seen) != len(piles) {
-		t.Fatalf("%d of %d piles planned: 75 + 69 covers them all", len(seen), len(piles))
+		t.Fatalf("%d of %d piles planned: 100 + 44 covers them all", len(seen), len(piles))
 	}
 	for i := 0; i < 6000 && storedIn(g, "wood", 20, 2, 21, 3) < 144; i++ {
 		g.Step(10)
@@ -188,29 +188,31 @@ func TestTwoHaulersSplitTheCluster(t *testing.T) {
 	}
 }
 
-// TestGatherCapsByStackLimitAndRoom: meals (limit 10) load 10; a cell
-// holding 60 of a 75-limit kind takes a load of 15, which never spills.
+// TestGatherCapsByStackLimitAndRoom (STK-ST): meals stack to 1000 now,
+// so a load of them is the carry limit (100, not the old wiki 10); a cell
+// holding 960 pemmican takes a load of 40, which never spills, and ends
+// at exactly 1000.
 func TestGatherCapsByStackLimitAndRoom(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 8})
 	for x := 2; x <= 6; x++ {
-		g.SpawnStack(item.FineMeal, 4, x, 2)
+		g.SpawnStack(item.FineMeal, 30, x, 2)
 	}
 	zoneCmd(g, command.DesignateStockpile, 20, 2, 21, 3, 0)
 	id, _ := g.SpawnNamedPawn(1, 2, "Hauler")
-	if j := haulNow(t, g, id); j.Count != 10 || loadOf(g, j) != 10 {
-		t.Fatalf("meal load %d (cap %d), want 10", loadOf(g, j), j.Count)
+	if j := haulNow(t, g, id); j.Count != item.CarryLimit || loadOf(g, j) != item.CarryLimit {
+		t.Fatalf("meal load %d (cap %d), want %d", loadOf(g, j), j.Count, item.CarryLimit)
 	}
 
 	h := New(Config{Seed: 1, Width: 24, Height: 8})
 	zoneCmd(h, command.DesignateStockpile, 20, 2, 20, 2, 0)
-	h.SpawnStack(item.Pemmican, 60, 20, 2)
+	h.SpawnStack(item.Pemmican, 960, 20, 2)
 	for x := 2; x <= 4; x++ {
-		h.SpawnStack(item.Pemmican, 10, x, 2)
+		h.SpawnStack(item.Pemmican, 30, x, 2)
 	}
 	hid, _ := h.SpawnNamedPawn(1, 2, "Hauler")
-	if j := haulNow(t, h, hid); j.Count != 15 || loadOf(h, j) != 15 {
-		t.Fatalf("pemmican load %d (cap %d), want 15", loadOf(h, j), j.Count)
+	if j := haulNow(t, h, hid); j.Count != 40 || loadOf(h, j) != 40 {
+		t.Fatalf("pemmican load %d (cap %d), want 40", loadOf(h, j), j.Count)
 	}
 	for range 200 {
 		h.Step(10)
@@ -223,8 +225,8 @@ func TestGatherCapsByStackLimitAndRoom(t *testing.T) {
 			t.Fatalf("pemmican spilled or still carried: %+v", it)
 		}
 	}
-	if got := storedIn(h, "pemmican", 20, 2, 20, 2); got != 75 {
-		t.Fatalf("stockpile cell holds %d, want 75", got)
+	if got := storedIn(h, "pemmican", 20, 2, 20, 2); got != item.StackLimit {
+		t.Fatalf("stockpile cell holds %d, want 1000", got)
 	}
 }
 

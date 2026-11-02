@@ -3,10 +3,12 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -98,34 +100,150 @@ func TestForbiddenFoodNotEaten(t *testing.T) {
 	}
 }
 
-func TestRaidDropsForbidden(t *testing.T) {
+// STK-AL (game/allow): what a death drops starts forbidden outside the home
+// area, whatever the faction; inside Home it stays allowed.
+func TestDeathDropsForbiddenOutsideHome(t *testing.T) {
 	g, _ := raidGame(t)
-	g.Raid(1)
-	rid := g.raiderIDs[0]
-	weapon := g.equip[rid]
-	g.die(rid, health.CauseInjury)
-	cid, body, ok := g.bodyOf(rid)
-	if !ok || !body.Forbidden {
-		t.Fatalf("a raider's body starts forbidden: %+v %v", body, ok)
+	g.paintHome(10, 5, 20, 15, true) // Home round the colonist at (15, 10)
+	g.Raid(2)
+	out, in := g.raiderIDs[0], g.raiderIDs[1]
+	g.positions.Set(in, Position{X: 14, Y: 10}) // one raider dies inside Home
+	if p, _ := g.positions.Get(out); g.inHome(p.Y*g.grid.Width() + p.X) {
+		t.Fatalf("the raid spawned inside Home at %+v", p)
 	}
-	st, ok := stackOf(g, weapon)
-	if !ok || !st.Forbidden {
-		t.Fatalf("its %s starts forbidden: %+v %v", weapon, st, ok)
+	wOut, wIn := g.equip[out], g.equip[in]
+	g.die(out, health.CauseInjury)
+	g.die(in, health.CauseInjury)
+	cid, body, ok := g.bodyOf(out)
+	if !ok || !body.Forbidden {
+		t.Fatalf("a raider's body outside Home starts forbidden: %+v %v", body, ok)
 	}
 	if iv, _ := itemView(g, cid); !iv.Forbidden {
 		t.Fatalf("corpse view %+v", iv)
 	}
-	// a dead colonist is not forbidden
-	var col entity.EntityID
-	for _, id := range g.pawnIDs {
-		if !g.isRaider(id) {
-			col = id
-			break
+	if st, ok := stackOf(g, wOut); !ok || !st.Forbidden {
+		t.Fatalf("its %s starts forbidden: %+v %v", wOut, st, ok)
+	}
+	if _, b, ok := g.bodyOf(in); !ok || b.Forbidden {
+		t.Fatalf("a raider's body inside Home stays allowed: %+v %v", b, ok)
+	}
+	for _, id := range g.itemIDs {
+		if st, _ := g.stacks.Get(id); st.Kind == wIn && st.X == 14 && st.Y == 10 && st.Forbidden {
+			t.Fatalf("the %s dropped inside Home is forbidden: %+v", wIn, st)
 		}
 	}
+	// a colonist is no exception: inside Home allowed, outside forbidden
+	col, _ := g.SpawnNamedPawn(15, 10, "Bo")
+	far, _ := g.SpawnNamedPawn(2, 2, "Cy")
 	g.die(col, health.CauseInjury)
+	g.die(far, health.CauseInjury)
 	if _, cb, ok := g.bodyOf(col); !ok || cb.Forbidden {
-		t.Fatalf("a colonist's body is not forbidden: %+v %v", cb, ok)
+		t.Fatalf("a colonist's body inside Home is allowed: %+v %v", cb, ok)
+	}
+	if _, cb, ok := g.bodyOf(far); !ok || !cb.Forbidden {
+		t.Fatalf("a colonist's body outside Home is forbidden: %+v %v", cb, ok)
+	}
+}
+
+// STK-AL: a carcass outside Home starts forbidden unless its hunter or a
+// predator takes the kill.
+func TestCarcassForbiddenOutsideHome(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 24, Height: 12})
+	g.paintHome(0, 0, 9, 11, true)
+	carcass := func(x, y int) item.Stack {
+		for _, id := range g.itemIDs {
+			if st, _ := g.stacks.Get(id); st.Kind == item.CorpseAnimal && st.X == x && st.Y == y {
+				return st
+			}
+		}
+		t.Fatalf("no carcass at %d,%d", x, y)
+		return item.Stack{}
+	}
+	in, _ := g.SpawnAnimal("deer", 4, 4)
+	out, _ := g.SpawnAnimal("deer", 18, 4)
+	pin, _ := g.positions.Get(in)
+	pout, _ := g.positions.Get(out)
+	g.killAnimal(in, 0)
+	g.killAnimal(out, 0)
+	if carcass(pin.X, pin.Y).Forbidden || !carcass(pout.X, pout.Y).Forbidden {
+		t.Fatalf("inside Home allowed, outside forbidden: %+v %+v", carcass(pin.X, pin.Y), carcass(pout.X, pout.Y))
+	}
+	// a hunter's kill outside Home stays allowed: the hunter carries it
+	hunter, _ := g.SpawnNamedPawn(16, 8, "Hu")
+	prey, _ := g.SpawnAnimal("deer", 20, 8)
+	pp, _ := g.positions.Get(prey)
+	g.jobs.Set(hunter, job.Record{Kind: job.Hunt, Target: prey})
+	g.killAnimal(prey, hunter)
+	if carcass(pp.X, pp.Y).Forbidden {
+		t.Fatal("a hunter's kill was forbidden")
+	}
+	if !killTaken(g, hunter, prey) || killTaken(g, hunter, out) || killTaken(g, 0, prey) {
+		t.Fatal("killTaken: the hunter's own prey only")
+	}
+}
+
+// STK-AL: map loot starts forbidden and found; Haul things allows and marks
+// it, and allows a forbidden colony stack without marking it.
+func TestHaulThingsAllows(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 16, Height: 8})
+	g.spawnUnclaimed(item.Steel, 10, 3, 3, true)
+	loot := g.itemAt(3, 3)
+	own, _ := g.SpawnStack(item.Wood, 5, 6, 3)
+	g.setForbidden(own, true)
+	g.Enqueue(command.Command{Kind: command.DesignateHaul, X: 0, Y: 0, X2: 8, Y2: 5, Enabled: true})
+	g.Step(1)
+	if st, _ := g.stacks.Get(loot); st.Forbidden || !st.HaulMarked || !st.Unclaimed {
+		t.Fatalf("loot after Haul things: %+v", st)
+	}
+	if st, _ := g.stacks.Get(own); st.Forbidden || st.HaulMarked {
+		t.Fatalf("the colony's stack is allowed, unmarked: %+v", st)
+	}
+	// the item's Mark for hauling allows too
+	g.spawnUnclaimed(item.Silver, 7, 10, 3, true)
+	coin := g.itemAt(10, 3)
+	g.Enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(coin), Enabled: true})
+	g.Step(1)
+	if st, _ := g.stacks.Get(coin); st.Forbidden || !st.HaulMarked {
+		t.Fatalf("marked loot: %+v", st)
+	}
+}
+
+// STK-AL: an order on a forbidden stack allows it.
+func TestOrderAllowsTarget(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		o    command.Order
+		kind item.Kind
+	}{{command.OrderEat, item.Berries}, {command.OrderEquip, item.Knife}, {command.OrderHaul, item.Wood}} {
+		g := New(Config{Seed: 1, Width: 16, Height: 8})
+		ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
+		g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 12, Y: 1, X2: 14, Y2: 3})
+		sid, _ := g.SpawnStack(c.kind, 3, 6, 4)
+		g.setForbidden(sid, true)
+		g.Step(1)
+		g.Enqueue(command.Command{Kind: command.Prioritize, Pawn: uint64(ada), Order: c.o, X: 6, Y: 4})
+		g.Step(1)
+		if st, ok := g.stacks.Get(sid); ok && st.Forbidden {
+			t.Fatalf("order %v left its %s forbidden: %+v", c.o, c.kind, st)
+		}
+	}
+}
+
+// STK-AL: a binge ignores forbidding; a calm colonist does not.
+func TestBingeIgnoresForbidden(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
+	sid, _ := g.SpawnStack(item.Berries, 10, 6, 4)
+	g.setForbidden(sid, true)
+	if best, _, _, _ := g.bestFood(ada, ada); best != 0 {
+		t.Fatalf("a calm colonist picked forbidden food %d", best)
+	}
+	g.breaks[ada] = breakState{kind: mentalbreak.FoodBinge, until: 1 << 40}
+	if best, _, _, _ := g.bestFood(ada, ada); best != sid {
+		t.Fatalf("a binge picked %d, want the forbidden berries %d", best, sid)
 	}
 }
 

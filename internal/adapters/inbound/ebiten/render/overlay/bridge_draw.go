@@ -15,17 +15,14 @@ import (
 // Bridges (MAPGEN-3 §3.4): a bridge is a Building of Kind "bridge" in the
 // foundation layer. It draws after the terrain (over the animated water)
 // and before floors and objects, as one of 16 connection variants chosen
-// by which sides open onto water, marsh or mud. A thin shadow lies on the
-// water along the open edges. Land ends and neighbouring bridge cells get
-// no edge, so a span reads as one structure.
+// by which sides open onto water, marsh or mud. It casts no shadow (only
+// colonists do). Land ends and neighbouring bridge cells get no edge, so
+// a span reads as one structure.
 
 const BridgeKind = "bridge"
 
 // Mask bits (N, E, S, W) and the neighbour each looks at.
 var bridgeSides = [4][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}
-
-// bridgeShadowClr is the water shadow along an open bridge edge.
-var bridgeShadowClr = color.NRGBA{R: 8, G: 22, B: 36, A: 70}
 
 // BridgeKey is the sprite of a bridge with open-side mask m (0..15).
 func BridgeKey(m int) string { return "structure/bridge_" + sprite.TwoDigits(m&15) }
@@ -80,17 +77,6 @@ func BridgeMask(w game.WorldView, set map[[2]int]bool, x, y int) int {
 	return m
 }
 
-// BridgeShadowSides lists the side indexes (0 N, 1 E, 2 S, 3 W) set in m.
-func BridgeShadowSides(m int) []int {
-	var out []int
-	for i := range bridgeSides {
-		if m&(1<<i) != 0 {
-			out = append(out, i)
-		}
-	}
-	return out
-}
-
 // BridgeLabelAt is the hover line of a bridged cell ("Bridge over deep
 // water", "over marsh", "over mud"); "" when no bridge stands there.
 func BridgeLabelAt(w game.WorldView, x, y int) string {
@@ -121,8 +107,8 @@ func BridgeLabelAt(w game.WorldView, x, y int) string {
 	return "Bridge"
 }
 
-// DrawFoundation draws the foundation layer in view: bridge shadows on
-// the water, then the deck sprites. Tiles are physical pixels (v.Cam).
+// DrawFoundation draws the foundation layer in view: the bridge deck
+// sprites. Tiles are physical pixels (v.Cam).
 func (o *Set) DrawFoundation(v *render.View, ps sprite.Pass, ch *Chunks, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	v.LayerDrawn("foundation")
 	if !ch.Live || v.Art == nil { // baked below 48 px (lod.go)
@@ -144,16 +130,13 @@ func (o *Set) DrawFoundation(v *render.View, ps sprite.Pass, ch *Chunks, screen 
 	}
 }
 
-// DrawBridgeCell draws one bridge deck with its water shadow.
+// DrawBridgeCell draws one bridge deck.
 func (o *Set) DrawBridgeCell(v *render.View, ps sprite.Pass, dst *ebiten.Image, w game.WorldView, set map[[2]int]bool, b *game.BuildingView, tile float64, sw, sh int) {
 	m := BridgeMask(w, set, b.X, b.Y)
 	sx, sy := v.WorldToScreen(b.X, b.Y)
 	t := float32(tile)
 	if t <= 0 || sx+t < 0 || sy+t < 0 || sx > float32(sw) || sy > float32(sh) {
 		return
-	}
-	for _, q := range BridgeShadowRects(sx, sy, t, m) {
-		vector.FillRect(dst, q[0], q[1], q[2], q[3], bridgeShadowClr, false)
 	}
 	key := BridgeKey(m)
 	if v.Art.Has(key) {
@@ -169,27 +152,6 @@ func BridgeLine(b game.BuildingView) string {
 		return ""
 	}
 	return "Holds light things: no stone walls or floors"
-}
-
-// BridgeShadowRects are the shadow strips (x, y, w, h) on the water along
-// the open sides of a bridge cell at screen (sx, sy), t pixels a side:
-// thin, outside the cell, one per set bit of mask m.
-func BridgeShadowRects(sx, sy, t float32, m int) [][4]float32 {
-	th := max(t/10, 1)
-	var out [][4]float32
-	for _, s := range BridgeShadowSides(m) {
-		switch s {
-		case 0:
-			out = append(out, [4]float32{sx, sy - th, t, th})
-		case 1:
-			out = append(out, [4]float32{sx + t, sy, th, t})
-		case 2:
-			out = append(out, [4]float32{sx, sy + t, t, th})
-		case 3:
-			out = append(out, [4]float32{sx - th, sy, th, t})
-		}
-	}
-	return out
 }
 
 // terrainAt is the read model's terrain code at (x, y).

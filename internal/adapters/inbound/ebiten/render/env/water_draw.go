@@ -81,7 +81,7 @@ func (wr *Water) WaterFrameKey(v *render.View, t string, x, y int) string {
 // DrawWaterTile draws the water of terrain t at tile (x, y), lit as flat
 // ground: through water.kage when it compiles, else the baked frame.
 // cs is the colour scale of the tile (a missing-art fallback tint). A
-// bake or the shadow pass (baked) draws the baked frame through s.
+// bake (baked) draws the baked frame through s.
 func (e *Layer) DrawWaterTile(v *render.View, screen *ebiten.Image, t string, x, y int, tile float64, sw, sh int, cs sprite.ColorScale, baked bool, s Stamp) {
 	wx, wy := float64(x), float64(y)
 	var sh0 *ebiten.Shader

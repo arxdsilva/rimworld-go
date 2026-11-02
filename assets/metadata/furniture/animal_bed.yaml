@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 29]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.838
-  h: 0.27
-  d: 0.838
 tint:
   group: cloth
   mask: generated/world/furniture/animal_bed_mask.png

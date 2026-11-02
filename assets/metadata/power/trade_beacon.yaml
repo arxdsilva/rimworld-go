@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 76]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.561
-  h: 1.28
-  d: 0.4
 rotatable: false
 facing: south
 building: trade beacon

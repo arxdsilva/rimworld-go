@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 35]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.558
-  h: 0.41
-  d: 0.681
 species: haygrass
 growth: wilted
 variant: 3

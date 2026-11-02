@@ -306,10 +306,14 @@ func TestSearch(t *testing.T) {
 	if x, y, ok := Search(w, potato, 1, 1, nil, zone.PriorityPreferred, false); !ok || x != 20 || y != 20 {
 		t.Fatal("a hopper at half is refilled")
 	}
+	w.SetStack(food, item.Stack{Kind: item.Potatoes, Qty: zone.HopperStack, X: 20, Y: 20})
+	if x, _, ok := Search(w, potato, 20, 20, nil, zone.PriorityPreferred, false); ok {
+		t.Fatalf("a full hopper (one 75 stack, not 1000) takes no more: %d", x)
+	}
 	w.build(construction.Shelf, 15, 15)
 	steel := item.Stack{Kind: item.Steel, Qty: 5}
 	for range zone.ShelfStacks {
-		w.put(item.Steel, 75, 15, 15)
+		w.put(item.Steel, item.StackLimit, 15, 15) // STK-ST: a full stack is 1000
 	}
 	if x, y, ok := Search(w, steel, 15, 15, func(x, y int) bool { return y == 15 }, zone.PriorityNormal, false); !ok || x != 16 || y != 15 {
 		t.Fatalf("a full shelf cell is skipped: %d,%d", x, y)

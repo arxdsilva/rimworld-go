@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.517
-  h: 0.22
-  d: 0.439
 tint:
   group: cloth
   mask: generated/world/item/bowler_hat_mask.png

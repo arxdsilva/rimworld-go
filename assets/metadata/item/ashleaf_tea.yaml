@@ -8,10 +8,5 @@ footprint: [1, 1]
 origin_px: [16, 35]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.533
-  h: 0.41
-  d: 0.519
 item: ashleaf tea
 stack: true

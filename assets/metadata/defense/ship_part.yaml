@@ -8,11 +8,6 @@ footprint: [6, 3]
 origin_px: [16, 92]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 5.955
-  h: 1.607
-  d: 2.789
 building: ship part
 rotatable: false
 facing: south

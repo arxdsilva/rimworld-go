@@ -135,124 +135,188 @@ def _trough(full):
     return (1, 1), 0.52
 
 
+def _bench_legs(mat, r=0.06, h=0.52, x0=0.12, x1=2.88, y0=-0.18, y1=-0.82, bevel=0.015):
+    """Four corner legs of a 3 x 1 bench (STK-AR)."""
+    for i, x in enumerate((x0, x1)):
+        for j, y in enumerate((y0, y1)):
+            S.box("leg%d%d" % (i, j), x - r, y - r, 0.0, x + r, y + r, h, mat, bevel=bevel)
+
+
 def _workbench():
-    # 2 x 1, worker stands on the south side.
-    for i, x in enumerate([0.12, 1.88]):
-        for j, y in enumerate([-0.18, -0.82]):
-            S.box("leg%d%d" % (i, j), x - 0.06, y - 0.06, 0.0, x + 0.06, y + 0.06, 0.52, "metal_dark", bevel=0.015)
-    S.box("shelf", 0.10, -0.86, 0.14, 1.90, -0.14, 0.18, "wood", bevel=0.015)
-    S.box("top", 0.04, -0.94, 0.52, 1.96, -0.06, 0.62, "steel", bevel=0.03)
-    S.box("board", 0.06, -0.20, 0.62, 1.94, -0.06, 1.05, "wood_plank", bevel=0.03)
-    S.box("vise_base", 0.20, -0.72, 0.62, 0.48, -0.42, 0.72, "metal_dark", bevel=0.02)
-    S.box("vise_jaw", 0.24, -0.82, 0.66, 0.44, -0.70, 0.78, "steel", bevel=0.02)
-    S.box("toolbox", 1.38, -0.62, 0.62, 1.80, -0.34, 0.80, "food_red", bevel=0.03)
-    S.box("toolbox_lid", 1.36, -0.64, 0.80, 1.82, -0.32, 0.84, "metal_dark", bevel=0.015)
-    S.cyl("hammer_handle", 0.95, -0.55, 0.03, 0.62, 0.66, "wood", segs=8, ry=0.25)
-    S.box("hammer_head", 0.78, -0.64, 0.62, 0.86, -0.46, 0.70, "steel", bevel=0.015)
-    for i, x in enumerate([0.70, 0.95, 1.20]):
+    # 3 x 1 (STK-AR): the worker stands south of the middle cell, where a
+    # plank sits clamped in the vise. Toolbox west, hammer and saw east.
+    _bench_legs("metal_dark")
+    S.box("shelf", 0.10, -0.86, 0.14, 2.90, -0.14, 0.18, "wood", bevel=0.015)
+    S.box("crate", 0.24, -0.76, 0.18, 0.80, -0.28, 0.44, "wood_plank", bevel=0.02)
+    S.box("top", 0.04, -0.94, 0.52, 2.96, -0.06, 0.62, "steel", bevel=0.03)
+    S.box("board", 0.06, -0.20, 0.62, 2.94, -0.06, 1.05, "wood_plank", bevel=0.03)
+    # middle: the vise and its workpiece
+    S.box("vise_base", 1.32, -0.62, 0.62, 1.68, -0.36, 0.72, "metal_dark", bevel=0.02)
+    S.box("vise_jaw", 1.34, -0.84, 0.66, 1.66, -0.70, 0.80, "steel", bevel=0.02)
+    S.box("vise_jaw_b", 1.34, -0.66, 0.66, 1.66, -0.58, 0.80, "steel", bevel=0.015)
+    S.box("workpiece", 1.06, -0.70, 0.74, 1.94, -0.62, 0.84, "wood_plank", bevel=0.012)
+    S.cyl("vise_screw", 1.50, -0.90, 0.025, 0.68, 0.76, "metal_dark", segs=8, ry=0.07, bevel=0.0)
+    for k, (x, y) in enumerate(((1.10, -0.82), (1.88, -0.44), (1.22, -0.36))):
+        S.blob("shaving%d" % k, x, y, 0.625, 0.035, "straw", seed=20 + k, lumps=0.3, squash=0.4)
+    # west: the toolbox
+    S.box("toolbox", 0.24, -0.66, 0.62, 0.74, -0.34, 0.80, "food_red", bevel=0.03)
+    S.box("toolbox_lid", 0.22, -0.68, 0.80, 0.76, -0.32, 0.84, "metal_dark", bevel=0.015)
+    S.box("toolbox_grip", 0.40, -0.52, 0.84, 0.58, -0.48, 0.88, "metal_dark", bevel=0.005)
+    # east: hammer and hand saw
+    S.cyl("hammer_handle", 2.40, -0.70, 0.03, 0.62, 0.66, "wood", segs=8, ry=0.22)
+    S.box("hammer_head", 2.24, -0.80, 0.62, 2.32, -0.62, 0.70, "steel", bevel=0.015)
+    S.box("saw_blade", 2.24, -0.44, 0.62, 2.74, -0.32, 0.64, "steel", bevel=0.004)
+    S.box("saw_grip", 2.74, -0.46, 0.62, 2.86, -0.30, 0.68, "wood", bevel=0.01)
+    # pegboard tools and the lamp over the middle
+    for i, x in enumerate((0.40, 0.70, 1.00, 2.00, 2.30, 2.60)):
         S.box("peg%d" % i, x - 0.025, -0.24, 0.80, x + 0.025, -0.19, 0.98, "metal_dark", bevel=0.005)
-    S.box("light", 1.55, -0.20, 0.96, 1.70, -0.15, 1.02, "indicator", bevel=0.0)
-    return (2, 1), 1.05
+    S.box("wrench", 0.66, -0.235, 0.70, 0.74, -0.205, 0.92, "steel", bevel=0.006)
+    S.box("square", 2.24, -0.235, 0.74, 2.36, -0.205, 0.96, "brass", bevel=0.004)
+    S.box("light", 1.40, -0.20, 0.96, 1.60, -0.15, 1.02, "indicator", bevel=0.0)
+    return (3, 1), 1.05
 
 
 def _stonecutter_table():
-    # 2 x 1, worker stands on the south side. Stone slab top, blocks on a shelf, a hand saw.
-    for i, x in enumerate([0.14, 1.86]):
-        for j, y in enumerate([-0.20, -0.80]):
-            S.box("leg%d%d" % (i, j), x - 0.08, y - 0.08, 0.0, x + 0.08, y + 0.08, 0.50, "stone_neutral_dark", bevel=0.02)
-    S.box("shelf", 0.10, -0.86, 0.12, 1.90, -0.14, 0.17, "wood", bevel=0.015)
-    S.box("slab", 0.04, -0.94, 0.50, 1.96, -0.06, 0.64, "stone_neutral", bevel=0.03)
-    S.box("back", 0.06, -0.18, 0.64, 1.94, -0.06, 0.92, "wood_plank", bevel=0.03)
-    S.box("block_a", 0.22, -0.74, 0.64, 0.66, -0.34, 0.82, "stone_neutral_dark", bevel=0.025)
-    S.box("block_b", 0.30, -0.70, 0.82, 0.58, -0.40, 0.92, "stone_neutral", bevel=0.02)
-    S.box("saw_blade", 1.02, -0.70, 0.66, 1.62, -0.66, 0.78, "steel", bevel=0.005)
-    S.box("saw_grip", 1.62, -0.72, 0.66, 1.76, -0.62, 0.78, "wood", bevel=0.01)
-    S.box("chisel", 1.20, -0.46, 0.64, 1.56, -0.40, 0.68, "metal_dark", bevel=0.005)
-    S.box("dust", 0.78, -0.62, 0.64, 0.98, -0.44, 0.67, "stone_neutral", bevel=0.01)
-    return (2, 1), 0.92
+    # 3 x 1 (STK-AR): stone slab top. Middle: a block under the saw;
+    # west: cut blocks stacked; east: chisel, mallet and dust.
+    _bench_legs("stone_neutral_dark", r=0.08, h=0.50, x0=0.14, x1=2.86, y0=-0.20, y1=-0.80, bevel=0.02)
+    S.box("shelf", 0.10, -0.86, 0.12, 2.90, -0.14, 0.17, "wood", bevel=0.015)
+    S.box("slab", 0.04, -0.94, 0.50, 2.96, -0.06, 0.64, "stone_neutral", bevel=0.03)
+    S.box("back", 0.06, -0.18, 0.64, 2.94, -0.06, 0.92, "wood_plank", bevel=0.03)
+    # middle: the block being cut, the saw half way through it
+    S.box("block", 1.18, -0.74, 0.64, 1.82, -0.32, 0.84, "stone_neutral_dark", bevel=0.025)
+    S.box("kerf", 1.49, -0.75, 0.70, 1.51, -0.31, 0.845, "stone_neutral", bevel=0.0)
+    S.box("saw_blade", 1.46, -0.92, 0.80, 1.54, -0.30, 0.96, "steel", bevel=0.005)
+    S.box("saw_grip", 1.44, -1.02, 0.84, 1.56, -0.90, 0.98, "wood", bevel=0.01)
+    S.box("dust_mid", 1.06, -0.86, 0.64, 1.34, -0.70, 0.67, "stone_neutral", bevel=0.01)
+    # west: finished blocks
+    S.box("block_a", 0.20, -0.74, 0.64, 0.66, -0.34, 0.80, "stone_neutral_dark", bevel=0.025)
+    S.box("block_b", 0.26, -0.70, 0.80, 0.60, -0.40, 0.92, "stone_neutral", bevel=0.02)
+    S.box("block_c", 0.72, -0.60, 0.64, 0.92, -0.36, 0.76, "stone_neutral", bevel=0.02)
+    # east: chisel, mallet, dust
+    S.box("chisel", 2.10, -0.50, 0.64, 2.52, -0.44, 0.68, "metal_dark", bevel=0.005)
+    S.box("mallet_head", 2.20, -0.82, 0.64, 2.44, -0.66, 0.76, "wood", bevel=0.02)
+    S.cyl("mallet_handle", 2.60, -0.74, 0.022, 0.68, 0.72, "bark", segs=8, ry=0.18, bevel=0.0)
+    S.box("dust", 2.52, -0.62, 0.64, 2.80, -0.36, 0.67, "stone_neutral", bevel=0.01)
+    return (3, 1), 0.98
 
 
 def _stove():
-    # 2 x 1, the cook stands on the south side.
-    S.box("body", 0.06, -0.92, 0.0, 1.94, -0.10, 0.62, "metal_dark", bevel=0.04)
-    S.box("top", 0.04, -0.94, 0.62, 1.96, -0.08, 0.68, "steel", bevel=0.03)
-    for i, (cx, cy) in enumerate([(0.45, -0.48), (1.0, -0.48)]):
-        S.cyl("ring%d" % i, cx, cy, 0.17, 0.68, 0.71, "metal_dark", segs=20, bevel=0.0)
-        S.cyl("glow%d" % i, cx, cy, 0.10, 0.70, 0.715, "lamp_warm", segs=20, bevel=0.0)
-    S.cyl("pot", 0.45, -0.48, 0.15, 0.71, 0.86, "steel", r_top=0.16, segs=18)
-    S.cyl("stew", 0.45, -0.48, 0.13, 0.855, 0.865, "crop_fruit", segs=18, bevel=0.0)
-    S.box("board", 1.40, -0.72, 0.68, 1.86, -0.26, 0.72, "wood_plank", bevel=0.015)
-    S.ellipsoid("veg", 1.55, -0.45, 0.76, 0.06, 0.06, 0.05, "crop_fruit", segs=10, rings=6)
-    S.box("door", 0.20, -0.935, 0.12, 1.00, -0.90, 0.48, "steel", bevel=0.015)
-    S.box("handle", 0.30, -0.95, 0.40, 0.90, -0.93, 0.43, "metal_dark", bevel=0.005)
-    S.box("pipe", 1.70, -0.20, 0.68, 1.84, -0.10, 1.10, "metal_dark", bevel=0.02)
-    return (2, 1), 1.10
+    # 3 x 1 (STK-AR), the cook stands south of the middle cell: two burners
+    # and the oven door there; the firebox and flue west, a prep board east.
+    S.box("body", 0.06, -0.92, 0.0, 2.94, -0.10, 0.62, "metal_dark", bevel=0.04)
+    S.box("top", 0.04, -0.94, 0.62, 2.96, -0.08, 0.68, "steel", bevel=0.03)
+    for i, cx in enumerate((1.24, 1.76)):
+        S.cyl("ring%d" % i, cx, -0.50, 0.17, 0.68, 0.71, "metal_dark", segs=20, bevel=0.0)
+        S.cyl("glow%d" % i, cx, -0.50, 0.10, 0.70, 0.715, "lamp_warm", segs=20, bevel=0.0)
+    S.cyl("pot", 1.24, -0.50, 0.15, 0.71, 0.86, "steel", r_top=0.16, segs=18)
+    S.cyl("stew", 1.24, -0.50, 0.13, 0.855, 0.865, "crop_fruit", segs=18, bevel=0.0)
+    S.cyl("pan", 1.76, -0.50, 0.14, 0.71, 0.76, "metal_dark", segs=18, bevel=0.01)
+    S.box("pan_handle", 1.90, -0.53, 0.73, 2.12, -0.47, 0.76, "metal_dark", bevel=0.005)
+    S.box("door", 1.08, -0.935, 0.12, 1.92, -0.90, 0.48, "steel", bevel=0.015)
+    S.box("handle", 1.18, -0.95, 0.40, 1.82, -0.93, 0.43, "metal_dark", bevel=0.005)
+    # west: the firebox with logs and its flue
+    S.box("firedoor", 0.20, -0.935, 0.10, 0.80, -0.90, 0.42, "steel_dark", bevel=0.015)
+    S.box("grate", 0.30, -0.95, 0.18, 0.70, -0.93, 0.26, "lamp_warm", bevel=0.0)
+    for k, y in enumerate((-0.74, -0.58)):
+        S.cyl("log%d" % k, 0.46, y, 0.06, 0.68, 0.74, "bark", segs=10, ry=0.06, bevel=0.0)
+        S.box("log_body%d" % k, 0.20, y - 0.06, 0.68, 0.72, y + 0.06, 0.78, "bark", bevel=0.05)
+    S.box("pipe", 0.30, -0.24, 0.68, 0.48, -0.10, 1.10, "metal_dark", bevel=0.02)
+    S.box("pipe_cap", 0.26, -0.28, 1.06, 0.52, -0.06, 1.12, "steel_dark", bevel=0.015)
+    # east: the prep board with a vegetable and a knife
+    S.box("board", 2.20, -0.78, 0.68, 2.84, -0.30, 0.72, "wood_plank", bevel=0.015)
+    S.ellipsoid("veg", 2.40, -0.54, 0.76, 0.07, 0.07, 0.05, "crop_fruit", segs=10, rings=6)
+    S.box("knife", 2.56, -0.66, 0.72, 2.80, -0.62, 0.735, "steel", bevel=0.003)
+    return (3, 1), 1.12
 
 
 def _brewing_bench():
-    # 2 x 1, the brewer stands on the south side. Barrels on a plank counter, a mash tub and a spigot.
-    for i, x in enumerate([0.12, 1.88]):
-        for j, y in enumerate([-0.18, -0.82]):
-            S.box("leg%d%d" % (i, j), x - 0.06, y - 0.06, 0.0, x + 0.06, y + 0.06, 0.50, "bark", bevel=0.015)
-    S.box("shelf", 0.10, -0.86, 0.12, 1.90, -0.14, 0.16, "wood", bevel=0.015)
-    S.box("top", 0.04, -0.94, 0.50, 1.96, -0.06, 0.58, "wood_plank", bevel=0.03)
-    for k, cx in enumerate([0.36, 0.78]):   # two lying-upright barrels at the back, banded
-        S.cyl("barrel%d" % k, cx, -0.34, 0.17, 0.58, 0.98, "wood", r_top=0.17, segs=16, bevel=0.03)
+    # 3 x 1 (STK-AR), the brewer stands south of the middle cell: the mash
+    # tub there, two banded barrels west, a paddle, mugs and a sack east.
+    _bench_legs("bark", h=0.50)
+    S.box("shelf", 0.10, -0.86, 0.12, 2.90, -0.14, 0.16, "wood", bevel=0.015)
+    S.box("top", 0.04, -0.94, 0.50, 2.96, -0.06, 0.58, "wood_plank", bevel=0.03)
+    for k, cx in enumerate((0.30, 0.72)):
+        S.cyl("barrel%d" % k, cx, -0.36, 0.17, 0.58, 0.98, "wood", r_top=0.17, segs=16, bevel=0.03)
         for z in (0.66, 0.90):
-            S.cyl("hoop%d%d" % (k, int(z * 10)), cx, -0.34, 0.178, z, z + 0.05, "metal_dark", segs=16, bevel=0.0)
-        S.cyl("lid%d" % k, cx, -0.34, 0.15, 0.98, 1.0, "wood_plank", segs=16, bevel=0.0)
-    S.cyl("tub", 1.44, -0.58, 0.30, 0.58, 0.82, "bark", r_top=0.33, segs=22, bevel=0.025)
-    S.cyl("tub_rim", 1.44, -0.58, 0.335, 0.76, 0.80, "metal_dark", segs=22, bevel=0.0)
-    S.cyl("mash", 1.44, -0.58, 0.29, 0.80, 0.85, "crop_fruit", segs=22, bevel=0.0)
-    S.ellipsoid("foam", 1.50, -0.52, 0.86, 0.07, 0.06, 0.02, "snow", segs=10, rings=5)
-    S.box("paddle", 1.18, -0.96, 0.58, 1.26, -0.88, 1.12, "wood", bevel=0.01)
-    S.cyl("spigot", 0.57, -0.70, 0.03, 0.66, 0.72, "steel", segs=8, ry=0.03, bevel=0.0)
-    S.cyl("mug", 0.57, -0.80, 0.055, 0.58, 0.68, "ceramic", segs=12, bevel=0.01)
-    return (2, 1), 1.12
+            S.cyl("hoop%d%d" % (k, int(z * 10)), cx, -0.36, 0.178, z, z + 0.05, "metal_dark", segs=16, bevel=0.0)
+        S.cyl("lid%d" % k, cx, -0.36, 0.15, 0.98, 1.0, "wood_plank", segs=16, bevel=0.0)
+    S.cyl("spigot", 0.51, -0.70, 0.03, 0.66, 0.72, "steel", segs=8, ry=0.03, bevel=0.0)
+    S.cyl("jug", 0.50, -0.78, 0.07, 0.58, 0.72, "ceramic", segs=12, r_top=0.05, bevel=0.01)
+    # middle: the mash tub
+    S.cyl("tub", 1.50, -0.54, 0.32, 0.58, 0.84, "bark", r_top=0.35, segs=22, bevel=0.025)
+    S.cyl("tub_rim", 1.50, -0.54, 0.355, 0.78, 0.82, "metal_dark", segs=22, bevel=0.0)
+    S.cyl("mash", 1.50, -0.54, 0.31, 0.82, 0.87, "crop_fruit", segs=22, bevel=0.0)
+    S.ellipsoid("foam", 1.58, -0.48, 0.88, 0.08, 0.07, 0.02, "snow", segs=10, rings=5)
+    S.box("paddle", 1.62, -0.66, 0.84, 1.70, -0.58, 1.14, "wood", bevel=0.01)
+    # east: mugs, a grain sack
+    for k, (x, y) in enumerate(((2.16, -0.78), (2.34, -0.70))):
+        S.cyl("mug%d" % k, x, y, 0.055, 0.58, 0.68, "ceramic", segs=12, bevel=0.01)
+    S.blob("sack", 2.60, -0.42, 0.72, 0.22, "straw", seed=61, lumps=0.15, squash=0.8)
+    S.cyl("sack_tie", 2.60, -0.42, 0.06, 0.86, 0.92, "bark", segs=10, bevel=0.0)
+    S.ellipsoid("grain", 2.36, -0.40, 0.60, 0.08, 0.06, 0.02, "corn_yellow", segs=10, rings=5)
+    return (3, 1), 1.14
 
 
 def _drug_table():
-    # 2 x 1, the worker stands on the south side. Mortar and pestle, leaf bundles drying on a rail.
-    for i, x in enumerate([0.14, 1.86]):
-        for j, y in enumerate([-0.20, -0.80]):
-            S.box("leg%d%d" % (i, j), x - 0.06, y - 0.06, 0.0, x + 0.06, y + 0.06, 0.52, "wood", bevel=0.015)
-    S.box("top", 0.04, -0.94, 0.52, 1.96, -0.06, 0.60, "wood_plank", bevel=0.03)
-    S.box("brace", 0.10, -0.86, 0.16, 1.90, -0.14, 0.20, "bark", bevel=0.015)
-    S.cyl("mortar", 0.50, -0.55, 0.17, 0.60, 0.76, "stone_dark", r_top=0.2, segs=18, bevel=0.025)
-    S.cyl("paste", 0.50, -0.55, 0.15, 0.755, 0.77, "vegetation", segs=18, bevel=0.0)
-    S.cyl("pestle", 0.58, -0.50, 0.03, 0.70, 1.02, "stone", segs=8, r_top=0.045, bevel=0.01, ry=0.03)
-    S.box("rail_l", 1.12, -0.24, 0.60, 1.18, -0.18, 1.10, "bark", bevel=0.01)
-    S.box("rail_r", 1.88, -0.24, 0.60, 1.94, -0.18, 1.10, "bark", bevel=0.01)
-    S.box("rail", 1.12, -0.24, 1.04, 1.94, -0.18, 1.10, "bark", bevel=0.01)
-    for k, x in enumerate([1.26, 1.46, 1.66, 1.80]):   # leaf bundles hanging to dry
+    # 3 x 1 (STK-AR), the worker stands south of the middle cell: mortar,
+    # pestle and a tray there; jars west, leaf bundles drying on a rail east.
+    _bench_legs("wood", h=0.52, x0=0.14, x1=2.86, y0=-0.20, y1=-0.80)
+    S.box("top", 0.04, -0.94, 0.52, 2.96, -0.06, 0.60, "wood_plank", bevel=0.03)
+    S.box("brace", 0.10, -0.86, 0.16, 2.90, -0.14, 0.20, "bark", bevel=0.015)
+    # middle: mortar, pestle and the tray of ground leaf
+    S.cyl("mortar", 1.36, -0.55, 0.17, 0.60, 0.76, "stone_dark", r_top=0.2, segs=18, bevel=0.025)
+    S.cyl("paste", 1.36, -0.55, 0.15, 0.755, 0.77, "vegetation", segs=18, bevel=0.0)
+    S.cyl("pestle", 1.44, -0.50, 0.03, 0.70, 1.02, "stone", segs=8, r_top=0.045, bevel=0.01, ry=0.03)
+    S.box("tray", 1.62, -0.84, 0.60, 1.94, -0.42, 0.64, "wood", bevel=0.01)
+    S.ellipsoid("pile", 1.78, -0.63, 0.66, 0.12, 0.15, 0.04, "leaf_light", segs=12, rings=6)
+    # west: jars and a folded paper
+    for k, (x, y, mat) in enumerate(((0.30, -0.40, "glass"), (0.56, -0.36, "glass"), (0.40, -0.66, "ceramic"))):
+        S.cyl("jar%d" % k, x, y, 0.08, 0.60, 0.76, mat, segs=12, bevel=0.01)
+        S.cyl("jar_lid%d" % k, x, y, 0.085, 0.76, 0.80, "wood", segs=12, bevel=0.005)
+    S.box("paper", 0.66, -0.84, 0.60, 0.92, -0.62, 0.605, "ceramic", bevel=0.0)
+    # east: drying rail with leaf bundles
+    S.box("rail_l", 2.08, -0.24, 0.60, 2.14, -0.18, 1.10, "bark", bevel=0.01)
+    S.box("rail_r", 2.86, -0.24, 0.60, 2.92, -0.18, 1.10, "bark", bevel=0.01)
+    S.box("rail", 2.08, -0.24, 1.04, 2.92, -0.18, 1.10, "bark", bevel=0.01)
+    for k, x in enumerate((2.22, 2.42, 2.62, 2.80)):
         S.box("twine%d" % k, x - 0.01, -0.225, 0.90, x + 0.01, -0.195, 1.04, "straw", bevel=0.0)
-        S.ellipsoid("leaves%d" % k, x, -0.21, 0.82, 0.07, 0.04, 0.12, "leaf_light" if k % 2 else "vegetation", segs=10, rings=6)
-    S.box("tray", 1.02, -0.80, 0.60, 1.60, -0.40, 0.64, "wood", bevel=0.01)
-    S.ellipsoid("pile", 1.30, -0.60, 0.68, 0.2, 0.14, 0.05, "leaf_light", segs=12, rings=6)
-    S.cyl("jar", 1.78, -0.62, 0.08, 0.60, 0.76, "glass", segs=12, bevel=0.01)
-    S.cyl("jar_lid", 1.78, -0.62, 0.085, 0.76, 0.80, "wood", segs=12, bevel=0.005)
-    return (2, 1), 1.10
+        S.ellipsoid("leaves%d" % k, x, -0.21, 0.82, 0.07, 0.04, 0.12, "leaf_light" if k % 2 else "vegetation",
+                    segs=10, rings=6)
+    S.ellipsoid("loose", 2.50, -0.66, 0.62, 0.16, 0.10, 0.03, "vegetation", segs=12, rings=6)
+    return (3, 1), 1.10
 
 
 def _butcher_table():
-    # 2 x 1, the butcher stands on the south side.
-    for i, x in enumerate([0.14, 1.86]):
-        for j, y in enumerate([-0.2, -0.8]):
-            S.box("leg%d%d" % (i, j), x - 0.07, y - 0.07, 0.0, x + 0.07, y + 0.07, 0.5, "wood", bevel=0.02)
-    S.box("stretcher", 0.12, -0.56, 0.12, 1.88, -0.44, 0.18, "wood", bevel=0.015)
-    S.box("slab", 0.04, -0.94, 0.50, 1.96, -0.06, 0.66, "wood_plank", bevel=0.04, segments=2)
-    S.box("block", 0.12, -0.86, 0.66, 0.86, -0.18, 0.74, "wood", bevel=0.03)
-    for i, y in enumerate([-0.34, -0.52, -0.70]):
-        S.box("groove%d" % i, 0.16, y - 0.008, 0.738, 0.82, y + 0.008, 0.744, "bark", bevel=0.0)
-    S.box("blade", 1.05, -0.70, 0.66, 1.42, -0.48, 0.69, "steel", bevel=0.01)
-    S.box("handle", 1.42, -0.62, 0.66, 1.62, -0.56, 0.70, "metal_dark", bevel=0.01)
-    S.ellipsoid("cut", 1.62, -0.30, 0.71, 0.13, 0.09, 0.05, "food_red", segs=14, rings=8)
-    S.ellipsoid("bone", 1.62, -0.30, 0.74, 0.05, 0.03, 0.02, "ceramic", segs=10, rings=6)
-    S.box("rail", 0.06, -0.10, 0.66, 1.94, -0.04, 1.02, "wood", bevel=0.02)
-    for i, x in enumerate([0.40, 0.80, 1.20]):
+    # 3 x 1 (STK-AR), the butcher stands south of the middle cell, at the
+    # chopping block; a bucket west, cut meat east, a hook rail at the back.
+    _bench_legs("wood", r=0.07, h=0.5, x0=0.14, x1=2.86, y0=-0.2, y1=-0.8, bevel=0.02)
+    S.box("stretcher", 0.12, -0.56, 0.12, 2.88, -0.44, 0.18, "wood", bevel=0.015)
+    S.box("slab", 0.04, -0.94, 0.50, 2.96, -0.06, 0.66, "wood_plank", bevel=0.04, segments=2)
+    # middle: the block, its grooves, the cleaver and a joint on it
+    S.box("block", 1.08, -0.88, 0.66, 1.92, -0.20, 0.74, "wood", bevel=0.03)
+    for i, y in enumerate((-0.36, -0.54, -0.72)):
+        S.box("groove%d" % i, 1.12, y - 0.008, 0.738, 1.88, y + 0.008, 0.744, "bark", bevel=0.0)
+    S.ellipsoid("joint", 1.36, -0.54, 0.79, 0.15, 0.11, 0.06, "food_red", segs=14, rings=8)
+    S.ellipsoid("joint_bone", 1.36, -0.54, 0.83, 0.06, 0.035, 0.025, "ceramic", segs=10, rings=6)
+    S.box("blade", 1.56, -0.72, 0.74, 1.80, -0.50, 0.77, "steel", bevel=0.01)
+    S.box("blade_grip", 1.80, -0.64, 0.74, 1.96, -0.58, 0.78, "metal_dark", bevel=0.01)
+    # west: a pail
+    S.cyl("pail", 0.44, -0.58, 0.17, 0.66, 0.90, "wood", r_top=0.19, segs=16, bevel=0.02)
+    S.cyl("pail_band", 0.44, -0.58, 0.18, 0.80, 0.84, "metal_dark", segs=16, bevel=0.0)
+    S.cyl("pail_in", 0.44, -0.58, 0.16, 0.86, 0.885, "food_red", segs=16, bevel=0.0)
+    # east: cuts laid out and a knife
+    for k, (x, y) in enumerate(((2.30, -0.66), (2.58, -0.60))):
+        S.ellipsoid("cut%d" % k, x, y, 0.70, 0.12, 0.08, 0.045, "food_red", segs=14, rings=8)
+    S.box("knife", 2.20, -0.40, 0.66, 2.54, -0.36, 0.68, "steel", bevel=0.004)
+    S.box("knife_grip", 2.54, -0.41, 0.66, 2.66, -0.35, 0.70, "metal_dark", bevel=0.005)
+    # back rail with hooks
+    S.box("rail", 0.06, -0.10, 0.66, 2.94, -0.04, 1.02, "wood", bevel=0.02)
+    for i, x in enumerate((0.50, 1.00, 1.50, 2.00, 2.50)):
         S.cyl("hook%d" % i, x, -0.12, 0.012, 0.86, 1.0, "steel", segs=6, bevel=0.0)
-    S.ellipsoid("hang", 1.20, -0.13, 0.78, 0.07, 0.04, 0.09, "food_red", segs=12, rings=8)
-    return (2, 1), 1.02
+    S.ellipsoid("hang", 2.50, -0.13, 0.78, 0.07, 0.04, 0.09, "food_red", segs=12, rings=8)
+    S.ellipsoid("hang2", 1.00, -0.13, 0.80, 0.06, 0.035, 0.08, "food_red", segs=12, rings=8)
+    return (3, 1), 1.02
 
 
 def _drying_rack():
@@ -282,22 +346,29 @@ def _drying_rack():
 
 
 def _tailoring_bench():
-    """2 x 1 tailor's table: a cutting top with a spread hide, a bolt of
-    cloth, shears and a spool. The tailor stands on the south side."""
-    for i, x in enumerate([0.12, 1.88]):
-        for j, y in enumerate([-0.18, -0.82]):
-            S.box("leg%d%d" % (i, j), x - 0.05, y - 0.05, 0.0, x + 0.05, y + 0.05, 0.52, "wood", bevel=0.015)
-    S.box("stretcher", 0.10, -0.55, 0.14, 1.90, -0.45, 0.19, "wood", bevel=0.01)
-    S.box("top", 0.04, -0.94, 0.52, 1.96, -0.06, 0.60, "wood_plank", bevel=0.03)
-    S.box("hide", 0.18, -0.80, 0.60, 0.98, -0.22, 0.615, "leather", bevel=0.01)
-    S.cyl("bolt", 1.40, -0.30, 0.09, 0.60, 0.62, "cloth", segs=14, ry=0.09)
-    S.box("bolt_body", 1.10, -0.39, 0.60, 1.70, -0.21, 0.70, "cloth", bevel=0.05)
-    S.cyl("spool", 1.58, -0.70, 0.05, 0.60, 0.70, "wood", segs=12)
-    S.cyl("thread", 1.58, -0.70, 0.045, 0.62, 0.68, "food_red", segs=12, bevel=0.0)
-    S.box("shear_a", 1.10, -0.74, 0.60, 1.34, -0.71, 0.62, "steel", bevel=0.004)
-    S.box("shear_b", 1.12, -0.66, 0.60, 1.34, -0.69, 0.62, "steel", bevel=0.004)
-    S.cyl("ring", 1.36, -0.69, 0.03, 0.60, 0.625, "metal_dark", segs=10, bevel=0.0)
-    return (2, 1), 0.72
+    """3 x 1 tailor's table (STK-AR): the hide spread on the middle cell
+    under the shears, a bolt of cloth west, spool, pins and a folded shirt
+    east. The tailor stands south of the middle."""
+    _bench_legs("wood", r=0.05)
+    S.box("stretcher", 0.10, -0.55, 0.14, 2.90, -0.45, 0.19, "wood", bevel=0.01)
+    S.box("top", 0.04, -0.94, 0.52, 2.96, -0.06, 0.60, "wood_plank", bevel=0.03)
+    # middle: hide with a chalk line and the shears on it
+    S.box("hide", 1.06, -0.86, 0.60, 1.94, -0.22, 0.615, "leather", bevel=0.01)
+    S.box("chalk", 1.16, -0.56, 0.615, 1.84, -0.545, 0.618, "ceramic", bevel=0.0)
+    S.box("shear_a", 1.30, -0.74, 0.615, 1.60, -0.71, 0.635, "steel", bevel=0.004)
+    S.box("shear_b", 1.32, -0.66, 0.615, 1.60, -0.69, 0.635, "steel", bevel=0.004)
+    S.cyl("ring", 1.62, -0.69, 0.03, 0.615, 0.64, "metal_dark", segs=10, bevel=0.0)
+    # west: a bolt of cloth
+    S.cyl("bolt", 0.50, -0.34, 0.09, 0.60, 0.62, "cloth", segs=14, ry=0.09)
+    S.box("bolt_body", 0.16, -0.43, 0.60, 0.84, -0.25, 0.70, "cloth", bevel=0.05)
+    S.box("bolt_tail", 0.30, -0.80, 0.60, 0.86, -0.43, 0.61, "cloth", bevel=0.005)
+    # east: spool, pin cushion, folded shirt
+    S.cyl("spool", 2.20, -0.70, 0.05, 0.60, 0.70, "wood", segs=12)
+    S.cyl("thread", 2.20, -0.70, 0.045, 0.62, 0.68, "food_red", segs=12, bevel=0.0)
+    S.ellipsoid("cushion", 2.40, -0.78, 0.64, 0.07, 0.07, 0.04, "food_red", segs=12, rings=6)
+    S.box("folded", 2.36, -0.50, 0.60, 2.84, -0.20, 0.66, "cloth", bevel=0.03)
+    S.box("folded_top", 2.40, -0.48, 0.66, 2.80, -0.22, 0.70, "cloth", bevel=0.03)
+    return (3, 1), 0.72
 
 
 def _horseshoe_pin():
@@ -490,61 +561,76 @@ def _torch_lamp():
 
 
 def _electric_stove():
-    # 2 x 1, the cook stands on the south side. Enamel body, a black glass
-    # cooktop with three rings (glow), an oven window (glow), a back console
-    # with knobs and a display (glow). No flue: it runs on power.
-    S.box("plinth", 0.08, -0.92, 0.0, 1.92, -0.10, 0.08, "steel_dark", bevel=0.01)
-    S.box("body", 0.06, -0.92, 0.08, 1.94, -0.08, 0.62, "ceramic", bevel=0.04)
-    S.box("top", 0.04, -0.94, 0.62, 1.96, -0.06, 0.66, "steel", bevel=0.02)
-    S.box("glass", 0.12, -0.86, 0.66, 1.30, -0.30, 0.672, "backdrop", bevel=0.008)
-    for k, x in enumerate((0.38, 0.71, 1.04)):
-        P.glow(S.cyl("ring%d" % k, x, -0.58, 0.125, 0.672, 0.68, "steel_dark", segs=24, bevel=0.0), "gland_ember")
-        S.cyl("ring_in%d" % k, x, -0.58, 0.07, 0.672, 0.682, "backdrop", segs=20, bevel=0.0)
-    S.cyl("pot", 0.38, -0.58, 0.11, 0.68, 0.80, "steel", r_top=0.115, segs=18)
-    S.cyl("stew", 0.38, -0.58, 0.095, 0.795, 0.805, "crop_fruit", segs=18, bevel=0.0)
-    S.box("board", 1.42, -0.80, 0.66, 1.86, -0.36, 0.70, "wood_plank", bevel=0.015)
-    S.ellipsoid("veg", 1.60, -0.56, 0.74, 0.06, 0.06, 0.05, "vegetation", segs=10, rings=6)
-    S.box("console", 0.06, -0.26, 0.66, 1.94, -0.08, 0.92, "steel_dark", bevel=0.03)
-    for k, x in enumerate((0.30, 0.52, 0.74, 0.96)):
+    # 3 x 1 (STK-AR), the cook stands south of the middle cell. Enamel body,
+    # a black glass cooktop with three rings (glow) on the middle, an oven
+    # window (glow) under it, a back console with knobs and a display (glow),
+    # a drawer cabinet west, a prep board east. No flue: it runs on power.
+    S.box("plinth", 0.08, -0.92, 0.0, 2.92, -0.10, 0.08, "steel_dark", bevel=0.01)
+    S.box("body", 0.06, -0.92, 0.08, 2.94, -0.08, 0.62, "ceramic", bevel=0.04)
+    S.box("top", 0.04, -0.94, 0.62, 2.96, -0.06, 0.66, "steel", bevel=0.02)
+    S.box("glass", 1.02, -0.88, 0.66, 1.98, -0.30, 0.672, "backdrop", bevel=0.008)
+    for k, (x, y, r) in enumerate(((1.26, -0.66, 0.12), (1.74, -0.66, 0.12), (1.50, -0.44, 0.09))):
+        P.glow(S.cyl("ring%d" % k, x, y, r, 0.672, 0.68, "steel_dark", segs=24, bevel=0.0), "gland_ember")
+        S.cyl("ring_in%d" % k, x, y, r * 0.56, 0.672, 0.682, "backdrop", segs=20, bevel=0.0)
+    S.cyl("pot", 1.26, -0.66, 0.11, 0.68, 0.80, "steel", r_top=0.115, segs=18)
+    S.cyl("stew", 1.26, -0.66, 0.095, 0.795, 0.805, "crop_fruit", segs=18, bevel=0.0)
+    S.box("console", 0.06, -0.26, 0.66, 2.94, -0.08, 0.92, "steel_dark", bevel=0.03)
+    for k, x in enumerate((1.14, 1.34, 1.66, 1.86)):
         S.cyl("knob%d" % k, x, -0.27, 0.035, 0.78, 0.84, "metal_dark", segs=10, bevel=0.005)
-    P.glow(S.box("display", 1.30, -0.275, 0.74, 1.80, -0.255, 0.86, "backdrop", bevel=0.005), "indicator")
-    S.box("door", 0.16, -0.945, 0.14, 1.10, -0.91, 0.54, "steel", bevel=0.015)
-    P.glow(S.box("oven_window", 0.28, -0.955, 0.22, 0.98, -0.94, 0.42, "backdrop", bevel=0.006), "lamp_warm")
-    S.box("handle", 0.26, -0.965, 0.47, 1.00, -0.945, 0.50, "steel_dark", bevel=0.005)
-    S.box("drawer", 1.20, -0.935, 0.14, 1.84, -0.91, 0.54, "ceramic", bevel=0.015)
-    S.box("drawer_pull", 1.44, -0.95, 0.44, 1.60, -0.93, 0.47, "steel_dark", bevel=0.005)
-    S.box("cable", 1.84, -0.10, 0.0, 1.90, -0.02, 0.66, "fur_black", bevel=0.01)
-    return (2, 1), 0.94
+    P.glow(S.box("display", 1.40, -0.275, 0.74, 1.60, -0.255, 0.86, "backdrop", bevel=0.005), "indicator")
+    S.box("door", 1.06, -0.945, 0.14, 1.94, -0.91, 0.54, "steel", bevel=0.015)
+    P.glow(S.box("oven_window", 1.16, -0.955, 0.22, 1.84, -0.94, 0.42, "backdrop", bevel=0.006), "lamp_warm")
+    S.box("handle", 1.14, -0.965, 0.47, 1.86, -0.945, 0.50, "steel_dark", bevel=0.005)
+    # west: drawers and a canister set
+    for k, z in enumerate((0.14, 0.36)):
+        S.box("drawer%d" % k, 0.16, -0.935, z, 0.86, -0.91, z + 0.18, "ceramic", bevel=0.015)
+        S.box("pull%d" % k, 0.42, -0.95, z + 0.12, 0.60, -0.93, z + 0.15, "steel_dark", bevel=0.005)
+    for k, x in enumerate((0.30, 0.52)):
+        S.cyl("canister%d" % k, x, -0.48, 0.08, 0.66, 0.84 - 0.04 * k, "steel", segs=12, bevel=0.01)
+    # east: board, vegetable, cable
+    S.box("board", 2.18, -0.80, 0.66, 2.84, -0.36, 0.70, "wood_plank", bevel=0.015)
+    S.ellipsoid("veg", 2.40, -0.56, 0.74, 0.06, 0.06, 0.05, "vegetation", segs=10, rings=6)
+    S.box("cabinet_door", 2.16, -0.935, 0.14, 2.84, -0.91, 0.54, "ceramic", bevel=0.015)
+    S.box("cabinet_pull", 2.24, -0.95, 0.30, 2.28, -0.93, 0.42, "steel_dark", bevel=0.005)
+    S.box("cable", 2.84, -0.10, 0.0, 2.90, -0.02, 0.66, "fur_black", bevel=0.01)
+    return (3, 1), 0.94
 
 
 def _electric_tailoring_bench():
-    """2 x 1 electric tailoring bench: a steel cutting table with cloth
-    spread and a bolt, and an enamelled sewing machine with its work lamp
-    and power lamp (glow). The tailor stands on the south side."""
-    for i, x in enumerate([0.12, 1.88]):
-        for j, y in enumerate([-0.18, -0.82]):
-            S.box("leg%d%d" % (i, j), x - 0.045, y - 0.045, 0.0, x + 0.045, y + 0.045, 0.52, "steel_dark", bevel=0.012)
-    S.box("stretcher", 0.10, -0.55, 0.14, 1.90, -0.45, 0.19, "steel_dark", bevel=0.01)
-    S.box("top", 0.04, -0.94, 0.52, 1.96, -0.06, 0.58, "steel", bevel=0.03)
-    S.box("cloth", 0.14, -0.84, 0.58, 0.88, -0.32, 0.595, "cloth", bevel=0.01)
-    S.box("bolt", 0.16, -0.28, 0.58, 0.78, -0.10, 0.70, "cloth", bevel=0.05)
-    S.box("shear_a", 0.50, -0.74, 0.595, 0.74, -0.71, 0.615, "steel", bevel=0.004)
-    S.box("shear_b", 0.52, -0.66, 0.595, 0.74, -0.69, 0.615, "steel", bevel=0.004)
-    S.cyl("shear_ring", 0.76, -0.69, 0.03, 0.595, 0.62, "metal_dark", segs=10, bevel=0.0)
-    # the sewing machine: bed, pillar, arm and head; hand wheel on the east
-    S.box("bed", 1.06, -0.80, 0.58, 1.86, -0.34, 0.64, "mug_blue", bevel=0.02)
-    S.box("fabric", 1.10, -0.76, 0.64, 1.44, -0.40, 0.65, "cloth", bevel=0.005)
-    S.box("pillar", 1.64, -0.66, 0.64, 1.82, -0.44, 0.98, "mug_blue", bevel=0.03)
-    S.box("arm", 1.14, -0.64, 0.86, 1.82, -0.46, 0.99, "mug_blue", bevel=0.04)
-    S.box("head", 1.12, -0.67, 0.70, 1.28, -0.43, 0.99, "mug_blue", bevel=0.03)
-    S.box("needle", 1.19, -0.565, 0.64, 1.21, -0.545, 0.72, "steel", bevel=0.0)
-    P.glow(S.box("work_lamp", 1.13, -0.685, 0.70, 1.27, -0.66, 0.76, "backdrop", bevel=0.004), "lamp_warm")
-    P.glow(S.cyl("power_lamp", 1.74, -0.55, 0.035, 0.99, 1.015, "backdrop", segs=10, bevel=0.0), "indicator")
-    S.box("hand_wheel", 1.82, -0.64, 0.80, 1.87, -0.46, 0.98, "steel", bevel=0.03)
-    S.cyl("spool", 1.50, -0.55, 0.045, 0.99, 1.07, "food_red", segs=12, bevel=0.005)
-    S.cyl("spindle", 1.50, -0.55, 0.012, 0.99, 1.10, "steel", segs=6, bevel=0.0)
-    S.box("cable", 1.84, -0.40, 0.0, 1.90, -0.34, 0.58, "fur_black", bevel=0.01)
-    return (2, 1), 1.10
+    """3 x 1 electric tailoring bench (STK-AR): a steel table, the sewing
+    machine on the middle cell with its work lamp and power lamp (glow),
+    a cloth bolt and shears west, spools and folded work east. The tailor
+    stands south of the middle."""
+    _bench_legs("steel_dark", r=0.045, bevel=0.012)
+    S.box("stretcher", 0.10, -0.55, 0.14, 2.90, -0.45, 0.19, "steel_dark", bevel=0.01)
+    S.box("top", 0.04, -0.94, 0.52, 2.96, -0.06, 0.58, "steel", bevel=0.03)
+    # west: cloth and shears
+    S.box("cloth", 0.12, -0.84, 0.58, 0.88, -0.36, 0.595, "cloth", bevel=0.01)
+    S.box("bolt", 0.14, -0.30, 0.58, 0.86, -0.10, 0.70, "cloth", bevel=0.05)
+    S.box("shear_a", 0.46, -0.74, 0.595, 0.70, -0.71, 0.615, "steel", bevel=0.004)
+    S.box("shear_b", 0.48, -0.66, 0.595, 0.70, -0.69, 0.615, "steel", bevel=0.004)
+    S.cyl("shear_ring", 0.72, -0.69, 0.03, 0.595, 0.62, "metal_dark", segs=10, bevel=0.0)
+    # middle: the sewing machine (bed, pillar, arm, head; hand wheel east)
+    S.box("bed", 1.08, -0.82, 0.58, 1.92, -0.34, 0.64, "mug_blue", bevel=0.02)
+    S.box("fabric", 1.06, -0.78, 0.64, 1.48, -0.40, 0.65, "cloth", bevel=0.005)
+    S.box("pillar", 1.70, -0.66, 0.64, 1.88, -0.44, 0.98, "mug_blue", bevel=0.03)
+    S.box("arm", 1.20, -0.64, 0.86, 1.88, -0.46, 0.99, "mug_blue", bevel=0.04)
+    S.box("head", 1.18, -0.67, 0.70, 1.34, -0.43, 0.99, "mug_blue", bevel=0.03)
+    S.box("needle", 1.25, -0.565, 0.64, 1.27, -0.545, 0.72, "steel", bevel=0.0)
+    P.glow(S.box("work_lamp", 1.19, -0.685, 0.70, 1.33, -0.66, 0.76, "backdrop", bevel=0.004), "lamp_warm")
+    P.glow(S.cyl("power_lamp", 1.80, -0.55, 0.035, 0.99, 1.015, "backdrop", segs=10, bevel=0.0), "indicator")
+    S.box("hand_wheel", 1.88, -0.64, 0.80, 1.93, -0.46, 0.98, "steel", bevel=0.03)
+    S.cyl("spool", 1.56, -0.55, 0.045, 0.99, 1.07, "food_red", segs=12, bevel=0.005)
+    S.cyl("spindle", 1.56, -0.55, 0.012, 0.99, 1.10, "steel", segs=6, bevel=0.0)
+    # east: spool rack and folded work
+    S.box("rack", 2.12, -0.30, 0.58, 2.84, -0.12, 0.64, "steel_dark", bevel=0.01)
+    for k, (x, mat) in enumerate(((2.24, "food_red"), (2.42, "jacket_navy"), (2.60, "corn_yellow"),
+                                   (2.76, "sheet_teal"))):
+        S.cyl("rspool%d" % k, x, -0.21, 0.045, 0.64, 0.76, mat, segs=12, bevel=0.005)
+    S.box("folded", 2.16, -0.84, 0.58, 2.78, -0.44, 0.64, "cloth", bevel=0.03)
+    S.box("folded_top", 2.20, -0.80, 0.64, 2.74, -0.48, 0.69, "jacket_navy", bevel=0.03)
+    S.box("cable", 2.84, -0.40, 0.0, 2.90, -0.34, 0.58, "fur_black", bevel=0.01)
+    return (3, 1), 1.10
 
 
 def _electric_research_bench():
@@ -1001,13 +1087,13 @@ BUILDERS = {
     "tool_cabinet": (_tool_cabinet, {"building": "tool cabinet"}),
     "table_small": (_table, {}),
     "chair_basic": (_chair, {"attachments": {"seat": [0.5, 0.52]}}),
-    "workbench_basic": (_workbench, {"attachments": {"worker": [0.5, 1.15]}}),
+    "workbench_basic": (_workbench, {"attachments": {"worker": [1.5, 1.15]}}),
     "lamp_standing": (_lamp, {"emissive": "lamp_warm", "light_radius": 6}),
-    "stonecutter_table": (_stonecutter_table, {"attachments": {"worker": [0.5, 1.15]}}),
-    "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
-    "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
-    "brewing_bench": (_brewing_bench, {"attachments": {"worker": [0.5, 1.15]}, "building": "brewing bench"}),
-    "drug_table": (_drug_table, {"attachments": {"worker": [0.5, 1.15]}, "building": "drug table"}),
+    "stonecutter_table": (_stonecutter_table, {"attachments": {"worker": [1.5, 1.15]}}),
+    "stove_basic": (_stove, {"attachments": {"cook": [1.5, 1.15]}}),
+    "butcher_table": (_butcher_table, {"attachments": {"worker": [1.5, 1.15]}}),
+    "brewing_bench": (_brewing_bench, {"attachments": {"worker": [1.5, 1.15]}, "building": "brewing bench"}),
+    "drug_table": (_drug_table, {"attachments": {"worker": [1.5, 1.15]}, "building": "drug table"}),
     "campfire": (_campfire, {}),
     "feeding_trough_empty": (lambda: _trough(False), {"building": "feeding trough", "state": "empty"}),
     "feeding_trough_full": (lambda: _trough(True), {"building": "feeding trough", "state": "full"}),
@@ -1015,7 +1101,7 @@ BUILDERS = {
     "sandbags": (_sandbags, {}),
     "research_bench": (_research_bench, {"attachments": {"worker": [1.5, 2.15]}}),
     "spike_trap": (_spike_trap, {}),
-    "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]}}),
+    "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [1.5, 1.15]}}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
     "grave_dug": (_grave_dug, {"building": "grave", "state": "dug"}),
     "grave_filled": (_grave_filled, {"building": "grave", "state": "filled"}),
@@ -1035,9 +1121,9 @@ BUILDERS = {
     "torch_lamp": (_torch_lamp, {"building": "torch lamp", "emissive": "lamp_warm", "light_radius": 4,
                                  "fuel": "wood", "flame_scale": 0.55,
                                  "attachments": {"fire": P.project(TORCH_FIRE, TORCH_ZMAX)}}),
-    "electric_stove": (_electric_stove, {"attachments": {"cook": [0.25, 1.5]}, "building": "electric stove",
+    "electric_stove": (_electric_stove, {"attachments": {"cook": [1.5, 1.15]}, "building": "electric stove",
                                          "recipes": "stove"}),
-    "electric_tailoring_bench": (_electric_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]},
+    "electric_tailoring_bench": (_electric_tailoring_bench, {"attachments": {"worker": [1.5, 1.15]},
                                                              "building": "electric tailoring bench",
                                                              "recipes": "tailoring bench"}),
     "electric_research_bench": (_electric_research_bench, {"attachments": {"worker": [2.5, 2.15]},
@@ -1088,9 +1174,7 @@ def build(only=None):
             gname = P.glow_name(name + suffix)
             if lits:   # PLAY-021: emissive parts get a glow layer
                 ex.update(emissive=lits[0], glow="furniture/" + gname)
-            # flat floor mats lie on the ground: no sun shadow
-            out.append(S.render_asset("furniture", name + suffix, footprint=fp, zmax=zmax, extra=ex,
-                                      shadow_kind="none" if extra.get("flat") else None))
+            out.append(S.render_asset("furniture", name + suffix, footprint=fp, zmax=zmax, extra=ex))
             if lits:
                 fn()
                 S.face(S.objects(), f, fp0)

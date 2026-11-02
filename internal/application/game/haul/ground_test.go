@@ -54,8 +54,11 @@ func TestGroundListsInItemOrder(t *testing.T) {
 	if n, top := gr.Shelf(f, item.Wood, 2, 3); n != 3 || !top {
 		t.Fatalf("Shelf = %d, %v: three stacks, the 10 wood takes a load", n, top)
 	}
-	if r := gr.Room(f, item.Wood, 2, 3, 3); r != item.Wood.StackLimit()-10 {
+	if r := gr.Room(f, item.Wood, 2, 3, 3, item.Wood.StackLimit()); r != item.Wood.StackLimit()-10 {
 		t.Fatalf("Room = %d: a full cell tops up its smallest wood stack", r)
+	}
+	if r := gr.Room(f, item.Wood, 2, 3, 3, 75); r != 65 {
+		t.Fatalf("Room = %d: a hopper-sized cap leaves 65 over the 10 wood", r)
 	}
 	f.stacks[5].Carrier = 1 // picked up and deleted with no Moved: verified, not trusted
 	delete(f.stacks, 3)

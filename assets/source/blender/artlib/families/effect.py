@@ -57,8 +57,7 @@ def _save(name, img, origin, extra):
     path = S.out_path("effect", name)
     S.write_png(img, path)
     data = {"image": "generated/world/effect/%s.png" % name, "scale": C.SCALE, "canvas": [w, h],
-            "footprint": [0, 0], "origin_px": list(origin), "particle": True,
-            "shadow": {"kind": "none", "w": 0.0, "h": 0.0, "d": 0.0}}
+            "footprint": [0, 0], "origin_px": list(origin), "particle": True}
     data.update(extra)
     meta.write("effect", name, data)
     return path

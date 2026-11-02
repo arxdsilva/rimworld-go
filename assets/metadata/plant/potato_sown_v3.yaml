@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.122
-  h: 0.028
-  d: 0.052
 species: potato
 growth: sown
 variant: 3

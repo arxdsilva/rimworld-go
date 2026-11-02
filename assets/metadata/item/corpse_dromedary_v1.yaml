@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [72, 34]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.978
-  h: 0.47
-  d: 1.236
 ppt: 128
 item: dromedary corpse
 species: dromedary

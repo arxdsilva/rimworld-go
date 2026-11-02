@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [56, 22]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.73
-  h: 0.359
-  d: 1.111
 ppt: 128
 item: cougar corpse
 species: cougar

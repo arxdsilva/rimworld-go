@@ -9,12 +9,11 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/application/game"
 )
 
 // Roof presentation (ART §16.1, UI-010): Roofed tiles are lit as indoors
-// (light.go), with soft eave shadows inside walls; the Roof overlay (R or
+// (light.go), with no shadow of their own; the Roof overlay (R or
 // the HUD button, forced on while a roof tool is held) shows built,
 // natural and planned roofs.
 
@@ -90,98 +89,16 @@ func RoofLabelAt(w game.WorldView, x, y int) string {
 // RoofDrawState is the roof pass's reusable state (Set.RoofDraw).
 type RoofDrawState struct {
 	batch        gfx.TriBatch
-	Edges        []EaveEdge
 	OverlayVerts int // vertices the last overlay drew, for tests
 }
 
-// --- eaves ---------------------------------------------------------------------------
-
-// Sides of a tile, for eaves.
+// Sides of a tile.
 const (
 	SideN = iota
 	SideE
 	SideS
 	SideW
 )
-
-// EaveEdge is a Roofed tile's side against a wall.
-type EaveEdge struct{ X, Y, Side int }
-
-// EaveEdges lists, in the tile range, every side of a Roofed (non-wall)
-// tile that faces a wall: where the roof's eave shadow falls.
-func EaveEdges(w game.WorldView, x0, y0, x1, y1 int, out []EaveEdge) []EaveEdge {
-	out = out[:0]
-	if len(w.RoofCells) == 0 || len(w.RoomGrid) == 0 {
-		return out
-	}
-	nb := [4][2]int{SideN: {0, -1}, SideE: {1, 0}, SideS: {0, 1}, SideW: {-1, 0}}
-	for y := y0; y <= y1; y++ {
-		for x := x0; x <= x1; x++ {
-			if !Roofed(RoofCellAt(w, x, y)) || RoomIDAt(w, x, y) == -2 {
-				continue
-			}
-			for s, d := range nb {
-				if RoomIDAt(w, x+d[0], y+d[1]) == -2 {
-					out = append(out, EaveEdge{x, y, s})
-				}
-			}
-		}
-	}
-	return out
-}
-
-// EaveAlpha is the eave shadow's alpha (0..255): 30 by day, 18 at night.
-func EaveAlpha(l light.State) uint8 {
-	if l.SunL[2] > 0 {
-		return 30
-	}
-	return 18
-}
-
-// EaveWidth is the eave gradient's width in screen px for a side at tile
-// size tile: 10 px under a top wall, 6 px elsewhere, at zoom 1.
-func EaveWidth(side int, tile float64) float64 {
-	px := 6.0
-	if side == SideN {
-		px = 10
-	}
-	return px * tile / camera.TileSize
-}
-
-// DrawEaves draws the soft shadow inside walls around Roofed interiors.
-func (o *Set) DrawEaves(v *render.View, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	if len(w.RoofCells) == 0 {
-		return
-	}
-	st := &o.RoofDraw
-	x0, y0, x1, y1 := visibleTiles(v, sw, sh, tile)
-	st.Edges = EaveEdges(w, x0, y0, x1, y1, st.Edges)
-	if len(st.Edges) == 0 {
-		return
-	}
-	a := float64(EaveAlpha(o.Lit.Light)) / 255
-	c := color.RGBA{shadowColorU8(0), shadowColorU8(1), shadowColorU8(2), 255}
-	b := &st.batch
-	b.Reset()
-	for _, e := range st.Edges {
-		sx, sy := v.WorldToScreen(e.X, e.Y)
-		x, y := float64(sx), float64(sy)
-		px := EaveWidth(e.Side, tile)
-		switch e.Side {
-		case SideN:
-			b.Rect(x, y, tile, px, c, a, a, 0, 0)
-		case SideS:
-			b.Rect(x, y+tile-px, tile, px, c, 0, 0, a, a)
-		case SideE:
-			b.Rect(x+tile-px, y, px, tile, c, 0, a, 0, a)
-		case SideW:
-			b.Rect(x, y, px, tile, c, a, 0, a, 0)
-		}
-	}
-	b.Flush(screen, o.whiteImg(), ebiten.BlendSourceOver)
-}
-
-func shadowColorU8(i int) uint8 { return uint8(light.ShadowColor[i]) }
 
 // --- overlay -------------------------------------------------------------------------
 

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 23]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.865
-  h: 0.14
-  d: 0.28
 weapon: mace
 rotatable: true
 points: east

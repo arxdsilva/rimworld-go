@@ -22,7 +22,8 @@ func TestNewStorageDefaults(t *testing.T) {
 	}
 	d := NewDump()
 	if !d.Allows(item.CorpseHuman) || !d.Allows(item.CorpseAnimal) || !d.Allows(item.Bones) || !d.Allows(item.SlateChunk) ||
-		d.Allows(item.Meal) || d.Allows(item.Wood) || !d.AllowsStack(item.Stack{Kind: item.CorpseAnimal, Qty: 1, Rot: 1 << 30}) {
+		d.Allows(item.Meal) || d.Allows(item.Wood) || !d.AllowsStack(item.Stack{Kind: item.CorpseAnimal, Qty: 1, Rot: 1 << 30}) ||
+		d.Priority != PriorityNormal || d.Hidden || !d.Custom || d.Kind.Stacks() != 1 {
 		t.Fatalf("new dump %+v", d)
 	}
 	h := NewHopper()
@@ -166,5 +167,20 @@ func TestStorageGroups(t *testing.T) {
 	}
 	if z, _ := saved.Zone(b); z.Group != a {
 		t.Fatal("the group round-trips")
+	}
+}
+
+// TestStackCap (STK-ST): a hopper cell keeps one vanilla raw-food stack
+// (wiki: Hopper, 75); every other storage cell, and the bare ground, the
+// kind's own limit.
+func TestStackCap(t *testing.T) {
+	t.Parallel()
+	if KindHopper.StackCap(item.StackLimit) != HopperStack || HopperStack != 75 || KindHopper.StackCap(1) != 1 {
+		t.Fatal("a hopper holds one stack of 75")
+	}
+	for _, k := range []Kind{0, KindStockpile, KindDump, KindShelf} {
+		if k.StackCap(item.StackLimit) != item.StackLimit || k.StackCap(1) != 1 {
+			t.Fatalf("kind %d caps a stack", k)
+		}
 	}
 }

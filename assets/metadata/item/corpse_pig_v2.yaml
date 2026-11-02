@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [20, 16]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.162
-  h: 0.429
-  d: 1.021
 ppt: 128
 item: pig corpse
 species: pig

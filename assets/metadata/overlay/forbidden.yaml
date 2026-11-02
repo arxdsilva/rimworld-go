@@ -9,8 +9,3 @@ origin_px: [0, 0]
 overlay: forbidden
 marking: true
 note: "corner chip, upper-right of the item tile"
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0

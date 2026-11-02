@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [62, 56]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.808
-  h: 0.715
-  d: 1.398
 ppt: 128
 item: bison corpse
 species: bison

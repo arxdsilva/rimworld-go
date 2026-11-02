@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 27]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.717
-  h: 0.2
-  d: 0.539
 tint:
   group: cloth
   mask: generated/world/item/cowboy_hat_mask.png

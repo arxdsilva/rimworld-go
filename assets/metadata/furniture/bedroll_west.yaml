@@ -8,11 +8,6 @@ footprint: [2, 1]
 origin_px: [16, 27]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.92
-  h: 0.224
-  d: 0.86
 tint:
   group: cloth
   mask: generated/world/furniture/bedroll_west_mask.png

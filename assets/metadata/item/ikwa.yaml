@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 19]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.863
-  h: 0.06
-  d: 0.304
 item: ikwa

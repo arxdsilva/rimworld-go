@@ -151,7 +151,7 @@ func PlantSprite(p game.PlantView) (string, float64) {
 		return k, sc
 	}
 	if ks, ok := PlantKeys.Crops[p.Species]; ok {
-		return ks[env.CropStage(p)][h%env.CropVariants], 1 // the inspector's icon and the shadow; DrawCropObj composes the units
+		return ks[env.CropStage(p)][h%env.CropVariants], 1 // the inspector's icon; DrawCropObj composes the units
 	}
 	if k, sc, ok := NewPlantKey(p, h); ok {
 		return k, sc

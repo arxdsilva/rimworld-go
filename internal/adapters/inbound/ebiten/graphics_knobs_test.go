@@ -25,28 +25,25 @@ import (
 func TestShadowsOffSkipsTheLayer(t *testing.T) {
 	t.Parallel()
 	w := shadowWorld(nil)
-	w.Buildings = []game.BuildingView{{Kind: "wall", X: 2, Y: 2, W: 1, H: 1}}
 	r := shadowRenderer(t, w)
+	r.view.Pawns = []game.PawnView{{ID: 1, X: 4, Y: 4}}
 	r.lit.Light = testLight(0.4, 0.4, 0.3)
 	dst := ebiten.NewImage(640, 400)
 	r.drawShadows(dst, w, 640, 400, r.cam.Tile())
-	if r.env.Shadow.Composites != 1 || r.env.Shadow.Layer == nil {
-		t.Fatalf("fixture: composites %d, layer %v; the shadow layer should draw with shadows on", r.env.Shadow.Composites, r.env.Shadow.Layer)
+	if r.env.Shadow.Flushes != 1 || r.env.Shadow.Drawn != 1 {
+		t.Fatalf("fixture: %d draws, %d blobs; a colonist outdoors should cast with shadows on", r.env.Shadow.Flushes, r.env.Shadow.Drawn)
 	}
 	r.env.Shadow.SetOff(true)
-	if r.env.Shadow.Layer != nil || r.env.Shadow.Scratch != nil {
-		t.Fatal("turning shadows off should free the screen-sized layers")
-	}
 	for i := 0; i < 3; i++ {
 		r.drawShadows(dst, w, 640, 400, r.cam.Tile())
 	}
-	if r.env.Shadow.Composites != 1 || r.env.Shadow.Layer != nil {
-		t.Fatalf("shadows off still drew: composites %d, layer %v", r.env.Shadow.Composites, r.env.Shadow.Layer)
+	if r.env.Shadow.Flushes != 1 || r.env.Shadow.Drawn != 0 {
+		t.Fatalf("shadows off still drew: %d draws, %d blobs", r.env.Shadow.Flushes, r.env.Shadow.Drawn)
 	}
 	r.env.Shadow.SetOff(false)
 	r.drawShadows(dst, w, 640, 400, r.cam.Tile())
-	if r.env.Shadow.Composites != 2 {
-		t.Fatalf("shadows back on: composites %d, want 2", r.env.Shadow.Composites)
+	if r.env.Shadow.Flushes != 2 {
+		t.Fatalf("shadows back on: %d draws, want 2", r.env.Shadow.Flushes)
 	}
 }
 

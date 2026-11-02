@@ -3,16 +3,11 @@ version: 1
 id: "core:power/radio_console_east"
 image: generated/world/power/radio_console_east.png
 scale: 2
-canvas: [160, 364]
-footprint: [1, 2]
+canvas: [288, 492]
+footprint: [2, 3]
 origin_px: [16, 92]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.82
-  h: 1.66
-  d: 1.9
 rotatable: true
 facing: east
 building: radio console

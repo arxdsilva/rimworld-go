@@ -6,7 +6,6 @@ scale: 2
 canvas: [512, 640]
 footprint: [4, 5]
 origin_px: [0, 0]
-shadow: {kind: none, w: 0.0, h: 0.0, d: 0.0}
 portrait: steady
 character: Orla Vane
 thumbnail: steady_thumb

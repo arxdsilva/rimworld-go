@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [58, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.756
-  h: 0.653
-  d: 0.926
 ppt: 128
 item: donkey corpse
 species: donkey

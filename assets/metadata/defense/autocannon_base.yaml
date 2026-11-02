@@ -8,11 +8,6 @@ footprint: [2, 2]
 origin_px: [16, 66]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.59
-  h: 0.62
-  d: 1.52
 rotatable: false
 facing: south
 building: autocannon

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [45, 122]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 1.193
-  h: 2.134
-  d: 0.24
 rotatable: false
 facing: south
 layer: rotor

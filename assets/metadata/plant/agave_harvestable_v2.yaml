@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 43]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.649
-  h: 0.575
-  d: 0.652
 species: agave
 stage: harvestable
 variant: 2

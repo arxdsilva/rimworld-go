@@ -56,6 +56,21 @@ func (k Kind) Settings() bool { return k.Storage() || k == KindGrave }
 // link into a storage group (Link).
 func (k Kind) Building() bool { return k == KindShelf || k == KindHopper || k == KindGrave }
 
+// HopperStack is the most one hopper cell holds of a raw food: one
+// stack, the vanilla raw-food stack (wiki: Hopper, one stack of food;
+// the game's raw-food stack is 75). A hopper keeps it although a tile
+// elsewhere stacks to item.StackLimit (STK-ST).
+const HopperStack = 75
+
+// StackCap is how many of a kind with stack limit lim one stack on a
+// cell of kind k holds: lim, at most HopperStack in a hopper.
+func (k Kind) StackCap(lim int) int {
+	if k == KindHopper {
+		return min(lim, HopperStack)
+	}
+	return lim
+}
+
 // Stacks is how many stacks one cell of a storage zone of kind k holds.
 func (k Kind) Stacks() int {
 	if k == KindShelf {

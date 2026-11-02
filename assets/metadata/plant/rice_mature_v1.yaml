@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 42]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.851
-  h: 0.608
-  d: 0.855
 species: rice
 growth: mature
 variant: 1

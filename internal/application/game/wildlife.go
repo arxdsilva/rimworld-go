@@ -420,29 +420,30 @@ func (g *Game) fillWildlifeView(w *WorldView) {
 // dropCorpse leaves the colony's own carcass of s at (x, y)
 // (dropCorpseAs).
 func (g *Game) dropCorpse(s animal.Species, x, y int) entity.EntityID {
-	return g.dropCorpseAs(s, x, y, false, 0)
+	return g.dropCorpseAs(s, x, y, false, false, 0)
 }
 
 // dropCorpseAs leaves a carcass of s at (x, y), stacking with its
 // species, and returns the stack it lies in (0: none). An unclaimed
 // carcass (the colony had no hand in the death: PLAY-017) waits for a
-// haul mark, and stacks only with other unclaimed ones. yield is its
-// butcher yield (item.Stack.Yield, FOOD-3: 0 a whole adult).
-func (g *Game) dropCorpseAs(s animal.Species, x, y int, unclaimed bool, yield int) entity.EntityID {
+// haul mark, and stacks only with other unclaimed ones; forbid forbids it
+// (game/allow). yield is its butcher yield (item.Stack.Yield, FOOD-3: 0 a
+// whole adult).
+func (g *Game) dropCorpseAs(s animal.Species, x, y int, unclaimed, forbid bool, yield int) entity.EntityID {
 	sid, err := g.SpawnStack(item.CorpseAnimal, 1, x, y)
 	if err != nil {
 		return 0
 	}
 	st, _ := g.stacks.Get(sid)
 	// a mechanoid's wreck never rots (Dried: it keeps; DEF-4)
-	st.Animal, st.Unclaimed, st.Dried, st.Yield = uint8(s), unclaimed, animal.IsMech(s), uint16(yield)
+	st.Animal, st.Unclaimed, st.Dried, st.Yield, st.Forbidden = uint8(s), unclaimed, animal.IsMech(s), uint16(yield), forbid
 	g.mergeOrSet(sid, st)
 	if _, ok := g.stacks.Get(sid); ok {
 		return sid
 	}
 	for _, id := range g.itemIDs { // merged into the carcasses already there
 		if o, ok := g.stacks.Get(id); ok && o.Carrier == 0 && o.X == x && o.Y == y && o.Kind == item.CorpseAnimal && o.Animal == uint8(s) &&
-			o.Unclaimed == unclaimed && !o.HaulMarked && o.Yield == uint16(yield) {
+			o.Unclaimed == unclaimed && o.Forbidden == forbid && !o.HaulMarked && o.Yield == uint16(yield) {
 			return id
 		}
 	}

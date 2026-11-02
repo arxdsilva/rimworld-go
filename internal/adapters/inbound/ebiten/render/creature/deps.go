@@ -23,7 +23,7 @@ type Figures interface {
 	// FigureLayers appends p's sprites in art facing fs, bottom first.
 	FigureLayers(dst []Layer, p game.PawnView, fs string) []Layer
 	// PawnBlood and AnimalBlood are a figure's blood stain this frame
-	// (lit.kage's Custom3; 0 in the shadow pass).
+	// (lit.kage's Custom3; 0 in a bake).
 	PawnBlood(p game.PawnView) float32
 	AnimalBlood(an game.AnimalView) float32
 	// LayerBlood is the stain one layer of a pawn takes.

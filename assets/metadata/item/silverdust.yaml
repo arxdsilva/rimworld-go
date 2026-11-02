@@ -8,10 +8,5 @@ footprint: [1, 1]
 origin_px: [16, 34]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.495
-  h: 0.35
-  d: 0.406
 item: silverdust
 stack: true

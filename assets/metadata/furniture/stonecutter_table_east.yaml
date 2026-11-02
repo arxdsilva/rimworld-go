@@ -3,17 +3,12 @@ version: 1
 id: "core:furniture/stonecutter_table_east"
 image: generated/world/furniture/stonecutter_table_east.png
 scale: 2
-canvas: [160, 330]
-footprint: [1, 2]
-origin_px: [16, 58]
+canvas: [160, 460]
+footprint: [1, 3]
+origin_px: [16, 60]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.88
-  h: 0.92
-  d: 1.92
 attachments:
-  worker: [0.5, 1.15]
+  worker: [1.5, 1.15]
 rotatable: true
 facing: east

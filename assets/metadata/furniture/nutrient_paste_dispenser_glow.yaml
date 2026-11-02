@@ -8,11 +8,6 @@ footprint: [3, 4]
 origin_px: [16, 99]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 1.91
-  h: 1.295
-  d: 0.7
 layer: glow
 of: furniture/nutrient_paste_dispenser
 emissive: lamp_warm

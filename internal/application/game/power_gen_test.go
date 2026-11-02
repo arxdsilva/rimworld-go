@@ -175,9 +175,9 @@ func TestWindBandIsBlockedByWallsBuildingsRockRoofsAndTrees(t *testing.T) {
 				g.placeGenerated(construction.Building{Kind: construction.Wall, Stuff: item.Wood, X: c[0], Y: c[1]})
 			}
 		}, 400}, // 16 of 20 clear = 800 permille
-		{"a blocking bench (2x1)", func(g *Game) {
+		{"a blocking bench (3x1)", func(g *Game) {
 			g.placeGenerated(construction.Building{Kind: construction.Workbench, Stuff: item.Wood, X: 17, Y: 20})
-		}, 450}, // 18 clear = 900
+		}, 425}, // 17 clear = 850
 		{"rock", func(g *Game) {
 			g.setTerrain(24, 21, terrain.Rock)
 			g.setTerrain(25, 21, terrain.Rock)

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [38, 12]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.442
-  h: 0.158
-  d: 0.986
 ppt: 128
 item: cobra corpse
 species: cobra

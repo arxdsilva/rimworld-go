@@ -8,10 +8,5 @@ footprint: [1, 1]
 origin_px: [16, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.72
-  h: 0.191
-  d: 0.61
 item: incendiary shells
 stack: true

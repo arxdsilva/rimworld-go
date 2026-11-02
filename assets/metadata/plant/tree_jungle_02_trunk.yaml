@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [46, 100]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.404
-  h: 1.603
-  d: 0.39
 species: tree
 kind: jungle
 variant: 2

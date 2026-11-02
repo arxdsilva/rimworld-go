@@ -91,13 +91,13 @@ def build():
         for mask in range(16):
             con = _fence(mask, mat)
             out.append(S.render_asset("structure", "fence_%s_%02d" % (mat, mask), zmax=FH + 0.03,
-                                      clip=tuple(con), shadow_kind="none",
+                                      clip=tuple(con),
                                       extra={"autotile": "fence", "mask": mask, "material": mat}))
     for open_ in (False, True):
         for facing in FACINGS:
             con = _gate(facing, open_)
             name = "fence_gate_%s%s" % ("open_" if open_ else "", facing)
-            out.append(S.render_asset("structure", name, zmax=FH + 0.08, clip=con, shadow_kind="none",
+            out.append(S.render_asset("structure", name, zmax=FH + 0.08, clip=con,
                                       extra={"facing": facing, "state": "open" if open_ else "closed",
                                              "material": "wood"}))
     return out

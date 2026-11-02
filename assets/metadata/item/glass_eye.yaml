@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.22
-  h: 0.217
-  d: 0.22
 item: glass eye

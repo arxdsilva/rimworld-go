@@ -8,11 +8,6 @@ footprint: [2, 2]
 origin_px: [16, 92]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 1.305
-  h: 0.975
-  d: 1.33
 layer: glow
 of: power/wood_fired_generator
 emissive: hive_glow

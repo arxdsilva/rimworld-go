@@ -8,10 +8,5 @@ footprint: [1, 2]
 origin_px: [16, 55]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.88
-  h: 0.85
-  d: 2
 building: sleeper casket
 state: open

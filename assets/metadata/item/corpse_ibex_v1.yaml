@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [38, 20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.43
-  h: 0.471
-  d: 0.961
 ppt: 128
 item: ibex corpse
 species: ibex

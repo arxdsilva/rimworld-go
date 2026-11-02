@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.9
-  h: 0.066
-  d: 0.8
 carpet: wool
 flat: true
 rotatable: false

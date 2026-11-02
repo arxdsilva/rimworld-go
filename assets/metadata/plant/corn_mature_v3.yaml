@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 74]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.763
-  h: 1.323
-  d: 0.361
 species: corn
 growth: mature
 variant: 3

@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 26]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.931
-  h: 0.2
-  d: 0.343
 item: triple rocket launcher

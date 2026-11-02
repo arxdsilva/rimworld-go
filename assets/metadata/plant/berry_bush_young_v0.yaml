@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 24]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.546
-  h: 0.149
-  d: 0.405
 species: berry_bush
 stage: young
 variant: 0

@@ -316,37 +316,16 @@ def _blueprint(t):
     return _save("blueprint", img, {"overlay": "blueprint", "tileable": True})
 
 
-# ------------------------------------------------- shadow + roof textures
+# ------------------------------------------------------------ roof textures
 def _save_flat(name, w, h, img, extra=None):
     path = S.out_path("overlay", name)
     S.write_png(img, path)
     data = {"image": "generated/world/overlay/%s.png" % name, "scale": C.SCALE,
             "canvas": [w, h], "footprint": [w / N, h / N], "origin_px": [0, 0],
-            "overlay": name, "shadow": {"kind": "none", "w": 0.0, "h": 0.0, "d": 0.0}}
+            "overlay": name}
     data.update(extra or {})
     meta.write("overlay", name, data)
     return path
-
-
-def _shadow_blob():
-    """128x64 soft Gaussian ellipse, white RGB, alpha 1 at the centre -> 0 at the edge."""
-    H, W = N // 2, N
-    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32) + 0.5
-    r2 = ((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2
-    g = np.exp(-4.0 * r2)
-    g = np.clip((g - np.exp(-4.0)) / (1.0 - np.exp(-4.0)), 0.0, 1.0) * (r2 < 1.0)
-    img = np.ones((H, W, 4), np.float32)
-    img[..., 3] = g
-    return _save_flat("shadow_blob", W, H, img, {"marking": True})
-
-
-def _shadow_box():
-    """128x128 white rectangle with an 8 px feather to alpha 0 at the border."""
-    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32) + 0.5
-    edge = np.minimum(np.minimum(xx, N - xx), np.minimum(yy, N - yy))
-    img = np.ones((N, N, 4), np.float32)
-    img[..., 3] = np.clip(edge / 8.0, 0.0, 1.0)
-    return _save_flat("shadow_box", N, N, img, {"marking": True})
 
 
 def _g_roof(xx, yy, c):  # gable roof: chevron + eave line
@@ -410,6 +389,23 @@ def _g_plan(xx, yy, c):  # dotted square with a pencil across its corner
 def _g_plan_clear(xx, yy, c):  # the same, crossed out
     d = _g_plan(xx, yy, c)
     return np.minimum(d, _seg(xx, yy, c - 24, c - 24, c + 24, c + 24))
+
+
+def _g_dump(xx, yy, c):  # STK: an open crate with an arrow dropping into it (dumping stockpile)
+    crate = np.abs(_rbox(xx, yy, c, c + 11, 21, 12, 3.0))
+    slats = _seg(xx, yy, c - 21, c + 11, c + 21, c + 11)
+    arrow = np.minimum(_seg(xx, yy, c, c - 27, c, c - 5),
+                       np.minimum(_seg(xx, yy, c - 10, c - 14, c, c - 4), _seg(xx, yy, c + 10, c - 14, c, c - 4)))
+    return [np.minimum(crate, slats), arrow]
+
+
+def _g_planned(xx, yy, c):  # STK-AR: an hourglass, "not in this game yet" (greyed placeholder cards)
+    caps = np.minimum(_seg(xx, yy, c - 16, c - 22, c + 16, c - 22), _seg(xx, yy, c - 16, c + 22, c + 16, c + 22))
+    glass = np.minimum(np.minimum(_seg(xx, yy, c - 12, c - 22, c + 12, c + 22),
+                                  _seg(xx, yy, c + 12, c - 22, c - 12, c + 22)),
+                       np.minimum(_seg(xx, yy, c - 12, c - 22, c - 12, c - 17),
+                                  _seg(xx, yy, c + 12, c + 22, c + 12, c + 17)))
+    return [glass, caps]
 
 
 def _roof_tile(name, kind):
@@ -2116,6 +2112,8 @@ def build():
             _badge_icon("home_clear", t, _g_home_clear, t["danger"]),
             _badge_icon("plan", t, _g_plan, (0.72, 0.83, 0.94)),
             _badge_icon("plan_clear", t, _g_plan_clear, t["danger"]),
+            _badge_icon("zone_dump", t, _g_dump, (0.62, 0.54, 0.44)),
+            _badge_icon("planned", t, _g_planned, (0.56, 0.56, 0.58)),
             _ash(0), _ash(1), _ash(2), _tilled(0), _tilled(1), _tilled(2), _tilled(3),
             _badge_icon("extinguish", t, _g_extinguish, (0.40, 0.70, 0.95)),
             _badge_icon("start_fire", t, _g_start_fire, (0.98, 0.58, 0.22)),
@@ -2132,7 +2130,7 @@ def build():
     out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY021_ICONS]
     out += [_badge_icon(n, t, g, rgb) for n, g, rgb in CARE_ICONS]
     out += [_badge_icon(n, t, g, rgb) for n, g, rgb in PLAY024_ICONS]
-    out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
+    out += [_roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]
     # One icon per roster species (ui_icon/<key>), cut from the standing

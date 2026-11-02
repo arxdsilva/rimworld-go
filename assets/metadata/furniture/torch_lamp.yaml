@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 68]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.458
-  h: 1.13
-  d: 0.437
 building: torch lamp
 emissive: lamp_warm
 light_radius: 4

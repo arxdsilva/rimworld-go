@@ -9,115 +9,50 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/world/roof"
 )
-
-// fakeCasters is the shadow pass's renderer stand-in: fixed casters.
-type fakeCasters struct {
-	objects []Caster
-	white   *ebiten.Image
-}
-
-func (f *fakeCasters) Objects(game.WorldView, []game.PawnView) []Caster { return f.objects }
-
-func (f *fakeCasters) VisibleTiles() (x0, y0, x1, y1 int) { return 0, 0, 19, 11 }
-
-func (f *fakeCasters) White() *ebiten.Image { return f.white }
 
 func near(a, b, eps float64) bool { return math.Abs(a-b) <= eps }
 
-// TestShadowPassWithoutTheRenderer runs the whole pass on hand-built
-// casters by moonlight: the layer is composited once at half size on a 2×
-// display, with a roofed run cleared; with shadows off, or nothing
-// casting, nothing is drawn.
-func TestShadowPassWithoutTheRenderer(t *testing.T) {
-	t.Parallel()
-	const mw, mh = 20, 12
-	w := game.WorldView{TerrainW: mw, Terrain: make([]uint8, mw*mh), RoomGrid: make([]int, mw*mh), RoofCells: make([]uint8, mw*mh), DayOfYear: 15}
-	for i := range w.RoomGrid {
-		w.RoomGrid[i] = -1
-	}
-	for x := 12; x < 18; x++ { // a roofed run in rows 1..3
-		for y := 1; y <= 3; y++ {
-			w.RoofCells[y*mw+x] = uint8(roof.Built)
-		}
-	}
-	v := &render.View{W: w, Cam: camera.Camera{Zoom: 0.5, Dev: 2, Placed: true}}
-	lit := &Lit{Light: LightAt(23, 15, "clear", 0)}
-	if lit.Light.ShadowAlpha <= 0 {
-		t.Fatal("fixture: no moon shadows at 23:00")
-	}
-	host := &fakeCasters{
-		objects: []Caster{
-			{Spec: ShadowSpec{Kind: ShadowBox, W: 1, H: 1, D: 1}, X: 2, Y: 2},
-			{Spec: ShadowSpec{Kind: ShadowBlob, W: 0.7, H: 2, D: 0.4}, X: 9.5, Y: 8.5},
-		},
-		white: ebiten.NewImage(1, 1),
-	}
+// TestColonistShadowPass runs the pass on hand-built feet: every blob
+// goes out in one batched draw, the batch and texture are reused across
+// frames, and nothing is drawn with shadows off, no feet or no light.
+// Not parallel: it counts allocations.
+func TestColonistShadowPass(t *testing.T) {
+	v := &render.View{W: game.WorldView{TerrainW: 20, DayOfYear: 15}, Cam: camera.Camera{Zoom: 1, Placed: true}}
+	l := LightAt(12, 15, "clear", 0)
+	feet := []Foot{{X: 2.5, Y: 2.5, Scale: 1}, {X: 6.5, Y: 4.5, Scale: 1}, {X: 9.5, Y: 3.5, Scale: 1}}
 	var st Shadows
 	screen := ebiten.NewImage(640, 400)
-	st.Draw(v, lit, host, screen, w, 640, 400, v.Cam.Tile())
-	if st.Composites != 1 {
-		t.Fatalf("composites %d, want one", st.Composites)
+	st.Draw(v, l, screen, feet, 15)
+	if st.Drawn != 3 || st.Flushes != 1 {
+		t.Fatalf("drew %d blobs in %d draws, want 3 in 1", st.Drawn, st.Flushes)
 	}
-	if b := st.Layer.Bounds(); b.Dx() != 320 || b.Dy() != 200 {
-		t.Fatalf("layer %v at device scale 2, want 320x200", b)
+	tex := st.blobImg
+	many := make([]Foot, 40)
+	for i := range many {
+		many[i] = Foot{X: float64(i%10) + 0.5, Y: float64(i/10) + 0.5, Scale: 1}
 	}
-	if r0, ok := st.BlurOpts.Uniforms["R0"].(float32); !ok || r0 <= 0 {
-		t.Fatalf("blur radius %v", st.BlurOpts.Uniforms["R0"])
+	st.Draw(v, l, screen, many, 15) // grow the batch once
+	few := testing.AllocsPerRun(20, func() { st.Draw(v, l, screen, feet, 15) })
+	lots := testing.AllocsPerRun(20, func() { st.Draw(v, l, screen, many, 15) })
+	if st.blobImg != tex || st.Drawn != 40 {
+		t.Fatal("the blob texture was remade")
 	}
-	if _, ok := st.BlurOpts.Uniforms["R1"]; ok {
-		t.Fatal("the blur still sets a height term (creature silhouettes are gone)")
+	if lots > few+2 { // ebiten's per-draw bookkeeping varies by one or two; a per-colonist cost would add ~37
+		t.Fatalf("%.0f allocations a frame for 40 colonists, %.0f for 3", lots, few)
 	}
-
-	// nothing casting: nothing composited
-	empty := &fakeCasters{white: host.white}
-	st.Draw(v, lit, empty, screen, w, 640, 400, v.Cam.Tile())
-	if st.Composites != 1 {
-		t.Fatal("composited a layer with no casters")
-	}
-	// shadows off: the layers are freed and nothing is drawn
+	flushes := st.Flushes
+	st.Draw(v, l, screen, nil, 15)
+	st.Draw(v, State{}, screen, feet, 15)
 	st.SetOff(true)
-	if st.Layer != nil || st.Scratch != nil {
-		t.Fatal("shadows off kept the screen-sized layers")
-	}
-	st.Draw(v, lit, host, screen, w, 640, 400, v.Cam.Tile())
-	if st.Composites != 1 {
-		t.Fatal("shadows off still drew")
+	st.Draw(v, l, screen, feet, 15)
+	if st.Flushes != flushes || st.Drawn != 0 {
+		t.Fatalf("drew with no feet, no light or shadows off: %d draws, %d blobs", st.Flushes-flushes, st.Drawn)
 	}
 	st.SetOff(false)
-	st.Draw(v, lit, host, screen, w, 640, 400, v.Cam.Tile())
-	if st.Composites != 2 {
-		t.Fatalf("shadows back on: composites %d, want 2", st.Composites)
-	}
-}
-
-// TestShadowSpecCachePerCatalog: SpecOf caches a key's caster per
-// catalog and starts afresh with a new one.
-func TestShadowSpecCachePerCatalog(t *testing.T) {
-	t.Parallel()
-	var st Shadows
-	if s := st.SpecOf(nil, "structure/wall_wood_05"); s.Kind != ShadowBox {
-		t.Fatalf("wall without art: %+v, want the box fallback", s)
-	}
-	if s := st.SpecOf(nil, "terrain/soil_00"); s.Kind != ShadowNone {
-		t.Fatalf("terrain: %+v, want none", s)
-	}
-	if len(st.specs) != 2 {
-		t.Fatalf("cached %d specs, want 2", len(st.specs))
-	}
-}
-
-func TestBlurShaderCompiles(t *testing.T) {
-	t.Parallel()
-	if _, err := ebiten.NewShader(shadowBlurKage); err != nil {
-		t.Fatalf("shadow_blur.kage: %v", err)
-	}
-	if r := BlurRadius(1); !near(r, 0.6, 1e-9) {
-		t.Fatalf("radius %v", r)
-	}
-	if lo, hi := ShadowTint(0), ShadowTint(1); lo != [3]float32{18, 20, 34} || hi != [3]float32{18, 20, 30} {
-		t.Fatalf("tint %v %v", lo, hi)
+	st.Draw(v, LightAt(23, 15, "clear", 0), screen, feet, 15) // a faint blob under the moon
+	if st.Drawn != 3 || st.Flushes != flushes+1 {
+		t.Fatalf("moonlight: %d blobs", st.Drawn)
 	}
 }
 
@@ -131,5 +66,13 @@ func TestSunElevationFromLight(t *testing.T) {
 	}
 	if SunElevation(LightAt(2, 15, "clear", 0)) != 0 {
 		t.Fatal("the sun is up at 02:00")
+	}
+}
+
+func TestShadowTintBluerAtLowSun(t *testing.T) {
+	t.Parallel()
+	lo, hi := ShadowTint(0), ShadowTint(1)
+	if !(lo[2] > hi[2] && lo[0] == hi[0]) {
+		t.Fatalf("tint %v %v", lo, hi)
 	}
 }

@@ -7,7 +7,7 @@ The Architect panel: its categories and tools, material and crop pickers, the dr
 - `Tool` (35 methods) with `Zones` (30), `Areas` (19), `Marks` (13), `Mover` (8), each `struct{*Tool}`.
 - `Sim` (7 methods, the simulation reads a tool needs), optional capabilities `ZoneRefuser`, `AreaReader`, `BuildingMover`.
 - `Host` (embeds `ports.Dispatcher`, 8 methods) and `Map` (8 methods: the renderer's ghost, ring, link and zone draws, zone labels, plants, overlays).
-- Exported data: `Categories`, `Tools`, `FacingNames`, `StyleNames`, `ZoneSpecies`; pure helpers `PlacementCells`, `ShapeCells`, `BuildSprite`, `BuildSpriteStuff`, `MovableKind`, `StockLine`, `PowerLine`, `RotateFacing`.
+- Exported data: `Categories`, `Tools`, `Planned` (STK-AG: greyed placeholder cards for vanilla items not in the game, never armed; `.cursor/ARCHITECT_GAP_ANALYSIS.md`), `FacingNames`, `StyleNames`, `ZoneSpecies`; pure helpers `PlacementCells`, `ShapeCells`, `BuildSprite`, `BuildSpriteStuff`, `MovableKind`, `StockLine`, `PowerLine`, `RotateFacing`.
 - The two former package globals (`areaPaint`, `archLocks`) are fields on `Tool`.
 
 ## Allowed Dependencies
@@ -29,7 +29,7 @@ The Architect panel: its categories and tools, material and crop pickers, the dr
 
 ## Invariants
 - Guard limits: `Tool` 35 and `Zones` 30 methods (≤ 40), no type over 25 fields without a note; every interface ≤ 8 methods.
-- Package size: 16 source files, 4,002 lines (`go test ./internal/arch/`).
+- Package size: 16 source files, 4,072 lines (`go test ./internal/arch/`).
 - Build keys: `sprites.go` duplicates `render/world`'s build keys until the sweep points it there.
 
 ## Hot Paths
@@ -44,7 +44,7 @@ The Architect panel: its categories and tools, material and crop pickers, the dr
 - None. The package reads and writes no files.
 
 ## Tests
-- 5 test files, 23 `Test*` functions, including `TestArchCategoriesHaveTools`, `TestToolCatalogIsConsistent`, `TestSnowClearToolsInZones`, `TestZoneToolsRenamedAndRoofMoved`.
+- 6 test files, 26 `Test*` functions, including `TestEveryGapRowHasACard` (parses the gap analysis), `TestPlannedCardsAreGreyAndInert`, `TestArchCategoriesHaveTools`, `TestToolCatalogIsConsistent`, `TestSnowClearToolsInZones`, `TestZoneToolsRenamedAndRoofMoved`.
 - Tests use a `fakeShell` (14 methods) instead of the simulation.
 - Coverage 42.7 % (ARCH-005 row).
 

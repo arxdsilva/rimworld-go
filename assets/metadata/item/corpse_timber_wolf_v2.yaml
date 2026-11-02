@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [40, 10]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.48
-  h: 0.36
-  d: 0.968
 ppt: 128
 item: timber wolf corpse
 species: timber_wolf

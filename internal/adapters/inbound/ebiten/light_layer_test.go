@@ -1,13 +1,11 @@
 package ebiten
 
 import (
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/application/game"
 )
 
@@ -33,22 +31,12 @@ func (r *Renderer) lightTile(tx, ty int) (sky, lamp float32) {
 	return r.pipe().Lit.LightTile(&r.view, tx, ty)
 }
 
-// drawShadows draws the frame's shadow layer onto screen
-// (light.Shadows.Draw); the renderer lists the casters (shadow.go).
+// drawShadows draws the frame's colonist shadows of w and the frame's
+// pawns onto screen (world.Pipeline.ShadowFeet, light.Shadows.Draw).
 func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	r.pipe().Env.SetView(r.liveView(), sw, sh, tile)
-	r.env.Shadow.Draw(r.liveView(), r.pipe().Lit, shadowHost{r}, screen, w, sw, sh, tile)
-}
-
-// addBox queues a box caster's swept footprint (light.AddBox).
-func (r *Renderer) addBox(b *gfx.TriBatch, c lightpkg.Caster, l lightpkg.State, tile, a float64) {
-	light.AddBox(r.liveView(), b, c, l, a)
-}
-
-// shadowCasters lists the frame's box and blob casters (shadowHost.Objects)
-// in the live frame view.
-func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []lightpkg.Caster {
-	r.pipe()
-	r.liveView()
-	return shadowHost{r}.Objects(w, pawns)
+	p := r.pipe()
+	p.Env.SetView(r.liveView(), sw, sh, tile)
+	st := &r.env.Shadow
+	st.Feet = p.ShadowFeet(&w, r.view.Pawns, tile, st.Feet)
+	st.Draw(r.liveView(), r.lit.Light, screen, st.Feet, w.DayOfYear)
 }

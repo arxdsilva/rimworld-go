@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 58]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.374
-  h: 0.96
-  d: 0.25
 species: hops
 growth: wilted
 variant: 0

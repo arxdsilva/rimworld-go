@@ -163,24 +163,24 @@ func (g *Game) PickResearch(name string) {
 // ResetResearch forgets all research (fixtures: a fresh colony's tree).
 func (g *Game) ResetResearch() { g.lab.Reset() }
 
-// migrateResearchBenches (save v9, RSCH-1): the simple research bench
-// grew from 2x1 to 3x2 and the hi-tech one to 5x2. A bench whose new
-// footprint and work spot still fit (in bounds, standable ground, no other
-// object or blueprint) keeps its place and blocks its new cells; any other
-// is taken down and its old materials refunded in full, with a message.
-// Their blueprints are cancelled (delivered materials drop): the player
-// places them again at the new size.
-func (g *Game) migrateResearchBenches() {
+// migrateBenches (save v9 RSCH-1, v10 STK-BN; game/resize) handles kinds
+// whose footprint grew. A bench whose new footprint and work spot still
+// fit (in bounds, standable ground, no other object or blueprint) keeps
+// its origin and facing and blocks its new cells; any other is taken down
+// and refund's materials (its older cost) returned, with a message. Their
+// blueprints are cancelled (delivered materials drop): the player places
+// them again at the new size.
+func (g *Game) migrateBenches(grew func(construction.Kind) bool, refund func(construction.Building) (item.Kind, int, int)) {
 	changed := false
 	for _, id := range append([]entity.EntityID(nil), g.frameIDs...) {
-		if fr, ok := g.frames.Get(id); ok && construction.RecipeBench(fr.Kind) == construction.ResearchBench {
+		if fr, ok := g.frames.Get(id); ok && grew(fr.Kind) {
 			g.cancelFrame(id) // frame_view.go
 			changed = true
 		}
 	}
 	for _, id := range append([]entity.EntityID(nil), g.bldgIDs...) {
 		b, ok := g.bldgs.Get(id)
-		if !ok || construction.RecipeBench(b.Kind) != construction.ResearchBench {
+		if !ok || !grew(b.Kind) {
 			continue
 		}
 		changed = true
@@ -192,16 +192,11 @@ func (g *Game) migrateResearchBenches() {
 			continue
 		}
 		g.removeBuildingAs(id, false)
-		wood, stuff, comps := 8, b.Stuff, 0 // the 2x1 benches' costs (save v8)
-		if b.Kind == construction.ElectricResearchBench {
-			wood, stuff, comps = 65, item.Steel, 3
-		}
-		g.dropStack(stuff, wood, b.X, b.Y)
-		if comps > 0 {
-			g.dropStack(item.Components, comps, b.X, b.Y)
-		}
+		stuff, n, comps := refund(b)
+		g.dropStack(stuff, n, b.X, b.Y)
+		g.dropStack(item.Components, comps, b.X, b.Y) // none: SpawnStack refuses 0
 		g.message(b.X, b.Y, "%s", fmt.Sprintf("The %s no longer fits at its larger size; it was taken down and its materials returned.",
-			map[bool]string{true: rlab.HiTechLabel, false: "research bench"}[b.Kind == construction.ElectricResearchBench]))
+			map[bool]string{true: rlab.HiTechLabel, false: construction.DefOf(b.Kind).Name}[b.Kind == construction.ElectricResearchBench]))
 	}
 	if changed {
 		g.markRoomsDirty()

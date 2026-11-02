@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 54]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.873
-  h: 0.834
-  d: 0.785
 species: haygrass
 growth: harvestable
 variant: 2

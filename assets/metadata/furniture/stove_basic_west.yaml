@@ -3,17 +3,12 @@ version: 1
 id: "core:furniture/stove_basic_west"
 image: generated/world/furniture/stove_basic_west.png
 scale: 2
-canvas: [160, 338]
-footprint: [1, 2]
-origin_px: [16, 66]
+canvas: [160, 467]
+footprint: [1, 3]
+origin_px: [16, 67]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.87
-  h: 1.1
-  d: 1.92
 attachments:
-  cook: [0.25, 1.5]
+  cook: [1.5, 1.15]
 rotatable: true
 facing: west

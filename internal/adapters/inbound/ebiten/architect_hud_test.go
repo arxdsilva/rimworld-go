@@ -246,7 +246,7 @@ func TestArchitectToolsAreCommands(t *testing.T) {
 			if cb.Run != nil || len(cb.Cmds) > 0 || cb.Options != nil {
 				t.Errorf("%s: legacy ids go through applyClick, got Run/Cmds/Options", cb.ID)
 			}
-			if cb.On || cb.Disabled {
+			if cb.On || cb.Disabled != tool.Planned { // STK-AG: only a placeholder is greyed
 				t.Errorf("%s: On=%v Disabled=%v with nothing selected", cb.ID, cb.On, cb.Disabled)
 			}
 		}
@@ -279,20 +279,20 @@ func TestArchitectSelectedToolIsOn(t *testing.T) {
 
 func TestArchitectLockedToolsAreDisabledWithReason(t *testing.T) {
 	t.Parallel()
-	s := &stubSim{buildables: lockedCatalog("campfire")}
+	s := &stubSim{buildables: lockedCatalog("stool")}
 	s.world.Locked = map[string]string{"build:lamp": "Electricity"}
 	a, _ := colonyApp(t, s)
 	a.arch.OpenPanel()
 	a.applyClick("arch.cat.furniture")
 
-	fire, ok1 := archCmd(a, "arch.tool.campfire")
+	fire, ok1 := archCmd(a, "arch.tool.stool")
 	lamp, ok2 := archCmd(a, "arch.tool.lamp")
 	table, ok3 := archCmd(a, "arch.tool.table")
 	if !ok1 || !ok2 || !ok3 {
-		t.Fatalf("missing furniture commands: campfire=%v lamp=%v table=%v", ok1, ok2, ok3)
+		t.Fatalf("missing furniture commands: stool=%v lamp=%v table=%v", ok1, ok2, ok3)
 	}
 	if !fire.Disabled || fire.Reason != game.ReasonScenario {
-		t.Errorf("campfire = %+v, want disabled: %s", fire, game.ReasonScenario)
+		t.Errorf("stool = %+v, want disabled: %s", fire, game.ReasonScenario)
 	}
 	if !lamp.Disabled || lamp.Reason != "Needs research: Electricity" {
 		t.Errorf("lamp = %+v, want disabled: Needs research: Electricity", lamp)
@@ -301,14 +301,15 @@ func TestArchitectLockedToolsAreDisabledWithReason(t *testing.T) {
 		t.Errorf("table = %+v, want enabled", table)
 	}
 	// A locked tool never selects, and says why.
-	archPick(t, a, "campfire")
+	archPick(t, a, "stool")
 	if a.arch.ToolID != "" || a.hint != game.ReasonScenario {
 		t.Fatalf("tool=%q hint=%q: a locked tool must not select and says why", a.arch.ToolID, a.hint)
 	}
-	// An area tool has no build to lock.
+	// An area tool has no build to lock (a placeholder is greyed as not in
+	// the game yet, STK-AG).
 	a.applyClick("arch.cat.orders")
 	for _, c := range a.archToolCommands() {
-		if c.Disabled {
+		if c.Disabled && c.Reason != architect.PlannedReason {
 			t.Errorf("%s disabled: %q", c.ID, c.Reason)
 		}
 	}

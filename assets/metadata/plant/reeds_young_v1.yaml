@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 43]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.392
-  h: 0.57
-  d: 0.235
 species: reeds
 stage: young
 variant: 1

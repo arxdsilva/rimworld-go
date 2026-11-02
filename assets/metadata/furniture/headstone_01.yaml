@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 44]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.36
-  h: 0.62
-  d: 0.16
 item: headstone
 style: cross
 rotatable: false

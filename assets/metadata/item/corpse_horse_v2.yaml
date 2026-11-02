@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [80, 42]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.109
-  h: 0.515
-  d: 1.282
 ppt: 128
 item: horse corpse
 species: horse

@@ -372,6 +372,9 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 	if reason != "" {
 		return
 	}
+	if o == command.OrderEat || o == command.OrderHaul || o == command.OrderEquip {
+		forbids(g).Ordered(rec.Target) // game/allow: the player's order allows its target
+	}
 	if o == command.OrderHarvest {
 		if p, ok := g.plants.Get(rec.Target); ok {
 			p.Designated = true

@@ -8,10 +8,5 @@ footprint: [1, 1]
 origin_px: [16, 25]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.494
-  h: 0.147
-  d: 0.487
 item: agave fruit
 stack: true

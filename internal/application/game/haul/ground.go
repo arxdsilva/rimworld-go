@@ -88,14 +88,14 @@ func (gr *Ground) Others(h Items, id entity.EntityID, x, y int) int {
 }
 
 // Room is how much of kind k storage cell (x, y), holding up to slots
-// stacks, still takes (Cell.Room).
-func (gr *Ground) Room(h Items, k item.Kind, x, y, slots int) int {
+// stacks of at most lim each, still takes (Cell.Room).
+func (gr *Ground) Room(h Items, k item.Kind, x, y, slots, lim int) int {
 	var c Cell
 	for _, oid := range gr.Loose(h, x, y) {
 		o := h.StackRef(oid)
 		c.Add(o.Kind == k, o.Qty)
 	}
-	return c.Room(k.StackLimit(), slots)
+	return c.Room(lim, slots)
 }
 
 // Shelf is how many stacks lie loose on shelf cell (x, y) and whether

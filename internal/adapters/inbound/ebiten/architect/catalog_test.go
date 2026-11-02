@@ -1,6 +1,9 @@
 package architect
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,21 +13,21 @@ import (
 )
 
 // TestArchCategoriesHaveTools: every category in Categories gets a
-// button, so each must hold tools; the PLAY-021 Power and Temperature
-// categories join the list with their first tools.
+// button, so each must hold cards, and every vanilla category is listed
+// (STK-AG: all twelve, in the vanilla order).
 func TestArchCategoriesHaveTools(t *testing.T) {
 	t.Parallel()
-	listed := map[string]bool{}
+	var ids []string
 	for _, c := range Categories {
-		listed[c.ID] = true
+		ids = append(ids, c.ID)
 		if len(ToolsIn(c.ID)) == 0 {
 			t.Errorf("category %s has no tools", c.ID)
 		}
 	}
-	for _, id := range []string{CatPower, CatTemperature} {
-		if len(ToolsIn(id)) > 0 && !listed[id] {
-			t.Errorf("%s has tools but no category button", id)
-		}
+	want := []string{"orders", "zones", "structure", "production", "furniture", CatPower, "security", "misc",
+		CatFloors, CatRecreation, CatShip, CatTemperature}
+	if strings.Join(ids, ",") != strings.Join(want, ",") {
+		t.Errorf("categories %v, want %v", ids, want)
 	}
 }
 
@@ -69,7 +72,7 @@ func TestSnowClearToolsInZones(t *testing.T) {
 func TestToolCatalogIsConsistent(t *testing.T) {
 	t.Parallel()
 	seen := map[string]bool{}
-	cats := map[string]bool{CatTemperature: true}
+	cats := map[string]bool{}
 	for _, c := range Categories {
 		cats[c.ID] = true
 	}
@@ -80,6 +83,15 @@ func TestToolCatalogIsConsistent(t *testing.T) {
 		seen[d.ID] = true
 		if !cats[d.Category] {
 			t.Errorf("%s in unknown category %q", d.ID, d.Category)
+		}
+		if d.Planned != strings.HasPrefix(d.ID, PlannedPrefix) {
+			t.Errorf("%s: placeholder %v, id prefix disagrees", d.ID, d.Planned)
+		}
+		if d.Planned {
+			if d.Build != "" || d.Cmd != 0 || d.Crop != "" || d.Variant != 0 || d.Icon != PlannedIcon || d.Desc == "" {
+				t.Errorf("placeholder %s must carry no build or command, the planned icon and a sentence: %+v", d.ID, d)
+			}
+			continue
 		}
 		if d.Mode == PlaceArea {
 			if d.Cmd == 0 {
@@ -176,5 +188,139 @@ func TestCardLines(t *testing.T) {
 	}
 	if got := CropLines(game.CropView{Name: "rice", Label: "rice", Food: true, FrostKill: -25}); !strings.Contains(got[2], "below -3C") {
 		t.Errorf("crop lines %q", got)
+	}
+}
+
+// TestPlannedCardsAreGreyAndInert: a placeholder card is disabled with
+// "Not in this game yet" and its sentence; selecting it arms nothing and
+// says why, and a forced Submit on it sends no command.
+func TestPlannedCardsAreGreyAndInert(t *testing.T) {
+	t.Parallel()
+	tl, f := newFake(&fakeSim{})
+	tl.Open = true
+	n := 0
+	for _, c := range Categories {
+		tl.Cat = c.ID
+		sawPlanned := false
+		for _, card := range tl.Cards() {
+			d, _ := ToolByID(strings.TrimPrefix(card.ID, "arch.tool."))
+			if !d.Planned {
+				if sawPlanned {
+					t.Errorf("%s: working card %s after a placeholder", c.ID, card.ID)
+				}
+				continue
+			}
+			sawPlanned = true
+			n++
+			if !card.Disabled || card.Reason != PlannedReason || card.Desc != d.Desc || card.Toggle || card.On || card.Icon != PlannedIcon {
+				t.Errorf("placeholder card %+v", card)
+			}
+			tl.SelectTool(d.ID)
+			if tl.ToolID != "" || f.hint != PlannedReason {
+				t.Fatalf("%s armed %q (hint %q)", d.ID, tl.ToolID, f.hint)
+			}
+			tl.ToolID, tl.Drag = d.ID, true // forced, as no input path can
+			tl.X0, tl.Y0, tl.X1, tl.Y1 = 0, 0, 3, 3
+			tl.Submit()
+			tl.ToolID, tl.Drag = "", false
+			if len(f.cmds) != 0 {
+				t.Fatalf("%s sent %+v", d.ID, f.cmds)
+			}
+		}
+	}
+	if n != len(Planned) {
+		t.Fatalf("%d placeholder cards shown, %d planned", n, len(Planned))
+	}
+	if tl.Preset("", "", ""); strings.HasPrefix(tl.ToolID, PlannedPrefix) {
+		t.Fatalf("Preset armed placeholder %s", tl.ToolID)
+	}
+}
+
+// TestEveryGapRowHasACard: .cursor/ARCHITECT_GAP_ANALYSIS.md lists every
+// core vanilla Architect item with the card that stands for it. Each
+// row's card exists in that category, a missing row's card is a
+// placeholder and a done or partial row's card works, every placeholder
+// has a row, and the counts table agrees.
+func TestEveryGapRowHasACard(t *testing.T) {
+	t.Parallel()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for ; ; dir = filepath.Dir(dir) {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			break
+		}
+		if filepath.Dir(dir) == dir {
+			t.Fatal("no go.mod above the package")
+		}
+	}
+	doc, err := os.ReadFile(filepath.Join(dir, ".cursor", "ARCHITECT_GAP_ANALYSIS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, missing, cats := 0, 0, map[string]bool{}
+	covered := map[string]bool{}
+	tick := func(s string) (string, bool) {
+		s = strings.TrimSpace(s)
+		if len(s) < 3 || s[0] != '`' || s[len(s)-1] != '`' {
+			return "", false
+		}
+		return s[1 : len(s)-1], true
+	}
+	for _, ln := range strings.Split(string(doc), "\n") {
+		cols := strings.Split(ln, "|")
+		if len(cols) < 6 {
+			continue
+		}
+		cat, ok1 := tick(cols[1])
+		card, ok2 := tick(cols[3])
+		if !ok1 || !ok2 {
+			continue
+		}
+		item, status := strings.TrimSpace(cols[2]), strings.TrimSpace(cols[4])
+		rows++
+		cats[cat] = true
+		d, ok := ToolByID(card)
+		switch {
+		case !ok:
+			t.Errorf("%s (%s): no card %q", item, cat, card)
+			continue
+		case d.Category != cat:
+			t.Errorf("%s: card %s sits in %q, the doc says %q", item, card, d.Category, cat)
+		}
+		switch status {
+		case "missing":
+			missing++
+			if !d.Planned {
+				t.Errorf("%s is missing but %s is a working card", item, card)
+			}
+		case "done", "partial":
+			if d.Planned {
+				t.Errorf("%s is %s but %s is a placeholder", item, status, card)
+			}
+		default:
+			t.Errorf("%s: status %q", item, status)
+		}
+		covered[card] = true
+	}
+	for _, d := range Planned {
+		if !covered[d.ID] {
+			t.Errorf("placeholder %s has no row in the gap analysis", d.ID)
+		}
+	}
+	for _, c := range Categories {
+		if !cats[c.ID] {
+			t.Errorf("category %s has no rows", c.ID)
+		}
+	}
+	for _, want := range []string{
+		fmt.Sprintf("| Vanilla core items (rows below) | %d |", rows),
+		fmt.Sprintf("| Done or partial (a working card) | %d |", rows-missing),
+		fmt.Sprintf("| Missing (a placeholder card) | %d rows on %d placeholder cards", missing, len(Planned)),
+	} {
+		if !strings.Contains(string(doc), want) {
+			t.Errorf("counts table lacks %q", want)
+		}
 	}
 }

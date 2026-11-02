@@ -8,11 +8,6 @@ footprint: [1, 4]
 origin_px: [16, 40]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.07
-  h: 0.53
-  d: 0.07
 layer: glow
 of: furniture/hydroponics_basin_south
 emissive: indicator

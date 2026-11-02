@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [40, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.471
-  h: 0.418
-  d: 1.14
 ppt: 128
 item: emberbuck corpse
 species: emberbuck

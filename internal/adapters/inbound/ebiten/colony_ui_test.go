@@ -505,7 +505,7 @@ func lockedCatalog(kind string) []game.BuildableView {
 
 func TestArchitectLockedByScenario(t *testing.T) {
 	t.Parallel()
-	s := &stubSim{buildables: lockedCatalog("campfire")}
+	s := &stubSim{buildables: lockedCatalog("stool")}
 	a, _ := colonyApp(t, s)
 	a.arch.OpenPanel()
 	a.arch.SelectCategory("furniture")
@@ -513,19 +513,19 @@ func TestArchitectLockedByScenario(t *testing.T) {
 	var fire, lamp uikit.Button
 	for _, b := range a.insp.Commands().CommandGridButtons() { // the tools are command buttons
 		switch b.ID {
-		case "arch.tool.campfire":
+		case "arch.tool.stool":
 			fire = b
 		case "arch.tool.lamp":
 			lamp = b
 		}
 	}
 	if !fire.Disabled || fire.Reason != game.ReasonScenario {
-		t.Fatalf("campfire card = %+v, want disabled: %s", fire, game.ReasonScenario)
+		t.Fatalf("stool card = %+v, want disabled: %s", fire, game.ReasonScenario)
 	}
 	if lamp.Disabled {
 		t.Fatalf("lamp card = %+v, want enabled", lamp)
 	}
-	click(t, a, "arch.tool.campfire")
+	click(t, a, "arch.tool.stool")
 	if a.arch.ToolID != "" || a.hint != game.ReasonScenario {
 		t.Fatalf("tool=%q hint=%q: a locked card must not select and says why", a.arch.ToolID, a.hint)
 	}
@@ -573,7 +573,7 @@ func TestNewBuildingCards(t *testing.T) {
 	// They sit in their categories, each card reachable.
 	a, _ := colonyApp(t, &stubSim{})
 	a.arch.OpenPanel()
-	for cat, id := range map[string]string{"production": "tool_cabinet", "furniture": "hospital_bed"} {
+	for cat, id := range map[string]string{"misc": "tool_cabinet", "furniture": "hospital_bed"} {
 		a.arch.SelectCategory(cat)
 		found := false
 		for _, b := range a.insp.Commands().CommandGridButtons() { // the tools are command buttons

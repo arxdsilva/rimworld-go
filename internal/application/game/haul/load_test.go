@@ -20,12 +20,13 @@ func TestSplitLoadKeepsCorpseSpecies(t *testing.T) {
 }
 
 func TestToppable(t *testing.T) {
-	// a carpet keeps the plain limit (STO-2: wood stacks to 75 now)
-	if !Toppable(item.Stack{Kind: item.CarpetWool, Qty: 900}) || Toppable(item.Stack{Kind: item.CarpetWool, Qty: 901}) {
-		t.Fatal("a plain stack takes a full load")
+	// STK-ST: any stack below its limit takes more (the load is capped by
+	// the room left); a one-per-stack kind never tops up
+	if !Toppable(item.Stack{Kind: item.Wood, Qty: 999}) || Toppable(item.Stack{Kind: item.Wood, Qty: 1000}) {
+		t.Fatal("a 1000 stack takes any room")
 	}
-	if !Toppable(item.Stack{Kind: item.Pemmican, Qty: 74}) || Toppable(item.Stack{Kind: item.Pemmican, Qty: 75}) {
-		t.Fatal("a small-limit stack takes any room")
+	if !Toppable(item.Stack{Kind: item.Pemmican, Qty: 900}) || Toppable(item.Stack{Kind: item.Rifle, Qty: 1}) {
+		t.Fatal("pemmican tops up to 1000; a rifle stays one")
 	}
 }
 

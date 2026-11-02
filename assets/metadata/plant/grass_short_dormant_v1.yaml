@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.309
-  h: 0.296
-  d: 0.38
 species: grass
 stage: dormant
 variant: 1

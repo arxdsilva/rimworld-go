@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 62]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.563
-  h: 1.019
-  d: 0.62
 building: vitals monitor
 rotatable: true
 facing: east

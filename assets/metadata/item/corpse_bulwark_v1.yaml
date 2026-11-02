@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [132, 176]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 3.478
-  h: 1.947
-  d: 3.614
 ppt: 100
 item: bulwark corpse
 species: bulwark

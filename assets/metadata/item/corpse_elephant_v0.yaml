@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [128, 118]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.9
-  h: 1.658
-  d: 1.963
 ppt: 124
 item: elephant corpse
 species: elephant

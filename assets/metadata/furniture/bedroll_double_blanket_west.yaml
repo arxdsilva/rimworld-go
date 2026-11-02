@@ -8,11 +8,6 @@ footprint: [2, 2]
 origin_px: [16, 27]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.23
-  h: 0.19
-  d: 1.78
 tint:
   group: cloth
   mask: generated/world/furniture/bedroll_double_blanket_west_mask.png

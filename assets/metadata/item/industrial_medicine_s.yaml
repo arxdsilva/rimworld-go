@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.355
-  h: 0.19
-  d: 0.393
 item: industrial medicine
 stack: true
 stack_size: s

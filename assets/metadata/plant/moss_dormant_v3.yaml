@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 21]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.472
-  h: 0.028
-  d: 0.416
 species: moss
 stage: dormant
 variant: 3

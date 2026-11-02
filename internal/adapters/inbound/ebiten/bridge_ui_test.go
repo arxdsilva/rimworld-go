@@ -21,17 +21,10 @@ func TestBridgeArchitectToolInStructure(t *testing.T) {
 	if _, ok := architect.Buildable("bridge"); !ok {
 		t.Error("the simulation catalog must offer a bridge")
 	}
-	var floorAt, bridgeAt = -1, -1
-	for i, tl := range toolsIn("structure") {
-		switch tl.ID {
-		case "floor":
-			floorAt = i
-		case "bridge":
-			bridgeAt = i
-		}
-	}
-	if bridgeAt != floorAt+1 {
-		t.Errorf("bridge sits at %d, want right after floor (%d)", bridgeAt, floorAt)
+	// STK-AG: the wood floor moved to the vanilla Floors category; the
+	// bridge stays in Structure, as in vanilla.
+	if floor, _ := toolByID("floor"); floor.Category != architect.CatFloors {
+		t.Errorf("floor sits in %q, want %q", floor.Category, architect.CatFloors)
 	}
 }
 

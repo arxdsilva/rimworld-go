@@ -190,10 +190,12 @@ func (a *App) draftSelection() {
 }
 
 // forbidSelection is F: the selected item stacks are forbidden, or allowed
-// when all already are.
+// when all already are; with no stack selected, a selected door or bed
+// flips (STK-AL).
 func (a *App) forbidSelection() {
 	items := a.sel.SelectedItems()
 	if len(items) == 0 {
+		a.insp.Building().ForbidSelection()
 		return
 	}
 	all := true

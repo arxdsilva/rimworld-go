@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [46, 88]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.209
-  h: 1.196
-  d: 0.22
 species: tree
 kind: pine
 variant: 2

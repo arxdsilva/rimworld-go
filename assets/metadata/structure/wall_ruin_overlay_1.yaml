@@ -6,10 +6,5 @@ scale: 2
 canvas: [160, 224]
 footprint: [1, 1]
 origin_px: [16, 80]
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0
 overlay: wall_ruin
 variant: 1

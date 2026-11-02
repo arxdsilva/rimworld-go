@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 44]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.861
-  h: 0.516
-  d: 0.861
 building: hive mound
 rotatable: false
 facing: south

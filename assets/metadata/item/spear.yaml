@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 22]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.891
-  h: 0.062
-  d: 0.428
 item: spear

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [92, 76]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.267
-  h: 1.186
-  d: 1.671
 ppt: 128
 item: ground sloth corpse
 species: ground_sloth

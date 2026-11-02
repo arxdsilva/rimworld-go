@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [70, 34]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.924
-  h: 0.604
-  d: 1.046
 ppt: 128
 item: deer corpse
 species: deer

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [64, 6]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.842
-  h: 0.359
-  d: 0.799
 ppt: 128
 item: panther corpse
 species: panther

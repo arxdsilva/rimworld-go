@@ -8,10 +8,5 @@ footprint: [2, 2]
 origin_px: [16, 27]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.84
-  h: 0.228
-  d: 1.68
 building: steam vent
 walkable: true

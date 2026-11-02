@@ -1,13 +1,13 @@
 # render/light package
 
 ## Package Purpose
-The renderer's sun, moon and lamp lighting: the light grid (sky exposure and lamp light per tile), the lit-sprite shader (`lit.kage`) and its pair images, the light sources, the box and blob shadows of buildings, rock, plants and items with their blur, daylight and the no-art sky overlay. It reads the frame's `*render.View` and its own state, never the renderer. The shadow pass asks the renderer for its casters through `Casters`. ARCH-004 wave 4.1 (agent R2). Creatures cast no shadow (user decision, 2026-10-31): the silhouettes, point-light shadows and contact pools of ART-012 are gone.
+The renderer's sun, moon and lamp lighting: the light grid (sky exposure and lamp light per tile), the lit-sprite shader (`lit.kage`) and its pair images, the light sources, the colonists' drop shadows, daylight and the no-art sky overlay. It reads the frame's `*render.View` and its own state, never the renderer. ARCH-004 wave 4.1 (agent R2). Only colonists on unroofed tiles cast a shadow (user decision, 2026-11-01, STK-SH): the box and blob casters of buildings, rock, plants and items, their layer and blur shader, and ART-012's creature shadows are gone.
 
 ## Owned Concepts
 - `Lit` (9 methods): `Draw`, `DrawGround`, `LightTile`, `LightFoot`, `Sync`, `SourceOf`, `GroundLamp`, `LitShader`, `SyncUniforms`. `Blaze` is the fire-light hook.
 - `Grid` (13 methods): sky exposure and lamp light per tile; `AtF` is the float lookup.
-- `Shadows[F]` (5 methods) with `Casters` (3 methods: `Objects`, `VisibleTiles`, `White`); `Caster`. `Cast` is an empty marker the pipeline sets during a bake (`sprite.Pass.Cast`).
-- Daylight and the sky overlay; two embedded shaders (the lit-sprite shader `lit.kage` and the shadow pass shader).
+- `Shadows` (3 methods: `Draw`, `SetOff`, `blobTexture`), `Foot` (a colonist's ground pivot and scale), `Colonist`/`Casts` (who casts: a colonist, not a prisoner, visitor, ally, guest, raider, body or carried pawn, on a tile with no built or natural roof), `ColonistQuad`, `ColonistAlpha`. The pipeline (`world.Pipeline.ShadowFeet`) fills the feet. `Cast` is an empty marker the pipeline sets during a bake (`sprite.Pass.Cast`).
+- Daylight and the sky overlay; one embedded shader (the lit-sprite shader `lit.kage`).
 
 ## Allowed Dependencies
 - Leaves: `art`, `camera`, `gfx`; layer `render` (the view).
@@ -21,13 +21,12 @@ The renderer's sun, moon and lamp lighting: the light grid (sky exposure and lam
 
 ## Public Contracts
 - `Lit.Draw` draws one lit sprite; `Grid.AtF` and `LightTile` are called per sprite. ARCH-004 recorded that `Grid.AtF`, `LightTile` and `Lit.Draw` did not inline before the move either.
-- `Casters` is the only path from the shadow pass to the renderer.
-- No creature reaches the shadow layer: the root's `TestCreaturesCastNoShadow` checks pawns and animals in sun, moonlight and lamp light add no caster, composite or lit draw.
+- `Shadows.Draw(v, light, screen, feet, dayOfYear)` draws every blob in one batched draw with a texture made once; no per-colonist allocation (`TestColonistShadowPass`).
+- Only colonists outdoors cast: the root's `TestOnlyColonistsOutdoorsCastShadows` runs whole frames with walls, rock, a tree, items, a bridge, an animal, a prisoner and a raider at noon, low sun and moon; `TestJourneyColonistShadowAndToggle` checks the Options toggle.
 
 ## Invariants
 - Lamps are brighter near than far in a room (`TestLampNearBrighterThanFarInRoom`); night is darker than noon (`TestSkyOverlayNightDarkerThanNoon`); day overlay is clear (`TestSkyOverlayDayIsClear`).
 - Lights come only from light sources (`TestLightsComeOnlyFromLightSources`, a root guard).
-- `Shadows[F]`'s type parameter is unused; it stays only while `render/env` declares the field as `Shadows[creature.FigurePose]`.
 
 ## Hot Paths
 - `Lit.Draw` runs once per lit sprite; `LightGridLamps` rebuilds the grid's lamp light. `BenchmarkLightGridLamps` measures it: 142–153 µs before, 139–142 µs after on a quiet run, 0 allocs (ARCH-004).
@@ -39,12 +38,11 @@ The renderer's sun, moon and lamp lighting: the light grid (sky exposure and lam
 - None. Shaders are embedded.
 
 ## Tests
-- 5 source files, 6 test files, 40 `Test*` functions.
+- 5 source files, 6 test files.
 - Coverage 84 % (ARCH-004).
 
 ## Benchmarks
-- `BenchmarkLightGridLamps` (in the package).
+- `BenchmarkLightGridLamps` (in the package); the root's `BenchmarkShadows` is the colonist pass.
 
 ## Known Design Constraints
-- `Shadows[F]` keeps a dead type parameter until `render/env/environment.go` drops its `creature.FigurePose` type argument (left for that package's owner).
-- The root keeps a trimmed `shadow.go` with the box and blob caster lists.
+- None for shadows: there are no shadow textures or metadata (`make art-check` rejects a `shadow:` block).

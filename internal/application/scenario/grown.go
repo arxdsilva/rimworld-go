@@ -224,7 +224,7 @@ func (b *builder) furnish(room, x, y int) {
 		b.buildNow("chair", "wood", x+4, y+2)
 	case 3: // workshop
 		b.buildNow("workbench", "wood", x, y)
-		b.buildNow("tailoring bench", "wood", x+3, y)
+		b.buildNow("tailoring bench", "wood", x+2, y+2) // STK-BN: 3x1 benches, two do not fit in a row
 		b.buildNow("research bench", "wood", x, y+3)
 	case 4: // storerooms; the first has a floor
 		if room != 4 {

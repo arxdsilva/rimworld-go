@@ -10,7 +10,6 @@ import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
@@ -545,8 +544,8 @@ func TestRealAnimalBodies(t *testing.T) {
 		corpse = max(corpse, m.Origin[0]/p, (float64(m.Canvas[0])-m.Origin[0])/p-1, m.Origin[1]/p, (float64(m.Canvas[1])-m.Origin[1])/p-1)
 	}
 	t.Logf("corpse reach past the cell: %.2f tiles", corpse)
-	if corpse+light.ShadowMaxLen > worldpkg.VisPad {
-		t.Errorf("a corpse reaches %.2f tiles past its cell and its shadow %v more: over visPad %d", corpse, light.ShadowMaxLen, worldpkg.VisPad)
+	if corpse > worldpkg.VisPad {
+		t.Errorf("a corpse reaches %.2f tiles past its cell: over visPad %d", corpse, worldpkg.VisPad)
 	}
 }
 

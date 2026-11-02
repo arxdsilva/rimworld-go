@@ -24,7 +24,7 @@ SHEAR_K = 0.35
 FIGURE_LEAN_DEG = 82.0
 FIGURE_SCALE = 0.92
 # Animals lean less than people so the body stays long (animals/rig.py
-# and stage._shadow_meta read this; never hard-code it again).
+# reads this; never hard-code it again).
 ANIMAL_LEAN_DEG = 70.0
 
 # --- light (§6) ---------------------------------------------------------

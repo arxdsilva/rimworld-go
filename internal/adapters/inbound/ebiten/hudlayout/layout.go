@@ -51,7 +51,7 @@ const (
 	MaxMsgs   = 5
 
 	ArchCatsW = 212 // the Architect's two category columns
-	ArchCatsH = 140
+	ArchCatsH = 204 // six rows of two category buttons (12 vanilla categories, STK-AG): 2*8 pad + 6*28 + 5*4
 	ArchDescW = 320
 )
 

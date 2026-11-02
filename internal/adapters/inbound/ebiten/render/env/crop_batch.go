@@ -300,25 +300,6 @@ func CropUnitLook(damage, rank, n int) (scale, alpha float64) {
 	return scale, alpha
 }
 
-// DamageShadowFactor is how much of a damaged plant's sun shadow is left:
-// the mean size times opacity of its units (a crop) or of the whole plant,
-// so a field's shadows thin out with it and are gone when it is.
-func DamageShadowFactor(p game.PlantView) float64 {
-	if p.Damage <= 0 {
-		return 1
-	}
-	n := 1
-	if IsCropPlant(&p) {
-		n = CropUnitCount(p.Species)
-	}
-	sum := 0.0
-	for k := 0; k < n; k++ {
-		s, a := CropUnitLook(p.Damage, k, n)
-		sum += s * a
-	}
-	return sum / float64(n)
-}
-
 // PlantDamageLook is the whole-plant treatment of a damaged plant that is
 // not a crop (a tree, a bush): its tint with the fade folded into the
 // alpha, and its size factor.

@@ -870,15 +870,11 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position, ids []entity.En
 
 // planGather is stockpile haul rec of stack first with its load planned
 // (HAUL-002, game/haul): Count caps the load by what the storage cell
-// still takes, and Pickups are the nearby piles of the same load among
-// the candidates the caller's search put in g.haul.cands; a pile in
+// still takes (any room, STK-ST), and Pickups are the nearby piles of
+// the same load among the candidates the caller's search put in g.haul.cands; a pile in
 // storage joins only a load bound for a higher priority.
 func planGather(g *Game, id entity.EntityID, rec job.Record, first item.Stack) job.Record {
-	lim := first.Kind.StackLimit()
-	rec.Count = min(item.CarryLimit, lim)
-	if lim < item.StackLimit { // a plain kind's cell always takes a full load (haul.Toppable)
-		rec.Count = haul.Capacity(lim, haulRoom(g, first.Kind, rec.DestX, rec.DestY))
-	}
+	rec.Count = haul.Capacity(first.Kind.StackLimit(), haulRoom(g, first.Kind, rec.DestX, rec.DestY))
 	dz, _ := g.storageAt(rec.DestX, rec.DestY)
 	r, keep := g.restrictedRef(id), g.haul.cands[:0]
 	for _, c := range g.haul.cands {
@@ -911,12 +907,10 @@ func haulCands(g *Game, id entity.EntityID, k item.Kind) {
 	}
 }
 
-// haulRoom is how much of kind k storage cell (x, y) still takes.
+// haulRoom is how much of kind k storage cell (x, y) still takes (cellCap).
 func haulRoom(g *Game, k item.Kind, x, y int) int {
-	if g.onShelf(x, y) {
-		return g.idx.ground.Room(haulHost{g}, k, x, y, zone.ShelfStacks)
-	}
-	return g.idx.ground.Room(haulHost{g}, k, x, y, 1)
+	z, _ := g.storageAt(x, y)
+	return g.idx.ground.Room(haulHost{g}, k, x, y, z.Kind.Stacks(), cellCap(g, k, x, y))
 }
 
 // haulHost is game/haul's Host (HAUL-002).
@@ -1628,7 +1622,7 @@ func (g *Game) deleteItem(id entity.EntityID) {
 }
 
 // mergeOrSet puts stack id down at st's tile, merging into a same-kind
-// stack there up to StackLimit; any overflow spills to a nearby tile.
+// stack there up to cellCap; any overflow spills to a nearby tile.
 func (g *Game) mergeOrSet(id entity.EntityID, st item.Stack) { g.mergeOrSetFrom(id, st, nil) }
 
 // spillStep is one tile a spilling stack was tried on, with its quantity.
@@ -1669,7 +1663,7 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			continue
 		}
 		other := *op // copied before the store changes below
-		room := other.Kind.StackLimit() - other.Qty
+		room := cellCap(g, other.Kind, st.X, st.Y) - other.Qty
 		if room <= 0 {
 			break
 		}
@@ -1681,7 +1675,7 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			return
 		}
 		other = item.MergeFood(other, st, room)
-		other.Qty = other.Kind.StackLimit()
+		other.Qty += room
 		g.putStack(oid, other)
 		st.Qty -= room
 		break
@@ -1713,7 +1707,7 @@ func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
 				if oid == 0 {
 					return nx, ny, true
 				}
-				if o, _ := g.stacks.Get(oid); o.Kind == k && o.Qty < k.StackLimit() {
+				if o, _ := g.stacks.Get(oid); o.Kind == k && o.Qty < cellCap(g, k, nx, ny) {
 					return nx, ny, true
 				}
 			}

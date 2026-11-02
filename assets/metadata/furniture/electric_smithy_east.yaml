@@ -3,18 +3,13 @@ version: 1
 id: "core:furniture/electric_smithy_east"
 image: generated/world/furniture/electric_smithy_east.png
 scale: 2
-canvas: [160, 332]
-footprint: [1, 2]
-origin_px: [16, 60]
+canvas: [160, 461]
+footprint: [1, 3]
+origin_px: [16, 61]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.905
-  h: 0.96
-  d: 1.84
 attachments:
-  worker: [0.5, 1.15]
+  worker: [1.5, 1.15]
 building: electric forge
 recipes: wood-fired forge
 rotatable: true

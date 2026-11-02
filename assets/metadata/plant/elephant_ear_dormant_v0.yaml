@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 23]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.664
-  h: 0.112
-  d: 0.763
 species: elephant_ear
 stage: dormant
 variant: 0

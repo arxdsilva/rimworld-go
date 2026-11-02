@@ -186,11 +186,11 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 	t.Parallel()
 	a, _ := stubColony(t)
 	tool, ok := toolByID("carpet")
-	if !ok || tool.Category != "furniture" || tool.Mode != architect.PlaceSingle || tool.Build != "carpet" || tool.Icon != "carpet" {
+	if !ok || tool.Category != architect.CatFloors || tool.Mode != architect.PlaceSingle || tool.Build != "carpet" || tool.Icon != "carpet" {
 		t.Fatalf("carpet tool = %+v ok=%v", tool, ok)
 	}
 	click(t, a, "tab.architect")
-	click(t, a, "arch.cat.furniture")
+	click(t, a, "arch.cat.floors")
 	click(t, a, "arch.tool.carpet")
 	var stuffs []uikit.Button
 	for _, b := range a.arch.Buttons() {
@@ -251,7 +251,7 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 		t.Fatalf("wall offers %d materials, want %d", n, len(want))
 	}
 	click(t, a, "arch.stuff.granite blocks")
-	click(t, a, "arch.cat.furniture")
+	click(t, a, "arch.cat.floors")
 	click(t, a, "arch.tool.carpet")
 	tool, _ := toolByID("carpet")
 	if got := a.toolStuff(tool); got != "straw carpet" {
@@ -331,7 +331,7 @@ func TestCarpetPlacementSendsStuff(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	click(t, a, "tab.architect")
-	click(t, a, "arch.cat.furniture")
+	click(t, a, "arch.cat.floors")
 	click(t, a, "arch.tool.carpet")
 	click(t, a, "arch.stuff.cloth carpet")
 	a.arch.Drag = true

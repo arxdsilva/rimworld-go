@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [76, 48]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.027
-  h: 0.742
-  d: 1.261
 ppt: 128
 item: yak corpse
 species: yak

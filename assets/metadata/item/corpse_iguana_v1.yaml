@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [60, 6]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.789
-  h: 0.835
-  d: 0.633
 ppt: 128
 item: iguana corpse
 species: iguana

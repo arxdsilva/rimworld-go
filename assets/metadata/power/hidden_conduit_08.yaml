@@ -6,11 +6,6 @@ scale: 2
 canvas: [128, 128]
 footprint: [1, 1]
 origin_px: [0, 0]
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0
 autotile: hidden_conduit
 mask: 8
 overlay: power

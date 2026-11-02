@@ -4,12 +4,13 @@ import (
 	"math"
 	"testing"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/world/roof"
 )
 
 // testLight is a hand-built light: shadows fall away from a light at
-// azimuth az (screen space, 0 = east) and elevation el (radians), with
-// the ART §6.1 length clamp and the given alpha.
+// azimuth az (screen space, 0 = east) and elevation el (radians), clamped
+// at 3 tiles as LightAt does, with the given alpha.
 func testLight(az, el, alpha float64) State {
 	lx, ly := math.Cos(az)*math.Cos(el), 0.5*math.Sin(az)*math.Cos(el)
 	n := math.Hypot(lx, ly)
@@ -17,7 +18,7 @@ func testLight(az, el, alpha float64) State {
 		SunL:      [3]float32{float32(lx), float32(ly), float32(math.Sin(el))},
 		ShadowDir: [2]float64{-lx / n, -ly / n},
 		ShadowLen: func(h float64) float64 {
-			return math.Min(math.Max(h/math.Tan(el), 0.25*h), ShadowMaxLen)
+			return math.Min(math.Max(h/math.Tan(el), 0.25*h), litShadowMaxLen)
 		},
 		ShadowAlpha: alpha,
 	}
@@ -32,165 +33,111 @@ func quadExtent(q [4][2]float64) float64 {
 	return math.Hypot(q[1][0]-q[0][0], q[1][1]-q[0][1])
 }
 
-func hullCentroid(pts [8][2]float64, n int) (float64, float64) {
-	var x, y float64
-	for i := 0; i < n; i++ {
-		x += pts[i][0]
-		y += pts[i][1]
-	}
-	return x / float64(n), y / float64(n)
+// quadWidth is the quad's width across the shadow.
+func quadWidth(q [4][2]float64) float64 {
+	return math.Hypot(q[2][0]-q[0][0], q[2][1]-q[0][1])
 }
 
-var pawnBlob = ShadowSpec{Kind: ShadowBlob, W: 0.55, H: 1.7, D: 0.35}
-
-var wallBox = ShadowSpec{Kind: ShadowBox, W: 1, H: 1, D: 1}
-
-func TestShadowPointsAwayFromSun(t *testing.T) {
+// TestColonistShadowFollowsTheSun: the blob is centred away from the
+// light, starts at the feet, is longer at dawn than at noon (clamped) and
+// keeps its width; a scaled foot scales the blob.
+func TestColonistShadowFollowsTheSun(t *testing.T) {
 	t.Parallel()
-	morning := testLight(0.3, 0.4, 0.3)         // sun in the east, a little south
-	evening := testLight(math.Pi-0.3, 0.4, 0.3) // sun in the west
-	cx, _ := quadCentre(BlobQuad(5, 5, pawnBlob, morning))
-	ex, _ := quadCentre(BlobQuad(5, 5, pawnBlob, evening))
-	if !(cx < 5 && ex > 5) {
-		t.Fatalf("blob centres: morning %.2f (want west of 5), evening %.2f (want east)", cx, ex)
-	}
-	_, my := quadCentre(BlobQuad(5, 5, pawnBlob, morning))
-	if my >= 5 {
-		t.Fatalf("a southern sun casts north (up the screen); centre y %.2f", my)
-	}
-	pts, n := BoxHull(5, 5, 1, 1, wallBox, morning)
-	hx, _ := hullCentroid(pts, n)
-	if !(hx < 5.5) {
-		t.Fatalf("box shadow centroid x %.2f, want west of the footprint centre", hx)
-	}
-	// the footprint stays inside the shadow
-	for _, c := range [][2]float64{{5, 5}, {6, 5}, {5, 6}, {6, 6}} {
-		if !inConvex(pts, n, c[0], c[1]) {
-			t.Fatalf("footprint corner %v outside the hull %v", c, pts[:n])
+	foot := Foot{X: 5.5, Y: 5.5, Scale: 1}
+	for _, az := range []float64{0.3, 1.2, 2.5, 4} {
+		l := testLight(az, 0.5, 0.3)
+		cx, cy := quadCentre(ColonistQuad(foot, l))
+		dx, dy := cx-foot.X, cy-foot.Y
+		if dot := dx*l.ShadowDir[0] + dy*l.ShadowDir[1]; dot <= 0 {
+			t.Fatalf("az %.1f: blob centre (%.2f,%.2f) is not on the shadow side %v", az, dx, dy, l.ShadowDir)
+		}
+		// the blob's near end is at the feet: half its depth behind them
+		if q := ColonistQuad(foot, l); !near(quadExtent(q)/2-math.Hypot(dx, dy), colonistD/2, 1e-9) {
+			t.Fatalf("az %.1f: blob does not start at the feet", az)
 		}
 	}
-}
-
-// inConvex reports p inside (or on) the counter-clockwise hull.
-func inConvex(pts [8][2]float64, n int, x, y float64) bool {
-	for i := 0; i < n; i++ {
-		a, b := pts[i], pts[(i+1)%n]
-		if (b[0]-a[0])*(y-a[1])-(b[1]-a[1])*(x-a[0]) < -1e-9 {
-			return false
-		}
+	dawn := testLight(0.1, 0.12, 0.3)
+	noon := testLight(math.Pi/2, 65*math.Pi/180, 0.5)
+	qd, qn := ColonistQuad(foot, dawn), ColonistQuad(foot, noon)
+	if ld, ln := quadExtent(qd), quadExtent(qn); !(ld > 1.5*ln) || ld > colonistD+colonistMaxLen+1e-9 {
+		t.Fatalf("blob length dawn %.2f noon %.2f (clamp %.2f)", ld, ln, colonistD+colonistMaxLen)
 	}
-	return true
+	if !near(quadWidth(qd), colonistW, 1e-9) || !near(quadWidth(qn), colonistW, 1e-9) {
+		t.Fatalf("blob width dawn %.2f noon %.2f, want %.2f", quadWidth(qd), quadWidth(qn), colonistW)
+	}
+	big := ColonistQuad(Foot{X: 5.5, Y: 5.5, Scale: 2}, noon)
+	if !near(quadWidth(big), 2*colonistW, 1e-9) {
+		t.Fatalf("a scaled foot's blob is %.2f wide", quadWidth(big))
+	}
+	// no light direction: a round blob at the feet
+	flat := ColonistQuad(foot, State{})
+	if cx, cy := quadCentre(flat); !near(cx, foot.X, 1e-9) || !near(cy, foot.Y, 1e-9) {
+		t.Fatalf("no light: blob at (%.2f,%.2f)", cx, cy)
+	}
 }
 
-func TestShadowLongAtDawnShortAtNoon(t *testing.T) {
+// TestColonistShadowFadesWithTheSun: darker at noon than at dawn, a
+// faint blob under the moon, none without a light.
+func TestColonistShadowFadesWithTheSun(t *testing.T) {
 	t.Parallel()
-	dawn := testLight(0.1, 0.12, 0.1)
-	noon := testLight(math.Pi/2, 65*math.Pi/180, 0.32)
-	ld, ln := quadExtent(BlobQuad(0, 0, pawnBlob, dawn)), quadExtent(BlobQuad(0, 0, pawnBlob, noon))
-	if !(ld > 2*ln) {
-		t.Fatalf("blob length dawn %.2f vs noon %.2f", ld, ln)
+	const day = 172 // summer
+	noon := ColonistAlpha(LightAt(12, day, "clear", 0), day)
+	dawn := ColonistAlpha(LightAt(6.8, day, "clear", 0), day)
+	moon := ColonistAlpha(LightAt(0, day, "clear", 0), day)
+	if !(noon > dawn && dawn > moon && moon > 0) {
+		t.Fatalf("alpha noon %.3f dawn %.3f moon %.3f", noon, dawn, moon)
 	}
-	if ld > ShadowMaxLen+1.2 {
-		t.Fatalf("dawn shadow %.2f exceeds the clamp", ld)
+	if moon > 0.2 {
+		t.Fatalf("the moon's blob is not faint: %.3f", moon)
 	}
-	area := func(l State) float64 {
-		pts, n := BoxHull(0, 0, 1, 1, wallBox, l)
-		a := 0.0
-		for i := 0; i < n; i++ {
-			p, q := pts[i], pts[(i+1)%n]
-			a += p[0]*q[1] - q[0]*p[1]
-		}
-		return a / 2
+	if a := ColonistAlpha(State{}, day); a != 0 {
+		t.Fatalf("no light: alpha %.3f", a)
 	}
-	if ad, an := area(dawn), area(noon); !(ad > an && an > 1) {
-		t.Fatalf("box shadow area dawn %.2f noon %.2f", ad, an)
+	storm := ColonistAlpha(LightAt(12, day, "storm", 1), day)
+	if !(storm < noon) {
+		t.Fatalf("a storm does not fade the shadow: %.3f vs %.3f", storm, noon)
 	}
 }
 
-func TestMoonShadowsFaint(t *testing.T) {
+// TestOnlyColonistsOutdoorsCast: a colonist on open ground casts; under a
+// built or natural roof, as a prisoner, visitor, ally, guest, raider, a
+// body or carried, nothing does. A planned roof is no roof yet.
+func TestOnlyColonistsOutdoorsCast(t *testing.T) {
 	t.Parallel()
-	day := ShadowCompositeScale(testLight(1, 1, 0.32))
-	moon := ShadowCompositeScale(testLight(1, 0.5, 0.12))
-	if !(moon[3] > 0 && moon[3] < day[3]/2) {
-		t.Fatalf("moon alpha %.3f vs day %.3f", moon[3], day[3])
+	w := game.WorldView{TerrainW: 10, RoofCells: make([]uint8, 100)}
+	w.RoofCells[3*10+3] = uint8(roof.Built)
+	w.RoofCells[3*10+4] = uint8(roof.Natural)
+	w.RoofCells[3*10+5] = uint8(roof.PlanBuild)
+	col := game.PawnView{ID: 1, X: 1, Y: 1}
+	if !Casts(&col, &w) {
+		t.Fatal("a colonist outdoors casts no shadow")
 	}
-	// the composite is the dark cool shadow colour, premultiplied
-	if !(day[2] > day[0] && math.Abs(float64(day[0])-18.0/255*0.32) < 1e-4) {
-		t.Fatalf("composite colour %v", day)
-	}
-}
-
-func TestBoxVsBlobByMetadata(t *testing.T) {
-	t.Parallel()
-	meta := func(kind string, fw, fd, ch int) *art.Meta {
-		m := &art.Meta{Footprint: [2]int{fw, fd}, Canvas: [2]int{160, ch}}
-		m.Shadow.Kind = kind
-		if kind != "" {
-			m.Shadow.W, m.Shadow.H, m.Shadow.D = 0.8, 2, 0.6
-		}
-		return m
-	}
-	cases := []struct {
-		key  string
-		m    *art.Meta
-		want ShadowKind
-		h    float64
+	for _, c := range []struct {
+		name string
+		edit func(*game.PawnView)
+		want bool
 	}{
-		{"structure/wall_wood_05", meta("box", 1, 1, 224), ShadowBox, 2},
-		{"plant/tree_oak_00", meta("blob", 1, 1, 400), ShadowBlob, 2},
-		{"item/wood_pile", meta("none", 1, 1, 200), ShadowNone, 0},
-		// fallbacks by family while the art has no shadow block
-		{"structure/wall_wood_05", meta("", 1, 1, 224), ShadowBox, 1},
-		{"structure/floor_wood", meta("", 1, 1, 128), ShadowNone, 0},
-		{"furniture/table_2x1", meta("", 2, 1, 198), ShadowBox, 1},
-		{"rock/rock_wall_00", nil, ShadowBox, 1},
-		{"plant/tree_oak_00", meta("", 1, 1, 512), ShadowBlob, 512.0 / art.TilePx * 0.8},
-		// creatures cast nothing (2026-10-31): no family fallback
-		{"pawn/body_south", meta("", 1, 1, 250), ShadowNone, 0},
-		{"animal/dustbuck_east", meta("", 1, 1, 256), ShadowNone, 0},
-		{"item/wood_pile", meta("", 1, 1, 128), ShadowBlob, 0.7},
-		{"overlay/stockpile", meta("", 1, 1, 128), ShadowNone, 0},
-		{"weather/raindrop", nil, ShadowNone, 0},
-		{"terrain/soil_00", nil, ShadowNone, 0},
-	}
-	for _, c := range cases {
-		s := ShadowSpecFor(c.key, c.m)
-		if s.Kind != c.want || math.Abs(s.H-c.h) > 1e-9 {
-			t.Errorf("%s (kind %q): got %+v, want kind %d h %.3f", c.key, kindOf(c.m), s, c.want, c.h)
+		{"under a built roof", func(p *game.PawnView) { p.X, p.Y = 3, 3 }, false},
+		{"under a natural roof", func(p *game.PawnView) { p.X, p.Y = 4, 3 }, false},
+		{"under a planned roof", func(p *game.PawnView) { p.X, p.Y = 5, 3 }, true},
+		{"lying outdoors", func(p *game.PawnView) { p.Lying = true }, true},
+		{"prisoner", func(p *game.PawnView) { p.Prisoner = true }, false},
+		{"visitor", func(p *game.PawnView) { p.Visitor = true }, false},
+		{"ally", func(p *game.PawnView) { p.Ally = true }, false},
+		{"guest", func(p *game.PawnView) { p.GuestFaction = "Hill Folk" }, false},
+		{"raider", func(p *game.PawnView) { p.Hostile = true }, false},
+		{"body", func(p *game.PawnView) { p.Embodied = true }, false},
+		{"carried", func(p *game.PawnView) { p.CarriedBy = 9 }, false},
+	} {
+		p := col
+		c.edit(&p)
+		if got := Casts(&p, &w); got != c.want {
+			t.Errorf("%s: casts %v, want %v", c.name, got, c.want)
 		}
 	}
-	if s := ShadowSpecFor("furniture/table_2x1", meta("", 2, 1, 198)); s.W != 2 || s.D != 1 {
-		t.Errorf("box fallback footprint %+v, want 2x1", s)
-	}
-	if s := ShadowSpecFor("plant/bush_mature_v0", meta("", 1, 1, 200)); math.Abs(s.W-0.7) > 1e-9 || s.D != 0.4 {
-		t.Errorf("plant fallback %+v", s)
-	}
-}
-
-func kindOf(m *art.Meta) string {
-	if m == nil {
-		return "<nil>"
-	}
-	return m.Shadow.Kind
-}
-
-func TestBoxSkirtPointsOutward(t *testing.T) {
-	t.Parallel()
-	for _, az := range []float64{0.2, 1.4, 2.0, 2.9, 3.5, 4.8} {
-		l := testLight(az, 0.35, 0.3)
-		pts, n := BoxHull(0, 0, 1, 1, wallBox, l)
-		if n < 4 || n > 6 {
-			t.Fatalf("az %.1f: hull of %d points", az, n)
-		}
-		cx, cy := hullCentroid(pts, n)
-		for i := 0; i < n; i++ {
-			p, q := pts[i], pts[(i+1)%n]
-			dx, dy := q[0]-p[0], q[1]-p[1]
-			nx, ny := dy, -dx
-			mx, my := (p[0]+q[0])/2-cx, (p[1]+q[1])/2-cy
-			if nx*mx+ny*my <= 0 {
-				t.Fatalf("az %.1f: edge %d normal points inward", az, i)
-			}
-		}
+	// no roof data: every tile is open sky
+	bare := game.WorldView{TerrainW: 10}
+	if !Casts(&col, &bare) {
+		t.Fatal("no roof data: a colonist casts no shadow")
 	}
 }

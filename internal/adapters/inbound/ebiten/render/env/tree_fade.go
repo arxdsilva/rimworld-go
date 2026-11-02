@@ -8,7 +8,7 @@ import (
 
 // Tree parts and the see-through canopy (PLAY-010 2.9). Every tree key
 // also exists as <key>_trunk and <key>_canopy on the same canvas and
-// origin. The trunk (and the shadow) never fade; the canopy eases to
+// origin. The trunk never fades; the canopy eases to
 // TreeSeeThrough while a creature, the hovered thing or the Architect
 // ghost stands on the tree's tile, the tile above or the two diagonals
 // above, so whoever walks behind a tree stays visible.

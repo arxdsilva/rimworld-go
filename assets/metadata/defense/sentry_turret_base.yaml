@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 52]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.77
-  h: 0.46
-  d: 0.72
 rotatable: false
 facing: south
 building: sentry turret

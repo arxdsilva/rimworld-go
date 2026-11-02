@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [44, -14]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.52
-  h: 0.254
-  d: 0.493
 ppt: 128
 item: cinder rat corpse
 species: cinder_rat

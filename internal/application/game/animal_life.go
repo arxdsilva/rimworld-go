@@ -139,7 +139,7 @@ func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
 	g.logEvent(id, logEntry{Kind: logOldAge})
 	g.endMating(id, a)
 	g.removeAnimal(id)
-	toxicRot(g, g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, animal.CorpseYieldOf(*a, now, true)), body.ToxicBuildup(a.Body)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
+	toxicRot(g, g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame, forbids(g).DropForbidden(pos.X, pos.Y), animal.CorpseYieldOf(*a, now, true)), body.ToxicBuildup(a.Body)) // wildlife.go: a wild one's is unclaimed (PLAY-017)
 	if animal.DefOf(a.Species).Explosive {
 		g.burst(a.Species, pos)
 	}

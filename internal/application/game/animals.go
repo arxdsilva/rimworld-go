@@ -784,10 +784,11 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	}
 	// the colony's death (wildlife.go), else the corpse is unclaimed (PLAY-017)
 	colony := a.Tame || g.colonyKill(by, pos)
-	g.onAnimalDied(id, by) // bonds.go: the bonded colonist's grief, before the state goes
+	out := forbids(g).CorpseForbidden(pos.X, pos.Y, killTaken(g, by, id)) // game/allow: outside the home area
+	g.onAnimalDied(id, by)                                                // bonds.go: the bonded colonist's grief, before the state goes
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
-	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony, animal.CorpseYieldOf(a, uint64(g.clock.Now()), g.herdOf().Careful(id)))
+	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony, out, animal.CorpseYieldOf(a, uint64(g.clock.Now()), g.herdOf().Careful(id)))
 	toxicRot(g, corpse, body.ToxicBuildup(a.Body)) // incidents.go (FOOD-6)
 	g.herdOf().Killed(by, id, corpse)              // game/herd (FOOD-3): a hunter carries its kill to storage
 	k, ok := g.animals.Get(by)

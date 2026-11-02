@@ -99,9 +99,9 @@ func (s *search) take(cx, cy int) {
 
 // topUp takes (cx, cy) when a stack there still takes a load of the
 // kind: its first stack on the ground, any of its stacks on a shelf. A
-// hopper is refilled only once down to half its stack limit (STO-2,
-// original tuning), then filled up: no hauler trickles in each portion
-// the dispenser took.
+// hopper is refilled only once down to half its one stack
+// (zone.HopperStack; STO-2, original tuning), then filled up: no hauler
+// trickles in each portion the dispenser took.
 func (s *search) topUp(cx, cy int, shelf, hopper bool) {
 	if !s.better(cx, cy) {
 		return
@@ -113,7 +113,7 @@ func (s *search) topUp(cx, cy int, shelf, hopper bool) {
 		}
 		return
 	}
-	if o, ok := s.c.First(cx, cy); ok && o.Kind == k && haul.Toppable(o) && s.open(cx, cy) && !(hopper && o.Qty*2 > k.StackLimit()) {
+	if o, ok := s.c.First(cx, cy); ok && o.Kind == k && haul.Toppable(o) && s.open(cx, cy) && !(hopper && o.Qty*2 > zone.KindHopper.StackCap(k.StackLimit())) {
 		s.take(cx, cy)
 	}
 }

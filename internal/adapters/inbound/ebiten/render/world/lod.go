@@ -24,7 +24,7 @@ import (
 //	          (chunk_cache.go), drawn lit per tile; objects stay live;
 //	< 16 px   map: one whole-map bake at 4 px/tile in ≤ 4096-px pages,
 //	          ground, a soft grass tint, buildings and plants as marks; no
-//	          shadows, tufts, decals or item sprites; creatures keep a
+//	          colonist shadows, tufts, decals or item sprites; creatures keep a
 //	          minimum size and selection rings stay.
 //
 // Grass tufts (render/env) are live from 24 px (at most four a tile
@@ -104,9 +104,9 @@ type LOD struct {
 }
 
 // VisPad is how far past the visible tiles the per-frame chunk lists
-// reach: tall sprites (trees, walls) south of the view and the longest
-// shadows from any side, a big carcass's canvas (up to about 1.7 tiles
-// past its cell, PLAY-022) with its shadow included. Animals are not
+// reach: tall sprites (trees, walls) south of the view, a colonist's
+// shadow from any side and a big carcass's canvas (up to about 1.7 tiles
+// past its cell, PLAY-022). Animals are not
 // chunk-listed: their culls pad by AnimalPadsOf.
 const VisPad = env.VisPad
 
@@ -115,7 +115,7 @@ const VisPad = env.VisPad
 const BakeBudget = 24
 
 // syncFrameChunks fetches this frame's chunk views over the visible tiles
-// (padded); the object, floor, grass and shadow passes iterate only them.
+// (padded); the object, floor and grass passes iterate only them.
 func (k *Bakes) syncFrameChunks() {
 	l := k.LOD
 	x0, y0, x1, y1 := k.visibleTiles()

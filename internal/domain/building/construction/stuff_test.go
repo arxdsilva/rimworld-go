@@ -101,7 +101,7 @@ func TestStonecutterIsBench(t *testing.T) {
 	if d.Kind != StonecutterTable || d.Name != "stonecutter table" || !d.Bench || !d.BlocksMove || !d.Rotatable || !d.HasSpot {
 		t.Fatalf("stonecutter def = %+v", d)
 	}
-	if d.Size != [2]int{2, 1} || d.Spot != [2]int{0, 1} || d.Layer != LayerObject || d.Wood != 6 || d.Work != 160 {
+	if d.Size != [2]int{3, 1} || d.Spot != [2]int{1, 1} || d.Layer != LayerObject || d.Wood != 6 || d.Work != 160 {
 		t.Fatalf("stonecutter shape = %+v", d)
 	}
 	if !slices.Equal(Stuffs(StonecutterTable), []item.Kind{item.Wood}) {

@@ -8,12 +8,11 @@ import (
 // Light sources (PLAY-020 §3b, PLAY-021): every building the renderer
 // lights the world with comes from AppendSources, and nothing else in
 // the package tests a building's kind for light. The light grid (light.go)
-// and the creature-shadow point lights (shadow_cast.go) both read its
-// list. Whether a building gives light is the simulation's call
+// reads its list. Whether a building gives light is the simulation's call
 // (BuildingView.Glow: a powered lamp, a burning torch or campfire), never
 // a kind check here.
 
-// Kind is how a source lights: its falloff and its shadow height.
+// Kind is how a source lights: its falloff.
 type Kind uint8
 
 const (
@@ -21,8 +20,7 @@ const (
 	Campfire                 // a burning campfire: 1 − d/3.5 within 3 tiles, flat
 )
 
-// Source is one light: the building's id (shadow flicker and tie
-// breaks), its tile and its reach in tiles.
+// Source is one light: the building's id (flicker and tie breaks), its tile and its reach in tiles.
 type Source struct {
 	ID     uint64
 	X, Y   int

@@ -41,7 +41,7 @@ func TestBridgeKeys(t *testing.T) {
 	}
 }
 
-func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
+func TestDrawFoundationPaintsDeck(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
 	r.cam.Zoom = 32.0 / float64(camerapkg.TileSize)

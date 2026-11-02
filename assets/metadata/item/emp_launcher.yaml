@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 24]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.86
-  h: 0.148
-  d: 0.313
 item: emp launcher

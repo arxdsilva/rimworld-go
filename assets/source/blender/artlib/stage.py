@@ -406,58 +406,6 @@ def _clip(img, origin, footprint, clip, zclip):
     return img
 
 
-SHADOW_KINDS = {"plant": "blob", "item": "blob", "gear": "blob",
-                "structure": "box", "furniture": "box", "rock": "box",
-                "terrain": "none", "overlay": "none", "weather": "none"}
-# Creatures cast no shadow (user decision, 2026-10-31): their sprites
-# carry no shadow: block at all.
-NO_SHADOW_FAMILIES = ("pawn", "animal")
-FLAT_H = 0.05   # tiles: casters this low cast no shadow
-
-
-def figure_lean(family):
-    """Degrees an upright figure family is leaned back towards the viewer
-    (contracts), or None for families drawn with the plain shear."""
-    return {"pawn": C.FIGURE_LEAN_DEG, "animal": C.ANIMAL_LEAN_DEG}.get(family)
-
-
-def _shadow_meta(family, name, kind=None, footprint=None):
-    """Caster bounds (tiles) from the unsheared, non-holdout meshes.
-
-    Figures are modelled leaned back towards the camera; their bounds are
-    measured after undoing the lean so h is the standing height and w/d
-    the ground footprint. Structures are clamped to their footprint
-    (autotile posts overhang to join neighbours)."""
-    unlean = None
-    if figure_lean(family) is not None:
-        unlean = Matrix.Rotation(math.radians(figure_lean(family)), 4, "X")
-    lo = np.full(3, 1e9)
-    hi = np.full(3, -1e9)
-    for ob in stage().collection.all_objects:
-        if ob.type != "MESH" or ob.get("rwg_holdout"):
-            continue
-        n = len(ob.data.vertices)
-        if not n:
-            continue
-        co = np.empty(n * 3, np.float32)
-        ob.data.vertices.foreach_get("co", co)
-        m = np.array(ob.matrix_world if unlean is None else unlean @ ob.matrix_world)
-        v = co.reshape(n, 3) @ m[:3, :3].T + m[:3, 3]
-        lo, hi = np.minimum(lo, v.min(axis=0)), np.maximum(hi, v.max(axis=0))
-    if hi[0] < lo[0]:
-        lo = hi = np.zeros(3)
-    w, d = float(hi[0] - lo[0]), float(hi[1] - lo[1])
-    h = float(hi[2] - lo[2]) if unlean is not None else float(max(hi[2], 0.0))
-    if footprint is not None and family in ("structure", "furniture", "rock"):
-        w, d = min(w, footprint[0]), min(d, footprint[1])
-    k = kind or SHADOW_KINDS.get(family, "none")
-    if kind is None and family == "structure" and name.startswith("floor_"):
-        k = "none"
-    if h <= FLAT_H:
-        k = "none"
-    return {"kind": k, "w": round(w, 3), "h": round(h, 3), "d": round(d, 3)}
-
-
 def _figure_cover(sc, family):
     """Layered figure sprites (contracts.OUTLINE_INNER_FAMILIES) are rendered
     over a holdout of the figure beneath them (pawn apparel and hair over the
@@ -480,15 +428,14 @@ def _figure_cover(sc, family):
 
 def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
                  outline=True, shadow=False, extra=None, keep=False,
-                 clip=(), zclip=None, tint=True, shadow_kind=None, outline_width=None, ppt=None):
+                 clip=(), zclip=None, tint=True, outline_width=None, ppt=None):
     """Shear, frame, render, post-process, write PNG + metadata.
 
     footprint: (w, h) tiles. zmax: tallest point (m). margins: tiles
     (left, right, top, bottom) beyond the footprint/overhang.
-    shadow: bake a UI-art drop shadow (world sprites never do; the game
-    casts sun shadows from the `shadow:` metadata). shadow_kind overrides
-    the per-family caster kind (blob|box|none). Pawn and animal sprites
-    (NO_SHADOW_FAMILIES) get no shadow: block.
+    shadow: bake a UI-art drop shadow (world sprites never do). No sprite
+    metadata carries a `shadow:` block: only colonists cast a shadow, a
+    blob the renderer draws itself (user decision, 2026-11-01).
     ppt: pixels per tile for this sprite (PLAY-022, animals and corpses);
     written to the metadata. Its margins are exact pixel counts and may be
     negative (a canvas tighter than the tile: origin_px outside it). None
@@ -496,7 +443,6 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
     unchanged.
     """
     sc = stage()
-    shadow_meta = None if family in NO_SHADOW_FAMILIES else _shadow_meta(family, name, shadow_kind, footprint)
     w, h = footprint
     ml, mr, mt, mb = margins or (C.DEFAULT_MARGIN,) * 4
     d = C.PPT if ppt is None else ppt
@@ -536,8 +482,6 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
         "origin_px": [left, top],
         "projection": {"shear_k": C.SHEAR_K},
     }
-    if shadow_meta is not None:
-        data["shadow"] = shadow_meta
     if ppt is not None:
         data["ppt"] = int(ppt)
     if groups and tint:

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 34]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.271
-  h: 0.348
-  d: 0.221
 species: fire_lily
 stage: young
 variant: 1

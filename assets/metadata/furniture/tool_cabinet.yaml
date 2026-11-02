@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 59]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.76
-  h: 0.94
-  d: 0.635
 building: tool cabinet
 rotatable: false
 facing: south

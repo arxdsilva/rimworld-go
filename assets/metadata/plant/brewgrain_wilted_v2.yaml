@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 27]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.679
-  h: 0.279
-  d: 0.744
 species: brewgrain
 growth: wilted
 variant: 2

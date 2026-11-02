@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [66, 54]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.876
-  h: 0.774
-  d: 1.257
 ppt: 128
 item: emu corpse
 species: emu

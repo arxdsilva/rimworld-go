@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [38, -6]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.429
-  h: 0.408
-  d: 0.566
 ppt: 128
 item: capybara corpse
 species: capybara

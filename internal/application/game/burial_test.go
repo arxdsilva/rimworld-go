@@ -19,10 +19,12 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// burGame is a bare map with Ada standing at (3, 5).
+// burGame is a bare map with Ada standing at (3, 5), all of it Home (STK-AL:
+// a body outside Home starts forbidden).
 func burGame(t *testing.T, w, h int) (*Game, entity.EntityID) {
 	t.Helper()
 	g := New(Config{Seed: 3, Width: w, Height: h})
+	g.paintHome(0, 0, w-1, h-1, true)
 	ada, err := g.SpawnNamedPawn(3, 5, "Ada")
 	if err != nil {
 		t.Fatal(err)

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [0, 22]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.852
-  h: 0.294
-  d: 1.103
 ppt: 128
 item: monkey corpse
 species: monkey

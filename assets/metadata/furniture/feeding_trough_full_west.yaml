@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 48]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.6
-  h: 0.52
-  d: 0.88
 building: feeding trough
 state: full
 rotatable: true

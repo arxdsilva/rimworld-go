@@ -75,7 +75,7 @@ func (p *Pipeline) Draw(screen *ebiten.Image) {
 
 // DrawArt draws the world in its fixed order: the ground (live, or the
 // chunk or map bakes), foundations, floors, conduits, zones and plans,
-// blueprints, floor markings, shadows and eaves, the objects of the view
+// blueprints, floor markings, colonist shadows, the objects of the view
 // by row (rock, cave mouths, buildings, plants, items, frames, animals,
 // pawns), then work glow, fires, labels, badges, bubbles, particles,
 // weather and fog, floaters, designations, animal overlays and the
@@ -151,9 +151,8 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 
 	if lt != Map { // no shadows on the whole-map bake
 		p.setView(sw, sh, tile)
-		p.Shadows.Draw(p.lightView(), p.Lit, p.Casters, screen, w, sw, sh, tile) // under every object
-		p.setView(sw, sh, tile)
-		p.Overlays.DrawEaves(v, screen, w, sw, sh, tile)
+		p.Shadows.Feet = p.ShadowFeet(&w, v.Pawns, tile, p.Shadows.Feet)
+		p.Shadows.Draw(p.lightView(), p.Lit.Light, screen, p.Shadows.Feet, w.DayOfYear) // under every object
 	}
 
 	l.occupied = resetCells(l.occupied)
@@ -479,4 +478,28 @@ func (p *Pipeline) DrawFloorLayers(screen *ebiten.Image, w game.WorldView, sw, s
 		p.Overlays.DrawStains(v, p.Pass(), screen, w, sw, sh, tile)
 		p.Overlays.Fires.DrawAshStains(v, p.Pass(), screen, w, sw, sh, tile)
 	}
+}
+
+// ShadowFeet appends to out[:0] the feet of this frame's shadow casters:
+// the colonists in view standing on unroofed tiles (light.Casts), where
+// they are drawn (their motion, scaled up with the creatures far out).
+// Nothing else casts a shadow (user decision, 2026-11-01).
+func (p *Pipeline) ShadowFeet(w *game.WorldView, pawns []game.PawnView, tile float64, out []light.Foot) []light.Foot {
+	out = out[:0]
+	l := p.LOD
+	ct := LodTile(tile)
+	k := 1.0
+	if ct > tile && tile > 0 {
+		k = ct / tile
+	}
+	for i := range pawns {
+		pw := &pawns[i]
+		if !light.Casts(pw, w) || !l.InView(pw.X, pw.Y, 2, 2) {
+			continue
+		}
+		wx, wy := p.interpWorld(*pw)
+		wx, wy = CreatureAt(wx, wy, tile, ct)
+		out = append(out, light.Foot{X: wx + creature.PawnFeetX*k, Y: wy + creature.PawnFeetY*k, Scale: k})
+	}
+	return out
 }

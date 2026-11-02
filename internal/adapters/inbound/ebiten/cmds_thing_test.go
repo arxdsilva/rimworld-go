@@ -638,9 +638,10 @@ func TestItemHaulMarkCommand(t *testing.T) {
 	if c := thingCmd(t, a.insp.Thing().ItemCommands(22), "item.haulmark"); c.Label != "Unmark" || !c.On {
 		t.Fatalf("marked = %+v", c)
 	}
-	// a forbidden stack would not be hauled: the mark says so, but Unmark stays on
+	// STK-AL: marking a forbidden stack allows it (vanilla Haul things), so
+	// the mark stays enabled and says so
 	s.world.Items[0].Forbidden = true
-	if c := thingCmd(t, a.insp.Thing().ItemCommands(21), "item.haulmark"); !c.Disabled || c.Reason != "forbidden: allow it first" {
+	if c := thingCmd(t, a.insp.Thing().ItemCommands(21), "item.haulmark"); c.Disabled || !strings.Contains(c.Desc, "allows it") {
 		t.Fatalf("forbidden stack mark = %+v", c)
 	}
 	s.world.Items[1].Forbidden = true // already marked

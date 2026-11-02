@@ -364,11 +364,11 @@ func (g *Game) takeGoods(gd tradeGoods, k item.Kind, n int) {
 	}
 }
 
-// dropGoods puts qty of k down at (x, y) in stacks of at most
-// item.StackLimit (spilling to free tiles), forbidden when forbid.
+// dropGoods puts qty of k down at (x, y) in stacks of at most its
+// StackLimit (spilling to free tiles), forbidden when forbid.
 func (g *Game) dropGoods(k item.Kind, qty, x, y int, forbid bool) {
 	for qty > 0 {
-		n := min(qty, item.StackLimit)
+		n := min(qty, k.StackLimit())
 		qty -= n
 		sid, err := g.SpawnStack(k, n, x, y)
 		if err != nil {

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [72, 46]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.975
-  h: 0.755
-  d: 1.309
 ppt: 128
 item: woolhorn corpse
 species: woolhorn

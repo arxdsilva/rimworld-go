@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [60, 50]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.79
-  h: 0.775
-  d: 1.457
 ppt: 128
 item: polar bear corpse
 species: polar_bear

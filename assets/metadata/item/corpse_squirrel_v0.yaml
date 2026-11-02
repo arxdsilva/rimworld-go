@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [34, 40]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.364
-  h: 0.409
-  d: 1.225
 ppt: 128
 item: squirrel corpse
 species: squirrel

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [76, 46]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.031
-  h: 0.697
-  d: 1.254
 ppt: 128
 item: cow corpse
 species: cow

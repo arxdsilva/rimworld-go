@@ -8,11 +8,6 @@ footprint: [2, 2]
 origin_px: [16, 89]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.797
-  h: 1.6
-  d: 1.822
 rotatable: false
 facing: south
 building: geothermal generator

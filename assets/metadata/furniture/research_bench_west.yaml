@@ -8,11 +8,6 @@ footprint: [2, 3]
 origin_px: [16, 60]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.92
-  h: 0.92
-  d: 2.92
 attachments:
   worker: [1.5, 2.15]
 rotatable: true

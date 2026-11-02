@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [146, 94]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 4.125
-  h: 1.629
-  d: 2.019
 ppt: 88
 item: glimmerstag corpse
 species: glimmerstag

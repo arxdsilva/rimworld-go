@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 52]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.695
-  h: 0.77
-  d: 0.38
 rotatable: false
 facing: south
 layer: gun

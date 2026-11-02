@@ -139,7 +139,7 @@ func TestAreaOverlaysDrawOnlyWhenShown(t *testing.T) {
 	}
 }
 
-func TestRoofOverlayAndEaves(t *testing.T) {
+func TestRoofOverlay(t *testing.T) {
 	t.Parallel()
 	o := testSet(&testHost{})
 	screen := ebiten.NewImage(640, 640)
@@ -159,10 +159,6 @@ func TestRoofOverlayAndEaves(t *testing.T) {
 	o.DrawRoofOverlay(v, screen, w, areas, 640, 640, 64)
 	if o.RoofDraw.OverlayVerts == 0 {
 		t.Fatal("shown roof overlay drew nothing")
-	}
-	o.DrawEaves(v, screen, w, 640, 640, 64)
-	if len(o.RoofDraw.Edges) != 1 || o.RoofDraw.Edges[0] != (EaveEdge{X: 5, Y: 5, Side: SideE}) {
-		t.Fatalf("eaves %v", o.RoofDraw.Edges)
 	}
 	o.DrawRoofUnsupported(v, screen, 1, 1, 64)
 }
@@ -307,7 +303,7 @@ func TestCasketsCueTheirOpening(t *testing.T) {
 	}
 }
 
-func TestBloodSkipsTheShadowPassAndCarriedPatients(t *testing.T) {
+func TestBloodSkipsBakesAndCarriedPatients(t *testing.T) {
 	t.Parallel()
 	o := testSet(&testHost{})
 	v := testView(game.WorldView{})
@@ -317,7 +313,7 @@ func TestBloodSkipsTheShadowPassAndCarriedPatients(t *testing.T) {
 		t.Fatal("a hurt pawn bleeds")
 	}
 	if o.PawnBlood(v, sprite.Pass{Cast: &light.Cast{}}, p) != 0 {
-		t.Fatal("no blood in the shadow pass")
+		t.Fatal("no blood in a bake")
 	}
 	p.CarriedBy = 2
 	if o.PawnBlood(v, sprite.Pass{}, p) != 0 {

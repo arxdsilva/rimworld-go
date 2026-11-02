@@ -274,8 +274,6 @@ def _prune(keep_prefix):
 
 def _render(name, extra, part, zmax):
     kw = dict(zmax=zmax, margins=TREE_MARGINS, extra=extra, outline=False, outline_width=0)
-    if part == "trunk":
-        kw["shadow_kind"] = "none"
     return S.render_asset("plant", name + ("_" + part if part else ""), **kw)
 
 

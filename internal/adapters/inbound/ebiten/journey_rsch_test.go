@@ -254,7 +254,7 @@ func TestJourneyRschBuildHiTechBenchAndAnalyzer(t *testing.T) {
 	place("production", "electric_research", ox+1, oy+3)
 	run(func() bool { _, ok := find("research"); return ok }, "hi-tech bench")
 	alone, _ := find("research")
-	place("production", "multi_analyzer", ox+6, oy+3)
+	place("misc", "multi_analyzer", ox+6, oy+3) // STK-AG: vanilla Misc
 	run(func() bool { _, ok := find("analyzer"); return ok }, "multi-analyzer")
 	bench, _ := find("research")
 	lines := inspector.ResearchLines(bench, j.world())

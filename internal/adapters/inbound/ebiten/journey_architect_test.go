@@ -131,7 +131,7 @@ func mustTool(t *testing.T, id string) architect.ToolDef {
 func TestJourneyArchitectCtrlConstrainsDrag(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
-	j.openArch("structure", "floor")
+	j.openArch(architect.CatFloors, "floor") // STK-AG: vanilla Floors
 	j.dragTiles(inputframe.Left, 8, 2, 12, 4, input.ModCtrl)
 	cells := map[[2]int]bool{}
 	for _, c := range j.cmdsOf(command.DesignateBuild) {
@@ -271,7 +271,11 @@ func TestJourneyArchitectOrdersTools(t *testing.T) {
 		t.Run(c.tool, func(t *testing.T) {
 			t.Parallel()
 			j := archJourney(t)
-			j.openArch("orders", c.tool)
+			cat := "orders"
+			if c.tool == "smooth" {
+				cat = architect.CatFloors // STK-AG: vanilla keeps Smooth under Floors
+			}
+			j.openArch(cat, c.tool)
 			j.dragTiles(inputframe.Left, 8, 2, 11, 4, 0)
 			got, ok := j.lastCmd(c.kind)
 			if !ok || got.X != 8 || got.Y != 2 || got.X2 != 11 || got.Y2 != 4 || got.Enabled != c.enabled {

@@ -8,10 +8,5 @@ footprint: [1, 1]
 origin_px: [16, 27]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.63
-  h: 0.255
-  d: 0.544
 decoration: true
 material: stone

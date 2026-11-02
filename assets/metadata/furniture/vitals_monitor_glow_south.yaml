@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 62]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.52
-  h: 1.019
-  d: 0.303
 layer: glow
 of: furniture/vitals_monitor_south
 emissive: med_teal_glow

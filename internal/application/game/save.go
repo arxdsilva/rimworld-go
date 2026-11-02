@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/raid"
 	rlab "rimworld-go/internal/application/game/research"
+	"rimworld-go/internal/application/game/resize"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/difficulty"
@@ -86,11 +87,12 @@ import (
 // T-shirt and pants where their skin slots are free (Outfit.Everyday).
 // v9 (RSCH-1) moves research to the wiki costs: each project keeps its
 // fraction of the cost, and the resized research benches keep their place
-// where they still fit or are refunded (migrateResearchBenches).
+// where they still fit or are refunded (migrateBenches). v10 (STK-BN)
+// does the same for the benches it gives the wiki footprints (game/resize).
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 9
+const SaveVersion = 10
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -773,7 +775,10 @@ func (g *Game) migrateSave(v int) {
 		if g.hasSetup() {
 			g.ng.setup.Difficulty = rlab.MigrateDifficulty(g.ng.setup.Difficulty)
 		}
-		g.migrateResearchBenches() // research.go
+		g.migrateBenches(resize.V9, resize.RefundV9) // research.go
+		fallthrough
+	case v < 10: // STK-BN: wiki bench footprints
+		g.migrateBenches(resize.V10, resize.RefundV10)
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

@@ -11,8 +11,3 @@ terrain: shallow_water
 variant: 1
 variants: 4
 liquid: true
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0

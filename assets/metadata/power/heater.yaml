@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 55]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.68
-  h: 0.84
-  d: 0.605
 rotatable: false
 facing: south
 building: heater

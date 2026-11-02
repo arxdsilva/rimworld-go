@@ -9,9 +9,9 @@ contract (one standing sprite per layer and facing, attachments, canvas).
     python3 assets/source/tools/validate_assets.py [--no-light]
 
 Every sprite must also have a normal map <name>_n.png of the same size
-and alpha (make normals) and a shadow: block in its metadata (ART §6.1),
-except pawn and animal sprites, which must carry none (creatures cast no
-shadow); --no-light skips those two checks.
+and alpha (make normals; ART §6.1), and no sprite carries a shadow: block
+(only colonists cast a shadow, a blob the renderer draws; user decision,
+2026-11-01); --no-light skips the normal-map check.
 """
 import os
 import re
@@ -47,9 +47,6 @@ ID = re.compile(r"^core:[a-z_]+/[a-z0-9_]+$")
 
 errors = []
 LIGHT = "--no-light" not in sys.argv[1:]
-SHADOW_KINDS = ("blob", "box", "none")
-# creatures cast no shadow (user decision, 2026-10-31): no shadow: block
-NO_SHADOW_FAMILIES = ("pawn", "animal")
 
 
 def err(msg):
@@ -103,13 +100,15 @@ def check_sprite(family, name, path):
         g = re.search(r"group: (\w+)", md).group(1)
         if g not in TINT_GROUPS:
             err("%s/%s: unknown tint group %s" % (family, name, g))
+    if re.search(r"^shadow:", md, re.M):
+        err("%s/%s: only colonists cast a shadow; remove the shadow: block" % (family, name))
     if LIGHT:
         check_light(family, name, path, md, img)
     return md
 
 
 def check_light(family, name, path, md, img):
-    """The normal map and shadow caster of one sprite (ART §6.1)."""
+    """The normal map of one sprite (ART §6.1)."""
     npath = path[:-4] + "_n.png"
     # terrain, floors and the flat ground decals (snow cover, frost; PLAY-022)
     flat = family == "terrain" or (family == "structure" and name.startswith("floor")) or \
@@ -125,15 +124,6 @@ def check_light(family, name, path, md, img):
             err("%s/%s: normal map size %s != %s" % (family, name, n.size, img.size))
         elif n.convert("RGBA").getchannel("A").tobytes() != img.getchannel("A").tobytes():
             err("%s/%s: normal map alpha differs from the sprite" % (family, name))
-    if family in NO_SHADOW_FAMILIES:
-        if re.search(r"^shadow:", md, re.M):
-            err("%s/%s: creatures cast no shadow; remove the shadow: block" % (family, name))
-        return
-    m = re.search(r"^shadow:\n  kind: (\w+)\n  w: ([\d.]+)\n  h: ([\d.]+)\n  d: ([\d.]+)$", md, re.M)
-    if not m:
-        err("%s/%s: missing shadow: block (kind, w, h, d)" % (family, name))
-    elif m.group(1) not in SHADOW_KINDS:
-        err("%s/%s: unknown shadow kind %s" % (family, name, m.group(1)))
 
 
 def check_terrain_seams():

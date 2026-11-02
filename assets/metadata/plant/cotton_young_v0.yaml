@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 34]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.221
-  h: 0.415
-  d: 0.227
 species: cotton
 growth: young
 variant: 0

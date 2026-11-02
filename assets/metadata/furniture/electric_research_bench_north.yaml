@@ -8,11 +8,6 @@ footprint: [5, 2]
 origin_px: [16, 76]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 4.92
-  h: 1.315
-  d: 1.93
 attachments:
   worker: [2.5, 2.15]
 building: electric research bench

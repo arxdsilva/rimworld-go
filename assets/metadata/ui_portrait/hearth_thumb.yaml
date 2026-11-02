@@ -6,7 +6,6 @@ scale: 1
 canvas: [120, 150]
 footprint: [0, 0]
 origin_px: [0, 0]
-shadow: {kind: none, w: 0.0, h: 0.0, d: 0.0}
 portrait: hearth
 character: Bram Holloway
 thumbnail: true

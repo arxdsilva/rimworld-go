@@ -3,18 +3,13 @@ version: 1
 id: "core:furniture/drug_table_south"
 image: generated/world/furniture/drug_table_south.png
 scale: 2
-canvas: [288, 210]
-footprint: [2, 1]
+canvas: [416, 210]
+footprint: [3, 1]
 origin_px: [16, 66]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.92
-  h: 1.1
-  d: 0.88
 attachments:
-  worker: [0.5, 1.15]
+  worker: [1.5, 1.15]
 building: drug table
 rotatable: true
 facing: south

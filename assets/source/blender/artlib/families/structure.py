@@ -367,7 +367,6 @@ def _wall_ruin_overlay(k):
     meta.write("structure", "wall_ruin_overlay_%d" % k, {
         "image": "generated/world/structure/wall_ruin_overlay_%d.png" % k, "scale": C.SCALE,
         "canvas": [W, H], "footprint": [1, 1], "origin_px": [ox, oy],
-        "shadow": {"kind": "none", "w": 0.0, "h": 0.0, "d": 0.0},
         "overlay": "wall_ruin", "variant": k})
     return path
 

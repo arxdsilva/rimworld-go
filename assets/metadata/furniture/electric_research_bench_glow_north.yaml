@@ -8,11 +8,6 @@ footprint: [5, 2]
 origin_px: [16, 76]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 4.445
-  h: 1.315
-  d: 1.17
 layer: glow
 of: furniture/electric_research_bench_north
 emissive: indicator

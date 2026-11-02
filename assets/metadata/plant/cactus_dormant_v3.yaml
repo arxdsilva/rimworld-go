@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 41]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.412
-  h: 0.524
-  d: 0.212
 species: cactus
 stage: dormant
 variant: 3

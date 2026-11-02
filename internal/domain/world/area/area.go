@@ -1,7 +1,9 @@
 package area
 
-// MaxAreas is how many areas a colony can have.
-const MaxAreas = 10
+// MaxAreas is how many allowed areas a colony can have; the home area is
+// not one of them (wiki: Allowed area, STK-AL). A save with more keeps
+// them and makes no new one.
+const MaxAreas = 8
 
 // Area is one named area: a bitset over the map, row-major. ID is stable
 // for the colony's lifetime (never reused); Color is its overlay tint.
@@ -21,7 +23,7 @@ type Set struct {
 }
 
 // palette is the areas' overlay colours (our own), cycled by id.
-var palette = [MaxAreas][4]uint8{
+var palette = [...][4]uint8{
 	{92, 168, 120, 255}, {196, 98, 104, 255}, {96, 132, 204, 255}, {214, 170, 74, 255}, {160, 104, 196, 255},
 	{78, 178, 186, 255}, {206, 128, 70, 255}, {140, 170, 80, 255}, {198, 108, 164, 255}, {120, 120, 150, 255},
 }

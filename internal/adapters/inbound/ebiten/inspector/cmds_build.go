@@ -157,6 +157,9 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	if b.Deconstruct {
 		add("Marked for deconstruction")
 	}
+	if b.Forbidden { // STK-AL: as an item's pane says it
+		add("Forbidden: colonists leave it alone")
+	}
 	w := a.shell.World()
 	add(world.RoomLabelAt(w, b.X, b.Y))
 	add(fuelLine(b))

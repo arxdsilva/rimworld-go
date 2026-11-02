@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 46]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 0.977
-  h: 0.694
-  d: 1
 overlay: cave_mouth
 facing: south
 rotatable: true

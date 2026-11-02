@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.509
-  h: 0.06
-  d: 0.66
 weapon: short_bow
 rotatable: true
 points: east

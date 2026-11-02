@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [28, 2]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.269
-  h: 0.323
-  d: 0.818
 ppt: 128
 item: labrador corpse
 species: labrador

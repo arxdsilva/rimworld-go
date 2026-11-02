@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 20]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.205
-  h: 0.124
-  d: 0.21
 species: haygrass
 growth: sprout
 variant: 2

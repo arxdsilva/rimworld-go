@@ -8,9 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 23]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.703
-  h: 0.12
-  d: 0.641
 item: spinal brace

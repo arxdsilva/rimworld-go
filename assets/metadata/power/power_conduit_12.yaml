@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 24]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.78
-  h: 0.085
-  d: 0.78
 autotile: conduit
 mask: 12
 building: power conduit

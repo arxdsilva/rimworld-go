@@ -95,7 +95,8 @@ func TestMapFindsSpawnUnclaimed(t *testing.T) {
 		st, _ := g.stacks.Get(id)
 		if found[[2]int{st.X, st.Y}] {
 			seen++
-			if !st.Unclaimed || st.HaulMarked || st.Forbidden {
+			loot := st.X == 41 && st.Y == 21 // STK-AL: loot starts forbidden, stone chunks do not
+			if !st.Unclaimed || st.HaulMarked || st.Forbidden != loot {
 				t.Fatalf("map find at %d,%d: %+v", st.X, st.Y, st)
 			}
 			continue
@@ -118,7 +119,7 @@ func TestVaultLootAndCasketWeaponsSpawnUnclaimed(t *testing.T) {
 	g := vaultGame(t, nil, nil)
 	for _, at := range [][2]int{{66, 67}, {69, 67}} {
 		st, ok := g.stacks.Get(g.itemAt(at[0], at[1]))
-		if !ok || !st.Unclaimed || st.Forbidden {
+		if !ok || !st.Unclaimed || !st.Forbidden { // STK-AL: found and forbidden
 			t.Fatalf("vault loot at %v: %+v %v", at, st, ok)
 		}
 	}
@@ -144,22 +145,24 @@ func TestVaultLootAndCasketWeaponsSpawnUnclaimed(t *testing.T) {
 		}
 	}
 	h.casketRemains(construction.Building{Kind: construction.SleeperCasket, X: 2, Y: 2}, nil)
-	if st, ok := h.stacks.Get(h.itemAt(2, 2)); !ok || !st.Kind.IsWeapon() || !st.Unclaimed || st.Forbidden {
-		t.Fatalf("the casket's weapon is found: %+v %v", st, ok)
+	if st, ok := h.stacks.Get(h.itemAt(2, 2)); !ok || !st.Kind.IsWeapon() || !st.Unclaimed || !st.Forbidden {
+		t.Fatalf("the casket's weapon is found and forbidden: %+v %v", st, ok)
 	}
 }
 
 func TestRaiderAndVisitorGearSpawnUnclaimed(t *testing.T) {
 	t.Parallel()
 	g, ada := raidGame(t)
+	g.paintHome(2, 2, 4, 4, true) // STK-AL: Home round the visitor and the colonist, not the raid's edge
+	g.paintHome(24, 15, 28, 19, true)
 	g.Raid(1)
 	rid := g.raiderIDs[0]
 	weapon := g.equip[rid]
 	g.die(rid, health.CauseInjury)
 	if st, ok := stackOf(g, weapon); !ok || !st.Unclaimed || !st.Forbidden {
-		t.Fatalf("a raider's %s is found and forbidden: %+v %v", weapon, st, ok)
+		t.Fatalf("a raider's %s outside Home is found and forbidden: %+v %v", weapon, st, ok)
 	}
-	// a visitor's weapon is found but allowed
+	// a visitor's weapon inside Home is found but allowed
 	vid := g.entities.Next()
 	g.peopleReg().add(&person{ID: vid, Where: whereVisitor})
 	g.positions.Set(vid, Position{X: 3, Y: 3})

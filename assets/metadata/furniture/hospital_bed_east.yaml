@@ -8,11 +8,6 @@ footprint: [2, 1]
 origin_px: [16, 60]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.9
-  h: 0.98
-  d: 0.99
 attachments:
   sleeper: [0.5, 0.42]
 building: hospital bed

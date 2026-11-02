@@ -9,8 +9,3 @@ origin_px: [0, 0]
 overlay: animal_sleeping_spot
 marking: true
 rotatable: false
-shadow:
-  kind: none
-  w: 0.0
-  h: 0.0
-  d: 0.0

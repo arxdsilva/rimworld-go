@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 22]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.811
-  h: 0.1
-  d: 0.573
 species: duskmoss
 stage: mature
 variant: 0

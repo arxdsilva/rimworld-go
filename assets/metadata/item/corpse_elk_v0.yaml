@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [110, 126]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.557
-  h: 1.132
-  d: 2.247
 ppt: 128
 item: elk corpse
 species: elk

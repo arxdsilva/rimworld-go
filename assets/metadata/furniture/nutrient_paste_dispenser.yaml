@@ -8,11 +8,6 @@ footprint: [3, 4]
 origin_px: [16, 99]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 3.0
-  h: 1.83
-  d: 3.9
 building: nutrient paste dispenser
 attachments:
   worker: [1.5, 4.15]

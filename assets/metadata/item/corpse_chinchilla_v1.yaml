@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, -8]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.087
-  h: 0.439
-  d: 0.528
 ppt: 128
 item: chinchilla corpse
 species: chinchilla

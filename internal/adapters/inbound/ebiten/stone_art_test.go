@@ -134,7 +134,7 @@ func TestSmoothToolSendsOneRect(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	click(t, a, "tab.architect")
-	click(t, a, "arch.cat.orders")
+	click(t, a, "arch.cat.floors")
 	click(t, a, "arch.tool.smooth")
 	tool, _ := toolByID("smooth")
 	if tool.Icon != "order_smooth" || tool.Mode != architect.PlaceArea {

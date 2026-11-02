@@ -12,7 +12,7 @@ import (
 	appscenario "rimworld-go/internal/application/scenario"
 )
 
-// BenchmarkDrawArt is one whole world frame (terrain, shadows, buildings,
+// BenchmarkDrawArt is one whole world frame (terrain, colonist shadows, buildings,
 // plants, items, animals and pawns) of a generated colony with the real
 // art, at a zoom that shows most of the map. It measures the CPU side of
 // the draw: building and queueing draw calls (the GPU is not flushed in

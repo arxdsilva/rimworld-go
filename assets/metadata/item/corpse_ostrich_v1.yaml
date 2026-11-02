@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [98, 80]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.361
-  h: 1.472
-  d: 1.5
 ppt: 128
 item: ostrich corpse
 species: ostrich

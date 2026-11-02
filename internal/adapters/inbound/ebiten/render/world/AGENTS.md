@@ -4,7 +4,7 @@
 The renderer's world pipeline: the draw order of one frame (ground, floors, zones, objects by row, marks and labels), the zoom tiers with the chunk and whole-map bakes, the frame's chunk lists, the terrain, plant, item and building art keys, the stack counts, chat bubbles and damage marks. `Pipeline` (the order) composes the layer packages (`sprite`, `light`, `env`, `creature`, `overlay`, `cue`) through its parts `Bakes`, `Objects` and `Labels`. It reads one `*render.View` per frame and asks the renderer only through `Source`. ARCH-004 wave 4.4 (agent R9).
 
 ## Owned Concepts
-- `Pipeline` (9 methods): the draw order, copied line for line from the root.
+- `Pipeline` (10 methods): the draw order, copied line for line from the root; `ShadowFeet` lists the colonists on unroofed tiles in view whose shadows `light.Shadows` draws (STK-SH: nothing else casts a shadow).
 - `Bakes` (11 methods): zoom tiers, chunk and whole-map bakes, the frame's chunk lists.
 - `Objects` (9), `Labels` (9), `LOD` (3): the tier selection.
 - `base` (33 methods) shared by the parts; `Shared` points at the renderer's camera and blood; `base.Cast` is the bake marker (`WithBake`), `lod`, `links` and `stoneArt`.

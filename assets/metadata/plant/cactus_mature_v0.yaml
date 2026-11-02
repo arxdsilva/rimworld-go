@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [26, 53]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.587
-  h: 0.79
-  d: 0.206
 species: cactus
 stage: mature
 variant: 0

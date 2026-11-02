@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [128, 70]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 2.912
-  h: 1.187
-  d: 1.285
 ppt: 124
 item: caribou corpse
 species: caribou

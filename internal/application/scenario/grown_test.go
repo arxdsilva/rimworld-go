@@ -194,6 +194,10 @@ func TestGrownGolden(t *testing.T) {
 	// stockpiles allow every storable kind, so their filters gain the seven
 	// new food kinds' bits; with both hidden the previous pin comes back
 	// exactly. Stable over -count=2.
+	// Re-pinned (STK): stacks of 1000 per tile (chunks one), 3x1
+	// production benches worked from the middle (the workshop's tailoring
+	// bench moved), and vanilla auto-forbid outside Home; TestScaleGolden
+	// held. Stable over -count=2.
 	// Re-pinned (RSCH-1): wiki research costs, tech levels and speed
 	// (0.00825 x research speed x bench x difficulty), bench sizes 3x2 and
 	// 5x2 with tier gating, and the Multi-analyzer; the scale runs have no
@@ -210,7 +214,7 @@ func TestGrownGolden(t *testing.T) {
 	// butchering by body size, per-species animal products, taming food and
 	// auto-slaughter; the previous pin held through FOOD-0 (the committed
 	// full suite). Stable over -count=2.
-	const want uint64 = 0x51487b30909d4220
+	const want uint64 = 0x753367ca3d4f612e
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

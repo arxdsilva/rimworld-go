@@ -207,7 +207,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012: creature shadows removed by user decision on 2026-10-31, so creatures cast none while buildings, plants, items and rock keep theirs; MAPGEN-2: fog of war over unexplored tiles, black on the minimap; PLAY-022: animals drawn at their body's area and picked by any tile of it, walking with planted feet)
+-   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012 / STK-SH: by user decision (2026-11-01) only colonists standing on unroofed tiles cast a shadow, a soft sun- or moon-directed blob under the feet; buildings, rock, plants, items, roofs, bridges, animals, prisoners, visitors and raiders cast none; MAPGEN-2: fog of war over unexplored tiles, black on the minimap; PLAY-022: animals drawn at their body's area and picked by any tile of it, walking with planted feet)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner; PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too; SIM-062: rescue, capture, arrest and prioritize tending on the clicked pawn from the right-click menu)
+-   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; forbid on items, doors and beds (UI-016, CBT-5, STK-AL); PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too; SIM-062: rescue, capture, arrest and prioritize tending on the clicked pawn from the right-click menu)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -394,7 +394,7 @@ the player's primary world-editing command surface.
 -   [x] **Architect button/tab** (opens on last category)
     -   Opens build/designation categories.
     -   Remembers last category optionally.
--   [x] **Category navigation** (Orders, Zones, Structure, Furniture — only categories with content; PLAY-018: two category columns at the lower-left, a description box above them)
+-   [x] **Category navigation** (PLAY-018: two category columns at the lower-left, a description box above them; STK-AG: all twelve vanilla categories in vanilla order — Orders, Zones, Structure, Production, Furniture, Power, Security, Misc, Floors, Recreation, Ship, Temperature — always shown, six rows of two; tools moved to their vanilla category, `.cursor/ARCHITECT_GAP_ANALYSIS.md`)
     -   Orders.
     -   Zone/Area.
     -   Structure.
@@ -403,8 +403,9 @@ the player's primary world-editing command surface.
     -   Power.
     -   Security.
     -   Miscellaneous/endgame.
-    -   Categories appear only when content exists/unlocked.
--   [-] **Build option cards/buttons** (wave E U5: shelf under Furniture; icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice; wave D U4: 24 new ToolDefs, production benches, furniture and security entries plus the powered door under Structure, with BuildSprite cases)
+    -   Floors, Recreation, Ship, Temperature (STK-AG).
+    -   Categories appear only when content exists/unlocked. (STK-AG: replaced by the vanilla rule, every category always shown; a missing item is a greyed placeholder.)
+-   [-] **Build option cards/buttons** (wave E U5: shelf under Furniture; icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice; wave D U4: 24 new ToolDefs, production benches, furniture and security entries plus the powered door under Structure, with BuildSprite cases; STK-AG: every core vanilla Architect item has a card — 118 of 191 rows work (hydroponics basin and sun lamp cards added), the other 73 are 66 greyed placeholder cards with "Not in this game yet" and an original sentence, never placeable; material choice is still missing for grouped families such as carpet colours and flagstones)
     -   Icon.
     -   name.
     -   material requirement.
@@ -441,7 +442,7 @@ the player's primary world-editing command surface.
 -   [x] **Hunt**
 -   [x] **Deconstruct**
 -   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
--   [x] **Forbid/unforbid** (Orders › Forbid/Allow area tools, the item panel button and F on the selection, UI-016)
+-   [x] **Forbid/unforbid** (Orders › Forbid/Allow area tools, the item panel button and F on the selection, UI-016; STK-AL: F on a selected door or bed, the forbidden marker on buildings, Mark for hauling allows a forbidden stack)
 -   [x] **Haul things** (PLAY-017: Orders › Haul things marks items found on the map for hauling; item panel and group buttons, "Found here" line, a haul mark on the map; Cancel unmarks)
 -   [ ] **Remove floor**
 -   [x] **Remove roof** (SIM-018)
@@ -462,7 +463,7 @@ the player's primary world-editing command surface.
 
 ## 6.1 Zone tool
 
--   [x] **Create stockpile** (Architect paint, tile by tile: skips tiles another zone owns; the drag ghost marks each tile green or red (ZONE-001); PLAY-023: the cursor names a refused cell's reason, a refused drag hints the most common one; Dumping stockpile tool)
+-   [x] **Create stockpile** (Architect paint, tile by tile: skips tiles another zone owns; the drag ghost marks each tile green or red (ZONE-001); PLAY-023: the cursor names a refused cell's reason, a refused drag hints the most common one; Dumping stockpile tool with its own icon and a corpses-and-chunks tooltip, STK-ST)
 -   [x] **Create growing zone** (crop picker incl. tree zones (ZONE-001); PLAY-023: soil-only placement with per-cell reasons)
 -   [x] **Expand zone** (painting next to a zone of the same kind, and for grow zones the same crop, extends it; a drag bridging two merges them; PLAY-020: a selected zone's Expand tool adds a dragged rectangle to that zone)
 -   [x] **Shrink/delete zone** (the Cancel tool clears just its tiles; a zone cut in two becomes two zones; PLAY-020: a selected zone's Shrink tool removes only its own tiles, and Delete removes it)
@@ -514,7 +515,7 @@ the player's primary world-editing command surface.
 
 ## 6.5 Allowed areas
 
--   [x] **Area manager** (SIM-046; PLAY-015 UI-025: create, rename, invert, delete with confirm, colour swatches; opened from Architect, Schedule, Animals, Assign)
+-   [x] **Area manager** (SIM-046; PLAY-015 UI-025: create, rename, invert, delete with confirm, colour swatches; opened from Architect, Schedule, Animals, Assign; STK-AL: capped at 8 areas, wiki)
     -   Create.
     -   rename.
     -   delete.
@@ -842,7 +843,7 @@ understandable.
 
 -   [x] **Power/operational state** (PLAY-021: the building pane says Uses/Produces N W, the grid balance and stored energy, a switch Closed/Open, a thermostat target and whether it works now, flick pending; the Power toggle (V))
 -   [-] **Interaction status** (work spot outlined on selection)
--   [x] **Door forbid** (CBT-5: the door pane Forbid/Allow toggle, `bldg.forbid`)
+-   [x] **Door forbid** (CBT-5: the door pane Forbid/Allow toggle, `bldg.forbid`; STK-AL: F key, Allow label, marker and pane line)
 -   [x] **Door, turret and mortar controls** (DEF-3 U4: `inspector/cmds_defence.go`: door Hold open, turret Hold fire, mortar Set target and Clear target; barrel, shells and target lines; mortar aim mode in `orders/mortar_aim.go`: next map click sends SetMortarTarget with the single selected colonist, right-click or Esc cancels, aim marker drawn)
 -   [x] **Facility link and work speed** (PRD-3: the bench pane lists linked facilities (`BuildingView.Linked`) and the work speed with its causes (`WorkSpeed`), set from bench factor, tool cabinets, light, roof and cleanliness)
 -   [x] **Current worker/progress** (PRD-1: [name progress%], gathering, or the no-worker reason)

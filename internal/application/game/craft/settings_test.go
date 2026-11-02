@@ -142,7 +142,8 @@ func finishClub(t *testing.T, st recipe.StoreMode, zone uint64) []storeCall {
 
 func TestBillStoreModes(t *testing.T) {
 	t.Parallel()
-	if s := finishClub(t, recipe.BestStockpile, 0); len(s) != 1 || s[0] != (storeCall{pawn, item.Club, 4, 5, 0}) {
+	// STK-BN: the product is set down on the 3x1 bench's middle-front spot
+	if s := finishClub(t, recipe.BestStockpile, 0); len(s) != 1 || s[0] != (storeCall{pawn, item.Club, 5, 5, 0}) {
 		t.Fatalf("best stockpile: %+v", s)
 	}
 	if s := finishClub(t, recipe.DropOnFloor, 0); len(s) != 0 {
@@ -431,14 +432,14 @@ func TestIngredientSearchEdges(t *testing.T) {
 	t.Parallel()
 	// the read model sees a club's wood across stacks, and none when the
 	// stacks are forbidden, reserved by another or out of the radius
-	f, c := clubBench(t, recipe.Bill{})
-	f.put(50, item.Stack{Kind: item.Wood, Qty: 2, X: 5, Y: 6})
-	f.put(51, item.Stack{Kind: item.Wood, Qty: 2, X: 6, Y: 6, Forbidden: true})
-	f.put(52, item.Stack{Kind: item.Wood, Qty: 1, X: 6, Y: 7})
+	f, c := clubBench(t, recipe.Bill{}) // its work spot is 5,5
+	f.put(50, item.Stack{Kind: item.Wood, Qty: 2, X: 6, Y: 6})
+	f.put(51, item.Stack{Kind: item.Wood, Qty: 2, X: 7, Y: 6, Forbidden: true})
+	f.put(52, item.Stack{Kind: item.Wood, Qty: 1, X: 7, Y: 7})
 	if _, st := c.Bills.Line(1, 0); st != BillNoInput {
 		t.Fatalf("3 usable wood of 4: %q", st)
 	}
-	f.stacks[51] = item.Stack{Kind: item.Wood, Qty: 2, X: 6, Y: 6}
+	f.stacks[51] = item.Stack{Kind: item.Wood, Qty: 2, X: 7, Y: 6}
 	if _, st := c.Bills.Line(1, 0); st != BillActive {
 		t.Fatalf("5 wood in three stacks: %q", st)
 	}

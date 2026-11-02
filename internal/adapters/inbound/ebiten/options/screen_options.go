@@ -190,7 +190,7 @@ func graphicsRows() []OptionRow {
 			"Shows fps, 1 % low, frame, update and draw time, sim rate and memory in a small box by the resources. Costs nothing measurable."),
 		detail(choiceRow("effects", "Effects", "How many weather, smoke and spark particles draw. Reduced and Minimal cost less CPU and GPU time.",
 			func(s *config.Settings) *string { return &s.Graphics.Effects }, config.EffectLevels)),
-		detail(flag("shadows", "Shadows", "Soft cast shadows under everything; costs GPU time.",
+		detail(flag("shadows", "Shadows", "Soft shadows under colonists standing outdoors.",
 			func(s *config.Settings) *bool { return &s.Graphics.Shadows })),
 		detail(flag("lighting", "Lighting", "Sun, moon and lamp light shaded by each sprite's relief. Off keeps a plain day and night tint; the relief costs GPU time and memory.",
 			func(s *config.Settings) *bool { return &s.Graphics.Lighting })),

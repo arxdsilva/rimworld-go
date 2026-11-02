@@ -311,32 +311,6 @@ func TestCropIsCropPlant(t *testing.T) {
 	}
 }
 
-// PLAY-016: a dying plant's shadow shrinks with its units and is gone when
-// they are.
-func TestDamageShadowFactor(t *testing.T) {
-	t.Parallel()
-	corn := game.PlantView{Species: "corn", Stage: 2}
-	if DamageShadowFactor(corn) != 1 {
-		t.Fatal("healthy: full shadow")
-	}
-	prev := 1.0
-	for _, d := range []int{30, 60, 80, 90, 99} {
-		corn.Damage = d
-		f := DamageShadowFactor(corn)
-		if f > prev || f < 0 {
-			t.Fatalf("damage %d: factor %v after %v", d, f, prev)
-		}
-		prev = f
-	}
-	corn.Damage = 100
-	if DamageShadowFactor(corn) != 0 {
-		t.Fatal("dead: no shadow")
-	}
-	if f := DamageShadowFactor(game.PlantView{Species: "tree", Damage: 85}); f <= 0 || f >= 1 {
-		t.Fatalf("a dying tree's shadow: %v", f)
-	}
-}
-
 // TestCropFitKeepsUnitInTile: CropFit keeps a unit inside its tile, leaves
 // one that fits where it is, moves one that does not before shrinking it,
 // and shrinks it only until its top meets the north edge.

@@ -50,10 +50,6 @@ type Meta struct {
 	TintGroup string
 	TintMask  string
 	Attach    map[string][2]float64
-	// Shadow is how the sprite casts a moving shadow (ART §6.1): kind
-	// "blob", "box" or "none" (or empty: none), and its footprint width W,
-	// height above ground H and depth D, in tiles.
-	Shadow artShadow
 	// LightRadius is a light's reach in tiles (metadata "light_radius",
 	// PLAY-020 §3b); 0 when the sprite gives none.
 	LightRadius float64
@@ -71,12 +67,6 @@ func (m Meta) PxPerTile() float64 {
 		return m.PPT
 	}
 	return TilePx
-}
-
-// artShadow is a sprite's shadow caster (metadata "shadow:").
-type artShadow struct {
-	Kind    string
-	W, H, D float64
 }
 
 // ParseMeta reads the flat YAML subset written by artlib/meta.py:
@@ -126,20 +116,6 @@ func ParseMeta(src string) (Meta, error) {
 			m.TintGroup = val
 		case nested && parent == "tint" && key == "mask":
 			m.TintMask = val
-		case nested && parent == "shadow" && key == "kind":
-			m.Shadow.Kind = val
-		case nested && parent == "shadow" && (key == "w" || key == "h" || key == "d"):
-			var f float64
-			if f, err = strconv.ParseFloat(val, 64); err == nil {
-				switch key {
-				case "w":
-					m.Shadow.W = f
-				case "h":
-					m.Shadow.H = f
-				default:
-					m.Shadow.D = f
-				}
-			}
 		case nested && parent == "attachments":
 			var p [2]float64
 			p, err = parsePair(val)

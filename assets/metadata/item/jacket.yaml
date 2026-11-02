@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 25]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.64
-  h: 0.14
-  d: 0.589
 tint:
   group: cloth
   mask: generated/world/item/jacket_mask.png

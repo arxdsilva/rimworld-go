@@ -71,10 +71,10 @@ func t1Hours(j *journey, h int, each func()) {
 	}
 }
 
-// t1Place arms an Architect tool from the Misc category and clicks a tile.
+// t1Place arms an Architect tool from the Temperature category and clicks a tile.
 func t1Place(j *journey, tool string, x, y int) {
 	j.t.Helper()
-	j.openArch("misc", tool)
+	j.openArch("temperature", tool)
 	j.lookAt(x, y)
 	j.update(1)
 	j.settle()

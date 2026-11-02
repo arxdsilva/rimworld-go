@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [19, 28]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 0.754
-  h: 0.299
-  d: 0.58
 species: wheat
 growth: wilted
 variant: 2

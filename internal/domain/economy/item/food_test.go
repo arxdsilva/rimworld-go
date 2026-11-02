@@ -3,7 +3,7 @@ package item
 import "testing"
 
 // TestFoodCatalogue (FOOD-0 contract): the food kinds parse by name, are
-// valued, stack to the raw-food 75 and land in their categories; the
+// valued, stack to StackLimit (STK-ST) and land in their categories; the
 // raw foods are raw and edible, hay is feed (edible, not raw, eaten
 // last), hops are a material; both new meats are meat (the meat side of
 // recipes), and strawberries skip the raw-food thought like berries.
@@ -17,7 +17,7 @@ func TestFoodCatalogue(t *testing.T) {
 			t.Errorf("%s has no expected category here", k)
 			continue
 		}
-		if got, ok := ParseKind(k.String()); !ok || got != k || k.Value() <= 0 || k.Category() != want || k.StackLimit() != 75 {
+		if got, ok := ParseKind(k.String()); !ok || got != k || k.Value() <= 0 || k.Category() != want || k.StackLimit() != StackLimit {
 			t.Errorf("%s: parse %v %v, value %d, category %q want %q, stack %d", k, got, ok, k.Value(), k.Category(), want,
 				k.StackLimit())
 		}

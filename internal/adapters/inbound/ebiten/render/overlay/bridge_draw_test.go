@@ -80,38 +80,6 @@ func TestBridgeLabelAt(t *testing.T) {
 	}
 }
 
-func TestBridgeShadowSides(t *testing.T) {
-	// Shadow lies on the open sides only; mask bits N,E,S,W = 1,2,4,8.
-	if got := BridgeShadowSides(0); len(got) != 0 {
-		t.Errorf("mask 0 shadows %v", got)
-	}
-	if got := BridgeShadowSides(15); len(got) != 4 {
-		t.Errorf("mask 15 shadows %v", got)
-	}
-	if got := BridgeShadowSides(1 | 4); len(got) != 2 || got[0] != 0 || got[1] != 2 {
-		t.Errorf("mask 5 shadows %v", got)
-	}
-}
-
-func TestBridgeShadowRects(t *testing.T) {
-	t.Parallel()
-	got := BridgeShadowRects(100, 50, 40, 1|8) // N and W open
-	want := [][4]float32{{100, 46, 40, 4}, {96, 50, 4, 40}}
-	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
-		t.Errorf("rects = %v, want %v", got, want)
-	}
-	all := BridgeShadowRects(0, 0, 40, 15)
-	if len(all) != 4 || all[1] != ([4]float32{40, 0, 4, 40}) || all[2] != ([4]float32{0, 40, 40, 4}) {
-		t.Errorf("all = %v", all)
-	}
-	if got := BridgeShadowRects(0, 0, 5, 1); got[0][3] != 1 {
-		t.Errorf("thin strips are at least 1 px: %v", got)
-	}
-	if len(BridgeShadowRects(0, 0, 40, 0)) != 0 {
-		t.Error("a closed bridge casts no shadow")
-	}
-}
-
 func bridgeWorld(w, h int, fill terrain.Type, bridges ...[2]int) game.WorldView {
 	wv := game.WorldView{TerrainW: w, Terrain: make([]uint8, w*h), StructVer: 1}
 	for i := range wv.Terrain {

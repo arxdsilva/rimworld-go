@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [46, 90]
 projection:
   shear_k: 0.35
-shadow:
-  kind: none
-  w: 0.408
-  h: 1.32
-  d: 0.32
 species: tree
 kind: oak
 variant: 0

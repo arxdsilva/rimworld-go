@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [72, 122]
 projection:
   shear_k: 0.35
-shadow:
-  kind: blob
-  w: 1.967
-  h: 2.083
-  d: 1.695
 ppt: 128
 item: hive brute corpse
 species: hive_brute

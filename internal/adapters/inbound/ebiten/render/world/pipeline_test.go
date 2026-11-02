@@ -73,9 +73,6 @@ func (h *fakeHosts) DrawTile(screen *ebiten.Image, key string, wx, wy, tile floa
 func (h *fakeHosts) DrawSpritePose(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps motion.Pose) {
 	h.p.DrawSpritePose(screen, key, tint, wx, wy, tile, ps)
 }
-func (h *fakeHosts) Objects(game.WorldView, []game.PawnView) []light.Caster { return nil }
-func (h *fakeHosts) VisibleTiles() (x0, y0, x1, y1 int)                     { return h.p.visibleTiles() }
-func (h *fakeHosts) White() *ebiten.Image                                   { return h.p.LOD.WhiteImg() }
 
 // figures is the creature layer's host: plain figures, no blood, no cues.
 type figures struct{}
@@ -157,7 +154,7 @@ func newRig(t *testing.T, w game.WorldView, mw, mh int, keys ...string) *rig {
 		Trace: &render.Trace{Layer: func(name string) { r.layers = append(r.layers, name) }}}
 	h := &fakeHosts{}
 	r.p = New(Layers{Lit: lit, Env: e, Creatures: cr, Overlays: ov, Cues: cue.New(), Shadows: &light.Shadows{}, Motion: &motion.State[creature.Body]{}},
-		Hosts{Index: h, Stamp: h, Casters: h},
+		Hosts{Index: h, Stamp: h},
 		Shared{Cam: cam, Blood: &blood},
 		r.v, src)
 	h.p = r.p

@@ -8,11 +8,6 @@ footprint: [1, 1]
 origin_px: [16, 64]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1
-  h: 0.93
-  d: 1
 tint:
   group: stone_tint
   mask: generated/world/rock/ore_gold_12_c4_mask.png

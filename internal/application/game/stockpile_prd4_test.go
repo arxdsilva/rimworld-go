@@ -239,26 +239,28 @@ func countAt(g *Game, x, y int) int {
 	return n
 }
 
-// TestWaveEStackLimit: a hauler carries no more of a wave E kind than a
-// tile holds, and merging stops at the kind's limit.
+// TestWaveEStackLimit (STK-ST): merging stops at the kind's limit, now
+// 1000 for a meal (the wiki's 10 is gone), and the rest spills to a
+// neighbouring tile.
 func TestWaveEStackLimit(t *testing.T) {
 	t.Parallel()
 	g := storedYard(t)
-	spawn(t, g, item.FineMeal, 8, 16, 1)
-	id, err := g.SpawnStack(item.FineMeal, 6, 16, 1)
+	spawn(t, g, item.FineMeal, 995, 16, 1)
+	id, err := g.SpawnStack(item.FineMeal, 8, 16, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	st, _ := g.stacks.Get(id)
 	g.mergeOrSet(id, st)
-	total, most := 0, 0
+	total, most, stacks := 0, 0, 0
 	for _, it := range g.World().Items {
 		if it.Kind == "fine meal" {
 			total += it.Qty
 			most = max(most, it.Qty)
+			stacks++
 		}
 	}
-	if total != 14 || most != item.FineMeal.StackLimit() {
-		t.Fatalf("fine meals: %d in all, biggest stack %d", total, most)
+	if total != 1003 || most != item.StackLimit || stacks != 2 || item.FineMeal.StackLimit() != item.StackLimit {
+		t.Fatalf("fine meals: %d in all in %d stacks, biggest stack %d", total, stacks, most)
 	}
 }

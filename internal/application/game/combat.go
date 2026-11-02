@@ -124,7 +124,6 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	g.spawnCorpse(id)
 	g.dropRaiderGear(id)           // the weapon falls beside the body
 	g.combat.Gear.Died(id, killer) // combat/gear.go (CBT-3): a death of wounds is the last attacker's kill
-	g.forbidRaidBody(id)           // forbid.go: a raider's body starts forbidden
 	g.socialOnDeath(id, killer)    // social_grief.go: relations, grief, killer opinion
 	g.bondsOnDeath(id)             // bonds.go: bonded animals lose their master
 	g.mourn(id)

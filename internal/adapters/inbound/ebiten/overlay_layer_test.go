@@ -42,12 +42,6 @@ func (r *Renderer) zoneLabelPlanFor(z game.ZoneView, g *overlaypkg.ZoneGeom, til
 	return r.overlays().Zones.ZoneLabelPlanFor(v, z, g, tile)
 }
 
-func (r *Renderer) drawEaves(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	r.pipe().Env.SetView(r.liveView(), sw, sh, tile)
-	v := r.liveView()
-	r.overlays().DrawEaves(v, screen, w, sw, sh, tile)
-}
-
 func (r *Renderer) drawHomeOverlay(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	r.pipe().Env.SetView(r.liveView(), sw, sh, tile)
 	v := r.liveView()

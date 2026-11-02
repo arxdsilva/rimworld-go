@@ -86,6 +86,6 @@ def _ship_part():
 def build(only=None):
     """The ship part sprite (defense/ship_part)."""
     fp, zmax = _ship_part()
-    out = [S.render_asset(FAMILY, "ship_part", footprint=fp, zmax=zmax, shadow_kind="box",
+    out = [S.render_asset(FAMILY, "ship_part", footprint=fp, zmax=zmax,
                           extra={"building": "ship part", "rotatable": False, "facing": "south"})]
     return out

@@ -43,7 +43,7 @@ type Source interface {
 
 // Layers are the draw layers the pipeline composes, all built and owned
 // by the renderer: the light, the environment, the creatures, the
-// overlays, the sound cues, the shadow pass and the creature motion.
+// overlays, the sound cues, the colonist shadows and the creature motion.
 type Layers struct {
 	Lit       *light.Lit
 	Env       *env.Layer
@@ -55,13 +55,12 @@ type Layers struct {
 }
 
 // Hosts are the layers' own host interfaces the renderer implements and
-// the pipeline passes on (render/env deps.go, light.Casters): stored once,
+// the pipeline passes on (render/env deps.go): stored once,
 // so passing them allocates nothing.
 type Hosts struct {
-	Index   env.Chunks
-	Stamp   env.Stamp
-	Movers  env.Movers
-	Casters light.Casters
+	Index  env.Chunks
+	Stamp  env.Stamp
+	Movers env.Movers
 }
 
 // Shared is the renderer state the pipeline works on and the renderer

@@ -118,7 +118,7 @@ def build():
                    extra={"building": "sentry turret", "gun_layer": "defense/sentry_turret_gun",
                           "frames": GUN_FRAMES})
     for i in range(GUN_FRAMES):
-        out += P.render("sentry_turret_gun_%02d" % i, _gun(i), family=FAMILY, shadow_kind="none",
+        out += P.render("sentry_turret_gun_%02d" % i, _gun(i), family=FAMILY,
                         extra={"layer": "gun", "of": "defense/sentry_turret_base", "frame": i,
                                "frames": GUN_FRAMES, "step_deg": GUN_STEP})
     return out

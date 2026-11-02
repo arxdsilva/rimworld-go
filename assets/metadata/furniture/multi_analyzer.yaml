@@ -8,11 +8,6 @@ footprint: [2, 2]
 origin_px: [16, 76]
 projection:
   shear_k: 0.35
-shadow:
-  kind: box
-  w: 1.88
-  h: 1.325
-  d: 1.88
 building: multi-analyzer
 rotatable: false
 facing: south
