@@ -4,9 +4,12 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/farm"
+	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
 )
@@ -202,5 +205,29 @@ func TestLeaflessPlantsStopGrowing(t *testing.T) {
 	g.clock.Advance(2 * climateInterval)
 	if q := grow(); q.Leafless(uint64(g.clock.Now())) || q.Growth <= p.Growth {
 		t.Fatalf("leaves back, warm noon: %+v", q)
+	}
+}
+
+// WG-05: a rainforest catches disease more often than a forest, an ice sheet
+// less, and a difficulty with no disease stays at none.
+func TestNatureOddsFollowTheBiome(t *testing.T) {
+	odds := func(b biome.ID) int {
+		g := New(Config{Width: 10, Height: 10})
+		g.biome = b
+		return natureOdds(g).Disease
+	}
+	forest := odds(biome.TemperateForest)
+	if rain, ice := odds(biome.TropicalRainforest), odds(biome.IceSheet); rain <= forest || ice >= forest {
+		t.Fatalf("disease odds: forest %d, rainforest %d, ice sheet %d", forest, rain, ice)
+	}
+}
+
+// MAP-06: the cap is clamped to what Options offers.
+func TestColonyCapIsClamped(t *testing.T) {
+	g := New(Config{Width: 10, Height: 10})
+	g.Enqueue(command.Command{Kind: command.SetColonyCap, Count: 99})
+	g.Step(1)
+	if n := g.worldS().maxColonies; n != maps.ColonyCapLimit {
+		t.Fatalf("cap %d, want %d", n, maps.ColonyCapLimit)
 	}
 }

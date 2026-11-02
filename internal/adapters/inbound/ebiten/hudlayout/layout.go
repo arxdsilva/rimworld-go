@@ -40,6 +40,13 @@ const (
 	BarSlotH = 64
 	BarGap   = 4
 
+	// MaxBarGroups caps the colonist bar's map groups (MAP-1): the most
+	// open maps. Inputs keeps them in an array so it stays comparable.
+	MaxBarGroups = 8
+	barGroupPad  = 3  // a group frame's inset around its slots, at scale 1
+	barChipH     = 14 // a group's label chip above its slots
+	barGroupGap  = 8  // between two group frames
+
 	ResourcesW   = 168
 	ResourceRowH = 20
 	ResourcesMin = 40 // less room than this hides the list
@@ -65,7 +72,11 @@ var barScales = []struct {
 // of each region fill their fields (hud.go a.hud()); none of them may call
 // a.hud() while doing so.
 type Inputs struct {
-	Colonists int  // colonist bar entries
+	Colonists int // colonist bar entries
+	// BarGroups are the slots of each map's colonists in bar order, zero
+	// after the last group. All zero (a single map) draws the bar as one
+	// plain run of cards, with no frames; otherwise Colonists is their sum.
+	BarGroups [MaxBarGroups]int
 	PaneShown bool // the inspect pane is up (a selection, or cell info)
 	ArchOpen  bool
 	Commands  int // command buttons to lay out
@@ -80,6 +91,13 @@ type Inputs struct {
 	ArchDescH            float32 // the Architect description box (0: none)
 	WindowW, WindowH     float32 // an open main-tab window's wanted size (0: none)
 	PerfW, PerfH         float32 // the performance box's size (0: off)
+}
+
+// BarGroup is one map's frame on the colonist bar: its label chip on top
+// and the N slots from BarSlots[First] inside.
+type BarGroup struct {
+	Frame, Chip gfx.Rect
+	First, N    int
 }
 
 // Layout is every region of the colony HUD this frame, in logical
@@ -101,6 +119,9 @@ type Layout struct {
 	BarSlots []gfx.Rect // one per shown colonist (the last may be "+N")
 	BarScale float32
 	BarMore  int // colonists not shown (the last slot reads "+N")
+	// BarGroups are the map frames of a bar with several maps (empty with
+	// one); the groups' slots are consecutive runs of BarSlots.
+	BarGroups []BarGroup
 
 	Resources gfx.Rect
 	Messages  gfx.Rect
@@ -178,8 +199,13 @@ func Compute(sw, sh int, st Inputs) Layout {
 	// right column
 	if st.Colonists > 0 {
 		capW := W - 2*(HudMargin+RightW+HudMargin)
-		l.BarScale, l.BarSlots, l.BarMore = layoutBar(W, capW, st.Colonists)
-		l.Bar = BoundsOf(l.BarSlots)
+		if st.BarGroups[0] > 0 {
+			l.BarScale, l.BarSlots, l.BarMore, l.BarGroups = layoutBarGroups(W, capW, st.BarGroups)
+			l.Bar = BoundsOf(frames(l.BarGroups))
+		} else {
+			l.BarScale, l.BarSlots, l.BarMore = layoutBar(W, capW, st.Colonists)
+			l.Bar = BoundsOf(l.BarSlots)
+		}
 	}
 	barBottom := float32(HudMargin)
 	if !l.Bar.Empty() {
@@ -311,6 +337,87 @@ func layoutBar(W, capW float32, n int) (float32, []gfx.Rect, int) {
 		return s.scale, slots, more
 	}
 	return 1, nil, 0
+}
+
+func frames(gs []BarGroup) []gfx.Rect {
+	out := make([]gfx.Rect, len(gs))
+	for i, g := range gs {
+		out[i] = g.Frame
+	}
+	return out
+}
+
+// layoutBarGroups lays the bar out as one framed block per map (MAP-1),
+// left to right, centred: the biggest scale step whose allowed rows hold
+// every group, else the smallest step with the last slot reading "+N".
+func layoutBarGroups(W, capW float32, sizes [MaxBarGroups]int) (float32, []gfx.Rect, int, []BarGroup) {
+	var ns []int
+	total := 0
+	for _, n := range sizes {
+		if n <= 0 {
+			break
+		}
+		ns = append(ns, n)
+		total += n
+	}
+	for i, s := range barScales {
+		if slots, groups, ok := fitGroups(W, capW, s.scale, s.rows, ns); ok {
+			return s.scale, slots, 0, groups
+		} else if i == len(barScales)-1 {
+			for keep := total - 1; keep >= 1; keep-- {
+				if slots, groups, ok = fitGroups(W, capW, s.scale, s.rows, truncate(ns, keep)); ok {
+					return s.scale, slots, total - keep + 1, groups
+				}
+			}
+			return s.scale, slots, total, groups
+		}
+	}
+	return 1, nil, 0, nil
+}
+
+// truncate is ns cut to keep slots in all.
+func truncate(ns []int, keep int) []int {
+	var out []int
+	for _, n := range ns {
+		if keep <= 0 {
+			break
+		}
+		out = append(out, min(n, keep))
+		keep -= n
+	}
+	return out
+}
+
+// fitGroups places the groups at one scale step with rows rows each; ok
+// when they fit capW.
+func fitGroups(W, capW, scale float32, rows int, ns []int) ([]gfx.Rect, []BarGroup, bool) {
+	pitch := (BarSlotW + BarGap) * scale
+	pad, gap := barGroupPad*scale, barGroupGap*scale
+	chip := barChipH * scale
+	widths := make([]float32, len(ns))
+	var sum float32
+	for i, n := range ns {
+		cols := (n + rows - 1) / rows
+		widths[i] = float32(cols)*pitch - BarGap*scale + 2*pad
+		sum += widths[i]
+	}
+	sum += float32(len(ns)-1) * gap
+	x := float32(math.Floor(float64((W - sum) / 2)))
+	var slots []gfx.Rect
+	groups := make([]BarGroup, len(ns))
+	for i, n := range ns {
+		cols := (n + rows - 1) / rows
+		g := BarGroup{First: len(slots), N: n}
+		g.Frame = gfx.Rect{X: x, Y: HudMargin, W: widths[i], H: chip + pad + float32(min(rows, (n+cols-1)/cols))*(BarSlotH+BarGap)*scale - BarGap*scale + pad}
+		g.Chip = gfx.Rect{X: g.Frame.X, Y: g.Frame.Y, W: g.Frame.W, H: chip}
+		for j := range n {
+			r, c := j/cols, j%cols
+			slots = append(slots, gfx.Rect{X: x + pad + float32(c)*pitch, Y: HudMargin + chip + pad + float32(r)*(BarSlotH+BarGap)*scale, W: BarSlotW * scale, H: BarSlotH * scale})
+		}
+		groups[i] = g
+		x += widths[i] + gap
+	}
+	return slots, groups, sum <= capW
 }
 
 // BoundsOf is the smallest gfx.Rect around rs (zero for none).

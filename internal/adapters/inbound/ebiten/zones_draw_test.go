@@ -125,7 +125,7 @@ func TestZoneLabelOncePerZone(t *testing.T) {
 	if overlay.ZoneLabelText(z) != "Potato" || overlay.ZoneLabelText(game.ZoneView{Kind: game.ZonePen}) != "Pen" {
 		t.Fatal("label text")
 	}
-	g := (&Renderer{}).overlays().Zones.ZoneGeomOf(z)
+	g := bareRenderer().overlays().Zones.ZoneGeomOf(z)
 	if len(g.Cells) != 6 {
 		t.Fatalf("geom cells = %d", len(g.Cells))
 	}

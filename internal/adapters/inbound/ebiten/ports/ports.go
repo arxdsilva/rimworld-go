@@ -171,6 +171,30 @@ type ReinstallCrate struct{ ID entity.EntityID }
 type LoadPods struct{ Pod entity.EntityID }
 type LaunchPods struct{ Pod entity.EntityID }
 
+// Spot is a place on one of the open maps (MAP-0): a tile and the creature
+// to follow there (0: none). Map CurrentMap means the map on screen.
+type Spot struct {
+	Map   game.MapID
+	X, Y  int
+	Focus entity.EntityID
+}
+
+// CurrentMap is Spot.Map for "the map on screen".
+const CurrentMap = game.MapID(1<<32 - 1)
+
+// JumpTo shows Spot: switch to its map, select Focus there if it is still
+// on it, and centre the camera (messages, letters, alerts, the colonist bar).
+type JumpTo struct{ Spot Spot }
+
+// SwitchMap shows map Map, keeping each map's own camera.
+type SwitchMap struct{ Map game.MapID }
+
+// OpenWorld shows the full-screen world view with world object Select
+// selected ("" for none; "caravan:<id>", "map:<id>", "settlement:<tile>",
+// "site:<id>", "pod:<id>", "tile:<n>"); CloseWorld returns to the map.
+type OpenWorld struct{ Select string }
+type CloseWorld struct{}
+
 func (OpenArchitect) isIntent()   {}
 func (CloseArchitect) isIntent()  {}
 func (PresetBuildTool) isIntent() {}
@@ -186,6 +210,10 @@ func (CenterOnPawn) isIntent()    {}
 func (ReinstallCrate) isIntent()  {}
 func (LoadPods) isIntent()        {}
 func (LaunchPods) isIntent()      {}
+func (JumpTo) isIntent()          {}
+func (SwitchMap) isIntent()       {}
+func (OpenWorld) isIntent()       {}
+func (CloseWorld) isIntent()      {}
 
 // Screen is a full-screen route of the client (presentation only; it never
 // exists in the domain). The root's screenID is this type.

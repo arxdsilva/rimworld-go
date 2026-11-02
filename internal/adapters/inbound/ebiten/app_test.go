@@ -69,6 +69,10 @@ func (s *stubSim) Prisoner(id entity.EntityID) (game.PrisonerView, bool) {
 	return v, ok
 }
 func (s *stubSim) WorldMap() game.WorldMapView      { return s.worldMap }
+func (s *stubSim) Maps() []game.MapView             { return []game.MapView{{Label: "Colony", Kind: "colony"}} }
+func (s *stubSim) ViewMap(game.MapID)               {}
+func (s *stubSim) ViewedMap() game.MapID            { return 0 }
+func (s *stubSim) Colonists() []game.PawnView       { return s.pawns }
 func (s *stubSim) Areas() []game.AreaView           { return s.areas }
 func (s *stubSim) History() []game.HistoryEntryView { return s.history }
 

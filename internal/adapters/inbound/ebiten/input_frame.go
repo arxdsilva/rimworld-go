@@ -57,7 +57,7 @@ func (a *App) colonyLive() bool {
 // toolActive reports a tool owns the pointer: Move mode, an Architect
 // tool, or a formation drag.
 func (a *App) toolActive() bool {
-	return a.arch.Mover.State().On || (a.arch.Open && a.arch.ToolID != "") || a.ord.Form.On || a.ord.Aim.On
+	return a.arch.Mover.State().On || (a.arch.Open && a.arch.ToolID != "") || a.ord.Form.On || a.ord.Aim.On || a.world.Spotting()
 }
 
 // modalOpen reports a menu sits over the map.
@@ -86,7 +86,9 @@ func (a *App) contextStack() []input.Context {
 		if a.win.Open {
 			s = append(s, input.CtxPanel)
 		}
-		s = append(s, input.CtxMap)
+		if !a.world.Open() { // the world view: the map's keys are dead
+			s = append(s, input.CtxMap)
+		}
 	}
 	s = append(s, input.CtxGlobal)
 	if a.tools.Mode() {

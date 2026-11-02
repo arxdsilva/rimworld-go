@@ -115,7 +115,8 @@ never imports a feature.
   outside its exemption list (each entry has a reason) and
   `TestMapPixelsComeFromMapCursor` checks every `TileAt`/`screenToWorld`
   caller, in the sub-packages too.
-- Settings are presentation-only and never reach the simulation; `-capture`
+- Settings are presentation-only and never reach the simulation, except Max
+  colonies, sent as `command.SetColonyCap` (a rule the player sets); `-capture`
   runs get no `SettingsHooks` and no `Sound`, so captures are deterministic.
 - Commitment colonies: one save slot written by the game itself; pause shows
   Save & Quit, Load and developer mode are disabled (`options`).

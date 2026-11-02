@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
@@ -60,6 +61,7 @@ type Env struct {
 	Art      *art.Catalog     // nil while the art is missing
 	Sel      *selection.Model // what is selected (zones, buildings)
 	Keys     input.Bindings   // the live key bindings
+	Units    units.Temp       // how temperatures read (Options, WG-16)
 	Window   string           // the open main-tab window ("work", "schedule", …)
 	WinOpen  bool             // a main-tab window is open
 	UIHidden bool             // F11 hid the interface

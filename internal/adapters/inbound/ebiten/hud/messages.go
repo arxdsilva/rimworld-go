@@ -6,8 +6,10 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"strconv"
 	"strings"
 
@@ -17,13 +19,8 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// FmtTemp renders tenths of a degree C as whole degrees ("-3C").
-func FmtTemp(tenths int) string {
-	if tenths < 0 {
-		return fmt.Sprintf("%dC", (tenths-5)/10)
-	}
-	return fmt.Sprintf("%dC", (tenths+5)/10)
-}
+// FmtTemp renders tenths of a degree C as whole degrees of unit u ("-3C").
+func FmtTemp(u units.Temp, tenths int) string { return u.Compact(tenths) }
 
 // tileTemp is the air temperature on a tile: enclosed rooms hold the
 // indoor temperature, everything else is outdoors.
@@ -199,22 +196,28 @@ func (c Right) messageButtonsIn(l hudlayout.Layout) []uikit.Button {
 }
 
 // focusEntity selects creature id (an animal or a colonist) and centres
-// the camera on it. False when nothing has that id.
-func (c Right) focusEntity(id entity.EntityID) bool {
+// the camera on it. A creature on another map than the one on screen goes
+// through Jump, which switches maps first (x, y is where the news was). False
+// when nothing has that id.
+func (c Right) focusEntity(id entity.EntityID, mp game.MapID, x, y int) bool {
 	if !c.live() || id == 0 {
 		return false
+	}
+	if g := c.sh.Env().Game; g != nil && mp != g.ViewedMap() && mp != ports.CurrentMap {
+		c.sh.Jump(ports.Spot{Map: mp, X: x, Y: y, Focus: id})
+		return true
 	}
 	for _, an := range c.sh.World().Animals {
 		if an.ID == id {
 			c.sh.Pick(selection.Cand{Kind: selection.Animal, ID: an.ID})
-			c.sh.CenterOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
+			c.sh.Jump(ports.Spot{Map: ports.CurrentMap, X: an.X, Y: an.Y})
 			return true
 		}
 	}
 	for _, p := range c.sh.Pawns() {
 		if p.ID == id {
 			c.sh.Select(p.ID)
-			c.sh.CenterOnMap(float64(p.X)+0.5, float64(p.Y)+0.5)
+			c.sh.Jump(ports.Spot{Map: ports.CurrentMap, X: p.X, Y: p.Y})
 			return true
 		}
 	}
@@ -230,11 +233,11 @@ func (c Right) FocusMessage(id string) {
 		return
 	}
 	m := live[i]
-	if c.focusEntity(m.Focus) {
+	if c.focusEntity(m.Focus, m.Map, m.X, m.Y) {
 		return
 	}
 	if m.X != 0 || m.Y != 0 {
-		c.sh.CenterOnMap(float64(m.X)+0.5, float64(m.Y)+0.5)
+		c.sh.Jump(ports.Spot{Map: m.Map, X: m.X, Y: m.Y})
 	}
 }
 

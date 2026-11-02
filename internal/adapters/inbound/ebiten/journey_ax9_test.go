@@ -18,7 +18,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
-	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/research"
@@ -241,21 +240,23 @@ func TestJourneyAX9PodsLaunch(t *testing.T) {
 	pod := wdBuilding(j, px, py)
 	ax9LoadOne(t, j, pod, px, py, uint64(pawn.ID))
 	wdSelect(j, px, py)
-	if !j.clickID(inspector.LaunchPodsBtnID) || j.a.uiModalTop() != windows.WorldModalID {
-		t.Fatalf("Launch opened %q, want the World tab", j.a.uiModalTop())
+	if !j.clickID(inspector.LaunchPodsBtnID) || !j.a.world.Open() {
+		t.Fatalf("Launch did not open the world view (top %q)", j.a.uiModalTop())
 	}
+	const podDrop, podVisit = "world.pod.drop", "world.pod.visit"
 	home := j.g.WorldMap().Tile
-	target, mode := home, windows.LaunchDropID
+	homeRow := "world.pod.target." + strconv.Itoa(home)
+	j.until(func() bool { _, ok := j.a.uiSt().Find(homeRow); return ok }, 200) // the planet is charted, the list up
+	target, mode := home, podDrop
 	for _, s := range j.g.WorldSites() {
-		if s.Visitable {
-			if j.clickID("world.launch.target." + strconv.Itoa(s.Tile)) {
-				target, mode = s.Tile, windows.LaunchVisitID
-				break
-			}
+		if s.Visitable && hasWidget(j.a, "world.pod.target."+strconv.Itoa(s.Tile)) {
+			j.clickID("world.pod.target." + strconv.Itoa(s.Tile))
+			target, mode = s.Tile, podVisit
+			break
 		}
 	}
 	if target == home {
-		j.until(func() bool { return j.clickID("world.launch.target." + strconv.Itoa(home)) }, 200)
+		j.clickID(homeRow)
 	}
 	if !j.clickID(mode) {
 		t.Fatalf("the %s button is disabled on target %d", mode, target)
@@ -271,10 +272,10 @@ func TestJourneyAX9PodsLaunch(t *testing.T) {
 	j.key("Digit3", 0)
 	j.until(func() bool { return len(j.world().AX.Pods) == 0 }, 8000)
 	j.key("Space", 0)
-	if mode == windows.LaunchVisitID && len(j.g.WorldMap().Caravans) != 1 {
+	if mode == podVisit && len(j.g.WorldMap().Caravans) != 1 {
 		t.Fatalf("the visitors are no caravan: %+v", j.g.WorldMap().Caravans)
 	}
-	if mode == windows.LaunchDropID && !slices.ContainsFunc(j.g.Snapshot(), func(p game.PawnView) bool { return p.ID == pawn.ID }) {
+	if mode == podDrop && !slices.ContainsFunc(j.g.Snapshot(), func(p game.PawnView) bool { return p.ID == pawn.ID }) {
 		t.Fatal("the dropped colonist is not back on the map")
 	}
 }
@@ -300,7 +301,8 @@ func TestJourneyAX9CaravanPacks(t *testing.T) {
 		j.key("Space", 0)
 	}
 	j.key("F8", 0)
-	if !j.clickID("modal." + windows.WorldModalID + ".world.form") {
+	j.update(2) // the colony is selected on opening: its gizmos are up
+	if !j.clickID("world.act.form") {
 		t.Fatal("Form caravan is disabled")
 	}
 	j.update(1)

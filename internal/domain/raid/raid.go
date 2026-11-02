@@ -39,10 +39,11 @@ const (
 	StageThenAssault                 // gather near the edge, then attack together
 	Steal                            // grab valuables and leave
 	Burn                             // set the colony alight
+	Defend                           // hold a faction's own settlement (MAP-05)
 	NumStrategies
 )
 
-var strategyNames = [NumStrategies]string{"assault", "siege", "sappers", "staged assault", "steal", "burn"}
+var strategyNames = [NumStrategies]string{"assault", "siege", "sappers", "staged assault", "steal", "burn", "defend"}
 
 func (s Strategy) String() string {
 	if s >= NumStrategies {

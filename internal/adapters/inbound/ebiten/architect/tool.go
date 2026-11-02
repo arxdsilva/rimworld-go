@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/floors"
 	"rimworld-go/internal/domain/sim/command"
@@ -267,17 +268,12 @@ func sewHint(item string) string {
 	return ""
 }
 
-// fmtTemp renders tenths of a degree C as whole degrees ("-3C"), as the
-// temperature readouts do (climate_ui.go).
-func fmtTemp(tenths int) string {
-	if tenths < 0 {
-		return fmt.Sprintf("%dC", (tenths-5)/10)
-	}
-	return fmt.Sprintf("%dC", (tenths+5)/10)
-}
+// FmtTempIn renders tenths of a degree C as whole degrees of unit u
+// ("-3C"), as the temperature readouts do (climate_ui.go, WG-16).
+func FmtTempIn(u units.Temp, tenths int) string { return u.Compact(tenths) }
 
 // CropLines is the crop picker's stat lines for c (crops and the tree).
-func CropLines(c game.CropView) []string {
+func CropLines(c game.CropView, u units.Temp) []string {
 	if c.Name == "tree" {
 		return []string{
 			fmt.Sprintf("Tree: %.1f days, %d wood per tree", c.Days, c.Yield),
@@ -293,7 +289,7 @@ func CropLines(c game.CropView) []string {
 	if c.ShelfDays > 0 {
 		keeps = fmt.Sprintf("keeps %.0f days", c.ShelfDays)
 	}
-	out := []string{first, second, fmt.Sprintf("frost kills below %s, %s", fmtTemp(c.FrostKill), keeps)}
+	out := []string{first, second, fmt.Sprintf("frost kills below %s, %s", FmtTempIn(u, c.FrostKill), keeps)}
 	if c.ExtraQty > 0 {
 		out = append(out, fmt.Sprintf("also +%d %s per harvest", c.ExtraQty, c.Extra))
 	}

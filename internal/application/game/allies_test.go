@@ -2,6 +2,7 @@ package game
 
 import (
 	"reflect"
+	"rimworld-go/internal/application/game/visit"
 	"testing"
 
 	"rimworld-go/internal/application/game/combat"
@@ -40,16 +41,16 @@ func aidHere(t *testing.T, g *Game, f *faction.Faction) []entity.EntityID {
 	t.Helper()
 	g.Enqueue(command.Command{Kind: command.CommsRequestAid, Index: f.ID})
 	g.ApplyPending()
-	c := g.aidOf(f.ID)
+	c := aidOf(g).Of(f.ID)
 	if c == nil {
 		t.Fatal("no aid call")
 	}
 	c.At = uint64(g.clock.Now()) + 1
 	for i := 0; i < 5 && !c.Here; i++ {
 		g.Step(1)
-		c = g.aidOf(f.ID)
+		c = aidOf(g).Of(f.ID)
 	}
-	ids := g.allyIDs(f.ID)
+	ids := aidOf(g).AllyIDs(f.ID)
 	if c == nil || !c.Here || len(ids) == 0 {
 		t.Fatalf("aid did not arrive: %+v", c)
 	}
@@ -108,7 +109,7 @@ func TestRequestAidSpendsGoodwillAndCooldown(t *testing.T) {
 		t.Fatalf("goodwill %d, aid %+v", f.Goodwill, g.trade.aid)
 	}
 	c := g.trade.aid[0]
-	if c.Faction != f.ID || c.Here || c.At < now+allyDelayMinH*clock.TicksPerHour || c.At > now+allyDelayMaxH*clock.TicksPerHour {
+	if c.Faction != f.ID || c.Here || c.At < now+visit.DelayMinH*clock.TicksPerHour || c.At > now+visit.DelayMaxH*clock.TicksPerHour {
 		t.Fatalf("aid call %+v (now %d)", c, now)
 	}
 	if cd := g.cooldownOf(f.ID); cd.AidUntil != now+faction.AidCooldownDays*clock.TicksPerDay {
@@ -122,11 +123,11 @@ func TestRequestAidSpendsGoodwillAndCooldown(t *testing.T) {
 		t.Fatalf("again: %v %q", ok, why)
 	}
 	g.setCooldown(f.ID, faction.Cooldowns{})
-	if ok, why := g.aidRequestOK(*f, now); ok || why != ReasonAidComing {
+	if ok, why := g.aidRequestOK(*f, now); ok || why != visit.ReasonAidComing {
 		t.Fatalf("while on the way: %v %q", ok, why)
 	}
 	g.trade.aid[0].Here = true
-	if ok, why := g.aidRequestOK(*f, now); ok || why != ReasonAlliesHere {
+	if ok, why := g.aidRequestOK(*f, now); ok || why != visit.ReasonAlliesHere {
 		t.Fatalf("while here: %v %q", ok, why)
 	}
 	g.trade.aid = nil
@@ -145,12 +146,12 @@ func TestAidArrivesAfterDelay(t *testing.T) {
 	// the wait itself is long: skip most of it, then watch the last ticks
 	g.clock.Advance(int(at - uint64(g.clock.Now()) - 3))
 	g.Step(2)
-	if len(g.allyIDs(f.ID)) != 0 || g.trade.aid[0].Here {
+	if len(aidOf(g).AllyIDs(f.ID)) != 0 || g.trade.aid[0].Here {
 		t.Fatal("aid arrived early")
 	}
 	g.Step(2)
-	ids := g.allyIDs(f.ID)
-	if n := len(ids); n < allyMin || n > allyMax {
+	ids := aidOf(g).AllyIDs(f.ID)
+	if n := len(ids); n < visit.AllyMin || n > visit.AllyMax {
 		t.Fatalf("%d allies came", n)
 	}
 	if !hasLetter(g, "have come to help defend the colony") {
@@ -290,9 +291,9 @@ func TestTurretsIgnoreAllies(t *testing.T) {
 		}
 	}
 	f.Relation, f.Goodwill = faction.Friendly, 60
-	g.addAid(aidCall{Faction: f.ID, At: uint64(g.clock.Now())})
+	aidOf(g).Add(aidCall{Faction: f.ID, At: uint64(g.clock.Now())})
 	g.aidTick(uint64(g.clock.Now()))
-	ids := g.allyIDs(f.ID)
+	ids := aidOf(g).AllyIDs(f.ID)
 	if len(ids) == 0 {
 		t.Fatal("no allies")
 	}
@@ -335,7 +336,7 @@ func TestTurretsIgnoreAllies(t *testing.T) {
 }
 
 // TestAlliesLeaveWhenQuiet: a standing raider keeps the group's calm
-// clock at zero; with none about for allyQuiet the group turns for home
+// clock at zero; with none about for visit.AllyQuiet the group turns for home
 // (a letter), stays turned even when a raider shows up again (no
 // flapping), and walks off the map. The day cap sends them home even
 // with raiders about.
@@ -343,19 +344,19 @@ func TestAlliesLeaveWhenQuiet(t *testing.T) {
 	t.Parallel()
 	g, f := aidGame(t)
 	ids := aidHere(t, g, f)
-	c := g.aidOf(f.ID)
+	c := aidOf(g).Of(f.ID)
 	now := uint64(g.clock.Now())
-	c.Calm = now - allyQuiet + 5
+	c.Calm = now - visit.AllyQuiet + 5
 	g.raidWith([]item.Kind{item.Club}, raid.Assault)
 	rid := g.raiderIDs[len(g.raiderIDs)-1]
 	g.Step(10)
-	if c = g.aidOf(f.ID); c.Leaving || c.Calm != uint64(g.clock.Now())-1 {
+	if c = aidOf(g).Of(f.ID); c.Leaving || c.Calm != uint64(g.clock.Now())-1 {
 		t.Fatalf("with a raider about: %+v (now %d)", c, g.clock.Now())
 	}
 	g.removeRaider(rid)
-	c.Calm = uint64(g.clock.Now()) - allyQuiet + 5
+	c.Calm = uint64(g.clock.Now()) - visit.AllyQuiet + 5
 	g.Step(10)
-	if c = g.aidOf(f.ID); c == nil || !c.Leaving {
+	if c = aidOf(g).Of(f.ID); c == nil || !c.Leaving {
 		t.Fatalf("not leaving after the calm: %+v", c)
 	}
 	if !hasLetter(g, "are heading home") {
@@ -369,19 +370,19 @@ func TestAlliesLeaveWhenQuiet(t *testing.T) {
 	g.raidWith([]item.Kind{item.Club}, raid.Assault)
 	for i := 0; i < 300; i++ {
 		g.Step(1)
-		for _, id := range g.allyIDs(f.ID) {
+		for _, id := range aidOf(g).AllyIDs(f.ID) {
 			if j, _ := g.jobs.Get(id); j.Kind == job.Attack {
 				t.Fatalf("leaving ally %d turned back to fight", id)
 			}
 		}
 	}
-	for i := 0; i < 40 && len(g.allyIDs(f.ID)) > 0; i++ {
+	for i := 0; i < 40 && len(aidOf(g).AllyIDs(f.ID)) > 0; i++ {
 		g.Step(250)
 	}
-	if left := g.allyIDs(f.ID); len(left) > 0 {
+	if left := aidOf(g).AllyIDs(f.ID); len(left) > 0 {
 		t.Fatalf("allies %v never left", left)
 	}
-	if g.aidOf(f.ID) != nil {
+	if aidOf(g).Of(f.ID) != nil {
 		t.Fatal("the aid call outlived its fighters")
 	}
 	for _, id := range ids {
@@ -393,10 +394,10 @@ func TestAlliesLeaveWhenQuiet(t *testing.T) {
 	g2, f2 := aidGame(t)
 	aidHere(t, g2, f2)
 	g2.raidWith([]item.Kind{item.Club}, raid.Assault)
-	c2 := g2.aidOf(f2.ID)
+	c2 := aidOf(g2).Of(f2.ID)
 	c2.LeaveAt = uint64(g2.clock.Now()) + 2
 	g2.Step(4)
-	if c2 = g2.aidOf(f2.ID); !c2.Leaving {
+	if c2 = aidOf(g2).Of(f2.ID); !c2.Leaving {
 		t.Fatalf("the day cap did not send them home: %+v", c2)
 	}
 }
@@ -432,7 +433,7 @@ func TestAidSurvivesSave(t *testing.T) {
 	}
 	g.trade.aid[0].At = uint64(g.clock.Now()) + 1
 	g.Step(3)
-	ids := g.allyIDs(f.ID)
+	ids := aidOf(g).AllyIDs(f.ID)
 	if len(ids) == 0 {
 		t.Fatal("no allies")
 	}
@@ -444,7 +445,7 @@ func TestAidSurvivesSave(t *testing.T) {
 	if h.StateHash() != before {
 		t.Fatal("the hash moved over a round trip")
 	}
-	if got := h.allyIDs(f.ID); !reflect.DeepEqual(got, ids) {
+	if got := aidOf(h).AllyIDs(f.ID); !reflect.DeepEqual(got, ids) {
 		t.Fatalf("allies after load %v, want %v", got, ids)
 	}
 	if !reflect.DeepEqual(h.trade.aid, g.trade.aid) || !reflect.DeepEqual(h.worldSt.visitors, g.worldSt.visitors) {
@@ -476,7 +477,7 @@ func TestAidSameSeed(t *testing.T) {
 			t.Fatalf("hashes diverged after %d ticks", (i+1)*400)
 		}
 	}
-	if !reflect.DeepEqual(a.trade.aid, b.trade.aid) || !reflect.DeepEqual(a.allyIDs(fa), b.allyIDs(fb)) {
+	if !reflect.DeepEqual(a.trade.aid, b.trade.aid) || !reflect.DeepEqual(aidOf(a).AllyIDs(fa), aidOf(b).AllyIDs(fb)) {
 		t.Fatal("aid state diverged")
 	}
 }

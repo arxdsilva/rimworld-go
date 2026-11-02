@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 )
 
@@ -66,7 +67,7 @@ func TestBarMoodTokens(t *testing.T) {
 func TestFmtDegrees(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[int]string{0: "0 °C", 94: "9 °C", 95: "10 °C", 215: "22 °C", -4: "0 °C", -5: "-1 °C", -94: "-9 °C", -95: "-10 °C"} {
-		if got := FmtDegrees(in); got != want {
+		if got := FmtDegrees(units.Celsius, in); got != want {
 			t.Errorf("FmtDegrees(%d) = %q, want %q", in, got, want)
 		}
 	}

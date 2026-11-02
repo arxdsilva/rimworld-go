@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"strings"
 
 	"rimworld-go/internal/application/game"
@@ -176,7 +177,7 @@ func (c Global) Plan() GlobalPlan {
 		return GlobalPlan{}
 	}
 	w := c.sh.World()
-	p := GlobalPlan{Reason: c.sh.PauseReason(), Weather: w.Weather != "", Chips: StatusChips(w)}
+	p := GlobalPlan{Reason: c.sh.PauseReason(), Weather: w.Weather != "", Chips: chipsIn(w, c.sh.Env().Units)}
 	if chip, ok := SkyChip(w.SkyEvent, w.SkyEventEnds, uint64(c.sh.Tick())); ok { // FOOD-6: eclipse, toxic fallout
 		p.Chips = append(p.Chips, chip)
 	}
@@ -414,17 +415,12 @@ func (c Global) dateTip(w game.WorldView) string {
 	if len(lines) == 0 {
 		return "Date\n" + c.sh.Date().String()
 	}
-	return SeasonText(w) + "\n" + strings.Join(lines[1:], "\n")
+	return SeasonText(w, c.sh.Env().Units) + "\n" + strings.Join(lines[1:], "\n")
 }
 
-// FmtDegrees is a temperature in tenths of a degree C as "18 °C",
-// rounding half away from zero like FmtTemp.
-func FmtDegrees(tenths int) string {
-	if tenths < 0 {
-		return fmt.Sprintf("%d °C", (tenths-5)/10)
-	}
-	return fmt.Sprintf("%d °C", (tenths+5)/10)
-}
+// FmtDegrees is a temperature in tenths of a degree C as "18 °C" in unit
+// u, rounding half away from zero like FmtTemp.
+func FmtDegrees(u units.Temp, tenths int) string { return u.Tenths(tenths) }
 
 // TemperatureLine is "Indoors 18 °C" or "Outdoors 9 °C" for the cell under
 // the cursor; over the HUD (or off the map) it is the outdoor temperature.
@@ -439,7 +435,7 @@ func (c Global) TemperatureLine() string {
 	if indoors {
 		where = "Indoors"
 	}
-	return where + " " + FmtDegrees(t)
+	return where + " " + FmtDegrees(c.sh.Env().Units, t)
 }
 
 // ---------------------------------------------------------------- Drawing

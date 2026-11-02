@@ -614,7 +614,7 @@ func (a *App) captureUI(ui string) {
 	case "search", "rooms", "multiselect", "drawstyle", "hideui":
 		a.captureInput(ui, at)
 	case "factions-colony", "bio", "work-incapable", "arrival", "options-story", "letter-intro",
-		"arch-hospital", "arch-cabinet", "arch-locked", "chips":
+		"arch-hospital", "arch-cabinet", "arch-locked", "chips", "world":
 		a.captureColonyUI(ui) // capture_colony.go
 	case "architect":
 		a.arch.OpenPanel()
@@ -696,7 +696,7 @@ func (a *App) captureUI(ui string) {
 			a.renderer.game.Step(10)
 			a.renderer.syncPawns()
 		}
-	case "social", "health", "prisoner", "history", "world", "assign":
+	case "social", "health", "prisoner", "history", "assign":
 		a.captureSocialUI(ui) // capture_social.go: the -scenario social tabs and windows
 	case "pawn":
 		if snap := a.renderer.snapshot(); len(snap) > 0 {

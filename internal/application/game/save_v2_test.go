@@ -186,7 +186,7 @@ func TestSaveInfoFields(t *testing.T) {
 
 func TestSupportedSaveVersions(t *testing.T) {
 	t.Parallel()
-	for v, ok := range map[int]bool{0: false, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true, 10: true, 11: true, 12: false} { // v5: PLAY-021, v6: MED-02, v7: FOOD-1, v8: TEMP-*, v9: RSCH-1, v10: STK-BN, v11: AX-0
+	for v, ok := range map[int]bool{0: false, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true, 10: true, 11: true, 12: true, 13: false} { // v5: PLAY-021, v6: MED-02, v7: FOOD-1, v8: TEMP-*, v9: RSCH-1, v10: STK-BN, v11: AX-0, v12: MAP-0
 		if SupportedSaveVersion(v) != ok {
 			t.Errorf("version %d supported = %v", v, !ok)
 		}

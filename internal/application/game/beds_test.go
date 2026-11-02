@@ -183,7 +183,7 @@ func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
 			t.Fatalf("lovin' mood %d %v", v, found)
 		}
 	}
-	if s := g.gatherSt(); s.lovinAt[a] <= socNow(g) {
+	if s := g.gatherSt(); s.LovinAt[a] <= socNow(g) {
 		t.Fatal("no lovin' cooldown")
 	}
 	g.rest.Lovin.Check(lo, socNow(g)) // cooldown: no second time at once

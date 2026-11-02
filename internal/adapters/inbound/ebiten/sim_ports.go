@@ -25,6 +25,13 @@ type SimCommander interface {
 	Enqueue(command.Command)
 }
 
+// SimControl is the stepper and the command sink together (the union's
+// slot for both).
+type SimControl interface {
+	SimStepper
+	SimCommander
+}
+
 // SimFrame is the colony's clock and map size.
 type SimFrame interface {
 	Tick() clock.Tick
@@ -93,6 +100,16 @@ type SimTabs interface {
 	WorldMap() game.WorldMapView
 	Areas() []game.AreaView
 	History() []game.HistoryEntryView
+}
+
+// SimMaps is the open maps (MAP-0): the switcher's rows, which one the
+// other readers report (ViewMap is a presentation choice, never a command)
+// and every colonist on every map for the colonist bar.
+type SimMaps interface {
+	Maps() []game.MapView
+	ViewMap(id game.MapID)
+	ViewedMap() game.MapID
+	Colonists() []game.PawnView
 }
 
 // SimChunks is the renderer's read models (NG-1 E5): a chunk's share of

@@ -577,12 +577,23 @@ func saveHooks() uiadapter.SaveHooks {
 			}
 			return out, err
 		},
-		SaveView: func(slot string, v camerapkg.View) error {
-			return store.SaveView(slot, filesave.ViewFile{CX: v.CX, CY: v.CY, Zoom: v.Zoom})
+		SaveView: func(slot string, views map[game.MapID]camerapkg.View) error {
+			files := make(map[game.MapID]filesave.ViewFile, len(views))
+			for id, v := range views {
+				files[id] = filesave.ViewFile{CX: v.CX, CY: v.CY, Zoom: v.Zoom}
+			}
+			return store.SaveView(slot, filesave.ViewsOf(files))
 		},
-		LoadView: func(path string) (camerapkg.View, bool) {
+		LoadView: func(path string) (map[game.MapID]camerapkg.View, bool) {
 			f, ok := store.LoadView(path)
-			return camerapkg.View{CX: f.CX, CY: f.CY, Zoom: f.Zoom}, ok
+			if !ok {
+				return nil, false
+			}
+			views := map[game.MapID]camerapkg.View{}
+			for id, v := range f.PerMap() {
+				views[id] = camerapkg.View{CX: v.CX, CY: v.CY, Zoom: v.Zoom}
+			}
+			return views, true
 		},
 		Load: func(path string) (uiadapter.Simulation, string, error) {
 			g, info, err := store.Load(path)

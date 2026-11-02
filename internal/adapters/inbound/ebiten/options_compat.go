@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -112,8 +113,8 @@ func (s optionsSaver) Save(slot string) error {
 	if err := s.a.saveHook()(s.a.renderer.game, slot); err != nil {
 		return err
 	}
-	if h := s.a.cfg.Saves.SaveView; h != nil { // VIEW-001: the camera rides beside the save
-		v := s.a.renderer.cam.View(s.a.mapViewport())
+	if h := s.a.cfg.Saves.SaveView; h != nil { // VIEW-001: every map's camera rides beside the save
+		v := s.a.renderer.scenes.views(s.a.mapViewport())
 		if err := h(slot, v); err != nil {
 			log.Printf("save camera view: %v", err)
 		}
@@ -134,7 +135,7 @@ func (s optionsSaver) Load(path string) (string, clock.Tick, error) {
 	s.a.startSession(sim)
 	if h := s.a.cfg.Saves.LoadView; h != nil && s.a.renderer != nil {
 		if v, ok := h(path); ok {
-			s.a.renderer.cam.Resume(v)
+			s.a.renderer.scenes.resumeViews(v)
 		}
 	}
 	return slot, sim.Tick(), nil
@@ -277,10 +278,10 @@ type SaveHooks struct {
 	// SaveCommit saves a commitment-mode colony to its one slot (NG-1 §2.13);
 	// nil falls back to Save.
 	SaveCommit func(sim Simulation, slot string) error
-	// SaveView and LoadView keep the camera beside a save (VIEW-001); nil
-	// leaves the camera to centre as before.
-	SaveView func(slot string, v camerapkg.View) error
-	LoadView func(path string) (camerapkg.View, bool)
+	// SaveView and LoadView keep each map's camera beside a save
+	// (VIEW-001, MAP-1); nil leaves the cameras to centre as before.
+	SaveView func(slot string, v map[game.MapID]camerapkg.View) error
+	LoadView func(path string) (map[game.MapID]camerapkg.View, bool)
 }
 
 // commitment reports a commitment colony is running (read through the
@@ -355,8 +356,12 @@ func (a *App) loadSettings() {
 
 // setSettings applies a change everywhere and stores it.
 func (a *App) setSettings(s config.Settings) {
+	before := a.settings.Gameplay.Colonies()
 	a.settings = s.Normalize()
 	a.applySettings()
+	if n := a.settings.Gameplay.Colonies(); n != before && a.renderer != nil {
+		a.renderer.enqueue(command.Command{Kind: command.SetColonyCap, Count: n}) // MAP-06: the one setting the rules read
+	}
 	if hint := options.SaveSettings(a.cfg.Settings, a.settings); hint != "" {
 		a.hint = hint
 	}
@@ -392,6 +397,7 @@ func (a *App) syncRenderer() {
 	r.reducedFlashing = s.Accessibility.ReducedFlashing
 	r.reducedMotion = s.Accessibility.ReducedMotion
 	r.smooth.Instant = s.Accessibility.ReducedMotion // no eased pan or zoom
+	r.overlays().TempDraw.Units = units.FromUnit(s.Gameplay.TempUnit)
 	if !s.Gameplay.DevMode && r.speed == speedUltra {
 		r.speed = speedVeryFast // ultrafast is a developer tier
 	}

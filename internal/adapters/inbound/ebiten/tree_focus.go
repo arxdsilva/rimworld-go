@@ -38,17 +38,17 @@ func (a *App) syncTreeFocus() {
 	if hovered {
 		hover[0], hover[1] = r.TileAt(a.mapCursor()) // the map is physical
 	}
-	a.treeSel = a.treeSel[:0]
+	a.tree.sel = a.tree.sel[:0]
 	if r.hasSelect {
 		for _, p := range r.game.Snapshot() {
 			if p.ID == r.selected {
-				a.treeSel = append(a.treeSel, [2]int{p.X, p.Y})
+				a.tree.sel = append(a.tree.sel, [2]int{p.X, p.Y})
 			}
 		}
 		an := r.world().Animals
 		for i := range an {
 			if an[i].ID == r.selected {
-				a.treeSel = append(a.treeSel, [2]int{an[i].X, an[i].Y})
+				a.tree.sel = append(a.tree.sel, [2]int{an[i].X, an[i].Y})
 			}
 		}
 	}
@@ -56,6 +56,9 @@ func (a *App) syncTreeFocus() {
 	if a.arch.ToolID != "" {
 		_, ghost = a.previewCells()
 	}
-	a.treeFocus = treeFocusCells(a.treeFocus[:0], hover, hovered, a.treeSel, ghost)
-	r.pipe().Env.Trees.SetTreeFocus(a.treeFocus) // render/env tree_fade.go
+	a.tree.focus = treeFocusCells(a.tree.focus[:0], hover, hovered, a.tree.sel, ghost)
+	r.pipe().Env.Trees.SetTreeFocus(a.tree.focus) // render/env tree_fade.go
 }
+
+// treeBufs are syncTreeFocus's reused buffers (App.tree).
+type treeBufs struct{ focus, sel [][2]int }

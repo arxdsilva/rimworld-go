@@ -267,7 +267,7 @@ world state.
 
 Status (NG-1):
 
--   [x] seed; (free text, original two-word phrases; random button)
+-   [x] seed; (free text, original two-word phrases; random button; WG-2: the seeded planet name heads the screen)
 -   [x] world coverage/size; (30, 50 or 100 % of the globe)
 -   [x] temperature; (five stops)
 -   [x] rainfall; (five stops)
@@ -305,9 +305,9 @@ than another.
 
 Status (NG-1):
 
--   [x] selected-tile panel; (terrain, elevation, temperatures, rainfall, growing period, stones, water, caves, roads, forage, wildlife, nearest settlement, movement difficulty, warnings)
--   [x] interactive planet/world map; (rotating hex globe with biome, temperature, rainfall and elevation views, rivers, roads, faction-tinted settlements)
--   [-] inspect tiles / search features; (inspect and hover yes; no feature search, only Random site and the Factions dialog)
+-   [x] selected-tile panel; (terrain, elevation, temperatures, rainfall, growing period, stones, water, caves, roads, forage %, wildlife, nearest settlement, movement difficulty, time zone, disease, travel by season, quadrum temperatures, nearby bases and the 4-tile base warning, warnings; Celsius or Fahrenheit)
+-   [x] interactive planet/world map; (rotating globe with relief, faceted light, snow caps, coast and shore, biome, temperature, rainfall, elevation and hilliness views, a legend, optional grid, rivers by size, roads by class, feature labels, faction-tinted settlements)
+-   [x] inspect tiles / search features; (inspect and hover; a search box over named features and settlements; a filter panel for Random site; the Factions dialog)
 -   [x] choose tile; (invalid tiles give the reason on the disabled Next button)
 -   [x] regenerate/back; (Back keeps the draft, Create World regenerates, Random site)
 -   [x] continue. (Next to Create Characters)
@@ -1487,7 +1487,7 @@ Show path, travel time, terrain cost and invalid route reasons.
     caravan opens §35.
 -   **States:** no caravans: the list says so; the colony tile is always
     marked.
--   [ ] Not wired yet (M9).
+-   [x] Wired: F8 opens the full-screen `worldview/` over the running colony (markers for colonies, sites, encounters, destroyed sites, caravans, pods and settlements; picking; inspector with disabled reasons; route preview and ETA; search, legend, grid). `windows/world*.go` is gone.
 
 ------------------------------------------------------------------------
 
@@ -1580,7 +1580,7 @@ Manage an active world-traveling group.
 -   **Commands:** `command.CaravanReturn` (`Target` = caravan id).
 -   **States:** arrived caravans show "Waiting at destination";
     returning ones show the trip home.
--   [ ] Not wired yet (M9).
+-   [-] Wired: `CaravanView`, `Game.TravelEstimate` and the inspector gizmos Travel, Return, Enter (only when Arrived), Attack (hostile bases), Settle and Reform. Missing: Trade (no caravan trading) and Split, which stays disabled ("Not yet").
 
 ------------------------------------------------------------------------
 
@@ -1609,6 +1609,8 @@ result.
 -   launch;
 -   cancel;
 -   select landing/attack/gift/reinforcement behavior where supported.
+
+-   [x] Loading and launch are wired (AX-9: Load transport pods dialog, launcher fuel, reasons). Targeting: the engine supports Drop, Drop at centre, Pick spot, Attack (edge or centre), Found, gift and visit on any open map (MAP-2); the world view draws the range ring and the anchored landing menu (edge, centre, attack edge or centre, found, gift, visit, pick spot; Visit is refused without a settlement).
 
 ------------------------------------------------------------------------
 
@@ -2194,7 +2196,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; cursor temperature, biome chip, season, weather and climate event chips present; Shift+T temperature overlay, TEMP-5)
 -   [-] selection (click pawn or colonist bar; inspector Character/Needs)
 -   [-] Generic Inspector (name, job, status, reason, food/rest bars; Health/Social/Gear disabled)
--   [-] colonist bar (snapshot slots, click selects, idle portrait, display name; no status icons, no double-click center)
+-   [-] colonist bar (snapshot slots, click selects, idle portrait, display name, status marks, double-click centres; MAP-1: a frame per open map with a threat dot, then caravan groups with a caravan status icon; no custom sort)
 -   [-] contextual commands (Architect + Work + Menu live; others disabled `not implemented`; no selection command bar)
 
 ## Wave UI-2 --- Build a colony

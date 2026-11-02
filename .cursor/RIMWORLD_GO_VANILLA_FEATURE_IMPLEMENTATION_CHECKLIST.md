@@ -1743,12 +1743,12 @@ local colony map. citeturn1search4
         supporting travel.
 -   [x] **Latitude**
 -   [x] **Elevation**
--   [x] **Rainfall** (latitude bands, distance from the sea, rain shadow; arid shrubland is about 40 % of land, a tuning follow-up)
+-   [x] **Rainfall** (latitude bands, distance from the sea, rain shadow; v1 worlds score biomes inside the wiki thresholds so arid shrubland is at most 20 % of land (WG-02); v0 worlds keep the old table)
 -   [x] **Temperature**
 -   [x] **Seasonality** (hemisphere-aware peak day, amplitude by latitude and continentality)
--   [-] **Movement difficulty** (shown on the tile card; informational until world travel exists)
--   [x] **Roads** (settlements joined by roads; they become dirt tracks on the local map)
--   [x] **Rivers** (flow downhill to the sea, lakes in basins; become rivers on the local map)
+-   [x] **Movement difficulty** (WG-1: wiki values in `planet.MoveDifficulty` (biome base, hills, winter, roads x0.5); shown on the tile card with travel by season and used by caravan speed and routing (MAP-09))
+-   [x] **Roads** (settlements joined by roads of five classes (path, dirt, stone, ancient asphalt and highway; WG-07); they become dirt tracks on the local map)
+-   [x] **Rivers** (flow downhill to the sea, lakes in basins; creek, river, large and huge (WG-08); become rivers on the local map)
     -   If part of chosen base-game target.
 
 ## 22.2 Biomes
@@ -1773,7 +1773,7 @@ Each biome defines: - terrain mix; - plant density/species; -
 wildlife; - rainfall; - temperature profile; - disease frequency; -
 forage; - local map appearance.
 
-SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the generated globe from temperature, rain, hills and elevation, and the player picks a world tile. Each defines climate, wetness, ground mix, wild plants, grass density/regrowth and wildlife density; disease frequency is not modelled.
+SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the generated globe from temperature, rain, hills and elevation, and the player picks a world tile. Each defines climate, wetness, ground mix, wild plants, grass density/regrowth and wildlife density. WG-1 adds the wiki forage percentage, disease mean time and movement difficulty per biome; the disease incident weight follows the biome (`biome.DiseaseOdds`).
 
 ## 22.3 Terrain topology
 
@@ -1798,8 +1798,8 @@ SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the
 -   [x] **Settlement placement** (NG-1: Poisson-disc over land, capitals first, density by type and population setting)
 -   [-] **Faction territory distribution** (preferred biomes and clustering near the capital; no territory ownership)
 -   [ ] **Settlement trade inventory**
--   [ ] **Hostile settlement attack map**
--   [ ] **Settlement destruction**
+-   [-] **Hostile settlement attack map** (MAP-2: a generated compound with loot, walls and defenders who hold, engage and flee at 50 % losses; turrets are inert and compound doors are held open)
+-   [x] **Settlement destruction** (MAP-2: defeated once no defender stands; -200 goodwill and hostile on attack, +20 from the faction's enemies, the settlement leaves the planet and the map; no bases left means the faction is gone)
     -   Destroying all settlements can eliminate a faction's world
         presence.
 
@@ -2173,7 +2173,7 @@ relocation. citeturn2search12
 
 ## 28.1 Caravan formation
 
--   [-] **Form caravan dialog** (SIM-046: colonists and destination; AX-9: tame pack animals and goods by amount; no prisoners)
+-   [-] **Form caravan dialog** (SIM-046: colonists and destination; AX-9: tame pack animals and goods by amount; MAP-1: prisoners and animals carry through a reform; no prisoners picked in the dialog)
     -   Select colonists.
     -   animals.
     -   prisoners.
@@ -2191,10 +2191,10 @@ relocation. citeturn2search12
 
 ## 28.2 World movement
 
--   [-] **World pathfinding** (SIM-046: route over the rebuilt planet)
+-   [x] **World pathfinding** (SIM-046: route over the rebuilt planet; MAP-09: cost is `MoveDifficulty` with roads halved)
     -   Route across world tiles.
     -   Terrain/roads affect movement.
--   [-] **Travel speed** (SIM-046: slowest Moving speed; AX-9: the carried-mass factor, a quarter of the empty pace at full load (the wiki's x2 to x0.5); no terrain/weather)
+-   [x] **Travel speed** (MAP-09: 0.06 days per difficulty point, 06:00-22:00 only, mass x2 empty to x0.5 full, mounts 1.3-2.0, roads x0.5; an empty caravan makes about 22 tiles a day; `TravelEstimate`; no weather)
     -   Pawn/animal capacities.
     -   mass.
     -   terrain.
@@ -2202,7 +2202,7 @@ relocation. citeturn2search12
     -   weather/season where appropriate.
 -   [ ] **Foraging**
     -   Caravan can gain food from suitable tiles based on skills/biome.
--   [ ] **Rest**
+-   [x] **Rest** (MAP-09: caravans move only from 06:00 to 22:00)
     -   Caravan pauses/rests according to travel cycle.
 
 ## 28.3 Caravan needs
@@ -2220,11 +2220,11 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 -   [-] **Visit friendly settlement** (SIM-046: one day; no trade or gifts)
     -   Trade.
     -   gifts.
--   [ ] **Attack hostile settlement**
--   [ ] **Enter event/quest map**
--   [ ] **Ambush encounter**
+-   [x] **Attack hostile settlement** (MAP-2: `AttackSettlement` from the caravan inspector, hostile bases only; pods can attack any human base with the same -200 goodwill rule, a known difference)
+-   [x] **Enter event/quest map** (MAP-1: arrival opens a site map; mineral sites; MAP-3: encounter maps; no quests)
+-   [x] **Ambush encounter** (MAP-3: ambush, manhunter ambush and demand with Give and Refuse; the meeting encounter is deferred, no caravan trading)
 -   [x] **Return to colony** (SIM-046)
--   [ ] **Settle new colony**
+-   [x] **Settle new colony** (MAP-3: `SettleHere` from the caravan inspector with Max colonies 1-5, default 1, and `AbandonMap` with a confirm; abandoning the last colony wipes it and keeps an empty map, an open decision as the repo has no game-over flow)
     -   If multiple colonies are supported by target scope.
 
 ## 28.5 Transport pods
@@ -2234,7 +2234,7 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 -   [x] **Load pawns/items** (AX-9: colonists walk in, haulers bring goods and lead tame animals in)
 -   [x] **World-range targeting** (AX-9: any tile in range on the World tab)
 -   [x] **Launch** (AX-9: the pods are spent and fly, ten tiles an hour (original), shown on the globe)
--   [-] **Arrival at map/settlement** (AX-9: the colony's drop spot, a gift (goodwill by market value), a visit, or a caravan on any other tile that mines a mineral site; attacking a settlement and founding a colony need a second map)
+-   [x] **Arrival at map/settlement** (MAP-2: Drop, Drop at centre, Pick spot, Attack edge or centre and Found on any open map, plus gift and visit, chosen from the world view's landing menu)
     -   Trade/attack/reinforce/gift depending target.
 
 ------------------------------------------------------------------------

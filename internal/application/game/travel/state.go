@@ -69,6 +69,7 @@ type Flight struct {
 	From, To       int
 	Depart, Arrive uint64
 	Mode           uint8 // command.PodArrive*
+	X, Y           int   // PodArriveSpot: where on the map
 	Pods           int
 	Load           Hold
 }

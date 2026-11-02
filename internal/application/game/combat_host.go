@@ -330,7 +330,7 @@ func (h combatBreach) BreachRoute(id entity.EntityID, tx, ty int) ([]pathing.Poi
 	pos, _ := g.positions.Get(id)
 	breaks := g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap)
 	if g.sapper(id) {
-		breaks = g.sapperBreaks() // sappers tunnel through rock too
+		breaks = sapperBreaks(g) // sappers tunnel through rock too
 	}
 	return g.searcher().Find(breachMap{g: g, breaks: breaks}, pos.X, pos.Y, tx, ty)
 }

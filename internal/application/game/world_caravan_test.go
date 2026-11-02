@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
@@ -85,7 +86,7 @@ func friendlySettlement(t *testing.T, g *Game, tile int) {
 
 // formCaravan orders ids to dest and steps until all of them are off the
 // map.
-func formCaravan(t *testing.T, g *Game, dest int, ids ...entity.EntityID) *caravanRec {
+func formCaravan(t *testing.T, g *Game, dest int, ids ...entity.EntityID) *maps.Caravan {
 	t.Helper()
 	list := ""
 	for i, id := range ids {
@@ -97,7 +98,7 @@ func formCaravan(t *testing.T, g *Game, dest int, ids ...entity.EntityID) *carav
 	g.Enqueue(command.Command{Kind: command.FormCaravan, Name: list, Count: dest})
 	for i := 0; i < 60; i++ {
 		g.Step(60)
-		if c := g.caravanOf(ids[0]); c != nil && c.C.State != caravan.Forming {
+		if c := fleetOf(g).Of(ids[0]); c != nil && c.C.State != caravan.Forming {
 			return c
 		}
 	}
@@ -150,17 +151,17 @@ func TestCaravanOutAndBackKeepsRelations(t *testing.T) {
 	}
 
 	visited := false
-	for i := 0; i < 80 && g.caravanAt(cid) != nil; i++ {
+	for i := 0; i < 80 && fleetOf(g).At(cid) != nil; i++ {
 		worldForward(g, 2500)
-		if c := g.caravanAt(cid); c != nil && c.C.State == caravan.Visiting {
+		if c := fleetOf(g).At(cid); c != nil && c.C.State == caravan.Visiting {
 			visited = true
 		}
 	}
 	if !visited {
 		t.Fatal("the caravan never visited the settlement")
 	}
-	if g.caravanAt(cid) != nil {
-		t.Fatalf("the caravan never came home: %+v", g.caravanAt(cid).C)
+	if fleetOf(g).At(cid) != nil {
+		t.Fatalf("the caravan never came home: %+v", fleetOf(g).At(cid).C)
 	}
 	for i, id := range []entity.EntityID{a, b} {
 		if !slices.Contains(g.pawnIDs, id) || g.isStashed(id) || !g.onMap(id) || g.personName(id) != names[i] {
@@ -231,7 +232,7 @@ func TestCaravanSaveLoadInTransit(t *testing.T) {
 	c := formCaravan(t, g, nearDest(t, g), a)
 	cid := entity.EntityID(c.C.ID)
 	worldForward(g, 5000)
-	if c := g.caravanAt(cid); c == nil || c.C.State != caravan.Travelling {
+	if c := fleetOf(g).At(cid); c == nil || c.C.State != caravan.Travelling {
 		t.Fatal("setup: the caravan should be on the road")
 	}
 	h, _ := saveLoadInfo(t, g)
@@ -257,13 +258,13 @@ func TestCaravanReturnCommandTurnsBack(t *testing.T) {
 	worldForward(g, 2500*4)
 	g.Enqueue(command.Command{Kind: command.CaravanReturn, Target: uint64(cid)})
 	g.ApplyPending()
-	if c := g.caravanAt(cid); c != nil && c.C.State != caravan.Returning {
+	if c := fleetOf(g).At(cid); c != nil && c.C.State != caravan.Returning {
 		t.Fatalf("state after Return: %v", c.C.State)
 	}
-	for i := 0; i < 40 && g.caravanAt(cid) != nil; i++ {
+	for i := 0; i < 40 && fleetOf(g).At(cid) != nil; i++ {
 		worldForward(g, 2500)
 	}
-	if g.caravanAt(cid) != nil || !slices.Contains(g.pawnIDs, a) {
+	if fleetOf(g).At(cid) != nil || !slices.Contains(g.pawnIDs, a) {
 		t.Fatal("the caravan did not come home")
 	}
 }
@@ -279,7 +280,7 @@ func TestCaravanFormingCancelledByUndraft(t *testing.T) {
 	}
 	g.setDraft(a, false)
 	g.Step(120)
-	if g.caravanOf(a) != nil || g.isStashed(a) || len(g.worldSt.caravans) != 0 {
+	if fleetOf(g).Of(a) != nil || g.isStashed(a) || len(g.worldSt.caravans) != 0 {
 		t.Fatal("an undrafted member should stay home and the caravan be called off")
 	}
 }

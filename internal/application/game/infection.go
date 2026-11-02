@@ -181,7 +181,7 @@ func (g *Game) stepCare(now uint64) {
 	if len(g.med.patients) == 0 {
 		return
 	}
-	for _, id := range slices.Clone(g.med.patients) { // a death touches the index
+	for _, id := range ownPatients(g) { // patients.go: this map's, a copy (a death touches the index)
 		v, ok := g.vital.Get(id)
 		if g.bodies[id] == nil || !ok || v.Status == health.Dead {
 			continue

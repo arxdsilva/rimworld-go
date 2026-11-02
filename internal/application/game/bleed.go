@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"slices"
 
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -46,7 +45,7 @@ func (g *Game) stepBloodLoss() {
 	if len(g.med.patients) == 0 {
 		return
 	}
-	for _, id := range slices.Clone(g.med.patients) { // a death may touch the index
+	for _, id := range ownPatients(g) { // patients.go: this map's, a copy (a death touches the index)
 		b := g.bodies[id]
 		v, ok := g.vital.Get(id)
 		if b == nil || !ok || v.Status == health.Dead {

@@ -83,9 +83,13 @@ type gnawEvent struct {
 // herds and timbergnaws and, at the scheduled tick, rolls a nature event.
 func (g *Game) phaseIncidents() {
 	now := uint64(g.clock.Now())
-	g.trackFlare(now)  // power_events.go: the solar flare's end (PLAY-021); a nil check without power
-	g.climateTick(now) // weather_ng1.go (TEMP-2): the climate event's offset and end
-	g.tradeTick(now)   // trade.go (PLAY-024): requested caravans, the ship, pods, sessions; returns at once without trade
+	g.trackFlare(now) // power_events.go: the solar flare's end (PLAY-021); a nil check without power
+	// MAP-0: the climate offset (ng.climateOff) and trade are the colony's,
+	// on the first map's pass.
+	if primary(g) {
+		g.climateTick(now) // weather_ng1.go (TEMP-2): the climate event's offset and end
+		g.tradeTick(now)   // trade.go (PLAY-024): requested caravans, the ship, pods, sessions; returns at once without trade
+	}
 	if !g.wild {
 		return
 	}
@@ -154,8 +158,17 @@ func (g *Game) pickNature(now uint64) (incident.ID, bool) {
 	return incident.PickOdds(incident.Nature, g.incidents, rn, g.biome, odds, g.rng.IntN(total), ok)
 }
 
-// incidentFits is the map's situational check for event id.
+// incidentFits is the map's situational check for event id. MAP-0: each
+// map rolls its own nature events; the colony's events (gatherings,
+// visitors, traders, colony-wide climate events) fit only on the first map.
 func (g *Game) incidentFits(id incident.ID, now uint64) bool {
+	switch id {
+	case incident.Party, incident.VisitorGroup, incident.WandererJoins, incident.TraderCaravan, incident.OrbitalTrader,
+		incident.HeatWave, incident.ColdSnap, incident.VolcanicWinter:
+		if !primary(g) {
+			return false
+		}
+	}
 	switch id {
 	case incident.HerdCrossing:
 		return g.grid.Width() > crossMinWidth && g.hasWildSpecies(crosser)
@@ -682,7 +695,7 @@ func stepToxic(g *Game, now uint64) {
 	fallout, h, roll := g.incidents.Fallout(now), now/clock.TicksPerHour, g.stream(streamMedical).IntN
 	var ids []entity.EntityID
 	g.need.All(func(id entity.EntityID, _ needs.Pair) {
-		if fallout || body.ToxicBuildup(g.bodies[id]) > 0 {
+		if (fallout || body.ToxicBuildup(g.bodies[id]) > 0) && owns(g, id) { // MAP-0: on its own map's pass, under its own sky
 			ids = append(ids, id)
 		}
 	})

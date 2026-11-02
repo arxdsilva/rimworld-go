@@ -71,7 +71,6 @@ func winCases() []winCase {
 		{"assign", "tab.assign", windowspkg.AssignModalID, []string{"assign.", "modal." + windowspkg.AssignModalID}, func(a *App) { a.win.Assign().Launch() }},
 		{"history", "tab.history", windowspkg.HistoryModalID, []string{"history.", "modal." + windowspkg.HistoryModalID}, func(a *App) { a.win.History().Launch() }},
 		{"factions", "tab.factions", windowspkg.ColFacModalID, []string{"fac.", "colfac.", "modal." + windowspkg.ColFacModalID}, func(a *App) { a.win.Factions().Launch() }},
-		{"world", "tab.world", windowspkg.WorldModalID, []string{"world.", "modal." + windowspkg.WorldModalID}, func(a *App) { a.win.World().Launch() }},
 	}
 }
 

@@ -73,9 +73,9 @@ func (c CellInfo) Lines() []string {
 		return nil
 	}
 	if _, indoors := tileTemp(w, tx, ty); indoors {
-		lines = append(lines, "Temperature "+FmtTemp(e.Game.TemperatureAt(tx, ty))+" (indoors)")
+		lines = append(lines, "Temperature "+FmtTemp(e.Units, e.Game.TemperatureAt(tx, ty))+" (indoors)")
 	} else {
-		lines = append(lines, "Temperature "+FmtTemp(e.Game.TemperatureAt(tx, ty)))
+		lines = append(lines, "Temperature "+FmtTemp(e.Units, e.Game.TemperatureAt(tx, ty)))
 	}
 	for _, lbl := range []string{world.RoomLabelAt(w, tx, ty), HomeLabelAt(w, tx, ty), PlanLabelAt(w, tx, ty), overlay.RoofLabelAt(w, tx, ty), overlay.BridgeLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), env.PlantDamageLabelAt(w, tx, ty), GrassLabelAt(w, tx, ty), world.FenceLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {

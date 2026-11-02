@@ -154,7 +154,7 @@ func (g *Game) threatOK(k raid.Threat) bool {
 	s := g.ng.setup.Difficulty
 	switch k {
 	case raid.ThreatRaid:
-		return s.BigThreats && !g.incidentDisabled("raid") && g.hostileRaider()
+		return s.BigThreats && !g.incidentDisabled("raid") && hostileRaider(g)
 	case raid.ThreatHive:
 		return s.BigThreats && !g.incidentDisabled("hive_swarm")
 	case raid.ThreatPack:
@@ -259,14 +259,21 @@ func (g *Game) raidMessage(ex, ey, n int, plan raid.Plan, f *faction.Faction) {
 
 // setupTick runs every tick for a setup colony (phaseThreats): the
 // arrival, then hourly losses and raid outcomes, the day rollover at
-// midnight and the scenario's scheduled incidents.
+// midnight and the scenario's scheduled incidents. MAP-0: losses and repelled raids are each map's (its pawns, its raid
+// groups); the landing, the day's rollover and the scenario's incidents
+// are the colony's, on the first map's pass.
 func (g *Game) setupTick(now uint64) {
-	g.arrivalTick(now) // arrival.go
+	if primary(g) {
+		g.arrivalTick(now) // arrival.go
+	}
 	if now%clock.TicksPerHour != 0 {
 		return
 	}
 	g.checkLosses(now)
 	g.checkRaidsOver(now) // factions.go
+	if !primary(g) {
+		return
+	}
 	switch now % clock.TicksPerDay {
 	case 0:
 		g.dayRollover(now)

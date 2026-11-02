@@ -200,7 +200,7 @@ func TestStrangerDeclinedLeaves(t *testing.T) {
 	}
 	// accepting an offer whose stranger is gone does nothing but say so
 	g.letters.list = append(g.letters.list, savedLetter{ID: 999, Join: s})
-	g.departVisitor(s)
+	visitBodies{g}.Depart(s)
 	g.acceptLetter(999)
 	if slices.Contains(g.pawnIDs, s) {
 		t.Fatal("a stranger who left cannot join")

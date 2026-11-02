@@ -7,7 +7,7 @@ import (
 
 // MAPGEN-2: a vent hisses once per burst, however many frames draw it.
 func TestSteamHissOncePerBurst(t *testing.T) {
-	r := &Renderer{}
+	r := bareRenderer()
 	x, y := 7, 3
 	period := uint64(env.SteamPeriod(x, y))
 	start := period - env.SteamPhase(x, y) // a burst begins here

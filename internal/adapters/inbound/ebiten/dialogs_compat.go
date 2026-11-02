@@ -3,7 +3,7 @@ package ebiten
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	dialogspkg "rimworld-go/internal/adapters/inbound/ebiten/dialogs"
-	"rimworld-go/internal/adapters/inbound/ebiten/windows"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
 )
 
@@ -49,7 +49,7 @@ func (h dialogsHost) Comms() (game.CommsView, bool) {
 // Sites are the settlements a caravan may visit.
 func (h dialogsHost) Sites() []game.WorldSiteView {
 	if r := h.a.renderer; r != nil {
-		if s, ok := r.game.(windows.WorldSource); ok {
+		if s, ok := r.game.(worldview.WorldSource); ok {
 			return s.WorldSites()
 		}
 	}

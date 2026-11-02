@@ -4,6 +4,7 @@ import (
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/application/game"
 	"testing"
 )
 
@@ -45,15 +46,15 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 func TestSaveWritesViewAndLoadResumesIt(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 40, h: 40})
-	views := map[string]camera.View{}
+	views := map[string]map[game.MapID]camera.View{}
 	a.cfg.Saves = SaveHooks{
 		Save: func(Simulation, string) error { return nil },
 		List: func() ([]ports.SaveSlot, error) {
 			return []ports.SaveSlot{{Name: "s", Path: "s", Date: "Year 1", Colonists: 3}}, nil
 		},
 		Load:     func(path string) (Simulation, string, error) { return &stubSim{w: 40, h: 40}, path, nil },
-		SaveView: func(slot string, v camera.View) error { views[slot] = v; return nil },
-		LoadView: func(path string) (camera.View, bool) { v, ok := views[path]; return v, ok },
+		SaveView: func(slot string, v map[game.MapID]camera.View) error { views[slot] = v; return nil },
+		LoadView: func(path string) (map[game.MapID]camera.View, bool) { v, ok := views[path]; return v, ok },
 	}
 	a.finishBoot()
 	quickStart(t, a)
@@ -65,7 +66,7 @@ func TestSaveWritesViewAndLoadResumesIt(t *testing.T) {
 	if err := (optionsSaver{a}).Save("s"); err != nil {
 		t.Fatal(err)
 	}
-	if got := views["s"]; got != want {
+	if got := views["s"][0]; got != want {
 		t.Fatalf("saved view %+v, want %+v", got, want)
 	}
 	if _, _, err := (optionsSaver{a}).Load("s"); err != nil {

@@ -29,6 +29,7 @@ func (a *App) hud() hudlayout.Layout {
 	sw, sh := a.size()
 	st := hudlayout.Inputs{
 		Colonists:  a.chrome.Bar().Count(),
+		BarGroups:  a.chrome.Bar().GroupSizes(),
 		PaneShown:  a.insp.PaneShown(),
 		ArchOpen:   a.arch.Open,
 		Commands:   a.insp.Commands().CommandCount(),
@@ -44,11 +45,18 @@ func (a *App) hud() hudlayout.Layout {
 	st.ExpandedW, st.ExpandedH = a.insp.ExpandedWant()
 	st.WindowW, st.WindowH = a.win.Want()
 	st.PerfW, st.PerfH = a.meter.Box()
-	if m := &a.hst.lay; m.ok && m.sw == sw && m.sh == sh && m.st == st {
+	if a.world.Open() { // the world inspector takes the pane's place; no map, no command grid, no minimap
+		st.PaneShown, st.Commands, st.MinimapOn, st.ExpandedW, st.ExpandedH = true, 0, false, 0, 0
+	}
+	if m := &a.hst.lay; m.ok && m.sw == sw && m.sh == sh && m.st == st && m.world == a.world.Open() {
 		return m.lay
 	}
 	lay := hudlayout.Compute(sw, sh, st)
-	a.hst.lay = hudMemo{sw: sw, sh: sh, st: st, lay: lay, ok: true}
+	if a.world.Open() { // the inspector also takes the pane's tab row
+		lay.Pane = gfx.Rect{X: lay.Pane.X, Y: lay.PaneTabs.Y, W: lay.Pane.W, H: lay.Pane.H + lay.PaneTabs.H}
+		lay.PaneTabs = gfx.Rect{}
+	}
+	a.hst.lay = hudMemo{sw: sw, sh: sh, st: st, world: a.world.Open(), lay: lay, ok: true}
 	return lay
 }
 
@@ -58,6 +66,7 @@ func (a *App) hud() hudlayout.Layout {
 type hudMemo struct {
 	sw, sh int
 	st     hudlayout.Inputs
+	world  bool // the world view was open
 	lay    hudlayout.Layout
 	ok     bool
 }
@@ -72,6 +81,7 @@ func (a *App) colonyUI(sw, sh int) {
 	if a.renderer == nil {
 		return
 	}
+	a.world.Declare(sw, sh)           // worldview: its widgets sit under the HUD's in the hit test
 	a.chrome.Right().DeclareLetters() // may open a letter window, which takes the layer from here on
 	if a.chrome.Hidden {
 		return
@@ -80,7 +90,7 @@ func (a *App) colonyUI(sw, sh int) {
 	a.assignTabUI(sw, sh)         // assign_ui.go: Assign tab (ENG-003)
 	a.chrome.Banner().Declare(sw) // hud/gathering.go: wedding/party banner (ENG-003)
 	a.socialTabsUI()              // social_tabs_ui.go: the History tab (ENG-003)
-	a.worldTabUI(sw, sh)          // world_ui.go: World tab, caravans (ENG-003)
+	a.worldTabUI(sw, sh)          // windows_compat.go: the World tab's toggle (worldview)
 	a.win.Work().Tips(sw, sh)
 	a.win.Research().Declare(sw, sh) // research_ui.go: the project list's scroll view
 	a.chrome.Global().DeclareChips(sw)
@@ -88,10 +98,12 @@ func (a *App) colonyUI(sw, sh int) {
 	a.areaSelectorsUI(sw, sh)       // area_select.go: Schedule column, inspector line, overlay sync
 	// PLAY-018 HUD regions: resources, colonist bar, right column, global
 	a.chrome.DeclareRegions(sw, sh)
-	a.insp.PaneUI(sw, sh)                   // hud_inspect.go
-	a.insp.Commands().CommandGridUI(sw, sh) // hud_commands.go
-	a.lrn.UI(sw, sh)                        // learn_ui.go
-	a.mainWindowUI(sw, sh)                  // hud_window.go
+	if !a.world.Open() {
+		a.insp.PaneUI(sw, sh)                   // hud_inspect.go
+		a.insp.Commands().CommandGridUI(sw, sh) // hud_commands.go
+	}
+	a.lrn.UI(sw, sh)       // learn_ui.go
+	a.mainWindowUI(sw, sh) // hud_window.go
 }
 
 func (a *App) colonyButtons(sw, sh int) []uikit.Button {
@@ -103,13 +115,17 @@ func (a *App) colonyButtons(sw, sh int) []uikit.Button {
 	out = append(out, a.ord.SearchButtons(sw)...)
 	out = append(out, a.lrn.Buttons()...)
 	out = append(out, a.chrome.Global().Buttons(sw)...) // hud/global.go
-	out = append(out, a.insp.Commands().GroupButtons()...)
-	out = append(out, a.chrome.Tabs().Buttons(sw, sh)...)        // hud/tabs.go
-	out = append(out, a.chrome.Bar().Buttons(sw, sh)...)         // hud/colonistbar.go
-	out = append(out, a.insp.Commands().CommandGridButtons()...) // hud_commands.go
-	out = append(out, a.insp.PaneButtons()...)                   // hud_inspect.go
-	out = append(out, a.chrome.Right().Buttons(sw)...)           // hud/right.go
-	out = append(out, a.chrome.Res().Buttons()...)               // hud/resources.go
+	if !a.world.Open() {
+		out = append(out, a.insp.Commands().GroupButtons()...)
+	}
+	out = append(out, a.chrome.Tabs().Buttons(sw, sh)...) // hud/tabs.go
+	out = append(out, a.chrome.Bar().Buttons(sw, sh)...)  // hud/colonistbar.go
+	if !a.world.Open() {
+		out = append(out, a.insp.Commands().CommandGridButtons()...) // hud_commands.go
+		out = append(out, a.insp.PaneButtons()...)                   // hud_inspect.go
+	}
+	out = append(out, a.chrome.Right().Buttons(sw)...) // hud/right.go
+	out = append(out, a.chrome.Res().Buttons()...)     // hud/resources.go
 	out = append(out, a.arch.Buttons()...)
 	out = append(out, a.win.Buttons()...)
 	return out
@@ -134,6 +150,7 @@ func (a *App) drawMapOverlays(dst *ebiten.Image) {
 	a.arch.Marks.DrawPenOutline(dst) // pen_draw.go: selected pen, or all while the Pen marker tool is held
 	a.arch.Mover.DrawMarkers(dst)    // move_mode.go: pending moves
 	a.arch.Mover.Draw(dst)
+	a.world.DrawSpot(dst)     // worldview/spot_draw.go: Pick spot's cell
 	drawCombatOverlay(a, dst) // combat_overlay_host.go: range, hit chance, cover, projectiles
 	a.drawSelectionMarks(dst) // each kind's file: the map marker
 }
@@ -142,21 +159,25 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	if a.renderer == nil {
 		return
 	}
-	a.chrome.Global().Draw(screen, sw, sh)    // hud/global.go
-	a.chrome.Res().Draw(screen, sw, sh)       // hud/resources.go
-	a.chrome.Bar().Draw(screen, sw, sh)       // hud/colonistbar.go
-	a.chrome.Tabs().Draw(screen, sw, sh)      // hud/tabs.go
-	a.insp.DrawPane(screen)                   // hud_inspect.go
-	a.insp.Commands().DrawCommandGrid(screen) // hud_commands.go
+	a.chrome.Global().Draw(screen, sw, sh) // hud/global.go
+	a.chrome.Res().Draw(screen, sw, sh)    // hud/resources.go
+	a.chrome.Bar().Draw(screen, sw, sh)    // hud/colonistbar.go
+	a.chrome.Tabs().Draw(screen, sw, sh)   // hud/tabs.go
+	if !a.world.Open() {
+		a.insp.DrawPane(screen)                   // hud_inspect.go
+		a.insp.Commands().DrawCommandGrid(screen) // hud_commands.go
+	}
 	a.arch.Draw(screen)
 	a.win.Draw(screen, sw, sh)            // hud_window.go
 	a.chrome.Right().Draw(screen, sw, sh) // hud/right.go
 	a.lrn.Draw(screen)                    // learn_ui.go
 	a.ord.DrawFloat(screen)
-	a.chrome.Cell().Draw(screen, sh)      // hud/cellinfo.go
-	a.chrome.RoomStats().DrawCard(screen) // hud/rooms.go
-	a.tools.Draw(screen, sw, sh)          // devmode.go
-	a.ord.DrawSearch(screen, sw)          // search_ui.go
+	if !a.world.Open() {
+		a.chrome.Cell().Draw(screen, sh)      // hud/cellinfo.go
+		a.chrome.RoomStats().DrawCard(screen) // hud/rooms.go
+	}
+	a.tools.Draw(screen, sw, sh) // devmode.go
+	a.ord.DrawSearch(screen, sw) // search_ui.go
 }
 
 // colonyChromeHit reports the point (logical) is on the HUD, so a click

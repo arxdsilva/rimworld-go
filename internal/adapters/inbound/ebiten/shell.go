@@ -3,6 +3,7 @@ package ebiten
 import (
 	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/inbound/ebiten/mapnav"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
@@ -381,12 +382,20 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.sel.Clear(selectionpkg.None)
 	case ports.CenterOnPawn:
 		a.centreOnPawn(it.ID)
+	case ports.JumpTo:
+		jumpTo(a, it.Spot)
+	case ports.SwitchMap:
+		switchMap(a, it.Map)
 	case ports.ReinstallCrate:
 		a.arch.Mover.StartCrate(it.ID) // move_mode.go, reinstall.go (AX-1)
 	case ports.LoadPods:
 		a.deal.OpenLoadPods(it.Pod) // dialogs/pods.go (AX-9)
 	case ports.LaunchPods:
-		a.win.World().LaunchFor(it.Pod) // windows/world_ax9.go (AX-9)
+		a.world.LaunchFor(it.Pod) // worldview/pods.go (AX-9, MAP-10)
+	case ports.OpenWorld:
+		a.world.Show(it.Select) // worldview
+	case ports.CloseWorld:
+		a.world.Close()
 	case ports.Push:
 		a.apply(intent{kind: intentPush, screen: it.Screen})
 	case ports.Back:
@@ -475,10 +484,15 @@ func clickRoutes() []clickRoute {
 		on(ids.PrefixGroup, (*App).applyGroupClick),                                        // multiselect.go
 		on(ids.PrefixSearch, (*App).applySearchClick),                                      // search_ui.go
 		on(ids.PrefixDev, (*App).applyDevClick),                                            // devmode.go
-		on(ids.PrefixBarPawn, clickBarPawn),                                                // hud/colonistbar.go
-		on(ids.PrefixResearchPick, func(a *App, id string) { a.win.Research().Pick(id) }),  // research_ui.go
-		on(ids.PrefixAnimals, func(a *App, id string) { a.win.Animals().Click(id) }),       // animals_ui.go
-		{id: "tab.", prefix: true, run: clickMainTab},                                      // work, schedule, research, animals; others fall through
+		on(hud.BarMapPrefix, func(a *App, id string) { // hud/colonistbar.go: a map group's frame
+			if m, ok := hud.BarMapOf(id); ok {
+				switchMap(a, m)
+			}
+		}),
+		on(ids.PrefixBarPawn, clickBarPawn),                                               // hud/colonistbar.go
+		on(ids.PrefixResearchPick, func(a *App, id string) { a.win.Research().Pick(id) }), // research_ui.go
+		on(ids.PrefixAnimals, func(a *App, id string) { a.win.Animals().Click(id) }),      // animals_ui.go
+		{id: "tab.", prefix: true, run: clickMainTab},                                     // work, schedule, research, animals; others fall through
 		on(ids.PrefixSchedBrush, func(a *App, id string) {
 			if v, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixSchedBrush)); err == nil {
 				a.win.Brush = schedule.Activity(v)
@@ -556,6 +570,9 @@ func clickBarPawn(a *App, id string) {
 		return
 	}
 	pid := entity.EntityID(n)
+	if a.chrome.Bar().ClickAway(pid, a.in.Shift()) { // another map: jump, or toast on shift
+		return
+	}
 	if a.in.Shift() {
 		a.sel.ToggleInSet(selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: pid})
 		return
@@ -597,4 +614,60 @@ func openOptions(a *App, id string) {
 	a.opt.Tab = ""
 	a.rebind = options.RebindState{}
 	a.apply(a.clickIntent(id))
+}
+
+// switchMap shows map m (MAP-1). The selection belongs to the map left
+// behind, so it goes; the renderer swaps to m's scene, with its own camera,
+// on the next frame (scene.go).
+func switchMap(a *App, m game.MapID) {
+	if a.renderer == nil || a.renderer.game.ViewedMap() == m {
+		return
+	}
+	a.renderer.game.ViewMap(m)
+	a.renderer.scenes.follow(a.renderer) // scene.go: m's camera before anyone centres it
+	a.sel.Clear(selectionpkg.None)
+}
+
+// cycleMap shows the next (or previous) open map, wrapping (] and [).
+func cycleMap(a *App, next bool) {
+	if a.renderer == nil {
+		return
+	}
+	dir := -1
+	if next {
+		dir = 1
+	}
+	g := a.renderer.game
+	switchMap(a, mapnav.Next(g.Maps(), g.ViewedMap(), dir))
+}
+
+// jumpTo shows spot s: its map first, then the creature it follows
+// (selected, if it is still on that map), else its tile. A negative tile
+// only switches the map (a cross-map threat alert).
+func jumpTo(a *App, s ports.Spot) {
+	if a.renderer == nil {
+		return
+	}
+	if s.Map != ports.CurrentMap {
+		switchMap(a, s.Map)
+	}
+	if s.Focus != 0 {
+		for _, p := range a.renderer.snapshot() {
+			if p.ID == s.Focus {
+				a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Pawn, ID: p.ID})
+				a.centreOnPawn(p.ID)
+				return
+			}
+		}
+		for _, an := range a.renderer.game.World().Animals {
+			if an.ID == s.Focus {
+				a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: an.ID})
+				a.centerOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
+				return
+			}
+		}
+	}
+	if s.X >= 0 && s.Y >= 0 {
+		a.centerOnMap(float64(s.X)+0.5, float64(s.Y)+0.5)
+	}
 }

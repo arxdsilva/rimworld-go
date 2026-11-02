@@ -3,6 +3,7 @@ package hud
 import (
 	"fmt"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/world/biome"
 )
@@ -12,8 +13,8 @@ import (
 
 // SeasonText is the climate label: "Boreal forest | Spring -2C outside". A
 // world with no biome name (a stub) shows the season alone.
-func SeasonText(w game.WorldView) string {
-	s := fmt.Sprintf("%s  %s outside", w.Season, FmtTemp(w.OutdoorTemp))
+func SeasonText(w game.WorldView, u units.Temp) string {
+	s := fmt.Sprintf("%s  %s outside", w.Season, FmtTemp(u, w.OutdoorTemp))
 	if w.Biome != "" {
 		s = w.Biome + " | " + s
 	}

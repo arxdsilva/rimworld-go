@@ -2,9 +2,9 @@ package ebiten
 
 import (
 	"image/color"
-	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
+	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
@@ -15,6 +15,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/medcare"
@@ -48,12 +49,9 @@ func newWindows(a *App) *windows.Set {
 
 func (h windowsHost) Env() windows.Env {
 	a := h.a
-	e := windows.Env{Art: a.art}
+	var e windows.Env
 	if r := a.renderer; r != nil {
 		e.Game = r.game
-	}
-	if a.ng != nil {
-		e.Planet = a.ng.Planet
 	}
 	return e
 }
@@ -80,8 +78,6 @@ func (h windowsHost) Float(x, y float32, opts []game.OrderOption) {
 	h.a.ord.OpenPick(x, y, false, opts, func(i int) { h.a.shell.Enqueue(opts[i].Cmd) })
 }
 
-func (h windowsHost) FormCaravan(globePick func() int) { h.a.deal.OpenFormCaravan(globePick) }
-
 func (h windowsHost) FactionsTable(body gfx.Rect, maxH float32, sel *int) gfx.Rect {
 	rows := h.colonyRows()
 	plain := make([]wizardpkg.FacRow, len(rows))
@@ -94,15 +90,61 @@ func (h windowsHost) FactionsTable(body gfx.Rect, maxH float32, sel *int) gfx.Re
 	return rest
 }
 
+// ---- worldview.Host: the full-screen world view (MAP-2)
+
+// worldHost is the root's side of worldview.Host.
+type worldHost struct{ a *App }
+
+var _ worldview.Shell = worldShell{}
+
+// worldShell is the view's view of the App: the ports roles plus its Host.
+type worldShell struct {
+	shell
+	worldHost
+}
+
+func newWorldView(a *App) *worldview.View {
+	return worldview.New(worldShell{a.shell, worldHost{a}})
+}
+
+func (h worldHost) Env() worldview.Env {
+	a := h.a
+	e := worldview.Env{Art: a.art}
+	if r := a.renderer; r != nil {
+		e.Game = r.game
+	}
+	if a.ng != nil {
+		e.Planet = a.ng.Planet
+	}
+	return e
+}
+
+func (h worldHost) Layout() hudlayout.Layout { return h.a.hud() }
+
+func (h worldHost) ChromeHit(mx, my int) bool {
+	sw, sh := h.a.size()
+	return h.a.colonyChromeHit(mx, my, sw, sh)
+}
+
+func (h worldHost) FormCaravan(globePick func() int) { h.a.deal.OpenFormCaravan(globePick) }
+
+// SettleReason asks the live game (a free function: Game is over its method
+// budget, so a stub simulation has no answer).
+func (h worldHost) SettleReason(id uint64) (string, bool) {
+	if r := h.a.renderer; r != nil {
+		if g, ok := r.game.(*game.Game); ok {
+			return game.SettleReason(g, id), true
+		}
+	}
+	return "", false
+}
+
 // ---- windows.Labels
 
 func (h windowsHost) PawnLabel(p game.PawnView) string       { return hud.PawnLabel(p) }
 func (h windowsHost) AnimalLabel(an game.AnimalView) string  { return inspector.AnimalLabel(an) }
 func (h windowsHost) AnimalHealth(an game.AnimalView) string { return inspector.AnimalHealthCell(an) }
 func (h windowsHost) CareShort(p medcare.Policy) string      { return inspector.CareShort(p) }
-func (h windowsHost) Caravan(c game.CaravanView) (string, string) {
-	return dialogs.CaravanTip(c), dialogs.CaravanHealthNote(c)
-}
 
 func (h windowsHost) Factions() []windows.Faction {
 	rows := h.colonyRows()
@@ -224,7 +266,7 @@ func (a *App) historyTabUI(sw, sh int) {
 func (a *App) factionsTabUI(sw, sh int) {
 	a.tabWidget(sw, sh, ids.TabFactions, false, a.win.Factions().Toggle)
 }
-func (a *App) worldTabUI(sw, sh int) { a.tabWidget(sw, sh, ids.TabWorld, false, a.win.World().Toggle) }
+func (a *App) worldTabUI(sw, sh int) { a.tabWidget(sw, sh, ids.TabWorld, false, a.world.Toggle) }
 
 // mainWindowUI declares the Animals tab button's toggle (the app's toggle
 // does not know Wildlife) and the open window's kit parts.

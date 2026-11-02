@@ -373,6 +373,23 @@ const (
 	// casket Target climbs out.
 	BoardShip
 	LeaveShip
+	// MAP-0 contract (multiple maps), appended so no number moves:
+	// EnterMap, caravan Target enters (or opens) the map at its tile;
+	// AttackSettlement, caravan Target attacks the settlement at its tile;
+	// SettleHere, caravan Target founds a colony on its tile; AbandonMap,
+	// map Target closes and everything left on it is lost;
+	// CaravanTravel, caravan Target heads for world tile Count;
+	// CaravanReform, the pawns on map Target leave as a caravan;
+	// EncounterAnswer, Mode answers encounter letter Target (0 give, 1 refuse);
+	// SetColonyCap, Count is Options' Max colonies (MAP-06).
+	EnterMap
+	AttackSettlement
+	SettleHere
+	AbandonMap
+	CaravanTravel
+	CaravanReform
+	EncounterAnswer
+	SetColonyCap
 )
 
 // LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).
@@ -380,6 +397,13 @@ const (
 	PodArriveDrop  uint8 = iota // land on the tile: a map edge or centre, the colony at its drop spot
 	PodArriveGift               // a settlement: give everything as a gift (goodwill by market value)
 	PodArriveVisit              // a settlement: land the pawns to visit and trade
+	// MAP-0 contract, appended: attack a settlement landing at its map's
+	// edge or centre, found a colony, or land at (X2, Y2) on an open map.
+	PodArriveAttackEdge
+	PodArriveAttackCentre
+	PodArriveFound
+	PodArriveSpot
+	PodArriveDropCentre // land at the map's centre instead of its edge
 )
 
 // EditFoodPolicy modes (Command.Mode), FOOD-0.
@@ -515,4 +539,8 @@ type Command struct {
 	SkillMin, SkillMax uint8
 	Worker             uint64
 	UnpauseAt          int
+	// Map is the map the command acts on when MapSet (MAP-0); unset, it
+	// acts on the map viewed when it is applied.
+	Map    uint32
+	MapSet bool
 }

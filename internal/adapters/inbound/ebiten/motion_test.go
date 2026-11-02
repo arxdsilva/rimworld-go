@@ -586,7 +586,7 @@ func TestInterpWorldFollowsMotion(t *testing.T) {
 	if x, _ := r.interpWorld(p); x != float64(p.X) {
 		t.Fatalf("settled pawn is drawn on its tile, got %v", x)
 	}
-	if (&Renderer{}).liveView().AnimT != 0 {
+	if bareRenderer().liveView().AnimT != 0 {
 		t.Fatal("renderer without a sim has animT 0")
 	}
 }

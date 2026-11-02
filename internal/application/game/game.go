@@ -81,6 +81,7 @@ type PawnView struct {
 	ID            entity.EntityID
 	Name          string
 	X, Y          int
+	Map           MapID // the map X, Y are on (MAP-0)
 	Activity      schedule.Activity
 	Job           string
 	Hunger        int
@@ -337,11 +338,15 @@ type LetterView struct {
 	Title string
 	Text  string
 	X, Y  int             // where it happened (-1: nowhere)
+	Map   MapID           // the map X, Y are on (MAP-0)
 	Focus entity.EntityID // the creature it is about (0: none)
 	Intro bool            // the scenario's opening letter (opens by itself)
 	// JoinOffer: the letter asks whether a rescued stranger may join
 	// (AcceptLetter accepts, DismissLetter declines; SIM-063).
 	JoinOffer bool
+	// Demand: a caravan's encounter asks Give or Refuse (EncounterAnswer,
+	// Target this letter, Mode 0 give, 1 refuse; MAP-08).
+	Demand bool
 }
 
 // StoredResourceView is one row of the resource list (PLAY-018).
@@ -700,28 +705,109 @@ type AutoSlaughterView struct {
 	MaxMales, MaxFemales, MaxYoung int
 }
 
-// Game holds all authoritative simulation state.
+// Game holds all authoritative simulation state: the colony-wide part
+// here, and the map being stepped or viewed through the embedded
+// *mapState (MAP-0). Every map in maps ticks every tick (Step).
 type Game struct {
+	*mapState
+	// maps are the open maps in id order, maps[0] first; view is the one
+	// the read models report between ticks (ViewMap).
+	maps     []*mapState
+	view     *mapState
 	clock    *clock.Clock
-	grid     *grid.Grid
 	entities *entity.Allocator
 	rng      *randx.Rand
 	sched    schedule.Grid
-	wl       wildlifeState // SIM-019 wildlife events (wildlife.go)
 	// thoughtBuf is thoughtLevel's reused thought list (rooms.go; never
 	// saved, never handed out).
 	thoughtBuf []mood.Thought
 
-	messages []MessageView
-	letters  letterState // the letter stack (letters.go, PLAY-018)
+	messages   []MessageView
+	letters    letterState // the letter stack (letters.go, PLAY-018)
+	names      *component.Store[string]
+	need       *component.Store[needs.Pair]
+	vital      *component.Store[health.Record]
+	labor      *component.Store[work.Mask]
+	lastMeal   map[entity.EntityID]item.Kind
+	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
+	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
+	exposure   bodytemp.Ledger              // TEMP-3: hypothermia and heatstroke, pawns and animals
+	noComfort  map[entity.EntityID]uint64   // no warm/cool spot found until this tick
+	troughs    map[entity.EntityID]troughState
+	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
+	calm       map[entity.EntityID]uint64 // fled a threat: holding back from work until this tick
+	banked     map[entity.EntityID]bool   // campfires banked by their room thermostat (heat.go)
+	orderQueue map[entity.EntityID][]queuedOrder
+	apparel    map[entity.EntityID]worn
+	prio       map[entity.EntityID]work.Priorities
+	nextThreat uint64
+	threatsOn  bool
+	scheds     map[entity.EntityID]schedule.Grid
+	joy        map[entity.EntityID]int // recreation need, 0..recreation.Full
+	breaks     map[entity.EntityID]breakState
+	memories   map[entity.EntityID]mood.Memories
+	pending    []command.Command
+
+	ateAt   map[entity.EntityID]bool
+	logs    map[entity.EntityID][]logEntry // per-creature event logs (eventlog.go)
+	draft   map[entity.EntityID]bool
+	sleptAt map[entity.EntityID]entity.EntityID // pawn -> bed, 0 = ground
+	equip   map[entity.EntityID]item.Kind       // wielded weapon; absent = fists
+	// lastStrike and lastHit are transient presentation stamps (see
+	// action_view.go); the simulation never reads them.
+	lastStrike map[entity.EntityID]strikeRec
+	lastHit    map[entity.EntityID]hitRec
+
+	lab       *rlab.Lab // game/research (RSCH-1): progress, the current project, the bench job
+	moverBuf  []mover
+	moverOld  []entity.EntityID // pruneMotion scratch
+	raiderBuf []entity.EntityID // phaseThreats scratch
+	// enterHook, when set (tests only), replaces enter's verdicts.
+	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
+	// phaseObs: optional per-phase timing observer (phases.go); set only
+	// from cmd/* and benchmarks, never read by gameplay.
+	phaseObs PhaseObserver
+	viewGen  uint64
+	// sk: bios, skills, stats and learning (skills.go, NG-1 PAWN-G).
+	sk skillState
+	// ng: the new-game setup's live state (setup.go, NG-1 SETUP); zero
+	// for a legacy colony.
+	ng ng1State
+	// Social and host systems (ENG-003): each container is nil until its
+	// milestone first needs it, and saved as an additive field.
+	soc     *socialState                    // social_state.go
+	people  *peopleRegistry                 // people.go
+	bodies  map[entity.EntityID]*body.Body  // body.go
+	med     medState                        // patients.go (MED-00)
+	care    *care.Care                      // care package (SIM-061): carry, policy, doctor
+	mind    *mind.Mind                      // mind package (SIM-066): mental breaks
+	craft   *craft.Craft                    // craft package (PRD-0): bills, drying, tool cabinets
+	surg    *surgeryState                   // surgery.go
+	drugs   map[entity.EntityID]*drug.State // drugs.go
+	prison  *prison.Prison                  // prison package: prisoners, warden work
+	rest    *rest.Sleep                     // rest package (BED-0): beds, sleep, waking thoughts
+	worldSt *worldState                     // world_state.go
+	history []historyEntry                  // history.go
+	streams rngStreams                      // rng_streams.go: never g.rng
+	// PLAY-024: traders, request cooldowns and the open trade or comms
+	// session (trade.go), saved as the additive Trade field.
+	trade tradeState
+}
+
+// mapState is one map's state (MAP-0): its grid, terrain, the entities
+// standing on it and their map components, and every cache derived
+// from them. Entity ids are global, so tables keyed by entity stay on
+// Game. It has no methods: Game reaches its fields through the embedded
+// pointer, which Step points at each map in turn.
+type mapState struct {
+	id   uint32 // 0 for the first map
+	tile int    // the world tile under the map, -1 without a world
+	grid *grid.Grid
+	wl   wildlifeState // SIM-019 wildlife events (wildlife.go)
 
 	pawnIDs   []entity.EntityID
 	positions *component.Store[Position]
-	names     *component.Store[string]
 	jobs      *component.Store[job.Record]
-	need      *component.Store[needs.Pair]
-	vital     *component.Store[health.Record]
-	labor     *component.Store[work.Mask]
 
 	itemIDs  []entity.EntityID
 	stacks   *component.Store[item.Stack]
@@ -740,60 +826,29 @@ type Game struct {
 	structVer uint64
 	stoneView stoneView // world.go: stoneLayers' cache, at structVer
 
-	zones      *zone.Map // stockpiles, grow zones and pens (zones.go, ZONE-001)
-	lastMeal   map[entity.EntityID]item.Kind
-	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
-	weather    weather.State                // outdoor weather (weather.go, SIM-016)
-	weatherFix bool                         // dev: HoldWeather keeps the forced weather
-	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
-	exposure   bodytemp.Ledger              // TEMP-3: hypothermia and heatstroke, pawns and animals
-	noComfort  map[entity.EntityID]uint64   // no warm/cool spot found until this tick
-	biome      biome.ID                     // the map's setting (SIM-023)
-	climate    temperature.Climate          // its outdoor temperature curve
-	incidents  incident.State               // the storyteller's nature events (SIM-025)
-	troughs    map[entity.EntityID]troughState
-	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
-	postponed  postState                  // work put off, orders followed (postpone.go, SIM-027)
-	calm       map[entity.EntityID]uint64 // fled a threat: holding back from work until this tick
-	banked     map[entity.EntityID]bool   // campfires banked by their room thermostat (heat.go)
-	orderQueue map[entity.EntityID][]queuedOrder
-	apparel    map[entity.EntityID]worn
-	clothes    apparelIndex // free apparel stacks (apparel.go), never saved
-	prio       map[entity.EntityID]work.Priorities
+	zones      *zone.Map           // stockpiles, grow zones and pens (zones.go, ZONE-001)
+	weather    weather.State       // outdoor weather (weather.go, SIM-016)
+	weatherFix bool                // dev: HoldWeather keeps the forced weather
+	biome      biome.ID            // the map's setting (SIM-023)
+	climate    temperature.Climate // its outdoor temperature curve
+	incidents  incident.State      // the storyteller's nature events (SIM-025)
+	postponed  postState           // work put off, orders followed (postpone.go, SIM-027)
+	clothes    apparelIndex        // free apparel stacks (apparel.go), never saved
 	raiderIDs  []entity.EntityID
 	raiders    map[entity.EntityID]raid.Raider
 	raidGroups []raid.Group
-	nextThreat uint64
-	threatsOn  bool
-	scheds     map[entity.EntityID]schedule.Grid
-	joy        map[entity.EntityID]int // recreation need, 0..recreation.Full
-	breaks     map[entity.EntityID]breakState
 	thermo     *thermo.Model // game/thermo (TEMP-1): the rooms' air and breached cells' residual
-	memories   map[entity.EntityID]mood.Memories
 	roomGrid   []int
 	rooms      []roomStats
 	roomDirty  bool
 	fence      fenceIndex  // fence and gate cells, derived (fences.go, SIM-028)
 	regs       regionState // walkability regions and labels, derived (regions.go, NG-1 E2)
 	reserve    *reservation.Table
-	pending    []command.Command
-
-	ateAt   map[entity.EntityID]bool
-	logs    map[entity.EntityID][]logEntry // per-creature event logs (eventlog.go)
-	draft   map[entity.EntityID]bool
-	sleptAt map[entity.EntityID]entity.EntityID // pawn -> bed, 0 = ground
 
 	animalIDs []entity.EntityID
 	animals   *component.Store[animal.State]
-	equip     map[entity.EntityID]item.Kind // wielded weapon; absent = fists
 	traces    []projectile.Trace
-	// lastStrike and lastHit are transient presentation stamps (see
-	// action_view.go); the simulation never reads them.
-	lastStrike map[entity.EntityID]strikeRec
-	lastHit    map[entity.EntityID]hitRec
-	wild       bool // wildlife migrates in (generated colonies)
-
-	lab *rlab.Lab // game/research (RSCH-1): progress, the current project, the bench job
+	wild      bool // wildlife migrates in (generated colonies)
 	// roofs: the roof state per tile (roof.go, SIM-018), row-major; empty
 	// until the first room rebuild. roofCollapses are recent collapses.
 	roofs         []roof.Cell
@@ -809,17 +864,12 @@ type Game struct {
 
 	// motion: per-creature step timing (motion_store.go); moverBuf is
 	// scratch for the ascending-ID mover list.
-	motion    *component.Store[motionRec]
-	moverBuf  []mover
-	moverOld  []entity.EntityID // pruneMotion scratch
-	raiderBuf []entity.EntityID // phaseThreats scratch
+	motion *component.Store[motionRec]
 	// pathSearch is the game's own A* state (paths.go: searcher), never
 	// saved; a pointer so a copied Game shares one search generation.
 	pathSearch *pathing.Searcher
 	animalQ    [3]animalQCache // fences.go: animalPathQuery, never saved
 	occ        occupancy       // movement blocking index (occupancy.go), transient
-	// enterHook, when set (tests only), replaces enter's verdicts.
-	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
 	// haul: in-flight material deliveries (haul_route.go, HAUL-001).
 	haul haulState
 	// monitors: each hospital bed's vitals monitor, per structVer (items_ng1.go), never saved.
@@ -828,9 +878,6 @@ type Game struct {
 	vents ventCache
 	// light: the simulation's artificial light grid (light.go), never saved.
 	light lightGrid
-	// phaseObs: optional per-phase timing observer (phases.go); set only
-	// from cmd/* and benchmarks, never read by gameplay.
-	phaseObs PhaseObserver
 	// idx: derived per-cell lookups (indexes.go), never saved.
 	idx indexes
 	// cellSets and sapperSet: building/terrain cell sets cached per
@@ -839,7 +886,6 @@ type Game struct {
 	sapperSet cellCache
 	// views, viewGen, viewTerr: read-model caches (indexes.go).
 	views    viewCache
-	viewGen  uint64
 	viewTerr layerCache
 	// plantVer moves on every plant store write (setPlant, dropPlant in
 	// world.go): the plant view memo keys on it. Never saved or hashed.
@@ -853,11 +899,6 @@ type Game struct {
 	minesVer  uint64
 	mineCache mineCache
 	seedCache seedCache
-	// sk: bios, skills, stats and learning (skills.go, NG-1 PAWN-G).
-	sk skillState
-	// ng: the new-game setup's live state (setup.go, NG-1 SETUP); zero
-	// for a legacy colony.
-	ng ng1State
 	// fog: unexplored tiles (fog.go, MAPGEN-2); zero: no fog.
 	fog fogState
 	// PLAY-015: fires, per-tile snow and the pens' settings.
@@ -871,31 +912,12 @@ type Game struct {
 	br bridgeState
 	// mapFields caches the developer map-field layers (mapfields.go); never saved.
 	mapFields *mapFieldCache
-	// Social and host systems (ENG-003): each container is nil until its
-	// milestone first needs it, and saved as an additive field.
-	soc     *socialState                    // social_state.go
-	people  *peopleRegistry                 // people.go
-	bodies  map[entity.EntityID]*body.Body  // body.go
-	med     medState                        // patients.go (MED-00)
-	care    *care.Care                      // care package (SIM-061): carry, policy, doctor
-	mind    *mind.Mind                      // mind package (SIM-066): mental breaks
-	craft   *craft.Craft                    // craft package (PRD-0): bills, drying, tool cabinets
-	surg    *surgeryState                   // surgery.go
-	drugs   map[entity.EntityID]*drug.State // drugs.go
-	prison  *prison.Prison                  // prison package: prisoners, warden work
-	rest    *rest.Sleep                     // rest package (BED-0): beds, sleep, waking thoughts
-	worldSt *worldState                     // world_state.go
-	areas   *area.Set                       // areas.go
-	history []historyEntry                  // history.go
-	streams rngStreams                      // rng_streams.go: never g.rng
+	areas     *area.Set // areas.go
 	// pw is the colony's electricity (power.go, PLAY-021); nil until the
 	// colony has a power device.
 	pw *powerState
 	// pwc: power nets and device lists per structVer (power.go), never saved.
 	pwc powerCache
-	// PLAY-024: traders, request cooldowns and the open trade or comms
-	// session (trade.go), saved as the additive Trade field.
-	trade tradeState
 	// combat package (DEF-0): sight, cover, sentry turrets (their aims
 	// saved as the additive Turrets field); combat_host.go.
 	combat *combat.Combat
@@ -904,70 +926,201 @@ type Game struct {
 
 // New builds a Game from cfg. Width/Height must be positive.
 func New(cfg Config) *Game {
+	m := newMapState(cfg, 0)
 	g := &Game{
+		mapState:   m,
+		maps:       []*mapState{m},
+		view:       m,
 		clock:      clock.NewAt(clock.StartingMorning()),
-		grid:       grid.New(cfg.Width, cfg.Height),
 		entities:   entity.NewAllocator(),
 		rng:        randx.New(cfg.Seed),
 		sched:      schedule.DefaultColony(),
-		positions:  component.NewStore[Position](),
 		names:      component.NewStore[string](),
-		jobs:       component.NewStore[job.Record](),
 		need:       component.NewStore[needs.Pair](),
 		vital:      component.NewStore[health.Record](),
 		labor:      component.NewStore[work.Mask](),
-		stacks:     component.NewStore[item.Stack](),
-		frames:     component.NewStore[construction.Frame](),
-		bldgs:      component.NewStore[construction.Building](),
-		plants:     component.NewStore[plant.Wild](),
-		terr:       terrain.NewMap(cfg.Width, cfg.Height),
-		zones:      zone.NewMap(cfg.Width, cfg.Height),
-		mines:      make(map[[2]int]bool),
-		smooths:    make(map[[2]int]bool),
-		geo:        geology.NewMap(cfg.Width, cfg.Height),
 		lastMeal:   make(map[entity.EntityID]item.Kind),
 		fuel:       make(map[entity.EntityID]int),
 		exposure:   make(bodytemp.Ledger),
 		noComfort:  make(map[entity.EntityID]uint64),
-		biome:      cfg.Biome,
-		climate:    biome.DefOf(cfg.Biome).Climate,
 		troughs:    make(map[entity.EntityID]troughState),
 		noFood:     make(map[entity.EntityID]uint64),
-		postponed:  newPostState(),
 		calm:       make(map[entity.EntityID]uint64),
 		banked:     make(map[entity.EntityID]bool),
 		orderQueue: make(map[entity.EntityID][]queuedOrder),
 		apparel:    make(map[entity.EntityID]worn),
 		prio:       make(map[entity.EntityID]work.Priorities),
-		raiders:    make(map[entity.EntityID]raid.Raider),
 		scheds:     make(map[entity.EntityID]schedule.Grid),
 		joy:        make(map[entity.EntityID]int),
 		breaks:     make(map[entity.EntityID]breakState),
 		memories:   make(map[entity.EntityID]mood.Memories),
-		roomDirty:  true,
-		reserve:    reservation.NewTable(),
 		ateAt:      make(map[entity.EntityID]bool),
 		logs:       make(map[entity.EntityID][]logEntry),
 		draft:      make(map[entity.EntityID]bool),
 		sleptAt:    make(map[entity.EntityID]entity.EntityID),
-		animals:    component.NewStore[animal.State](),
 		equip:      make(map[entity.EntityID]item.Kind),
-		motion:     component.NewStore[motionRec](),
 		lastStrike: make(map[entity.EntityID]strikeRec),
 		lastHit:    make(map[entity.EntityID]hitRec),
 		streams:    rngStreams{seed: cfg.Seed},
 	}
 	g.care = care.New(newCareHost(g), care.Roles{Prison: carePrison{g}, Guests: careGuests{g}, Social: careSocial{g}, Gear: careGear{g}, Meals: careMeals{g}}) // care_host*.go
 	g.mind = mind.New(newMindHost(g))
-	g.combat = newCombat(g)
-	g.raid = newRaid(g)                     // raid_host.go
+	initMapHosts(g)
 	g.craft = craft.New(newCraftHost(g))    // craft_host.go
 	g.prison = prison.New(newPrisonHost(g)) // prison_host.go
 	g.rest = rest.New(newRestHost(g))       // rest_host.go
-	g.thermo = thermo.New(newThermoHost(g)) // thermo_host.go
 	g.lab = rlab.New(researchHost{g})       // research.go
 	g.lab.Prog = research.Complete()        // sandbox: everything known
 	return g
+}
+
+// newMapState allocates map id's stores at cfg's size (MAP-0). Its
+// counters start at id<<48, so map versions never meet another map's in a
+// cache keyed on them; the first map's start at zero as before.
+func newMapState(cfg Config, id uint32) *mapState {
+	v := uint64(id) << 48
+	return &mapState{
+		id:        id,
+		tile:      -1,
+		structVer: v,
+		plantVer:  v,
+		minesVer:  v,
+		grid:      grid.New(cfg.Width, cfg.Height),
+		positions: component.NewStore[Position](),
+		jobs:      component.NewStore[job.Record](),
+		stacks:    component.NewStore[item.Stack](),
+		frames:    component.NewStore[construction.Frame](),
+		bldgs:     component.NewStore[construction.Building](),
+		plants:    component.NewStore[plant.Wild](),
+		terr:      terrain.NewMap(cfg.Width, cfg.Height),
+		zones:     zone.NewMap(cfg.Width, cfg.Height),
+		mines:     make(map[[2]int]bool),
+		smooths:   make(map[[2]int]bool),
+		geo:       geology.NewMap(cfg.Width, cfg.Height),
+		biome:     cfg.Biome,
+		climate:   biome.DefOf(cfg.Biome).Climate,
+		postponed: newPostState(),
+		raiders:   make(map[entity.EntityID]raid.Raider),
+		roomDirty: true,
+		reserve:   reservation.NewTable(),
+		animals:   component.NewStore[animal.State](),
+		motion:    component.NewStore[motionRec](),
+	}
+}
+
+// initMapHosts builds the current map's own clusters over g (MAP-0): their
+// hosts reach the map through g, so they serve whichever map is current.
+func initMapHosts(g *Game) {
+	g.combat = newCombat(g)
+	g.raid = newRaid(g)                     // raid_host.go
+	g.thermo = thermo.New(newThermoHost(g)) // thermo_host.go
+}
+
+// MapID names an open map (MAP-0); the first map is 0.
+type MapID uint32
+
+// MapView is one open map for the map switcher and the world view (MAP-0).
+type MapView struct {
+	ID        MapID
+	Label     string // "Colony", a site or settlement name
+	Kind      string // "colony", "site", "settlement" or "encounter"
+	Tile      int    // world tile, -1 without a world
+	Colonists int    // our colonists standing on it
+	Threat    bool   // hostiles on the map
+	Countdown int    // ticks left to pack up before it closes; 0: none
+}
+
+// primary reports whether the current pass runs the colony-wide work: the
+// first map's (MAP-0). With one map it always does.
+func primary(g *Game) bool { return len(g.maps) <= 1 || g.mapState == g.maps[0] }
+
+// owns reports whether the current map's pass handles id's work in a
+// colony-wide table (needs, patients, caravan members): the map it stands
+// on, or the first map for a creature on no map. With one map it always does.
+func owns(g *Game, id entity.EntityID) bool {
+	if len(g.maps) <= 1 || g.positions.Has(id) || g.animals.Has(id) {
+		return true
+	}
+	if !primary(g) {
+		return false
+	}
+	for _, m := range g.maps[1:] {
+		if m.positions.Has(id) || m.animals.Has(id) {
+			return false
+		}
+	}
+	return true
+}
+
+// mapByID returns the open map id, or nil.
+func mapByID(g *Game, id uint32) *mapState {
+	for _, m := range g.maps {
+		if m.id == id {
+			return m
+		}
+	}
+	return nil
+}
+
+// ViewMap makes map id the one the read models report (MAP-0). It is a
+// presentation choice, not a command: it never changes how a tick runs.
+// An unknown id is ignored.
+func (g *Game) ViewMap(id MapID) {
+	m := mapByID(g, uint32(id))
+	if m == nil || m == g.view {
+		return
+	}
+	g.view, g.mapState = m, m
+	g.viewGen++ // view cache (indexes.go): another map's state
+}
+
+// ViewedMap returns the map the read models report.
+func (g *Game) ViewedMap() MapID { return MapID(g.view.id) }
+
+// Maps lists the open maps in id order.
+func (g *Game) Maps() []MapView {
+	out := make([]MapView, 0, len(g.maps))
+	for _, m := range g.maps {
+		out = append(out, mapView(g, m))
+	}
+	return out
+}
+
+// mapView reads map m's switcher row; the census swaps to m and back.
+func mapView(g *Game, m *mapState) MapView {
+	v := MapView{ID: MapID(m.id), Label: "Colony", Kind: "colony", Tile: m.tile}
+	if m.id == 0 {
+		v.Tile = g.colonyTile()
+	}
+	v.Label, v.Kind, v.Countdown = mapsLabel(g, m.id, v.Label, v.Kind) // world_state.go: game/maps' atlas
+	cur := g.mapState
+	g.mapState = m
+	for _, id := range g.pawnIDs {
+		if _, r := g.raiders[id]; !r {
+			v.Colonists++
+		} else if g.isRaider(id) {
+			v.Threat = true
+		}
+	}
+	g.mapState = cur
+	return v
+}
+
+// Colonists returns every colonist on every open map, each tagged with its
+// map, maps in id order (MAP-0). Caravan members are listed by WorldMap.
+func (g *Game) Colonists() []PawnView {
+	cur := g.mapState
+	var out []PawnView
+	for _, m := range g.maps {
+		g.mapState = m
+		for _, v := range g.Snapshot() { // each map keeps its own view cache
+			if _, r := g.raiders[v.ID]; !r {
+				out = append(out, v)
+			}
+		}
+	}
+	g.mapState = cur
+	return out
 }
 
 // NewColony builds a generated map (terrain, trees, bushes) with the
@@ -1119,30 +1272,20 @@ func (g *Game) SetWork(id entity.EntityID, t work.Type, on bool) {
 	g.labor.Set(id, m.Set(t, on))
 }
 
-// Step advances the simulation by n ticks.
-// Phases: commands → needs/health → AI/jobs → movement → clock.
+// Step advances the simulation by n ticks. Every open map runs its 15
+// phases in id order (runPhases), the first map's pass also running the
+// colony-wide work (primary); then map requests are applied, the viewed
+// map is current again and the clock moves (MAP-0).
 func (g *Game) Step(n int) {
 	g.viewGen++ // view cache (indexes.go): a new state
-	if g.phaseObs != nil {
-		g.stepObserved(n)
-		return
-	}
 	for i := 0; i < n; i++ {
-		g.phaseCommands()
-		g.phasePlants()
-		g.phasePower() // power.go: nets balance before the climate (PLAY-021)
-		g.phaseClimate()
-		g.phaseMedical() // bleed.go: bleeding, blood loss, infection (MED-01)
-		g.phaseNeeds()
-		g.phaseAI()
-		g.phaseJobs()
-		g.phaseSocial() // social.go: interactions (ENG-003)
-		g.phaseAnimals()
-		g.phaseThreats()
-		g.phaseIncidents() // incidents.go: nature events, departures (SIM-025)
-		g.phaseWorld()     // world_state.go: caravans (ENG-003)
-		g.phaseWeather()
-		g.phaseMovement()
+		for _, m := range g.maps {
+			g.mapState = m
+			g.runPhases()
+		}
+		g.mapState = g.maps[0]
+		mapsFlush(g) // world_state.go: game/maps opens, enters and closes maps (MAP-01..04)
+		g.mapState = g.view
 		g.clock.Advance(1)
 	}
 }
@@ -1180,6 +1323,7 @@ func (g *Game) snapshot() []PawnView {
 		}
 		views = append(views, PawnView{
 			ID:            id,
+			Map:           MapID(g.mapState.id),
 			Name:          name,
 			X:             pos.X,
 			Y:             pos.Y,

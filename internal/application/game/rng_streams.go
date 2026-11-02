@@ -27,6 +27,8 @@ const (
 	tradeSalt   = 0x7EAD3
 	defenseSalt = 0xDEF3A5
 	craftSalt   = 0xC2AF7 // PRD-2: quality rolls and worn apparel wear
+	storySalt   = 0x57021 // MAP-12: which colony a threat targets
+	roadSalt    = 0x20AD7 // MAP-08: caravan encounters
 )
 
 // Stream names, the RNGStreams save keys.
@@ -42,6 +44,8 @@ const (
 	streamTrade   = "trade"
 	streamDefense = "defense"
 	streamCraft   = "craft"
+	streamStory   = "story"
+	streamRoad    = "road"
 )
 
 // streamSeedKey holds the base seed in the RNGStreams save map (8 bytes,
@@ -54,6 +58,7 @@ var streamSalts = map[string]uint64{
 	streamWorld: worldSalt, streamPrison: prisonSalt, streamBond: bondSalt,
 	streamPower: powerSalt, streamMedical: medSalt,
 	streamTrade: tradeSalt, streamDefense: defenseSalt, streamCraft: craftSalt,
+	streamStory: storySalt, streamRoad: roadSalt,
 }
 
 // rngStreams is the base seed and the streams created so far.

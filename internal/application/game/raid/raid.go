@@ -160,6 +160,7 @@ const (
 	Stage   = raiddef.StageThenAssault
 	Steal   = raiddef.Steal
 	Burn    = raiddef.Burn
+	Defend  = raiddef.Defend // MAP-05: a settlement's defenders (defend.go)
 )
 
 const (

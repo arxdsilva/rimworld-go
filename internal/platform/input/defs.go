@@ -28,6 +28,8 @@ const (
 	TabQuests    Action = "tab.quests"
 	TabWorld     Action = "tab.world"
 	TabHistory   Action = "tab.history"
+	MapNext      Action = "map.next" // MAP-1: the next open map
+	MapPrev      Action = "map.prev"
 
 	Screenshot Action = "view.screenshot"
 	HideUI     Action = "view.hide_ui"
@@ -146,6 +148,8 @@ var defs = []Def{
 	{ID: TabQuests, Label: "Quests", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F7"), Reserved: NotYet},
 	{ID: TabWorld, Label: "World", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F8")},
 	{ID: TabHistory, Label: "History", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F9")},
+	{ID: MapNext, Label: "Next map", Category: "Tabs", Context: CtxGlobal, Defaults: keys("BracketRight")},
+	{ID: MapPrev, Label: "Previous map", Category: "Tabs", Context: CtxGlobal, Defaults: keys("BracketLeft")},
 
 	{ID: Screenshot, Label: "Screenshot", Category: "View", Context: CtxGlobal, Defaults: keys("F10")},
 	{ID: HideUI, Label: "Hide interface", Category: "View", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F11")},

@@ -122,7 +122,7 @@ func (rs *Raiders) Think(id entity.EntityID, now uint64) {
 // with injury hurt.
 func (rs *Raiders) fight(id entity.EntityID, r Raider, j job.Record, hurt, x, y int, now uint64) {
 	h := rs.h
-	if rs.siege(id, r, hurt, now) || rs.stage(id, r, j, x, y, now) {
+	if rs.defend(id, &r, j, hurt, x, y, now) || rs.siege(id, r, hurt, now) || rs.stage(id, r, j, x, y, now) { // defend.go (MAP-05)
 		return
 	}
 	if r.Mode == Arriving && rs.mischief(id, r, j, x, y, now) {
@@ -248,7 +248,9 @@ func (rs *Raiders) broken(group int, now uint64) bool {
 func (rs *Raiders) givenUp(r Raider, now uint64) bool {
 	start := r.Arrived
 	if groups := rs.h.Groups(); r.Group < len(groups) {
-		if grp := groups[r.Group]; grp.Plan == Siege || grp.Plan == Stage {
+		if grp := groups[r.Group]; grp.Plan == Defend {
+			return false // defend.go: at home, it never gives up
+		} else if grp.Plan == Siege || grp.Plan == Stage {
 			if !grp.Stormed {
 				return false
 			}

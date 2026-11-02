@@ -70,9 +70,9 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		if forbiddable(b) {
 			out = append(out, forbidCommand(b))
 		}
-		out = append(out, a.powerCommands(b)...) // cmds_power.go (PLAY-021)
-		out = append(out, ventCommands(b)...)    // temp_ui.go (TEMP-5)
-		out = append(out, potCommands(b)...)     // ax2.go (AX-2)
+		out = append(out, a.powerCommandsIn(a.env().Units, b)...) // cmds_power.go (PLAY-021)
+		out = append(out, ventCommands(b)...)                     // temp_ui.go (TEMP-5)
+		out = append(out, potCommands(b)...)                      // ax2.go (AX-2)
 		out = append(out, a.MoveCommands(b)...)
 		out = append(out, orderCommands(a, b)...)           // cmds_orders.go (AX-1): uninstall, open a grave
 		out = append(out, shipCommands(a, b)...)            // ax8.go (AX-8): reactor, sleeper, launch
@@ -169,7 +169,7 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	add(world.RoomLabelAt(w, b.X, b.Y))
 	add(fuelLine(b))
 	add(overlay.TurretLine(b))
-	add(PowerLines(b, w)...)
+	add(PowerLinesIn(a.env().Units, b, w)...)
 	add(TempLines(b)...) // temp_ui.go (TEMP-5)
 	if b.DryQty > 0 {
 		add(fmt.Sprintf("Drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct))

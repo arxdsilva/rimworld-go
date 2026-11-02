@@ -7,7 +7,7 @@ The colony HUD's regions: resource bar, colonist bar, right column (letters, mes
 - `Chrome` (17 methods, holds the toasts) over `Resources` (13), `ColonistBar` (15), `Right` (32: letters, messages, alerts), `Alerts` (9: the alert rules), `Global` (21, status chips folded in), `CellInfo` (4), `Tabs` (3), `Banner` (5), `RoomStats` (2). Each is `struct{*Chrome}` or a field of it.
 - `alertExplanations` is a literal table; the rules are data, not `init()` registration.
 - `Shell` = `Sizer + World + View + Overlays + Speed + Settings + Host + Peers`.
-- `Host` (8 methods: `Widgets`, `Commands`, `Env`, `Layout`, `ChromeHit`, `SpeedLabel`, `CenterOnMap`, `SetSettings`).
+- `Host` (8 methods: `Widgets`, `Commands`, `Env`, `Layout`, `ChromeHit`, `SpeedLabel`, `Jump`, `SetSettings`).
 - `Peers` (8 methods: `PawnSel`, `Pick`, `Picked`, `TabOn`, `Power`, `StoneItem`, `DrawPawnBust`, `DrawWeather`).
 - `Reader` (`Snapshot`, `TemperatureAt`, `Factions`, `Activity`) and the small source interfaces in `alerts_allies.go`, `alerts_trade.go`, `gathering.go`.
 

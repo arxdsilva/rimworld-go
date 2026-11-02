@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/temperature"
 )
 
@@ -36,9 +37,13 @@ func (g *Game) applyClimate(now uint64) {
 }
 
 // baseClimate is the outdoor curve without the climate event (saves).
+// MAP-0: the event's offset lives on the first map only (climateTick runs
+// on its pass), so another map's curve is its base.
 func baseClimate(g *Game) (c temperature.Climate) {
 	c = g.climate
-	c.YearMean -= g.ng.climateOff
+	if primary(g) {
+		c.YearMean -= g.ng.climateOff
+	}
 	return c
 }
 
@@ -47,10 +52,10 @@ func climateFits(g *Game, id incident.ID, now uint64) bool {
 	return incident.ClimateFits(id, int(baseClimate(g).DailyMean(clock.Tick(now))))
 }
 
-// natureOdds is the nature pool's odds: the disease frequency
-// (disease.go); the wizard's Extreme weather triples the climate events.
+// natureOdds is the nature pool's odds: the disease frequency (disease.go)
+// scaled by the biome's (WG-05); the wizard's Extreme weather triples the climate events.
 func natureOdds(g *Game) incident.Odds {
-	o := incident.Odds{Disease: g.diseasePct(), Climate: incident.FullFreq}
+	o := incident.Odds{Disease: g.diseasePct() * biome.DiseaseOdds(g.biome) / 100, Climate: incident.FullFreq}
 	if g.hasSetup() && g.ng.setup.Difficulty.ExtremeWeather {
 		o.Climate = incident.ExtremeClimatePct
 	}

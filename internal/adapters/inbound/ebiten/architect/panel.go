@@ -268,7 +268,7 @@ func (t *Tool) buildPlan(k planKey) DescPlan {
 		p.cropTop, p.cropCols, p.cropW = y, cols, bw
 		rows := (len(ZoneSpecies()) + cols - 1) / cols
 		y += float32(rows)*(archBtnH+archBtnGap) - archBtnGap + archBlockGap
-		for _, ln := range CropLines(t.selectedCrop()) {
+		for _, ln := range CropLines(t.selectedCrop(), t.sh.Env().Units) {
 			add(ln, dim)
 		}
 	}

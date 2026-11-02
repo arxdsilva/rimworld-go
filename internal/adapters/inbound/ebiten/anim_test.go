@@ -53,7 +53,8 @@ func TestHairFollowsHead(t *testing.T) {
 
 func TestCarryLiftEases(t *testing.T) {
 	t.Parallel()
-	r := &Renderer{present: 50}
+	r := bareRenderer()
+	r.present = 50
 	st := r.pipe().Creatures
 	if k := st.CarryEase(7, 50); k != 0 {
 		t.Fatalf("lift starts on the ground: %v", k)
@@ -106,7 +107,7 @@ func TestDustAtFootOnContact(t *testing.T) {
 			t.Fatalf("dust lands at the feet, got %v", p)
 		}
 	}
-	r := &Renderer{}
+	r := bareRenderer()
 	st := r.pipe().Creatures
 	m := walkingState
 	m.X, m.Y, m.Stride = 5, 5, 0.7
@@ -148,7 +149,8 @@ func TestCombatMinVisibleFrames(t *testing.T) {
 		t.Fatalf("1x matches the sim-timed reaction: %v %v", a, b)
 	}
 	// bookkeeping retains a trace after the sim drops it
-	r := &Renderer{present: 100}
+	r := bareRenderer()
+	r.present = 100
 	st := r.pipe().Creatures
 	st.TrackReactions([]game.TraceView{bite}, 1000, 100)
 	if got := st.Reactions(100, nil); len(got) != 1 {
@@ -206,7 +208,7 @@ func TestTrotEightFrames(t *testing.T) {
 
 func TestParticlesExpire(t *testing.T) {
 	t.Parallel()
-	r := &Renderer{}
+	r := bareRenderer()
 	r.pipe().Creatures.Burst(r.liveView(), creature.PartDust, 3, 3, 4, 99)
 	if len(r.parts) != 4 {
 		t.Fatalf("burst = %d", len(r.parts))
@@ -226,7 +228,7 @@ func TestParticlesExpire(t *testing.T) {
 
 func TestItemPopAndSway(t *testing.T) {
 	t.Parallel()
-	r := &Renderer{}
+	r := bareRenderer()
 	w := game.WorldView{Items: []game.ItemView{{ID: 1}}}
 	r.pipe().Creatures.SyncItems(r.liveView(), w) // first sync: existing items never pop
 	if r.itemPop(1) != 1 {

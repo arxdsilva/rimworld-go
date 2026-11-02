@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 )
 
@@ -78,7 +79,7 @@ func TestVolcanicWinterChipAndRoomHeatLines(t *testing.T) {
 	if RoomHeatLines(game.RoomView{}) != nil {
 		t.Fatal("a plain room has no thermal lines")
 	}
-	if !strings.Contains(strings.Join(RoomCardLines(game.RoomView{Temp: 210, ExposedWalls: 4}), "|"), "Exposed walls 4") {
+	if !strings.Contains(strings.Join(RoomCardLines(game.RoomView{Temp: 210, ExposedWalls: 4}, units.Celsius), "|"), "Exposed walls 4") {
 		t.Fatal("the card shows the thermal lines")
 	}
 }

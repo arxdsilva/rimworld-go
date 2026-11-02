@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 )
 
@@ -13,7 +14,7 @@ import (
 func TestRoomLines(t *testing.T) {
 	t.Parallel()
 	rm := game.RoomView{ID: 4, Role: "bedroom", Score: 12, Impressiveness: 120, Label: "decent", Temp: 214, Lit: true, Roofed: 0.5, Cells: 20}
-	got := strings.Join(RoomCardLines(rm), "|")
+	got := strings.Join(RoomCardLines(rm, units.Celsius), "|")
 	want := "Bedroom|Impressiveness 12.0 (decent)|Space 0.0 ()|Beauty +0.0 ()|Wealth 0 silver ()|Cleanliness +0.00 (clean)|Temperature 21C|Counts as outdoors (under 75% roofed)|Lit: yes   Roofed: 50%|20 cells"
 	if got != want {
 		t.Fatalf("card = %q, want %q", got, want)
@@ -41,7 +42,7 @@ func TestMessageLooks(t *testing.T) {
 		MessageEdge(game.MessageView{Kind: "good"}) != LetterColor("good") {
 		t.Fatal("style or edge")
 	}
-	if FmtTemp(-25) != "-3C" || FmtTemp(25) != "3C" || FmtDegrees(-25) != "-3 °C" {
+	if FmtTemp(units.Celsius, -25) != "-3C" || FmtTemp(units.Celsius, 25) != "3C" || FmtDegrees(units.Celsius, -25) != "-3 °C" {
 		t.Fatal("temperatures")
 	}
 }

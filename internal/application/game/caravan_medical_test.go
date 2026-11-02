@@ -108,7 +108,7 @@ func TestCaravanMemberDiesAwayCleanly(t *testing.T) {
 			if g.isStashed(a) || g.indexedPatient(a) {
 				t.Fatalf("dead member still stashed %v / a patient %v", g.isStashed(a), g.indexedPatient(a))
 			}
-			if cv := g.caravanAt(cid); cv == nil || slices.Contains(cv.C.Members, uint64(a)) || !slices.Contains(cv.C.Members, uint64(b)) {
+			if cv := fleetOf(g).At(cid); cv == nil || slices.Contains(cv.C.Members, uint64(a)) || !slices.Contains(cv.C.Members, uint64(b)) {
 				t.Fatalf("caravan members after the death: %+v", cv)
 			}
 			if p := g.personOf(a); p.Where != whereDead {
@@ -143,8 +143,8 @@ func TestCaravanMedicTends(t *testing.T) {
 	if pb.BleedPerDay() == 0 {
 		t.Fatal("fixture: the cut does not bleed")
 	}
-	if g.caravanMedic(g.caravanOf(medic)) != medic {
-		t.Fatalf("medic %d, want %d", g.caravanMedic(g.caravanOf(medic)), medic)
+	if fleetOf(g).Medic(fleetOf(g).Of(medic)) != medic {
+		t.Fatalf("medic %d, want %d", fleetOf(g).Medic(fleetOf(g).Of(medic)), medic)
 	}
 	roadHours(g, 1)
 	flu, _ := pb.Cond(body.CondFlu)

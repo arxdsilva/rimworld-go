@@ -34,9 +34,27 @@ func (g *Game) ApplyPending() {
 func (g *Game) phaseCommands() {
 	cmds := g.pending
 	g.pending = nil
+	var later []command.Command
 	for _, c := range cmds {
-		g.applyOne(c)
+		switch m := cmdMap(g, c); {
+		case m == g.mapState:
+			g.applyOne(c)
+		case m != nil:
+			later = append(later, c) // another map's pass applies it (MAP-0)
+		}
 	}
+	if later != nil {
+		g.pending = append(later, g.pending...)
+	}
+}
+
+// cmdMap is the map c acts on: Command.Map when set, else the viewed map;
+// nil for a map that is no longer open (the command is dropped).
+func cmdMap(g *Game, c command.Command) *mapState {
+	if !c.MapSet {
+		return g.view
+	}
+	return mapByID(g, c.Map)
 }
 
 func (g *Game) applyOne(c command.Command) {
@@ -60,7 +78,7 @@ func (g *Game) applyOne(c command.Command) {
 	switch c.Kind {
 	case command.AddOperation, command.RemoveOperation, command.SetDrugPolicy, command.AssignBedOwner,
 		command.SetAnimalMaster, command.SetTraining, command.GiftAnimal, command.Capture, command.Arrest,
-		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn,
+		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap,
 		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
 		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
 		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)
@@ -1143,9 +1161,9 @@ func (g *Game) phaseJobs() {
 		case job.Arrest:
 			g.care.DoArrest(id, j) // care/capture.go
 		case job.Kidnap:
-			g.doKidnap(id, j) // world_state.go
+			doKidnap(g, id, j) // world_state.go
 		case job.ExitMap:
-			g.doExitMap(id, j) // world_state.go
+			doExitMap(g, id, j) // world_state.go
 		case job.TendAnimal:
 			g.doTendAnimal(id, j) // bonds.go
 		case job.Visit:

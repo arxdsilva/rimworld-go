@@ -7,8 +7,9 @@ import (
 
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/raid"
-	"rimworld-go/internal/application/game/travel"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -17,71 +18,39 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Visitors and wanderers (ENG-003, M9). A friendly or neutral faction
-// sends two to four of its people: they walk in from an edge, stroll near
-// the colony for half a day (job.Visit: walk to a spot, linger) and walk
-// out again (a trader caravan, trade_caravan.go, stays longer and
-// closer). They are registered people (Where Visitor, their faction)
-// on raiderIDs as non-hostile pawns (raid.Raider.Leaving, as the colony's
-// released prisoners are), so colonists can chat with them and capture or
-// arrest them (M8); the visit itself is driven from phaseWorld, out of
-// the raid and prisoner AI. Leaving is one-way: once a visitor turns for
-// the edge it never strolls again. Off the map they stay in the registry
-// (OffMap) with their relations.
-//
-// A wanderer is one generated human who walks in and joins the colony.
+// Visitors and wanderers (ENG-003, M9). The visit itself (groups walking
+// in, strolling, leaving; military aid among them) lives in game/visit
+// over the adapters below; the records are worldSt.visitors. A wanderer
+// is one generated human who walks in and joins the colony.
 
 const (
 	visitorSalt  = 0x715170
 	wandererSalt = 0x3A4D3E
-	// visitorStay is how long a group strolls before it leaves.
-	visitorStay = clock.TicksPerDay / 2
-	// visitorLinger is how long a visitor stands at a spot it walked to.
-	visitorLinger = 600
-	// visitorRange is how far from the colony's heart they stroll.
-	visitorRange = 10
-	// visitorRetry: a walk that failed is tried again this much later.
-	visitorRetry = 250
-	// visitorGiveUp: a leaving visitor still on the map this long after its
-	// leave time slips away where it stands.
-	visitorGiveUp = clock.TicksPerDay / 2
-	// visitorInset keeps visitors this far in from the border (the
-	// released-prisoner rule takes anyone standing on it off the map).
-	visitorInset = 2
+	// visitorRange is how far from the colony's heart visitors stroll.
+	visitorRange = visit.StrollRange
 	// visitorGroup is the raid group a visitor belongs to: none.
 	visitorGroup = math.MaxInt32
-	// visitorSpotR is how far from an edge point a spot is looked for.
-	visitorSpotR = 12
 	// wandererMaxColony: no wanderer joins a colony this large.
 	wandererMaxColony = 16
 )
 
-// visitorRec is one visitor on the map.
-type visitorRec struct {
-	ID      entity.EntityID
-	Faction int // 1 + faction index
-	LeaveAt uint64
-	Leaving bool
-	RetryAt uint64
-	// Ally: a fighter sent as military aid (allies.go, PLAY-024); false
-	// for every ordinary visitor and in older saves.
-	Ally bool
-	// Down: it was down last tick, so a death now is a death while down
-	// (care.Hospitality.Died, SIM-063).
-	Down bool
+// visitorRec is one visitor on the map (game/visit).
+type visitorRec = visit.Rec
+
+// visitsOf is game/visit over the game (its host built once per world
+// state).
+func visitsOf(g *Game) visit.Visits {
+	if w := g.worldSt; w != nil {
+		if w.visitH == nil {
+			w.visitH = newVisitHost(g)
+		}
+		return visit.Of(w.visitH)
+	}
+	return visit.Of(newVisitHost(g))
 }
 
-// visitingFactions are the factions (1 + index) that may send visitors:
-// human, not hostile, not defeated.
-func (g *Game) visitingFactions() []int {
-	var out []int
-	for i, f := range g.ng.factions {
-		if f.Type.Human() && f.Relation != faction.Hostile && !f.Defeated {
-			out = append(out, i+1)
-		}
-	}
-	return out
-}
+// visitingFactions are the factions (1 + index) that may send visitors.
+func (g *Game) visitingFactions() []int { return visitsOf(g).Factions() }
 
 // visitorsFit reports whether a friendly visitor group can arrive: a
 // colony with a friendly or neutral people and no visitors already here.
@@ -93,249 +62,31 @@ func (g *Game) visitorsFit(now uint64) bool {
 }
 
 // visitorsArrive brings a visitor group in from a map edge.
-func (g *Game) visitorsArrive(now uint64) bool {
-	facs := g.visitingFactions()
-	if len(facs) == 0 {
-		return false
-	}
-	r := g.stream(streamWorld)
-	fac := facs[r.IntN(len(facs))]
-	f := g.factionOf(fac)
-	ex, ey, ok := g.worldEdge()
-	if !ok {
-		return false
-	}
-	n := 2 + r.IntN(3)
-	wantKin := g.relativeRoll(relativeVisitPermille) // relative_world.go
-	var kin entity.EntityID
-	var used [][2]int
-	var ids []entity.EntityID
-	for k := 0; k < n; k++ {
-		x, y, ok := g.insetLandNear(ex, ey, used)
-		if !ok {
-			break
-		}
-		used = append(used, [2]int{x, y})
-		if wantKin {
-			wantKin = false
-			if kin = g.relativeFor(fac, whereVisitor, techTag(f)); kin != 0 {
-				g.placeVisitor(kin, fac, x, y, now)
-				ids = append(ids, kin)
-				continue
-			}
-		}
-		ids = append(ids, g.spawnVisitor(fac, f, x, y, now))
-	}
-	if len(ids) == 0 {
-		return false
-	}
-	g.letter(letterInfo, "Visitors", fmt.Sprintf("%d people of %s have come to visit. They will stay about half a day.", len(ids), f.Name), ids[0])
-	if kin != 0 {
-		g.relativeLetter(letterInfo, "Relative arrives", kin, "visitors from "+f.Name)
-	}
-	return true
-}
+func (g *Game) visitorsArrive(now uint64) bool { return visitsOf(g).Arrive(now) }
 
-// insetLandNear is a free dry tile near (x, y) at least visitorInset from
-// the border.
+// insetLandNear is a free dry tile near (x, y) in from the border.
 func (g *Game) insetLandNear(x, y int, used [][2]int) (int, int, bool) {
-	w, h := g.grid.Width(), g.grid.Height()
-	x = min(max(x, visitorInset), w-1-visitorInset)
-	y = min(max(y, visitorInset), h-1-visitorInset)
-	return travel.Ring(x, y, visitorSpotR, func(nx, ny int) bool { // game/travel
-		return g.inset(nx, ny) && g.dryWalkable(nx, ny) && !slices.Contains(used, [2]int{nx, ny}) && !g.pawnOn(nx, ny)
-	})
-}
-
-// inset reports (x, y) is at least visitorInset in from the border.
-func (g *Game) inset(x, y int) bool {
-	w, h := g.grid.Width(), g.grid.Height()
-	return x >= visitorInset && y >= visitorInset && x < w-visitorInset && y < h-visitorInset
+	return visitsOf(g).InsetLand(x, y, used)
 }
 
 // spawnVisitor puts one new visitor of faction fac on (x, y).
 func (g *Game) spawnVisitor(fac int, f *faction.Faction, x, y int, now uint64) entity.EntityID {
-	id := g.entities.Next()
-	p := pawngen.Generate(g.worldSeed()^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f)})
-	g.peopleReg().add(&person{ID: id, Bio: p, HasBio: true, Faction: fac, Where: whereVisitor})
-	g.socState().sig[id] = personSig{}
-	g.placeVisitor(id, fac, x, y, now)
-	return id
+	return visitsOf(g).Spawn(fac, f, x, y, now)
 }
 
-// placeVisitor puts registered person id (Where Visitor) on (x, y) as a
-// visitor of faction fac.
-func (g *Game) placeVisitor(id entity.EntityID, fac, x, y int, now uint64) {
-	g.raiderIDs = withID(g.raiderIDs, id) // prisoners.go
-	g.positions.Set(id, Position{X: x, Y: y})
-	g.names.Set(id, bioName(g.personOf(id).Bio))
-	g.jobs.Set(id, job.Record{})
-	g.need.Set(id, needs.NewFull())
-	g.vital.Set(id, health.Record{Status: health.Alive})
-	g.raiders[id] = raid.Raider{Group: visitorGroup, Arrived: now, Leaving: true, Idle: now, RetryAt: math.MaxUint64}
-	w := g.worldS()
-	w.visitors = append(w.visitors, visitorRec{ID: id, Faction: fac, LeaveAt: now + visitorStay})
-	g.invalidateCreatures()
-}
-
-// setVisitorStay makes visitor id leave at leaveAt (a trader caravan's
-// longer stay).
-func (g *Game) setVisitorStay(id entity.EntityID, leaveAt uint64) {
-	w := g.worldS()
-	for i := range w.visitors {
-		if w.visitors[i].ID == id {
-			w.visitors[i].LeaveAt = leaveAt
-		}
-	}
-}
-
-// visitorsTick drives every visitor: keep it out of the released-prisoner
-// walk-out, stroll near the colony, and leave when the stay is over.
-func (g *Game) visitorsTick(now uint64) {
-	w := g.worldSt
-	kept := w.visitors[:0]
-	for i := range w.visitors {
-		v := &w.visitors[i] // in place: careGuests.Leave updates the record mid-step
-		if g.visitorStep(v, now) {
-			kept = append(kept, *v)
-			continue
-		}
-		g.traderVisitorGone(v.ID) // trade_caravan.go (PLAY-024): the trader's goods
-		if v.Ally {
-			g.allyGone(*v) // allies.go: a letter for one who fell
-		}
-		if st, _ := g.vital.Get(v.ID); v.Down && st.Status == health.Dead {
-			g.care.Guest.Died(v.ID) // care/guest.go: died while down
-		}
-	}
-	clear(w.visitors[len(kept):])
-	w.visitors = kept
-}
-
-// visitorStep runs visitor v for one tick; false: it is no longer a
-// visitor on the map (gone, dead, taken prisoner).
-func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
-	r, ok := g.raiders[v.ID]
-	if !ok || g.prison.Is(v.ID) {
-		return false
-	}
-	if p := g.personOf(v.ID); p == nil || p.Where != whereVisitor {
-		return false
-	}
-	st, _ := g.vital.Get(v.ID)
-	if st.Status == health.Dead {
-		return false
-	}
-	// prison.Live walks a Leaving pawn out once RetryAt passes or it idled
-	// a day: the visit holds both off.
-	r.Leaving, r.Idle, r.RetryAt = true, now, math.MaxUint64
-	g.raiders[v.ID] = r
-	if v.Down = st.Status != health.Alive; v.Down {
-		return true // down: it waits for help (or capture)
-	}
-	if g.care.Guest.Step(v.ID) {
-		return true // care/guest.go: rescued, it heals in the colony's bed
-	}
-	pos, _ := g.positions.Get(v.ID)
-	j, _ := g.jobs.Get(v.ID)
-	if !v.Leaving && now >= v.LeaveAt {
-		v.Leaving, v.RetryAt = true, 0
-		g.reserve.ReleaseOwner(v.ID)
-		g.jobs.Set(v.ID, job.Record{})
-		j = job.Record{}
-	}
-	if v.Leaving && (nearBorder(pos, g.grid.Width(), g.grid.Height()) || j.Kind == job.Move && j.State == job.Complete || now >= v.LeaveAt+visitorGiveUp) {
-		g.departVisitor(v.ID)
-		return false
-	}
-	if v.Ally && !v.Leaving {
-		return g.allyStep(v, pos, j, now) // allies.go: fight, else stroll
-	}
-	if j.State == job.Complete || j.State == job.Fail || j.State == job.Do && j.Kind != job.Visit {
-		// a finished walk, or another system's job left standing (a step
-		// aside): nothing runs a raiderIDs pawn's job but this
-		g.reserve.ReleaseOwner(v.ID)
-		j = job.Record{}
-		g.jobs.Set(v.ID, j)
-	}
-	if v.Leaving { // walk to the nearest edge band; the check above sends it home there
-		if j.Active() || now < v.RetryAt {
-			return true
-		}
-		ex, ey := nearestEdge(pos, g.grid.Width(), g.grid.Height())
-		x, y, ok := g.insetLandNear(ex, ey, nil)
-		if !ok {
-			x, y, ok = g.combat.Tiles.WalkableNear(ex, ey, visitorSpotR) // a wet edge: any way out
-		}
-		if !ok || !g.startJob(v.ID, job.Record{Kind: job.Move, TX: x, TY: y}) {
-			v.RetryAt = now + visitorRetry
-		}
-		return true
-	}
-	switch {
-	case j.Kind == job.Visit && j.State == job.Do:
-		g.lingerVisit(v.ID, j)
-	case j.Active():
-	case g.traderHeld(v.ID): // trade_caravan.go: a trader stays put while traded with
-	case now >= v.RetryAt:
-		if !g.startStroll(v.ID) {
-			v.RetryAt = now + visitorRetry
-		}
-	}
-	return true
-}
-
-// nearBorder reports p is within visitorInset of the border of a w x h map.
-func nearBorder(p Position, w, h int) bool { return min(p.X, p.Y, w-1-p.X, h-1-p.Y) <= visitorInset }
-
-// departVisitor: visitor id walks off the map; it stays a known person.
-func (g *Game) departVisitor(id entity.EntityID) {
-	g.setWhere(id, whereOffMap)
-	g.removeRaider(id) // raids.go: off the map
-	g.invalidateCreatures()
-}
-
-// startStroll sends visitor id to a spot near the colony to linger.
-func (g *Game) startStroll(id entity.EntityID) bool {
-	hx, hy := g.home()
-	r := g.stream(streamWorld)
-	rg := g.caravanStrollRange(id) // trade_caravan.go: a trader caravan camps closer
-	x := hx + r.IntN(2*rg+1) - rg
-	y := hy + r.IntN(2*rg+1) - rg
-	tx, ty, ok := g.combat.Tiles.WalkableNear(x, y, 3)
-	if !ok || !g.inset(tx, ty) {
-		return false
-	}
-	return g.startJob(id, job.Record{Kind: job.Visit, TX: tx, TY: ty, WorkLeft: visitorLinger})
-}
-
-// lingerVisit counts a visitor's stay at its spot down; the visit ends
-// when it is over.
-func (g *Game) lingerVisit(id entity.EntityID, j job.Record) {
-	if j.WorkLeft > 0 {
-		j.WorkLeft--
-	}
-	if j.WorkLeft == 0 {
-		j.State = job.Complete
-	}
-	g.jobs.Set(id, j)
-}
+// setVisitorStay makes visitor id leave at leaveAt.
+func (g *Game) setVisitorStay(id entity.EntityID, leaveAt uint64) { visitsOf(g).SetStay(id, leaveAt) }
 
 // doVisit runs a visit job for a pawn on pawnIDs (phaseJobs): the same
-// linger.
-func (g *Game) doVisit(id entity.EntityID, j job.Record) { g.lingerVisit(id, j) }
+// linger as a visitor's.
+func (g *Game) doVisit(id entity.EntityID, j job.Record) { visitsOf(g).Linger(id, j) }
 
 // visitorIDs lists the visitors on the map, ascending.
 func (g *Game) visitorIDs() []entity.EntityID {
 	if g.worldSt == nil {
 		return nil
 	}
-	out := make([]entity.EntityID, 0, len(g.worldSt.visitors))
-	for _, v := range g.worldSt.visitors {
-		out = append(out, v.ID)
-	}
-	slices.Sort(out)
-	return out
+	return visitsOf(g).IDs()
 }
 
 // wandererFits reports whether a wanderer can join: a set-up colony that
@@ -408,7 +159,7 @@ func (h careGuests) Goodwill(fac uint64, delta int, reason string) {
 	}
 }
 
-// Leave turns recovered guest id for home now, with visitorGiveUp to walk
+// Leave turns recovered guest id for home now, with its give-up time to walk
 // out before it slips away.
 func (h careGuests) Leave(id entity.EntityID) {
 	g, now := h.g, uint64(h.g.clock.Now())
@@ -468,3 +219,127 @@ func (h careGuests) join(p entity.EntityID) {
 	g.letter(letterGood, "Stranger joins", text, p)
 	g.addHistory("joined", text, p)
 }
+
+// visitHost is game/visit's roles (visit/deps.go) over small adapters.
+type visitHost struct {
+	visitBodies
+	visitMovers
+	visitGround
+	visitArrivals
+	visitFighters
+	visitDiplomacy
+}
+
+func newVisitHost(g *Game) visitHost {
+	return visitHost{visitBodies{g}, visitMovers{g}, visitGround{g}, visitArrivals{g}, visitFighters{g}, visitDiplomacy{g}}
+}
+
+type visitBodies struct{ g *Game }
+
+func (h visitBodies) Present(id entity.EntityID) bool {
+	_, ok := h.g.raiders[id]
+	p := h.g.personOf(id)
+	return ok && !h.g.prison.Is(id) && p != nil && p.Where == whereVisitor
+}
+func (h visitBodies) Status(id entity.EntityID) health.Status {
+	st, _ := h.g.vital.Get(id)
+	return st.Status
+}
+func (h visitBodies) Hold(id entity.EntityID, now uint64) { // prison.Live walks a Leaving pawn out once RetryAt passes or it idled a day
+	r := h.g.raiders[id]
+	r.Leaving, r.Idle, r.RetryAt = true, now, math.MaxUint64
+	h.g.raiders[id] = r
+}
+func (h visitBodies) GuestStep(id entity.EntityID) bool { return h.g.care.Guest.Step(id) }
+func (h visitBodies) GuestDied(id entity.EntityID)      { h.g.care.Guest.Died(id) }
+func (h visitBodies) Standing(id entity.EntityID) bool  { return h.g.standingPawn(id) }
+func (h visitBodies) Name(id entity.EntityID) string    { return h.g.name(id) }
+func (h visitBodies) Depart(id entity.EntityID) { // it stays a known person
+	h.g.setWhere(id, whereOffMap)
+	h.g.removeRaider(id) // raids.go: off the map
+	h.g.invalidateCreatures()
+}
+
+type visitMovers struct{ g *Game }
+
+func (h visitMovers) Pos(id entity.EntityID) (int, int) {
+	p, _ := h.g.positions.Get(id)
+	return p.X, p.Y
+}
+func (h visitMovers) Job(id entity.EntityID) job.Record                { j, _ := h.g.jobs.Get(id); return j }
+func (h visitMovers) SetJob(id entity.EntityID, rec job.Record)        { h.g.jobs.Set(id, rec) }
+func (h visitMovers) Release(id entity.EntityID)                       { h.g.reserve.ReleaseOwner(id) }
+func (h visitMovers) StartJob(id entity.EntityID, rec job.Record) bool { return h.g.startJob(id, rec) }
+func (h visitMovers) WalkableNear(x, y, r int) (int, int, bool) {
+	return h.g.combat.Tiles.WalkableNear(x, y, r)
+}
+func (h visitMovers) Free(x, y int) bool { return h.g.dryWalkable(x, y) && !h.g.pawnOn(x, y) }
+func (h visitMovers) Size() (int, int)   { return h.g.grid.Width(), h.g.grid.Height() }
+
+type visitGround struct{ g *Game }
+
+func (h visitGround) Home() (int, int)                   { return h.g.home() }
+func (h visitGround) Edge() (int, int, bool)             { return h.g.worldEdge() }
+func (h visitGround) TraderHeld(id entity.EntityID) bool { return h.g.traderHeld(id) }
+func (h visitGround) StrollRange(id entity.EntityID) int { return h.g.caravanStrollRange(id) }
+func (h visitGround) TraderGone(id entity.EntityID)      { h.g.traderVisitorGone(id) }
+func (h visitGround) WorldRoll(n int) int                { return h.g.stream(streamWorld).IntN(n) }
+func (h visitGround) TradeRoll(n int) int                { return h.g.stream(streamTrade).IntN(n) }
+func (h visitGround) Records(create bool) *[]visit.Rec {
+	if h.g.worldSt == nil && !create {
+		return nil
+	}
+	return &h.g.worldS().visitors
+}
+
+type visitArrivals struct{ g *Game }
+
+func (h visitArrivals) NewPerson(ref int, f *faction.Faction) entity.EntityID {
+	g := h.g
+	id := g.entities.Next()
+	p := pawngen.Generate(g.worldSeed()^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f)})
+	g.peopleReg().add(&person{ID: id, Bio: p, HasBio: true, Faction: ref, Where: whereVisitor})
+	g.socState().sig[id] = personSig{}
+	return id
+}
+func (h visitArrivals) Place(id entity.EntityID, ref, x, y int, now uint64) {
+	g := h.g
+	g.raiderIDs = withID(g.raiderIDs, id) // prisoners.go
+	g.positions.Set(id, Position{X: x, Y: y})
+	g.names.Set(id, bioName(g.personOf(id).Bio))
+	g.jobs.Set(id, job.Record{})
+	g.need.Set(id, needs.NewFull())
+	g.vital.Set(id, health.Record{Status: health.Alive})
+	g.raiders[id] = raid.Raider{Group: visitorGroup, Arrived: now, Leaving: true, Idle: now, RetryAt: math.MaxUint64}
+	g.invalidateCreatures()
+}
+func (h visitArrivals) RelativeRoll() bool { return h.g.relativeRoll(relativeVisitPermille) } // relative_world.go
+func (h visitArrivals) RelativeFor(ref int, f *faction.Faction) entity.EntityID {
+	return h.g.relativeFor(ref, whereVisitor, techTag(f))
+}
+func (h visitArrivals) RelativeLetter(kin entity.EntityID, among string) {
+	h.g.relativeLetter(letterInfo, "Relative arrives", kin, among)
+}
+func (h visitArrivals) Letter(kind, title, text string, focus entity.EntityID) {
+	h.g.letter(kind, title, text, focus)
+}
+
+type visitFighters struct{ g *Game }
+
+func (h visitFighters) RaiderIDs() []entity.EntityID           { return h.g.raiderIDs }
+func (h visitFighters) StandingRaider(id entity.EntityID) bool { return h.g.standingRaider(id) }
+func (h visitFighters) Arm(id entity.EntityID, k item.Kind)    { h.g.equip[id] = k }
+func (h visitFighters) Strike(id entity.EntityID, j job.Record, now uint64) {
+	h.g.combat.Strikes.Do(id, j, now)
+}
+func (h visitFighters) NearestColonist(x, y int) (entity.EntityID, int, int, bool) {
+	id, p, ok := h.g.nearestColonist(Position{X: x, Y: y})
+	return id, p.X, p.Y, ok
+}
+
+type visitDiplomacy struct{ g *Game }
+
+func (h visitDiplomacy) Factions() []faction.Faction              { return h.g.ng.factions }
+func (h visitDiplomacy) Cooldown(id int) faction.Cooldowns        { return h.g.cooldownOf(id) }
+func (h visitDiplomacy) SetCooldown(id int, cd faction.Cooldowns) { h.g.setCooldown(id, cd) }
+func (h visitDiplomacy) RelDay(now uint64) int                    { return h.g.relDay(now) }

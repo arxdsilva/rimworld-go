@@ -303,7 +303,7 @@ func TestNonFigureDrawsHaveNoBlood(t *testing.T) {
 
 func TestDrawLitWritesCustom3(t *testing.T) {
 	t.Parallel()
-	r := &Renderer{}
+	r := bareRenderer()
 	r.view.W = roomWorld()
 	img := ebiten.NewImage(4, 4)
 	dst := ebiten.NewImage(16, 16)
@@ -340,7 +340,7 @@ func TestBloodShaderCompiles(t *testing.T) {
 		t.Fatal("lit.kage decodes custom.w into blood blotches")
 	}
 	// draw through it with blood set: compiles and runs on this backend
-	r := &Renderer{}
+	r := bareRenderer()
 	r.view.W = roomWorld()
 	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	r.figureBlood = overlay.EncodeBlood(0.6, 10, false)

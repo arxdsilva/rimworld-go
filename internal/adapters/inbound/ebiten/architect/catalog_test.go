@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -183,10 +184,10 @@ func TestCardLines(t *testing.T) {
 		t.Errorf("steel stock line %q", got)
 	}
 	tree := game.CropView{Name: "tree", Days: 10, Yield: 25}
-	if got := CropLines(tree); len(got) != 2 || !strings.HasPrefix(got[0], "Tree: 10.0 days") {
+	if got := CropLines(tree, units.Celsius); len(got) != 2 || !strings.HasPrefix(got[0], "Tree: 10.0 days") {
 		t.Errorf("tree lines %q", got)
 	}
-	if got := CropLines(game.CropView{Name: "rice", Label: "rice", Food: true, FrostKill: -25}); !strings.Contains(got[2], "below -3C") {
+	if got := CropLines(game.CropView{Name: "rice", Label: "rice", Food: true, FrostKill: -25}, units.Celsius); !strings.Contains(got[2], "below -3C") {
 		t.Errorf("crop lines %q", got)
 	}
 }

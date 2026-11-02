@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -28,6 +29,11 @@ type Reader interface {
 	TemperatureAt(x, y int) int
 	Factions() []game.FactionView
 	Activity() schedule.Activity
+	// The open maps (MAP-1): the colonist bar's groups and the cross-map
+	// alerts. Maps is in map order, Colonists covers every map.
+	Maps() []game.MapView
+	ViewedMap() game.MapID
+	Colonists() []game.PawnView
 }
 
 // Env is what the HUD reads of the program around it, as of the call.
@@ -35,6 +41,7 @@ type Env struct {
 	Game  Reader       // nil off the colony (no renderer)
 	Art   *art.Catalog // the map's catalog (item sprites); nil off the colony
 	Icons *art.Catalog // the client's catalog (ui_icon/ sprites)
+	Units units.Temp   // how temperatures read (Options, WG-16)
 
 	Updates uint64 // the Update counter (toasts, double clicks)
 	Session int    // colonies started this run (letter ids restart with each)
@@ -64,9 +71,10 @@ type Host interface {
 	// SpeedLabel is the clock's speed text (it says why the game paused
 	// itself).
 	SpeedLabel() string
-	// CenterOnMap pans the camera so the world point is in the middle of
-	// the map viewport.
-	CenterOnMap(wx, wy float64)
+	// Jump shows the spot: it switches to the spot's map (CurrentMap: the
+	// one on screen), selects Focus when it is still on that map and
+	// centres the camera on X, Y. A negative X or Y only switches the map.
+	Jump(ports.Spot)
 	// SetSettings stores and applies the player's options the way the
 	// Options screen does.
 	SetSettings(config.Settings)

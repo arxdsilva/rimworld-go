@@ -63,7 +63,8 @@ func TestLightingOffDrawsPlainWithoutPairs(t *testing.T) {
 	t.Parallel()
 	art := &artpkg.Catalog{}
 	sprite := normalSprite(art)
-	r := &Renderer{art: art}
+	r := bareRenderer()
+	r.art = art
 	r.view.W = roomWorld()
 	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
@@ -94,7 +95,8 @@ func TestLightingOffBloodyFigureStillShades(t *testing.T) {
 	t.Parallel()
 	art := &artpkg.Catalog{}
 	sprite := normalSprite(art)
-	r := &Renderer{art: art}
+	r := bareRenderer()
+	r.art = art
 	r.view.W = roomWorld()
 	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	r.lit.Off = true
@@ -220,7 +222,8 @@ func TestLitPairCapacityFollowsTheVisibleSprites(t *testing.T) {
 func TestLitPairsStayBounded(t *testing.T) {
 	t.Parallel()
 	art := &artpkg.Catalog{}
-	r := &Renderer{art: art}
+	r := bareRenderer()
+	r.art = art
 	r.view.W = roomWorld()
 	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
@@ -248,7 +251,7 @@ func TestLitPairsStayBounded(t *testing.T) {
 // --- water -----------------------------------------------------------------------
 
 func waterRendererFixture() *Renderer {
-	r := &Renderer{}
+	r := bareRenderer()
 	r.view.W = roomWorld()
 	r.lit.Light = lightpkg.LightAt(12, summerDay, "clear", 0)
 	r.art = &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{}}

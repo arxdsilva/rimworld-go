@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/input"
@@ -61,17 +62,17 @@ func powerNetOf(w game.WorldView, id int) (game.PowerNetView, bool) {
 	return game.PowerNetView{}, false
 }
 
-// fmtTarget is a thermostat target in tenths of a degree C: "21 °C", or
+// FmtTarget is a thermostat target in tenths of a degree C: "21 °C", or
 // "21.5 °C" when it is not whole.
-func FmtTarget(tenths int) string {
-	if tenths%10 == 0 {
-		return fmt.Sprintf("%d °C", tenths/10)
-	}
-	sign, t := "", tenths
-	if t < 0 {
-		sign, t = "-", -t
-	}
-	return fmt.Sprintf("%s%d.%d °C", sign, t/10, t%10)
+func FmtTarget(tenths int) string { return FmtTargetIn(units.Celsius, tenths) }
+
+// FmtTargetIn is FmtTarget in the player's temperature unit (WG-16).
+func FmtTargetIn(u units.Temp, tenths int) string { return u.Target(tenths) }
+
+// thermoStepLabels are the thermostat buttons' labels and the step they
+// name, in the player's unit: one degree Celsius is 1.8 degrees Fahrenheit.
+func thermoStepLabels(u units.Temp) (down, up string) {
+	return "-" + u.Step(), "+" + u.Step()
 }
 
 // Warning lines start with one of these; the pane draws them in the
@@ -92,6 +93,11 @@ func PaneLineWarns(line string) bool {
 // what is wrong, a pending flick, and its grid's balance. Nil for a
 // building that is not electrical.
 func PowerLines(b game.BuildingView, w game.WorldView) []string {
+	return PowerLinesIn(units.Celsius, b, w)
+}
+
+// PowerLinesIn is PowerLines with temperatures in the player's unit.
+func PowerLinesIn(u units.Temp, b game.BuildingView, w game.WorldView) []string {
 	if b.PowerRole == "" {
 		return nil
 	}
@@ -106,7 +112,7 @@ func PowerLines(b game.BuildingView, w game.WorldView) []string {
 			out = append(out, "No power")
 		}
 		if isThermostatBldg(b) {
-			out = append(out, "Target "+FmtTarget(b.ThermoTarget))
+			out = append(out, "Target "+FmtTargetIn(u, b.ThermoTarget))
 			switch {
 			case !b.ThermoActive:
 				out = append(out, "Idle (at target)")
@@ -205,6 +211,12 @@ func fuelLine(b game.BuildingView) string {
 // powerCommands are b's power buttons: the Power toggle on every device
 // with one, and a heater's or cooler's thermostat.
 func (a Building) powerCommands(b game.BuildingView) []Button {
+	return a.powerCommandsIn(units.Celsius, b)
+}
+
+// powerCommandsIn is powerCommands with the thermostat's temperatures in
+// the player's unit (WG-16).
+func (a Building) powerCommandsIn(u units.Temp, b game.BuildingView) []Button {
 	var out []Button
 	if hasPowerToggle(b) {
 		desc := "Switch it on or off. A colonist walks over and flicks it, so it takes a moment."
@@ -219,13 +231,14 @@ func (a Building) powerCommands(b game.BuildingView) []Button {
 			Cmds: []command.Command{{Kind: command.SetPowerWanted, Target: uint64(b.ID), Enabled: !b.PowerWantOn}}})
 	}
 	if isThermostatBldg(b) {
-		now := FmtTarget(b.ThermoTarget)
+		now := FmtTargetIn(u, b.ThermoTarget)
+		down, up := thermoStepLabels(u)
 		out = append(out,
-			Button{ID: powerDownCmdID, Label: "-1 °C", Icon: "thermostat_down",
-				Desc: "Lower the target temperature by 1 °C. It is " + now + " now.",
+			Button{ID: powerDownCmdID, Label: down, Icon: "thermostat_down",
+				Desc: "Lower the target temperature by " + u.Step() + ". It is " + now + " now.",
 				Cmds: []command.Command{{Kind: command.SetThermostat, Target: uint64(b.ID), Count: b.ThermoTarget - powerThermoStep}}},
-			Button{ID: powerUpCmdID, Label: "+1 °C", Icon: "thermostat_up",
-				Desc: "Raise the target temperature by 1 °C. It is " + now + " now.",
+			Button{ID: powerUpCmdID, Label: up, Icon: "thermostat_up",
+				Desc: "Raise the target temperature by " + u.Step() + ". It is " + now + " now.",
 				Cmds: []command.Command{{Kind: command.SetThermostat, Target: uint64(b.ID), Count: b.ThermoTarget + powerThermoStep}}})
 	}
 	return out

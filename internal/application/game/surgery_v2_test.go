@@ -215,7 +215,7 @@ func spawnGuest(t *testing.T, g *Game, x, y int) entity.EntityID {
 	t.Helper()
 	id := g.entities.Next()
 	g.peopleReg().add(&person{ID: id, Bio: pawngen.Pawn{First: "Gus"}, HasBio: true, Where: whereVisitor})
-	g.placeVisitor(id, 0, x, y, uint64(g.clock.Now()))
+	visitsOf(g).Place(id, 0, x, y, uint64(g.clock.Now()))
 	if !g.visitor(id) {
 		t.Fatal("not a guest")
 	}

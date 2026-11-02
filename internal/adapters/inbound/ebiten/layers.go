@@ -25,6 +25,10 @@ import (
 // (Lit, Env, Creatures, Overlays, Cues, LOD, Links, Stone, Paint): built on
 // first use, its painter's catalog kept current (the App sets r.art after
 // New; tests swap it). Every layer draws with the pipeline's painter.
+// The pipeline is the shown scene's (scene.go): it is built while that
+// scene is r.mapScene, so &r.env, &r.mo, &r.cam, &r.view, &r.snowc and the
+// rest point at that map's own state and no cache mixes maps; the lighting
+// (&r.lit), the water shader and the cue bus are the Renderer's, shared.
 func (r *Renderer) pipe() *world.Pipeline {
 	if r.wp == nil {
 		r.lit.Blaze = overlay.BlazeLight // a burning cell's reach and strength live with the fires

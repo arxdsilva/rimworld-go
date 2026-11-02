@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"strings"
 
 	"rimworld-go/internal/application/game"
@@ -61,7 +62,7 @@ func (c RoomStats) DrawOverlay(screen *ebiten.Image) {
 
 // RoomCardLines is the hover card for a room: its role, impressiveness and
 // the four stats behind it, each with the label the simulation gives it.
-func RoomCardLines(rm game.RoomView) []string {
+func RoomCardLines(rm game.RoomView, u units.Temp) []string {
 	lit := "no"
 	if rm.Lit {
 		lit = "yes"
@@ -77,7 +78,7 @@ func RoomCardLines(rm game.RoomView) []string {
 		fmt.Sprintf("Beauty %+.1f (%s)", float64(rm.Beauty)/10, rm.BeautyLabel),
 		fmt.Sprintf("Wealth %d silver (%s)", rm.Wealth, rm.WealthLabel),
 		fmt.Sprintf("Cleanliness %+.2f (%s)", float64(rm.CleanStat)/100, clean),
-		"Temperature " + FmtTemp(rm.Temp),
+		"Temperature " + FmtTemp(u, rm.Temp),
 		fmt.Sprintf("Lit: %s   Roofed: %d%%", lit, int(math.Round(rm.Roofed*100))),
 		fmt.Sprintf("%d cells", rm.Cells),
 	}
@@ -129,7 +130,7 @@ func (c RoomStats) DrawCard(screen *ebiten.Image) {
 			return
 		}
 	}
-	lines := RoomCardLines(w.Rooms[id])
+	lines := RoomCardLines(w.Rooms[id], c.sh.Env().Units)
 	wid := int(gfx.MaxTextW(lines, gfx.Body))
 	rowH := int(gfx.LineStep(gfx.Body))
 	pw, ph := wid+24, len(lines)*rowH+12

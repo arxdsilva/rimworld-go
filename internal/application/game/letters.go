@@ -33,11 +33,15 @@ type savedLetter struct {
 	Title    string
 	Text     string
 	X, Y     int
+	Map      MapID
 	Focus    entity.EntityID
 	Intro    bool
 	// Join: the rescued stranger whose offer to join this letter carries
 	// (0: none; SIM-063). AcceptLetter takes it in, dismissing declines.
 	Join entity.EntityID
+	// Demand: a caravan's encounter asks Give or Refuse by this letter
+	// (command.EncounterAnswer, MAP-08).
+	Demand bool
 }
 
 // letterState is the stack, oldest first, and how many letters were ever
@@ -73,7 +77,7 @@ func (g *Game) addLetter(m MessageView) string {
 		x, y = -1, -1 // no place (a message at 0,0 means none): the UI offers no jump
 	}
 	g.letters.list = append(g.letters.list, savedLetter{ID: g.letters.next, Tick: m.Tick, Kind: kind,
-		Title: m.Title, Text: m.Text, X: x, Y: y, Focus: m.Focus})
+		Title: m.Title, Text: m.Text, X: x, Y: y, Map: m.Map, Focus: m.Focus})
 	if n := len(g.letters.list); n > maxLetters {
 		g.letters.list = append(g.letters.list[:0:0], g.letters.list[n-maxLetters:]...)
 	}
@@ -125,7 +129,7 @@ func (g *Game) letterViews() []LetterView {
 	out := make([]LetterView, len(g.letters.list))
 	for i, l := range g.letters.list {
 		out[i] = LetterView{ID: l.ID, Tick: l.Tick, Kind: l.Kind, Title: l.Title, Text: l.Text,
-			X: l.X, Y: l.Y, Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0}
+			X: l.X, Y: l.Y, Map: l.Map, Focus: l.Focus, Intro: l.Intro, JoinOffer: l.Join != 0, Demand: l.Demand}
 	}
 	return out
 }

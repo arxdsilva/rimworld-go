@@ -107,6 +107,20 @@ func BenchmarkTickRaid(b *testing.B) {
 	b.Run("500", func(b *testing.B) { benchTicks(b, loadFixture(b, 500, true)) })
 }
 
+// BenchmarkMultiMap steps a grown 250 colony with two generated 150 site maps
+// open beside it (MAP-01: all maps tick); compare BenchmarkTickGrown/250.
+func BenchmarkMultiMap(b *testing.B) {
+	g := loadFixture(b, 250, false)
+	if opened := game.OpenBenchMaps(g, 2); opened != 2 {
+		b.Fatalf("opened %d site maps, want 2", opened)
+	}
+	g.Step(1) // the opening runs at the flush
+	if n := len(g.Maps()); n != 3 {
+		b.Fatalf("%d maps open, want 3", n)
+	}
+	benchTicks(b, g)
+}
+
 // BenchmarkReadModel builds both read models once per frame with nothing
 // changed since the last frame (the renderer's steady state).
 // "500/cached" is the same with the view cache on (SetViewCache: the

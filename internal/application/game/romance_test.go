@@ -75,11 +75,11 @@ func woo(t testing.TB, g *Game, a, b entity.EntityID) {
 func TestRomancePairTransitions(t *testing.T) {
 	g, a, b := couple(t)
 	adore(g, b, a)
-	if g.breakUp(a, b, socNow(g)) || g.propose(a, b, socNow(g)) || g.marry(a, b, socNow(g)) {
+	if g.breakUp(a, b, socNow(g)) || g.propose(a, b, socNow(g)) || gatherOf(g).Marry(a, b, socNow(g)) {
 		t.Fatal("strangers broke up, proposed or married")
 	}
 	woo(t, g, a, b) // None -> Lover
-	if g.marry(a, b, socNow(g)) {
+	if gatherOf(g).Marry(a, b, socNow(g)) {
 		t.Fatal("lovers married without an engagement")
 	}
 	adore(g, b, a)
@@ -97,10 +97,10 @@ func TestRomancePairTransitions(t *testing.T) {
 	if g.propose(a, b, socNow(g)) {
 		t.Fatal("fiances proposed again")
 	}
-	if !g.marry(a, b, socNow(g)) || g.pairOf(a, b).Kind != social.PairSpouse {
+	if !gatherOf(g).Marry(a, b, socNow(g)) || g.pairOf(a, b).Kind != social.PairSpouse {
 		t.Fatal("fiances did not marry")
 	}
-	if g.marry(a, b, socNow(g)) {
+	if gatherOf(g).Marry(a, b, socNow(g)) {
 		t.Fatal("married twice")
 	}
 	if g.breakUp(a, b, socNow(g)) {

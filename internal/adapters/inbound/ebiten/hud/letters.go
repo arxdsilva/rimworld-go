@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"strconv"
@@ -246,11 +247,11 @@ func letterHasPlace(l game.LetterView) bool {
 
 // jumpToLetter takes the camera to the letter's creature, or else its tile.
 func (c Right) jumpToLetter(l game.LetterView) {
-	if c.focusEntity(l.Focus) {
+	if c.focusEntity(l.Focus, l.Map, l.X, l.Y) {
 		return
 	}
 	if l.X >= 0 && l.Y >= 0 {
-		c.sh.CenterOnMap(float64(l.X)+0.5, float64(l.Y)+0.5)
+		c.sh.Jump(ports.Spot{Map: l.Map, X: l.X, Y: l.Y})
 	}
 }
 
@@ -294,8 +295,9 @@ func (c Right) openLetterView(l game.LetterView) {
 
 // letterFooter is the letter window's buttons: Continue, or, for a
 // rescued stranger's offer to join (SIM-063), Accept (command.AcceptLetter)
-// and Decline (command.DismissLetter); then "Jump to" when the letter has
-// a place.
+// and Decline (command.DismissLetter), or, for a demand on a caravan
+// (MAP-08), Give and Refuse (command.EncounterAnswer); then "Jump to" when
+// the letter has a place.
 func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 	buttons := []uikit.ModalButton{{ID: "continue", Label: "Continue", Style: uikit.BtnPrimary, Closes: true}}
 	if l.JoinOffer && l.ID != 0 {
@@ -304,6 +306,15 @@ func (c Right) letterFooter(l game.LetterView) []uikit.ModalButton {
 				c.sh.Enqueue(command.Command{Kind: command.AcceptLetter, Target: l.ID})
 			}},
 			{ID: "decline", Label: "Decline", Closes: true, OnClick: func() { c.dismissLetter(l.ID) }},
+		}
+	}
+	if l.Demand && l.ID != 0 {
+		answer := func(mode uint8) {
+			c.sh.Enqueue(command.Command{Kind: command.EncounterAnswer, Target: l.ID, Mode: mode})
+		}
+		buttons = []uikit.ModalButton{
+			{ID: "give", Label: "Give", Style: uikit.BtnPrimary, Closes: true, OnClick: func() { answer(0) }},
+			{ID: "refuse", Label: "Refuse", Closes: true, OnClick: func() { answer(1) }},
 		}
 	}
 	if letterHasPlace(l) {

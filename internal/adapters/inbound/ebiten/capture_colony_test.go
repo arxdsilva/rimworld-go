@@ -142,6 +142,15 @@ func TestCaptureColonyStates(t *testing.T) {
 			}
 			t.Fatal("no campfire card")
 		}},
+		{"world", 60, func(t *testing.T, a *App) {
+			g, _ := a.renderer.game.(*game.Game)
+			if g == nil || !a.world.Open() {
+				t.Fatalf("the world capture should show the world view, open %v", a.world.Open())
+			}
+			if _, ok := g.WorldParams(); !ok {
+				t.Fatal("the world capture's colony has no planet")
+			}
+		}},
 		{"chips", 60, func(t *testing.T, a *App) {
 			if chips := statusChips(a.renderer.world()); len(chips) != 1 || chips[0].Label != "Ashfall sky" {
 				t.Fatalf("chips = %+v, want the Ashfall sky condition", chips)

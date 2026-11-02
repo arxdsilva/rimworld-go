@@ -3,6 +3,7 @@ package ebiten
 import (
 	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -51,7 +52,7 @@ func newHud(a *App) *hud.Chrome {
 func (h hudHost) Env() hud.Env {
 	a := h.a
 	e := hud.Env{
-		Icons: a.art, Updates: a.updates, Session: a.simsStarted, Hint: a.hint != "", Alt: a.in.Alt(),
+		Icons: a.art, Units: units.FromUnit(a.settings.Gameplay.TempUnit), Updates: a.updates, Session: a.simsStarted, Hint: a.hint != "", Alt: a.in.Alt(),
 		PanelOpen: a.arch.Open || a.win.Open,
 	}
 	if r := a.renderer; r != nil {
@@ -78,11 +79,9 @@ func (h hudHost) StoneItem(key, kind string, cs sprite.ColorScale) (string, spri
 	return h.a.renderer.pipe().StoneItem(key, kind, cs)
 }
 
-func (h hudHost) CenterOnMap(wx, wy float64) {
-	if h.a.renderer != nil {
-		h.a.centerOnMap(wx, wy)
-	}
-}
+// Jump hands the spot to the shell's JumpTo intent (shell.go: switch map,
+// select the focus, centre).
+func (h hudHost) Jump(s portspkg.Spot) { shellDispatch{h.a}.Do(portspkg.JumpTo{Spot: s}) }
 
 func (h hudHost) DrawPawnBust(dst *ebiten.Image, p game.PawnView, x, y, w, ht float64) {
 	if r := h.a.renderer; r != nil && r.art != nil {
@@ -113,7 +112,7 @@ func (h hudHost) TabOn(id string) bool {
 	case ids.TabAssign:
 		return a.win.KitID() == windows.AssignModalID
 	case ids.TabWorld:
-		return a.win.KitID() == windows.WorldModalID
+		return a.world.Open()
 	case ids.TabHistory:
 		return a.win.KitID() == windows.HistoryModalID
 	case ids.TabFactions:

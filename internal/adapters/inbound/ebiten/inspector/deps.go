@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/skill"
@@ -45,6 +46,7 @@ type Env struct {
 	Art    *art.Catalog   // the App's sprites and icons (nil while missing)
 	MapArt *art.Catalog   // the renderer's (nil off the colony)
 	Keys   input.Bindings // the live key bindings (the command keys' labels)
+	Units  units.Temp     // how temperatures read (Options, WG-16)
 
 	WinOpen  bool // a main-tab window is open: the pane gives way
 	ArchOpen bool // the Architect is open: the grid shows its tools

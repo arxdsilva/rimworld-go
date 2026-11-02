@@ -155,7 +155,7 @@ func migrateStarvation(g *Game, id entity.EntityID) {
 func stepMalnutrition(g *Game, now uint64) {
 	var ids []entity.EntityID
 	g.need.All(func(id entity.EntityID, n needs.Pair) {
-		if n.Starving() || body.Malnutrition(g.bodies[id]) > 0 {
+		if (n.Starving() || body.Malnutrition(g.bodies[id]) > 0) && owns(g, id) { // MAP-0: on its own map's pass
 			ids = append(ids, id)
 		}
 	})

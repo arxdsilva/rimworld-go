@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"slices"
+	"strconv"
 	"strings"
 
 	"rimworld-go/internal/application/game"
@@ -43,6 +44,12 @@ type Alert struct {
 	Sev     AlertSev // SevDanger for danger alerts (set by BuildAlerts)
 	Explain string   // what is wrong and what to do (set by BuildAlerts)
 	Targets [][2]int
+	// Map is the map the targets are on (Current sets it to the viewed map
+	// for every alert but a cross-map one, which names its own).
+	Map game.MapID
+	// Cross marks an alert about another open map than the one on screen;
+	// its target (-1, -1) only switches to the map.
+	Cross bool
 }
 
 const (
@@ -316,7 +323,36 @@ func (c Alerts) Current() []Alert {
 		}
 		out = append(out, extra...)
 	}
+	out = markMaps(out, env.Game)
 	c.alerts = alertsMemo{key: k, out: out, ok: true}
+	return out
+}
+
+// MapThreatKey is the key prefix of the cross-map threat alert
+// ("mapthreat.<map id>").
+const MapThreatKey = "mapthreat"
+
+// markMaps stamps every alert with the viewed map and appends "Threat on
+// <label>" for each other open map with hostiles (MAP-1).
+func markMaps(out []Alert, g Reader) []Alert {
+	viewed := g.ViewedMap()
+	for i := range out {
+		out[i].Map = viewed
+	}
+	maps := g.Maps()
+	if len(maps) < 2 {
+		return out
+	}
+	for _, m := range maps {
+		if m.ID == viewed || !m.Threat {
+			continue
+		}
+		out = append(out, Alert{
+			Key: MapThreatKey + "." + strconv.FormatUint(uint64(m.ID), 10), Label: "Threat on " + m.Label,
+			Danger: true, Sev: SevDanger, Explain: AlertExplain(MapThreatKey),
+			Targets: [][2]int{{-1, -1}}, Map: m.ID, Cross: true,
+		})
+	}
 	return out
 }
 
@@ -500,7 +536,7 @@ func (c Alerts) cycle(key string, dir int) {
 		}
 		c.alertCycle[key] = idx + 1
 		t := al.Targets[idx]
-		c.sh.CenterOnMap(float64(t[0])+0.5, float64(t[1])+0.5)
+		c.sh.Jump(ports.Spot{Map: al.Map, X: t[0], Y: t[1]})
 		return
 	}
 }
@@ -670,6 +706,7 @@ var alertExplanations = map[string]string{
 	"unhappy":       "Colonists are in a poor mood and close to breaking. Look at what drags it down: hunger, rest, comfort and room to breathe.",
 	"shipwaking":    "The ship reactor is waking, and its call draws raiders and machines until it is fully awake. Wall it in and keep colonists near it: if it falls, the waking is lost.",
 	"shipready":     "The ship is complete and its reactor awake. Board colonists into its stasis caskets, then select any ship part and press Launch ship to leave the planet. This ends the colony's story.",
+	"mapthreat":     "Hostiles are on another of your maps. Click to switch to it and deal with them; nobody is steering that map while you look elsewhere, only your colonists' own orders hold.",
 	"allies":        "Fighters sent by a friendly faction are helping defend the colony. They fight raiders and hostile animals on their own and go home once all is quiet, within a day. Turrets and colonists never shoot them.",
 }
 

@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
@@ -49,7 +50,7 @@ func newInspector(a *App) *inspector.Pane {
 
 func (h inspectorHost) Env() inspector.Env {
 	a := h.a
-	e := inspector.Env{Art: a.art, Keys: a.bindings(), WinOpen: a.win.Open, ArchOpen: a.arch.Open,
+	e := inspector.Env{Art: a.art, Keys: a.bindings(), Units: units.FromUnit(a.settings.Gameplay.TempUnit), WinOpen: a.win.Open, ArchOpen: a.arch.Open,
 		UIHidden: a.chrome.Hidden, Updates: a.updates, Shift: a.in.Shift(), Ctrl: a.in.Ctrl(), WheelY: a.in.Raw.WheelY}
 	if r := a.renderer; r != nil {
 		e.Sim, e.MapArt = r.game, r.art
@@ -106,7 +107,9 @@ func (h inspectorHost) Move(b game.BuildingView, cancel bool) {
 // ---- inspector.Labels
 
 func (h inspectorHost) PawnLabel(p game.PawnView) string { return hud.PawnLabel(p) }
-func (h inspectorHost) Temp(tenths int) string           { return hud.FmtTemp(tenths) }
+func (h inspectorHost) Temp(tenths int) string {
+	return hud.FmtTemp(units.FromUnit(h.a.settings.Gameplay.TempUnit), tenths)
+}
 func (h inspectorHost) WildRow(species string) (game.WildlifeRow, bool) {
 	return h.a.win.Animals().WildRow(species)
 }

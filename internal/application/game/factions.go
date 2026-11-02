@@ -79,7 +79,7 @@ func (g *Game) factionOf(ref int) *faction.Faction {
 }
 
 // hostileRaider reports a hostile human faction that can raid.
-func (g *Game) hostileRaider() bool {
+func hostileRaider(g *Game) bool {
 	for _, f := range g.ng.factions {
 		if f.Type.Human() && f.Relation == faction.Hostile && !f.Defeated {
 			return true

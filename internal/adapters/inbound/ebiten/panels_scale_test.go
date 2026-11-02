@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"strings"
 	"testing"
@@ -76,7 +77,7 @@ func TestEmblemFallbackAtScale(t *testing.T) {
 
 func TestRoomCardAtScale(t *testing.T) {
 	withUIScale(t, 1.5)
-	if lines := hud.RoomCardLines(game.RoomView{Role: "bedroom", Score: 12}); len(lines) == 0 {
+	if lines := hud.RoomCardLines(game.RoomView{Role: "bedroom", Score: 12}, units.Celsius); len(lines) == 0 {
 		t.Fatal("no card lines")
 	}
 }

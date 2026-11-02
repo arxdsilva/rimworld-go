@@ -53,11 +53,11 @@ func (f *formCaravan) massKg() int {
 // 1.6 tiles a day").
 func (dl *Dealings) caravanLoadLine(f *formCaravan) string {
 	c, m := f.capKg(dl), f.massKg()
-	pace := 1000
+	load := int32(0)
 	if c > 0 {
-		pace = max(250, 1000-750*min(m, c)/c)
+		load = int32(1000 * min(m, c) / c)
 	}
-	return fmt.Sprintf("%d / %d kg · about %.1f tiles a day", m, c, float64(formTilesPerDay*pace)/1000)
+	return fmt.Sprintf("%d / %d kg · about %.1f tiles a day", m, c, caravan.TilesPerDay(caravan.LoadFactor(load))) // on flat ground
 }
 
 // caravanList is the command's Name: the colonists, the animals, then the

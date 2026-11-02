@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 )
 
@@ -11,14 +12,14 @@ func TestRoomCardStats(t *testing.T) {
 	t.Parallel()
 	rm := game.RoomView{Role: "hospital", Score: 41, Impressiveness: 412, Label: "impressive", Space: 305, SpaceLabel: "spacious",
 		Beauty: 15, BeautyLabel: "pleasant", Wealth: 480, WealthLabel: "rich", CleanStat: -40, Cleanliness: "dirty", Cells: 20}
-	got := strings.Join(RoomCardLines(rm), "|")
+	got := strings.Join(RoomCardLines(rm, units.Celsius), "|")
 	for _, w := range []string{"Hospital|Impressiveness 41.2 (impressive)", "Space 30.5 (spacious)", "Beauty +1.5 (pleasant)",
 		"Wealth 480 silver (rich)", "Cleanliness -0.40 (dirty)", "20 cells"} {
 		if !strings.Contains(got, w) {
 			t.Fatalf("card %q lacks %q", got, w)
 		}
 	}
-	if !strings.Contains(strings.Join(RoomCardLines(game.RoomView{}), "|"), "(clean)") {
+	if !strings.Contains(strings.Join(RoomCardLines(game.RoomView{}, units.Celsius), "|"), "(clean)") {
 		t.Fatal("empty cleanliness falls back to clean")
 	}
 }

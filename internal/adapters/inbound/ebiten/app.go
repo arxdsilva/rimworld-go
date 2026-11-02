@@ -33,6 +33,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/biome"
@@ -160,12 +161,11 @@ type App struct {
 	// closeHandled is what the window close hooks (cfg.WindowHooks,
 	// saves.go) were last told.
 	closeHandled bool
-	// treeFocus / treeSel are reused buffers for the see-through canopy
-	// focus (tree_focus.go).
-	treeFocus, treeSel [][2]int
-	menuTick           uint64           // drives menu motion; counts while no colony is shown
-	menuScreen         *mainmenu.Screen // mainmenu.Screen owns the main menu (ARCH-005)
-	wiz                *wizard.Flow     // wizard.Flow owns the New Colony flow (ARCH-005)
+	tree         treeBufs         // the see-through canopy focus's reused buffers (tree_focus.go)
+	world        *worldview.View  // the full-screen world view (MAP-2): open, the map neither draws nor takes input
+	menuTick     uint64           // drives menu motion; counts while no colony is shown
+	menuScreen   *mainmenu.Screen // mainmenu.Screen owns the main menu (ARCH-005)
+	wiz          *wizard.Flow     // wizard.Flow owns the New Colony flow (ARCH-005)
 	// The colony's features, each its own package behind a Shell (ARCH-005
 	// wave 5.3): the Options screen, the main-tab windows, the Architect,
 	// the order flow, the dialogs, the learning helper, developer mode and
@@ -263,6 +263,9 @@ func (a *App) handleColonyEscape() bool {
 	}
 	if a.tools.State.Menu {
 		a.tools.State.Menu = false
+		return true
+	}
+	if a.world.Escape() { // worldview: pick spot, targeting, the selection, then the view
 		return true
 	}
 	if a.ord.Form.On {
@@ -513,6 +516,9 @@ func (a *App) startSession(sim Simulation) {
 	a.renderer.cueBus().SoundHas = a.cfg.Sound.Has // animal voices fall back by what exists
 	a.renderer.art = a.art
 	a.syncRenderer()
+	if n := a.settings.Gameplay.Colonies(); n > 1 { // the sim's default is 1 and unsaved
+		a.renderer.enqueue(command.Command{Kind: command.SetColonyCap, Count: n})
+	}
 	a.nav.reset(frame{screen: portspkg.ScreenColony})
 }
 
@@ -812,6 +818,7 @@ func NewApp(cfg AppConfig) *App {
 	a.wiz = wizard.New(wizHost{a})
 	a.opt, a.win, a.arch, a.ord = newOptions(a), newWindows(a), newArchitect(a), newOrders(a)
 	a.deal, a.lrn, a.tools, a.meter = newDialogs(a), newLearn(a), newDevtools(a), newPerf(a)
+	a.world = newWorldView(a) // windows_compat.go
 	a.insp, a.chrome = newInspector(a), newHud(a)
 	a.loadSettings()
 	a.applySettings()
@@ -868,7 +875,7 @@ func (a *App) Update() error {
 				}
 			} else if a.colonyLive() && a.colonyChromeHit(mx, my, sw, sh) {
 				a.in.Take(inputframe.Left)
-			} else if a.colonyLive() && !a.chrome.Hidden && a.renderer.minimapClick(mx, my, camerapkg.ColonyViewport(sw, sh), a.mapViewport()) {
+			} else if a.colonyLive() && !a.chrome.Hidden && !a.world.Open() && a.renderer.minimapClick(mx, my, camerapkg.ColonyViewport(sw, sh), a.mapViewport()) {
 				a.in.Take(inputframe.Left) // minimap (minimap.go): the camera moved
 			}
 		}
@@ -884,7 +891,7 @@ func (a *App) Update() error {
 		a.insp.Commands().PruneGroup()
 		a.handleColonyKeys() // hotkeys.go
 		a.renderer.wheelTaken = a.insp.Pawn().HandleLogWheel()
-		if a.cfg.Capture == nil { // captures frame the camera themselves
+		if a.cfg.Capture == nil && !a.world.Open() { // captures frame the camera themselves; the world view's camera is the globe's
 			a.renderer.applyCamera(a.mapViewport(), a.cameraInput(a.mapViewport())) // physical (camera.go)
 		}
 		a.win.Schedule().Drag()
@@ -893,11 +900,12 @@ func (a *App) Update() error {
 			a.tools.State.Menu = false
 			a.in.Take(inputframe.Left)
 		}
-		moving := a.arch.Mover.Handle()      // move_mode.go: placing a moved building
-		moving = a.ord.HandleAim() || moving // mortar_aim.go
-		zoning := a.arch.Zones.Handle()      // zone_select.go: a selected zone's Expand or Shrink tool
+		moving := a.arch.Mover.Handle()         // move_mode.go: placing a moved building
+		moving = a.ord.HandleAim() || moving    // mortar_aim.go
+		moving = a.world.HandleSpot() || moving // worldview/pods.go: Pick spot's placement cursor
+		zoning := a.arch.Zones.Handle()         // zone_select.go: a selected zone's Expand or Shrink tool
 		a.arch.HandleInput()
-		if a.arch.ToolID == "" && !moving && !zoning {
+		if a.arch.ToolID == "" && !moving && !zoning && !a.world.Open() {
 			a.handleMapMouse() // selection.go / multiselect.go / formation.go
 		}
 	}
@@ -945,7 +953,12 @@ func (a *App) Draw(screen *ebiten.Image) {
 	case portspkg.ScreenPawns:
 		a.drawPawns(screen, sw, sh)
 	case portspkg.ScreenColony:
-		if a.renderer != nil {
+		if a.world.Open() {
+			a.lastDraw = time.Time{}
+			gfx.SetPass("world")
+			a.world.DrawGlobe(screen, sw, sh) // worldview: the globe in the map's place
+			gfx.SetPass("hud")
+		} else if a.renderer != nil {
 			now := a.now()
 			if a.cfg.Capture == nil && !a.lastDraw.IsZero() && a.nav.overlay() != overlayPause {
 				a.renderer.SyncDev() // the viewport is in this frame's map pixels
@@ -977,7 +990,9 @@ func (a *App) Draw(screen *ebiten.Image) {
 			screen.Fill(uikit.Space)
 		}
 		if !a.chrome.Hidden {
-			a.renderer.drawMinimap(screen, camerapkg.ColonyViewport(sw, sh), a.mapViewport()) // minimap.go: big maps only
+			if !a.world.Open() {
+				a.renderer.drawMinimap(screen, camerapkg.ColonyViewport(sw, sh), a.mapViewport()) // minimap.go: big maps only
+			}
 			a.drawColonyHUD(screen, sw, sh)
 		}
 		a.drawPerfOverlay(screen, sw, sh) // perf_overlay.go: also with the UI hidden (PERF-002)

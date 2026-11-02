@@ -86,7 +86,9 @@ func (a *App) handleTabKeys() {
 	case f.Fired(input.TabAssign):
 		a.win.Assign().Toggle()
 	case f.Fired(input.TabWorld):
-		a.win.World().Toggle() // world_ui.go
+		a.world.Toggle() // worldview
+	case f.Fired(input.MapNext), f.Fired(input.MapPrev):
+		cycleMap(a, f.Fired(input.MapNext)) // shell.go (MAP-1)
 	case f.Fired(input.TabHistory):
 		if a.uiModalTop() == windows.HistoryModalID {
 			a.uiCloseTop()

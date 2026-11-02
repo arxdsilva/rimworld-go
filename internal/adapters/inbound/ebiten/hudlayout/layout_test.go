@@ -78,3 +78,52 @@ func TestPerfRectEmptyWhenOff(t *testing.T) {
 		t.Fatal("a small box fits on a 1280x720 screen")
 	}
 }
+
+// Two maps' colonists sit in two separate frames, side by side, centred,
+// with each slot inside its frame, below its chip, and never over the right
+// column; a lone plain bar has no frames at all.
+func TestLayoutBarGroupsFrameEachMap(t *testing.T) {
+	t.Parallel()
+	for _, sz := range layoutScreens {
+		l := Compute(sz[0], sz[1], Inputs{Colonists: 6, GlobalH: 196})
+		if len(l.BarGroups) != 0 {
+			t.Fatalf("%v: a single map has %d frames", sz, len(l.BarGroups))
+		}
+		st := Inputs{Colonists: 9, GlobalH: 196, Alerts: 3}
+		st.BarGroups[0], st.BarGroups[1] = 6, 3
+		l = Compute(sz[0], sz[1], st)
+		if len(l.BarGroups) != 2 || len(l.BarSlots) != 9 || l.BarMore != 0 {
+			t.Fatalf("%v: %d frames, %d slots (+%d)", sz, len(l.BarGroups), len(l.BarSlots), l.BarMore)
+		}
+		a, b := l.BarGroups[0], l.BarGroups[1]
+		if a.Frame.Right() >= b.Frame.X || a.N != 6 || b.First != 6 || b.N != 3 {
+			t.Errorf("%v: frames %+v %+v", sz, a, b)
+		}
+		for i, s := range l.BarSlots {
+			g := a
+			if i >= 6 {
+				g = b
+			}
+			if s.X < g.Frame.X || s.Right() > g.Frame.Right() || s.Y < g.Chip.Bottom() || s.Bottom() > g.Frame.Bottom() {
+				t.Errorf("%v: slot %d %+v outside its frame %+v / chip %+v", sz, i, s, g.Frame, g.Chip)
+			}
+		}
+		if l.Bar.Right() > l.Right.X {
+			t.Errorf("%v: bar %+v reaches the right column %+v", sz, l.Bar, l.Right)
+		}
+	}
+}
+
+// Too many colonists for any step keep the slots that fit and end in "+N".
+func TestLayoutBarGroupsOverflow(t *testing.T) {
+	t.Parallel()
+	st := Inputs{Colonists: 120, GlobalH: 196}
+	st.BarGroups[0], st.BarGroups[1] = 60, 60
+	l := Compute(1280, 720, st)
+	if l.BarMore == 0 || len(l.BarSlots)+l.BarMore-1 != 120 {
+		t.Fatalf("%d slots, more %d", len(l.BarSlots), l.BarMore)
+	}
+	if l.Bar.Right() > l.Right.X {
+		t.Errorf("bar %+v reaches the right column", l.Bar)
+	}
+}

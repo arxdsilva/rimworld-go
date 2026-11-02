@@ -4,13 +4,15 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
-	"strings"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/planet"
+	"rimworld-go/internal/platform/input"
 )
 
 // globeTabSim is the stub with the World tab's read models (no globe: its
@@ -44,7 +46,9 @@ func worldStub() *globeTabSim {
 	}}
 }
 
-func TestWorldTabListsCaravansAndReturns(t *testing.T) {
+// A colony with no world map: the view opens on a note, the tab's toggle
+// closes it, and no gizmo or marker appears.
+func TestWorldViewWithoutAWorldMap(t *testing.T) {
 	t.Parallel()
 	s := worldStub()
 	a, f := colonyApp(t, s.stubSim)
@@ -54,20 +58,20 @@ func TestWorldTabListsCaravansAndReturns(t *testing.T) {
 			t.Fatal("the World tab is disabled")
 		}
 	}
-	a.win.World().Toggle()
+	a.world.Toggle()
 	f.Frame(t, a)
-	if a.uiModalTop() != windowspkg.WorldModalID {
-		t.Fatalf("top modal %q", a.uiModalTop())
+	if !a.world.Open() || !(hudHost{a}).TabOn("tab.world") {
+		t.Fatalf("open %v active %v", a.world.Open(), (hudHost{a}).TabOn("tab.world"))
 	}
-	if !hasWidget(a, "world.caravan.40") {
-		t.Fatal("no row for the caravan")
+	if w, ok := a.uiSt().Find(worldview.GridID); !ok || !w.Disabled {
+		t.Fatalf("Grid with no world: %+v", w)
 	}
-	press(t, a, f, "world.caravan.40.return")
-	if n := len(s.cmds); n != 1 || s.cmds[0].Kind != command.CaravanReturn || s.cmds[0].Target != 40 {
-		t.Fatalf("commands %+v, want CaravanReturn 40", s.cmds)
+	if hasWidget(a, "world.obj.caravan.40") {
+		t.Fatal("a marker with no globe")
 	}
-	if w, _ := a.uiSt().Find("modal." + windowspkg.WorldModalID + ".world.form"); !w.Disabled || !strings.Contains(w.Reason, "no world map") {
-		t.Fatalf("Form caravan without a world map: %+v", w)
+	press(t, a, f, worldview.CloseID)
+	if a.world.Open() {
+		t.Fatal("Close left the view open")
 	}
 }
 
@@ -138,24 +142,49 @@ func (s *chartedSim) WorldParams() (planet.Params, bool) {
 	return planet.Params{SeedText: "world-tab", Coverage: 5, Rain: 2, Temp: 2, Pop: 1}, true
 }
 
-func TestWorldTabChartsTheGlobe(t *testing.T) {
+// The world view takes the map's place on a charted world: the caravan's
+// marker selects it, Return sends its command, the sim keeps its map, and
+// Esc steps back selection first, then the view. Windows and the view
+// replace each other.
+func TestWorldViewChartsTheGlobe(t *testing.T) {
 	t.Parallel()
 	s := &chartedSim{worldStub()}
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	// the charting and its cache: windows TestWorldTabChartsThePlanetOnce
-	a.win.World().Toggle()
-	for i := 0; i < 3; i++ {
+	// the charting and its cache: worldview TestWorldViewChartsThePlanetOnce
+	a.world.Show("caravan:40")
+	for i := 0; i < 400 && !hasWidget(a, "world.act.return"); i++ {
 		f.Frame(t, a)
 	}
-	if a.uiModalTop() != windowspkg.WorldModalID || hasWidget(a, "modal."+windowspkg.WorldModalID+".world.form") == false {
-		t.Fatal("World tab not open")
+	if !hasWidget(a, "world.act.return") {
+		t.Fatal("the caravan's gizmos never came up")
 	}
-	_ = drawFrame(t, a, f) // the globe and its caravan marker draw in the modal
-	if st := a.uiModalTop(); st != windowspkg.WorldModalID {
-		t.Fatalf("top modal after a draw %q", st)
+	_ = drawFrame(t, a, f) // the globe and its markers draw in the map's place
+	press(t, a, f, "world.act.return")
+	if n := len(s.cmds); n != 1 || s.cmds[0].Kind != command.CaravanReturn || s.cmds[0].Target != 40 {
+		t.Fatalf("commands %+v, want CaravanReturn 40", s.cmds)
 	}
-	if w, _ := a.uiSt().Find("modal." + windowspkg.WorldModalID + ".world.form"); w.Disabled {
-		t.Fatalf("Form caravan disabled with a world map: %q", w.Reason)
+	if slices.Contains(a.contextStack(), input.CtxMap) {
+		t.Fatal("the map's keys are live under the world view")
+	}
+	f.Key(t, a, "Escape", 0)
+	if !a.world.Open() || a.world.Selected() != "" {
+		t.Fatalf("Esc: open %v selected %q", a.world.Open(), a.world.Selected())
+	}
+	f.Key(t, a, "Escape", 0)
+	if a.world.Open() {
+		t.Fatal("the second Esc did not close the view")
+	}
+	a.world.Toggle()
+	f.Frame(t, a)
+	click(t, a, "tab.work")
+	f.Frame(t, a)
+	if a.world.Open() || !a.win.Open {
+		t.Fatalf("Work over the view: world %v window %v", a.world.Open(), a.win.Open)
+	}
+	a.world.Toggle()
+	f.Frame(t, a)
+	if !a.world.Open() || a.win.Open {
+		t.Fatalf("the view over Work: world %v window %v", a.world.Open(), a.win.Open)
 	}
 }

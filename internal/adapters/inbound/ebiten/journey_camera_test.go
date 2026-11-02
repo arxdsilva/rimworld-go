@@ -266,14 +266,14 @@ func TestJourneyCameraBarDoubleClickCentres(t *testing.T) {
 func TestJourneyCameraRestoredOnLoad(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jSize(60, 60))
-	views := map[string]camerapkg.View{}
+	views := map[string]map[game.MapID]camerapkg.View{}
 	j.a.cfg.Saves = SaveHooks{
 		Save: func(Simulation, string) error { return nil },
 		Load: func(string) (Simulation, string, error) {
 			return game.New(game.Config{Seed: 1, Width: 60, Height: 60}), "s", nil
 		},
-		SaveView: func(slot string, v camerapkg.View) error { views[slot] = v; return nil },
-		LoadView: func(path string) (camerapkg.View, bool) { v, ok := views[path]; return v, ok },
+		SaveView: func(slot string, v map[game.MapID]camerapkg.View) error { views[slot] = v; return nil },
+		LoadView: func(path string) (map[game.MapID]camerapkg.View, bool) { v, ok := views[path]; return v, ok },
 	}
 	j.draw(1)
 	r := j.a.renderer

@@ -5,7 +5,6 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -16,25 +15,21 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/planet"
 )
 
 // Reader is the simulation's read models the windows show beyond the
 // frame's world view (consumer-owned; the game implements it). The
-// optional readers (WorldSource, the Assign tab's policy and care
-// readers) are type assertions on it.
+// optional readers (the Assign tab's policy and care readers) are type
+// assertions on it.
 type Reader interface {
 	Wildlife() []game.WildlifeRow
 	History() []game.HistoryEntryView
-	WorldMap() game.WorldMapView
 	IncapableReason(id entity.EntityID, t work.Type) string
 }
 
 // Env is what the windows read of the program around them, as of the call.
 type Env struct {
-	Game   Reader         // nil off the colony (no renderer)
-	Art    *art.Catalog   // the sprite and icon catalog
-	Planet *planet.Planet // the planet the colony was founded on (nil: none kept)
+	Game Reader // nil off the colony (no renderer)
 }
 
 // Faction is one row of the colony's Factions table as the window's
@@ -61,9 +56,6 @@ type Labels interface {
 	AnimalHealth(game.AnimalView) string
 	// CareShort is a care level's short word ("Herbal").
 	CareShort(medcare.Policy) string
-	// Caravan is a caravan's hover card (every member's health) and its
-	// health note for the list line (sick and hurt members first).
-	Caravan(game.CaravanView) (tip, note string)
 	// Factions are the Factions table's rows, the Swarm last.
 	Factions() []Faction
 	// DrawAnimalIcon draws an animal's species icon (or its initial).
@@ -91,9 +83,6 @@ type Host interface {
 	ManageAreas()
 	// Float opens the order menu at (x, y) with opts; nil opts closes it.
 	Float(x, y float32, opts []game.OrderOption)
-	// FormCaravan opens the Form caravan dialog over the World tab;
-	// globePick reports the tile last picked on its globe (-1 none).
-	FormCaravan(globePick func() int)
 	// FactionsTable declares the Factions table over Labels.Factions at
 	// the top of body, at most maxH tall (more rows scroll), and returns
 	// the rest of body; sel is the picked row.
@@ -115,7 +104,7 @@ type Shell interface {
 // Set is the colony's main-tab windows (ARCH-005): which one is open, the
 // kit window's definition, and the windows' own state. Each window is a
 // view type over it (Work, Schedule, Assign, Animals, Research, History,
-// Factions, World).
+// Factions).
 type Set struct {
 	sh Shell
 
@@ -171,8 +160,6 @@ type (
 	History struct{ *Set }
 	// Factions is the Factions tab: the table and goodwill history.
 	Factions struct{ *Set }
-	// World is the World tab: the planet and the caravans.
-	World struct{ *Set }
 	// Storage is the storage zone settings window (PRD-4).
 	Storage struct{ *Set }
 )
@@ -184,7 +171,6 @@ func (w *Set) Animals() Animals   { return Animals{w} }
 func (w *Set) Research() Research { return Research{w} }
 func (w *Set) History() History   { return History{w} }
 func (w *Set) Factions() Factions { return Factions{w} }
-func (w *Set) World() World       { return World{w} }
 func (w *Set) Storage() Storage   { return Storage{w} }
 
 func (w *Set) kit() *uikit.Kit { return w.sh.Kit() }

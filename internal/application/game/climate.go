@@ -17,7 +17,8 @@ const maxMessages = 12
 type MessageView struct {
 	Tick uint64
 	Text string
-	X, Y int // where it happened, for jumping the camera
+	X, Y int   // where it happened, for jumping the camera
+	Map  MapID // the map X, Y are on (MAP-0)
 	// Danger marks a threat arriving (raids, predator packs): the UI may
 	// pause the game for it.
 	Danger bool
@@ -80,6 +81,7 @@ func (g *Game) threat(title string, x, y int, format string, args ...any) {
 }
 
 func (g *Game) post(m MessageView) {
+	m.Map = MapID(g.mapState.id)
 	if m.Letter {
 		m.Kind = g.addLetter(m) // letters.go: a letter is also kept in the stack
 	}

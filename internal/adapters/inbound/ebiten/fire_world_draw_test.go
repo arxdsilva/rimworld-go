@@ -14,7 +14,8 @@ import (
 )
 
 func TestStrikeFlashAndThunder(t *testing.T) {
-	r := &Renderer{present: 100}
+	r := bareRenderer()
+	r.present = 100
 	r.overlays().Fires.OnSimStrike(5, 6, 4000)
 	if !r.pipe().Env.FlashSeen || r.pipe().Env.FlashAt != 100 {
 		t.Errorf("flash %+v", r.env)
@@ -50,7 +51,7 @@ func TestExtinguishOnlyForDraftedOnFire(t *testing.T) {
 }
 
 func TestLightGridPicksUpBlazeByVersion(t *testing.T) {
-	r := &Renderer{}
+	r := bareRenderer()
 	v := roomWorld()
 	v.Fires, v.FireVer = []game.FireView{{X: 4, Y: 1, Size: 90}}, 1
 	r.view.W = v

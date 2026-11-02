@@ -113,6 +113,7 @@ type Beasts interface {
 
 // Globe is the world beyond the map.
 type Globe interface {
+	Landings
 	// Planet is the colony's planet (nil: no world map); ColonyTile its
 	// tile (-1 none); Home the colony's drop spot on the map.
 	Planet() *planet.Planet
@@ -124,8 +125,27 @@ type Globe interface {
 	// Land sets members (stashed passengers) down on world tile t as a
 	// caravan arrived there (animals ride with it): its id.
 	Land(members, animals []uint64, t int) uint64
+	// Assault has caravan cid (pod passengers just landed) attack the
+	// settlement on its tile, entering at its map's edge or centre
+	// (game/maps, MAP-05).
+	Assault(cid uint64, centre bool)
 	// Caravan reports caravan id still out on the world.
 	Caravan(id uint64) bool
+}
+
+// Landings is pods coming down on the open maps and founding colonies
+// (game/maps, MAP-10).
+type Landings interface {
+	// MapOpen reports a map open on tile t (the first colony's included).
+	MapOpen(t int) bool
+	// LandOn sets pod passengers (stashed) and animals down on the open map
+	// at tile t (game/maps, MAP-10): at its centre, at spot (x, y), else its
+	// edge. The carrier caravan's id (0: no map there).
+	LandOn(members, animals []uint64, t int, centre, spot bool, x, y int) uint64
+	// FoundReason is why a colony cannot be founded on tile t ("" it can);
+	// Found has caravan cid found it (game/maps, MAP-06).
+	FoundReason(t int) string
+	Found(cid uint64) string
 }
 
 // Colony is the colony-wide inputs and outputs.

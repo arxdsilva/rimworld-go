@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/orders"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"strings"
 	"testing"
@@ -180,12 +181,12 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 		t.Fatal("F9 again closes History")
 	}
 	f.Key(t, a, "F8", 0)
-	if a.uiModalTop() != windows.WorldModalID {
-		t.Fatalf("F8 should open World, top modal %q", a.uiModalTop())
+	if !a.world.Open() {
+		t.Fatal("F8 should open the world view")
 	}
 	f.Key(t, a, "F8", 0)
-	if a.uiModalTop() == windows.WorldModalID {
-		t.Fatal("F8 again closes World")
+	if a.world.Open() {
+		t.Fatal("F8 again closes the world view")
 	}
 	for _, k := range []string{"F7", "T"} { // V is live since PLAY-021 (TestVHotkeyFlicksTheSelectedDevice)
 		f.Key(t, a, k, 0)
@@ -445,7 +446,7 @@ func TestRoomStatsOverlayAndCard(t *testing.T) {
 	if b, ok := hasButton(a.colonyButtons(a.size()), hud.RoomsButtonID); !ok || !b.Selected || !strings.Contains(b.Tip, "[G]") {
 		t.Fatalf("HUD rooms button %+v", b)
 	}
-	lines := hud.RoomCardLines(s.world.Rooms[0])
+	lines := hud.RoomCardLines(s.world.Rooms[0], units.Celsius)
 	want := []string{"Bedroom", "Impressiveness 55.0 (slightly impressive)", "Space 29.0 (rather tight)",
 		"Beauty +1.5 (neutral)", "Wealth 1200 silver (somewhat poor)", "Cleanliness +0.00 (clean)",
 		"Temperature 21.5°C", "Lit: yes   Roofed: 100%", "12 cells"}

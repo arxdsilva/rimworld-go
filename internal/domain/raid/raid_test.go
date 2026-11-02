@@ -16,7 +16,7 @@ func TestNamesAppendOnly(t *testing.T) {
 		t.Error("an unknown arrival walks in")
 	}
 	for s, want := range map[Strategy]string{ImmediateAssault: "assault", Siege: "siege", Sappers: "sappers",
-		StageThenAssault: "staged assault", Steal: "steal", Burn: "burn", NumStrategies: "assault"} {
+		StageThenAssault: "staged assault", Steal: "steal", Burn: "burn", Defend: "defend", NumStrategies: "assault"} {
 		if s.String() != want {
 			t.Errorf("strategy %d = %q, want %q", s, s, want)
 		}

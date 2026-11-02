@@ -12,6 +12,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -93,7 +94,7 @@ func TestJourneyRoomCardStats(t *testing.T) {
 		return r
 	}
 	before := view()
-	card := strings.Join(hud.RoomCardLines(before), "\n")
+	card := strings.Join(hud.RoomCardLines(before, units.Celsius), "\n")
 	for _, want := range []string{"Impressiveness", "Space", "Beauty", "Wealth"} {
 		if !strings.Contains(card, want) {
 			t.Fatalf("room card lacks %q:\n%s", want, card)

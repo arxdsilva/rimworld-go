@@ -119,7 +119,8 @@ func TestAnimalFeetStayPlanted(t *testing.T) {
 			t.Fatalf("%s: the body moves %.4f tiles per cycle, want its gait %.4f", c.species, got, c.gait)
 		}
 	}
-	r := &Renderer{art: gaitArt("deer", 0.816)}
+	r := bareRenderer()
+	r.art = gaitArt("deer", 0.816)
 	if g := r.animalGait(game.AnimalView{Species: "deer", Scale: 0.6}); math.Abs(g-0.816*0.6) > 1e-12 {
 		t.Fatalf("a juvenile's gait %v, want 0.6 x 0.816", g)
 	}

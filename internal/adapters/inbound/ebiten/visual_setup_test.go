@@ -225,6 +225,7 @@ func (s *visualScene) closeAll(t testing.TB) {
 	a.insp.ClosePaneTab()
 	a.sel.Clear(selection.None)
 	a.win.Open = false
+	a.world.Close()
 	a.arch.ClosePanel()
 	a.ord.CloseFloat()
 	for i := 0; i < 8 && len(a.uiSt().Modals) > 0; i++ {

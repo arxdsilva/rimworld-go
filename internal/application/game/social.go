@@ -31,16 +31,22 @@ const (
 )
 
 // phaseSocial runs after phaseJobs: the daily upkeep, then each due
-// colonist's interaction check and mood step.
+// colonist's interaction check and mood step. MAP-0: each map's colonists
+// talk on its pass; the daily upkeep, gatherings and visitors are the
+// colony's, on the first map's pass (even with nobody on it, once a second
+// map is open).
 func (g *Game) phaseSocial() {
-	if len(g.pawnIDs) == 0 {
+	colony := primary(g) && (len(g.pawnIDs) > 0 || len(g.maps) > 1)
+	if !colony && len(g.pawnIDs) == 0 {
 		return
 	}
 	now := uint64(g.clock.Now())
-	if g.soc != nil && now%clock.TicksPerDay == 0 {
+	if colony && g.soc != nil && now%clock.TicksPerDay == 0 {
 		g.socialDay(now)
 	}
-	g.gatherTick(now) // gathering.go: weddings and parties (M5)
+	if colony {
+		g.gatherTick(now) // gathering.go: weddings and parties (M5)
+	}
 	for _, id := range g.pawnIDs {
 		u := uint64(id)
 		if (now+u*socialStagger)%socialPeriod == 0 {
@@ -50,7 +56,7 @@ func (g *Game) phaseSocial() {
 			g.stepMood(id) // social_mood.go
 		}
 	}
-	if g.worldSt != nil {
+	if colony && g.worldSt != nil {
 		// visitors.go: visitors start conversations too (arrival order)
 		for _, v := range g.worldSt.visitors {
 			if (now+uint64(v.ID)*socialStagger)%socialPeriod == 0 {

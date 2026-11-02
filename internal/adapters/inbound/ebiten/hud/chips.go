@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"strings"
 
 	"rimworld-go/internal/application/game"
@@ -25,6 +26,15 @@ import (
 type StatusChip struct {
 	Label, Tip string
 	Edge       color.RGBA
+}
+
+// chipsIn is StatusChips with the domain's sentences in temperature unit u.
+func chipsIn(w game.WorldView, u units.Temp) []StatusChip {
+	chips := StatusChips(w)
+	for i := range chips {
+		chips[i].Tip = u.Text(chips[i].Tip)
+	}
+	return chips
 }
 
 // StatusChips lists the conditions for a world view: the extreme weather
@@ -68,7 +78,7 @@ func (c Global) ChipRects(chips []StatusChip, sw int) []gfx.Rect {
 
 // DeclareChips declares the conditions' hover cards.
 func (c Global) DeclareChips(sw int) {
-	chips := StatusChips(c.sh.World())
+	chips := chipsIn(c.sh.World(), c.sh.Env().Units)
 	for i, r := range c.ChipRects(chips, sw) {
 		c.kit().Tip("hud.chip."+uikit.Num(i), r, chips[i].Tip)
 	}
@@ -87,7 +97,7 @@ func drawConditionLines(screen *ebiten.Image, chips []StatusChip, rs []gfx.Rect)
 
 // DrawChips paints the conditions.
 func (c Global) DrawChips(screen *ebiten.Image, sw int) {
-	chips := StatusChips(c.sh.World())
+	chips := chipsIn(c.sh.World(), c.sh.Env().Units)
 	drawConditionLines(screen, chips, c.ChipRects(chips, sw))
 }
 

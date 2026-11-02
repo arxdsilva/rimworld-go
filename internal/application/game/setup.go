@@ -415,8 +415,11 @@ func (g *Game) importSetupState(s *SetupState) {
 // landingSpot is where the colony landed: the generator's choice, or the
 // map centre for legacy colonies and older saves.
 func (g *Game) landingSpot() (int, int) {
-	if g.ng.hasLanding {
+	if g.ng.hasLanding && g.id == 0 {
 		return g.ng.landing[0], g.ng.landing[1]
+	}
+	if m := atlasRow(g); m != nil && m.HasLand { // MAP-06: another map's own spot
+		return m.Land[0], m.Land[1]
 	}
 	return g.grid.Width() / 2, g.grid.Height() / 2
 }

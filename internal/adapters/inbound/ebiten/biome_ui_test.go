@@ -339,7 +339,7 @@ func TestHandleWorkColumn(t *testing.T) {
 
 func TestNewBiomeKeysFallBackWithoutArt(t *testing.T) {
 	t.Parallel()
-	r := &Renderer{}
+	r := bareRenderer()
 	for _, terr := range []string{"sand", "marsh", "ice", "soil", "unheard_of"} {
 		if k, _ := r.pipe().TerrainTileKey(terr, 1); k == "" {
 			t.Errorf("terrain %q has no key", terr)

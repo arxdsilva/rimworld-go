@@ -57,7 +57,7 @@ func TestAxContractPlannedKindsCannotBeBuilt(t *testing.T) {
 	if (BuildingView{}).AX != (axview.Building{}) {
 		t.Fatal("the AX building view starts zero")
 	}
-	if SaveVersion != 11 {
-		t.Fatalf("save version %d, want 11 (AX-0)", SaveVersion)
+	if SaveVersion < 11 {
+		t.Fatalf("save version %d, want at least 11 (AX-0)", SaveVersion)
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 )
 
@@ -67,7 +68,14 @@ func TempTint(tenths int) color.NRGBA {
 func TempDangerous(tenths int) bool { return tenths <= TempDangerCold || tenths >= TempDangerHot }
 
 // TempLabel is "21 °C" for tenths.
-func TempLabel(tenths int) string {
+func TempLabel(tenths int) string { return TempLabelIn(units.Celsius, tenths) }
+
+// TempLabelIn is TempLabel in the player's temperature unit (WG-16): Celsius
+// floors to the degree below, Fahrenheit rounds.
+func TempLabelIn(u units.Temp, tenths int) string {
+	if u.F {
+		return u.Tenths(tenths)
+	}
 	d := tenths / 10
 	if tenths < 0 && tenths%10 != 0 {
 		d-- // floor
@@ -78,10 +86,13 @@ func TempLabel(tenths int) string {
 // TempDrawState caches the overlay's per-room tints and labels on TempVer
 // and holds the per-frame label anchors; all slices are reused.
 type TempDrawState struct {
-	valid   bool
-	ver     uint64
-	outdoor int
-	rooms   int
+	// Units is how the labels read (Options, WG-16); the App sets it and
+	// a change rebuilds the labels (unit is the one they were built in).
+	Units, unit units.Temp
+	valid       bool
+	ver         uint64
+	outdoor     int
+	rooms       int
 
 	tint   []color.NRGBA // per room id
 	danger []bool
@@ -98,10 +109,10 @@ type TempDrawState struct {
 }
 
 func (s *TempDrawState) sync(w *game.WorldView) {
-	if s.valid && s.ver == w.TempVer && s.outdoor == w.OutdoorTemp && s.rooms == len(w.Rooms) {
+	if s.valid && s.ver == w.TempVer && s.outdoor == w.OutdoorTemp && s.rooms == len(w.Rooms) && s.unit == s.Units {
 		return
 	}
-	s.valid, s.ver, s.outdoor, s.rooms = true, w.TempVer, w.OutdoorTemp, len(w.Rooms)
+	s.valid, s.ver, s.outdoor, s.rooms, s.unit = true, w.TempVer, w.OutdoorTemp, len(w.Rooms), s.Units
 	s.Builds++
 	n := len(w.Rooms)
 	if cap(s.tint) < n {
@@ -112,9 +123,9 @@ func (s *TempDrawState) sync(w *game.WorldView) {
 	s.n, s.sx, s.sy = s.n[:n], s.sx[:n], s.sy[:n]
 	for i := range w.Rooms {
 		t := w.Rooms[i].Temp
-		s.tint[i], s.danger[i], s.label[i] = TempTint(t), TempDangerous(t), TempLabel(t)
+		s.tint[i], s.danger[i], s.label[i] = TempTint(t), TempDangerous(t), TempLabelIn(s.Units, t)
 	}
-	s.outTn, s.outDng, s.outLbl = TempTint(w.OutdoorTemp), TempDangerous(w.OutdoorTemp), TempLabel(w.OutdoorTemp)
+	s.outTn, s.outDng, s.outLbl = TempTint(w.OutdoorTemp), TempDangerous(w.OutdoorTemp), TempLabelIn(s.Units, w.OutdoorTemp)
 }
 
 var (

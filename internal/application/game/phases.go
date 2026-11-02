@@ -36,25 +36,27 @@ type PhaseObserver func(phase string, elapsed time.Duration)
 // SetPhaseObserver installs o (nil removes it).
 func (g *Game) SetPhaseObserver(o PhaseObserver) { g.phaseObs = o }
 
-// stepObserved is Step with each phase timed for the observer.
-func (g *Game) stepObserved(n int) {
+// runPhases runs the current map's 15 phases in Step order, timing each
+// for the observer when one is set.
+func (g *Game) runPhases() {
 	phases := [...]struct {
 		name string
-		run  func()
+		run  func(*Game)
 	}{
-		{PhaseCommands, g.phaseCommands}, {PhasePlants, g.phasePlants}, {PhasePower, g.phasePower},
-		{PhaseClimate, g.phaseClimate},
-		{PhaseMedical, g.phaseMedical}, {PhaseNeeds, g.phaseNeeds}, {PhaseAI, g.phaseAI},
-		{PhaseJobs, g.phaseJobs}, {PhaseSocial, g.phaseSocial}, {PhaseAnimals, g.phaseAnimals},
-		{PhaseThreats, g.phaseThreats}, {PhaseIncidents, g.phaseIncidents}, {PhaseWorld, g.phaseWorld},
-		{PhaseWeather, g.phaseWeather}, {PhaseMovement, g.phaseMovement},
+		{PhaseCommands, (*Game).phaseCommands}, {PhasePlants, (*Game).phasePlants}, {PhasePower, (*Game).phasePower},
+		{PhaseClimate, (*Game).phaseClimate},
+		{PhaseMedical, (*Game).phaseMedical}, {PhaseNeeds, (*Game).phaseNeeds}, {PhaseAI, (*Game).phaseAI},
+		{PhaseJobs, (*Game).phaseJobs}, {PhaseSocial, (*Game).phaseSocial}, {PhaseAnimals, (*Game).phaseAnimals},
+		{PhaseThreats, (*Game).phaseThreats}, {PhaseIncidents, (*Game).phaseIncidents}, {PhaseWorld, (*Game).phaseWorld},
+		{PhaseWeather, (*Game).phaseWeather}, {PhaseMovement, (*Game).phaseMovement},
 	}
-	for i := 0; i < n; i++ {
-		for _, p := range phases {
-			t0 := time.Now()
-			p.run()
-			g.phaseObs(p.name, time.Since(t0))
+	for _, p := range phases {
+		if g.phaseObs == nil {
+			p.run(g)
+			continue
 		}
-		g.clock.Advance(1)
+		t0 := time.Now()
+		p.run(g)
+		g.phaseObs(p.name, time.Since(t0))
 	}
 }

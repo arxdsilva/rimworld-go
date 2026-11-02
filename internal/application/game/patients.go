@@ -80,6 +80,18 @@ func (g *Game) syncPatient(id entity.EntityID, b *body.Body) {
 	g.clearPatient(id)
 }
 
+// ownPatients is a copy of the patients index (a death may touch the
+// index) holding the ids the current map's pass steps (MAP-0, owns): each
+// patient once a tick, on its own map's pass, or the first map's when it is
+// on none (a caravan member).
+func ownPatients(g *Game) []entity.EntityID {
+	ids := slices.Clone(g.med.patients)
+	if len(g.maps) > 1 {
+		ids = slices.DeleteFunc(ids, func(id entity.EntityID) bool { return !owns(g, id) })
+	}
+	return ids
+}
+
 // sweepPatients clears every indexed pawn that no longer needs care or
 // has died (hourly, from phaseMedical).
 func (g *Game) sweepPatients() {

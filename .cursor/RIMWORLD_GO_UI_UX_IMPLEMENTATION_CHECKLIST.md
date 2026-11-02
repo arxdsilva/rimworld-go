@@ -354,7 +354,7 @@ building, item, plant, animal, corpse or tile.
     -   Compact representation of each colonist.
     -   Click selects; double-click centers.
     -   Preserve identity at a glance.
--   [-] **Status indicators** (PLAY-018: drafted, sleeping, mental break, downed, idle, fighting, fleeing and burning marks on the bar card; no inspired or caravan marks)
+-   [-] **Status indicators** (PLAY-018: drafted, sleeping, mental break, downed, idle, fighting, fleeing and burning marks on the bar card; MAP-1: a caravan status icon (`ui_icon/status_caravan`) on members away; no inspired mark)
     -   Downed.
     -   drafted.
     -   mental state.
@@ -363,7 +363,7 @@ building, item, plant, animal, corpse or tile.
     -   caravan/off-map.
     -   break risk.
     -   Icons must remain readable without opening inspector.
--   [-] **Ordering** (snapshot insertion order; no groups or custom sort)
+-   [-] **Ordering** (insertion order inside a group; MAP-1: one frame per open map (label chip, red dot on a threat, current map highlighted), then caravan groups; `hud/colonistbar.go`, `Colonists()`; a click on another map's colonist switches, selects and centres; no custom sort)
     -   Stable default ordering.
     -   Later allow groups/custom ordering.
 -   [x] **Large-colony scaling** (PLAY-018: the bar scales to 0.75 and 0.5 and wraps to 2-3 rows, then a "+N" slot; it never reaches the resource list or the right column)
@@ -1337,43 +1337,43 @@ the player what just happened and what requires attention.
 
 ## 25.1 World/local transition
 
--   [-] **World button/tab** (SIM-046: World tab (F8))
+-   [x] **World button/tab** (F8 opens the full-screen `worldview/` (F8, 14 journeys in `journey_world_test.go`); Escape cancels targeting, then the pod menu or spot, then clears the selection, then closes; the simulation and HUD keep running; MAP-1: the colony bar and `]`/`[` switch maps)
     -   Switch from local map to planet.
     -   Preserve local camera.
--   [-] **Planet navigation** (SIM-046: World tab globe plus setup globe; no object selection; NG-1: setup only. The landing globe rotates with drag, inertia and keys, zooms and picks tiles; there is no world view inside a running colony)
+-   [x] **Planet navigation** (NG-1: the landing globe rotates with drag, inertia and keys, zooms and picks tiles, and has relief, search, filters and a legend (WG-1, WG-2). Inside a running colony the World tab (F8) reuses the globe; the full-screen `worldview/` picks the nearest marker, a second click cycles objects on the tile and a double-click enters an own map; see `MULTIMAP_GAP_ANALYSIS.md` MAP-11)
     -   Rotate/pan/zoom or equivalent world navigation.
     -   Select world tile/object.
 
 ## 25.2 World tile inspector
 
--   [-] **Biome** (NG-1: shown on the landing screen's tile panel; the colony top bar names it; no world tab in the colony)
+-   [x] **Biome** (NG-1: shown on the landing screen's tile panel (`worldinfo.BuildTileInfo`); the colony top bar names it; the world view shows the same tile panel, skipping razed bases)
 -   [-] **Terrain/hilliness** (landing screen only)
 -   [-] **Elevation** (landing screen only)
 -   [-] **Temperature** (landing screen only: mean, summer high, winter low)
 -   [-] **Rainfall** (landing screen only)
 -   [-] **Growing period** (landing screen only)
--   [-] **Movement difficulty** (landing screen only; informational until world travel exists)
+-   [-] **Movement difficulty** (landing screen only, the wiki value from `planet.MoveDifficulty` with travel by season (WG-1); caravans now use it (MAP-09))
 -   [-] **Road/river** (landing screen only)
--   [-] **Forage** (landing screen only)
+-   [-] **Forage** (landing screen only; wiki percentage, WG-04; also disease, time zone and a quadrum temperature table)
 -   [-] **Settlement/faction if occupied** (landing screen only: nearest settlement and the Factions dialog; an occupied tile cannot be chosen)
--   [ ] **Distance/travel estimate when route context exists**
+-   [x] **Distance/travel estimate when route context exists** (`Game.TravelEstimate` returns ticks and a reason; the world view shows the ETA from the selected caravan)
 
 ## 25.3 World objects
 
--   [ ] **Player colony**
--   [ ] **Faction settlement**
+-   [x] **Player colony** (MAP-1: `colony_home` marker in the world view; double-click enters it)
+-   [x] **Faction settlement** (faction-tinted settlement icons; pickable, the inspector shows faction, relation, distance and ETA; Attack gizmo)
 -   [-] **Caravan** (SIM-046: caravan list and globe marker)
--   [ ] **Quest site**
--   [ ] **Temporary encounter**
+-   [x] **Quest site** (mineral sites open as site maps (MAP-1); `site_camp` and `site_ruined` markers; there are no quests)
+-   [x] **Temporary encounter** (MAP-3: encounter maps and the `encounter` marker, `map_threat` on a threat)
 -   [ ] **Distant endgame objective**
 -   [x] **Transport pod destination marker** (AX-9: pods in flight drawn along their arc with the `ui_icon/pod_flight` badge, their target highlighted, listed under the caravans; mineral sites as `ui_icon/mining_site`)
 
 ## 25.4 World route visualization
 
--   [ ] **Path line**
--   [ ] **Estimated travel time**
--   [ ] **Terrain/road cost**
--   [ ] **Invalid destination reason**
+-   [x] **Path line** (`worldview/route.go`: a route preview while a caravan is arming Travel)
+-   [x] **Estimated travel time** (`TravelEstimate`, cached per target)
+-   [-] **Terrain/road cost** (the estimate uses `MoveDifficulty` with roads x0.5; the view shows the total only, no per-segment cost)
+-   [x] **Invalid destination reason** (`TravelEstimate` returns the reason and the gizmo shows it disabled)
 
 ------------------------------------------------------------------------
 
@@ -1381,9 +1381,9 @@ the player what just happened and what requires attention.
 
 ## 26.1 New-world setup
 
--   [x] **World seed input** (UI-014: typed digit field with Dice; same seed and biome give the same site)
+-   [x] **World seed input** (UI-014: free-text seed field (`planet.Params.SeedText`) with Dice; same seed and settings give the same world and site)
 -   [x] **Planet coverage/size option** (NG-1: 30 / 50 / 100 % of the globe; 5 % in dev mode)
--   [x] **Temperature/rainfall/population options where supported** (NG-1: five temperature and rainfall stops, three population stops, plus the faction table)
+-   [x] **Temperature/rainfall/population options where supported** (NG-1: five temperature and rainfall stops, three population stops, plus the faction table; WG-2: the seeded planet name heads the screen)
 -   [x] **Generate button** (NG-1: builds the globe behind a progress dialog; unchanged settings reuse the world, changed ones mark it stale)
 -   [x] **Generation progress** (NG-1: phase and percentage; the builder runs a fixed budget per frame so the UI stays responsive)
     -   UI remains responsive.
@@ -1391,7 +1391,7 @@ the player what just happened and what requires attention.
 ## 26.2 Landing-site selection
 
 -   [x] **Select world tile** (NG-1: click on the rotating hex globe; ocean, lakes and occupied tiles show why they cannot be chosen)
--   [x] **Detailed tile card** (NG-1: terrain, coordinates, elevation, mean/summer/winter temperature, rainfall, growing period, stones, water, caves, roads, nearest settlement, movement difficulty, forage, wildlife and warnings; biome hover card)
+-   [x] **Detailed tile card** (NG-1: terrain, coordinates, elevation, mean/summer/winter temperature, rainfall, growing period, stones, water, caves, roads, nearest settlement, movement difficulty, forage, wildlife and warnings; biome hover card; WG-2: time zone, disease, forage %, travel by season, a quadrum table, nearby bases and the 4-tile base warning; Celsius or Fahrenheit by option)
     -   biome.
     -   temperature range.
     -   growing period.
@@ -1400,7 +1400,7 @@ the player what just happened and what requires attention.
     -   movement difficulty.
     -   stone/resource context if known.
     -   nearby factions.
--   [ ] **Search/find world features** (not in NG-1 scope: only a Random site button and the Factions dialog's find-capital click)
+-   [x] **Search/find world features** (WG-2: a search box on the landing screen over named features and settlements (`planet.Find`), clicking a result centres and pulses it; a filter panel narrows Random site (`RandomLandingFiltered`). The world view has the same search box, legend and grid)
     -   Optional high-value usability feature.
 -   [x] **Settle/start command** (NG-1: Next goes to Create Characters; Start there builds the colony)
 -   [x] **Back/regenerate** (NG-1: Back keeps the draft; Create World regenerates; Random site picks another tile)
@@ -1589,8 +1589,8 @@ the player what just happened and what requires attention.
 -   [x] **Loading progress** (AX-9: "Load N / M kg" on the pod pane as colonists walk in and haulers bring the rest; Unload)
 -   [x] **Launch button** (AX-9: disabled with a reason while the pods are empty or a pod has no fuelled launcher)
 -   [x] **World targeting mode** (AX-9: Launch opens the World tab picking a tile, from the globe or a list of targets in range)
--   [-] **Range visualization** (AX-9: the picked tile's distance against the range, and only targets in range listed; no range ring drawn on the globe)
--   [-] **Destination action** (AX-9: land (the colony's drop spot, or a caravan anywhere else), visit, gift; attack and founding need a second map)
+-   [x] **Range visualization** (AX-9: the picked tile's distance against the range, and only targets in range listed; the world view draws the range ring, one breadth-first search from fuel / 2.25, 66 tiles at most)
+-   [x] **Destination action** (MAP-2: the engine lands pods on any open map: Drop, Drop at centre, Attack (edge or centre), Found, Pick spot, plus AX-9 gift and visit; the anchored landing menu offers edge, centre, attack edge or centre, found, gift, visit and pick spot, each with its disabled reason)
     -   land.
     -   reinforce.
     -   gift.

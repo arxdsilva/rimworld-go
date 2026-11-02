@@ -181,7 +181,7 @@ func TestVisitorRelativeArrives(t *testing.T) {
 		}
 		if kin == 0 {
 			for _, id := range g.visitorIDs() {
-				g.departVisitor(id)
+				visitBodies{g}.Depart(id)
 			}
 			g.worldSt.visitors = nil
 		}

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"slices"
 
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/entity"
@@ -19,13 +20,17 @@ import (
 // the record).
 
 // stashRec is one pawn off the map: its holder (a caravan, a casket), the
-// cell it left from, a prisoner's mark or an animal's state (AX-9).
+// cell it left from on map Map (MAP-01), a prisoner's mark (with its
+// raider record when it travels by caravan, MAP-01) or an animal's state
+// (AX-9).
 type stashRec struct {
 	ID       entity.EntityID
 	Holder   entity.EntityID
 	X, Y     int
 	Prisoner bool
 	Beast    *animal.State
+	Map      uint32
+	Raider   *raid.Raider
 }
 
 // stashCmp orders stash records by id (binary search).
@@ -48,7 +53,7 @@ func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 	if !ok || !slices.Contains(g.pawnIDs, id) && !prisoner && (beast == nil || !beast.Tame) || g.isStashed(id) {
 		return false
 	}
-	rec := stashRec{ID: id, Holder: holder, X: pos.X, Y: pos.Y, Prisoner: prisoner}
+	rec := stashRec{ID: id, Holder: holder, X: pos.X, Y: pos.Y, Prisoner: prisoner, Map: g.id}
 	if beast != nil {
 		a := *beast
 		rec.Beast = &a
@@ -73,8 +78,13 @@ func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 	g.jobs.Delete(id)
 	g.motion.Delete(id)
 	g.pawnIDs, g.raiderIDs = withoutID(g.pawnIDs, id), withoutID(g.raiderIDs, id) // prisoners.go
-	// a casket or a pod keeps what it is (AX-9)
-	if g.caravanAt(holder) != nil {
+	// a casket or a pod keeps what it is (AX-9); a prisoner on a caravan
+	// takes its raider record along (MAP-01)
+	if fleetOf(g).At(holder) != nil && prisoner {
+		r := g.raiders[id]
+		rec.Raider = &r
+		delete(g.raiders, id)
+	} else if fleetOf(g).At(holder) != nil {
 		g.setWhere(id, whereCaravan)
 	}
 	return addStash(g, rec)
@@ -98,7 +108,7 @@ func (g *Game) unstashPawn(id entity.EntityID, x, y int) bool {
 		return false
 	}
 	r := g.worldSt.stashed[i]
-	g.dropStash(id)
+	dropStash(g, id)
 	if r.Beast != nil { // AX-9: a tame animal, as it went
 		putAnimal(g, id, *r.Beast, x, y)
 		return true
@@ -106,6 +116,11 @@ func (g *Game) unstashPawn(id entity.EntityID, x, y int) bool {
 	g.positions.Set(id, Position{X: x, Y: y})
 	g.jobs.Set(id, job.Record{})
 	if r.Prisoner {
+		if r.Raider != nil { // MAP-01: in its own group on the map it enters, out of any raid
+			g.raidGroups = append(g.raidGroups, raid.Group{Over: true})
+			r.Raider.Group = len(g.raidGroups) - 1
+			g.raiders[id] = *r.Raider
+		}
 		g.raiderIDs = withID(g.raiderIDs, id)
 	} else {
 		g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go: ascending, as movers needs
@@ -118,7 +133,7 @@ func (g *Game) unstashPawn(id entity.EntityID, x, y int) bool {
 }
 
 // dropStash forgets stashed pawn id (back on the map, or dead away).
-func (g *Game) dropStash(id entity.EntityID) {
+func dropStash(g *Game, id entity.EntityID) {
 	if g.worldSt == nil {
 		return
 	}

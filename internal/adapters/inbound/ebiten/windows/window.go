@@ -9,7 +9,7 @@ import (
 )
 
 // Main-tab windows (PLAY-018: WINDOWS owns them): Work, Schedule,
-// Research, Animals, Wildlife, Assign, History, Factions and World open
+// Research, Animals, Wildlife, Assign, History and Factions open
 // bottom-left above the tab strip, in the layout's Window rect.
 //
 // One window is open at a time, and Open + Mode say which:
@@ -92,7 +92,7 @@ func (w *Set) Rect() uikit.Button {
 func (w *Set) Anchor() gfx.Rect { return w.sh.WindowRect() }
 
 // Buttons are the open hand-drawn window's buttons (Work, Schedule,
-// Research, Animals); a kit window (History, Assign, World, Factions)
+// Research, Animals); a kit window (History, Assign, Factions)
 // declares its own widgets and has none here.
 func (w *Set) Buttons() []uikit.Button {
 	if !w.live() || !w.Open || !w.legacy() {

@@ -28,7 +28,7 @@ import (
 // (dieAway), anyone else where it is (die).
 func (g *Game) dieMedical(id entity.EntityID, cause health.Cause) {
 	if g.isStashed(id) {
-		g.dieAway(id, cause)
+		dieAway(g, id, cause)
 		return
 	}
 	g.die(id, cause)
@@ -41,7 +41,7 @@ func (g *Game) caravanMembers() []entity.EntityID {
 	}
 	var out []entity.EntityID
 	for _, r := range g.worldSt.stashed { // sorted by id
-		if g.caravanAt(r.Holder) == nil {
+		if fleetOf(g).At(r.Holder) == nil {
 			continue
 		}
 		if v, ok := g.vital.Get(r.ID); ok && v.Status != health.Dead {
@@ -52,9 +52,13 @@ func (g *Game) caravanMembers() []entity.EntityID {
 }
 
 // colonistsHomeAndAway are the colonists at home (homeColonists) and away
-// on caravans, in id order.
+// on caravans, in id order. MAP-0: the caravans' members belong to the
+// first map's pass (owns), so another map's outbreak strikes only its own.
 func (g *Game) colonistsHomeAndAway() []entity.EntityID {
 	out := g.homeColonists() // relative_world.go: alive, on the map
+	if !primary(g) {
+		return out
+	}
 	away := g.caravanMembers()
 	if len(away) == 0 {
 		return out
@@ -67,7 +71,7 @@ func (g *Game) colonistsHomeAndAway() []entity.EntityID {
 // caravanName names the caravan id travels with ("the caravan to Oakhold";
 // "" when it is on none).
 func (g *Game) caravanName(id entity.EntityID) string {
-	c := g.caravanOf(id)
+	c := fleetOf(g).Of(id)
 	if c == nil {
 		return ""
 	}
@@ -92,63 +96,45 @@ func (g *Game) awayNote(victims []entity.EntityID) string {
 	return " " + strings.Join(parts, " ")
 }
 
-// caravanMedic is c's best medic: a standing member able to doctor with
-// the highest Medicine level (at least 1; ties to the lowest id); 0 when
-// there is none.
-func (g *Game) caravanMedic(c *caravanRec) entity.EntityID {
-	var best entity.EntityID
-	bestLvl := 0
-	for _, m := range c.C.Members {
-		id := entity.EntityID(m)
-		if !g.alive(id) || g.incapableWork(id).Enabled(work.Doctor) || g.capacity(id, body.Manipulation) <= 0 {
-			continue
-		}
-		lvl := int(g.skillOf(id, skill.Medicine).Level)
-		if lvl < 1 {
-			continue
-		}
-		if lvl > bestLvl || lvl == bestLvl && id < best {
-			best, bestLvl = id, lvl
-		}
+// MedicLevel is id's Medicine level when it can doctor on the road
+// (alive, able to doctor, hands that work), else 0 (game/maps picks the
+// caravan's medic).
+func (h mapsRoad) MedicLevel(id entity.EntityID) int {
+	g := h.g
+	if !g.alive(id) || g.prison.Is(id) || g.incapableWork(id).Enabled(work.Doctor) || g.capacity(id, body.Manipulation) <= 0 {
+		return 0
 	}
-	return best
+	return int(g.skillOf(id, skill.Medicine).Level)
 }
 
-// caravanTendQuality rolls medic's tend on patient on the road: no bed,
-// no medicine, its manipulation and sight, ×0.7 on itself.
-func (g *Game) caravanTendQuality(medic, patient entity.EntityID) int32 {
+// TendDue reports member id alive with a tend due.
+func (h mapsRoad) TendDue(id entity.EntityID, now uint64) bool {
+	b := h.g.bodies[id]
+	v, ok := h.g.vital.Get(id)
+	return b != nil && b.TendDue(now) && ok && v.Status != health.Dead
+}
+
+// MayTend reports medic may tend id: its care level, or self-tend.
+func (h mapsRoad) MayTend(medic, id entity.EntityID) bool {
+	if id == medic {
+		return h.g.care.SelfTendAllowed(id)
+	}
+	return h.g.care.Level(id).Tends()
+}
+
+// Tend has medic tend what is due on id on the road: no bed, no
+// medicine, its manipulation and sight, x0.7 on itself.
+func (h mapsRoad) Tend(medic, id entity.EntityID, now uint64) {
+	g, b := h.g, h.g.bodies[id]
+	v, _ := g.vital.Get(id)
 	in := body.TendInput{Skill: int(g.skillOf(medic, skill.Medicine).Level), Manip: 1000, Sight: 1000,
-		Medicine: noMedicine, Self: medic == patient, Roll: g.stream(streamMedical).IntN}
-	if b := g.bodies[medic]; b != nil {
-		in.Manip, in.Sight = b.Capacity(body.Manipulation), b.Capacity(body.Sight)
+		Medicine: noMedicine, Self: medic == id, Roll: g.stream(streamMedical).IntN}
+	if mb := g.bodies[medic]; mb != nil {
+		in.Manip, in.Sight = mb.Capacity(body.Manipulation), mb.Capacity(body.Sight)
 	}
-	return body.TendQuality(in)
-}
-
-// caravanCare has c's medic tend whatever is due on its members, in
-// member order (hourly on the road, stepCaravans).
-func (g *Game) caravanCare(c *caravanRec, now uint64) {
-	medic := g.caravanMedic(c)
-	if medic == 0 {
-		return
-	}
-	for _, m := range slices.Clone(c.C.Members) {
-		id := entity.EntityID(m)
-		b := g.bodies[id]
-		if b == nil || !b.TendDue(now) {
-			continue
-		}
-		v, ok := g.vital.Get(id)
-		if !ok || v.Status == health.Dead {
-			continue
-		}
-		if id == medic && !g.care.SelfTendAllowed(id) || id != medic && !g.care.Level(id).Tends() {
-			continue
-		}
-		if b.TendAll(g.caravanTendQuality(medic, id), now) > 0 {
-			g.bodyChanged(id, b, &v) // body.go: bleeding stops, stats follow
-			g.updateDowned(id, b, &v)
-		}
+	if b.TendAll(body.TendQuality(in), now) > 0 {
+		g.bodyChanged(id, b, &v) // body.go: bleeding stops, stats follow
+		g.updateDowned(id, b, &v)
 	}
 }
 

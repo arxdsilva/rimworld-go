@@ -114,7 +114,7 @@ func TestLightGridBuildsOnlyReadChunks(t *testing.T) {
 	t.Parallel()
 	const w, h = 64, 64
 	v := game.WorldView{TerrainW: w, Terrain: make([]uint8, w*h), RoomGrid: make([]int, w*h), RoofCells: make([]uint8, w*h)}
-	r := &Renderer{}
+	r := bareRenderer()
 	r.view.W = v
 	r.lightTile(1, 1)
 	built := 0
@@ -148,7 +148,8 @@ func TestLightGridBuildsOnlyReadChunks(t *testing.T) {
 // without animals assumes animalSpanFallback.
 func TestAnimalPadsFromLargestCanvas(t *testing.T) {
 	t.Parallel()
-	r := &Renderer{art: xlArt()} // canvas 6 x 3 tiles at 64 ppt: 2.5 west, 2.5 east, 2 up, 0 down
+	r := bareRenderer()
+	r.art = xlArt() // canvas 6 x 3 tiles at 64 ppt: 2.5 west, 2.5 east, 2 up, 0 down
 	if e := r.art.AnimalExtent(); e.Side != 2.5 || e.Up != 2 || e.Down != 0 {
 		t.Fatalf("extent %+v", e)
 	}
@@ -158,7 +159,8 @@ func TestAnimalPadsFromLargestCanvas(t *testing.T) {
 	if pad, padS := r.animalPads(8); pad != 8 || padS != 7 {
 		t.Fatalf("pads %d, %d at 8 px tiles (drawn at 16), want 8, 7", pad, padS)
 	}
-	bare := &Renderer{art: envArt("terrain/soil_00")}
+	bare := bareRenderer()
+	bare.art = envArt("terrain/soil_00")
 	if e := bare.art.AnimalExtent(); e.Side != artpkg.AnimalSpanFallback || e.Up != artpkg.AnimalSpanFallback {
 		t.Fatalf("no animal art: %+v", e)
 	}

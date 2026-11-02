@@ -85,7 +85,8 @@ func TestWaterTerrainSprites(t *testing.T) {
 		}
 	}
 	// a terrain tile of each new ground is its own art, not the fallback
-	r := &Renderer{art: c}
+	r := bareRenderer()
+	r.art = c
 	for _, n := range []string{"shallow_water", "deep_water", "mud", "track"} {
 		if k, cs := r.pipe().TerrainTileKey(n, 2); k != "terrain/"+n+"_02" || cs != spritepkg.NoCS {
 			t.Errorf("%s tile = %q %v", n, k, cs)
@@ -174,7 +175,7 @@ func TestWaterShaderCompiles(t *testing.T) {
 		}
 	}
 	// draw a water tile through it: compiles on this backend and runs
-	r := &Renderer{}
+	r := bareRenderer()
 	r.view.W = roomWorld()
 	r.lit.Light = light.LightAt(12, summerDay, "clear", 0)
 	r.present = 90
@@ -205,7 +206,7 @@ func TestWaterShaderCompiles(t *testing.T) {
 
 func TestWaterFallbackFramesAnimate(t *testing.T) {
 	t.Parallel()
-	r := &Renderer{}
+	r := bareRenderer()
 	r.water.Err = errors.New("no shader") // as when water.kage fails to compile
 	frames := map[string]bool{}
 	for p := uint64(0); p < 4*env.WaterFrameTicks; p += env.WaterFrameTicks {

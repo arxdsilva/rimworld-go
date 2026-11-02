@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/gather"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -61,7 +62,7 @@ func runWedding(t *testing.T, save bool, at social.GatherPhase) (*Game, bool) {
 		}
 		g.Step(1)
 		if save && !saved {
-			if ga := g.running(); ga != nil && ga.Phase == at {
+			if ga := gatherOf(g).Running(); ga != nil && ga.Phase == at {
 				g, saved = saveLoad(t, g), true
 			}
 		}
@@ -79,7 +80,7 @@ func TestWeddingEndToEnd(t *testing.T) {
 			keepFit(g)
 		}
 		g.Step(1)
-		if ga := g.running(); ga != nil {
+		if ga := gatherOf(g).Running(); ga != nil {
 			if ga.Phase == social.PhaseCeremony {
 				sawCeremony = true
 				if v := g.Gatherings(); len(v) != 1 || v[0].Kind != "wedding" || v[0].Phase != "ceremony" || len(v[0].Hosts) != 2 {
@@ -90,7 +91,7 @@ func TestWeddingEndToEnd(t *testing.T) {
 				sawGuest = true
 			}
 		}
-		if weddings(g) == 1 && g.running() == nil {
+		if weddings(g) == 1 && gatherOf(g).Running() == nil {
 			break
 		}
 	}
@@ -108,7 +109,7 @@ func TestWeddingEndToEnd(t *testing.T) {
 	if v, _ := moodOfKind(g, c, mood.AttendedWedding); v != 20 {
 		t.Fatalf("attended-wedding mood %d", v)
 	}
-	if g.running() != nil || len(g.Gatherings()) != 0 {
+	if gatherOf(g).Running() != nil || len(g.Gatherings()) != 0 {
 		t.Fatal("the wedding never ended")
 	}
 	if j, _ := g.jobs.Get(c); j.Kind == job.Gather && j.Active() {
@@ -143,31 +144,31 @@ func TestWeddingSaveLoadEachPhase(t *testing.T) {
 func TestWeddingAbortAndRetry(t *testing.T) {
 	g, a, b, _ := weddingColony(t)
 	lo := min(a, b)
-	g.weddingCheck(lo, socNow(g))
-	if g.running() == nil {
+	gatherOf(g).WeddingCheck(lo, socNow(g))
+	if gatherOf(g).Running() == nil {
 		t.Fatal("no wedding scheduled")
 	}
 	g.draft[a] = true
-	for range gatherPeriod + 1 {
+	for range gather.Period + 1 {
 		g.Step(1)
 	}
-	if g.running() != nil {
+	if gatherOf(g).Running() != nil {
 		t.Fatal("drafted host: still running")
 	}
 	g.draft[a] = false
-	g.weddingCheck(lo, socNow(g))
-	if g.running() != nil {
+	gatherOf(g).WeddingCheck(lo, socNow(g))
+	if gatherOf(g).Running() != nil {
 		t.Fatal("rescheduled inside the retry day")
 	}
 	advanceDays(g, 1)
-	g.weddingCheck(lo, socNow(g))
-	if g.running() == nil {
+	gatherOf(g).WeddingCheck(lo, socNow(g))
+	if gatherOf(g).Running() == nil {
 		t.Fatal("not rescheduled after the retry day")
 	}
 	g.breakUp(a, b, socNow(g)+6*social.Day) // a breakup calls it off too
-	g.clock.Advance(gatherPeriod - int(socNow(g)%gatherPeriod))
+	g.clock.Advance(gather.Period - int(socNow(g)%gather.Period))
 	g.gatherTick(socNow(g))
-	if g.running() != nil {
+	if gatherOf(g).Running() != nil {
 		t.Fatal("wedding of a split couple still running")
 	}
 }
@@ -175,7 +176,7 @@ func TestWeddingAbortAndRetry(t *testing.T) {
 // marry is a no-op for spouses (a reloaded reception can't pay twice).
 func TestMarryOnlyOnce(t *testing.T) {
 	g, a, b, _ := weddingColony(t)
-	if !g.marry(a, b, socNow(g)) || g.marry(a, b, socNow(g)) {
+	if !gatherOf(g).Marry(a, b, socNow(g)) || gatherOf(g).Marry(a, b, socNow(g)) {
 		t.Fatal("marry should succeed once")
 	}
 	if weddings(g) != 1 {
@@ -213,11 +214,11 @@ func TestPartyThrownAndAttended(t *testing.T) {
 			keepFit(g)
 		}
 		g.Step(1)
-		if g.running() == nil {
+		if gatherOf(g).Running() == nil {
 			break
 		}
 	}
-	if g.running() != nil {
+	if gatherOf(g).Running() != nil {
 		t.Fatal("party never ended")
 	}
 	got := 0
@@ -248,12 +249,12 @@ func TestMarrySurnameAdoption(t *testing.T) {
 	setLast(a, "Reed")
 	setLast(b, "Stone")
 	first := g.sk.bios[a].First
-	g.shareSurname(a, b)
+	gatherOf(g).ShareSurname(a, b)
 	if g.sk.bios[a].Last != "Stone" || g.sk.bios[b].Last != "Stone" || g.sk.bios[a].First != first {
 		t.Fatalf("surnames %q / %q", g.sk.bios[a].Last, g.sk.bios[b].Last)
 	}
 	setLast(c, "Vale")
-	g.shareSurname(c, b)
+	gatherOf(g).ShareSurname(c, b)
 	lo, hi := min(b, c), max(b, c)
 	if g.sk.bios[hi].Last != g.sk.bios[lo].Last {
 		t.Fatal("same-sex couple kept two names")

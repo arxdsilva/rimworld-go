@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -391,16 +392,16 @@ func TestCropLinesCottonAndWheat(t *testing.T) {
 	if cotton.Name == "" || wheat.Name == "" {
 		t.Skip("catalog lacks cotton or wheat")
 	}
-	if got := strings.Join(architect.CropLines(cotton), "|"); !strings.Contains(got, "cloth, not food") || strings.Contains(got, "food 0 each") {
+	if got := strings.Join(architect.CropLines(cotton, units.Celsius), "|"); !strings.Contains(got, "cloth, not food") || strings.Contains(got, "food 0 each") {
 		t.Fatalf("cotton lines = %q", got)
 	}
-	if got := strings.Join(architect.CropLines(wheat), "|"); !strings.Contains(got, "+4 straw") {
+	if got := strings.Join(architect.CropLines(wheat, units.Celsius), "|"); !strings.Contains(got, "+4 straw") {
 		t.Fatalf("wheat lines = %q", got)
 	}
-	if got := strings.Join(architect.CropLines(potato), "|"); strings.Contains(got, "not food") || strings.Contains(got, "straw") {
+	if got := strings.Join(architect.CropLines(potato, units.Celsius), "|"); strings.Contains(got, "not food") || strings.Contains(got, "straw") {
 		t.Fatalf("potato lines = %q", got)
 	}
-	if lines := architect.CropLines(game.CropView{Name: "tree", Days: 5, Yield: 10}); len(lines) != 2 {
+	if lines := architect.CropLines(game.CropView{Name: "tree", Days: 5, Yield: 10}, units.Celsius); len(lines) != 2 {
 		t.Fatalf("tree lines = %q", lines)
 	}
 }

@@ -203,7 +203,7 @@ func (g *Game) stepDiseases(now uint64) {
 	if len(g.med.patients) == 0 {
 		return
 	}
-	for _, id := range slices.Clone(g.med.patients) { // a death touches the index
+	for _, id := range ownPatients(g) { // patients.go: this map's, a copy (a death touches the index)
 		b := g.bodies[id]
 		poisoned := g.poisoned(id) // food_poison.go (WS-M)
 		if !poisoned && !hasDisease(b) {

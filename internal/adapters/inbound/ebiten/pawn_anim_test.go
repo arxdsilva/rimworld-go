@@ -182,7 +182,8 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 		t.Fatal("unmirrored: unchanged")
 	}
 	sprite, normal := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8)
-	r := &Renderer{art: &artpkg.Catalog{Normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
+	r := bareRenderer()
+	r.art = &artpkg.Catalog{Normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}
 	r.view.W = roomWorld()
 	r.lit.Light = lightpkg.LightAt(8, summerDay, "clear", 0)
 	dst := ebiten.NewImage(32, 32)

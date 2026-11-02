@@ -193,12 +193,12 @@ func TestJourneyTabsWorldAndHistory(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	j.key("F8", 0)
-	if got := j.a.uiModalTop(); got != "colony.world" {
-		t.Fatalf("F8 opened %q", got)
+	if !j.a.world.Open() {
+		t.Fatal("F8 did not open the world view")
 	}
-	j.key("Escape", 0)
-	if got := j.a.uiModalTop(); got != "" {
-		t.Fatalf("Escape left %q open", got)
+	j.key("F8", 0)
+	if j.a.world.Open() {
+		t.Fatal("F8 again left the world view open")
 	}
 	j.key("F9", 0)
 	if got := j.a.uiModalTop(); got != "colony.history" {

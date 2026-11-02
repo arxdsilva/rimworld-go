@@ -20,15 +20,14 @@ import (
 // ids, Count = the tile); the simulation walks them to the map edge.
 
 const (
-	FormCaravanID   = "colony.world.caravan"
-	formCaravanW    = 980
-	formCaravanH    = 560
-	formRowH        = 28
-	FormNoMembers   = "Pick at least one colonist."
-	FormNoDest      = "Pick a destination."
-	FormTooHeavy    = "Too heavy: pick fewer goods or more pack animals."
-	formHostileWhy  = "Hostile: they would not receive a caravan."
-	formTilesPerDay = 3 // caravan.BaseTilesPerDay at full Moving, for the summary
+	FormCaravanID  = "colony.world.caravan"
+	formCaravanW   = 980
+	formCaravanH   = 560
+	formRowH       = 28
+	FormNoMembers  = "Pick at least one colonist."
+	FormNoDest     = "Pick a destination."
+	FormTooHeavy   = "Too heavy: pick fewer goods or more pack animals."
+	formHostileWhy = "Hostile: they would not receive a caravan."
 )
 
 // formCaravan is the dialog's draft: colonists, and (AX-9) pack animals

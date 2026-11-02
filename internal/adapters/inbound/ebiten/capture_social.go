@@ -47,8 +47,6 @@ func (a *App) captureSocialUI(ui string) {
 		a.insp.OpenPaneTab("prisoner")
 	case "history":
 		a.win.History().Launch()
-	case "world":
-		a.win.World().Toggle()
 	case "assign":
 		a.win.Assign().Launch()
 	}

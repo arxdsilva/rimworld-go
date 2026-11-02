@@ -21,8 +21,10 @@ import (
 	raiddef "rimworld-go/internal/domain/raid"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/randx"
 	"slices"
 )
 
@@ -57,8 +59,11 @@ func (g *Game) phaseThreats() {
 	if g.hasSetup() {
 		g.setupTick(now) // story.go: arrival, losses, day rollover (NG-1)
 	}
-	if g.threatsOn && now >= g.nextThreat {
+	if g.threatsOn && now >= g.nextThreat && primary(g) { // MAP-0: one storyteller clock for the colony, fired on the first map
+		cur := g.mapState
+		g.mapState = threatTarget(g) // world_state.go: the colony it strikes (MAP-12)
 		g.fireThreat(now)
+		g.mapState = cur
 	}
 	g.raid.Pods.Step(now)                          // raid/pods.go (DEF-4): drop pods land
 	ids := append(g.raiderBuf[:0], g.raiderIDs...) // the list changes as raiders die or leave
@@ -449,7 +454,7 @@ func (g *Game) kitOf(n int) []item.Kind { return kit.Legacy(n, g.rng.IntN) }
 
 // sapperMap is the map as sappers see it when planning a tunnel: walls,
 // doors and rock all give way; traps are stepped around.
-func (g *Game) sapperBreaks() tileSet {
+func sapperBreaks(g *Game) tileSet {
 	return g.sapperSet.get(g.structVer, func() tileSet {
 		set := slices.Clone(g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap))
 		w := g.grid.Width()
@@ -624,4 +629,82 @@ func (h combatArms) Undraft(id entity.EntityID)            { h.g.setDraft(id, fa
 func (h combatArms) DropAt(st item.Stack)                  { h.g.dropStackOf(st, st.X, st.Y) }
 func (h combatArms) Belt(id entity.EntityID) (item.Kind, uint8) { // CBT-3: combat.Belts
 	return h.g.apparel[id].On[item.Belt].Kind, h.g.apparel[id].On[item.Belt].Quality
+}
+
+// mapsSettle is game/maps' Settler (maps/settle.go, MAP-05).
+type mapsSettle struct{ g *Game }
+
+// AttackReason is why caravan id cannot attack its tile's settlement ("" it can).
+func (g *Game) AttackReason(id uint64) string {
+	return fleetOf(g).Life().AttackReason(entity.EntityID(id))
+}
+
+func (h mapsSettle) Factions() []faction.Faction { return h.g.ng.factions }
+func (h mapsSettle) Day() int                    { return h.g.relDay(uint64(h.g.clock.Now())) + 1 }
+func (h mapsSettle) ThreatScale() int {
+	if !h.g.hasSetup() {
+		return 100
+	}
+	return h.g.ng.setup.Difficulty.ThreatScale
+}
+func (h mapsSettle) Defenders() int { return h.g.raid.Raiders.Defending() }
+
+// Settle lays compound c as placeRuin lays a ruin (Ancient: nobody's
+// wealth, no blueprint), beds forbidden, goods free to pack, with a lane
+// from the south gate to the map edge, and spawns the defenders.
+func (h mapsSettle) Settle(c mapgen.Compound, fac int, arms []item.Kind, seed uint64) {
+	g, rng := h.g, h.g.rng
+	g.rng = randx.New(seed)
+	defer func() { g.rng = rng }()
+	for y := c.Y0 - 2; y <= c.Y1+2; y++ {
+		for x := c.X0 - 2; x <= c.X1+2; x++ {
+			clearSite(g, x, y)
+		}
+	}
+	for y := c.Y1 + 3; y < g.grid.Height(); y++ {
+		clearSite(g, c.Centre.X, y)
+	}
+	for _, p := range c.Pieces {
+		id := g.placeGenerated(construction.Building{Kind: p.Kind, Stuff: p.Stuff, Facing: p.Facing, X: p.X, Y: p.Y, Ancient: true, Forbidden: p.Kind.Sleeps()})
+		if id != 0 && p.Kind.IsDoor() {
+			g.combat.Doors.SetHold(id, true) // their own doors: shut, they would hold the defenders in
+		}
+	}
+	for _, l := range c.Loot {
+		g.spawnUnclaimed(l.Kind, l.Qty, l.X, l.Y, false)
+	}
+	g.raidGroups = append(g.raidGroups, raid.Group{Plan: raid.Defend, Faction: fac, Over: true, FleeLoss: raid.DefendFleeLoss, CampX: c.Centre.X, CampY: c.Centre.Y, Camped: true})
+	gi := len(g.raidGroups) - 1
+	for i, k := range arms {
+		p := c.Posts[i%len(c.Posts)]
+		if x, y, ok := g.combat.Tiles.WalkableNear(p.X, p.Y, 3); ok {
+			spawnRaider(g, 0, gi, k, x, y)
+			g.raidGroups[gi].Size++
+		}
+	}
+}
+
+// clearSite makes cell (x, y) open dry ground, unroofed, with nothing on it.
+func clearSite(g *Game, x, y int) {
+	if !g.grid.InBounds(x, y) {
+		return
+	}
+	if t := g.terr.At(x, y); !t.Walkable() || terrain.IsWater(t) || t == terrain.Marsh || t == terrain.Mud {
+		g.setTerrain(x, y, terrain.Soil)
+	}
+	g.clearGrass(x, y)
+	if id := g.plantAt(x, y); id != 0 {
+		g.removePlant(id)
+	}
+	for _, l := range [2]construction.Layer{construction.LayerObject, construction.LayerFloor} {
+		if id := g.layerBldgAt(x, y, l); id != 0 {
+			g.removeBuildingAs(id, false)
+		}
+	}
+	for id := g.itemAt(x, y); id != 0; id = g.itemAt(x, y) {
+		g.deleteItem(id)
+	}
+	if len(g.roofs) > 0 {
+		g.setRoof(y*g.grid.Width()+x, 0)
+	}
 }

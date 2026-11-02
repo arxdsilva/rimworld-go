@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
+	"rimworld-go/internal/domain/world/planet"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/pkg/randx"
 )
@@ -34,6 +35,7 @@ import (
 //	arch-cabinet     the Architect's Tool cabinet card, tooltip with components
 //	arch-locked      a scenario-forbidden building shown disabled with its reason
 //	chips            the top strip's condition chip (Ashfall sky)
+//	world            the world view, on a planet
 //
 // Captures are developer tooling: they use the same Enqueue / Step calls
 // as play and a fixed seed, so a shot is repeatable.
@@ -41,7 +43,7 @@ import (
 // colonyCaptures lists the states above.
 var colonyCaptures = []string{
 	"factions-colony", "bio", "work-incapable", "arrival", "options-story",
-	"letter-intro", "arch-hospital", "arch-cabinet", "arch-locked", "chips",
+	"letter-intro", "arch-hospital", "arch-cabinet", "arch-locked", "chips", "world",
 }
 
 // colonyCapture reports ui is one of them.
@@ -93,6 +95,12 @@ func captureSetup(ui string) game.Setup {
 			Stones: []geology.Stone{geology.Granite, geology.Marble}},
 		Factions: faction.Generate(faction.DefaultSlots(), randx.New(7)),
 		MapSize:  100, Season: game.SeasonSpring, Seed: 4242,
+	}
+	if ui == "world" { // the world view needs a planet to show
+		s.World = planet.Params{SeedText: "amber-hollow", Coverage: 30, Rain: 2, Temp: 2, Pop: 1,
+			Factions: faction.DefaultSlots(), Version: planet.CurrentVersion}
+		p := planet.Build(s.World)
+		s.Tile, s.Factions = p.RandomLanding(3), p.Factions
 	}
 	captureHistory(s.Factions)
 	// The first seed whose three have someone who can't do some work.
@@ -147,6 +155,9 @@ func (a *App) captureColonyUI(ui string) {
 		}
 	}
 	switch ui {
+	case "world":
+		a.cursor = &[2]int{-100, -100}
+		a.world.Show("")
 	case "factions-colony":
 		a.cursor = &[2]int{-100, -100}
 		a.win.Factions().Launch()

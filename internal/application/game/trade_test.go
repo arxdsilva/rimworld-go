@@ -2,6 +2,7 @@ package game
 
 import (
 	"reflect"
+	"rimworld-go/internal/application/game/visit"
 	"slices"
 	"strings"
 	"testing"
@@ -296,7 +297,7 @@ func tradeYard(t *testing.T, g *Game, neg entity.EntityID, silver, comps int) {
 	for d := 1; d <= 6 && len(cells) < 2; d++ {
 		for _, o := range [][2]int{{d, 0}, {-d, 0}, {0, d}, {0, -d}} {
 			x, y := p.X+o[0], p.Y+o[1]
-			if g.inset(x, y) && g.dryWalkable(x, y) && g.itemAt(x, y) == 0 && !g.pawnOn(x, y) && len(cells) < 2 {
+			if visit.Inside(x, y, g.grid.Width(), g.grid.Height()) && g.dryWalkable(x, y) && g.itemAt(x, y) == 0 && !g.pawnOn(x, y) && len(cells) < 2 {
 				cells = append(cells, [2]int{x, y})
 			}
 		}

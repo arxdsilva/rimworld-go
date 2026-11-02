@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
@@ -18,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/caravan"
+	"rimworld-go/internal/domain/world/geology"
 )
 
 // AX-9: stasis caskets, transport pods, the long-range mineral scanner
@@ -221,7 +223,7 @@ func TestTransportPodsLoadLaunchVisit(t *testing.T) {
 	if len(g.World().AX.Pods) != 0 {
 		t.Fatal("the pods never landed")
 	}
-	c := g.caravanOf(ada)
+	c := fleetOf(g).Of(ada)
 	if c == nil || c.C.State != caravan.Visiting || c.C.Tile != dest {
 		t.Fatalf("no visiting caravan at the settlement: %+v", c)
 	}
@@ -237,7 +239,7 @@ func TestTransportPodsLoadLaunchVisit(t *testing.T) {
 		return n
 	}
 	before := steelOnMap()
-	g.caravanHome(c)
+	fleetOf(g).Home(c)
 	if steel := steelOnMap() - before; steel != 30 || g.isStashed(ada) {
 		t.Fatalf("home: %d steel set down, Ada stashed %v", steel, g.isStashed(ada))
 	}
@@ -304,7 +306,7 @@ func TestTransportPodsDropHome(t *testing.T) {
 }
 
 // A scanner find lays a world mining site 6-25 tiles out, shown in the
-// world view; a caravan arriving there mines it and carries the lump.
+// world view; a caravan arriving there opens a site map with the lump.
 func TestMineralSiteFoundAndMined(t *testing.T) {
 	t.Parallel()
 	g := worldGame(t)
@@ -319,16 +321,19 @@ func TestMineralSiteFoundAndMined(t *testing.T) {
 		t.Fatalf("site %d tiles out", d)
 	}
 	w := g.worldS()
-	w.caravans = append(w.caravans, caravanRec{C: caravan.Caravan{ID: 999999, Tile: int(sites[0].Tile), State: caravan.Arrived},
+	w.caravans = append(w.caravans, maps.Caravan{C: caravan.Caravan{ID: 999999, Tile: int(sites[0].Tile), State: caravan.Arrived},
 		Home: g.colonyTile()})
 	c := &w.caravans[len(w.caravans)-1]
-	g.caravanArrived(c, uint64(g.clock.Now()))
-	if c.C.State != caravan.Visiting || len(g.World().AX.Sites) != 0 {
-		t.Fatalf("the caravan did not mine the site: %+v", c.C)
+	fleetOf(g).Arrived(c, uint64(g.clock.Now()))
+	// MAP-04 (re-baselined): the site is no longer mined abstractly in two
+	// days; arriving claims it and a site map opens at the tick's end with
+	// the lump laid as gold ore (wiki: Long-range mineral scanner).
+	if c.C.State != caravan.Arrived || len(g.World().AX.Sites) != 0 {
+		t.Fatalf("the caravan did not claim the site: %+v", c.C)
 	}
-	s := g.worldSt.ax9.Export()
-	if len(s.Cargo) != 1 || s.Cargo[0].Hold.Items[0].Kind != item.Gold || s.Cargo[0].Hold.Items[0].Qty < 320 {
-		t.Fatalf("cargo %+v", s.Cargo)
+	g.Step(1)
+	if len(g.maps) != 2 || len(w.atlas.Maps) != 1 || w.atlas.Maps[0].Lump != item.Gold || len(w.atlas.Maps[0].Cells) < 320/OreYield[geology.Gold] {
+		t.Fatalf("no gold site map: %d maps, atlas %+v", len(g.maps), w.atlas.Maps)
 	}
 }
 
@@ -400,7 +405,7 @@ func TestHitchingSpotGathersCaravan(t *testing.T) {
 	ada := g.pawnIDs[0]
 	g.Enqueue(command.Command{Kind: command.FormCaravan, Name: entityStr(ada), Count: dest})
 	g.Step(1)
-	c := g.caravanOf(ada)
+	c := fleetOf(g).Of(ada)
 	if c == nil || !travelOf(g).Gathering(c.C.ID) {
 		t.Fatal("the caravan is not gathering at the spot")
 	}
@@ -416,7 +421,7 @@ func TestHitchingSpotGathersCaravan(t *testing.T) {
 	if !at {
 		t.Fatal("Ada never reached the hitching spot")
 	}
-	g.Step(caravanFormCheck * 3)
+	g.Step(maps.FormCheck * 3)
 	if j, _ := g.jobs.Get(ada); j.Kind == job.ExitMap {
 		t.Fatal("left before the wait was over")
 	}
@@ -429,7 +434,7 @@ func TestHitchingSpotGathersCaravan(t *testing.T) {
 	if !left {
 		t.Fatal("the caravan never set off from the spot")
 	}
-	cid := g.caravanOf(ada).C.ID
+	cid := fleetOf(g).Of(ada).C.ID
 	for i := 0; i < 600; i++ {
 		g.Step(1)
 		if travelOf(g).Gathering(cid) {
@@ -584,7 +589,7 @@ func TestCaravanPacksGoodsAndAnimals(t *testing.T) {
 	g.animals.Ref(aid).Tame = true
 	g.Enqueue(command.Command{Kind: command.FormCaravan, Name: entityStr(ada) + "," + entityStr(aid) + "," + entityStr(sid) + ":30", Count: dest})
 	g.Step(1)
-	c := g.caravanOf(ada)
+	c := fleetOf(g).Of(ada)
 	if c == nil || !travelOf(g).Gathering(c.C.ID) {
 		t.Fatal("the caravan is not gathering")
 	}
@@ -596,7 +601,7 @@ func TestCaravanPacksGoodsAndAnimals(t *testing.T) {
 			}
 		}
 		g.Step(1)
-		if c = g.caravanAt(entity.EntityID(cid)); c == nil || c.C.State != caravan.Forming {
+		if c = fleetOf(g).At(entity.EntityID(cid)); c == nil || c.C.State != caravan.Forming {
 			break
 		}
 	}

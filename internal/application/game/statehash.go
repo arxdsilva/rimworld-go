@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/sim/statehash"
+	"rimworld-go/internal/domain/world/temperature"
 )
 
 // StateHash fingerprints the complete authoritative state: everything Save
@@ -88,7 +89,27 @@ func normalisedFields(info SaveInfo, s *saveState) map[string]any {
 		delete(st, streamSeedKey)
 		f["RNGStreams"] = st
 	}
+	// MAP-0: each extra map's state hashed the same way (none: nothing
+	// added); the viewed map is presentation.
+	delete(f, "View")
+	if len(s.ExtraMaps) > 0 {
+		hs := make([]extraHash, len(s.ExtraMaps))
+		for i := range s.ExtraMaps {
+			m := &s.ExtraMaps[i]
+			hs[i] = extraHash{m.ID, m.Tile, m.Climate, statehash.OfFields(normalisedFields(SaveInfo{}, &m.State))}
+		}
+		f["ExtraMaps"] = hs
+	}
 	return f
+}
+
+// extraHash is an extra map in the hash: its fields' hash beside its id,
+// tile and climate.
+type extraHash struct {
+	ID      uint32
+	Tile    int
+	Climate temperature.Climate
+	State   uint64
 }
 
 // infoV1 is SaveInfo as version 1 wrote it (the hashed header).

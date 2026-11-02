@@ -89,7 +89,9 @@ func testStoneArt(keys ...string) *Renderer {
 	for _, k := range keys {
 		c.Sprites[k] = &artpkg.Sprite{}
 	}
-	return &Renderer{art: c}
+	r := bareRenderer()
+	r.art = c
+	return r
 }
 
 func TestArchStockLineShowsSelectedStuff(t *testing.T) {

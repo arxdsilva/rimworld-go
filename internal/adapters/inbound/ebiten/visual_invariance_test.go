@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"strconv"
 	"strings"
 	"testing"
@@ -564,7 +565,7 @@ func visPanels() []visPanel {
 		}, visSelRegions},
 	)
 	// the main tabs' windows, all in the Window rect
-	for _, tab := range []string{"work", "schedule", "research", "animals", "wildlife", "assign", "world", "history"} {
+	for _, tab := range []string{"work", "schedule", "research", "animals", "wildlife", "assign", "history"} {
 		ps = append(ps, visPanel{
 			name:    "tab_" + tab,
 			open:    func(t *testing.T, s *visualScene) { s.a.applyClick("tab." + tab) },
@@ -572,6 +573,12 @@ func visPanels() []visPanel {
 		})
 	}
 	ps = append(ps,
+		// the world view is no window: the inspector in the pane's place and its toolbar
+		visPanel{"tab_world", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.world") },
+			func(s *visualScene) []gfx.Rect {
+				l := s.a.hud()
+				return []gfx.Rect{l.Pane, worldview.ToolbarRect(l), l.Resources}
+			}},
 		visPanel{"tab_architect", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.architect") },
 			func(s *visualScene) []gfx.Rect {
 				l := s.a.hud()

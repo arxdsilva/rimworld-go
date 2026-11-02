@@ -17,3 +17,6 @@ User request (2026-10-30): loading a game always centred the camera; it should c
 
 ## Gaps
 - The store has no delete, so a view file stays behind if its save file is removed by hand.
+
+## Follow-up (MAP-1)
+- The sidecar is now per map: `filesave.ViewFile.Maps` (omitempty, keyed by decimal map id) holds every other open map's camera, the top-level fields stay map 0's, and an old sidecar still loads. See `MAP-1-site-maps.md`.

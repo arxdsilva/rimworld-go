@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -606,7 +607,7 @@ func TestShipAloneRaisesNoCaravanAlert(t *testing.T) {
 
 func TestTopBarNamesTheBiome(t *testing.T) {
 	t.Parallel()
-	got := SeasonText(game.WorldView{Biome: "Boreal forest", BiomeKey: "boreal_forest", Season: "Spring", OutdoorTemp: -20})
+	got := SeasonText(game.WorldView{Biome: "Boreal forest", BiomeKey: "boreal_forest", Season: "Spring", OutdoorTemp: -20}, units.Celsius)
 	if got != "Boreal forest | Spring  -2C outside" {
 		t.Fatalf("season text = %q", got)
 	}

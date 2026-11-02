@@ -94,10 +94,12 @@ import (
 // where they still fit or are refunded (migrateBenches). v10 (STK-BN)
 // does the same for the benches it gives the wiki footprints (game/resize).
 // v11 (AX-0) is for the AX owners' steps (A2 tables, A3 floors and carpets).
+// v12 (MAP-0) adds the extra open maps (ExtraMaps): an older binary refuses
+// a save it would read as the first map alone.
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 11
+const SaveVersion = 12
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -410,6 +412,19 @@ type saveState struct {
 	// Recreation (AX-6, game/recreate): recreation tolerances; nil when
 	// there are none (absent in older saves).
 	Recreation *recreate.Save
+	// ExtraMaps (v12, MAP-0) is every open map after the first, in id
+	// order, and View the map viewed; nil and 0 with one map.
+	ExtraMaps []mapSave
+	View      uint32
+}
+
+// mapSave is one extra map: only State's map fields are written
+// (exportMapFields), and Climate is its curve as it stands.
+type mapSave struct {
+	ID      uint32
+	Tile    int
+	Climate temperature.Climate
+	State   saveState
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -458,66 +473,49 @@ func (g *Game) Info(name string) SaveInfo {
 	return info
 }
 
-// Save writes the whole game to w under the given save name.
+// Save writes the whole game to w under the given save name. The first map
+// is the top level, whatever map is viewed; every other open map is an
+// ExtraMaps entry (MAP-0).
 func (g *Game) Save(w io.Writer, name string) error {
+	cur := g.mapState
+	defer func() { g.mapState = cur }()
+	g.mapState = g.maps[0]
 	rng, err := g.rng.MarshalBinary()
 	if err != nil {
 		return fmt.Errorf("save rng: %w", err)
 	}
 	s := saveState{
-		Tick: g.clock.Now(), W: g.grid.Width(), H: g.grid.Height(), NextEntity: g.entities.Peek(),
-		RNG: rng, Sched: g.sched, BlockedBits: g.grid.BlockedBits(), Messages: g.messages,
+		Tick: g.clock.Now(), NextEntity: g.entities.Peek(),
+		RNG: rng, Sched: g.sched, Messages: g.messages,
 		Letters: g.letters.list, NextLetter: g.letters.next,
-		PawnIDs: g.pawnIDs, Positions: exportStore(g.positions), Names: exportStore(g.names),
-		Jobs: exportStore(g.jobs), Need: exportStore(g.need), Vital: exportStore(g.vital), Labor: exportStore(g.labor),
-		ItemIDs: g.itemIDs, Stacks: exportStore(g.stacks), FrameIDs: g.frameIDs, Frames: exportStore(g.frames),
-		BldgIDs: g.bldgIDs, Bldgs: exportStore(g.bldgs), PlantIDs: g.plantIDs, Plants: exportStore(g.plants),
-		Terr: g.terr, Mines: g.mines,
-		LastMeal: g.lastMeal, Bills: g.craft.Bills.Export(), Racks: g.craft.Drying.Export(), Art: g.craft.Art.Export(), Fuel: g.fuel,
+		Names: exportStore(g.names), Need: exportStore(g.need), Vital: exportStore(g.vital), Labor: exportStore(g.labor),
+		LastMeal: g.lastMeal, Bills: g.craft.Bills.Export(), Racks: g.craft.Drying.Export(), Art: map[entity.EntityID]craft.Artwork{}, Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
-		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.rest.Export(), RestNeeds: g.rest.Needs.Export(), Calm: g.calm, Banked: g.banked,
+		NoFood: g.noFood, RestedFree: g.rest.Export(), RestNeeds: g.rest.Needs.Export(), Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Worn: craft.ExportOutfits(g.apparel), Joy: g.joy,
-		PrioList: exportPrios(g.prio), Scheds: g.scheds,
-		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
-		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.thermo.Temps, Thermo: g.thermo.Export(),
-		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
-		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
-		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
+		PrioList: exportPrios(g.prio), Scheds: g.scheds, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
+		Breaks: map[entity.EntityID]savedBreak{}, Memories: g.memories, Pending: g.pending,
+		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt, Equip: g.equip,
 		Carrying: g.care.Carry.Export(), TendedUntil: g.care.Doctor.ExportTended(),
 		Research: g.lab.Prog.V1(), ResearchAll: g.lab.Prog.Slice(), NG1: g.exportSetupState(), ResearchCur: g.lab.Cur, ResearchSet: g.lab.Set,
-		ResearchCold: g.lab.ColdList(), RockDamage: g.raid.Rock.Export(), Residual: g.thermo.Residual,
-		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
-		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
-		DoorsOriented: true, // PLAY-011: door facings are stored
+		ResearchCold: g.lab.ColdList(), Strikes: g.lastStrike, Hits: g.lastHit, Graves: g.graves,
 	}
-	s.Grass, s.GrassCut = g.exportGrass()
-	s.GrassGrowth = g.exportGrassGrowth() // grass.go
-	s.Landing = g.exportLanding()         // setup_mapgen.go: nil for the map centre
+	exportMapFields(g, &s)
+	eachMap(g, func() { // a sculpture stands on one map, its record is colony-wide
+		for id, a := range g.craft.Art.Export() {
+			s.Art[id] = a
+		}
+	})
+	s.Landing = g.exportLanding() // setup_mapgen.go: nil for the map centre
 	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
 	s.SkillLive = g.exportSkillLive()
-	s.Biome, s.GrassRegrow, s.Incidents, s.Troughs = g.biome, g.grass.regrow, g.incidents, g.troughs
-	s.Stains, s.StainDrip = g.exportStains(), g.stains.dripN
-	s.Dirt, s.Carried = g.exportDirt()
-	s.Home, s.CleanWired = g.exportHome(), true
-	s.NoHomeAuto = g.homeArea.off
-	s.Snow, s.SnowClear = g.exportSnow() // snow_clear.go: nil without snow or an area
-	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
-	s.Plan = g.exportPlan() // plan.go
-	s.Fog = g.exportFog()   // fog.go (MAPGEN-2): nil without fog
-
-	s.Vaults = g.exportVaults() // vault.go (MAPGEN-3): nil without vaults
-	s.Fires = g.exportFires()   // fire.go (PLAY-015): nil while nothing burns
-	// pens.go (PLAY-015): marker settings, unpenned clocks
-	s.PenMarkers, s.PenAnimals = slices.Clone(g.pens), g.exportPenAnimals()
+	s.Troughs = g.troughs
 	for id, e := range g.exposure { // TEMP-3: the wiki scale (bodytemp.Ledger); the dead drop out
-		if g.vital.Has(id) || g.animals.Has(id) {
+		if g.vital.Has(id) || slices.ContainsFunc(g.maps, func(m *mapState) bool { return m.animals.Has(id) }) {
 			s.Exposure[id] = [2]int{int(e.Hypo), int(e.Heat)}
 		}
 	}
-	// bridge.go (MAPGEN-3): the sea bitset, nil without a sea
-	s.Ocean = g.exportOcean()
-	s.AX4 = g.br.ind.Export(g.bldgs.Has) // game/industry (AX-4)
-	s.AX8 = g.worldS().ship.Export()     // game/ship (AX-8); an empty world state saves nothing
+	s.AX8 = g.worldS().ship.Export() // game/ship (AX-8); an empty world state saves nothing
 	for id, q := range g.orderQueue {
 		for _, o := range q {
 			s.OrderQueue[id] = append(s.OrderQueue[id], savedOrder{Cmd: o.cmd, Label: o.label, RetryAt: o.retryAt, Tries: o.tries})
@@ -526,9 +524,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	for id, b := range g.breaks {
 		s.Breaks[id] = savedBreak{b.kind, b.until}
 	}
-	s.ZoneMap, s.Logs, s.Incoming = g.exportZones(), g.exportLogs(), g.exportIncoming()
-	s.Deliveries = g.exportDeliveries()
-	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
+	s.Logs = g.exportLogs()
 	s.Social, s.People, s.World = g.exportSocial(), g.exportPeople(), g.exportWorld()
 	if g.soc != nil { // AX-6
 		s.Recreation = g.soc.rec.Export()
@@ -537,17 +533,23 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Surgery = g.exportSurgery()
 	s.BedRest = g.care.Rest.Export()   // care/rest.go (PLAY-020)
 	s.Mind = g.mind.Export()           // mind (SIM-066)
-	s.Orders = ordersOf(g).Export()    // game/orders (AX-1)
 	s.FeedRetry = g.care.Feed.Export() // care/feed.go (SIM-064)
-	s.Power = g.exportPower()          // power.go (PLAY-021): nil without power
 	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
 	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
-	s.Turrets, s.Shots, s.Smoke = g.combat.Turrets.Export(), g.combat.Shots.Export(), g.combat.Blasts.Export()
-	s.Mechs = g.raid.Mechs.Export() // raid/mech.go (DEF-4)
-	s.Diet = g.sk.diet.Export()     // game/diet (FOOD-4): nil at the defaults
-	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
+	s.Diet = g.sk.diet.Export()        // game/diet (FOOD-4): nil at the defaults
+	s.History = slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
+	}
+	for _, m := range g.maps[1:] { // MAP-0: the other open maps, in id order
+		g.mapState = m
+		e := mapSave{ID: m.id, Tile: m.tile, Climate: m.climate}
+		exportMapFields(g, &e.State)
+		s.ExtraMaps = append(s.ExtraMaps, e)
+	}
+	g.mapState = g.maps[0] // Info describes the first map
+	if g.view != nil {
+		s.View = g.view.id
 	}
 	// BestSpeed: a fifth of the default level's time for a file about a
 	// sixth larger (NG-1 §6.8: a 500² save in ≤ 300 ms, ≤ 4 MB).
@@ -563,6 +565,59 @@ func (g *Game) Save(w io.Writer, name string) error {
 		return fmt.Errorf("save state: %w", err)
 	}
 	return zw.Close()
+}
+
+// exportMapFields writes the current map's fields of s (MAP-0): the first
+// map's go in the top level, each other map's in its ExtraMaps entry.
+func exportMapFields(g *Game, s *saveState) {
+	s.W, s.H, s.BlockedBits = g.grid.Width(), g.grid.Height(), g.grid.BlockedBits()
+	s.PawnIDs, s.Positions, s.Jobs = g.pawnIDs, exportStore(g.positions), exportStore(g.jobs)
+	s.ItemIDs, s.Stacks, s.FrameIDs, s.Frames = g.itemIDs, exportStore(g.stacks), g.frameIDs, exportStore(g.frames)
+	s.BldgIDs, s.Bldgs, s.PlantIDs, s.Plants = g.bldgIDs, exportStore(g.bldgs), g.plantIDs, exportStore(g.plants)
+	s.Terr, s.Mines = g.terr, g.mines
+	s.Postponed, s.PostSweep, s.PostOrders = g.exportPostponed(), g.postponed.sweepAt, g.exportOrders()
+	s.RaiderIDs, s.Raiders, s.RaidGroups = g.raiderIDs, g.raiders, g.raidGroups
+	s.RoomGrid, s.RoomTemps, s.Thermo = g.roomGrid, g.thermo.Temps, g.thermo.Export()
+	s.Claims = g.reserve.Export()
+	s.AnimalIDs, s.Animals, s.Traces, s.Wild, s.Wildlife = g.animalIDs, exportStore(g.animals), g.traces, g.wild, g.wl
+	s.RockDamage, s.Residual = g.raid.Rock.Export(), g.thermo.Residual
+	s.Motion, s.Weather, s.Roofs = g.exportMotion(), g.weather, g.exportRoofs()
+	s.DoorsOriented = true // PLAY-011: door facings are stored
+	s.Grass, s.GrassCut = g.exportGrass()
+	s.GrassGrowth = g.exportGrassGrowth() // grass.go
+	s.Biome, s.GrassRegrow, s.Incidents = g.biome, g.grass.regrow, g.incidents
+	s.Stains, s.StainDrip = g.exportStains(), g.stains.dripN
+	s.Dirt, s.Carried = g.exportDirt()
+	s.Home, s.CleanWired = g.exportHome(), true
+	s.NoHomeAuto = g.homeArea.off
+	s.Snow, s.SnowClear = g.exportSnow() // snow_clear.go: nil without snow or an area
+	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
+	s.Plan = g.exportPlan()     // plan.go
+	s.Fog = g.exportFog()       // fog.go (MAPGEN-2): nil without fog
+	s.Vaults = g.exportVaults() // vault.go (MAPGEN-3): nil without vaults
+	s.Fires = g.exportFires()   // fire.go (PLAY-015): nil while nothing burns
+	// pens.go (PLAY-015): marker settings, unpenned clocks
+	s.PenMarkers, s.PenAnimals = slices.Clone(g.pens), g.exportPenAnimals()
+	s.Ocean = g.exportOcean()            // bridge.go (MAPGEN-3): the sea bitset, nil without a sea
+	s.AX4 = g.br.ind.Export(g.bldgs.Has) // game/industry (AX-4)
+	s.ZoneMap, s.Incoming, s.Deliveries = g.exportZones(), g.exportIncoming(), g.exportDeliveries()
+	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
+	s.Orders = ordersOf(g).Export() // game/orders (AX-1)
+	s.Power = g.exportPower()       // power.go (PLAY-021): nil without power
+	s.Turrets, s.Shots, s.Smoke = g.combat.Turrets.Export(), g.combat.Shots.Export(), g.combat.Blasts.Export()
+	s.Mechs = g.raid.Mechs.Export() // raid/mech.go (DEF-4)
+	s.Areas = g.areas.Export()
+}
+
+// eachMap runs f with each open map current in turn, the first map first,
+// then restores the current map.
+func eachMap(g *Game, f func()) {
+	cur := g.mapState
+	for _, m := range g.maps {
+		g.mapState = m
+		f()
+	}
+	g.mapState = cur
 }
 
 // ErrSaveVersion means the save was written by an incompatible version.
@@ -604,26 +659,12 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 		return nil, info, fmt.Errorf("restore rng: %w", err)
 	}
 	g.clock = clock.NewAt(s.Tick)
-	g.grid = grid.Restore(s.W, s.H, s.blockedTiles())
 	g.entities = entity.Resume(s.NextEntity)
 	g.sched = s.Sched
 	g.messages = s.Messages
-	g.pawnIDs, g.positions, g.names = s.PawnIDs, importStore(s.Positions), importStore(s.Names)
-	g.jobs, g.need, g.vital, g.labor = importStore(s.Jobs), importStore(s.Need), importStore(s.Vital), importStore(s.Labor)
-	g.itemIDs, g.stacks = s.ItemIDs, importStore(s.Stacks)
-	g.frameIDs, g.frames = s.FrameIDs, importStore(s.Frames)
-	g.bldgIDs, g.bldgs = s.BldgIDs, importStore(s.Bldgs)
-	g.plantIDs, g.plants = s.PlantIDs, importStore(s.Plants)
-	g.terr = s.Terr
-	g.roomGrid, g.roomDirty = s.RoomGrid, true
-	g.thermo.Import(s.RoomTemps, s.Residual, s.Thermo) // game/thermo (TEMP-1)
-	g.reserve = reservation.Import(s.Claims)
+	g.names = importStore(s.Names)
+	g.need, g.vital, g.labor = importStore(s.Need), importStore(s.Vital), importStore(s.Labor)
 	g.pending = s.Pending
-	g.animalIDs, g.animals = s.AnimalIDs, importStore(s.Animals)
-	g.migrateAnimalBodies() // animal_health.go (MED-13): one-part bodies get their anatomy
-	g.traces, g.wild = s.Traces, s.Wild
-	g.wl = s.Wildlife
-	setMap(&g.mines, s.Mines)
 	setMap(&g.lastMeal, s.LastMeal)
 	g.craft.Bills.Import(s.Bills)  // craft/bills.go
 	g.craft.Drying.Import(s.Racks) // craft/drying.go
@@ -631,9 +672,6 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.fuel, s.Fuel)
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.noFood, s.NoFood)
-	g.importPostponed(s.Postponed)
-	g.postponed.sweepAt = s.PostSweep
-	g.importOrders(s.PostOrders)
 	g.rest.Import(s.RestedFree)      // rest/sleep.go
 	g.rest.Needs.Import(s.RestNeeds) // rest/needs.go (BED-3)
 	setMap(&g.calm, s.Calm)
@@ -652,8 +690,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 			g.labor.Set(id, m.Set(work.PlantCut, p[work.PlantCut] > 0))
 		}
 	}
-	setMap(&g.raiders, s.Raiders)
-	g.raiderIDs, g.raidGroups, g.nextThreat, g.threatsOn = s.RaiderIDs, s.RaidGroups, s.NextThreat, s.ThreatsOn
+	g.nextThreat, g.threatsOn = s.NextThreat, s.ThreatsOn
 	setMap(&g.scheds, s.Scheds)
 	setMap(&g.joy, s.Joy)
 	setMap(&g.memories, s.Memories)
@@ -669,24 +706,102 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 		g.lab.Prog = research.FromSlice(s.ResearchAll)
 	}
 	g.lab.SetCold(s.ResearchCold)
-	g.raid.Rock.Import(s.RockDamage) // raid/rock.go
-	g.motion = importStore(s.Motion) // a mover without a record reads motionOf's due-now default
 	setMap(&g.lastStrike, s.Strikes)
 	setMap(&g.lastHit, s.Hits)
-	g.weather = s.Weather
 	setMap(&g.graves, s.Graves)
-	g.afterLoadBurial()
-	g.importRoofs(s.Roofs)
-	g.importGrass(s.Grass, s.GrassCut)
-	g.importGrassGrowth(s.GrassGrowth) // grass.go: older saves load full
-	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
+	for id, q := range s.OrderQueue { // before importGeology's stone migration
+		for _, o := range q {
+			g.orderQueue[id] = append(g.orderQueue[id], queuedOrder{cmd: o.Cmd, label: o.Label, retryAt: o.RetryAt, tries: o.Tries})
+		}
+	}
+	importMapFields(g, &s)
 	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
 	g.applyClimate(uint64(max(s.Tick, 1) - 1))  // weather_ng1.go (TEMP-2): the climate event's offset as at the last tick
 	g.importLanding(s.Landing)                  // setup_mapgen.go: after importSetupState
 	g.importBios(s.Bios, s.Skills, s.WorkCarry) // skills.go: older saves get neutral bios
 	g.importSkillLive(s.SkillLive)
-	g.grass.regrow = s.GrassRegrow
 	setMap(&g.troughs, s.Troughs)
+	for id, e := range s.Exposure {
+		g.exposure[id] = bodytemp.Sev{Hypo: int32(e[0]), Heat: int32(e[1])}
+	}
+	for id, b := range s.Breaks {
+		g.breaks[id] = breakState{b.Kind, b.Until}
+	}
+	g.importLogs(s.Logs)
+	g.importSocial(s.Social)
+	if s.Recreation != nil { // AX-6: after the social state it hangs off
+		g.socState().rec = recreate.Load(recHost{newRestHost(g)}, s.Recreation)
+	}
+	g.importPeople(s.People)
+	g.importWorld(s.World)
+	shipOf(g).Import(s.AX8) // game/ship (AX-8)
+	g.importBodies(s.Bodies)
+	g.importSurgery(s.Surgery)
+	g.care.Rest.Import(s.BedRest)
+	g.mind.Import(s.Mind) // mind (SIM-066)
+	g.care.Feed.Import(s.FeedRetry)
+	g.care.Policy.Import(s.Care) // care/policy.go (MED-03)
+	g.med.animalIdxOK = false    // animal_health.go: rebuilt on first use
+	g.importTrade(s.Trade)       // trade.go (PLAY-024): sessions close on load
+	g.sk.diet.Import(s.Diet)     // game/diet (FOOD-4)
+	g.importDrugs(s.Drugs)
+	g.importPrisoners(s.Prisoners)
+	g.history = s.History
+	if err := g.importStreams(s.RNGStreams); err != nil {
+		return nil, info, fmt.Errorf("restore rng streams: %w", err)
+	}
+	g.importLetters(s.Letters, s.NextLetter) // letters.go: an older save's letter messages become letters
+	g.migrateSave(info.Version)
+	for _, e := range s.ExtraMaps { // MAP-0: each extra map at its own size
+		m := newMapState(Config{Width: e.State.W, Height: e.State.H}, e.ID)
+		m.tile = e.Tile
+		g.maps, g.mapState = append(g.maps, m), m
+		initMapHosts(g)
+		importMapFields(g, &e.State)
+		g.climate = e.Climate
+	}
+	eachMap(g, func() { g.warmIndexes(true) }) // jobindex.go: indexes, rooms and regions now, not on the first tick
+	if v := mapByID(g, s.View); v != nil {
+		g.view = v
+	}
+	g.mapState = g.view
+	return g, info, nil
+}
+
+// importMapFields restores the current map's fields of s (MAP-0), with the
+// steps that bring an older save's map up to date. Load runs it for the
+// first map once the colony-wide state its steps read is in, then for
+// each extra map.
+func importMapFields(g *Game, s *saveState) {
+	g.grid = grid.Restore(s.W, s.H, s.blockedTiles())
+	g.pawnIDs, g.positions, g.jobs = s.PawnIDs, importStore(s.Positions), importStore(s.Jobs)
+	g.itemIDs, g.stacks = s.ItemIDs, importStore(s.Stacks)
+	g.frameIDs, g.frames = s.FrameIDs, importStore(s.Frames)
+	g.bldgIDs, g.bldgs = s.BldgIDs, importStore(s.Bldgs)
+	g.plantIDs, g.plants = s.PlantIDs, importStore(s.Plants)
+	g.terr = s.Terr
+	g.roomGrid, g.roomDirty = s.RoomGrid, true
+	g.thermo.Import(s.RoomTemps, s.Residual, s.Thermo) // game/thermo (TEMP-1)
+	g.reserve = reservation.Import(s.Claims)
+	g.animalIDs, g.animals = s.AnimalIDs, importStore(s.Animals)
+	g.migrateAnimalBodies() // animal_health.go (MED-13): one-part bodies get their anatomy
+	g.traces, g.wild = s.Traces, s.Wild
+	g.wl = s.Wildlife
+	setMap(&g.mines, s.Mines)
+	g.importPostponed(s.Postponed)
+	g.postponed.sweepAt = s.PostSweep
+	g.importOrders(s.PostOrders)
+	setMap(&g.raiders, s.Raiders)
+	g.raiderIDs, g.raidGroups = s.RaiderIDs, s.RaidGroups
+	g.raid.Rock.Import(s.RockDamage) // raid/rock.go
+	g.motion = importStore(s.Motion) // a mover without a record reads motionOf's due-now default
+	g.weather = s.Weather
+	g.afterLoadBurial()
+	g.importRoofs(s.Roofs)
+	g.importGrass(s.Grass, s.GrassCut)
+	g.importGrassGrowth(s.GrassGrowth) // grass.go: older saves load full
+	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
+	g.grass.regrow = s.GrassRegrow
 	g.importStains(s.Stains)
 	setMap(&g.stains.dripN, s.StainDrip)
 	g.importPlan(s.Plan)            // plan.go: older saves have no marks
@@ -706,52 +821,20 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importOcean(s.Ocean)
 	g.br.ind.Import(s.AX4) // game/industry (AX-4)
 	g.seedGrass()          // an older save: grass from terrain, bare under buildings
-	for id, e := range s.Exposure {
-		g.exposure[id] = bodytemp.Sev{Hypo: int32(e[0]), Heat: int32(e[1])}
-	}
-	for id, q := range s.OrderQueue {
-		for _, o := range q {
-			g.orderQueue[id] = append(g.orderQueue[id], queuedOrder{cmd: o.Cmd, label: o.Label, retryAt: o.RetryAt, tries: o.Tries})
-		}
-	}
-	for id, b := range s.Breaks {
-		g.breaks[id] = breakState{b.Kind, b.Until}
-	}
-	s.ZoneMap.legacy = legacyZones{s.Stockpiles, s.GrowZones, s.Pens} // older saves: rectangles
+	// older saves: zone rectangles
+	s.ZoneMap.legacy = legacyZones{s.Stockpiles, s.GrowZones, s.Pens}
 	g.importZones(s.ZoneMap)
-	g.importLogs(s.Logs)
 	g.importIncoming(s.Incoming)
 	g.importDeliveries(s.Deliveries)
 	g.afterLoadAnimals() // legacy corpses and bills (wildlife.go)
 	g.importGeology(s.Geo, s.Smooths, s.StructVer)
-	g.importSocial(s.Social)
-	if s.Recreation != nil { // AX-6: after the social state it hangs off
-		g.socState().rec = recreate.Load(recHost{newRestHost(g)}, s.Recreation)
-	}
-	g.importPeople(s.People)
-	g.importWorld(s.World)
-	shipOf(g).Import(s.AX8) // game/ship (AX-8)
-	g.importBodies(s.Bodies)
-	g.importSurgery(s.Surgery)
-	g.care.Rest.Import(s.BedRest)
-	g.mind.Import(s.Mind)        // mind (SIM-066)
 	ordersOf(g).Import(s.Orders) // game/orders (AX-1)
-	g.care.Feed.Import(s.FeedRetry)
-	g.care.Policy.Import(s.Care) // care/policy.go (MED-03)
-	g.med.animalIdxOK = false    // animal_health.go: rebuilt on first use
 	g.importPower(s.Power)       // power.go (PLAY-021)
-	g.importTrade(s.Trade)       // trade.go (PLAY-024): sessions close on load
 	g.combat.Turrets.Import(s.Turrets)
 	g.combat.Shots.Import(s.Shots)
 	g.combat.Blasts.Import(s.Smoke)
 	g.raid.Mechs.Import(s.Mechs) // raid/mech.go (DEF-4)
-	g.sk.diet.Import(s.Diet)     // game/diet (FOOD-4)
-	g.importDrugs(s.Drugs)
-	g.importPrisoners(s.Prisoners)
-	g.areas, g.history = area.Import(s.Areas), s.History
-	if err := g.importStreams(s.RNGStreams); err != nil {
-		return nil, info, fmt.Errorf("restore rng streams: %w", err)
-	}
+	g.areas = area.Import(s.Areas)
 	if !s.DoorsOriented {
 		g.orientDoors() // placement.go: an older save's doors take their walls' axis (PLAY-011)
 	}
@@ -759,10 +842,6 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	// pens become pen markers
 	g.importPens(s.PenMarkers, s.PenAnimals)
 	g.migratePenZones()
-	g.importLetters(s.Letters, s.NextLetter) // letters.go: an older save's letter messages become letters
-	g.migrateSave(info.Version)
-	g.warmIndexes(true) // jobindex.go: indexes, rooms and regions now, not on the first tick
-	return g, info, nil
 }
 
 // migrateSave brings a loaded save of version v up to SaveVersion: each
@@ -812,6 +891,8 @@ func (g *Game) migrateSave(v int) {
 	case v < 11: // AX-0: the AX owners' steps, empty until A2 (1x1 tables to 1x2) and A3 (stone tiles, carpets) add theirs
 		construction.MigrateFloors(g.bldgs, g.frames)  // A3: stone-block floors become stone tiles
 		g.migrateBenches(resize.V11, resize.RefundV10) // A2: 1x1 tables become 1x2 (taken down and refunded where they no longer fit)
+		fallthrough
+	case v < 12: // MAP-0: an older save has one map, nothing to change
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

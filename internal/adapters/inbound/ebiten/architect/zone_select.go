@@ -328,20 +328,21 @@ var growFullRange = sync.OnceValues(func() (lo, hi int) {
 // middle: "Growing now", "Too cold" or "Too hot", with the temperature and
 // the range plants grow in.
 func (z *Zones) climateLine(zv game.ZoneView) string {
+	u := z.sh.Env().Units
 	g := z.sh.Overlays().Zones.ZoneGeomOf(zv)
 	x, y := min(max(int(g.Ax), g.MinX), g.MaxX), min(max(int(g.Ay), g.MinY), g.MaxY)
 	t := z.sim().TemperatureAt(x, y)
 	lo, hi := growTempRange()
 	switch {
 	case t <= lo:
-		return fmt.Sprintf("Too cold to grow: %s (needs above %s)", fmtTemp(t), fmtTemp(lo))
+		return fmt.Sprintf("Too cold to grow: %s (needs above %s)", u.Compact(t), u.Compact(lo))
 	case t >= hi:
-		return fmt.Sprintf("Too hot to grow: %s (needs below %s)", fmtTemp(t), fmtTemp(hi))
+		return fmt.Sprintf("Too hot to grow: %s (needs below %s)", u.Compact(t), u.Compact(hi))
 	}
 	if fl, fh := growFullRange(); t < fl || t > fh {
-		return fmt.Sprintf("Growing slowly: %s (full speed between %s and %s)", fmtTemp(t), fmtTemp(fl), fmtTemp(fh))
+		return fmt.Sprintf("Growing slowly: %s (full speed between %s and %s)", u.Compact(t), u.Compact(fl), u.Compact(fh))
 	}
-	return fmt.Sprintf("Growing now: %s (grows between %s and %s)", fmtTemp(t), fmtTemp(lo), fmtTemp(hi))
+	return fmt.Sprintf("Growing now: %s (grows between %s and %s)", u.Compact(t), u.Compact(lo), u.Compact(hi))
 }
 
 // zoneOwnPlant reports a plant is one its growing zone grows (as the map

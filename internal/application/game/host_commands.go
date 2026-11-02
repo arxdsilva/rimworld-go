@@ -37,9 +37,13 @@ func (g *Game) applyHostCommand(c command.Command) {
 	case command.ReleasePrisoner:
 		g.prison.Release(target, 0) // prison/prison.go: walks off the map
 	case command.FormCaravan:
-		g.cmdFormCaravan(c.Name, c.Count) // world_state.go
+		fleetOf(g).Form(c.Name, c.Count) // game/maps
 	case command.CaravanReturn:
-		g.cmdCaravanReturn(target) // world_state.go
+		fleetOf(g).Return(target) // game/maps
+	case command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel:
+		mapsApply(g, c) // world_state.go: game/maps (MAP-01..04)
+	case command.SetColonyCap:
+		SetMaxColonies(g, c.Count) // world_state.go
 	case command.PaintArea:
 		g.cmdPaintArea(c.Index, c.X, c.Y, c.X2, c.Y2, c.Enabled) // areas.go
 	case command.RenameArea:

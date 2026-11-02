@@ -1001,7 +1001,7 @@ func (g *Game) organHarvested(surgeon, donor entity.EntityID, part body.Part) {
 // scan) and stands up a patient it no longer holds down: up when its body
 // allows (bleed.go standsUp), else left down from its wounds.
 func (g *Game) stepAnesthetics(now uint64) {
-	for _, id := range slices.Clone(g.med.patients) { // a change touches the index
+	for _, id := range ownPatients(g) { // patients.go: this map's, a copy (a change touches the index)
 		b := g.bodies[id]
 		v, ok := g.vital.Get(id)
 		if b == nil || !ok || v.Status == health.Dead {

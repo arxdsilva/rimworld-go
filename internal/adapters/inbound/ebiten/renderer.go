@@ -13,7 +13,6 @@ import (
 	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
-	minimappkg "rimworld-go/internal/adapters/inbound/ebiten/render/minimap"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
@@ -23,7 +22,6 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -35,14 +33,14 @@ import (
 // hands one in and the root stores it; every feature and layer depends on
 // its own smaller interface (SOLID_GO.md §6), never on this union.
 type Simulation interface {
-	SimStepper
-	SimCommander
+	SimControl
 	SimFrame
 	SimWorld
 	SimPlacement
 	SimColony
 	SimTabs
 	SimChunks
+	SimMaps
 }
 
 var _ Simulation = (*game.Game)(nil)
@@ -119,15 +117,19 @@ type pawnVisual struct {
 
 // Renderer drives an Ebitengine window from a running Simulation.
 type Renderer struct {
+	// mapScene is the viewed map's presentation state (scene.go): its
+	// camera, motion, particles, environment, pipeline with every bake,
+	// snow cache, frame view, minimap and sound memory. scenes holds every
+	// open map's and switches when the simulation's view moves.
+	*mapScene
+	scenes sceneSet
+
 	// onEnqueue, when set, sees every command the player sends (PLAY-018:
 	// the learning helper marks lessons done from the player's own orders).
 	onEnqueue  func(command.Command)
-	view       render.View   // this frame's context for the draw layers (render/view.go)
-	treeFx     envpkg.TreeFx // see-through tree canopies (tree_fade.go)
 	game       Simulation
 	wheelTaken bool // the mouse wheel scrolled a log this frame
 	speed      speed
-	cam        camerapkgpkg.Camera
 	art        *artpkg.Catalog
 
 	// present is a presentation-only frame counter. Animation reads it;
@@ -135,34 +137,18 @@ type Renderer struct {
 	present   uint64
 	selected  entity.EntityID
 	hasSelect bool
-	last      map[entity.EntityID]pawnVisual
 
-	// animation state (presentation only)
-	parts    []creaturepkg.Particle
-	itemBorn map[entity.EntityID]uint64
 	// viewCached: the simulation caches its read models (viewCacher), so a
 	// read model handed out again is the same, unchanged one and memos
 	// keyed on its identity hold (split, App.alerts).
 	viewCached bool
-	split      pawnSplit
-	mo         motionpkg.State[creaturepkg.Body] // per-creature motion and the animT clock (render/motion); each track carries its animal's body player
-	smooth     camerapkgpkg.Smooth               // eased pan and zoom (camera/smooth.go)
-	env        envState                          // wind, contact springs and weather (environment.go)
-	lit        lightpkg.Lit                      // sun, moon and lamp lighting (render/light)
-	// bursts remembers which explosive deaths already burst (animal_burst.go).
-	// voice is the animals' sound memory (animal_sounds.go); soundHas
-	// reports a sound id exists (the App wires Sound.Has; nil: all do).
+	smooth     camerapkgpkg.Smooth // eased pan and zoom (camera/smooth.go); the player's, halted on a map switch
+	lit        lightpkg.Lit        // sun, moon and lamp lighting (render/light); shader and pair cache shared by every map
 	// sound is the world's sound-cue bus (render/cue); cueBus() builds it on
-	// first use.
+	// first use. Its memories are primed on a map switch (scene.go).
 	sound *cue.Bus
-	// figureBlood, while non-zero, is the blood stain drawLit puts on the
-	// figure layer being drawn (lit.kage Custom3, blood_draw.go).
-	figureBlood float32
 	// stepTicks are single ticks the developer asked for while paused.
 	stepTicks int
-	// wp is the world draw order and every draw layer, the zoom state, the
-	// link grid and the stone cache (render/world, layers.go: pipe).
-	wp *world.Pipeline
 
 	selectClr color.RGBA
 
@@ -176,19 +162,14 @@ type Renderer struct {
 	fx              float64
 	edgeScroll      bool
 	reducedFlashing bool
-	reducedMotion   bool // freezes the water ripple and foam (water_draw.go)
-	water           envpkg.Water
+	reducedMotion   bool         // freezes the water ripple and foam (water_draw.go)
+	water           envpkg.Water // the water shader, shared by every map
 
-	// sound (sound_signals.go): cues for the App's director, last frame's
-	// world to hear changes, the pending thunder and the world this frame.
-	threatAt   uint64 // present frame of the newest threat
-	heard      game.WorldView
+	// sound (sound_signals.go): the present frame of the newest threat and
+	// the danger messages already seen.
+	threatAt   uint64
 	dangerInit bool
 	lastDanger uint64
-	floaters   []creaturepkg.Floater
-
-	mini  minimappkg.Map   // the minimap (render/minimap)
-	snowc envpkg.SnowCache // snow_cache.go: snow veil and wet masks per chunk
 }
 
 // viewCacher is a simulation that can cache its read models between
@@ -204,16 +185,20 @@ func New(sim Simulation) *Renderer {
 	if cached {
 		vc.SetViewCache(true)
 	}
-	return &Renderer{
+	r := &Renderer{
 		game:          sim,
 		viewCached:    cached,
 		speed:         speedNormal,
-		cam:           camerapkgpkg.Camera{Zoom: 1},
 		pauseOnThreat: true,
 		fx:            1,
-		last:          map[entity.EntityID]pawnVisual{},
 		selectClr:     color.RGBA{R: 250, G: 220, B: 60, A: 255},
 	}
+	var id game.MapID
+	if sim != nil {
+		id = sim.ViewedMap()
+	}
+	r.scenes.start(r, id)
+	return r
 }
 
 // ticksWanted is this Update's nominal tick count: the speed tier's ticks
@@ -237,6 +222,7 @@ func (r *Renderer) advance() { r.advanceTicks(r.ticksWanted(), nil) }
 // App's Update budget (update_budget.go) can stop early. The ticks run in
 // the same order whichever Update runs them. mo.stepped is the count done.
 func (r *Renderer) advanceTicks(want int, more func(done int) bool) (done int) {
+	r.scenes.follow(r) // the player switched maps (MAP-1, scene.go)
 	r.present++
 	if want > 0 && r.speed.ticksPerFrame() == 0 && r.stepTicks > 0 {
 		r.stepTicks--
@@ -482,7 +468,8 @@ func (r *Renderer) worldToScreenF(wx, wy float64) (float32, float32) {
 // Draw renders terrain, pawns, and selection. HUD chrome is App-owned.
 func (r *Renderer) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 28, G: 42, B: 32, A: 255})
-	r.SyncDev() // the screen is physical
+	r.scenes.follow(r) // a switch since the last Update draws the right map
+	r.SyncDev()        // the screen is physical
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.cam.Tile()

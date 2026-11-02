@@ -20,7 +20,9 @@ import (
 // workRenderer is a renderer whose animT is the stub sim's tick.
 func workRenderer(tick int) (*Renderer, *stubSim) {
 	sim := &stubSim{tick: clock.Tick(tick)}
-	return &Renderer{game: sim}, sim
+	r := bareRenderer()
+	r.game = sim
+	return r, sim
 }
 
 // tickAt is a tick (>= 0) at which pawn id's swing of the given period

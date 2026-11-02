@@ -46,10 +46,12 @@ func (o Ops) Do(id entity.EntityID, j job.Record) {
 	}
 }
 
-// Tick is travel's upkeep at tick now: boarders and led animals every
-// loadUpkeep ticks, flights, sites and cargo every upkeep ticks (a nil
-// State has nothing to do).
-func (o Ops) Tick(now uint64) {
+// TickPass is travel's upkeep at tick now on one map's pass (a nil State
+// has nothing to do). MAP-0: boarders, led animals and the caskets every
+// loadUpkeep ticks are the current map's; the flights, sites, cargo and
+// packing every upkeep ticks are the colony's, run only with colony set
+// (the first map's pass).
+func (o Ops) TickPass(now uint64, colony bool) {
 	if o.s == nil {
 		return
 	}
@@ -59,7 +61,7 @@ func (o Ops) Tick(now uint64) {
 	if now%loadUpkeep == 0 {
 		caskets(o).fuseTick(now)
 	}
-	if now%upkeep != 0 {
+	if !colony || now%upkeep != 0 {
 		return
 	}
 	if len(o.s.flights) > 0 {
@@ -86,9 +88,6 @@ func (o Ops) AssignLoad(id entity.EntityID) bool { return pods(o).AssignLoad(id)
 
 // AssignScan starts researcher id on a mineral scanner (Research work).
 func (o Ops) AssignScan(id entity.EntityID, tries int) bool { return scanner(o).AssignScan(id, tries) }
-
-// Mine is a caravan's arrival on tile t (scanner sites; launch.go).
-func (o Ops) Mine(cid uint64, t int, now uint64) (uint64, bool) { return pods(o).Mine(cid, t, now) }
 
 // Home sets caravan cid's pod cargo down around (x, y).
 func (o Ops) Home(cid uint64, x, y int) { pods(o).Home(cid, x, y) }

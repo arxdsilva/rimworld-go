@@ -273,7 +273,8 @@ func TestArtFrameNames(t *testing.T) {
 	}
 	// animal frames resolve, missing ones fall back to the standing sprite
 	c := &artpkg.Catalog{Sprites: map[string]*artpkg.Sprite{"animal/deer_south": {}, "animal/deer_south_walk03": {}}}
-	r := &Renderer{art: c}
+	r := bareRenderer()
+	r.art = c
 	if r.framed("animal/deer_south", "_walk03") != "animal/deer_south_walk03" {
 		t.Fatal("frame names resolve")
 	}

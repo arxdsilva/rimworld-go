@@ -1,8 +1,6 @@
 package game
 
 import (
-	"slices"
-
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -36,7 +34,7 @@ func (g *Game) stepOrganFailure() {
 	}
 	g.stepAnesthetics(uint64(g.clock.Now())) // surgery.go (MED-06): wear anaesthetics off first
 
-	for _, id := range slices.Clone(g.med.patients) { // a death touches the index
+	for _, id := range ownPatients(g) { // patients.go: this map's, a copy (a death touches the index)
 		b := g.bodies[id]
 		v, ok := g.vital.Get(id)
 		if b == nil || !ok || v.Status == health.Dead || !b.OrganFailure() {

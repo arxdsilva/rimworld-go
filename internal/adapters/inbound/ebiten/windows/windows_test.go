@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/planet"
 )
 
 // fakeReader is a colony with no wildlife, history or world map.
@@ -19,7 +18,6 @@ type fakeReader struct{}
 
 func (fakeReader) Wildlife() []game.WildlifeRow                      { return nil }
 func (fakeReader) History() []game.HistoryEntryView                  { return nil }
-func (fakeReader) WorldMap() game.WorldMapView                       { return game.WorldMapView{Tile: -1} }
 func (fakeReader) IncapableReason(entity.EntityID, work.Type) string { return "" }
 
 // The lists keep every column when the window has room and leave the
@@ -72,25 +70,6 @@ func TestNextPresetCycles(t *testing.T) {
 	}
 	if PresetLabel(drug.Unrestricted) != "Unrestricted" {
 		t.Fatal(PresetLabel(drug.Unrestricted))
-	}
-}
-
-// The World tab charts the colony's planet a slice per frame, once: a
-// reopened tab finds it in the cache.
-func TestWorldTabChartsThePlanetOnce(t *testing.T) {
-	t.Parallel()
-	_, w := newFake()
-	st := &worldUI{picked: -1, hasMap: true,
-		params: planet.Params{SeedText: "world-tab", Coverage: 5, Rain: 2, Temp: 2, Pop: 1}}
-	var p *planet.Planet
-	for i := 0; i < 400 && p == nil; i++ {
-		p = w.World().planetFor(st)
-	}
-	if p == nil {
-		t.Fatal("the world was never charted")
-	}
-	if q := w.World().planetFor(&worldUI{params: st.params, hasMap: true}); q != p {
-		t.Fatal("a reopened tab charts the world again")
 	}
 }
 

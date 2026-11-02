@@ -146,8 +146,9 @@ func (o core) dropHold(h *Hold, x, y int) {
 func (o pods) loadTick() {
 	for _, h := range sortedKeys(o.s.roped) {
 		b := o.s.roped[h]
-		if j := o.job(h); j.Kind == job.LoadPods && j.Carry == b.ID && j.Active() {
-			continue
+		j, here := o.h.Job(h)
+		if !here || j.Kind == job.LoadPods && j.Carry == b.ID && j.Active() {
+			continue // MAP-0: a hauler on another map is its own pass's
 		}
 		delete(o.s.roped, h)
 		x, y := o.h.Pos(h)

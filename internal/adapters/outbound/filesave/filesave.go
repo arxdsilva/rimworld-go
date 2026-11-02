@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -163,9 +164,54 @@ const ViewExt = ".rwview"
 
 // ViewFile is the camera as the sidecar stores it: the world point at the
 // middle of the screen in tiles, and the zoom (never pixel offsets, so it
-// survives another window size or screen density).
+// survives another window size or screen density). The top level is map
+// 0's camera and Maps every other open map's by its decimal id (MAP-1), so
+// a sidecar written before there were several maps loads as map 0's.
 type ViewFile struct {
 	CX, CY, Zoom float64
+	Maps         map[string]ViewFile `json:"maps,omitempty"`
+}
+
+// valid reports the camera is finite with a positive zoom.
+func (v ViewFile) valid() bool {
+	fin := func(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
+	return fin(v.CX) && fin(v.CY) && fin(v.Zoom) && v.Zoom > 0
+}
+
+// ViewsOf is the sidecar for each map's camera: map 0 at the top level,
+// the others under Maps.
+func ViewsOf(views map[game.MapID]ViewFile) ViewFile {
+	var out ViewFile
+	for id, v := range views {
+		v.Maps = nil
+		if id == 0 {
+			out.CX, out.CY, out.Zoom = v.CX, v.CY, v.Zoom
+			continue
+		}
+		if out.Maps == nil {
+			out.Maps = map[string]ViewFile{}
+		}
+		out.Maps[strconv.FormatUint(uint64(id), 10)] = v
+	}
+	return out
+}
+
+// PerMap is the sidecar's valid cameras by map id: map 0 from the top
+// level, the others from Maps (an entry with a bad id or camera is left
+// out).
+func (v ViewFile) PerMap() map[game.MapID]ViewFile {
+	out := map[game.MapID]ViewFile{}
+	if v.valid() {
+		out[0] = ViewFile{CX: v.CX, CY: v.CY, Zoom: v.Zoom}
+	}
+	for k, m := range v.Maps {
+		id, err := strconv.ParseUint(k, 10, 32)
+		if err != nil || !m.valid() {
+			continue
+		}
+		out[game.MapID(id)] = ViewFile{CX: m.CX, CY: m.CY, Zoom: m.Zoom}
+	}
+	return out
 }
 
 func viewPath(savePath string) string {
@@ -203,19 +249,16 @@ func (s Store) SaveView(slot string, v ViewFile) error {
 	return nil
 }
 
-// LoadView reads the camera sidecar beside the save at savePath. A missing,
-// unreadable or invalid file reports false: the save loads as it always did.
+// LoadView reads the camera sidecar beside the save at savePath. A missing
+// or unreadable file, or one without a single valid camera, reports false:
+// the save loads as it always did. PerMap gives the cameras by map.
 func (s Store) LoadView(savePath string) (ViewFile, bool) {
 	data, err := os.ReadFile(viewPath(savePath))
 	if err != nil {
 		return ViewFile{}, false
 	}
 	var v ViewFile
-	if json.Unmarshal(data, &v) != nil {
-		return ViewFile{}, false
-	}
-	fin := func(f float64) bool { return !math.IsNaN(f) && !math.IsInf(f, 0) }
-	if !fin(v.CX) || !fin(v.CY) || !fin(v.Zoom) || v.Zoom <= 0 {
+	if json.Unmarshal(data, &v) != nil || len(v.PerMap()) == 0 {
 		return ViewFile{}, false
 	}
 	return v, true

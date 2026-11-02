@@ -72,12 +72,13 @@ func TestLampRadiusFromMetadata(t *testing.T) {
 	}
 	v := lampTestWorld(16, 10)
 	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
-	r := &Renderer{art: art}
+	r := bareRenderer()
+	r.art = art
 	r.view.W = v
 	if a, b := levelAt(r, 7, 5), levelAt(r, 8, 5); a <= 0 || b != 0 {
 		t.Fatalf("radius 3: 2 tiles %v, 3 tiles %v", a, b)
 	}
-	r2 := &Renderer{}
+	r2 := bareRenderer()
 	r2.view.W = v
 	if l := levelAt(r2, 9, 5); l <= 0 {
 		t.Fatalf("default radius 6: 4 tiles %v", l)

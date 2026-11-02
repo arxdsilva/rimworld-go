@@ -222,8 +222,8 @@ type restCouples struct{ g *Game }
 func (h restCouples) Mate(id entity.EntityID) entity.EntityID  { return h.g.partnerOf(id) }
 func (h restCouples) Opinion(from, to entity.EntityID) int32   { return h.g.opinion(from, to) }
 func (h restCouples) Age(id entity.EntityID) int               { return h.g.socialPerson(id).AgeYears }
-func (h restCouples) LovinAt(id entity.EntityID) uint64        { return h.g.gatherSt().lovinAt[id] }
-func (h restCouples) SetLovinAt(id entity.EntityID, at uint64) { h.g.gatherSt().lovinAt[id] = at }
+func (h restCouples) LovinAt(id entity.EntityID) uint64        { return h.g.gatherSt().LovinAt[id] }
+func (h restCouples) SetLovinAt(id entity.EntityID, at uint64) { h.g.gatherSt().LovinAt[id] = at }
 func (h restCouples) SocialRoll(n int) int                     { return h.g.stream(streamSocial).IntN(n) }
 func (h restCouples) Standing(id entity.EntityID) bool {
 	return h.g.alive(id) && !h.g.breaking(id) && !h.g.drafted(id)

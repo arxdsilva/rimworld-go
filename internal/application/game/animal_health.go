@@ -371,15 +371,18 @@ func (g *Game) stepAnimalConds(id entity.EntityID, a *animal.State, b *body.Body
 // ---- the animal patients index ----
 
 // animalPatientIDs is the sorted ids of animals with a body that needs
-// care (animalPatient), built from the animals on first use (a new game,
-// or after a load reset the care state).
+// care (animalPatient), built from every map's animals on first use (a new
+// game, or after a load reset the care state). The index is colony-wide
+// (MAP-0): each map's pass steps the ones standing on it.
 func (g *Game) animalPatientIDs() []entity.EntityID {
 	c := &g.med
 	if !c.animalIdxOK {
 		c.animalPatients = c.animalPatients[:0]
-		for _, id := range g.animalIDs {
-			if a := g.animals.Ref(id); a != nil && animalPatient(a) {
-				c.animalPatients = append(c.animalPatients, id)
+		for _, m := range g.maps {
+			for _, id := range m.animalIDs {
+				if a := m.animals.Ref(id); a != nil && animalPatient(a) {
+					c.animalPatients = append(c.animalPatients, id)
+				}
 			}
 		}
 		slices.Sort(c.animalPatients)
@@ -397,12 +400,12 @@ func (g *Game) markAnimalPatient(id entity.EntityID) {
 }
 
 // sweepAnimalPatients drops every indexed animal that is gone or has no
-// body needing care left.
+// body needing care left; another map's animals wait for its pass (owns).
 func (g *Game) sweepAnimalPatients() {
 	ids := g.animalPatientIDs()
 	kept := ids[:0]
 	for _, id := range ids {
-		if a := g.animals.Ref(id); a != nil && animalPatient(a) {
+		if a := g.animals.Ref(id); a != nil && animalPatient(a) || !owns(g, id) {
 			kept = append(kept, id)
 		}
 	}

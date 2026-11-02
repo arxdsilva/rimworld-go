@@ -134,6 +134,7 @@ var canvasExempt = map[string]string{
 	"orders/formation.go:DrawFormation":              "world: formation markers on tiles",
 	"render/overlay/combat_draw.go:DrawTargetMark":   "world: the target ring on the enemy tile (no text)",
 	"render/overlay/blast_draw.go:drawFx":            "world: blast and shield effect sprites on the map",
+	"worldview/spot_draw.go:DrawSpot":                "world: the pick-spot cursor's cell outline on the map (MAP-10; the hint goes through the canvas)",
 	"orders/mortar_aim.go:drawAim":                   "world: the mortar and aimed tile outlines (the hint goes through the canvas)",
 	"architect/zone_tools.go:drawGhost":              "world: zone/drag ghost cells on the map (palette and labels use the canvas)",
 	"architect/move_mode.go:Draw":                    "world: move-mode footprint outline (hints use the canvas)",
@@ -143,11 +144,9 @@ var canvasExempt = map[string]string{
 	"render/overlay/power_overlay.go:drawPowerFrame": "world: the red frame round a device on no power grid",
 
 	// the globe: physical size inside its logical area
-	"globe/globe.go:Draw":                  "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
-	"globe/globe.go:DrawBody":              "globe: the sphere, at physical size",
-	"globe/globe.go:drawMarks":             "globe: marks on the sphere",
-	"windows/world.go:drawCaravanMarks":    "globe overlay: caravan marks drawn on the globe surface",
-	"windows/world_ax9.go:drawTravelMarks": "globe overlay: pods in flight and mining sites, drawn like the caravan marks (AX-9)",
+	"globe/globe.go:Draw":      "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
+	"globe/globe.go:DrawBody":  "globe: the sphere, at physical size",
+	"globe/globe.go:drawMarks": "globe: marks on the sphere",
 
 	// full-screen backgrounds, physical size, unscaled
 	"mainmenu/diorama.go:DrawDiorama":     "full-screen background (physical size, unscaled)",
@@ -187,7 +186,7 @@ var worldPixelHelpers = map[string]bool{
 var hudFiles = []string{
 	"hud/*.go", "inspector/*.go",
 	"threat_ui.go", "uikit/*.go",
-	"orders/search.go", "windows/*.go", "architect/*.go", "options/*.go", "dialogs/*.go", "learn/*.go", "devtools/*.go", "perf/*.go",
+	"orders/search.go", "windows/*.go", "worldview/*.go", "architect/*.go", "options/*.go", "dialogs/*.go", "learn/*.go", "devtools/*.go", "perf/*.go",
 	"screen_*.go", "ui_*.go", "*_ui.go", "portrait.go",
 	"hud_*.go", "cmds_*.go", // PLAY-018 HUD regions
 }
@@ -195,11 +194,10 @@ var hudFiles = []string{
 // hudFilesNot are files the globs above catch that are not HUD files.
 var hudFilesNot = []string{
 	"architect/move_mode.go", "architect/pen_draw.go", "architect/zone_tools.go", // world ghosts and outlines
-	"devtools/mapfields.go", // world: the dev map-field layer
-	"windows/world.go",      // globe overlay
-	"windows/world_ax9.go",  // globe overlay: pods and mining sites (AX-9)
-	"order_queue_ui.go",     // world route
-	"hud/rooms.go",          // mixed: the room tile tint is world
+	"devtools/mapfields.go",  // world: the dev map-field layer
+	"worldview/spot_draw.go", // world: the pick-spot cursor's cell outline
+	"order_queue_ui.go",      // world route
+	"hud/rooms.go",           // mixed: the room tile tint is world
 }
 
 // hudCallsWorldHelper are HUD functions that call a world pixel helper on

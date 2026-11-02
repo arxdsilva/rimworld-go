@@ -299,7 +299,8 @@ func TestCarriedCarcassShowsItsSpecies(t *testing.T) {
 		t.Fatalf("no %s", key)
 	}
 	p := game.PawnView{Carrying: "animal corpse", CarryingAnimal: "capybara"}
-	r := &Renderer{art: c}
+	r := bareRenderer()
+	r.art = c
 	if a := r.carryPose(p, motionpkg.MoveState{}); a.Held.Key != key {
 		t.Fatalf("held %q, want %q", a.Held.Key, key)
 	}
@@ -473,7 +474,7 @@ func TestMarksClearTheArt(t *testing.T) {
 	if creaturepkg.BarLift(top) <= top || creaturepkg.BarLift(top) >= creaturepkg.MarkerLift(top) {
 		t.Fatalf("bar %v between the top %v and the mark %v", creaturepkg.BarLift(top), top, creaturepkg.MarkerLift(top))
 	}
-	bare := &Renderer{}
+	bare := bareRenderer()
 	if got := bare.animalTop(game.AnimalView{Size: 2.2}, 64); got != creaturepkg.AnimalHeight(2.2) {
 		t.Fatalf("no art: top %v, want the estimate %v", got, creaturepkg.AnimalHeight(2.2))
 	}

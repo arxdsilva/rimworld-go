@@ -2,10 +2,12 @@ package filesave
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -147,7 +149,7 @@ func TestViewSidecarRoundTrip(t *testing.T) {
 	if err := s.SaveView("My colony", want); err != nil {
 		t.Fatal(err)
 	}
-	if got, ok := s.LoadView(path); !ok || got != want {
+	if got, ok := s.LoadView(path); !ok || !reflect.DeepEqual(got, want) {
 		t.Fatalf("view %+v %v, want %+v", got, ok, want)
 	}
 	slots, err := s.List()
@@ -164,5 +166,42 @@ func TestViewSidecarRoundTrip(t *testing.T) {
 	}
 	if left, _ := filepath.Glob(filepath.Join(s.Dir, "*.tmp")); len(left) != 0 {
 		t.Fatalf("temp files left: %v", left)
+	}
+}
+
+// TestViewSidecarPerMap: each open map's camera round-trips (MAP-1); map 0
+// stays at the top level, so a sidecar written before maps still loads as
+// map 0's, and one holding only another map's camera loads too.
+func TestViewSidecarPerMap(t *testing.T) {
+	s := Store{Dir: t.TempDir()}
+	path := filepath.Join(s.Dir, "Two-maps"+Ext)
+	views := map[game.MapID]ViewFile{0: {CX: 10, CY: 20, Zoom: 1}, 3: {CX: 5.5, CY: 6.5, Zoom: 0.5}}
+	if err := s.SaveView("Two maps", ViewsOf(views)); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(s.Dir, "Two-maps"+ViewExt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw map[string]any
+	if json.Unmarshal(data, &raw) != nil || raw["CX"] != 10.0 || raw["maps"] == nil {
+		t.Fatalf("map 0 at the top level, the others under maps: %s", data)
+	}
+	got, ok := s.LoadView(path)
+	if !ok || !reflect.DeepEqual(got.PerMap(), views) {
+		t.Fatalf("per map %+v %v, want %+v", got.PerMap(), ok, views)
+	}
+
+	os.WriteFile(filepath.Join(s.Dir, "Two-maps"+ViewExt), []byte(`{"CX":3,"CY":4,"Zoom":2}`), 0o644)
+	got, ok = s.LoadView(path)
+	if want := map[game.MapID]ViewFile{0: {CX: 3, CY: 4, Zoom: 2}}; !ok || !reflect.DeepEqual(got.PerMap(), want) {
+		t.Fatalf("an old sidecar is map 0's: %+v %v", got.PerMap(), ok)
+	}
+
+	os.WriteFile(filepath.Join(s.Dir, "Two-maps"+ViewExt),
+		[]byte(`{"CX":0,"CY":0,"Zoom":0,"maps":{"2":{"CX":1,"CY":2,"Zoom":1},"x":{"CX":1,"CY":1,"Zoom":1},"4":{"CX":1,"CY":1,"Zoom":-1}}}`), 0o644)
+	got, ok = s.LoadView(path)
+	if want := map[game.MapID]ViewFile{2: {CX: 1, CY: 2, Zoom: 1}}; !ok || !reflect.DeepEqual(got.PerMap(), want) {
+		t.Fatalf("only the valid cameras load: %+v %v", got.PerMap(), ok)
 	}
 }

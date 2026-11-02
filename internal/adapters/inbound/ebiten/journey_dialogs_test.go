@@ -6,7 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
-	"rimworld-go/internal/adapters/inbound/ebiten/windows"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"strconv"
 	"testing"
 
@@ -551,10 +551,11 @@ func TestJourneyDialogsCaravanFormAndReturn(t *testing.T) {
 		j.key("Space", 0)
 	}
 	j.key("F8", 0)
-	if j.a.uiModalTop() != windows.WorldModalID {
-		t.Fatalf("F8 opened %q, want the World tab", j.a.uiModalTop())
+	if !j.a.world.Open() {
+		t.Fatal("F8 did not open the world view")
 	}
-	if !j.clickID("modal." + windows.WorldModalID + ".world.form") {
+	j.update(2) // the colony is selected on opening: its gizmos are up
+	if !j.clickID("world.act.form") {
 		t.Fatal("Form caravan is disabled on a colony with a world")
 	}
 	j.update(1)
@@ -585,17 +586,26 @@ func TestJourneyDialogsCaravanFormAndReturn(t *testing.T) {
 	if len(cs) != 1 {
 		t.Fatalf("%d caravans after Send, want 1", len(cs))
 	}
-	if j.a.uiModalTop() != windows.WorldModalID {
-		t.Fatalf("top modal %q after Send, want the World tab back", j.a.uiModalTop())
+	if j.a.uiModalTop() != "" || !j.a.world.Open() {
+		t.Fatalf("top modal %q after Send, want the world view back", j.a.uiModalTop())
 	}
-	row := "world.caravan." + strconv.FormatUint(cs[0].ID, 10) + ".return"
-	if !j.clickID(row) {
-		t.Fatalf("the caravan's %q button is disabled (state %q)", row, cs[0].State)
+	// the caravan forms on the colony's tile: a click on the colony's marker
+	// cycles to it
+	j.update(worldFly)
+	if !j.clickID("world.obj.map.0") || j.a.world.Selected() != "caravan:"+strconv.FormatUint(cs[0].ID, 10) {
+		t.Fatalf("selected %q, want the caravan", j.a.world.Selected())
+	}
+	if !j.clickID("world.act.return") {
+		t.Fatalf("the caravan's Return is disabled (state %q)", cs[0].State)
 	}
 	if c, ok := j.lastCmd(command.CaravanReturn); !ok || c.Target != cs[0].ID {
 		t.Fatalf("CaravanReturn %+v (sent %v), want caravan %d", c, ok, cs[0].ID)
 	}
 	if after := j.g.WorldMap().Caravans; len(after) == 1 && after[0].State == cs[0].State {
-		t.Fatalf("the caravan is still %q after %s", after[0].State, func() string { l, _ := windows.CaravanReturnLabel(cs[0]); return l }())
+		t.Fatalf("the caravan is still %q after %s", after[0].State, func() string { l, _ := worldview.CaravanReturnLabel(cs[0]); return l }())
 	}
 }
+
+// worldFly is enough Updates for the globe's flight to the colony (it opens
+// centred on it) to put the markers in place.
+const worldFly = 30
