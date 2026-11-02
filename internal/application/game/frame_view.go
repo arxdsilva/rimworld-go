@@ -107,7 +107,7 @@ func equalFrameView(a, b *FrameView) bool {
 		a.Stuff == b.Stuff && a.W == b.W && a.H == b.H && a.Moving == b.Moving && a.MovingFrom == b.MovingFrom &&
 		a.WorkTotal == b.WorkTotal && a.Incoming == b.Incoming && a.InStock == b.InStock &&
 		a.Reserved == b.Reserved && a.Builder == b.Builder && slices.Equal(a.Haulers, b.Haulers) &&
-		a.Status == b.Status && a.Comp == b.Comp && a.CompNeed == b.CompNeed && a.CompIncoming == b.CompIncoming
+		a.Status == b.Status && a.Comp == b.Comp && a.CompNeed == b.CompNeed && a.CompIncoming == b.CompIncoming && a.AX == b.AX
 }
 
 // fillFrameViews completes the inspector fields of the frames World()

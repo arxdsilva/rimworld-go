@@ -12,6 +12,7 @@ const (
 	Blood Kind = iota // creatures and people
 	Ichor             // hive insects
 	Ash               // what a fire leaves (PLAY-015, appended)
+	Foam              // fire foam left by a foam burst (AX-0 contract, A5; never made before A5)
 )
 
 func (k Kind) String() string {
@@ -20,6 +21,8 @@ func (k Kind) String() string {
 		return "ichor"
 	case Ash:
 		return "ash"
+	case Foam:
+		return "foam"
 	}
 	return "blood"
 }

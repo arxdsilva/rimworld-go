@@ -302,9 +302,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.zones.Clear(zone.Rect{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}) // zones.go: shrinks or splits
 	g.clearRoofPlans(minX, minY, maxX, maxY)
 	g.unmarkGrass(minX, minY, maxX, maxY) // grass.go
-
 	g.unmarkHarvest(minX, minY, maxX, maxY)
-
 }
 
 func (g *Game) phaseNeeds() {

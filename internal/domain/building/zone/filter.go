@@ -135,12 +135,16 @@ func categories() []category {
 		{"Raw resources/Wood", []item.Kind{item.Wood}},
 		{"Raw resources/Stone blocks", []item.Kind{item.SandstoneBlocks, item.GraniteBlocks, item.LimestoneBlocks, item.SlateBlocks,
 			item.MarbleBlocks, item.Stone}},
-		{"Raw resources/Metals", []item.Kind{item.Steel, item.Silver, item.Gold, item.Plasteel, item.Uranium}},
+		{"Raw resources/Metals", []item.Kind{item.Steel, item.Silver, item.Gold, item.Plasteel, item.Uranium,
+			item.Jade}}, // AX-0: jade sits with the precious materials
 		{"Raw resources/Chemicals", []item.Kind{item.EmberOil, item.Chemfuel, item.Reagent}},
 		{"Raw resources/Brewing and leaves", []item.Kind{item.Wort, item.AshleafLeaf, item.Hops}},
 		{path: "Items"},
-		{"Items/Shells", []item.Kind{item.MortarShells, item.IncendiaryShells, item.EMPShells, item.SmokeShells}},
-		{"Items/Parts", []item.Kind{item.ReinforcedBarrel}},
+		{"Items/Shells", []item.Kind{item.MortarShells, item.IncendiaryShells, item.EMPShells, item.SmokeShells,
+			item.FoamShells, item.AntimatterWarhead}}, // AX-0 (A5)
+		{"Items/Parts", []item.Kind{item.ReinforcedBarrel, item.MindCore}},      // AX-0: the mind core (A8)
+		{"Items/Books", []item.Kind{item.Novel, item.Textbook, item.Schematic}}, // AX-0 (A7)
+		{"Items/Buildings", []item.Kind{item.MinifiedBuilding}},                 // AX-0: crated buildings (A1)
 		{"Items/Carpets", item.Carpets()},
 		{path: "Weapons"},
 		{"Weapons/Melee", []item.Kind{item.Club, item.Knife, item.Spear, item.Mace, item.Gladius, item.Longsword, item.Ikwa}},

@@ -215,6 +215,100 @@ const (
 	// art): a multi-analyzer, a powered facility that a hi-tech research
 	// bench (ElectricResearchBench) links to for the hardest projects.
 	MultiAnalyzer
+	// AX-0 contract (append only, saved). Every vanilla Architect item the
+	// game lacked (.cursor/ARCHITECT_GAP_ANALYSIS.md), each owned by one AX
+	// agent (.cursor/handoffs/AX-0-contract.md). Planned() is true for
+	// every one of them until its owner makes it real (ax_<owner>.go), so
+	// none can be designated (placement.go placeFrameStuff) and none has
+	// an Architect tool, art or behaviour yet.
+	//
+	// A2 structure, furniture and decor: a 2-wide ornate door, a column
+	// (holds a roof, bounds no room), an animal flap, a double sleeping
+	// spot, an animal sleeping box, the bigger tables (Table becomes the
+	// 1x2), a couch, a plant pot, a small shelf, the wall-mounted torch and
+	// lamp, a flood light, an urn (never built: traded or found), the two
+	// steles and an egg box.
+	OrnateDoor
+	Column
+	AnimalFlap
+	DoubleSleepingSpot
+	AnimalSleepingBox
+	Table2x2
+	Table2x4
+	Table3x3
+	Couch
+	PlantPot
+	SmallShelf
+	WallTorch
+	WallLamp
+	FloodLight
+	Urn
+	LargeStele
+	GrandStele
+	EggBox
+	// A3 floors (LayerFloor): straw matting, concrete, paved tile, steel,
+	// silver, gold and sterile tile, stone tile and flagstone (one kind
+	// each, the stone is the stuff) and the colour-picked carpet floor
+	// (Building.Tint is the colour; Carpet stays the entrance carpet).
+	StrawMatting
+	Concrete
+	PavedTile
+	SteelTile
+	SilverTile
+	GoldTile
+	SterileTile
+	StoneTile
+	Flagstone
+	CarpetFloor
+	// A4 power and industry: a conduit laid over shallow water, a chemfuel
+	// generator, a watermill on a river, a deep drill and the
+	// ground-penetrating scanner that finds its ore, a moisture pump and
+	// an electric crematorium.
+	WaterproofConduit
+	ChemfuelGenerator
+	Watermill
+	DeepDrill
+	GroundScanner
+	MoisturePump
+	ElectricCrematorium
+	// A5 fire foam and security: a foam popper, a foam charge, a foam
+	// turret, a warhead charge (an antimatter warhead) and a rocket
+	// battery.
+	FoamPopper
+	IEDFoam
+	FoamTurret
+	IEDWarhead
+	RocketBattery
+	// A6 recreation: a ring toss, an ur board, chess, billiards and poker
+	// tables, three televisions (the big screen is never built: traded
+	// or found) and a telescope (traded or found).
+	RingToss
+	UrBoard
+	ChessTable
+	BilliardsTable
+	PokerTable
+	TubeTV
+	FlatscreenTV
+	BigScreenTV
+	Telescope
+	// A7 books: a bookcase and a small bookcase.
+	Bookcase
+	SmallBookcase
+	// A8 the escape ship: structural beam, stasis casket, computer core,
+	// reactor, engine and sensor cluster.
+	ShipBeam
+	ShipCasket
+	ShipCore
+	ShipReactor
+	ShipEngine
+	ShipSensor
+	// A9 travel: a stasis casket, a transport pod and its launcher, a
+	// long-range mineral scanner and a caravan hitching spot.
+	StasisCasket
+	TransportPod
+	PodLauncher
+	MineralScanner
+	HitchingSpot
 	kindCount
 )
 
@@ -282,6 +376,24 @@ type Def struct {
 	// Fabric (BED-1): sewn from cloth or leather only (Wood is then the
 	// fabric needed).
 	Fabric bool
+	// AX-0 contract. StoneOnly: stone blocks are the only material (Wood is
+	// then the blocks needed). Only: the one material it is made of (0:
+	// the flags decide), Wood being the units needed (hay matting, silver
+	// tile, foam shells for a foam charge). Extra are secondary materials
+	// delivered with the main one (gold in an ornate door, plasteel in a
+	// ship part); nothing reads them until their owner wires delivery.
+	// Unbuildable: never designated as a blueprint (an urn, the big screen,
+	// the telescope: traded or found, they arrive crated and are only
+	// reinstalled, A1).
+	StoneOnly, Unbuildable bool
+	Only                   item.Kind
+	Extra                  [3]Cost
+}
+
+// Cost is N units of item Item (a Def's secondary material, AX-0).
+type Cost struct {
+	Item item.Kind
+	N    int
 }
 
 // StoneWorkPct is the work multiplier (percent) for granite, the legacy
@@ -551,6 +663,152 @@ var defs = [kindCount]Def{
 	// and gold are secondary materials, not modelled yet.
 	MultiAnalyzer: {Kind: MultiAnalyzer, Name: "multi-analyzer", Wood: 4, Work: 1000, Layer: LayerObject, BlocksMove: true,
 		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 8},
+	// AX-0 contract rows (Planned until their owner flips them). wiki
+	// numbers scaled as the wave D rows: materials / 9 rounded (at least
+	// 1), work / 10, components and advanced components as the wiki;
+	// "orig" marks original tuning where the wiki is silent or [MEM].
+	// A2, wiki: Ornate door, Column, Animal flap, Double sleeping spot,
+	// Animal sleeping box, Table, Couch, Plant pot, Small shelf, Wall torch
+	// lamp, Wall lamp, Flood light, Urn, Large stele, Grand stele, Egg box.
+	OrnateDoor: {Kind: OrnateDoor, Name: "ornate door", Wood: 8, Work: 1500, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{2, 1}, StoneOK: true, MetalOK: true, Extra: [3]Cost{{item.Gold, 6}}},
+	Column: {Kind: Column, Name: "column", Wood: 2, Work: 75, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
+	// wiki (W): fabric or leather; not minifiable.
+	AnimalFlap: {Kind: AnimalFlap, Name: "animal flap", Wood: 3, Work: 85, Layer: LayerObject, Fabric: true},
+	// wiki text: 2x2, like the double bed.
+	DoubleSleepingSpot: {Kind: DoubleSleepingSpot, Name: "double sleeping spot", Layer: LayerObject, Rotatable: true,
+		Size: [2]int{2, 2}},
+	AnimalSleepingBox: {Kind: AnimalSleepingBox, Name: "animal sleeping box", Wood: 3, Work: 18, Layer: LayerObject,
+		StoneOK: true, MetalOK: true},
+	Table2x2: {Kind: Table2x2, Name: "table 2x2", Wood: 6, Work: 150, Layer: LayerObject, Size: [2]int{2, 2},
+		StoneOK: true, MetalOK: true},
+	Table2x4: {Kind: Table2x4, Name: "table 2x4", Wood: 11, Work: 300, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{2, 4}, StoneOK: true, MetalOK: true},
+	Table3x3: {Kind: Table3x3, Name: "table 3x3", Wood: 11, Work: 330, Layer: LayerObject, Size: [2]int{3, 3},
+		StoneOK: true, MetalOK: true},
+	Couch: {Kind: Couch, Name: "couch", Wood: 22, Work: 2000, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1},
+		Fabric: true},
+	PlantPot:   {Kind: PlantPot, Name: "plant pot", Wood: 2, Work: 25, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	SmallShelf: {Kind: SmallShelf, Name: "small shelf", Wood: 1, Work: 25, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	// Wall-mounted: placed against a wall, facing away from it (A2).
+	WallTorch: {Kind: WallTorch, Name: "wall torch", Wood: 2, Work: 10, Layer: LayerObject, Rotatable: true},
+	WallLamp: {Kind: WallLamp, Name: "wall lamp", Wood: 2, Work: 33, Layer: LayerObject, Rotatable: true,
+		MetalOK: true, MetalOnly: true},
+	FloodLight: {Kind: FloodLight, Name: "flood light", Wood: 6, Work: 60, Layer: LayerObject, MetalOK: true, MetalOnly: true},
+	// Never built (traded or found; wiki: 20 stuff): it arrives crated and
+	// is only reinstalled. Work orig (its deconstruct time).
+	Urn: {Kind: Urn, Name: "urn", Wood: 2, Work: 50, Layer: LayerObject, StoneOK: true, MetalOK: true, Unbuildable: true},
+	LargeStele: {Kind: LargeStele, Name: "large stele", Wood: 14, Work: 800, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, StoneOnly: true},
+	GrandStele: {Kind: GrandStele, Name: "grand stele", Wood: 28, Work: 1600, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{3, 3}, StoneOnly: true},
+	EggBox: {Kind: EggBox, Name: "egg box", Wood: 2, Work: 200, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	// A3, wiki: Floors, Straw matting, Sterile tile, Stone tile, Flagstone,
+	// Carpet (per tile; the lead's ruling: flagstone takes 4 blocks).
+	StrawMatting: {Kind: StrawMatting, Name: "straw matting", Wood: 1, Work: 12, Layer: LayerFloor, Only: item.Hay},
+	Concrete:     {Kind: Concrete, Name: "concrete", Wood: 1, Work: 10, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
+	PavedTile:    {Kind: PavedTile, Name: "paved tile", Wood: 1, Work: 30, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
+	SteelTile:    {Kind: SteelTile, Name: "steel tile", Wood: 1, Work: 80, Layer: LayerFloor, MetalOK: true, MetalOnly: true},
+	SilverTile:   {Kind: SilverTile, Name: "silver tile", Wood: 8, Work: 80, Layer: LayerFloor, Only: item.Silver},
+	GoldTile:     {Kind: GoldTile, Name: "gold tile", Wood: 8, Work: 80, Layer: LayerFloor, Only: item.Gold},
+	SterileTile: {Kind: SterileTile, Name: "sterile tile", Wood: 1, Work: 160, Layer: LayerFloor, MetalOK: true, MetalOnly: true,
+		Extra: [3]Cost{{item.Silver, 1}}},
+	StoneTile:   {Kind: StoneTile, Name: "stone tile", Wood: 1, Work: 110, Layer: LayerFloor, StoneOnly: true},
+	Flagstone:   {Kind: Flagstone, Name: "flagstone", Wood: 1, Work: 50, Layer: LayerFloor, StoneOnly: true},
+	CarpetFloor: {Kind: CarpetFloor, Name: "carpet floor", Wood: 1, Work: 80, Layer: LayerFloor, Only: item.Cloth},
+	// A4, wiki: Waterproof conduit, Chemfuel powered generator, Watermill
+	// generator (5x6 with its wheel; 280 wood + 80 steel), Deep drill,
+	// Ground-penetrating scanner, Moisture pump, Electric crematorium. The
+	// chemfuel generator's work is orig (the wood-fired generator's).
+	WaterproofConduit: {Kind: WaterproofConduit, Name: "waterproof conduit", Wood: 1, Work: 4, Layer: LayerConduit,
+		MetalOK: true, MetalOnly: true},
+	ChemfuelGenerator: {Kind: ChemfuelGenerator, Name: "chemfuel generator", Wood: 11, Work: 320, Layer: LayerObject,
+		BlocksMove: true, Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 3},
+	Watermill: {Kind: Watermill, Name: "watermill generator", Wood: 31, Work: 400, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{5, 6}, Components: 3, Extra: [3]Cost{{item.Steel, 9}}},
+	DeepDrill: {Kind: DeepDrill, Name: "deep drill", Wood: 11, Work: 1000, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{1, 2}, Spot: [2]int{0, 2}, HasSpot: true, MetalOK: true, MetalOnly: true, Components: 2},
+	GroundScanner: {Kind: GroundScanner, Name: "ground-penetrating scanner", Wood: 17, Work: 1200, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{3, 3}, Spot: [2]int{1, 3}, HasSpot: true, MetalOK: true, MetalOnly: true,
+		Components: 4, Extra: [3]Cost{{item.AdvancedComponents, 1}}},
+	MoisturePump: {Kind: MoisturePump, Name: "moisture pump", Wood: 8, Work: 150, Layer: LayerObject, BlocksMove: true,
+		MetalOK: true, MetalOnly: true, Components: 4},
+	ElectricCrematorium: {Kind: ElectricCrematorium, Name: "electric crematorium", Wood: 17, Work: 450, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{3, 2}, Spot: [2]int{1, 2}, HasSpot: true, Bench: true, StoneOnly: true,
+		Components: 2, Extra: [3]Cost{{item.Steel, 2}}},
+	// A5, wiki: Firefoam popper, IED firefoam trap (2 firefoam shells),
+	// Foam turret (100 metal; 140 chemfuel), IED antigrain warhead trap (1
+	// warhead), Rocketswarm launcher (20 plasteel; 180 chemfuel). A charge's
+	// Wood counts its shells or warhead (Only).
+	FoamPopper: {Kind: FoamPopper, Name: "foam popper", Wood: 8, Work: 150, Layer: LayerObject, MetalOK: true, MetalOnly: true,
+		Components: 1},
+	IEDFoam: {Kind: IEDFoam, Name: "foam charge", Wood: 2, Work: 140, Layer: LayerObject, Only: item.FoamShells},
+	FoamTurret: {Kind: FoamTurret, Name: "foam turret", Wood: 11, Work: 180, Layer: LayerObject, BlocksMove: true,
+		MetalOK: true, MetalOnly: true, Components: 3, Extra: [3]Cost{{item.Chemfuel, 16}}},
+	IEDWarhead: {Kind: IEDWarhead, Name: "warhead charge", Wood: 1, Work: 140, Layer: LayerObject, Only: item.AntimatterWarhead},
+	RocketBattery: {Kind: RocketBattery, Name: "rocket battery", Wood: 22, Work: 1000, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 2,
+		Extra: [3]Cost{{item.Plasteel, 2}, {item.Chemfuel, 20}}},
+	// A6, wiki: Hoopstone ring, Game of Ur, Chess table, Billiards table
+	// (80 cloth + 30 wood), Poker table (50 cloth + 25 wood), Tube
+	// television, Flatscreen television, Megascreen television and
+	// Telescope (never built: traded or found; their material and work
+	// are orig, for salvage and deconstruction).
+	RingToss: {Kind: RingToss, Name: "ring toss", Wood: 2, Work: 10, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	UrBoard:  {Kind: UrBoard, Name: "ur board", Wood: 4, Work: 600, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	ChessTable: {Kind: ChessTable, Name: "chess table", Wood: 8, Work: 800, Layer: LayerObject, StoneOK: true,
+		MetalOK: true},
+	BilliardsTable: {Kind: BilliardsTable, Name: "billiards table", Wood: 9, Work: 1200, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 3}, StoneOK: true, MetalOK: true, Extra: [3]Cost{{item.Cloth, 9}, {item.Wood, 3}}},
+	PokerTable: {Kind: PokerTable, Name: "poker table", Wood: 6, Work: 1000, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, StoneOK: true, MetalOK: true, Extra: [3]Cost{{item.Cloth, 6}, {item.Wood, 3}}},
+	TubeTV: {Kind: TubeTV, Name: "tube television", Wood: 9, Work: 1000, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, MetalOK: true, MetalOnly: true, Components: 4},
+	FlatscreenTV: {Kind: FlatscreenTV, Name: "flatscreen television", Wood: 16, Work: 4000, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{2, 1}, MetalOK: true, MetalOnly: true, Components: 16},
+	BigScreenTV: {Kind: BigScreenTV, Name: "big screen television", Wood: 16, Work: 400, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{3, 1}, MetalOK: true, MetalOnly: true, Unbuildable: true},
+	Telescope: {Kind: Telescope, Name: "telescope", Wood: 4, Work: 300, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Spot: [2]int{0, 1}, HasSpot: true, MetalOK: true, MetalOnly: true, Unbuildable: true},
+	// A7, wiki: Bookcase, Small bookcase.
+	Bookcase: {Kind: Bookcase, Name: "bookcase", Wood: 2, Work: 50, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1},
+		StoneOK: true, MetalOK: true},
+	SmallBookcase: {Kind: SmallBookcase, Name: "small bookcase", Wood: 1, Work: 25, Layer: LayerObject, StoneOK: true,
+		MetalOK: true},
+	// A8, wiki: Ship structural beam, Ship cryptosleep casket, Ship
+	// computer core (+1 persona core), Ship reactor, Ship engine, Sensor
+	// cluster (steel the main material).
+	ShipBeam: {Kind: ShipBeam, Name: "ship structural beam", Wood: 22, Work: 800, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 6}, MetalOK: true, MetalOnly: true, Components: 3,
+		Extra: [3]Cost{{item.Plasteel, 4}, {item.AdvancedComponents, 1}}},
+	ShipCasket: {Kind: ShipCasket, Name: "ship stasis casket", Wood: 13, Work: 800, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 3,
+		Extra: [3]Cost{{item.Uranium, 2}, {item.AdvancedComponents, 3}}},
+	ShipCore: {Kind: ShipCore, Name: "ship computer core", Wood: 17, Work: 1600, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true,
+		Extra: [3]Cost{{item.AdvancedComponents, 4}, {item.Gold, 8}, {item.MindCore, 1}}},
+	ShipReactor: {Kind: ShipReactor, Name: "ship reactor", Wood: 39, Work: 6500, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{6, 7}, MetalOK: true, MetalOnly: true,
+		Extra: [3]Cost{{item.Plasteel, 31}, {item.Uranium, 8}, {item.AdvancedComponents, 8}}},
+	ShipEngine: {Kind: ShipEngine, Name: "ship engine", Wood: 29, Work: 5000, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{3, 4}, MetalOK: true, MetalOnly: true,
+		Extra: [3]Cost{{item.Plasteel, 16}, {item.Uranium, 8}, {item.AdvancedComponents, 6}}},
+	ShipSensor: {Kind: ShipSensor, Name: "ship sensor cluster", Wood: 16, Work: 3000, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 6,
+		Extra: [3]Cost{{item.Gold, 1}, {item.AdvancedComponents, 6}}},
+	// A9, wiki: Cryptosleep casket, Transport pod, Pod launcher,
+	// Long-range mineral scanner, Caravan hitching spot (free).
+	StasisCasket: {Kind: StasisCasket, Name: "stasis casket", Wood: 20, Work: 320, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 4,
+		Extra: [3]Cost{{item.Uranium, 1}, {item.AdvancedComponents, 1}}},
+	TransportPod: {Kind: TransportPod, Name: "transport pod", Wood: 7, Work: 160, Layer: LayerObject, MetalOK: true,
+		MetalOnly: true, Components: 1},
+	PodLauncher: {Kind: PodLauncher, Name: "pod launcher", Wood: 6, Work: 300, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 1},
+	MineralScanner: {Kind: MineralScanner, Name: "long-range mineral scanner", Wood: 22, Work: 1000, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{3, 3}, Spot: [2]int{1, 3}, HasSpot: true, MetalOK: true,
+		MetalOnly: true, Components: 6, Extra: [3]Cost{{item.AdvancedComponents, 2}}},
+	HitchingSpot: {Kind: HitchingSpot, Name: "caravan hitching spot", Layer: LayerObject},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
@@ -628,6 +886,10 @@ func MaxHP(k Kind, s item.Kind) int {
 		hp = 250
 	case HiveMound: // wiki: Hive
 		hp = 130
+	default:
+		if ax, ok := axMaxHP(k); ok { // ax_hp.go (AX-0 contract)
+			hp = ax
+		}
 	}
 	pct, _ := StuffStats(s)
 	return hp * pct / 100
@@ -769,7 +1031,11 @@ func Covers(k Kind, f Facing, x, y, px, py int) bool {
 func Movable(k Kind) bool {
 	switch k {
 	case Wall, Door, Autodoor, Fence, FenceGate, Grave, Bridge, SleeperCasket,
-		PowerConduit, HiddenConduit, Cooler, Vent, GeothermalGenerator:
+		PowerConduit, HiddenConduit, Cooler, Vent, GeothermalGenerator,
+		// AX-0 contract: door-like, wall-mounted or fixed pieces (wiki: not
+		// minifiable), and the escape ship's parts.
+		OrnateDoor, Column, AnimalFlap, WallTorch, WallLamp, WaterproofConduit, Watermill, HitchingSpot,
+		ShipBeam, ShipCasket, ShipCore, ShipReactor, ShipEngine, ShipSensor:
 		return false
 	}
 	return DefOf(k).Layer != LayerFloor
@@ -837,6 +1103,9 @@ func Refund(k Kind) int {
 
 // StuffOK reports whether k may be built from material s.
 func StuffOK(k Kind, s item.Kind) bool {
+	if d := DefOf(k); d.Only != 0 || d.StoneOnly { // AX-0 contract
+		return s == d.Only || d.StoneOnly && item.IsStoneBlocks(s)
+	}
 	if DefOf(k).Carpet || s.IsCarpet() {
 		return DefOf(k).Carpet && s.IsCarpet()
 	}
@@ -856,6 +1125,11 @@ func StuffOK(k Kind, s item.Kind) bool {
 
 // DefaultStuff is the material k is built from when none is chosen.
 func DefaultStuff(k Kind) item.Kind {
+	if d := DefOf(k); d.Only != 0 { // AX-0 contract
+		return d.Only
+	} else if d.StoneOnly {
+		return item.StoneBlocks()[0]
+	}
 	if DefOf(k).Carpet {
 		return item.CarpetStraw
 	}
@@ -874,6 +1148,12 @@ func IsFabric(s item.Kind) bool { return s == item.Cloth || s == item.Leather }
 // Stuffs lists the materials k may be built from, default first.
 func Stuffs(k Kind) []item.Kind {
 	d := DefOf(k)
+	switch { // AX-0 contract
+	case d.Only != 0:
+		return []item.Kind{d.Only}
+	case d.StoneOnly:
+		return item.StoneBlocks()
+	}
 	if d.Carpet {
 		return item.Carpets()
 	}
@@ -957,6 +1237,11 @@ type Frame struct {
 	// place (same kind, same footprint, PLAY-011): built without taking
 	// the old piece down.
 	Swaps entity.EntityID
+	// AX-0 contract (0 until their owners use them): Tint is a carpet
+	// floor's colour (A3, the building's Tint once built); ExtraGot the
+	// Def.Extra secondary materials delivered so far, slot by slot.
+	Tint     uint8
+	ExtraGot [3]int
 }
 
 // Ready reports materials and components are in place.
@@ -995,6 +1280,12 @@ type Building struct {
 	// Quality (PRD-2) is the building's quality, quality.Level+1 (0 = none
 	// or built before quality existed: read as Normal by the stats).
 	Quality uint8
+	// AX-0 contract (0 until their owners use them): Tint is a carpet
+	// floor's colour index (A3; 0 the default colour); Uninstall marks it
+	// to be crated by a colonist (A1, like Deconstruct; WorkLeft is the
+	// work left once started).
+	Tint      uint8
+	Uninstall bool
 }
 
 // HP is the building's remaining hit points.

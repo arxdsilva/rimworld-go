@@ -19,11 +19,12 @@ func (k Kind) Category() string {
 		return "Weapons"
 	case k.IsMedicine(), k.IsDrug():
 		return "Medicine"
-	case k == Components, k.IsCarpet(), k.IsImplant(), k.IsOrgan(), k.IsShell(), k == AdvancedComponents, k == ReinforcedBarrel:
+	case k == Components, k.IsCarpet(), k.IsImplant(), k.IsOrgan(), k.IsShell(), k == AdvancedComponents, k == ReinforcedBarrel,
+		k == MinifiedBuilding, k == AntimatterWarhead, k == FoamShells, k.IsBook(), k == MindCore: // AX-0 contract
 		return "Manufactured"
 	case k == Wood, k == Stone, IsChunk(k), IsStoneBlocks(k), IsMetal(k),
 		k == Leather, k == Cloth, k == Straw, k == Wool, k == EmberOil, k == AshleafLeaf,
-		k == Chemfuel, k == Wort, k == Reagent, k == Uranium, k == Plasteel, k == Hops:
+		k == Chemfuel, k == Wort, k == Reagent, k == Uranium, k == Plasteel, k == Hops, k == Jade:
 		return "Materials"
 	}
 	return "Other"

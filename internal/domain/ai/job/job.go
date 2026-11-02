@@ -152,6 +152,31 @@ const (
 	// before FOOD-3): a handler kills a tame animal marked for slaughter
 	// in melee, no weapon needed (Handling work).
 	Slaughter
+	// AX-0 contract (append only, saved; nothing starts them until their
+	// owner does). A1: Uninstall crates a building, OpenContainer opens a
+	// grave, sarcophagus or casket, RemoveFloor takes up a floor (chopping
+	// is Cut, a corpse strip is Strip). A4: OperateDrill works a deep
+	// drill, ScanGround a ground-penetrating scanner. A6: Recreate plays at
+	// a recreation building (games, ring toss), WatchTelevision watches
+	// from a seat, Stargaze uses a telescope. A7: Read reads a book. A8:
+	// StartReactor starts the ship reactor. A9: EnterCasket and
+	// CarryToCasket put a pawn into a stasis casket, LoadPods carries a
+	// thing into a transport pod, ScanMinerals works a long-range mineral
+	// scanner.
+	Uninstall
+	OpenContainer
+	RemoveFloor
+	OperateDrill
+	ScanGround
+	Recreate
+	WatchTelevision
+	Stargaze
+	Read
+	StartReactor
+	EnterCasket
+	CarryToCasket
+	LoadPods
+	ScanMinerals
 )
 
 // Hauls reports a haul job: a plain haul, or FOOD-4's hopper fill, a
@@ -172,7 +197,8 @@ func (k Kind) Eating() bool { return k == Eat || k == DispensePaste }
 
 // IsIdle reports a free-time behaviour that any real work may replace.
 func (k Kind) IsIdle() bool {
-	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes || k == SocialRelax || k == Gather || k == SitDown
+	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes || k == SocialRelax || k == Gather || k == SitDown ||
+		k == Recreate || k == WatchTelevision || k == Stargaze || k == Read // AX-0 contract (A6, A7)
 }
 
 func (k Kind) String() string {
@@ -313,6 +339,34 @@ func (k Kind) String() string {
 		return "dispense paste"
 	case Slaughter:
 		return "slaughter"
+	case Uninstall: // AX-0 contract from here
+		return "uninstall"
+	case OpenContainer:
+		return "open"
+	case RemoveFloor:
+		return "remove floor"
+	case OperateDrill:
+		return "drill"
+	case ScanGround:
+		return "scan the ground"
+	case Recreate:
+		return "play"
+	case WatchTelevision:
+		return "watch television"
+	case Stargaze:
+		return "stargaze"
+	case Read:
+		return "read"
+	case StartReactor:
+		return "start reactor"
+	case EnterCasket:
+		return "enter casket"
+	case CarryToCasket:
+		return "carry to casket"
+	case LoadPods:
+		return "load pods"
+	case ScanMinerals:
+		return "scan for minerals"
 	default:
 		return "idle"
 	}

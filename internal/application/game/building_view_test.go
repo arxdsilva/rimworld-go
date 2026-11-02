@@ -22,6 +22,9 @@ func fieldsAllCompared[T any](t *testing.T, base T, clone func(T) T, eq func(a, 
 	for i := range rt.NumField() {
 		b := clone(base)
 		f := reflect.ValueOf(&b).Elem().Field(i)
+		for f.Kind() == reflect.Struct { // AX-0: a nested view struct (AX) changes through its first field
+			f = f.Field(0)
+		}
 		switch f.Kind() {
 		case reflect.String:
 			f.SetString(f.String() + "x")

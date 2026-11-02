@@ -89,10 +89,11 @@ import (
 // fraction of the cost, and the resized research benches keep their place
 // where they still fit or are refunded (migrateBenches). v10 (STK-BN)
 // does the same for the benches it gives the wiki footprints (game/resize).
+// v11 (AX-0) is for the AX owners' steps (A2 tables, A3 floors and carpets).
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 10
+const SaveVersion = 11
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -779,6 +780,8 @@ func (g *Game) migrateSave(v int) {
 		fallthrough
 	case v < 10: // STK-BN: wiki bench footprints
 		g.migrateBenches(resize.V10, resize.RefundV10)
+		fallthrough
+	case v < 11: // AX-0: the AX owners' steps, empty until A2 (1x1 tables to 1x2) and A3 (stone tiles, carpets) add theirs
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

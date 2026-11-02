@@ -25,7 +25,7 @@ func TestStackLimit(t *testing.T) {
 	}
 	for k := Kind(0); k < numKinds; k++ {
 		one := k.IsWeapon() || k.IsContractWeapon() || k.IsApparel() || k.IsBelt() || k.IsCorpse() || IsChunk(k) ||
-			k.IsImplant() || k.IsOrgan()
+			k.IsImplant() || k.IsOrgan() || k.IsBook() || k == MinifiedBuilding
 		if got := k.StackLimit(); one && got != 1 || !one && got != StackLimit {
 			t.Errorf("%s stacks to %d (per-unit identity or chunk: %v)", k, got, one)
 		}

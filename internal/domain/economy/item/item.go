@@ -227,6 +227,26 @@ const (
 	CowboyHat
 	BowlerHat
 	Tribalwear
+	// AX-0 contract (append only, saved; never spawned until its owner
+	// uses it, ENG-003 wiki numbers, original names). MinifiedBuilding
+	// (A1, wiki: Minified thing) is an uninstalled building packed to be
+	// hauled, traded and reinstalled: Stack.Building is its construction
+	// kind, Stack.Stuff and Quality its material and quality, Wear its lost
+	// hit points. AntimatterWarhead (A5, wiki: Antigrain warhead) is the
+	// warhead charge's load; FoamShells (A5, wiki: Firefoam shell) the
+	// foam charge's and a mortar's. Novel, Textbook and Schematic (A7,
+	// wiki: Books) are books, one per stack with a quality. Jade (A2/A4/A9,
+	// wiki: Jade) is a stone-like precious material (no stuff row until A2
+	// adds the jade wall). MindCore (A8, wiki: Persona core) is the ship
+	// computer core's mind, found or traded, never made.
+	MinifiedBuilding
+	AntimatterWarhead
+	FoamShells
+	Novel
+	Textbook
+	Schematic
+	Jade
+	MindCore
 	numKinds
 )
 
@@ -256,7 +276,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"nutrient paste meal", "smokepop pack", "shield belt", "rocket launcher", "triple rocket launcher", "smoke launcher",
 	"charge rifle", "charge lance", "ikwa",
 	"rice", "strawberries", "hay", "hops", "human meat", "insect meat", "agave fruit",
-	"t-shirt", "button-down shirt", "pants", "jacket", "cowboy hat", "bowler hat", "tribalwear"}
+	"t-shirt", "button-down shirt", "pants", "jacket", "cowboy hat", "bowler hat", "tribalwear",
+	"crated building", "antimatter warhead", "foam shells", "novel", "textbook", "schematic", "jade", "mind core"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -274,6 +295,10 @@ func (k Kind) IsContractWeapon() bool { return k >= RocketLauncher && k <= Ikwa 
 // IsBelt reports belt-layer apparel (the shield belt and the smokepop
 // pack), worn in the Belt slot since CBT-3.
 func (k Kind) IsBelt() bool { return k == SmokepopPack || k == ShieldBelt }
+
+// IsBook reports a book (AX-0 contract, A7): a novel, textbook or
+// schematic.
+func (k Kind) IsBook() bool { return k >= Novel && k <= Schematic }
 
 // IsShell reports a mortar shell (DEF-3).
 func (k Kind) IsShell() bool { return k >= MortarShells && k <= SmokeShells }
@@ -635,6 +660,9 @@ type Stack struct {
 	// species in IngredientSpecies (animal.MeatTag, as Animal on Meat).
 	Ingredients       [MaxIngredients]Kind
 	IngredientSpecies [MaxIngredients]uint8
+	// Building (AX-0 contract, 0 until A1 crates one) is a MinifiedBuilding
+	// stack's construction kind (construction.Kind; item cannot import it).
+	Building uint8
 }
 
 // MaxIngredients is how many ingredient kinds a meal remembers (FOOD-4).

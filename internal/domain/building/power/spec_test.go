@@ -1,6 +1,7 @@
 package power
 
 import (
+	"maps"
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -44,6 +45,7 @@ func TestSpecOf(t *testing.T) {
 		construction.UraniumSlugTurret:      {Role: Consumer, Class: ClassDefense, Draw: 150, Idle: 150, Toggle: true},
 		construction.Autodoor:               {Role: Consumer, Class: ClassDefense, Draw: 50, Idle: 50, Toggle: true},
 	}
+	maps.Copy(want, axWant) // ax_test.go (AX-0 contract)
 	seen := 0
 	for _, d := range construction.All() {
 		got := SpecOf(d.Kind)

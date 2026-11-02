@@ -51,6 +51,38 @@ var furniture = [kindCount]Furniture{
 	GrandSculpture: {Beauty: 400000},
 	// PRD-4, wiki: Shelf (beauty 0.5).
 	Shelf: {Beauty: 500},
+	// AX-0 contract (inert while Planned), wiki infoboxes: A2 Double
+	// sleeping spot, Animal sleeping box, Couch, Table, Small shelf, Urn,
+	// Large/Grand stele, Ornate door, Column, Flood light; A4 and A5 the
+	// machines' beauty; A6 Game of Ur, Chess table; A7 Bookcase. A plant
+	// pot's beauty is its plant's (A2).
+	DoubleSleepingSpot:  {Comfort: 400, RestEffectiveness: 800},
+	AnimalSleepingBox:   {Comfort: 600, RestEffectiveness: 930},
+	Couch:               {Comfort: 850, Beauty: 8000},
+	Table2x2:            {Beauty: 1000},
+	Table2x4:            {Beauty: 2000},
+	Table3x3:            {Beauty: 2000},
+	SmallShelf:          {Beauty: 500},
+	Urn:                 {Beauty: 5000},
+	LargeStele:          {Beauty: 15000},
+	GrandStele:          {Beauty: 30000},
+	OrnateDoor:          {Beauty: 30000},
+	Column:              {Beauty: 5000},
+	FloodLight:          {Beauty: -5000},
+	WaterproofConduit:   {Beauty: -2000},
+	ChemfuelGenerator:   {Beauty: -20000},
+	Watermill:           {Beauty: -20000},
+	MoisturePump:        {Beauty: -8000},
+	ElectricCrematorium: {Beauty: -10000},
+	FoamPopper:          {Beauty: -8000},
+	IEDFoam:             {Beauty: -4000},
+	IEDWarhead:          {Beauty: -4000},
+	FoamTurret:          {Beauty: -20000},
+	RocketBattery:       {Beauty: -20000},
+	UrBoard:             {Beauty: 2000},
+	ChessTable:          {Beauty: 4000},
+	Bookcase:            {Beauty: 500},
+	SmallBookcase:       {Beauty: 500},
 }
 
 // facilityComfort is an end table's or dresser's comfort offset by the

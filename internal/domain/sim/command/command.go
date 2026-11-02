@@ -307,6 +307,74 @@ const (
 	// once, as if its last point went in (developer mode; the Research
 	// tab's dev finish button).
 	DevFinishResearch
+	// AX-0 contract (append only; the game ignores each until its owner
+	// routes it, tick.go or host_commands.go). Rectangle designations take
+	// X,Y..X2,Y2 and mark (Enabled) or unmark; Undesignate clears one with
+	// its Order. A1 orders and zones:
+	//   DesignateUninstall: buildings to crate (Building.Uninstall; Movable
+	//     kinds only), a colonist then packs each into a MinifiedBuilding.
+	//   Reinstall: place crated building stack Target as a blueprint at
+	//     X, Y facing Facing (a reinstall frame: no materials).
+	//   DesignateChopWood: like DesignateCut, but trees only (and mature
+	//     ones: wiki, 40 % grown).
+	//   DesignateSlaughter: tame animals to slaughter (herd/slaughter.go).
+	//   DesignateClaim: ruined or abandoned buildings become the colony's
+	//     (Building.Ruin/Ancient cleared; no work, wiki).
+	//   DesignateStrip: corpses and downed pawns to strip of apparel.
+	//   DesignateOpen: graves, sarcophagi and caskets to open.
+	//   DesignateDeleteZone: removes every zone's cells in the rectangle.
+	//   DesignateRemoveFloor: floors (LayerFloor) to take up.
+	//   DesignateClearRoofArea / DesignateClearNoRoofArea: erase the
+	//     build-roof / remove-roof area over the rectangle (plans too).
+	DesignateUninstall
+	Reinstall
+	DesignateChopWood
+	DesignateSlaughter
+	DesignateClaim
+	DesignateStrip
+	DesignateOpen
+	DesignateDeleteZone
+	DesignateRemoveFloor
+	DesignateClearRoofArea
+	DesignateClearNoRoofArea
+	// A2: SetPotPlant sows plant pot Target with plant species Build (a
+	// decorative plant, plant.Species).
+	SetPotPlant
+	// A4: none (the drill, scanner, pump and crematorium use bills, power
+	// toggles and the existing commands).
+	// A5: none (turrets rearm and refuel through the existing jobs).
+	// A7: SetBookcaseFilter is reserved for a bookcase's allowed books
+	// (Target, Name a book kind, Enabled); the storage filter commands may
+	// serve instead.
+	SetBookcaseFilter
+	// A8 the escape ship: StartReactor starts ship reactor Target's
+	// countdown; LaunchShip launches the ship that part Target belongs to
+	// (refused, with the launch report, until it is complete).
+	StartReactor
+	LaunchShip
+	// A9 travel:
+	//   EnterCasket: Pawn walks into stasis casket Target, or carries
+	//     downed pawn Worker there when Worker is not 0.
+	//   EjectCasket: opens stasis casket Target (its sleeper wakes).
+	//   LoadPods: load the pod group of transport pod Target with Name, a
+	//     comma-separated list of "id" (a pawn or animal) and "id:qty" (a
+	//     stack and how many) entries; Enabled false unloads them.
+	//   LaunchPods: launch the pod group of transport pod Target to world
+	//     tile Count, arriving per Mode (PodArrive*).
+	//   SetScannerTarget: long-range mineral scanner Target looks for item
+	//     kind Stuff (0: any).
+	EnterCasket
+	EjectCasket
+	LoadPods
+	LaunchPods
+	SetScannerTarget
+)
+
+// LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).
+const (
+	PodArriveDrop  uint8 = iota // land on the tile: a map edge or centre, the colony at its drop spot
+	PodArriveGift               // a settlement: give everything as a gift (goodwill by market value)
+	PodArriveVisit              // a settlement: land the pawns to visit and trade
 )
 
 // EditFoodPolicy modes (Command.Mode), FOOD-0.
@@ -390,6 +458,19 @@ const (
 	OrderFeedPatient
 	OrderStrip
 	OrderCarryToPrisonBed
+	// AX-0 contract (append only, tile orders at X, Y; also Undesignate's
+	// Order for the matching AX designation): uninstall the building,
+	// slaughter the tame animal, open the container, take up the floor,
+	// chop the tree (A1); read a book from the stack at X, Y (A7); enter
+	// the stasis casket (A9). Strip and Hunt reuse OrderStrip and
+	// OrderHunt; TargetsPawn stays the SIM-062 range.
+	OrderUninstall
+	OrderSlaughter
+	OrderOpen
+	OrderRemoveFloor
+	OrderChopWood
+	OrderRead
+	OrderEnterCasket
 )
 
 // TargetsPawn reports an order that acts on the pawn in Command.Target

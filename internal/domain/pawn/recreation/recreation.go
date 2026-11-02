@@ -23,6 +23,13 @@ const (
 	Relax
 	FireSide
 	Horseshoes
+	// AX-0 contract (append only; no gain until A6 and A7 fill the table):
+	// a game at a recreation building, television, stargazing (A6) and
+	// reading (A7).
+	Play
+	Television
+	Stargazing
+	Reading
 )
 
 // gain per GainPeriod ticks of each activity. A three-hour evening of

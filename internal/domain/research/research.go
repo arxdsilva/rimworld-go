@@ -107,6 +107,41 @@ const (
 	CarpetMaking
 	Greatbows
 	ProphylPressing
+	// AX-0 contract (append only, saved; wiki: Research, original names):
+	// the projects that gate the AX content (.cursor/handoffs/AX-0-contract.md).
+	// Each unlocks only AX-0 kinds, which stay Planned (unbuildable) until
+	// their owner makes them real. WaterPower (wiki: Watermill),
+	// FoamSuppression (Firefoam), SterileSurfaces (Sterile materials),
+	// FloodLighting (Advanced lights), Television (Tube television),
+	// FoamTurrets (Foam turret), FlatScreens (Flatscreen television),
+	// Drainage (Moisture pump), DeepDrilling (Deep drilling), GroundScanning
+	// (Ground-penetrating scanner), TransportPods (Transport pod),
+	// MineralScanning (Long-range mineral scanner), RocketBatteries
+	// (Rocketswarm launcher), Stasis (Cryptosleep casket), and the escape
+	// ship's chain: ShipFrames (Starflight basics), ShipStasis (Vacuum
+	// cryptosleep), ShipMinds (Machine persuasion), ShipReactors (Starship
+	// reactor), ShipDrives (Johnson-Tanaka drive), ShipSensors (Starflight
+	// sensors).
+	WaterPower
+	FoamSuppression
+	SterileSurfaces
+	FloodLighting
+	Television
+	FoamTurrets
+	FlatScreens
+	Drainage
+	DeepDrilling
+	GroundScanning
+	TransportPods
+	MineralScanning
+	RocketBatteries
+	Stasis
+	ShipFrames
+	ShipStasis
+	ShipMinds
+	ShipReactors
+	ShipDrives
+	ShipSensors
 	NumProjects
 )
 
@@ -195,7 +230,10 @@ var defs = [NumProjects]Def{
 		Unlocks: []string{"build:power conduit", "build:hidden conduit", "build:power switch", "build:wood-fired generator",
 			"build:lamp", "build:heater", "build:electric stove", "build:electric tailoring bench",
 			"build:electric forge", "build:electric smelter",
-			"build:sun lamp"}}, // FOOD-0, wiki: Sun lamp (Electricity)
+			"build:sun lamp", // FOOD-0, wiki: Sun lamp (Electricity)
+			// AX-0, wiki: Wall lamp, Waterproof conduit, Chemfuel powered
+			// generator, Electric crematorium (Electricity)
+			"build:wall lamp", "build:waterproof conduit", "build:chemfuel generator", "build:electric crematorium"}},
 	// wiki: Battery (Industrial, 400, Electricity).
 	Batteries: {Project: Batteries, Name: "batteries", Label: "Batteries", Cost: 400, TechLevel: Industrial, Requires: []Project{Electricity},
 		Desc: "Store spare power for the night and for lean hours.", Unlocks: []string{"build:battery"}},
@@ -232,7 +270,8 @@ var defs = [NumProjects]Def{
 	Metalworking: {Project: Metalworking, Name: "metalworking", Label: "Metalworking", Cost: 700, TechLevel: Medieval,
 		Desc: "A wood-fired forge to beat steel into maces, short swords and throwing spears.",
 		Unlocks: []string{"build:wood-fired forge", "build:electric forge", "recipe:make_mace", "recipe:make_gladius", "recipe:make_pila",
-			"recipe:make_simple_helmet"}}, // PRD-4: wiki Simple helmet (Smithing)
+			"recipe:make_simple_helmet",                                  // PRD-4: wiki Simple helmet (Smithing)
+			"build:steel tile", "build:silver tile", "build:gold tile"}}, // AX-0, wiki: Floors (Smithing)
 	// wiki: Long blades (Medieval, 400, Smithing).
 	Bladesmithing: {Project: Bladesmithing, Name: "bladesmithing", Label: "Bladesmithing", Cost: 400, TechLevel: Medieval,
 		Requires: []Project{Metalworking},
@@ -279,11 +318,17 @@ var defs = [NumProjects]Def{
 	Upholstery: {Project: Upholstery, Name: "upholstery", Label: "Upholstery", Cost: 300, TechLevel: Medieval,
 		Desc: "Padded chairs, dressers, end tables, shelves that keep goods off the ground, tool cabinets and vents.",
 		Unlocks: []string{"build:armchair", "build:shelf", "build:sarcophagus", "build:dresser", "build:end table",
-			"build:tool cabinet", "build:vent"}},
+			"build:tool cabinet", "build:vent",
+			// AX-0, wiki: Ornate door, Couch, Small shelf, Large and Grand
+			// stele, Chess, Billiards and Poker table, Bookcase, Small
+			// bookcase (Complex furniture)
+			"build:ornate door", "build:couch", "build:small shelf", "build:large stele", "build:grand stele",
+			"build:chess table", "build:billiards table", "build:poker table", "build:bookcase", "build:small bookcase"}},
 	// wiki: IEDs (Industrial, 500, Electricity).
 	Charges: {Project: Charges, Name: "charges", Label: "Buried charges", Cost: 500, TechLevel: Industrial, Requires: []Project{Electricity},
-		Desc:    "Shells wired to a trip line, buried where raiders will walk.",
-		Unlocks: []string{"build:blast charge", "build:fire charge", "build:pulse charge", "build:smoke charge"}},
+		Desc: "Shells wired to a trip line, buried where raiders will walk.",
+		Unlocks: []string{"build:blast charge", "build:fire charge", "build:pulse charge", "build:smoke charge",
+			"build:foam charge", "build:warhead charge"}}, // AX-0, wiki: IED firefoam trap, IED antigrain warhead trap
 	// wiki: Mortars (Industrial, 2000, Gunsmithing).
 	Artillery: {Project: Artillery, Name: "artillery", Label: "Field artillery", Cost: 2000, TechLevel: Industrial,
 		Requires: []Project{Gunsmithing},
@@ -359,7 +404,9 @@ var defs = [NumProjects]Def{
 		Unlocks: []string{"build:passive cooler"}},
 	// wiki: Stonecutting (Medieval, 300).
 	Stonecutting: {Project: Stonecutting, Name: "stonecutting", Label: "Stonecutting", Cost: 300, TechLevel: Medieval,
-		Desc: "A table to saw rough chunks of rock into blocks fit for walls and floors.", Unlocks: []string{"build:stonecutter table"}},
+		Desc: "A table to saw rough chunks of rock into blocks fit for walls and floors.",
+		Unlocks: []string{"build:stonecutter table",
+			"build:concrete", "build:paved tile", "build:stone tile"}}, // AX-0, wiki: Floors (Stonecutting)
 	// wiki: Air conditioning (Industrial, 500, Electricity).
 	AirConditioning: {Project: AirConditioning, Name: "air_conditioning", Label: "Air conditioning", Cost: 500, TechLevel: Industrial,
 		Requires: []Project{Electricity},
@@ -379,7 +426,8 @@ var defs = [NumProjects]Def{
 	CarpetMaking: {Project: CarpetMaking, Name: "carpet_making", Label: "Carpet making", Cost: 800, TechLevel: Medieval,
 		Desc: "Weave and sew soft carpets that make a floor pleasant to walk on.",
 		Unlocks: []string{"build:carpet", "recipe:make_straw_carpet", "recipe:make_wood_carpet", "recipe:sew_cloth_carpet",
-			"recipe:sew_leather_carpet", "recipe:weave_wool_carpet"}},
+			"recipe:sew_leather_carpet", "recipe:weave_wool_carpet",
+			"build:carpet floor"}}, // AX-0, wiki: Carpet (Carpet making)
 	// wiki: Greatbow (Medieval, 600, Recurve bow).
 	Greatbows: {Project: Greatbows, Name: "greatbows", Label: "Greatbows", Cost: 600, TechLevel: Medieval, Requires: []Project{Bowcraft},
 		Desc: "A bow as tall as its archer, slow to draw and deadly at range.", Unlocks: []string{"recipe:make_greatbow"}},
@@ -387,6 +435,108 @@ var defs = [NumProjects]Def{
 	ProphylPressing: {Project: ProphylPressing, Name: "prophyl_pressing", Label: "Prophyl pressing", Cost: 500, TechLevel: Industrial,
 		Requires: []Project{HerbalRemedies},
 		Desc:     "Press prophyl tablets that keep the body from catching the common sicknesses.", Unlocks: []string{"recipe:press_prophyl"}},
+	// AX-0 contract rows (wiki: Research; [MEM] marks a prerequisite the
+	// wiki notes do not confirm, original tuning until checked).
+	// wiki: Watermill (Industrial, 700, Electricity).
+	WaterPower: {Project: WaterPower, Name: "water_power", Label: "Water power", Cost: 700, TechLevel: Industrial,
+		Requires: []Project{Electricity},
+		Desc:     "A paddle wheel set in a flowing river turns a generator day and night.",
+		Unlocks:  []string{"build:watermill generator"}},
+	// wiki: Firefoam (Industrial, 600, Electricity).
+	FoamSuppression: {Project: FoamSuppression, Name: "foam_suppression", Label: "Fire foam", Cost: 600, TechLevel: Industrial,
+		Requires: []Project{Electricity},
+		Desc:     "A thick foam that smothers flames, sprayed by poppers that burst when they sense fire.",
+		Unlocks:  []string{"build:foam popper"}},
+	// wiki: Sterile materials (Industrial, 600, Electricity).
+	SterileSurfaces: {Project: SterileSurfaces, Name: "sterile_surfaces", Label: "Sterile surfaces", Cost: 600,
+		TechLevel: Industrial, Requires: []Project{Electricity},
+		Desc:    "Silver-laced tiles that keep germs from settling, for clean wards and labs.",
+		Unlocks: []string{"build:sterile tile"}},
+	// wiki: Advanced lights (Industrial, 300, Electricity).
+	FloodLighting: {Project: FloodLighting, Name: "flood_lighting", Label: "Flood lighting", Cost: 300, TechLevel: Industrial,
+		Requires: []Project{Electricity},
+		Desc:     "Powerful lamps that light a whole yard, and thriftier bulbs for every lamp.",
+		Unlocks:  []string{"build:flood light"}},
+	// wiki: Tube television (Industrial, 1000, Electricity, hidden Complex furniture).
+	Television: {Project: Television, Name: "television", Label: "Television", Cost: 1000, TechLevel: Industrial,
+		Requires: []Project{Electricity}, Hidden: []Project{Upholstery},
+		Desc:    "A glowing box of moving pictures that colonists gather round in the evening.",
+		Unlocks: []string{"build:tube television"}},
+	// wiki: Foam turret (Industrial, 800, Gun turrets, hidden Firefoam).
+	FoamTurrets: {Project: FoamTurrets, Name: "foam_turrets", Label: "Foam turrets", Cost: 800, TechLevel: Industrial,
+		Requires: []Project{Sentries}, Hidden: []Project{FoamSuppression},
+		Desc:    "A powered nozzle that aims at fires on its own and drowns them in foam.",
+		Unlocks: []string{"build:foam turret"}},
+	// wiki: Flatscreen television (Industrial, 2000, Microelectronics + Tube television; hi-tech bench).
+	FlatScreens: {Project: FlatScreens, Name: "flat_screens", Label: "Flat screens", Cost: 2000, TechLevel: Industrial,
+		Bench: HiTechBench, Requires: []Project{Microcircuits, Television},
+		Desc:    "A thin, sharp screen that a whole room can watch at once.",
+		Unlocks: []string{"build:flatscreen television"}},
+	// wiki: Moisture pump (Industrial, 1200, Microelectronics, hidden Machining; hi-tech bench).
+	Drainage: {Project: Drainage, Name: "drainage", Label: "Drainage pumps", Cost: 1200, TechLevel: Industrial,
+		Bench: HiTechBench, Requires: []Project{Microcircuits}, Hidden: []Project{MachineTools},
+		Desc:    "A pump that slowly draws the water out of marsh, mud and shallows around it.",
+		Unlocks: []string{"build:moisture pump"}},
+	// wiki: Deep drilling (Industrial, 4000, Microelectronics; hi-tech bench).
+	DeepDrilling: {Project: DeepDrilling, Name: "deep_drilling", Label: "Deep drilling", Cost: 4000, TechLevel: Industrial,
+		Bench: HiTechBench, Requires: []Project{Microcircuits},
+		Desc:    "A drill that bores far below the surface to bring up buried ore.",
+		Unlocks: []string{"build:deep drill"}},
+	// wiki: Ground-penetrating scanner (Industrial, 1000, Deep drilling; hi-tech bench).
+	GroundScanning: {Project: GroundScanning, Name: "ground_scanning", Label: "Ground scanning", Cost: 1000,
+		TechLevel: Industrial, Bench: HiTechBench, Requires: []Project{DeepDrilling},
+		Desc:    "A scanner that maps the ore deposits hidden deep under the colony.",
+		Unlocks: []string{"build:ground-penetrating scanner"}},
+	// wiki: Transport pod (Industrial, 1000, Microelectronics, hidden Biofuel refining and Machining; hi-tech bench).
+	TransportPods: {Project: TransportPods, Name: "transport_pods", Label: "Transport pods", Cost: 1000, TechLevel: Industrial,
+		Bench: HiTechBench, Requires: []Project{Microcircuits}, Hidden: []Project{FuelRefining, MachineTools},
+		Desc:    "Fuelled pods fired from a launcher to land people and goods far across the world.",
+		Unlocks: []string{"build:transport pod", "build:pod launcher"}},
+	// wiki: Long-range mineral scanner (Industrial, 2000, Microelectronics, hidden Machining; hi-tech bench).
+	MineralScanning: {Project: MineralScanning, Name: "mineral_scanning", Label: "Mineral scanning", Cost: 2000,
+		TechLevel: Industrial, Bench: HiTechBench, Requires: []Project{Microcircuits}, Hidden: []Project{MachineTools},
+		Desc:    "A dish that searches the region for rich mineral lumps worth an expedition.",
+		Unlocks: []string{"build:long-range mineral scanner"}},
+	// wiki: Rocketswarm launcher (Industrial, 3000, Multi-analyzer, hidden Autocannon turret; hi-tech bench + analyzer).
+	RocketBatteries: {Project: RocketBatteries, Name: "rocket_batteries", Label: "Rocket batteries", Cost: 3000,
+		TechLevel: Industrial, Bench: HiTechAnalyzer, Requires: []Project{MultiAnalysis}, Hidden: []Project{HeavyTurrets},
+		Desc:    "A launcher that fills the sky over the enemy with a volley of small rockets.",
+		Unlocks: []string{"build:rocket battery"}},
+	// wiki: Cryptosleep casket (Spacer, 2000, Multi-analyzer; hi-tech bench + analyzer).
+	Stasis: {Project: Stasis, Name: "stasis", Label: "Stasis caskets", Cost: 2000, TechLevel: Spacer, Bench: HiTechAnalyzer,
+		Requires: []Project{MultiAnalysis},
+		Desc:     "A sealed casket that holds a sleeper unchanging, unaging and unhungry, until opened.",
+		Unlocks:  []string{"build:stasis casket"}},
+	// wiki: Starflight basics (Spacer, 4000, Advanced fabrication).
+	ShipFrames: {Project: ShipFrames, Name: "ship_frames", Label: "Starflight frames", Cost: 4000, TechLevel: Spacer,
+		Bench: HiTechAnalyzer, Requires: []Project{PrecisionFabrication},
+		Desc:    "The beams that hold a ship able to leave this world together.",
+		Unlocks: []string{"build:ship structural beam"}},
+	// wiki: Vacuum cryptosleep (Spacer, 2800; [MEM] Starflight basics + Cryptosleep casket).
+	ShipStasis: {Project: ShipStasis, Name: "ship_stasis", Label: "Ship stasis", Cost: 2800, TechLevel: Spacer,
+		Bench: HiTechAnalyzer, Requires: []Project{ShipFrames, Stasis},
+		Desc:    "Stasis caskets hardened to keep their sleepers through the void.",
+		Unlocks: []string{"build:ship stasis casket"}},
+	// wiki: Machine persuasion (Spacer, 3000, Multi-analyzer; RESEARCH_GAP_ANALYSIS 4.6).
+	ShipMinds: {Project: ShipMinds, Name: "ship_minds", Label: "Ship minds", Cost: 3000, TechLevel: Spacer,
+		Bench: HiTechAnalyzer, Requires: []Project{MultiAnalysis},
+		Desc:    "Coaxing a found machine mind to steer a ship and keep its course.",
+		Unlocks: []string{"build:ship computer core"}},
+	// wiki: Starship reactor (Spacer, 6000; [MEM] Starflight basics).
+	ShipReactors: {Project: ShipReactors, Name: "ship_reactors", Label: "Ship reactors", Cost: 6000, TechLevel: Spacer,
+		Bench: HiTechAnalyzer, Requires: []Project{ShipFrames},
+		Desc:    "A reactor strong enough to lift a ship, slow and loud to wake.",
+		Unlocks: []string{"build:ship reactor"}},
+	// wiki: Johnson-Tanaka drive (Spacer, 6000; [MEM] Starship reactor).
+	ShipDrives: {Project: ShipDrives, Name: "ship_drives", Label: "Ship drives", Cost: 6000, TechLevel: Spacer,
+		Bench: HiTechAnalyzer, Requires: []Project{ShipReactors},
+		Desc:    "Engines that push a ship between the stars.",
+		Unlocks: []string{"build:ship engine"}},
+	// wiki: Starflight sensors (Spacer, 4000; [MEM] Starflight basics).
+	ShipSensors: {Project: ShipSensors, Name: "ship_sensors", Label: "Ship sensors", Cost: 4000, TechLevel: Spacer,
+		Bench: HiTechAnalyzer, Requires: []Project{ShipFrames},
+		Desc:    "Sensors that let a ship find its way through the dark.",
+		Unlocks: []string{"build:ship sensor cluster"}},
 }
 
 // DefOf returns the definition of p.

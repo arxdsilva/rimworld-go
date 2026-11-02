@@ -146,7 +146,7 @@ func SpecOf(k construction.Kind) Spec {
 	case construction.SunLamp: // FOOD-2, wiki: Sun lamp (2,900 W, only 06:00-19:12: the game's powerWant)
 		return consumer(ClassLamp, 2900, 0)
 	}
-	return Spec{}
+	return axSpec(k) // ax.go: the AX-0 contract kinds
 }
 
 func producer(peak int) Spec { return Spec{Role: Producer, Peak: peak, Toggle: true} }

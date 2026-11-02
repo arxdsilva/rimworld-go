@@ -57,6 +57,12 @@ var value = [numKinds]int{
 	// share (34 - 20 cloth at 1.5) plus 20 leather at 2.1, 46; the seven
 	// in cloth.
 	TShirt: 66, ButtonDownShirt: 77, Pants: 66, Jacket: 130, CowboyHat: 44, BowlerHat: 37, Tribalwear: 97,
+	// AX-0 contract. wiki: Antigrain warhead (1200), Novel and Textbook
+	// (160), Schematic (150), Jade (5). The foam shell's 50 is original
+	// tuning, as the other shells; the mind core's 3000 is original tuning
+	// ([MEM] wiki: Persona core). A crated building is worth its building
+	// (A1 fills that in), so its row is 0.
+	AntimatterWarhead: 1200, FoamShells: 50, Novel: 160, Textbook: 160, Schematic: 150, Jade: 5, MindCore: 3000,
 }
 
 // Value is the market value of one unit of k.
@@ -72,13 +78,14 @@ func (k Kind) Value() int {
 // same type stacks to StackLimit on one tile. A thing with per-unit
 // identity is never "the same type" twice and stays one per stack:
 // weapons, apparel and belts (quality, hit points), corpses (body,
-// freshness), implants and organs; stone chunks stay one per tile.
+// freshness), implants and organs, books and crated buildings (AX-0);
+// stone chunks stay one per tile.
 // Anything else, bones included, stacks to StackLimit.
 var stackLimit = func() (t [numKinds]int) {
 	for k := Kind(0); k < numKinds; k++ {
 		t[k] = StackLimit
 		if k.IsWeapon() || k.IsContractWeapon() || k.IsApparel() || k.IsBelt() || k.IsCorpse() || IsChunk(k) ||
-			k.IsImplant() || k.IsOrgan() {
+			k.IsImplant() || k.IsOrgan() || k.IsBook() || k == MinifiedBuilding {
 			t[k] = 1
 		}
 	}

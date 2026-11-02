@@ -174,19 +174,19 @@ Costs are wiki base costs; tribal factions pay Medieval x1.5, Industrial or high
 | Electricity | 1600 | none | Electricity |
 | Battery | 400 | Electricity | Batteries |
 | Biofuel refining | 700 | Electricity | FuelRefining |
-| Watermill | 700 | Electricity | content not in game (no water power) |
+| Watermill | 700 | Electricity | WaterPower (AX-0; the watermill, A4) |
 | Nutrient paste | 400 | Electricity | NutrientPaste |
 | Solar panel | 600 | Electricity | SolarPower |
 | Air conditioning | 500 | Electricity | content depends on the cooler; scenario start row |
 | Autodoor | 600 | Electricity | PoweredDoors |
 | Hydroponics | 700 | Electricity | Hydroponics |
-| Firefoam | 600 | Electricity | content not in game |
+| Firefoam | 600 | Electricity | FoamSuppression (AX-0; the foam popper, A5) |
 | IEDs | 500 | Electricity | Charges |
 | Geothermal | 3200 | Electricity | GeothermalPower |
-| Sterile materials | 600 | Electricity | content not in game unless sterile tiles exist |
-| Advanced lights | 300 | Electricity | content not in game unless lamps are gated |
+| Sterile materials | 600 | Electricity | SterileSurfaces (AX-0; the sterile tile, A3) |
+| Advanced lights | 300 | Electricity | FloodLighting (AX-0; the flood light, A2) |
 | Packaged survival meal | 500 | Nutrient paste | SealedRations |
-| Tube television | 1000 | Electricity, h: Complex furniture | content not in game |
+| Tube television | 1000 | Electricity, h: Complex furniture | Television (AX-0; A6) |
 | Machining | 1000 | Electricity, Smithing | MachineTools |
 | Smokepop | 300 | Machining, h: Complex clothing | content not in game |
 | Prosthetics | 600 | Machining | Prosthetics |
@@ -196,7 +196,7 @@ Costs are wiki base costs; tribal factions pay Medieval x1.5, Industrial or high
 | Blowback operation | 500 | Gunsmithing | SelfLoading |
 | Gas operation | 1000 | Blowback operation | GasOperated |
 | Gun turrets | 500 | Blowback operation | Sentries |
-| Foam turret | 800 | Gun turrets, h: Firefoam | content not in game |
+| Foam turret | 800 | Gun turrets, h: Firefoam | FoamTurrets (AX-0; A5) |
 | Microelectronics | 3000 | Electricity | Microcircuits (unlocks the hi-tech bench; also gates the analyzer chain) |
 | Wind power, Radio relay, Traps, Herbal remedies, Pharmacology, Bridges, Servo replacements | n/a | n/a | Own projects with no wiki row: map onto the nearest row's cost and tech level (Wind power as Solar panel, Radio relay as Advanced lights, Traps as Smithing, Herbal remedies as Drug production, Pharmacology as Psychite refining, Bridges as Complex furniture, Servo replacements as Prosthetics) |
 
@@ -204,14 +204,14 @@ Costs are wiki base costs; tribal factions pay Medieval x1.5, Industrial or high
 
 | Wiki project | Cost | Prereq | Maps to / note |
 |---|---|---|---|
-| Flatscreen television | 2000 | Microelectronics, Tube television | content not in game |
-| Moisture pump | 1200 | Microelectronics, h: Machining | content not in game |
+| Flatscreen television | 2000 | Microelectronics, Tube television | FlatScreens (AX-0; A6) |
+| Moisture pump | 1200 | Microelectronics, h: Machining | Drainage (AX-0; A4) |
 | Hospital bed | 1200 | Microelectronics, h: Sterile materials, Complex furniture | content not in game unless a hospital bed is gated |
-| Deep drilling | 4000 | Microelectronics | content not in game |
-| Ground-penetrating scanner | 1000 | Deep drilling | content not in game |
-| Transport pod | 1000 | Microelectronics, h: Biofuel refining, Machining | content not in game |
+| Deep drilling | 4000 | Microelectronics | DeepDrilling (AX-0; A4) |
+| Ground-penetrating scanner | 1000 | Deep drilling | GroundScanning (AX-0; A4) |
+| Transport pod | 1000 | Microelectronics, h: Biofuel refining, Machining | TransportPods (AX-0; A9) |
 | Medicine production | 1500 | Drug production, Microelectronics | Pharmacology (herbal-to-industrial medicine) |
-| Long-range mineral scanner | 2000 | Microelectronics, h: Machining | content not in game |
+| Long-range mineral scanner | 2000 | Microelectronics, h: Machining | MineralScanning (AX-0; A9) |
 | Shields | 1000 | Microelectronics, h: Complex clothing | content not in game unless shields exist |
 | Precision rifling | 1400 | Microelectronics, Gas operation | RifledBarrels |
 | Autocannon turret | 1600 | Microelectronics, Gun turrets, Gas operation | HeavyTurrets |
@@ -226,19 +226,19 @@ Costs are wiki base costs; tribal factions pay Medieval x1.5, Industrial or high
 | Fabrication | 4000 | Multi-analyzer | Fabrication |
 | Advanced fabrication | 4000 | Multi-analyzer | PrecisionFabrication |
 | Uranium slug turret | 3000 | Multi-analyzer, h: Autocannon, Precision rifling | SlugTurrets |
-| Rocketswarm launcher | 3000 | Multi-analyzer, h: Autocannon | content not in game |
+| Rocketswarm launcher | 3000 | Multi-analyzer, h: Autocannon | RocketBatteries (AX-0; A5) |
 
 ### 4.6 Spacer (all H+MA)
 
 | Wiki project | Cost | Prereq | Maps to / note |
 |---|---|---|---|
-| Cryptosleep casket | 2000 | Multi-analyzer | content not in game |
+| Cryptosleep casket | 2000 | Multi-analyzer | Stasis (AX-0; the stasis casket, A9) |
 | Recon armor | 6000 | Fabrication, h: Complex clothing | PoweredArmor (nearest) |
 | Marine armor | 6000 | Recon armor | content not in game |
 | Pulse-charged munitions | 3000 | Fabrication, h: Precision rifling | content not in game |
 | Bionic replacements | 2000 | Fabrication, h: Prosthetics | ServoReplacements |
-| Starflight basics, starflight sensors, vacuum cryptosleep, starship reactor, Johnson-Tanaka drive | 2800-6000 | chain | out of scope (endgame ship chain) |
-| Machine persuasion | 3000 | Multi-analyzer | content not in game |
+| Starflight basics, starflight sensors, vacuum cryptosleep, starship reactor, Johnson-Tanaka drive | 4000, 4000, 2800, 6000, 6000 | Advanced fabrication, then the chain | ShipFrames, ShipSensors, ShipStasis, ShipReactors, ShipDrives (AX-0; the escape ship, A8; chain prerequisites past Starflight basics [MEM]) |
+| Machine persuasion | 3000 | Multi-analyzer | ShipMinds (AX-0; the ship computer core, A8) |
 
 Ultra: none in core. Evidence for the 45 current projects: `D :6-98` (enum), `:113-252` (defs, costs, `Requires`). Remaining own projects not placed above (Metalworking tiers, RotaryGuns variants, Upholstery duplicates and the like) take the nearest row's cost and tech level in RSCH-1.
 

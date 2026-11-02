@@ -722,7 +722,7 @@ func (g *Game) CanPlaceStuff(kind, stuff string, x, y int) (bool, string) {
 }
 
 func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f construction.Facing, x, y int) {
-	if !kind.Valid() || !construction.StuffOK(kind, stuff) {
+	if !kind.Valid() || kind.Planned() || construction.DefOf(kind).Unbuildable || !construction.StuffOK(kind, stuff) { // AX-0 gate
 		return
 	}
 	if !construction.DefOf(kind).Rotatable && !kind.IsDoor() {

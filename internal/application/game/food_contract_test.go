@@ -132,6 +132,9 @@ func TestSameItemViewSeesEveryField(t *testing.T) {
 	for i := 0; i < typ.NumField(); i++ {
 		b := a
 		f := reflect.ValueOf(&b).Elem().Field(i)
+		for f.Kind() == reflect.Struct { // AX-0: a nested view struct (AX) changes through its first field
+			f = f.Field(0)
+		}
 		switch f.Kind() {
 		case reflect.String:
 			f.SetString("x")

@@ -5,6 +5,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/axview"
 	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
@@ -266,12 +267,10 @@ type PawnView struct {
 	// suffix, since InteractTick), the mood the smoothed mood is heading
 	// for, and whether the pawn is a prisoner, a visitor or in a social
 	// fight. Zero until their milestones fill them.
-	Interaction  string
-	InteractTick uint64
-	MoodTarget   int
-	Prisoner     bool
-	Visitor      bool
-	SocialFight  bool
+	Interaction                    string
+	InteractTick                   uint64
+	MoodTarget                     int
+	Prisoner, Visitor, SocialFight bool
 	// Ally: a visitor sent as military aid (PLAY-024), fighting raiders.
 	Ally bool
 	// Disfigured: a scar on the face (body.Disfigured); the renderer draws it.
@@ -279,8 +278,9 @@ type PawnView struct {
 	// FOOD-0 contract ("" and 0 until FOOD-4 and FOOD-1): food policy name, malnutrition percent.
 	FoodPolicy   string
 	Malnutrition int
-	ToxicBuildup int // FOOD-6: toxic buildup percent (body/cond_toxic.go)
-	Frostbite    int // TEMP-3: parts with an open frostbite (body.Frostbite wounds)
+	ToxicBuildup int         // FOOD-6: toxic buildup percent (body/cond_toxic.go)
+	Frostbite    int         // TEMP-3: parts with an open frostbite (body.Frostbite wounds)
+	AX           axview.Pawn // AX-0 contract (zero until its owners fill it)
 }
 
 // ItemView is a ground stack.
@@ -323,8 +323,9 @@ type ItemView struct {
 	Quality, Stuff string
 	HP, MaxHP      int
 	Tainted        bool
-	Urgent         bool     // STO/CBT contract (false until STO-2): marked to haul urgently
-	Ingredients    []string // FOOD-0 contract (nil until FOOD-4): a meal's ingredient kind names
+	Urgent         bool        // STO/CBT contract (false until STO-2): marked to haul urgently
+	Ingredients    []string    // FOOD-0 contract (nil until FOOD-4): a meal's ingredient kind names
+	AX             axview.Item // AX-0 contract (zero until its owners fill it)
 }
 
 // LetterView is one letter in the right-side stack (PLAY-018).
@@ -352,16 +353,14 @@ type StoredResourceView struct {
 
 // FrameView is a construction blueprint.
 type FrameView struct {
-	ID       entity.EntityID
-	Kind     string
-	X, Y     int
-	Wood     int
-	Need     int
-	WorkLeft int
-	Facing   string
-	Floor    bool
-	Stuff    string
-	W, H     int
+	ID                   entity.EntityID
+	Kind                 string
+	X, Y                 int
+	Wood, Need, WorkLeft int
+	Facing               string
+	Floor                bool
+	Stuff                string
+	W, H                 int
 	// Moving: a reinstall frame for building MovingFrom (UI-011).
 	Moving     bool
 	MovingFrom entity.EntityID
@@ -377,6 +376,7 @@ type FrameView struct {
 	// Components delivered, needed and on the way (NG-1 §4.8; 0 for a
 	// kind without any).
 	Comp, CompNeed, CompIncoming int
+	AX                           axview.Frame // AX-0 contract (zero until its owners fill it)
 }
 
 // BuildingView is a completed wall or bed.
@@ -398,21 +398,17 @@ type BuildingView struct {
 	// Ruin: an abandoned piece from map generation (MAPGEN-2).
 	Ruin bool
 	// Medical: a bed kept for the sick and injured (PLAY-020).
-	Medical bool
-	W, H    int // footprint in tiles (after facing)
-	HasSpot bool
-	SpotX   int
-	SpotY   int
-	Bench   bool
-	Bills   []BillView
+	Medical        bool
+	W, H           int // footprint in tiles (after facing)
+	HasSpot, Bench bool
+	SpotX, SpotY   int
+	Bills          []BillView
 	// Drying rack contents: DryQty items of DryKind, DryPct percent dry.
-	DryKind string
-	DryQty  int
-	DryPct  int
+	DryKind        string
+	DryQty, DryPct int
 	// Campfire: FuelPct of capacity left, Burning when lit (not banked).
-	Fuel    bool
-	FuelPct int
-	Burning bool
+	Fuel, Burning bool
+	FuelPct       int
 	// HPPct is the building's health (percent); below 100 it is damaged.
 	HPPct int
 	// Catch: an installed carpet's share of tracked dirt wiped, percent (SIM-021).
@@ -490,10 +486,11 @@ type BuildingView struct {
 	// STO/CBT contract (0 until STO-2): storage Group id, Stored stacks of Capacity.
 	Group            uint64
 	Stored, Capacity int
-	Open             bool   // TEMP-0 contract (false until TEMP-1): a vent letting air through (command.ToggleVent)
-	HeatRate         int    // TEMP-0 contract (0 until TEMP-1): heat into its room, tenths of heat/s (signed: cooling < 0)
-	ResearchSpeed    int    // RSCH-1: a research bench's factor now, permille (game/research Factor)
-	Analyzer         uint64 // RSCH-1: the multi-analyzer a hi-tech research bench links (building id, 0 none)
+	Open             bool            // TEMP-0 contract (false until TEMP-1): a vent letting air through (command.ToggleVent)
+	HeatRate         int             // TEMP-0 contract (0 until TEMP-1): heat into its room, tenths of heat/s (signed: cooling < 0)
+	ResearchSpeed    int             // RSCH-1: a research bench's factor now, permille (game/research Factor)
+	Analyzer         uint64          // RSCH-1: the multi-analyzer a hi-tech research bench links (building id, 0 none)
+	AX               axview.Building // AX-0 contract (zero until its owners fill it; in the equality check)
 }
 
 // Bed facility bits on BuildingView.Facilities (BED-1).
@@ -684,8 +681,9 @@ type WorldView struct {
 	// TempVer, the temperature overlay's cache key: it changes whenever a cell's air may have (game/thermo).
 	ClimateEvent              string
 	ClimateEventEnds, TempVer uint64
-	ResearchAlert             bool   // RSCH-1: no project picked while one is open, a bench stands and a colonist can research
-	TechLevel                 string // RSCH-1: the colony's tech level (research.TechLevel's name; it prices projects)
+	ResearchAlert             bool         // RSCH-1: no project picked while one is open, a bench stands and a colonist can research
+	TechLevel                 string       // RSCH-1: the colony's tech level (research.TechLevel's name; it prices projects)
+	AX                        axview.World // AX-0 contract (zero until its owners fill it)
 }
 
 // FoodPolicyView is one food policy: its id, name and allowed kind names.

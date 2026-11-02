@@ -345,7 +345,25 @@ func TestJourneyRschSearchAndPrereqLink(t *testing.T) {
 		j.key("Backspace", 0)
 	}
 	j.key("Enter", 0)
-	j.clickID("research.pick." + strconv.Itoa(int(child.ID)))
+	j.update(2)
+	// the jump scrolled the tree: pick a child drawn in the view it left
+	shown = map[string]bool{}
+	for _, b := range j.a.win.Research().Buttons() {
+		shown[b.ID] = true
+	}
+	child = game.ResearchView{}
+	for _, p := range rsProjects(j) {
+		if len(p.Prereqs) > 0 && shown["research.pick."+strconv.Itoa(int(p.ID))] {
+			child = p
+			break
+		}
+	}
+	if child.Label == "" {
+		t.Fatal("no project with a drawn prerequisite is in view after the search")
+	}
+	if !j.clickID("research.pick." + strconv.Itoa(int(child.ID))) {
+		t.Fatalf("project %d is not clickable", child.ID)
+	}
 	pre := child.Prereqs[0]
 	if !j.clickID("research.prereq." + strconv.Itoa(pre)) {
 		t.Fatalf("the prerequisite link %d is disabled", pre)

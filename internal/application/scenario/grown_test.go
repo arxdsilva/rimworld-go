@@ -194,6 +194,9 @@ func TestGrownGolden(t *testing.T) {
 	// stockpiles allow every storable kind, so their filters gain the seven
 	// new food kinds' bits; with both hidden the previous pin comes back
 	// exactly. Stable over -count=2.
+	// Re-pinned (AX-0): the sandbox's CompleteResearch also finishes the
+	// 20 new projects and stockpile filters gain the new item kinds' bits;
+	// with both hidden the STK pin comes back exactly.
 	// Re-pinned (STK): stacks of 1000 per tile (chunks one), 3x1
 	// production benches worked from the middle (the workshop's tailoring
 	// bench moved), and vanilla auto-forbid outside Home; TestScaleGolden
@@ -214,7 +217,7 @@ func TestGrownGolden(t *testing.T) {
 	// butchering by body size, per-species animal products, taming food and
 	// auto-slaughter; the previous pin held through FOOD-0 (the committed
 	// full suite). Stable over -count=2.
-	const want uint64 = 0x753367ca3d4f612e
+	const want uint64 = 0xef4cef40a35e4444
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)
