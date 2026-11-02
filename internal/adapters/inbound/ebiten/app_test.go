@@ -134,6 +134,7 @@ func (s *stubSim) CanZoneAt(kind string, x, y int) bool {
 }
 
 func testApp(sim Simulation) *App {
+	forgetFontsNow()
 	return NewApp(AppConfig{
 		Version: "test",
 		LoadArt: func() (*art.Catalog, error) {

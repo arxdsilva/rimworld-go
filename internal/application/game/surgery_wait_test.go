@@ -63,6 +63,7 @@ func waitOf(t *testing.T, g *Game, patient entity.EntityID) (string, bool) {
 }
 
 func TestSurgeryWaitNoStockAndResearch(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 10)
 	g.lab.Prog = research.Progress{} // a new colony knows nothing yet
 	queueOp(g, patient, body.InstallImplant, body.LegL, item.ProstheticLeg)
@@ -95,6 +96,7 @@ func TestSurgeryWaitNoStockAndResearch(t *testing.T) {
 }
 
 func TestSurgeryWaitResearchIgnoredWithStock(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 10)
 	g.lab.Prog = research.Progress{}
 	g.SpawnStack(item.ProstheticLeg, 1, 3, 9) // traded, or from the dev menu
@@ -105,6 +107,7 @@ func TestSurgeryWaitResearchIgnoredWithStock(t *testing.T) {
 }
 
 func TestSurgeryWaitLoneColonist(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(10, 6, "Solo")
 	g.SpawnStack(item.PegLeg, 1, 2, 9)
@@ -131,6 +134,7 @@ func TestSurgeryWaitLoneColonist(t *testing.T) {
 }
 
 func TestSurgeryWaitUnreachableImplantNeverLiesDown(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(10, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
@@ -164,6 +168,7 @@ func TestSurgeryWaitUnreachableImplantNeverLiesDown(t *testing.T) {
 }
 
 func TestSurgeryWaitDoctorOnTheWay(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 10)
 	addPegLeg(g, patient)
 	saw := map[string]bool{}
@@ -190,6 +195,7 @@ func TestSurgeryWaitDoctorOnTheWay(t *testing.T) {
 // (a free implant) and stays down on the looser one, so a hauler briefly
 // holding the implant neither gets it up nor puts it down again.
 func TestSurgeryWaitLyingDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 10)
 	addPegLeg(g, patient)
 	sid := firstStack(g, item.PegLeg)
@@ -233,6 +239,7 @@ func TestSurgeryWaitLyingDoesNotFlap(t *testing.T) {
 }
 
 func TestHealthyLegReplacedWithProsthetic(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(10, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
@@ -286,6 +293,7 @@ func TestHealthyLegReplacedWithProsthetic(t *testing.T) {
 }
 
 func TestSurgeryPatientPrefersHospitalBed(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 20)
 	studyAll(g)
 	placeBuilt(t, g, construction.HospitalBed, construction.South, 15, 2)
@@ -332,6 +340,7 @@ func TestSurgeryPatientPrefersHospitalBed(t *testing.T) {
 }
 
 func TestHealthOptions(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 10) // left leg and foot gone, a peg leg in stock
 	g.lab.Prog = research.Progress{}
 	hv, _ := g.Health(patient)
@@ -388,6 +397,7 @@ func TestHealthOptions(t *testing.T) {
 }
 
 func TestGlassEyeCoversTheMissingPartThought(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 10)
 	b := g.bodies[patient]
 	b.Missing = 1 << body.EyeL

@@ -47,6 +47,7 @@ func socPoints(g *Game, from, to entity.EntityID) int { return centiPoints(g.opi
 // §21: opinions are directional; an insult is -15 opinion and -5 mood,
 // and both end with their memories.
 func TestSocialOpinionDirectionalAndInsultExpires(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	insulted := func() int {
 		v := 0
@@ -78,6 +79,7 @@ func TestSocialOpinionDirectionalAndInsultExpires(t *testing.T) {
 
 // §21: stacking diminishes by 0.9 per copy; deep talk is +15 both ways.
 func TestSocialStackingAndDeepTalk(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	g.applyInteraction(a, b, social.Insult, socNow(g))
 	g.applyInteraction(a, b, social.Insult, socNow(g))
@@ -100,6 +102,7 @@ func TestSocialStackingAndDeepTalk(t *testing.T) {
 // §21: a Fair pawn earns +20 from an eligible observer; Gracious ignores
 // looks.
 func TestSocialBeautyAndGracious(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	withTraits(g, b, false, trait.Fair)
 	if got := socPoints(g, a, b); got != 20 {
@@ -113,6 +116,7 @@ func TestSocialBeautyAndGracious(t *testing.T) {
 
 // §21: siblings start at +20 and can still end up negative.
 func TestSocialSiblingsCanFallOut(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	reg := g.peopleReg()
 	mom, dad := g.entities.Next(), g.entities.Next()
@@ -147,6 +151,7 @@ func TestSocialSiblingsCanFallOut(t *testing.T) {
 // §21 no-flap: the friend and rival flags enter at +-20 and leave only
 // past +-15, so an opinion wobbling around the threshold flips them once.
 func TestSocialFriendRivalHysteresisNoFlap(t *testing.T) {
+	t.Parallel()
 	var friend, rival bool
 	fChanges, rChanges := 0, 0
 	for i := 0; i < 400; i++ {
@@ -190,6 +195,7 @@ func TestSocialFriendRivalHysteresisNoFlap(t *testing.T) {
 // §20.18: pawns a wall separates never interact; the same pair without the
 // wall do.
 func TestSocialSeparatedPawnsNeverInteract(t *testing.T) {
+	t.Parallel()
 	run := func(wall bool) int {
 		g := New(Config{Seed: 3, Width: 20, Height: 12})
 		if wall {
@@ -219,6 +225,7 @@ func TestSocialSeparatedPawnsNeverInteract(t *testing.T) {
 
 // Interactions come no faster than the cooldown, and log prose.
 func TestSocialInteractionCadence(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	for range 50 {
 		g.SetNeeds(a, needs.Full, needs.Full)
@@ -260,6 +267,7 @@ func socPawnView(g *Game, id entity.EntityID) PawnView {
 
 // Social rolls come from the social stream: the main stream is untouched.
 func TestSocialRNGIsolation(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	before, _ := g.rng.MarshalBinary()
 	for range 20 {
@@ -276,6 +284,7 @@ func TestSocialRNGIsolation(t *testing.T) {
 // caravan) grieves, a stranger beside the body does not; the killer is
 // hated; the cold-hearted feel nothing.
 func TestSocialGriefFollowsTies(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 40, Height: 12})
 	dead, _ := g.SpawnNamedPawn(5, 5, "Dee")
 	sib, _ := g.SpawnNamedPawn(35, 5, "Sib")
@@ -337,6 +346,7 @@ func TestSocialGriefFollowsTies(t *testing.T) {
 
 // A missing colonist is grieved by the lost table; its return ends it.
 func TestSocialLostThenReturned(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	mom := g.entities.Next()
 	g.peopleReg().add(&person{ID: mom, Bio: g.worldBio(mom, false, 60), HasBio: true, Where: whereOffMap})
@@ -364,6 +374,7 @@ func TestSocialLostThenReturned(t *testing.T) {
 
 // harm, rescue and botched surgery leave their memories.
 func TestSocialHarmRescueSurgeryMemories(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	g.onRescued(a, b)
 	if got := socPoints(g, b, a); got != 25 {
@@ -387,6 +398,7 @@ func TestSocialHarmRescueSurgeryMemories(t *testing.T) {
 
 // A raider is a registered person with a full bio.
 func TestSocialRaiderPerson(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 30, Height: 30})
 	g.SpawnNamedPawn(15, 15, "Ada")
 	g.Raid(2)
@@ -407,6 +419,7 @@ func TestSocialRaiderPerson(t *testing.T) {
 // Idle chat stands both pawns together: the target waits for the
 // initiator.
 func TestSocialChatMirrorsTarget(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	g.positions.Set(b, Position{X: 10, Y: 5})
 	if !g.idleChat(a, 300) {
@@ -425,6 +438,7 @@ func TestSocialChatMirrorsTarget(t *testing.T) {
 // Smoothed mood climbs at most 12 points an hour toward the target and is
 // what the pawn view shows, beside the target.
 func TestSocialMoodSmoothing(t *testing.T) {
+	t.Parallel()
 	g, a, _ := socialPair(t)
 	g.stepMood(a)
 	start := g.moodOf(a)
@@ -454,6 +468,7 @@ func TestSocialMoodSmoothing(t *testing.T) {
 // The founders get families: off-map relatives with bios, from the social
 // stream, the same for the same seed.
 func TestSocialFamilySeedDeterministic(t *testing.T) {
+	t.Parallel()
 	sig := func() (int, int, uint64) {
 		g := NewColony(Config{Seed: 9, Width: 48, Height: 40})
 		off := 0
@@ -479,6 +494,7 @@ func TestSocialFamilySeedDeterministic(t *testing.T) {
 
 // History keeps the newest 500 lines.
 func TestSocialHistoryCap(t *testing.T) {
+	t.Parallel()
 	g, a, _ := socialPair(t)
 	for range historyCap + 20 {
 		g.addHistory("test", "x", a)
@@ -491,6 +507,7 @@ func TestSocialHistoryCap(t *testing.T) {
 // Save and load mid-run reproduce the uninterrupted run, social state and
 // all (edges, flags, logs, smoothed moods, the stream).
 func TestSocialSaveLoadSameHash(t *testing.T) {
+	t.Parallel()
 	straight := NewColony(Config{Seed: 5, Width: 48, Height: 40})
 	straight.Step(6000)
 	g := NewColony(Config{Seed: 5, Width: 48, Height: 40})
@@ -533,6 +550,7 @@ func sortedEdgeKeys(g *Game) []pairKey {
 // An old save without social blocks loads; its colonists register on the
 // first social pass.
 func TestSocialOldSaveRegistersColonists(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 6, Width: 48, Height: 40})
 	g.people, g.soc = nil, nil
 	var buf bytes.Buffer

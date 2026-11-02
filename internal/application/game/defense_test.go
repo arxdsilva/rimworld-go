@@ -13,6 +13,7 @@ import (
 )
 
 func TestDoorsAreShutToRaidersAndAnimals(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	hut(t, g, 2, 2, 8, 8)
 	hm := g.hostileMap()
@@ -40,6 +41,7 @@ func (g *Game) raidPathTo(t *testing.T, x, y int) ([]Position, bool) {
 }
 
 func TestRaiderBreaksIntoAClosedHut(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 24, Height: 14})
 	hut(t, g, 2, 2, 8, 8)
 	ada, _ := g.SpawnNamedPawn(5, 5, "Ada")
@@ -65,6 +67,7 @@ func TestRaiderBreaksIntoAClosedHut(t *testing.T) {
 }
 
 func TestSandbagsGiveCover(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	if !g.BuildNow("sandbags", "wood", "south", 9, 5) {
 		t.Fatal("build sandbags")
@@ -82,6 +85,7 @@ func TestSandbagsGiveCover(t *testing.T) {
 }
 
 func TestSpikeTrapSpringsOnRaiderAndIsRelaid(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 10})
 	if !g.BuildNow("spike trap", "wood", "south", 10, 5) {
 		t.Fatal("build trap")
@@ -104,6 +108,7 @@ func TestSpikeTrapSpringsOnRaiderAndIsRelaid(t *testing.T) {
 }
 
 func TestBuildersRepairDamage(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 10})
 	if !g.BuildNow("wall", "wood", "south", 10, 5) {
 		t.Fatal("build wall")

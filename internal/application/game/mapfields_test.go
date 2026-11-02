@@ -16,6 +16,7 @@ func fieldsGame(t *testing.T) *Game {
 }
 
 func TestMapFieldLayersAllLayersInRange(t *testing.T) {
+	t.Parallel()
 	g := fieldsGame(t)
 	layers, err := g.MapFieldLayers()
 	if err != nil {
@@ -55,6 +56,7 @@ func TestMapFieldLayersAllLayersInRange(t *testing.T) {
 }
 
 func TestMapFieldLayersOldOrLegacyColonyErrors(t *testing.T) {
+	t.Parallel()
 	g := fieldsGame(t)
 	g.ng.setup.GenVersion = 0
 	if _, err := g.MapFieldLayers(); err == nil {
@@ -66,6 +68,7 @@ func TestMapFieldLayersOldOrLegacyColonyErrors(t *testing.T) {
 }
 
 func TestMapFieldLayersCachedAndSideEffectFree(t *testing.T) {
+	t.Parallel()
 	g := fieldsGame(t)
 	h := g.StateHash()
 	a, err := g.MapFieldLayers()
@@ -82,6 +85,7 @@ func TestMapFieldLayersCachedAndSideEffectFree(t *testing.T) {
 }
 
 func TestMapFieldLayersLiveLayersFollowTheGame(t *testing.T) {
+	t.Parallel()
 	g := fieldsGame(t)
 	g.fog.hidden = make([]uint64, (g.grid.Width()*g.grid.Height()+63)/64)
 	g.fog.hidden[0] |= 1
@@ -100,6 +104,7 @@ func TestMapFieldLayersLiveLayersFollowTheGame(t *testing.T) {
 // MAPGEN-3: the terrain layer marks road bridges and sealed vaults over the
 // ground, after the terrain types.
 func TestTerrainLegendHasBridgesAndVaults(t *testing.T) {
+	t.Parallel()
 	l := terrainLegend()
 	n := len(terrain.Names())
 	if len(l) != n+2 || l[n].Label != "bridge" || l[n+1].Label != "sealed vault" {

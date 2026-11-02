@@ -17,6 +17,7 @@ import (
 // mind.BingeGap, so the whole binge eats a handful to a few dozen meals,
 // never the unbounded stream of a re-issued eat (FOOD-6).
 func TestWholeFoodBingeIsBounded(t *testing.T) {
+	t.Parallel()
 	const longest = 45000
 	g := New(Config{Seed: 2, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
@@ -50,6 +51,7 @@ func TestWholeFoodBingeIsBounded(t *testing.T) {
 // in the initial stage; wiki: Food poisoning) stretches a sitting to
 // twice the work of a healthy one (FOOD-6).
 func TestFoodPoisonedPawnEatsSlower(t *testing.T) {
+	t.Parallel()
 	sitting := func(poisoned bool) int {
 		g := New(Config{Seed: 2, Width: 10, Height: 6})
 		id, _ := g.SpawnNamedPawn(2, 2, "Ada")

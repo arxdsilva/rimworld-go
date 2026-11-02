@@ -54,6 +54,7 @@ func fogMessage(g *Game, text string) bool {
 }
 
 func TestFogStartRevealedSealedCaveHidden(t *testing.T) {
+	t.Parallel()
 	g := fogCaveGame(t)
 	for _, c := range [][2]int{{3, 8}, {0, 0}, {9, 19}, {10, 0}, {10, 8}, {10, 19}} {
 		if g.Fogged(c[0], c[1]) {
@@ -77,6 +78,7 @@ func TestFogStartRevealedSealedCaveHidden(t *testing.T) {
 }
 
 func TestFogInitSetupOnly(t *testing.T) {
+	t.Parallel()
 	legacy := fogCaveGame(t)
 	legacy.fog = fogState{}
 	legacy.initFog()
@@ -94,6 +96,7 @@ func TestFogInitSetupOnly(t *testing.T) {
 }
 
 func TestFogMiningOpensCave(t *testing.T) {
+	t.Parallel()
 	g := fogCaveGame(t)
 	if _, err := g.SpawnNamedPawn(9, 8, "Bo"); err != nil {
 		t.Fatal(err)
@@ -128,6 +131,7 @@ func TestFogMiningOpensCave(t *testing.T) {
 }
 
 func TestFogSmallOpeningNoMessage(t *testing.T) {
+	t.Parallel()
 	g := fogCaveGame(t)
 	g.setTerrain(10, 2, terrain.Stone) // a niche in the face: only its ring shows
 	if g.Fogged(11, 2) || !g.Fogged(12, 2) {
@@ -149,6 +153,7 @@ func TestFogSmallOpeningNoMessage(t *testing.T) {
 }
 
 func TestFogHidesThingsInReadModels(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	for y := 0; y < 20; y++ {
 		for x := 10; x < 30; x++ {
@@ -207,6 +212,7 @@ func TestFogHidesThingsInReadModels(t *testing.T) {
 }
 
 func TestFogWorldLayer(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	if w := g.World(); w.Fog != nil || w.FogVer != 0 {
 		t.Fatal("no fog: empty layer")
@@ -227,6 +233,7 @@ func TestFogWorldLayer(t *testing.T) {
 }
 
 func TestFogPlacementAndOrders(t *testing.T) {
+	t.Parallel()
 	g := fogCaveGame(t)
 	id, _ := g.SpawnNamedPawn(9, 8, "Bo")
 	if ok, r := g.CanPlace("wall", 12, 8); ok || r != ReasonFogged {
@@ -282,6 +289,7 @@ func TestFogPlacementAndOrders(t *testing.T) {
 }
 
 func TestFogDeconstructOpensRoom(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 20})
 	// a sealed 3x3 room of walls at 10..14
 	for y := 10; y <= 14; y++ {
@@ -307,6 +315,7 @@ func TestFogDeconstructOpensRoom(t *testing.T) {
 }
 
 func TestFogDeepWaterSeen(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	for y := 0; y < 10; y++ {
 		for x := 8; x < 12; x++ {
@@ -320,6 +329,7 @@ func TestFogDeepWaterSeen(t *testing.T) {
 }
 
 func TestFogSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := fogCaveGame(t)
 	g.setTerrain(10, 2, terrain.Stone)
 	var buf bytes.Buffer

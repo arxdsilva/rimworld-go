@@ -10,6 +10,7 @@ import (
 )
 
 func TestGrowZoneSowsGrowsAndHarvests(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
@@ -47,6 +48,7 @@ func TestGrowZoneSowsGrowsAndHarvests(t *testing.T) {
 }
 
 func TestBerryHarvestYieldsBerries(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Bo")
 	g.SpawnPlant(5, 2)
@@ -58,6 +60,7 @@ func TestBerryHarvestYieldsBerries(t *testing.T) {
 }
 
 func TestPawnsPreferMealsAndNutritionDiffers(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Cora")
 	g.SpawnStack(item.Berries, 3, 2, 2) // closer
@@ -74,6 +77,7 @@ func TestPawnsPreferMealsAndNutritionDiffers(t *testing.T) {
 }
 
 func TestCancelRemovesGrowZone(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: 2, Y: 1, X2: 4, Y2: 3})
 	g.Step(1)
@@ -90,6 +94,7 @@ func TestCancelRemovesGrowZone(t *testing.T) {
 }
 
 func TestOrdersAtOffersSowOnEmptyZoneCell(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Ada")
 	g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: 5, Y: 1, X2: 6, Y2: 2})

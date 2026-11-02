@@ -12,6 +12,7 @@ import (
 // the same bench in a 5 C room at the wiki's 70 %. The bench once compared
 // tenths against whole degrees, so every bench in a warm room ran at 70 %.
 func TestBenchSpeedFollowsRoomTemperature(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	hut(t, g, 1, 1, 7, 7)
 	if !g.BuildNow("stove", "wood", "south", 4, 3) {

@@ -161,6 +161,7 @@ func TestLeavingWalksTheMapOff(t *testing.T) {
 // A hungry deer walks to its meal and ambles when it wanders; each step's
 // label follows the mode it started in.
 func TestGoingToFoodWalksWanderingAmbles(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	sowGrass(g, 16, 8, 20, 12)

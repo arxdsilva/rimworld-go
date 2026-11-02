@@ -59,6 +59,7 @@ func BenchmarkSocialPhase200(b *testing.B) { benchSocialPhase(b, 200) }
 // §12.4: an idle colonist joins company at a table, relaxes there with a
 // chat's joy, and counts as chatting (interactions come sooner).
 func TestSocialRelaxJoinsCompany(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	buildNow(t, g, construction.Table, item.Wood, construction.South, 10, 5)
 	if g.idleSocialRelax(a, 300) {

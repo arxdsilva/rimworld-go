@@ -26,6 +26,7 @@ func choiceGame(t *testing.T) (*Game, uint64) {
 }
 
 func TestEqualPrioritiesFollowTheDefaultOrder(t *testing.T) {
+	t.Parallel()
 	g, id := choiceGame(t)
 	g.Step(2)
 	if j, _ := g.jobs.Get(uint64ToID(id)); j.Kind != job.Haul {
@@ -34,6 +35,7 @@ func TestEqualPrioritiesFollowTheDefaultOrder(t *testing.T) {
 }
 
 func TestHigherPriorityWorkComesFirst(t *testing.T) {
+	t.Parallel()
 	g, id := choiceGame(t)
 	g.Enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: id, Work: command.WorkGrow, Count: 1})
 	g.Step(2)
@@ -51,6 +53,7 @@ func TestHigherPriorityWorkComesFirst(t *testing.T) {
 }
 
 func TestPersonalSchedule(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 10})
 	a, _ := g.SpawnNamedPawn(3, 3, "Ada")
 	b, _ := g.SpawnNamedPawn(8, 3, "Bo")

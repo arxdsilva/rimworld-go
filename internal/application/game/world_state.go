@@ -599,11 +599,9 @@ func mapsLabel(g *Game, id uint32, label, kind string) (string, string, int) {
 	return fleetOf(g).Life().Label(id, label, kind, uint64(g.clock.Now()))
 }
 
-// DevOpenMap opens a site map on world tile at once (a dev hook for the
-// journeys), registered in the atlas: its id. Without a planet (a legacy
-// colony, a test fixture) it opens a blank 60×60 map of the colony's
-// biome on tile -1 instead. Like any temporary map it closes after three
-// hours with nobody of ours on it.
+// DevOpenMap opens a site map on world tile at once for the journeys: its
+// id. Without a planet (a legacy colony, a fixture) it opens a blank 60×60
+// map of the colony's biome on tile -1; empty, it closes after three hours.
 func DevOpenMap(g *Game, tile int) (MapID, bool) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	now := uint64(g.clock.Now())
@@ -821,16 +819,19 @@ func atlasRow(g *Game) *maps.Meta {
 func DevDemand(g *Game, id entity.EntityID, st item.Stack) {
 	g.viewGen++
 	travelOf(g).Carry(uint64(id), st)
-	if f := fleetOf(g); f.At(id) != nil {
-		f.Waylay(f.At(id), maps.Demand, uint64(g.clock.Now()))
-	}
+	maps.DevDemand(fleetOf(g), id, uint64(g.clock.Now()))
+}
+
+// DevArrive sets caravan id down at tile as if it had walked, for the journeys.
+func DevArrive(g *Game, id entity.EntityID, tile int) {
+	g.viewGen++
+	maps.DevArrive(fleetOf(g), id, tile, uint64(g.clock.Now()))
 }
 
 // SetMaxColonies is command.SetColonyCap: Options' Max colonies (MAP-06).
 func SetMaxColonies(g *Game, n int) { g.worldS().maxColonies = max(1, min(n, maps.ColonyCapLimit)) }
 
-// SettleReason is why caravan id cannot found a colony where it is ("" it
-// can; MAP-06).
+// SettleReason is why caravan id cannot found a colony here ("" it can; MAP-06).
 func SettleReason(g *Game, id uint64) string {
 	if g.worldSt == nil {
 		return "No such caravan."
@@ -838,10 +839,9 @@ func SettleReason(g *Game, id uint64) string {
 	return fleetOf(g).SettleReason(entity.EntityID(id))
 }
 
-// threatTarget is the map a threat strikes (MAP-12): the current one in a
-// game with one colony, with no draw; else a colony with people on it,
-// weighted by wealth, from the story stream. Sites, settlements and
-// encounters are never picked.
+// threatTarget is the map a threat strikes (MAP-12): the current one with one
+// colony, with no draw; else a colony with people on it, weighted by wealth,
+// from the story stream. Sites, settlements and encounters are never picked.
 func threatTarget(g *Game) *mapState {
 	cur := g.mapState
 	if g.worldSt == nil || len(g.worldSt.atlas.Maps) == 0 {

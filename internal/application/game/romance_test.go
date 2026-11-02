@@ -73,6 +73,7 @@ func woo(t testing.TB, g *Game, a, b entity.EntityID) {
 // Every pair transition along the life of a couple, and the invalid ones
 // refused.
 func TestRomancePairTransitions(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	adore(g, b, a)
 	if g.breakUp(a, b, socNow(g)) || g.propose(a, b, socNow(g)) || gatherOf(g).Marry(a, b, socNow(g)) {
@@ -125,6 +126,7 @@ func TestRomancePairTransitions(t *testing.T) {
 // Orientation, age and kin decide who may court whom; the Social tab
 // says why not.
 func TestRomanceEligibility(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	if g.attractionOf(a, b) <= 0 || g.attractionOf(b, a) <= 0 {
 		t.Fatal("a straight man and woman are not attracted")
@@ -178,6 +180,7 @@ func TestRomanceEligibility(t *testing.T) {
 // A rebuff: -10 / -15 opinion, -5 / -3 mood, and no new attempt on that
 // target while it lasts.
 func TestRomanceRebuffMemories(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	withTraits(g, b, true, trait.Asexual) // always says no
 	if !g.tryRomance(a, b, socNow(g)) {
@@ -208,6 +211,7 @@ func TestRomanceRebuffMemories(t *testing.T) {
 // An affair: the cheated partner holds it against the cheater and is
 // miserable.
 func TestRomanceAffair(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	c, _ := g.SpawnNamedPawn(7, 5, "Cy")
 	g.ensurePerson(c)
@@ -233,6 +237,7 @@ func TestRomanceAffair(t *testing.T) {
 // Breakups and divorces: who is dumped remembers it; the grace keeps a
 // fresh couple together.
 func TestRomanceBreakupAndDivorce(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	now := socNow(g)
 	g.setPair(a, b, social.Pair{Kind: social.PairLover, Since: now, LastChange: now})
@@ -269,6 +274,7 @@ func TestRomanceBreakupAndDivorce(t *testing.T) {
 // No-flap: a couple that keeps trying to break up and reconcile changes
 // state at most once per grace.
 func TestRomanceBreakupReconcileNoFlap(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	now := socNow(g)
 	g.setPair(a, b, social.Pair{Kind: social.PairLover, Since: now, LastChange: now})
@@ -295,6 +301,7 @@ func TestRomanceBreakupReconcileNoFlap(t *testing.T) {
 // A proposal: turned down (opinion below zero) with the memories and the
 // ten-day cooldown; accepted by an adoring lover.
 func TestRomanceProposalRejectAndCooldown(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	g.setPair(a, b, social.Pair{Kind: social.PairLover})
 	for range 4 {
@@ -331,6 +338,7 @@ func TestRomanceProposalRejectAndCooldown(t *testing.T) {
 // The interaction context carries the attraction and the partnered flag,
 // so romance gets chosen; the social loop resolves it.
 func TestRomanceChosenInSocialLoop(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	withTraits(g, a, false, trait.Striking)
 	withTraits(g, b, true, trait.Striking)

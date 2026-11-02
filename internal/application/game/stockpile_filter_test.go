@@ -9,6 +9,7 @@ import (
 
 // The dead are carried to graves and pyres, never shelved with the food.
 func TestHumanCorpseAndBonesNeverStockpiled(t *testing.T) {
+	t.Parallel()
 	all := zone.Zone{Kind: zone.KindStockpile, Food: true, Wood: true, Stone: true}
 	for _, k := range []item.Kind{item.CorpseHuman, item.Bones} {
 		if allows(all, k) {

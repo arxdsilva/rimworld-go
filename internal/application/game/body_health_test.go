@@ -18,6 +18,7 @@ import (
 // ENG-003 M1: humanlike bodies behind health.Record.Injury.
 
 func TestHurtAddsWoundAndInjuryIsBodyDamage(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	g.hurt(p, 12, 0)
@@ -40,6 +41,7 @@ func TestHurtAddsWoundAndInjuryIsBodyDamage(t *testing.T) {
 }
 
 func TestHitKindsFollowTheWeapon(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	bo, _ := g.SpawnNamedPawn(3, 2, "Bo")
@@ -56,6 +58,7 @@ func TestHitKindsFollowTheWeapon(t *testing.T) {
 }
 
 func TestDownedAndDeathThresholdsUnchanged(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 25; seed++ {
 		g := New(Config{Seed: seed, Width: 12, Height: 8})
 		p, _ := g.SpawnNamedPawn(4, 4, "Ada")
@@ -78,6 +81,7 @@ func TestDownedAndDeathThresholdsUnchanged(t *testing.T) {
 // cadence): an untended bruise on a standing colonist heals 8 HP a day,
 // a point every 3 hours, and Injury follows the body.
 func TestPlainWoundHealsAtWikiRate(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	addWound(t, g, p, body.LegL, 6, body.Bruise) // bruises never scar
@@ -99,6 +103,7 @@ func TestPlainWoundHealsAtWikiRate(t *testing.T) {
 // TestClosedCutsMayScarDeterministically: deep cuts close and some scar
 // (20 per mille for a 14+ HP cut), the same ones for the same seed.
 func TestClosedCutsMayScarDeterministically(t *testing.T) {
+	t.Parallel()
 	scars := func() (int, []entry[savedBody]) {
 		g := New(Config{Seed: 9, Width: 12, Height: 8})
 		p, _ := g.SpawnNamedPawn(4, 4, "Ada")
@@ -134,6 +139,7 @@ func TestClosedCutsMayScarDeterministically(t *testing.T) {
 }
 
 func TestMissingJawSilencesTalkingInTheView(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	v := g.VitalOf(p)
@@ -164,6 +170,7 @@ func TestMissingJawSilencesTalkingInTheView(t *testing.T) {
 }
 
 func TestCapacitiesFeedStatsOnlyOnChange(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	base := g.statOf(p, stat.MoveSpeed)
@@ -187,6 +194,7 @@ func TestCapacitiesFeedStatsOnlyOnChange(t *testing.T) {
 }
 
 func TestUnconsciousGoesDownWithHysteresis(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	v := g.VitalOf(p)
@@ -218,6 +226,7 @@ func TestUnconsciousGoesDownWithHysteresis(t *testing.T) {
 }
 
 func TestOldInjuryMigratesToATorsoBruise(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	v := g.VitalOf(p)
@@ -238,6 +247,7 @@ func TestOldInjuryMigratesToATorsoBruise(t *testing.T) {
 }
 
 func TestFixtureSavesLoadWithBodies(t *testing.T) {
+	t.Parallel()
 	for _, path := range []string{"testdata/premotion_v1.sav", ng1V2Fixture} {
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -262,6 +272,7 @@ func TestFixtureSavesLoadWithBodies(t *testing.T) {
 }
 
 func TestBodiesSurviveSaveLoad(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	g.hurt(p, 25, 0)
@@ -285,6 +296,7 @@ func TestBodiesSurviveSaveLoad(t *testing.T) {
 }
 
 func TestBodiesAreDeterministic(t *testing.T) {
+	t.Parallel()
 	run := func() ([]entry[savedBody], []entity.EntityID) {
 		g := New(Config{Seed: 77, Width: 16, Height: 10})
 		a, _ := g.SpawnNamedPawn(4, 4, "Ada")
@@ -305,6 +317,7 @@ func TestBodiesAreDeterministic(t *testing.T) {
 }
 
 func TestInjurySetFromOutsideReconciles(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	g.hurt(p, 20, 0)

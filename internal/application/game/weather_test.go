@@ -28,6 +28,7 @@ func remembers(g *Game, id entity.EntityID, k mood.Kind) bool {
 }
 
 func TestSetWeatherHook(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	g.SetWeather(weather.Storm, 0.9)
 	w := g.Weather()
@@ -37,6 +38,7 @@ func TestSetWeatherHook(t *testing.T) {
 }
 
 func TestPhaseWeatherAdvancesDeterministically(t *testing.T) {
+	t.Parallel()
 	a, b := weatherGame(t), weatherGame(t)
 	a.Step(3 * 15000)
 	b.Step(3 * 15000)
@@ -60,6 +62,7 @@ func TestPhaseWeatherAdvancesDeterministically(t *testing.T) {
 }
 
 func TestRainSlowsOutdoorStepsNotIndoor(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	hut(t, g, 10, 2, 16, 8)
 	in, out := 13, 5
@@ -88,6 +91,7 @@ func TestRainSlowsOutdoorStepsNotIndoor(t *testing.T) {
 }
 
 func TestOutdoorCampfireDousedInRain(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	jumpTo(g, 45, 1) // winter, cold enough that a fire burns
 	g.BuildNow("campfire", "wood", "south", 5, 5)
@@ -133,6 +137,7 @@ func TestOutdoorCampfireDousedInRain(t *testing.T) {
 }
 
 func TestDousedCampfireBurnsNoFuel(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	jumpTo(g, 45, 1)
 	g.BuildNow("campfire", "wood", "south", 5, 5)
@@ -152,6 +157,7 @@ func TestDousedCampfireBurnsNoFuel(t *testing.T) {
 }
 
 func TestSnowChillsOutdoorTemp(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	hut(t, g, 10, 2, 16, 8)
 	g.ensureRooms()
@@ -175,6 +181,7 @@ func TestSnowChillsOutdoorTemp(t *testing.T) {
 }
 
 func TestSoakedAndSnowDayThoughts(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	hut(t, g, 10, 2, 16, 8)
 	outside, _ := g.SpawnPawn(3, 3)
@@ -209,6 +216,7 @@ func TestSoakedAndSnowDayThoughts(t *testing.T) {
 }
 
 func TestPlantWiltedView(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	jumpTo(g, 10, 12) // warm spring noon
 	corn, _ := g.SpawnCrop("corn", 3, 3, 40)
@@ -231,6 +239,7 @@ func TestPlantWiltedView(t *testing.T) {
 }
 
 func TestWeatherSaved(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	g.SetWeather(weather.Snow, 0.4)
 	g.weather.SnowDepth, g.weather.WindDir, g.weather.WindSpeed = 0.35, 1.25, 1.5
@@ -248,6 +257,7 @@ func TestWeatherSaved(t *testing.T) {
 }
 
 func TestWorldViewWeatherFields(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	g.SetWeather(weather.Rain, 0.6)
 	g.weather.WindDir, g.weather.WindSpeed = 0, 2
@@ -266,6 +276,7 @@ func TestWorldViewWeatherFields(t *testing.T) {
 }
 
 func TestGroundBuildUpPerClimateInterval(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	jumpTo(g, 45, 1) // winter: snow does not melt
 	g.SetWeather(weather.Rain, 0.6)

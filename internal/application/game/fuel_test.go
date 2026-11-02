@@ -142,6 +142,7 @@ func TestRainPutsOutAnOutdoorTorchButNotARoofedOne(t *testing.T) {
 }
 
 func TestHaulerRefuelsTorchLamp(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	jumpTo(g, 10, 12)
 	g.SetWeather(weather.Clear, 0)
@@ -166,6 +167,7 @@ func TestHaulerRefuelsTorchLamp(t *testing.T) {
 }
 
 func TestWoodGeneratorBurnsAndHaulerRefuelsIt(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	jumpTo(g, 10, 12)
 	g.SetWeather(weather.Clear, 0)
@@ -225,6 +227,7 @@ func TestWoodGeneratorIsNotDousedByRain(t *testing.T) {
 }
 
 func TestRefuelPicksTheEmptiestByFillAcrossKinds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 10})
 	jumpTo(g, 10, 12)
 	g.SetWeather(weather.Clear, 0)

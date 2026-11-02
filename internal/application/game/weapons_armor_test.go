@@ -26,6 +26,7 @@ import (
 // TestBurstWeaponFiresSeveralShots: a colonist with an assault rifle fires
 // a burst of three shots ten ticks apart, so several are in flight at once.
 func TestBurstWeaponFiresSeveralShots(t *testing.T) {
+	t.Parallel()
 	g, att, _ := attackSetup(t, item.AssaultRifle, 20)
 	var fired []uint64
 	peak := 0
@@ -68,6 +69,7 @@ func blastSeen(t *testing.T, g *Game, blast string) BurstView {
 // TestGrenadeExplosionDamagesWithinRadius: a thrown frag grenade bursts
 // on its target and wounds the colonist beside it, not one further off.
 func TestGrenadeExplosionDamagesWithinRadius(t *testing.T) {
+	t.Parallel()
 	g, _, tgt := attackSetup(t, item.FragGrenades, 6)
 	beside := sleeper(g, 12, 5, "Cy")
 	far := sleeper(g, 15, 5, "Di")
@@ -85,6 +87,7 @@ func TestGrenadeExplosionDamagesWithinRadius(t *testing.T) {
 
 // TestMolotovIgnites: a molotov sets its landing cell alight.
 func TestMolotovIgnites(t *testing.T) {
+	t.Parallel()
 	g, _, _ := attackSetup(t, item.MolotovCocktails, 5)
 	b := blastSeen(t, g, "flame")
 	if g.fireIndex(b.X, b.Y) < 0 {
@@ -95,6 +98,7 @@ func TestMolotovIgnites(t *testing.T) {
 // TestPlateArmorDeflectsKnife: knife blows on a colonist in steel plate
 // armor deal far less than on one in everyday clothes.
 func TestPlateArmorDeflectsKnife(t *testing.T) {
+	t.Parallel()
 	dealt := func(plate bool) int {
 		g := New(Config{Seed: 6, Width: 30, Height: 12})
 		att, _ := g.SpawnNamedPawn(5, 5, "Ada")
@@ -125,6 +129,7 @@ func TestPlateArmorDeflectsKnife(t *testing.T) {
 // TestGearReadModel: the pawn view carries the wielded weapon's numbers
 // and each worn garment's armor by its stuff and quality.
 func TestGearReadModel(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	g.Arm(id, item.AssaultRifle)
@@ -148,6 +153,7 @@ func TestGearReadModel(t *testing.T) {
 // TestRaidKitByTech: the storyteller arms tribes with bows and blades and
 // industrial raiders with the firearms and grenades of the catalogue.
 func TestRaidKitByTech(t *testing.T) {
+	t.Parallel()
 	seen := map[faction.Tech]map[item.Kind]bool{faction.Neolithic: {}, faction.Industrial: {}}
 	for seed := uint64(1); seed <= 20; seed++ {
 		g := New(Config{Seed: seed, Width: 10, Height: 8})
@@ -168,6 +174,7 @@ func TestRaidKitByTech(t *testing.T) {
 // TestSmokeAndStunSurviveASave: smoke clouds and an EMP-stunned turret's
 // stun are in the save.
 func TestSmokeAndStunSurviveASave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 10})
 	_, _ = g.SpawnNamedPawn(2, 2, "Ada")
 	g.combat.Blasts.Explode(0, weapon.Fists, 8, 5, explosion.Def{Kind: explosion.Smoke, Radius: 2400})
@@ -192,6 +199,7 @@ func TestSmokeAndStunSurviveASave(t *testing.T) {
 // hunt job (it goes for a gun if one lies free), and a hunt order is
 // refused for want of a ranged weapon.
 func TestNoHuntingWithExplosives(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 65, Width: 40, Height: 16})
 	bareGround(g)
 	p, _ := g.SpawnNamedPawn(2, 8, "Hunter")

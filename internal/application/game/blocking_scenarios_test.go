@@ -157,6 +157,7 @@ func corridorScenario(t *testing.T, goA, goB bool) (int, int) {
 }
 
 func TestCorridorHeadOnBothArrive(t *testing.T) {
+	t.Parallel()
 	// PLAY-010: the two colonists pass through each other, so each crosses
 	// in the time it takes through an empty corridor (±1 tick)
 	aloneA, _ := corridorScenario(t, true, false)
@@ -174,6 +175,7 @@ func TestCorridorHeadOnBothArrive(t *testing.T) {
 }
 
 func TestCorridorBlockerHeadOnBothArrive(t *testing.T) {
+	t.Parallel()
 	// the corridor scenario with a colonist and a wild animal, which still
 	// block each other: the animal (the higher ID) backs out of the
 	// corridor and both get across. Only the movement phase runs.
@@ -213,6 +215,7 @@ func TestCorridorBlockerHeadOnBothArrive(t *testing.T) {
 }
 
 func TestCrowdToOneCellSpreads(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 20})
 	target := Position{10, 10}
 	ids := []entity.EntityID{draftedPawn(t, g, 3, 3), draftedPawn(t, g, 3, 16), draftedPawn(t, g, 16, 3)}
@@ -249,6 +252,7 @@ func TestCrowdToOneCellSpreads(t *testing.T) {
 }
 
 func TestDoorChokepointQueues(t *testing.T) {
+	t.Parallel()
 	// mirrors cmd/game -scenario crowd: a 5x5 room with one door, every
 	// colonist sent inside at once
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
@@ -297,6 +301,7 @@ func TestDoorChokepointQueues(t *testing.T) {
 }
 
 func TestThreeCycleNoDeadlock(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 14})
 	a := draftedPawn(t, g, 6, 6)
 	b := draftedPawn(t, g, 7, 6)
@@ -314,6 +319,7 @@ func TestThreeCycleNoDeadlock(t *testing.T) {
 }
 
 func TestRaiderBlocksDoorway(t *testing.T) {
+	t.Parallel()
 	// a wall across the map with a single gap; a raider stands in it.
 	// Only the movement phase runs, so the raider holds still.
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
@@ -362,6 +368,7 @@ func pathing8(a, b Position) int { return max(abs(a.X-b.X), abs(a.Y-b.Y)) }
 func kitOfOne(g *Game) []item.Kind { return g.kitOf(1)[:1] }
 
 func TestNoSharedCellInvariant(t *testing.T) {
+	t.Parallel()
 	seeds, ticks := 5, 20000
 	if testing.Short() {
 		seeds, ticks = 2, 5000
@@ -403,6 +410,7 @@ func TestNoSharedCellInvariant(t *testing.T) {
 }
 
 func TestBlockingSameSeedSameRun(t *testing.T) {
+	t.Parallel()
 	run := func() []Position {
 		g := NewColony(Config{Seed: 7, Width: 48, Height: 40})
 		g.Raid(3)

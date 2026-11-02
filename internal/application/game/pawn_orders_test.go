@@ -66,6 +66,7 @@ func rescueScene(t *testing.T) (g *Game, doc, bo, hosp, plain entity.EntityID) {
 }
 
 func TestPawnOrdersRescueRow(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	r := orderRow(g, doc, 12, 6, "Rescue Bo")
 	if r == nil || r.Disabled || r.Cmd.Kind != command.Prioritize || r.Cmd.Order != command.OrderRescue || r.Cmd.Target != uint64(bo) || r.Cmd.Pawn != uint64(doc) {
@@ -86,6 +87,7 @@ func TestPawnOrdersRescueRow(t *testing.T) {
 }
 
 func TestPawnOrdersRescueNoFreeBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 14})
 	doc, _ := g.SpawnNamedPawn(6, 6, "Doc")
 	g.SpawnNamedPawn(12, 6, "Bo")
@@ -99,6 +101,7 @@ func TestPawnOrdersRescueNoFreeBed(t *testing.T) {
 }
 
 func TestPawnOrdersRescueCarriedBy(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	al, _ := g.SpawnNamedPawn(11, 7, "Al")
 	g.Enqueue(prioritize(command.OrderRescue, doc, bo, 12, 6, false))
@@ -116,6 +119,7 @@ func TestPawnOrdersRescueCarriedBy(t *testing.T) {
 }
 
 func TestPawnOrdersForcedRescueUndraftedReachesMedicalBed(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, hosp, plain := rescueScene(t)
 	g.setPriority(doc, work.Doctor, 0) // it would never rescue on its own
 	g.Enqueue(prioritize(command.OrderRescue, doc, bo, 12, 6, false))
@@ -149,6 +153,7 @@ func TestPawnOrdersForcedRescueUndraftedReachesMedicalBed(t *testing.T) {
 }
 
 func TestPawnOrdersForcedRescueDraftedStaysDrafted(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, hosp, _ := rescueScene(t)
 	g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(doc), Enabled: true})
 	g.Step(1)
@@ -167,6 +172,7 @@ func TestPawnOrdersForcedRescueDraftedStaysDrafted(t *testing.T) {
 }
 
 func TestPawnOrdersRescueFallsBackToAnyFreeBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 14})
 	doc, _ := g.SpawnNamedPawn(6, 6, "Doc")
 	bo, _ := g.SpawnNamedPawn(12, 6, "Bo")
@@ -180,6 +186,7 @@ func TestPawnOrdersRescueFallsBackToAnyFreeBed(t *testing.T) {
 }
 
 func TestPawnOrdersAutonomousDoctorLeavesOrderedTarget(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, hosp, _ := rescueScene(t)
 	rival, _ := g.SpawnNamedPawn(13, 7, "Rival") // nearer to Bo, a doctor
 	g.setPriority(rival, work.Doctor, 1)
@@ -201,6 +208,7 @@ func TestPawnOrdersAutonomousDoctorLeavesOrderedTarget(t *testing.T) {
 }
 
 func TestPawnOrdersRescuedByAnotherEndsCleanly(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	other, _ := g.SpawnNamedPawn(13, 7, "Eve")
 	g.Enqueue(prioritize(command.OrderRescue, doc, bo, 12, 6, false))
@@ -222,6 +230,7 @@ func TestPawnOrdersRescuedByAnotherEndsCleanly(t *testing.T) {
 }
 
 func TestPawnOrdersRescueOfPatientWhoDiesEndsCleanly(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	g.Enqueue(prioritize(command.OrderRescue, doc, bo, 12, 6, false))
 	g.Step(1)
@@ -244,6 +253,7 @@ func TestPawnOrdersRescueOfPatientWhoDiesEndsCleanly(t *testing.T) {
 }
 
 func TestPawnOrdersCaptureRows(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 24, Height: 14})
 	ada, _ := g.SpawnNamedPawn(8, 6, "Ada")
 	rid := spawnRaiderAt(t, g, 12, 6, 0)
@@ -272,6 +282,7 @@ func TestPawnOrdersCaptureRows(t *testing.T) {
 }
 
 func TestPawnOrdersArrestRow(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, _, _ := prisonGame(t)
 	bx, by := tileOf(g, bo)
 	r := orderRow(g, ada, bx, by, "Arrest Bo")
@@ -296,6 +307,7 @@ func TestPawnOrdersArrestRow(t *testing.T) {
 }
 
 func TestPawnOrdersTendRowsByDraft(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 12})
 	doc, _ := g.SpawnNamedPawn(6, 6, "Doc")
 	bo, _ := g.SpawnNamedPawn(12, 6, "Bo")
@@ -329,6 +341,7 @@ func TestPawnOrdersTendRowsByDraft(t *testing.T) {
 }
 
 func TestPawnOrdersQueuedRescueRunsAfterFirstOrder(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, hosp, _ := rescueScene(t)
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(doc), X: 4, Y: 9})
 	g.Step(1)

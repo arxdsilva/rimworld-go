@@ -34,6 +34,7 @@ func ventGame(t *testing.T, ok func(g *Game, x, y int) bool) (*Game, int, int) {
 }
 
 func TestNoSowingOnAVent(t *testing.T) {
+	t.Parallel()
 	g, x, y := ventGame(t, func(g *Game, x, y int) bool { return g.sowable(x, y) })
 	if g.sowable(x, y) {
 		t.Fatalf("sowable on the vent at %d,%d", x, y)
@@ -41,6 +42,7 @@ func TestNoSowingOnAVent(t *testing.T) {
 }
 
 func TestNoGrassRegrowsOnAVent(t *testing.T) {
+	t.Parallel()
 	g, x, y := ventGame(t, func(g *Game, x, y int) bool { return g.grassCanRegrow(x, y) })
 	if g.grassCanRegrow(x, y) {
 		t.Fatalf("grass regrows on the vent at %d,%d", x, y)
@@ -48,6 +50,7 @@ func TestNoGrassRegrowsOnAVent(t *testing.T) {
 }
 
 func TestNoStockpileStorageOnAVent(t *testing.T) {
+	t.Parallel()
 	g, x, y := ventGame(t, func(g *Game, x, y int) bool {
 		return g.CanZoneAt(ZoneStockpile, x, y) && g.layerBldgAt(x, y, construction.LayerObject) == 0
 	})

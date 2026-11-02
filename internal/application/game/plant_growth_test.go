@@ -16,6 +16,7 @@ import (
 // passes (staggered chunks) they came from. A midwinter night is past
 // every crop's cold threshold (TEMP-2: crops die at once).
 func TestFrostNoticesMergeWithinAnInterval(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 16})
 	bareGround(g)
 	jumpTo(g, 45, 5) // midwinter night
@@ -51,6 +52,7 @@ func TestFrostNoticesMergeWithinAnInterval(t *testing.T) {
 // they stand in, and never more than GrowSpan at full rate over the
 // windows they were grown for.
 func TestStaggeredGrowthMatchesSpan(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 64, Height: 64})
 	bareGround(g)
 	g.SetWeather(weather.Clear, 0)

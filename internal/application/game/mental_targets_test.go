@@ -35,6 +35,7 @@ func hasCatharsis(g *Game, id entity.EntityID) bool {
 // spree insults the others; over a few seeds an insult turns into a
 // social fight, which ends the spree.
 func TestInsultingSpreeInsultsAndCanStartAFight(t *testing.T) {
+	t.Parallel()
 	fought := false
 	for seed := uint64(1); seed <= 8 && !fought; seed++ {
 		g := New(Config{Seed: seed, Width: 20, Height: 12})
@@ -64,6 +65,7 @@ func TestInsultingSpreeInsultsAndCanStartAFight(t *testing.T) {
 // TestBerserkAttacksAndEndsWhenDowned: a berserker attacks the colonist
 // next to it; colonists may attack it; downed, it calms with catharsis.
 func TestBerserkAttacksAndEndsWhenDowned(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	ada, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	bo, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -97,6 +99,7 @@ func TestBerserkAttacksAndEndsWhenDowned(t *testing.T) {
 // TestDraftedColonistAttacksBerserker: "Melee attack" a berserk colonist
 // is a valid forced attack.
 func TestDraftedColonistAttacksBerserker(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	ada, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	bo, _ := g.SpawnNamedPawn(12, 5, "Bo")
@@ -114,6 +117,7 @@ func TestDraftedColonistAttacksBerserker(t *testing.T) {
 // TestMurderousRageEndsWhenTargetDies: the rage names its one target and
 // ends once it is dead.
 func TestMurderousRageEndsWhenTargetDies(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	ada, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	bo, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -140,6 +144,7 @@ func TestMurderousRageEndsWhenTargetDies(t *testing.T) {
 // TestMurderousRageFinishesADownedTarget: a downed target is struck
 // where it lies.
 func TestMurderousRageFinishesADownedTarget(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	ada, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	bo, _ := g.SpawnNamedPawn(8, 5, "Bo")
@@ -161,6 +166,7 @@ func TestMurderousRageFinishesADownedTarget(t *testing.T) {
 // (a cause rescue admits), a doctor carries it to bed and feeds it
 // (SIM-063 rescue, SIM-064 feeding), and it gets up when it recovers.
 func TestCatatonicGoesDownIsRescuedAndFed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 66, Width: 24, Height: 10})
 	ann, _ := g.SpawnNamedPawn(4, 5, "Ann")
 	doc, _ := g.SpawnNamedPawn(12, 5, "Doc")
@@ -200,6 +206,7 @@ func TestCatatonicGoesDownIsRescuedAndFed(t *testing.T) {
 // break-threshold stat (Steady -6, Brittle +6) and the other tiers follow
 // (wiki ratios, mentalbreak.ShiftThresholds).
 func TestBreakThresholdsFollowTraits(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	plain, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	steady := spawnGen(t, g, 3, 2, genPawn("Rain", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Steady} }))
@@ -221,6 +228,7 @@ func TestBreakThresholdsFollowTraits(t *testing.T) {
 // TestMentalBreakDoesNotFlap: a miserable colonist breaks, recovers, and
 // does not break again while it feels catharsis.
 func TestMentalBreakDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	g.ForceBreak(id, mentalbreak.SadWander)

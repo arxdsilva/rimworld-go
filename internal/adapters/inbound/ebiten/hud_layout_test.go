@@ -31,6 +31,7 @@ func assertChromeIsTheLayout(t *testing.T, a *App) {
 	t.Helper()
 	sw, sh := a.size()
 	regions := append(a.hud().Chrome(), a.lrn.Chrome()...)
+	rects := a.chromeRects(sw, sh) // the layout holds still: once, not per probe (a full HUD build under -race)
 	const step = 20
 	for y := step / 2; y < sh; y += step {
 		for x := step / 2; x < sw; x += step {
@@ -41,9 +42,15 @@ func assertChromeIsTheLayout(t *testing.T, a *App) {
 					break
 				}
 			}
-			if got := a.colonyChromeHit(x, y, sw, sh); got != in {
+			if got := chromeHitIn(a, x, y, sw, sh, rects); got != in {
 				t.Fatalf("(%d,%d): the HUD hit-test says %v, the layout's regions %v (regions %+v)", x, y, got, in, regions)
 			}
+		}
+	}
+	// And the whole path once per region.
+	for _, r := range regions {
+		if x, y := int(r.X+r.W/2), int(r.Y+r.H/2); r.Hit(x, y) && !a.colonyChromeHit(x, y, sw, sh) {
+			t.Fatalf("(%d,%d): colonyChromeHit misses region %+v", x, y, r)
 		}
 	}
 }

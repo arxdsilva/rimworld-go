@@ -146,3 +146,18 @@ func (f Fleet) care(c *Caravan, now uint64) {
 		}
 	}
 }
+
+// DevArrive sets caravan id down at tile as if it had walked there.
+func DevArrive(f Fleet, id entity.EntityID, tile int, now uint64) {
+	if c := f.At(id); c != nil {
+		c.C.Tile, c.C.Dest, c.C.Path, c.C.State = tile, tile, nil, caravan.Arrived
+		f.Arrived(c, now)
+	}
+}
+
+// DevDemand stages a road demand on caravan id (MAP-08 rolls one at random).
+func DevDemand(f Fleet, id entity.EntityID, now uint64) {
+	if c := f.At(id); c != nil {
+		f.Waylay(c, Demand, now)
+	}
+}

@@ -12,6 +12,7 @@ import (
 )
 
 func TestMovePawnFollowsPath(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, err := g.SpawnNamedPawn(1, 1, "Ada")
 	if err != nil {
@@ -35,6 +36,7 @@ func TestMovePawnFollowsPath(t *testing.T) {
 }
 
 func TestMovePawnBlockedIsUnreachable(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 6, Height: 3})
 	id, err := g.SpawnPawn(0, 1)
 	if err != nil {
@@ -52,6 +54,7 @@ func TestMovePawnBlockedIsUnreachable(t *testing.T) {
 }
 
 func TestEatRestoresHunger(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	id, err := g.SpawnNamedPawn(2, 2, "Bo")
 	if err != nil {
@@ -71,6 +74,7 @@ func TestEatRestoresHunger(t *testing.T) {
 }
 
 func TestFirstPlayableHaulBedEatSleep(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 1, Width: 20, Height: 16})
 	for _, p := range g.Snapshot() {
 		g.SetNeeds(p.ID, 4000, 8500)
@@ -120,6 +124,7 @@ func TestFirstPlayableHaulBedEatSleep(t *testing.T) {
 }
 
 func TestHarvestYieldsFood(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	id, err := g.SpawnNamedPawn(2, 2, "Cora")
 	if err != nil {
@@ -138,6 +143,7 @@ func TestHarvestYieldsFood(t *testing.T) {
 }
 
 func TestStartKitHasNamedPawnsFoodWoodPlants(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 1, Width: 20, Height: 16})
 	snap := g.Snapshot()
 	if len(snap) != 3 {
@@ -160,6 +166,7 @@ func TestStartKitHasNamedPawnsFoodWoodPlants(t *testing.T) {
 }
 
 func TestCompletedWallBlocksWalkability(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, err := g.SpawnNamedPawn(1, 2, "Ada")
 	if err != nil {
@@ -177,6 +184,7 @@ func TestCompletedWallBlocksWalkability(t *testing.T) {
 }
 
 func TestExhaustionForcesSleepOnGround(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	id, err := g.SpawnNamedPawn(2, 2, "Bo")
 	if err != nil {
@@ -210,6 +218,7 @@ func TestExhaustionForcesSleepOnGround(t *testing.T) {
 // TestNoFoodMalnutritionThenDeath (FOOD-1): at 0 % food a colonist stays
 // up but grows malnourished, and dies of it at full severity.
 func TestNoFoodMalnutritionThenDeath(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	id, err := g.SpawnNamedPawn(2, 2, "Ada")
 	if err != nil {
@@ -236,6 +245,7 @@ func TestNoFoodMalnutritionThenDeath(t *testing.T) {
 // TestStarvationMalnourishesWhileSleeping (FOOD-1): hunger runs out
 // while asleep too, and malnutrition sets in.
 func TestStarvationMalnourishesWhileSleeping(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	id, err := g.SpawnNamedPawn(2, 2, "Ada")
 	if err != nil {
@@ -249,6 +259,7 @@ func TestStarvationMalnourishesWhileSleeping(t *testing.T) {
 }
 
 func TestDeadPawnReleasesBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, err := g.SpawnNamedPawn(1, 2, "Ada")
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 )
 
 func TestDevSetPair(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	for name, want := range devPairKinds {
 		if !g.DevSetPair(a, b, name) || g.pairOf(a, b).Kind != want {
@@ -23,6 +24,7 @@ func TestDevSetPair(t *testing.T) {
 }
 
 func TestDevAddOpinionMemory(t *testing.T) {
+	t.Parallel()
 	g, a, b := socialPair(t)
 	before := g.opinion(a, b)
 	if !g.DevAddOpinionMemory(a, b, "insulted") || g.opinion(a, b) >= before {
@@ -37,6 +39,7 @@ func TestDevAddOpinionMemory(t *testing.T) {
 }
 
 func TestDevBond(t *testing.T) {
+	t.Parallel()
 	g, a, _ := socialPair(t)
 	id, err := g.SpawnAnimal("husky", 8, 5)
 	if err != nil {
@@ -57,6 +60,7 @@ func TestDevBond(t *testing.T) {
 }
 
 func TestDevScar(t *testing.T) {
+	t.Parallel()
 	g, a, _ := socialPair(t)
 	if g.DevScar(a, "elbow") {
 		t.Error("unknown part accepted")

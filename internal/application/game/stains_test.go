@@ -49,6 +49,7 @@ func dripSteps(g *Game, id entity.EntityID) {
 }
 
 func TestHitStampsTargetTile(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	a, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -67,6 +68,7 @@ func TestHitStampsTargetTile(t *testing.T) {
 }
 
 func TestHeavyHitSpraysBehindAwayFromAttacker(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	b, _ := g.SpawnNamedPawn(6, 5, "Bo")
 	g.stainHit(b, Position{5, 5}, Position{6, 5}, 10) // attacker to the west
@@ -98,6 +100,7 @@ func TestHeavyHitSpraysBehindAwayFromAttacker(t *testing.T) {
 }
 
 func TestMissLeavesNoStain(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 7, Width: 30, Height: 12})
 	a, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -115,6 +118,7 @@ func TestMissLeavesNoStain(t *testing.T) {
 }
 
 func TestDeathLeavesPool(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(7, 7, "Ada")
 	g.stainHit(id, Position{6, 7}, Position{7, 7}, 1) // a light hit already there
@@ -129,6 +133,7 @@ func TestDeathLeavesPool(t *testing.T) {
 }
 
 func TestAnimalDeathPool(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, err := g.SpawnAnimal("deer", 8, 8)
 	if err != nil {
@@ -141,6 +146,7 @@ func TestAnimalDeathPool(t *testing.T) {
 }
 
 func TestInsectIchor(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, err := g.SpawnAnimal("hive_beetle", 8, 8)
 	if err != nil {
@@ -163,6 +169,7 @@ func TestInsectIchor(t *testing.T) {
 }
 
 func TestBleedingColonistDripsEvery3Tiles(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	g.stainStep(id, Position{9, 3}) // healthy: no count, no drip
@@ -207,6 +214,7 @@ func TestBleedingColonistDripsEvery3Tiles(t *testing.T) {
 }
 
 func TestTendedColonistStopsDripping(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b := hurtWound(t, g, id, 25)
@@ -222,6 +230,7 @@ func TestTendedColonistStopsDripping(t *testing.T) {
 // TestRaiderBleedsFromAnOpenCut (MED-01; was TestRaiderBleedsAtThirty): a
 // raider drips by its body, like a colonist, not past an injury threshold.
 func TestRaiderBleedsFromAnOpenCut(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 6, Width: 30, Height: 12})
 	g.SpawnNamedPawn(5, 5, "Ada")
 	g.Raid(1)
@@ -248,6 +257,7 @@ func TestRaiderBleedsFromAnOpenCut(t *testing.T) {
 }
 
 func TestHurtAnimalDrips(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, _ := g.SpawnAnimal("deer", 8, 8)
 	a, _ := g.animals.Get(id)
@@ -267,6 +277,7 @@ func TestHurtAnimalDrips(t *testing.T) {
 }
 
 func TestDownedPools(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	hurtWound(t, g, id, 10) // bleeding (MED-01: only a bleeding body pools)
@@ -307,6 +318,7 @@ func TestDownedPools(t *testing.T) {
 }
 
 func TestStainFadesSmoothlyOver7Days(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	g.stamp(4, 4, stain.Blood, stain.Full)
 	steps := stain.FadeTicks / climateInterval
@@ -339,6 +351,7 @@ func rainSteps(g *Game, n, x, y int) (stain.Stain, bool) {
 }
 
 func TestRainWashesOutdoors2h(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	g.SetWeather(weather.Rain, 1)
 	g.stamp(20, 5, stain.Blood, stain.Full)
@@ -355,6 +368,7 @@ func TestRainWashesOutdoors2h(t *testing.T) {
 }
 
 func TestSnowWashes3h(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	g.SetWeather(weather.Snow, 1)
 	g.stamp(20, 5, stain.Blood, stain.Full)
@@ -368,6 +382,7 @@ func TestSnowWashes3h(t *testing.T) {
 }
 
 func TestRoofedStainOnlyFades(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	hut(t, g, 2, 2, 8, 8)
 	if g.underSky(5, 5) {
@@ -387,6 +402,7 @@ func TestRoofedStainOnlyFades(t *testing.T) {
 }
 
 func TestStampIgnoresRockAndOutOfBounds(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	g.setTerrain(3, 3, terrain.Rock)
 	g.stamp(3, 3, stain.Blood, 500)
@@ -411,6 +427,7 @@ func fillStains(g *Game, from, to int, a int) {
 }
 
 func TestCapDropsFaintest(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 60, Height: 40})
 	g.stamp(0, 0, stain.Blood, 10)
 	g.stamp(1, 0, stain.Blood, 500)
@@ -458,6 +475,7 @@ func TestCapDropsFaintest(t *testing.T) {
 }
 
 func TestStainViewSorted(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	g.stamp(5, 3, stain.Blood, 500)
 	g.stamp(2, 3, stain.Ichor, 1000)
@@ -478,6 +496,7 @@ func TestStainViewSorted(t *testing.T) {
 }
 
 func TestStainsSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	g.stamp(5, 3, stain.Blood, 500)
 	g.stamp(2, 3, stain.Ichor, 1000)
@@ -522,6 +541,7 @@ func TestStainsSaveRoundTrip(t *testing.T) {
 }
 
 func TestOldSaveNoStains(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	g.stamp(5, 3, stain.Blood, 500)
 	g.importStains(nil)
@@ -550,6 +570,7 @@ func TestOldSaveNoStains(t *testing.T) {
 }
 
 func TestStainDecayPrunesGoneCreatures(t *testing.T) {
+	t.Parallel()
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	deer, _ := g.SpawnAnimal("deer", 9, 9)
@@ -582,6 +603,7 @@ func stainBattle(t *testing.T) *Game {
 }
 
 func TestStainsDeterministic(t *testing.T) {
+	t.Parallel()
 	a, b := stainBattle(t), stainBattle(t)
 	if len(a.exportStains()) == 0 {
 		t.Fatal("no stains to compare")

@@ -25,6 +25,7 @@ func building(g *Game, x, y int, kind string) (BuildingView, bool) {
 }
 
 func TestCanPlaceReasons(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	if _, err := g.SpawnStack(item.Wood, 5, 3, 3); err != nil {
 		t.Fatal(err)
@@ -77,6 +78,7 @@ func TestCanPlaceReasons(t *testing.T) {
 }
 
 func TestBuildFloorAndTableOnSameTile(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 6})
 	if _, err := g.SpawnNamedPawn(1, 1, "Ada"); err != nil {
 		t.Fatal(err)
@@ -103,6 +105,7 @@ func TestBuildFloorAndTableOnSameTile(t *testing.T) {
 }
 
 func TestDoorIsWalkableWallIsNotAndEjectsBuilder(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Bo")
 	if _, err := g.SpawnStack(item.Wood, 10, 2, 2); err != nil {
@@ -127,6 +130,7 @@ func TestDoorIsWalkableWallIsNotAndEjectsBuilder(t *testing.T) {
 }
 
 func TestDeconstructRefundsAndFreesTile(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Cora")
 	g.SpawnStack(item.Wood, 4, 1, 1)
@@ -153,6 +157,7 @@ func TestDeconstructRefundsAndFreesTile(t *testing.T) {
 }
 
 func TestCancelClearsDeconstructMark(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 6, Height: 4})
 	g.SpawnStack(item.Wood, 4, 0, 0)
 	build(g, construction.Table, construction.South, 3, 2)
@@ -169,6 +174,7 @@ func TestCancelClearsDeconstructMark(t *testing.T) {
 }
 
 func TestDraftedPawnIgnoresWorkUntilUndrafted(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Ada")
 	g.SpawnStack(item.Wood, 4, 2, 2)
@@ -195,6 +201,7 @@ func TestDraftedPawnIgnoresWorkUntilUndrafted(t *testing.T) {
 }
 
 func TestPrioritizeOverridesCurrentJobAndTiredness(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Bo")
 	g.SpawnStack(item.Food, 3, 10, 2)
@@ -215,6 +222,7 @@ func TestPrioritizeOverridesCurrentJobAndTiredness(t *testing.T) {
 }
 
 func TestOrdersAtReasons(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Cora")
 	build(g, construction.Bed, construction.South, 5, 2)
@@ -247,6 +255,7 @@ func TestOrdersAtReasons(t *testing.T) {
 }
 
 func TestBuildablesMatchCatalog(t *testing.T) {
+	t.Parallel()
 	b := Buildables()
 	if len(b) != len(construction.All()) || b[0].Kind != "wall" || !b[0].Blocks {
 		t.Fatalf("buildables = %+v", b)

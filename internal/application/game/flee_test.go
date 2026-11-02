@@ -50,6 +50,7 @@ func fullNeeds(g *Game, ids ...entity.EntityID) {
 }
 
 func TestUnarmedColonistFleesChargeTenTilesAway(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 50, Height: 20})
 	ada, _ := g.SpawnNamedPawn(25, 10, "Ada")
 	fullNeeds(g, ada)
@@ -67,6 +68,7 @@ func TestUnarmedColonistFleesChargeTenTilesAway(t *testing.T) {
 }
 
 func TestUnarmedColonistFleesManhunterElevenTilesAway(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 50, Height: 20})
 	ada, _ := g.SpawnNamedPawn(25, 10, "Ada")
 	fullNeeds(g, ada)
@@ -95,6 +97,7 @@ func TestUnarmedColonistFleesManhunterElevenTilesAway(t *testing.T) {
 }
 
 func TestArmedColonistFightsDraftedHolds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 50, Height: 20})
 	ada, _ := g.SpawnNamedPawn(25, 10, "Ada")
 	g.Arm(ada, item.Club)
@@ -137,6 +140,7 @@ func TestArmedColonistFightsDraftedHolds(t *testing.T) {
 }
 
 func TestQueuedOrderWaitsForCalmThenResumes(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 60, Height: 20})
 	ada, _ := g.SpawnNamedPawn(30, 10, "Ada")
 	fullNeeds(g, ada)
@@ -185,6 +189,7 @@ func TestQueuedOrderWaitsForCalmThenResumes(t *testing.T) {
 }
 
 func TestSleepingColonistWakesAndRuns(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 50, Height: 20})
 	ada, _ := g.SpawnNamedPawn(25, 10, "Ada")
 	g.rest.InPlace(ada)
@@ -201,6 +206,7 @@ func TestSleepingColonistWakesAndRuns(t *testing.T) {
 }
 
 func TestFleeGoalNeverAcrossAWall(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 17})
 	// a wall from top to bottom at x=6: everything west of it is cut off
 	for y := 0; y < 17; y++ {
@@ -223,6 +229,7 @@ func TestFleeGoalNeverAcrossAWall(t *testing.T) {
 }
 
 func TestFleeGoalPrefersHome(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 50, Height: 30})
 	ada, _ := g.SpawnNamedPawn(25, 15, "Ada")
 	fullNeeds(g, ada)
@@ -237,6 +244,7 @@ func TestFleeGoalPrefersHome(t *testing.T) {
 }
 
 func TestCorneredColonistStaysPut(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 16})
 	walledIn(t, g, 10, 7, 10, 7) // a one-tile cell
 	ada, _ := g.SpawnNamedPawn(10, 7, "Ada")
@@ -258,6 +266,7 @@ func TestCorneredColonistStaysPut(t *testing.T) {
 // A threat hovering between 13 and 15 tiles neither starts a flight nor
 // ends one: 12 to start, 16 to let go (hysteresis).
 func TestFleeReachNoFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 90, Height: 20})
 	ada, _ := g.SpawnNamedPawn(50, 10, "Ada")
 	fullNeeds(g, ada)
@@ -307,6 +316,7 @@ func countLogs(g *Game, id entity.EntityID, prefix string) int {
 }
 
 func TestFleeViewWithoutThreatInSight(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 12})
 	ada, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	if fleeing(g, ada).Fleeing {

@@ -78,6 +78,7 @@ func runMove(t *testing.T, g *Game, bid entity.EntityID, pawns ...entity.EntityI
 }
 
 func TestMoveBedKeepsOwner(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "bed", "south", 3, 3)
 	owner := builder(t, g, 1, 1)
@@ -118,6 +119,7 @@ func TestMoveBedKeepsOwner(t *testing.T) {
 }
 
 func TestMoveBenchKeepsBills(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "butcher table", "south", 3, 3)
 	if len(g.craft.Bills.Of(bid)) == 0 {
@@ -139,6 +141,7 @@ func TestMoveBenchKeepsBills(t *testing.T) {
 }
 
 func TestMoveCampfireKeepsFuel(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "campfire", "south", 3, 3)
 	g.FuelCampfire(3, 3)
@@ -155,6 +158,7 @@ func TestMoveCampfireKeepsFuel(t *testing.T) {
 }
 
 func TestMoveOneTileOverlapAllowed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "butcher table", "south", 4, 4) // cells 4,4 and 5,4
 	if ok, why := g.CanMoveTo(bid, "south", 5, 4); !ok {
@@ -169,6 +173,7 @@ func TestMoveOneTileOverlapAllowed(t *testing.T) {
 }
 
 func TestMovedBlockerUpdatesWalkability(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "campfire", "south", 3, 3)
 	pid := builder(t, g, 10, 4)
@@ -194,6 +199,7 @@ func TestMovedBlockerUpdatesWalkability(t *testing.T) {
 }
 
 func TestCannotMoveWallOrGrave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	wall := built(t, g, "wall", "south", 2, 2)
 	grave := built(t, g, "grave", "south", 5, 5)
@@ -216,6 +222,7 @@ func TestCannotMoveWallOrGrave(t *testing.T) {
 }
 
 func TestMoveBlockedReason(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "butcher table", "south", 4, 4)
 	built(t, g, "chair", "south", 9, 9)
@@ -254,6 +261,7 @@ func TestMoveBlockedReason(t *testing.T) {
 }
 
 func TestBuildingUsableWhileMovePending(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "bed", "south", 3, 3)
 	pid, _ := g.SpawnNamedPawn(5, 5, "Ada")
@@ -285,6 +293,7 @@ func TestBuildingUsableWhileMovePending(t *testing.T) {
 }
 
 func TestCancelMove(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "chair", "south", 3, 3)
 	moveCmd(g, bid, construction.South, 9, 6)
@@ -308,6 +317,7 @@ func TestCancelMove(t *testing.T) {
 }
 
 func TestMoveDroppedWhenBuildingGone(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "chair", "south", 3, 3)
 	moveCmd(g, bid, construction.South, 9, 6)
@@ -340,6 +350,7 @@ func TestMoveDroppedWhenBuildingGone(t *testing.T) {
 }
 
 func TestSecondMoveReplacesFirst(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "butcher table", "south", 3, 3)
 	moveCmd(g, bid, construction.South, 8, 5)
@@ -365,6 +376,7 @@ func TestSecondMoveReplacesFirst(t *testing.T) {
 }
 
 func TestMoveSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 16, Height: 12})
 	bid := built(t, g, "butcher table", "south", 3, 3)
 	builder(t, g, 1, 1)
@@ -392,6 +404,7 @@ func TestMoveSaveRoundTrip(t *testing.T) {
 }
 
 func TestMoveDeterministic(t *testing.T) {
+	t.Parallel()
 	run := func() *Game {
 		g := NewColony(Config{Seed: 5, Width: 40, Height: 32})
 		cx, cy := g.Width()/2, g.Height()/2

@@ -32,6 +32,7 @@ func animalAlive(g *Game, id entity.EntityID) bool {
 }
 
 func TestHunterFetchesRifleAndBringsDownDustbuck(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 16})
 	p, _ := g.SpawnNamedPawn(2, 8, "Hunter")
 	if _, err := g.SpawnStack(item.Rifle, 1, 4, 8); err != nil {
@@ -58,6 +59,7 @@ func TestHunterFetchesRifleAndBringsDownDustbuck(t *testing.T) {
 }
 
 func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 30, Height: 12})
 	victim, _ := g.SpawnNamedPawn(10, 6, "Bait")
 	shooter, _ := g.SpawnNamedPawn(4, 6, "Shooter")
@@ -97,6 +99,7 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 }
 
 func TestInjuryDownsThenHeals(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	p, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	// one torso bruise (MED-01): a hit that tore a part off would leave a
@@ -125,6 +128,7 @@ func TestInjuryDownsThenHeals(t *testing.T) {
 }
 
 func TestWallsBlockShots(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	from, to := Position{X: 2, Y: 4}, Position{X: 8, Y: 4}
 	if !g.combat.Sight.Line(from.X, from.Y, to.X, to.Y) {
@@ -137,6 +141,7 @@ func TestWallsBlockShots(t *testing.T) {
 }
 
 func TestCombatOrders(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	p, _ := g.SpawnNamedPawn(2, 4, "Ada")
 	if _, err := g.SpawnAnimal("dustbuck", 8, 4); err != nil {
@@ -176,6 +181,7 @@ func TestCombatOrders(t *testing.T) {
 }
 
 func TestColonyStartsWithWildlifeAndARifle(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 7, Width: 48, Height: 40})
 	// 3-4 season-weighted herds (SIM-019): grazers and at least one
 	// predator (formerly dustbuck herds and 2 ridgewolves)
@@ -213,6 +219,7 @@ func TestColonyStartsWithWildlifeAndARifle(t *testing.T) {
 }
 
 func TestBigStacksHaulInLoadsAndTopUp(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	if _, err := g.SpawnNamedPawn(2, 4, "Hauler"); err != nil {
 		t.Fatal(err)
@@ -267,6 +274,7 @@ func TestBigStacksHaulInLoadsAndTopUp(t *testing.T) {
 }
 
 func TestMergeOverflowSpills(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	g.SpawnStack(item.Wood, 990, 4, 4)
 	g.dropStack(item.Wood, 30, 4, 4)
@@ -281,6 +289,7 @@ func TestMergeOverflowSpills(t *testing.T) {
 }
 
 func TestUnarmedColonistCalmsDown(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 40, Height: 16})
 	runner, _ := g.SpawnNamedPawn(12, 8, "Runner")
 	g.SetNeeds(runner, needs.Full, needs.Full)
@@ -330,6 +339,7 @@ func TestUnarmedColonistCalmsDown(t *testing.T) {
 }
 
 func TestArmedColonistKeepsTarget(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 30, Height: 12})
 	shooter, _ := g.SpawnNamedPawn(10, 6, "Shooter")
 	g.Arm(shooter, item.Rifle)

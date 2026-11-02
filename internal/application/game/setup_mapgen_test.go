@@ -521,6 +521,7 @@ func TestLandingSaveRoundTrip(t *testing.T) {
 // A ruined piece salvages half its normal refund, rounded up, so a broken
 // wall still gives something back.
 func TestRuinRefundHalfRoundedUp(t *testing.T) {
+	t.Parallel()
 	for _, k := range []construction.Kind{construction.Wall, construction.Floor, construction.Table} {
 		full := construction.Refund(k)
 		got := refundOf(construction.Building{Kind: k, Ruin: true})

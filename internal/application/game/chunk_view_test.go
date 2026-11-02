@@ -11,6 +11,7 @@ import (
 // plants, items, buildings and frames by anchor tile, in list order, and
 // PlantsIn is the full list filtered by the rectangle.
 func TestChunkViewMatchesFullLists(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 70, Height: 45})
 	for x := 12; x < 36; x += 3 { // walls either side of chunk borders
 		g.BuildNow("wall", "wood", "south", x, 15)
@@ -79,6 +80,7 @@ func TestChunkViewMatchesFullLists(t *testing.T) {
 // terrain, a building touching it or a neighbour's edge tile changes, and
 // not when nothing it shows does; plant versions follow the plants.
 func TestChunkVersionsTrackChanges(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 64, Height: 64})
 	g.SetViewCache(true)
 	g.Step(2)
@@ -125,6 +127,7 @@ func TestChunkVersionsTrackChanges(t *testing.T) {
 // TestMinimapLayer: the layer has a cell per tile, is not resent when
 // unchanged and is when the ground changes.
 func TestMinimapLayer(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 40, Height: 30})
 	g.SetViewCache(true)
 	g.Step(1)

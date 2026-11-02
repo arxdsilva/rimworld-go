@@ -34,6 +34,7 @@ func grassTile(t *testing.T, g *Game, x0, y0, x1, y1 int) (int, int) {
 func gridGrass(w WorldView, x, y int) bool { return w.Grass[y*w.TerrainW+x] == 1 }
 
 func TestGrassSeededFromTerrain(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	g.setTerrain(3, 3, terrain.Stone)
 	w := g.World()
@@ -59,6 +60,7 @@ func TestGrassSeededFromTerrain(t *testing.T) {
 }
 
 func TestBuildingClearsGrass(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	g.SpawnStack(item.Wood, 20, 0, 0)
 	x, y := grassTile(t, g, 2, 2, 20, 12)
@@ -69,6 +71,7 @@ func TestBuildingClearsGrass(t *testing.T) {
 }
 
 func TestFloorClearsGrass(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	g.SpawnStack(item.Wood, 20, 0, 0)
 	x, y := grassTile(t, g, 2, 2, 20, 12)
@@ -79,6 +82,7 @@ func TestFloorClearsGrass(t *testing.T) {
 }
 
 func TestSowingClearsGrass(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	_ = id
@@ -94,6 +98,7 @@ func TestSowingClearsGrass(t *testing.T) {
 }
 
 func TestCutPlantsMarksGrassAndGrowerCutsIt(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	g.SpawnNamedPawn(2, 2, "Ada")
 	x, y := grassTile(t, g, 4, 3, 12, 10)
@@ -110,6 +115,7 @@ func TestCutPlantsMarksGrassAndGrowerCutsIt(t *testing.T) {
 }
 
 func TestCancelUnmarksGrass(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	x, y := grassTile(t, g, 4, 3, 12, 10)
 	g.Enqueue(command.Command{Kind: command.DesignateCut, X: x, Y: y, X2: x, Y2: y})
@@ -123,6 +129,7 @@ func TestCancelUnmarksGrass(t *testing.T) {
 }
 
 func TestGrassDeterministic(t *testing.T) {
+	t.Parallel()
 	run := func() WorldView {
 		g := grassGame()
 		g.SpawnNamedPawn(2, 2, "Ada")
@@ -137,6 +144,7 @@ func TestGrassDeterministic(t *testing.T) {
 }
 
 func TestGrassHiddenUnderBuildingsInOldSave(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	g.SpawnStack(item.Wood, 20, 0, 0)
 	x, y := grassTile(t, g, 2, 2, 20, 12)
@@ -151,6 +159,7 @@ func TestGrassHiddenUnderBuildingsInOldSave(t *testing.T) {
 }
 
 func TestGrassExportImportRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	x, y := grassTile(t, g, 4, 3, 12, 10)
 	g.Enqueue(command.Command{Kind: command.DesignateCut, X: x, Y: y, X2: x, Y2: y})
@@ -166,6 +175,7 @@ func TestGrassExportImportRoundTrip(t *testing.T) {
 
 // TestGrassSaveLoadRoundTrip: cut tiles and cut marks survive Save/Load.
 func TestGrassSaveLoadRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 5, Width: 40, Height: 30})
 	w := g.World()
 	var on [][2]int
@@ -201,6 +211,7 @@ func TestGrassSaveLoadRoundTrip(t *testing.T) {
 // TestOutdoorGrassGrowsInTheSunWindowOnly: open grass regrows between
 // sunrise and sunset, not through the night.
 func TestOutdoorGrassGrowsInTheSunWindowOnly(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	x, y := grassTile(t, g, 2, 2, 20, 12)
 	jumpTo(g, 10, 21) // an hour after sunset (a window looks back a tenth of an hour)
@@ -219,6 +230,7 @@ func TestOutdoorGrassGrowsInTheSunWindowOnly(t *testing.T) {
 // grass gains the day's regrowth it always did (a third of the way from
 // shoots to full), now all in the sun's hours.
 func TestOutdoorGrassDailyTotalUnchanged(t *testing.T) {
+	t.Parallel()
 	want := plant.GrassGrowSpan(plant.TempFactor(150), 0, clock.TicksPerDay) // round the clock, as before
 	if want < 27 || want > 29 {
 		t.Fatalf("legacy day total %d", want)
@@ -239,6 +251,7 @@ func TestOutdoorGrassDailyTotalUnchanged(t *testing.T) {
 // day; a lamp one tile away (0.6) grows it round the clock, one four tiles
 // away (0.3) is not enough.
 func TestRoofedGrassNeedsAStrongLamp(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	a, b := grassTile(t, g, 2, 2, 20, 12)
 	lx, ly := a+1, b
@@ -277,6 +290,7 @@ func TestRoofedGrassNeedsAStrongLamp(t *testing.T) {
 // TestLampGrowsRoofedGrassAtNight: lamplight grows roofed grass through
 // the night too.
 func TestLampGrowsRoofedGrassAtNight(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	x, y := grassTile(t, g, 2, 2, 20, 12)
 	if g.hasGrass(x+1, y) {

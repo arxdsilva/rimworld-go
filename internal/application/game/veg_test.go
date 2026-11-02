@@ -27,6 +27,7 @@ func mustPlant(t *testing.T, g *Game, s plant.Species, x, y int) {
 }
 
 func TestPlantWalkCost(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	g.HoldWeather()
 	g.SetWeather(weather.Clear, 0)
@@ -59,6 +60,7 @@ func TestPlantWalkCost(t *testing.T) {
 // TestBrambleSlowsWalking: a drafted pawn crossing ten bramble tiles
 // takes about 1.5x as long as on bare soil.
 func TestBrambleSlowsWalking(t *testing.T) {
+	t.Parallel()
 	walk := func(s plant.Species, on bool) uint64 {
 		g := corridor(12)
 		g.HoldWeather()
@@ -91,6 +93,7 @@ func TestBrambleSlowsWalking(t *testing.T) {
 // TestReplanDetoursBrambles: a replan (the costed query) goes round a
 // bramble patch when the way round is cheap, and through it when not.
 func TestReplanDetoursBrambles(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	for y := 0; y < 12; y++ {
 		for x := 0; x < 30; x++ {
@@ -126,6 +129,7 @@ func TestReplanDetoursBrambles(t *testing.T) {
 }
 
 func TestGroundPlantsNeverBlockBuilding(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	g.SpawnStack(item.Wood, 75, 0, 0)
 	for i, s := range []plant.Species{plant.Bramble, plant.Moss, plant.Agave, plant.BallCactus, plant.ElephantEar, plant.FireLily, plant.Dandelion} {
@@ -145,6 +149,7 @@ func TestGroundPlantsNeverBlockBuilding(t *testing.T) {
 }
 
 func TestGroundPlantLabels(t *testing.T) {
+	t.Parallel()
 	for s, want := range map[plant.Species]string{
 		plant.Bramble: "bramble thicket", plant.Moss: "ground moss", plant.Agave: "desert rosette",
 		plant.BallCactus: "ball cactus", plant.ElephantEar: "elephant ear", plant.FireLily: "fire lily",
@@ -173,6 +178,7 @@ func TestGroundPlantLabels(t *testing.T) {
 // TestBrowseGroundPlants: grazers browse moss, brambles and the
 // wildflowers when no grass is left, never the cactus types or agave.
 func TestBrowseGroundPlants(t *testing.T) {
+	t.Parallel()
 	setup := func(s plant.Species) (*Game, animal.State, Position) {
 		g := New(Config{Seed: 1, Width: 20, Height: 12})
 		bareGround(g)
@@ -229,6 +235,7 @@ func regrowNow(t *testing.T, g *Game, x, y int) {
 }
 
 func TestGrassRegrowsAsShootsAndFillsOut(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	x, y := grassTile(t, g, 2, 2, 20, 12)
 	ox, oy := grassTile(t, g, x+1, y, 20, 12)
@@ -280,6 +287,7 @@ func TestGrassRegrowsAsShootsAndFillsOut(t *testing.T) {
 }
 
 func TestGrassGrowthPausesUnderSnowAndFrost(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name string
 		set  func(g *Game, x, y int)
@@ -301,6 +309,7 @@ func TestGrassGrowthPausesUnderSnowAndFrost(t *testing.T) {
 }
 
 func TestClearedGrowingGrassLeavesGrowingSet(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	x, y := grassTile(t, g, 2, 2, 20, 12)
 	regrowNow(t, g, x, y)
@@ -322,6 +331,7 @@ func TestClearedGrowingGrassLeavesGrowingSet(t *testing.T) {
 // fuller one is grazed; a full map picks exactly the nearest tile in
 // ring order, as before growth existed.
 func TestGrazersPreferFullerGrass(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	bareGround(g)
 	sowGrass(g, 4, 5, 4, 5) // ring order: (4,5) before (6,5)
@@ -354,6 +364,7 @@ func TestGrazersPreferFullerGrass(t *testing.T) {
 // keeps leaving it while fuller grass is in reach, decision after
 // decision, and only grazes it when nothing else is within reach.
 func TestGrazerLeavesShootsNoFlap(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	bareGround(g)
 	sowGrass(g, 6, 5, 6, 5)
@@ -375,6 +386,7 @@ func TestGrazerLeavesShootsNoFlap(t *testing.T) {
 }
 
 func TestGrazingYieldScalesWithGrowth(t *testing.T) {
+	t.Parallel()
 	meal := func(growth int) int {
 		g := mildGame()
 		bareGround(g)
@@ -402,6 +414,7 @@ func TestGrazingYieldScalesWithGrowth(t *testing.T) {
 }
 
 func TestGrassGrowthSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := mildGame()
 	x, y := grassTile(t, g, 2, 2, 20, 12)
 	regrowNow(t, g, x, y)
@@ -439,6 +452,7 @@ func TestGrassGrowthSaveRoundTrip(t *testing.T) {
 // TestOldSaveGrassLoadsFull: a save without growth (all older saves)
 // loads with every grass tile full; a full map saves no growth layer.
 func TestOldSaveGrassLoadsFull(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	cells, _ := g.exportGrass()
 	if g.exportGrassGrowth() != nil {

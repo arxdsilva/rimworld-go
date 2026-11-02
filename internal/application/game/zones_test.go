@@ -33,6 +33,7 @@ func zoneOwner(t *testing.T, g *Game, x, y int) ZoneView {
 
 // A tile is in one zone at most: a later drag skips taken tiles.
 func TestZonesNeverOverlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 20})
 	zoneCmd(g, command.DesignateStockpile, 2, 2, 6, 6, 0)
 	zoneCmd(g, command.DesignateGrowZone, 4, 4, 9, 9, 0)
@@ -71,6 +72,7 @@ func TestZonesNeverOverlap(t *testing.T) {
 
 // Touching zones of one kind are one zone; grow zones only with one crop.
 func TestAdjacentZonesMerge(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	zoneCmd(g, command.DesignateStockpile, 1, 1, 3, 3, 0)
 	zoneCmd(g, command.DesignateStockpile, 7, 1, 9, 3, 0)
@@ -104,6 +106,7 @@ func TestAdjacentZonesMerge(t *testing.T) {
 // Grow zones only take fertile ground: not rough stone or rock; gravel is
 // poor but plantable. Stockpiles may sit on rough stone.
 func TestGrowZoneSkipsInfertileGround(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	g.setTerrain(2, 1, terrain.Stone)
 	g.setTerrain(3, 1, terrain.Rock)
@@ -130,6 +133,7 @@ func TestGrowZoneSkipsInfertileGround(t *testing.T) {
 // A haul goes to the stockpile tile nearest the load; topping up a stack
 // with room still comes first.
 func TestStockpileCellPicksNearest(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 10})
 	zoneCmd(g, command.DesignateStockpile, 1, 1, 3, 3, 0) // off the edge ring (PLAY-023)
 	zoneCmd(g, command.DesignateStockpile, 20, 4, 23, 7, 0)
@@ -153,6 +157,7 @@ func TestStockpileCellPicksNearest(t *testing.T) {
 // Older saves hold rectangles: they are painted in saved order, so
 // overlaps resolve first-wins and touching ones merge.
 func TestLoadMigratesLegacyZoneRects(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 20})
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "old"); err != nil {
@@ -224,6 +229,7 @@ func TestLoadMigratesLegacyZoneRects(t *testing.T) {
 // A tame animal keeps to a pen that is not a rectangle (PLAY-015: a
 // fenced L with a pen marker).
 func TestTameAnimalKeepsToLShapedPen(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 20})
 	in := func(x, y int) bool {
 		return x >= 14 && x <= 22 && y >= 8 && y <= 9 || x >= 14 && x <= 15 && y >= 10 && y <= 16

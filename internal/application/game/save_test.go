@@ -43,6 +43,7 @@ func sameState(t *testing.T, label string, a, b *Game) {
 }
 
 func TestSaveLoadRoundTripContinuesIdentically(t *testing.T) {
+	t.Parallel()
 	g := busyColony(t)
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "test colony"); err != nil {
@@ -66,6 +67,7 @@ func TestSaveLoadRoundTripContinuesIdentically(t *testing.T) {
 }
 
 func TestLoadRejectsGarbage(t *testing.T) {
+	t.Parallel()
 	if _, _, err := Load(bytes.NewReader([]byte("not a save"))); err == nil {
 		t.Fatal("garbage should not load")
 	}
@@ -85,6 +87,7 @@ func saveLoad(t *testing.T, g *Game) *Game {
 }
 
 func TestSaveRoundTripGeologySmooths(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 4, Width: 40, Height: 30})
 	if !g.SetGround(1, 1, 3, 1, "rock", "marble", "silver") || !g.SetGround(1, 2, 3, 2, "rock", "slate", "") {
 		t.Fatal("set ground")
@@ -102,6 +105,7 @@ func TestSaveRoundTripGeologySmooths(t *testing.T) {
 }
 
 func TestLegacyStoneMigrates(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 16, Height: 10})
 	for x := 0; x < 16; x++ {
 		g.setTerrain(x, 9, terrain.Rock)

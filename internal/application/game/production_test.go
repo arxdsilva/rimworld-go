@@ -27,6 +27,7 @@ func placeBuilt(t *testing.T, g *Game, k construction.Kind, f construction.Facin
 }
 
 func TestMultiTilePlacementAndBlocking(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 6})
 	if ok, r := g.CanPlaceAt("workbench", "wood", "south", 7, 2); !ok { // STK-BN: 3x1, cells 7..9
 		t.Fatalf("bench at 7,2: %q", r)
@@ -55,6 +56,7 @@ func TestMultiTilePlacementAndBlocking(t *testing.T) {
 }
 
 func TestStoveCooksMealsFromRawFood(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
@@ -79,6 +81,7 @@ func TestStoveCooksMealsFromRawFood(t *testing.T) {
 }
 
 func TestBillModesSuspendAndRemove(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Bo")
 	placeBuilt(t, g, construction.Workbench, construction.South, 5, 2)
@@ -112,6 +115,7 @@ func TestBillModesSuspendAndRemove(t *testing.T) {
 }
 
 func TestBillWaitsForIngredients(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
 	g.FuelCampfire(5, 2)                // FOOD-4: the stove burns wood
@@ -127,6 +131,7 @@ func TestBillWaitsForIngredients(t *testing.T) {
 }
 
 func TestBillsDontOvershootWithTwoCooks(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	a, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	b, _ := g.SpawnNamedPawn(2, 1, "Bo")

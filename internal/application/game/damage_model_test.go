@@ -24,6 +24,7 @@ func deflectAll(int) int { return 0 }
 
 // TestRifleHitBleeds: a rifle round leaves a bleeding gunshot.
 func TestRifleHitBleeds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	rifle := hitOf(weapon.Rifle)
@@ -69,6 +70,7 @@ func armorPass(t *testing.T, kinds ...item.Kind) (covered, bare map[body.Part]in
 // TestHelmetProtectsOnlyHead: a helmet stops hits on the brain and ears
 // and nothing below the neck.
 func TestHelmetProtectsOnlyHead(t *testing.T) {
+	t.Parallel()
 	covered, bare := armorPass(t, item.SimpleHelmet)
 	for p := range covered {
 		if p != body.Brain && p != body.EarL && p != body.EarR {
@@ -83,6 +85,7 @@ func TestHelmetProtectsOnlyHead(t *testing.T) {
 // TestFlakVestTorsoNotLegs: a flak vest covers the torso and its organs,
 // never the legs.
 func TestFlakVestTorsoNotLegs(t *testing.T) {
+	t.Parallel()
 	covered, bare := armorPass(t, item.FlakVest)
 	if covered[body.Torso] == 0 || bare[body.Torso] != 0 || covered[body.LegL]+covered[body.LegR]+covered[body.FootL] != 0 ||
 		bare[body.LegL]+bare[body.LegR] == 0 {
@@ -99,6 +102,7 @@ func TestFlakVestTorsoNotLegs(t *testing.T) {
 // leg hit first; both wear by what reached them, and a deflection by the
 // duster spares the pants.
 func TestLayeredArmorWearsOutermostFirst(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 9, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	big := damage.Hit{Form: damage.FormCut, Amount: 40}
@@ -125,6 +129,7 @@ func TestLayeredArmorWearsOutermostFirst(t *testing.T) {
 // TestApparelWearsAndBreaks: absorbed hits wear a garment down to ratty
 // and finally destroy it.
 func TestApparelWearsAndBreaks(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	g.apparel[ada] = craft.Outfit{On: [craft.Slots]craft.Piece{item.Head: {Kind: item.MarineHelmet}}}
@@ -144,6 +149,7 @@ func TestApparelWearsAndBreaks(t *testing.T) {
 // TestHeadshotDestroysBrainAndKills: a heavy round on the brain overkills
 // it past the bullet window: the brain is destroyed and the pawn dies.
 func TestHeadshotDestroysBrainAndKills(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	shot := hitOf(weapon.SniperRifle)
@@ -164,6 +170,7 @@ func TestHeadshotDestroysBrainAndKills(t *testing.T) {
 // less than 40 % of its hit points never destroys it; the part is left
 // at one hit point.
 func TestBluntNeverDestroysUnderWindow(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 30; seed++ {
 		g := New(Config{Seed: seed, Width: 12, Height: 8})
 		ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
@@ -180,6 +187,7 @@ func TestBluntNeverDestroysUnderWindow(t *testing.T) {
 // TestBluntBrainStuns: a hard blunt blow to the brain stuns: no step and
 // no attack until it passes.
 func TestBluntBrainStuns(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	now := uint64(g.clock.Now())
@@ -199,6 +207,7 @@ func TestBluntBrainStuns(t *testing.T) {
 // power 3 against body size 1): his steps cost six times as long for 95
 // ticks, then normal again; an autopistol's 0.5 does not stagger him.
 func TestStaggerSlowsAndExpires(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	now := uint64(g.clock.Now())
@@ -234,6 +243,7 @@ func TestStaggerSlowsAndExpires(t *testing.T) {
 // every tick of the window, free at its end, and slowed again only by a
 // round after it.
 func TestStaggerNoFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	start := uint64(g.clock.Now())

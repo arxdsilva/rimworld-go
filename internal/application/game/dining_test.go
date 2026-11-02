@@ -11,6 +11,7 @@ import (
 )
 
 func TestColonistCarriesMealToTable(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	id, _ := g.SpawnNamedPawn(2, 5, "Ada")
 	g.SpawnStack(item.Meal, 5, 3, 5)
@@ -40,6 +41,7 @@ func TestColonistCarriesMealToTable(t *testing.T) {
 }
 
 func TestCampfireCooksWithFuelOnly(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)

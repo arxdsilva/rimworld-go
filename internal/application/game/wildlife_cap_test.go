@@ -10,6 +10,7 @@ import (
 // maps unchanged), √area beyond, never above 300, continuous and
 // non-decreasing.
 func TestWildlifeCapCurve(t *testing.T) {
+	t.Parallel()
 	for _, density := range []int{0, 5, 12, 25, 40, 100} {
 		for _, sz := range [][2]int{{48, 40}, {80, 60}, {120, 120}} {
 			a := sz[0] * sz[1]

@@ -62,6 +62,7 @@ func firstFeed(g *Game, id entity.EntityID, ticks int) animal.State {
 }
 
 func TestTameDeerEatsTheNearBushNotFarGrass(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 20)
 	sowGrass(g, 30, 10, 30, 10) // 20 tiles away
 	bush, _ := g.spawnPlant(plant.BerryBush, 12, 10, plant.DefOf(plant.BerryBush).GrowTicks)
@@ -91,6 +92,7 @@ func TestTameDeerEatsTheNearBushNotFarGrass(t *testing.T) {
 }
 
 func TestTameDogEatsStockpiledMeat(t *testing.T) {
+	t.Parallel()
 	g := feedField(30, 20)
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 15, Y: 9, X2: 17, Y2: 11})
 	meat := stack(t, g, item.Meat, 30, 16, 10)
@@ -145,6 +147,7 @@ func TestTameDogEatsStockpiledMeat(t *testing.T) {
 // A stack another owner holds is skipped, and one that becomes forbidden
 // on the way is given up (re-checked every step).
 func TestTameFeedRechecksTheStack(t *testing.T) {
+	t.Parallel()
 	g := feedField(30, 20)
 	near := stack(t, g, item.Meat, 10, 13, 10)
 	far := stack(t, g, item.Meat, 10, 20, 10)
@@ -181,6 +184,7 @@ func wallRing(t *testing.T, g *Game, x0, y0, x1, y1 int) {
 // there), colony animals and a colonist, all closer than the hare: it
 // hunts only the hare.
 func TestTameWolfHuntsAWildHare(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 24)
 	wallRing(t, g, 8, 7, 17, 13)
 	rex := hungryTame(t, g, "timber_wolf", 10, 10, "Rex")
@@ -231,6 +235,7 @@ func TestTameWolfHuntsAWildHare(t *testing.T) {
 }
 
 func TestTameWolfLeavesColonyAnimalsAndPeopleAlone(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 24)
 	ada, _ := g.SpawnNamedPawn(12, 12, "Ada")
 	rex := hungryTame(t, g, "timber_wolf", 10, 10, "Rex")
@@ -261,6 +266,7 @@ func TestTameWolfLeavesColonyAnimalsAndPeopleAlone(t *testing.T) {
 }
 
 func TestTameFeedStaysInItsArea(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 20)
 	paintArea(g, 1, 0, 0, 7, 19)
 	sowGrass(g, 1, 10, 1, 10) // inside, 5 away
@@ -288,6 +294,7 @@ func TestTameFeedStaysInItsArea(t *testing.T) {
 }
 
 func TestPennedAnimalEatsInsideItsPen(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 24)
 	fenceRing(t, g, 14, 4, 23, 13, [2]int{18, 13})
 	buildMarker(t, g, 16, 10)
@@ -301,6 +308,7 @@ func TestPennedAnimalEatsInsideItsPen(t *testing.T) {
 }
 
 func TestTameAnimalsSpareCropsAndMarkedBushes(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 20)
 	crop, _ := g.spawnPlant(plant.Potato, 11, 10, plant.DefOf(plant.Potato).GrowTicks)
 	p, _ := g.plants.Get(crop)
@@ -330,6 +338,7 @@ func TestTameAnimalsSpareCropsAndMarkedBushes(t *testing.T) {
 // No-flap (1): two equal stacks at equal distance. The dog takes one
 // and eats from it without ever switching; a second dog takes the other.
 func TestTameFeedNoFlapEqualStacks(t *testing.T) {
+	t.Parallel()
 	g := feedField(30, 20)
 	left := stack(t, g, item.Meat, 20, 6, 10)
 	right := stack(t, g, item.Meat, 20, 14, 10)
@@ -362,6 +371,7 @@ func TestTameFeedNoFlapEqualStacks(t *testing.T) {
 // No-flap (2): a wild hare and stockpiled meat at equal distance. The
 // wolf commits to one of them and never swaps back and forth.
 func TestTameFeedNoFlapPreyVersusMeat(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 20)
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 23, Y: 10, X2: 23, Y2: 10})
 	meat := stack(t, g, item.Meat, 40, 23, 10)
@@ -395,6 +405,7 @@ func TestTameFeedNoFlapPreyVersusMeat(t *testing.T) {
 }
 
 func TestTamePredatorDietLine(t *testing.T) {
+	t.Parallel()
 	g := feedField(20, 12)
 	rex := hungryTame(t, g, "timber_wolf", 5, 5, "Rex")
 	dog := hungryTame(t, g, "husky", 9, 5, "Bo")
@@ -421,6 +432,7 @@ func feedUntil(g *Game, id entity.EntityID, want, ticks int) []animal.FeedTarget
 }
 
 func TestTameDeerEatsStockpiledKibble(t *testing.T) {
+	t.Parallel()
 	g := feedField(30, 20)
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 15, Y: 9, X2: 17, Y2: 11})
 	kibble := stack(t, g, item.Kibble, 50, 16, 10)
@@ -443,6 +455,7 @@ func TestTameDeerEatsStockpiledKibble(t *testing.T) {
 // Feed first (user decision 2026-10-30): kibble 10 tiles off beats a meal
 // beside the deer; with only the meal in reach it eats the meal.
 func TestTameFeedFirstThenMeal(t *testing.T) {
+	t.Parallel()
 	g := feedField(30, 20)
 	meal := stack(t, g, item.Meal, 3, 11, 10)
 	kibble := stack(t, g, item.Kibble, 50, 20, 10)
@@ -469,6 +482,7 @@ func TestTameFeedFirstThenMeal(t *testing.T) {
 // A strict carnivore (the dire wolf) passes kibble and meals for meat,
 // and with only kibble and meals in reach eats nothing.
 func TestStrictCarnivoreLeavesKibbleAlone(t *testing.T) {
+	t.Parallel()
 	g := feedField(30, 20)
 	stack(t, g, item.Kibble, 50, 11, 10)
 	stack(t, g, item.Meal, 3, 10, 11)
@@ -528,6 +542,7 @@ func doorRoom(t *testing.T, g *Game, x0, y0, x1, y1, dx, dy int) entity.EntityID
 // the door forever; once the door is gone it eats from the stockpile,
 // and it never swaps back and forth.
 func TestTameDeerSkipsTheStockpileBehindAShutDoor(t *testing.T) {
+	t.Parallel()
 	g := feedField(50, 20)
 	door := doorRoom(t, g, 20, 7, 26, 13, 20, 10)
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 22, Y: 9, X2: 24, Y2: 11})
@@ -564,6 +579,7 @@ func TestTameDeerSkipsTheStockpileBehindAShutDoor(t *testing.T) {
 // A spot a tame animal gave up on (it could not get there in
 // feedWalkLimit) is skipped for forage.ForgetTicks, then tried again.
 func TestTameFeedForgetsAGivenUpSpot(t *testing.T) {
+	t.Parallel()
 	g := feedField(40, 20)
 	kibble := stack(t, g, item.Kibble, 50, 14, 10)
 	sowGrass(g, 30, 10, 30, 10)
@@ -601,6 +617,7 @@ func TestTameFeedForgetsAGivenUpSpot(t *testing.T) {
 // FeedRadius; at 30 % it doesn't. No flap: on its long walk it keeps one
 // target and searches far until it has eaten.
 func TestStarvingTameSearchesFar(t *testing.T) {
+	t.Parallel()
 	far := func(food int) (*Game, entity.EntityID, entity.EntityID) {
 		g := feedField(80, 20)
 		k := stack(t, g, item.Kibble, 60, 60, 10) // 55 tiles off
@@ -643,6 +660,7 @@ func TestStarvingTameSearchesFar(t *testing.T) {
 
 // The far search keeps to the allowed area and the pen.
 func TestStarvingSearchStaysInAreaAndPen(t *testing.T) {
+	t.Parallel()
 	g := feedField(80, 20)
 	paintArea(g, 1, 0, 0, 20, 19)
 	stack(t, g, item.Kibble, 60, 60, 10)
@@ -672,6 +690,7 @@ func TestStarvingSearchStaysInAreaAndPen(t *testing.T) {
 
 // A trough filled with kibble feeds the pen (kibble passes every filter).
 func TestPenTroughFeedsKibble(t *testing.T) {
+	t.Parallel()
 	for _, f := range []uint8{TroughPlants, TroughMeat, TroughAny} {
 		if !troughFeeds(f, item.Kibble) {
 			t.Fatalf("filter %d refuses kibble", f)

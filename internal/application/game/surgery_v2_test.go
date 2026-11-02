@@ -62,6 +62,7 @@ func surgeryLine(g *Game, patient entity.EntityID) string {
 }
 
 func TestHarvestYieldsOrgan(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := surgeryColony(t, 4)
 	queueOp(g, patient, body.HarvestOrgan, body.KidneyL, 0)
 	operateAll(t, g, patient, doc)
@@ -81,6 +82,7 @@ func TestHarvestYieldsOrgan(t *testing.T) {
 }
 
 func TestHarvestLifeOrganKills(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := surgeryColony(t, 4)
 	queueOp(g, patient, body.HarvestOrgan, body.Heart, 0)
 	operateAll(t, g, patient, doc)
@@ -91,6 +93,7 @@ func TestHarvestLifeOrganKills(t *testing.T) {
 }
 
 func TestInstallOrgan(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := surgeryColony(t, 4)
 	v := g.VitalOf(patient)
 	b := g.ensureBody(patient, &v)
@@ -108,6 +111,7 @@ func TestInstallOrgan(t *testing.T) {
 }
 
 func TestEuthanasiaCause(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := surgeryColony(t, 4)
 	queueOp(g, patient, body.Euthanize, body.HandL, 0) // whole body: queued on the torso
 	if ops := g.operationsOf(patient); len(ops) != 1 || ops[0].Part != body.Torso {
@@ -128,6 +132,7 @@ func TestEuthanasiaCause(t *testing.T) {
 // TestAnestheticWearsOffInGame: an operation lays the patient down under
 // the anaesthetic; woozy, it stands again; after 20 hours it is gone.
 func TestAnestheticWearsOffInGame(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := surgeryColony(t, 4)
 	queueOp(g, patient, body.Anesthetize, body.Torso, 0)
 	operateAll(t, g, patient, doc)
@@ -164,6 +169,7 @@ func TestAnestheticWearsOffInGame(t *testing.T) {
 }
 
 func TestSurgeryConsumesMedicine(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 20) // 6 herbal medicine in stock
 	addPegLeg(g, patient)
 	operateUntil(t, g, patient, doc)
@@ -195,6 +201,7 @@ func TestSurgeryConsumesMedicine(t *testing.T) {
 }
 
 func TestPrisonerGetsOperated(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	(*g.sk.skills[ada])[skill.Medicine].Level = 20
@@ -223,6 +230,7 @@ func spawnGuest(t *testing.T, g *Game, x, y int) entity.EntityID {
 }
 
 func TestGuestGetsOperated(t *testing.T) {
+	t.Parallel()
 	g, _, doc := surgeryColony(t, 4)
 	guest := spawnGuest(t, g, 14, 8)
 	g.hurt(guest, health.DownedInjury+10, 0)
@@ -245,6 +253,7 @@ func TestGuestGetsOperated(t *testing.T) {
 }
 
 func TestHarvestMood(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	g.ng.factions = []faction.Faction{{Type: faction.Settlers, Name: "Valley", Goodwill: 0}}
@@ -289,6 +298,7 @@ func TestHarvestMood(t *testing.T) {
 }
 
 func TestMonitorNeedsPowerAndAdjacency(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(5, 2, "Patient")
 	bed := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 5, 2)
@@ -337,6 +347,7 @@ func TestMonitorNeedsPowerAndAdjacency(t *testing.T) {
 }
 
 func TestSurgeryCleanlinessFromRoom(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	if c, out := g.surgeryCleanliness(15, 9); !out || c != 0 {
 		t.Fatalf("outdoors: %d %v", c, out)
@@ -368,6 +379,7 @@ func TestSurgeryCleanlinessFromRoom(t *testing.T) {
 // patient still under the old hour-long anaesthetic loads, wakes the
 // patient within the hour, and the queue still runs.
 func TestOldSurgerySaveLoads(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 20)
 	addPegLeg(g, patient)
 	queueOp(g, patient, body.Amputate, body.HandR, 0)
@@ -401,6 +413,7 @@ func TestOldSurgerySaveLoads(t *testing.T) {
 // TestSurgeryChanceView: a queued operation shows its chance with the
 // factor breakdown.
 func TestSurgeryChanceView(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 8)
 	queueOp(g, patient, body.Amputate, body.HandR, 0)
 	hv, _ := g.Health(patient)

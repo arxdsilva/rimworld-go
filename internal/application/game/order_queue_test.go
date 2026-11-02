@@ -21,6 +21,7 @@ func queueTestGame(t *testing.T) (*Game, uint64) {
 }
 
 func TestQueuedOrdersRunInSequence(t *testing.T) {
+	t.Parallel()
 	g, id := queueTestGame(t)
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: id, X: 6, Y: 1})
 	g.Enqueue(command.Command{Kind: command.Prioritize, Pawn: id, Order: command.OrderEquip, X: 12, Y: 6, Queue: true})
@@ -54,6 +55,7 @@ func TestQueuedOrdersRunInSequence(t *testing.T) {
 }
 
 func TestQueueLimitAndPlainOrderReplaces(t *testing.T) {
+	t.Parallel()
 	g, id := queueTestGame(t)
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: id, X: 22, Y: 10})
 	for i := 0; i < 5; i++ {
@@ -71,6 +73,7 @@ func TestQueueLimitAndPlainOrderReplaces(t *testing.T) {
 }
 
 func TestImpossibleQueuedOrderIsSkipped(t *testing.T) {
+	t.Parallel()
 	g, id := queueTestGame(t)
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: id, X: 4, Y: 1})
 	g.Enqueue(command.Command{Kind: command.Prioritize, Pawn: id, Order: command.OrderEquip, X: 12, Y: 6, Queue: true})

@@ -31,6 +31,7 @@ func hasLog(g *Game, id entity.EntityID, sub string) bool {
 }
 
 func TestPredatorBiteIsLoggedOnBothSides(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 10})
 	wolf, _ := g.SpawnAnimal("ridgewolf", 5, 5)
 	buck, _ := g.SpawnAnimal("dustbuck", 6, 5)
@@ -44,6 +45,7 @@ func TestPredatorBiteIsLoggedOnBothSides(t *testing.T) {
 }
 
 func TestColonistHitAndMissLogged(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 7, Width: 30, Height: 12})
 	a, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -60,6 +62,7 @@ func TestColonistHitAndMissLogged(t *testing.T) {
 }
 
 func TestTrapAndDownedLogged(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 10})
 	g.BuildNow("spike trap", "wood", "south", 10, 5)
 	g.Raid(1)
@@ -79,6 +82,7 @@ func TestTrapAndDownedLogged(t *testing.T) {
 }
 
 func TestEatAndSleepLogged(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	g.SpawnStack(item.Food, 4, 4, 2)
@@ -95,6 +99,7 @@ func TestEatAndSleepLogged(t *testing.T) {
 }
 
 func TestTamingLoggedOnBothSides(t *testing.T) {
+	t.Parallel()
 	won, lost := false, false
 	for seed := uint64(1); seed <= 30 && !(won && lost); seed++ {
 		g := New(Config{Seed: seed, Width: 24, Height: 14})
@@ -129,6 +134,7 @@ func TestTamingLoggedOnBothSides(t *testing.T) {
 }
 
 func TestLogCapAndOrder(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	for i := 0; i < 45; i++ {
@@ -150,6 +156,7 @@ func TestLogCapAndOrder(t *testing.T) {
 }
 
 func TestLogSurvivesSaveAndAnimalRemovalDeletes(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 10})
 	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	buck, _ := g.SpawnAnimal("dustbuck", 6, 5)

@@ -63,6 +63,7 @@ func runUntilCharge(g *Game, beast, ada entity.EntityID, ticks int) (at, rolls i
 }
 
 func TestPredatorChargesNearbyColonist(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 11, Width: 32, Height: 20})
 	cougar, ada := chargeScene(t, g, "cougar")
 	at, rolls := runUntilCharge(g, cougar, ada, 20*animal.ChargeCooldown)
@@ -91,6 +92,7 @@ func TestPredatorChargesNearbyColonist(t *testing.T) {
 }
 
 func TestPackPredatorCharges(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 12, Width: 32, Height: 20})
 	wolf, ada := chargeScene(t, g, "timber_wolf")
 	if at, _ := runUntilCharge(g, wolf, ada, 20*animal.ChargeCooldown); at < 0 {
@@ -99,6 +101,7 @@ func TestPackPredatorCharges(t *testing.T) {
 }
 
 func TestNoChargeFromGrazersSleepersOrOnGentle(t *testing.T) {
+	t.Parallel()
 	ticks := 15 * animal.ChargeCooldown
 	for _, s := range []string{"deer", "bison", "cow"} {
 		g := New(Config{Seed: 11, Width: 32, Height: 20})
@@ -140,6 +143,7 @@ func TestNoChargeFromGrazersSleepersOrOnGentle(t *testing.T) {
 // After every roll the next waits ChargeCooldown ticks, and a charge that
 // ends starts the cooldown again.
 func TestChargeCooldownHolds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 13, Width: 32, Height: 20})
 	cougar, ada := chargeScene(t, g, "cougar")
 	var rolls, charges int
@@ -180,6 +184,7 @@ func TestChargeCooldownHolds(t *testing.T) {
 }
 
 func TestChargeBreaksOffBeyondLeash(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 11, Width: 40, Height: 20})
 	cougar, ada := chargeScene(t, g, "cougar")
 	if at, _ := runUntilCharge(g, cougar, ada, 20*animal.ChargeCooldown); at < 0 {
@@ -211,6 +216,7 @@ func TestChargeBreaksOffBeyondLeash(t *testing.T) {
 }
 
 func TestChargeStateSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	id, _ := g.SpawnAnimal("cougar", 5, 5)
 	setAnimal(g, id, func(a *animal.State) { a.ChargeSince, a.NextCharge = 1234, 5678 })

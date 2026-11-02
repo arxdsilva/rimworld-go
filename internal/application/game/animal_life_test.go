@@ -94,6 +94,7 @@ func mateUntilPregnant(t *testing.T, g *Game, s animal.Species, m, f entity.Enti
 }
 
 func TestMatingPregnancyBirth(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 20})
 	billy := spawnSexed(t, g, "goat", 13, 10, false, true, "Billy")
 	daisy := spawnSexed(t, g, "goat", 16, 10, true, true, "Daisy")
@@ -169,6 +170,7 @@ func TestMatingPregnancyBirth(t *testing.T) {
 }
 
 func TestLitterInheritsTameness(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	now := uint64(g.clock.Now())
 	doe := spawnSexed(t, g, "deer", 8, 8, true, false, "")
@@ -207,6 +209,7 @@ func TestLitterInheritsTameness(t *testing.T) {
 }
 
 func TestJuvenileGrowsAndScales(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	now := uint64(g.clock.Now())
@@ -261,6 +264,7 @@ func TestJuvenileGrowsAndScales(t *testing.T) {
 }
 
 func TestYoungFollowsMother(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 20})
 	now := uint64(g.clock.Now())
 	mom := spawnSexed(t, g, "goat", 30, 10, true, true, "Mom")
@@ -281,6 +285,7 @@ func TestYoungFollowsMother(t *testing.T) {
 }
 
 func TestOldAgeDeath(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	now := uint64(g.clock.Now())
 	life := animal.LifeOf(animal.Goat)
@@ -331,6 +336,7 @@ func eggStack(g *Game, k item.Kind) (entity.EntityID, item.Stack, bool) {
 }
 
 func TestFertileEggHatches(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	warmDay(t, g)
 	// a mated turkey hen lays a fertile egg on one of her laying days
@@ -374,6 +380,7 @@ func TestFertileEggHatches(t *testing.T) {
 }
 
 func TestFrozenEggDies(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20, Biome: biome.IceSheet})
 	jumpTo(g, seasonDay(t, "Winter", 1), 2)
 	if tc := g.TemperatureAt(10, 10); tc >= animal.HatchMin {
@@ -393,6 +400,7 @@ func TestFrozenEggDies(t *testing.T) {
 }
 
 func TestChickensLayWithoutRooster(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	hen := spawnSexed(t, g, "chicken", 10, 10, true, true, "Hen")
 	wild := spawnSexed(t, g, "chicken", 20, 10, true, false, "")
@@ -435,6 +443,7 @@ func TestChickensLayWithoutRooster(t *testing.T) {
 }
 
 func TestNoMatingFlap(t *testing.T) {
+	t.Parallel()
 	// one check a day, at the male's own tick
 	for _, s := range []animal.Species{animal.Goat, animal.Raccoon} {
 		for id := uint64(1); id < 50; id++ {
@@ -498,6 +507,7 @@ func TestNoMatingFlap(t *testing.T) {
 }
 
 func TestLifeSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 30, Height: 20})
 	warmDay(t, g)
 	now := uint64(g.clock.Now())

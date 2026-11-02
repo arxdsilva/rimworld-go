@@ -3,6 +3,7 @@ package game
 import "testing"
 
 func TestSoilsFarmability(t *testing.T) {
+	t.Parallel()
 	byName := map[string]SoilView{}
 	for _, s := range Soils() {
 		if s.Label == "" {

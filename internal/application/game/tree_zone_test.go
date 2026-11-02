@@ -33,6 +33,7 @@ func treesAt(g *Game) (n int, zoned int) {
 }
 
 func TestTreeZoneAccepted(t *testing.T) {
+	t.Parallel()
 	g, _ := treeZoneGame(t)
 	g.Step(1)
 	w := g.World()
@@ -51,6 +52,7 @@ func TestTreeZoneAccepted(t *testing.T) {
 }
 
 func TestGrowersSowSaplings(t *testing.T) {
+	t.Parallel()
 	g, _ := treeZoneGame(t)
 	g.Step(TicksPerCell*40 + 4*plant.DefOf(plant.Tree).SowWork)
 	if n, z := treesAt(g); n != 4 || z != 4 {
@@ -78,6 +80,7 @@ func ripeZoneTree(t *testing.T) (*Game, entity.EntityID) {
 }
 
 func TestMatureZoneTreeChoppedForWood(t *testing.T) {
+	t.Parallel()
 	g, pid := ripeZoneTree(t)
 	before := g.World().Wood
 	g.Step(TicksPerCell*40 + plant.DefOf(plant.Tree).CutWork + 60)
@@ -91,6 +94,7 @@ func TestMatureZoneTreeChoppedForWood(t *testing.T) {
 }
 
 func TestZoneTreeResownAfterChop(t *testing.T) {
+	t.Parallel()
 	g, pid := ripeZoneTree(t)
 	g.Step(TicksPerCell*60 + plant.DefOf(plant.Tree).CutWork + 4*plant.DefOf(plant.Tree).SowWork + 200)
 	if _, ok := g.plants.Get(pid); ok {
@@ -109,6 +113,7 @@ func TestZoneTreeResownAfterChop(t *testing.T) {
 }
 
 func TestWildTreeNotAutoChopped(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	g.SpawnNamedPawn(1, 1, "Ada")
 	if id := g.plantAt(6, 4); id != 0 {
@@ -122,6 +127,7 @@ func TestWildTreeNotAutoChopped(t *testing.T) {
 }
 
 func TestTreesNeverFrostKilled(t *testing.T) {
+	t.Parallel()
 	if plant.Frostbitten(plant.Tree, -500) {
 		t.Fatal("trees must not be frost-killed")
 	}

@@ -54,6 +54,7 @@ func fieldsAllCompared[T any](t *testing.T, base T, clone func(T) T, eq func(a, 
 // TestBuildingViewEqual: equalBuildingView compares every field, Bills by
 // element and MovingTo by the cell it points at.
 func TestBuildingViewEqual(t *testing.T) {
+	t.Parallel()
 	base := BuildingView{ID: 3, Kind: "campfire", Bills: []BillView{{Recipe: "meal", Target: 10}}, MovingTo: &[2]int{4, 5},
 		Linked: []string{"tool cabinet"}}
 	clone := func(v BuildingView) BuildingView {
@@ -81,6 +82,7 @@ func TestBuildingViewEqual(t *testing.T) {
 // TestFrameViewEqual: equalFrameView compares every field, Haulers by
 // element.
 func TestFrameViewEqual(t *testing.T) {
+	t.Parallel()
 	base := FrameView{ID: 3, Kind: "wall", Haulers: []string{"Ada (4 wood)"}}
 	clone := func(v FrameView) FrameView {
 		v.Haulers = append([]string(nil), v.Haulers...)
@@ -102,6 +104,7 @@ func viewGame(t *testing.T) *Game {
 // while it reads the same; a change hands out a fresh list that keeps an
 // unchanged bench's Bills slice, and the old list is left as it was.
 func TestBuildingViewsKeepIdentity(t *testing.T) {
+	t.Parallel()
 	g := viewGame(t)
 	fire := buildNow(t, g, construction.Campfire, item.Wood, construction.South, 10, 10)
 	wall := buildNow(t, g, construction.Wall, item.Wood, construction.South, 20, 10)
@@ -141,6 +144,7 @@ func TestBuildingViewsKeepIdentity(t *testing.T) {
 // TestZoneViewsShared: the zone list is handed out again until the zone
 // map changes.
 func TestZoneViewsShared(t *testing.T) {
+	t.Parallel()
 	g := viewGame(t)
 	zid := g.paintZone(zone.KindStockpile, zone.Zone{Food: true}, 2, 2, 4, 4)
 	a := g.zoneViews()
@@ -161,6 +165,7 @@ func TestZoneViewsShared(t *testing.T) {
 // FoodByKind map, the Stored rows) are handed out again while they read
 // the same, and rebuilt only when what they count moves.
 func TestItemViewsKeepIdentity(t *testing.T) {
+	t.Parallel()
 	g := viewGame(t)
 	g.paintZone(zone.KindStockpile, zone.Zone{Food: true, Wood: true}, 2, 2, 4, 4)
 	berries, _ := g.SpawnStack(item.Berries, 10, 3, 3)

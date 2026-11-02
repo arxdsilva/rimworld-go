@@ -29,6 +29,7 @@ var pawnActions = map[string]bool{
 }
 
 func TestActionVocabularyCoversJobs(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	placeBuilt(t, g, construction.Workbench, construction.South, 8, 2)
@@ -80,6 +81,7 @@ func TestActionVocabularyCoversJobs(t *testing.T) {
 }
 
 func TestActionAttackFollowsWeapon(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	for _, st := range []job.State{job.Goto, job.Do} {
@@ -111,6 +113,7 @@ func TestActionAttackFollowsWeapon(t *testing.T) {
 }
 
 func TestActionRescueAndBenches(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	patient, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -156,6 +159,7 @@ func TestActionRescueAndBenches(t *testing.T) {
 }
 
 func TestActionProgress(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	plantID, err := g.SpawnPlant(9, 9)
@@ -224,6 +228,7 @@ func TestActionProgress(t *testing.T) {
 func withLeft(j job.Record, n int) job.Record { j.WorkLeft = n; return j }
 
 func TestActionProgressRisesDuringRealWork(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 24, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	patient, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -273,6 +278,7 @@ func pawnView(g *Game, id entity.EntityID) PawnView {
 }
 
 func TestAttackCycle(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		w    item.Kind
 		dist int
@@ -317,6 +323,7 @@ func TestAttackCycle(t *testing.T) {
 }
 
 func TestAttackCycleIdleIsZero(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	if pv := pawnView(g, id); pv.AttackCycle != 0 || pv.Action != "" {
@@ -325,6 +332,7 @@ func TestAttackCycleIdleIsZero(t *testing.T) {
 }
 
 func TestTraceCarriesAttackerTargetWeapon(t *testing.T) {
+	t.Parallel()
 	// Pawn vs pawn.
 	g, att, tgt := attackSetup(t, item.Rifle, 4)
 	var tr TraceView
@@ -380,6 +388,7 @@ func TestTraceCarriesAttackerTargetWeapon(t *testing.T) {
 }
 
 func TestHitStampsVictim(t *testing.T) {
+	t.Parallel()
 	// Pawn victim.
 	g, att, tgt := attackSetup(t, item.Rifle, 4)
 	var hitTick uint64
@@ -438,6 +447,7 @@ func (g *Game) strikeUntilHit(t *testing.T, att, tgt entity.EntityID, wk weapon.
 }
 
 func TestMissDoesNotStampVictim(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 7, Width: 30, Height: 12})
 	shooter, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	target, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -455,6 +465,7 @@ func TestMissDoesNotStampVictim(t *testing.T) {
 }
 
 func TestRaiderViewsCarryActions(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 6, Width: 20, Height: 12})
 	g.SpawnNamedPawn(2, 2, "Ada")
 	g.RaidArmed(item.Rifle)
@@ -472,6 +483,7 @@ func TestRaiderViewsCarryActions(t *testing.T) {
 }
 
 func TestSaveKeepsStrikeAndHitStamps(t *testing.T) {
+	t.Parallel()
 	g, att, tgt := attackSetup(t, item.Rifle, 4)
 	for i := 0; i < 600 && g.lastHit[tgt].Tick == 0; i++ {
 		g.Step(1)
@@ -490,6 +502,7 @@ func TestSaveKeepsStrikeAndHitStamps(t *testing.T) {
 }
 
 func TestCarryingExposesItemKind(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	patient, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -518,6 +531,7 @@ func TestCarryingExposesItemKind(t *testing.T) {
 }
 
 func TestAnimalActionAndCycle(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 30, Height: 12})
 	victim, _ := g.SpawnNamedPawn(10, 6, "Bait")
 	wolf, _ := g.SpawnAnimal("ridgewolf", 11, 6)
@@ -573,6 +587,7 @@ func TestAnimalActionAndCycle(t *testing.T) {
 }
 
 func TestKnifeSpearWeaponMapping(t *testing.T) {
+	t.Parallel()
 	if weapon.ForItem(item.Knife) != weapon.Knife || weapon.ForItem(item.Spear) != weapon.Spear {
 		t.Fatal("knife and spear map to their weapons")
 	}
@@ -585,6 +600,7 @@ func TestKnifeSpearWeaponMapping(t *testing.T) {
 }
 
 func TestRaidKitCanRollKnifeSpear(t *testing.T) {
+	t.Parallel()
 	seen := map[item.Kind]int{}
 	for seed := uint64(1); seed <= 40; seed++ {
 		g := New(Config{Seed: seed, Width: 10, Height: 8})

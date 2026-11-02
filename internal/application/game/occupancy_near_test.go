@@ -69,6 +69,7 @@ func checkNear(t *testing.T, o *occupancy, when string) {
 // skips empty ground with stay equal to a recount through rebuilds, moves
 // and stack hand-overs of a busy colony, for blockers and partners alike.
 func TestOccupancyNearMatchesCells(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 7, Width: 48, Height: 40})
 	g.Raid(2)
 	for tick := 0; tick < 3000; tick++ {
@@ -86,6 +87,7 @@ func TestOccupancyNearMatchesCells(t *testing.T) {
 // TestOccupancyPutStacked: a stacked blocker taking a cell over keeps
 // near unchanged; the last one leaving clears it.
 func TestOccupancyPutStacked(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := wildAt(t, g, 5, 5)
 	b := wildAt(t, g, 5, 5) // stacked on a
@@ -110,6 +112,7 @@ func TestOccupancyPutStacked(t *testing.T) {
 // ID is first after a rebuild, the next one takes over when the first
 // leaves, and they never show as blockers.
 func TestOccupancyPartnerLayer(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 5, 5)
 	b := mustPawn(t, g, 5, 5)

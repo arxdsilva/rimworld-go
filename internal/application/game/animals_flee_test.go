@@ -39,6 +39,7 @@ func fleeEpisode(t *testing.T, g *Game, id entity.EntityID, from func() Position
 }
 
 func TestFleeingDustbuckRunsToItsGoal(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 40, Height: 20})
 	watcher := draftedPawn(t, g, 10, 10) // stands still
 	g.SetNeeds(watcher, needs.Full, needs.Full)
@@ -53,6 +54,7 @@ func TestFleeingDustbuckRunsToItsGoal(t *testing.T) {
 }
 
 func TestTameAnimalFleesWithoutFlapping(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 40, Height: 20})
 	wolf, _ := g.SpawnAnimal("ridgewolf", 8, 10)
 	pin := func() { // a sated wild wolf that just stands there
@@ -73,6 +75,7 @@ func TestTameAnimalFleesWithoutFlapping(t *testing.T) {
 }
 
 func TestEnragedAnimalDoesNotFlee(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 30, Height: 12})
 	hunter, _ := g.SpawnNamedPawn(10, 6, "Hunter")
 	g.SetNeeds(hunter, needs.Full, needs.Full)

@@ -51,6 +51,7 @@ func droppedHere(t *testing.T, g *Game, doc, bo entity.EntityID, how string) {
 }
 
 func TestRescueFidelityCarrierDowned(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	pickedUp(t, g, doc, bo)
 	g.hurt(doc, health.DownedInjury+10, 0)
@@ -62,6 +63,7 @@ func TestRescueFidelityCarrierDowned(t *testing.T) {
 }
 
 func TestRescueFidelityCarrierDrafted(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	pickedUp(t, g, doc, bo)
 	g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(doc), Enabled: true})
@@ -70,6 +72,7 @@ func TestRescueFidelityCarrierDrafted(t *testing.T) {
 }
 
 func TestRescueFidelityCarrierOrderedElsewhere(t *testing.T) {
+	t.Parallel()
 	for _, drafted := range []bool{false, true} {
 		g, doc, bo, _, _ := rescueScene(t)
 		if drafted {
@@ -87,6 +90,7 @@ func TestRescueFidelityCarrierOrderedElsewhere(t *testing.T) {
 }
 
 func TestRescueFidelityCarrierFlees(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	pickedUp(t, g, doc, bo)
 	p := g.positionOf(doc)
@@ -100,6 +104,7 @@ func TestRescueFidelityCarrierFlees(t *testing.T) {
 }
 
 func TestRescueFidelityPatientDies(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, _, _ := rescueScene(t)
 	pickedUp(t, g, doc, bo)
 	g.die(bo, health.CauseBloodLoss)
@@ -114,6 +119,7 @@ func TestRescueFidelityPatientDies(t *testing.T) {
 // TestRescueFidelityStarvedToOwnBed: a colonist down from malnutrition is
 // rescued (SIM-063) to its own bed, not the medical one it doesn't need.
 func TestRescueFidelityStarvedToOwnBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 14})
 	doc, _ := g.SpawnNamedPawn(6, 6, "Doc")
 	bo, _ := g.SpawnNamedPawn(12, 6, "Bo")
@@ -131,6 +137,7 @@ func TestRescueFidelityStarvedToOwnBed(t *testing.T) {
 // TestRescueFidelityKeepsOwnClaim: an injured colonist goes to the
 // medical bed and keeps its own bed's claim.
 func TestRescueFidelityKeepsOwnClaim(t *testing.T) {
+	t.Parallel()
 	g, doc, bo, hosp, plain := rescueScene(t)
 	b, _ := g.bldgs.Get(plain)
 	g.bldgs.Set(plain, b.Claim(uint64(bo)))
@@ -146,6 +153,7 @@ func TestRescueFidelityKeepsOwnClaim(t *testing.T) {
 }
 
 func TestRescueFidelityBedHazard(t *testing.T) {
+	t.Parallel()
 	g, _, bo, hosp, plain := rescueScene(t)
 	h := careReach{g}
 	if h.BedHazard(hosp) || h.BedHazard(plain) {
@@ -174,6 +182,7 @@ func TestRescueFidelityBedHazard(t *testing.T) {
 }
 
 func TestRescueFidelityWardenTakesPrisonerToBed(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, bed := prisonGame(t)
 	g.makePrisoner(rid, ada) // downed where it was taken, out of bed
 	for _, id := range []entity.EntityID{ada, bo} {

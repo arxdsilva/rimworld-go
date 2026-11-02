@@ -80,6 +80,7 @@ func drugAddiction(g *Game, id entity.EntityID, k item.Kind) *drug.Addiction {
 }
 
 func TestIngestBeerWhenBored(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	g.SpawnStack(item.Beer, 3, 9, 2)
 	drugStepFed(g, id, 2000)
@@ -100,6 +101,7 @@ func TestIngestBeerWhenBored(t *testing.T) {
 
 // Not bored: no drink (social drinking is for low recreation).
 func TestIngestNotWhenEntertained(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	g.SpawnStack(item.Beer, 3, 9, 2)
 	for i := 0; i < 20; i++ {
@@ -112,6 +114,7 @@ func TestIngestNotWhenEntertained(t *testing.T) {
 }
 
 func TestDrugTipsyThoughtDecaysThenHangover(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	for i := 0; i < 3; i++ {
 		g.ingestDose(id, item.Beer)
@@ -144,6 +147,7 @@ func TestDrugTipsyThoughtDecaysThenHangover(t *testing.T) {
 }
 
 func TestDrugAddictionLifecycle(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
 	drugAddict(t, g, id, item.AshleafTea)
@@ -177,6 +181,7 @@ func TestDrugAddictionLifecycle(t *testing.T) {
 
 // A craving with its drug out of reach doesn't retry every idle recheck.
 func TestDrugCravingSeekNoFlap(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	drugAddict(t, g, id, item.AshleafTea)
 	drugAddiction(g, id, item.AshleafTea).Need, drugAddiction(g, id, item.AshleafTea).Seeking = 100, true
@@ -199,6 +204,7 @@ func TestDrugCravingSeekNoFlap(t *testing.T) {
 
 // A sated addict, with the drug in reach, takes it once and stops.
 func TestDrugCravingStopsWhenSated(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	drugAddict(t, g, id, item.AshleafTea)
 	a := drugAddiction(g, id, item.AshleafTea)
@@ -212,6 +218,7 @@ func TestDrugCravingStopsWhenSated(t *testing.T) {
 }
 
 func TestDrugPolicyNoDrugsBlocks(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	g.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(id), Mode: uint8(drug.NoDrugs)})
 	g.Step(1)
@@ -235,6 +242,7 @@ func TestDrugPolicyNoDrugsBlocks(t *testing.T) {
 }
 
 func TestDrugPolicyCommandValidates(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	if p := drug.Preset(g.DrugPolicy(id)); p != drug.SocialDrinking {
 		t.Fatalf("default policy %v", p)
@@ -249,6 +257,7 @@ func TestDrugPolicyCommandValidates(t *testing.T) {
 }
 
 func TestDrugAbstainerNeverDrinks(t *testing.T) {
+	t.Parallel()
 	g, _ := drugColony(t)
 	id := spawnGen(t, g, 3, 3, genPawn("Prue", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Abstainer} }))
 	g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
@@ -267,6 +276,7 @@ func TestDrugAbstainerNeverDrinks(t *testing.T) {
 }
 
 func TestDrugSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
 	drugAddict(t, g, id, item.AshleafTea)
@@ -293,6 +303,7 @@ func TestDrugSaveRoundTrip(t *testing.T) {
 
 // Drug use is deterministic: two runs from one seed agree.
 func TestDrugDeterminismSameSeed(t *testing.T) {
+	t.Parallel()
 	run := func() uint64 {
 		g, id := drugColony(t)
 		g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
@@ -329,6 +340,7 @@ func drugPain(g *Game, id entity.EntityID, dmg int) *body.Body {
 // stages (major costs consciousness, extreme downs the colonist) until a
 // dose takes it to 1000 and kills it, of an overdose.
 func TestOverdoseStagesKill(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	seen := map[int]bool{}
 	for i := 0; i < 10; i++ {
@@ -366,6 +378,7 @@ func TestOverdoseStagesKill(t *testing.T) {
 // TestOverdoseExtremeMayKill: left at the extreme stage, the hourly roll
 // (mean three days) kills some colonists before it wears off, not all.
 func TestOverdoseExtremeMayKill(t *testing.T) {
+	t.Parallel()
 	deaths := 0
 	for seed := uint64(1); seed <= 40; seed++ {
 		g := New(Config{Seed: seed, Width: 16, Height: 8})
@@ -393,6 +406,7 @@ func TestOverdoseExtremeMayKill(t *testing.T) {
 // TestOverdoseDecays: an overdose falls 1000 a day; the colonist stands up
 // once it leaves the extreme stage and is clear of it within a day.
 func TestOverdoseDecays(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	g.ingestDose(id, item.ProphylTablet)
 	sev := g.bodies[id].Overdose()
@@ -436,6 +450,7 @@ func TestOverdoseDecays(t *testing.T) {
 // TestPainkillerHalvesPain: a numbroot dose halves the Health tab's pain
 // for 12 hours and shows as a drug line and a condition row.
 func TestPainkillerHalvesPain(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	drugPain(g, id, 36) // pain 450
 	hv, _ := g.Health(id)
@@ -471,6 +486,7 @@ func TestPainkillerHalvesPain(t *testing.T) {
 // it wore off: about one per 12 hours, and few job changes around the
 // moment it wears off.
 func TestPainkillerUseDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	if _, err := g.SpawnStack(item.NumbrootTincture, 10, 9, 2); err != nil {
 		t.Fatal(err)
@@ -511,6 +527,7 @@ func TestPainkillerUseDoesNotFlap(t *testing.T) {
 // malaria, plague or sleeping sickness outbreak (not flu) until five days
 // after the dose.
 func TestProphylBlocksMalaria(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	other, _ := g.SpawnNamedPawn(4, 2, "Bo")
 	g.ingestDose(id, item.ProphylTablet)
@@ -544,6 +561,7 @@ func TestProphylBlocksMalaria(t *testing.T) {
 // TestProphylRetakenEveryFiveDays: under the default policy a colonist
 // takes a prophyl tablet at once, none again before five days, then one.
 func TestProphylRetakenEveryFiveDays(t *testing.T) {
+	t.Parallel()
 	g, id := drugColony(t)
 	if _, err := g.SpawnStack(item.ProphylTablet, 5, 9, 2); err != nil {
 		t.Fatal(err)
@@ -590,6 +608,7 @@ type legacyDrugState struct {
 // last doses load into the slices, the new drugs read zero, and prophyl
 // is due at once.
 func TestLegacyDrugSaveLoadsWithMedicalDrugs(t *testing.T) {
+	t.Parallel()
 	var buf bytes.Buffer
 	old := legacyDrugState{Alcohol: 100, Tolerance: [3]int32{0, 300, 50}, LastDose: [3]uint64{7, 0, 9}, Policy: drug.Unrestricted}
 	if err := gob.NewEncoder(&buf).Encode(old); err != nil {

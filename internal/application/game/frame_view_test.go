@@ -25,6 +25,7 @@ func frameView(g *Game, id entity.EntityID) (FrameView, bool) {
 }
 
 func TestFrameViewMaterialsAndWork(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	ada, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	onlyWork(g, ada, work.Haul, work.Construct)
@@ -235,6 +236,7 @@ func TestFrameInStockCountsOncePerKind(t *testing.T) {
 // A carpet sewn earlier lies in a stockpile across the map; its blueprint
 // sits on the tile just inside a door. A colonist brings it and lays it.
 func TestCarpetBuiltFromStockpiledCarpetBesideDoor(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	ada, _ := g.SpawnNamedPawn(2, 6, "Ada")
 	onlyWork(g, ada, work.Haul, work.Construct)

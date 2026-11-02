@@ -70,6 +70,7 @@ func alive(g *Game, pid entity.EntityID) bool {
 // and is not the zone's crop is cut by a grower, and only then is the cell
 // sown with potatoes.
 func TestZoneClearsWrongPlantsThenSows(t *testing.T) {
+	t.Parallel()
 	ripe := func(s plant.Species) int { return plant.DefOf(s).GrowTicks }
 	cases := []struct {
 		name     string
@@ -115,6 +116,7 @@ func TestZoneClearsWrongPlantsThenSows(t *testing.T) {
 // TestZoneClearTargetsTheNearestWrongPlant: with two wrong plants the
 // grower walks to the nearer one first, with the ordinary Cut job.
 func TestZoneClearTargetsTheNearestWrongPlant(t *testing.T) {
+	t.Parallel()
 	g, id := clearGame(t)
 	far := putPlant(t, g, plant.Moss, 8, 2, 0, false)
 	near := putPlant(t, g, plant.Moss, 5, 2, 0, false)
@@ -136,6 +138,7 @@ func TestZoneClearTargetsTheNearestWrongPlant(t *testing.T) {
 // TestZoneClearSkipsReservedAndPostponedPlants: a plant another pawn has
 // reserved, or this pawn has put off, is not picked.
 func TestZoneClearSkipsReservedAndPostponedPlants(t *testing.T) {
+	t.Parallel()
 	g, id := clearGame(t)
 	other, _ := g.SpawnNamedPawn(2, 1, "Bo")
 	pid := putPlant(t, g, plant.Moss, 5, 2, 0, false)
@@ -168,6 +171,7 @@ func TestZoneClearSkipsReservedAndPostponedPlants(t *testing.T) {
 // TestZoneNeverCutsTheRightCrop: a zone's own crop, and its own unripe
 // trees, stand untouched however long the grower works.
 func TestZoneNeverCutsTheRightCrop(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		crop string
@@ -202,6 +206,7 @@ func TestZoneNeverCutsTheRightCrop(t *testing.T) {
 // for the zone is harvested through its mark (never cut while ripe); the
 // cell is cleared and sown once the harvest leaves it unripe or empty.
 func TestZoneHarvestsRipeWrongCropBeforeClearing(t *testing.T) {
+	t.Parallel()
 	t.Run("ripe corn in a potato zone", func(t *testing.T) {
 		g, id := clearGame(t)
 		orig := putPlant(t, g, plant.Corn, 4, 2, plant.DefOf(plant.Corn).GrowTicks, true)
@@ -258,6 +263,7 @@ func TestZoneHarvestsRipeWrongCropBeforeClearing(t *testing.T) {
 // TestNoClearingOutOfSeason: in a frozen winter the soil is not sowable,
 // so nothing is cleared for it; in spring the same moss is.
 func TestNoClearingOutOfSeason(t *testing.T) {
+	t.Parallel()
 	g, id := clearGame(t)
 	moss := putPlant(t, g, plant.Moss, 4, 2, 0, false)
 	drawZone(t, g, "potato", 4, 2, 4, 2)
@@ -287,6 +293,7 @@ func TestNoClearingOutOfSeason(t *testing.T) {
 // TestZoneClearIgnoresUnsowableCells: a cell blocked for another reason (a
 // planned wall, here) is not cleared: sowing could not follow.
 func TestZoneClearIgnoresUnsowableCells(t *testing.T) {
+	t.Parallel()
 	g, id := clearGame(t)
 	putPlant(t, g, plant.Moss, 4, 2, 0, false)
 	drawZone(t, g, "potato", 4, 2, 4, 2)
@@ -312,6 +319,7 @@ func TestZoneClearIgnoresUnsowableCells(t *testing.T) {
 // the potato's sow work, not the generic constant, as the growers' own
 // sowing does.
 func TestForcedSowUsesTheCropsOwnWork(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		crop string
 		s    plant.Species
@@ -340,6 +348,7 @@ func TestForcedSowUsesTheCropsOwnWork(t *testing.T) {
 // the zone and a plant that already sat in a zone (its mark cancelled) are
 // left alone.
 func TestZoneDrawnOverRipePlantMarksIt(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	ripeBush := putPlant(t, g, plant.BerryBush, 4, 2, plant.DefOf(plant.BerryBush).GrowTicks, false)
 	ripeCorn := putPlant(t, g, plant.Corn, 5, 2, plant.DefOf(plant.Corn).GrowTicks, true) // a wrong, ripe crop
@@ -380,6 +389,7 @@ func TestZoneDrawnOverRipePlantMarksIt(t *testing.T) {
 // TestWantsHarvestNeedsTheMark: a ripe zone crop is wanted only while
 // marked; a ripe wild plant likewise.
 func TestWantsHarvestNeedsTheMark(t *testing.T) {
+	t.Parallel()
 	ripe := plant.Plant{Species: plant.Potato, Growth: plant.DefOf(plant.Potato).GrowTicks, Zone: true}
 	if wantsHarvest(ripe) {
 		t.Fatal("an unmarked ripe zone crop is wanted")
@@ -402,6 +412,7 @@ func TestWantsHarvestNeedsTheMark(t *testing.T) {
 // harvested; after "Cancel harvest" (Undesignate harvest) a grower leaves
 // it standing.
 func TestCancelHarvestSticksOnRipeZoneCrop(t *testing.T) {
+	t.Parallel()
 	setup := func(t *testing.T) (*Game, entity.EntityID, entity.EntityID) {
 		g, id := clearGame(t)
 		pid := putPlant(t, g, plant.Potato, 4, 2, plant.DefOf(plant.Potato).GrowTicks, true)

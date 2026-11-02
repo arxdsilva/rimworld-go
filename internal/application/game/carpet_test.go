@@ -186,6 +186,7 @@ func TestCarpetRemovalRefundsItsOwnItem(t *testing.T) {
 // Craft a straw carpet at a workbench, hang it as a blueprint, watch a
 // colonist haul it into the frame and build it, then take it back down.
 func TestCarpetCraftHaulInstallDeconstruct(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	placeBuilt(t, g, construction.Workbench, construction.South, 5, 2)

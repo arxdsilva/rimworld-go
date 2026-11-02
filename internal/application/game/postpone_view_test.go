@@ -45,6 +45,7 @@ func (g *Game) postponedLinesRef(id entity.EntityID) []string {
 }
 
 func TestPostponedTopsMatchFullSort(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 4, Width: 48, Height: 40})
 	g.Step(10)
 	now := uint64(g.clock.Now())

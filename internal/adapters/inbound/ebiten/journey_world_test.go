@@ -136,6 +136,25 @@ func sendCaravan(j *journey, pawn entity.EntityID, tile int) game.CaravanView {
 	return game.CaravanView{}
 }
 
+// formCaravan forms a caravan of pawn bound for tile with the game's own
+// command and runs the world until it is on the road. The long walk itself
+// is TestJourneyWorldTravelAndReturn's; a journey about what happens once
+// there follows this with game.DevArrive.
+func formCaravan(j *journey, pawn entity.EntityID, tile int) game.CaravanView {
+	j.t.Helper()
+	j.g.Enqueue(command.Command{Kind: command.FormCaravan, Name: strconv.FormatUint(uint64(pawn), 10), Count: tile})
+	for i := 0; i < 500; i++ {
+		j.g.Step(60)
+		for _, c := range j.g.WorldMap().Caravans {
+			if c.State == caravan.Travelling.Label() {
+				return c
+			}
+		}
+	}
+	j.t.Fatalf("the caravan never left for tile %d: %+v", tile, j.g.WorldMap().Caravans)
+	return game.CaravanView{}
+}
+
 // TestJourneyWorldViewOpensSelectsAndCloses: F8 shows the globe with the
 // colony selected; Esc clears the selection, then closes; a double click on
 // the colony's marker enters it.
@@ -728,7 +747,8 @@ func TestJourneyWorldAttackHostileBase(t *testing.T) {
 	t.Parallel()
 	j, p := worldColony(t)
 	s, _ := nearestSite(j, p, true)
-	c := sendCaravan(j, j.g.Snapshot()[0].ID, s.Tile)
+	c := formCaravan(j, j.g.Snapshot()[0].ID, s.Tile)
+	game.DevArrive(j.g, entity.EntityID(c.ID), s.Tile)
 	worldOpen(j)
 	worldFind(j, s)
 	worldPick(j, "world.obj.caravan."+strconv.FormatUint(uint64(c.ID), 10), "caravan:"+strconv.FormatUint(uint64(c.ID), 10))
@@ -754,7 +774,7 @@ func TestJourneyWorldDemandLetterAnswers(t *testing.T) {
 	}{{"give", 0}, {"refuse", 1}} {
 		j, p := worldColony(t)
 		s, _ := nearestSite(j, p, true)
-		c := sendCaravan(j, j.g.Snapshot()[0].ID, s.Tile)
+		c := formCaravan(j, j.g.Snapshot()[0].ID, s.Tile)
 		game.DevDemand(j.g, entity.EntityID(c.ID), item.Stack{Kind: item.Silver, Qty: 100})
 		j.g.Step(1)
 		j.update(1)

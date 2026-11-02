@@ -32,7 +32,9 @@ jobs:
           # shellcheck disable=SC2086 # LINUX_DEPS is a word list
           sudo apt-get update && sudo apt-get install -y $LINUX_DEPS xvfb
       - run: go vet ./...
-      - run: xvfb-run -a go test -race -timeout 10m ./...
+      # -p 2: on 4 vCPUs the two big binaries otherwise starve each other towards
+      # the per-binary timeout (.cursor/handoffs/CI-001-race-budget-and-memory.md).
+      - run: xvfb-run -a go test -race -p 2 -timeout 10m ./...
 
   build:
     needs: test

@@ -36,6 +36,7 @@ func near(a, b float64) bool { return math.Abs(a-b) < 1e-4 }
 // shadows; overlapping lights take the brighter. (PLAY-021: lamps light
 // on power, litLamp; light_power_test.go.)
 func TestLightGridLampAndCampfire(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	litLamp(t, g, 10, 10, 7, 9)
 	for _, c := range []struct {
@@ -83,6 +84,7 @@ func TestLightGridLampAndCampfire(t *testing.T) {
 // TestCellLightDaylight: an unroofed cell gets the outdoor daylight, a
 // roofed one only artificial light.
 func TestCellLightDaylight(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	g.setRoof(5*40+5, 0)
 	jumpTo(g, 11, 12)
@@ -102,6 +104,7 @@ func TestCellLightDaylight(t *testing.T) {
 // leave the grid alone; a lamp, a terrain change or a glowing plant
 // rebuilds it once.
 func TestLightGridRebuildsOnlyOnChange(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	g.cellLight(1, 1)
 	b := g.light.builds
@@ -149,6 +152,7 @@ func growthOf(t *testing.T, g *Game, id uint64) (plant.Plant, bool) {
 // TestMossNeedsLight: ordinary moss grows under the open sky by day and
 // next to a lamp, never in a dark roofed cave.
 func TestMossNeedsLight(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	g.setRoof(5*40+5, 0)
 	lit, _ := g.spawnPlant(plant.Moss, 5, 5, 0)
@@ -170,6 +174,7 @@ func TestMossNeedsLight(t *testing.T) {
 // dark cave grows (stone counts as CaveFertility); a legacy plant
 // ignores light entirely.
 func TestDuskmossGrowsInTheDark(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	g.setTerrain(10, 10, terrain.Stone)
 	g.setTerrain(12, 10, terrain.StoneSmooth)
@@ -195,6 +200,7 @@ func TestDuskmossGrowsInTheDark(t *testing.T) {
 // TestDuskmossWithersUnderOpenSky: duskmoss under a removed roof loses
 // growth by day and is removed at nothing, with one notice for the patch.
 func TestDuskmossWithersUnderOpenSky(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	gt := plant.DefOf(plant.Duskmoss).GrowTicks
 	var ids []uint64
@@ -250,6 +256,7 @@ func plantViewOf(v []PlantView, id uint64) PlantView {
 // TestDuskmossWithersNearNewLamp: a lamp lit beside duskmoss in the
 // dark makes it wither; taking the lamp away lets it regrow.
 func TestDuskmossWithersNearNewLamp(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	g.setTerrain(11, 10, terrain.Stone)
 	gt := plant.DefOf(plant.Duskmoss).GrowTicks
@@ -274,6 +281,7 @@ func TestDuskmossWithersNearNewLamp(t *testing.T) {
 // and never off; only a drop below 0.35 stops it, and 0.40 then does not
 // restart it.
 func TestWitherNoFlap(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	g.setTerrain(10, 10, terrain.Stone)
 	gt := plant.DefOf(plant.Duskmoss).GrowTicks
@@ -312,6 +320,7 @@ func TestWitherNoFlap(t *testing.T) {
 
 // TestDuskmossWalkCost: duskmoss slows walkers like bramble does.
 func TestDuskmossWalkCost(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	_, _ = g.spawnPlant(plant.Duskmoss, 4, 4, 1000)
 	if c := g.plantWalkCost(4, 4); c != 125 {
@@ -322,6 +331,7 @@ func TestDuskmossWalkCost(t *testing.T) {
 // TestPlantViewLightNeeds: the inspector reads moss's and duskmoss's
 // light needs from the view.
 func TestPlantViewLightNeeds(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	m, _ := g.spawnPlant(plant.Moss, 2, 2, 0)
 	d, _ := g.spawnPlant(plant.Duskmoss, 4, 2, 0)
@@ -380,6 +390,7 @@ func legacyGrowth(g *Game, rate, x, y int, t0 uint64, n int) int {
 // strong lamp a crop stands still, noon included; the open-sky crop beside
 // it grows exactly as before the rule.
 func TestRoofedCropWithoutLampDoesNotGrow(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.setRoof(25*40+25, 0)
 	roofed, _ := g.spawnPlant(plant.Potato, 5, 5, 0)
@@ -400,6 +411,7 @@ func TestRoofedCropWithoutLampDoesNotGrow(t *testing.T) {
 // light is under the 51 % crops need, so a roofed crop one tile from a lit
 // lamp stands still through a whole day and night.
 func TestLampGrowsNoCropAtAnyHour(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	_, gen := litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
 	near1, _ := g.spawnPlant(plant.Potato, 11, 10, 0)
@@ -419,6 +431,7 @@ func TestLampGrowsNoCropAtAnyHour(t *testing.T) {
 // in any light): under the open sky a lamp no longer grows the crop
 // through the night.
 func TestLampDoesNotGrowCropsAtNight(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.setRoof(11*40+10, 0)
 	litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
@@ -434,6 +447,7 @@ func TestLampDoesNotGrowCropsAtNight(t *testing.T) {
 // non-cave species grows exactly as it did (GrowSpan per window), through
 // two days and nights.
 func TestOutdoorGrowthUnchanged(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	type pl struct {
 		id   uint64
@@ -462,6 +476,7 @@ func TestOutdoorGrowthUnchanged(t *testing.T) {
 // roofed cave (the sun's hours at its stone fertility), neither stopped by
 // the roof nor sped up by a dim lamp.
 func TestDuskmossGrowthUnchanged(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.setTerrain(10, 10, terrain.Stone)
 	id, _ := g.spawnPlant(plant.Duskmoss, 10, 10, 0)
@@ -478,6 +493,7 @@ func TestDuskmossGrowthUnchanged(t *testing.T) {
 // only while it burns, and the light grid follows the fuel running out and
 // being refilled.
 func TestUnfuelledCampfireGivesNoLight(t *testing.T) {
+	t.Parallel()
 	g := lightFixture(t)
 	g.climate = temperature.Climate{YearMean: -100} // cold: the fire never banks down
 	g.HoldWeather()
@@ -518,6 +534,7 @@ func TestUnfuelledCampfireGivesNoLight(t *testing.T) {
 // 51 % crops need, so neither the crop beside a burning campfire nor the
 // one beside a cold one grows on a dark roofed night.
 func TestBurningCampfireGrowsNoCrop(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	placeBuilt(t, g, construction.Campfire, construction.South, 30, 30)
 	placeBuilt(t, g, construction.Campfire, construction.South, 10, 10)
@@ -545,6 +562,7 @@ func growthNow(g *Game, id uint64) PlantGrowthView {
 // TestPlantGrowthState: why a plant is or isn't growing now, and the
 // time left to ripe at the current conditions.
 func TestPlantGrowthState(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.setRoof(25*40+25, 0)
 	open, _ := g.spawnPlant(plant.Potato, 25, 25, 0)
@@ -613,6 +631,7 @@ func TestPlantGrowthState(t *testing.T) {
 // read model hands out keeps its identity across the hour change (the
 // state is no longer on PlantView).
 func TestPlantGrowthFollowsTheClock(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.SetViewCache(true)
 	g.setRoof(25*40+25, 0)
@@ -640,6 +659,7 @@ func TestPlantGrowthFollowsTheClock(t *testing.T) {
 
 // TestDuskmossViewNeverRests: a cave species has no night to rest through.
 func TestDuskmossViewNeverRests(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.setTerrain(10, 10, terrain.Stone)
 	id, _ := g.spawnPlant(plant.Duskmoss, 10, 10, 0)
@@ -656,6 +676,7 @@ func TestDuskmossViewNeverRests(t *testing.T) {
 // TestRipeningMarksZoneCrop: a crop that ripens on a growing-zone cell is
 // marked for harvest; one that ripens elsewhere is not.
 func TestRipeningMarksZoneCrop(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.setRoof(5*40+5, 0)
 	g.setRoof(5*40+6, 0)
@@ -680,6 +701,7 @@ func TestRipeningMarksZoneCrop(t *testing.T) {
 // they now get on ripening; unripe ones, ones outside zones and trees
 // don't, and running it twice changes nothing.
 func TestMigrateHarvestMarks(t *testing.T) {
+	t.Parallel()
 	g := mildLight(t)
 	g.addGrowZone(5, 5, 6, 5, uint8(plant.Potato))
 	gt := plant.DefOf(plant.Potato).GrowTicks

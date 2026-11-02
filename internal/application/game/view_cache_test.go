@@ -12,6 +12,7 @@ import (
 // tick on a colony under a raid (logs, stains, postponed work, motion),
 // and a view handed out earlier is never rewritten.
 func TestViewCacheMatchesFresh(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("long run")
 	}

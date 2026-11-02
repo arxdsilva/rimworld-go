@@ -44,6 +44,7 @@ func medHour(g *Game) {
 }
 
 func TestUntendedCutBleedsOut(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b := addWound(t, g, id, body.Torso, 30, body.Cut) // 1800 ‰/day: 75 an hour
@@ -90,6 +91,7 @@ func (g *Game) patientIndexed(id entity.EntityID) (int, bool) {
 }
 
 func TestBruisesAndBurnsDoNotBleed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	addWound(t, g, id, body.Torso, 30, body.Bruise)
@@ -106,6 +108,7 @@ func TestBruisesAndBurnsDoNotBleed(t *testing.T) {
 }
 
 func TestTendStopsBleeding(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	ada, _ := g.SpawnNamedPawn(4, 5, "Ada")
 	bo, _ := g.SpawnNamedPawn(8, 5, "Bo")
@@ -134,6 +137,7 @@ func TestTendStopsBleeding(t *testing.T) {
 }
 
 func TestRaiderBleedsOutLikeColonist(t *testing.T) {
+	t.Parallel()
 	g, ada := raidGame(t)
 	g.Raid(1)
 	rid := g.raiderIDs[0]
@@ -172,6 +176,7 @@ func TestRaiderBleedsOutLikeColonist(t *testing.T) {
 }
 
 func TestRaiderBleedsOutInTheRealGame(t *testing.T) {
+	t.Parallel()
 	g, _ := raidGame(t)
 	g.Raid(1)
 	rid := g.raiderIDs[0]
@@ -194,6 +199,7 @@ func TestRaiderBleedsOutInTheRealGame(t *testing.T) {
 }
 
 func TestDownedHysteresis(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	shock := g.painShockAt(id)
@@ -240,6 +246,7 @@ func TestDownedHysteresis(t *testing.T) {
 }
 
 func TestBloodLossDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b := addWound(t, g, id, body.ArmL, 1, body.Bruise) // a patient, nothing bleeding
@@ -270,6 +277,7 @@ func TestBloodLossDoesNotFlap(t *testing.T) {
 }
 
 func TestHealthViewBleeding(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	hv, ok := g.healthView(id)
@@ -311,6 +319,7 @@ func TestHealthViewBleeding(t *testing.T) {
 }
 
 func TestDoctorTendsTheFastestBleederFirst(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 24, Height: 12})
 	doc, _ := g.SpawnNamedPawn(4, 5, "Ada")
 	near, _ := g.SpawnNamedPawn(6, 5, "Bo")
@@ -329,6 +338,7 @@ func TestDoctorTendsTheFastestBleederFirst(t *testing.T) {
 }
 
 func TestBloodStateSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	b := addWound(t, g, id, body.Torso, 10, body.Cut)
@@ -350,6 +360,7 @@ func TestBloodStateSurvivesSave(t *testing.T) {
 // A downed raider that does not bleed heals slowly, gets up once past the
 // band and flees (MED-01: no bleed-out timer keeps it lying forever).
 func TestBruisedRaiderGetsUpAndFlees(t *testing.T) {
+	t.Parallel()
 	g, _ := raidGame(t)
 	g.Raid(1)
 	rid := g.raiderIDs[0]

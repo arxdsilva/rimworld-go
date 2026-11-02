@@ -51,6 +51,7 @@ func routeCostOf(sx, sy int, p []pathing.Point) int {
 // when the ends are at most longPath apart, and a legal path to the same
 // target costing at most 10% more beyond it.
 func TestPathsExactBelowLongThreshold(t *testing.T) {
+	t.Parallel()
 	g := openColony(t, 3, 260, 90)
 	id := g.pawnIDs[0]
 	r := randx.New(9)
@@ -108,6 +109,7 @@ func TestPathsExactBelowLongThreshold(t *testing.T) {
 // order); the rest fail as deferred (not unreachable, not postponed) and
 // get their search on a later tick. Two identical games agree exactly.
 func TestLongSearchBudgetDeterministic(t *testing.T) {
+	t.Parallel()
 	run := func() ([]job.Record, uint64) {
 		g := openColony(t, 5, 240, 40)
 		var ids []entity.EntityID

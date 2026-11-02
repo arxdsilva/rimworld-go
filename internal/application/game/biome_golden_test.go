@@ -35,6 +35,7 @@ func temperateHash(t *testing.T, seed uint64) uint64 {
 }
 
 func TestTemperateGenerationUnchanged(t *testing.T) {
+	t.Parallel()
 	for _, seed := range []uint64{1, 7, 42} {
 		got := temperateHash(t, seed)
 		if w := goldenTemperate[seed]; got != w {

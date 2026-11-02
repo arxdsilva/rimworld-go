@@ -14,6 +14,7 @@ import (
 // quality and stuff in the view, across a save and load, and when it is
 // swapped for another it falls as the same stack.
 func TestEquippedWeaponKeepsQuality(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 30, 20, 10, 10)
 	sid, _ := g.SpawnStack(item.Mace, 1, 11, 10)
 	st, _ := g.stacks.Get(sid)
@@ -50,6 +51,7 @@ func TestEquippedWeaponKeepsQuality(t *testing.T) {
 // helmets by their weapon's power, a slasher a shield belt, shown in
 // their views.
 func TestRaidersSpawnArmored(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 40, 30, 20, 15)
 	g.raidWith([]item.Kind{item.SniperRifle, item.Longsword}, raid.Assault)
 	var dressed [][]string
@@ -73,6 +75,7 @@ func TestRaidersSpawnArmored(t *testing.T) {
 // like any garment, keeps it through its own dressing and shows its
 // charge.
 func TestShieldBeltWornByOrder(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 30, 20, 10, 10)
 	sid, _ := g.SpawnStack(item.ShieldBelt, 1, 11, 10)
 	g.doEquip(ada, job.Record{Kind: job.Equip, Target: sid, Forced: true})

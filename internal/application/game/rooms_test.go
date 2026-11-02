@@ -33,6 +33,7 @@ func box(t *testing.T, g *Game, x0, y0, x1, y1 int, door [2]int) {
 }
 
 func TestRoomsDetectedAndScored(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	box(t, g, 2, 2, 7, 7, [2]int{4, 7})
 	w := g.World()
@@ -60,6 +61,7 @@ func TestRoomsDetectedAndScored(t *testing.T) {
 }
 
 func TestMoodFromEatingAndSleeping(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	id, _ := g.SpawnNamedPawn(10, 5, "Ada")
 	g.SpawnStack(item.Potatoes, 4, 11, 5) // FOOD-4: berries are exempt from the raw-food thought
@@ -96,6 +98,7 @@ func TestMoodFromEatingAndSleeping(t *testing.T) {
 }
 
 func TestUnhappyPawnsWorkSlower(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 6, Height: 4})
 	id, _ := g.SpawnNamedPawn(1, 1, "Bo")
 	for _, k := range []mood.Kind{mood.SleptOutside, mood.AteRaw, mood.AteWithoutTable, mood.SleptInAwfulRoom} {

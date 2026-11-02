@@ -34,6 +34,7 @@ func plantViewGame(t *testing.T) (*Game, [3]PlantView) {
 // edited and no crop wilting, the plant list is handed out again as it is
 // (the fast path), across the clock moving on, dawn included.
 func TestPlantViewsKeepIdentityOnQuietTick(t *testing.T) {
+	t.Parallel()
 	g, _ := plantViewGame(t)
 	a := g.plantViews()
 	ver := g.views.plants.ver
@@ -72,6 +73,7 @@ func TestPlantViewsKeepIdentityOnQuietTick(t *testing.T) {
 // gives its view the zone's crop; a zone edit that changes no plant's
 // view keeps the list.
 func TestPlantViewsRefreshOnZoneEdit(t *testing.T) {
+	t.Parallel()
 	g, ids := plantViewGame(t)
 	a := g.plantViews()
 	zid := g.paintZone(zone.KindGrow, zone.Zone{Crop: uint8(plant.Potato)}, 20, 20, 20, 20)
@@ -96,6 +98,7 @@ func TestPlantViewsRefreshOnZoneEdit(t *testing.T) {
 // wilts its view with no plant written; a wild shrub in the same air is
 // not a crop and never wilts.
 func TestPlantViewsRefreshOnWiltFlip(t *testing.T) {
+	t.Parallel()
 	g, ids := plantViewGame(t)
 	a := g.plantViews()
 	if plantOf(a, ids[0].ID).Wilted {

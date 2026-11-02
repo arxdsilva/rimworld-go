@@ -34,6 +34,7 @@ func killWith(g *Game, id, by entity.EntityID) Position {
 }
 
 func TestCorpseClaimFollowsTheKiller(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 20})
 	bareGround(g)
 	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
@@ -74,6 +75,7 @@ func TestCorpseClaimFollowsTheKiller(t *testing.T) {
 }
 
 func TestTrapKillIsTheColonys(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	placeBuilt(t, g, construction.SpikeTrap, construction.South, 12, 10)
@@ -105,6 +107,7 @@ func TestTrapKillIsTheColonys(t *testing.T) {
 }
 
 func TestStarvedAndOldCorpsesClaim(t *testing.T) {
+	t.Parallel()
 	// a wild animal that starves is unclaimed; a tame one is the colony's
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
@@ -168,6 +171,7 @@ func TestStarvedAndOldCorpsesClaim(t *testing.T) {
 // Claimed and unclaimed carcasses of one species on one tile never merge,
 // and a killer feeds on the stack its own kill went into.
 func TestCorpseClaimsKeepApart(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	colony := g.dropCorpseAs(animal.Deer, 10, 10, false, false, 0)
@@ -192,6 +196,7 @@ func TestCorpseClaimsKeepApart(t *testing.T) {
 }
 
 func TestWildEggsAreUnclaimed(t *testing.T) {
+	t.Parallel()
 	for _, tame := range []bool{false, true} {
 		g := New(Config{Seed: 1, Width: 30, Height: 20})
 		warmDay(t, g)

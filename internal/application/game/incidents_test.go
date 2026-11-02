@@ -40,6 +40,7 @@ func lastMessage(g *Game) MessageView {
 }
 
 func TestHerdCrossesEdgeToEdge(t *testing.T) {
+	t.Parallel()
 	g := eventMap(t, 3, 60, 40, biome.Tundra)
 	before := len(g.animalIDs)
 	if !g.FireIncident("herd_crossing") {
@@ -101,6 +102,7 @@ func TestHerdCrossesEdgeToEdge(t *testing.T) {
 }
 
 func TestStrayJoinsTame(t *testing.T) {
+	t.Parallel()
 	for _, b := range []biome.ID{biome.TemperateForest, biome.IceSheet, biome.Desert} {
 		g := eventMap(t, 4, 40, 40, b)
 		before := len(g.animalIDs)
@@ -159,6 +161,7 @@ func evHasSpecies(list []animal.Species, s animal.Species) bool {
 }
 
 func TestFarmAnimalsBothSexes(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 8; seed++ {
 		b := []biome.ID{biome.TemperateForest, biome.Desert, biome.Tundra, biome.TropicalRainforest}[seed%4]
 		g := eventMap(t, seed, 40, 40, b)
@@ -197,6 +200,7 @@ func TestFarmAnimalsBothSexes(t *testing.T) {
 }
 
 func TestClimateFit(t *testing.T) {
+	t.Parallel()
 	g := wildMapOf(1, 10, 10, biome.Desert)
 	if g.climateFit(animal.Cow) || g.climateFit(animal.Husky) || !g.climateFit(animal.Goat) || !g.climateFit(animal.Donkey) {
 		t.Fatal("desert fit: no cows or huskies, goats and donkeys")
@@ -208,6 +212,7 @@ func TestClimateFit(t *testing.T) {
 }
 
 func TestSelfTameNearHome(t *testing.T) {
+	t.Parallel()
 	g := eventMap(t, 5, 80, 80, biome.TemperateForest)
 	near, _ := g.SpawnAnimal("deer", 45, 40)
 	wolf, _ := g.SpawnAnimal("timber_wolf", 38, 42)
@@ -235,6 +240,7 @@ func TestSelfTameNearHome(t *testing.T) {
 }
 
 func TestTimbergnawsEatTreesAndLeave(t *testing.T) {
+	t.Parallel()
 	g := eventMap(t, 6, 50, 30, biome.BorealForest)
 	for i := 0; i < 14; i++ {
 		if _, err := g.spawnPlant(plant.Pine, 8+i*2, 6+i%3*8, plant.DefOf(plant.Pine).GrowTicks); err != nil {
@@ -296,6 +302,7 @@ func TestTimbergnawsEatTreesAndLeave(t *testing.T) {
 }
 
 func TestMadAnimalGoesManhunter(t *testing.T) {
+	t.Parallel()
 	g := eventMap(t, 7, 100, 100, biome.TemperateForest)
 	near, _ := g.SpawnAnimal("deer", 60, 70)
 	far, _ := g.SpawnAnimal("deer", 99, 99) // beyond madRadius of home
@@ -341,6 +348,7 @@ func TestMadAnimalGoesManhunter(t *testing.T) {
 // TestNoEventDuringThreat: a due nature roll waits while a hostile is on
 // the map, then fires once it is gone.
 func TestNoEventDuringThreat(t *testing.T) {
+	t.Parallel()
 	g := eventMap(t, 8, 60, 60, biome.TemperateForest)
 	for i := 0; i < 6; i++ {
 		_, _ = g.SpawnAnimal("deer", 20+i, 25)
@@ -370,6 +378,7 @@ func TestNoEventDuringThreat(t *testing.T) {
 }
 
 func TestIncidentCooldownsAndSave(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 9, Width: 48, Height: 40})
 	if g.incidents.NextNature == 0 {
 		g.Step(1)

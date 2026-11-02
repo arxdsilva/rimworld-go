@@ -54,6 +54,7 @@ func animalOf(g *Game, id entity.EntityID) animal.State {
 }
 
 func TestHungryDeerGrazesAndStops(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	sowGrass(g, 12, 8, 17, 12) // 30 tiles
@@ -92,6 +93,7 @@ func TestHungryDeerGrazesAndStops(t *testing.T) {
 }
 
 func TestWildDeerEatsCrop(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	crop, _ := g.spawnPlant(plant.Potato, 14, 10, plant.DefOf(plant.Potato).GrowTicks)
@@ -141,6 +143,7 @@ func TestWildDeerEatsCrop(t *testing.T) {
 }
 
 func TestWolfEatsItsKill(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 30, Height: 20})
 	bareGround(g)
 	wolf, _ := g.SpawnAnimal("timber_wolf", 10, 10)
@@ -175,6 +178,7 @@ func TestWolfEatsItsKill(t *testing.T) {
 }
 
 func TestStarvingAnimalDies(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	bareGround(g)
 	g.ClearPlants(0, 0, 19, 11)
@@ -202,6 +206,7 @@ func TestStarvingAnimalDies(t *testing.T) {
 }
 
 func TestAnimalsSleepAtNight(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	jumpTo(g, 1, 20)
 	deer, _ := g.SpawnAnimal("deer", 10, 10)
@@ -224,6 +229,7 @@ func TestAnimalsSleepAtNight(t *testing.T) {
 }
 
 func TestNocturnalSleepsByDay(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	jumpTo(g, 1, 11)
 	coon, _ := g.SpawnAnimal("raccoon", 10, 10)
@@ -250,6 +256,7 @@ func TestNocturnalSleepsByDay(t *testing.T) {
 }
 
 func TestWokenTerritorialFightsBack(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	jumpTo(g, 1, 22)
 	ada, _ := g.SpawnNamedPawn(12, 10, "Ada")
@@ -275,6 +282,7 @@ func TestWokenTerritorialFightsBack(t *testing.T) {
 }
 
 func TestHurtPredatorBreaksOff(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 20})
 	bareGround(g)
 	wolf, _ := g.SpawnAnimal("timber_wolf", 11, 10)
@@ -317,6 +325,7 @@ func TestHurtPredatorBreaksOff(t *testing.T) {
 }
 
 func TestPredatorGivesUpChase(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 80, Height: 20})
 	bareGround(g)
 	wolf, _ := g.SpawnAnimal("timber_wolf", 5, 10)
@@ -351,6 +360,7 @@ func TestPredatorGivesUpChase(t *testing.T) {
 }
 
 func TestPenTroughFeedsInWinter(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	jumpTo(g, seasonDay(t, "Winter", 1), 10)
 	bareGround(g)
@@ -413,6 +423,7 @@ func buildingView(g *Game, id entity.EntityID) BuildingView {
 }
 
 func TestTroughFilterCommand(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	fenceRing(t, g, 14, 4, 23, 13, [2]int{18, 13}) // PLAY-015: a marker pen
 	buildMarker(t, g, 16, 10)
@@ -459,6 +470,7 @@ func TestTroughFilterCommand(t *testing.T) {
 // feedFlapRun steps a deer in a meadow and checks every switch between
 // wandering and feeding against the thresholds.
 func TestNoFeedFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 30})
 	bareGround(g)
 	sowGrass(g, 0, 0, 39, 29)
@@ -488,6 +500,7 @@ func TestNoFeedFlap(t *testing.T) {
 }
 
 func TestNoRestFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 30})
 	sowGrass(g, 0, 0, 39, 29)
 	deer, _ := g.SpawnAnimal("deer", 20, 15)
@@ -516,6 +529,7 @@ func TestNoRestFlap(t *testing.T) {
 }
 
 func TestDecisionPacing(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	deer, _ := g.SpawnAnimal("deer", 10, 10)
 	g.Step(1)
@@ -545,6 +559,7 @@ func TestDecisionPacing(t *testing.T) {
 }
 
 func TestTimbergnawEatsTrees(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	sowGrass(g, 0, 0, 29, 19) // grass is no food to a tree-eater
 	tree, _ := g.spawnPlant(plant.Tree, 14, 10, plant.DefOf(plant.Tree).GrowTicks)
@@ -568,6 +583,7 @@ func TestTimbergnawEatsTrees(t *testing.T) {
 }
 
 func TestIndexMatchesBruteForce(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 8; seed++ {
 		g := New(Config{Seed: seed, Width: 70, Height: 50})
 		for i := 0; i < 60; i++ {
@@ -611,6 +627,7 @@ func TestIndexMatchesBruteForce(t *testing.T) {
 }
 
 func TestOldSaveAnimalsNormalised(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	wolf, _ := g.SpawnAnimal("timber_wolf", 5, 5)
 	deer, _ := g.SpawnAnimal("deer", 9, 5)
@@ -642,6 +659,7 @@ func TestOldSaveAnimalsNormalised(t *testing.T) {
 }
 
 func TestWildlifeRows(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 20})
 	for i := 0; i < 3; i++ {
 		_, _ = g.SpawnAnimal("deer", 5+i, 5)
@@ -667,6 +685,7 @@ func TestWildlifeRows(t *testing.T) {
 }
 
 func TestDomesticNotWildAtStart(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 25; seed++ {
 		g := New(Config{Seed: seed, Width: 60, Height: 60})
 		g.spawnWildlife()
@@ -684,6 +703,7 @@ func TestDomesticNotWildAtStart(t *testing.T) {
 }
 
 func TestBiomeWildlifeAtStart(t *testing.T) {
+	t.Parallel()
 	cold := map[animal.Species]bool{}
 	for seed := uint64(1); seed <= 25; seed++ {
 		g := NewColony(Config{Seed: seed, Width: 60, Height: 60, Biome: biome.Tundra})
@@ -723,6 +743,7 @@ func TestBiomeWildlifeAtStart(t *testing.T) {
 // The indexes are derived state: a game saved mid-day and loaded goes on
 // exactly as the one that kept running.
 func TestWildlifeSaveContinuesDeterministically(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 60, Height: 50})
 	g.generate(4)
 	g.seedGrass()

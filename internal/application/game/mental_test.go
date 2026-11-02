@@ -14,6 +14,7 @@ import (
 )
 
 func TestRecreationDrainsAndFunRefillsIt(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	g.joy[id] = 5000
@@ -46,6 +47,7 @@ func TestRecreationDrainsAndFunRefillsIt(t *testing.T) {
 }
 
 func TestBoredomThoughts(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 10, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	has := func(k mood.Kind) bool {
@@ -67,6 +69,7 @@ func TestBoredomThoughts(t *testing.T) {
 }
 
 func TestMiserableColonistBreaksAndRecovers(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	for _, k := range []mood.Kind{mood.SleptOutside, mood.AteRaw, mood.AteWithoutTable, mood.SleptInAwfulRoom} {
@@ -117,6 +120,7 @@ func TestMiserableColonistBreaksAndRecovers(t *testing.T) {
 }
 
 func TestFoodBingeEatsPastFull(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SpawnStack(item.Lettuce, 60, 4, 2)

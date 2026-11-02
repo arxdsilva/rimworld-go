@@ -8,6 +8,7 @@ import (
 )
 
 func TestWidthHeightReflectConfig(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 7, Height: 4})
 
 	if g.Width() != 7 || g.Height() != 4 {
@@ -16,6 +17,7 @@ func TestWidthHeightReflectConfig(t *testing.T) {
 }
 
 func TestDateMatchesTick(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 	g.Step(clock.TicksPerDay + clock.TicksPerHour*3)
 
@@ -26,6 +28,7 @@ func TestDateMatchesTick(t *testing.T) {
 }
 
 func TestSpawnPawnAssignsPosition(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 
 	id, err := g.SpawnPawn(2, 3)
@@ -43,6 +46,7 @@ func TestSpawnPawnAssignsPosition(t *testing.T) {
 }
 
 func TestSpawnPawnRejectsOutOfBounds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 
 	if _, err := g.SpawnPawn(99, 99); err == nil {
@@ -54,6 +58,7 @@ func TestSpawnPawnRejectsOutOfBounds(t *testing.T) {
 }
 
 func TestStartsInTheMorning(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 	if g.Tick() != clock.StartingMorning() {
 		t.Fatalf("Tick() = %d, want %d", g.Tick(), clock.StartingMorning())
@@ -67,6 +72,7 @@ func TestStartsInTheMorning(t *testing.T) {
 }
 
 func TestMorningEightIsWork(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 	if g.Date().Hour != clock.StartHour {
 		t.Fatalf("hour = %d, want %d", g.Date().Hour, clock.StartHour)
@@ -77,6 +83,7 @@ func TestMorningEightIsWork(t *testing.T) {
 }
 
 func TestStepAdvancesClock(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 
 	g.Step(10)
@@ -87,6 +94,7 @@ func TestStepAdvancesClock(t *testing.T) {
 }
 
 func TestStepKeepsPawnsInBounds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 	if _, err := g.SpawnPawn(0, 0); err != nil {
 		t.Fatalf("SpawnPawn: %v", err)
@@ -105,6 +113,7 @@ func TestStepKeepsPawnsInBounds(t *testing.T) {
 }
 
 func TestPawnsRelocateAtMostOncePerCell(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 8})
 	if _, err := g.SpawnPawn(3, 3); err != nil {
 		t.Fatalf("SpawnPawn: %v", err)
@@ -125,6 +134,7 @@ func TestPawnsRelocateAtMostOncePerCell(t *testing.T) {
 }
 
 func TestStepIsDeterministicForSameSeed(t *testing.T) {
+	t.Parallel()
 	run := func() []PawnView {
 		g := New(Config{Seed: 42, Width: 10, Height: 10})
 		for i := 0; i < 5; i++ {

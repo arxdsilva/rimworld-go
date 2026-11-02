@@ -57,6 +57,7 @@ func checkRegionQueries(t *testing.T, g *Game, r *randx.Rand, pairs int) {
 // traps at random, mines and floods cells, and removes buildings again;
 // after every batch each layer's region answers match its path query.
 func TestRegionReachMatchesQueries(t *testing.T) {
+	t.Parallel()
 	kinds := []string{"wall", "wall", "wall", "door", "fence", "fence", "fence gate", "spike trap"}
 	for seed := uint64(1); seed <= 4; seed++ {
 		r := randx.New(seed)
@@ -121,6 +122,7 @@ func TestRegionsDoNotChangeState(t *testing.T) {
 // fences (a tame area animal through the gate; wild animals and, PLAY-015,
 // livestock not).
 func TestFenceReachableUsesLayers(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 2, Width: 40, Height: 30})
 	g.SetGround(0, 0, 39, 29, "soil", "", "")
 	g.ClearPlants(0, 0, 39, 29)

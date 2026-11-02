@@ -14,6 +14,7 @@ import (
 // the current order instead of replacing the queue, is named after its
 // patient, and runs when the first tend is done.
 func TestEmergencyTendQueues(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 48, Height: 12})
 	doc, _ := g.SpawnNamedPawn(6, 6, "Doc")
 	bo, _ := g.SpawnNamedPawn(10, 6, "Bo")
@@ -44,6 +45,7 @@ func TestEmergencyTendQueues(t *testing.T) {
 // tile differ only by their target; the queue label must follow the
 // target, not the first option of the same kind.
 func TestOrderLabelMatchesTarget(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 48, Height: 12})
 	doc, _ := g.SpawnNamedPawn(6, 6, "Doc")
 	bo, _ := g.SpawnNamedPawn(10, 6, "Bo")

@@ -48,6 +48,7 @@ func onlyHabitat(s animal.Species, h animal.Habitat) bool { return animal.Roster
 // boreal cold-climate animals are drawn more in winter, arid hot-climate
 // ones more in summer.
 func TestStartWildlifeBySeason(t *testing.T) {
+	t.Parallel()
 	cold, hot := map[string]int{}, map[string]int{}
 	for _, season := range []string{"Winter", "Summer"} {
 		day := seasonDay(t, season, 1)
@@ -130,6 +131,7 @@ func TestWildlifeWeights(t *testing.T) {
 // edge, the same for the same seed; a map at capacity gets nobody, at any
 // hour.
 func TestMigrationDeterministic(t *testing.T) {
+	t.Parallel()
 	run := func() ([]animal.Species, []Position) {
 		g := New(Config{Seed: 11, Width: 50, Height: 50})
 		g.wild = true
@@ -175,6 +177,7 @@ func TestMigrationDeterministic(t *testing.T) {
 }
 
 func TestPackPredatorsHunt(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 40, Height: 20})
 	w1, _ := g.SpawnAnimal("timber_wolf", 10, 10)
 	w2, _ := g.SpawnAnimal("timber_wolf", 11, 12)
@@ -210,6 +213,7 @@ func TestPackPredatorsHunt(t *testing.T) {
 }
 
 func TestSmallPreyOnly(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 40, Height: 20})
 	fox, _ := g.SpawnAnimal("red_fox", 10, 10)
 	_, _ = g.SpawnAnimal("deer", 11, 10)
@@ -226,6 +230,7 @@ func TestSmallPreyOnly(t *testing.T) {
 }
 
 func TestExplosiveBurstOnDeath(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 20})
 	boom, _ := g.SpawnAnimal("emberbuck", 10, 10)
 	near, _ := g.SpawnNamedPawn(11, 10, "Near")
@@ -277,6 +282,7 @@ func hasMessage(g *Game, sub string) bool {
 }
 
 func TestButcherYieldBySize(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		species       string
 		meat, leather int
@@ -313,6 +319,7 @@ func TestButcherYieldBySize(t *testing.T) {
 // carcass is its own stack of one, named by its species; a second one on
 // a taken tile lies beside it.
 func TestAnimalCorpsesNeverStack(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	g.dropCorpse(animal.Deer, 4, 4)
 	g.dropCorpse(animal.Deer, 4, 4)
@@ -330,6 +337,7 @@ func TestAnimalCorpsesNeverStack(t *testing.T) {
 }
 
 func TestOldSaveCorpsesConvert(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	if _, err := g.SpawnStack(item.CorpseDustbuck, 2, 3, 3); err != nil {
 		t.Fatal(err)
@@ -391,6 +399,7 @@ func TestAttackVerbs(t *testing.T) {
 }
 
 func TestAnimalActionIsItsAttack(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 10})
 	p, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	for _, c := range []struct{ species, action string }{{"cow", "headbutt"}, {"chicken", "peck"}, {"cougar", "claw"},
@@ -416,6 +425,7 @@ func TestAnimalActionIsItsAttack(t *testing.T) {
 }
 
 func TestAnimalStrikeScalesBySize(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 10})
 	p, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	chick, _ := g.SpawnAnimal("chicken", 6, 5)
@@ -434,6 +444,7 @@ func TestAnimalStrikeScalesBySize(t *testing.T) {
 }
 
 func TestSpawnAnimalAcceptsEveryKey(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 70, Height: 4})
 	for i, s := range animal.All() {
 		if _, err := g.SpawnAnimal(s.String(), i, 1); err != nil {

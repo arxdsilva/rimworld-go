@@ -30,6 +30,7 @@ func twoGrowers(t *testing.T, x1, y1, x2, y2 int) (*Game, entity.EntityID, entit
 }
 
 func TestSowClaimsItsTile(t *testing.T) {
+	t.Parallel()
 	g, ada, bo := twoGrowers(t, 5, 2, 8, 3)
 	if !g.assignSow(ada) {
 		t.Fatal("Ada found nothing to sow")
@@ -51,6 +52,7 @@ func TestSowClaimsItsTile(t *testing.T) {
 }
 
 func TestForcedSowRefusesAClaimedTile(t *testing.T) {
+	t.Parallel()
 	g, ada, bo := twoGrowers(t, 5, 2, 8, 3)
 	if !g.assignSow(ada) {
 		t.Fatal("Ada found nothing to sow")
@@ -74,6 +76,7 @@ func TestForcedSowRefusesAClaimedTile(t *testing.T) {
 // tick do two of them hold Sow jobs on one cell, no Sow fails because its
 // cell was taken, and the field ends fully sown.
 func TestTwoGrowersNeverShareASowCell(t *testing.T) {
+	t.Parallel()
 	g, ada, bo := twoGrowers(t, 5, 2, 10, 3)
 	gone := 0
 	for tick := 0; tick < 8000; tick++ {
@@ -104,6 +107,7 @@ func TestTwoGrowersNeverShareASowCell(t *testing.T) {
 // TestSowClaimSurvivesSaveLoad: a sow in progress keeps its claim through
 // a save and load, so the other grower still can't take the cell.
 func TestSowClaimSurvivesSaveLoad(t *testing.T) {
+	t.Parallel()
 	g, ada, _ := twoGrowers(t, 5, 2, 8, 3)
 	if !g.assignSow(ada) {
 		t.Fatal("Ada found nothing to sow")
@@ -133,6 +137,7 @@ func sownCells(g *Game, x1, y1, x2, y2 int) int {
 // TestForcedSowSaysSowingIsOff: with sowing off in the zone, "Sow here" is
 // refused with that reason, not the general "cannot sow here".
 func TestForcedSowSaysSowingIsOff(t *testing.T) {
+	t.Parallel()
 	g, ada, _ := twoGrowers(t, 5, 2, 8, 3)
 	z, ok := g.zoneAt(5, 2)
 	if !ok {

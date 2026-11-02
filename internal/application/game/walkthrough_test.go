@@ -65,6 +65,7 @@ func runMoves(g *Game, n int, ids ...entity.EntityID) (maxBlocked int) {
 }
 
 func TestPartnersStepThroughEachOther(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 5)
 	b := mustPawn(t, g, 3, 5)
@@ -109,6 +110,7 @@ func TestPartnersStepThroughEachOther(t *testing.T) {
 }
 
 func TestWildBoarAndRaiderStillBlock(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	col := mustPawn(t, g, 2, 5)
 	boar := animalAt(t, g, "wild_boar", 3, 5, false)
@@ -149,6 +151,7 @@ func TestWildBoarAndRaiderStillBlock(t *testing.T) {
 }
 
 func TestCombatFinalStepArrivesNear(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	m := mustPawn(t, g, 4, 5)
 	w := mustPawn(t, g, 5, 5)
@@ -207,6 +210,7 @@ func TestCombatFinalStepArrivesNear(t *testing.T) {
 }
 
 func TestNonCombatRingAllGo(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 5, 5)
 	b := mustPawn(t, g, 6, 5)
@@ -226,6 +230,7 @@ func TestNonCombatRingAllGo(t *testing.T) {
 }
 
 func TestWalkThroughWorkingColonistNoWait(t *testing.T) {
+	t.Parallel()
 	run := func(blocking bool) int {
 		g := corridorGame()
 		a := mustPawn(t, g, 1, 5)
@@ -255,6 +260,7 @@ func TestWalkThroughWorkingColonistNoWait(t *testing.T) {
 }
 
 func TestDraftedCrowdEndsOnThreeCells(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 20})
 	target := Position{10, 10}
 	ids := []entity.EntityID{draftedPawn(t, g, 3, 10), draftedPawn(t, g, 17, 10), draftedPawn(t, g, 10, 3)}
@@ -290,6 +296,7 @@ func TestDraftedCrowdEndsOnThreeCells(t *testing.T) {
 }
 
 func TestFleeingColonistDoesNotStopOnColonist(t *testing.T) {
+	t.Parallel()
 	run := func(fleeing bool) (Position, int) {
 		g := corridorGame()
 		g.grid.SetWalkable(8, 4, true) // a bay beside the goal
@@ -320,6 +327,7 @@ func TestFleeingColonistDoesNotStopOnColonist(t *testing.T) {
 }
 
 func TestDogAndColonistPassThrough(t *testing.T) {
+	t.Parallel()
 	g := corridorGame()
 	c := mustPawn(t, g, 2, 5)
 	dog := animalAt(t, g, "husky", 10, 5, true)
@@ -334,6 +342,7 @@ func TestDogAndColonistPassThrough(t *testing.T) {
 }
 
 func TestUnstackOnlyInCombat(t *testing.T) {
+	t.Parallel()
 	work := func(g *Game, id entity.EntityID) {
 		g.jobs.Set(id, job.Record{Kind: job.Construct, State: job.Do, TX: 6, TY: 5, WorkLeft: 50})
 	}
@@ -394,6 +403,7 @@ func TestUnstackOnlyInCombat(t *testing.T) {
 }
 
 func TestPartnerMeleeAndCombatOnSharedCell(t *testing.T) {
+	t.Parallel()
 	// a colonist fighting another stops next to it, even mid-walk
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 5)

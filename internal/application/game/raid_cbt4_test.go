@@ -41,6 +41,7 @@ func coverRig(t *testing.T) (*Game, entity.EntityID, entity.EntityID) {
 // TestRaiderSeeksCoverUnderFire: a raider shooting at an armed colonist
 // first moves behind the sandbags between them.
 func TestRaiderSeeksCoverUnderFire(t *testing.T) {
+	t.Parallel()
 	g, ada, rid := coverRig(t)
 	behind := false
 	for i := 0; i < 900 && !behind; i++ {
@@ -62,6 +63,7 @@ func TestRaiderSeeksCoverUnderFire(t *testing.T) {
 // TestRaiderCoverDoesNotFlap: once in cover the raider holds it; it
 // picks a new spot at most rarely and never steps back and forth.
 func TestRaiderCoverDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, ada, rid := coverRig(t)
 	var spots []Position
 	for i := 0; i < 2400 && g.standingPawn(ada); i++ {
@@ -83,6 +85,7 @@ func TestRaiderCoverDoesNotFlap(t *testing.T) {
 // TestRaiderPrefersArmedColonist: threat-weighted, a raider goes for the
 // rifleman a little further off over the unarmed colonist nearer.
 func TestRaiderPrefersArmedColonist(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 50, 30, 30, 15)
 	bo, _ := g.SpawnNamedPawn(22, 15, "Bo")
 	g.equip[ada] = item.Rifle
@@ -110,6 +113,7 @@ func TestRaiderPrefersArmedColonist(t *testing.T) {
 // TestRaiderDodgesGrenade: a raider steps out of a grenade's blast
 // before it lands.
 func TestRaiderDodgesGrenade(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 50, 30, 40, 15)
 	rid := turretRaider(t, g, 20, 15)
 	g.combat.Shots.Lob(ada, weapon.FragGrenade, 30, 15, 20, 15, 20, 15)
@@ -124,6 +128,7 @@ func TestRaiderDodgesGrenade(t *testing.T) {
 // TestRetreatingRaiderGrabsLoot: a raider leaving picks up a stack worth
 // taking on its way out, once.
 func TestRetreatingRaiderGrabsLoot(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 50, 30, 45, 15)
 	sid, _ := g.SpawnStack(item.Rifle, 1, 24, 15)
 	rid := turretRaider(t, g, 20, 15)
@@ -143,6 +148,7 @@ func TestRetreatingRaiderGrabsLoot(t *testing.T) {
 
 // TestBurnRaidBurnsCrops: a burner sets a sown crop alight.
 func TestBurnRaidBurnsCrops(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 40, 20, 35, 10)
 	pid, err := g.SpawnCrop("corn", 20, 10, 60)
 	if err != nil {
@@ -168,6 +174,7 @@ func TestBurnRaidBurnsCrops(t *testing.T) {
 // TestSiegeResupply: a camped siege gets a pod of meals and full mortar
 // racks once a day.
 func TestSiegeResupply(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 90, 90, 45, 45)
 	g.Siege(3)
 	for i := 0; i < 400 && !g.raidGroups[0].Camped; i++ {
@@ -200,6 +207,7 @@ func TestSiegeResupply(t *testing.T) {
 // TestPrisonBreakFightsAndFlees: an escaping prisoner is hostile,
 // flees, and bashes through a door that shuts it in.
 func TestPrisonBreakFightsAndFlees(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 40, 20, 5, 5)
 	rid := turretRaider(t, g, 20, 10)
 	g.makePrisoner(rid, ada)
@@ -224,6 +232,7 @@ func TestPrisonBreakFightsAndFlees(t *testing.T) {
 // TestMechBashesShutDoor: a mechanoid shut out by walls and a door breaks
 // its way in (a wall or the door on its breach route).
 func TestMechBashesShutDoor(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 30, 30, 12, 12)
 	for x := 10; x <= 14; x++ {
 		for _, y := range []int{10, 14} {
@@ -259,6 +268,7 @@ func TestMechBashesShutDoor(t *testing.T) {
 // TestMechDropPods: a mechanoid raid by drop pod falls, then lands its
 // machines beside their shells; the pods survive a save.
 func TestMechDropPods(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 50, 40, 25, 20)
 	if n := g.raid.Mechs.Raid(raid.MechRaidMinPoints, raiddef.DropPodCentre, uint64(g.clock.Now())); n == 0 {
 		t.Fatal("pods planned")
@@ -303,6 +313,7 @@ func hiveRig(t *testing.T) (*Game, entity.EntityID) {
 // roofed cave raises a hive mound whose swarm is its brood; it breeds and
 // spreads; destroyed, it breeds no more; it survives a save.
 func TestHiveMoundBreedsSpreadsAndStops(t *testing.T) {
+	t.Parallel()
 	g, _ := hiveRig(t)
 	if !(raidNest{g}).HiveSpot(8, 10) || (raidNest{g}).HiveSpot(30, 10) {
 		t.Fatal("hive spots: under the roof only")
@@ -348,6 +359,7 @@ func TestHiveMoundBreedsSpreadsAndStops(t *testing.T) {
 // shooting at it; one set to ignore carries on; an armed one set to
 // attack shoots the raider on sight (CBT-4, wiki: Threat response).
 func TestThreatResponse(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 50, 30, 30, 15)
 	rid := turretRaider(t, g, 20, 15)
 	r := g.raiders[rid]
@@ -394,6 +406,7 @@ func TestThreatResponse(t *testing.T) {
 // stays calm) while the raider lingers, never switching back to work and
 // to flight every few ticks.
 func TestThreatResponseDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 60, 30, 30, 15)
 	rid := turretRaider(t, g, 20, 15)
 	r := g.raiders[rid]

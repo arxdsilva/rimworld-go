@@ -16,6 +16,7 @@ import (
 )
 
 func TestNewColonyIsGeneratedAroundAnOpenStart(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 48, Height: 40})
 	w := g.World()
 	if w.TerrainW != 48 || len(w.Terrain) != 48*40 {
@@ -50,6 +51,7 @@ func TestNewColonyIsGeneratedAroundAnOpenStart(t *testing.T) {
 }
 
 func TestChopTreeDropsWood(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Ada")
 	g.SpawnPlantSpecies("tree", 6, 2, plant.DefOf(plant.Tree).GrowTicks)
@@ -64,6 +66,7 @@ func TestChopTreeDropsWood(t *testing.T) {
 }
 
 func TestMineRockDropsTypedChunk(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Bo")
 	for y := 0; y < 5; y++ {
@@ -99,6 +102,7 @@ func TestMineRockDropsTypedChunk(t *testing.T) {
 }
 
 func TestMineOreDropsMetalAndClearsOre(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		ore  string
 		kind item.Kind
@@ -145,6 +149,7 @@ func TestMineOreDropsMetalAndClearsOre(t *testing.T) {
 }
 
 func TestMineSmoothedWall(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Bo")
 	if !g.SetGround(6, 0, 6, 4, "rock_smooth", "limestone", "") {
@@ -172,6 +177,7 @@ func TestMineSmoothedWall(t *testing.T) {
 }
 
 func TestStoneWallUsesStoneBlocks(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Cora")
 	g.SpawnStack(item.GraniteBlocks, 5, 2, 3)
@@ -191,6 +197,7 @@ func TestStoneWallUsesStoneBlocks(t *testing.T) {
 }
 
 func TestBerryBushRegrowsAfterHarvest(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Ada")
 	g.SpawnPlant(5, 2)
@@ -214,6 +221,7 @@ func TestBerryBushRegrowsAfterHarvest(t *testing.T) {
 }
 
 func TestTreeBlocksBuildingButBushIsCleared(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnPlantSpecies("tree", 3, 3, 100)
 	if ok, r := g.CanPlace("bed", 3, 3); ok || r != ReasonTree {
@@ -226,6 +234,7 @@ func TestTreeBlocksBuildingButBushIsCleared(t *testing.T) {
 }
 
 func TestOrdersAtOffersChopAndMine(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	id, _ := g.SpawnNamedPawn(1, 2, "Ada")
 	g.SpawnPlantSpecies("tree", 4, 2, 500)
@@ -252,6 +261,7 @@ func TestOrdersAtOffersChopAndMine(t *testing.T) {
 }
 
 func TestCancelClearsCutAndMine(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnPlantSpecies("tree", 4, 2, 500)
 	g.setTerrain(7, 2, terrain.Rock)

@@ -44,6 +44,7 @@ func pinAnimal(g *Game, id entity.EntityID) {
 }
 
 func TestHurtAnimalAlwaysReacts(t *testing.T) {
+	t.Parallel()
 	type attacker int
 	const (
 		byColonist attacker = iota
@@ -110,6 +111,7 @@ func TestHurtAnimalAlwaysReacts(t *testing.T) {
 }
 
 func TestFighterFightsBackAgainstItsOwnKind(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 30, Height: 16})
 	bareGround(g)
 	boar, _ := g.SpawnAnimal("wild_boar", 10, 8)
@@ -126,6 +128,7 @@ func TestFighterFightsBackAgainstItsOwnKind(t *testing.T) {
 }
 
 func TestFighterKeepsItsTarget(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 30, Height: 16})
 	bareGround(g)
 	boar, _ := g.SpawnAnimal("wild_boar", 10, 8)
@@ -139,6 +142,7 @@ func TestFighterKeepsItsTarget(t *testing.T) {
 }
 
 func TestTameAnimalHurtByColonistFlees(t *testing.T) {
+	t.Parallel()
 	for _, s := range []string{"bison", "ridgewolf", "cow"} {
 		g := New(Config{Seed: 3, Width: 30, Height: 16})
 		bareGround(g)
@@ -164,6 +168,7 @@ func TestTameAnimalHurtByColonistFlees(t *testing.T) {
 // cougar held in place (a colonist's hits may turn it manhunter, which
 // fights to the death by design).
 func TestTerritorialReactionDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 40, Height: 20})
 	bareGround(g)
 	boar, _ := g.SpawnAnimal("wild_boar", 20, 10)
@@ -213,6 +218,7 @@ func TestTerritorialReactionDoesNotFlap(t *testing.T) {
 // a colonist it cannot reach, moves after every hit and never leaves the
 // pen.
 func TestPennedSheepFleesEveryHit(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 7, Width: 30, Height: 20})
 	bareGround(g)
 	fenceRing(t, g, 10, 5, 16, 11) // inside: 11..15 x 6..10
@@ -241,6 +247,7 @@ func TestPennedSheepFleesEveryHit(t *testing.T) {
 // The flee spot search: a goal past the fence is never picked; the far
 // side of the pen is.
 func TestFleeSpotStaysReachable(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 7, Width: 30, Height: 20})
 	bareGround(g)
 	fenceRing(t, g, 10, 5, 16, 11)
@@ -275,6 +282,7 @@ func TestFleeSpotStaysReachable(t *testing.T) {
 // A fighter that can't get at its attacker (a fence between, for a wild
 // one) runs instead of standing at the fence.
 func TestFighterFleesFoeItCannotReach(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 20})
 	bareGround(g)
 	fenceRing(t, g, 10, 5, 18, 13)
@@ -305,6 +313,7 @@ func TestFighterFleesFoeItCannotReach(t *testing.T) {
 // reachesFoe on a foe standing where the animal can't (a fence post): a
 // walkable cell beside it must be reachable.
 func TestReachesFoeOnAFence(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 20})
 	bareGround(g)
 	fenceRing(t, g, 2, 2, 7, 7)

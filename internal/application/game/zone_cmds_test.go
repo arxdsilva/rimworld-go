@@ -83,6 +83,7 @@ func totalFood(g *Game) int {
 // ---- sowing ----
 
 func TestSetZoneSowOffStopsSowingUntilItIsOnAgain(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 3)
 	zcmd(g, command.SetZoneSow, id, false)
@@ -104,6 +105,7 @@ func TestSetZoneSowOffStopsSowingUntilItIsOnAgain(t *testing.T) {
 }
 
 func TestSowingOffOnlyAffectsThatZone(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	off := zoneAndApply(t, g, "potato", 4, 1, 5, 1)
 	zoneAndApply(t, g, "radish", 4, 4, 5, 4)
@@ -115,6 +117,7 @@ func TestSowingOffOnlyAffectsThatZone(t *testing.T) {
 }
 
 func TestSetZoneSowOffCancelsAnInFlightSow(t *testing.T) {
+	t.Parallel()
 	g, ada := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 10, 4, 10, 4)
 	for i := 0; i < 600 && jobOf(g, ada).Kind != job.Sow; i++ {
@@ -141,6 +144,7 @@ func TestSetZoneSowOffCancelsAnInFlightSow(t *testing.T) {
 
 // doSow itself refuses once sowing is off, even if nothing interrupted the job.
 func TestDoSowFailsWhenSowingIsOff(t *testing.T) {
+	t.Parallel()
 	g, ada := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 4, 2, 4, 2)
 	j := job.Record{Kind: job.Sow, State: job.Do, TX: 4, TY: 2, WorkLeft: 1}
@@ -156,6 +160,7 @@ func TestDoSowFailsWhenSowingIsOff(t *testing.T) {
 }
 
 func TestForcedSowAndSowableRefuseASowingOffZone(t *testing.T) {
+	t.Parallel()
 	g, ada := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 2)
 	if _, why := g.forcedJob(ada, command.OrderSow, 4, 2, construction.LayerObject); why != "" {
@@ -185,6 +190,7 @@ func TestForcedSowAndSowableRefuseASowingOffZone(t *testing.T) {
 }
 
 func TestSowingOffStopsTreeZonesReplanting(t *testing.T) {
+	t.Parallel()
 	g, _ := treeZoneGame(t)
 	g.Step(1)
 	id := zoneID(t, g, 4, 2)
@@ -208,6 +214,7 @@ func TestSowingOffStopsTreeZonesReplanting(t *testing.T) {
 
 // Harvesting and the ripe mark go on whichever toggle is off.
 func TestToggledOffZonesStillHarvestRipeCrops(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name        string
 		sow, cut    bool // allowed
@@ -243,6 +250,7 @@ func TestToggledOffZonesStillHarvestRipeCrops(t *testing.T) {
 // ---- cutting ----
 
 func TestSetZoneCutOffLeavesWildPlantsAndTheirCellsUnsown(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	moss := putPlant(t, g, plant.Moss, 4, 2, 0, false)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 2)
@@ -267,6 +275,7 @@ func TestSetZoneCutOffLeavesWildPlantsAndTheirCellsUnsown(t *testing.T) {
 }
 
 func TestSetZoneCutOffStopsZoneTreeChopping(t *testing.T) {
+	t.Parallel()
 	g, pid := ripeZoneTree(t)
 	zcmd(g, command.SetZoneCut, zoneID(t, g, 4, 2), false)
 	zcmd(g, command.SetZoneSow, zoneID(t, g, 4, 2), false) // FOOD-2: sowing a sapling takes 4,000 (wiki), keep Ada free
@@ -283,6 +292,7 @@ func TestSetZoneCutOffStopsZoneTreeChopping(t *testing.T) {
 }
 
 func TestSetZoneCutOffCancelsAnInFlightClear(t *testing.T) {
+	t.Parallel()
 	g, ada := clearGame(t)
 	moss := putPlant(t, g, plant.Moss, 10, 4, 0, false)
 	id := zoneAndApply(t, g, "potato", 10, 4, 10, 4)
@@ -305,6 +315,7 @@ func TestSetZoneCutOffCancelsAnInFlightClear(t *testing.T) {
 // A plant the player designated for cutting is not the zone's business:
 // a cut already under way on it goes on when cutting is turned off.
 func TestSetZoneCutOffKeepsDesignatedCuts(t *testing.T) {
+	t.Parallel()
 	g, ada := clearGame(t)
 	moss := putPlant(t, g, plant.Moss, 10, 4, 0, false)
 	id := zoneAndApply(t, g, "potato", 10, 4, 10, 4)
@@ -329,6 +340,7 @@ func TestSetZoneCutOffKeepsDesignatedCuts(t *testing.T) {
 
 // Sowing off alone does not stop the clearing; the cells just stay empty.
 func TestSowingOffStillClearsWrongPlants(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	moss := putPlant(t, g, plant.Moss, 4, 2, 0, false)
 	id := zoneAndApply(t, g, "potato", 4, 2, 4, 2)
@@ -341,6 +353,7 @@ func TestSowingOffStillClearsWrongPlants(t *testing.T) {
 
 // The mature trees of a deleted tree zone are ordinary trees again.
 func TestZoneTreesOutsideAnyZoneAreNotChopped(t *testing.T) {
+	t.Parallel()
 	g, pid := ripeZoneTree(t)
 	zcmd(g, command.DeleteZone, zoneID(t, g, 4, 2), false)
 	g.Step(TicksPerCell*40 + plant.DefOf(plant.Tree).CutWork + 60)
@@ -353,6 +366,7 @@ func TestZoneTreesOutsideAnyZoneAreNotChopped(t *testing.T) {
 
 // A crop research has not unlocked cannot be picked, as for a new zone.
 func TestSetZoneCropRefusesAResearchLockedCrop(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	g.ResetResearch() // New leaves every project done; a fresh colony knows none
 	id := zoneAndApply(t, g, "potato", 1, 4, 2, 4)
@@ -368,6 +382,7 @@ func TestSetZoneCropRefusesAResearchLockedCrop(t *testing.T) {
 }
 
 func TestSetZoneCropMakesGrowersClearAndResow(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	old := []entity.EntityID{
 		putPlant(t, g, plant.Potato, 4, 2, 100, true),
@@ -392,6 +407,7 @@ func TestSetZoneCropMakesGrowersClearAndResow(t *testing.T) {
 }
 
 func TestSetZoneCropWithCuttingOffLeavesTheOldPlants(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	old := putPlant(t, g, plant.Potato, 4, 2, 100, true)
 	id := zoneAndApply(t, g, "potato", 4, 2, 4, 2)
@@ -405,6 +421,7 @@ func TestSetZoneCropWithCuttingOffLeavesTheOldPlants(t *testing.T) {
 }
 
 func TestSetZoneCropIgnoresWhatDoesNotApply(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	grow := zoneAndApply(t, g, "potato", 1, 4, 2, 4)
 	zoneCmd(g, command.DesignateStockpile, 8, 1, 9, 2, 0)
@@ -433,6 +450,7 @@ func TestSetZoneCropIgnoresWhatDoesNotApply(t *testing.T) {
 }
 
 func TestSetZoneCropMergesWithATouchingZoneOfThatCrop(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 1, 4, 4, 4)
 	a := zoneAndApply(t, g, "potato", 1, 4, 2, 4)
@@ -452,6 +470,7 @@ func TestSetZoneCropMergesWithATouchingZoneOfThatCrop(t *testing.T) {
 // ---- expand ----
 
 func TestExpandZoneAddsAdjacentCellsKeepingSettingsAndName(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 4, 2, 8, 3)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 3)
@@ -474,6 +493,7 @@ func TestExpandZoneAddsAdjacentCellsKeepingSettingsAndName(t *testing.T) {
 }
 
 func TestExpandZoneDetachedBlockBecomesANewZoneWithTheSameSettings(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 1, 1, 9, 4)
 	id := zoneAndApply(t, g, "potato", 1, 1, 2, 1)
@@ -491,6 +511,7 @@ func TestExpandZoneDetachedBlockBecomesANewZoneWithTheSameSettings(t *testing.T)
 }
 
 func TestExpandZoneSkipsInvalidCells(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 4, 2, 8, 3)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 2)
@@ -514,6 +535,7 @@ func TestExpandZoneSkipsInvalidCells(t *testing.T) {
 }
 
 func TestExpandZoneAppliesToStockpilesAndIgnoresUnknownIDs(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 4, 2, 6, 3)
 	zoneCmd(g, command.DesignateStockpile, 4, 2, 5, 2, 0)
@@ -531,6 +553,7 @@ func TestExpandZoneAppliesToStockpilesAndIgnoresUnknownIDs(t *testing.T) {
 }
 
 func TestExpandZoneMarksRipePlantsItCovers(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 4, 2, 6, 2)
 	id := zoneAndApply(t, g, "potato", 4, 2, 4, 2)
@@ -546,6 +569,7 @@ func TestExpandZoneMarksRipePlantsItCovers(t *testing.T) {
 // ---- remove cells ----
 
 func TestRemoveZoneCellsTouchesOnlyThatZone(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 2, 2, 8, 3)
 	grow := zoneAndApply(t, g, "potato", 2, 2, 5, 3)
@@ -561,6 +585,7 @@ func TestRemoveZoneCellsTouchesOnlyThatZone(t *testing.T) {
 }
 
 func TestRemoveZoneCellsSplitsKeepingSettingsAndTheBiggestPieceKeepsTheID(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 1, 2, 9, 3)
 	id := zoneAndApply(t, g, "potato", 1, 2, 9, 3)
@@ -586,6 +611,7 @@ func TestRemoveZoneCellsSplitsKeepingSettingsAndTheBiggestPieceKeepsTheID(t *tes
 }
 
 func TestRemoveZoneCellsDeletesAnEmptiedZone(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 3)
 	zrect(g, command.RemoveZoneCells, id, 0, 0, 11, 5)
@@ -599,6 +625,7 @@ func TestRemoveZoneCellsDeletesAnEmptiedZone(t *testing.T) {
 // ---- delete ----
 
 func TestDeleteZoneRemovesItAndFreesItsCells(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	a := zoneAndApply(t, g, "potato", 1, 4, 2, 4)
 	zoneCmd(g, command.DesignateStockpile, 8, 1, 9, 2, 0)
@@ -620,6 +647,7 @@ func TestDeleteZoneRemovesItAndFreesItsCells(t *testing.T) {
 // ---- rename and hide ----
 
 func TestRenameZoneTrimsAndCapsTheName(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 3)
 	rename := func(name string) string {
@@ -650,6 +678,7 @@ func TestRenameZoneTrimsAndCapsTheName(t *testing.T) {
 }
 
 func TestRenameAndHideApplyToEveryZoneKind(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	zoneCmd(g, command.DesignateStockpile, 8, 1, 9, 2, 0)
 	st := zoneID(t, g, 8, 1)
@@ -670,6 +699,7 @@ func TestRenameAndHideApplyToEveryZoneKind(t *testing.T) {
 }
 
 func TestSowAndCutTogglesIgnoreStockpilesAndUnknownIDs(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	zoneCmd(g, command.DesignateStockpile, 8, 1, 9, 2, 0)
 	st := zoneID(t, g, 8, 1)
@@ -688,6 +718,7 @@ func TestSowAndCutTogglesIgnoreStockpilesAndUnknownIDs(t *testing.T) {
 // the same crop against one joins it, and the tiles take the zone's
 // settings (as the lowest id's do when a drag bridges two zones).
 func TestPaintingNextToAConfiguredZoneJoinsItAndTakesItsSettings(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	soil(g, 2, 2, 9, 3)
 	id := zoneAndApply(t, g, "potato", 2, 2, 3, 3)
@@ -712,6 +743,7 @@ func TestPaintingNextToAConfiguredZoneJoinsItAndTakesItsSettings(t *testing.T) {
 // ---- saves and the state hash ----
 
 func TestZoneSettingsSurviveSaveAndLoad(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 3)
 	zcmd(g, command.SetZoneSow, id, false)
@@ -748,6 +780,7 @@ func TestZoneSettingsSurviveSaveAndLoad(t *testing.T) {
 // A zone with every setting at its default hashes as it did before the
 // settings existed: toggling one on moves the hash, off again restores it.
 func TestDefaultZoneSettingsDoNotMoveTheStateHash(t *testing.T) {
+	t.Parallel()
 	g, _ := clearGame(t)
 	id := zoneAndApply(t, g, "potato", 4, 2, 5, 3)
 	base := g.StateHash()

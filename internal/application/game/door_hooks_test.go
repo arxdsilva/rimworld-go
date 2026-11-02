@@ -22,6 +22,7 @@ func doorAtID(t *testing.T, g *Game) uint64 {
 // TestDoorWaitOnTheWay (DEF-3): a colonist walking out of the hut waits at
 // the shut wooden door for its opening time before stepping into it.
 func TestDoorWaitOnTheWay(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 14})
 	hutWalls(t, g, 2, 2, 8, 8)
 	id, _ := g.SpawnPawn(5, 6)
@@ -49,6 +50,7 @@ func TestDoorWaitOnTheWay(t *testing.T) {
 // TestHeldDoorLetsHostilesThrough: a door held open is open to raiders'
 // paths and steps (the region map agrees); let go, it shuts them out again.
 func TestHeldDoorLetsHostilesThrough(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	hut(t, g, 2, 2, 8, 8)
 	doorAtID(t, g)
@@ -73,6 +75,7 @@ func TestHeldDoorLetsHostilesThrough(t *testing.T) {
 // TestForbiddenDoorBarsColonists: a forbidden door is shut to colonists
 // (and stays shut to hostiles); allowed again, colonists pass.
 func TestForbiddenDoorBarsColonists(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	hut(t, g, 2, 2, 8, 8)
 	bid := doorAtID(t, g)
@@ -95,6 +98,7 @@ func TestForbiddenDoorBarsColonists(t *testing.T) {
 // TestAutodoorIsADoor: the powered door separates rooms, is shut to
 // hostiles and lines up with its walls like the plain door.
 func TestAutodoorIsADoor(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	for x := 2; x <= 8; x++ {
 		kind := "wall"

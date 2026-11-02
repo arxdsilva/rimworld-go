@@ -11,6 +11,7 @@ import (
 )
 
 func TestRaidsGrowWithWealth(t *testing.T) {
+	t.Parallel()
 	poor := New(Config{Seed: 1, Width: 30, Height: 20})
 	_, _ = poor.SpawnNamedPawn(15, 10, "Ada")
 	rich := New(Config{Seed: 1, Width: 30, Height: 20})
@@ -32,6 +33,7 @@ func TestRaidsGrowWithWealth(t *testing.T) {
 }
 
 func TestSiegeDigsInThenStorms(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 60, Height: 30})
 	ada, _ := g.SpawnNamedPawn(30, 15, "Ada")
 	g.Siege(2)
@@ -67,6 +69,7 @@ func TestSiegeDigsInThenStorms(t *testing.T) {
 }
 
 func TestSappersTunnelThroughRock(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 30, Height: 16})
 	ada, _ := g.SpawnNamedPawn(15, 8, "Ada")
 	for y := 5; y <= 11; y++ {
@@ -95,6 +98,7 @@ func TestSappersTunnelThroughRock(t *testing.T) {
 }
 
 func TestSappersStepAroundTraps(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 10})
 	if !g.BuildNow("spike trap", "wood", "south", 10, 5) {
 		t.Fatal("trap")

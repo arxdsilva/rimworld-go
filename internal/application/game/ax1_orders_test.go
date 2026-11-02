@@ -40,6 +40,7 @@ func crateOf(g *Game) (entity.EntityID, item.Stack) {
 }
 
 func TestUninstallCratesAndReinstallKeepsQualityAndWear(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	bid := built(t, g, "bed", "south", 4, 4)
 	b, _ := g.bldgs.Get(bid)
@@ -102,6 +103,7 @@ func TestUninstallCratesAndReinstallKeepsQualityAndWear(t *testing.T) {
 }
 
 func TestUninstallRefusesFixedPiecesAndUndesignates(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	wall := built(t, g, "wall", "south", 2, 2)
 	bed := built(t, g, "bed", "south", 6, 6)
@@ -129,6 +131,7 @@ func TestUninstallRefusesFixedPiecesAndUndesignates(t *testing.T) {
 }
 
 func TestChopWoodMarksGrownTreesOnly(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	d := plant.DefOf(plant.Tree)
 	young, _ := g.spawnPlant(plant.Tree, 2, 2, d.GrowTicks*39/100)
@@ -146,6 +149,7 @@ func TestChopWoodMarksGrownTreesOnly(t *testing.T) {
 }
 
 func TestSlaughterMarksTameAnimalsOnly(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	wild, _ := g.SpawnAnimal("dustbuck", 3, 3)
 	tame, _ := g.SpawnAnimal("dustbuck", 5, 3)
@@ -164,6 +168,7 @@ func TestSlaughterMarksTameAnimalsOnly(t *testing.T) {
 }
 
 func TestClaimMakesRuinsTheColonys(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	ruin := g.placeGenerated(construction.Building{Kind: construction.Bed, Stuff: item.Wood, X: 5, Y: 5, Ruin: true})
 	camp := g.placeGenerated(construction.Building{Kind: construction.Wall, Stuff: item.Wood, X: 9, Y: 5, Ancient: true})
@@ -183,6 +188,7 @@ func TestClaimMakesRuinsTheColonys(t *testing.T) {
 }
 
 func TestStripMarkAHaulerStripsTheDowned(t *testing.T) {
+	t.Parallel()
 	g, doc, patient := careScene(t)
 	g.setPriority(doc, work.Doctor, 0) // a hauler here, not the patient's doctor
 	g.equip[patient] = item.Rifle
@@ -210,6 +216,7 @@ func TestStripMarkAHaulerStripsTheDowned(t *testing.T) {
 }
 
 func TestOpenGraveLiftsTheBodyOut(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	grave := burGrave(t, g, construction.South, 14, 4)
 	cy := burKill(t, g, 12, 8, "Cy")
@@ -233,6 +240,7 @@ func TestOpenGraveLiftsTheBodyOut(t *testing.T) {
 }
 
 func TestDeleteZoneAndClearRoofAreas(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	ax1Cmd(g, command.Command{Kind: command.DesignateStockpile, X: 2, Y: 2, X2: 6, Y2: 6})
 	ax1Cmd(g, ax1Rect(command.DesignateDeleteZone, 2, 2, 4, 6, true))
@@ -259,6 +267,7 @@ func TestDeleteZoneAndClearRoofAreas(t *testing.T) {
 }
 
 func TestRemoveFloorMarksFloorsOnly(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	floor := built(t, g, "floor", "south", 4, 4)
 	bed := built(t, g, "bed", "south", 4, 4)
@@ -282,6 +291,7 @@ func TestRemoveFloorMarksFloorsOnly(t *testing.T) {
 }
 
 func TestOrdersMarksSurviveSave(t *testing.T) {
+	t.Parallel()
 	g, _, patient := careScene(t)
 	grave := burGrave(t, g, construction.South, 2, 2)
 	cy := burKill(t, g, 3, 8, "Cy")
@@ -305,6 +315,7 @@ func TestOrdersMarksSurviveSave(t *testing.T) {
 }
 
 func TestInstallJobsAreOrdersJobs(t *testing.T) {
+	t.Parallel()
 	for _, k := range []job.Kind{job.Uninstall, job.Install, job.OpenContainer} {
 		if !postponable(k) {
 			t.Fatalf("%v is put off when out of reach", k)

@@ -10,6 +10,7 @@ import (
 )
 
 func TestIdleColonistsDontStandStill(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 24, Height: 16})
 	start := map[uint64]Position{}
 	for i, n := range []string{"Ada", "Bo", "Cora"} {
@@ -37,6 +38,7 @@ func TestIdleColonistsDontStandStill(t *testing.T) {
 }
 
 func TestIdleGivesWayToWork(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 24, Height: 16})
 	id, _ := g.SpawnNamedPawn(8, 8, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
@@ -55,6 +57,7 @@ func TestIdleGivesWayToWork(t *testing.T) {
 }
 
 func TestBedtimeBeatsAPrioritizedOrder(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 24, Height: 16})
 	id, _ := g.SpawnNamedPawn(2, 8, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)

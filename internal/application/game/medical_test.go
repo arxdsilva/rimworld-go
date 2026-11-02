@@ -13,6 +13,7 @@ import (
 )
 
 func TestDoctorRescuesToBedAndTends(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(14, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
@@ -57,6 +58,7 @@ func TestDoctorRescuesToBedAndTends(t *testing.T) {
 }
 
 func TestRescueCarriesPatient(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(12, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(10, 6, "Doc")
@@ -77,6 +79,7 @@ func TestRescueCarriesPatient(t *testing.T) {
 }
 
 func TestButcherTableTurnsCorpsesIntoMeat(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	cook, err := g.SpawnNamedPawn(2, 5, "Cook")
 	if err != nil {
@@ -100,6 +103,7 @@ func TestButcherTableTurnsCorpsesIntoMeat(t *testing.T) {
 }
 
 func TestUnarmedColonistFleesArmedFightsBack(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 30, Height: 12})
 	runner, _ := g.SpawnNamedPawn(10, 6, "Runner")
 	wolf, _ := g.SpawnAnimal("ridgewolf", 13, 6)
@@ -125,6 +129,7 @@ func TestUnarmedColonistFleesArmedFightsBack(t *testing.T) {
 }
 
 func TestSleepingSpotIsInstantAndFree(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	sleeper, _ := g.SpawnNamedPawn(2, 2, "Sleeper")
 	g.Apply(command.Command{Kind: command.DesignateBuild, Build: uint8(construction.SleepingSpot), X: 5, Y: 4})
@@ -149,6 +154,7 @@ func TestSleepingSpotIsInstantAndFree(t *testing.T) {
 }
 
 func TestTwoColonistsShareADoubleBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 10})
 	a, _ := g.SpawnNamedPawn(2, 7, "A")
 	b, _ := g.SpawnNamedPawn(3, 7, "B")

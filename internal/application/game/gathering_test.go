@@ -73,6 +73,7 @@ func runWedding(t *testing.T, save bool, at social.GatherPhase) (*Game, bool) {
 // A wedding end to end: the couple gathers at the spot, marries at the
 // end of the ceremony, everyone gets the thought, then it is over.
 func TestWeddingEndToEnd(t *testing.T) {
+	t.Parallel()
 	g, a, b, c := weddingColony(t)
 	sawCeremony, sawGuest := false, false
 	for i := range weddingTicks {
@@ -120,6 +121,7 @@ func TestWeddingEndToEnd(t *testing.T) {
 // Save/load inside each wedding phase: exactly one marriage and the same
 // state as the uninterrupted run.
 func TestWeddingSaveLoadEachPhase(t *testing.T) {
+	t.Parallel()
 	straight, _ := runWedding(t, false, 0)
 	want := straight.StateHash()
 	if weddings(straight) != 1 {
@@ -142,6 +144,7 @@ func TestWeddingSaveLoadEachPhase(t *testing.T) {
 // A drafted host calls the wedding off; the couple waits a day before the
 // next try.
 func TestWeddingAbortAndRetry(t *testing.T) {
+	t.Parallel()
 	g, a, b, _ := weddingColony(t)
 	lo := min(a, b)
 	gatherOf(g).WeddingCheck(lo, socNow(g))
@@ -175,6 +178,7 @@ func TestWeddingAbortAndRetry(t *testing.T) {
 
 // marry is a no-op for spouses (a reloaded reception can't pay twice).
 func TestMarryOnlyOnce(t *testing.T) {
+	t.Parallel()
 	g, a, b, _ := weddingColony(t)
 	if !gatherOf(g).Marry(a, b, socNow(g)) || gatherOf(g).Marry(a, b, socNow(g)) {
 		t.Fatal("marry should succeed once")
@@ -196,6 +200,7 @@ func TestMarryOnlyOnce(t *testing.T) {
 // A party: fit colonists in a decent mood and a party spot; attendees
 // get the thought, then it ends. Two colonists are not a party.
 func TestPartyThrownAndAttended(t *testing.T) {
+	t.Parallel()
 	g, a, b, c := weddingColony(t)
 	g.setPair(a, b, social.Pair{})
 	if g.partyFits(socNow(g)) {
@@ -240,6 +245,7 @@ func TestPartyThrownAndAttended(t *testing.T) {
 // Surname adoption changes only Bio.Last: the wife takes the husband's,
 // a same-sex couple the lower id's.
 func TestMarrySurnameAdoption(t *testing.T) {
+	t.Parallel()
 	g, a, b, c := weddingColony(t) // a female, b and c male
 	setLast := func(id entity.EntityID, s string) {
 		p := g.sk.bios[id]

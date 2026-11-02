@@ -9,6 +9,7 @@ import (
 // TestUndesignateKeepsZones: cancelling one designation never deletes the
 // pen, grow zone or stockpile under it (DesignateCancel would).
 func TestUndesignateKeepsZones(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 20})
 	apply := func(c command.Command) { g.Enqueue(c); g.ApplyPending() }
 	apply(command.Command{Kind: command.DesignatePen, X: 2, Y: 2, X2: 8, Y2: 8})
@@ -51,6 +52,7 @@ func TestUndesignateKeepsZones(t *testing.T) {
 // TestUndesignateOnlyNamedMark: clearing the cut mark leaves a mine mark
 // and deconstruction in the same rectangle alone.
 func TestUndesignateOnlyNamedMark(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	if !g.BuildNow("bed", "wood", "south", 3, 3) {
 		t.Fatal("build bed")

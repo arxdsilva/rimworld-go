@@ -62,6 +62,15 @@ var (
 	fontFaces   = map[faceKey]*text.GoTextFace{}
 )
 
+// ForgetFonts drops the fonts and with them Ebitengine's cache of shaped text,
+// which evicts on the game loop's tick. Tests have no loop, so they call this.
+func ForgetFonts() {
+	fontMu.Lock()
+	defer fontMu.Unlock()
+	fontSources = [2]*text.GoTextFaceSource{}
+	clear(fontFaces)
+}
+
 // FaceSize is the pixel size a style is rasterised at under UI scale s,
 // and k = that size / the style size (the glyph scale). At s = 1 it is
 // the style size. Otherwise it is floored to whole pixels: the shaper

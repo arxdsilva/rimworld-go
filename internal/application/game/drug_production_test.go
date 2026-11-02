@@ -32,6 +32,7 @@ func brewBench(t *testing.T, researched bool, k construction.Kind, r recipe.ID, 
 }
 
 func TestBrewBeerAtBrewingBench(t *testing.T) {
+	t.Parallel()
 	g := brewBench(t, true, construction.BrewingBench, recipe.BrewBeer, item.Brewgrain, 6)
 	if n := g.stockOf(item.Beer); n != 3 {
 		t.Fatalf("beer = %d, want 3", n)
@@ -42,6 +43,7 @@ func TestBrewBeerAtBrewingBench(t *testing.T) {
 }
 
 func TestBrewTeaAtDrugTable(t *testing.T) {
+	t.Parallel()
 	g := brewBench(t, true, construction.DrugTable, recipe.BrewTea, item.AshleafLeaf, 4)
 	if n := g.stockOf(item.AshleafTea); n != 2 {
 		t.Fatalf("tea = %d, want 2", n)
@@ -49,6 +51,7 @@ func TestBrewTeaAtDrugTable(t *testing.T) {
 }
 
 func TestPressTabletAtDrugTable(t *testing.T) {
+	t.Parallel()
 	g := brewBench(t, true, construction.DrugTable, recipe.PressTablet, item.AshleafLeaf, 6)
 	if n := g.stockOf(item.SparkTablet); n != 1 {
 		t.Fatalf("tablets = %d, want 1", n)
@@ -58,6 +61,7 @@ func TestPressTabletAtDrugTable(t *testing.T) {
 // Without Herbal remedies the tablet bill is refused (the table is built
 // before the research is forgotten: it is gated too).
 func TestPressTabletNeedsResearch(t *testing.T) {
+	t.Parallel()
 	g := brewBench(t, false, construction.DrugTable, recipe.PressTablet, item.AshleafLeaf, 6)
 	if n := g.stockOf(item.SparkTablet); n != 0 {
 		t.Fatalf("tablets = %d without research, want 0", n)

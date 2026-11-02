@@ -21,6 +21,7 @@ func raidGame(t *testing.T) (*Game, uint64) {
 }
 
 func TestRaidersAttackAndArmedColonistFightsBack(t *testing.T) {
+	t.Parallel()
 	g, ada := raidGame(t)
 	g.equip[uint64ToID(ada)] = item.Rifle
 	g.Raid(1)
@@ -56,6 +57,7 @@ func TestRaidersAttackAndArmedColonistFightsBack(t *testing.T) {
 }
 
 func TestRaiderFleesWhenBadlyHurt(t *testing.T) {
+	t.Parallel()
 	g, _ := raidGame(t)
 	g.Raid(1)
 	rid := g.raiderIDs[0]
@@ -76,6 +78,7 @@ func TestRaiderFleesWhenBadlyHurt(t *testing.T) {
 // (bleed_test.go, MED-01): a downed raider bleeds out by its wounds, not a timer.
 
 func TestStorytellerSendsTheFirstRaid(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 5, Width: 48, Height: 40})
 	if g.nextThreat < firstRaidDay*clock.TicksPerDay || g.nextThreat > (firstRaidDay+1)*clock.TicksPerDay {
 		t.Fatalf("first threat at tick %d", g.nextThreat)
@@ -91,6 +94,7 @@ func TestStorytellerSendsTheFirstRaid(t *testing.T) {
 }
 
 func TestSaveLoadMidRaid(t *testing.T) {
+	t.Parallel()
 	g, _ := raidGame(t)
 	g.Raid(2)
 	g.Step(500)

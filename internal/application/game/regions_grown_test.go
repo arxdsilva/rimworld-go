@@ -11,6 +11,7 @@ import (
 // doors, a fenced pen) under a raid runs bit-identically with region
 // answers and with plain searches.
 func TestRegionsGrownSameState(t *testing.T) {
+	t.Parallel()
 	if testing.Short() || os.Getenv("RIMWORLD_FIXTURE_DIR") == "" {
 		t.Skip("needs the cached grown fixture (RIMWORLD_FIXTURE_DIR): building it takes minutes")
 	}

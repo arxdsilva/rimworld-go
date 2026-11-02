@@ -33,6 +33,7 @@ func checkPostKinds(t *testing.T, p *postState) {
 // TestPostKindsTrackEntries: the per-pawn, per-kind key lists follow every
 // put, renewal and drop, and a reindex rebuilds them.
 func TestPostKindsTrackEntries(t *testing.T) {
+	t.Parallel()
 	p := newPostState()
 	rng := rand.New(rand.NewPCG(7, 1))
 	kinds := []job.Kind{job.Haul, job.Cut, job.Repair}
@@ -54,6 +55,7 @@ func TestPostKindsTrackEntries(t *testing.T) {
 // in step through renewals, lazy pruning, walkability syncs and sweeps,
 // and every target postponedFor reports put off is in postponedTargets.
 func TestPostponedTargetsCoverPostponedFor(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 4, Width: 48, Height: 40})
 	g.Step(10)
 	rng := rand.New(rand.NewPCG(2, 8))

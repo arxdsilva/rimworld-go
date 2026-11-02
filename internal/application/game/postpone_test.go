@@ -137,6 +137,7 @@ func messaged(g *Game, part string) bool {
 }
 
 func TestBlockedJobIsPostponed(t *testing.T) {
+	t.Parallel()
 	g := doorwayMap()
 	fid := readyWall(t, g, 12, 5)
 	bob := postWorker(t, g, 3, 5, "Bob", work.Construct, work.Haul)
@@ -184,6 +185,7 @@ func TestBlockedJobIsPostponed(t *testing.T) {
 }
 
 func TestUnreachableFrameDoesNotHideReachableOnes(t *testing.T) {
+	t.Parallel()
 	t.Run("frames", func(t *testing.T) {
 		g := New(Config{Seed: 1, Width: 24, Height: 12})
 		near := readyWall(t, g, 5, 5)
@@ -261,6 +263,7 @@ func TestUnreachableFrameDoesNotHideReachableOnes(t *testing.T) {
 }
 
 func TestUnreachableRetriedAfterWallRemoved(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	fid := readyWall(t, g, 5, 5)
 	rockRing(g, 5, 5)
@@ -285,6 +288,7 @@ func TestUnreachableRetriedAfterWallRemoved(t *testing.T) {
 }
 
 func TestWorkingPawnShufflesAside(t *testing.T) {
+	t.Parallel()
 	// a 1-wide corridor along y=5 with a bay at (3,4)
 	corridor := func() *Game {
 		g := occTestGame()
@@ -346,6 +350,7 @@ func TestWorkingPawnShufflesAside(t *testing.T) {
 }
 
 func TestBlockedForcedOrderIsPostponedNotLost(t *testing.T) {
+	t.Parallel()
 	setup := func(t *testing.T) (*Game, entity.EntityID, entity.EntityID, entity.EntityID) {
 		g := doorwayMap()
 		fid := readyWall(t, g, 12, 5)
@@ -393,6 +398,7 @@ func TestBlockedForcedOrderIsPostponedNotLost(t *testing.T) {
 }
 
 func TestPostponeSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	fid := readyWall(t, g, 5, 5)
 	bob := postWorker(t, g, 12, 8, "Bob", work.Construct)
@@ -424,6 +430,7 @@ func TestPostponeSaveRoundTrip(t *testing.T) {
 }
 
 func TestPostponedLinesInView(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	fid := readyWall(t, g, 5, 5)
 	bob := postWorker(t, g, 12, 8, "Bob")

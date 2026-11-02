@@ -51,6 +51,7 @@ func sleepTicks(a, b int) int {
 }
 
 func TestCollapseSleepsWhereItStands(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	placeBuilt(t, g, construction.Bed, construction.South, 12, 5) // a bed it never walks to
@@ -75,6 +76,7 @@ func TestCollapseSleepsWhereItStands(t *testing.T) {
 // A collapsed colonist sleeps to a reasonable rest: hunger doesn't get it up
 // early (which used to wake it every tick, as it can't walk while downed).
 func TestCollapseStaysDownUntil80(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	g.SpawnStack(item.Food, 20, 6, 2)
@@ -95,6 +97,7 @@ func TestCollapseStaysDownUntil80(t *testing.T) {
 }
 
 func TestTiredInWorkBlockKeepsWorking(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	scheduleAll(g, schedule.Work)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -109,6 +112,7 @@ func TestTiredInWorkBlockKeepsWorking(t *testing.T) {
 }
 
 func TestTiredInRecreationSleepsTo80(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	scheduleAll(g, schedule.Recreation)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -135,6 +139,7 @@ func TestTiredInRecreationSleepsTo80(t *testing.T) {
 // Bug 4: a Sleep block doesn't keep a fully rested colonist in bed; the rest
 // of the block is free time, until it tires again.
 func TestSleepBlockWakesAtFullThenFreeTime(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	scheduleAll(g, schedule.Sleep)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -171,6 +176,7 @@ func TestSleepBlockWakesAtFullThenFreeTime(t *testing.T) {
 // The user's choice: when Work hours start a sleeper over the tired line
 // gets up, even short of WakeRest.
 func TestSleepBlockEndWakesForWork(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	scheduleAll(g, schedule.Sleep)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -190,6 +196,7 @@ func TestSleepBlockEndWakesForWork(t *testing.T) {
 // every time it crept over the tired line. Now it sleeps once in a while,
 // properly.
 func TestNoMicroNaps(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	sleepAnytime(g)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -253,6 +260,7 @@ func warmHut(t *testing.T) (*Game, entity.EntityID) {
 
 // W1: warming up and going to bed used to interrupt each other every tick.
 func TestColdAndTiredDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, id := warmHut(t)
 	g.SetNeeds(id, needs.Full, needs.CriticalRest-500)
 	if c := kindChanges(g, id, 500); c > 3 {
@@ -262,6 +270,7 @@ func TestColdAndTiredDoesNotFlap(t *testing.T) {
 
 // W2: the same loop between warming up and lying down for a doctor.
 func TestColdPatientDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, id := warmHut(t)
 	g.SpawnNamedPawn(3, 10, "Doc")
 	g.Infect(id, 20) // sick until immune (MED-02)
@@ -276,6 +285,7 @@ func TestColdPatientDoesNotFlap(t *testing.T) {
 // W3: with nowhere warm to go, the warmth check must not cancel the job the
 // colonist is doing (it used to, every warmRetry ticks).
 func TestNoWarmSpotDoesNotCutTheJob(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 8})
 	jumpTo(g, 45, 0)
 	sleepAnytime(g)
@@ -296,6 +306,7 @@ func TestNoWarmSpotDoesNotCutTheJob(t *testing.T) {
 
 // F1: food out of reach used to be retried every tick.
 func TestUnreachableFoodBacksOff(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	g.SpawnStack(item.Food, 10, 8, 4)
@@ -315,6 +326,7 @@ func TestUnreachableFoodBacksOff(t *testing.T) {
 
 // B1: a bed out of reach means the ground, not retrying every tick.
 func TestUnreachableBedSleepsOnGround(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	sleepAnytime(g)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -332,6 +344,7 @@ func TestUnreachableBedSleepsOnGround(t *testing.T) {
 // I1: a work giver that fails (the stack is walled in) used to overwrite the
 // running free-time activity, restarting it every idle recheck.
 func TestIdleActivitySurvivesFailedHaul(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	g.SpawnStack(item.Wood, 10, 12, 6)
@@ -358,6 +371,7 @@ func TestIdleActivitySurvivesFailedHaul(t *testing.T) {
 // H1: a campfire's room thermostat has a band, so the fire doesn't flicker
 // on and off every climate interval.
 func TestCampfireBankingHasABand(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	hut(t, g, 6, 1, 12, 7)
 	if !g.BuildNow("campfire", "wood", "south", 9, 3) {
@@ -394,6 +408,7 @@ func TestCampfireBankingHasABand(t *testing.T) {
 }
 
 func TestAntiFlapStateSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	g.rest.MarkRested(id)

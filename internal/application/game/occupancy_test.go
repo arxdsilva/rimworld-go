@@ -60,6 +60,7 @@ func pos(g *Game, id entity.EntityID) Position {
 }
 
 func TestEnterFreeCellGoesAndReindexes(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 2)
 	walkTo(g, a, job.Move, straight(2, 5, 2)...)
@@ -80,6 +81,7 @@ func TestEnterFreeCellGoesAndReindexes(t *testing.T) {
 }
 
 func TestEnterBlockedByStandingPawn(t *testing.T) {
+	t.Parallel()
 	// PLAY-010: a colonist no longer blocks another colonist; the walker
 	// steps into the worker's cell at once and both stay indexed there
 	g := occTestGame()
@@ -139,6 +141,7 @@ func TestEnterBlockedByStandingPawn(t *testing.T) {
 }
 
 func TestDownedPawnDoesNotBlock(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 5)
 	b := mustPawn(t, g, 3, 5)
@@ -156,6 +159,7 @@ func TestDownedPawnDoesNotBlock(t *testing.T) {
 }
 
 func TestCarriedPawnDoesNotBlock(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 5)
 	carrier := mustPawn(t, g, 3, 6)
@@ -172,6 +176,7 @@ func TestCarriedPawnDoesNotBlock(t *testing.T) {
 }
 
 func TestIdlePawnStepsAside(t *testing.T) {
+	t.Parallel()
 	// a 1-wide corridor along y=5 with a bay at (5,4)
 	corridor := func() *Game {
 		g := occTestGame()
@@ -234,6 +239,7 @@ func TestIdlePawnStepsAside(t *testing.T) {
 }
 
 func TestDraftedAndRaiderDoNotMakeWay(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	b := mustPawn(t, g, 3, 5)
 	g.setDraft(b, true)
@@ -253,6 +259,7 @@ func TestDraftedAndRaiderDoNotMakeWay(t *testing.T) {
 }
 
 func TestHeadOnSwapResolves(t *testing.T) {
+	t.Parallel()
 	// PLAY-010: two colonists head-on simply pass through each other
 	g := occTestGame()
 	a := mustPawn(t, g, 3, 5)
@@ -312,6 +319,7 @@ func TestHeadOnSwapResolves(t *testing.T) {
 }
 
 func TestHostileTargetIsNotAYieldPartner(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 5)
 	b := mustPawn(t, g, 3, 5)
@@ -330,6 +338,7 @@ func TestHostileTargetIsNotAYieldPartner(t *testing.T) {
 }
 
 func TestArriveNearWhenDestinationTaken(t *testing.T) {
+	t.Parallel()
 	// the last cell is held by a blocker (a wild animal standing still);
 	// colonists in one another's way are covered in walkthrough_test.go
 	g := occTestGame()
@@ -387,6 +396,7 @@ func TestArriveNearWhenDestinationTaken(t *testing.T) {
 }
 
 func TestExactCellJobsWait(t *testing.T) {
+	t.Parallel()
 	kinds := append([]job.Kind(nil), exactCellKinds...)
 	for _, k := range append(kinds, job.Haul, job.Eat) {
 		g := occTestGame()
@@ -422,6 +432,7 @@ func TestExactCellJobsWait(t *testing.T) {
 }
 
 func TestThreeCycleHighestYields(t *testing.T) {
+	t.Parallel()
 	// drafted: each last step lands on a colonist in combat, so the ring
 	// resolves as before (out of combat they all just go: walkthrough_test.go)
 	g := occTestGame()
@@ -445,6 +456,7 @@ func TestThreeCycleHighestYields(t *testing.T) {
 }
 
 func TestUnstackHigherIDMovesOff(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 5, 5)
 	b := mustPawn(t, g, 5, 5)
@@ -490,6 +502,7 @@ func TestUnstackHigherIDMovesOff(t *testing.T) {
 }
 
 func TestAnimalRepathAround(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	d, err := g.SpawnAnimal("dustbuck", 2, 5)
 	if err != nil {
@@ -521,6 +534,7 @@ func TestAnimalRepathAround(t *testing.T) {
 }
 
 func TestPathAroundUsesMoverQuery(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	// a wall across x=6 with one door at (6,5)
 	for y := 0; y < 12; y++ {
@@ -556,6 +570,7 @@ func TestPathAroundUsesMoverQuery(t *testing.T) {
 }
 
 func TestPathAroundUnwalkableTarget(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	g.grid.SetWalkable(8, 5, false)
 	a := mustPawn(t, g, 2, 5)
@@ -579,6 +594,7 @@ func TestPathAroundUnwalkableTarget(t *testing.T) {
 }
 
 func TestCrowdCostPricesCreatures(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 2)
 	b := wildAt(t, g, 5, 5)
@@ -621,6 +637,7 @@ func TestCrowdCostPricesCreatures(t *testing.T) {
 }
 
 func TestOccupancyIndexIsLazyAndBounded(t *testing.T) {
+	t.Parallel()
 	g := occTestGame()
 	a := mustPawn(t, g, 1, 1)
 	// off the 15-tick sweep, starting a phase builds nothing

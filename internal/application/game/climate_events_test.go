@@ -211,6 +211,7 @@ func TestLeaflessPlantsStopGrowing(t *testing.T) {
 // WG-05: a rainforest catches disease more often than a forest, an ice sheet
 // less, and a difficulty with no disease stays at none.
 func TestNatureOddsFollowTheBiome(t *testing.T) {
+	t.Parallel()
 	odds := func(b biome.ID) int {
 		g := New(Config{Width: 10, Height: 10})
 		g.biome = b
@@ -224,6 +225,7 @@ func TestNatureOddsFollowTheBiome(t *testing.T) {
 
 // MAP-06: the cap is clamped to what Options offers.
 func TestColonyCapIsClamped(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Width: 10, Height: 10})
 	g.Enqueue(command.Command{Kind: command.SetColonyCap, Count: 99})
 	g.Step(1)

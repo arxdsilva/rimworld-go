@@ -61,6 +61,7 @@ func backstoryWith(t *testing.T, b backstory.Bits) backstory.Def {
 // allowed, 0 on the low-mood ticks it skipped — skilled or not, and every
 // other skill/trait hook is the identity for it.
 func TestNeutralPawnTimingsUnchanged(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 12, Height: 8})
 	happy, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	sad, _ := g.SpawnNamedPawn(5, 2, "Bo")
@@ -134,6 +135,7 @@ func legacyTemperament(n string) Temperament {
 // TestSkillSpeedRatio: a level 20 builder outworks a level 0 one by
 // 1780/580.
 func TestSkillSpeedRatio(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	lv := func(l uint8) func(*pawngen.Pawn) {
 		return func(p *pawngen.Pawn) { p.Skills[skill.Construction].Level = l }
@@ -155,6 +157,7 @@ func TestSkillSpeedRatio(t *testing.T) {
 // TestLearningSaturation: one skill learns at most learnCapDay a day; the
 // next day it learns again. Incapable skills never learn.
 func TestLearningSaturation(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id := spawnGen(t, g, 2, 2, genPawn("Kit", func(p *pawngen.Pawn) {
 		p.Skills[skill.Mining].Passion = skill.Major
@@ -188,6 +191,7 @@ func TestLearningSaturation(t *testing.T) {
 // neglect with a day of practice changes level at most once, and its
 // daily rollover runs exactly once a day at its hour bucket.
 func TestDecayNoFlapInPlay(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id := spawnGen(t, g, 2, 2, genPawn("Ox", func(p *pawngen.Pawn) {
 		p.Skills[skill.Mining] = skill.Skill{Level: 12, Passion: skill.Minor}
@@ -221,6 +225,7 @@ func TestDecayNoFlapInPlay(t *testing.T) {
 // 0, can't be switched on (a toast says why), is never assigned, and a
 // forced order is refused with the reason.
 func TestIncapablePriorityIgnoredAndOrderRefused(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	bs := backstoryWith(t, backstory.Mining)
 	id := spawnGen(t, g, 2, 2, genPawn("Pip", func(p *pawngen.Pawn) {
@@ -269,6 +274,7 @@ func TestIncapablePriorityIgnoredAndOrderRefused(t *testing.T) {
 // TestViolenceIncapableNeverStrikes: a pacifist told to attack never
 // swings, never auto-engages, and runs from danger even when armed.
 func TestViolenceIncapableNeverStrikes(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	id := spawnGen(t, g, 2, 2, genPawn("Dove", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Gentle} }))
 	aid, err := g.SpawnAnimal("wild_boar", 3, 2)
@@ -305,6 +311,7 @@ func TestViolenceIncapableNeverStrikes(t *testing.T) {
 // TestAccuracyRisesWithSkill: 400 shots with one seed hit more often the
 // better the shooter; Deliberate aim adds and Quick draw costs accuracy.
 func TestAccuracyRisesWithSkill(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	shooter := func(name string, l uint8, tr ...trait.ID) entity.EntityID {
 		return spawnGen(t, g, 1+len(g.pawnIDs), 2, genPawn(name, func(p *pawngen.Pawn) {
@@ -340,6 +347,7 @@ func TestAccuracyRisesWithSkill(t *testing.T) {
 // TestTraitMoodAndBreakOffsets: Sunny/Brooding shift mood, Fussy doubles
 // a hardship thought, Steady/Brittle move the break threshold.
 func TestTraitMoodAndBreakOffsets(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	base, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	sunny := spawnGen(t, g, 3, 2, genPawn("Sun", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Sunny, trait.Brittle} }))
@@ -367,6 +375,7 @@ func TestTraitMoodAndBreakOffsets(t *testing.T) {
 
 // TestBirthdayRebuildsStats: turning 50 slows work and walking.
 func TestBirthdayRebuildsStats(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id := spawnGen(t, g, 2, 2, genPawn("Old", func(p *pawngen.Pawn) { p.AgeDays = 50*pawngen.DaysPerYear - 1 }))
 	if g.statOf(id, stat.WorkSpeed) != 1000 {
@@ -387,6 +396,7 @@ func TestBirthdayRebuildsStats(t *testing.T) {
 // TestLegacyLookUnchanged: a SpawnNamedPawn colonist's view look is the
 // renderer's historic hash look (palette indices).
 func TestLegacyLookUnchanged(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	for i := 0; i < 6; i++ {
 		g.SpawnNamedPawn(1+i, 2, "")
@@ -421,6 +431,7 @@ func rendererMix(x uint64) uint64 {
 // TestBioViewInGame: the Bio tab shows the generated identity with live
 // skills; the pawn view carries sex, age, title, levels and passions.
 func TestBioViewInGame(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	bs := backstoryWith(t, backstory.Violence)
 	id := spawnGen(t, g, 2, 2, genPawn("Wren", func(p *pawngen.Pawn) {
@@ -453,6 +464,7 @@ func TestBioViewInGame(t *testing.T) {
 // TestImportBiosMigratesLegacy: a save's bios round-trip; colonists of an
 // older save without any get their legacy identity.
 func TestImportBiosMigratesLegacy(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id := spawnGen(t, g, 2, 2, genPawn("Sol", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Tireless} }))
 	ada, _ := g.SpawnNamedPawn(3, 2, "Ada")

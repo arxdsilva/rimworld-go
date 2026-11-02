@@ -37,6 +37,7 @@ func onEdge(g *Game, p Position, slack int) bool {
 }
 
 func TestWildlifeCapacity(t *testing.T) {
+	t.Parallel()
 	g := wildMapOf(1, 100, 100, biome.TemperateForest)
 	summer := uint64(seasonDay(t, "Summer", 0)*clock.TicksPerDay + 12*clock.TicksPerHour)
 	winter := uint64(seasonDay(t, "Winter", 0)*clock.TicksPerDay + 12*clock.TicksPerHour)
@@ -65,6 +66,7 @@ func TestWildlifeCapacity(t *testing.T) {
 }
 
 func TestWildlifeRefillsBelowCap(t *testing.T) {
+	t.Parallel()
 	g := wildMapOf(5, 60, 60, biome.TemperateForest)
 	capacity := g.wildlifeCap()
 	seen := map[entity.EntityID]bool{}
@@ -96,6 +98,7 @@ func TestWildlifeRefillsBelowCap(t *testing.T) {
 }
 
 func TestOverCapHerdLeaves(t *testing.T) {
+	t.Parallel()
 	g := wildMapOf(2, 40, 40, biome.TemperateForest)
 	capacity := g.wildlifeCap() // 16
 	var herds [][]entity.EntityID
@@ -153,6 +156,7 @@ func TestOverCapHerdLeaves(t *testing.T) {
 // high threshold only ever loses (and stops above the low one): arrivals
 // and departures never answer each other.
 func TestCapacityNoFlap(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		pct  int // starting count, percent of capacity
@@ -191,6 +195,7 @@ func TestCapacityNoFlap(t *testing.T) {
 }
 
 func TestStartWildlifeNearTarget(t *testing.T) {
+	t.Parallel()
 	for _, b := range []biome.ID{biome.TemperateForest, biome.Tundra, biome.TropicalRainforest, biome.Desert} {
 		g := NewColony(Config{Seed: 4, Width: 100, Height: 100, Biome: b})
 		target, n := g.startTarget(), g.wildCount()

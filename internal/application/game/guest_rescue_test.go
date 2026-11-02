@@ -61,6 +61,7 @@ func visitorRecOf(g *Game, id entity.EntityID) (visitorRec, bool) {
 }
 
 func TestDownedVisitorRescuedTendedAndLeaves(t *testing.T) {
+	t.Parallel()
 	g, doc, vis, fac := guestScene(t)
 	// TEMP-3: the bed stands in the open; a temperate spring's nights (about
 	// −1 °C) would give a guest lying there for days wiki hypothermia, which
@@ -110,6 +111,7 @@ func TestDownedVisitorRescuedTendedAndLeaves(t *testing.T) {
 }
 
 func TestGuestDyingDownedCostsGoodwill(t *testing.T) {
+	t.Parallel()
 	g, _, vis, fac := guestScene(t)
 	before := g.factionOf(fac).Goodwill
 	g.hurt(vis, health.DownedInjury+10, 0)
@@ -161,6 +163,7 @@ func joinLetter(g *Game, s entity.EntityID) *LetterView {
 }
 
 func TestRescuedStrangerAsksToJoinAndIsAccepted(t *testing.T) {
+	t.Parallel()
 	g, _, _, _ := guestScene(t)
 	g.climate = temperature.Climate{YearMean: -500} // deadly cold out: leaving is unsafe, so it always asks
 	s := strangerInBed(t, g)
@@ -184,6 +187,7 @@ func TestRescuedStrangerAsksToJoinAndIsAccepted(t *testing.T) {
 }
 
 func TestStrangerDeclinedLeaves(t *testing.T) {
+	t.Parallel()
 	g, _, _, _ := guestScene(t)
 	g.climate = temperature.Climate{YearMean: -500}
 	s := strangerInBed(t, g)

@@ -63,6 +63,7 @@ func penOf(g *Game, m entity.EntityID) PenView {
 }
 
 func TestPenEnclosureFloodFill(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	c := g.penRegion(m)
 	if !c.enclosed || c.cells != 49 || c.minX != 21 || c.maxX != 27 || c.minY != 5 || c.maxY != 11 {
@@ -93,6 +94,7 @@ func TestPenEnclosureFloodFill(t *testing.T) {
 }
 
 func TestBrokenFenceOpensPen(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	g.Step(penThinkEvery) // the pass notes the pen enclosed
 	v := g.World().PenVer
@@ -125,6 +127,7 @@ func TestBrokenFenceOpensPen(t *testing.T) {
 }
 
 func TestLivestockBlockedByGatesUnlessLed(t *testing.T) {
+	t.Parallel()
 	g, _ := penWorld(t)
 	cow := tameAt(t, g, "cow", "Bess", 24, 9)
 	dog := tameAt(t, g, "husky", "Ash", 23, 9)
@@ -184,6 +187,7 @@ func penRunUntil(g *Game, pawns []entity.EntityID, ticks int, done func() bool) 
 }
 
 func TestRopeLeadsCowIntoPen(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
@@ -227,6 +231,7 @@ func TestRopeLeadsCowIntoPen(t *testing.T) {
 }
 
 func TestRopeRefusedOutsideHandlerReach(t *testing.T) {
+	t.Parallel()
 	g, _ := penWorld(t)
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
@@ -249,6 +254,7 @@ func TestRopeRefusedOutsideHandlerReach(t *testing.T) {
 }
 
 func TestPenSettingsFilterAndReRope(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	fenceRing(t, g, 4, 4, 12, 12, [2]int{8, 12})
 	m2 := buildMarker(t, g, 8, 8)
@@ -294,6 +300,7 @@ func TestPenSettingsFilterAndReRope(t *testing.T) {
 }
 
 func TestPenFoodFigures(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	sowGrass(g, 21, 5, 27, 11) // 49 tiles
 	v := penOf(g, m)
@@ -322,6 +329,7 @@ func TestPenFoodFigures(t *testing.T) {
 }
 
 func TestPenAutoCut(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	in, _ := g.spawnPlant(plant.Tree, 22, 6, plant.DefOf(plant.Tree).GrowTicks)
 	out, _ := g.spawnPlant(plant.Tree, 10, 18, plant.DefOf(plant.Tree).GrowTicks)
@@ -345,6 +353,7 @@ func TestPenAutoCut(t *testing.T) {
 }
 
 func TestUnpennedLivestockRoamAndLeave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 120, Height: 30})
 	bareGround(g)
 	cow := tameAt(t, g, "cow", "Bess", 100, 15)
@@ -400,6 +409,7 @@ func TestUnpennedLivestockRoamAndLeave(t *testing.T) {
 }
 
 func TestUnpennedClockResetNoFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 24})
 	bareGround(g)
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
@@ -440,6 +450,7 @@ func TestUnpennedClockResetNoFlap(t *testing.T) {
 }
 
 func TestPaintedPenMigrates(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 24})
 	bareGround(g)
 	fenceRing(t, g, 20, 4, 28, 12, [2]int{24, 12})
@@ -477,6 +488,7 @@ func TestPaintedPenMigrates(t *testing.T) {
 }
 
 func TestPenSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
 	s := defaultPenSettings()
@@ -502,6 +514,7 @@ func TestPenSaveRoundTrip(t *testing.T) {
 }
 
 func TestDoRopeEdgeCases(t *testing.T) {
+	t.Parallel()
 	g, m := penWorld(t)
 	cow := tameAt(t, g, "cow", "Bess", 8, 18)
 	ada, _ := g.SpawnNamedPawn(9, 18, "Ada")

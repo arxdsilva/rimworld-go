@@ -44,6 +44,7 @@ func collectOnce(t *testing.T, g *Game, pawn, aid entity.EntityID) {
 }
 
 func TestMilkJob(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	onlyWork(g, ada, work.Handle)
@@ -88,6 +89,7 @@ func TestMilkJob(t *testing.T) {
 }
 
 func TestShearJob(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		species string
 		s       animal.Species
@@ -115,6 +117,7 @@ func TestShearJob(t *testing.T) {
 }
 
 func TestEmberOilCollected(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	onlyWork(g, ada, work.Handle)
@@ -137,6 +140,7 @@ func TestEmberOilCollected(t *testing.T) {
 }
 
 func TestHungryAnimalsProduceSlower(t *testing.T) {
+	t.Parallel()
 	if animal.ProductPerDay(animal.Goat, 0) != 0 {
 		t.Fatal("a starving animal grows nothing")
 	}
@@ -168,6 +172,7 @@ func TestHungryAnimalsProduceSlower(t *testing.T) {
 }
 
 func TestEmberOilFuelsCampfire(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
@@ -192,6 +197,7 @@ func TestEmberOilFuelsCampfire(t *testing.T) {
 }
 
 func TestWoolParkaRecipe(t *testing.T) {
+	t.Parallel()
 	for id, want := range map[recipe.ID]struct {
 		qty int
 		out item.Kind
@@ -231,6 +237,7 @@ func TestWoolParkaRecipe(t *testing.T) {
 }
 
 func TestHandleWorkTypeAndTamingMoved(t *testing.T) {
+	t.Parallel()
 	try := func(types ...work.Type) bool {
 		g := New(Config{Seed: 2, Width: 24, Height: 14})
 		ada, _ := g.SpawnNamedPawn(4, 7, "Ada")

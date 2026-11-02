@@ -28,6 +28,7 @@ func t6Air(g *Game, r int, t temperature.Temp) {
 // and fires light no faster than one per thermo.IgniteCooldown however
 // long the air stays hot (no-flap: the air never relights every step).
 func TestHotRoomIgnitesFlammablesOnCooldown(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	hut(t, g, 2, 2, 12, 9)
 	for x := 3; x <= 11; x++ {
@@ -67,6 +68,7 @@ func TestHotRoomIgnitesFlammablesOnCooldown(t *testing.T) {
 // at most once per exposure.BurnEvery ticks even with the air wobbling
 // across the line every step (no-flap); just under it, none.
 func TestHeatBurnsOnCadence(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	hut(t, g, 2, 2, 12, 9)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
@@ -108,6 +110,7 @@ func TestHeatBurnsOnCadence(t *testing.T) {
 // cooler set to -5 C in a desert summer pulls a sealed storeroom below
 // freezing and the meat in it stops rotting, while meat outside spoils.
 func TestFreezerKeepsMeatFrozen(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 14, Biome: biome.Desert})
 	jumpTo(g, 20, 6)
 	for x := 4; x <= 10; x++ {
@@ -155,6 +158,7 @@ func TestFreezerKeepsMeatFrozen(t *testing.T) {
 // yard with no roof is no outdoors for benches or sleepers, a big one is;
 // the open map is; a room a quarter-plus unroofed is outdoors for surgery.
 func TestOutdoorsJudgementsInTheGame(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 48, Height: 30})
 	hutWalls(t, g, 1, 1, 8, 8)    // a 6x6 yard
 	hutWalls(t, g, 12, 1, 33, 22) // a 20x20 yard

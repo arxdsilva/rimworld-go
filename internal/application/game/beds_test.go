@@ -38,6 +38,7 @@ func tireOut(g *Game, id entity.EntityID) {
 // A partnered colonist claims a free double bed; its partner joins the
 // free slot; both then keep it.
 func TestBedPartnersShareDoubleBed(t *testing.T) {
+	t.Parallel()
 	g, a, b, s1, _, double := bedroom(t)
 	g.rest.Beds.AssignOwner(s1, a, 0) // a owns a single bed
 	tireOut(g, a)
@@ -63,6 +64,7 @@ func TestBedPartnersShareDoubleBed(t *testing.T) {
 // No-flap: night after night the couple keeps the same bed, even with a
 // second free double bed around.
 func TestBedPartnerChoiceNoFlap(t *testing.T) {
+	t.Parallel()
 	g, a, b, _, _, _ := bedroom(t)
 	buildNow(t, g, construction.DoubleBed, item.Wood, construction.South, 6, 6)
 	changes := 0
@@ -88,6 +90,7 @@ func TestBedPartnerChoiceNoFlap(t *testing.T) {
 // Sleeping alone is only for the partnered, and only when the beds
 // differ.
 func TestBedSleptAloneOnlyWhenPartnered(t *testing.T) {
+	t.Parallel()
 	g, a, b, s1, s2, _ := bedroom(t)
 	g.setPair(a, b, social.Pair{}) // strangers first
 	g.sleptAt[a], g.sleptAt[b] = s1, s2
@@ -111,6 +114,7 @@ func TestBedSleptAloneOnlyWhenPartnered(t *testing.T) {
 
 // The partner thought is the opinion over ten, capped at +-10.
 func TestBedPartnerOpinionThought(t *testing.T) {
+	t.Parallel()
 	g, a, b, _, _, _ := bedroom(t)
 	want := partnerMood(g.opinion(a, b))
 	if want != int(g.opinion(a, b)/1000) || want == 0 {
@@ -148,6 +152,7 @@ func asleepTogether(t *testing.T, g *Game, a, b, double entity.EntityID) {
 // Lovin': a young couple asleep in the same double bed makes love, then
 // both feel it; never while one of them is downed.
 func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
+	t.Parallel()
 	g, a, b, _, _, double := bedroom(t)
 	asleepTogether(t, g, a, b, double)
 	v, _ := g.vital.Get(b)
@@ -195,6 +200,7 @@ func TestLovinInDoubleBedNotWhileDowned(t *testing.T) {
 // AssignBedOwner: the owner gets the slot and gives up its old bed; 0
 // clears the slot; a bad slot or a non-colonist is ignored.
 func TestBedAssignOwnerCommand(t *testing.T) {
+	t.Parallel()
 	g, a, b, s1, _, double := bedroom(t)
 	g.rest.Beds.AssignOwner(s1, a, 0)
 	g.Enqueue(command.Command{Kind: command.AssignBedOwner, Target: uint64(double), Pawn: uint64(a), Index: 1})

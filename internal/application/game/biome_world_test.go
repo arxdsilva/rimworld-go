@@ -17,6 +17,7 @@ import (
 )
 
 func TestBiomeClimate(t *testing.T) {
+	t.Parallel()
 	tundra := New(Config{Seed: 1, Width: 16, Height: 16, Biome: biome.Tundra})
 	desert := New(Config{Seed: 1, Width: 16, Height: 16, Biome: biome.Desert})
 	temperate := New(Config{Seed: 1, Width: 16, Height: 16})
@@ -38,6 +39,7 @@ func TestBiomeClimate(t *testing.T) {
 }
 
 func TestBiomeGrassSeeding(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 4, Width: 64, Height: 48, Biome: biome.BorealForest})
 	w := g.World()
 	ground, grass := 0, 0
@@ -63,6 +65,7 @@ func TestBiomeGrassSeeding(t *testing.T) {
 }
 
 func TestGrassRegrows(t *testing.T) {
+	t.Parallel()
 	g := grassGame() // temperate: regrows in 6 days +-20%
 	x, y := grassTile(t, g, 2, 2, 20, 12)
 	if !g.grazeGrass(x, y) || g.hasGrass(x, y) {
@@ -88,6 +91,7 @@ func TestGrassRegrows(t *testing.T) {
 }
 
 func TestCutGrassRegrowsButBuiltDoesNot(t *testing.T) {
+	t.Parallel()
 	g := grassGame()
 	g.SpawnStack(item.Wood, 20, 0, 0)
 	cx, cy := grassTile(t, g, 2, 2, 10, 12)
@@ -107,6 +111,7 @@ func TestCutGrassRegrowsButBuiltDoesNot(t *testing.T) {
 }
 
 func TestGrassNeverRegrowsWithoutRegrowDays(t *testing.T) {
+	t.Parallel()
 	// the ice sheet has no regrow days (deserts got some for their grazers)
 	g := New(Config{Seed: 1, Width: 24, Height: 16, Biome: biome.IceSheet})
 	g.setTerrain(5, 5, terrain.Soil)
@@ -120,6 +125,7 @@ func TestGrassNeverRegrowsWithoutRegrowDays(t *testing.T) {
 }
 
 func TestRegrowQueueSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 16, Biome: biome.TemperateSwamp})
 	for x := 2; x < 20; x++ {
 		for y := 2; y < 12; y++ {
@@ -150,6 +156,7 @@ func TestRegrowQueueSurvivesSave(t *testing.T) {
 }
 
 func TestIceNotSowable(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 16, Biome: biome.IceSheet})
 	g.setTerrain(4, 4, terrain.Ice)
 	g.setTerrain(6, 4, terrain.Sand)
@@ -202,6 +209,7 @@ func walkTicks(t *testing.T, ground terrain.Type) uint64 {
 }
 
 func TestMarshSlowsWalking(t *testing.T) {
+	t.Parallel()
 	soil, marsh, sand := walkTicks(t, terrain.Soil), walkTicks(t, terrain.Marsh), walkTicks(t, terrain.Sand)
 	if marsh < soil*17/10 {
 		t.Fatalf("marsh %d ticks vs soil %d: should be about twice as slow", marsh, soil)
@@ -212,6 +220,7 @@ func TestMarshSlowsWalking(t *testing.T) {
 }
 
 func TestBiomePlantsDieOutOfClimate(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 16}) // temperate
 	jungle, _ := g.spawnPlant(plant.JungleTree, 3, 3, 1000)
 	oak, _ := g.spawnPlant(plant.Tree, 5, 3, 1000)
@@ -264,6 +273,7 @@ func TestBiomePlantsDieOutOfClimate(t *testing.T) {
 }
 
 func TestBiomePlantsGrowAndYield(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 16, Biome: biome.TropicalSwamp})
 	reeds, _ := g.spawnPlant(plant.Reeds, 3, 3, 0)
 	jumpTo(g, 10, 8)
@@ -284,6 +294,7 @@ func TestBiomePlantsGrowAndYield(t *testing.T) {
 }
 
 func TestSameSeedSameBiomeSameWorld(t *testing.T) {
+	t.Parallel()
 	for _, b := range []biome.ID{biome.BorealForest, biome.Desert, biome.TropicalSwamp, biome.SeaIce} {
 		a := NewColony(Config{Seed: 13, Width: 48, Height: 40, Biome: b})
 		c := NewColony(Config{Seed: 13, Width: 48, Height: 40, Biome: b})
@@ -300,6 +311,7 @@ func TestSameSeedSameBiomeSameWorld(t *testing.T) {
 }
 
 func TestOldSaveLoadsTemperate(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 48, Height: 40}) // Biome zero, as every pre-biome save
 	g.Step(500)
 	var buf bytes.Buffer

@@ -112,6 +112,7 @@ func burMessage(g *Game, text string) bool {
 }
 
 func TestColonistDeathSpawnsCorpse(t *testing.T) {
+	t.Parallel()
 	g, _ := burGame(t, 16, 10)
 	bo, _ := g.SpawnNamedPawn(8, 5, "Bo")
 	g.equip[bo] = item.Rifle
@@ -142,6 +143,7 @@ func TestColonistDeathSpawnsCorpse(t *testing.T) {
 }
 
 func TestRaiderDeathLeavesCorpseNotRemoved(t *testing.T) {
+	t.Parallel()
 	g, _ := raidGame(t)
 	g.Raid(1)
 	rid := g.raiderIDs[0]
@@ -166,6 +168,7 @@ func TestRaiderDeathLeavesCorpseNotRemoved(t *testing.T) {
 }
 
 func TestCorpseRotsToBones(t *testing.T) {
+	t.Parallel()
 	g, _ := burGame(t, 16, 10)
 	jumpTo(g, 15, 0) // summer: full rot speed
 	bo := burKill(t, g, 8, 5, "Bo")
@@ -189,6 +192,7 @@ func TestCorpseRotsToBones(t *testing.T) {
 }
 
 func TestGraveBuildAndBury(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	bo := burKill(t, g, 8, 5, "Bo")
 	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: uint8(construction.Grave), Facing: uint8(construction.South), X: 16, Y: 4})
@@ -246,6 +250,7 @@ func TestGraveBuildAndBury(t *testing.T) {
 }
 
 func TestBuryPrefersNearestCorpseAndGrave(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 30, 12)
 	far := burKill(t, g, 20, 5, "Far")
 	near := burKill(t, g, 7, 5, "Near")
@@ -281,6 +286,7 @@ func TestBuryPrefersNearestCorpseAndGrave(t *testing.T) {
 }
 
 func TestNoBuryWithoutEmptyGrave(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	if g.assignBury(ada) {
 		t.Fatal("nobody to bury")
@@ -312,6 +318,7 @@ func TestNoBuryWithoutEmptyGrave(t *testing.T) {
 }
 
 func TestPyreCremateBill(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	placeBuilt(t, g, construction.Pyre, construction.South, 12, 4)
 	pyre := g.layerBldgAt(12, 4, construction.LayerObject)
@@ -371,6 +378,7 @@ func TestPyreCremateBill(t *testing.T) {
 }
 
 func TestColonistDiedThought(t *testing.T) {
+	t.Parallel()
 	g, ada := raidGame(t)
 	a := uint64ToID(ada)
 	cy, _ := g.SpawnNamedPawn(16, 10, "Cy")
@@ -390,6 +398,7 @@ func TestColonistDiedThought(t *testing.T) {
 }
 
 func TestUnburiedCorpseThought(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 30, 12)
 	g.positions.Set(ada, Position{3, 3})
 	bo := burKill(t, g, 10, 3, "Bo")
@@ -425,6 +434,7 @@ func TestUnburiedCorpseThought(t *testing.T) {
 }
 
 func TestLaidToRestThought(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	cy, _ := g.SpawnNamedPawn(1, 10, "Cy")
 	g.labor.Set(cy, 0) // Cy does no work: only Ada digs and buries
@@ -443,6 +453,7 @@ func TestLaidToRestThought(t *testing.T) {
 }
 
 func TestFilledGraveBlocksAndCannotDeconstruct(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	full := burGrave(t, g, construction.East, 10, 4) // (10,4) and (11,4)
 	empty := burGrave(t, g, construction.South, 14, 4)
@@ -470,6 +481,7 @@ func TestFilledGraveBlocksAndCannotDeconstruct(t *testing.T) {
 }
 
 func TestDigBuryCremateActions(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	build(g, construction.Grave, construction.South, 8, 2)
 	g.Step(1)
@@ -509,6 +521,7 @@ func TestDigBuryCremateActions(t *testing.T) {
 }
 
 func TestSaveRoundTripGravesAndCorpses(t *testing.T) {
+	t.Parallel()
 	g, _ := burGame(t, 24, 12)
 	bo := burKill(t, g, 8, 5, "Bo")
 	burGrave(t, g, construction.South, 14, 4)
@@ -553,6 +566,7 @@ func TestSaveRoundTripGravesAndCorpses(t *testing.T) {
 }
 
 func TestOldSaveDeadColonistGetsCorpse(t *testing.T) {
+	t.Parallel()
 	g, _ := raidGame(t)
 	// an older build: death left the pawn lying there, no corpse item
 	bo, _ := g.SpawnNamedPawn(8, 5, "Bo")
@@ -603,6 +617,7 @@ func TestOldSaveDeadColonistGetsCorpse(t *testing.T) {
 }
 
 func TestBuriedRaiderLeavesTheRaiderList(t *testing.T) {
+	t.Parallel()
 	g, ada := raidGame(t)
 	g.Raid(1)
 	rid := g.raiderIDs[0]
@@ -630,6 +645,7 @@ func TestBuriedRaiderLeavesTheRaiderList(t *testing.T) {
 }
 
 func TestBuryFailsCleanlyWhenTheGraveGoes(t *testing.T) {
+	t.Parallel()
 	g, ada := burGame(t, 24, 12)
 	bo := burKill(t, g, 6, 5, "Bo")
 	gid := burGrave(t, g, construction.South, 18, 4)
@@ -650,6 +666,7 @@ func TestBuryFailsCleanlyWhenTheGraveGoes(t *testing.T) {
 }
 
 func TestEpitaphNamesTheCause(t *testing.T) {
+	t.Parallel()
 	cases := map[health.Cause]string{
 		health.CauseInjury: " of wounds", health.CauseHypothermia: " of the cold", health.CauseHeatstroke: " of heatstroke",
 		health.CauseInfection: " of infection", health.CauseNoFood: " of hunger", health.CauseBloodLoss: " of blood loss", health.CauseOrganFailure: " of organ failure",

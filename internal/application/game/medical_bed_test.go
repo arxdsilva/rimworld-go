@@ -34,6 +34,7 @@ func bedOf(g *Game, id entity.EntityID) construction.Building {
 // Medical is a per-bed setting: the bed beside it in the same room is
 // left as it was, and only sleeping places take it.
 func TestSetBedMedicalChangesOnlyThatBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 10})
 	hut(t, g, 2, 1, 12, 7)
 	a := buildNow(t, g, construction.Bed, item.Wood, construction.South, 4, 2)
@@ -59,6 +60,7 @@ func TestSetBedMedicalChangesOnlyThatBed(t *testing.T) {
 // Turning a bed medical frees it of its owner (a sleeper in it gets up);
 // a patient lying in it keeps it for its stay.
 func TestMedicalBedReleasesOwners(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	sleepAnytime(g)
 	ada, _ := g.SpawnNamedPawn(4, 6, "Ada")
@@ -88,6 +90,7 @@ func TestMedicalBedReleasesOwners(t *testing.T) {
 // Healthy colonists never sleep in, own, or are ordered into a medical
 // bed; a hurt one may be.
 func TestHealthyColonistsNeverUseMedicalBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	sleepAnytime(g)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -127,6 +130,7 @@ func TestHealthyColonistsNeverUseMedicalBed(t *testing.T) {
 // A healthy colonist woken in a medical bed (well again) gets up, and a
 // plain bed is chosen over it.
 func TestHealthySleeperLeavesMedicalBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	sleepAnytime(g)
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
@@ -152,6 +156,7 @@ func TestHealthySleeperLeavesMedicalBed(t *testing.T) {
 // freeBedFor (rescue, surgery) ranks medical beds first, then the
 // hospital kind, then distance.
 func TestFreeBedForRanksMedicalFirst(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 24, Height: 12})
 	patient, _ := g.SpawnNamedPawn(2, 5, "Patient")
 	near := buildNow(t, g, construction.Bed, item.Wood, construction.South, 3, 5)
@@ -174,6 +179,7 @@ func TestFreeBedForRanksMedicalFirst(t *testing.T) {
 }
 
 func TestNewHospitalBedStartsMedical(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	h := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 4, 2)
 	p := buildNow(t, g, construction.Bed, item.Wood, construction.South, 8, 2)
@@ -185,6 +191,7 @@ func TestNewHospitalBedStartsMedical(t *testing.T) {
 // A rescued patient taken to a medical bed holds it for its stay and
 // keeps its own bed.
 func TestRescueToMedicalBedKeepsOwnBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	pat, _ := g.SpawnNamedPawn(5, 6, "Patient")
 	g.SpawnNamedPawn(3, 9, "Doc")
@@ -204,6 +211,7 @@ func TestRescueToMedicalBedKeepsOwnBed(t *testing.T) {
 // A patient rests in a medical bed outside its allowed area; a healthy
 // sleep there would not be exempt.
 func TestMedicalBedIsAreaExempt(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	b := buildNow(t, g, construction.Bed, item.Wood, construction.South, 6, 2)
@@ -218,6 +226,7 @@ func TestMedicalBedIsAreaExempt(t *testing.T) {
 }
 
 func TestMedicalFlagSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	b := buildNow(t, g, construction.Bed, item.Wood, construction.South, 4, 2)
 	h := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 8, 2)
@@ -240,6 +249,7 @@ func TestMedicalFlagSurvivesSave(t *testing.T) {
 // an owner elsewhere gives it up, a colonist lying in it keeps it for the
 // stay, and plain beds are left alone.
 func TestMigrateHospitalBedsFromV3(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 8})
 	ada, _ := g.SpawnNamedPawn(2, 6, "Ada")
 	bo, _ := g.SpawnNamedPawn(3, 6, "Bo")

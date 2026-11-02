@@ -27,6 +27,7 @@ func friendAt(t *testing.T, g *Game, pat entity.EntityID, x, y int) entity.Entit
 }
 
 func TestFriendVisitsBedriddenColonistAndBothRelax(t *testing.T) {
+	t.Parallel()
 	g, pat, _ := sickPatient(t)
 	fri := friendAt(t, g, pat, 8, 4)
 	if !g.lyingAwake(pat) {
@@ -66,6 +67,7 @@ func TestFriendVisitsBedriddenColonistAndBothRelax(t *testing.T) {
 func stepUntilFed(g *Game, n int, cond func() bool) bool { return restFedUntil(g, n, cond) }
 
 func TestVisitPairDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, pat, _ := sickPatient(t)
 	fri := friendAt(t, g, pat, 8, 4)
 	starts, prev := 0, false
@@ -94,6 +96,7 @@ func TestVisitPairDoesNotFlap(t *testing.T) {
 }
 
 func TestBedriddenAwakePatientIsAChatPartner(t *testing.T) {
+	t.Parallel()
 	g, pat, _ := sickPatient(t)
 	if !g.lyingAwake(pat) {
 		g.SetNeeds(pat, 9000, 9000)
@@ -110,6 +113,7 @@ func TestBedriddenAwakePatientIsAChatPartner(t *testing.T) {
 }
 
 func TestStripDropsDownedColonistsGear(t *testing.T) {
+	t.Parallel()
 	g, doc, patient := careScene(t)
 	w := g.apparel[patient]
 	w.On[item.Body].Kind = item.Parka

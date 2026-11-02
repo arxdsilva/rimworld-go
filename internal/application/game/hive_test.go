@@ -11,6 +11,7 @@ import (
 )
 
 func TestHiveSwarmEvent(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 6; seed++ {
 		g := New(Config{Seed: seed, Width: 40, Height: 30})
 		_, _ = g.SpawnNamedPawn(20, 15, "Ada")
@@ -68,6 +69,7 @@ func TestHiveSwarmEvent(t *testing.T) {
 }
 
 func TestHiveNeverTameable(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	p, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	id, _ := g.SpawnAnimal("hive_crawler", 10, 5)
@@ -86,6 +88,7 @@ func TestHiveNeverTameable(t *testing.T) {
 }
 
 func TestLegendaryRevengeCallsHerd(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 60, Height: 20})
 	p, _ := g.SpawnNamedPawn(10, 10, "Ada")
 	stag, _ := g.SpawnAnimal("glimmerstag", 12, 10)
@@ -112,6 +115,7 @@ func TestLegendaryRevengeCallsHerd(t *testing.T) {
 }
 
 func TestLegendaryEventOncePerYear(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 7, Width: 30, Height: 20})
 	_, _ = g.SpawnNamedPawn(15, 10, "Ada")
 	g.wild = true

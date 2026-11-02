@@ -163,6 +163,7 @@ func TestRepairOnlyInsideHome(t *testing.T) {
 }
 
 func TestRoofAreaPersistsAndRebuilds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 10})
 	hut(t, g, 1, 1, 12, 5)
 	g.designateRoof(14, 3, 16, 3, true) // outside the hut: no auto roof
@@ -201,6 +202,7 @@ func TestRoofAreaPersistsAndRebuilds(t *testing.T) {
 }
 
 func TestRoofAreaPlanReraisedAfterCollapse(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 10})
 	// a lone tile far from any support, then a wall that supports it
 	g.ensureRooms()
@@ -222,6 +224,7 @@ func TestRoofAreaPlanReraisedAfterCollapse(t *testing.T) {
 }
 
 func TestCancelClearsRoofArea(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 10})
 	hut(t, g, 1, 1, 12, 5)
 	g.designateRoof(3, 3, 5, 3, true)
@@ -233,6 +236,7 @@ func TestCancelClearsRoofArea(t *testing.T) {
 }
 
 func TestLegacyRoofPlansUntouched(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 10})
 	hut(t, g, 1, 1, 12, 5)
 	if countRoof(g, roof.AreaBuild) != 0 {

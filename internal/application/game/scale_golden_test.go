@@ -186,6 +186,7 @@ func TestScaleGolden(t *testing.T) {
 }
 
 func TestStateHashStable(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 48, Height: 40})
 	g.Step(300)
 	a, b := g.StateHash(), g.StateHash()
@@ -200,6 +201,7 @@ func TestStateHashStable(t *testing.T) {
 
 // TestPhaseObserverDoesNotChangeState: an observed Step is the same Step.
 func TestPhaseObserverDoesNotChangeState(t *testing.T) {
+	t.Parallel()
 	a := NewColony(Config{Seed: 5, Width: 48, Height: 40})
 	b := NewColony(Config{Seed: 5, Width: 48, Height: 40})
 	seen := map[string]int{}

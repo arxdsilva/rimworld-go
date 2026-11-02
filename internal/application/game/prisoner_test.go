@@ -88,6 +88,7 @@ func capture(t *testing.T, g *Game, ada, bo, rid entity.EntityID) {
 }
 
 func TestCaptureCarriesDownedRaiderToPrisonBed(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, bed := prisonGame(t)
 	g.Enqueue(command.Command{Kind: command.Capture, Pawn: uint64(ada), Target: uint64(rid)})
 	carried := false
@@ -153,6 +154,7 @@ func (g *Game) positionOf(id entity.EntityID) Position {
 }
 
 func TestCaptureNeedsAPrisonerBed(t *testing.T) {
+	t.Parallel()
 	g, ada, _, rid, bed := prisonGame(t)
 	g.Enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(bed), Enabled: false})
 	g.Enqueue(command.Command{Kind: command.Capture, Pawn: uint64(ada), Target: uint64(rid)})
@@ -167,6 +169,7 @@ func TestCaptureNeedsAPrisonerBed(t *testing.T) {
 }
 
 func TestResistanceFactorEndpointsDriveAVisit(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		op   int32
 		mood int
@@ -194,6 +197,7 @@ func TestResistanceFactorEndpointsDriveAVisit(t *testing.T) {
 }
 
 func TestWardenVisitsOncePerIntervalNoFlap(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	g.setPriority(bo, work.Warden, 1)
@@ -228,6 +232,7 @@ func TestWardenVisitsOncePerIntervalNoFlap(t *testing.T) {
 }
 
 func TestPrisonerFoodBandHysteresis(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	band := func(h int) bool {
@@ -252,6 +257,7 @@ func TestPrisonerFoodBandHysteresis(t *testing.T) {
 }
 
 func TestWardenBringsFoodOnceNoFlap(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	g.setPriority(bo, work.Warden, 1)
@@ -280,6 +286,7 @@ func TestWardenBringsFoodOnceNoFlap(t *testing.T) {
 }
 
 func TestRecruitKeepsFamilyAndRemembersWarden(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	g.ensurePerson(ada)
 	g.setParents(rid, [2]entity.EntityID{ada, 0}) // Ada is the raider's mother
@@ -326,6 +333,7 @@ func TestRecruitKeepsFamilyAndRemembersWarden(t *testing.T) {
 }
 
 func TestReleaseWalksOffAndPleasesFaction(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	g.ng.factions = []faction.Faction{{Type: faction.Settlers, Name: "Valley", Goodwill: -20}}
 	g.personOf(rid).Faction = 1
@@ -358,6 +366,7 @@ func (g *Game) jobsOf(id entity.EntityID) job.Record {
 }
 
 func TestExecutionGivesRelativesKillerOpinion(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	g.ensurePerson(ada)
 	g.setParents(rid, [2]entity.EntityID{ada, 0})
@@ -381,6 +390,7 @@ func TestExecutionGivesRelativesKillerOpinion(t *testing.T) {
 }
 
 func TestArrestSuccessAndFailure(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, _, _ := prisonGame(t)
 	// asleep: the arrest is sure
 	g.jobs.Set(bo, job.Record{Kind: job.Sleep, State: job.Do})
@@ -444,6 +454,7 @@ func TestArrestSuccessAndFailure(t *testing.T) {
 }
 
 func TestSaveLoadKeepsPrisoners(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	g.SetNeeds(rid, prison.FoodLow-1, needs.Full)

@@ -95,6 +95,7 @@ func allSupplied(g *Game) bool {
 }
 
 func TestDeliveryFeedsManyFramesAndStoresTheRest(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 2, Y: 2, X2: 4, Y2: 4})
 	g.SpawnStack(item.Wood, 300, 3, 3)
@@ -119,6 +120,7 @@ func TestDeliveryFeedsManyFramesAndStoresTheRest(t *testing.T) {
 }
 
 func TestDeliveryWithoutStorageCarriesJustTheNeed(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		full bool // a stockpile with no room left
@@ -145,6 +147,7 @@ func TestDeliveryWithoutStorageCarriesJustTheNeed(t *testing.T) {
 }
 
 func TestDeliveryRouteLimits(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 60, Height: 12})
 	g.SpawnStack(item.Wood, 300, 3, 3)
 	id := hauler(t, g, 3, 4)
@@ -175,6 +178,7 @@ func TestDeliveryRouteLimits(t *testing.T) {
 }
 
 func TestTwoHaulersNeverOverDeliver(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	g.SpawnStack(item.Wood, 50, 3, 3)
 	hauler(t, g, 2, 5)
@@ -212,6 +216,7 @@ func midRoute(t *testing.T, g *Game, id entity.EntityID) job.Record {
 }
 
 func TestDraftedHaulerDropsLoadAndFreesFrames(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	g.SpawnStack(item.Wood, 300, 3, 3)
 	id := hauler(t, g, 6, 6)
@@ -241,6 +246,7 @@ func TestDraftedHaulerDropsLoadAndFreesFrames(t *testing.T) {
 }
 
 func TestDeadHaulerFreesFrames(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	g.SpawnStack(item.Wood, 300, 3, 3)
 	id := hauler(t, g, 6, 6)
@@ -257,6 +263,7 @@ func TestDeadHaulerFreesFrames(t *testing.T) {
 }
 
 func TestRefuelLeftoverGoesToStockpile(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
@@ -285,6 +292,7 @@ func TestRefuelLeftoverGoesToStockpile(t *testing.T) {
 }
 
 func TestSupplyOrderChainsFrames(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	g.SpawnStack(item.Wood, 300, 3, 3)
 	id := hauler(t, g, 6, 6)
@@ -301,6 +309,7 @@ func TestSupplyOrderChainsFrames(t *testing.T) {
 }
 
 func TestSaveMidRouteContinuesIdentically(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 2, Y: 2, X2: 4, Y2: 4})
 	g.SpawnStack(item.Wood, 300, 3, 3)
@@ -341,6 +350,7 @@ func tripEnd(t *testing.T, g *Game, id entity.EntityID) {
 }
 
 func TestLeftoverFindsAnotherStockpileWhenTheSpareGoes(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 2, Y: 9, X2: 3, Y2: 10})
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 20, Y: 7, X2: 21, Y2: 8})
@@ -360,6 +370,7 @@ func TestLeftoverFindsAnotherStockpileWhenTheSpareGoes(t *testing.T) {
 }
 
 func TestRouteSkipsFramesFilledMeanwhile(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	g.SpawnStack(item.Wood, 300, 3, 3)
 	id := hauler(t, g, 6, 6)

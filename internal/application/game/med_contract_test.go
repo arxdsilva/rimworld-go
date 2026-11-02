@@ -84,6 +84,7 @@ func pegLegged(t *testing.T) (*Game, entity.EntityID) {
 // a fixed array of 20 parts and drug tolerance and last doses as arrays
 // of 3; it loads into the slices with nothing lost.
 func TestLegacyBodySaveKeepsImplants(t *testing.T) {
+	t.Parallel()
 	g, id := pegLegged(t)
 	moving := g.bodies[id].Capacity(body.Moving)
 	check := func(name string, h *Game) {
@@ -119,6 +120,7 @@ func TestLegacyBodySaveKeepsImplants(t *testing.T) {
 
 // TestSavedBodyRoundTrip: the new body fields survive a save.
 func TestSavedBodyRoundTrip(t *testing.T) {
+	t.Parallel()
 	g, id := pegLegged(t)
 	b := g.bodies[id]
 	b.BloodLoss = 120
@@ -149,6 +151,7 @@ func patientScan(g *Game) []entity.EntityID {
 // the index equals a brute-force scan of the bodies right after every
 // hourly sweep, and it is rebuilt the same on load.
 func TestPatientsIndexMatchesScan(t *testing.T) {
+	t.Parallel()
 	ticks := 20000
 	if testing.Short() {
 		ticks = 6000
@@ -192,6 +195,7 @@ func TestPatientsIndexMatchesScan(t *testing.T) {
 }
 
 func TestPatientsIndexSortedUnique(t *testing.T) {
+	t.Parallel()
 	var g Game
 	for _, id := range []entity.EntityID{9, 3, 7, 3, 12, 9} {
 		g.markPatient(id)
@@ -210,6 +214,7 @@ func TestPatientsIndexSortedUnique(t *testing.T) {
 // its wounds are healed or scarred the sweep clears it, and a dead pawn
 // is no patient.
 func TestPatientMarkedByWoundAndClearedWhenWell(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(10, 6, "Patient")
 	other, _ := g.SpawnNamedPawn(4, 6, "Other")
@@ -230,6 +235,7 @@ func TestPatientMarkedByWoundAndClearedWhenWell(t *testing.T) {
 }
 
 func TestHealthViewMedicalDefaults(t *testing.T) {
+	t.Parallel()
 	g, id := pegLegged(t)
 	hv, ok := g.Health(id)
 	if !ok || hv.DeathInHours != -1 || hv.Conditions != nil || hv.BloodLossPct != 0 {
@@ -241,6 +247,7 @@ func TestHealthViewMedicalDefaults(t *testing.T) {
 // its neighbour above (-1) or below (+1); anything out of range is a
 // no-op.
 func TestReorderOperation(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 10)
 	addPegLeg(g, patient)
 	queueOp(g, patient, body.Amputate, body.HandL, 0)
@@ -282,6 +289,7 @@ func TestReorderOperation(t *testing.T) {
 // transplant on a hand, no carcinoma to excise, no kind past NumOps;
 // euthanasia and anaesthesia go on the whole body (the torso).
 func TestAddOperationRefusesUnimplementedKinds(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 10)
 	for k := body.HarvestOrgan; k <= body.NumOps; k++ {
 		queueOp(g, patient, k, body.HandL, 0)
@@ -305,6 +313,7 @@ func TestAddOperationRefusesUnimplementedKinds(t *testing.T) {
 // TestHeadlineUnderAnesthetic: a sedated patient's headline says so
 // instead of a race result (MED-06's anesthetic has no race).
 func TestHeadlineUnderAnesthetic(t *testing.T) {
+	t.Parallel()
 	var b body.Body
 	b.AddCond(body.Condition{Kind: body.CondAnesthetic})
 	if got := body.ConditionHeadline(&b, false); got != "Under anesthetic" {
@@ -315,6 +324,7 @@ func TestHeadlineUnderAnesthetic(t *testing.T) {
 // TestInjureCutBleeds: the dev hook deals a cut, which bleeds, where
 // Injure's bruise does not (README medical clip).
 func TestInjureCutBleeds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	id, _ := g.SpawnNamedPawn(4, 4, "Pat")
 	g.InjureCut(id, 12)

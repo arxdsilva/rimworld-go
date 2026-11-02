@@ -16,6 +16,7 @@ import (
 // removals, roof designations and the passing hours. (The self-check also
 // proves every incremental rebuild against room.Detect.)
 func TestRoomsIncrementalMatchesFull(t *testing.T) {
+	t.Parallel()
 	kinds := []string{"wall", "wall", "wall", "wall", "door", "bed", "table", "chair", "lamp", "floor", "fence"}
 	stuffs := []string{"wood", "granite blocks", "steel"}
 	for seed := uint64(1); seed <= 3; seed++ {

@@ -14,6 +14,7 @@ import (
 // hostile on the map is released after combat.AutoUndraft ticks, an order
 // starts the quiet over, and nothing drafts it again.
 func TestAutoUndraftInPlay(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(3, 4, "Ada")
 	g.Apply(command.Command{Kind: command.DraftPawn, Pawn: uint64(p), Enabled: true})
@@ -37,6 +38,7 @@ func TestAutoUndraftInPlay(t *testing.T) {
 // colonist stands, the equip order takes it back; a stowed weapon is the
 // spare and an unarmed drop puts it down.
 func TestDropWeaponThenReEquip(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	p, _ := g.SpawnNamedPawn(3, 4, "Ada")
 	g.equip[p] = item.Rifle

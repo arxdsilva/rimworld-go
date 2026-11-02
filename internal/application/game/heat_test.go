@@ -46,6 +46,7 @@ func hutWalls(t *testing.T, g *Game, x0, y0, x1, y1 int) {
 }
 
 func TestCampfireHeatsItsRoomInWinter(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	jumpTo(g, 45, 0)
 	hut(t, g, 1, 1, 7, 7)   // heated
@@ -70,6 +71,7 @@ func TestCampfireHeatsItsRoomInWinter(t *testing.T) {
 }
 
 func TestHaulerRefuelsCampfire(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
@@ -90,6 +92,7 @@ func TestHaulerRefuelsCampfire(t *testing.T) {
 }
 
 func TestColdNightOutsideKillsWithoutShelter(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	jumpTo(g, 45, 0)
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
@@ -112,6 +115,7 @@ func TestColdNightOutsideKillsWithoutShelter(t *testing.T) {
 }
 
 func TestFreezingColonistSeeksWarmRoom(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	jumpTo(g, 45, 0)
 	hut(t, g, 6, 1, 12, 7)
@@ -136,6 +140,7 @@ func TestFreezingColonistSeeksWarmRoom(t *testing.T) {
 }
 
 func TestUnreachableTreeIsSkipped(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(1, 4, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
@@ -165,6 +170,7 @@ func TestUnreachableTreeIsSkipped(t *testing.T) {
 }
 
 func TestBreachedRoomCoolsOverHours(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	jumpTo(g, 45, 0)
 	hut(t, g, 1, 1, 7, 7)

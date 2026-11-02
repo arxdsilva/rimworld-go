@@ -32,6 +32,7 @@ func mechView(t *testing.T, g *Game, id entity.EntityID) AnimalView {
 // TestMechFightsAsRaider: a mechanoid shows as a hostile machine, never
 // hungers or tires, and opens fire on the colonist with its own gun.
 func TestMechFightsAsRaider(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 7, Width: 40, Height: 30})
 	ada, _ := g.SpawnNamedPawn(25, 15, "Ada")
 	id, err := g.SpawnAnimal("spindle", 8, 15)
@@ -58,6 +59,7 @@ func TestMechFightsAsRaider(t *testing.T) {
 // view says so); its plating turns blows; hit, it bleeds no stain; broken,
 // it leaves a wreck that keeps, which no predator eats.
 func TestMechEMPAndWreck(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 40, Height: 30})
 	id, err := g.SpawnAnimal("harrow", 10, 10)
 	if err != nil {
@@ -123,6 +125,7 @@ func TestMechEMPAndWreck(t *testing.T) {
 // asleep, a shot at the hull wakes them, and broken it leaves its salvage
 // and no blueprint; it saves with its guards.
 func TestShipPartInGame(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 5, Width: 80, Height: 80})
 	_, _ = g.SpawnNamedPawn(40, 40, "Ada")
 	now := uint64(g.clock.Now())
@@ -181,6 +184,7 @@ func TestShipPartInGame(t *testing.T) {
 // TestShipPartNeedsPoints: below the wiki's 400 raid points the threat
 // does not fit, and a bare colony has nowhere near that.
 func TestShipPartNeedsPoints(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 40, Height: 30})
 	_, _ = g.SpawnNamedPawn(20, 15, "Ada")
 	if g.raidPoints(0) >= raid.ShipPartMinPoints {

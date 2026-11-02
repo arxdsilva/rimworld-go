@@ -46,6 +46,7 @@ func nicks(p *CandidatePool) []string {
 }
 
 func TestCandidatePoolOps(t *testing.T) {
+	t.Parallel()
 	fx := builtinEffects(t)
 	p := NewCandidatePool(poolSeed, fx)
 
@@ -214,6 +215,7 @@ func teamPawn(nick string, level uint8, years int) pawngen.Pawn {
 }
 
 func TestTeamWarnings(t *testing.T) {
+	t.Parallel()
 	gentle := func(p pawngen.Pawn) pawngen.Pawn { p.Traits = []trait.ID{trait.Gentle}; return p }
 	withSkill := func(p pawngen.Pawn, id skill.ID, l uint8) pawngen.Pawn { p.Skills[id].Level = l; return p }
 	collector := storyByTitle(t, "Debt collector") // incapable of caring
@@ -275,6 +277,7 @@ func TestTeamWarnings(t *testing.T) {
 }
 
 func TestBioOfFields(t *testing.T) {
+	t.Parallel()
 	p := pawngen.Pawn{
 		First: "Ada", Nick: "Wren", Last: "Stone",
 		Look:       look.Look{Sex: look.Female, Build: look.Thin},
@@ -369,6 +372,7 @@ func TestBioOfFields(t *testing.T) {
 }
 
 func TestPoolDeterministic(t *testing.T) {
+	t.Parallel()
 	for _, d := range scenario.Builtins() {
 		fx := d.Apply()
 		a, b := NewCandidatePool(poolSeed, fx), NewCandidatePool(poolSeed, fx)

@@ -46,6 +46,7 @@ func industrialMedicine(g *Game) int {
 // medicine is a Doctor bill, so a doctor with nothing to tend works it at
 // the workbench; a crafter never does.
 func TestDoctorRefinesMedicine(t *testing.T) {
+	t.Parallel()
 	g, id := refineSetup(t, work.Doctor)
 	for range 40 {
 		g.SetNeeds(id, needs.Full, needs.Full)
@@ -71,6 +72,7 @@ func TestDoctorRefinesMedicine(t *testing.T) {
 // off, priorities round-trip as slices, and a save written with 12 work
 // types (Prios) loads with Warden off and the rest kept.
 func TestWardenOffByDefaultAndMigrated(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 10, Height: 10})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	if p := g.prioOf(id); p[work.Warden] != 0 || p[work.Haul] != work.DefaultPriority {
@@ -105,6 +107,7 @@ func TestWardenOffByDefaultAndMigrated(t *testing.T) {
 // from the base seed, survives a save, and continues exactly; using it
 // never touches the main RNG.
 func TestRNGStreamsSavedAndLazy(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 9, Width: 10, Height: 10})
 	main := g.StateHash()
 	a := g.stream(streamSocial)
@@ -138,6 +141,7 @@ func TestRNGStreamsSavedAndLazy(t *testing.T) {
 // and save fields change nothing yet — a colony steps, saves and loads to
 // the same state, and the read models are empty.
 func TestSocialStubsAreNoOps(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 3, Width: 48, Height: 40})
 	g.Step(600)
 	id := g.pawnIDs[0]

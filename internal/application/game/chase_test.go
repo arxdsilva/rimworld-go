@@ -54,6 +54,7 @@ func chaseFixture(t *testing.T, s string) (*Game, entity.EntityID, entity.Entity
 }
 
 func TestHungryPredatorChaseWarns(t *testing.T) {
+	t.Parallel()
 	g, wolf, ada := chaseFixture(t, "timber_wolf")
 	setAnimal(g, wolf, func(a *animal.State) { a.Food, a.NextDecide = 2000, 0 })
 	g.Step(1)
@@ -80,6 +81,7 @@ func TestHungryPredatorChaseWarns(t *testing.T) {
 }
 
 func TestRevengeChaseWarns(t *testing.T) {
+	t.Parallel()
 	g, wolf, ada := chaseFixture(t, "timber_wolf")
 	setAnimal(g, wolf, func(a *animal.State) { a.Attacker, a.NextDecide = ada, 1<<40 })
 	g.Step(1)
@@ -92,6 +94,7 @@ func TestRevengeChaseWarns(t *testing.T) {
 }
 
 func TestChargeWarnsOnceAcrossRepeatedCharges(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 13, Width: 32, Height: 20})
 	cougar, ada := chargeScene(t, g, "cougar")
 	g.names.Set(ada, "Ada")
@@ -134,6 +137,7 @@ func TestChargeWarnsOnceAcrossRepeatedCharges(t *testing.T) {
 }
 
 func TestNewTargetRewarns(t *testing.T) {
+	t.Parallel()
 	g, wolf, ada := chaseFixture(t, "timber_wolf")
 	bo := draftedPawn(t, g, 10, 13)
 	g.names.Set(bo, "Bo")
@@ -170,6 +174,7 @@ func TestNewTargetRewarns(t *testing.T) {
 }
 
 func TestFightBackWarnsOnceAndManhuntersNotTwice(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 6; seed++ {
 		g := New(Config{Seed: seed, Width: 40, Height: 20})
 		bareGround(g)
@@ -223,6 +228,7 @@ func TestFightBackWarnsOnceAndManhuntersNotTwice(t *testing.T) {
 }
 
 func TestChaseWarnStateSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g, wolf, ada := chaseFixture(t, "timber_wolf")
 	setAnimal(g, wolf, func(a *animal.State) { a.Food, a.NextDecide = 2000, 0 })
 	g.Step(1)
@@ -251,6 +257,7 @@ func TestChaseWarnStateSurvivesSave(t *testing.T) {
 
 // noteChase (combat.go's hook) reads and writes the stored animal.
 func TestNoteChaseUsesTheStore(t *testing.T) {
+	t.Parallel()
 	g, wolf, ada := chaseFixture(t, "timber_wolf")
 	setAnimal(g, wolf, func(a *animal.State) { a.Mode, a.Target = animal.Attack, ada })
 	g.noteChase(wolf, ada)

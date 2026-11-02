@@ -23,6 +23,7 @@ func letterAbout(g *Game, title string, focus entity.EntityID) bool {
 // §13.2 Social impact: a Social-20 speaker's deep talk (and insult) lands
 // harder than a Social-0 speaker's; the memory carries the scale.
 func TestSocialImpactScalesInteractions(t *testing.T) {
+	t.Parallel()
 	landed := func(level int, k social.Interaction) (int32, int16) {
 		g, a, b := socialPair(t)
 		g.sk.skills[a][skill.Social].Level = uint8(level)
@@ -45,6 +46,7 @@ func TestSocialImpactScalesInteractions(t *testing.T) {
 
 // Grief lines name who died: Dee's brother grieves "my sister died".
 func TestGriefThoughtNamesTheRelation(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 40, Height: 12})
 	dee, _ := g.SpawnNamedPawn(5, 5, "Dee")
 	sib, _ := g.SpawnNamedPawn(30, 5, "Sib")
@@ -72,6 +74,7 @@ func TestGriefThoughtNamesTheRelation(t *testing.T) {
 // Breakup pressure reads a known affair and proposals the time together:
 // the interaction context the game builds carries both.
 func TestInteractCtxAffairAndTogether(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	adore(g, b, a)
 	woo(t, g, a, b)
@@ -103,6 +106,7 @@ func TestInteractCtxAffairAndTogether(t *testing.T) {
 // Letters: a turned-down proposal, a social fight, a bonded animal's
 // death, a recruit, each about the pawn.
 func TestSocialEventsPostLetters(t *testing.T) {
+	t.Parallel()
 	g, a, b := couple(t)
 	adore(g, b, a)
 	woo(t, g, a, b)

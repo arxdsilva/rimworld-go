@@ -42,6 +42,7 @@ func feedGame(t *testing.T, hunger int, doctor bool) (g *Game, ann, doc entity.E
 // grows hungry (it used to stay frozen), grows malnourished and dies of it
 // (FOOD-1).
 func TestDownedColonistStarvesWithNobodyToFeedIt(t *testing.T) {
+	t.Parallel()
 	g, ann, _ := feedGame(t, 600, false)
 	if _, st, ok := mealStack(g); ok { // nothing to eat should it get up (a patient's downing is re-judged)
 		g.deleteItem(st)
@@ -67,6 +68,7 @@ func TestDownedColonistStarvesWithNobodyToFeedIt(t *testing.T) {
 // TestDoctorFeedsDownedColonist: a doctor fetches a meal and feeds the
 // downed colonist before it starves; "Fed by Doc" is logged.
 func TestDoctorFeedsDownedColonist(t *testing.T) {
+	t.Parallel()
 	g, ann, doc := feedGame(t, care.FeedHungry+60, true)
 	sawFeed := false
 	for i := 0; i < 3000; i++ {
@@ -92,6 +94,7 @@ func TestDoctorFeedsDownedColonist(t *testing.T) {
 // at 0 % food and malnourished is fed by the doctor and its malnutrition
 // recedes.
 func TestMalnourishedDownedColonistFedRecovers(t *testing.T) {
+	t.Parallel()
 	g, ann, doc := feedGame(t, 0, true)
 	malnourish(g, ann, 150)
 	for i := 0; i < 3000; i++ {
@@ -114,6 +117,7 @@ func TestMalnourishedDownedColonistFedRecovers(t *testing.T) {
 // TestFeedPatientOrder: "Feed Ann" from the menu feeds a downed colonist
 // above Hungry; with no food it is disabled.
 func TestFeedPatientOrder(t *testing.T) {
+	t.Parallel()
 	g, ann, doc := feedGame(t, needs.Full/2, true)
 	opt := feedOption(t, g, doc, ann)
 	if opt.Disabled {
@@ -156,6 +160,7 @@ func feedOption(t *testing.T, g *Game, doc, patient entity.EntityID) OrderOption
 // TestWardenFeedsDownedPrisoner: a downed prisoner grows hungry too and
 // the warden's food run (the shared driver) feeds it.
 func TestWardenFeedsDownedPrisoner(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	g.setPriority(bo, work.Warden, 1)
@@ -181,6 +186,7 @@ func TestWardenFeedsDownedPrisoner(t *testing.T) {
 // for as long as the meal lasts, and with no food the doctor tries once
 // per care.FeedRetry instead of every tick.
 func TestFeedPatientDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, ann, doc := feedGame(t, care.FeedHungry+60, true)
 	runs, last := 0, job.None
 	for i := 0; i < 20000; i++ {

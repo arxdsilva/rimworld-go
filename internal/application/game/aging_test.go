@@ -58,6 +58,7 @@ func rollDays(g *Game, n int) {
 }
 
 func TestNoChronicBeforeOnsetAge(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 3, 6, 20) // before every onset age (artery blockage: 21)
 	rollDays(g, 3000)
 	for _, id := range ids {
@@ -79,6 +80,7 @@ func TestNoChronicBeforeOnsetAge(t *testing.T) {
 // TestOnsetChanceRisesWithAge: the older colonists collect more
 // conditions over the same days.
 func TestOnsetChanceRisesWithAge(t *testing.T) {
+	t.Parallel()
 	count := func(years int) int {
 		g, ids := agingColony(t, 11, 8, years)
 		rollDays(g, 240)
@@ -95,6 +97,7 @@ func TestOnsetChanceRisesWithAge(t *testing.T) {
 }
 
 func TestAgingRollSkipsTheDead(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 5, 2, 90)
 	v := g.VitalOf(ids[1])
 	v.Status = health.Dead
@@ -133,6 +136,7 @@ func heartAttackRun(t *testing.T, seed uint64) (int, health.Record, []body.Condi
 }
 
 func TestHeartAttackDeterministic(t *testing.T) {
+	t.Parallel()
 	deaths := 0
 	for s := uint64(1); s <= 12; s++ {
 		h1, v1, c1 := heartAttackRun(t, s)
@@ -153,6 +157,7 @@ func TestHeartAttackDeterministic(t *testing.T) {
 }
 
 func TestPumpHeartPreventsHeartAttack(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 9, 2, 90)
 	for _, id := range ids {
 		v := g.VitalOf(id)
@@ -187,6 +192,7 @@ func TestPumpHeartPreventsHeartAttack(t *testing.T) {
 }
 
 func TestArteryBlockageProgresses(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 2, 1, 30)
 	id := ids[0]
 	g.developAging(id, body.CondArteryBlockage, int(body.Heart), 0)
@@ -219,6 +225,7 @@ func TestArteryBlockageProgresses(t *testing.T) {
 }
 
 func TestExciseCarcinoma(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := surgeryColony(t, 4)
 	v := g.VitalOf(patient)
 	b := g.ensureBody(patient, &v)
@@ -268,6 +275,7 @@ func replaceWith(t *testing.T, cond body.CondKind, p body.Part, k item.Kind) []b
 }
 
 func TestCataractCuredByEyeReplacement(t *testing.T) {
+	t.Parallel()
 	if c := replaceWith(t, body.CondCataract, body.EyeL, item.OpticImplant); len(c) != 0 {
 		t.Fatalf("an optic implant ends the cataract: %+v", c)
 	}
@@ -277,12 +285,14 @@ func TestCataractCuredByEyeReplacement(t *testing.T) {
 }
 
 func TestBadBackCuredBySpinalBrace(t *testing.T) {
+	t.Parallel()
 	if c := replaceWith(t, body.CondBadBack, body.Spine, item.SpinalBrace); len(c) != 0 {
 		t.Fatalf("a spinal brace ends the bad back: %+v", c)
 	}
 }
 
 func TestAgingHealthRows(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 6, 1, 70)
 	id := ids[0]
 	v := g.VitalOf(id)
@@ -314,6 +324,7 @@ func TestAgingHealthRows(t *testing.T) {
 }
 
 func TestDementiaWanders(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 8, 1, 75)
 	id := ids[0]
 	v := g.VitalOf(id)
@@ -340,6 +351,7 @@ func TestDementiaWanders(t *testing.T) {
 // debilitating stage downs the patient once; the downing band keeps it
 // down while the stage moves back and forth.
 func TestHeartAttackDownedDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 4, 1, 60)
 	id := ids[0]
 	v := g.VitalOf(id)
@@ -364,6 +376,7 @@ func TestHeartAttackDownedDoesNotFlap(t *testing.T) {
 }
 
 func TestAgingConditionsSurviveSave(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 6, 1, 70)
 	id := ids[0]
 	v := g.VitalOf(id)
@@ -383,6 +396,7 @@ func TestAgingConditionsSurviveSave(t *testing.T) {
 // TestLegacySaveHasNoAgingConds: an older save loads with no aging
 // conditions and starts rolling them.
 func TestLegacySaveHasNoAgingConds(t *testing.T) {
+	t.Parallel()
 	g, ids := agingColony(t, 6, 2, 70)
 	h := loadAsVersion(t, g, 6)
 	for _, id := range ids {
@@ -400,6 +414,7 @@ func TestLegacySaveHasNoAgingConds(t *testing.T) {
 // stepped across many midnights with conditions growing and a heart
 // attack under way, end in the same state.
 func TestAgingIsDeterministic(t *testing.T) {
+	t.Parallel()
 	run := func() (uint64, int) {
 		g, ids := agingColony(t, 21, 4, 85)
 		g.clock = clock.NewAt(clock.Tick(30*clock.TicksPerDay - clock.TicksPerHour))
@@ -435,6 +450,7 @@ func TestAgingIsDeterministic(t *testing.T) {
 // TestDoctorTendsHeartAttack: a doctor tends a heart attack (it takes
 // tending every hour) and uses medicine on it.
 func TestDoctorTendsHeartAttack(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := surgeryColony(t, 5)
 	g.developAging(patient, body.CondHeartAttack, int(body.Heart), uint64(g.clock.Now()))
 	tended := false

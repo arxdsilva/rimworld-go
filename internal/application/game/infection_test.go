@@ -18,6 +18,7 @@ import (
 // TestUntreatedInfectionKills: with no one to tend it, an infection
 // climbs 84 % a day and kills in about 28 hours (MED-02).
 func TestUntreatedInfectionKills(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	g.setPriority(id, work.Doctor, 0) // no one to tend it
@@ -39,6 +40,7 @@ func TestUntreatedInfectionKills(t *testing.T) {
 // 6–18 hours after it opened and festers some of the time (30 %
 // outdoors); the roll is spent either way.
 func TestWoundsMayFesterWhenLeftUntended(t *testing.T) {
+	t.Parallel()
 	infected := 0
 	for seed := uint64(1); seed <= 40; seed++ {
 		g := New(Config{Seed: seed, Width: 12, Height: 8})
@@ -68,6 +70,7 @@ func TestWoundsMayFesterWhenLeftUntended(t *testing.T) {
 
 // TestBruisesNeverFester: a bruise gets no roll at all.
 func TestBruisesNeverFester(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	if b := addWound(t, g, id, body.Torso, 5, body.Bruise); b.Wounds[0].InfectAt != 0 {
@@ -78,6 +81,7 @@ func TestBruisesNeverFester(t *testing.T) {
 // TestCleanRoomHalvesTheChance: a roofed, floored, clean room halves the
 // infection chance; outdoors it is whole.
 func TestCleanRoomHalvesTheChance(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(9, 5, "Ada")
 	if f := g.roomInfectionFactor(id); f != infection.RoomOther {
@@ -111,6 +115,7 @@ func (g *Game) phaseInfectionAt() {
 // tends the infection with industrial medicine at a rolled quality, tends
 // it again each 12-hour window, and the infection is beaten.
 func TestDoctorTendsInfectionWithMedicine(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(14, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
@@ -153,6 +158,7 @@ func TestDoctorTendsInfectionWithMedicine(t *testing.T) {
 // a doctor and plenty of medicine is tended once per 12-hour window, not
 // again and again.
 func TestOneTendPerWindow(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(14, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
@@ -183,6 +189,7 @@ func TestOneTendPerWindow(t *testing.T) {
 // and an infection races on its body like a colonist's (MED-01 left
 // raiders and prisoners out).
 func TestPrisonerWoundsCanInfect(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	b := addWound(t, g, rid, body.ArmL, 6, body.Bite)
@@ -216,6 +223,7 @@ func (g *Game) countItem(k item.Kind) int {
 }
 
 func TestLoneColonistTendsItself(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	g.hurt(id, 25, 0)
@@ -234,6 +242,7 @@ func TestLoneColonistTendsItself(t *testing.T) {
 }
 
 func TestHealrootYieldsMedicine(t *testing.T) {
+	t.Parallel()
 	d := plant.DefOf(plant.Healroot)
 	if !d.Crop || d.Yields != item.HerbalMedicine || d.Yield <= 0 {
 		t.Fatalf("healroot def %+v", d)

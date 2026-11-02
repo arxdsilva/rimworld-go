@@ -11,6 +11,7 @@ import (
 // SIM-049 dev hooks: lose a part, spawn implants.
 
 func TestDevLosePart(t *testing.T) {
+	t.Parallel()
 	g, a, _ := socialPair(t)
 	gen := g.viewGen
 	if !g.DevLosePart(a, "left leg") {
@@ -58,6 +59,7 @@ func TestDevLosePart(t *testing.T) {
 }
 
 func TestDevSpawnImplants(t *testing.T) {
+	t.Parallel()
 	g, a, _ := socialPair(t)
 	if g.DevSpawnImplants(9999) {
 		t.Fatal("unknown pawn")

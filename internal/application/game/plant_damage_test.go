@@ -69,6 +69,7 @@ func nearDeath(g *Game, id entity.EntityID) {
 // own cold threshold dies in the first window, with the batched kill
 // notice and no damage warning; corn at its threshold lives.
 func TestColdKillsCropsAtOnce(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 40, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 12) // summer: only the pinned tiles freeze
@@ -104,6 +105,7 @@ func TestColdKillsCropsAtOnce(t *testing.T) {
 }
 
 func TestHeatScorchesWildPlants(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 12)
@@ -132,6 +134,7 @@ func TestHeatScorchesWildPlants(t *testing.T) {
 // below 60% heals once the air is safe again, a second frost the same
 // day posts no second warning, and a frost the next day warns again.
 func TestFrostDamageHealsAndWarnsOncePerDay(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 1)
@@ -179,6 +182,7 @@ func TestFrostDamageHealsAndWarnsOncePerDay(t *testing.T) {
 // it damaging from the first frosty window until it dies: one warning,
 // damage never falling.
 func TestFrostDamageNoFlap(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 16})
 	bareGround(g)
 	jumpTo(g, 10, 1)
@@ -210,6 +214,7 @@ func TestFrostDamageNoFlap(t *testing.T) {
 // the chunked plant pass kills corn everywhere on the map within one
 // climate interval.
 func TestStaggeredFrostKillsCrops(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 64, Height: 64})
 	bareGround(g)
 	jumpTo(g, 45, 2)
@@ -228,6 +233,7 @@ func TestStaggeredFrostKillsCrops(t *testing.T) {
 }
 
 func TestDamagedHarvestYieldsLess(t *testing.T) {
+	t.Parallel()
 	g := dirtGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	pid, _ := g.spawnPlant(plant.Wheat, 6, 5, plant.DefOf(plant.Wheat).GrowTicks)
@@ -256,6 +262,7 @@ func TestDamagedHarvestYieldsLess(t *testing.T) {
 }
 
 func TestPlantDamageSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 16})
 	cold, _ := g.spawnPlant(plant.Corn, 3, 3, 100)
 	hot, _ := g.spawnPlant(plant.Pine, 5, 3, 100)

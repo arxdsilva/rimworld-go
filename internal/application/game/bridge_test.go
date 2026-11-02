@@ -419,6 +419,7 @@ func TestBridgeZones(t *testing.T) {
 }
 
 func TestBuildersSpanDeepWaterFromTheShore(t *testing.T) {
+	t.Parallel()
 	g := riverGame(t)
 	if _, err := g.SpawnNamedPawn(2, 4, "Ada"); err != nil {
 		t.Fatal(err)

@@ -29,6 +29,7 @@ func stackOf(g *Game, k item.Kind) (item.Stack, bool) {
 }
 
 func TestMeatRotsAwayInSummer(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 6})
 	jumpTo(g, 15, 0) // mid-summer
 	if _, err := g.SpawnStack(item.Meat, 20, 2, 2); err != nil {
@@ -50,6 +51,7 @@ func TestMeatRotsAwayInSummer(t *testing.T) {
 }
 
 func TestWinterFreezesFoodAndKillsCrops(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 6})
 	g.climate.YearMean -= 100 // FOOD-2: a hard winter, crops die below -10..-18 °C (wiki)
 	jumpTo(g, 45, 0)          // mid-winter
@@ -82,6 +84,7 @@ func TestWinterFreezesFoodAndKillsCrops(t *testing.T) {
 }
 
 func TestNoSowingInWinter(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 6})
 	if !g.sowable(3, 3) {
 		t.Fatal("spring soil should be sowable")
@@ -93,6 +96,7 @@ func TestNoSowingInWinter(t *testing.T) {
 }
 
 func TestRottenCorpseIsNotButchered(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 8, Height: 6})
 	if _, err := g.SpawnStack(item.CorpseAnimal, 1, 2, 2); err != nil {
 		t.Fatal(err)
@@ -110,6 +114,7 @@ func TestRottenCorpseIsNotButchered(t *testing.T) {
 // TestYearProbe runs a generated colony through a full year and logs how it
 // fares. Set RIMWORLD_PROBE=1 to run.
 func TestYearProbe(t *testing.T) {
+	t.Parallel()
 	if os.Getenv("RIMWORLD_PROBE") == "" {
 		t.Skip("set RIMWORLD_PROBE=1")
 	}

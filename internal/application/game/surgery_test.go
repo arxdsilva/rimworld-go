@@ -57,6 +57,7 @@ func operateUntil(t *testing.T, g *Game, patient, doc entity.EntityID) {
 }
 
 func TestOperationQueueValidatesAndRemoves(t *testing.T) {
+	t.Parallel()
 	g, patient, _ := legless(t, 10)
 	addPegLeg(g, patient)
 	addPegLeg(g, patient) // a duplicate is ignored
@@ -80,6 +81,7 @@ func TestOperationQueueValidatesAndRemoves(t *testing.T) {
 }
 
 func TestSurgeryInstallsAPegLeg(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 20)
 	before := g.bodies[patient].Capacity(body.Moving)
 	addPegLeg(g, patient)
@@ -117,6 +119,7 @@ func TestSurgeryInstallsAPegLeg(t *testing.T) {
 }
 
 func TestBotchedSurgeryWoundsAndReports(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 0)
 	v := g.VitalOf(doc)
 	db := g.ensureBody(doc, &v)
@@ -152,6 +155,7 @@ func TestBotchedSurgeryWoundsAndReports(t *testing.T) {
 }
 
 func TestSurgeryWaitDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 10)
 	addPegLeg(g, patient)
 	if !g.awaitingSurgery(patient) {
@@ -173,6 +177,7 @@ func TestSurgeryWaitDoesNotFlap(t *testing.T) {
 }
 
 func TestCrafterMakesAPegLegFromABill(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Bo")
 	placeBuilt(t, g, construction.Workbench, construction.South, 5, 2)

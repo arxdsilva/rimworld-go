@@ -10,6 +10,7 @@ import (
 )
 
 func TestDryingRackDriesMeat(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	jumpTo(g, 15, 6) // warm summer morning
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
@@ -59,6 +60,7 @@ func TestDryingRackDriesMeat(t *testing.T) {
 }
 
 func TestDeconstructedRackReturnsBatch(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	if !g.BuildNow("drying rack", "wood", "south", 6, 3) {
 		t.Fatal("could not build a drying rack")

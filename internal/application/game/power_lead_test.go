@@ -14,6 +14,7 @@ import (
 // in the order menu; a device's view names both ends of its link line.
 
 func TestGeneratorRunsOnlyWhenOnAndNotFlared(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	gen := psFuelled(t, g, 5, 5)
 	if !g.generatorRunning(gen) {
@@ -35,6 +36,7 @@ func TestGeneratorRunsOnlyWhenOnAndNotFlared(t *testing.T) {
 }
 
 func TestOrdersOfferAPendingFlick(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	sw := buildNow(t, g, construction.PowerSwitch, item.Steel, construction.South, 9, 4)
 	ada := psWorker(t, g, 5, 8)
@@ -57,6 +59,7 @@ func TestOrdersOfferAPendingFlick(t *testing.T) {
 }
 
 func TestDeviceViewNamesBothLinkEnds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	psConduits(t, g, 4, 10, 16)
 	lamp := buildNow(t, g, construction.Lamp, item.Wood, construction.South, 17, 5)
@@ -72,6 +75,7 @@ func TestDeviceViewNamesBothLinkEnds(t *testing.T) {
 // wood-fired generator) reports its fuel in the view, a producer its peak
 // output, and a heater whether its thermostat is working now.
 func TestBurnerAndPowerViewFields(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	gen := psFuelled(t, g, 5, 5)
 	torch := buildNow(t, g, construction.TorchLamp, item.Wood, construction.South, 12, 5)

@@ -24,6 +24,7 @@ import (
 )
 
 func TestButcheringYieldsLeather(t *testing.T) {
+	t.Parallel()
 	d := recipe.DefOf(recipe.ButcherAnimal) // leather by species (SIM-019)
 	if d.Extra != item.Leather || !d.BySpecies || animal.DefOf(animal.Deer).Leather <= 0 {
 		t.Fatalf("butchering should give leather: %+v", d)
@@ -34,6 +35,7 @@ func TestButcheringYieldsLeather(t *testing.T) {
 }
 
 func TestColonistDressesForWinterAndSurvives(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	jumpTo(g, 44, 6)
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
@@ -62,6 +64,7 @@ func TestColonistDressesForWinterAndSurvives(t *testing.T) {
 // comes off in summer for a duster, which shades (heat 85 %), not on its
 // own.
 func TestParkaComesOffInSummer(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	jumpTo(g, 15, 9)
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
@@ -80,6 +83,7 @@ func TestParkaComesOffInSummer(t *testing.T) {
 }
 
 func TestWearOrderInMenu(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	g.SpawnStack(item.Duster, 1, 6, 3)

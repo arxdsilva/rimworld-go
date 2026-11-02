@@ -10,6 +10,7 @@ import (
 )
 
 func TestResearchUnlocksSpikeTraps(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	g.lab.Prog = research.Progress{} // a fresh colony
 	if !g.BuildNow("research bench", "wood", "south", 4, 4) {

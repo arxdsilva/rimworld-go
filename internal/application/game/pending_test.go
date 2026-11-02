@@ -11,6 +11,7 @@ import (
 // TestApplyPendingMatchesStep: applying queued commands while paused, then
 // stepping, reaches exactly the state of stepping with them still queued.
 func TestApplyPendingMatchesStep(t *testing.T) {
+	t.Parallel()
 	cmds := func(g *Game) {
 		p := g.Snapshot()[0]
 		// zones skip rock: paint by the colonist, on open ground

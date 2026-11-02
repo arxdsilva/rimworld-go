@@ -43,6 +43,7 @@ func bothAt(g *Game, kind string, x, y int) (floor, obj bool) {
 }
 
 func TestFloorUnderBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	placeBuilt(t, g, construction.Bed, construction.South, 7, 3)
 	buildFloorUnder(t, g, 7, 3)
@@ -52,6 +53,7 @@ func TestFloorUnderBed(t *testing.T) {
 }
 
 func TestFloorUnderWorkbench(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 8})
 	placeBuilt(t, g, construction.Workbench, construction.South, 7, 3)
 	if g.grid.Walkable(7, 3) {

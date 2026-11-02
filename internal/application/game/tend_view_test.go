@@ -60,6 +60,7 @@ func loadAsVersionWith(t *testing.T, g *Game, v int, edit func(*saveState)) *Gam
 // wound, with no immunity; a legacy open wound without an infection adds
 // nothing; a v6 save never writes the legacy field.
 func TestOldSaveInfectionMigrates(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	bo, _ := g.SpawnNamedPawn(6, 4, "Bo")
@@ -94,6 +95,7 @@ func TestOldSaveInfectionMigrates(t *testing.T) {
 // clock; part tooltips list each wound's tend quality; the pawn view
 // says losing and how long a wound has waited.
 func TestHealthViewConditions(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(4, 4, "Ada")
 	b := addWound(t, g, id, body.LegL, 6, body.Bruise)

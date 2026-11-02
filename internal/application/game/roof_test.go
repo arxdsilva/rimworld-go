@@ -72,6 +72,7 @@ func worker(t *testing.T, g *Game, x, y int) entity.EntityID {
 }
 
 func TestAutoRoofPlansClosedRoom(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	hutWalls(t, g, 1, 1, 7, 7) // 5x5 interior
 	g.ensureRooms()
@@ -99,6 +100,7 @@ func TestAutoRoofPlansClosedRoom(t *testing.T) {
 }
 
 func TestAutoRoofSkipsLargeRoom(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 20})
 	hutWalls(t, g, 1, 1, 15, 15) // 13x13 = 169 cells > AutoMaxCells
 	g.ensureRooms()
@@ -117,6 +119,7 @@ func TestAutoRoofSkipsLargeRoom(t *testing.T) {
 }
 
 func TestAutoRoofRespectsNoAuto(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	hutWalls(t, g, 1, 1, 7, 7)
 	g.ensureRooms()
@@ -136,6 +139,7 @@ func TestAutoRoofRespectsNoAuto(t *testing.T) {
 }
 
 func TestBuildersRoofTileByTile(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	hutWalls(t, g, 1, 1, 5, 5) // 3x3 interior
 	id := worker(t, g, 3, 3)
@@ -192,6 +196,7 @@ func TestBuildersRoofTileByTile(t *testing.T) {
 }
 
 func TestRoofWorkSpotBesideBlockedTile(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	hutWalls(t, g, 1, 1, 5, 5)
 	g.ensureRooms()
@@ -212,6 +217,7 @@ func TestRoofWorkSpotBesideBlockedTile(t *testing.T) {
 }
 
 func TestDesignateRoofOnlySupported(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 12})
 	if !g.BuildNow("wall", "wood", "south", 2, 5) {
 		t.Fatal("wall")
@@ -240,6 +246,7 @@ func TestDesignateRoofOnlySupported(t *testing.T) {
 }
 
 func TestRemoveRoofSetsNoAutoAndUnroofs(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	hut(t, g, 1, 1, 5, 5) // roofed 3x3
 	g.roofOnMined(4, 4)   // a natural roof inside: never removed
@@ -285,6 +292,7 @@ func TestRemoveRoofSetsNoAutoAndUnroofs(t *testing.T) {
 }
 
 func TestCancelClearsRoofPlans(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	hutWalls(t, g, 1, 1, 7, 7)
 	g.ensureRooms()
@@ -308,6 +316,7 @@ func TestCancelClearsRoofPlans(t *testing.T) {
 }
 
 func TestRoofCollapsesWhenWallRemoved(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 10})
 	hut(t, g, 1, 1, 12, 5) // interior x 2..11, y 2..4: 30 roofed tiles
 	g.roofOnMined(11, 4)   // natural: never collapses
@@ -359,6 +368,7 @@ func TestRoofCollapsesWhenWallRemoved(t *testing.T) {
 }
 
 func TestMinedRockLeavesNaturalRoof(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	for _, p := range [][2]int{{6, 4}, {6, 6}} {
 		g.setTerrain(p[0], p[1], terrain.Rock)
@@ -401,6 +411,7 @@ func roomTempAt(g *Game, x, y int) temperature.Temp {
 // the control is read at dawn, when the outside has fallen below the
 // day's mean and the roofed room has not followed).
 func TestUnroofedRoomTracksOutdoors(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	g.HoldWeather()
 	jumpTo(g, 45, 5)        // a winter dawn
@@ -425,6 +436,7 @@ func TestUnroofedRoomTracksOutdoors(t *testing.T) {
 // single wall faces, 25 thin-roof cells) moves exactly as the wiki's wall
 // and roof rates say (temperature.Exposure, TEMP-1), step after step.
 func TestRoofedRoomFollowsWikiEqualisation(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	jumpTo(g, 45, 0)
 	hut(t, g, 1, 1, 7, 7)
@@ -450,6 +462,7 @@ func TestRoofedRoomFollowsWikiEqualisation(t *testing.T) {
 }
 
 func TestHalfRoofedBetween(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 10})
 	g.HoldWeather()
 	jumpTo(g, 45, 0)
@@ -472,6 +485,7 @@ func TestHalfRoofedBetween(t *testing.T) {
 }
 
 func TestCampfireInUnroofedRoomBarelyHelps(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	g.HoldWeather()
 	g.SetWeather(weather.Clear, 0)
@@ -512,6 +526,7 @@ func pavilion(t *testing.T, g *Game) {
 }
 
 func TestRoofBlocksRainEffects(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	jumpTo(g, 45, 1) // cold enough that fires burn
 	pavilion(t, g)
@@ -549,6 +564,7 @@ func TestRoofBlocksRainEffects(t *testing.T) {
 }
 
 func TestRoofShieldsSnowChill(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	pavilion(t, g)
 	g.SetWeather(weather.Clear, 0)
@@ -574,6 +590,7 @@ func TestRoofShieldsSnowChill(t *testing.T) {
 }
 
 func TestDoorUnderRoofNotSoaked(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	hut(t, g, 10, 2, 16, 8) // door at 13,8
 	id := worker(t, g, 13, 8)
@@ -588,6 +605,7 @@ func TestDoorUnderRoofNotSoaked(t *testing.T) {
 }
 
 func TestSleptOutsideIsPsychologicallyOutdoors(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	pavilion(t, g)
 	hutWalls(t, g, 15, 2, 21, 8)
@@ -619,6 +637,7 @@ func TestSleptOutsideIsPsychologicallyOutdoors(t *testing.T) {
 }
 
 func TestRoofViewBitsHourDay(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	hut(t, g, 1, 1, 7, 7)
 	g.designateRoof(4, 4, 4, 4, false)
@@ -654,6 +673,7 @@ func TestRoofViewBitsHourDay(t *testing.T) {
 }
 
 func TestRoofsSaveRoundTrip(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	hut(t, g, 1, 1, 7, 7)
 	g.designateRoof(3, 3, 3, 3, false)
@@ -680,6 +700,7 @@ func TestRoofsSaveRoundTrip(t *testing.T) {
 }
 
 func TestOldSaveAutoRoofsOnLoad(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	hutWalls(t, g, 1, 1, 7, 7)
 	g.ensureRooms()
@@ -705,6 +726,7 @@ func TestOldSaveAutoRoofsOnLoad(t *testing.T) {
 }
 
 func TestImportRoofsRejectsWrongSize(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 6, Height: 6})
 	g.importRoofs([]uint8{1, 2, 3})
 	if len(g.roofs) != 0 {
@@ -719,6 +741,7 @@ func TestImportRoofsRejectsWrongSize(t *testing.T) {
 }
 
 func TestRoofDeterministic(t *testing.T) {
+	t.Parallel()
 	run := func(saveAt int) ([]uint8, []PawnView) {
 		g := New(Config{Seed: 7, Width: 24, Height: 12})
 		hutWalls(t, g, 1, 1, 7, 7)
@@ -769,6 +792,7 @@ func countCells(cells []uint8, f roof.Cell) int {
 }
 
 func TestRoofJobFailsWhenPlanCancelled(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 14, Height: 10})
 	hutWalls(t, g, 1, 1, 5, 5)
 	g.ensureRooms()
@@ -806,6 +830,7 @@ func TestRoofJobFailsWhenPlanCancelled(t *testing.T) {
 // TestDousedFireDoesNotLightRoom: a campfire put out by snow in an
 // unroofed room leaves the room dark; under a roof it burns and lights it.
 func TestDousedFireDoesNotLightRoom(t *testing.T) {
+	t.Parallel()
 	g := weatherGame(t)
 	g.SkipTo(44, 6) // a winter morning: the fire is not banked for warmth
 	hutWalls(t, g, 10, 2, 16, 8)

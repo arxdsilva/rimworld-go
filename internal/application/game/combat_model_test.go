@@ -37,6 +37,7 @@ func sleeper(g *Game, x, y int, name string) entity.EntityID {
 }
 
 func TestRifleShotFliesInTheGame(t *testing.T) {
+	t.Parallel()
 	g, att, tgt := attackSetup(t, item.Rifle, 12)
 	var fired TraceView
 	for i := 0; i < 400 && fired.Stage != projectile.Fired; i++ {
@@ -73,6 +74,7 @@ func TestRifleShotFliesInTheGame(t *testing.T) {
 }
 
 func TestHitChanceQuery(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 40, Height: 10})
 	att, _ := g.SpawnNamedPawn(2, 5, "Ada")
 	g.Arm(att, item.Rifle)
@@ -95,6 +97,7 @@ func TestHitChanceQuery(t *testing.T) {
 }
 
 func TestApparelArmorInTheGame(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 6, Width: 30, Height: 12})
 	att, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	outcome := map[int]int{} // damage dealt by a hit -> count
@@ -136,6 +139,7 @@ func TestApparelArmorInTheGame(t *testing.T) {
 }
 
 func TestFriendlyFireInTheGame(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 9, Width: 40, Height: 10})
 	att, _ := g.SpawnNamedPawn(2, 5, "Ada")
 	g.Arm(att, item.Rifle)
@@ -156,6 +160,7 @@ func TestFriendlyFireInTheGame(t *testing.T) {
 }
 
 func TestShotInFlightSurvivesASave(t *testing.T) {
+	t.Parallel()
 	g, att, _ := attackSetup(t, item.Rifle, 20)
 	for i := 0; i < 400 && g.combat.Shots.Len() == 0; i++ {
 		g.Step(1)

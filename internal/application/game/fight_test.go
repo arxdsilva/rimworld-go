@@ -73,6 +73,7 @@ func runFight(t testing.TB, g *Game, a, b entity.EntityID, limit int) int {
 // §M6 chance table: insult 4%, slight 0.5%, nothing else; the recipient's
 // Bloodthirsty, hunger band and drink scale it.
 func TestFightChanceTableAndMultipliers(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 1)
 	_ = a
 	if c := g.fightChanceFor(b, social.Insult); c != 40 {
@@ -119,6 +120,7 @@ func TestFightChanceTableAndMultipliers(t *testing.T) {
 // Only a slight or an insult can start a fight, and when one does both
 // are in the brawl, with a danger message and a history line.
 func TestFightTriggersOnlyFromSlightOrInsult(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 1)
 	for range 3000 {
 		for _, k := range []social.Interaction{social.Chitchat, social.DeepTalk, social.KindWords} {
@@ -176,6 +178,7 @@ func TestFightTriggersOnlyFromSlightOrInsult(t *testing.T) {
 // A pawn that can't do violence never starts a fight, and dragged into
 // one it never strikes back; the fighter it faces does.
 func TestFightNonViolentNeverInitiatesNorStrikes(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 20, Height: 12})
 	dove := spawnGen(t, g, 5, 5, genPawn("Dove", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Gentle} }))
 	hawk, _ := g.SpawnNamedPawn(6, 5, "Hawk")
@@ -209,6 +212,7 @@ func TestFightNonViolentNeverInitiatesNorStrikes(t *testing.T) {
 // Brawls are fists only, whatever the fighters carry; every hit is
 // "harmed me" for the victim.
 func TestBrawlFistsOnlyAndHarmedMe(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 2)
 	g.equip[a] = item.Rifle
 	g.equip[b] = item.Club
@@ -252,6 +256,7 @@ func TestBrawlFistsOnlyAndHarmedMe(t *testing.T) {
 // The fight lasts at least 420 ticks unless someone goes down, then ends
 // on a recovery roll; ending gives no catharsis.
 func TestFightMinimumDurationThenEnds(t *testing.T) {
+	t.Parallel()
 	for seed := uint64(1); seed <= 6; seed++ {
 		g, a, b := fightPair(t, seed)
 		g.mind.StartFight(b, a)
@@ -284,6 +289,7 @@ func TestFightMinimumDurationThenEnds(t *testing.T) {
 // Each fighter rolls its own outcome: both outcomes occur across seeds,
 // and the two fighters sometimes disagree.
 func TestFightOutcomesBothOccurIndependently(t *testing.T) {
+	t.Parallel()
 	seen := map[social.FightOutcome]int{}
 	differ, same := 0, 0
 	for seed := uint64(1); seed <= 30; seed++ {
@@ -313,6 +319,7 @@ func TestFightOutcomesBothOccurIndependently(t *testing.T) {
 
 // A brawler takes no orders: drafting (and moving) is rejected mid-fight.
 func TestFightRejectsDrafting(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 1)
 	g.mind.StartFight(b, a)
 	g.Step(10)
@@ -333,6 +340,7 @@ func TestFightRejectsDrafting(t *testing.T) {
 // No-flap: once a pair has fought, insults can't start another fight
 // between them for a day; after it they can.
 func TestFightPairCooldownNoFlap(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 4)
 	withTraits(g, a, true, trait.Bloodthirsty)
 	withTraits(g, b, true, trait.Bloodthirsty)
@@ -373,6 +381,7 @@ func TestFightPairCooldownNoFlap(t *testing.T) {
 // Bystanders don't treat a brawler as a threat: an armed colonist next
 // to the fight neither engages nor flees, and an unarmed one keeps calm.
 func TestFightBystandersStayOut(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 5)
 	armed, _ := g.SpawnNamedPawn(7, 5, "Cy")
 	unarmed, _ := g.SpawnNamedPawn(5, 6, "Di")
@@ -401,6 +410,7 @@ func TestFightBystandersStayOut(t *testing.T) {
 
 // Going down ends the fight at once, for both.
 func TestFightEndsWhenOneIsDowned(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 1)
 	g.mind.StartFight(b, a)
 	g.Step(5)
@@ -415,6 +425,7 @@ func TestFightEndsWhenOneIsDowned(t *testing.T) {
 
 // Save/load mid-fight continues exactly as the unbroken game.
 func TestFightSaveLoadMidFightSameHash(t *testing.T) {
+	t.Parallel()
 	mk := func() (*Game, entity.EntityID, entity.EntityID) {
 		g, a, b := fightPair(t, 6)
 		g.positions.Set(b, Position{11, 5}) // they walk to each other first
@@ -451,6 +462,7 @@ func TestFightSaveLoadMidFightSameHash(t *testing.T) {
 
 // Brawl hit rolls never move the main stream.
 func TestFightRNGIsolation(t *testing.T) {
+	t.Parallel()
 	g, a, b := fightPair(t, 1)
 	g.mind.StartFight(b, a)
 	before, _ := g.rng.MarshalBinary()

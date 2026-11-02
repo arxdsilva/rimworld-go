@@ -59,6 +59,7 @@ func runCare(g *Game, n int, cond func() bool, ids ...entity.EntityID) bool {
 }
 
 func TestCarePolicyCapsMedicine(t *testing.T) {
+	t.Parallel()
 	g, doc, patient := careScene(t) // injury ≥ severeInjury: industrial first
 	want := map[medcare.Policy]item.Kind{
 		medcare.Best: item.IndustrialMedicine, medcare.IndustrialMax: item.IndustrialMedicine,
@@ -93,6 +94,7 @@ func TestCarePolicyCapsMedicine(t *testing.T) {
 }
 
 func TestNoCareSkipsTend(t *testing.T) {
+	t.Parallel()
 	g, doc, patient := careScene(t)
 	placeBuilt(t, g, construction.SleepingSpot, construction.South, 2, 2)
 	setCare(g, patient, medcare.NoCare)
@@ -117,6 +119,7 @@ func TestNoCareSkipsTend(t *testing.T) {
 }
 
 func TestNoMedsTendsWithoutMedicine(t *testing.T) {
+	t.Parallel()
 	g, doc, patient := careScene(t)
 	setCare(g, patient, medcare.NoMeds)
 	if !runCare(g, 400, func() bool { return g.tended(patient) }, doc) {
@@ -135,6 +138,7 @@ func laidDown(g *Game, id entity.EntityID) {
 }
 
 func TestDoctorPriorityOrder(t *testing.T) {
+	t.Parallel()
 	g, patient, doc := legless(t, 10) // a bed at (12, 2), a peg leg in stock
 	addPegLeg(g, patient)
 	downed, _ := g.SpawnNamedPawn(4, 9, "Downed")
@@ -177,6 +181,7 @@ func TestDoctorPriorityOrder(t *testing.T) {
 // patient sticks with it even when another starts bleeding faster
 // halfway; the patient stays reserved until the tend ends.
 func TestDoctorDoesNotFlapBetweenPatients(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 24, Height: 12})
 	a, _ := g.SpawnNamedPawn(12, 4, "A")
 	b, _ := g.SpawnNamedPawn(12, 9, "B")
@@ -216,6 +221,7 @@ func TestDoctorDoesNotFlapBetweenPatients(t *testing.T) {
 }
 
 func TestEmergencyTendWhileDrafted(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 48, Height: 12})
 	doc, _ := g.SpawnNamedPawn(6, 6, "Doc")
 	patient, _ := g.SpawnNamedPawn(12, 6, "Bo")
@@ -272,6 +278,7 @@ func TestEmergencyTendWhileDrafted(t *testing.T) {
 }
 
 func TestDefaultCareForPrisoners(t *testing.T) {
+	t.Parallel()
 	g, ada, bo, rid, _ := prisonGame(t)
 	capture(t, g, ada, bo, rid)
 	dog, _ := g.SpawnAnimal("labrador", 6, 3)
@@ -310,6 +317,7 @@ func TestDefaultCareForPrisoners(t *testing.T) {
 }
 
 func TestSelfTendToggle(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	addWound(t, g, id, body.ArmL, 6, body.Cut)
@@ -348,6 +356,7 @@ func TestSelfTendToggle(t *testing.T) {
 }
 
 func TestCareSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g, doc, patient := careScene(t)
 	if g.care.Policy.Export() != nil {
 		t.Fatal("all defaults: no Care save field (older saves hash as before)")
@@ -373,6 +382,7 @@ func TestCareSurvivesSave(t *testing.T) {
 // TestCareReasonsMatchGame: the care package repeats three of the game's
 // order reasons (it can't import them); they stay the same text.
 func TestCareReasonsMatchGame(t *testing.T) {
+	t.Parallel()
 	if care.ReasonIncapable != ReasonIncapable || care.ReasonBusyTarget != ReasonBusyTarget ||
 		care.ReasonUnreachable != ReasonUnreachable {
 		t.Fatal("care's reasons drifted from the game's")

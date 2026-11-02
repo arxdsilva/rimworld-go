@@ -30,6 +30,7 @@ func itemView(g *Game, id entity.EntityID) (ItemView, bool) {
 }
 
 func TestForbiddenStackNotHauled(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	ada, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	for wt := work.Type(0); wt < work.NumTypes; wt++ {
@@ -70,6 +71,7 @@ func TestForbiddenStackNotHauled(t *testing.T) {
 }
 
 func TestForbiddenFoodNotEaten(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
 	sid, _ := g.SpawnStack(item.Berries, 10, 6, 4)
@@ -103,6 +105,7 @@ func TestForbiddenFoodNotEaten(t *testing.T) {
 // STK-AL (game/allow): what a death drops starts forbidden outside the home
 // area, whatever the faction; inside Home it stays allowed.
 func TestDeathDropsForbiddenOutsideHome(t *testing.T) {
+	t.Parallel()
 	g, _ := raidGame(t)
 	g.paintHome(10, 5, 20, 15, true) // Home round the colonist at (15, 10)
 	g.Raid(2)

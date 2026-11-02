@@ -61,6 +61,7 @@ func kill(g *Game, id entity.EntityID) {
 }
 
 func TestDropPodRaidLandsAndLeavesShells(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 40, 30, 20, 15)
 	g.RaidDropPods(item.Club, item.Club)
 	if len(g.raiderIDs) != 0 {
@@ -104,6 +105,7 @@ func TestDropPodRaidLandsAndLeavesShells(t *testing.T) {
 }
 
 func TestPodBreaksRoofAndHurtsBeneath(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 30, 20, 5, 5)
 	bo, _ := g.SpawnNamedPawn(13, 10, "Bo")
 	g.ensureRoofGrid()
@@ -127,6 +129,7 @@ func TestPodBreaksRoofAndHurtsBeneath(t *testing.T) {
 // TestStagedRaidStormsOnceNoFlap: a staged raid gathers at its spot,
 // holds, then storms exactly once; gathered raiders don't shuffle.
 func TestStagedRaidStormsOnceNoFlap(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 80, 80, 40, 40)
 	g.raidWith(g.kitOf(3), raid.Stage)
 	if len(g.raiderIDs) == 0 {
@@ -168,6 +171,7 @@ func TestStagedRaidStormsOnceNoFlap(t *testing.T) {
 // TestRetreatAtFleeShareNoFlap: the group flees at its share lost, logs
 // it once, and no raider turns back.
 func TestRetreatAtFleeShareNoFlap(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 40, 20, 20, 10)
 	g.Raid(4)
 	g.raidGroups[0].FleeLoss = 50
@@ -214,6 +218,7 @@ func send(g *Game, c command.Command) {
 // at most when one falls); off, it never starts shooting on its own; the
 // switch shows on the read model.
 func TestFireAtWillNoFlap(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 40, 20, 20, 10)
 	drafted(t, g, ada, item.Rifle)
 	g.Raid(2)
@@ -258,6 +263,7 @@ func def4View(g *Game, id entity.EntityID) PawnView {
 // TestHoldPositionNeverChases: holding, a drafted colonist shoots a
 // fleeing raider in reach and never follows it.
 func TestHoldPositionNeverChases(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 60, 20, 30, 10)
 	drafted(t, g, ada, item.Club)
 	send(g, command.Command{Kind: command.SetHoldPosition, Pawn: uint64(ada), Enabled: true})
@@ -287,6 +293,7 @@ func TestHoldPositionNeverChases(t *testing.T) {
 // cell and spends one, the last leaves the colonist unarmed, and too far
 // walks in first (CBT-2; the next order replaces the walk).
 func TestGrenadeBelt(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 40, 20, 10, 10)
 	sid, _ := g.SpawnStack(item.FragGrenades, 2, 11, 10)
 	g.doEquip(ada, job.Record{Kind: job.Equip, Target: sid})
@@ -336,6 +343,7 @@ func TestGrenadeBelt(t *testing.T) {
 // TestSiegeMortarsAndStorm: a siege builds two mortars its raiders crew
 // and fire at the colony; a besieger hit may storm at once (8 %).
 func TestSiegeMortarsAndStorm(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 90, 90, 45, 45)
 	g.Siege(3)
 	for i := 0; i < 400 && !g.raidGroups[0].Camped; i++ {
@@ -398,6 +406,7 @@ func TestSiegeMortarsAndStorm(t *testing.T) {
 }
 
 func TestStealRaidTakesLootAndDropsIt(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 40, 20, 35, 10)
 	sid, _ := g.SpawnStack(item.Rifle, 1, 20, 10)
 	g.raidWith([]item.Kind{item.Club}, raid.Steal)
@@ -426,6 +435,7 @@ func TestStealRaidTakesLootAndDropsIt(t *testing.T) {
 }
 
 func TestBurnRaidSetsFires(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 40, 20, 35, 10)
 	if !g.BuildNow("wall", "wood", "south", 20, 5) {
 		t.Fatal("wall")
@@ -442,6 +452,7 @@ func TestBurnRaidSetsFires(t *testing.T) {
 }
 
 func TestRivalFactionsFight(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 50, 30, 45, 25)
 	g.ng.factions = []faction.Faction{{Type: faction.Drifters, Name: "Ash", Relation: faction.Hostile},
 		{Type: faction.Clans, Name: "Fern", Relation: faction.Hostile}}
@@ -463,6 +474,7 @@ func TestRivalFactionsFight(t *testing.T) {
 }
 
 func TestIEDChainsAndBulletsAndSappersKnow(t *testing.T) {
+	t.Parallel()
 	g, _ := def4Game(t, 40, 20, 35, 18)
 	for _, x := range []int{10, 12} {
 		if !g.BuildNow("blast charge", "steel", "south", x, 5) {
@@ -502,6 +514,7 @@ func TestIEDChainsAndBulletsAndSappersKnow(t *testing.T) {
 }
 
 func TestCombatLogBoundedAndSaved(t *testing.T) {
+	t.Parallel()
 	g, ada := def4Game(t, 30, 20, 15, 10)
 	for i := 0; i < 100; i++ {
 		g.combat.Log.Add("line")

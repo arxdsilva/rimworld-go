@@ -42,6 +42,7 @@ func raceOutcome(k body.CondKind, tendQ int32, limit int) (died, cured int) {
 // and is beaten when well tended (herbal-level quality, 70 %), at the
 // wiki's rates; untreated flu kills in about four days.
 func TestDiseaseOutcomeCurves(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		kind               body.CondKind
 		dieMin, dieMax     int // untended death, hours
@@ -70,6 +71,7 @@ func TestDiseaseOutcomeCurves(t *testing.T) {
 // no one to tend it dies of disease in about four days; the death clock
 // and the headline show the race.
 func TestUntreatedFluKillsColonist(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	g.setPriority(id, work.Doctor, 0) // no one to tend it
@@ -101,6 +103,7 @@ func TestUntreatedFluKillsColonist(t *testing.T) {
 // TestTendedFluIsBeaten: a doctor with medicine tends the flu once per
 // 12-hour window and the patient recovers; the disease leaves the body.
 func TestTendedFluIsBeaten(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(14, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
@@ -128,6 +131,7 @@ func TestTendedFluIsBeaten(t *testing.T) {
 // and the severity shown falls with each tend. Muscle parasites slow
 // moving and manipulation and double the awake rest fall.
 func TestParasitesCureByTendSum(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	g.setPriority(id, work.Doctor, 0)
@@ -213,6 +217,7 @@ func pickedDiseases(g *Game, n int) map[incident.ID]int {
 // TestDiseaseFreqZeroNoIncidents: at 0 % disease frequency no disease is
 // ever rolled or fired; at 100 % they are.
 func TestDiseaseFreqZeroNoIncidents(t *testing.T) {
+	t.Parallel()
 	g := diseaseGame(t, biome.TemperateForest, 0)
 	if got := pickedDiseases(g, 400); len(got) != 0 {
 		t.Fatalf("frequency 0 rolled %v", got)
@@ -229,6 +234,7 @@ func TestDiseaseFreqZeroNoIncidents(t *testing.T) {
 // TestSleepingSicknessTropicalOnly: sleeping sickness is rolled in the
 // tropics and never in a temperate forest.
 func TestSleepingSicknessTropicalOnly(t *testing.T) {
+	t.Parallel()
 	temperate := diseaseGame(t, biome.TemperateForest, 300)
 	if got := pickedDiseases(temperate, 600); got[incident.SleepingSickness] != 0 || got[incident.Malaria] != 0 {
 		t.Fatalf("temperate forest rolled %v", got)
@@ -242,6 +248,7 @@ func TestSleepingSicknessTropicalOnly(t *testing.T) {
 // TestSynthStomachBlocksGutWorms: a colonist with a synth stomach never
 // catches gut worms.
 func TestSynthStomachBlocksGutWorms(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	v, _ := g.vital.Get(id)
@@ -257,6 +264,7 @@ func TestSynthStomachBlocksGutWorms(t *testing.T) {
 // TestDiseaseLetter: an outbreak strikes 1..n colonists on the medical
 // stream and posts one caution letter naming them at the first.
 func TestDiseaseLetter(t *testing.T) {
+	t.Parallel()
 	g := diseaseGame(t, biome.TemperateForest, 100)
 	before := len(g.letters.list)
 	if !g.FireIncident("plague") {
@@ -299,6 +307,7 @@ func TestDiseaseLetter(t *testing.T) {
 // the severity hovers at the stage line; once immune and up, it does not
 // go back for the disease alone.
 func TestDiseaseBedRestDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	setup := func(t *testing.T, sev, imm int32) (*Game, *body.Condition) {
 		t.Helper()
 		g := New(Config{Seed: 1, Width: 20, Height: 10})

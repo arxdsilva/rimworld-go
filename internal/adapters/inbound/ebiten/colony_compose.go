@@ -183,6 +183,11 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 // colonyChromeHit reports the point (logical) is on the HUD, so a click
 // there never reaches the map.
 func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
+	return chromeHitIn(a, mx, my, sw, sh, a.chromeRects(sw, sh))
+}
+
+// chromeHitIn is colonyChromeHit against rects, the frame's chromeRects.
+func chromeHitIn(a *App, mx, my, sw, sh int, rects []gfx.Rect) bool {
 	if a.chrome.Hidden {
 		return false
 	}
@@ -199,7 +204,7 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 		return true
 	}
 	x, y := float32(mx), float32(my)
-	for _, r := range a.chromeRects(sw, sh) {
+	for _, r := range rects {
 		if r.Contains(x, y) {
 			return true
 		}

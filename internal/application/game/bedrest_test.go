@@ -82,6 +82,7 @@ func sickPatient(t *testing.T) (g *Game, pat, bed entity.EntityID) {
 // every tick: rest.Sleep.done woke it to eat, then patientRest (before the eat
 // check) laid it down again, so it never ate.
 func TestHungryPatientEatsThenReturnsToBed(t *testing.T) {
+	t.Parallel()
 	g, pat, bed := sickPatient(t)
 	g.SetNeeds(pat, needs.RavenousAt+1, needs.Full) // turns ravenous asleep (rest.Sleep.Do; FOOD-1: sleepers wake ravenous)
 	ate := stepUntil(g, 1500, func() bool {
@@ -102,6 +103,7 @@ func TestHungryPatientEatsThenReturnsToBed(t *testing.T) {
 // until it is well (healing injury down to care.RestWellInjury, at least
 // care.RestMin), then gets up.
 func TestInjuredColonistRestsUntilHealed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	pat, _ := g.SpawnNamedPawn(4, 4, "Pat")
 	g.SpawnNamedPawn(12, 6, "Doc")
@@ -137,6 +139,7 @@ func TestInjuredColonistRestsUntilHealed(t *testing.T) {
 // With no bed free a patient carries on and only looks again after
 // care.RestRetry.
 func TestNoBedPutsRestRetryInEffect(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	setInjury(g, id, 45, true)
@@ -159,6 +162,7 @@ func TestNoBedPutsRestRetryInEffect(t *testing.T) {
 // With no bed, a patient another colonist will tend lies down where it is
 // for the doctor (as before beds were required), then carries on.
 func TestNoBedPatientWaitsOnFloorForDoctor(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 16, Height: 8})
 	pat, _ := g.SpawnNamedPawn(2, 2, "Pat")
 	g.SpawnNamedPawn(10, 5, "Doc")
@@ -183,6 +187,7 @@ func TestNoBedPatientWaitsOnFloorForDoctor(t *testing.T) {
 
 // "Rest when hurt" off: the patient gets up and works; back on, it rests.
 func TestRestWhenHurtToggle(t *testing.T) {
+	t.Parallel()
 	g, pat, bed := sickPatient(t)
 	g.Enqueue(command.Command{Kind: command.SetPawnBedRest, Target: uint64(pat), Enabled: false})
 	if !restFedUntil(g, 300, func() bool { return !restingIn(g, pat, bed) }) {
@@ -207,6 +212,7 @@ func TestRestWhenHurtToggle(t *testing.T) {
 }
 
 func TestDraftingOverridesBedRest(t *testing.T) {
+	t.Parallel()
 	g, pat, bed := sickPatient(t)
 	g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(pat), Enabled: true})
 	for i := 0; i < 300; i++ {
@@ -222,6 +228,7 @@ func TestDraftingOverridesBedRest(t *testing.T) {
 }
 
 func TestBedRestResumesAfterForcedOrder(t *testing.T) {
+	t.Parallel()
 	g, pat, bed := sickPatient(t)
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(pat), X: 12, Y: 6})
 	arrived := restFedUntil(g, 600, func() bool {
@@ -240,6 +247,7 @@ func TestBedRestResumesAfterForcedOrder(t *testing.T) {
 // A patient takes a free medical bed over its own, holds it only for the
 // stay, and keeps its own bed throughout.
 func TestPatientPrefersMedicalBedThenGivesItBack(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 10})
 	pat, _ := g.SpawnNamedPawn(4, 4, "Pat")
 	g.SpawnNamedPawn(10, 7, "Doc")
@@ -273,6 +281,7 @@ func TestPatientPrefersMedicalBedThenGivesItBack(t *testing.T) {
 
 // With no one else to doctor it, a patient tends its own wound in bed.
 func TestLonePatientTendsItselfInBed(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 3, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(5, 4, "Ada")
 	bed := buildNow(t, g, construction.Bed, item.Wood, construction.South, 8, 2)
@@ -293,6 +302,7 @@ func TestLonePatientTendsItselfInBed(t *testing.T) {
 
 // Scars and lost parts can't heal: they never keep a colonist in bed.
 func TestPermanentDamageDoesNotRest(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 4, Width: 20, Height: 12})
 	id, _ := g.SpawnNamedPawn(10, 6, "Peg")
 	placeBuilt(t, g, construction.Bed, construction.South, 12, 2)
@@ -315,6 +325,7 @@ func TestPermanentDamageDoesNotRest(t *testing.T) {
 // No-flap: around the start and stop lines a patient changes job kind a
 // handful of times at most.
 func TestBedRestDoesNotFlap(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name string
 		set  func(g *Game, id entity.EntityID)
@@ -354,6 +365,7 @@ func TestBedRestDoesNotFlap(t *testing.T) {
 }
 
 func TestBedRestStateSurvivesSave(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	id, _ := g.SpawnNamedPawn(2, 2, "Bo")
 	g.care.Rest.Import(&care.RestSave{Off: []entity.EntityID{id}, Since: []care.Entry[uint64]{{ID: id, V: 11}},
@@ -376,6 +388,7 @@ func TestBedRestStateSurvivesSave(t *testing.T) {
 
 // A resting patient saved and loaded goes on exactly as the original.
 func TestRestingPatientRoundTrip(t *testing.T) {
+	t.Parallel()
 	g, pat, bed := sickPatient(t)
 	var buf bytes.Buffer
 	if err := g.Save(&buf, "t"); err != nil {
@@ -393,6 +406,7 @@ func TestRestingPatientRoundTrip(t *testing.T) {
 }
 
 func TestBedRestView(t *testing.T) {
+	t.Parallel()
 	g, pat, _ := sickPatient(t)
 	g.Step(1)
 	pv := pawnView(g, pat)
@@ -409,6 +423,7 @@ func TestBedRestView(t *testing.T) {
 // otherDoctor skips doctors on bed rest: two resting doctors don't wait on
 // each other forever.
 func TestRestingDoctorIsNoOtherDoctor(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	a, _ := g.SpawnNamedPawn(2, 2, "A")
 	b, _ := g.SpawnNamedPawn(4, 2, "B")

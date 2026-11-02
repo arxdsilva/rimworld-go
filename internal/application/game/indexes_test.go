@@ -18,6 +18,7 @@ import (
 // these tests cover the paths ordinary play rarely takes.
 
 func TestIndexConflictFallsBackToListOrder(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	if !g.BuildNow("wall", "wood", "south", 3, 3) {
 		t.Fatal("first wall")
@@ -45,6 +46,7 @@ func TestIndexConflictFallsBackToListOrder(t *testing.T) {
 }
 
 func TestIndexOffMapAndUnknownLayer(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 6, Height: 6})
 	g.BuildNow("wall", "wood", "south", 0, 0)
 	for _, c := range [][2]int{{-1, 0}, {0, -1}, {6, 0}, {0, 6}} {
@@ -59,6 +61,7 @@ func TestIndexOffMapAndUnknownLayer(t *testing.T) {
 }
 
 func TestIndexFollowsMovesAndLoad(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 12})
 	if !g.BuildNow("table", "wood", "south", 2, 2) {
 		t.Fatal("table")
@@ -114,6 +117,7 @@ func identityIffEqual(t *testing.T, when string, a, b WorldView) {
 }
 
 func TestViewCache(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 2, Width: 48, Height: 40})
 	g.Step(5)
 	plain := g.World()
@@ -206,6 +210,7 @@ func plantOf(ps []PlantView, id entity.EntityID) PlantView {
 }
 
 func TestSharedLayersCopyOnWrite(t *testing.T) {
+	t.Parallel()
 	g := NewColony(Config{Seed: 2, Width: 48, Height: 40})
 	a := g.World()
 	g.Step(1)
@@ -227,6 +232,7 @@ func TestSharedLayersCopyOnWrite(t *testing.T) {
 }
 
 func TestShareLayer(t *testing.T) {
+	t.Parallel()
 	var c layerCache
 	if shareLayer(&c, []uint8(nil)) != nil {
 		t.Fatal("empty layer not nil")
@@ -247,6 +253,7 @@ func TestShareLayer(t *testing.T) {
 }
 
 func TestTileSetBounds(t *testing.T) {
+	t.Parallel()
 	s := newTileSet(70)
 	s.add(-1)
 	s.add(69)
@@ -257,6 +264,7 @@ func TestTileSetBounds(t *testing.T) {
 }
 
 func TestDropIDsKeepsOrder(t *testing.T) {
+	t.Parallel()
 	ids := []entity.EntityID{5, 1, 4, 1, 3}
 	got := dropIDs(ids, func(id entity.EntityID) bool { return id == 1 })
 	if !slices.Equal(got, []entity.EntityID{5, 4, 3}) {
@@ -268,6 +276,7 @@ func TestDropIDsKeepsOrder(t *testing.T) {
 // (corpses of different species) used to bounce a third between them
 // until the stack overflowed; it now comes to rest.
 func TestSpillPingPongEnds(t *testing.T) {
+	t.Parallel()
 	g := New(Config{Seed: 1, Width: 9, Height: 9})
 	for y := 0; y < 9; y++ {
 		for x := 0; x < 9; x++ {
