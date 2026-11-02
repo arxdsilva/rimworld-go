@@ -18,6 +18,9 @@ const (
 	saltRivers   = 0x5249564500000005
 	saltFactions = 0x4641435400000006
 	saltLanding  = 0x4c414e4400000007
+	saltAncient  = 0x414e434900000008 // v1 ancient road network
+	saltFeatures = 0x4645415400000009 // v1 feature names
+	saltName     = 0x4e414d450000000a // v1 planet name
 )
 
 // stage is one resumable generation phase: begin once, item for each of
@@ -39,7 +42,8 @@ var stages = []stage{
 	{PhaseBiomes, 0.25, beginBiomes, itemBiomes, nil},
 	{PhaseRivers, 0.10, beginRivers, itemRivers, endRivers},
 	{PhaseFactions, 0.05, nil, itemFactions, nil},
-	{PhaseRoads, 0.10, beginRoads, itemRoads, endRoads},
+	{PhaseRoads, 0.08, beginRoads, itemRoads, endRoads},
+	{PhaseRoads, 0.02, beginFeatures, itemFeatures, endFeatures}, // v1 only (WG-09, WG-15)
 }
 
 // Step does up to units of work (tile visits; an indivisible begin or end
@@ -140,8 +144,13 @@ type gen struct {
 	sources []int32
 	edges   [][2]int32 // road edges (settlement tiles) to route
 	roads   [][2]int32
-	astar   *astar
-	elev    *elevState
-	biomes  *biomeState
-	rain    noise3.Field
+	// v1: the class of each edge and of each routed segment (parallel
+	// to edges and roads).
+	edgeClass []RoadClass
+	segClass  []RoadClass
+	feat      *featState
+	astar     *astar
+	elev      *elevState
+	biomes    *biomeState
+	rain      noise3.Field
 }

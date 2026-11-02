@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/globemath"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/planet"
+	"rimworld-go/internal/domain/world/site"
 )
 
 // TestGlobeCapture writes review PNGs of the globe when GLOBE_CAPTURE_DIR
@@ -66,7 +67,8 @@ func TestGlobeCapture(t *testing.T) {
 		size := globepkg.Clamp(g.TilePx()*2, 12, 46)
 		for k := range g.Marks {
 			m := &g.Marks[k]
-			sx, sy, vz := g.WorldPt(&g.P.Center[m.Tile])
+			sp := g.Surface(int(m.Tile))
+			sx, sy, vz := g.WorldPt(&sp)
 			if vz < g.Zh+0.04 {
 				continue
 			}
@@ -86,6 +88,18 @@ func TestGlobeCapture(t *testing.T) {
 				disc(img, float64(sx), float64(sy), size*0.32, m.Tint)
 			}
 		}
+		// Names are GPU text: the capture shows each placed label's box
+		// (settlements warm, features pale, oceans blue).
+		for _, l := range g.Labels() {
+			c := color.NRGBA{0xE6, 0xE0, 0xCF, 255}
+			switch {
+			case l.Settlement:
+				c = color.NRGBA{0xE8, 0xC0, 0x70, 255}
+			case l.Ocean:
+				c = color.NRGBA{0x9F, 0xC0, 0xDA, 255}
+			}
+			box(img, l.X, l.Y, l.W, l.H, c)
+		}
 		f, err := os.Create(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatal(err)
@@ -97,7 +111,7 @@ func TestGlobeCapture(t *testing.T) {
 	}
 	for _, cov := range []int{30, 100} {
 		p := planet.Build(planet.Params{SeedText: "amber-hollow", Coverage: cov, Rain: 2, Temp: 2, Pop: 1,
-			Factions: faction.DefaultSlots()})
+			Factions: faction.DefaultSlots(), Version: planet.CurrentVersion})
 		g := globepkg.New(p, art)
 		g.Reduced = true
 		tag := map[int]string{30: "30", 100: "100"}[cov]
@@ -115,6 +129,43 @@ func TestGlobeCapture(t *testing.T) {
 			g.Center(int(g.Marks[0].Tile))
 		}
 		shot("globe_"+tag+"_zoom.png", g)
+		// The relief: the mountain tile with the most mountainous neighbours,
+		// close up and at a middle zoom, with the grid on for the close-up.
+		if m := mountainHeart(p); m >= 0 {
+			g.Select(-1)
+			g.Center(m)
+			g.Cam.SetDist(2.0)
+			shot("globe_"+tag+"_mountains.png", g)
+			g.Cam.SetDist(1.4)
+			g.SetGrid(true)
+			shot("globe_"+tag+"_mountains_grid.png", g)
+			g.SetGrid(false)
+			g.SetMode(globepkg.ModeHilliness)
+			shot("globe_"+tag+"_Hilliness.png", g)
+			g.SetMode(globepkg.ModeBiome)
+			g.Select(landTile(t, g))
+		}
+		// Roads by class and rivers, close up; labels at the middle zoom.
+		if k := roadOfClass(p, planet.AncientHighway); k >= 0 {
+			g.Select(-1)
+			g.Center(int(p.Roads[k][0]))
+			g.Cam.SetDist(1.35)
+			shot("globe_"+tag+"_roads.png", g)
+		}
+		if k := roadOfClass(p, planet.Path); k >= 0 {
+			g.Center(int(p.Roads[k][0]))
+			g.Cam.SetDist(1.3)
+			shot("globe_"+tag+"_paths.png", g)
+		}
+		if m := riverMouth(p); m >= 0 {
+			g.Center(m)
+			g.Cam.SetDist(1.4)
+			shot("globe_"+tag+"_rivers.png", g)
+		}
+		g.Cam.SetDist(1.8)
+		shot("globe_"+tag+"_labels_mid.png", g)
+		g.Cam.SetDist(3.2)
+		shot("globe_"+tag+"_labels_far.png", g)
 		g.Cam.SetDist(2.9)
 		for _, m := range []globepkg.Mode{globepkg.ModeTemperature, globepkg.ModeRainfall, globepkg.ModeElevation} {
 			g.SetMode(m)
@@ -126,7 +177,7 @@ func TestGlobeCapture(t *testing.T) {
 	{
 		p := planet.Build(wizard.BackdropShowcase)
 		g := globepkg.New(p, nil)
-		g.Rivers, g.Roads, g.Marks = nil, nil, nil
+		g.Bare()
 		g.SetAreaPx(0, 0, wizard.BackdropDiscArea, wizard.BackdropDiscArea)
 		g.Cam.SetDist(wizard.BackdropDiscDist)
 		g.Cam.Lat, g.Cam.Lon = 0.35, float64(p.Seed%628)/100
@@ -171,6 +222,67 @@ func TestGlobeCapture(t *testing.T) {
 		defer f.Close()
 		_ = png.Encode(f, bg)
 	}
+}
+
+// roadOfClass is the first road segment of class c (-1 when none).
+func roadOfClass(p *planet.Planet, c planet.RoadClass) int {
+	for k := range p.Roads {
+		if p.RoadClassOf(k) == c {
+			return k
+		}
+	}
+	return -1
+}
+
+// riverMouth is the land tile of the largest river that flows into the sea.
+func riverMouth(p *planet.Planet) int {
+	best, size := -1, site.NoRiver
+	for i := range p.River {
+		to := p.RiverTo[i]
+		if to >= 0 && p.Water[i] == planet.Land && p.Water[to] == planet.Ocean && p.River[i] > size {
+			best, size = i, p.River[i]
+		}
+	}
+	return best
+}
+
+// box strokes a 1 px rectangle.
+func box(img *image.RGBA, x, y, w, h float32, c color.NRGBA) {
+	x0, y0, x1, y1 := int(x), int(y), int(x+w), int(y+h)
+	for px := x0; px <= x1; px++ {
+		blend(img, px, y0, c, 0.9)
+		blend(img, px, y1, c, 0.9)
+	}
+	for py := y0; py <= y1; py++ {
+		blend(img, x0, py, c, 0.9)
+		blend(img, x1, py, c, 0.9)
+	}
+	for py := y0 + 1; py < y1; py++ {
+		for px := x0 + 1; px < x1; px++ {
+			blend(img, px, py, color.NRGBA{10, 14, 20, 255}, 0.35)
+		}
+	}
+}
+
+// mountainHeart is the mountainous tile with the most mountainous
+// neighbours (-1 when the world has none).
+func mountainHeart(p *planet.Planet) int {
+	best, bestN := -1, -1
+	for i := 0; i < p.TileCount(); i++ {
+		if p.Hill[i] != site.Mountainous || p.Water[i] != planet.Land {
+			continue
+		}
+		n := 0
+		for _, nb := range p.Neighbours(i) {
+			if p.Hill[nb] >= site.LargeHills {
+				n++
+			}
+		}
+		if n > bestN {
+			best, bestN = i, n
+		}
+	}
+	return best
 }
 
 func centreOn(g *globepkg.View, c [3]float32) {

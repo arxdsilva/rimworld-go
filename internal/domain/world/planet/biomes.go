@@ -51,9 +51,10 @@ func itemBiomes(b *Builder, i int) {
 	}
 	p.Stones[i] = pickStones(v)
 
+	v1 := b.p.v1()
 	if p.Water[i] != Land {
 		p.Hill[i] = site.Flat
-		if float64(p.Temp[i]) < seaIceTempX10 && p.Water[i] == Ocean {
+		if p.Water[i] == Ocean && (!v1 && float64(p.Temp[i]) < seaIceTempX10 || v1 && p.Temp[i] <= seaIceTempV1X10) {
 			p.Water[i] = Land
 			p.Biome[i] = biome.SeaIce
 		}
@@ -76,7 +77,11 @@ func itemBiomes(b *Builder, i int) {
 	case site.LargeHills:
 		p.Caves[i] = unit(bs.caveSeed, i) < caveLarge
 	}
-	p.Biome[i] = Classify(float64(p.Temp[i])/10, int(p.Rain[i]), h, e)
+	if v1 {
+		p.Biome[i] = scoreBiome(float64(p.Temp[i])/10, int(p.Rain[i]), h, e)
+	} else {
+		p.Biome[i] = Classify(float64(p.Temp[i])/10, int(p.Rain[i]), h, e)
+	}
 }
 
 // HillsFor is the hilliness for a relief g (metres, max neighbour
@@ -132,6 +137,64 @@ func Classify(t float64, r int, h site.Hills, e int) biome.ID {
 	default:
 		return biome.Desert
 	}
+}
+
+// Wiki thresholds for the v1 biome candidates (wiki: Biomes); the scores
+// that choose among them are original tuning.
+const (
+	seaIceTempV1X10  = -220 // sea ice: ocean at or below −22 °C
+	iceSheetMaxT     = -10.0
+	tundraMaxT       = 0.0
+	forestMinT       = -10.0 // temperate and boreal forest, swamps, bog, shrubland
+	forestMinRain    = 600
+	tropicalMinT     = 15.0
+	tropicalMinRain  = 2000
+	shrubMaxRain     = 2000 // arid shrubland: 600..2000 mm
+	desertMinT       = 0.0
+	desertMaxRain    = 600
+	extremeMinT      = 4.82
+	extremeMaxRain   = 340
+	swampMaxElev     = 400 // original: "low" ground for swamps and bogs
+	tropSwampMaxElev = 250 // original
+)
+
+// scoreBiome is the v1 land biome (WG-02): every biome whose wiki
+// thresholds admit (t °C, r mm, hills h, elevation e) is a candidate and
+// the highest score wins (table order on ties). The scores are linear in
+// t and r, laid out so the winners partition the plane in bands. Their
+// crossing points are original tuning: ice sheet below −14 °C, tundra to
+// −8 °C, boreal forest to −1 °C, temperate forest to about 23 °C (warmer
+// when wetter), arid shrubland on the hot fringe, rainforest wherever the
+// tropical thresholds hold, swamps and bogs on low, wet ground, extreme
+// desert where it is both hot and very dry.
+func scoreBiome(t float64, r int, h site.Hills, e int) biome.ID {
+	rain := float64(r)
+	low := h <= site.SmallHills && e < swampMaxElev
+	best, bestS := biome.Tundra, math.Inf(-1)
+	try := func(id biome.ID, ok bool, s float64) {
+		if ok && s > bestS {
+			best, bestS = id, s
+		}
+	}
+	forest := t >= forestMinT && r >= forestMinRain
+	tropical := t >= tropicalMinT && r >= tropicalMinRain
+	boreal := t + 8                                                 // original tuning
+	temperate := 3*t + 10                                           // original tuning
+	rainforest := temperate + 2*(t-15) + (rain-tropicalMinRain)/100 // original tuning
+	try(biome.TemperateForest, forest, temperate)
+	try(biome.BorealForest, forest, boreal)
+	try(biome.Tundra, t <= tundraMaxT, 0)
+	try(biome.ColdBog, t >= forestMinT && low && r >= forestMinRain, boreal+(rain-850)/100)
+	try(biome.IceSheet, t <= iceSheetMaxT, 2*(-14-t))
+	try(biome.TemperateSwamp, forest && low, temperate+(rain-1000)/100)
+	try(biome.TropicalSwamp, tropical && h == site.Flat && e < tropSwampMaxElev, rainforest+(rain-2800)/100)
+	try(biome.TropicalRainforest, tropical, rainforest)
+	try(biome.AridShrubland, t >= forestMinT && r >= forestMinRain && r < shrubMaxRain,
+		temperate+3*(t-23)+(1300-rain)/200)
+	desert := 3*t + 7
+	try(biome.Desert, t >= desertMinT && r < desertMaxRain, desert)
+	try(biome.ExtremeDesert, t >= extremeMinT && r <= extremeMaxRain, desert+(t-18)+(200-rain)/20)
+	return best
 }
 
 // pickStones takes the two strongest fields, plus the third when it is

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image/color"
 	"math"
-	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -12,12 +11,12 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/globe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldinfo"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
-	"rimworld-go/internal/domain/world/plant"
-	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/platform/input"
 )
@@ -36,21 +35,27 @@ const (
 	landModalW   = 560
 )
 
+// LandTitle heads the screen.
+const LandTitle = "Choose your landing site"
+
 // landGeo is the screen's rectangles.
 type landGeo struct {
 	Globe, Panel, bar, title gfx.Rect
 	mode, legend             gfx.Rect
+	grid, search             gfx.Rect
 }
 
 func LandRects(sw, sh int) landGeo {
 	w, h := float32(sw), float32(sh)
 	g := landGeo{}
 	g.Panel = gfx.Rect{X: w - landPanelW - landPanelPad, Y: landPanelPad, W: landPanelW, H: h - landPanelPad - landBarH - 2*landPanelPad}
-	g.bar = gfx.Rect{X: (w - 740) / 2, Y: h - landBarH - landPanelPad, W: 740, H: landBarH}
+	g.bar = gfx.Rect{X: (w - 740) / 2, Y: h - landBarH - landPanelPad, W: 790, H: landBarH}
 	g.Globe = gfx.Rect{X: 0, Y: landTitleH, W: g.Panel.X, H: g.bar.Y - landTitleH}
-	g.title = gfx.Rect{X: 0, Y: 12, W: g.Panel.X, H: 32}
 	g.mode = gfx.Rect{X: g.Panel.X - 12 - 170, Y: 14, W: 170, H: 30}
 	g.legend = gfx.Rect{X: g.mode.X - 8 - 90, Y: 14, W: 90, H: 30}
+	g.grid = gfx.Rect{X: g.legend.X - 8 - 70, Y: 14, W: 70, H: 30}
+	g.search = gfx.Rect{X: g.grid.X - 8 - 90, Y: 14, W: 90, H: 30}
+	g.title = gfx.Rect{X: 0, Y: 12, W: g.search.X, H: 32} // what the buttons leave
 	return g
 }
 
@@ -151,239 +156,15 @@ func (ng *Draft) ResolvedSeason() game.Season {
 
 // ---- the tile info ------------------------------------------------------------
 
-// infoRow is a label/value line of the tile panel.
-type infoRow struct {
-	Label, Value, tip string
-	col               color.RGBA
-}
+// The card itself (BuildTileInfo, rows, search, filter, legend) lives in
+// the worldinfo leaf; these keep the wizard's own callers short.
 
-// TileInfo is everything the panel shows for one tile.
-type TileInfo struct {
-	tile      int
-	biome     biome.ID
-	Name      string
-	Blurb     string
-	difficult string
-	BiomeTip  string
-	Rows      []infoRow
-	Warnings  []string
-	Invalid   string // why the tile can't be landed on ("" valid)
-	Outside   bool
-}
+// CoordText writes a position as "34.2°S 121.7°W".
+func CoordText(lat, lon int16) string { return worldinfo.CoordText(lat, lon) }
 
-func CoordText(lat, lon int16) string {
-	ns, ew := "N", "E"
-	if lat < 0 {
-		ns, lat = "S", -lat
-	}
-	if lon < 0 {
-		ew, lon = "W", -lon
-	}
-	return fmt.Sprintf("%d.%d°%s %d.%d°%s", lat/10, lat%10, ns, lon/10, lon%10, ew)
-}
-
-func celsius(t temperature.Temp) string { return fmt.Sprintf("%.0f°C", float64(t)/10) }
-
-// hillsTip explains hilliness for the local map.
-func hillsTip(h site.Hills) string {
-	switch h {
-	case site.SmallHills:
-		return "Small hills\nA few rocky rises. Some mining, easy building."
-	case site.LargeHills:
-		return "Large hills\nMuch of the map is rock. Good for mining and defence."
-	case site.Mountainous:
-		return "Mountainous\nMostly mountain. Building room is scarce but ore is plentiful."
-	}
-	return "Flat\nOpen ground. Easy to build, little rock to mine."
-}
-
-// MovementDifficulty is the informational travel multiplier of a tile
-// (x1.0 to x3.0) from its hills and biome.
-func MovementDifficulty(h site.Hills, b biome.ID) float64 {
-	v := 1.0
-	switch h {
-	case site.SmallHills:
-		v += 0.3
-	case site.LargeHills:
-		v += 0.7
-	case site.Mountainous:
-		v += 1.2
-	}
-	switch b {
-	case biome.ColdBog, biome.TemperateSwamp, biome.TropicalSwamp:
-		v += 0.5
-	case biome.IceSheet, biome.SeaIce:
-		v += 0.6
-	case biome.TropicalRainforest:
-		v += 0.3
-	case biome.ExtremeDesert, biome.Desert:
-		v += 0.2
-	case biome.Tundra:
-		v += 0.1
-	}
-	return math.Min(3, math.Round(v*10)/10)
-}
-
-// ForageLevel is the wild food on offer, from the biome's berry bushes.
-func ForageLevel(b biome.ID) string {
-	n := 0
-	for _, p := range biome.DefOf(b).Plants {
-		if p.Species == plant.BerryBush {
-			n += p.Permil
-		}
-	}
-	switch {
-	case n >= 25:
-		return "High"
-	case n >= 10:
-		return "Medium"
-	}
-	return "Low"
-}
-
-// WildlifeLevel is the animal density label of a biome.
-func WildlifeLevel(b biome.ID) string {
-	w := biome.DefOf(b).Wildlife
-	switch {
-	case w <= 15:
-		return "Sparse"
-	case w <= 45:
-		return "Low"
-	case w <= 85:
-		return "Moderate"
-	case w < 100:
-		return "Plentiful"
-	}
-	return "Abundant"
-}
-
-func yesNo(b bool) string {
-	if b {
-		return "Yes"
-	}
-	return "No"
-}
-
-// BuildTileInfo reads tile i of p for the panel; sizeNote is the memory
-// warning for the chosen map size on this computer ("" none,
-// Host.MapSizeNote).
-func BuildTileInfo(p *planet.Planet, i int, sizeNote string) TileInfo {
-	if i < 0 || i >= p.TileCount() {
-		return TileInfo{tile: i, Outside: true}
-	}
-	s := p.Site(i)
-	d := biome.DefOf(p.Biome[i])
-	ti := TileInfo{tile: i, biome: p.Biome[i], Name: d.Name, Blurb: d.Blurb, difficult: d.Difficulty}
-	if p.Water[i] == planet.Ocean {
-		ti.Name, ti.Blurb, ti.difficult = "Ocean", "Open sea. Nobody can land here.", ""
-	} else if p.Water[i] == planet.Lake {
-		ti.Name, ti.Blurb, ti.difficult = "Lake", "Fresh water. Nobody can land here.", ""
-	}
-	ti.BiomeTip = d.Name + "\n" + strings.Join(LandingDetail(game.BiomeInfoOf(p.Biome[i]), 60)[2:], "\n")
-	if ok, reason := p.ValidLanding(i); !ok {
-		ti.Invalid = reason
-	}
-	lo, hi := s.Climate.Range()
-	grow := p.GrowingDays(i)
-	growText := fmt.Sprintf("%d of %d days", grow, clock.DaysPerYear)
-	if grow >= clock.DaysPerYear {
-		growText = "Year-round"
-	}
-	var stones []string
-	for _, st := range s.Stones {
-		stones = append(stones, st.Label())
-	}
-	water := []string{}
-	if l := s.River.Size.Label(); l != "" {
-		water = append(water, l)
-	}
-	if s.Coast != 0 {
-		water = append(water, "Coast")
-	}
-	if s.Lakes > 0 {
-		water = append(water, "Lake")
-	}
-	waterText := "None"
-	if len(water) > 0 {
-		waterText = strings.Join(water, ", ")
-	}
-	near := "None nearby"
-	if t, dist := p.Nearest(i, 64, func(t int) bool { return p.Settlement[t] >= 0 }); t >= 0 {
-		fname := ""
-		if f, _ := p.SettlementFaction(t); f >= 0 && f < len(p.Factions) {
-			fname = p.Factions[f].Name
-		}
-		near = fmt.Sprintf("%s (%s), %d tiles", p.SettlementName(t), fname, dist)
-	}
-	mv := MovementDifficulty(s.Hills, p.Biome[i])
-	ti.Rows = []infoRow{
-		{"Terrain", s.Hills.Label(), hillsTip(s.Hills), uikit.Text},
-		{"Coordinates", CoordText(p.Lat[i], p.Lon[i]), "", uikit.Text},
-		{"Elevation", fmt.Sprintf("%d m", p.Elev[i]), "", uikit.Text},
-		{"Avg temperature", fmt.Sprintf("%.1f°C", float64(p.Temp[i])/10), "Average temperature\nThe yearly mean at this tile.", uikit.Text},
-		{"Summer / winter", celsius(hi) + " / " + celsius(lo), "The warmest afternoon and the coldest night of the year.", uikit.Text},
-		{"Rainfall", fmt.Sprintf("%d mm/year", p.Rain[i]), "", uikit.Text},
-		{"Growing period", growText, "Growing period\nDays a year warm enough for crops to grow (daily mean above 3°C).", uikit.Text},
-		{"Stone types", strings.Join(stones, ", "), "Stone types\nWhat the local rock is made of. It sets the building stone and ore you can mine.", uikit.Text},
-		{"Water", waterText, "Water\nRivers, coast and lakes shape the map and give water to build beside.", uikit.Text},
-		{"Caves", yesNo(s.Caves), "Caves\nCave systems under the hills hide ore, and sometimes things worse.", uikit.Text},
-		{"Roads", yesNo(s.Road != 0), "", uikit.Text},
-		{"Nearest settlement", near, "", uikit.Text},
-		{"Movement difficulty", fmt.Sprintf("x%.1f", mv), "Movement difficulty\nHow slow it is to cross this tile. Informational until world travel exists.", uikit.Text},
-		{"Forage", ForageLevel(p.Biome[i]), "Forage\nWild berries and plants to eat without farming.", uikit.Text},
-		{"Wildlife", WildlifeLevel(p.Biome[i]), "Wildlife\nHow many wild animals live here.", uikit.Text},
-	}
-	if p.Water[i] != planet.Land {
-		ti.Rows = ti.Rows[:2]
-	}
-	switch p.Biome[i] {
-	case biome.IceSheet, biome.SeaIce, biome.ExtremeDesert:
-		ti.Warnings = append(ti.Warnings, "Extreme climate")
-	}
-	if p.Water[i] == planet.Land && grow < 15 {
-		ti.Warnings = append(ti.Warnings, "Very short growing season")
-	}
-	if sizeNote != "" { // the size picker's rule (Host.MapSizeNote)
-		ti.Warnings = append(ti.Warnings, sizeNote)
-	}
-	return ti
-}
-
-// LandingDetail is the biome card's text: name, blurb, climate, ground,
-// plants and wildlife, wrapped to cols characters.
+// LandingDetail is the biome card's text in Celsius, wrapped to cols.
 func LandingDetail(b game.BiomeInfo, cols int) []string {
-	title := b.Name
-	if b.Difficulty != "" {
-		title += "  [" + b.Difficulty + "]"
-	}
-	out := []string{title, ""}
-	out = append(out, uikit.WrapCols(b.Blurb, cols)...)
-	out = append(out, "",
-		fmt.Sprintf("Temperature  %dC winter low, %dC summer high", b.WinterLow, b.SummerHigh),
-		fmt.Sprintf("Growing      about %d days a year", b.GrowingDays),
-	)
-	out = append(out, wrapLabeled("Ground", b.Ground, cols)...)
-	out = append(out, wrapLabeled("Plants", b.Plants, cols)...)
-	out = append(out, wrapLabeled("Wildlife", b.Wildlife, cols)...)
-	return out
-}
-
-// wrapLabeled is "Label      a, b, c" wrapped under its label column.
-func wrapLabeled(label string, items []string, cols int) []string {
-	const lw = 13
-	text := "none"
-	if len(items) > 0 {
-		text = strings.Join(items, ", ")
-	}
-	rows := uikit.WrapCols(text, cols-lw)
-	for i := range rows {
-		if i == 0 {
-			rows[i] = fmt.Sprintf("%-*s%s", lw, label, rows[i])
-		} else {
-			rows[i] = strings.Repeat(" ", lw) + rows[i]
-		}
-	}
-	return rows
+	return worldinfo.LandingDetail(b, cols, units.Celsius)
 }
 
 // ---- the screen ------------------------------------------------------------------
@@ -395,6 +176,7 @@ func (w landingPage) landingGlobe(ng *Draft) *globe.View {
 	}
 	if ng.Globe == nil || ng.globeOf != ng.Planet {
 		ng.Globe, ng.globeOf = globe.New(ng.Planet, w.art()), ng.Planet
+		ng.Land.Box.Reset()
 		ng.Globe.Select(ng.Tile)
 		if ng.Tile >= 0 {
 			ng.Globe.Center(ng.Tile)
@@ -435,9 +217,14 @@ func (w landingPage) landingUI(sw, sh int) {
 	g.SetArea(float64(geo.Globe.X), float64(geo.Globe.Y), float64(geo.Globe.W), float64(geo.Globe.H))
 
 	// The top-right controls.
-	uikit.StyledButton(w.kit(), "land.mode", geo.mode, "View: "+g.Mode().String(), uikit.BtnOpts{Tip: "View mode\nColour the globe by biome, temperature, rainfall or elevation."},
+	uikit.StyledButton(w.kit(), "land.mode", geo.mode, "View: "+g.Mode().String(), uikit.BtnOpts{Tip: "View mode\nColour the globe by biome, temperature, rainfall, elevation or hilliness."},
 		func() { g.SetMode((g.Mode() + 1) % globe.NumModes) })
-	uikit.StyledButton(w.kit(), "land.legend", geo.legend, "Legend", uikit.BtnOpts{Selected: ng.Legend}, func() { ng.Legend = !ng.Legend })
+	uikit.StyledButton(w.kit(), "land.legend", geo.legend, "Legend", uikit.BtnOpts{Selected: ng.Land.Legend,
+		Tip: "Legend\nWhat the colours, rivers and roads on the globe mean."}, func() { ng.Land.Legend = !ng.Land.Legend })
+	uikit.StyledButton(w.kit(), "land.grid", geo.grid, "Grid", uikit.BtnOpts{Selected: g.Grid(),
+		Tip: "Grid\nShow the tile edges once you zoom in."}, func() { g.SetGrid(!g.Grid()) })
+	uikit.StyledButton(w.kit(), "land.search", geo.search, "Search", uikit.BtnOpts{Selected: ng.Land.Search,
+		Tip: "Search\nFind a named ocean, sea, lake, mountain range, desert, forest, ice cap or settlement."}, func() { ng.Land.Search = !ng.Land.Search })
 
 	// Bottom bar.
 	w.kit().Panel(geo.bar)
@@ -453,8 +240,12 @@ func (w landingPage) landingUI(sw, sh int) {
 
 	// The globe takes the pointer anywhere outside the chrome and modals.
 	mx, my := w.kit().Host().Cursor()
+	over := w.landOverlays(ng, g, geo)
 	blocked := w.kit().ModalOpen() || geo.Panel.Hit(mx, my) || geo.bar.Hit(mx, my) || geo.mode.Hit(mx, my) || geo.legend.Hit(mx, my) ||
-		(ng.Legend && w.legendRect(geo).Hit(mx, my))
+		geo.grid.Hit(mx, my) || geo.search.Hit(mx, my)
+	for _, r := range over {
+		blocked = blocked || r.Hit(mx, my)
+	}
 	clicked, _ := g.Update(globeInputFrom(w.in(), sw, sh, blocked), w.sh.Settings().Accessibility.ReducedMotion)
 	switch {
 	case clicked >= 0:
@@ -463,9 +254,53 @@ func (w landingPage) landingUI(sw, sh int) {
 		ng.Outside = true
 	}
 	ng.Tile = g.Selected()
-	if ng.Legend {
-		w.landLegend(g, w.legendRect(geo))
+}
+
+// landOverlays declares the search box, the legend and the random-site
+// filter panel in their stack under the top-right row, and returns the
+// rectangles they cover.
+func (w landingPage) landOverlays(ng *Draft, g *globe.View, geo landGeo) []gfx.Rect {
+	var out []gfx.Rect
+	u := w.units()
+	y := geo.mode.Bottom() + 8
+	if ng.Land.Search {
+		r := ng.Land.Box.Draw(w.kit(), "land.search", geo.mode.Right(), y, ng.Planet, func(h planet.Hit) { w.pickHit(ng, g, h) })
+		out = append(out, r)
+		y = r.Bottom() + 8
 	}
+	if ng.Land.Legend {
+		out = append(out, worldinfo.DrawLegend(w.kit(), geo.mode.Right(), y, g.Mode(), u))
+	}
+	if ng.Land.Filter {
+		x := geo.bar.X + 12 + 110 + 10
+		h := ng.Land.Criteria.Height()
+		out = append(out, ng.Land.Criteria.Draw(w.kit(), "land.filter", x, geo.bar.Y-h-8, u))
+	}
+	return out
+}
+
+// pickHit selects and centres the tile of a search result and pulses the
+// feature's tiles (the globe's Hl highlight).
+func (w landingPage) pickHit(ng *Draft, g *globe.View, h planet.Hit) {
+	tiles := []int{h.Tile}
+	if fs := ng.Planet.Features(); h.Feature >= 0 && h.Feature < len(fs) {
+		tiles = tiles[:0]
+		for _, t := range fs[h.Feature].Tiles {
+			tiles = append(tiles, int(t))
+		}
+	}
+	ng.Tile, ng.Outside = h.Tile, false
+	g.Select(h.Tile)
+	g.Center(h.Tile)
+	g.Highlight(tiles, searchPulseFrames)
+}
+
+// searchPulseFrames is how long a picked feature pulses.
+const searchPulseFrames = 150
+
+// units is the player's temperature formatter.
+func (w landingPage) units() units.Temp {
+	return units.FromUnit(w.sh.Settings().Gameplay.TempUnit)
 }
 
 // landBar declares the bottom bar's buttons.
@@ -477,7 +312,11 @@ func (w landingPage) landBar(ng *Draft, g *globe.View, bar gfx.Rect) {
 		x += bw + 10
 	}
 	btn(ids.WizardBack, "Back", 110, uikit.BtnOpts{}, w.back)
-	btn("land.random", "Select random site", 190, uikit.BtnOpts{Tip: "Select random site\nPick a pleasant place at random. Press again for another."}, func() { w.randomLanding(ng, g) })
+	btn("land.random", "Select random site", 190, uikit.BtnOpts{Tip: "Select random site\nPick a pleasant place at random, matching your criteria if you set any. Press again for another."}, func() { w.randomLanding(ng, g) })
+	x -= 10 - 2 // the caret sits against the button it belongs to
+	btn("land.filter", "v", 30, uikit.BtnOpts{Selected: ng.Land.Filter || ng.Land.Criteria.Active(),
+		Tip: "Random site criteria\nChoose biomes, temperature, terrain, rivers, coast, roads, caves and stone for Select random site."},
+		func() { ng.Land.Filter = !ng.Land.Filter })
 	btn("land.advanced", "Advanced...", 120, uikit.BtnOpts{Tip: "Advanced\nStarting season and map size."}, w.pushLandingAdvanced)
 	btn("land.factions", "Factions...", 120, uikit.BtnOpts{Tip: "Factions\nWho lives on this planet."}, func() { w.pushFactions(ng, g) })
 	reason := ng.tileReason()
@@ -498,10 +337,14 @@ func (w landingPage) landBar(ng *Draft, g *globe.View, bar gfx.Rect) {
 
 // randomLanding selects the next random valid site and flies there.
 func (w landingPage) randomLanding(ng *Draft, g *globe.View) {
-	t := ng.Planet.RandomLanding(ng.LandRolls)
+	t := ng.Planet.RandomLandingFiltered(ng.Land.Criteria.Filter(), ng.LandRolls)
 	ng.LandRolls++
 	if t < 0 {
-		w.kit().Deny("No tile on this world can be landed on.")
+		if ng.Land.Criteria.Active() {
+			w.kit().Deny("No tile matches.")
+		} else {
+			w.kit().Deny("No tile on this world can be landed on.")
+		}
 		return
 	}
 	ng.Tile, ng.Outside = t, false
@@ -555,11 +398,17 @@ func (w landingPage) landInfoPanel(ng *Draft, r gfx.Rect, tile int, uncovered bo
 }
 
 // tileInfoFor is the cached info of a tile.
-func (w landingPage) tileInfoFor(ng *Draft, tile int) TileInfo {
+func (w landingPage) tileInfoFor(ng *Draft, tile int) worldinfo.TileInfo {
 	c := &ng.Info
 	note := w.sh.MapSizeNote(ng.MapSize)
-	if c.Planet != ng.Planet || c.Tile != tile || c.side != ng.MapSize || c.note != note {
-		*c = infoCache{Planet: ng.Planet, Tile: tile, side: ng.MapSize, note: note, info: BuildTileInfo(ng.Planet, tile, note)}
+	u := w.units()
+	day := 0
+	if ng.Planet != nil && tile >= 0 && tile < ng.Planet.TileCount() {
+		day = SeasonMid(ng.Planet.Site(tile).Climate, ng.ResolvedSeason())
+	}
+	if c.Planet != ng.Planet || c.Tile != tile || c.side != ng.MapSize || c.note != note || c.units != u || c.day != day {
+		*c = infoCache{Planet: ng.Planet, Tile: tile, side: ng.MapSize, note: note, units: u, day: day,
+			info: worldinfo.BuildTileInfoWith(ng.Planet, tile, worldinfo.Opts{SizeNote: note, Units: u, Day: day})}
 	}
 	return c.info
 }
@@ -571,11 +420,16 @@ type infoCache struct {
 	Tile   int
 	side   int
 	note   string // the map-size warning the info was made with
-	info   TileInfo
+	units  units.Temp
+	day    int
+	info   worldinfo.TileInfo
 }
 
+// Card is the cached tile card.
+func (c infoCache) Card() worldinfo.TileInfo { return c.info }
+
 // infoBlocks lays the tile info out for a width.
-func (w landingPage) infoBlocks(ti TileInfo, width float32) []infoBlock {
+func (w landingPage) infoBlocks(ti worldinfo.TileInfo, width float32) []infoBlock {
 	var out []infoBlock
 	// Header: icon, name, difficulty tag, blurb.
 	nameSt := gfx.Large
@@ -583,14 +437,14 @@ func (w landingPage) infoBlocks(ti TileInfo, width float32) []infoBlock {
 	blurbLines := gfx.WrapPx(ti.Blurb, gfx.Body, float64(width))
 	hh := float32(56)
 	out = append(out, infoBlock{h: hh, tip: ti.BiomeTip, draw: func(dst *ebiten.Image, r gfx.Rect) {
-		if img := w.art().Image(biome.DefOf(ti.biome).Icon(), noTint); img != nil && ti.Name != "Ocean" && ti.Name != "Lake" {
+		if img := w.art().Image(biome.DefOf(ti.Biome).Icon(), noTint); img != nil && ti.Name != "Ocean" && ti.Name != "Lake" {
 			gfx.Icon(dst, img, float64(r.X), float64(r.Y+4), 48)
 		}
 		gfx.Text(dst, ti.Name, float64(r.X+58), float64(r.Y+8), nameSt)
-		if ti.difficult != "" {
+		if ti.Difficulty != "" {
 			t := gfx.Small
 			t.Color = uikit.Warning
-			gfx.Text(dst, "Difficulty: "+ti.difficult, float64(r.X+58), float64(r.Y+8)+gfx.LineH(nameSt), t)
+			gfx.Text(dst, "Difficulty: "+ti.Difficulty, float64(r.X+58), float64(r.Y+8)+gfx.LineH(nameSt), t)
 		}
 	}})
 	out = append(out, infoBlock{h: float32(len(blurbLines))*float32(gfx.LineH(gfx.Body)) + 8, draw: func(dst *ebiten.Image, r gfx.Rect) {
@@ -619,16 +473,19 @@ func (w landingPage) infoBlocks(ti TileInfo, width float32) []infoBlock {
 			}
 		}})
 	}
+	if len(ti.Quadrums) > 0 {
+		out = append(out, quadrumBlock(ti.Quadrums, width))
+	}
 	vw := width - landLabelW
 	for _, row := range ti.Rows {
 		row := row
 		lines := gfx.WrapPx(row.Value, gfx.Body, float64(vw))
 		h := max(float32(len(lines)), 1)*float32(gfx.LineH(gfx.Body)) + 6
-		out = append(out, infoBlock{h: h, tip: row.tip, draw: func(dst *ebiten.Image, r gfx.Rect) {
+		out = append(out, infoBlock{h: h, tip: row.Tip, draw: func(dst *ebiten.Image, r gfx.Rect) {
 			ls := uikit.DimText()
 			gfx.Text(dst, uikit.FitText(row.Label, ls, landLabelW-8), float64(r.X), float64(r.Y+2), ls)
 			vs := gfx.Body
-			vs.Color = row.col
+			vs.Color = row.Col
 			for i, l := range lines {
 				gfx.Text(dst, l, float64(r.X+landLabelW), float64(r.Y+2)+float64(i)*gfx.LineH(vs), vs)
 			}
@@ -638,49 +495,22 @@ func (w landingPage) infoBlocks(ti TileInfo, width float32) []infoBlock {
 	return out
 }
 
-// ---- legend -----------------------------------------------------------------------------
-
-func (w landingPage) legendRect(geo landGeo) gfx.Rect {
-	return gfx.Rect{X: geo.mode.Right() - 190, Y: geo.mode.Bottom() + 8, W: 190, H: 14 + 12*18}
-}
-
-// landLegend paints the biome colours (or the data ramp) in r.
-func (w landingPage) landLegend(g *globe.View, r gfx.Rect) {
-	w.kit().Queue(func(dst *ebiten.Image) {
-		uikit.DrawPanel(dst, r.X, r.Y, r.W, r.H)
-		st := gfx.Small
-		if g.Mode() == globe.ModeBiome {
-			for i, d := range biome.All() {
-				y := r.Y + 8 + float32(i)*18
-				c := globe.PalRGB(d.Key)
-				uikit.FillRect(dst, gfx.Rect{X: r.X + 10, Y: y + 2, W: 14, H: 12}, color.RGBA{uint8(c[0] * 255), uint8(c[1] * 255), uint8(c[2] * 255), 255})
-				gfx.Text(dst, d.Name, float64(r.X+32), float64(y), st)
+// quadrumBlock is the card's four-quadrum temperature table.
+func quadrumBlock(qs []worldinfo.Quadrum, width float32) infoBlock {
+	return infoBlock{h: 2*float32(gfx.LineH(gfx.Small)) + 14, tip: "Temperature by quadrum\nThe tile's mean temperature in each quarter of the year, with the season it falls in here.",
+		draw: func(dst *ebiten.Image, r gfx.Rect) {
+			cw := r.W / float32(len(qs))
+			for i, q := range qs {
+				ls := uikit.DimText()
+				ls.Align = gfx.AlignCenter
+				cx := float64(r.X + cw*float32(i) + cw/2)
+				gfx.Text(dst, q.Season, cx, float64(r.Y+2), ls)
+				vs := gfx.Body
+				vs.Align = gfx.AlignCenter
+				gfx.Text(dst, q.Temp, cx, float64(r.Y+2)+gfx.LineH(ls), vs)
 			}
-			return
-		}
-		var stops []globe.ColourStop
-		var unit string
-		switch g.Mode() {
-		case globe.ModeTemperature:
-			stops, unit = globe.TempRamp, "°C"
-		case globe.ModeRainfall:
-			stops, unit = globe.RainRamp, " mm"
-		default:
-			stops, unit = globe.ElevRamp, " m"
-		}
-		bar := gfx.Rect{X: r.X + 12, Y: r.Y + 14, W: r.W - 24, H: 16}
-		lo, hi := stops[0].At, stops[len(stops)-1].At
-		for x := 0; x < int(bar.W); x++ {
-			c := globe.Ramp(stops, lo+(hi-lo)*float32(x)/bar.W)
-			uikit.FillRect(dst, gfx.Rect{X: bar.X + float32(x), Y: bar.Y, W: 1, H: bar.H}, color.RGBA{uint8(c[0] * 255), uint8(c[1] * 255), uint8(c[2] * 255), 255})
-		}
-		uikit.StrokeRect(dst, bar, uikit.PanelBorder)
-		ls := st
-		ls.Color = uikit.TextDim
-		gfx.Text(dst, fmt.Sprintf("%.0f%s", lo, unit), float64(bar.X), float64(bar.Bottom()+4), ls)
-		ls.Align = gfx.AlignRight
-		gfx.Text(dst, fmt.Sprintf("%.0f%s", hi, unit), float64(bar.Right()), float64(bar.Bottom()+4), ls)
-	})
+			uikit.FillRect(dst, gfx.Rect{X: r.X, Y: r.Bottom() - 1, W: r.W, H: 1}, uikit.Fade(uikit.PanelBorder, 0x50))
+		}}
 }
 
 // ---- drawing -------------------------------------------------------------------------------
@@ -701,9 +531,9 @@ func (w landingPage) drawLanding(screen *ebiten.Image, sw, sh int) {
 	st.Align = gfx.AlignCenter
 	cx := float64(geo.title.X + geo.title.W/2)
 	st.Color = color.RGBA{0, 0, 0, 200}
-	gfx.Text(screen, "Choose your landing site", cx+1.5, float64(geo.title.Y)+1.5, st)
+	gfx.Text(screen, LandTitle, cx+1.5, float64(geo.title.Y)+1.5, st)
 	st.Color = uikit.Heading
-	gfx.Text(screen, "Choose your landing site", cx, float64(geo.title.Y), st)
+	gfx.Text(screen, LandTitle, cx, float64(geo.title.Y), st)
 }
 
 // ---- Advanced ---------------------------------------------------------------------------------
@@ -731,7 +561,7 @@ func (w landingPage) landingAdvancedBody(ng *Draft, body gfx.Rect, opts []game.M
 	y += 26
 	sel := ng.Season + 1
 	if w.kit().Radio("land.season", gfx.Rect{X: body.X, Y: y, W: body.W, H: 5 * uikit.RadioRowH}, append([]string{"Auto"}, seasonNames...), &sel, uikit.RadioOpts{
-		Tips: []string{"Auto\nThe first season that is already warm (8°C or more) and getting warmer; otherwise the warmest one."},
+		Tips: []string{"Auto\nThe first season that is already warm (" + w.units().Whole(8) + " or more) and getting warmer; otherwise the warmest one."},
 	}) {
 		ng.Season = sel - 1
 	}

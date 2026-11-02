@@ -200,11 +200,17 @@ Trade, caravans, world travel and quests are out of scope; the Factions dialog s
   | `arid_shrubland` | #A58E5A |
   | `desert` | #CDAE72 |
   | `extreme_desert` | #DDBE86 |
-  | `mountain_tint` | #6E6A62 (mixed in by hilliness) |
+  | `rock` | #76706A (bare high ground, by height) |
+  | `snow` | #E2E7EA (above the snowline, by height) |
+  | `shallow` | #2F6A8C (coastal band) |
+  | `shore` | #CFC6A6 (coastline stroke) |
+  | `grid` | #1C2228 (optional tile edges) |
+  | `hill_flat` / `hill_small` / `hill_large` / `hill_mountain` | #6E8A5C / #A79F66 / #A87A52 / #6F625C (Hilliness view mode) |
+  | `label` / `label_ocean` | #E6E0CF / #9FC0DA (feature names) |
   | `uncovered` | #121820 |
   | `atmosphere_rim` | #4A7FD4 |
 
-  Each biome has one base colour, mixed toward `mountain_tint` by hilliness (0 / 12 / 25 / 40%).
+  Each biome has one base colour. Hills are no longer a tint (`mountain_tint` was removed with the WG relief): rock and snow are described by height. Tiles above `snowline - 1100 m` (`rockBelowM`) blend toward `rock`, and above the snowline (2600 m + 120 m per C of tile mean, original) toward `snow` (`globe/relief.go`); the Hilliness view mode uses the `hill_*` swatches.
 
 ### 1.3 Layout system (`ebiten/ui_layout.go`)
 - **Types and helpers:**
@@ -1853,7 +1859,11 @@ type Config struct { Seed uint64; Width, Height int; Biome biome.ID; Setup *Setu
   - Falls back to 4 animated frames per water type.
   - Shore foam is drawn as an edge-mask overlay.
   - Reduced Motion freezes the ripple.
-- **Globe:** no sprites, only vertex colours from `world.yaml`, plus the emblem icons for settlements.
+- **Globe:** no sprites and no shader; CPU relief geometry with vertex colours from `world.yaml`, plus the emblem icons for settlements (WG plan §1.2, `globe/relief.go`).
+  - Relief: hills and mountains stand off the sphere (corner heights from the sharing tiles, a lifted centre peak per hill class, radius `1 + 0.022·h/6000`, at most `globe.ReliefMax`); water stays flat at radius 1.
+  - Faceted light: every fan face has its own normal, lit from the upper-left sun (ambient 0.38 + 0.62 Lambert, plus the atmosphere rim); tiles draw far to near.
+  - Colour: bare `rock` below and `snow` above the snowline; soft biome borders inside each water class; a `shallow` coastal band, a `shore` coastline stroke, an optional `grid`; the Hilliness view mode uses `hill_*`.
+  - Lines and names (`globe/labels.go`): rivers by size (creek 0.6 … huge 2.4 × zoom scale, tapered at the source, ending at the shore), roads by class (`road_*`), feature labels by zoom band and facing with a collision pass (at most 24); `RoadLegend`, `RiverLegend`, `HillLegend` feed the legends.
 
 ### 7.4 Audio (procedural, `cmd/audiogen` recipes; no credits)
 | Id | Plays when | Recipe |

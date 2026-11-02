@@ -14,6 +14,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldinfo"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
@@ -100,10 +101,10 @@ type Draft struct {
 	GenHold   float32 // captures: stop stepping at this progress
 	Globe     *globe.View
 	globeOf   *planet.Planet
-	LandRolls int  // presses of "Select random site"
-	Outside   bool // the last click was on the uncovered part of the globe
-	Legend    bool // the biome legend is open
-	facSel    int  // highlighted row of the Factions table
+	LandRolls int    // presses of "Select random site"
+	Outside   bool   // the last click was on the uncovered part of the globe
+	Land      landUI // the landing screen's open panels
+	facSel    int    // highlighted row of the Factions table
 	Info      infoCache
 
 	Pool    candidatePool // the character candidates
@@ -189,7 +190,7 @@ func (w *Flow) newDraft() *Draft {
 		MapSize:     DefaultMapSideEnabled(),
 		NamesOf:     -1,
 		World: planet.Params{SeedText: seedText, Coverage: DefaultCoverage, Rain: 2, Temp: 2, Pop: 1,
-			Factions: faction.DefaultSlots()},
+			Factions: faction.DefaultSlots(), Version: planet.CurrentVersion},
 	}
 	if p, ok := storyteller.ByKey(g.LastStoryteller); ok && !p.Hidden {
 		ng.Storyteller = p.Key
@@ -432,3 +433,11 @@ func wrapHeight(s string, st gfx.TextStyle, w float32) float32 {
 
 // noTint draws a sprite untinted.
 var noTint color.NRGBA
+
+// landUI is the Select Landing Site screen's open panels and their state:
+// the legend, the feature search and the random-site criteria.
+type landUI struct {
+	Legend, Search, Filter bool
+	Box                    worldinfo.SearchBox
+	Criteria               worldinfo.FilterPanel
+}

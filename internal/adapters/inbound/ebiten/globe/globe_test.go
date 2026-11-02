@@ -15,6 +15,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/globemath"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/domain/faction"
@@ -38,7 +39,7 @@ func globeTestPlanet(tb testing.TB, coverage int) *planet.Planet {
 		return p
 	}
 	p := planet.Build(planet.Params{SeedText: "amber-hollow", Coverage: coverage, Rain: 2, Temp: 2, Pop: 1,
-		Factions: faction.DefaultSlots()})
+		Factions: faction.DefaultSlots(), Version: planet.CurrentVersion})
 	globePlanets[coverage] = p
 	return p
 }
@@ -177,10 +178,12 @@ func TestGlobeColoursByWaterThenBiome(t *testing.T) {
 	t.Parallel()
 	g := testGlobe(t)
 	p := g.P
-	var ocean, lake, landMtn, seaIce = -1, -1, -1, -1
+	var ocean, shallow, lake, landMtn, seaIce = -1, -1, -1, -1, -1
 	for i := 0; i < p.TileCount(); i++ {
 		switch {
-		case p.Water[i] == planet.Ocean && ocean < 0:
+		case p.Water[i] == planet.Ocean && coastalShallow(p, i) && shallow < 0:
+			shallow = i
+		case p.Water[i] == planet.Ocean && !coastalShallow(p, i) && ocean < 0:
 			ocean = i
 		case p.Water[i] == planet.Lake && lake < 0:
 			lake = i
@@ -210,9 +213,17 @@ func TestGlobeColoursByWaterThenBiome(t *testing.T) {
 	if d, s := OceanColour(-4000), OceanColour(-50); d[2] >= s[2] {
 		t.Fatalf("deep %v not darker than shallow %v", d, s)
 	}
-	// Land mixes towards the mountain tint by hilliness (jitter is within 3 %).
+	// The shallow band: coastal ocean shallower than 200 m.
+	if shallow < 0 {
+		t.Fatal("test world has no shallow coastal ocean")
+	}
+	if g.Base[shallow] != PalRGB("shallow") || p.Elev[shallow] <= -200 {
+		t.Fatalf("shallow tile %d (elev %d) colour %v", shallow, p.Elev[shallow], g.Base[shallow])
+	}
+	// Mountains keep their biome colour: relief and light make them read,
+	// not a tint (jitter is within 3 %).
 	if landMtn >= 0 {
-		want := MixRGB(PalRGB(biome.DefOf(p.Biome[landMtn]).Key), PalRGB("mountain_tint"), 0.40)
+		want := PalRGB(biome.DefOf(p.Biome[landMtn]).Key)
 		for c := 0; c < 3; c++ {
 			if r := g.Base[landMtn][c] / want[c]; r < 0.969 || r > 1.031 {
 				t.Fatalf("mountain tile channel %d ratio %v", c, r)
@@ -227,14 +238,14 @@ func TestGlobeColoursByWaterThenBiome(t *testing.T) {
 			}
 		}
 	}
-	// Every hilliness has a mix.
+	// Every hilliness has a Hilliness-mode colour.
 	for _, h := range []site.Hills{site.HillsDefault, site.Flat, site.SmallHills, site.LargeHills, site.Mountainous} {
-		if int(h) >= len(HillMix) {
-			t.Fatalf("no hill mix for %v", h)
+		if int(h) >= len(HillKey) {
+			t.Fatalf("no hilliness colour for %v", h)
 		}
-	}
-	if HillMix[site.Flat] != 0 || HillMix[site.SmallHills] != 0.12 || HillMix[site.LargeHills] != 0.25 || HillMix[site.Mountainous] != 0.40 {
-		t.Fatalf("hill mixes %v", HillMix)
+		if _, ok := WorldPalette[HillKey[h]]; !ok {
+			t.Fatalf("hilliness %v colour %q not in the palette", h, HillKey[h])
+		}
 	}
 }
 
@@ -252,7 +263,7 @@ func TestGlobeModesRecolourOnly(t *testing.T) {
 	}
 	biomeLand, biomeOcean := g.Base[land], g.Base[ocean]
 	nv := g.Verts
-	for _, m := range []Mode{ModeTemperature, ModeRainfall, ModeElevation} {
+	for _, m := range []Mode{ModeTemperature, ModeRainfall, ModeElevation, ModeHilliness} {
 		g.SetMode(m)
 		if g.Mode() != m {
 			t.Fatalf("mode %v not set", m)
@@ -646,7 +657,8 @@ func TestGlobeSelectBounds(t *testing.T) {
 }
 
 // TestGlobeBuildStaysInsideTheSilhouette checks no vertex lands outside
-// the sphere's outline (a tile folded over the horizon would).
+// the outline of the sphere of radius ReliefMax, the highest relief (a tile
+// folded over the horizon would).
 func TestGlobeBuildStaysInsideTheSilhouette(t *testing.T) {
 	t.Parallel()
 	g := New(globeTestPlanet(t, 100), nil)
@@ -661,7 +673,9 @@ func TestGlobeBuildStaysInsideTheSilhouette(t *testing.T) {
 			t.Fatalf("empty or ragged mesh: %d verts %d indices", g.NV, g.NI)
 		}
 		vp := g.Viewport()
-		r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
+		// The silhouette of a sphere of radius R seen from D is
+		// f R / sqrt(D^2 - R^2), the unit sphere's seen from D/R.
+		r := globemath.SilhouetteRadius(vp, g.Cam.Dist/ReliefMax)
 		for k := 0; k < g.NV; k++ {
 			v := g.Verts[k]
 			if math.IsNaN(float64(v.DstX)) || math.IsNaN(float64(v.DstY)) {
@@ -736,7 +750,7 @@ func TestGlobeCullsTheFarSide(t *testing.T) {
 	g := New(globeTestPlanet(t, 100), nil)
 	g.Sw, g.Sh = 1280, 720
 	g.Build()
-	tiles := g.NV / 7 // roughly: one centre + 5 or 6 corners per tile
+	tiles := g.NV / 18 // roughly: six faces of three vertices per tile
 	if n := g.P.TileCount(); tiles > n*6/10 || tiles < n/10 {
 		t.Fatalf("%d of %d tiles drawn", tiles, n)
 	}
@@ -760,7 +774,7 @@ func TestGlobeOverlayDrawsRiversAndRoads(t *testing.T) {
 	t.Parallel()
 	g := New(globeTestPlanet(t, 100), nil)
 	g.Sw, g.Sh = 1280, 720
-	if len(g.Rivers) == 0 {
+	if len(g.geom.Rivers) == 0 {
 		t.Skip("test world has no rivers")
 	}
 	// Look at a river tile.
@@ -951,4 +965,465 @@ func parseHexRGBA(s string) (color.RGBA, error) {
 		return color.RGBA{}, err
 	}
 	return color.RGBA{R: b[0], G: b[1], B: b[2], A: b[3]}, nil
+}
+
+// reliefTile is a mountainous land tile of the full test world.
+func reliefTile(t testing.TB, g *View) int {
+	t.Helper()
+	best, bestH := -1, float32(-1)
+	for i := 0; i < g.P.TileCount(); i++ {
+		if isLand(g.P, i) && g.P.Hill[i] == site.Mountainous && g.geom.centreH[i] > bestH {
+			best, bestH = i, g.geom.centreH[i]
+		}
+	}
+	if best < 0 {
+		t.Fatal("test world has no mountains")
+	}
+	return best
+}
+
+func radius(v [3]float32) float32 {
+	return float32(math.Sqrt(float64(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])))
+}
+
+// TestGlobeReliefPeaksAboveCorners: every mountain's centre stands above
+// its lowest corner and, in nine of ten, above the mean of its corners;
+// a good share stand above all of them (peaks). A corner between two
+// mountains is lifted toward their peaks to form a ridge, so a low peak
+// may sit under a high saddle. Every vertex stays within [1, ReliefMax]
+// and water stays at radius 1.
+func TestGlobeReliefPeaksAboveCorners(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 100), nil)
+	p, geo := g.P, g.geom
+	n, aboveMean, aboveAll := 0, 0, 0
+	for i := 0; i < p.TileCount(); i++ {
+		if !isLand(p, i) || p.Hill[i] != site.Mountainous {
+			continue
+		}
+		n++
+		rc := radius(geo.centreDisp[i])
+		var mean, hi float32
+		lo := float32(9)
+		m := float32(p.CornerOff[i+1] - p.CornerOff[i])
+		for o := p.CornerOff[i]; o < p.CornerOff[i+1]; o++ {
+			rk := radius(geo.cornerDisp[geo.cornerID[o]])
+			mean += rk / m
+			lo, hi = min(lo, rk), max(hi, rk)
+		}
+		if rc <= lo {
+			t.Fatalf("mountain %d: centre radius %v not above its lowest corner %v", i, rc, lo)
+		}
+		if rc > mean {
+			aboveMean++
+		}
+		if rc > hi {
+			aboveAll++
+		}
+	}
+	if n == 0 {
+		t.Fatal("no mountains")
+	}
+	if aboveMean*10 < n*9 || aboveAll*10 < n*3 {
+		t.Fatalf("of %d mountains %d stand above their corners' mean and %d above every corner", n, aboveMean, aboveAll)
+	}
+	for i := 0; i < p.TileCount(); i++ {
+		r := radius(geo.centreDisp[i])
+		if r > ReliefMax+1e-5 || r < 1-1e-5 {
+			t.Fatalf("tile %d radius %v outside [1, ReliefMax]", i, r)
+		}
+		if p.Water[i] == planet.Ocean && math.Abs(float64(r-1)) > 1e-5 {
+			t.Fatalf("ocean tile %d radius %v, want flat 1", i, r)
+		}
+	}
+	for c, ts := range geo.cornerTiles {
+		for _, tl := range ts {
+			if tl >= 0 && p.Water[tl] == planet.Ocean && math.Abs(float64(radius(geo.cornerDisp[c])-1)) > 1e-5 {
+				t.Fatalf("corner %d on the ocean is at radius %v: coasts must meet at sea level", c, radius(geo.cornerDisp[c]))
+			}
+		}
+	}
+	if ReliefMax < 1.025 || ReliefMax > 1.035 {
+		t.Fatalf("ReliefMax %v", ReliefMax)
+	}
+}
+
+// TestGlobeSunFacingSlopeBrighter: with the sun upper left, a face that
+// tilts toward it is drawn brighter than one tilting away, and flat ground
+// facing the eye shades as the sphere did.
+func TestGlobeSunFacingSlopeBrighter(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 100), nil)
+	g.Sw, g.Sh = 1280, 720
+	g.Reduced = true
+	i := reliefTile(t, g)
+	centreNow(g, i)
+	g.Cam.SetDist(1.5)
+	g.setupFrame()
+	p, geo := g.P, g.geom
+	// Light the tile's faces as Build does and compare the most sun-facing
+	// with the least, by the direction each face leans.
+	lo, hi := float32(2), float32(-1)
+	var loLean, hiLean float32
+	c := p.Center[i]
+	for o := p.CornerOff[i]; o < p.CornerOff[i+1]; o++ {
+		n := geo.faceN[o]
+		d := max(0, n[0]*g.sun[0]+n[1]*g.sun[1]+n[2]*g.sun[2])
+		s := lightAmbient + lightDiffuse*d
+		// lean: the face normal's tilt off the radial, along the sun's
+		// direction on the ground
+		dot := n[0]*c[0] + n[1]*c[1] + n[2]*c[2]
+		tx, ty, tz := n[0]-dot*c[0], n[1]-dot*c[1], n[2]-dot*c[2]
+		lean := tx*g.sun[0] + ty*g.sun[1] + tz*g.sun[2]
+		if s < lo {
+			lo, loLean = s, lean
+		}
+		if s > hi {
+			hi, hiLean = s, lean
+		}
+	}
+	if hi-lo < 0.1 {
+		t.Fatalf("mountain faces light %v..%v: slopes do not read", lo, hi)
+	}
+	if hiLean <= 0 || loLean >= hiLean {
+		t.Fatalf("the bright face leans %v toward the sun, the dark one %v", hiLean, loLean)
+	}
+	// The drawn mesh agrees: the tile's centre vertices (one per face, at
+	// the screen centre) carry different light.
+	g.Build()
+	minB, maxB := float32(9), float32(-1)
+	for k := 0; k+2 < g.NV; k += 3 {
+		v := g.Verts[k] // a face's first vertex is its tile centre
+		if math.Abs(float64(v.DstX)-640) < 2 && math.Abs(float64(v.DstY)-360) < 2 {
+			b := v.ColorR + v.ColorG + v.ColorB
+			minB, maxB = min(minB, b), max(maxB, b)
+		}
+	}
+	if maxB <= minB {
+		t.Fatalf("drawn faces of the peak all share a brightness (%v..%v)", minB, maxB)
+	}
+	// Flat ground facing the eye straight on: within rounding of the old
+	// sphere shading (ambient + diffuse on the sphere normal).
+	k1, _ := Shade(0, 0, 1)
+	flat := float32(lightAmbient + lightDiffuse*globeSun[2])
+	if math.Abs(float64(k1-flat)) > 1e-4 {
+		t.Fatalf("flat shade %v, sphere shade %v", flat, k1)
+	}
+}
+
+// TestGlobeSharedCornersIdentical: tiles sharing a corner place it at the
+// same relief point, and every drawn copy of a corner lands on the same
+// screen position, so the relief cannot crack.
+func TestGlobeSharedCornersIdentical(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 100), nil)
+	g.Sw, g.Sh = 1280, 720
+	p, geo := g.P, g.geom
+	for i := 0; i < p.TileCount(); i++ {
+		for o := p.CornerOff[i]; o < p.CornerOff[i+1]; o++ {
+			for _, nb := range p.Neighbours(i) {
+				for q := p.CornerOff[nb]; q < p.CornerOff[nb+1]; q++ {
+					a, b := p.Corners[o], p.Corners[q]
+					if math.Abs(float64(a[0]-b[0]))+math.Abs(float64(a[1]-b[1]))+math.Abs(float64(a[2]-b[2])) > 1e-4 {
+						continue
+					}
+					if geo.cornerDisp[geo.cornerID[o]] != geo.cornerDisp[geo.cornerID[q]] {
+						t.Fatalf("tiles %d and %d place a shared corner apart", i, nb)
+					}
+				}
+			}
+		}
+	}
+	i := reliefTile(t, g)
+	centreNow(g, i)
+	g.Cam.SetDist(1.4)
+	g.Build()
+	seen := map[[2]float32]int{}
+	for k := 0; k < g.NV; k++ {
+		seen[[2]float32{g.Verts[k].DstX, g.Verts[k].DstY}]++
+	}
+	// Each corner of the centred tile is in two faces of each of its three tiles.
+	for o := p.CornerOff[i]; o < p.CornerOff[i+1]; o++ {
+		sx, sy, _ := g.cc.at(geo.cornerID[o], &g.xform, geo)
+		if n := seen[[2]float32{sx, sy}]; n != 6 {
+			t.Fatalf("corner drawn %d times at one position, want 6 (3 tiles x 2 faces)", n)
+		}
+	}
+}
+
+// TestGlobeSnowOnHighColdPeaks: in Biome mode a peak above its snowline
+// turns toward the snow colour, a warm lowland does not, and the ice sheet
+// is all snow.
+func TestGlobeSnowOnHighColdPeaks(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 100), nil)
+	p, geo := g.P, g.geom
+	snow := PalRGB("snow")
+	dist := func(a, b rgb) float32 {
+		return gfx.Abs32(a[0]-b[0]) + gfx.Abs32(a[1]-b[1]) + gfx.Abs32(a[2]-b[2])
+	}
+	high, low, ice := 0, 0, 0
+	for i := 0; i < p.TileCount(); i++ {
+		if !(p.Water[i] == planet.Land) {
+			continue
+		}
+		if p.Biome[i] == biome.IceSheet {
+			if geo.ccol[i] != snow {
+				t.Fatalf("ice sheet tile %d not snow: %v", i, geo.ccol[i])
+			}
+			ice++
+			continue
+		}
+		if !isLand(p, i) {
+			continue
+		}
+		sl := geo.snowAt[i]
+		switch {
+		case geo.centreH[i] >= sl+snowBandM:
+			if geo.ccol[i] != snow {
+				t.Fatalf("peak %d at %v m (snowline %v) is %v, not snow", i, geo.centreH[i], sl, geo.ccol[i])
+			}
+			high++
+		case geo.centreH[i] < sl && p.Temp[i] > 150:
+			if dist(geo.ccol[i], g.Base[i]) != 0 {
+				t.Fatalf("warm lowland %d snowed", i)
+			}
+			low++
+		}
+	}
+	if high == 0 || low == 0 || ice == 0 {
+		t.Fatalf("snowy peaks %d, warm lowland %d, ice sheet %d", high, low, ice)
+	}
+	// Snow is a Biome-mode colour; data views show their data.
+	g.SetMode(ModeTemperature)
+	for i := 0; i < p.TileCount(); i++ {
+		if isLand(p, i) && geo.centreH[i] >= geo.snowAt[i]+snowBandM && p.Biome[i] != biome.IceSheet {
+			if geo.ccol[i] != g.Base[i] {
+				t.Fatalf("temperature mode snowed tile %d", i)
+			}
+			break
+		}
+	}
+}
+
+func TestGlobeGridAndBare(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 100), nil)
+	g.Sw, g.Sh = 1280, 720
+	centreNow(g, landTile(t, g))
+	g.Cam.SetDist(2.0)
+	g.Build()
+	plain := len(g.Ov)
+	if g.Grid() {
+		t.Fatal("grid on by default")
+	}
+	g.SetGrid(true)
+	g.Build()
+	if !g.Grid() || len(g.Ov) <= plain+400 {
+		t.Fatalf("grid adds %d overlay vertices", len(g.Ov)-plain)
+	}
+	g.Cam.SetDist(gridDist + 0.3) // too far out: no grid
+	g.Build()
+	far := len(g.Ov)
+	g.SetGrid(false)
+	g.Build()
+	if len(g.Ov) != far {
+		t.Fatalf("grid drawn beyond Dist %v", gridDist)
+	}
+	if len(g.geom.Coast) == 0 {
+		t.Fatal("no coastline built")
+	}
+	g.SetGrid(true)
+	g.Bare()
+	if g.Grid() || len(g.geom.Coast)+len(g.geom.Rivers)+len(g.geom.Roads)+len(g.Marks) != 0 {
+		t.Fatal("Bare kept lines or marks")
+	}
+}
+
+// TestGlobeRoadsByClass: every road class has a style; a highway is an
+// asphalt road 1.6x as wide; paths only show from zoom 1.0; the test world
+// draws every class.
+func TestGlobeRoadsByClass(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 30), nil)
+	g.Sw, g.Sh = 1280, 720
+	leg := RoadLegend()
+	for c, e := range leg {
+		if e.Label == "" || e.Width <= 0 {
+			t.Fatalf("road class %d legend %+v", c, e)
+		}
+		if _, ok := WorldPalette[roadStyles[c].key]; !ok {
+			t.Fatalf("road class %d colour %q not in the palette", c, roadStyles[c].key)
+		}
+	}
+	if a, h := roadStyles[planet.AncientAsphaltRoad], roadStyles[planet.AncientHighway]; h.body != a.body*highwayWide || !h.centre || h.key != a.key {
+		t.Fatalf("highway %+v vs asphalt %+v", h, a)
+	}
+	seen := map[uint8]bool{}
+	path := -1
+	for k, s := range g.geom.Roads {
+		seen[s.w] = true
+		if s.w == uint8(planet.Path) && path < 0 {
+			path = k
+		}
+	}
+	if len(seen) != int(planet.NumRoadClasses) || path < 0 {
+		t.Fatalf("road classes on the test world: %v", seen)
+	}
+	// Look at a path and draw only it.
+	r := g.P.Roads[path]
+	centreNow(g, int(r[0]))
+	g.Cam.SetDist(1.5)
+	g.setupFrame()
+	g.geom.Roads = g.geom.Roads[path : path+1]
+	g.Ov, g.Oi = g.Ov[:0], g.Oi[:0]
+	g.geom.strokeRoads(&g.xform, &g.ovMesh, pathZoom-0.1, 1)
+	if len(g.Ov) != 0 {
+		t.Fatalf("path drawn below zoom %v", pathZoom)
+	}
+	g.geom.strokeRoads(&g.xform, &g.ovMesh, pathZoom, 1)
+	if len(g.Ov) != 4*len(roadDots) {
+		t.Fatalf("path drew %d vertices, want %d dots", len(g.Ov), len(roadDots))
+	}
+}
+
+// TestGlobeRiversTaperAndEndAtShore: a river into the sea or a lake ends at
+// the shore (no point at a water tile's centre); sources taper; creeks only
+// show from zoom 1.0.
+func TestGlobeRiversTaperAndEndAtShore(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 100), nil)
+	g.Sw, g.Sh = 1280, 720
+	p, geo := g.P, g.geom
+	mouths, tapers := 0, 0
+	for i := range p.River {
+		if p.River[i] != site.NoRiver && p.RiverTo[i] >= 0 && p.Water[p.RiverTo[i]] != planet.Land && p.Water[i] == planet.Land {
+			mouths++
+		}
+	}
+	for _, s := range geo.Rivers {
+		for _, e := range [2][3]float32{s.a, s.b} {
+			d := norm3(e)
+			ti := p.TileAt(d)
+			if ti >= 0 && p.Water[ti] != planet.Land {
+				c := p.Center[ti]
+				if d[0]*c[0]+d[1]*c[1]+d[2]*c[2] > 0.99999 {
+					t.Fatalf("a river runs to the centre of water tile %d", ti)
+				}
+			}
+		}
+		if s.wa < s.wb {
+			tapers++
+		}
+		if s.wb != riverWidth[s.w] {
+			t.Fatalf("river size %d width %v", s.w, s.wb)
+		}
+	}
+	if mouths == 0 || tapers == 0 {
+		t.Fatalf("%d river mouths, %d tapered sources", mouths, tapers)
+	}
+	// Creeks hide below zoom 1.0.
+	creek := -1
+	for k, s := range geo.Rivers {
+		if s.w == uint8(site.Creek) {
+			creek = k
+			break
+		}
+	}
+	if creek < 0 {
+		t.Fatal("no creek")
+	}
+	centreNow(g, p.TileAt(norm3(geo.Rivers[creek].a)))
+	g.Cam.SetDist(1.5)
+	g.setupFrame()
+	geo.Rivers = geo.Rivers[creek : creek+1]
+	g.Ov, g.Oi = g.Ov[:0], g.Oi[:0]
+	g.geom.strokeRivers(&g.xform, &g.ovMesh, creekZoom-0.1, 1)
+	if len(g.Ov) != 0 {
+		t.Fatal("creek drawn below zoom 1.0")
+	}
+	g.geom.strokeRivers(&g.xform, &g.ovMesh, creekZoom, 1)
+	if len(g.Ov) != 4 {
+		t.Fatalf("creek drew %d vertices", len(g.Ov))
+	}
+	for _, e := range RiverLegend() {
+		if e.Label == "" || e.Width <= 0 || e.Colour != WorldPalette["river"] {
+			t.Fatalf("river legend %+v", e)
+		}
+	}
+	for k, e := range HillLegend() {
+		if e.Colour != WorldPalette[HillKey[site.Flat+site.Hills(k)]] || e.Label == "" {
+			t.Fatalf("hill legend %+v", e)
+		}
+	}
+}
+
+// TestGlobeLabelsByZoomFacingAndCollision: oceans are named when zoomed
+// out, ranges and lakes in the middle band, settlements close in; every
+// label faces the eye, none overlap, at most 24.
+func TestGlobeLabelsByZoomFacingAndCollision(t *testing.T) {
+	t.Parallel()
+	g := New(globeTestPlanet(t, 100), nil)
+	g.Sw, g.Sh = 1280, 720
+	if len(g.geom.feats) == 0 {
+		t.Fatal("the v1 test world has no features")
+	}
+	rng := rand.New(rand.NewSource(7))
+	kinds := map[string]bool{}
+	for trial := 0; trial < 40; trial++ {
+		g.Cam.Lat = (rng.Float64()*2 - 1) * 1.2
+		g.Cam.Lon = (rng.Float64()*2 - 1) * math.Pi
+		g.Cam.SetDist([]float64{1.5, 1.8, 2.6, 3.5}[trial%4])
+		g.Build()
+		ls := g.Labels()
+		if len(ls) > maxLabels {
+			t.Fatalf("%d labels", len(ls))
+		}
+		for a := range ls {
+			for b := a + 1; b < len(ls); b++ {
+				p, q := ls[a], ls[b]
+				if p.X < q.X+q.W && q.X < p.X+p.W && p.Y < q.Y+q.H && q.Y < p.Y+p.H {
+					t.Fatalf("labels %q and %q overlap", p.Text, q.Text)
+				}
+			}
+			switch l := ls[a]; {
+			case l.Settlement:
+				if g.Cam.Dist > settleLabelD {
+					t.Fatalf("settlement %q named at Dist %v", l.Text, g.Cam.Dist)
+				}
+				kinds["settlement"] = true
+			case l.Ocean:
+				if g.Cam.Dist < 2.4 {
+					t.Fatalf("ocean %q named at Dist %v", l.Text, g.Cam.Dist)
+				}
+				kinds["ocean"] = true
+			default:
+				if g.Cam.Dist < 1.6 || g.Cam.Dist > 3.2 {
+					t.Fatalf("feature %q named at Dist %v", l.Text, g.Cam.Dist)
+				}
+				kinds["feature"] = true
+			}
+		}
+		for _, f := range g.geom.feats {
+			for _, l := range ls {
+				if l.Text == f.text && !l.Settlement {
+					c := g.P.Center[f.tile]
+					if c[0]*g.CamDir[0]+c[1]*g.CamDir[1]+c[2]*g.CamDir[2] <= labelFacing {
+						t.Fatalf("%q labelled while turned away", f.text)
+					}
+				}
+			}
+		}
+	}
+	if !kinds["ocean"] || !kinds["feature"] || !kinds["settlement"] {
+		t.Fatalf("label kinds seen: %v", kinds)
+	}
+	if s := spaced("the Salt Deep"); s != "T H E   S A L T   D E E P" {
+		t.Fatalf("spaced %q", s)
+	}
+	g.Bare()
+	g.Build()
+	if len(g.Labels()) != 0 {
+		t.Fatal("a bare globe still names things")
+	}
 }

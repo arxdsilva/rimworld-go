@@ -28,6 +28,7 @@ const (
 	Creek
 	River
 	LargeRiver
+	HugeRiver // WG-08: appended, so saved values keep their meaning
 )
 
 // Dir8 is a map edge direction: 0 N, 1 NE, 2 E, ... 7 NW.
@@ -89,7 +90,7 @@ func (h Hills) Label() string {
 	return hillLabels[h]
 }
 
-var riverLabels = [...]string{NoRiver: "", Creek: "Creek", River: "River", LargeRiver: "Large river"}
+var riverLabels = [...]string{NoRiver: "", Creek: "Creek", River: "River", LargeRiver: "Large river", HugeRiver: "Huge river"}
 
 // Label names a river size ("Large river"); NoRiver is "".
 func (r RiverSize) Label() string {

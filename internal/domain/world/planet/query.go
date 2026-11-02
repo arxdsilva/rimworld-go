@@ -219,8 +219,13 @@ func (p *Planet) GrowingDays(i int) int {
 }
 
 // Hops is the hop distance between tiles (capped at limit). It is not
-// safe for concurrent use (it reuses a scratch buffer).
-func (p *Planet) Hops(a, b, limit int) int {
+// safe for concurrent use (it reuses the planet's scratch buffer); use
+// HopsWith with a caller-owned HopScratch from other goroutines.
+func (p *Planet) Hops(a, b, limit int) int { return p.HopsWith(&p.ext.hops, a, b, limit) }
+
+// HopsWith is Hops over caller-owned scratch s (one per goroutine), so
+// concurrent readers never share a buffer.
+func (p *Planet) HopsWith(s *HopScratch, a, b, limit int) int {
 	n := p.TileCount()
 	if a < 0 || b < 0 || a >= n || b >= n || limit <= 0 {
 		return max(limit, 0)
@@ -233,31 +238,29 @@ func (p *Planet) Hops(a, b, limit int) int {
 	if ang > float64(limit)*math.Acos(clampF(p.stepCos, -1, 1))+1e-9 {
 		return limit
 	}
-	if len(p.hopMark) != n {
-		p.hopMark, p.hopGen = make([]uint32, n), 0
-	}
-	p.hopGen++
-	gen := p.hopGen
-	p.hopMark[a] = gen
-	front := []int32{int32(a)}
+	gen := s.start(n)
+	s.mark[a] = gen
+	front := append(s.front[:0], int32(a))
+	next := s.next[:0]
+	defer func() { s.front, s.next = front[:0], next[:0] }()
 	for d := 1; d < limit; d++ {
-		var next []int32
+		next = next[:0]
 		for _, t := range front {
 			for _, nb := range p.Neighbours(int(t)) {
-				if p.hopMark[nb] == gen {
+				if s.mark[nb] == gen {
 					continue
 				}
 				if int(nb) == b {
 					return d
 				}
-				p.hopMark[nb] = gen
+				s.mark[nb] = gen
 				next = append(next, nb)
 			}
 		}
 		if len(next) == 0 {
 			break
 		}
-		front = next
+		front, next = next, front
 	}
 	return limit
 }
@@ -355,9 +358,11 @@ func (p *Planet) SettlementName(i int) string {
 
 // SettlementTiles are the settled tiles, in global settlement order.
 func (p *Planet) SettlementTiles() []int32 {
-	out := make([]int32, len(p.settlements))
+	out := make([]int32, 0, len(p.settlements))
 	for k, s := range p.settlements {
-		out[k] = s.tile
+		if p.Settlement[s.tile] == int32(k) { // a destroyed base has left its tile (MAP-05)
+			out = append(out, s.tile)
+		}
 	}
 	return out
 }
@@ -383,8 +388,12 @@ func finish(p *Planet) {
 			w = landingPreferred
 		}
 		total += w
-		p.landCum = append(p.landCum, total)
-		p.landTile = append(p.landTile, int32(i))
+		p.ext.landCum = append(p.ext.landCum, total)
+		p.ext.landTile = append(p.ext.landTile, int32(i))
+	}
+	p.ext.roadAt = make([]bool, p.TileCount())
+	for _, r := range p.Roads {
+		p.ext.roadAt[r[0]], p.ext.roadAt[r[1]] = true, true
 	}
 }
 
@@ -392,13 +401,18 @@ func finish(p *Planet) {
 // and the press counter n, weighted toward pleasant sites; -1 when no tile
 // is valid.
 func (p *Planet) RandomLanding(n int) int {
-	if len(p.landCum) == 0 {
+	cum := p.ext.landCum
+	if len(cum) == 0 {
 		return -1
 	}
-	r := randx.New(mix(p.Seed ^ saltLanding ^ mix(uint64(n))))
-	x := uint32(r.IntN(int(p.landCum[len(p.landCum)-1])))
-	k := sort.Search(len(p.landCum), func(j int) bool { return p.landCum[j] > x })
-	return int(p.landTile[k])
+	x := uint32(landingRand(p.Seed, n).IntN(int(cum[len(cum)-1])))
+	k := sort.Search(len(cum), func(j int) bool { return cum[j] > x })
+	return int(p.ext.landTile[k])
+}
+
+// landingRand is the stream for random-landing press n.
+func landingRand(seed uint64, n int) *randx.Rand {
+	return randx.New(mix(seed ^ saltLanding ^ mix(uint64(n))))
 }
 
 // Key hashes the params (a planet is reused when its key matches).

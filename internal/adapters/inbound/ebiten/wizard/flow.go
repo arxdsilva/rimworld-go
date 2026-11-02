@@ -181,6 +181,7 @@ func globeInputFrom(in *inputframe.Frame, w, h int, blocked bool) globe.Input {
 	return globe.Input{
 		W: w, H: h, MX: in.Raw.Mx, MY: in.Raw.My, Wheel: in.Raw.WheelY,
 		Down: in.Raw.Down, Press: in.Raw.Press, Release: in.Raw.Release,
-		Held: in.Raw.Held, Keys: in.Raw.Pressed, Shift: in.Shift(), Blocked: blocked,
+		Held: in.Raw.Held, Keys: in.Raw.Pressed, Shift: in.Shift(),
+		Blocked: blocked || in.Raw.Press[inputframe.Left] && !in.Clicked(inputframe.Left), // a dialog's button used this press
 	}
 }

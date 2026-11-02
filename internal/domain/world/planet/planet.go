@@ -12,6 +12,11 @@ import (
 	"rimworld-go/pkg/randx"
 )
 
+// CurrentVersion is the generator version new worlds use (WG-17). Every
+// generator change since v0 runs only for Params.Version >= 1, so a saved
+// v0 world rebuilds byte-identically from its Setup params.
+const CurrentVersion uint16 = 1
+
 // Frequency is the icosphere subdivision: 10*F*F+2 tiles on the full globe.
 const Frequency = 48
 
@@ -25,6 +30,10 @@ type Params struct {
 	Factions []faction.Slot
 	Version  uint16
 }
+
+// v1 reports the WG generator (biome scoring, road classes, huge rivers,
+// world features and the planet name).
+func (p Params) v1() bool { return p.Version >= 1 }
 
 // Phase is a generation step.
 type Phase uint8
@@ -94,10 +103,7 @@ type Planet struct {
 	radCos      []float32 // cos of the tile's largest centre-corner angle
 	buckets     []int32   // TileAt lat/lon grid
 	stepCos     float64   // cos of the largest neighbour angle
-	landCum     []uint32  // RandomLanding cumulative weights
-	landTile    []int32
-	hopMark     []uint32 // Hops scratch (not safe for concurrent use)
-	hopGen      uint32
+	ext         extData   // query tables and WG (v1) data, see ext.go
 }
 
 type settlementRef struct {

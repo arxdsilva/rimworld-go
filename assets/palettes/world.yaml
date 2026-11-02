@@ -1,16 +1,22 @@
 # Original rimworld-go world-map (globe) palette (NG-1 §1.2).
-# One base colour per biome, mixed toward mountain_tint by hilliness
-# (0 / 12 / 25 / 40 %). Prototyped for this project, not sampled from
-# another game. Consumed by internal/adapters/inbound/ebiten (globe.go).
+# One base colour per biome; hills and mountains read through the relief
+# and its light, with bare rock below and snow above the snowline (plan §1.2). shallow is the
+# coastal band, shore the coastline stroke, grid the optional tile edges,
+# hill_* the Hilliness view mode, road_* the road classes (road_centre the
+# asphalt centre line), label and label_ocean the feature names. Prototyped for this project, not sampled
+# from another game. Consumed by internal/adapters/inbound/ebiten/globe.
 
 world.ocean_deep: "#0E2A47FF"
 world.ocean_shallow: "#1F4E79FF"
 world.lake: "#2D6A9AFF"
-world.river: "#3F86C2FF"
-world.road: "#8C7355FF"
+world.river: "#3D73A0FF"
+world.road_path: "#B39C74FF"
+world.road_dirt: "#8C7355FF"
+world.road_stone: "#9C978CFF"
+world.road_asphalt: "#3C3D3FFF"
+world.road_centre: "#D6D0B8FF"
 world.uncovered: "#121820FF"
 world.atmosphere_rim: "#4A7FD4FF"
-world.mountain_tint: "#6E6A62FF"
 world.ice_sheet: "#E6EEF2FF"
 world.sea_ice: "#CFE0EAFF"
 world.tundra: "#9AA58AFF"
@@ -23,3 +29,14 @@ world.tropical_swamp: "#3C6A3AFF"
 world.arid_shrubland: "#A58E5AFF"
 world.desert: "#CDAE72FF"
 world.extreme_desert: "#DDBE86FF"
+world.snow: "#E2E7EAFF"
+world.rock: "#76706AFF"
+world.shallow: "#2F6A8CFF"
+world.shore: "#CFC6A6FF"
+world.grid: "#1C2228FF"
+world.hill_flat: "#6E8A5CFF"
+world.hill_small: "#A79F66FF"
+world.hill_large: "#A87A52FF"
+world.hill_mountain: "#6F625CFF"
+world.label: "#E6E0CFFF"
+world.label_ocean: "#9FC0DAFF"

@@ -103,3 +103,33 @@ func TestFitKeepsSitesInsideTheBiome(t *testing.T) {
 		t.Fatalf("an all-swing site: %+v (%v..%v)", tight, lo, hi)
 	}
 }
+
+// WG-03/04/05: forage, disease and movement per biome (wiki: Biomes).
+func TestWikiTravelNumbers(t *testing.T) {
+	want := map[ID][4]float64{
+		TemperateForest: {100, 50, 1, 3}, TemperateSwamp: {75, 40, 4, 6}, TropicalRainforest: {100, 35, 2, 4},
+		TropicalSwamp: {75, 30, 4, 6}, AridShrubland: {50, 65, 1, 3}, Desert: {25, 90, 1, 3},
+		ExtremeDesert: {0, 90, 1, 3}, BorealForest: {75, 60, 1, 3}, ColdBog: {50, 45, 4, 6},
+		Tundra: {50, 80, 1, 3}, IceSheet: {0, 90, 1.5, 3.5}, SeaIce: {0, 90, 1.5, 3.5},
+	}
+	for b := ID(0); b < NumBiomes; b++ {
+		d, w := DefOf(b), want[b]
+		if got := [4]float64{float64(d.Forage), float64(d.DiseaseMTB), d.MoveBase, d.MoveWinter}; got != w {
+			t.Errorf("%s: %v, want %v", b, got, w)
+		}
+	}
+}
+
+// WG-05: disease odds follow the published mean days, relative to a forest.
+func TestDiseaseOddsFollowTheBiomeMTB(t *testing.T) {
+	for b, want := range map[ID]int{TemperateForest: 100, Desert: 55, AridShrubland: 76, TropicalRainforest: 142, IceSheet: 55} {
+		if got := DiseaseOdds(b); got != want {
+			t.Errorf("%s: odds %d, want %d", DefOf(b).Key, got, want)
+		}
+	}
+	for _, d := range All() {
+		if d.DiseaseMTB <= 0 {
+			t.Errorf("%s has no disease MTB", d.Key)
+		}
+	}
+}

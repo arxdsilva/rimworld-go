@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -559,7 +560,7 @@ func (w pawnsPage) traitChips(x, y, width float32, v game.CandidateView) float32
 		cr := gfx.Rect{X: cx, Y: cy, W: cw, H: 24}
 		tip := t.Label + "\n" + t.Desc
 		if t.Effects != "" {
-			tip += "\n" + t.Effects
+			tip += "\n" + units.FromUnit(w.sh.Settings().Gameplay.TempUnit).Text(t.Effects)
 		}
 		w.kit().Tip(fmt.Sprintf("pawns.trait.%d", i), cr, tip)
 		w.kit().Queue(func(dst *ebiten.Image) {

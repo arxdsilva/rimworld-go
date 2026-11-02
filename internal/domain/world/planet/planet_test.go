@@ -341,7 +341,7 @@ func TestRiversFlowDownhillToWater(t *testing.T) {
 				if steps > p.TileCount() {
 					t.Fatalf("river from %d loops", i)
 				}
-				if p.riverEnds(cur) {
+				if riverEnds(p, cur) {
 					break
 				}
 				next := int(p.RiverTo[cur])

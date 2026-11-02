@@ -30,8 +30,12 @@ func (p *Planet) Route(a, b int) []int {
 	s.gen++
 	goal := f64(p.Center[b])
 	stepAng := math.Acos(clampF(p.stepCos, -1, 1))
+	minStep := float64(roadStepCost)
+	if p.Params.v1() {
+		minStep = 1 // a flat road tile (routeCost)
+	}
 	h := func(t int) float64 {
-		return math.Acos(clampF(dot64(f64(p.Center[t]), goal), -1, 1)) / stepAng * roadStepCost
+		return math.Acos(clampF(dot64(f64(p.Center[t]), goal), -1, 1)) / stepAng * minStep
 	}
 	s.stamp[a], s.g[a], s.from[a] = s.gen, 0, -1
 	heap.Push(&s.open, openItem{h(a), int32(a)})
@@ -63,8 +67,14 @@ func (p *Planet) Route(a, b int) []int {
 	return nil
 }
 
-// routeCost is the doubled cost of a caravan entering land tile t.
+// routeCost is the doubled cost of a caravan entering land tile t. A v1
+// world prices it by movement difficulty without the winter term, so routes
+// favour what caravans travel fastest (MAP-09); a v0 world keeps the road
+// builder's costs, so an old save's next route stays as it was.
 func (p *Planet) routeCost(t int) int {
+	if p.Params.v1() {
+		return max(1, int(math.Round(2*p.moveAllYear(t))))
+	}
 	if p.Biome[t] == biome.SeaIce {
 		return roadStepCost + routeSeaIceCost
 	}

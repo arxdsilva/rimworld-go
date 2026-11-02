@@ -12,6 +12,7 @@ const (
 	riverSourceProb = 0.06
 	riverFlowRiver  = 4
 	riverFlowLarge  = 12
+	riverFlowHuge   = 30 // v1 (WG-08), original tuning
 	lakeMinTiles    = 2
 	basinMaxTiles   = 24
 	riverMaxSteps   = 4096
@@ -34,7 +35,7 @@ func beginRivers(b *Builder) int {
 
 // riverEnds reports a tile where a river stops: open water, sea ice or an
 // ice sheet.
-func (p *Planet) riverEnds(t int) bool {
+func riverEnds(p *Planet, t int) bool {
 	return p.Water[t] != Land || p.Biome[t] == biome.SeaIce || p.Biome[t] == biome.IceSheet
 }
 
@@ -49,21 +50,21 @@ func itemRivers(b *Builder, k int) {
 		return // already on a river
 	}
 	for step := 0; step < riverMaxSteps; step++ {
-		if p.riverEnds(cur) {
+		if riverEnds(p, cur) {
 			return
 		}
 		if p.River[cur] != site.NoRiver && p.RiverTo[cur] >= 0 {
 			return // joined an existing river
 		}
 		p.River[cur] = site.Creek
-		next := p.lowestNeighbour(cur)
+		next := lowestNeighbour(p, cur)
 		if next >= 0 && p.Elev[next] < p.Elev[cur] {
 			p.RiverTo[cur] = int32(next)
 			cur = next
 			continue
 		}
-		basin, outlet := p.basin(cur)
-		if len(basin) >= lakeMinTiles || outlet < 0 || p.drainsTo(outlet, cur) {
+		basin, outlet := basin(p, cur)
+		if len(basin) >= lakeMinTiles || outlet < 0 || drainsTo(p, outlet, cur) {
 			for _, t := range basin {
 				p.Water[t] = Lake
 				p.River[t] = site.NoRiver
@@ -80,7 +81,7 @@ func itemRivers(b *Builder, k int) {
 
 // drainsTo reports that the river at from already flows into t (spilling
 // there would close a loop).
-func (p *Planet) drainsTo(from, t int) bool {
+func drainsTo(p *Planet, from, t int) bool {
 	for s, x := 0, from; x >= 0 && s < riverMaxSteps; s++ {
 		if x == t {
 			return true
@@ -94,7 +95,7 @@ func (p *Planet) drainsTo(from, t int) bool {
 }
 
 // lowestNeighbour is i's lowest neighbour (lowest index on ties), or -1.
-func (p *Planet) lowestNeighbour(i int) int {
+func lowestNeighbour(p *Planet, i int) int {
 	best := -1
 	for _, nb := range p.Neighbours(i) {
 		if best < 0 || p.Elev[nb] < p.Elev[best] || (p.Elev[nb] == p.Elev[best] && int(nb) < best) {
@@ -108,7 +109,7 @@ func (p *Planet) lowestNeighbour(i int) int {
 // it pops a tile that drains elsewhere: a tile with a strictly lower
 // neighbour outside the basin, or water/ice. It returns the basin and that
 // outlet (-1 when the flood hit basinMaxTiles first).
-func (p *Planet) basin(t int) ([]int32, int) {
+func basin(p *Planet, t int) ([]int32, int) {
 	in := map[int32]bool{int32(t): true}
 	basin := []int32{int32(t)}
 	var front []int32
@@ -132,7 +133,7 @@ func (p *Planet) basin(t int) ([]int32, int) {
 		}
 		x := front[bi]
 		front = append(front[:bi], front[bi+1:]...)
-		if p.riverEnds(int(x)) {
+		if riverEnds(p, int(x)) {
 			return basin, int(x)
 		}
 		for _, nb := range p.Neighbours(int(x)) {
@@ -152,7 +153,7 @@ func (p *Planet) basin(t int) ([]int32, int) {
 
 // endRivers accumulates flow down every river (each river tile adds one
 // unit of catchment) and sizes it: creek, river from riverFlowRiver,
-// large river from riverFlowLarge.
+// large river from riverFlowLarge, and on v1 huge river from riverFlowHuge.
 func endRivers(b *Builder) {
 	p := b.w
 	n := p.TileCount()
@@ -186,9 +187,12 @@ func endRivers(b *Builder) {
 			queue = append(queue, to)
 		}
 	}
+	huge := b.p.v1()
 	for i := 0; i < n; i++ {
 		switch {
 		case p.River[i] == site.NoRiver:
+		case huge && flow[i] >= riverFlowHuge:
+			p.River[i] = site.HugeRiver
 		case flow[i] >= riverFlowLarge:
 			p.River[i] = site.LargeRiver
 		case flow[i] >= riverFlowRiver:

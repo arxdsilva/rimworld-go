@@ -16,7 +16,6 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
-	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/platform/input"
 )
@@ -280,7 +279,7 @@ func TestTileInfoFields(t *testing.T) {
 	}
 	ti := buildTileInfo(p, land, 120, 0)
 	want := []string{"Terrain", "Coordinates", "Elevation", "Avg temperature", "Summer / winter", "Rainfall",
-		"Growing period", "Stone types", "Water", "Caves", "Roads", "Nearest settlement", "Movement difficulty", "Forage", "Wildlife"}
+		"Time zone", "Growing period", "Stone types", "Water", "Caves", "Roads", "Nearby bases", "Movement difficulty", "Caravan per tile", "Forage", "Wildlife", "Disease"}
 	got := map[string]string{}
 	for _, r := range ti.Rows {
 		got[r.Label] = r.Value
@@ -296,7 +295,7 @@ func TestTileInfoFields(t *testing.T) {
 	if ti.Name != biome.DefOf(p.Biome[land]).Name || ti.Blurb == "" || ti.BiomeTip == "" {
 		t.Errorf("header: %q %q", ti.Name, ti.Blurb)
 	}
-	if !strings.Contains(got["Coordinates"], "°") || !strings.HasSuffix(got["Rainfall"], "mm/year") || !strings.HasPrefix(got["Movement difficulty"], "x") {
+	if !strings.Contains(got["Coordinates"], "°") || !strings.HasSuffix(got["Rainfall"], "mm/year") || !strings.HasPrefix(got["Movement difficulty"], "x") || !strings.HasPrefix(got["Time zone"], "UTC") || !strings.HasSuffix(got["Forage"], "%") || !strings.HasPrefix(got["Disease"], "every ~") {
 		t.Errorf("formats: %v", got)
 	}
 	if !strings.Contains(got["Growing period"], "of 60 days") && got["Growing period"] != "Year-round" {
@@ -321,12 +320,6 @@ func TestTileInfoFields(t *testing.T) {
 	}
 	if wizard.CoordText(-342, -1217) != "34.2°S 121.7°W" || wizard.CoordText(342, 1217) != "34.2°N 121.7°E" {
 		t.Errorf("coords %q", wizard.CoordText(-342, -1217))
-	}
-	if wizard.MovementDifficulty(site.Mountainous, biome.IceSheet) > 3 || wizard.MovementDifficulty(site.Flat, biome.TemperateForest) != 1 {
-		t.Error("movement difficulty runs from x1.0 to x3.0")
-	}
-	if wizard.ForageLevel(biome.TemperateForest) != "High" || wizard.ForageLevel(biome.IceSheet) != "Low" || wizard.WildlifeLevel(biome.ExtremeDesert) != "Sparse" || wizard.WildlifeLevel(biome.TemperateForest) != "Abundant" {
-		t.Error("forage and wildlife levels")
 	}
 	// The panel tracks the selection and the hover.
 	f := fakeOn(a)
@@ -416,7 +409,7 @@ func TestLandingLegendModesAndDrawing(t *testing.T) {
 		t.Fatalf("modes seen %v, now %v", seen, a.ng.Globe.Mode())
 	}
 	click(t, a, "land.legend")
-	if !a.ng.Legend {
+	if !a.ng.Land.Legend {
 		t.Fatal("the legend opens")
 	}
 	for m := globepkg.Mode(0); m < globepkg.NumModes; m++ {

@@ -12,7 +12,7 @@ func TestHillsLabel(t *testing.T) {
 }
 
 func TestRiverLabel(t *testing.T) {
-	want := map[RiverSize]string{NoRiver: "", Creek: "Creek", River: "River", LargeRiver: "Large river", 9: ""}
+	want := map[RiverSize]string{NoRiver: "", Creek: "Creek", River: "River", LargeRiver: "Large river", HugeRiver: "Huge river", 9: ""}
 	for r, w := range want {
 		if got := r.Label(); got != w {
 			t.Errorf("RiverSize(%d).Label() = %q, want %q", r, got, w)

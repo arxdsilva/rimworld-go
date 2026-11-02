@@ -90,6 +90,8 @@ func beginRoads(b *Builder) int {
 	}
 	slices.Sort(comps)
 	g.edges = g.edges[:0]
+	g.edgeClass = g.edgeClass[:0]
+	v1 := b.p.v1()
 	for _, c := range comps {
 		tiles := byComp[c]
 		var cands []cand
@@ -137,7 +139,14 @@ func beginRoads(b *Builder) int {
 			g.edges = append(g.edges, [2]int32{e.a, e.b})
 		}
 	}
+	if v1 {
+		for _, e := range g.edges {
+			g.edgeClass = append(g.edgeClass, baseRoadClass(p, e, len(g.edgeClass)))
+		}
+		ancientEdges(b, comp)
+	}
 	g.roads = g.roads[:0]
+	g.segClass = g.segClass[:0]
 	g.astar = newAstar(n)
 	return len(g.edges)
 }
@@ -148,10 +157,17 @@ func itemRoads(b *Builder, k int) {
 	for j := 1; j < len(path); j++ {
 		a, c := path[j-1], path[j]
 		b.g.roads = append(b.g.roads, [2]int32{min(a, c), max(a, c)})
+		if k < len(b.g.edgeClass) {
+			b.g.segClass = append(b.g.segClass, b.g.edgeClass[k])
+		}
 	}
 }
 
 func endRoads(b *Builder) {
+	if b.p.v1() {
+		endRoadsV1(b)
+		return
+	}
 	r := b.g.roads
 	slices.SortFunc(r, func(u, v [2]int32) int {
 		if u[0] != v[0] {

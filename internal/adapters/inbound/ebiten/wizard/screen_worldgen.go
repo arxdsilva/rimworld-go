@@ -125,7 +125,7 @@ func (w worldPage) worldGenUI(sw, sh int) {
 func (w worldPage) resetWorldAll() {
 	ng := w.draft()
 	ng.World = planet.Params{SeedText: RandomWorldPhrase(), Coverage: DefaultCoverage, Rain: 2, Temp: 2, Pop: 1,
-		Factions: faction.DefaultSlots()}
+		Factions: faction.DefaultSlots(), Version: planet.CurrentVersion}
 }
 
 // ---- left column: the planet --------------------------------------------
@@ -136,6 +136,7 @@ func (w worldPage) worldLeft(ng *Draft, col gfx.Rect) {
 	hs := gfx.Large
 	hs.Color = uikit.Heading
 	w.kit().Label(in.X, in.Y, "Planet", hs)
+	w.worldName(ng, in, hs)
 	y := in.Y + float32(gfx.LineH(hs)) + 10
 
 	// Seed.
@@ -197,6 +198,31 @@ func (w worldPage) worldLeft(ng *Draft, col gfx.Rect) {
 		ws := gfx.Body
 		ws.Color = uikit.Warning
 		w.kit().Label(in.X, y, "Settings changed since the last world. Generate it again.", ws)
+	}
+}
+
+// worldName is the generated planet's name and its generator-version badge
+// at the right of the Planet heading (WG-15); nothing before a world exists.
+func (w worldPage) worldName(ng *Draft, in gfx.Rect, hs gfx.TextStyle) {
+	if ng.Planet == nil {
+		return
+	}
+	badge := fmt.Sprintf("v%d", ng.Planet.Params.Version)
+	bs := gfx.Small
+	bs.Color = uikit.TextDim
+	bw := gfx.TextW(badge, bs) + 12
+	br := gfx.Rect{X: in.Right() - bw, Y: in.Y + 3, W: bw, H: float32(gfx.LineH(bs)) + 6}
+	w.kit().Tip("world.version", br, fmt.Sprintf("World generator version %d\nSaved worlds keep the version they were made with, so they stay as they were.", ng.Planet.Params.Version))
+	w.kit().Queue(func(dst *ebiten.Image) {
+		uikit.FillRect(dst, br, uikit.Field)
+		uikit.StrokeRect(dst, br, uikit.PanelBorder)
+		gfx.Text(dst, badge, float64(br.X+6), float64(br.Y+3), bs)
+	})
+	if name := ng.Planet.Name(); name != "" {
+		ns := hs
+		ns.Align = gfx.AlignRight
+		ns.Color = uikit.Text
+		w.kit().Label(br.X-10, in.Y, uikit.FitText(name, ns, in.W-bw-120), ns)
 	}
 }
 

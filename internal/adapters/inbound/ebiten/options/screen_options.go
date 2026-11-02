@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -324,6 +325,24 @@ func OptionRows(tab string) []OptionRow {
 					return float64(s.Gameplay.PanSpeed-config.PanSpeedMin) / (config.PanSpeedMax - config.PanSpeedMin)
 				},
 				apply: func(s *config.Settings, d int) { s.Gameplay.PanSpeed += d * config.PanSpeedStep }},
+			{Key: "tempunit", Label: "Temperature unit", kind: rowChoice, Col: 1, // second column: the first is full at 960x540
+				Tip:   "How temperatures read everywhere: degrees Celsius or Fahrenheit.",
+				value: func(s config.Settings) string { return units.FromUnit(s.Gameplay.TempUnit).Name() },
+				apply: func(s *config.Settings, _ int) {
+					if s.Gameplay.TempUnit == units.UnitF {
+						s.Gameplay.TempUnit = ""
+					} else {
+						s.Gameplay.TempUnit = units.UnitF
+					}
+				}},
+			{Key: "maxcolonies", Label: "Max colonies", kind: rowStep, Col: 1,
+				value: func(s config.Settings) string { return fmt.Sprintf("%d", s.Gameplay.Colonies()) },
+				frac: func(s config.Settings) float64 {
+					return float64(s.Gameplay.Colonies()-1) / float64(config.MaxColoniesLimit-1)
+				},
+				apply: func(s *config.Settings, d int) {
+					s.Gameplay.MaxColonies = max(1, min(s.Gameplay.Colonies()+d, config.MaxColoniesLimit))
+				}},
 			toggleRow("devmode", "Developer mode", func(s *config.Settings) *bool { return &s.Gameplay.DevMode }),
 		}
 	case "controls":
@@ -360,6 +379,9 @@ func (o *Screen) CurrentTab() string {
 }
 
 func rowY(i int) float32 { return float32(optRowY + i*optRowStep) }
+
+// stepValueX is where a step row with its controls at cx writes its value.
+func stepValueX(cx float32) float32 { return cx + 2*OptBtnH + optBarW + 28 }
 
 // OptPos is row i's label x, control x and y: rows stack down their column.
 func OptPos(rows []OptionRow, i int) (labelX, ctrlX, y float32) {
@@ -489,7 +511,7 @@ func (o *Screen) DrawOptions(screen *ebiten.Image, sw, sh int) {
 		gfx.FillRect(screen, bx, by, optBarW, 12, uikit.BtnDisabled, false)
 		gfx.FillRect(screen, bx, by, optBarW*float32(gfx.Clamp01(r.frac(o.sh.Settings()))), 12, uikit.Accent, false)
 		gfx.StrokeRect(screen, bx, by, optBarW, 12, 1, uikit.PanelBorder, false)
-		gfx.Text(screen, r.value(o.sh.Settings()), OptCtrlX+2*OptBtnH+optBarW+28, ty, gfx.Body)
+		gfx.Text(screen, r.value(o.sh.Settings()), float64(stepValueX(cx)), ty, gfx.Body)
 	}
 	if note := optionNotes[tab]; note != "" {
 		ny := float64(rowY(len(rows))) + optNoteY - 20

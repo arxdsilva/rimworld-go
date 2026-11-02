@@ -143,7 +143,7 @@ func (b *BackdropState) drawPlanet(screen *ebiten.Image, sw, sh int, p *planet.P
 	}
 	if b.View == nil || b.ViewOf != src {
 		g := globe.New(src, nil)
-		g.Rivers, g.Roads, g.Marks = nil, nil, nil // far away: the bare tiles
+		g.Bare() // far away: the bare tiles
 		g.SetAreaPx(0, 0, BackdropDiscArea, BackdropDiscArea)
 		g.Cam.SetDist(BackdropDiscDist)
 		g.Cam.Lat, g.Cam.Lon = 0.35, float64(src.Seed%628)/100

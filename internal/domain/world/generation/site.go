@@ -81,6 +81,7 @@ var riverWidths = [...]struct{ width, core float64 }{
 	site.Creek:      {3, 0},
 	site.River:      {9, 3},
 	site.LargeRiver: {15, 7},
+	site.HugeRiver:  {21, 11}, // original tuning (WG-08)
 }
 
 // GenerateSite builds the map for biome b at landing site s.

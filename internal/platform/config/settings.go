@@ -127,7 +127,18 @@ type Gameplay struct {
 	LastSaveMode    string `json:"last_save_mode,omitempty"`
 	RunOnStart      bool   `json:"run_on_start,omitempty"`
 	BirthdayLetters bool   `json:"birthday_letters,omitempty"`
+	// TempUnit is how temperatures read: "" Celsius, "F" Fahrenheit (WG-16).
+	TempUnit string `json:"temp_unit,omitempty"`
+	// MaxColonies caps the permanent colonies a player may hold at once
+	// (MAP-06; wiki: Colony, default 1, up to 5); 0 means the default.
+	MaxColonies int `json:"max_colonies,omitempty"`
 }
+
+// MaxColoniesLimit is the highest MaxColonies (wiki: Colony).
+const MaxColoniesLimit = 5
+
+// Colonies is the effective colony cap: MaxColonies clamped to 1..5.
+func (g Gameplay) Colonies() int { return max(1, min(g.MaxColonies, MaxColoniesLimit)) }
 
 // Accessibility options.
 type Accessibility struct {

@@ -37,7 +37,16 @@ const (
 var rainBandLat = [rainBandPoints]float64{0, 12, 25, 38, 50, 90}
 var rainBandMM = [rainBandPoints]float64{2400, 2100, 300, 800, 900, 200}
 
-func rainBand(latDeg float64) float64 {
+// rainBandMMV1 is the v1 curve (WG-02, original tuning): a wetter
+// equatorial belt and a less parched subtropical minimum, so rainforest
+// and temperate forest reach their shares under the wiki thresholds.
+var rainBandMMV1 = [rainBandPoints]float64{2700, 2400, 420, 850, 900, 200}
+
+func rainBand(latDeg float64, v1 bool) float64 {
+	rainBandMM := rainBandMM
+	if v1 {
+		rainBandMM = rainBandMMV1
+	}
 	a := math.Abs(latDeg)
 	for k := 1; k < rainBandPoints; k++ {
 		if a <= rainBandLat[k] {
@@ -99,8 +108,8 @@ func itemClimate(b *Builder, i int) {
 	c := f64(p.Center[i])
 	wet := 1 + rainNoiseAmp*(2*b.g.rain.FBm(c[0], c[1], c[2], 3, rainNoiseFreq, 0.5)-1)*2
 	wet = clampF(wet, 1-rainNoiseAmp, 1+rainNoiseAmp)
-	r := rainBand(lat) * moisture * wet * rainMult[clampInt(b.p.Rain, 0, 4)]
-	if p.Water[i] == Land && p.upwindPeak(i) {
+	r := rainBand(lat, b.p.v1()) * moisture * wet * rainMult[clampInt(b.p.Rain, 0, 4)]
+	if p.Water[i] == Land && upwindPeak(p, i) {
 		r *= shadowFactor
 	}
 	p.Temp[i] = int16(math.Round(t * 10))
@@ -110,7 +119,7 @@ func itemClimate(b *Builder, i int) {
 // upwindPeak reports a tile over shadowElev within shadowReach steps
 // upwind: westerlies (wind from the west) outside the tropics, easterlies
 // inside them.
-func (p *Planet) upwindPeak(i int) bool {
+func upwindPeak(p *Planet, i int) bool {
 	cur := i
 	for s := 0; s < shadowReach; s++ {
 		east, _ := p.eastNorth(cur)

@@ -62,8 +62,8 @@ const (
 // riverWidth is the channel width at Scale 1 (×√Scale), riverCore the
 // deep core's share of it, by size.
 var (
-	riverWidth = [...]float64{site.Creek: 3, site.River: 7, site.LargeRiver: 12}
-	riverCore  = [...]float64{site.Creek: 0, site.River: 0.30, site.LargeRiver: 0.45}
+	riverWidth = [...]float64{site.Creek: 3, site.River: 7, site.LargeRiver: 12, site.HugeRiver: 17} // huge: original tuning (WG-08)
+	riverCore  = [...]float64{site.Creek: 0, site.River: 0.30, site.LargeRiver: 0.45, site.HugeRiver: 0.55}
 )
 
 // Run is the pass.

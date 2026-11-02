@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/faction"
@@ -630,7 +631,9 @@ func (w editorPage) partControls(f *uikit.Form, ng *Draft, ed *editorState, i in
 		}
 	case scenario.PartCondition:
 		if c, ok := w.ctl(f, "Condition"); ok {
-			uikit.Choice(w.kit(), id("cond"), c, "Permanent condition", edCondNames, IndexWhere(len(edConditions), func(k int) bool { return edConditions[k] == p.Cond }), "",
+			uikit.Choice(w.kit(), id("cond"), c, "Permanent condition", mapNames(len(edCondNames), func(i int) string {
+				return units.FromUnit(w.sh.Settings().Gameplay.TempUnit).Text(edCondNames[i])
+			}), IndexWhere(len(edConditions), func(k int) bool { return edConditions[k] == p.Cond }), "",
 				func(k int) { p.Cond = edConditions[k] })
 		}
 	case scenario.PartScheduledIncident:

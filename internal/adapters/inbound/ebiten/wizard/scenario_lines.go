@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -266,7 +267,7 @@ func (w *Flow) detailView(id string, r gfx.Rect, d scenario.Def, lines []game.De
 		}
 		rr := gfx.Rect{X: area.View.X, Y: area.View.Y + row.y - area.Off, W: area.View.W, H: row.h}.Intersect(area.View)
 		if !rr.Empty() {
-			w.kit().Tip(id+".tip."+uikit.Num(i), rr, row.tip)
+			w.kit().Tip(id+".tip."+uikit.Num(i), rr, units.FromUnit(w.sh.Settings().Gameplay.TempUnit).Text(row.tip))
 		}
 	}
 	u.Queue(func(dst *ebiten.Image) {
