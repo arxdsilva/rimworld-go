@@ -23,8 +23,8 @@ func statBedroom(t *testing.T, g *Game) entity.EntityID {
 	return g.layerBldgAt(3, 3, construction.LayerObject)
 }
 
-// furnish floors the 4x4 interior and adds an end table and a dresser.
-func furnish(t *testing.T, g *Game) {
+// furnishRoom floors the 4x4 interior and adds an end table and a dresser.
+func furnishRoom(t *testing.T, g *Game) {
 	t.Helper()
 	for y := 3; y <= 6; y++ {
 		for x := 3; x <= 6; x++ {
@@ -79,7 +79,7 @@ func TestFurnishedBedroomScoresHigher(t *testing.T) {
 	if bare.Beauty >= 0 || bare.CleanStat != -100 || bare.Cleanliness != "dirty" || bare.BeautyLabel != room.BeautyLabel(bare.Beauty) {
 		t.Fatalf("bare soil is ugly and dirty: %+v", bare)
 	}
-	furnish(t, g)
+	furnishRoom(t, g)
 	fine := roomView(t, g, 4, 4)
 	if fine.Impressiveness <= bare.Impressiveness || fine.Beauty <= bare.Beauty || fine.Wealth <= bare.Wealth ||
 		fine.Space >= bare.Space || fine.CleanStat != 0 || fine.Role != "bedroom" {
@@ -96,7 +96,7 @@ func TestFilthLowersBeautyAndCleanliness(t *testing.T) {
 	t.Parallel()
 	g := dirtGame(t)
 	statBedroom(t, g)
-	furnish(t, g)
+	furnishRoom(t, g)
 	clean := roomView(t, g, 4, 4)
 	for y := 3; y <= 6; y++ {
 		for x := 3; x <= 6; x++ {
@@ -153,7 +153,7 @@ func TestBedroomThoughtLadder(t *testing.T) {
 	if v, ok := memValue(g, id, mood.SleptInBedroom); !ok || v != -2 {
 		t.Fatalf("awful bedroom thought %d %v", v, ok)
 	}
-	furnish(t, g)
+	furnishRoom(t, g)
 	gild(t, g, 600)
 	r := roomView(t, g, 4, 4)
 	stage := room.ImpressivenessStage(r.Impressiveness)
@@ -225,7 +225,7 @@ func TestRoomThoughtDoesNotFlap(t *testing.T) {
 	t.Parallel()
 	g := dirtGame(t)
 	bed := statBedroom(t, g)
-	furnish(t, g)
+	furnishRoom(t, g)
 	id, _ := g.SpawnNamedPawn(3, 3, "Ada")
 	wakeIn(g, id, bed)
 	first, _ := memValue(g, id, mood.SleptInBedroom)
@@ -284,7 +284,7 @@ func TestDiningRoomThought(t *testing.T) {
 func TestRoomQualityAllocatesNothing(t *testing.T) {
 	g := dirtGame(t)
 	statBedroom(t, g)
-	furnish(t, g)
+	furnishRoom(t, g)
 	gild(t, g, 100)
 	r := g.roomAt(4, 4)
 	restRooms{g}.RoomQuality(r)

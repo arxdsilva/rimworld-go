@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/farm"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
@@ -11,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -185,7 +187,7 @@ func (h restRooms) Tile(x, y int) rest.Tile {
 	}
 	fb, floored := g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerFloor))
 	t := rest.Tile{Object: g.layerBldgAt(x, y, construction.LayerObject), Indoors: g.roomAt(x, y) >= 0,
-		Floor: room.FloorUnder(fb.Stuff, floored, g.terr.At(x, y) == terrain.StoneSmooth), Filth: g.filthTotal(y*g.grid.Width() + x)}
+		Floor: room.FloorUnder(fb, floored, g.terr.At(x, y) == terrain.StoneSmooth), Filth: g.filthTotal(y*g.grid.Width() + x)}
 	if p, ok := g.plants.Get(g.plantAt(x, y)); ok {
 		t.Plant, t.Planted, t.Mature = p.Species, true, p.Ripe()
 	}
@@ -228,4 +230,16 @@ func (h restCouples) Hurt(id entity.EntityID) (int32, int32, bool) {
 		return bd.Pain(), bd.Capacity(body.Consciousness), true
 	}
 	return 0, 0, false
+}
+
+// furnishHost is game/furnish's Host (A2: plant pots): the buildings as
+// rest sees them, a pot cell's growing rate and the room recount.
+type furnishHost struct{ restBedding }
+
+func (h furnishHost) RoomsChanged()    { h.g.markRoomsDirty() }
+func (h furnishHost) Air(x, y int) int { return int(h.g.temperatureAt(x, y)) }
+func (h furnishHost) GrowRate(x, y int) int {
+	g, now := h.g, uint64(h.g.clock.Now())
+	l := farm.GrowLight(g.roofAt(x, y).Roofed() || g.incidents.Eclipsed(now), g.incidents.SkyPermil(now), g.artificialLight(x, y), nil, x, y, nil)
+	return plant.TempFactor(int(g.temperatureAt(x, y))) * plant.LightFactor(l) / 1000
 }

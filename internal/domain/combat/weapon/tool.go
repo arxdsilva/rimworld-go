@@ -111,7 +111,7 @@ func ToolsOf(k Kind) []Tool {
 	case Fists, FragGrenade, Molotov, EMPGrenade:
 		return fistTools
 	}
-	if k < numKinds && k != SentryGun && defs[k].Ranged && (k <= lastCatalogue || k >= RocketLauncher) {
+	if k < numKinds && k != SentryGun && defs[k].Ranged && (k <= lastCatalogue || k >= RocketLauncher && k <= lastCarried) {
 		return gunTools
 	}
 	return nil

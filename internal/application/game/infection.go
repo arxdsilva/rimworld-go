@@ -160,8 +160,8 @@ func (g *Game) tendQualityFor(doctor, patient entity.EntityID, med item.Kind) in
 }
 
 // roomInfectionFactor is the infection room factor (permille) where id
-// lies: a roofed, fully floored room without filth halves the chance;
-// outdoors or anywhere else it stays whole. wiki: Infection.
+// lies: a roofed, fully floored room without filth halves the chance (30 %
+// in sterile tile, AX-3); outdoors or anywhere else it stays whole. wiki: Infection.
 func (g *Game) roomInfectionFactor(id entity.EntityID) int32 {
 	pos, _ := g.positions.Get(id)
 	r := g.roomAt(pos.X, pos.Y)
@@ -169,10 +169,8 @@ func (g *Game) roomInfectionFactor(id entity.EntityID) int32 {
 		return infection.RoomOther
 	}
 	c := g.rooms[r].contents
-	if sum, _ := g.roomFilth(r); sum > 0 || c.Floored < c.Cells || g.roomRoofed(r) < cleanRoomRoofed {
-		return infection.RoomOther
-	}
-	return infection.RoomClean
+	sum, _ := g.roomFilth(r)
+	return infection.RoomFactor(sum == 0 && c.Floored >= c.Cells && g.roomRoofed(r) >= cleanRoomRoofed, int32(g.rooms[r].tally.CleanHundredths/max(c.Cells, 1)))
 }
 
 // stepCare runs an hour of care on every patient in id order (from

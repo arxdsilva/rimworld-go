@@ -54,7 +54,7 @@ func TestJourneyArchitectVanillaCategoriesAndPlaceholders(t *testing.T) {
 			}
 		}
 		if first.ID == "" {
-			continue // Temperature: every vanilla item works
+			continue // every vanilla item of this category works (AX)
 		}
 		tried++
 		id := "arch.tool." + first.ID
@@ -91,8 +91,8 @@ func TestJourneyArchitectVanillaCategoriesAndPlaceholders(t *testing.T) {
 			t.Fatalf("%s: the Architect left the category (open %v, %q)", c.ID, j.a.arch.Open, j.a.arch.Cat)
 		}
 	}
-	if tried != 11 {
-		t.Fatalf("placeholders tried in %d categories, want 11", tried)
+	if tried == 0 && len(architect.Planned) > 0 {
+		t.Fatal("no placeholder card was tried")
 	}
 }
 

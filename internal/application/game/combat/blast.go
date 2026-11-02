@@ -44,6 +44,7 @@ type Blasts struct {
 	loose   []entity.EntityID // Debris.Loose's reused buffer
 	smoke   []explosion.Cloud // live smoke clouds (saved: Export)
 	traps   *Traps            // DEF-4: a blast lights the buried charges it reaches
+	foam    Foamer            // AX-5: the fires a foam burst puts out (nil: none)
 }
 
 // Debris is what a blast reaches on the ground besides creatures and
@@ -89,6 +90,10 @@ func (b *Blasts) Explode(by entity.EntityID, wk weapon.Kind, x, y int, d explosi
 	h.Burst(x, y, now, d)
 	if d.Kind == explosion.Smoke {
 		b.smoke = append(b.smoke, explosion.Cloud{X: x, Y: y, Radius: d.Radius, Until: now + explosion.SmokeTicks})
+	}
+	if d.Douses() { // AX-5: foam puts fires out and harms nothing (foam.go)
+		b.smother(x, y, d)
+		return
 	}
 	var hit []Seen
 	if d.Flesh() {
@@ -229,6 +234,8 @@ func (b *Blasts) ground(x, y int, cells []blastCell, d explosion.Def, hit []Seen
 		}
 		if d.Ignites() {
 			b.kindle(c, c.x == x && c.y == y, hit)
+		} else if d.Fire > 0 && b.h.Roll(1000) < d.Fire { // AX-5: the warhead lights about a fifth of its cells
+			b.debris.Kindle(c.x, c.y)
 		}
 	}
 }
@@ -289,6 +296,8 @@ func cookOff(k item.Kind) (weapon.Kind, bool) {
 		return weapon.Molotov, true
 	case item.EMPGrenades:
 		return weapon.EMPGrenade, true
+	case item.AntimatterWarhead: // AX-5, wiki: Antigrain warhead (bursts when badly damaged)
+		return weapon.Warhead, true
 	}
 	return weapon.ForShell(k)
 }

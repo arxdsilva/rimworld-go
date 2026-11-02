@@ -136,6 +136,9 @@ func (a Building) SelectBuildingAt(tx, ty int) bool {
 func (a Building) ClearBuilding() { a.sel.HasBuilding = false }
 
 func BuildingTitle(b game.BuildingView) string {
+	if t := ruinedFloorTitle(b); b.Ruin && t != "" { // floor_title.go (AX-3)
+		return t
+	}
 	if b.Ruin {
 		return ruinTitle(b)
 	}
@@ -147,6 +150,9 @@ func BuildingTitle(b game.BuildingView) string {
 	}
 	if b.Kind == "carpet" && strings.HasSuffix(b.Stuff, " carpet") {
 		return strings.ToUpper(b.Stuff[:1]) + b.Stuff[1:] // "Straw carpet"
+	}
+	if t := floorTitle(b.Kind, b.Stuff, b.AX.Colour); t != "" { // floor_title.go (AX-3)
+		return t
 	}
 	return materialTitle(b.Kind, b.Stuff) // "Wall", "Granite wall", "Steel door"
 }

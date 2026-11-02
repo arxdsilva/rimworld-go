@@ -14,6 +14,9 @@ func TestStuffStatsGraniteMatchesLegacy(t *testing.T) {
 	for _, d := range All() {
 		woodHP := MaxHP(d.Kind, item.Wood)
 		legacyWork := d.Work * 160 / 100
+		if FixedWork(d.Kind) { // AX-3: a wiki floor's work in any material
+			legacyWork = d.Work
+		}
 		for _, s := range []item.Kind{item.GraniteBlocks, item.Stone} {
 			if got := MaxHP(d.Kind, s); got != woodHP*2 {
 				t.Errorf("%s from %v: HP %d, legacy %d", d.Name, s, got, woodHP*2)
@@ -42,7 +45,9 @@ func TestStuffStatsTable(t *testing.T) {
 		{item.MarbleBlocks, 140, 150},
 		{item.Steel, 140, 90},
 		{item.GraniteChunk, 100, 100}, // not stuff
-		{item.Gold, 100, 100},
+		{item.Gold, 90, 81},           // A2, wiki: Walls (180 HP against wood's 195)
+		{item.Plasteel, 430, 198},     // A2, wiki: Walls
+		{item.Jade, 75, 450},          // A2, wiki: Walls
 	}
 	for _, tc := range tests {
 		hp, work := StuffStats(tc.s)
@@ -66,10 +71,11 @@ func TestStuffsLists(t *testing.T) {
 		k    Kind
 		want []item.Kind
 	}{
-		{Wall, append(slices.Clone(withBlocks), item.Steel)},
-		{Floor, withBlocks},
+		{Wall, append(append(slices.Clone(withBlocks), item.Steel), PreciousWalls[:]...)}, // A2: precious walls
+		{Floor, []item.Kind{item.Wood}}, // AX-3: stone floors are stone tiles
+		{StoneTile, blocks},
 		{Door, []item.Kind{item.Wood, item.Steel}},
-		{Table, []item.Kind{item.Wood, item.Steel}},
+		{Table, append(slices.Clone(withBlocks), item.Steel)}, // A2, wiki: Table (stuffed: wood, stone, metal)
 	}
 	for _, tc := range tests {
 		got := Stuffs(tc.k)
@@ -85,12 +91,12 @@ func TestStuffsLists(t *testing.T) {
 			}
 		}
 		for _, s := range []item.Kind{item.Stone, item.GraniteChunk, item.Silver, item.Gold} {
-			if StuffOK(tc.k, s) {
+			if StuffOK(tc.k, s) && !(tc.k == Wall && IsPreciousWall(s)) {
 				t.Errorf("StuffOK(%s, %v) = true", DefOf(tc.k).Name, s)
 			}
 		}
 	}
-	if StuffOK(Floor, item.Steel) || StuffOK(Table, item.MarbleBlocks) || StuffOK(Door, item.SlateBlocks) {
+	if StuffOK(Floor, item.Steel) || StuffOK(Table, item.Silver) || StuffOK(Door, item.SlateBlocks) {
 		t.Fatal("material accepted where it is not listed")
 	}
 }

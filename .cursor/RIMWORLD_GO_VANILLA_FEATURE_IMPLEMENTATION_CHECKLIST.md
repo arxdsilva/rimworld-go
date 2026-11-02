@@ -593,7 +593,7 @@ This is the heart of autonomous colony behavior.
     -   faction/permission interaction.
     -   affect pathing and room boundaries.
 -   [x] **Bridges** (MAPGEN-3: research-gated wooden foundation layer over water, marsh or mud, never the open sea; walkable at full speed, holds light things (wooden walls, doors, fences, furniture) but not stone/steel walls or floors; a destroyed bridge breaks what it held and sinks items on deep water; generated road bridges)
--   [-] **Floors** (buildable/deconstructable separate layer; SIM-028: may go under any furniture, not on rock, walls, fences/gates or dug graves; no movement/beauty/cleanliness stats)
+-   [x] **Floors** (buildable/deconstructable separate layer; SIM-028: may go under any furniture, not on rock, walls, fences/gates or dug graves; AX-3: every vanilla floor kind with the wiki beauty, cleanliness, flammability and walk speed (13/(13+path cost): floors 100 %, straw matting 93 %, soil 87 %), in room stats, tile beauty and the floor's pane; a floor laid over another replaces it in place once built)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
 -   [-] **Roofs** (SIM-018; FOOD-6: a roof shelters pawns, animals and plants from toxic fallout; no deterioration or collapse injuries)
@@ -602,7 +602,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (PRD-4: shelf, a storage zone over its footprint, 3 stacks per cell, Preferred, no deterioration, beauty 0.5; bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; missing: couch, joy, light effects)
+-   [-] **Furniture** (PRD-4: shelf, a storage zone over its footprint, 3 stacks per cell, Preferred, no deterioration, beauty 0.5; bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; AX-2: couch with two seats, tables of four sizes seating a diner per side cell (`construction.Seats`), plant pot whose plant grows and adds beauty, small shelf, steles, urn; missing: joy)
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -1182,7 +1182,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Filth entities/layers** (SIM-020: blood and ichor stains that fade over 7 days and wash off in rain and snow; SIM-021: dirt tracked in on boots from outdoor ground and field work, kept indoors until cleaned; no vomit or trash, animals track no dirt)
     -   Dirt, blood, vomit, trash-like filth.
     -   Created by movement/events/injuries/animals as appropriate.
--   [-] **Cleanliness** (SIM-021: room filth from dirt and stains costs up to 10 impressiveness, shown in room labels; RSCH-1: research benches use the wiki cleanliness factor; floor properties and medical/cooking effects missing)
+-   [x] **Cleanliness** (SIM-021: room filth from dirt and stains costs up to 10 impressiveness, shown in room labels; RSCH-1: research benches use the wiki cleanliness factor; AX-3: each floor kind's wiki cleanliness (sterile tile +0.6, metal tiles +0.2, straw -0.1) enters the room's cleanliness, which drives research speed, food poisoning, surgery success and, in a clean room, the wound infection factor (x0.5, down to x0.3 in sterile tile))
     -   Room cleanliness derived from filth/floor properties.
     -   Influences medical/cooking/research or other vanilla-equivalent
         systems.
@@ -1535,7 +1535,7 @@ children systems.
 
 -   [x] **Milk production** (SIM-026: milk from dairy species with a product bar; Handle-work Milk job)
 -   [x] **Wool production** (SIM-026: Shear job; wool parka and wool carpet recipes)
--   [x] **Egg laying** (SIM-026: chickens, ducks, geese lay plain eggs; fertile eggs hatch at 0 to 45 C, frozen ones die; ember oil campfire fuel)
+-   [x] **Egg laying** (SIM-026: chickens, ducks, geese lay plain eggs; fertile eggs hatch at 0 to 45 C, frozen ones die; ember oil campfire fuel; AX-2: tame layers lay into an egg box with room within 20 tiles, which stores the eggs)
     -   Data-driven species components.
 
 ## 18.8 Reproduction
@@ -2449,15 +2449,15 @@ the player-facing system.
 
 STK-AG: every core vanilla item has a card in its vanilla category (`.cursor/ARCHITECT_GAP_ANALYSIS.md`); missing ones are greyed placeholders.
 
--   [-] **Orders** (13 of 18 work, Chop wood through Cut plants; missing Uninstall, Slaughter, Claim, Strip, Open)
--   [-] **Zone/area** (12 of 15; missing Delete zone and the two roof-area clear tools)
--   [-] **Structure** (6 of 9; missing Ornate door, Column, Animal flap)
--   [-] **Production** (23 of 25; missing Deep drill, Electric crematorium)
--   [-] **Furniture** (21 of 35; missing large tables, couch, bookcases, small shelf, wall lamps, flood light, plant pot, urn, double sleeping spot, animal sleeping box)
--   [-] **Power** (PLAY-021: conduit, hidden conduit, switch, four generators, battery; missing waterproof conduit, chemfuel generator, watermill)
--   [-] **Security** (11 of 15; missing firefoam and antigrain IEDs, foam turret, rocketswarm launcher)
--   [-] **Misc/ship** (Misc 10 of 21; Ship 0 of 6, all placeholders)
--   [-] **Floors** (STK-AG: wood floor, stone-block floors, entrance carpet, Smooth; missing straw matting, concrete, the metal and sterile tiles, flagstones, Remove floor)
+-   [x] **Orders** (18 of 18; AX-1: Uninstall into a crated building and Reinstall, trees-only Chop wood, Slaughter, Claim, Strip, Open)
+-   [x] **Zone/area** (15 of 15; AX-1: Delete zone and the two roof-area clear tools)
+-   [x] **Structure** (9 of 9; AX-2: 2-wide ornate door, roof-holding column that walls no room, animal flap shut to people; walls in silver, gold, plasteel, uranium and jade)
+-   [x] **Production** (25 of 25; AX-4: deep drill over the deep ore a ground scan finds, electric crematorium's corpse-burning bill)
+-   [-] **Furniture** (33 of 35; AX-2: the 1x2 table (old 1x1 tables migrate) and 2x2/2x4/3x3 tables on one card family, couch, small shelf, wall torch, wall lamp, flood light, plant pot, urn (found in ruins), double sleeping spot, animal sleeping box; a grower sows the plant pot; missing the two bookcases)
+-   [x] **Power** (PLAY-021: conduit, hidden conduit, switch, four generators, battery; AX-4: waterproof conduit over shallow water, chemfuel generator, watermill on the map's flowing river)
+-   [-] **Security** (15 of 15 work; AX-5: foam and warhead charges, foam turret, rocket battery; missing: the rocket battery's manual activation and per-rocket tile spread)
+-   [-] **Misc/ship** (Misc 16 of 21, AX-5 foam popper, AX-4 ground-penetrating scanner and moisture pump, AX-2 egg box and large and grand steles; Ship 0 of 6, all placeholders)
+-   [x] **Floors** (STK-AG: wood floor, entrance carpet, Smooth; AX-3: straw matting, concrete, paved tile, steel, silver, gold and sterile tile, stone tiles and flagstones (one card each with a stone picker), and the colour-picked carpet floor; AX-1: Remove floor)
 -   [-] **Recreation** (STK-AG: horseshoe pin only; 9 placeholders)
 -   [x] **Temperature** (STK-AG: campfire, heater, cooler, passive cooler, vent)
     -   Categories may use original naming.

@@ -170,6 +170,9 @@ type Ruin struct {
 	Loot           []Loot
 	// Rubble are stone chunks scattered in and around the ruin.
 	Rubble []ChunkSpawn
+	// Urns (A2) stand in a shed: an antique never built, only found (or
+	// traded); Stuff is the ruin's wall material.
+	Urns []RuinFloor
 }
 
 // Casket is a sealed sleeper casket in a vault (MAPGEN-3): its top cell
@@ -236,6 +239,9 @@ type Result struct {
 	Bridges []Point
 	// Ocean marks open-sea water (the coast), which is never bridged.
 	Ocean []bool
+	// River (AX-4) is each river water cell's flow, downstream: Dir8+1
+	// (1 N, 2 NE, ... 8 NW; 0 still or dry). Nil without a river.
+	River []uint8
 	// Vaults are the sealed vaults (MAPGEN-3).
 	Vaults []Vault
 	// Start is the landing spot.
@@ -253,6 +259,11 @@ var ErrSize = errors.New("mapgen: map size must be positive")
 func (c *Ctx) Finish() Result {
 	r := *c.R
 	r.W, r.H = c.W, c.H
+	for i := range r.River { // AX-4: only water flows (later passes may have filled a channel cell)
+		if !terrain.IsWater(r.Terrain.Cells[i]) {
+			r.River[i] = 0
+		}
+	}
 	if c.Cfg.Debug {
 		r.Fields = c.F
 	}

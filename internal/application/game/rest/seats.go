@@ -41,10 +41,9 @@ const (
 
 type seatSpot struct{ x, y, score int }
 
-// IsSeat reports a piece a pawn sits on: dining chair, stool, armchair.
-func IsSeat(k construction.Kind) bool {
-	return k == construction.Chair || k == construction.Stool || k == construction.Armchair
-}
+// IsSeat reports a piece a pawn sits on: dining chair, stool, armchair,
+// and a couch (A2: a seat on each of its two cells).
+func IsSeat(k construction.Kind) bool { return construction.Seats(k) > 0 && !k.IsTable() }
 
 // ComfortAt is the comfort (permille) of the seat on (x, y); ok false
 // when there is none (a forbidden seat is still sat on by whoever is on
@@ -63,18 +62,20 @@ func (s *Seats) ComfortAt(x, y int) (comfort int, ok bool) {
 func seatBonus(comfort int) int { return max(0, comfort/100-1) }
 
 // AtTable is the best free place for pawn id to eat food lying at
-// (fx, fy): a seat next to a table, else any free floor beside one, by
-// distance less the seat's bonus; ties go to the upper-left cell. Only
-// the eight best are tried for reach.
+// (fx, fy): a seat next to a table (any size: a cell along each side of
+// it, construction.SeatCells, so a table seats construction.Seats
+// diners), else any free floor beside one, by distance less the seat's
+// bonus; ties go to the upper-left cell. Only the eight best are tried
+// for reach.
 func (s *Seats) AtTable(id entity.EntityID, fx, fy int) (x, y int, ok bool) {
 	spots := s.scratch[:0]
 	for _, bid := range s.h.BuildingIDs() {
 		b, ok := s.h.Building(bid)
-		if !ok || b.Kind != construction.Table {
+		if !ok || !b.Kind.IsTable() {
 			continue
 		}
-		for _, d := range [4][2]int{{0, 1}, {1, 0}, {-1, 0}, {0, -1}} {
-			x, y := b.X+d[0], b.Y+d[1]
+		for _, c := range construction.SeatCells(b.Kind, b.Facing, b.X, b.Y) {
+			x, y := c[0], c[1]
 			if !s.h.TileFree(id, x, y) {
 				continue
 			}
@@ -135,15 +136,21 @@ func (s *Seats) best(id entity.EntityID) (x, y int, ok bool) {
 	bestScore := 1 << 30
 	for _, bid := range s.h.BuildingIDs() {
 		b, has := s.h.Building(bid)
-		if !has || !IsSeat(b.Kind) || b.Forbidden || !s.h.AreaAllows(id, b.X, b.Y) || !s.h.TileFree(id, b.X, b.Y) {
+		if !has || !IsSeat(b.Kind) || b.Forbidden {
 			continue
 		}
-		d := pathing.Dist(px, py, b.X, b.Y)
-		if d > seatReach {
-			continue
-		}
-		if sc := d - seatBonus(construction.FurnitureOf(b.Kind, b.Stuff, qualityOf(b)).Comfort); sc < bestScore {
-			x, y, bestScore = b.X, b.Y, sc
+		cells, n := construction.SmallFootprint(b.Kind, b.Facing, b.X, b.Y) // A2: a couch seats two
+		for _, c := range cells[:n] {
+			if !s.h.AreaAllows(id, c[0], c[1]) || !s.h.TileFree(id, c[0], c[1]) {
+				continue
+			}
+			d := pathing.Dist(px, py, c[0], c[1])
+			if d > seatReach {
+				continue
+			}
+			if sc := d - seatBonus(construction.FurnitureOf(b.Kind, b.Stuff, qualityOf(b)).Comfort); sc < bestScore {
+				x, y, bestScore = c[0], c[1], sc
+			}
 		}
 	}
 	return x, y, bestScore < 1<<30 && s.h.Reachable(id, x, y)

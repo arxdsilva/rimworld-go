@@ -69,6 +69,14 @@ var stuffs = [numKinds]StuffProps{
 	// Sheep wool stands for every wool.
 	Wool: {Value: 2700, MaxHP: 1000, BeautyFactor: 1500, ArmorSharp: 360, ArmorHeat: 1100,
 		ColdInsulation: 260, HeatInsulation: 100, WorkToMake: 1000, Flammability: 1700},
+	// A2 (wall materials), wiki: Materials, Plasteel, Uranium, Jade; the
+	// melee and armor factors marked orig are unconfirmed (original tuning).
+	Plasteel: {Value: 9000, MaxHP: 2800, BeautyFactor: 1000, SharpDamage: 1100, BluntDamage: 900,
+		ArmorSharp: 1140, ArmorBlunt: 450, ArmorHeat: 600, ColdInsulation: 30, WorkToMake: 1400, Immune: true}, // orig: melee, armor
+	Uranium: {Value: 6000, MaxHP: 2500, BeautyFactor: 1000, SharpDamage: 400, BluntDamage: 1500,
+		ArmorSharp: 750, ArmorBlunt: 1250, ArmorHeat: 600, ColdInsulation: 30, WorkToMake: 1600, Immune: true}, // orig: melee, armor
+	Jade: {Value: 5000, MaxHP: 500, BeautyFactor: 3000, BeautyOffset: 10, SharpDamage: 450, BluntDamage: 1000,
+		WorkToMake: 1500, Immune: true}, // orig: melee
 }
 
 // stuffCats is each material's family.
@@ -76,6 +84,7 @@ var stuffCats = [numKinds]StuffCategory{
 	Wood: Woody, Steel: Metallic, Silver: Metallic, Gold: Metallic,
 	GraniteBlocks: Stony, SandstoneBlocks: Stony, LimestoneBlocks: Stony, SlateBlocks: Stony, MarbleBlocks: Stony,
 	Cloth: Fabric, Wool: Fabric, Leather: Leathery,
+	Plasteel: Metallic, Uranium: Metallic, Jade: Stony, // A2: wall materials
 }
 
 // StuffCategory is material k's family (0: k is no material).

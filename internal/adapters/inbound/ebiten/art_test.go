@@ -144,7 +144,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"plant/berry_bush_harvestable_v0", "plant/berry_bush_harvestable_v1", "overlay/grow_zone",
 		worldpkg.ItemSprite("food"), worldpkg.ItemSprite("berries"), worldpkg.ItemSprite("meat"),
 		worldpkg.ItemSprite("meal"), worldpkg.ItemSprite("stone"), "rock/rock_wall_15", "terrain/stone_edge_15",
-		"structure/wall_stone_15", "structure/floor_stone",
+		"structure/wall_stone_15", "structure/floor_stone_tile_granite",
 		"structure/frame_1x1", "item/wood_pile", "item/food_crate", "overlay/stockpile",
 		"overlay/blueprint", "overlay/selection", "overlay/designation_harvest",
 		"overlay/designation_deconstruct", "ui_icon/draft", "overlay/designation_hunt",
@@ -192,6 +192,9 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	}
 	keys = append(keys, worldpkg.ItemSprite("granite chunk"), worldpkg.ItemSprite("marble blocks"), worldpkg.ItemSprite("steel"),
 		worldpkg.ItemSprite("silver"), worldpkg.ItemSprite("gold"), worldpkg.SmoothMarkKey)
+	for _, stone := range []string{"granite", "limestone", "marble", "sandstone", "slate"} { // AX-3: a floor per stone
+		keys = append(keys, worldpkg.FloorSprite("stone tile", stone+" blocks"), worldpkg.FloorSprite("flagstone", stone+" blocks"))
+	}
 	keys = append(keys, ng1ArtKeys()...) // water, mud, track, caves, pods, components, medicine, cabinet, hospital bed
 	for f := artpkg.FaceSouth; f <= artpkg.FaceWest; f++ {
 		keys = append(keys, "furniture/bed_basic_blanket_"+f.String())

@@ -119,6 +119,9 @@ func TestBuildingFlammability(t *testing.T) {
 		{construction.Door, item.Steel, 0},
 		{construction.Wall, item.Food, 700}, // legacy zero stuff: the default, wood
 		{construction.Carpet, item.CarpetCloth, 800},
+		{construction.CarpetFloor, item.Cloth, 800}, // AX-3
+		{construction.StrawMatting, item.Hay, 1000},
+		{construction.SterileTile, item.Steel, 0},
 		{construction.Campfire, item.Wood, 0},
 		{construction.Grave, item.Wood, 0},
 		{construction.SteamVent, item.Food, 0},

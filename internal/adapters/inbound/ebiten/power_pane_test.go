@@ -330,7 +330,7 @@ func TestPowerCommandsComeBeforeMoveAndKeepTheirHotkeyLabel(t *testing.T) {
 	t.Parallel()
 	a, _, _ := pwrApp(t, 0, pwrHeater())
 	ids := strings.Join(bldCmdIDs(a.insp.Building().BuildingCommands(10)), ",")
-	if ids != "cmd.power.toggle,cmd.power.temp_down,cmd.power.temp_up,bldg.move,bldg.copy,bldg.deconstruct" {
+	if ids != "cmd.power.toggle,cmd.power.temp_down,cmd.power.temp_up,bldg.move,bldg.copy,cmd.bldg.uninstall,bldg.deconstruct" {
 		t.Fatalf("heater commands = %s", ids)
 	}
 	c, _ := bldCmd(a.insp.Building().BuildingCommands(10), "cmd.power.toggle")

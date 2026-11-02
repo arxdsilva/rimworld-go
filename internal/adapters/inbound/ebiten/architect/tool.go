@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/floors"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/input"
 )
@@ -36,6 +37,7 @@ type Tool struct {
 	Facing         uint8
 	Stuff          string // picked material ("wood", "granite blocks", "steel", a carpet)
 	Crop           string // crop the growing-zone tool sows
+	Colour         string // picked carpet floor colour (AX-3, colour.go)
 	Drag           bool
 	X0, Y0, X1, Y1 int  // the drag box, in tiles
 	Ctrl           bool // Ctrl held: the drag box is square (drawstyle.go)
@@ -206,11 +208,14 @@ func TooltipLines(d ToolDef, stuff string, wood, stock int) []string {
 		lines = append(lines, carpetStockLine(stuff, stock))
 		return append(lines, "Tip: lay it on the tile just inside a door")
 	}
-	cost := fmt.Sprintf("Cost: %d %s", bv.Wood, stuff)
+	cost := fmt.Sprintf("Cost: %d %s", costOf(bv, stuff), stuff)
 	if n := componentsOf(bv); n > 0 {
 		cost += fmt.Sprintf(" + %d %s", n, componentWord(n))
 	}
 	lines = append(lines, fmt.Sprintf("%s   Work: %d", cost, bv.Work))
+	if fl := floors.Line(d.Build, stuff); fl != "" { // AX-3: what a cell gives its room
+		lines = append(lines, fl)
+	}
 	if pl := PowerLine(bv); pl != "" { // PLAY-021: draw, output or store
 		lines = append(lines, pl)
 	}
@@ -354,6 +359,10 @@ func (t *Tool) SelectTool(id string) {
 	t.desc.dflt = "" // the player is working in the open category
 	t.Cat = d.Category
 	defer t.sh.SyncOverlays()
+	if cur, ok := ToolByID(t.ToolID); ok && d.Family != "" && cur.Family == d.Family {
+		t.ToolID, t.Drag = NextInFamily(cur), false // A2: the family's next member, after the last none
+		return
+	}
 	if t.ToolID == id {
 		t.ToolID = "" // clicking the selected card toggles it off
 		return
@@ -411,6 +420,7 @@ func (t *Tool) Draw(screen *ebiten.Image) {
 	mx, my := t.sh.Cursor()
 	for _, b := range t.Buttons() {
 		uikit.DrawButton(screen, b, b.Contains(mx, my))
+		t.drawSwatch(screen, b) // colour.go: a carpet colour's fill
 	}
 }
 
@@ -514,13 +524,14 @@ func (t *Tool) PreviewCells() (ToolDef, []GhostCell) {
 	}
 	out := make([]GhostCell, 0, len(cells))
 	stuff := t.ToolStuff(d)
+	painted := t.paintedSame(d) // colour.go: carpet floors already in the picked colour
 	for _, c := range cells {
 		fc := FacingNames[t.Facing]
 		ok, reason := sim.CanPlaceAt(d.Build, stuff, fc, c[0], c[1])
 		gc := GhostCell{X: c[0], Y: c[1], OK: ok, Reason: reason,
 			Facing: sim.AutoFacingAt(d.Build, fc, c[0], c[1])}
-		if !ok && reason == game.ReasonSame {
-			gc.Same, gc.Reason = true, ""
+		if !ok && reason == game.ReasonSame || painted[[2]int{c[0], c[1]}] {
+			gc.OK, gc.Same, gc.Reason = false, true, ""
 		}
 		if ok {
 			gc.Replaces = sim.ReplacesAt(d.Build, stuff, c[0], c[1])
@@ -598,9 +609,13 @@ func (t *Tool) Submit() {
 		return
 	}
 	stuff, _ := game.StuffID(t.ToolStuff(d))
+	colour := 0
+	if ColourTool(d) {
+		colour = ColourIndex(t.ToolColour()) // AX-3: the carpet floor's colour
+	}
 	for _, c := range cells {
 		if c.OK && !c.Same {
-			t.sh.Enqueue(command.Command{Kind: command.DesignateBuild, Build: id, Facing: t.Facing, Stuff: stuff, X: c.X, Y: c.Y})
+			t.sh.Enqueue(command.Command{Kind: command.DesignateBuild, Build: id, Facing: t.Facing, Stuff: stuff, X: c.X, Y: c.Y, Index: colour})
 		}
 	}
 }

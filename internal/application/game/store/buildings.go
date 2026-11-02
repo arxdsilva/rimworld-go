@@ -19,8 +19,13 @@ type Buildings struct{}
 // settings a new one starts with (ok false for any other building).
 func ZoneKind(k construction.Kind) (zone.Kind, zone.Zone, bool) {
 	switch k {
-	case construction.Shelf:
+	case construction.Shelf, construction.SmallShelf: // A2: the small shelf is a 1x1 shelf (wiki: Small shelf)
 		return zone.KindShelf, zone.NewShelf(), true
+	case construction.EggBox: // A2, wiki: Egg box: a shelf for eggs, where layers lay
+		z := zone.NewShelf()
+		z.SetAllowed(zone.Universe(zone.KindShelf), false)
+		z.SetAllowed(zone.Filter{}.With(item.Egg, true).With(item.FertileEgg, true), true)
+		return zone.KindShelf, z, true
 	case construction.Hopper:
 		return zone.KindHopper, zone.NewHopper(), true
 	case construction.Grave, construction.Sarcophagus:

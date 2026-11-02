@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; forbid on items, doors and beds (UI-016, CBT-5, STK-AL); PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too; SIM-062: rescue, capture, arrest and prioritize tending on the clicked pawn from the right-click menu)
+-   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; forbid on items, doors and beds (UI-016, CBT-5, STK-AL); PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too; SIM-062: rescue, capture, arrest and prioritize tending on the clicked pawn from the right-click menu; AX-1: Uninstall on a building, Reinstall on its crate (a ghost placement), Open on a filled grave, Strip on a downed person)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -405,7 +405,7 @@ the player's primary world-editing command surface.
     -   Miscellaneous/endgame.
     -   Floors, Recreation, Ship, Temperature (STK-AG).
     -   Categories appear only when content exists/unlocked. (STK-AG: replaced by the vanilla rule, every category always shown; a missing item is a greyed placeholder.)
--   [-] **Build option cards/buttons** (wave E U5: shelf under Furniture; icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice; wave D U4: 24 new ToolDefs, production benches, furniture and security entries plus the powered door under Structure, with BuildSprite cases; STK-AG: every core vanilla Architect item has a card — 118 of 191 rows work (hydroponics basin and sun lamp cards added), the other 73 are 66 greyed placeholder cards with "Not in this game yet" and an original sentence, never placeable; material choice is still missing for grouped families such as carpet colours and flagstones)
+-   [-] **Build option cards/buttons** (wave E U5: shelf under Furniture; icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice; wave D U4: 24 new ToolDefs, production benches, furniture and security entries plus the powered door under Structure, with BuildSprite cases; STK-AG: every core vanilla Architect item has a card — 118 of 191 rows work (hydroponics basin and sun lamp cards added), the other 73 are 66 greyed placeholder cards with "Not in this game yet" and an original sentence, never placeable; AX-3: the stone tile and flagstone cards have a stone picker and the carpet floor card a colour picker; the tables still lack a size choice)
     -   Icon.
     -   name.
     -   material requirement.
@@ -444,9 +444,9 @@ the player's primary world-editing command surface.
 -   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
 -   [x] **Forbid/unforbid** (Orders › Forbid/Allow area tools, the item panel button and F on the selection, UI-016; STK-AL: F on a selected door or bed, the forbidden marker on buildings, Mark for hauling allows a forbidden stack)
 -   [x] **Haul things** (PLAY-017: Orders › Haul things marks items found on the map for hauling; item panel and group buttons, "Found here" line, a haul mark on the map; Cancel unmarks)
--   [ ] **Remove floor**
+-   [x] **Remove floor** (AX-1: Floors › Remove floor marks floors only; half the material back, nothing for flagstone)
 -   [x] **Remove roof** (SIM-018)
--   [ ] **Claim structure where base-game semantics require it**
+-   [x] **Claim structure where base-game semantics require it** (AX-1: Orders › Claim makes ruins and ancient or raider-built pieces the colony's at once, Home area included)
 -   [x] **Smooth stone/floor equivalents if supported** (Orders › Smooth: rock walls without ore and rough stone floors, UI-017/SIM-029)
 
 ## 5.4 Designation feedback

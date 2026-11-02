@@ -33,7 +33,7 @@ func TestRifleHitBleeds(t *testing.T) {
 	if b == nil || len(b.Wounds) != 1 || b.Wounds[0].Kind != body.Gunshot || body.BleedRate(b.Wounds[0]) == 0 {
 		t.Fatalf("a rifle hit bleeds: %+v", b)
 	}
-	if woundKindLabel(body.Gunshot) != "gunshot" || woundKindLabel(body.Stab) != "stab" {
+	if body.WoundKindLabel(body.Gunshot) != "gunshot" || body.WoundKindLabel(body.Stab) != "stab" {
 		t.Fatal("the Health tab names the new wounds")
 	}
 }

@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 )
 
@@ -41,6 +42,9 @@ func (t *Tool) ToolLock(d ToolDef) string {
 	if d.Build == "" {
 		return ""
 	}
+	if bv, ok := Buildable(d.Build); ok && construction.DefOf(construction.Kind(bv.ID)).Unbuildable {
+		return UnbuildableReason // AX-0: an urn, found or traded, never built
+	}
 	if sim := t.sim(); sim != nil {
 		if why := t.locks.get(sim, t.sh.Tick(), d.Build); why != "" {
 			return why
@@ -52,12 +56,25 @@ func (t *Tool) ToolLock(d ToolDef) string {
 	return ""
 }
 
+// UnbuildableReason is the card lock of a kind never built (A2: the urn;
+// construction.Def.Unbuildable).
+const UnbuildableReason = "Found in ruins, never built"
+
 // LockWord is the card's second line for a locked tool.
 func LockWord(reason string) string {
 	if strings.HasPrefix(reason, "Needs research") {
 		return "needs research"
 	}
 	return "locked"
+}
+
+// costOf is building bv's material count in stuff: ten times for a
+// silver, gold or jade wall (A2, construction.CostFor).
+func costOf(bv game.BuildableView, stuff string) int {
+	if s, ok := item.ParseKind(stuff); ok {
+		return construction.CostFor(construction.Kind(bv.ID), s)
+	}
+	return bv.Wood
 }
 
 // componentsOf is how many components building bv needs besides its

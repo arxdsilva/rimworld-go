@@ -136,10 +136,23 @@ func projectileMarks(out []overlay.ProjectileMark, shots []projectile.View, alph
 		out = append(out, overlay.ProjectileMark{
 			X:  (float64(s.X) + 500 + float64(s.VX)*alpha) / 1000,
 			Y:  (float64(s.Y) + 500 + float64(s.VY)*alpha) / 1000,
-			DX: dx, DY: dy, Kind: "bullet",
+			DX: dx, DY: dy, Kind: projectileKind(s.Weapon),
 		})
 	}
 	return out
+}
+
+// projectileKind is how a shot of the weapon named w is drawn: the AX-5
+// rocket battery's rockets and foam turret's blobs as sprites, the rest as
+// a bullet's streak.
+func projectileKind(w string) string {
+	switch w {
+	case "rocket battery":
+		return overlay.ProjectileRocket
+	case "foam turret":
+		return overlay.ProjectileFoam
+	}
+	return "bullet"
 }
 
 // weaponReach is the reach of the weapon named name (fists when unknown).

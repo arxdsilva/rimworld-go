@@ -381,6 +381,8 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.sel.Clear(selectionpkg.None)
 	case ports.CenterOnPawn:
 		a.centreOnPawn(it.ID)
+	case ports.ReinstallCrate:
+		a.arch.Mover.StartCrate(it.ID) // move_mode.go, reinstall.go (AX-1)
 	case ports.Push:
 		a.apply(intent{kind: intentPush, screen: it.Screen})
 	case ports.Back:
@@ -489,6 +491,7 @@ func clickRoutes() []clickRoute {
 		on(ids.PrefixArchCat, func(a *App, id string) { a.arch.SelectCategory(strings.TrimPrefix(id, ids.PrefixArchCat)) }),
 		on(ids.PrefixArchStuff, func(a *App, id string) { a.arch.Stuff = strings.TrimPrefix(id, ids.PrefixArchStuff) }),
 		on(ids.PrefixArchCrop, func(a *App, id string) { a.arch.Crop = strings.TrimPrefix(id, ids.PrefixArchCrop) }),
+		on(ids.PrefixArchColour, func(a *App, id string) { a.arch.Colour = strings.TrimPrefix(id, ids.PrefixArchColour) }), // AX-3
 		on(ids.PrefixArchTool, func(a *App, id string) { a.arch.SelectTool(strings.TrimPrefix(id, ids.PrefixArchTool)) }),
 		on(ids.PrefixFloat, (*App).chooseFloat), // orders.go
 		on(ids.PrefixLoadSlot, func(a *App, id string) {

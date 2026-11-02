@@ -1,0 +1,29 @@
+# AX art (AR1, 2026-11-01): wall materials (jade, plasteel, uranium and the
+# silver/gold trims), floors (concrete, paved tile, sterile tile, carpet
+# neutrals), clay plant pots and the flood light. Original colours.
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+# The carpet neutrals are near-white like stone_neutral: the renderer
+# multiplies the carpet floor by its colour (no mask, the whole tile).
+version: 1
+materials:
+  jade:            {light: "#93b89c", base: "#79a286", shadow: "#5c7f69"}
+  jade_dark:       {light: "#628a71", base: "#50735d", shadow: "#3d5948"}
+  plasteel_wall:   {light: "#c4ccd3", base: "#abb6bf", shadow: "#85919c"}
+  plasteel_trim:   {light: "#7f8c97", base: "#697782", shadow: "#515c65"}
+  uranium_wall:    {light: "#737a66", base: "#626855", shadow: "#4a4f40"}
+  uranium_trim:    {light: "#4f5546", base: "#41463a", shadow: "#30342b"}
+  silver_trim:     {light: "#acb0b7", base: "#94989f", shadow: "#71757c"}
+  gold_trim:       {light: "#c9a35a", base: "#b18b45", shadow: "#866731"}
+  concrete:        {light: "#bfbcb5", base: "#afaba3", shadow: "#8e8b84"}
+  concrete_dark:   {light: "#a19d95", base: "#908c84", shadow: "#716e68"}
+  paver:           {light: "#b2a08c", base: "#a08e7a", shadow: "#7f7162"}
+  paver_alt:       {light: "#a69a8d", base: "#958a7d", shadow: "#766d63"}
+  grout:           {light: "#6f6962", base: "#5f5953", shadow: "#49443f"}
+  sterile:         {light: "#eff4f5", base: "#e3eaec", shadow: "#bac5c9"}
+  sterile_grout:   {light: "#bfcbcf", base: "#b0bec2", shadow: "#8e9ca1"}
+  carpet_neutral:  {light: "#f3f3f3", base: "#e5e5e5", shadow: "#bebebe"}
+  carpet_neutral_dark: {light: "#d2d2d2", base: "#c3c3c3", shadow: "#9f9f9f"}
+  clay:            {light: "#c18668", base: "#ad7257", shadow: "#875b44"}
+  clay_dark:       {light: "#8e5f47", base: "#7b503c", shadow: "#5e3d2e"}
+emissive:
+  flood_white:     "#fff3d2"

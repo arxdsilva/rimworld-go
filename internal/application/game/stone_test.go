@@ -257,12 +257,13 @@ func TestSoilLabel(t *testing.T) {
 func TestStuffNamesAndAlias(t *testing.T) {
 	t.Parallel()
 	for name, want := range map[string]item.Kind{"stone": item.GraniteBlocks, "granite blocks": item.GraniteBlocks,
-		"slate blocks": item.SlateBlocks, "steel": item.Steel, "wood": item.Wood} {
+		"slate blocks": item.SlateBlocks, "steel": item.Steel, "wood": item.Wood,
+		"gold": item.Gold, "hay": item.Hay} { // AX-3: gold tile, straw matting
 		if id, ok := StuffID(name); !ok || item.Kind(id) != want {
 			t.Errorf("StuffID(%q) = %d %v", name, id, ok)
 		}
 	}
-	for _, name := range []string{"granite chunk", "gold", "berries"} {
+	for _, name := range []string{"granite chunk", "meal", "berries"} {
 		if _, ok := StuffID(name); ok {
 			t.Errorf("%q is not a building material", name)
 		}

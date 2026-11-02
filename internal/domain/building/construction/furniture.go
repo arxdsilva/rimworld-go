@@ -51,6 +51,8 @@ var furniture = [kindCount]Furniture{
 	GrandSculpture: {Beauty: 400000},
 	// PRD-4, wiki: Shelf (beauty 0.5).
 	Shelf: {Beauty: 500},
+	// A2, wiki: Table (1x2, beauty 0.5).
+	Table: {Beauty: 500},
 	// AX-0 contract (inert while Planned), wiki infoboxes: A2 Double
 	// sleeping spot, Animal sleeping box, Couch, Table, Small shelf, Urn,
 	// Large/Grand stele, Ornate door, Column, Flood light; A4 and A5 the

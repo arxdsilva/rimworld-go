@@ -144,8 +144,8 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		if f.Kind == "carpet" {
 			p.drawSpriteCS(screen, BuildSpriteStuff(f.Kind, f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, sprite.BlueprintCS)
 		} else if f.Floor {
-			cs := sprite.MulCS(sprite.TintCS(p.stuffTint(f.Stuff)), sprite.BlueprintCS)
-			p.drawSpriteCS(screen, p.BuildKey("floor", f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, cs)
+			cs := sprite.MulCS(sprite.TintCS(p.floorTint(f.Kind, f.Stuff, f.AX.Colour)), sprite.BlueprintCS) // floor_keys.go
+			p.drawSpriteCS(screen, FloorSprite(f.Kind, f.Stuff), none, float64(f.X), float64(f.Y), tile, sw, sh, cs)
 		}
 	}
 
@@ -460,7 +460,7 @@ func (p *Pipeline) DrawFloorLayers(screen *ebiten.Image, w game.WorldView, sw, s
 					continue
 				}
 				if b := &w.Buildings[i]; b.Floor {
-					p.DrawTile(screen, p.BuildKey("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, sprite.TintCS(p.stuffTint(b.Stuff)))
+					p.DrawTile(screen, FloorSprite(b.Kind, b.Stuff), float64(b.X), float64(b.Y), tile, sw, sh, sprite.TintCS(p.floorTint(b.Kind, b.Stuff, b.AX.Colour))) // floor_keys.go
 				}
 			}
 		}

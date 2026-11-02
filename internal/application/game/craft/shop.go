@@ -63,7 +63,7 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 			if ElectricBench(b.Kind) && !h.Powered(bid) {
 				continue // PLAY-021: an electric bench works only on power
 			}
-			if d.ID == recipe.Cremate && h.FreeWood() < d.ExtraQty {
+			if BurnsWood(b.Kind, d) && h.FreeWood() < d.ExtraQty {
 				continue // no wood to burn the body with
 			}
 			if bl.SearchAt > h.Now() {
@@ -88,7 +88,7 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 				unreach = true
 				continue
 			}
-			rec.Dest, rec.DestX, rec.DestY, rec.WorkLeft, rec.BillIndex = bid, spot[0], spot[1], d.Work, i
+			rec.Dest, rec.DestX, rec.DestY, rec.WorkLeft, rec.BillIndex = bid, spot[0], spot[1], BillWork(b.Kind, d), i
 			if s.start(id, rec) {
 				return true
 			}

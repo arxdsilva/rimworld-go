@@ -50,7 +50,34 @@ const (
 const (
 	RoomClean = 500
 	RoomOther = 1000
+	// RoomSterile is a clean room floored in sterile tile (AX-3). wiki:
+	// Sterile tile (an infection chance factor of 30 %, against 50 % on
+	// other floors).
+	RoomSterile = 300
+	// sterileClean is the floor cleanliness (hundredths) of a room laid in
+	// sterile tile throughout. wiki: Sterile tile (+0.6).
+	sterileClean = 60
 )
+
+// RoomCleanFactor is the room factor of a clean room (roofed, floored,
+// without filth) whose floors give cleanliness floorClean (hundredths, the
+// cells' average): RoomClean on plain floors, falling linearly to
+// RoomSterile at sterile tile's +0.6 (AX-3; the line between the two wiki
+// points is original tuning, so a part-tiled room counts in part).
+func RoomCleanFactor(floorClean int32) int32 {
+	return RoomFactor(true, floorClean)
+}
+
+// RoomFactor is the room factor where a wound lies: RoomOther unless the
+// room is clean (roofed, fully floored, without filth), else
+// RoomCleanFactor of its floors' cleanliness floorClean.
+func RoomFactor(clean bool, floorClean int32) int32 {
+	if !clean {
+		return RoomOther
+	}
+	c := min(max(floorClean, 0), sterileClean)
+	return RoomClean - (RoomClean-RoomSterile)*c/sterileClean
+}
 
 // WoundChance is the permille chance a wound of kind festers: its base
 // chance × the tend factor (tendQ < 0: untended) × the room factor

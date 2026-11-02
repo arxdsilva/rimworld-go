@@ -44,14 +44,17 @@ func StuffStone(stuff string) string {
 	return ""
 }
 
-// StuffMaterial is the art material of a building stuff: wood, stone or
-// steel.
+// StuffMaterial is the art material of a building stuff: wood, stone,
+// steel, or a precious wall's own material (A2: silver, gold, plasteel,
+// uranium, jade).
 func StuffMaterial(stuff string) string {
 	switch {
 	case IsStoneStuff(stuff):
 		return "stone"
 	case stuff == "steel":
 		return "steel"
+	case stuff == "silver", stuff == "gold", stuff == "plasteel", stuff == "uranium", stuff == "jade": // A2: precious walls
+		return stuff
 	}
 	return "wood"
 }
@@ -63,6 +66,8 @@ func WallPrefix(stuff string) string {
 		return "structure/wall_stone"
 	case "steel":
 		return "structure/wall_steel"
+	case "silver", "gold", "plasteel", "uranium", "jade": // A2 (AR1's art)
+		return "structure/wall_" + StuffMaterial(stuff)
 	}
 	return "structure/wall_wood"
 }

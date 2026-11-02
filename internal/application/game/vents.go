@@ -37,7 +37,6 @@ type ventCache struct {
 	list  [][2]int
 
 	fuel fuelList
-	wind windCache
 }
 
 // ventList is every steam vent's top-left cell, in building order.

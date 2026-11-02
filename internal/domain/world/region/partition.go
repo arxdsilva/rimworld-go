@@ -17,6 +17,7 @@ const (
 	Fence                   // a fence post: shut to every animal
 	Gate                    // a fence gate: shut to wild animals
 	Trap                    // a spike trap: shut to sappers
+	Flap                    // an animal flap (A2): shut to people
 )
 
 const (

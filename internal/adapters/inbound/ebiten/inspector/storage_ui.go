@@ -31,7 +31,8 @@ const (
 )
 
 // storageKinds are the buildings with a Storage button.
-var storageKinds = map[string]bool{shelfKind: true, hopperKind: true, sarcophagusKind: true, graveKind: true}
+var storageKinds = map[string]bool{shelfKind: true, hopperKind: true, sarcophagusKind: true, graveKind: true,
+	smallShelfKind: true, eggBoxKind: true} // A2
 
 // storageZoneOf is the storage zone building b owns.
 func storageZoneOf(a Building, b game.BuildingView) (game.ZoneView, bool) {

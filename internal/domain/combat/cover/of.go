@@ -13,15 +13,16 @@ func OfBuilding(k construction.Kind) Kind {
 		return Sandbags
 	case construction.Barricade:
 		return Barricade
-	case construction.Wall:
+	case construction.Wall, construction.Column: // A2: a column is as solid as a wall
 		return Wall
-	case construction.Door, construction.Autodoor:
+	case construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap: // A2: every door
 		return Door
 	case construction.Fence, construction.FenceGate:
 		return Fence
 	case construction.Stool:
 		return Stool
-	case construction.Table, construction.Bed, construction.DoubleBed, construction.HospitalBed:
+	case construction.Table, construction.Table2x2, construction.Table2x4, construction.Table3x3, // A2: every table
+		construction.Bed, construction.DoubleBed, construction.HospitalBed:
 		return Table
 	case construction.Chair:
 		return Chair

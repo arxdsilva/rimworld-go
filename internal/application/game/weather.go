@@ -3,6 +3,7 @@ package game
 import (
 	"math"
 
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -110,13 +111,14 @@ func (g *Game) hasMemory(id entity.EntityID, k mood.Kind) bool {
 }
 
 // weatherSlow is base step ticks plus what rain, snow or a blizzard adds
-// on an outdoor tile, after the ground's own cost (SIM-023: marsh, sand
-// and ice are slow unless floored over; plain ground costs 100%).
+// on an outdoor tile, after the ground's own cost (SIM-023: marsh, sand and
+// ice are slow unless floored over; plain ground 100 %, a floor 87 %, AX-3).
 func (g *Game) weatherSlow(x, y int, base int) int {
 	base = g.fenceSlow(x, y, base) // fences.go: climbing over a fence
 	if c := g.terr.At(x, y).WalkCost(); c != 100 && g.treadAt(y*g.grid.Width()+x)&treadFloor == 0 {
 		base = (base*c + 99) / 100
 	}
+	base = (base*construction.FloorStepPct(g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerFloor))) + 50) / 100 // AX-3: floors are quicker than soil
 	// PLAY-010: a bramble thicket or elephant ears slow the step too
 	if c := g.plantWalkCost(x, y); c > 100 && g.treadAt(y*g.grid.Width()+x)&treadFloor == 0 {
 		base = (base*c + 99) / 100

@@ -230,8 +230,18 @@ var vaultNanomed = lootEntry{item.NanomedKit, 1, 3}
 
 const vaultNanomedPct = 4
 
+// vaultWarhead is the antimatter warhead (AX-5): it is never made or
+// sold, only found in an ancient shrine (or given for a quest, which this
+// game has none of), so a vault holds one on the vaultWarheadPct rolls
+// just above the nanomed kits', again taking no draw of its own. wiki:
+// Antigrain warhead; the chance is original tuning.
+var vaultWarhead = lootEntry{item.AntimatterWarhead, 1, 1}
+
+const vaultWarheadPct = 2
+
 // vaultLoot draws 3-6 stacks: a rifle (35%), one rare find (15%; nanomed
-// kits on 4%), and the rest from the base table.
+// kits on 4%, an antimatter warhead on 2%), and the rest from the base
+// table.
 func vaultLoot(rn *randx.Rand) []lootEntry {
 	n := 3 + rn.IntN(4)
 	var out []lootEntry
@@ -240,8 +250,11 @@ func vaultLoot(rn *randx.Rand) []lootEntry {
 	}
 	if r := rn.IntN(100); r < 15 {
 		find := lootEntry{vaultSpecials[rn.IntN(len(vaultSpecials))], 1, 1}
-		if r < vaultNanomedPct {
+		switch {
+		case r < vaultNanomedPct:
 			find = vaultNanomed
+		case r < vaultNanomedPct+vaultWarheadPct:
+			find = vaultWarhead
 		}
 		out = append(out, find)
 	}

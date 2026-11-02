@@ -262,11 +262,11 @@ func TestWindShareIsCachedPerStructRoofAndHour(t *testing.T) {
 	if got := g.genOutput(id); got != 500 {
 		t.Fatalf("baseline %d", got)
 	}
-	builds := g.vents.wind.builds
+	builds := g.br.ind.WindBuilds()
 	for range 5 {
 		_ = g.genOutput(id)
 	}
-	if g.vents.wind.builds != builds {
+	if g.br.ind.WindBuilds() != builds {
 		t.Fatal("the band was re-scanned with nothing changed")
 	}
 

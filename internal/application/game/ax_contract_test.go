@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game/axview"
@@ -11,8 +12,8 @@ import (
 
 // TestAxContractPlannedKindsCannotBeBuilt (AX-0): a Planned kind and an
 // Unbuildable one place no blueprint, while a live kind on the same cell
-// does; every AX research project unlocks only Planned kinds, so nothing
-// it opens is buildable before its owner makes it real.
+// does; every AX research project unlocks only AX kinds (each Planned, so
+// unbuildable, until its owner makes it real).
 func TestAxContractPlannedKindsCannotBeBuilt(t *testing.T) {
 	t.Parallel()
 	g := NewColony(Config{Seed: 7, Width: 40, Height: 40})
@@ -29,7 +30,10 @@ func TestAxContractPlannedKindsCannotBeBuilt(t *testing.T) {
 		t.Fatal("no free cell")
 	}
 	n := len(g.frameIDs)
-	for _, k := range []construction.Kind{construction.SmallShelf, construction.Urn, construction.HitchingSpot, construction.StoneTile} {
+	for k := construction.Kind(0); k.Valid(); k++ { // owners unplan their kinds as they go live (AX-2 on)
+		if !k.Planned() && !construction.DefOf(k).Unbuildable {
+			continue
+		}
 		g.placeFrameStuff(k, construction.DefaultStuff(k), construction.South, x, y)
 		if len(g.frameIDs) != n {
 			t.Fatalf("%s placed a blueprint while planned", k)
@@ -41,9 +45,12 @@ func TestAxContractPlannedKindsCannotBeBuilt(t *testing.T) {
 	}
 	for p := research.WaterPower; p < research.NumProjects; p++ {
 		for _, u := range research.DefOf(p).Unlocks {
+			if !strings.HasPrefix(u, "build:") {
+				continue // AX-5: Fire foam also unlocks the foam shell recipe
+			}
 			k, ok := construction.Parse(u[len("build:"):])
-			if !ok || !k.Planned() {
-				t.Errorf("%s unlocks %q, not a planned AX kind", research.DefOf(p).Name, u)
+			if !ok || k <= construction.MultiAnalyzer {
+				t.Errorf("%s unlocks %q, not an AX kind", research.DefOf(p).Name, u)
 			}
 		}
 	}

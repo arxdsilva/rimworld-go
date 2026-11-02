@@ -74,8 +74,21 @@ const (
 	ChargeRifle
 	ChargeLance
 	Ikwa
+	// AX-5 (append only, saved in shots and logs): fired by buildings or
+	// set off where they lie, never carried. MortarFoam is the mortar
+	// lobbing a foam shell; FoamSpray the foam turret's nozzle;
+	// SwarmRocket the rocket battery's rocket; Warhead the antimatter
+	// warhead going off (a warhead charge or a cooking-off warhead).
+	MortarFoam
+	FoamSpray
+	SwarmRocket
+	Warhead
 	numKinds
 )
+
+// lastCarried is the last carried weapon of the CBT-3 gear (the kinds
+// after it are AX-5's building weapons).
+const lastCarried = Ikwa
 
 // lastCatalogue is the last carried weapon of the DEF-2 catalogue (the
 // kinds after it are building and mechanoid guns).
@@ -229,7 +242,43 @@ var defs = [numKinds]Def{
 	ChargeLance:          ranged("charge lance", 30, 450, 102, 162, 32, 1, 0, 650, 850, 850, 750, 120),
 	// The ikwa's main attack is its head (15 stab, 22 %, 2 s; ikwaTools).
 	Ikwa: {Name: "ikwa", Range: 1, Damage: 15, Cooldown: 120, Accuracy: 85, Burst: 1, ArmorPen: 220, DamageType: damage.Sharp},
+
+	// AX-5. The foam shell bursts in foam over 5 tiles (wiki: Firefoam
+	// shell). The foam turret sprays 41 blobs 2 ticks apart at 27 cells/s
+	// over 19.9 tiles, then waits 3600 ticks (wiki: Foam turret); each
+	// blob smothers 1.9 tiles (original tuning: the wiki gives none). The
+	// rocket battery fires 12 rockets 10 ticks apart after a 60-tick aim,
+	// 24 bomb at 36 % AP in 2.9 tiles, forced miss 5.75, 38 cells/s over
+	// 29.9 tiles; its Cooldown is the text's 7200-tick recharge after a
+	// volley, not the infobox's 210 (the page conflicts; the recharge is
+	// the rule a player meets, and a volley empties it anyway). wiki:
+	// Rocketswarm launcher. The antimatter warhead: 550 bomb at 130 % AP
+	// over 14.9 tiles, 110 at the edge, ~22 % of its cells alight. wiki:
+	// Antigrain warhead
+	MortarFoam: mortar(explosion.Def{Kind: explosion.Foam, Radius: 5000}),
+	FoamSpray: {Name: "foam turret", Ranged: true, Range: 19, Cooldown: FoamCooldown, Burst: 41, BurstTicks: 2, Accuracy: 100,
+		DamageType: damage.Blunt, Speed: 27 * 1000 / 60, Blast: explosion.Def{Kind: explosion.Foam, Radius: 1900}},
+	SwarmRocket: {Name: "rocket battery", Ranged: true, Range: 29, Damage: 24, ArmorPen: 360, Warmup: 60, Cooldown: RocketRecharge,
+		Burst: 12, BurstTicks: 10, Accuracy: 100, DamageType: damage.Bomb, Speed: 38 * 1000 / 60,
+		Blast: explosion.Def{Kind: explosion.Bomb, Radius: 2900, Damage: 24, Pen: 360}, ForcedMiss: 5750},
+	Warhead: warheadShell(),
 }
+
+// warheadShell is the antimatter warhead: lobbed by a mortar like any
+// shell (wiki: Antigrain warhead, a mortar shell), and the blast of a
+// warhead charge or a cooking-off warhead. It keeps its own name in logs.
+func warheadShell() Def {
+	d := mortar(explosion.Def{Kind: explosion.Bomb, Radius: 14900, Damage: 550, Pen: 1300, Rim: 200, Fire: 220})
+	d.Name = "antimatter warhead"
+	return d
+}
+
+// The AX-5 building weapons' waits. wiki: Foam turret (3600 ticks),
+// Rocketswarm launcher (7200, the text's recharge)
+const (
+	FoamCooldown   = 3600
+	RocketRecharge = 7200
+)
 
 // launcher is a rocket launcher: its blast radius and forced-miss radius
 // (thousandths of a tile), rockets per trigger pull and the ticks between
@@ -273,10 +322,21 @@ func mortar(b explosion.Def) Def {
 // ForShell is the mortar weapon that lobs shell kind k (ok false: no
 // shell).
 func ForShell(k item.Kind) (Kind, bool) {
-	if !k.IsShell() {
-		return Fists, false
+	switch k {
+	case item.MortarShells:
+		return MortarHE, true
+	case item.IncendiaryShells:
+		return MortarIncendiary, true
+	case item.EMPShells:
+		return MortarEMP, true
+	case item.SmokeShells:
+		return MortarSmoke, true
+	case item.FoamShells: // AX-5
+		return MortarFoam, true
+	case item.AntimatterWarhead: // AX-5, wiki: Antigrain warhead
+		return Warhead, true
 	}
-	return MortarHE + Kind(k-item.MortarShells), true
+	return Fists, false
 }
 
 // ranged is a banded gun or bow: name, damage, armor penetration

@@ -13,7 +13,7 @@ func axMaxHP(k Kind) (int, bool) {
 		return 160, true
 	case AnimalFlap:
 		return 20, true
-	case AnimalSleepingBox, PlantPot:
+	case AnimalSleepingBox, PlantPot, Table: // wiki: Table (1x2) 75
 		return 75, true
 	case Table2x2, RingToss, ChessTable, Bookcase:
 		return 100, true

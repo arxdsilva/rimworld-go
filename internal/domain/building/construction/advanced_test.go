@@ -85,7 +85,7 @@ func TestComponentFramesWait(t *testing.T) {
 
 func TestSteelFurniture(t *testing.T) {
 	t.Parallel()
-	for _, k := range []Kind{Table, Chair, Bed, DoubleBed} {
+	for _, k := range []Kind{Chair, Bed, DoubleBed} { // A2: the table takes stone too (wiki: Table)
 		if !StuffOK(k, item.Steel) || !StuffOK(k, item.Wood) || StuffOK(k, item.GraniteBlocks) {
 			t.Errorf("%s: wood or steel, not stone", k)
 		}

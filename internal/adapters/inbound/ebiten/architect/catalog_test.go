@@ -150,7 +150,7 @@ func TestBuildSpriteKeys(t *testing.T) {
 		{world.BuildSprite("power switch", "", 0, false, true), "power/power_switch_off"},
 		{world.BuildSprite("battery", "north", 0, false, false), "power/battery_north"},
 		{world.BuildSpriteStuff("door", "steel", "", 0, false, false), "structure/door_steel_ns_closed"},
-		{world.BuildSpriteStuff("floor", "granite blocks", "", 0, false, false), "structure/floor_stone"},
+		{world.BuildSpriteStuff("floor", "granite blocks", "", 0, false, false), "structure/floor_stone_tile_granite"},
 		{world.BuildSpriteStuff("carpet", "cloth carpet", "", 0, false, false), "furniture/carpet_cloth"},
 		{world.BuildSpriteStuff("carpet", "silk", "", 0, false, false), "furniture/carpet_straw"},
 		{world.BuildSprite("no such kind", "", 0, false, false), ""},

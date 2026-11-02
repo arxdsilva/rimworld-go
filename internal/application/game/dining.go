@@ -21,7 +21,7 @@ func (g *Game) nextToTable(x, y int) bool {
 				continue
 			}
 			bid := g.layerBldgAt(x+dx, y+dy, construction.LayerObject)
-			if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Table {
+			if b, ok := g.bldgs.Get(bid); ok && b.Kind.IsTable() {
 				return true
 			}
 		}

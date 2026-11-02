@@ -56,11 +56,11 @@ func TestPowerArchitectTools(t *testing.T) {
 		}
 	}
 	want := []string{"conduit", "hidden_conduit", "power_switch", "wood_generator", "solar_panel", "wind_turbine", "geothermal", "battery",
-		"planned_waterproof_conduit", "planned_chemfuel_generator", "planned_watermill"} // STK-AG placeholders follow the working cards
+		"waterproof_conduit", "chemfuel_generator", "watermill"} // AX-4 made the three placeholders real
 	if got := toolIDsIn(architectpkg.CatPower); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("Power tools %v, want %v", got, want)
 	}
-	for _, id := range []string{"conduit", "hidden_conduit"} {
+	for _, id := range []string{"conduit", "hidden_conduit", "waterproof_conduit"} {
 		if tl, _ := toolByID(id); tl.Mode != architectpkg.PlaceLine {
 			t.Errorf("%s places in mode %v, want a line", id, tl.Mode)
 		}

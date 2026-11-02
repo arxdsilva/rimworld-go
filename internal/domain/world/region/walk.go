@@ -6,20 +6,20 @@ type Layer uint8
 
 // Movement layers.
 const (
-	Colonist Layer = iota // the grid: doors, fences, gates, traps open
-	Hostile               // doors shut (raiders)
-	Sapper                // doors and traps shut
+	Colonist Layer = iota // the grid: doors, fences, gates, traps open; animal flaps shut
+	Hostile               // doors and flaps shut (raiders)
+	Sapper                // doors, flaps and traps shut
 	Tame                  // fences shut; doors and gates open
 	Wild                  // doors, fences and gates shut
 	Layers                // number of layers
 )
 
 var layerBlocks = [Layers]Flags{
-	Colonist: 0,
-	Hostile:  Door,
-	Sapper:   Door | Trap,
+	Colonist: Flap,
+	Hostile:  Door | Flap,
+	Sapper:   Door | Trap | Flap,
 	Tame:     Fence,
-	Wild:     Door | Fence | Gate,
+	Wild:     Door | Fence | Gate | Flap,
 }
 
 // Blocks is the set of flags layer l may not enter.

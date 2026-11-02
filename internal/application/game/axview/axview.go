@@ -78,6 +78,8 @@ type Pawn struct {
 	Reading string
 	// A9: Casket, the stasis casket it sleeps in (building id, 0 none).
 	Casket uint64
+	// A1: StripMarked, a downed pawn marked to be stripped.
+	StripMarked bool
 }
 
 // Frame is game.FrameView.AX.

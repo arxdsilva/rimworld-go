@@ -82,7 +82,7 @@ const SteamVentRate = steamVentRate
 // in (the cooler and vent are wall-mounted links: cache.go).
 func heats(k construction.Kind) bool {
 	switch k {
-	case construction.Heater, construction.PassiveCooler, construction.Campfire, construction.TorchLamp,
+	case construction.Heater, construction.PassiveCooler, construction.Campfire, construction.TorchLamp, construction.WallTorch,
 		construction.ElectricSmelter, construction.Stove, construction.ElectricStove, construction.WoodGenerator,
 		construction.SteamVent:
 		return true
@@ -122,7 +122,7 @@ func (m *Model) pushOf(s site, air temperature.Milli) push {
 		if h.Burning(s.id) {
 			return push{rate: campfireRate, limit: campfireCap, capped: true}
 		}
-	case construction.TorchLamp:
+	case construction.TorchLamp, construction.WallTorch: // A2, wiki: Wall torch lamp (the torch lamp's heat)
 		if h.Burning(s.id) {
 			return push{rate: torchRate, limit: torchCap, capped: true}
 		}

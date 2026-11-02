@@ -68,7 +68,8 @@ const (
 	outdoorSurgery  = 850  // wiki: Doctoring (operating outdoors ×85 %)
 	monitorSurgery  = 1050 // wiki: Vitals monitor (surgery success ×105 %)
 	cleanDirtiest   = 600  // wiki: Doctoring (cleanliness factor 60 % ..
-	cleanSterile    = 1018 // .. 101.8 %)
+	cleanSterile    = 1018 // .. 101.8 %, reached at sterileClean)
+	sterileClean    = 60   // wiki: Sterile tile (cleanliness +0.6: surgery ×1.02 in a sterile hospital, AX-3)
 	darkSurgery     = 750  // wiki: Doctoring (in darkness ×75 %, full from 50 % lit)
 	litEnough       = 50   // percent lit from which light costs nothing
 )
@@ -77,7 +78,7 @@ const (
 // surgeon's Medicine level, manipulation and sight (permille), the bed
 // (a hospital bed or not), an adjacent powered vitals monitor, the room's
 // cleanliness (CleanPct, RimWorld cleanliness ×100: 0 a plain clean floor,
-// −500 filthy, +100 sterile) and light (LightPct, 0..100 lit), whether it
+// −500 filthy, +60 sterile tile) and light (LightPct, 0..100 lit), whether it
 // happens outdoors (cleanliness then counts as outdoor), the operation and
 // the medicine used (0: none).
 type SurgeryInput struct {
@@ -128,17 +129,18 @@ func medicineSurgery(k item.Kind) int32 {
 
 // CleanFactor is the room cleanliness multiplier (permille): linear from
 // 600 at −500 (filthy) to 1000 at 0 (a clean plain floor), then to 1018
-// at +100 (sterile); outdoors 850. wiki: Doctoring (the end points); the
-// straight segments between them are original tuning.
+// at +60 (a room in sterile tile, the cleanest floor); outdoors 850. wiki:
+// Doctoring, Sterile tile (the end points); the straight segments between
+// them are original tuning.
 func CleanFactor(cleanPct int32, outdoors bool) int32 {
 	if outdoors {
 		return outdoorSurgery
 	}
-	c := clamp32(cleanPct, -500, 100)
+	c := clamp32(cleanPct, -500, sterileClean)
 	if c < 0 {
 		return 1000 + (1000-cleanDirtiest)*c/500
 	}
-	return 1000 + (cleanSterile-1000)*c/100
+	return 1000 + (cleanSterile-1000)*c/sterileClean
 }
 
 // LightFactor is the light multiplier (permille): full from 50 % lit,

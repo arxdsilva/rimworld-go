@@ -14,7 +14,9 @@ import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/diet"
+	"rimworld-go/internal/application/game/industry"
 	"rimworld-go/internal/application/game/mind"
+	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/application/game/raid"
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/resize"
@@ -226,7 +228,8 @@ type saveState struct {
 	Scheds     map[entity.EntityID]schedule.Grid
 	Joy        map[entity.EntityID]int
 	Breaks     map[entity.EntityID]savedBreak
-	Mind       mind.Save // mind (SIM-066): break targets and retarget ticks
+	Mind       mind.Save   // mind (SIM-066): break targets and retarget ticks
+	Orders     orders.Save // AX-1: strip and open marks; absent in older saves
 	RoomGrid   []int
 	RoomTemps  []temperature.Temp
 	Memories   map[entity.EntityID]mood.Memories
@@ -297,6 +300,9 @@ type saveState struct {
 	// deep water is bridgeable); Vaults the sealed vaults' state.
 	Ocean  []uint64
 	Vaults []vaultSave
+	// AX4 (game/industry): river flow, deep ore, machines' progress;
+	// absent in older saves (no river flow, no ore found).
+	AX4 industry.Save
 	// PLAY-015: NoHomeAuto (zero: Home expands automatically), per-tile
 	// snow and the snow clearing area, burning fires, pen marker settings.
 	NoHomeAuto bool
@@ -500,6 +506,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	// bridge.go (MAPGEN-3): the sea bitset, nil without a sea
 	s.Ocean = g.exportOcean()
+	s.AX4 = g.br.ind.Export(g.bldgs.Has) // game/industry (AX-4)
 	for id, q := range g.orderQueue {
 		for _, o := range q {
 			s.OrderQueue[id] = append(s.OrderQueue[id], savedOrder{Cmd: o.cmd, Label: o.label, RetryAt: o.retryAt, Tries: o.tries})
@@ -516,6 +523,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Surgery = g.exportSurgery()
 	s.BedRest = g.care.Rest.Export()   // care/rest.go (PLAY-020)
 	s.Mind = g.mind.Export()           // mind (SIM-066)
+	s.Orders = ordersOf(g).Export()    // game/orders (AX-1)
 	s.FeedRetry = g.care.Feed.Export() // care/feed.go (SIM-064)
 	s.Power = g.exportPower()          // power.go (PLAY-021): nil without power
 	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
@@ -682,7 +690,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	}
 	// bridge.go (MAPGEN-3): older saves have no sea
 	g.importOcean(s.Ocean)
-	g.seedGrass() // an older save: grass from terrain, bare under buildings
+	g.br.ind.Import(s.AX4) // game/industry (AX-4)
+	g.seedGrass()          // an older save: grass from terrain, bare under buildings
 	for id, e := range s.Exposure {
 		g.exposure[id] = bodytemp.Sev{Hypo: int32(e[0]), Heat: int32(e[1])}
 	}
@@ -707,7 +716,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
 	g.care.Rest.Import(s.BedRest)
-	g.mind.Import(s.Mind) // mind (SIM-066)
+	g.mind.Import(s.Mind)        // mind (SIM-066)
+	ordersOf(g).Import(s.Orders) // game/orders (AX-1)
 	g.care.Feed.Import(s.FeedRetry)
 	g.care.Policy.Import(s.Care) // care/policy.go (MED-03)
 	g.med.animalIdxOK = false    // animal_health.go: rebuilt on first use
@@ -782,6 +792,8 @@ func (g *Game) migrateSave(v int) {
 		g.migrateBenches(resize.V10, resize.RefundV10)
 		fallthrough
 	case v < 11: // AX-0: the AX owners' steps, empty until A2 (1x1 tables to 1x2) and A3 (stone tiles, carpets) add theirs
+		construction.MigrateFloors(g.bldgs, g.frames)  // A3: stone-block floors become stone tiles
+		g.migrateBenches(resize.V11, resize.RefundV10) // A2: 1x1 tables become 1x2 (taken down and refunded where they no longer fit)
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }

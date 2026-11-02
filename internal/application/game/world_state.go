@@ -651,7 +651,7 @@ func (g *Game) worldEdge() (int, int, bool) {
 		hx, hy = x, y
 	}
 	r := g.stream(streamWorld)
-	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door, construction.Autodoor)}
+	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap)}
 	var fx, fy int
 	found, checks := false, 0
 	for try := 0; try < 200; try++ {

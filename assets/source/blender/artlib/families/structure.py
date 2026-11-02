@@ -110,19 +110,6 @@ def _door(axis, open_, frame, leaf):
     return ("W", "E") if axis == "ew" else ("N", "S")
 
 
-def _floor_stone():
-    # Flagstones on a 2x2 grid per tile with a staggered second row.
-    for r in range(-1, 3):
-        y1 = -r / 2
-        y0 = y1 - 0.5
-        off = 0.25 if r % 2 else 0.0
-        for k in range(-1, 3):
-            x0 = k / 2 + off
-            S.box("flag", x0 + 0.018, y0 + 0.018, -0.035, x0 + 0.5 - 0.018, y1 - 0.018, 0.0,
-                  "stone_neutral" if (r + k) % 3 else "gravel", bevel=0.02)
-    S.box("under", -1, -2, -0.08, 2, 1, -0.035, "stone_neutral_dark", bevel=0.0)
-
-
 def _floor_wood():
     # Planks run east-west, period 1 tile in both axes; overshoot is cropped.
     rows = 5
@@ -412,9 +399,6 @@ def build():
                                           extra={"axis": axis, "state": "open" if open_ else "closed"}))
     _floor_wood()
     out.append(S.render_asset("structure", "floor_wood", zmax=0.0, margins=(0, 0, 0, 0),
-                              outline=False, shadow=False, extra={"tileable": True}))
-    _floor_stone()
-    out.append(S.render_asset("structure", "floor_stone", zmax=0.0, margins=(0, 0, 0, 0),
                               outline=False, shadow=False, extra={"tileable": True}))
     _frame()
     out.append(S.render_asset("structure", "frame_1x1", zmax=0.76, extra={"stage": "frame"}))

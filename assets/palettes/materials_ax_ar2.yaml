@@ -1,0 +1,11 @@
+# AX-AR2 art (AX programme, A4 power and industry, A5 fire foam and
+# security): the waterproof conduit's sealed jacket, fire foam and the
+# foam gear's safety paint, and the antimatter warhead's band. Original
+# colours. Merged over materials.yaml by the palette loader.
+# palette_mute: applied materials (sat=0.8 contrast=0.8 light=0.96 warm=8)
+version: 1
+materials:
+  conduit_jacket: {light: "#5a656c", base: "#4e5960", shadow: "#3e494e"}
+  foam:           {light: "#eaece3", base: "#e7ebdf", shadow: "#c2cabc"}
+  foam_paint:     {light: "#87bbab", base: "#71ad9c", shadow: "#588875"}
+  warhead_band:   {light: "#b589bf", base: "#a77ab5", shadow: "#895e8f"}

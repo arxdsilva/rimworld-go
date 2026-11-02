@@ -72,7 +72,9 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		}
 		out = append(out, a.powerCommands(b)...) // cmds_power.go (PLAY-021)
 		out = append(out, ventCommands(b)...)    // temp_ui.go (TEMP-5)
+		out = append(out, potCommands(b)...)     // ax2.go (AX-2)
 		out = append(out, a.MoveCommands(b)...)
+		out = append(out, a.orderCommands(b)...) // cmds_orders.go (AX-1): uninstall, open a grave
 	}
 	if !b.Deconstruct {
 		out = append(out, Button{ID: "bldg.deconstruct", Label: "Deconstruct", Icon: "order_deconstruct",
@@ -157,6 +159,7 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	if b.Deconstruct {
 		add("Marked for deconstruction")
 	}
+	add(OrderLines(b)...)
 	if b.Forbidden { // STK-AL: as an item's pane says it
 		add("Forbidden: colonists leave it alone")
 	}
@@ -171,6 +174,8 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	}
 	add(GraveLines(b)...)
 	add(env.VentLine(b), CarpetLine(b), overlay.BridgeLine(b), SwapLine(b))
+	add(FloorLines(b)...) // floor_title.go (AX-3)
+	add(ax2Lines(b)...)   // ax2.go (AX-2)
 	if _, moving := a.shell.MoveState(b); moving != "" {
 		add(moving)
 	}
@@ -227,6 +232,7 @@ func (a Thing) FramePane(id entity.EntityID) Spec {
 			p.Lines = append(p.Lines, "In stock  "+in.Stock)
 		}
 	}
+	p.Lines = append(p.Lines, frameExtraLines(f)...) // ax4.go (AX-4): secondary materials
 	if in.Work != "" {
 		p.Bars = append(p.Bars, Bar{Label: "Work", Pct: bldgFracPct(in.WorkFrac), Color: uikit.Good})
 		p.Lines = append(p.Lines, "Work  "+in.Work)

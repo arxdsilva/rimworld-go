@@ -133,7 +133,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if fr.Ready() {
 			return job.Record{}, ReasonSupplied
 		}
-		sk := haul.SupplyKind(fr) // items_ng1.go: the material, then the components
+		sk := haul.SupplyKind(fr) // the material, then the components, then secondary materials (AX-4)
 		wid, wx, wy := g.nearestFree(id, func(k item.Kind) bool { return k == sk })
 		if wid == 0 {
 			if sk != item.Wood {
@@ -425,7 +425,8 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		// then a route chained from it like any delivery
 		fr, _ := g.frames.Get(rec.Dest)
 		st, _ := g.stacks.Get(rec.Target)
-		route, shares := g.routeFrom(rec.Target, st, haul.SlotKey(rec.Dest, st.Kind), haul.SupplyNeed(fr, st.Kind))
+		sl, _ := haul.SlotFor(rec.Dest, fr, st.Kind) // the material, components or a secondary material (AX-4)
+		route, shares := g.routeFrom(rec.Target, st, sl.Key|rec.Dest, sl.Need-sl.Have)
 		route.Forced = true
 		g.startDelivery(id, route, shares)
 		return

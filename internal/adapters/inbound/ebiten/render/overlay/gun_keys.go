@@ -13,6 +13,9 @@ const (
 	AutocannonKind = "autocannon"
 	SlugTurretKind = "slug turret"
 	MortarKind     = "mortar"
+	// AX-5: the foam turret and rocket battery (AR2's art).
+	FoamTurretKind    = "foam turret"
+	RocketBatteryKind = "rocket battery"
 )
 
 // gunSpec is a gun post's base sprite and its 16 gun frames.
@@ -32,6 +35,10 @@ func gunOf(kind string) (gunSpec, bool) {
 		return gunSpec{"defense/slug_turret_base", &slugGunKeys}, true
 	case MortarKind:
 		return gunSpec{"defense/mortar_base", &mortarTubeKeys}, true
+	case FoamTurretKind:
+		return gunSpec{"defense/foam_turret_base", &foamGunKeys}, true
+	case RocketBatteryKind:
+		return gunSpec{"defense/rocket_battery_base", &rocketGunKeys}, true
 	}
 	return gunSpec{}, false
 }
@@ -124,4 +131,42 @@ var mortarTubeKeys = [TurretAimFrames]string{
 	"defense/mortar_tube_13",
 	"defense/mortar_tube_14",
 	"defense/mortar_tube_15",
+}
+
+var foamGunKeys = [TurretAimFrames]string{
+	"defense/foam_turret_gun_00",
+	"defense/foam_turret_gun_01",
+	"defense/foam_turret_gun_02",
+	"defense/foam_turret_gun_03",
+	"defense/foam_turret_gun_04",
+	"defense/foam_turret_gun_05",
+	"defense/foam_turret_gun_06",
+	"defense/foam_turret_gun_07",
+	"defense/foam_turret_gun_08",
+	"defense/foam_turret_gun_09",
+	"defense/foam_turret_gun_10",
+	"defense/foam_turret_gun_11",
+	"defense/foam_turret_gun_12",
+	"defense/foam_turret_gun_13",
+	"defense/foam_turret_gun_14",
+	"defense/foam_turret_gun_15",
+}
+
+var rocketGunKeys = [TurretAimFrames]string{
+	"defense/rocket_battery_gun_00",
+	"defense/rocket_battery_gun_01",
+	"defense/rocket_battery_gun_02",
+	"defense/rocket_battery_gun_03",
+	"defense/rocket_battery_gun_04",
+	"defense/rocket_battery_gun_05",
+	"defense/rocket_battery_gun_06",
+	"defense/rocket_battery_gun_07",
+	"defense/rocket_battery_gun_08",
+	"defense/rocket_battery_gun_09",
+	"defense/rocket_battery_gun_10",
+	"defense/rocket_battery_gun_11",
+	"defense/rocket_battery_gun_12",
+	"defense/rocket_battery_gun_13",
+	"defense/rocket_battery_gun_14",
+	"defense/rocket_battery_gun_15",
 }

@@ -329,35 +329,6 @@ func plural(n int) string {
 	return "s"
 }
 
-// operationLabel is how the Health tab lists op on body b: fitting an
-// implant where the part is missing installs it, where it is still there
-// replaces it (SIM-049).
-func operationLabel(b *body.Body, op body.Operation) string {
-	part := op.Part.Label()
-	switch op.Kind {
-	case body.InstallImplant:
-		if op.Part < body.NumParts && b.Missing&(1<<op.Part) == 0 {
-			return fmt.Sprintf("Replace %s with %s", part, op.Item)
-		}
-		return fmt.Sprintf("Install %s (%s)", op.Item, part)
-	case body.RemoveImplant:
-		return fmt.Sprintf("Remove implant (%s)", part)
-	case body.Amputate:
-		return fmt.Sprintf("Amputate %s", part)
-	case body.HarvestOrgan: // MED-00 placeholders until MED-06
-		return fmt.Sprintf("Harvest %s", part)
-	case body.InstallOrgan:
-		return fmt.Sprintf("Install organ (%s)", part)
-	case body.Euthanize:
-		return "Euthanize"
-	case body.Anesthetize:
-		return "Anesthetize"
-	case body.ExciseCarcinoma:
-		return fmt.Sprintf("Excise carcinoma (%s)", part)
-	}
-	return "Operation (" + part + ")"
-}
-
 // implantKinds are the implant item kinds in kind order.
 var implantKinds = func() []item.Kind {
 	var out []item.Kind
@@ -397,7 +368,7 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	hv.Parts = make([]PartView, 0, len(ps))
 	for _, s := range ps {
 		pv := PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP, Part: int(s.Part),
-			Bleed: int(b.PartBleedPerDay(s.Part)) / 10, TendTip: partTendTip(b, s.Part)}
+			Bleed: int(b.PartBleedPerDay(s.Part)) / 10, TendTip: body.PartTendTip(b, s.Part)}
 		if s.Fitted {
 			pv.Implant = s.Implant.String()
 		}
@@ -406,7 +377,7 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	for i, op := range g.operationsOf(id) {
 		why, ready := g.surgeryWait(id, op)   // surgery.go: Blocked needs the player
 		pct, tip := g.operationChance(id, op) // surgery.go (MED-06): the chance and its factors
-		hv.Operations = append(hv.Operations, OperationView{Label: operationLabel(b, op), Slot: i, Status: why, Blocked: !ready,
+		hv.Operations = append(hv.Operations, OperationView{Label: body.OperationLabel(b, op), Slot: i, Status: why, Blocked: !ready,
 			ChancePct: pct, ChanceTip: tip})
 	}
 	hv.Options = g.operationOptions(id, b)
@@ -433,7 +404,7 @@ func (g *Game) operationOptions(id entity.EntityID, b *body.Body) []OperationOpt
 			}
 		}
 		why, _ := g.opBlocked(id, 0, b, op, false) // surgery.go
-		out = append(out, OperationOptionView{Label: operationLabel(b, op), Kind: uint8(op.Kind), Part: uint8(op.Part),
+		out = append(out, OperationOptionView{Label: body.OperationLabel(b, op), Kind: uint8(op.Kind), Part: uint8(op.Part),
 			Item: uint8(op.Item), Disabled: why != "", Reason: why})
 	}
 	for p := body.Part(0); p < body.NumParts; p++ {
@@ -474,36 +445,6 @@ func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
 	return append(ts, mood.Thought{Kind: mood.MissingPart, Label: d.Label, Value: d.Value})
 }
 
-// woundKindLabels name body.WoundKind values for the Health tab.
-var woundKindLabels = [...]string{body.Cut: "cut", body.Bruise: "bruise", body.Bite: "bite", body.Scratch: "scratch",
-	body.Burn: "burn", body.Surgical: "surgical cut", body.Stab: "stab", body.Gunshot: "gunshot", body.Frostbite: "frostbite"}
-
-func woundKindLabel(k body.WoundKind) string {
-	if int(k) < len(woundKindLabels) {
-		return woundKindLabels[k]
-	}
-	return "wound"
-}
-
-// partTendTip lists p's open wounds with their tend quality, one a line
-// ("" when it has none).
-func partTendTip(b *body.Body, p body.Part) string {
-	var lines []string
-	for _, w := range b.Wounds {
-		if w.Part != p || w.Permanent {
-			continue
-		}
-		t := fmt.Sprintf("%s, %d HP: ", woundKindLabel(w.Kind), w.Dmg)
-		if w.Tended {
-			t += fmt.Sprintf("tended %d%%", int(w.TendQ)/10)
-		} else {
-			t += "untended"
-		}
-		lines = append(lines, t)
-	}
-	return strings.Join(lines, "\n")
-}
-
 // conditionRows fills the Health tab's condition rows (MED-02) and lets
 // a condition set the headline when nothing bleeds ("Infection: losing"
 // or "winning") and shorten the death clock.
@@ -517,7 +458,7 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 	for _, c := range b.Conds {
 		d := body.DefOfCond(c.Kind)
 		tended := now < c.TendUntil
-		cv := ConditionView{Label: conditionLabel(c, d), SevPct: int(c.Sev) / 10, ImmPct: int(c.Immunity) / 10,
+		cv := ConditionView{Label: body.ConditionLabel(c, d), SevPct: int(c.Sev) / 10, ImmPct: int(c.Immunity) / 10,
 			TendPct: int(c.TendQ) / 10, Losing: infection.Losing(c, d, tended, imm)}
 		aging := body.IsAging(c.Kind) // aging.go (MED-08): its own label and card
 		if aging {
@@ -542,64 +483,11 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 	case body.AgingHeads(b): // body/aging_text.go (MED-08): a heart attack, or only age conditions
 		hv.State = body.AgingHeadline(b, hv.State, now)
 	default:
-		hv.State = conditionHeadline(b, losing)
+		hv.State = body.ConditionHeadline(b, losing)
 	}
 	if h := g.condDeathHours(id, b); h >= 0 && (hv.DeathInHours < 0 || h < hv.DeathInHours) {
 		hv.DeathInHours = h
 	}
-}
-
-// conditionHeadline is the Health tab's headline for b's conditions when
-// nothing bleeds: "Infection: winning/losing" while a wound festers, else
-// its first disease's ("Flu: losing"; a parasite: "Gut worms: needs
-// tending").
-func conditionHeadline(b *body.Body, losing bool) string {
-	name := ""
-	cure, sedated := false, false
-	for _, c := range b.Conds {
-		if c.Kind == body.CondAnesthetic { // no race to win or lose (MED-06)
-			sedated = true
-			continue
-		}
-		if body.IsAging(c.Kind) { // the aging headline's (MED-08)
-			continue
-		}
-		if c.Kind == body.CondInfection {
-			name, cure = "Infection", false
-			break
-		}
-		if name == "" {
-			d := body.DefOfCond(c.Kind)
-			name, cure = strings.ToUpper(d.Label[:1])+d.Label[1:], d.CureTendSum > 0
-		}
-	}
-	switch {
-	case name == "" && sedated:
-		return "Under anesthetic"
-	case name == "":
-		return "Infection: winning"
-	case losing:
-		return name + ": losing"
-	case cure:
-		return name + ": needs tending"
-	}
-	return name + ": winning"
-}
-
-// conditionLabel is a condition row's name: kind, stage and part
-// ("Infection (major), left arm").
-func conditionLabel(c body.Condition, d body.CondDef) string {
-	l := d.Label
-	if l != "" {
-		l = strings.ToUpper(l[:1]) + l[1:]
-	}
-	if int(c.Stage) < len(d.Stages) && d.Stages[c.Stage].Label != "" {
-		l += " (" + d.Stages[c.Stage].Label + ")"
-	}
-	if c.Part != body.Torso || c.Kind == body.CondInfection {
-		l += ", " + c.Part.Label()
-	}
-	return l
 }
 
 // conditionTip is a condition row's hover card: severity and immunity,

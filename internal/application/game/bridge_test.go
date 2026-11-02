@@ -209,7 +209,7 @@ func TestBridgeSupportRules(t *testing.T) {
 		{"wall", "granite blocks", false},
 		{"wall", "steel", false},
 		{"floor", "wood", false},
-		{"floor", "granite blocks", false},
+		{"stone tile", "granite blocks", false}, // AX-3: stone floors are stone tiles
 		{"grave", "wood", false},
 	} {
 		ok, why := g.CanPlaceAt(c.kind, c.stuff, "south", 7, 3)

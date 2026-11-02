@@ -161,6 +161,10 @@ type ClearSelection struct{}
 // CenterOnPawn pans the camera to the pawn.
 type CenterOnPawn struct{ ID entity.EntityID }
 
+// ReinstallCrate enters the placement mode for crated building ID (AX-1):
+// the next map click sends command.Reinstall.
+type ReinstallCrate struct{ ID entity.EntityID }
+
 func (OpenArchitect) isIntent()   {}
 func (CloseArchitect) isIntent()  {}
 func (PresetBuildTool) isIntent() {}
@@ -173,6 +177,7 @@ func (SelectPawn) isIntent()      {}
 func (TogglePawnInSet) isIntent() {}
 func (ClearSelection) isIntent()  {}
 func (CenterOnPawn) isIntent()    {}
+func (ReinstallCrate) isIntent()  {}
 
 // Screen is a full-screen route of the client (presentation only; it never
 // exists in the domain). The root's screenID is this type.

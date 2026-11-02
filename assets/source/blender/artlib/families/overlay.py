@@ -455,7 +455,6 @@ ICONS = {
     "club": ("item", "club_wood"),
     "rifle": ("item", "rifle_ground"),
     "floor": ("structure", "floor_wood"),
-    "table": ("furniture", "table_small"),
     "chair": ("furniture", "chair_basic_south"),
     "wall": ("structure", "wall_wood_00"),
     "door": ("structure", "door_wood_ew_closed"),

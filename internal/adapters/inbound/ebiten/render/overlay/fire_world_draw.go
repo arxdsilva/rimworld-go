@@ -245,14 +245,25 @@ const ashKind = "ash"
 // AshKey is the decal of an ash stain: one of overlay/ash_0..2 by variant.
 func AshKey(variant uint8) string { return "overlay/ash_" + string(rune('0'+variant%3)) }
 
-// DrawAshStains draws the burnt-ground decals under objects.
+// foamKind is the stain fire foam leaves (AX-5); FoamKey its decal, one of
+// overlay/foam_0..2 by variant (AR2's art).
+const foamKind = "foam"
+
+func FoamKey(variant uint8) string { return "overlay/foam_" + string(rune('0'+variant%3)) }
+
+// DrawAshStains draws the burnt-ground and fire-foam (AX-5) decals under
+// objects.
 func (o *Fires) DrawAshStains(v *render.View, ps sprite.Pass, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	for _, s := range w.Stains {
-		if s.Kind != ashKind || s.Amount <= 0 {
+		if s.Kind != ashKind && s.Kind != foamKind || s.Amount <= 0 {
 			continue
 		}
+		key := AshKey(s.Variant)
+		if s.Kind == foamKind {
+			key = FoamKey(s.Variant)
+		}
 		a := float32(gfx.Clamp01(s.Amount))
-		o.P.DrawCS(v, ps, screen, AshKey(s.Variant), color.NRGBA{}, float64(s.X), float64(s.Y), tile, sw, sh, sprite.ColorScale{a, a, a, a})
+		o.P.DrawCS(v, ps, screen, key, color.NRGBA{}, float64(s.X), float64(s.Y), tile, sw, sh, sprite.ColorScale{a, a, a, a})
 	}
 }
 

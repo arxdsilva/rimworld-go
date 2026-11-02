@@ -76,8 +76,14 @@ const (
 
 // isTurret reports a kind the turret code runs: the sentry turret and the
 // two heavy turrets.
+// AX-5 adds the foam turret and the rocket battery.
 func isTurret(k construction.Kind) bool {
-	return k == construction.SentryTurret || k == construction.Autocannon || k == construction.UraniumSlugTurret
+	switch k {
+	case construction.SentryTurret, construction.Autocannon, construction.UraniumSlugTurret, construction.FoamTurret,
+		construction.RocketBattery:
+		return true
+	}
+	return false
 }
 
 // gunOf is the gun turret kind k fires.
@@ -87,6 +93,10 @@ func gunOf(k construction.Kind) weapon.Kind {
 		return weapon.Autocannon
 	case construction.UraniumSlugTurret:
 		return weapon.SlugTurret
+	case construction.FoamTurret:
+		return weapon.FoamSpray
+	case construction.RocketBattery:
+		return weapon.SwarmRocket
 	}
 	return weapon.SentryGun
 }
@@ -119,15 +129,23 @@ func turretName(k construction.Kind) string {
 		return "an autocannon"
 	case construction.UraniumSlugTurret:
 		return "a slug turret"
+	case construction.RocketBattery:
+		return "a rocket battery"
+	case construction.FoamTurret:
+		return "a foam turret"
 	}
 	return TurretLogName
 }
 
 // Arm is a turret's barrel and orders (DEF-3): Fired rounds since its
-// barrel was last replaced and Hold, the player's "hold fire".
+// barrel was last replaced and Hold, the player's "hold fire". AX-5: a
+// chemfuel turret's Fired counts the charges or rockets used since its
+// last reload (a new one is full), and Cool is the tick its wait after
+// firing ends.
 type Arm struct {
 	Fired int
 	Hold  bool
+	Cool  uint64
 }
 
 // ArmSave is one Arm on disk.
@@ -135,6 +153,7 @@ type ArmSave struct {
 	ID    entity.EntityID
 	Fired int
 	Hold  bool
+	Cool  uint64 // AX-5; absent in older saves
 }
 
 // Aim is one turret's aim: the creature it holds (0: idle), its baked aim
@@ -206,8 +225,11 @@ type Turrets struct {
 	blasts *Blasts
 	// after are the defences stepped after the turrets every tick, saved
 	// those whose state rides in the Turrets save block (DEF-3).
-	after [5]phaser
+	after [6]phaser
 	saved saved
+	// AX-5: the fires a foam turret sees (foam.go) and its reused buffer.
+	foam    Foamer
+	fireBuf [][2]int
 }
 
 // saved are the components whose state the Turrets save block carries.
@@ -280,11 +302,15 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 	if now < a.StunnedUntil { // EMP: dark until it recovers
 		return
 	}
-	if !t.pw.Powered(id) || t.arms[id].Hold || t.Spent(id, k) {
+	if !t.pw.Powered(id) || t.arms[id].Hold || t.Spent(id, k) || now < t.arms[id].Cool {
 		if had && a.Target != 0 { // no power, held or spent: it lets go and stays quiet
 			a.Target, a.ReadyAt, a.Burst = 0, 0, 0
 			t.setAim(id, a)
 		}
+		return
+	}
+	if k == construction.FoamTurret { // AX-5: it aims at fires, not creatures (foam.go)
+		t.foamStep(id, x, y, now)
 		return
 	}
 	wk := gunOf(k)
@@ -309,7 +335,7 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 		if !ok {
 			return
 		}
-		a.Target, a.ReadyAt, a.SeenAt, tx, ty = s.ID, now+turretAimTicks, now, s.X, s.Y
+		a.Target, a.ReadyAt, a.SeenAt, tx, ty = s.ID, now+uint64(max(turretAimTicks, aimOf(k, d))), now, s.X, s.Y
 	}
 	a.Dir = aimFrame(x, y, tx, ty, a.Dir)
 	if a.SeenAt == now && now >= a.ReadyAt && weapon.ReachesAt(d, x, y, tx, ty) { // CBT-2: straight-line range
@@ -320,9 +346,22 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 			a.ReadyAt = now + uint64(d.BurstTicks)
 		} else {
 			a.Burst = 0
+			if k == construction.RocketBattery { // AX-5: the volley is gone; it recharges
+				t.cool(id, now+uint64(d.Cooldown))
+			}
 		}
 	}
 	t.setAim(id, a)
+}
+
+// aimOf is the aim before the first shot of turret kind k's gun d beyond
+// turretAimTicks: the rocket battery's 60 ticks (AX-5). wiki: Rocketswarm
+// launcher
+func aimOf(k construction.Kind, d weapon.Def) int {
+	if k == construction.RocketBattery {
+		return d.Warmup
+	}
+	return 0
 }
 
 // wear counts a round off turret id's barrel.
@@ -333,12 +372,6 @@ func (t *Turrets) wear(id entity.EntityID) {
 	r := t.arms[id]
 	r.Fired++
 	t.arms[id] = r
-}
-
-// Spent: turret id (of kind k) has fired its barrel out and stays quiet
-// until a rearm.
-func (t *Turrets) Spent(id entity.EntityID, k construction.Kind) bool {
-	return t.arms[id].Fired >= BarrelOf(k)
 }
 
 // Barrel is the life left in turret id's barrel, permille (1000 fresh).
@@ -445,11 +478,28 @@ func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 	delete(t.aims, id)
 	delete(t.arms, id)
 	h := t.h
-	if h.DefenseRoll(100) >= TurretBlastPct || t.blasts == nil {
+	if t.blasts == nil {
 		return
 	}
+	switch b.Kind { // AX-5: a smashed popper or foam turret bursts in foam, always
+	case construction.FoamPopper:
+		h.Message(b.X, b.Y, "The foam popper burst as it broke.")
+		t.blasts.Explode(0, weapon.MortarFoam, b.X, b.Y, foamDef(PopperRadius))
+		return
+	case construction.FoamTurret:
+		h.Message(b.X, b.Y, "The foam turret burst as it broke.")
+		t.blasts.Explode(0, weapon.FoamSpray, b.X, b.Y, foamDef(FoamTurretBurstRadius))
+		return
+	}
+	if h.DefenseRoll(100) >= TurretBlastPct {
+		return
+	}
+	r := turretBlastRadius
+	if b.Kind == construction.RocketBattery {
+		r = RocketBlastRadius
+	}
 	h.Message(b.X, b.Y, fmt.Sprintf("The %s blew up!", construction.DefOf(b.Kind).Name))
-	t.blasts.Explode(0, gunOf(b.Kind), b.X, b.Y, explosion.Def{Kind: explosion.Bomb, Radius: turretBlastRadius, Damage: TurretBlastDamage,
+	t.blasts.Explode(0, gunOf(b.Kind), b.X, b.Y, explosion.Def{Kind: explosion.Bomb, Radius: r, Damage: TurretBlastDamage,
 		Pen: turretBlastPen})
 }
 
@@ -553,7 +603,7 @@ func (t *Turrets) Export() *TurretSave {
 	}
 	slices.SortFunc(s.Aims, func(x, y AimSave) int { return cmp.Compare(x.ID, y.ID) })
 	for id, r := range t.arms {
-		s.Arms = append(s.Arms, ArmSave{ID: id, Fired: r.Fired, Hold: r.Hold})
+		s.Arms = append(s.Arms, ArmSave{ID: id, Fired: r.Fired, Hold: r.Hold, Cool: r.Cool})
 	}
 	slices.SortFunc(s.Arms, func(x, y ArmSave) int { return cmp.Compare(x.ID, y.ID) })
 	if v := t.saved; v.traps != nil {
@@ -602,6 +652,6 @@ func (t *Turrets) Import(s *TurretSave) {
 		t.arms = make(map[entity.EntityID]Arm, len(s.Arms))
 	}
 	for _, r := range s.Arms {
-		t.arms[r.ID] = Arm{Fired: r.Fired, Hold: r.Hold}
+		t.arms[r.ID] = Arm{Fired: r.Fired, Hold: r.Hold, Cool: r.Cool}
 	}
 }

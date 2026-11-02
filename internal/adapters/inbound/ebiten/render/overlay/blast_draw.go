@@ -33,6 +33,8 @@ func blastLook(kind string) (blastFx, bool) {
 		return blastFx{"effect/emp_flash", 30, 0.35}, true
 	case "smoke":
 		return blastFx{"effect/smoke_cloud", 1200, 0.3}, true
+	case "foam": // AX-5: a short white puff (the smoke cloud until AR2's foam effect); the foam itself stays as a stain
+		return blastFx{"effect/smoke_cloud", 240, 0.2}, true
 	}
 	return blastFx{}, false
 }

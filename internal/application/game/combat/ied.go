@@ -20,9 +20,18 @@ import (
 // IEDFuse is the delay from trigger to burst. wiki: IED trap
 const IEDFuse = 15
 
-// isIED reports a buried-charge kind.
-func isIED(k construction.Kind) bool {
-	return k >= construction.IEDHighExplosive && k <= construction.IEDSmoke
+// isIED reports a buried-charge kind (an explicit set: AX-5's foam and
+// warhead charges sit far past the DEF-3 ones in the enum).
+func isIED(k construction.Kind) bool { return k.IsCharge() }
+
+// fuseOf is the delay from trigger to burst of kind k: a foam popper's
+// spark (AX-5, PopperFuse), else IEDFuse (the warhead charge's too).
+// wiki: Firefoam popper, IED antigrain warhead trap
+func fuseOf(k construction.Kind) uint64 {
+	if k == construction.FoamPopper {
+		return PopperFuse
+	}
+	return IEDFuse
 }
 
 // iedBlast is the blast charge kind k bursts with and the weapon its log
@@ -35,6 +44,12 @@ func iedBlast(k construction.Kind) (weapon.Kind, explosion.Def) {
 		return weapon.MortarEMP, weapon.DefOf(weapon.MortarEMP).Blast
 	case construction.IEDSmoke:
 		return weapon.MortarSmoke, weapon.DefOf(weapon.MortarSmoke).Blast
+	case construction.IEDFoam: // AX-5, wiki: IED firefoam trap
+		return weapon.MortarFoam, foamDef(FoamChargeRadius)
+	case construction.FoamPopper: // AX-5, wiki: Firefoam popper
+		return weapon.MortarFoam, foamDef(PopperRadius)
+	case construction.IEDWarhead: // AX-5, wiki: IED antigrain warhead trap (the warhead's own blast)
+		return weapon.Warhead, weapon.DefOf(weapon.Warhead).Blast
 	}
 	b := weapon.DefOf(weapon.MortarHE).Blast
 	b.Radius = 3900 // wiki: IED trap
@@ -61,7 +76,7 @@ func (t *Traps) light(id entity.EntityID, k construction.Kind, x, y int) {
 			return
 		}
 	}
-	t.fuses = append(t.fuses, Fuse{ID: id, Kind: k, X: x, Y: y, At: t.h.Now() + IEDFuse})
+	t.fuses = append(t.fuses, Fuse{ID: id, Kind: k, X: x, Y: y, At: t.h.Now() + fuseOf(k)})
 }
 
 // cook starts the cook-off of stack id on (x, y) (once: CBT-5).

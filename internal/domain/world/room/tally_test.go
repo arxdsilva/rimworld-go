@@ -21,7 +21,7 @@ func TestTallyFloorsAndFilth(t *testing.T) {
 	// wood floor everywhere: beauty 0, cleanliness 0; one carpet over wood +2
 	var wood Tally
 	for range 16 {
-		wood.AddFloor(item.Wood)
+		wood.AddFloor(construction.Floor, item.Wood)
 	}
 	wood.AddCarpet(WoodFloor, item.CarpetCloth)
 	in = wood.Inputs(16, 0, 0, 0)
@@ -30,11 +30,12 @@ func TestTallyFloorsAndFilth(t *testing.T) {
 	}
 	// smooth stone and stone tiles are +1; a carpet on bare ground +3
 	var mixed Tally
-	mixed.AddFloor(item.GraniteBlocks)
+	mixed.AddFloor(construction.StoneTile, item.GraniteBlocks)
 	mixed.AddCarpet(Bare, item.CarpetWool)
 	in = mixed.Inputs(4, 2, 0, 0) // 1 tile, 2 smooth, 1 bare under the carpet
-	if in.BeautySumTenths != 10+20-10+30 || FloorOf(item.Stone) != StoneTile || FloorUnder(item.Wood, true, true) != WoodFloor ||
-		FloorUnder(0, false, true) != Smooth || FloorUnder(0, false, false) != Bare {
+	if in.BeautySumTenths != 10+20-10+30 || FloorOf(construction.Floor, item.Stone) != StoneTile ||
+		FloorUnder(construction.Building{Kind: construction.Floor, Stuff: item.Wood}, true, true) != WoodFloor ||
+		FloorUnder(construction.Building{}, false, true) != Smooth || FloorUnder(construction.Building{}, false, false) != Bare {
 		t.Fatalf("mixed %+v", in)
 	}
 	// a full cell's worth of filth: -15 beauty, -5 cleanliness
@@ -59,7 +60,7 @@ func TestTallyBuildingsAndRoles(t *testing.T) {
 		t.Fatalf("legendary bed %+v", fine)
 	}
 	if BuildingBeauty(construction.HospitalBed, item.Gold, quality.Default) != 20000 ||
-		BuildingBeauty(construction.Bed, item.MarbleBlocks, quality.Default) != 1350+1000 || BuildingBeauty(construction.Table, item.Wood, quality.Default) != 0 {
+		BuildingBeauty(construction.Bed, item.MarbleBlocks, quality.Default) != 1350+1000 || BuildingBeauty(construction.Table, item.Wood, quality.Default) != 500 { // A2, wiki: Table (beauty 0.5)
 		t.Fatal("material beauty")
 	}
 	if BuildingValue(construction.Wall, item.GraniteBlocks, quality.Default) <= BuildingValue(construction.Wall, item.Wood, quality.Default) {

@@ -502,8 +502,8 @@ func TestJourneyFineMealMoods(t *testing.T) {
 		j := newJourney(t, jPawns([2]int{8, 4}))
 		j.g.ClearPlants(0, 0, 23, 23)
 		id := ordColonists(j)[0]
-		wdBuild(j, "table", 10, 4)
-		wdBuild(j, "chair", 10, 5)
+		wdBuild(j, "table", 10, 4) // A2: 1x2, (10, 4) and (10, 5)
+		wdBuild(j, "chair", 10, 6)
 		f2EatFine(j, id)
 		m := f2Thoughts(j, id)
 		if v, ok := f2Mood(m, "fine meal"); !ok || v != 5 {

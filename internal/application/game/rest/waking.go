@@ -34,7 +34,7 @@ func (w *Waking) After(id entity.EntityID) {
 	r := w.h.RoomAt(x, y)
 	bed, _ := w.h.SleptAt(id)
 	b, inBed := w.h.Building(bed)
-	if !inBed || b.Kind == construction.SleepingSpot {
+	if !inBed || b.Kind == construction.SleepingSpot || b.Kind == construction.DoubleSleepingSpot { // A2: a spot is the ground
 		if w.h.Outside(x, y) {
 			w.h.Remember(id, mood.SleptOutside)
 		} else {

@@ -62,6 +62,13 @@ var weaponVoices = map[string]weaponVoice{
 	"smoke launcher":         {fire: "sfx.smoke_launcher", land: blastLands},
 	"charge rifle":           {fire: "sfx.charge_rifle_shot"},
 	"charge lance":           {fire: "sfx.charge_lance_shot"},
+	// AX-5 defences, on existing sounds: the foam turret's nozzle hisses
+	// like the smoke launcher, the rocket battery's rockets launch as the
+	// carried launchers'; their bursts are cued by ListenBlasts.
+	"foam turret":    {fire: "sfx.smoke_launcher", land: blastLands},
+	"rocket battery": {fire: "sfx.rocket_launch", land: blastLands},
+	// a mortar lobbing an antimatter warhead keeps the mortar's voice
+	"antimatter warhead": {fire: "sfx.mortar_launch", incoming: "sfx.mortar_incoming"},
 }
 
 // heavyMelee are the melee weapons with the heavy hit sound.
@@ -172,7 +179,8 @@ type BlastEvent struct {
 }
 
 // blastSounds is the sound of each blast kind.
-var blastSounds = map[string]string{"bomb": "sfx.explosion", "flame": "sfx.incendiary_burst", "EMP": "sfx.emp_burst", "smoke": "sfx.smokepop_burst"}
+var blastSounds = map[string]string{"bomb": "sfx.explosion", "flame": "sfx.incendiary_burst", "EMP": "sfx.emp_burst", "smoke": "sfx.smokepop_burst",
+	"foam": "sfx.smokepop_burst"} // AX-5: foam bursts with the smokepop's hiss
 
 // ListenBlasts cues each new explosion once, at its tile.
 func (b *Bus) ListenBlasts(evs []BlastEvent) {

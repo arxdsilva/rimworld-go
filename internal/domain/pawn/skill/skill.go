@@ -217,3 +217,12 @@ func NeutralSet() Set {
 	}
 	return s
 }
+
+// XPPct is the progress toward the next level in percent (0..100).
+func (s Skill) XPPct() int {
+	c := Cost(s.Level)
+	if c <= 0 || s.XP <= 0 {
+		return 0
+	}
+	return int(min(int64(s.XP)*100/int64(c), 100))
+}

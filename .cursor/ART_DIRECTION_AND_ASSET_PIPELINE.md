@@ -1258,8 +1258,8 @@ resolve metadata conflicts, and update the catalog.
 -   [x] pawn base: original compositional pawns (ART-025: limbless round-headed figure, body/pants/shirt/vest/hair layers, S/E/N rendered with west mirrored, EntityID-stable tints; walk, work, lying/in-bed/carried motion are renderer transforms, no frames)
 -   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
 -   [-] held weapons and worn armor layers (DEF-2: 22 weapon sprites `weapon/<key>`, 8 armor pieces as `pawn/<layer>_<build>_<facing>` and helmets `pawn/<helmet>_<facing>`, stuff tint masks, validator clean; drawn from `PawnView.Worn` in `render/creature/worn.go` with stuff tints, held keys in `render/creature/held.go`, item keys in `render/world/keys.go`; missing: armor on portraits and the colonist bar, stuff tint on ground items)
--   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet)
--   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist)
+-   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet; AX-AR2: `item/crated_building`, `item/foam_shells`, `item/antimatter_warhead` with icons, drawn when A1/A5 wire them)
+-   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist; AX-AR2 `families/orders.py`: `designation_uninstall|open|strip` and the order badges `order_uninstall|chop|claim|strip|open`, `roof_area_clear`, `roof_remove_clear`, `floor_remove`)
 
 ### ART Wave 3 --- Survival
 
@@ -1271,15 +1271,15 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 4 --- Production
 
--   [-] material variants (wood, five tinted stones and steel for walls; wood/stone floors; wood/steel doors; furniture wood only)
--   [ ] furniture families
+-   [-] material variants (wood, five tinted stones and steel for walls, plus AX-AR1 plasteel, uranium, silver, jade and gold walls (47 linked sprites each); wood/stone floors plus the AX-AR1 floors (§40); wood/steel doors and the ornate door; furniture wood with stuff colour shift, stone_tint masks on carved pieces; missing: in-game review until A2/A3 wire the keys)
+-   [-] furniture families (AX-AR1 `families/decor.py`, §40: tables 1x2/2x2/2x4/3x3, couch, small shelf, plant pot, column, urn, large and grand stele, egg box, animal sleeping box, wall torch, wall lamp and flood light with glow, ornate door, animal flap, double sleeping spot, Architect icons; missing: in-game review until A2 wires the keys)
 -   [x] production/research benches (wave D, A3: family `workshop`, 161 sprites with `fortify`, glow masks for the burning forge and powered benches, stuff tint masks on sculptures (large and grand re-rendered at the wiki footprints) and armchair, icons for every kind; validator 5709 sprites 0 errors, `make art-check` clean incl. orphans; renderer in `render/world/objects.go`, `render/overlay/power_draw.go`; STK-AR 2026-11-01: the 14 production benches (workbench, stove, butcher, tailoring, stonecutter, brewing, drug, electric stove and tailoring, both forges, machining, sculpting, smelter) redrawn at the wiki 3x1 with the work surface on the middle cell, the fabrication bench at 5x2, the fuel refinery and radio console at 3x2, all four facings, glow layers and icons re-cut, keys unchanged; `ui_icon/planned` (greyed Architect placeholder) and `ui_icon/zone_dump`)
--   [x] fortify and turret guns (wave D, A3: family `fortify` with barricade (`stone_tint` mask), autocannon, slug turret and mortar guns drawn from a precomputed key table in `render/overlay/turret_draw.go`, powered door, four shell item icons)
+-   [x] fortify and turret guns (wave D, A3: family `fortify` with barricade (`stone_tint` mask), autocannon, slug turret and mortar guns drawn from a precomputed key table in `render/overlay/turret_draw.go`, powered door, four shell item icons; AX-AR2 `families/security.py`: foam turret (1x1) and rocket battery (2x2) bases with lamp glow and 16-frame guns, foam popper, foam and warhead charges, icons)
 -   [x] storage (wave E, A4: family `storage`, the shelf at its footprint; 5957 sprites in the validator, 0 errors)
 -   [x] goods (wave E, A4: family `goods`, 15 item sprites and `ui_icon` icons for the PRD-4 and DEF-4 kinds: meals, kibble, wort, drugs, chemfuel, components, uranium, plasteel, reinforced barrel)
 -   [x] mech (wave E, A4: four mechanoids with full sprite sets, wrecks and icons; see §11.1; voices are not art; generated with MOSS in SND-004)
 -   [x] shippart (wave E, A4: family `shippart`, the 6x3 crashed ship part)
--   [x] generators/batteries/conduits/lamps (PLAY-021: `artlib/families/power.py`: a linked 16-mask conduit and a hidden-conduit overlay marking, power switch on/off, wood-fired, solar, wind (eight rotor frames) and geothermal generators, battery, heater, in-wall cooler; torch lamp and electric benches in furniture; lit parts as `<name>_glow` layers drawn only while powered, the standing lamp's bulb included (PLAY-022); review sheet `generated/power_buildings.png`)
+-   [x] generators/batteries/conduits/lamps (PLAY-021: `artlib/families/power.py`: a linked 16-mask conduit and a hidden-conduit overlay marking, power switch on/off, wood-fired, solar, wind (eight rotor frames) and geothermal generators, battery, heater, in-wall cooler; torch lamp and electric benches in furniture; lit parts as `<name>_glow` layers drawn only while powered, the standing lamp's bulb included (PLAY-022); review sheet `generated/power_buildings.png`; AX-AR2 `families/industry.py`: waterproof conduit (16 masks, stilts), chemfuel generator with glow, 5x6 watermill in four facings with a separate six-frame wheel layer on a tight canvas (`offset_tiles`))
 
 ### ART Wave 5 --- Combat
 
@@ -1287,7 +1287,7 @@ resolve metadata conflicts, and update the catalog.
 -   [-] pistol/rifle/shotgun/long-range weapon (rifle carried, aimed and firing, ART-027; no pistol, shotgun or long rifle)
 -   [x] arms additions, belt, effect and hive families (wave 3, CBT-3/CBT-5: `families/arms.py` rocket launcher, triple rocket launcher, smoke launcher, charge rifle, charge lance and ikwa, held and as items; `families/belt.py` shield belt and smokepop pack worn and as items; `families/effect.py` fire_burst, emp_flash, smoke_cloud and shield_bubble; `families/hive.py` hive mound; validator 6020 sprites, 0 errors; 10 procedural sounds in `wave3_recipes.go`)
 -   [ ] armor/helmets
--   [-] projectiles/muzzle flash/impact/explosion (tracer, muzzle flash, smoke, casing, impact puff and blood; no explosions)
+-   [-] projectiles/muzzle flash/impact/explosion (tracer, muzzle flash, smoke, casing, impact puff and blood; no explosions; AX-AR2: `effect/rocket_projectile` and `effect/foam_projectile` east-pointing particles and the `overlay/foam_0..2` stain, waiting for A5's renderer wiring)
 -   [ ] fire/smoke
 -   [ ] turret/defenses
 
@@ -1317,7 +1317,7 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 9 --- Endgame
 
--   [ ] advanced production/power
+-   [-] advanced production/power (AX-AR2 `families/industry.py`: deep drill 1x2, ground-penetrating scanner 3x3 and electric crematorium 3x2 (stone tint) in four facings, moisture pump, all with glow layers, the `overlay/deep_ore` marker and Architect icons; wired in game by AX-4 (build keys, the watermill's turning wheel layer, the deep ore overlay multiplied by the ore colour); missing: an in-game visual review pass)
 -   [ ] ship components
 -   [ ] endgame effects
 -   [ ] victory presentation
@@ -1584,3 +1584,41 @@ original (§2). Renderer wiring belongs to the TEMP sim/UI agents.
   - Ground items `item/<tshirt|button_down|pants|jacket|tribalwear|cowboy_hat|bowler_hat>`
     (neutral cloth plus mask) and `ui_icon/<same>`, cut from the item with
     a `tints.cloth` preset multiplied in (the HUD draws icons untinted).
+
+
+## 40. AX decor, furniture and floors (AR1)
+
+Generated 2026-11-01 by `make art FAMILIES="decor flooring"`, with colours from
+`palettes/materials_decor.yaml`. Every design is original (§2). Renderer wiring
+belongs to A2 (decor) and A3 (floors). Until they wire them, the keys below are unread.
+
+- **`decor` family** (`artlib/families/decor.py`):
+  - `structure/ornate_door_<ew|ns>_<open|closed>` (2x1/1x2, clipped into walls)
+    and `structure/animal_flap_<ew|ns>_<open|closed>` (fabric strips, `cloth` mask);
+  - `structure/wall_<plasteel|uranium|silver|jade|gold>_*` (47 linked each);
+  - `overlay/double_sleeping_spot_<facing>` (2x2 chalk marking);
+  - furniture: `table_1x2_<south|east>`, `table_2x2`, `table_2x4_<south|east>`
+    and `table_3x3` (wood, stuff colour shift; north and west reuse south and east);
+  - `couch_<facing>` (`cloth` mask, `seat`/`seat2`), `small_shelf_<facing>`,
+    `plant_pot` (`plant` attachment, canvas px), `animal_sleeping_box`, `egg_box`;
+  - `column`, `urn`, `large_stele` and `grand_stele` (`stone_tint` masks);
+  - `wall_torch_<facing>` (`fire` attachment, flame drawn live) and
+    `wall_lamp_<facing>` with `wall_lamp_glow_<facing>`: each hung on the wall
+    behind its tile;
+  - `flood_light` with `flood_light_glow` (emissive `flood_white`);
+  - icons `ui_icon/<name>` for each of these.
+- **`flooring` family** (`artlib/families/flooring.py`). Each floor is a
+  tileable 128 x 128 `structure/floor_*` sprite with a one-tile period, no
+  outline and no normal map:
+  - `straw_matting`, `concrete`, `paved_tile`, `steel_tile`, `silver_tile`,
+    `gold_tile`, `sterile_tile`;
+  - `stone_tile_<stone>` and `flagstone_<stone>` with one look per stone,
+    multiplied by the stone tint;
+  - `carpet`: one neutral pile multiplied by the carpet colour, so a single
+    texture covers every colour;
+  - icons `ui_icon/<straw_matting|concrete|paved_tile|steel_tile|silver_tile|gold_tile|sterile_tile|stone_tile|flagstone|carpet_floor>`.
+- **Retire once wired:** `structure/floor_stone` (stone floors migrate to
+  stone tile), together with its icon source. `furniture/table_small` and
+  `ui_icon/table` went with AX-2 (the table is 1x2; its card shows
+  `ui_icon/table_1x2`). Until a rose and a daylily have art, a plant pot draws
+  its plant with the fire lily and dandelion sprites at the `plant` attachment.

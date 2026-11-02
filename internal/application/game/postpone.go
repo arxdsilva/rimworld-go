@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
@@ -73,6 +74,7 @@ type postState struct {
 	// orders is the player order each colonist is following now, so a
 	// blocked one can go back on its queue.
 	orders map[entity.EntityID]queuedOrder
+	ord    *orders.Orders // game/orders (AX-1), built by ordersOf (move.go); never saved here
 }
 
 // postPawnKind is the part of a postKey postState.kinds groups by.
@@ -130,8 +132,8 @@ func (p *postState) reindex() {
 func postponable(k job.Kind) bool {
 	switch k {
 	case job.Haul, job.FillHopper, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
-		job.Bill, job.Hunt, job.Refuel, job.Repair, job.Research, job.Clean, job.Bury,
-		job.Roof, job.Unroof, job.Equip:
+		job.Bill, job.Hunt, job.Refuel, job.Repair, job.Research, job.OperateDrill, job.ScanGround, job.Clean, job.Bury,
+		job.Roof, job.Unroof, job.Equip, job.Uninstall, job.Install, job.OpenContainer: // AX-1
 		return true
 	}
 	return false

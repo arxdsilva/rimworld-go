@@ -71,8 +71,11 @@ func TestBuildablesListCarpetMaterials(t *testing.T) {
 			t.Fatalf("StuffID(%q) = %d %v", c.String(), id, ok)
 		}
 	}
-	if _, ok := StuffID("cloth"); ok {
-		t.Fatal("raw cloth is not a build material")
+	if id, ok := StuffID("cloth"); !ok || item.Kind(id) != item.Cloth { // AX-3: the carpet floor's material
+		t.Fatal("raw cloth is a build material now")
+	}
+	if _, ok := StuffID("berries"); ok {
+		t.Fatal("berries are not a build material")
 	}
 }
 

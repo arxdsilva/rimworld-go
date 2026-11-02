@@ -35,3 +35,7 @@ func V10(k construction.Kind) bool {
 func RefundV10(b construction.Building) (item.Kind, int, int) {
 	return b.Stuff, construction.WoodCost(b.Kind), construction.ComponentCost(b.Kind)
 }
+
+// V11 reports a kind save v11 grew (A2, wiki: Table: the 1x1 table to
+// the 1x2 one; its cost did not change, so RefundV10 refunds it).
+func V11(k construction.Kind) bool { return k == construction.Table }

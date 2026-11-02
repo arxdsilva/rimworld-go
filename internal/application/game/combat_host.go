@@ -46,7 +46,7 @@ var _ combat.Host = combatHost{}
 func newCombat(g *Game) *combat.Combat {
 	h := combatHost{combatCreatures{g}, combatRosters{g}, combatGround{g}, combatSkills{g}, combatJobs{g}, combatHarm{g}, combatEvents{g}, combatDice{g}}
 	return combat.New(h, combat.Roles{Power: combatPower{g}, Flight: combatFlight{g}, Hunts: combatHunts{g}, Breach: combatBreach{g},
-		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}, Belts: combatArms{g}, Debris: combatDebris{g}})
+		Field: combatField{g}, Supply: combatSupply{g}, Arms: combatArms{g}, Draft: combatArms{g}, Belts: combatArms{g}, Debris: combatDebris{g}, Foam: combatFoam{g}})
 }
 
 type combatCreatures struct{ g *Game }
@@ -328,7 +328,7 @@ type combatBreach struct{ g *Game }
 func (h combatBreach) BreachRoute(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 	g := h.g
 	pos, _ := g.positions.Get(id)
-	breaks := g.buildingCells(construction.Wall, construction.Door, construction.Autodoor)
+	breaks := g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap)
 	if g.sapper(id) {
 		breaks = g.sapperBreaks() // sappers tunnel through rock too
 	}

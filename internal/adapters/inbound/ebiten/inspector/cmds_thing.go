@@ -402,6 +402,9 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 	}
 	title := QualifiedTitle(ItemTitle(it), it.Stuff, it.Quality)
 	lines = append(ItemFactLines(it), lines...)
+	if ln := CrateLine(it); ln != "" { // cmds_orders.go (AX-1)
+		lines = append(lines, ln)
+	}
 	var bars []Bar
 	if b, ok := RotBar(it); ok { // FOOD-5: how much shelf life is left
 		bars = append(bars, b)
@@ -449,7 +452,7 @@ func (a Thing) ItemCommands(id entity.EntityID) []Button {
 	for _, v := range ItemVerbs(it, InStockpile(a.shell.World(), it.X, it.Y)) {
 		out = append(out, a.colonistVerbCmd(v.ID, v.Label, v.Icon, v.Desc, it.X, it.Y, v.Match))
 	}
-	return out
+	return append(out, a.crateCommands(it)...) // cmds_orders.go (AX-1): Reinstall
 }
 
 // ---- plants ----

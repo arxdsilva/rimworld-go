@@ -177,6 +177,9 @@ const (
 	CarryToCasket
 	LoadPods
 	ScanMinerals
+	// A1: Install carries a crated building to its reinstall blueprint and
+	// installs it (Construction).
+	Install
 )
 
 // Hauls reports a haul job: a plain haul, or FOOD-4's hopper fill, a
@@ -367,6 +370,8 @@ func (k Kind) String() string {
 		return "load pods"
 	case ScanMinerals:
 		return "scan for minerals"
+	case Install:
+		return "install"
 	default:
 		return "idle"
 	}

@@ -100,6 +100,7 @@ func (g *Game) phaseClimate() {
 	}
 	g.checkRoofSupport() // roof.go: unsupported roofs fall first
 	g.burnFuel()         // fuel.go: the burners use their fuel
+	g.br.ind.Pumps(industryHost{g}).Advance(climateInterval)
 	g.expose()
 	g.craft.Condition.Rot(climateInterval)           // craft/condition.go
 	g.craft.Condition.Weather(uint64(g.clock.Now())) // PRD-2: deterioration and worn wear, hourly

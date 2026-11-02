@@ -24,15 +24,29 @@ const (
 	WoodFloor
 	StoneTile
 	CarpetFloor
+	// AX-3: the other built floors (FloorOf).
+	StrawFloor
+	ConcreteFloor
+	PavedFloor
+	SteelFloor
+	SilverFloor
+	GoldFloor
+	SterileFloor
+	FlagstoneFloor
 )
 
 // floorBeauty (tenths) and floorClean (hundredths) per Floor. wiki: Beauty
-// (bare ground -1), Floors (wood 0, stone tile +1, carpet +2); Room
-// (natural ground cleanliness -1, built floors 0). The smoothed stone
-// floor is not published: original tuning, as a stone tile.
+// (bare ground -1), Floors (wood 0, stone tile +1, carpet +2, straw matting
+// -1 and cleanliness -0.1, concrete -1, paved tile 0, steel tile 0, silver
+// tile +4, gold tile +11, the three metal tiles cleanliness +0.2, flagstone
+// 0), Sterile tile (beauty -1, cleanliness +0.6); Room (natural ground
+// cleanliness -1, other built floors 0). The smoothed stone floor is not
+// published: original tuning, as a stone tile.
 var (
-	floorBeauty = [...]int{Bare: -10, Smooth: 10, WoodFloor: 0, StoneTile: 10, CarpetFloor: 20}
-	floorClean  = [...]int{Bare: -100, CarpetFloor: 0}
+	floorBeauty = [...]int{Bare: -10, Smooth: 10, WoodFloor: 0, StoneTile: 10, CarpetFloor: 20, StrawFloor: -10,
+		ConcreteFloor: -10, PavedFloor: 0, SteelFloor: 0, SilverFloor: 40, GoldFloor: 110, SterileFloor: -10, FlagstoneFloor: 0}
+	floorClean = [...]int{Bare: -100, CarpetFloor: 0, StrawFloor: -10, SteelFloor: 20, SilverFloor: 20, GoldFloor: 20,
+		SterileFloor: 60, FlagstoneFloor: 0}
 )
 
 // Filth per filth.Full of dirt plus stain on a cell. wiki: Filth (dirt
@@ -46,24 +60,55 @@ const (
 	buildingValueWorkRatio = 20 // work ticks per silver (colony Wealth's building rule)
 )
 
-// FloorUnder is the Floor beneath a carpet: the floor building's (stuff,
-// when floored), else smooth or bare ground.
-func FloorUnder(stuff item.Kind, floored, smooth bool) Floor {
+// FloorUnder is the Floor of a cell: the floor building's (b, when
+// floored), else smooth or bare ground.
+func FloorUnder(b construction.Building, floored, smooth bool) Floor {
 	switch {
 	case floored:
-		return FloorOf(stuff)
+		return FloorOf(b.Kind, b.Stuff)
 	case smooth:
 		return Smooth
 	}
 	return Bare
 }
 
-// FloorOf is the Floor a floor building of stuff makes.
-func FloorOf(stuff item.Kind) Floor {
+// FloorOf is the Floor a floor building of kind k and stuff makes (a wood
+// floor of stone blocks, from before save v11, is a stone tile).
+func FloorOf(k construction.Kind, stuff item.Kind) Floor {
+	switch k {
+	case construction.StoneTile:
+		return StoneTile
+	case construction.CarpetFloor:
+		return CarpetFloor
+	case construction.StrawMatting:
+		return StrawFloor
+	case construction.Concrete:
+		return ConcreteFloor
+	case construction.PavedTile:
+		return PavedFloor
+	case construction.SteelTile:
+		return SteelFloor
+	case construction.SilverTile:
+		return SilverFloor
+	case construction.GoldTile:
+		return GoldFloor
+	case construction.SterileTile:
+		return SterileFloor
+	case construction.Flagstone:
+		return FlagstoneFloor
+	}
 	if item.IsStoneBlocks(stuff) || stuff == item.Stone {
 		return StoneTile
 	}
 	return WoodFloor
+}
+
+// FloorStats is the beauty (tenths) and cleanliness (hundredths) one cell
+// of a floor building of kind k and stuff gives its room (the pane and the
+// Architect show them).
+func FloorStats(k construction.Kind, stuff item.Kind) (beautyTenths, cleanHundredths int) {
+	f := FloorOf(k, stuff)
+	return floorBeauty[f], floorClean[f]
 }
 
 // Tally sums the static part of a room's stats: blocking furniture cells,
@@ -94,13 +139,13 @@ func (t *Tally) AddBuilding(k construction.Kind, stuff item.Kind, q quality.Leve
 	}
 }
 
-// AddFloor adds a floor building of stuff.
-func (t *Tally) AddFloor(stuff item.Kind) {
-	f := FloorOf(stuff)
+// AddFloor adds a floor building of kind k and stuff.
+func (t *Tally) AddFloor(k construction.Kind, stuff item.Kind) {
+	f := FloorOf(k, stuff)
 	t.Covered++
 	t.BeautyTenths += floorBeauty[f]
 	t.CleanHundredths += floorClean[f]
-	t.Wealth += BuildingValue(construction.Floor, stuff, quality.Default)
+	t.Wealth += BuildingValue(k, stuff, quality.Default)
 }
 
 // AddCarpet adds a carpet laid over a cell whose floor is under; Bare
@@ -142,7 +187,7 @@ func cutsSpace(k construction.Kind) bool {
 	case construction.DefOf(k).BlocksMove, k.Sleeps() && !k.Instant(), k == construction.AnimalBed:
 		return true
 	}
-	return k == construction.Table || k == construction.EndTable || k == construction.Dresser
+	return k.IsTable() || k == construction.EndTable || k == construction.Dresser
 }
 
 // BuildingValue is a building's market value: its material at twice the
@@ -178,24 +223,25 @@ func (t Tally) Role(c Contents, medicalBeds, prisonerBeds int) Role {
 // contents and tally; under is the floor beneath it when it is a carpet.
 func Add(c *Contents, t *Tally, b construction.Building, cells int, under Floor) {
 	switch q, _ := quality.FromStored(b.Quality); {
-	case b.Kind == construction.Floor:
+	case construction.DefOf(b.Kind).Layer == construction.LayerFloor:
 		c.Floored++
-		t.AddFloor(b.Stuff)
+		t.AddFloor(b.Kind, b.Stuff)
 		return
 	case b.Kind == construction.Carpet:
 		t.AddCarpet(under, b.Stuff)
 		return
 	default:
 		t.AddBuilding(b.Kind, b.Stuff, q, cells)
+		t.BeautyTenths += construction.PotBeauty(b) / 100 // A2: a plant pot's plant
 	}
 	switch k := b.Kind; {
 	case k.Sleeps():
 		c.Beds++
-	case k == construction.Table:
+	case k.IsTable(): // A2: every size
 		c.Tables++
 	case k == construction.Chair:
 		c.Chairs++
-	case k == construction.Lamp, k == construction.TorchLamp:
+	case k == construction.Lamp, k == construction.TorchLamp, k.WallHung(), k == construction.FloodLight:
 		c.Lamps++ // a light fitting, lit or not
 	case construction.DefOf(k).Bench:
 		c.Benches++

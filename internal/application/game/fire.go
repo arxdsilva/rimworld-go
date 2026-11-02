@@ -247,6 +247,9 @@ func (g *Game) fireItems() (fuel map[int]int, burning map[int][]entity.EntityID)
 // stacks.
 func (g *Game) cellFuel(x, y int, items map[int]int) fire.Fuel {
 	var f fire.Fuel
+	if s, ok := g.stains.tiles[[2]int{x, y}]; ok && s.Kind == stain.Foam { // AX-5: nothing burns under fire foam
+		return f
+	}
 	if pid := g.plantAt(x, y); pid != 0 {
 		if p := g.plants.Ref(pid); p != nil {
 			f = f.With(fire.PlantFlammability(p.Species))
@@ -278,20 +281,6 @@ func (g *Game) cellFuel(x, y int, items map[int]int) fire.Fuel {
 // (MetalOnly): fire.BuildingFlammability is 0 for them, so a conduit adds
 // no fuel and never burns.
 var fireLayers = [...]construction.Layer{construction.LayerObject, construction.LayerFloor, construction.LayerFoundation, construction.LayerConduit}
-
-// fireMix is splitmix64's finaliser.
-func fireMix(x uint64) uint64 {
-	x += 0x9E3779B97F4A7C15
-	x = (x ^ x>>30) * 0xBF58476D1CE4E5B9
-	x = (x ^ x>>27) * 0x94D049BB133111EB
-	return x ^ x>>31
-}
-
-// spreadRoll is the roll (0..999999) for the fire on cell src setting
-// cell dst alight on tick now.
-func spreadRoll(seed, now uint64, src, dst int) int {
-	return int(fireMix(seed^fireMix(now^uint64(src)<<24^uint64(dst)<<44)) % 1_000_000)
-}
 
 // stepFires runs one fire step every fire.StepTicks while anything burns:
 // each fire grows, starves or is drenched, big ones spread, and every
@@ -332,7 +321,7 @@ func (g *Game) stepFires() {
 			}
 			shield := !roofed && g.roofAt(nx, ny).Roofed()
 			c := fire.SpreadChance(size, g.cellFuel(nx, ny, items), fire.Downwind(d[0], d[1], wx, wy), shield)
-			if c > 0 && spreadRoll(seed, now, src, dst) < c {
+			if c > 0 && fire.SpreadRoll(seed, now, src, dst) < c {
 				lit[dst] = true
 				spread = append(spread, fire.Fire{X: nx, Y: ny, Size: fire.IgniteSize})
 			}
@@ -481,7 +470,7 @@ func scorch(g *Game) {
 	for _, r := range g.thermo.HotRooms(nil, thermo.IgniteAt) {
 		c := thermo.IgniteChance(g.thermo.Temps[r])
 		g.thermo.EachCell(r, func(i int) bool {
-			if g.thermo.MayIgnite(now) && spreadRoll(seed, now, i, i) < c && g.fireIndex(i%w, i/w) < 0 && g.ignite(i%w, i/w, fire.IgniteSize) {
+			if g.thermo.MayIgnite(now) && fire.SpreadRoll(seed, now, i, i) < c && g.fireIndex(i%w, i/w) < 0 && g.ignite(i%w, i/w, fire.IgniteSize) {
 				g.thermo.Ignited(now)
 			}
 			return g.thermo.MayIgnite(now)
@@ -523,6 +512,15 @@ func (g *Game) fireWarmth(x, y int) temperature.Temp {
 	}
 	return temperature.Temp(best * fireOutdoorHeat)
 }
+
+// combatFoam is combat.Foamer (AX-5, combat/foam.go): the fires a foam
+// burst, popper or turret sees and puts out, and the foam it leaves.
+type combatFoam struct{ g *Game }
+
+func (h combatFoam) FiresNear(x, y, r int) bool { return h.g.firesAround(x, y, r) }
+func (h combatFoam) Burning(x, y int) int       { return h.g.fireAt(x, y) }
+func (h combatFoam) Douse(x, y int)             { h.g.douseFire(x, y, fire.MaxSize) }
+func (h combatFoam) Spill(x, y, n int)          { h.g.stamp(x, y, stain.Foam, n) }
 
 // devStartFire lights (x, y) (the developer action, command.DevStartFire).
 func (g *Game) devStartFire(x, y int) { g.startFire(x, y, devFireSize) }

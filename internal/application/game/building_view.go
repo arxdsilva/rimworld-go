@@ -161,7 +161,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 		Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(), Quality: craft.QualityLabel(b.Quality),
 		Bench: construction.DefOf(b.Kind).Bench,
 	}
-	bv.HPPct = b.HP() * 100 / max(1, construction.MaxHP(b.Kind, b.Stuff))
+	bv.HPPct, bv.AX.Colour = b.HP()*100/max(1, construction.MaxHP(b.Kind, b.Stuff)), construction.TintName(b.Kind, b.Tint) // AX-3: a carpet floor's colour
 	if b.Kind == construction.Carpet {
 		bv.Catch = filth.Catch(b.Stuff) / 10
 	}
@@ -186,16 +186,21 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	bv.Medical = b.Medical     // PLAY-020: kept for the sick and injured
 	st := g.rest.Stats.Of(id)  // BED-1: comfort, rest effectiveness, beauty, facilities (rest/stats.go)
 	bv.Comfort, bv.RestEffect, bv.Beauty, bv.Facilities, bv.Forbidden = st.Comfort, st.RestEffect, st.Beauty, st.Links(), b.Forbidden
-	g.fillCasketView(bv, id, b) // casket.go (MAPGEN-3)
+	bv.Beauty += construction.PotBeauty(b) // A2: seats, a pot's plant, a hung light (axview)
+	bv.AX.Seats, bv.AX.Plant, bv.AX.PlantPct, bv.AX.WallMounted = construction.Seats(b.Kind), construction.PotPlant(b.Plant).DefOf().Name, int(b.Growth)/10, b.Kind.WallHung()
+	g.fillCasketView(bv, id, b)  // casket.go (MAPGEN-3)
+	fillOrderViews(g, bv, id, b) // move.go (AX-1): uninstall and open marks
 	bv.Linked, bv.WorkSpeed, bv.Epitaph = g.craft.Stations.View(id, b, bv.Epitaph)
 	bv.ResearchSpeed, bv.Analyzer = g.lab.Factor(id), uint64(g.lab.Analyzer(id)) // game/research (RSCH-1)
 	// PLAY-021: the light the renderer draws (light.go), then power
 	// (power_view.go)
 	bv.Glow, bv.GlowRadius = g.glowOf(id, b)
 	g.fillPowerBuilding(bv, id, b)
+	g.br.ind.View(industryHost{g}, &bv.AX, id, b)            // game/industry (AX-4): drill, scanner, pump, watermill
 	df := g.combat.Orders.View(id, b, uint64(g.clock.Now())) // combat/orders.go: turrets, mortars, doors (PLAY-024, DEF-3)
 	bv.AimDir, bv.ShotAge, bv.HoldOpen, bv.HoldFire, bv.HasTarget = df.Dir, df.ShotAge, df.HoldOpen, df.HoldFire, df.HasTarget
 	bv.Barrel, bv.Shells, bv.TargetX, bv.TargetY = df.Barrel, df.Shells, df.TargetX, df.TargetY
+	bv.AX.Charges, bv.AX.ChargeCap, bv.AX.Armed = df.Charges, df.ChargeCap, df.Armed // AX-5
 }
 
 // equalBuildingView reports two views that read the same: every field

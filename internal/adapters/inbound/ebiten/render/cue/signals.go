@@ -93,7 +93,7 @@ func (b *Bus) ListenWorld(v *render.View, w game.WorldView, pawns []game.PawnVie
 	for _, b := range w.Buildings {
 		built[[2]int{b.X, b.Y}] = true
 		switch b.Kind {
-		case "door":
+		case "door", "ornate door": // A2: the ornate door sounds as a door
 			doors[[2]int{b.X, b.Y}] = standing[[2]int{b.X, b.Y}]
 		case autodoorKind: // opens for anyone passing, or when held open
 			doors[[2]int{b.X, b.Y}] = standing[[2]int{b.X, b.Y}] || b.HoldOpen

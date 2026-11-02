@@ -35,35 +35,68 @@ func TestSeatKindsAndComfort(t *testing.T) {
 func TestAtTablePrefersSeats(t *testing.T) {
 	f := newFake()
 	s := New(f)
-	f.bed(1, construction.Table, 10, 10)
-	f.bldgIDs = append(f.bldgIDs, 99) // a building gone from the store
-	// food at (10, 13): the south cell (10, 11) is nearest; a stool to
+	f.bed(1, construction.Table, 10, 10) // A2: the 1x2 table, (10, 10) and (10, 11)
+	f.bldgIDs = append(f.bldgIDs, 99)    // a building gone from the store
+	// food at (10, 14): the south seat (10, 12) is nearest; a stool to
 	// the east is worth 4 steps, an armchair to the west 7
-	if x, y, ok := s.Seats.AtTable(9, 10, 13); !ok || x != 10 || y != 11 {
+	if x, y, ok := s.Seats.AtTable(9, 10, 14); !ok || x != 10 || y != 12 {
 		t.Fatalf("bare table: %d,%d %v", x, y, ok)
 	}
-	f.unreachable[[2]int{11, 10}] = true // food to the east: of the two cells 3 away, the upper
-	if x, y, _ := s.Seats.AtTable(9, 13, 10); x != 10 || y != 9 {
+	f.unreachable[[2]int{10, 9}] = true // food to the north: of the two cells 3 away, the left
+	if x, y, _ := s.Seats.AtTable(9, 10, 7); x != 9 || y != 10 {
 		t.Fatalf("tie: %d,%d", x, y)
 	}
-	delete(f.unreachable, [2]int{11, 10})
-	f.bed(2, construction.Stool, 11, 10)
-	if x, y, _ := s.Seats.AtTable(9, 10, 13); x != 11 || y != 10 {
+	delete(f.unreachable, [2]int{10, 9})
+	f.bed(2, construction.Stool, 11, 11)
+	if x, y, _ := s.Seats.AtTable(9, 10, 14); x != 11 || y != 11 {
 		t.Fatalf("stool: %d,%d", x, y)
 	}
-	f.bed(3, construction.Armchair, 9, 10)
-	if x, y, _ := s.Seats.AtTable(9, 10, 13); x != 9 || y != 10 {
+	f.bed(3, construction.Armchair, 9, 11)
+	if x, y, _ := s.Seats.AtTable(9, 10, 14); x != 9 || y != 11 {
 		t.Fatalf("armchair: %d,%d", x, y)
 	}
 	// taken, unreachable or cluttered cells are passed over
-	f.taken[[2]int{9, 10}] = 7
-	f.unreachable[[2]int{11, 10}] = true
-	f.bed(4, construction.EndTable, 10, 11)
-	if x, y, _ := s.Seats.AtTable(9, 10, 13); x != 10 || y != 9 {
+	f.taken[[2]int{9, 11}] = 7
+	f.unreachable[[2]int{11, 11}] = true
+	f.bed(4, construction.EndTable, 10, 12)
+	if x, y, _ := s.Seats.AtTable(9, 10, 14); x != 9 || y != 10 {
 		t.Fatalf("leftover: %d,%d", x, y)
 	}
 	if _, _, ok := s.Seats.AtTable(9, 100, 100); ok {
 		t.Fatal("a table out of reach")
+	}
+}
+
+// TestBigTableSeatsAndCouch (A2): a 2x2 table offers a seat along each
+// side cell (8, wiki: Table), and a couch is two seats: a sitter takes the
+// nearer cell, a second the other.
+func TestBigTableSeatsAndCouch(t *testing.T) {
+	f := newFake()
+	s := New(f)
+	f.bed(1, construction.Table2x2, 10, 10)
+	n := 0
+	for _, c := range construction.SeatCells(construction.Table2x2, construction.South, 10, 10) {
+		f.taken[c] = 50 // every seat taken
+		n++
+	}
+	if n != 8 {
+		t.Fatalf("%d seats round a 2x2 table, want 8", n)
+	}
+	if _, _, ok := s.Seats.AtTable(9, 10, 14); ok {
+		t.Fatal("a full table still seats a diner")
+	}
+	f.pawn(2, 0, 0)
+	s.Needs.m[2] = NeedRecord{Comfort: 20 * needs.LevelPct}
+	f.bed(3, construction.Couch, 2, 0) // (2, 0) and (3, 0)
+	if c, ok := s.Seats.ComfortAt(3, 0); !ok || c != 850 {
+		t.Fatalf("couch comfort %d %v, want 850 (wiki: Couch)", c, ok)
+	}
+	if x, y, ok := s.Seats.best(2); !ok || x != 2 || y != 0 {
+		t.Fatalf("first sitter: %d,%d %v", x, y, ok)
+	}
+	f.taken[[2]int{2, 0}] = 9
+	if x, y, ok := s.Seats.best(2); !ok || x != 3 || y != 0 {
+		t.Fatalf("second sitter: %d,%d %v, want the couch's other cell", x, y, ok)
 	}
 }
 

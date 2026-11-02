@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/industry"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -20,6 +21,7 @@ import (
 // bridgeState is the open-sea bitset (nil: no sea known).
 type bridgeState struct {
 	ocean []uint64
+	ind   industry.State // AX-4 (game/industry): river flow, deep ore, drills, scanners, pumps, mills, wind
 }
 
 // cellWalkable is whether pawns can stand on (x, y): the terrain is
@@ -146,7 +148,7 @@ func (g *Game) exportOcean() []uint64 { return slices.Clone(g.br.ocean) }
 // importOcean restores a saved sea bitset; an absent (older save) or
 // mis-sized one is no sea, so every deep water stays bridgeable.
 func (g *Game) importOcean(bits []uint64) {
-	g.br = bridgeState{}
+	g.br.ocean = nil
 	n := g.grid.Width() * g.grid.Height()
 	if len(bits) == 0 || len(bits) != (n+63)/64 {
 		return

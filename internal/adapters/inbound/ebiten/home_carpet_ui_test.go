@@ -229,9 +229,11 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	a, _ := stubColony(t)
 	click(t, a, "tab.architect") // opens on Structure
 	click(t, a, "arch.tool.wall")
-	// wood, every stone's blocks and steel, labelled and inside the panel
+	// wood, every stone's blocks, steel and the precious walls (A2), labelled and inside the panel
 	want := map[string]string{"wood": "Wood", "sandstone blocks": "Sandstone blocks", "granite blocks": "Granite blocks",
-		"limestone blocks": "Limestone blocks", "slate blocks": "Slate blocks", "marble blocks": "Marble blocks", "steel": "Steel"}
+		"limestone blocks": "Limestone blocks", "slate blocks": "Slate blocks", "marble blocks": "Marble blocks", "steel": "Steel",
+		// A2, wiki: Walls: the precious walls
+		"silver": "Silver", "gold": "Gold", "plasteel": "Plasteel", "uranium": "Uranium", "jade": "Jade"}
 	r := a.arch.Rect()
 	n := 0
 	for _, b := range a.arch.Buttons() {

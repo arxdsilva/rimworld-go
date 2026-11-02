@@ -17,10 +17,14 @@ const (
 	Flame      // burning fuel: molotovs, incendiary shells; sets cells alight
 	EMP        // an electromagnetic pulse: stuns machines, harms no flesh
 	Smoke      // a cloud that spoils aim through it, harms nothing
+	// Foam (AX-5, append only: saved in bursts) smothers fire: it puts
+	// out every fire it reaches and leaves fire foam on the ground, and
+	// harms nothing. wiki: Firefoam popper
+	Foam
 	numKinds
 )
 
-var names = [numKinds]string{"", "bomb", "flame", "EMP", "smoke"}
+var names = [numKinds]string{"", "bomb", "flame", "EMP", "smoke", "foam"}
 
 // String is the player-facing name ("" for None).
 func (k Kind) String() string {
@@ -57,6 +61,7 @@ var kinds = [numKinds]struct {
 	Flame: {damage.Heat, [numTargets]int{Passable: 1000, Impassable: 1000, Wall: 1000}, true},
 	EMP:   {damage.EMP, [numTargets]int{}, false},
 	Smoke: {damage.Blunt, [numTargets]int{}, false},
+	Foam:  {damage.Blunt, [numTargets]int{}, false},
 }
 
 // Def is one blast: its kind, reach and punch. Radius is in thousandths
@@ -67,6 +72,13 @@ type Def struct {
 	Radius int
 	Damage int
 	Pen    int
+	// AX-5: Rim is the damage left at the rim (permille of Damage; 0:
+	// RimShare) and Fire the chance (permille) each cell a bomb reaches
+	// catches fire (0: none). The antimatter warhead: 550 at the centre
+	// to 110 at the edge, about 22 % of its cells alight. wiki: Antigrain
+	// warhead
+	Rim  int
+	Fire int
 }
 
 // Zero reports a weapon without a blast.
@@ -85,6 +97,9 @@ func (d Def) Flesh() bool { return d.Kind < numKinds && kinds[d.Kind].flesh }
 
 // Ignites reports a blast that sets the cells it reaches alight.
 func (d Def) Ignites() bool { return d.Kind == Flame }
+
+// Douses reports a blast that puts out the fires it reaches (AX-5).
+func (d Def) Douses() bool { return d.Kind == Foam }
 
 // Reach is the radius in whole tiles, rounded up: the square a caller
 // scans around the centre.
@@ -113,9 +128,12 @@ func (d Def) At(dist int) int {
 	if d.Damage <= 0 || dist > d.Radius || dist < 0 {
 		return 0
 	}
-	f := 1000
+	f, rim := 1000, RimShare
+	if d.Rim > 0 {
+		rim = d.Rim
+	}
 	if d.Radius > 0 {
-		f -= (1000 - RimShare) * dist / d.Radius
+		f -= (1000 - rim) * dist / d.Radius
 	}
 	return max(d.Damage*f/1000, 1)
 }

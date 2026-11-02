@@ -30,7 +30,7 @@ if HERE not in sys.path:
 
 import artlib  # noqa: E402
 
-FAMILIES = ["terrain", "rock", "structure", "fence", "power", "climate", "defense", "fortify", "shippart", "furniture", "bedroom", "workshop", "storage", "paste", "sarcophagus", "hive", "plant", "trees", "item", "goods", "food", "pawn", "gear", "arms", "armor", "apparel", "belt", "animal", "weather", "overlay", "effect"]
+FAMILIES = ["terrain", "rock", "structure", "fence", "power", "climate", "defense", "fortify", "shippart", "furniture", "bedroom", "workshop", "storage", "paste", "sarcophagus", "hive", "plant", "trees", "item", "goods", "food", "pawn", "gear", "arms", "armor", "apparel", "belt", "animal", "weather", "overlay", "effect", "orders", "industry", "security", "decor", "flooring"]
 SCENES = ["menu"]   # whole-scene renders; only built when named
 
 

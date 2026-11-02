@@ -1,8 +1,10 @@
 package game
 
 import (
+	"cmp"
 	"strings"
 
+	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -88,7 +90,7 @@ func StuffID(name string) (uint8, bool) {
 		return uint8(k), true
 	}
 	k, ok := item.ParseKind(name)
-	if !ok || !k.IsCarpet() {
+	if !ok || !k.IsCarpet() && !construction.OnlyStuff(k) { // AX-3: hay, silver, gold, cloth floors
 		return 0, false
 	}
 	return uint8(k), true
@@ -149,13 +151,18 @@ func (g *Game) canPlaceStuffAt(k construction.Kind, stuff item.Kind, f construct
 		return false, ReasonSame
 	}
 	cells, spot, hasSpot := construction.Footprint(k, f, x, y)
-	for _, c := range cells {
-		if ok, r := g.canPlaceCell(k, stuff, c[0], c[1], swap != 0); !ok {
+	for i, c := range cells { // a watermill's wheel goes in the water (game/industry, AX-4)
+		if ok, r := g.canPlaceCell(k, stuff, c[0], c[1], swap != 0); !ok && (r != ReasonWater || !construction.WheelCell(k, i)) {
 			return false, r
 		}
 	}
 	if k == construction.GeothermalGenerator && !g.ventOrigin(x, y) {
 		return false, ReasonNeedsVent // exactly over a steam vent, nowhere else
+	} else if ok, r := g.br.ind.Mill(industryHost{g}).Place(k, f, x, y); !ok {
+		return false, r // the wheel wholly in a river's moving water
+	}
+	if k.WallHung() && !hangsOn(g, f, x, y) {
+		return false, ReasonNeedsWall // A2: a wall torch or lamp hangs on the wall behind it
 	}
 	if swap != 0 {
 		return true, "" // the piece already stands there, spot and all
@@ -238,6 +245,8 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 		if ok, r := g.bridgePlacement(x, y); !ok {
 			return false, r
 		}
+	} else if wades := k == construction.WaterproofConduit && g.terr.At(x, y) == terrain.ShallowWater; wades {
+		// AX-4: a waterproof conduit runs over shallow water
 	} else if ok, r := g.waterPlacement(x, y); !ok { // water.go: nothing but a bridge is built on water
 		return false, r
 	} else if ok, r := g.supportPlacement(k, stuff, x, y); !ok { // bridge.go: a deck holds light things only
@@ -347,14 +356,15 @@ func (g *Game) AutoFacingAt(kind, facing string, x, y int) string {
 // autoOriented: doors and fence gates face along their walls or fences; a
 // cooler (PLAY-021) or vent (TEMP-0) faces across its wall (WallFacing).
 func autoOriented(k construction.Kind) bool {
-	return k.IsDoor() || k == construction.FenceGate || k.WallMounted()
+	return k.IsDoor() || k == construction.FenceGate || k.WallMounted() || k.WallHung()
 }
 
 // orientPiece: a piece a door or gate lines up with (wall, door, fence,
 // gate).
 func orientPiece(k construction.Kind) bool {
 	switch k {
-	case construction.Wall, construction.Door, construction.Autodoor, construction.Fence, construction.FenceGate:
+	case construction.Wall, construction.Door, construction.Autodoor, construction.Fence, construction.FenceGate,
+		construction.OrnateDoor, construction.AnimalFlap:
 		return true
 	}
 	return false
@@ -389,6 +399,12 @@ func (g *Game) solidAt(x, y int) bool {
 // prefer. Neighbours are read in fixed N, E, S, W order; no RNG.
 func (g *Game) autoFacing(k construction.Kind, x, y int, prefer construction.Facing) construction.Facing {
 	if !autoOriented(k) {
+		return prefer
+	}
+	for i := 0; i < 4 && k.WallHung() && !hangsOn(g, prefer, x, y); i++ { // A2: it faces away from its wall
+		prefer = (prefer + 1) % 4
+	}
+	if k.WallHung() {
 		return prefer
 	}
 	h, v := 0, 0
@@ -507,7 +523,7 @@ func (g *Game) ReplacesAt(kind, stuff string, x, y int) string {
 		return ""
 	}
 	if swap, _ := g.swapCheck(k, s, b.Facing, x, y); swap != 0 {
-		return stuffWord(b.Stuff) + " " + construction.DefOf(k).Name + " → " + stuffWord(s)
+		return stuffWord(b.Stuff) + " " + construction.DefOf(b.Kind).Name + " → " + construction.SwapTo(b.Kind, k, stuffWord(s))
 	}
 	return ""
 }
@@ -532,7 +548,7 @@ func (g *Game) swapCheck(k construction.Kind, stuff item.Kind, f construction.Fa
 	def := construction.DefOf(k)
 	bid := g.layerBldgAt(x, y, def.Layer)
 	b, ok := g.bldgs.Get(bid)
-	if !ok || b.Kind != k || b.X != x || b.Y != y {
+	if !ok || !construction.Replaces(b.Kind, k) || b.X != x || b.Y != y { // AX-3: a floor over any floor
 		return 0, false
 	}
 	if !def.Rotatable {
@@ -547,7 +563,7 @@ func (g *Game) swapCheck(k construction.Kind, stuff item.Kind, f construction.Fa
 			return 0, false
 		}
 	}
-	if b.Stuff == stuff {
+	if construction.SameFloor(b.Kind, b.Stuff, k, stuff) {
 		return 0, true
 	}
 	if construction.StuffOK(k, stuff) {
@@ -603,8 +619,7 @@ func (g *Game) completeSwap(id entity.EntityID, fr construction.Frame, b constru
 	}
 	g.frameIDs = kept
 	old := b
-	b.Stuff, b.Damage, b.Ruin = fr.Stuff, 0, false // a rebuilt ruin is the colony's
-	b.Ancient = false                              // vault.go: so is a rebuilt vault piece
+	b.Kind, b.Stuff, b.Tint, b.Damage, b.Ruin, b.Ancient = fr.Kind, fr.Stuff, fr.Tint, 0, false, false // a rebuilt ruin or vault piece is the colony's; AX-3: a new floor
 	g.bldgs.Set(fr.Swaps, b)
 	g.markRoomsDirty() // stone walls change beauty and impressiveness
 	g.structVer++      // SIM-029: the tint changes
@@ -631,7 +646,7 @@ func (g *Game) fillSwapView(bv *BuildingView, id entity.EntityID) {
 		return
 	}
 	total := max(1, construction.WorkFor(fr.Kind, fr.Stuff))
-	bv.SwapTo = fr.Stuff.String()
+	bv.SwapTo = construction.SwapToName(bv.Kind, fr.Kind, fr.Stuff) // AX-3: or the new floor
 	bv.SwapPct = min(100, max(0, (total-fr.WorkLeft)*100/total))
 }
 
@@ -641,10 +656,29 @@ func (g *Game) replacedStanding(fr construction.Frame) entity.EntityID {
 	if fr.Replaces == 0 {
 		return 0
 	}
-	if !g.bldgs.Has(fr.Replaces) {
-		return 0
+	if g.bldgs.Has(fr.Replaces) {
+		return fr.Replaces
 	}
-	return fr.Replaces
+	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
+	for _, c := range cells[1:] { // A2: an ornate door's second cell
+		if bid := g.layerBldgAt(c[0], c[1], construction.LayerObject); bid != 0 {
+			return bid
+		}
+	}
+	return 0
+}
+
+// hangsOn reports a wall (built or planned) or rock behind a wall-hung
+// piece facing f at (x, y) (A2).
+func hangsOn(g *Game, f construction.Facing, x, y int) bool {
+	bx, by := construction.Behind(f, x, y)
+	if !g.grid.InBounds(bx, by) || terrain.IsRockWall(g.terr.At(bx, by)) {
+		return g.grid.InBounds(bx, by)
+	}
+	b, _ := g.bldgs.Get(g.layerBldgAt(bx, by, construction.LayerObject))
+	fr, _ := g.frames.Get(g.layerFrameAt(bx, by, construction.LayerObject))
+	return g.layerBldgAt(bx, by, construction.LayerObject) != 0 && b.Kind == construction.Wall ||
+		g.layerFrameAt(bx, by, construction.LayerObject) != 0 && fr.Kind == construction.Wall
 }
 
 // replaceWhy is the build refusal while the old piece stands ("" when
@@ -744,20 +778,22 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 		Facing:   f,
 		X:        x,
 		Y:        y,
-		Need:     construction.WoodCost(kind),
-		CompNeed: construction.ComponentCost(kind), // delivered after the material (haul_route.go)
+		Need:     construction.CostFor(kind, stuff), // A2: ten times for a silver, gold or jade wall
+		CompNeed: construction.ComponentCost(kind),  // delivered after the material (haul_route.go)
 		WorkLeft: construction.WorkFor(kind, stuff),
 	}
 	if swap != 0 {
 		fr.Swaps = swap // converted in place: nothing comes down (PLAY-011)
 		fr.CompNeed = 0 // the components already in it are kept
 	} else if cells, _, _ := construction.Footprint(kind, f, x, y); len(cells) > 0 {
-		if rep := g.replaceTarget(kind, cells[0][0], cells[0][1]); rep != 0 {
-			fr.Replaces = rep // the old piece comes down first
-			if b, _ := g.bldgs.Get(rep); !b.Deconstruct {
-				b.Deconstruct, b.WorkLeft = true, construction.DeconstructTicks(b.Kind)
-				g.bldgs.Set(rep, b)
-				fr.ReplaceMarked = true
+		for i, c := range cells { // A2: a 2-wide ornate door takes down a piece per cell
+			if rep := g.replaceTarget(kind, c[0], c[1]); rep != 0 {
+				if b, _ := g.bldgs.Get(rep); !b.Deconstruct {
+					b.Deconstruct, b.WorkLeft = true, construction.DeconstructTicks(b.Kind)
+					g.bldgs.Set(rep, b)
+					fr.ReplaceMarked = fr.ReplaceMarked || i == 0
+				}
+				fr.Replaces = cmp.Or(fr.Replaces, rep) // the old piece comes down first
 			}
 		}
 	}
@@ -789,6 +825,15 @@ func (g *Game) ejectPawns(x, y int) {
 
 func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := normalizeRect(x1, y1, x2, y2)
+	markDeconstructWhere(g, minX, minY, maxX, maxY, on, anyLayer)
+}
+
+// anyLayer: markDeconstructWhere takes every layer.
+const anyLayer = construction.Layer(255)
+
+// markDeconstructWhere marks the pieces of layer (anyLayer: all; AX-1
+// remove floor: floors) in the normalized rectangle.
+func markDeconstructWhere(g *Game, minX, minY, maxX, maxY int, on bool, layer construction.Layer) {
 	var erase []entity.EntityID
 	defer func() {
 		for _, id := range erase {
@@ -797,7 +842,7 @@ func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 	}()
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
-		if !ok || b.X < minX || b.X > maxX || b.Y < minY || b.Y > maxY || g.fogged(b.X, b.Y) {
+		if !ok || b.X < minX || b.X > maxX || b.Y < minY || b.Y > maxY || g.fogged(b.X, b.Y) || layer != anyLayer && construction.DefOf(b.Kind).Layer != layer {
 			continue
 		}
 		if b.Deconstruct == on {
@@ -818,7 +863,7 @@ func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 			g.refuseBridge(b) // bridge_remove.go: clear the deck first
 			continue
 		}
-		b.Deconstruct = on
+		b.Deconstruct, b.Uninstall = on, b.Uninstall && !on // AX-1: a deconstruct mark replaces an uninstall one
 		if on {
 			b.WorkLeft = construction.DeconstructTicks(b.Kind)
 			if b.Occupant != 0 {
@@ -896,9 +941,17 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 		x, y := g.refundCell(b, refundStuff(b))
 		g.dropStack(refundStuff(b), r, x, y)
 	}
+	for i, c := range construction.DefOf(b.Kind).Extra {
+		g.dropStack(c.Item, orders.FloorExtraRefund(b.Kind, i), b.X, b.Y) // AX-1: a floor's secondary material, half back
+	}
 	if n := componentRefund(b.Kind); n > 0 {
 		x, y := g.refundCell(b, item.Components)
 		g.dropStack(item.Components, n, x, y) // half the components, rounded down
+	}
+	for _, c := range construction.DefOf(b.Kind).Extra { // AX-4: half the secondary materials too (a floor's: A1's rule above)
+		if c.N/2 > 0 && construction.DefOf(b.Kind).Layer != construction.LayerFloor {
+			g.dropStack(c.Item, c.N/2, b.X, b.Y)
+		}
 	}
 }
 

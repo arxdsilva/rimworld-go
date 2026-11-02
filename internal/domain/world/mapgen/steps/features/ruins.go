@@ -48,10 +48,45 @@ func ruinCount(c *mapgen.Ctx, rn *randx.Rand) int {
 func (Ruins) Run(c *mapgen.Ctx) error {
 	rn := c.Rand("ruins")
 	n := ruinCount(c, rn)
+	from := len(c.R.Ruins)
 	for k := 0; k < n; k++ {
 		placeRuin(c, rn)
 	}
+	placeUrns(c, c.Rand("ruin_urns"), from)
 	return nil
+}
+
+// placeUrns stands an urn in half the sheds placed from index from on
+// (A2; original tuning: the wiki says only that urns are found in ruins),
+// on a floored cell no loot lies on, drawn from its own stream so the
+// ruins themselves are unchanged.
+func placeUrns(c *mapgen.Ctx, rn *randx.Rand, from int) {
+	for i := from; i < len(c.R.Ruins); i++ {
+		ru := &c.R.Ruins[i]
+		if ru.Kind != mapgen.Shed || len(ru.Walls) == 0 || rn.IntN(2) != 0 {
+			continue
+		}
+		var free [][2]int
+		for _, f := range ru.Floors {
+			if !hasLoot(ru, f.X, f.Y) {
+				free = append(free, [2]int{f.X, f.Y})
+			}
+		}
+		if len(free) == 0 {
+			continue
+		}
+		p := free[rn.IntN(len(free))]
+		ru.Urns = append(ru.Urns, mapgen.RuinFloor{X: p[0], Y: p[1], Stuff: ru.Walls[0].Stuff})
+	}
+}
+
+func hasLoot(ru *mapgen.Ruin, x, y int) bool {
+	for _, l := range ru.Loot {
+		if l.X == x && l.Y == y {
+			return true
+		}
+	}
+	return false
 }
 
 func newWallRun(rn *randx.Rand) shape {

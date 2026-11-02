@@ -128,7 +128,7 @@ func (o *Wiring) DrawDefenseParts(v *render.View, ps sprite.Pass, ch *Chunks, ds
 		return
 	}
 	switch b.Kind {
-	case SentryTurretKind, AutocannonKind, SlugTurretKind, MortarKind:
+	case SentryTurretKind, AutocannonKind, SlugTurretKind, MortarKind, FoamTurretKind, RocketBatteryKind:
 		gk, wx, wy, ok := turretGunAt(v.Art, b)
 		if !ok {
 			return

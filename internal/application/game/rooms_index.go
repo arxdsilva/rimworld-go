@@ -120,6 +120,9 @@ func (g *Game) syncRooms() (first bool, bchanged []int32) {
 			for _, c := range cells {
 				if g.grid.InBounds(c[0], c[1]) {
 					feed(c[1]*w + c[0])
+					if s.kind.HoldsRoof() { // A2: a column's support changes, not the rooms
+						bchanged = append(bchanged, int32(c[1]*w+c[0]))
+					}
 				}
 			}
 		}
@@ -220,7 +223,7 @@ func (g *Game) countRoomBuildings(grid []int, stats []roomStats) {
 		under := room.Bare
 		if b.Kind == construction.Carpet { // the floor beneath it
 			fb, ok := g.bldgs.Get(g.layerBldgAt(b.X, b.Y, construction.LayerFloor))
-			under = room.FloorUnder(fb.Stuff, ok, g.terr.At(b.X, b.Y) == terrain.StoneSmooth)
+			under = room.FloorUnder(fb, ok, g.terr.At(b.X, b.Y) == terrain.StoneSmooth)
 		}
 		room.Add(&stats[r].contents, &stats[r].tally, b, len(cells), under)
 	}
@@ -271,13 +274,13 @@ func (g *Game) refreshRoofSupportAround(bchanged []int32) {
 		clear(ri.stamp)
 		ri.gen = 1
 	}
-	grid := g.roomGrid
+	grid, cols := g.roomGrid, g.buildingCells(construction.Column) // A2: a column holds a roof too
 	const r = roof.SupportRange
 	supported := func(x, y int) bool {
 		for yy := max(0, y-r); yy <= min(h-1, y+r); yy++ {
 			row := grid[yy*w : yy*w+w]
 			for xx := max(0, x-r); xx <= min(w-1, x+r); xx++ {
-				if row[xx] == room.Wall {
+				if row[xx] == room.Wall || cols.has(yy*w+xx) {
 					return true
 				}
 			}

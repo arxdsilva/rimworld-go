@@ -20,8 +20,8 @@ Scope: every Architect category and item in core vanilla RimWorld 1.5 (no Royalt
 | | Count |
 |---|---|
 | Vanilla core items (rows below) | 191 |
-| Done or partial (a working card) | 118 |
-| Missing (a placeholder card) | 73 rows on 66 placeholder cards (the large tables, the two bookcases and the five flagstones each share one card) |
+| Done or partial (a working card) | 169 |
+| Missing (a placeholder card) | 22 rows on 21 placeholder cards (the two bookcases share one card) |
 
 ## Items
 
@@ -33,18 +33,18 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 |---|---|---|---|---|
 | `orders` | Cancel | `cancel` | done | |
 | `orders` | Deconstruct | `deconstruct` | done | |
-| `orders` | Uninstall | `planned_uninstall` | missing | Needs a minified-building item; the building pane's Move mode covers relocating for now. |
+| `orders` | Uninstall | `uninstall` | done | AX-1: a builder packs the building into a crated building (`item.MinifiedBuilding`: stuff, quality and wear kept; bills, fuel and owners are not); the crate's Reinstall gizmo lays a blueprint and a builder carries the crate there and installs it. Work: the deconstruct work to pack, the move order's to install (wiki silent, original tuning). |
 | `orders` | Mine | `mine` | done | |
 | `orders` | Haul things | `haul` | done | |
 | `orders` | Cut plants | `cut` | done | |
 | `orders` | Harvest | `harvest` | done | |
-| `orders` | Chop wood | `cut` | partial | Cut plants also fells trees; no trees-only order. |
+| `orders` | Chop wood | `chop` | done | AX-1: trees only (trunked plants, the saguaro included), from 40 % grown (wiki). |
 | `orders` | Hunt | `hunt` | done | |
-| `orders` | Slaughter | `planned_slaughter` | missing | Needs a slaughter designation and job for tame animals (the animal pane lists it). |
+| `orders` | Slaughter | `slaughter` | done | AX-1: marks tame animals only, through the FOOD-3 slaughter job (herd/slaughter.go). |
 | `orders` | Tame | `tame` | done | |
-| `orders` | Claim | `planned_claim` | missing | Needs building ownership by faction. |
-| `orders` | Strip | `planned_strip` | missing | Needs a strip job; the allow programme (AL) may cover drafted pick-up only. |
-| `orders` | Open | `planned_open` | missing | The casket pane opens one casket; no area order. |
+| `orders` | Claim | `claim` | done | AX-1: ruins (`Building.Ruin`) and ancient or raider-built pieces (`Building.Ancient`) become the colony's at once, no work (wiki), and join the Home area. |
+| `orders` | Strip | `strip` | done | AX-1: marks downed people; a hauler strips each with the SIM-065 strip job. Our corpses already shed what they wore at death (PRD-2), so there is nothing left on a body to strip. |
+| `orders` | Open | `open` | done | AX-1: sealed sleeper caskets (the casket pane's open order) and filled graves or sarcophagi (a hauler lifts the body out). The stasis casket ejects through A9's own order. |
 | `orders` | Forbid | `forbid` | done | |
 | `orders` | Allow | `allow` | done | |
 | `orders` | Plan | `plan` | done | |
@@ -57,13 +57,13 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `zones` | Stockpile zone | `stockpile` | done | |
 | `zones` | Dumping stockpile zone | `dump` | done | Vanilla parity in `STORAGE_GAP_ANALYSIS.md` (ST). |
 | `zones` | Growing zone | `grow` | done | |
-| `zones` | Delete zone | `planned_delete_zone` | missing | Needs an any-zone cell-removal command; Cancel and a zone's Shrink cover part of it. |
+| `zones` | Delete zone | `delete_zone` | done | AX-1: removes every zone's cells under the drag (stockpiles, growing zones, pens); a zone cut in two splits. |
 | `zones` | Expand home area | `home` | done | |
 | `zones` | Clear home area | `unhome` | done | |
 | `zones` | Build roof area | `roof` | done | |
-| `zones` | Clear build roof area | `planned_clear_roof_area` | missing | Needs a clear mode on the roof-area command. |
+| `zones` | Clear build roof area | `clear_roof_area` | done | AX-1: erases the build roof area and its plans; roofs already up stay. |
 | `zones` | Remove roof area | `noroof` | done | |
-| `zones` | Clear remove roof area | `planned_clear_noroof_area` | missing | Needs a clear mode on the remove-roof command. |
+| `zones` | Clear remove roof area | `clear_noroof_area` | done | AX-1: erases the remove roof area and its plans, so a closed room there is auto-roofed again. |
 | `zones` | Expand snow clear area | `snow_clear` | done | |
 | `zones` | Clear snow clear area | `unsnow_clear` | done | |
 | `zones` | Expand allowed area | `allowed_area` | done | |
@@ -74,14 +74,14 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
-| `structure` | Wall | `wall` | done | Wood, stone blocks, steel; no plasteel, silver, gold, jade or uranium walls. |
+| `structure` | Wall | `wall` | done | Wood, stone blocks, steel, and since AX-2 silver, gold, plasteel, uranium and jade (silver, gold and jade cost ten times the stuff, wiki: Walls). |
 | `structure` | Door | `door` | done | |
 | `structure` | Autodoor | `autodoor` | done | Our "Powered door". |
-| `structure` | Ornate door | `planned_ornate_door` | missing | 1.5 core, research Complex furniture; needs a 2-wide door kind. |
-| `structure` | Column | `planned_column` | missing | Needs a roof-holding, non-walling kind. |
+| `structure` | Ornate door | `ornate_door` | done | AX-2: a 2-wide door (research Upholstery). Its 50 gold secondary material waits on Def.Extra delivery. |
+| `structure` | Column | `column` | done | AX-2: holds a roof like a wall, bounds no room. |
 | `structure` | Fence | `fence` | done | |
 | `structure` | Fence gate | `fence_gate` | done | |
-| `structure` | Animal flap | `planned_animal_flap` | missing | Needs an animal-only door rule. |
+| `structure` | Animal flap | `animal_flap` | done | AX-2: tame animals pass; people and wild animals don't (path layers). |
 | `structure` | Bridge | `bridge` | done | |
 
 ### Production
@@ -111,48 +111,48 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `production` | Nutrient paste dispenser | `nutrient_paste_dispenser` | done | |
 | `production` | Hopper | `hopper` | done | |
 | `production` | Hydroponics basin | `hydroponics` | done | Card added by STK-AG (the kind existed since FOOD-2). |
-| `production` | Deep drill | `planned_deep_drill` | missing | Needs deep ore deposits and the ground-penetrating scanner. |
-| `production` | Electric crematorium | `planned_crematorium` | missing | Needs a corpse-burning bill on a powered bench; the funeral pyre (ours) burns bodies. |
+| `production` | Deep drill | `deep_drill` | done | AX-4: a miner works it on power; it brings up the deep ore a ground scan found within 2 cells (wiki 14000-work cycle; the portions per cycle are original tuning), then stone chunks once the ore runs out. No insect infestation yet. |
+| `production` | Electric crematorium | `crematorium` | done | AX-4: the Cremate bill on power, no wood, 180 work a corpse (wiki). Apparel, weapon and drug burning bills and its heat are not modelled. |
 
 ### Furniture
 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
 | `furniture` | Sleeping spot | `spot` | done | |
-| `furniture` | Double sleeping spot | `planned_double_sleeping_spot` | missing | Needs a two-sleeper spot kind (the double bed's rules exist). |
+| `furniture` | Double sleeping spot | `double_sleeping_spot` | done | AX-2. |
 | `furniture` | Bedroll | `bedroll` | done | |
 | `furniture` | Double bedroll | `double_bedroll` | done | |
 | `furniture` | Bed | `bed` | done | |
 | `furniture` | Double bed | `double_bed` | done | |
 | `furniture` | Hospital bed | `hospital_bed` | done | |
 | `furniture` | Animal sleeping spot | `animal_spot` | done | |
-| `furniture` | Animal sleeping box | `planned_animal_sleeping_box` | missing | Needs a kind; animal bed rules exist. |
+| `furniture` | Animal sleeping box | `animal_sleeping_box` | done | AX-2. |
 | `furniture` | Animal bed | `animal_bed` | done | |
 | `furniture` | End table | `end_table` | done | |
 | `furniture` | Dresser | `dresser` | done | |
-| `furniture` | Table (1x2) | `table` | partial | Ours is a single-tile table. |
-| `furniture` | Table (2x2) | `planned_tables` | missing | Needs multi-tile tables and seat counting. |
-| `furniture` | Table (2x4) | `planned_tables` | missing | As above. |
-| `furniture` | Table (3x3) | `planned_tables` | missing | As above. |
+| `furniture` | Table (1x2) | `table` | done | AX-2: older 1x1 tables migrate (save v11); seats along each side cell. |
+| `furniture` | Table (2x2) | `table` | done | AX-2: the table card's family (click the card again for the next size). |
+| `furniture` | Table (2x4) | `table` | done | As above. |
+| `furniture` | Table (3x3) | `table` | done | As above. |
 | `furniture` | Stool | `stool` | done | |
 | `furniture` | Dining chair | `chair` | done | |
 | `furniture` | Armchair | `armchair` | done | |
-| `furniture` | Couch | `planned_couch` | missing | Needs a two-seat kind. |
+| `furniture` | Couch | `couch` | done | AX-2: two seats. |
 | `furniture` | Small sculpture | `small_sculpture` | done | |
 | `furniture` | Large sculpture | `large_sculpture` | done | |
 | `furniture` | Grand sculpture | `grand_sculpture` | done | |
-| `furniture` | Plant pot | `planned_plant_pot` | missing | Needs a decorative plant container. |
+| `furniture` | Plant pot | `plant_pot` | done | AX-2: pick a rose or daylily in its pane; a grower sows it, frost kills it and it is sown again; it grows in light and adds beauty. |
 | `furniture` | Bookcase | `planned_bookcase` | missing | Needs books (vanilla 1.5 reading). |
 | `furniture` | Small bookcase | `planned_bookcase` | missing | As above. |
 | `furniture` | Shelf | `shelf` | done | |
-| `furniture` | Small shelf | `planned_small_shelf` | missing | Needs a 1x1 shelf kind; shelf storage rules exist. |
+| `furniture` | Small shelf | `small_shelf` | done | AX-2. |
 | `furniture` | Torch lamp | `torch_lamp` | done | |
-| `furniture` | Wall torch lamp | `planned_wall_torch_lamp` | missing | Needs wall-mounted placement. |
-| `furniture` | Wall lamp | `planned_wall_lamp` | missing | As above. |
+| `furniture` | Wall torch lamp | `wall_torch` | done | AX-2 (our "wall torch"): hung on the cell in front of a wall, facing out (it takes that cell's object slot). |
+| `furniture` | Wall lamp | `wall_lamp` | done | As above. |
 | `furniture` | Standing lamp | `lamp` | done | Our "Lamp". |
 | `furniture` | Sun lamp | `sun_lamp` | done | Card added by STK-AG (the kind existed since FOOD-2). |
-| `furniture` | Flood light | `planned_flood_light` | missing | Needs a wide-radius light kind. |
-| `furniture` | Urn | `planned_urn` | missing | Not craftable in vanilla; needs a trade or map-gen source. |
+| `furniture` | Flood light | `flood_light` | done | AX-2. |
+| `furniture` | Urn | `urn` | done | AX-2: stands in generated shed ruins (claim to own); the card is locked. No trader stock yet. |
 
 ### Power
 
@@ -160,14 +160,14 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 |---|---|---|---|---|
 | `power` | Power conduit | `conduit` | done | |
 | `power` | Hidden conduit | `hidden_conduit` | done | |
-| `power` | Waterproof conduit | `planned_waterproof_conduit` | missing | Needs conduits over shallow water. |
+| `power` | Waterproof conduit | `waterproof_conduit` | done | AX-4: a conduit that also goes over shallow water (never deep water). |
 | `power` | Power switch | `power_switch` | done | |
 | `power` | Wood-fired generator | `wood_generator` | done | |
-| `power` | Chemfuel powered generator | `planned_chemfuel_generator` | missing | Needs chemfuel as a burnable fuel. |
+| `power` | Chemfuel powered generator | `chemfuel_generator` | done | AX-4: 1000 W, 30 chemfuel a tank, 4.5 a day while running; haulers refuel it with chemfuel. Its explosion when badly damaged is not modelled. |
 | `power` | Wind turbine | `wind_turbine` | done | |
 | `power` | Solar generator | `solar_panel` | done | |
 | `power` | Geothermal generator | `geothermal` | done | |
-| `power` | Watermill generator | `planned_watermill` | missing | Needs rivers with flow direction. |
+| `power` | Watermill generator | `watermill` | done | AX-4: map generation keeps the river's flow; the 5x6 mill's wheel row must sit in moving water; 1100 W, 330 W with another mill in its 13x7 exclusion area. Older saves and river-less maps have no flowing water. |
 | `power` | Battery | `battery` | done | |
 
 ### Security
@@ -181,13 +181,13 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `security` | IED incendiary trap | `ied_fire` | done | Our "Fire charge". |
 | `security` | IED EMP trap | `ied_pulse` | done | Our "Pulse charge". |
 | `security` | IED smoke trap | `ied_smoke` | done | Our "Smoke charge". |
-| `security` | IED firefoam trap | `planned_ied_firefoam` | missing | Needs firefoam (fire suppression foam). |
-| `security` | IED antigrain warhead trap | `planned_ied_antigrain` | missing | Needs the antigrain warhead item. |
+| `security` | IED firefoam trap | `ied_foam` | done | AX-5: our "Foam charge" (2 foam shells, foam burst r 9.9, re-laid after it goes off). |
+| `security` | IED antigrain warhead trap | `ied_warhead` | done | AX-5: our "Warhead charge" (antimatter warhead: 550 bomb r 14.9 falling to 110, ~22 % of cells alight). The warhead is found in ancient vaults (2 % of vaults); the wiki's other source, quest rewards, waits for quests. |
 | `security` | Mini-turret | `sentry_turret` | done | Our "Sentry turret". |
 | `security` | Autocannon turret | `autocannon` | done | |
 | `security` | Uranium slug turret | `slug_turret` | done | |
-| `security` | Foam turret | `planned_foam_turret` | missing | Needs firefoam. |
-| `security` | Rocketswarm launcher | `planned_rocketswarm` | missing | Needs a rocket projectile and its ammunition. |
+| `security` | Foam turret | `foam_turret` | done | AX-5: 80 W, r 19.9, 41 blobs a spray, 10 charges refilled with chemfuel (7.2 a charge), 3600-tick wait; bursts in foam when smashed. |
+| `security` | Rocketswarm launcher | `rocket_battery` | partial | AX-5: our "Rocket battery" (2x2, 150 W, 12 rockets of 24 bomb, r 29.9, full 180-chemfuel load only, 7200-tick recharge). It fires on its own at raiders like the other turrets; vanilla's manual activation by a colonist and per-rocket tile spread are not modelled. |
 | `security` | Mortar | `mortar` | done | |
 
 ### Misc
@@ -195,7 +195,7 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
 | `misc` | Caravan hitching spot | `planned_hitching_spot` | missing | Needs caravan-forming wait spots. |
-| `misc` | Egg box | `planned_egg_box` | missing | Needs a laying-target container for animals. |
+| `misc` | Egg box | `egg_box` | done | AX-2: tame layers within 20 tiles lay in it; it stores eggs. |
 | `misc` | Grave | `grave` | done | Moved from Furniture. |
 | `misc` | Sarcophagus | `sarcophagus` | done | Moved from Furniture. |
 | `misc` | Marriage spot | `marriage_spot` | done | |
@@ -205,42 +205,42 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `misc` | Comms console | `radio_console` | done | Our "Radio console". |
 | `misc` | Orbital trade beacon | `trade_beacon` | done | Our "Trade beacon". |
 | `misc` | Cryptosleep casket | `planned_cryptosleep_casket` | missing | The sealed vault casket kind exists (not buildable); needs a cost, research and an enter job. |
-| `misc` | Firefoam popper | `planned_firefoam_popper` | missing | Needs firefoam. |
-| `misc` | Ground-penetrating scanner | `planned_deep_scanner` | missing | Needs deep ore deposits. |
+| `misc` | Firefoam popper | `foam_popper` | done | AX-5: our "Foam popper" (fire within 3.9 tiles, 150-tick spark, foam burst r 9.9; spent, then re-laid as a blueprint, the wiki's rebuild option; no manual trigger). |
+| `misc` | Ground-penetrating scanner | `deep_scanner` | done | AX-4: a researcher works it on power; a find every 180000 work on average (360000 at most) lays a lump of deep ore (wiki sizes and yields), shown by the deep ore overlay. |
 | `misc` | Long-range mineral scanner | `planned_mineral_scanner` | missing | Needs world-map mining sites. |
-| `misc` | Moisture pump | `planned_moisture_pump` | missing | Needs terrain drying over time. |
+| `misc` | Moisture pump | `moisture_pump` | done | AX-4: on power it dries marsh and mud to soil and shallow water to gravel, one cell of radius every 8.7 days up to 6.9; moving water and the sea stay. |
 | `misc` | Multi-analyzer | `multi_analyzer` | done | Moved from Production. |
 | `misc` | Pod launcher | `planned_pod_launcher` | missing | Needs transport pod travel on the world map. |
 | `misc` | Transport pod | `planned_transport_pod` | missing | As above. |
 | `misc` | Vitals monitor | `vitals_monitor` | done | Moved from Furniture. |
-| `misc` | Large stele | `planned_large_stele` | missing | Needs a kind; beauty rules exist. |
-| `misc` | Grand stele | `planned_grand_stele` | missing | As above. |
+| `misc` | Large stele | `large_stele` | done | AX-2. |
+| `misc` | Grand stele | `grand_stele` | done | AX-2. |
 
 ### Floors
 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
 | `floors` | Wood floor | `floor` | done | Moved from Structure. |
-| `floors` | Straw matting | `planned_straw_matting` | missing | Needs floor kinds per material beyond wood and stone blocks. |
-| `floors` | Concrete | `planned_concrete` | missing | As above. |
-| `floors` | Paved tile | `planned_paved_tile` | missing | As above. |
-| `floors` | Steel tile | `planned_steel_tile` | missing | As above. |
-| `floors` | Silver tile | `planned_silver_tile` | missing | As above. |
-| `floors` | Gold tile | `planned_gold_tile` | missing | As above. |
-| `floors` | Sterile tile | `planned_sterile_tile` | missing | Also needs the infection and cleanliness bonus. |
-| `floors` | Carpet | `carpet` | partial | Ours is a one-tile entrance carpet laid from a crafted carpet item, not a colour-picked floor (research Carpet making). Moved from Furniture. |
-| `floors` | Sandstone tile | `floor` | partial | The Wood floor card's sandstone blocks material; no separate stone-tile name or look per stone. |
-| `floors` | Granite tile | `floor` | partial | As above, granite blocks. |
-| `floors` | Limestone tile | `floor` | partial | As above, limestone blocks. |
-| `floors` | Slate tile | `floor` | partial | As above, slate blocks. |
-| `floors` | Marble tile | `floor` | partial | As above, marble blocks. |
-| `floors` | Sandstone flagstone | `planned_flagstone` | missing | Needs a floor laid from stone chunks. |
-| `floors` | Granite flagstone | `planned_flagstone` | missing | As above. |
-| `floors` | Limestone flagstone | `planned_flagstone` | missing | As above. |
-| `floors` | Slate flagstone | `planned_flagstone` | missing | As above. |
-| `floors` | Marble flagstone | `planned_flagstone` | missing | As above. |
+| `floors` | Straw matting | `straw_matting` | done | 2 hay a tile (1 here), beauty -1, cleanliness -0.1, walk speed 93 % (other floors 100 %, soil 87 %), burns readily. |
+| `floors` | Concrete | `concrete` | done | 1 steel, beauty -1 (research Stonecutting). |
+| `floors` | Paved tile | `paved_tile` | done | Steel, beauty 0 (research Stonecutting). |
+| `floors` | Steel tile | `steel_tile` | done | Steel, cleanliness +0.2 (research Metalworking, as silver and gold tile). |
+| `floors` | Silver tile | `silver_tile` | done | Silver, beauty +4, cleanliness +0.2. |
+| `floors` | Gold tile | `gold_tile` | done | Gold, beauty +11, cleanliness +0.2. |
+| `floors` | Sterile tile | `sterile_tile` | done | Steel and silver, cleanliness +0.6: lowers wound infection in a clean room (x0.3 against x0.5), and raises surgery and research speed through room cleanliness (research Sterile surfaces). |
+| `floors` | Carpet | `carpet_floor` | done | A colour-picked floor: 63 colours under our own names, 1 cloth whatever the colour, beauty +2 (research Carpet making); laying another colour over it repaints it, and any floor laid over another replaces it once built. Our one-tile entrance carpet (wipes boots, from a crafted carpet item) stays as its own `carpet` card. |
+| `floors` | Sandstone tile | `stone_tile` | done | The Stone tile card's sandstone blocks, with that stone's own sprite. Beauty +1. Wood floors of stone blocks from older saves become stone tiles. |
+| `floors` | Granite tile | `stone_tile` | done | The Stone tile card's granite blocks, with that stone's own sprite. Beauty +1. Wood floors of stone blocks from older saves become stone tiles. |
+| `floors` | Limestone tile | `stone_tile` | done | The Stone tile card's limestone blocks, with that stone's own sprite. Beauty +1. Wood floors of stone blocks from older saves become stone tiles. |
+| `floors` | Slate tile | `stone_tile` | done | The Stone tile card's slate blocks, with that stone's own sprite. Beauty +1. Wood floors of stone blocks from older saves become stone tiles. |
+| `floors` | Marble tile | `stone_tile` | done | The Stone tile card's marble blocks, with that stone's own sprite. Beauty +1. Wood floors of stone blocks from older saves become stone tiles. |
+| `floors` | Sandstone flagstone | `flagstone` | done | The Flagstone card's sandstone; 4 blocks a tile per the lead's ruling (1 here), beauty 0, no refund. |
+| `floors` | Granite flagstone | `flagstone` | done | The Flagstone card's granite; 4 blocks a tile per the lead's ruling (1 here), beauty 0, no refund. |
+| `floors` | Limestone flagstone | `flagstone` | done | The Flagstone card's limestone; 4 blocks a tile per the lead's ruling (1 here), beauty 0, no refund. |
+| `floors` | Slate flagstone | `flagstone` | done | The Flagstone card's slate; 4 blocks a tile per the lead's ruling (1 here), beauty 0, no refund. |
+| `floors` | Marble flagstone | `flagstone` | done | The Flagstone card's marble; 4 blocks a tile per the lead's ruling (1 here), beauty 0, no refund. |
 | `floors` | Smooth surface | `smooth` | done | Our "Smooth stone" (walls and floors). Moved from Orders. |
-| `floors` | Remove floor | `planned_remove_floor` | missing | Needs a floor-removal designation (Deconstruct takes our floors down). |
+| `floors` | Remove floor | `remove_floor` | done | AX-1: marks floors only; half the material (and of any secondary material) back, nothing for flagstone (wiki, agreed with A3). Deconstruct still takes floors down too (kept for older habits and tests). |
 
 ### Recreation
 
@@ -281,4 +281,4 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 ## Follow-ups
 
 - Each missing row becomes real by replacing its placeholder with a working `ToolDef` in `Tools` and flipping the row to done. Its art follows `rimworld-go-art-assets`.
-- Grouped families (carpet colours, stone tiles, flagstones) want a material or colour picker on one card, like the wall's material row.
+- Grouped families: stone tiles and flagstones have a stone picker on one card, and the carpet floor a colour picker (AX-3); the tables still want one.

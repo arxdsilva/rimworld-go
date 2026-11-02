@@ -176,6 +176,9 @@ const (
 	MakeCowboyHat
 	MakeBowlerHat
 	MakeTribalwear
+	// AX-5 (append only, saved): the foam shell at the machining table
+	// (the foam charge's load and a mortar shell; wiki: Firefoam shell).
+	MakeFoamShells
 	numRecipes
 )
 
@@ -302,7 +305,7 @@ var defs = [numRecipes]Def{
 		Also: smithy},
 	Cremate: {ID: Cremate, Name: "cremate", Label: "Cremate corpse", Bench: construction.Pyre,
 		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Work: 300, Skill: work.Craft, Learn: skill.Crafting,
-		Extra: item.Wood, ExtraQty: 2},
+		Extra: item.Wood, ExtraQty: 2, Also: []construction.Kind{construction.ElectricCrematorium}}, // AX-4: no wood there
 	DryFood: {ID: DryFood, Name: "dry_food", Label: "Dry food", Bench: construction.DryingRack,
 		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Learn: skill.Cooking, Dry: true},
 	// Entrance carpets: the better the material, the more dirt it catches.
@@ -462,6 +465,8 @@ var defs = [numRecipes]Def{
 	MakeBowlerHat:        tailor(MakeBowlerHat, "make_bowler_hat", "Sew bowler hat", item.BowlerHat, 20, 1800),
 	MakeTribalwear:       tribal(),
 	CookPemmicanBulk:     meal(CookPemmicanBulk, "cook_pemmican_bulk", "Make pemmican x4", item.Pemmican, 20, 20, 64, 2800, 0), // wiki: Pemmican
+	// AX-5, wiki: Firefoam shell (25 steel, 800 work; /9 and /10 as the other shells)
+	MakeFoamShells: made(MakeFoamShells, "make_foam_shells", "Make foam shell", construction.MachiningTable, item.FoamShells, 80, 0, in(item.Steel, 3)),
 }
 
 // servoSkill and servoWork are the servo tier's crafting level and work

@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -97,7 +98,7 @@ func (g *Game) applyNaturalRoofs(cells []roof.Cell) {
 // the loot left inside and the rubble around it.
 func (g *Game) placeRuin(r mapgen.Ruin) {
 	for _, f := range r.Floors {
-		g.placeGenerated(construction.Building{Kind: construction.Floor, Stuff: f.Stuff, X: f.X, Y: f.Y, Ruin: true})
+		g.placeGenerated(construction.Building{Kind: construction.FloorFor(f.Stuff), Stuff: f.Stuff, X: f.X, Y: f.Y, Ruin: true})
 	}
 	for _, wp := range r.Walls {
 		dmg := construction.MaxHP(construction.Wall, wp.Stuff) * min(max(wp.DamagePct, 0), 99) / 100
@@ -110,6 +111,9 @@ func (g *Game) placeRuin(r mapgen.Ruin) {
 	}
 	for _, c := range r.Rubble {
 		g.dropChunk(c)
+	}
+	for _, u := range r.Urns { // A2: an urn, found (claimed like the rest of the ruin)
+		g.placeGenerated(construction.Building{Kind: construction.Urn, Stuff: u.Stuff, X: u.X, Y: u.Y, Ruin: true})
 	}
 }
 
@@ -234,7 +238,10 @@ func (g *Game) naturalAt(x, y int) bool {
 
 // refundOf is what deconstructing b gives back: a ruin gives half.
 func refundOf(b construction.Building) int {
-	r := construction.Refund(b.Kind)
+	r := construction.RefundFor(b.Kind, b.Stuff) // A2: ten times for a silver, gold or jade wall
+	if construction.DefOf(b.Kind).Layer == construction.LayerFloor {
+		r = orders.FloorRefund(b.Kind) // AX-1 (wiki: Floors): half, nothing for flagstone
+	}
 	if b.Ruin {
 		r = (r + 1) / 2 // half, rounded up: a ruin still gives something back
 	}

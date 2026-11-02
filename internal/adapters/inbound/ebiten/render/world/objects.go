@@ -65,6 +65,10 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		open = !b.PowerOn // the actual state: an open switch is off
 	case b.Kind == "vent": // TEMP-1: open or shut (build_keys.go)
 		open = b.Open
+	case b.Kind == "animal flap": // A2: an animal swings it open
+		open = l.Creatures[[2]int{b.X, b.Y}]
+	case b.Kind == "ornate door": // A2: either leaf's cell
+		open = open || l.occupied[[2]int{b.X + b.W - 1, b.Y + b.H - 1}]
 	case b.Kind == "passive cooler": // TEMP-1: fuelled or empty (build_keys.go)
 		open = b.FuelPct > 0
 	}
@@ -97,7 +101,7 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 			break
 		}
 		t := none
-		if (b.Kind == "bed" || b.Kind == "double bed" || b.Kind == "armchair") && len(l.cloth) > 0 {
+		if (b.Kind == "bed" || b.Kind == "double bed" || b.Kind == "armchair" || b.Kind == "couch" || b.Kind == "animal flap") && len(l.cloth) > 0 { // A2: couch, flap
 			t = o.art().Tint("cloth", l.cloth[art.Mix64(uint64(b.ID))%uint64(len(l.cloth))])
 		}
 		// stone walls, fences and floors take their stone's tint; the
@@ -107,6 +111,9 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 			t, cs = o.stuffTint(b.Stuff), sprite.NoCS
 		}
 		o.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, cs)
+		if b.AX.Plant != "" { // A2: a plant pot's plant
+			o.drawPotPlant(dst, b, key, tile, sw, sh)
+		}
 		chP := o.OverlayChunks()
 		o.Overlays.Wiring.DrawPowerParts(v, o.Pass(), &chP, dst, b, key, tile, sw, sh) // glow, blades, flame, charge
 		chD := o.OverlayChunks()
@@ -116,8 +123,13 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 	if b.DryQty > 0 {
 		o.drawRackLoad(dst, *b, tile, sw, sh)
 	}
-	if b.Deconstruct {
+	switch { // AX-1: a casket's open order rides its deconstruct mark
+	case b.AX.OpenMarked:
+		o.drawSprite(dst, "overlay/designation_open", none, float64(b.X), float64(b.Y), tile, sw, sh)
+	case b.Deconstruct:
 		o.drawSprite(dst, "overlay/designation_deconstruct", none, float64(b.X), float64(b.Y), tile, sw, sh)
+	case b.AX.Uninstall:
+		o.drawSprite(dst, "overlay/designation_uninstall", none, float64(b.X), float64(b.Y), tile, sw, sh)
 	}
 	if b.Forbidden { // STK-AL: a forbidden door or bed wears the item's marker
 		o.DrawForbiddenMark(dst, b.X, b.Y, tile, sw, sh)
@@ -222,6 +234,42 @@ func (o *Objects) drawRackLoad(dst *ebiten.Image, b game.BuildingView, tile floa
 	}
 }
 
+// potPlantArt is the plant art a pot plant borrows (A2: until it has its
+// own, a rose draws as the red fire lily, a daylily as the yellow
+// dandelion; plants never carry an outline).
+func potPlantArt(plant string) (string, bool) {
+	switch plant {
+	case "rose":
+		return "plant/fire_lily", true
+	case "daylily":
+		return "plant/dandelion", true
+	}
+	return "", false
+}
+
+// drawPotPlant draws pot b's plant (drawn as key) rising from the soil
+// (its sprite's plant attachment), young below half grown, scaled from a
+// third to two thirds of a tile with its growth.
+func (o *Objects) drawPotPlant(dst *ebiten.Image, b *game.BuildingView, key string, tile float64, sw, sh int) {
+	base, ok := potPlantArt(b.AX.Plant)
+	sp := o.art().Sprites[key]
+	if !ok || sp == nil {
+		return
+	}
+	a, ok := sp.Meta.Attach["plant"]
+	if !ok {
+		return
+	}
+	stage := "_young_v0"
+	if b.AX.PlantPct >= 50 {
+		stage = "_mature_v0"
+	}
+	k := 0.33 + 0.33*float64(b.AX.PlantPct)/100
+	sx := float64(b.X) + (a[0]-sp.Meta.Origin[0])/art.TilePx - 0.5*k
+	sy := float64(b.Y) + (a[1]-sp.Meta.Origin[1])/art.TilePx - 0.85*k
+	o.drawSpriteScaled(dst, base+stage, color.NRGBA{}, sx, sy, tile, sw, sh, sprite.NoCS, k)
+}
+
 // rackSlatLift raises rack contents (in tiles) to sit on the slats.
 const rackSlatLift = 0.3
 
@@ -229,7 +277,8 @@ const rackSlatLift = 0.3
 // (PRD-3 sculptures, DEF-3 barricade): the stuff's stone colours the mask.
 func stoneMaskKind(kind string) bool {
 	switch kind {
-	case "small sculpture", "large sculpture", "grand sculpture", "barricade", "sarcophagus":
+	case "small sculpture", "large sculpture", "grand sculpture", "barricade", "sarcophagus",
+		"column", "urn", "large stele", "grand stele": // A2 (AR1's art)
 		return true
 	}
 	return false

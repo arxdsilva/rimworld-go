@@ -1,7 +1,7 @@
 package game
 
 import (
-	"fmt"
+	"rimworld-go/internal/application/game/evlog"
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -25,57 +25,57 @@ type LogLineView struct {
 	Text string // e.g. "Bitten by Ridgewolf (-6)"
 }
 
-// Event kinds. Values are saved; append only.
+// Event kinds (game/evlog). Values are saved; append only.
 const (
-	logHit uint8 = iota + 1
-	logAttacked
-	logMissed
-	logWasMissed
-	logBit
-	logBitten
-	logTrap
-	logDowned
-	logDied
-	logKilled
-	logFled
-	logTendedBy
-	logTended
-	logAte
-	logSleptBed
-	logSleptGround
-	logTamedBy
-	logResistedTaming
-	logTamed
-	logFailedTame
-	logManhunter
-	logMental
-	logRecovered
-	logInfected
-	logInfectionCleared
-	logHypothermia
-	logHeatstroke
-	logRescuedBy
-	logRescued
-	logCollapsed
-	logStarving  // SIM-024: an animal's food ran out
-	logLeaving   // SIM-025: set off to leave the map (over capacity, crossing, done gnawing)
-	logJoined    // SIM-025: a stray or farm animal joined the colony
-	logLiking    // SIM-025: a wild animal tamed itself
-	logMated     // SIM-026: mated with Name
-	logGaveBirth // SIM-026: Amount young (Name: "goat kids")
-	logBorn      // SIM-026: born to Name
-	logOldAge    // SIM-026: died of old age
-	logHatched   // SIM-026: hatched from an egg
-	logCharged   // PLAY-010: a predator charged Name
-	logChargedBy // PLAY-010: charged by Name ("a cougar")
-	logIngested  // ENG-003 M2: took a drug (Name: "beer")
-	logSurgery   // ENG-003 M1: Name is the operation's outcome line
-	logScarred   // ENG-003 M1: a wound left a scar (Name: the part)
-	logPutOn     // PLAY-017: put on a garment (Name: "parka")
-	logTookOff   // PLAY-017: took a garment off (Name: "duster")
-	logVisited   // SIM-065: a friend visited the bed (Name: the visitor)
-	logFedBy     // SIM-064: fed by Name (a doctor or warden)
-	logFed       // SIM-064: fed Name
+	logHit              = evlog.Hit
+	logAttacked         = evlog.Attacked
+	logMissed           = evlog.Missed
+	logWasMissed        = evlog.WasMissed
+	logBit              = evlog.Bit
+	logBitten           = evlog.Bitten
+	logTrap             = evlog.Trap
+	logDowned           = evlog.Downed
+	logDied             = evlog.Died
+	logKilled           = evlog.Killed
+	logFled             = evlog.Fled
+	logTendedBy         = evlog.TendedBy
+	logTended           = evlog.Tended
+	logAte              = evlog.Ate
+	logSleptBed         = evlog.SleptBed
+	logSleptGround      = evlog.SleptGround
+	logTamedBy          = evlog.TamedBy
+	logResistedTaming   = evlog.ResistedTaming
+	logTamed            = evlog.Tamed
+	logFailedTame       = evlog.FailedTame
+	logManhunter        = evlog.Manhunter
+	logMental           = evlog.Mental
+	logRecovered        = evlog.Recovered
+	logInfected         = evlog.Infected
+	logInfectionCleared = evlog.InfectionCleared
+	logHypothermia      = evlog.Hypothermia
+	logHeatstroke       = evlog.Heatstroke
+	logRescuedBy        = evlog.RescuedBy
+	logRescued          = evlog.Rescued
+	logCollapsed        = evlog.Collapsed
+	logStarving         = evlog.Starving
+	logLeaving          = evlog.Leaving
+	logJoined           = evlog.Joined
+	logLiking           = evlog.Liking
+	logMated            = evlog.Mated
+	logGaveBirth        = evlog.GaveBirth
+	logBorn             = evlog.Born
+	logOldAge           = evlog.OldAge
+	logHatched          = evlog.Hatched
+	logCharged          = evlog.Charged
+	logChargedBy        = evlog.ChargedBy
+	logIngested         = evlog.Ingested
+	logSurgery          = evlog.Surgery
+	logScarred          = evlog.Scarred
+	logPutOn            = evlog.PutOn
+	logTookOff          = evlog.TookOff
+	logVisited          = evlog.Visited
+	logFedBy            = evlog.FedBy
+	logFed              = evlog.Fed
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -165,7 +165,7 @@ func (g *Game) logLines(id entity.EntityID) []LogLineView {
 	out := make([]LogLineView, 0, len(l))
 	for i := len(l) - 1; i >= 0; i-- {
 		d := clock.DateAt(clock.Tick(l[i].Tick))
-		out = append(out, LogLineView{Tick: l[i].Tick, Day: d.Day + 1, Hour: d.Hour, Text: logText(l[i])})
+		out = append(out, LogLineView{Tick: l[i].Tick, Day: d.Day + 1, Hour: d.Hour, Text: evlog.Text(l[i].Kind, l[i].Weapon, l[i].Name, l[i].Amount)})
 	}
 	if vc.on {
 		if vc.logs == nil {
@@ -188,133 +188,6 @@ func (g *Game) logLines(id entity.EntityID) []LogLineView {
 type logLinesMemo struct {
 	src []logEntry
 	out []LogLineView
-}
-
-// strikeVerb is an animal blow's verb ("Bit", "Clawed"), passive
-// ("Bitten", "Clawed") when suffered.
-func strikeVerb(wk uint8, passive bool) string {
-	switch weapon.Kind(wk) {
-	case weapon.Claw:
-		return "Clawed"
-	case weapon.Kick:
-		return "Kicked"
-	case weapon.Gore:
-		return "Gored"
-	case weapon.Headbutt:
-		return "Headbutted"
-	case weapon.Peck:
-		return "Pecked"
-	}
-	if passive {
-		return "Bitten"
-	}
-	return "Bit"
-}
-
-func logText(e logEntry) string {
-	with := ""
-	if n := weapon.DefOf(weapon.Kind(e.Weapon)).Name; n != "fists" && n != "" {
-		with = " with " + n
-	}
-	switch e.Kind {
-	case logIngested:
-		return "Took " + e.Name
-	case logPutOn:
-		return "Put on a " + e.Name
-	case logTookOff:
-		return "Took off the " + e.Name
-	case logVisited:
-		return "Visited by " + e.Name
-	case logFedBy:
-		return "Fed by " + e.Name
-	case logFed:
-		return "Fed " + e.Name
-	case logSurgery, logScarred:
-		return e.Name
-	case logHit:
-		return fmt.Sprintf("Hit %s%s (-%d)", e.Name, with, e.Amount)
-	case logAttacked:
-		return fmt.Sprintf("Attacked by %s%s (-%d)", e.Name, with, e.Amount)
-	case logMissed:
-		return "Missed " + e.Name
-	case logWasMissed:
-		return e.Name + " missed"
-	case logBit:
-		return fmt.Sprintf("%s %s (-%d)", strikeVerb(e.Weapon, false), e.Name, e.Amount)
-	case logBitten:
-		return fmt.Sprintf("%s by %s (-%d)", strikeVerb(e.Weapon, true), e.Name, e.Amount)
-	case logTrap:
-		return fmt.Sprintf("Hurt by a trap (-%d)", e.Amount)
-	case logDowned:
-		return "Downed"
-	case logDied:
-		return "Died"
-	case logKilled:
-		return "Killed " + e.Name
-	case logFled:
-		return "Fled from " + e.Name
-	case logTendedBy:
-		return "Tended by " + e.Name
-	case logTended:
-		return "Tended " + e.Name
-	case logAte:
-		return "Ate " + e.Name
-	case logSleptBed:
-		return "Slept in a bed"
-	case logSleptGround:
-		return "Slept on the ground"
-	case logTamedBy:
-		return "Tamed by " + e.Name
-	case logResistedTaming:
-		return "Resisted taming by " + e.Name
-	case logTamed:
-		return "Tamed " + e.Name
-	case logFailedTame:
-		return "Failed to tame " + e.Name
-	case logManhunter:
-		return "Went manhunter"
-	case logMental:
-		return "Mental break: " + e.Name
-	case logRecovered:
-		return "Recovered from a mental break"
-	case logInfected:
-		return "Wound infected"
-	case logInfectionCleared:
-		return "Infection cleared"
-	case logHypothermia:
-		return "Suffering hypothermia"
-	case logHeatstroke:
-		return "Suffering heatstroke"
-	case logRescuedBy:
-		return "Rescued by " + e.Name
-	case logRescued:
-		return "Rescued " + e.Name
-	case logCollapsed:
-		return "Collapsed from exhaustion"
-	case logStarving:
-		return "Starving"
-	case logLeaving:
-		return "Left for the edge of the map"
-	case logJoined:
-		return "Joined the colony"
-	case logLiking:
-		return "Took a liking to the colony"
-	case logMated:
-		return "Mated with " + e.Name
-	case logGaveBirth:
-		return fmt.Sprintf("Gave birth to %d %s", e.Amount, e.Name)
-	case logBorn:
-		return "Born to " + e.Name
-	case logOldAge:
-		return "Died of old age"
-	case logHatched:
-		return "Hatched"
-	case logCharged:
-		return "Charged " + e.Name
-	case logChargedBy:
-		return "Charged by " + e.Name
-	}
-	return ""
 }
 
 // exportLogs returns the logs for saving (copied; empty logs omitted).

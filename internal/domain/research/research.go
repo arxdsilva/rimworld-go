@@ -446,7 +446,7 @@ var defs = [NumProjects]Def{
 	FoamSuppression: {Project: FoamSuppression, Name: "foam_suppression", Label: "Fire foam", Cost: 600, TechLevel: Industrial,
 		Requires: []Project{Electricity},
 		Desc:     "A thick foam that smothers flames, sprayed by poppers that burst when they sense fire.",
-		Unlocks:  []string{"build:foam popper"}},
+		Unlocks:  []string{"build:foam popper", "recipe:make_foam_shells"}},
 	// wiki: Sterile materials (Industrial, 600, Electricity).
 	SterileSurfaces: {Project: SterileSurfaces, Name: "sterile_surfaces", Label: "Sterile surfaces", Cost: 600,
 		TechLevel: Industrial, Requires: []Project{Electricity},

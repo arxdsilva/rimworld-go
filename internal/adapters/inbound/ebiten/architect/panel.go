@@ -60,12 +60,16 @@ func (t *Tool) Cards() []Card {
 	}
 	out := make([]Card, 0, len(tools))
 	for _, d := range tools {
+		head := d.ID
+		if m, ok := ToolByID(t.ToolID); ok && d.Family != "" && m.Family == d.Family {
+			d = m // a family's card stands for its armed member (A2)
+		}
 		if d.Planned { // a greyed placeholder: its sentence, and why it cannot be used
 			out = append(out, Card{ID: ids.PrefixArchTool + d.ID, Label: d.Label, Icon: d.Icon, Desc: d.Desc,
 				Disabled: true, Reason: PlannedReason})
 			continue
 		}
-		b := Card{ID: ids.PrefixArchTool + d.ID, Label: d.Label, Icon: d.Icon, Toggle: true}
+		b := Card{ID: ids.PrefixArchTool + head, Label: d.Label, Icon: d.Icon, Toggle: true}
 		stuff := t.ToolStuff(d)
 		stock := 0
 		if bv, ok := Buildable(d.Build); ok && bv.Carpet {
@@ -135,11 +139,14 @@ type DescPlan struct {
 	cropTop  float32
 	cropCols int
 	cropW    float32
+
+	colourTop float32 // the carpet floor's swatches (colour.go)
 }
 
 // planKey is everything the plan depends on.
 type planKey struct {
 	tool, stuff, crop, rot string
+	colour                 string
 	facing                 uint8
 	style                  DrawStyle
 	scale                  float64
@@ -161,6 +168,9 @@ func (t *Tool) key() planKey {
 	k.style = t.CurStyle(d)
 	if d.Crop != "" {
 		k.crop = t.selectedCrop().Name
+	}
+	if ColourTool(d) {
+		k.colour = t.ToolColour()
 	}
 	if _, ok := Buildable(d.Build); ok {
 		k.stuff = t.ToolStuff(d)
@@ -246,6 +256,12 @@ func (t *Tool) buildPlan(k planKey) DescPlan {
 		p.stuffTop, p.stuffPerRow, p.stuffW = y, perRow, bw
 		y += float32(rows)*(archBtnH+archBtnGap) - archBtnGap
 	}
+	if ColourTool(d) { // AX-3: the colour picker, then the picked colour's name
+		y += archBlockGap
+		p.colourTop = y
+		y += float32(colourRows())*(archSwatch+archSwatchGap) - archSwatchGap + archBlockGap
+		add(ColourLabel(k.colour), gfx.Body)
+	}
 	if d.Crop != "" {
 		y += archBlockGap
 		cols, bw := archCropGrid()
@@ -272,7 +288,9 @@ func (t *Tool) hint(d ToolDef) string {
 		PlaceFill:   "Drag to fill",
 		PlaceArea:   "Drag an area",
 	}[d.Mode]
-	if d.Build == "door" || d.Build == "powered door" || d.Build == "fence gate" {
+	if d.Build == "wall torch" || d.Build == "wall lamp" { // A2
+		hint += "  in front of a wall: it faces away from it"
+	} else if d.Build == "door" || d.Build == "powered door" || d.Build == "fence gate" || d.Build == "ornate door" || d.Build == "animal flap" {
 		hint += "  faces along the wall or fence; " + t.rotateKeys() + " sets a free-standing one (" + FacingNames[t.Facing] + ")"
 	} else if bv, ok := Buildable(d.Build); ok && bv.Rotatable {
 		hint += "  " + t.rotateKeys() + " rotate (" + FacingNames[t.Facing] + ")"
@@ -332,6 +350,11 @@ func (t *Tool) descButtons(r gfx.Rect) []uikit.Button {
 				Y: r.Y + plan.stuffTop + float32(row)*(archBtnH+archBtnGap),
 				W: plan.stuffW, H: archBtnH, Selected: sel == s,
 			})
+		}
+	}
+	if plan.colourTop > 0 {
+		for _, b := range t.colourButtons(r, plan.colourTop) {
+			add(b)
 		}
 	}
 	if plan.cropTop > 0 {

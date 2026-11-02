@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/roof"
@@ -60,7 +61,7 @@ type roofIndex struct {
 // (each costs a path search) before giving up for now.
 const roofTries = 3
 
-const roofPlans = roof.PlanBuild | roof.PlanRemove
+const roofPlans, roofCancel = roof.PlanBuild | roof.PlanRemove, roof.PlanBuild | roof.PlanRemove | roof.AreaBuild // Cancel: plans and build area
 
 // ReasonThickRoof is why a thick natural roof can't be removed.
 const ReasonThickRoof = "Thick rock overhead"
@@ -157,7 +158,8 @@ func (g *Game) refreshRoofSupport() {
 	g.roofx.countsOK = false // room ids changed
 	w, h := g.grid.Width(), g.grid.Height()
 	grid := g.roomGrid
-	field := roof.SupportField(w, h, func(x, y int) bool { return grid[y*w+x] == room.Wall })
+	cols := g.buildingCells(construction.Column) // A2: a column holds the roof like a wall
+	field := roof.SupportField(w, h, func(x, y int) bool { return grid[y*w+x] == room.Wall || cols.has(y*w+x) })
 	for i, c := range g.roofs {
 		n := c &^ roof.Supported
 		if field[i] {
@@ -232,9 +234,10 @@ func (g *Game) clipRect(x1, y1, x2, y2 int) (minX, minY, maxX, maxY int) {
 	return max(minX, 0), max(minY, 0), min(maxX, g.grid.Width()-1), min(maxY, g.grid.Height()-1)
 }
 
-// clearRoofPlans drops roof plans inside the (normalized) rectangle.
-// NoAuto stays: a cancelled removal does not invite auto-roofing back.
-func (g *Game) clearRoofPlans(minX, minY, maxX, maxY int) {
+// clearRoofPlans drops the roof bits of mask inside the rectangle: Cancel
+// the plans and the build area (NoAuto stays: a cancelled removal does not
+// invite auto-roofing back); the Clear area orders one area each (AX-1).
+func (g *Game) clearRoofPlans(minX, minY, maxX, maxY int, mask roof.Cell) {
 	if len(g.roofs) == 0 {
 		return
 	}
@@ -242,7 +245,7 @@ func (g *Game) clearRoofPlans(minX, minY, maxX, maxY int) {
 	w := g.grid.Width()
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
-			g.setRoof(y*w+x, g.roofs[y*w+x]&^(roofPlans|roof.AreaBuild))
+			g.setRoof(y*w+x, g.roofs[y*w+x]&^mask)
 		}
 	}
 }

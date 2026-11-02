@@ -337,8 +337,8 @@ const (
 	DesignateRemoveFloor
 	DesignateClearRoofArea
 	DesignateClearNoRoofArea
-	// A2: SetPotPlant sows plant pot Target with plant species Build (a
-	// decorative plant, plant.Species).
+	// A2: SetPotPlant picks plant pot Target's plant, Build a
+	// construction.PotPlant (0 empties it); a grower then sows it.
 	SetPotPlant
 	// A4: none (the drill, scanner, pump and crematorium use bills, power
 	// toggles and the existing commands).

@@ -446,7 +446,7 @@ func (g *Game) kitOf(n int) []item.Kind { return kit.Legacy(n, g.rng.IntN) }
 // doors and rock all give way; traps are stepped around.
 func (g *Game) sapperBreaks() tileSet {
 	return g.sapperSet.get(g.structVer, func() tileSet {
-		set := slices.Clone(g.buildingCells(construction.Wall, construction.Door, construction.Autodoor))
+		set := slices.Clone(g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap))
 		w := g.grid.Width()
 		for y := 0; y < g.grid.Height(); y++ {
 			for x := 0; x < w; x++ {
@@ -487,7 +487,7 @@ type raidArrive struct{ g *Game }
 
 func (h raidArrive) PodSpot(x, y int) bool { return h.g.podFree(x, y, nil) } // arrival.go
 func (h raidArrive) Reach(x, y, tx, ty int) bool {
-	bm := breachMap{g: h.g, breaks: h.g.buildingCells(construction.Wall, construction.Door, construction.Autodoor)}
+	bm := breachMap{g: h.g, breaks: h.g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap)}
 	_, ok := h.g.searcher().Find(bm, x, y, tx, ty)
 	return ok
 }
@@ -600,8 +600,7 @@ func sapperTraps(g *Game) tileSet {
 		set := slices.Clone(g.buildingCells(construction.SpikeTrap))
 		w := g.grid.Width()
 		for _, id := range g.bldgIDs {
-			if b, ok := g.bldgs.Get(id); ok && b.Kind >= construction.IEDHighExplosive && b.Kind <= construction.IEDSmoke &&
-				(uint64(id)*0x9E3779B97F4A7C15)>>32%100 < sapperKnowPct {
+			if b, ok := g.bldgs.Get(id); ok && b.Kind.IsCharge() && (uint64(id)*0x9E3779B97F4A7C15)>>32%100 < sapperKnowPct {
 				set.add(b.Y*w + b.X)
 			}
 		}

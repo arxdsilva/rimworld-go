@@ -60,12 +60,20 @@ func BarrelCost(k construction.Kind) (item.Kind, int) {
 		return item.Uranium, 7
 	case construction.Mortar:
 		return item.ReinforcedBarrel, 1
+	case construction.FoamTurret: // AX-5: a full load, 72 chemfuel (Rearms take what it is missing)
+		return item.Chemfuel, 8
+	case construction.RocketBattery: // AX-5: 180 chemfuel, all at once
+		return item.Chemfuel, 20
 	}
 	return item.Steel, 9
 }
 
 // shellOrder is the order shells are fetched in.
-var shellOrder = [...]item.Kind{item.MortarShells, item.IncendiaryShells, item.EMPShells, item.SmokeShells}
+// AX-5: foam shells (they only smother fires), then antimatter warheads
+// last: a mortar is loaded with a rare warhead only when nothing else is
+// in stock.
+var shellOrder = [...]item.Kind{item.MortarShells, item.IncendiaryShells, item.EMPShells, item.SmokeShells, item.FoamShells,
+	item.AntimatterWarhead}
 
 // phase drops the hauls that are over and, on scan ticks, starts new
 // ones (the game's job phase advances them: Do).
@@ -88,7 +96,7 @@ func (r *Rearms) busy(id entity.EntityID) bool {
 func (r *Rearms) scan(now uint64) {
 	for _, id := range r.turrets.list() {
 		b, ok := r.h.Building(id)
-		if ok && r.turrets.Barrel(id, b.Kind) <= 250 && !r.busy(id) {
+		if ok && r.turrets.wantsRearm(id, b.Kind) && !r.busy(id) {
 			r.barrel(id, b)
 		}
 	}
@@ -113,6 +121,10 @@ func (r *Rearms) scan(now uint64) {
 // barrel starts a haul of building id's barrel material, else of steel
 // (BarrelCost: no source of the wiki's material yet).
 func (r *Rearms) barrel(id entity.EntityID, b construction.Building) {
+	if n := r.turrets.chemfuel(id, b.Kind); n > 0 { // AX-5: a chemfuel turret takes chemfuel, never steel
+		r.start(id, b, item.Chemfuel, n)
+		return
+	}
 	k, n := BarrelCost(b.Kind)
 	if k != item.Steel && r.start(id, b, k, n) {
 		return

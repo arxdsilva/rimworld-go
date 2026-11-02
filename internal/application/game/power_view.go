@@ -60,7 +60,7 @@ func (g *Game) fillPowerBuilding(bv *BuildingView, id entity.EntityID, b constru
 	case power.Producer:
 		bv.PowerMax = s.Peak
 		if bv.PowerOut = g.liveOutput(id); bv.PowerOut == 0 {
-			bv.NoPowerReason = g.noPowerWhy(id, net, b.Kind == construction.WoodGenerator && g.fuel[id] <= 0)
+			bv.NoPowerReason = g.noPowerWhy(id, net, (b.Kind == construction.WoodGenerator || b.Kind == construction.ChemfuelGenerator) && g.fuel[id] <= 0)
 		} else if net == 0 {
 			bv.NoPowerReason = NoPowerNotConnected
 		}

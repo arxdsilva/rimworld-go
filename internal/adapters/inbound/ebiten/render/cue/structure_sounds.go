@@ -45,6 +45,7 @@ var benchLoops = map[string]string{
 var iedKinds = map[string]bool{
 	construction.IEDHighExplosive.String(): true, construction.IEDIncendiary.String(): true,
 	construction.IEDEMP.String(): true, construction.IEDSmoke.String(): true,
+	construction.IEDFoam.String(): true, construction.IEDWarhead.String(): true, // AX-5
 }
 
 // benchWorker is a crafter at work: the loop it makes and the bench tile.

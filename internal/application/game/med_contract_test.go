@@ -297,7 +297,7 @@ func TestAddOperationRefusesUnimplementedKinds(t *testing.T) {
 	if n := len(g.operationsOf(patient)); n != 1 {
 		t.Fatal("amputation still queues")
 	}
-	if l := operationLabel(g.bodies[patient], body.Operation{Kind: body.Euthanize, Part: body.Torso}); l == "" || l == "Operation (torso)" {
+	if l := body.OperationLabel(g.bodies[patient], body.Operation{Kind: body.Euthanize, Part: body.Torso}); l == "" || l == "Operation (torso)" {
 		t.Fatalf("label %q", l)
 	}
 }
@@ -307,7 +307,7 @@ func TestAddOperationRefusesUnimplementedKinds(t *testing.T) {
 func TestHeadlineUnderAnesthetic(t *testing.T) {
 	var b body.Body
 	b.AddCond(body.Condition{Kind: body.CondAnesthetic})
-	if got := conditionHeadline(&b, false); got != "Under anesthetic" {
+	if got := body.ConditionHeadline(&b, false); got != "Under anesthetic" {
 		t.Fatalf("headline %q, want %q", got, "Under anesthetic")
 	}
 }

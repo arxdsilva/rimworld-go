@@ -74,6 +74,9 @@ func (a Pawn) PawnCommands(id entity.EntityID) []Button {
 	}
 	out = append(out, smokepopCommand(p)...)
 	out = append(out, threatCommand(p)...)
+	if c, ok := stripCommand(p); ok { // cmds_orders.go (AX-1)
+		out = append(out, c)
+	}
 	return out
 }
 
@@ -300,6 +303,9 @@ func (a Pawn) PawnLines(p game.PawnView) []string {
 		job = "idle"
 	}
 	out = append(out, "Job: "+job)
+	if ln := StripLine(p); ln != "" { // cmds_orders.go (AX-1)
+		out = append(out, ln)
+	}
 	if ln := PostponedLine(p.Postponed); ln != "" {
 		out = append(out, ln)
 	}

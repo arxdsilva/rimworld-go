@@ -88,7 +88,7 @@ func (g *Game) syncRegionFlags(f *fenceIndex) {
 	if f.n > 0 {
 		for _, id := range g.bldgIDs {
 			b, ok := g.bldgs.Get(id)
-			if !ok || !construction.DefOf(b.Kind).AnimalBlock {
+			if !ok || !flapOrFence(b.Kind) {
 				continue
 			}
 			fp, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -116,6 +116,8 @@ func (g *Game) syncRegionFlags(f *fenceIndex) {
 				fl |= region.Fence
 			case fenceGate:
 				fl |= region.Gate
+			case fenceFlap:
+				fl |= region.Flap
 			}
 		}
 		if fl != 0 {
@@ -148,7 +150,7 @@ func (g *Game) syncRegionFlags(f *fenceIndex) {
 // plus the flagged cells l may not enter.
 func (g *Game) layerBits(l region.Layer) []uint64 {
 	g.regionsNow()
-	if l == region.Colonist {
+	if l == region.Colonist && g.fences().flaps == 0 {
 		return g.grid.BlockedBits()
 	}
 	rs := &g.regs

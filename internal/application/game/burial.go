@@ -223,7 +223,7 @@ func (g *Game) cremate(bid, cid entity.EntityID, d recipe.Def) {
 	}
 	g.deleteItem(cid)
 	b, _ := g.bldgs.Get(bid)
-	g.burnWood(b.X, b.Y, d.ExtraQty)
+	g.burnWood(b.X, b.Y, d.ExtraQty*map[bool]int{true: 1}[b.Kind == construction.Pyre]) // AX-4: the electric crematorium burns no wood
 	rec := g.restRecord(st)
 	g.setGrave(st.Of, rec)
 	g.message(b.X, b.Y, "%s was cremated", rec.Name)
@@ -470,6 +470,7 @@ func (g *Game) afterLoadBurial() {
 // already laid to rest).
 func (g *Game) fillPawnDeath(pv *PawnView) {
 	pv.Embodied = pv.Status == health.Dead.String()
+	pv.AX.StripMarked = ordersOf(g).Strip.Marked(pv.ID) // game/orders (AX-1): a downed pawn marked to strip
 }
 
 // fillCorpseView sets ItemView.Of and OfName for a human corpse or bones,
@@ -501,7 +502,7 @@ func (g *Game) fillGraveView(bv *BuildingView, id entity.EntityID, b constructio
 		if rec, ok := g.graves[id]; ok {
 			bv.Occupant, bv.Epitaph, bv.Headstone = rec.Name, epitaph(rec), rec.Headstone
 		}
-	case construction.Pyre:
+	case construction.Pyre, construction.ElectricCrematorium: // AX-4
 		bv.Burning = g.cremating(id)
 	}
 }

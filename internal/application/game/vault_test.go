@@ -162,7 +162,7 @@ func TestVaultLaidSealedAndHidden(t *testing.T) {
 	if !ok || !w.Ancient || w.Stuff != item.GraniteBlocks || w.Ruin || w.Damage != 0 {
 		t.Fatalf("vault wall %+v %v", w, ok)
 	}
-	if f, ok := bldgAt(g, construction.Floor, 66, 66); !ok || !f.Ancient {
+	if f, ok := bldgAt(g, construction.StoneTile, 66, 66); !ok || !f.Ancient { // AX-3: laid as stone tile
 		t.Fatalf("vault floor %+v %v", f, ok)
 	}
 	want := []vault.Occupant{vault.Grateful, vault.Hostile, vault.Empty, vault.Remains}

@@ -15,7 +15,7 @@ func TestColonistCarriesMealToTable(t *testing.T) {
 	id, _ := g.SpawnNamedPawn(2, 5, "Ada")
 	g.SpawnStack(item.Meal, 5, 3, 5)
 	placeBuilt(t, g, construction.Table, construction.South, 12, 5)
-	placeBuilt(t, g, construction.Chair, construction.South, 12, 6)
+	placeBuilt(t, g, construction.Chair, construction.South, 12, 7) // A2: south of the 1x2 table
 	g.SetNeeds(id, needs.CriticalHunger-1, needs.Full)
 	ate := false
 	for i := 0; i < 400+needs.EatWorkTicks && !ate; i++ {
@@ -30,8 +30,8 @@ func TestColonistCarriesMealToTable(t *testing.T) {
 		t.Fatalf("at (%d,%d) job %s thoughts %+v: should have eaten at the table", p.X, p.Y, p.Job, p.Thoughts)
 	}
 	p := pawn(t, g, id)
-	if p.X != 12 || p.Y != 6 {
-		t.Fatalf("ate at (%d,%d), want the chair at (12,6)", p.X, p.Y)
+	if p.X != 12 || p.Y != 7 {
+		t.Fatalf("ate at (%d,%d), want the chair at (12,7)", p.X, p.Y)
 	}
 	want := 5 - portionsFor(needs.CriticalHunger-1, item.Stack{Kind: item.Meal})
 	if st, ok := stackOf(g, item.Meal); !ok || st.Qty != want || st.X != 3 {

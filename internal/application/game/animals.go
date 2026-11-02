@@ -838,9 +838,15 @@ func (g *Game) removeAnimal(id entity.EntityID) {
 
 func (g *Game) markHunt(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
+	markHuntWhere(g, minX, minY, maxX, maxY, on, nil)
+}
+
+// markHuntWhere marks the animals keep takes (nil: all; AX-1 slaughter:
+// tame ones) in the normalized rectangle.
+func markHuntWhere(g *Game, minX, minY, maxX, maxY int, on bool, keep func(animal.State) bool) {
 	for _, id := range g.animalIDs {
 		a, ok := g.animals.Get(id)
-		if !ok {
+		if !ok || keep != nil && !keep(a) {
 			continue
 		}
 		p, _ := g.positions.Get(id)

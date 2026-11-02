@@ -44,3 +44,13 @@ func TestRefunds(t *testing.T) {
 		t.Fatalf("machining table refund %v %d %d", s, n, c)
 	}
 }
+
+// TestV11IsTheTable (A2): save v11 grows only the table, once.
+func TestV11IsTheTable(t *testing.T) {
+	t.Parallel()
+	for _, d := range construction.All() {
+		if V11(d.Kind) != (d.Kind == construction.Table) || V11(d.Kind) && (V9(d.Kind) || V10(d.Kind)) {
+			t.Errorf("%s: v11 %v", d.Kind, V11(d.Kind))
+		}
+	}
+}

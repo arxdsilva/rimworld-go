@@ -24,6 +24,7 @@ const (
 	fenceNone uint8 = iota
 	fencePost
 	fenceGate
+	fenceFlap // A2: an animal flap, open to animals, shut to people (flapQuery)
 )
 
 // fenceIndex marks the cells holding a built fence (fencePost) or gate
@@ -34,6 +35,7 @@ type fenceIndex struct {
 	built bool
 	cells []uint8
 	n     int
+	flaps int // A2: animal flaps among the n
 	gen   uint64
 }
 
@@ -44,7 +46,7 @@ func (g *Game) fences() *fenceIndex {
 	if f.built {
 		return f
 	}
-	f.built, f.n = true, 0
+	f.built, f.n, f.flaps = true, 0, 0
 	f.gen++
 	w, h := g.grid.Width(), g.grid.Height()
 	if len(f.cells) != w*h {
@@ -54,12 +56,14 @@ func (g *Game) fences() *fenceIndex {
 	}
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
-		if !ok || !construction.DefOf(b.Kind).AnimalBlock {
+		if !ok || !flapOrFence(b.Kind) {
 			continue
 		}
 		v := fencePost
 		if construction.DefOf(b.Kind).Gate {
 			v = fenceGate
+		} else if b.Kind == construction.AnimalFlap {
+			v, f.flaps = fenceFlap, f.flaps+1
 		}
 		cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		for _, c := range cells {
@@ -200,4 +204,33 @@ func (g *Game) fenceReachable(a *animal.State, pos Position) func(x, y int) bool
 		l = region.Tame
 	}
 	return forage.Reach(g.regionsNow(), l, pos.X, pos.Y, g.grid.Width(), g.grid.Height(), f.cells)
+}
+
+// flapOrFence: a piece the fence index holds (fences, gates, A2's animal
+// flaps: any flap routes tame animals through the tame layer).
+func flapOrFence(k construction.Kind) bool {
+	return construction.DefOf(k).AnimalBlock || k == construction.AnimalFlap
+}
+
+// flapQuery is the grid as people walk it while animal flaps stand (A2):
+// a flap is shut to them, with the colonist layer's region answers.
+type flapQuery struct{ g *Game }
+
+func (q flapQuery) Width() int  { return q.g.grid.Width() }
+func (q flapQuery) Height() int { return q.g.grid.Height() }
+func (q flapQuery) Walkable(x, y int) bool {
+	return q.g.grid.Walkable(x, y) && q.g.fence.cells[y*q.g.grid.Width()+x] != fenceFlap
+}
+func (q flapQuery) BlockedBits() []uint64 { return q.g.layerBits(region.Colonist) }
+func (q flapQuery) Reach(sx, sy, tx, ty int) bool {
+	return q.g.noRegions() || checkReach(q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
+}
+
+// colonistGrid is the walkability people plan with: the grid, or with
+// animal flaps on the map the grid with the flaps shut (flapQuery).
+func colonistGrid(g *Game) pathing.Query {
+	if g.fences().flaps == 0 {
+		return g.grid
+	}
+	return flapQuery{g}
 }

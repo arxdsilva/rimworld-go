@@ -36,11 +36,12 @@ func BuildSpriteStuff(kind, stuff, facing string, mask int, ew, open bool) strin
 	if kind == "carpet" {
 		return CarpetSprite(stuff)
 	}
+	if k := FloorSprite(kind, stuff); k != "" { // floor_keys.go: every floor kind (AX-3)
+		return k
+	}
 	switch m := sprite.StuffMaterial(stuff); {
 	case kind == "wall" && m != "wood":
 		return sprite.WallPrefix(stuff) + "_" + sprite.TwoDigits(mask)
-	case kind == "floor" && m == "stone":
-		return "structure/floor_stone"
 	case kind == "door" && m == "steel":
 		return DoorSprite("steel", ew, open)
 	}
@@ -73,6 +74,9 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return DoorSprite("wood", ew, open)
 	case "floor":
 		return "structure/floor_wood"
+	case "straw matting", "concrete", "paved tile", "steel tile", "silver tile", "gold tile", "sterile tile", "stone tile",
+		"flagstone", "carpet floor": // AX-3, floor_keys.go
+		return FloorSprite(kind, "")
 	case overlay.BridgeKind:
 		return overlay.BridgeKey(mask)
 	case "double bed":
@@ -125,8 +129,23 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/tailoring_bench_" + FacingOr(facing)
 	case "drying rack":
 		return "furniture/drying_rack_" + FacingOr(facing)
-	case "table":
-		return "furniture/table_small"
+	case "table": // A2 (AR1's art): the 1x2 table; north draws south, west draws east
+		return "furniture/table_1x2_" + axisFacing(facing)
+	case "table 2x2":
+		return "furniture/table_2x2"
+	case "table 2x4":
+		return "furniture/table_2x4_" + axisFacing(facing)
+	case "table 3x3":
+		return "furniture/table_3x3"
+	case "ornate door", "animal flap":
+		return "structure/" + strings.ReplaceAll(kind, " ", "_") + "_" + map[bool]string{true: "ew", false: "ns"}[ew] + "_" +
+			map[bool]string{true: "open", false: "closed"}[open]
+	case "double sleeping spot":
+		return "overlay/double_sleeping_spot_" + FacingOr(facing)
+	case "couch", "small shelf", "wall torch", "wall lamp":
+		return "furniture/" + strings.ReplaceAll(kind, " ", "_") + "_" + FacingOr(facing)
+	case "column", "animal sleeping box", "plant pot", "flood light", "urn", "large stele", "grand stele", "egg box":
+		return "furniture/" + strings.ReplaceAll(kind, " ", "_")
 	case "chair":
 		return "furniture/chair_basic_" + FacingOr(facing)
 	case "lamp":
@@ -211,6 +230,16 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "defense/slug_turret_base"
 	case "mortar":
 		return "defense/mortar_base"
+	case "foam popper": // AX-5 (AR2's art)
+		return "defense/foam_popper"
+	case "foam charge":
+		return "defense/ied_foam"
+	case "warhead charge":
+		return "defense/ied_warhead"
+	case overlay.FoamTurretKind:
+		return "defense/foam_turret_base"
+	case overlay.RocketBatteryKind:
+		return "defense/rocket_battery_base"
 	case "powered door":
 		return "structure/autodoor_" + map[bool]string{true: "ew", false: "ns"}[ew] + "_" + map[bool]string{true: "open", false: "closed"}[open]
 	}
@@ -271,6 +300,20 @@ func PowerSprite(kind, facing string, mask int, open bool) string {
 		return "furniture/electric_research_bench_" + FacingOr(facing)
 	case "multi-analyzer": // RSCH-3: 2x2 facility, one facing; its glow is the on state
 		return "furniture/multi_analyzer"
+	case overlay.WaterproofConduitKind: // AX-4 (AR2's art)
+		return "power/waterproof_conduit_" + sprite.TwoDigits(mask&15)
+	case "chemfuel generator":
+		return "power/chemfuel_generator"
+	case overlay.WatermillKind: // the wheel is its own layer (power_draw.go drawMillWheel)
+		return "power/watermill_" + FacingOr(facing)
+	case "deep drill":
+		return "power/deep_drill_" + FacingOr(facing)
+	case "ground-penetrating scanner":
+		return "power/ground_scanner_" + FacingOr(facing)
+	case "moisture pump":
+		return "power/moisture_pump"
+	case "electric crematorium":
+		return "furniture/electric_crematorium_" + FacingOr(facing)
 	}
 	return ""
 }
@@ -285,6 +328,15 @@ func DoorSprite(material string, ew, open bool) string {
 		state = "open"
 	}
 	return "structure/door_" + material + "_" + axis + "_" + state
+}
+
+// axisFacing is south or east: the facing of a kind whose north and
+// west draw as its south and east (a table).
+func axisFacing(f string) string {
+	if f == "east" || f == "west" {
+		return "east"
+	}
+	return "south"
 }
 
 // FacingOr is f, south when unset.

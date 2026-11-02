@@ -3,9 +3,13 @@ package game
 import (
 	"math"
 
+	"rimworld-go/internal/application/game/industry"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
@@ -34,10 +38,8 @@ const (
 	solarNightPermil = 120
 	windPerSpeedW    = 250
 	windMaxW         = 1100
-	// windBandDepth is how many cells wide the band beside each long side
-	// of a turbine is.
-	windBandDepth = 5
-	geothermalW   = 1800
+	geothermalW      = 1800
+	chemfuelGenW     = 1000 // AX-4, wiki: Chemfuel powered generator
 )
 
 // genOutput is generator id's output in W (0 for a piece that makes none,
@@ -58,6 +60,12 @@ func (g *Game) genOutput(id entity.EntityID) int {
 		return g.solarOutput(b)
 	case construction.WindTurbine:
 		return g.windOutput(id, b)
+	case construction.ChemfuelGenerator: // AX-4: burns chemfuel (fuel.go)
+		if g.fuel[id] > 0 {
+			return chemfuelGenW
+		}
+	case construction.Watermill:
+		return g.br.ind.Mill(industryHost{g}).Output(id) // game/industry: the wheel in the river
 	}
 	return 0
 }
@@ -96,82 +104,13 @@ func (g *Game) windOutput(id entity.EntityID, b construction.Building) int {
 	if w == 0 {
 		return 0
 	}
-	return w * g.windClear(id, b) / 1000
+	return w * g.br.ind.WindClear(industryHost{g}, g.bldgs, id, b) / 1000 // game/industry: the clear band
 }
 
-// windCache holds each turbine's clear share (permille), valid for one
-// structure, roof state and game hour (trees grow, so a band is looked at
-// again every hour). Never saved.
-type windCache struct {
-	ok      bool
-	structV uint64
-	roofV   uint64
-	hour    uint64
-	bldgs   any // the store it was built from (a load swaps it)
-	share   map[entity.EntityID]int
-	builds  int // band scans so far (tests)
-}
-
-// windClear is the share (permille) of turbine id's band that is open air.
-func (g *Game) windClear(id entity.EntityID, b construction.Building) int {
-	c := &g.vents.wind
-	hour := uint64(g.clock.Now()) / clock.TicksPerHour
-	if !c.ok || c.structV != g.structVer || c.roofV != g.roofVer() || c.hour != hour || c.bldgs != any(g.bldgs) {
-		clear(c.share)
-		if c.share == nil {
-			c.share = map[entity.EntityID]int{}
-		}
-		c.ok, c.structV, c.roofV, c.hour, c.bldgs = true, g.structVer, g.roofVer(), hour, g.bldgs
-	}
-	if s, ok := c.share[id]; ok {
-		return s
-	}
-	s := g.scanWindBand(b)
-	c.share[id] = s
-	c.builds++
-	return s
-}
-
-// scanWindBand counts the open cells of the band along both long sides of
-// turbine b: windBandDepth cells out from each side, over the turbine's
-// length. Cells off the map are open air.
-func (g *Game) scanWindBand(b construction.Building) int {
-	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-	if len(cells) == 0 {
-		return 0
-	}
-	x0, y0, x1, y1 := cells[0][0], cells[0][1], cells[0][0], cells[0][1]
-	for _, c := range cells[1:] {
-		x0, y0, x1, y1 = min(x0, c[0]), min(y0, c[1]), max(x1, c[0]), max(y1, c[1])
-	}
-	total, open := 0, 0
-	visit := func(x, y int) {
-		total++
-		if !g.windBlocked(x, y) {
-			open++
-		}
-	}
-	if x1-x0 > y1-y0 { // lies east-west: the band is above and below
-		for x := x0; x <= x1; x++ {
-			for d := 1; d <= windBandDepth; d++ {
-				visit(x, y0-d)
-				visit(x, y1+d)
-			}
-		}
-	} else { // lies north-south: the band is left and right
-		for y := y0; y <= y1; y++ {
-			for d := 1; d <= windBandDepth; d++ {
-				visit(x0-d, y)
-				visit(x1+d, y)
-			}
-		}
-	}
-	return open * 1000 / total
-}
-
-// windBlocked reports a cell that stops the wind: a roof, rock, a wall or
+// WindBlocked reports a cell that stops the wind: a roof, rock, a wall or
 // door, a building that blocks movement, or a tree. Off the map is open.
-func (g *Game) windBlocked(x, y int) bool {
+func (h industryHost) WindBlocked(x, y int) bool {
+	g := h.g
 	if !g.grid.InBounds(x, y) {
 		return false
 	}
@@ -185,4 +124,63 @@ func (g *Game) windBlocked(x, y int) bool {
 		return plant.DefOf(p.Species).Trunk && p.Species != plant.Cactus
 	}
 	return false
+}
+
+// industryHost is game/industry's roles (game/industry/deps.go, AX-4).
+type industryHost struct{ g *Game }
+
+func (h industryHost) StructVer() uint64              { return h.g.structVer }
+func (h industryHost) RoofVer() uint64                { return h.g.roofVer() }
+func (h industryHost) Hour() uint64                   { return uint64(h.g.clock.Now()) / clock.TicksPerHour }
+func (h industryHost) BuildingIDs() []entity.EntityID { return h.g.bldgIDs }
+func (h industryHost) Building(id entity.EntityID) (construction.Building, bool) {
+	return h.g.bldgs.Get(id)
+}
+func (h industryHost) Powered(id entity.EntityID) bool     { return h.g.powered(id) }
+func (h industryHost) Size() (int, int)                    { return h.g.grid.Width(), h.g.grid.Height() }
+func (h industryHost) Terrain(x, y int) terrain.Type       { return h.g.terr.At(x, y) }
+func (h industryHost) SetTerrain(x, y int, t terrain.Type) { h.g.setTerrain(x, y, t) }
+func (h industryHost) Ocean(x, y int) bool                 { return h.g.isOcean(x, y) }
+func (h industryHost) StoneAt(x, y int) geology.Stone      { return h.g.stoneAt(x, y) }
+func (h industryHost) Seed() uint64                        { return h.g.streams.seed }
+func (h industryHost) Drop(k item.Kind, n, x, y int)       { h.g.dropStack(k, n, x, y) }
+func (h industryHost) Changed()                            { h.g.viewGen++ }
+func (h industryHost) Pos(id entity.EntityID) (int, int) {
+	p, _ := h.g.positions.Get(id)
+	return p.X, p.Y
+}
+func (h industryHost) Work(id entity.EntityID, mining bool) int {
+	if mining {
+		return h.g.workProgress(id, skMining, true) // skills.go: trains Mining
+	}
+	return h.g.workProgress(id, skIntellectual, true)
+}
+func (h industryHost) Letter(title, text string, x, y int) {
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
+}
+func (h industryHost) Free(worker, bench entity.EntityID, k job.Kind, sx, sy int) bool {
+	if owner, taken := h.g.reserve.EntityOwner(bench); taken && owner != worker || h.g.postponedFor(worker, k, bench, 0, 0) {
+		return false
+	}
+	o, held := h.g.reserve.TileOwner(sx, sy)
+	return h.g.grid.Walkable(sx, sy) && (!held || o == worker)
+}
+func (h industryHost) Start(worker, bench entity.EntityID, k job.Kind, sx, sy, ticks int) bool {
+	return h.g.startJob(worker, job.Record{Kind: k, Target: bench, TX: sx, TY: sy, WorkLeft: ticks}) &&
+		h.g.reserve.TryTile(worker, sx, sy) // the held machine draws its full power (power.go powerWant)
+}
+
+// doOperate is one tick of a deep drill's or scanner's sitting (AX-4).
+func (h industryHost) doOperate(id entity.EntityID, j job.Record) {
+	switch h.g.br.ind.Ops(h).Do(id, j.Target) {
+	case industry.Stop:
+		j.State = job.Complete
+	case industry.Blocked:
+		j.State, j.Fail = job.Fail, job.Blocked // the power went (put off a while: postpone.go)
+	default:
+		if j.WorkLeft--; j.WorkLeft <= 0 {
+			j.State = job.Complete
+		}
+	}
+	h.g.jobs.Set(id, j)
 }

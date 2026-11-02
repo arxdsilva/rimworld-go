@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/farm"
+	"rimworld-go/internal/application/game/furnish"
 
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
@@ -35,7 +36,8 @@ func (g *Game) growChunks() {
 	var lamps []farm.Lamp
 	gp := g.growthPct() // setup.go: a scenario's permanent conditions (Ashfall)
 	if ph == 0 {
-		g.sunLampTick(now) // plant_light.go: the lamps' hours, short circuits
+		g.sunLampTick(now)                                     // plant_light.go: the lamps' hours, short circuits
+		furnish.NewPots(furnishHost{restBedding{g}}).Tick(now) // game/furnish (A2): pot plants, hourly
 	}
 	for c := (ph*n + climateInterval - 1) / climateInterval; c < n && c*climateInterval/n == ph; c++ {
 		if lamps == nil {

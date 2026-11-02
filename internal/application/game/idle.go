@@ -193,7 +193,7 @@ func (g *Game) idleSocialRelax(id entity.EntityID, linger int) bool {
 	found, bestD := false, 31
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !(b.Kind == construction.Table || b.Kind == construction.Campfire && g.burning(bid, b)) {
+		if !ok || !(b.Kind.IsTable() || b.Kind == construction.Campfire && g.burning(bid, b)) {
 			continue
 		}
 		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD && g.areaAllows(id, b.X, b.Y) && g.companyAt(id, b.X, b.Y) { // areas.go

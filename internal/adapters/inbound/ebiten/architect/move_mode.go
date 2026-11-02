@@ -33,6 +33,9 @@ type MoveState struct {
 	Facing uint8
 	Fresh  bool          // entered this frame: ignore the click that opened it
 	Check  BuildingMover // test override of the sim's CanMoveTo
+	// Crate is the crated building being reinstalled (AX-1, reinstall.go;
+	// Bid is then 0).
+	Crate entity.EntityID
 }
 
 // State is Move mode's state.
@@ -45,7 +48,8 @@ func MovableKind(kind string, floor bool) bool {
 		return false
 	}
 	switch kind {
-	case "wall", "door", "powered door", "grave", "fence", "fence gate":
+	case "wall", "door", "powered door", "grave", "fence", "fence gate",
+		"ornate door", "column", "animal flap", "wall torch", "wall lamp": // A2 (construction.Movable)
 		return false
 	}
 	return true
@@ -82,6 +86,10 @@ func (m *Mover) building() (game.BuildingView, bool) {
 	if !s.On || m.sim() == nil {
 		return game.BuildingView{}, false
 	}
+	if s.Crate != 0 { // reinstall.go (AX-1)
+		it, ok := m.crate(s.Crate)
+		return CrateGhost(it), ok
+	}
 	for _, b := range m.sh.World().Buildings {
 		if b.ID == s.Bid {
 			return b, true
@@ -96,7 +104,7 @@ func (m *Mover) Start(b game.BuildingView) {
 		return
 	}
 	s := &m.st
-	s.On, s.Bid, s.Facing, s.Fresh = true, b.ID, FacingIndex(b.Facing), true
+	s.On, s.Bid, s.Crate, s.Facing, s.Fresh = true, b.ID, 0, FacingIndex(b.Facing), true
 	m.ToolID = ""
 	m.Drag = false
 }
@@ -105,6 +113,9 @@ func (m *Mover) Start(b game.BuildingView) {
 // with the current facing.
 func (m *Mover) valid(b game.BuildingView, x, y int) (bool, string) {
 	s := &m.st
+	if s.Crate != 0 { // reinstall.go (AX-1): the Architect's own placement rule
+		return m.sim().CanPlaceAt(b.Kind, b.Stuff, FacingNames[s.Facing], x, y)
+	}
 	mv := s.Check
 	if mv == nil {
 		mv, _ = m.sim().(BuildingMover)
@@ -144,7 +155,11 @@ func (m *Mover) Step(tx, ty int, onMap bool, rotate int, left, cancel bool) bool
 			m.sh.Hint(why)
 			return true
 		}
-		m.sh.Enqueue(command.Command{Kind: command.MoveBuilding, Target: uint64(b.ID), X: tx, Y: ty, Facing: s.Facing})
+		c := command.Command{Kind: command.MoveBuilding, Target: uint64(b.ID), X: tx, Y: ty, Facing: s.Facing}
+		if s.Crate != 0 {
+			c = ReinstallCmd(s.Crate, s.Facing, tx, ty) // reinstall.go (AX-1)
+		}
+		m.sh.Enqueue(c)
 		s.On = false
 	}
 	return true
@@ -198,6 +213,9 @@ func (m *Mover) Draw(screen *ebiten.Image) {
 	m.sh.DrawPlacementGhost(screen, b.Kind, b.Stuff, FacingNames[m.st.Facing],
 		[]GhostCell{{X: tx, Y: ty, OK: okMove, Reason: why}})
 	msg := "Move " + m.sh.BuildingTitle(b)
+	if m.st.Crate != 0 {
+		msg = "Reinstall " + b.Kind // reinstall.go (AX-1)
+	}
 	if !okMove {
 		msg += "   can't move: " + why
 	} else if bv, ok := Buildable(b.Kind); ok && bv.Rotatable {

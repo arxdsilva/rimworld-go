@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"cmp"
 	"fmt"
 	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
@@ -236,7 +237,7 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 		}
 	}
 	for _, tool := range allArchTools() {
-		if !seen["arch.tool."+tool.ID] {
+		if id := cmp.Or(tool.Family, tool.ID); !seen["arch.tool."+id] { // A2: a family member is reached through its card
 			t.Fatalf("tool %s is not reachable from any category", tool.ID)
 		}
 		if tool.Build != "" {

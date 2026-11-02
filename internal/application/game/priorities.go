@@ -3,7 +3,6 @@ package game
 import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/schedule"
-	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -11,40 +10,6 @@ import (
 // priority by priority (1 first, then 2, ...); among work types with the
 // same priority it follows work.Order. Each colonist has its own 24-hour
 // schedule (a copy of the colony default when it arrives).
-
-func workTypeOf(c command.WorkType) (work.Type, bool) {
-	switch c {
-	case command.WorkHaul:
-		return work.Haul, true
-	case command.WorkConstruct:
-		return work.Construct, true
-	case command.WorkGrow:
-		return work.Grow, true
-	case command.WorkMine:
-		return work.Mine, true
-	case command.WorkCook:
-		return work.Cook, true
-	case command.WorkHunt:
-		return work.Hunt, true
-	case command.WorkCraft:
-		return work.Craft, true
-	case command.WorkDoctor:
-		return work.Doctor, true
-	case command.WorkResearch:
-		return work.Research, true
-	case command.WorkClean:
-		return work.Clean, true
-	case command.WorkHandle:
-		return work.Handle, true
-	case command.WorkWarden:
-		return work.Warden, true
-	case command.WorkFirefight:
-		return work.Firefight, true // firefight.go
-	case command.WorkPlantCut:
-		return work.PlantCut, true // FOOD-2
-	}
-	return 0, false
-}
 
 // prioOf is a colonist's priorities (derived from its enable mask for
 // colonists made before priorities existed).
@@ -112,10 +77,10 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
 		return g.haulUrgent(id) || g.fillHoppers(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || // haul_priority.go, trough_feed.go
-			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || g.assignHaul(id) // FOOD-4: hoppers, barrels
+			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || ordersOf(g).AssignHaul(id) || g.assignHaul(id) // FOOD-4: hoppers, barrels; AX-1: open, strip
 	case work.Construct:
 		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
-			g.assignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go
+			g.assignConstruct(id) || ordersOf(g).AssignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go; AX-1: uninstall, install
 	case work.Cook, work.Craft:
 		return t == work.Cook && g.fillHoppers(id) || g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // haul_priority.go, craft/shop.go
 	case work.Hunt:
@@ -127,9 +92,9 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.PlantCut: // FOOD-2: cutting split from growing (wiki: Plants)
 		return g.assignCut(id)
 	case work.Mine:
-		return g.assignMine(id)
+		return g.assignMine(id) || g.br.ind.Ops(industryHost{g}).Assign(id, true, workTries) // game/industry: deep drills (AX-4)
 	case work.Research:
-		return g.lab.Assign(id, workTries) // game/research
+		return g.lab.Assign(id, workTries) || g.br.ind.Ops(industryHost{g}).Assign(id, false, workTries) // game/research, game/industry scanners
 	case work.Clean:
 		return g.assignClean(id) || g.assignClearSnow(id) // clean.go, snow_clear.go
 	}

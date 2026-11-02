@@ -63,7 +63,7 @@ func TestSlotsAndShares(t *testing.T) {
 		t.Fatalf("slot keys: %d %v", fid, comp)
 	}
 	fr := construction.Frame{Stuff: item.Wood, Need: 10, Wood: 10, CompNeed: 2}
-	if !SlotOpen(fr, item.Components) || SlotOpen(fr, item.Wood) || SlotOpen(fr, item.Steel) {
+	if !SlotOpen(fr, key, item.Components) || SlotOpen(fr, 7, item.Wood) || SlotOpen(fr, 7, item.Steel) {
 		t.Fatal("slot open: the components, once the wood is in")
 	}
 	if SupplyKind(fr) != item.Components || SupplyNeed(fr, item.Components) != 2 || SupplyHave(fr, item.Wood) != 10 {

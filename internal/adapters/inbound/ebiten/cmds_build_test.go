@@ -305,7 +305,7 @@ func TestBuildingCommandsCancelMoveAndLockedCopy(t *testing.T) {
 	s.world.Locked = map[string]string{"build:butcher table": "Smithing"}
 	a, _ := bldApp(t, s, 9)
 	cs := a.insp.Building().BuildingCommands(9)
-	if got := strings.Join(bldCmdIDs(cs), ","); got != "bldg.move,bldg.copy,bldg.cancelmove,bldg.deconstruct" {
+	if got := strings.Join(bldCmdIDs(cs), ","); got != "bldg.move,bldg.copy,bldg.cancelmove,cmd.bldg.uninstall,bldg.deconstruct" /* AX-1: Uninstall */ {
 		t.Fatalf("commands = %s", got)
 	}
 	if c, _ := bldCmd(cs, "bldg.copy"); !c.Disabled || c.Reason != "needs research: Smithing" {

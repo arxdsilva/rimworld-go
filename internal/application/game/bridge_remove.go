@@ -141,6 +141,7 @@ func (g *Game) foundationGone(b construction.Building) {
 // (finished wooden decks; the water underneath stays).
 func (g *Game) applyBridges(res mapgen.Result) {
 	g.setOcean(res.Ocean)
+	g.br.ind.SetFlow(res.River, res.W, res.H) // game/industry: the river's flow (AX-4)
 	for _, p := range res.Bridges {
 		g.placeGenerated(construction.Building{Kind: construction.Bridge, Stuff: item.Wood, X: p.X, Y: p.Y})
 	}

@@ -51,7 +51,8 @@ func PlantBurnSteps(s plant.Species) int {
 }
 
 // BuildingFlammability is how readily a building of kind k made of stuff
-// burns: wooden ones (bridges too) 0.7, carpets 0.8, stone and steel never.
+// burns: wooden ones (bridges too) 0.7, carpets and carpet floors 0.8,
+// straw matting 1.0, stone and steel never.
 // Fire pits, graves, spots and natural features don't burn.
 func BuildingFlammability(k construction.Kind, stuff item.Kind) int {
 	d := construction.DefOf(k)
@@ -65,7 +66,9 @@ func BuildingFlammability(k construction.Kind, stuff item.Kind) int {
 		stuff = construction.DefaultStuff(k)
 	}
 	switch {
-	case stuff.IsCarpet():
+	case k == construction.StrawMatting: // AX-3, wiki: Floors (straw 150 %, the most of any floor)
+		return 1000
+	case stuff.IsCarpet(), k == construction.CarpetFloor:
 		return 800
 	case stuff == item.Wood:
 		return 700

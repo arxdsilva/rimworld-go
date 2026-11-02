@@ -1,8 +1,6 @@
 package game
 
 import (
-	"strings"
-
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -51,8 +49,8 @@ func bioOf(p pawngen.Pawn) BioView {
 	sex := p.Look.Sex
 	v := BioView{
 		First: p.First, Nick: p.Nick, Last: p.Last,
-		Sex:      sexLabel(sex),
-		Build:    buildLabel(p.Look.Build),
+		Sex:      sex.Label(),
+		Build:    p.Look.Build.Label(),
 		AgeYears: p.AgeYears(),
 		Look:     p.Look,
 	}
@@ -87,7 +85,7 @@ func bioOf(p pawngen.Pawn) BioView {
 			sv.Level = int(s.Level)
 			sv.LevelLabel = skill.LevelLabel(s.Level)
 			sv.Passion = int(s.Passion)
-			sv.XPPct = xpPct(s)
+			sv.XPPct = s.XPPct()
 			if skillAffects[id].hasWork {
 				// Level speed × WorkSpeed stat × trait/condition skill speed.
 				sv.SpeedPct = int(int64(skill.SpeedPermil(s.Level)) * workSpeed *
@@ -97,7 +95,7 @@ func bioOf(p pawngen.Pawn) BioView {
 		v.Skills[id] = sv
 	}
 
-	v.Incapable = incapableReasons(p)
+	v.Incapable = p.IncapableReasons()
 	for _, c := range p.Conditions {
 		if c.Label() == "" {
 			continue
@@ -115,70 +113,4 @@ func backstoryText(id backstory.ID, sex look.Sex, name string) (title, desc stri
 		return noBackstory, ""
 	}
 	return d.Title, backstory.Fill(d.Desc, sex, name)
-}
-
-// incapableReasons lists each incapability with what causes it:
-// "Violence (backstory: Convoy mechanic)", or several causes joined:
-// "Violence (backstory: Convoy mechanic, trait: Gentle)". Bits go in
-// backstory.Bits order; causes go childhood, adulthood, then traits.
-func incapableReasons(p pawngen.Pawn) []string {
-	all := p.Incapable()
-	if all == 0 {
-		return nil
-	}
-	type cause struct {
-		bits backstory.Bits
-		text string
-	}
-	var causes []cause
-	for _, id := range []backstory.ID{p.Childhood, p.Adulthood} {
-		if d := backstory.DefOf(id); id != 0 && d.Incapable != 0 {
-			causes = append(causes, cause{d.Incapable, "backstory: " + d.Title})
-		}
-	}
-	for _, t := range p.Traits {
-		if d := trait.DefOf(t); d.Incapable != 0 {
-			causes = append(causes, cause{d.Incapable, "trait: " + d.Label})
-		}
-	}
-	var out []string
-	for b := backstory.Bits(1); b&backstory.AllBits != 0; b <<= 1 {
-		if all&b == 0 {
-			continue
-		}
-		var why []string
-		for _, c := range causes {
-			if c.bits&b != 0 {
-				why = append(why, c.text)
-			}
-		}
-		out = append(out, b.Labels()[0]+" ("+strings.Join(why, ", ")+")")
-	}
-	return out
-}
-
-// xpPct is the progress toward the next level in percent (0..100).
-func xpPct(s skill.Skill) int {
-	c := skill.Cost(s.Level)
-	if c <= 0 || s.XP <= 0 {
-		return 0
-	}
-	return int(min(int64(s.XP)*100/int64(c), 100))
-}
-
-func sexLabel(s look.Sex) string {
-	if s == look.Female {
-		return "Female"
-	}
-	return "Male"
-}
-
-func buildLabel(b look.Build) string {
-	switch b {
-	case look.Thin:
-		return "Thin"
-	case look.Heavy:
-		return "Heavy"
-	}
-	return "Average"
 }

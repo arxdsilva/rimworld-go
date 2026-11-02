@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/furnish"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -77,6 +78,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
 	case command.SetDifficulty:
 		g.cmdSetDifficulty(c.Name) // story.go (NG-1)
+	case command.SetPotPlant: // game/furnish (A2): Build is the construction.PotPlant
+		furnish.NewPots(furnishHost{restBedding{g}}).SetPlant(entity.EntityID(c.Target), construction.PotPlant(c.Build))
 	case command.ClearOrders:
 		delete(g.orderQueue, entity.EntityID(c.Pawn))
 	case command.MovePawn:
@@ -111,6 +114,7 @@ func (g *Game) applyOne(c command.Command) {
 		}
 		if !g.buildLocked(kind) {
 			g.placeFrameStuff(kind, stuff, construction.ParseFacing(c.Facing), c.X, c.Y)
+			construction.TintFrame(g.frames.Ref(g.layerFrameAt(c.X, c.Y, construction.LayerFloor)), c.Index) // AX-3: a carpet floor's colour
 		}
 	case command.DesignateCut:
 		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
@@ -167,7 +171,7 @@ func (g *Game) applyOne(c command.Command) {
 		}
 		g.prioritize(entity.EntityID(c.Pawn), c.Order, c.X, c.Y, construction.Layer(c.Layer))
 	case command.SetWorkEnabled:
-		t, ok := workTypeOf(c.Work)
+		t, ok := work.FromCommand(c.Work)
 		if !ok {
 			return
 		}
@@ -177,7 +181,7 @@ func (g *Game) applyOne(c command.Command) {
 		}
 		g.setPriority(entity.EntityID(c.Pawn), t, v)
 	case command.SetWorkPriority:
-		if t, ok := workTypeOf(c.Work); ok {
+		if t, ok := work.FromCommand(c.Work); ok {
 			g.setPriority(entity.EntityID(c.Pawn), t, c.Count)
 		}
 	case command.SetSchedule:
@@ -221,6 +225,10 @@ func (g *Game) applyOne(c command.Command) {
 		g.herdOf().Auto.Apply(c) // game/herd (FOOD-3)
 	case command.SetFoodPolicy, command.EditFoodPolicy:
 		g.sk.diet.Apply(c, dietEaters{g}) // game/diet (FOOD-4): food policies
+	case command.DesignateUninstall, command.Reinstall, command.DesignateStrip, command.DesignateOpen, command.DesignateClaim,
+		command.DesignateChopWood, command.DesignateSlaughter, command.DesignateRemoveFloor, command.DesignateDeleteZone,
+		command.DesignateClearRoofArea, command.DesignateClearNoRoofArea:
+		applyOrder(g, c) // move.go, game/orders (AX-1)
 	}
 }
 
@@ -252,6 +260,8 @@ func (g *Game) undesignate(o command.Order, x1, y1, x2, y2 int) {
 		g.markSmooth(minX, minY, maxX, maxY, false)
 	case command.OrderDeconstruct:
 		g.markDeconstruct(minX, minY, maxX, maxY, false)
+	default:
+		unmarkOrder(g, o, minX, minY, maxX, maxY) // move.go (AX-1)
 	}
 }
 
@@ -300,8 +310,9 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markTame(x1, y1, x2, y2, false)
 	g.markHaul(x1, y1, x2, y2, false)                                        // haul_claim.go
 	g.zones.Clear(zone.Rect{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}) // zones.go: shrinks or splits
-	g.clearRoofPlans(minX, minY, maxX, maxY)
-	g.unmarkGrass(minX, minY, maxX, maxY) // grass.go
+	g.clearRoofPlans(minX, minY, maxX, maxY, roofCancel)
+	ordersOf(g).Cancel(minX, minY, maxX, maxY) // game/orders (AX-1): uninstall, strip and open marks
+	g.unmarkGrass(minX, minY, maxX, maxY)      // grass.go
 	g.unmarkHarvest(minX, minY, maxX, maxY)
 }
 
@@ -952,7 +963,7 @@ func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity
 	var bx, by int
 	for _, fid := range g.frameIDs {
 		fr := g.frames.Ref(fid) // read only: nothing below changes the store
-		if fr == nil || !fr.Ready() || g.replacedStanding(*fr) != 0 {
+		if fr == nil || !fr.Ready() || g.replacedStanding(*fr) != 0 || crateFrame(g, *fr) {
 			continue // a door waits for the wall it replaces to come down
 		}
 		if _, taken := g.reserve.EntityOwner(fid); taken {
@@ -1049,6 +1060,8 @@ func (g *Game) phaseJobs() {
 			g.doHarvest(id, j)
 		case job.Deconstruct:
 			g.doDeconstruct(id, j)
+		case job.Uninstall, job.Install, job.OpenContainer:
+			ordersOf(g).Do(id, j) // game/orders (AX-1)
 		case job.Cut:
 			g.doCut(id, j)
 		case job.Mine:
@@ -1073,6 +1086,8 @@ func (g *Game) phaseJobs() {
 			g.doRepair(id, j)
 		case job.Research:
 			g.doResearch(id, j)
+		case job.OperateDrill, job.ScanGround:
+			industryHost{g}.doOperate(id, j) // power_gen.go: game/industry (AX-4)
 		case job.Tame, job.Milk, job.Shear, job.Slaughter:
 			g.herdOf().Do(id, j) // game/herd (FOOD-3): taming, milking, shearing, slaughter
 		case job.ClearSnow:
@@ -1335,7 +1350,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 		g.zoneBuilt(fr.Kind, cells) // zones.go (PLAY-023)
 		return
 	}
-	if b, ok := g.bldgs.Get(fr.Swaps); ok && fr.Swaps != 0 && b.Kind == fr.Kind && b.X == fr.X && b.Y == fr.Y {
+	if b, ok := g.bldgs.Get(fr.Swaps); ok && fr.Swaps != 0 && construction.Replaces(b.Kind, fr.Kind) && b.X == fr.X && b.Y == fr.Y {
 		g.completeSwap(id, fr, b) // placement.go: the same building, new material
 		return
 	}
@@ -1348,7 +1363,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	}
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
-	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y,
+	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y, Tint: fr.Tint,
 		Medical: fr.Kind == construction.HospitalBed}) // PLAY-020: hospital beds start medical
 	g.noteBuilding(id) // indexes.go
 	g.markRoomsDirty()

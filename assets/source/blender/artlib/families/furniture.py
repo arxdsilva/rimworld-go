@@ -1085,7 +1085,6 @@ BUILDERS = {
     "bed_double": (_bed_double, {"attachments": {"sleeper": [0.5, 0.42], "sleeper2": [1.5, 0.42]}}),
     "hospital_bed": (_hospital_bed, {"attachments": {"sleeper": [0.5, 0.42]}, "building": "hospital bed"}),
     "tool_cabinet": (_tool_cabinet, {"building": "tool cabinet"}),
-    "table_small": (_table, {}),
     "chair_basic": (_chair, {"attachments": {"seat": [0.5, 0.52]}}),
     "workbench_basic": (_workbench, {"attachments": {"worker": [1.5, 1.15]}}),
     "lamp_standing": (_lamp, {"emissive": "lamp_warm", "light_radius": 6}),

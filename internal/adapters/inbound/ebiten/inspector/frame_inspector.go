@@ -76,6 +76,9 @@ func FrameName(f game.FrameView) string {
 	if f.Kind == "carpet" && strings.HasSuffix(f.Stuff, " carpet") {
 		return Capitalize(f.Stuff)
 	}
+	if t := floorTitle(f.Kind, f.Stuff, f.AX.Colour); t != "" { // floor_title.go (AX-3)
+		return t
+	}
 	return materialTitle(f.Kind, f.Stuff)
 }
 
@@ -109,6 +112,9 @@ func BuildInfo(f game.FrameView, w game.WorldView) frameInfo {
 			}
 		}
 		in.Status = "Moving " + name + " here: needs no materials"
+		if CrateFrame(f, w) { // cmds_orders.go (AX-1): a crated building's blueprint
+			in.Status = "Reinstalling a crated " + f.Kind + ": a builder brings the crate"
+		}
 	case f.Status != "":
 		in.Status = f.Status
 	case f.Wood >= f.Need:

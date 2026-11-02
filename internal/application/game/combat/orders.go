@@ -17,6 +17,7 @@ type Orders struct {
 	mortars *Mortars
 	doors   *Doors
 	rearms  *Rearms
+	traps   *Traps // AX-5: a charge's or popper's fuse (Facts.Armed)
 }
 
 // Do is colonist id's defence job j in its Do state (the game's job
@@ -38,7 +39,7 @@ func (o *Orders) Apply(c command.Command) (way bool) {
 		return false
 	}
 	switch {
-	case c.Kind == command.SetDoorHoldOpen && k.IsDoor():
+	case c.Kind == command.SetDoorHoldOpen && k.IsDoor() && k != construction.AnimalFlap: // A2: a flap is never held open
 		way = o.doors.Held(id) != c.Enabled
 		o.doors.SetHold(id, c.Enabled)
 	case c.Kind == command.SetTurretHold && isTurret(k):
@@ -60,6 +61,11 @@ type Facts struct {
 	ShotAge                          int
 	HoldOpen, HoldFire, HasTarget    bool
 	Barrel, Shells, TargetX, TargetY int
+	// AX-5: a chemfuel turret's Charges left of its ChargeCap (foam
+	// charges or rockets); Armed, a foam popper or buried charge whose
+	// fuse is not burning.
+	Charges, ChargeCap int
+	Armed              bool
 }
 
 // View is building id's (built as b) Facts at now.
@@ -69,6 +75,11 @@ func (o *Orders) View(id entity.EntityID, b construction.Building, now uint64) F
 	case isTurret(b.Kind):
 		f.Dir, f.ShotAge = o.turrets.View(id, now)
 		f.HoldFire, f.Barrel = o.turrets.Held(id), o.turrets.Barrel(id, b.Kind)
+		if n := LoadOf(b.Kind); n > 0 {
+			f.Charges, f.ChargeCap = o.turrets.Charges(id, b.Kind), n
+		}
+	case b.Kind.IsCharge() || b.Kind == construction.FoamPopper:
+		f.Armed = o.traps == nil || !o.traps.Burning(id)
 	case b.Kind == construction.Mortar:
 		st := o.mortars.State(id)
 		f.Barrel, f.Shells = o.mortars.Barrel(id), st.shells()

@@ -23,6 +23,9 @@ func (o *Objects) DrawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, til
 	o.Creatures.DropCarry(p.ID)
 	fp := o.Creatures.FigurePoseOf(v, p)
 	o.Creatures.DrawPawnFigure(v, o.Pass(), screen, p, wx, wy, tile, fp)
+	if p.AX.StripMarked { // AX-1: a downed person marked to strip
+		o.drawSprite(screen, "overlay/designation_strip", color.NRGBA{}, wx, wy, tile, sw, sh)
+	}
 	if p.Lying {
 		return
 	}

@@ -28,7 +28,9 @@ func QualityBuilding(k construction.Kind) bool {
 	switch k {
 	case construction.Bed, construction.DoubleBed, construction.HospitalBed, construction.Bedroll,
 		construction.DoubleBedroll, construction.AnimalBed, construction.EndTable, construction.Dresser,
-		construction.Table, construction.Chair, construction.HorseshoePin:
+		construction.Table, construction.Chair, construction.HorseshoePin,
+		// A2, wiki: Table, Couch, Animal sleeping box (furniture with quality)
+		construction.Table2x2, construction.Table2x4, construction.Table3x3, construction.Couch, construction.AnimalSleepingBox:
 		return true
 	}
 	return false

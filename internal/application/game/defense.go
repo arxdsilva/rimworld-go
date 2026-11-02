@@ -88,7 +88,7 @@ func (g *Game) cellSet(key [4]uint64) *cellCache {
 // animals (a shared cached set; holding a door open bumps structVer).
 func (g *Game) shutDoors() tileSet {
 	return g.cellSet([4]uint64{3: 1 << 63}).get(g.structVer, func() tileSet {
-		return g.combat.Doors.Shut(slices.Clone(g.buildingCells(construction.Door, construction.Autodoor)), g.grid.Width())
+		return g.combat.Doors.Shut(slices.Clone(g.buildingCells(construction.DoorKinds[:]...)), g.grid.Width())
 	})
 }
 
@@ -154,7 +154,7 @@ func (g *Game) pathQuery(id entity.EntityID) pathing.Query {
 	case g.isRaider(id):
 		return g.hostileMap()
 	}
-	return g.softPathQuery(id, g.grid) // area_soft.go: a restricted pawn prefers its area; fire costs
+	return g.softPathQuery(id, colonistGrid(g)) // fences.go: flaps shut; area_soft.go: a restricted pawn prefers its area; fire costs
 }
 
 // doorAt reports a built door on (x, y) shut to hostiles: any door (or
@@ -191,7 +191,7 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 		g.collapseBridge(b) // bridge_remove.go: what it held up goes with it
 	}
 	g.removeBuilding(id)
-	if b.Kind == construction.SentryTurret {
+	if b.Kind.BurstsWhenDestroyed() { // AX-5: also the foam popper, foam turret and rocket battery
 		// combat/turret.go (PLAY-024): it blows up once it is gone and its
 		// blueprint laid, so the blast never finds it standing
 		defer g.combat.Turrets.Blast(id, b)

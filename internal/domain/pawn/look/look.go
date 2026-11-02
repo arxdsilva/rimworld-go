@@ -7,6 +7,8 @@
 // larger palette still draw if a palette shrinks.
 package look
 
+import "strings"
+
 // Sex drives names, pronouns and art; no stat differences.
 type Sex uint8
 
@@ -76,6 +78,12 @@ func (b Build) String() string {
 	}
 	return "average"
 }
+
+// Label names a sex for the Bio tab ("Female").
+func (s Sex) Label() string { return strings.ToUpper(s.String()[:1]) + s.String()[1:] }
+
+// Label names a build for the Bio tab ("Average").
+func (b Build) Label() string { return strings.ToUpper(b.String()[:1]) + b.String()[1:] }
 
 // BuildKey is the art build prefix: m_avg, f_thin, ...
 func (l Look) BuildKey() string {

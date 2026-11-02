@@ -114,7 +114,7 @@ func (b *Bills) Defaults(id entity.EntityID, k construction.Kind) {
 	if k == construction.ButcherSpot {
 		k = construction.ButcherTable // PRD-3: the spot butchers like the table
 	}
-	if k == construction.Pyre {
+	if k == construction.Pyre || k == construction.ElectricCrematorium { // AX-4: the crematorium too
 		b.list[id] = append(b.list[id], recipe.Bill{Recipe: recipe.Cremate, Mode: recipe.Forever, Target: 1})
 		return
 	}
@@ -214,7 +214,7 @@ func (b *Bills) Line(bid entity.EntityID, i int) (recipe.Bill, string) {
 		return bl, BillDrying
 	case d.Ferment && !b.drying.barrelOpen(bid):
 		return bl, BillFermenting
-	case b.unfueled(bid), d.ID == recipe.Cremate && b.h.FreeWood() < d.ExtraQty:
+	case b.unfueled(bid), d.ID == recipe.Cremate && b.pyre(bid) && b.h.FreeWood() < d.ExtraQty:
 		return bl, BillNoFuel
 	case b.unpowered(bid):
 		return bl, BillNoPower
@@ -239,4 +239,29 @@ func (b *Bills) unfueled(bid entity.EntityID) bool {
 func (b *Bills) unpowered(bid entity.EntityID) bool {
 	bench, ok := b.h.Building(bid)
 	return ok && ElectricBench(bench.Kind) && !b.h.Powered(bid)
+}
+
+// pyre reports bench bid a funeral pyre (its cremation burns wood).
+func (b *Bills) pyre(bid entity.EntityID) bool {
+	bench, ok := b.h.Building(bid)
+	return ok && bench.Kind == construction.Pyre
+}
+
+// CrematoriumWork is the electric crematorium's work per corpse (AX-4,
+// wiki: Electric crematorium, 180 ticks).
+const CrematoriumWork = 180
+
+// BurnsWood reports a cremation on bench k that burns the recipe's wood:
+// the funeral pyre's, never the electric crematorium's.
+func BurnsWood(k construction.Kind, d recipe.Def) bool {
+	return d.ID == recipe.Cremate && k == construction.Pyre
+}
+
+// BillWork is bill d's work on bench k: the crematorium burns a corpse in
+// CrematoriumWork, everything else takes the recipe's work.
+func BillWork(k construction.Kind, d recipe.Def) int {
+	if d.ID == recipe.Cremate && k == construction.ElectricCrematorium {
+		return CrematoriumWork
+	}
+	return d.Work
 }

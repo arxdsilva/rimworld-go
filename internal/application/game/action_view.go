@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/orders"
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
@@ -92,7 +93,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 			return ActionDig
 		}
 		return ActionBuild
-	case job.Deconstruct:
+	case job.Deconstruct, job.Uninstall, job.OpenContainer: // AX-1: crating and opening read as taking apart
 		return ActionDeconstruct
 	case job.Cut:
 		return ActionChop
@@ -108,7 +109,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionEat
 	case job.Horseshoes:
 		return ActionHorseshoes
-	case job.Research:
+	case job.Research, job.ScanGround:
 		return ActionResearch
 	case job.Tame:
 		return ActionTame
@@ -118,7 +119,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionShear
 	case job.Repair:
 		return ActionRepair
-	case job.Roof, job.Unroof:
+	case job.Roof, job.Unroof, job.Install:
 		return ActionBuild
 	case job.Breach:
 		return ActionBreach
@@ -143,7 +144,7 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		if fr, ok := g.frames.Get(j.Target); ok {
 			return construction.WorkFor(fr.Kind, fr.Stuff)
 		}
-	case job.Deconstruct:
+	case job.Deconstruct, job.Uninstall:
 		if b, ok := g.bldgs.Get(j.Target); ok {
 			return construction.DeconstructTicks(b.Kind)
 		}
@@ -164,8 +165,10 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 			return plant.DefOf(plant.Species(z.Crop)).SowWork
 		}
 		return SowWork
-	case job.Research:
+	case job.Research, job.OperateDrill, job.ScanGround:
 		return rlab.Session
+	case job.Install, job.OpenContainer: // game/orders (AX-1)
+		return orders.WorkTotal(j.Kind, g.frames.Ref(j.Target))
 	case job.Tend, job.EmergencyTend:
 		if j.Target == id {
 			return TendWork * 3 / 2

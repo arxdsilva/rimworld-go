@@ -50,10 +50,15 @@ const (
 	SunLampKind       = "sun lamp"
 	HeaterKind        = "heater"
 	CoolerKind        = "cooler"
+	// AX-4 power and industry.
+	WaterproofConduitKind = "waterproof conduit"
+	WatermillKind         = "watermill generator"
 )
 
 // IsConduitKind reports a conduit, shown or hidden (the conduit pass).
-func IsConduitKind(kind string) bool { return kind == ConduitKind || kind == HiddenConduitKind }
+func IsConduitKind(kind string) bool {
+	return kind == ConduitKind || kind == HiddenConduitKind || kind == WaterproofConduitKind
+}
 
 // PowerDeviceKinds are the kinds that make, draw or store power: a
 // conduit's stub reaches into them. Built devices also count by their
@@ -62,6 +67,8 @@ var PowerDeviceKinds = map[string]bool{
 	"lamp": true, HeaterKind: true, CoolerKind: true, BatteryKind: true,
 	WoodGeneratorKind: true, SolarPanelKind: true, WindTurbineKind: true, GeothermalKind: true,
 	"electric stove": true, "electric tailoring bench": true, "electric research bench": true,
+	"chemfuel generator": true, WatermillKind: true, "deep drill": true, "ground-penetrating scanner": true,
+	"moisture pump": true, "electric crematorium": true, // AX-4
 }
 
 // LinkKinds is the renderer's sprite.Kinds: BuildingLink and PowerLink.
@@ -76,7 +83,7 @@ func (LinkKinds) Power(kind string) sprite.LinkCell { return PowerLink(kind) }
 // BuildingLink is the link cell of a building or frame kind.
 func BuildingLink(kind string) sprite.LinkCell {
 	switch kind {
-	case "wall", "door", "powered door", CoolerKind, "vent": // a cooler or vent fills a wall gap like a door
+	case "wall", "door", "powered door", CoolerKind, "vent", "ornate door", "animal flap": // a cooler or vent fills a wall gap like a door (A2: every door)
 		return sprite.WallLink
 	case sprite.FenceKind, sprite.GateKind:
 		return sprite.FenceLink
@@ -165,7 +172,13 @@ const FueledForgeKind = "wood-fired forge"
 // OwnsFlame reports a burning kind whose fire power_draw.go draws (the
 // torch's flame) or that shows none (the generator's firebox glows and
 // smokes): DrawFires and the campfire embers leave them alone.
-func OwnsFlame(kind string) bool { return kind == TorchLampKind || kind == WoodGeneratorKind }
+func OwnsFlame(kind string) bool {
+	return kind == TorchLampKind || kind == WoodGeneratorKind || kind == WallTorchKind
+}
+
+// WallTorchKind is the wall-hung torch (A2): its flame as the torch lamp's,
+// smaller (AR1: flame_scale 0.4).
+const WallTorchKind = "wall torch"
 
 // attachWorld is attachment name of sprite key drawn for a building
 // anchored at (x, y), in world tiles: placement puts the sprite's
@@ -214,7 +227,7 @@ func (o *Wiring) drawUnlitSprite(v *render.View, dst *ebiten.Image, key string, 
 // sprite (key, just drawn): the glow layer while it runs, then the
 // turbine's blades, the torch's flame or the battery's charge bar.
 func (o *Wiring) DrawPowerParts(v *render.View, ps sprite.Pass, ch *Chunks, dst *ebiten.Image, b *game.BuildingView, key string, tile float64, sw, sh int) {
-	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != SunLampKind && b.Kind != TorchLampKind && b.Kind != FueledForgeKind) {
+	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != SunLampKind && b.Kind != TorchLampKind && b.Kind != FueledForgeKind && b.Kind != WallTorchKind) {
 		return
 	}
 	if poweredLook(b) || (b.Kind == FueledForgeKind && (b.Burning || b.Glow)) {
@@ -223,12 +236,14 @@ func (o *Wiring) DrawPowerParts(v *render.View, ps sprite.Pass, ch *Chunks, dst 
 		}
 	}
 	switch b.Kind {
-	case TorchLampKind:
+	case TorchLampKind, WallTorchKind:
 		if torchBurning(b) {
 			o.drawTorchFlame(v, dst, b, tile)
 		}
 	case WindTurbineKind:
 		o.drawTurbineBlades(v, ps, dst, b, key, tile, sw, sh)
+	case WatermillKind:
+		o.drawMillWheel(v, ps, dst, b, tile, sw, sh)
 	case BatteryKind:
 		o.drawBatteryBar(v, dst, b, key, tile)
 	}
@@ -263,7 +278,7 @@ func (o *Wiring) DrawConduits(v *render.View, ps sprite.Pass, ch *Chunks, links 
 				traced = true
 				v.LayerDrawn("conduits")
 			}
-			if b.Kind == ConduitKind {
+			if b.Kind == ConduitKind || b.Kind == WaterproofConduitKind {
 				if key := o.Host.BuildKey(b.Kind, "", links.ConduitMask(b.X, b.Y), false, false); v.Art.Has(key) {
 					o.PowerTrace("conduit", key)
 					o.P.DrawCS(v, ps, screen, key, none, float64(b.X), float64(b.Y), tile, sw, sh, sprite.NoCS)
@@ -436,6 +451,9 @@ func (o *Wiring) drawTurbineBlades(v *render.View, ps sprite.Pass, dst *ebiten.I
 // (metadata flame_scale; TestPowerArtCoversRenderer keeps them equal).
 const TorchFlameScale = 0.55
 
+// WallTorchFlameScale is the wall torch's flame (AR1's flame_scale, A2).
+const WallTorchFlameScale = 0.4
+
 // torchBurning reports a torch lamp on fire: the sim says Burning, or it
 // gives light (Glow). One with fuel the rain put out is dark.
 func torchBurning(b *game.BuildingView) bool { return b.Burning || b.Glow }
@@ -449,13 +467,16 @@ func TorchFireAt(c *art.Catalog, key string, b *game.BuildingView) (float64, flo
 // drawTorchFlame draws the campfire flame, scaled down, on the torch's
 // head (its tile's top centre without the attachment).
 func (o *Wiring) drawTorchFlame(v *render.View, dst *ebiten.Image, b *game.BuildingView, tile float64) {
-	key := o.Host.BuildKey(TorchLampKind, "", 0, false, false)
+	key, scale := o.Host.BuildKey(TorchLampKind, "", 0, false, false), TorchFlameScale
+	if b.Kind == WallTorchKind { // A2: hung on its wall, facing away from it
+		key, scale = o.Host.BuildKey(b.Kind, b.Facing, 0, false, false), WallTorchFlameScale
+	}
 	x, y, ok := TorchFireAt(v.Art, key, b)
 	if !ok {
 		x, y = float64(b.X)+0.5, float64(b.Y)
 	}
 	o.PowerTrace("flame", key)
-	o.drawFlame(v, dst, x, y, float64(v.Present)+float64(b.ID)*17, tile, TorchFlameScale)
+	o.drawFlame(v, dst, x, y, float64(v.Present)+float64(b.ID)*17, tile, scale)
 }
 
 // --- battery -----------------------------------------------------------
@@ -649,4 +670,47 @@ func CoveredVent(covers [][4]int, b *game.BuildingView) bool {
 // VentTraceKey is a vent puff's trace key: the frame's sprite @x,y.
 func VentTraceKey(f, x, y int) string {
 	return "effect/steam_puff_" + strconv.Itoa(f) + "@" + strconv.Itoa(x) + "," + strconv.Itoa(y)
+}
+
+// --- watermill (AX-4) ----------------------------------------------------
+
+// MillWheelFrames is the wheel's looping frames (AR2's art, 7.5° apart).
+const MillWheelFrames = 6
+
+// millWheelFPS is the wheel's frames a second while the mill makes power
+// (orig: a slow, heavy turn).
+const millWheelFPS = 4
+
+// MillWheelKey is the wheel layer of a watermill facing f, frame 1..6.
+func MillWheelKey(facing string, frame int) string {
+	if facing == "" {
+		facing = "south"
+	}
+	return "power/watermill_wheel_" + facing + "_" + sprite.TwoDigits(frame)
+}
+
+// MillWheelOffset is where a watermill's wheel layer is anchored, in
+// tiles from the base's top-left (the art's offset_tiles).
+func MillWheelOffset(facing string) (float64, float64) {
+	switch facing {
+	case "east":
+		return 5, 0
+	case "north", "west":
+		return 0, 0
+	}
+	return 0, 5
+}
+
+// drawMillWheel draws watermill b's wheel over its base: turning while it
+// makes power, still otherwise (and under reduced motion).
+func (o *Wiring) drawMillWheel(v *render.View, ps sprite.Pass, dst *ebiten.Image, b *game.BuildingView, tile float64, sw, sh int) {
+	f := int(art.Mix64(uint64(b.ID)) % MillWheelFrames)
+	if !v.ReducedMotion && b.PowerOut > 0 {
+		f += int(v.Present * millWheelFPS / 60)
+	}
+	f = f%MillWheelFrames + 1
+	k := MillWheelKey(b.Facing, f)
+	ox, oy := MillWheelOffset(b.Facing)
+	o.PowerTrace("wheel", k)
+	o.P.DrawCS(v, ps, dst, k, color.NRGBA{}, float64(b.X)+ox, float64(b.Y)+oy, tile, sw, sh, sprite.NoCS)
 }

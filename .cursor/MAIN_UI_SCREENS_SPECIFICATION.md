@@ -525,6 +525,8 @@ Disabled commands show reason.
 - **Building panel:**
   - **Move:** a ghost placement mode that reinstalls the same building, keeping its bills, fuel and owners.
   - **Copy:** the Architect, preset to that building.
+  - **Uninstall (AX-1):** a toggle that marks it to be packed into a crated building; a filled grave also offers **Open**, a downed person **Strip**.
+- **Crated building (AX-1):** the item panel names what it holds; **Reinstall** runs the Move ghost for the packed kind and sends `Reinstall`.
 - **Action availability:** actions come from the same options as the right-click menu, and disabled ones show the simulation's reason.
 - **Paused play:** every action applies at once while paused.
 
@@ -2222,7 +2224,7 @@ Agents should implement screens approximately in this dependency order.
 -   [x] Research (RSCH-2)
 -   [ ] Assign/Policies
 -   [ ] combat controls/targeting on Main Colony
--   [-] environmental overlays (roof, power, fertility, cover and Shift+T temperature done; beauty and room overlays missing)
+-   [-] environmental overlays (roof, power, fertility, cover and Shift+T temperature done; AX-4 deep ore shows while a deep drill or scanner is selected or its tool is in hand; beauty and room overlays missing)
 
 ## Wave UI-5 --- Colony ecosystem
 

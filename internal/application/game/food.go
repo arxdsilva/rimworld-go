@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/application/game/crops"
 	"rimworld-go/internal/application/game/diet"
+	"rimworld-go/internal/application/game/furnish"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -154,6 +155,10 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 		return true // wrong plants are cut before their cells are sown
 	}
 	pos, _ := g.positions.Get(id)
+	if bid, x, y, work, ok := furnish.NewPots(furnishHost{restBedding{g}}).ToSow(pos.X, pos.Y); ok && g.areaAllows(id, x, y) &&
+		!g.postponedFor(id, job.Sow, bid, x, y) && g.reachable(id, x, y) && g.startJob(id, job.Record{Kind: job.Sow, Target: bid, TX: x, TY: y, WorkLeft: work}) {
+		return true // A2: a plant pot waiting for its plant (game/furnish)
+	}
 	var tried [][2]int
 	for range workTries { // SIM-027: the next nearest cell when one can't be started
 		bestD := 1 << 30
@@ -195,7 +200,8 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 
 func (g *Game) doSow(id entity.EntityID, j job.Record) {
 	z, ok := g.zoneAt(j.TX, j.TY)
-	if !ok || !g.sowable(j.TX, j.TY) {
+	pots, b := furnish.NewPots(furnishHost{restBedding{g}}), g.bldgs.Ref(j.Target)
+	if pot := j.Target != 0; pot && (b == nil || !furnish.Waiting(*b)) || !pot && (!ok || !g.sowable(j.TX, j.TY)) { // A2: or a pot
 		j.State, j.Fail = job.Fail, job.TargetGone
 		g.jobs.Set(id, j)
 		return
@@ -210,12 +216,16 @@ func (g *Game) doSow(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	g.clearGrass(j.TX, j.TY) // grass.go: sowing clears it
-	if pid, err := g.spawnPlant(plant.Species(z.Crop), j.TX, j.TY, 0); err == nil {
-		p, _ := g.plants.Get(pid)
-		p.Zone = true
-		g.setPlant(pid, p)
-		g.notePlantMark(pid) // jobindex.go
+	if j.Target != 0 {
+		pots.Sow(j.Target) // A2: the pot's plant sprouts
+	} else {
+		g.clearGrass(j.TX, j.TY) // grass.go: sowing clears it
+		if pid, err := g.spawnPlant(plant.Species(z.Crop), j.TX, j.TY, 0); err == nil {
+			p, _ := g.plants.Get(pid)
+			p.Zone = true
+			g.setPlant(pid, p)
+			g.notePlantMark(pid) // jobindex.go
+		}
 	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)

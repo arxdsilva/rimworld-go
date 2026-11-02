@@ -48,7 +48,7 @@ OBJECTS = [
     ("furniture", "bed_basic_south", 7, 2, {"cloth": "navy"}),
     ("furniture", "bed_basic_south", 10, 2, {"cloth": "rust"}),
     ("furniture", "lamp_standing", 9, 2, None),
-    ("furniture", "table_small", 8, 4, None),
+    ("furniture", "table_1x2_south", 8, 4, None),
     ("furniture", "chair_basic_east", 7, 4, None),
     ("furniture", "chair_basic_west", 9, 4, None),
     ("furniture", "workbench_basic_south", 2, 3, None),

@@ -187,7 +187,7 @@ func (g *Game) migrateBenches(grew func(construction.Kind) bool, refund func(con
 		cells, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		if g.benchFits(id, append(cells, spot)) {
 			for _, c := range cells {
-				g.grid.SetWalkable(c[0], c[1], false)
+				g.grid.SetWalkable(c[0], c[1], g.grid.Walkable(c[0], c[1]) && !construction.DefOf(b.Kind).BlocksMove) // A2: a table blocks nothing
 			}
 			continue
 		}

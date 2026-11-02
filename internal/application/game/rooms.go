@@ -293,7 +293,7 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 		return "", 0, 0
 	}
 	switch j.Kind {
-	case job.Construct, job.Deconstruct, job.Cut, job.Harvest, job.Sow:
+	case job.Construct, job.Deconstruct, job.Cut, job.Harvest, job.Sow, job.Uninstall, job.Install, job.OpenContainer:
 		return j.Kind.String(), j.TX, j.TY
 	case job.Mine, job.Smooth, job.Roof, job.Unroof, job.Clean, job.ClearSnow:
 		return j.Kind.String(), j.DestX, j.DestY

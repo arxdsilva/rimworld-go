@@ -25,6 +25,7 @@ const (
 	PrefixArchCat      = "arch.cat."
 	PrefixArchStuff    = "arch.stuff."
 	PrefixArchCrop     = "arch.crop."
+	PrefixArchColour   = "arch.colour." // AX-3: a carpet floor colour swatch
 	PrefixArchTool     = "arch.tool."
 	PrefixFloat        = "float."
 	PrefixLoadSlot     = "load.slot."

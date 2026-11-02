@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/industry"
 	"sort"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -23,54 +24,19 @@ import (
 // with campfires only behaves exactly as it did before the table existed.
 
 const (
-	// refuelBelow: haulers top a campfire up once it is half empty.
-	refuelBelow = CampfireCapacity * TicksPerWood / 2
-	refuelWork  = 30
+	refuelWork = 30
 	// oilWood: one ember oil burns as long as this many logs (SIM-026).
 	oilWood = 3
-	// torchLogs and generatorLogs are how many logs a full tank takes
-	// (wiki: Torch lamp 20, Wood-fired generator 75; unscaled, like the
-	// campfire's 20).
-	torchLogs     = 20
-	generatorLogs = 75
-	// torchBurn and generatorBurn are the ticks of fuel used per 1000 ticks
-	// of burning (campfire: 1000, one for one, its wiki 10 logs a day):
-	// wiki: Torch lamp 2 logs a day, Wood-fired generator 22 a day.
-	torchBurn     = 200
-	generatorBurn = 2200
+	// the fuel table's numbers (game/industry/fuel.go)
+	torchLogs, torchBurn, generatorBurn, chemfuelTicks = industry.TorchLogs, industry.TorchBurn, industry.GeneratorBurn, industry.ChemfuelTicks
 )
 
 // fuelDef is how one kind of building holds and burns fuel.
-type fuelDef struct {
-	// CapTicks is a full tank, in ticks of fuel.
-	CapTicks int
-	// Below: haulers bring more once the tank falls under this.
-	Below int
-	// BurnPermil is the fuel used per 1000 ticks of burning: 1000 burns
-	// one tick of fuel per tick, 1600 one and a half times as fast.
-	BurnPermil int
-	// Banks: the fire banks down in warm air (campfires only).
-	Banks bool
-}
+type fuelDef = industry.Fuel
 
-// fuelSpec is kind k's fuel table row; ok is false for a kind that burns
-// nothing.
-func fuelSpec(k construction.Kind) (fuelDef, bool) {
-	switch k {
-	case construction.Campfire:
-		return fuelDef{CapTicks: CampfireCapacity * TicksPerWood, Below: refuelBelow, BurnPermil: 1000,
-			Banks: true}, true
-	case construction.TorchLamp:
-		return fuelDef{CapTicks: torchLogs * TicksPerWood, Below: torchLogs * TicksPerWood / 2, BurnPermil: torchBurn}, true
-	case construction.WoodGenerator:
-		return fuelDef{CapTicks: generatorLogs * TicksPerWood, Below: generatorLogs * TicksPerWood / 2, BurnPermil: generatorBurn}, true
-	case construction.FueledSmithy, construction.Stove: // PRD-3, FOOD-4, wiki: Fueled smithy, Fueled stove (50 logs, scaled / 10); burns only while worked (craft.WorkPerWood)
-		return fuelDef{CapTicks: 5 * TicksPerWood, Below: 5 * TicksPerWood / 2}, true
-	case construction.PassiveCooler: // TEMP-1, wiki: Passive cooler (50 wood, 10 a day: one per TicksPerWood)
-		return fuelDef{CapTicks: 50 * TicksPerWood, Below: 25 * TicksPerWood, BurnPermil: 1000}, true
-	}
-	return fuelDef{}, false
-}
+// fuelSpec is kind k's fuel table row (game/industry/fuel.go, moved by
+// AX-4); ok is false for a kind that burns nothing.
+func fuelSpec(k construction.Kind) (fuelDef, bool) { return industry.FuelSpec(k) }
 
 // fuelList is the cached list of fuel users, never saved.
 type fuelList struct {
@@ -142,7 +108,7 @@ func (g *Game) generatorRunning(id entity.EntityID) bool {
 // fuel, and a campfire or torch is neither banked nor doused by rain or
 // snow. A generator burns while it is running.
 func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
-	if b.Kind == construction.WoodGenerator {
+	if b.Kind == construction.WoodGenerator || b.Kind == construction.ChemfuelGenerator {
 		return g.fuel[bid] > 0 && g.generatorRunning(bid)
 	}
 	return g.fuel[bid] > 0 && !g.doused(bid) && !g.banked[bid]
@@ -186,6 +152,8 @@ func fuelTicks(k item.Kind) int {
 		return TicksPerWood
 	case item.EmberOil:
 		return oilWood * TicksPerWood
+	case item.Chemfuel:
+		return chemfuelTicks
 	}
 	return 0
 }
@@ -233,9 +201,14 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 	for _, f := range fires {
 		b, _ := g.bldgs.Get(f.bid)
 		fuel := item.Wood
+		if b.Kind == construction.ChemfuelGenerator {
+			fuel = item.Chemfuel // AX-4: it burns chemfuel only
+		}
 		need := g.fuelRoom(f.bid, fuel)
 		sid, st := g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need})
-		if sid == 0 {
+		if sid == 0 && fuel == item.Chemfuel {
+			continue
+		} else if sid == 0 {
 			fuel = item.EmberOil
 			need = g.fuelRoom(f.bid, fuel)
 			if sid, st = g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need}); sid == 0 {

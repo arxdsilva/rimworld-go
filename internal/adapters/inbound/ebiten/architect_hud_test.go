@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -40,6 +41,12 @@ func archCmd(a *App, id string) (inspector.Button, bool) {
 // legacy id goes to applyClick (a disabled one only says why).
 func archPick(t *testing.T, a *App, tool string) {
 	t.Helper()
+	if d, ok := architect.ToolByID(tool); ok && d.Family != "" && d.Family != tool { // A2: a family's card, clicked until it is armed
+		for i := 0; i < 8 && a.arch.ToolID != tool; i++ {
+			archPick(t, a, d.Family)
+		}
+		return
+	}
 	c, ok := archCmd(a, "arch.tool."+tool)
 	if !ok {
 		t.Fatalf("no command for tool %q in category %q", tool, a.arch.Cat)
@@ -246,7 +253,9 @@ func TestArchitectToolsAreCommands(t *testing.T) {
 			if cb.Run != nil || len(cb.Cmds) > 0 || cb.Options != nil {
 				t.Errorf("%s: legacy ids go through applyClick, got Run/Cmds/Options", cb.ID)
 			}
-			if cb.On || cb.Disabled != tool.Planned { // STK-AG: only a placeholder is greyed
+			bv, _ := architect.Buildable(tool.Build)
+			unbuilt := tool.Build != "" && construction.DefOf(construction.Kind(bv.ID)).Unbuildable // A2: the urn
+			if cb.On || cb.Disabled != (tool.Planned || unbuilt) {                                  // STK-AG: only a placeholder (or a kind never built) is greyed
 				t.Errorf("%s: On=%v Disabled=%v with nothing selected", cb.ID, cb.On, cb.Disabled)
 			}
 		}
@@ -554,6 +563,11 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 					}
 				}
 				for _, b := range archButtonsWith(a, "arch.crop.") {
+					if !within(b, l.ArchDesc) {
+						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
+					}
+				}
+				for _, b := range archButtonsWith(a, "arch.colour.") { // AX-3: the carpet floor's swatches
 					if !within(b, l.ArchDesc) {
 						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.ID, b.ID, b, l.ArchDesc)
 					}

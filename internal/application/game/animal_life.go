@@ -4,7 +4,9 @@ import (
 	"rimworld-go/internal/application/game/herd"
 	"strings"
 
+	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
@@ -361,7 +363,9 @@ func (g *Game) layOne(id entity.EntityID, a *animal.State) {
 	pos, _ := g.positions.Get(id)
 	x, y := pos.X, pos.Y
 	if a.Tame {
-		if m, _ := g.penAt(x, y); m != 0 { // pens.go
+		if bx, by, ok := eggBoxNear(g, x, y); ok { // A2: an egg box in reach first
+			x, y = bx, by
+		} else if m, _ := g.penAt(x, y); m != 0 { // pens.go
 			x, y = g.eggBox(m, x, y)
 		}
 	}
@@ -415,6 +419,27 @@ func (g *Game) eggBox(pen entity.EntityID, x, y int) (int, int) {
 		}
 	}
 	return bx, by
+}
+
+// eggBoxReach is how far (tiles) a tame layer goes to an egg box (A2;
+// original tuning: the wiki gives no distance).
+const eggBoxReach = 20
+
+// eggBoxNear is the nearest allowed egg box with room within eggBoxReach
+// of (x, y) that a tame animal there can walk to (A2, wiki: Egg box).
+func eggBoxNear(g *Game, x, y int) (bx, by int, ok bool) {
+	best, q := eggBoxReach+1, g.animalPathQuery(true, false)
+	for _, bid := range g.bldgIDs {
+		b := g.bldgs.Ref(bid)
+		if b == nil || b.Kind != construction.EggBox || b.Forbidden || pathing.Dist(x, y, b.X, b.Y) >= best {
+			continue
+		}
+		r, can := q.(pathing.Reacher)
+		if _, n, c := g.storeView(bid); n < c && (!can || r.Reach(x, y, b.X, b.Y)) {
+			best, bx, by = pathing.Dist(x, y, b.X, b.Y), b.X, b.Y
+		}
+	}
+	return bx, by, best <= eggBoxReach
 }
 
 // incubate advances every fertile egg stack on the ground by a climate

@@ -251,7 +251,7 @@ func (g *Game) incapableWhy(id entity.EntityID, t work.Type) string {
 		return ""
 	}
 	p := g.sk.bios[id]
-	reasons := incapableReasons(p) // one per bit, in bit order
+	reasons := p.IncapableReasons() // one per bit, in bit order
 	i := 0
 	for b := backstory.Bits(1); b&backstory.AllBits != 0; b <<= 1 {
 		if p.Incapable()&b == 0 {
@@ -697,7 +697,7 @@ func (g *Game) fillPawnBio(pv *PawnView) {
 	if !ok {
 		p = legacyBio(pv.ID, pv.Name)
 	}
-	pv.Sex, pv.Build, pv.AgeYears = sexLabel(p.Look.Sex), buildLabel(p.Look.Build), p.AgeYears()
+	pv.Sex, pv.Build, pv.AgeYears = p.Look.Sex.Label(), p.Look.Build.Label(), p.AgeYears()
 	pv.Look, pv.Title = p.Look, p.Title()
 	pv.Incapable = p.Incapable().WorkMask()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {

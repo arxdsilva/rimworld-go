@@ -1311,6 +1311,7 @@ func (g *Game) world() WorldView {
 		Schedule:    g.scheduleView(),
 	}
 	w.Research, w.Locked = g.lab.Lists(g.views.on) // game/research
+	w.AX.DeepOreVer, w.AX.DeepOre = g.br.ind.DeepOre(g.grid.Width())
 	w.ResearchAlert, w.TechLevel = g.lab.Alert(), researchHost{g}.Tech().String()
 	if n, felled := g.Timbergnaws(); n > 0 {
 		w.TreesFelled = felled

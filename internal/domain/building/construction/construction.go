@@ -417,15 +417,21 @@ func StuffStats(s item.Kind) (hpPct, workPct int) {
 	case item.Steel:
 		return 140, 90
 	}
+	if hp, work, ok := preciousStats(s); ok { // ax_a2.go: the extra wall materials
+		return hp, work
+	}
 	return 100, 100
 }
 
 var defs = [kindCount]Def{
-	Wall:         {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
-	Bed:          {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}, MetalOK: true},
-	Door:         {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject, MetalOK: true},
-	Floor:        {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor, StoneOK: true},
-	Table:        {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject, MetalOK: true},
+	Wall:  {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
+	Bed:   {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}, MetalOK: true},
+	Door:  {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject, MetalOK: true},
+	Floor: {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor},
+	// wiki: Table (1x2): 28 stuff, 750 work (A2; older 1x1 tables migrate in
+	// save.go's v11 step).
+	Table: {Kind: Table, Name: "table", Wood: 3, Work: 75, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2},
+		StoneOK: true, MetalOK: true},
 	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true, MetalOK: true},
 	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
 	SleepingSpot: {Kind: SleepingSpot, Name: "sleeping spot", Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
@@ -920,20 +926,25 @@ func WallFacing(h, v int, prefer Facing) Facing {
 }
 
 // IsDoor reports a door: the plain door and the powered autodoor (DEF-3).
-func (k Kind) IsDoor() bool { return k == Door || k == Autodoor }
+// A2: the 2-wide ornate door and the animal flap (shut to people: the
+// colonist path query and region layers refuse it) are doors too.
+func (k Kind) IsDoor() bool { return k == Door || k == Autodoor || k == OrnateDoor || k == AnimalFlap }
 
 // Sleeps reports whether k is something to sleep in.
 func (k Kind) Sleeps() bool {
-	return k == Bed || k == SleepingSpot || k == DoubleBed || k == HospitalBed || k == Bedroll || k == DoubleBedroll
+	return k == Bed || k == SleepingSpot || k == DoubleBed || k == HospitalBed || k == Bedroll || k == DoubleBedroll ||
+		k == DoubleSleepingSpot
 }
 
 // AnimalSleeps reports a sleeping place for tame animals (BED-1).
-func (k Kind) AnimalSleeps() bool { return k == AnimalSleepingSpot || k == AnimalBed }
+func (k Kind) AnimalSleeps() bool {
+	return k == AnimalSleepingSpot || k == AnimalBed || k == AnimalSleepingBox
+}
 
 // Sleepers is how many pawns a sleeping place holds side by side.
 func (k Kind) Sleepers() int {
 	switch {
-	case k == DoubleBed || k == DoubleBedroll:
+	case k == DoubleBed || k == DoubleBedroll || k == DoubleSleepingSpot:
 		return 2
 	case k.Sleeps():
 		return 1
@@ -1112,6 +1123,9 @@ func StuffOK(k Kind, s item.Kind) bool {
 	if DefOf(k).Fabric || IsFabric(s) {
 		return DefOf(k).Fabric && IsFabric(s)
 	}
+	if IsPreciousWall(s) { // ax_a2.go: silver, gold, plasteel, uranium and jade walls
+		return k == Wall
+	}
 	switch {
 	case s == item.Wood:
 		return !DefOf(k).MetalOnly
@@ -1170,11 +1184,17 @@ func Stuffs(k Kind) []item.Kind {
 	if d.MetalOK {
 		out = append(out, item.Steel)
 	}
+	if k == Wall { // ax_a2.go
+		out = append(out, PreciousWalls[:]...)
+	}
 	return out
 }
 
 // WorkFor is the construct work for k built from s.
 func WorkFor(k Kind, s item.Kind) int {
+	if FixedWork(k) { // A3: a wiki floor's work is the same in every material
+		return DefOf(k).Work
+	}
 	_, pct := StuffStats(s)
 	return DefOf(k).Work * pct / 100
 }
@@ -1245,7 +1265,7 @@ type Frame struct {
 }
 
 // Ready reports materials and components are in place.
-func (f Frame) Ready() bool { return f.Wood >= f.Need && f.Comp >= f.CompNeed }
+func (f Frame) Ready() bool { return f.Wood >= f.Need && f.Comp >= f.CompNeed && f.ExtrasIn() }
 
 // Building is a completed structure.
 type Building struct {
@@ -1286,6 +1306,10 @@ type Building struct {
 	// work left once started).
 	Tint      uint8
 	Uninstall bool
+	// A2: Plant is a plant pot's plant (construction.PotPlant, 0 none) and
+	// Growth its growth, permille.
+	Plant  uint8
+	Growth uint16
 }
 
 // HP is the building's remaining hit points.

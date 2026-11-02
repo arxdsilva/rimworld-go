@@ -53,6 +53,24 @@ type Roles struct {
 	Debris Debris
 	// Belts (CBT-3) is what creatures wear at the belt (gear.go).
 	Belts Belts
+	// Foam (AX-5, foam.go): the fires a foam burst puts out and the foam
+	// it leaves (nil: foam smothers nothing, tests).
+	Foam Foamer
+}
+
+// Foamer is the map's fires as fire foam sees them (AX-5): which cells
+// burn, putting one out and leaving foam on the ground. Consumer-owned;
+// values only.
+type Foamer interface {
+	// FiresNear reports any fire within Chebyshev radius r of (x, y): the
+	// fire index's cheap per-chunk check, before a cell scan.
+	FiresNear(x, y, r int) bool
+	// Burning is the fire's size on (x, y) (0: none).
+	Burning(x, y int) int
+	// Douse puts out the fire on (x, y), if any.
+	Douse(x, y int)
+	// Spill leaves amount (of stain.Full) of fire foam on (x, y).
+	Spill(x, y, amount int)
 }
 
 // Drafting releases drafted colonists (CBT-2).

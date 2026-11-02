@@ -23,6 +23,7 @@ const (
 	frameOnTheWay   = "Materials on the way"
 	frameCompsWay   = "Components on the way"
 	frameNeedComps  = "Needs %d components"
+	frameNeedExtra  = "Needs %d %s" // AX-4: a secondary material (Def.Extra)
 	frameNoHauler   = "Waiting for a hauler"
 	frameBuiltBy    = "Being built by %s"
 	frameNoBuilder  = "Waiting for a builder"
@@ -92,6 +93,7 @@ func (g *Game) appendFrameViews(out []FrameView) []FrameView {
 		})
 		fv := &out[len(out)-1]
 		fv.W, fv.H, _, _, _ = g.footprintOf(fr.Kind, fr.Facing, fr.X, fr.Y)
+		fv.AX.Colour = construction.TintName(fr.Kind, fr.Tint) // AX-3: a carpet floor's colour
 		if fr.Reinstall != 0 {
 			fv.Moving, fv.MovingFrom = true, entity.EntityID(fr.Reinstall)
 		}
@@ -169,6 +171,7 @@ func (g *Game) fillFrameViews(views []FrameView) {
 		fv.WorkTotal = frameWork(fr)
 		fv.Incoming = g.haul.incoming[fv.ID]
 		fv.Comp, fv.CompNeed, fv.CompIncoming = fr.Comp, fr.CompNeed, g.haul.incoming[fv.ID|haul.CompSlot]
+		fv.AX.Extra, fv.AX.ExtraGot, fv.AX.Need = haul.ExtraView(fr) // AX-4: secondary materials
 		if s := stock[fr.Stuff]; s != nil {
 			fv.InStock, fv.Reserved = s.inStock, s.reserved
 		}
@@ -206,12 +209,10 @@ func (g *Game) haulQty(j job.Record) int {
 // haulerLine names a hauler's share: key is a frame id, or its
 // components slot (haul_route.go).
 func (g *Game) haulerLine(pid entity.EntityID, qty int, key entity.EntityID) string {
-	fid, comp := haul.SlotFrame(key)
+	fid, _ := haul.SlotFrame(key)
 	fr, _ := g.frames.Get(fid)
-	if comp {
-		return fmt.Sprintf(frameHaulerLine, g.name(pid), qty, item.Components.String())
-	}
-	return fmt.Sprintf(frameHaulerLine, g.name(pid), qty, fr.Stuff.String())
+	sl, _ := haul.SlotOf(fid, fr, key) // the material, the components or a secondary material (AX-4)
+	return fmt.Sprintf(frameHaulerLine, g.name(pid), qty, sl.Kind.String())
 }
 
 // frameStatus is the frame inspector's one-line status (plan Part B).
@@ -225,6 +226,8 @@ func frameStatus(fr construction.Frame, fv FrameView) string {
 		return frameCompsWay
 	case fr.Wood >= fr.Need && fr.Comp < fr.CompNeed:
 		return fmt.Sprintf(frameNeedComps, fr.CompNeed-fr.Comp)
+	case fr.Wood >= fr.Need && fr.Comp >= fr.CompNeed && !fr.ExtrasIn():
+		return fmt.Sprintf(frameNeedExtra, haul.SupplyNeed(fr, haul.SupplyKind(fr)), haul.SupplyKind(fr))
 	case !fr.Ready() && fv.Incoming > 0:
 		return frameOnTheWay
 	case !fr.Ready():
@@ -295,18 +298,23 @@ func (g *Game) refundFrame(id entity.EntityID, fr construction.Frame) {
 	}
 	if len(g.haul.deliveries) > 0 {
 		for _, pid := range g.pawnIDs {
-			if len(g.haul.deliveries[pid]) > 0 {
-				g.consumeShare(pid, id)
-				g.consumeShare(pid, id|haul.CompSlot)
+			for _, key := range haul.Keys(id) { // AX-4: the secondary slots too
+				g.consumeShare(pid, key)
 			}
 		}
 	}
-	delete(g.haul.incoming, id)
-	delete(g.haul.incoming, id|haul.CompSlot)
+	for _, key := range haul.Keys(id) {
+		delete(g.haul.incoming, key)
+	}
 	if fr.Reinstall == 0 && fr.Wood > 0 {
 		g.dropStack(fr.Stuff, fr.Wood, fr.X, fr.Y)
 	}
 	if fr.Reinstall == 0 && fr.Comp > 0 {
 		g.dropStack(item.Components, fr.Comp, fr.X, fr.Y)
+	}
+	for i, c := range construction.DefOf(fr.Kind).Extra {
+		if fr.ExtraGot[i] > 0 {
+			g.dropStack(c.Item, fr.ExtraGot[i], fr.X, fr.Y)
+		}
 	}
 }

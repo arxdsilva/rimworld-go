@@ -136,7 +136,7 @@ func TestSleptInAwfulRoomWhenFilthy(t *testing.T) {
 	t.Parallel()
 	g := dirtGame(t)
 	bed := statBedroom(t, g)
-	furnish(t, g)
+	furnishRoom(t, g)
 	id, _ := g.SpawnNamedPawn(3, 3, "Ada")
 	if l := roomView(t, g, 4, 4).Label; l == "awful" {
 		t.Fatalf("fixture bedroom is %s", l)

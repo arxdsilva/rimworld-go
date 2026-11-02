@@ -38,6 +38,13 @@ const (
 	torchRadius = 4
 	torchLight  = 0.5
 	glowRadius  = 1
+	// A2, wiki: Wall torch lamp (5.76), Wall lamp (7.54), Flood light
+	// (17.45) light radii, rounded; the strengths are original tuning (a
+	// wall torch as a torch lamp, a wall lamp as a lamp).
+	wallTorchRadius = 6
+	wallLampRadius  = 8
+	floodRadius     = 17
+	floodLight      = 0.8
 )
 
 // lightGrid is the cached artificial light, never saved.
@@ -75,7 +82,8 @@ type lightSrcList struct {
 // isLightSource reports a kind that can give light: a lamp, a torch lamp
 // or a campfire.
 func isLightSource(k construction.Kind) bool {
-	return k == construction.Lamp || k == construction.TorchLamp || k == construction.Campfire || k == construction.SunLamp
+	return k == construction.Lamp || k == construction.TorchLamp || k == construction.Campfire || k == construction.SunLamp ||
+		k.WallHung() || k == construction.FloodLight // A2
 }
 
 // lightSources is the cached list of light sources; callers must not keep
@@ -89,7 +97,7 @@ func (g *Game) lightSources() *lightSrcList {
 	for _, id := range g.bldgIDs {
 		if b := g.bldgs.Ref(id); b != nil && isLightSource(b.Kind) {
 			c.ids = append(c.ids, id)
-			if b.Kind == construction.TorchLamp {
+			if b.Kind == construction.TorchLamp || b.Kind == construction.WallTorch {
 				c.torches++
 			}
 		}
@@ -110,6 +118,12 @@ func (g *Game) shining(id entity.EntityID, b construction.Building) (bool, int, 
 		return g.burning(id, b), torchRadius, torchLight
 	case construction.Campfire:
 		return g.burning(id, b), campfireRadius, campfireLight
+	case construction.WallTorch: // A2
+		return g.burning(id, b), wallTorchRadius, torchLight
+	case construction.WallLamp:
+		return g.powered(id), wallLampRadius, lampLight
+	case construction.FloodLight:
+		return g.powered(id), floodRadius, floodLight
 	case construction.SunLamp: // FOOD-2: plant_light.go bumps the grid at its hours
 		return g.powered(id) && plant.SunLampOn(uint64(g.clock.Now())), plant.SunLampReach, 1
 	}

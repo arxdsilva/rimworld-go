@@ -110,7 +110,7 @@ func (c *Set) EmitWorldBursts(v *render.View, w game.WorldView) {
 // throws no particles; the plain bomb keeps the generic burst: false.
 func emitBlast(ev BurstEvent) bool {
 	switch ev.Kind {
-	case "flame", "EMP", "smoke":
+	case "flame", "EMP", "smoke", "foam": // AX-5: foam
 		return true
 	}
 	return false

@@ -50,7 +50,7 @@ func (n *Needs) TileBeauty(x, y int) int {
 		case o.Kind == construction.Carpet:
 			f = room.CarpetFloor
 		case o.X == x && o.Y == y:
-			b = room.BuildingBeauty(o.Kind, o.Stuff, qualityOf(o)) / 100
+			b = (room.BuildingBeauty(o.Kind, o.Stuff, qualityOf(o)) + construction.PotBeauty(o)) / 100 // A2: a pot's plant
 		}
 	}
 	b += room.FloorBeautyTenths(f, t.Indoors) + room.FilthBeautyTenths(t.Filth, t.Indoors)

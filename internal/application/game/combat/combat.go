@@ -50,6 +50,8 @@ type Combat struct {
 	// CBT-3: Gear (gear.go: the wielded weapon's make, shield belts,
 	// smokepop packs and the fighters' records).
 	Gear *Gear
+	// AX-5: Poppers (foam.go: the foam poppers watching for fire).
+	Poppers *Poppers
 }
 
 // New builds the combat cluster on host h with the extra roles r.
@@ -74,7 +76,9 @@ func New(h Host, r Roles) *Combat {
 	c.Strikes.gear, c.Drafts.gear, c.Turrets.blasts = c.Gear, c.Gear, c.Blasts
 	c.Tactics = &Tactics{h: h, sight: c.Sight, f: r.Field, br: r.Breach, doors: c.Doors, shots: c.Shots, drafts: c.Drafts}
 	c.Guard.drafts, c.Guard.st, c.Guard.tac, c.Guard.tiles, c.Drafts.tac = c.Drafts, c.Strikes, c.Tactics, c.Tiles, c.Tactics // CBT-4
-	c.Turrets.after = [...]phaser{c.Traps, c.Doors, c.Mortars, c.Rearms, c.Drafts}
+	c.Blasts.foam, c.Turrets.foam, c.Orders.traps = r.Foam, r.Foam, c.Traps                                                   // AX-5
+	c.Poppers = &Poppers{h: h, f: r.Field, foam: r.Foam, traps: c.Traps}
+	c.Turrets.after = [...]phaser{c.Traps, c.Doors, c.Mortars, c.Rearms, c.Drafts, c.Poppers}
 	c.Turrets.saved = saved{traps: c.Traps, doors: c.Doors, mortars: c.Mortars, rearms: c.Rearms, drafts: c.Drafts, log: c.Log, gear: c.Gear}
 	return c
 }

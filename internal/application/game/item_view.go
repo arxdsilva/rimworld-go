@@ -88,6 +88,7 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 			Ingredients: craft.IngredientNames(st), // FOOD-4
 		})
 		g.fillCorpseView(&out[len(out)-1], st) // burial.go
+		fillCrateView(&out[len(out)-1], st)    // move.go (AX-1): a crated building's kind and material
 		if st.Carrier != 0 {
 			continue
 		}

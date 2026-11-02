@@ -213,9 +213,16 @@ func (g *Game) phasePlants() {
 
 func (g *Game) markCut(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := normalizeRect(x1, y1, x2, y2)
+	markCutWhere(g, minX, minY, maxX, maxY, on, nil)
+	g.markGrass(minX, minY, maxX, maxY, on) // grass.go
+}
+
+// markCutWhere is markCut's plant pass over the normalized rectangle,
+// only for the plants keep takes (nil: every plant; AX-1 chop wood: trees).
+func markCutWhere(g *Game, minX, minY, maxX, maxY int, on bool, keep func(plant.Wild) bool) {
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
-		if !ok || p.X < minX || p.X > maxX || p.Y < minY || p.Y > maxY || g.fogged(p.X, p.Y) {
+		if !ok || p.X < minX || p.X > maxX || p.Y < minY || p.Y > maxY || g.fogged(p.X, p.Y) || keep != nil && !keep(p) {
 			continue
 		}
 		p.Cut = on
@@ -225,7 +232,6 @@ func (g *Game) markCut(x1, y1, x2, y2 int, on bool) {
 		}
 		g.setPlant(id, p)
 	}
-	g.markGrass(minX, minY, maxX, maxY, on) // grass.go
 }
 
 func (g *Game) markMine(x1, y1, x2, y2 int, on bool) {

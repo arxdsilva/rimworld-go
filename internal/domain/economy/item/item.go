@@ -300,8 +300,15 @@ func (k Kind) IsBelt() bool { return k == SmokepopPack || k == ShieldBelt }
 // schematic.
 func (k Kind) IsBook() bool { return k >= Novel && k <= Schematic }
 
-// IsShell reports a mortar shell (DEF-3).
-func (k Kind) IsShell() bool { return k >= MortarShells && k <= SmokeShells }
+// IsShell reports a mortar shell (DEF-3; AX-5 foam shell and antimatter
+// warhead).
+func (k Kind) IsShell() bool {
+	switch k {
+	case MortarShells, IncendiaryShells, EMPShells, SmokeShells, FoamShells, AntimatterWarhead: // AX-5: an explicit set, not a range
+		return true
+	}
+	return false
+}
 
 // IsCorpse reports an animal carcass.
 func (k Kind) IsCorpse() bool {

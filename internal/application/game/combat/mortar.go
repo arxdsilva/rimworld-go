@@ -74,6 +74,9 @@ type Mortar struct {
 	// smoke); Fired shells since its barrel was fitted.
 	Shells [4]int
 	Fired  int
+	// Foam and Warhead are the foam shells and antimatter warheads loaded
+	// (AX-5; absent in older saves).
+	Foam, Warhead int
 	// Hostile (DEF-4): a besieging raid's mortar, crewed by its raiders
 	// and aimed at the colonists; colonists never man or rearm it.
 	Hostile bool
@@ -271,21 +274,29 @@ func (m *Mortars) idleDrafted(c entity.EntityID) bool {
 }
 
 // shells is how many shells are loaded.
-func (st Mortar) shells() int { return st.Shells[0] + st.Shells[1] + st.Shells[2] + st.Shells[3] }
+func (st Mortar) shells() int {
+	return st.Shells[0] + st.Shells[1] + st.Shells[2] + st.Shells[3] + st.Foam + st.Warhead
+}
 
 // fire lobs one shell (the first loaded kind, high explosive first) from
 // mortar b at (ax, ay): it lands within the forced-miss radius.
 func (m *Mortars) fire(b construction.Building, st *Mortar, ax, ay int, now uint64) {
-	i := 0
-	for st.Shells[i] == 0 {
-		i++
+	wk := weapon.MortarFoam // AX-5: then warheads, foam shells last
+	switch i := slices.IndexFunc(st.Shells[:], func(n int) bool { return n > 0 }); {
+	case i >= 0:
+		st.Shells[i]--
+		wk = weapon.MortarHE + weapon.Kind(i)
+	case st.Warhead > 0:
+		st.Warhead--
+		wk = weapon.Warhead
+	default:
+		st.Foam--
 	}
-	st.Shells[i]--
 	st.Fired++
 	d := weapon.DefOf(weapon.MortarHE)
 	st.ReadyAt = now + uint64(d.Cooldown+d.Warmup)
 	lx, ly := m.scatter(ax, ay, MissRadius(m.crewLevel(st.Crew)))
-	m.shots.Lob(st.Crew, weapon.MortarHE+weapon.Kind(i), b.X, b.Y, ax, ay, lx, ly)
+	m.shots.Lob(st.Crew, wk, b.X, b.Y, ax, ay, lx, ly)
 }
 
 // MissRadius is the mortar's forced-miss radius (thousandths of a tile)
@@ -437,7 +448,14 @@ func (m *Mortars) load(id entity.EntityID, k item.Kind, n int) int {
 	if n <= 0 {
 		return 0
 	}
-	st.Shells[wk-weapon.MortarHE] += n
+	switch wk {
+	case weapon.MortarFoam:
+		st.Foam += n
+	case weapon.Warhead:
+		st.Warhead += n
+	default:
+		st.Shells[wk-weapon.MortarHE] += n
+	}
 	m.set(id, st)
 	return n
 }

@@ -44,7 +44,11 @@ func TestBuildSpriteStuffMaterials(t *testing.T) {
 		{"door", "wood", 5, false, false, "structure/door_wood_ns_closed"},
 		{"door", "wood", 0, sprite.DoorAxisEW("south"), false, "structure/door_wood_ew_closed"}, // axis from the stored facing, not the links mask
 		{"door", "steel", 15, sprite.DoorAxisEW("west"), true, "structure/door_steel_ns_open"},
-		{"floor", "granite blocks", 0, false, false, "structure/floor_stone"},
+		{"floor", "granite blocks", 0, false, false, "structure/floor_stone_tile_granite"},    // a pre-v11 stone floor
+		{"stone tile", "marble blocks", 0, false, false, "structure/floor_stone_tile_marble"}, // AX-3
+		{"flagstone", "slate blocks", 0, false, false, "structure/floor_flagstone_slate"},
+		{"carpet floor", "cloth", 0, false, false, "structure/floor_carpet"},
+		{"sterile tile", "steel", 0, false, false, "structure/floor_sterile_tile"},
 		{"fence", "marble blocks", 15, false, false, "structure/fence_stone_15"},
 	}
 	for _, c := range cases {

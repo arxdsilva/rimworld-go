@@ -85,7 +85,7 @@ func TestCleanlinessFactor(t *testing.T) {
 		want  int32
 	}{
 		{-900, false, 600}, {-500, false, 600}, {-250, false, 800}, {-100, false, 920}, {0, false, 1000},
-		{50, false, 1009}, {100, false, 1018}, {400, false, 1018}, {-500, true, 850}, {100, true, 850},
+		{30, false, 1009}, {50, false, 1015}, {60, false, 1018}, {100, false, 1018}, {400, false, 1018}, // AX-3: sterile tile tops it {-500, true, 850}, {100, true, 850},
 	} {
 		if got := CleanFactor(c.clean, c.out); got != c.want {
 			t.Errorf("CleanFactor(%d, outdoors %v) = %d, want %d", c.clean, c.out, got, c.want)

@@ -33,10 +33,12 @@ const (
 	MortarClrID  = "cmd.mortar.clear"
 )
 
-func isDoorBldg(b game.BuildingView) bool { return b.Kind == doorKind || b.Kind == autodoorKind }
+func isDoorBldg(b game.BuildingView) bool {
+	return b.Kind == doorKind || b.Kind == autodoorKind || b.Kind == ornateDoorKind // A2: not the animal flap
+}
 
 func isTurretBldg(b game.BuildingView) bool {
-	return b.Kind == turretKind || b.Kind == autocannon || b.Kind == slugTurret
+	return b.Kind == turretKind || b.Kind == autocannon || b.Kind == slugTurret || b.Kind == foamTurretKind || b.Kind == rocketBatteryKind // AX-5
 }
 
 // defenceCommands are a door's, turret's or mortar's own buttons.
@@ -89,6 +91,8 @@ func defenceLines(b game.BuildingView) []string {
 			out = append(out, "No target set")
 		}
 	}
+	out = append(out, ax5Lines(b)...) // ax5.go (AX-5)
+	out = append(out, ax4Lines(b)...) // ax4.go (AX-4)
 	if isDoorBldg(b) && b.HoldOpen {
 		out = append(out, "Held open")
 	}

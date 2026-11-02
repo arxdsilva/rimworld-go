@@ -237,6 +237,48 @@ func (c *Combat) DrawProjectiles(v *render.View, dst *ebiten.Image, ps []Project
 		if bx < 0 || by < 0 || bx > float32(v.SW) || by > float32(v.SH) {
 			continue
 		}
+		if key, tiles, ok := projectileSprite(p.Kind); ok && v.Art != nil && v.Art.Has(key) {
+			if img, geo, ok := projectileGeo(v, key, p, tiles, bx, by); ok { // a world sprite, placed by the camera
+				dst.DrawImage(img, &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear})
+			}
+			continue
+		}
 		vector.StrokeLine(dst, ax, ay, bx, by, th, tracerColour, true)
 	}
+}
+
+// projectileSprite is the sprite a projectile kind flies as and its length
+// in tiles (AX-5: the rocket battery's rockets and the foam turret's
+// blobs; ok false: a tracer streak).
+func projectileSprite(kind string) (string, float64, bool) {
+	switch kind {
+	case ProjectileRocket:
+		return "effect/rocket_projectile", 0.75, true
+	case ProjectileFoam:
+		return "effect/foam_projectile", 0.5, true
+	}
+	return "", 0, false
+}
+
+// Projectile kinds with a sprite (ProjectileMark.Kind, AX-5).
+const (
+	ProjectileRocket = "rocket"
+	ProjectileFoam   = "foam"
+)
+
+// projectileGeo places sprite key (pointing east, its origin at the nose)
+// at the screen point (sx, sy), turned to p's heading and tiles long; ok
+// false when the art has no such image.
+func projectileGeo(v *render.View, key string, p ProjectileMark, tiles float64, sx, sy float32) (*ebiten.Image, ebiten.GeoM, bool) {
+	sp, img := v.Art.Sprite(key), v.Art.Image(key, color.NRGBA{})
+	if sp == nil || img == nil || img.Bounds().Dx() == 0 {
+		return nil, ebiten.GeoM{}, false
+	}
+	sc := v.Cam.Tile() * tiles / float64(img.Bounds().Dx())
+	geo := ebiten.GeoM{}
+	geo.Translate(-float64(sp.Meta.Origin[0]), -float64(sp.Meta.Origin[1]))
+	geo.Scale(sc, sc)
+	geo.Rotate(math.Atan2(p.DY, p.DX))
+	geo.Translate(float64(sx), float64(sy))
+	return img, geo, true
 }

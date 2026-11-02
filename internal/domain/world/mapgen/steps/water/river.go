@@ -384,6 +384,10 @@ func layRiver(c *mapgen.Ctx, r *randx.Rand, line []mapgen.PointF, size site.Rive
 				w = mapgen.Deep
 			}
 			f.Water[i], f.River[i], f.Rock[i], f.Coast[i] = w, true, false, false
+			if c.R.River == nil { // AX-4: the flow a watermill turns in (no random draw)
+				c.R.River = make([]uint8, N)
+			}
+			c.R.River[i] = flowDir(p.tx[k], p.ty[k])
 		case f.Coast[i]: // a beach keeps its sand beside the mouth
 		case d <= hw+bw || (f.Rock[i] && d <= hw+math.Max(bw, canyonBank)):
 			f.Water[i], f.River[i], f.Rock[i] = mapgen.Bank, true, false
@@ -507,4 +511,11 @@ func crosses(c *mapgen.Ctx, line []mapgen.PointF, p riverProfile, k int, half, r
 		}
 	}
 	return false
+}
+
+// flowDir is the river's downstream direction along tangent (tx, ty) as
+// Dir8+1 (1 north, clockwise to 8 north-west; y grows south).
+func flowDir(tx, ty float64) uint8 {
+	a := math.Atan2(tx, -ty) // 0 north, clockwise
+	return uint8(int(math.Round(a/(math.Pi/4))+8)%8) + 1
 }

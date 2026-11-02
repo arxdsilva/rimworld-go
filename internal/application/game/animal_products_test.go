@@ -253,7 +253,7 @@ func TestHandleWorkTypeAndTamingMoved(t *testing.T) {
 	if !try(work.Handle) {
 		t.Fatal("a handler with Hunt off tames the marked goat")
 	}
-	if wt, ok := workTypeOf(command.WorkHandle); !ok || wt != work.Handle {
+	if wt, ok := work.FromCommand(command.WorkHandle); !ok || wt != work.Handle {
 		t.Fatal("the Handle work command")
 	}
 }

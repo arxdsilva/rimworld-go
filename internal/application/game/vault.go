@@ -114,7 +114,7 @@ func (g *Game) placeVaults(vs []mapgen.Vault) {
 		rec := vaultSave{ID: v.ID, X0: v.X0, Y0: v.Y0, X1: v.X1, Y1: v.Y1}
 		g.carveVault(v)
 		for _, f := range v.Floors {
-			g.placeGenerated(construction.Building{Kind: construction.Floor, Stuff: f.Stuff, X: f.X, Y: f.Y, Ancient: true})
+			g.placeGenerated(construction.Building{Kind: construction.FloorFor(f.Stuff), Stuff: f.Stuff, X: f.X, Y: f.Y, Ancient: true})
 		}
 		for _, w := range v.Walls {
 			g.placeGenerated(construction.Building{Kind: construction.Wall, Stuff: v.WallStuff, X: w.X, Y: w.Y, Ancient: true})
