@@ -38,6 +38,14 @@ func NewHopper() Zone {
 	return z
 }
 
+// NewBookcase is a new bookcase's storage (A7, wiki: Bookcase): books
+// only, Preferred priority like a shelf, its overlay hidden.
+func NewBookcase() Zone {
+	z := Zone{Kind: KindBookcase, Hidden: true, Priority: PriorityPreferred}
+	z.SetAllowed(Universe(KindBookcase), true)
+	return z
+}
+
 // NewGrave is a new grave's or (sarcophagus) sarcophagus's settings:
 // human corpses and bones (wiki: Grave: the default only allows human
 // corpses); a sarcophagus colonists only (wiki: Sarcophagus). Important

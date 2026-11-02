@@ -37,6 +37,9 @@ type Rooms interface {
 	Contents(r int) (beds, benches int)
 	// TemperatureAt is the air at (x, y), tenths of a degree C.
 	TemperatureAt(x, y int) int
+	// ReadingBonus is indoor room r's reading bonus, permille over 1000
+	// (AX-7, game/books: books shelved in its bookcases).
+	ReadingBonus(r int) int
 }
 
 // Workers is the researchers and their job.

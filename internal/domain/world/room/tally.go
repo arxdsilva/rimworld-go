@@ -131,10 +131,10 @@ func (t *Tally) AddBuilding(k construction.Kind, stuff item.Kind, q quality.Leve
 	if cutsSpace(k) {
 		t.Impassable += cells
 	}
-	switch k {
-	case construction.HorseshoePin:
+	switch {
+	case k.Recreation(): // AX-6: games, screens, the telescope
 		t.RecBuildings++
-	case construction.Stove, construction.ElectricStove:
+	case k == construction.Stove || k == construction.ElectricStove:
 		t.Stoves++
 	}
 }

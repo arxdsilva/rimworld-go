@@ -159,7 +159,7 @@ const (
 	// drill, ScanGround a ground-penetrating scanner. A6: Recreate plays at
 	// a recreation building (games, ring toss), WatchTelevision watches
 	// from a seat, Stargaze uses a telescope. A7: Read reads a book. A8:
-	// StartReactor starts the ship reactor. A9: EnterCasket and
+	// BoardShip walks into a ship stasis casket. A9: EnterCasket and
 	// CarryToCasket put a pawn into a stasis casket, LoadPods carries a
 	// thing into a transport pod, ScanMinerals works a long-range mineral
 	// scanner.
@@ -172,7 +172,7 @@ const (
 	WatchTelevision
 	Stargaze
 	Read
-	StartReactor
+	BoardShip
 	EnterCasket
 	CarryToCasket
 	LoadPods
@@ -360,8 +360,8 @@ func (k Kind) String() string {
 		return "stargaze"
 	case Read:
 		return "read"
-	case StartReactor:
-		return "start reactor"
+	case BoardShip:
+		return "board ship"
 	case EnterCasket:
 		return "enter casket"
 	case CarryToCasket:

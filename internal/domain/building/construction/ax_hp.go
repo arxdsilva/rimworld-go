@@ -3,8 +3,8 @@ package construction
 // axMaxHP is the base hit points of an AX-0 contract kind (ok=false: the
 // default). wiki: each item's infobox (the AX-0 wiki notes); a steel-only
 // kind's base is the wiki value divided by steel's 140 % (as DEF-3), so
-// steel gives the wiki figure. The ship reactor's is original tuning (the
-// wiki figure is unconfirmed). Floors keep the default.
+// steel gives the wiki figure (the ship reactor's 500 too: wiki: Ship
+// reactor). Floors keep the default.
 func axMaxHP(k Kind) (int, bool) {
 	switch k {
 	case OrnateDoor, BilliardsTable, PokerTable:
@@ -59,7 +59,7 @@ func axMaxHP(k Kind) (int, bool) {
 		return 286, true
 	case ShipCore: // 150
 		return 107, true
-	case ShipReactor: // orig 500
+	case ShipReactor: // 500
 		return 357, true
 	case StasisCasket, TransportPod, MineralScanner: // 250
 		return 179, true

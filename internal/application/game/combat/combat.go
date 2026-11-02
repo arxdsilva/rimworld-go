@@ -66,7 +66,7 @@ func New(h Host, r Roles) *Combat {
 	c.Strikes.shots, c.Strikes.blasts, c.Turrets.st = c.Shots, c.Blasts, c.Strikes
 	c.Traps = &Traps{h: h, blasts: c.Blasts}
 	c.Guard = &Guard{h: h, fl: r.Flight}
-	c.Mortars = &Mortars{h: h, f: r.Field, turrets: c.Turrets, shots: c.Shots}
+	c.Mortars = &Mortars{h: h, f: r.Field, pw: r.Power, turrets: c.Turrets, shots: c.Shots}
 	c.Rearms = &Rearms{h: h, sup: r.Supply, br: r.Breach, turrets: c.Turrets, mortars: c.Mortars}
 	c.Orders = &Orders{h: h, turrets: c.Turrets, mortars: c.Mortars, doors: c.Doors, rearms: c.Rearms}
 	c.Hunting, c.Tiles = &Hunting{h: h, hu: r.Hunts}, &Tiles{f: r.Field}

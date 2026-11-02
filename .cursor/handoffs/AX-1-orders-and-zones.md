@@ -52,8 +52,20 @@ The Architect's remaining Orders and Zones rows, plus Remove floor, now work end
 - The determinism gate passes with no golden change.
 - No-flap test: not applicable. No need, threat or threshold behaviour was added; the 40 % chop limit only filters which trees a mark takes.
 
+## Follow-up: crated buildings from traders
+- Trade goods may now be crated buildings: `trade.Goods` (an item kind plus a building), `Line.Building` and `Delta.Building`, all optional in saves.
+  - The offer codec writes "kind/building:qty".
+  - A crate row's key is "crated building:<kind>", labelled "<Kind> (crated)".
+- Stock (`trade.cratePools`, drawn after the regular goods, so the earlier draws are unchanged; counts and chances are original tuning):
+  - orbital curio merchant: big screen television (30 %), telescope (40 %), 1 to 2 urns (40 %);
+  - bulk hauler caravan: an urn (20 %).
+- Prices come from `trade.CrateValue` (wiki: Megascreen television 1485, Telescope 350; urn 200, within the wiki's 20 to 2000).
+- A bought crate arrives (by caravan or drop pod) as an `item.MinifiedBuilding` of that kind, in its default material, through `dropGoods`, which now takes a `trade.Line`. Reinstall places it.
+- Traders don't buy the colony's crates (`Wants` is false; crates have no item value yet).
+- Tests: trade/goods_test.go, `TestBuyCratedBigScreenFromOrbitalTrader`, and `TestJourneyAX1BuyCrateFromTradeShip` (the trade dialog row, the offer, the pod).
+
 ## Open
-- A crate keeps no bills, fuel or owners.
+- A crate keeps no bills, fuel or owners; a crate is worth nothing in wealth, and traders don't buy it back.
 - The Reinstall ghost uses CanPlaceAt, which shows research locks; the simulation's install ignores them.
 - There is no forced "Prioritize uninstall/open" in the right-click menu (OrderUninstall and OrderOpen stay unrouted).
 - The floor's deconstruct job is labelled "deconstruct"; `job.RemoveFloor` is unused.

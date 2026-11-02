@@ -26,6 +26,8 @@ func ZoneKind(k construction.Kind) (zone.Kind, zone.Zone, bool) {
 		z.SetAllowed(zone.Universe(zone.KindShelf), false)
 		z.SetAllowed(zone.Filter{}.With(item.Egg, true).With(item.FertileEgg, true), true)
 		return zone.KindShelf, z, true
+	case construction.Bookcase, construction.SmallBookcase: // A7, wiki: Bookcase: books only, 5 a cell
+		return zone.KindBookcase, zone.NewBookcase(), true
 	case construction.Hopper:
 		return zone.KindHopper, zone.NewHopper(), true
 	case construction.Grave, construction.Sarcophagus:

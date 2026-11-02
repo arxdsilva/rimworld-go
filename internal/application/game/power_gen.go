@@ -56,6 +56,8 @@ func (g *Game) genOutput(id entity.EntityID) int {
 		}
 	case construction.GeothermalGenerator:
 		return geothermalW
+	case construction.ShipReactor: // AX-8, wiki: Ship reactor (1000 W, started or not)
+		return 1000
 	case construction.SolarPanel:
 		return g.solarOutput(b)
 	case construction.WindTurbine:

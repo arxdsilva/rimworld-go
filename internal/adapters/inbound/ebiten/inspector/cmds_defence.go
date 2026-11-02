@@ -38,7 +38,7 @@ func isDoorBldg(b game.BuildingView) bool {
 }
 
 func isTurretBldg(b game.BuildingView) bool {
-	return b.Kind == turretKind || b.Kind == autocannon || b.Kind == slugTurret || b.Kind == foamTurretKind || b.Kind == rocketBatteryKind // AX-5
+	return b.Kind == turretKind || b.Kind == autocannon || b.Kind == slugTurret || b.Kind == foamTurretKind // AX-5
 }
 
 // defenceCommands are a door's, turret's or mortar's own buttons.
@@ -55,13 +55,17 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 			Cmds: []command.Command{{Kind: command.SetTurretHold, X: b.X, Y: b.Y, Enabled: !b.HoldFire}}})
 	case storageKinds[b.Kind]:
 		out = append(out, a.shelfStorageCommand(b)...)
-	case b.Kind == mortarKind:
+	case b.Kind == mortarKind || b.Kind == rocketBatteryKind: // AX-5: the battery is aimed like a mortar
 		bx, by, id := b.X, b.Y, b.ID
-		out = append(out, Button{ID: MortarAimID, Label: "Set target", Icon: "order_attack",
-			Desc: "Click a tile on the map for this mortar to shell. Esc or a right click cancels.",
-			Run:  func() { a.shell.Do(ports.AimMortar{ID: id, X: bx, Y: by}) }})
-		clr := Button{ID: MortarClrID, Label: "Clear target", Icon: "order_cancel",
-			Desc: "Drop the forced target; the mortar picks its own again.",
+		aimDesc, clrDesc := "Click a tile on the map for this mortar to shell. Esc or a right click cancels.",
+			"Drop the forced target; the mortar picks its own again."
+		if b.Kind == rocketBatteryKind {
+			aimDesc, clrDesc = "Click a tile for the next volley; a drafted colonist mans the battery and fires it once. Esc or a right click cancels.",
+				"Drop the target: the battery holds its rockets."
+		}
+		out = append(out, Button{ID: MortarAimID, Label: "Set target", Icon: "order_attack", Desc: aimDesc,
+			Run: func() { a.shell.Do(ports.AimMortar{ID: id, X: bx, Y: by}) }})
+		clr := Button{ID: MortarClrID, Label: "Clear target", Icon: "order_cancel", Desc: clrDesc,
 			Cmds: []command.Command{{Kind: command.ClearMortarTarget, X: b.X, Y: b.Y}}}
 		if !b.HasTarget {
 			clr.Disabled, clr.Reason = true, "no target set"
@@ -83,8 +87,10 @@ func defenceLines(b game.BuildingView) []string {
 			out = append(out, "Holding fire")
 		}
 	}
-	if b.Kind == mortarKind {
-		out = append(out, fmt.Sprintf("Shells loaded  %d", b.Shells))
+	if b.Kind == mortarKind || b.Kind == rocketBatteryKind {
+		if b.Kind == mortarKind {
+			out = append(out, fmt.Sprintf("Shells loaded  %d", b.Shells))
+		}
 		if b.HasTarget {
 			out = append(out, fmt.Sprintf("Target  (%d, %d)", b.TargetX, b.TargetY))
 		} else {
@@ -93,6 +99,7 @@ func defenceLines(b game.BuildingView) []string {
 	}
 	out = append(out, ax5Lines(b)...) // ax5.go (AX-5)
 	out = append(out, ax4Lines(b)...) // ax4.go (AX-4)
+	out = append(out, ax6Lines(b)...) // ax6.go (AX-6)
 	if isDoorBldg(b) && b.HoldOpen {
 		out = append(out, "Held open")
 	}

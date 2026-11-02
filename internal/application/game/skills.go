@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/diet"
+	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/domain/animal"
 	"strings"
 
@@ -618,13 +619,7 @@ func (g *Game) drainJoy(id entity.EntityID, now uint64) {
 	if now%recreation.DrainPeriod != 0 || g.joy[id] <= 0 {
 		return
 	}
-	r := g.statOf(id, stat.RecreationRate)
-	switch g.lovesWork(id) {
-	case skill.Minor:
-		r = r * 800 / 1000
-	case skill.Major:
-		r = r * 600 / 1000
-	}
+	r := recreate.PassionDrain(g.statOf(id, stat.RecreationRate), g.lovesWork(id))
 	if r == 1000 {
 		g.joy[id]--
 		return

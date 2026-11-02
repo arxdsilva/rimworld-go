@@ -65,12 +65,14 @@ type search struct {
 	x, y   int
 	d      int
 	ok     bool
+	slots  int // stacks a cell of the zone being searched holds
 }
 
 // zone visits zone id's cells (row-major), stopping below the rows that
 // could still hold a better cell.
 func (s *search) zone(id zone.ID, kind zone.Kind, top bool) {
-	shelf := kind == zone.KindShelf
+	shelf := kind.Stacks() > 1 // a shelf's or a bookcase's (A7) several stacks a cell
+	s.slots = kind.Stacks()
 	s.c.Zones().EachCell(id, func(cx, cy int) bool {
 		if s.ok && (s.any || cy-s.ny > s.d) {
 			return false
@@ -125,7 +127,7 @@ func (s *search) free(cx, cy int, shelf, building bool) {
 		return
 	}
 	if shelf {
-		if n, _ := s.c.Shelf(s.st.Kind, cx, cy); n >= zone.ShelfStacks {
+		if n, _ := s.c.Shelf(s.st.Kind, cx, cy); n >= s.slots {
 			return
 		}
 	} else if _, ok := s.c.First(cx, cy); ok {

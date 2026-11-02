@@ -1,19 +1,19 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/pawn/skill"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Animal training (ENG-003, M10; Handle work). A handler trains a tame
 // animal's first enabled, unlearned skill (Obedience before Guard and
-// Release) once its session is due: trainCooldown (plus a per-animal
+// Release) once its session is due: herd.TrainCooldown (plus a per-animal
 // stagger) after the last one, success or not, so neither handler nor
 // animal flaps between sessions. A session succeeds with
 // training.StepChance (x5 for the bonded trainer) and a success may bond
@@ -30,19 +30,13 @@ import (
 // guardKeepRadius from the master (enter 5, leave 8: no flapping).
 //
 // Which skills are on lives in the high bit of animal.State.Trained:
-// trainToggled marks a skill the player flipped away from its default
+// herd.TrainToggled marks a skill the player flipped away from its default
 // (Obedience on, the others off), so older saves and new animals need no
 // extra field.
 
 const (
 	// trainWork: the ticks one session takes (like a taming).
 	trainWork = animal.TameWork
-	// trainCooldown and trainJitter: a session is due this long (plus up
-	// to trainJitter, by id) after the last.
-	trainCooldown = 3 * clock.TicksPerHour
-	trainJitter   = 600
-	// trainToggled: Trained[s] bit set when s is not at its default.
-	trainToggled uint8 = 0x80
 	// followFar: an obedient animal walks to its drafted master once it
 	// is farther than this; it then goes right up to them (followNear).
 	followFar  = 3
@@ -57,91 +51,13 @@ const (
 	guardHitWindow = 2 * animal.DecideEvery
 )
 
-var trainLabels = [training.NumSkills]string{training.Obedience: "Obedience", training.Guard: "Guard", training.Release: "Release"}
-
-// trainLabel is a skill's display name.
-func trainLabel(s training.Skill) string {
-	if s >= training.NumSkills {
-		return ""
-	}
-	return trainLabels[s]
-}
-
-// canLearn reports whether species sp can learn s at all: Obedience any
-// tame animal but hive insects, Guard fighters and pets, Release
-// predators.
-func canLearn(sp animal.Species, s training.Skill) bool {
-	d := animal.DefOf(sp)
-	if d.Hive {
-		return false
-	}
-	switch s {
-	case training.Obedience:
-		return true
-	case training.Guard:
-		return animal.Fighter(sp) || animal.RosterOf(sp).Behaviour == animal.Pet
-	case training.Release:
-		return d.Predator
-	}
-	return false
-}
-
-// trainDefault is whether s is on for a new animal.
-func trainDefault(s training.Skill) bool { return s == training.Obedience }
-
-// trainOn reports whether skill s is on for a.
-func trainOn(a animal.State, s training.Skill) bool {
-	if s >= training.NumSkills || !canLearn(a.Species, s) {
-		return false
-	}
-	return trainDefault(s) != (a.Trained[s]&trainToggled != 0)
-}
-
-// trainSteps is a's steps of s as of now (decayed since the last
-// session).
-func trainSteps(a animal.State, s training.Skill, now uint64) uint8 {
-	if s >= training.NumSkills {
-		return 0
-	}
-	steps := a.Trained[s] &^ trainToggled
-	if a.TrainDecay == 0 || now <= a.TrainDecay {
-		return steps
-	}
-	return training.Decay(s, steps, now-a.TrainDecay)
-}
-
-// trainLearned reports whether a knows s now.
-func trainLearned(a animal.State, s training.Skill, now uint64) bool {
-	return training.Learned(s, trainSteps(a, s, now))
-}
-
-// nextTrainSkill is the skill a's next session works on: the first on and
-// unlearned one, Guard and Release only once Obedience is learned.
-func nextTrainSkill(a animal.State, now uint64) (training.Skill, bool) {
-	for s := training.Skill(0); s < training.NumSkills; s++ {
-		if !trainOn(a, s) || trainLearned(a, s, now) {
-			continue
-		}
-		if s != training.Obedience && !trainLearned(a, training.Obedience, now) {
-			continue
-		}
-		return s, true
-	}
-	return 0, false
-}
-
-// trainDue reports whether animal id's next session may start now.
-func trainDue(id entity.EntityID, a animal.State, now uint64) bool {
-	return a.TrainDecay == 0 || now >= a.TrainDecay+trainCooldown+uint64(id)%trainJitter
-}
-
 // trainable reports whether a handler may train animal id now.
 func (g *Game) trainable(id entity.EntityID, a *animal.State, now uint64) bool {
 	if !a.Tame || a.Dead() || a.Enraged(now) || sleeping(*a) || a.Leaving ||
-		a.Mode == animal.Flee || a.Mode == animal.Attack || a.Mode == animal.Confused || !trainDue(id, *a, now) {
+		a.Mode == animal.Flee || a.Mode == animal.Attack || a.Mode == animal.Confused || !herd.TrainDue(id, *a, now) {
 		return false
 	}
-	_, ok := nextTrainSkill(*a, now)
+	_, ok := herd.NextTrainSkill(*a, now)
 	return ok
 }
 
@@ -159,14 +75,14 @@ func (g *Game) cmdSetAnimalFollow(id entity.EntityID, on bool) {
 
 func (g *Game) cmdSetTraining(id entity.EntityID, s int, on bool) {
 	a, ok := g.animals.Get(id)
-	if !ok || !a.Tame || s < 0 || s >= int(training.NumSkills) || !canLearn(a.Species, training.Skill(s)) {
+	if !ok || !a.Tame || s < 0 || s >= int(training.NumSkills) || !herd.CanLearn(a.Species, training.Skill(s)) {
 		return
 	}
 	sk := training.Skill(s)
-	if on == trainDefault(sk) {
-		a.Trained[sk] &^= trainToggled
+	if on == herd.TrainDefault(sk) {
+		a.Trained[sk] &^= herd.TrainToggled
 	} else {
-		a.Trained[sk] |= trainToggled
+		a.Trained[sk] |= herd.TrainToggled
 	}
 	g.animals.Set(id, a)
 }
@@ -230,7 +146,7 @@ func (g *Game) doTrain(id entity.EntityID, j job.Record) {
 	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
-	s, ok := nextTrainSkill(a, now)
+	s, ok := herd.NextTrainSkill(a, now)
 	if !ok {
 		return
 	}
@@ -243,7 +159,7 @@ func (g *Game) doTrain(id entity.EntityID, j job.Record) {
 // may bond them.
 func (g *Game) trainSession(trainer, id entity.EntityID, a *animal.State, s training.Skill, now uint64) {
 	for k := training.Skill(0); k < training.NumSkills; k++ {
-		a.Trained[k] = a.Trained[k]&trainToggled | trainSteps(*a, k, now)
+		a.Trained[k] = a.Trained[k]&herd.TrainToggled | herd.TrainSteps(*a, k, now)
 	}
 	a.TrainDecay = now
 	chance := training.StepChance(int(g.skillOf(trainer, skill.Animals).Level), a.Bond == uint64(trainer))
@@ -251,9 +167,9 @@ func (g *Game) trainSession(trainer, id entity.EntityID, a *animal.State, s trai
 		return
 	}
 	a.Trained[s]++
-	if training.Learned(s, a.Trained[s]&^trainToggled) {
+	if training.Learned(s, a.Trained[s]&^herd.TrainToggled) {
 		p, _ := g.positions.Get(id)
-		g.message(p.X, p.Y, "%s trained %s the %s in %s.", g.name(trainer), a.Name, a.Species.Label(), trainLabel(s))
+		g.message(p.X, p.Y, "%s trained %s the %s in %s.", g.name(trainer), a.Name, a.Species.Label(), herd.TrainLabel(s))
 	}
 	g.tryBond(id, a, trainer, training.BondTrain)
 }
@@ -262,8 +178,8 @@ func (g *Game) trainSession(trainer, id entity.EntityID, a *animal.State, s trai
 // master, walking up to them once they are more than followFar away. It
 // reports true while it follows.
 func (g *Game) followMaster(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
-	if a.Master == 0 || !a.Tame || a.NoFollow || !trainLearned(*a, training.Obedience, now) &&
-		!trainLearned(*a, training.Guard, now) && !trainLearned(*a, training.Release, now) {
+	if a.Master == 0 || !a.Tame || a.NoFollow || !herd.TrainLearned(*a, training.Obedience, now) &&
+		!herd.TrainLearned(*a, training.Guard, now) && !herd.TrainLearned(*a, training.Release, now) {
 		return false
 	}
 	m := entity.EntityID(a.Master)
@@ -289,7 +205,7 @@ func (g *Game) masterDuty(id entity.EntityID, a *animal.State, now uint64) bool 
 	if a.Master == 0 || !a.Tame {
 		return false
 	}
-	guard, release := trainLearned(*a, training.Guard, now), trainLearned(*a, training.Release, now)
+	guard, release := herd.TrainLearned(*a, training.Guard, now), herd.TrainLearned(*a, training.Release, now)
 	if !guard && !release {
 		return false
 	}
@@ -384,9 +300,9 @@ func trainViews(a animal.State, now uint64) ([]bool, []AnimalTrainingView) {
 	learned := make([]bool, training.NumSkills)
 	rows := make([]AnimalTrainingView, training.NumSkills)
 	for s := training.Skill(0); s < training.NumSkills; s++ {
-		learned[s] = trainLearned(a, s, now)
-		rows[s] = AnimalTrainingView{Skill: int(s), Label: trainLabel(s), Allowed: canLearn(a.Species, s),
-			On: trainOn(a, s), Learned: learned[s], Steps: int(trainSteps(a, s, now)), Needed: int(training.Needed(s))}
+		learned[s] = herd.TrainLearned(a, s, now)
+		rows[s] = AnimalTrainingView{Skill: int(s), Label: herd.TrainLabel(s), Allowed: herd.CanLearn(a.Species, s),
+			On: herd.TrainOn(a, s), Learned: learned[s], Steps: int(herd.TrainSteps(a, s, now)), Needed: int(training.Needed(s))}
 	}
 	return learned, rows
 }

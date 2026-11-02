@@ -670,6 +670,10 @@ type Stack struct {
 	// Building (AX-0 contract, 0 until A1 crates one) is a MinifiedBuilding
 	// stack's construction kind (construction.Kind; item cannot import it).
 	Building uint8
+	// Book (A7) is a book's seed: its generated title, the skills a
+	// textbook teaches or the projects a schematic covers (game/books);
+	// 0 for anything else.
+	Book uint32
 }
 
 // MaxIngredients is how many ingredient kinds a meal remembers (FOOD-4).
@@ -796,7 +800,7 @@ func CanMerge(a, b Stack) bool {
 func SameLoad(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of &&
 		a.Animal == b.Animal && a.Tame == b.Tame && a.Quality == b.Quality && a.Stuff == b.Stuff && (a.Wear == b.Wear || a.Kind.IsFood()) &&
-		a.Yield == b.Yield
+		a.Yield == b.Yield && a.Book == b.Book // A7: two books are never one load
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a

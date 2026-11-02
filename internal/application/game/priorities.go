@@ -77,7 +77,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
 		return g.haulUrgent(id) || g.fillHoppers(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || // haul_priority.go, trough_feed.go
-			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || ordersOf(g).AssignHaul(id) || g.assignHaul(id) // FOOD-4: hoppers, barrels; AX-1: open, strip
+			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || ordersOf(g).AssignHaul(id) || travelOf(g).AssignLoad(id) || g.assignHaul(id) // FOOD-4: hoppers, barrels; AX-1: open, strip; AX-9: pods
 	case work.Construct:
 		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
 			g.assignConstruct(id) || ordersOf(g).AssignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go; AX-1: uninstall, install
@@ -94,7 +94,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Mine:
 		return g.assignMine(id) || g.br.ind.Ops(industryHost{g}).Assign(id, true, workTries) // game/industry: deep drills (AX-4)
 	case work.Research:
-		return g.lab.Assign(id, workTries) || g.br.ind.Ops(industryHost{g}).Assign(id, false, workTries) // game/research, game/industry scanners
+		return g.lab.Assign(id, workTries) || g.br.ind.Ops(industryHost{g}).Assign(id, false, workTries) || travelOf(g).AssignScan(id, workTries) // game/research, game/industry and game/travel scanners
 	case work.Clean:
 		return g.assignClean(id) || g.assignClearSnow(id) // clean.go, snow_clear.go
 	}

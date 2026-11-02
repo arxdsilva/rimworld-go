@@ -33,7 +33,7 @@ func unmarkCmd(o command.Order, x, y int) command.Command {
 
 // orderCommands are building b's AX-1 buttons: Uninstall (a movable
 // piece) and Open (a filled grave or sarcophagus).
-func (a Building) orderCommands(b game.BuildingView) []Button {
+func orderCommands(a Building, b game.BuildingView) []Button {
 	var out []Button
 	if movable, _ := a.shell.MoveState(b); movable && !b.Ruin {
 		u := Button{ID: UninstallBtnID, Label: "Uninstall", Icon: "order_uninstall", Toggle: true, On: b.AX.Uninstall,

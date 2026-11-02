@@ -18,9 +18,11 @@ import (
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/recreate"
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/resize"
 	"rimworld-go/internal/application/game/rest"
+	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -119,6 +121,9 @@ type SaveInfo struct {
 	Difficulty  string
 	MapSize     int
 	Biome       string
+	// Ending (AX-8) is "ship" once the colony's ship has left: the
+	// save's story is complete ("" while it goes on).
+	Ending string
 }
 
 type entry[T any] struct {
@@ -303,6 +308,7 @@ type saveState struct {
 	// AX4 (game/industry): river flow, deep ore, machines' progress;
 	// absent in older saves (no river flow, no ore found).
 	AX4 industry.Save
+	AX8 *ship.Save // game/ship (AX-8): reactors, sleepers, the launch; absent: nothing started
 	// PLAY-015: NoHomeAuto (zero: Home expands automatically), per-tile
 	// snow and the snow clearing area, burning fires, pen marker settings.
 	NoHomeAuto bool
@@ -401,6 +407,9 @@ type saveState struct {
 	// parts; nil when there are none (absent in older saves).
 	Mechs *raid.MechSave
 	Diet  *diet.Save // FOOD-4 (game/diet): food policies and holders; nil at the defaults (absent in older saves)
+	// Recreation (AX-6, game/recreate): recreation tolerances; nil when
+	// there are none (absent in older saves).
+	Recreation *recreate.Save
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -444,6 +453,9 @@ func (g *Game) Info(name string) SaveInfo {
 		info.Commitment = s.SaveMode == difficulty.Commitment
 		info.Storyteller = g.storyProfile().Name
 		info.Difficulty = s.Preset.String()
+	}
+	if g.worldSt != nil && g.worldSt.ship.Launched() {
+		info.Ending = ship.EndingShip // game/ship (AX-8)
 	}
 	return info
 }
@@ -507,6 +519,9 @@ func (g *Game) Save(w io.Writer, name string) error {
 	// bridge.go (MAPGEN-3): the sea bitset, nil without a sea
 	s.Ocean = g.exportOcean()
 	s.AX4 = g.br.ind.Export(g.bldgs.Has) // game/industry (AX-4)
+	if g.worldSt != nil {
+		s.AX8 = g.worldSt.ship.Export() // game/ship (AX-8)
+	}
 	for id, q := range g.orderQueue {
 		for _, o := range q {
 			s.OrderQueue[id] = append(s.OrderQueue[id], savedOrder{Cmd: o.cmd, Label: o.label, RetryAt: o.retryAt, Tries: o.tries})
@@ -519,6 +534,9 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Deliveries = g.exportDeliveries()
 	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
 	s.Social, s.People, s.World = g.exportSocial(), g.exportPeople(), g.exportWorld()
+	if g.soc != nil { // AX-6
+		s.Recreation = g.soc.rec.Export()
+	}
 	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
 	s.Surgery = g.exportSurgery()
 	s.BedRest = g.care.Rest.Export()   // care/rest.go (PLAY-020)
@@ -711,8 +729,14 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.afterLoadAnimals() // legacy corpses and bills (wildlife.go)
 	g.importGeology(s.Geo, s.Smooths, s.StructVer)
 	g.importSocial(s.Social)
+	if s.Recreation != nil { // AX-6: after the social state it hangs off
+		g.socState().rec = recreate.Load(recHost{newRestHost(g)}, s.Recreation)
+	}
 	g.importPeople(s.People)
 	g.importWorld(s.World)
+	if s.AX8 != nil {
+		shipOf(g).Import(s.AX8) // game/ship (AX-8)
+	}
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
 	g.care.Rest.Import(s.BedRest)

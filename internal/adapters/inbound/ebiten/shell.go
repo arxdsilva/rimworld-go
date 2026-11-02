@@ -383,6 +383,10 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.centreOnPawn(it.ID)
 	case ports.ReinstallCrate:
 		a.arch.Mover.StartCrate(it.ID) // move_mode.go, reinstall.go (AX-1)
+	case ports.LoadPods:
+		a.deal.OpenLoadPods(it.Pod) // dialogs/pods.go (AX-9)
+	case ports.LaunchPods:
+		a.win.World().LaunchFor(it.Pod) // windows/world_ax9.go (AX-9)
 	case ports.Push:
 		a.apply(intent{kind: intentPush, screen: it.Screen})
 	case ports.Back:

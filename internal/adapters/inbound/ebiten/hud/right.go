@@ -102,6 +102,7 @@ type rightState struct {
 	known   map[uint64]bool   // letters the stack has seen
 	fresh   map[uint64]uint64 // new letter -> presentation frame it arrived
 	read    map[uint64]bool   // letters the player opened
+	ending  bool              // the ending screen has opened this session (ending.go, AX-8)
 }
 
 // ---- hover cards ------------------------------------------------------

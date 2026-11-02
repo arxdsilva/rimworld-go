@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
@@ -141,21 +142,9 @@ func (g *Game) insetLandNear(x, y int, used [][2]int) (int, int, bool) {
 	w, h := g.grid.Width(), g.grid.Height()
 	x = min(max(x, visitorInset), w-1-visitorInset)
 	y = min(max(y, visitorInset), h-1-visitorInset)
-	for d := 0; d <= visitorSpotR; d++ {
-		for dy := -d; dy <= d; dy++ {
-			for dx := -d; dx <= d; dx++ {
-				if max(abs(dx), abs(dy)) != d {
-					continue
-				}
-				nx, ny := x+dx, y+dy
-				if !g.inset(nx, ny) || !g.dryWalkable(nx, ny) || slices.Contains(used, [2]int{nx, ny}) || g.pawnOn(nx, ny) {
-					continue
-				}
-				return nx, ny, true
-			}
-		}
-	}
-	return 0, 0, false
+	return travel.Ring(x, y, visitorSpotR, func(nx, ny int) bool { // game/travel
+		return g.inset(nx, ny) && g.dryWalkable(nx, ny) && !slices.Contains(used, [2]int{nx, ny}) && !g.pawnOn(nx, ny)
+	})
 }
 
 // inset reports (x, y) is at least visitorInset in from the border.

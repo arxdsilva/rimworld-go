@@ -140,7 +140,7 @@ func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
 	}
 	n := len(f.members())
 	dl.kit().Label(summary.X, summary.Y+6, fmt.Sprintf("%d colonist(s) · about %d tiles a day · 5 days of food", n, formTilesPerDay), gfx.Small)
-	dl.kit().Label(summary.X, summary.Y+26, "They walk to the map edge first; a friendly settlement hosts them a day.", gfx.WithColor(gfx.Small, uikit.TextDim))
+	dl.kit().Label(summary.X, summary.Y+26, "They gather at a hitching spot if there is one, then leave by the map edge; a friendly settlement hosts them a day.", gfx.WithColor(gfx.Small, uikit.TextDim))
 
 	rh, rrest := right.SplitV(26)
 	dl.kit().Label(rh.X, rh.Y, "Destination", hs)

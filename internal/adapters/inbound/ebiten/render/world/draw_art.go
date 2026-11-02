@@ -273,6 +273,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	clP := p.CreatureCull()
 	p.Creatures.DrawParticles(v, &clP, screen, tile)
 	p.Overlays.DrawArrivals(v, screen, w, tile)
+	p.Overlays.DrawLaunch(v, screen, w, tile)        // overlay/ship_draw.go (AX-8): the launch flare
 	p.Overlays.Combat.DrawBlasts(v, screen, w, tile) // blast sprites by kind (CBT-5)
 	p.Overlays.Combat.DrawShields(v, screen, tile)   // shield bubbles
 	p.Lb.DrawSteamPuffs(screen, w, tile)             // features_draw.go

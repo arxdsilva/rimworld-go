@@ -129,7 +129,7 @@ func (g *Game) landTradePod(p tradePod) {
 		}
 	}
 	for _, l := range p.Items {
-		g.dropGoods(l.Kind, l.Qty, bx, by, false)
+		g.dropGoods(l, bx, by, false)
 	}
 	g.message(bx, by, "A drop pod with your purchases has landed.")
 }

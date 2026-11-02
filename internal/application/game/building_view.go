@@ -188,8 +188,13 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	bv.Comfort, bv.RestEffect, bv.Beauty, bv.Facilities, bv.Forbidden = st.Comfort, st.RestEffect, st.Beauty, st.Links(), b.Forbidden
 	bv.Beauty += construction.PotBeauty(b) // A2: seats, a pot's plant, a hung light (axview)
 	bv.AX.Seats, bv.AX.Plant, bv.AX.PlantPct, bv.AX.WallMounted = construction.Seats(b.Kind), construction.PotPlant(b.Plant).DefOf().Name, int(b.Growth)/10, b.Kind.WallHung()
-	g.fillCasketView(bv, id, b)  // casket.go (MAPGEN-3)
-	fillOrderViews(g, bv, id, b) // move.go (AX-1): uninstall and open marks
+	g.fillCasketView(bv, id, b)                        // casket.go (MAPGEN-3)
+	fillOrderViews(g, bv, id, b)                       // move.go (AX-1): uninstall and open marks
+	bv.AX.ReadingBonus = booksOf(g).CaseBonus(id, b)   // game/books (AX-7): a bookcase's room
+	shipOf(g).FillBuilding(shipHost{g}, &bv.AX, id, b) // story.go: game/ship (AX-8)
+	if b.Kind.Recreation() {                           // game/recreate (AX-6): joy kind and users
+		bv.AX.Joy, bv.AX.Users = recView(g).PieceView(id)
+	}
 	bv.Linked, bv.WorkSpeed, bv.Epitaph = g.craft.Stations.View(id, b, bv.Epitaph)
 	bv.ResearchSpeed, bv.Analyzer = g.lab.Factor(id), uint64(g.lab.Analyzer(id)) // game/research (RSCH-1)
 	// PLAY-021: the light the renderer draws (light.go), then power
@@ -197,6 +202,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	bv.Glow, bv.GlowRadius = g.glowOf(id, b)
 	g.fillPowerBuilding(bv, id, b)
 	g.br.ind.View(industryHost{g}, &bv.AX, id, b)            // game/industry (AX-4): drill, scanner, pump, watermill
+	travelOf(g).View(&bv.AX, id, b)                          // game/travel (AX-9): casket, pods, launcher, mineral scanner
 	df := g.combat.Orders.View(id, b, uint64(g.clock.Now())) // combat/orders.go: turrets, mortars, doors (PLAY-024, DEF-3)
 	bv.AimDir, bv.ShotAge, bv.HoldOpen, bv.HoldFire, bv.HasTarget = df.Dir, df.ShotAge, df.HoldOpen, df.HoldFire, df.HasTarget
 	bv.Barrel, bv.Shells, bv.TargetX, bv.TargetY = df.Barrel, df.Shells, df.TargetX, df.TargetY

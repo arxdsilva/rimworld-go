@@ -116,9 +116,11 @@ func TestAX5WarheadCharge(t *testing.T) {
 	}
 }
 
-// TestAX5RocketBatteryVolley: a powered rocket battery fires its volley
-// at a raider and then shows an empty load.
-func TestAX5RocketBatteryVolley(t *testing.T) {
+// TestAX5RocketBatteryHoldsFire: a powered, loaded rocket battery with a
+// raider in range never fires on its own (it is manned and aimed like a
+// mortar: the journey and combat tests cover the volley); its view shows
+// a full volley and no target.
+func TestAX5RocketBatteryHoldsFire(t *testing.T) {
 	t.Parallel()
 	out := 1000
 	g, _ := turretRig(t, 6, 50, 40, &out)
@@ -133,7 +135,7 @@ func TestAX5RocketBatteryVolley(t *testing.T) {
 		}
 	}
 	v := ax5View(t, g, uint64(rid))
-	if v.AX.ChargeCap != 12 || v.AX.Charges != 0 || !fired {
-		t.Fatalf("rockets %d / %d, fired %v", v.AX.Charges, v.AX.ChargeCap, fired)
+	if fired || v.AX.ChargeCap != 12 || v.AX.Charges != 12 || v.HasTarget {
+		t.Fatalf("fired %v, rockets %d / %d, target %v", fired, v.AX.Charges, v.AX.ChargeCap, v.HasTarget)
 	}
 }

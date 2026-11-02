@@ -602,7 +602,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (PRD-4: shelf, a storage zone over its footprint, 3 stacks per cell, Preferred, no deterioration, beauty 0.5; bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; AX-2: couch with two seats, tables of four sizes seating a diner per side cell (`construction.Seats`), plant pot whose plant grows and adds beauty, small shelf, steles, urn; missing: joy)
+-   [-] **Furniture** (PRD-4: shelf, a storage zone over its footprint, 3 stacks per cell, Preferred, no deterioration, beauty 0.5; bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; BED-1: bedroll, double bedroll, animal sleeping spot, animal bed, end table, dresser; bed comfort, rest effectiveness and beauty; BED-3: stool, dining chair and armchair carry comfort and beauty and are sat on (`rest/seats.go`); PRD-3: sculptures (small 1x1, large 1x1, grand 2x2) are furniture with quality-scaled beauty; AX-2: couch with two seats, tables of four sizes seating a diner per side cell (`construction.Seats`), plant pot whose plant grows and adds beauty, small shelf, steles, urn; AX-7: bookcase (10 books) and small bookcase (5), books-only storage (`zone.KindBookcase`) giving their room the reading bonus; missing: joy)
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -784,7 +784,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 -   [x] **Recreation need** (drains ~4300/day awake, refilled by free-time activities; bored/starved/entertained thoughts)
     -   Decays.
     -   Pawns seek recreation during suitable schedule/idle time.
--   [-] **Recreation types** (wander, chat, relax on a chair, fireside, horseshoes; no cerebral/tech types)
+-   [-] **Recreation types** (wander, chat, relax on a chair, fireside; AX-6: dexterity (horseshoes, ring toss, billiards), cerebral (ur board, chess, poker), television (tube, flatscreen, big screen) and telescope kinds at wiki power, `game/recreate`; AX-7: reading books (novels by quality x1.2..x2.5, textbooks and schematics x1.0, times the room's reading bonus), `game/books`; missing: chemical and food joy as recreation kinds)
     -   Solitary relaxation.
     -   social interaction.
     -   dexterity-style play.
@@ -792,10 +792,10 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   telescope/television/other technology-gated categories as
         vanilla-equivalent content is added.
     -   chemical/food enjoyment where appropriate.
--   [ ] **Recreation tolerance/variety**
+-   [x] **Recreation tolerance/variety** (AX-6, wiki: tolerance 2/3 of the gain cuts the next gain, wears off 18..7 %/day by wealth, bored above 50 % until below 30 %; a colonist picks the joy kind it has had least; Needs tab shows tolerances; free wander/chat/relax keep no tolerance)
     -   Repeating one recreation category reduces its effectiveness.
     -   Encourage multiple recreation sources.
--   [-] **Recreation jobs/buildings** (no-building activities plus the horseshoe pin)
+-   [x] **Recreation jobs/buildings** (AX-6: no-building activities, horseshoe pin, ring toss, ur board, chess, billiards and poker tables for 1-4 players, televisions watched from seats in their watch area, telescope at night outdoors; skill training; pane joy kind and users)
     -   Basic no-building recreation.
     -   horseshoe-like dexterity object.
     -   chess/game table equivalent.
@@ -1697,7 +1697,7 @@ have prerequisites, and technologies unlock buildings/gear.
 
 -   [x] **Simple research bench** (RSCH-1: 3x2, factor 0.75, basic projects only)
 -   [x] **Advanced research bench** (RSCH-1: the hi-tech research bench, 5x2, 250 W, needs Microelectronics (our Microcircuits); a multi-analyzer (2x2, 200 W) within 6 tiles adds +0.10 and opens the analyzer projects)
--   [x] **Research job** (Research work type; two-hour sittings at the nearest free bench that can work the project; RSCH-1: wiki research speed (Intellectual 8 % + 11.5 %/level, manipulation and sight at half weight, global work speed), bench factor (laboratory, cleanliness, outdoors, temperature with hysteresis), difficulty factor; `game/research`)
+-   [x] **Research job** (Research work type; two-hour sittings at the nearest free bench that can work the project; RSCH-1: wiki research speed (Intellectual 8 % + 11.5 %/level, manipulation and sight at half weight, global work speed), bench factor (laboratory, cleanliness, outdoors, temperature with hysteresis), difficulty factor; `game/research`; AX-7: the room's reading bonus (shelved books, up to x1.2) multiplies the bench factor, and a schematic read puts its wiki points an hour into its projects)
     -   Intellectual skill.
     -   bench speed.
     -   room/environment modifiers as appropriate.
@@ -1723,7 +1723,7 @@ progression:
 -   [ ] **Armor/apparel technologies**
 -   [x] **Geothermal/advanced power** (MAPGEN-2: steam vents warm the air; PLAY-021: a geothermal generator stands exactly on a vent, 1800 W)
 -   [x] **Hospital/medical technology** (hospital bed (SIM-034); MED-06: powered vitals monitor beside a hospital bed: tend +7 %, surgery ×1.05, immunity +2 %; MED-05: servo implants, nanomed kit)
--   [ ] **Transport pods**
+-   [x] **Transport pods** (AX-9: the Transport pods and Mineral scanning projects gate the pod, the launcher and the long-range mineral scanner; Stasis caskets the stasis casket)
 -   [ ] **Ship/endgame technologies**
 
 ------------------------------------------------------------------------
@@ -2229,12 +2229,12 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 
 ## 28.5 Transport pods
 
--   [ ] **Pod launcher**
--   [ ] **Fuel**
--   [ ] **Load pawns/items**
--   [ ] **World-range targeting**
--   [ ] **Launch**
--   [ ] **Arrival at map/settlement**
+-   [x] **Pod launcher** (AX-9: feeds the pod beside it; touching pods form a group, 150 kg each)
+-   [x] **Fuel** (AX-9: 150 chemfuel, 2.25 a tile a pod, 66 tiles at most; haulers refuel with chemfuel)
+-   [x] **Load pawns/items** (AX-9: colonists walk in, haulers bring goods and lead tame animals in)
+-   [x] **World-range targeting** (AX-9: any tile in range on the World tab)
+-   [x] **Launch** (AX-9: the pods are spent and fly, ten tiles an hour (original), shown on the globe)
+-   [-] **Arrival at map/settlement** (AX-9: the colony's drop spot, a gift (goodwill by market value), a visit, or a caravan on any other tile that mines a mineral site; attacking a settlement and founding a colony need a second map)
     -   Trade/attack/reinforce/gift depending target.
 
 ------------------------------------------------------------------------
@@ -2453,10 +2453,10 @@ STK-AG: every core vanilla item has a card in its vanilla category (`.cursor/ARC
 -   [x] **Zone/area** (15 of 15; AX-1: Delete zone and the two roof-area clear tools)
 -   [x] **Structure** (9 of 9; AX-2: 2-wide ornate door, roof-holding column that walls no room, animal flap shut to people; walls in silver, gold, plasteel, uranium and jade)
 -   [x] **Production** (25 of 25; AX-4: deep drill over the deep ore a ground scan finds, electric crematorium's corpse-burning bill)
--   [-] **Furniture** (33 of 35; AX-2: the 1x2 table (old 1x1 tables migrate) and 2x2/2x4/3x3 tables on one card family, couch, small shelf, wall torch, wall lamp, flood light, plant pot, urn (found in ruins), double sleeping spot, animal sleeping box; a grower sows the plant pot; missing the two bookcases)
+-   [x] **Furniture** (35 of 35; AX-2: the 1x2 table (old 1x1 tables migrate) and 2x2/2x4/3x3 tables on one card family, couch, small shelf, wall torch, wall lamp, flood light, plant pot, urn (found in ruins), double sleeping spot, animal sleeping box; a grower sows the plant pot; AX-7: bookcase and small bookcase on one card family, books-only storage for 10 and 5 whose shelved books give the room the wiki reading bonus)
 -   [x] **Power** (PLAY-021: conduit, hidden conduit, switch, four generators, battery; AX-4: waterproof conduit over shallow water, chemfuel generator, watermill on the map's flowing river)
--   [-] **Security** (15 of 15 work; AX-5: foam and warhead charges, foam turret, rocket battery; missing: the rocket battery's manual activation and per-rocket tile spread)
--   [-] **Misc/ship** (Misc 16 of 21, AX-5 foam popper, AX-4 ground-penetrating scanner and moisture pump, AX-2 egg box and large and grand steles; Ship 0 of 6, all placeholders)
+-   [x] **Security** (15 of 15 work; AX-5: foam and warhead charges, foam turret, and the rocket battery, manned and aimed like the mortar)
+-   [-] **Misc/ship** (Misc 21 of 21, AX-5 foam popper, AX-4 ground-penetrating scanner and moisture pump, AX-2 egg box and large and grand steles, AX-9 stasis casket, transport pod, pod launcher, long-range mineral scanner and hitching spot; Ship 0 of 6, all placeholders)
 -   [x] **Floors** (STK-AG: wood floor, entrance carpet, Smooth; AX-3: straw matting, concrete, paved tile, steel, silver, gold and sterile tile, stone tiles and flagstones (one card each with a stone picker), and the colour-picked carpet floor; AX-1: Remove floor)
 -   [-] **Recreation** (STK-AG: horseshoe pin only; 9 placeholders)
 -   [x] **Temperature** (STK-AG: campfire, heater, cooler, passive cooler, vent)

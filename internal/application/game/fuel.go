@@ -201,8 +201,8 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 	for _, f := range fires {
 		b, _ := g.bldgs.Get(f.bid)
 		fuel := item.Wood
-		if b.Kind == construction.ChemfuelGenerator {
-			fuel = item.Chemfuel // AX-4: it burns chemfuel only
+		if b.Kind == construction.ChemfuelGenerator || b.Kind == construction.PodLauncher {
+			fuel = item.Chemfuel // AX-4, AX-9: they take chemfuel only
 		}
 		need := g.fuelRoom(f.bid, fuel)
 		sid, st := g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need})

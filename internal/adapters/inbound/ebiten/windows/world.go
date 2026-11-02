@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/planet"
 )
 
@@ -63,6 +64,9 @@ type worldUI struct {
 	// Caravan dialog offers it as the destination.
 	picked int
 	sel    uint64 // selected caravan
+	// launch is the transport pod whose group is picking its target
+	// (0: the tab is not picking; world_ax9.go, AX-9).
+	launch entity.EntityID
 }
 
 // Toggle opens the World tab, or closes it when it is the open one.
@@ -70,11 +74,13 @@ func (w World) Toggle() { w.toggleKit(WorldModalID, w.Launch) }
 
 // Launch opens the World tab: a main-tab window in the Window rect
 // (window.go), with Form caravan in its footer.
-func (w World) Launch() {
+func (w World) Launch() { w.launchWith(&worldUI{picked: -1}) }
+
+// launchWith opens the World tab over st.
+func (w World) launchWith(st *worldUI) {
 	if !w.live() {
 		return
 	}
-	st := &worldUI{picked: -1}
 	if src, ok := w.sh.Env().Game.(WorldSource); ok {
 		st.params, st.hasMap = src.WorldParams()
 	}
@@ -165,6 +171,7 @@ func (w World) globe(st *worldUI, r gfx.Rect, view game.WorldMapView) {
 	for _, c := range view.Caravans {
 		tiles = append(tiles, c.Tile)
 	}
+	tiles = append(tiles, travelTiles(w.sh.World())...) // world_ax9.go (AX-9): pods' targets, mining sites
 	g.Highlight(tiles, 2)
 	mx, my := w.sh.Cursor()
 	blocked := w.kit().ModalOpen() || w.KitID() != WorldModalID || !r.Hit(mx, my) // a dialog over the tab takes the pointer
@@ -173,7 +180,7 @@ func (w World) globe(st *worldUI, r gfx.Rect, view game.WorldMapView) {
 		st.picked = clicked
 	}
 	art := w.sh.Env().Art
-	caravans := view.Caravans
+	caravans, marks := view.Caravans, travelMarks(p, w.sh.World(), uint64(w.sh.Tick())) // world_ax9.go (AX-9)
 	w.kit().Queue(func(dst *ebiten.Image) {
 		sub := gfx.ClipTo(dst, r)
 		uikit.FillRect(sub, r, uikit.Space)
@@ -181,6 +188,7 @@ func (w World) globe(st *worldUI, r gfx.Rect, view game.WorldMapView) {
 		g.EnsureGPU(sw, sh)
 		g.DrawBody(sub)
 		drawCaravanMarks(sub, g, art, caravans)
+		drawTravelMarks(sub, g, art, marks)
 	})
 	line := "Colony tile marked. Click a tile to pick it as a caravan destination."
 	if st.picked >= 0 {
@@ -189,6 +197,10 @@ func (w World) globe(st *worldUI, r gfx.Rect, view game.WorldMapView) {
 			name = fmt.Sprintf("tile %d", st.picked)
 		}
 		line = "Picked: " + name
+	}
+	if st.launch != 0 {
+		w.launchBar(st, r, p) // world_ax9.go (AX-9): the pods' target picker
+		return
 	}
 	w.kit().Label(r.X+6, r.Bottom()-float32(gfx.LineH(gfx.Small))-4, line, gfx.WithColor(gfx.Small, uikit.TextDim))
 }
@@ -254,6 +266,11 @@ func CaravanReturnLabel(c game.CaravanView) (label, reason string) {
 
 // list declares the caravan list (the §35 inspector rows).
 func (w World) list(st *worldUI, r gfx.Rect, view game.WorldMapView) {
+	if st.launch != 0 {
+		w.launchList(st, r) // world_ax9.go (AX-9): targets in range
+		return
+	}
+	r = w.travelList(r) // world_ax9.go (AX-9): pods in flight, mining sites
 	head, rest := r.SplitV(28)
 	w.kit().Label(head.X, head.Y, "Caravans", gfx.WithColor(gfx.Label, uikit.Heading))
 	if len(view.Caravans) == 0 {

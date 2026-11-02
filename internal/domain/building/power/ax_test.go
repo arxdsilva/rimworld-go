@@ -20,4 +20,5 @@ var axWant = map[construction.Kind]Spec{
 	construction.TubeTV:              {Role: Consumer, Class: ClassBench, Draw: 200, Idle: 20, Toggle: true},
 	construction.FlatscreenTV:        {Role: Consumer, Class: ClassBench, Draw: 330, Idle: 33, Toggle: true},
 	construction.BigScreenTV:         {Role: Consumer, Class: ClassBench, Draw: 450, Idle: 45, Toggle: true},
+	construction.ShipReactor:         {Role: Producer, Peak: 1000, Toggle: true},
 }

@@ -5,6 +5,9 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/ship"
+	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/backstory"
@@ -383,4 +386,74 @@ func (g *Game) revengePct(base int) int {
 // predatorsHuntColonists: wild predators may pick colonists as prey.
 func (g *Game) predatorsHuntColonists() bool {
 	return !g.hasSetup() || g.ng.setup.Difficulty.PredatorsHuntColonists
+}
+
+// --- game/ship (AX-8): the escape ship, its reactor's raids, the ending.
+
+// shipOf is the ship component, built on first use off the world state.
+func shipOf(g *Game) *ship.State {
+	if w := g.worldS(); w.ship == nil {
+		w.ship = &ship.State{}
+	}
+	return g.worldSt.ship
+}
+
+// shipHost implements ship.Host over the game.
+type shipHost struct{ g *Game }
+
+func (h shipHost) StructVer() uint64              { return h.g.structVer }
+func (h shipHost) BuildingIDs() []entity.EntityID { return h.g.bldgIDs }
+func (h shipHost) Building(id entity.EntityID) (construction.Building, bool) {
+	return h.g.bldgs.Get(id)
+}
+func (h shipHost) Lift(id entity.EntityID) { h.g.removeBuildingAs(id, false) }
+func (h shipHost) Ready(id entity.EntityID) bool {
+	return h.g.standingPawn(id) && slices.Contains(h.g.pawnIDs, id)
+}
+func (h shipHost) Name(id entity.EntityID) string { return h.g.name(id) }
+func (h shipHost) Spot(id entity.EntityID, x, y int) (int, int, bool) {
+	return h.g.reachableSpot(id, x, y)
+}
+func (h shipHost) StartJob(id entity.EntityID, rec job.Record) bool { return h.g.startJob(id, rec) }
+func (h shipHost) SetJob(id entity.EntityID, j job.Record)          { h.g.jobs.Set(id, j) }
+func (h shipHost) Board(id, casket entity.EntityID) bool            { return h.g.stashPawn(id, casket) }
+func (h shipHost) Wake(id, casket entity.EntityID) bool {
+	x, y, ok := 0, 0, false
+	if b, has := h.g.bldgs.Get(casket); has {
+		x, y, ok = h.g.casketExit(b, nil) // casket.go: a free cell beside it
+	} else if i, found := slices.BinarySearchFunc(h.g.worldS().stashed, id, stashCmp); found {
+		r := h.g.worldSt.stashed[i] // the casket is gone: beside where it stood
+		x, y, ok = h.g.combat.Tiles.WalkableNear(r.X, r.Y, 3)
+	}
+	return ok && h.g.unstashPawn(id, x, y)
+}
+func (h shipHost) Now() uint64  { return uint64(h.g.clock.Now()) }
+func (h shipHost) Seed() uint64 { return h.g.streams.seed }
+func (h shipHost) Raid(mech bool) {
+	g, now := h.g, uint64(h.g.clock.Now())
+	day := int(now / clock.TicksPerDay)
+	switch {
+	case g.hasSetup() && !g.ng.setup.Difficulty.BigThreats: // the difficulty's no big threats holds
+	case mech && g.raid.Threats.MechRaid(g.raidPoints(day), now) > 0:
+	case g.hasSetup():
+		g.storyRaid(g.relDay(now), 100) // the storyteller's raid, at its threat points
+	default:
+		g.scaledRaid(day)
+	}
+}
+func (h shipHost) Letter(title, text string, x, y int, danger bool) {
+	if danger {
+		h.g.threat(title, x, y, "%s", text)
+		return
+	}
+	h.g.post(MessageView{Tick: uint64(h.g.clock.Now()), Text: text, X: x, Y: y, Letter: true, Title: title, Kind: letterGood})
+}
+func (h shipHost) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
+func (h shipHost) Changed()                      { h.g.viewGen++ }
+
+// DevWakeShip moves the ship reactors' countdowns and the next countdown
+// raid on by ticks (dev mode and journeys).
+func DevWakeShip(g *Game, ticks uint64) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	shipOf(g).Rewind(ticks)
 }

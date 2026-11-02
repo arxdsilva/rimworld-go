@@ -341,7 +341,7 @@ func TestProposeTradeMovesGoods(t *testing.T) {
 	}
 	silver0, comps0, bought0 := totalOf(g, item.Silver), totalOf(g, item.Components), totalOf(g, buy.Kind)
 	tsilver0, tstock0 := c.Stock.Silver, buy.Qty
-	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: EncodeTradeOffer(offer)})
+	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer(offer)})
 	g.ApplyPending()
 	v, ok := g.TradeView()
 	if !ok || v.Reason != "" {
@@ -373,7 +373,7 @@ func TestProposeTradeMovesGoods(t *testing.T) {
 	// a gift: goodwill for goods, no silver back
 	f.Goodwill = 0
 	silver1 := totalOf(g, item.Silver)
-	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: EncodeTradeOffer([]trade.Delta{{Kind: item.Silver, Qty: -200}}), Enabled: true})
+	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer([]trade.Delta{{Kind: item.Silver, Qty: -200}}), Enabled: true})
 	g.ApplyPending()
 	if f.Goodwill != faction.GiftGoodwill(200) || totalOf(g, item.Silver) != silver1-200 {
 		t.Fatalf("gift: goodwill %d, silver %d -> %d", f.Goodwill, silver1, totalOf(g, item.Silver))
@@ -393,7 +393,7 @@ func TestProposeTradeRejectsStaleCounts(t *testing.T) {
 	g.takeGoods(gd, item.Components, 5) // half is used up meanwhile
 	stock := cloneStock(c.Stock)
 	comps := totalOf(g, item.Components)
-	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: EncodeTradeOffer(offer)})
+	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer(offer)})
 	g.ApplyPending()
 	v, _ := g.TradeView()
 	if v.Reason != trade.RejectOverStock.String() {
@@ -553,7 +553,7 @@ func TestOrbitalPurchaseDropsPod(t *testing.T) {
 		t.Fatalf("settle: %s", res.Reject)
 	}
 	before := totalOf(g, buy.Kind)
-	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: EncodeTradeOffer(offer)})
+	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer(offer)})
 	g.ApplyPending()
 	if v, _ := g.TradeView(); v.Reason != "" {
 		t.Fatalf("refused: %s", v.Reason)

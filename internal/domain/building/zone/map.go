@@ -35,15 +35,22 @@ const (
 	// bodies it takes, at what priority): burial fills it, never hauling.
 	KindHopper
 	KindGrave
+	// KindBookcase (A7) is a bookcase's storage, laid by it like
+	// KindShelf: books only, BookcaseStacks a cell.
+	KindBookcase
 )
 
 // ShelfStacks is how many stacks one shelf cell holds (wiki: Shelf).
 const ShelfStacks = 3
 
+// BookcaseStacks is how many books one bookcase cell holds (wiki:
+// Bookcase, 10 books on its 2 cells; Small bookcase, 5).
+const BookcaseStacks = 5
+
 // Storage reports a kind haulers store things in: stockpiles, dumping
 // stockpiles, shelves and hoppers.
 func (k Kind) Storage() bool {
-	return k == KindStockpile || k == KindDump || k == KindShelf || k == KindHopper
+	return k == KindStockpile || k == KindDump || k == KindShelf || k == KindHopper || k == KindBookcase
 }
 
 // Settings reports a kind with storage settings (filter, special
@@ -54,7 +61,9 @@ func (k Kind) Settings() bool { return k.Storage() || k == KindGrave }
 // hopper, grave): it never merges with a neighbour, the player's zone
 // tools leave it alone, and only RemoveTiles lifts it. Such zones may
 // link into a storage group (Link).
-func (k Kind) Building() bool { return k == KindShelf || k == KindHopper || k == KindGrave }
+func (k Kind) Building() bool {
+	return k == KindShelf || k == KindHopper || k == KindGrave || k == KindBookcase
+}
 
 // HopperStack is the most one hopper cell holds of a raw food: one
 // stack, the vanilla raw-food stack (wiki: Hopper, one stack of food;
@@ -73,8 +82,11 @@ func (k Kind) StackCap(lim int) int {
 
 // Stacks is how many stacks one cell of a storage zone of kind k holds.
 func (k Kind) Stacks() int {
-	if k == KindShelf {
+	switch k {
+	case KindShelf:
 		return ShelfStacks
+	case KindBookcase:
+		return BookcaseStacks
 	}
 	return 1
 }

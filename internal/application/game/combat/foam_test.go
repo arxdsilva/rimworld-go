@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -238,48 +239,77 @@ func TestFoamTurretRefuel(t *testing.T) {
 	}
 }
 
-// TestRocketBatteryVolley: a loaded battery fires a volley of 12 rockets
-// at a raider, then is spent until a full reload of chemfuel, and stays
-// quiet for its recharge even once reloaded.
+// TestRocketBatteryVolley: a rocket battery never fires on its own; once
+// the player sets a target, a drafted colonist on its crew spot mans it
+// and it fires a volley of 12 rockets, each on its own roll within the
+// forced-miss radius of the target; the volley clears the target and
+// empties it, a colonist reloads the full 180 chemfuel, and it stays
+// quiet for its recharge.
 func TestRocketBatteryVolley(t *testing.T) {
 	t.Parallel()
 	f, _, c := foamRig()
 	f.build(50, construction.RocketBattery, 10, 5)
-	f.wired, f.powered[50], f.defense, f.gen = true, true, []entity.EntityID{50}, 1
-	tu := c.Turrets
-	f.raider(1, 10, 25, weapon.Club)
-	for range 400 {
-		f.now++
-		tu.Phase(f.now)
+	f.wired, f.powered[50], f.gen = true, true, 1
+	m := c.Mortars
+	sx, sy := spot(f.bldgs[50])
+	f.pawn(1, sx, sy, weapon.Fists)
+	f.drafted[1] = true
+	f.raider(2, 10, 25, weapon.Club)
+	rockets := func() int {
+		n := 0
+		for _, tr := range f.traces {
+			if tr.Weapon == "rocket battery" && tr.Stage == projectile.Fired {
+				n++
+			}
+		}
+		return n
 	}
-	rockets := 0
-	for _, tr := range f.traces {
-		if tr.Weapon == "rocket battery" && tr.Stage == projectile.Fired {
-			rockets++
+	step := func(n int) {
+		for range n {
+			f.now++
+			m.phase(f.now)
+			if j, ok := f.jobs[1]; ok && j.Kind == job.ManMortar && j.State != job.Do {
+				arrive(f, 1)
+			}
 		}
 	}
-	if rockets != RocketVolley || !tu.Spent(50, construction.RocketBattery) || !tu.wantsRearm(50, construction.RocketBattery) {
-		t.Fatalf("rockets %d spent %v", rockets, tu.Spent(50, construction.RocketBattery))
+	step(300)
+	if rockets() != 0 || m.State(50).Crew != 0 {
+		t.Fatal("a rocket battery fired (or was manned) on its own")
 	}
-	if tu.chemfuel(50, construction.RocketBattery) != 20 {
-		t.Fatal("a reload is 180 chemfuel, /9")
+	f.droll = []int{0, 0, 11, 11, 3, 8} // the first rocket lands wide of the aim (the rest, out of rolls, on it)
+	c.Orders.Apply(command.Command{Kind: command.SetMortarTarget, X: 10, Y: 5, X2: 10, Y2: 28})
+	if v := c.Orders.View(50, f.bldgs[50], f.now); !v.HasTarget || v.Charges != RocketVolley || v.ChargeCap != RocketVolley {
+		t.Fatalf("view %+v", v)
 	}
-	tu.Rearm(50)
-	if tu.Spent(50, construction.RocketBattery) || tu.arms[50].Cool < f.now+weapon.RocketRecharge-400 {
-		t.Fatalf("reloaded %+v", tu.arms[50])
+	step(400)
+	if rockets() != RocketVolley || m.State(50).Crew != 1 {
+		t.Fatalf("rockets %d crew %d", rockets(), m.State(50).Crew)
 	}
-	for range 400 {
-		f.now++
-		tu.Phase(f.now)
-	}
-	n := 0
-	for _, tr := range f.traces {
-		if tr.Weapon == "rocket battery" && tr.Stage == projectile.Fired {
-			n++
+	spread, onAim := 0, 0
+	for _, sh := range c.Shots.Export() {
+		if sh.Weapon == weapon.SwarmRocket && !sh.Aimed {
+			spread++
+		} else if sh.Weapon == weapon.SwarmRocket {
+			onAim++
 		}
 	}
-	if n != RocketVolley {
+	if spread != 1 || onAim != RocketVolley-1 {
+		t.Fatalf("spread %d on the aim %d: each rocket rolls its own miss", spread, onAim)
+	}
+	if v := c.Orders.View(50, f.bldgs[50], f.now); v.HasTarget || v.Charges != 0 || !m.reloadWanted(50) {
+		t.Fatalf("after the volley %+v", v)
+	}
+	m.reload(50)
+	c.Orders.Apply(command.Command{Kind: command.SetMortarTarget, X: 10, Y: 5, X2: 10, Y2: 28})
+	step(400)
+	if rockets() != RocketVolley {
 		t.Fatal("fired again inside its recharge")
+	}
+	f.now += weapon.RocketRecharge
+	step(400)
+	if rockets() != 2*RocketVolley {
+		t.Fatalf("no volley after the recharge: %d", rockets())
 	}
 }
 

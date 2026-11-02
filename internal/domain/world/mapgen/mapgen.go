@@ -173,6 +173,13 @@ type Ruin struct {
 	// Urns (A2) stand in a shed: an antique never built, only found (or
 	// traded); Stuff is the ruin's wall material.
 	Urns []RuinFloor
+	// Screens and Scopes (A6) are a big screen television (its west cell;
+	// three cells wide, facing south) and a telescope left in a shed: never
+	// built, only found. Stuff is steel.
+	Screens, Scopes []RuinFloor
+	// Books (A7) is a book left in a shed (Qty 1): the game mints its
+	// quality and title when it spawns it.
+	Books []Loot
 }
 
 // Casket is a sealed sleeper casket in a vault (MAPGEN-3): its top cell

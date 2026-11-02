@@ -306,6 +306,9 @@ func (a Pawn) PawnLines(p game.PawnView) []string {
 	if ln := StripLine(p); ln != "" { // cmds_orders.go (AX-1)
 		out = append(out, ln)
 	}
+	if ln := ReadingLine(p); ln != "" { // ax7.go (AX-7)
+		out = append(out, ln)
+	}
 	if ln := PostponedLine(p.Postponed); ln != "" {
 		out = append(out, ln)
 	}

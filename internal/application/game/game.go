@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/application/game/axview"
 	"rimworld-go/internal/application/game/bodytemp"
+	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
@@ -1026,6 +1027,9 @@ func (g *Game) SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error
 	id := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, id)
 	g.putStack(id, item.Stack{Kind: kind, Qty: qty, X: x, Y: y})
+	if kind.IsBook() {
+		books.Mint(g.stacks.Ref(id), g.streams.seed, uint64(id), g.lab.Prog.Done) // game/books (A7): quality and title, hashed
+	}
 	if kind.IsApparel() {
 		g.noteApparel(id) // apparel.go: the free-clothes index
 	}
@@ -1240,8 +1244,8 @@ func (g *Game) snapshot() []PawnView {
 		if in, ok := g.mind.Inspire.Of(id); ok {                                 // mind/inspiration.go (PRD-2)
 			pv.Inspiration, pv.InspirationTicks = in.Kind.String(), in.Until-uint64(g.clock.Now())
 		}
-		pv.Recreation = g.joy[id] * 100 / recreation.Full
-		pv.Comfort, pv.Beauty, pv.Outdoors = g.rest.Needs.Percents(id) // rest/needs.go (BED-3)
+		pv.Recreation, pv.AX.Joy, pv.AX.Tolerance = g.joy[id]*100/recreation.Full, recView(g).Joy(id), recView(g).Tolerances(id) // AX-6
+		pv.Comfort, pv.Beauty, pv.Outdoors = g.rest.Needs.Percents(id)                                                           // rest/needs.go (BED-3)
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()
 		}
@@ -1312,6 +1316,8 @@ func (g *Game) world() WorldView {
 	}
 	w.Research, w.Locked = g.lab.Lists(g.views.on) // game/research
 	w.AX.DeepOreVer, w.AX.DeepOre = g.br.ind.DeepOre(g.grid.Width())
+	shipOf(g).FillWorld(shipHost{g}, &w.AX) // story.go: game/ship (AX-8)
+	travelOf(g).World(&w.AX)                // world_stash.go: game/travel (AX-9): pods in flight, mineral sites
 	w.ResearchAlert, w.TechLevel = g.lab.Alert(), researchHost{g}.Tech().String()
 	if n, felled := g.Timbergnaws(); n > 0 {
 		w.TreesFelled = felled

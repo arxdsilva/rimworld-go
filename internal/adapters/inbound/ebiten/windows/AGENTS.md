@@ -12,7 +12,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 ## Allowed Dependencies
 - Leaves: `art`, `gfx`, `ids`, `inputframe`, `ports`, `uikit`.
 - `globe`: the World tab charts the planet with the globe view (stated as fact: windows imports `globe`).
-- `application/game` read models; domain `ai/work`, `building/construction`, `faction`, `pawn/drug`, `pawn/medcare`, `pawn/schedule`, `pawn/skill`, `sim/clock`, `sim/command`, `sim/entity`, `world/planet`.
+- `application/game` read models; domain `ai/work`, `building/construction`, `faction`, `pawn/drug`, `pawn/medcare`, `pawn/schedule`, `pawn/skill`, `sim/clock`, `sim/command`, `sim/entity`, `world/caravan` (pod range and flight time, AX-9), `world/planet`.
 - Ebitengine (`ebiten`, `vector`); stdlib (`fmt`, `image/color`, `math`).
 
 ## Forbidden Dependencies

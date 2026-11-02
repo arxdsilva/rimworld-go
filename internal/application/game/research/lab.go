@@ -167,6 +167,26 @@ func (l *Lab) finish(x, y int) {
 	l.Set, l.Carry = false, 0
 }
 
+// CostOf is project p's cost to this colony, percent of its base cost
+// (its tech level's and the scenario's parts, as bench work pays).
+func (l *Lab) CostOf(p proj.Project) int { return max(1, l.costPct(p)*l.h.CostPct()/100) }
+
+// Study puts n points (at base cost) into p from a schematic being read
+// (AX-7, game/books). Finishing p posts the research letter at (x, y)
+// and drops p if it was the current project; another pick is kept.
+func (l *Lab) Study(p proj.Project, n, x, y int) {
+	if !l.Prog.Add(p, n) {
+		return
+	}
+	cur, set, carry := l.Cur, l.Set, l.Carry
+	l.Cur = p
+	l.finish(x, y)
+	if p != cur {
+		l.Cur, l.Set, l.Carry = cur, set, carry
+	}
+	l.h.Changed()
+}
+
 // DevFinish finishes the current project at once, as if its last point
 // went in (developer mode).
 func (l *Lab) DevFinish() {

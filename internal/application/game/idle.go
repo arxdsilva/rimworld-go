@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -80,9 +81,12 @@ func (g *Game) assignIdle(id entity.EntityID) bool {
 	}
 	linger := idleMinTicks + g.rng.IntN(idleMaxTicks-idleMinTicks)
 	if g.temperamentOf(id) != Wanderer || g.rng.IntN(2) == 0 {
-		if g.joy[id] < recreation.Entertained && g.rng.IntN(3) > 0 && g.idleHorseshoes(id, linger) {
-			return true // the best fun around, when there's a pin
+		if g.joy[id] < recreation.Entertained && g.rng.IntN(3) > 0 && recOf(g).Seek(id, linger) {
+			return true // game/recreate (AX-6): the best fun around, when there's a pin, a game or a screen
 		}
+	}
+	if booksOf(g).Seek(id) { // game/books (AX-7): a book, when bored and one lies in reach
+		return true
 	}
 	switch pick {
 	case 1:
@@ -288,7 +292,7 @@ func (g *Game) idleAt(id entity.EntityID, linger int, kind job.Kind,
 func (g *Game) doIdle(id entity.EntityID, j job.Record) {
 	j.WorkLeft--
 	if _, breaking := g.breaks[id]; !breaking && uint64(g.clock.Now())%recreation.GainPeriod == 0 {
-		g.joy[id] = recreation.Clamp(g.joy[id] + recreation.Gain(activityOf(j.Kind)))
+		g.joy[id] = recreation.Clamp(g.joy[id] + recreation.Gain(recreate.ActivityOf(j.Kind)))
 	}
 	if j.Kind == job.Chat {
 		pos, _ := g.positions.Get(id)
@@ -309,57 +313,3 @@ func (g *Game) doIdle(id entity.EntityID, j job.Record) {
 
 // TemperamentOf names a colonist's free-time leaning (inspector).
 func (g *Game) TemperamentOf(id entity.EntityID) string { return g.temperamentOf(id).String() }
-
-// activityOf maps a free-time job to its recreation activity.
-func activityOf(k job.Kind) recreation.Activity {
-	switch k {
-	case job.Wander:
-		return recreation.Wander
-	case job.Chat, job.SocialRelax:
-		return recreation.Chat
-	case job.Relax:
-		return recreation.Relax
-	case job.FireSide:
-		return recreation.FireSide
-	case job.Horseshoes:
-		return recreation.Horseshoes
-	}
-	return recreation.None
-}
-
-// idleHorseshoes pitches horseshoes at the nearest pin from a spot three
-// tiles off it.
-func (g *Game) idleHorseshoes(id entity.EntityID, linger int) bool {
-	pos, _ := g.positions.Get(id)
-	var best construction.Building
-	found, bestD := false, 31
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.HorseshoePin || !g.areaAllows(id, b.X, b.Y) { // areas.go
-			continue
-		}
-		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD {
-			best, bestD, found = b, d, true
-		}
-	}
-	if !found {
-		return false
-	}
-	for _, d := range [][2]int{{0, 3}, {3, 0}, {0, -3}, {-3, 0}, {2, 2}, {-2, 2}, {2, -2}, {-2, -2}} {
-		x, y := best.X+d[0], best.Y+d[1]
-		if !g.grid.Walkable(x, y) || g.bedCovering(x, y) || !g.inArea(id, x, y) { // areas.go
-			continue
-		}
-		if _, taken := g.reserve.TileOwner(x, y); taken {
-			continue
-		}
-		if !g.reachable(id, x, y) {
-			continue
-		}
-		if g.startJob(id, job.Record{Kind: job.Horseshoes, TX: x, TY: y, DestX: best.X, DestY: best.Y, WorkLeft: linger}) {
-			g.reserve.TryTile(id, x, y)
-			return true
-		}
-	}
-	return false
-}

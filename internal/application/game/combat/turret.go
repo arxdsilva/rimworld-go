@@ -76,11 +76,11 @@ const (
 
 // isTurret reports a kind the turret code runs: the sentry turret and the
 // two heavy turrets.
-// AX-5 adds the foam turret and the rocket battery.
+// AX-5 adds the foam turret (the rocket battery is manned like a mortar:
+// battery.go).
 func isTurret(k construction.Kind) bool {
 	switch k {
-	case construction.SentryTurret, construction.Autocannon, construction.UraniumSlugTurret, construction.FoamTurret,
-		construction.RocketBattery:
+	case construction.SentryTurret, construction.Autocannon, construction.UraniumSlugTurret, construction.FoamTurret:
 		return true
 	}
 	return false
@@ -95,7 +95,7 @@ func gunOf(k construction.Kind) weapon.Kind {
 		return weapon.SlugTurret
 	case construction.FoamTurret:
 		return weapon.FoamSpray
-	case construction.RocketBattery:
+	case construction.RocketBattery: // its blast when smashed is named after its rockets
 		return weapon.SwarmRocket
 	}
 	return weapon.SentryGun
@@ -129,8 +129,6 @@ func turretName(k construction.Kind) string {
 		return "an autocannon"
 	case construction.UraniumSlugTurret:
 		return "a slug turret"
-	case construction.RocketBattery:
-		return "a rocket battery"
 	case construction.FoamTurret:
 		return "a foam turret"
 	}
@@ -335,7 +333,7 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 		if !ok {
 			return
 		}
-		a.Target, a.ReadyAt, a.SeenAt, tx, ty = s.ID, now+uint64(max(turretAimTicks, aimOf(k, d))), now, s.X, s.Y
+		a.Target, a.ReadyAt, a.SeenAt, tx, ty = s.ID, now+turretAimTicks, now, s.X, s.Y
 	}
 	a.Dir = aimFrame(x, y, tx, ty, a.Dir)
 	if a.SeenAt == now && now >= a.ReadyAt && weapon.ReachesAt(d, x, y, tx, ty) { // CBT-2: straight-line range
@@ -346,22 +344,9 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 			a.ReadyAt = now + uint64(d.BurstTicks)
 		} else {
 			a.Burst = 0
-			if k == construction.RocketBattery { // AX-5: the volley is gone; it recharges
-				t.cool(id, now+uint64(d.Cooldown))
-			}
 		}
 	}
 	t.setAim(id, a)
-}
-
-// aimOf is the aim before the first shot of turret kind k's gun d beyond
-// turretAimTicks: the rocket battery's 60 ticks (AX-5). wiki: Rocketswarm
-// launcher
-func aimOf(k construction.Kind, d weapon.Def) int {
-	if k == construction.RocketBattery {
-		return d.Warmup
-	}
-	return 0
 }
 
 // wear counts a round off turret id's barrel.

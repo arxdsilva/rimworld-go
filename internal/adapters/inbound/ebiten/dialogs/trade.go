@@ -8,7 +8,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/command"
@@ -130,7 +129,7 @@ func (d *tradeDraft) giftSilver() int {
 func (d *tradeDraft) colonyAfterC() int { return d.view.ColonySilver*100 - d.totalC() }
 func (d *tradeDraft) traderAfterC() int { return d.view.TraderSilver*100 + d.totalC() }
 
-// offer is the deal as game.EncodeTradeOffer takes it (zero lines out).
+// offer is the deal as trade.EncodeOffer takes it (zero lines out).
 func (d *tradeDraft) offer() []trade.Delta {
 	var out []trade.Delta
 	for _, r := range d.view.Rows {
@@ -138,8 +137,8 @@ func (d *tradeDraft) offer() []trade.Delta {
 		if n == 0 {
 			continue
 		}
-		if k, ok := item.ParseKind(r.Kind); ok {
-			out = append(out, trade.Delta{Kind: k, Qty: n})
+		if g, ok := trade.ParseGoods(r.Kind); ok { // AX-1: a crated building's row names its building
+			out = append(out, trade.Delta{Kind: g.Kind, Qty: n, Building: g.Building})
 		}
 	}
 	return out
@@ -260,7 +259,7 @@ func (dl *Dealings) proposeTrade(d *tradeDraft) {
 	if d.reason() != "" {
 		return
 	}
-	dl.sh.Enqueue(command.Command{Kind: command.ProposeTrade, Name: game.EncodeTradeOffer(d.offer()), Enabled: d.gift})
+	dl.sh.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer(d.offer()), Enabled: d.gift})
 }
 
 // TradeLine is one row of the table: a category header or a goods row.

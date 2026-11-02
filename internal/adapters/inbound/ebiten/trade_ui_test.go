@@ -68,7 +68,7 @@ func TestTradeDialogEmitsProposeTrade(t *testing.T) {
 	clickID(t, a, f, "trade."+item.Wood.String()+".give.1")
 	clickID(t, a, f, "trade."+item.Wood.String()+".give.1")
 	clickID(t, a, f, "modal."+dialogs.TradeModalID+".accept")
-	want := game.EncodeTradeOffer([]trade.Delta{{Kind: item.Wood, Qty: -1}})
+	want := trade.EncodeOffer([]trade.Delta{{Kind: item.Wood, Qty: -1}})
 	var got *command.Command
 	for i := range s.cmds {
 		if s.cmds[i].Kind == command.ProposeTrade {

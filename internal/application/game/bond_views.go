@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/herd"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/sim/entity"
@@ -40,8 +41,8 @@ func (g *Game) fillAnimalBonds(av *AnimalView, id entity.EntityID, a animal.Stat
 		av.MasterID = entity.EntityID(a.Master)
 		av.Master = g.name(av.MasterID)
 	}
-	av.CanFollow = trainLearned(a, training.Obedience, now) || trainLearned(a, training.Guard, now) ||
-		trainLearned(a, training.Release, now)
+	av.CanFollow = herd.TrainLearned(a, training.Obedience, now) || herd.TrainLearned(a, training.Guard, now) ||
+		herd.TrainLearned(a, training.Release, now)
 	av.Follows = av.CanFollow && !a.NoFollow
 	if a.Bond != 0 {
 		av.BondID = entity.EntityID(a.Bond)

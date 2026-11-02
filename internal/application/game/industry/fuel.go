@@ -58,6 +58,8 @@ func FuelSpec(k construction.Kind) (Fuel, bool) {
 		return Fuel{CapTicks: GeneratorLogs * TicksPerWood, Below: GeneratorLogs * TicksPerWood / 2, BurnPermil: GeneratorBurn}, true
 	case construction.ChemfuelGenerator:
 		return Fuel{CapTicks: ChemfuelTank * ChemfuelTicks, Below: ChemfuelTank * ChemfuelTicks / 2, BurnPermil: 1000}, true
+	case construction.PodLauncher: // AX-9, wiki: Pod launcher (150 chemfuel; burns only on a launch, game/travel)
+		return Fuel{CapTicks: 150 * ChemfuelTicks, Below: 135 * ChemfuelTicks}, true
 	case construction.FueledSmithy, construction.Stove: // PRD-3, FOOD-4, wiki: Fueled smithy, Fueled stove (50 logs, scaled / 10); burns only while worked (craft.WorkPerWood)
 		return Fuel{CapTicks: 5 * TicksPerWood, Below: 5 * TicksPerWood / 2}, true
 	case construction.PassiveCooler: // TEMP-1, wiki: Passive cooler (50 wood, 10 a day: one per TicksPerWood)

@@ -1,6 +1,7 @@
 package game
 
 import (
+	"cmp"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -364,35 +365,20 @@ func (g *Game) takeGoods(gd tradeGoods, k item.Kind, n int) {
 	}
 }
 
-// dropGoods puts qty of k down at (x, y) in stacks of at most its
-// StackLimit (spilling to free tiles), forbidden when forbid.
-func (g *Game) dropGoods(k item.Kind, qty, x, y int, forbid bool) {
-	for qty > 0 {
-		n := min(qty, k.StackLimit())
+// dropGoods puts line l down at (x, y) in stacks of at most its kind's
+// StackLimit (spilling to free tiles), forbidden when forbid; a crated
+// building keeps its kind, in its default material (AX-1).
+func (g *Game) dropGoods(l trade.Line, x, y int, forbid bool) {
+	for qty := l.Qty; qty > 0; {
+		n := min(qty, l.Kind.StackLimit())
 		qty -= n
-		sid, err := g.SpawnStack(k, n, x, y)
+		sid, err := g.SpawnStack(l.Kind, n, x, y)
 		if err != nil {
 			return
 		}
 		if s, ok := g.stacks.Get(sid); ok {
-			s.Forbidden = forbid
+			s.Forbidden, s.Building, s.Stuff = forbid, l.Building, cmp.Or(trade.CrateStuff(l.Building), s.Stuff)
 			g.mergeOrSet(sid, s)
 		}
-	}
-}
-
-// stockAdd adds qty (negative: removes) of kind k to st, keeping its lines
-// sorted by kind and dropping empty ones.
-func stockAdd(st *trade.Stock, k item.Kind, qty int) {
-	i, ok := slices.BinarySearchFunc(st.Lines, k, func(l trade.Line, k item.Kind) int { return int(l.Kind) - int(k) })
-	if ok {
-		st.Lines[i].Qty += qty
-		if st.Lines[i].Qty <= 0 {
-			st.Lines = slices.Delete(st.Lines, i, i+1)
-		}
-		return
-	}
-	if qty > 0 {
-		st.Lines = slices.Insert(st.Lines, i, trade.Line{Kind: k, Qty: qty})
 	}
 }

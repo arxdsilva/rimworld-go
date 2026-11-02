@@ -29,8 +29,8 @@ func TestEncodeTradeOfferRoundTrip(t *testing.T) {
 		{{Kind: item.Components, Qty: -3}, {Kind: item.Meal, Qty: 12}, {Kind: item.Rifle, Qty: -1}},
 		{{Kind: item.Wood, Qty: 1000000}, {Kind: item.Food, Qty: -999}},
 	} {
-		s := EncodeTradeOffer(offer)
-		got, err := DecodeTradeOffer(s)
+		s := trade.EncodeOffer(offer)
+		got, err := trade.DecodeOffer(s)
 		if err != nil || !reflect.DeepEqual(got, offer) && (len(got) != 0 || len(offer) != 0) {
 			t.Fatalf("%q decodes to %v, %v; want %v", s, got, err, offer)
 		}
@@ -38,11 +38,11 @@ func TestEncodeTradeOfferRoundTrip(t *testing.T) {
 		_ = map[command.Command]bool{{Kind: command.ProposeTrade, Name: s}: true}
 	}
 	want := fmt.Sprintf("%d:-4,%d:2", item.Steel, item.Meal)
-	if s := EncodeTradeOffer([]trade.Delta{{Kind: item.Steel, Qty: -4}, {Kind: item.Meal, Qty: 2}}); s != want {
+	if s := trade.EncodeOffer([]trade.Delta{{Kind: item.Steel, Qty: -4}, {Kind: item.Meal, Qty: 2}}); s != want {
 		t.Fatalf("encoding %q, want %q", s, want)
 	}
 	for _, bad := range []string{"x", "1", "1:", ":2", "1:2,", "1:0", "1:2,1:3", "250:1", "-1:2", "1:2:3", "1;2", "1: 2"} {
-		if got, err := DecodeTradeOffer(bad); err == nil {
+		if got, err := trade.DecodeOffer(bad); err == nil {
 			t.Errorf("%q decoded to %v", bad, got)
 		}
 	}
@@ -126,7 +126,7 @@ func TestTradeCommandsInertInPhase0(t *testing.T) {
 	before := g.StateHash()
 	for _, k := range []command.Kind{command.ProposeTrade, command.CloseTrade, command.CommsCallTrader, command.CommsGift,
 		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms} {
-		g.Enqueue(command.Command{Kind: k, Index: 1, Count: 40, Name: EncodeTradeOffer([]trade.Delta{{Kind: item.Steel, Qty: 5}})})
+		g.Enqueue(command.Command{Kind: k, Index: 1, Count: 40, Name: trade.EncodeOffer([]trade.Delta{{Kind: item.Steel, Qty: 5}})})
 	}
 	g.ApplyPending()
 	if g.StateHash() != before {

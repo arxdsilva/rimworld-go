@@ -109,7 +109,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionEat
 	case job.Horseshoes:
 		return ActionHorseshoes
-	case job.Research, job.ScanGround:
+	case job.Research, job.ScanGround, job.ScanMinerals:
 		return ActionResearch
 	case job.Tame:
 		return ActionTame
@@ -165,7 +165,7 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 			return plant.DefOf(plant.Species(z.Crop)).SowWork
 		}
 		return SowWork
-	case job.Research, job.OperateDrill, job.ScanGround:
+	case job.Research, job.OperateDrill, job.ScanGround, job.ScanMinerals:
 		return rlab.Session
 	case job.Install, job.OpenContainer: // game/orders (AX-1)
 		return orders.WorkTotal(j.Kind, g.frames.Ref(j.Target))

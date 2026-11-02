@@ -11,10 +11,12 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/sim/command"
@@ -364,5 +366,54 @@ func TestJourneyAX1ClaimRuin(t *testing.T) {
 		if b.ID == ruin.ID && b.Ruin {
 			t.Fatalf("the ruin %s at (%d, %d) is still a ruin", b.Kind, b.X, b.Y)
 		}
+	}
+}
+
+// TestJourneyAX1BuyCrateFromTradeShip: the orbital trade ship's crated
+// furniture shows as its own row in the trade dialog; taking one and
+// accepting sends the crate in the offer, and the drop pod brings a
+// crated building of that kind.
+func TestJourneyAX1BuyCrateFromTradeShip(t *testing.T) {
+	t.Parallel()
+	j := radioColony(t)
+	if !j.g.FireIncident("orbital_trader") {
+		t.Fatal("the orbital trader incident refused this colony")
+	}
+	if _, err := j.g.SpawnStack(item.Silver, 3000, 13, 6); err != nil {
+		t.Fatal(err)
+	}
+	useRadio(t, j)
+	j.clickID("comms.call")
+	j.update(2)
+	if j.a.uiModalTop() != dialogs.TradeModalID {
+		t.Fatalf("top modal %q after the call, want the trade dialog", j.a.uiModalTop())
+	}
+	v, _ := j.g.TradeView()
+	var row game.TradeRowView
+	for _, r := range v.Rows {
+		if strings.Contains(r.Kind, ":") && r.TraderQty > 0 {
+			row = r
+			break
+		}
+	}
+	if row.Kind == "" {
+		t.Fatalf("the trade ship stocks no crated furniture: %+v", v.Rows)
+	}
+	if !strings.HasSuffix(row.Label, "(crated)") || row.WillSell {
+		t.Fatalf("crate row %+v", row)
+	}
+	if !j.clickID("trade." + row.Kind + ".take.1") {
+		t.Fatalf("take 1 %s is disabled", row.Label)
+	}
+	if !j.clickID("modal." + dialogs.TradeModalID + ".accept") {
+		t.Fatalf("Accept is disabled with a %s on the table", row.Label)
+	}
+	if c, ok := j.lastCmd(command.ProposeTrade); !ok || !strings.Contains(c.Name, "/") {
+		t.Fatalf("ProposeTrade %+v (sent %v), want the crate's building in the offer", c, ok)
+	}
+	j.clickID("modal." + dialogs.TradeModalID + ".cancel")
+	want := strings.SplitN(row.Kind, ":", 2)[1]
+	if !ax1Run(j, 3000, func() bool { c, ok := ax1Crate(j); return ok && c.AX.Building == want }) {
+		t.Fatalf("no crated %s came down", want)
 	}
 }

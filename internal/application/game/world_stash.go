@@ -64,7 +64,9 @@ func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 	w := g.worldS()
 	i, _ := slices.BinarySearchFunc(w.stashed, id, stashCmp)
 	w.stashed = slices.Insert(w.stashed, i, stashRec{ID: id, Holder: holder, X: pos.X, Y: pos.Y})
-	g.setWhere(id, whereCaravan)
+	if g.caravanAt(holder) != nil { // a casket or a pod keeps what it is (AX-9)
+		g.setWhere(id, whereCaravan)
+	}
 	g.invalidateCreatures()
 	return true
 }
@@ -80,7 +82,9 @@ func (g *Game) unstashPawn(id entity.EntityID, x, y int) bool {
 	g.positions.Set(id, Position{X: x, Y: y})
 	g.jobs.Set(id, job.Record{})
 	g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go: ascending, as movers needs
-	g.setWhere(id, whereColony)
+	if p := g.personOf(id); p != nil && p.Where == whereCaravan {
+		p.Where = whereColony
+	}
 	g.invalidateCreatures()
 	return true
 }

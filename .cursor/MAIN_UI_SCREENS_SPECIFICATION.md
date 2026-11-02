@@ -790,7 +790,7 @@ lists every core item and its card):
 -   Security;
 -   Miscellaneous (grave, sarcophagus, tool cabinet, multi-analyzer, vitals monitor, spots, comms);
 -   Floors (wood floor, carpet, Smooth);
--   Recreation (horseshoe pin);
+-   Recreation (AX-6: horseshoe pin, ring toss, ur board, chess, billiards and poker tables, tube and flatscreen televisions; the big screen television and telescope cards are locked "Found in ruins, never built"; a recreation piece's pane shows its joy kind and users, a colonist's Needs tab what it enjoys and its tolerances);
 -   Ship (placeholders only);
 -   Temperature (campfire, heater, cooler, passive cooler, vent).
 
@@ -2253,12 +2253,12 @@ required before a polished external build.
 -   [-] Caravan Formation (SIM-046: colonists and destination only)
 -   [-] Caravan Inspector (SIM-046: caravan list in the World tab)
 -   [ ] Quest
--   [ ] Transport Pod
+-   [-] Transport Pod (AX-9: §36's loading (dialog, pod and launcher panes) and targeting (World tab picker, pods in flight); no range ring, attack or founding)
 
 ## Wave UI-8 --- Campaign completion
 
--   [ ] Endgame Ship
--   [ ] Victory
+-   [-] Endgame Ship (AX-8: the ship parts' inspector pane carries §37's information and actions, with the reactor warning and the launch confirmation; no dedicated screen or connectivity overlay)
+-   [-] Victory (AX-8: the ending screen with outcome, escaped and remaining colonists, days and research; Keep watching and Main menu; no credits or full story summary)
 -   [-] Save (pause > Save writes the colony's slot; no name prompt; commitment colonies save themselves and offer Save & Quit)
 -   [x] Load (save list from the main menu and pause; corrupt saves listed disabled with the reason; disabled with a reason in commitment mode)
 -   [-] Pause Menu (Resume/Save/Load/Options/Main Menu/Quit; Help disabled; Save & Quit in commitment mode)

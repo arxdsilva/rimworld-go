@@ -20,8 +20,8 @@ Scope: every Architect category and item in core vanilla RimWorld 1.5 (no Royalt
 | | Count |
 |---|---|
 | Vanilla core items (rows below) | 191 |
-| Done or partial (a working card) | 169 |
-| Missing (a placeholder card) | 22 rows on 21 placeholder cards (the two bookcases share one card) |
+| Done or partial (a working card) | 191 |
+| Missing (a placeholder card) | 0 rows on 0 placeholder cards |
 
 ## Items
 
@@ -142,8 +142,8 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `furniture` | Large sculpture | `large_sculpture` | done | |
 | `furniture` | Grand sculpture | `grand_sculpture` | done | |
 | `furniture` | Plant pot | `plant_pot` | done | AX-2: pick a rose or daylily in its pane; a grower sows it, frost kills it and it is sown again; it grows in light and adds beauty. |
-| `furniture` | Bookcase | `planned_bookcase` | missing | Needs books (vanilla 1.5 reading). |
-| `furniture` | Small bookcase | `planned_bookcase` | missing | As above. |
+| `furniture` | Bookcase | `bookcase` | done | AX-7: 2x1 storage for 10 books (books only, 5 a cell, `zone.KindBookcase`); its room's reading bonus (wiki: +0.8 % a book for the first 5 ... up to x1.20) multiplies reading recreation and learning there and research at its benches. Books (novel, textbook, schematic) have a quality and an original generated title; colonists read for recreation (and on order, an hour), textbooks teach skills up to their quality's cap, schematics put points into their projects. Found in ruin sheds, sold by caravans and orbital traders, sometimes carried by raiders; never crafted (vanilla core). Not done: passion mood thoughts, starting colonists' books, the Assign tab's reading policy. |
+| `furniture` | Small bookcase | `small_bookcase` | done | AX-7: the 1x1 bookcase for 5 books, the bookcase card's family member. As above. |
 | `furniture` | Shelf | `shelf` | done | |
 | `furniture` | Small shelf | `small_shelf` | done | AX-2. |
 | `furniture` | Torch lamp | `torch_lamp` | done | |
@@ -152,7 +152,7 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `furniture` | Standing lamp | `lamp` | done | Our "Lamp". |
 | `furniture` | Sun lamp | `sun_lamp` | done | Card added by STK-AG (the kind existed since FOOD-2). |
 | `furniture` | Flood light | `flood_light` | done | AX-2. |
-| `furniture` | Urn | `urn` | done | AX-2: stands in generated shed ruins (claim to own); the card is locked. No trader stock yet. |
+| `furniture` | Urn | `urn` | done | AX-2: stands in generated shed ruins (claim to own); the card is locked. AX-1: bulk haulers and orbital curio merchants sometimes stock a crated urn (200 silver, original tuning in the wiki range). |
 
 ### Power
 
@@ -187,14 +187,14 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `security` | Autocannon turret | `autocannon` | done | |
 | `security` | Uranium slug turret | `slug_turret` | done | |
 | `security` | Foam turret | `foam_turret` | done | AX-5: 80 W, r 19.9, 41 blobs a spray, 10 charges refilled with chemfuel (7.2 a charge), 3600-tick wait; bursts in foam when smashed. |
-| `security` | Rocketswarm launcher | `rocket_battery` | partial | AX-5: our "Rocket battery" (2x2, 150 W, 12 rockets of 24 bomb, r 29.9, full 180-chemfuel load only, 7200-tick recharge). It fires on its own at raiders like the other turrets; vanilla's manual activation by a colonist and per-rocket tile spread are not modelled. |
+| `security` | Rocketswarm launcher | `rocket_battery` | done | AX-5: our "Rocket battery" (2x2, 150 W, 12 rockets of 24 bomb, r 29.9, full 180-chemfuel load only, 7200-tick recharge). Manned and aimed like the mortar (Set target; a drafted colonist mans it); it never fires on its own, and each rocket rolls its own landing within the 5.75-tile forced miss. |
 | `security` | Mortar | `mortar` | done | |
 
 ### Misc
 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
-| `misc` | Caravan hitching spot | `planned_hitching_spot` | missing | Needs caravan-forming wait spots. |
+| `misc` | Caravan hitching spot | `hitching_spot` | partial | AX-9: a forming caravan's members gather around the spot (one by caravan id when there are several) and wait an hour once all have come, then leave by the map edge; half a day at most. Caravans carry no pack animals or goods, so there is no roping, grazing or loading wait. |
 | `misc` | Egg box | `egg_box` | done | AX-2: tame layers within 20 tiles lay in it; it stores eggs. |
 | `misc` | Grave | `grave` | done | Moved from Furniture. |
 | `misc` | Sarcophagus | `sarcophagus` | done | Moved from Furniture. |
@@ -204,14 +204,14 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `misc` | Tool cabinet | `tool_cabinet` | done | Moved from Production. |
 | `misc` | Comms console | `radio_console` | done | Our "Radio console". |
 | `misc` | Orbital trade beacon | `trade_beacon` | done | Our "Trade beacon". |
-| `misc` | Cryptosleep casket | `planned_cryptosleep_casket` | missing | The sealed vault casket kind exists (not buildable); needs a cost, research and an enter job. |
+| `misc` | Cryptosleep casket | `stasis_casket` | partial | AX-9: our "Stasis casket" (wiki cost, research Stasis caskets). A colonist climbs in, or carries a downed colonist or prisoner in, from the right-click menu; the sleeper's needs, age and illness stand still; Eject lets it out, and a destroyed or removed casket breaks open. Waking sickness and the explosion of a badly damaged casket are not modelled; animals can't be put in. |
 | `misc` | Firefoam popper | `foam_popper` | done | AX-5: our "Foam popper" (fire within 3.9 tiles, 150-tick spark, foam burst r 9.9; spent, then re-laid as a blueprint, the wiki's rebuild option; no manual trigger). |
 | `misc` | Ground-penetrating scanner | `deep_scanner` | done | AX-4: a researcher works it on power; a find every 180000 work on average (360000 at most) lays a lump of deep ore (wiki sizes and yields), shown by the deep ore overlay. |
-| `misc` | Long-range mineral scanner | `planned_mineral_scanner` | missing | Needs world-map mining sites. |
+| `misc` | Long-range mineral scanner | `mineral_scanner` | partial | AX-9: a researcher works it on power; a find every 1-480000 work (mean 240000, wiki) lays a world mining site 6-25 tiles out with the wiki's lump for the chosen mineral (any by default), gone after 30 days, shown on the World tab. The game has one map, so a caravan or pods reaching the site mine it in two days (original) and carry the lump home as cargo instead of opening a site map. |
 | `misc` | Moisture pump | `moisture_pump` | done | AX-4: on power it dries marsh and mud to soil and shallow water to gravel, one cell of radius every 8.7 days up to 6.9; moving water and the sea stay. |
 | `misc` | Multi-analyzer | `multi_analyzer` | done | Moved from Production. |
-| `misc` | Pod launcher | `planned_pod_launcher` | missing | Needs transport pod travel on the world map. |
-| `misc` | Transport pod | `planned_transport_pod` | missing | As above. |
+| `misc` | Pod launcher | `pod_launcher` | done | AX-9: 150 chemfuel, refuelled by haulers with chemfuel only; it feeds the pod beside it at 2.25 chemfuel a tile a pod (66 tiles on a full tank); a fuel gauge in its slot. |
+| `misc` | Transport pod | `transport_pod` | partial | AX-9: touching pods form a group (150 kg each); the load dialog picks colonists, tame animals and goods, colonists walk in and haulers bring the rest; the World tab picks a tile in range: the colony (dropped at its drop spot), a settlement as a gift (goodwill by market value) or a visit, or any tile (the passengers wait there as a caravan, the goods ride as its cargo; a mineral site is mined). Pods in flight show on the globe. Founding a colony and attacking a settlement need a second map and are refused. |
 | `misc` | Vitals monitor | `vitals_monitor` | done | Moved from Furniture. |
 | `misc` | Large stele | `large_stele` | done | AX-2. |
 | `misc` | Grand stele | `grand_stele` | done | AX-2. |
@@ -246,27 +246,27 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
-| `recreation` | Horseshoes pin | `horseshoes` | done | Moved from Furniture. |
-| `recreation` | Hoopstone ring | `planned_hoopstone` | missing | Needs recreation kinds beyond horseshoes. |
-| `recreation` | Game of Ur board | `planned_game_of_ur` | missing | As above. |
-| `recreation` | Chess table | `planned_chess_table` | missing | As above; a social game for two. |
-| `recreation` | Billiards table | `planned_billiards` | missing | As above. |
-| `recreation` | Poker table | `planned_poker_table` | missing | As above. |
-| `recreation` | Tube television | `planned_tube_tv` | missing | Needs watched recreation from seats. |
-| `recreation` | Flatscreen television | `planned_flatscreen_tv` | missing | As above. |
-| `recreation` | Megascreen television | `planned_megascreen_tv` | missing | As above; traded, not researched. |
-| `recreation` | Telescope | `planned_telescope` | missing | Needs night-sky recreation. |
+| `recreation` | Horseshoes pin | `horseshoes` | done | Moved from Furniture. AX-6: dexterity, power 1.0, 8 throwing spots, trains Shooting, tolerance (game/recreate). |
+| `recreation` | Hoopstone ring | `ring_toss` | done | AX-6 "ring toss": dexterity, power 1.0, 3 throwers 3 tiles off, trains Shooting, quality. |
+| `recreation` | Game of Ur board | `ur_board` | done | AX-6 "ur board": cerebral, power 0.8, 1-2 players beside it (a chair if there), trains Intellectual, quality. |
+| `recreation` | Chess table | `chess_table` | done | AX-6: cerebral, power 1.0 (0.76-1.8 by quality), 2 players; a game with company counts as chatting. |
+| `recreation` | Billiards table | `billiards_table` | done | AX-6: 2x3, dexterity, power 1.3, 2 players around it, trains Shooting; cloth and wood as Extra. |
+| `recreation` | Poker table | `poker_table` | done | AX-6: 2x2, cerebral, power 1.3, up to 4 around it, trains Intellectual. |
+| `recreation` | Tube television | `tube_tv` | done | AX-6: television, power 1.2, watched from the 3x5 area in front (seats first) while powered. |
+| `recreation` | Flatscreen television | `flatscreen_tv` | done | AX-6: 2x1, power 1.4, 5x6 watch area. |
+| `recreation` | Megascreen television | `big_screen_tv` | done | AX-6 "big screen television": 3x1, power 1.6, 7x6 watch area; never built: found in ruin sheds (claim the ruin), or bought crated from an orbital curio merchant (AX-1, wiki value 1485). |
+| `recreation` | Telescope | `telescope` | done | AX-6: telescope joy, power 1.2, at night under an open sky only, trains Intellectual 0.004 XP/tick; never built: found in ruin sheds, or bought crated from an orbital curio merchant (AX-1, wiki value 350). |
 
 ### Ship
 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
-| `ship` | Ship structural beam | `planned_ship_beam` | missing | Needs the escape-ship victory (MASTER_SPEC endgame). |
-| `ship` | Ship cryptosleep casket | `planned_ship_casket` | missing | As above. |
-| `ship` | Ship computer core | `planned_ship_core` | missing | As above. |
-| `ship` | Ship reactor | `planned_ship_reactor` | missing | As above, plus the reactor's raid countdown. |
-| `ship` | Ship engine | `planned_ship_engine` | missing | As above. |
-| `ship` | Sensor cluster | `planned_ship_sensor` | missing | As above. |
+| `ship` | Ship structural beam | `ship_beam` | done | AX-8 (game/ship): parts touching side to side are one ship; a casket joins only through a beam (wiki: Ship). The launch report and the Launch ship button are on every part's pane. |
+| `ship` | Ship cryptosleep casket | `ship_casket` | done | AX-8 "ship stasis casket": a colonist boards on a right-click order and sleeps off the map, needs frozen, until woken or launched. Downed colonists and animals can't be carried in yet. |
+| `ship` | Ship computer core | `ship_core` | done | AX-8: its blueprint takes a mind core (the persona core) as a secondary material. Curio merchants (orbital traders) sometimes carry one (15 %, original tuning); quest offers and faction requests don't exist yet. |
+| `ship` | Ship reactor | `ship_reactor` | done | AX-8: 1000 W always; Start reactor (behind a warning) begins the wiki's 15-day waking, needing no colonist and allowed before the ship is finished. Raids come through the storyteller every 1 to 1.5 days, people and mechanoids by turns (the spacing is original; the wiki only says "constant"); they stop when it wakes or is destroyed, and destruction loses the waking. Countdown on the pane and as an alert. |
+| `ship` | Ship engine | `ship_engine` | done | AX-8: a ship needs three. |
+| `ship` | Sensor cluster | `ship_sensor` | done | AX-8 "ship sensor cluster". Launch: once nothing is missing, the ship lifts off with its sleepers (a flare where it stood), the ending screen opens (MAIN_UI §38) and the save is marked complete (SaveInfo.Ending, tagged in the Load list). |
 
 ### Temperature
 

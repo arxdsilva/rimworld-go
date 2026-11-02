@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/haul"
@@ -292,6 +293,8 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		return g.extinguishJob(id, x, y) // firefight.go
 	case command.OrderFlick:
 		return g.flickJob(id, x, y) // power_flick.go (PLAY-021)
+	case command.OrderRead:
+		return booksOf(g).Order(id, g.itemAt(x, y)) // game/books (AX-7): an hour with the book
 	case command.OrderTrade:
 		return g.tradeJob(id, x, y) // trade_session.go (PLAY-024)
 	case command.OrderUseComms:
@@ -564,15 +567,24 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		if st.Kind.IsFood() {
 			add(fmt.Sprintf("Eat %s", st.Kind), command.OrderEat, construction.LayerObject)
 		}
+		if st.Kind.IsBook() { // game/books (AX-7)
+			add("Read "+books.Title(st), command.OrderRead, construction.LayerObject)
+		}
 		add(fmt.Sprintf("Haul %d %s to stockpile", st.Qty, st.Kind), command.OrderHaul, construction.LayerObject)
 	}
 	if g.drafted(pawn) && g.fireAt(x, y) > 0 { // firefight.go: any fire, forced
 		add("Extinguish fire", command.OrderExtinguish, construction.LayerObject)
 	}
+	for _, o := range travelOf(g).Orders(pawn, x, y) { // game/travel (AX-9): enter or carry to a stasis casket
+		out = append(out, OrderOption(o))
+	}
 	for _, o := range g.care.PawnOrders(pawn, x, y) { // care/orders.go (MED-03): drafted "Tend <name>"
 		out = append(out, OrderOption(o))
 	}
-	g.tradeOrders(add, x, y) // trade_session.go (PLAY-024): "Trade with <name>"
-	g.commsOrders(add, x, y) // comms.go (PLAY-024): "Use radio console"
+	g.tradeOrders(add, x, y)                                                                               // trade_session.go (PLAY-024): "Trade with <name>"
+	g.commsOrders(add, x, y)                                                                               // comms.go (PLAY-024): "Use radio console"
+	if l, c, ok := shipOf(g).Order(shipHost{g}, pawn, g.layerBldgAt(x, y, construction.LayerObject)); ok { // story.go (AX-8)
+		out = append(out, OrderOption{Label: l, Cmd: c})
+	}
 	return out
 }

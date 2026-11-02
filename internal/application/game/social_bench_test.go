@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -80,7 +81,7 @@ func TestSocialRelaxJoinsCompany(t *testing.T) {
 	if !reached || !g.chatting(a) {
 		t.Fatal("never sat down in company")
 	}
-	if activityOf(job.SocialRelax) != recreation.Chat {
+	if recreate.ActivityOf(job.SocialRelax) != recreation.Chat {
 		t.Fatal("social relaxing is not a chat's joy")
 	}
 }

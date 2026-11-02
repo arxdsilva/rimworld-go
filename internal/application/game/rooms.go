@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/diet"
+	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
@@ -10,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
-	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/room"
@@ -215,13 +215,8 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	if n.Tired() {
 		states = append(states, mood.Tired)
 	}
-	switch joy := g.joy[id]; {
-	case joy < recreation.Starved:
-		states = append(states, mood.RecreationStarved)
-	case joy < recreation.Bored:
-		states = append(states, mood.Bored)
-	case joy >= recreation.Entertained:
-		states = append(states, mood.Entertained)
+	if k, ok := recreate.Mood(g.joy[id]); ok { // game/recreate: starved, bored, entertained
+		states = append(states, k)
 	}
 	if g.feelsSick(id) { // disease.go: infections (MED-02), diseases and parasites (MED-04)
 		states = append(states, mood.Sick)
@@ -311,8 +306,8 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 		if b, ok := g.bldgs.Get(j.Dest); ok {
 			return "refuel", b.X, b.Y
 		}
-	case job.Horseshoes:
-		return "play horseshoes", j.DestX, j.DestY
+	case job.Horseshoes, job.Recreate, job.WatchTelevision, job.Stargaze:
+		return recView(g).Acting(j) // game/recreate (AX-6): "play chess" toward the table
 	case job.Tend, job.EmergencyTend: // EmergencyTend: care/tend.go (MED-03)
 		if p, ok := g.positions.Get(j.Target); ok {
 			return j.Kind.String(), p.X, p.Y

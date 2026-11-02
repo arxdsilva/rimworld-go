@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/farm"
+	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
@@ -10,7 +11,9 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/room"
@@ -242,4 +245,39 @@ func (h furnishHost) GrowRate(x, y int) int {
 	g, now := h.g, uint64(h.g.clock.Now())
 	l := farm.GrowLight(g.roofAt(x, y).Roofed() || g.incidents.Eclipsed(now), g.incidents.SkyPermil(now), g.artificialLight(x, y), nil, x, y, nil)
 	return plant.TempFactor(int(g.temperatureAt(x, y))) * plant.LightFactor(l) / 1000
+}
+
+// recHost is game/recreate's Host (AX-6): the rest roles plus the joy,
+// power, sky and skills a recreation piece needs.
+type recHost struct{ restHost }
+
+func (h recHost) Now() uint64                     { return uint64(h.restBodies.g.clock.Now()) }
+func (h recHost) Powered(id entity.EntityID) bool { return h.restBodies.g.powered(id) }
+func (h recHost) Sky() int                        { return int(skyLight(h.restBodies.g) * 1000) }
+func (h recHost) Sight(id entity.EntityID) int    { return int(h.restBodies.g.capacity(id, body.Sight)) }
+func (h recHost) PawnIDs() []entity.EntityID      { return h.restBodies.g.pawnIDs }
+func (h recHost) Wealth() int                     { return h.restBodies.g.Wealth() }
+func (h recHost) Joy(id entity.EntityID) int      { return h.restBodies.g.joy[id] }
+func (h recHost) AddJoy(id entity.EntityID, n int) {
+	h.restBodies.g.joy[id] = recreation.Clamp(h.restBodies.g.joy[id] + n)
+}
+func (h recHost) Learn(id entity.EntityID, sk skill.ID, xp int) { h.restBodies.g.learn(id, sk, xp) }
+func (h recHost) Enjoyed(id entity.EntityID)                    { h.restBodies.g.rest.Waking.Felt(id, rest.Enjoyed) }
+
+// recOf is the recreation component (game/recreate, AX-6), kept on the
+// social state and made on first use (a load replaces it).
+func recOf(g *Game) *recreate.State {
+	if s := g.socState(); s.rec == nil {
+		s.rec = recreate.New(recHost{newRestHost(g)})
+	}
+	return g.soc.rec
+}
+
+// recView is game/recreate's read side for the views: it never makes the
+// component (a view must leave the state as it found it).
+func recView(g *Game) recreate.View {
+	if g.soc == nil {
+		return recreate.NewView(recHost{newRestHost(g)}, nil)
+	}
+	return recreate.NewView(recHost{newRestHost(g)}, g.soc.rec)
 }

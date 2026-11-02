@@ -1,7 +1,7 @@
 package trade
 
 import (
-	"sort"
+	"slices"
 
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
@@ -68,10 +68,13 @@ const (
 	SpecialtyPct = 10
 )
 
-// Line is one stock row: Qty units of Kind.
+// Line is one stock row: Qty units of Kind. Building is a crated
+// building's construction kind (AX-1; Kind item.MinifiedBuilding), 0 for
+// any other goods.
 type Line struct {
-	Kind item.Kind
-	Qty  int
+	Kind     item.Kind
+	Qty      int
+	Building uint8
 }
 
 // Stock is a trader's goods (sorted by item kind, silver not among them)
@@ -94,8 +97,9 @@ type Terms struct {
 // Delta is one line of an offer: Qty > 0 the colony buys Qty units of
 // Kind, Qty < 0 it sells -Qty. Silver never appears: Settle balances it.
 type Delta struct {
-	Kind item.Kind
-	Qty  int
+	Kind     item.Kind
+	Qty      int
+	Building uint8 // a crated building's kind (AX-1), as Line.Building
 }
 
 // Reject is why Settle refused an offer (RejectNone: accepted).
@@ -176,6 +180,9 @@ var pools = [NumKinds][]entry{
 		{item.Corn, 30, 90, 70}, {item.Wheat, 30, 90, 70}, {item.Beans, 20, 60, 60},
 		{item.Meat, 20, 60, 60}, {item.Wool, 20, 60, 50}, {item.HerbalMedicine, 5, 15, 90},
 		{item.Components, 2, 6, 70}, {item.SlateBlocks, 30, 100, 40},
+		// AX-7: books (wiki: Books, sold by trade caravans and orbital
+		// traders); counts and chances are original tuning.
+		{item.Novel, 1, 3, 50}, {item.Textbook, 1, 2, 40},
 	},
 	Quartermaster: {
 		{item.Rifle, 1, 3, 100}, {item.Club, 1, 4, 80}, {item.Knife, 2, 5, 80}, {item.Spear, 2, 5, 80},
@@ -192,6 +199,12 @@ var pools = [NumKinds][]entry{
 		{item.ServoLeg, 1, 1, 60}, {item.OpticImplant, 1, 1, 50}, {item.Beer, 4, 12, 80},
 		{item.SparkTablet, 3, 8, 70}, {item.AshleafTea, 4, 10, 70}, {item.CarpetWool, 2, 6, 80},
 		{item.IndustrialMedicine, 2, 6, 60},
+		// AX-8: now and then a mind core, the ship computer core's heart
+		// (wiki: Persona core, found through trade and quests); the chance
+		// is original tuning.
+		{item.MindCore, 1, 1, 15},
+		// AX-7: books (see the bulk hauler's).
+		{item.Novel, 1, 3, 70}, {item.Textbook, 1, 3, 60}, {item.Schematic, 1, 2, 50},
 	},
 }
 
@@ -217,17 +230,22 @@ func Generate(k TraderKind, tech faction.Tech, rng *randx.Rand) Stock {
 			continue
 		}
 		if roll < e.pct {
-			st.Lines = append(st.Lines, Line{Kind: e.kind, Qty: qty})
+			st.AddGoods(Goods{Kind: e.kind}, qty)
 		}
 	}
-	sort.Slice(st.Lines, func(i, j int) bool { return st.Lines[i].Kind < st.Lines[j].Kind })
+	for _, c := range cratePools[k] { // goods.go (AX-1): drawn after the goods, so their stream is unchanged
+		qty := c.min + rng.IntN(c.max-c.min+1)
+		if rng.IntN(100) < c.pct {
+			st.AddGoods(Goods{item.MinifiedBuilding, uint8(c.kind)}, qty)
+		}
+	}
 	return st
 }
 
 // Wants reports whether a trader of kind k buys goods of kind it. Silver
 // is not a good: it settles every trade.
 func Wants(k TraderKind, it item.Kind) bool {
-	if k >= NumKinds || it.Value() <= 0 || it == item.Silver {
+	if k >= NumKinds || it.Value() <= 0 || it == item.Silver || it == item.MinifiedBuilding { // AX-1: crates are only sold to the colony
 		return false
 	}
 	c := it.Category()
@@ -265,10 +283,16 @@ func clamp(v, lo, hi int) int {
 // t, in hundredths of a silver. Silver is always at face value (100). A
 // hostile faction, or a kind without a market value, has no price (0).
 func Price(it item.Kind, k TraderKind, s Side, t Terms) int {
+	return PriceOf(Goods{Kind: it}, k, s, t)
+}
+
+// PriceOf is Price for goods g: a crated building is worth CrateValue.
+func PriceOf(g Goods, k TraderKind, s Side, t Terms) int {
+	it := g.Kind
 	if it == item.Silver {
 		return 100
 	}
-	v := it.Value() * 100
+	v := g.Value() * 100
 	if v <= 0 || t.Hostile {
 		return 0
 	}
@@ -295,41 +319,41 @@ func Settle(offer []Delta, colony map[item.Kind]int, st Stock, t Terms, gift boo
 	if t.Hostile {
 		return Result{Reject: RejectHostile}
 	}
-	net := map[item.Kind]int{}
+	net := map[Goods]int{}
 	for _, d := range offer {
-		net[d.Kind] += d.Qty
+		net[Goods{d.Kind, d.Building}] += d.Qty
 	}
-	kinds := make([]item.Kind, 0, len(net))
-	for it, q := range net {
+	keys := make([]Goods, 0, len(net))
+	for g, q := range net {
 		if q != 0 {
-			kinds = append(kinds, it)
+			keys = append(keys, g)
 		}
 	}
-	if len(kinds) == 0 {
+	if len(keys) == 0 {
 		return Result{Reject: RejectEmpty}
 	}
-	sort.Slice(kinds, func(i, j int) bool { return kinds[i] < kinds[j] })
-	stock := map[item.Kind]int{}
+	slices.SortFunc(keys, Goods.Compare)
+	stock := map[Goods]int{}
 	for _, l := range st.Lines {
-		stock[l.Kind] += l.Qty
+		stock[l.Goods()] += l.Qty
 	}
 	var res Result
 	var buyC, sellC int // hundredths
-	for _, it := range kinds {
-		q := net[it]
+	for _, g := range keys {
+		q, it := net[g], g.Kind
 		switch {
 		case q > 0:
 			if gift || it == item.Silver {
 				return Result{Reject: RejectUnwanted}
 			}
-			if stock[it] < q {
+			if stock[g] < q {
 				return Result{Reject: RejectOverStock}
 			}
-			buyC += q * Price(it, st.Kind, Buy, t)
-			res.Buy = append(res.Buy, Line{it, q})
+			buyC += q * PriceOf(g, st.Kind, Buy, t)
+			res.Buy = append(res.Buy, Line{Kind: it, Qty: q, Building: g.Building})
 		default:
 			q = -q
-			if colony[it] < q {
+			if g.Building != 0 || colony[it] < q { // the colony sells plain goods only
 				return Result{Reject: RejectOverStock}
 			}
 			if gift {
@@ -340,7 +364,7 @@ func Settle(offer []Delta, colony map[item.Kind]int, st Stock, t Terms, gift boo
 				return Result{Reject: RejectUnwanted}
 			}
 			sellC += q * Price(it, st.Kind, Sell, t)
-			res.Sell = append(res.Sell, Line{it, q})
+			res.Sell = append(res.Sell, Line{Kind: it, Qty: q})
 		}
 	}
 	if gift {
@@ -372,4 +396,24 @@ func GiftValue(offer []Delta) int {
 		}
 	}
 	return total
+}
+
+// Add adds qty (negative: removes) of kind k to st, keeping its lines
+// sorted by kind and dropping empty ones (moved from the game package, AX-8).
+func (st *Stock) Add(k item.Kind, qty int) { st.AddGoods(Goods{Kind: k}, qty) }
+
+// AddGoods is Add for goods g (a crated building keeps its own line,
+// AX-1); lines sort by kind, then building.
+func (st *Stock) AddGoods(g Goods, qty int) {
+	i, ok := slices.BinarySearchFunc(st.Lines, g, func(l Line, g Goods) int { return l.Goods().Compare(g) })
+	if ok {
+		st.Lines[i].Qty += qty
+		if st.Lines[i].Qty <= 0 {
+			st.Lines = slices.Delete(st.Lines, i, i+1)
+		}
+		return
+	}
+	if qty > 0 {
+		st.Lines = slices.Insert(st.Lines, i, Line{Kind: g.Kind, Qty: qty, Building: g.Building})
+	}
 }

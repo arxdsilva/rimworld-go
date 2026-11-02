@@ -30,7 +30,9 @@ func QualityBuilding(k construction.Kind) bool {
 		construction.DoubleBedroll, construction.AnimalBed, construction.EndTable, construction.Dresser,
 		construction.Table, construction.Chair, construction.HorseshoePin,
 		// A2, wiki: Table, Couch, Animal sleeping box (furniture with quality)
-		construction.Table2x2, construction.Table2x4, construction.Table3x3, construction.Couch, construction.AnimalSleepingBox:
+		construction.Table2x2, construction.Table2x4, construction.Table3x3, construction.Couch, construction.AnimalSleepingBox,
+		// A6, wiki: Quality (game tables' recreation power; not screens or the telescope)
+		construction.RingToss, construction.UrBoard, construction.ChessTable, construction.BilliardsTable, construction.PokerTable:
 		return true
 	}
 	return false

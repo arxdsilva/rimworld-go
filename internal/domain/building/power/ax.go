@@ -12,7 +12,8 @@ import "rimworld-go/internal/domain/building/construction"
 // Long-range mineral scanner (700 W). A bench idles at a tenth (our rule);
 // the drill, the scanners and the screens are benches here (worked or
 // watched); the pump draws all the time. The foam popper, the stasis
-// casket, the pods and the ship need no power.
+// casket, the pods and the ship's other parts need no power; the ship
+// reactor (wiki: Ship reactor) gives 1000 W at all times, started or not.
 func axSpec(k construction.Kind) Spec {
 	switch k {
 	case construction.WallLamp:
@@ -43,6 +44,8 @@ func axSpec(k construction.Kind) Spec {
 		return bench(330)
 	case construction.BigScreenTV:
 		return bench(450)
+	case construction.ShipReactor:
+		return producer(1000)
 	}
 	return Spec{}
 }

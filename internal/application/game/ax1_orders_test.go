@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
@@ -311,5 +312,48 @@ func TestInstallJobsAreOrdersJobs(t *testing.T) {
 	}
 	if orders.WorkTotal(job.OpenContainer, nil) != orders.OpenWork {
 		t.Fatal("opening shows its work")
+	}
+}
+
+// TestBuyCratedBigScreenFromOrbitalTrader: an exotic orbital trader's
+// crated big screen television shows as its own trade row, is bought,
+// comes down in the drop pod as a crated building of that kind, and
+// Reinstall places its blueprint.
+func TestBuyCratedBigScreenFromOrbitalTrader(t *testing.T) {
+	t.Parallel()
+	g, _, _, pawn := orbitalGame(t)
+	g.orbitalArrive(uint64(g.clock.Now()))
+	buildNow(t, g, construction.TradeBeacon, item.Steel, construction.South, 22, 14)
+	spawn(t, g, item.Silver, 3000, 23, 15)
+	openComms(t, g, pawn)
+	g.Enqueue(command.Command{Kind: command.CommsCallTrader})
+	g.ApplyPending()
+	tv := trade.Goods{Kind: item.MinifiedBuilding, Building: uint8(construction.BigScreenTV)}
+	g.trade.orbital.Stock.AddGoods(tv, 1) // whatever the dice gave, one crate for sure
+	v, _ := g.TradeView()
+	var row TradeRowView
+	for _, r := range v.Rows {
+		if r.Kind == tv.Name() {
+			row = r
+		}
+	}
+	if row.Label != "Big screen television (crated)" || row.TraderQty < 1 || !row.WillBuy || row.WillSell || row.BuyC <= 1485*100 {
+		t.Fatalf("crate row %+v", row)
+	}
+	offer := []trade.Delta{{Kind: tv.Kind, Qty: 1, Building: tv.Building}}
+	g.Enqueue(command.Command{Kind: command.ProposeTrade, Name: trade.EncodeOffer(offer)})
+	g.ApplyPending()
+	if v, _ := g.TradeView(); v.Reason != "" {
+		t.Fatalf("refused: %s", v.Reason)
+	}
+	g.Step(tradePodFall + 2)
+	cid, st := crateOf(g)
+	if cid == 0 || construction.Kind(st.Building) != construction.BigScreenTV || st.Stuff != construction.DefaultStuff(construction.BigScreenTV) {
+		t.Fatalf("delivered crate %+v", st)
+	}
+	g.Enqueue(command.Command{Kind: command.Reinstall, Target: uint64(cid), X: 6, Y: 4})
+	g.ApplyPending()
+	if fid := ordersOf(g).Install.FrameOf(cid); fid == 0 {
+		t.Fatal("the bought crate takes a reinstall blueprint")
 	}
 }

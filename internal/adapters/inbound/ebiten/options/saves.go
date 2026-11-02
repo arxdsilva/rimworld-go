@@ -132,8 +132,12 @@ const (
 	slotRows = 9
 )
 
-// commitTag marks a commitment save in the load list.
-const commitTag = "Commitment"
+// commitTag marks a commitment save in the load list; EndingTag a save
+// whose ship has left (AX-8: the story is complete).
+const (
+	commitTag = "Commitment"
+	EndingTag = "Complete: escaped by ship"
+)
 
 // LoadButtons are the Load screen's buttons: Back, then one per slot.
 func (s *Screen) LoadButtons(sw, sh int) []uikit.Button {
@@ -170,6 +174,10 @@ func (s *Screen) DrawLoad(screen *ebiten.Image, sw, sh int) {
 			when := sl.Modified.Format("Jan 2 15:04")
 			gfx.Text(screen, when, right, by+4, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignRight})
 			right -= float64(gfx.TextW(when, gfx.Small)) + 16
+		}
+		if sl.Ending != "" {
+			gfx.Text(screen, EndingTag, right, by+4, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.Good, Align: gfx.AlignRight})
+			right -= float64(gfx.TextW(EndingTag, gfx.Small)) + 16
 		}
 		if sl.Commitment {
 			gfx.Text(screen, commitTag, right, by+4, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.Accent, Align: gfx.AlignRight})

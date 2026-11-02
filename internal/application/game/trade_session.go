@@ -1,6 +1,7 @@
 package game
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 
@@ -108,24 +109,28 @@ func (g *Game) TradeView() (TradeView, bool) {
 	v.Social, v.PriceModPct = terms.Social, priceModPct(terms)
 	gd := g.colonyGoods(v.Orbital)
 	v.ColonySilver, v.TraderSilver = gd.counts[item.Silver], p.stock.Silver
-	theirs := map[item.Kind]int{}
-	kinds := make([]item.Kind, 0, len(gd.counts)+len(p.stock.Lines))
+	theirs := map[trade.Goods]int{} // AX-1: a crated building is goods of its own
+	keys := make([]trade.Goods, 0, len(gd.counts)+len(p.stock.Lines))
 	for _, l := range p.stock.Lines {
-		theirs[l.Kind] += l.Qty
-		kinds = append(kinds, l.Kind)
+		theirs[l.Goods()] += l.Qty
+		keys = append(keys, l.Goods())
 	}
 	for k := range gd.counts {
-		if k != item.Silver && k.Value() > 0 && theirs[k] == 0 {
-			kinds = append(kinds, k)
+		if k != item.Silver && k.Value() > 0 && theirs[trade.Goods{Kind: k}] == 0 {
+			keys = append(keys, trade.Goods{Kind: k})
 		}
 	}
-	slices.Sort(kinds)
-	kinds = slices.Compact(kinds)
-	for _, k := range kinds {
-		v.Rows = append(v.Rows, TradeRowView{Kind: k.String(), Label: itemLabel(k), Category: k.Category(),
-			ColonyQty: gd.counts[k], TraderQty: theirs[k],
-			BuyC: trade.Price(k, p.kind, trade.Buy, terms), SellC: trade.Price(k, p.kind, trade.Sell, terms),
-			WillBuy: theirs[k] > 0, WillSell: trade.Wants(p.kind, k)})
+	slices.SortFunc(keys, trade.Goods.Compare)
+	keys = slices.Compact(keys)
+	for _, gk := range keys {
+		k, colony := gk.Kind, gd.counts[gk.Kind]
+		if gk.Building != 0 {
+			colony = 0 // the colony's own crates are not on offer
+		}
+		v.Rows = append(v.Rows, TradeRowView{Kind: gk.Name(), Label: cmp.Or(gk.Label(), itemLabel(k)), Category: k.Category(),
+			ColonyQty: colony, TraderQty: theirs[gk],
+			BuyC: trade.PriceOf(gk, p.kind, trade.Buy, terms), SellC: trade.PriceOf(gk, p.kind, trade.Sell, terms),
+			WillBuy: theirs[gk] > 0, WillSell: gk.Building == 0 && trade.Wants(p.kind, k)})
 	}
 	slices.SortStableFunc(v.Rows, func(a, b TradeRowView) int {
 		if ra, rb := item.CategoryRank(a.Category), item.CategoryRank(b.Category); ra != rb {
@@ -142,7 +147,7 @@ func (g *Game) TradeView() (TradeView, bool) {
 	return v, true
 }
 
-// cmdProposeTrade settles the offer encoded in offer (EncodeTradeOffer),
+// cmdProposeTrade settles the offer encoded in offer (trade.EncodeOffer),
 // as a gift when gift is set, against the live counts; a refusal is kept
 // as the session's reason.
 func (g *Game) cmdProposeTrade(offer string, gift bool) {
@@ -154,7 +159,7 @@ func (g *Game) cmdProposeTrade(offer string, gift bool) {
 	if !ok {
 		return
 	}
-	deltas, err := DecodeTradeOffer(offer)
+	deltas, err := trade.DecodeOffer(offer)
 	if err != nil {
 		s.reason = ReasonOfferBroken
 		return
@@ -176,7 +181,7 @@ func (g *Game) cmdProposeTrade(offer string, gift bool) {
 		if l.Kind == item.Silver {
 			p.stock.Silver += l.Qty
 		} else {
-			stockAdd(p.stock, l.Kind, l.Qty)
+			p.stock.Add(l.Kind, l.Qty)
 		}
 	}
 	now := uint64(g.clock.Now())
@@ -196,14 +201,14 @@ func (g *Game) cmdProposeTrade(offer string, gift bool) {
 		deliver = append(deliver, trade.Line{Kind: item.Silver, Qty: res.Silver})
 	}
 	for _, l := range res.Buy {
-		stockAdd(p.stock, l.Kind, -l.Qty)
+		p.stock.AddGoods(l.Goods(), -l.Qty)
 		deliver = append(deliver, l)
 	}
 	if orbital {
 		g.sendTradePod(deliver, now) // trade_orbital.go
 	} else {
 		for _, l := range deliver {
-			g.dropGoods(l.Kind, l.Qty, pos.X, pos.Y, false)
+			g.dropGoods(l, pos.X, pos.Y, false)
 		}
 	}
 	g.message(pos.X, pos.Y, "%s traded with %s.", g.name(s.negotiator), p.name)

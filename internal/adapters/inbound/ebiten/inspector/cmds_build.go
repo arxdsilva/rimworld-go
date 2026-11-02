@@ -74,7 +74,9 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		out = append(out, ventCommands(b)...)    // temp_ui.go (TEMP-5)
 		out = append(out, potCommands(b)...)     // ax2.go (AX-2)
 		out = append(out, a.MoveCommands(b)...)
-		out = append(out, a.orderCommands(b)...) // cmds_orders.go (AX-1): uninstall, open a grave
+		out = append(out, orderCommands(a, b)...)           // cmds_orders.go (AX-1): uninstall, open a grave
+		out = append(out, shipCommands(a, b)...)            // ax8.go (AX-8): reactor, sleeper, launch
+		out = append(out, TravelCommands(a.shell.Do, b)...) // ax9.go (AX-9): casket, pods, scanner
 	}
 	if !b.Deconstruct {
 		out = append(out, Button{ID: "bldg.deconstruct", Label: "Deconstruct", Icon: "order_deconstruct",
@@ -174,8 +176,11 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	}
 	add(GraveLines(b)...)
 	add(env.VentLine(b), CarpetLine(b), overlay.BridgeLine(b), SwapLine(b))
-	add(FloorLines(b)...) // floor_title.go (AX-3)
-	add(ax2Lines(b)...)   // ax2.go (AX-2)
+	add(FloorLines(b)...)             // floor_title.go (AX-3)
+	add(ax2Lines(b)...)               // ax2.go (AX-2)
+	add(BookcaseLines(b, w.Items)...) // ax7.go (AX-7)
+	add(ShipLines(b, w)...)           // ax8.go (AX-8)
+	add(TravelLines(b)...)            // ax9.go (AX-9)
 	if _, moving := a.shell.MoveState(b); moving != "" {
 		add(moving)
 	}

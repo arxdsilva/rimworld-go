@@ -41,6 +41,8 @@ func ItemCategory(it game.ItemView) string {
 		return "body"
 	case isCarpetItem(it):
 		return "furnishing"
+	case isBook(it): // ax7.go (AX-7)
+		return it.Kind
 	}
 	return "material"
 }
@@ -58,6 +60,9 @@ func ItemTitle(it game.ItemView) string {
 			return "Bones of " + it.OfName
 		}
 		return "Bones"
+	}
+	if isBook(it) && it.AX.Title != "" { // ax7.go (AX-7): a book goes by its title
+		return it.AX.Title
 	}
 	t := Capitalize(it.Kind)
 	if it.Qty > 1 {
@@ -104,6 +109,7 @@ func ItemLines(it game.ItemView, stored bool) []string {
 	if it.PoisonPermille > 0 {
 		out = append(out, "Poison chance "+poisonPct(it.PoisonPermille))
 	}
+	out = append(out, BookLines(it)...) // ax7.go (AX-7)
 	if isCarpetItem(it) {
 		out = append(out, fmt.Sprintf("Catches %d%% of tracked dirt", it.Catch),
 			"Install from Architect > Furniture > Carpet")
@@ -153,6 +159,10 @@ func ItemVerbs(it game.ItemView, stored bool) []ItemVerb {
 	case "food":
 		out = append(out, ItemVerb{"cmd.item.eat", "Eat", "eat",
 			"Have a colonist eat it now. A click sends the nearest; right-click picks who.", OrderIs(command.OrderEat)})
+	}
+	if isBook(it) { // ax7.go (AX-7)
+		out = append(out, ItemVerb{"cmd.item.read", "Read", it.Kind, // ui_icon/novel, textbook, schematic (AR3)
+			"Have a colonist read it for an hour. A click sends the nearest; right-click picks who.", OrderIs(command.OrderRead)})
 	}
 	if !stored {
 		out = append(out, ItemVerb{"cmd.item.haul", "Haul", "order_haul",

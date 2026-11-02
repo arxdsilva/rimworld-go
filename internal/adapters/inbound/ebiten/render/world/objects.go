@@ -88,6 +88,15 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		if b.Kind == overlay.CasketKind {
 			key = overlay.CasketSprite(*b) // closed or open
 		}
+		if b.Kind == "ship stasis casket" {
+			key = ShipKey(*b) // ship_keys.go (AX-8): empty or occupied
+		}
+		if b.Kind == StasisCasketKind {
+			key = TravelKey(*b) // travel_keys.go (AX-9): empty or occupied
+		}
+		if b.Kind == BookcaseKind || b.Kind == SmallBookcaseKind {
+			key = BookcaseKey(b.Kind, b.Facing, b.Stored) // book_keys.go (A7): empty, half or full
+		}
 		if b.Kind == TroughKind {
 			key = TroughKey(*b)
 			if !o.art().Has(key) {
@@ -118,6 +127,7 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		o.Overlays.Wiring.DrawPowerParts(v, o.Pass(), &chP, dst, b, key, tile, sw, sh) // glow, blades, flame, charge
 		chD := o.OverlayChunks()
 		o.Overlays.Wiring.DrawDefenseParts(v, o.Pass(), &chD, dst, b, key, tile, sw, sh) // gun, beacon light
+		o.Overlays.Wiring.DrawShipGlow(v, &chD, dst, b, key, tile, sw, sh)               // overlay/ship_draw.go (AX-8)
 	}
 	o.Env.DrawRuinOverlay(v, o.Pass(), dst, b, tile, sw, sh)
 	if b.DryQty > 0 {

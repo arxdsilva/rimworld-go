@@ -286,7 +286,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line; PLAY-018: one lower-left inspect pane for every kind (header, compact status bars, chips, scrolling lines) with its tabs opening a panel upward)
+-   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line; PLAY-018: one lower-left inspect pane for every kind (header, compact status bars, chips, scrolling lines) with its tabs opening a panel upward; AX-7: a book's pane is titled by its generated title and quality and lists what it teaches and what its quality gives, with a Read button; a bookcase's pane lists its books and the room's reading bonus; a colonist's pane says what it reads)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
@@ -602,7 +602,7 @@ interfaces.
 
 ## 9.1 Needs tab
 
--   [-] **Need bars** (food and rest 0–100; BED-3: comfort, beauty and outdoors bars on the inspector Needs tab; no recreation bar)
+-   [-] **Need bars** (food and rest 0–100; BED-3: comfort, beauty and outdoors bars on the inspector Needs tab; the recreation bar reads "fun", and AX-6 adds rows under it: the joy kind it enjoys now and its tolerances with "(bored)"; missing: chemical/addiction need bars)
     -   Food.
     -   rest.
     -   recreation.
@@ -1366,7 +1366,7 @@ the player what just happened and what requires attention.
 -   [ ] **Quest site**
 -   [ ] **Temporary encounter**
 -   [ ] **Distant endgame objective**
--   [ ] **Transport pod destination marker**
+-   [x] **Transport pod destination marker** (AX-9: pods in flight drawn along their arc with the `ui_icon/pod_flight` badge, their target highlighted, listed under the caravans; mineral sites as `ui_icon/mining_site`)
 
 ## 25.4 World route visualization
 
@@ -1582,39 +1582,39 @@ the player what just happened and what requires attention.
 
 # 31. Transport Pod UI
 
--   [ ] **Launcher inspector**
--   [ ] **Fuel level**
--   [ ] **Load group**
+-   [x] **Launcher inspector** (AX-9: the launcher's chemfuel and the pods' reach; the pod's load, range and least chemfuel)
+-   [x] **Fuel level** (AX-9: "Chemfuel N / 150" and a gauge in the launcher's fuel slot)
+-   [x] **Load group** (AX-9: the Load transport pods dialog picks colonists, tame animals and goods by amount against the group's lift)
     -   pawns/items.
--   [ ] **Loading progress**
--   [ ] **Launch button**
--   [ ] **World targeting mode**
--   [ ] **Range visualization**
--   [ ] **Destination action**
+-   [x] **Loading progress** (AX-9: "Load N / M kg" on the pod pane as colonists walk in and haulers bring the rest; Unload)
+-   [x] **Launch button** (AX-9: disabled with a reason while the pods are empty or a pod has no fuelled launcher)
+-   [x] **World targeting mode** (AX-9: Launch opens the World tab picking a tile, from the globe or a list of targets in range)
+-   [-] **Range visualization** (AX-9: the picked tile's distance against the range, and only targets in range listed; no range ring drawn on the globe)
+-   [-] **Destination action** (AX-9: land (the colony's drop spot, or a caravan anywhere else), visit, gift; attack and founding need a second map)
     -   land.
     -   reinforce.
     -   gift.
     -   attack.
     -   trade where supported.
--   [ ] **Invalid target explanation**
+-   [x] **Invalid target explanation** (AX-9: each action's disabled reason: out of range, needs a settlement, hostile, no tile picked; the game's refusal message otherwise)
 
 ------------------------------------------------------------------------
 
 # 32. Endgame Ship UI
 
--   [ ] **Ship component inspector**
--   [ ] **Ship connectivity/validity overlay**
--   [ ] **Missing required component explanation**
--   [ ] **Reactor status**
--   [ ] **Start reactor confirmation**
+-   [x] **Ship component inspector** (AX-8: every part's pane says whether it is joined to the main ship, the reactor's state, a casket's sleeper, and the launch report)
+-   [-] **Ship connectivity/validity overlay** (AX-8: the pane names a part not joined to the main ship, a casket only through a beam; no map overlay)
+-   [x] **Missing required component explanation** (AX-8: the launch report lists what the ship lacks: engines, reactor, core, sensor, beam, casket, the reactor's waking, a sleeper)
+-   [x] **Reactor status** (AX-8: asleep, waking with the time left, awake)
+-   [x] **Start reactor confirmation** (AX-8: a warning dialog before the countdown)
     -   Explicitly warn about endgame threat escalation.
--   [ ] **Reactor countdown**
--   [ ] **Casket occupancy**
--   [ ] **Load/unload pawn**
--   [ ] **Launch readiness**
--   [ ] **Launch confirmation**
--   [ ] **Victory/escape screen**
--   [ ] **Colony story summary**
+-   [x] **Reactor countdown** (AX-8: on the reactor's pane and as the "Ship reactor waking" alert)
+-   [x] **Casket occupancy** (AX-8: occupied sprite and glow, "Sleeper: name" on the pane)
+-   [-] **Load/unload pawn** (AX-8: a colonist boards from the right-click menu, Wake sleeper on the casket's pane; downed colonists and animals can't be carried in yet)
+-   [x] **Launch readiness** (AX-8: launch report, "Ship ready to launch" alert, Launch ship disabled with the first missing item)
+-   [x] **Launch confirmation** (AX-8: a dialog naming who leaves)
+-   [x] **Victory/escape screen** (AX-8: the ending screen opens once the ship has left; Keep watching or Main menu; the save is tagged complete in the Load list)
+-   [-] **Colony story summary** (AX-8: who escaped, who stayed, the colony's days and research; no deaths, relationships, wealth or records yet)
 -   [ ] **Credits**
 
 ------------------------------------------------------------------------
@@ -2149,7 +2149,7 @@ Complete:
 -   [-] Caravan formation. (SIM-046: colonists and destination only)
 -   [-] Caravan inspector. (SIM-046: caravan list in the World tab)
 -   [ ] Quests.
--   [ ] Transport pods.
+-   [-] Transport pods. (AX-9: load dialog, pod pane, World tab target picker, pods in flight; no range ring, attack or founding)
 
 **Player outcome:** Colony participates in the generated world rather
 than existing only on one map.

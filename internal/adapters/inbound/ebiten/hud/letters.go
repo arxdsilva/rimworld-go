@@ -220,6 +220,7 @@ func (c Right) DeclareLetters() {
 		c.openLetterView(l)
 	}
 	st.primed = true
+	c.declareEnding() // ending.go (AX-8): once the ship has left
 }
 
 // LetterClick handles a "letter.<ID>" click: it opens the letter.

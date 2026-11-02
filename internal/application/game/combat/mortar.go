@@ -28,6 +28,7 @@ import (
 type Mortars struct {
 	h       Host
 	f       Field
+	pw      Power    // AX-5: the rocket battery fires only while powered (battery.go)
 	turrets *Turrets // Targetable
 	shots   *Shots
 	states  map[entity.EntityID]Mortar // saved
@@ -100,27 +101,45 @@ func (m *Mortars) list(now uint64) []entity.EntityID {
 	return m.ids
 }
 
-func isMortar(k construction.Kind) bool { return k == construction.Mortar }
+// isMortar reports a manned emplacement on the mortar's path: the mortar
+// and (AX-5, battery.go) the rocket battery.
+func isMortar(k construction.Kind) bool {
+	return k == construction.Mortar || k == construction.RocketBattery
+}
 
-// spot is where the crew of mortar b stands.
+// spot is where the crew of mortar b stands: its crew spot, else the tile
+// below its footprint's first column (the rocket battery's).
 func spot(b construction.Building) (int, int) {
-	_, s, ok := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-	if !ok {
+	cells, s, ok := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+	if ok {
+		return s[0], s[1]
+	}
+	if len(cells) == 0 {
 		return b.X, b.Y + 1
 	}
-	return s[0], s[1]
+	x, y := cells[0][0], cells[0][1]
+	for _, c := range cells {
+		if c[1] > y || c[1] == y && c[0] < x {
+			x, y = c[0], c[1]
+		}
+	}
+	return x, y + 1
 }
 
 // phase crews, aims and fires every mortar.
 func (m *Mortars) phase(now uint64) {
 	for _, id := range m.list(now) {
 		b, ok := m.h.Building(id)
-		if !ok || b.Kind != construction.Mortar {
+		if !ok || !isMortar(b.Kind) {
 			continue
 		}
 		st := m.states[id]
 		before := st
-		m.step(id, b, &st, now)
+		if b.Kind == construction.RocketBattery {
+			m.stepBattery(id, b, &st, now) // AX-5: battery.go
+		} else {
+			m.step(id, b, &st, now)
+		}
 		if st != before {
 			m.set(id, st)
 		}

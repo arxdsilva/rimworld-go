@@ -833,7 +833,7 @@ func (g *Game) arrivalOf(id entity.EntityID) arrival {
 	switch j.Kind {
 	case job.Move:
 		return arriveNearest
-	case job.Sleep, job.Relax, job.Bill, job.Research, job.Horseshoes, job.OperateDrill, job.ScanGround:
+	case job.Sleep, job.Relax, job.Bill, job.Research, job.Horseshoes, job.OperateDrill, job.ScanGround, job.ScanMinerals, job.Recreate, job.WatchTelevision, job.Stargaze:
 		return arriveExact
 	case job.Eat, job.Haul, job.FillHopper, job.Rescue:
 		if j.Carry != 0 && j.PickupI >= len(j.Pickups) || g.care.Carry.Patient(id) != 0 {
@@ -845,7 +845,7 @@ func (g *Game) arrivalOf(id entity.EntityID) arrival {
 
 // exactCellKinds lists the job kinds arrivalOf always holds to their cell
 // (Eat, Haul and Rescue only while carrying).
-var exactCellKinds = []job.Kind{job.Sleep, job.Relax, job.Bill, job.Research, job.Horseshoes, job.OperateDrill, job.ScanGround}
+var exactCellKinds = []job.Kind{job.Sleep, job.Relax, job.Bill, job.Research, job.Horseshoes, job.OperateDrill, job.ScanGround, job.ScanMinerals, job.Recreate, job.WatchTelevision, job.Stargaze}
 
 // workCell is the tile id's job works on: the rock for mining, the tile
 // being swept for cleaning, else the job target, else the walk's last cell.

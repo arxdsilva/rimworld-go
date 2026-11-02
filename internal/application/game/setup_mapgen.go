@@ -104,7 +104,7 @@ func (g *Game) placeRuin(r mapgen.Ruin) {
 		dmg := construction.MaxHP(construction.Wall, wp.Stuff) * min(max(wp.DamagePct, 0), 99) / 100
 		g.placeGenerated(construction.Building{Kind: construction.Wall, Stuff: wp.Stuff, X: wp.X, Y: wp.Y, Ruin: true, Damage: dmg})
 	}
-	for _, l := range r.Loot {
+	for _, l := range append(r.Loot, r.Books...) { // A7: a book too (game/books mints it)
 		if l.Qty > 0 && g.dryWalkable(l.X, l.Y) {
 			g.spawnUnclaimed(l.Kind, l.Qty, l.X, l.Y, true) // haul_claim.go: found, not the colony's; forbidden (game/allow)
 		}
@@ -114,6 +114,9 @@ func (g *Game) placeRuin(r mapgen.Ruin) {
 	}
 	for _, u := range r.Urns { // A2: an urn, found (claimed like the rest of the ruin)
 		g.placeGenerated(construction.Building{Kind: construction.Urn, Stuff: u.Stuff, X: u.X, Y: u.Y, Ruin: true})
+	}
+	for i, u := range append(r.Screens, r.Scopes...) { // A6: a big screen television or a telescope, found (claimed with the ruin)
+		g.placeGenerated(construction.Building{Kind: [2]construction.Kind{construction.Telescope, construction.BigScreenTV}[max(min(len(r.Screens)-i, 1), 0)], Stuff: u.Stuff, X: u.X, Y: u.Y, Ruin: true})
 	}
 }
 

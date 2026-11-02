@@ -86,3 +86,20 @@ func (c *Caravan) Step(ticks int) bool {
 
 // IsArrived reports whether the caravan has reached the end of its path.
 func IsArrived(c *Caravan) bool { return c.State == Arrived }
+
+// Label is the caravan inspector's state line.
+func (s State) Label() string {
+	switch s {
+	case Forming:
+		return "Forming"
+	case Travelling:
+		return "Travelling"
+	case Arrived:
+		return "Waiting at destination"
+	case Visiting:
+		return "Visiting"
+	case Returning:
+		return "Returning home"
+	}
+	return "Home"
+}

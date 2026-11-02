@@ -119,6 +119,12 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/pyre"
 	case "horseshoe pin":
 		return "furniture/horseshoe_pin"
+	case "ring toss", "ur board", "chess table", "poker table": // A6 (AR3's art)
+		return "furniture/" + strings.ReplaceAll(kind, " ", "_")
+	case "billiards table": // north draws south, west draws east
+		return "furniture/billiards_table_" + axisFacing(facing)
+	case "tube television", "flatscreen television", "big screen television", "telescope":
+		return "furniture/" + strings.ReplaceAll(kind, " ", "_") + "_" + FacingOr(facing)
 	case "sandbags":
 		return "furniture/sandbags"
 	case "research bench":
@@ -164,6 +170,10 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/vitals_monitor_" + FacingOr(facing)
 	case "pod shell":
 		return "structure/pod_shell"
+	case "ship structural beam", "ship stasis casket", "ship engine", "ship computer core", "ship reactor", "ship sensor cluster":
+		return ShipSprite(kind, facing) // ship_keys.go (AX-8)
+	case StasisCasketKind, TransportPodKind, PodLauncherKind, "long-range mineral scanner", "caravan hitching spot":
+		return TravelSprite(kind, facing) // travel_keys.go (AX-9)
 	case env.SteamVentKind:
 		return "structure/steam_vent"
 	case "pen marker":
@@ -200,6 +210,8 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/armchair_" + FacingOr(facing)
 	case "shelf": // PRD-4
 		return "furniture/shelf_" + FacingOr(facing)
+	case BookcaseKind, SmallBookcaseKind: // A7 (AR3's art): empty; BookcaseKey picks the filled looks
+		return BookcaseKey(kind, facing, 0)
 	case "hopper": // STO-2
 		return "furniture/hopper"
 	case "nutrient paste dispenser":

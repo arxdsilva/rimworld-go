@@ -1,0 +1,20 @@
+# AX-AR3 art (AX programme, A6 recreation, A7 books and bookcases): game
+# table felts, book covers and pages, the schematic's drafting blue, and
+# the television screens' lit colours. Original colours, written already
+# muted (sat ~0.8, close bands, warm shadows) like materials_decor.yaml.
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+version: 1
+materials:
+  felt:            {light: "#4f8a62", base: "#437a55", shadow: "#355f42"}
+  felt_dark:       {light: "#3c6b4b", base: "#325c40", shadow: "#284732"}
+  felt_wine:       {light: "#8a4a4c", base: "#783e41", shadow: "#5d3132"}
+  book_red:        {light: "#a1554c", base: "#8c463f", shadow: "#6c3730"}
+  book_blue:       {light: "#56708f", base: "#485f7c", shadow: "#384a5f"}
+  book_green:      {light: "#64805a", base: "#556f4c", shadow: "#42563b"}
+  book_ochre:      {light: "#b88f4f", base: "#a27b40", shadow: "#7e5f33"}
+  page_cream:      {light: "#ece2c9", base: "#ddd1b4", shadow: "#b7a88a"}
+  schematic_blue:  {light: "#5b8fa8", base: "#4b7d96", shadow: "#3a6175"}
+  schematic_line:  {light: "#d9e8ee", base: "#c8dbe3", shadow: "#a3b9c2"}
+emissive:
+  tv_screen_glow:  "#cfe6ff"
+  tv_picture_glow: "#9fd8b0"

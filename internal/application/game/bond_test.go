@@ -2,6 +2,7 @@ package game
 
 import (
 	"math"
+	"rimworld-go/internal/application/game/herd"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -463,7 +464,7 @@ func TestBondFieldsSurviveSave(t *testing.T) {
 	a, _ := g.animals.Get(dog)
 	a.Bond, a.Master, a.TrainDecay = uint64(ada), uint64(ada), 7
 	a.Trained[training.Obedience] = 2
-	a.Trained[training.Guard] = trainToggled
+	a.Trained[training.Guard] = herd.TrainToggled
 	g.animals.Set(dog, a)
 	l := saveLoad(t, g)
 	b, _ := l.animals.Get(dog)

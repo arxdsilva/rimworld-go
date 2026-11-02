@@ -279,6 +279,13 @@ func (a Pawn) drawNeedsTab(screen *ebiten.Image, id entity.EntityID, r gfx.Rect)
 	}
 	gfx.Text(screen, "feels "+p.MoodLabel, float64(x), fy, gfx.WithColor(gfx.Body, uikit.TextDim))
 	ty := fy + float64(gfx.LineStep(gfx.Body)) + 4
+	for _, row := range JoyRows(p) { // ax6.go (AX-6): what it enjoys now, its recreation tolerances
+		if float32(ty)+gfx.LineStep(gfx.Small) > in.Bottom() {
+			return
+		}
+		gfx.Text(screen, gfx.Ellipsize(row, gfx.Small, float64(in.W)-8), float64(x), ty, gfx.WithColor(gfx.Small, uikit.TextDim))
+		ty += float64(gfx.LineStep(gfx.Small))
+	}
 	for i, th := range p.Thoughts {
 		if i >= 5 || float32(ty)+gfx.LineStep(gfx.Small) > in.Bottom() {
 			break

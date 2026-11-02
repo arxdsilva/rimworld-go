@@ -43,7 +43,7 @@ func ZoneByID(w game.WorldView, id uint16) (game.ZoneView, bool) {
 func ZoneCellAt(w game.WorldView, x, y int) (game.ZoneView, bool) {
 	for i := range w.Zones {
 		z := &w.Zones[i]
-		if z.Kind == "shelf" { // a shelf's zone is not selectable by tile (PRD-4)
+		if z.Kind == "shelf" || z.Kind == game.ZoneBookcase { // a shelf's (bookcase's, A7) zone is not selectable by tile (PRD-4)
 			continue
 		}
 		if x < z.MinX || x > z.MaxX || y < z.MinY || y > z.MaxY {
@@ -238,7 +238,7 @@ func (z *Zones) Lines(zv game.ZoneView) []string {
 		if zv.NoCut {
 			out = append(out, "Cutting off")
 		}
-	case game.ZoneStockpile, game.ZoneDump, game.ZoneShelf:
+	case game.ZoneStockpile, game.ZoneDump, game.ZoneShelf, game.ZoneBookcase:
 		out = append(out, "Priority: "+ZonePriorityName(zv), zoneStoredLine(zv), zoneFilterLine(zv))
 	}
 	return out

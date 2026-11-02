@@ -57,14 +57,16 @@ const (
 	ZoneStockpile = "stockpile"
 	ZoneGrow      = "grow"
 	ZonePen       = "pen"
-	ZoneDump      = "dump"   // a dumping stockpile (PLAY-023)
-	ZoneShelf     = "shelf"  // a shelf's storage (PRD-4): laid by the shelf, never painted
-	ZoneHopper    = "hopper" // STO-2, laid by their buildings: a hopper's raw food,
-	ZoneGrave     = "grave"  // a grave's or sarcophagus's settings (Shelf names the building)
+	ZoneDump      = "dump"     // a dumping stockpile (PLAY-023)
+	ZoneShelf     = "shelf"    // a shelf's storage (PRD-4): laid by the shelf, never painted
+	ZoneHopper    = "hopper"   // STO-2, laid by their buildings: a hopper's raw food,
+	ZoneGrave     = "grave"    // a grave's or sarcophagus's settings (Shelf names the building)
+	ZoneBookcase  = "bookcase" // A7: a bookcase's books (Shelf names the building)
 )
 
 var zoneKindNames = map[zone.Kind]string{zone.KindStockpile: ZoneStockpile, zone.KindGrow: ZoneGrow, zone.KindPen: ZonePen,
-	zone.KindDump: ZoneDump, zone.KindShelf: ZoneShelf, zone.KindHopper: ZoneHopper, zone.KindGrave: ZoneGrave}
+	zone.KindDump: ZoneDump, zone.KindShelf: ZoneShelf, zone.KindHopper: ZoneHopper, zone.KindGrave: ZoneGrave,
+	zone.KindBookcase: ZoneBookcase}
 
 func zoneKindOf(name string) (zone.Kind, bool) {
 	switch name {
@@ -586,18 +588,15 @@ func (g *Game) cmdStockpile(c command.Command) {
 // onShelf reports (x, y) lies under a shelf's storage.
 func (g *Game) onShelf(x, y int) bool {
 	z, ok := g.storageAt(x, y)
-	return ok && z.Kind == zone.KindShelf
+	return ok && z.Kind.Stacks() > 1 // a shelf or a bookcase (A7)
 }
 
 // cellFull reports tile (x, y) holds as many stacks besides id as it
-// may: one anywhere, zone.ShelfStacks on a shelf (mergeOrSet spills
-// from a full tile).
+// may: one anywhere, more on a shelf or bookcase (zone.Kind.Stacks;
+// mergeOrSet spills from a full tile).
 func (g *Game) cellFull(id entity.EntityID, x, y int) bool {
-	slots := 1
-	if g.onShelf(x, y) {
-		slots = zone.ShelfStacks
-	}
-	return g.idx.ground.Others(haulHost{g}, id, x, y) >= slots
+	z, _ := g.storageAt(x, y)
+	return g.idx.ground.Others(haulHost{g}, id, x, y) >= z.Kind.Stacks()
 }
 
 // liftShelf takes a removed storage building's zone off its footprint.

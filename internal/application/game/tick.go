@@ -78,6 +78,10 @@ func (g *Game) applyOne(c command.Command) {
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
 	case command.SetDifficulty:
 		g.cmdSetDifficulty(c.Name) // story.go (NG-1)
+	case command.StartReactor, command.LaunchShip, command.BoardShip, command.LeaveShip:
+		shipOf(g).Apply(shipHost{g}, c) // story.go: game/ship (AX-8)
+	case command.EnterCasket, command.EjectCasket, command.LoadPods, command.LaunchPods, command.SetScannerTarget:
+		travelOf(g).Apply(c) // world_stash.go: game/travel (AX-9)
 	case command.SetPotPlant: // game/furnish (A2): Build is the construction.PotPlant
 		furnish.NewPots(furnishHost{restBedding{g}}).SetPlant(entity.EntityID(c.Target), construction.PotPlant(c.Build))
 	case command.ClearOrders:
@@ -616,6 +620,9 @@ func (g *Game) keepIdling(id entity.EntityID, idling job.Record) {
 }
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
+	if j, _ := g.jobs.Get(id); j.Kind == job.Read && rec.Kind != job.Read {
+		g.dropCarry(id) // game/books (AX-7): work replaces reading; the book is put down
+	}
 	g.reserve.ReleaseOwner(id)
 	g.releaseDelivery(id) // a replaced delivery gives its shares back
 	// areas.go: a job outside the pawn's allowed area fails fast
@@ -1088,6 +1095,10 @@ func (g *Game) phaseJobs() {
 			g.doResearch(id, j)
 		case job.OperateDrill, job.ScanGround:
 			industryHost{g}.doOperate(id, j) // power_gen.go: game/industry (AX-4)
+		case job.EnterCasket, job.CarryToCasket, job.LoadPods, job.ScanMinerals:
+			travelOf(g).Do(id, j) // world_stash.go: game/travel (AX-9)
+		case job.BoardShip:
+			shipOf(g).Do(shipHost{g}, id, j) // story.go: game/ship (AX-8)
 		case job.Tame, job.Milk, job.Shear, job.Slaughter:
 			g.herdOf().Do(id, j) // game/herd (FOOD-3): taming, milking, shearing, slaughter
 		case job.ClearSnow:
@@ -1098,8 +1109,12 @@ func (g *Game) phaseJobs() {
 			g.doFightFire(id, j) // firefight.go
 		case job.Flick:
 			g.doFlick(id, j) // power_flick.go (PLAY-021)
-		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide, job.SitDown:
+		case job.Read:
+			booksOf(g).Do(id, j) // game/books (AX-7)
+		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Hide, job.SitDown:
 			g.doIdle(id, j) // SitDown (BED-3): rest/seats.go ends it at the seat's comfort
+		case job.Horseshoes, job.Recreate, job.WatchTelevision, job.Stargaze:
+			recOf(g).Do(id, j) // game/recreate (AX-6): games, screens, the telescope
 		// ENG-003: social and host-system jobs, each in its owner's file.
 		case job.Surgery:
 			g.doSurgery(id, j) // surgery.go

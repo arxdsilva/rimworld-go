@@ -1258,7 +1258,7 @@ resolve metadata conflicts, and update the catalog.
 -   [x] pawn base: original compositional pawns (ART-025: limbless round-headed figure, body/pants/shirt/vest/hair layers, S/E/N rendered with west mirrored, EntityID-stable tints; walk, work, lying/in-bed/carried motion are renderer transforms, no frames)
 -   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
 -   [-] held weapons and worn armor layers (DEF-2: 22 weapon sprites `weapon/<key>`, 8 armor pieces as `pawn/<layer>_<build>_<facing>` and helmets `pawn/<helmet>_<facing>`, stuff tint masks, validator clean; drawn from `PawnView.Worn` in `render/creature/worn.go` with stuff tints, held keys in `render/creature/held.go`, item keys in `render/world/keys.go`; missing: armor on portraits and the colonist bar, stuff tint on ground items)
--   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet; AX-AR2: `item/crated_building`, `item/foam_shells`, `item/antimatter_warhead` with icons, drawn when A1/A5 wire them)
+-   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet; AX-AR2: `item/crated_building`, `item/foam_shells`, `item/antimatter_warhead` with icons, drawn when A1/A5 wire them; AX-AR3 §41: `item/novel`, `item/textbook`, `item/schematic` with icons, drawn when A7 wires them)
 -   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist; AX-AR2 `families/orders.py`: `designation_uninstall|open|strip` and the order badges `order_uninstall|chop|claim|strip|open`, `roof_area_clear`, `roof_remove_clear`, `floor_remove`)
 
 ### ART Wave 3 --- Survival
@@ -1272,7 +1272,7 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 4 --- Production
 
 -   [-] material variants (wood, five tinted stones and steel for walls, plus AX-AR1 plasteel, uranium, silver, jade and gold walls (47 linked sprites each); wood/stone floors plus the AX-AR1 floors (§40); wood/steel doors and the ornate door; furniture wood with stuff colour shift, stone_tint masks on carved pieces; missing: in-game review until A2/A3 wire the keys)
--   [-] furniture families (AX-AR1 `families/decor.py`, §40: tables 1x2/2x2/2x4/3x3, couch, small shelf, plant pot, column, urn, large and grand stele, egg box, animal sleeping box, wall torch, wall lamp and flood light with glow, ornate door, animal flap, double sleeping spot, Architect icons; missing: in-game review until A2 wires the keys)
+-   [-] furniture families (AX-AR1 `families/decor.py`, §40: tables 1x2/2x2/2x4/3x3, couch, small shelf, plant pot, column, urn, large and grand stele, egg box, animal sleeping box, wall torch, wall lamp and flood light with glow, ornate door, animal flap, double sleeping spot, Architect icons; AX-AR3 `families/recreation.py` and `families/library.py`, §41: ring toss, ur board, chess, billiards and poker tables, tube, flatscreen and big screen televisions with lit-screen glow, telescope, bookcase and small bookcase in empty, half and full looks, icons; missing: in-game review until A2, A6 and A7 wire the keys)
 -   [x] production/research benches (wave D, A3: family `workshop`, 161 sprites with `fortify`, glow masks for the burning forge and powered benches, stuff tint masks on sculptures (large and grand re-rendered at the wiki footprints) and armchair, icons for every kind; validator 5709 sprites 0 errors, `make art-check` clean incl. orphans; renderer in `render/world/objects.go`, `render/overlay/power_draw.go`; STK-AR 2026-11-01: the 14 production benches (workbench, stove, butcher, tailoring, stonecutter, brewing, drug, electric stove and tailoring, both forges, machining, sculpting, smelter) redrawn at the wiki 3x1 with the work surface on the middle cell, the fabrication bench at 5x2, the fuel refinery and radio console at 3x2, all four facings, glow layers and icons re-cut, keys unchanged; `ui_icon/planned` (greyed Architect placeholder) and `ui_icon/zone_dump`)
 -   [x] fortify and turret guns (wave D, A3: family `fortify` with barricade (`stone_tint` mask), autocannon, slug turret and mortar guns drawn from a precomputed key table in `render/overlay/turret_draw.go`, powered door, four shell item icons; AX-AR2 `families/security.py`: foam turret (1x1) and rocket battery (2x2) bases with lamp glow and 16-frame guns, foam popper, foam and warhead charges, icons)
 -   [x] storage (wave E, A4: family `storage`, the shelf at its footprint; 5957 sprites in the validator, 0 errors)
@@ -1311,15 +1311,15 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 8 --- World/factions
 
 -   [x] faction emblems (`ui_icon/faction_<settlers|clans|drifters|freebooters|swarm|player>`)
--   [-] settlement/caravan/quest icons (settlement icons for neolithic and industrial factions; no caravan or quest icons)
+-   [-] settlement/caravan/quest icons (settlement icons for neolithic and industrial factions; the `ui_icon/caravan` globe marker; AX-AR4 §42: world-map markers `ui_icon/pod_flight` and `ui_icon/mining_site` in the caravan badge style, which stay unread until A9 wires them; missing: quest icons)
 -   [ ] trade icons
 -   [-] world terrain (the globe is vertex-coloured from `assets/palettes/world.yaml` with no sprite terrain; storyteller busts, scenario, skill, passion and trait icons added alongside, ART-014)
 
 ### ART Wave 9 --- Endgame
 
--   [-] advanced production/power (AX-AR2 `families/industry.py`: deep drill 1x2, ground-penetrating scanner 3x3 and electric crematorium 3x2 (stone tint) in four facings, moisture pump, all with glow layers, the `overlay/deep_ore` marker and Architect icons; wired in game by AX-4 (build keys, the watermill's turning wheel layer, the deep ore overlay multiplied by the ore colour); missing: an in-game visual review pass)
--   [ ] ship components
--   [ ] endgame effects
+-   [-] advanced production/power (AX-AR2 `families/industry.py`: deep drill 1x2, ground-penetrating scanner 3x3 and electric crematorium 3x2 (stone tint) in four facings, moisture pump, all with glow layers, the `overlay/deep_ore` marker and Architect icons; wired in game by AX-4 (build keys, the watermill's turning wheel layer, the deep ore overlay multiplied by the ore colour); AX-AR4 `families/transit.py` (§42): long-range mineral scanner 3x3 in four facings with a working-state glow, stasis casket (empty and occupied) and pod launcher (fuel slot `gauge0`/`gauge1`) in four facings, transport pod, hitching spot marking, icons and the `pod_flight`/`mining_site` world markers; AX-9 wired them: sprites by facing, the occupied casket and its glow, the scanner's working glow, the launcher's fuel gauge, the world markers; missing: an in-game visual review pass)
+-   [x] ship components (AX-AR4 `families/starship.py`, §42: structural beam 2x6, ship stasis casket (empty and occupied) and engine 3x4 in four facings, computer core, reactor 6x7 (its glow layer is the started state) and sensor cluster, all with glow layers, the `item/mind_core`, Architect icons; AX-8 wired them: part sprites by facing, the occupied casket, the reactor glow once started, the other parts' indicator glows, the mind core item; `TestAX8ShipArt` checks footprints and glow layers)
+-   [-] endgame effects (AX-AR4: `effect/launch_flare`, the ground blast of a pod or ship launch; AX-8 draws it where the ship lifted off, growing and fading for 240 ticks; missing: a ship take-off sequence, the pods' use by A9)
 -   [ ] victory presentation
 
 ### ART Wave 10 --- Plugin/developer
@@ -1622,3 +1622,68 @@ belongs to A2 (decor) and A3 (floors). Until they wire them, the keys below are 
   `ui_icon/table` went with AX-2 (the table is 1x2; its card shows
   `ui_icon/table_1x2`). Until a rose and a daylily have art, a plant pot draws
   its plant with the fire lily and dandelion sprites at the `plant` attachment.
+
+## 41. AX recreation, books and bookcases (AR3)
+
+Generated 2026-11-02 by `make art FAMILIES="recreation library"`, with colours from
+`palettes/materials_ax_ar3.yaml` (felts, book covers, page cream, drafting blue, the
+`tv_screen_glow` and `tv_picture_glow` emissives). Every design is original (§2).
+Renderer wiring belongs to A6 (recreation) and A7 (books and bookcases). Until they
+wire them, the keys below are unread.
+
+- **`recreation` family** (`artlib/families/recreation.py`), all in furniture:
+  - `ring_toss`, `ur_board`, `chess_table`, `poker_table` (not rotatable);
+  - `billiards_table_<south|east>` (2x3/3x2; north and west reuse them, as the tables do);
+  - `tube_television_<facing>` (1x1), `flatscreen_television_<facing>` (2x1) and
+    `big_screen_television_<facing>` (3x1), each with `<name>_glow_<facing>`. The glow
+    lights the screen, which faces the facing, plus a status lamp on top, so every
+    facing has an on state;
+  - `telescope_<facing>`: the eyepiece faces the user's spot;
+  - the stuff-made tables are drawn in wood and take the whole-sprite stuff colour
+    shift, while the felts keep their own colour. There are no tint masks;
+  - icons `ui_icon/<name>`, with the television icons showing a lit screen.
+- **`library` family** (`artlib/families/library.py`):
+  - `item/novel` (slim, red), `item/textbook` (thick and blue, with tabs) and
+    `item/schematic` (a drafting folio with a rolled sheet), plus their icons. There is
+    one sprite per kind; quality is an inspector label, not a tint (§35);
+  - `furniture/bookcase[_half|_full]_<facing>` (2x1) and
+    `furniture/small_bookcase[_half|_full]` (1x1). The case is open on top, so the
+    books read from above in every facing;
+  - icons `ui_icon/bookcase` and `ui_icon/small_bookcase`.
+
+## 42. AX escape ship, caskets, pods and scanner (AR4)
+
+Generated 2026-11-02 by `make art FAMILIES="starship transit"` from existing palette
+entries (plasteel, steel, gold, uranium, pod and casket colours; `indicator`,
+`crystal_glow`, `med_teal_glow`, `radio_screen_glow`, `sentry_lamp_glow` and
+`mech_flash` glows). Every design is original (§2). Renderer wiring belongs to A8
+(ship) and A9 (caskets, pods, scanner, spot, world markers). Until they wire them,
+the keys below are unread.
+
+- **`starship` family** (`artlib/families/starship.py`), sprites in structure:
+  - `ship_beam_<facing>` (2x6): a keel truss with gold-contact end flanges, so beams
+    laid end to end read as one keel. It is not an autotile family. It has eight
+    casket ports with lamps (glow);
+  - `ship_casket_<facing>` (1x2, empty: a dark viewport, no glow) and
+    `ship_casket_occupied_<facing>` (frosted viewport, teal and green glow);
+  - `ship_core` (2x2) and `ship_sensor` (2x2), each with glow;
+  - `ship_reactor` (6x7), drawn cold. `ship_reactor_glow` is the started
+    (counting-down) state;
+  - `ship_engine_<facing>` (3x4): the nozzle opens to the facing side, and the
+    throat glows;
+  - `item/mind_core`, `effect/launch_flare` (a 256x192 particle with its origin at
+    the centre);
+  - icons `ui_icon/ship_beam|ship_casket|ship_core|ship_reactor|ship_engine|ship_sensor|mind_core`.
+- **`transit` family** (`artlib/families/transit.py`):
+  - `furniture/stasis_casket_<facing>` (empty) and
+    `furniture/stasis_casket_occupied_<facing>` with glow. It is a distinct design
+    from the ancient `structure/sleeper_casket_*`;
+  - `structure/transport_pod` (1x1);
+  - `structure/pod_launcher_<facing>` (1x2): the fuel slot is between `gauge0`
+    (empty) and `gauge1` (full), as on the battery;
+  - `power/mineral_scanner_<facing>` (3x3, console on the middle of the south row).
+    Its glow is the working state;
+  - `overlay/hitching_spot` (a flat chalk marking);
+  - world-map markers `ui_icon/pod_flight` and `ui_icon/mining_site` (badge style,
+    like `ui_icon/caravan`);
+  - icons `ui_icon/stasis_casket|transport_pod|pod_launcher|mineral_scanner|hitching_spot`.

@@ -4,11 +4,13 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
-	"strconv"
-	"strings"
 
+	"rimworld-go/internal/application/game/ship"
+	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -85,6 +87,9 @@ type worldState struct {
 	// out (areas.go; not saved: views only).
 	areaVer map[uint16]uint64
 	areaGen uint64
+	ship    *ship.State   // story.go: game/ship (AX-8), built on first use
+	ax9     *travel.State // game/travel (AX-9): caskets, pods, sites, hitching
+	ax9h    travel.Host   // its host (travelOf), built once
 }
 
 // caravanRec is one caravan with the colony's bookkeeping around it.
@@ -112,6 +117,7 @@ type worldSave struct {
 	// positions (index i is id i+1 now), Version 2 area refs (PLAY-015).
 	AreaOf  []areaAssign
 	HuntOut []huntOutRec // area_dest.go
+	AX9     *travel.Save // game/travel (AX-9): absent in older saves
 }
 
 // worldSaveVersion is the format exportWorld writes (2: area refs).
@@ -172,6 +178,7 @@ func (g *Game) phaseWorld() {
 	if len(w.caravans) > 0 && now%caravanFormCheck == 0 {
 		g.checkForming(now)
 	}
+	travelOf(g).Tick(now) // game/travel (AX-9)
 	if now%worldStep != 0 {
 		return
 	}
@@ -180,6 +187,9 @@ func (g *Game) phaseWorld() {
 	}
 	if len(w.caravans) > 0 {
 		g.stepCaravans(now)
+	}
+	if w.ship.Busy() {
+		w.ship.Tick(shipHost{g}) // story.go: game/ship (AX-8): countdowns, raids, fallen caskets
 	}
 }
 
@@ -251,8 +261,8 @@ func (g *Game) cmdFormCaravan(members string, dest int) {
 		Home: home, Out: route, Formed: now,
 	}
 	for _, id := range ids {
-		g.setDraft(id, true) // schedules and work leave a caravan member alone
-		if !g.startExit(id) {
+		g.setDraft(id, true) // schedules and work leave a caravan member alone; AX-9: a hitching spot first
+		if !travelOf(g).Hitch(c.C.ID, id, len(c.C.Members)) && !g.startExit(id) {
 			g.setDraft(id, false)
 			continue
 		}
@@ -271,21 +281,9 @@ func (g *Game) cmdFormCaravan(members string, dest int) {
 // caravanCandidates parses the member list: standing colonists on the map,
 // not breaking and not already in a caravan, each once, ascending.
 func (g *Game) caravanCandidates(members string) []entity.EntityID {
-	var out []entity.EntityID
-	for _, f := range strings.Split(members, ",") {
-		n, err := strconv.ParseUint(strings.TrimSpace(f), 10, 64)
-		if err != nil {
-			continue
-		}
-		id := entity.EntityID(n)
-		if !slices.Contains(g.pawnIDs, id) || !g.standingPawn(id) || g.breaking(id) || g.caravanOf(id) != nil ||
-			slices.Contains(out, id) {
-			continue
-		}
-		out = append(out, id)
-	}
-	slices.Sort(out)
-	return out
+	return travel.ParseIDs(members, func(id entity.EntityID) bool {
+		return slices.Contains(g.pawnIDs, id) && g.standingPawn(id) && !g.breaking(id) && g.caravanOf(id) == nil
+	})
 }
 
 // startExit sends pawn id to the nearest map edge to leave (job.ExitMap).
@@ -338,7 +336,7 @@ func (g *Game) checkForming(now uint64) {
 	w := g.worldSt
 	for i := 0; i < len(w.caravans); i++ {
 		c := &w.caravans[i]
-		if c.C.State != caravan.Forming {
+		if c.C.State != caravan.Forming || travelOf(g).Gather(c.C.ID, c.Exiting, c.Formed, now) { // AX-9: waiting at the hitching spot
 			continue
 		}
 		for _, id := range slices.Clone(c.Exiting) {
@@ -391,18 +389,7 @@ func (g *Game) departCaravan(c *caravanRec, now uint64) {
 	c.C.State = caravan.Travelling
 	c.NextTalk = now + caravanTalkPeriod
 	g.letter(letterInfo, "Caravan departed", fmt.Sprintf("%s set out for %s with %d days of food.",
-		joinNames(names), g.tileName(c.C.Dest), caravanFoodDays/1000), 0)
-}
-
-// joinNames is "A", "A and B" or "A, B and C".
-func joinNames(ns []string) string {
-	switch len(ns) {
-	case 0:
-		return "Nobody"
-	case 1:
-		return ns[0]
-	}
-	return strings.Join(ns[:len(ns)-1], ", ") + " and " + ns[len(ns)-1]
+		travel.JoinNames(names), g.tileName(c.C.Dest), caravanFoodDays/1000), 0)
 }
 
 // settlementFaction is the faction (1 + index) whose settlement stands on
@@ -487,6 +474,10 @@ func (g *Game) stepCaravans(now uint64) {
 func (g *Game) caravanArrived(c *caravanRec, now uint64) {
 	if c.Back {
 		g.caravanHome(c)
+		return
+	}
+	if until, ok := travelOf(g).Mine(c.C.ID, c.C.Tile, now); ok { // game/travel (AX-9): a mineral site
+		c.C.State, c.C.VisitUntil = caravan.Visiting, until
 		return
 	}
 	f := g.factionOf(g.settlementFaction(c.C.Tile))
@@ -579,8 +570,9 @@ func (g *Game) caravanHome(c *caravanRec) {
 			g.cmdMove(id, tx, ty)
 		}
 	}
+	travelOf(g).Home(c.C.ID, ex, ey) // game/travel (AX-9): the pods' cargo
 	if len(names) > 0 {
-		g.letter(letterInfo, "Caravan returned", joinNames(names)+" came back from the journey.", entity.EntityID(c.C.Members[0]))
+		g.letter(letterInfo, "Caravan returned", travel.JoinNames(names)+" came back from the journey.", entity.EntityID(c.C.Members[0]))
 	}
 }
 
@@ -645,47 +637,21 @@ func (g *Game) caravanTalk(c *caravanRec, now uint64) {
 // reached (walls and doors broken if need be), drawn from the world
 // stream: what edgeTile is for raids, without touching g.rng.
 func (g *Game) worldEdge() (int, int, bool) {
-	w, h := g.grid.Width(), g.grid.Height()
 	hx, hy := g.home()
 	if x, y, ok := g.combat.Tiles.WalkableNear(hx, hy, 6); ok {
 		hx, hy = x, y
 	}
-	r := g.stream(streamWorld)
 	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door, construction.Autodoor, construction.OrnateDoor, construction.AnimalFlap)}
-	var fx, fy int
-	found, checks := false, 0
-	for try := 0; try < 200; try++ {
-		var x, y int
-		switch r.IntN(4) {
-		case 0:
-			x, y = r.IntN(w), 0
-		case 1:
-			x, y = r.IntN(w), h-1
-		case 2:
-			x, y = 0, r.IntN(h)
-		default:
-			x, y = w-1, r.IntN(h)
-		}
-		if !g.dryWalkable(x, y) {
-			continue
-		}
-		if !found {
-			fx, fy, found = x, y, true
-		}
-		if checks++; checks > 12 {
-			break
-		}
-		if _, ok := g.searcher().Find(bm, x, y, hx, hy); ok {
-			return x, y, true
-		}
-	}
-	return fx, fy, found
+	return travel.EdgeTile(g.grid.Width(), g.grid.Height(), g.stream(streamWorld).IntN, g.dryWalkable, func(x, y int) bool {
+		_, ok := g.searcher().Find(bm, x, y, hx, hy)
+		return ok
+	})
 }
 
 // exportWorld is the World save field (nil: nothing yet).
 func (g *Game) exportWorld() *worldSave {
 	w := g.worldSt
-	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 {
+	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 && w.ax9.Empty() {
 		return nil
 	}
 	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors)}
@@ -696,7 +662,7 @@ func (g *Game) exportWorld() *worldSave {
 		s.AreaOf = append(s.AreaOf, areaAssign{Pawn: id, Area: a})
 	}
 	slices.SortFunc(s.AreaOf, func(a, b areaAssign) int { return cmp.Compare(a.Pawn, b.Pawn) })
-	s.HuntOut = exportHuntOut(w.huntOut) // area_dest.go
+	s.HuntOut, s.AX9 = exportHuntOut(w.huntOut), w.ax9.Export() // area_dest.go, game/travel
 	return s
 }
 
@@ -728,24 +694,7 @@ func (g *Game) importWorld(s *worldSave) {
 		}
 		w.areaOf[a.Pawn] = importAreaRef(s.Version, a.Area) // areas.go
 	}
-	w.huntOut = importHuntOut(s.HuntOut) // area_dest.go
-}
-
-// caravanStateLabel is the caravan inspector's state line.
-func caravanStateLabel(c *caravanRec) string {
-	switch c.C.State {
-	case caravan.Forming:
-		return "Forming"
-	case caravan.Travelling:
-		return "Travelling"
-	case caravan.Arrived:
-		return "Waiting at destination"
-	case caravan.Visiting:
-		return "Visiting"
-	case caravan.Returning:
-		return "Returning home"
-	}
-	return "Home"
+	w.huntOut, w.ax9 = importHuntOut(s.HuntOut), travel.Import(s.AX9) // area_dest.go, game/travel
 }
 
 // worldMapView builds the World tab: the colony tile and every caravan.
@@ -756,7 +705,7 @@ func (g *Game) worldMapView() WorldMapView {
 	}
 	for i := range g.worldSt.caravans {
 		c := &g.worldSt.caravans[i]
-		cv := CaravanView{ID: c.C.ID, Tile: c.C.Tile, Dest: c.C.Dest, Progress: c.C.Progress / 10, State: caravanStateLabel(c)}
+		cv := CaravanView{ID: c.C.ID, Tile: c.C.Tile, Dest: c.C.Dest, Progress: c.C.Progress / 10, State: c.C.State.Label()}
 		if c.Back {
 			cv.Dest = c.Home
 		}
@@ -767,4 +716,79 @@ func (g *Game) worldMapView() WorldMapView {
 		v.Caravans = append(v.Caravans, cv)
 	}
 	return v
+}
+
+// travelOf is game/travel over the game (AX-9): stasis caskets, transport
+// pods, the mineral scanner and hitching spots, its state in worldSt.ax9.
+func travelOf(g *Game) travel.Ops {
+	w := g.worldS()
+	if w.ax9h == nil {
+		w.ax9h = newTravelHost(g) // built once: views and ticks allocate nothing
+	}
+	return travel.Of(&w.ax9).Ops(w.ax9h)
+}
+
+// travelHost is game/travel's roles (travel/deps.go) over adapters.
+type travelHost struct {
+	g *Game
+	industryHost
+	herdHost
+	careRoster
+	careHealth
+	combatSupply
+	raidFight
+}
+
+func newTravelHost(g *Game) travelHost {
+	return travelHost{g, industryHost{g}, herdHost{g}, careRoster{g}, careHealth{g}, combatSupply{g}, raidFight{g}}
+}
+
+func (h travelHost) Pos(id entity.EntityID) (int, int)   { return h.industryHost.Pos(id) }
+func (h travelHost) Work(id entity.EntityID, m bool) int { return h.industryHost.Work(id, m) }
+func (h travelHost) Name(id entity.EntityID) string      { return h.g.name(id) }
+func (h travelHost) Fuel(id entity.EntityID) int         { return h.g.fuel[id] / chemfuelTicks }
+func (h travelHost) SetFuel(id entity.EntityID, n int)   { h.g.setFuel(id, n*chemfuelTicks) }
+func (h travelHost) Remove(id entity.EntityID)           { h.g.removeBuildingAs(id, false) }
+func (h travelHost) Downed(id entity.EntityID) bool {
+	v, _ := h.g.vital.Get(id)
+	return v.Status == health.Downed
+}
+func (h travelHost) Stash(id, holder entity.EntityID) bool     { return h.g.stashPawn(id, holder) }
+func (h travelHost) Unstash(id entity.EntityID, x, y int) bool { return h.g.unstashPawn(id, x, y) }
+func (h travelHost) Pick(c, p entity.EntityID)                 { h.g.care.Carry.Pick(c, p) }
+func (h travelHost) PutDown(c entity.EntityID)                 { h.g.care.DropPatient(c) }
+func (h travelHost) Move(id entity.EntityID, x, y int)         { h.g.cmdMove(id, x, y) }
+func (h travelHost) DropStack(st item.Stack, x, y int)         { h.g.dropStackOf(st, x, y) }
+func (h travelHost) RemoveAnimal(id entity.EntityID)           { h.g.removeAnimal(id) }
+func (h travelHost) Planet() *planet.Planet                    { return h.g.worldPlanet() }
+func (h travelHost) ColonyTile() int                           { return h.g.colonyTile() }
+func (h travelHost) Home() (int, int)                          { return h.g.home() }
+func (h travelHost) Caravan(id uint64) bool                    { return h.g.caravanAt(entity.EntityID(id)) != nil }
+func (h travelHost) Faction(t int) (*faction.Faction, string) {
+	return h.g.factionOf(h.g.settlementFaction(t)), h.g.tileName(t)
+}
+func (h travelHost) PutAnimal(id entity.EntityID, a animal.State, x, y int) {
+	g := h.g
+	i, _ := slices.BinarySearch(g.animalIDs, id)
+	g.animalIDs = slices.Insert(g.animalIDs, i, id)
+	a.FeedClaim, a.Target, a.Attacker, a.NextThink = 0, 0, 0, uint64(g.clock.Now())+1
+	g.positions.Set(id, Position{X: x, Y: y})
+	g.animals.Set(id, a)
+	g.invalidateCreatures()
+}
+
+// Land: pod passengers become a caravan arrived on t (home by land).
+func (h travelHost) Land(members, animals []uint64, t int) uint64 {
+	g, w, home := h.g, h.g.worldS(), h.g.colonyTile()
+	c := caravanRec{C: caravan.Caravan{ID: uint64(g.entities.Next()), Members: members, Animals: animals, Tile: t, Dest: t,
+		State: caravan.Arrived, FoodDays: caravanFoodDays}, Home: home, Out: g.worldPlanet().Route(home, t)}
+	for i, r := range w.stashed {
+		if slices.Contains(members, uint64(r.ID)) {
+			w.stashed[i].Holder = entity.EntityID(c.C.ID)
+			g.setWhere(r.ID, whereCaravan)
+		}
+	}
+	w.caravans = append(w.caravans, c)
+	g.caravanArrived(&w.caravans[len(w.caravans)-1], uint64(g.clock.Now()))
+	return c.C.ID
 }

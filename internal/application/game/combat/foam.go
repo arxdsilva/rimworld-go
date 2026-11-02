@@ -25,8 +25,9 @@ import (
 //     chemfuel hauled by a colonist refills its charges (rearm.go);
 //   - a foam shell lobbed by a mortar or cooking off, and a smashed popper
 //     or foam turret.
-// The rocket battery (turret.go) fires a volley of rockets from a full
-// load only, then needs a reload of chemfuel and its recharge.
+// The rocket battery (battery.go) is manned like a mortar and fires a
+// volley of rockets at the player's target from a full load only, then
+// needs a reload of chemfuel and its recharge.
 
 const (
 	// FoamSpill is the foam a burst leaves on each cell it reaches (of
@@ -62,13 +63,10 @@ const (
 func foamDef(r int) explosion.Def { return explosion.Def{Kind: explosion.Foam, Radius: r} }
 
 // LoadOf is the shots a chemfuel turret of kind k holds when full: a foam
-// turret's charges, a rocket battery's rockets (0: a barrel turret).
+// turret's charges (0: a barrel turret).
 func LoadOf(k construction.Kind) int {
-	switch k {
-	case construction.FoamTurret:
+	if k == construction.FoamTurret {
 		return FoamTurretCharges
-	case construction.RocketBattery:
-		return RocketVolley
 	}
 	return 0
 }
@@ -79,49 +77,36 @@ func (t *Turrets) Charges(id entity.EntityID, k construction.Kind) int {
 }
 
 // wantsRearm: turret id (of kind k) asks for a haul. A barrel turret at a
-// quarter barrel, a foam turret at a quarter of its charges, a rocket
-// battery once a volley (or part of one) is gone and it is not firing:
-// it fires from a full load only. Each is filled to full, so it asks
-// once (no flapping between asking and not).
+// quarter barrel, a foam turret at a quarter of its charges. Each is
+// filled to full, so it asks once (no flapping between asking and not).
 func (t *Turrets) wantsRearm(id entity.EntityID, k construction.Kind) bool {
-	switch k {
-	case construction.FoamTurret:
+	if k == construction.FoamTurret {
 		return t.Charges(id, k) <= FoamTurretCharges/4
-	case construction.RocketBattery:
-		return t.arms[id].Fired > 0 && t.aims[id].Burst == 0
 	}
 	return t.Barrel(id, k) <= 250
 }
 
 // chemfuel is the chemfuel units turret id (of kind k) takes to fill up
-// (0: not a chemfuel turret): a foam turret 7.2 a charge rounded up, a
-// rocket battery its whole 180 (only a full load fires), both /9 as
-// every cost here. wiki: Foam turret, Rocketswarm launcher
+// (0: not a chemfuel turret): a foam turret 7.2 a charge rounded up, /9
+// as every cost here. wiki: Foam turret
 func (t *Turrets) chemfuel(id entity.EntityID, k construction.Kind) int {
-	switch k {
-	case construction.FoamTurret:
+	if k == construction.FoamTurret {
 		return (t.arms[id].Fired*FoamTurretFuel + 89) / 90
-	case construction.RocketBattery:
-		return 20
 	}
 	return 0
 }
 
 // Spent reports turret id (of kind k) unable to fire until a rearm: a
-// barrel fired out, a foam turret out of charges, a rocket battery
-// without its full load between volleys.
+// barrel fired out, a foam turret out of charges.
 func (t *Turrets) Spent(id entity.EntityID, k construction.Kind) bool {
-	switch k {
-	case construction.FoamTurret: // a spray under way finishes
+	if k == construction.FoamTurret { // a spray under way finishes
 		return t.arms[id].Fired >= FoamTurretCharges && t.aims[id].Burst == 0
-	case construction.RocketBattery:
-		return t.arms[id].Fired > 0 && t.aims[id].Burst == 0
 	}
 	return t.arms[id].Fired >= BarrelOf(k)
 }
 
-// cool keeps turret id quiet until tick until (a foam turret's or rocket
-// battery's wait after it fired).
+// cool keeps turret id quiet until tick until (a foam turret's wait after
+// it sprayed).
 func (t *Turrets) cool(id entity.EntityID, until uint64) {
 	if t.arms == nil {
 		t.arms = map[entity.EntityID]Arm{}

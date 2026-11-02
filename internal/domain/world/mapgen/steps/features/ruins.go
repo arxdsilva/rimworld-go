@@ -53,6 +53,8 @@ func (Ruins) Run(c *mapgen.Ctx) error {
 		placeRuin(c, rn)
 	}
 	placeUrns(c, c.Rand("ruin_urns"), from)
+	placeAntiques(c, c.Rand("ruin_antiques"), from)
+	placeBooks(c, c.Rand("ruin_books"), from) // ruin_books.go (A7)
 	return nil
 }
 
@@ -78,6 +80,49 @@ func placeUrns(c *mapgen.Ctx, rn *randx.Rand, from int) {
 		p := free[rn.IntN(len(free))]
 		ru.Urns = append(ru.Urns, mapgen.RuinFloor{X: p[0], Y: p[1], Stuff: ru.Walls[0].Stuff})
 	}
+}
+
+// placeAntiques leaves a big screen television in one shed in four and a
+// telescope in another one in four (A6; original tuning: the wiki says
+// the megascreen is found in ancient shrines and the telescope bought or
+// won, and this game's ruins stand in for both), on floored cells no loot
+// or urn takes, drawn from their own stream so ruins and urns are
+// unchanged. The screen needs three such cells in a row.
+func placeAntiques(c *mapgen.Ctx, rn *randx.Rand, from int) {
+	for i := from; i < len(c.R.Ruins); i++ {
+		ru := &c.R.Ruins[i]
+		if ru.Kind != mapgen.Shed || len(ru.Floors) == 0 {
+			continue
+		}
+		roll := rn.IntN(4)
+		free := map[[2]int]bool{}
+		for _, f := range ru.Floors {
+			if !hasLoot(ru, f.X, f.Y) && !hasUrn(ru, f.X, f.Y) {
+				free[[2]int{f.X, f.Y}] = true
+			}
+		}
+		for _, f := range ru.Floors {
+			p := mapgen.RuinFloor{X: f.X, Y: f.Y, Stuff: item.Steel}
+			switch {
+			case roll == 0 && free[[2]int{f.X, f.Y}] && free[[2]int{f.X + 1, f.Y}] && free[[2]int{f.X + 2, f.Y}]:
+				ru.Screens = append(ru.Screens, p)
+			case roll == 1 && free[[2]int{f.X, f.Y}] && free[[2]int{f.X, f.Y + 1}]:
+				ru.Scopes = append(ru.Scopes, p)
+			default:
+				continue
+			}
+			break
+		}
+	}
+}
+
+func hasUrn(ru *mapgen.Ruin, x, y int) bool {
+	for _, u := range ru.Urns {
+		if u.X == x && u.Y == y {
+			return true
+		}
+	}
+	return false
 }
 
 func hasLoot(ru *mapgen.Ruin, x, y int) bool {

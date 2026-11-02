@@ -32,6 +32,9 @@ func ax5Lines(b game.BuildingView) []string {
 		if b.AX.Charges < b.AX.ChargeCap {
 			return []string{fmt.Sprintf("Rockets  %d / %d", b.AX.Charges, b.AX.ChargeCap), "Needs a full reload of chemfuel to fire"}
 		}
+		if !b.HasTarget {
+			return []string{fmt.Sprintf("Rockets  %d / %d", b.AX.Charges, b.AX.ChargeCap), "Set a target: a drafted colonist mans it"}
+		}
 		return []string{fmt.Sprintf("Rockets  %d / %d", b.AX.Charges, b.AX.ChargeCap)}
 	case ax5Armed[b.Kind]:
 		if b.AX.Armed {

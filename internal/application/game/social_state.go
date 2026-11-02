@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 
+	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/social"
@@ -96,7 +97,8 @@ type socialState struct {
 	// signature change. Both only key the cache (never saved).
 	relVer uint64
 	sigVer map[entity.EntityID]uint64
-	gath   *gatherState // gatherings and lovin' (gathering.go, M5); nil: none
+	gath   *gatherState    // gatherings and lovin' (gathering.go, M5); nil: none
+	rec    *recreate.State // recreation tolerances (game/recreate, AX-6; recOf); nil: none
 }
 
 func newSocial() *socialState {

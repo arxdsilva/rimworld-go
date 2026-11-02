@@ -62,8 +62,8 @@ func BarrelCost(k construction.Kind) (item.Kind, int) {
 		return item.ReinforcedBarrel, 1
 	case construction.FoamTurret: // AX-5: a full load, 72 chemfuel (Rearms take what it is missing)
 		return item.Chemfuel, 8
-	case construction.RocketBattery: // AX-5: 180 chemfuel, all at once
-		return item.Chemfuel, 20
+	case construction.RocketBattery: // AX-5: 180 chemfuel, all at once (battery.go)
+		return item.Chemfuel, RocketReload
 	}
 	return item.Steel, 9
 }
@@ -103,6 +103,12 @@ func (r *Rearms) scan(now uint64) {
 	for _, id := range r.mortars.list(now) {
 		b, ok := r.h.Building(id)
 		if !ok || r.busy(id) {
+			continue
+		}
+		if b.Kind == construction.RocketBattery { // AX-5: a full reload of chemfuel
+			if r.mortars.reloadWanted(id) {
+				r.start(id, b, item.Chemfuel, RocketReload)
+			}
 			continue
 		}
 		switch barrel, room := r.mortars.wants(id); {
@@ -179,7 +185,7 @@ func (r *Rearms) free(c entity.EntityID) bool {
 // mortar's crew spot first).
 func (r *Rearms) workSpot(c entity.EntityID, b construction.Building) (int, int, bool) {
 	q := r.br.Query(c)
-	if b.Kind == construction.Mortar {
+	if isMortar(b.Kind) {
 		if x, y := spot(b); q.Walkable(x, y) {
 			return x, y, true
 		}
@@ -270,6 +276,8 @@ func (r *Rearms) apply(a Rearm, n int) {
 	switch {
 	case isTurret(b.Kind):
 		r.turrets.Rearm(a.Building)
+	case b.Kind == construction.RocketBattery:
+		r.mortars.reload(a.Building)
 	case !a.Kind.IsShell(): // its barrel
 		r.mortars.rearm(a.Building)
 	default:

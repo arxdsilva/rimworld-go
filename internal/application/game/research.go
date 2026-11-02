@@ -46,6 +46,7 @@ func (h researchHost) Contents(r int) (int, int) {
 	return h.g.rooms[r].contents.Beds, h.g.rooms[r].contents.Benches
 }
 func (h researchHost) TemperatureAt(x, y int) int { return int(h.g.temperatureAt(x, y)) }
+func (h researchHost) ReadingBonus(r int) int     { return booksOf(h.g).RoomBonus(r) } // game/books (AX-7)
 func (h researchHost) Pos(id entity.EntityID) (int, int) {
 	p, _ := h.g.positions.Get(id)
 	return p.X, p.Y

@@ -131,7 +131,8 @@ func (l *Lab) analyzed(bench entity.EntityID) bool {
 // Factor is bench's research factor now, permille (0: not a research
 // bench): the bench kind (simple 0.75, hi-tech 1.0, +0.10 with a powered
 // analyzer), times not a laboratory 0.8, cleanliness (very dirty 0.75 ...
-// sterile 1.09; outdoors 0.75 and 0.9) and a bad temperature 0.7.
+// sterile 1.09; outdoors 0.75 and 0.9), the room's reading bonus (up to
+// 1.2) and a bad temperature 0.7.
 func (l *Lab) Factor(bench entity.EntityID) int {
 	b, ok := l.h.Building(bench)
 	if !ok || !isBench(b.Kind) {
@@ -152,6 +153,7 @@ func (l *Lab) Factor(bench entity.EntityID) int {
 		mul(notLabFactor)
 	} else {
 		mul(cleanFactor(l.h.Cleanliness(r)))
+		mul(1000 + l.h.ReadingBonus(r)) // AX-7 (wiki: Reading bonus): the room's shelved books
 		if !l.lab(r) {
 			mul(notLabFactor)
 		}

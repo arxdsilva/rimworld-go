@@ -929,6 +929,7 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	g.markRoomsDirty()
 	g.structVer++ // SIM-029: link/autotile caches
 	g.reorientFootprint(b.Kind, b.Facing, b.X, b.Y)
+	travelOf(g).Gone(id, b) // game/travel (AX-9): a casket breaks open, a pod spills
 	for _, c := range []uint64{b.Claimant, b.Claimant2} {
 		if c != 0 {
 			delete(g.sleptAt, entity.EntityID(c))

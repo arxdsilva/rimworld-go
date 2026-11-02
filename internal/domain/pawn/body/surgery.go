@@ -383,3 +383,32 @@ func (b *Body) minorWound(p Part, roll func(int) int, now uint64) {
 		b.Wounds = append(b.Wounds, Wound{Part: p, Dmg: dmg, Kind: Surgical, At: now, Size: int32(dmg)})
 	}
 }
+
+// DoneText is the log wording of operation op's outcome o (moved from the
+// game package, AX-8).
+func (op Operation) DoneText(o Outcome) string {
+	part := op.Part.Label()
+	switch o {
+	case MinorFail:
+		return "slipped during an operation on the " + part
+	case Catastrophic:
+		return "badly botched an operation on the " + part
+	case Ridiculous:
+		return "made a ridiculous mess of an operation on the " + part
+	}
+	switch op.Kind {
+	case InstallImplant:
+		return "fitted a " + op.Item.String() + " to the " + part
+	case RemoveImplant:
+		return "removed the implant from the " + part
+	case HarvestOrgan:
+		return "harvested the " + part
+	case InstallOrgan:
+		return "transplanted a " + op.Item.String() + " into the " + part
+	case Anesthetize:
+		return "anesthetized the patient"
+	case ExciseCarcinoma:
+		return "excised the carcinoma from the " + part
+	}
+	return "amputated the " + part
+}

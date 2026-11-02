@@ -110,7 +110,7 @@ func (g *Game) canSocialize(id entity.EntityID, initiator bool) bool {
 // comes sooner).
 func (g *Game) chatting(id entity.EntityID) bool {
 	j, _ := g.jobs.Get(id)
-	return (j.Kind == job.Chat || j.Kind == job.SocialRelax) && j.State == job.Do
+	return (j.Kind == job.Chat || j.Kind == job.SocialRelax || j.Kind == job.Recreate) && j.State == job.Do // AX-6: a game played together
 }
 
 // socialPartner is who a talks to: its chat partner when it is chatting,

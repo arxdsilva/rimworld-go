@@ -87,6 +87,7 @@ var canvasExempt = map[string]string{
 	"render/creature/burial.go:DrawFlameScreen":        "world: pyre flames",
 	"render/overlay/fire_world_draw.go:DrawWorldFires": "world: flames, ash decals",
 	"render/overlay/arrival_draw.go:DrawArrivals":      "world: drop-pod arrivals",
+	"render/overlay/ship_draw.go:DrawLaunch":           "world: the escape ship's launch flare (AX-8)",
 	"render/overlay/bridge_draw.go:DrawBridgeCell":     "world: bridge fallback deck",
 	"render/env/cave_plants_draw.go:DrawDuskGlow":      "world: the duskmoss glow discs",
 	"render/env/crop_batch.go:DrawLitBatch":            "world: crop unit and furrow batches",
@@ -142,10 +143,11 @@ var canvasExempt = map[string]string{
 	"render/overlay/power_overlay.go:drawPowerFrame": "world: the red frame round a device on no power grid",
 
 	// the globe: physical size inside its logical area
-	"globe/globe.go:Draw":               "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
-	"globe/globe.go:DrawBody":           "globe: the sphere, at physical size",
-	"globe/globe.go:drawMarks":          "globe: marks on the sphere",
-	"windows/world.go:drawCaravanMarks": "globe overlay: caravan marks drawn on the globe surface",
+	"globe/globe.go:Draw":                  "globe: drawn at physical size inside its logical area (x s); names go through the canvas",
+	"globe/globe.go:DrawBody":              "globe: the sphere, at physical size",
+	"globe/globe.go:drawMarks":             "globe: marks on the sphere",
+	"windows/world.go:drawCaravanMarks":    "globe overlay: caravan marks drawn on the globe surface",
+	"windows/world_ax9.go:drawTravelMarks": "globe overlay: pods in flight and mining sites, drawn like the caravan marks (AX-9)",
 
 	// full-screen backgrounds, physical size, unscaled
 	"mainmenu/diorama.go:DrawDiorama":     "full-screen background (physical size, unscaled)",
@@ -195,6 +197,7 @@ var hudFilesNot = []string{
 	"architect/move_mode.go", "architect/pen_draw.go", "architect/zone_tools.go", // world ghosts and outlines
 	"devtools/mapfields.go", // world: the dev map-field layer
 	"windows/world.go",      // globe overlay
+	"windows/world_ax9.go",  // globe overlay: pods and mining sites (AX-9)
 	"order_queue_ui.go",     // world route
 	"hud/rooms.go",          // mixed: the room tile tint is world
 }

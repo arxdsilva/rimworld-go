@@ -15,10 +15,12 @@ This handoff covers the AX programme's wave 1 foam and security rows. Under ENG-
 - **Foam turret** (80 W, range 19.9): on its scan tick it looks for the fires it can see. Each spray costs one of its 10 charges and puts 41 blobs, 2 ticks apart, on those fires, nearest first and in turn; each blob is a 1.9-tile foam burst (projectile flight at 27 cells/s). It then waits 3600 ticks.
   - A new turret is full. At 2 charges or fewer a colonist hauls chemfuel: 7.2 a charge rounded up, /9.
   - A smashed foam turret bursts damageless foam over 4 tiles.
-- **Rocket battery** (2x2, 150 W, range 29.9): after a 60-tick aim it fires 12 rockets, 10 ticks apart: 24 bomb, 36 % AP, 2.9-tile blast, 5.75 forced miss, 38 cells/s.
-  - It fires from a full load only. A colonist reloads all 180 chemfuel (20 units) at once.
+- **Rocket battery** (2x2, 150 W, range 29.9): manned and aimed like the mortar, on its path (combat/battery.go). It never fires on its own.
+  - The player presses Set target in its pane (the mortar's buttons and aim mode, SetMortarTarget/ClearMortarTarget) and clicks a tile. A drafted colonist on its crew spot (below the footprint), the named colonist, or the nearest idle drafted one within 12 tiles mans it (job ManMortar).
+  - While it is powered, loaded and recharged, it aims for 60 ticks, then fires 12 rockets 10 ticks apart: 24 bomb, 36 % AP, 2.9-tile blast, 38 cells/s. Each rocket rolls its own landing within the 5.75-tile forced miss.
+  - The volley clears the target (the player aims every volley) and empties it. It fires from a full load only: a colonist reloads all 180 chemfuel (20 units) at once. The crew stands down as a mortar's does.
   - A smashed battery blows up (50 bomb over 6.9 tiles) on the turret roll.
-- **Cooldown decision**: the wiki gives 210 ticks in the infobox and 7200 in the text. I chose the text's 7200-tick recharge, stored as `weapon.RocketRecharge` in `SwarmRocket.Cooldown` and in `Arm.Cool`. The recharge is the rule a player meets, and the 210-tick gun cooldown never matters for a weapon that empties itself in one volley.
+- **Cooldown decision**: the wiki gives 210 ticks in the infobox and 7200 in the text. I chose the text's 7200-tick recharge, stored as `weapon.RocketRecharge` in `SwarmRocket.Cooldown` (the battery's `Mortar.ReadyAt` after a volley). The recharge is the rule a player meets, and the 210-tick gun cooldown never matters for a weapon that empties itself in one volley.
 - **Foam shells**: a machining-table recipe (`recipe.MakeFoamShells`: 3 steel, 80 work), unlocked by Fire foam. Mortars load them last (`Mortar.Foam`) and lob 5-tile foam bursts (`weapon.MortarFoam`).
 - **Warhead as mortar ammo** (wiki: Antigrain warhead, a mortar shell): `weapon.Warhead` is a mortar row with the charge's blast, and `item.IsShell` and `weapon.ForShell` include the warhead. A mortar fires warheads after the ordinary shells and before foam (`Mortar.Warhead`). Rearm hauls fetch warheads last, only when nothing else is in stock; they keep the mortar's sound.
 - **Burning creatures**: creatures here burn only by standing in a fire cell, so foam that douses the cell puts them out; a foam turret aiming at fire cells aims at burning pawns too.
@@ -41,14 +43,13 @@ This handoff covers the AX programme's wave 1 foam and security rows. Under ENG-
 - **Adapters**: build_keys.go, gun_keys.go, turret_draw.go, blast_draw.go, creature/burst.go, cue combat_sounds.go and structure_sounds.go, blood_draw.go, fire_world_draw.go, combat_draw.go, combat_overlay_host.go, inspector ax5.go and cmds_defence.go, and architect catalog.go and planned.go.
 
 ## Tests
-- combat/foam_test.go: the burst, both charges, the popper's no-flap, the foam turret's spray and cooldown no-flap, refuelling, the rocket volley and recharge, smashed defences, and foam mortar shells.
-- game/ax5_test.go: the kinds are live; the foam turret puts out a fire, leaves foam that nothing burns under, and spends a charge; a popper bursts and is rebuilt; the warhead charge; the rocket battery volley.
-- journey_ax5_test.go: placement from the Architect, a popper smothering a fire, a colonist building a foam charge from foam shells, the pane lines, and hold fire.
+- combat/foam_test.go: the burst, both charges, the popper's no-flap, the foam turret's spray and cooldown no-flap, refuelling, smashed defences, foam and warhead mortar shells, and the rocket battery (no fire without a target even with a raider in range, manned volley with per-rocket spread, target cleared, reload, recharge).
+- game/ax5_test.go: the kinds are live; the foam turret puts out a fire, leaves foam that nothing burns under, and spends a charge; a popper bursts and is rebuilt; the warhead charge; a rocket battery holds fire on its own.
+- journey_ax5_test.go: placement from the Architect, a popper smothering a fire, a colonist building a foam charge from foam shells, the pane lines, hold fire on the foam turret, and the rocket battery aimed through Set target and fired by a drafted colonist (12 scattered bursts around the target, then an empty load and no target).
 - vaults_test.go now allows the warhead.
 - The determinism gate passes with no golden change.
 
 ## Open
-- **Rocket battery**: vanilla has a colonist activate it manually and spreads its rockets over target tiles; here it fires on its own like the other turrets.
 - **Foam popper**: there is no manual trigger, and the HP ≤ 8 rule for bursting when destroyed is not modelled; it always bursts.
 - **Foam coating**: the "covered in foam" coating on pawns is not modelled. Pawns burn only by standing in fire, and foam puts that fire out.
 - **Warhead**: quest rewards wait for a quest system.

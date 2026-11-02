@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
@@ -242,21 +243,9 @@ func (g *Game) landPod(p *podState) {
 // freeLandNear is the nearest dry walkable tile to (x, y) within r that
 // no colonist stands on and is not in used (ring by ring, no randomness).
 func (g *Game) freeLandNear(x, y, r int, used [][2]int) (int, int, bool) {
-	for d := 0; d <= r; d++ {
-		for dy := -d; dy <= d; dy++ {
-			for dx := -d; dx <= d; dx++ {
-				if max(abs(dx), abs(dy)) != d {
-					continue
-				}
-				nx, ny := x+dx, y+dy
-				if !g.dryWalkable(nx, ny) || slices.Contains(used, [2]int{nx, ny}) || g.pawnOn(nx, ny) {
-					continue
-				}
-				return nx, ny, true
-			}
-		}
-	}
-	return 0, 0, false
+	return travel.Ring(x, y, r, func(nx, ny int) bool { // game/travel
+		return g.dryWalkable(nx, ny) && !slices.Contains(used, [2]int{nx, ny}) && !g.pawnOn(nx, ny)
+	})
 }
 
 // pawnOn reports a colonist standing on (x, y).

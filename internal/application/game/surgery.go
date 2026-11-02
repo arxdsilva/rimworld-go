@@ -910,7 +910,7 @@ func (g *Game) operate(surgeon, patient entity.EntityID, slot int, j *job.Record
 	}
 	g.bodyChanged(patient, b, &v)
 	g.remember(patient, mood.Surgery) // rooms.go
-	line := g.name(surgeon) + " " + operationDone(op, outcome) + " on " + g.name(patient)
+	line := g.name(surgeon) + " " + op.DoneText(outcome) + " on " + g.name(patient)
 	g.logEvent(patient, logEntry{Kind: logSurgery, Name: line})
 	if outcome != body.Success {
 		g.woundOpened(patient) // infection.go: a surgical wound wants tending
@@ -994,34 +994,6 @@ func (g *Game) organHarvested(surgeon, donor entity.EntityID, part body.Part) {
 	gw = max(gw, harvestGoodwillCap)
 	faction.Adjust(f, gw, fmt.Sprintf("Day %d: %s's %s harvested (%d goodwill)", g.relDay(now)+1, g.name(donor), part.Label(), gw))
 	_ = surgeon
-}
-
-// operationDone is the log wording of an operation's outcome.
-func operationDone(op body.Operation, o body.Outcome) string {
-	part := op.Part.Label()
-	switch o {
-	case body.MinorFail:
-		return "slipped during an operation on the " + part
-	case body.Catastrophic:
-		return "badly botched an operation on the " + part
-	case body.Ridiculous:
-		return "made a ridiculous mess of an operation on the " + part
-	}
-	switch op.Kind {
-	case body.InstallImplant:
-		return "fitted a " + op.Item.String() + " to the " + part
-	case body.RemoveImplant:
-		return "removed the implant from the " + part
-	case body.HarvestOrgan:
-		return "harvested the " + part
-	case body.InstallOrgan:
-		return "transplanted a " + op.Item.String() + " into the " + part
-	case body.Anesthetize:
-		return "anesthetized the patient"
-	case body.ExciseCarcinoma:
-		return "excised the carcinoma from the " + part
-	}
-	return "amputated the " + part
 }
 
 // stepAnesthetics wears every patient's anaesthetic off by an hour's

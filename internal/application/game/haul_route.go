@@ -3,12 +3,16 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/application/game/store"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -33,8 +37,34 @@ type haulState struct {
 	storedAt map[entity.EntityID]uint64
 	cands    []haul.Cand // HAUL-002 scratch (planGather): never saved
 	picks    []haul.Pick
-	store    store.Store // STO-2: storage buildings, urgent marks, the paste dispenser (game/store)
+	store    store.Store  // STO-2: storage buildings, urgent marks, the paste dispenser (game/store)
+	bk       *books.Books // AX-7: reading (game/books), built on first use, never saved
 }
+
+// booksOf is the reading component (game/books), built on first use.
+func booksOf(g *Game) *books.Books {
+	if g.haul.bk == nil {
+		g.haul.bk = books.New(researchHost{g}, haulHost{g}, ordersHost{g}, bookMind{g}, bookMind{g})
+	}
+	return g.haul.bk
+}
+
+// bookMind is game/books' Mind and Colony roles.
+type bookMind struct{ g *Game }
+
+func (h bookMind) Joy(id entity.EntityID) int                    { return h.g.joy[id] }
+func (h bookMind) SetJoy(id entity.EntityID, v int)              { h.g.joy[id] = v }
+func (h bookMind) Learn(id entity.EntityID, sk skill.ID, xp int) { h.g.learn(id, sk, xp) }
+func (h bookMind) Level(id entity.EntityID, sk skill.ID) int     { return int(h.g.skillOf(id, sk).Level) }
+func (h bookMind) Study(p research.Project, n int)               { h.g.lab.Study(p, n, 0, 0) }
+func (h bookMind) Cost(p research.Project) int                   { return h.g.lab.CostOf(p) }
+func (h bookMind) Sighted(id entity.EntityID) bool {
+	return h.g.bodies[id] == nil || h.g.bodies[id].Capacity(body.Sight) > 0
+}
+func (h bookMind) Gen() uint64                                 { return h.g.idx.ground.Gen() }
+func (h bookMind) Roll(n int) int                              { return h.g.rng.IntN(n) }
+func (h bookMind) Allowed(id entity.EntityID, x, y int) bool   { return h.g.areaAllows(id, x, y) }
+func (h bookMind) ClaimTile(id entity.EntityID, x, y int) bool { return h.g.reserve.TryTile(id, x, y) }
 
 func (g *Game) exportIncoming() map[entity.EntityID]int { return g.haul.incoming }
 

@@ -348,7 +348,7 @@ const (
 	// serve instead.
 	SetBookcaseFilter
 	// A8 the escape ship: StartReactor starts ship reactor Target's
-	// countdown; LaunchShip launches the ship that part Target belongs to
+	// countdown (BoardShip and LeaveShip are at the end); LaunchShip launches the ship that part Target belongs to
 	// (refused, with the launch report, until it is complete).
 	StartReactor
 	LaunchShip
@@ -368,6 +368,11 @@ const (
 	LoadPods
 	LaunchPods
 	SetScannerTarget
+	// A8 (appended after A9's, so no number moves): BoardShip, Pawn walks
+	// into ship stasis casket Target; LeaveShip, the sleeper in ship stasis
+	// casket Target climbs out.
+	BoardShip
+	LeaveShip
 )
 
 // LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).

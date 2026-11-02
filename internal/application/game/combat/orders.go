@@ -44,9 +44,9 @@ func (o *Orders) Apply(c command.Command) (way bool) {
 		o.doors.SetHold(id, c.Enabled)
 	case c.Kind == command.SetTurretHold && isTurret(k):
 		o.turrets.SetHold(id, c.Enabled)
-	case c.Kind == command.SetMortarTarget && k == construction.Mortar:
+	case c.Kind == command.SetMortarTarget && isMortar(k): // AX-5: the rocket battery too
 		o.mortars.SetTarget(id, c.X2, c.Y2, entity.EntityID(c.Pawn))
-	case c.Kind == command.ClearMortarTarget && k == construction.Mortar:
+	case c.Kind == command.ClearMortarTarget && isMortar(k):
 		o.mortars.ClearTarget(id)
 	}
 	return way
@@ -80,6 +80,10 @@ func (o *Orders) View(id entity.EntityID, b construction.Building, now uint64) F
 		}
 	case b.Kind.IsCharge() || b.Kind == construction.FoamPopper:
 		f.Armed = o.traps == nil || !o.traps.Burning(id)
+	case b.Kind == construction.RocketBattery: // AX-5: its volley and target
+		st := o.mortars.State(id)
+		f.Charges, f.ChargeCap = max(0, RocketVolley-st.Fired), RocketVolley
+		f.HasTarget, f.TargetX, f.TargetY = st.Forced, st.TX, st.TY
 	case b.Kind == construction.Mortar:
 		st := o.mortars.State(id)
 		f.Barrel, f.Shells = o.mortars.Barrel(id), st.shells()

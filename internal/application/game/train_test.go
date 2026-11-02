@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/herd"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -16,7 +17,7 @@ func TestTrainingDefaultsAndToggles(t *testing.T) {
 	t.Parallel()
 	g, _, dog := bondYard(t, 20)
 	a, _ := g.animals.Get(dog)
-	if !trainOn(a, training.Obedience) || trainOn(a, training.Guard) || trainOn(a, training.Release) {
+	if !herd.TrainOn(a, training.Obedience) || herd.TrainOn(a, training.Guard) || herd.TrainOn(a, training.Release) {
 		t.Fatal("Obedience is on by default, the rest off")
 	}
 	set := func(id entity.EntityID, s training.Skill, on bool) {
@@ -26,24 +27,24 @@ func TestTrainingDefaultsAndToggles(t *testing.T) {
 	set(dog, training.Obedience, false)
 	set(dog, training.Release, true) // a labrador is no hunter: ignored
 	a, _ = g.animals.Get(dog)
-	if trainOn(a, training.Obedience) || !trainOn(a, training.Guard) || trainOn(a, training.Release) {
+	if herd.TrainOn(a, training.Obedience) || !herd.TrainOn(a, training.Guard) || herd.TrainOn(a, training.Release) {
 		t.Fatalf("toggled %v", a.Trained)
 	}
-	if trainSteps(a, training.Guard, 0) != 0 || trainSteps(a, training.Obedience, 0) != 0 {
+	if herd.TrainSteps(a, training.Guard, 0) != 0 || herd.TrainSteps(a, training.Obedience, 0) != 0 {
 		t.Fatal("the toggle bit is not a step")
 	}
 	set(dog, training.Obedience, true)
-	if a, _ = g.animals.Get(dog); !trainOn(a, training.Obedience) || a.Trained[training.Obedience] != 0 {
+	if a, _ = g.animals.Get(dog); !herd.TrainOn(a, training.Obedience) || a.Trained[training.Obedience] != 0 {
 		t.Fatal("back to default clears the bit")
 	}
 	wolf, _ := g.SpawnAnimal("timber_wolf", 10, 10)
 	set(wolf, training.Release, true)
-	if w, _ := g.animals.Get(wolf); trainOn(w, training.Release) {
+	if w, _ := g.animals.Get(wolf); herd.TrainOn(w, training.Release) {
 		t.Fatal("wild animals are not trained")
 	}
 	g.TameAnimal(wolf, "Burr")
 	set(wolf, training.Release, true)
-	if w, _ := g.animals.Get(wolf); !trainOn(w, training.Release) {
+	if w, _ := g.animals.Get(wolf); !herd.TrainOn(w, training.Release) {
 		t.Fatal("a tame wolf can learn Release")
 	}
 }
@@ -54,38 +55,38 @@ func TestTrainingStepsOrderAndDecay(t *testing.T) {
 	(*g.sk.skills[ada])[skill.Animals].Level = 20
 	a, _ := g.animals.Get(dog)
 	a.Bond = uint64(ada) // a bonded trainer of 20 never fails
-	a.Trained[training.Guard] |= trainToggled
+	a.Trained[training.Guard] |= herd.TrainToggled
 	now := uint64(1000)
-	if s, _ := nextTrainSkill(a, now); s != training.Obedience {
+	if s, _ := herd.NextTrainSkill(a, now); s != training.Obedience {
 		t.Fatal("Obedience first")
 	}
 	for i := 0; i < 3; i++ {
-		s, _ := nextTrainSkill(a, now)
+		s, _ := herd.NextTrainSkill(a, now)
 		g.trainSession(ada, dog, &a, s, now)
 	}
-	if !trainLearned(a, training.Obedience, now) {
+	if !herd.TrainLearned(a, training.Obedience, now) {
 		t.Fatalf("three steps learn Obedience: %v", a.Trained)
 	}
-	if s, ok := nextTrainSkill(a, now); !ok || s != training.Guard {
+	if s, ok := herd.NextTrainSkill(a, now); !ok || s != training.Guard {
 		t.Fatal("then Guard")
 	}
 	for i := 0; i < 3; i++ {
 		g.trainSession(ada, dog, &a, training.Guard, now)
 	}
-	if _, ok := nextTrainSkill(a, now); ok {
+	if _, ok := herd.NextTrainSkill(a, now); ok {
 		t.Fatal("everything on is learned")
 	}
 	later := now + training.DecayTicks
-	if trainSteps(a, training.Guard, later) != 2 || trainLearned(a, training.Guard, later) {
+	if herd.TrainSteps(a, training.Guard, later) != 2 || herd.TrainLearned(a, training.Guard, later) {
 		t.Fatal("ten days unpractised costs a step")
 	}
-	if s, ok := nextTrainSkill(a, later); !ok || s != training.Obedience {
+	if s, ok := herd.NextTrainSkill(a, later); !ok || s != training.Obedience {
 		t.Fatal("a decayed skill is trained again")
 	}
-	if trainSteps(a, training.Obedience, now+99*training.DecayTicks) != 1 {
+	if herd.TrainSteps(a, training.Obedience, now+99*training.DecayTicks) != 1 {
 		t.Fatal("learned Obedience keeps its floor")
 	}
-	if !trainDue(dog, a, now+trainCooldown+trainJitter) || trainDue(dog, a, now+trainCooldown-1) {
+	if !herd.TrainDue(dog, a, now+herd.TrainCooldown+herd.TrainJitter) || herd.TrainDue(dog, a, now+herd.TrainCooldown-1) {
 		t.Fatal("the next session waits for the cooldown")
 	}
 }
@@ -102,7 +103,7 @@ func TestHandlerTrainsAnimalWithCooldown(t *testing.T) {
 	g.animals.Set(dog, a)
 	var starts []uint64
 	last := job.None
-	for i := 0; i < 4*int(trainCooldown) && len(starts) < 4; i++ {
+	for i := 0; i < 4*int(herd.TrainCooldown) && len(starts) < 4; i++ {
 		g.Step(1)
 		if i%50 == 0 {
 			g.SetNeeds(ada, 1<<20, 1<<20)
@@ -117,12 +118,12 @@ func TestHandlerTrainsAnimalWithCooldown(t *testing.T) {
 		t.Fatalf("handler started %d sessions", len(starts))
 	}
 	for i := 1; i < len(starts); i++ {
-		if starts[i]-starts[i-1] < trainCooldown {
+		if starts[i]-starts[i-1] < herd.TrainCooldown {
 			t.Fatalf("sessions %d ticks apart: %v", starts[i]-starts[i-1], starts)
 		}
 	}
 	a, _ = g.animals.Get(dog)
-	if !trainLearned(a, training.Obedience, uint64(g.clock.Now())) {
+	if !herd.TrainLearned(a, training.Obedience, uint64(g.clock.Now())) {
 		t.Fatalf("Obedience learnt after %d sessions: %v", len(starts), a.Trained)
 	}
 }
@@ -183,7 +184,7 @@ func dutyYard(t *testing.T, dx int, skills ...training.Skill) (g *Game, ada, dog
 	a, _ := g.animals.Get(dog)
 	a.Master, a.TrainDecay = uint64(ada), 0
 	for _, s := range skills {
-		a.Trained[s] = training.Needed(s) | trainToggled
+		a.Trained[s] = training.Needed(s) | herd.TrainToggled
 	}
 	g.animals.Set(dog, a)
 	rid = spawnRaiderAt(t, g, 20+dx, 10, 1)
@@ -325,7 +326,7 @@ func TestGuardAnimalClosesOnThreatStepped(t *testing.T) {
 	g.TameAnimal(dog, "Rook")
 	a, _ := g.animals.Get(dog)
 	a.Master = uint64(ada)
-	a.Trained[training.Guard] = training.Needed(training.Guard) | trainToggled
+	a.Trained[training.Guard] = training.Needed(training.Guard) | herd.TrainToggled
 	g.animals.Set(dog, a)
 	wolf, _ := g.SpawnAnimal("ridgewolf", 24, 10)
 	w, _ := g.animals.Get(wolf)

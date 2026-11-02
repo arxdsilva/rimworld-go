@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/pawn/social"
 	"slices"
 
+	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -471,6 +472,8 @@ func (g *Game) afterLoadBurial() {
 func (g *Game) fillPawnDeath(pv *PawnView) {
 	pv.Embodied = pv.Status == health.Dead.String()
 	pv.AX.StripMarked = ordersOf(g).Strip.Marked(pv.ID) // game/orders (AX-1): a downed pawn marked to strip
+	j, _ := g.jobs.Get(pv.ID)
+	pv.AX.Reading = books.Reading(j, g.stacks.Ref(j.Target)) // game/books (AX-7): the book it reads
 }
 
 // fillCorpseView sets ItemView.Of and OfName for a human corpse or bones,

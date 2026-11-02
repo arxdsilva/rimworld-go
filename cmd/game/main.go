@@ -569,7 +569,7 @@ func saveHooks() uiadapter.SaveHooks {
 			out := make([]uiadapter.SaveSlot, 0, len(slots))
 			for _, sl := range slots {
 				s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Date: sl.Info.Date,
-					Colonists: sl.Info.Colonists, Modified: sl.Modified, Commitment: sl.Info.Commitment}
+					Colonists: sl.Info.Colonists, Modified: sl.Modified, Commitment: sl.Info.Commitment, Ending: sl.Info.Ending}
 				if sl.Err != nil {
 					s.Err = sl.Err.Error()
 				}

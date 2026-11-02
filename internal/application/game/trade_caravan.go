@@ -174,10 +174,10 @@ func (g *Game) traderLost(c *traderCaravan) {
 		x, y = p.X, p.Y
 	}
 	for _, l := range c.Stock.Lines {
-		g.dropGoods(l.Kind, l.Qty, x, y, true)
+		g.dropGoods(l, x, y, true)
 	}
 	if c.Stock.Silver > 0 {
-		g.dropGoods(item.Silver, c.Stock.Silver, x, y, true)
+		g.dropGoods(trade.Line{Kind: item.Silver, Qty: c.Stock.Silver}, x, y, true)
 	}
 	f := g.factionByID(c.Faction)
 	if f == nil {

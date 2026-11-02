@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/craft"
 	"slices"
 
@@ -87,8 +88,9 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 			HP: st.HP(), MaxHP: st.MaxHP(), Tainted: st.Tainted(), Urgent: g.haul.store.Urgent.Has(id), // STO-2
 			Ingredients: craft.IngredientNames(st), // FOOD-4
 		})
-		g.fillCorpseView(&out[len(out)-1], st) // burial.go
-		fillCrateView(&out[len(out)-1], st)    // move.go (AX-1): a crated building's kind and material
+		g.fillCorpseView(&out[len(out)-1], st)  // burial.go
+		fillCrateView(&out[len(out)-1], st)     // move.go (AX-1): a crated building's kind and material
+		books.FillItem(&out[len(out)-1].AX, st) // game/books (AX-7): a book's title, teaching, power
 		if st.Carrier != 0 {
 			continue
 		}

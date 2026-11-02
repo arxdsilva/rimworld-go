@@ -120,7 +120,7 @@ func TestGenerateStockPerKind(t *testing.T) {
 					t.Fatalf("kind %d silver %d lines %d", k, st.Silver, len(st.Lines))
 				}
 				for i, l := range st.Lines {
-					if l.Qty <= 0 || l.Kind == item.Silver || i > 0 && st.Lines[i-1].Kind >= l.Kind {
+					if l.Qty <= 0 || l.Kind == item.Silver || i > 0 && st.Lines[i-1].Goods().Compare(l.Goods()) >= 0 { // AX-1: crates order by building
 						t.Fatalf("bad line %+v", l)
 					}
 				}
@@ -153,12 +153,12 @@ func TestWants(t *testing.T) {
 }
 
 func stock() Stock {
-	return Stock{Kind: Quartermaster, Silver: 500, Lines: []Line{{item.Rifle, 2}, {item.Parka, 3}}}
+	return Stock{Kind: Quartermaster, Silver: 500, Lines: []Line{{Kind: item.Rifle, Qty: 2}, {Kind: item.Parka, Qty: 3}}}
 }
 
 func TestSettleBuyAndSell(t *testing.T) {
 	col := map[item.Kind]int{item.Silver: 400, item.Club: 5}
-	r := Settle([]Delta{{item.Parka, 1}, {item.Club, -2}}, col, stock(), Terms{}, false)
+	r := Settle([]Delta{{Kind: item.Parka, Qty: 1}, {Kind: item.Club, Qty: -2}}, col, stock(), Terms{}, false)
 	if !r.OK() {
 		t.Fatalf("rejected: %v", r.Reject)
 	}
@@ -171,7 +171,7 @@ func TestSettleBuyAndSell(t *testing.T) {
 		t.Fatalf("silver %d", r.Silver)
 	}
 	// Colony receives.
-	r = Settle([]Delta{{item.Club, -5}}, col, stock(), Terms{}, false)
+	r = Settle([]Delta{{Kind: item.Club, Qty: -5}}, col, stock(), Terms{}, false)
 	if !r.OK() || r.Silver != r.SilverCenti/100 || r.Silver <= 0 {
 		t.Fatalf("%+v", r)
 	}
@@ -179,40 +179,40 @@ func TestSettleBuyAndSell(t *testing.T) {
 
 func TestSettleRejectsUnaffordable(t *testing.T) {
 	col := map[item.Kind]int{item.Silver: 10, item.Club: 100}
-	if r := Settle([]Delta{{item.Rifle, 1}}, col, stock(), Terms{}, false); r.Reject != RejectUnaffordable {
+	if r := Settle([]Delta{{Kind: item.Rifle, Qty: 1}}, col, stock(), Terms{}, false); r.Reject != RejectUnaffordable {
 		t.Fatalf("colony: %v", r.Reject)
 	}
-	if r := Settle([]Delta{{item.Club, -100}}, col, stock(), Terms{}, false); r.Reject != RejectUnaffordable {
+	if r := Settle([]Delta{{Kind: item.Club, Qty: -100}}, col, stock(), Terms{}, false); r.Reject != RejectUnaffordable {
 		t.Fatalf("trader: %v", r.Reject)
 	}
 }
 
 func TestSettleRejectsOverStock(t *testing.T) {
 	col := map[item.Kind]int{item.Silver: 99999, item.Club: 1}
-	if r := Settle([]Delta{{item.Rifle, 3}}, col, stock(), Terms{}, false); r.Reject != RejectOverStock {
+	if r := Settle([]Delta{{Kind: item.Rifle, Qty: 3}}, col, stock(), Terms{}, false); r.Reject != RejectOverStock {
 		t.Fatalf("trader stock: %v", r.Reject)
 	}
-	if r := Settle([]Delta{{item.Club, -2}}, col, stock(), Terms{}, false); r.Reject != RejectOverStock {
+	if r := Settle([]Delta{{Kind: item.Club, Qty: -2}}, col, stock(), Terms{}, false); r.Reject != RejectOverStock {
 		t.Fatalf("colony stock: %v", r.Reject)
 	}
 }
 
 func TestSettleRejectsUnwanted(t *testing.T) {
 	col := map[item.Kind]int{item.Wood: 50, item.Silver: 50}
-	if r := Settle([]Delta{{item.Wood, -5}}, col, stock(), Terms{}, false); r.Reject != RejectUnwanted {
+	if r := Settle([]Delta{{Kind: item.Wood, Qty: -5}}, col, stock(), Terms{}, false); r.Reject != RejectUnwanted {
 		t.Fatalf("%v", r.Reject)
 	}
-	if r := Settle([]Delta{{item.Silver, 5}}, col, stock(), Terms{}, false); r.Reject != RejectUnwanted {
+	if r := Settle([]Delta{{Kind: item.Silver, Qty: 5}}, col, stock(), Terms{}, false); r.Reject != RejectUnwanted {
 		t.Fatalf("silver line: %v", r.Reject)
 	}
 }
 
 func TestSettleHostileEmpty(t *testing.T) {
 	col := map[item.Kind]int{item.Club: 5}
-	if r := Settle([]Delta{{item.Club, -1}}, col, stock(), Terms{Hostile: true}, false); r.Reject != RejectHostile {
+	if r := Settle([]Delta{{Kind: item.Club, Qty: -1}}, col, stock(), Terms{Hostile: true}, false); r.Reject != RejectHostile {
 		t.Fatal("hostile")
 	}
-	if r := Settle([]Delta{{item.Club, 1}, {item.Club, -1}}, col, stock(), Terms{}, false); r.Reject != RejectEmpty {
+	if r := Settle([]Delta{{Kind: item.Club, Qty: 1}, {Kind: item.Club, Qty: -1}}, col, stock(), Terms{}, false); r.Reject != RejectEmpty {
 		t.Fatal("empty")
 	}
 	for _, r := range []Reject{RejectNone, RejectEmpty, RejectHostile, RejectUnaffordable, RejectOverStock, RejectUnwanted} {
@@ -225,20 +225,20 @@ func TestSettleHostileEmpty(t *testing.T) {
 func TestSettleGiftNoSilver(t *testing.T) {
 	col := map[item.Kind]int{item.Silver: 300, item.Wood: 500}
 	// Gifts need not be wanted and pay nothing back.
-	r := Settle([]Delta{{item.Silver, -200}, {item.Wood, -100}}, col, stock(), Terms{}, true)
+	r := Settle([]Delta{{Kind: item.Silver, Qty: -200}, {Kind: item.Wood, Qty: -100}}, col, stock(), Terms{}, true)
 	if !r.OK() || r.SilverCenti != 0 || r.Silver != 0 || r.Goodwill != faction.GiftGoodwill(300) || len(r.Sell) != 2 {
 		t.Fatalf("%+v", r)
 	}
-	if GiftValue([]Delta{{item.Silver, -200}, {item.Wood, -100}, {item.Rifle, 4}}) != 300 {
+	if GiftValue([]Delta{{Kind: item.Silver, Qty: -200}, {Kind: item.Wood, Qty: -100}, {Kind: item.Rifle, Qty: 4}}) != 300 {
 		t.Fatal("gift value counts only what the colony gives")
 	}
-	if r := Settle([]Delta{{item.Rifle, 1}}, col, stock(), Terms{}, true); r.Reject != RejectUnwanted {
+	if r := Settle([]Delta{{Kind: item.Rifle, Qty: 1}}, col, stock(), Terms{}, true); r.Reject != RejectUnwanted {
 		t.Fatal("cannot take from a gift")
 	}
-	if r := Settle([]Delta{{item.Silver, -400}}, col, stock(), Terms{}, true); r.Reject != RejectOverStock {
+	if r := Settle([]Delta{{Kind: item.Silver, Qty: -400}}, col, stock(), Terms{}, true); r.Reject != RejectOverStock {
 		t.Fatal("gift over colony silver")
 	}
-	if r := Settle([]Delta{{item.Bones, -1}}, map[item.Kind]int{item.Bones: 1}, stock(), Terms{}, true); r.Reject != RejectUnwanted {
+	if r := Settle([]Delta{{Kind: item.Bones, Qty: -1}}, map[item.Kind]int{item.Bones: 1}, stock(), Terms{}, true); r.Reject != RejectUnwanted {
 		t.Fatal("worthless gift")
 	}
 }

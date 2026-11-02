@@ -162,17 +162,92 @@ func TestJourneyAX5FoamTurret(t *testing.T) {
 	wdToggle(t, "foam turret", 10, 5, []string{"hold"}, command.SetTurretHold, "HoldFire")
 }
 
-// TestJourneyAX5RocketBattery: a rocket battery is laid from Security once
-// researched, its pane shows a full volley, and Hold fire holds it.
+// TestJourneyAX5RocketBattery: a rocket battery is laid from Security
+// once researched. A powered one holds its rockets until the player aims
+// it (combat's TestRocketBatteryVolley: even with a raider in range): its inspector's Set target button and a map
+// click send SetMortarTarget, the drafted colonist mans it, and its
+// rockets burst around the target, each scattered on its own. The volley
+// empties it and clears the target, and the pane asks for chemfuel.
 func TestJourneyAX5RocketBattery(t *testing.T) {
 	t.Parallel()
-	j := newJourney(t, jPawns([2]int{8, 4}))
+	j := newJourney(t, jSize(48, 48), jPawns([2]int{10, 9}))
 	rsFinish(j, int(research.RocketBatteries))
-	ax5Lay(t, j, "security", "rocket_battery", "rocket battery", 14, 8)
-	wdBuild(j, "rocket battery", 20, 8)
-	id := wdSelect(j, 20, 8)
-	if lines := wbPaneLines(j, id); !strings.Contains(lines, "rockets  12 / 12") {
-		t.Fatalf("rocket battery pane %q, want a full volley", lines)
+	ax5Lay(t, j, "security", "rocket_battery", "rocket battery", 30, 8)
+	if !j.g.BuildNow("wood-fired generator", "steel", "south", 2, 2) {
+		t.Fatal("no generator")
 	}
-	wdToggle(t, "rocket battery", 10, 5, []string{"hold"}, command.SetTurretHold, "HoldFire")
+	j.g.FuelCampfire(2, 2)
+	for x := 2; x <= 10; x++ {
+		j.g.BuildNow("power conduit", "steel", "south", x, 4)
+	}
+	wdBuild(j, "rocket battery", 10, 5)
+	id := wdSelect(j, 10, 5)
+	if lines := wbPaneLines(j, id); !strings.Contains(lines, "rockets  12 / 12") || !strings.Contains(lines, "set a target") {
+		t.Fatalf("rocket battery pane %q, want a full volley and no target", lines)
+	}
+	const tx, ty = 10, 30
+	// draft the colonist beside the battery: even drafted and idle there,
+	// it fires nothing without a target
+	j.lookAt(10, 9)
+	j.update(1)
+	j.settle()
+	ordPick(j, 0)
+	j.key("R", 0)
+	if !j.pawn(ordColonists(j)[0]).Drafted {
+		t.Fatal("R did not draft the colonist")
+	}
+	j.key("Digit3", 0)
+	rockets := func() int {
+		n := 0
+		for _, b := range j.world().Bursts {
+			if wcStr(j, b, "Blast") == "bomb" && b.Radius == 29 {
+				n++
+			}
+		}
+		return n
+	}
+	for i := 0; i < 600; i++ {
+		careFeed(j)
+		j.update(1)
+	}
+	j.key("Space", 0)
+	if rockets() != 0 {
+		t.Fatal("the rocket battery fired on its own")
+	}
+	wdSelect(j, 10, 5)
+	j.clickID(wdButton(j, "Set target button", "target"))
+	j.lookAt(tx, ty)
+	j.update(1)
+	j.settle()
+	j.clickTile(tx, ty, 0, 0)
+	if c, ok := j.lastCmd(command.SetMortarTarget); !ok || c.X != 10 || c.Y != 5 || c.X2 != tx || c.Y2 != ty {
+		t.Fatalf("SetMortarTarget %+v (sent %v), want battery (10,5) target (%d,%d)", c, ok, tx, ty)
+	}
+	if v := wdView(j, id); !wcField(j, v, "HasTarget").Bool() {
+		t.Fatalf("battery view %+v does not show the target", v)
+	}
+	j.key("Digit3", 0)
+	for i := 0; i < 3000 && rockets() < 12; i++ {
+		careFeed(j)
+		j.update(1)
+	}
+	j.key("Space", 0)
+	near, spread := 0, false
+	for _, b := range j.world().Bursts {
+		if wcStr(j, b, "Blast") == "bomb" && b.Radius == 29 && abs(b.X-tx) <= 6 && abs(b.Y-ty) <= 6 {
+			near++
+			spread = spread || b.X != tx || b.Y != ty
+		}
+	}
+	if near != 12 || !spread {
+		t.Fatalf("%d rockets burst within 6 tiles of the target (spread %v), want 12 scattered", near, spread)
+	}
+	v := wdView(j, id)
+	if wcField(j, v, "HasTarget").Bool() {
+		t.Fatal("the volley left the target set")
+	}
+	wdSelect(j, 10, 5)
+	if lines := wbPaneLines(j, id); !strings.Contains(lines, "rockets  0 / 12") || !strings.Contains(lines, "chemfuel") {
+		t.Fatalf("pane after the volley %q", lines)
+	}
 }

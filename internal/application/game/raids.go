@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/books"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/raid"
@@ -12,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/combat/kit"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -237,7 +239,7 @@ func (g *Game) dropRaiderGear(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	out := forbids(g).DropForbidden(pos.X, pos.Y)
 	if r := g.raiders[id]; r.LootQty > 0 { // a thief's haul stays where it fell (DEF-4)
-		g.dropGoods(r.Loot, r.LootQty, pos.X, pos.Y, out)
+		g.dropGoods(trade.Line{Kind: r.Loot, Qty: r.LootQty}, pos.X, pos.Y, out)
 		r.Loot, r.LootQty = 0, 0
 		g.raiders[id] = r
 	}
@@ -255,6 +257,9 @@ func (g *Game) dropRaiderGear(id entity.EntityID) {
 		delete(g.equip, id)
 	}
 	g.combat.Drafts.DropSpare(id) // combat/draft.go (CBT-2): the spare weapon falls too
+	if k, ok := books.RaidLoot(g.streams.seed, uint64(id)); ok && g.isRaider(id) {
+		g.spawnUnclaimed(k, 1, pos.X, pos.Y, out) // game/books (AX-7): a book a raider carried
+	}
 }
 
 // removeRaider takes raider (or visitor, prisoner) id off the map. A

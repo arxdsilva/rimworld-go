@@ -19,6 +19,7 @@ type fakeHost struct {
 	ver             uint64
 	outdoors        bool
 	clean, beds     int
+	reading         int // AX-7: the room's reading bonus
 	benches, temp   int
 	pawn            Pawn
 	tech            proj.TechLevel
@@ -52,6 +53,7 @@ func (f *fakeHost) Building(id entity.EntityID) (construction.Building, bool) {
 func (f *fakeHost) Powered(id entity.EntityID) bool                      { return !f.off[id] }
 func (f *fakeHost) Room(int, int) (int, bool)                            { return 1, !f.outdoors }
 func (f *fakeHost) Cleanliness(int) int                                  { return f.clean }
+func (f *fakeHost) ReadingBonus(int) int                                 { return f.reading }
 func (f *fakeHost) Contents(int) (int, int)                              { return f.beds, f.benches }
 func (f *fakeHost) TemperatureAt(int, int) int                           { return f.temp }
 func (f *fakeHost) Pos(entity.EntityID) (int, int)                       { return 0, 0 }
@@ -332,5 +334,33 @@ func TestMigrate(t *testing.T) {
 	}
 	if len(legacyCost) != 45 {
 		t.Fatalf("%d legacy costs", len(legacyCost))
+	}
+}
+
+// TestReadingBonusAndStudy (AX-7): the room's reading bonus multiplies
+// the bench factor; a schematic's points finish a project with the
+// letter and keep another pick.
+func TestReadingBonusAndStudy(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	l := New(f)
+	hi := f.add(construction.ElectricResearchBench, 5, 0)
+	f.reading = 60 // ten shelved books
+	if got := l.Factor(hi); got != 1060 {
+		t.Fatalf("reading bonus factor %d, want 1060", got)
+	}
+	l.Pick(proj.Herbalism)
+	p := proj.Tailoring
+	cost := proj.DefOf(p).Cost
+	l.Study(p, cost-1, 0, 0)
+	if l.Prog.Done(p) || len(f.letters) != 0 {
+		t.Fatal("one point short is not done")
+	}
+	l.Study(p, 5, 0, 0)
+	if !l.Prog.Done(p) || len(f.letters) != 1 || l.Cur != proj.Herbalism || !l.Set {
+		t.Fatalf("done %v letters %v cur %v set %v", l.Prog.Done(p), f.letters, l.Cur, l.Set)
+	}
+	if l.CostOf(p) < 1 {
+		t.Fatal("cost percent")
 	}
 }

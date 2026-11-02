@@ -53,7 +53,7 @@ func (g *Game) isPatient(id entity.EntityID, b *body.Body) bool {
 		return false
 	}
 	v, ok := g.vital.Get(id)
-	return ok && v.Status != health.Dead
+	return ok && v.Status != health.Dead && (g.worldSt == nil || !g.worldSt.ax9.Asleep(id)) // AX-9: stasis suspends illness
 }
 
 // markPatient adds id to the index (once).

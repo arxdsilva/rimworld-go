@@ -1,19 +1,11 @@
 package game
 
-import (
-	"errors"
-	"strconv"
-	"strings"
-
-	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/trade"
-	"rimworld-go/internal/domain/sim/entity"
-)
+import "rimworld-go/internal/domain/sim/entity"
 
 // PLAY-024 Phase 0 contract (lead-owned): the read models the trade and
-// comms dialogs consume and the offer codec ProposeTrade carries. The
-// producers are trade_session.go and comms.go (agent S2, Phase 1); the
-// dialogs (agent U1, Phase 2) read them through their own interfaces.
+// comms dialogs consume (ProposeTrade's offer codec is trade.EncodeOffer).
+// The producers are trade_session.go and comms.go (agent S2, Phase 1);
+// the dialogs (agent U1, Phase 2) read them through their own interfaces.
 // See .cursor/MAIN_UI_SCREENS_SPECIFICATION.md §28 and §29.
 
 // TradeView is the open trade session (Game.TradeView; ok false while
@@ -48,7 +40,7 @@ type TradeView struct {
 }
 
 // TradeRowView is one row of the trade dialog. Kind is the item kind's
-// name (item.Kind.String; the key EncodeTradeOffer's caller parses back),
+// name (item.Kind.String; the key trade.EncodeOffer's caller parses back),
 // Label its display name, Category its item category. BuyC is what the
 // colony pays for one unit, SellC what it gets for one (hundredths of a
 // silver). WillBuy: the trader sells it (it has some); WillSell: the
@@ -113,59 +105,4 @@ type OrbitalView struct {
 	CaravanVisiting  bool
 	CaravanFaction   string
 	CaravanHoursLeft int
-}
-
-// Offer codec errors.
-var (
-	errOfferSyntax = errors.New("trade offer: malformed")
-	errOfferLine   = errors.New("trade offer: bad line")
-)
-
-// EncodeTradeOffer packs an offer into command.Command.Name (Command
-// stays comparable): "kind:qty" pairs joined by ",", kind the item.Kind
-// id and qty signed (positive: the colony buys), both decimal. The empty
-// offer is "".
-func EncodeTradeOffer(offer []trade.Delta) string {
-	var b strings.Builder
-	for i, d := range offer {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		b.WriteString(strconv.Itoa(int(d.Kind)))
-		b.WriteByte(':')
-		b.WriteString(strconv.Itoa(d.Qty))
-	}
-	return b.String()
-}
-
-// DecodeTradeOffer reads EncodeTradeOffer's output. It refuses malformed
-// text, unknown item kinds, zero quantities and a kind listed twice.
-func DecodeTradeOffer(s string) ([]trade.Delta, error) {
-	if s == "" {
-		return nil, nil
-	}
-	parts := strings.Split(s, ",")
-	out := make([]trade.Delta, 0, len(parts))
-	seen := make(map[item.Kind]bool, len(parts))
-	for _, p := range parts {
-		ks, qs, ok := strings.Cut(p, ":")
-		if !ok {
-			return nil, errOfferSyntax
-		}
-		k, err := strconv.ParseUint(ks, 10, 8)
-		if err != nil {
-			return nil, errOfferSyntax
-		}
-		q, err := strconv.Atoi(qs)
-		if err != nil {
-			return nil, errOfferSyntax
-		}
-		kind := item.Kind(k)
-		if q == 0 || kind.String() == "unknown" || seen[kind] {
-			return nil, errOfferLine
-		}
-		seen[kind] = true
-		out = append(out, trade.Delta{Kind: kind, Qty: q})
-	}
-	return out, nil
 }

@@ -165,6 +165,12 @@ type CenterOnPawn struct{ ID entity.EntityID }
 // the next map click sends command.Reinstall.
 type ReinstallCrate struct{ ID entity.EntityID }
 
+// LoadPods opens the load dialog for the transport pod group of pod Pod
+// (AX-9); LaunchPods opens the World tab to pick that group's launch
+// target.
+type LoadPods struct{ Pod entity.EntityID }
+type LaunchPods struct{ Pod entity.EntityID }
+
 func (OpenArchitect) isIntent()   {}
 func (CloseArchitect) isIntent()  {}
 func (PresetBuildTool) isIntent() {}
@@ -178,6 +184,8 @@ func (TogglePawnInSet) isIntent() {}
 func (ClearSelection) isIntent()  {}
 func (CenterOnPawn) isIntent()    {}
 func (ReinstallCrate) isIntent()  {}
+func (LoadPods) isIntent()        {}
+func (LaunchPods) isIntent()      {}
 
 // Screen is a full-screen route of the client (presentation only; it never
 // exists in the domain). The root's screenID is this type.
@@ -278,6 +286,9 @@ type SaveSlot struct {
 	// Commitment marks a commitment colony's one save (tagged in the list;
 	// it loads like any other).
 	Commitment bool
+	// Ending is the colony's ending ("ship": its ship has left, AX-8): the
+	// save's story is complete (tagged in the list).
+	Ending string
 }
 
 // Saves is the load screen's view of the save slots and the two actions

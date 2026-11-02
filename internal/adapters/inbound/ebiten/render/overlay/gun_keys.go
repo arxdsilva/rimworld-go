@@ -46,7 +46,7 @@ func gunOf(kind string) (gunSpec, bool) {
 // aimOf is the gun frame b points at: a mortar with a forced target aims at
 // it (frame 0 points south, counting clockwise on screen), else AimDir.
 func aimOf(b *game.BuildingView) int {
-	if b.Kind != MortarKind || !b.HasTarget {
+	if b.Kind != MortarKind && b.Kind != RocketBatteryKind || !b.HasTarget { // AX-5: the battery aims at its target too
 		return aimFrame(b.AimDir)
 	}
 	dx, dy := float64(b.TargetX-b.X), float64(b.TargetY-b.Y)

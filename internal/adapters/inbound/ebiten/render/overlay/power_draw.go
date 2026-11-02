@@ -155,6 +155,12 @@ func poweredLook(b *game.BuildingView) bool {
 	if b.Kind == SunLampKind { // lit only by day and while powered: the sim's Glow, not Powered
 		return b.Glow
 	}
+	if b.Kind == StasisCasketKind { // AX-9: lit while it holds a sleeper (travel_draw.go)
+		return b.AX.SleeperID != 0
+	}
+	if b.Kind == ShipReactorKind { // AX-8: lit once started (ship_draw.go), its 1000 W or not
+		return b.AX.Countdown >= 0
+	}
 	switch b.PowerRole {
 	case "consumer":
 		return b.Powered
@@ -227,7 +233,7 @@ func (o *Wiring) drawUnlitSprite(v *render.View, dst *ebiten.Image, key string, 
 // sprite (key, just drawn): the glow layer while it runs, then the
 // turbine's blades, the torch's flame or the battery's charge bar.
 func (o *Wiring) DrawPowerParts(v *render.View, ps sprite.Pass, ch *Chunks, dst *ebiten.Image, b *game.BuildingView, key string, tile float64, sw, sh int) {
-	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != SunLampKind && b.Kind != TorchLampKind && b.Kind != FueledForgeKind && b.Kind != WallTorchKind) {
+	if ch.Baking || v.Art == nil || (b.PowerRole == "" && b.Kind != SunLampKind && b.Kind != TorchLampKind && b.Kind != FueledForgeKind && b.Kind != WallTorchKind && !travelPart(b.Kind)) {
 		return
 	}
 	if poweredLook(b) || (b.Kind == FueledForgeKind && (b.Burning || b.Glow)) {
@@ -246,6 +252,8 @@ func (o *Wiring) DrawPowerParts(v *render.View, ps sprite.Pass, ch *Chunks, dst 
 		o.drawMillWheel(v, ps, dst, b, tile, sw, sh)
 	case BatteryKind:
 		o.drawBatteryBar(v, dst, b, key, tile)
+	case PodLauncherKind:
+		o.drawLauncherBar(v, dst, b, key, tile) // travel_draw.go (AX-9)
 	}
 }
 

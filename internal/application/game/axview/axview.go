@@ -74,6 +74,10 @@ type Item struct {
 type Pawn struct {
 	// A6: Joy, the recreation kind it is enjoying now ("" none).
 	Joy string
+	// A6: Tolerance, its recreation tolerance per joy kind (only kinds
+	// above 0, recreation.JoyKind order): percent, and bored (above 50 %
+	// until it falls below 30 %).
+	Tolerance []JoyTol
 	// A7: Reading, the title of the book it reads now.
 	Reading string
 	// A9: Casket, the stasis casket it sleeps in (building id, 0 none).
@@ -103,6 +107,12 @@ type World struct {
 	ShipLaunched bool
 	Ending       string
 	LaunchIssues []string
+	// ShipID, the ship LaunchIssues reports on (the one with a reactor,
+	// else the largest; 0 none); Countdown, its reactor's ticks left (-1
+	// not started or none, 0 done); Escaped, who left aboard (the ending).
+	ShipID    uint64
+	Countdown int
+	Escaped   []string
 	// A9: Pods in flight and the mineral sites found.
 	Pods  []PodFlight
 	Sites []Site
@@ -127,4 +137,11 @@ type Site struct {
 	Tile    int32
 	Mineral string // item kind name
 	Expires uint64 // tick
+}
+
+// JoyTol is one joy kind's tolerance (A6, game.PawnView.AX.Tolerance).
+type JoyTol struct {
+	Kind  string
+	Pct   int
+	Bored bool
 }

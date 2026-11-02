@@ -315,6 +315,8 @@ func Universe(k Kind) Filter {
 		return sets.rawFood
 	case KindGrave:
 		return sets.corpses
+	case KindBookcase: // A7: books only (wiki: Bookcase)
+		return Filter{}.With(item.Novel, true).With(item.Textbook, true).With(item.Schematic, true)
 	}
 	return Filter{}
 }

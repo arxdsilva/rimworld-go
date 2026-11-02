@@ -8,12 +8,12 @@ The colony's trade, comms and caravan dialogs: what a trader or faction offers, 
 - `Host` (4 methods: `Trade`, `Comms`, `Sites`, `HoldSpeed`).
 - `TradeSource` and `CommsSource`: one-method optional capabilities (`TradeStatus`, `CommsView`) that the root asserts on `Simulation` (SOLID_GO.md §5).
 - Pure draft maths and text: `TradeLines`/`TradeLine`, `CaravanTitle`, `CaravanTip`, `CaravanHealthNote`, `MemberList`, `SilverText`; the `tradeDraft` type (11 methods) holds the deal being built.
-- Modal IDs: `TradeModalID`, `CommsModalID`, `FormCaravanID`.
+- Modal IDs: `TradeModalID`, `CommsModalID`, `FormCaravanID`, `LoadPodsID` (AX-9: the Load transport pods dialog, `OpenLoadPods`).
 
 ## Allowed Dependencies
 - Leaves: `gfx`, `inputframe`, `ports`, `uikit`.
 - Application read models: `application/game` (`TradeView`, `CommsView`, `WorldSiteView`, `CaravanView`).
-- Domain value types: `economy/item`, `economy/trade`, `faction`, `sim/clock`, `sim/command`, `sim/entity`.
+- Domain value types: `animal` (an animal's body class for its mass), `economy/item`, `economy/trade`, `faction`, `sim/clock`, `sim/command`, `sim/entity`, `world/caravan` (the pods' masses, AX-9).
 - Ebitengine (`ebiten`); stdlib (`fmt`, `slices`, `strconv`, `strings`).
 
 ## Forbidden Dependencies
