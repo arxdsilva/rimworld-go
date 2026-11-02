@@ -87,7 +87,7 @@ func ax8Sleeper(j *journey, c [2]int) string {
 
 func TestJourneyAX8EscapeShip(t *testing.T) {
 	t.Parallel()
-	j := newJourney(t, jSize(48, 36), jPawns([2]int{12, 24}))
+	j := newJourney(t, jSize(48, 36), jPawns([2]int{12, 24}, [2]int{15, 24}))
 	ax8Research(j)
 	for _, tool := range []struct {
 		id, kind string
@@ -101,7 +101,11 @@ func TestJourneyAX8EscapeShip(t *testing.T) {
 	}
 
 	casket, reactor := ax8Ship(j, 12, 6)
-	pawn := uint64(j.g.Snapshot()[0].ID)
+	casket2 := [2]int{14, 12} // a second casket under the beam, facing east
+	if !j.g.BuildNow("ship stasis casket", "steel", "east", casket2[0], casket2[1]) {
+		t.Fatal("no second casket")
+	}
+	pawn, downed := uint64(j.g.Snapshot()[0].ID), uint64(j.g.Snapshot()[1].ID)
 	rid := wdSelect(j, reactor[0], reactor[1])
 	lines := wbPaneLines(j, rid)
 	for _, want := range []string{"reactor asleep", "launch report:", "the reactor has not been started", "nobody sleeps in a ship casket"} {
@@ -111,6 +115,11 @@ func TestJourneyAX8EscapeShip(t *testing.T) {
 	}
 	if j.clickID(inspector.LaunchShipBtnID) {
 		t.Fatal("Launch ship is enabled on an unready ship")
+	}
+	// the connectivity overlay: the selected part's ship is highlighted
+	j.update(1)
+	if sel := j.a.renderer.overlays().ShipSel; sel == 0 || sel != j.world().AX.ShipID {
+		t.Fatalf("ship overlay on %d, want the ship %d", sel, j.world().AX.ShipID)
 	}
 
 	// board, wake from the casket's pane, board again
@@ -129,6 +138,22 @@ func TestJourneyAX8EscapeShip(t *testing.T) {
 	if ax8Sleeper(j, casket) != "" {
 		t.Fatal("the sleeper did not wake")
 	}
+
+	// a downed colonist is carried into the second casket (game/travel's
+	// carry, extended to ship caskets)
+	careDown(j, downed)
+	careSelect(j, pawn)
+	j.settle()
+	name := j.pawn(downed).Name
+	if rows := careRightClick(j, j.pawn(downed).X, j.pawn(downed).Y); !slices.Contains(rows, "Carry "+name+" to ship stasis casket") {
+		t.Fatalf("downed colonist's menu %q lacks the ship casket carry", rows)
+	}
+	j.pick("Carry " + name + " to ship stasis casket")
+	if c, ok := j.lastCmd(command.EnterCasket); !ok || c.Worker != downed {
+		t.Fatalf("EnterCasket %+v ok=%v", c, ok)
+	}
+	ax8Run(j, func() bool { return ax8Sleeper(j, casket2) != "" }, 6000)
+
 	ax8Board(t, j, pawn, casket)
 
 	// the reactor starts behind its warning
@@ -189,7 +214,7 @@ func TestJourneyAX8EscapeShip(t *testing.T) {
 	j.update(2)
 	j.key("Space", 0)
 	w := j.world()
-	if w.AX.Ending != ship.EndingShip || len(w.AX.Escaped) != 1 {
+	if w.AX.Ending != ship.EndingShip || len(w.AX.Escaped) != 2 {
 		t.Fatalf("after the launch: %+v", w.AX)
 	}
 	if _, _, _, _, ok := overlay.LaunchFlare(w, uint64(j.g.Tick()), false); !ok {

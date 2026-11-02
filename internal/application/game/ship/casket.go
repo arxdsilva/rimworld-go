@@ -78,3 +78,23 @@ func (s *State) Prune(h Host) {
 		h.Changed()
 	}
 }
+
+// CasketFree reports ship casket id standing, not marked for removal and
+// empty: game/travel may carry a downed colonist into it.
+func (s *State) CasketFree(h Host, id entity.EntityID) bool {
+	b, ok := h.Building(id)
+	return ok && b.Kind == construction.ShipCasket && !b.Deconstruct && !s.launched && s.Sleeper(id) == 0
+}
+
+// LayIn puts pawn, carried there by game/travel's CarryToCasket, to sleep
+// in ship casket id; false when it can't (the carrier sets it down).
+func (s *State) LayIn(h Host, pawn, id entity.EntityID) bool {
+	if !s.CasketFree(h, id) || !h.Board(pawn, id) {
+		return false
+	}
+	s.setSleeper(id, pawn)
+	b, _ := h.Building(id)
+	h.Message(b.X, b.Y, h.Name(pawn)+" was laid in a ship stasis casket.")
+	h.Changed()
+	return true
+}

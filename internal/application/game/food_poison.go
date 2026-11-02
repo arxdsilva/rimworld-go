@@ -55,8 +55,8 @@ func (g *Game) rollFoodPoison(id entity.EntityID, st item.Stack) {
 // stepDiseases): its stage by time, a vomit now and then on the map, and
 // a message once it is over.
 func (g *Game) stepFoodPoison(id entity.EntityID, b *body.Body, v *health.Record, now uint64) {
-	if b.StepFoodPoisoning(now) {
-		if _, still := b.Poisoned(); !still {
+	if fp := b.StepFoodPoisoning(now); fp || body.StepCryptoSickness(b, now) { // AX-9: cryptosleep sickness too
+		if _, still := b.Poisoned(); fp && !still {
 			pos, _ := g.positions.Get(id)
 			g.message(pos.X, pos.Y, "%s is over the food poisoning.", g.name(id))
 		}
@@ -69,11 +69,7 @@ func (g *Game) stepFoodPoison(id entity.EntityID, b *body.Body, v *health.Record
 // foodVomit rolls a vomit for id's food poisoning stage: a splash of dirt
 // where it stands (none off the map).
 func (g *Game) foodVomit(id entity.EntityID, b *body.Body) {
-	c, ok := b.Poisoned()
-	if !ok {
-		return
-	}
-	every := body.FoodVomitEvery(c.Stage)
+	every := body.VomitEvery(b) // food poisoning's stage, or cryptosleep sickness (AX-9)
 	if every <= 0 || g.stream(streamMedical).IntN(int(every)) != 0 {
 		return
 	}
@@ -82,8 +78,16 @@ func (g *Game) foodVomit(id entity.EntityID, b *body.Body) {
 	}
 }
 
-// poisoned reports id with food poisoning (the "sick" thought).
+// poisoned reports id with food poisoning or cryptosleep sickness (AX-9).
 func (g *Game) poisoned(id entity.EntityID) bool {
 	_, ok := g.bodies[id].Poisoned()
-	return ok
+	return ok || body.CryptoSick(g.bodies[id])
+}
+
+// cryptoSicken gives person id cryptosleep sickness (out of a casket).
+func cryptoSicken(g *Game, id entity.EntityID) {
+	if v, ok := g.vital.Get(id); ok && v.Status != health.Dead && g.ensureBody(id, &v) != nil {
+		body.CryptoSicken(g.bodies[id], uint64(g.clock.Now()))
+		g.bodyChanged(id, g.bodies[id], &v) // body.go: stats follow, joins the patients
+	}
 }

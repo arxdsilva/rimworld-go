@@ -136,3 +136,38 @@ func Ring(x, y, r int, ok func(x, y int) bool) (int, int, bool) {
 	}
 	return 0, 0, false
 }
+
+// ExitBeside is a cell beside cells (each cell's eight neighbours in
+// turn) that open accepts and busy does not, else the first open but busy
+// one (ok false: none open): where a casket's occupant climbs out (moved
+// out of package game by AX-9).
+func ExitBeside(cells [][2]int, open, busy func(x, y int) bool) (int, int, bool) {
+	var fallback [2]int
+	found := false
+	for _, c := range cells {
+		for _, d := range [8][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}} {
+			x, y := c[0]+d[0], c[1]+d[1]
+			switch {
+			case !open(x, y):
+			case !busy(x, y):
+				return x, y, true
+			case !found:
+				fallback, found = [2]int{x, y}, true
+			}
+		}
+	}
+	return fallback[0], fallback[1], found
+}
+
+// CaravanView is one caravan on the World tab (the game's CaravanView);
+// Progress is the percent to its next tile.
+type CaravanView struct {
+	ID      uint64
+	Members []string
+	// Health is each member's short health note, parallel to Members
+	// ("bleeding", "flu", "food poisoning"; "" when well; WS-M).
+	Health     []string
+	Tile, Dest int
+	Progress   int
+	State      string
+}

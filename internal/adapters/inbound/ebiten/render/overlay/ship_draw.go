@@ -18,6 +18,47 @@ import (
 // launch flare where the ship lifted off. Presentation only: it reads the
 // building views, the launch letter and the simulation tick.
 
+// shipLinkTint is the highlight over the selected part's ship.
+var shipLinkTint = color.NRGBA{90, 200, 230, 70}
+
+// IsShipKind reports one of the escape ship's six part kinds.
+func IsShipKind(kind string) bool {
+	switch kind {
+	case "ship structural beam", "ship stasis casket", "ship computer core", "ship reactor", "ship engine", "ship sensor cluster":
+		return true
+	}
+	return false
+}
+
+// ShipSelOf is Set.ShipSel for the selected building b (sel false: none):
+// a ship part's ship, else 0.
+func ShipSelOf(b game.BuildingView, sel bool) uint64 {
+	if !sel || !IsShipKind(b.Kind) {
+		return 0
+	}
+	return b.AX.ShipID
+}
+
+// DrawShipLinks highlights every part of the selected part's ship
+// (Set.ShipSel): the connectivity overlay. A part left out (a casket with
+// no beam beside it) stays plain.
+func (o *Set) DrawShipLinks(v *render.View, screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
+	if o.ShipSel == 0 {
+		return
+	}
+	x0, y0, x1, y1 := visibleTiles(v, sw, sh, tile)
+	for i := range w.Buildings {
+		b := &w.Buildings[i]
+		if b.AX.ShipID != o.ShipSel || b.X+b.W < x0 || b.X > x1 || b.Y+b.H < y0 || b.Y > y1 {
+			continue
+		}
+		sx, sy := v.WorldToScreenF(float64(b.X), float64(b.Y))
+		ex, ey := v.WorldToScreenF(float64(b.X+max(b.W, 1)), float64(b.Y+max(b.H, 1)))
+		o.solidRect(screen, sx, sy, ex-sx, ey-sy, shipLinkTint)
+	}
+	v.LayerDrawn("ship links")
+}
+
 // ShipReactorKind is the ship reactor (its glow: poweredLook).
 const ShipReactorKind = "ship reactor"
 

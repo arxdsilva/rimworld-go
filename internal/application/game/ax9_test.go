@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
@@ -459,5 +460,167 @@ func TestTravelStateSaves(t *testing.T) {
 	if again.AX9 == nil || !slices.EqualFunc(again.AX9.Sites, s.AX9.Sites, func(a, b travel.Site) bool { return a == b }) ||
 		again.AX9.Holds[0].Hold.Items[0].Qty != 12 {
 		t.Fatalf("restored %+v", again.AX9)
+	}
+}
+
+// ax9Downed downs pawn id (a colonist or prisoner) on the spot.
+func ax9Downed(g *Game, id entity.EntityID) {
+	v, _ := g.vital.Get(id)
+	v.Status = health.Downed
+	g.vital.Set(id, v)
+}
+
+// ax9Carry orders carrier to carry patient into casket and runs until it
+// is stashed (keep re-downs a colonist or prisoner each tick).
+func ax9Carry(t *testing.T, g *Game, carrier, patient, casket entity.EntityID, keep func()) {
+	t.Helper()
+	g.Enqueue(command.Command{Kind: command.EnterCasket, Pawn: uint64(carrier), Target: uint64(casket), Worker: uint64(patient)})
+	for i := 0; i < 2000 && !g.isStashed(patient); i++ {
+		keep()
+		g.Step(1)
+	}
+	if !g.isStashed(patient) {
+		t.Fatalf("%d was not carried into the casket", patient)
+	}
+}
+
+// The wiki lets downed prisoners and animals into a cryptosleep casket: a
+// colonist carries a downed tame animal in (it comes out as it went) and
+// a downed prisoner (still a prisoner when ejected, and sick from the
+// stasis while an animal is not).
+func TestStasisCasketTakesAnimalsAndPrisoners(t *testing.T) {
+	t.Parallel()
+	g, ada, _, rid, _ := prisonGame(t)
+	ax9Idle(g, ada)
+	casket := buildNow(t, g, construction.StasisCasket, item.Steel, construction.South, 8, 8)
+	g.makePrisoner(rid, ada)
+	ax9Carry(t, g, ada, rid, casket, func() { ax9Downed(g, rid) })
+	if travelOf(g).Sleeper(casket) != rid || slices.Contains(g.raiderIDs, rid) {
+		t.Fatal("the prisoner is not asleep in the casket")
+	}
+	g.Enqueue(command.Command{Kind: command.EjectCasket, Target: uint64(casket)})
+	g.Step(1)
+	if !g.prison.Is(rid) || !slices.Contains(g.raiderIDs, rid) || !body.CryptoSick(g.bodies[rid]) {
+		t.Fatalf("ejected prisoner: prisoner %v listed %v sick %v", g.prison.Is(rid), slices.Contains(g.raiderIDs, rid), body.CryptoSick(g.bodies[rid]))
+	}
+	aid, err := g.SpawnAnimal("donkey", 6, 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := g.animals.Ref(aid)
+	a.Tame, a.Downed = true, true
+	species := a.Species
+	ax9Carry(t, g, ada, aid, casket, func() {
+		if a := g.animals.Ref(aid); a != nil {
+			a.Downed = true
+		}
+	})
+	if g.animals.Has(aid) || travelOf(g).Sleeper(casket) != aid {
+		t.Fatal("the animal is not asleep in the casket")
+	}
+	g.Enqueue(command.Command{Kind: command.EjectCasket, Target: uint64(casket)})
+	g.Step(1)
+	if b, ok := g.animals.Get(aid); !ok || b.Species != species || !b.Tame {
+		t.Fatalf("the animal did not come out as it went: %+v ok=%v", b, ok)
+	}
+}
+
+// Waking gives cryptosleep sickness (wiki: 10000 ticks); a casket down to
+// 50 hit points sparks and, two seconds on, explodes: it is gone and its
+// sleeper thrown out. Once lit the fuse goes off even if repaired (one
+// way: no flap).
+func TestStasisCasketSicknessAndExplosion(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 4, Width: 24, Height: 16})
+	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
+	ax9Idle(g, ada)
+	casket := buildNow(t, g, construction.StasisCasket, item.Steel, construction.South, 12, 6)
+	g.Enqueue(command.Command{Kind: command.EnterCasket, Pawn: uint64(ada), Target: uint64(casket)})
+	for i := 0; i < 600 && !g.isStashed(ada); i++ {
+		g.Step(1)
+	}
+	b, _ := g.bldgs.Get(casket)
+	b.Damage = b.HP() - 40 // 40 hit points left
+	g.bldgs.Set(casket, b)
+	g.Step(61)
+	if !g.bldgs.Has(casket) {
+		t.Fatal("the casket blew at once")
+	}
+	b, _ = g.bldgs.Get(casket)
+	b.Damage = 0 // repaired: the fuse burns on
+	g.bldgs.Set(casket, b)
+	g.Step(200)
+	if g.bldgs.Has(casket) || g.isStashed(ada) {
+		t.Fatalf("no explosion: casket %v, Ada stashed %v", g.bldgs.Has(casket), g.isStashed(ada))
+	}
+	if !body.CryptoSick(g.bodies[ada]) {
+		t.Fatal("Ada woke without cryptosleep sickness")
+	}
+	g.Step(body.CryptoSickTicks + 2*2500)
+	if body.CryptoSick(g.bodies[ada]) {
+		t.Fatal("the sickness never wore off")
+	}
+}
+
+// A caravan formed with goods and a pack animal waits at the hitching
+// spot while they are loaded (the goods carried there, the animal led and
+// tied), leaves with them as cargo and moves slower for the load; picks
+// past what it carries (35 kg a person) are left behind.
+func TestCaravanPacksGoodsAndAnimals(t *testing.T) {
+	t.Parallel()
+	g := worldGame(t)
+	dest := nearDest(t, g)
+	x, y := ax9Free(t, g)
+	buildNow(t, g, construction.HitchingSpot, item.Wood, construction.South, x+1, y+1)
+	ada := g.pawnIDs[0]
+	sid, err := g.SpawnStack(item.Steel, 40, x+3, y+2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	aid, err := g.SpawnAnimal("donkey", x, y+2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.animals.Ref(aid).Tame = true
+	g.Enqueue(command.Command{Kind: command.FormCaravan, Name: entityStr(ada) + "," + entityStr(aid) + "," + entityStr(sid) + ":30", Count: dest})
+	g.Step(1)
+	c := g.caravanOf(ada)
+	if c == nil || !travelOf(g).Gathering(c.C.ID) {
+		t.Fatal("the caravan is not gathering")
+	}
+	cid := c.C.ID
+	for i := 0; i < 12000; i++ {
+		if i%500 == 0 {
+			for _, id := range g.pawnIDs {
+				g.SetNeeds(id, needs.Full, needs.Full)
+			}
+		}
+		g.Step(1)
+		if c = g.caravanAt(entity.EntityID(cid)); c == nil || c.C.State != caravan.Forming {
+			break
+		}
+	}
+	if c == nil || c.C.State == caravan.Forming {
+		t.Fatalf("the caravan never set out: %+v", c)
+	}
+	s := g.worldSt.ax9.Export()
+	var cargo travel.Hold
+	for _, cc := range s.Cargo {
+		if cc.Caravan == cid {
+			cargo = cc.Hold
+		}
+	}
+	if len(cargo.Items) != 1 || cargo.Items[0].Qty != 30 || len(cargo.Animals) != 1 || cargo.Animals[0].ID != aid || g.animals.Has(aid) {
+		t.Fatalf("cargo %+v (animal on the map %v)", cargo, g.animals.Has(aid))
+	}
+	if p := travelOf(g).Pace(cid, 1); p >= 1000 || c.C.Slowest >= 1000 {
+		t.Fatalf("a loaded caravan at full pace: pace %d slowest %d", p, c.C.Slowest)
+	}
+	// too heavy: 500 kg of steel on one colonist is left behind
+	g2 := worldGame(t)
+	sid2, _ := g2.SpawnStack(item.Steel, 1000, 5, 5)
+	travelOf(g2).Pack(99, entityStr(sid2)+":1000", 1)
+	if s := g2.worldSt.ax9.Export(); s != nil && len(s.Packs) != 0 {
+		t.Fatalf("an overweight pick was packed: %+v", s.Packs)
 	}
 }

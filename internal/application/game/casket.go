@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -140,25 +141,9 @@ func (g *Game) openCasketGroup(bid entity.EntityID) {
 // cell beside it, inside its vault when it has one.
 func (g *Game) casketExit(b construction.Building, v *vaultSave) (int, int, bool) {
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-	var fallback [2]int
-	found := false
-	for _, c := range cells {
-		for _, d := range [8][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}} {
-			x, y := c[0]+d[0], c[1]+d[1]
-			if !g.dryWalkable(x, y) || v != nil && !v.inside(x, y) {
-				continue
-			}
-			if g.creatureOn(x, y) {
-				if !found {
-					fallback, found = [2]int{x, y}, true
-				}
-				continue
-			}
-			return x, y, true
-		}
-	}
-	if found {
-		return fallback[0], fallback[1], true
+	open := func(x, y int) bool { return g.dryWalkable(x, y) && (v == nil || v.inside(x, y)) }
+	if x, y, ok := travel.ExitBeside(cells, open, g.creatureOn); ok { // game/travel
+		return x, y, true
 	}
 	return g.combat.Tiles.WalkableNear(b.X, b.Y, 3)
 }

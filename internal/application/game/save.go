@@ -454,9 +454,7 @@ func (g *Game) Info(name string) SaveInfo {
 		info.Storyteller = g.storyProfile().Name
 		info.Difficulty = s.Preset.String()
 	}
-	if g.worldSt != nil && g.worldSt.ship.Launched() {
-		info.Ending = ship.EndingShip // game/ship (AX-8)
-	}
+	info.Ending = g.worldS().ship.Ending() // game/ship (AX-8)
 	return info
 }
 
@@ -519,9 +517,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	// bridge.go (MAPGEN-3): the sea bitset, nil without a sea
 	s.Ocean = g.exportOcean()
 	s.AX4 = g.br.ind.Export(g.bldgs.Has) // game/industry (AX-4)
-	if g.worldSt != nil {
-		s.AX8 = g.worldSt.ship.Export() // game/ship (AX-8)
-	}
+	s.AX8 = g.worldS().ship.Export()     // game/ship (AX-8); an empty world state saves nothing
 	for id, q := range g.orderQueue {
 		for _, o := range q {
 			s.OrderQueue[id] = append(s.OrderQueue[id], savedOrder{Cmd: o.cmd, Label: o.label, RetryAt: o.retryAt, Tries: o.tries})
@@ -734,9 +730,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	}
 	g.importPeople(s.People)
 	g.importWorld(s.World)
-	if s.AX8 != nil {
-		shipOf(g).Import(s.AX8) // game/ship (AX-8)
-	}
+	shipOf(g).Import(s.AX8) // game/ship (AX-8)
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
 	g.care.Rest.Import(s.BedRest)

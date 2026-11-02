@@ -305,3 +305,16 @@ func TestRewindSkipsTheCountdownAndBringsTheRaid(t *testing.T) {
 		t.Fatalf("left %d letters %v", s.left(sh, f.now), f.letters)
 	}
 }
+
+func TestLayACarriedColonistInAShipCasket(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	var s State
+	casket, reactor := minimal(f)
+	if !s.CasketFree(f, casket) || s.CasketFree(f, reactor) {
+		t.Fatal("free casket check")
+	}
+	if !s.LayIn(f, 100, casket) || s.Sleeper(casket) != 100 || s.CasketFree(f, casket) || s.LayIn(f, 101, casket) {
+		t.Fatalf("lay: sleeper %d", s.Sleeper(casket))
+	}
+}

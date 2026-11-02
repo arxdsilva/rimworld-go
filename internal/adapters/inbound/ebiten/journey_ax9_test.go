@@ -145,6 +145,26 @@ func TestJourneyAX9CasketScannerPods(t *testing.T) {
 		t.Fatal("the sleeper is still in the casket")
 	}
 
+	// a downed colonist carried in from the right-click menu, and woken
+	bob := uint64(j.g.Snapshot()[1].ID)
+	careDown(j, bob)
+	careSelect(j, pawn)
+	bp := j.pawn(bob)
+	rows := careRightClick(j, bp.X, bp.Y)
+	if !slices.ContainsFunc(rows, func(r string) bool { return strings.HasSuffix(r, "to stasis casket") }) {
+		t.Fatalf("downed colonist menu %q lacks the carry row", rows)
+	}
+	j.pick("Carry ")
+	if c, ok := j.lastCmd(command.EnterCasket); !ok || c.Worker != bob || c.Target != uint64(cid) {
+		t.Fatalf("carry EnterCasket %+v ok=%v", c, ok)
+	}
+	j.key("Digit3", 0)
+	j.until(func() bool { return ax9Sleeper(j, casket) != "" }, 4000)
+	j.key("Space", 0)
+	wdSelect(j, casket[0], casket[1])
+	j.clickID(inspector.EjectCasketBtnID)
+	j.update(2)
+
 	// the scanner's pane and its target menu
 	wdBuild(j, "long-range mineral scanner", 24, 16)
 	sid := wdSelect(j, 24, 16)
@@ -267,4 +287,59 @@ func ax9At(j *journey, x, y int) (game.BuildingView, bool) {
 		}
 	}
 	return game.BuildingView{}, false
+}
+
+// TestJourneyAX9CaravanPacks: on a wizard colony the Form caravan dialog
+// lists goods with their amounts beside the colonists; a colonist and
+// all of one kind of goods are sent: the caravan gathers to load them.
+func TestJourneyAX9CaravanPacks(t *testing.T) {
+	t.Parallel()
+	j := newMenuJourney(t)
+	wizardToColony(t, j)
+	if j.a.renderer.speed != speedPaused {
+		j.key("Space", 0)
+	}
+	j.key("F8", 0)
+	if !j.clickID("modal." + windows.WorldModalID + ".world.form") {
+		t.Fatal("Form caravan is disabled")
+	}
+	j.update(1)
+	member := j.g.Snapshot()[0].ID
+	j.clickID("form.member." + strconv.FormatUint(uint64(member), 10))
+	total := map[string]int{}
+	for _, it := range j.world().Items {
+		if k, ok := item.ParseKind(it.Kind); ok && !k.IsCorpse() && !it.Forbidden && !it.Carried {
+			total[it.Kind] += it.Qty
+		}
+	}
+	picked := ""
+	for k, n := range total {
+		if dialogs.GoodsKg(k, n) <= 30 && (picked == "" || k < picked) {
+			picked = k
+		}
+	}
+	if picked != "" && !j.clickID("form.goods."+strings.ReplaceAll(picked, " ", "_")+".all") {
+		t.Fatalf("no goods row for %s", picked)
+	}
+	if picked == "" {
+		t.Skip("no light loose goods on this colony")
+	}
+	dest := -1
+	for _, s := range j.g.WorldSites() {
+		if s.Visitable {
+			dest = s.Tile
+			break
+		}
+	}
+	j.clickID("form.dest." + strconv.Itoa(dest))
+	if !j.clickID("modal." + dialogs.FormCaravanID + ".form.send") {
+		t.Fatal("Send is disabled with a colonist, light goods and a destination")
+	}
+	c, ok := j.lastCmd(command.FormCaravan)
+	if !ok || !strings.Contains(c.Name, ":") || !strings.HasPrefix(c.Name, strconv.FormatUint(uint64(member), 10)+",") {
+		t.Fatalf("FormCaravan %+v ok=%v, want the colonist then the goods", c, ok)
+	}
+	if cs := j.g.WorldMap().Caravans; len(cs) != 1 || cs[0].State != "Forming" {
+		t.Fatalf("caravans %+v", cs)
+	}
 }

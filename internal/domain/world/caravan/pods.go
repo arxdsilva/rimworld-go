@@ -53,3 +53,11 @@ func PodRange(fuel, pods int) int {
 func PodFuel(tiles, pods int) int {
 	return (max(tiles, 0)*pods*PodFuelQuarters + 3) / 4
 }
+
+// PersonCarryKg is what a person carries on a caravan (wiki: Caravan,
+// body size x 35 kg; a person's body size is 1).
+const PersonCarryKg = 35
+
+// PackKg is what an animal of body size bs (hundredths, animal.BodySize)
+// carries on a caravan (wiki: Caravan, body size x 35 kg).
+func PackKg(bs int) int { return bs * PersonCarryKg / 100 }

@@ -73,8 +73,9 @@ type Option struct {
 }
 
 // Orders are pawn's stasis casket rows for a click on (x, y): enter the
-// casket there, or carry the downed pawn lying there to the nearest
-// empty casket.
+// casket there, or carry the downed colonist, prisoner or tame animal
+// lying there to the nearest empty stasis casket, and (AX-8) to the
+// nearest free ship stasis casket when the ship has one.
 func (o Ops) Orders(pawn entity.EntityID, x, y int) []Option {
 	for _, bid := range o.h.BuildingIDs() {
 		if b, ok := o.h.Building(bid); ok && b.Kind == construction.StasisCasket && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
@@ -85,31 +86,35 @@ func (o Ops) Orders(pawn entity.EntityID, x, y int) []Option {
 			return []Option{opt}
 		}
 	}
-	for _, pid := range o.h.PawnIDs() {
-		if pid == pawn || !o.h.Downed(pid) {
-			continue
+	c := caskets(o)
+	for _, ids := range [][]entity.EntityID{o.h.PawnIDs(), o.h.RaiderIDs(), o.tame()} {
+		for _, pid := range ids {
+			if px, py := o.h.Pos(pid); pid == pawn || px != x || py != y || !c.carriable(pid) {
+				continue
+			}
+			cmd := command.Command{Kind: command.EnterCasket, Pawn: uint64(pawn), Worker: uint64(pid)}
+			opt := Option{Label: "Carry " + o.h.Name(pid) + " to stasis casket", Cmd: cmd}
+			if opt.Cmd.Target = uint64(c.nearestCasket(x, y, construction.StasisCasket)); opt.Cmd.Target == 0 {
+				opt.Disabled, opt.Reason = true, "no empty stasis casket"
+			}
+			out := []Option{opt}
+			if ship := c.nearestCasket(x, y, construction.ShipCasket); ship != 0 {
+				cmd.Target = uint64(ship)
+				out = append(out, Option{Label: "Carry " + o.h.Name(pid) + " to ship stasis casket", Cmd: cmd})
+			}
+			return out
 		}
-		if px, py := o.h.Pos(pid); px != x || py != y {
-			continue
-		}
-		casket := caskets(o).nearestCasket(x, y)
-		opt := Option{Label: "Carry " + o.h.Name(pid) + " to stasis casket",
-			Cmd: command.Command{Kind: command.EnterCasket, Pawn: uint64(pawn), Target: uint64(casket), Worker: uint64(pid)}}
-		if casket == 0 {
-			opt.Disabled, opt.Reason = true, "no empty stasis casket"
-		}
-		return []Option{opt}
 	}
 	return nil
 }
 
-// nearestCasket is the empty stasis casket nearest (x, y) (0: none).
-func (o caskets) nearestCasket(x, y int) entity.EntityID {
+// nearestCasket is the free casket of kind k nearest (x, y) (0: none).
+func (o caskets) nearestCasket(x, y int, k construction.Kind) entity.EntityID {
 	var best entity.EntityID
 	bd := 1 << 30
 	for _, id := range o.h.BuildingIDs() {
 		b, ok := o.h.Building(id)
-		if !ok || b.Kind != construction.StasisCasket || !o.freeCasket(id) {
+		if !ok || b.Kind != k || !o.freeCasket(id, true) {
 			continue
 		}
 		if d := abs(b.X-x) + abs(b.Y-y); d < bd {

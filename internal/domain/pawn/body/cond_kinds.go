@@ -66,6 +66,9 @@ const (
 	CondHypothermia
 	CondHypothermicSlowdown
 	CondHeatstroke
+	// CondCryptosleepSickness is the daze after a stasis casket (AX-9,
+	// cond_crypto.go): it wears off by time.
+	CondCryptosleepSickness
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -78,7 +81,7 @@ type CondEntry struct {
 
 // condTables lists every phase's definition table (one line per phase).
 var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood, condsMalnutrition, condsToxic,
-	condsFrostbite}
+	condsFrostbite, condsCrypto}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)

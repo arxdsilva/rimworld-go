@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/entity"
@@ -16,7 +17,7 @@ import (
 type Host interface {
 	Sites
 	People
-	Hands
+	Carriers
 	Movers
 	Goods
 	Beasts
@@ -37,6 +38,8 @@ type Sites interface {
 	SetFuel(id entity.EntityID, units int)
 	// Remove takes a building away with no refund (a launched pod).
 	Remove(id entity.EntityID)
+	// Explode bursts d at (x, y) (a stasis casket blowing up).
+	Explode(x, y int, d explosion.Def)
 }
 
 // People is the colony's pawns and its off-map stash.
@@ -53,12 +56,20 @@ type People interface {
 	Unstash(id entity.EntityID, x, y int) bool
 }
 
-// Hands is carrying a downed pawn.
-type Hands interface {
+// Carriers is carrying a downed pawn into a casket: the carry itself,
+// the prisoners (listed among the raiders) who may be carried in, and the
+// escape ship's caskets (game/ship, AX-8; LayInShip posts its message).
+type Carriers interface {
 	// Pick has carrier pick patient up; PutDown sets what it carries down
 	// where it stands.
 	Pick(carrier, patient entity.EntityID)
 	PutDown(carrier entity.EntityID)
+	RaiderIDs() []entity.EntityID
+	IsPrisoner(id entity.EntityID) bool
+	ShipCasketFree(id entity.EntityID) bool
+	LayInShip(pawn, casket entity.EntityID) bool
+	// Sicken gives a person out of a casket cryptosleep sickness.
+	Sicken(id entity.EntityID)
 }
 
 // Movers is the pawns' jobs and walking.

@@ -24,7 +24,15 @@ type State struct {
 	sites   []Site
 	finds   int // mineral finds so far (each hashes the next)
 	nextID  uint64
-	groups  groupCache // derived (per structure version)
+	fuses   map[entity.EntityID]uint64 // stasis casket -> when its lit fuse blows (casket.go)
+	packs   map[uint64]*Pack           // forming caravan -> what it still loads (pack.go)
+	groups  groupCache                 // derived (per structure version)
+	// casketList is the stasis caskets of one structure version (derived).
+	casketList struct {
+		ok  bool
+		ver uint64
+		ids []entity.EntityID
+	}
 }
 
 // Hold is what a pod (or a landed caravan's cargo) carries: passengers
@@ -100,6 +108,20 @@ type Save struct {
 	Sites   []Site
 	Finds   int
 	NextID  uint64
+	Fuses   []Fuse
+	Packs   []CaravanPack
+}
+
+// CaravanPack is a forming caravan's packing.
+type CaravanPack struct {
+	Caravan uint64
+	Pack    Pack
+}
+
+// Fuse is a stasis casket's lit fuse.
+type Fuse struct {
+	Casket entity.EntityID
+	At     uint64
 }
 
 // Pair is a casket and its sleeper.
@@ -145,7 +167,7 @@ type ScanEntry struct {
 func (s *State) Empty() bool {
 	return s == nil || len(s.caskets) == 0 && len(s.holds) == 0 && len(s.wants) == 0 && len(s.roped) == 0 &&
 		len(s.cargo) == 0 && len(s.hitch) == 0 && len(s.scans) == 0 && len(s.flights) == 0 && len(s.sites) == 0 &&
-		s.finds == 0 && s.nextID == 0
+		s.finds == 0 && s.nextID == 0 && len(s.fuses) == 0 && len(s.packs) == 0
 }
 
 // sortedKeys is m's keys, ascending.
@@ -190,6 +212,14 @@ func (s *State) Export() *Save {
 	for _, f := range s.flights {
 		f.Load = f.Load.clone()
 		out.Flights = append(out.Flights, f)
+	}
+	for _, k := range sortedKeys(s.fuses) {
+		out.Fuses = append(out.Fuses, Fuse{k, s.fuses[k]})
+	}
+	for _, k := range sortedKeys(s.packs) {
+		p := *s.packs[k]
+		p.Items, p.Animals, p.Tied = slices.Clone(p.Items), slices.Clone(p.Animals), slices.Clone(p.Tied)
+		out.Packs = append(out.Packs, CaravanPack{k, p})
 	}
 	return out
 }
@@ -237,6 +267,20 @@ func Import(v *Save) *State {
 	for _, f := range v.Flights {
 		f.Load = f.Load.clone()
 		s.flights = append(s.flights, f)
+	}
+	for _, p := range v.Packs {
+		pk := p.Pack
+		pk.Items, pk.Animals, pk.Tied = slices.Clone(pk.Items), slices.Clone(pk.Animals), slices.Clone(pk.Tied)
+		if s.packs == nil {
+			s.packs = map[uint64]*Pack{}
+		}
+		s.packs[p.Caravan] = &pk
+	}
+	for _, f := range v.Fuses {
+		if s.fuses == nil {
+			s.fuses = map[entity.EntityID]uint64{}
+		}
+		s.fuses[f.Casket] = f.At
 	}
 	return s
 }
@@ -313,15 +357,16 @@ type core struct {
 // (apply.go); each concern's operations hang off their own type.
 type Ops struct{ core }
 
-// caskets, pods, scanner and hitching are the stasis caskets', the
-// transport pods', the mineral scanner's and the hitching spots'
-// operations (casket.go; pods.go, load.go, launch.go; scanner.go;
-// hitch.go).
+// caskets, pods, scanner, hitching and packing are the stasis caskets',
+// the transport pods', the mineral scanner's, the hitching spots' and the
+// caravans' packing operations (casket.go; pods.go, load.go, launch.go;
+// scanner.go; hitch.go; pack.go).
 type (
 	caskets  struct{ core }
 	pods     struct{ core }
 	scanner  struct{ core }
 	hitching struct{ core }
+	packing  struct{ core }
 )
 
 // Ops is travel's operations on s.

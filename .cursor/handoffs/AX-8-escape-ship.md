@@ -23,7 +23,9 @@ Scope: the AX programme's A8 rows (`.cursor/ARCHITECT_GAP_ANALYSIS.md` Ship), bu
   - Two letters: "waking" (red) and "ready".
 - **Boarding.**
   - A colonist boards through the casket's right-click order "Board the ship stasis casket" (`command.BoardShip` → `job.BoardShip`). It is stashed off the map with world_stash (holder = the casket), so its needs are frozen.
-  - The pane's Wake sleeper button (`command.LeaveShip`) brings the sleeper out beside the casket.
+  - A downed pawn is carried in through game/travel's flow, with no second copy. The right-click row on the downed pawn is "Carry <name> to ship stasis casket": `command.EnterCasket` with `Worker`, then `job.CarryToCasket`. A9 added the travel `Ships` role. The game's `travelHost.ShipCasketFree` and `LayInShip`, in story.go and owned by A8, delegate to `ship.State.CasketFree` and `LayIn`. Prisoners and animals follow A9's stash rule, the same rule as the stasis casket.
+  - The pane's Wake sleeper button (`command.LeaveShip`) brings the sleeper out beside the casket. A woken sleeper gets the wiki's cryptosleep sickness (`cryptoSicken`, shared with A9).
+- **Connectivity overlay.** Selecting a ship part sets `overlay.Set.ShipSel`, its ship id, in architect_compat.go `syncPowerForce`. `DrawShipLinks` then tints every part of that ship, so a part left out stands plain.
   - If a casket is destroyed, its sleeper wakes where it stood.
 - **Launch.**
   - LaunchShip is refused with the report in a message until nothing is missing.
@@ -54,19 +56,18 @@ Scope: the AX programme's A8 rows (`.cursor/ARCHITECT_GAP_ANALYSIS.md` Ship), bu
   - `operationDone` → `body.Operation.DoneText`;
   - `stockAdd` → `trade.(*Stock).Add`.
 
-  The game package's net from A8 is about -5 lines and 0 Game methods or fields.
+  The game package's net from A8 is about -5 lines and 0 Game methods or fields. The follow-up (the delegates) is paid inside story.go and save.go: Save, Load and Info now go through `worldS()` and `shipOf()`, and an empty world state saves nothing.
 
 ## Tests
 - `game/ship/ship_test.go`: joins, report, raid spacing (no flap), a destroyed reactor, the launch, waking and fallen caskets, view and save, Rewind, Duration.
 - `game/ax8_test.go`: parts, report and power; board → countdown raid → launch → save round trip; waking a sleeper.
 - `ebiten/journey_ax8_test.go`:
-  - `TestJourneyAX8EscapeShip`: every tool is laid from the Architect, then board, wake and board again; the reactor starts behind its warning; a countdown raid comes and is beaten (dev hooks); the alerts follow; the launch goes through its confirmation; the ending screen and flare show; the save is marked.
+  - `TestJourneyAX8EscapeShip`: every tool is laid from the Architect; selecting a part highlights the ship; board, wake, a downed colonist carried into a second casket, board again; the reactor starts behind its warning; a countdown raid comes and is beaten (dev hooks); the alerts follow; the launch goes through its confirmation; the ending screen and flare show; the save is marked.
   - `TestAX8ShipArt`: footprints and glows.
 - Determinism gate: no golden moved.
 
 ## Not done (noted in the gap and checklist rows)
-- Downed colonists, prisoners and animals can't be carried into a ship casket.
-- There is no map overlay for connectivity, and no dedicated §37 screen: the pane carries it.
+- There is no dedicated §37 screen: the pane carries it.
 - No quest offer or faction request sources the mind core.
 - The ending summary has no deaths, relationships, wealth or credits.
 - There is no take-off animation beyond the flare.

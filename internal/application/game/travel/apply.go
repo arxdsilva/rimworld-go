@@ -36,6 +36,10 @@ func (o Ops) Do(id entity.EntityID, j job.Record) {
 	case job.CarryToCasket:
 		caskets(o).doCarry(id, j)
 	case job.LoadPods:
+		if j.Dest == 0 && j.BillIndex != 0 {
+			packing(o).doPack(id, j) // a caravan's load (pack.go)
+			return
+		}
 		pods(o).doLoad(id, j)
 	case job.ScanMinerals:
 		scanner(o).doScan(id, j)
@@ -52,6 +56,9 @@ func (o Ops) Tick(now uint64) {
 	if now%loadUpkeep == 0 && (len(o.s.wants) > 0 || len(o.s.roped) > 0) {
 		pods(o).loadTick()
 	}
+	if now%loadUpkeep == 0 {
+		caskets(o).fuseTick(now)
+	}
 	if now%upkeep != 0 {
 		return
 	}
@@ -63,6 +70,9 @@ func (o Ops) Tick(now uint64) {
 	}
 	if len(o.s.cargo) > 0 {
 		pods(o).cargoTick()
+	}
+	if len(o.s.packs) > 0 {
+		packing(o).packTick()
 	}
 }
 

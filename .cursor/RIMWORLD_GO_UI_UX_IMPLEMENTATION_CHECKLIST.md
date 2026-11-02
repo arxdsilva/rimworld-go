@@ -1499,17 +1499,17 @@ the player what just happened and what requires attention.
 -   [-] **People list** (SIM-046: colonists only)
     -   Colonists.
     -   prisoners.
--   [ ] **Animals**
--   [ ] **Items**
+-   [x] **Animals** (AX-9: tame animals with what each carries)
+-   [x] **Items** (AX-9: loose goods by kind with an amount stepper and All)
 -   [-] **Food** (SIM-046: food days)
 -   [ ] **Medicine**
 -   [ ] **Currency**
--   [ ] **Mass summary**
+-   [x] **Mass summary** (AX-9: "N / M kg" against the colonists' and animals' carrying capacity)
     -   carried / capacity.
 -   [ ] **Travel time**
 -   [ ] **Food duration**
 -   [ ] **Forage estimate**
--   [ ] **Movement speed**
+-   [x] **Movement speed** (AX-9: tiles a day with the load's slowdown)
 -   [ ] **Warnings**
     -   immobile pawn.
     -   insufficient food.
@@ -1603,14 +1603,14 @@ the player what just happened and what requires attention.
 # 32. Endgame Ship UI
 
 -   [x] **Ship component inspector** (AX-8: every part's pane says whether it is joined to the main ship, the reactor's state, a casket's sleeper, and the launch report)
--   [-] **Ship connectivity/validity overlay** (AX-8: the pane names a part not joined to the main ship, a casket only through a beam; no map overlay)
+-   [x] **Ship connectivity/validity overlay** (AX-8: selecting a ship part highlights every part of its ship on the map, so a part left out stands plain; the pane names a part not joined to the main ship, a casket only through a beam)
 -   [x] **Missing required component explanation** (AX-8: the launch report lists what the ship lacks: engines, reactor, core, sensor, beam, casket, the reactor's waking, a sleeper)
 -   [x] **Reactor status** (AX-8: asleep, waking with the time left, awake)
 -   [x] **Start reactor confirmation** (AX-8: a warning dialog before the countdown)
     -   Explicitly warn about endgame threat escalation.
 -   [x] **Reactor countdown** (AX-8: on the reactor's pane and as the "Ship reactor waking" alert)
 -   [x] **Casket occupancy** (AX-8: occupied sprite and glow, "Sleeper: name" on the pane)
--   [-] **Load/unload pawn** (AX-8: a colonist boards from the right-click menu, Wake sleeper on the casket's pane; downed colonists and animals can't be carried in yet)
+-   [x] **Load/unload pawn** (AX-8: a colonist boards from the right-click menu; a downed one is carried in with "Carry <name> to ship stasis casket" (game/travel's carry, as for the stasis casket, which also takes downed prisoners and animals); Wake sleeper on the casket's pane)
 -   [x] **Launch readiness** (AX-8: launch report, "Ship ready to launch" alert, Launch ship disabled with the first missing item)
 -   [x] **Launch confirmation** (AX-8: a dialog naming who leaves)
 -   [x] **Victory/escape screen** (AX-8: the ending screen opens once the ship has left; Keep watching or Main menu; the save is tagged complete in the Load list)

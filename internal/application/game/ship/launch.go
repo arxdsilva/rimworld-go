@@ -63,6 +63,15 @@ func centre(h Sites, sh Ship) (int, int) {
 	return (minX + maxX) / 2, (minY + maxY) / 2
 }
 
+// Ending is the colony's ending: EndingShip once the ship has left ("" on
+// a nil State or before).
+func (s *State) Ending() string {
+	if s.Launched() {
+		return EndingShip
+	}
+	return ""
+}
+
 // Escaped is who left aboard, in the order they boarded the ship's
 // caskets (the slice is the state's, read only).
 func (s *State) Escaped() []string { return s.escaped }

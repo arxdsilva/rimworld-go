@@ -388,9 +388,8 @@ func (g *Game) predatorsHuntColonists() bool {
 	return !g.hasSetup() || g.ng.setup.Difficulty.PredatorsHuntColonists
 }
 
-// --- game/ship (AX-8): the escape ship, its reactor's raids, the ending.
-
-// shipOf is the ship component, built on first use off the world state.
+// shipOf is game/ship (AX-8: the escape ship, its reactor's raids, the
+// ending), built on first use off the world state.
 func shipOf(g *Game) *ship.State {
 	if w := g.worldS(); w.ship == nil {
 		w.ship = &ship.State{}
@@ -398,8 +397,7 @@ func shipOf(g *Game) *ship.State {
 	return g.worldSt.ship
 }
 
-// shipHost implements ship.Host over the game.
-type shipHost struct{ g *Game }
+type shipHost struct{ g *Game } // ship.Host over the game
 
 func (h shipHost) StructVer() uint64              { return h.g.structVer }
 func (h shipHost) BuildingIDs() []entity.EntityID { return h.g.bldgIDs }
@@ -422,16 +420,17 @@ func (h shipHost) Wake(id, casket entity.EntityID) bool {
 	if b, has := h.g.bldgs.Get(casket); has {
 		x, y, ok = h.g.casketExit(b, nil) // casket.go: a free cell beside it
 	} else if i, found := slices.BinarySearchFunc(h.g.worldS().stashed, id, stashCmp); found {
-		r := h.g.worldSt.stashed[i] // the casket is gone: beside where it stood
-		x, y, ok = h.g.combat.Tiles.WalkableNear(r.X, r.Y, 3)
+		x, y, ok = h.g.combat.Tiles.WalkableNear(h.g.worldSt.stashed[i].X, h.g.worldSt.stashed[i].Y, 3) // where the casket stood
 	}
-	return ok && h.g.unstashPawn(id, x, y)
+	if ok = ok && h.g.unstashPawn(id, x, y); ok {
+		cryptoSicken(h.g, id) // food_poison.go: the wiki's cryptosleep sickness, as the stasis casket's
+	}
+	return ok
 }
 func (h shipHost) Now() uint64  { return uint64(h.g.clock.Now()) }
 func (h shipHost) Seed() uint64 { return h.g.streams.seed }
 func (h shipHost) Raid(mech bool) {
-	g, now := h.g, uint64(h.g.clock.Now())
-	day := int(now / clock.TicksPerDay)
+	g, now, day := h.g, uint64(h.g.clock.Now()), int(uint64(h.g.clock.Now())/clock.TicksPerDay)
 	switch {
 	case g.hasSetup() && !g.ng.setup.Difficulty.BigThreats: // the difficulty's no big threats holds
 	case mech && g.raid.Threats.MechRaid(g.raidPoints(day), now) > 0:
@@ -451,9 +450,16 @@ func (h shipHost) Letter(title, text string, x, y int, danger bool) {
 func (h shipHost) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
 func (h shipHost) Changed()                      { h.g.viewGen++ }
 
-// DevWakeShip moves the ship reactors' countdowns and the next countdown
-// raid on by ticks (dev mode and journeys).
+// DevWakeShip moves the reactors' countdowns and the next raid on by ticks (dev mode, journeys).
 func DevWakeShip(g *Game, ticks uint64) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	shipOf(g).Rewind(ticks)
+}
+
+// ShipCasketFree and LayInShip are game/travel's Ships role (AX-8): carrying into a ship casket.
+func (h travelHost) ShipCasketFree(id entity.EntityID) bool {
+	return shipOf(h.g).CasketFree(shipHost{h.g}, id)
+}
+func (h travelHost) LayInShip(p, c entity.EntityID) bool {
+	return shipOf(h.g).LayIn(shipHost{h.g}, p, c)
 }

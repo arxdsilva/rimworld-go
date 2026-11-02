@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -14,14 +15,17 @@ import (
 // sees it; its identity stays (name, needs, health, body, drugs, skills,
 // bio, mood memories, social edges, registry record, equipment), so the
 // same id comes back with the same relationships. Caravans stash their
-// members; M9b's kidnapping can reuse it.
+// members; caskets (AX-9) also prisoners and tame animals (its state in
+// the record).
 
-// stashRec is one pawn off the map: who holds it (a caravan id, or
-// another owner) and the cell it left from.
+// stashRec is one pawn off the map: its holder (a caravan, a casket), the
+// cell it left from, a prisoner's mark or an animal's state (AX-9).
 type stashRec struct {
-	ID     entity.EntityID
-	Holder entity.EntityID
-	X, Y   int
+	ID       entity.EntityID
+	Holder   entity.EntityID
+	X, Y     int
+	Prisoner bool
+	Beast    *animal.State
 }
 
 // stashCmp orders stash records by id (binary search).
@@ -36,12 +40,20 @@ func (g *Game) isStashed(id entity.EntityID) bool {
 	return found
 }
 
-// stashPawn takes colonist id off the map for holder (a caravan). It
-// reports false when id is not a colonist on the map.
+// stashPawn takes colonist, prisoner or tame animal id off the map for
+// holder; false when id is none of those on the map.
 func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 	pos, ok := g.positions.Get(id)
-	if !ok || !slices.Contains(g.pawnIDs, id) || g.isStashed(id) {
+	prisoner, beast := g.prison.Is(id) && slices.Contains(g.raiderIDs, id), g.animals.Ref(id)
+	if !ok || !slices.Contains(g.pawnIDs, id) && !prisoner && (beast == nil || !beast.Tame) || g.isStashed(id) {
 		return false
+	}
+	rec := stashRec{ID: id, Holder: holder, X: pos.X, Y: pos.Y, Prisoner: prisoner}
+	if beast != nil {
+		a := *beast
+		rec.Beast = &a
+		g.removeAnimal(id)
+		return addStash(g, rec)
 	}
 	g.ensurePerson(id)
 	g.interrupt(id, job.Cancelled) // drops what it carries, frees its claims
@@ -60,13 +72,19 @@ func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 	g.positions.Delete(id)
 	g.jobs.Delete(id)
 	g.motion.Delete(id)
-	g.pawnIDs = withoutID(g.pawnIDs, id) // prisoners.go
-	w := g.worldS()
-	i, _ := slices.BinarySearchFunc(w.stashed, id, stashCmp)
-	w.stashed = slices.Insert(w.stashed, i, stashRec{ID: id, Holder: holder, X: pos.X, Y: pos.Y})
-	if g.caravanAt(holder) != nil { // a casket or a pod keeps what it is (AX-9)
+	g.pawnIDs, g.raiderIDs = withoutID(g.pawnIDs, id), withoutID(g.raiderIDs, id) // prisoners.go
+	// a casket or a pod keeps what it is (AX-9)
+	if g.caravanAt(holder) != nil {
 		g.setWhere(id, whereCaravan)
 	}
+	return addStash(g, rec)
+}
+
+// addStash files stash record r (ascending by id).
+func addStash(g *Game, r stashRec) bool {
+	w := g.worldS()
+	i, _ := slices.BinarySearchFunc(w.stashed, r.ID, stashCmp)
+	w.stashed = slices.Insert(w.stashed, i, r)
 	g.invalidateCreatures()
 	return true
 }
@@ -75,13 +93,23 @@ func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 // colonist (idle, undrafted). It reports false when id is not stashed or
 // the tile is not walkable.
 func (g *Game) unstashPawn(id entity.EntityID, x, y int) bool {
-	if !g.isStashed(id) || !g.grid.Walkable(x, y) {
+	i, found := slices.BinarySearchFunc(g.worldS().stashed, id, stashCmp)
+	if !found || !g.grid.Walkable(x, y) {
 		return false
 	}
+	r := g.worldSt.stashed[i]
 	g.dropStash(id)
+	if r.Beast != nil { // AX-9: a tame animal, as it went
+		putAnimal(g, id, *r.Beast, x, y)
+		return true
+	}
 	g.positions.Set(id, Position{X: x, Y: y})
 	g.jobs.Set(id, job.Record{})
-	g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go: ascending, as movers needs
+	if r.Prisoner {
+		g.raiderIDs = withID(g.raiderIDs, id)
+	} else {
+		g.pawnIDs = withID(g.pawnIDs, id) // prisoners.go: ascending, as movers needs
+	}
 	if p := g.personOf(id); p != nil && p.Where == whereCaravan {
 		p.Where = whereColony
 	}
@@ -95,4 +123,14 @@ func (g *Game) dropStash(id entity.EntityID) {
 		return
 	}
 	g.worldSt.stashed = slices.DeleteFunc(g.worldSt.stashed, func(r stashRec) bool { return r.ID == id })
+}
+
+// putAnimal sets stashed or carried animal id back down at (x, y) as a.
+func putAnimal(g *Game, id entity.EntityID, a animal.State, x, y int) {
+	i, _ := slices.BinarySearch(g.animalIDs, id)
+	g.animalIDs = slices.Insert(g.animalIDs, i, id)
+	a.FeedClaim, a.Target, a.Attacker, a.NextThink = 0, 0, 0, uint64(g.clock.Now())+1
+	g.positions.Set(id, Position{X: x, Y: y})
+	g.animals.Set(id, a)
+	g.invalidateCreatures()
 }

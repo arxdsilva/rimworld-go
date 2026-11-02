@@ -21,18 +21,22 @@ import (
 
 const (
 	FormCaravanID   = "colony.world.caravan"
-	formCaravanW    = 720
-	formCaravanH    = 520
+	formCaravanW    = 980
+	formCaravanH    = 560
 	formRowH        = 28
 	FormNoMembers   = "Pick at least one colonist."
 	FormNoDest      = "Pick a destination."
+	FormTooHeavy    = "Too heavy: pick fewer goods or more pack animals."
 	formHostileWhy  = "Hostile: they would not receive a caravan."
 	formTilesPerDay = 3 // caravan.BaseTilesPerDay at full Moving, for the summary
 )
 
-// formCaravan is the dialog's draft.
+// formCaravan is the dialog's draft: colonists, and (AX-9) pack animals
+// and goods by kind.
 type formCaravan struct {
 	picked map[entity.EntityID]bool
+	beasts map[entity.EntityID]bool
+	goods  map[string]int
 	dest   int // -1 none
 	// globe is the tile last picked on the World tab's globe (-1 none),
 	// read live while the dialog is open.
@@ -42,13 +46,13 @@ type formCaravan struct {
 // OpenFormCaravan opens the dialog over the World tab; globePick reports
 // the tile last picked on its globe (-1 none).
 func (dl *Dealings) OpenFormCaravan(globePick func() int) {
-	f := &formCaravan{picked: map[entity.EntityID]bool{}, dest: globePick(), globe: globePick}
+	f := &formCaravan{picked: map[entity.EntityID]bool{}, beasts: map[entity.EntityID]bool{}, goods: map[string]int{}, dest: globePick(), globe: globePick}
 	dl.kit().Push(uikit.Modal{
 		ID: FormCaravanID, Title: "Form caravan", W: formCaravanW, H: formCaravanH,
 		Draw: func(body gfx.Rect) { dl.formCaravanBody(f, body) },
 		Buttons: []uikit.ModalButton{
 			{ID: "form.send", Label: "Send", Style: uikit.BtnPrimary, Closes: true,
-				Disabled: func() string { return f.reason() }, OnClick: func() { dl.sendCaravan(f) }},
+				Disabled: func() string { return dl.formReason(f) }, OnClick: func() { dl.sendCaravan(f) }},
 			{ID: "form.cancel", Label: "Cancel", Closes: true},
 		},
 	})
@@ -61,6 +65,18 @@ func (f *formCaravan) reason() string {
 	}
 	if f.dest < 0 {
 		return FormNoDest
+	}
+	return ""
+}
+
+// formReason is why Send is disabled ("" it is not): f's reason, or a
+// load past what the caravan carries (AX-9).
+func (dl *Dealings) formReason(f *formCaravan) string {
+	if r := f.reason(); r != "" {
+		return r
+	}
+	if f.massKg() > f.capKg(dl) {
+		return FormTooHeavy
 	}
 	return ""
 }
@@ -88,10 +104,10 @@ func MemberList(ids []entity.EntityID) string {
 
 // sendCaravan emits the FormCaravan command.
 func (dl *Dealings) sendCaravan(f *formCaravan) {
-	if f.reason() != "" {
+	if dl.formReason(f) != "" {
 		return
 	}
-	dl.sh.Enqueue(command.Command{Kind: command.FormCaravan, Name: MemberList(f.members()), Count: f.dest})
+	dl.sh.Enqueue(command.Command{Kind: command.FormCaravan, Name: dl.caravanList(f), Count: f.dest})
 }
 
 // caravanPickReason is why colonist p cannot join ("" it can).
@@ -108,8 +124,10 @@ func caravanPickReason(p game.PawnView) string {
 // formCaravanBody declares the colonist picks, the destinations and the
 // summary.
 func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
-	left, right := body.SplitH(body.W / 2)
-	left.W -= 12
+	left, right := body.SplitH(body.W * 2 / 3)
+	left, mid := left.SplitH(left.W / 2)
+	left.W, mid.W = left.W-12, mid.W-12
+	dl.caravanPacks(f, mid) // caravan_pack.go (AX-9): pack animals and goods
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
 	lh, lrest := left.SplitV(26)
 	dl.kit().Label(lh.X, lh.Y, "Colonists", hs)
@@ -139,7 +157,7 @@ func (dl *Dealings) formCaravanBody(f *formCaravan, body gfx.Rect) {
 		}
 	}
 	n := len(f.members())
-	dl.kit().Label(summary.X, summary.Y+6, fmt.Sprintf("%d colonist(s) · about %d tiles a day · 5 days of food", n, formTilesPerDay), gfx.Small)
+	dl.kit().Label(summary.X, summary.Y+6, fmt.Sprintf("%d colonist(s) · %s · 5 days of food", n, dl.caravanLoadLine(f)), gfx.Small)
 	dl.kit().Label(summary.X, summary.Y+26, "They gather at a hitching spot if there is one, then leave by the map edge; a friendly settlement hosts them a day.", gfx.WithColor(gfx.Small, uikit.TextDim))
 
 	rh, rrest := right.SplitV(26)

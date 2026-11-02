@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/body"
@@ -260,6 +261,7 @@ func (g *Game) cmdFormCaravan(members string, dest int) {
 		C:    caravan.Caravan{ID: uint64(g.entities.Next()), Tile: home, Dest: dest, Path: slices.Clone(route[1:]), State: caravan.Forming},
 		Home: home, Out: route, Formed: now,
 	}
+	travelOf(g).Pack(c.C.ID, members, len(ids)) // game/travel (AX-9): goods and pack animals
 	for _, id := range ids {
 		g.setDraft(id, true) // schedules and work leave a caravan member alone; AX-9: a hitching spot first
 		if !travelOf(g).Hitch(c.C.ID, id, len(c.C.Members)) && !g.startExit(id) {
@@ -384,7 +386,7 @@ func (g *Game) departCaravan(c *caravanRec, now uint64) {
 		slowest = min(slowest, g.capacity(id, body.Moving))
 		names = append(names, g.personName(id))
 	}
-	c.C.Slowest = max(slowest, 1)
+	c.C.Slowest = max(slowest*int32(travelOf(g).Pace(c.C.ID, len(c.C.Members)))/1000, 1) // AX-9: slower when heavy
 	c.C.FoodDays = caravanFoodDays
 	c.C.State = caravan.Travelling
 	c.NextTalk = now + caravanTalkPeriod
@@ -749,9 +751,9 @@ func (h travelHost) Name(id entity.EntityID) string      { return h.g.name(id) }
 func (h travelHost) Fuel(id entity.EntityID) int         { return h.g.fuel[id] / chemfuelTicks }
 func (h travelHost) SetFuel(id entity.EntityID, n int)   { h.g.setFuel(id, n*chemfuelTicks) }
 func (h travelHost) Remove(id entity.EntityID)           { h.g.removeBuildingAs(id, false) }
-func (h travelHost) Downed(id entity.EntityID) bool {
-	v, _ := h.g.vital.Get(id)
-	return v.Status == health.Downed
+func (h travelHost) Downed(id entity.EntityID) bool { // AX-9: a downed animal too
+	v, ok := h.g.vital.Get(id)
+	return v.Status == health.Downed || !ok && h.g.animals.Ref(id) != nil && h.g.animals.Ref(id).Downed
 }
 func (h travelHost) Stash(id, holder entity.EntityID) bool     { return h.g.stashPawn(id, holder) }
 func (h travelHost) Unstash(id entity.EntityID, x, y int) bool { return h.g.unstashPawn(id, x, y) }
@@ -768,14 +770,10 @@ func (h travelHost) Faction(t int) (*faction.Faction, string) {
 	return h.g.factionOf(h.g.settlementFaction(t)), h.g.tileName(t)
 }
 func (h travelHost) PutAnimal(id entity.EntityID, a animal.State, x, y int) {
-	g := h.g
-	i, _ := slices.BinarySearch(g.animalIDs, id)
-	g.animalIDs = slices.Insert(g.animalIDs, i, id)
-	a.FeedClaim, a.Target, a.Attacker, a.NextThink = 0, 0, 0, uint64(g.clock.Now())+1
-	g.positions.Set(id, Position{X: x, Y: y})
-	g.animals.Set(id, a)
-	g.invalidateCreatures()
+	putAnimal(h.g, id, a, x, y)
 }
+func (h travelHost) Sicken(id entity.EntityID)         { cryptoSicken(h.g, id) }
+func (h travelHost) Explode(x, y int, d explosion.Def) { h.g.combat.Blasts.Explode(0, 0, x, y, d) }
 
 // Land: pod passengers become a caravan arrived on t (home by land).
 func (h travelHost) Land(members, animals []uint64, t int) uint64 {

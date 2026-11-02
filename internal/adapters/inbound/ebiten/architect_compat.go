@@ -146,6 +146,7 @@ func (a *App) syncPowerForce() {
 		a.renderer.overlays().Power.Forced = a.arch.Marks.ForcesPower()
 		b, sel := a.insp.SelectedBuilding() // AX-4: the deep ore overlay, by the drill and scanner
 		a.renderer.overlays().DeepOre.Forced = a.arch.Open && overlay.DeepOreTool(a.arch.ToolID) || sel && overlay.DeepOreKind(b.Kind)
+		a.renderer.overlays().ShipSel = overlay.ShipSelOf(b, sel) // AX-8: the selected part's ship
 	}
 }
 

@@ -67,31 +67,10 @@ func (g *Game) landColony() {
 	g.scatterKit(cx, cy)
 }
 
-// splitKit cuts the starting kit into stacks of at most podValue worth
-// (at most maxKitPods pieces each), in kit order.
-func splitKit(kit []scenario.Stack) []scenario.Stack {
-	var out []scenario.Stack
-	for _, s := range kit {
-		if s.Qty <= 0 {
-			continue
-		}
-		v := s.Kind.Value() * s.Qty
-		n := min(max((v+podValue-1)/podValue, 1), maxKitPods, s.Qty)
-		for i := 0; i < n; i++ {
-			q := s.Qty / n
-			if i == 0 {
-				q += s.Qty % n
-			}
-			out = append(out, scenario.Stack{Kind: s.Kind, Qty: q, Near: true, Piles: 1})
-		}
-	}
-	return out
-}
-
 // planPods places the drop pods (landing in the arrival phase).
 func (g *Game) planPods(cx, cy int) {
 	people := len(g.ng.setup.Colonists)
-	kit := splitKit(g.ng.fx.StartItems)
+	kit := scenario.SplitKit(g.ng.fx.StartItems, podValue, maxKitPods)
 	value := 0
 	for _, s := range kit {
 		value += s.Kind.Value() * s.Qty

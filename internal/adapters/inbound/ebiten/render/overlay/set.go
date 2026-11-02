@@ -107,6 +107,9 @@ type Set struct {
 	Fertility                          Toggle // growing_draw.go: ground fertility and growing zones
 	Temp                               Toggle // temp_draw.go: air temperature per tile (TEMP-5)
 	DeepOre                            Toggle // deep_ore_draw.go: the deep ore a scanner found (AX-4)
+	// ShipSel is the selected ship part's ship (0 none): ship_draw.go
+	// highlights every part of it (AX-8).
+	ShipSel uint64
 
 	Area     AreaOverlay        // the armed or hovered allowed area (area_overlay.go)
 	RoofDraw RoofDrawState      // eaves and the Roof overlay (roof_draw.go)

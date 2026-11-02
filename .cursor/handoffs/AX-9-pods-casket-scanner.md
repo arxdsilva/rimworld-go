@@ -63,9 +63,28 @@ Scope: the AX programme's A9 rows (`.cursor/ARCHITECT_GAP_ANALYSIS.md` Misc), EN
   - every tool laid; casket enter and eject; the scanner target; the hitching pane; load and unload;
   - on a wizard colony, a launch through the World tab picker that lands.
 
+## Follow-up (after wave 2)
+- **Stasis casket:**
+  - Downed prisoners and tame animals can be carried in (wiki). The game's stash (world_stash.go) now holds prisoners, who return to raiderIDs, and animals, whose whole state rides in `stashRec.Beast` and comes back through `putAnimal`. There is one stash rule for both caskets.
+  - People wake with cryptosleep sickness (`body.CondCryptosleepSickness`, `cond_crypto.go`; wiki: 10000 ticks, consciousness x0.8, moving and manipulation x0.9, a vomit every 3 h on average). It is stepped hourly with food poisoning, and the wiki gives animals none.
+  - At 50 HP or less a casket sparks; 120 ticks later it explodes (wiki: flame, 10 damage, radius 2.66). The fuse is one-way, with a no-flap test.
+  - Carrying into the ship's caskets goes through the `Carriers.ShipCasketFree`/`LayInShip` role (A8 owns the host side). `cryptoSicken(g, id)` is shared with the ship's wake.
+- **Caravans carry goods and pack animals** (`travel/pack.go`):
+  - The Form caravan dialog has a pack animals and goods column, a mass against carrying capacity line (wiki: body size x 35 kg) and the pace.
+  - Picks ride in FormCaravan's Name (`id`, `stack:qty`).
+  - The caravan gathers at a hitching spot, or at the drop spot when it has goods and no spot. Haulers and the waiting members carry the goods there and lead the animals in, which are tied and wander nearby (`job.LoadPods` with `BillIndex` = the caravan).
+  - It leaves once loaded plus an hour, or after half a day.
+  - The goods become cargo, which comes home with the caravan; the animals leave the map with it.
+  - Carried mass slows it to a quarter of the empty pace at full load (the wiki's x2 to x0.5, linear; original between the ends).
+- **Game lines:** paid by moving `splitKit` to `scenario.SplitKit`, the `casketExit` search to `travel.ExitBeside`, and `CaravanView` to `travel.CaravanView` (aliased). The package is at 53537 of 53539, with no Game method added (the helpers are free functions).
+- **Tests:**
+  - `game/ax9_test.go` adds animals and prisoners in the casket, sickness and the explosion (no flap), and caravan packing with capacity;
+  - `body/cond_crypto_test.go`;
+  - journeys: a downed colonist carried in from the menu, and the caravan dialog's goods.
+
 ## Not done
-- Waking sickness, the casket's explosion, animals in caskets.
+- A hauler's Open order for the stasis casket (Eject is immediate).
+- Trading a caravan's cargo at a settlement (there is no caravan trading).
 - Attacking a settlement, founding a colony, and site maps (no second map).
 - A range ring on the globe.
-- Pack animals at the hitching spot.
 - `PawnView.AX.Casket` (sleepers are off the map, so they have no pawn view).

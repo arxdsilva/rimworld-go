@@ -1,6 +1,9 @@
 package game
 
-import "rimworld-go/internal/domain/sim/entity"
+import (
+	"rimworld-go/internal/application/game/travel"
+	"rimworld-go/internal/domain/sim/entity"
+)
 
 // Read models of the social and host systems (ENG-003 C3). The UI reads
 // them through the methods below; they are copies, never live state. Until
@@ -146,17 +149,8 @@ type WorldMapView struct {
 	Caravans []CaravanView
 }
 
-// CaravanView is one caravan; Progress is the percent to its next tile.
-type CaravanView struct {
-	ID      uint64
-	Members []string
-	// Health is each member's short health note, parallel to Members
-	// ("bleeding", "flu", "food poisoning"; "" when well; WS-M).
-	Health     []string
-	Tile, Dest int
-	Progress   int
-	State      string
-}
+// CaravanView is one caravan (game/travel).
+type CaravanView = travel.CaravanView
 
 // AreaView is one allowed area.
 type AreaView struct {
