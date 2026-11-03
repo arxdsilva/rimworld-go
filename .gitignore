@@ -1,5 +1,6 @@
 /bin/
 /dist/
+/release-artifacts/
 *.exe
 *.test
 *.out

@@ -1,0 +1,47 @@
+# Publishes the GitHub release when a v* tag is pushed (.github/workflows/release.yml).
+# The workflow's matrix builds the binaries, because they need cgo on each OS and
+# a universal macOS binary, and scripts/package_release.sh packs them with the
+# assets. GoReleaser adds the checksums and the notes, and publishes.
+version: 2
+
+project_name: rimworld-go
+
+builds:
+  - skip: true
+
+checksum:
+  name_template: checksums.txt
+  extra_files:
+    - glob: ./release-artifacts/*
+
+changelog:
+  use: github
+  sort: asc
+  abbrev: 7
+  groups:
+    - title: New features
+      regexp: '^feat(\(.+\))?!?:'
+      order: 0
+    - title: Fixes
+      regexp: '^fix(\(.+\))?!?:'
+      order: 1
+    - title: Performance
+      regexp: '^perf(\(.+\))?!?:'
+      order: 2
+    - title: Documentation
+      regexp: '^docs(\(.+\))?!?:'
+      order: 3
+    - title: Everything else
+      order: 999
+
+release:
+  name_template: "rimworld-go {{ .Tag }}"
+  prerelease: auto
+  extra_files:
+    - glob: ./release-artifacts/*
+  header: |
+    Unpack the archive for your system and run `rimworld-go` (`rimworld-go.exe` on Windows); keep the `assets` folder next to it.
+
+    - **macOS:** the build is unsigned. The first time, right-click `rimworld-go` → Open, or run `xattr -dr com.apple.quarantine <folder>`.
+    - **Windows:** SmartScreen may warn about an unknown publisher → More info → Run anyway.
+    - **Linux:** needs OpenGL and ALSA (most desktops have them).
