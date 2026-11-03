@@ -2,6 +2,7 @@ package game
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
@@ -15,11 +16,12 @@ import (
 // balance, shedding, the kinds' specs) are domain/building/power.
 //
 // phasePower balances every net every powerInterval ticks, integrating
-// the exact time since the last balance. A flick, a solar flare's start
-// and end and a short circuit's drain balance at once, in the call that
-// changes the grid (doFlick, setFlare, drainNet); a building added or
-// removed joins the next balance. Nothing waits on a flag across ticks, so
-// a save between two ticks loads into the same next balance.
+// the exact time since the last balance. A flick, a Reconnect, a solar
+// flare's start and end and a short circuit's drain balance at once, in the
+// call that changes the grid (doFlick, cmdReconnectPower, setFlare, drainNet);
+// a building added or removed joins the next balance. Nothing waits on a
+// flag across ticks, so a save between two ticks loads into the same next
+// balance.
 //
 // In a colony without power devices (producers, consumers, batteries)
 // the phase writes nothing and g.pw stays nil, so its saves and hashes are
@@ -30,8 +32,8 @@ import (
 //
 // Saved (powerSave): battery charge, wanted and actual on/off, the
 // consumers the last balance left unpowered (every other consumer ran),
-// shed timers, thermostats, the flare's end and the last balance's tick.
-// Nets, outputs and the flick index are derived.
+// shed timers, thermostats, the flare's end, the last balance's tick and
+// the pinned wires. Nets, outputs and the flick index are derived.
 
 const (
 	// powerInterval is the ticks between two balances.
@@ -52,6 +54,7 @@ type powerState struct {
 	powered map[entity.EntityID]bool   // consumers the last balance ran
 	shed    map[entity.EntityID]uint64 // shed consumers: held off until this tick
 	thermo  map[entity.EntityID]thermoSave
+	pins    map[entity.EntityID]uint64 // devices reconnected by hand (PWR-4): the chosen conductor
 	// flareUntil is the solar flare's end tick (0: none); last the tick of
 	// the last balance.
 	flareUntil, last uint64
@@ -131,30 +134,17 @@ func (g *Game) powerList() *powerCache {
 		c.ids = append(c.ids, id)
 		c.specs = append(c.specs, s)
 		c.nodes = append(c.nodes, power.Node{ID: uint64(id), Role: s.Role, Cells: cells})
-		if isDevice(s.Role) {
+		if s.Role.Device() {
 			c.devices++
 		}
 	}
 	if !slices.IsSorted(c.ids) { // building order is id order but for odd loads
-		idx := make([]int, len(c.ids))
-		for i := range idx {
-			idx[i] = i
-		}
-		slices.SortFunc(idx, func(a, b int) int { return cmp.Compare(c.ids[a], c.ids[b]) })
-		ids, specs, nodes := slices.Clone(c.ids), slices.Clone(c.specs), slices.Clone(c.nodes)
-		for i, j := range idx {
-			c.ids[i], c.specs[i], c.nodes[i] = ids[j], specs[j], nodes[j]
-		}
+		power.SortByNode(c.ids, c.specs, c.nodes)
 	}
 	c.ok, c.sv, c.n, c.bldgs = true, g.structVer, len(g.bldgIDs), g.bldgs
 	c.gen++
 	c.builds++
 	return c
-}
-
-// isDevice: a role the balance works on (not a conduit or switch).
-func isDevice(r power.Role) bool {
-	return r == power.Producer || r == power.Consumer || r == power.Storage
 }
 
 // powerNode is building id's index in the list (ok false: not a power
@@ -169,15 +159,20 @@ func (g *Game) powerGraph() *powerCache {
 	if c.gOK && c.gList == c.gen && c.gTop == c.topo {
 		return c
 	}
+	var pins map[entity.EntityID]uint64
+	if g.pw != nil {
+		pins = g.pw.pins
+	}
 	for i := range c.nodes {
 		if c.nodes[i].Role == power.Switch {
 			c.nodes[i].Closed = g.powerOn(c.ids[i])
 		}
+		c.nodes[i].Pin = pins[c.ids[i]]
 	}
 	c.graph = c.b.Build(g.grid.Width(), g.grid.Height(), c.nodes)
 	c.order, c.nets = c.order[:0], c.nets[:0]
 	for i, n := range c.nodes {
-		if !isDevice(n.Role) {
+		if !n.Role.Device() {
 			continue
 		}
 		if net := c.graph.Net(n.ID); net != 0 {
@@ -301,19 +296,14 @@ func (g *Game) balanceNet(c *powerCache, net []int32, dt int, now uint64) {
 			if !live && pw.shed[id] == 0 {
 				d.ShedUntil = 0 // a dead net: unpowered, no hold
 			}
-			switch {
-			case d.ShedUntil == 0:
-				if _, ok := pw.shed[id]; ok {
-					delete(pw.shed, id)
-				}
-			case pw.shed[id] != d.ShedUntil:
+			if d.ShedUntil == 0 {
+				delete(pw.shed, id)
+			} else {
 				pw.shed[id] = d.ShedUntil
 			}
 		case power.Storage:
 			if d.Stored == 0 {
-				if _, ok := pw.charge[id]; ok {
-					delete(pw.charge, id)
-				}
+				delete(pw.charge, id)
 			} else {
 				pw.charge[id] = d.Stored
 			}
@@ -373,13 +363,14 @@ func newPowerState() *powerState {
 	return &powerState{
 		charge: map[entity.EntityID]int64{}, wantOff: map[entity.EntityID]bool{}, isOff: map[entity.EntityID]bool{},
 		powered: map[entity.EntityID]bool{}, shed: map[entity.EntityID]uint64{}, thermo: map[entity.EntityID]thermoSave{},
+		pins: map[entity.EntityID]uint64{},
 	}
 }
 
-// idle: nothing worth keeping without devices (no switch or thermostat
-// set, no flare).
+// idle: nothing worth keeping without devices (no switch, thermostat or
+// pin set, no flare).
 func (pw *powerState) idle() bool {
-	return len(pw.wantOff) == 0 && len(pw.isOff) == 0 && len(pw.thermo) == 0 && pw.flareUntil == 0
+	return len(pw.wantOff) == 0 && len(pw.isOff) == 0 && len(pw.thermo) == 0 && len(pw.pins) == 0 && pw.flareUntil == 0
 }
 
 // dropPower forgets the power state (every device is gone).
@@ -417,26 +408,10 @@ func (g *Game) prunePower(c *powerCache) {
 		}
 		return power.Spec{}
 	}
-	for id := range pw.charge {
-		if role(id).Role != power.Storage {
-			delete(pw.charge, id)
-		}
-	}
-	for id := range pw.powered {
-		if role(id).Role != power.Consumer {
-			delete(pw.powered, id)
-		}
-	}
-	for id := range pw.shed {
-		if role(id).Role != power.Consumer {
-			delete(pw.shed, id)
-		}
-	}
-	for id := range pw.thermo {
-		if !isThermostat(role(id)) {
-			delete(pw.thermo, id)
-		}
-	}
+	maps.DeleteFunc(pw.charge, func(id entity.EntityID, _ int64) bool { return role(id).Role != power.Storage })
+	maps.DeleteFunc(pw.powered, func(id entity.EntityID, _ bool) bool { return role(id).Role != power.Consumer })
+	maps.DeleteFunc(pw.shed, func(id entity.EntityID, _ uint64) bool { return role(id).Role != power.Consumer })
+	maps.DeleteFunc(pw.thermo, func(id entity.EntityID, _ thermoSave) bool { return !role(id).Thermostat() })
 	topo := false
 	for id := range pw.isOff {
 		if s := role(id); !s.Toggle {
@@ -449,15 +424,16 @@ func (g *Game) prunePower(c *powerCache) {
 			delete(pw.wantOff, id)
 		}
 	}
+	for id := range pw.pins {
+		if !role(id).Role.Device() {
+			delete(pw.pins, id)
+			topo = true
+		}
+	}
 	if topo {
 		c.topo++
 	}
 	pw.flicks = slices.DeleteFunc(pw.flicks, func(id entity.EntityID) bool { return !role(id).Toggle })
-}
-
-// isThermostat: a heater or a cooler.
-func isThermostat(s power.Spec) bool {
-	return s.Class == power.ClassHeater || s.Class == power.ClassCooler
 }
 
 // --- hooks for the consumers, generators and events ---------------------
@@ -556,7 +532,7 @@ func (g *Game) setThermoActive(id entity.EntityID, on bool) {
 
 func (g *Game) isThermostatBldg(id entity.EntityID) bool {
 	b := g.bldgs.Ref(id)
-	return b != nil && isThermostat(power.SpecOf(b.Kind))
+	return b != nil && power.SpecOf(b.Kind).Thermostat()
 }
 
 // putThermo edits id's thermostat, keeping only non-default ones.
@@ -699,6 +675,9 @@ func (g *Game) exportPower() *powerSave {
 		if sp.Toggle && pw.isOff[id] {
 			s.IsOff = append(s.IsOff, id)
 		}
+		if v := pw.pins[id]; v != 0 && sp.Role.Device() {
+			s.Pins = append(s.Pins, entry[uint64]{ID: id, V: v})
+		}
 		if sp.Role != power.Consumer {
 			continue
 		}
@@ -708,7 +687,7 @@ func (g *Game) exportPower() *powerSave {
 		if v := pw.shed[id]; v != 0 {
 			s.Shed = append(s.Shed, entry[uint64]{ID: id, V: v})
 		}
-		if t, ok := pw.thermo[id]; ok && isThermostat(sp) {
+		if t, ok := pw.thermo[id]; ok && sp.Thermostat() {
 			s.Thermo = append(s.Thermo, entry[thermoSave]{ID: id, V: t})
 		}
 	}
@@ -740,6 +719,9 @@ func (g *Game) importPower(s *powerSave) {
 	}
 	for _, e := range s.Thermo {
 		pw.thermo[e.ID] = e.V
+	}
+	for _, e := range s.Pins {
+		pw.pins[e.ID] = e.V
 	}
 	g.pw = pw
 	c := g.powerList()

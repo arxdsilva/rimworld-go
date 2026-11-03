@@ -64,14 +64,15 @@ var (
 	MoodBad       = color.RGBA{R: 0xFF, G: 0xA0, B: 0x94, A: 0xFF}
 	// PLAY-021 power overlay: a colour per grid, handed out in turn
 	// (power_overlay.go), and grey for pieces on no grid.
-	PowerNet1 = color.RGBA{R: 0xF5, G: 0xD5, B: 0x47, A: 0xFF}
-	PowerNet2 = color.RGBA{R: 0x4F, G: 0xE0, B: 0xD0, A: 0xFF}
-	PowerNet3 = color.RGBA{R: 0xF2, G: 0x7E, B: 0xB8, A: 0xFF}
-	PowerNet4 = color.RGBA{R: 0xA3, G: 0xE0, B: 0x5A, A: 0xFF}
-	PowerNet5 = color.RGBA{R: 0xA9, G: 0x8B, B: 0xFF, A: 0xFF}
-	PowerNet6 = color.RGBA{R: 0x3E, G: 0x8B, B: 0xFF, A: 0xFF}
-	PowerNone = color.RGBA{R: 0x9A, G: 0x94, B: 0xA8, A: 0xFF}
-	PowerCord = color.RGBA{R: 0x21, G: 0x1D, B: 0x1A, A: 0xFF} // PWR-1: the wire on the map
+	PowerNet1    = color.RGBA{R: 0xF5, G: 0xD5, B: 0x47, A: 0xFF}
+	PowerNet2    = color.RGBA{R: 0x4F, G: 0xE0, B: 0xD0, A: 0xFF}
+	PowerNet3    = color.RGBA{R: 0xF2, G: 0x7E, B: 0xB8, A: 0xFF}
+	PowerNet4    = color.RGBA{R: 0xA3, G: 0xE0, B: 0x5A, A: 0xFF}
+	PowerNet5    = color.RGBA{R: 0xA9, G: 0x8B, B: 0xFF, A: 0xFF}
+	PowerNet6    = color.RGBA{R: 0x3E, G: 0x8B, B: 0xFF, A: 0xFF}
+	PowerNone    = color.RGBA{R: 0x9A, G: 0x94, B: 0xA8, A: 0xFF}
+	PowerCord    = color.RGBA{R: 0x21, G: 0x1D, B: 0x1A, A: 0xFF} // PWR-1: the wire on the map
+	PowerCordRim = color.RGBA{R: 0xD6, G: 0xCD, B: 0xBB, A: 0xFF} // its faint rim, for dark floors
 )
 
 var Tokens = map[string]color.RGBA{
@@ -128,6 +129,7 @@ var Tokens = map[string]color.RGBA{
 	"ui.power_net6":      PowerNet6,
 	"ui.power_none":      PowerNone,
 	"ui.power_cord":      PowerCord,
+	"ui.power_cord_rim":  PowerCordRim,
 }
 
 const menuBackdropBands = 12

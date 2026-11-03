@@ -13,6 +13,8 @@ import (
 	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -772,6 +774,37 @@ func TestPowerPassesInTheFrame(t *testing.T) {
 	}
 	if conduitDraws != 3 {
 		t.Fatalf("conduit sprites drawn %d times, want 3 (two built, one blueprint; none in the object pass)", conduitDraws)
+	}
+}
+
+// TestWiresInTheFrame: the renderer's real frame draws a wire over a wall to
+// a hidden conduit under it, and the wire keeps its place between the
+// objects and the fog. The hidden conduit itself stays unmarked.
+func TestWiresInTheFrame(t *testing.T) {
+	w, _, _ := pdWorld(
+		".W..",
+		"....",
+	)
+	w.TerrainW, w.Terrain = 20, make([]uint8, 20*12)
+	w.Buildings = append(w.Buildings,
+		game.BuildingView{ID: 50, Kind: overlaypkg.HiddenConduitKind, PowerRole: "transmitter", PowerNet: 1, X: 1, Y: 0, W: 1, H: 1},
+		game.BuildingView{ID: 51, Kind: "lamp", PowerRole: "consumer", PowerNet: 1, X: 4, Y: 2, W: 1, H: 1,
+			HasLink: true, LinkFromX: 4, LinkFromY: 2, LinkX: 1, LinkY: 0})
+	r, got := pdRenderer(t, w)
+	var cords []povTrace
+	r.overlays().Wiring.Nets.Trace = func(part string, x, y int, c color.NRGBA) { cords = append(cords, povTrace{part, x, y, c}) }
+	var order []string
+	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
+	r.drawArt(ebiten.NewImage(640, 400), 640, 400, r.cam.Tile())
+	if l := povParts(cords, "cord"); len(l) != 1 || l[0].x != 4 || l[0].y != 2 || l[0].c != overlaypkg.TokenNRGBA(uikit.PowerCord) {
+		t.Fatalf("wires %v, want one from the lamp in the cord colour", cords)
+	}
+	ob, co, fog := slices.Index(order, "objects"), slices.Index(order, "power cords"), slices.Index(order, "fog")
+	if ob < 0 || co < ob || fog < co {
+		t.Fatalf("layers %v: want objects, power cords, fog", order)
+	}
+	if pdCount(*got, "marking ") != 0 {
+		t.Fatalf("the hidden conduit is marked off the overlay: %v", *got)
 	}
 }
 

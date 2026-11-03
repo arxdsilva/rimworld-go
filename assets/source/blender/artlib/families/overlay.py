@@ -1967,6 +1967,14 @@ def _g_power_toggle(xx, yy, c):  # the on/off symbol: an open ring and a bar thr
     return [_arc(xx, yy, c, c + 2, 21, -50, 230), _seg(xx, yy, c, c - 26, c, c - 2)]
 
 
+def _g_power_reconnect(xx, yy, c):  # two grids, a wire swinging from one to the other: two arrows swapping
+    top = np.minimum(_seg(xx, yy, c - 14, c - 9, c + 20, c - 9),
+                     np.minimum(_seg(xx, yy, c + 20, c - 9, c + 11, c - 18), _seg(xx, yy, c + 20, c - 9, c + 11, c)))
+    low = np.minimum(_seg(xx, yy, c + 14, c + 11, c - 20, c + 11),
+                     np.minimum(_seg(xx, yy, c - 20, c + 11, c - 11, c + 2), _seg(xx, yy, c - 20, c + 11, c - 11, c + 20)))
+    return [top, low, _dot(xx, yy, c - 24, c - 9, 4), _dot(xx, yy, c + 24, c + 11, 4)]
+
+
 def _thermometer(xx, yy, cx, cy):
     stem = np.abs(_cap(xx, yy, cx, cy - 26, cx, cy + 8, 6))
     bulb = np.hypot(xx - cx, yy - (cy + 16)) - 9
@@ -1991,6 +1999,7 @@ def _g_no_power(xx, yy, c):  # the bolt struck through
 PLAY021_ICONS = (   # name, glyph, colour (or a base.yaml overlay token)
     ("overlay_power", _g_overlay_power, (0.98, 0.80, 0.30)),
     ("power_toggle", _g_power_toggle, (0.98, 0.80, 0.30)),
+    ("power_reconnect", _g_power_reconnect, (0.98, 0.80, 0.30)),
     ("thermostat_up", _g_thermostat_up, (0.98, 0.58, 0.22)),
     ("thermostat_down", _g_thermostat_down, (0.40, 0.70, 0.95)),
     ("no_power", _g_no_power, "danger"),

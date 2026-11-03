@@ -46,7 +46,7 @@ func (g *Game) fillPowerBuilding(bv *BuildingView, id entity.EntityID, b constru
 	bv.PowerOn, bv.PowerWantOn = g.powerOn(id), g.powerWantOn(id)
 	if l, ok := c.graph.Link(uint64(id)); ok {
 		bv.LinkX, bv.LinkY, bv.HasLink = l.X, l.Y, true
-		bv.LinkFromX, bv.LinkFromY = l.FromX, l.FromY
+		bv.LinkFromX, bv.LinkFromY, bv.PowerRelink = l.FromX, l.FromY, l.Next != 0
 	}
 	switch s.Role {
 	case power.Consumer:
@@ -55,7 +55,7 @@ func (g *Game) fillPowerBuilding(bv *BuildingView, id entity.EntityID, b constru
 		} else {
 			bv.NoPowerReason = g.noPowerWhy(id, net, false)
 		}
-		if isThermostat(s) {
+		if s.Thermostat() {
 			bv.ThermoTarget, bv.ThermoActive = g.thermoTarget(id), g.thermoActive(id)
 		}
 	case power.Producer:
@@ -144,47 +144,29 @@ func (g *Game) fillPowerView(w *WorldView) {
 		}
 	}
 	w.SolarFlare = g.solarFlare()
-	w.PowerVer = g.powerViewVer(c)
+	w.PowerVer = c.viewVer(g.pw)
 }
 
-// powerViewVer is WorldView.PowerVer: a hash of every power building's
-// net and its powered, on and wanted state, and of the flare, so it moves
-// whenever any of them does and is the same in a game and its reload (0:
-// no power state). Cached per (pw.ver, graph).
-func (g *Game) powerViewVer(c *powerCache) uint64 {
-	pw := g.pw
+// viewVer is WorldView.PowerVer: a hash of every power building's net, wire
+// and powered, on and wanted state, and of the flare, so it moves whenever
+// any of them does and is the same in a game and its reload (0: no power
+// state). Cached per (pw.ver, graph).
+func (c *powerCache) viewVer(pw *powerState) uint64 {
 	if pw == nil {
 		return 0
 	}
 	if c.hOK && c.hVer == pw.ver && c.hGen == c.ggen {
 		return c.hash
 	}
-	const prime = 1099511628211
-	h := uint64(14695981039346656037)
-	mix := func(v uint64) {
-		for range 8 {
-			h ^= v & 0xff
-			h *= prime
-			v >>= 8
-		}
-	}
-	mix(uint64(len(c.ids)))
+	h := power.Mix(power.HashSeed, uint64(len(c.ids)))
 	for i, id := range c.ids {
-		flags := uint64(0)
-		if pw.powered[id] {
-			flags |= 1
-		}
-		if pw.isOff[id] {
-			flags |= 2
-		}
-		if pw.wantOff[id] {
-			flags |= 4
-		}
-		mix(uint64(id))
-		mix(c.graph.Net(c.nodes[i].ID))
-		mix(flags)
+		h = power.Mix(h, uint64(id))
+		h = power.Mix(h, c.graph.Net(c.nodes[i].ID))
+		l, _ := c.graph.Link(c.nodes[i].ID)
+		h = power.Mix(h, l.To)
+		h = power.Mix(h, power.FlagBits(pw.powered[id], pw.isOff[id], pw.wantOff[id]))
 	}
-	mix(pw.flareUntil)
+	h = power.Mix(h, pw.flareUntil)
 	h |= 1 // never 0 while there is power state
 	c.hOK, c.hVer, c.hGen, c.hash = true, pw.ver, c.ggen, h
 	return h

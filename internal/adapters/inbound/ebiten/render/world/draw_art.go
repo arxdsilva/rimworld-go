@@ -77,7 +77,7 @@ func (p *Pipeline) Draw(screen *ebiten.Image) {
 // chunk or map bakes), foundations, floors, conduits, zones and plans,
 // blueprints, floor markings, colonist shadows, the objects of the view
 // by row (rock, cave mouths, buildings, plants, items, frames, animals,
-// pawns), then work glow, fires, labels, badges, bubbles, particles,
+// pawns), then the power wires, work glow, fires, labels, badges, bubbles, particles,
 // weather and fog, floaters, designations, animal overlays and the
 // selection ring.
 func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
@@ -247,11 +247,19 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		draws = append(draws, ArtDraw{Row: row, Col: wx, Kind: objPawn, I: int32(i), wx: wx, wy: wy})
 	}
 	sortDraws(draws)
+	chW := p.Bk.CordChunks()
+	if lt != Map { // buildings are baked there
+		p.Overlays.Wiring.DrawCordStubs(v, &chW, screen, &w, sw, sh, tile) // overlay/power_cords.go: under the objects
+	}
+	p.layer("objects")
 	for i := range draws {
 		p.Ob.runDraw(screen, &w, &draws[i], tile, sw, sh)
 	}
 	p.Env.FlushCrops(screen) // render/env: the last run of units
-	clear(draws)             // drop this frame's closures; keep the buffer
+	if lt != Map {
+		p.Overlays.Wiring.DrawCords(v, &chW, screen, &w, sw, sh, tile) // overlay/power_cords.go: over objects, under weather and fog
+	}
+	clear(draws) // drop this frame's closures; keep the buffer
 	p.draws = draws[:0]
 	p.Creatures.DrawWorkGlow(v, screen, tile)
 	p.Overlays.Fires.DrawFires(v, screen, w, tile)
@@ -280,6 +288,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	p.Env.DrawWeather(v, screen, w, sw, sh, tile)
 	p.Overlays.Fires.ShowStrikes(v, w)
 	p.Env.DrawLightning(v, screen, sw, sh)
+	p.layer("fog")
 	p.Overlays.DrawFog(v, screen, w, sw, sh, tile) // unexplored tiles over everything
 	gfx.FogDrawn()                                 // world_scale.go: later labels show over the fog
 	p.Creatures.DrawFloaters(v, screen, tile)

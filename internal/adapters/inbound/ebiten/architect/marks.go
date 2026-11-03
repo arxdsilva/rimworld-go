@@ -66,7 +66,7 @@ func (m *Marks) PowerToggleTip() string {
 		hint = " [" + l + "]"
 	}
 	return "Power grid" + hint +
-		"\nEach grid's conduits in its own colour, the links, unpowered and unconnected devices and battery charge. Shown by itself while you place a power building."
+		"\nEach grid's conduits and wires in its own colour, unpowered and unconnected devices and battery charge. Wires show on the map all the time; this colours them by grid. Shown by itself while you place a power building."
 }
 
 // PowerLegend is the key shown in the global stack while the overlay is on.
@@ -79,7 +79,8 @@ func (m *Marks) PowerLegend() string {
 
 // drawPowerGhostLinks draws, for each placeable cell of a powered
 // building's ghost, the link it would make (in the target net's colour)
-// or a "Not connected" tag over its footprint.
+// or a "Not connected" tag over its footprint; a generator or battery that
+// joins by touching shows no tag, and a line only if it wires the pair out.
 func (m *Marks) drawPowerGhostLinks(screen *ebiten.Image, d ToolDef, cells []GhostCell) {
 	if m.sim() == nil || !overlay.PowerDeviceKinds[d.Build] {
 		return
@@ -90,7 +91,6 @@ func (m *Marks) drawPowerGhostLinks(screen *ebiten.Image, d ToolDef, cells []Gho
 	}
 	w := m.sh.World()
 	g := &m.sh.Overlays().Wiring.Nets
-	is := g.Transmitters(&w)
 	g.SyncNets(w.PowerNets)
 	mw, mh := m.sh.MapSize()
 	tile := m.sh.TilePx()
@@ -103,10 +103,14 @@ func (m *Marks) drawPowerGhostLinks(screen *ebiten.Image, d ToolDef, cells []Gho
 			f = FacingIndex(c.Facing) // move_mode.go
 		}
 		foot, _, _ := construction.Footprint(construction.Kind(bv.ID), construction.Facing(f), c.X, c.Y)
-		if from, to, linked := overlay.GhostLink(foot, mw, mh, is); linked {
+		from, to, linked, joined := g.GhostWire(&w, d.Build, foot, mw, mh)
+		if linked {
 			col := g.NetColour(g.NetAt(to))
 			m.sh.DrawPowerLink(screen, from, to, col, tile)
 			g.Emit("ghost link", c.X, c.Y, col)
+			continue
+		}
+		if joined {
 			continue
 		}
 		x0, y0, x1 := c.X, c.Y, c.X
@@ -123,7 +127,7 @@ func (m *Marks) drawPowerGhostLinks(screen *ebiten.Image, d ToolDef, cells []Gho
 const PowerButtonID = "hud.power"
 
 const (
-	powerLegendTxt = "Power: a colour per grid · lines link devices · no-power sign unpowered · red frame not connected · bar battery charge"
+	powerLegendTxt = "Power: wires and conduits take their grid's colour · no-power sign unpowered · red frame not connected · bar battery charge"
 	// PowerGhostLabel tags a powered ghost no grid would reach.
 	PowerGhostLabel = "Not connected"
 )

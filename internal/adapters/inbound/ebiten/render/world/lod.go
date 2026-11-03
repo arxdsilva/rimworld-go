@@ -83,6 +83,7 @@ type LOD struct {
 	ViewSet            bool // a frame has set VX0..VY1 (InView)
 	cx0, cy0, cx1, cy1 int
 	Views              []game.ChunkView
+	cordViews          []game.ChunkView // CordChunks' list, reused
 	Chunks             ChunkCache
 	Pages              MapBake
 	// reused per-frame buffers (draw_art.go)
@@ -134,6 +135,29 @@ func (k *Bakes) syncFrameChunks() {
 			l.Views = append(l.Views, k.src.ChunkLayer(cx, cy))
 		}
 	}
+}
+
+// CordChunks is OverlayChunks with the lists widened by a chunk all round:
+// a wire reaches past VisPad (ConnectRange tiles from a footprint of up to
+// seven), so a device just outside the frame's chunks may still cross the
+// screen. Only the wire pass walks it; the object pass keeps Views.
+func (k *Bakes) CordChunks() overlay.Chunks {
+	l := k.LOD
+	ch := k.OverlayChunks()
+	buf := append(l.cordViews[:0], l.Views...)
+	if l.cx1 >= l.cx0 && l.cy1 >= l.cy0 {
+		cs := game.ChunkSize
+		mx, my := (k.v.MapW-1)/cs, (k.v.MapH-1)/cs
+		for cy := max(l.cy0-1, 0); cy <= min(l.cy1+1, my); cy++ {
+			for cx := max(l.cx0-1, 0); cx <= min(l.cx1+1, mx); cx++ {
+				if cy < l.cy0 || cy > l.cy1 || cx < l.cx0 || cx > l.cx1 {
+					buf = append(buf, k.src.ChunkLayer(cx, cy))
+				}
+			}
+		}
+	}
+	l.cordViews, ch.Views = buf, buf
+	return ch
 }
 
 // Near reports whether tile (x, y) is within pad tiles of the view (south

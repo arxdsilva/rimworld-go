@@ -6,9 +6,10 @@ import "rimworld-go/internal/domain/building/construction"
 // clock.TicksPerHour).
 const WTicksPerWh = 2500
 
-// ConnectRange is how far (Chebyshev, in tiles, from its footprint) a
-// device reaches for a transmitter to join.
-const ConnectRange = 3
+// ConnectRange is how far (in tiles, from its footprint) a device reaches
+// for a conductor to wire to (wiki: Power, 6 squares). The wiki doesn't
+// publish how it measures; ours is Chebyshev.
+const ConnectRange = 6
 
 // Balance rules (PLAY021_PLAN.md Balance; our numbers).
 const (
@@ -29,9 +30,9 @@ type Role uint8
 
 const (
 	None        Role = iota // not electrical
-	Producer                // makes power (generators, solar, wind, geothermal)
-	Consumer                // draws power (lamps, heaters, coolers, electric benches)
-	Storage                 // stores power (batteries)
+	Producer                // makes power (generators, solar, wind, geothermal); conducts
+	Consumer                // draws power (lamps, heaters, coolers, electric benches); never conducts
+	Storage                 // stores power (batteries); conducts
 	Transmitter             // carries power between neighbours (conduits)
 	Switch                  // a transmitter while closed; open, it cuts the grid
 )
@@ -52,6 +53,9 @@ func (r Role) String() string {
 	}
 	return ""
 }
+
+// Device: a role the balance works on (not a conduit or switch).
+func (r Role) Device() bool { return r == Producer || r == Consumer || r == Storage }
 
 // Class is a consumer's place in the shed order of a brownout: the lowest
 // class is switched off first (lamps, then benches, coolers, heaters, and
@@ -79,6 +83,9 @@ type Spec struct {
 	Draw, Idle, Peak, CapWh int
 	Toggle, Hidden          bool
 }
+
+// Thermostat: a heater or a cooler.
+func (s Spec) Thermostat() bool { return s.Class == ClassHeater || s.Class == ClassCooler }
 
 // SpecOf is kind k's electrical definition (the zero Spec, Role None, for
 // a kind that is not electrical, the torch lamp included). A lamp has no

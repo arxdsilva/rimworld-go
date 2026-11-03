@@ -30,8 +30,10 @@ const (
 	powerSwitch      = "switch"
 	powerThermoStep  = 10 // a thermostat step: 1 °C, in tenths
 	powerToggleCmdID = "cmd.power.toggle"
-	powerDownCmdID   = "cmd.power.temp_down"
-	powerUpCmdID     = "cmd.power.temp_up"
+	// PowerReconnectCmdID is the Reconnect button (PWR-4).
+	PowerReconnectCmdID = "cmd.power.reconnect"
+	powerDownCmdID      = "cmd.power.temp_down"
+	powerUpCmdID        = "cmd.power.temp_up"
 )
 
 // hasPowerToggle reports b has the player's on / off: a switch, a generator
@@ -47,6 +49,39 @@ func hasPowerToggle(b game.BuildingView) bool {
 // isThermostatBldg reports b is a heater or a cooler.
 func isThermostatBldg(b game.BuildingView) bool {
 	return b.Kind == overlay.HeaterKind || b.Kind == overlay.CoolerKind
+}
+
+// isPowerDevice reports b is a device on a grid (consumer, producer or
+// battery), not a transmitter or a switch.
+func isPowerDevice(b game.BuildingView) bool {
+	switch b.PowerRole {
+	case PowerProducer, PowerConsumer, powerStorage:
+		return true
+	}
+	return false
+}
+
+// reconnectReason is why Reconnect cannot be pressed on b ("" when it can).
+func reconnectReason(b game.BuildingView) string {
+	switch {
+	case !b.HasLink && b.PowerNet == 0:
+		return "No grid in range."
+	case !b.HasLink:
+		return "Touching the grid: no wire to move."
+	case !b.PowerRelink:
+		return "No other grid in range."
+	}
+	return ""
+}
+
+// reconnectButton is b's Reconnect: wire it to the next grid in range at
+// once (command.ReconnectPower), no colonist needed.
+func reconnectButton(b game.BuildingView) Button {
+	r := reconnectReason(b)
+	return Button{ID: PowerReconnectCmdID, Label: "Reconnect", Icon: "power_reconnect",
+		Desc:     "Wire this to the next grid in range, at once. No colonist is needed.",
+		Disabled: r != "", Reason: r,
+		Cmds: []command.Command{{Kind: command.ReconnectPower, Target: uint64(b.ID)}}}
 }
 
 // powerNetOf is the world's net with id (ok false: not listed, or id 0).
@@ -229,6 +264,9 @@ func (a Building) powerCommandsIn(u units.Temp, b game.BuildingView) []Button {
 		out = append(out, Button{ID: powerToggleCmdID, Label: "Power", Icon: "power_toggle", Hotkey: input.Power,
 			Toggle: true, On: b.PowerWantOn, Desc: desc,
 			Cmds: []command.Command{{Kind: command.SetPowerWanted, Target: uint64(b.ID), Enabled: !b.PowerWantOn}}})
+	}
+	if isPowerDevice(b) {
+		out = append(out, reconnectButton(b))
 	}
 	if isThermostatBldg(b) {
 		now := FmtTargetIn(u, b.ThermoTarget)

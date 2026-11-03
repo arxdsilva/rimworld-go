@@ -84,6 +84,8 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdSetZonePriority(uint16(c.Target), c.Index) // haul_priority.go (PLAY-023)
 	case command.SetPowerWanted:
 		g.cmdSetPowerWanted(target, c.Enabled) // power_flick.go (PLAY-021)
+	case command.ReconnectPower:
+		g.cmdReconnectPower(target) // power_flick.go (PWR-4)
 	case command.SetThermostat:
 		g.cmdSetThermostat(target, c.Count) // power_heat.go (PLAY-021)
 	case command.SetMedicalCare:

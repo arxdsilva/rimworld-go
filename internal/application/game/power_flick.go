@@ -42,6 +42,26 @@ func (g *Game) cmdSetPowerWanted(target entity.EntityID, on bool) {
 	g.bumpPower()
 }
 
+// cmdReconnectPower moves device target's wire to the next grid in range
+// (PWR-4): at once, no colonist walks there (wiki: Battery). Refused for a
+// non-device and with no other grid in range.
+func (g *Game) cmdReconnectPower(target entity.EntityID) {
+	c := g.powerGraph()
+	i, ok := c.powerNode(target)
+	if !ok || !c.specs[i].Role.Device() {
+		return
+	}
+	l, _ := c.graph.Link(uint64(target))
+	if l.Next == 0 {
+		return
+	}
+	now := uint64(g.clock.Now())
+	g.ensurePower(now).pins[target] = l.Next
+	c.topo++
+	g.bumpPower()
+	g.balancePower(now)
+}
+
 // syncFlick puts building id in the flick index, or takes it out, as its
 // wanted and actual state differ or match.
 func (g *Game) syncFlick(id entity.EntityID) {

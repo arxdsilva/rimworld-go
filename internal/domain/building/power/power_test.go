@@ -11,7 +11,7 @@ import (
 // and the role names BuildingView.PowerRole shows.
 func TestUnitsAndRoleNames(t *testing.T) {
 	t.Parallel()
-	if WTicksPerWh != clock.TicksPerHour || ConnectRange != 3 {
+	if WTicksPerWh != clock.TicksPerHour || ConnectRange != 6 {
 		t.Fatalf("units: %d W·ticks per Wh, range %d", WTicksPerWh, ConnectRange)
 	}
 	want := map[Role]string{None: "", Producer: "producer", Consumer: "consumer", Storage: "storage",

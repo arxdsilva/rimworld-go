@@ -86,6 +86,7 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetZoneSow, command.SetZoneCut, command.SetZoneHidden, command.RenameZone,
 		command.SetZoneCrop, command.ExpandZone, command.RemoveZoneCells, command.DeleteZone, // zone_cmds.go (PLAY-020)
 		command.SetPowerWanted, command.SetThermostat, // power_flick.go, power_heat.go (PLAY-021)
+		command.ReconnectPower,                                              // power_flick.go (PWR-4)
 		command.SetMedicalCare, command.SetDefaultCare, command.SetSelfTend, // care package (MED-00)
 		command.EmergencyTend, command.ReorderOperation, // care package, surgery.go
 		command.SetZonePriority, // haul_priority.go (PLAY-023)

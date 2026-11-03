@@ -1044,10 +1044,12 @@ const powerBaseRow = 9
 // a solar panel and a wind turbine feed a battery through a conduit line
 // with a switch and a hidden stretch; lamps, a heater and an electric
 // stove draw on it; a lamp east of a gap is off the grid, and a torch lamp
-// burns west of it all.
+// burns west of it all. West of the line stands a walled room (PWR-1): a
+// conduit under its south wall, a cooler set in its north wall, a wall lamp
+// and a heater inside, every wire over the walls.
 func powerBase(g *game.Game, cx, cy int) {
 	y := cy - powerBaseRow                // north of the start's house and fields
-	g.ClearPlants(cx-15, y-4, cx+13, y+4) // trees would block the pieces
+	g.ClearPlants(cx-20, y-5, cx+17, y+9) // trees would block the pieces
 	for x := cx - 9; x <= cx+8; x++ {
 		kind := "power conduit"
 		switch {
@@ -1066,9 +1068,34 @@ func powerBase(g *game.Game, cx, cy int) {
 	g.BuildNow("lamp", "wood", "south", cx+4, y-1)
 	g.BuildNow("heater", "steel", "south", cx+6, y-1)
 	g.BuildNow("electric stove", "steel", "south", cx+4, y+1)
-	g.BuildNow("lamp", "wood", "south", cx+12, y+2) // too far from any conduit: not connected
+	g.BuildNow("lamp", "wood", "south", cx+16, y+8) // too far from any conduit: not connected
 	g.BuildNow("torch lamp", "wood", "south", cx-14, y+3)
 	g.FuelCampfire(cx-14, y+3)
+	for x := cx - 14; x <= cx-9; x++ { // the feed from the line to the room's wall
+		g.BuildNow("power conduit", "steel", "south", x, y+1)
+	}
+	g.BuildNow("power conduit", "steel", "south", cx-14, y)
+	for x := cx - 19; x <= cx-14; x++ {
+		if x >= cx-16 {
+			g.BuildNow("power conduit", "steel", "south", x, y-1) // under the south wall
+		}
+		g.BuildNow("wall", "steel", "south", x, y-1)
+		if x != cx-16 {
+			g.BuildNow("wall", "steel", "south", x, y-5)
+		}
+	}
+	g.BuildNow("cooler", "steel", "north", cx-16, y-5) // into the gap the wall left
+	for ry := y - 4; ry <= y-2; ry++ {
+		g.BuildNow("wall", "steel", "south", cx-19, ry)
+		g.BuildNow("wall", "steel", "south", cx-14, ry)
+	}
+	g.BuildNow("wall lamp", "steel", "east", cx-18, y-3)
+	g.BuildNow("heater", "steel", "south", cx-15, y-3)
+	for ry := y - 4; ry <= y-2; ry++ { // a dark floor, to read the wires on
+		for x := cx - 18; x <= cx-15; x++ {
+			g.BuildNow("flagstone", "slate blocks", "south", x, ry)
+		}
+	}
 }
 
 // bleedingScene: a colonist bleeding from deep cuts a few tiles from a

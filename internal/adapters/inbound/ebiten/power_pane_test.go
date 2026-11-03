@@ -284,7 +284,7 @@ func TestPowerToggleIsOnlyOnToggleDevices(t *testing.T) {
 		{ID: 30, Kind: "wall", X: 1, Y: 1}, {ID: 31, Kind: "torch lamp", X: 1, Y: 1, Fuel: true}} {
 		a, _, _ := pwrApp(t, 0, b)
 		for _, c := range a.insp.Building().BuildingCommands(b.ID) {
-			if strings.HasPrefix(c.ID, "cmd.power.") {
+			if strings.HasPrefix(c.ID, "cmd.power.") && c.ID != inspector.PowerReconnectCmdID { // PWR-4: a battery is a device
 				t.Errorf("%s has %s", b.Kind, c.ID)
 			}
 		}
@@ -330,7 +330,7 @@ func TestPowerCommandsComeBeforeMoveAndKeepTheirHotkeyLabel(t *testing.T) {
 	t.Parallel()
 	a, _, _ := pwrApp(t, 0, pwrHeater())
 	ids := strings.Join(bldCmdIDs(a.insp.Building().BuildingCommands(10)), ",")
-	if ids != "cmd.power.toggle,cmd.power.temp_down,cmd.power.temp_up,bldg.move,bldg.copy,cmd.bldg.uninstall,bldg.deconstruct" {
+	if ids != "cmd.power.toggle,cmd.power.reconnect,cmd.power.temp_down,cmd.power.temp_up,bldg.move,bldg.copy,cmd.bldg.uninstall,bldg.deconstruct" {
 		t.Fatalf("heater commands = %s", ids)
 	}
 	c, _ := bldCmd(a.insp.Building().BuildingCommands(10), "cmd.power.toggle")
@@ -612,6 +612,49 @@ func TestPaneDrawsThePowerWarning(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("ui %g: the pane does not draw the no-power line", ui)
+		}
+	}
+}
+
+// PWR-4: Reconnect is on devices only, and says why it is disabled.
+func TestPowerReconnectButton(t *testing.T) {
+	t.Parallel()
+	with := func(b game.BuildingView, f func(*game.BuildingView)) game.BuildingView {
+		f(&b)
+		return b
+	}
+	cases := []struct {
+		name   string
+		b      game.BuildingView
+		want   bool // the button is there
+		reason string
+	}{
+		{"free to move", with(pwrHeater(), func(b *game.BuildingView) { b.HasLink, b.PowerRelink = true, true }), true, ""},
+		{"no other grid", with(pwrHeater(), func(b *game.BuildingView) { b.HasLink = true }), true, "No other grid in range."},
+		{"touching the grid", pwrHeater(), true, "Touching the grid: no wire to move."},
+		{"no grid at all", with(pwrHeater(), func(b *game.BuildingView) { b.PowerNet = 0 }), true, "No grid in range."},
+		{"generator", with(pwrGenerator(), func(b *game.BuildingView) { b.HasLink, b.PowerRelink = true, true }), true, ""},
+		{"battery", with(pwrBattery(), func(b *game.BuildingView) { b.HasLink, b.PowerRelink = true, true }), true, ""},
+		{"switch", pwrSwitch(), false, ""},
+		{"conduit", pwrConduit(), false, ""},
+	}
+	for _, tc := range cases {
+		a, s, _ := pwrApp(t, 0, tc.b)
+		btn, ok := bldCmd(a.insp.Building().BuildingCommands(tc.b.ID), inspector.PowerReconnectCmdID)
+		if ok != tc.want {
+			t.Fatalf("%s: Reconnect present %v, want %v", tc.name, ok, tc.want)
+		}
+		if !ok {
+			continue
+		}
+		if btn.Reason != tc.reason || btn.Disabled != (tc.reason != "") {
+			t.Fatalf("%s: disabled %v reason %q, want %q", tc.name, btn.Disabled, btn.Reason, tc.reason)
+		}
+		if tc.reason == "" {
+			pressCmd(a, btn)
+			if c := s.cmds[len(s.cmds)-1]; c.Kind != command.ReconnectPower || c.Target != uint64(tc.b.ID) {
+				t.Fatalf("%s: sent %+v", tc.name, c)
+			}
 		}
 	}
 }

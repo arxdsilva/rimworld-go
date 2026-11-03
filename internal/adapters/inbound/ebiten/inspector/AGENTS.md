@@ -27,6 +27,7 @@ The selection's inspector: the pane with its tabs (pawn needs, gear, health, soc
 ## Public Contracts
 - `New(sh Shell) *Pane` and the kind types; `Producers` is the lookup from `selection.Kind` to the producer that builds commands for it.
 - Every action is a `command.Command` through `ports.Commands`; the inspector mutates no domain state.
+- A power device's pane has a Reconnect button (`PowerReconnectCmdID`, `cmds_power.go`, PWR-4): it sends `command.ReconnectPower` and is disabled with a reason from `BuildingView` (`HasLink`, `PowerNet`, `PowerRelink`).
 
 ## Invariants
 - Guard limits: `Pane` 37, `Building` 36 and `Tabs` 32 methods (all ≤ 40).

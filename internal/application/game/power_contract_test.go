@@ -121,6 +121,7 @@ func TestPowerSaveGob(t *testing.T) {
 		Charge: []entry[int64]{{ID: 4, V: 900 * 2500}}, WantOff: []entity.EntityID{5}, IsOff: []entity.EntityID{6},
 		Unpowered: []entity.EntityID{7}, Shed: []entry[uint64]{{ID: 8, V: 12500}},
 		Thermo: []entry[thermoSave]{{ID: 9, V: thermoSave{Target: 210, Active: true}}}, FlareUntil: 30000, Last: 29950,
+		Pins: []entry[uint64]{{ID: 10, V: 77}},
 	}}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(&in); err != nil {

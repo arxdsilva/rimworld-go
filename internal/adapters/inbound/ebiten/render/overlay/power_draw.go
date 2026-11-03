@@ -61,14 +61,21 @@ func IsConduitKind(kind string) bool {
 }
 
 // PowerDeviceKinds are the kinds that make, draw or store power: a
-// conduit's stub reaches into them. Built devices also count by their
-// view's PowerRole; frames and ghosts, which have none, by this list.
+// conduit's stub reaches into them and their frames and ghosts show their
+// wire. Built devices also count by their view's PowerRole; frames and
+// ghosts, which have none, by this list (TestPowerDeviceKindsAreComplete).
 var PowerDeviceKinds = map[string]bool{
 	"lamp": true, HeaterKind: true, CoolerKind: true, BatteryKind: true,
 	WoodGeneratorKind: true, SolarPanelKind: true, WindTurbineKind: true, GeothermalKind: true,
 	"electric stove": true, "electric tailoring bench": true, "electric research bench": true,
 	"chemfuel generator": true, WatermillKind: true, "deep drill": true, "ground-penetrating scanner": true,
 	"moisture pump": true, "electric crematorium": true, // AX-4
+	"wall lamp": true, "flood light": true, SunLampKind: true, "vitals monitor": true, "multi-analyzer": true,
+	"radio console": true, "electric forge": true, "machining table": true, "fabrication bench": true,
+	"electric smelter": true, "fuel refinery": true, "nutrient paste dispenser": true, "hydroponics basin": true,
+	"fish tank": true, "tube television": true, "flatscreen television": true, "big screen television": true,
+	"long-range mineral scanner": true, "ship reactor": true, "powered door": true,
+	"sentry turret": true, "autocannon": true, "slug turret": true, "foam turret": true, "rocket battery": true,
 }
 
 // LinkKinds is the renderer's sprite.Kinds: BuildingLink and PowerLink.

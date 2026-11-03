@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/power"
 )
 
@@ -22,16 +23,17 @@ import (
 //     (PowerPalette, handed out in turn and kept while the net lives;
 //     grey on no net), with RENDER's conduit markings over them, so
 //     hidden conduits show here and only here.
-//   - Every linked device has a line from its footprint to the
-//     transmitter it joined; a device on no grid gets a red frame.
+//   - Every linked device has a line in its net's colour from its footprint
+//     to the conductor it joined, over the wire the map always shows
+//     (power_cords.go); a device on no grid gets a red frame.
 //   - Producers wear a disc, consumers a ring, batteries a square and a
 //     charge bar; an unpowered consumer the no-power sign, steady, on the
 //     spot of the world's blinking badge (power_draw.go).
 //   - It is the "Power grid" global toggle (hud_global.go, Shift+P) and
 //     shows by itself while a power tool is in hand (syncPowerForce).
 //   - The placement ghost of a powered building links to the nearest
-//     transmitter in range by the simulation's rule, or says "Not
-//     connected" (drawPowerGhostLinks).
+//     conductor in range by the simulation's rule, joins by touching, or
+//     says "Not connected" (drawPowerGhostLinks).
 
 // powerDetailPx: below this tile size the overlay keeps only the grid
 // tint, the links and the frames (marks would be specks).
@@ -61,6 +63,7 @@ type powerTransCache struct {
 	ok                  bool
 	structVer, powerVer uint64
 	n                   int
+	gen                 uint64         // counts the rebuilds
 	cells               map[[2]int]int // transmitter cell -> its net (0: none)
 }
 
@@ -136,49 +139,126 @@ func (o *PowerOverlay) NetColour(net int) color.NRGBA {
 // (0: none).
 func (o *PowerOverlay) NetAt(c [2]int) int { return o.tr.cells[c] }
 
-// Transmitters reports the cells a device can link to: built conduits
-// and switches that are on, less every cell under a switch that is off
-// (nothing conducts there; power.Builder.Build).
+// Transmitters reports the cells a device can link to: built conduits,
+// switches that are on, generators and batteries (a lone one has net 0 and
+// still counts), less every cell under a switch that is off (nothing
+// conducts there; power.Builder.Build).
 func (o *PowerOverlay) Transmitters(w *game.WorldView) func(x, y int) bool {
+	o.syncTransmitters(w)
+	return func(x, y int) bool { return o.isTransmitter(x, y) }
+}
+
+// isTransmitter is Transmitters' answer as last synced.
+func (o *PowerOverlay) isTransmitter(x, y int) bool {
+	_, ok := o.tr.cells[[2]int{x, y}]
+	return ok
+}
+
+// syncTransmitters rebuilds the cells when the structure or the power
+// state moved.
+func (o *PowerOverlay) syncTransmitters(w *game.WorldView) {
 	c := &o.tr
-	if !c.ok || c.structVer != w.StructVer || c.powerVer != w.PowerVer || c.n != len(w.Buildings) {
-		c.ok, c.structVer, c.powerVer, c.n = true, w.StructVer, w.PowerVer, len(w.Buildings)
-		if c.cells == nil {
-			c.cells = map[[2]int]int{}
+	if c.ok && c.structVer == w.StructVer && c.powerVer == w.PowerVer && c.n == len(w.Buildings) {
+		return
+	}
+	c.ok, c.structVer, c.powerVer, c.n = true, w.StructVer, w.PowerVer, len(w.Buildings)
+	c.gen++
+	if c.cells == nil {
+		c.cells = map[[2]int]int{}
+	}
+	clear(c.cells)
+	var cut [][2]int
+	for i := range w.Buildings {
+		b := &w.Buildings[i]
+		switch b.PowerRole {
+		case "transmitter", "switch", "producer", "storage":
+		default:
+			continue
 		}
-		clear(c.cells)
-		var cut [][2]int
-		for i := range w.Buildings {
-			b := &w.Buildings[i]
-			open := b.PowerRole == "switch" && !b.PowerOn
-			if b.PowerRole != "transmitter" && b.PowerRole != "switch" {
-				continue
-			}
-			for y := b.Y; y < b.Y+max(b.H, 1); y++ {
-				for x := b.X; x < b.X+max(b.W, 1); x++ {
-					if open {
-						cut = append(cut, [2]int{x, y})
-					} else {
-						c.cells[[2]int{x, y}] = b.PowerNet
-					}
+		open := b.PowerRole == "switch" && !b.PowerOn
+		for y := b.Y; y < b.Y+max(b.H, 1); y++ {
+			for x := b.X; x < b.X+max(b.W, 1); x++ {
+				if open {
+					cut = append(cut, [2]int{x, y})
+				} else {
+					c.cells[[2]int{x, y}] = b.PowerNet
 				}
 			}
 		}
-		for _, k := range cut {
-			delete(c.cells, k)
+	}
+	for _, k := range cut {
+		delete(c.cells, k)
+	}
+}
+
+// GhostWire is what planning a kind on footprint cells of an mw x mh map
+// would make, by the simulation's rule (power.Builder.Build). A generator or
+// battery touching a conductor (the same cell or a 4-neighbour) on a grid
+// joins it: no wire, joined. One touching only a lone generator or battery
+// (net 0, so nothing is in that one's range) makes a grid with it, and wires
+// the pair out if it reaches anything else: joined, wired or not. Anything
+// else takes the nearest conductor (GhostLink); neither wired nor joined, it
+// is not connected.
+func (o *PowerOverlay) GhostWire(w *game.WorldView, kind string, cells [][2]int, mw, mh int) (from, to [2]int, wired, joined bool) {
+	o.syncTransmitters(w)
+	var lone map[[2]int]bool
+	if ghostConducts(kind) {
+		for _, c := range cells {
+			if c[0] < 0 || c[1] < 0 || c[0] >= mw || c[1] >= mh {
+				continue
+			}
+			x, y := c[0], c[1]
+			for _, n := range [5][2]int{c, {x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}} {
+				net, ok := o.tr.cells[n]
+				if !ok {
+					continue
+				}
+				if net != 0 {
+					return from, to, false, true
+				}
+				if lone == nil {
+					lone = map[[2]int]bool{}
+				}
+				o.markLone(lone, n)
+			}
 		}
 	}
-	return func(x, y int) bool {
-		_, ok := c.cells[[2]int{x, y}]
-		return ok
+	from, to, wired = GhostLink(cells, mw, mh, func(x, y int) bool {
+		return o.isTransmitter(x, y) && !lone[[2]int{x, y}]
+	})
+	return from, to, wired, lone != nil
+}
+
+// ghostConducts: a planned generator or battery. A device that only draws
+// power always needs its wire.
+func ghostConducts(kind string) bool {
+	k, ok := construction.Parse(kind)
+	if !ok {
+		return false
+	}
+	r := power.SpecOf(k).Role
+	return r == power.Producer || r == power.Storage
+}
+
+// markLone adds the cells of the lone device at c: nothing on a grid touches
+// one, so its net-0 cells in a row are all it.
+func (o *PowerOverlay) markLone(lone map[[2]int]bool, c [2]int) {
+	if net, ok := o.tr.cells[c]; !ok || net != 0 || lone[c] {
+		return
+	}
+	lone[c] = true
+	for _, n := range [4][2]int{{c[0] - 1, c[1]}, {c[0] + 1, c[1]}, {c[0], c[1] - 1}, {c[0], c[1] + 1}} {
+		o.markLone(lone, n)
 	}
 }
 
 // GhostLink is the link a device with footprint cells would make on a
 // w x h map, by the simulation's rule (power.Builder.link): the nearest
-// transmitter cell within power.ConnectRange of the footprint (Chebyshev;
-// ties by y, then x), and the footprint cell the line leaves from (at
-// that distance, the nearest in a straight line, then by y, then x).
+// conductor cell (a conduit, a closed switch, a generator or a battery)
+// within power.ConnectRange of the footprint (Chebyshev; ties by straight
+// line, then y, then x), and the footprint cell the line leaves from (at that distance, the
+// nearest in a straight line, then by y, then x). What a generator or
+// battery does touching a conductor is GhostWire's.
 func GhostLink(cells [][2]int, w, h int, is func(x, y int) bool) (from, to [2]int, ok bool) {
 	in := func(c [2]int) bool { return c[0] >= 0 && c[1] >= 0 && c[0] < w && c[1] < h }
 	x0, y0, x1, y1 := w, h, -1, -1
@@ -193,21 +273,24 @@ func GhostLink(cells [][2]int, w, h int, is func(x, y int) bool) (from, to [2]in
 	rng := power.ConnectRange
 	x0, y0 = max(x0-rng, 0), max(y0-rng, 0)
 	x1, y1 = min(x1+rng, w-1), min(y1+rng, h-1)
-	best := rng + 1
+	best, bestS := rng+1, 0
 scan:
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			if !is(x, y) {
 				continue
 			}
-			d := math.MaxInt
+			d, s := math.MaxInt, 0
 			for _, c := range cells {
 				if in(c) {
-					d = min(d, chebDist(c[0]-x, c[1]-y))
+					dx, dy := c[0]-x, c[1]-y
+					if k, e := chebDist(dx, dy), dx*dx+dy*dy; k < d || (k == d && e < s) {
+						d, s = k, e
+					}
 				}
 			}
-			if d < best {
-				best, to, ok = d, [2]int{x, y}, true
+			if d < best || (d == best && s < bestS) {
+				best, bestS, to, ok = d, s, [2]int{x, y}, true
 				if d == 0 {
 					break scan // nothing nearer, nothing earlier
 				}
@@ -288,16 +371,18 @@ func (o *Wiring) DrawOverlay(v *render.View, ch *Chunks, links *Links, screen *e
 	}
 }
 
-// drawPowerDevice draws device b's overlay parts: its link line (or a red
-// frame on no grid) and, with detail, its mark, the no-power sign and a
-// battery's charge.
+// drawPowerDevice draws device b's overlay parts: its link line, a red
+// frame on no grid (a generator touching a conduit has no line and needs
+// no frame) and, with detail, its mark, the no-power sign and a battery's
+// charge.
 func (o *Wiring) drawPowerDevice(v *render.View, dst *ebiten.Image, b *game.BuildingView, tile float64, detail bool) {
 	g := &o.Nets
 	c := g.NetColour(b.PowerNet)
 	if b.HasLink {
 		o.DrawPowerLink(v, dst, [2]int{b.LinkFromX, b.LinkFromY}, [2]int{b.LinkX, b.LinkY}, c, tile)
 		g.Emit("link", b.LinkFromX, b.LinkFromY, c)
-	} else {
+	}
+	if b.PowerNet == 0 {
 		o.drawPowerFrame(v, dst, b, tile)
 		g.Emit("disconnected", b.X, b.Y, TokenNRGBA(uikit.Danger))
 	}

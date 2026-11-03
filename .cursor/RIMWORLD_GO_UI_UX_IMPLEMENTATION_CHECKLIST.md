@@ -941,12 +941,12 @@ understandable.
 
 ## 16.2 Power overlay
 
--   [x] **Power conduits/networks** (PLAY-021: Shift+P "Power grid" overlay, auto-shown while placing power buildings; each net in its own colour, hidden conduits included)
+-   [x] **Power conduits/networks** (PLAY-021: Shift+P "Power grid" overlay, auto-shown while placing power buildings; each net in its own colour, hidden conduits included; PWR-1: the wire from each device to its grid shows on the map all the time, the overlay colours it by grid)
 -   [x] **Powered/unpowered buildings** (PLAY-021: the no-power sign on unpowered consumers; glow layers only while running)
--   [x] **Producer/consumer state** (PLAY-021: a disc on producers, a ring on consumers, link lines to their conduit)
+-   [x] **Producer/consumer state** (PLAY-021: a disc on producers, a ring on consumers, link lines to the conductor they wire to; PWR-1/5: the wire is always on the map and placed power blueprints show theirs)
 -   [x] **Battery charge** (PLAY-021: a charge bar on the battery sprite and in the overlay)
 -   [-] **Network production vs consumption** (PLAY-021: in each device's pane, "Grid: +X W (G made, L used), stored S of C Wh"; not drawn in the overlay)
--   [x] **Disconnected network visualization** (PLAY-021: grey for conduits on no grid, a red frame on devices with no link, a "Not connected" alert)
+-   [x] **Disconnected network visualization** (PLAY-021: grey for conduits on no grid, a red frame on devices on no grid, a "Not connected" alert; PWR-4: a Reconnect button in the device pane, disabled with a reason)
 
 ## 16.3 Temperature overlay
 

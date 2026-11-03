@@ -82,7 +82,7 @@ func psStepUntil(t *testing.T, g *Game, n int, what string, done func() bool) {
 }
 
 // TestPowerGeneratorLightsLampThroughConduits: a fuelled generator feeds
-// a lamp through a conduit line it links to; a lamp far from any conduit
+// a lamp through a conduit line it touches (no wire: PWR-3); a lamp far from any conduit
 // is not connected.
 func TestPowerGeneratorLightsLampThroughConduits(t *testing.T) {
 	t.Parallel()
@@ -96,9 +96,9 @@ func TestPowerGeneratorLightsLampThroughConduits(t *testing.T) {
 	if !g.powered(lamp) || g.powered(far) {
 		t.Fatalf("powered: lamp %v, far lamp %v", g.powered(lamp), g.powered(far))
 	}
-	net := int(line[0])
+	net := int(gen) // PWR-3: a generator conducts, and has the smallest id on the set
 	gv, lv, fv := psView(t, g, gen), psView(t, g, lamp), psView(t, g, far)
-	if gv.PowerRole != "producer" || gv.PowerOut != 800 || gv.PowerNet != net || !gv.HasLink || gv.NoPowerReason != "" {
+	if gv.PowerRole != "producer" || gv.PowerOut != 800 || gv.PowerNet != net || gv.HasLink || gv.NoPowerReason != "" {
 		t.Errorf("generator view %+v", gv)
 	}
 	if lv.PowerRole != "consumer" || !lv.Powered || lv.PowerUse != 50 || lv.PowerNet != net || lv.NoPowerReason != "" ||

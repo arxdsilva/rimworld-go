@@ -147,11 +147,13 @@ type Fires struct {
 }
 
 // Wiring draws the power layer: conduits, device glows and parts, the
-// no-power badges, the power overlay and the turret's gun and range.
+// wires, the no-power badges, the power overlay and the turret's gun and
+// range.
 type Wiring struct {
 	*base
 	Nets  PowerOverlay // the power overlay's net colours and transmitters
 	Parts PowerDraw    // turbine blade phases, glow keys, vent covers
+	Cords Cords        // power_cords.go: the wires on the map
 }
 
 // New is the overlays of painter p and light layer lit, the Plan overlay

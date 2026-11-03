@@ -167,8 +167,13 @@ func TestArchPowerLine(t *testing.T) {
 	if !strings.Contains(strings.Join(lines, "\n"), "Power: uses 175 W working") { // TEMP-1: wiki watts
 		t.Errorf("heater card %q lacks its power line", lines)
 	}
-	if power.ConnectRange != 3 || !strings.Contains(toolDesc(t, "conduit"), "within 3 tiles") {
+	if power.ConnectRange != 6 || !strings.Contains(toolDesc(t, "conduit"), "within 6 tiles") {
 		t.Errorf("the conduit card names the link range: %q, range %d", toolDesc(t, "conduit"), power.ConnectRange)
+	}
+	for _, id := range []string{"lamp", "wall_lamp"} {
+		if d := toolDesc(t, id); !strings.Contains(d, "generator or battery within 6 tiles") {
+			t.Errorf("the %s card names what it wires to and how far: %q", id, d)
+		}
 	}
 }
 
@@ -579,9 +584,11 @@ func TestGhostLinkRule(t *testing.T) {
 		from, to [2]int
 		ok       bool
 	}{
-		{"in range", one, transAt([2]int{8, 5}), [2]int{5, 5}, [2]int{8, 5}, true},
-		{"out of range", one, transAt([2]int{9, 5}), [2]int{}, [2]int{}, false},
+		{"in range", one, transAt([2]int{11, 5}), [2]int{5, 5}, [2]int{11, 5}, true},
+		{"out of range", one, transAt([2]int{12, 5}), [2]int{}, [2]int{}, false},
 		{"nearest wins", one, transAt([2]int{8, 5}, [2]int{6, 7}), [2]int{5, 5}, [2]int{6, 7}, true},
+		{"tie: straighter", one, transAt([2]int{4, 6}, [2]int{5, 6}, [2]int{6, 6}), [2]int{5, 5}, [2]int{5, 6}, true},
+		{"tie: straighter beats a smaller y", one, transAt([2]int{3, 3}, [2]int{5, 7}), [2]int{5, 5}, [2]int{5, 7}, true},
 		{"tie: smaller y", one, transAt([2]int{7, 6}, [2]int{3, 4}), [2]int{5, 5}, [2]int{3, 4}, true},
 		{"tie: then smaller x", one, transAt([2]int{7, 4}, [2]int{3, 4}), [2]int{5, 5}, [2]int{3, 4}, true},
 		{"under it", one, transAt([2]int{5, 5}), [2]int{5, 5}, [2]int{5, 5}, true},
@@ -599,8 +606,9 @@ func TestGhostLinkRule(t *testing.T) {
 	}
 }
 
-// The ghost's transmitters are the built conduits and the switches that
-// are on; an open switch carries nothing, not even a conduit under it.
+// The ghost's transmitters are the built conduits, the switches that are
+// on, generators and batteries; an open switch carries nothing, not even a
+// conduit under it.
 func TestGhostTransmitters(t *testing.T) {
 	t.Parallel()
 	w := game.WorldView{TerrainW: 10, StructVer: 3, Buildings: []game.BuildingView{
@@ -610,10 +618,12 @@ func TestGhostTransmitters(t *testing.T) {
 		{ID: 4, Kind: overlaypkg.PowerSwitchKind, X: 4, Y: 1, W: 1, H: 1, PowerRole: "switch"},
 		{ID: 5, Kind: overlaypkg.ConduitKind, X: 4, Y: 1, W: 1, H: 1, PowerRole: "transmitter"},
 		{ID: 6, Kind: overlaypkg.HeaterKind, X: 5, Y: 1, W: 1, H: 1, PowerRole: "consumer"},
+		{ID: 7, Kind: overlaypkg.BatteryKind, X: 6, Y: 1, W: 1, H: 1, PowerRole: "storage"},
+		{ID: 8, Kind: overlaypkg.SolarPanelKind, X: 7, Y: 1, W: 1, H: 1, PowerRole: "producer"},
 	}}
 	var o overlaypkg.PowerOverlay
 	is := o.Transmitters(&w)
-	for x, want := range map[int]bool{1: true, 2: true, 3: true, 4: false, 5: false} {
+	for x, want := range map[int]bool{1: true, 2: true, 3: true, 4: false, 5: false, 6: true, 7: true} {
 		if is(x, 1) != want {
 			t.Errorf("cell %d,1 transmits %v, want %v", x, !want, want)
 		}
@@ -627,10 +637,10 @@ func TestGhostTransmitters(t *testing.T) {
 
 // ghostApp is a colony with a built conduit at (4, 4) and the Architect
 // holding tool, the cursor on (tx, ty).
-func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
+func ghostApp(t *testing.T, tool string, tx, ty int, more ...game.BuildingView) (*App, *[]povTrace) {
 	t.Helper()
 	s := &stubSim{w: 24, h: 24, world: game.WorldView{TerrainW: 24, Terrain: make([]uint8, 24*24), StructVer: 1,
-		Buildings: []game.BuildingView{{ID: 1, Kind: overlaypkg.ConduitKind, X: 4, Y: 4, W: 1, H: 1, PowerRole: "transmitter", PowerNet: 1}},
+		Buildings: append([]game.BuildingView{{ID: 1, Kind: overlaypkg.ConduitKind, X: 4, Y: 4, W: 1, H: 1, PowerRole: "transmitter", PowerNet: 1}}, more...),
 		PowerNets: []game.PowerNetView{{ID: 1}}}}
 	a, f := powerArch(t, s)
 	tl, _ := toolByID(tool)
@@ -644,7 +654,9 @@ func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
 }
 
 // A device ghost in range draws its link to the conduit; out of range it
-// says "Not connected"; a conduit ghost links nothing.
+// says "Not connected"; a conduit ghost links nothing. A battery touching
+// the conduit is connected, with no line and no tag; off by a corner it
+// wires like any device.
 func TestPlacementGhostLink(t *testing.T) {
 	t.Parallel()
 	screen := ebiten.NewImage(640, 400)
@@ -657,7 +669,7 @@ func TestPlacementGhostLink(t *testing.T) {
 		t.Errorf("an in-range ghost says not connected (%d)", n)
 	}
 
-	a, got = ghostApp(t, "heater", 10, 6)
+	a, got = ghostApp(t, "heater", 11, 6)
 	a.arch.DrawGhost(screen)
 	if len(povParts(*got, "ghost link")) != 0 || len(povParts(*got, "not connected")) != 1 {
 		t.Errorf("out of range: %v, want one Not connected", *got)
@@ -675,6 +687,29 @@ func TestPlacementGhostLink(t *testing.T) {
 	a.arch.DrawGhost(screen)
 	if len(*got) != 0 {
 		t.Errorf("an unpowered building's ghost drew links: %v", *got)
+	}
+
+	// a conduit clear of the panel: the cursor over chrome draws no ghost
+	far := game.BuildingView{ID: 2, Kind: overlaypkg.ConduitKind, X: 9, Y: 7, W: 1, H: 1, PowerRole: "transmitter", PowerNet: 1}
+	a, got = ghostApp(t, "battery", 9, 8, far)
+	a.arch.DrawGhost(screen)
+	if len(*got) != 0 {
+		t.Errorf("a battery touching the conduit: %v, want no line and no tag", *got)
+	}
+	a, got = ghostApp(t, "battery", 10, 8, far)
+	a.arch.DrawGhost(screen)
+	if len(povParts(*got, "ghost link")) != 1 || len(povParts(*got, "not connected")) != 0 {
+		t.Errorf("a battery off by a corner: %v, want its line", *got)
+	}
+	a, got = ghostApp(t, "battery", 14, 14)
+	a.arch.DrawGhost(screen)
+	if len(povParts(*got, "ghost link")) != 0 || len(povParts(*got, "not connected")) != 1 {
+		t.Errorf("a battery alone: %v, want Not connected", *got)
+	}
+	a, got = ghostApp(t, "wall_lamp", 6, 6)
+	a.arch.DrawGhost(screen)
+	if len(povParts(*got, "ghost link")) != 1 {
+		t.Errorf("a wall lamp ghost: %v, want its line", *got)
 	}
 }
 

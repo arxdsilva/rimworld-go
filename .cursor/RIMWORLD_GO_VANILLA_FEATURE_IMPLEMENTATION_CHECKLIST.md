@@ -1287,7 +1287,7 @@ treatment, and surgery are major colony-management systems.
     -   coolers/heaters.
     -   communications.
     -   defensive/utility equipment where applicable.
--   [x] **Power conduits/network** (PLAY-021: conduits and hidden conduits on their own layer link 4-neighbour nets, devices join a transmitter within 3 tiles, an open switch cuts; nets rebuilt only on structure or switch change)
+-   [x] **Power conduits/network** (PLAY-021: conduits and hidden conduits on their own layer link 4-neighbour nets, devices wire to a conductor within 6 tiles (PWR-2, wiki; Chebyshev is ours), generators and batteries conduct (PWR-3), a wire is always drawn and Reconnect moves it to the next grid (PWR-1, PWR-4), an open switch cuts; nets rebuilt only on structure or switch change)
     -   Connected graph.
     -   Topology recalculated only when changed.
 -   [x] **Power availability** (PLAY-021: every 50 ticks each net balances; batteries cover a deficit, then consumers are shed by class with a minimum off time and headroom (no-flap tested))

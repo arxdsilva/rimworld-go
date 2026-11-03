@@ -178,7 +178,7 @@ def overlay_strip():
 ICON_NAMES = ("power_conduit", "hidden_conduit", "power_switch", "wood_fired_generator", "solar_panel",
               "wind_turbine", "geothermal_generator", "battery", "torch_lamp", "heater", "cooler",
               "electric_stove", "electric_tailoring_bench", "electric_research_bench",
-              "overlay_power", "power_toggle", "thermostat_up", "thermostat_down", "no_power")
+              "overlay_power", "power_toggle", "power_reconnect", "thermostat_up", "thermostat_down", "no_power")
 
 
 def icon_strip(width):

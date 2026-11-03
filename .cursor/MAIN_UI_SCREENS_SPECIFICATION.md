@@ -786,7 +786,7 @@ lists every core item and its card):
 -   Structure;
 -   Production;
 -   Furniture;
--   Power (PLAY-021, implemented: conduit and hidden conduit as line tools, switch, wood-fired, solar, wind and geothermal generators, battery; each card names its draw or output and its research lock; while a powered building is in hand the ghost links to the nearest conduit within 3 tiles or says "Not connected");
+-   Power (PLAY-021, implemented: conduit and hidden conduit as line tools, switch, wood-fired, solar, wind and geothermal generators, battery; each card names its draw or output and its research lock; while a powered building is in hand the ghost links to the nearest conductor (conduit, switch that is on, generator or battery) within 6 tiles, joins by touching with no wire, or says "Not connected"; PWR-5: placed power blueprints show a dimmer wire);
 -   Security;
 -   Miscellaneous (grave, sarcophagus, tool cabinet, multi-analyzer, vitals monitor, spots, comms);
 -   Floors (wood floor, carpet, Smooth);
@@ -2368,7 +2368,8 @@ roof; - fertility; - beauty; - room; - path/debug data.
 
 **Power grid overlay (PLAY-021, implemented):**
 - **Toggle:** Shift+P or the HUD "Power grid" button (icon `overlay_power`, the second row of the global toggles). It is forced on while a power tool or a powered building is in hand.
-- **What it shows:** each net's conduits and switches in its own colour (`ui.power_net1..6`, grey `ui.power_none` for none), hidden conduits included; a link line from each device to its conduit; a disc on producers, a ring on consumers, a square and charge bar on batteries; the no-power sign on unpowered consumers; a red frame on devices with no grid; a legend in the global stack.
+- **What it shows:** each net's conduits and switches in its own colour (`ui.power_net1..6`, grey `ui.power_none` for none), hidden conduits included; a link line from each device to the conductor it wires to, in its net's colour, over the wire the map shows all the time in `ui.power_cord` (PWR-1; 6 tiles; hidden conduits get a wire too); a disc on producers, a ring on consumers, a square and charge bar on batteries; the no-power sign on unpowered consumers; a red frame on devices with no grid; a legend in the global stack.
+- **Reconnect (PWR-4):** a button `cmd.power.reconnect` (icon `power_reconnect`) in the pane of a producer, consumer or battery. It wires the device to the next grid in range at once (`command.ReconnectPower`, no colonist). Disabled reasons: "No grid in range.", "Touching the grid: no wire to move.", "No other grid in range."
 
 **Roof overlay (UI-010, implemented):**
 - **Toggle:** R or the HUD "Roof" button (icon `overlay_roof`). It is forced on while the Architect's Build roof or Remove roof tool is held.
