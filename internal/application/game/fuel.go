@@ -1,14 +1,18 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/aqua"
 	"rimworld-go/internal/application/game/industry"
 	"sort"
 
 	"rimworld-go/internal/domain/ai/job"
+	rules "rimworld-go/internal/domain/building/aqua"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/temperature"
 )
 
 // The shared fuel table (PLAY-021): everything that burns logs.
@@ -108,6 +112,9 @@ func (g *Game) generatorRunning(id entity.EntityID) bool {
 // fuel, and a campfire or torch is neither banked nor doused by rain or
 // snow. A generator burns while it is running.
 func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
+	if b.Kind == construction.FishTank { // FISH-*: fish eat while they live and the tank runs
+		return g.fuel[bid] > 0 && g.tanks != nil && g.tanks.Stocked(bid) && g.powered(bid)
+	}
 	if b.Kind == construction.WoodGenerator || b.Kind == construction.ChemfuelGenerator {
 		return g.fuel[bid] > 0 && g.generatorRunning(bid)
 	}
@@ -140,6 +147,9 @@ func (g *Game) burnFuel() {
 		}
 		g.setFuel(bid, max(0, g.fuel[bid]-climateInterval*spec.BurnPermil/1000)) // light.go: a burnt-out fire stops lighting
 	}
+	if g.tanks != nil {
+		g.tanks.Phase() // game/aqua (FISH-*): hourly, right after the tanks' feed
+	}
 }
 
 // --- refuelling ------------------------------------------------------------
@@ -154,6 +164,11 @@ func fuelTicks(k item.Kind) int {
 		return oilWood * TicksPerWood
 	case item.Chemfuel:
 		return chemfuelTicks
+	case item.Hay, item.Kibble: // FISH-*: fish feed, as raw plant food below
+		return rules.FeedItemTicks
+	}
+	if (recipe.Input{AnyVeg: true}).Accepts(k) {
+		return rules.FeedItemTicks
 	}
 	return 0
 }
@@ -182,6 +197,9 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 		if !ok || b.Deconstruct || g.fuel[bid] >= spec.Below {
 			continue
 		}
+		if b.Kind == construction.FishTank && (g.tanks == nil || !g.tanks.WantsFeed(bid)) {
+			continue // FISH-*: fed once a stock is chosen
+		}
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
 			continue
 		}
@@ -203,16 +221,22 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 		fuel := item.Wood
 		if b.Kind == construction.ChemfuelGenerator || b.Kind == construction.PodLauncher {
 			fuel = item.Chemfuel // AX-4, AX-9: they take chemfuel only
+		} else if b.Kind == construction.FishTank {
+			fuel = item.Hay // FISH-*: hay first; tankFeed has the rest
 		}
 		need := g.fuelRoom(f.bid, fuel)
 		sid, st := g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need})
-		if sid == 0 && fuel == item.Chemfuel {
+		if sid == 0 && fuel == item.Hay {
+			if sid, st = tankFeed(g, id, need); sid == 0 {
+				continue
+			}
+		} else if sid == 0 && fuel == item.Chemfuel {
 			continue
 		} else if sid == 0 {
 			fuel = item.EmberOil
 			need = g.fuelRoom(f.bid, fuel)
 			if sid, st = g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need}); sid == 0 {
-				return false
+				continue // no wood: a tank or a chemfuel burner further on may still be served
 			}
 		}
 		sx, sy, ok := g.besideSpot(id, b.X, b.Y)
@@ -321,4 +345,120 @@ func (g *Game) FuelCampfire(x, y int) {
 		}
 		g.setFuel(bid, full)
 	}
+}
+
+// --- fish tanks (FISH-*) ---------------------------------------------------
+
+// TankView and TankOption are a fish tank's read model (game/aqua).
+type (
+	TankView   = aqua.View
+	TankOption = aqua.Option
+)
+
+// tanksOf is this map's tanks (game/aqua), built on first use.
+func tanksOf(g *Game) *aqua.Tanks {
+	if g.tanks == nil {
+		g.tanks = aqua.New(tankHost{herdHost{g}})
+	}
+	return g.tanks
+}
+
+// tanksApply is command.SetTankStock: tank raises stock count.
+func tanksApply(g *Game, tank entity.EntityID, count int) {
+	if count >= 0 && count < int(rules.NumSpecies) {
+		tanksOf(g).Apply(tank, rules.Species(count))
+	}
+}
+
+// tankFeed is the nearest feed besides hay for a tank taking up to need
+// items: kibble, then raw plant food.
+func tankFeed(g *Game, id entity.EntityID, need int) (entity.EntityID, item.Stack) {
+	for _, in := range [...]recipe.Input{{Kind: item.Kibble}, {AnyVeg: true}} {
+		in.Qty, in.Max = 1, need
+		if sid, st := g.ingredientFor(id, in); sid != 0 {
+			return sid, st
+		}
+	}
+	return 0, item.Stack{}
+}
+
+// tankHost implements aqua.Host over the game (the herd's adapter has the
+// handler's half: game/handling.go).
+type tankHost struct{ herdHost }
+
+func (h tankHost) Tank(id entity.EntityID) (int, int, bool) {
+	if b := h.g.bldgs.Ref(id); b != nil && b.Kind == construction.FishTank {
+		return b.X, b.Y, true
+	}
+	return 0, 0, false
+}
+func (h tankHost) Workable(id entity.EntityID) bool {
+	b := h.g.bldgs.Ref(id)
+	return b != nil && !b.Deconstruct && !b.Forbidden && !b.Hostile
+}
+func (h tankHost) Powered(id entity.EntityID) bool { return h.g.powered(id) }
+func (h tankHost) Air(x, y int) temperature.Temp   { return h.g.temperatureAt(x, y) }
+func (h tankHost) Feed(id entity.EntityID) int     { return h.g.fuel[id] }
+func (h tankHost) Postponed(id entity.EntityID, k job.Kind, t entity.EntityID) bool {
+	return h.g.postponedFor(id, k, t, 0, 0)
+}
+func (h tankHost) PutOff(id entity.EntityID, k job.Kind, t entity.EntityID) {
+	h.g.postpone(postKey{Pawn: id, Kind: k, Target: t}, job.Unreachable)
+}
+
+// DropFish leaves qty fish, allowed, on the first tile around (x, y) with
+// room, or on (x, y) itself.
+func (h tankHost) DropFish(x, y, qty int) {
+	if !h.g.dryWalkable(x, y) || h.g.itemAt(x, y) != 0 {
+		if nx, ny, ok := h.g.spillTile(item.Fish, x, y); ok {
+			x, y = nx, ny
+		}
+	}
+	h.g.dropStack(item.Fish, qty, x, y)
+}
+
+// BestAnimals is the best Animals level among the colonists.
+func (h tankHost) BestAnimals() int {
+	best := 0
+	for _, id := range h.g.pawnIDs {
+		if h.g.colonist(id) {
+			best = max(best, int(h.g.skillOf(id, skill.Animals).Level))
+		}
+	}
+	return best
+}
+
+// BesideTank is the free tile beside tank's footprint nearest id that id can
+// reach (a tank is walked through, so a neighbour of its anchor may be its
+// own cell).
+func (h tankHost) BesideTank(id, tank entity.EntityID) (int, int, bool) {
+	b := h.g.bldgs.Ref(tank)
+	if b == nil {
+		return 0, 0, false
+	}
+	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+	pos, _ := h.g.positions.Get(id)
+	best, bx, by := 1<<30, 0, 0
+	for _, c := range cells {
+		for _, d := range [...][2]int{{0, 1}, {1, 0}, {-1, 0}, {0, -1}} {
+			nx, ny := c[0]+d[0], c[1]+d[1]
+			if footprintHas(cells, nx, ny) || !h.g.grid.Walkable(nx, ny) || h.g.bedCovering(nx, ny) {
+				continue
+			}
+			if dd := manhattan(pos.X, pos.Y, nx, ny); dd < best && h.g.reachable(id, nx, ny) {
+				best, bx, by = dd, nx, ny
+			}
+		}
+	}
+	return bx, by, best != 1<<30
+}
+
+// footprintHas reports (x, y) among cells.
+func footprintHas(cells [][2]int, x, y int) bool {
+	for _, c := range cells {
+		if c[0] == x && c[1] == y {
+			return true
+		}
+	}
+	return false
 }

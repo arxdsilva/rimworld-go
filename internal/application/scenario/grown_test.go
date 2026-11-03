@@ -217,7 +217,12 @@ func TestGrownGolden(t *testing.T) {
 	// butchering by body size, per-species animal products, taming food and
 	// auto-slaughter; the previous pin held through FOOD-0 (the committed
 	// full suite). Stable over -count=2.
-	const want uint64 = 0xef4cef40a35e4444
+	// Re-pinned (FISH-0): the sandbox's CompleteResearch also finishes
+	// Aquaculture and stockpile filters gain the fish bit. The enum additions
+	// alone on the previous commit give this exact hash, so the allow, door,
+	// visitor and tank behaviour changes move nothing here. Stable over
+	// -count=2.
+	const want uint64 = 0x7a22aca804422474
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

@@ -58,3 +58,6 @@ The colony HUD's regions: resource bar, colonist bar, right column (letters, mes
 
 ## New wanderers (MAP-19)
 `ending.go`: "Nobody left" (`GoneAlertKey`, counts down to new wanderers; a click reopens the everyone-gone screen via `Alerts.Focus`). The gone screen's New wanderers button (`GoneWanderersID`) is off with "In 6h" or "No more groups" and sends `ports.OpenWanderers`.
+
+## Fish tank (FISH)
+`alerts_tank.go`: "Fish dying" (`FishDyingAlertKey`, a stocked tank with `Tank.Trouble`).

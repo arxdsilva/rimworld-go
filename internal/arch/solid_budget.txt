@@ -12,8 +12,8 @@ methods rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 73  # moved from 
 fields rimworld-go/internal/application/game.Game 64
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 30
-files rimworld-go/internal/application/game 178
-lines rimworld-go/internal/application/game 53328
+files rimworld-go/internal/application/game 176
+lines rimworld-go/internal/application/game 53293
 methods rimworld-go/internal/adapters/inbound/ebiten.App 244
 methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 71
 methods rimworld-go/internal/application/game.Game 1837

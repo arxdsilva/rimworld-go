@@ -413,6 +413,8 @@ var Tools = []ToolDef{
 	// STK-AG: built kinds that had no card (FOOD-2 contract).
 	{ID: "hydroponics", Label: "Hydroponics basin", Category: "production", Icon: "crop", Mode: PlaceSingle, Build: "hydroponics basin",
 		Desc: "A powered bed of nutrient water (1x4): crops sown in it grow far faster than on soil, but only under a sun lamp or the open sky. Q/E rotates."},
+	{ID: "fish_tank", Label: "Fish tank", Category: "production", Icon: "fish_tank", Mode: PlaceSingle, Build: "fish tank",
+		Desc: "A powered tank (1x4) that raises fish for the table: pick a stock, keep it fed, warm and powered, and a hand nets the catch. Q/E rotates."},
 	{ID: "sun_lamp", Label: "Sun lamp", Category: "furniture", Icon: "lamp", Mode: PlaceSingle, Build: "sun lamp",
 		Desc: "A strong powered light that lets crops grow indoors, under a roof, in the area it lights."},
 	// PLAY-021 power: the grid's pieces.

@@ -220,6 +220,8 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/sarcophagus_" + FacingOr(facing)
 	case "hydroponics basin": // FOOD-2: faced; its glow layer comes from DrawPowerParts
 		return "furniture/hydroponics_basin_" + FacingOr(facing)
+	case FishTankKind: // FISH: faced like the basin; glow and fish overlays come from DrawPowerParts and drawTankFish
+		return "furniture/fish_tank_" + FacingOr(facing)
 	case "sun lamp":
 		return "furniture/sun_lamp"
 	case "hive mound": // CBT-4

@@ -51,6 +51,7 @@ var value = [numKinds]int{
 	// FOOD-0: whole silver like the other raw foods (wiki: Rice, Strawberry,
 	// Hay, Hops, Human meat, Insect meat, Agave all value about one silver).
 	Rice: 1, Strawberries: 1, Hay: 1, Hops: 1, HumanMeat: 1, InsectMeat: 1, AgaveFruit: 1,
+	Fish: 2, // FISH-*: as Meat
 	// TEMP-4, wiki market values at Normal quality in the default material
 	// (each garment's page): the parka and duster in plainleather 197 and
 	// 205; the tuque, whose wiki row is cloth (34), in leather: its work

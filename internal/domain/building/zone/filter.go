@@ -115,7 +115,7 @@ func categories() []category {
 		{path: "Foods/Raw food"},
 		{"Foods/Raw food/Plant matter", []item.Kind{item.Berries, item.Potatoes, item.Corn, item.Wheat, item.Beans, item.Lettuce,
 			item.Radishes, item.Pumpkins, item.Brewgrain, item.Rice, item.Strawberries, item.AgaveFruit}},
-		{"Foods/Raw food/Meat", []item.Kind{item.Meat, item.HumanMeat, item.InsectMeat}},
+		{"Foods/Raw food/Meat", []item.Kind{item.Meat, item.HumanMeat, item.InsectMeat, item.Fish}},
 		{"Foods/Raw food/Animal products", []item.Kind{item.Milk, item.Egg, item.FertileEgg}},
 		{"Foods/Animal feed", []item.Kind{item.Kibble, item.Hay}},
 		{path: "Manufactured"},

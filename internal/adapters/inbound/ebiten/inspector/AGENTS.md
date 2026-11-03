@@ -53,3 +53,6 @@ The selection's inspector: the pane with its tabs (pawn needs, gear, health, soc
 - The largest package by lines: 7,318 source lines in 26 files. Split by kind further before adding a seventh tab type.
 - Converting shims `healthOption` and `itemVerb` remain for three root tests.
 - `selection.Zone` producer (`cmds_zone.go`) stays root until it joins `architect.Zones`.
+
+## Fish tank (FISH)
+`tank.go`: `tankProducer` wraps the building producer in `New` (no method on `Building`): a Stock picker button (`TankStockBtnID`, `command.SetTankStock`), stock/growth/health lines, the `Fish dying:` trouble line (drawn as a warning) and a Feed bar from `Tank.FeedPct`.

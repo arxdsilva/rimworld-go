@@ -142,6 +142,9 @@ const (
 	ShipReactors
 	ShipDrives
 	ShipSensors
+	// Aquaculture (FISH-*, append only, saved; original, cost ours) opens the
+	// fish tank.
+	Aquaculture
 	NumProjects
 )
 
@@ -537,6 +540,13 @@ var defs = [NumProjects]Def{
 		Bench: HiTechAnalyzer, Requires: []Project{ShipFrames},
 		Desc:    "Sensors that let a ship find its way through the dark.",
 		Unlocks: []string{"build:ship sensor cluster"}},
+	// FISH-*: nothing in vanilla farms fish; the cost is original tuning.
+	Aquaculture: {Project: Aquaculture, Name: "aquaculture", Label: "Aquaculture", Cost: 900, TechLevel: Industrial,
+		Requires: []Project{Hydroponics},
+		Desc: "Powered fish tanks. Pick a stock, and a handler stocks the tank and nets it when the fish are grown, " +
+			"which takes days. Haulers bring hay, kibble or raw plant food as feed. Without power, feed or air the fish " +
+			"can bear, the stock weakens and dies, fastest without power. Tilapia want warmth, trout cold and a skilled hand.",
+		Unlocks: []string{"build:fish tank"}},
 }
 
 // DefOf returns the definition of p.

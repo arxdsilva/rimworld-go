@@ -494,6 +494,7 @@ the player's primary world-editing command surface.
 
 ## 6.3 Growing-zone configuration
 
+-   [x] **Fish tank panel** (FISH: inspector stock picker with disabled reasons, growth, ready to net, health with its trouble, feed bar; Architect card behind Aquaculture; "Fish dying" alert)
 -   [-] **Crop selector** (the architect's crop picker and, PLAY-020, a selected zone's "Plant: <crop>" list with research locks; FOOD-5: each crop button's hover card gives days on soil, gravel and rich soil, yield, Plants skill, hydroponics, frost and shelf life; no search, no numbers on the zone pane's list)
     -   Searchable plant list.
     -   required skill.

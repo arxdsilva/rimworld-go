@@ -710,6 +710,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
     -   Mature plants generate harvest work.
     -   Skill can affect yield/failure.
+-   [x] **Fish tanks** (FISH: not vanilla, built from vanilla parts; a hydroponics-sized powered tank behind the Aquaculture research, three stocks, feed hauled like fuel, stock and net work on the Animals skill, raw fish as meat. `.cursor/FISH_TANK_PLAN.md` §3)
 -   [x] **Wild plants** (seeded generation scatters trees and berry bushes on fertile ground; PLAY-010 SIM-038: per-biome bramble thicket (slows walking), ground moss, desert rosette, ball cactus, elephant ear, fire lily, dandelions)
     -   Map generation creates harvestable/non-harvestable vegetation.
 

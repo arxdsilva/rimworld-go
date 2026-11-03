@@ -86,7 +86,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Hunt:
 		return g.combat.Hunting.Assign(id) // combat/hunt.go
 	case work.Handle: // SIM-026: taming moved here from Hunt
-		return g.assignRope(id) || g.herdOf().AssignTame(id) || g.assignTrain(id) || g.herdOf().AssignRest(id) // rope.go, herd, bonds.go
+		return g.assignRope(id) || g.herdOf().AssignTame(id) || g.assignTrain(id) || g.herdOf().AssignRest(id) || (g.tanks != nil && g.tanks.Assign(id)) // rope.go, herd, bonds.go, game/aqua
 	case work.Grow:
 		return g.assignHarvest(id) || g.assignSow(id)
 	case work.PlantCut: // FOOD-2: cutting split from growing (wiki: Plants)

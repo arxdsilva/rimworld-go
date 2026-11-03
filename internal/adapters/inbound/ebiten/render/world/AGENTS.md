@@ -52,3 +52,5 @@ The renderer's world pipeline: the draw order of one frame (ground, floors, zone
 - `lod`, `links` and `stoneArt` stay `Renderer` fields in the root (about 20 root files read `r.lod`); the pipeline reaches them through `Shared`.
 - The root's trimmed `draw_art.go` keeps the placement ghost (it takes the Architect's `ghostCell`); `stone_art.go` keeps the titles.
 - `architect/sprites.go` duplicates these build keys until the sweep points it here.
+
+Fish tank (FISH): `build_keys.go` keys `fish tank` as the basin; `tank_fish.go` draws the stock overlay (`fish_tank_fish_{1,2,3}_{facing}` by `TankFishStage`) after `DrawPowerParts`' glow; keys are precomputed, no per-frame allocation.

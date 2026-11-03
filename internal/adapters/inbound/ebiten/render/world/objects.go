@@ -125,6 +125,7 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		}
 		chP := o.OverlayChunks()
 		o.Overlays.Wiring.DrawPowerParts(v, o.Pass(), &chP, dst, b, key, tile, sw, sh) // glow, blades, flame, charge
+		o.drawTankFish(dst, b, tile, sw, sh)
 		chD := o.OverlayChunks()
 		o.Overlays.Wiring.DrawDefenseParts(v, o.Pass(), &chD, dst, b, key, tile, sw, sh) // gun, beacon light
 		o.Overlays.Wiring.DrawShipGlow(v, &chD, dst, b, key, tile, sw, sh)               // overlay/ship_draw.go (AX-8)

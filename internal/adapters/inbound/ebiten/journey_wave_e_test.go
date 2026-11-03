@@ -177,8 +177,8 @@ func TestJourneyCraftFineMeal(t *testing.T) {
 	}
 	j.g.Enqueue(command.Command{Kind: command.AddBill, X: 10, Y: 5, Recipe: uint8(def.ID), Mode: 0, Count: 1})
 	j.g.ApplyPending()
-	for i, k := range def.InputKinds() {
-		if _, err := j.g.SpawnStack(k, 40, 13, 6+i); err != nil {
+	for i, k := range def.InputKinds() { // one stack per raw kind: two columns on the 24-tile map
+		if _, err := j.g.SpawnStack(k, 40, 13+i/16, 6+i%16); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -309,6 +309,9 @@ const (
 	PodLauncher
 	MineralScanner
 	HitchingSpot
+	// FishTank (FISH-*, append only, saved): a powered tank that raises a
+	// stock of fish (game/aqua).
+	FishTank
 	kindCount
 )
 
@@ -654,6 +657,10 @@ var defs = [kindCount]Def{
 	// component, 2800 work), Sun lamp (40 steel, 330 work). Scaled as the
 	// wave D rows; the basin is passed through, like the shelf.
 	HydroponicsBasin: {Kind: HydroponicsBasin, Name: "hydroponics basin", Wood: 11, Work: 280, Layer: LayerObject,
+		Rotatable: true, Size: [2]int{1, 4}, MetalOK: true, MetalOnly: true, Components: 1},
+	// FISH-*: built like the basin (wiki: Hydroponics basin; fish tanks are
+	// ours), with the same scaled cost, passed through the same way.
+	FishTank: {Kind: FishTank, Name: "fish tank", Wood: 11, Work: 280, Layer: LayerObject,
 		Rotatable: true, Size: [2]int{1, 4}, MetalOK: true, MetalOnly: true, Components: 1},
 	SunLamp: {Kind: SunLamp, Name: "sun lamp", Wood: 4, Work: 33, Layer: LayerObject, MetalOK: true, MetalOnly: true},
 	// TEMP-1, wiki: Passive cooler (50 wood; game/thermo cools, fuel.go
@@ -1291,7 +1298,9 @@ type Building struct {
 	Ancient bool
 	// Hostile (MAP-13): a settlement's turret: it needs no power, fires on
 	// us and stays hostile until destroyed; nobody of ours can wire, claim,
-	// order or remove it.
+	// order or remove it. MAP-17: a settlement's door: shut to colonists and
+	// animals, open to its defenders, until smashed or claimed after the
+	// defeat.
 	Hostile bool
 	// Sealed sleeper caskets (MAPGEN-3): Occupant is a vault.Occupant
 	// (0: open or empty shell); CasketGroup the vault id whose caskets open

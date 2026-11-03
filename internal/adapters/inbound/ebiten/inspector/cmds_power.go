@@ -77,7 +77,7 @@ func thermoStepLabels(u units.Temp) (down, up string) {
 
 // Warning lines start with one of these; the pane draws them in the
 // warning colour (paneLineWarns).
-var powerWarnPrefixes = []string{"No power", "Not producing", "Not connected", "Brownout"}
+var powerWarnPrefixes = []string{"No power", "Not producing", "Not connected", "Brownout", fishDyingPrefix}
 
 // paneLineWarns reports a pane line is a power warning.
 func PaneLineWarns(line string) bool {

@@ -180,6 +180,10 @@ const (
 	// A1: Install carries a crated building to its reinstall blueprint and
 	// installs it (Construction).
 	Install
+	// FISH-*: a handler stocks an empty fish tank or nets a ripe one
+	// (game/aqua; Animals skill, Handling work).
+	StockTank
+	NetTank
 )
 
 // Hauls reports a haul job: a plain haul, or FOOD-4's hopper fill, a
@@ -372,6 +376,10 @@ func (k Kind) String() string {
 		return "scan for minerals"
 	case Install:
 		return "install"
+	case StockTank:
+		return "stock fish tank"
+	case NetTank:
+		return "net fish tank"
 	default:
 		return "idle"
 	}

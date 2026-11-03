@@ -5,6 +5,7 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/application/game/aqua"
 	"rimworld-go/internal/application/game/axview"
 	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/books"
@@ -498,6 +499,7 @@ type BuildingView struct {
 	ResearchSpeed    int             // RSCH-1: a research bench's factor now, permille (game/research Factor)
 	Analyzer         uint64          // RSCH-1: the multi-analyzer a hi-tech research bench links (building id, 0 none)
 	AX               axview.Building // AX-0 contract (zero until its owners fill it; in the equality check)
+	Tank             *TankView       // FISH-*: a fish tank's stock, growth, health and feed (nil for any other building)
 }
 
 // Bed facility bits on BuildingView.Facilities (BED-1).
@@ -805,6 +807,9 @@ type mapState struct {
 	tile int    // the world tile under the map, -1 without a world
 	grid *grid.Grid
 	wl   wildlifeState // SIM-019 wildlife events (wildlife.go)
+	// tanks: the fish tanks in use on this map (fuel.go, game/aqua), nil
+	// until one is; saved as the optional Tanks field.
+	tanks *aqua.Tanks
 
 	pawnIDs   []entity.EntityID
 	positions *component.Store[Position]

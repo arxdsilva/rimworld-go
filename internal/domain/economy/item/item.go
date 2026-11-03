@@ -247,6 +247,9 @@ const (
 	Schematic
 	Jade
 	MindCore
+	// Fish (FISH-*, append only, saved) is netted from a fish tank: raw meat
+	// in every way, by the same tables as Meat (nutrition, mass, rot, storage).
+	Fish
 	numKinds
 )
 
@@ -277,7 +280,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"charge rifle", "charge lance", "ikwa",
 	"rice", "strawberries", "hay", "hops", "human meat", "insect meat", "agave fruit",
 	"t-shirt", "button-down shirt", "pants", "jacket", "cowboy hat", "bowler hat", "tribalwear",
-	"crated building", "antimatter warhead", "foam shells", "novel", "textbook", "schematic", "jade", "mind core"}
+	"crated building", "antimatter warhead", "foam shells", "novel", "textbook", "schematic", "jade", "mind core",
+	"fish"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool {
@@ -326,6 +330,7 @@ var nutrition = [numKinds]int{Food: 9000, Berries: 500, Meat: 500, Meal: 9000,
 	Milk: 500, Egg: 2500, Brewgrain: 500,
 	FineMeal: 9000, LavishMeal: 10000, SurvivalMeal: 9000, Pemmican: 500, Kibble: 500, NutrientPasteMeal: 9000,
 	Rice: 500, Strawberries: 500, AgaveFruit: 500, HumanMeat: 500, InsectMeat: 500, Hay: 500,
+	Fish:       500,
 	FertileEgg: 2500} // FOOD-3: a fertilized egg is edible (wiki: Eggs; by species: animal.StackNutrition)
 
 // MaxEatAtOnce is how many units of k a pawn eats in one sitting: one
@@ -348,7 +353,7 @@ var preference = [numKinds]int{Meal: 4, Food: 3, Berries: 2, Corn: 2, Lettuce: 2
 	NutrientPasteMeal: 3, // wiki: awful, below the simple meal, above raw food
 	// FOOD-0: hay and human meat rank with kibble, last (wiki: desperate
 	// only); FOOD-4's food policies refine the choice.
-	Rice: 1, Strawberries: 2, AgaveFruit: 2, InsectMeat: 1}
+	Rice: 1, Strawberries: 2, AgaveFruit: 2, InsectMeat: 1, Fish: 1}
 
 // Nutrition is the hunger restored by eating one unit of k (0 if inedible).
 func (k Kind) Nutrition() int {
@@ -379,13 +384,13 @@ func (k Kind) RawPenaltyFree() bool { return k == Berries || k == Strawberries |
 
 // IsMeat reports raw meat of any origin (FOOD-0; FOOD-3 tags meat stacks
 // with their species).
-func (k Kind) IsMeat() bool { return k == Meat || k == HumanMeat || k == InsectMeat }
+func (k Kind) IsMeat() bool { return k == Meat || k == HumanMeat || k == InsectMeat || k == Fish }
 
 // Foods lists every edible kind.
 func Foods() []Kind {
 	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg, Brewgrain,
 		FineMeal, LavishMeal, Pemmican, SurvivalMeal, Kibble, NutrientPasteMeal,
-		Rice, Strawberries, AgaveFruit, HumanMeat, InsectMeat, Hay, FertileEgg}
+		Rice, Strawberries, AgaveFruit, HumanMeat, InsectMeat, Hay, FertileEgg, Fish}
 }
 
 // IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
@@ -757,7 +762,7 @@ func (k Kind) Dryable() bool {
 // squash take longer, and cooked meals are dried into hard travel cakes.
 var dryDays = [numKinds]float64{Meat: 1, Meal: 1, Lettuce: 0.75, Berries: 2, Radishes: 1.5,
 	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5, FineMeal: 1, LavishMeal: 1, NutrientPasteMeal: 1,
-	Rice: 1.5, Strawberries: 2, AgaveFruit: 2, HumanMeat: 1, InsectMeat: 1}
+	Rice: 1.5, Strawberries: 2, AgaveFruit: 2, HumanMeat: 1, InsectMeat: 1, Fish: 1}
 
 // DryTicks is how long a batch of k takes to dry at full speed.
 func (k Kind) DryTicks() int {
@@ -852,7 +857,7 @@ func MergePoison(qa int, pa int16, qb int, pb int16) int16 {
 var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5, CorpseAnimal: 2.5, CorpseHuman: 3,
 	Berries: 14, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 60, Pumpkins: 50,
 	Milk: 14, Egg: 15, FineMeal: 4, LavishMeal: 4, Pemmican: 70, Wort: 5.6, NutrientPasteMeal: 0.75,
-	Rice: 40, Strawberries: 14, AgaveFruit: 25, HumanMeat: 2, InsectMeat: 2, Hops: 30}
+	Rice: 40, Strawberries: 14, AgaveFruit: 25, HumanMeat: 2, InsectMeat: 2, Hops: 30, Fish: 2}
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).
 func (k Kind) ShelfTicks() int {

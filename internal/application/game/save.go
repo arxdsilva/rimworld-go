@@ -9,6 +9,7 @@ import (
 	"hash/fnv"
 	"io"
 	mathbits "math/bits"
+	"rimworld-go/internal/application/game/aqua"
 	"rimworld-go/internal/application/game/bodytemp"
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
@@ -307,6 +308,9 @@ type saveState struct {
 	// deep water is bridgeable); Vaults the sealed vaults' state.
 	Ocean  []uint64
 	Vaults []vaultSave
+	// Tanks is the fish tanks in use on this map (FISH-*, game/aqua); nil
+	// without one, so older saves and goldens hold.
+	Tanks []aqua.Entry
 	// AX4 (game/industry): river flow, deep ore, machines' progress;
 	// absent in older saves (no river flow, no ore found).
 	AX4 industry.Save
@@ -595,6 +599,7 @@ func exportMapFields(g *Game, s *saveState) {
 	s.Plan = g.exportPlan()     // plan.go
 	s.Fog = g.exportFog()       // fog.go (MAPGEN-2): nil without fog
 	s.Vaults = g.exportVaults() // vault.go (MAPGEN-3): nil without vaults
+	s.Tanks = g.tanks.Export()  // game/aqua (FISH-*): nil without a tank in use
 	s.Fires = g.exportFires()   // fire.go (PLAY-015): nil while nothing burns
 	// pens.go (PLAY-015): marker settings, unpenned clocks
 	s.PenMarkers, s.PenAnimals = slices.Clone(g.pens), g.exportPenAnimals()
@@ -796,6 +801,7 @@ func importMapFields(g *Game, s *saveState) {
 	g.raid.Rock.Import(s.RockDamage) // raid/rock.go
 	g.motion = importStore(s.Motion) // a mover without a record reads motionOf's due-now default
 	g.weather = s.Weather
+	g.tanks = aqua.Import(tankHost{herdHost{g}}, s.Tanks) // game/aqua (FISH-*)
 	g.afterLoadBurial()
 	g.importRoofs(s.Roofs)
 	g.importGrass(s.Grass, s.GrassCut)

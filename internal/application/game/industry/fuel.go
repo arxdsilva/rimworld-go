@@ -1,6 +1,9 @@
 package industry
 
-import "rimworld-go/internal/domain/building/construction"
+import (
+	"rimworld-go/internal/domain/building/aqua"
+	"rimworld-go/internal/domain/building/construction"
+)
 
 // The shared fuel table (PLAY-021, moved here from game/fuel.go by AX-4):
 // everything that burns logs or chemfuel. The game holds each burner's
@@ -64,6 +67,8 @@ func FuelSpec(k construction.Kind) (Fuel, bool) {
 		return Fuel{CapTicks: 5 * TicksPerWood, Below: 5 * TicksPerWood / 2}, true
 	case construction.PassiveCooler: // TEMP-1, wiki: Passive cooler (50 wood, 10 a day: one per TicksPerWood)
 		return Fuel{CapTicks: 50 * TicksPerWood, Below: 25 * TicksPerWood, BurnPermil: 1000}, true
+	case construction.FishTank: // FISH-*, original (domain/building/aqua): feed, a quarter asks, burns only while stocked and powered (game.burning)
+		return Fuel{CapTicks: aqua.FeedFull, Below: aqua.FeedBelow, BurnPermil: 1000}, true
 	}
 	return Fuel{}, false
 }

@@ -133,7 +133,8 @@ func postponable(k job.Kind) bool {
 	switch k {
 	case job.Haul, job.FillHopper, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
 		job.Bill, job.Hunt, job.Refuel, job.Repair, job.Research, job.OperateDrill, job.ScanGround, job.ScanMinerals, job.Clean, job.Bury,
-		job.Roof, job.Unroof, job.Equip, job.Uninstall, job.Install, job.OpenContainer: // AX-1
+		job.Roof, job.Unroof, job.Equip, job.Uninstall, job.Install, job.OpenContainer, // AX-1
+		job.StockTank, job.NetTank: // FISH-*
 		return true
 	}
 	return false

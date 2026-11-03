@@ -165,8 +165,11 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	if b.Kind == construction.Carpet {
 		bv.Catch = filth.Catch(b.Stuff) / 10
 	}
-	if pct, ok := g.fuelPct(id, b); ok { // campfire, torch lamp, wood-fired generator (fuel.go)
+	if pct, ok := g.fuelPct(id, b); ok && b.Kind != construction.FishTank { // campfire, torch lamp, wood-fired generator (fuel.go)
 		bv.Fuel, bv.FuelPct, bv.Burning = true, pct, g.burning(id, b)
+	}
+	if b.Kind == construction.FishTank {
+		bv.Tank = tanksOf(g).View(id) // game/aqua: feed reads as Tank.FeedPct, not as fuel
 	}
 	if thermo.Heats(b.Kind) || b.Kind == construction.Vent { // game/thermo (TEMP-1): heat output, an open vent
 		bv.HeatRate, bv.Open = g.thermo.BuildingRate(id), b.Kind == construction.Vent && g.powerOn(id)
@@ -215,7 +218,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 // TestBuildingViewEqual proves every field is compared (a field added to
 // BuildingView must be added here).
 func equalBuildingView(a, b *BuildingView) bool {
-	if (a.MovingTo == nil) != (b.MovingTo == nil) || (a.MovingTo != nil && *a.MovingTo != *b.MovingTo) {
+	if (a.MovingTo == nil) != (b.MovingTo == nil) || (a.MovingTo != nil && *a.MovingTo != *b.MovingTo) || !a.Tank.Equal(b.Tank) {
 		return false
 	}
 	return a.ID == b.ID && a.Kind == b.Kind && a.X == b.X && a.Y == b.Y &&

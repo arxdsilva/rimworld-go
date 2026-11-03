@@ -903,6 +903,9 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	g.reserve.ReleaseTarget(id) // RES-1: its claimants' jobs find it gone
 	delete(g.fuel, id)
 	delete(g.banked, id)
+	if g.tanks != nil {
+		g.tanks.Gone(id, b.X, b.Y) // game/aqua (FISH-*)
+	}
 	if b.Kind == construction.DryingRack || b.Kind == construction.FermentingBarrel { // PRD-4: the barrel's wort too
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		g.craft.Drying.Empty(id, spot[0], spot[1])

@@ -7,6 +7,7 @@ import (
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	aquarules "rimworld-go/internal/domain/building/aqua"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -113,7 +114,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionResearch
 	case job.Tame:
 		return ActionTame
-	case job.Milk:
+	case job.Milk, job.StockTank, job.NetTank: // FISH-*: hands at an animal's side
 		return ActionMilk
 	case job.Shear:
 		return ActionShear
@@ -123,7 +124,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionBuild
 	case job.Breach:
 		return ActionBreach
-	case job.Clean, job.ClearSnow: // snow_clear.go: shovelling reads as sweeping
+	case job.Clean, job.ClearSnow: // game/snow: shovelling reads as sweeping
 		return ActionClean
 	}
 	return ""
@@ -178,6 +179,10 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		return animal.TameWork
 	case job.Milk, job.Shear:
 		return animal.CollectWork
+	case job.StockTank:
+		return aquarules.StockWork
+	case job.NetTank:
+		return aquarules.NetWork
 	case job.Eat:
 		return needs.EatWorkTicks
 	case job.Bury:

@@ -13,7 +13,7 @@ var massOf = map[Kind]int{
 	Wood: 400, Stone: 1000, Steel: 500, Silver: 8, Gold: 8, Plasteel: 250, Uranium: 1000, Jade: 500,
 	Components: 600, AdvancedComponents: 600, Chemfuel: 50, Cloth: 26, Leather: 30, Wool: 28, Straw: 14, Hay: 14,
 	Berries: 30, Potatoes: 30, Meat: 30, Corn: 30, Wheat: 30, Beans: 30, Lettuce: 30, Radishes: 30, Pumpkins: 30,
-	Rice: 30, Strawberries: 30, Hops: 30, HumanMeat: 30, InsectMeat: 30, AgaveFruit: 30, Brewgrain: 30,
+	Rice: 30, Strawberries: 30, Hops: 30, HumanMeat: 30, InsectMeat: 30, Fish: 30, AgaveFruit: 30, Brewgrain: 30,
 	Milk: 45, Egg: 150, FertileEgg: 150, Meal: 440, FineMeal: 440, LavishMeal: 440, NutrientPasteMeal: 440,
 	SurvivalMeal: 300, Pemmican: 18, Kibble: 15, Beer: 300, Wort: 20,
 	HerbalMedicine: 350, IndustrialMedicine: 500, NanomedKit: 500,

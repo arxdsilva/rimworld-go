@@ -203,7 +203,7 @@ func New(sh Shell) *Pane {
 		selection.Animal:   {Pane: p.Animal().AnimalPane, Commands: p.Animal().AnimalCommands},
 		selection.Item:     {Pane: p.Thing().ItemPane, Commands: p.Thing().ItemCommands},
 		selection.Plant:    {Pane: p.Thing().PlantPane, Commands: p.Thing().PlantCommands},
-		selection.Building: {Pane: p.Building().BuildingPane, Commands: p.Building().BuildingCommands},
+		selection.Building: {Pane: tankProducer{p.Building()}.Pane, Commands: tankProducer{p.Building()}.Commands}, // tank.go adds the fish tank's picker
 		selection.Frame:    {Pane: p.Thing().FramePane, Commands: p.Thing().FrameCommands},
 	}
 	return p

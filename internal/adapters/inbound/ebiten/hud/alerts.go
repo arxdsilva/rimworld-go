@@ -242,6 +242,9 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 		out = append(out, al)
 	}
 	out = append(out, brownoutAlerts(w)...) // alerts_power.go (PLAY-021)
+	if al, ok := FishDyingAlert(w); ok {    // alerts_tank.go (FISH)
+		out = append(out, al)
+	}
 	if al, ok := notConnectedAlert(w); ok {
 		out = append(out, al)
 	}
@@ -710,6 +713,7 @@ var alertExplanations = map[string]string{
 	"spoiling":      "Stored food is about to rot. Eat it, or move it somewhere cool, before it is lost.",
 	"waitingframes": "Some blueprints need materials that are not in stock. Gather or make what they need, or cancel the blueprints.",
 	"research":      "A research bench and a colonist who does research are ready, but no project is picked. Open the Research tab, select a project and press Start research.",
+	"fishdying":     "A fish tank's stock is dying: the power is out, the air is too hot or cold for the fish, or the feeder is empty. Fix what the tank's pane names, and keep feed in stock for the haulers.",
 	"gone":          "Nobody is left in the colony. Click to open the screen again: eight hours after the last one went, new wanderers can set out to start over, up to seven groups in all.",
 	"unhappy":       "Colonists are in a poor mood and close to breaking. Look at what drags it down: hunger, rest, comfort and room to breathe.",
 	"shipwaking":    "The ship reactor is waking, and its call draws raiders and machines until it is fully awake. Wall it in and keep colonists near it: if it falls, the waking is lost.",

@@ -46,6 +46,8 @@ func (g *Game) applyHostCommand(c command.Command) {
 		SetMaxColonies(g, c.Count) // world_state.go
 	case command.NewWanderers:
 		cmdNewWanderers(g, c.Name) // world_stash.go (MAP-19)
+	case command.SetTankStock:
+		tanksApply(g, target, c.Count) // fuel.go: game/aqua (FISH-*)
 	case command.PaintArea:
 		g.cmdPaintArea(c.Index, c.X, c.Y, c.X2, c.Y2, c.Enabled) // areas.go
 	case command.RenameArea:

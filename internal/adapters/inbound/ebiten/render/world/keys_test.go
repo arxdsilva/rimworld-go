@@ -342,6 +342,18 @@ func TestFoodItemsAndBuildingsResolve(t *testing.T) {
 	if got := BuildSprite("hydroponics basin", "east", 0, false, false); got != "furniture/hydroponics_basin_east" {
 		t.Errorf("basin %q", got)
 	}
+	if got := BuildSprite("fish tank", "north", 0, false, false); got != "furniture/fish_tank_north" {
+		t.Errorf("fish tank %q", got)
+	}
+	if got := ItemSprite("fish"); got != "item/fish" {
+		t.Errorf("fish %q", got)
+	}
+	if got := TankFishKey(TankFishStage(&game.TankView{Stocked: true, GrowthPct: 50}), "east"); got != "furniture/fish_tank_fish_2_east" {
+		t.Errorf("fish overlay %q", got)
+	}
+	if TankFishKey(TankFishStage(&game.TankView{GrowthPct: 90}), "east") != "" || TankFishStage(nil) != 0 {
+		t.Error("an empty tank draws no fish")
+	}
 	if got := BuildSprite("sun lamp", "", 0, false, false); got != "furniture/sun_lamp" {
 		t.Errorf("sun lamp %q", got)
 	}

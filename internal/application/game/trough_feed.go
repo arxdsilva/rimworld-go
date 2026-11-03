@@ -48,9 +48,9 @@ func troughFeeds(f uint8, k item.Kind) bool {
 	case TroughPlants:
 		return plants
 	case TroughMeat:
-		return k == item.Meat
+		return k == item.Meat || k == item.Fish
 	case TroughAny:
-		return plants || k == item.Meat
+		return plants || k == item.Meat || k == item.Fish
 	}
 	return false
 }

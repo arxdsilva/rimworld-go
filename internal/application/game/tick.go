@@ -78,7 +78,7 @@ func (g *Game) applyOne(c command.Command) {
 	switch c.Kind {
 	case command.AddOperation, command.RemoveOperation, command.SetDrugPolicy, command.AssignBedOwner,
 		command.SetAnimalMaster, command.SetTraining, command.GiftAnimal, command.Capture, command.Arrest,
-		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap, command.NewWanderers,
+		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap, command.SetTankStock, command.NewWanderers,
 		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
 		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
 		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)
@@ -1119,6 +1119,8 @@ func (g *Game) phaseJobs() {
 			shipOf(g).Do(shipHost{g}, id, j) // story.go: game/ship (AX-8)
 		case job.Tame, job.Milk, job.Shear, job.Slaughter:
 			g.herdOf().Do(id, j) // game/herd (FOOD-3): taming, milking, shearing, slaughter
+		case job.StockTank, job.NetTank:
+			tanksOf(g).Do(id, j) // fuel.go: game/aqua (FISH-*)
 		case job.ClearSnow:
 			g.doClearSnow(id, j) // game/snow
 		case job.Clean:
