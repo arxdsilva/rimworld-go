@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/platform/atomicfile"
 )
 
 // WarmupTicks is the grown colony's warm-up before it is saved: two
@@ -355,14 +356,7 @@ func stuffID(name string) uint8 {
 }
 
 func writeAtomic(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return fmt.Errorf("fixture cache: %w", err)
-	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
-		return fmt.Errorf("fixture cache: %w", err)
-	}
-	if err := os.Rename(tmp, path); err != nil {
+	if err := atomicfile.WriteBytes(path, 0o644, data); err != nil {
 		return fmt.Errorf("fixture cache: %w", err)
 	}
 	return nil

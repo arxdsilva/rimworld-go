@@ -5,10 +5,12 @@ package settingsfile
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"rimworld-go/internal/platform/atomicfile"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -49,25 +51,8 @@ func (s Store) Load() (config.Settings, error) {
 
 // Save writes the settings, replacing the file atomically.
 func (s Store) Save(set config.Settings) error {
-	dir := filepath.Dir(s.Path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("create settings folder: %w", err)
-	}
-	tmp, err := os.CreateTemp(dir, "settings-*.tmp")
+	err := atomicfile.Write(s.Path, 0o600, func(w io.Writer) error { return config.Encode(w, set) })
 	if err != nil {
-		return fmt.Errorf("create settings: %w", err)
-	}
-	if err := config.Encode(tmp, set); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return fmt.Errorf("write settings: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return fmt.Errorf("write settings: %w", err)
-	}
-	if err := os.Rename(tmp.Name(), s.Path); err != nil {
-		os.Remove(tmp.Name())
 		return fmt.Errorf("store settings: %w", err)
 	}
 	return nil

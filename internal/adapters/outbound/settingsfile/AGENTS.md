@@ -15,7 +15,7 @@ Load and save the Options. The UI reaches it only through
 
 ## Allowed dependencies
 
-- `internal/platform/config`, the standard library
+- `internal/platform/atomicfile`, `internal/platform/config`, the standard library
 
 ## Forbidden dependencies
 

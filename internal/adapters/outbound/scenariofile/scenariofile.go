@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"rimworld-go/internal/platform/atomicfile"
 )
 
 // Ext is the scenario-file extension.
@@ -108,24 +110,7 @@ func (s Store) Save(name string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
-		return fmt.Errorf("create scenarios folder: %w", err)
-	}
-	tmp, err := os.CreateTemp(s.Dir, name+"-*.tmp")
-	if err != nil {
-		return fmt.Errorf("create scenario: %w", err)
-	}
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return fmt.Errorf("write scenario: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return fmt.Errorf("write scenario: %w", err)
-	}
-	if err := os.Rename(tmp.Name(), p); err != nil {
-		os.Remove(tmp.Name())
+	if err := atomicfile.WriteBytes(p, 0o600, data); err != nil {
 		return fmt.Errorf("store scenario: %w", err)
 	}
 	return nil

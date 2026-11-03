@@ -6,8 +6,9 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"rimworld-go/internal/platform/atomicfile"
 )
 
 // Take is one generation, approved or not (ledger.json), by either
@@ -91,14 +92,7 @@ func (l *Ledger) save(file string) error {
 	if err := enc.Encode(l); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
-		return err
-	}
-	tmp := file + ".tmp"
-	if err := os.WriteFile(tmp, buf.Bytes(), 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, file)
+	return atomicfile.WriteBytes(file, 0o644, buf.Bytes())
 }
 
 // spent is the credits all logged takes cost.

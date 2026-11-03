@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/platform/atomicfile"
 )
 
 // Ext is the save-file extension.
@@ -74,44 +75,11 @@ func (s Store) Save(g *game.Game, slot string) (string, error) {
 // crash. Any failure removes the temp file and leaves the old save as it
 // was — a commitment colony's only save is never half-written (NG-1 §2.13).
 func (s Store) write(slot string, encode func(io.Writer) error) (string, error) {
-	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
-		return "", fmt.Errorf("create saves folder: %w", err)
-	}
 	path := filepath.Join(s.Dir, slot+Ext)
-	tmp, err := os.CreateTemp(s.Dir, slot+Ext+"-*.tmp")
-	if err != nil {
-		return "", fmt.Errorf("create save: %w", err)
-	}
-	fail := func(err error) (string, error) {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return "", err
-	}
-	if err := encode(tmp); err != nil {
-		return fail(err)
-	}
-	if err := tmp.Sync(); err != nil {
-		return fail(fmt.Errorf("flush save: %w", err))
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return "", fmt.Errorf("write save: %w", err)
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		os.Remove(tmp.Name())
+	if err := atomicfile.Write(path, 0o600, encode); err != nil {
 		return "", fmt.Errorf("store save: %w", err)
 	}
-	syncDir(s.Dir)
 	return path, nil
-}
-
-// syncDir flushes a folder's entries (the rename) to disk. Best effort:
-// some systems cannot sync a directory, and the save is complete anyway.
-func syncDir(dir string) {
-	if d, err := os.Open(dir); err == nil {
-		_ = d.Sync()
-		d.Close()
-	}
 }
 
 // List returns every save, newest first. Unreadable files are listed with
@@ -221,29 +189,12 @@ func viewPath(savePath string) string {
 // SaveView writes the camera sidecar for slot atomically (temp file and
 // rename), replacing any earlier one.
 func (s Store) SaveView(slot string, v ViewFile) error {
-	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
-		return fmt.Errorf("create saves folder: %w", err)
-	}
 	slot = sanitize(slot)
 	data, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("encode view: %w", err)
 	}
-	tmp, err := os.CreateTemp(s.Dir, slot+ViewExt+"-*.tmp")
-	if err != nil {
-		return fmt.Errorf("create view: %w", err)
-	}
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return fmt.Errorf("write view: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return fmt.Errorf("write view: %w", err)
-	}
-	if err := os.Rename(tmp.Name(), filepath.Join(s.Dir, slot+ViewExt)); err != nil {
-		os.Remove(tmp.Name())
+	if err := atomicfile.WriteBytes(filepath.Join(s.Dir, slot+ViewExt), 0o600, data); err != nil {
 		return fmt.Errorf("store view: %w", err)
 	}
 	return nil
