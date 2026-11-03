@@ -3,13 +3,17 @@ package game
 import (
 	"math"
 
+	"rimworld-go/internal/application/game/snow"
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/temperature"
+	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
 )
 
@@ -54,8 +58,9 @@ func (g *Game) outdoorsAt(x, y int) bool { return g.underSky(x, y) }
 // and ground build-up every climate interval.
 func (g *Game) phaseWeather() {
 	now := g.clock.Now()
-	g.phaseSnowSeed()    // snow.go: a global depth with no layer yet seeds it
-	defer g.snowChunks() // snow.go: per-tile snow, a few chunks a tick, after the step
+	sn := g.snowOf()
+	sn.SeedDue()      // game/snow: a global depth with no layer yet seeds it
+	defer sn.Chunks() // game/snow: per-tile snow, a few chunks a tick, after the step
 	if uint64(now)%weatherBlockTicks == 0 && !g.weatherFix {
 		mean := float64(g.climate.DailyMean(now)) / 10
 		wet := g.weatherWet(biome.DefOf(g.biome).Wetness) // rain and snow odds, percent of temperate (weather_ng1.go: still air)
@@ -132,7 +137,7 @@ func (g *Game) weatherSlow(x, y int, base int) int {
 	case weather.Blizzard:
 		pct = 0.40
 	}
-	if g.snowAt(x, y) > snowDeep { // snow.go: this cell's own snow (PLAY-015)
+	if g.snowOf().At(x, y) > snow.Deep { // game/snow: this cell's own snow (PLAY-015)
 		pct = math.Max(pct, 0.20)
 	}
 	if pct == 0 || !g.outdoorsAt(x, y) {
@@ -211,3 +216,69 @@ func (g *Game) fillPlantWeather(pv *PlantView, p plant.Plant) {
 	t := int(g.temperatureAt(p.X, p.Y))
 	pv.Wilted = t < d.FrostKill+frostMargin || (!p.Ripe() && plant.TempFactor(t) == 0)
 }
+
+// snowState is the per-tile snow depth and the snow clearing area
+// (game/snow).
+type snowState = snow.State
+
+// snowOf is the snow layer over the current map's state.
+func (g *Game) snowOf() snow.Layer {
+	return snow.New(snowHost{g}, &g.snow, snow.Steps{Climate: climateInterval, WeatherBlock: weatherBlockTicks})
+}
+
+func (g *Game) paintSnowClear(x, y, x2, y2 int, on bool)     { g.snowOf().PaintClear(x, y, x2, y2, on) }
+func (g *Game) doClearSnow(id entity.EntityID, j job.Record) { g.snowOf().DoClear(id, j) }
+func (g *Game) exportSnow() ([]byte, []uint64)               { return g.snowOf().Export() }
+func (g *Game) importSnow(depth []byte, clear []uint64)      { g.snowOf().Import(depth, clear) }
+
+// fillSnowView copies the snow layer and the clearing area into the view.
+func (g *Game) fillSnowView(w *WorldView) {
+	v := g.snowOf().View()
+	if v.Snow != nil {
+		w.Snow, w.SnowVer = v.Snow, v.SnowVer
+	}
+	if v.Clear != nil {
+		w.SnowClear, w.SnowClearVer = v.Clear, v.ClearVer
+	}
+}
+
+// snowHost implements snow.Host (snow/deps.go) over the game. It is only a
+// pointer, so handing it to the layer does not allocate.
+type snowHost struct{ g *Game }
+
+var _ snow.Host = snowHost{}
+
+func (h snowHost) Now() clock.Tick                       { return h.g.clock.Now() }
+func (h snowHost) Weather() weather.State                { return h.g.weather }
+func (h snowHost) SetMapDepth(d float64)                 { h.g.weather.SnowDepth = d }
+func (h snowHost) WeatherHeld() bool                     { return h.g.weatherFix }
+func (h snowHost) Outdoor(t clock.Tick) temperature.Temp { return h.g.climate.Outdoor(t) }
+func (h snowHost) Size() (int, int)                      { return h.g.grid.Width(), h.g.grid.Height() }
+func (h snowHost) EnsureRooms()                          { h.g.ensureRooms() }
+func (h snowHost) Cover() ([]int, []roof.Cell, []terrain.Type) {
+	return h.g.roomGrid, h.g.roofs, h.g.terr.Cells
+}
+func (h snowHost) UnderSky(x, y int) bool        { return h.g.underSky(x, y) }
+func (h snowHost) Terrain(x, y int) terrain.Type { return h.g.terr.At(x, y) }
+func (h snowHost) Pos(id entity.EntityID) (int, int) {
+	p, _ := h.g.positions.Get(id)
+	return p.X, p.Y
+}
+func (h snowHost) Allowed(id entity.EntityID, x, y int) bool { return h.g.inArea(id, x, y) }
+func (h snowHost) PostponedFor(id entity.EntityID, k job.Kind, x, y int) bool {
+	return h.g.postponedFor(id, k, 0, x, y)
+}
+func (h snowHost) PostponeTile(id entity.EntityID, k job.Kind, x, y int) {
+	h.g.postponeTile(id, k, x, y)
+}
+func (h snowHost) ReachableSpot(id entity.EntityID, x, y int) (int, int, bool) {
+	return h.g.reachableSpot(id, x, y)
+}
+func (h snowHost) Work(id entity.EntityID) int { return h.g.workProgress(id, skNone, false) }
+func (h snowHost) TileTaken(x, y int) bool {
+	_, taken := h.g.reserve.TileOwner(x, y)
+	return taken
+}
+func (h snowHost) ClaimTile(id entity.EntityID, x, y int)           { h.g.reserve.TryTile(id, x, y) }
+func (h snowHost) StartJob(id entity.EntityID, rec job.Record) bool { return h.g.startJob(id, rec) }
+func (h snowHost) SetJob(id entity.EntityID, j job.Record)          { h.g.jobs.Set(id, j) }

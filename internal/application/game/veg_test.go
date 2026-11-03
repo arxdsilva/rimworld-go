@@ -292,7 +292,7 @@ func TestGrassGrowthPausesUnderSnowAndFrost(t *testing.T) {
 		name string
 		set  func(g *Game, x, y int)
 	}{
-		{"snow", func(g *Game, x, y int) { g.setSnowCell(y*g.grid.Width()+x, 128) }}, // PLAY-015: the tile's own snow
+		{"snow", func(g *Game, x, y int) { g.snowOf().SetCell(y*g.grid.Width()+x, 128) }}, // PLAY-015: the tile's own snow
 		{"frost", func(g *Game, _, _ int) { g.climate = temperature.Climate{YearMean: -50} }},
 	} {
 		g := mildGame()

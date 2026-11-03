@@ -34,6 +34,12 @@ func climateSteps(g *Game, n int) {
 
 func snowIdx(g *Game, x, y int) int { return y*g.grid.Width() + x }
 
+// snowLayerOf is a copy of the layer the game would save (nil: none lying).
+func snowLayerOf(g *Game) []byte {
+	d, _ := g.exportSnow()
+	return d
+}
+
 func TestSnowBuildsOnOpenCellsOnly(t *testing.T) {
 	t.Parallel()
 	g := snowGame(t, -150)
@@ -41,13 +47,13 @@ func TestSnowBuildsOnOpenCellsOnly(t *testing.T) {
 	g.setTerrain(30, 10, terrain.ShallowWater) // open water
 	g.SetWeather(weather.Snow, 1)
 	climateSteps(g, 12)
-	if d := g.snowAt(10, 10); d < 20 {
+	if d := g.snowOf().At(10, 10); d < 20 {
 		t.Fatalf("open ground holds %d after 12 snowy steps, want a build-up", d)
 	}
-	if d := g.snowAt(3, 3); d != 0 {
+	if d := g.snowOf().At(3, 3); d != 0 {
 		t.Fatalf("roofed cell holds %d, want 0", d)
 	}
-	if d := g.snowAt(30, 10); d != 0 {
+	if d := g.snowOf().At(30, 10); d != 0 {
 		t.Fatalf("water holds %d, want 0", d)
 	}
 	if w := g.Weather().SnowDepth; w <= 0 || w > 1 {
@@ -58,10 +64,10 @@ func TestSnowBuildsOnOpenCellsOnly(t *testing.T) {
 func TestSnowRoofedLaterClears(t *testing.T) {
 	t.Parallel()
 	g := snowGame(t, -150)
-	g.setSnowCell(snowIdx(g, 5, 5), 200)
+	g.snowOf().SetCell(snowIdx(g, 5, 5), 200)
 	roofOver(g, 5, 5, 5, 5)
 	climateSteps(g, 1)
-	if d := g.snowAt(5, 5); d != 0 {
+	if d := g.snowOf().At(5, 5); d != 0 {
 		t.Fatalf("a newly roofed cell keeps %d, want 0", d)
 	}
 }
@@ -69,18 +75,18 @@ func TestSnowRoofedLaterClears(t *testing.T) {
 func TestSnowMeltsWithWarmth(t *testing.T) {
 	t.Parallel()
 	g := snowGame(t, 100) // 10 C: about 10 units a step
-	g.setSnowCell(snowIdx(g, 8, 8), 200)
+	g.snowOf().SetCell(snowIdx(g, 8, 8), 200)
 	climateSteps(g, 5)
-	d := int(g.snowAt(8, 8))
+	d := int(g.snowOf().At(8, 8))
 	if d >= 200 || d < 140 || d > 160 {
 		t.Fatalf("after 5 steps at 10 C depth %d, want about 149", d)
 	}
 	climateSteps(g, 30)
-	if d := g.snowAt(8, 8); d != 0 {
+	if d := g.snowOf().At(8, 8); d != 0 {
 		t.Fatalf("snow left at %d after a long thaw", d)
 	}
 	climateSteps(g, 1)
-	if g.snow.depth != nil || g.Weather().SnowDepth != 0 {
+	if snowLayerOf(g) != nil || g.Weather().SnowDepth != 0 {
 		t.Fatal("a fully melted layer is dropped and the global depth is 0")
 	}
 }
@@ -88,76 +94,18 @@ func TestSnowMeltsWithWarmth(t *testing.T) {
 func TestSnowStaysInFrost(t *testing.T) {
 	t.Parallel()
 	g := snowGame(t, -50)
-	g.setSnowCell(snowIdx(g, 8, 8), 120)
+	g.snowOf().SetCell(snowIdx(g, 8, 8), 120)
 	climateSteps(g, 10)
-	if d := g.snowAt(8, 8); d != 120 {
+	if d := g.snowOf().At(8, 8); d != 120 {
 		t.Fatalf("frost, no snowfall: depth %d, want 120", d)
-	}
-}
-
-func TestSnowOpRainBlockHalves(t *testing.T) {
-	t.Parallel()
-	g := snowGame(t, -50)
-	g.weatherFix = false
-	block := uint64(weatherBlockTicks) * 7
-	g.weather.Kind, g.weather.Target = weather.Rain, weather.Rain
-	if halve, _ := g.snowOp(block, 0); !halve {
-		t.Fatal("a rain block's first step halves the snow")
-	}
-	if halve, _ := g.snowOp(block+climateInterval, 0); halve {
-		t.Fatal("only the block's first step halves")
-	}
-	g.weather.Target = weather.Storm
-	if halve, _ := g.snowOp(block, 0); !halve {
-		t.Fatal("a storm block halves too")
-	}
-	g.weather.Kind, g.weather.Target = weather.Snow, weather.Snow
-	if halve, _ := g.snowOp(block, 0); halve {
-		t.Fatal("a snow block does not halve")
-	}
-	g.weather.Target = weather.Rain
-	g.weatherFix = true
-	if halve, _ := g.snowOp(block, 0); halve {
-		t.Fatal("held weather starts no block")
-	}
-}
-
-func TestSnowRainBlockHalvesCells(t *testing.T) {
-	t.Parallel()
-	g := snowGame(t, -50)
-	g.setSnowCell(snowIdx(g, 8, 8), 200)
-	cg := g.snowChunkGrid()
-	c := cg.Of(8, 8)
-	g.snowChunk(cg, c, true, 0)
-	if d := g.snowAt(8, 8); d != 100 {
-		t.Fatalf("halved depth %d, want 100", d)
-	}
-}
-
-func TestSnowOpFallAndMeltRates(t *testing.T) {
-	t.Parallel()
-	g := snowGame(t, -50)
-	g.SetWeather(weather.Snow, 1)
-	sum := 0
-	for c := range 100 {
-		_, d := g.snowOp(uint64(climateInterval*(c+40)), c)
-		sum += d
-	}
-	if sum < 290 || sum > 322 { // 3.06 a step at full intensity, dithered
-		t.Fatalf("100 full-intensity steps add %d, want about 306", sum)
-	}
-	g.climate = temperature.Climate{YearMean: 100}
-	g.SetWeather(weather.Clear, 0)
-	if _, d := g.snowOp(uint64(climateInterval*40), 0); d > -10 || d < -11 {
-		t.Fatalf("10 C melts %d a step, want -10 or -11", d)
 	}
 }
 
 func TestSnowSlowsWalkingPerCell(t *testing.T) {
 	t.Parallel()
 	g := snowGame(t, -50)
-	g.setSnowCell(snowIdx(g, 8, 8), 200)
-	g.setSnowCell(snowIdx(g, 9, 8), 60)
+	g.snowOf().SetCell(snowIdx(g, 8, 8), 200)
+	g.snowOf().SetCell(snowIdx(g, 9, 8), 60)
 	if got := g.weatherSlow(8, 8, 10); got != 12 {
 		t.Fatalf("deep snow step %d, want 12", got)
 	}
@@ -177,7 +125,7 @@ func TestGrassRegrowthPausesPerSnowyCell(t *testing.T) {
 	regrowNow(t, g, x, y)
 	regrowNow(t, g, x2, y2)
 	for range clock.TicksPerDay / climateInterval {
-		g.setSnowCell(snowIdx(g, x, y), 200) // 15 C melts it: keep it lying
+		g.snowOf().SetCell(snowIdx(g, x, y), 200) // 15 C melts it: keep it lying
 		g.Step(climateInterval)
 	}
 	if got := g.grassGrowthAt(x, y); got != plant.GrassShoots {
@@ -196,7 +144,7 @@ func TestSnowViewPerCell(t *testing.T) {
 	if w.Snow != nil || w.SnowClear != nil {
 		t.Fatal("no snow, no area: empty layers")
 	}
-	g.setSnowCell(snowIdx(g, 8, 8), 90)
+	g.snowOf().SetCell(snowIdx(g, 8, 8), 90)
 	g.paintSnowClear(1, 1, 2, 3, true)
 	var v WorldView
 	g.fillSnowView(&v)
@@ -231,7 +179,9 @@ func TestSnowSaveRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(h.snow.depth, g.snow.depth) || !slices.Equal(h.snow.clear, g.snow.clear) {
+	hd, hc := h.exportSnow()
+	gd, gc := g.exportSnow()
+	if !slices.Equal(hd, gd) || !slices.Equal(hc, gc) {
 		t.Fatal("snow layer or clearing area changed by a save")
 	}
 	if h.Weather().SnowDepth != g.Weather().SnowDepth {
@@ -241,7 +191,7 @@ func TestSnowSaveRoundTrip(t *testing.T) {
 	h.HoldWeather()
 	g.Step(500)
 	h.Step(500)
-	if !slices.Equal(h.snow.depth, g.snow.depth) {
+	if !slices.Equal(snowLayerOf(h), snowLayerOf(g)) {
 		t.Fatal("a loaded game snows differently from the one it was saved from")
 	}
 }
@@ -260,19 +210,19 @@ func TestOldSaveSeedsSnowFromGlobal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d := h.snowAt(10, 10); d != 102 {
+	if d := h.snowOf().At(10, 10); d != 102 {
 		t.Fatalf("before the first step open ground reads %d, want 102", d)
 	}
 	h.climate = g.climate
 	h.HoldWeather()
 	h.Step(climateInterval)
-	if h.snow.depth == nil {
+	if snowLayerOf(h) == nil {
 		t.Fatal("the global depth seeds the layer")
 	}
-	if d := h.snowAt(10, 10); d != 102 {
+	if d := h.snowOf().At(10, 10); d != 102 {
 		t.Fatalf("open cell seeded to %d, want 102", d)
 	}
-	if d := h.snowAt(3, 3); d != 0 {
+	if d := h.snowOf().At(3, 3); d != 0 {
 		t.Fatalf("roofed cell seeded to %d, want 0", d)
 	}
 }
@@ -286,7 +236,7 @@ func TestSnowDeterministic(t *testing.T) {
 		g.SetWeather(weather.Clear, 0)
 		g.climate = temperature.Climate{YearMean: 30}
 		climateSteps(g, 10)
-		return slices.Clone(g.snow.depth)
+		return snowLayerOf(g)
 	}
 	a, b := run(), run()
 	if a == nil || !slices.Equal(a, b) {
@@ -303,13 +253,14 @@ func BenchmarkSnowClimateStep500(b *testing.B) {
 	g.HoldWeather()
 	g.SetWeather(weather.Snow, 1)
 	g.weather.SnowDepth = 0.3
-	g.seedSnow()
+	g.snowOf().Seed()
 	g.ensureRooms()
+	sn := g.snowOf()
 	base := uint64(g.clock.Now()) - uint64(g.clock.Now())%climateInterval
 	b.ResetTimer()
 	for range b.N {
 		for ph := range uint64(climateInterval) {
-			g.snowChunksAt(base + ph)
+			sn.ChunksAt(base + ph)
 		}
 	}
 }

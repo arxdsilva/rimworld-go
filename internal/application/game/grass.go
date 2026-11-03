@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"sort"
 
+	"rimworld-go/internal/application/game/snow"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -467,6 +468,7 @@ func (g *Game) growGrassChunk(c int, now uint64) {
 	}
 	w := g.grid.Width()
 	art := g.lightCells() // one read per tile below
+	lying := g.snowOf()
 	t0 := now - min(now, climateInterval)
 	l := s.growing[c]
 	kept := l[:0]
@@ -478,7 +480,7 @@ func (g *Game) growGrassChunk(c int, now uint64) {
 			continue
 		}
 		x, y := int(i)%w, int(i)/w
-		if g.snowAt(x, y) >= snowGrassCover { // snow.go: this tile's own snow (PLAY-015)
+		if lying.At(x, y) >= snow.GrassCover { // game/snow: this tile's own snow (PLAY-015)
 			kept = append(kept, i)
 			continue
 		}
