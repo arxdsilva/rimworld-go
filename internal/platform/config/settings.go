@@ -21,7 +21,9 @@ import (
 // (Quality, Shadows, Lighting, Water, Grass) plus Detected and Chosen
 // (graphics.go); an older file keeps today's look, with Detected empty so
 // the next start detects the hardware tier.
-const SettingsVersion = 6 // 6: PERF-002, VSync off and a frame cap by default
+// Version 7 added Telemetry; Normalize turns detailed usage data on for
+// anything older.
+const SettingsVersion = 7 // 6: PERF-002, VSync off and a frame cap by default
 
 // MaxLearnedLessons caps the learning helper's done list.
 const MaxLearnedLessons = 64
@@ -34,6 +36,16 @@ type Settings struct {
 	Gameplay      Gameplay      `json:"gameplay"`
 	Accessibility Accessibility `json:"accessibility"`
 	Controls      Controls      `json:"controls"`
+	Telemetry     Telemetry     `json:"telemetry"`
+}
+
+// Telemetry is the usage data the game sends (usagehttp). Basic data is
+// always sent; Advanced is the Options switch for the detailed part.
+// InstallID is a random UUID made on the first run (cmd/game), and it is
+// what a player quotes to have their data deleted.
+type Telemetry struct {
+	Advanced  bool   `json:"advanced"`
+	InstallID string `json:"install_id,omitempty"`
 }
 
 // Controls are the player's key bindings: action id -> binding strings
@@ -195,6 +207,7 @@ func Defaults() Settings {
 			Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, RenderScale: 1},
 		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100, ShowLearningHelper: true, ShowColonistBar: true},
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
+		Telemetry:     Telemetry{Advanced: true},
 	}
 }
 
@@ -223,6 +236,9 @@ func (s Settings) Normalize() Settings {
 			s.Graphics.VSync = false
 		}
 		s.Graphics.FrameCap = FrameCapDefault
+	}
+	if s.Version < 7 { // before usage data: no switch, on by default
+		s.Telemetry.Advanced = true
 	}
 	s.Version = SettingsVersion
 	s.Gameplay.LearnedLessons = dedupeLessons(s.Gameplay.LearnedLessons)

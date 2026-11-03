@@ -35,6 +35,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/platform/config"
@@ -125,6 +126,34 @@ type AppConfig struct {
 	Background  bgWindow
 	WindowHooks windowHooks
 	Hardware    func() sysinfo.Info
+	// Usage is where usage data goes (nil: nowhere; captures, tests, dev).
+	Usage Usage
+}
+
+// Usage is what the App reports about a session (cmd/game wires usagehttp).
+// Frame runs on every update and must stay cheap; true means a Snapshot is
+// due.
+type Usage interface {
+	Colony(kind, storyteller, preset, biome string, mapSize int)
+	Frame(advanced bool, quality string) (snapshotDue bool)
+	Snapshot(gameDay, colonists int, fps float64)
+}
+
+// noUsage sends nothing.
+type noUsage struct{}
+
+func (noUsage) Colony(_, _, _, _ string, _ int) {}
+func (noUsage) Frame(bool, string) bool         { return false }
+func (noUsage) Snapshot(int, int, float64)      {}
+
+// reportColony tells Usage a colony started: kind is "new" or "load". Only
+// values from game content go out, nothing the player named.
+func reportColony(u Usage, kind string, sim Simulation) {
+	if _, off := u.(noUsage); off {
+		return
+	}
+	story := sim.Story()
+	u.Colony(kind, story.Storyteller, story.Preset, sim.World().BiomeKey, sim.Width())
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -796,6 +825,9 @@ func NewApp(cfg AppConfig) *App {
 	if cfg.Sound == nil {
 		cfg.Sound = noSound{}
 	}
+	if cfg.Usage == nil {
+		cfg.Usage = noUsage{}
+	}
 	if cfg.WindowHooks == nil {
 		cfg.WindowHooks = ebitenWindow{}
 	}
@@ -842,6 +874,10 @@ func (a *App) Update() error {
 		return ebiten.Termination
 	}
 	a.updates++
+	if a.cfg.Usage.Frame(a.settings.Telemetry.Advanced, a.settings.Graphics.Quality) && a.renderer != nil {
+		sim := a.renderer.game
+		a.cfg.Usage.Snapshot(int(sim.Tick()/clock.TicksPerDay), len(sim.Colonists()), ebiten.ActualFPS())
+	}
 	a.syncUIScale() // ui_scale.go: before any measure or hit test
 	a.pollInput()
 	a.syncBackground() // background.go: Run in background, from this frame's focus

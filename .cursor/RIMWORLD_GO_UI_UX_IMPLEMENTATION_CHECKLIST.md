@@ -1689,6 +1689,7 @@ the player what just happened and what requires attention.
 
 -   [x] **Pause on threat** (Options › Gameplay, on by default; PLAY-017: animal chases trigger it)
 -   [x] **Run in background** (PLAY-017: Options › Gameplay; off pauses the colony while the window is away, on keeps it running at a capped frame rate)
+-   [x] **Share detailed usage data** (Options › Gameplay, on by default; `usagehttp`, see the README's "What data the game sends")
 -   [ ] **Autosave interval**
 -   [ ] **Default speed behavior**
 -   [ ] **Edge scrolling**

@@ -1803,6 +1803,7 @@ presentation only, never the simulation; captures ignore them.
 -   [x] edge scrolling;
 -   [x] camera pan speed;
 -   [x] developer mode (UI-016: ultrafast, tick step, debug actions, log, inspector);
+-   [x] share detailed usage data (on by default; basic data is always sent, see the README);
 -   [ ] speed behavior;
 -   [ ] confirmations;
 -   [ ] learning helper.

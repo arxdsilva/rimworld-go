@@ -99,13 +99,16 @@ func main() {
 		defaultSeed = *seed
 	}
 
+	gfxOverrides := devGraphics{hidpi: hidpiOverride, vsync: vsyncOverride, renderScale: *renderScale, tier: *graphics, windowed: probe != nil}
+	usage := usageTracker(shot != nil || probe != nil || *scenario != "" || gfxOverrides.any())
+
 	cfg := uiadapter.AppConfig{
 		DefaultSeed:  defaultSeed,
 		DefaultBiome: biomeID,
 		Version:      version,
 		Capture:      shot,
 		Saves:        saveHooks(),
-		Settings:     settingsHooks(shot != nil, devGraphics{hidpi: hidpiOverride, vsync: vsyncOverride, renderScale: *renderScale, tier: *graphics, windowed: probe != nil}),
+		Settings:     settingsHooks(shot != nil, gfxOverrides),
 		Scenarios:    scenarioStore(shot != nil),
 		FPSProbe:     probe,
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
@@ -424,6 +427,9 @@ func main() {
 	if snd := openSound(shot != nil || *noAudio || os.Getenv("RIMWORLD_GO_NOAUDIO") == "1"); snd != nil {
 		cfg.Sound = snd
 	}
+	if usage != nil { // a nil *Tracker in the interface would not read as "none"
+		cfg.Usage = usage
+	}
 	app := uiadapter.NewApp(cfg)
 
 	ebiten.SetTPS(clock.TicksPerSecond)
@@ -438,8 +444,12 @@ func main() {
 		ebiten.SetWindowSize(ebiten.Monitor().Size())
 		ebiten.SetWindowFloating(true)
 	}
-	if err := ebiten.RunGame(app); err != nil {
-		log.Fatal(err)
+	runErr := ebiten.RunGame(app)
+	if usage != nil {
+		usage.Close() // before a log.Fatal would skip it
+	}
+	if runErr != nil {
+		log.Fatal(runErr)
 	}
 	stopProfiles()
 	if probeProfile != nil {

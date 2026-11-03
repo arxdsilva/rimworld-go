@@ -291,3 +291,81 @@ func TestBackgroundUsesTheAppWindowByDefault(t *testing.T) {
 		t.Fatalf("calls = %v, want the default window made runnable", w.calls)
 	}
 }
+
+func TestUsageDataOptionRow(t *testing.T) {
+	t.Parallel()
+	store := &fakeSettings{s: config.Defaults()}
+	a := optionsApp(store)
+	a.opt.Tab = "gameplay"
+	if got := optionBtn(t, a, "options.usagedata").Label; got != "On" {
+		t.Fatalf("detailed usage data shows %q by default, want On", got)
+	}
+	a.opt.ApplyOption("options.usagedata")
+	if a.settings.Telemetry.Advanced || store.s.Telemetry.Advanced {
+		t.Fatalf("toggle did not set and store the option: %+v", store.s.Telemetry)
+	}
+	if b2 := optionsApp(store); b2.settings.Telemetry.Advanced {
+		t.Fatal("the player's choice was lost after a restart")
+	}
+}
+
+// fakeUsage records what the App reports.
+type fakeUsage struct {
+	due       bool
+	advanced  []bool
+	colonies  []string
+	snapshots int
+}
+
+func (f *fakeUsage) Colony(kind, _, _, _ string, _ int) { f.colonies = append(f.colonies, kind) }
+func (f *fakeUsage) Frame(advanced bool, _ string) bool {
+	f.advanced = append(f.advanced, advanced)
+	return f.due
+}
+func (f *fakeUsage) Snapshot(int, int, float64) { f.snapshots++ }
+
+func TestUsageFollowsTheSwitchAndSkipsSnapshotsWithoutAColony(t *testing.T) {
+	t.Parallel()
+	store := &fakeSettings{s: config.Defaults()}
+	a := optionsApp(store)
+	usage := &fakeUsage{due: true}
+	a.cfg.Usage = usage
+	if err := a.Update(); err != nil {
+		t.Fatal(err)
+	}
+	a.opt.Tab = "gameplay"
+	a.opt.ApplyOption("options.usagedata")
+	if err := a.Update(); err != nil {
+		t.Fatal(err)
+	}
+	if len(usage.advanced) != 2 || !usage.advanced[0] || usage.advanced[1] {
+		t.Errorf("Frame saw advanced = %v, want [true false]", usage.advanced)
+	}
+	if usage.snapshots != 0 {
+		t.Errorf("%d snapshots with no colony running", usage.snapshots)
+	}
+}
+
+func TestUsageReportsTheRunningColony(t *testing.T) {
+	t.Parallel()
+	a, s := archColony(t)
+	usage := &fakeUsage{}
+	a.cfg.Usage = usage
+	if err := a.Update(); err != nil {
+		t.Fatal(err)
+	}
+	if usage.snapshots != 0 {
+		t.Fatal("a snapshot was taken before one was due")
+	}
+	usage.due = true
+	if err := a.Update(); err != nil {
+		t.Fatal(err)
+	}
+	if usage.snapshots != 1 {
+		t.Errorf("snapshots = %d, want 1", usage.snapshots)
+	}
+	a.finishStart(s)
+	if len(usage.colonies) != 1 || usage.colonies[0] != "new" {
+		t.Errorf("colonies = %v, want [new]", usage.colonies)
+	}
+}

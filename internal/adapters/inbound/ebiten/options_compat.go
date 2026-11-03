@@ -133,6 +133,7 @@ func (s optionsSaver) Load(path string) (string, clock.Tick, error) {
 	}
 	s.a.dropSession()
 	s.a.startSession(sim)
+	reportColony(s.a.cfg.Usage, "load", sim)
 	if h := s.a.cfg.Saves.LoadView; h != nil && s.a.renderer != nil {
 		if v, ok := h(path); ok {
 			s.a.renderer.scenes.resumeViews(v)

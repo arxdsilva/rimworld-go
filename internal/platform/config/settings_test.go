@@ -203,3 +203,24 @@ func TestRAMNoticeSeenRoundTrip(t *testing.T) {
 		t.Fatalf("RAMNoticeSeen %d after a round trip, want %d", got.Gameplay.RAMNoticeSeen, uint64(4<<30))
 	}
 }
+
+func TestDetailedUsageDataDefaultsOnAndMigrates(t *testing.T) {
+	t.Parallel()
+	if !Defaults().Telemetry.Advanced {
+		t.Fatal("detailed usage data must default on")
+	}
+	old, err := Decode(strings.NewReader(`{"version": 6, "telemetry": {"advanced": false}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !old.Telemetry.Advanced || old.Version != SettingsVersion {
+		t.Fatalf("version 6 file: %+v, version %d, want the switch on", old.Telemetry, old.Version)
+	}
+	off, err := Decode(strings.NewReader(`{"version": 7, "telemetry": {"advanced": false, "install_id": "abc"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if off.Telemetry.Advanced || off.Telemetry.InstallID != "abc" {
+		t.Fatalf("version 7 file lost the player's choice: %+v", off.Telemetry)
+	}
+}
