@@ -114,6 +114,9 @@ Primary entry point for a play session.
 -   [x] Low-memory notice (PLAY-019: a warning card under the rail when
     the computer has less RAM than the game needs to run smoothly; warns
     only, "Got it" hides it until the amount of RAM changes)
+-   [x] Update notice (a card under the version line when GitHub has a
+    newer release: Download opens the page in the browser, Later hides it
+    until the next launch; a failed check shows nothing)
 
 ## Information
 

@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -219,6 +222,128 @@ func TestJourneyFlowPauseSaveHook(t *testing.T) {
 	}
 	if j.a.nav.overlay() == overlayPause || j.a.nav.screen() != ports.ScreenColony {
 		t.Fatalf("Save left the pause menu up (screen %s)", j.a.nav.screen())
+	}
+}
+
+// fakeUpdates knows of a newer release and counts the downloads asked for.
+type fakeUpdates struct {
+	version, page string
+	downloads     int
+}
+
+func (u *fakeUpdates) UpdateAvailable() (string, string) { return u.version, u.page }
+func (u *fakeUpdates) DownloadUpdate()                   { u.downloads++ }
+
+// shownText is everything a Draw of the current screen paints, joined.
+func shownText(t *testing.T, a *App) string {
+	t.Helper()
+	var all []string
+	for _, e := range drawnText(t, a, a.sw, a.sh) {
+		all = append(all, e.Text)
+	}
+	return strings.Join(all, "\n")
+}
+
+// TestJourneyFlowUpdateNotice: with a newer release known, the main menu says
+// so under the version; Download opens the page once per click and Later hides
+// the notice for this run, also after a trip through another screen.
+func TestJourneyFlowUpdateNotice(t *testing.T) {
+	up := &fakeUpdates{version: "v9.9.9", page: "example.test/releases"}
+	j := newJourney(t)
+	j.a.cfg.Version = "v0.1.20"
+	j.a.cfg.Updates = up
+	j.key("Escape", 0)
+	j.clickID("pause.menu")
+	j.update(1)
+	text := shownText(t, j.a)
+	for _, want := range []string{"v0.1.20", "Version v9.9.9 is available", "example.test/releases"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the menu doesn't show %q:\n%s", want, text)
+		}
+	}
+	j.clickID(mainmenu.UpdateDownloadID)
+	if up.downloads != 1 {
+		t.Fatalf("one click opened the page %d times", up.downloads)
+	}
+	j.update(3)
+	if up.downloads != 1 || !hasWidget(j.a, mainmenu.UpdateDownloadID) {
+		t.Fatalf("after Download: %d opens, notice shown %v; it should stay, the player may need it again",
+			up.downloads, hasWidget(j.a, mainmenu.UpdateDownloadID))
+	}
+	j.clickID(mainmenu.UpdateLaterID)
+	j.update(1)
+	if hasWidget(j.a, mainmenu.UpdateDownloadID) {
+		t.Fatal("Later didn't hide the notice")
+	}
+	if text := shownText(t, j.a); strings.Contains(text, "v9.9.9") || !strings.Contains(text, "v0.1.20") {
+		t.Errorf("after Later the menu shows:\n%s", text)
+	}
+	j.clickID(ids.MenuCredits)
+	j.clickID("credits.back")
+	j.update(1)
+	if j.a.nav.screen() != ports.ScreenMainMenu || hasWidget(j.a, mainmenu.UpdateDownloadID) {
+		t.Errorf("back on %s the notice shown is %v", j.a.nav.screen(), hasWidget(j.a, mainmenu.UpdateDownloadID))
+	}
+	if up.downloads != 1 {
+		t.Errorf("downloads %d after Later", up.downloads)
+	}
+}
+
+// TestJourneyFlowNoUpdateNoNotice: with nothing newer known, the menu only
+// shows the version.
+func TestJourneyFlowNoUpdateNoNotice(t *testing.T) {
+	a, f, _ := ngTest(t, func(c *AppConfig) { c.Version = "v0.1.21" })
+	f.Frame(t, a)
+	if hasWidget(a, mainmenu.UpdateDownloadID) || hasWidget(a, mainmenu.UpdateLaterID) {
+		t.Fatal("a notice with nothing to offer")
+	}
+	if text := shownText(t, a); !strings.Contains(text, "v0.1.21") || strings.Contains(text, "available") {
+		t.Errorf("the menu shows:\n%s", text)
+	}
+}
+
+// TestUpdateNoticeClearsTheRailAndTheRAMCard: both notices at once leave every
+// button reachable.
+func TestUpdateNoticeClearsTheRailAndTheRAMCard(t *testing.T) {
+	up := &fakeUpdates{version: "v9.9.9", page: "github.com/arxdsilva/rimworld-go/releases/latest"}
+	a, f, _ := ngTest(t, func(c *AppConfig) {
+		withHardware(4 * gib)(c)
+		c.Updates = up
+	})
+	f.Frame(t, a)
+	if !hasWidget(a, mainmenu.RAMDismissID) || !hasWidget(a, mainmenu.UpdateDownloadID) {
+		t.Fatal("want both notices")
+	}
+	card := mainmenu.UpdateCard(a.sw, up.page)
+	for _, b := range a.menuScreen.Buttons(a.sw, a.sh) {
+		if rectsOverlap(card, gfx.Rect{X: b.X, Y: b.Y, W: b.W, H: b.H}) {
+			t.Errorf("the notice %+v covers %s", card, b.ID)
+		}
+	}
+	for _, id := range []string{mainmenu.UpdateDownloadID, mainmenu.UpdateLaterID} {
+		w, ok := a.uiSt().Find(id)
+		if !ok || w.R.X < card.X || w.R.Y < card.Y || w.R.Right() > card.Right() || w.R.Bottom() > card.Bottom() {
+			t.Errorf("%s %+v is outside its card %+v", id, w.R, card)
+		}
+	}
+}
+
+// TestJourneyFlowPauseShowsTheVersion: the running version is one Escape away
+// during play, and so is the news of a newer one.
+func TestJourneyFlowPauseShowsTheVersion(t *testing.T) {
+	j := newJourney(t)
+	j.a.cfg.Version = "v0.1.20"
+	j.key("Escape", 0)
+	if text := shownText(t, j.a); !strings.Contains(text, "v0.1.20") || strings.Contains(text, "available") {
+		t.Errorf("pause shows:\n%s", text)
+	}
+	j.a.cfg.Updates = &fakeUpdates{version: "v9.9.9", page: "p"}
+	if text := shownText(t, j.a); !strings.Contains(text, "v0.1.20 (v9.9.9 available)") {
+		t.Errorf("pause shows:\n%s", text)
+	}
+	line := mainmenu.VersionLine("v0.1.20", "v0.1.21")
+	if w := gfx.TextW("Paused", gfx.Large) + gfx.TextW(line, gfx.Body); w > 360-2*24 {
+		t.Errorf("the title and %q take %v px of the 360 px panel", line, w)
 	}
 }
 

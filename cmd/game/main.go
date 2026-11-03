@@ -100,7 +100,8 @@ func main() {
 	}
 
 	gfxOverrides := devGraphics{hidpi: hidpiOverride, vsync: vsyncOverride, renderScale: *renderScale, tier: *graphics, windowed: probe != nil}
-	usage := usageTracker(shot != nil || probe != nil || *scenario != "" || gfxOverrides.any())
+	devRun := shot != nil || probe != nil || *scenario != "" || gfxOverrides.any()
+	usage := usageTracker(devRun)
 
 	cfg := uiadapter.AppConfig{
 		DefaultSeed:  defaultSeed,
@@ -429,6 +430,9 @@ func main() {
 	}
 	if usage != nil { // a nil *Tracker in the interface would not read as "none"
 		cfg.Usage = usage
+	}
+	if updates := updateChecker(version, devRun); updates != nil {
+		cfg.Updates = updates
 	}
 	app := uiadapter.NewApp(cfg)
 

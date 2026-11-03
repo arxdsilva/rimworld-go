@@ -168,6 +168,23 @@ func TestLowRAMNoticeDoesNotCoverTheMenuButtons(t *testing.T) {
 	}
 }
 
+// The id-driven click path of tests and captures also acts once per click.
+func TestUpdateNoticeIDClickActsOnce(t *testing.T) {
+	up := &fakeUpdates{version: "v9.9.9", page: "p"}
+	a, f, _ := ngTest(t, func(c *AppConfig) { c.Updates = up })
+	f.Frame(t, a)
+	click(t, a, mainmenu.UpdateDownloadID)
+	f.Frame(t, a)
+	if up.downloads != 1 {
+		t.Fatalf("one click opened the page %d times", up.downloads)
+	}
+	click(t, a, mainmenu.UpdateLaterID)
+	f.Frame(t, a)
+	if hasWidget(a, mainmenu.UpdateDownloadID) {
+		t.Fatal("Later didn't hide the notice")
+	}
+}
+
 func rectsOverlap(a, b gfx.Rect) bool {
 	return a.X < b.Right() && b.X < a.Right() && a.Y < b.Bottom() && b.Y < a.Bottom()
 }

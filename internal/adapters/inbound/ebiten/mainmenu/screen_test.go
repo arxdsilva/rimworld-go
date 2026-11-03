@@ -61,3 +61,28 @@ func TestLoadSceneRetriesWhileNoLoader(t *testing.T) {
 		t.Fatal("drew a diorama that was never loaded")
 	}
 }
+
+func TestVersionLine(t *testing.T) {
+	t.Parallel()
+	if got := VersionLine("v0.1.20", ""); got != "v0.1.20" {
+		t.Errorf("no update: %q", got)
+	}
+	if got := VersionLine("v0.1.20", "v0.1.21"); got != "v0.1.20 (v0.1.21 available)" {
+		t.Errorf("update: %q", got)
+	}
+}
+
+// The notice's address fits its card, and a narrow window keeps it off the rail.
+func TestUpdateCardFitsAndClearsTheRail(t *testing.T) {
+	t.Parallel()
+	const page = "github.com/arxdsilva/rimworld-go/releases/latest"
+	for _, sw := range []int{640, 800, 1280, 2560} {
+		card := UpdateCard(sw, page)
+		if card.Right() > RailX(sw) {
+			t.Errorf("width %d: card %+v reaches the rail at %v", sw, card, RailX(sw))
+		}
+		if card.W < updateDownloadW+updateBtnGap+updateLaterW+2*ramCardPad {
+			t.Errorf("width %d: card %v is too narrow for its buttons", sw, card.W)
+		}
+	}
+}

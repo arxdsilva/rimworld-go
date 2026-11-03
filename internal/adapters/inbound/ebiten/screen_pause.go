@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 
@@ -35,6 +36,10 @@ func (a *App) drawPause(screen *ebiten.Image, sw, sh int) {
 	py := float32(sh)/2 - ph/2
 	uikit.DrawPanel(screen, px, py, pw, ph)
 	gfx.Text(screen, "Paused", float64(px)+24, float64(py)+16, gfx.WithColor(gfx.Large, uikit.Heading))
+	newer, _ := a.cfg.Updates.UpdateAvailable()
+	ver := gfx.WithColor(gfx.Body, uikit.TextDim)
+	ver.Align = gfx.AlignRight
+	gfx.Text(screen, mainmenu.VersionLine(a.cfg.Version, newer), float64(px+pw)-24, float64(py)+20, ver)
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.pauseButtons(sw, sh), mx, my)
 }

@@ -128,6 +128,9 @@ type AppConfig struct {
 	Hardware    func() sysinfo.Info
 	// Usage is where usage data goes (nil: nowhere; captures, tests, dev).
 	Usage Usage
+	// Updates says whether a newer release exists (nil: none known; captures,
+	// tests, dev).
+	Updates mainmenu.Updates
 }
 
 // Usage is what the App reports about a session (cmd/game wires usagehttp).
@@ -827,6 +830,9 @@ func NewApp(cfg AppConfig) *App {
 	}
 	if cfg.Usage == nil {
 		cfg.Usage = noUsage{}
+	}
+	if cfg.Updates == nil {
+		cfg.Updates = noUpdates{}
 	}
 	if cfg.WindowHooks == nil {
 		cfg.WindowHooks = ebitenWindow{}

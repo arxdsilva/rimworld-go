@@ -34,10 +34,11 @@ const (
 
 // Screen is the main menu: its background scene, its rail and its notice.
 type Screen struct {
-	sh      Shell
-	splash  *ebiten.Image
-	diorama *Diorama
-	tried   bool
+	sh           Shell
+	splash       *ebiten.Image
+	diorama      *Diorama
+	tried        bool
+	updateHidden bool // the player pressed Later: gone until the next launch
 }
 
 // New is the menu screen over its shell.
@@ -104,8 +105,14 @@ func (s *Screen) RAMNoticeCard(sw, sh int, text string) gfx.Rect {
 	return gfx.Rect{X: x, Y: y, W: w, H: h}
 }
 
-// Declare declares the main menu's widgets: the low-RAM notice.
+// Declare declares the main menu's widgets: its notices.
 func (s *Screen) Declare(sw, sh int) {
+	s.declareUpdateNotice(sw)
+	s.declareRAMNotice(sw, sh)
+}
+
+// declareRAMNotice declares the low-RAM card when it is due.
+func (s *Screen) declareRAMNotice(sw, sh int) {
 	text, total := s.sh.LowRAMNotice()
 	if text == "" {
 		return
@@ -124,19 +131,7 @@ func (s *Screen) Declare(sw, sh int) {
 	})
 	btn := gfx.Rect{X: card.Right() - ramCardPad - ramBtnW, Y: card.Bottom() - ramCardPad - ramBtnH, W: ramBtnW, H: ramBtnH}
 	opts := uikit.BtnOpts{Tip: "Got it\nHide this notice. It comes back only if the computer's memory changes."}
-	dismiss := func() { s.sh.DismissRAMNotice(total) }
-	// The click runs at once, also when it comes from the id-driven click
-	// path of tests and captures.
-	pressed := k.Button(RAMDismissID, btn, "Got it", opts)
-	if n := len(k.Cur); n > 0 && k.Cur[n-1].ID == RAMDismissID {
-		k.Cur[n-1].Click = func() {
-			k.OK()
-			dismiss()
-		}
-	}
-	if pressed {
-		dismiss()
-	}
+	s.noticeButton(RAMDismissID, btn, "Got it", opts, func() { s.sh.DismissRAMNotice(total) })
 }
 
 // Draw paints the main menu: the diorama (or the gradient), the splash,

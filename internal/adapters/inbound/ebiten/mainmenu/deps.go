@@ -46,4 +46,5 @@ type Shell interface {
 	ports.Settings
 	ports.Widgets
 	Host
+	Updates
 }

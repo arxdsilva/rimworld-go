@@ -1,14 +1,16 @@
 # mainmenu package
 
 ## Package Purpose
-The main menu screen: the hero splash and the colony diorama behind it, the button rail (Continue, Load, New, Options, Credits, Quit), the credits text and the RAM notice card. It reaches the shell through a small interface and the simulation not at all. Feature package (ARCH-005 wave 5.1, agent A3).
+The main menu screen: the hero splash and the colony diorama behind it, the button rail (Continue, Load, New, Options, Credits, Quit), the credits text, and the RAM and update notice cards. It reaches the shell through a small interface and the simulation not at all. Feature package (ARCH-005 wave 5.1, agent A3).
 
 ## Owned Concepts
-- `Screen` (9 methods, 8 exported) built by `New(sh Shell) *Screen`: splash, diorama, rail, credits lines, RAM notice card.
+- `Screen` built by `New(sh Shell) *Screen`: splash, diorama, rail, credits lines, RAM and update notice cards.
 - `Diorama` and `LoadDiorama(root)`: the menu scene loaded from assets.
 - `NewestSlot(slots []ports.SaveSlot) int`: picks the slot Continue uses.
 - `Host` (8 methods): `LoadSplash`, `LoadMenuScene`, `Version`, `MenuTick`, `HasSaves`, `LowRAMNotice`, `DismissRAMNotice`, `DrawFlame`.
-- `Shell` = `Sizer + Settings + Widgets + Host`.
+- `Updates` (`update_notice.go`, 2 methods): `UpdateAvailable`, `DownloadUpdate`. `cmd/game` wires `outbound/updatecheck`. Separate from `Host`, which is at the 8-method limit.
+- `VersionLine`, `UpdateCard`: the running version with any newer one, and the notice's card.
+- `Shell` = `Sizer + Settings + Widgets + Host + Updates`.
 
 ## Allowed Dependencies
 - Leaves: `art`, `gfx`, `ids`, `ports`, `uikit`.
@@ -26,6 +28,7 @@ The main menu screen: the hero splash and the colony diorama behind it, the butt
 
 ## Invariants
 - The menu view covers the whole screen (`TestMenuViewCoversScreen`).
+- The update notice sits on the left under the version line, clear of the rail and the RAM card. Later hides it for this run only; nothing is saved (`TestUpdateCardFitsAndClearsTheRail`, `TestJourneyFlowUpdateNotice`).
 - Flicker and breath ranges stay within bounds (`TestMenuFlickerAndBreathRange`); motes are deterministic (`TestMenuMotesDeterministic`) and the slow-path view is deterministic (`TestMenuViewSlowAndDeterministic`).
 
 ## Hot Paths
@@ -39,7 +42,7 @@ The main menu screen: the hero splash and the colony diorama behind it, the butt
 - Reads save slot metadata through `ports.Saves` (`HasSaves`, `NewestSlot`). Writes nothing.
 
 ## Tests
-- 4 source files, 2 test files, 12 `Test*` functions.
+- 5 source files, 2 test files, 14 `Test*` functions.
 - Coverage 41 % (ARCH-005 row).
 
 ## Benchmarks

@@ -64,6 +64,12 @@ func (a *App) dismissRAMNotice(total uint64) {
 	a.setSettings(s)
 }
 
+// noUpdates knows of no newer release (captures, tests, dev builds).
+type noUpdates struct{}
+
+func (noUpdates) UpdateAvailable() (string, string) { return "", "" }
+func (noUpdates) DownloadUpdate()                   {}
+
 // menuHost is what the main menu sees of the App: the ports roles it calls
 // and mainmenu.Host.
 type menuHost struct{ a *App }
@@ -98,6 +104,10 @@ func (h menuHost) MenuTick() uint64               { return h.a.menuTick }
 func (h menuHost) HasSaves() bool                 { return h.a.hasSaves() }
 func (h menuHost) LowRAMNotice() (string, uint64) { return h.a.lowRAMNotice() }
 func (h menuHost) DismissRAMNotice(total uint64)  { h.a.dismissRAMNotice(total) }
+func (h menuHost) UpdateAvailable() (string, string) {
+	return h.a.cfg.Updates.UpdateAvailable()
+}
+func (h menuHost) DownloadUpdate() { h.a.cfg.Updates.DownloadUpdate() }
 func (h menuHost) DrawFlame(dst *ebiten.Image, sx, sy float32, t, tile, k float64) {
 	creature.DrawFlameScreen(dst, sx, sy, t, tile, k)
 }

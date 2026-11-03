@@ -1418,7 +1418,8 @@ the player what just happened and what requires attention.
 -   [-] **Plugins** (disabled)
 -   [x] **Credits** (creator, originality notice, asset credits)
 -   [x] **Quit**
--   [-] **Version/build identifier** (shows `dev` / AppConfig.Version; no commit id)
+-   [-] **Version/build identifier** (shows `dev` / AppConfig.Version on the main menu and the pause menu; no commit id)
+-   [x] **Update notice** (`updatecheck`: a newer GitHub release shows a card with Download and Later; the pause menu names it next to the version)
 
 ## 27.2 Scenario selection
 
