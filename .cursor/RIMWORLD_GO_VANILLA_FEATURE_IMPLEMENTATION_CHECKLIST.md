@@ -2228,6 +2228,12 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 -   [x] **New wanderers after a game over** (MAP-19, wiki: Endings: after 8 in-game hours, at most 7 groups, a pawn picker; they walk in from an edge)
 -   [x] **Enemy doors** (MAP-17, wiki: Door: a settlement's doors are shut to colonists and open to defenders, can be attacked, and can be claimed once no defender stands)
 -   [x] **Visitors of a faction turned hostile** (MAP-18: they leave as enemies, shooting back; trade closes; a letter says so)
+-   [x] **Claim a defeated base's turrets** (MAP-21, wiki: Faction base: once no defender stands, a turret is claimed, fires for us with no grid, reloads by hauler; a mini-turret can be uninstalled and then needs power)
+-   [x] **Turret fuse** (MAP-21, wiki: Mini-turret, Autocannon turret, Uranium slug turret: 50 % below 20 % health, 240 ticks, 3.9 or 5.9 tiles; autocannon and slug can't be re-installed)
+-   [-] Raiders running from a sparking turret (wiki: Uranium slug turret) and the fuse's hiss: not built
+-   [x] **Wanderers after a launch, and the wanderer event** (MAP-22, wiki: Ending: all aboard counts as gone; a wanderer event restarts a gone colony)
+-   [x] **Arresting a visitor turns the faction** (MAP-23, wiki: Events, Factions: at most -75 goodwill on reaching the target, whatever the roll; everyone there turns)
+-   [x] **Leaving visitors carry their wounded** (MAP-23, wiki: Visitor)
 -   [x] **Settle new colony** (MAP-3: `SettleHere` from the caravan inspector with Max colonies 1-5, default 1, and `AbandonMap` with a confirm; abandoning the last colony wipes it and keeps an empty map, then the everyone-gone ending appears, MAP-14)
     -   If multiple colonies are supported by target scope.
 

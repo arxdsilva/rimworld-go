@@ -1,4 +1,4 @@
-# Multiple maps gap analysis (MAP-0..MAP-4)
+# Multiple maps gap analysis (MAP-0..MAP-6)
 
 Scope: several maps open and ticking at once (the colony, mineral sites, attacked settlements, founded colonies and caravan encounters), the caravan and pod rules that open them, and the UI that switches between them, compared with core vanilla RimWorld 1.5 (no DLC). Load only for MAP-* tasks. Phase handoffs go in `.cursor/handoffs/MAP-N-*.md`. AX-9 (transport pods, caravans, the mineral scanner) refused all of this as needing "a second map". Sister document: `WORLDGEN_GAP_ANALYSIS.md` (WG-03 supplies the movement difficulty that MAP-09 uses). Sources: rimworldwiki.com pages Caravan, Colony, Faction base, Long-range mineral scanner, Transport pod, Ending, Goodwill (2026-11-02). Names and prose are ours.
 
@@ -11,7 +11,7 @@ Scope: several maps open and ticking at once (the colony, mineral sites, attacke
 | Ticking | Every open map ticks every tick, as vanilla does. |
 | Architecture | The per-map half of `Game` moves into a `mapState` bundle that `Game` embeds, so field promotion keeps `g.grid` compiling; lifecycle lives in the new sub-package `game/maps` behind consumer-owned hosts of at most 8 methods. `application/game` is at its SOLID ceiling, so added lines are paid for by moving the caravan state machine out. |
 | Saves | Map 0 stays at the top level of the save; extra maps are additive (`ExtraMaps`); `SaveVersion` 11 to 12 with a no-op migration. A single-map game hashes as today. |
-| Open questions (settled by the user, 2026-11-02) | Abandoning the last colony ends the game with a modal (MAP-14). Settlement turrets fire on colonists and the player can't power or claim them (MAP-13). Caravans attack neutral bases as vanilla does (MAP-15). |
+| Open questions (settled by the user, 2026-11-02) | Abandoning the last colony ends the game with a modal (MAP-14). Settlement turrets fire on colonists and the player can't power or claim them (MAP-13; the "can't claim" half was reversed on 2026-11-03 by MAP-21, because the wiki's Faction base page says they can be claimed once the base is defeated. That decision was taken while fixing the four deferred items, and the user was told; they can still overrule it). Caravans attack neutral bases as vanilla does (MAP-15). |
 | Original tuning (wiki silent) | Ticks per tile and winter curve (WG-03), encounter MTB by biome, map sizes for sites, settlements and encounters, defender points, defender flee threshold, mass multiplier curve, settlement loot, pack-up pacing. |
 
 ## Scope notes
@@ -53,23 +53,86 @@ Columns: id, vanilla behaviour (wiki page), ours today (the state before MAP-0, 
 | MAP-10 | Pods: 2.25 chemfuel per tile, max 66; onto a manned base always an attack (edge or centre); onto a loaded map pick the exact spot (Transport pod) | Fuel and range are done (`domain/world/caravan/pods.go:12-18`, `PodRange`, `PodFuel`); drop, gift and visit work (AX-9); landing elsewhere becomes a caravan (`travel/launch.go:139` `land`) | No attack, found or spot | New pod modes `PodArriveAttackEdge`, `PodArriveAttackCentre`, `PodArriveFound`, `PodArriveSpot`; `LaunchReason` loses the refusal; `land` asks the map registry; range ring and anchored landing menu in the world view. Done: Drop, DropCentre, Spot, Attack edge and centre, Found, gift, visit (Visit is refused without a settlement), all from the world view (`TestJourneyWorldPodModes`, `PodPickSpot`, `PodFound`). Caravans and pods follow the same rule since MAP-15. | MAP-2 | done |
 | MAP-11 | Colonist bar groups pawns by map; the world button switches the view | One map; the World tab is modal (`ebiten/windows/world.go`, `world_ax9.go`; F8 `tab.world` in `platform/input/defs.go:147`); `hud.Host.CenterOnMap` takes bare coordinates (`ebiten/hud/deps.go:69`) | No map groups or switching | `SimMaps` port, `mapnav` leaf (keys `]` and `[`), colonist bar groups per map and caravan (`hud/colonistbar.go`), `Jump(Spot)`, per-map camera sidecar, scene per map in the renderer, full-screen `worldview` with inspector Colonist bar groups, `]` and `[`, `Jump(Spot)`, per-map camera and renderer scenes are done; the full-screen `worldview/` (F8, picking with cycle and double-click enter, markers, inspector with disabled reasons, route and ETA, search, legend, grid) replaced `windows/world*.go`; 14 journeys in `journey_world_test.go`; Split stays disabled ("Not yet"). | MAP-1, MAP-3 | done |
 | MAP-12 | Raids can target any colony | One target (the single grid) | Threats always hit map 0 | The storyteller picks a target map from its own named stream, weighted by colony wealth; cross-map "Threat on X" alert Storyteller target on `streamStory`; no draw with one colony; sites and encounters are never picked. | MAP-2 | done |
-| MAP-13 | Settlement turrets stay hostile, aren't needed to destroy the base and stay hostile afterwards (Faction base) | Inert, and `Claim` accepted them (`orders/claim.go`), so the player could own and wire them | Free turrets, and no danger from them | `Building.Hostile`: fires on colonists and tame animals, needs no power and joins no grid, can't be claimed or ordered; drafted colonists can shoot it; defeat still ignores it | MAP-4 | done |
+| MAP-13 | Settlement turrets stay hostile, aren't needed to destroy the base and stay hostile afterwards (Faction base) | Inert, and `Claim` accepted them (`orders/claim.go`), so the player could own and wire them | Free turrets, and no danger from them | `Building.Hostile`: fires on colonists and tame animals, needs no power and joins no grid, can't be ordered; drafted colonists can shoot it; defeat still ignores it. Claiming it after the defeat came with MAP-21 | MAP-4 | done |
 | MAP-14 | When all colonists are dead, kidnapped or gone the colony is over and a popup says so; play can continue watching (Ending) | No flow at all, even when everyone dies; abandoning the last colony only posted a letter | The game never ends | `AX.EveryoneGone` (no colonist on any map, none on the road except prisoners, beasts and the kidnapped); modal with Keep watching, Load and Main menu. New wanderers: MAP-19 | MAP-4 | done |
 | MAP-15 | Non-hostile settlements can be attacked; -200 goodwill and the faction turns hostile (Faction base) | The simulation and pods allowed it; only the caravan inspector refused, and its tip wrongly said the people turn hostile for good | One UI refusal, one wrong tip | Refusal removed, confirm modal on a non-hostile base, tip fixed, relation shown | MAP-4 | done |
 | MAP-16 | Goodwill with a settlement's faction can't rise during an attack (Faction base) | The daily drift, radio and pod gifts, released prisoners and given animals all raised it | Goodwill rose during a siege | `Faction.Besieged`, kept in step by `Lifecycle.Flush`: `Adjust` and `DailyDrift` ignore rises, the radio refuses the gift with a reason, a pod gift lands for no goodwill (`TestGoodwillCannotRiseDuringAttack`) | MAP-4 | done |
 | MAP-17 | "Doors owned by an enemy must be claimed (which requires defeating said enemy) in order for colonists to open them" (Door) | `Settle` held every settlement door open, so colonists walked in | No break-in | Doors lie shut with `Building.Hostile`. Defenders open them, colonists and animals are shut out (`colonistGrid`, region `Enemy` flag). A drafted Attack order breaks one; Claim works once no defender stands. Defenders go out when the compound is hit, held by `defendHold` (`settlement_door_test.go`) | MAP-5 | done |
 | MAP-18 | Visitors whose faction turns hostile stop visiting and leave, defending themselves, as enemies (game behaviour; the Visitors page is missing) | They carried on visiting | Peace with an enemy | `visit/turn.go`: they become raiders already leaving, in a group of their own that costs no goodwill; trade closes; a letter says so; a guest in bed stays until recovered (`visitors_hostile_test.go`) | MAP-5 | done |
 | MAP-19 | "The option to create new wanderers to start the colony again after eight in-game hours… After seven new groups have been created, the option will no longer be available" (Endings) | Deferred at MAP-14 | No way back after a game over | `command.NewWanderers`, a picker, walking in from an edge; `AX.Wanderers*` read model; a legacy colony with no setup gets no option (`wanderers_test.go`, `journey_wanderers_test.go`) | MAP-5 | done |
-| MAP-20 | A mini-turret needs a hauler after 60 rounds (Mini-turret); nothing says an enemy reloads one | A spent settlement turret goes silent for good | None: checked, same result | Kept and pinned (`TestSpentSettlementTurretStaysSilent`); the inspector says "Out of ammo". The wiki is silent on enemy turrets, so this rests on game behaviour | MAP-5 | done |
+| MAP-21 | Turrets of a defeated base can be claimed, fire for you, can be uninstalled; a turret below 20 % has a 50 % chance of a 240-tick fuse and a blast, 3.9 or 5.9 tiles; autocannon and slug can't be re-installed; turrets shoot manhunters (Faction base, Mini-turret, Autocannon turret, Uranium slug turret) | Not claimable; rolled only when destroyed; heavy ones never blew up; heavy ones movable | Lost turrets, safer heavy turrets | `Building.OffGrid`, `orders.ReasonDefenders`, `combat/turret_fuse.go`, `colonyTarget` with manhunters, `construction.Movable` (`settlement_claim_test.go`, `combat/turret_fuse_test.go`, `journey_settlement_door_test.go`) | MAP-6 | done |
+| MAP-22 | New wanderers also after leaving the planet; a wanderer event restarts a dead colony; a menu like game creation's (Ending) | Launch was a special case; the event needed a colonist; no portrait or passions | No way back after a launch | `whereEscaped`, `everyoneGone`, `wandererFits`, ship ending first with the button, the picker's card (`ax8_test.go`, `wanderers_test.go`, `hud/ending_test.go`, `dialogs/wanderers_test.go`) | MAP-6 | done |
+| MAP-23 | Arresting a visitor sets relations to -75 and turns everyone there at once (Events, Factions); leaving visitors carry their wounded (Visitor) | A capture cost a little and turned nobody; the wounded stayed | Free arrests | `arrestGoodwill`, `ArrestRoll`, `visit/carry.go` with no-flap `Rec.NoCarry` (`visitors_carry_test.go`) | MAP-6 | done |
+| MAP-20 | A mini-turret needs a hauler after 60 rounds (Mini-turret); nothing says an enemy reloads one | A spent settlement turret goes silent for good | None: checked, same result | Kept and pinned (`TestSpentSettlementTurretStaysSilent`); the inspector says "Out of ammo". The wiki is silent on enemy turrets, so this rests on game behaviour. MAP-21 lets it be claimed and reloaded after the defeat | MAP-5 | done |
 
 ## Counts
 
 | | Count |
 |---|---|
-| Rows MAP-01 to MAP-20 | 20 |
+| Rows MAP-01 to MAP-23 | 23 |
 | Missing | 0 |
 | Partial | 0 |
-| Done | 20 |
+| Done | 23 |
+
+## The four deferred items, second pass (MAP-6, 2026-11-03)
+
+Wiki pages read on 2026-11-03. **[S]** marks a page too long to fetch whole, read through a summary of it. **Memory** marks what rests on no published page. Rows MAP-21 to MAP-23 sit above with the others' format; this section has the detail.
+
+### Settlement doors (MAP-17)
+
+| Vanilla | Before | Now | Source |
+|---|---|---|---|
+| "Doors owned by an enemy must be claimed (which requires defeating said enemy) in order for colonists to open them." | Same rule, but a refused Claim said nothing | The refused order says "Defeat the defenders first." | Door |
+| Claiming adds the piece to the Home area | Done (AX-1) | Unchanged | Orders, Claim |
+| "Unclaimed doors, like those in ruins, can be opened by any non-animal until they are claimed." | Our ruins have no doors | Nothing to do | Door; `grep` of mapgen |
+| | No journey for a claim after a real defeat | `TestJourneyClaimAfterTheDefeat` | |
+
+Old saves keep settlement doors held open from before MAP-17. They aren't migrated: it only makes that one attack easier.
+
+### Settlement turrets (MAP-13, MAP-20, MAP-21)
+
+| Vanilla | Before | Now | Source |
+|---|---|---|---|
+| "Once defeated, a base's turrets can be safely claimed to disable firing at friendly pawns and even turn them to your side." | Never claimable: **wrong**, this line was missed in MAP-4 | Claim once no defender stands. It fires for us off any grid | Faction base |
+| "These can be uninstalled and brought back to your colony." | No | A mini-turret crates and moves; set up elsewhere, it needs power like any other | Faction base |
+| Autocannon and uranium slug turret: "cannot be re-installed" | They could move, with a crate | Can't be moved or uninstalled | Autocannon turret, Uranium slug turret |
+| "the turrets will remain hostile after the base is destroyed" | Done | Unchanged | Faction base |
+| 60 rounds, then a hauler brings 80 steel (autocannon 90 and 180) | Done for ours | A claimed turret reloads the same way | Mini-turret, Autocannon turret |
+| Nothing says an enemy reloads | Silent for good | Silent until claimed (`TestSpentSettlementTurretStaysSilent`) | No source: kept |
+| "50% chance to explode when damaged below 20% health ... spark and emit a hissing sound for 240 ticks (4 secs) before exploding, dealing 50 Bomb damage in a 3.9 tile radius" | Rolled only when destroyed, no fuse | `combat/turret_fuse.go`: one roll on the fall below 20 %, 240-tick fuse, saved. Destroyed first, it blows at once | Mini-turret |
+| Autocannon and slug turret: same chance and fuse, 5.9 tiles | **Never blew up at all**, whatever the old comment said | They do, at 5.9 | Autocannon turret, Uranium slug turret |
+| "only shoot at enemies of their faction, including manhunting animals but not animals hunting pawns" | A settlement's turret ignored manhunters | It shoots them | Mini-turret |
+| "All nearby raiders will attempt to move out of the blast radius before detonation." | No | Left out: needs raider AI of its own | Uranium slug turret |
+| "hissing sound" | No | The fuse shows as a message and a pane line, no sound or particle | Mini-turret |
+
+### New wanderers (MAP-19, MAP-22)
+
+| Vanilla | Before | Now | Source |
+|---|---|---|---|
+| Offered when all are "dead, kidnapped, or have left the planet" | A launch with everyone aboard kept passengers as stashed; only a special case said "gone" | `whereEscaped`: gone for good. The ship's screen opens first and offers New wanderers; "Nobody left" follows the same rule | Ending |
+| "does not appear with the archonexus ending or the planetkiller" | We have neither | Nothing to do | Ending |
+| 8 in-game hours, seven groups | Done | Unchanged | Ending |
+| "It is still possible to continue by waiting until a wanderer event appears." "a wanderer event or refugee chased quest can restart the colony." | The event needed a living colonist | It fits a gone colony, and the arrival ends the game over | Ending |
+| "a menu similar to the game creation menu" | List and card, no portrait or passions | Portrait and passion glyphs on the card | Ending |
+| Pawn count, arrival gear, commitment mode | | No page says. Kept: the setup's group size, what `spawnGenerated` gives, available in commitment | Silent |
+| | | A legacy colony (no setup) still has no option: `hasSetup` gates much else. The refugee quest doesn't exist here, so it isn't offered | |
+
+Older saves that launched before this keep their passengers as stashed, so they don't count as gone, as before.
+
+### Visitors when their faction turns hostile (MAP-18, MAP-23)
+
+| Vanilla | Before | Now | Source |
+|---|---|---|---|
+| Arrest: "that entire faction will immediately turn extremely hostile, dropping to -76 Goodwill ... includes any other members of the same Faction currently there." "Arresting a visiting faction member will set relations to -75 (Hostile) ... instantly making enemies out of any remaining faction members on the map." | Only a successful arrest cost anything: 25 goodwill, and nobody turned unless that crossed the line | On reaching the target, whatever the roll: goodwill at most -75, everyone turns. -75 taken over -76: the two pages disagree by one | Events [S], Factions [S] |
+| "When leaving, visitors will carry away wounded members of their faction." | Left them behind | `visit/carry.go`, for leavers. Turned visitors run on the raid AI and don't | Visitor |
+| Visitors already on the map when the faction turns for any other reason | Leave as enemies | Unchanged | **Memory**: no page covers it |
+| A raid alert | The MAP-5 report said a raid alert could pause the game. **That was wrong** | Turned visitors flee, so they raise no raid alert; their letter is "caution". Pinned by `TestTurnedGuestsRaiseNoRaidAlert` and `TestFleeingEnemiesRaiseNoRaidAlert` | Code |
+| Goodwill for a guest healed by a turned faction: the wiki has "+16" for returning a member and "rescuing fallen faction members does not improve good will" | +12 | Unchanged: the pages disagree | Factions [S] |
+
+### Noticed, not changed
+
+- Our hostile threshold is -50 and calm is -10; the wiki says hostile at -75 or below. Moving it changes every goodwill balance.
+- After a base falls, the wiki has "enemies will arrive in 4 days" unless you settle, and the site vanishes. Ours has the 24-hour pack-up from the Caravan page and no such raid. Both pages are published, and MAP-03 is the one built.
 
 ## Attack and founding
 

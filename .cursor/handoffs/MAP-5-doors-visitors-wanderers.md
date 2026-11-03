@@ -14,9 +14,9 @@ Closes the MAP-4 leftovers the vanilla way (asked 2026-11-02). Gap rows MAP-17 t
 ## Gaps
 - Old saves keep their held-open settlement doors.
 - A legacy colony (no setup) gets no new-wanderers option.
-- No journey claims a door after a defeat in the real loop; a stub test and a game test cover it.
+- ~~No journey claims a door after a defeat in the real loop~~ closed by MAP-6 (`TestJourneyClaimAfterTheDefeat`).
 - No enemy mark on a door: it shows the usual sprite.
 - A recovering guest of a turned faction still earns the usual +12 goodwill.
 - A caravan has no pack animals, so a turned caravan has none to take along.
-- The wanderer picker is a `dialogs` modal, not the wizard page (`dialogs` can't import `wizard`), so it has no portrait or passion glyphs.
-- The Visitors page was unreachable, so MAP-18 rests on game behaviour, not a published page.
+- The wanderer picker is a `dialogs` modal, not the wizard page (`dialogs` can't import `wizard`). MAP-6 gave it the portrait and passion glyphs.
+- The Visitors page was unreachable, so MAP-18 rests on game behaviour, not a published page. MAP-6 found the arrest and carrying rules on Events, Factions and Visitor; the turn itself still has no page.
