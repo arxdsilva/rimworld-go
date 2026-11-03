@@ -1,9 +1,12 @@
 package dialogs
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/look"
 )
 
 // speedPausedTier is the paused speed tier (ports.Speed).
@@ -23,6 +26,11 @@ type Host interface {
 	// HoldSpeed sets the speed tier without the speed cue: the dialogs
 	// pause the display while open and give the tier back after.
 	HoldSpeed(tier int)
+	// DrawPortrait draws a person of look l fitted into the box; false: no
+	// art for it.
+	DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, h float64) bool
+	// Icon is UI icon key's image (nil: missing).
+	Icon(key string) *ebiten.Image
 }
 
 // Shell composes the roles the feature calls with its Host.

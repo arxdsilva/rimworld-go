@@ -51,8 +51,8 @@ func (g *Game) isStashed(id entity.EntityID) bool {
 }
 
 // everyoneGone reports no living colonist left under our control (wiki: Ending):
-// none on a map, on the road, in a pod or casket, due to land or away on the
-// ship. Prisoners, animals and the kidnapped do not count.
+// none on a map, on the road, in a pod or casket or due to land. Prisoners,
+// animals, the kidnapped and those who left on the ship do not count.
 func everyoneGone(g *Game) bool {
 	for _, m := range g.maps {
 		if slices.ContainsFunc(m.pawnIDs, g.alive) {
@@ -62,12 +62,12 @@ func everyoneGone(g *Game) bool {
 	if slices.ContainsFunc(g.ng.pods, func(p podState) bool { return !p.Landed && len(p.Pawns) > 0 }) {
 		return false
 	}
-	if g.worldSt == nil || g.worldSt.ship.Launched() {
-		return g.worldSt == nil
+	if g.worldSt == nil {
+		return true
 	}
 	return !slices.ContainsFunc(g.worldSt.stashed, func(r stashRec) bool {
 		p := g.personOf(r.ID)
-		return !r.Prisoner && r.Beast == nil && g.alive(r.ID) && (p == nil || p.Where != whereKidnapped)
+		return !r.Prisoner && r.Beast == nil && g.alive(r.ID) && (p == nil || p.Where != whereKidnapped && p.Where != whereEscaped)
 	})
 }
 

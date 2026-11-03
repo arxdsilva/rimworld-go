@@ -34,6 +34,7 @@ func (s *State) Launch(h Host, id entity.EntityID) []string {
 		if p := s.Sleeper(c); p != 0 {
 			names = append(names, h.Name(p))
 			s.setSleeper(c, 0) // they go with the ship: stashed for good
+			h.Escaped(p)
 		}
 	}
 	for _, pid := range sh.Parts {

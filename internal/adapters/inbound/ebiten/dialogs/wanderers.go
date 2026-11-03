@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -15,8 +17,8 @@ import (
 // The New wanderers picker (MAIN_UI §38, wiki: Endings): after a game over,
 // once the wait is over, the player chooses the group that sets out to start
 // again, in a menu shaped like the game creation menu's colonist page: a
-// list of slots with a reroll on each, and the chosen person's card (name,
-// age, backstory, traits and skills). Start emits NewWanderers (Name = the
+// list of slots with a reroll on each, and the chosen person's card (portrait,
+// name, age, backstory, traits and skills with passion glyphs). Start emits NewWanderers (Name = the
 // seeds, comma-separated decimal). The seeds come from the tick the picker
 // opened at and a local reroll counter: UI state, no simulation access.
 
@@ -29,6 +31,8 @@ const (
 	wanderersH         = 540
 	wandererRowH       = 40
 	wandererSkillRowH  = 17
+	wandererPortraitW  = 90
+	wandererPortraitH  = 112
 	wanderersWaitWords = "New wanderers can't set out yet."
 )
 
@@ -212,6 +216,12 @@ func wandererName(b game.BioView) string {
 // traits, what they cannot do and their skills.
 func (dl *Dealings) wandererCard(b game.BioView, in gfx.Rect) {
 	k := dl.kit()
+	pic := gfx.Rect{X: in.Right() - wandererPortraitW, Y: in.Y, W: wandererPortraitW, H: wandererPortraitH}
+	k.Queue(func(dst *ebiten.Image) {
+		uikit.FillRect(dst, pic, uikit.Field)
+		dl.sh.DrawPortrait(dst, b.Look, float64(pic.X), float64(pic.Y), float64(pic.W), float64(pic.H))
+	})
+	wide := float64(in.W - wandererPortraitW - 12) // the lines beside the portrait
 	full := strings.TrimSpace(b.First + " '" + b.Nick + "' " + b.Last)
 	if b.Nick == "" {
 		full = wandererName(b)
@@ -222,7 +232,7 @@ func (dl *Dealings) wandererCard(b game.BioView, in gfx.Rect) {
 	k.Label(in.X, y, fmt.Sprintf("%s, age %d. Build: %s.", b.Sex, b.AgeYears, b.Build), uikit.DimText())
 	y += 22
 	for _, l := range [][2]string{{"Childhood", b.Childhood}, {"Adulthood", b.Adulthood}} {
-		k.Label(in.X, y, l[0]+": "+gfx.Ellipsize(l[1], gfx.Body, float64(in.W-90)), gfx.Body)
+		k.Label(in.X, y, l[0]+": "+gfx.Ellipsize(l[1], gfx.Body, wide-90), gfx.Body)
 		y += 20
 	}
 	traits := "none"
@@ -233,13 +243,13 @@ func (dl *Dealings) wandererCard(b game.BioView, in gfx.Rect) {
 		}
 		traits = strings.Join(names, ", ")
 	}
-	k.Label(in.X, y, "Traits: "+gfx.Ellipsize(traits, gfx.Body, float64(in.W-70)), gfx.Body)
+	k.Label(in.X, y, "Traits: "+gfx.Ellipsize(traits, gfx.Body, wide-70), gfx.Body)
 	y += 20
 	if len(b.Incapable) > 0 {
-		k.Label(in.X, y, "Incapable of: "+gfx.Ellipsize(strings.Join(b.Incapable, ", "), gfx.Body, float64(in.W-110)), gfx.WithColor(gfx.Body, uikit.Danger))
+		k.Label(in.X, y, "Incapable of: "+gfx.Ellipsize(strings.Join(b.Incapable, ", "), gfx.Body, wide-110), gfx.WithColor(gfx.Body, uikit.Danger))
 		y += 20
 	}
-	y += 8
+	y = max(y, in.Y+wandererPortraitH) + 8
 	k.Label(in.X, y, "Skills", gfx.WithColor(gfx.Label, uikit.Heading))
 	y += 22
 	for _, s := range b.Skills {
@@ -247,19 +257,33 @@ func (dl *Dealings) wandererCard(b game.BioView, in gfx.Rect) {
 			break
 		}
 		st := gfx.Body
-		lvl, pass := strconv.Itoa(s.Level), ""
+		lvl := strconv.Itoa(s.Level)
 		if s.Incapable {
 			st, lvl = gfx.WithColor(gfx.Body, uikit.TextDisabled), "-"
 		}
-		switch s.Passion {
-		case 1:
-			pass = "passion"
-		case 2:
-			pass = "major passion"
-		}
 		k.Label(in.X, y, s.Label, st)
-		k.Label(in.X+170, y, pass, uikit.DimText())
-		k.Label(in.X+300, y, lvl, st)
+		dl.passionGlyph(float64(in.X+170), float64(y), s.Passion)
+		k.Label(in.X+210, y, lvl, st)
 		y += wandererSkillRowH
 	}
+}
+
+// passionGlyph draws a skill's passion at (x, y), as the game creation menu's
+// skill table does.
+func (dl *Dealings) passionGlyph(x, y float64, passion int) {
+	key := ""
+	switch passion {
+	case 1:
+		key = "ui_icon/passion_minor"
+	case 2:
+		key = "ui_icon/passion_major"
+	}
+	if key == "" {
+		return
+	}
+	dl.kit().Queue(func(dst *ebiten.Image) {
+		if img := dl.sh.Icon(key); img != nil {
+			gfx.Icon(dst, img, x, y, 14)
+		}
+	})
 }

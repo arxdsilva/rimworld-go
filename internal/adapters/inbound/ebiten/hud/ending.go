@@ -106,12 +106,12 @@ func countdown(ticks int) string {
 // left (DeclareLetters calls it every Update).
 func (c Right) declareEnding() {
 	w, st := c.sh.World(), c.session()
-	c.declareGone(w, st)
-	if !w.AX.ShipLaunched || st.ending {
+	if w.AX.ShipLaunched && !st.ending {
+		st.ending, st.goneArmed = true, false // this screen also says what the other one would
+		c.openEnding(w)
 		return
 	}
-	st.ending = true
-	c.openEnding(w)
+	c.declareGone(w, st)
 }
 
 // declareGone opens the everyone-gone screen (MAP-14) when
@@ -161,6 +161,9 @@ func standingLine(w game.WorldView, now clock.Tick) string {
 func (c Right) openEnding(w game.WorldView) {
 	buttons := []uikit.ModalButton{{ID: EndingWatchID, Label: "Keep watching", Style: uikit.BtnPrimary, Closes: true}}
 	if d, ok := c.sh.(ports.Dispatcher); ok {
+		if w.AX.EveryoneGone { // MAP-22: all aboard: new wanderers may still come (wiki: Ending)
+			buttons = c.wanderersButton(buttons, w, d)
+		}
 		buttons = append(buttons, uikit.ModalButton{ID: EndingMenuID, Label: "Main menu", Closes: true,
 			OnClick: func() { d.Do(ports.ReturnToMenu{}) }})
 	}
@@ -173,11 +176,7 @@ func (c Right) openEnding(w game.WorldView) {
 func (c Right) openGone(w game.WorldView) {
 	buttons := []uikit.ModalButton{{ID: GoneWatchID, Label: "Keep watching", Style: uikit.BtnPrimary, Closes: true}}
 	if d, ok := c.sh.(ports.Dispatcher); ok {
-		if w.AX.WanderersMax > 0 { // MAP-19: a game made from a Setup has the option
-			buttons = append(buttons, uikit.ModalButton{ID: GoneWanderersID, Label: "New wanderers", Closes: true,
-				Disabled: c.wanderersReason,
-				OnClick:  func() { d.Do(ports.OpenWanderers{}) }})
-		}
+		buttons = c.wanderersButton(buttons, w, d)
 		buttons = append(buttons, uikit.ModalButton{ID: GoneLoadID, Label: "Load game", Closes: true,
 			Disabled: func() string {
 				if s, ok := c.sh.Env().Game.(storyReader); ok && s.Story().Commitment {
@@ -190,6 +189,16 @@ func (c Right) openGone(w game.WorldView) {
 				OnClick: func() { d.Do(ports.ReturnToMenu{}) }})
 	}
 	c.pushEnding(GoneModalID, goneTitle, goneText, []string{standingLine(w, c.sh.Tick())}, buttons)
+}
+
+// wanderersButton appends New wanderers (MAP-19), in a game made from a Setup.
+func (c Right) wanderersButton(buttons []uikit.ModalButton, w game.WorldView, d ports.Dispatcher) []uikit.ModalButton {
+	if w.AX.WanderersMax == 0 {
+		return buttons
+	}
+	return append(buttons, uikit.ModalButton{ID: GoneWanderersID, Label: "New wanderers", Closes: true,
+		Disabled: c.wanderersReason,
+		OnClick:  func() { d.Do(ports.OpenWanderers{}) }})
 }
 
 // wanderersReason is why New wanderers is off: the wait, in hours, or the

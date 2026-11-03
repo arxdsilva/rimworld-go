@@ -434,8 +434,9 @@ func (h shipHost) Wake(id, casket entity.EntityID) bool {
 	}
 	return ok
 }
-func (h shipHost) Now() uint64  { return uint64(h.g.clock.Now()) }
-func (h shipHost) Seed() uint64 { return h.g.streams.seed }
+func (h shipHost) Escaped(id entity.EntityID) { h.g.setWhere(id, whereEscaped) }
+func (h shipHost) Now() uint64                { return uint64(h.g.clock.Now()) }
+func (h shipHost) Seed() uint64               { return h.g.streams.seed }
 func (h shipHost) Raid(mech bool) {
 	g, now, day := h.g, uint64(h.g.clock.Now()), int(uint64(h.g.clock.Now())/clock.TicksPerDay)
 	switch {

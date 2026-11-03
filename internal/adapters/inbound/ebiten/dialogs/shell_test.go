@@ -1,9 +1,12 @@
 package dialogs
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -17,6 +20,10 @@ type fakeShell struct {
 	tv    *game.TradeView
 	cv    *game.CommsView
 	sites []game.WorldSiteView
+
+	w         game.WorldView
+	portraits int
+	icons     []string
 }
 
 func newFake() (*fakeShell, *Dealings) {
@@ -36,18 +43,26 @@ func (h fakeHost) Cue(string)               {}
 func (h fakeHost) Hint(string)              {}
 func (h fakeHost) ReducedMotion() bool      { return true }
 
-func (s *fakeShell) Enqueue(c command.Command)     { s.cmds = append(s.cmds, c) }
-func (s *fakeShell) World() game.WorldView         { return game.WorldView{} }
-func (s *fakeShell) Pawns() []game.PawnView        { return nil }
-func (s *fakeShell) MapSize() (int, int)           { return 0, 0 }
-func (s *fakeShell) Tick() clock.Tick              { return 0 }
-func (s *fakeShell) Date() clock.Date              { return clock.Date{} }
-func (s *fakeShell) Paused() bool                  { return s.tier == 0 }
-func (s *fakeShell) TogglePause()                  {}
-func (s *fakeShell) SetSpeed(t int)                { s.tier = t }
-func (s *fakeShell) SpeedTier() int                { return s.tier }
-func (s *fakeShell) PauseReason() string           { return "" }
-func (s *fakeShell) HoldSpeed(t int)               { s.tier = t }
+func (s *fakeShell) Enqueue(c command.Command) { s.cmds = append(s.cmds, c) }
+func (s *fakeShell) World() game.WorldView     { return s.w }
+func (s *fakeShell) Pawns() []game.PawnView    { return nil }
+func (s *fakeShell) MapSize() (int, int)       { return 0, 0 }
+func (s *fakeShell) Tick() clock.Tick          { return 0 }
+func (s *fakeShell) Date() clock.Date          { return clock.Date{} }
+func (s *fakeShell) Paused() bool              { return s.tier == 0 }
+func (s *fakeShell) TogglePause()              {}
+func (s *fakeShell) SetSpeed(t int)            { s.tier = t }
+func (s *fakeShell) SpeedTier() int            { return s.tier }
+func (s *fakeShell) PauseReason() string       { return "" }
+func (s *fakeShell) HoldSpeed(t int)           { s.tier = t }
+func (s *fakeShell) DrawPortrait(*ebiten.Image, look.Look, float64, float64, float64, float64) bool {
+	s.portraits++
+	return false
+}
+func (s *fakeShell) Icon(key string) *ebiten.Image {
+	s.icons = append(s.icons, key)
+	return nil
+}
 func (s *fakeShell) Kit() *uikit.Kit               { return s.kit }
 func (s *fakeShell) Sites() []game.WorldSiteView   { return s.sites }
 func (s *fakeShell) Trade() (game.TradeView, bool) { return opt(s.tv) }

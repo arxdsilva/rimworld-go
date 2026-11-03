@@ -40,6 +40,8 @@ type Crew interface {
 	Board(id, casket entity.EntityID) bool
 	// Wake brings sleeper id back onto the map beside casket.
 	Wake(id, casket entity.EntityID) bool
+	// Escaped: sleeper id left the planet with the ship.
+	Escaped(id entity.EntityID)
 }
 
 // Colony is the colony-wide clock, raids and notices.

@@ -58,6 +58,7 @@ func (f *fake) StartJob(id entity.EntityID, rec job.Record) bool { f.jobs[id] = 
 func (f *fake) SetJob(id entity.EntityID, j job.Record)          { f.jobs[id] = j }
 func (f *fake) Board(id, casket entity.EntityID) bool            { f.aboard[id] = casket; return true }
 func (f *fake) Wake(id, _ entity.EntityID) bool                  { delete(f.aboard, id); return true }
+func (f *fake) Escaped(entity.EntityID)                          {}
 func (f *fake) Now() uint64                                      { return f.now }
 func (f *fake) Seed() uint64                                     { return 7 }
 func (f *fake) Raid(mech bool)                                   { f.raids = append(f.raids, mech) }

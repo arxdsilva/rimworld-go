@@ -97,7 +97,7 @@ func (g *Game) visitorIDs() []entity.EntityID {
 // wandererFits reports whether a wanderer can join: a set-up colony that
 // is not yet large. With nobody left at all, one restarts it (wiki: Ending).
 func (g *Game) wandererFits(now uint64) bool {
-	return g.hasSetup() && len(g.pawnIDs) > 0 && len(g.pawnIDs) < wandererMaxColony
+	return g.hasSetup() && (everyoneGone(g) || len(g.pawnIDs) > 0 && len(g.pawnIDs) < wandererMaxColony)
 }
 
 // wandererJoins brings in a generated human who walks to the colony and

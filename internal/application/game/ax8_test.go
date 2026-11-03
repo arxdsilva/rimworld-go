@@ -140,6 +140,71 @@ func TestShipBoardCountdownLaunch(t *testing.T) {
 	}
 }
 
+// launchedColony boards Ada, wakes the reactor and launches.
+func launchedColony(t *testing.T, g *Game, ada, casket, reactor entity.EntityID) {
+	t.Helper()
+	g.Enqueue(command.Command{Kind: command.BoardShip, Pawn: uint64(ada), Target: uint64(casket)})
+	for i := 0; i < 3000 && shipOf(g).Sleeper(casket) == 0; i++ {
+		g.Step(1)
+	}
+	if shipOf(g).Sleeper(casket) != ada {
+		t.Fatal("Ada did not board")
+	}
+	g.Enqueue(command.Command{Kind: command.StartReactor, Target: uint64(reactor)})
+	g.Step(1)
+	DevWakeShip(g, ship.CountdownTicks)
+	g.Step(250)
+	for _, id := range slices.Clone(g.raiderIDs) {
+		g.Injure(id, 10000)
+	}
+	g.Step(1)
+	if w := g.World(); len(w.AX.LaunchIssues) != 0 {
+		t.Fatalf("not ready: %v", w.AX.LaunchIssues)
+	}
+	g.Enqueue(command.Command{Kind: command.LaunchShip, Target: uint64(reactor)})
+	g.Step(1)
+	if !g.World().AX.ShipLaunched {
+		t.Fatal("no launch")
+	}
+}
+
+// TestLaunchWithEveryoneAboardIsEveryoneGone (MAP-22; wiki: Ending: "dead,
+// kidnapped, or have left the planet"): the passengers count as gone for good,
+// and the save agrees.
+func TestLaunchWithEveryoneAboardIsEveryoneGone(t *testing.T) {
+	t.Parallel()
+	g, ada, casket, reactor := shipColony(t)
+	launchedColony(t, g, ada, casket, reactor)
+	if p := g.personOf(ada); p == nil || p.Where != whereEscaped {
+		t.Fatalf("the passenger's place: %+v", p)
+	}
+	if !everyoneGone(g) || !g.World().AX.EveryoneGone {
+		t.Fatal("nobody left, but it doesn't say so")
+	}
+	if h := saveLoad(t, g); !everyoneGone(h) {
+		t.Fatal("a save brought someone back")
+	}
+}
+
+// TestLaunchLeavingSomeoneBehindIsNot: whoever stays keeps the colony going, and
+// so does someone away with a caravan's worth of stashing.
+func TestLaunchLeavingSomeoneBehindIsNot(t *testing.T) {
+	t.Parallel()
+	g, ada, casket, reactor := shipColony(t)
+	bo, err := g.SpawnNamedPawn(4, 14, "Bo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	launchedColony(t, g, ada, casket, reactor)
+	if everyoneGone(g) {
+		t.Fatal("Bo stayed")
+	}
+	g.die(bo, 0)
+	if !everyoneGone(g) {
+		t.Fatal("Bo died, and everyone's gone now")
+	}
+}
+
 // A sleeper climbs back out on the casket's wake order and walks again.
 func TestShipSleeperWakes(t *testing.T) {
 	t.Parallel()

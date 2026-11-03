@@ -316,3 +316,45 @@ func TestWanderersComeToTheFirstMapWhateverIsCurrent(t *testing.T) {
 func messageHas(g *Game, text string) bool {
 	return slices.ContainsFunc(g.messageViews(), func(m MessageView) bool { return strings.Contains(m.Text, text) })
 }
+
+// TestWandererEventRestartsAGoneColony (MAP-22; wiki: Ending: "a wanderer event
+// or refugee chased quest can restart the colony"): the storyteller's event
+// still fits with nobody left, however long the list of the dead, and whoever
+// comes ends the game over.
+func TestWandererEventRestartsAGoneColony(t *testing.T) {
+	t.Parallel()
+	g := goneGame(t)
+	for len(g.pawnIDs) < wandererMaxColony { // the dead keep their place on the list
+		id, err := g.SpawnNamedPawn(5, 5, "Late")
+		if err != nil {
+			t.Fatal(err)
+		}
+		g.die(id, 0)
+	}
+	g.Step(2)
+	if !everyoneGone(g) || g.ng.setup.GoneAt == 0 {
+		t.Fatalf("fixture: gone %v at %d", everyoneGone(g), g.ng.setup.GoneAt)
+	}
+	if !g.FireIncident("wanderer_joins") {
+		t.Fatal("the event doesn't fit a colony with nobody")
+	}
+	g.Step(2)
+	ax := g.World().AX
+	if len(livingColonists(g)) != 1 || ax.EveryoneGone || g.ng.setup.GoneAt != 0 {
+		t.Fatalf("colonists %d, gone %v, at %d", len(livingColonists(g)), ax.EveryoneGone, g.ng.setup.GoneAt)
+	}
+}
+
+// TestWandererEventKeepsTheColonyCap: with people here, the cap still counts.
+func TestWandererEventKeepsTheColonyCap(t *testing.T) {
+	t.Parallel()
+	g := visitorGame(t)
+	for len(g.pawnIDs) < wandererMaxColony {
+		if _, err := g.SpawnNamedPawn(5, 5, "More"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if g.wandererFits(uint64(g.clock.Now())) {
+		t.Fatal("a full colony takes one more")
+	}
+}

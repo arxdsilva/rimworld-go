@@ -24,6 +24,7 @@ const (
 	whereOffMap
 	whereKidnapped
 	whereDead
+	whereEscaped // left the planet on the ship (MAP-22); stashed for good
 )
 
 // worldPersonSalt seeds the bios of off-map people (a pure function of
@@ -428,7 +429,7 @@ func (g *Game) pruneStrangers() {
 	var drop []entity.EntityID
 	for _, id := range reg.ids {
 		p := reg.byID[id]
-		if p.Where == whereColony || p.Where == wherePrisoner || p.Where == whereCaravan || p.Where == whereKidnapped {
+		if p.Where == whereColony || p.Where == wherePrisoner || p.Where == whereCaravan || p.Where == whereKidnapped || p.Where == whereEscaped {
 			continue
 		}
 		if slices.Contains(g.pawnIDs, id) || p.Where != whereDead && g.onMap(id) {

@@ -1,10 +1,15 @@
 package ebiten
 
 import (
+	"image/color"
+
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	dialogspkg "rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/look"
 )
 
 // dialogs.Dealings owns the trade, comms and caravan dialogs (ARCH-005);
@@ -25,6 +30,14 @@ type dialogsShell struct {
 func newDialogs(a *App) *dialogs.Dealings {
 	return dialogs.New(dialogsShell{a.shell, dialogsHost{a}})
 }
+
+// DrawPortrait is the wizard's portrait, for the New wanderers card.
+func (h dialogsHost) DrawPortrait(dst *ebiten.Image, l look.Look, x, y, w, ht float64) bool {
+	return drawLookPortrait(dst, h.a.art, l, x, y, w, ht)
+}
+
+// Icon is a UI icon, untinted.
+func (h dialogsHost) Icon(key string) *ebiten.Image { return h.a.art.Image(key, color.NRGBA{}) }
 
 // Trade is the open trade session, if the simulation offers sessions.
 func (h dialogsHost) Trade() (game.TradeView, bool) {
