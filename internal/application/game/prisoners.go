@@ -31,8 +31,9 @@ const (
 	// releaseGoodwill is what a released prisoner's faction gives once it
 	// is home.
 	releaseGoodwill = 15
-	// arrestGoodwill is what arresting a visitor costs with its faction.
-	arrestGoodwill = 25
+	// arrestGoodwill is where trying to arrest a visitor leaves its faction's
+	// goodwill, at the most (wiki: Factions, -75; Events gives -76).
+	arrestGoodwill = -75
 	// arrestBase is the arrest chance, permille, before the arrester's
 	// Social skill (arrestPerSocial a level) and ArrestSuccess stat.
 	arrestBase      = 600

@@ -178,7 +178,7 @@ func (c *Care) DoArrest(id entity.EntityID, j job.Record) {
 		return
 	}
 	h.Interrupt(t, job.Interrupted)
-	c.pr.MakePrisoner(t, id, true)
+	c.pr.MakePrisoner(t, id)
 	c.DoCapture(id, job.Record{Kind: job.Capture, Target: t, State: job.Do, Forced: j.Forced})
 }
 

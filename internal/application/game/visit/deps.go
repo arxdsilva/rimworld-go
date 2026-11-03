@@ -23,7 +23,13 @@ type Host interface {
 	Fighters
 	Diplomacy
 	Records
-	Turning // turn.go
+	Leaving
+}
+
+// Leaving is how a visit ends early or with company.
+type Leaving interface {
+	Turning  // turn.go
+	Carrying // carry.go
 }
 
 // Bodies is a visitor as a person on the map.
@@ -108,6 +114,19 @@ type Fighters interface {
 	Engage(id entity.EntityID, x, y, r int, now uint64) bool
 	// NearestColonist is the standing colonist nearest (x, y).
 	NearestColonist(x, y int) (entity.EntityID, int, int, bool)
+}
+
+// Carrying is carrying a wounded friend (carry.go).
+type Carrying interface {
+	// Carrying is whom id carries (0: nobody).
+	Carrying(id entity.EntityID) entity.EntityID
+	// Pick lifts t onto id; PutDown sets down whoever id carries, if anyone.
+	Pick(id, t entity.EntityID)
+	PutDown(id entity.EntityID)
+	// Beside is a free tile beside (x, y) that id can stand on.
+	Beside(id entity.EntityID, x, y int) (int, int, bool)
+	// Message posts a map message.
+	Message(x, y int, text string)
 }
 
 // Diplomacy is the factions and their request cooldowns.

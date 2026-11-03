@@ -83,6 +83,8 @@ func (v Visits) turn(r *Rec, now uint64) bool {
 	if h.GuestStep(r.ID) || h.Rescuing(r.ID) {
 		return true
 	}
+	h.PutDown(r.ID) // carry.go: a fight is coming, the friend it held is on its own
+	r.Fetch = 0
 	h.TurnHostile(r.ID, now)
 	r.Leaving, r.LeaveAt = true, now
 	return true

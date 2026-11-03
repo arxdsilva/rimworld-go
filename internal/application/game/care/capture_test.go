@@ -249,7 +249,7 @@ func TestArrestChasesRollsAndCarriesOff(t *testing.T) {
 	h.log = nil
 	h.jobs[patient] = job.Record{Kind: job.Wander, State: job.Goto}
 	c.DoArrest(doc, job.Record{Kind: job.Arrest, Target: patient, State: job.Do, Forced: true})
-	if want := []string{"interrupt", "arrested", "drop gear"}; !slices.Equal(h.log, want) {
+	if want := []string{"interrupt", "prisoner", "drop gear"}; !slices.Equal(h.log, want) {
 		t.Fatalf("arrested: log %v", h.log)
 	}
 	j = h.jobs[doc]

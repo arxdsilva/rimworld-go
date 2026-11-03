@@ -95,6 +95,9 @@ func (a Tabs) prisonerCommands(p game.PawnView) []Button {
 	arrest := Button{ID: PrisonerArrest, Label: "Arrest", Icon: "arrest",
 		Desc: "Arrest " + p.Name + ": another colonist takes them to a prisoner bed.",
 		Cmds: []command.Command{{Kind: command.Arrest, Target: uint64(p.ID)}}}
+	if p.Visitor {
+		arrest.Desc += " Trying it turns their whole faction hostile."
+	}
 	var target game.PawnView
 	found := false
 	for _, h := range a.shell.Hostiles() {

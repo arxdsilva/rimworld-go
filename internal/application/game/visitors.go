@@ -95,7 +95,7 @@ func (g *Game) visitorIDs() []entity.EntityID {
 }
 
 // wandererFits reports whether a wanderer can join: a set-up colony that
-// is not yet large.
+// is not yet large. With nobody left at all, one restarts it (wiki: Ending).
 func (g *Game) wandererFits(now uint64) bool {
 	return g.hasSetup() && len(g.pawnIDs) > 0 && len(g.pawnIDs) < wandererMaxColony
 }
@@ -244,10 +244,11 @@ type visitHost struct {
 	visitFighters
 	visitDiplomacy
 	visitTurning
+	visitCarrying
 }
 
 func newVisitHost(g *Game) visitHost {
-	return visitHost{visitBodies{g}, visitMovers{g}, visitGround{g}, visitArrivals{g}, visitFighters{g}, visitDiplomacy{g}, visitTurning{g}}
+	return visitHost{visitBodies{g}, visitMovers{g}, visitGround{g}, visitArrivals{g}, visitFighters{g}, visitDiplomacy{g}, visitTurning{g}, visitCarrying{g}}
 }
 
 type visitBodies struct{ g *Game }
@@ -359,6 +360,19 @@ func (h visitDiplomacy) Factions() []faction.Faction              { return h.g.n
 func (h visitDiplomacy) Cooldown(id int) faction.Cooldowns        { return h.g.cooldownOf(id) }
 func (h visitDiplomacy) SetCooldown(id int, cd faction.Cooldowns) { h.g.setCooldown(id, cd) }
 func (h visitDiplomacy) RelDay(now uint64) int                    { return h.g.relDay(now) }
+
+// visitCarrying is visit.Carrying (visit/carry.go, MAP-23).
+type visitCarrying struct{ g *Game }
+
+func (h visitCarrying) Carrying(id entity.EntityID) entity.EntityID {
+	return h.g.care.Carry.Patient(id)
+}
+func (h visitCarrying) Pick(id, t entity.EntityID) { h.g.care.Carry.Pick(id, t) }
+func (h visitCarrying) PutDown(id entity.EntityID) { h.g.care.Carry.Drop(id) }
+func (h visitCarrying) Beside(id entity.EntityID, x, y int) (int, int, bool) {
+	return h.g.besideSpot(id, x, y)
+}
+func (h visitCarrying) Message(x, y int, text string) { h.g.message(x, y, "%s", text) }
 
 // visitTurning is visit.Turning (visit/turn.go, MAP-18): a turned visitor
 // becomes a raider already fleeing, the way a prisoner breaking out does

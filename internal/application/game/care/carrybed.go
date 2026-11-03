@@ -41,7 +41,7 @@ func (c *Care) carryToBed(id entity.EntityID, j job.Record, trip bedTrip) {
 	t := j.Target
 	c.Carry.Drop(id)
 	if trip == tripCapture && !h.IsPrisoner(t) {
-		c.pr.MakePrisoner(t, id, false)
+		c.pr.MakePrisoner(t, id)
 	}
 	c.layInBed(t, j.Dest, trip == tripRescue)
 	if trip == tripRescue {

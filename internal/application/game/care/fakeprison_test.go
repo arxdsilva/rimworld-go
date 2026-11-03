@@ -48,13 +48,9 @@ func (p *fakePrison) DropGear(target entity.EntityID) {
 	delete(p.armed, target)
 	p.h.log = append(p.h.log, "drop gear")
 }
-func (p *fakePrison) MakePrisoner(target, captor entity.EntityID, arrested bool) {
+func (p *fakePrison) MakePrisoner(target, captor entity.EntityID) {
 	p.h.prisoners[target] = true
-	if arrested {
-		p.h.log = append(p.h.log, "arrested")
-	} else {
-		p.h.log = append(p.h.log, "prisoner")
-	}
+	p.h.log = append(p.h.log, "prisoner")
 }
 func (p *fakePrison) ArrestRoll(arrester, target entity.EntityID) bool { return p.giveIn }
 func (p *fakePrison) StartFight(starter, other entity.EntityID) {

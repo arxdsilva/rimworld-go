@@ -35,7 +35,7 @@ func (p *orderPrison) PrisonBedFor(target entity.EntityID, x, y int) (entity.Ent
 	return p.prisonBd, p.prisonBd != 0
 }
 func (p *orderPrison) DropGear(target entity.EntityID) { p.log = append(p.log, "drop gear") }
-func (p *orderPrison) MakePrisoner(target, captor entity.EntityID, arrested bool) {
+func (p *orderPrison) MakePrisoner(target, captor entity.EntityID) {
 	p.log = append(p.log, "prisoner")
 }
 func (p *orderPrison) ArrestRoll(arrester, target entity.EntityID) bool { return true }

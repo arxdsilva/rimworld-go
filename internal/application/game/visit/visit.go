@@ -57,6 +57,10 @@ type Rec struct {
 	// Turned: its faction turned hostile during this visit (turn.go,
 	// MAP-18); it never goes back. Absent in older saves.
 	Turned bool
+	// Fetch is the wounded friend it is walking over to carry off, NoCarry
+	// that it gave up on that for this visit (carry.go). Absent in older saves.
+	Fetch   entity.EntityID
+	NoCarry bool
 }
 
 // Visits is the visitor records (the host's, Records) over the host.
@@ -230,10 +234,12 @@ func (v Visits) step(a Aid, r *Rec, now uint64) bool {
 		return v.walkOut(r, now) // turn.go
 	}
 	if !h.Present(r.ID) {
+		h.PutDown(r.ID)
 		return false
 	}
 	st := h.Status(r.ID)
 	if st == health.Dead {
+		h.PutDown(r.ID)
 		return false
 	}
 	if r.Turned {
@@ -241,6 +247,8 @@ func (v Visits) step(a Aid, r *Rec, now uint64) bool {
 	}
 	h.Hold(r.ID, now)
 	if r.Down = st != health.Alive; r.Down {
+		h.PutDown(r.ID)
+		r.Fetch = 0
 		return true // down: it waits for help (or capture)
 	}
 	if h.GuestStep(r.ID) {
@@ -254,9 +262,13 @@ func (v Visits) step(a Aid, r *Rec, now uint64) bool {
 		h.SetJob(r.ID, job.Record{})
 		j = job.Record{}
 	}
+	if r.Leaving && v.carryOff(r, x, y, j, now) { // carry.go
+		return true
+	}
+	j = h.Job(r.ID)
 	w, ht := h.Size()
 	if r.Leaving && (min(x, y, w-1-x, ht-1-y) <= Inset || j.Kind == job.Move && j.State == job.Complete || now >= r.LeaveAt+giveUp) {
-		h.Depart(r.ID)
+		v.goHome(r.ID) // carry.go
 		return false
 	}
 	if r.Ally && !r.Leaving {

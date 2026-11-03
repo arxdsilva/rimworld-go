@@ -22,16 +22,18 @@ func (h carePrison) PersonName(id entity.EntityID) string { return h.g.personNam
 func (h carePrison) PrisonBedFor(target entity.EntityID, x, y int) (entity.EntityID, bool) {
 	return h.g.prisonBedFor(target, Position{X: x, Y: y})
 }
-func (h carePrison) DropGear(target entity.EntityID) { h.g.dropRaiderGear(target) }
-func (h carePrison) MakePrisoner(target, captor entity.EntityID, arrested bool) {
-	if arrested && h.g.visitor(target) {
+func (h carePrison) DropGear(target entity.EntityID)             { h.g.dropRaiderGear(target) }
+func (h carePrison) MakePrisoner(target, captor entity.EntityID) { h.g.makePrisoner(target, captor) }
+
+// ArrestRoll: reaching a visitor to arrest it turns its faction hostile
+// whatever the roll says (wiki: Events), and visit.notice turns the rest of
+// its people on the map.
+func (h carePrison) ArrestRoll(arrester, target entity.EntityID) bool {
+	if h.g.visitor(target) {
 		if f := h.g.factionOf(h.g.personOf(target).Faction); f != nil {
-			faction.Adjust(f, -arrestGoodwill, "visitor arrested")
+			faction.Adjust(f, min(0, arrestGoodwill-f.Goodwill), "visitor arrested")
 		}
 	}
-	h.g.makePrisoner(target, captor)
-}
-func (h carePrison) ArrestRoll(arrester, target entity.EntityID) bool {
 	return h.g.stream(streamPrison).IntN(1000) < h.g.arrestChance(arrester, target)
 }
 func (h carePrison) StartFight(starter, other entity.EntityID) { h.g.mind.StartFight(starter, other) }

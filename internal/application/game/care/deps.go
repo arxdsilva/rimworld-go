@@ -181,10 +181,10 @@ type Prison interface {
 	PrisonBedFor(target entity.EntityID, x, y int) (entity.EntityID, bool)
 	// DropGear leaves target's weapon on the ground (a captive keeps none).
 	DropGear(target entity.EntityID)
-	// MakePrisoner turns target into the colony's prisoner, taken by
-	// captor; arrested marks an arrest (a visitor's faction resents it).
-	MakePrisoner(target, captor entity.EntityID, arrested bool)
-	// ArrestRoll rolls arrester's attempt on target on the host's prison
+	// MakePrisoner turns target into the colony's prisoner, taken by captor.
+	MakePrisoner(target, captor entity.EntityID)
+	// ArrestRoll is arrester's attempt, beside it, on target: a visitor's
+	// faction turns hostile at once. It rolls the attempt on the host's prison
 	// stream: true when target gives in.
 	ArrestRoll(arrester, target entity.EntityID) bool
 	// StartFight starts a social fight: starter attacks other.
