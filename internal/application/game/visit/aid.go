@@ -235,7 +235,7 @@ func (a Aid) AllyIDs(id int) []entity.EntityID {
 	ref := a.ref(id)
 	var out []entity.EntityID
 	for _, r := range a.v.recs() {
-		if r.Ally && r.Faction == ref {
+		if r.Ally && !r.Turned && r.Faction == ref {
 			out = append(out, r.ID)
 		}
 	}
@@ -247,7 +247,7 @@ func (a Aid) AllyIDs(id int) []entity.EntityID {
 func (a Aid) IsAlly(id entity.EntityID) bool {
 	for _, r := range a.v.recs() {
 		if r.ID == id {
-			return r.Ally
+			return r.Ally && !r.Turned
 		}
 	}
 	return false
@@ -280,7 +280,7 @@ func (a Aid) leave(c *Call) {
 	rs := a.v.recs()
 	for i := range rs {
 		r := &rs[i]
-		if !r.Ally || r.Faction != ref || r.Leaving {
+		if !r.Ally || r.Turned || r.Faction != ref || r.Leaving {
 			continue
 		}
 		if first == 0 {
@@ -342,7 +342,7 @@ func (a Aid) RaidTarget(x, y int) (entity.EntityID, int, int, bool) {
 		bestD = weapon.Distance(x, y, bx, by)
 	}
 	for _, r := range a.v.recs() {
-		if !r.Ally || r.Leaving || !h.Standing(r.ID) {
+		if !r.Ally || r.Turned || r.Leaving || !h.Standing(r.ID) {
 			continue
 		}
 		ax, ay := h.Pos(r.ID)

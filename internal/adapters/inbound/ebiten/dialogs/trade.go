@@ -200,11 +200,12 @@ func (dl *Dealings) SyncDealings() {
 		}
 		dl.commsDismissed = false
 	}
+	dl.syncWanderers()
 	dl.pause()
 }
 
 // Open reports whether a trade or comms dialog is open.
-func (dl *Dealings) Open() bool { return dl.trade != nil || dl.comms != nil }
+func (dl *Dealings) Open() bool { return dl.trade != nil || dl.comms != nil || dl.wand != nil }
 
 // Paused reports whether the dialogs hold the display paused.
 func (dl *Dealings) Paused() bool { return dl.paused }

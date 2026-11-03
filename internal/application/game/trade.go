@@ -57,7 +57,9 @@ type tradeState struct {
 
 // traderCaravan is a trader caravan on the map (saved). Trader is the
 // visitor carrying the goods, Members the whole group (ascending),
-// Faction the faction id (faction.Faction.ID).
+// Faction the faction id (faction.Faction.ID). Turned: its faction turned
+// hostile while it was here (MAP-18); it trades no more, even if they calm
+// down.
 type traderCaravan struct {
 	Trader  entity.EntityID
 	Members []entity.EntityID
@@ -65,6 +67,7 @@ type traderCaravan struct {
 	Kind    trade.TraderKind
 	Stock   trade.Stock
 	LeaveAt uint64
+	Turned  bool
 }
 
 // orbitalShip is an orbital trader in radio range until Until (saved).
@@ -182,6 +185,7 @@ func clonePodsT(ps []tradePod) []tradePod {
 // caravans come, the ship leaves, pods land and sessions whose people or
 // trader are gone close.
 func (g *Game) tradeTick(now uint64) {
+	wanderersTick(g, now) // world_stash.go (MAP-19)
 	t := &g.trade
 	if t.caravan == nil && t.orbital == nil && len(t.pods) == 0 && len(t.requests) == 0 && len(t.aid) == 0 && t.session == nil && t.comms == nil {
 		return
@@ -227,7 +231,7 @@ func (g *Game) checkSessions() {
 // session, so it works whether or not a dialog is open.
 func (g *Game) TradeStatus() (OrbitalView, bool) {
 	v := g.orbitalView(uint64(g.clock.Now()))
-	if c := g.trade.caravan; c != nil {
+	if c := g.trade.caravan; c != nil && !c.Turned {
 		v.CaravanVisiting = true
 		if f := g.factionByID(c.Faction); f != nil {
 			v.CaravanFaction = f.Name

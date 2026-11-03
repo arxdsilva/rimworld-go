@@ -23,6 +23,7 @@ type Host interface {
 	Fighters
 	Diplomacy
 	Records
+	Turning // turn.go
 }
 
 // Bodies is a visitor as a person on the map.

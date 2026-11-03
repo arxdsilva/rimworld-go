@@ -404,6 +404,8 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.apply(intent{kind: intentStartGame})
 	case ports.Quit:
 		a.apply(intent{kind: intentQuit})
+	case ports.OpenWanderers:
+		a.deal.OpenWanderers() // dialogs/wanderers.go (MAP-19)
 	case ports.ReturnToMenu:
 		a.apply(intent{kind: intentReturnToMenu})
 	case ports.Resume:

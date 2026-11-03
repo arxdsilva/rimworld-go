@@ -18,6 +18,7 @@ const (
 	Gate                    // a fence gate: shut to wild animals
 	Trap                    // a spike trap: shut to sappers
 	Flap                    // an animal flap (A2): shut to people
+	Enemy                   // a settlement's door (MAP-17): shut to people and every animal, open to its own
 )
 
 const (

@@ -43,6 +43,11 @@ type Setup struct {
 	// (mapgen.Version; 0: the pre-MAPGEN-2 site generator). Debug views
 	// regenerate fields only for their own version.
 	GenVersion uint16
+	// GoneAt is the tick everyone was gone from (0: someone is here), and
+	// WandererGroups how many new groups came since (MAP-19). Absent in
+	// older saves.
+	GoneAt         uint64
+	WandererGroups int
 }
 
 // MaxEnabledSide is the largest map side the wizard offers; raised by the

@@ -49,3 +49,6 @@ The colony's trade, comms and caravan dialogs: what a trader or faction offers, 
 
 ## Known Design Constraints
 - `TradeSource`/`CommsSource` are optional: the root asserts them on `Simulation`, so a source without them is handled by the dialog's own code path.
+
+## New wanderers picker (MAP-19)
+`wanderers.go`: `OpenWanderers` (from `ports.OpenWanderers`) opens a modal of up to `AX.WanderersMax` slots with a reroll each and the chosen person's card (`game.WandererBio`); Start sends `command.NewWanderers` (Name = seeds). Seeds come from the open tick and a local counter (UI state). Counts in `Open()`, so the display pauses while it is open. Imports `domain/pawn/pawngen` for `Rules` only.

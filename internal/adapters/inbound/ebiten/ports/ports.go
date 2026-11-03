@@ -290,13 +290,17 @@ type Resume struct{}
 // Pause opens the pause overlay.
 type Pause struct{}
 
-func (Push) isIntent()         {}
-func (Back) isIntent()         {}
-func (StartGame) isIntent()    {}
-func (Quit) isIntent()         {}
-func (ReturnToMenu) isIntent() {}
-func (Resume) isIntent()       {}
-func (Pause) isIntent()        {}
+// OpenWanderers opens the New wanderers picker (MAP-19), after a game over.
+type OpenWanderers struct{}
+
+func (Push) isIntent()          {}
+func (Back) isIntent()          {}
+func (StartGame) isIntent()     {}
+func (Quit) isIntent()          {}
+func (ReturnToMenu) isIntent()  {}
+func (Resume) isIntent()        {}
+func (Pause) isIntent()         {}
+func (OpenWanderers) isIntent() {}
 
 // Widgets is the immediate-mode kit a screen declares its widgets into.
 type Widgets interface {

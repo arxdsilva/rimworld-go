@@ -3,6 +3,7 @@ package raid
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -18,6 +19,12 @@ import (
 // or leave idle (raiders.go givenUp); once the group has lost
 // DefendFleeLoss percent it flees off the map through the raiders' own
 // retreat (Group.FleeLoss, broken).
+//
+// MAP-17: the compound's doors are shut and its people walk through them.
+// SightRange never needed a clear line, so a colonist outside the wall still
+// draws them out; a blow on any piece of the compound does too (Alarm), from
+// anywhere. Once engaged a defender stays so at least defendHold while it has
+// anyone to go for, and every blow or wound starts that over.
 
 const (
 	// DefendFleeLoss is the share of a settlement's defenders (percent)
@@ -33,7 +40,22 @@ const (
 	defendRelease = 2 * SightRange
 	// defendPost spreads the posts around the centre (cells either way).
 	defendPost = 3
+	// defendHold is the least a defender stays engaged (original tuning): a
+	// shot from far off, or a colonist in and out of range, can't flap it
+	// through its door.
+	defendHold = clock.TicksPerHour
 )
+
+// Alarm: a piece of a compound was hit at now, so its defenders turn out
+// (the game's building damage). No group defends on a colony's map.
+func (rs *Raiders) Alarm(now uint64) {
+	groups := rs.h.Groups()
+	for i := range groups {
+		if groups[i].Plan == Defend {
+			groups[i].Alarm = now
+		}
+	}
+}
 
 // Defending counts the defenders still on their feet and not fleeing.
 func (rs *Raiders) Defending() int {
@@ -55,24 +77,28 @@ func (rs *Raiders) defend(id entity.EntityID, r *Raider, j job.Record, hurt, x, 
 	if grp.Plan != Defend {
 		return false
 	}
-	shot := hurt > r.Hurt
-	if !shot && (now+uint64(id))%stageEvery != 0 {
+	shot, alarm := hurt > r.Hurt, grp.Alarm > r.Engaged
+	if !shot && !alarm && (now+uint64(id))%stageEvery != 0 {
 		return r.Mode != Assaulting // between looks: as it was
 	}
-	d := 1 << 20
+	d, foe := 1<<20, false
 	if _, tx, ty, ok := h.RaidTarget(x, y); ok {
-		d = weapon.Distance(x, y, tx, ty)
+		d, foe = weapon.Distance(x, y, tx, ty), true
 	}
 	switch {
-	case r.Mode == Assaulting && d <= defendRelease:
+	case r.Mode == Assaulting && (d <= defendRelease || shot || alarm || foe && now < r.Engaged+defendHold):
+		if shot || alarm { // its hold starts over
+			r.Hurt, r.Engaged = hurt, now
+			h.SetRaider(id, *r)
+		}
 		return false // still a fight in reach
 	case r.Mode == Assaulting:
-		r.Mode, r.Idle = Arriving, 0 // back to its post
+		r.Mode, r.Idle, r.Hurt = Arriving, 0, hurt // back to its post
 		h.SetRaider(id, *r)
 		h.Interrupt(id, job.Cancelled)
 		j = job.Record{}
-	case d <= SightRange || shot:
-		r.Mode, r.Hurt, r.Idle = Assaulting, hurt, 0
+	case d <= SightRange || shot || alarm:
+		r.Mode, r.Hurt, r.Idle, r.Engaged = Assaulting, hurt, 0, now
 		h.SetRaider(id, *r)
 		return false
 	}

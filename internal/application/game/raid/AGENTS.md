@@ -35,6 +35,7 @@ Threats: the legacy storyteller's die and raid plans, the raider AI (arrive, ass
 - No map iteration; raiders are visited in the game's `raiderIDs` order.
 - Hysteresis (CBT-4): a raider moves to cover only for `coverMargin` more and then holds `coverHold` (`TestRaiderCoverDoesNotFlap`); a mechanoid keeps bashing its one block until it is down; hives look every 60 ticks.
 - Hysteresis: a raider that found no way in waits `RaiderRetry`; a fleeing raider never returns to the fight (`TestRetreatAtFleeShareNoFlap`); a siege holds its camp until its storm; a staged raid storms once and a raider walks back only past `StageWander`, and the group storms on sight of a colonist or at its 10-15 h assault timer (`TestStagedRaidStormsOnceNoFlap`); thieves and burners retry on `RaiderRetry` cooldowns.
+- Hysteresis (MAP-17): a settlement's defender turns out on a target in `SightRange`, a wound, or a blow on its compound (`Raiders.Alarm`, `Group.Alarm` newer than `Raider.Engaged`); it stays out `defendHold`, each further blow or wound starting that over, and only then past `defendRelease` goes back to its post (`TestDefendEngagesAndReleasesNoFlap`, `TestDefendAlarmTurnsOutAndDoesNotFlap`).
 
 ## Tests
 - Unit tests here: `raid_test.go` (threat odds, plan names, rock damage with save round trip).

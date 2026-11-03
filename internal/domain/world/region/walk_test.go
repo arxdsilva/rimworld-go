@@ -34,7 +34,7 @@ type world struct {
 }
 
 func randomFlags(r *randx.Rand) Flags {
-	switch r.IntN(6) {
+	switch r.IntN(7) {
 	case 0:
 		return Door
 	case 1:
@@ -45,6 +45,8 @@ func randomFlags(r *randx.Rand) Flags {
 		return Trap
 	case 4:
 		return Door | Trap
+	case 5:
+		return Enemy
 	}
 	return 0
 }
@@ -260,4 +262,21 @@ func FuzzRegionReachability(f *testing.F) {
 			wd.check(t, r, 6)
 		}
 	})
+}
+
+// TestEnemyFlagLayers (MAP-17): a settlement's door is shut to colonists, tame
+// and wild animals, and open to raiders and sappers, which plan on their own
+// doors the game has already cleared.
+func TestEnemyFlagLayers(t *testing.T) {
+	t.Parallel()
+	for _, l := range []Layer{Colonist, Tame, Wild} {
+		if l.Blocks()&Enemy == 0 {
+			t.Fatalf("layer %d walks through an enemy door", l)
+		}
+	}
+	for _, l := range []Layer{Hostile, Sapper} {
+		if l.Blocks()&Enemy != 0 {
+			t.Fatalf("layer %d is shut out by its own door", l)
+		}
+	}
 }

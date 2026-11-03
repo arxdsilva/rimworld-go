@@ -202,6 +202,11 @@ func TestSiegeResupply(t *testing.T) {
 	if meals() != before+12 || g.raidGroups[0].Supply <= uint64(g.clock.Now()) {
 		t.Fatalf("12 meals landed (%d → %d) and the next supply is set", before, meals())
 	}
+	for _, id := range g.itemIDs {
+		if st, _ := g.stacks.Get(id); st.Kind == item.SurvivalMeal && (!st.Forbidden || !st.Unclaimed) {
+			t.Fatalf("the besiegers' meals are the colony's to haul: %+v", st)
+		}
+	}
 }
 
 // TestPrisonBreakFightsAndFlees: an escaping prisoner is hostile,

@@ -50,21 +50,29 @@ func TestSlaughterAndClaimRules(t *testing.T) {
 	if Slaughterable(animal.State{}) || !Slaughterable(animal.State{Tame: true}) {
 		t.Fatal("slaughter marks tame animals only")
 	}
-	if Claimable(construction.Building{Kind: construction.Bed}) {
+	if Claimable(construction.Building{Kind: construction.Bed}, 0) {
 		t.Fatal("the colony's own bed is not claimed")
 	}
-	if !Claimable(construction.Building{Kind: construction.Bed, Ruin: true}) || !Claimable(construction.Building{Kind: construction.Wall, Ancient: true}) {
+	if !Claimable(construction.Building{Kind: construction.Bed, Ruin: true}, 0) || !Claimable(construction.Building{Kind: construction.Wall, Ancient: true}, 0) {
 		t.Fatal("ruins and raider or vault pieces are claimed")
 	}
-	if Claimable(construction.Building{Kind: construction.SteamVent, Ancient: true}) {
+	if Claimable(construction.Building{Kind: construction.SteamVent, Ancient: true}, 0) {
 		t.Fatal("a natural feature is nobody's")
 	}
 	// MAP-13: a settlement's turret stays hostile; the rest of the compound is claimable
-	if Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true, Hostile: true}) {
+	if Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true, Hostile: true}, 0) {
 		t.Fatal("a settlement's turret is not claimed")
 	}
-	if !Claimable(construction.Building{Kind: construction.Wall, Ancient: true}) || !Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true}) {
+	if !Claimable(construction.Building{Kind: construction.Wall, Ancient: true}, 1) || !Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true}, 1) {
 		t.Fatal("a compound's other pieces stay claimable")
+	}
+	// MAP-17: its door waits for the defeat
+	door := construction.Building{Kind: construction.Door, Ancient: true, Hostile: true}
+	if Claimable(door, 1) {
+		t.Fatal("an enemy door is claimed only with no defender up")
+	}
+	if !Claimable(door, 0) {
+		t.Fatal("with the defenders beaten its door is claimed")
 	}
 }
 

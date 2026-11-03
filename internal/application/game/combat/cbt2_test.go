@@ -323,7 +323,7 @@ func TestDropThenReEquip(t *testing.T) {
 		t.Fatal("belt drawn")
 	}
 	d.DropWeapon(1, true)
-	d.DropSpare(1)
+	d.DropSpare(1, false)
 	if _, _, ok := d.Spare(1); ok || f.putDown[len(f.putDown)-1] != "5,5:frag grenades:3" {
 		t.Fatalf("the dead drop their spare: %v", f.putDown)
 	}

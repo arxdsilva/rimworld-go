@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/forage"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -25,6 +26,10 @@ const (
 	fencePost
 	fenceGate
 	fenceFlap // A2: an animal flap, open to animals, shut to people (flapQuery)
+	// fenceEnemy (MAP-17): a settlement's door, shut to colonists and every
+	// animal until smashed or claimed. Its defenders plan on hostileMap, which
+	// has it open (combat.Doors.Shut).
+	fenceEnemy
 )
 
 // fenceIndex marks the cells holding a built fence (fencePost) or gate
@@ -35,7 +40,7 @@ type fenceIndex struct {
 	built bool
 	cells []uint8
 	n     int
-	flaps int // A2: animal flaps among the n
+	flaps int // A2: animal flaps and, MAP-17, enemy doors among the n: cells shut to people
 	gen   uint64
 }
 
@@ -56,13 +61,16 @@ func (g *Game) fences() *fenceIndex {
 	}
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
-		if !ok || !flapOrFence(b.Kind) {
+		if !ok || !fenceIndexed(b) {
 			continue
 		}
 		v := fencePost
-		if construction.DefOf(b.Kind).Gate {
+		switch {
+		case combat.EnemyDoor(b):
+			v, f.flaps = fenceEnemy, f.flaps+1
+		case construction.DefOf(b.Kind).Gate:
 			v = fenceGate
-		} else if b.Kind == construction.AnimalFlap {
+		case b.Kind == construction.AnimalFlap:
 			v, f.flaps = fenceFlap, f.flaps+1
 		}
 		cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -92,7 +100,7 @@ func (g *Game) fenceAt(x, y int) uint8 {
 // a fence, or a gate for a wild one.
 func (g *Game) fenceBars(tame bool, x, y int) bool {
 	switch g.fenceAt(x, y) {
-	case fencePost:
+	case fencePost, fenceEnemy:
 		return true
 	case fenceGate:
 		return !tame
@@ -125,7 +133,7 @@ func (q fenceQuery) Walkable(x, y int) bool {
 		return false
 	}
 	switch q.cells[y*q.w+x] {
-	case fencePost:
+	case fencePost, fenceEnemy:
 		return false
 	case fenceGate:
 		return q.gateOK
@@ -212,22 +220,31 @@ func flapOrFence(k construction.Kind) bool {
 	return construction.DefOf(k).AnimalBlock || k == construction.AnimalFlap
 }
 
-// flapQuery is the grid as people walk it while animal flaps stand (A2):
-// a flap is shut to them, with the colonist layer's region answers.
+// fenceIndexed: b goes on the fence index.
+func fenceIndexed(b construction.Building) bool { return flapOrFence(b.Kind) || combat.EnemyDoor(b) }
+
+// flapQuery is the grid as people walk it while animal flaps or a
+// settlement's doors stand (A2, MAP-17): those are shut to them, with the
+// colonist layer's region answers.
 type flapQuery struct{ g *Game }
 
 func (q flapQuery) Width() int  { return q.g.grid.Width() }
 func (q flapQuery) Height() int { return q.g.grid.Height() }
 func (q flapQuery) Walkable(x, y int) bool {
-	return q.g.grid.Walkable(x, y) && q.g.fence.cells[y*q.g.grid.Width()+x] != fenceFlap
+	if !q.g.grid.Walkable(x, y) {
+		return false
+	}
+	c := q.g.fence.cells[y*q.g.grid.Width()+x]
+	return c != fenceFlap && c != fenceEnemy
 }
 func (q flapQuery) BlockedBits() []uint64 { return q.g.layerBits(region.Colonist) }
 func (q flapQuery) Reach(sx, sy, tx, ty int) bool {
 	return q.g.noRegions() || checkReach(q, sx, sy, tx, ty, q.g.regionsNow().Reach(region.Colonist, sx, sy, tx, ty))
 }
 
-// colonistGrid is the walkability people plan with: the grid, or with
-// animal flaps on the map the grid with the flaps shut (flapQuery).
+// colonistGrid is the walkability people plan with: the grid, or with animal
+// flaps or a settlement's doors on the map the grid with those shut
+// (flapQuery); a map with neither pays nothing.
 func colonistGrid(g *Game) pathing.Query {
 	if g.fences().flaps == 0 {
 		return g.grid

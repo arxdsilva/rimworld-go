@@ -44,8 +44,8 @@ func CycleTicks(d weapon.Def) int {
 }
 
 // Target is the tile of a target that can still be attacked: a living
-// animal, a standing colonist or a sentry turret (raiders turn on
-// turrets).
+// animal, a standing colonist, a sentry turret (raiders turn on turrets) or a
+// settlement's door a colonist was ordered at (MAP-17).
 func (s *Strikes) Target(id entity.EntityID) (x, y int, ok bool) { return s.target(id, false) }
 
 // target is Target; downed also accepts a humanlike lying downed (CBT-2:
@@ -61,7 +61,7 @@ func (s *Strikes) target(id entity.EntityID, downed bool) (x, y int, ok bool) {
 	if h.StandingPawn(id) || downed && h.Lying(id) {
 		return h.Pos(id)
 	}
-	if b, ok := s.turrets.At(id); ok {
+	if b, ok := s.buildingTarget(id); ok {
 		return b.X, b.Y, true
 	}
 	return 0, 0, false
@@ -108,7 +108,7 @@ func (s *Strikes) strike(attacker, target entity.EntityID, wk weapon.Kind, roll 
 	h := s.h
 	hk, d := s.natural(attacker, wk)
 	ax, ay, _ := h.Pos(attacker)
-	if b, ok := s.turrets.At(target); ok { // PLAY-024: a raider attacking a sentry turret
+	if b, ok := s.buildingTarget(target); ok { // PLAY-024: a raider attacking a sentry turret; MAP-17: a colonist a settlement's door
 		s.building(attacker, target, b.X, b.Y, ax, ay, d, roll)
 		return d
 	}
@@ -199,10 +199,10 @@ func (s *Strikes) alive(id entity.EntityID) bool {
 	return s.h.StandingPawn(id) || s.h.Lying(id)
 }
 
-// building is StrikeRoll on building target at (tx, ty) (a sentry turret):
-// the attacker's hit chance (no cover: the turret is the cover), a trace
-// marked Building, and DamageBuilding on a hit (a destroyed turret blows
-// up: Turrets.Blast).
+// building is StrikeRoll on building target at (tx, ty) (a sentry turret or a
+// settlement's door): the attacker's hit chance (no cover: the building is
+// the cover), a trace marked Building, and DamageBuilding on a hit (a
+// destroyed turret blows up: Turrets.Blast).
 func (s *Strikes) building(attacker, target entity.EntityID, tx, ty, ax, ay int, d weapon.Def, roll func(int) int) {
 	h := s.h
 	r := s.report(attacker, ax, ay, target, tx, ty, d, true)
@@ -234,13 +234,13 @@ func (s *Strikes) Report(shooter, target entity.EntityID) (attack.Report, bool) 
 	if !ok {
 		return attack.Report{}, false
 	}
-	_, turret := s.turrets.At(target)
+	_, built := s.buildingTarget(target)
 	wk := s.h.Weapon(shooter)
 	d := s.def(shooter, wk)
-	if !turret && s.melee(shooter, wk, d, ax, ay, tx, ty) {
+	if !built && s.melee(shooter, wk, d, ax, ay, tx, ty) {
 		d.Ranged, d.Bands = false, attack.Bands{} // a gun's stock beside its target
 	}
-	return s.report(shooter, ax, ay, target, tx, ty, d, turret), true
+	return s.report(shooter, ax, ay, target, tx, ty, d, built), true
 }
 
 // report is the hit chance of attacker at (ax, ay) on target at (tx, ty)

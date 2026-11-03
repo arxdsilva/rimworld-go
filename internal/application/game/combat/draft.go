@@ -437,14 +437,16 @@ func (d *Drafts) Spare(id entity.EntityID) (k item.Kind, qty int, ok bool) {
 	return s.Kind, s.Qty, !s.Empty()
 }
 
-// DropSpare puts colonist id's spare weapon down where it lies (it died).
-func (d *Drafts) DropSpare(id entity.EntityID) {
+// DropSpare puts colonist id's spare weapon down where it lies (it died);
+// forbid is the home-area rule its other gear fell under (game/allow).
+func (d *Drafts) DropSpare(id entity.EntityID, forbid bool) {
 	s := d.set[id]
 	x, y, ok := d.h.Pos(id)
 	if d.arms == nil || !ok || s.Spare.Empty() {
 		return
 	}
 	st := s.Spare.Stack(x, y)
+	st.Forbidden = forbid
 	s.Spare = inventory.Slot{}
 	d.put(id, s)
 	d.arms.DropAt(st)

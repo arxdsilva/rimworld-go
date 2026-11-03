@@ -94,8 +94,9 @@ func (t *Turrets) hostileLive() bool {
 }
 
 // OrderedAt is what a drafted colonist's Attack order on (x, y) goes for:
-// the animal there, else the raider (Ordered), else a settlement's turret
-// (0: nothing to attack).
+// the animal there, else the raider (Ordered), else a settlement's turret or
+// door (0: nothing to attack). A door is only ever an order: AutoEngage looks
+// through the turret list (hostileInReach).
 func (s *Strikes) OrderedAt(beast, raider entity.EntityID, x, y int) entity.EntityID {
 	switch {
 	case beast != 0:
@@ -103,7 +104,22 @@ func (s *Strikes) OrderedAt(beast, raider entity.EntityID, x, y int) entity.Enti
 	case raider != 0 && s.Ordered(raider):
 		return raider
 	}
-	return s.turrets.HostileAt(x, y)
+	if id := s.turrets.HostileAt(x, y); id != 0 {
+		return id
+	}
+	return enemyDoorAt(s.h, x, y)
+}
+
+// buildingTarget is target id as a building a strike deals with: a turret, or
+// a settlement's door (MAP-17).
+func (s *Strikes) buildingTarget(id entity.EntityID) (construction.Building, bool) {
+	if b, ok := s.turrets.At(id); ok {
+		return b, true
+	}
+	if b, ok := s.h.Building(id); ok && EnemyDoor(b) {
+		return b, true
+	}
+	return construction.Building{}, false
 }
 
 // yieldsTurret reports a colonist at (x, y) dropping its own attack on a

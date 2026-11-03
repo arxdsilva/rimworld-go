@@ -88,7 +88,7 @@ func (g *Game) syncRegionFlags(f *fenceIndex) {
 	if f.n > 0 {
 		for _, id := range g.bldgIDs {
 			b, ok := g.bldgs.Get(id)
-			if !ok || !flapOrFence(b.Kind) {
+			if !ok || !fenceIndexed(b) {
 				continue
 			}
 			fp, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -118,6 +118,8 @@ func (g *Game) syncRegionFlags(f *fenceIndex) {
 				fl |= region.Gate
 			case fenceFlap:
 				fl |= region.Flap
+			case fenceEnemy:
+				fl |= region.Enemy
 			}
 		}
 		if fl != 0 {

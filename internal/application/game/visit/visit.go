@@ -54,6 +54,9 @@ type Rec struct {
 	// Down: it was down last tick, so a death now is a death while down
 	// (care.Hospitality.Died, SIM-063).
 	Down bool
+	// Turned: its faction turned hostile during this visit (turn.go,
+	// MAP-18); it never goes back. Absent in older saves.
+	Turned bool
 }
 
 // Visits is the visitor records (the host's, Records) over the host.
@@ -180,7 +183,9 @@ func (v Visits) SetStay(id entity.EntityID, leaveAt uint64) {
 func (v Visits) IDs() []entity.EntityID {
 	out := make([]entity.EntityID, 0, len(v.recs()))
 	for _, r := range v.recs() {
-		out = append(out, r.ID)
+		if !r.Turned || !v.h.Enemy(r.ID) { // turn.go: an enemy is on the raider list only
+			out = append(out, r.ID)
+		}
 	}
 	slices.Sort(out)
 	return out
@@ -194,6 +199,7 @@ func (v Visits) Tick(a Aid, now uint64) {
 	if list == nil {
 		return
 	}
+	v.notice(*list) // turn.go: a faction turned hostile (MAP-18)
 	kept := (*list)[:0]
 	for i := range *list {
 		r := &(*list)[i] // in place: a guest leaving updates the record mid-step
@@ -202,6 +208,9 @@ func (v Visits) Tick(a Aid, now uint64) {
 			continue
 		}
 		v.h.TraderGone(r.ID) // trade_caravan.go (PLAY-024): the trader's goods
+		if r.Turned {
+			continue // an enemy's end costs no goodwill and gets no letter
+		}
 		if r.Ally {
 			a.gone(*r) // a letter for one who fell
 		}
@@ -217,12 +226,18 @@ func (v Visits) Tick(a Aid, now uint64) {
 // the map (gone, dead, taken prisoner).
 func (v Visits) step(a Aid, r *Rec, now uint64) bool {
 	h := v.h
+	if r.Turned && h.Enemy(r.ID) {
+		return v.walkOut(r, now) // turn.go
+	}
 	if !h.Present(r.ID) {
 		return false
 	}
 	st := h.Status(r.ID)
 	if st == health.Dead {
 		return false
+	}
+	if r.Turned {
+		return v.turn(r, now) // turn.go
 	}
 	h.Hold(r.ID, now)
 	if r.Down = st != health.Alive; r.Down {

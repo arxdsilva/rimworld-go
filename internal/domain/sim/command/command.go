@@ -382,6 +382,8 @@ const (
 	// CaravanReform, the pawns on map Target leave as a caravan;
 	// EncounterAnswer, Mode answers encounter letter Target (0 give, 1 refuse);
 	// SetColonyCap, Count is Options' Max colonies (MAP-06).
+	// NewWanderers (MAP-14), Name is the chosen group's pawn seeds, a new
+	// group after a game over.
 	EnterMap
 	AttackSettlement
 	SettleHere
@@ -390,6 +392,7 @@ const (
 	CaravanReform
 	EncounterAnswer
 	SetColonyCap
+	NewWanderers
 )
 
 // LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).

@@ -1498,7 +1498,7 @@ func (g *Game) world() WorldView {
 	g.fillStainView(&w)    // stains.go
 	g.fillDirtView(&w)     // filth.go
 	g.fillHomeView(&w)     // home.go
-	g.fillSnowView(&w)     // snow_clear.go (PLAY-015)
+	g.fillSnowView(&w)     // game/snow (PLAY-015)
 	g.fillPenView(&w)      // pens.go
 	g.fillPlanView(&w)     // plan.go
 	g.fillSetupView(&w)    // setup_view.go (NG-1)

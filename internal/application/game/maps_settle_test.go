@@ -144,7 +144,7 @@ func TestAttackSettlementOpensCompound(t *testing.T) {
 	}
 	goods := map[item.Kind]bool{}
 	for _, id := range m.itemIDs {
-		if st, ok := m.stacks.Get(id); ok && !st.Forbidden {
+		if st, ok := m.stacks.Get(id); ok && st.Forbidden && st.Unclaimed { // found loot, as a vault's: nothing goes for it unasked
 			goods[st.Kind] = true
 		}
 	}

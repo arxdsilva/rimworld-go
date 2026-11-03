@@ -31,6 +31,9 @@ type Buildings interface {
 	Claimed(id entity.EntityID)
 	// Message posts a quiet message at (x, y).
 	Message(x, y int, text string)
+	// Defending counts a settlement's defenders on their feet on this map
+	// (Claim: its doors wait for the defeat, MAP-17).
+	Defending() int
 }
 
 // Hands is a worker's job, its claims and its work.

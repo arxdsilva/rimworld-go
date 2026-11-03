@@ -31,6 +31,7 @@ const (
 	TurretHoldID = "cmd.turret.hold"
 	MortarAimID  = "cmd.mortar.target"
 	MortarClrID  = "cmd.mortar.clear"
+	DoorClaimID  = "cmd.door.claim"
 )
 
 func isDoorBldg(b game.BuildingView) bool {
@@ -39,6 +40,25 @@ func isDoorBldg(b game.BuildingView) bool {
 
 func isTurretBldg(b game.BuildingView) bool {
 	return b.Kind == turretKind || b.Kind == autocannon || b.Kind == slugTurret || b.Kind == foamTurretKind // AX-5
+}
+
+// enemyDoorCommands are a settlement's door's buttons (MAP-17): Claim, once
+// no defender stands (the same count the Claim order makes: raid.Defending).
+// A settlement's turret has none.
+func enemyDoorCommands(b game.BuildingView, hostiles []game.PawnView) []Button {
+	if !isDoorBldg(b) {
+		return nil
+	}
+	claim := Button{ID: DoorClaimID, Label: "Claim", Icon: "order_claim",
+		Desc: "Make this door the colony's, so colonists can open it.",
+		Cmds: []command.Command{{Kind: command.DesignateClaim, X: b.X, Y: b.Y, X2: b.X, Y2: b.Y, Enabled: true}}}
+	for _, h := range hostiles {
+		if h.Status == "alive" && !h.Prisoner && !h.Fleeing {
+			claim.Disabled, claim.Reason = true, "defeat the defenders first"
+			break
+		}
+	}
+	return []Button{claim}
 }
 
 // defenceCommands are a door's, turret's or mortar's own buttons.
@@ -79,10 +99,22 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 // is no one's to run, so none of the barrel, power or hold lines apply.
 const HostileTurretLine = "Hostile: it fires on us. Destroy it."
 
+// HostileTurretSpentLine is the same pane once its barrel is spent (MAP-20).
+const HostileTurretSpentLine = "Out of ammo: it can't fire, and nobody here will reload it."
+
+// EnemyDoorLine is what a settlement's door's pane says (MAP-17).
+const EnemyDoorLine = "Enemy door: colonists can't pass. Break it, or claim it once the defenders are beaten."
+
 // defenceLines are the barrel, shells and target lines, and a bench's
 // facility and work speed lines.
 func defenceLines(b game.BuildingView) []string {
 	if b.Hostile {
+		switch {
+		case isDoorBldg(b):
+			return []string{EnemyDoorLine}
+		case b.Barrel == 0:
+			return []string{HostileTurretSpentLine}
+		}
 		return []string{HostileTurretLine}
 	}
 	var out []string

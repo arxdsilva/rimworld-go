@@ -7,7 +7,6 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -84,8 +83,9 @@ func (g *Game) cellSet(key [4]uint64) *cellCache {
 	return c
 }
 
-// shutDoors is the doors not held open (DEF-3): shut to raiders and wild
-// animals (a shared cached set; holding a door open bumps structVer).
+// shutDoors is the doors not held open (DEF-3) and not a settlement's own
+// (MAP-17): shut to raiders and wild animals (a shared cached set; holding a
+// door open and claiming one bump structVer).
 func (g *Game) shutDoors() tileSet {
 	return g.cellSet([4]uint64{3: 1 << 63}).get(g.structVer, func() tileSet {
 		return g.combat.Doors.Shut(slices.Clone(g.buildingCells(construction.DoorKinds[:]...)), g.grid.Width())
@@ -114,7 +114,8 @@ func (g *Game) scanBuildingCells(kinds []construction.Kind) tileSet {
 }
 
 // hostileMap is the map as raiders and wild animals see it: the colony's
-// doors are shut to them, unless held open (DEF-3).
+// doors are shut to them, unless held open (DEF-3); a settlement's are its
+// defenders' own (MAP-17; animals meet them in fenceQuery).
 type hostileMap struct {
 	g     *Game
 	doors tileSet
@@ -158,14 +159,15 @@ func (g *Game) pathQuery(id entity.EntityID) pathing.Query {
 }
 
 // doorAt reports a built door on (x, y) shut to hostiles: any door (or
-// autodoor) not held open (DEF-3, combat/door.go).
+// autodoor) not held open (DEF-3, combat/door.go) and not a settlement's own
+// (MAP-17).
 func (g *Game) doorAt(x, y int) bool {
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
 	if bid == 0 {
 		return false
 	}
 	b, _ := g.bldgs.Get(bid)
-	return b.Kind.IsDoor() && !g.combat.Doors.Held(bid)
+	return b.Kind.IsDoor() && !g.combat.Doors.Held(bid) && !b.Hostile
 }
 
 // damageBuilding harms a building, destroying it at zero hit points.
@@ -179,6 +181,9 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 		b, _ = g.bldgs.Get(id)
 	}
 	b.Damage += dmg
+	if b.Ancient || b.Hostile { // raid/defend.go (MAP-17): a blow on the compound, behind its shut doors
+		g.raid.Raiders.Alarm(uint64(g.clock.Now()))
+	}
 	if b.Kind == construction.ShipPart { // raid/shippart.go (DEF-4): its guards wake; broken, it leaves salvage
 		defer g.raid.Ships.Hit(id, b.HP() <= 0, uint64(g.clock.Now()))
 	}
@@ -233,8 +238,10 @@ func (g *Game) clearItemsFrom(x, y int, cells [][2]int) {
 						continue
 					}
 					g.deleteItem(sid)
-					// found or marked stays so (haul_claim.go)
-					g.dropStackOf(item.Stack{Kind: st.Kind, Qty: st.Qty, Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked}, nx, ny)
+					if to, err := g.SpawnStack(st.Kind, st.Qty, nx, ny); err == nil { // the same stack, only elsewhere
+						st.X, st.Y = nx, ny
+						g.mergeOrSet(to, st)
+					}
 					moved = true
 				}
 			}

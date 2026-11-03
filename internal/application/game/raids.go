@@ -261,7 +261,7 @@ func (g *Game) dropRaiderGear(id entity.EntityID) {
 		}
 		delete(g.equip, id)
 	}
-	g.combat.Drafts.DropSpare(id) // combat/draft.go (CBT-2): the spare weapon falls too
+	g.combat.Drafts.DropSpare(id, out) // combat/draft.go (CBT-2): the spare weapon falls too
 	if k, ok := books.RaidLoot(g.streams.seed, uint64(id)); ok && g.isRaider(id) {
 		g.spawnUnclaimed(k, 1, pos.X, pos.Y, out) // game/books (AX-7): a book a raider carried
 	}
@@ -649,6 +649,10 @@ func (h mapsSettle) ThreatScale() int {
 }
 func (h mapsSettle) Defenders() int { return h.g.raid.Raiders.Defending() }
 
+// Defending is game/orders' count of a settlement's defenders still up
+// (Claim, MAP-17).
+func (h ordersHost) Defending() int { return h.g.raid.Raiders.Defending() }
+
 // Settle lays compound c as placeRuin lays a ruin (Ancient: nobody's
 // wealth, no blueprint), beds forbidden, goods free to pack, with a lane
 // from the south gate to the map edge, and spawns the defenders.
@@ -665,13 +669,10 @@ func (h mapsSettle) Settle(c mapgen.Compound, fac int, arms []item.Kind, seed ui
 		clearSite(g, c.Centre.X, y)
 	}
 	for _, p := range c.Pieces {
-		id := g.placeGenerated(construction.Building{Kind: p.Kind, Stuff: p.Stuff, Facing: p.Facing, X: p.X, Y: p.Y, Ancient: true, Forbidden: p.Kind.Sleeps(), Hostile: p.Kind == construction.SentryTurret})
-		if id != 0 && p.Kind.IsDoor() {
-			g.combat.Doors.SetHold(id, true) // their own doors: shut, they would hold the defenders in
-		}
+		g.placeGenerated(construction.Building{Kind: p.Kind, Stuff: p.Stuff, Facing: p.Facing, X: p.X, Y: p.Y, Ancient: true, Forbidden: p.Kind.Sleeps(), Hostile: p.Kind == construction.SentryTurret || p.Kind.IsDoor()})
 	}
 	for _, l := range c.Loot {
-		g.spawnUnclaimed(l.Kind, l.Qty, l.X, l.Y, false)
+		g.spawnUnclaimed(l.Kind, l.Qty, l.X, l.Y, true) // like vault loot: found, forbidden; the pack-up takes it (mapsPop.PackUp)
 	}
 	g.raidGroups = append(g.raidGroups, raid.Group{Plan: raid.Defend, Faction: fac, Over: true, FleeLoss: raid.DefendFleeLoss, CampX: c.Centre.X, CampY: c.Centre.Y, Camped: true})
 	gi := len(g.raidGroups) - 1

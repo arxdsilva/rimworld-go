@@ -253,6 +253,9 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []Alert {
 	}
 	out = append(out, shipAlerts(w)...) // ending.go (AX-8): the reactor's countdown, a ready ship
 	group("unhappy", false, unhappy, func(n string) string { return n + " is unhappy" }, "colonists are unhappy")
+	if al, ok := GoneAlert(w); ok { // ending.go (MAP-19)
+		out = append(out, al)
+	}
 	if w.ResearchAlert { // RSCH-2: the game raises it (a bench and a researcher, no project)
 		out = append(out, Alert{Key: ResearchAlertKey, Label: "Need research project"})
 	}
@@ -511,6 +514,10 @@ func (c Alerts) Focus(id string) {
 		d.Do(ports.ShowWindow{Mode: "research"})
 		return
 	}
+	if key == GoneAlertKey { // ending.go: back to the everyone-gone screen
+		Right{c.Chrome}.openGone(c.sh.World())
+		return
+	}
 	c.cycle(key, 1)
 }
 
@@ -703,6 +710,7 @@ var alertExplanations = map[string]string{
 	"spoiling":      "Stored food is about to rot. Eat it, or move it somewhere cool, before it is lost.",
 	"waitingframes": "Some blueprints need materials that are not in stock. Gather or make what they need, or cancel the blueprints.",
 	"research":      "A research bench and a colonist who does research are ready, but no project is picked. Open the Research tab, select a project and press Start research.",
+	"gone":          "Nobody is left in the colony. Click to open the screen again: eight hours after the last one went, new wanderers can set out to start over, up to seven groups in all.",
 	"unhappy":       "Colonists are in a poor mood and close to breaking. Look at what drags it down: hunger, rest, comfort and room to breathe.",
 	"shipwaking":    "The ship reactor is waking, and its call draws raiders and machines until it is fully awake. Wall it in and keep colonists near it: if it falls, the waking is lost.",
 	"shipready":     "The ship is complete and its reactor awake. Board colonists into its stasis caskets, then select any ship part and press Launch ship to leave the planet. This ends the colony's story.",

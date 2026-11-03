@@ -281,7 +281,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		}
 		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}, ""
 	case command.OrderAttack:
-		aid := g.combat.Strikes.OrderedAt(g.animalAt(x, y), g.raiderAt(x, y), x, y) // CBT-2: a downed raider too; MAP-13: a settlement's turret
+		aid := g.combat.Strikes.OrderedAt(g.animalAt(x, y), g.raiderAt(x, y), x, y) // CBT-2: a downed raider too; MAP-13, MAP-17: a settlement's turret or door
 		if aid == 0 {
 			return job.Record{}, ReasonGone
 		}
@@ -458,7 +458,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	move := OrderOption{Label: "Go here", Cmd: command.Command{Kind: command.MovePawn, Pawn: uint64(pawn), X: x, Y: y}}
 	if terrain.IsRockWall(g.terr.At(x, y)) {
 		move.Disabled, move.Reason = true, ReasonRock
-	} else if !g.grid.Walkable(x, y) {
+	} else if !g.grid.Walkable(x, y) || g.combat.Doors.EnemyAt(x, y) != 0 { // MAP-17: walkable to its defenders only
 		move.Disabled, move.Reason = true, ReasonBlocked
 	} else if !reach {
 		move.Disabled, move.Reason = true, ReasonUnreachable
@@ -555,6 +555,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	}
 	if g.drafted(pawn) && g.combat.Turrets.HostileAt(x, y) != 0 { // MAP-13
 		add(combat.AttackVerb(hasRanged(g, pawn))+"sentry turret", command.OrderAttack, construction.LayerObject)
+	}
+	if g.drafted(pawn) && g.combat.Doors.EnemyAt(x, y) != 0 { // MAP-17
+		add(combat.AttackVerb(hasRanged(g, pawn))+"enemy door", command.OrderAttack, construction.LayerObject)
 	}
 	if iid := g.itemAt(x, y); iid != 0 {
 		st, _ := g.stacks.Get(iid)

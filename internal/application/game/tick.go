@@ -78,7 +78,7 @@ func (g *Game) applyOne(c command.Command) {
 	switch c.Kind {
 	case command.AddOperation, command.RemoveOperation, command.SetDrugPolicy, command.AssignBedOwner,
 		command.SetAnimalMaster, command.SetTraining, command.GiftAnimal, command.Capture, command.Arrest,
-		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap,
+		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn, command.EnterMap, command.AttackSettlement, command.CaravanReform, command.AbandonMap, command.SettleHere, command.EncounterAnswer, command.CaravanTravel, command.SetColonyCap, command.NewWanderers,
 		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
 		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
 		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)
@@ -223,7 +223,7 @@ func (g *Game) applyOne(c command.Command) {
 	case command.SetHomeAuto:
 		g.setHomeAuto(c.Enabled) // home.go
 	case command.DesignateSnowClear:
-		g.paintSnowClear(c.X, c.Y, c.X2, c.Y2, c.Enabled) // snow_clear.go
+		g.paintSnowClear(c.X, c.Y, c.X2, c.Y2, c.Enabled) // game/snow
 	case command.DesignateHome:
 		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
 	case command.DevStartFire:
@@ -1120,7 +1120,7 @@ func (g *Game) phaseJobs() {
 		case job.Tame, job.Milk, job.Shear, job.Slaughter:
 			g.herdOf().Do(id, j) // game/herd (FOOD-3): taming, milking, shearing, slaughter
 		case job.ClearSnow:
-			g.doClearSnow(id, j) // snow_clear.go
+			g.doClearSnow(id, j) // game/snow
 		case job.Clean:
 			g.doClean(id, j) // clean.go
 		case job.FightFire:

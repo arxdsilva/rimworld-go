@@ -25,7 +25,7 @@ import (
 func settlementTurrets(m *mapState) []entity.EntityID {
 	var out []entity.EntityID
 	for _, id := range m.bldgIDs {
-		if b, ok := m.bldgs.Get(id); ok && b.Hostile {
+		if b, ok := m.bldgs.Get(id); ok && b.Hostile && !b.Kind.IsDoor() { // MAP-17: its doors are hostile too
 			out = append(out, id)
 		}
 	}
@@ -510,5 +510,60 @@ func TestSettlementTurretSameSeedAndSaveHash(t *testing.T) {
 	}
 	if c := turretFightRun(t, true); a != c {
 		t.Fatalf("a save mid-fight moved the hash: %x and %x", a, c)
+	}
+}
+
+// spendTurret fires off turret tid's whole barrel.
+func spendTurret(g *Game, tid entity.EntityID) {
+	s := g.combat.Turrets.Export()
+	if s == nil {
+		s = &combat.TurretSave{Version: combat.TurretSaveVersion}
+	}
+	for i := range s.Arms {
+		if s.Arms[i].ID == tid {
+			s.Arms = append(s.Arms[:i], s.Arms[i+1:]...)
+			break
+		}
+	}
+	s.Arms = append(s.Arms, combat.ArmSave{ID: tid, Fired: combat.SentryBarrel})
+	g.combat.Turrets.Import(s)
+}
+
+// TestSpentSettlementTurretStaysSilent (MAP-20): the wiki's numbers hold (60
+// rounds a barrel; 80 steel scaled by 9 as construction costs are). Spent, a
+// settlement's turret never fires or rearms, however much steel lies by it,
+// and it's no threat: a drafted colonist it could have shot goes off the
+// draft by the usual quiet stretch.
+func TestSpentSettlementTurretStaysSilent(t *testing.T) {
+	t.Parallel()
+	if combat.SentryBarrel != 60 {
+		t.Fatalf("a barrel lasts %d rounds, the wiki says 60", combat.SentryBarrel)
+	}
+	if k, n := combat.BarrelCost(construction.SentryTurret); k != item.Steel || n != 9 {
+		t.Fatalf("a barrel costs %d of %v, want 9 steel (80 scaled)", n, k)
+	}
+	g, tid := hostileField(t, 7)
+	spendTurret(g, tid)
+	ada, err := g.SpawnNamedPawn(20, 14, "Ada")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.dropStackOf(item.Stack{Kind: item.Steel, Qty: 60}, 21, 6)
+	g.setDraft(ada, true)
+	if g.combat.Turrets.Barrel(tid, construction.SentryTurret) != 0 {
+		t.Fatal("the barrel isn't spent")
+	}
+	for i := 0; i < combat.AutoUndraft+200 && g.drafted(ada); i++ {
+		g.Step(1)
+	}
+	if g.drafted(ada) {
+		t.Fatal("a spent turret kept the colonist drafted")
+	}
+	g.Step(2 * clock.TicksPerHour) // on its work now: the steel is in reach
+	if shotBySentry(g, ada) {
+		t.Fatal("a spent turret fired")
+	}
+	if g.combat.Turrets.Barrel(tid, construction.SentryTurret) != 0 {
+		t.Fatal("somebody rearmed a settlement's turret")
 	}
 }

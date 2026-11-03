@@ -1673,6 +1673,7 @@ Close the campaign and reflect the emergent story back to the player. Two ending
 ## Everyone-gone modal
 
 -   [x] `ending.gone` (MAP-14): opens by itself when the read model's `AX.EveryoneGone` turns true, and again if colonists came back and left. Buttons `modal.ending.gone.<btn>`: Keep watching (primary), Load game (disabled in a commitment colony, with the reason), Main menu.
+-   [x] New wanderers (MAP-19, wiki: Endings): a button on `ending.gone`, disabled with a reason until 8 in-game hours have passed and after 7 groups. While everyone is gone an alert with a countdown stays up and reopens the modal, so Keep watching doesn't lose the option. The button opens a pawn picker with a reroll per slot and Start, which sends `command.NewWanderers`.
 -   [x] Abandoning the last colony is allowed; its confirm (`world.abandon`) adds that nobody would be left and the game ends, when no caravan, pod or other map holds a colonist.
 
 ------------------------------------------------------------------------

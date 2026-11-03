@@ -18,6 +18,7 @@ func (g *Game) fillSetupView(w *WorldView) {
 		w.Conditions = append(w.Conditions, c.Key())
 	}
 	w.Season = g.season(now)
+	fillWanderers(g, &w.AX) // world_stash.go (MAP-19)
 }
 
 // Buildables is the catalog for this colony: Buildables() with the

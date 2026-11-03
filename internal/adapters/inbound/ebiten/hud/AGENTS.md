@@ -55,3 +55,6 @@ The colony HUD's regions: resource bar, colonist bar, right column (letters, mes
 ## Known Design Constraints
 - The colony composition stays root: `colony_compose.go` (`colonyUI`, `colonyButtons`, `drawColonyHUD`, `colonyChromeHit`, `hudRightClick`, the `hud()` layout memo). Renderer-side toggles live in `hud_global_render.go`.
 - Converting shims (`alert`, `letterRow`, `messageRow`, `statusChip`, `toast`) remain in root tests that read lowercase fields.
+
+## New wanderers (MAP-19)
+`ending.go`: "Nobody left" (`GoneAlertKey`, counts down to new wanderers; a click reopens the everyone-gone screen via `Alerts.Focus`). The gone screen's New wanderers button (`GoneWanderersID`) is off with "In 6h" or "No more groups" and sends `ports.OpenWanderers`.

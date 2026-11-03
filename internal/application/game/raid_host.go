@@ -226,7 +226,10 @@ func (h raidTactics) Crop(x, y int) bool {
 	p := h.g.plants.Ref(h.g.plantAt(x, y))
 	return p != nil && p.Zone && h.g.fireAt(x, y) == 0
 }
-func (h raidTactics) Drop(k item.Kind, qty, x, y int) { _, _ = h.g.SpawnStack(k, qty, x, y) }
+
+// Drop: a siege's supply pod is the besiegers', not the colony's: forbidden
+// and found, so no hauler walks to their camp for it (haul_claim.go).
+func (h raidTactics) Drop(k item.Kind, qty, x, y int) { h.g.spawnUnclaimed(k, qty, x, y, true) }
 func (h raidTactics) Restock(m entity.EntityID)       { h.g.combat.Mortars.Raise(m) }
 
 // raidNest places hive mounds (raid/nest.go, CBT-4): dark (below 30 %

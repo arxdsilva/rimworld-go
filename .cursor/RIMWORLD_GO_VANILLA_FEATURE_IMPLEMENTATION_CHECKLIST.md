@@ -2224,6 +2224,9 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 -   [x] **Enter event/quest map** (MAP-1: arrival opens a site map; mineral sites; MAP-3: encounter maps; no quests)
 -   [x] **Ambush encounter** (MAP-3: ambush, manhunter ambush and demand with Give and Refuse; the meeting encounter is deferred, no caravan trading)
 -   [x] **Return to colony** (SIM-046)
+-   [x] **New wanderers after a game over** (MAP-19, wiki: Endings: after 8 in-game hours, at most 7 groups, a pawn picker; they walk in from an edge)
+-   [x] **Enemy doors** (MAP-17, wiki: Door: a settlement's doors are shut to colonists and open to defenders, can be attacked, and can be claimed once no defender stands)
+-   [x] **Visitors of a faction turned hostile** (MAP-18: they leave as enemies, shooting back; trade closes; a letter says so)
 -   [x] **Settle new colony** (MAP-3: `SettleHere` from the caravan inspector with Max colonies 1-5, default 1, and `AbandonMap` with a confirm; abandoning the last colony wipes it and keeps an empty map, then the everyone-gone ending appears, MAP-14)
     -   If multiple colonies are supported by target scope.
 

@@ -6,9 +6,11 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/care"
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/health"
@@ -32,6 +34,9 @@ const (
 	visitorGroup = math.MaxInt32
 	// wandererMaxColony: no wanderer joins a colony this large.
 	wandererMaxColony = 16
+	// shootBackHold is how long after its last wound a turned visitor keeps
+	// shooting before it walks on (MAP-18, original tuning).
+	shootBackHold = 300
 )
 
 // visitorRec is one visitor on the map (game/visit).
@@ -107,18 +112,28 @@ func (g *Game) wandererJoins(now uint64) bool {
 		return false
 	}
 	p := pawngen.Generate(g.worldSeed()^wandererSalt, int(g.entities.Peek()), 0, pawngen.Rules{})
+	id, ok := walkInColonist(g, p, x, y)
+	if !ok {
+		return false
+	}
+	g.letter(letterGood, "Wanderer joins", g.personName(id)+", a wanderer, has asked to join the colony.", id)
+	g.addHistory("joined", g.personName(id)+" wandered in and joined the colony.", id)
+	return true
+}
+
+// walkInColonist stands generated person p on (x, y) as a colonist, walking
+// to the colony's heart.
+func walkInColonist(g *Game, p pawngen.Pawn, x, y int) (entity.EntityID, bool) {
 	id, err := g.spawnGenerated(p, x, y) // skills.go
 	if err != nil {
-		return false
+		return 0, false
 	}
 	g.ensurePerson(id)
 	hx, hy := g.home()
 	if tx, ty, ok := g.combat.Tiles.WalkableNear(hx, hy, 4); ok {
 		g.cmdMove(id, tx, ty)
 	}
-	g.letter(letterGood, "Wanderer joins", g.personName(id)+", a wanderer, has asked to join the colony.", id)
-	g.addHistory("joined", g.personName(id)+" wandered in and joined the colony.", id)
-	return true
+	return id, true
 }
 
 // careGuests is care.Guests (care/deps.go, SIM-063): the visitors on the
@@ -228,10 +243,11 @@ type visitHost struct {
 	visitArrivals
 	visitFighters
 	visitDiplomacy
+	visitTurning
 }
 
 func newVisitHost(g *Game) visitHost {
-	return visitHost{visitBodies{g}, visitMovers{g}, visitGround{g}, visitArrivals{g}, visitFighters{g}, visitDiplomacy{g}}
+	return visitHost{visitBodies{g}, visitMovers{g}, visitGround{g}, visitArrivals{g}, visitFighters{g}, visitDiplomacy{g}, visitTurning{g}}
 }
 
 type visitBodies struct{ g *Game }
@@ -343,3 +359,91 @@ func (h visitDiplomacy) Factions() []faction.Faction              { return h.g.n
 func (h visitDiplomacy) Cooldown(id int) faction.Cooldowns        { return h.g.cooldownOf(id) }
 func (h visitDiplomacy) SetCooldown(id int, cd faction.Cooldowns) { h.g.setCooldown(id, cd) }
 func (h visitDiplomacy) RelDay(now uint64) int                    { return h.g.relDay(now) }
+
+// visitTurning is visit.Turning (visit/turn.go, MAP-18): a turned visitor
+// becomes a raider already fleeing, the way a prisoner breaking out does
+// (prison_host.go), in a group of its own that is no raid.
+type visitTurning struct{ g *Game }
+
+func (h visitTurning) Enemy(id entity.EntityID) bool {
+	r, ok := h.g.raiders[id]
+	if !ok || r.Leaving || h.g.prison.Is(id) {
+		return false
+	}
+	v, ok := h.g.vital.Get(id)
+	return ok && v.Status != health.Dead
+}
+
+func (h visitTurning) TurnHostile(id entity.EntityID, now uint64) {
+	g := h.g
+	g.raidGroups = append(g.raidGroups, raid.Group{Size: 1, Over: true})
+	v, _ := g.vital.Get(id)
+	r := g.raiders[id]
+	r.Group, r.Mode, r.Escaping, r.Leaving = len(g.raidGroups)-1, raid.Fleeing, true, false
+	r.Idle, r.RetryAt, r.Hurt = 0, 0, v.Injury
+	r.KidnapAt = math.MaxUint64 // it is leaving, not raiding
+	if v.Status != health.Alive {
+		r.Downed = now
+	}
+	g.raiders[id] = r
+	g.setWhere(id, whereRaider)
+	g.reserve.ReleaseOwner(id)
+	g.jobs.Set(id, job.Record{})
+	g.invalidateCreatures()
+}
+
+// ShootBack: a new wound makes an armed enemy shoot back at the nearest
+// colonist it can hit, for shootBackHold after its last wound; only a wound
+// starts this, so it can't flap. It never chases: a fight whose target is out
+// of reach ends, and it walks on.
+func (h visitTurning) ShootBack(id entity.EntityID, now uint64) {
+	g := h.g
+	v, _ := g.vital.Get(id)
+	if v.Status != health.Alive {
+		return
+	}
+	r, d := g.raiders[id], weaponDefOf(g, id)
+	pos, _ := g.positions.Get(id)
+	shot := v.Injury > r.Hurt
+	if shot {
+		r.Engaged = now
+	}
+	r.Hurt = v.Injury
+	g.raiders[id] = r
+	if j, _ := g.jobs.Get(id); j.Kind == job.Attack && j.Active() {
+		tp, ok := g.positions.Get(j.Target)
+		if !ok || !g.combat.Sight.CanHit(pos.X, pos.Y, d, tp.X, tp.Y) ||
+			weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) > 1 && now >= r.Engaged+shootBackHold {
+			g.interrupt(id, job.Cancelled)
+		}
+		return
+	}
+	if !shot || !d.Ranged {
+		return
+	}
+	if t, tp, ok := g.nearestColonist(pos); ok && g.combat.Sight.CanHit(pos.X, pos.Y, d, tp.X, tp.Y) {
+		g.reserve.ReleaseOwner(id)
+		g.jobs.Set(id, job.Record{Kind: job.Attack, Target: t, TX: tp.X, TY: tp.Y, State: job.Do, WorkLeft: combat.AimTicks(d)})
+	}
+}
+
+func (h visitTurning) Rescuing(id entity.EntityID) bool {
+	if h.g.care.Carry.Carrier(id) != 0 {
+		return true
+	}
+	v, _ := h.g.vital.Get(id)
+	_, taken := h.g.reserve.EntityOwner(id)
+	return taken && v.Status != health.Alive
+}
+
+func (h visitTurning) TraderTurned(ref int) bool {
+	g, c := h.g, h.g.trade.caravan
+	if c == nil || g.factionRef(c.Faction) != ref {
+		return false
+	}
+	c.Turned = true
+	if s := g.trade.session; s != nil && s.trader == c.Trader {
+		g.trade.session = nil
+	}
+	return true
+}

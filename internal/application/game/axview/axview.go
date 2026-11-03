@@ -6,6 +6,8 @@
 // stays comparable (the building view's equality check compares it).
 package axview
 
+import "rimworld-go/internal/domain/pawn/pawngen"
+
 // Building is game.BuildingView.AX.
 type Building struct {
 	// A1: Uninstall, marked to be crated (construction.Building.Uninstall);
@@ -108,7 +110,17 @@ type World struct {
 	Ending       string
 	// EveryoneGone (MAP-14): no colonist is left under our control.
 	EveryoneGone bool
-	LaunchIssues []string
+	// MAP-19, new wanderers after a game over (zero in a colony without a
+	// setup): WanderersIn, ticks until the option opens, only meaningful
+	// while EveryoneGone; WanderersLeft, groups left of seven; WanderersOK,
+	// a command.NewWanderers would be taken now; WanderersMax, how many one
+	// group may hold; WanderersRules, what game.WandererPawn rolls under.
+	WanderersIn    int
+	WanderersLeft  int
+	WanderersOK    bool
+	WanderersMax   int
+	WanderersRules pawngen.Rules
+	LaunchIssues   []string
 	// ShipID, the ship LaunchIssues reports on (the one with a reactor,
 	// else the largest; 0 none); Countdown, its reactor's ticks left (-1
 	// not started or none, 0 done); Escaped, who left aboard (the ending).

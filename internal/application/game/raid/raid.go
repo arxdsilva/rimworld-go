@@ -109,6 +109,9 @@ type Raider struct {
 	CoverAt        uint64
 	CoverX, CoverY int
 	Escaping       bool
+	// Engaged (MAP-17, absent in older saves) is the tick a settlement's
+	// defender last turned out (defend.go: it stays out defendHold).
+	Engaged uint64
 }
 
 // Group is one raid (the game's saved RaidGroups).
@@ -142,6 +145,9 @@ type Group struct {
 	// Supply (CBT-4, absent in older saves) is when a camped siege's next
 	// resupply pod lands (tactics.go).
 	Supply uint64
+	// Alarm (MAP-17, absent in older saves) is the tick a piece of a Defend
+	// group's compound was last hit (defend.go).
+	Alarm uint64
 }
 
 // Plan is how a raid comes at the colony: the domain's strategy (DEF-4;

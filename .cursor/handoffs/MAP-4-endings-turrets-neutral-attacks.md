@@ -14,8 +14,6 @@ Settles the three questions MAP-2 and MAP-3 left open for the user (decided 2026
 `journey_gone_test.go`, `hud/ending_test.go`, `TestEveryoneGone`, `combat/turret_hostile_test.go` (with `TestHostileTurretDoesNotFlap`), `settlement_turret_test.go`, `TestGoodwillCannotRiseDuringAttack`, `TestBesiegedGoodwillCannotRise`, `TestAttackConfirmsAndAbandonWarns`. `TestJourneyWorldEnterAndRefusedGizmos` and `TestCaravanGizmosCarryTheirReasons` dropped their "attack is refused" assertions, because the rule changed; no golden moved.
 
 ## Gaps
-- New wanderers after a game over (vanilla 1.5) are deferred.
-- Visitors at home don't react when their faction turns hostile, for any cause (`visitors.go` never reads the relation).
-- Compound doors stay held open, so colonists can walk through them.
+- New wanderers, visitors reacting to a hostile faction and shut compound doors were closed by MAP-5 (`MAP-5-doors-visitors-wanderers.md`).
 - `worldview.attackGoodwill` copies `maps.attackGoodwill`, because no read model carries it. `hud.goneLoadReason` copies `options.CommitLoadReason`, because `hud` may not import `options`.
 - A spent settlement turret stays quiet for good; nobody rearms it (original simplification).

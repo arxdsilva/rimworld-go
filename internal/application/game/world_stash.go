@@ -3,10 +3,15 @@ package game
 import (
 	"cmp"
 	"slices"
+	"strings"
 
+	"rimworld-go/internal/application/game/axview"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/pawn/pawngen"
+	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -64,6 +69,112 @@ func everyoneGone(g *Game) bool {
 		p := g.personOf(r.ID)
 		return !r.Prisoner && r.Beast == nil && g.alive(r.ID) && (p == nil || p.Where != whereKidnapped)
 	})
+}
+
+// wanderersTitle is the letter that announces new wanderers.
+const wanderersTitle = "New wanderers"
+
+// wanderersTick keeps the tick everyone went (MAP-19): it starts the wait
+// when the last one goes, and someone existing again ends it. A colony with
+// people only pays everyoneGone's first alive check.
+func wanderersTick(g *Game, now uint64) {
+	s := g.ng.setup
+	if s == nil {
+		return
+	}
+	if !everyoneGone(g) {
+		s.GoneAt = 0
+	} else if s.GoneAt == 0 {
+		s.GoneAt = now
+	}
+}
+
+// wanderersOpen is the option's state now (visit/wanderers.go).
+func wanderersOpen(g *Game) (in, left int, ok bool) {
+	s := g.ng.setup
+	return visit.WanderersOpen(everyoneGone(g), s.GoneAt, uint64(g.clock.Now()), s.WandererGroups)
+}
+
+// wanderersMax is how many may set out together: as many as this game's
+// scenario started with.
+func wanderersMax(g *Game) int { return min(max(g.ng.fx.People, 1), scenario.MaxPeople) }
+
+// fillWanderers fills the option's read model.
+func fillWanderers(g *Game, ax *axview.World) {
+	ax.WanderersIn, ax.WanderersLeft, ax.WanderersOK = wanderersOpen(g)
+	ax.WanderersMax, ax.WanderersRules = wanderersMax(g), g.ng.fx.Rules
+}
+
+// WandererPawn is the person seed makes under rules
+// (WorldView.AX.WanderersRules): the picker's preview is exactly who
+// command.NewWanderers brings for that seed.
+func WandererPawn(seed uint64, rules pawngen.Rules) pawngen.Pawn {
+	return pawngen.Generate(seed, 0, 0, rules)
+}
+
+// WandererBio is WandererPawn's card for the picker.
+func WandererBio(seed uint64, rules pawngen.Rules) BioView { return bioOf(WandererPawn(seed, rules)) }
+
+// cmdNewWanderers brings a new group in from an edge of the first colony map,
+// the same way a wanderer comes, under the player's control (MAP-19; name:
+// the chosen seeds, visit.ParseSeeds). That map always exists: abandoning the
+// last colony leaves it, emptied (game/maps).
+func cmdNewWanderers(g *Game, name string) {
+	s := g.ng.setup
+	if s == nil {
+		g.worldNote("No new wanderers can come to this colony.")
+		return
+	}
+	_, left, open := wanderersOpen(g)
+	switch {
+	case !everyoneGone(g):
+		g.worldNote("New wanderers come only once everyone is gone.")
+		return
+	case left == 0:
+		g.worldNote("No more wanderers will come.")
+		return
+	case !open:
+		g.worldNote("New wanderers can't come until eight hours after the last colonist went.")
+		return
+	}
+	seeds, why := visit.ParseSeeds(name, wanderersMax(g))
+	if why != "" {
+		g.worldNote("New wanderers can't set out: %s.", why)
+		return
+	}
+	cur := g.mapState
+	g.mapState = g.maps[0]
+	defer func() { g.mapState = cur }()
+	ids, names := walkInWanderers(g, seeds, g.ng.fx.Rules)
+	if len(ids) == 0 {
+		g.worldNote("New wanderers can't find a way in.")
+		return
+	}
+	s.WandererGroups++
+	s.GoneAt = 0
+	text := strings.Join(names, ", ") + " came across what is left and mean to start again. They are yours to lead."
+	g.letter(letterGood, wanderersTitle, text, ids[0])
+	g.addHistory("joined", text, ids...)
+}
+
+// walkInWanderers stands seeds' people on land near a map edge, walking in.
+func walkInWanderers(g *Game, seeds []uint64, rules pawngen.Rules) (ids []entity.EntityID, names []string) {
+	ex, ey, ok := g.worldEdge()
+	if !ok {
+		return nil, nil
+	}
+	var used [][2]int
+	for _, seed := range seeds {
+		x, y, ok := g.insetLandNear(ex, ey, used)
+		if !ok {
+			break
+		}
+		used = append(used, [2]int{x, y})
+		if id, ok := walkInColonist(g, WandererPawn(seed, rules), x, y); ok { // visitors.go
+			ids, names = append(ids, id), append(names, g.personName(id))
+		}
+	}
+	return ids, names
 }
 
 // stashPawn takes colonist, prisoner or tame animal id off the map for

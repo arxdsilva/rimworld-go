@@ -18,9 +18,13 @@ import (
 // holds it open. An open door lets shots and sight through (Sight.blocks).
 // Only doors that are open are stepped: no door list, no scan.
 //
-// The game's other hooks: HeldOpen (a door hostiles may walk through:
-// its shut-door set) and Barred (a forbidden door, shut to colonists: its
-// walkability).
+// The game's other hooks: Shut (the doors shut to hostiles: its shut-door
+// set) and Barred (a forbidden door, shut to colonists: its walkability).
+//
+// A settlement's door (MAP-17, EnemyDoor) is its people's own: they walk
+// through it as through any door, opening it with Wait, and nothing of ours
+// can hold it open or forbid it. The game shuts it to colonists and animals
+// (fences.go, fenceEnemy); it opens to them only smashed or claimed.
 type Doors struct {
 	h      Host
 	pw     Power
@@ -104,13 +108,39 @@ func (d *Doors) State(id entity.EntityID) door.State { return d.states[id] }
 // Held reports door id held open.
 func (d *Doors) Held(id entity.EntityID) bool { return d.states[id].Hold }
 
+// EnemyDoor reports b a settlement's door: Building.Hostile on a door kind
+// (MAP-17). The same flag on a turret is turret_hostile.go's.
+func EnemyDoor(b construction.Building) bool { return b.Hostile && b.Kind.IsDoor() }
+
+// enemyDoorAt is the settlement's door on (x, y) (0: none).
+func enemyDoorAt(h Host, x, y int) entity.EntityID {
+	id, k := h.Object(x, y)
+	if id == 0 || !k.IsDoor() {
+		return 0
+	}
+	if b, ok := h.Building(id); !ok || !b.Hostile {
+		return 0
+	}
+	return id
+}
+
+// enemy reports door id a settlement's.
+func (d *Doors) enemy(id entity.EntityID) bool {
+	b, ok := d.h.Building(id)
+	return ok && EnemyDoor(b)
+}
+
+// EnemyAt is enemyDoorAt for the game (the order menu).
+func (d *Doors) EnemyAt(x, y int) entity.EntityID { return enemyDoorAt(d.h, x, y) }
+
 // Shut clears from the door cells set (a bitset, one bit per cell of a
-// map w wide) the doors held open, and returns it: the doors shut to
-// hostiles (the game's shut-door set).
+// map w wide) the doors hostiles walk through, held open or their own
+// (MAP-17), and returns it: the doors shut to hostiles (the game's shut-door
+// set).
 func (d *Doors) Shut(set []uint64, w int) []uint64 {
 	for wi, word := range set {
 		for ; word != 0; word &= word - 1 {
-			if i := wi<<6 + bits.TrailingZeros64(word); d.HeldOpen(i%w, i/w) {
+			if i := wi<<6 + bits.TrailingZeros64(word); d.HeldOpen(i%w, i/w) || enemyDoorAt(d.h, i%w, i/w) != 0 {
 				set[wi] &^= 1 << (uint(i) & 63)
 			}
 		}
@@ -125,7 +155,7 @@ func (d *Doors) HeldOpen(x, y int) bool {
 	return id != 0 && k.IsDoor() && d.states[id].Hold
 }
 
-// Wait is how many ticks a colonist stepping into the door on (x, y) at
+// Wait is how many ticks a creature stepping into the door on (x, y) at
 // now waits for it to open (0: open, or no door); it opens the door (the
 // game's step hook).
 func (d *Doors) Wait(x, y int, now uint64) int {
@@ -141,14 +171,15 @@ func (d *Doors) Wait(x, y int, now uint64) int {
 }
 
 // Barred reports the door on (x, y) forbidden: shut to colonists (BED-1's
-// Forbidden flag; the game's colonist path hook).
+// Forbidden flag; the game's colonist path hook). A settlement's door is not
+// ours to forbid: the flag would shut its defenders in.
 func (d *Doors) Barred(x, y int) bool {
 	id, k := d.h.Object(x, y)
 	if id == 0 || !k.IsDoor() {
 		return false
 	}
 	b, _ := d.h.Building(id)
-	return b.Forbidden
+	return b.Forbidden && !b.Hostile
 }
 
 // export is the doors not shut, ascending (nil when none).

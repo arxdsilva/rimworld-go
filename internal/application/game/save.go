@@ -590,7 +590,7 @@ func exportMapFields(g *Game, s *saveState) {
 	s.Dirt, s.Carried = g.exportDirt()
 	s.Home, s.CleanWired = g.exportHome(), true
 	s.NoHomeAuto = g.homeArea.off
-	s.Snow, s.SnowClear = g.exportSnow() // snow_clear.go: nil without snow or an area
+	s.Snow, s.SnowClear = g.exportSnow() // game/snow: nil without snow or an area
 	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
 	s.Plan = g.exportPlan()     // plan.go
 	s.Fog = g.exportFog()       // fog.go (MAPGEN-2): nil without fog
@@ -810,7 +810,7 @@ func importMapFields(g *Game, s *saveState) {
 	g.importFires(s.Fires)          // fire.go: older saves have no fires
 	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
 	g.homeArea.off = s.NoHomeAuto
-	// snow_clear.go (PLAY-015): an older save seeds from its global depth
+	// game/snow (PLAY-015): an older save seeds from its global depth
 	g.importSnow(s.Snow, s.SnowClear)
 	g.importDirt(s.Dirt, s.Carried) // filth.go
 	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued

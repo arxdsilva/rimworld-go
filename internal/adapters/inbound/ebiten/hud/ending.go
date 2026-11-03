@@ -25,10 +25,12 @@ const (
 	EndingModalID      = "ending.ship"
 	EndingWatchID      = "ending.watch"
 	EndingMenuID       = "ending.menu"
+	GoneAlertKey       = "gone"
 	GoneModalID        = "ending.gone" // everyone is gone (MAP-14)
 	GoneWatchID        = "ending.gone.watch"
 	GoneLoadID         = "ending.gone.load"
 	GoneMenuID         = "ending.gone.menu"
+	GoneWanderersID    = "ending.gone.wanderers" // New wanderers (MAP-19)
 	endingW            = 560
 	// goneLoadReason is why Load stays off in a commitment colony: the same
 	// words as the pause menu's (options.CommitLoadReason; hud may not
@@ -70,6 +72,25 @@ func shipAlerts(w game.WorldView) []Alert {
 		return []Alert{{Key: ShipReadyAlertKey, Label: "Ship ready to launch", Targets: at}}
 	}
 	return nil
+}
+
+// GoneAlert is "Nobody left" while everyone is gone (MAP-19), with the wait
+// for new wanderers when that option exists in this game. A click reopens the
+// everyone-gone screen, so Keep watching never loses the way back.
+func GoneAlert(w game.WorldView) (Alert, bool) {
+	ax := w.AX
+	if !ax.EveryoneGone {
+		return Alert{}, false
+	}
+	label := goneTitle
+	switch {
+	case ax.WanderersMax == 0 || ax.WanderersLeft == 0: // no such option, or all seven groups used
+	case ax.WanderersOK:
+		label += ": new wanderers can come"
+	default:
+		label += ": wanderers in " + countdown(ax.WanderersIn)
+	}
+	return Alert{Key: GoneAlertKey, Label: label}, true
 }
 
 // countdown is ticks as days and hours ("12 days 4 hours").
@@ -146,11 +167,17 @@ func (c Right) openEnding(w game.WorldView) {
 	c.pushEnding(EndingModalID, endingTitle, endingText, EndingLines(w, c.sh.Pawns(), c.sh.Tick()), buttons)
 }
 
-// openGone pushes the everyone-gone screen: Keep watching, Load game (off
+// openGone pushes the everyone-gone screen: Keep watching, New wanderers
+// (off until the wait is over), Load game (off
 // in a commitment colony, as in the pause menu) and Main menu.
 func (c Right) openGone(w game.WorldView) {
 	buttons := []uikit.ModalButton{{ID: GoneWatchID, Label: "Keep watching", Style: uikit.BtnPrimary, Closes: true}}
 	if d, ok := c.sh.(ports.Dispatcher); ok {
+		if w.AX.WanderersMax > 0 { // MAP-19: a game made from a Setup has the option
+			buttons = append(buttons, uikit.ModalButton{ID: GoneWanderersID, Label: "New wanderers", Closes: true,
+				Disabled: c.wanderersReason,
+				OnClick:  func() { d.Do(ports.OpenWanderers{}) }})
+		}
 		buttons = append(buttons, uikit.ModalButton{ID: GoneLoadID, Label: "Load game", Closes: true,
 			Disabled: func() string {
 				if s, ok := c.sh.Env().Game.(storyReader); ok && s.Story().Commitment {
@@ -163,6 +190,19 @@ func (c Right) openGone(w game.WorldView) {
 				OnClick: func() { d.Do(ports.ReturnToMenu{}) }})
 	}
 	c.pushEnding(GoneModalID, goneTitle, goneText, []string{standingLine(w, c.sh.Tick())}, buttons)
+}
+
+// wanderersReason is why New wanderers is off: the wait, in hours, or the
+// seven groups used up ("" it is on).
+func (c Right) wanderersReason() string {
+	ax := c.sh.World().AX
+	switch {
+	case ax.WanderersLeft == 0:
+		return "No more groups"
+	case !ax.WanderersOK:
+		return "In " + countdown(ax.WanderersIn)
+	}
+	return ""
 }
 
 // storyReader is the colony's story read model (optional on Reader; the

@@ -43,6 +43,7 @@ type Dealings struct {
 	tradeDismissed bool
 	comms          *commsDraft
 	commsDismissed bool
+	wand           *wandererDraft // the New wanderers picker (wanderers.go)
 	paused         bool
 	resume         int
 }

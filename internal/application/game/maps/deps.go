@@ -178,7 +178,8 @@ type Populator interface {
 	// Aboard is our people (colonists, prisoners) and tame animals on the
 	// current map, in id order.
 	Aboard() (people, animals []entity.EntityID)
-	// PackUp loads the current map's unforbidden goods onto caravan cid.
+	// PackUp loads the current map's unforbidden goods, and a settlement's
+	// found loot, onto caravan cid.
 	PackUp(cid uint64)
 	// Raid sends the storyteller's raid onto the current map.
 	Raid()

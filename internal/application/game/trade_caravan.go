@@ -99,17 +99,18 @@ func lower(s string) string {
 // trader, conscious, on the map and not yet leaving.
 func (g *Game) traderOpen(id entity.EntityID) bool {
 	c := g.trade.caravan
-	if c == nil || c.Trader != id || uint64(g.clock.Now()) >= c.LeaveAt || !g.visitor(id) {
+	if c == nil || c.Trader != id || c.Turned || uint64(g.clock.Now()) >= c.LeaveAt || !g.visitor(id) {
 		return false
 	}
 	v, _ := g.vital.Get(id)
 	return v.Status == health.Alive
 }
 
-// traderAt is the trader standing at x, y (0: none).
+// traderAt is the trader standing at x, y (0: none). One that turned
+// (MAP-18) still counts, so the order menu says why it won't trade.
 func (g *Game) traderAt(x, y int) entity.EntityID {
 	c := g.trade.caravan
-	if c == nil || !g.visitor(c.Trader) {
+	if c == nil || !c.Turned && !g.visitor(c.Trader) {
 		return 0
 	}
 	if p, ok := g.positions.Get(c.Trader); ok && p.X == x && p.Y == y {
@@ -167,7 +168,8 @@ func (g *Game) traderVisitorGone(id entity.EntityID) {
 }
 
 // traderLost drops caravan c's goods forbidden where its trader fell and
-// costs the faction traderLostGoodwill.
+// costs the faction traderLostGoodwill, unless the caravan had turned on the
+// colony (MAP-18).
 func (g *Game) traderLost(c *traderCaravan) {
 	x, y := g.home()
 	if p, ok := g.positions.Get(c.Trader); ok {
@@ -181,6 +183,10 @@ func (g *Game) traderLost(c *traderCaravan) {
 	}
 	f := g.factionByID(c.Faction)
 	if f == nil {
+		return
+	}
+	if c.Turned {
+		g.letter(letterInfo, "Trader lost", fmt.Sprintf("%s, the trader of %s, won't reach home. Its goods lie where it fell.", g.name(c.Trader), f.Name), c.Trader)
 		return
 	}
 	now := uint64(g.clock.Now())

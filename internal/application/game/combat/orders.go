@@ -39,7 +39,7 @@ func (o *Orders) Apply(c command.Command) (way bool) {
 		return false
 	}
 	switch {
-	case c.Kind == command.SetDoorHoldOpen && k.IsDoor() && k != construction.AnimalFlap: // A2: a flap is never held open
+	case c.Kind == command.SetDoorHoldOpen && k.IsDoor() && k != construction.AnimalFlap && !o.doors.enemy(id): // A2: a flap is never held open; MAP-17: nor an enemy's door by us
 		way = o.doors.Held(id) != c.Enabled
 		o.doors.SetHold(id, c.Enabled)
 	case c.Kind == command.SetTurretHold && isTurret(k):

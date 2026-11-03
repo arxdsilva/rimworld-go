@@ -48,3 +48,5 @@ The contract between the ebiten client's shell (the root package: `App` and `Ren
 ## Known Design Constraints
 - The `Screen` names are referenced by the root's screen table; adding one means adding it in `ports` first.
 - ARCH-005 added the contract first (`Screen`, the navigation intents, `Widgets`, `Saves`); roles added later need a second caller.
+
+`OpenWanderers` (MAP-19): hud asks the shell to open the New wanderers picker (`dialogs`).

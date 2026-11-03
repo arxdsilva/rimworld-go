@@ -796,10 +796,17 @@ func (h mapsPop) Aboard() (people, animals []entity.EntityID) {
 	}
 	return people, animals
 }
+
+// PackUp: a settlement's goods start forbidden like any found loot, and
+// taking them is what the pack-up is for, so there it allows what was found
+// lying (mapsSettle.Settle).
 func (h mapsPop) PackUp(cid uint64) {
 	g := h.g
+	m := atlasRow(g)
+	loot := m != nil && (m.Kind == maps.Settlement || m.Defeated) // a fallen settlement is a Site
 	for _, sid := range slices.Clone(g.itemIDs) {
-		if st, ok := g.stacks.Get(sid); ok && !st.Forbidden {
+		if st, ok := g.stacks.Get(sid); ok && (!st.Forbidden || loot && st.Unclaimed) {
+			st.Forbidden = false
 			travelOf(g).Carry(cid, st)
 			g.deleteItem(sid)
 		}
