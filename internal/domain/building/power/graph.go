@@ -7,24 +7,28 @@ import (
 
 // Node is one electrical building for Build: its id (an entity id,
 // unique), role, footprint cells and, for a switch, whether it is closed
-// (conducting).
+// (conducting). Pin is the conductor a device was reconnected to (PWR-4; 0:
+// the nearest).
 type Node struct {
 	ID     uint64
 	Role   Role
 	Cells  [][2]int
 	Closed bool
+	Pin    uint64
 }
 
 // Link is the transmitter a device joins: its node id and the transmitter
 // cell the link line is drawn to, the device cell it is drawn from (the
 // footprint cell nearest it: Chebyshev, then straight-line distance, then
 // y, then x) and their Chebyshev distance (0: a transmitter lies under
-// the device).
+// the device). Next is the conductor Reconnect moves it to (PWR-4; 0: no
+// other grid in range).
 type Link struct {
 	To           uint64
 	X, Y         int
 	FromX, FromY int
 	Dist         int
+	Next         uint64
 }
 
 // Graph is the topology Build makes: the net every node is on and the

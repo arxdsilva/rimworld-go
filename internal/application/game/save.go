@@ -439,14 +439,14 @@ type mapSave struct {
 // tick (0: none) and the tick of the last balance. Nets, outputs and the
 // flick index are derived, not saved.
 type powerSave struct {
-	Charge     []entry[int64]
-	WantOff    []entity.EntityID
-	IsOff      []entity.EntityID
-	Unpowered  []entity.EntityID
-	Shed       []entry[uint64]
-	Thermo     []entry[thermoSave]
-	FlareUntil uint64
-	Last       uint64
+	Charge           []entry[int64]
+	WantOff          []entity.EntityID
+	IsOff            []entity.EntityID
+	Unpowered        []entity.EntityID
+	Shed             []entry[uint64]
+	Thermo           []entry[thermoSave]
+	FlareUntil, Last uint64
+	Pins             []entry[uint64] // devices reconnected by hand (PWR-4): the chosen conductor
 }
 
 // thermoSave is a heater's or cooler's thermostat: its target (tenths of a

@@ -450,7 +450,7 @@ type BuildingView struct {
 	// while they differ). PowerUse and PowerOut are the W drawn and made
 	// now; StoredWh of CapWh a battery's charge. NoPowerReason says why a
 	// consumer is unpowered (NoPower*; "" when powered). LinkX, LinkY is
-	// the transmitter cell a device's link line goes to (HasLink).
+	// the link line's end (HasLink); PowerRelink: another grid is in range.
 	PowerRole            string
 	PowerNet             int
 	Powered              bool
@@ -460,7 +460,7 @@ type BuildingView struct {
 	NoPowerReason        string
 	LinkX, LinkY         int
 	LinkFromX, LinkFromY int // the device's cell the link line starts from
-	HasLink              bool
+	HasLink, PowerRelink bool
 	// Glow: the building gives off light now (a lamp, a burning campfire;
 	// light.go glowOf), reaching GlowRadius tiles in the simulation's
 	// light. Presentation lights only from Glow; it may draw its own reach.

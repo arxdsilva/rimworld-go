@@ -239,7 +239,7 @@ func equalBuildingView(a, b *BuildingView) bool {
 		a.PowerUse == b.PowerUse && a.PowerOut == b.PowerOut &&
 		a.StoredWh == b.StoredWh && a.CapWh == b.CapWh && a.NoPowerReason == b.NoPowerReason &&
 		a.LinkX == b.LinkX && a.LinkY == b.LinkY && a.LinkFromX == b.LinkFromX && a.LinkFromY == b.LinkFromY &&
-		a.HasLink == b.HasLink && a.Glow == b.Glow && a.GlowRadius == b.GlowRadius &&
+		a.HasLink == b.HasLink && a.PowerRelink == b.PowerRelink && a.Glow == b.Glow && a.GlowRadius == b.GlowRadius &&
 		a.ThermoTarget == b.ThermoTarget && a.ThermoActive == b.ThermoActive && a.PowerMax == b.PowerMax &&
 		a.AimDir == b.AimDir && a.ShotAge == b.ShotAge &&
 		a.Comfort == b.Comfort && a.RestEffect == b.RestEffect && a.Beauty == b.Beauty &&

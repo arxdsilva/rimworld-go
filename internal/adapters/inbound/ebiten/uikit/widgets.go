@@ -71,6 +71,7 @@ var (
 	PowerNet5 = color.RGBA{R: 0xA9, G: 0x8B, B: 0xFF, A: 0xFF}
 	PowerNet6 = color.RGBA{R: 0x3E, G: 0x8B, B: 0xFF, A: 0xFF}
 	PowerNone = color.RGBA{R: 0x9A, G: 0x94, B: 0xA8, A: 0xFF}
+	PowerCord = color.RGBA{R: 0x21, G: 0x1D, B: 0x1A, A: 0xFF} // PWR-1: the wire on the map
 )
 
 var Tokens = map[string]color.RGBA{
@@ -126,6 +127,7 @@ var Tokens = map[string]color.RGBA{
 	"ui.power_net5":      PowerNet5,
 	"ui.power_net6":      PowerNet6,
 	"ui.power_none":      PowerNone,
+	"ui.power_cord":      PowerCord,
 }
 
 const menuBackdropBands = 12

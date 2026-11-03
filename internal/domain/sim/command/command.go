@@ -384,7 +384,8 @@ const (
 	// SetColonyCap, Count is Options' Max colonies (MAP-06).
 	// SetTankStock (FISH-0), Count is the stock species fish tank Target
 	// raises (aqua.Species; 0 leaves it empty); NewWanderers (MAP-14), Name
-	// is the chosen group's pawn seeds, a new group after a game over.
+	// is the chosen group's pawn seeds, a new group after a game over;
+	// ReconnectPower (PWR-4), device Target wires to the next grid in range.
 	EnterMap
 	AttackSettlement
 	SettleHere
@@ -395,6 +396,7 @@ const (
 	SetColonyCap
 	SetTankStock
 	NewWanderers
+	ReconnectPower
 )
 
 // LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).
