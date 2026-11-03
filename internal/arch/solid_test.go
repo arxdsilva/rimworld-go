@@ -66,6 +66,9 @@ var forbiddenImports = []struct {
 	{module + "/internal/domain/", prefix(module + "/internal/ports/"), "domain must not know the ports"},
 	{module + "/internal/domain/", prefix("github.com/hajimehoshi/ebiten"), "domain is headless"},
 	{module + "/internal/domain/", exactOrSub("os"), "domain reads no files, env or clock"},
+	{module + "/internal/domain/", thirdParty, "the deterministic core uses only the standard library (GO_BEST_PRACTICES §86)"},
+	{module + "/internal/application/", thirdParty, "the deterministic core uses only the standard library (GO_BEST_PRACTICES §86)"},
+	{module + "/pkg/", thirdParty, "domain imports pkg, so pkg uses only the standard library (GO_BEST_PRACTICES §86)"},
 	{module + "/internal/application/", prefix(module + "/internal/adapters/"), "application must not know adapters"},
 	{module + "/internal/ports/", prefix(module + "/internal/adapters/"), "ports must not know adapters"},
 	{module + "/internal/adapters/outbound/", prefix(module + "/internal/adapters/inbound/"), "outbound adapters must not know the UI"},
@@ -78,6 +81,13 @@ func prefix(p string) func(string) bool {
 }
 func exactOrSub(p string) func(string) bool {
 	return func(s string) bool { return s == p || strings.HasPrefix(s, p+"/") }
+}
+
+// thirdParty: a module path's first element has a dot; the standard
+// library's and ours don't.
+func thirdParty(p string) bool {
+	first, _, _ := strings.Cut(p, "/")
+	return strings.Contains(first, ".")
 }
 
 // measure is one measured violation: a numeric rule's value, or 0 for the

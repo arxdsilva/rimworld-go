@@ -21,7 +21,8 @@ Non-negotiable rules:
 - Dependencies point inward: adapters → application → domain.
 - Domain must remain headless and deterministic.
 - One authoritative simulation owner; no goroutine-per-pawn/job.
-- Search before creating shared primitives.
+- Search before creating shared primitives or utilities: this repo, then the standard library, then well-known libraries (GO_BEST_PRACTICES §86).
+- Third-party libraries are allowed in cmd, adapters and platform, never in domain, application or pkg (enforced by internal/arch). Every module in go.mod is listed in THIRD_PARTY_NOTICES.md.
 - All external mutations enter as typed commands.
 - UI/rendering never mutates domain state directly.
 - Any code that depends on an adapter, or an adapter that depends on the application layer, must depend on a small, consumer-owned interface (the behavior it needs), never the concrete type directly — construct concrete types only at the composition root. This is SOLID's Dependency Inversion Principle; keep each such interface single-purpose per the Interface Segregation Principle. See `.cursor/HEXAGONAL_ARCHITECTURE.md` §6.

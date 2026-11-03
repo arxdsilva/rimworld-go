@@ -11,7 +11,7 @@ Separate:
 
 ```text
 domain/ai/pathing          pure deterministic algorithms
-adapters/outbound/pathworker  asynchronous worker execution
+adapters/outbound (a new package when pathing goes async)  asynchronous worker execution
 ```
 
 The path algorithm is gameplay logic; worker scheduling is infrastructure.

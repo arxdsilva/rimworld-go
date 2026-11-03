@@ -98,7 +98,7 @@ application
 domain
 ```
 
-Domain may depend on pure utility packages such as geometry, fixed-point types, deterministic collections, and RNG primitives.
+Domain may depend on pure utility packages such as geometry, fixed-point types, deterministic collections, and RNG primitives. These live in pkg/ and use only the standard library.
 
 Forbidden:
 
@@ -106,7 +106,6 @@ Forbidden:
 domain → renderer
 domain → filesystem
 domain → Ebitengine
-domain → protobuf generated package
 domain → OS APIs
 domain → network libraries
 domain → CLI
@@ -244,17 +243,11 @@ rimworld-go/
 │   │   │   └── future_net/
 │   │   └── outbound/
 │   │       ├── contentfs/
-│   │       ├── protobufsave/
-│   │       ├── pathworker/
 │   │       ├── slogmetrics/
-│   │       ├── filesystem/
 │   │       └── modloader/
 │   │
 │   ├── platform/
-│   │   ├── config/
-│   │   ├── logging/
-│   │   ├── profiling/
-│   │   └── buildinfo/
+│   │   └── config/
 │   │
 │   └── testkit/
 │       ├── simtest/
@@ -263,11 +256,8 @@ rimworld-go/
 │       └── replaytest/
 │
 ├── pkg/
-│   ├── geom/
-│   ├── fixed/
-│   ├── randx/
-│   ├── bitset/
-│   └── collections/
+│   ├── mathx/
+│   └── randx/
 │
 ├── api/
 │   └── proto/
@@ -345,7 +335,7 @@ Adapters translate external technology into ports.
 Examples:
 
 - Ebitengine UI → inbound application commands;
-- Protobuf files → persistence port;
+- save files → persistence port;
 - filesystem content → content port;
 - worker pool → pathing port.
 
@@ -603,6 +593,8 @@ Examples:
 
 Do not put game concepts in `pkg/`.
 
+Add a primitive here only when the standard library doesn't have it (GO_BEST_PRACTICES §86). container/heap and math/rand/v2 already cover the general cases; pkg/randx wraps the latter for seeding and save state.
+
 ---
 
 # 17. Domain Event Rules
@@ -652,19 +644,14 @@ Prefer visible transitions over implicit callback chains.
 
 # 19. Persistence Boundary
 
-Runtime domain types are not the save schema.
+Saves are gob + gzip, versioned by SaveVersion with one migration per step
+(internal/application/game/save.go). Gob matches fields by name: renaming or
+removing a field drops its data without an error. The save schema test lists
+every saved field, so such a change must bump SaveVersion and add a migration.
+Reconsider Protobuf only if saves must be read outside Go.
 
-The persistence adapter translates:
-
-```text
-domain snapshot
-↔ versioned persistence DTO
-↔ protobuf representation
-```
-
-Generated protobuf code must stay outside the domain.
-
-Migration logic belongs to persistence/application boundaries.
+The application layer encodes and migrates the state; the persistence adapter
+owns the files.
 
 ---
 
@@ -725,7 +712,7 @@ Recommended split:
 
 ```text
 domain/ai/pathing      pure deterministic solver
-adapters/outbound/pathworker   worker pool orchestration
+adapters/outbound (a new package when pathing goes async)   worker pool orchestration
 ```
 
 ---
@@ -912,7 +899,7 @@ internal/domain imports internal/adapters
 internal/domain imports internal/platform
 internal/domain imports Ebitengine
 internal/domain imports os
-internal/domain imports protobuf generated code
+internal/domain, internal/application or pkg imports a third-party module
 authoritative package calls time.Now
 authoritative package uses global math/rand
 ```
@@ -986,7 +973,7 @@ ADR-0006 Chunked world
 ADR-0007 Hierarchical pathfinding
 ADR-0008 Command-based mutations
 ADR-0009 Snapshot-based rendering
-ADR-0010 Protobuf persistence schema
+ADR-0010 Versioned gob save format
 ADR-0011 Content definitions and runtime indexing
 ADR-0012 Async worker ordered-commit model
 ```

@@ -176,9 +176,7 @@ internal/
   metrics/
   debug/
 pkg/
-  geom/
-  fixed/
-  collections/
+  mathx/
   randx/
 content/
 assets/
@@ -1351,9 +1349,11 @@ Commands are serialized and sorted deterministically. This supports replay and f
 
 # 45. Save Architecture
 
-Do not serialize runtime Go structs using `gob` as the public save contract.
-
-Use explicit versioned schemas, preferably Protobuf initially.
+Saves are gob + gzip, versioned by SaveVersion with one migration per step
+(internal/application/game/save.go). Gob matches fields by name: renaming or
+removing a field drops its data without an error. The save schema test lists
+every saved field, so such a change must bump SaveVersion and add a migration.
+Reconsider Protobuf only if saves must be read outside Go.
 
 Suggested container:
 
@@ -2010,7 +2010,7 @@ Examples:
 - sparse component stores;
 - Ebitengine renderer;
 - hierarchical pathfinding;
-- Protobuf saves;
+- gob saves with versioned migrations;
 - Starlark vs WASM;
 - multiplayer model.
 
@@ -2221,7 +2221,7 @@ BUILD-002 blueprints
 BUILD-003 resource delivery
 BUILD-004 construction
 BUILD-005 wall/door
-SAVE-001 Protobuf schema
+SAVE-001 versioned save schema
 SAVE-002 minimal save/load
 TEST-001 sim test DSL
 PERF-001 benchmark harness
@@ -2342,7 +2342,7 @@ reflection-heavy generic ECS before real need
 service-locator GameContext containing everything
 runtime Go plugins from untrusted mods
 renderer-owned authoritative state
-gob as permanent public save schema
+a saved field renamed or removed without a SaveVersion bump and a migration
 ```
 
 

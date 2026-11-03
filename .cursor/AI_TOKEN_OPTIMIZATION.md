@@ -439,7 +439,7 @@ Example:
 domain/sim/entity — IDs and lifecycle
 domain/ai/job — job state machines
 domain/ai/pathing — pure path solver
-adapters/outbound/pathworker — async worker execution
+adapters/outbound (a new package when pathing goes async) — async worker execution
 ```
 
 This is cheaper than exploratory reads.

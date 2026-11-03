@@ -394,7 +394,6 @@ Use generics when they clearly reduce duplication.
 Good candidates:
 - sparse component store;
 - heap;
-- bitset helpers;
 - small collection primitives.
 
 Avoid generic “architecture frameworks”.
@@ -716,19 +715,17 @@ Domain does not call filesystem APIs.
 Adapters own:
 - files;
 - directories;
-- compression;
-- protobuf encoding;
 - mod discovery.
 
 ---
 
 # 43. Serialization
 
-Runtime structs are not persistence contracts.
-
-Use explicit DTO translation.
-
-Generated protobuf code should not leak into domain signatures.
+Saves are gob + gzip, versioned by SaveVersion with one migration per step
+(internal/application/game/save.go). Gob matches fields by name: renaming or
+removing a field drops its data without an error. The save schema test lists
+every saved field, so such a change must bump SaveVersion and add a migration.
+Reconsider Protobuf only if saves must be read outside Go.
 
 ---
 
@@ -986,13 +983,13 @@ Presentation dependencies may use it if unavoidable, but renderer selection shou
 
 ---
 
-# 63. Protobuf
+# 63. Generated Code
 
-Keep `.proto` files under a dedicated API/schema location.
-
-Never hand-edit generated `.pb.go`.
+Never hand-edit generated files.
 
 Do not feed generated code to AI agents unless debugging generator output.
+
+The save format is §43.
 
 ---
 
@@ -1269,18 +1266,35 @@ Never hash raw pointer addresses or Go map iteration.
 
 ---
 
-# 86. Standard Library First
+# 86. Dependencies: Standard Library, Then a Library, Then Our Own Code
 
-Prefer Go standard library when adequate.
+When code needs a capability, take the first that fits:
 
-Every external dependency should justify:
+1. The standard library has it ready to call.
+2. A well-known, maintained library has it.
+3. We write it, with the reason in the package's AGENTS.md or the handoff:
+   a hot path a library can't serve without allocating, output that must stay
+   reproducible, or a library that costs more than the code it replaces.
+
+Assembling a standard format from standard-library parts does not count as
+step 1: a UUID from crypto/rand, semver from a regexp, a YAML subset from
+bufio. Don't add a dependency for a few obvious lines either.
+
+Where libraries may go:
+
+- cmd, internal/adapters, internal/platform: allowed.
+- internal/domain, internal/application, pkg: standard library only, enforced
+  by internal/arch (they are the deterministic core, and domain imports pkg).
+- A library's types stay inside its adapter and never cross a port.
+
+Every new dependency states in its handoff:
+
 - capability;
-- maintenance;
-- license;
-- platform impact;
-- determinism/security implications.
-
-Avoid dependency sprawl.
+- maintenance (not archived, recent releases);
+- license, with the module listed in THIRD_PARTY_NOTICES.md;
+- platform (the Windows release builds with CGO_ENABLED=0, so it must be pure Go there);
+- what it pulls in (`go mod graph`);
+- determinism and security implications.
 
 ---
 
@@ -1292,7 +1306,8 @@ Run:
 - tests;
 - race tests where relevant;
 - deterministic hashes;
-- benchmarks for hot dependencies.
+- benchmarks for hot dependencies;
+- govulncheck (CI runs it on every push).
 
 Do not auto-merge major dependency upgrades blindly.
 

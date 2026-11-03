@@ -65,3 +65,19 @@ func TestSOLIDBudgetFile(t *testing.T) {
 		t.Fatalf("a missing file is an empty budget, got %v %v", b, o)
 	}
 }
+
+func TestThirdParty(t *testing.T) {
+	t.Parallel()
+	for p, want := range map[string]bool{
+		"os":                      false,
+		"encoding/gob":            false,
+		"rimworld-go/pkg/randx":   false,
+		"golang.org/x/mod/semver": true,
+		"github.com/google/uuid":  true,
+		"go.yaml.in/yaml/v3":      true,
+	} {
+		if got := thirdParty(p); got != want {
+			t.Errorf("thirdParty(%q) = %v, want %v", p, got, want)
+		}
+	}
+}
