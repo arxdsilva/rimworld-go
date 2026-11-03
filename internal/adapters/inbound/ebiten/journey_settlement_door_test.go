@@ -11,11 +11,9 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// TestJourneyEnemyDoorRefusesClaim (MAP-17): a real attack on a base lays its
-// doors shut; selecting one says why colonists can't pass, offers only Claim,
-// and refuses that with a reason while its defenders stand.
-func TestJourneyEnemyDoorRefusesClaim(t *testing.T) {
-	t.Parallel()
+// attackedBase is a real attack on a neutral base, its map in view.
+func attackedBase(t *testing.T) *journey {
+	t.Helper()
 	j, _, _ := neutralBase(t)
 	j.clickID("world.act.attack")
 	if !j.clickID("modal." + worldview.AttackID + ".ok") {
@@ -35,6 +33,15 @@ func TestJourneyEnemyDoorRefusesClaim(t *testing.T) {
 	j.update(worldFly)
 	j.g.ViewMap(away)
 	j.update(2)
+	return j
+}
+
+// TestJourneyEnemyDoorRefusesClaim (MAP-17): a real attack on a base lays its
+// doors shut; selecting one says why colonists can't pass, offers only Claim,
+// and refuses that with a reason while its defenders stand.
+func TestJourneyEnemyDoorRefusesClaim(t *testing.T) {
+	t.Parallel()
+	j := attackedBase(t)
 	var door game.BuildingView
 	for _, b := range j.g.World().Buildings {
 		if b.Hostile && b.Kind == "door" {
@@ -101,5 +108,56 @@ func TestEnemyDoorClaimSendsTheOrder(t *testing.T) {
 	c := s.cmds[len(s.cmds)-1]
 	if c.Kind != command.DesignateClaim || c.X != 4 || c.Y != 6 || c.X2 != 4 || c.Y2 != 6 || !c.Enabled {
 		t.Fatalf("Claim sent %+v", c)
+	}
+}
+
+// TestJourneyClaimAfterTheDefeat (MAP-17, MAP-21; wiki: Door, Faction base): the
+// defenders fall, and the door and the turret each take a click on Claim. The
+// door stops being hostile, the turret goes on with no grid.
+func TestJourneyClaimAfterTheDefeat(t *testing.T) {
+	t.Parallel()
+	j := attackedBase(t)
+	for _, p := range j.g.Snapshot() {
+		if p.Hostile {
+			j.g.Injure(p.ID, 100000)
+		}
+	}
+	j.update(2)
+	claim := func(kind func(game.BuildingView) bool, id string) entity.EntityID {
+		t.Helper()
+		var b game.BuildingView
+		for _, v := range j.g.World().Buildings {
+			if v.Hostile && kind(v) {
+				b = v
+				break
+			}
+		}
+		if b.ID == 0 {
+			t.Fatal("the base has no such piece")
+		}
+		wdSelect(j, b.X, b.Y)
+		j.update(2)
+		if !j.clickID(id) {
+			t.Fatalf("Claim on the %s took no click", b.Kind)
+		}
+		j.update(2)
+		return b.ID
+	}
+	door := claim(func(b game.BuildingView) bool { return b.Kind == "door" }, inspector.DoorClaimID)
+	gun := claim(func(b game.BuildingView) bool { return b.Kind != "door" }, inspector.TurretClaimID)
+	for _, v := range j.g.World().Buildings {
+		switch v.ID {
+		case door:
+			if v.Hostile {
+				t.Fatalf("door %+v", v)
+			}
+		case gun:
+			if v.Hostile || !v.OffGrid || !v.Powered {
+				t.Fatalf("turret %+v", v)
+			}
+			if lines := bldLines(j.a.insp.Building().BuildingPane(gun)); !strings.Contains(lines, inspector.OffGridLine) {
+				t.Fatalf("the pane says %q", lines)
+			}
+		}
 	}
 }

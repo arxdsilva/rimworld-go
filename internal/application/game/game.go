@@ -405,6 +405,9 @@ type BuildingView struct {
 	// Ruin: an abandoned piece from map generation (MAPGEN-2).
 	Ruin    bool
 	Hostile bool // MAP-13: a settlement's turret, firing on us
+	// OffGrid: a claimed settlement turret on no grid; Sparking: a turret's
+	// fuse burns (MAP-21).
+	OffGrid, Sparking bool
 	// Medical: a bed kept for the sick and injured (PLAY-020).
 	Medical        bool
 	W, H           int // footprint in tiles (after facing)

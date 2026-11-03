@@ -1053,7 +1053,9 @@ func Movable(k Kind) bool {
 		// AX-0 contract: door-like, wall-mounted or fixed pieces (wiki: not
 		// minifiable), and the escape ship's parts.
 		OrnateDoor, Column, AnimalFlap, WallTorch, WallLamp, WaterproofConduit, Watermill, HitchingSpot,
-		ShipBeam, ShipCasket, ShipCore, ShipReactor, ShipEngine, ShipSensor:
+		ShipBeam, ShipCasket, ShipCore, ShipReactor, ShipEngine, ShipSensor,
+		// wiki: Autocannon turret, Uranium slug turret (cannot be re-installed)
+		Autocannon, UraniumSlugTurret:
 		return false
 	}
 	return DefOf(k).Layer != LayerFloor
@@ -1296,12 +1298,16 @@ type Building struct {
 	// Ancient (MAPGEN-3): an intact piece of a sealed vault (walls, floor,
 	// caskets): not colony wealth, not a Home anchor, not repaired.
 	Ancient bool
-	// Hostile (MAP-13): a settlement's turret: it needs no power, fires on
-	// us and stays hostile until destroyed; nobody of ours can wire, claim,
-	// order or remove it. MAP-17: a settlement's door: shut to colonists and
-	// animals, open to its defenders, until smashed or claimed after the
-	// defeat.
+	// Hostile (MAP-13): a settlement's turret: it needs no power and fires
+	// on us; nobody of ours can wire, order or remove it. MAP-17: a
+	// settlement's door: shut to colonists and animals, open to its
+	// defenders. Either stays so until smashed, or claimed after the defeat
+	// (wiki: Faction base, Door).
 	Hostile bool
+	// OffGrid (MAP-21): a settlement's turret we claimed still runs on its
+	// own supply and fires for us (wiki: Faction base). Moved or crated, it
+	// is an ordinary turret that needs power.
+	OffGrid bool
 	// Sealed sleeper caskets (MAPGEN-3): Occupant is a vault.Occupant
 	// (0: open or empty shell); CasketGroup the vault id whose caskets open
 	// together.

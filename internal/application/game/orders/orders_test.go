@@ -59,9 +59,10 @@ func TestSlaughterAndClaimRules(t *testing.T) {
 	if Claimable(construction.Building{Kind: construction.SteamVent, Ancient: true}, 0) {
 		t.Fatal("a natural feature is nobody's")
 	}
-	// MAP-13: a settlement's turret stays hostile; the rest of the compound is claimable
-	if Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true, Hostile: true}, 0) {
-		t.Fatal("a settlement's turret is not claimed")
+	// MAP-21: a settlement's turret waits for the defeat (wiki: Faction base); the rest of the compound doesn't
+	turret := construction.Building{Kind: construction.SentryTurret, Ancient: true, Hostile: true}
+	if Claimable(turret, 1) || !Claimable(turret, 0) {
+		t.Fatal("a settlement's turret is claimed once no defender is up, and only then")
 	}
 	if !Claimable(construction.Building{Kind: construction.Wall, Ancient: true}, 1) || !Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true}, 1) {
 		t.Fatal("a compound's other pieces stay claimable")

@@ -92,8 +92,8 @@ func TestSettlementTurretPane(t *testing.T) {
 	f.world.Buildings = []game.BuildingView{hostile, ours}
 	a := New(f).Building()
 
-	if got := a.BuildingCommands(7); len(got) != 0 {
-		t.Errorf("hostile turret buttons = %+v", got)
+	if got := a.BuildingCommands(7); len(got) != 1 || got[0].ID != TurretClaimID { // MAP-21 (wiki: Faction base)
+		t.Errorf("hostile turret buttons = %+v, want Claim alone", got)
 	}
 	if got := a.defenceCommands(hostile); len(got) != 0 {
 		t.Errorf("hostile turret defence buttons = %+v", got)

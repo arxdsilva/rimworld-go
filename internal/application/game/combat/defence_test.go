@@ -300,7 +300,11 @@ func TestSlugTurretArmor(t *testing.T) {
 		t.Fatal("names")
 	}
 	b := f.bldgs[52]
+	full := construction.MaxHP(b.Kind, b.Stuff)
+	b.Damage = full
 	f.RemoveBuilding(52)
+	f.droll = nil
+	tu.Hurt(52, b, full)
 	tu.Blast(52, b)
 	if f.msgs[0] != "The slug turret blew up!" {
 		t.Fatalf("blast message %q", f.msgs[0])

@@ -325,7 +325,12 @@ func TestSmashedFoamDefencesBurst(t *testing.T) {
 	if f.blasts[1].Radius != FoamTurretBurstRadius {
 		t.Fatal("foam turret")
 	}
-	c.Turrets.Blast(42, construction.Building{Kind: construction.RocketBattery, X: 10, Y: 10})
+	rocket := construction.Building{Kind: construction.RocketBattery, X: 10, Y: 10}
+	full := construction.MaxHP(rocket.Kind, rocket.Stuff)
+	rocket.Damage = full
+	f.droll = []int{0}
+	c.Turrets.Hurt(42, rocket, full) // its fuse lights as it breaks
+	c.Turrets.Blast(42, rocket)
 	if b := f.blasts[2]; b.Kind != explosion.Bomb || b.Radius != RocketBlastRadius {
 		t.Fatalf("rocket battery %+v", b)
 	}

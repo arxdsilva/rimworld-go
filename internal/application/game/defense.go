@@ -180,7 +180,11 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 		g.openCasketGroup(id) // casket.go: harming a sealed casket opens its group
 		b, _ = g.bldgs.Get(id)
 	}
+	before := b.HP()
 	b.Damage += dmg
+	if b.Kind.BurstsWhenDestroyed() {
+		g.combat.Turrets.Hurt(id, b, before) // combat/turret_fuse.go (MAP-21)
+	}
 	if b.Ancient || b.Hostile { // raid/defend.go (MAP-17): a blow on the compound, behind its shut doors
 		g.raid.Raiders.Alarm(uint64(g.clock.Now()))
 	}
@@ -197,7 +201,7 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 	}
 	g.removeBuilding(id)
 	if b.Kind.BurstsWhenDestroyed() { // AX-5: also the foam popper, foam turret and rocket battery
-		// combat/turret.go (PLAY-024): it blows up once it is gone and its
+		// combat/turret_fuse.go (PLAY-024): it blows up once it is gone and its
 		// blueprint laid, so the blast never finds it standing
 		defer g.combat.Turrets.Blast(id, b)
 	}

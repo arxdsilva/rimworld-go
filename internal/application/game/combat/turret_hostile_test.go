@@ -66,8 +66,9 @@ func TestHostileTurretFiresWithoutPower(t *testing.T) {
 }
 
 // TestHostileTurretPicksTheColonyOnly: raiders, visitors, prisoners and wild
-// animals (even manhunters) are its side or none of its business; colonists
-// and tame animals are targets, nearest first.
+// animals hunting nobody in particular are its side or none of its business;
+// colonists, tame animals and manhunters (wiki: Mini-turret) are targets,
+// nearest first.
 func TestHostileTurretPicksTheColonyOnly(t *testing.T) {
 	t.Parallel()
 	f, c := hostileRig(t)
@@ -76,7 +77,7 @@ func TestHostileTurretPicksTheColonyOnly(t *testing.T) {
 	f.raider(1, 10, 7, weapon.Rifle)
 	f.pos[4] = [2]int{10, 8}
 	f.beast(2, 11, 7, animal.State{Species: animal.Deer})
-	f.beast(3, 12, 7, animal.State{Species: animal.TimberWolf, Manhunter: f.now + 100000})
+	f.beast(3, 12, 7, animal.State{Species: animal.TimberWolf})
 	f.beast(5, 13, 7, animal.State{Species: animal.Deer, Tame: true, Injury: 1 << 20}) // dead
 	scanOnce(f, c)
 	if tu.Firing(50) {
@@ -87,6 +88,12 @@ func TestHostileTurretPicksTheColonyOnly(t *testing.T) {
 	scanOnce(f, c)
 	if tu.Aim(50).Target != 7 {
 		t.Fatalf("the nearer of colonist and tame animal: %+v", tu.Aim(50))
+	}
+	f2, c2 := hostileRig(t)
+	f2.beast(3, 12, 7, animal.State{Species: animal.TimberWolf, Manhunter: f2.now + 100000})
+	scanOnce(f2, c2)
+	if c2.Turrets.Aim(50).Target != 3 {
+		t.Fatalf("a manhunter is its enemy too: %+v", c2.Turrets.Aim(50))
 	}
 	delete(f.pos, 7)
 	delete(f.animals, 7)

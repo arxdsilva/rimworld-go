@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game/orders"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -436,6 +437,9 @@ func TestClaimEnemyDoorOnlyAfterDefeat(t *testing.T) {
 	if b, _ := g.bldgs.Get(did); !b.Hostile || !b.Ancient {
 		t.Fatalf("claimed with a defender standing: %+v", b)
 	}
+	if !messageHas(g, orders.ReasonDefenders) {
+		t.Fatal("the refused claim gave no reason")
+	}
 	if g.reachable(ada, cmpInX, cmpInY) {
 		t.Fatal("the refused claim opened the way")
 	}
@@ -456,8 +460,8 @@ func TestClaimEnemyDoorOnlyAfterDefeat(t *testing.T) {
 		t.Fatalf("a claimed door costs a query: %T", colonistQ)
 	}
 	ax1Cmd(g, ax1Rect(command.DesignateClaim, 40, 5, 40, 5, true))
-	if tb, _ := g.bldgs.Get(tur); !tb.Hostile {
-		t.Fatalf("the turret was claimed: %+v", tb)
+	if tb, _ := g.bldgs.Get(tur); tb.Hostile || tb.Ancient || !tb.OffGrid { // MAP-21 (wiki: Faction base)
+		t.Fatalf("the turret after the defeat: %+v", tb)
 	}
 }
 

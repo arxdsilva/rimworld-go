@@ -11,15 +11,19 @@ import (
 // ruins (Building.Ruin) and ancient or raider-built pieces
 // (Building.Ancient). Claimed, they count as colony wealth, join the Home
 // area, are repaired and rebuilt, and give their full refund. A natural
-// feature (a steam vent) is never anyone's. A settlement's door takes the
-// defeat of its defenders first (MAP-17, wiki: Door).
+// feature (a steam vent) is never anyone's. A settlement's door and turret
+// take the defeat of its defenders first (MAP-17, MAP-21; wiki: Door, Faction
+// base); a claimed turret goes on firing, for us, with no grid.
 type Claim struct{ h Host }
 
-// Claimable reports a building the Claim order takes. A settlement's turret
-// that fires on us is not one (MAP-13); a settlement's door is once defenders
-// is 0 (MAP-17); the rest of its compound is.
+// ReasonDefenders is what a Claim that took nothing says when defenders
+// still stand by a door or turret in the rectangle.
+const ReasonDefenders = "Defeat the defenders first."
+
+// Claimable reports a building the Claim order takes: a settlement's door or
+// turret only once defenders is 0.
 func Claimable(b construction.Building, defenders int) bool {
-	if b.Hostile && (!b.Kind.IsDoor() || defenders > 0) {
+	if b.Hostile && defenders > 0 {
 		return false
 	}
 	return (b.Ruin || b.Ancient) && !construction.DefOf(b.Kind).Natural
@@ -30,6 +34,7 @@ func Claimable(b construction.Building, defenders int) bool {
 func (c *Claim) Mark(minX, minY, maxX, maxY int) int {
 	h := c.h
 	n, defenders := 0, -1
+	var refused *construction.Building
 	for _, id := range h.BuildingIDs() {
 		b, ok := h.Building(id)
 		if !ok || !in(b.X, b.Y, minX, minY, maxX, maxY) || !h.Seen(b.X, b.Y) {
@@ -39,15 +44,22 @@ func (c *Claim) Mark(minX, minY, maxX, maxY int) int {
 			defenders = h.Defending() // a count over the raiders: once, for a mark with a hostile piece
 		}
 		if !Claimable(b, defenders) {
+			if b.Hostile {
+				refused = &b
+			}
 			continue
 		}
 		if b.Hostile {
 			b.Forbidden = false // nothing of ours could have meant it
+			b.OffGrid = !b.Kind.IsDoor()
 		}
 		b.Ruin, b.Ancient, b.Hostile = false, false, false
 		h.SetBuilding(id, b)
 		h.Claimed(id)
 		n++
+	}
+	if n == 0 && refused != nil {
+		h.Message(refused.X, refused.Y, ReasonDefenders)
 	}
 	return n
 }

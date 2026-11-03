@@ -58,3 +58,17 @@ func TestSpentSettlementTurretSaysSo(t *testing.T) {
 		t.Fatalf("live lines = %q", got)
 	}
 }
+
+// TestClaimedAndSparkingTurretLines (MAP-21): a claimed turret says what it runs
+// on, and a lit fuse says so whoever's turret it is.
+func TestClaimedAndSparkingTurretLines(t *testing.T) {
+	t.Parallel()
+	ours := game.BuildingView{ID: 7, Kind: turretKind, OffGrid: true, Powered: true, Barrel: 10}
+	if got := strings.Join(defenceLines(ours), "|"); !strings.Contains(got, OffGridLine) {
+		t.Fatalf("claimed lines = %q", got)
+	}
+	lit := game.BuildingView{ID: 7, Kind: turretKind, Hostile: true, Barrel: 10, Sparking: true}
+	if got := strings.Join(defenceLines(lit), "|"); !strings.HasPrefix(got, SparkingLine) || !strings.Contains(got, HostileTurretLine) {
+		t.Fatalf("sparking lines = %q", got)
+	}
+}

@@ -23,7 +23,7 @@ func (k Kind) IsCharge() bool {
 // launcher, Mini-turret
 func (k Kind) BurstsWhenDestroyed() bool {
 	switch k {
-	case SentryTurret, FoamPopper, FoamTurret, RocketBattery:
+	case SentryTurret, Autocannon, UraniumSlugTurret, FoamPopper, FoamTurret, RocketBattery:
 		return true
 	}
 	return false

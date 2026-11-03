@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/application/game/combat"
+	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -368,7 +369,7 @@ func TestOrderedAttackOnSettlementTurret(t *testing.T) {
 	if g.combat.Turrets.Aim(tid).Target != 0 {
 		t.Fatal("it still aims")
 	}
-	if len(g.powerList().hostile) != 0 {
+	if len(g.powerList().offGrid) != 0 {
 		t.Fatal("still on the turret list")
 	}
 
@@ -430,6 +431,8 @@ func TestFireAtWillShootsSettlementTurret(t *testing.T) {
 func TestSettlementTurretRefusesThePlayer(t *testing.T) {
 	t.Parallel()
 	g, tid := hostileField(t, 9)
+	g.raidGroups = append(g.raidGroups, raid.Group{Plan: raid.Defend, Over: true, FleeLoss: raid.DefendFleeLoss, CampX: 30, CampY: 30, Camped: true, Size: 1})
+	spawnRaider(g, 0, len(g.raidGroups)-1, item.Club, 30, 30)
 	wall := buildNow(t, g, construction.Wall, item.Steel, construction.South, 25, 5)
 	w, _ := g.bldgs.Get(wall)
 	w.Ancient = true

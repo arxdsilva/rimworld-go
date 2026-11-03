@@ -9,12 +9,14 @@ import (
 )
 
 // A settlement's turret (MAP-13, Building.Hostile): it stands on a caravan
-// attack's map, needs no power and is on no grid, fires on colonists and
-// tame animals, and stays hostile after the settlement falls. Nobody at
-// the colony runs it, so a spent one goes quiet for good; a drafted
-// colonist shoots it (an order, or fire at will when no creature is
-// nearer) and it comes down through the usual Blast. The lock keeps the
-// usual two ranges: it picks up within the gun's reach and lets go past
+// attack's map, needs no power and is on no grid, fires on colonists, tame
+// animals and manhunters (wiki: Mini-turret), and stays hostile after the
+// settlement falls (wiki: Faction base). Nobody at the colony runs it, so a
+// spent one goes quiet until claimed; a drafted colonist shoots it (an order,
+// or fire at will when no creature is nearer). Claimed once no defender
+// stands (orders/claim.go), it keeps its own supply (Building.OffGrid) and is
+// ours: it fires on what ours fire on and a hauler reloads it. The lock keeps
+// the usual two ranges: it picks up within the gun's reach and lets go past
 // the release margin.
 
 // searchOf is the creatures turret b looks through.
@@ -28,18 +30,18 @@ func searchOf(b construction.Building) Who {
 // aimsAt reports s a target of turret b, by b's side.
 func (t *Turrets) aimsAt(b construction.Building, s Seen, now uint64) bool {
 	if b.Hostile {
-		return t.colonyTarget(s)
+		return t.colonyTarget(s, now)
 	}
 	return t.Targetable(s.ID, now)
 }
 
-// colonyTarget is Targetable's sibling for a settlement's turret: a tame
-// animal, or a colonist on its feet. The colonists' roster decides, since
-// a raider, visitor or prisoner stands up just the same; a raider counts
-// a berserk colonist as its own, this turret does not.
-func (t *Turrets) colonyTarget(s Seen) bool {
+// colonyTarget is Targetable's sibling for a settlement's turret: a tame or
+// manhunting animal, or a colonist on its feet. The colonists' roster
+// decides, since a raider, visitor or prisoner stands up just the same; a
+// raider counts a berserk colonist as its own, this turret does not.
+func (t *Turrets) colonyTarget(s Seen, now uint64) bool {
 	if a, ok := t.h.Animal(s.ID); ok {
-		return !a.Dead() && a.Tame
+		return !a.Dead() && (a.Tame || a.Enraged(now))
 	}
 	if !t.h.StandingPawn(s.ID) {
 		return false

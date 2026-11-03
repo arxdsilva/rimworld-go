@@ -55,14 +55,14 @@ func (a *Pane) frameView(id entity.EntityID) (game.FrameView, bool) {
 // buildingCommands are building id's command buttons: the kind's own first
 // (trough filter, bed owners, prisoner mark, casket, the power toggle and
 // thermostat), then Move, Copy and Deconstruct. A steam vent is natural: nothing to do. A pen marker only
-// comes down; its settings are the Pen tab. A settlement's turret takes no orders: a drafted colonist shoots it (MAP-13); its door takes only a claim (MAP-17).
+// comes down; its settings are the Pen tab. A settlement's turret or door takes one order, Claim, once its defenders are beaten (MAP-13, MAP-17, MAP-21); its door takes only a claim (MAP-17).
 func (a Building) BuildingCommands(id entity.EntityID) []Button {
 	b, ok := a.BuildingView(id)
 	if !ok || b.Kind == env.SteamVentKind {
 		return nil
 	}
 	if b.Hostile {
-		return enemyDoorCommands(b, a.shell.Hostiles())
+		return enemyCommands(b, a.shell.Hostiles())
 	}
 	var out []Button
 	if !isPenMarker(b) {

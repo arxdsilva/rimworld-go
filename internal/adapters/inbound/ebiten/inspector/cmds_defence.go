@@ -27,11 +27,12 @@ const (
 
 // Button ids (journeys press them by these).
 const (
-	DoorHoldID   = "cmd.door.hold"
-	TurretHoldID = "cmd.turret.hold"
-	MortarAimID  = "cmd.mortar.target"
-	MortarClrID  = "cmd.mortar.clear"
-	DoorClaimID  = "cmd.door.claim"
+	DoorHoldID    = "cmd.door.hold"
+	TurretHoldID  = "cmd.turret.hold"
+	MortarAimID   = "cmd.mortar.target"
+	MortarClrID   = "cmd.mortar.clear"
+	DoorClaimID   = "cmd.door.claim"
+	TurretClaimID = "cmd.turret.claim"
 )
 
 func isDoorBldg(b game.BuildingView) bool {
@@ -42,16 +43,16 @@ func isTurretBldg(b game.BuildingView) bool {
 	return b.Kind == turretKind || b.Kind == autocannon || b.Kind == slugTurret || b.Kind == foamTurretKind // AX-5
 }
 
-// enemyDoorCommands are a settlement's door's buttons (MAP-17): Claim, once
-// no defender stands (the same count the Claim order makes: raid.Defending).
-// A settlement's turret has none.
-func enemyDoorCommands(b game.BuildingView, hostiles []game.PawnView) []Button {
-	if !isDoorBldg(b) {
-		return nil
-	}
+// enemyCommands are a settlement's door's or turret's one button (MAP-17,
+// MAP-21): Claim, once no defender stands (the same count the Claim order
+// makes: raid.Defending).
+func enemyCommands(b game.BuildingView, hostiles []game.PawnView) []Button {
 	claim := Button{ID: DoorClaimID, Label: "Claim", Icon: "order_claim",
 		Desc: "Make this door the colony's, so colonists can open it.",
 		Cmds: []command.Command{{Kind: command.DesignateClaim, X: b.X, Y: b.Y, X2: b.X, Y2: b.Y, Enabled: true}}}
+	if !isDoorBldg(b) {
+		claim.ID, claim.Desc = TurretClaimID, "Make this turret the colony's: it stops firing on us and fires on our enemies, with no grid."
+	}
 	for _, h := range hostiles {
 		if h.Status == "alive" && !h.Prisoner && !h.Fleeing {
 			claim.Disabled, claim.Reason = true, "defeat the defenders first"
@@ -97,10 +98,17 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 
 // HostileTurretLine is what a settlement's turret's pane says (MAP-13): it
 // is no one's to run, so none of the barrel, power or hold lines apply.
-const HostileTurretLine = "Hostile: it fires on us. Destroy it."
+const HostileTurretLine = "Hostile: it fires on us. Destroy it, or claim it once the defenders are beaten."
 
 // HostileTurretSpentLine is the same pane once its barrel is spent (MAP-20).
-const HostileTurretSpentLine = "Out of ammo: it can't fire, and nobody here will reload it."
+const HostileTurretSpentLine = "Out of ammo: it can't fire. Claimed, a hauler can reload it."
+
+// OffGridLine and SparkingLine are a claimed turret's and a turret's lit
+// fuse's lines (MAP-21).
+const (
+	OffGridLine  = "Claimed: runs on its own supply. Moved, it needs power."
+	SparkingLine = "Sparking: it will blow up!"
+)
 
 // EnemyDoorLine is what a settlement's door's pane says (MAP-17).
 const EnemyDoorLine = "Enemy door: colonists can't pass. Break it, or claim it once the defenders are beaten."
@@ -108,16 +116,22 @@ const EnemyDoorLine = "Enemy door: colonists can't pass. Break it, or claim it o
 // defenceLines are the barrel, shells and target lines, and a bench's
 // facility and work speed lines.
 func defenceLines(b game.BuildingView) []string {
+	var out []string
+	if b.Sparking {
+		out = append(out, SparkingLine)
+	}
 	if b.Hostile {
 		switch {
 		case isDoorBldg(b):
-			return []string{EnemyDoorLine}
+			return append(out, EnemyDoorLine)
 		case b.Barrel == 0:
-			return []string{HostileTurretSpentLine}
+			return append(out, HostileTurretSpentLine)
 		}
-		return []string{HostileTurretLine}
+		return append(out, HostileTurretLine)
 	}
-	var out []string
+	if b.OffGrid {
+		out = append(out, OffGridLine)
+	}
 	if isTurretBldg(b) || b.Kind == mortarKind {
 		if b.Barrel > 0 {
 			out = append(out, fmt.Sprintf("Barrel  %d%%", b.Barrel/pctPerPermile))

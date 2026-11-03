@@ -209,10 +209,13 @@ func (h combatDice) DefenseRoll(n int) int { return h.g.stream(streamDefense).In
 
 type combatPower struct{ g *Game }
 
-func (h combatPower) Wired() bool                     { return h.g.pw != nil }
-func (h combatPower) Armed() bool                     { return len(h.g.powerList().hostile) > 0 }
-func (h combatPower) Powered(id entity.EntityID) bool { return h.g.powered(id) }
-func (h combatPower) PowerGen() uint64                { return h.g.powerList().gen }
+func (h combatPower) Wired() bool { return h.g.pw != nil }
+func (h combatPower) Armed() bool { return len(h.g.powerList().offGrid) > 0 }
+func (h combatPower) Powered(id entity.EntityID) bool {
+	b := h.g.bldgs.Ref(id)
+	return h.g.powered(id) || b != nil && b.OffGrid
+}
+func (h combatPower) PowerGen() uint64 { return h.g.powerList().gen }
 func (h combatPower) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 	c := h.g.powerList()
 	for i, s := range c.specs {
@@ -220,7 +223,7 @@ func (h combatPower) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 			buf = append(buf, c.ids[i])
 		}
 	}
-	return append(buf, c.hostile...)
+	return append(buf, c.offGrid...)
 }
 
 type combatFlight struct{ g *Game }

@@ -223,13 +223,17 @@ func TestTurretBlastAndChain(t *testing.T) {
 	f.build(62, construction.Wall, 30, 5)
 	tu.setAim(50, Aim{Target: 1})
 	b := f.bldgs[50]
+	full := construction.MaxHP(b.Kind, b.Stuff)
+	b.Damage = full // one blow takes it from whole to nothing
 	f.RemoveBuilding(50)
 	f.droll = []int{TurretBlastPct} // half the time it does not blow up
+	tu.Hurt(50, b, full)
 	tu.Blast(50, b)
 	if tu.Firing(50) || f.bursts != 0 || len(f.msgs) != 0 {
 		t.Fatalf("no blast: bursts %d msgs %v", f.bursts, f.msgs)
 	}
 	f.droll = []int{TurretBlastPct - 1}
+	tu.Hurt(50, b, full)
 	tu.Blast(50, b)
 	if f.bursts != 1 || len(f.msgs) != 1 || f.blasts[0].Radius != 3900 || f.blasts[0].Damage != TurretBlastDamage {
 		t.Fatalf("blast: bursts %d msgs %v %+v", f.bursts, f.msgs, f.blasts)

@@ -2,11 +2,9 @@ package combat
 
 import (
 	"cmp"
-	"fmt"
 	"slices"
 
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/combat/explosion"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -30,12 +28,12 @@ import (
 //
 // CBT-3: the sentry turret is the wiki's mini-turret (its gun, range and
 // barrel), every turret's round is a projectile (Shots.Turret: strays,
-// friendly fire and armor like a pawn's shot), and a destroyed turret
-// blows up half the time with the mini-turret's blast (Blast).
+// friendly fire and armor like a pawn's shot), and a turret badly hurt
+// lights its fuse half the time and blows up (turret_fuse.go).
 //
 // MAP-13: a settlement's turret (Building.Hostile) needs no power, shoots
-// colonists and tame animals, and nobody at the colony runs it
-// (turret_hostile.go).
+// colonists and tame animals, and nobody at the colony runs it until it is
+// claimed (turret_hostile.go).
 
 const (
 	// TurretScanEvery: an idle turret looks for a target once in this
@@ -50,14 +48,13 @@ const (
 	TurretLost = 20
 	// turretAimTicks is the aim before the first shot at a new target.
 	turretAimTicks = 30
-	// The blast of a destroyed turret: the percent chance it blows up,
-	// and its bomb (damage, radius in thousandths). wiki: Mini-turret
-	// (the heavy turrets take the same: original assumption). The wiki's
-	// 240-tick fuse lit below 20 % hit points is left out: it blows up as
-	// it is destroyed.
+	// A turret's blast (turret_fuse.go): the percent chance its fuse lights,
+	// and its bomb (damage, radius in thousandths). wiki: Mini-turret,
+	// Autocannon turret, Uranium slug turret.
 	TurretBlastPct    = 50
 	TurretBlastDamage = 50
 	turretBlastRadius = 3900
+	heavyBlastRadius  = 5900
 	turretBlastPen    = 100 // the other bombs' 10 % (original assumption, as the mortar's HE shell)
 	// ShotAgeMax caps a turret view's shot age: past it the renderer's
 	// recoil, flash and "engaged" read (turret_draw.go, 90 ticks) are long
@@ -187,6 +184,8 @@ type TurretSave struct {
 	Doors   []DoorSave
 	Fuses   []Fuse
 	Rearms  []Rearm
+	// MAP-21 (absent in older saves): turret fuses burning (turret_fuse.go).
+	Sparks []Fuse
 	// DEF-4 (absent in older saves): drafted switches and grenade belts,
 	// grenade orders in their warmup, the combat log.
 	Drafts []DraftSave
@@ -223,6 +222,7 @@ type Turrets struct {
 	// (their shots fly as projectiles, CBT-3), blasts a destroyed
 	// turret's explosion.
 	arms   map[entity.EntityID]Arm
+	sparks []Fuse // burning fuses, in the order lit (turret_fuse.go)
 	st     *Strikes
 	blasts *Blasts
 	// after are the defences stepped after the turrets every tick, saved
@@ -294,6 +294,7 @@ func (t *Turrets) Phase(now uint64) {
 	} else if len(t.aims) > 0 { // no power device on the map: no turret can be on
 		t.list() // drops the aims of turrets that are gone
 	}
+	t.burnFuses(now) // turret_fuse.go
 	for _, p := range t.after {
 		if p != nil {
 			p.phase(now)
@@ -464,47 +465,14 @@ func (t *Turrets) shot(id entity.EntityID, wk weapon.Kind, fx, fy int, target en
 	t.st.shots.Turret(id, wk, fx, fy, target, tx, ty)
 }
 
-// Blast: turret b (already removed) is destroyed and blows up
-// TurretBlastPct of the time (defence stream): a bomb of TurretBlastDamage
-// in turretBlastRadius through the blast path (armor, buildings, a
-// turret among them may blow up in turn). wiki: Mini-turret
-func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
-	delete(t.aims, id)
-	delete(t.arms, id)
-	h := t.h
-	if t.blasts == nil {
-		return
-	}
-	switch b.Kind { // AX-5: a smashed popper or foam turret bursts in foam, always
-	case construction.FoamPopper:
-		h.Message(b.X, b.Y, "The foam popper burst as it broke.")
-		t.blasts.Explode(0, weapon.MortarFoam, b.X, b.Y, foamDef(PopperRadius))
-		return
-	case construction.FoamTurret:
-		h.Message(b.X, b.Y, "The foam turret burst as it broke.")
-		t.blasts.Explode(0, weapon.FoamSpray, b.X, b.Y, foamDef(FoamTurretBurstRadius))
-		return
-	}
-	if h.DefenseRoll(100) >= TurretBlastPct {
-		return
-	}
-	r := turretBlastRadius
-	if b.Kind == construction.RocketBattery {
-		r = RocketBlastRadius
-	}
-	h.Message(b.X, b.Y, fmt.Sprintf("The %s blew up!", construction.DefOf(b.Kind).Name))
-	t.blasts.Explode(0, gunOf(b.Kind), b.X, b.Y, explosion.Def{Kind: explosion.Bomb, Radius: r, Damage: TurretBlastDamage,
-		Pen: turretBlastPen})
-}
-
 // ForRaider is the powered turret a raider at (x, y) turns on instead of
 // the nearest colonist cd tiles off: the nearest one within sight tiles,
 // and only when it is at least SwitchMargin closer than the colonist (so a
 // raider between the two never swaps back and forth). ok false: none. A
 // settlement's turret is on the raiders' side and never offered (MAP-13).
 func (t *Turrets) ForRaider(x, y, cd, sight int) (id entity.EntityID, bx, by int, ok bool) {
-	if !t.pw.Wired() {
-		return 0, 0, 0, false // no power device: no powered turret
+	if !t.pw.Wired() && !t.pw.Armed() {
+		return 0, 0, 0, false // no power device and none claimed off a grid: no live turret
 	}
 	bestD := min(sight, cd-SwitchMargin) + 1
 	for _, tid := range t.list() {
@@ -611,7 +579,8 @@ func (t *Turrets) Export() *TurretSave {
 	if t.saved.gear != nil {
 		s.Gear = t.saved.gear.export()
 	}
-	if len(s.Aims)+len(s.Arms)+len(s.Fuses)+len(s.Doors)+len(s.Mortars)+len(s.Rearms)+len(s.Drafts)+len(s.Throws)+len(s.Log)+len(s.Gear) == 0 {
+	s.Sparks = slices.Clone(t.sparks)
+	if len(s.Sparks)+len(s.Aims)+len(s.Arms)+len(s.Fuses)+len(s.Doors)+len(s.Mortars)+len(s.Rearms)+len(s.Drafts)+len(s.Throws)+len(s.Log)+len(s.Gear) == 0 {
 		return nil
 	}
 	return s
@@ -623,6 +592,7 @@ func (t *Turrets) Import(s *TurretSave) {
 	if s == nil {
 		s = &TurretSave{}
 	}
+	t.sparks = slices.Clone(s.Sparks)
 	if v := t.saved; v.traps != nil {
 		v.traps.importFuses(s.Fuses)
 		v.doors.importDoors(s.Doors)

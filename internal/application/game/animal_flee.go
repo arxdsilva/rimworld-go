@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -93,11 +94,6 @@ func (g *Game) fleeHit(id entity.EntityID, a *animal.State, by entity.EntityID, 
 const (
 	// fleeHitDist: a hurt animal runs this far straight away.
 	fleeHitDist = 8
-	// fleeSearchR, fleeSearchMax: when straight away is shut, the cells
-	// within this radius it can walk to (at most this many) are searched
-	// for the one farthest from the threat.
-	fleeSearchR   = 8
-	fleeSearchMax = 300
 	// fleeStay: a fleeing animal with nowhere better to go looks again
 	// this many ticks later.
 	fleeStay = 30
@@ -131,7 +127,7 @@ func cellDistSq(p, q Position) int {
 // own layer (tame: fences shut, gates open; wild: both shut):
 //  1. dist tiles straight away (animal.FleeGoal), if a free tile near it
 //     can be reached;
-//  2. else the reachable cell within fleeSearchR farthest from the
+//  2. else the reachable cell nearby (combat.FleeCell) farthest from the
 //     threat (in a pen, its far side);
 //  3. else a reachable neighbour not beside the threat;
 //  4. else any reachable neighbour.
@@ -147,7 +143,8 @@ func (g *Game) fleeSpot(a *animal.State, pos, threat Position, dist int, mustMov
 	if x, y, ok := g.combat.Tiles.WalkableNear(fx, fy, 3); ok && (x != pos.X || y != pos.Y) && q.Walkable(x, y) && g.layerReach(q, pos, x, y) {
 		return Position{X: x, Y: y}, true
 	}
-	if p, ok := fleeSearch(q, pos, threat); ok {
+	if x, y, ok := combat.FleeCell(q, pos.X, pos.Y, threat.X, threat.Y); ok {
+		p := Position{X: x, Y: y}
 		if !mustMove && cellDistSq(p, threat) <= cellDistSq(pos, threat) {
 			return pos, true
 		}
@@ -170,43 +167,6 @@ func (g *Game) fleeSpot(a *animal.State, pos, threat Position, dist int, mustMov
 				if !found || cellDistSq(n, threat) > cellDistSq(best, threat) {
 					best, found = n, true
 				}
-			}
-		}
-	}
-	return best, found
-}
-
-// fleeSearch is a breadth-first walk (4-neighbours, so every cell it
-// reaches is walkable to) over q from pos, within fleeSearchR and at most
-// fleeSearchMax cells, for the cell other than pos farthest from threat
-// (the first found on a tie). It allocates nothing.
-func fleeSearch(q pathing.Query, pos, threat Position) (Position, bool) {
-	const side = 2*fleeSearchR + 1
-	var seen [side * side]bool
-	var queue [side * side]int16
-	w, h := q.Width(), q.Height()
-	at := func(x, y int) int { return (y-pos.Y+fleeSearchR)*side + x - pos.X + fleeSearchR }
-	seen[at(pos.X, pos.Y)] = true
-	queue[0] = int16(at(pos.X, pos.Y))
-	head, tail := 0, 1
-	best, bestD, found := pos, -1, false
-	for head < tail && head < fleeSearchMax {
-		i := int(queue[head])
-		head++
-		c := Position{X: pos.X + i%side - fleeSearchR, Y: pos.Y + i/side - fleeSearchR}
-		if c != pos {
-			if d := cellDistSq(c, threat); d > bestD {
-				best, bestD, found = c, d, true
-			}
-		}
-		for _, n := range [4]Position{{X: c.X + 1, Y: c.Y}, {X: c.X - 1, Y: c.Y}, {X: c.X, Y: c.Y + 1}, {X: c.X, Y: c.Y - 1}} {
-			if n.X < 0 || n.Y < 0 || n.X >= w || n.Y >= h || weapon.Distance(n.X, n.Y, pos.X, pos.Y) > fleeSearchR {
-				continue
-			}
-			if j := at(n.X, n.Y); !seen[j] && q.Walkable(n.X, n.Y) {
-				seen[j] = true
-				queue[tail] = int16(j)
-				tail++
 			}
 		}
 	}

@@ -196,7 +196,7 @@ type Wounds interface {
 type Harm interface {
 	Wounds
 	// DamageBuilding harms building id (construction: it breaks and
-	// leaves a blueprint; a sentry turret then calls Turrets.Blast).
+	// leaves a blueprint; a turret also calls Turrets.Hurt, then Blast).
 	DamageBuilding(id entity.EntityID, dmg int)
 	// Stain bloodies the ground for a hit from (ax, ay) on target at
 	// (tx, ty), before the hurt.
@@ -237,8 +237,10 @@ type Dice interface {
 type Power interface {
 	// Wired: the colony has a power device at all.
 	Wired() bool
-	// Armed: a settlement's turret stands on the map (MAP-13).
+	// Armed: a turret that needs no grid stands on the map, a settlement's
+	// or one claimed from it (MAP-13, MAP-21).
 	Armed() bool
+	// Powered is true of a claimed turret off any grid (Building.OffGrid).
 	Powered(id entity.EntityID) bool
 	// PowerGen is the power list's generation; it moves whenever the
 	// powered buildings change.

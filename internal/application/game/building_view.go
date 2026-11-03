@@ -183,12 +183,12 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	}
 	bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = g.footprintOf(b.Kind, b.Facing, b.X, b.Y)
 	bv.Group, bv.Stored, bv.Capacity = g.storeView(id)
-	g.fillGraveView(bv, id, b) // burial.go
-	g.fillSwapView(bv, id)     // placement.go: pending material change (PLAY-011)
-	bv.Ruin = b.Ruin           // MAPGEN-2: an abandoned piece
-	bv.Hostile = b.Hostile     // MAP-13: a settlement's turret
-	bv.Medical = b.Medical     // PLAY-020: kept for the sick and injured
-	st := g.rest.Stats.Of(id)  // BED-1: comfort, rest effectiveness, beauty, facilities (rest/stats.go)
+	g.fillGraveView(bv, id, b)                    // burial.go
+	g.fillSwapView(bv, id)                        // placement.go: pending material change (PLAY-011)
+	bv.Ruin = b.Ruin                              // MAPGEN-2: an abandoned piece
+	bv.Hostile, bv.OffGrid = b.Hostile, b.OffGrid // MAP-13: a settlement's turret; MAP-21: one claimed
+	bv.Medical = b.Medical                        // PLAY-020: kept for the sick and injured
+	st := g.rest.Stats.Of(id)                     // BED-1: comfort, rest effectiveness, beauty, facilities (rest/stats.go)
 	bv.Comfort, bv.RestEffect, bv.Beauty, bv.Facilities, bv.Forbidden = st.Comfort, st.RestEffect, st.Beauty, st.Links(), b.Forbidden
 	bv.Beauty += construction.PotBeauty(b) // A2: seats, a pot's plant, a hung light (axview)
 	bv.AX.Seats, bv.AX.Plant, bv.AX.PlantPct, bv.AX.WallMounted = construction.Seats(b.Kind), construction.PotPlant(b.Plant).DefOf().Name, int(b.Growth)/10, b.Kind.WallHung()
@@ -208,6 +208,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	g.br.ind.View(industryHost{g}, &bv.AX, id, b)            // game/industry (AX-4): drill, scanner, pump, watermill
 	travelOf(g).View(&bv.AX, id, b)                          // game/travel (AX-9): casket, pods, launcher, mineral scanner
 	df := g.combat.Orders.View(id, b, uint64(g.clock.Now())) // combat/orders.go: turrets, mortars, doors (PLAY-024, DEF-3)
+	bv.Sparking = g.combat.Turrets.Sparking(id)              // combat/turret_fuse.go (MAP-21)
 	bv.AimDir, bv.ShotAge, bv.HoldOpen, bv.HoldFire, bv.HasTarget = df.Dir, df.ShotAge, df.HoldOpen, df.HoldFire, df.HasTarget
 	bv.Barrel, bv.Shells, bv.TargetX, bv.TargetY = df.Barrel, df.Shells, df.TargetX, df.TargetY
 	bv.AX.Charges, bv.AX.ChargeCap, bv.AX.Armed = df.Charges, df.ChargeCap, df.Armed // AX-5
@@ -224,7 +225,7 @@ func equalBuildingView(a, b *BuildingView) bool {
 	return a.ID == b.ID && a.Kind == b.Kind && a.X == b.X && a.Y == b.Y &&
 		a.Claimant == b.Claimant && a.Claimant2 == b.Claimant2 && a.Facing == b.Facing &&
 		a.Floor == b.Floor && a.Deconstruct == b.Deconstruct && a.Stuff == b.Stuff && a.Quality == b.Quality &&
-		a.SwapTo == b.SwapTo && a.SwapPct == b.SwapPct && a.Ruin == b.Ruin && a.Hostile == b.Hostile && a.Medical == b.Medical &&
+		a.SwapTo == b.SwapTo && a.SwapPct == b.SwapPct && a.Ruin == b.Ruin && a.Hostile == b.Hostile && a.OffGrid == b.OffGrid && a.Sparking == b.Sparking && a.Medical == b.Medical &&
 		a.W == b.W && a.H == b.H && a.HasSpot == b.HasSpot && a.SpotX == b.SpotX && a.SpotY == b.SpotY &&
 		a.Bench == b.Bench && slices.Equal(a.Bills, b.Bills) &&
 		a.DryKind == b.DryKind && a.DryQty == b.DryQty && a.DryPct == b.DryPct &&

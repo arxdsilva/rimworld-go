@@ -209,7 +209,7 @@ func (g *Game) completeMove(id entity.EntityID, fr construction.Frame) {
 	g.releaseSwap(bid) // placement.go: a material change left behind is built new
 	blocks := construction.DefOf(b.Kind).BlocksMove
 	oldCells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-	b.X, b.Y, b.Facing = fr.X, fr.Y, fr.Facing
+	b.X, b.Y, b.Facing, b.OffGrid = fr.X, fr.Y, fr.Facing, false // MAP-21: moved, a claimed turret needs power
 	g.bldgs.Set(bid, b)
 	g.noteBuilding(bid) // indexes.go: it stands somewhere new
 	if blocks {
