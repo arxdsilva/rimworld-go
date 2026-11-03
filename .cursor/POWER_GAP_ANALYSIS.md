@@ -8,7 +8,7 @@ Wiki pages read on 2026-11-03: Power, Power conduit, Wall lamp, Cooler, Heater, 
 
 | Item | Decision |
 |---|---|
-| Numbers | The 6-tile range and the list of what carries power are wiki numbers (ENG-003). Power is not on the `AGENTS.md` ENG-003 exception list. The user approved both for PWR-* by approving the plan on 2026-11-03. The `AGENTS.md` line is not edited yet: the user has not answered whether to add power to it. Until then this file is the record. |
+| Numbers | The 6-tile range and the list of what carries power are wiki numbers (ENG-003). The user approved both for PWR-* by approving the plan on 2026-11-03, and added power to the `AGENTS.md` ENG-003 exception list the same day. |
 | Disconnect | No Disconnect button, as in vanilla. The power switch and the Power toggle already cut a device. |
 | Look | The wire is our own dark cord colour (`ui.power_cord`). The overlay and the placement ghost keep a colour per grid. Vanilla's black cord, magenta overlay and golden blueprint are not copied. |
 | Reconnect order | By grid, not by conduit tile (see "Original"). |

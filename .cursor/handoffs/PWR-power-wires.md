@@ -24,7 +24,7 @@ Asked 2026-11-03: powered items such as wall lamps, coolers and heaters should c
 - Old range tests moved from 3 to 6 with the same boundary checks: `TestBuildConnectRange`, `power_ui_test.go`, `power_sim_test.go`.
 
 ## Decisions
-- Wiki numbers for power (6 tiles, what carries power) by the user's approval of the plan, 2026-11-03. The `AGENTS.md` ENG-003 line is not edited; the user has not answered.
+- Wiki numbers for power (6 tiles, what carries power) by the user's approval of the plan, 2026-11-03. The user then added power to the `AGENTS.md` ENG-003 line the same day.
 - No Disconnect button, as the wiki names none.
 - Reconnect cycles by grid, applies at once, and is disabled with a reason when there is nothing to move to.
 - The wire is our own colour; the overlay colours it by grid.
@@ -36,7 +36,6 @@ Asked 2026-11-03: powered items such as wall lamps, coolers and heaters should c
 - A pin whose target is gone stays stored and falls back to nearest; a rebuilt conduit has a new id, so the wire does not jump back.
 - A wire passes over a pawn walking beneath it.
 - A placed blueprint's wire has no stub, so it starts at the cell's edge. A wire passes over the part of a sprite that overhangs its own cell northward, such as the top of a stove.
-- The `AGENTS.md` ENG-003 exception line for power is pending the user's answer.
 
 ## Verification
 Run 2026-11-03 on the final tree, by the lead.
