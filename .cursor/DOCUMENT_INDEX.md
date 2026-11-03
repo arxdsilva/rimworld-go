@@ -23,6 +23,7 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Pawn-to-pawn interaction gap analysis vs RimWorld (rescue, orders on a pawn, feeding patients, visiting, mental breaks), wiki constants, SIM-061…066 | `PAWN_INTERACTION_GAP_ANALYSIS.md` |
 | World generation and globe gap analysis (biomes, movement, features, search, globe look), wiki constants, WG phases | `WORLDGEN_GAP_ANALYSIS.md` |
 | Multiple simultaneous maps gap analysis (site, settlement, colony and encounter maps, caravan and pod rules), wiki constants, MAP phases | `MULTIMAP_GAP_ANALYSIS.md` |
+| Power wires gap analysis (visible wire, 6-tile range, generators and batteries conduct, Reconnect, blueprint wires), wiki constants, PWR-1..5 | `POWER_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Multi-area work across parallel agents; every multi-area plan includes its Parallel workers section (§0) | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |
