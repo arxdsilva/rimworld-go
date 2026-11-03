@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/pkg/flatyaml"
 )
 
 func TestMenuViewCoversScreen(t *testing.T) {
@@ -127,7 +128,7 @@ func TestMenuDioramaAssetsDecode(t *testing.T) {
 		t.Fatalf("base %dx%d opaque=%v, metadata canvas %v", w, h, opaque, m.Canvas)
 	}
 	for _, key := range []string{"glow_lamp", "glow_fire"} {
-		rel := metaScalar(string(raw), key)
+		rel := flatyaml.Scalar(string(raw), key)
 		if rel == "" {
 			t.Fatalf("metadata has no %s", key)
 		}

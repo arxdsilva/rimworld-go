@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"rimworld-go/pkg/flatyaml"
 	"rimworld-go/pkg/spritenormals"
 )
 
@@ -195,15 +196,8 @@ func metaOf(png string) string {
 // flatNormal reports a top-level `flat_normal: true` in sprite metadata:
 // low cover (grass, moss) is lit flat so it can be mirrored freely.
 func flatNormal(meta string) bool {
-	for _, line := range strings.Split(meta, "\n") {
-		k, v, ok := strings.Cut(line, ":")
-		if !ok || k != "flat_normal" {
-			continue
-		}
-		v, _, _ = strings.Cut(v, "#")
-		return strings.TrimSpace(v) == "true"
-	}
-	return false
+	v, _, _ := strings.Cut(flatyaml.Scalar(meta, "flat_normal"), "#")
+	return strings.TrimSpace(v) == "true"
 }
 
 // flatNormals is a normal map pointing straight at the viewer (0,0,1)
@@ -224,16 +218,15 @@ func flatNormals(src *image.NRGBA) *image.NRGBA {
 // linkedMask is the top-level `mask:` of an `autotile:` sprite, else -1.
 func linkedMask(meta string) int {
 	auto, mask := false, -1
-	for _, line := range strings.Split(meta, "\n") {
-		k, v, ok := strings.Cut(line, ":")
-		if !ok || strings.HasPrefix(line, " ") {
+	for l := range flatyaml.Lines(meta) {
+		if !l.HasColon || l.Indent > 0 {
 			continue
 		}
-		switch k {
+		switch l.Key {
 		case "autotile":
 			auto = true
 		case "mask":
-			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+			if n, err := strconv.Atoi(l.Value); err == nil {
 				mask = n
 			}
 		}

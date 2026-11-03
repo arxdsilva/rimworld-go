@@ -1,7 +1,6 @@
 package mainmenu
 
 import (
-	"bufio"
 	"fmt"
 	"image"
 	"image/color"
@@ -18,6 +17,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
+	"rimworld-go/pkg/flatyaml"
 )
 
 // The main-menu background: a dusk colony rendered in Blender
@@ -73,10 +73,10 @@ func LoadDiorama(root string) (*Diorama, error) {
 		return nil, err
 	}
 	d := &Diorama{Levels: []*ebiten.Image{base}, W: m.Canvas[0], H: m.Canvas[1], TilePx: art.TilePx}
-	if d.Lamp, err = img(metaScalar(string(raw), "glow_lamp")); err != nil {
+	if d.Lamp, err = img(flatyaml.Scalar(string(raw), "glow_lamp")); err != nil {
 		return nil, err
 	}
-	if d.Fire, err = img(metaScalar(string(raw), "glow_fire")); err != nil {
+	if d.Fire, err = img(flatyaml.Scalar(string(raw), "glow_fire")); err != nil {
 		return nil, err
 	}
 	keys := make([]string, 0, len(m.Attach))
@@ -105,22 +105,6 @@ func LoadDiorama(root string) (*Diorama, error) {
 		d.Levels = append(d.Levels, lv)
 	}
 	return d, nil
-}
-
-// metaScalar is a top-level "key: value" from flat metadata YAML.
-func metaScalar(src, key string) string {
-	sc := bufio.NewScanner(strings.NewReader(src))
-	for sc.Scan() {
-		line := sc.Text()
-		if strings.HasPrefix(line, " ") {
-			continue
-		}
-		k, v, ok := strings.Cut(line, ":")
-		if ok && strings.TrimSpace(k) == key {
-			return strings.Trim(strings.TrimSpace(v), `"`)
-		}
-	}
-	return ""
 }
 
 // view places an iw x ih image over an sw x sh screen at tick t:

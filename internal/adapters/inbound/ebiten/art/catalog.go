@@ -4,7 +4,6 @@
 package art
 
 import (
-	"bufio"
 	"fmt"
 	"image"
 	"image/color"
@@ -18,6 +17,7 @@ import (
 	"sync"
 
 	"rimworld-go/internal/platform/assetroot"
+	"rimworld-go/pkg/flatyaml"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
@@ -74,19 +74,11 @@ func (m Meta) PxPerTile() float64 {
 func ParseMeta(src string) (Meta, error) {
 	m := Meta{Attach: map[string][2]float64{}}
 	parent := ""
-	sc := bufio.NewScanner(strings.NewReader(src))
-	for sc.Scan() {
-		line := sc.Text()
-		trim := strings.TrimSpace(line)
-		if trim == "" || strings.HasPrefix(trim, "#") {
-			continue
+	for l := range flatyaml.Lines(src) {
+		if !l.HasColon {
+			return m, fmt.Errorf("bad metadata line %q", l.Text)
 		}
-		key, val, ok := strings.Cut(trim, ":")
-		if !ok {
-			return m, fmt.Errorf("bad metadata line %q", line)
-		}
-		val = strings.Trim(strings.TrimSpace(val), `"`)
-		nested := strings.HasPrefix(line, " ")
+		key, val, nested := l.Key, l.Value, l.Indent > 0
 		if !nested {
 			parent = ""
 			if val == "" {
@@ -105,7 +97,7 @@ func ParseMeta(src string) (Meta, error) {
 		case !nested && key == "footprint":
 			m.Footprint, err = parseIntPair(val)
 		case !nested && key == "origin_px":
-			m.Origin, err = parsePair(val)
+			m.Origin, err = flatyaml.Pair(val)
 		case !nested && key == "light_radius":
 			m.LightRadius, err = strconv.ParseFloat(val, 64)
 		case !nested && key == "ppt":
@@ -118,7 +110,7 @@ func ParseMeta(src string) (Meta, error) {
 			m.TintMask = val
 		case nested && parent == "attachments":
 			var p [2]float64
-			p, err = parsePair(val)
+			p, err = flatyaml.Pair(val)
 			m.Attach[key] = p
 		}
 		if err != nil {
@@ -128,31 +120,11 @@ func ParseMeta(src string) (Meta, error) {
 	if m.ID == "" || m.Image == "" || m.Canvas[0] < 1 || m.Canvas[1] < 1 {
 		return m, fmt.Errorf("metadata missing id/image/canvas")
 	}
-	return m, sc.Err()
-}
-
-func parsePair(v string) ([2]float64, error) {
-	var out [2]float64
-	v = strings.TrimSpace(v)
-	if !strings.HasPrefix(v, "[") || !strings.HasSuffix(v, "]") {
-		return out, fmt.Errorf("want [a, b], got %q", v)
-	}
-	parts := strings.Split(v[1:len(v)-1], ",")
-	if len(parts) != 2 {
-		return out, fmt.Errorf("want 2 values, got %q", v)
-	}
-	for i, p := range parts {
-		f, err := strconv.ParseFloat(strings.TrimSpace(p), 64)
-		if err != nil {
-			return out, err
-		}
-		out[i] = f
-	}
-	return out, nil
+	return m, nil
 }
 
 func parseIntPair(v string) ([2]int, error) {
-	f, err := parsePair(v)
+	f, err := flatyaml.Pair(v)
 	return [2]int{int(f[0]), int(f[1])}, err
 }
 
@@ -161,19 +133,16 @@ func parseIntPair(v string) ([2]int, error) {
 func ParseTints(src string) (map[string]map[string]color.NRGBA, error) {
 	out := map[string]map[string]color.NRGBA{}
 	in := false
-	sc := bufio.NewScanner(strings.NewReader(src))
-	for sc.Scan() {
-		line := sc.Text()
-		if !strings.HasPrefix(line, " ") {
-			in = strings.HasPrefix(line, "tints:")
+	for l := range flatyaml.Lines(src) {
+		if l.Indent == 0 {
+			in = strings.HasPrefix(l.Text, "tints:")
 			continue
 		}
 		if !in {
 			continue
 		}
-		group, body, ok := strings.Cut(strings.TrimSpace(line), ":")
-		body = strings.TrimSpace(body)
-		if !ok || !strings.HasPrefix(body, "{") || !strings.HasSuffix(body, "}") {
+		group, body := l.Key, l.Value
+		if !l.HasColon || !strings.HasPrefix(body, "{") || !strings.HasSuffix(body, "}") {
 			continue
 		}
 		g := map[string]color.NRGBA{}
@@ -190,7 +159,7 @@ func ParseTints(src string) (map[string]map[string]color.NRGBA, error) {
 		}
 		out[group] = g
 	}
-	return out, sc.Err()
+	return out, nil
 }
 
 func parseHex(h string) (color.NRGBA, error) {

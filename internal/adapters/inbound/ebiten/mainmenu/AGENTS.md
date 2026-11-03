@@ -14,8 +14,8 @@ The main menu screen: the hero splash and the colony diorama behind it, the butt
 
 ## Allowed Dependencies
 - Leaves: `art`, `gfx`, `ids`, `ports`, `uikit`.
-- `platform/assetroot` (asset path), `platform/config` (settings).
-- Ebitengine (`ebiten`, `vector`); stdlib (`bufio`, `errors`, `image`, `image/png`, `os`, `path/filepath`, `sort`, `strings`, `time`).
+- `platform/assetroot` (asset path), `platform/config` (settings), `pkg/flatyaml` (the diorama's metadata).
+- Ebitengine (`ebiten`, `vector`); stdlib (`errors`, `image`, `image/png`, `os`, `path/filepath`, `sort`, `strings`, `time`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

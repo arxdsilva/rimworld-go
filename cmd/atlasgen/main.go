@@ -41,7 +41,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"image"
@@ -55,6 +54,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"rimworld-go/pkg/flatyaml"
 )
 
 const gutter = 1 // pixels between packed sprites
@@ -223,15 +224,11 @@ func collect(root, family string) ([]*entry, error) {
 func parseSpriteMeta(root, key, src string) (*entry, error) {
 	e := &entry{key: key}
 	inTint := false
-	sc := bufio.NewScanner(strings.NewReader(src))
-	for sc.Scan() {
-		line := strings.TrimRight(sc.Text(), " \t\r")
-		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "version:") {
+	for l := range flatyaml.Lines(src) {
+		if strings.HasPrefix(l.Text, "version:") {
 			continue
 		}
-		nested := strings.HasPrefix(line, " ")
-		k, v, _ := strings.Cut(strings.TrimSpace(line), ":")
-		v = strings.Trim(strings.TrimSpace(v), `"`)
+		nested, k, v := l.Indent > 0, l.Key, l.Value
 		if !nested {
 			inTint = k == "tint"
 		}
@@ -239,15 +236,15 @@ func parseSpriteMeta(root, key, src string) (*entry, error) {
 		case !nested && k == "image":
 			e.imagePath = filepath.Join(root, filepath.FromSlash(v))
 		case !nested && k == "canvas":
-			w, h, err := parseInts2(v)
+			c, err := flatyaml.Ints(v, 2)
 			if err != nil {
 				return nil, fmt.Errorf("canvas: %w", err)
 			}
-			e.canvas = image.Pt(w, h)
+			e.canvas = image.Pt(c[0], c[1])
 		case nested && inTint && k == "mask":
 			e.maskPath = filepath.Join(root, filepath.FromSlash(v))
 		}
-		e.meta = append(e.meta, line)
+		e.meta = append(e.meta, l.Text)
 	}
 	if e.imagePath == "" || e.canvas.X < 1 || e.canvas.Y < 1 {
 		return nil, fmt.Errorf("metadata missing image/canvas")
@@ -255,24 +252,7 @@ func parseSpriteMeta(root, key, src string) (*entry, error) {
 	if _, err := os.Stat(strings.TrimSuffix(e.imagePath, ".png") + "_n.png"); err == nil {
 		e.normPath = strings.TrimSuffix(e.imagePath, ".png") + "_n.png"
 	}
-	return e, sc.Err()
-}
-
-func parseInts2(v string) (int, int, error) {
-	v = strings.TrimSpace(v)
-	if !strings.HasPrefix(v, "[") || !strings.HasSuffix(v, "]") {
-		return 0, 0, fmt.Errorf("want [a, b], got %q", v)
-	}
-	p := strings.Split(v[1:len(v)-1], ",")
-	if len(p) != 2 {
-		return 0, 0, fmt.Errorf("want [a, b], got %q", v)
-	}
-	a, err := strconv.Atoi(strings.TrimSpace(p[0]))
-	if err != nil {
-		return 0, 0, err
-	}
-	b, err := strconv.Atoi(strings.TrimSpace(p[1]))
-	return a, b, err
+	return e, nil
 }
 
 func decode(path string) (*image.NRGBA, error) {
@@ -587,16 +567,8 @@ func parseAtlas(src string) (atlasIndex, error) {
 		}
 	}
 	inSprites, inTint := false, false
-	sc := bufio.NewScanner(strings.NewReader(src))
-	sc.Buffer(make([]byte, 1<<20), 1<<20)
-	for ln := 1; sc.Scan(); ln++ {
-		line := strings.TrimRight(sc.Text(), " \t\r")
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		k, v, _ := strings.Cut(strings.TrimSpace(line), ":")
-		v = strings.Trim(strings.TrimSpace(v), `"`)
+	for l := range flatyaml.Lines(src) {
+		indent, k, v := l.Indent, l.Key, l.Value
 		var err error
 		switch {
 		case indent == 0 && !inSprites:
@@ -621,48 +593,28 @@ func parseAtlas(src string) (atlasIndex, error) {
 				cur.page, err = strconv.Atoi(v)
 			case "rect":
 				var r [4]int
-				r, err = parseInts(v, 4)
+				r, err = flatyaml.Ints(v, 4)
 				cur.rect = image.Rect(r[0], r[1], r[0]+r[2], r[1]+r[3])
 			case "trim":
 				var r [4]int
-				r, err = parseInts(v, 2)
+				r, err = flatyaml.Ints(v, 2)
 				cur.trim = image.Pt(r[0], r[1])
 			case "normal":
 				cur.normal = v == "true"
 			case "canvas":
 				var r [4]int
-				r, err = parseInts(v, 2)
+				r, err = flatyaml.Ints(v, 2)
 				cur.canvas = image.Pt(r[0], r[1])
 			}
 		case inSprites && cur != nil && indent == 6 && inTint && k == "mask":
 			cur.mask = true
 		}
 		if err != nil {
-			return idx, fmt.Errorf("line %d: %s: %w", ln, k, err)
+			return idx, fmt.Errorf("line %d: %s: %w", l.Number, k, err)
 		}
 	}
 	flush()
-	return idx, sc.Err()
-}
-
-func parseInts(v string, n int) ([4]int, error) {
-	var out [4]int
-	v = strings.TrimSpace(v)
-	if !strings.HasPrefix(v, "[") || !strings.HasSuffix(v, "]") {
-		return out, fmt.Errorf("want a list, got %q", v)
-	}
-	p := strings.Split(v[1:len(v)-1], ",")
-	if len(p) != n {
-		return out, fmt.Errorf("want %d numbers, got %q", n, v)
-	}
-	for i, s := range p {
-		x, err := strconv.Atoi(strings.TrimSpace(s))
-		if err != nil {
-			return out, err
-		}
-		out[i] = x
-	}
-	return out, nil
+	return idx, nil
 }
 
 // checkAtlas validates the written atlas of family: its pages exist and

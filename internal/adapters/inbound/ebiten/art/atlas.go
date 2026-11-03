@@ -1,7 +1,6 @@
 package art
 
 import (
-	"bufio"
 	"bytes"
 	"compress/flate"
 	"fmt"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"rimworld-go/pkg/flatyaml"
 )
 
 // Atlas-packed sprite families (NG-1 plan 7.1). cmd/atlasgen packs a
@@ -59,16 +60,8 @@ func ParseAtlas(src string) (family string, pages int, out []atlasEntry, err err
 		meta.Reset()
 	}
 	inSprites := false
-	sc := bufio.NewScanner(strings.NewReader(src))
-	sc.Buffer(make([]byte, 1<<20), 1<<20)
-	for ln := 1; sc.Scan(); ln++ {
-		line := strings.TrimRight(sc.Text(), " \t\r")
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		k, v, _ := strings.Cut(strings.TrimSpace(line), ":")
-		v = strings.Trim(strings.TrimSpace(v), `"`)
+	for l := range flatyaml.Lines(src) {
+		indent, k, v := l.Indent, l.Key, l.Value
 		switch {
 		case indent == 0:
 			switch k {
@@ -76,7 +69,7 @@ func ParseAtlas(src string) (family string, pages int, out []atlasEntry, err err
 				family = v
 			case "pages":
 				if pages, err = strconv.Atoi(v); err != nil {
-					return "", 0, nil, fmt.Errorf("atlas line %d: pages: %w", ln, err)
+					return "", 0, nil, fmt.Errorf("atlas line %d: pages: %w", l.Number, err)
 				}
 			case "sprites":
 				inSprites = true
@@ -94,14 +87,14 @@ func ParseAtlas(src string) (family string, pages int, out []atlasEntry, err err
 					continue
 				case "rect":
 					var r [4]int
-					if r, err = atlasInts(v, 4); err != nil {
+					if r, err = flatyaml.Ints(v, 4); err != nil {
 						return "", 0, nil, fmt.Errorf("atlas %s: rect: %w", cur.Key, err)
 					}
 					cur.Rect = image.Rect(r[0], r[1], r[0]+r[2], r[1]+r[3])
 					continue
 				case "trim":
 					var r [4]int
-					if r, err = atlasInts(v, 2); err != nil {
+					if r, err = flatyaml.Ints(v, 2); err != nil {
 						return "", 0, nil, fmt.Errorf("atlas %s: trim: %w", cur.Key, err)
 					}
 					cur.Trim = image.Pt(r[0], r[1])
@@ -111,31 +104,11 @@ func ParseAtlas(src string) (family string, pages int, out []atlasEntry, err err
 					continue
 				}
 			}
-			meta.WriteString(line[4:] + "\n")
+			meta.WriteString(l.Text[4:] + "\n")
 		}
 	}
 	flush()
-	return family, pages, out, sc.Err()
-}
-
-func atlasInts(v string, n int) ([4]int, error) {
-	var out [4]int
-	v = strings.TrimSpace(v)
-	if !strings.HasPrefix(v, "[") || !strings.HasSuffix(v, "]") {
-		return out, fmt.Errorf("want a list, got %q", v)
-	}
-	parts := strings.Split(v[1:len(v)-1], ",")
-	if len(parts) != n {
-		return out, fmt.Errorf("want %d numbers, got %q", n, v)
-	}
-	for i, p := range parts {
-		x, err := strconv.Atoi(strings.TrimSpace(p))
-		if err != nil {
-			return out, err
-		}
-		out[i] = x
-	}
-	return out, nil
+	return family, pages, out, nil
 }
 
 // Pages are decoded at most once per layer (sprite pixels, tint masks,

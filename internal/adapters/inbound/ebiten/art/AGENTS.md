@@ -12,7 +12,7 @@ The generated sprite catalog: atlas pages, sprite metadata, tints, normal maps a
 
 ## Allowed Dependencies
 - Ebitengine (`ebiten`) for `*ebiten.Image` and `*ebiten.Shader`.
-- `platform/assetroot` (locating `assets/`).
+- `platform/assetroot` (locating `assets/`), `pkg/flatyaml` (sprite metadata, atlases and palettes).
 - Standard library: `embed`, `image`, `image/png`, `compress/flate`, `container/list`, `sync`, `sync/atomic`, `os`, `path/filepath`.
 
 ## Forbidden Dependencies
@@ -46,7 +46,7 @@ The generated sprite catalog: atlas pages, sprite metadata, tints, normal maps a
 - Tests needing the real art index use the lazy `realArt`/`testArt`/`atlasArt` helpers in the root package.
 
 ## Benchmarks
-- None in the package.
+- `BenchmarkParseMetaAll`, `BenchmarkParseAtlasAll`, `BenchmarkParseTints`, `BenchmarkIndex` run over the real tree. They are what to measure before reconsidering a YAML library (`pkg/flatyaml/AGENTS.md`).
 
 ## Known Design Constraints
 - `ReadBack` is set by the root's `loadArtCatalog`/`indexArtCatalog` wrappers.
