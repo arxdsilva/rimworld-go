@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
-	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	worldpkg "rimworld-go/internal/adapters/inbound/ebiten/render/world"
@@ -13,7 +12,7 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-func buildCropAtlas(c *artpkg.Catalog, species []string) *envpkg.CropAtlas {
+func buildCropAtlas(c *artpkg.Catalog, species []string) *env.CropAtlas {
 	return env.BuildCropAtlas(c, worldpkg.PlantKeys.PlantKeyTable, species)
 }
 
@@ -21,7 +20,7 @@ func (r *Renderer) windAt(x, y float64) (vx, vy float64) {
 	return r.pipe().Env.WindAt(r.liveView(), x, y)
 }
 
-func (r *Renderer) plantPose(x, y int, kind envpkg.PlantKind, amount, scale float64) motionpkg.Pose {
+func (r *Renderer) plantPose(x, y int, kind env.PlantKind, amount, scale float64) motionpkg.Pose {
 	return r.pipe().Env.PlantPose(r.liveView(), x, y, kind, amount, scale)
 }
 
@@ -92,6 +91,6 @@ func (r *Renderer) drawPuddleVeil(screen *ebiten.Image, w game.WorldView, sw, sh
 	r.pipe().Env.DrawPuddleVeil(v, screen, w, sw, sh, tile, envHost{r}, envHost{r})
 }
 
-func (r *Renderer) bakeSnowChunk(c *envpkg.SnowChunk, w game.WorldView, mw, mh, cx, cy int) {
+func (r *Renderer) bakeSnowChunk(c *env.SnowChunk, w game.WorldView, mw, mh, cx, cy int) {
 	r.pipe().Env.BakeSnowChunk(c, w, mw, mh, cx, cy, envHost{r})
 }

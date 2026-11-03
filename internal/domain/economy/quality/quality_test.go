@@ -5,7 +5,9 @@ import "testing"
 func TestRollDeterministic(t *testing.T) {
 	for s := 0; s <= MaxSkill; s++ {
 		for _, r := range []uint32{0, 1, 1 << 31, 4294967295} {
-			if Roll(s, r, false) != Roll(s, r, false) || Roll(s, r, true) != Roll(s, r, true) {
+			f1, f2 := Roll(s, r, false), Roll(s, r, false)
+			t1, t2 := Roll(s, r, true), Roll(s, r, true)
+			if f1 != f2 || t1 != t2 {
 				t.Fatal("not deterministic")
 			}
 		}

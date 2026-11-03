@@ -6,7 +6,6 @@ import (
 	"math"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
-	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	spritepkg "rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
@@ -53,7 +52,7 @@ func (e *envState) stepCollapses(c *creature.Set, v *render.View, w game.WorldVi
 	seen := make(map[game.RoofCollapseView]bool, len(w.RoofCollapses))
 	for _, rc := range w.RoofCollapses {
 		if !e.collapses[rc] {
-			seed := randx.Mix64(rc.Tick ^ uint64(envpkg.TileKey(rc.X, rc.Y))<<20 ^ 0xc011)
+			seed := randx.Mix64(rc.Tick ^ uint64(env.TileKey(rc.X, rc.Y))<<20 ^ 0xc011)
 			c.Burst(v, creature.PartDust, float64(rc.X)+0.5, float64(rc.Y)+0.5, 12, seed)
 			c.Burst(v, creature.PartChip, float64(rc.X)+0.5, float64(rc.Y)+0.4, 4, seed^0x5a)
 		}

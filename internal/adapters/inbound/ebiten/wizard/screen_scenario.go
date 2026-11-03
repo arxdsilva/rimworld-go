@@ -130,7 +130,7 @@ func (w scenarioPage) scenarioUI(sw, sh int) {
 	}
 	sel := ng.Selected()
 	uikit.StyledButton(w.kit(), "scen.new", b(0), "New scenario", uikit.BtnOpts{Tip: "New scenario\nStart a fresh scenario in the editor."}, func() {
-		editorPage{w.Flow}.openEditor(newScenarioDef(), "")
+		editorPage(w).openEditor(newScenarioDef(), "")
 	})
 	editOpts := uikit.BtnOpts{Tip: "Edit a copy\nOpen a copy of the selected scenario in the editor. The original is never changed."}
 	if sel == nil || sel.Err != "" {
@@ -138,7 +138,7 @@ func (w scenarioPage) scenarioUI(sw, sh int) {
 	}
 	uikit.StyledButton(w.kit(), "scen.edit", b(1), "Edit a copy", editOpts, func() {
 		if s := ng.Selected(); s != nil {
-			editorPage{w.Flow}.openEditor(CopyForEditing(s.Def), s.Key)
+			editorPage(w).openEditor(CopyForEditing(s.Def), s.Key)
 		}
 	})
 	uikit.StyledButton(w.kit(), "scen.import", b(2), "Load file...", uikit.BtnOpts{Disabled: w.store() == nil, Reason: "Scenario files are unavailable in this build.", Tip: "Load file\nPick a scenario file from the scenarios folder."}, w.openScenarioFiles)

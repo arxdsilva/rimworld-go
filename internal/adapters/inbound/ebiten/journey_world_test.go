@@ -190,7 +190,9 @@ func TestJourneyWorldViewOpensSelectsAndCloses(t *testing.T) {
 	j.draw(2) // the map draws again
 	j.key("F8", 0)
 	j.update(worldFly)
-	if !j.clickID("world.obj.map.0") || !j.clickID("world.obj.map.0") {
+	first := j.clickID("world.obj.map.0")
+	second := j.clickID("world.obj.map.0")
+	if !first || !second {
 		t.Fatal("the colony marker refused a click")
 	}
 	if j.a.world.Open() {

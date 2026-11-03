@@ -345,7 +345,7 @@ func (h combatBreach) Query(id entity.EntityID) pathing.Query { return h.g.pathQ
 type combatDebris struct{ g *Game }
 
 func (h combatDebris) Loose(x, y int, buf []entity.EntityID) []entity.EntityID {
-	return append(buf, h.g.idx.ground.Loose(haulHost{h.g}, x, y)...)
+	return append(buf, h.g.idx.ground.Loose(haulHost(h), x, y)...)
 }
 func (h combatDebris) Stack(id entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(id) }
 func (h combatDebris) PutStack(id entity.EntityID, st item.Stack)  { h.g.putStack(id, st) }

@@ -22,16 +22,14 @@ type pathSeg struct{ ax, ay, bx, by float32 }
 
 // PawnPathPlan is what to draw for one colonist, in screen pixels.
 type PawnPathPlan struct {
-	id           uint64
-	Drafted      bool
-	Selected     bool
-	Segs         []pathSeg // dashes, already culled to the screen
-	HasGoal      bool
-	gx, gy       float32
-	HasDrop      bool
-	dx, dy       float32
-	fromX, fromY float32
-	hasFrom      bool
+	id       uint64
+	Drafted  bool
+	Selected bool
+	Segs     []pathSeg // dashes, already culled to the screen
+	HasGoal  bool
+	gx, gy   float32
+	HasDrop  bool
+	dx, dy   float32
 }
 
 func segOnScreen(s pathSeg, sw, sh int) bool {

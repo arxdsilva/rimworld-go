@@ -130,7 +130,8 @@ func TestSpriteKeys(t *testing.T) {
 			t.Fatalf("TwoDigits(%d) = %q", n, got)
 		}
 	}
-	if TileHash(3, 4) != TileHash(3, 4) || TileHash(3, 4) == TileHash(4, 3) {
+	hashA, hashB := TileHash(3, 4), TileHash(3, 4)
+	if hashA != hashB || TileHash(3, 4) == TileHash(4, 3) {
 		t.Fatal("TileHash is stable and not symmetric")
 	}
 	if GrassTint("temperate_forest") != NoCS || GrassTint("no such biome") != NoCS || GrassTint("desert") == NoCS {

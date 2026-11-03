@@ -225,7 +225,7 @@ func (a Bills) billConfigBody(body gfx.Rect, b game.BuildingView, i int, mode ui
 		}
 		y += billCfgRowH
 	}
-	step := Building{a.Pane}.qtyStep()
+	step := Building(a).qtyStep()
 
 	label("Store in")
 	chips(len(billStoreLabels), func(j int) string { return "bill.cfg.store." + strconv.Itoa(j) },
@@ -420,7 +420,7 @@ func (a Bills) pasteBlock(b game.BuildingView) string {
 	if c == nil {
 		return "Copy a bill first."
 	}
-	for _, r := range (Building{a.Pane}).RecipesFor(b.Kind) {
+	for _, r := range (Building(a)).RecipesFor(b.Kind) {
 		if r.Name == c.Recipe {
 			return ""
 		}
@@ -436,7 +436,7 @@ func (a Bills) pasteBill(b game.BuildingView) {
 		return
 	}
 	var id uint8
-	for _, r := range (Building{a.Pane}).RecipesFor(b.Kind) {
+	for _, r := range (Building(a)).RecipesFor(b.Kind) {
 		if r.Name == c.Recipe {
 			id = r.ID
 		}

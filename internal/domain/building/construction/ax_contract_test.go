@@ -13,8 +13,10 @@ import (
 // screen and telescope are Unbuildable; the kind still fits its byte.
 func TestAxContractKinds(t *testing.T) {
 	t.Parallel()
-	if kindCount > 255 {
-		t.Fatalf("%d kinds overflow the saved byte", kindCount)
+	// Kind is a uint8, so the compiler already rejects a 256th kind; check
+	// the last kind is valid and the one past it is not (no wrap to zero).
+	if last := Kind(kindCount - 1); !last.Valid() || (last + 1).Valid() {
+		t.Fatalf("%d kinds do not fit the saved byte", kindCount)
 	}
 	names := map[string]bool{}
 	for _, d := range All() {

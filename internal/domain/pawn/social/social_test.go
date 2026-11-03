@@ -229,7 +229,7 @@ func TestCompatibility(t *testing.T) {
 			}
 		}
 	}
-	if Compatibility(7, 1, 2, 30, 30) != Compatibility(7, 1, 2, 30, 30) {
+	if first, again := Compatibility(7, 1, 2, 30, 30), Compatibility(7, 1, 2, 30, 30); first != again {
 		t.Fatal("unstable")
 	}
 	if Compatibility(7, 1, 2, 30, 30) == Compatibility(8, 1, 2, 30, 30) &&

@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"sync"
@@ -14,7 +13,7 @@ import (
 // one package at a time (SOLID_GO.md §11: no forwarder outlives the commit
 // series that repoints its callers).
 
-func loadArtCatalog(root string) (*artpkg.Catalog, error) {
+func loadArtCatalog(root string) (*art.Catalog, error) {
 	c, err := art.Load(root)
 	if c != nil {
 		c.ReadBack = readBack

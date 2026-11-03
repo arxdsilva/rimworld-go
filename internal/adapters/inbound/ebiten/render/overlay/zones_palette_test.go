@@ -5,7 +5,8 @@ import "testing"
 func TestZoneColourIsDeterministicPerID(t *testing.T) {
 	t.Parallel()
 	for id := uint16(0); id < 40; id++ {
-		if ZoneColour(id) != ZoneColour(id) || ZoneColour(id) != ZonePalette[int(id)%len(ZonePalette)] {
+		first, second := ZoneColour(id), ZoneColour(id)
+		if first != second || ZoneColour(id) != ZonePalette[int(id)%len(ZonePalette)] {
 			t.Fatalf("zone %d colour not stable", id)
 		}
 	}

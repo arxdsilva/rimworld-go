@@ -110,8 +110,7 @@ func build(h Sites) graph {
 	for i := range root {
 		root[i] = i
 	}
-	var find func(int) int
-	find = func(i int) int {
+	find := func(i int) int {
 		for root[i] != i {
 			root[i] = root[root[i]]
 			i = root[i]

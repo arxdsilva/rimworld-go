@@ -41,27 +41,27 @@ func (v chromeBar) declareChrome(sw, sh int, p *planet.Planet) []gfx.Rect {
 	out := v.declareTools(sw, p)
 	ins := inspectorRect(lay)
 	if v.pods.on {
-		(targeting{v.View}).declarePodTargets(ins)
+		targeting(v).declarePodTargets(ins)
 	} else {
-		(inspector{v.View}).declareInspector(ins)
+		inspector(v).declareInspector(ins)
 	}
 	out = append(out, ins)
 	if v.route.on {
 		tb := ToolbarRect(lay)
 		r := gfx.Rect{X: tb.X, Y: tb.Y - routeBarH - hudlayout.HudMargin, W: routeBarW, H: routeBarH}
-		(router{v.View}).declareRouteBar(r)
+		router(v).declareRouteBar(r)
 		out = append(out, r)
 	}
 	if v.pods.on && !v.pods.menu {
 		tb := ToolbarRect(lay)
 		r := gfx.Rect{X: tb.X, Y: tb.Y - 40 - hudlayout.HudMargin, W: routeBarW, H: 40}
 		v.kit().Panel(r)
-		v.kit().Label(r.X+10, r.Y+12, gfx.Ellipsize(targeting{v.View}.podsHead(), gfx.Body, float64(r.W-20)), gfx.Body)
+		v.kit().Label(r.X+10, r.Y+12, gfx.Ellipsize(targeting(v).podsHead(), gfx.Body, float64(r.W-20)), gfx.Body)
 		out = append(out, r)
 	}
 	if v.pods.on && v.pods.menu {
-		r := (targeting{v.View}).podMenuRect(sw, sh)
-		(targeting{v.View}).declarePodMenu(r)
+		r := targeting(v).podMenuRect(sw, sh)
+		targeting(v).declarePodMenu(r)
 		out = append(out, r)
 	}
 	return out

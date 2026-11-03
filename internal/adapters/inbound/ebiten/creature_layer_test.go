@@ -9,7 +9,6 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -40,7 +39,7 @@ func (r *Renderer) drawFigure(screen *ebiten.Image, p game.PawnView, wx, wy, til
 
 func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawnVisual, wx, wy, tile float64) {
 	c, v := r.pipe().Creatures, r.liveView()
-	c.DrawLyingPawn(v, r.pipe().Pass(), screen, p, creature.Visual{Facing: vis.facing, LyingSince: vis.lyingSince}, wx, wy, tile)
+	c.DrawLyingPawn(v, r.pipe().Pass(), screen, p, creaturepkg.Visual{Facing: vis.facing, LyingSince: vis.lyingSince}, wx, wy, tile)
 }
 
 func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
@@ -103,7 +102,7 @@ func (r *Renderer) combatOffset(p game.PawnView) (dx, dy float64, flash float32)
 
 func (r *Renderer) fallPose(p game.PawnView, vis pawnVisual) motionpkg.Pose {
 	c, v := r.pipe().Creatures, r.liveView()
-	ps := c.FallPose(v, p, creature.Visual{Facing: vis.facing, LyingSince: vis.lyingSince})
+	ps := c.FallPose(v, p, creaturepkg.Visual{Facing: vis.facing, LyingSince: vis.lyingSince})
 	return ps
 }
 

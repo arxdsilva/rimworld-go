@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	mainmenupkg "rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 
@@ -26,7 +25,7 @@ func (a *App) creditsButtons(sw, sh int) []uikit.Button {
 }
 
 func (a *App) drawCredits(screen *ebiten.Image, sw, sh int) {
-	a.paintMenu(screen, sw, sh, "Credits", mainmenupkg.CreditsLines(), a.creditsButtons(sw, sh))
+	a.paintMenu(screen, sw, sh, "Credits", mainmenu.CreditsLines(), a.creditsButtons(sw, sh))
 }
 
 // hasSaves reports a loadable save exists (for Continue).
@@ -76,14 +75,14 @@ type menuHost struct{ a *App }
 
 var _ mainmenu.Shell = menuHost{}
 
-func (h menuHost) Size() (int, int)              { return shellSize{h.a}.Size() }
-func (h menuHost) Cursor() (int, int)            { return shellSize{h.a}.Cursor() }
-func (h menuHost) MapCursor() (int, int)         { return shellSize{h.a}.MapCursor() }
-func (h menuHost) MapScale() float64             { return shellSize{h.a}.MapScale() }
-func (h menuHost) Settings() config.Settings     { return shellSettings{h.a}.Settings() }
-func (h menuHost) KeyName(x input.Action) string { return shellSettings{h.a}.KeyName(x) }
-func (h menuHost) KeyHint(x input.Action) string { return shellSettings{h.a}.KeyHint(x) }
-func (h menuHost) Kit() *uikit.Kit               { return shellWidgets{h.a}.Kit() }
+func (h menuHost) Size() (int, int)              { return shellSize(h).Size() }
+func (h menuHost) Cursor() (int, int)            { return shellSize(h).Cursor() }
+func (h menuHost) MapCursor() (int, int)         { return shellSize(h).MapCursor() }
+func (h menuHost) MapScale() float64             { return shellSize(h).MapScale() }
+func (h menuHost) Settings() config.Settings     { return shellSettings(h).Settings() }
+func (h menuHost) KeyName(x input.Action) string { return shellSettings(h).KeyName(x) }
+func (h menuHost) KeyHint(x input.Action) string { return shellSettings(h).KeyHint(x) }
+func (h menuHost) Kit() *uikit.Kit               { return shellWidgets(h).Kit() }
 
 func (h menuHost) LoadSplash() (*ebiten.Image, error) {
 	if h.a.cfg.LoadSplash == nil {
@@ -92,7 +91,7 @@ func (h menuHost) LoadSplash() (*ebiten.Image, error) {
 	return h.a.cfg.LoadSplash()
 }
 
-func (h menuHost) LoadMenuScene() (*mainmenupkg.Diorama, error) {
+func (h menuHost) LoadMenuScene() (*mainmenu.Diorama, error) {
 	if h.a.cfg.LoadMenuScene == nil {
 		return nil, mainmenu.ErrNoLoader
 	}

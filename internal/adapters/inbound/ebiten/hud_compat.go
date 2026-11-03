@@ -81,7 +81,7 @@ func (h hudHost) StoneItem(key, kind string, cs sprite.ColorScale) (string, spri
 
 // Jump hands the spot to the shell's JumpTo intent (shell.go: switch map,
 // select the focus, centre).
-func (h hudHost) Jump(s portspkg.Spot) { shellDispatch{h.a}.Do(portspkg.JumpTo{Spot: s}) }
+func (h hudHost) Jump(s portspkg.Spot) { shellDispatch(h).Do(portspkg.JumpTo{Spot: s}) }
 
 func (h hudHost) DrawPawnBust(dst *ebiten.Image, p game.PawnView, x, y, w, ht float64) {
 	if r := h.a.renderer; r != nil && r.art != nil {

@@ -34,7 +34,6 @@ func TestFriendVisitsBedriddenColonistAndBothRelax(t *testing.T) {
 		g.SetNeeds(pat, 9000, 9000)
 		restFed(g, 1)
 	}
-	joyP := g.joy[pat]
 	visiting := func() bool { j, _ := g.jobs.Get(fri); return j.Kind == job.VisitSick }
 	start := g.joy[fri]
 	ok := false
@@ -46,7 +45,8 @@ func TestFriendVisitsBedriddenColonistAndBothRelax(t *testing.T) {
 	if !ok {
 		t.Fatalf("a bored friend of a bedridden colonist visits it (joy %d, start %d)", g.joy[fri], start)
 	}
-	g.joy[pat], joyP = 3000, 3000
+	joyP := 3000
+	g.joy[pat] = joyP
 	g.joy[fri] = recreation.Bored
 	if !stepUntilFed(g, 3000, func() bool { return !visiting() }) {
 		t.Fatal("the visit ends")

@@ -180,16 +180,6 @@ func w3Bursts(j *journey, blast string) (n int) {
 	return n
 }
 
-// w3Hostiles are the raiders still standing.
-func w3Hostiles(j *journey) (out []uint64) {
-	for _, p := range weRaiders(j) {
-		if p.Status == "alive" {
-			out = append(out, uint64(p.ID))
-		}
-	}
-	return out
-}
-
 // w3Auto calls the first *game.Game method named in names, filling its
 // parameters by type: an entity.EntityID gets id, another integer n, a
 // float n, a string str, anything else its zero value (a variadic tail is

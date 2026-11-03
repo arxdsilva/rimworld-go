@@ -102,15 +102,6 @@ func TestCleanRoomHalvesTheChance(t *testing.T) {
 	}
 }
 
-// phaseInfectionAt runs the hourly medical pass now.
-func (g *Game) phaseInfectionAt() {
-	now := uint64(g.clock.Now())
-	if r := now % clock.TicksPerHour; r != 0 {
-		g.clock.Advance(int(clock.TicksPerHour - r))
-	}
-	g.phaseMedical()
-}
-
 // TestDoctorTendsInfectionWithMedicine: a sick colonist rests, a doctor
 // tends the infection with industrial medicine at a rolled quality, tends
 // it again each 12-hour window, and the infection is beaten.

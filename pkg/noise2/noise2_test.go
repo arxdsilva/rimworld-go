@@ -96,7 +96,7 @@ func TestSeedSeparatesNames(t *testing.T) {
 	if Seed(1, "elevation") == Seed(1, "fertility") || Seed(1, "a") == Seed(2, "a") {
 		t.Fatal("Seed collides")
 	}
-	if Seed(1, "x") != Seed(1, "x") {
+	if first, again := Seed(1, "x"), Seed(1, "x"); first != again {
 		t.Fatal("Seed not deterministic")
 	}
 }

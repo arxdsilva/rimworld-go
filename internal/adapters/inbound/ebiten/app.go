@@ -7,13 +7,10 @@ import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
-	optionspkg "rimworld-go/internal/adapters/inbound/ebiten/options"
 	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
-	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
-	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"strconv"
 	"strings"
 	"time"
@@ -31,7 +28,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/orders"
 	"rimworld-go/internal/adapters/inbound/ebiten/perf"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
-	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
@@ -98,7 +94,7 @@ type AppConfig struct {
 	LoadArt    func() (*artpkg.Catalog, error)
 	LoadSplash func() (*ebiten.Image, error)
 	// Scenarios stores custom scenarios (nil: custom scenarios unavailable).
-	Scenarios wizardpkg.ScenarioStore
+	Scenarios wizard.ScenarioStore
 	// FPSProbe runs a dev frame-rate measurement and quits (fps_probe.go).
 	FPSProbe *perf.FPSProbe
 	// NewSimBuilder builds a wizard Setup colony step by step for the
@@ -112,7 +108,7 @@ type AppConfig struct {
 	// Saves connects save/load to storage (zero value: disabled).
 	Saves SaveHooks
 	// Settings loads and stores the Options (zero value: defaults, not saved).
-	Settings optionspkg.Hooks
+	Settings options.Hooks
 	// Window applies fullscreen and VSync (nil: leave the window alone).
 	Window func(fullscreen, vsync bool)
 	// Sound plays the client's audio (nil: silent).
@@ -204,7 +200,7 @@ type App struct {
 	// the frame-timing instruments. Built by NewApp from the <pkg>_compat.go
 	// constructors.
 	opt        *options.Screen
-	win        *windows.Set
+	win        *windowspkg.Set
 	arch       *architect.Tool
 	ord        *orders.Controller
 	deal       *dialogs.Dealings
@@ -219,7 +215,7 @@ type App struct {
 
 	// ng is the New Colony wizard's draft as wizard.Flow hands it over
 	// (KeepDraft, wizard_compat.go); nil outside the wizard.
-	ng *wizardpkg.Draft
+	ng *wizard.Draft
 	// settings are the player's Options (settings.go).
 	settings config.Settings
 	snd      soundDirector // what is heard (sound_director.go)
@@ -239,9 +235,9 @@ type App struct {
 	in      inputframe.Frame
 	binds   input.Bindings
 	updates uint64
-	bg      bgState                // Run in background (background.go)
-	rebind  optionspkg.RebindState // Options › Controls key capture (controls_ui.go)
-	midDrag midDragState           // middle-mouse camera drag
+	bg      bgState             // Run in background (background.go)
+	rebind  options.RebindState // Options › Controls key capture (controls_ui.go)
+	midDrag midDragState        // middle-mouse camera drag
 }
 
 // art_atlas.go: pages cut in the background, not mid-frame
@@ -347,7 +343,7 @@ func (a *App) handleColonyEscape() bool {
 		return true
 	}
 	if a.sel.Grouped() {
-		a.sel.Clear(selectionpkg.None)
+		a.sel.Clear(selection.None)
 		return true
 	}
 	if a.renderer != nil && a.renderer.HasSelect() {
@@ -514,7 +510,7 @@ func (a *App) frameAlpha() float64 {
 func (a *App) startGame() {
 	seed := a.cfg.DefaultSeed
 	if seed == 0 {
-		seed = wizardpkg.RandomSeed()
+		seed = wizard.RandomSeed()
 	}
 	b, err := a.simBuilder(NewGame{Seed: seed, Biome: a.cfg.DefaultBiome})
 	if err != nil {
@@ -522,7 +518,7 @@ func (a *App) startGame() {
 		return
 	}
 	for {
-		if _, _, done := b.Step(wizardpkg.LoadUnits); done {
+		if _, _, done := b.Step(wizard.LoadUnits); done {
 			break
 		}
 	}

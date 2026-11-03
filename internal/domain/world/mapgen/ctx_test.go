@@ -11,7 +11,8 @@ func TestCtxHelpers(t *testing.T) {
 	s := site.Site{Biome: biome.TemperateForest}
 	cfg := Config{Seed: 9, W: 32, H: 32, Site: s, Biome: biome.DefOf(s.Biome), Debug: true}
 	c := NewCtx(cfg)
-	if c.Rand("a").IntN(1<<30) == c.Rand("b").IntN(1<<30) || c.Rand("a").IntN(1<<30) != c.Rand("a").IntN(1<<30) {
+	a1, a2 := c.Rand("a").IntN(1<<30), c.Rand("a").IntN(1<<30)
+	if b := c.Rand("b").IntN(1 << 30); a1 == b || a1 != a2 {
 		t.Fatal("step streams")
 	}
 	if c.NoiseSeed("a") == c.NoiseSeed("b") || c.Scale() <= 0 {

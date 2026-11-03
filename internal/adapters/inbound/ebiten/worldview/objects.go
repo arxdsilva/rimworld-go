@@ -70,12 +70,11 @@ func newObject(k Kind, n uint64, tile int, label string) Object {
 
 // readModels are the read models the objects come from, as read once.
 type readModels struct {
-	maps     []game.MapView
-	world    game.WorldMapView
-	sites    []game.WorldSiteView
-	ax       axview.World
-	tiles    int // the planet's tile count (objects off it are dropped)
-	homeTile int
+	maps  []game.MapView
+	world game.WorldMapView
+	sites []game.WorldSiteView
+	ax    axview.World
+	tiles int // the planet's tile count (objects off it are dropped)
 }
 
 // buildObjects lists every world object of r, in pick order (maps,

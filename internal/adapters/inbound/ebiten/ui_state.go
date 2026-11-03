@@ -3,7 +3,6 @@ package ebiten
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
-	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	uikitpkg "rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/input"
 )
@@ -36,9 +35,9 @@ func (a *App) uiPreInput(raw *inputframe.Raw) {
 		mx, my = a.cursor[0], a.cursor[1]
 	}
 	u.TakePages(raw, mx, my)
-	if len(u.Modals) > 0 && uikit.RawPressed(raw, "Escape") {
+	if len(u.Modals) > 0 && uikitpkg.RawPressed(raw, "Escape") {
 		a.uiCloseTop()
-		uikit.DropPressed(raw, "Escape")
+		uikitpkg.DropPressed(raw, "Escape")
 	}
 	u.TakeTab(raw, raw.Mods&input.ModShift != 0)
 }

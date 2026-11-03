@@ -518,7 +518,7 @@ func (c Alerts) Focus(id string) {
 		return
 	}
 	if key == GoneAlertKey { // ending.go: back to the everyone-gone screen
-		Right{c.Chrome}.openGone(c.sh.World())
+		Right(c).openGone(c.sh.World())
 		return
 	}
 	c.cycle(key, 1)

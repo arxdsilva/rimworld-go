@@ -5,7 +5,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	creaturepkg "rimworld-go/internal/adapters/inbound/ebiten/render/creature"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	overlaypkg "rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
@@ -15,11 +14,11 @@ import (
 
 // torchFireAt is where torch b's flame stands (its sprite's fire attachment).
 func torchFireAt(c *art.Catalog, b *game.BuildingView) (float64, float64, bool) {
-	return overlay.TorchFireAt(c, world.BuildSprite(overlaypkg.TorchLampKind, "", 0, false, false), b)
+	return overlaypkg.TorchFireAt(c, world.BuildSprite(overlaypkg.TorchLampKind, "", 0, false, false), b)
 }
 
 func turretAimVec(i int) creaturepkg.Vec {
-	p := overlay.TurretAimVec(i)
+	p := overlaypkg.TurretAimVec(i)
 	return creaturepkg.Vec{X: p.X, Y: p.Y}
 }
 
@@ -37,7 +36,7 @@ func (r *Renderer) drawFenceRun(b *gfx.TriBatch, run overlaypkg.EdgeRun, tile fl
 	r.overlays().Zones.DrawFenceRun(v, b, run, tile)
 }
 
-func (r *Renderer) zoneLabelPlanFor(z game.ZoneView, g *overlaypkg.ZoneGeom, tile float64) (plan overlay.ZoneLabelPlan, ox, oy float32, bw, bh float64) {
+func (r *Renderer) zoneLabelPlanFor(z game.ZoneView, g *overlaypkg.ZoneGeom, tile float64) (plan overlaypkg.ZoneLabelPlan, ox, oy float32, bw, bh float64) {
 	v := r.liveView()
 	return r.overlays().Zones.ZoneLabelPlanFor(v, z, g, tile)
 }

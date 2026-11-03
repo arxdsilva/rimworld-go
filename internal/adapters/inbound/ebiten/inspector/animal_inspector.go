@@ -20,9 +20,6 @@ import (
 
 // Animal selection, its inspector (hunt toggle) and the hostile alert.
 
-// alertClr is the hostile-animal marker and alert colour: the danger token.
-var alertClr = uikit.Danger
-
 func animalAt(w game.WorldView, x, y int) (game.AnimalView, bool) {
 	for _, an := range w.Animals {
 		if an.X == x && an.Y == y {

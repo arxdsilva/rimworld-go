@@ -3,7 +3,6 @@ package ebiten
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
-	uikitpkg "rimworld-go/internal/adapters/inbound/ebiten/uikit"
 )
 
 // The modal stack lives in uikit (ARCH-003). The App declares its modals
@@ -19,7 +18,7 @@ type modal struct {
 	W, H      float32
 	// Draw declares the body's widgets (and draws its text) in body.
 	Draw    func(a *App, body gfx.Rect)
-	Buttons []uikitpkg.ModalButton // footer, laid out right to left (first = rightmost)
+	Buttons []uikit.ModalButton // footer, laid out right to left (first = rightmost)
 	// OnClose runs when Esc or the X closes it.
 	OnClose func()
 	// Anchor returns the rectangle the frame sits on (nil: centred on the

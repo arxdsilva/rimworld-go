@@ -1,8 +1,6 @@
 package light
 
 import (
-	"math"
-
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
@@ -28,10 +26,4 @@ func (r *rig) litSource(img *ebiten.Image) (*ebiten.Image, float32, bool) {
 // drawLit is a lit draw outside a bake, bloodless.
 func (r *rig) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs [4]float32, wx, wy float64) {
 	r.lit.Draw(&r.view, dst, img, geo, cs, wx, wy, false, 0)
-}
-
-// unit is (x, y) normalised.
-func unit(x, y float64) (float64, float64) {
-	n := math.Hypot(x, y)
-	return x / n, y / n
 }

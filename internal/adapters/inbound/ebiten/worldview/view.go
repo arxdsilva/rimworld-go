@@ -448,10 +448,10 @@ func (v picker) cancelMode() {
 func (v picker) clickTile(t, mx, my int) {
 	switch {
 	case v.pods.on:
-		(targeting{v.View}).openPodMenu(t, float32(mx), float32(my))
+		targeting(v).openPodMenu(t, float32(mx), float32(my))
 		return
 	case v.route.on:
-		(router{v.View}).setRouteTarget(t)
+		router(v).setRouteTarget(t)
 		return
 	}
 	v.notePick(t)
@@ -475,11 +475,11 @@ func (v picker) clickMark(key string) {
 	}
 	mx, my = v.markAt(o, mx, my)
 	if v.pods.on {
-		(targeting{v.View}).openPodMenu(v.objs[o].Tile, float32(mx), float32(my))
+		targeting(v).openPodMenu(v.objs[o].Tile, float32(mx), float32(my))
 		return
 	}
 	if v.route.on {
-		(router{v.View}).setRouteTarget(v.objs[o].Tile)
+		router(v).setRouteTarget(v.objs[o].Tile)
 		return
 	}
 	v.notePick(v.objs[o].Tile)

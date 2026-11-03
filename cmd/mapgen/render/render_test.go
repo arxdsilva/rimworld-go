@@ -63,9 +63,9 @@ func TestRampsSurviveBadValues(t *testing.T) {
 		t.Error("near distances must differ")
 	}
 	for _, v := range []float32{-1, 0, 0.2, 0.5, 0.9, 1, 2, nan, inf} {
-		Grey(v)
-		WetRamp(v)
-		Heat(v)
+		if Grey(v).A != 255 || WetRamp(v).A != 255 || Heat(v).A != 255 {
+			t.Errorf("ramps at %v must stay opaque", v)
+		}
 	}
 	if Grey(nan) != Grey(0) || Grey(2) != Grey(1) {
 		t.Error("clamp")

@@ -34,7 +34,8 @@ func TestTable_RejectsExclusiveTileConflict(t *testing.T) {
 func TestTable_SameOwnerReclaimOK(t *testing.T) {
 	tab := NewTable()
 	a := entity.EntityID(1)
-	if !tab.TryTile(a, 1, 1) || !tab.TryTile(a, 1, 1) {
+	first, again := tab.TryTile(a, 1, 1), tab.TryTile(a, 1, 1)
+	if !first || !again {
 		t.Fatal("owner may refresh their own claim")
 	}
 }

@@ -5,7 +5,6 @@ import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/mapnav"
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
-	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	selectionpkg "rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"strconv"
 	"strings"
@@ -48,8 +47,8 @@ type shell struct {
 	shellSaves
 	shellDispatch
 
-	screens map[portspkg.Screen]func(a *App, sw, sh int) // uiBegin: each screen's widgets
-	routes  []clickRoute                                 // applyClick: by id or prefix, in order
+	screens map[ports.Screen]func(a *App, sw, sh int) // uiBegin: each screen's widgets
+	routes  []clickRoute                              // applyClick: by id or prefix, in order
 }
 
 func newShell(a *App) shell {
@@ -421,17 +420,17 @@ func (s shellDispatch) Do(it ports.Intent) {
 // per Update, right after the input is polled, while the screen is on
 // top with no overlay. A new screen adds a row here (SOLID_GO.md §4:
 // registration at the composition root, not init()).
-func screenTable() map[portspkg.Screen]func(a *App, sw, sh int) {
-	return map[portspkg.Screen]func(a *App, sw, sh int){
-		portspkg.ScreenMainMenu:       func(a *App, sw, sh int) { a.menuScreen.Declare(sw, sh) },
-		portspkg.ScreenScenario:       func(a *App, sw, sh int) { a.scenarioUI(sw, sh) },
-		portspkg.ScreenScenarioEditor: func(a *App, sw, sh int) { a.editorUI(sw, sh) },
-		portspkg.ScreenStoryteller:    func(a *App, sw, sh int) { a.storytellerUI(sw, sh) },
-		portspkg.ScreenWorldGen:       func(a *App, sw, sh int) { a.worldGenUI(sw, sh) },
-		portspkg.ScreenLanding:        func(a *App, sw, sh int) { a.landingUI(sw, sh) },
-		portspkg.ScreenPawns:          func(a *App, sw, sh int) { a.pawnsUI(sw, sh) },
-		portspkg.ScreenOptions:        func(a *App, sw, sh int) { a.opt.UI(sw, sh) },
-		portspkg.ScreenColony:         func(a *App, sw, sh int) { a.colonyUI(sw, sh) },
+func screenTable() map[ports.Screen]func(a *App, sw, sh int) {
+	return map[ports.Screen]func(a *App, sw, sh int){
+		ports.ScreenMainMenu:       func(a *App, sw, sh int) { a.menuScreen.Declare(sw, sh) },
+		ports.ScreenScenario:       func(a *App, sw, sh int) { a.scenarioUI(sw, sh) },
+		ports.ScreenScenarioEditor: func(a *App, sw, sh int) { a.editorUI(sw, sh) },
+		ports.ScreenStoryteller:    func(a *App, sw, sh int) { a.storytellerUI(sw, sh) },
+		ports.ScreenWorldGen:       func(a *App, sw, sh int) { a.worldGenUI(sw, sh) },
+		ports.ScreenLanding:        func(a *App, sw, sh int) { a.landingUI(sw, sh) },
+		ports.ScreenPawns:          func(a *App, sw, sh int) { a.pawnsUI(sw, sh) },
+		ports.ScreenOptions:        func(a *App, sw, sh int) { a.opt.UI(sw, sh) },
+		ports.ScreenColony:         func(a *App, sw, sh int) { a.colonyUI(sw, sh) },
 	}
 }
 
@@ -608,7 +607,7 @@ func clickMainTab(a *App, id string) bool {
 // openLoadScreen refreshes the slot list and pushes the Load screen.
 func openLoadScreen(a *App, _ string) {
 	a.opt.RefreshSlots()
-	a.apply(intent{kind: intentPush, screen: portspkg.ScreenLoad})
+	a.apply(intent{kind: intentPush, screen: ports.ScreenLoad})
 }
 
 // openOptions opens Options on its first tab with no key capture pending.

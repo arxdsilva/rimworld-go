@@ -73,7 +73,7 @@ func TestHitChance(t *testing.T) {
 	if got := hc(12, pf, 0, 500, 800, 900, n); got != 800*900/1000*500/1000*800/1000 {
 		t.Fatalf("product = %d", got)
 	}
-	if hc(20, 940_000, 550, 700, n, 950, n) != hc(20, 940_000, 550, 700, n, 950, n) {
+	if first, again := hc(20, 940_000, 550, 700, n, 950, n), hc(20, 940_000, 550, 700, n, 950, n); first != again {
 		t.Fatal("determinism")
 	}
 	if hc(0, ShooterPerTile(0), 0, n, n, n, n) != 600 {

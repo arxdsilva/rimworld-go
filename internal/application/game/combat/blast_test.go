@@ -132,9 +132,9 @@ func TestMolotovIgnitesAndBurns(t *testing.T) {
 // the stun survives a save.
 func TestEMPStunsTurret(t *testing.T) {
 	t.Parallel()
-	f, tu := turretRig(t)
+	f, _ := turretRig(t)
 	c := New(f, Roles{Power: f, Flight: f, Hunts: f, Breach: f})
-	tu = c.Turrets
+	tu := c.Turrets
 	f.pawn(1, 11, 5, weapon.Fists)
 	emp := weapon.DefOf(weapon.EMPGrenade).Blast
 	c.Blasts.Explode(9, weapon.EMPGrenade, 10, 6, emp)

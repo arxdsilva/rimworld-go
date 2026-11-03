@@ -3,7 +3,6 @@ package ebiten
 import (
 	"fmt"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
-	perfpkg "rimworld-go/internal/adapters/inbound/ebiten/perf"
 	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"time"
 
@@ -100,7 +99,7 @@ func (h perfHost) ForceSpeed(tier int) {
 
 // StartProbe starts the probe's colony and frames the camera: the probe
 // measures the whole map, in map pixels.
-func (h perfHost) StartProbe(p *perfpkg.FPSProbe) (int, uint64, string) {
+func (h perfHost) StartProbe(p *perf.FPSProbe) (int, uint64, string) {
 	a := h.a
 	if a.nav.screen() == portspkg.ScreenBoot {
 		a.finishBoot()

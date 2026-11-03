@@ -243,13 +243,8 @@ func fuelLine(b game.BuildingView) string {
 	return ""
 }
 
-// powerCommands are b's power buttons: the Power toggle on every device
-// with one, and a heater's or cooler's thermostat.
-func (a Building) powerCommands(b game.BuildingView) []Button {
-	return a.powerCommandsIn(units.Celsius, b)
-}
-
-// powerCommandsIn is powerCommands with the thermostat's temperatures in
+// powerCommandsIn are b's power buttons: the Power toggle on every device
+// with one, and a heater's or cooler's thermostat, with its temperatures in
 // the player's unit (WG-16).
 func (a Building) powerCommandsIn(u units.Temp, b game.BuildingView) []Button {
 	var out []Button

@@ -83,10 +83,11 @@ func TestMossCommandLine(t *testing.T) {
 		t.Fatalf("command\n got %q\nwant %q", got, want)
 	}
 	// seeds: stable per id and take, distinct between takes, -moss-seed wins
-	if a.mossSeed("animal.cow.call", 1) != a.mossSeed("animal.cow.call", 1) || a.mossSeed("animal.cow.call", 1) == a.mossSeed("animal.cow.call", 2) {
+	first, again, take2 := a.mossSeed("animal.cow.call", 1), a.mossSeed("animal.cow.call", 1), a.mossSeed("animal.cow.call", 2)
+	if first != again || first == take2 {
 		t.Fatal("derived seeds must be stable and differ by take")
 	}
-	if s := a.mossSeed("animal.cow.call", 1); s <= 0 {
+	if s := first; s <= 0 {
 		t.Fatalf("seed %d", s)
 	}
 	a.cfg.moss.seed = 7

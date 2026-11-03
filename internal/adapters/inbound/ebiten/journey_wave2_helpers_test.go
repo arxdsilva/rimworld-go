@@ -57,12 +57,6 @@ func w2Click(j *journey, what string, inc []string, exc ...string) {
 	}
 }
 
-// w2Opt reads a field by reflection; ok is false when the type has none.
-func w2Opt(v any, name string) (reflect.Value, bool) {
-	f := reflect.Indirect(reflect.ValueOf(v)).FieldByName(name)
-	return f, f.IsValid()
-}
-
 // w2Bool reads a bool field; fatal when the field is missing.
 func w2Bool(j *journey, v any, name string) bool {
 	j.t.Helper()
@@ -71,16 +65,6 @@ func w2Bool(j *journey, v any, name string) bool {
 		j.t.Fatalf("%T.%s is %s, not bool", v, name, f.Kind())
 	}
 	return f.Bool()
-}
-
-// w2Zone is the zone view with that id.
-func w2Zone(j *journey, id uint16) (game.ZoneView, bool) {
-	for _, z := range j.world().Zones {
-		if z.ID == id {
-			return z, true
-		}
-	}
-	return game.ZoneView{}, false
 }
 
 // w2ShelfZone is the storage zone view of the shelf building b.

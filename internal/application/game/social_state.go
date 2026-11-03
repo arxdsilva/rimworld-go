@@ -61,13 +61,6 @@ func (e *edge) dir(from entity.EntityID) int {
 	return 1
 }
 
-func (e *edge) other(id entity.EntityID) entity.EntityID {
-	if id == e.lo {
-		return e.hi
-	}
-	return e.lo
-}
-
 func (e *edge) invalidate() { e.ok = [2]bool{} }
 
 // empty reports an edge with nothing left to keep.
@@ -249,15 +242,6 @@ func (g *Game) refreshSig(id entity.EntityID) {
 	}
 	s.sig[id] = cur
 	s.sigVer[id]++
-}
-
-// invalidateOpinions is for the host systems (body, drugs, traits): id's
-// state that opinions read changed, so resample it now.
-func (g *Game) invalidateOpinions(id entity.EntityID) {
-	if g.personOf(id) == nil {
-		return
-	}
-	g.refreshSig(id)
 }
 
 // capacity is id's body capacity c, permille (no body: whole).

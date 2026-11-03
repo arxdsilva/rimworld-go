@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"image/color"
-	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -135,7 +134,7 @@ func (a *App) archToolCommands() []inspector.Button {
 }
 
 // previewCells is what the current tool would affect right now.
-func (a *App) previewCells() (architectpkg.ToolDef, []architectpkg.GhostCell) {
+func (a *App) previewCells() (architect.ToolDef, []architect.GhostCell) {
 	d, cells := a.arch.PreviewCells()
 	return d, cells
 }
@@ -185,8 +184,8 @@ func (a *App) areaChip(p game.PawnView) (inspector.Chip, bool) {
 // types' old lowercase fields. Each shim and converter goes with its last
 // lowercase reader.
 
-func toolByID(id string) (architectpkg.ToolDef, bool) {
+func toolByID(id string) (architect.ToolDef, bool) {
 	d, ok := architect.ToolByID(id)
 	return d, ok
 }
-func allArchTools() []architectpkg.ToolDef { return architect.AllTools() }
+func allArchTools() []architect.ToolDef { return architect.AllTools() }

@@ -89,7 +89,8 @@ func TestTurretMuzzleFlashFromBuildingTrace(t *testing.T) {
 	// mount (80,100) on origin (16,80), gun mount (60,60) origin (20,60), muzzle (62,110)
 	px := float64(artpkg.TilePx)
 	wantX := 3 + (80-16)/px - (60-20)/px + (62-20)/px
-	wantY := 3 + (100-80)/px - (60-60)/px + (110-60)/px
+	gunMountY, gunOriginY := 60.0, 60.0 // equal on purpose: the gun's own pivot adds nothing
+	wantY := 3 + (100-80)/px - (gunMountY-gunOriginY)/px + (110-60)/px
 	if d := mz.X - wantX; d > 1e-9 || d < -1e-9 {
 		t.Errorf("muzzle x %v, want %v", mz.X, wantX)
 	}

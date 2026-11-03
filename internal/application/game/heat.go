@@ -166,12 +166,6 @@ func (g *Game) warmSpot(id entity.EntityID) (int, int, bool) {
 	}, func(x, y int) bool { return g.reachable(id, x, y) })
 }
 
-// assignWarm walks pawn id to the nearest bearable spot, if any.
-func (g *Game) assignWarm(id entity.EntityID) bool {
-	x, y, ok := g.warmSpot(id)
-	return ok && g.startJob(id, job.Record{Kind: job.Warm, TX: x, TY: y, WorkLeft: warmWait})
-}
-
 // exposureDanger: hypothermia or heatstroke bad enough to get a sleeper
 // out of bed (the serious stage; a little chill only matters once awake).
 func (g *Game) exposureDanger(id entity.EntityID) bool {

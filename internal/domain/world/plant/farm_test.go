@@ -96,7 +96,7 @@ func TestHydroponicsAndBlight(t *testing.T) {
 	if (Plant{Species: Rice}).Blighten(0, clock.TicksPerDay).Blight != 0 {
 		t.Error("blight grew on a healthy plant")
 	}
-	if Roll(1, 2, 3) == Roll(1, 2, 4) || Roll(1, 2, 3) != Roll(1, 2, 3) {
+	if r1, r2 := Roll(1, 2, 3), Roll(1, 2, 3); r1 == Roll(1, 2, 4) || r1 != r2 {
 		t.Error("Roll")
 	}
 }

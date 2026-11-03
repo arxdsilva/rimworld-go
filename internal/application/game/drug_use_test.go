@@ -251,7 +251,7 @@ func TestDrugPolicyCommandValidates(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: 9999, Mode: uint8(drug.Unrestricted)})
 	g.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(id), Mode: uint8(drug.SocialDrinking)})
 	g.Step(1)
-	if g.drugs != nil && len(g.drugs) != 0 {
+	if len(g.drugs) != 0 {
 		t.Fatalf("drugs %v: bad or no-op policy commands leave no state", g.drugs)
 	}
 }

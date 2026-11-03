@@ -6,7 +6,6 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
@@ -93,12 +92,12 @@ type wizHost struct{ a *App }
 
 var _ wizard.Shell = wizHost{}
 
-func (h wizHost) Hint(text string)              { shellHint{h.a}.Hint(text) }
-func (h wizHost) Settings() config.Settings     { return shellSettings{h.a}.Settings() }
-func (h wizHost) KeyName(x input.Action) string { return shellSettings{h.a}.KeyName(x) }
-func (h wizHost) KeyHint(x input.Action) string { return shellSettings{h.a}.KeyHint(x) }
-func (h wizHost) Kit() *uikit.Kit               { return shellWidgets{h.a}.Kit() }
-func (h wizHost) Do(it ports.Intent)            { shellDispatch{h.a}.Do(it) }
+func (h wizHost) Hint(text string)              { shellHint(h).Hint(text) }
+func (h wizHost) Settings() config.Settings     { return shellSettings(h).Settings() }
+func (h wizHost) KeyName(x input.Action) string { return shellSettings(h).KeyName(x) }
+func (h wizHost) KeyHint(x input.Action) string { return shellSettings(h).KeyHint(x) }
+func (h wizHost) Kit() *uikit.Kit               { return shellWidgets(h).Kit() }
+func (h wizHost) Do(it portspkg.Intent)         { shellDispatch(h).Do(it) }
 
 func (h wizHost) Env() wizard.Env {
 	a := h.a

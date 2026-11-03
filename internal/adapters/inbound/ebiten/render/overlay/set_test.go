@@ -229,7 +229,8 @@ func TestZonesBatchEveryOutlineInOneDraw(t *testing.T) {
 	if !o.Zones.plants[[2]int{5, 5}] || len(o.Zones.plants) != 1 {
 		t.Fatalf("the grow zone's own plant: %v", o.Zones.plants)
 	}
-	if o.Zones.ZoneGeomOf(z) != o.Zones.ZoneGeomOf(z) {
+	geomA, geomB := o.Zones.ZoneGeomOf(z), o.Zones.ZoneGeomOf(z)
+	if geomA != geomB {
 		t.Fatal("an unchanged zone rebuilt its outline")
 	}
 	o.Zones.DrawZoneLabels(v, screen, w, 640, 640, 64)

@@ -487,13 +487,6 @@ func (g *Game) powerVer() uint64 {
 	return g.pw.ver
 }
 
-// powerBuildings lists the power buildings (any role), ascending by id,
-// with their specs: read only, valid until the structure changes.
-func (g *Game) powerBuildings() ([]entity.EntityID, []power.Spec) {
-	c := g.powerList()
-	return c.ids, c.specs
-}
-
 // powerDevices counts the colony's producers, consumers and batteries.
 func (g *Game) powerDevices() int { return g.powerList().devices }
 

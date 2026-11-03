@@ -17,11 +17,6 @@ const PlannedIcon = "planned"
 // PlannedPrefix starts every placeholder's tool id.
 const PlannedPrefix = "planned_"
 
-// planned is a placeholder card.
-func planned(id, category, label, desc string) ToolDef {
-	return ToolDef{ID: PlannedPrefix + id, Label: label, Category: category, Icon: PlannedIcon, Desc: desc, Planned: true}
-}
-
 // Planned are the placeholder cards, by category in the vanilla order.
 var Planned = []ToolDef{
 	// Production

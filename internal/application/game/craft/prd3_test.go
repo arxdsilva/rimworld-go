@@ -284,10 +284,11 @@ func TestArtGrammar(t *testing.T) {
 	t.Parallel()
 	titles := map[string]bool{}
 	for seed := uint32(0); seed < 200; seed++ {
-		if ArtTitle(seed) != ArtTitle(seed) || ArtTitle(seed) == "" {
+		first, again := ArtTitle(seed), ArtTitle(seed)
+		if first != again || first == "" {
 			t.Fatal("not deterministic")
 		}
-		titles[ArtTitle(seed)] = true
+		titles[first] = true
 	}
 	if len(titles) < 100 {
 		t.Fatalf("only %d titles in 200 seeds", len(titles))

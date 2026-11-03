@@ -26,8 +26,6 @@ func healthOptionTip(o inspector.HealthOption) string {
 func itemVerbs(it game.ItemView, stored bool) []inspector.ItemVerb {
 	in := inspector.ItemVerbs(it, stored)
 	out := make([]inspector.ItemVerb, len(in))
-	for i, v := range in {
-		out[i] = v
-	}
+	copy(out, in)
 	return out
 }

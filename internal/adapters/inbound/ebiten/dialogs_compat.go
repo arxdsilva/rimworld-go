@@ -6,7 +6,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
-	dialogspkg "rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/look"
@@ -42,7 +41,7 @@ func (h dialogsHost) Icon(key string) *ebiten.Image { return h.a.art.Image(key, 
 // Trade is the open trade session, if the simulation offers sessions.
 func (h dialogsHost) Trade() (game.TradeView, bool) {
 	if r := h.a.renderer; r != nil {
-		if s, ok := r.game.(dialogspkg.TradeSource); ok {
+		if s, ok := r.game.(dialogs.TradeSource); ok {
 			return s.TradeView()
 		}
 	}
@@ -52,7 +51,7 @@ func (h dialogsHost) Trade() (game.TradeView, bool) {
 // Comms is the open comms session, if the simulation offers sessions.
 func (h dialogsHost) Comms() (game.CommsView, bool) {
 	if r := h.a.renderer; r != nil {
-		if s, ok := r.game.(dialogspkg.CommsSource); ok {
+		if s, ok := r.game.(dialogs.CommsSource); ok {
 			return s.CommsView()
 		}
 	}

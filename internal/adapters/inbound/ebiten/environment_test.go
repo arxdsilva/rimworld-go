@@ -15,7 +15,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 )
@@ -24,11 +23,11 @@ import (
 // world pipeline's (lod.go) until the two share one table.
 func TestEnvTiersMatchLOD(t *testing.T) {
 	t.Parallel()
-	if env.LiveMin != worldpkg.LiveMin || env.ChunkMin != worldpkg.ChunkMin || env.DecalMinTile != worldpkg.DecalMinTile || env.VisPad != worldpkg.VisPad {
-		t.Fatalf("env tiers %v/%v/%v/%v, lod.go %v/%v/%v/%v", env.LiveMin, env.ChunkMin, env.DecalMinTile, env.VisPad,
+	if envpkg.LiveMin != worldpkg.LiveMin || envpkg.ChunkMin != worldpkg.ChunkMin || envpkg.DecalMinTile != worldpkg.DecalMinTile || envpkg.VisPad != worldpkg.VisPad {
+		t.Fatalf("env tiers %v/%v/%v/%v, lod.go %v/%v/%v/%v", envpkg.LiveMin, envpkg.ChunkMin, envpkg.DecalMinTile, envpkg.VisPad,
 			worldpkg.LiveMin, worldpkg.ChunkMin, worldpkg.DecalMinTile, worldpkg.VisPad)
 	}
-	if env.SoilVariants != worldpkg.SoilVariants || env.GrassEvery != worldpkg.GrassEvery {
+	if envpkg.SoilVariants != worldpkg.SoilVariants || envpkg.GrassEvery != worldpkg.GrassEvery {
 		t.Fatal("env's terrain variants or grass spacing differ from draw_art.go's")
 	}
 	for _, tile := range []float64{4, 16, 24, 32, 48, 96} {

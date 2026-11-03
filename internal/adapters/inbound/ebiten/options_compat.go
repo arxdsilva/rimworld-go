@@ -6,7 +6,6 @@ import (
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/devtools"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
-	portspkg "rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
@@ -274,7 +273,7 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 // that feature.
 type SaveHooks struct {
 	Save func(sim Simulation, slot string) error
-	List func() ([]portspkg.SaveSlot, error)
+	List func() ([]ports.SaveSlot, error)
 	Load func(path string) (Simulation, string, error) // sim, slot name
 	// SaveCommit saves a commitment-mode colony to its one slot (NG-1 §2.13);
 	// nil falls back to Save.

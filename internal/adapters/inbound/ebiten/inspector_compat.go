@@ -166,14 +166,6 @@ func hasBuildTool(kind string) bool {
 	return false
 }
 
-// healthOption is inspector.HealthOption in its old field names (the root's
-// health and journey tests read them).
-type healthOption = inspector.HealthOption
-
-// itemVerb is inspector.ItemVerb in its old field names (haul_ui_test.go,
-// item_inspector_test.go).
-type itemVerb = inspector.ItemVerb
-
 // ---- aliases and wrappers
 
 func (a *App) applyAnimalClick(id string)   { a.insp.Animal().ApplyAnimalClick(id) }

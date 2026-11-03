@@ -7,7 +7,6 @@ import (
 	"regexp"
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	lightpkg "rimworld-go/internal/adapters/inbound/ebiten/render/light"
-	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"strings"
@@ -26,23 +25,6 @@ func lampTestWorld(w, h int) game.WorldView {
 		v.RoomGrid[i] = -1
 	}
 	return v
-}
-
-// lampRoom walls the rectangle x0..x1, y0..y1 (walls on its border) and
-// makes its inside room id, roofed (walls included).
-func lampRoom(v *game.WorldView, id, x0, y0, x1, y1 int) {
-	for y := y0; y <= y1; y++ {
-		for x := x0; x <= x1; x++ {
-			i := y*v.TerrainW + x
-			v.RoofCells[i] = overlay.RoofBuilt
-			if x == x0 || y == y0 || x == x1 || y == y1 {
-				v.RoomGrid[i] = -2
-			} else {
-				v.RoomGrid[i] = id
-			}
-		}
-	}
-	v.Rooms = append(v.Rooms, game.RoomView{ID: id, Lit: true})
 }
 
 // lampBuilding is a powered standing lamp: PLAY-021 lights only what the

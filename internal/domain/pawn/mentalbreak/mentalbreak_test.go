@@ -161,7 +161,7 @@ func TestDurationForRange(t *testing.T) {
 				t.Errorf("DurationFor(%d,%d)=%d outside %d..%d", k, roll, got, d.MinDuration, d.MaxDuration)
 			}
 		}
-		if DurationFor(k, 5) != DurationFor(k, 5) {
+		if first, again := DurationFor(k, 5), DurationFor(k, 5); first != again {
 			t.Error("not deterministic")
 		}
 	}

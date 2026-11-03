@@ -8,8 +8,6 @@ import (
 	artpkg "rimworld-go/internal/adapters/inbound/ebiten/art"
 	"strings"
 	"testing"
-
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 )
 
 // TestAtlasCoversKeys checks the generated atlas of every packed family:
@@ -32,7 +30,7 @@ func TestAtlasCoversKeys(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, _, entries, err := art.ParseAtlas(string(raw))
+		_, _, entries, err := artpkg.ParseAtlas(string(raw))
 		if err != nil {
 			t.Fatal(err)
 		}

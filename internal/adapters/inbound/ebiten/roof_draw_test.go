@@ -11,26 +11,6 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// roofLabelWorld is a 10x6 map: tiles x<5 are room 0 (small), x>=5 room
-// 1 (large); column 4 of row 0 is a wall.
-func roofLabelWorld() game.WorldView {
-	w := game.WorldView{TerrainW: 10, RoomGrid: make([]int, 60), RoofCells: make([]uint8, 60),
-		Rooms: []game.RoomView{{ID: 0, Cells: 20}, {ID: 1, Cells: 151}}}
-	for i := range w.RoomGrid {
-		if i%10 >= 5 {
-			w.RoomGrid[i] = 1
-		}
-	}
-	w.RoomGrid[4] = -2
-	w.RoofCells[4] = overlaypkg.RoofBuilt // a roof flag on a wall still reads nothing
-	w.RoofCells[10] = overlaypkg.RoofBuilt | overlaypkg.RoofPlanRemove
-	w.RoofCells[11] = overlaypkg.RoofPlanBuild
-	w.RoofCells[12] = overlaypkg.RoofNatural
-	w.RoofCells[13] = overlaypkg.RoofBuilt
-	w.RoofCells[20] = overlaypkg.RoofNatural | overlaypkg.RoofThick
-	return w
-}
-
 func TestRoomLabelRoofedPercent(t *testing.T) {
 	t.Parallel()
 	w := game.WorldView{TerrainW: 2, RoomGrid: []int{0, 1}, Rooms: []game.RoomView{

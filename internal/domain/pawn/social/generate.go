@@ -47,14 +47,13 @@ type Plan struct {
 }
 
 type famGen struct {
-	roll  func(int) int
-	next  ID
-	plan  Plan
-	par   map[ID][2]ID // lookup only, never iterated
-	spec  map[ID]int   // index into plan.Specs, lookup only
-	wed   map[ID]bool
-	ages  map[ID]int // colonists
-	order []ID
+	roll func(int) int
+	next ID
+	plan Plan
+	par  map[ID][2]ID // lookup only, never iterated
+	spec map[ID]int   // index into plan.Specs, lookup only
+	wed  map[ID]bool
+	ages map[ID]int // colonists
 }
 
 // Families builds the starting family ties among colonists (chance-based

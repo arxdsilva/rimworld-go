@@ -31,7 +31,6 @@ func BridgeKey(m int) string { return "structure/bridge_" + sprite.TwoDigits(m&1
 // model's StructVer moves (like the link grid).
 type BridgeCache struct {
 	ver   uint64
-	n     int
 	built bool
 	cells map[[2]int]bool
 }

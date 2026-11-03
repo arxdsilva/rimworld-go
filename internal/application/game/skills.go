@@ -494,12 +494,6 @@ func (g *Game) butcherYield(id entity.EntityID, qty int) int {
 	return (g.diffYield(DiffButcher, qty)*animal.ButcheryEfficiency(int(g.skillOf(id, skill.Cooking).Level)) + 500) / 1000
 }
 
-// meetsMinSkill reports whether id may take a bill needing level min of
-// sk (a recipe's MinSkill; ReasonSkill when refused as an order).
-func (g *Game) meetsMinSkill(id entity.EntityID, sk skill.ID, min uint8) bool {
-	return min == 0 || g.skillOf(id, sk).Level >= min
-}
-
 // ReasonSkill refuses work the colonist is not skilled enough for.
 const ReasonSkill = "not skilled enough"
 

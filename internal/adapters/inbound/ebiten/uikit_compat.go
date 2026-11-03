@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
-	uikitpkg "rimworld-go/internal/adapters/inbound/ebiten/uikit"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -34,7 +33,7 @@ func (h uiHost) ReducedMotion() bool       { return h.a.settings.Accessibility.R
 
 // ---- the setup-screen composites (uikit/form.go)
 
-func (a *App) ngButton(id string, r gfx.Rect, label string, o uikitpkg.BtnOpts, fn func()) {
+func (a *App) ngButton(id string, r gfx.Rect, label string, o uikit.BtnOpts, fn func()) {
 	uikit.StyledButton(a.uiSt(), id, r, label, o, fn)
 }
 func (a *App) ngChoice(id string, r gfx.Rect, title string, opts []string, cur int, disabled string, pick func(i int)) {
@@ -45,20 +44,20 @@ func (a *App) declareOnScreenLayer() { uikit.OnScreenLayer(a.uiSt()) }
 
 // diffSlider is a labelled slider row over *v with the range of the
 // difficulty field key; a reason disables it.
-func (a *App) diffSlider(f *uikitpkg.Form, id, label string, v *int, key string, format func(int) string, disabled, tip string) {
+func (a *App) diffSlider(f *uikit.Form, id, label string, v *int, key string, format func(int) string, disabled, tip string) {
 	f.Slider(a, id, label, v, a.withTick(wizard.DiffSpec(key)), format, disabled, tip)
 }
-func (a *App) diffCheck(f *uikitpkg.Form, id, label string, v *bool, disabled, tip string) {
+func (a *App) diffCheck(f *uikit.Form, id, label string, v *bool, disabled, tip string) {
 	f.Check(a, id, label, v, disabled, tip)
 }
-func (a *App) diffStepper(f *uikitpkg.Form, id, label string, v *int, lo, hi int, tip string) {
+func (a *App) diffStepper(f *uikit.Form, id, label string, v *int, lo, hi int, tip string) {
 	f.Stepper(a, id, label, v, lo, hi, tip)
 }
 
 // ---- the kit's methods, on the App
 
 // withTick gives a slider the App's step sound (sound_director.go).
-func (a *App) withTick(sp uikitpkg.SliderSpec) uikitpkg.SliderSpec {
+func (a *App) withTick(sp uikit.SliderSpec) uikit.SliderSpec {
 	if sp.Tick == nil {
 		sp.Tick = func(lo, hi, old, cur float64) { a.sliderCue(sp, lo, hi, old, cur) }
 	}

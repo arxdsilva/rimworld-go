@@ -90,34 +90,6 @@ func TestOresNoRock(t *testing.T) {
 	}
 }
 
-// lumps splits ore cells of kind o into 4-connected groups.
-func lumps(c *mapgen.Ctx, o geology.Ore) [][]int {
-	seen := map[int]bool{}
-	var out [][]int
-	for _, s := range oreCells(c, o) {
-		if seen[s] {
-			continue
-		}
-		g := []int{s}
-		seen[s] = true
-		for k := 0; k < len(g); k++ {
-			x, y := c.XY(g[k])
-			for _, d := range dirs4 {
-				if !c.In(x+d[0], y+d[1]) {
-					continue
-				}
-				j := c.Idx(x+d[0], y+d[1])
-				if !seen[j] && c.R.Geology.Ore[j] == o {
-					seen[j] = true
-					g = append(g, j)
-				}
-			}
-		}
-		out = append(out, g)
-	}
-	return out
-}
-
 func TestOreRules(t *testing.T) {
 	spec := map[geology.Ore]oreSpec{}
 	for _, s := range oreSpecs {

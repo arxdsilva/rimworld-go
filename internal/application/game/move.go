@@ -476,7 +476,7 @@ func (h ordersHost) PeopleIn(minX, minY, maxX, maxY int) []entity.EntityID {
 func (h ordersHost) Strippable(id entity.EntityID) bool {
 	v, ok := h.g.vital.Get(id)
 	p, _ := h.g.positions.Get(id)
-	return ok && v.Status == health.Downed && !h.g.fogged(p.X, p.Y) && careGear{h.g}.HasGear(id)
+	return ok && v.Status == health.Downed && !h.g.fogged(p.X, p.Y) && careGear(h).HasGear(id)
 }
 
 // fillCrateView names a crated building's kind (ItemView.AX.Building) and

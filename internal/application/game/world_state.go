@@ -755,7 +755,7 @@ func placeLump(g *Game, k item.Kind, qty int) []int {
 type mapsPop struct{ g *Game }
 
 func (h mapsPop) Seed() uint64 { return h.g.streams.seed }
-func (h mapsPop) Raid()        { shipHost{h.g}.Raid(false) } // story.go: the storyteller's raid
+func (h mapsPop) Raid()        { shipHost(h).Raid(false) } // story.go: the storyteller's raid
 func (h mapsPop) Census(cells []int) maps.Census {
 	g := h.g
 	c := maps.Census{Ours: len(g.pawnIDs)}

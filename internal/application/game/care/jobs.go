@@ -21,9 +21,3 @@ func (c *Care) Do(id entity.EntityID, j job.Record) {
 		c.PrisonBeds.Do(id, j)
 	}
 }
-
-// endJob completes j for id (the W3 stubs use it until their agents land).
-func (c *Care) endJob(id entity.EntityID, j job.Record) {
-	j.State = job.Complete
-	c.h.SetJob(id, j)
-}

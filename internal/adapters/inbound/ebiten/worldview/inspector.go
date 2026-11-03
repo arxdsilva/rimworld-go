@@ -249,7 +249,7 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 	}
 	return o.Label, lines, []gizmo{
 		{name: "travel", label: "Travel", why: travelWhy, tip: "Travel\nPick a tile on the globe; the route and how long it takes show before you confirm.",
-			run: func() { (router{v.View}).startRoute(id, tile) }},
+			run: func() { router(v).startRoute(id, tile) }},
 		{name: "return", label: retLabel, why: retWhy, tip: "Return\nThe caravan turns round and comes home the way it went.",
 			run: func() { v.send(command.Command{Kind: command.CaravanReturn, Target: id}) }},
 		{name: "settle", label: "Settle here", why: settleWhy, tip: "Settle here\nThe caravan founds a new colony on this tile.",
