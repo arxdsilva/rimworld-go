@@ -74,6 +74,43 @@ func nextHours(g *Game, n int) {
 	g.Step((clock.TicksPerHour-r)%clock.TicksPerHour + (n-1)*clock.TicksPerHour + 1)
 }
 
+// TestGoodwillCannotRiseDuringAttack: neither the daily drift nor a gift
+// raises it until the settlement falls (wiki: Faction base), and the radio
+// refuses the gift rather than spend the silver.
+func TestGoodwillCannotRiseDuringAttack(t *testing.T) {
+	t.Parallel()
+	g, m, _, fi, _ := besieged(t, faction.Settlers)
+	f := &g.ng.factions[fi]
+	was := f.Goodwill
+	if !f.Besieged {
+		t.Fatal("the open settlement map should count as an attack")
+	}
+	for i := range g.ng.factions {
+		if i != fi && g.ng.factions[i].Besieged {
+			t.Fatalf("faction %d is besieged too", i)
+		}
+	}
+	for range 5 {
+		g.factionsDay()
+	}
+	faction.Adjust(f, 10, "a gift")
+	if row := g.commsFaction(*f, true, 1000, 0); row.Gift.Allowed || row.Gift.Reason != faction.ReasonBesieged {
+		t.Fatalf("radio gift during the attack: %+v", row.Gift)
+	}
+	if f.Goodwill != was {
+		t.Fatalf("goodwill moved from %d to %d during the attack", was, f.Goodwill)
+	}
+	settleMeta(g, m).Defeated = true
+	g.Step(1)
+	if f.Besieged {
+		t.Fatal("still besieged after the settlement fell")
+	}
+	g.factionsDay()
+	if f.Goodwill <= was {
+		t.Fatalf("goodwill %d stayed at %d after the settlement fell", f.Goodwill, was)
+	}
+}
+
 // TestAttackSettlementOpensCompound: the attack costs 200 goodwill and
 // turns the faction hostile; a settlement map opens at its tile with the
 // compound and goods placed and the defenders at their posts; our people

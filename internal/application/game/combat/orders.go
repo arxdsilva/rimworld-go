@@ -43,7 +43,9 @@ func (o *Orders) Apply(c command.Command) (way bool) {
 		way = o.doors.Held(id) != c.Enabled
 		o.doors.SetHold(id, c.Enabled)
 	case c.Kind == command.SetTurretHold && isTurret(k):
-		o.turrets.SetHold(id, c.Enabled)
+		if o.turrets.HostileAt(c.X, c.Y) == 0 { // MAP-13: a settlement's turret takes no orders from us
+			o.turrets.SetHold(id, c.Enabled)
+		}
 	case c.Kind == command.SetMortarTarget && isMortar(k): // AX-5: the rocket battery too
 		o.mortars.SetTarget(id, c.X2, c.Y2, entity.EntityID(c.Pawn))
 	case c.Kind == command.ClearMortarTarget && isMortar(k):

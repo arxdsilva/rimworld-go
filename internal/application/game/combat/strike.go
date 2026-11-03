@@ -332,6 +332,11 @@ func (s *Strikes) Do(id entity.EntityID, j job.Record, now uint64) {
 	px, py, _ := h.Pos(id)
 	wk := h.Weapon(id)
 	d := s.gear.Reach(id, wk) // CBT-3: as made; a shield belt's wearer only clubs
+	if !j.Forced && j.Kind == job.Attack && (now+uint64(id))%foeEvery == 0 && s.yieldsTurret(j.Target, px, py, d, now) {
+		j.State, j.Path = job.Complete, nil // MAP-13: a creature closed in: AutoEngage turns on it
+		h.SetJob(id, j)
+		return
+	}
 	if j.WorkLeft > 0 {
 		j.WorkLeft--
 	}

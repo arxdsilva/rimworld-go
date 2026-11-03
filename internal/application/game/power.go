@@ -78,6 +78,7 @@ type powerCache struct {
 	nodes  []power.Node
 	// devices counts the producers, consumers and batteries.
 	devices int
+	hostile []entity.EntityID // settlement turrets (MAP-13): on no grid, no node
 
 	// The graph, per (list gen, topo): topo bumps when a switch flicks.
 	gOK         bool
@@ -112,10 +113,14 @@ func (g *Game) powerList() *powerCache {
 	if c.ok && c.sv == g.structVer && c.n == len(g.bldgIDs) && c.bldgs == any(g.bldgs) {
 		return c
 	}
-	c.ids, c.specs, c.nodes, c.devices = c.ids[:0], c.specs[:0], c.nodes[:0], 0
+	c.ids, c.specs, c.nodes, c.hostile, c.devices = c.ids[:0], c.specs[:0], c.nodes[:0], c.hostile[:0], 0
 	for _, id := range g.bldgIDs {
 		b := g.bldgs.Ref(id)
 		if b == nil {
+			continue
+		}
+		if b.Hostile {
+			c.hostile = append(c.hostile, id)
 			continue
 		}
 		s := power.SpecOf(b.Kind)

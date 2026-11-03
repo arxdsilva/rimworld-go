@@ -66,7 +66,7 @@ func notConnectedAlert(w game.WorldView) (Alert, bool) {
 	kind := ""
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if b.PowerRole == "" || b.NoPowerReason != game.NoPowerNotConnected {
+		if b.Hostile || b.PowerRole == "" || b.NoPowerReason != game.NoPowerNotConnected { // MAP-13: a settlement's turret is not ours to wire
 			continue
 		}
 		at = append(at, [2]int{b.X, b.Y})

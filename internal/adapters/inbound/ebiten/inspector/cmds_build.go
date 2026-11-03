@@ -55,10 +55,10 @@ func (a *Pane) frameView(id entity.EntityID) (game.FrameView, bool) {
 // buildingCommands are building id's command buttons: the kind's own first
 // (trough filter, bed owners, prisoner mark, casket, the power toggle and
 // thermostat), then Move, Copy and Deconstruct. A steam vent is natural: nothing to do. A pen marker only
-// comes down; its settings are the Pen tab.
+// comes down; its settings are the Pen tab. A settlement's turret takes no orders: a drafted colonist shoots it (MAP-13).
 func (a Building) BuildingCommands(id entity.EntityID) []Button {
 	b, ok := a.BuildingView(id)
-	if !ok || b.Kind == env.SteamVentKind {
+	if !ok || b.Kind == env.SteamVentKind || b.Hostile {
 		return nil
 	}
 	var out []Button
@@ -168,8 +168,10 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	w := a.shell.World()
 	add(world.RoomLabelAt(w, b.X, b.Y))
 	add(fuelLine(b))
-	add(overlay.TurretLine(b))
-	add(PowerLinesIn(a.env().Units, b, w)...)
+	if !b.Hostile { // MAP-13: on no grid, so power says nothing about it
+		add(overlay.TurretLine(b))
+		add(PowerLinesIn(a.env().Units, b, w)...)
+	}
 	add(TempLines(b)...) // temp_ui.go (TEMP-5)
 	if b.DryQty > 0 {
 		add(fmt.Sprintf("Drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct))

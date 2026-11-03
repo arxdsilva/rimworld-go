@@ -61,6 +61,8 @@ func (g *Game) commsFaction(f faction.Faction, beacons bool, silver int, now uin
 	switch {
 	case f.Defeated:
 		row.Gift.Reason = faction.ReasonGone
+	case f.Besieged:
+		row.Gift.Reason = faction.ReasonBesieged
 	case !beacons:
 		row.Gift.Reason = ReasonNoBeacon
 	case silver < faction.GiftSilverPerGoodwill:
@@ -109,7 +111,7 @@ func (g *Game) cmdCommsCallTrader() {
 func (g *Game) cmdCommsGift(id, silver int) {
 	c := g.trade.comms
 	f := g.factionByID(id)
-	if c == nil || f == nil || f.Defeated || faction.DefOf(f.Type).Hidden || silver <= 0 {
+	if c == nil || f == nil || f.Defeated || f.Besieged || faction.DefOf(f.Type).Hidden || silver <= 0 {
 		return
 	}
 	gw := faction.GiftGoodwill(silver)

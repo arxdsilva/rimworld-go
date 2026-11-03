@@ -183,6 +183,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	g.fillGraveView(bv, id, b) // burial.go
 	g.fillSwapView(bv, id)     // placement.go: pending material change (PLAY-011)
 	bv.Ruin = b.Ruin           // MAPGEN-2: an abandoned piece
+	bv.Hostile = b.Hostile     // MAP-13: a settlement's turret
 	bv.Medical = b.Medical     // PLAY-020: kept for the sick and injured
 	st := g.rest.Stats.Of(id)  // BED-1: comfort, rest effectiveness, beauty, facilities (rest/stats.go)
 	bv.Comfort, bv.RestEffect, bv.Beauty, bv.Facilities, bv.Forbidden = st.Comfort, st.RestEffect, st.Beauty, st.Links(), b.Forbidden
@@ -220,7 +221,7 @@ func equalBuildingView(a, b *BuildingView) bool {
 	return a.ID == b.ID && a.Kind == b.Kind && a.X == b.X && a.Y == b.Y &&
 		a.Claimant == b.Claimant && a.Claimant2 == b.Claimant2 && a.Facing == b.Facing &&
 		a.Floor == b.Floor && a.Deconstruct == b.Deconstruct && a.Stuff == b.Stuff && a.Quality == b.Quality &&
-		a.SwapTo == b.SwapTo && a.SwapPct == b.SwapPct && a.Ruin == b.Ruin && a.Medical == b.Medical &&
+		a.SwapTo == b.SwapTo && a.SwapPct == b.SwapPct && a.Ruin == b.Ruin && a.Hostile == b.Hostile && a.Medical == b.Medical &&
 		a.W == b.W && a.H == b.H && a.HasSpot == b.HasSpot && a.SpotX == b.SpotX && a.SpotY == b.SpotY &&
 		a.Bench == b.Bench && slices.Equal(a.Bills, b.Bills) &&
 		a.DryKind == b.DryKind && a.DryQty == b.DryQty && a.DryPct == b.DryPct &&

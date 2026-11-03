@@ -97,12 +97,13 @@ func (c Right) Declare(sw, sh int) {}
 // the stack has seen (a new one flashes) and which the player opened. It
 // restarts with each colony (rightSession).
 type rightState struct {
-	session int
-	primed  bool              // the first Update of the session has seen the stack
-	known   map[uint64]bool   // letters the stack has seen
-	fresh   map[uint64]uint64 // new letter -> presentation frame it arrived
-	read    map[uint64]bool   // letters the player opened
-	ending  bool              // the ending screen has opened this session (ending.go, AX-8)
+	session   int
+	primed    bool              // the first Update of the session has seen the stack
+	known     map[uint64]bool   // letters the stack has seen
+	fresh     map[uint64]uint64 // new letter -> presentation frame it arrived
+	read      map[uint64]bool   // letters the player opened
+	ending    bool              // the ending screen has opened this session (ending.go, AX-8)
+	goneArmed bool              // a colonist was here since the everyone-gone screen last opened (ending.go, MAP-14)
 }
 
 // ---- hover cards ------------------------------------------------------

@@ -79,3 +79,46 @@ func TestBillSourceIsZeroWithoutTheField(t *testing.T) {
 		t.Errorf("source = %d", got)
 	}
 }
+
+// TestSettlementTurretPane (MAP-13): the pane of a settlement's turret says
+// it is hostile and offers nothing to run it with: no buttons at all, no
+// barrel, hold, power or lock line. A turret of ours beside it keeps them.
+func TestSettlementTurretPane(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	hostile := game.BuildingView{ID: 7, Kind: "sentry turret", X: 3, Y: 4, W: 1, H: 1, Hostile: true,
+		Barrel: 800, HoldFire: true, PowerRole: "consumer", NoPowerReason: game.NoPowerNotConnected}
+	ours := game.BuildingView{ID: 8, Kind: "sentry turret", X: 9, Y: 4, W: 1, H: 1, Barrel: 800, PowerRole: "consumer", Powered: true}
+	f.world.Buildings = []game.BuildingView{hostile, ours}
+	a := New(f).Building()
+
+	if got := a.BuildingCommands(7); len(got) != 0 {
+		t.Errorf("hostile turret buttons = %+v", got)
+	}
+	if got := a.defenceCommands(hostile); len(got) != 0 {
+		t.Errorf("hostile turret defence buttons = %+v", got)
+	}
+	if got := strings.Join(defenceLines(hostile), "|"); got != HostileTurretLine {
+		t.Errorf("hostile turret defence lines = %q", got)
+	}
+	lines := strings.Join(a.buildingLines(hostile), "|")
+	if !strings.Contains(lines, HostileTurretLine) {
+		t.Errorf("hostile turret lines = %q lack the status", lines)
+	}
+	for _, not := range []string{"Barrel", "Holding", "No power", "Power", "connected", "Idle", "Target locked"} {
+		if strings.Contains(lines, not) {
+			t.Errorf("hostile turret lines = %q say %q", lines, not)
+		}
+	}
+
+	found := false
+	for _, b := range a.BuildingCommands(8) {
+		found = found || b.ID == TurretHoldID
+	}
+	if !found {
+		t.Error("our turret lost Hold fire")
+	}
+	if got := strings.Join(a.buildingLines(ours), "|"); !strings.Contains(got, "Barrel  80%") || strings.Contains(got, HostileTurretLine) {
+		t.Errorf("our turret lines = %q", got)
+	}
+}

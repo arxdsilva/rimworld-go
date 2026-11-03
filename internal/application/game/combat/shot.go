@@ -48,7 +48,7 @@ const Tracking = 1
 // muzzle rolls on roll (the defence stream; a pawn's on the main one).
 func (s *Shots) fire(attacker, target entity.EntityID, ax, ay, tx, ty int, wk weapon.Kind, d weapon.Def, r attack.Report, building bool, roll func(int) int) {
 	h := s.h
-	sh := projectile.Shot{Owner: attacker, Target: target, Raider: h.StandingRaider(attacker), Weapon: wk,
+	sh := projectile.Shot{Owner: attacker, Target: target, Raider: s.raidersSide(attacker, building), Weapon: wk,
 		Damage: d.Damage, Pen: weapon.Penetration(d, d.Damage), Type: d.DamageType, Fired: h.Now(),
 		Hit: weapon.HitOf(wk, d), FromBuilding: building} // the firing weapon's hit (CBT-2), carried and saved
 	dx, dy := tx, ty
@@ -319,6 +319,17 @@ func (s *Shots) standing(x, y int, owner entity.EntityID) (entity.EntityID, bool
 		}
 	}
 	return best, best != 0
+}
+
+// raidersSide reports the shooter on the raiders' side: a raider on its
+// feet, or a settlement's turret (MAP-13: its defenders are the shooter's
+// allies, colonists in the line are not).
+func (s *Shots) raidersSide(attacker entity.EntityID, building bool) bool {
+	if building {
+		b, ok := s.h.Building(attacker)
+		return ok && b.Hostile
+	}
+	return s.h.StandingRaider(attacker)
 }
 
 // friendly: v fights on sh's owner's side (raiders with raiders, the

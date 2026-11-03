@@ -106,6 +106,8 @@ type World struct {
 	// ending key ("" none); LaunchIssues, what the launch report lists.
 	ShipLaunched bool
 	Ending       string
+	// EveryoneGone (MAP-14): no colonist is left under our control.
+	EveryoneGone bool
 	LaunchIssues []string
 	// ShipID, the ship LaunchIssues reports on (the one with a reactor,
 	// else the largest; 0 none); Countdown, its reactor's ticks left (-1

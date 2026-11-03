@@ -344,3 +344,39 @@ func TestWorldDeterminism(t *testing.T) {
 		t.Fatalf("state hash %#x vs %#x", a, b)
 	}
 }
+
+// TestEveryoneGone: the ending waits for the last living colonist under our
+// control (MAP-14, wiki: Ending). Someone due to land or on the road holds it
+// off; the dead, the kidnapped and prisoners don't.
+func TestEveryoneGone(t *testing.T) {
+	t.Parallel()
+	g := worldGame(t)
+	if everyoneGone(g) {
+		t.Fatal("a colony with colonists is gone")
+	}
+	ada, tile := g.pawnIDs[0], plainNear(t, g)
+	arriveAt(t, g, tile, ada) // on the road
+	for _, id := range slices.Clone(g.pawnIDs) {
+		kill(g, id)
+	}
+	if everyoneGone(g) {
+		t.Fatal("gone with a colonist on the road")
+	}
+	g.setWhere(ada, whereKidnapped)
+	if !everyoneGone(g) {
+		t.Fatal("the kidnapped still count")
+	}
+	g.setWhere(ada, whereCaravan)
+	kill(g, ada)
+	if !everyoneGone(g) {
+		t.Fatal("a dead caravan member still counts")
+	}
+	g.ng.pods = []podState{{Pawns: []int{0}}}
+	if everyoneGone(g) {
+		t.Fatal("gone with a pod still to land")
+	}
+	g.ng.pods[0].Landed = true
+	if !everyoneGone(g) {
+		t.Fatal("a landed pod still counts")
+	}
+}

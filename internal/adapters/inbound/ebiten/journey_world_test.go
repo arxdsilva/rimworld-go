@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/dialogs"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
 	"rimworld-go/internal/domain/economy/item"
 
 	"rimworld-go/internal/application/game"
@@ -273,14 +274,13 @@ func enteredMap(t *testing.T) (j *journey, mapID game.MapID, tile int) {
 }
 
 // TestJourneyWorldEnterAndRefusedGizmos: Enter on a caravan standing on a
-// friendly settlement opens its map (EnterMap). Settle at the colony cap and
-// Attack on a friendly base are refused with their reasons and send nothing.
+// friendly settlement opens its map (EnterMap). Settle at the colony cap is
+// refused with its reason and sends nothing.
 func TestJourneyWorldEnterAndRefusedGizmos(t *testing.T) {
 	t.Parallel()
 	j, _, _, _ := atSettlement(t)
 	for _, g := range []struct{ id, why string }{
 		{"world.act.settle", "most colonies"},
-		{"world.act.attack", "hostile"},
 	} {
 		why, off := gizmoWhy(j, g.id)
 		if !off || !strings.Contains(why, g.why) {
@@ -497,6 +497,9 @@ func TestJourneyWorldPodModes(t *testing.T) {
 			if !j.clickID("world.pod." + c.name) {
 				w, _ := j.a.uiSt().Find("world.pod." + c.name)
 				t.Fatalf("%s is disabled: %q", c.name, w.Reason)
+			}
+			if j.a.uiModalTop() == worldview.AttackID { // MAP-15: a base that is not hostile asks first
+				j.clickID("modal." + worldview.AttackID + ".ok")
 			}
 			cmd, ok := j.lastCmd(command.LaunchPods)
 			if !ok || cmd.Mode != c.mode || cmd.Count != tile || cmd.Target != uint64(pod) {

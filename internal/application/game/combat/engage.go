@@ -3,6 +3,7 @@ package combat
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -10,8 +11,10 @@ import (
 // hit from where it stands (CBT-2: any hostile, not only one attacking a
 // colonist: raiders, manhunters, mechanoids, insects; found through the
 // creature index within the weapon's reach, never a scan of every
-// creature). It also runs the pawn's auto-undraft timer (Drafts.idle):
-// it is called only while the pawn stands idle.
+// creature), or a settlement's turret in reach when no creature is nearer
+// (MAP-13; a colony's own turret never is one). It also runs the pawn's
+// auto-undraft timer (Drafts.idle): it is called only while the pawn
+// stands idle.
 func (s *Strikes) AutoEngage(id entity.EntityID) {
 	h := s.h
 	now := h.Now()
@@ -32,10 +35,13 @@ func (s *Strikes) AutoEngage(id entity.EntityID) {
 		}
 		best, bestSq = c.ID, sq
 	}
+	bx, by, _ := h.Pos(best)
+	if tid, tx, ty, ok := s.turrets.hostileInReach(px, py, d, s.sight); ok && (best == 0 || weapon.Distance(px, py, tx, ty)+SwitchMargin <= weapon.Distance(px, py, bx, by)) {
+		best, bx, by = tid, tx, ty
+	}
 	if best == 0 {
 		return
 	}
-	bx, by, _ := h.Pos(best)
 	if s.drafts != nil && s.drafts.tac != nil && s.drafts.tac.TakeCover(id, best, px, py, d, bx, by) {
 		return // CBT-4: fire at will steps into adjacent cover first
 	}
@@ -81,9 +87,10 @@ func (s *Strikes) foe(a animal.State, now uint64) bool {
 	return s.h.Hostile(a) || a.Manhunter > now || animal.IsMech(a.Species) || animal.DefOf(a.Species).Hive
 }
 
-// Threatened reports a hostile anywhere on the map: a raider on its feet
-// or a hostile animal (a scan of the raiders and animals; the auto-undraft
-// timer asks once in threatEvery ticks per pawn).
+// Threatened reports a hostile anywhere on the map: a raider on its feet,
+// a hostile animal or a settlement's turret that can still fire (a scan of
+// the raiders and animals; the auto-undraft timer asks once in threatEvery
+// ticks per pawn).
 func (s *Strikes) Threatened(now uint64) bool {
 	h := s.h
 	for _, rid := range h.RaiderIDs() {
@@ -96,5 +103,5 @@ func (s *Strikes) Threatened(now uint64) bool {
 			return true
 		}
 	}
-	return false
+	return s.turrets.hostileLive()
 }

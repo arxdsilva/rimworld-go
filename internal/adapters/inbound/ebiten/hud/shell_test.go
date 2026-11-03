@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/config"
@@ -55,6 +56,7 @@ func (f *fakeShell) Pawns() []game.PawnView        { return f.pawns }
 func (f *fakeShell) Layout() hudlayout.Layout      { return f.lay }
 func (f *fakeShell) Settings() config.Settings     { return f.set }
 func (f *fakeShell) SetSettings(s config.Settings) { f.set = s }
+func (f *fakeShell) Tick() clock.Tick              { return 3 * clock.TicksPerDay }
 func (f *fakeShell) Present() uint64               { return f.present }
 func (f *fakeShell) Cursor() (int, int)            { return -1, -1 }
 func (f *fakeShell) Size() (int, int)              { return 1280, 720 }

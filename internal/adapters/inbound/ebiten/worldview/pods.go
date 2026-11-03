@@ -397,6 +397,16 @@ func (v targeting) launch(mode uint8) {
 		v.Close()
 		return
 	}
+	if mode == command.PodArriveAttackEdge || mode == command.PodArriveAttackCentre {
+		// MAP-15: an attack on a settlement that is not hostile asks first.
+		if site, settled := v.siteAt(ps.target); settled && site.Relation != "hostile" {
+			v.kit().Confirm(AttackID, "Attack "+site.Faction, attackConfirmText(site), "Attack", true, func() {
+				v.send(c)
+				v.pods = podState{}
+			})
+			return
+		}
+	}
 	v.send(c)
 	v.pods = podState{}
 }

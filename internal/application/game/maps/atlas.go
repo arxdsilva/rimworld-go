@@ -144,6 +144,14 @@ type Atlas struct {
 // Empty reports a single-map game that never opened another map.
 func (a *Atlas) Empty() bool { return a == nil || a.Next == 0 && len(a.Maps) == 0 && len(a.Queue) == 0 }
 
+// Attacking reports a settlement of faction fac (1 + index) under attack: its
+// map is open and not yet defeated.
+func (a *Atlas) Attacking(fac int) bool {
+	return a != nil && slices.ContainsFunc(a.Maps, func(m Meta) bool {
+		return m.Kind == Settlement && !m.Defeated && m.Faction == fac
+	})
+}
+
 // Clone is a deep copy of a.
 func (a *Atlas) Clone() *Atlas {
 	c := &Atlas{Next: a.Next, Maps: slices.Clone(a.Maps), Queue: slices.Clone(a.Queue)}

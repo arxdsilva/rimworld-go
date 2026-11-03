@@ -74,11 +74,13 @@ func (l Lifecycle) Flush(now uint64) {
 		a.Queue = slices.Delete(a.Queue, 0, 1)
 		l.apply(r, now)
 	}
-	if now%clock.TicksPerHour != 0 {
-		return
+	if now%clock.TicksPerHour == 0 {
+		for _, id := range l.ids() {
+			l.hourly(id, now)
+		}
 	}
-	for _, id := range l.ids() {
-		l.hourly(id, now)
+	for i, fs := 0, l.f.h.Factions(); i < len(fs); i++ {
+		fs[i].Besieged = a.Attacking(i + 1)
 	}
 }
 

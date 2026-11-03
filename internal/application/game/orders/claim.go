@@ -14,9 +14,10 @@ import (
 // feature (a steam vent) is never anyone's.
 type Claim struct{ h Host }
 
-// Claimable reports a building the Claim order takes.
+// Claimable reports a building the Claim order takes. A settlement's turret
+// that fires on us is not one (MAP-13); the rest of its compound is.
 func Claimable(b construction.Building) bool {
-	return (b.Ruin || b.Ancient) && !construction.DefOf(b.Kind).Natural
+	return (b.Ruin || b.Ancient) && !b.Hostile && !construction.DefOf(b.Kind).Natural
 }
 
 // Mark claims every claimable building whose origin lies in the

@@ -33,7 +33,7 @@ func (o core) settlement(t int) (name string, ok, hostile, human bool) {
 func (o core) gift(t, value int) int {
 	f, _ := o.h.Faction(t)
 	gw := faction.GiftGoodwill(value)
-	if f == nil || gw <= 0 {
+	if f == nil || gw <= 0 || f.Besieged {
 		return 0
 	}
 	faction.Adjust(f, gw, fmt.Sprintf("Gifts by transport pod (%+d goodwill)", gw))

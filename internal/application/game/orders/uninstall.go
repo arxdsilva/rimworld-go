@@ -27,7 +27,7 @@ type Uninstall struct {
 // feature) that holds no one.
 func Packable(b construction.Building) bool {
 	d := construction.DefOf(b.Kind)
-	return construction.Movable(b.Kind) && !b.Kind.Instant() && !d.Natural && !b.Ruin && !b.Ancient && b.Occupant == 0
+	return construction.Movable(b.Kind) && !b.Kind.Instant() && !d.Natural && !b.Ruin && !b.Ancient && !b.Hostile && b.Occupant == 0
 }
 
 // ReasonUnpackable is why a building can't be uninstalled.

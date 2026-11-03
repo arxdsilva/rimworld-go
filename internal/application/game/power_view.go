@@ -36,7 +36,7 @@ const (
 // ThermoTarget; Glow comes from light.go).
 func (g *Game) fillPowerBuilding(bv *BuildingView, id entity.EntityID, b construction.Building) {
 	s := power.SpecOf(b.Kind)
-	if s.Role == power.None {
+	if s.Role == power.None || b.Hostile { // MAP-13: a settlement's turret is on no grid
 		return
 	}
 	c := g.powerGraph()

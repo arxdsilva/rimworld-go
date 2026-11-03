@@ -518,7 +518,7 @@ func TestCaravanGizmosCarryTheirReasons(t *testing.T) {
 	g.world.Caravans[0].Tile = friendly.Tile
 	v.read.dirty = true
 	frame(sh, v, -1, -1, inputframe.Raw{})
-	if why := gizmoOf(t, v, "attack").why; !strings.Contains(why, "hostile") {
+	if why := gizmoOf(t, v, "attack").why; why != "" { // MAP-15: it asks first instead (TestAttackConfirmsAndAbandonWarns)
 		t.Fatalf("attack a friend: %q", why)
 	}
 	if why := gizmoOf(t, v, "enter").why; why != "" {
@@ -574,8 +574,8 @@ func TestMapGizmos(t *testing.T) {
 	sh, v := newFake(g)
 	v.Show("map:0")
 	frame(sh, v, -1, -1, inputframe.Raw{})
-	if why := gizmoOf(t, v, "abandon").why; why == "" {
-		t.Fatal("the last colony must refuse Abandon")
+	if why := gizmoOf(t, v, "abandon").why; why != "" {
+		t.Fatalf("Abandon is refused: %q", why)
 	}
 	gizmoOf(t, v, "form").run()
 	if sh.formed != 1 {
@@ -1120,5 +1120,33 @@ func TestSettleReasonComesFromTheGame(t *testing.T) {
 	frame(sh, v, -1, -1, inputframe.Raw{})
 	if why := gizmoOf(t, v, "settle").why; why != sh.settle {
 		t.Fatalf("settle: %q", why)
+	}
+}
+
+// Attacking a settlement that is not hostile asks first and names the
+// cost; a hostile one attacks at once (MAP-15). Abandoning the last colony
+// with nobody out warns that it ends the game (MAP-14).
+func TestAttackConfirmsAndAbandonWarns(t *testing.T) {
+	t.Parallel()
+	sh, v := newFake(colonyGame(t))
+	in := inspector{v}
+	friendly := game.WorldSiteView{Faction: "Oakhold", Relation: "friendly"}
+	in.attackSettlement(7, friendly, true)
+	if !sh.kit.ModalOpen() || len(sh.cmds) != 0 {
+		t.Fatalf("friendly base: modal %v, commands %v", sh.kit.ModalOpen(), sh.cmds)
+	}
+	if txt := attackConfirmText(friendly); !strings.Contains(txt, "Oakhold") || !strings.Contains(txt, "200") || !strings.Contains(txt, "friendly") {
+		t.Fatalf("confirm text %q", txt)
+	}
+	sh.kit.Modals = nil
+	in.attackSettlement(7, game.WorldSiteView{Faction: "Ironhold", Relation: "hostile"}, true)
+	if sh.kit.ModalOpen() || len(sh.cmds) != 1 || sh.cmds[0].Kind != command.AttackSettlement {
+		t.Fatalf("hostile base: modal %v, commands %v", sh.kit.ModalOpen(), sh.cmds)
+	}
+	if !in.endsGame(game.MapView{ID: 0, Kind: "colony"}) {
+		t.Fatal("the last colony with nobody out must end the game")
+	}
+	if in.endsGame(game.MapView{ID: 3, Kind: "site"}) {
+		t.Fatal("a site map never ends the game")
 	}
 }

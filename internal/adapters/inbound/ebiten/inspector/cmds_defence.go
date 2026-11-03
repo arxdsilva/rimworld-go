@@ -49,7 +49,7 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 		out = append(out, Button{ID: DoorHoldID, Label: "Hold open", Toggle: true, On: b.HoldOpen,
 			Desc: "Keep this door open so nobody waits at it. Turn it off to let it close again.",
 			Cmds: []command.Command{{Kind: command.SetDoorHoldOpen, X: b.X, Y: b.Y, Enabled: !b.HoldOpen}}})
-	case isTurretBldg(b):
+	case isTurretBldg(b) && !b.Hostile: // MAP-13: a settlement's turret takes no orders
 		out = append(out, Button{ID: TurretHoldID, Label: "Hold fire", Toggle: true, On: b.HoldFire,
 			Desc: "Stop this turret shooting until you turn it off again.",
 			Cmds: []command.Command{{Kind: command.SetTurretHold, X: b.X, Y: b.Y, Enabled: !b.HoldFire}}})
@@ -75,9 +75,16 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 	return out
 }
 
+// HostileTurretLine is what a settlement's turret's pane says (MAP-13): it
+// is no one's to run, so none of the barrel, power or hold lines apply.
+const HostileTurretLine = "Hostile: it fires on us. Destroy it."
+
 // defenceLines are the barrel, shells and target lines, and a bench's
 // facility and work speed lines.
 func defenceLines(b game.BuildingView) []string {
+	if b.Hostile {
+		return []string{HostileTurretLine}
+	}
 	var out []string
 	if isTurretBldg(b) || b.Kind == mortarKind {
 		if b.Barrel > 0 {

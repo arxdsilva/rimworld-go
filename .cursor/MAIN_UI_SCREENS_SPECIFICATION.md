@@ -1580,7 +1580,7 @@ Manage an active world-traveling group.
 -   **Commands:** `command.CaravanReturn` (`Target` = caravan id).
 -   **States:** arrived caravans show "Waiting at destination";
     returning ones show the trip home.
--   [-] Wired: `CaravanView`, `Game.TravelEstimate` and the inspector gizmos Travel, Return, Enter (only when Arrived), Attack (hostile bases), Settle and Reform. Missing: Trade (no caravan trading) and Split, which stays disabled ("Not yet").
+-   [-] Wired: `CaravanView`, `Game.TravelEstimate` and the inspector gizmos Travel, Return, Enter (only when Arrived), Attack (any human base; a non-hostile one asks first, modal `world.attack`, naming the faction, the 200 goodwill and that it turns hostile), Settle and Reform. Missing: Trade (no caravan trading) and Split, which stays disabled ("Not yet").
 
 ------------------------------------------------------------------------
 
@@ -1610,7 +1610,7 @@ result.
 -   cancel;
 -   select landing/attack/gift/reinforcement behavior where supported.
 
--   [x] Loading and launch are wired (AX-9: Load transport pods dialog, launcher fuel, reasons). Targeting: the engine supports Drop, Drop at centre, Pick spot, Attack (edge or centre), Found, gift and visit on any open map (MAP-2); the world view draws the range ring and the anchored landing menu (edge, centre, attack edge or centre, found, gift, visit, pick spot; Visit is refused without a settlement).
+-   [x] Loading and launch are wired (AX-9: Load transport pods dialog, launcher fuel, reasons). Targeting: the engine supports Drop, Drop at centre, Pick spot, Attack (edge or centre), Found, gift and visit on any open map (MAP-2); the world view draws the range ring and the anchored landing menu (edge, centre, attack edge or centre, found, gift, visit, pick spot; Visit is refused without a settlement; Attack on a non-hostile base asks first with the same modal).
 
 ------------------------------------------------------------------------
 
@@ -1646,7 +1646,7 @@ phase.
 
 ## Purpose
 
-Close the campaign and reflect the emergent story back to the player.
+Close the campaign and reflect the emergent story back to the player. Two endings open it: the ship leaving, and everyone being gone (MAP-14: no colonist left on any map or on the road; prisoners, beasts and the kidnapped don't count).
 
 ## Content
 
@@ -1664,10 +1664,16 @@ Close the campaign and reflect the emergent story back to the player.
 
 ## Actions
 
--   continue viewing colony if supported;
+-   continue viewing colony if supported (Keep watching);
+-   load a save (the everyone-gone ending);
 -   main menu;
 -   credits;
 -   export/share summary later.
+
+## Everyone-gone modal
+
+-   [x] `ending.gone` (MAP-14): opens by itself when the read model's `AX.EveryoneGone` turns true, and again if colonists came back and left. Buttons `modal.ending.gone.<btn>`: Keep watching (primary), Load game (disabled in a commitment colony, with the reason), Main menu.
+-   [x] Abandoning the last colony is allowed; its confirm (`world.abandon`) adds that nobody would be left and the game ends, when no caravan, pod or other map holds a colonist.
 
 ------------------------------------------------------------------------
 

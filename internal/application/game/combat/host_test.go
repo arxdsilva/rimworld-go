@@ -63,6 +63,8 @@ type fakeHost struct {
 	wired   bool
 	powered map[entity.EntityID]bool
 	gen     uint64
+	armed   bool                     // MAP-13: a settlement's turret stands on the map
+	guests  map[entity.EntityID]bool // MAP-13: on the raiders' roster but no raider (a visitor, a prisoner)
 	defense []entity.EntityID
 
 	calm      map[entity.EntityID]uint64
@@ -155,8 +157,10 @@ func (f *fakeHost) Animal(id entity.EntityID) (animal.State, bool) {
 	a, ok := f.animals[id]
 	return a, ok
 }
-func (f *fakeHost) Weapon(id entity.EntityID) weapon.Kind  { return f.weapons[id] }
-func (f *fakeHost) StandingPawn(id entity.EntityID) bool   { return f.pawns[id] || f.raiders[id] } // raiders are named humanlikes too
+func (f *fakeHost) Weapon(id entity.EntityID) weapon.Kind { return f.weapons[id] }
+func (f *fakeHost) StandingPawn(id entity.EntityID) bool {
+	return f.pawns[id] || f.raiders[id] || f.guests[id]
+}                                                          // raiders are named humanlikes too
 func (f *fakeHost) StandingRaider(id entity.EntityID) bool { return f.raiders[id] }
 func (f *fakeHost) RaiderOn(t, id entity.EntityID) (int, int, bool) {
 	j := f.jobs[t]
@@ -179,7 +183,7 @@ func (f *fakeHost) Near(x, y, r int, who Who, buf []Seen) []Seen {
 		switch {
 		case beast:
 			kind = Animals
-		case raider:
+		case raider || f.guests[id]:
 			kind = Raiders
 		}
 		if who&kind != 0 && weapon.Distance(x, y, p[0], p[1]) <= r {
@@ -316,6 +320,7 @@ func (f *fakeHost) DefenseRoll(int) int {
 func (f *fakeHost) Wired() bool                     { return f.wired }
 func (f *fakeHost) Powered(id entity.EntityID) bool { return f.powered[id] }
 func (f *fakeHost) PowerGen() uint64                { return f.gen }
+func (f *fakeHost) Armed() bool                     { return f.armed }
 func (f *fakeHost) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 	return append(buf, f.defense...)
 }

@@ -21,13 +21,18 @@ import (
 // the tabs. Every gizmo carries why it is disabled. Ids world.act.<name>.
 
 const (
-	inspPad    = 10
-	gizmoH     = 26
-	gizmoCols  = 3
-	lineH      = 18
-	AbandonID  = "world.abandon" // the confirm modal (its buttons: modal.world.abandon.ok / .cancel)
-	notYet     = "Not yet."
-	stillForms = "Still forming at the colony."
+	inspPad   = 10
+	gizmoH    = 26
+	gizmoCols = 3
+	lineH     = 18
+	AbandonID = "world.abandon" // the confirm modal (its buttons: modal.world.abandon.ok / .cancel)
+	AttackID  = "world.attack"  // the confirm modal for attacking a settlement that is not hostile (MAP-15)
+	// attackGoodwill is what attacking a settlement costs its faction
+	// (wiki: Faction base). The simulation applies it (maps.attackGoodwill);
+	// no read model carries it, so the confirm names it from here.
+	attackGoodwill = 200
+	notYet         = "Not yet."
+	stillForms     = "Still forming at the colony."
 )
 
 // line is one label/value row of the inspector.
@@ -139,9 +144,13 @@ func (v inspector) inspectMap(o *Object) (string, []line, []gizmo) {
 	}
 	id := m.ID
 	jump := gizmo{name: "jump", label: "Jump", tip: "Jump\nShow this map.", run: func() { v.jump(id) }}
-	abandon := gizmo{name: "abandon", label: "Abandon", why: v.abandonReason(m.Kind), tip: "Abandon\nLeave this map for good. Everyone and everything still on it is lost.",
+	abandon := gizmo{name: "abandon", label: "Abandon", tip: "Abandon\nLeave this map for good. Everyone and everything still on it is lost.",
 		run: func() {
-			v.kit().Confirm(AbandonID, "Abandon "+o.Label, "Everyone and everything still on "+o.Label+" will be lost. This cannot be undone.", "Abandon", true,
+			body := "Everyone and everything still on " + o.Label + " will be lost. This cannot be undone."
+			if v.endsGame(m) {
+				body += " Nobody would be left: this ends the game."
+			}
+			v.kit().Confirm(AbandonID, "Abandon "+o.Label, body, "Abandon", true,
 				func() { v.send(command.Command{Kind: command.AbandonMap, Target: uint64(id)}) })
 		}}
 	if m.Kind == "colony" {
@@ -167,22 +176,25 @@ func (v inspector) inspectMap(o *Object) (string, []line, []gizmo) {
 	return o.Label, lines, []gizmo{jump, reform, abandon}
 }
 
-// abandonReason is why a map of kind may not be abandoned ("" it may):
-// never the last colony.
-func (v inspector) abandonReason(kind string) string {
-	if kind != "colony" {
-		return ""
+// endsGame reports that abandoning colony m leaves nobody of ours anywhere
+// (MAP-14): it is the last colony and no caravan, pod or other map holds a
+// colonist. The simulation's EveryoneGone is the authority once it happens;
+// this only warns before.
+func (v inspector) endsGame(m game.MapView) bool {
+	if m.Kind != "colony" {
+		return false
 	}
-	n := 0
 	for i := range v.objs {
-		if o := &v.objs[i]; o.Kind == KindMap && o.Map.Kind == "colony" {
-			n++
+		switch o := &v.objs[i]; o.Kind {
+		case KindCaravan, KindPod:
+			return false
+		case KindMap:
+			if o.Map.ID != m.ID && (o.Map.Kind == "colony" || o.Map.Colonists > 0) {
+				return false
+			}
 		}
 	}
-	if n <= 1 {
-		return "Your last colony cannot be abandoned."
-	}
-	return ""
+	return true
 }
 
 // inspectCaravan is a caravan (§35): Travel, Return, Settle here, Enter,
@@ -230,8 +242,6 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 		attackWhy = stillForms
 	case !settled:
 		attackWhy = "No settlement here."
-	case site.Relation != "hostile":
-		attackWhy = "Only hostile settlements can be attacked."
 	default:
 		if a, ok := v.sh.Env().Game.(Attacker); ok {
 			attackWhy = a.AttackReason(id)
@@ -246,10 +256,29 @@ func (v inspector) inspectCaravan(o *Object) (string, []line, []gizmo) {
 			run: func() { v.send(command.Command{Kind: command.SettleHere, Target: id}) }},
 		{name: "enter", label: "Enter", why: enterWhy, tip: "Enter\nThe caravan enters the map here (opening one when there is none yet).",
 			run: func() { v.send(command.Command{Kind: command.EnterMap, Target: id}) }},
-		{name: "attack", label: "Attack", why: attackWhy, tip: "Attack\nAttack the settlement here. Its people turn hostile for good.",
-			run: func() { v.send(command.Command{Kind: command.AttackSettlement, Target: id}) }},
+		{name: "attack", label: "Attack", why: attackWhy, tip: "Attack\nAttack the settlement here. Attacking a settlement that is not hostile costs its faction " + strconv.Itoa(attackGoodwill) + " goodwill and turns them hostile until it recovers.",
+			run: func() { v.attackSettlement(id, site, settled) }},
 		{name: "split", label: "Split", why: notYet, tip: "Split\nSplitting a caravan in two."},
 	}
+}
+
+// attackSettlement sends caravan id's attack at once on a hostile
+// settlement; on any other it first asks, naming the faction and the cost
+// (MAP-15).
+func (v inspector) attackSettlement(id uint64, site game.WorldSiteView, settled bool) {
+	send := func() { v.send(command.Command{Kind: command.AttackSettlement, Target: id}) }
+	if !settled || site.Relation == "hostile" {
+		send()
+		return
+	}
+	v.kit().Confirm(AttackID, "Attack "+site.Faction, attackConfirmText(site), "Attack", true, send)
+}
+
+// attackConfirmText is the confirm's body: who is attacked, how they
+// stand with us now, and what the attack costs.
+func attackConfirmText(site game.WorldSiteView) string {
+	return fmt.Sprintf("%s is %s toward us. Attacking their settlement costs %d goodwill and turns them hostile; "+
+		"goodwill recovers only slowly with time and gifts.", site.Faction, site.Relation, attackGoodwill)
 }
 
 // settleReason is why caravan id on tile may not found a colony there: the

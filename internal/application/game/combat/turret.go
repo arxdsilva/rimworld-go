@@ -32,6 +32,10 @@ import (
 // barrel), every turret's round is a projectile (Shots.Turret: strays,
 // friendly fire and armor like a pawn's shot), and a destroyed turret
 // blows up half the time with the mini-turret's blast (Blast).
+//
+// MAP-13: a settlement's turret (Building.Hostile) needs no power, shoots
+// colonists and tame animals, and nobody at the colony runs it
+// (turret_hostile.go).
 
 const (
 	// TurretScanEvery: an idle turret looks for a target once in this
@@ -228,6 +232,8 @@ type Turrets struct {
 	// AX-5: the fires a foam turret sees (foam.go) and its reused buffer.
 	foam    Foamer
 	fireBuf [][2]int
+	// roster is colonyTarget's reused Near buffer (MAP-13).
+	roster []Seen
 }
 
 // saved are the components whose state the Turrets save block carries.
@@ -254,6 +260,7 @@ func (t *Turrets) list() []entity.EntityID {
 		return t.ids
 	}
 	t.ids = t.pw.AppendDefense(t.ids[:0])
+	slices.Sort(t.ids)
 	t.ids = slices.DeleteFunc(t.ids, func(id entity.EntityID) bool { // turrets only (an autodoor may draw too)
 		b, ok := t.h.Building(id)
 		return !ok || !isTurret(b.Kind)
@@ -276,13 +283,13 @@ func (t *Turrets) list() []entity.EntityID {
 // phase, after the raiders think), then the other defences' tick (IED
 // fuses, doors, mortars, rearm hauls; DEF-3).
 func (t *Turrets) Phase(now uint64) {
-	if t.pw.Wired() {
+	if t.pw.Wired() || t.pw.Armed() { // MAP-13: a settlement's turret runs without a device on the map
 		for _, id := range t.list() {
 			b, ok := t.h.Building(id)
 			if !ok {
 				continue
 			}
-			t.step(id, b.Kind, b.X, b.Y, now)
+			t.step(id, b, now)
 		}
 	} else if len(t.aims) > 0 { // no power device on the map: no turret can be on
 		t.list() // drops the aims of turrets that are gone
@@ -294,13 +301,14 @@ func (t *Turrets) Phase(now uint64) {
 	}
 }
 
-// step is one turret's tick at (x, y).
-func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now uint64) {
+// step is one turret's tick.
+func (t *Turrets) step(id entity.EntityID, b construction.Building, now uint64) {
+	k, x, y := b.Kind, b.X, b.Y
 	a, had := t.aims[id]
 	if now < a.StunnedUntil { // EMP: dark until it recovers
 		return
 	}
-	if !t.pw.Powered(id) || t.arms[id].Hold || t.Spent(id, k) || now < t.arms[id].Cool {
+	if !b.Hostile && !t.pw.Powered(id) || t.arms[id].Hold || t.Spent(id, k) || now < t.arms[id].Cool {
 		if had && a.Target != 0 { // no power, held or spent: it lets go and stays quiet
 			a.Target, a.ReadyAt, a.Burst = 0, 0, 0
 			t.setAim(id, a)
@@ -317,7 +325,7 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 	var tx, ty int
 	if a.Target != 0 {
 		var keep bool
-		if tx, ty, keep = t.holds(x, y, &a, now, release, d.MinRange); !keep {
+		if tx, ty, keep = t.holds(b, &a, now, release, d.MinRange); !keep {
 			a.Target, a.ReadyAt, a.Burst = 0, 0, 0
 			t.setAim(id, a)
 		}
@@ -326,9 +334,9 @@ func (t *Turrets) step(id entity.EntityID, k construction.Kind, x, y int, now ui
 		if (now+uint64(id))%TurretScanEvery != 0 {
 			return
 		}
-		t.near = t.h.Near(x, y, lock, Raiders|Animals, t.near[:0])
+		t.near = t.h.Near(x, y, lock, searchOf(b), t.near[:0])
 		s, ok := nearest(t.near, x, y, func(s Seen) bool {
-			return weapon.Distance(x, y, s.X, s.Y) >= d.MinRange && t.Targetable(s.ID, now) && t.sight.Line(x, y, s.X, s.Y)
+			return weapon.Distance(x, y, s.X, s.Y) >= d.MinRange && t.aimsAt(b, s, now) && t.sight.Line(x, y, s.X, s.Y)
 		})
 		if !ok {
 			return
@@ -422,14 +430,15 @@ func (t *Turrets) setAim(id entity.EntityID, a Aim) {
 	t.aims[id] = a
 }
 
-// holds reports whether the turret at (x, y) keeps its target, with the
-// target's tile; it notes the tick it saw it. A target that can no longer
+// holds reports whether turret b keeps its target, with the target's
+// tile; it notes the tick it saw it. A target that can no longer
 // be shot at (down, dead, gone, calmed), is past release (or inside the
 // gun's minimum range), or has been out of sight for TurretLost ticks is
 // let go.
-func (t *Turrets) holds(x, y int, a *Aim, now uint64, release, minRange int) (int, int, bool) {
+func (t *Turrets) holds(b construction.Building, a *Aim, now uint64, release, minRange int) (int, int, bool) {
+	x, y := b.X, b.Y
 	tx, ty, ok := t.h.Pos(a.Target)
-	if d := weapon.Distance(x, y, tx, ty); !ok || !t.Targetable(a.Target, now) || d > release || d < minRange {
+	if d := weapon.Distance(x, y, tx, ty); !ok || !t.aimsAt(b, Seen{ID: a.Target, X: tx, Y: ty}, now) || d > release || d < minRange {
 		return tx, ty, false
 	}
 	if t.sight.Line(x, y, tx, ty) {
@@ -491,7 +500,8 @@ func (t *Turrets) Blast(id entity.EntityID, b construction.Building) {
 // ForRaider is the powered turret a raider at (x, y) turns on instead of
 // the nearest colonist cd tiles off: the nearest one within sight tiles,
 // and only when it is at least SwitchMargin closer than the colonist (so a
-// raider between the two never swaps back and forth). ok false: none.
+// raider between the two never swaps back and forth). ok false: none. A
+// settlement's turret is on the raiders' side and never offered (MAP-13).
 func (t *Turrets) ForRaider(x, y, cd, sight int) (id entity.EntityID, bx, by int, ok bool) {
 	if !t.pw.Wired() {
 		return 0, 0, 0, false // no power device: no powered turret
@@ -499,7 +509,7 @@ func (t *Turrets) ForRaider(x, y, cd, sight int) (id entity.EntityID, bx, by int
 	bestD := min(sight, cd-SwitchMargin) + 1
 	for _, tid := range t.list() {
 		b, ok := t.h.Building(tid)
-		if !ok || !t.pw.Powered(tid) {
+		if !ok || b.Hostile || !t.pw.Powered(tid) {
 			continue
 		}
 		if d := weapon.Distance(x, y, b.X, b.Y); d < bestD {

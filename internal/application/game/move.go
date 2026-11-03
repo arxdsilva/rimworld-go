@@ -49,7 +49,7 @@ func (g *Game) canMoveTo(bid entity.EntityID, f construction.Facing, x, y int) (
 	if ok && isNatural(b.Kind) {
 		return false, ReasonNatural // setup_mapgen.go: a steam vent stays
 	}
-	if !ok || !construction.Movable(b.Kind) || b.Deconstruct {
+	if !ok || !construction.Movable(b.Kind) || b.Deconstruct || b.Hostile {
 		return false, ReasonCantMove
 	}
 	if g.swapFrameFor(bid) != 0 {

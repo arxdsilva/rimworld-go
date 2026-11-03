@@ -210,6 +210,7 @@ func (h combatDice) DefenseRoll(n int) int { return h.g.stream(streamDefense).In
 type combatPower struct{ g *Game }
 
 func (h combatPower) Wired() bool                     { return h.g.pw != nil }
+func (h combatPower) Armed() bool                     { return len(h.g.powerList().hostile) > 0 }
 func (h combatPower) Powered(id entity.EntityID) bool { return h.g.powered(id) }
 func (h combatPower) PowerGen() uint64                { return h.g.powerList().gen }
 func (h combatPower) AppendDefense(buf []entity.EntityID) []entity.EntityID {
@@ -219,7 +220,7 @@ func (h combatPower) AppendDefense(buf []entity.EntityID) []entity.EntityID {
 			buf = append(buf, c.ids[i])
 		}
 	}
-	return buf
+	return append(buf, c.hostile...)
 }
 
 type combatFlight struct{ g *Game }

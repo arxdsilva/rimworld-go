@@ -5,6 +5,7 @@ The colony HUD's regions: resource bar, colonist bar, right column (letters, mes
 
 ## Owned Concepts
 - `Chrome` (17 methods, holds the toasts) over `Resources` (13), `ColonistBar` (15), `Right` (32: letters, messages, alerts), `Alerts` (9: the alert rules), `Global` (21, status chips folded in), `CellInfo` (4), `Tabs` (3), `Banner` (5), `RoomStats` (2). Each is `struct{*Chrome}` or a field of it.
+- The endings (`ending.go`): the ship's modal and the everyone-gone modal `ending.gone` (MAP-14, Keep watching, Load game, Main menu), which opens when `AX.EveryoneGone` turns true and re-arms only after it goes false.
 - `alertExplanations` is a literal table; the rules are data, not `init()` registration.
 - `Shell` = `Sizer + World + View + Overlays + Speed + Settings + Host + Peers`.
 - `Host` (8 methods: `Widgets`, `Commands`, `Env`, `Layout`, `ChromeHit`, `SpeedLabel`, `Jump`, `SetSettings`).

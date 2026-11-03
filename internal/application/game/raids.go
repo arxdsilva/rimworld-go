@@ -665,7 +665,7 @@ func (h mapsSettle) Settle(c mapgen.Compound, fac int, arms []item.Kind, seed ui
 		clearSite(g, c.Centre.X, y)
 	}
 	for _, p := range c.Pieces {
-		id := g.placeGenerated(construction.Building{Kind: p.Kind, Stuff: p.Stuff, Facing: p.Facing, X: p.X, Y: p.Y, Ancient: true, Forbidden: p.Kind.Sleeps()})
+		id := g.placeGenerated(construction.Building{Kind: p.Kind, Stuff: p.Stuff, Facing: p.Facing, X: p.X, Y: p.Y, Ancient: true, Forbidden: p.Kind.Sleeps(), Hostile: p.Kind == construction.SentryTurret})
 		if id != 0 && p.Kind.IsDoor() {
 			g.combat.Doors.SetHold(id, true) // their own doors: shut, they would hold the defenders in
 		}

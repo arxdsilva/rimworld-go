@@ -70,6 +70,7 @@ type Faction struct {
 	Name        string
 	Leader      Leader
 	Goodwill    int
+	Besieged    bool // MAP-16: we are attacking a settlement of theirs, so goodwill can't rise (wiki: Faction base)
 	Relation    Relation
 	Settlements []int // world tile ids, capital first
 	// SettlementNames are the settlements' names, parallel to Settlements.
@@ -253,6 +254,9 @@ func Update(f *Faction) {
 // Adjust changes f's goodwill by delta (clamped to -100..100; fixed types
 // ignore it), records event among the last five and updates the relation.
 func Adjust(f *Faction, delta int, event string) {
+	if f.Besieged && delta > 0 {
+		return
+	}
 	if !def(f.Type).Fixed {
 		f.Goodwill = min(max(f.Goodwill+delta, goodwillMin), goodwillMax)
 	}
@@ -272,7 +276,7 @@ func DailyDrift(f *Faction) {
 	d := def(f.Type)
 	if !d.Fixed {
 		switch {
-		case f.Goodwill < d.Baseline:
+		case f.Goodwill < d.Baseline && !f.Besieged:
 			f.Goodwill++
 		case f.Goodwill > d.Baseline:
 			f.Goodwill--

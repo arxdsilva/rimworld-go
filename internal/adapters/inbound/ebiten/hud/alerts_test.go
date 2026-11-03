@@ -485,6 +485,12 @@ func TestNotConnectedAlert(t *testing.T) {
 	if got := alertByKeyPrefix(BuildAlerts(nil, w), "notconnected"); len(got) != 0 {
 		t.Fatalf("alert without a loose device: %+v", got)
 	}
+	// MAP-13: a settlement's turret is not ours to wire
+	w.Buildings = append(w.Buildings, game.BuildingView{ID: 6, Kind: "sentry turret", X: 20, Y: 20, Hostile: true,
+		PowerRole: "consumer", NoPowerReason: game.NoPowerNotConnected})
+	if got := alertByKeyPrefix(BuildAlerts(nil, w), "notconnected"); len(got) != 0 {
+		t.Fatalf("alert for a settlement's turret: %+v", got)
+	}
 }
 
 func TestNoFuelAlertCoversGeneratorsAndTorches(t *testing.T) {

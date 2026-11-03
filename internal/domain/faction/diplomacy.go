@@ -27,6 +27,7 @@ const (
 // Player-facing refusal reasons.
 const (
 	ReasonGone       = "that faction is gone"
+	ReasonBesieged   = "they refuse anything from us while we attack them"
 	ReasonHostile    = "they are hostile"
 	ReasonNotFriend  = "they are not friendly enough"
 	ReasonGoodwill   = "they don't trust you enough"

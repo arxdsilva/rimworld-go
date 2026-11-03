@@ -20,7 +20,7 @@ The colony's full-screen world view (MAP-2, MAIN_UI_SCREENS §33, §35, §36): t
 
 ## Public Contracts
 - Root calls: `Show`, `Toggle`, `Close`, `Open`, `Escape` (pick spot, pod menu, targeting or route, selection, then the view), `LaunchFor`, `Declare` (once per Update, in `colonyUI`, before the HUD's widgets), `DrawGlobe` (in the map's place), `HandleSpot`, `Spotting`, `DrawSpot`.
-- Widget ids: `world.obj.<map|caravan|settlement|site|pod>.<id>`, `world.act.<jump|form|abandon|reform|travel|return|settle|enter|attack|split|confirm|cancel>`, `world.pod.<drop|dropcentre|attackedge|attackcentre|found|gift|visit|spot|cancel>`, `world.pod.target.<tile>`, `world.search`, `world.search.field`, `world.legend`, `world.grid`, `world.close`, modal `world.abandon`.
+- Widget ids: `world.obj.<map|caravan|settlement|site|pod>.<id>`, `world.act.<jump|form|abandon|reform|travel|return|settle|enter|attack|split|confirm|cancel>`, `world.pod.<drop|dropcentre|attackedge|attackcentre|found|gift|visit|spot|cancel>`, `world.pod.target.<tile>`, `world.search`, `world.search.field`, `world.legend`, `world.grid`, `world.close`, modals `world.abandon` and `world.attack` (a non-hostile base asks first, MAP-15).
 - Everything leaves as `command.Command` (`ports.Commands`) or `ports.Intent`; a launch names the pods' own map (`MapSet`), so a switch to the target map does not move the command.
 
 ## Invariants

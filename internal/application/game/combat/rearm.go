@@ -96,7 +96,7 @@ func (r *Rearms) busy(id entity.EntityID) bool {
 func (r *Rearms) scan(now uint64) {
 	for _, id := range r.turrets.list() {
 		b, ok := r.h.Building(id)
-		if ok && r.turrets.wantsRearm(id, b.Kind) && !r.busy(id) {
+		if ok && !b.Hostile && r.turrets.wantsRearm(id, b.Kind) && !r.busy(id) { // MAP-13: nobody rearms a settlement's turret
 			r.barrel(id, b)
 		}
 	}

@@ -59,6 +59,13 @@ func TestSlaughterAndClaimRules(t *testing.T) {
 	if Claimable(construction.Building{Kind: construction.SteamVent, Ancient: true}) {
 		t.Fatal("a natural feature is nobody's")
 	}
+	// MAP-13: a settlement's turret stays hostile; the rest of the compound is claimable
+	if Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true, Hostile: true}) {
+		t.Fatal("a settlement's turret is not claimed")
+	}
+	if !Claimable(construction.Building{Kind: construction.Wall, Ancient: true}) || !Claimable(construction.Building{Kind: construction.SentryTurret, Ancient: true}) {
+		t.Fatal("a compound's other pieces stay claimable")
+	}
 }
 
 func TestPackableAndCrate(t *testing.T) {
@@ -67,7 +74,8 @@ func TestPackableAndCrate(t *testing.T) {
 		t.Fatal("a bed packs")
 	}
 	for _, b := range []construction.Building{{Kind: construction.Wall}, {Kind: construction.Floor},
-		{Kind: construction.Bed, Ruin: true}, {Kind: construction.SleeperCasket, Occupant: 1}} {
+		{Kind: construction.Bed, Ruin: true}, {Kind: construction.SleeperCasket, Occupant: 1},
+		{Kind: construction.SentryTurret, Hostile: true}, {Kind: construction.SentryTurret, Ancient: true, Hostile: true}} { // MAP-13
 		if Packable(b) {
 			t.Fatalf("%v must not pack", b.Kind)
 		}

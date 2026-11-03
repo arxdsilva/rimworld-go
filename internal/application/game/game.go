@@ -402,7 +402,8 @@ type BuildingView struct {
 	SwapTo  string
 	SwapPct int
 	// Ruin: an abandoned piece from map generation (MAPGEN-2).
-	Ruin bool
+	Ruin    bool
+	Hostile bool // MAP-13: a settlement's turret, firing on us
 	// Medical: a bed kept for the sick and injured (PLAY-020).
 	Medical        bool
 	W, H           int // footprint in tiles (after facing)
@@ -1461,7 +1462,8 @@ func (g *Game) world() WorldView {
 	w.Research, w.Locked = g.lab.Lists(g.views.on) // game/research
 	w.AX.DeepOreVer, w.AX.DeepOre = g.br.ind.DeepOre(g.grid.Width())
 	shipOf(g).FillWorld(shipHost{g}, &w.AX) // story.go: game/ship (AX-8)
-	travelOf(g).World(&w.AX)                // world_stash.go: game/travel (AX-9): pods in flight, mineral sites
+	w.AX.EveryoneGone = everyoneGone(g)
+	travelOf(g).World(&w.AX) // world_stash.go: game/travel (AX-9): pods in flight, mineral sites
 	w.ResearchAlert, w.TechLevel = g.lab.Alert(), researchHost{g}.Tech().String()
 	if n, felled := g.Timbergnaws(); n > 0 {
 		w.TreesFelled = felled

@@ -845,7 +845,7 @@ func markDeconstructWhere(g *Game, minX, minY, maxX, maxY int, on bool, layer co
 		if !ok || b.X < minX || b.X > maxX || b.Y < minY || b.Y > maxY || g.fogged(b.X, b.Y) || layer != anyLayer && construction.DefOf(b.Kind).Layer != layer {
 			continue
 		}
-		if b.Deconstruct == on {
+		if b.Deconstruct == on || on && b.Hostile { // MAP-13: a settlement's turret only comes down by force
 			continue
 		}
 		if on && isNatural(b.Kind) {

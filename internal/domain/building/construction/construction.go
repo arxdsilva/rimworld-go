@@ -1289,6 +1289,10 @@ type Building struct {
 	// Ancient (MAPGEN-3): an intact piece of a sealed vault (walls, floor,
 	// caskets): not colony wealth, not a Home anchor, not repaired.
 	Ancient bool
+	// Hostile (MAP-13): a settlement's turret: it needs no power, fires on
+	// us and stays hostile until destroyed; nobody of ours can wire, claim,
+	// order or remove it.
+	Hostile bool
 	// Sealed sleeper caskets (MAPGEN-3): Occupant is a vault.Occupant
 	// (0: open or empty shell); CasketGroup the vault id whose caskets open
 	// together.

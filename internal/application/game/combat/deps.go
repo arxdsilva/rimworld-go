@@ -237,11 +237,14 @@ type Dice interface {
 type Power interface {
 	// Wired: the colony has a power device at all.
 	Wired() bool
+	// Armed: a settlement's turret stands on the map (MAP-13).
+	Armed() bool
 	Powered(id entity.EntityID) bool
 	// PowerGen is the power list's generation; it moves whenever the
 	// powered buildings change.
 	PowerGen() uint64
-	// AppendDefense appends the defence consumers (the turrets), ascending.
+	// AppendDefense appends the defence consumers and the settlement turrets
+	// (not sorted across the two).
 	AppendDefense(buf []entity.EntityID) []entity.EntityID
 }
 

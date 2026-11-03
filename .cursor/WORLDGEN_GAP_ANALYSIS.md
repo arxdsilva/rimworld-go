@@ -6,7 +6,7 @@ Scope: the Create world and Select starting site screens (the planet, its biomes
 
 | Item | Decision |
 |---|---|
-| Numbers | ENG-003 is extended to WG-* (approved with the plan, 2026-11-02; the `AGENTS.md` ENG-003 line is pending the user): published wiki numbers are tuning data, names and prose stay original. Each constant gets `// wiki: <page>`, or `// original tuning` where the wiki publishes nothing. |
+| Numbers | ENG-003 is extended to WG-* (approved 2026-11-02 and recorded on the `AGENTS.md` ENG-003 line): published wiki numbers are tuning data, names and prose stay original. Each constant gets `// wiki: <page>`, or `// original tuning` where the wiki publishes nothing. |
 | Original tuning (wiki silent) | Biome scoring inside the thresholds, river widths and the huge-river flow, winter movement curve shape, relief exaggeration, snowline, road class placement, feature naming. |
 | Excluded | Pollution (Biotech), landmass and mountain sliders, landmarks and tile mutators (Odyssey; not on the wiki). Listed as `n/a (DLC)`. |
 | Stability | New worlds set `planet.Params.Version = 1`; every generator change is gated on `Version >= 1`, so v0 worlds (old saves) rebuild identically. |

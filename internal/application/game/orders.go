@@ -281,10 +281,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		}
 		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: combat.AimTicks(weaponDefOf(g, id))}, ""
 	case command.OrderAttack:
-		aid := g.animalAt(x, y)
-		if rid := g.raiderAt(x, y); aid == 0 && rid != 0 && g.combat.Strikes.Ordered(rid) { // CBT-2: a downed one too
-			aid = rid
-		}
+		aid := g.combat.Strikes.OrderedAt(g.animalAt(x, y), g.raiderAt(x, y), x, y) // CBT-2: a downed raider too; MAP-13: a settlement's turret
 		if aid == 0 {
 			return job.Record{}, ReasonGone
 		}
@@ -555,6 +552,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			verb += "raider " // a colonist in a berserk break is named plainly (SIM-066)
 		}
 		add(verb+g.name(rid), command.OrderAttack, construction.LayerObject)
+	}
+	if g.drafted(pawn) && g.combat.Turrets.HostileAt(x, y) != 0 { // MAP-13
+		add(combat.AttackVerb(hasRanged(g, pawn))+"sentry turret", command.OrderAttack, construction.LayerObject)
 	}
 	if iid := g.itemAt(x, y); iid != 0 {
 		st, _ := g.stacks.Get(iid)

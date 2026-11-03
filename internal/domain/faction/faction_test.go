@@ -465,3 +465,22 @@ func TestSpacingAndCount(t *testing.T) {
 		}
 	}
 }
+
+// TestBesiegedGoodwillCannotRise: during an attack goodwill only falls (MAP-16).
+func TestBesiegedGoodwillCannotRise(t *testing.T) {
+	f := Faction{Type: Settlers, Goodwill: -50, Besieged: true}
+	Adjust(&f, 20, "a gift")
+	DailyDrift(&f)
+	if f.Goodwill != -50 || len(f.Events) != 0 {
+		t.Fatalf("goodwill %d events %v, want -50 and none", f.Goodwill, f.Events)
+	}
+	Adjust(&f, -10, "an insult")
+	if f.Goodwill != -60 {
+		t.Fatalf("goodwill %d, want -60", f.Goodwill)
+	}
+	f.Besieged = false
+	DailyDrift(&f)
+	if f.Goodwill != -59 {
+		t.Fatalf("goodwill %d, want the drift to resume at -59", f.Goodwill)
+	}
+}
