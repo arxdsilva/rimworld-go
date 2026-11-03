@@ -33,3 +33,28 @@
 - **Project:** [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) by the Noto Project Authors
 - **License:** SIL Open Font License 1.1. The full text is in [`internal/adapters/inbound/ebiten/gfx/fontdata/OFL.txt`](internal/adapters/inbound/ebiten/gfx/fontdata/OFL.txt).
 - **What:** `NotoSans-Regular.ttf` and `NotoSans-SemiBold.ttf` (hinted static builds from the notofonts release site), embedded unmodified as the interface font (NG-1).
+
+## Go modules
+
+The game's binary links these modules. Their license files, with any NOTICE file, are in [`third_party/go-modules`](third_party/go-modules), refreshed by `make licenses`. A test in `internal/arch` fails when a module in `go.mod` is missing from this table.
+
+| Module | License | Linked on |
+| --- | --- | --- |
+| Go standard library | BSD-3-Clause, [`third_party/go-modules/go/LICENSE`](third_party/go-modules/go/LICENSE) | all |
+| `github.com/cli/browser` | BSD-2-Clause | all |
+| `github.com/ebitengine/gomobile` | BSD-3-Clause | not linked |
+| `github.com/ebitengine/hideconsole` | Apache-2.0 | Windows |
+| `github.com/ebitengine/oto/v3` | Apache-2.0 | all |
+| `github.com/ebitengine/purego` | Apache-2.0 | all |
+| `github.com/go-text/typesetting` | BSD-3-Clause and Unlicense; `harfbuzz` MIT | all |
+| `github.com/google/uuid` | BSD-3-Clause | all |
+| `github.com/hajimehoshi/ebiten/v2` | Apache-2.0 | all |
+| `github.com/jezek/xgb` | BSD-3-Clause | Linux |
+| `github.com/jfreymuth/oggvorbis` | MIT | all |
+| `github.com/jfreymuth/vorbis` | MIT | all |
+| `github.com/rivo/uniseg` | MIT | all |
+| `golang.org/x/image` | BSD-3-Clause | all |
+| `golang.org/x/mod` | BSD-3-Clause | all |
+| `golang.org/x/sync` | BSD-3-Clause | all |
+| `golang.org/x/sys` | BSD-3-Clause | all |
+| `golang.org/x/text` | BSD-3-Clause | all |

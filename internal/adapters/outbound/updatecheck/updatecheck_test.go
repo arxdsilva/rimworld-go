@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"slices"
 	"strings"
 	"testing"
 )
@@ -28,7 +27,9 @@ func TestNewer(t *testing.T) {
 		{"v0.1.21", "dev", false},
 		{"", "v0.1.20", false},
 		{"latest", "v0.1.20", false},
-		{"v99999999999999999999.0.0", "v0.1.20", false},
+		{"v99999999999999999999.0.0", "v0.1.20", true}, // only shown as text; the page is constant
+		{"v1", "v0.1.20", false},
+		{"v1.2", "v0.1.20", false},
 		{"0.1.21", "v0.1.20", false},
 		{"v0.1.21/../../evil", "v0.1.20", false},
 	} {
@@ -108,29 +109,28 @@ func TestNothingIsOfferedBeforeTheAnswer(t *testing.T) {
 
 func TestDownloadOpensTheFixedPage(t *testing.T) {
 	t.Parallel()
-	var opened []string
+	opened := make(chan string, 1)
 	c := &Checker{open: func(url string) error {
-		opened = append(opened, url)
+		opened <- url
 		return errors.New("no browser") // the notice still shows the address
 	}}
 	c.DownloadUpdate()
-	if !slices.Equal(opened, []string{pageURL}) {
-		t.Errorf("opened %v", opened)
+	if got := <-opened; got != pageURL {
+		t.Errorf("opened %q", got)
 	}
 }
 
-func TestBrowserCommand(t *testing.T) {
+// Opening can wait for the browser, and DownloadUpdate runs on the game loop.
+func TestDownloadDoesNotWaitForTheBrowser(t *testing.T) {
 	t.Parallel()
-	const url = "https://example.test/x"
-	for goos, want := range map[string][]string{
-		"darwin":  {"open", url},
-		"linux":   {"xdg-open", url},
-		"freebsd": {"xdg-open", url},
-		"windows": {"rundll32", "url.dll,FileProtocolHandler", url},
-	} {
-		name, args := browserCommand(goos, url)
-		if got := append([]string{name}, args...); !slices.Equal(got, want) {
-			t.Errorf("%s: %v", goos, got)
-		}
-	}
+	release := make(chan struct{})
+	finished := make(chan struct{})
+	c := &Checker{open: func(string) error {
+		<-release
+		close(finished)
+		return nil
+	}}
+	c.DownloadUpdate() // would hang here if it waited
+	close(release)
+	<-finished
 }

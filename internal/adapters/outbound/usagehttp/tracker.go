@@ -5,11 +5,10 @@
 package usagehttp
 
 import (
-	"crypto/rand"
-	"fmt"
 	"math"
-	"regexp"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Endpoint is where release builds send usage data.
@@ -27,19 +26,15 @@ const (
 	tierAdvanced = "advanced"
 )
 
-var idPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-
 // NewID returns a random version 4 UUID.
-func NewID() string {
-	var b [16]byte
-	_, _ = rand.Read(b[:]) // crypto/rand.Read never fails since Go 1.24
-	b[6] = b[6]&0x0f | 0x40
-	b[8] = b[8]&0x3f | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
+func NewID() string { return uuid.NewString() }
 
-// ValidID reports whether s is a UUID in the form NewID writes.
-func ValidID(s string) bool { return idPattern.MatchString(s) }
+// ValidID reports whether s is a UUID in the form NewID writes. uuid.Parse
+// also takes urn:uuid:, braces and upper case, which NewID never writes.
+func ValidID(s string) bool {
+	id, err := uuid.Parse(s)
+	return err == nil && id.String() == s
+}
 
 // Config is what a Tracker needs from the composition root.
 type Config struct {

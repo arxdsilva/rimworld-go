@@ -14,7 +14,7 @@ Tell the project how many people play, on what, and how far they get, without sl
 
 ## Allowed dependencies
 
-- The standard library only.
+- The standard library and `github.com/google/uuid`. Its types stay in this package; IDs cross as strings.
 
 ## Forbidden dependencies
 

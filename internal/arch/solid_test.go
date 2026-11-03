@@ -269,12 +269,12 @@ func moduleRoot(t *testing.T) string {
 	}
 }
 
-// scanTree parses every package under internal/ and cmd/, one goroutine
+// scanTree parses every package under internal/, cmd/ and pkg/, one goroutine
 // per package.
 func scanTree(t *testing.T, root string) []*pkgScan {
 	t.Helper()
 	dirs, tests := map[string][]string{}, map[string][]string{}
-	for _, top := range []string{"internal", "cmd"} {
+	for _, top := range []string{"internal", "cmd", "pkg"} {
 		err := filepath.WalkDir(filepath.Join(root, top), func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err

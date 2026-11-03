@@ -31,7 +31,22 @@ vet:
 
 .PHONY: lint
 lint:
-	staticcheck ./...
+	go run honnef.co/go/tools/cmd/staticcheck@2026.2.2 ./...
+
+.PHONY: vuln
+vuln:  ## known vulnerabilities in the code paths the game reaches
+	go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+.PHONY: licenses
+licenses:  ## copy license files to third_party/go-modules for every release platform; list new modules in THIRD_PARTY_NOTICES.md, delete a dropped module's folder by hand
+	GOBIN=$(CURDIR)/bin go install github.com/google/go-licenses/v2@v2.0.1
+	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 bin/go-licenses save ./cmd/game --ignore rimworld-go --force --save_path=bin/licenses/linux
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 bin/go-licenses save ./cmd/game --ignore rimworld-go --force --save_path=bin/licenses/windows
+	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 bin/go-licenses save ./cmd/game --ignore rimworld-go --force --save_path=bin/licenses/darwin
+	mkdir -p third_party/go-modules/go
+	cp -Rf bin/licenses/linux/. bin/licenses/windows/. bin/licenses/darwin/. third_party/go-modules/
+	cp -f "$$(go env GOROOT)/LICENSE" third_party/go-modules/go/LICENSE
+	chmod -R u+w bin/licenses third_party/go-modules
 
 .PHONY: agent-budget
 agent-budget:  ## how many parallel agents this machine's free RAM holds (PARALLEL_WORK §1)

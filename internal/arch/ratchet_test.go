@@ -81,3 +81,44 @@ func TestThirdParty(t *testing.T) {
 		}
 	}
 }
+
+// Every module the build can use has its license on record, because a
+// release ships third_party/ and THIRD_PARTY_NOTICES.md (GO_BEST_PRACTICES §86).
+func TestEveryModuleIsInTheNotices(t *testing.T) {
+	t.Parallel()
+	root := moduleRoot(t)
+	mod, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	notices, err := os.ReadFile(filepath.Join(root, "THIRD_PARTY_NOTICES.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := 0
+	inBlock := false
+	for line := range strings.Lines(string(mod)) {
+		fields := strings.Fields(line)
+		switch {
+		case len(fields) == 0:
+			continue
+		case fields[0] == "require" && len(fields) > 1 && fields[1] == "(":
+			inBlock = true
+			continue
+		case fields[0] == ")":
+			inBlock = false
+			continue
+		case fields[0] == "require":
+			fields = fields[1:]
+		case !inBlock:
+			continue
+		}
+		found++
+		if !strings.Contains(string(notices), "`"+fields[0]+"`") {
+			t.Errorf("%s is in go.mod but not in THIRD_PARTY_NOTICES.md (make licenses, then add its row)", fields[0])
+		}
+	}
+	if found == 0 {
+		t.Error("read no modules from go.mod")
+	}
+}

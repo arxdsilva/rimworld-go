@@ -1,9 +1,12 @@
 module rimworld-go
 
-go 1.26.5
+go 1.26.10
 
 require (
+	github.com/cli/browser v1.3.0
+	github.com/google/uuid v1.6.0
 	github.com/hajimehoshi/ebiten/v2 v2.9.11
+	golang.org/x/mod v0.42.0
 	golang.org/x/sys v0.44.0
 )
 
