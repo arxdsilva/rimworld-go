@@ -352,9 +352,9 @@ func (g *Game) layOne(id entity.EntityID, a *animal.State) {
 	if fertile {
 		st.Tame = a.Tame
 	}
-	st.Unclaimed = !a.Tame // a wild mother's egg waits for a haul mark (PLAY-017)
-
-	g.mergeOrSet(sid, st) // onto the eggs already there
+	st.Unclaimed = !a.Tame                                   // a wild mother's egg waits for a haul mark (PLAY-017)
+	st.Forbidden = !a.Tame && forbids(g).DropForbidden(x, y) // and starts forbidden outside Home (AL-4)
+	g.mergeOrSet(sid, st)                                    // onto the eggs already there
 }
 
 // eggBox is where a hen in pen lays: the walkable pen cell nearest the

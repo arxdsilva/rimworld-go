@@ -347,8 +347,9 @@ func (g *Game) animalHurt(id entity.EntityID, a *animal.State, by entity.EntityI
 }
 
 // feedOnKill: the killer of an animal feeds on its carcass (T4) when it
-// eats meat and has room for it. A tame one eats only what it hunted
-// (PLAY-017), holding the carcass against haulers while it eats.
+// eats meat and has room for it, holding it against the colony's work
+// while it eats (AL-2; syncFeedClaim). A tame one eats only what it hunted
+// (PLAY-017). A kill that spilled off a full tile is eaten where it lies.
 func (g *Game) feedOnKill(by entity.EntityID, k *animal.State, corpse entity.EntityID, at Position) {
 	hunted := k.HuntSince != 0
 	k.Target, k.Attacker, k.HuntSince = 0, 0, 0
@@ -356,13 +357,14 @@ func (g *Game) feedOnKill(by entity.EntityID, k *animal.State, corpse entity.Ent
 	if corpse == 0 || k.Tame && !hunted || !animal.EcologyOf(k.Species).Diet.Meat() || k.Food >= animal.FeedStop {
 		return
 	}
+	if st, ok := g.stacks.Get(corpse); ok {
+		at = Position{X: st.X, Y: st.Y}
+	}
 	k.Mode = animal.Feed
 	k.Feed = animal.FeedTarget{Kind: animal.FeedCarcass, ID: corpse, X: at.X, Y: at.Y}
 	k.FeedLeft = animal.CarcassTicks
 	k.NextFeed = uint64(g.clock.Now()) + feedWalkLimit
-	if k.Tame {
-		g.syncFeedClaim(by, k)
-	}
+	g.syncFeedClaim(by, k)
 }
 
 // --- the food search (plan 2.4) -------------------------------------------
@@ -470,8 +472,8 @@ func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow f
 			if d > r || g.stockpiled(st.X, st.Y) { // never from the colony's stores
 				return true
 			}
-			if _, taken := g.reserve.EntityOwner(iid); taken {
-				return true
+			if o, taken := g.reserve.EntityOwner(iid); taken && !g.wildFeeder(o) {
+				return true // a wild feeder's carcass stays on the menu: a pack eats one kill together
 			}
 			switch {
 			case st.Kind == item.CorpseAnimal && diet.Meat() && animal.Species(st.Animal) != a.Species && !animal.IsMech(animal.Species(st.Animal)):
@@ -650,13 +652,15 @@ func (g *Game) tameHuntOn(id, target entity.EntityID, tp Position) bool {
 	return g.tamePrey(id, target, uint64(g.clock.Now())) && g.inArea(id, tp.X, tp.Y)
 }
 
-// syncFeedClaim keeps a tame animal's reservation on the stack it walks
-// to and eats (and none other): taken when it picks one, released when
-// the meal ends, changes or is dropped by anything (phaseAnimals runs it
-// every tick for tame animals and for any animal still holding one).
+// syncFeedClaim keeps an animal's reservation on the stack it walks to and
+// eats (and none other): a tame one's food (PLAY-017) or any feeder's
+// carcass (AL-2): taken when it picks one, released when the meal ends,
+// changes or is dropped by anything. phaseAnimals runs it every tick for
+// tame animals, carcass feeders and any animal still holding one, so a
+// pack mate waiting on the holder takes the claim over when it goes.
 func (g *Game) syncFeedClaim(id entity.EntityID, a *animal.State) {
 	var want entity.EntityID
-	if a.Tame && a.Mode == animal.Feed && (a.Feed.Kind == animal.FeedItem || a.Feed.Kind == animal.FeedCarcass) {
+	if a.Mode == animal.Feed && (a.Feed.Kind == animal.FeedCarcass || a.Tame && a.Feed.Kind == animal.FeedItem) {
 		want = a.Feed.ID
 	}
 	if a.FeedClaim == want {
@@ -669,6 +673,22 @@ func (g *Game) syncFeedClaim(id entity.EntityID, a *animal.State) {
 	if want != 0 && g.reserve.TryEntity(id, want) {
 		a.FeedClaim = want
 	}
+}
+
+// wildFeeder reports id, a claim's owner, is a wild animal.
+func (g *Game) wildFeeder(id entity.EntityID) bool {
+	a := g.animals.Ref(id)
+	return a != nil && !a.Tame
+}
+
+// wildMayEat re-checks a wild feeder's carcass each step (AL-2): no
+// colonist or tame animal holds it; a pack mate may.
+func (g *Game) wildMayEat(a *animal.State, t animal.FeedTarget) bool {
+	if t.Kind != animal.FeedCarcass || a.FeedClaim == t.ID {
+		return true
+	}
+	o, taken := g.reserve.EntityOwner(t.ID)
+	return !taken || g.wildFeeder(o)
 }
 
 // tameMayEat re-checks a tame animal's stack each step (PLAY-017): not
@@ -801,7 +821,7 @@ func (g *Game) feedThere(a *animal.State, t animal.FeedTarget) bool {
 		return ok && p.X == t.X && p.Y == t.Y
 	case animal.FeedItem, animal.FeedCarcass:
 		st, ok := g.stacks.Get(t.ID)
-		return ok && st.Carrier == 0 && st.Qty > 0 && st.X == t.X && st.Y == t.Y && (!a.Tame || g.tameMayEat(a, t, st))
+		return ok && st.Carrier == 0 && st.Qty > 0 && st.X == t.X && st.Y == t.Y && (a.Tame && g.tameMayEat(a, t, st) || !a.Tame && g.wildMayEat(a, t))
 	case animal.FeedTrough:
 		return g.troughHas(t.ID, animal.EcologyOf(a.Species).Diet) // trough_feed.go
 	}

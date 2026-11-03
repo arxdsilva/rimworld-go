@@ -58,6 +58,27 @@ func (g Gather) Arrive(id entity.EntityID, j *job.Record) bool {
 	return g.Next(id, j)
 }
 
+// TargetGone updates j for stack sid having just left the map (AL-3),
+// reporting a change. Only a walk to the stack ends: a pawn at work on it
+// (State Do: an eater or a crafter using it up) finishes its own step, and
+// one that already has its load keeps going whatever became of the pile it
+// came from. A job heading to sid fails; a hauler heading to a pile on the
+// way goes back to Do, where Arrive skips it and walks on.
+func TargetGone(j *job.Record, sid entity.EntityID) bool {
+	if j.State != job.Goto {
+		return false
+	}
+	switch {
+	case j.Target == sid && (j.Carry == 0 || j.Kind == job.HaulIngredients): // its Target is where it heads
+		j.State, j.Fail = job.Fail, job.TargetGone
+	case j.Kind.Hauls() && j.Carry != 0 && j.PickupI+1 < len(j.Pickups) && j.Pickups[j.PickupI] == sid:
+		j.Path, j.PathI, j.State = nil, 0, job.Do
+	default:
+		return false
+	}
+	return true
+}
+
 // joins is stack sid when it still lies free and joins j's load, which
 // still has room (j.Count caps it; 0: no cap).
 func (g Gather) joins(j *job.Record, sid entity.EntityID) (item.Stack, bool) {

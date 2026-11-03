@@ -248,8 +248,8 @@ func (g *Game) phaseAnimals() {
 			continue
 		}
 		keepChaseWarned(&a, now) // chase.go
-		if a.Tame || a.FeedClaim != 0 {
-			g.syncFeedClaim(id, &a) // animal_needs.go: a tame eater's reservation
+		if a.Tame || a.FeedClaim != 0 || a.Mode == animal.Feed && a.Feed.Kind == animal.FeedCarcass {
+			g.syncFeedClaim(id, &a) // animal_needs.go: an eater's reservation
 		}
 		g.animals.Set(id, a) // it steps in phaseMovement
 	}
@@ -807,7 +807,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 
 func (g *Game) removeAnimal(id entity.EntityID) {
 	if a := g.animals.Ref(id); a != nil && a.FeedClaim != 0 {
-		g.reserve.ReleaseEntity(id, a.FeedClaim) // a tame eater's stack is free again
+		g.reserve.ReleaseEntity(id, a.FeedClaim) // an eater's stack is free again
 	}
 	g.reserve.ReleaseTarget(id) // RES-1: claims on it (a tamer, a hunter) end
 	delete(g.logs, id)

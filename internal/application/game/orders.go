@@ -312,7 +312,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 
 func (g *Game) busyBy(id, target entity.EntityID) string {
 	if owner, taken := g.reserve.EntityOwner(target); taken && owner != id {
-		return ReasonBusyTarget + g.name(owner)
+		return ReasonBusyTarget + g.killerName(owner)
 	}
 	return ""
 }

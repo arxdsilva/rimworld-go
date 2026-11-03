@@ -9,7 +9,10 @@
 // the wiki's Forbidden page is missing, see the gap analysis):
 //   - a thing that falls when a pawn or animal dies (its body, weapon, a
 //     thief's haul) starts forbidden when it lands outside the home area;
-//     a hunter's or predator's kill does not, its killer takes it;
+//     a hunter's kill does not, its killer takes it (a colonist hunting
+//     that prey, a tame animal on its hunt); a wild predator's kill is a
+//     death like any other, which it holds by reservation only while it
+//     feeds (AL-1, AL-2);
 //   - loot found on the map (ruins, vaults, caskets) starts forbidden;
 //   - the Haul things mark and an order on the stack allow it.
 package allow
@@ -147,8 +150,8 @@ func (f Forbids) Ordered(id entity.EntityID) {
 // forbidden: outside the home area (vanilla SetForbiddenIfOutsideHomeArea).
 func (f Forbids) DropForbidden(x, y int) bool { return !f.h.InHome(x, y) }
 
-// CorpseForbidden is DropForbidden for a body, except a kill its killer
-// takes: a hunter on its hunt, a predator's meal (taken is true).
+// CorpseForbidden is DropForbidden for a body, except a kill its hunter
+// takes (taken is true; the game's killTaken says which).
 func (f Forbids) CorpseForbidden(x, y int, taken bool) bool {
 	return !taken && f.DropForbidden(x, y)
 }

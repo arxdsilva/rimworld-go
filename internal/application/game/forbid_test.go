@@ -148,8 +148,8 @@ func TestDeathDropsForbiddenOutsideHome(t *testing.T) {
 	}
 }
 
-// STK-AL: a carcass outside Home starts forbidden unless its hunter or a
-// predator takes the kill.
+// STK-AL: a carcass outside Home starts forbidden unless its hunter takes
+// the kill (a wild predator's: allow_drops_test.go).
 func TestCarcassForbiddenOutsideHome(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 24, Height: 12})

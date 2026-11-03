@@ -1661,6 +1661,7 @@ func (g *Game) putStack(id entity.EntityID, st item.Stack) {
 }
 
 func (g *Game) deleteItem(id entity.EntityID) {
+	g.stackGone(id)             // forbid.go (AL-3): whoever walks to it stops now
 	g.reserve.ReleaseTarget(id) // RES-1: its claimants' jobs find it gone
 	g.idx.ground.Moved()
 	g.stacks.Delete(id)

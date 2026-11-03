@@ -106,3 +106,38 @@ func TestGatherStopsWhenFull(t *testing.T) {
 		t.Fatalf("a full load takes nothing more: %+v %+v", j, f.stacks)
 	}
 }
+
+// AL-3: only a walk to the stack that went ends.
+func TestTargetGone(t *testing.T) {
+	const gone, other, load = entity.EntityID(10), entity.EntityID(11), entity.EntityID(12)
+	for _, c := range []struct {
+		name     string
+		j        job.Record
+		changed  bool
+		state    job.State
+		fail     job.FailReason
+		pathKept bool
+	}{
+		{name: "walking to it empty-handed", j: job.Record{Kind: job.Haul, State: job.Goto, Target: gone}, changed: true, state: job.Fail, fail: job.TargetGone},
+		{name: "a bill's walk", j: job.Record{Kind: job.Bill, State: job.Goto, Target: gone}, changed: true, state: job.Fail, fail: job.TargetGone},
+		{name: "a gather's next stack, load in hand", j: job.Record{Kind: job.HaulIngredients, State: job.Goto, Target: gone, Carry: load}, changed: true, state: job.Fail, fail: job.TargetGone},
+		{name: "a hauler's pile on the way", j: job.Record{Kind: job.Haul, State: job.Goto, Target: other, Carry: load, Pickups: []entity.EntityID{gone, 3}}, changed: true, state: job.Do},
+		{name: "at work on it", j: job.Record{Kind: job.Eat, State: job.Do, Target: gone}, state: job.Do},
+		{name: "a gather picking it up", j: job.Record{Kind: job.HaulIngredients, State: job.Do, Target: gone, Carry: load}, state: job.Do},
+		{name: "a load carried from it", j: job.Record{Kind: job.Haul, State: job.Goto, Target: gone, Carry: load}, state: job.Goto, pathKept: true},
+		{name: "carrying it to a grave", j: job.Record{Kind: job.Bury, State: job.Goto, Target: gone, Carry: gone}, state: job.Goto, pathKept: true},
+		{name: "a bill's fetched load", j: job.Record{Kind: job.Bill, State: job.Goto, Target: gone, Carry: load}, state: job.Goto, pathKept: true},
+		{name: "a later pile", j: job.Record{Kind: job.Haul, State: job.Goto, Target: other, Carry: load, Pickups: []entity.EntityID{other, 3, gone, 3}}, state: job.Goto, pathKept: true},
+		{name: "piles all done", j: job.Record{Kind: job.Haul, State: job.Goto, Target: other, Carry: load, Pickups: []entity.EntityID{gone, 3}, PickupI: 2}, state: job.Goto, pathKept: true},
+		{name: "another stack", j: job.Record{Kind: job.Haul, State: job.Goto, Target: other}, state: job.Goto, pathKept: true},
+	} {
+		j := c.j
+		j.Path = []pathing.Point{{X: 1, Y: 1}}
+		if got := TargetGone(&j, gone); got != c.changed || j.State != c.state || j.Fail != c.fail {
+			t.Errorf("%s: changed %v, %+v", c.name, got, j)
+		}
+		if c.pathKept != (len(j.Path) == 1) && c.state != job.Fail && c.state != job.Do {
+			t.Errorf("%s: path %+v", c.name, j.Path)
+		}
+	}
+}
