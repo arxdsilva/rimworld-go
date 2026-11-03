@@ -13,6 +13,7 @@ The colony's prisoners: each one's state (interaction mode, resistance, next vis
 ## Allowed Dependencies
 - Domain value types (`pawn/prisoner`, `pawn/health`, `pawn/needs`, `ai/job`, `sim/entity`).
 - Nothing from `internal/application/game` or its other sub-packages: the roles in `deps.go` are the only way in.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - `internal/application/game`, adapters, platform, Ebitengine, global RNG, wall clock.

@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/platform/config"
+	"rimworld-go/pkg/randx"
 )
 
 // Grass as composed tufts (PLAY-010 §2.11, ART §9.1). A grassy tile is
@@ -144,7 +145,7 @@ func GrassCopies(x, y int, growth uint8, limit int, tallTile bool, out []TuftCop
 		order = tuftOrder[9][:n]
 	}
 	th := sprite.TileHash(x, y)
-	sym := art.Mix64(th^0x67726173) & 7
+	sym := randx.Mix64(th^0x67726173) & 7
 	size := tuftGrowthSize(TuftCopies(growth))
 	for k, cell := range order {
 		cx, cy := int(cell%3), int(cell/3)
@@ -157,7 +158,7 @@ func GrassCopies(x, y int, growth uint8, limit int, tallTile bool, out []TuftCop
 		if sym&4 != 0 {
 			cx, cy = cy, cx
 		}
-		h := art.Mix64(th ^ uint64(k+1)*0x9E3779B97F4A7C15 ^ 0x7475667473)
+		h := randx.Mix64(th ^ uint64(k+1)*0x9E3779B97F4A7C15 ^ 0x7475667473)
 		u := func(shift uint) float64 { return float64(h>>shift&0xffff) / 65535 }
 		c := TuftCopy{
 			Dx:      tuftAxis(cx, u(0)),
@@ -433,7 +434,7 @@ func GrassKeep(level string, x, y, n int) int {
 	}
 	f := float64(n) * d
 	k := int(f)
-	if u := float64(art.Mix64(sprite.TileHash(x, y)^0x7468696e)>>11) / (1 << 53); u < f-float64(k) {
+	if u := float64(randx.Mix64(sprite.TileHash(x, y)^0x7468696e)>>11) / (1 << 53); u < f-float64(k) {
 		k++
 	}
 	return k
@@ -668,7 +669,7 @@ func (e *Layer) GrassChunkSig(v *render.View, w *game.WorldView, cx, cy int, c C
 			if GrassTallAt(code, x, y) {
 				n |= 16
 			}
-			h = art.Mix64(h ^ uint64(y*w.TerrainW+x)<<5 ^ n)
+			h = randx.Mix64(h ^ uint64(y*w.TerrainW+x)<<5 ^ n)
 		}
 	}
 	if h == 0 {
@@ -681,15 +682,15 @@ func (e *Layer) GrassChunkSig(v *render.View, w *game.WorldView, cx, cy int, c C
 // quantised snow) into h.
 func (e *Layer) GrassLookSig(w *game.WorldView, h uint64) uint64 {
 	t := sprite.GrassTint(w.BiomeKey)
-	h = art.Mix64(h ^ uint64(math.Float32bits(t[0]))<<32 ^ uint64(math.Float32bits(t[1])))
-	h = art.Mix64(h ^ uint64(math.Float32bits(t[2])))
+	h = randx.Mix64(h ^ uint64(math.Float32bits(t[0]))<<32 ^ uint64(math.Float32bits(t[1])))
+	h = randx.Mix64(h ^ uint64(math.Float32bits(t[2])))
 	if grassDormant(w) {
-		h = art.Mix64(h ^ 0xd0)
+		h = randx.Mix64(h ^ 0xd0)
 	}
 	if d := grassDensity(e.Grass.Level); d < 1 { // the detail level thins the baked tufts
-		h = art.Mix64(h ^ uint64(d*100))
+		h = randx.Mix64(h ^ uint64(d*100))
 	}
-	return art.Mix64(h ^ uint64(grassSnowQ(e.Snow)*20))
+	return randx.Mix64(h ^ uint64(grassSnowQ(e.Snow)*20))
 }
 
 // GrassBakeKey is chunk version ver with sig folded in (sig 0: no grass,
@@ -698,7 +699,7 @@ func GrassBakeKey(ver, sig uint64) uint64 {
 	if sig == 0 {
 		return ver
 	}
-	return ver ^ art.Mix64(sig^0x9e3779b97f4a7c15)
+	return ver ^ randx.Mix64(sig^0x9e3779b97f4a7c15)
 }
 
 // GrassMapSig is chunk (cx, cy)'s grass tint signature for the map bake:
@@ -732,16 +733,16 @@ func (e *Layer) GrassMapSig(v *render.View, w *game.WorldView, cx, cy int, ver, 
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			if d := grassTintBucket(w, x, y); d != 0 {
-				h = art.Mix64(h ^ uint64(y*w.TerrainW+x)<<5 ^ uint64(d))
+				h = randx.Mix64(h ^ uint64(y*w.TerrainW+x)<<5 ^ uint64(d))
 			}
 		}
 	}
 	if h != 0 {
 		t := sprite.GrassTint(w.BiomeKey)
-		h = art.Mix64(h ^ uint64(math.Float32bits(t[0]))<<32 ^ uint64(math.Float32bits(t[1])))
-		h = art.Mix64(h ^ uint64(math.Float32bits(t[2])))
+		h = randx.Mix64(h ^ uint64(math.Float32bits(t[0]))<<32 ^ uint64(math.Float32bits(t[1])))
+		h = randx.Mix64(h ^ uint64(math.Float32bits(t[2])))
 		if grassDormant(w) {
-			h = art.Mix64(h ^ 0xd0)
+			h = randx.Mix64(h ^ 0xd0)
 		}
 	}
 	key.sig = h

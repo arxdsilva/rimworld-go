@@ -16,6 +16,7 @@ The main menu screen: the hero splash and the colony diorama behind it, the butt
 - Leaves: `art`, `gfx`, `ids`, `ports`, `uikit`.
 - `platform/assetroot` (asset path), `platform/config` (settings), `pkg/flatyaml` (the diorama's metadata).
 - Ebitengine (`ebiten`, `vector`); stdlib (`errors`, `image`, `image/png`, `os`, `path/filepath`, `sort`, `strings`, `time`).
+- `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

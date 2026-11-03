@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/noise"
 	"rimworld-go/pkg/randx"
 )
@@ -271,14 +272,7 @@ func (g *siteGen) in(x, y int) bool { return x >= 0 && y >= 0 && x < g.w && y < 
 
 // startDist is the Chebyshev distance from the map centre.
 func (g *siteGen) startDist(x, y int) int {
-	return max(abs(x-g.cx), abs(y-g.cy))
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
+	return max(mathx.Abs(x-g.cx), mathx.Abs(y-g.cy))
 }
 
 // setWater writes water t at i, or fallback inside the start guard.
@@ -807,7 +801,7 @@ func (g *siteGen) road() {
 		}
 		sx, sy := starts[d][0], starts[d][1]
 		dx, dy := float64(g.cx-sx), float64(g.cy-sy)
-		n := max(abs(g.cx-sx), abs(g.cy-sy))
+		n := max(mathx.Abs(g.cx-sx), mathx.Abs(g.cy-sy))
 		horiz := math.Abs(dx) >= math.Abs(dy)
 		for k := 0; k <= n; k++ {
 			x := sx + int(math.Round(dx*float64(k)/float64(max(1, n))))

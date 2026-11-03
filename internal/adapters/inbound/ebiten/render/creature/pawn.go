@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // Pawn figure animation (ART §27): one standing sprite per facing moved
@@ -410,7 +411,7 @@ func (c *Set) bedTint(v *render.View, b game.BuildingView) color.NRGBA {
 	if len(cloth) == 0 {
 		return color.NRGBA{}
 	}
-	return v.Art.Tint("cloth", cloth[art.Mix64(uint64(b.ID))%uint64(len(cloth))])
+	return v.Art.Tint("cloth", cloth[randx.Mix64(uint64(b.ID))%uint64(len(cloth))])
 }
 
 // slungScale is the size of a patient slung over a rescuer's shoulders;

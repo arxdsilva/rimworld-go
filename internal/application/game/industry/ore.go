@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/randx"
 )
 
 // Deep ore (wiki: Ground-penetrating scanner, Deep drill): lumps of ore
@@ -37,19 +38,11 @@ var oreDefs = [...]oreDef{
 // oreFinds is how many candidate centres a find tries (orig).
 const oreTries = 64
 
-// mix is splitmix64's finaliser: a find's hash stream.
-func mix(v uint64) uint64 {
-	v += 0x9e3779b97f4a7c15
-	v = (v ^ v>>30) * 0xbf58476d1ce4e5b9
-	v = (v ^ v>>27) * 0x94d049bb133111eb
-	return v ^ v>>31
-}
-
 // stream is a find's numbers: each call the next hash.
 type stream struct{ v uint64 }
 
 func (r *stream) next(n int) int {
-	r.v = mix(r.v)
+	r.v = randx.SplitMix64(r.v)
 	return int(r.v % uint64(max(1, n)))
 }
 

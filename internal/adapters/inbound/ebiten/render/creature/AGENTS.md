@@ -14,6 +14,7 @@ Draws pawns and animals: figure layers and poses, the animal body player, held i
 - Layers: `render` (the view), `render/light`, `render/motion`, `render/sprite`.
 - `application/game` read models; domain `sim/entity`.
 - Ebitengine (`ebiten`, `vector`); stdlib (`cmp`, `fmt`, `image`, `image/color`, `math`, `slices`, `strconv`, `strings`).
+- `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

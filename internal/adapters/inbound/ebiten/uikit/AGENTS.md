@@ -12,6 +12,7 @@ The immediate-mode widget kit (NG-1 §1.4): per-`Update` widget declarations wit
 ## Allowed Dependencies
 - Leaves: `gfx`, `inputframe`.
 - Ebitengine (`ebiten`); stdlib (`fmt`, `image/color`, `math`, `slices`, `sort`, `strconv`, `strings`); `testing` in tests.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

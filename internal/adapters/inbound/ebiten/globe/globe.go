@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
 	"rimworld-go/internal/domain/world/site"
+	"rimworld-go/pkg/randx"
 )
 
 // The landing-site globe (NG-1 §2.7, plan §1.2): the planet's hex tiles as
@@ -462,7 +463,7 @@ func (g *View) tileColour(i int) rgb {
 		}
 	}
 	// A touch of per-tile variation so the hex mosaic reads.
-	j := float32(art.Mix64(uint64(i)*0x9E3779B97F4A7C15+0x77)>>40) / float32(1<<24)
+	j := float32(randx.Mix64(uint64(i)*0x9E3779B97F4A7C15+0x77)>>40) / float32(1<<24)
 	return scaleRGB(c, 0.97+0.06*j)
 }
 
@@ -1173,10 +1174,10 @@ func BakeStarfield(seed uint64, w, h int, strength, skyFade float64) *image.NRGB
 	img := image.NewNRGBA(image.Rect(0, 0, max(w, 1), max(h, 1)))
 	n := w * h / 2600
 	for i := 0; i < n; i++ {
-		hs := art.Mix64(seed ^ uint64(i+1)*0x9E3779B97F4A7C15)
-		fx, fy := hashUnit(hs), hashUnit(art.Mix64(hs))
-		b := hashUnit(art.Mix64(hs ^ 0x51))
-		tone := hashUnit(art.Mix64(hs ^ 0xA7))
+		hs := randx.Mix64(seed ^ uint64(i+1)*0x9E3779B97F4A7C15)
+		fx, fy := hashUnit(hs), hashUnit(randx.Mix64(hs))
+		b := hashUnit(randx.Mix64(hs ^ 0x51))
+		tone := hashUnit(randx.Mix64(hs ^ 0xA7))
 		bright := (0.25 + 0.75*b*b*b) * strength * (1 - skyFade*fy)
 		c := [3]float64{0.85 + 0.15*tone, 0.88, 1 - 0.18*tone}
 		if tone > 0.8 {

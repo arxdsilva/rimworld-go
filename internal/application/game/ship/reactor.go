@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/randx"
 )
 
 // Countdown raids. The wiki says only that a waking reactor draws
@@ -99,8 +100,5 @@ func sortReactors(rs []Reactor) {
 
 // hash mixes seed and n (splitmix64's finaliser).
 func hash(seed, n uint64) uint64 {
-	z := seed + n*0x9E3779B97F4A7C15
-	z = (z ^ z>>30) * 0xBF58476D1CE4E5B9
-	z = (z ^ z>>27) * 0x94D049BB133111EB
-	return z ^ z>>31
+	return randx.Mix64(seed + n*0x9E3779B97F4A7C15)
 }

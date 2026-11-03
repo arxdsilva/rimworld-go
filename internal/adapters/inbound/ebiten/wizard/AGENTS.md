@@ -18,6 +18,7 @@ The New Colony flow (NG-1): scenario choice and the Scenario Editor, storyteller
 - `application/game` read models and setup (`game.Setup`); domain: `animal`, `building/construction`, `difficulty`, `economy/item`, `faction`, `pawn/look`, `pawn/pawngen`, `pawn/trait`, `research`, `scenario`, `sim/clock`, `storyteller`, `world/biome`, `world/planet`, `world/plant`, `world/site`, `world/temperature`.
 - `platform/config` (settings), `platform/input`.
 - Ebitengine (`ebiten`); stdlib (`bytes`, `errors`, `fmt`, `hash/fnv`, `image/color`, `math`, `math/rand/v2`).
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

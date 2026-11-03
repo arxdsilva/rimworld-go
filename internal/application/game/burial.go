@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/randx"
 )
 
 // Burial and cremation (SIM-017): bodies become corpse items, haulers
@@ -57,11 +58,7 @@ func dayOf(t uint64) int { return int(t/clock.TicksPerDay) + 1 }
 
 // headstoneOf picks one of the four headstone styles from the occupant.
 func headstoneOf(id entity.EntityID) int {
-	x := uint64(id) + 0x9e3779b97f4a7c15
-	x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9
-	x = (x ^ (x >> 27)) * 0x94d049bb133111eb
-	x ^= x >> 31
-	return int(x % 4)
+	return int(randx.SplitMix64(uint64(id)) % 4)
 }
 
 // spawnCorpse turns a pawn that just died into a human corpse item lying

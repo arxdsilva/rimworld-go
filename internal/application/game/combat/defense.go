@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Defences. Raiders and wild animals cannot open the colony's doors, so a
@@ -210,7 +211,7 @@ func (br *Breach) dig(id entity.EntityID, j job.Record) {
 		return
 	}
 	px, py, _ := h.Pos(id)
-	if abs(px-j.DestX) > 1 || abs(py-j.DestY) > 1 {
+	if mathx.Abs(px-j.DestX) > 1 || mathx.Abs(py-j.DestY) > 1 {
 		j.State, j.Fail = job.Fail, job.Unreachable
 		h.SetJob(id, j)
 		return
@@ -236,7 +237,7 @@ func (br *Breach) dig(id entity.EntityID, j job.Record) {
 func touches(x, y int, b construction.Building) bool {
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 	for _, c := range cells {
-		if abs(c[0]-x) <= 1 && abs(c[1]-y) <= 1 {
+		if mathx.Abs(c[0]-x) <= 1 && mathx.Abs(c[1]-y) <= 1 {
 			return true
 		}
 	}

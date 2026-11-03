@@ -13,6 +13,7 @@ What the player has selected: one pawn, animal, item, plant, building, frame or 
 - `ports` (the roles `Shell` embeds).
 - `application/game` read models; domain `sim/clock`, `sim/command`, `sim/entity`.
 - Standard library: `slices`, `strconv`, `strings`, `testing` (tests).
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

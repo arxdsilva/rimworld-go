@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // World fire presentation (PLAY-015 §5.3): the flame sprite of every
@@ -44,7 +45,7 @@ func FireClassOf(size int) string {
 // counter advances every fireFrameTicks presentation frames, offset by a
 // hash of the cell so neighbouring flames do not flicker in step.
 func FireFrameOf(present uint64, x, y int) int {
-	off := art.Mix64(uint64(x)*73856093^uint64(y)*19349663) % FireFrames
+	off := randx.Mix64(uint64(x)*73856093^uint64(y)*19349663) % FireFrames
 	return int((present/fireFrameTicks + off) % FireFrames)
 }
 

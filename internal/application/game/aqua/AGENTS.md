@@ -9,7 +9,7 @@ Fish tanks on one map (FISH-*, `.cursor/FISH_TANK_PLAN.md` §3): each tank's sta
 - Roles in `deps.go`; the game's adapter is `tankHost` in `game/fuel.go`.
 
 ## Allowed Dependencies
-- Domain packages only. Nothing from `internal/application/game` or adapters.
+- Domain packages and `pkg/mathx` (`Abs`) only. Nothing from `internal/application/game` or adapters.
 
 ## Invariants
 - No dice, no wall clock; tanks walk in id order. `Phase` walks its own list, never the buildings.

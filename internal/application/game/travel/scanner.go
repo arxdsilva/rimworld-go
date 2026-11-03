@@ -11,6 +11,8 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/planet"
+	"rimworld-go/pkg/mathx"
+	"rimworld-go/pkg/randx"
 )
 
 // The long-range mineral scanner (wiki: Long-range mineral scanner): a
@@ -45,17 +47,9 @@ func Minerals() []Mineral {
 	}
 }
 
-// mix is splitmix64's finaliser: a find's hash stream.
-func mix(v uint64) uint64 {
-	v += 0x9e3779b97f4a7c15
-	v = (v ^ v>>30) * 0xbf58476d1ce4e5b9
-	v = (v ^ v>>27) * 0x94d049bb133111eb
-	return v ^ v>>31
-}
-
 // hashN is the next number below n of the stream at *v.
 func hashN(v *uint64, n int) int {
-	*v = mix(*v)
+	*v = randx.SplitMix64(*v)
 	return int(*v % uint64(max(1, n)))
 }
 
@@ -108,7 +102,7 @@ func (o scanner) AssignScan(id entity.EntityID, tries int) bool {
 			if !ok || !o.h.Free(id, sid, job.ScanMinerals, spot[0], spot[1]) {
 				continue
 			}
-			if d := abs(px-spot[0]) + abs(py-spot[1]); d < bestD || d == bestD && sid < best {
+			if d := mathx.Abs(px-spot[0]) + mathx.Abs(py-spot[1]); d < bestD || d == bestD && sid < best {
 				best, bestD, bx, by = sid, d, spot[0], spot[1]
 			}
 		}

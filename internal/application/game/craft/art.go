@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/economy/quality"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Art is the sculptures colonists carve (PRD-3): a sculpting bench bill
@@ -130,7 +131,7 @@ func (a *Art) cell(k construction.Kind, sx, sy int) (int, int, bool) {
 	for r := 1; r <= artReach; r++ {
 		for dy := -r; dy <= r; dy++ {
 			for dx := -r; dx <= r; dx++ {
-				if max(abs(dx), abs(dy)) != r {
+				if max(mathx.Abs(dx), mathx.Abs(dy)) != r {
 					continue
 				}
 				x, y := sx+dx, sy+dy

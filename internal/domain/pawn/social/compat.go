@@ -1,18 +1,13 @@
 package social
 
-func splitmix64(x uint64) uint64 {
-	x += 0x9E3779B97F4A7C15
-	x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9
-	x = (x ^ (x >> 27)) * 0x94D049BB133111EB
-	return x ^ (x >> 31)
-}
+import "rimworld-go/pkg/randx"
 
 // pairHash is symmetric in a and b: it hashes the canonical (min,max).
 func pairHash(seed uint64, a, b ID) uint64 {
 	if a > b {
 		a, b = b, a
 	}
-	return splitmix64(splitmix64(a^seed) ^ splitmix64(b+0x1234567))
+	return randx.SplitMix64(randx.SplitMix64(a^seed) ^ randx.SplitMix64(b+0x1234567))
 }
 
 // Compatibility is how well a and b get on, permille: a stable random

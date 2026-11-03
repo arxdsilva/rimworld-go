@@ -3,6 +3,7 @@ package craft
 import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // facility is one kind of building that links to nearby benches and
@@ -78,7 +79,7 @@ func (f *Facilities) count(bench entity.EntityID) linked {
 			continue
 		}
 		for i, fc := range facilities {
-			if o.Kind != fc.Kind || n[i] >= fc.Max || max(abs(o.X-b.X), abs(o.Y-b.Y)) > fc.Reach {
+			if o.Kind != fc.Kind || n[i] >= fc.Max || max(mathx.Abs(o.X-b.X), mathx.Abs(o.Y-b.Y)) > fc.Reach {
 				continue
 			}
 			n[i]++
@@ -87,11 +88,4 @@ func (f *Facilities) count(bench entity.EntityID) linked {
 		}
 	}
 	return l
-}
-
-func abs(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
 }

@@ -16,6 +16,7 @@ The renderer's world pipeline: the draw order of one frame (ground, floors, zone
 - Layers: `render` (the view), `render/creature`, `render/cue`, `render/env`, `render/light`, `render/motion`, `render/overlay`, `render/sprite`.
 - `application/game` read models; domain `sim/clock`, `sim/entity`.
 - Ebitengine (`ebiten`, `vector`); stdlib (`cmp`, `fmt`, `image`, `image/color`, `math`).
+- `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package (`Renderer` is not imported; the root calls `r.pipeline().Draw(screen)`) and `cmd/`.

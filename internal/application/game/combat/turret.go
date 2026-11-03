@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Sentry turrets (PLAY-024). A powered turret looks for a target on a
@@ -505,7 +506,7 @@ func aimFrame(px, py, qx, qy int, prev int8) int8 {
 	if u == 0 && v == 0 {
 		return prev
 	}
-	au, av := abs(u), abs(v)
+	au, av := mathx.Abs(u), mathx.Abs(v)
 	// s: the 22.5° sector within the quadrant, by the angle off the u axis
 	// against tan 11.25°, 33.75°, 56.25° and 78.75° (in thousandths)
 	s := 0

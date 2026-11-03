@@ -1,6 +1,10 @@
 package architect
 
-import "sort"
+import (
+	"sort"
+
+	"rimworld-go/pkg/mathx"
+)
 
 // Architect draw styles (UI-016): drag tools draw a line, a filled or
 // empty rectangle, or a filled or empty oval. Q/E cycle the style on drag
@@ -95,7 +99,7 @@ func sign(v int) int {
 
 // constrainEnd moves the drag end so the box is square (Ctrl).
 func constrainEnd(x0, y0, x1, y1 int) (int, int) {
-	n := max(Abs(x1-x0), Abs(y1-y0))
+	n := max(mathx.Abs(x1-x0), mathx.Abs(y1-y0))
 	return x0 + sign(x1-x0)*n, y0 + sign(y1-y0)*n
 }
 

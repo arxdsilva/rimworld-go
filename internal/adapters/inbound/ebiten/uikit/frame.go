@@ -4,6 +4,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/pkg/mathx"
 )
 
 // Tooltip metrics (NG-1 §1.4).
@@ -123,13 +124,6 @@ func (k *Kit) Begin() {
 	k.mx, k.my = mx, my
 }
 
-func absInt(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-
 // tipTick advances the tooltip timer from the frame that just ended.
 func (k *Kit) tipTick(mx, my int, pressing bool) {
 	id := k.Hot
@@ -144,7 +138,7 @@ func (k *Kit) tipTick(mx, my int, pressing bool) {
 		k.tip.x, k.tip.y = mx, my
 		return
 	}
-	moved := absInt(mx-k.tip.x) > 3 || absInt(my-k.tip.y) > 3
+	moved := mathx.Abs(mx-k.tip.x) > 3 || mathx.Abs(my-k.tip.y) > 3
 	if id != k.tip.id || moved {
 		k.tip.id, k.TipFrames = id, 1
 		k.tip.x, k.tip.y = mx, my

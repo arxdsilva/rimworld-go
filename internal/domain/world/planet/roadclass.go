@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/pkg/randx"
 )
 
 // Ancient road network (WG-07, v1): an extra minimum spanning tree over a
@@ -33,7 +34,7 @@ func baseRoadClass(p *Planet, e [2]int32, k int) RoadClass {
 	if industrial {
 		return StoneRoad
 	}
-	if unit(mix(p.Seed^saltAncient), int(e[0])*7919+int(e[1])+k*104729) < 0.5 {
+	if unit(randx.Mix64(p.Seed^saltAncient), int(e[0])*7919+int(e[1])+k*104729) < 0.5 {
 		return Path
 	}
 	return DirtRoad

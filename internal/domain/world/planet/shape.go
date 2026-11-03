@@ -2,6 +2,8 @@ package planet
 
 import (
 	"math"
+
+	"rimworld-go/pkg/mathx"
 )
 
 // Coverage cap: the pole sits within ±poleLatMax of the equator so every
@@ -11,7 +13,7 @@ const poleLatMax = 15.0
 // CoverageCos is the cosine of the cap's angular radius acos(1−2c) for a
 // coverage percentage (≥ 100 keeps everything).
 func CoverageCos(coverage int) float64 {
-	c := float64(clampInt(coverage, 1, 100)) / 100
+	c := float64(mathx.Clamp(coverage, 1, 100)) / 100
 	if c >= 1 {
 		return -2
 	}
@@ -94,7 +96,5 @@ func (p *Planet) Neighbours(i int) []int32 { return p.Neigh[p.NeighOff[i]:p.Neig
 
 // TileCorners is tile i's polygon (counter-clockwise from outside).
 func (p *Planet) TileCorners(i int) [][3]float32 { return p.Corners[p.CornerOff[i]:p.CornerOff[i+1]] }
-
-func clampInt(v, lo, hi int) int { return max(lo, min(hi, v)) }
 
 func clampF(v, lo, hi float64) float64 { return math.Max(lo, math.Min(hi, v)) }

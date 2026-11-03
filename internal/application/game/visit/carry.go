@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Carrying the wounded home (MAP-23; wiki: Visitor: "When leaving, visitors
@@ -67,7 +68,7 @@ func (v Visits) fetching(r *Rec, x, y int, j job.Record) bool {
 	}
 	r.Fetch = 0
 	tx, ty := h.Pos(t)
-	done := j.State == job.Complete && max(abs(x-tx), abs(y-ty)) <= 1
+	done := j.State == job.Complete && max(mathx.Abs(x-tx), mathx.Abs(y-ty)) <= 1
 	h.Release(r.ID)
 	h.SetJob(r.ID, job.Record{})
 	if !done {
@@ -92,7 +93,7 @@ func (v Visits) woundedFor(r *Rec, x, y int) (entity.EntityID, bool) {
 			continue
 		}
 		ox, oy := h.Pos(o.ID)
-		if d := max(abs(x-ox), abs(y-oy)); best == 0 || d < bestD || d == bestD && o.ID < best {
+		if d := max(mathx.Abs(x-ox), mathx.Abs(y-oy)); best == 0 || d < bestD || d == bestD && o.ID < best {
 			best, bestD = o.ID, d
 		}
 	}
@@ -125,11 +126,4 @@ func (v Visits) goHome(id entity.EntityID) {
 		h.Depart(t)
 	}
 	h.Depart(id)
-}
-
-func abs(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
 }

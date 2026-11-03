@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/fire"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 )
 
 // PLAY-021 (INFRA): the conduit layer in the places that enumerate layers:
@@ -331,7 +332,7 @@ func TestDeconstructConduitUnderWall(t *testing.T) {
 func (g *Game) refundSomewhereNear(k item.Kind, x, y int) bool {
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
-		if ok && st.Kind == k && st.Carrier == 0 && abs(st.X-x) <= 2 && abs(st.Y-y) <= 2 {
+		if ok && st.Kind == k && st.Carrier == 0 && mathx.Abs(st.X-x) <= 2 && mathx.Abs(st.Y-y) <= 2 {
 			return true
 		}
 	}

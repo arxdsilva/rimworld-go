@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // View fills building id's AX fields for travel's kinds (b is it). It
@@ -117,7 +118,7 @@ func (o caskets) nearestCasket(x, y int, k construction.Kind) entity.EntityID {
 		if !ok || b.Kind != k || !o.freeCasket(id, true) {
 			continue
 		}
-		if d := abs(b.X-x) + abs(b.Y-y); d < bd {
+		if d := mathx.Abs(b.X-x) + mathx.Abs(b.Y-y); d < bd {
 			best, bd = id, d
 		}
 	}

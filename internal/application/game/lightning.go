@@ -2,8 +2,8 @@ package game
 
 import (
 	"rimworld-go/internal/domain/sim/clock"
-	"rimworld-go/internal/domain/world/fire"
 	"rimworld-go/internal/domain/world/weather"
+	"rimworld-go/pkg/randx"
 )
 
 // Lightning (PLAY-015 §5.2): during a storm a bolt strikes a random
@@ -34,7 +34,7 @@ type StrikeView struct {
 
 // strikeTick is the tick of slot's strike.
 func strikeTick(seed, slot uint64) uint64 {
-	return slot*strikeSlot + clock.TicksPerHour/2 + fire.Mix(seed^slot)%clock.TicksPerHour
+	return slot*strikeSlot + clock.TicksPerHour/2 + randx.SplitMix64(seed^slot)%clock.TicksPerHour
 }
 
 // stepLightning strikes when the storm's schedule says so (called every
@@ -76,7 +76,7 @@ func (g *Game) strikeCell(seed, slot uint64) (int, int, bool) {
 		return 0, 0, false
 	}
 	for try := uint64(0); try < strikeTries; try++ {
-		r := fire.Mix(seed ^ fire.Mix(slot<<8|try))
+		r := randx.SplitMix64(seed ^ randx.SplitMix64(slot<<8|try))
 		x, y := int(r%w), int((r>>32)%h)
 		if g.underSky(x, y) {
 			return x, y, true

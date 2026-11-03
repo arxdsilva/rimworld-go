@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // runDraw draws one queued object.
@@ -111,7 +112,7 @@ func (o *Objects) DrawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile 
 		}
 		t := none
 		if (b.Kind == "bed" || b.Kind == "double bed" || b.Kind == "armchair" || b.Kind == "couch" || b.Kind == "animal flap") && len(l.cloth) > 0 { // A2: couch, flap
-			t = o.art().Tint("cloth", l.cloth[art.Mix64(uint64(b.ID))%uint64(len(l.cloth))])
+			t = o.art().Tint("cloth", l.cloth[randx.Mix64(uint64(b.ID))%uint64(len(l.cloth))])
 		}
 		// stone walls, fences and floors take their stone's tint; the
 		// sculptures and the barricade carry a stone_tint mask instead

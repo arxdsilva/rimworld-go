@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/pkg/flatyaml"
+	"rimworld-go/pkg/randx"
 )
 
 // The main-menu background: a dusk colony rendered in Blender
@@ -143,8 +144,8 @@ func fract(x float64) float64 { return x - math.Floor(x) }
 // mote is dust speck i at tick t: drifts right and up, wraps, and
 // fades out before the button rail.
 func mote(i int, t float64, sw, sh int) (x, y, r float32, alpha float64) {
-	h := art.Mix64(uint64(i)*0x9E3779B97F4A7C15 + 0x4D)
-	bx, by, f := hashUnit(h), hashUnit(art.Mix64(h)), hashUnit(art.Mix64(h^0xA5A5))
+	h := randx.Mix64(uint64(i)*0x9E3779B97F4A7C15 + 0x4D)
+	bx, by, f := hashUnit(h), hashUnit(randx.Mix64(h)), hashUnit(randx.Mix64(h^0xA5A5))
 	vx := (0.4 + 0.6*f) / 7200
 	vy := (0.2 + 0.4*f) / 7200
 	fx := fract(bx + t*vx)
@@ -258,9 +259,9 @@ func (s *Screen) DrawDiorama(screen *ebiten.Image, sw, sh int, dim float64) bool
 		sx, sy := float32(ox+p[0]*sc), float32(oy+p[1]*sc)
 		s.sh.DrawFlame(screen, sx, sy, t+float64(i)*17, tile, 1)
 		for e := 0; e < embers; e++ {
-			h := art.Mix64(uint64(i*EmberCount+e) + 0x51)
+			h := randx.Mix64(uint64(i*EmberCount+e) + 0x51)
 			ph := fract(t/150 + hashUnit(h))
-			ex := sx + float32(tile*((hashUnit(art.Mix64(h))-0.5)*0.3+0.08*math.Sin(t/40+float64(e))))
+			ex := sx + float32(tile*((hashUnit(randx.Mix64(h))-0.5)*0.3+0.08*math.Sin(t/40+float64(e))))
 			ey := sy - float32(tile*(0.25+1.3*ph))
 			vector.FillCircle(screen, ex, ey, float32(math.Max(1, tile*0.022)), fade(color.RGBA{255, 170, 80, 255}, 0.8*(1-ph)), true)
 		}

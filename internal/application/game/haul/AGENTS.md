@@ -15,5 +15,5 @@ Stockpile hauling's own rules. A consumer sub-package of `internal/application/g
 - Construction deliveries, bill product storing and trough feeding: they never gather.
 
 ## Allowed Dependencies
-- Domain value types only (`sim/entity`, `ai/job`, `ai/pathing`, `economy/item`, `building/construction`).
+- Domain value types (`sim/entity`, `ai/job`, `ai/pathing`, `economy/item`, `building/construction`) and `pkg/mathx` (`Abs`) only.
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.

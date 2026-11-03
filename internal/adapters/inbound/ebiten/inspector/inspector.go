@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // insBarStep is the vertical step of a need bar on the Needs tab.
@@ -75,7 +76,7 @@ func (a Pawn) equipNearby(p game.PawnView) []equipOption {
 		if k, ok := item.ParseKind(it.Kind); it.Carried || !ok || !(k.IsWeapon() || k.IsApparel()) {
 			continue
 		}
-		cands = append(cands, cand{it, max(abs(it.X-p.X), abs(it.Y-p.Y))})
+		cands = append(cands, cand{it, max(mathx.Abs(it.X-p.X), mathx.Abs(it.Y-p.Y))})
 	}
 	sort.Slice(cands, func(i, j int) bool {
 		if cands[i].dist != cands[j].dist {

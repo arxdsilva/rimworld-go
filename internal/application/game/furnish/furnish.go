@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/pkg/mathx"
 )
 
 // Buildings reads and writes the buildings (the host's own id slice,
@@ -129,7 +130,7 @@ func (s Pots) ToSow(x, y int) (id entity.EntityID, px, py, work int, ok bool) {
 		if !has || !Waiting(b) || b.Forbidden || s.h.Air(b.X, b.Y) < PotSowAir {
 			continue
 		}
-		if d := max(abs(b.X-x), abs(b.Y-y)); d < best {
+		if d := max(mathx.Abs(b.X-x), mathx.Abs(b.Y-y)); d < best {
 			best, id, px, py, work = d, bid, b.X, b.Y, construction.PotPlant(b.Plant).DefOf().SowWork
 		}
 	}
@@ -153,8 +154,6 @@ func (s Pots) Sow(id entity.EntityID) bool {
 	s.h.RoomsChanged()
 	return true
 }
-
-func abs(v int) int { return max(v, -v) }
 
 // Grow is plant p's growth (permille) after one PotEvery at rate
 // (permille): its grow days at full rate in growing time (one growth

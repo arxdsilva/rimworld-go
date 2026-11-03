@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/platform/input"
+	"rimworld-go/pkg/mathx"
 )
 
 // Create Characters (NG-1 §2.9): the roster, one candidate's details and
@@ -252,7 +253,7 @@ func (w pawnsPage) pawnsRoster(ng *Draft, r gfx.Rect, views []game.CandidateView
 	}
 	// A drag in progress: it ends on release and moves the candidate.
 	if d := &ng.drag; d.on {
-		if absInt(my-d.y0) > pawnDragSlop {
+		if mathx.Abs(my-d.y0) > pawnDragSlop {
 			d.moved = true
 		}
 		if !w.in().Down(inputframe.Left) {
@@ -319,13 +320,6 @@ func (w pawnsPage) pawnsRoster(ng *Draft, r gfx.Rect, views []game.CandidateView
 	}
 	uikit.StyledButton(w.kit(), "pawns.swap", gfx.Rect{X: r.X + 4, Y: by + 34, W: r.W - 8, H: 28}, swapLabel, uikit.BtnOpts{Disabled: swapReason != "", Reason: swapReason},
 		func() { w.pushSwap(ng, views, nSel) })
-}
-
-func absInt(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // candidateLine is the roster row's second line.

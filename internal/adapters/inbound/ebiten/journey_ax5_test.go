@@ -14,6 +14,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 // ax5Lay arms tool in cat from the Architect, clicks (x, y) and checks the
@@ -127,7 +128,7 @@ func TestJourneyAX5Charges(t *testing.T) {
 	// the builder stands beside it (its figure covers the tile): let it walk off
 	clear := func() bool {
 		for _, p := range j.g.Snapshot() {
-			if abs(p.X-14) <= 1 && abs(p.Y-8) <= 2 {
+			if mathx.Abs(p.X-14) <= 1 && mathx.Abs(p.Y-8) <= 2 {
 				return false
 			}
 		}
@@ -234,7 +235,7 @@ func TestJourneyAX5RocketBattery(t *testing.T) {
 	j.key("Space", 0)
 	near, spread := 0, false
 	for _, b := range j.world().Bursts {
-		if wcStr(j, b, "Blast") == "bomb" && b.Radius == 29 && abs(b.X-tx) <= 6 && abs(b.Y-ty) <= 6 {
+		if wcStr(j, b, "Blast") == "bomb" && b.Radius == 29 && mathx.Abs(b.X-tx) <= 6 && mathx.Abs(b.Y-ty) <= 6 {
 			near++
 			spread = spread || b.X != tx || b.Y != ty
 		}

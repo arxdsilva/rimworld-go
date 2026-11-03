@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 )
 
 // riverBand paints a river across the map: rows y0..y1, shallow on the
@@ -248,7 +249,7 @@ func TestRouteAndLayExported(t *testing.T) {
 		t.Fatalf("path %v", pa)
 	}
 	for k := 1; k < len(pa); k++ {
-		if dx, dy := pa[k].X-pa[k-1].X, pa[k].Y-pa[k-1].Y; max(abs(dx), abs(dy)) != 1 {
+		if dx, dy := pa[k].X-pa[k-1].X, pa[k].Y-pa[k-1].Y; max(mathx.Abs(dx), mathx.Abs(dy)) != 1 {
 			t.Fatalf("path jumps at %d: %v -> %v", k, pa[k-1], pa[k])
 		}
 	}

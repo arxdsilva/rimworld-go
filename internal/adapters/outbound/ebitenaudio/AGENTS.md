@@ -36,6 +36,7 @@ on the audio device at 48 kHz, honoring the player's volume settings.
 - `pkg/audiomanifest`, `pkg/sfxsynth` (WAV reading)
 - `internal/platform/config` (`Audio`, `Gain`, defaults)
 - standard library
+- `pkg/randx` (`Mix64`, for the variant generator)
 
 ## Forbidden dependencies
 

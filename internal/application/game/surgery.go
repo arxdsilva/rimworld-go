@@ -22,6 +22,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/pkg/mathx"
 )
 
 // Surgery (ENG-003 M1; surgery v2, MED-06). The player queues operations
@@ -670,7 +671,7 @@ func (g *Game) doSurgery(id entity.EntityID, j job.Record) {
 		return
 	}
 	pos, _ := g.positions.Get(id)
-	if pp, _ := g.positions.Get(patient); abs(pp.X-pos.X) > 1 || abs(pp.Y-pos.Y) > 1 || !g.care.Doctor.Lying(patient) {
+	if pp, _ := g.positions.Get(patient); mathx.Abs(pp.X-pos.X) > 1 || mathx.Abs(pp.Y-pos.Y) > 1 || !g.care.Doctor.Lying(patient) {
 		j.State, j.Fail = job.Fail, job.TargetGone // the patient got up
 		g.jobs.Set(id, j)
 		return

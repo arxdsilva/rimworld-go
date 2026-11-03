@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Animal life (SIM-026): growing up, old age, mating, birth, eggs and
@@ -500,7 +501,7 @@ func (g *Game) fillAnimalLife(av *AnimalView, a animal.State, now uint64) {
 		gest := animal.GestTicks(a.Species)
 		av.Pregnant = true
 		if gest > 0 && a.Pregnant > now {
-			av.PregPct = clampInt(int(100-(a.Pregnant-now)*100/gest), 0, 100)
+			av.PregPct = mathx.Clamp(int(100-(a.Pregnant-now)*100/gest), 0, 100)
 		} else {
 			av.PregPct = 100
 		}

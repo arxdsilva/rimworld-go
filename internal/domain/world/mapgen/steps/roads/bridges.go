@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 )
 
 // Crossings (MAPGEN-3, .cursor/PLAY014_PLAN.md §3.3): where a road crosses
@@ -197,7 +198,7 @@ func (rt *router) fitStrip(path []int32, r [2]int, lo int) (st strip, ka, kb int
 	mx, my = mx/cnt, my/cnt
 	ax, ay := int(path[a])%rt.w, int(path[a])/rt.w
 	bx, by := int(path[b])%rt.w, int(path[b])/rt.w
-	chord := abs(by-ay) >= abs(bx-ax)
+	chord := mathx.Abs(by-ay) >= mathx.Abs(bx-ax)
 	axes := make([]bool, 0, 3)
 	if n, found := rt.riverNormal(mx+0.5, my+0.5); river && found {
 		axes = append(axes, math.Abs(n.Y) > math.Abs(n.X))
@@ -278,7 +279,7 @@ func (rt *router) bankWalk(st *strip, ms, sgn, maxSpan int) bool {
 		return false
 	}
 	walk := func(dir int) (int, bool) {
-		for s := ms; abs(s-ms) <= maxSpan; s += dir {
+		for s := ms; mathx.Abs(s-ms) <= maxSpan; s += dir {
 			if !rt.inMap(*st, s, st.p0) || !rt.inMap(*st, s, st.p0+1) {
 				return 0, false
 			}
@@ -298,7 +299,7 @@ func (rt *router) bankWalk(st *strip, ms, sgn, maxSpan int) bool {
 	}
 	s0, ok0 := walk(-sgn)
 	s1, ok1 := walk(sgn)
-	if !ok0 || !ok1 || abs(s1-s0) > maxSpan {
+	if !ok0 || !ok1 || mathx.Abs(s1-s0) > maxSpan {
 		return false
 	}
 	st.s0, st.s1 = s0, s1
@@ -309,8 +310,8 @@ func (rt *router) bankWalk(st *strip, ms, sgn, maxSpan int) bool {
 func (rt *router) target(st strip, s int, i int32) int32 {
 	x, y := int(i)%rt.w, int(i)/rt.w
 	a, b := st.cell(rt.w, s, st.p0), st.cell(rt.w, s, st.p0+1)
-	da := abs(a%rt.w-x) + abs(a/rt.w-y)
-	db := abs(b%rt.w-x) + abs(b/rt.w-y)
+	da := mathx.Abs(a%rt.w-x) + mathx.Abs(a/rt.w-y)
+	db := mathx.Abs(b%rt.w-x) + mathx.Abs(b/rt.w-y)
 	if db < da {
 		return int32(b)
 	}
@@ -407,11 +408,4 @@ func (rt *router) layStrip(st strip, changed map[int]bool) {
 			break
 		}
 	}
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

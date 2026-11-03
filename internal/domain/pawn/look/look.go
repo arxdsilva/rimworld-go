@@ -7,7 +7,11 @@
 // larger palette still draw if a palette shrinks.
 package look
 
-import "strings"
+import (
+	"strings"
+
+	"rimworld-go/pkg/randx"
+)
 
 // Sex drives names, pronouns and art; no stat differences.
 type Sex uint8
@@ -100,16 +104,6 @@ func (l Look) BuildKey() string {
 	return p + "avg"
 }
 
-// mix64 is the splitmix64 finaliser the renderer has always used.
-func mix64(x uint64) uint64 {
-	x ^= x >> 30
-	x *= 0xBF58476D1CE4E5B9
-	x ^= x >> 27
-	x *= 0x94D049BB133111EB
-	x ^= x >> 31
-	return x
-}
-
 // Legacy reproduces today's renderer look for pawn id exactly (male,
 // average build, short/crop/bun hair), given the palette sizes the
 // renderer used (skins, hairs, cloths). Palette names are unique (they
@@ -119,7 +113,7 @@ func Legacy(id uint64, skins, hairs, cloths int) Look {
 		if n <= 0 {
 			return 0
 		}
-		return uint8(mix64(id*0x9E3779B97F4A7C15+salt) % uint64(n))
+		return uint8(randx.Mix64(id*0x9E3779B97F4A7C15+salt) % uint64(n))
 	}
 	l := Look{
 		Sex:       Male,
@@ -130,7 +124,7 @@ func Legacy(id uint64, skins, hairs, cloths int) Look {
 		Shirt:     pick(4, cloths),
 		Pants:     pick(5, cloths),
 	}
-	if mix64(id+6)%2 == 0 {
+	if randx.Mix64(id+6)%2 == 0 {
 		l.Vest = cloths > 0 // an empty palette gave the renderer "" (no vest)
 		l.VestCloth = pick(7, cloths)
 	}

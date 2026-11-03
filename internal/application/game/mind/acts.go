@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // act runs one tick of break k for id (its job j, the break ending at
@@ -155,12 +156,5 @@ func (m *Mind) rage(id entity.EntityID, j job.Record, now uint64) {
 func (m *Mind) near(a, b entity.EntityID, r int) bool {
 	ax, ay, ok := m.h.Pos(a)
 	bx, by, ok2 := m.h.Pos(b)
-	return ok && ok2 && max(abs(ax-bx), abs(ay-by)) <= r
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
+	return ok && ok2 && max(mathx.Abs(ax-bx), mathx.Abs(ay-by)) <= r
 }

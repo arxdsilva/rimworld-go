@@ -5,7 +5,11 @@
 // seed always gives the same values. It has no game concepts.
 package noise3
 
-import "math"
+import (
+	"math"
+
+	"rimworld-go/pkg/randx"
+)
 
 // Field is one seeded noise field. The zero Field is valid (seed 0).
 type Field struct {
@@ -13,21 +17,14 @@ type Field struct {
 }
 
 // New returns the field for seed.
-func New(seed uint64) Field { return Field{seed: mix(seed ^ 0x9e3779b97f4a7c15)} }
-
-// mix is the splitmix64 finaliser: a cheap, well-distributed 64-bit hash.
-func mix(z uint64) uint64 {
-	z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9
-	z = (z ^ (z >> 27)) * 0x94d049bb133111eb
-	return z ^ (z >> 31)
-}
+func New(seed uint64) Field { return Field{seed: randx.Mix64(seed ^ 0x9e3779b97f4a7c15)} }
 
 // lattice is the value in [0, 1) at integer cell (x, y, z).
 func (f Field) lattice(x, y, z int64) float64 {
 	h := f.seed
-	h = mix(h ^ uint64(x)*0x8cb92ba72f3d8dd7)
-	h = mix(h ^ uint64(y)*0xd6e8feb86659fd93)
-	h = mix(h ^ uint64(z)*0xa0761d6478bd642f)
+	h = randx.Mix64(h ^ uint64(x)*0x8cb92ba72f3d8dd7)
+	h = randx.Mix64(h ^ uint64(y)*0xd6e8feb86659fd93)
+	h = randx.Mix64(h ^ uint64(z)*0xa0761d6478bd642f)
 	return float64(h>>11) / (1 << 53)
 }
 

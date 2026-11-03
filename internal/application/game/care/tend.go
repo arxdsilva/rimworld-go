@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 const (
@@ -161,7 +162,7 @@ func (d *Doctor) DoTend(id entity.EntityID, j job.Record) {
 	}
 	if j.Target != id {
 		x, y, _ := h.Pos(id)
-		if px, py, _ := h.Pos(j.Target); abs(px-x) > 1 || abs(py-y) > 1 {
+		if px, py, _ := h.Pos(j.Target); mathx.Abs(px-x) > 1 || mathx.Abs(py-y) > 1 {
 			j.State, j.Fail = job.Fail, job.TargetGone // the patient got up and left
 			h.SetJob(id, j)
 			return

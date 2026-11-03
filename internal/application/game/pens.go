@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/pkg/mathx"
 )
 
 // Pens (PLAY-015 §2). A pen is the region around a pen marker that
@@ -306,7 +307,7 @@ func (g *Game) penTarget(id entity.EntityID, a *animal.State, pos Position) enti
 }
 
 func octileDist(ax, ay, bx, by int) int {
-	dx, dy := abs(ax-bx), abs(ay-by)
+	dx, dy := mathx.Abs(ax-bx), mathx.Abs(ay-by)
 	return 10*max(dx, dy) + 4*min(dx, dy)
 }
 
@@ -696,7 +697,7 @@ func (g *Game) placePenMarker(x, y int) (entity.EntityID, bool) {
 	for r := 0; r < max(w, h); r++ {
 		for dy := -r; dy <= r; dy++ {
 			for dx := -r; dx <= r; dx++ {
-				if max(abs(dx), abs(dy)) != r {
+				if max(mathx.Abs(dx), mathx.Abs(dy)) != r {
 					continue
 				}
 				cx, cy := x+dx, y+dy

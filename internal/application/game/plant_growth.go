@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/chunk"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/pkg/mathx"
 )
 
 // Staggered plant growth and frost (NG-1 §6.6, E4). Every chunk's plants
@@ -242,7 +243,7 @@ func (g *Game) frostNotice(k farm.Kill, from uint64) {
 // from tick since on, within reach tiles (Chebyshev), already says it.
 func noticeOnce(g *Game, x, y int, text string, since uint64, reach int) {
 	for i := len(g.messages) - 1; i >= 0 && g.messages[i].Tick >= since; i-- {
-		if m := g.messages[i]; m.Text == text && max(abs(m.X-x), abs(m.Y-y)) <= reach {
+		if m := g.messages[i]; m.Text == text && max(mathx.Abs(m.X-x), mathx.Abs(m.Y-y)) <= reach {
 			return
 		}
 	}

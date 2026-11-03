@@ -13,6 +13,7 @@ The renderer's sun, moon and lamp lighting: the light grid (sky exposure and lam
 - Leaves: `art`, `camera`, `gfx`; layer `render` (the view).
 - `application/game` read models; domain `sim/clock`, `sim/entity`, `world/lighting`, `world/roof`, `world/room`, `world/weather`.
 - Ebitengine (`ebiten`); `embed`, `container/list`, `cmp`, `errors`, `strings`, `math`, `image`.
+- `pkg/mathx` (`Abs`), `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

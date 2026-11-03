@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/economy/trade"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 // The trade dialog (MAIN_UI_SCREENS §28, PLAY-024): a centred modal that
@@ -366,7 +367,7 @@ func (dl *Dealings) tradeBody(d *tradeDraft, body gfx.Rect) {
 	if total < 0 {
 		verb = "You receive"
 	}
-	dl.kit().Label(sum.X, sum.Y, fmt.Sprintf("%s %s silver", verb, SilverText(absInt(total))), gfx.Label)
+	dl.kit().Label(sum.X, sum.Y, fmt.Sprintf("%s %s silver", verb, SilverText(mathx.Abs(total))), gfx.Label)
 	if dl.kit().Check("trade.gift", gfx.Rect{X: sum.X, Y: sum.Y + 26, W: 220, H: 22}, "Gift (no payment)", &d.gift,
 		uikit.CheckOpts{Tip: "Gift\nGive goods away for goodwill instead of trading."}) {
 		d.setGift(d.gift)

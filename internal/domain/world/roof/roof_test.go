@@ -1,6 +1,10 @@
 package roof
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/pkg/mathx"
+)
 
 func TestSupportFieldChebyshevSix(t *testing.T) {
 	const w, h = 30, 20
@@ -11,7 +15,7 @@ func TestSupportFieldChebyshevSix(t *testing.T) {
 	}
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			d := max(abs(x-sx), abs(y-sy))
+			d := max(mathx.Abs(x-sx), mathx.Abs(y-sy))
 			if want := d <= SupportRange; f[y*w+x] != want {
 				t.Fatalf("(%d,%d) chebyshev %d: supported=%v, want %v", x, y, d, f[y*w+x], want)
 			}
@@ -59,11 +63,4 @@ func TestCellFlags(t *testing.T) {
 	if (Built|Supported).Roofed() != true || PlanBuild.Roofed() {
 		t.Fatal("built roofs are roofs, plans are not")
 	}
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

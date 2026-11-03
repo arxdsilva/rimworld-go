@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Capture is a developer screenshot run (ART Wave 1 "screenshot test
@@ -816,7 +817,7 @@ func panAt(wp [][2]float64, t float64) (float64, float64) {
 func (a *App) captureInspect(ui string) {
 	w := a.renderer.world()
 	cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
-	near := func(x, y int) int { return architectpkg.Abs(x-cx) + architectpkg.Abs(y-cy) }
+	near := func(x, y int) int { return mathx.Abs(x-cx) + mathx.Abs(y-cy) }
 	best, bx, by := 1<<30, cx, cy
 	pick := func(x, y int) {
 		if d := near(x, y); d < best {
@@ -908,7 +909,7 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	sx, sy, best := cx, cy, 1<<30
 	for y := 2; y < g.Height()-8; y++ {
 		for x := 2; x < g.Width()-12; x++ {
-			if d := architectpkg.Abs(x-cx) + architectpkg.Abs(y-cy); d < best && free(game.ZoneStockpile, x, y, 8, 6) {
+			if d := mathx.Abs(x-cx) + mathx.Abs(y-cy); d < best && free(game.ZoneStockpile, x, y, 8, 6) {
 				sx, sy, best = x, y, d
 			}
 		}
@@ -934,7 +935,7 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	gx, gy, gbest := sx, sy+7, 1<<30
 	for y := 2; y < g.Height()-4; y++ {
 		for x := 2; x < g.Width()-6; x++ {
-			if d := architectpkg.Abs(x-cx) + architectpkg.Abs(y-cy); d < gbest && g.CanZoneAt(game.ZoneStockpile, x, y) && !g.CanZoneAt(game.ZoneGrow, x, y) {
+			if d := mathx.Abs(x-cx) + mathx.Abs(y-cy); d < gbest && g.CanZoneAt(game.ZoneStockpile, x, y) && !g.CanZoneAt(game.ZoneGrow, x, y) {
 				gx, gy, gbest = x, y, d
 			}
 		}

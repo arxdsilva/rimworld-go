@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image/color"
 	"math"
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	envpkg "rimworld-go/internal/adapters/inbound/ebiten/render/env"
@@ -20,6 +19,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // Environment presentation (ART §27.3, §16) is render/env's (ARCH-004):
@@ -53,7 +53,7 @@ func (e *envState) stepCollapses(c *creature.Set, v *render.View, w game.WorldVi
 	seen := make(map[game.RoofCollapseView]bool, len(w.RoofCollapses))
 	for _, rc := range w.RoofCollapses {
 		if !e.collapses[rc] {
-			seed := art.Mix64(rc.Tick ^ uint64(envpkg.TileKey(rc.X, rc.Y))<<20 ^ 0xc011)
+			seed := randx.Mix64(rc.Tick ^ uint64(envpkg.TileKey(rc.X, rc.Y))<<20 ^ 0xc011)
 			c.Burst(v, creature.PartDust, float64(rc.X)+0.5, float64(rc.Y)+0.5, 12, seed)
 			c.Burst(v, creature.PartChip, float64(rc.X)+0.5, float64(rc.Y)+0.4, 4, seed^0x5a)
 		}

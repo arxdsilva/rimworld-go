@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Herd is the root, built by New: components as fields; a feature's
@@ -142,14 +143,7 @@ func done(h Host, id entity.EntityID, j job.Record) {
 func adjacent(h Host, id, aid entity.EntityID) bool {
 	x, y, _ := h.Pos(id)
 	ax, ay, ok := h.Pos(aid)
-	return ok && abs(x-ax) <= 1 && abs(y-ay) <= 1
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
+	return ok && mathx.Abs(x-ax) <= 1 && mathx.Abs(y-ay) <= 1
 }
 
 // walkBeside paths id beside animal aid for job j and stores it; it

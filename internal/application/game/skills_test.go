@@ -21,6 +21,7 @@ import (
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -149,7 +150,7 @@ func TestSkillSpeedRatio(t *testing.T) {
 		un += g.workProgress(novice, skill.Construction, true)
 		g.clock.Advance(1)
 	}
-	if abs(um-1780*ticks/1000) > 1 || abs(un-580*ticks/1000) > 1 {
+	if mathx.Abs(um-1780*ticks/1000) > 1 || mathx.Abs(un-580*ticks/1000) > 1 {
 		t.Fatalf("units: master %d (want %d), novice %d (want %d)", um, 1780*ticks/1000, un, 580*ticks/1000)
 	}
 }
@@ -418,7 +419,8 @@ func TestLegacyLookUnchanged(t *testing.T) {
 	}
 }
 
-// rendererMix is ebiten/art.go's historic splitmix64 finaliser.
+// rendererMix is ebiten/art.go's historic splitmix64 finaliser. It stays a
+// separate copy here: this test pins legacy looks independently of randx.
 func rendererMix(x uint64) uint64 {
 	x ^= x >> 30
 	x *= 0xBF58476D1CE4E5B9

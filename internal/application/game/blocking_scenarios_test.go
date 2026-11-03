@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Full-simulation blocking scenarios (SIM-014): creatures that block each
@@ -169,7 +170,7 @@ func TestCorridorHeadOnBothArrive(t *testing.T) {
 	if doneA < 0 || doneB < 0 {
 		t.Fatalf("not both across: %d %d", doneA, doneB)
 	}
-	if abs(doneA-aloneA) > 1 || abs(doneB-aloneB) > 1 {
+	if mathx.Abs(doneA-aloneA) > 1 || mathx.Abs(doneB-aloneB) > 1 {
 		t.Fatalf("crossing took %d and %d ticks, alone %d and %d", doneA, doneB, aloneA, aloneB)
 	}
 }
@@ -242,7 +243,7 @@ func TestCrowdToOneCellSpreads(t *testing.T) {
 			t.Fatalf("two pawns on %v", p)
 		}
 		seen[p] = true
-		if d := max(abs(p.X-target.X), abs(p.Y-target.Y)); d > 1 {
+		if d := max(mathx.Abs(p.X-target.X), mathx.Abs(p.Y-target.Y)); d > 1 {
 			t.Fatalf("pawn %d settled at %v, %d from the target", id, p, d)
 		}
 	}
@@ -362,7 +363,7 @@ func TestRaiderBlocksDoorway(t *testing.T) {
 	}
 }
 
-func pathing8(a, b Position) int { return max(abs(a.X-b.X), abs(a.Y-b.Y)) }
+func pathing8(a, b Position) int { return max(mathx.Abs(a.X-b.X), mathx.Abs(a.Y-b.Y)) }
 
 // kitOfOne is a one-raider kit.
 func kitOfOne(g *Game) []item.Kind { return g.kitOf(1)[:1] }

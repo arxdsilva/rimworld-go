@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/vault"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -36,7 +37,7 @@ func vaultCount(c *mapgen.Ctx) int {
 		return 0
 	}
 	n := int(math.Round(float64(c.W*c.H) / (250 * 250)))
-	return clampInt(n, 1, vaultMaxPerMap)
+	return mathx.Clamp(n, 1, vaultMaxPerMap)
 }
 
 // Run is the pass.

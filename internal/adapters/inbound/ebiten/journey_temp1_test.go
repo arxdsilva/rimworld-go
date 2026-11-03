@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/pkg/mathx"
 )
 
 // t1Room walls an interior (x0..x1, y0..y1) with a ring of walls, leaving
@@ -214,7 +215,7 @@ func TestJourneyTempUnroofedRoomIsOutdoors(t *testing.T) {
 		t.Fatalf("the room is %.0f%% roofed, want it open to the sky", r.Roofed*100)
 	}
 	out := j.g.TemperatureAt(13, 8)
-	if abs(r.Temp-out) > 30 {
+	if mathx.Abs(r.Temp-out) > 30 {
 		t.Fatalf("the unroofed room reads %d tenths, outside is %d", r.Temp, out)
 	}
 }

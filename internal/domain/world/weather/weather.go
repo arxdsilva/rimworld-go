@@ -6,6 +6,8 @@ package weather
 import (
 	"math"
 	"strings"
+
+	"rimworld-go/pkg/randx"
 )
 
 // Kind is the sky's state.
@@ -109,16 +111,9 @@ func RowWet(from Kind, season string, wet int) [4]float64 {
 	return r
 }
 
-func mix(x uint64) uint64 {
-	x += 0x9e3779b97f4a7c15
-	x = (x ^ x>>30) * 0xbf58476d1ce4e5b9
-	x = (x ^ x>>27) * 0x94d049bb133111eb
-	return x ^ x>>31
-}
-
 // unit is a deterministic value in [0,1) from (seed, block, salt).
 func unit(seed, block, salt uint64) float64 {
-	h := mix(mix(mix(seed)^block) ^ salt)
+	h := randx.SplitMix64(randx.SplitMix64(randx.SplitMix64(seed)^block) ^ salt)
 	return float64(h>>11) / (1 << 53)
 }
 

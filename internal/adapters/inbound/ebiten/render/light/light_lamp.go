@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/pkg/mathx"
 )
 
 // Point lamps (PLAY-020 §3b). A lamp lights the tiles within its radius
@@ -126,7 +127,7 @@ func (g *Grid) lampAt(k, x, y int) float32 {
 // diagonally between two boundary tiles touching at a corner.
 func (g *Grid) sees(rg []int, x0, y0, x1, y1 int) bool {
 	wall := func(x, y int) bool { return rg[y*g.w+x] == room.Wall }
-	dx, dy := absInt(x1-x0), -absInt(y1-y0)
+	dx, dy := mathx.Abs(x1-x0), -mathx.Abs(y1-y0)
 	sx, sy := 1, 1
 	if x1 < x0 {
 		sx = -1
@@ -179,11 +180,4 @@ func (g *Grid) packAt(fx, fy float64, level, lampLvl float32, k int) float32 {
 	}
 	str := LampDirMax * h / math.Hypot(h, lampDirH) * float64(lampLvl/level)
 	return PackLamp(level, str*hx/h, str*hy/h)
-}
-
-func absInt(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

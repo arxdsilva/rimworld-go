@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/caravan"
+	"rimworld-go/pkg/mathx"
 )
 
 // Caravan packing (wiki: Caravan): a forming caravan takes goods and
@@ -230,7 +231,7 @@ func (o packing) doPack(id entity.EntityID, j job.Record) {
 			o.end(id, j, 0)
 			return
 		}
-		if max(abs(ax-px), abs(ay-py)) > 1 {
+		if max(mathx.Abs(ax-px), mathx.Abs(ay-py)) > 1 {
 			if j.WorkLeft++; j.WorkLeft > 6 {
 				o.end(id, j, job.Unreachable)
 				return

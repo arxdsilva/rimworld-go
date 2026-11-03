@@ -16,6 +16,7 @@ The Architect panel: its categories and tools, material and crop pickers, the dr
 - Read model: `selection` (the selection kinds), `application/game` views.
 - Domain value types: `building/construction`, `building/power`, `sim/clock`, `sim/command`, `sim/entity`, `world/plant`.
 - `platform/input`; Ebitengine (`ebiten`, `vector`); stdlib.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

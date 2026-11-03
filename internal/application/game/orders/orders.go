@@ -15,6 +15,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Orders is the root, built by New: components as fields; each feature's
@@ -131,14 +132,7 @@ func in(x, y, minX, minY, maxX, maxY int) bool {
 
 // dist is the Chebyshev distance between two cells (the nearest-first
 // order of every giver here).
-func dist(ax, ay, bx, by int) int { return max(abs(ax-bx), abs(ay-by)) }
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
+func dist(ax, ay, bx, by int) int { return max(mathx.Abs(ax-bx), mathx.Abs(ay-by)) }
 
 // finish ends job j of id with state s.
 func finish(h Hands, id entity.EntityID, j job.Record, s job.State, why job.FailReason) {

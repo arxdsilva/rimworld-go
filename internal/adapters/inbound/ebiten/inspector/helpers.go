@@ -16,13 +16,6 @@ import (
 // bedRowH is a row of the bed owner picker (the Assign window's row).
 const bedRowH = 30
 
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-
 // drawIconCS draws img scaled to size x size at the logical point (x, y),
 // multiplied by cs (a stone item's tint, a disabled command's grey).
 func drawIconCS(dst, img *ebiten.Image, x, y, size float64, cs sprite.ColorScale) {

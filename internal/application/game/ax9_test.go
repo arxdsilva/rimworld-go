@@ -20,6 +20,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/caravan"
 	"rimworld-go/internal/domain/world/geology"
+	"rimworld-go/pkg/mathx"
 )
 
 // AX-9: stasis caskets, transport pods, the long-range mineral scanner
@@ -95,7 +96,7 @@ func TestStasisCasketSuspendsAndEjects(t *testing.T) {
 	if g.isStashed(ada) {
 		t.Fatal("a destroyed casket kept its sleeper")
 	}
-	if p, ok := g.positions.Get(ada); !ok || max(abs(p.X-8), abs(p.Y-4)) > 4 {
+	if p, ok := g.positions.Get(ada); !ok || max(mathx.Abs(p.X-8), mathx.Abs(p.Y-4)) > 4 {
 		t.Fatalf("Ada came out at %+v", p)
 	}
 }
@@ -416,7 +417,7 @@ func TestHitchingSpotGathersCaravan(t *testing.T) {
 	for i := 0; i < 3000 && !at; i++ {
 		g.Step(1)
 		p, _ := g.positions.Get(ada)
-		at = max(abs(p.X-x-1), abs(p.Y-y-1)) <= 3
+		at = max(mathx.Abs(p.X-x-1), mathx.Abs(p.Y-y-1)) <= 3
 	}
 	if !at {
 		t.Fatal("Ada never reached the hitching spot")

@@ -7,6 +7,8 @@ package sfxsynth
 
 import (
 	"math"
+
+	"rimworld-go/pkg/randx"
 )
 
 // Rate is the sample rate of every rendered sound.
@@ -70,10 +72,7 @@ type rng struct{ s uint64 }
 
 func (r *rng) next() uint64 {
 	r.s += 0x9E3779B97F4A7C15
-	z := r.s
-	z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
-	z = (z ^ (z >> 27)) * 0x94D049BB133111EB
-	return z ^ (z >> 31)
+	return randx.Mix64(r.s)
 }
 
 // float is uniform in [0, 1).

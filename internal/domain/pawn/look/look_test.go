@@ -1,6 +1,10 @@
 package look
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/pkg/randx"
+)
 
 // refLook is a verbatim copy of the pre-NG-1 renderer's lookFor
 // (internal/adapters/inbound/ebiten/art.go), kept as the reference the
@@ -16,7 +20,7 @@ func refLookFor(id uint64, skins, hairs, cloths []string) refLook {
 		if len(opts) == 0 {
 			return ""
 		}
-		return opts[mix64(id*0x9E3779B97F4A7C15+salt)%uint64(len(opts))]
+		return opts[randx.Mix64(id*0x9E3779B97F4A7C15+salt)%uint64(len(opts))]
 	}
 	l := refLook{
 		Skin:      pick(1, skins),
@@ -25,7 +29,7 @@ func refLookFor(id uint64, skins, hairs, cloths []string) refLook {
 		Shirt:     pick(4, cloths),
 		Pants:     pick(5, cloths),
 	}
-	if mix64(id+6)%2 == 0 {
+	if randx.Mix64(id+6)%2 == 0 {
 		l.Vest = pick(7, cloths)
 	}
 	if l.Pants == l.Shirt && len(cloths) > 1 {

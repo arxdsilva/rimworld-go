@@ -1,5 +1,7 @@
 package social
 
+import "rimworld-go/pkg/randx"
+
 // Chances (permille) for colonists' starting family ties.
 const (
 	chanceSiblings    = 60
@@ -63,7 +65,7 @@ func Families(seed uint64, colonists []Person, roll func(int) int, firstID ID) P
 	if roll == nil {
 		state := seed
 		roll = func(n int) int {
-			state = splitmix64(state)
+			state = randx.SplitMix64(state)
 			return int(state % uint64(n))
 		}
 	}

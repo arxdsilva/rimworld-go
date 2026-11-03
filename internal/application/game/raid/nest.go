@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Hive mounds (CBT-4). wiki: Hive, Infestation: an infestation raises
@@ -102,7 +103,7 @@ func (hv *Hives) raise(x, y int, now uint64) (int, bool) {
 // apart: no hive stands within hiveApart of (x, y).
 func (hv *Hives) apart(x, y int) bool {
 	for _, o := range hv.hives {
-		if max(abs(o.X-x), abs(o.Y-y)) <= hiveApart {
+		if max(mathx.Abs(o.X-x), mathx.Abs(o.Y-y)) <= hiveApart {
 			return false
 		}
 	}

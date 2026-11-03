@@ -29,6 +29,7 @@ Fighting: line of sight and cover, attack resolution and the attack/hunt job, de
 ## Allowed Dependencies
 - Domain value types (`combat/weapon`, `combat/projectile`, `combat/attack`, `combat/armor`, `combat/damage`, `building/construction`, `animal`, `pawn/body`, `pawn/health`, `economy/item`, `ai/job`, `ai/pathing`, `sim/entity`).
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - `internal/application/game`, adapters, platform, Ebitengine, global RNG, wall clock.

@@ -7,13 +7,13 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 // PLAY-018: letters are a stack in the right column (WorldView.Letters,
@@ -166,7 +166,7 @@ func TestLetterClickOpensTheLetterWindow(t *testing.T) {
 		t.Error("Jump to did not move the camera")
 	}
 	x, y := a.renderer.TileAt(int((a.mapViewport().X0+a.mapViewport().X1)/2), int((a.mapViewport().Y0+a.mapViewport().Y1)/2))
-	if architect.Abs(x-30) > 1 || architect.Abs(y-31) > 1 {
+	if mathx.Abs(x-30) > 1 || mathx.Abs(y-31) > 1 {
 		t.Errorf("camera centred on %d,%d, want 30,31", x, y)
 	}
 	if a.uiSt().ModalOpen() {

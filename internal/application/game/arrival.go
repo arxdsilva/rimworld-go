@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -140,7 +141,7 @@ func (g *Game) podSpotFrom(r *randx.Rand, cx, cy int, taken [][2]int) (int, int,
 	for r := 0; r <= 2*podRadius; r++ { // crowded: the nearest free tile
 		for dy := -r; dy <= r; dy++ {
 			for dx := -r; dx <= r; dx++ {
-				if max(abs(dx), abs(dy)) == r && g.podFree(cx+dx, cy+dy, taken) {
+				if max(mathx.Abs(dx), mathx.Abs(dy)) == r && g.podFree(cx+dx, cy+dy, taken) {
 					return cx + dx, cy + dy, true
 				}
 			}
@@ -154,7 +155,7 @@ func (g *Game) podFree(x, y int, taken [][2]int) bool {
 		return false // never under thick rock (roof.go)
 	}
 	for _, t := range taken {
-		if abs(t[0]-x) <= 1 && abs(t[1]-y) <= 1 {
+		if mathx.Abs(t[0]-x) <= 1 && mathx.Abs(t[1]-y) <= 1 {
 			return false
 		}
 	}

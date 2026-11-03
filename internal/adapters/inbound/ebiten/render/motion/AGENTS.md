@@ -12,6 +12,7 @@ The renderer's per-creature motion: tracks interpolated between simulation ticks
 - Leaves: `art` (the facing type `art.Facing`).
 - `application/game` read models (`PawnView`, `AnimalView`); domain `sim/clock`, `sim/entity`.
 - Ebitengine (`ebiten`); stdlib `fmt`, `math`.
+- `pkg/mathx` (`Abs`), `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

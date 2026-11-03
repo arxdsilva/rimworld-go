@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // The caravan hitching spot (wiki: Caravan, Caravan hitching spot): a
@@ -87,7 +88,7 @@ func (o hitching) Gather(cid uint64, members []entity.EntityID, formed, now uint
 			continue
 		}
 		x, y := o.h.Pos(id)
-		if max(abs(x-g.X), abs(y-g.Y)) > hitchNear {
+		if max(mathx.Abs(x-g.X), mathx.Abs(y-g.Y)) > hitchNear {
 			all = false
 			if j.Kind != job.Move || !j.Active() {
 				o.moveNear(id, g.X, g.Y, i)

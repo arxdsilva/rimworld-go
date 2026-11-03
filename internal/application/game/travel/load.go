@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Loading (wiki: Transport pod): the player picks who and what goes
@@ -362,7 +363,7 @@ func (o pods) fetchAnimal(id entity.EntityID, j job.Record, m *Manifest) {
 	}
 	ax, ay := o.h.Pos(a)
 	px, py := o.h.Pos(id)
-	if max(abs(ax-px), abs(ay-py)) > 1 {
+	if max(mathx.Abs(ax-px), mathx.Abs(ay-py)) > 1 {
 		if j.WorkLeft++; j.WorkLeft > 6 {
 			o.end(id, j, job.Unreachable)
 			return
@@ -378,11 +379,4 @@ func (o pods) fetchAnimal(id entity.EntityID, j job.Record, m *Manifest) {
 	o.s.rope(id, Beast{ID: a, State: st})
 	j.Carry = a
 	o.walk(id, j, j.DestX, j.DestY)
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

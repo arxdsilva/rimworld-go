@@ -27,6 +27,7 @@ import (
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 const (
@@ -154,13 +155,6 @@ func hostIndex(ga *social.Gathering, id entity.EntityID) int {
 	return -1
 }
 
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-
 // ready: a colonist on its feet, on the map, not drafted or breaking.
 func (g Gatherings) ready(id entity.EntityID) bool {
 	return g.h.Alive(id) && g.h.Romanceable(id) && g.h.OnMap(id) && !g.h.Drafted(id) && !g.h.Breaking(id)
@@ -191,7 +185,7 @@ func (g Gatherings) guestCell(id entity.EntityID, ga *social.Gathering) (int, in
 		if !ok || b.Kind != construction.Chair {
 			continue
 		}
-		d := max(abs(b.X-ga.SpotX), abs(b.Y-ga.SpotY))
+		d := max(mathx.Abs(b.X-ga.SpotX), mathx.Abs(b.Y-ga.SpotY))
 		if d > attendRadius || d >= best {
 			continue
 		}
@@ -206,7 +200,7 @@ func (g Gatherings) guestCell(id entity.EntityID, ga *social.Gathering) (int, in
 	for r := 2; r <= 3; r++ {
 		for dy := -r; dy <= r; dy++ {
 			for dx := -r; dx <= r; dx++ {
-				if max(abs(dx), abs(dy)) != r {
+				if max(mathx.Abs(dx), mathx.Abs(dy)) != r {
 					continue
 				}
 				x, y := ga.SpotX+dx, ga.SpotY+dy
@@ -294,7 +288,7 @@ func (g Gatherings) hostsPresent(ga *social.Gathering) bool {
 			continue
 		}
 		x, y, ok := g.h.Pos(entity.EntityID(h))
-		if !ok || max(abs(x-ga.SpotX), abs(y-ga.SpotY)) > hostNear {
+		if !ok || max(mathx.Abs(x-ga.SpotX), mathx.Abs(y-ga.SpotY)) > hostNear {
 			return false
 		}
 	}
@@ -330,7 +324,7 @@ func (g Gatherings) attendees(ga *social.Gathering) []entity.EntityID {
 		}
 		j := g.h.Job(id)
 		x, y, ok := g.h.Pos(id)
-		if j.Kind == job.Gather && j.State == job.Do && ok && max(abs(x-ga.SpotX), abs(y-ga.SpotY)) <= attendRadius {
+		if j.Kind == job.Gather && j.State == job.Do && ok && max(mathx.Abs(x-ga.SpotX), mathx.Abs(y-ga.SpotY)) <= attendRadius {
 			out = append(out, id)
 		}
 	}

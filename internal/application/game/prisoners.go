@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Prisoners (ENG-003, M8). The prison package holds each prisoner's state
@@ -122,7 +123,7 @@ func (g *Game) visitor(id entity.EntityID) bool {
 func (g *Game) adjacent(a, b entity.EntityID) bool {
 	pa, _ := g.positions.Get(a)
 	pb, _ := g.positions.Get(b)
-	return abs(pa.X-pb.X) <= 1 && abs(pa.Y-pb.Y) <= 1
+	return mathx.Abs(pa.X-pb.X) <= 1 && mathx.Abs(pa.Y-pb.Y) <= 1
 }
 
 // arrestChance is the permille chance arrester takes target in: certain

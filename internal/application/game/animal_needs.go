@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/region"
+	"rimworld-go/pkg/mathx"
 )
 
 // Animal needs and the behaviour state machine (SIM-024, plan 2.3). Food
@@ -252,7 +253,7 @@ func (g *Game) startRest(id entity.EntityID, a *animal.State, pos Position) {
 		return ok && o != id && m.Herd == a.Herd && !m.Tame && m.Mode == animal.Rest
 	})
 	if ok && weapon.Distance(pos.X, pos.Y, mp.X, mp.Y) > herdBedNear {
-		g.animalGoTo(id, a, mp.X+clampInt(pos.X-mp.X, -2, 2), mp.Y+clampInt(pos.Y-mp.Y, -2, 2))
+		g.animalGoTo(id, a, mp.X+mathx.Clamp(pos.X-mp.X, -2, 2), mp.Y+mathx.Clamp(pos.Y-mp.Y, -2, 2))
 	}
 }
 
@@ -765,7 +766,7 @@ func (g *Game) nearestGrass(pos Position, r int, ok func(x, y int) bool) (int, i
 func (g *Game) fullestGrass(pos Position, r, least int, try func(x, y int) bool) (int, int, bool) {
 	bx, by, best, last := 0, 0, 0, r
 	grassRings(pos, 0, r, func(x, y int) bool {
-		if d := max(abs(x-pos.X), abs(y-pos.Y)); d > last {
+		if d := max(mathx.Abs(x-pos.X), mathx.Abs(y-pos.Y)); d > last {
 			return true
 		}
 		if !try(x, y) {
@@ -773,7 +774,7 @@ func (g *Game) fullestGrass(pos Position, r, least int, try func(x, y int) bool)
 		}
 		if v := g.grassGrowthAt(x, y); v >= least && v > best {
 			if best == 0 {
-				last = min(r, max(abs(x-pos.X), abs(y-pos.Y))+1)
+				last = min(r, max(mathx.Abs(x-pos.X), mathx.Abs(y-pos.Y))+1)
 			}
 			bx, by, best = x, y, v
 		}

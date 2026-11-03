@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -113,18 +114,11 @@ func placeOres(c *mapgen.Ctx) []lump {
 
 func farFromAll(origins []mapgen.Point, x, y int) bool {
 	for _, p := range origins {
-		if max(abs(p.X-x), abs(p.Y-y)) < originSpacing {
+		if max(mathx.Abs(p.X-x), mathx.Abs(p.Y-y)) < originSpacing {
 			return false
 		}
 	}
 	return true
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // growLump grows a random 4-connected frontier from origin through free

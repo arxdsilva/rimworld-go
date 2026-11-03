@@ -8,6 +8,7 @@ import (
 	proj "rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Session is how long one sitting at the bench lasts.
@@ -94,7 +95,7 @@ func (l *Lab) try(worker entity.EntityID, tried []entity.EntityID) (entity.Entit
 		if !ok || !l.h.Free(worker, bid, spot[0], spot[1]) {
 			continue
 		}
-		if d := abs(px-spot[0]) + abs(py-spot[1]); d < bestD || (d == bestD && bid < best) {
+		if d := mathx.Abs(px-spot[0]) + mathx.Abs(py-spot[1]); d < bestD || (d == bestD && bid < best) {
 			best, bestD, bx, by = bid, d, spot[0], spot[1]
 		}
 	}

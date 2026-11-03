@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // hiddenConduitKind is the building kind drawn only while the power
@@ -552,7 +553,7 @@ func (m *Model) HandleMapMouse(f Mouse, sameOnScreen func(), box func(x0, y0, x1
 		f.Take()
 		p := m.Press
 		double := p.LastAt > 0 && updates-p.LastAt <= DoubleClickFrames &&
-			abs(mx-p.LastX) <= dblPx && abs(my-p.LastY) <= dblPx
+			mathx.Abs(mx-p.LastX) <= dblPx && mathx.Abs(my-p.LastY) <= dblPx
 		m.Press = Press{On: true, X: mx, Y: my, Shift: f.Shift(), LastAt: updates, LastX: mx, LastY: my}
 		switch {
 		case double:
@@ -564,7 +565,7 @@ func (m *Model) HandleMapMouse(f Mouse, sameOnScreen func(), box func(x0, y0, x1
 			m.ClickSelect()
 		}
 	case m.Press.On && f.Down():
-		if !m.Press.Box && (abs(mx-m.Press.X) > boxMin || abs(my-m.Press.Y) > boxMin) {
+		if !m.Press.Box && (mathx.Abs(mx-m.Press.X) > boxMin || mathx.Abs(my-m.Press.Y) > boxMin) {
 			m.Press.Box = true
 		}
 	case m.Press.On:
@@ -582,13 +583,6 @@ type Mouse interface {
 	Take()
 	Down() bool
 	Shift() bool
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // ApplyGroupClick handles a "group.*" button that acts on the members.

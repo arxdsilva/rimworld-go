@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/site"
+	"rimworld-go/pkg/mathx"
 )
 
 // popPct is the settlement density factor per population setting
@@ -28,7 +29,7 @@ func itemFactions(b *Builder, _ int) {
 	p := b.w
 	r := b.phaseRand(saltFactions)
 	p.Factions = b.genFactions(b.p.Factions, r)
-	b.place(p.Globe(), p.Factions, popPct[clampInt(b.p.Pop, 0, 2)], r)
+	b.place(p.Globe(), p.Factions, popPct[mathx.Clamp(b.p.Pop, 0, 2)], r)
 	p.settlements = p.settlements[:0]
 	for f := range p.Factions {
 		for k, t := range p.Factions[f].Settlements {

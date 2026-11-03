@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // IsMedicalBed: b is a sleeping place kept for the sick and injured.
@@ -147,11 +148,4 @@ func restBedFor(c *Care, patient entity.EntityID, x, y int) entity.EntityID {
 	return best
 }
 
-func manhattan(ax, ay, bx, by int) int { return abs(ax-bx) + abs(ay-by) }
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
+func manhattan(ax, ay, bx, by int) int { return mathx.Abs(ax-bx) + mathx.Abs(ay-by) }

@@ -22,6 +22,7 @@ import (
 	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/internal/domain/world/weather"
+	"rimworld-go/pkg/randx"
 )
 
 // Dynamic light (ART §6.1): a sun that rises in the east, crosses the
@@ -423,12 +424,12 @@ func (g *Grid) sync(w *game.WorldView, blaze func(buf []float32, fires []game.Fi
 			home = w.RoomGrid[i]
 		}
 		g.srcRoom = append(g.srcRoom, home)
-		sum = art.Mix64(sum ^ uint64(s.Kind) ^ uint64(uint32(s.X))<<8 ^ uint64(uint32(s.Y))<<36)
-		sum = art.Mix64(sum ^ math.Float64bits(s.Radius))
+		sum = randx.Mix64(sum ^ uint64(s.Kind) ^ uint64(uint32(s.X))<<8 ^ uint64(uint32(s.Y))<<36)
+		sum = randx.Mix64(sum ^ math.Float64bits(s.Radius))
 	}
-	sum = art.Mix64(sum ^ w.FireVer ^ uint64(len(w.Fires))<<32 ^ 0xb1a2e)
+	sum = randx.Mix64(sum ^ w.FireVer ^ uint64(len(w.Fires))<<32 ^ 0xb1a2e)
 	for _, n := range [3]int{lens[0], lens[1], lens[3]} { // layer sizes; the sources are compared by content
-		sum = art.Mix64(sum ^ uint64(n))
+		sum = randx.Mix64(sum ^ uint64(n))
 	}
 	layersSame := g.genRooms == g.keyRooms && g.genRoofs == g.keyRoofs
 	g.genRooms, g.genRoofs = g.keyRooms, g.keyRoofs

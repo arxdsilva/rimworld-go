@@ -55,3 +55,24 @@ func TestDeriveStreams(t *testing.T) {
 		t.Fatalf("Float64 %v", f)
 	}
 }
+
+// The values come from the copies these functions replaced (fire.Mix,
+// pawngen.mix64). SplitMix64(0) is also the published first output of
+// splitmix64 from seed 0.
+func TestMixersNeverChange(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct{ in, split, mix uint64 }{
+		{0x0, 0xe220a8397b1dcdaf, 0x0},
+		{0x1, 0x910a2dec89025cc1, 0x5692161d100b05e5},
+		{0x2a, 0xbdd732262feb6e95, 0xa759ea27d4727622},
+		{0xdeadbeefcafef00d, 0x901d4f652fb472cb, 0x19104ae2406d51c3},
+		{0xffffffffffffffff, 0xe4d971771b652c20, 0xb4d055fcf2cbbd7b},
+	} {
+		if got := SplitMix64(c.in); got != c.split {
+			t.Errorf("SplitMix64(%#x) = %#x, want %#x", c.in, got, c.split)
+		}
+		if got := Mix64(c.in); got != c.mix {
+			t.Errorf("Mix64(%#x) = %#x, want %#x", c.in, got, c.mix)
+		}
+	}
+}

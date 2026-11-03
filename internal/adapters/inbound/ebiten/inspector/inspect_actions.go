@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // colonistAction is one colonist's way to act on a tile, from the same
@@ -40,7 +41,7 @@ func (a Pawn) ColonistActions(tx, ty int, match func(game.OrderOption) bool) []C
 				continue
 			}
 			out = append(out, ColonistAction{Pawn: p.ID, Name: p.Name, Label: o.Label, Cmd: o.Cmd,
-				Disabled: o.Disabled, Reason: o.Reason, Dist: max(abs(p.X-tx), abs(p.Y-ty))})
+				Disabled: o.Disabled, Reason: o.Reason, Dist: max(mathx.Abs(p.X-tx), mathx.Abs(p.Y-ty))})
 			break
 		}
 	}

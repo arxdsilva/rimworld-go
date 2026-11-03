@@ -4,11 +4,11 @@ import (
 	"math"
 	"strings"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/randx"
 )
 
 // Animal voices (SND-003): idle calls while wandering, a cry when fleeing,
@@ -133,7 +133,7 @@ func (v *Voice) init() {
 // CallInterval is how long animal an waits between calls (the first wait
 // when first is set), scaled by the kind of animal.
 func CallInterval(an game.AnimalView, n uint64, first bool) uint64 {
-	h := art.Mix64(uint64(an.ID)*0x9E3779B97F4A7C15 ^ n*0xC2B2AE3D27D4EB4F)
+	h := randx.Mix64(uint64(an.ID)*0x9E3779B97F4A7C15 ^ n*0xC2B2AE3D27D4EB4F)
 	base := float64(CallEveryMin + h%CallEverySpan)
 	if first {
 		base = float64(FirstCallMin + h%FirstCallSpan)
@@ -254,7 +254,7 @@ func (b *Bus) ListenAnimals(rv *render.View, w game.WorldView, stepped int) {
 		case an.Mode != "wandering" || !audibleAt():
 			v.NextCall[id] = v.Clock + CallInterval(*an, n, false)
 		case !v.capsAllow(an.Species):
-			v.NextCall[id] = v.Clock + DeferMin + art.Mix64(uint64(id)^n<<32)%DeferSpan
+			v.NextCall[id] = v.Clock + DeferMin + randx.Mix64(uint64(id)^n<<32)%DeferSpan
 		default:
 			if x, y := at(); b.CueAnimal(an.Species, VoiceCall, x, y, VolCall) {
 				v.recent = append(v.recent, voicePlayed{v.frame, an.Species})

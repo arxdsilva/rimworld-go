@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 // The radio console dialog (MAIN_UI_SCREENS §29, PLAY-024): a centred
@@ -205,7 +206,7 @@ func goodwillBar(dst *ebiten.Image, r gfx.Rect, gw int) {
 	uikit.StrokeRect(dst, r, uikit.PanelBorder)
 	gw = max(commsGoodwillLo, min(commsGoodwillHi, gw))
 	mid := r.X + r.W/2
-	w := r.W / 2 * float32(absInt(gw)) / commsGoodwillHi
+	w := r.W / 2 * float32(mathx.Abs(gw)) / commsGoodwillHi
 	c := uikit.Good
 	x := mid
 	if gw < 0 {
@@ -213,11 +214,4 @@ func goodwillBar(dst *ebiten.Image, r gfx.Rect, gw int) {
 	}
 	uikit.FillRect(dst, gfx.Rect{X: x, Y: r.Y + 1, W: w, H: r.H - 2}, c)
 	uikit.FillRect(dst, gfx.Rect{X: mid, Y: r.Y - 2, W: 1, H: r.H + 4}, uikit.TextDim)
-}
-
-func absInt(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

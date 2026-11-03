@@ -8,10 +8,11 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // kingDist is the king-move distance between two cells.
-func kingDist(ax, ay, bx, by int) int { return max(abs(ax-bx), abs(ay-by)) }
+func kingDist(ax, ay, bx, by int) int { return max(mathx.Abs(ax-bx), mathx.Abs(ay-by)) }
 
 // nearFire reports a burning cell within r of (x, y).
 func nearFire(g *Game, x, y, r int) bool {

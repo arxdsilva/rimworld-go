@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Crashed ship parts (DEF-4, the CrashedShipPart threat). A blighting
@@ -125,7 +126,7 @@ func (sp *ShipParts) land() (int, int, entity.EntityID, bool) {
 	w, h := sp.h.Size()
 	for try := 0; try < shipTries; try++ {
 		x, y := sp.h.Roll(w), sp.h.Roll(h)
-		if d := max(abs(x-hx), abs(y-hy)); d < shipRangeMin || d > shipRangeMax {
+		if d := max(mathx.Abs(x-hx), mathx.Abs(y-hy)); d < shipRangeMin || d > shipRangeMax {
 			continue
 		}
 		if id, ok := sp.m.PlaceShipPart(x, y); ok {

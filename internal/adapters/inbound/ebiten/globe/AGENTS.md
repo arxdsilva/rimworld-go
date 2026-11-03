@@ -16,6 +16,7 @@ The New Colony wizard's planet view: the baked sphere, starfield, view modes and
 - Leaves: `art`, `gfx`, `globemath`, `inputframe`.
 - Domain value types: `faction`, `world/biome`, `world/planet`, `world/site`. Read-only.
 - Ebitengine (`ebiten`, `vector`); stdlib (`encoding/hex`, `fmt`, `image`, `image/color`, `math`, `strings`, `sync`).
+- `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - Simulation and application packages (`application/game`, `sim/*`). The view takes the planet as a value it reads.

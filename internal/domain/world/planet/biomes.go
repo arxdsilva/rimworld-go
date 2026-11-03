@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/site"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/noise3"
 )
 
@@ -63,7 +64,7 @@ func itemBiomes(b *Builder, i int) {
 
 	g := 0
 	for _, nb := range p.Neighbours(i) {
-		if d := absInt(e - int(max(p.Elev[nb], 0))); d > g {
+		if d := mathx.Abs(e - int(max(p.Elev[nb], 0))); d > g {
 			g = d
 		}
 	}
@@ -219,11 +220,4 @@ func pickStones(v [5]float64) [3]geology.Stone {
 		out[2] = all[top[2]]
 	}
 	return out
-}
-
-func absInt(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

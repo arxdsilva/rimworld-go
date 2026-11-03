@@ -5,12 +5,12 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // Puddles (PLAY-022): one smooth wet veil over the ground, not per-tile
@@ -97,7 +97,7 @@ func WetBucket(wet float64) uint8 { return uint8(math.Round(gfx.Clamp01(wet) * W
 // PuddleSalt seeds the map's relief: its size (WorldView carries no seed),
 // so a map keeps its puddles across saves and loads.
 func PuddleSalt(mw, mh int) uint64 {
-	return art.Mix64(uint64(uint32(mw))<<32 | uint64(uint32(mh)) ^ 0x9dd1e5)
+	return randx.Mix64(uint64(uint32(mw))<<32 | uint64(uint32(mh)) ^ 0x9dd1e5)
 }
 
 // PuddleField is the ground's relief at world point (fx, fy), 0..1: low
@@ -464,7 +464,7 @@ func (sc *SnowCache) puddleCropKey(cx, cy, mw, mh int, c Chunks) uint64 {
 			if sc.cropPass[i] != sc.pass {
 				sc.cropVer[i], sc.cropPass[i] = c.ChunkView(gx, gy).PlantVer, sc.pass
 			}
-			h = art.Mix64(h ^ sc.cropVer[i] ^ uint64(i)<<40)
+			h = randx.Mix64(h ^ sc.cropVer[i] ^ uint64(i)<<40)
 		}
 	}
 	return h

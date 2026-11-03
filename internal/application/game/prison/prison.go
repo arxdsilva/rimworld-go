@@ -77,5 +77,3 @@ func (p *Prison) Release(id, by entity.EntityID) {
 	x, y, _ := h.Pos(id)
 	h.Message(x, y, h.PersonName(id)+" has been released.")
 }
-
-func abs(v int) int { return max(v, -v) }

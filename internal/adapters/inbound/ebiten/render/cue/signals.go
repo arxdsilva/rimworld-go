@@ -1,11 +1,11 @@
 package cue
 
 import (
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/randx"
 )
 
 // Sound cues from the colony renderer (SND-001). The renderer only notes
@@ -198,7 +198,7 @@ func (b *Bus) TraceSound(t game.TraceView) {
 }
 
 // ThunderDelay is how long after a flash its thunder rolls in, frames.
-func ThunderDelay(bucket uint64) uint64 { return 20 + art.Mix64(bucket^0x7417)%70 }
+func ThunderDelay(bucket uint64) uint64 { return 20 + randx.Mix64(bucket^0x7417)%70 }
 
 // ListenThunder plays thunder once its delay after a flash has passed.
 func (b *Bus) ListenThunder(v *render.View) {

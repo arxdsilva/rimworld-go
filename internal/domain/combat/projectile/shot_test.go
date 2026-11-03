@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/pkg/mathx"
 )
 
 // walk flies s to its end, returning the cells entered per tick.
@@ -74,7 +75,7 @@ func TestShotLineMatchesSightOrder(t *testing.T) {
 		var s Shot
 		s.Launch(20, 20, 20+d[0], 20+d[1], 999)
 		walk(&s)
-		if s.X != 20+d[0] || s.Y != 20+d[1] || s.Cell != max(abs(d[0]), abs(d[1])) {
+		if s.X != 20+d[0] || s.Y != 20+d[1] || s.Cell != max(mathx.Abs(d[0]), mathx.Abs(d[1])) {
 			t.Fatalf("%v ends at %d,%d after %d", d, s.X, s.Y, s.Cell)
 		}
 	}

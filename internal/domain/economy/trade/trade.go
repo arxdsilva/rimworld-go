@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -269,16 +270,6 @@ func isSpecialty(k TraderKind, it item.Kind) bool {
 	return false
 }
 
-func clamp(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
-}
-
 // Price is one unit of it on side s with a trader of kind k under terms
 // t, in hundredths of a silver. Silver is always at face value (100). A
 // hostile faction, or a kind without a market value, has no price (0).
@@ -296,7 +287,7 @@ func PriceOf(g Goods, k TraderKind, s Side, t Terms) int {
 	if v <= 0 || t.Hostile {
 		return 0
 	}
-	social := clamp(t.Social, 0, 20)
+	social := mathx.Clamp(t.Social, 0, 20)
 	// Rates are in hundredths of a percentage point (10000 = 100 %).
 	markup := max(BuyMarkupPct*100-SocialStepCenti*social-BuyGoodwillMilli/10*t.Goodwill, BuyFloorPct*100)
 	buy := v * (10000 + markup) / 10000

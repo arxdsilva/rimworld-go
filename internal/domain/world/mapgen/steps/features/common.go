@@ -63,9 +63,6 @@ func shuffle[T any](r *randx.Rand, s []T) {
 	}
 }
 
-// clampInt limits v to [lo, hi].
-func clampInt(v, lo, hi int) int { return min(hi, max(lo, v)) }
-
 // ceilShare and floorShare are ceil/floor(n*p) with a float guard.
 func ceilShare(n int, p float64) int  { return int(math.Ceil(float64(n)*p - 1e-9)) }
 func floorShare(n int, p float64) int { return int(math.Floor(float64(n)*p + 1e-9)) }

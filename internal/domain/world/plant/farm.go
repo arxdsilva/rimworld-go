@@ -1,6 +1,9 @@
 package plant
 
-import "rimworld-go/internal/domain/sim/clock"
+import (
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/pkg/randx"
+)
 
 // Farming rules at the wiki's numbers (FOOD-2): partial harvests, crop
 // lifespans, growing light, hydroponics, the sun lamp's light and blight.
@@ -174,12 +177,7 @@ func (p Plant) Blighten(t0, t1 uint64) Plant {
 // Roll is a deterministic pseudo-random number of its arguments
 // (splitmix64): the farm's chances never draw from the simulation's RNG.
 func Roll(a, b, c uint64) uint64 {
-	z := a*0x9E3779B97F4A7C15 ^ b*0xBF58476D1CE4E5B9 ^ c*0x94D049BB133111EB
-	z ^= z >> 30
-	z *= 0xBF58476D1CE4E5B9
-	z ^= z >> 27
-	z *= 0x94D049BB133111EB
-	return z ^ z>>31
+	return randx.Mix64(a*0x9E3779B97F4A7C15 ^ b*0xBF58476D1CE4E5B9 ^ c*0x94D049BB133111EB)
 }
 
 // legacyGrow is each species' growth to ripe before FOOD-2 (14 sun hours a

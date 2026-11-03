@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/pkg/mathx"
 )
 
 // Social interactions (ENG-003, M3). Every colonist is looked at once per
@@ -141,7 +142,7 @@ func (g *Game) socialPartner(a entity.EntityID) entity.EntityID {
 // canHear reports b (at pb) can be a's partner: close, free to listen, in
 // a's room (or both outdoors) and in sight.
 func (g *Game) canHear(a entity.EntityID, pa Position, ra int, b entity.EntityID, pb Position) bool {
-	if b == a || max(abs(pa.X-pb.X), abs(pa.Y-pb.Y)) > partnerRadius || !g.canSocialize(b, false) {
+	if b == a || max(mathx.Abs(pa.X-pb.X), mathx.Abs(pa.Y-pb.Y)) > partnerRadius || !g.canSocialize(b, false) {
 		return false
 	}
 	rb := g.roomAt(pb.X, pb.Y)

@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/combat/damage"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Milli is the fixed-point scale of a shot's progress: thousandths of a
@@ -56,7 +57,7 @@ func (s *Shot) Launch(fx, fy, tx, ty, speed int) {
 	s.FromX, s.FromY, s.ToX, s.ToY = fx, fy, tx, ty
 	s.X, s.Y, s.Cell, s.Progress = fx, fy, 0, 0
 	s.Speed = max(speed, 1)
-	dx, dy := abs(tx-fx), abs(ty-fy)
+	dx, dy := mathx.Abs(tx-fx), mathx.Abs(ty-fy)
 	s.Steps, s.Err = max(dx, dy), dx-dy
 }
 
@@ -70,7 +71,7 @@ func (s *Shot) Fly() int {
 // Step moves the shot into the next cell of its line and reports whether
 // that cell is the destination.
 func (s *Shot) Step() (x, y int, last bool) {
-	dx, dy := abs(s.ToX-s.FromX), abs(s.ToY-s.FromY)
+	dx, dy := mathx.Abs(s.ToX-s.FromX), mathx.Abs(s.ToY-s.FromY)
 	e2 := 2 * s.Err
 	if e2 > -dy {
 		s.Err -= dy
@@ -122,13 +123,6 @@ func (s *Shot) View() View {
 		v.X += (s.ToX - s.FromX) * p / s.Steps
 		v.Y += (s.ToY - s.FromY) * p / s.Steps
 		v.VX, v.VY = (s.ToX-s.FromX)*s.Speed/s.Steps, (s.ToY-s.FromY)*s.Speed/s.Steps
-	}
-	return v
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
 	}
 	return v
 }

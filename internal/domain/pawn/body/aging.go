@@ -1,6 +1,9 @@
 package body
 
-import "rimworld-go/internal/domain/sim/clock"
+import (
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/pkg/randx"
+)
 
 // Aging (MED-08): chronic conditions that come with age, and the heart
 // attack an artery blockage can bring on. The definitions are in
@@ -220,18 +223,10 @@ func (g Growth) String() string {
 	return "growing"
 }
 
-// mix is a splitmix64 finaliser: a well-spread hash of x.
-func mix(x uint64) uint64 {
-	x += 0x9e3779b97f4a7c15
-	x = (x ^ x>>30) * 0xbf58476d1ce4e5b9
-	x = (x ^ x>>27) * 0x94d049bb133111eb
-	return x ^ x>>31
-}
-
 // agingKey is condition c's own hash under salt (the game's per-pawn
 // salt): its kind, part and onset tick.
 func agingKey(c Condition, salt uint64) uint64 {
-	return mix(salt ^ mix(c.Since^uint64(c.Kind)<<56^uint64(c.Part)<<48))
+	return randx.SplitMix64(salt ^ randx.SplitMix64(c.Since^uint64(c.Kind)<<56^uint64(c.Part)<<48))
 }
 
 // between maps hash h onto lo..hi.
@@ -256,7 +251,7 @@ func CarcinomaGrowth(c Condition, salt uint64) Growth {
 // blockage +700 × 0.5..3, a growing carcinoma +3000 × 0.45..1.65, one in
 // remission −2000 × 0.7..1.5, the factor drawn from c's hash under salt.
 func AgingRate(c Condition, salt uint64) int32 {
-	h := mix(agingKey(c, salt) ^ 0x5bd1e995)
+	h := randx.SplitMix64(agingKey(c, salt) ^ 0x5bd1e995)
 	switch c.Kind {
 	case CondArteryBlockage:
 		return arteryPerDay * between(h, arteryFactorLo, arteryFactorHi) / 1000

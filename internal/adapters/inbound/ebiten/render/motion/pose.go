@@ -8,10 +8,11 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // Poses, gaits and easing (ART §27). Pseudo-randomness comes from
-// art.Mix64 of stable keys, so a replay looks the same.
+// randx.Mix64 of stable keys, so a replay looks the same.
 
 // Pose is a transform applied to a whole figure (all of its layers).
 type Pose struct {
@@ -74,7 +75,7 @@ func easeOutBack(t float64) float64 {
 func Hash01(keys ...uint64) float64 {
 	h := uint64(0x9E3779B97F4A7C15)
 	for _, k := range keys {
-		h = art.Mix64(h ^ k)
+		h = randx.Mix64(h ^ k)
 	}
 	return float64(h>>11) / float64(1<<53)
 }

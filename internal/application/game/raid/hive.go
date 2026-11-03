@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/grid"
+	"rimworld-go/pkg/mathx"
 )
 
 // Hive swarms (SIM-019). A storyteller threat from day 12: three to six
@@ -122,7 +123,7 @@ func (hv *Hives) Exit() (int, int, bool) {
 			if !hv.h.DryWalkable(x, y) || !hv.bordersRock(x, y) {
 				continue
 			}
-			if d := max(abs(x-hx), abs(y-hy)); best < 0 || d < best {
+			if d := max(mathx.Abs(x-hx), mathx.Abs(y-hy)); best < 0 || d < best {
 				best, bx, by = d, x, y
 			}
 		}
@@ -141,11 +142,4 @@ func (hv *Hives) bordersRock(x, y int) bool {
 		}
 	}
 	return false
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

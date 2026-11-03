@@ -3,6 +3,7 @@ package mind
 import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Tantrum (CBT-4). wiki: Mental break, a major break (the 20 % threshold,
@@ -37,7 +38,7 @@ func (m *Mind) tantrum(id entity.EntityID, j job.Record, now uint64) {
 		return
 	}
 	x, y, _ := h.Pos(id)
-	if max(abs(x-t.X), abs(y-t.Y)) > 1 {
+	if max(mathx.Abs(x-t.X), mathx.Abs(y-t.Y)) > 1 {
 		if j.Active() && j.Kind == job.Move && (now+uint64(id))%repathTicks != 0 {
 			return
 		}

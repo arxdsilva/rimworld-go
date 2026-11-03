@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Animal gaits (PLAY-022, AnimalView.Gait): wandering, grazing and penned
@@ -614,7 +615,7 @@ func (g *Game) callPack(id entity.EntityID, pos Position, prey entity.EntityID) 
 func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	gates := g.gatesOpen(id, a) // rope.go: livestock pass gates only when led
 	w, h := g.grid.Width(), g.grid.Height()
-	gx, gy = clampInt(gx, 0, w-1), clampInt(gy, 0, h-1)
+	gx, gy = mathx.Clamp(gx, 0, w-1), mathx.Clamp(gy, 0, h-1)
 	if !g.grid.Walkable(gx, gy) || g.fenceBars(gates, gx, gy) {
 		found := false
 		for r := 1; r <= 3 && !found; r++ {
@@ -652,8 +653,6 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	}
 	a.Path, a.PathI, a.GoalX, a.GoalY = path, 0, gx, gy
 }
-
-func clampInt(v, lo, hi int) int { return min(max(v, lo), hi) }
 
 // moveAnimal takes an animal's next path step if it is due and the way
 // is clear (the animal half of phaseMovement; m, its record, says it

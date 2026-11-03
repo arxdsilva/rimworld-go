@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -109,7 +110,7 @@ func TestTraderCaravanArrivesStaysLeaves(t *testing.T) {
 		for _, id := range c.Members {
 			if j, _ := g.jobs.Get(id); j.Kind == job.Visit && j.Active() {
 				strolls++
-				if max(abs(j.TX-hx), abs(j.TY-hy)) > traderCaravanRange+3 {
+				if max(mathx.Abs(j.TX-hx), mathx.Abs(j.TY-hy)) > traderCaravanRange+3 {
 					t.Fatalf("a caravan member strolls to %d,%d, home %d,%d", j.TX, j.TY, hx, hy)
 				}
 			}
@@ -364,7 +365,7 @@ func TestProposeTradeMovesGoods(t *testing.T) {
 	np, _ := g.positions.Get(neg)
 	found := false
 	for _, iid := range g.itemIDs {
-		if st := g.stacks.Ref(iid); st != nil && st.Kind == buy.Kind && !st.Forbidden && max(abs(st.X-np.X), abs(st.Y-np.Y)) <= 2 {
+		if st := g.stacks.Ref(iid); st != nil && st.Kind == buy.Kind && !st.Forbidden && max(mathx.Abs(st.X-np.X), mathx.Abs(st.Y-np.Y)) <= 2 {
 			found = true
 		}
 	}

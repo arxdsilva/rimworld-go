@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/research"
+	"rimworld-go/pkg/randx"
 )
 
 // Titles: every word list below is this game's own (ENG-003: no vanilla
@@ -34,7 +35,7 @@ var (
 func Title(k item.Kind, s uint32) string {
 	h := uint64(s & 0xffff)
 	pick := func(l []string) string {
-		h = mix(h)
+		h = randx.SplitMix64(h)
 		return l[h%uint64(len(l))]
 	}
 	switch k {

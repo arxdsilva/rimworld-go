@@ -21,6 +21,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
+	"rimworld-go/pkg/mathx"
 )
 
 // fakeInput is a scripted keyboard and mouse: each poll returns the
@@ -333,7 +334,7 @@ func TestGroupDraftAndFormation(t *testing.T) {
 	seen := map[[2]int]bool{}
 	for _, m := range moves {
 		c := [2]int{m.X, m.Y}
-		if seen[c] || max(architect.Abs(m.X-14), architect.Abs(m.Y-5)) > 1 {
+		if seen[c] || max(mathx.Abs(m.X-14), mathx.Abs(m.Y-5)) > 1 {
 			t.Fatalf("formation cells must be distinct and around the target: %+v", moves)
 		}
 		seen[c] = true

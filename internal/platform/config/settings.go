@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"rimworld-go/pkg/mathx"
 )
 
 // SettingsVersion is the settings file format. Older files decode over
@@ -184,18 +186,11 @@ var UIScalePresets = []int{75, 90, 100, 115, 130, 150, 175, 200}
 func snapPreset(v int) int {
 	best := UIScalePresets[0]
 	for _, p := range UIScalePresets {
-		if abs(p-v) < abs(best-v) {
+		if mathx.Abs(p-v) < mathx.Abs(best-v) {
 			best = p
 		}
 	}
 	return best
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // Defaults are the settings of a fresh install.

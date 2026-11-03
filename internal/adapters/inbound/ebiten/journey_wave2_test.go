@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // TestJourneyStorageAllowAllAndSearch (STO-3): Clear all empties a
@@ -469,7 +470,7 @@ func TestJourneyDropWeapon(t *testing.T) {
 	}
 	p := j.pawn(id)
 	for _, it := range j.world().Items {
-		if it.Kind == item.Rifle.String() && !it.Carried && abs(it.X-p.X) <= 1 && abs(it.Y-p.Y) <= 1 {
+		if it.Kind == item.Rifle.String() && !it.Carried && mathx.Abs(it.X-p.X) <= 1 && mathx.Abs(it.Y-p.Y) <= 1 {
 			return
 		}
 	}

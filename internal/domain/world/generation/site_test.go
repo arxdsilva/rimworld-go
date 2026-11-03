@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -603,7 +604,7 @@ func TestWetGroundBySiteWater(t *testing.T) {
 			x, y := i%160, i/160
 			near := 1 << 30
 			for _, f := range fresh {
-				near = min(near, max(abs(x-f[0]), abs(y-f[1])))
+				near = min(near, max(mathx.Abs(x-f[0]), mathx.Abs(y-f[1])))
 			}
 			if near > c.reach {
 				t.Fatalf("%s: %s turned %s %d tiles from water", c.b, base.Terrain.Cells[i], tt, near)

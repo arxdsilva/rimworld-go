@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // World tab helpers moved here from the game package (AX-9 pays for its
@@ -128,7 +129,7 @@ func Ring(x, y, r int, ok func(x, y int) bool) (int, int, bool) {
 	for d := 0; d <= r; d++ {
 		for dy := -d; dy <= d; dy++ {
 			for dx := -d; dx <= d; dx++ {
-				if max(abs(dx), abs(dy)) == d && ok(x+dx, y+dy) {
+				if max(mathx.Abs(dx), mathx.Abs(dy)) == d && ok(x+dx, y+dy) {
 					return x + dx, y + dy, true
 				}
 			}

@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
+	"rimworld-go/pkg/mathx"
 )
 
 // turnHostile drops faction ref's goodwill as play would.
@@ -338,7 +339,7 @@ func TestTurnedVisitorHitsWhoeverStandsBesideIt(t *testing.T) {
 	vp, _ := g.positions.Get(vis)
 	moveTo(t, g, doc, vp.X+1, vp.Y)
 	dp, _ := g.positions.Get(doc)
-	if max(abs(dp.X-vp.X), abs(dp.Y-vp.Y)) > 1 {
+	if max(mathx.Abs(dp.X-vp.X), mathx.Abs(dp.Y-vp.Y)) > 1 {
 		t.Skip("fixture: no tile beside it")
 	}
 	g.Step(1)

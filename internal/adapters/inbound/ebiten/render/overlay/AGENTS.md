@@ -15,6 +15,7 @@ Draws the map overlays over the ground and under or over the objects: blood and 
 - Layers: `render` (the view), `render/light`, `render/motion`, `render/sprite`.
 - `application/game` read models; domain `building/construction`, `building/power`, `sim/clock`, `sim/entity`, `world/roof`, `world/terrain`.
 - Ebitengine (`ebiten`, `vector`); stdlib (`fmt`, `image`, `image/color`, `math`, `sort`, `strconv`, `strings`, `sync`).
+- `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

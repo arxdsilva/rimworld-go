@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
+	"rimworld-go/pkg/mathx"
 )
 
 // countRoof counts tiles with every flag of f set.
@@ -211,7 +212,7 @@ func TestRoofWorkSpotBesideBlockedTile(t *testing.T) {
 		t.Fatal("assignRoof")
 	}
 	j, _ := g.jobs.Get(id)
-	if j.DestX != 10 || j.DestY != 3 || (j.TX == 10 && j.TY == 3) || max(abs(j.TX-10), abs(j.TY-3)) != 1 {
+	if j.DestX != 10 || j.DestY != 3 || (j.TX == 10 && j.TY == 3) || max(mathx.Abs(j.TX-10), mathx.Abs(j.TY-3)) != 1 {
 		t.Fatalf("work spot %d,%d for tile 10,3", j.TX, j.TY)
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 )
 
 // OrderOption is one entry of a pawn's right-click menu at a tile. When
@@ -338,16 +339,7 @@ func (g *Game) nearestFree(id entity.EntityID, match func(item.Kind) bool) (enti
 	return best, bx, by
 }
 
-func manhattan(ax, ay, bx, by int) int {
-	dx, dy := ax-bx, ay-by
-	if dx < 0 {
-		dx = -dx
-	}
-	if dy < 0 {
-		dy = -dy
-	}
-	return dx + dy
-}
+func manhattan(ax, ay, bx, by int) int { return mathx.Abs(ax-bx) + mathx.Abs(ay-by) }
 
 // workSpot is where a pawn stands to work on (x, y): the tile itself if
 // walkable, else the nearest walkable neighbour it can reach.

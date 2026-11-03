@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 // Architect tool catalog (MAIN_UI_SCREENS §17, UI checklist §5). The
@@ -567,7 +568,7 @@ func PlacementCells(mode PlaceMode, x0, y0, x1, y1 int) [][2]int {
 	case PlaceSingle:
 		return [][2]int{{x1, y1}}
 	case PlaceLine:
-		dx, dy := Abs(x1-x0), Abs(y1-y0)
+		dx, dy := mathx.Abs(x1-x0), mathx.Abs(y1-y0)
 		var out [][2]int
 		if dx >= dy {
 			for _, x := range span(x0, x1) {
@@ -599,14 +600,6 @@ func span(a, b int) []int {
 		out = append(out, v)
 	}
 	return out
-}
-
-// Abs is |v|.
-func Abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // FacingNames maps construction facings to sprite suffixes.

@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Creature and food indexes (SIM-024): bucket grids so an animal's
@@ -56,7 +57,7 @@ func (b *bucketGrid[T]) reset(w, h int) {
 }
 
 func (b *bucketGrid[T]) bucket(x, y int) int {
-	bx, by := clampInt(x/idxBucket, 0, b.bw-1), clampInt(y/idxBucket, 0, b.bh-1)
+	bx, by := mathx.Clamp(x/idxBucket, 0, b.bw-1), mathx.Clamp(y/idxBucket, 0, b.bh-1)
 	return by*b.bw + bx
 }
 
@@ -98,8 +99,8 @@ func (b *bucketGrid[T]) each(x, y, r int, fn func(T) bool) {
 	if b.bw == 0 {
 		return
 	}
-	bx0, by0 := clampInt((x-r)/idxBucket, 0, b.bw-1), clampInt((y-r)/idxBucket, 0, b.bh-1)
-	bx1, by1 := clampInt((x+r)/idxBucket, 0, b.bw-1), clampInt((y+r)/idxBucket, 0, b.bh-1)
+	bx0, by0 := mathx.Clamp((x-r)/idxBucket, 0, b.bw-1), mathx.Clamp((y-r)/idxBucket, 0, b.bh-1)
+	bx1, by1 := mathx.Clamp((x+r)/idxBucket, 0, b.bw-1), mathx.Clamp((y+r)/idxBucket, 0, b.bh-1)
 	for by := by0; by <= by1; by++ {
 		for bx := bx0; bx <= bx1; bx++ {
 			bi := by*b.bw + bx

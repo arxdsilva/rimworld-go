@@ -24,6 +24,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/site"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -109,7 +110,7 @@ func TestJourneyAX1UninstallReinstall(t *testing.T) {
 	// to walk off
 	ax1Run(j, 4000, func() bool {
 		for _, p := range j.g.Snapshot() {
-			if abs(p.X-crate.X) <= 1 && abs(p.Y-crate.Y) <= 2 {
+			if mathx.Abs(p.X-crate.X) <= 1 && mathx.Abs(p.Y-crate.Y) <= 2 {
 				return false
 			}
 		}

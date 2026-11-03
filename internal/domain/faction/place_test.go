@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -46,15 +47,8 @@ func (g *fakeGlobe) Hills(i int) uint8 {
 func (g *fakeGlobe) Hops(a, b, limit int) int {
 	g.hops++
 	ax, ay, bx, by := a%g.w, a/g.w, b%g.w, b/g.w
-	d := abs(ax-bx) + abs(ay-by)
+	d := mathx.Abs(ax-bx) + mathx.Abs(ay-by)
 	return min(d, limit)
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 func place(t *testing.T, pop int, seed uint64) (*fakeGlobe, []Faction) {

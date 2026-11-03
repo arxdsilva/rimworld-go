@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // MoveState is how a creature moves on screen right now (ART §27). It is
@@ -205,7 +206,7 @@ func (mo *State[B]) Observe(id entity.EntityID, v MoView, face art.Facing) *Trac
 	oldModelV := k.model(ref + velH).sub(oldModel).scale(1 / velH)
 
 	if v.x != k.X || v.y != k.Y {
-		if absInt(v.x-k.X) > 1 || absInt(v.y-k.Y) > 1 {
+		if mathx.Abs(v.x-k.X) > 1 || mathx.Abs(v.y-k.Y) > 1 {
 			// teleported or several steps unseen: snap
 			k.rest = k.model(mo.now).stride
 			k.segs, k.corr = nil, moCorr{}
@@ -736,11 +737,4 @@ func (q quad) arc(s float64) float64 {
 		sum += glW[i] * q.speed(s*(x+1)/2)
 	}
 	return sum * s / 2
-}
-
-func absInt(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

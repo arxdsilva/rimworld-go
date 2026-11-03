@@ -6,7 +6,7 @@ The generated sprite catalog: atlas pages, sprite metadata, tints, normal maps a
 ## Owned Concepts
 - `Catalog` (21 methods, 12 exported) with `Load`, `Index`, `Locate`; `Catalog.ReadBack func(string) bool` tells the catalog which keys the renderer reads back (plants, grass).
 - `Sprite`, `Meta` (`ParseMeta`), `Atlas` (`ParseAtlas`), `AnimalExt`, `TintKey`, `MemSnapshot`.
-- `Facing` (`FaceSouth` and the other facings), `FacingFor`, `Origin`, `Mix64`.
+- `Facing` (`FaceSouth` and the other facings), `FacingFor`, `Origin`.
 - Tint: `ParseTints`, `TintNRGBA`, `TintTexel`, `MaskImage`, `MaskCoverage`, `DecodeNRGBA`; the `TintShader` (a `sync.OnceValues` over the embedded tint shader).
 - `Deflater` (a `compress/flate` helper) and the `container/list` LRU and `sync` pool state for memory accounting.
 
@@ -35,7 +35,7 @@ The generated sprite catalog: atlas pages, sprite metadata, tints, normal maps a
 - Loading and tint baking are startup or cache-miss work, not per frame. Not benchmarked in this package.
 
 ## Determinism Rules
-- Presentation only. `Mix64` is a pure hash for sprite variant choice; it never reads the simulation's RNG or the clock.
+- Presentation only: it never reads the simulation's RNG or the clock.
 
 ## Save/Mod Impact
 - Reads `assets/` (metadata, atlases, generated sprites) at load time. Writes nothing.

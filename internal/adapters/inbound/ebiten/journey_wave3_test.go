@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/economy/quality"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // TestJourneyRocketLauncherSingleUse (CBT-3): a drafted colonist with a
@@ -250,7 +251,7 @@ func TestJourneyRaidersSeekCover(t *testing.T) {
 				continue
 			}
 			for _, b := range bags {
-				if abs(r.X-b[0]) <= 1 && abs(r.Y-b[1]) <= 1 {
+				if mathx.Abs(r.X-b[0]) <= 1 && mathx.Abs(r.Y-b[1]) <= 1 {
 					beside++
 					break
 				}

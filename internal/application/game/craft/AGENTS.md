@@ -26,6 +26,7 @@ Production: every bench's bills and the bill commands, finding and doing bill wo
 ## Allowed Dependencies
 - Domain value types (`sim/entity`, `sim/command`, `ai/job`, `ai/work`, `ai/pathing`, `economy/recipe`, `economy/item`, `economy/quality`, `building/construction`, `building/power`, `pawn/skill`, `animal`).
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - `internal/application/game` (the guard's `imports` rule), adapters, platform, Ebitengine, global RNG, wall clock.

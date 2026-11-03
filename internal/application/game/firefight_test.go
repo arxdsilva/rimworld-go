@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // burn sets the fire on (x, y) to size (adding it when it isn't burning):
@@ -102,7 +103,7 @@ func TestFirefighterIgnoresFireOutsideHomeOrArea(t *testing.T) {
 		t.Fatal("ignored a fire in Home and its area")
 	}
 	if j, _ := g.jobs.Get(id); j.Kind != job.FightFire || j.DestX != 6 || j.DestY != 5 || g.fireAt(j.TX, j.TY) != 0 ||
-		max(abs(j.TX-6), abs(j.TY-5)) != 1 {
+		max(mathx.Abs(j.TX-6), mathx.Abs(j.TY-5)) != 1 {
 		t.Fatalf("job %+v: should stand beside (6, 5)", j)
 	}
 }

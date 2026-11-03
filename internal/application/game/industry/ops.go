@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // The operated machines: a deep drill worked by a miner (wiki: Deep
@@ -82,7 +83,7 @@ func (o Ops) Assign(worker entity.EntityID, drill bool, tries int) bool {
 			if !ok || !o.h.Free(worker, id, JobOf(b.Kind), spot[0], spot[1]) {
 				continue
 			}
-			if d := abs(px-spot[0]) + abs(py-spot[1]); d < bestD || d == bestD && id < best {
+			if d := mathx.Abs(px-spot[0]) + mathx.Abs(py-spot[1]); d < bestD || d == bestD && id < best {
 				best, bestD, bx, by = id, d, spot[0], spot[1]
 			}
 		}
@@ -96,13 +97,6 @@ func (o Ops) Assign(worker entity.EntityID, drill bool, tries int) bool {
 		tried = append(tried, best)
 	}
 	return false
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // Do is one tick of worker operating machine id.

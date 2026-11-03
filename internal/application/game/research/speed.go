@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	proj "rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Research speed and bench factor numbers (wiki: Research speed,
@@ -110,7 +111,7 @@ func (l *Lab) cache() *benchCache {
 			continue
 		}
 		for i, a := range analyzers {
-			if max(abs(a.X-b.X), abs(a.Y-b.Y)) <= craft.FacilityReach {
+			if max(mathx.Abs(a.X-b.X), mathx.Abs(a.Y-b.Y)) <= craft.FacilityReach {
 				c.link[id] = ids[i]
 				break
 			}
@@ -224,11 +225,4 @@ func (l *Lab) CanWork(bench entity.EntityID, b construction.Building, p proj.Pro
 		return hiTech(b.Kind) && l.analyzed(bench)
 	}
 	return true
-}
-
-func abs(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
 }

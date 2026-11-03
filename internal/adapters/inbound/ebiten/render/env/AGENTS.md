@@ -16,6 +16,7 @@ The colony view's ground cover and weather: grass tufts and the grass batch, cro
 - `application/game` read models; domain `sim/clock`, `sim/entity`, `world/roof`.
 - `platform/config` (imported; settings read).
 - Ebitengine (`ebiten`, `vector`); `embed` (the water shader); stdlib.
+- `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/randx"
 )
 
 // The New wanderers picker (MAIN_UI §38, wiki: Endings): after a game over,
@@ -56,20 +57,11 @@ type wandererDraft struct {
 	sel   int
 }
 
-// splitmix is a seed mixer (splitmix64), so neighbouring counters make
-// unrelated people.
-func splitmix(x uint64) uint64 {
-	x += 0x9E3779B97F4A7C15
-	x = (x ^ x>>30) * 0xBF58476D1CE4E5B9
-	x = (x ^ x>>27) * 0x94D049BB133111EB
-	return x ^ x>>31
-}
-
 // fresh is a seed no slot holds.
 func (d *wandererDraft) fresh() uint64 {
 	for {
 		d.next++
-		s := splitmix(d.base + d.next)
+		s := randx.SplitMix64(d.base + d.next)
 		if s == 0 {
 			continue
 		}

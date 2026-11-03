@@ -19,6 +19,7 @@ Looking after pawns that cannot look after themselves: the carry relation, rescu
 ## Allowed Dependencies
 - Domain value types (`sim/entity`, `sim/command`, `ai/job`, `pawn/health`, `pawn/medcare`, `construction`, `economy/item`, `world/pathing`, …).
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - `internal/application/game` (the guard's `imports` rule), adapters, platform, Ebitengine, global RNG, wall clock.

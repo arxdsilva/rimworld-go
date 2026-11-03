@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 var _ = owe("journey_wave_e_test.go", []string{}, []string{})
@@ -270,7 +271,7 @@ func weDist(j *journey, id uint64) int {
 	p := j.pawn(id)
 	best := 1 << 20
 	for _, r := range weRaiders(j) {
-		best = min(best, max(abs(r.X-p.X), abs(r.Y-p.Y)))
+		best = min(best, max(mathx.Abs(r.X-p.X), mathx.Abs(r.Y-p.Y)))
 	}
 	return best
 }
@@ -395,7 +396,7 @@ func weHoldRun(t *testing.T, hold bool) int {
 		careFeed(j)
 		j.update(1)
 		p := j.pawn(id)
-		far = max(far, max(abs(p.X-x0), abs(p.Y-y0)))
+		far = max(far, max(mathx.Abs(p.X-x0), mathx.Abs(p.Y-y0)))
 	}
 	j.key("Space", 0)
 	return far
@@ -447,7 +448,7 @@ func weThrow(j *journey, id uint64, x, y int) {
 // weBurstNear reports a burst of that blast within r tiles of (x, y).
 func weBurstNear(j *journey, blast string, x, y, r int) bool {
 	for _, b := range j.world().Bursts {
-		if strings.EqualFold(b.Blast, blast) && abs(b.X-x) <= r && abs(b.Y-y) <= r {
+		if strings.EqualFold(b.Blast, blast) && mathx.Abs(b.X-x) <= r && mathx.Abs(b.Y-y) <= r {
 			return true
 		}
 	}

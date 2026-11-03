@@ -73,6 +73,7 @@ never imports a feature.
 - Ebitengine, image/png, OS path lookup for generated art and the menu
   splash; `internal/platform/config` (settings), `internal/platform/input`
   (the key-binding registry and resolver).
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden dependencies
 

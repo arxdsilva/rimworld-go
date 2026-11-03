@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Capture and arrest (ENG-003, M8). A captor walks to a downed raider (or
@@ -133,7 +134,7 @@ func (c *Care) ableHandler(id, target entity.EntityID) bool {
 func (c *Care) adjacent(a, b entity.EntityID) bool {
 	ax, ay, _ := c.h.Pos(a)
 	bx, by, _ := c.h.Pos(b)
-	return abs(ax-bx) <= 1 && abs(ay-by) <= 1
+	return mathx.Abs(ax-bx) <= 1 && mathx.Abs(ay-by) <= 1
 }
 
 // DoCapture runs capture job j of captor id: beside the captive pick it

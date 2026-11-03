@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 )
 
 func validate(t testing.TB, c *mapgen.Ctx) {
@@ -62,7 +63,7 @@ func TestValidateCarvesOutOfEnclosure(t *testing.T) {
 	c := fixture(2, 60, 60)
 	for y := range 60 {
 		for x := range 60 {
-			if d := max(abs(x-30), abs(y-30)); d >= 8 && d <= 10 {
+			if d := max(mathx.Abs(x-30), mathx.Abs(y-30)); d >= 8 && d <= 10 {
 				setRock(c, x, y)
 			}
 		}

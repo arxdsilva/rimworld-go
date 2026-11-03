@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // The colonist pane's Prisoner tab and the Capture / Arrest commands
@@ -104,7 +105,7 @@ func (a Tabs) prisonerCommands(p game.PawnView) []Button {
 		if h.Status != "downed" || h.Prisoner {
 			continue
 		}
-		if d, best := abs(h.X-p.X)+abs(h.Y-p.Y), abs(target.X-p.X)+abs(target.Y-p.Y); !found || d < best || d == best && h.ID < target.ID {
+		if d, best := mathx.Abs(h.X-p.X)+mathx.Abs(h.Y-p.Y), mathx.Abs(target.X-p.X)+mathx.Abs(target.Y-p.Y); !found || d < best || d == best && h.ID < target.ID {
 			target, found = h, true
 		}
 	}

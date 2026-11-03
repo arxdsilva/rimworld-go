@@ -6,6 +6,8 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/caravan"
+	"rimworld-go/pkg/mathx"
+	"rimworld-go/pkg/randx"
 )
 
 // The open maps (MAP-01..04). Map 0 is the first colony and has no row
@@ -63,11 +65,7 @@ func SizeFor(k Kind, colonySide int) int {
 // SeedFor is map id's generator seed on tile, from the game seed: a pure
 // splitmix64 mix, so opening a map draws from no stream.
 func SeedFor(seed uint64, tile int, id uint32) uint64 {
-	v := seed ^ uint64(tile)*0x9e3779b97f4a7c15 ^ uint64(id)<<40
-	v += 0x9e3779b97f4a7c15
-	v = (v ^ v>>30) * 0xbf58476d1ce4e5b9
-	v = (v ^ v>>27) * 0x94d049bb133111eb
-	return v ^ v>>31
+	return randx.SplitMix64(seed ^ uint64(tile)*0x9e3779b97f4a7c15 ^ uint64(id)<<40)
 }
 
 // Meta is one open map's bookkeeping (saved).
@@ -245,20 +243,13 @@ func LumpCells(w, h, n int, free func(x, y int) bool) []int {
 	for d := 0; len(out) < n && d <= max(w, h)/2; d++ {
 		for y := cy - d; y <= cy+d && len(out) < n; y++ {
 			for x := cx - d; x <= cx+d && len(out) < n; x++ {
-				if (abs(x-cx) == d || abs(y-cy) == d) && x > 0 && y > 0 && x < w-1 && y < h-1 && free(x, y) {
+				if (mathx.Abs(x-cx) == d || mathx.Abs(y-cy) == d) && x > 0 && y > 0 && x < w-1 && y < h-1 && free(x, y) {
 					out = append(out, y*w+x)
 				}
 			}
 		}
 	}
 	return out
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // Countdown is map id's pack-up ticks left at now (0: none running).

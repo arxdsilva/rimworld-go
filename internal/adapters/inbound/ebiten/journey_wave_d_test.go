@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 var _ = owe("journey_wave_d_test.go", []string{}, []string{})
@@ -184,7 +185,7 @@ func TestJourneyMortarForcedTarget(t *testing.T) {
 		careFeed(j)
 		j.update(1)
 		for _, b := range j.world().Bursts {
-			if abs(b.X-tx) <= 10 && abs(b.Y-ty) <= 10 { // forced miss radius 9 (wiki: Mortar)
+			if mathx.Abs(b.X-tx) <= 10 && mathx.Abs(b.Y-ty) <= 10 { // forced miss radius 9 (wiki: Mortar)
 				near = true
 			}
 		}
@@ -208,7 +209,7 @@ func TestJourneyIEDTrigger(t *testing.T) {
 	j := newJourney(t, jPawns([2]int{12, 12}))
 	for y := 8; y <= 16; y++ {
 		for x := 8; x <= 16; x++ {
-			if max(abs(x-12), abs(y-12)) == 4 {
+			if max(mathx.Abs(x-12), mathx.Abs(y-12)) == 4 {
 				wdBuild(j, "blast charge", x, y)
 			}
 		}

@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 )
 
 func newCtx(seed uint64, w, h int) *mapgen.Ctx {
@@ -155,7 +156,7 @@ func TestOreRules(t *testing.T) {
 			ox, oy := c.XY(l.origin)
 			for _, m := range placed[:k] {
 				mx, my := c.XY(m.origin)
-				if max(abs(mx-ox), abs(my-oy)) < originSpacing {
+				if max(mathx.Abs(mx-ox), mathx.Abs(my-oy)) < originSpacing {
 					t.Fatal("origins closer than spacing")
 				}
 			}
@@ -193,7 +194,7 @@ func TestLumpShape(t *testing.T) {
 
 func TestOreOriginSpacing(t *testing.T) {
 	origins := []mapgen.Point{{X: 10, Y: 10}}
-	if farFromAll(origins, 15, 10) || !farFromAll(origins, 16, 10) || abs(-3) != 3 || abs(2) != 2 {
+	if farFromAll(origins, 15, 10) || !farFromAll(origins, 16, 10) || mathx.Abs(-3) != 3 || mathx.Abs(2) != 2 {
 		t.Fatal("farFromAll")
 	}
 }

@@ -3,6 +3,7 @@ package planet
 import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/site"
+	"rimworld-go/pkg/randx"
 )
 
 // River numbers (NG-1 §4.1).
@@ -20,7 +21,7 @@ const (
 
 func beginRivers(b *Builder) int {
 	p, g := b.w, &b.g
-	seed := mix(p.Seed ^ saltRivers)
+	seed := randx.Mix64(p.Seed ^ saltRivers)
 	g.sources = g.sources[:0]
 	for i := 0; i < p.TileCount(); i++ {
 		if p.Water[i] != Land || p.Biome[i] == biome.IceSheet || p.Biome[i] == biome.SeaIce {

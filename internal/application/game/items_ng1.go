@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/geology"
+	"rimworld-go/pkg/mathx"
 )
 
 // Components and the NG-1 buildings in play (NG-1 §4.8, §5.6).
@@ -105,7 +106,7 @@ func (g *Game) findMonitor(bed entity.EntityID) entity.EntityID {
 			continue
 		}
 		for _, c := range cells {
-			if abs(o.X-c[0]) <= 1 && abs(o.Y-c[1]) <= 1 {
+			if mathx.Abs(o.X-c[0]) <= 1 && mathx.Abs(o.Y-c[1]) <= 1 {
 				best = bid
 				break
 			}

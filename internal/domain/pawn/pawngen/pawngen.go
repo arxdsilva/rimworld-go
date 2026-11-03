@@ -95,20 +95,10 @@ const (
 	nameSalt = 0x50574e47454e4e31 // names (kept apart so Taken can't shift the rest)
 )
 
-// mix64 is the splitmix64 finaliser.
-func mix64(x uint64) uint64 {
-	x ^= x >> 30
-	x *= 0xBF58476D1CE4E5B9
-	x ^= x >> 27
-	x *= 0x94D049BB133111EB
-	x ^= x >> 31
-	return x
-}
-
 func streamSeed(seed uint64, slot, roll int, salt uint64) uint64 {
-	s := mix64(seed ^ salt)
-	s = mix64(s ^ uint64(int64(slot))*0x9E3779B97F4A7C15)
-	return mix64(s ^ uint64(int64(roll))*0xD1B54A32D192ED03)
+	s := randx.Mix64(seed ^ salt)
+	s = randx.Mix64(s ^ uint64(int64(slot))*0x9E3779B97F4A7C15)
+	return randx.Mix64(s ^ uint64(int64(roll))*0xD1B54A32D192ED03)
 }
 
 // Generate makes candidate slot's colonist on its roll-th reroll. The

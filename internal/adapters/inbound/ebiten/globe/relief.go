@@ -3,10 +3,10 @@ package globe
 import (
 	"math"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
 	"rimworld-go/internal/domain/world/site"
+	"rimworld-go/pkg/randx"
 )
 
 // Relief (plan §1.2): every hill and mountain stands up off the sphere.
@@ -100,7 +100,7 @@ func hillLift(p *planet.Planet, i int) float32 {
 	default:
 		return 0
 	}
-	j := float32(hashUnit(art.Mix64(uint64(i)*0x9E3779B97F4A7C15 + 0x5EED)))
+	j := float32(hashUnit(randx.Mix64(uint64(i)*0x9E3779B97F4A7C15 + 0x5EED)))
 	return l * (1 - liftJitter + 2*liftJitter*j)
 }
 

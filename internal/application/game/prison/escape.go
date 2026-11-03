@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Prison breaks (CBT-4). wiki: Prison break (Events): each prisoner may
@@ -50,7 +51,7 @@ func (p *Prison) breakOut(id entity.EntityID, now uint64) bool {
 			continue
 		}
 		ox, oy, ok := h.Pos(o)
-		if !ok || max(abs(ox-x), abs(oy-y)) > escapeReach {
+		if !ok || max(mathx.Abs(ox-x), mathx.Abs(oy-y)) > escapeReach {
 			continue
 		}
 		r := h.RoomOf(o)

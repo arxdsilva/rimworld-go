@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // PLAY-018 layout invariants: computeHUDLayout places every region so they
@@ -217,7 +218,7 @@ func layoutScreen(t *testing.T, a *App, w, h int, ui float64) (int, int) {
 	a.scale = gfx.Scale{Dev: 1, UI: ui, S: ui}
 	a.syncUIScale()
 	a.setPhysical(int(math.Round(float64(w)*ui)), int(math.Round(float64(h)*ui)))
-	if architectpkg.Abs(a.sw-w) > 1 || architectpkg.Abs(a.sh-h) > 1 {
+	if mathx.Abs(a.sw-w) > 1 || mathx.Abs(a.sh-h) > 1 {
 		t.Fatalf("logical screen %dx%d, want about %dx%d", a.sw, a.sh, w, h)
 	}
 	return a.sw, a.sh

@@ -121,7 +121,7 @@ func endFeatures(b *Builder) {
 		return
 	}
 	p := b.w
-	r := randx.New(mix(p.Seed ^ saltFeatures))
+	r := randx.New(randx.Mix64(p.Seed ^ saltFeatures))
 	used := map[string]bool{}
 	for k := range p.ext.features {
 		p.ext.features[k].Name = featureName(r, p.ext.features[k].Kind, used)
@@ -138,7 +138,7 @@ func endFeatures(b *Builder) {
 			}
 		}
 	}
-	p.ext.name = planetName(randx.New(mix(p.Seed ^ saltName)))
+	p.ext.name = planetName(randx.New(randx.Mix64(p.Seed ^ saltName)))
 	b.g.feat = nil
 }
 

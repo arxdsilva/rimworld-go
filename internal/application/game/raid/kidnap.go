@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Kidnapping (ENG-003, M9b; moved from the game's kidnap.go by CBT-4). A
@@ -73,7 +74,7 @@ func (kn *Kidnaps) Try(id entity.EntityID, x, y int, now uint64) bool {
 		return false
 	}
 	sx, sy, ok := x, y, true // already beside it
-	if max(abs(x-tx), abs(y-ty)) > 1 {
+	if max(mathx.Abs(x-tx), mathx.Abs(y-ty)) > 1 {
 		sx, sy, ok = kn.k.Beside(id, tx, ty)
 	}
 	if ok && h.StartJob(id, job.Record{Kind: job.Kidnap, Target: t, TX: sx, TY: sy}) {
@@ -114,7 +115,7 @@ func (kn *Kidnaps) guarded(c entity.EntityID, x, y int) bool {
 		if o == c || kn.h.Vital(o).Status != health.Alive {
 			continue
 		}
-		if ox, oy, ok := kn.h.Pos(o); ok && abs(ox-x) <= 1 && abs(oy-y) <= 1 {
+		if ox, oy, ok := kn.h.Pos(o); ok && mathx.Abs(ox-x) <= 1 && mathx.Abs(oy-y) <= 1 {
 			return true
 		}
 	}
@@ -155,7 +156,7 @@ func (kn *Kidnaps) pickUp(id, t entity.EntityID, j job.Record, now uint64) {
 	h := kn.h
 	x, y, _ := h.Pos(id)
 	tx, ty, _ := h.Pos(t)
-	if max(abs(x-tx), abs(y-ty)) > 1 {
+	if max(mathx.Abs(x-tx), mathx.Abs(y-ty)) > 1 {
 		kn.End(id, now)
 		return
 	}

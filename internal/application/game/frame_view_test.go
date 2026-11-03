@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Frame inspector read model (UI-015) and blueprint cancelling.
@@ -190,7 +191,7 @@ func TestCancelFrameRefundsMaterials(t *testing.T) {
 		for _, id := range g.itemIDs {
 			if st, _ := g.stacks.Get(id); id != sid && st.Kind == item.Wood && st.Carrier == 0 {
 				refund += st.Qty
-				if pathDist := max(abs(st.X-8), abs(st.Y-4)); pathDist > 1 {
+				if pathDist := max(mathx.Abs(st.X-8), mathx.Abs(st.Y-4)); pathDist > 1 {
 					t.Fatalf("%s: refund dropped at %d,%d", how, st.X, st.Y)
 				}
 			}

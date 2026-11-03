@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // Crops as composed units (PLAY-016, ART §9.3). A crop tile is not one big
@@ -158,11 +159,11 @@ func CropUnits(x, y, n int, vertical bool, out []CropUnit) []CropUnit {
 	th := sprite.TileHash(x, y)
 	var keys [4]uint64
 	for k := 0; k < n; k++ {
-		keys[k] = art.Mix64(th ^ uint64(k+1)*0xD6E8FEB86659FD93 ^ 0x72616e6b)
+		keys[k] = randx.Mix64(th ^ uint64(k+1)*0xD6E8FEB86659FD93 ^ 0x72616e6b)
 	}
 	for k, b := range cropBase[n] {
-		h := art.Mix64(th ^ uint64(k+1)*0x9E3779B97F4A7C15 ^ 0x63726f70)
-		h2 := art.Mix64(h ^ 0x756e6974)
+		h := randx.Mix64(th ^ uint64(k+1)*0x9E3779B97F4A7C15 ^ 0x63726f70)
+		h2 := randx.Mix64(h ^ 0x756e6974)
 		f := func(shift uint) float64 { return float64(h>>shift&0xffff) / 65535 }
 		along := b[0] + (f(0)*2-1)*CropJitterAlong
 		across := b[1] + (f(16)*2-1)*CropJitterAcross
@@ -855,7 +856,7 @@ func (e *Layer) DrawFurrows(v *render.View, dst *ebiten.Image, w game.WorldView,
 		if p.X < vx0-1 || p.X > vx1+1 || p.Y < vy0-1 || p.Y > vy1+1 || !IsCropPlant(p) {
 			return
 		}
-		fs := &a.furrows[art.Mix64(sprite.TileHash(p.X, p.Y)^0x66757272)%uint64(len(a.furrows))]
+		fs := &a.furrows[randx.Mix64(sprite.TileHash(p.X, p.Y)^0x66757272)%uint64(len(a.furrows))]
 		cx, cy := v.WorldToScreenF(float64(p.X)+0.5, float64(p.Y)+0.5)
 		sc := float32(tile) * fs.k // screen px per atlas px
 		vertical := e.Crops.vertical(&w, p.X, p.Y)

@@ -7,7 +7,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/architect"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
@@ -15,6 +14,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 func TestAlertClickCentresCamera(t *testing.T) {
@@ -195,7 +195,7 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 	}
 	at := func(i int) [2]int { return al.Targets[i] }
 	near := func(got, want [2]int) bool {
-		return architect.Abs(got[0]-want[0]) <= 1 && architect.Abs(got[1]-want[1]) <= 1
+		return mathx.Abs(got[0]-want[0]) <= 1 && mathx.Abs(got[1]-want[1]) <= 1
 	}
 
 	pressButton(t, a, f, "alert.raid") // left: first target

@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Hunting assigns hunts: moved unchanged from the game's combat.go
@@ -52,7 +53,7 @@ func (hn *Hunting) Assign(id entity.EntityID) bool {
 				continue
 			}
 			ax, ay, _ := h.Pos(aid)
-			d := abs(px-ax) + abs(py-ay)
+			d := mathx.Abs(px-ax) + mathx.Abs(py-ay)
 			if !a.Downed {
 				d += huntDownedFirst // a downed animal is finished first (animal_health.go)
 			}

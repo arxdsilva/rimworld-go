@@ -1,6 +1,9 @@
 package haul
 
-import "rimworld-go/internal/domain/sim/entity"
+import (
+	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
+)
 
 // Radius is how far (Chebyshev tiles) the next pile a load gathers may
 // lie from the last one picked up (original tuning).
@@ -31,7 +34,7 @@ func Plan(out []Pick, first Cand, cands []Cand, capacity, radius int) []Pick {
 	for left > 0 {
 		best, bestD := -1, 0
 		for i, c := range cands[:n] {
-			d := max(abs(c.X-x), abs(c.Y-y))
+			d := max(mathx.Abs(c.X-x), mathx.Abs(c.Y-y))
 			if c.ID == first.ID || c.Qty <= 0 || d > radius {
 				continue
 			}
@@ -64,13 +67,6 @@ func Pickups(picks []Pick) []entity.EntityID {
 		out = append(out, p.ID, entity.EntityID(p.Take))
 	}
 	return out
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // ClaimAll claims, for hauler id when the job starts, the planned count

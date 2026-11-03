@@ -21,6 +21,7 @@ Threats: the legacy storyteller's die and raid plans, the raider AI (arrive, ass
 ## Allowed Dependencies
 - Domain value types (`ai/job`, `animal`, `combat/weapon`, `pawn/health`, `incident`, `sim/clock`, `sim/entity`, `world/grid`, `world/temperature`).
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - `internal/application/game`, adapters, platform, Ebitengine, global RNG, wall clock.

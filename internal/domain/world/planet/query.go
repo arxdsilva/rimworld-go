@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/temperature"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -21,8 +22,8 @@ const (
 )
 
 func bucketOf(latX10, lonX10 int) int {
-	row := clampInt((latX10+900)/(bucketDeg*10), 0, bucketRows-1)
-	col := clampInt((lonX10+1800)/(bucketDeg*10), 0, bucketCols-1)
+	row := mathx.Clamp((latX10+900)/(bucketDeg*10), 0, bucketRows-1)
+	col := mathx.Clamp((lonX10+1800)/(bucketDeg*10), 0, bucketCols-1)
 	return row*bucketCols + col
 }
 
@@ -197,10 +198,10 @@ const (
 // growing with latitude and distance from the sea, a day swing that is
 // larger in dry places, and the hemisphere's peak day.
 func (p *Planet) climate(i int) temperature.Climate {
-	lat := absInt(int(p.Lat[i]))
+	lat := mathx.Abs(int(p.Lat[i]))
 	amp := ampEquator + (ampPolar-ampEquator)*min(lat, ampLatFull)/ampLatFull
 	amp += ampInland * min(int(p.CoastDist[i]), ampInlandTiles) / ampInlandTiles
-	r := clampInt(int(p.Rain[i]), swingDryRain, swingWetRain)
+	r := mathx.Clamp(int(p.Rain[i]), swingDryRain, swingWetRain)
 	swing := swingDry - (swingDry-swingWet)*(r-swingDryRain)/(swingWetRain-swingDryRain)
 	peak := peakNorth
 	if p.Lat[i] < 0 {
@@ -412,7 +413,7 @@ func (p *Planet) RandomLanding(n int) int {
 
 // landingRand is the stream for random-landing press n.
 func landingRand(seed uint64, n int) *randx.Rand {
-	return randx.New(mix(seed ^ saltLanding ^ mix(uint64(n))))
+	return randx.New(randx.Mix64(seed ^ saltLanding ^ randx.Mix64(uint64(n))))
 }
 
 // Key hashes the params (a planet is reused when its key matches).

@@ -8,7 +8,7 @@ The per-tile snow layer and the snow clearing area with its shovelling job (PLAY
 - `Layer` (`snow.New`): every operation, a value built per call over the current map's `State`, so it is never cached across a map swap. `Seed`, `SeedDue`, `Chunks`, `ChunksAt` run from the game's weather phase; `AssignClear`, `DoClear`, `PaintClear` from its job and command paths; `View`, `Export`, `Import` from the read model and saves.
 
 ## Allowed Dependencies
-- Domain packages only. Nothing from `internal/application/game`; the simulation comes in through the roles in `deps.go`, implemented by `snowHost` (`game/weather.go`).
+- Domain packages and `pkg/randx` (`SplitMix64`) only. Nothing from `internal/application/game`; the simulation comes in through the roles in `deps.go`, implemented by `snowHost` (`game/weather.go`).
 
 ## Invariants
 - Deterministic: no state outside `State`, no randomness (`dither` is a pure hash of step and chunk), no wall clock.

@@ -1,5 +1,7 @@
 package cover
 
+import "rimworld-go/pkg/mathx"
+
 // Cover by angle and range (CBT-2). wiki: Cover: cover works best against
 // shots coming straight at it, by the angle between the shot and the
 // cover as seen from the target (< 15 deg 100 %, 15-27 80 %, 27-40 60 %,
@@ -48,7 +50,7 @@ const (
 // against a shooter on (sx, sy): a third when it stands beside the cover,
 // two thirds a tile further, else all of it.
 func RangeFactor(sx, sy, cx, cy int) int {
-	switch max(abs(sx-cx), abs(sy-cy)) {
+	switch max(mathx.Abs(sx-cx), mathx.Abs(sy-cy)) {
 	case 0, 1:
 		return FrontFactor
 	case 2:
@@ -91,11 +93,4 @@ func Effective(g Grid, sx, sy, tx, ty int) (p int, best Kind, bx, by int) {
 		}
 	}
 	return 1000 - pass, best, bx, by
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/pkg/mathx"
 )
 
 // eventMap is an open wild map of biome b at day 20 (every event's first
@@ -61,19 +62,19 @@ func TestHerdCrossesEdgeToEdge(t *testing.T) {
 		// the exit is on the edge opposite the entry, within crossDrift
 		switch {
 		case start.X <= 2:
-			if a.ExitX != w-1 || abs(a.ExitY-start.Y) > crossDrift+2 {
+			if a.ExitX != w-1 || mathx.Abs(a.ExitY-start.Y) > crossDrift+2 {
 				t.Fatalf("entered west at %v, exit %d,%d", start, a.ExitX, a.ExitY)
 			}
 		case start.X >= w-3:
-			if a.ExitX != 0 || abs(a.ExitY-start.Y) > crossDrift+2 {
+			if a.ExitX != 0 || mathx.Abs(a.ExitY-start.Y) > crossDrift+2 {
 				t.Fatalf("entered east at %v, exit %d,%d", start, a.ExitX, a.ExitY)
 			}
 		case start.Y <= 2:
-			if a.ExitY != h-1 || abs(a.ExitX-start.X) > crossDrift+2 {
+			if a.ExitY != h-1 || mathx.Abs(a.ExitX-start.X) > crossDrift+2 {
 				t.Fatalf("entered north at %v, exit %d,%d", start, a.ExitX, a.ExitY)
 			}
 		default:
-			if a.ExitY != 0 || abs(a.ExitX-start.X) > crossDrift+2 {
+			if a.ExitY != 0 || mathx.Abs(a.ExitX-start.X) > crossDrift+2 {
 				t.Fatalf("entered south at %v, exit %d,%d", start, a.ExitX, a.ExitY)
 			}
 		}

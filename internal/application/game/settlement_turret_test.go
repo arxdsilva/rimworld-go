@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/mathx"
 )
 
 // MAP-13: a settlement's turrets fight. The whole game: a real attack on an
@@ -44,7 +45,7 @@ func standInSight(t *testing.T, g *Game, m *mapState, tid, id entity.EntityID) P
 	for r := 2; r <= 12; r++ {
 		for dy := -r; dy <= r; dy++ {
 			for dx := -r; dx <= r; dx++ {
-				if max(abs(dx), abs(dy)) != r || !g.grid.InBounds(b.X+dx, b.Y+dy) {
+				if max(mathx.Abs(dx), mathx.Abs(dy)) != r || !g.grid.InBounds(b.X+dx, b.Y+dy) {
 					continue
 				}
 				x, y := b.X+dx, b.Y+dy

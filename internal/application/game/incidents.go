@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/pkg/mathx"
 )
 
 // Nature events (SIM-025, plan 3.2-3.3). Every two to five days, at a
@@ -382,16 +383,16 @@ func (g *Game) crossingLine() (ax, ay, bx, by int, ok bool) {
 		switch g.rng.IntN(4) {
 		case 0: // north to south
 			ax, ay = g.rng.IntN(w), 0
-			bx, by = clampInt(ax+drift, 0, w-1), h-1
+			bx, by = mathx.Clamp(ax+drift, 0, w-1), h-1
 		case 1: // south to north
 			ax, ay = g.rng.IntN(w), h-1
-			bx, by = clampInt(ax+drift, 0, w-1), 0
+			bx, by = mathx.Clamp(ax+drift, 0, w-1), 0
 		case 2: // west to east
 			ax, ay = 0, g.rng.IntN(h)
-			bx, by = w-1, clampInt(ay+drift, 0, h-1)
+			bx, by = w-1, mathx.Clamp(ay+drift, 0, h-1)
 		default: // east to west
 			ax, ay = w-1, g.rng.IntN(h)
-			bx, by = 0, clampInt(ay+drift, 0, h-1)
+			bx, by = 0, mathx.Clamp(ay+drift, 0, h-1)
 		}
 		if !g.dryWalkable(ax, ay) || !g.dryWalkable(bx, by) {
 			continue

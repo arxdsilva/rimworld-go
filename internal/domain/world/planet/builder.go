@@ -116,23 +116,16 @@ func Seed(p Params) uint64 {
 }
 
 // phaseRand is the phase's deterministic stream.
-func (b *Builder) phaseRand(salt uint64) *randx.Rand { return randx.New(mix(b.w.Seed ^ salt)) }
+func (b *Builder) phaseRand(salt uint64) *randx.Rand { return randx.New(randx.Mix64(b.w.Seed ^ salt)) }
 
 // seed64 draws a 64-bit seed from r.
 func seed64(r *randx.Rand) uint64 {
 	return uint64(r.IntN(1<<31))<<33 ^ uint64(r.IntN(1<<31))<<2 ^ uint64(r.IntN(4))
 }
 
-// mix is the splitmix64 finaliser.
-func mix(z uint64) uint64 {
-	z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9
-	z = (z ^ (z >> 27)) * 0x94d049bb133111eb
-	return z ^ (z >> 31)
-}
-
 // unit is a per-tile hash in [0, 1).
 func unit(seed uint64, i int) float64 {
-	return float64(mix(seed^uint64(i)*0x9e3779b97f4a7c15)>>11) / (1 << 53)
+	return float64(randx.Mix64(seed^uint64(i)*0x9e3779b97f4a7c15)>>11) / (1 << 53)
 }
 
 // gen is scratch state shared between phases while building.

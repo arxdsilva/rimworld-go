@@ -339,10 +339,3 @@ func stoneAt(c *mapgen.Ctx, i int) geology.Stone {
 	}
 	return geology.Granite
 }
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}

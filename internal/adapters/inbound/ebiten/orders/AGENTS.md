@@ -18,6 +18,7 @@ The right-click order flow: the float menu over a tile, the order queue route, t
 - `selection`: the selection model (stated as fact: orders imports `selection`).
 - `application/game` read models; domain `sim/clock`, `sim/command`, `sim/entity`.
 - Ebitengine (`ebiten`, `vector`); stdlib (`sort`, `strconv`, `strings`, `unicode`, `unicode/utf8`).
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

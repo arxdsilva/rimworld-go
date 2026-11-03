@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Animal handling. Hunters also tame: an animal marked for taming holds
@@ -342,7 +343,7 @@ func (g *Game) wanderTame(id entity.EntityID, a *animal.State, pos Position, def
 			r = def.WanderRadius
 		}
 		x, y := pos.X+g.rng.IntN(2*r+1)-r, pos.Y+g.rng.IntN(2*r+1)-r
-		x, y = clampInt(x, 0, g.grid.Width()-1), clampInt(y, 0, g.grid.Height()-1)
+		x, y = mathx.Clamp(x, 0, g.grid.Width()-1), mathx.Clamp(y, 0, g.grid.Height()-1)
 		if c != nil && !g.inPenCells(c, x, y) { // pens need not be rectangles
 			return
 		}

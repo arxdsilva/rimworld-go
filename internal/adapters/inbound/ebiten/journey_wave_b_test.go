@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // wbSettings opens bill idx's settings dialog from the Bills tab.
@@ -68,7 +69,7 @@ func TestJourneyBillsStoreModeAndRadius(t *testing.T) {
 		j.tick(1)
 		for _, it := range j.world().Items {
 			if it.Kind == "club" && !it.Carried && !(it.X >= 12 && it.X <= 13 && it.Y >= 6 && it.Y <= 7) {
-				if d := max(abs(it.X-10), abs(it.Y-5)); d > 4 {
+				if d := max(mathx.Abs(it.X-10), mathx.Abs(it.Y-5)); d > 4 {
 					t.Fatalf("the club lies at (%d, %d), %d tiles from the bench", it.X, it.Y, d)
 				}
 				lay = true
@@ -85,13 +86,6 @@ func TestJourneyBillsStoreModeAndRadius(t *testing.T) {
 	if !lay {
 		t.Fatal("no club was made")
 	}
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // TestJourneyBillsIngredientToggle (PRD-1): forbidding wood in the bill

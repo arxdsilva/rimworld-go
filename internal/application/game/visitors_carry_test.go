@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // MAP-23 (wiki: Visitor): "When leaving, visitors will carry away wounded
@@ -120,7 +121,7 @@ func TestLeaverGivesUpOnAFriendOutOfReach(t *testing.T) {
 	g, a, b, _ := carryScene(t)
 	for dy := -2; dy <= 2; dy++ {
 		for dx := -2; dx <= 2; dx++ {
-			if max(abs(dx), abs(dy)) == 2 {
+			if max(mathx.Abs(dx), mathx.Abs(dy)) == 2 {
 				buildNow(t, g, construction.Wall, item.Steel, construction.South, 16+dx, 6+dy)
 			}
 		}

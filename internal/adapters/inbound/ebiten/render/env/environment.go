@@ -27,6 +27,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/roof"
+	"rimworld-go/pkg/randx"
 )
 
 // Environment presentation (ART §27.3, §16): the wind field, plants and
@@ -620,7 +621,7 @@ func CropGrowthStage(p game.PlantView) int {
 // TreeSpeciesAt is the tree species growing on a tile: mostly oak, then
 // birch, some pine.
 func TreeSpeciesAt(h uint64) int {
-	switch v := art.Mix64(h^0x7ee5) % 20; {
+	switch v := randx.Mix64(h^0x7ee5) % 20; {
 	case v < 9:
 		return 0
 	case v < 15:
@@ -854,7 +855,7 @@ var (
 // across several tiles, so early snow lies in soft patches rather than a
 // checkerboard.
 func SnowCover(x, y int, depth float64) (string, float64) {
-	return snowCoverKeys[art.Mix64(sprite.TileHash(x, y)^0x51)%2], snowField(float64(x)+0.5, float64(y)+0.5, depth)
+	return snowCoverKeys[randx.Mix64(sprite.TileHash(x, y)^0x51)%2], snowField(float64(x)+0.5, float64(y)+0.5, depth)
 }
 
 // snowField is the snow cover's opacity at world point (fx, fy).
@@ -882,7 +883,7 @@ func SnowDrift(x, y int, depth float64) (string, float64) {
 	if depth <= 0.4 || motion.Hash01(th, 0xd21f) > 0.18 {
 		return "", 0
 	}
-	return snowDriftKeys[art.Mix64(th^0xd2)%4], gfx.Clamp01((depth - 0.4) / 0.3)
+	return snowDriftKeys[randx.Mix64(th^0xd2)%4], gfx.Clamp01((depth - 0.4) / 0.3)
 }
 
 // FrostStrength is how strongly rime shows (0..0.35): on freezing
@@ -964,7 +965,7 @@ func (e *Layer) DrawGroundCover(v *render.View, screen *ebiten.Image, w game.Wor
 			}
 			if frost > 0 {
 				a := frost * motion.Smoothstep01((0.6-ValueNoise(float64(x)/4, float64(y)/4, 0xf505))/0.4)
-				decal(frostKeys[art.Mix64(sprite.TileHash(x, y)^0xf5)%4], x, y, a)
+				decal(frostKeys[randx.Mix64(sprite.TileHash(x, y)^0xf5)%4], x, y, a)
 			}
 		}
 	}

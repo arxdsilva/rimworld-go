@@ -18,6 +18,7 @@ The selection's inspector: the pane with its tabs (pawn needs, gear, health, soc
 - `selection`: the selection model and kinds. Stated as fact: the inspector imports `selection`.
 - `application/game` read models; domain value types (`ai/work`, `building/construction`, `economy/item`, `pawn/body`, `pawn/look`, `pawn/medcare`, `pawn/prisoner`, `pawn/skill`, `sim/clock`, `sim/command`, `sim/entity`, `world/plant`); `platform/input`.
 - Ebitengine; stdlib `reflect`, `math`, `fmt`, `image/color`.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

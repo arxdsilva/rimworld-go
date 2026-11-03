@@ -12,6 +12,7 @@ Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds
 ## Allowed Dependencies
 - Domain value types (`pawn/mentalbreak`, `pawn/mood`, `pawn/social`, `ai/job`, `sim/entity`, `sim/clock`).
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
+- `pkg/mathx` (`Abs`).
 
 ## Forbidden Dependencies
 - `internal/application/game`, adapters, platform, Ebitengine, global RNG, wall clock.

@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Warden work (ENG-003, M8): bring a hungry prisoner a meal, and visit
@@ -78,7 +79,7 @@ func (p *Prison) Assign(id entity.EntityID) bool {
 			continue
 		}
 		qx, qy, _ := h.Pos(q)
-		if d := abs(x-qx) + abs(y-qy); d < bestD {
+		if d := mathx.Abs(x-qx) + mathx.Abs(y-qy); d < bestD {
 			best, kind, bestD = q, k, d
 		}
 	}
@@ -122,7 +123,7 @@ func (p *Prison) Do(id entity.EntityID, j job.Record) {
 		return
 	}
 	ix, iy, _ := h.Pos(id)
-	if qx, qy, _ := h.Pos(q); abs(ix-qx) > 1 || abs(iy-qy) > 1 {
+	if qx, qy, _ := h.Pos(q); mathx.Abs(ix-qx) > 1 || mathx.Abs(iy-qy) > 1 {
 		h.Chase(id, q, j, chaseEvery)
 		return
 	}

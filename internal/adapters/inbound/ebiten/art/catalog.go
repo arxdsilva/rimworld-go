@@ -705,15 +705,6 @@ func FacingFor(dx, dy int, prev Facing) Facing {
 	}
 }
 
-func Mix64(x uint64) uint64 {
-	x ^= x >> 30
-	x *= 0xBF58476D1CE4E5B9
-	x ^= x >> 27
-	x *= 0x94D049BB133111EB
-	x ^= x >> 31
-	return x
-}
-
 // Origin converts a sprite's footprint anchor to a screen position:
 // the footprint's top-left lands at (sx, sy); scale is tile over the
 // sprite's density (pxPerTile).

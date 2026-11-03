@@ -14,6 +14,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/randx"
 )
 
 // Electricity on the map (PLAY-021, RENDER). Presentation only: every
@@ -400,7 +401,7 @@ func (p *PowerDraw) BladeFrame(id entity.EntityID, fps float64, now uint64) int 
 	s, ok := p.Spins[id]
 	switch {
 	case !ok:
-		s = turbineSpin{phase: float64(art.Mix64(uint64(id)) % TurbineFrames), last: now}
+		s = turbineSpin{phase: float64(randx.Mix64(uint64(id)) % TurbineFrames), last: now}
 	case now > s.last:
 		s.phase = math.Mod(s.phase+float64(now-s.last)*fps/60, TurbineFrames)
 		s.last = now
@@ -637,7 +638,7 @@ var smokeCS = sprite.ColorScale{0.4, 0.38, 0.36, 0.8}
 // machinePuff is the puff frame and alpha of machine id at tick now (ok
 // false between puffs), steam or smoke timing, offset by its id.
 func (o *Wiring) machinePuff(now, id uint64, steam bool) (int, float64, bool) {
-	h := art.Mix64(id ^ 0x5e4a9)
+	h := randx.Mix64(id ^ 0x5e4a9)
 	lo, spread := uint64(smokePeriodMin), uint64(smokePeriodSpread)
 	if steam {
 		lo, spread = geoPeriodMin, geoPeriodSpread
@@ -719,7 +720,7 @@ func MillWheelOffset(facing string) (float64, float64) {
 // drawMillWheel draws watermill b's wheel over its base: turning while it
 // makes power, still otherwise (and under reduced motion).
 func (o *Wiring) drawMillWheel(v *render.View, ps sprite.Pass, dst *ebiten.Image, b *game.BuildingView, tile float64, sw, sh int) {
-	f := int(art.Mix64(uint64(b.ID)) % MillWheelFrames)
+	f := int(randx.Mix64(uint64(b.ID)) % MillWheelFrames)
 	if !v.ReducedMotion && b.PowerOut > 0 {
 		f += int(v.Present * millWheelFPS / 60)
 	}

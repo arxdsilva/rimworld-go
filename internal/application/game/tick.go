@@ -20,6 +20,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/pkg/mathx"
 )
 
 // ApplyPending applies every queued command now, in order: what the next
@@ -1746,7 +1747,7 @@ func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
 	for r := 1; r <= 4; r++ {
 		for dy := -r; dy <= r; dy++ {
 			for dx := -r; dx <= r; dx++ {
-				if max(abs(dx), abs(dy)) != r {
+				if max(mathx.Abs(dx), mathx.Abs(dy)) != r {
 					continue
 				}
 				nx, ny := x+dx, y+dy
@@ -1764,13 +1765,6 @@ func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
 		}
 	}
 	return 0, 0, false
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // Ate reports whether the pawn completed an Eat job (fixture helper).

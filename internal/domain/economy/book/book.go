@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/economy/quality"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/research"
+	"rimworld-go/pkg/randx"
 )
 
 // Reading numbers by quality, Awful..Legendary (wiki: Novel, Textbook,
@@ -88,7 +89,7 @@ func Mint(k item.Kind, h uint64, open func(research.Project) bool) (quality.Leve
 	if !k.IsBook() {
 		return 0, 0
 	}
-	h = mix(h)
+	h = randx.SplitMix64(h)
 	roll, q := int(h%100), quality.Awful
 	for l, w := range foundWeights {
 		if roll < w {
@@ -97,11 +98,11 @@ func Mint(k item.Kind, h uint64, open func(research.Project) bool) (quality.Leve
 		}
 		roll -= w
 	}
-	h = mix(h)
+	h = randx.SplitMix64(h)
 	seed := uint32(h&0xffff) | 1
-	h = mix(h)
+	h = randx.SplitMix64(h)
 	two := int(h%100) < TwoSubjectsPct
-	h = mix(h)
+	h = randx.SplitMix64(h)
 	switch k {
 	case item.Textbook:
 		a := skill.ID(h % uint64(skill.NumSkills))
@@ -144,16 +145,8 @@ func projects(open func(research.Project) bool) []research.Project {
 	return live
 }
 
-// mix is a 64-bit finaliser (splitmix64's): a seed spread over all bits.
-func mix(h uint64) uint64 {
-	h += 0x9e3779b97f4a7c15
-	h = (h ^ h>>30) * 0xbf58476d1ce4e5b9
-	h = (h ^ h>>27) * 0x94d049bb133111eb
-	return h ^ h>>31
-}
-
 // Hash is a book's mint hash from the colony seed and the new stack's id.
-func Hash(seed, id uint64) uint64 { return mix(seed ^ mix(id)) }
+func Hash(seed, id uint64) uint64 { return randx.SplitMix64(seed ^ randx.SplitMix64(id)) }
 
 // Skills is the skills a textbook with seed s teaches (none for other
 // books).

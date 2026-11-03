@@ -15,6 +15,7 @@ The colony's trade, comms and caravan dialogs: what a trader or faction offers, 
 - Application read models: `application/game` (`TradeView`, `CommsView`, `WorldSiteView`, `CaravanView`).
 - Domain value types: `animal` (an animal's body class for its mass), `economy/item`, `economy/trade`, `faction`, `sim/clock`, `sim/command`, `sim/entity`, `world/caravan` (the pods' masses, AX-9).
 - Ebitengine (`ebiten`); stdlib (`fmt`, `slices`, `strconv`, `strings`).
+- `pkg/mathx` (`Abs`), `pkg/randx` (`SplitMix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/`.

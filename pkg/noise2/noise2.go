@@ -5,14 +5,11 @@
 // Every function returns values in [0, 1]. It has no game concepts.
 package noise2
 
-import "math"
+import (
+	"math"
 
-// mix is the splitmix64 finaliser: a cheap, well-distributed 64-bit hash.
-func mix(z uint64) uint64 {
-	z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9
-	z = (z ^ (z >> 27)) * 0x94d049bb133111eb
-	return z ^ (z >> 31)
-}
+	"rimworld-go/pkg/randx"
+)
 
 // Seed derives a field seed from a base seed and a name, so separate
 // fields of one map never share a lattice.
@@ -22,7 +19,7 @@ func Seed(base uint64, name string) uint64 {
 		h ^= uint64(name[i])
 		h *= 0x100000001b3
 	}
-	return mix(base ^ mix(h))
+	return randx.Mix64(base ^ randx.Mix64(h))
 }
 
 // gradDirs are 16 unit gradient directions.
@@ -35,8 +32,8 @@ var gradDirs = func() (g [16][2]float64) {
 }()
 
 func grad(seed uint64, ix, iy int64) [2]float64 {
-	h := mix(seed ^ uint64(ix)*0x8cb92ba72f3d8dd7)
-	h = mix(h ^ uint64(iy)*0xd6e8feb86659fd93)
+	h := randx.Mix64(seed ^ uint64(ix)*0x8cb92ba72f3d8dd7)
+	h = randx.Mix64(h ^ uint64(iy)*0xd6e8feb86659fd93)
 	return gradDirs[h>>60]
 }
 
@@ -88,7 +85,7 @@ func FBm(seed uint64, x, y float64, octaves int, cell, gain float64) float64 {
 	}
 	sum, norm, amp, freq := 0.0, 0.0, 1.0, 1/cell
 	for o := 0; o < octaves; o++ {
-		s := mix(seed + uint64(o)*0x9e3779b97f4a7c15)
+		s := randx.Mix64(seed + uint64(o)*0x9e3779b97f4a7c15)
 		sum += amp * raw(s, x*freq, y*freq)
 		norm += amp
 		amp *= gain
@@ -111,7 +108,7 @@ func Ridged(seed uint64, x, y float64, octaves int, cell, gain float64) float64 
 // of cell-sized lattice cells: sampling another field at the warped point
 // bends straight contours into organic ones (domain warping).
 func Warp(seed uint64, x, y, amp, cell float64) (float64, float64) {
-	sx, sy := mix(seed^0x5bd1e995), mix(seed^0x27d4eb2f165667c5)
+	sx, sy := randx.Mix64(seed^0x5bd1e995), randx.Mix64(seed^0x27d4eb2f165667c5)
 	ox := 2*FBm(sx, x, y, 2, cell, 0.5) - 1
 	oy := 2*FBm(sy, x, y, 2, cell, 0.5) - 1
 	return x + amp*ox, y + amp*oy

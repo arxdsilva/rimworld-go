@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/mapgen"
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/randx"
 )
 
@@ -274,7 +275,7 @@ func build(c *mapgen.Ctx, rn *randx.Rand, sh shape, b rect) {
 		lo, hi = 0.30, 0.55
 	}
 	minMiss, maxMiss := ceilShare(n, lo), floorShare(n, hi)
-	miss := clampInt(ceilShare(n, lo+(hi-lo)*float64(rn.IntN(101))/100), minMiss, maxMiss)
+	miss := mathx.Clamp(ceilShare(n, lo+(hi-lo)*float64(rn.IntN(101))/100), minMiss, maxMiss)
 	if sh.door >= 0 {
 		miss = max(miss, 1)
 	}
@@ -323,7 +324,7 @@ func buildShedInterior(c *mapgen.Ctx, rn *randx.Rand, ru *mapgen.Ruin, sh shape,
 	}
 	// Floor on 40..80% of the interior.
 	ni := len(inner)
-	nf := clampInt(ceilShare(ni, 0.40+0.40*float64(rn.IntN(101))/100), ceilShare(ni, 0.40), floorShare(ni, 0.80))
+	nf := mathx.Clamp(ceilShare(ni, 0.40+0.40*float64(rn.IntN(101))/100), ceilShare(ni, 0.40), floorShare(ni, 0.80))
 	pool := append([][2]int(nil), inner...)
 	shuffle(rn, pool)
 	for _, p := range pool[:nf] {

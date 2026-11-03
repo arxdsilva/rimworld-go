@@ -16,6 +16,7 @@ import (
 	rules "rimworld-go/internal/domain/building/aqua"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Entry is one tank's saved state. A tank has an entry from the moment the
@@ -192,7 +193,7 @@ func (ts *Tanks) Assign(id entity.EntityID) bool {
 			if !ok {
 				continue
 			}
-			if d := abs(x-px) + abs(y-py); d < bestD {
+			if d := mathx.Abs(x-px) + mathx.Abs(y-py); d < bestD {
 				pick, kind, bestD = e, k, d
 			}
 		}
@@ -243,11 +244,4 @@ func (ts *Tanks) Do(id entity.EntityID, j job.Record) {
 	}
 	j.State = job.Complete
 	ts.h.SetJob(id, j)
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

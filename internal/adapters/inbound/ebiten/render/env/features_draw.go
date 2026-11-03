@@ -5,10 +5,10 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/pkg/randx"
 )
 
 // Map-generation features (MAPGEN-2 §3.4-3.5): the ruin overlay on
@@ -27,7 +27,9 @@ const (
 	steamAlpha        = 0.85
 )
 
-func steamHash(x, y int) uint64 { return art.Mix64(uint64(uint32(x))<<32 | uint64(uint32(y)) ^ 0x57e4) }
+func steamHash(x, y int) uint64 {
+	return randx.Mix64(uint64(uint32(x))<<32 | uint64(uint32(y)) ^ 0x57e4)
+}
 
 // SteamPeriod is the ticks between this vent's bursts.
 func SteamPeriod(x, y int) int {

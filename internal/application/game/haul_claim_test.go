@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/vault"
+	"rimworld-go/pkg/mathx"
 )
 
 // PLAY-017 §5: haulers carry only the colony's own things; what was found
@@ -179,7 +180,7 @@ func TestRaiderAndVisitorGearSpawnUnclaimed(t *testing.T) {
 	clubs := 0
 	for _, id := range g.itemIDs {
 		st, _ := g.stacks.Get(id)
-		if st.Kind != item.Rifle || max(abs(st.X-26), abs(st.Y-17)) > 2 {
+		if st.Kind != item.Rifle || max(mathx.Abs(st.X-26), mathx.Abs(st.Y-17)) > 2 {
 			continue
 		}
 		clubs++

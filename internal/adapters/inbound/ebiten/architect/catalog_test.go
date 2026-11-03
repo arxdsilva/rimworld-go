@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/pkg/mathx"
 )
 
 // TestArchCategoriesHaveTools: every category in Categories gets a
@@ -133,7 +134,7 @@ func TestFacings(t *testing.T) {
 	if FacingIndex("west") != 3 || FacingIndex("bogus") != 0 || world.FacingOr("") != "south" || world.FacingOr("east") != "east" {
 		t.Error("facing names")
 	}
-	if Abs(-4) != 4 || Abs(3) != 3 {
+	if mathx.Abs(-4) != 4 || mathx.Abs(3) != 3 {
 		t.Error("Abs")
 	}
 }

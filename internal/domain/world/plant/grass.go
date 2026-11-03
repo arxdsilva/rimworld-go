@@ -3,6 +3,7 @@ package plant
 import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/randx"
 )
 
 // grassEvery is how sparse grass is: one soil tile in five.
@@ -45,10 +46,7 @@ func GrassAtBiome(t terrain.Type, x, y, permil int) bool {
 	if t == terrain.Sand {
 		permil /= 4
 	}
-	h := tileHash(x, y) ^ 0x6772617373 // "grass"
-	h = (h ^ h>>30) * 0xbf58476d1ce4e5b9
-	h = (h ^ h>>27) * 0x94d049bb133111eb
-	h ^= h >> 31
+	h := randx.Mix64(tileHash(x, y) ^ 0x6772617373) // "grass"
 	return int(h%1000) < permil
 }
 

@@ -45,11 +45,22 @@ func Derive(seed uint64, name string) *Rand {
 		h ^= uint64(name[i])
 		h *= 0x100000001b3
 	}
-	z := seed ^ h
-	z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9
-	z = (z ^ (z >> 27)) * 0x94d049bb133111eb
-	return New(z ^ (z >> 31))
+	return New(Mix64(seed ^ h))
 }
 
 // Float64 returns a pseudo-random number in [0, 1).
 func (r *Rand) Float64() float64 { return r.src.Float64() }
+
+// SplitMix64 is one full step of splitmix64 from state x: the golden-gamma
+// increment, then Mix64. Its output is part of generated worlds and saves, so
+// it must never change.
+func SplitMix64(x uint64) uint64 { return Mix64(x + 0x9E3779B97F4A7C15) }
+
+// Mix64 is splitmix64's finaliser alone, without the increment, so
+// Mix64(0) == 0. It gives different values from SplitMix64: the two are not
+// interchangeable, and its output must never change either.
+func Mix64(x uint64) uint64 {
+	x = (x ^ x>>30) * 0xBF58476D1CE4E5B9
+	x = (x ^ x>>27) * 0x94D049BB133111EB
+	return x ^ x>>31
+}

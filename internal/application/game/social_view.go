@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // socialView builds pawn id's Social tab: everyone it is related to, has
@@ -65,7 +66,7 @@ func (g *Game) socialView(id entity.EntityID) (SocialView, bool) {
 		if a.strength != b.strength {
 			return int(b.strength - a.strength)
 		}
-		if da, db := abs(a.row.OpinionTo), abs(b.row.OpinionTo); da != db {
+		if da, db := mathx.Abs(a.row.OpinionTo), mathx.Abs(b.row.OpinionTo); da != db {
 			return db - da
 		}
 		if a.row.Other < b.row.Other {

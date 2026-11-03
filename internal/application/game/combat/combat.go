@@ -259,10 +259,3 @@ func sign(v int) int {
 	}
 	return 0
 }
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}

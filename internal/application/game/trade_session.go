@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Trade sessions (PLAY-024, agent S2). The Trade job walks a colonist up
@@ -257,7 +258,7 @@ func (g *Game) doTrade(id entity.EntityID, j job.Record) {
 	}
 	pos, _ := g.positions.Get(id)
 	tp, _ := g.positions.Get(j.Target)
-	if max(abs(pos.X-tp.X), abs(pos.Y-tp.Y)) > 2 { // it strolled off: follow
+	if max(mathx.Abs(pos.X-tp.X), mathx.Abs(pos.Y-tp.Y)) > 2 { // it strolled off: follow
 		sx, sy, ok := g.besideSpot(id, tp.X, tp.Y)
 		var path []pathing.Point
 		if ok {

@@ -3,6 +3,7 @@ package planet
 import (
 	"math"
 
+	"rimworld-go/pkg/mathx"
 	"rimworld-go/pkg/noise3"
 )
 
@@ -63,7 +64,7 @@ func rainBand(latDeg float64, v1 bool) float64 {
 func TempAt(latDeg float64, elevM int, setting int) float64 {
 	s := math.Abs(math.Sin(latDeg * math.Pi / 180))
 	return tempEquator - float64(tempPoleDrop*math.Pow(s, tempLatExp)) -
-		float64(lapsePerKm*math.Max(0, float64(elevM))/1000) + tempOffset[clampInt(setting, 0, 4)]
+		float64(lapsePerKm*math.Max(0, float64(elevM))/1000) + tempOffset[mathx.Clamp(setting, 0, 4)]
 }
 
 // beginClimate measures every tile's hop distance to the ocean.
@@ -108,7 +109,7 @@ func itemClimate(b *Builder, i int) {
 	c := f64(p.Center[i])
 	wet := 1 + rainNoiseAmp*(2*b.g.rain.FBm(c[0], c[1], c[2], 3, rainNoiseFreq, 0.5)-1)*2
 	wet = clampF(wet, 1-rainNoiseAmp, 1+rainNoiseAmp)
-	r := rainBand(lat, b.p.v1()) * moisture * wet * rainMult[clampInt(b.p.Rain, 0, 4)]
+	r := rainBand(lat, b.p.v1()) * moisture * wet * rainMult[mathx.Clamp(b.p.Rain, 0, 4)]
 	if p.Water[i] == Land && upwindPeak(p, i) {
 		r *= shadowFactor
 	}

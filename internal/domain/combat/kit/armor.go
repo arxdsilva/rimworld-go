@@ -3,6 +3,7 @@ package kit
 import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/faction"
+	"rimworld-go/pkg/randx"
 )
 
 // Raider armor (CBT-3). A raider's armor follows its pawn kind, which the
@@ -35,7 +36,7 @@ const (
 // tech. seed picks the optional pieces (the raider's id, mixed: no stream
 // draw, so a raid's other rolls stay as they were).
 func Armor(w item.Kind, tech faction.Tech, seed uint64) []item.Kind {
-	cost, r := Cost(w), mix(seed)
+	cost, r := Cost(w), randx.SplitMix64(seed)
 	maybe := func(pct uint64) bool { // one draw of 0..99 per call, from r's bits
 		v := r % 100
 		r /= 100
@@ -86,14 +87,6 @@ func isMelee(k item.Kind) bool {
 		}
 	}
 	return false
-}
-
-// mix is splitmix64's finaliser: seed's bits spread evenly.
-func mix(seed uint64) uint64 {
-	z := seed + 0x9E3779B97F4A7C15
-	z = (z ^ z>>30) * 0xBF58476D1CE4E5B9
-	z = (z ^ z>>27) * 0x94D049BB133111EB
-	return z ^ z>>31
 }
 
 // Casket is the old blade the n-th casket's remains lie with (moved from

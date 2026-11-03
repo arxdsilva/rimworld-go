@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/mathx"
 )
 
 // Formation moves (UI-016): drafted colonists right-clicking a tile spread
@@ -33,13 +34,6 @@ const formationRadius = 8
 // right-click on a tile without a raider or animal (QA-001 finding).
 func (c *Controller) pawnOrderAt(p game.PawnView, tx, ty int) bool {
 	return hasPawnOrder(c.sh.OrdersAt(p.ID, tx, ty))
-}
-
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // draftedOf keeps the drafted colonists.
@@ -102,7 +96,7 @@ func ringCells(x, y, r int) [][2]int {
 	var out [][2]int
 	for dy := -r; dy <= r; dy++ {
 		for dx := -r; dx <= r; dx++ {
-			if max(abs(dx), abs(dy)) == r {
+			if max(mathx.Abs(dx), mathx.Abs(dy)) == r {
 				out = append(out, [2]int{x + dx, y + dy})
 			}
 		}
@@ -143,7 +137,7 @@ func FormationCells(x, y, n int, free func(x, y int) bool) [][2]int {
 
 // bresenham is the cells of the straight line from a to b.
 func bresenham(x0, y0, x1, y1 int) [][2]int {
-	dx, dy := abs(x1-x0), -abs(y1-y0)
+	dx, dy := mathx.Abs(x1-x0), -mathx.Abs(y1-y0)
 	sx, sy := 1, 1
 	if x0 > x1 {
 		sx = -1

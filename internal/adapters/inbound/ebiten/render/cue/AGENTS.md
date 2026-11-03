@@ -10,10 +10,11 @@ The sound cues the world raises: one-shot cues from world diffs, animal calls an
 - `animal_sounds.go` keeps its name: `cmd/audiogen` reads `VoiceGroups` from it as source (a text read, not an import).
 
 ## Allowed Dependencies
-- Leaves: `art`, `camera`.
+- Leaf: `camera`.
 - Layer: `render` (the view).
 - `application/game` read models; domain `building/construction`, `building/power`, `sim/clock`, `sim/entity`.
 - Standard library: `math`, `sort`, `strconv`, `strings`, `testing`.
+- `pkg/randx` (`Mix64`).
 
 ## Forbidden Dependencies
 - The ebiten root package and `cmd/` (the audiogen reader is a file read, not an import).

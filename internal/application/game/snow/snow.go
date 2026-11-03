@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
+	"rimworld-go/pkg/randx"
 )
 
 // The work is phased by chunk like plant growth (game/plant_growth.go):
@@ -270,14 +271,7 @@ func (l Layer) op(step uint64, c int) (halve bool, delta int) {
 
 // dither is a deterministic value in [0, 1) from (step, chunk).
 func dither(step uint64, c int) float64 {
-	return float64(mix64(mix64(step^0x5e0a)^uint64(c))>>11) / (1 << 53)
-}
-
-func mix64(x uint64) uint64 {
-	x += 0x9e3779b97f4a7c15
-	x = (x ^ x>>30) * 0xbf58476d1ce4e5b9
-	x = (x ^ x>>27) * 0x94d049bb133111eb
-	return x ^ x>>31
+	return float64(randx.SplitMix64(randx.SplitMix64(step^0x5e0a)^uint64(c))>>11) / (1 << 53)
 }
 
 // chunk applies one step's change to chunk c: open cells take it,
