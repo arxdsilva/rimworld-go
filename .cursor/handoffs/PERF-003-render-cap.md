@@ -29,3 +29,13 @@ Left alone on purpose: `prewarmWorkers` stays 4 (its pressure is small beside th
 3. A panic at 1440 too: hardware or Apple (Apple Diagnostics; the two reports in `/Library/Logs/DiagnosticReports`).
 
 Captures for the HUD work (DOS-10) wait for check 1.
+
+## Third panic, 10:19, with the cap in place
+
+A third report (`panic-full-2026-11-04-102002`) came from a different game binary (UUID `79f898be…` against `e8ab0521…` for the first two), so after the cap landed. Same error registers, same moment: 5.5 s of CPU, 1.07 GB resident, 34.8 k page faults, five threads running in `compress/flate` (the four `prewarmFiles` goroutines and the page cutter), the main thread waiting in a cgo callback. The user saw the top ~20 % of the frame drawn and green below it before the panic: the display engine failing to scan the framebuffer, and the error names the display clients (`DISP0`, `DISPEXT0..3`).
+
+So the render cap is not what decides it: the common load of the three panics is the boot prewarm's burst (four cores deflating ~765 MiB of freshly decoded sprites, ~560 MB of fresh pages in five seconds) while an external display in a scaled mode scans its framebuffer. The same panic string is reported on other M-series Macs with external HiDPI displays under Moonlight, scrcpy and Vectorworks (moonlight-stream/moonlight-qt#1299, Genymobile/scrcpy#5072, BetterDisplay discussion #2981), with no Apple fix; the Moonlight thread reports VSync on stopping it for one user.
+
+Change: `prewarmWorkers` 4 → 1 (`art/memory.go`): the prewarm is background work and now takes ~2 s instead of ~0.5 s. The cap stays: it is still right on its own.
+
+Open: whether the 10:19 run was still on the 3360x1890 mode (the user is asked), the native-mode run (test 2) and, if that panics too, Apple Diagnostics; a hardware fault on DRAM channel 0 that the game's bulk page touch happens to hit is still possible and only the native-mode run and the diagnostics separate the two.

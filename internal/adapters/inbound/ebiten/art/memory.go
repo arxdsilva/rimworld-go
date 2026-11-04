@@ -207,9 +207,14 @@ func (c *Catalog) prewarmFileKeys() []string {
 }
 
 // prewarmWorkers is how many goroutines decode files ahead: ~1700
-// sprites at ~0.5 ms a layer take ~0.5 s on 4 (a decode holds one sprite,
-// so memory does not grow with them).
-const prewarmWorkers = 4
+// sprites at ~0.5 ms a layer take ~2 s on one (a decode holds one sprite,
+// so memory does not grow with them). One, not four: three kernel panics
+// of the Mac's memory controller on 2026-11-04 (PERF-003) each caught the
+// game five seconds in with four deflating goroutines running and ~1 GB of
+// fresh pages touched, while an external display in a scaled mode scanned
+// its framebuffer; the prewarm is background work, so it takes the gentle
+// pace and leaves the memory bus to the display.
+const prewarmWorkers = 1
 
 // prewarmFiles decodes each layer of keys' sprites not yet taken and
 // publishes it deflated (the background prewarm's file half), keys taken
