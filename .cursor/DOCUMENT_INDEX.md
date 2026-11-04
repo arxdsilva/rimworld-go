@@ -29,6 +29,7 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Common Sense gap analysis (habit rules: tidying, bills, packs, joy, wandering, toggles), CSE rows | `COMMON_SENSE_GAP_ANALYSIS.md` |
 | Work priorities gap analysis (tie-break between work types, order inside a type, the Work tab), WRK rows | `WORK_PRIORITIES_GAP_ANALYSIS.md` |
 | Harvesting gap analysis (who harvests, batching, yield and speed by Plants level), HRV rows | `HARVEST_GAP_ANALYSIS.md` |
+| Mouse controls gap analysis (double click, Shift, box, group actions, right click, drag painting, multipliers), CTL rows | `MOUSE_CONTROLS_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Multi-area work across parallel agents; every multi-area plan includes its Parallel workers section (§0) | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |

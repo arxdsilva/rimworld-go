@@ -17,7 +17,7 @@ Scope: the Work tab and how a colonist picks work: the tie-break between work ty
 - [Work](https://rimworldwiki.com/wiki/Work): the work type table, the tasks of each type, and the rules below. The page is flagged a stub.
 - Rules taken from it: in manual mode each type has a priority from 1 to 4, and blank is never; for equal priorities "the tasks on the left are done first"; all work of one priority comes before the next; inside a type "tasks higher on the list will be prioritized".
 - **Limit of the source:** the page never says its table is the tab's left-to-right order. It matches what we remember of the game; nobody checked it in the game.
-- **Not on the page:** sorting by a column, a header click that changes a whole column, and the priority a newly enabled cell takes. We remember the first two existing in the game. Treat them as memory, not wiki fact.
+- **Not on the page:** sorting by a column and the priority a newly enabled cell takes. We remember sorting existing in the game: memory, not wiki fact. The game's own tips cover the header click and painting (`MOUSE_CONTROLS_GAP_ANALYSIS.md`).
 
 ## Order of work types
 
@@ -63,9 +63,9 @@ State: `done` shipped; `open` owed to a later change; `kept` differs from the wi
 | WRK-101 | Patient, Bed rest and Basic columns. Needs new `work.Type` values and a save migration. | open | |
 | WRK-102 | Smith and Tailor split from Craft. Needs new `work.Type` values, recipe skills and a save migration. | open | |
 | WRK-103 | Simple mode: the manual priorities toggle with plain checks. | open | |
-| WRK-104 | Sorting by a column and changing a whole column from its header. Memory of the game, not on the wiki. | open | |
+| WRK-104 | Sorting by a column (CTL-103). Changing a whole column from its header moved to CTL-014. | open | |
 | WRK-105 | The sound when assigning a pawn to work it will do poorly (wiki). | open | |
-| WRK-106 | Dragging to paint priorities. The UI checklist marked it done; the code only has clicks. | open | |
+| WRK-106 | Dragging to paint priorities: CTL-015. | open | |
 | WRK-107 | A delivery taken from the Construct slot is a `job.Haul`, so the colonist card names it Hauling and its speed reads as Haul work. Cosmetic. | open | `game/bio_view.go` |
 
 ## Already matching
