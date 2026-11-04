@@ -26,6 +26,11 @@ VSync is on by default (user decision, PERF-003): the third kernel panic of 2026
 
 `TestDockedForTable`, `TestEachBuiltInFitsEveryScreen`, `TestDockedTreeKeepsEveryWidget`, `TestDockedCardDropsNothing`, `TestGearCorners`, `TestTooTallLayoutWarnsOnce`, `TestCardBodyMargins`, `TestCardPaneLeavesCommandRoom`, `TestPaneHeightRow`, `TestCompactPaneMigration`, and `TestJourneyDossierCompact` (area, hour and diet pickers, bar → tab, gear, resize 1280x720 → 1920x1080 → 1024x768: pane + tabs ≤ 30 %, commands never over the pane); the geometry journeys re-pinned to the new numbers.
 
+## Captures (2026-11-04, after PERF-003)
+
+With the display back on its native mode, `bin/game -capture-ui dossier`, `dossier-animal`, `dossier-setup` and `dossier` at `-capture-ui-scale 1.5` (1920x1080 physical) were taken and read. Colonist: two lines, the rule and the four-column strip fit the 168 px pane; "Recreation 81%" fits its column; the six commands and the threat button sit right of the pane with no overlap. Animal: three columns (bars; area, food, state, master; obedience and guard); its two tabs sit at the right end of the strip because the fixed tabs are right-aligned by design (`inspector.PaneSpec.TabW`), not because of `MinTabs`. Setup: the Look tab shows "Dock the card in the pane", "Pane height 168", "Tabs kept in view 6", "Tab width 96". 150 %: the same picture scaled, nothing cut.
+
 ## Not done here
 
-Captures (`-capture-ui dossier`, `dossier-animal`, `dossier-setup` at 1280x720, 1024x768, 1920x1080) wait for the Mac's display to be back on its native mode (PERF-003): a capture opens a window. Things to look at in them: the gear over the end of a long name while hovering; 9 pt text on small screens; the strip's spacing at 436 px wide.
+- A capture is always 1280x720 logical, so 1024x768 (9 pt text, the 436 px strip) and a true 1080p layout can only be checked by hand: open the game windowed and resize. `TestJourneyDossierCompact` covers those sizes without a window.
+- The gear (upper right of the card's rect, under the header row) covers the last 21 px of the identity line while the pointer is over the card; a long line keeps its tooltip. Left as is.

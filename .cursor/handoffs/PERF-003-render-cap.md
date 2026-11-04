@@ -39,3 +39,7 @@ So the render cap is not what decides it: the common load of the three panics is
 Change: `prewarmWorkers` 4 → 1 (`art/memory.go`): the prewarm is background work and now takes ~2 s instead of ~0.5 s. The cap stays: it is still right on its own.
 
 Open: whether the 10:19 run was still on the 3360x1890 mode (the user is asked), the native-mode run (test 2) and, if that panics too, Apple Diagnostics; a hardware fault on DRAM channel 0 that the game's bulk page touch happens to hit is still possible and only the native-mode run and the diagnostics separate the two.
+
+## Outcome (2026-11-04, later)
+
+With VSync on by default, the prewarm on one core and the render cap, the user ran the game on the display's native mode (2560x1440 at 2x): stable. The scaled mode above the panel's native size ("looks like 3360x1890") is where macOS panicked; it is not supported here and the native mode is the answer. The three mitigations stay. Hardware was never shown faulty.
