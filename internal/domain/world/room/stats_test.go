@@ -111,3 +111,23 @@ func TestRoleOfFull(t *testing.T) {
 		t.Fatal("role names")
 	}
 }
+
+// TestRoleColdStore: a cooled room that would be General is a cold store.
+func TestRoleColdStore(t *testing.T) {
+	c := FullContents{Contents: Contents{Cells: 20}, ColdSides: 1}
+	if got := RoleOfFull(c); got != ColdStore {
+		t.Fatalf("role %v, want cold store", got)
+	}
+	c.ColdSides = 0
+	if got := RoleOfFull(c); got != General {
+		t.Fatalf("uncooled role %v, want room", got)
+	}
+}
+
+// TestRoleColdStoreWithBedIsBedroom: a bed outranks the cooler.
+func TestRoleColdStoreWithBedIsBedroom(t *testing.T) {
+	c := FullContents{Contents: Contents{Cells: 20, Beds: 1}, ColdSides: 2}
+	if got := RoleOfFull(c); got != Bedroom {
+		t.Fatalf("role %v, want bedroom", got)
+	}
+}

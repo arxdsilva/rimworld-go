@@ -7,7 +7,7 @@ The Architect panel: its categories and tools, material and crop pickers, the dr
 - `Tool` (35 methods) with `Zones` (30), `Areas` (19), `Marks` (13), `Mover` (8), each `struct{*Tool}`.
 - `Sim` (7 methods, the simulation reads a tool needs), optional capabilities `ZoneRefuser`, `AreaReader`, `BuildingMover`.
 - `Host` (embeds `ports.Dispatcher`, 8 methods) and `Map` (8 methods: the renderer's ghost, ring, link and zone draws, zone labels, plants, overlays).
-- Exported data: `Categories`, `Tools`, `Planned` (STK-AG: greyed placeholder cards for vanilla items not in the game, never armed; `.cursor/ARCHITECT_GAP_ANALYSIS.md`), `FacingNames`, `StyleNames`, `ZoneSpecies`; pure helpers `PlacementCells`, `ShapeCells`, `BuildSprite`, `BuildSpriteStuff`, `MovableKind`, `StockLine`, `PowerLine`, `RotateFacing`.
+- Exported data: `Categories` (13: Storage, `CatStorage`, holds the shelves, bookcases, egg box and the 27 Neat Storage pieces), `Tools`, `Planned` (STK-AG: greyed placeholder cards for vanilla items not in the game, never armed; `.cursor/ARCHITECT_GAP_ANALYSIS.md`), `FacingNames`, `StyleNames`, `ZoneSpecies`; pure helpers `PlacementCells`, `ShapeCells`, `BuildSprite`, `BuildSpriteStuff`, `MovableKind`, `StockLine`, `PowerLine`, `RotateFacing`.
 - The two former package globals (`areaPaint`, `archLocks`) are fields on `Tool`.
 
 ## Allowed Dependencies
@@ -45,7 +45,7 @@ The Architect panel: its categories and tools, material and crop pickers, the dr
 - None. The package reads and writes no files.
 
 ## Tests
-- 6 test files, 26 `Test*` functions, including `TestEveryGapRowHasACard` (parses the gap analysis), `TestPlannedCardsAreGreyAndInert`, `TestArchCategoriesHaveTools`, `TestToolCatalogIsConsistent`, `TestSnowClearToolsInZones`, `TestZoneToolsRenamedAndRoofMoved`.
+- 7 test files, 27 `Test*` functions, including `TestEveryGapRowHasACard` (parses the gap analysis), `TestEveryNeatStorageRowHasACard` (NST: the 27 Storage cards against `NEAT_STORAGE_GAP_ANALYSIS.md`), `TestPlannedCardsAreGreyAndInert`, `TestArchCategoriesHaveTools`, `TestToolCatalogIsConsistent`, `TestSnowClearToolsInZones`, `TestZoneToolsRenamedAndRoofMoved`.
 - Tests use a `fakeShell` (14 methods) instead of the simulation.
 - Coverage 42.7 % (ARCH-005 row).
 

@@ -23,6 +23,7 @@ type Care struct {
 	Guest      *Hospitality
 	Visits     *Visits
 	Strip      *Stripping
+	Giving     *Giving // gift.go (CSE-007)
 	h          Host
 	pr         Prison
 	gu         Guests
@@ -40,6 +41,7 @@ type Roles struct {
 	Social Social
 	Gear   Gear
 	Meals  Meals // feed.go (SIM-064)
+	Gifts  Gifts // gift.go (CSE-007)
 }
 
 // New builds the care cluster on host h with the extra roles r.
@@ -50,6 +52,7 @@ func New(h Host, r Roles) *Care {
 	c.Feed = newFeeding(c, h, r.Meals)
 	c.PrisonBeds, c.Guest = newPrisonBeds(c), newHospitality(c)
 	c.Visits, c.Strip = newVisits(c, r.Social), newStripping(c, r.Gear)
+	c.Giving = &Giving{c: c, r: r.Gifts}
 	return c
 }
 

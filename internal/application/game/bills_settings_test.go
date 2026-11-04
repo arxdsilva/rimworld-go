@@ -66,7 +66,7 @@ func TestBillGathersWoodFromSeveralStacks(t *testing.T) {
 	if !done() {
 		t.Fatal("no club from wood in three small stacks")
 	}
-	if !seen[job.HaulIngredients] {
+	if !seen[job.HaulIngredients] && !seen[job.PackIngredients] { // CSE-029: by pack with the rule on
 		t.Fatal("the crafter never gathered ingredients")
 	}
 	if g.stockOf(item.Club) != 1 || g.stockOf(item.Wood) != 1 {

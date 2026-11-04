@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -64,6 +66,16 @@ type Bills struct{ *Pane }
 
 // Bills is the pane's bills component.
 func (a *Pane) Bills() Bills { return Bills{a} }
+
+// pickTip is the Add bill picker's hover card for recipe r (CSE-046): the
+// item kinds its ingredients take, named. "" when the ingredients toggle
+// (FullRecipeList) is off, so the row reads as before, or the recipe names none.
+func (a Bills) pickTip(r game.RecipeView) string {
+	if !a.shell.World().Gameplay.On(gameplay.FullRecipeList) || len(r.InputKinds) == 0 {
+		return ""
+	}
+	return "Takes: " + strings.Join(r.InputKinds, ", ")
+}
 
 // billSettings are bill bl's settings as the read model reports them.
 func billSettings(bl game.BillView) BillSettings {

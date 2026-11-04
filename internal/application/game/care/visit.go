@@ -67,10 +67,16 @@ func (v *Visits) Assign(id entity.EntityID) bool {
 	if best == 0 {
 		return false
 	}
+	if v.c.Giving.Try(id, best) { // gift.go (CSE-007): it may bring something instead
+		return true
+	}
 	px, py, _ := h.Pos(best)
 	sx, sy, ok := h.BesideSpot(id, px, py)
 	return ok && h.StartJob(id, job.Record{Kind: job.VisitSick, Count: int(best), TX: sx, TY: sy, WorkLeft: VisitTicks})
 }
+
+// wantsCompany: p still lies awake in bed, and a visitor has someone to see.
+func (vs *Visits) wantsCompany(p entity.EntityID) bool { return vs.s != nil && vs.patientAwake(p) }
 
 // visitable: visitor v may start a visit to p now.
 func (vs *Visits) visitable(v, p entity.EntityID) bool {

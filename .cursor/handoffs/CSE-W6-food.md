@@ -1,0 +1,7 @@
+# CSE-W6 food (CSE-012 to CSE-015)
+
+- CSE-012/013: `item.MealRule{OddNormal, Mix}`, `SameMeal`, `CanMergeMeal`, `RuleOf(gameplay.Settings)` in `domain/economy/item/meal.go`. Sites: `game/tick.go` (planGather, tile merge) use `RuleOf(senseOf(g).Rules)`; `haul` (Host.MealRule, used by Gather.joins) and `travel` (Goods.MealRule, `Hold.addMeal`/`merge` take the rule; `addItem` keeps the default for tests) ask the colony's real rule through `item.RuleOf(senseOf(g).Rules)` adapters (`haulHost`, `travelHost`). Test `haul/meal_test.go` `TestGatherMealRule`: refused with SeparateMeals on, goes through off.
+- CSE-014: `recipe/flavour.go` (neutral tables), `craft.IngredientNamesFor` (pure function of stack id and kind, `randx.SplitMix64`); one-line change in `game/item_view.go`. Display only. No recipe-view line: the row's Work column names only ItemView.Ingredients/IngredientsLine (item inspector), which show the guess already; flavour is a stack fact, not a recipe fact.
+- CSE-015: `diet.Picker.Under(Ruler)`, `diet.SpoilBonus`; `dietEaters.Rules()` in `game/food.go`. Picker carries the flag (not `Book.Spoil`).
+- Tests: item `TestSameMealTaint`, `TestSameMealAgreesOnEveryPath`; recipe `TestFlavourNeutralOnly`; craft `TestFlavourIngredientsStable/NeutralOnly`; diet `TestScorePrefersSpoiling`, `TestScoreOffKeepsOldBonus`, `BenchmarkPickerScore` (0 allocs); game `TestTaintedMealStaysApart`.
+- Save: none. No new UI line for the spoil score (internal weighting).

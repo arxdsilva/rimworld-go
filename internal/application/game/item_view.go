@@ -86,7 +86,7 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked, PoisonPermille: int(st.Poison),
 			Quality: craft.QualityLabel(st.Quality), Stuff: craft.StuffLabel(st.Kind, st.Stuff), // PRD-2
 			HP: st.HP(), MaxHP: st.MaxHP(), Tainted: st.Tainted(), Urgent: g.haul.store.Urgent.Has(id), // STO-2
-			Ingredients: craft.IngredientNames(st), // FOOD-4
+			Ingredients: craft.IngredientNamesFor(st, uint64(id), senseOf(g).Rules), // FOOD-4, CSE-014
 		})
 		g.fillCorpseView(&out[len(out)-1], st)  // burial.go
 		fillCrateView(&out[len(out)-1], st)     // move.go (AX-1): a crated building's kind and material

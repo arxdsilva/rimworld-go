@@ -84,7 +84,7 @@ func TargetGone(j *job.Record, sid entity.EntityID) bool {
 func (g Gather) joins(j *job.Record, sid entity.EntityID) (item.Stack, bool) {
 	c, cok := g.h.Stack(j.Carry)
 	st, ok := g.h.Stack(sid)
-	ok = ok && cok && sid != j.Carry && st.Qty > 0 && st.Carrier == 0 && !st.Forbidden && item.SameLoad(c, st)
+	ok = ok && cok && sid != j.Carry && st.Qty > 0 && st.Carrier == 0 && !st.Forbidden && item.SameMeal(c, st, g.h.MealRule())
 	return st, ok && (j.Count <= 0 || c.Qty < j.Count)
 }
 

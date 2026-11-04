@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/room"
 )
 
 // game/sense's roles over the game: small adapters, pointer-shaped so that
@@ -14,7 +15,7 @@ import (
 func senseOf(g *Game) *sense.Sense {
 	w := g.worldS()
 	if w.sense == nil {
-		w.sense = sense.New(sense.Roles{Gear: senseGear{g}})
+		w.sense = sense.New(sense.Roles{Gear: senseGear{g}, Joy: senseJoy{g}, Tidy: newSenseTidy(g)})
 	}
 	return w.sense
 }
@@ -25,7 +26,9 @@ func cleaningOf(g *Game) sense.Cleaning {
 }
 
 // wanderOf is game/sense's idle stroll.
-func wanderOf(g *Game) sense.Wander { return sense.NewWander(senseWalks{g}, senseStrolls{g}) }
+func wanderOf(g *Game) sense.Wander {
+	return sense.NewWander(senseWalks{g}, senseStrolls{g}, senseOf(g).Rules, senseCourtesy{g}, senseCourtesy{g})
+}
 
 type senseFilth struct{ g *Game }
 
@@ -93,4 +96,39 @@ func (h senseStrolls) Roll(n int) int                { return h.g.rng.IntN(n) }
 func (h senseStrolls) OpenTile(id entity.EntityID, x, y int) bool {
 	g := h.g
 	return g.grid.Walkable(x, y) && !g.bedCovering(x, y) && !g.idleFireBlocked(x, y) && g.inArea(id, x, y) // areas.go
+}
+
+// senseCourtesy is the sky and the rooms for sheltered, polite strolls
+// (CSE-041, 042); asked only with their rules on.
+type senseCourtesy struct{ g *Game }
+
+func (h senseCourtesy) ShouldHide(id entity.EntityID) bool {
+	g := h.g
+	return !g.isRaider(id) && (soaking(g.weather.Kind) || g.incidents.Fallout(uint64(g.clock.Now())))
+}
+func (h senseCourtesy) Roofed(x, y int) bool { return h.g.roofAt(x, y).Roofed() }
+func (h senseCourtesy) Home(x, y int) bool   { return h.g.inHome(y*h.g.grid.Width() + x) }
+func (h senseCourtesy) Rude(id entity.EntityID, x, y int) bool {
+	g := h.g
+	if g.isRaider(id) || g.prison.Is(id) {
+		return false
+	}
+	r := g.roomAt(x, y)
+	if r < 0 || r >= len(g.rooms) {
+		return false
+	}
+	rs, cold := g.rooms[r], g.thermo.ColdSides(r)
+	if rs.contents.Beds == 0 && cold == 0 { // no role here is rude: skip the pass over stacks and buildings
+		return false
+	}
+	f := g.regs.rooms.countFacts(g)[r]
+	switch rs.tally.RoleCold(rs.contents, f.MedicalBeds, f.PrisonerBeds, cold) {
+	case room.Hospital, room.PrisonCell, room.PrisonBarracks, room.ColdStore:
+		return true
+	case room.Bedroom:
+		bid := g.bedOf(id)
+		b, ok := g.bldgs.Get(bid)
+		return !ok || g.roomAt(b.X, b.Y) != r
+	}
+	return false
 }

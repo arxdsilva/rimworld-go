@@ -119,6 +119,7 @@ func (a Tabs) gearTabBody(id entity.EntityID, r gfx.Rect) {
 	if tip := WeaponTip(p); tip != "" {
 		a.kit().Tip("inspector.gear.weapon", gfx.Rect{X: r.X + 12, Y: r.Y + g.WeaponVal, W: r.W - 12, H: step}, tip)
 	}
+	a.gearUnloadButtons(p, r, g, lines) // gear_rows.go (CSE-038)
 	pct, shield := ShieldCharge(p)
 	by := r.Y + g.Hint + step + 6 + float32(len(lines))*step + 4
 	a.kit().Queue(func(dst *ebiten.Image) {

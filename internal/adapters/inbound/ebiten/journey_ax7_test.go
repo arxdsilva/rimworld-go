@@ -32,7 +32,7 @@ func TestJourneyAX7BookcaseFamily(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
 	j.g.CompleteResearch() // both bookcases need Upholstery
-	ax2Place(j, "furniture", "bookcase", "bookcase", 10, 2)
+	ax2Place(j, "storage", "bookcase", "bookcase", 10, 2)
 	if w, ok := ax2Frame(j, "bookcase", 10, 2); !ok || w != 2 {
 		t.Fatalf("bookcase blueprint %v width %d, want 2", ok, w)
 	}

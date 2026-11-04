@@ -145,7 +145,7 @@ func (g *Game) roomViews() []RoomView {
 		sum, _ := g.roomFilth(i)
 		st, clean := r.tally.Stats(r.contents, sum, f.Wealth), r.tally.Stats(r.contents, 0, f.Wealth)
 		imp := st.ImpressivenessTenths
-		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.tally.Role(r.contents, f.MedicalBeds, f.PrisonerBeds).String(),
+		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.tally.RoleCold(r.contents, f.MedicalBeds, f.PrisonerBeds, g.thermo.ColdSides(i)).String(),
 			Score: imp / 10, Label: room.ImpressivenessLabel(imp), Impressiveness: imp, Temp: int(g.thermo.Temps[i]),
 			Space: st.SpaceTenths, SpaceLabel: room.SpaceLabel(st.SpaceTenths), Beauty: st.BeautyTenths,
 			BeautyLabel: room.BeautyLabel(st.BeautyTenths), Wealth: st.Wealth, WealthLabel: room.WealthLabel(st.Wealth),
@@ -290,7 +290,7 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 	switch j.Kind {
 	case job.Construct, job.Deconstruct, job.Cut, job.Harvest, job.Sow, job.Uninstall, job.Install, job.OpenContainer:
 		return j.Kind.String(), j.TX, j.TY
-	case job.Mine, job.Smooth, job.Roof, job.Unroof, job.Clean, job.ClearSnow:
+	case job.Mine, job.Smooth, job.Roof, job.Unroof, job.Clean, job.CleanRoom, job.ClearSnow:
 		return j.Kind.String(), j.DestX, j.DestY
 	case job.Bill:
 		if j.Carry == 0 { // picking the ingredient up, not working yet

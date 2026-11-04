@@ -280,7 +280,7 @@ func (o packing) doPack(id entity.EntityID, j job.Record) {
 			o.end(id, j, job.TargetGone)
 			return
 		}
-		o.s.cargoOf(cid).addItem(st)
+		o.s.cargoOf(cid).addMeal(st, o.h.MealRule())
 		for i := range pk.Items {
 			if pk.Items[i].Kind == st.Kind {
 				pk.Items[i].Qty -= st.Qty

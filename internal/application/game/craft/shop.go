@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -89,7 +90,7 @@ func (s *Shop) Assign(id entity.EntityID, m work.Mask) bool {
 				continue
 			}
 			rec.Dest, rec.DestX, rec.DestY, rec.WorkLeft, rec.BillIndex = bid, spot[0], spot[1], BillWork(b.Kind, d), i
-			if s.start(id, rec) {
+			if s.stackFirst(id, rec) || s.start(id, rec) {
 				return true
 			}
 		}
@@ -114,25 +115,63 @@ func (s *Shop) workerOK(id entity.EntityID, bl recipe.Bill, d recipe.Def) bool {
 // as ever (a plain bill job) when it will do, else stacks gathered from
 // around the work spot (a gather-ingredients job, PRD-1).
 func (s *Shop) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]int) (job.Record, bool) {
+	var near job.Record
 	if len(d.Inputs) == 0 {
 		if sid, st := s.p.nearest(id, d.Input); sid != 0 && s.p.fits(bl, st, spot) {
 			free := s.h.Claims().FreeFor(id, sid, st.Qty) // RES-1: Count is the part the job claims
-			return job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y, Count: min(free, d.Input.TakeFrom(st))}, true
+			near = job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y, Count: min(free, d.Input.TakeFrom(st))}
+			if st.Shelf() == 0 || !s.p.minds(d) {
+				return near, true
+			}
 		}
 	}
 	picks, ok := s.p.plan(id, bl, d, spot, &s.buf)
+	if near.Kind != job.None && (!ok || !anySpoiling(picks)) { // CSE-033: only what spoils changes the nearest stack
+		return near, true
+	}
 	if !ok {
 		return job.Record{}, false
 	}
 	if len(picks) == 1 && len(d.Inputs) == 0 {
 		return job.Record{Kind: job.Bill, Target: picks[0].id, TX: picks[0].x, TY: picks[0].y, Count: picks[0].take}, true
 	}
+	kind, recipeID := job.HaulIngredients, 0
+	if s.packable(id, picks) {
+		kind, recipeID = job.PackIngredients, int(bl.Recipe)
+		px, py, _ := s.h.Pos(id)
+		orderPicks(picks, px, py)
+	}
 	route := make([]entity.EntityID, 0, 2*len(picks))
 	for _, p := range picks {
 		route = append(route, p.id, entity.EntityID(p.take))
 	}
-	return job.Record{Kind: job.HaulIngredients, Target: picks[0].id, TX: picks[0].x, TY: picks[0].y,
-		Route: route, Count: len(route)}, true
+	return job.Record{Kind: kind, Target: picks[0].id, TX: picks[0].x, TY: picks[0].y,
+		Route: route, Count: len(route), SpareX: recipeID}, true
+}
+
+// anySpoiling reports a pick the rule moved ahead of nearer stacks.
+func anySpoiling(picks []pick) bool {
+	for _, p := range picks {
+		if p.spoil < notSpoiling {
+			return true
+		}
+	}
+	return false
+}
+
+// stackFirst offers to store one of bill job rec's stacks whole before the
+// bill starts (CSE-035). The bill isn't kept: the haul moves its stack, so the
+// pawn plans afresh when it next looks for work, and the host's cooldown stops
+// it hauling again.
+func (s *Shop) stackFirst(id entity.EntityID, rec job.Record) bool {
+	if !s.h.Rule(gameplay.StackToStockpile) {
+		return false
+	}
+	stacks := []entity.EntityID{rec.Target}
+	for i := 2; rec.Kind != job.Bill && i+1 < rec.Count; i += 2 {
+		stacks = append(stacks, rec.Route[i])
+	}
+	return s.h.StackFirst(id, rec.DestX, rec.DestY, stacks)
 }
 
 // start starts bill job rec for pawn id and reserves the bench, its work
@@ -142,6 +181,10 @@ func (s *Shop) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]in
 // does.
 func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
 	h := s.h
+	pack := rec.Kind == job.PackIngredients
+	if pack {
+		rec.Kind = job.HaulIngredients // starts as a gathering (the host claims its first pick's count)
+	}
 	if !h.StartJob(id, rec) {
 		if j, _ := h.Job(id); rec.Kind == job.HaulIngredients && j.Fail == job.Unreachable {
 			h.Postpone(id, rec.Dest)
@@ -156,6 +199,10 @@ func (s *Shop) start(id entity.EntityID, rec job.Record) bool {
 			cl.TryCount(id, rec.Route[i], int(rec.Route[i+1]), st.Qty)
 		}
 	}
+	if j, _ := h.Job(id); pack && j.Kind == job.HaulIngredients { // not a tidy the host put first (CSE-017)
+		j.Kind = job.PackIngredients
+		h.SetJob(id, j)
+	}
 	return true
 }
 
@@ -168,7 +215,7 @@ func (s *Shop) pending(bl recipe.Bill, d recipe.Def) int {
 	n := 0
 	for _, pid := range s.h.PawnIDs() {
 		j, ok := s.h.Job(pid)
-		if !ok || j.Kind != job.Bill && j.Kind != job.HaulIngredients || j.State == job.Complete || j.State == job.Fail {
+		if !ok || j.Kind != job.Bill && j.Kind != job.HaulIngredients && j.Kind != job.PackIngredients || j.State == job.Complete || j.State == job.Fail {
 			continue
 		}
 		if bills := s.bills.list[j.Dest]; j.BillIndex < len(bills) && bills[j.BillIndex].Recipe == bl.Recipe {
@@ -185,23 +232,34 @@ func (s *Shop) fail(id entity.EntityID, j job.Record, why job.FailReason) {
 }
 
 // Do runs one tick of pawn id's bill job j: gathering ingredients
-// (job.HaulIngredients, haul.go), fetching the one ingredient, working.
+// (job.HaulIngredients, haul.go; job.PackIngredients, packgather.go), fetching
+// the one ingredient, working.
 func (s *Shop) Do(id entity.EntityID, j job.Record) {
 	h := s.h
 	b, ok := h.Building(j.Dest)
 	bills := s.bills.list[j.Dest]
+	if j.Kind == job.PackIngredients {
+		j.BillIndex = billOf(j, bills)
+	}
 	if !ok || j.BillIndex >= len(bills) {
 		s.fail(id, j, job.TargetGone)
 		return
 	}
 	bl := bills[j.BillIndex]
 	d := recipe.DefOf(bl.Recipe)
-	if j.Kind == job.HaulIngredients {
+	switch j.Kind {
+	case job.HaulIngredients:
 		s.gather(id, j, b)
+		return
+	case job.PackIngredients:
+		s.packGather(id, j, b)
 		return
 	}
 	if j.Carry == 0 {
 		s.fetch(id, j, d)
+		return
+	}
+	if j.WorkLeft == BillWork(b.Kind, d) && s.tidyFirst(id, j) {
 		return
 	}
 	if ElectricBench(b.Kind) && !h.Powered(j.Dest) || BurnsWhileWorked(b.Kind) && h.Fuel(j.Dest) <= 0 {
@@ -242,6 +300,15 @@ func (s *Shop) Do(id entity.EntityID, j job.Record) {
 	if stored {
 		s.store(id, j, bl, d)
 	}
+}
+
+// tidyFirst offers a clean with the last load in, before the first work tick
+// (CSE-018); true: id's job is that clean, and the bill resumes after it. The
+// resumed bill targets the bench: its old stack is what the load was split from,
+// and restarting must not claim that again.
+func (s *Shop) tidyFirst(id entity.EntityID, j job.Record) bool {
+	j.Target = j.Dest
+	return s.h.TidyBench(id, j.Dest, j)
 }
 
 // fetch picks the ingredient up (splitting off what the recipe takes) and

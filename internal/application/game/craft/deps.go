@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -17,13 +18,52 @@ import (
 // so a host call on the tick path moves nothing to the heap.
 type Host interface {
 	Benches
-	Stock
+	Supply
 	Output
 	Workers
 	Crafters
 	Makers
 	Weathering
 	Workshop
+}
+
+// Supply is everything about where a bill's ingredients come from: Host
+// stays within the guard's eight embeds.
+type Supply interface {
+	Stock
+	Prep
+	Packs
+}
+
+// Prep is the colony's habits around a bill (CSE-018, 033, 035). A rule is
+// read as a value on every use: Rules is replaced on load.
+type Prep interface {
+	// Rule reads one of the colony's habit toggles.
+	Rule(t gameplay.Toggle) bool
+	// TidyBench may start a clean around bench, with bill j, its last load in
+	// hand, as the job it resumes afterwards; true: id's job is that clean now.
+	// Its own cooldown makes this once a bill.
+	TidyBench(id, bench entity.EntityID, j job.Record) bool
+	// StackFirst may send id to store one of stacks whole before a bill worked
+	// at (x, y) (CSE-035); true: id's job is that haul now. It keeps its own
+	// cooldown.
+	StackFirst(id entity.EntityID, x, y int, stacks []entity.EntityID) bool
+}
+
+// Packs is the pawn's pack, as a bill uses it (CSE-029, 030, 040).
+type Packs interface {
+	// PackRoom is the grams id's pack still takes (RespectCapacity off: more
+	// than anything weighs).
+	PackRoom(id entity.EntityID) int
+	// Stow moves n of stack from the map to id's pack, marked to go to storage
+	// if the bill leaves it over, and returns the pack entry; false: nothing
+	// moved.
+	Stow(id, stack entity.EntityID, n int) (entry uint32, ok bool)
+	// Unstow makes up to n of the entry a stack in id's hands; false: nothing
+	// moved (the entry rotted away, or id stands on no map).
+	Unstow(id entity.EntityID, entry uint32, n int) (entity.EntityID, bool)
+	// Settled: what id took out of its pack has landed, an ordinary stack now.
+	Settled(id entity.EntityID)
 }
 
 // Benches reads the buildings benches, racks and cabinets are, and what

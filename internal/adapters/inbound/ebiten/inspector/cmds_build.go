@@ -13,6 +13,8 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/gameplay"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -23,6 +25,20 @@ import (
 // are command buttons. Every existing id keeps its handler
 // (applyBuildingClick, applyFrameClick), so the commands carry no Run or
 // Cmds; the trough filter is new and carries Options.
+
+// BenchCleanID is the id of the button that opts a bench out of tidying.
+const BenchCleanID = "cmd.bench_clean"
+
+// benchCleanCommands is CSE-019: with the Habits rule on, each bench has a
+// switch for whether its room gets a tidy before its bills.
+func benchCleanCommands(rules gameplay.Settings, b game.BuildingView) []Button {
+	if !b.Bench || !rules.On(gameplay.BenchCleanToggle) {
+		return nil
+	}
+	return []Button{{ID: BenchCleanID, Label: "Tidy before bills", Icon: "home", Toggle: true, On: !b.CleanOff,
+		Desc: "On: colonists sweep this room before working here. Off: they get straight to the bill.",
+		Cmds: []command.Command{{Kind: command.SetBenchClean, Target: uint64(b.ID), Enabled: b.CleanOff}}}}
+}
 
 // buildingView is the read model of building id.
 func (a *Pane) BuildingView(id entity.EntityID) (game.BuildingView, bool) {
@@ -70,6 +86,7 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		out = append(out, a.bedCommands(b)...)
 		out = append(out, a.CasketCommands(b)...)
 		out = append(out, a.defenceCommands(b)...) // cmds_defence.go (DEF-3)
+		out = append(out, benchCleanCommands(a.shell.World().Gameplay, b)...)
 		if forbiddable(b) {
 			out = append(out, forbidCommand(b))
 		}

@@ -68,6 +68,18 @@ type Spec struct {
 	Rows            []Row
 	Tabs            []Tab
 	Close           string // the close button's id ("" none)
+
+	// The colonist card's restyled pane (pane_body.go, RHUD); zero everywhere
+	// else, and then the pane is the plain one.
+	Restyled           bool            // the header row with its buttons
+	Card               bool            // the card is the body
+	LogBody            bool            // the character log is the body
+	Kind               selection.Kind  // what the header acts on
+	ID                 entity.EntityID //
+	TabW               float32         // fixed tabs, right-aligned
+	TitleColor         color.RGBA      // the name's tint
+	TitleTip, TitleTab string          // its tooltip and the tab a click toggles
+	Emblem, EmblemTip  string          // the faction icon and its tooltip
 }
 
 // Pane metrics (logical px).
@@ -123,7 +135,7 @@ func (a *Pane) paneFor(k selection.Kind, id entity.EntityID) Spec {
 		return p(k, id)
 	}
 	if p := a.Producers[k].Pane; p != nil {
-		return p(id)
+		return a.Card().dress(k, id, p(id))
 	}
 	return Spec{}
 }
@@ -200,6 +212,7 @@ type Geom struct {
 	Bars     []gfx.Rect // one per shown bar
 	Chips    []gfx.Rect // one per shown chip
 	Body     gfx.Rect   // the scroll view (empty: no room)
+	Card     gfx.Rect   // the card's box, on a pane whose body it is
 	Lines    []string
 	RowsY0   float32 // content y of the first row
 	ContentH float32
@@ -217,11 +230,21 @@ func PaneLayout(p gfx.Rect, spec Spec) Geom {
 		g.Close = gfx.Rect{X: p.Right() - paneTop - paneCloseW, Y: p.Y + paneTop, W: paneCloseW, H: paneCloseW}
 		g.TitleW -= paneCloseW + paneTop
 	}
+	if spec.Restyled {
+		g.TitleW -= headReserve
+		if spec.Emblem != "" {
+			g.TitleW -= headEmblem
+		}
+	}
 	y += gfx.LineStep(gfx.Large)
 	if spec.Subtitle != "" {
 		y += gfx.LineStep(gfx.Body)
 	}
 	y += 6
+	if spec.Card {
+		g.Card = gfx.Rect{X: inner.X, Y: y, W: inner.W, H: max(0, limit-y)}
+		return g
+	}
 	if n := len(spec.Bars); n > 0 {
 		cols := min(n, paneBarCols)
 		w := (inner.W - float32(cols-1)*paneBarGap) / float32(cols)
@@ -294,6 +317,22 @@ func paneTabRects(strip gfx.Rect, tabs []Tab) []gfx.Rect {
 	return out
 }
 
+// fixedTabRects lays n tabs of one width out against the strip's right edge,
+// first tab leftmost, so the order stays the same (RHUD-005, 007).
+func fixedTabRects(strip gfx.Rect, n int, w float32) []gfx.Rect {
+	if n == 0 {
+		return nil
+	}
+	w = min(w, (strip.W+paneTabGap)/float32(n))
+	out := make([]gfx.Rect, n)
+	x := strip.Right() - float32(n)*w + paneTabGap
+	for i := range out {
+		out[i] = gfx.Rect{X: x, Y: strip.Y, W: w - paneTabGap, H: strip.H}
+		x += w
+	}
+	return out
+}
+
 // paneBodyOff is the body's scroll offset.
 func (a *Pane) paneBodyOff() float32 { return a.kit().Scroll[PaneBodyID] }
 
@@ -337,6 +376,9 @@ func (a *Pane) PaneButtons() []uikit.Button {
 // paneTabButtons are the tab strip's buttons.
 func (a *Pane) paneTabButtons(strip gfx.Rect, spec Spec) []uikit.Button {
 	rs := paneTabRects(strip, spec.Tabs)
+	if spec.TabW > 0 {
+		rs = fixedTabRects(strip, len(spec.Tabs), spec.TabW)
+	}
 	out := make([]uikit.Button, len(rs))
 	for i, r := range rs {
 		t := spec.Tabs[i]
@@ -374,7 +416,17 @@ func (a *Pane) DrawPane(screen *ebiten.Image) {
 	g := PaneLayout(p, spec)
 	x := float64(p.X + PaneInset)
 	y := float64(p.Y + paneTop)
-	gfx.Text(screen, gfx.Ellipsize(spec.Title, gfx.Large, float64(g.TitleW)), x, y, gfx.WithColor(gfx.Large, uikit.Heading))
+	titleC := uikit.Heading
+	if spec.TitleColor.A != 0 {
+		titleC = spec.TitleColor
+	}
+	if spec.Emblem != "" {
+		if img := a.Card().headIcon(spec.Emblem); img != nil {
+			gfx.Icon(screen, img, x, y, headBtn)
+		}
+		x += headEmblem
+	}
+	gfx.Text(screen, gfx.Ellipsize(spec.Title, gfx.Large, float64(g.TitleW)), x, y, gfx.WithColor(gfx.Large, titleC))
 	y += float64(gfx.LineStep(gfx.Large))
 	if spec.Subtitle != "" {
 		gfx.Text(screen, gfx.Ellipsize(spec.Subtitle, gfx.Body, float64(g.TitleW)), x, y, gfx.WithColor(gfx.Body, uikit.TextDim))
@@ -391,7 +443,7 @@ func (a *Pane) DrawPane(screen *ebiten.Image) {
 		b.Disabled, b.Quiet = c.Disabled, true
 		uikit.DrawButton(screen, b, b.Contains(mx, my))
 	}
-	if g.Body.Empty() {
+	if a.Card().drawBody(screen, spec, g) || g.Body.Empty() {
 		return
 	}
 	a.drawPaneBody(screen, spec, g, mx, my)
@@ -496,7 +548,14 @@ func (a *Pane) PaneUI(sw, sh int) {
 		}
 	}
 	u.Add(uikit.Widget{ID: paneFrameID, R: l.Pane, Wheel: true}) // the wheel never reaches the camera here
-	if g := PaneLayout(l.Pane, spec); !g.Body.Empty() {
+	g := PaneLayout(l.Pane, spec)
+	if spec.Restyled {
+		a.Card().declareHeader(l.Pane, spec, g)
+	}
+	switch {
+	case spec.Card:
+		a.Card().declareBody(spec, g)
+	case !spec.LogBody && !g.Body.Empty():
 		a.kit().ScrollArea(PaneBodyID, g.Body, g.ContentH, uikit.ScrollOpts{Step: gfx.LineStep(gfx.Body) * 3})
 	}
 	if t, open := a.openTabOf(spec); open && !l.Expanded.Empty() {

@@ -17,7 +17,7 @@ import (
 // state and policy, saved as Drugs (below). Small adapters, pointer-shaped,
 // so that building the component where it is needed allocates nothing.
 func doseOf(g *Game) dose.Drugs {
-	return dose.New(dose.Host{Pawns: dosePawns{g}, Minds: doseMinds{g}, Bodies: doseBodies{g}, Stock: doseStock{g}}, &g.drugs, idleRecheck)
+	return dose.New(dose.Host{Pawns: dosePawns{g}, Minds: doseMinds{g}, Bodies: doseBodies{g}, Stock: doseStock{g}, Habits: doseHabits{g}}, &g.drugs, idleRecheck)
 }
 
 // DrugPolicy is colonist id's drug policy, a drug.Preset (the Assign tab's

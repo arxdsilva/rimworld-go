@@ -7,10 +7,13 @@ import (
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/gameplay"
+	"rimworld-go/internal/domain/pawn/inventory"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/trait"
@@ -90,12 +93,14 @@ type craftHost struct {
 	craftMakers
 	craftWeather
 	craftShop
+	craftPrep
+	craftPacks
 }
 
 var _ craft.Host = craftHost{}
 
 func newCraftHost(g *Game) craftHost {
-	return craftHost{craftBenches{g}, craftStock{g}, craftOutput{g}, craftWorkers{g}, craftCrafters{g}, craftMakers{g}, craftWeather{g}, craftShop{g}}
+	return craftHost{craftBenches{g}, craftStock{g}, craftOutput{g}, craftWorkers{g}, craftCrafters{g}, craftMakers{g}, craftWeather{g}, craftShop{g}, craftPrep{g}, craftPacks{g}}
 }
 
 type craftBenches struct{ g *Game }
@@ -284,3 +289,61 @@ func (h craftShop) CanInstall(k construction.Kind, x, y int) bool {
 func (h craftShop) Install(k construction.Kind, stuff item.Kind, q uint8, x, y int) entity.EntityID {
 	return h.g.placeGenerated(construction.Building{Kind: k, Stuff: stuff, X: x, Y: y, Quality: q}) // setup_mapgen.go
 }
+
+// craftPrep: the colony's habits around a bill (game/sense, CSE-018, 033, 035).
+type craftPrep struct{ g *Game }
+
+func (h craftPrep) Rule(t gameplay.Toggle) bool { return senseOf(h.g).Rules.On(t) }
+func (h craftPrep) TidyBench(id, bench entity.EntityID, j job.Record) bool {
+	return senseOf(h.g).Tidy.TidyBench(id, bench, j)
+}
+
+// StackFirst (CSE-035): a stack outside the work spot's room (or any stack, for
+// a spot outdoors or in a room over 160 cells) whose storage lies nearer the pawn
+// than the spot does goes there first, at most once per cooldown (ours).
+func (h craftPrep) StackFirst(id entity.EntityID, x, y int, stacks []entity.EntityID) bool {
+	g, s, now := h.g, senseOf(h.g), uint64(h.g.clock.Now())
+	m, _ := g.labor.Get(id)
+	if s.HaulAt[id] > now || !m.Enabled(work.Haul) || g.incapableWork(id).Enabled(work.Haul) {
+		return false
+	}
+	pos, _ := g.positions.Get(id)
+	r := g.roomAt(x, y)
+	open := r < 0 || r >= len(g.rooms) || g.rooms[r].contents.Cells > 160
+	for _, sid := range stacks {
+		st, ok := g.stacks.Get(sid)
+		if !ok || st.Kind.StackLimit() <= 1 || !open && g.roomAt(st.X, st.Y) == r {
+			continue
+		}
+		if dx, dy, ok := g.haulDest(id, st, 0); ok && pathing.Dist(pos.X, pos.Y, dx, dy) < pathing.Dist(pos.X, pos.Y, x, y) {
+			s.HaulAt[id] = now + 1500
+			return g.haulToStockpile(id, pos, []entity.EntityID{sid}, 0)
+		}
+	}
+	return false
+}
+
+// craftPacks: the pack as a bill uses it (game/sense, CSE-029, 030, 040).
+type craftPacks struct{ g *Game }
+
+func (h craftPacks) PackRoom(id entity.EntityID) int { return senseOf(h.g).Gear.Room(id) }
+func (h craftPacks) Stow(id, stack entity.EntityID, n int) (uint32, bool) {
+	s := senseOf(h.g)
+	st, ok := h.g.stacks.Get(stack)
+	if !ok || !s.Gear.Stow(id, stack, n) {
+		return 0, false
+	}
+	p := s.Packs[id]
+	p.Items = slices.Clone(p.Items)
+	i := slices.IndexFunc(p.Items, func(e inventory.Entry) bool { return item.SameLoad(e.Stack, st) }) // the entry Stow joined
+	if i < 0 {
+		return 0, false
+	}
+	p.Items[i].Unload = true
+	s.Packs[id] = p
+	return p.Items[i].ID, true
+}
+func (h craftPacks) Unstow(id entity.EntityID, entry uint32, n int) (entity.EntityID, bool) {
+	return senseOf(h.g).Gear.TakeOut(id, entry, n)
+}
+func (h craftPacks) Settled(id entity.EntityID) { delete(senseOf(h.g).FromPack, id) }

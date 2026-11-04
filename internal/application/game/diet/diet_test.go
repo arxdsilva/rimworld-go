@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -274,5 +276,63 @@ func TestDays(t *testing.T) {
 	t.Parallel()
 	if DailyNeed != 16000 || Days(16000*3, 2) != 15 || Days(5000, 0) != 0 || Days(0, 3) != 0 {
 		t.Fatalf("days: need %d, %d", DailyNeed, Days(16000*3, 2))
+	}
+}
+
+type ruled struct{ s gameplay.Settings }
+
+func (r ruled) Rules() gameplay.Settings { return r.s }
+
+// TestScorePrefersSpoiling (CSE-015): graded pull toward food under three
+// days from spoiling, at most 36, rising as it nears spoilage, none beyond.
+func TestScorePrefersSpoiling(t *testing.T) {
+	t.Parallel()
+	var b Book
+	p := b.Picker(1, false, false).Under(ruled{})
+	day := clock.TicksPerDay
+	if SpoilBonus(0) != 0 || SpoilBonus(3*day) != 0 || SpoilBonus(4*day) != 0 {
+		t.Fatal("no bonus for food that keeps or has days to spare")
+	}
+	if got := SpoilBonus(1); got != 35 {
+		t.Fatalf("just before spoiling %d, want 35", got)
+	}
+	last := 0
+	for f := 3*day - 1; f > 0; f -= day / 50 {
+		if got := SpoilBonus(f); got < last || got > 36 {
+			t.Fatalf("bonus %d at %d ticks (was %d): must rise toward 36", got, f, last)
+		}
+		last = SpoilBonus(f)
+	}
+	fresh := &item.Stack{Kind: item.Meal, Qty: 1}
+	two := &item.Stack{Kind: item.Meal, Qty: 1, Rot: item.Meal.ShelfTicks() - 2*day}
+	if p.Score(two, 0) <= p.Score(fresh, 0) || p.Score(two, 0)-p.Score(fresh, 0) != SpoilBonus(two.FreshTicks()) {
+		t.Fatalf("two days left must lead: %d vs %d", p.Score(two, 0), p.Score(fresh, 0))
+	}
+}
+
+// TestScoreOffKeepsOldBonus: with SpoilingMeals off only the flat half-day
+// bonus remains.
+func TestScoreOffKeepsOldBonus(t *testing.T) {
+	t.Parallel()
+	var b Book
+	off := b.Picker(1, false, false).Under(ruled{gameplay.Settings{}.With(gameplay.SpoilingMeals, false)})
+	fresh := &item.Stack{Kind: item.Meal, Qty: 1}
+	two := &item.Stack{Kind: item.Meal, Qty: 1, Rot: item.Meal.ShelfTicks() - 2*clock.TicksPerDay}
+	soon := &item.Stack{Kind: item.Meal, Qty: 1, Rot: item.Meal.ShelfTicks() - 1000}
+	if off.Score(two, 0) != off.Score(fresh, 0) || off.Score(soon, 0)-off.Score(fresh, 0) != rotSoonBonus {
+		t.Fatal("off: no grade, flat 12 under half a day")
+	}
+}
+
+// BenchmarkPickerScore: the eating choice, rules read by value; must show
+// 0 allocs/op.
+func BenchmarkPickerScore(b *testing.B) {
+	var bk Book
+	st := &item.Stack{Kind: item.Meal, Qty: 1, Rot: item.Meal.ShelfTicks() - clock.TicksPerDay}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		p := bk.Picker(1, false, false).Under(ruled{})
+		_ = p.Takes(st)
+		_ = p.Score(st, i&63)
 	}
 }

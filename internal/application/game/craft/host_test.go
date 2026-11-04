@@ -47,6 +47,7 @@ type fakeHost struct {
 	drops        []item.Stack
 	butchered    []entity.EntityID // FOOD-3: ButcheredHuman calls
 	fakeMakers                     // condition_test.go (PRD-2): the craft dice, inspirations, weather and outfits
+	fakePrep                       // fake_prep_test.go (CSE-018, 029…035): habits and packs, all off
 	fakeWorkshop                   // fake_workshop_test.go (PRD-3): light, rooms, forge fuel, sculptures
 }
 

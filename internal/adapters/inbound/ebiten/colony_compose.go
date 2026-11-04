@@ -45,8 +45,17 @@ func (a *App) hud() hudlayout.Layout {
 	st.ExpandedW, st.ExpandedH = a.insp.ExpandedWant()
 	st.WindowW, st.WindowH = a.win.Want()
 	st.PerfW, st.PerfH = a.meter.Box()
+	st.PaneW, st.PaneH = a.insp.Card().Size()
+	st.Card = a.insp.Card().FloatRect(sw, sh)
+	if cd := a.settings.HUD.Card; !st.Card.Empty() { // RHUD-471, 475: the letters' side of the floating card
+		st.LetterGap = float32(cd.LetterGap)
+		if cd.CompressLetters {
+			st.LetterAvoid = st.Card
+		}
+	}
 	if a.world.Open() { // the world inspector takes the pane's place; no map, no command grid, no minimap
 		st.PaneShown, st.Commands, st.MinimapOn, st.ExpandedW, st.ExpandedH = true, 0, false, 0, 0
+		st.PaneW, st.PaneH, st.Card, st.LetterAvoid, st.LetterGap = 0, 0, gfx.Rect{}, gfx.Rect{}, 0
 	}
 	if m := &a.hst.lay; m.ok && m.sw == sw && m.sh == sh && m.st == st && m.world == a.world.Open() {
 		return m.lay
@@ -81,11 +90,13 @@ func (a *App) colonyUI(sw, sh int) {
 	if a.renderer == nil {
 		return
 	}
+	dossierHost{a}.followMap()        // dossier_compat.go: a map switch drops the card's cache (RHUD-503)
 	a.world.Declare(sw, sh)           // worldview: its widgets sit under the HUD's in the hit test
 	a.chrome.Right().DeclareLetters() // may open a letter window, which takes the layer from here on
 	if a.chrome.Hidden {
 		return
 	}
+	dossierHost{a}.declareFloating() // dossier_compat.go: first, so a press on the card is the card's
 	a.factionsTabUI(sw, sh)
 	a.assignTabUI(sw, sh)         // assign_ui.go: Assign tab (ENG-003)
 	a.chrome.Banner().Declare(sw) // hud/gathering.go: wedding/party banner (ENG-003)
@@ -171,6 +182,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.win.Draw(screen, sw, sh)            // hud_window.go
 	a.chrome.Right().Draw(screen, sw, sh) // hud/right.go
 	a.lrn.Draw(screen)                    // learn_ui.go
+	dossierHost{a}.drawFloating(screen)   // dossier_compat.go: over the grid and the right column, under the menus
 	a.ord.DrawFloat(screen)
 	if !a.world.Open() {
 		a.chrome.Cell().Draw(screen, sh)      // hud/cellinfo.go

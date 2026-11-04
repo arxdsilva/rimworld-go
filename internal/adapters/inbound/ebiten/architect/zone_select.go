@@ -266,6 +266,9 @@ func ZoneCropName(crop string) string {
 // few, then a count). A dumping stockpile reads the same tree.
 func zoneFilterLine(z game.ZoneView) string {
 	rows := game.StorageFilterRows(z.Kind, z.Filter)
+	if z.Profile != "" { // a Neat Storage piece reads its own ceiling (NST)
+		rows = game.ProfileFilterRows(z.Profile, z.Filter)
+	}
 	var names []string
 	all := true
 	for _, r := range rows {

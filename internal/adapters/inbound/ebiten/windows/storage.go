@@ -189,7 +189,11 @@ func treeRows(z game.ZoneView, open map[string]bool, find string) []treeRow {
 	rows := []treeRow{{id: "storage.h.items", label: "Allowed items", head: true, special: -1}}
 	hide := -1 // depth of the collapsed category whose children are skipped
 	find = strings.ToLower(find)
-	for _, r := range game.StorageFilterRows(z.Kind, z.Filter) {
+	rows0 := game.StorageFilterRows(z.Kind, z.Filter)
+	if z.Profile != "" { // a Neat Storage piece lists its own ceiling (NST)
+		rows0 = game.ProfileFilterRows(z.Profile, z.Filter)
+	}
+	for _, r := range rows0 {
 		if find != "" { // a search lists the matching rows flat, at any depth
 			if strings.Contains(strings.ToLower(r.Label), find) {
 				rows = append(rows, treeRow{id: "storage.filter." + r.Path, label: r.Label, path: r.Path, special: -1,

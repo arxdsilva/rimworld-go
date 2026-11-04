@@ -55,12 +55,13 @@ func AssignCareID(id entity.EntityID) string {
 func AssignDefCareID(g medcare.Group) string { return "assign.defcare." + strconv.Itoa(int(g)) }
 
 // AssignPresets is the cycle order of the drug policy button.
-var AssignPresets = []drug.Preset{drug.NoDrugs, drug.SocialDrinking, drug.Unrestricted}
+var AssignPresets = []drug.Preset{drug.NoDrugs, drug.SocialDrinking, drug.Unrestricted, drug.MoodLift}
 
 const assignDrugTip = "Drug policy\n" +
 	"No drugs: never takes any, even when hooked.\n" +
 	"Social drinking: a beer now and then when bored.\n" +
 	"Unrestricted: any recreational drug when bored.\n" +
+	"Mood lift: a beer only while mood is below 50 and not already recovering.\n" +
 	"A colonist hooked on a drug seeks it when the craving starts, unless set to no drugs. Abstainers never take drugs for fun."
 
 // drugPolicyReader is the read model the tab needs (consumer-owned; the

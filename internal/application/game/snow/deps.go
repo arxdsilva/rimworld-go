@@ -27,6 +27,9 @@ type Sky interface {
 	SetMapDepth(d float64)
 	// WeatherHeld reports forced weather: it starts no new block.
 	WeatherHeld() bool
+	// SkipClear reports the sky unfit for shovelling: snow or rain falling
+	// with the rule on (CSE-028).
+	SkipClear() bool
 	// Outdoor is the outdoor air at tick t.
 	Outdoor(t clock.Tick) temperature.Temp
 }

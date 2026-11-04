@@ -66,12 +66,16 @@ type Claims interface {
 // Routine reads a pawn's job.
 type Routine interface {
 	Job(id entity.EntityID) job.Record
+	// OnBedRest: id rests to heal, and no craving takes it outside.
+	OnBedRest(id entity.EntityID) bool
 }
 
 // Rooms reads what stands on a cell and the roof over it.
 type Rooms interface {
 	ObjectAt(x, y int) entity.EntityID
 	Roof(x, y int) (roofed, thick bool)
+	// Outside reports (x, y) feels outdoors (TEMP-6).
+	Outside(x, y int) bool
 }
 
 // Senses is the world as a recreation piece needs it.
@@ -87,6 +91,8 @@ type Senses interface {
 	PawnIDs() []entity.EntityID
 	// Wealth is the colony's wealth (read once a day at most).
 	Wealth() int
+	// OutdoorsJoy is gameplay.OutdoorsJoy (CSE-001).
+	OutdoorsJoy() bool
 }
 
 // Feelings changes a pawn's recreation and skills.
@@ -97,4 +103,6 @@ type Feelings interface {
 	Learn(id entity.EntityID, sk skill.ID, xp int)
 	// Enjoyed records a pastime finished (a fine recreation room's mood).
 	Enjoyed(id entity.EntityID)
+	// OutdoorsPct is id's outdoors need, in percent.
+	OutdoorsPct(id entity.EntityID) int
 }

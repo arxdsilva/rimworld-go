@@ -142,10 +142,10 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | `furniture` | Large sculpture | `large_sculpture` | done | |
 | `furniture` | Grand sculpture | `grand_sculpture` | done | |
 | `furniture` | Plant pot | `plant_pot` | done | AX-2: pick a rose or daylily in its pane; a grower sows it, frost kills it and it is sown again; it grows in light and adds beauty. |
-| `furniture` | Bookcase | `bookcase` | done | AX-7: 2x1 storage for 10 books (books only, 5 a cell, `zone.KindBookcase`); its room's reading bonus (wiki: +0.8 % a book for the first 5 ... up to x1.20) multiplies reading recreation and learning there and research at its benches. Books (novel, textbook, schematic) have a quality and an original generated title; colonists read for recreation (and on order, an hour), textbooks teach skills up to their quality's cap, schematics put points into their projects. Found in ruin sheds, sold by caravans and orbital traders, sometimes carried by raiders; never crafted (vanilla core). Not done: passion mood thoughts, starting colonists' books, the Assign tab's reading policy. |
-| `furniture` | Small bookcase | `small_bookcase` | done | AX-7: the 1x1 bookcase for 5 books, the bookcase card's family member. As above. |
-| `furniture` | Shelf | `shelf` | done | |
-| `furniture` | Small shelf | `small_shelf` | done | AX-2. |
+| `storage` | Bookcase | `bookcase` | done | AX-7: 2x1 storage for 10 books (books only, 5 a cell, `zone.KindBookcase`); its room's reading bonus (wiki: +0.8 % a book for the first 5 ... up to x1.20) multiplies reading recreation and learning there and research at its benches. Books (novel, textbook, schematic) have a quality and an original generated title; colonists read for recreation (and on order, an hour), textbooks teach skills up to their quality's cap, schematics put points into their projects. Found in ruin sheds, sold by caravans and orbital traders, sometimes carried by raiders; never crafted (vanilla core). Not done: passion mood thoughts, starting colonists' books, the Assign tab's reading policy. |
+| `storage` | Small bookcase | `small_bookcase` | done | AX-7: the 1x1 bookcase for 5 books, the bookcase card's family member. As above. |
+| `storage` | Shelf | `shelf` | done | |
+| `storage` | Small shelf | `small_shelf` | done | AX-2. |
 | `furniture` | Torch lamp | `torch_lamp` | done | |
 | `furniture` | Wall torch lamp | `wall_torch` | done | AX-2 (our "wall torch"): hung on the cell in front of a wall, facing out (it takes that cell's object slot). |
 | `furniture` | Wall lamp | `wall_lamp` | done | As above. |
@@ -195,7 +195,7 @@ Columns: category id, vanilla item, the card that stands for it (`planned_*` is 
 | Category | Vanilla item | Card | Status | Notes |
 |---|---|---|---|---|
 | `misc` | Caravan hitching spot | `hitching_spot` | done | AX-9: a forming caravan's members gather at the spot (one by caravan id when there are several; with goods or animals and no spot, at the drop spot). Haulers and the members carry the picked goods there and lead the pack animals in, tied at the spot (they wander nearby); everyone carries body size x 35 kg (wiki: Caravan). Once all are there and loaded they wait an hour, then leave by the map edge (half a day at most); the goods ride as cargo and come home with the caravan, and a heavy caravan is slower (the wiki's carried-mass factor). Goods can't be traded at a settlement yet (no caravan trading). |
-| `misc` | Egg box | `egg_box` | done | AX-2: tame layers within 20 tiles lay in it; it stores eggs. |
+| `storage` | Egg box | `egg_box` | done | AX-2: tame layers within 20 tiles lay in it; it stores eggs. |
 | `misc` | Grave | `grave` | done | Moved from Furniture. |
 | `misc` | Sarcophagus | `sarcophagus` | done | Moved from Furniture. |
 | `misc` | Marriage spot | `marriage_spot` | done | |

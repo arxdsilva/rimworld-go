@@ -74,8 +74,6 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 		out = append(out, Button{ID: TurretHoldID, Label: "Hold fire", Toggle: true, On: b.HoldFire,
 			Desc: "Stop this turret shooting until you turn it off again.",
 			Cmds: []command.Command{{Kind: command.SetTurretHold, X: b.X, Y: b.Y, Enabled: !b.HoldFire}}})
-	case storageKinds[b.Kind]:
-		out = append(out, a.shelfStorageCommand(b)...)
 	case b.Kind == mortarKind || b.Kind == rocketBatteryKind: // AX-5: the battery is aimed like a mortar
 		bx, by, id := b.X, b.Y, b.ID
 		aimDesc, clrDesc := "Click a tile on the map for this mortar to shell. Esc or a right click cancels.",
@@ -92,6 +90,8 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 			clr.Disabled, clr.Reason = true, "no target set"
 		}
 		out = append(out, clr)
+	case isStorage(a, b):
+		out = append(out, a.shelfStorageCommand(b)...)
 	}
 	return out
 }

@@ -339,7 +339,7 @@ func (o pods) doLoad(id entity.EntityID, j job.Record) {
 			o.end(id, j, job.TargetGone)
 			return
 		}
-		o.s.holdOf(o.podWithRoom(gr, (st.Qty*st.Kind.MassGrams()+999)/1000)).addItem(st)
+		o.s.holdOf(o.podWithRoom(gr, (st.Qty*st.Kind.MassGrams()+999)/1000)).addMeal(st, o.h.MealRule())
 		if m != nil {
 			for i := range m.Items {
 				if m.Items[i].Kind == st.Kind {

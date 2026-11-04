@@ -160,7 +160,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 		ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant), Claimant2: entity.EntityID(b.Claimant2),
 		Facing: b.Facing.String(), Floor: construction.DefOf(b.Kind).Layer == construction.LayerFloor,
 		Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(), Quality: craft.QualityLabel(b.Quality),
-		Bench: construction.DefOf(b.Kind).Bench,
+		Bench: construction.DefOf(b.Kind).Bench, CleanOff: senseOf(g).NoClean[id],
 	}
 	bv.HPPct, bv.AX.Colour = b.HP()*100/max(1, construction.MaxHP(b.Kind, b.Stuff)), construction.TintName(b.Kind, b.Tint) // AX-3: a carpet floor's colour
 	if b.Kind == construction.Carpet {

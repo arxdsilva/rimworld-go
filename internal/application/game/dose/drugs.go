@@ -87,7 +87,7 @@ func (d Drugs) Policy(id entity.EntityID) drug.Preset {
 // dose on its way.
 func (d Drugs) SetPolicy(id entity.EntityID, p uint8) {
 	pr := drug.Preset(p)
-	if pr > drug.Unrestricted || !d.h.Pawns.Colonist(id) {
+	if pr > drug.MoodLift || !d.h.Pawns.Colonist(id) {
 		return
 	}
 	if d.Policy(id) == pr {
@@ -262,6 +262,9 @@ func (d Drugs) Assign(id entity.EntityID) bool {
 	// recreational look below is as before.
 	if !craving {
 		if med := d.medical(id, probe, now); len(med) > 0 {
+			if d.fromPack(id, med, now) { // CSE-011: what it carries first
+				return true
+			}
 			if best, bx, by := d.nearest(id, med); best != 0 {
 				return d.start(id, best, bx, by, now)
 			}
@@ -270,7 +273,29 @@ func (d Drugs) Assign(id entity.EntityID) bool {
 	if !craving && !d.lookNow(id, now) {
 		return false
 	}
-	joyLow := d.h.Minds.Joy(id) < recreation.Bored
+	allowed := d.kinds(id, probe, d.h.Minds.Joy(id) < recreation.Bored, crave, craving, now)
+	if len(allowed) == 0 {
+		return false
+	}
+	if d.fromPack(id, allowed, now) { // CSE-011: what it carries first
+		return true
+	}
+	best, bx, by := d.nearest(id, allowed)
+	if best == 0 {
+		if s != nil {
+			s.Retry = now + retryNone
+		}
+		return false
+	}
+	return d.start(id, best, bx, by, now)
+}
+
+// kinds lists the recreational drugs id's policy lets it take now: a craving
+// only the craved one, and past the policy's mood gate only that (CSE-010).
+func (d Drugs) kinds(id entity.EntityID, probe *drug.State, joyLow bool, crave item.Kind, craving bool, now uint64) []item.Kind {
+	if !craving && !d.moodAllows(id, probe.Policy) {
+		return nil
+	}
 	traits := d.h.Minds.Traits(id)
 	var allowed []item.Kind
 	for _, def := range drug.All() {
@@ -281,17 +306,7 @@ func (d Drugs) Assign(id entity.EntityID) bool {
 			allowed = append(allowed, def.Kind)
 		}
 	}
-	if len(allowed) == 0 {
-		return false
-	}
-	best, bx, by := d.nearest(id, allowed)
-	if best == 0 {
-		if s != nil {
-			s.Retry = now + retryNone
-		}
-		return false
-	}
-	return d.start(id, best, bx, by, now)
+	return allowed
 }
 
 // start sends id to take a dose from stack best at (bx, by); a failed start
@@ -306,6 +321,12 @@ func (d Drugs) start(id, best entity.EntityID, bx, by int, now uint64) bool {
 		return false
 	}
 	return true
+}
+
+// startHeld is start for the dose id already holds as stack.
+func (d Drugs) startHeld(id, stack entity.EntityID) bool {
+	x, y := d.h.Pawns.Pos(id)
+	return d.h.Pawns.StartJob(id, job.Record{Kind: job.Ingest, Target: stack, Carry: stack, TX: x, TY: y, WorkLeft: ingestTicks})
 }
 
 // nearest is the nearest free, unforbidden stack of one of kinds.
@@ -346,7 +367,7 @@ func (d Drugs) Do(id entity.EntityID, j job.Record) {
 		return
 	}
 	st, ok := d.h.Stock.Stack(j.Target)
-	if !ok || st.Qty <= 0 || !st.Kind.IsDrug() || st.Carrier != 0 {
+	if !ok || st.Qty <= 0 || !st.Kind.IsDrug() || st.Carrier != 0 && st.Carrier != id {
 		j.State, j.Fail = job.Fail, job.TargetGone
 		d.h.Pawns.SetJob(id, j)
 		return
@@ -357,6 +378,11 @@ func (d Drugs) Do(id entity.EntityID, j job.Record) {
 		d.h.Stock.DeleteItem(j.Target)
 	} else {
 		d.h.Stock.PutStack(j.Target, st)
+	}
+	if j.Carry != 0 { // CSE-011: the dose in hand, out of the pack
+		j.Carry = 0
+		d.h.Pawns.SetJob(id, j)
+		d.h.Habits.Used(id)
 	}
 	if d.Ingest(id, k) {
 		return // died of an overdose: die cancelled the job

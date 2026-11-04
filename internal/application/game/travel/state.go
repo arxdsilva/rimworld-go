@@ -387,10 +387,13 @@ func (h *Hold) massKg(animalMass func(animal.Species) int) int {
 }
 
 // addItem puts st into h, merged into a like stack.
-func (h *Hold) addItem(st item.Stack) {
+func (h *Hold) addItem(st item.Stack) { h.addMeal(st, item.MealRule{}) }
+
+// addMeal is addItem under the colony's meal rule r (CSE-012).
+func (h *Hold) addMeal(st item.Stack, r item.MealRule) {
 	st.X, st.Y, st.Carrier = 0, 0, 0
 	for i := range h.Items {
-		if item.SameLoad(h.Items[i], st) {
+		if item.SameMeal(h.Items[i], st, r) {
 			h.Items[i].Qty += st.Qty
 			return
 		}
@@ -404,14 +407,14 @@ func (h *Hold) empty() bool {
 }
 
 // merge moves everything in o into h.
-func (h *Hold) merge(o *Hold) {
+func (h *Hold) merge(o *Hold, r item.MealRule) {
 	if o == nil {
 		return
 	}
 	h.Pawns = append(h.Pawns, o.Pawns...)
 	h.Animals = append(h.Animals, o.Animals...)
 	for _, st := range o.Items {
-		h.addItem(st)
+		h.addMeal(st, r)
 	}
 }
 

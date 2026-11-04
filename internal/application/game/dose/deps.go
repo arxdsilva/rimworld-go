@@ -24,6 +24,25 @@ type Host struct {
 	Minds  Minds
 	Bodies Bodies
 	Stock  Stock
+	Habits Habits
+}
+
+// Habits is what the colony's habit rules add to drug use (game/sense: CSE-007,
+// 008, 010, 011).
+type Habits interface {
+	// Mood is id's mood now and the level it is heading for, 0..100.
+	Mood(id entity.EntityID) (mood, potential int)
+	// PotentialMood is gameplay.DrugPotentialMood; PackDoses gameplay.AnyDrugFromPack.
+	PotentialMood() bool
+	PackDoses() bool
+	// PackHas reports id's pack holds drug k.
+	PackHas(id entity.EntityID, k item.Kind) bool
+	// Unpack brings one k out of id's pack into its hands.
+	Unpack(id entity.EntityID, k item.Kind) (entity.EntityID, bool)
+	// Used forgets that what id held came from its pack: it has been taken.
+	Used(id entity.EntityID)
+	// SpawnHeld makes st a new stack in id's hands.
+	SpawnHeld(id entity.EntityID, st item.Stack) (entity.EntityID, bool)
 }
 
 // Pawns is who a pawn is and what it is doing.

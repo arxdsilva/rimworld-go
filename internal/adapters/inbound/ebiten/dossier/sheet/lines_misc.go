@@ -57,14 +57,25 @@ func ActivityLine(p game.PawnView, c dossierview.Card) Line {
 		l.Text = "Raiding (" + p.RaidPlan + ")"
 	case c.AttackTarget != "":
 		l.Text = "Attacking " + c.AttackTarget
-	case p.Job != "":
-		l.Text = p.Job
+	case p.Job != "" && p.Job != "idle":
+		l.Text = capFirst(jobWords(p.Job))
 	case p.Acting != "":
 		l.Text = capFirst(p.Acting)
 	default:
 		l.Text, l.Tone = "Idle", ToneOff
 	}
 	return l
+}
+
+// jobWords is a job line without the state the simulation appends to it
+// (job.Record.Line): "wander goto" reads "wander".
+func jobWords(line string) string {
+	for _, state := range []string{" goto", " do", " complete"} {
+		if t, ok := strings.CutSuffix(line, state); ok {
+			return t
+		}
+	}
+	return line
 }
 
 // AnimalActivityLine is what a creature is doing now.

@@ -8,7 +8,9 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/pkg/randx"
 )
 
 // The bills read model (game re-exports these types as game.RecipeView,
@@ -153,6 +155,9 @@ func Recipes() []RecipeView {
 		}
 		v := RecipeView{ID: uint8(d.ID), Name: d.Name, Label: d.Label, Bench: d.Bench.String(),
 			Input: d.InputsLabel(), Output: d.Output.String()}
+		for _, k := range d.InputKinds() { // CSE-046: named, in kind order
+			v.InputKinds = append(v.InputKinds, k.String())
+		}
 		if d.Builds != 0 {
 			v.Output = d.Builds.String()
 		}
@@ -206,11 +211,11 @@ func (b *Bills) AppendViews(out []BillView, bid entity.EntityID) []BillView {
 func (b *Bills) current(v *BillView, bid entity.EntityID, i int, d recipe.Def) {
 	for _, pid := range b.h.PawnIDs() {
 		j, ok := b.h.Job(pid)
-		if !ok || !j.Active() || j.Dest != bid || j.BillIndex != i || j.Kind != job.Bill && j.Kind != job.HaulIngredients {
+		if !ok || !j.Active() || j.Dest != bid || j.BillIndex != i || j.Kind != job.Bill && j.Kind != job.HaulIngredients && j.Kind != job.PackIngredients {
 			continue
 		}
 		v.CurrentWorker = b.h.Name(pid)
-		v.Gathering = j.Kind == job.HaulIngredients || j.Carry == 0
+		v.Gathering = j.Kind == job.HaulIngredients || j.Kind == job.PackIngredients || j.Carry == 0
 		if !v.Gathering && d.Work > 0 {
 			v.Progress = max(0, min(100, 100*(d.Work-j.WorkLeft)/d.Work))
 		}
@@ -260,6 +265,26 @@ func IngredientNames(st item.Stack) []string {
 			name = k.String()
 		}
 		out = append(out, name)
+	}
+	return out
+}
+
+// IngredientNamesFor is IngredientNames, plus (CSE-014, FlavourIngredients,
+// off by default) a neutral guess for a cooked meal nothing made, one per
+// recipe input. The guess is a pure function of the stack id and kind, so it
+// is stable, costs no state and never touches a hash.
+func IngredientNamesFor(st item.Stack, id uint64, r gameplay.Settings) []string {
+	if names := IngredientNames(st); names != nil || !r.On(gameplay.FlavourIngredients) {
+		return names
+	}
+	slots := recipe.FlavourSlots(st.Kind)
+	if slots == nil {
+		return nil
+	}
+	out := make([]string, 0, len(slots))
+	for i := range slots {
+		h := randx.SplitMix64(id ^ uint64(st.Kind)<<48 ^ uint64(i)<<40)
+		out = append(out, recipe.FlavourKind(st.Kind, i, h).String())
 	}
 	return out
 }

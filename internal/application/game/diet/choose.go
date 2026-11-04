@@ -3,6 +3,7 @@ package diet
 import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -20,6 +21,7 @@ const (
 	desperatePenalty = 150
 	rotSoonBonus     = 12
 	rotSoon          = clock.TicksPerDay / 2
+	spoilWindow      = 3 * clock.TicksPerDay
 	travelFood       = 10
 	// A mood point is worth goodPoint tiles of walking when positive; a
 	// bad thought costs badBase plus badPoint tiles a point.
@@ -43,6 +45,17 @@ type Picker struct {
 	menu      Menu
 	desperate bool
 	cannibal  bool
+	flat      bool // CSE-015 off: the old flat bonus for food about to spoil
+}
+
+// Ruler is the colony's habit rules, read by value.
+type Ruler interface{ Rules() gameplay.Settings }
+
+// Under is p under the colony's rules (CSE-015: SpoilingMeals). The zero
+// Picker is the default, on. Values only: nothing is allocated.
+func (p Picker) Under(r Ruler) Picker {
+	p.flat = !r.Rules().On(gameplay.SpoilingMeals)
+	return p
 }
 
 // Picker is person id's food chooser.
@@ -69,10 +82,26 @@ func (p Picker) Score(st *item.Stack, d int) int {
 	case item.SurvivalMeal, item.Pemmican:
 		s -= travelFood
 	}
-	if f := st.FreshTicks(); f > 0 && f < rotSoon {
+	f := st.FreshTicks()
+	switch {
+	case p.flat && f > 0 && f < rotSoon:
 		s += rotSoonBonus
+	case !p.flat:
+		s += SpoilBonus(f)
 	}
 	return s
+}
+
+// SpoilBonus is CSE-015's pull toward food about to spoil: (6-2t)^2 for t
+// days left, 0 < t < 3, at most 36. f is the stack's FreshTicks (0: it
+// does not spoil). Integer maths; it falls smoothly to 0 at three days, so
+// there is no threshold to flap on.
+func SpoilBonus(f int) int {
+	if f <= 0 || f >= spoilWindow {
+		return 0
+	}
+	n := 6*clock.TicksPerDay - 2*f // (6-2t) days, in ticks
+	return n * n / (clock.TicksPerDay * clock.TicksPerDay)
 }
 
 // Allows reports the person's policy allows kind k (a desperate person

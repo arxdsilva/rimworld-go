@@ -1,6 +1,8 @@
 package recreate
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -27,6 +29,11 @@ const (
 	NightEnd   = 400
 	maxPieces  = 4 // pieces tried for a free cell, best first
 	maxCells   = 4 // cells tried for reach, best first
+	// A colonist craves the outdoors below CravingOn percent of its need and
+	// until it passes CravingOff (ours; the gap keeps it from flapping,
+	// CSE-001).
+	CravingOn  = 40
+	CravingOff = 60
 )
 
 type pick struct {
@@ -45,8 +52,9 @@ func (s *State) Seek(id entity.EntityID, linger int) bool {
 		return false
 	}
 	px, py := h.Pos(id)
-	var best [maxPieces]pick
-	n := 0
+	craving := s.craves(id)
+	var best, outside [maxPieces]pick
+	n, out := 0, 0
 	for _, bid := range h.BuildingIDs() {
 		b, ok := h.Building(bid)
 		sp, rec := SpecOf(b.Kind)
@@ -66,13 +74,52 @@ func (s *State) Seek(id entity.EntityID, linger int) bool {
 			score -= JoinBonus
 		}
 		n = insertPick(&best, n, pick{bid, score})
+		if craving && h.Outside(b.X, b.Y) {
+			out = insertPick(&outside, out, pick{bid, score})
+		}
+	}
+	for _, c := range outside[:out] { // CSE-001: out in the open first
+		if b, ok := h.Building(c.bid); ok && s.start(id, c.bid, b, linger) {
+			return true
+		}
 	}
 	for _, c := range best[:n] {
+		if tried(outside[:out], c.bid) {
+			continue
+		}
 		if b, ok := h.Building(c.bid); ok && s.start(id, c.bid, b, linger) {
 			return true
 		}
 	}
 	return false
+}
+
+// tried reports bid is among picks.
+func tried(picks []pick, bid entity.EntityID) bool {
+	for _, p := range picks {
+		if p.bid == bid {
+			return true
+		}
+	}
+	return false
+}
+
+// craves reads id's outdoors need into its craving: on below CravingOn, off
+// from CravingOff, and held between. A pawn on bed rest keeps its craving but
+// stays by it.
+func (s *State) craves(id entity.EntityID) bool {
+	h := s.h
+	if !h.OutdoorsJoy() {
+		return false
+	}
+	i, on := slices.BinarySearch(s.s.Craving, id)
+	switch pct := h.OutdoorsPct(id); {
+	case !on && pct < CravingOn:
+		s.s.Craving, on = slices.Insert(s.s.Craving, i, id), true
+	case on && pct >= CravingOff:
+		s.s.Craving, on = slices.Delete(s.s.Craving, i, i+1), false
+	}
+	return on && !h.OnBedRest(id)
 }
 
 // insertPick keeps the maxPieces best picks, lowest score first (ties:

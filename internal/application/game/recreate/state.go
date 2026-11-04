@@ -1,6 +1,8 @@
 package recreate
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -24,6 +26,8 @@ type Save struct {
 	// colony's wealth on day RateDay.
 	Rate    int
 	RateDay uint64
+	// Craving are the colonists craving the outdoors, sorted (CSE-001).
+	Craving []entity.EntityID
 }
 
 // State is the recreation component: per-colonist tolerances and its
@@ -41,6 +45,7 @@ func Load(h Host, in *Save) *State {
 	st := New(h)
 	if in != nil {
 		st.s.Rate, st.s.RateDay = in.Rate, in.RateDay
+		st.s.Craving = slices.Clone(in.Craving)
 		for id, p := range in.Pawns {
 			st.s.Pawns[id] = p
 		}
@@ -50,10 +55,10 @@ func Load(h Host, in *Save) *State {
 
 // Export is the state to save (nil when there is nothing to keep).
 func (s *State) Export() *Save {
-	if s == nil || len(s.s.Pawns) == 0 {
+	if s == nil || len(s.s.Pawns) == 0 && len(s.s.Craving) == 0 {
 		return nil
 	}
-	out := Save{Pawns: make(map[entity.EntityID]Pawn, len(s.s.Pawns)), Rate: s.s.Rate, RateDay: s.s.RateDay}
+	out := Save{Pawns: make(map[entity.EntityID]Pawn, len(s.s.Pawns)), Rate: s.s.Rate, RateDay: s.s.RateDay, Craving: slices.Clone(s.s.Craving)}
 	for id, p := range s.s.Pawns {
 		out.Pawns[id] = p
 	}
@@ -109,4 +114,9 @@ func (s *State) Gain(id entity.EntityID, k recreation.JoyKind, gain int) int {
 }
 
 // Forget drops id's record (it left the colony or died).
-func (s *State) Forget(id entity.EntityID) { delete(s.s.Pawns, id) }
+func (s *State) Forget(id entity.EntityID) {
+	delete(s.s.Pawns, id)
+	if i, on := slices.BinarySearch(s.s.Craving, id); on {
+		s.s.Craving = slices.Delete(s.s.Craving, i, i+1)
+	}
+}

@@ -97,6 +97,9 @@ func (a Pawn) HandleLogWheel() bool {
 // scrollLogAt scrolls the colonist Log tab under the cursor (the animal's
 // Log tab is a widget-kit scroll area: declareAnimalLog).
 func (a Pawn) ScrollLogAt(mx, my int, wy float64) bool {
+	if r, ok := a.Card().logBodyRect(); ok && a.ScrollLogIn(r, mx, my, wy) { // the log in the pane's body (RHUD-026)
+		return true
+	}
 	return a.PaneOpenTab() == "inspector.log" && a.inspectorVisible() && a.ScrollLogIn(a.ExpandedRect().Inset(PaneInset), mx, my, wy)
 }
 

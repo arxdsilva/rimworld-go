@@ -50,13 +50,14 @@ type ToolDef struct {
 }
 
 // Category ids beyond the original four rows (STK-AG: the panel shows all
-// vanilla categories and storage in seven rows of two, hudlayout.ArchCatsH).
+// vanilla categories, storage and Neat Storage in seven rows of two, hudlayout.ArchCatsH).
 const (
 	CatPower       = "power"
 	CatTemperature = "temperature"
 	CatFloors      = "floors"
 	CatRecreation  = "recreation"
 	CatShip        = "ship"
+	CatStorage     = "storage" // NST: the 27 Neat Storage pieces, shelves and bookcases
 )
 
 // Category is one button of the category panel.
@@ -69,7 +70,8 @@ var Categories = []Category{
 	{"structure", "Structure"},
 	{"production", "Production"},
 	{"furniture", "Furniture"},
-	{CatPower, "Power"}, // PLAY-021
+	{CatStorage, "Storage"}, // NST
+	{CatPower, "Power"},     // PLAY-021
 	{"security", "Security"},
 	{"misc", "Misc"}, // ENG-003: marriage and party spots
 	{CatFloors, "Floors"},
@@ -195,7 +197,7 @@ var Tools = []ToolDef{
 		Desc: "A proper two-tile bed. Q/E rotates."},
 	{ID: "double_bed", Label: "Double bed", Category: "furniture", Icon: "double_bed", Mode: PlaceSingle, Build: "double bed",
 		Desc: "A 2x2 bed two colonists share side by side. Q/E rotates."},
-	{ID: "shelf", Label: "Shelf", Category: "furniture", Icon: "shelf", Mode: PlaceSingle, Build: "shelf",
+	{ID: "shelf", Label: "Shelf", Category: CatStorage, Icon: "shelf", Mode: PlaceSingle, Build: "shelf",
 		Desc: "Holds stacks of one filter on the tiles it covers. Set what it accepts from its pane. Q/E rotates."},
 	{ID: "sarcophagus", Label: "Sarcophagus", Category: "misc", Icon: "sarcophagus", Mode: PlaceSingle, Build: "sarcophagus",
 		Desc: "A grand stone coffin: holds one body, and keeps it from rotting. Set whose it holds from its Storage button. Q/E rotates."},
@@ -237,12 +239,12 @@ var Tools = []ToolDef{
 		Build: "animal sleeping box", Desc: "A small box bed a pet sleeps in: it rests better than on the floor."},
 	{ID: "plant_pot", Label: "Plant pot", Category: "furniture", Icon: "plant_pot", Mode: PlaceSingle, Build: "plant pot",
 		Desc: "A pot for a decorative plant: select it to sow a rose or a daylily. The plant grows in light, making the room more beautiful as it grows."},
-	{ID: "small_shelf", Label: "Small shelf", Category: "furniture", Icon: "small_shelf", Mode: PlaceSingle, Build: "small shelf",
+	{ID: "small_shelf", Label: "Small shelf", Category: CatStorage, Icon: "small_shelf", Mode: PlaceSingle, Build: "small shelf",
 		Desc: "A one-tile shelf: holds 3 stacks of what you set from its pane. Q/E rotates."},
 	// AX-7 (wiki: Bookcase, Small bookcase; AR3's art): one family card, the small one next.
-	{ID: "bookcase", Label: "Bookcase", Category: "furniture", Icon: "bookcase", Mode: PlaceSingle, Build: "bookcase", Family: "bookcase",
+	{ID: "bookcase", Label: "Bookcase", Category: CatStorage, Icon: "bookcase", Mode: PlaceSingle, Build: "bookcase", Family: "bookcase",
 		Desc: "Shelves for 10 books. Every book shelved makes reading and research in its room a little better. Q/E rotates. Click the card again for the small bookcase."},
-	{ID: "small_bookcase", Label: "Small bookcase", Category: "furniture", Icon: "small_bookcase", Mode: PlaceSingle, Build: "small bookcase",
+	{ID: "small_bookcase", Label: "Small bookcase", Category: CatStorage, Icon: "small_bookcase", Mode: PlaceSingle, Build: "small bookcase",
 		Family: "bookcase", Desc: "A one-tile bookcase for 5 books; they count toward the room's reading bonus. Click the card again to put the bookcases away."},
 	{ID: "wall_torch", Label: "Wall torch", Category: "furniture", Icon: "wall_torch", Mode: PlaceSingle, Build: "wall torch",
 		Desc: "A torch hung on a wall: set it in front of one, facing out. Burns wood (holds 15, about 2 a day) to light and warm the room."},
@@ -396,7 +398,7 @@ var Tools = []ToolDef{
 	{ID: "party_spot", Label: "Party spot", Category: "misc", Icon: "party_spot", Mode: PlaceSingle, Build: "party spot",
 		Desc: "Where the colony gathers for parties. Free and instant."},
 	// AX-2 misc (wiki: Egg box, Large stele, Grand stele; AR1's art).
-	{ID: "egg_box", Label: "Egg box", Category: "misc", Icon: "egg_box", Mode: PlaceSingle, Build: "egg box",
+	{ID: "egg_box", Label: "Egg box", Category: CatStorage, Icon: "egg_box", Mode: PlaceSingle, Build: "egg box",
 		Desc: "A nesting box: tame hens within 20 tiles lay their eggs in it, and it stores them."},
 	{ID: "large_stele", Label: "Large stele", Category: "misc", Icon: "large_stele", Mode: PlaceSingle, Build: "large stele",
 		Desc: "A carved stone monument (2x2) that makes its room more beautiful."},
@@ -474,6 +476,61 @@ var Tools = []ToolDef{
 		Desc: "Pushes the ship into the sky (3x4); a ship needs three. Q/E rotates."},
 	{ID: "ship_sensor", Label: "Ship sensor cluster", Category: CatShip, Icon: "ship_sensor", Mode: PlaceSingle, Build: "ship sensor cluster",
 		Desc: "Lets the ship find its way (2x2); a ship needs one to launch."},
+	// NST-001..027 (Neat Storage; .cursor/NEAT_STORAGE_GAP_ANALYSIS.md): Build is the build name, Icon the slug.
+	{ID: "display_case", Label: "Display case", Category: CatStorage, Icon: "display_case", Mode: PlaceSingle, Build: "display case",
+		Desc: "A glass-fronted box for one fine thing. Colonists who walk past stop to look at it. Q/E rotates."},
+	{ID: "round_pedestal", Label: "Round pedestal", Category: CatStorage, Icon: "round_pedestal", Mode: PlaceSingle, Build: "round pedestal",
+		Desc: "A turned stand that holds one piece up for everyone to see; looking at it calms people."},
+	{ID: "small_display_shelf", Label: "Small display shelf", Category: CatStorage, Icon: "small_display_shelf", Mode: PlaceSingle, Build: "small display shelf",
+		Desc: "A one-tile rack with three slots, for nice things you want in sight. Q/E rotates."},
+	{ID: "display_shelf", Label: "Display shelf", Category: CatStorage, Icon: "display_shelf", Mode: PlaceSingle, Build: "display shelf",
+		Desc: "A wide display rack, three slots a tile, kept tidy for goods worth showing. Q/E rotates."},
+	{ID: "weapon_rack", Label: "Weapon rack", Category: CatStorage, Icon: "weapon_rack", Mode: PlaceSingle, Build: "weapon rack",
+		Desc: "A rack with pegs for three weapons a tile. Q/E rotates."},
+	{ID: "narrow_wardrobe", Label: "Narrow wardrobe", Category: CatStorage, Icon: "narrow_wardrobe", Mode: PlaceSingle, Build: "narrow wardrobe",
+		Desc: "A slim cupboard with four slots a tile for clothes and cloth. Q/E rotates."},
+	{ID: "wardrobe", Label: "Wardrobe", Category: CatStorage, Icon: "wardrobe", Mode: PlaceSingle, Build: "wardrobe",
+		Desc: "A two-tile cupboard with four slots a tile for clothes and cloth. Q/E rotates."},
+	{ID: "narrow_display_cabinet", Label: "Narrow display cabinet", Category: CatStorage, Icon: "narrow_display_cabinet", Mode: PlaceSingle, Build: "narrow display cabinet",
+		Desc: "A slim glass cabinet, four slots a tile, for goods, meals and medicine. Q/E rotates."},
+	{ID: "display_cabinet", Label: "Display cabinet", Category: CatStorage, Icon: "display_cabinet", Mode: PlaceSingle, Build: "display cabinet",
+		Desc: "A two-tile glass cabinet, four slots a tile, for goods, meals and medicine. Q/E rotates."},
+	{ID: "open_shelf", Label: "Open shelf", Category: CatStorage, Icon: "open_shelf", Mode: PlaceSingle, Build: "open shelf",
+		Desc: "Plain open boards, six slots a tile, for anything that is not a corpse or a chunk. Q/E rotates."},
+	{ID: "two_tier_display_shelf", Label: "2-tier display shelf", Category: CatStorage, Icon: "two_tier_display_shelf", Mode: PlaceSingle, Build: "two tier display shelf",
+		Desc: "Two shelves stacked on one frame: six slots a tile for goods worth showing. Q/E rotates."},
+	{ID: "narrow_tall_shelf", Label: "Narrow tall shelf", Category: CatStorage, Icon: "narrow_tall_shelf", Mode: PlaceSingle, Build: "narrow tall shelf",
+		Desc: "A tall, narrow unit with six slots a tile. Q/E rotates."},
+	{ID: "tall_shelf", Label: "Tall shelf", Category: CatStorage, Icon: "tall_shelf", Mode: PlaceSingle, Build: "tall shelf",
+		Desc: "A tall two-tile unit with six slots a tile. Q/E rotates."},
+	{ID: "safe", Label: "Safe", Category: CatStorage, Icon: "safe", Mode: PlaceSingle, Build: "safe",
+		Desc: "A steel strongbox with six slots, for metals, parts, drugs and medicine."},
+	{ID: "drum", Label: "Drum", Category: CatStorage, Icon: "drum", Mode: PlaceSingle, Build: "drum",
+		Desc: "A steel drum with six slots for fuel, chemicals, milk and drink."},
+	{ID: "horizontal_weapon_rack", Label: "Horizontal weapon rack", Category: CatStorage, Icon: "horizontal_weapon_rack", Mode: PlaceSingle, Build: "horizontal weapon rack",
+		Desc: "A steel rack that lays six weapons a tile flat. Q/E rotates."},
+	{ID: "vertical_weapon_rack", Label: "Vertical weapon rack", Category: CatStorage, Icon: "vertical_weapon_rack", Mode: PlaceSingle, Build: "vertical weapon rack",
+		Desc: "A steel rack that stands six weapons a tile on end. Q/E rotates."},
+	{ID: "textile_rack", Label: "Textile rack", Category: CatStorage, Icon: "textile_rack", Mode: PlaceSingle, Build: "textile rack",
+		Desc: "A frame with six slots a tile for cloth, hides and carpets. Q/E rotates."},
+	{ID: "meat_hook", Label: "Meat hook", Category: CatStorage, Icon: "meat_hook", Mode: PlaceSingle, Build: "meat hook",
+		Desc: "Steel hooks with six slots a tile, to keep raw meat off the floor. Q/E rotates."},
+	{ID: "mini_pallet", Label: "Mini pallet", Category: CatStorage, Icon: "mini_pallet", Mode: PlaceSingle, Build: "mini pallet",
+		Desc: "A tiny board platform with six slots; goods keep off the bare ground."},
+	{ID: "half_pallet", Label: "Half pallet", Category: CatStorage, Icon: "half_pallet", Mode: PlaceSingle, Build: "half pallet",
+		Desc: "A two-tile board platform with six slots a tile. Q/E rotates."},
+	{ID: "pallet", Label: "Pallet", Category: CatStorage, Icon: "pallet", Mode: PlaceSingle, Build: "pallet",
+		Desc: "A big board platform, four tiles with six slots each."},
+	{ID: "small_crate", Label: "Small crate", Category: CatStorage, Icon: "small_crate", Mode: PlaceSingle, Build: "small crate",
+		Desc: "A small slatted crate with six slots."},
+	{ID: "crate", Label: "Crate", Category: CatStorage, Icon: "crate", Mode: PlaceSingle, Build: "crate",
+		Desc: "A two-tile crate with six slots a tile. Q/E rotates."},
+	{ID: "large_crate", Label: "Large crate", Category: CatStorage, Icon: "large_crate", Mode: PlaceSingle, Build: "large crate",
+		Desc: "A big crate, four tiles with six slots each."},
+	{ID: "tall_crate", Label: "Tall crate", Category: CatStorage, Icon: "tall_crate", Mode: PlaceSingle, Build: "tall crate",
+		Desc: "A tall crate on a four-tile base, six slots a tile."},
+	{ID: "corpse_dump_spot", Label: "Corpse dump spot", Category: CatStorage, Icon: "corpse_dump_spot", Mode: PlaceSingle, Build: "corpse dump spot",
+		Desc: "One tile for up to twelve bodies, bones and chunks, out of the way."},
 }
 
 // allTools is the working tools, then the placeholders.

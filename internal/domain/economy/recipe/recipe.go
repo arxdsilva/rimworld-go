@@ -548,6 +548,19 @@ func (in Input) Accepts(k item.Kind) bool {
 	return k == in.Kind
 }
 
+// Kinds lists every item kind the input takes, in kind order: the kinds
+// Accepts takes (CSE-046's named ingredient summary). Per-stack state (a dry
+// recipe's spoiled stacks, a smelt's yield) is AcceptsStack's to judge.
+func (in Input) Kinds() []item.Kind {
+	var out []item.Kind
+	for k := item.Kind(0); k.String() != "unknown"; k++ {
+		if in.Accepts(k) {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
 // AcceptsStack is Accepts plus per-stack state: a dry recipe skips stacks
 // already dried or spoiled.
 func (in Input) AcceptsStack(s item.Stack) bool {

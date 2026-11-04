@@ -352,6 +352,10 @@ func TestActivityLine(t *testing.T) {
 		{"raid", game.PawnView{RaidPlan: "siege", Job: "x"}, card, "Raiding (siege)", ToneText},
 		{"attack", game.PawnView{Job: "x"}, dossierview.Card{AttackTarget: "Bo"}, "Attacking Bo", ToneText},
 		{"job", game.PawnView{Job: "Build wall", Acting: "construct"}, card, "Build wall", ToneText},
+		{"job state dropped", game.PawnView{Job: "wander goto"}, card, "Wander", ToneText},
+		{"job at work", game.PawnView{Job: "clean room do"}, card, "Clean room", ToneText},
+		{"job failed", game.PawnView{Job: "haul (no path)"}, card, "Haul (no path)", ToneText},
+		{"idle job", game.PawnView{Job: "idle"}, card, "Idle", ToneOff},
 		{"acting", game.PawnView{Acting: "cut"}, card, "Cut", ToneText},
 		{"idle", game.PawnView{}, card, "Idle", ToneOff},
 	}

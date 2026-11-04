@@ -604,6 +604,9 @@ func (g *Game) phaseAI() {
 			continue
 		}
 
+		if senseOf(g).Gear.Assign(id) { // game/sense (CSE-005, 039): a meal from the pack, a marked unload, a spare meal
+			continue
+		}
 		if n.Hungry() && g.seekFood(id) {
 			g.assignEat(id)
 			continue
@@ -660,8 +663,8 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	if r, ok := senseOf(g).Tidy.Before(id, rec); ok { // game/sense (CSE-017)
 		rec = r
 	}
-	if j, _ := g.jobs.Get(id); j.Kind == job.Read && rec.Kind != job.Read {
-		g.dropCarry(id) // game/books (AX-7): work replaces reading; the book is put down
+	if j, _ := g.jobs.Get(id); (j.Kind == job.Read || j.Kind == job.SocialRelax) && rec.Kind != j.Kind {
+		g.dropCarry(id) // game/books (AX-7), CSE-008: work replaces reading or a relax; the book or drink is put down
 	}
 	g.reserve.ReleaseOwner(id)
 	g.releaseDelivery(id) // a replaced delivery gives its shares back
@@ -935,7 +938,7 @@ func planGather(g *Game, id entity.EntityID, rec job.Record, first item.Stack) j
 	r, keep := g.restrictedRef(id), g.haul.cands[:0]
 	for _, c := range g.haul.cands {
 		st := g.stacks.Ref(c.ID)
-		if first.Qty >= rec.Count || st == nil || !item.SameLoad(first, *st) || !dz.AllowsStack(*st) || r != 0 && !g.refContains(r, c.X, c.Y) {
+		if first.Qty >= rec.Count || st == nil || !item.SameMeal(first, *st, item.RuleOf(senseOf(g).Rules)) || !dz.AllowsStack(*st) || r != 0 && !g.refContains(r, c.X, c.Y) {
 			continue
 		}
 		if z, ok := g.storageAt(c.X, c.Y); !ok || !z.AllowsStack(*st) || z.Priority < dz.Priority {
@@ -982,6 +985,7 @@ func (h haulHost) MapSize() (int, int)                         { return h.g.grid
 func (h haulHost) SelfCheck() bool                             { return selfCheck() }
 func (h haulHost) DeleteItem(id entity.EntityID)               { h.g.deleteItem(id) }
 func (h haulHost) Release(owner, target entity.EntityID)       { h.g.reserve.ReleaseEntity(owner, target) }
+func (h haulHost) MealRule() item.MealRule                     { return item.RuleOf(senseOf(h.g).Rules) }
 func (h haulHost) PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool) {
 	return h.g.pathTo(id, x, y)
 }
@@ -1117,8 +1121,8 @@ func (g *Game) phaseJobs() {
 			g.doSmooth(id, j) // smooth.go
 		case job.Sow:
 			g.doSow(id, j)
-		case job.Bill, job.HaulIngredients:
-			g.craft.Shop.Do(id, j) // craft/shop.go, craft/haul.go (PRD-1)
+		case job.Bill, job.HaulIngredients, job.PackIngredients:
+			g.craft.Shop.Do(id, j) // craft/shop.go, craft/haul.go (PRD-1), craft/packgather.go (CSE-029)
 		case job.Equip:
 			g.doEquip(id, j)
 		case job.Rescue:
@@ -1732,7 +1736,7 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 			continue
 		}
 		op := g.stacks.Ref(oid)
-		if !item.CanMerge(st, *op) {
+		if !item.CanMergeMeal(st, *op, item.RuleOf(senseOf(g).Rules)) {
 			continue
 		}
 		other := *op // copied before the store changes below

@@ -81,7 +81,7 @@ func (o pods) groupHold(gr *group) Hold {
 	var h Hold
 	for _, p := range gr.pods {
 		if ph := o.s.holds[p]; ph != nil {
-			h.merge(ph)
+			h.merge(ph, o.h.MealRule())
 		}
 	}
 	return h.clone()
@@ -203,7 +203,7 @@ func (o Ops) Claim(t int) (item.Kind, int, bool) {
 
 // Carry adds st to caravan cid's goods (a site map packed up, MAP-03).
 func (o Ops) Carry(cid uint64, st item.Stack) {
-	o.s.cargoOf(cid).addItem(st)
+	o.s.cargoOf(cid).addMeal(st, o.h.MealRule())
 	o.h.Changed()
 }
 
@@ -251,6 +251,6 @@ func (o pods) carry(cid uint64, load Hold) {
 	h := o.s.cargoOf(cid)
 	h.Animals = append(h.Animals, load.Animals...)
 	for _, st := range load.Items {
-		h.addItem(st)
+		h.addMeal(st, o.h.MealRule())
 	}
 }

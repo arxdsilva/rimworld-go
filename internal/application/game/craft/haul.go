@@ -28,10 +28,7 @@ func (s *Shop) gather(id entity.EntityID, j job.Record, b construction.Building)
 	h := s.h
 	switch {
 	case j.Target == j.Dest && j.Carry != 0:
-		putDown(h, j.Carry, b.X, b.Y)
-		h.Claims().TryEntity(id, j.Carry)
-		j.Route = append(j.Route[:len(j.Route):len(j.Route)], j.Carry) // a fresh array: copies never share it
-		j.Carry = 0
+		s.lay(id, &j, b)
 	case j.Target != j.Dest && !s.pickUp(id, &j):
 		s.fail(id, j, job.TargetGone)
 		return
@@ -49,9 +46,7 @@ func (s *Shop) gather(id entity.EntityID, j job.Record, b construction.Building)
 			j.Target, tx, ty = next, st.X, st.Y
 		}
 	} else {
-		j.Kind = job.Bill
-		j.Route = slices.Clone(j.Route[j.Count:])
-		j.Count, j.RouteI = 0, 0
+		toBill(&j)
 	}
 	path, ok := h.PathTo(id, tx, ty)
 	if !ok {
@@ -65,6 +60,23 @@ func (s *Shop) gather(id entity.EntityID, j job.Record, b construction.Building)
 		j.State = job.Goto
 	}
 	h.SetJob(id, j)
+}
+
+// lay sets the load in j's hands down on bench b, held for pawn id and listed
+// after j's picks.
+func (s *Shop) lay(id entity.EntityID, j *job.Record, b construction.Building) {
+	putDown(s.h, j.Carry, b.X, b.Y)
+	s.h.Claims().TryEntity(id, j.Carry)
+	j.Route = append(j.Route[:len(j.Route):len(j.Route)], j.Carry) // a fresh array: copies never share it
+	j.Carry = 0
+}
+
+// toBill turns gathering job j, its picks all done, into the plain bill job
+// that works them: Route is then the loads laid on the bench.
+func toBill(j *job.Record) {
+	j.Kind = job.Bill
+	j.Route = slices.Clone(j.Route[j.Count:])
+	j.Count, j.RouteI = 0, 0
 }
 
 // pickUp takes the planned count of the next stack on j's route into the

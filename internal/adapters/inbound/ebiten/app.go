@@ -226,8 +226,8 @@ type App struct {
 	sel         *selection.Model // selection.Model owns what is selected (ARCH-005)
 	capture     captureState
 	now         func() time.Time // wall clock for alpha (injectable for tests)
-	lastTick    time.Time        // when the renderer last advanced
-	lastDraw    time.Time        // previous colony Draw: the per-Draw camera step
+	stamp       frameStamps
+	dos         dossierState // the colonist card (dossier_compat.go), nil panel outside a session
 
 	// Input (UI-016): the device source (a fake in tests), this Update's
 	// resolved frame, the live bindings and an Update counter.
@@ -238,6 +238,12 @@ type App struct {
 	bg      bgState             // Run in background (background.go)
 	rebind  options.RebindState // Options › Controls key capture (controls_ui.go)
 	midDrag midDragState        // middle-mouse camera drag
+}
+
+// frameStamps are the wall clock's last marks.
+type frameStamps struct {
+	tick time.Time // when the renderer last advanced
+	draw time.Time // previous colony Draw: the per-Draw camera step
 }
 
 // art_atlas.go: pages cut in the background, not mid-frame
@@ -488,20 +494,20 @@ func (a *App) apply(in intent) {
 }
 
 // markUpdate stamps the renderer advance that Draw interpolates from.
-func (a *App) markUpdate() { a.lastTick = a.now() }
+func (a *App) markUpdate() { a.stamp.tick = a.now() }
 
 // frameAlpha is the fraction of the update interval elapsed since the
 // renderer last advanced (C7), in [0, 1). The wall clock stays in the
 // adapter; captures use 0 so their frames are deterministic.
 func (a *App) frameAlpha() float64 {
-	if a.cfg.Capture != nil || a.lastTick.IsZero() {
+	if a.cfg.Capture != nil || a.stamp.tick.IsZero() {
 		return 0
 	}
 	tps := ebiten.TPS()
 	if tps <= 0 {
 		tps = 60
 	}
-	f := float64(a.now().Sub(a.lastTick)) / float64(time.Second/time.Duration(tps))
+	f := float64(a.now().Sub(a.stamp.tick)) / float64(time.Second/time.Duration(tps))
 	return math.Max(0, math.Min(f, motionpkg.AlphaMax))
 }
 
@@ -543,6 +549,7 @@ func (a *App) startSession(sim Simulation) {
 	a.renderer = New(sim)
 	a.renderer.cueBus().SoundHas = a.cfg.Sound.Has // animal voices fall back by what exists
 	a.renderer.art = a.art
+	a.dos = newDossier(a) // over this session's art
 	a.syncRenderer()
 	if n := a.settings.Gameplay.Colonies(); n > 1 { // the sim's default is 1 and unsaved
 		a.renderer.enqueue(command.Command{Kind: command.SetColonyCap, Count: n})
@@ -551,6 +558,8 @@ func (a *App) startSession(sim Simulation) {
 }
 
 func (a *App) dropSession() {
+	a.dos.reset() // RHUD-504
+	a.dos = dossierState{}
 	a.renderer = nil
 	a.win.Open = false
 	a.arch.Open = false
@@ -973,10 +982,10 @@ func (a *App) Draw(screen *ebiten.Image) {
 
 	switch a.nav.screen() {
 	case portspkg.ScreenBoot:
-		a.lastDraw = time.Time{}
+		a.stamp.draw = time.Time{}
 		a.drawBoot(screen, sw, sh)
 	case portspkg.ScreenMainMenu:
-		a.lastDraw = time.Time{}
+		a.stamp.draw = time.Time{}
 		a.menuScreen.Draw(screen, sw, sh)
 	case portspkg.ScreenScenario:
 		a.drawScenario(screen, sw, sh)
@@ -992,17 +1001,17 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.drawPawns(screen, sw, sh)
 	case portspkg.ScreenColony:
 		if a.world.Open() {
-			a.lastDraw = time.Time{}
+			a.stamp.draw = time.Time{}
 			gfx.SetPass("world")
 			a.world.DrawGlobe(screen, sw, sh) // worldview: the globe in the map's place
 			gfx.SetPass("hud")
 		} else if a.renderer != nil {
 			now := a.now()
-			if a.cfg.Capture == nil && !a.lastDraw.IsZero() && a.nav.overlay() != overlayPause {
+			if a.cfg.Capture == nil && !a.stamp.draw.IsZero() && a.nav.overlay() != overlayPause {
 				a.renderer.SyncDev() // the viewport is in this frame's map pixels
-				a.renderer.stepCamera(now.Sub(a.lastDraw).Seconds(), a.mapViewport())
+				a.renderer.stepCamera(now.Sub(a.stamp.draw).Seconds(), a.mapViewport())
 			}
-			a.lastDraw = now
+			a.stamp.draw = now
 			a.renderer.mo.SetAlpha(a.frameAlpha())
 			a.syncTreeFocus() // tree_focus.go: hover, selection and ghost see through canopies
 			// world_scale.go: the map, and what the tools mark on it, draw
@@ -1038,14 +1047,14 @@ func (a *App) Draw(screen *ebiten.Image) {
 			a.drawPause(screen, sw, sh)
 		}
 	case portspkg.ScreenOptions:
-		a.lastDraw = time.Time{}
+		a.stamp.draw = time.Time{}
 		a.opt.DrawOptions(screen, sw, sh)
 	case portspkg.ScreenLoad:
 		a.opt.DrawLoad(screen, sw, sh)
 	case portspkg.ScreenCredits:
 		a.drawCredits(screen, sw, sh)
 	default:
-		a.lastDraw = time.Time{}
+		a.stamp.draw = time.Time{}
 		screen.Fill(uikit.Space)
 	}
 

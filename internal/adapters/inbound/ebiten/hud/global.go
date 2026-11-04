@@ -57,6 +57,7 @@ const (
 	// HomeAutoButtonID and PowerButtonID are the Architect's toggles
 	// (architect.HomeAutoButtonID, architect.PowerButtonID; the root's
 	// tests hold them equal).
+	DossierButtonID  = "hud.dossier" // the colonist card's dock toggle (RHUD-039)
 	HomeAutoButtonID = "hud.homeauto"
 	PowerButtonID    = "hud.power"
 
@@ -136,6 +137,36 @@ var GlobalToggles = []GlobalToggle{
 		tip: func(c Global) string {
 			return "Zones overlay" + stateSuffix(!c.ZonesOff) + c.sh.KeyHint(input.ZonesOverlay) + "\nShow or hide every zone on the map; each storage zone has its own colour."
 		}},
+}
+
+// dossierToggle docks the colonist card in the pane or floats it (RHUD-039).
+// It exists only while the card is on.
+var dossierToggle = GlobalToggle{ID: DossierButtonID, Icon: "dossier_toggle", Short: "Card",
+	on: func(c Global) bool { return c.sh.Settings().HUD.Docked },
+	tip: func(c Global) string {
+		if !c.sh.Settings().HUD.Pane.Restyle {
+			return "Colonist card: floating\nThe card stays beside the pane while restyling the pane is off."
+		}
+		if c.sh.Settings().HUD.Docked {
+			return "Colonist card: in the pane\nClick to float it over the map."
+		}
+		return "Colonist card: floating\nClick to put it back in the pane."
+	},
+	run: func(c Global) {
+		s := c.sh.Settings()
+		s.HUD.Docked = !s.HUD.Docked
+		c.sh.SetSettings(s)
+	}}
+
+// withDossierToggle is the toggles with the card's own last.
+var withDossierToggle = append(GlobalToggles[:len(GlobalToggles):len(GlobalToggles)], dossierToggle)
+
+// toggles are the toggles this frame.
+func (c Global) toggles() []GlobalToggle {
+	if c.sh.Settings().HUD.Enabled {
+		return withDossierToggle
+	}
+	return GlobalToggles
 }
 
 func stateSuffix(on bool) string {
@@ -267,12 +298,12 @@ func (c Global) Height() float32 {
 	if !c.live() {
 		return 0
 	}
-	return GlobalStackHeight(c.Plan(), len(GlobalToggles))
+	return GlobalStackHeight(c.Plan(), len(c.toggles()))
 }
 
 // Rows is this frame's stack, placed in the layout's Global rect.
 func (c Global) Rows() GlobalRowRects {
-	return LayoutGlobal(c.sh.Layout().Global, c.Plan(), len(GlobalToggles))
+	return LayoutGlobal(c.sh.Layout().Global, c.Plan(), len(c.toggles()))
 }
 
 // ToggleRect is the rect of toggle id.
@@ -281,7 +312,7 @@ func (c Global) ToggleRect(id string) (gfx.Rect, bool) {
 		return gfx.Rect{}, false
 	}
 	rows := c.Rows()
-	for i, tg := range GlobalToggles {
+	for i, tg := range c.toggles() {
 		if tg.ID == id {
 			return rows.Toggles[i], true
 		}
@@ -291,7 +322,7 @@ func (c Global) ToggleRect(id string) (gfx.Rect, bool) {
 
 // toggleButton is toggle i as a button at r.
 func (c Global) toggleButton(i int, r gfx.Rect) uikit.Button {
-	tg := GlobalToggles[i]
+	tg := c.toggles()[i]
 	return uikit.Button{ID: tg.ID, Label: tg.Short, X: r.X, Y: r.Y, W: r.W, H: r.H, Selected: tg.on(c), Tip: tg.tip(c)}
 }
 
@@ -303,7 +334,7 @@ func (c Global) Buttons(sw int) []uikit.Button {
 	}
 	rows := c.Rows()
 	var out []uikit.Button
-	for i, tg := range GlobalToggles {
+	for i, tg := range c.toggles() {
 		if tg.run == nil {
 			out = append(out, c.toggleButton(i, rows.Toggles[i]))
 		}
@@ -343,7 +374,7 @@ func (c Global) Declare(sw, sh int) {
 	}
 	rows := c.Rows()
 	u := c.kit()
-	for i, tg := range GlobalToggles {
+	for i, tg := range c.toggles() {
 		if tg.run == nil {
 			continue
 		}
@@ -456,7 +487,7 @@ func (c Global) Draw(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	plan := c.Plan()
-	rows := LayoutGlobal(g, plan, len(GlobalToggles))
+	rows := LayoutGlobal(g, plan, len(c.toggles()))
 	uikit.DrawPanel(screen, g.X, g.Y, g.W, g.H)
 	right := g.Right() - GlobalPad
 	w := c.sh.World()
@@ -480,7 +511,7 @@ func (c Global) Draw(screen *ebiten.Image, sw, sh int) {
 	for i, sb := range speedButtons {
 		c.drawButton(screen, rows.Speed[i], sb.id, sb.icon, sb.short, tier == sb.tier, mx, my)
 	}
-	for i, tg := range GlobalToggles {
+	for i, tg := range c.toggles() {
 		c.drawButton(screen, rows.Toggles[i], tg.ID, tg.Icon, tg.Short, tg.on(c), mx, my)
 	}
 }

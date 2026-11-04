@@ -70,3 +70,24 @@ type Strolls interface {
 	// danger, inside its allowed area.
 	OpenTile(id entity.EntityID, x, y int) bool
 }
+
+// Shelter is the sky and the roof for sheltered strolls (CSE-041).
+type Shelter interface {
+	// ShouldHide: id is a colonist on its home map with no lord duty, and
+	// the sky is unfit: rain or storm, or fallout without full toxic
+	// resistance. Weather changes only each 6-hour block, so this holds
+	// steady between blocks.
+	ShouldHide(id entity.EntityID) bool
+	// Roofed: (x, y) lies under a roof.
+	Roofed(x, y int) bool
+	// Home: (x, y) is in the Home area.
+	Home(x, y int) bool
+}
+
+// Manners is whose rooms an idle pawn leaves alone (CSE-042).
+type Manners interface {
+	// Rude: id would intrude standing on (x, y): another's bedroom, a
+	// hospital, a prison cell or barracks, a cooled store. Hostile pawns
+	// and prisoners never are.
+	Rude(id entity.EntityID, x, y int) bool
+}

@@ -219,6 +219,12 @@ func (t Tally) Role(c Contents, medicalBeds, prisonerBeds int) Role {
 		RecBuildings: t.RecBuildings, Stoves: t.Stoves})
 }
 
+// RoleCold is Role for a room that cold coolers (CSE-043) serve.
+func (t Tally) RoleCold(c Contents, medicalBeds, prisonerBeds, coldSides int) Role {
+	return RoleOfFull(FullContents{Contents: c, MedicalBeds: medicalBeds, PrisonerBeds: prisonerBeds,
+		RecBuildings: t.RecBuildings, Stoves: t.Stoves, ColdSides: coldSides})
+}
+
 // Add counts building b, covering cells room cells, into a room's
 // contents and tally; under is the floor beneath it when it is a carpet.
 func Add(c *Contents, t *Tally, b construction.Building, cells int, under Floor) {

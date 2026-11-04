@@ -8,8 +8,8 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-// Storage buildings' panes and buttons (STO-3): shelf, hopper, sarcophagus
-// and grave are storage whose settings live in the Storage window (the
+// Storage buildings' panes and buttons (STO-3): shelf, hopper, sarcophagus,
+// grave and the Neat Storage pieces are storage whose settings live in the Storage window (the
 // building's own zone, ZoneView.Shelf is its id). Shelves also link into a
 // group sharing one set of settings (LinkStorage, UnlinkStorage). The
 // nutrient paste dispenser shows the hoppers beside it and how full they
@@ -30,13 +30,18 @@ const (
 	graveKind       = "grave"
 )
 
-// storageKinds are the buildings with a Storage button.
-var storageKinds = map[string]bool{shelfKind: true, hopperKind: true, sarcophagusKind: true, graveKind: true,
-	smallShelfKind: true, eggBoxKind: true, // A2
-	bookcaseKind: true, smallBookcaseKind: true} // A7
+// isStorage reports whether a storage zone names building b (shelf, hopper,
+// grave, bookcase, any Neat Storage piece): no list of kinds to keep (NST).
+func isStorage(a Building, b game.BuildingView) bool {
+	_, ok := storageZoneOf(a, b)
+	return ok
+}
 
 // storageZoneOf is the storage zone building b owns.
 func storageZoneOf(a Building, b game.BuildingView) (game.ZoneView, bool) {
+	if a.Pane == nil { // a bare Building (unit tests) has no world
+		return game.ZoneView{}, false
+	}
 	for _, z := range a.shell.World().Zones {
 		if z.Shelf != 0 && z.Shelf == uint64(b.ID) {
 			return z, true
@@ -56,17 +61,18 @@ func (a Building) shelfStorageCommand(b game.BuildingView) []Button {
 	out := []Button{{ID: StorageID, Label: "Storage", Icon: "zone_stockpile",
 		Desc: "Choose which items this accepts, set its priority and special filters, and copy or paste settings.",
 		Run:  func() { a.shell.Do(ports.OpenStorage{Zone: zid}) }}}
-	if b.Kind != shelfKind {
-		return out
+	if z.Kind != game.ZoneShelf || (b.Kind != shelfKind && z.Profile == "") {
+		return out // only the shelf and the Neat Storage pieces link (NST)
 	}
 	return append(out, linkCommand(a, b, z), unlinkCommand(a, b, z))
 }
 
-// otherShelves are the shelves (other than b) that b can link to.
-func otherShelves(a Building, b game.BuildingView) []game.ZoneView {
+// otherShelves are the shelves (other than b) that b can link to: the same
+// profile only, since a group shares one filter ceiling (NST).
+func otherShelves(a Building, b game.BuildingView, profile string) []game.ZoneView {
 	var out []game.ZoneView
 	for _, z := range a.shell.World().Zones {
-		if z.Kind == game.ZoneShelf && z.Shelf != 0 && z.Shelf != uint64(b.ID) {
+		if z.Kind == game.ZoneShelf && z.Profile == profile && z.Shelf != 0 && z.Shelf != uint64(b.ID) {
 			out = append(out, z)
 		}
 	}
@@ -76,7 +82,7 @@ func otherShelves(a Building, b game.BuildingView) []game.ZoneView {
 // linkCommand is "Link settings": a pick of the other shelves; the chosen
 // one's group takes this shelf in and they share one set of settings.
 func linkCommand(a Building, b game.BuildingView, z game.ZoneView) Button {
-	others := otherShelves(a, b)
+	others := otherShelves(a, b, z.Profile)
 	c := Button{ID: LinkStorageID, Label: "Link settings", Icon: "zone_stockpile", Desc: "Join another shelf's group so both share one set of settings, priority and name."}
 	if len(others) == 0 {
 		c.Disabled, c.Reason = true, "no other shelf to link to"
@@ -124,7 +130,7 @@ func shelfLabel(z game.ZoneView) string {
 func storageLines(a Building, b game.BuildingView) []string {
 	var out []string
 	if z, ok := storageZoneOf(a, b); ok {
-		out = append(out, fmt.Sprintf("Stored: %d of %d stacks", z.Stored, z.Capacity), "Priority: "+zonePriority(z))
+		out = append(out, fmt.Sprintf("Stored: %d/%d stacks", z.Stored, z.Capacity), "Priority: "+zonePriority(z))
 		if z.Group != 0 {
 			out = append(out, "Linked with other shelves")
 		}

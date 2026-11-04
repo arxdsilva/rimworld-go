@@ -19,6 +19,9 @@ type Host interface {
 	PathTo(id entity.EntityID, x, y int) ([]pathing.Point, bool)
 	// Release frees owner's claim on target.
 	Release(owner, target entity.EntityID)
+	// MealRule is how meals stack by their ingredients (CSE-012): the
+	// planner and the pickup ask the same rule.
+	MealRule() item.MealRule
 }
 
 // Claimer claims n of stack target, which holds total, for owner (the

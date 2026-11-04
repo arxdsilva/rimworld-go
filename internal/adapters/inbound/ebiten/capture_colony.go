@@ -38,6 +38,10 @@ import (
 //	arch-locked      a scenario-forbidden building shown disabled with its reason
 //	chips            the top strip's condition chip (Ashfall sky)
 //	world            the world view, on a planet
+//	dossier          the colonist card in the pane (the card on, for this frame's settings)
+//	dossier-float    the floating card beside the plain pane
+//	dossier-log      the floating card with the log in the pane's body, a tab open
+//	dossier-animal   the card on a tame animal
 //
 // Captures are developer tooling: they use the same Enqueue / Step calls
 // as play and a fixed seed, so a shot is repeatable.
@@ -46,6 +50,7 @@ import (
 var colonyCaptures = []string{
 	"factions-colony", "bio", "work-incapable", "arrival", "options-story", "options-habits",
 	"letter-intro", "arch-hospital", "arch-cabinet", "arch-locked", "chips", "world",
+	"dossier", "dossier-float", "dossier-log", "dossier-animal",
 }
 
 // colonyCapture reports ui is one of them.
@@ -172,6 +177,8 @@ func (a *App) captureColonyUI(ui string) {
 				break
 			}
 		}
+	case "dossier", "dossier-float", "dossier-log", "dossier-animal":
+		dossierHost{a}.capture(ui, pawns, sw, sh)
 	case "work-incapable":
 		a.win.Open, a.win.Mode = true, "work"
 		for row, p := range pawns {

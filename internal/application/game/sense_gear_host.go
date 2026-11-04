@@ -3,8 +3,13 @@ package game
 import (
 	"slices"
 
+	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/sense"
+	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -75,6 +80,98 @@ func (h senseGear) SetDown(id entity.EntityID, st item.Stack) {
 	g.mapState = cur
 	layOn(g, g.maps[0], st, x, y)
 }
+
+// The errand roles (CSE-005, 037…039).
+func (h senseGear) Pos(id entity.EntityID) (int, int)              { p, _ := h.g.positions.Get(id); return p.X, p.Y }
+func (h senseGear) Now() uint64                                    { return uint64(h.g.clock.Now()) }
+func (h senseGear) StartJob(id entity.EntityID, r job.Record) bool { return h.g.startJob(id, r) }
+func (h senseGear) Job(id entity.EntityID) job.Record              { j, _ := h.g.jobs.Get(id); return j }
+func (h senseGear) SetJob(id entity.EntityID, j job.Record)        { h.g.jobs.Set(id, j) }
+func (h senseGear) Rested(id entity.EntityID) bool                 { n, _ := h.g.need.Get(id); return !n.Tired() }
+func (h senseGear) Free(id entity.EntityID) bool {
+	act := h.g.activityOf(id)
+	return h.Rested(id) && !needs.WorkScheduled(act) && !needs.SleepScheduled(act)
+}
+func (h senseGear) Hunger(id entity.EntityID) int  { n, _ := h.g.need.Get(id); return n.Hunger }
+func (h senseGear) Hungry(id entity.EntityID) bool { n, _ := h.g.need.Get(id); return n.Hungry() }
+func (h senseGear) Allows(id entity.EntityID, k item.Kind) bool {
+	return h.g.sk.diet.Picker(id, false, cannibal(h.g, id)).Allows(k)
+}
+func (h senseGear) StoreCell(id entity.EntityID, st item.Stack) (int, int, bool) {
+	return h.g.haulDest(id, st, 0) // haul_priority.go
+}
+func (h senseGear) Lay(id, stack entity.EntityID) {
+	st, ok := h.g.stacks.Get(stack)
+	if p, _ := h.g.positions.Get(id); ok {
+		st.Carrier, st.X, st.Y = 0, p.X, p.Y
+		claim(&st) // haul_claim.go: what a colonist put down is the colony's
+		h.g.mergeOrSet(stack, st)
+	}
+}
+
+// NearestMeal looks within mealReach tiles through the food index.
+func (h senseGear) NearestMeal(id entity.EntityID) (best entity.EntityID, bx, by int, ok bool) {
+	g, pos := h.g, h.g.positions.Ref(id)
+	pick, bestD := g.sk.diet.Picker(id, false, cannibal(g, id)), 1<<30
+	g.food().items.each(pos.X, pos.Y, mealReach, func(iid entity.EntityID) bool {
+		st := g.stacks.Ref(iid)
+		if st == nil || !sense.IsMeal(st.Kind) || st.Qty <= 0 || st.Forbidden || !pick.Allows(st.Kind) || g.reserve.FreeFor(id, iid, st.Qty) <= 0 || !g.inArea(id, st.X, st.Y) {
+			return true
+		}
+		if d := pathing.Dist(pos.X, pos.Y, st.X, st.Y); d < bestD || d == bestD && iid < best {
+			best, bx, by, bestD, ok = iid, st.X, st.Y, d, true
+		}
+		return true
+	})
+	return best, bx, by, ok
+}
+
+const mealReach = 40
+
+func (h senseGear) Worn(id entity.EntityID, n int) (int, bool) {
+	for _, s := range wearSlots {
+		if h.g.apparel[id].Kind(s) != 0 {
+			if n--; n < 0 {
+				return int(s), true
+			}
+		}
+	}
+	return 0, false
+}
+func (h senseGear) TakeOff(id entity.EntityID, slot int) bool {
+	g, s := h.g, item.Slot(slot)
+	w, pos := g.apparel[id], g.positions.Ref(id)
+	if p := w.On[s]; p.Kind == 0 || !slices.Contains(wearSlots[:], s) {
+		return false
+	} else {
+		w.On[s] = craft.Piece{}
+		w.SetForced(s, false)
+		g.apparel[id] = w
+		g.dropStackOf(p.Stack(pos.X, pos.Y), pos.X, pos.Y)
+		g.dressChanged(id, s)
+		g.dressNote(id, logTookOff, p.Kind)
+	}
+	return true
+}
+func (h senseGear) Armed(id entity.EntityID) bool {
+	w := h.g.Equipped(id)
+	return w != "" && w != "fists"
+}
+func (h senseGear) DropWeapon(id entity.EntityID) bool {
+	armed := h.Armed(id)
+	h.g.combat.Drafts.DropWeapon(id, false)
+	return armed
+}
+func (h senseGear) HasSpare(id entity.EntityID) bool {
+	_, _, ok := h.g.combat.Drafts.Spare(id)
+	return ok
+}
+func (h senseGear) DropSpare(id entity.EntityID) bool {
+	had := h.HasSpare(id)
+	h.g.combat.Drafts.DropSpare(id, false)
+	return had
+}
+func (h senseGear) Interrupt(id entity.EntityID) { h.g.interrupt(id, job.Interrupted) }
 
 // layOn sets st down at (x, y) on map m, merging as anything set down does, with
 // everything it was (its make, a book's title, its rot) kept.

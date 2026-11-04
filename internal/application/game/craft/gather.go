@@ -5,8 +5,11 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/gameplay"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -16,17 +19,25 @@ import (
 // wiki publishes none).
 const IngredientRetry = 500
 
+// spoilHorizon is how close to rotting, in whole hours, a stack must be for a
+// bill to take it ahead of nearer ones (CSE-033, 3 days, ours).
+const spoilHorizon = 3 * clock.HoursPerDay
+
+// notSpoiling is pick.spoil for a stack that keeps past spoilHorizon.
+const notSpoiling = spoilHorizon
+
 // pick is one stack an ingredient search takes from: how many (take),
-// and, while planning, what is left of it (left) and how far it lies
-// from the bench's work spot (d).
+// and, while planning, what is left of it (left), how far it lies from
+// the bench's work spot (d) and how soon it spoils (spoil, CSE-033).
 type pick struct {
-	id   entity.EntityID
-	kind item.Kind
-	x, y int
-	take int
-	left int
-	d    int
-	st   item.Stack
+	id    entity.EntityID
+	kind  item.Kind
+	x, y  int
+	take  int
+	left  int
+	d     int
+	spoil int
+	st    item.Stack
 }
 
 // planner searches the colony's stacks for a bill's ingredients.
@@ -59,8 +70,24 @@ func (p planner) usable(id, sid entity.EntityID, st item.Stack, bl recipe.Bill, 
 	return p.h.Claims().FreeFor(id, sid, st.Qty)
 }
 
+// minds reports the bill's search should put what spoils first: the rule,
+// and never for a doctor's recipe (CSE-033).
+func (p planner) minds(d recipe.Def) bool {
+	return d.Skill != work.Doctor && p.h.Rule(gameplay.SpoilingIngredients)
+}
+
+// spoilHours is how many whole hours st keeps, under spoilHorizon, else
+// notSpoiling (what never rots too).
+func spoilHours(st item.Stack) int {
+	if st.Shelf() == 0 {
+		return notSpoiling
+	}
+	return min(st.FreshTicks()/clock.TicksPerHour, notSpoiling)
+}
+
 // plan gathers d's ingredients for pawn id (0: anyone) from the stacks
-// nearest the work spot, ties by id: each ingredient from as many stacks
+// nearest the work spot, ties by id, and with the rule on (CSE-033) those
+// about to spoil before those: each ingredient from as many stacks
 // as it takes, except one that takes up to Max from a single stack (a
 // drying batch). The picks come grouped by kind (one carried load per
 // run), in buf until the next search; ok is false when an ingredient
@@ -70,6 +97,7 @@ func (p planner) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]
 	defer func() { buf.cands, buf.picks = cands[:0], out[:0] }()
 	var inBuf [4]recipe.Input
 	ins := d.AppendInputs(inBuf[:0])
+	minds := p.minds(d)
 	for _, sid := range p.h.ItemIDs() {
 		st, ok := p.h.Stack(sid)
 		if !ok || !acceptedBy(ins, st) {
@@ -79,10 +107,17 @@ func (p planner) plan(id entity.EntityID, bl recipe.Bill, d recipe.Def, spot [2]
 		if left <= 0 {
 			continue
 		}
+		spoil := notSpoiling
+		if minds {
+			spoil = spoilHours(st)
+		}
 		cands = append(cands, pick{id: sid, kind: st.Kind, x: st.X, y: st.Y, left: left,
-			d: pathing.Dist(spot[0], spot[1], st.X, st.Y), st: st})
+			d: pathing.Dist(spot[0], spot[1], st.X, st.Y), spoil: spoil, st: st})
 	}
 	slices.SortFunc(cands, func(a, b pick) int {
+		if c := cmp.Compare(a.spoil, b.spoil); c != 0 {
+			return c
+		}
 		if c := cmp.Compare(a.d, b.d); c != 0 {
 			return c
 		}

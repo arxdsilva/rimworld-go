@@ -16,6 +16,7 @@ type fakeHost struct {
 	px, py       int
 	wallX, wallY int
 	released     []entity.EntityID
+	rule         item.MealRule
 }
 
 func (f *fakeHost) Stack(id entity.EntityID) (item.Stack, bool) {
@@ -25,6 +26,7 @@ func (f *fakeHost) Stack(id entity.EntityID) (item.Stack, bool) {
 func (f *fakeHost) SetStack(id entity.EntityID, st item.Stack) { f.stacks[id] = st }
 func (f *fakeHost) DeleteItem(id entity.EntityID)              { delete(f.stacks, id) }
 func (f *fakeHost) Release(_, target entity.EntityID)          { f.released = append(f.released, target) }
+func (f *fakeHost) MealRule() item.MealRule                    { return f.rule }
 func (f *fakeHost) PathTo(_ entity.EntityID, x, y int) ([]pathing.Point, bool) {
 	if x == f.wallX && y == f.wallY {
 		return nil, false

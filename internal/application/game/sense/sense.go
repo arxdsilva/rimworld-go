@@ -24,7 +24,7 @@ type Sense struct {
 	SpareAt  map[entity.EntityID]uint64     // CSE-005's retry
 	UnloadAt map[entity.EntityID]uint64     // CSE-038's retry
 	NoClean  map[entity.EntityID]bool       // benches that opted out of tidying
-	TopOffOn map[entity.EntityID]bool       // CSE-002: topping off, ends at the high mark
+	TopOffOn map[entity.EntityID]bool       // CSE-002: not wanting recreation, from the high mark down to the low one
 	Packs    map[entity.EntityID]inventory.Pack
 	FromPack map[entity.EntityID]entity.EntityID // the carried stack came from the pack
 

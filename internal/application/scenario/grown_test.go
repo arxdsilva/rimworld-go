@@ -222,7 +222,13 @@ func TestGrownGolden(t *testing.T) {
 	// alone on the previous commit give this exact hash, so the allow, door,
 	// visitor and tank behaviour changes move nothing here. Stable over
 	// -count=2.
-	const want uint64 = 0x7a22aca804422474
+	// Re-pinned (CSE, wave 2 of the mods programme): the Common Sense habits
+	// on by default: tidying before work and bills, meals kept apart by what
+	// is in them, spoiling ingredients first, recreation top-off, snow waiting
+	// for a clear sky. With every habit off this fixture's hash is the one
+	// f7631b72a gives (seeds 7 and 3, 8000 ticks), so nothing moved outside the
+	// toggles. Stable over -count=2.
+	const want uint64 = 0xba1495be71601c63
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

@@ -246,7 +246,9 @@ func (g *Game) socialBotchedSurgery(surgeon, patient entity.EntityID) {
 // doSocialRelax runs a social-recreation job: lingering in company at a
 // table or fire, with the joy of a chat (idle.go doIdle).
 func (g *Game) doSocialRelax(id entity.EntityID, j job.Record) {
-	g.doIdle(id, j)
+	if j, lingers := senseOf(g).Relax.Do(id, j); lingers { // game/sense (CSE-008): the drink it brought
+		g.doIdle(id, j)
+	}
 }
 
 // endStubJob ends a job whose milestone has not filled its runner yet,

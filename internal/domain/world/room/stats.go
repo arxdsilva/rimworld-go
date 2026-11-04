@@ -9,6 +9,7 @@ type FullContents struct {
 	Contents
 	MedicalBeds, PrisonerBeds int
 	RecBuildings, Stoves      int
+	ColdSides                 int // coolers set under 0 °C with their cold side here
 }
 
 // RoleOfFull is RoleOf plus hospital, prison, recreation and kitchen rooms.
@@ -36,7 +37,10 @@ func RoleOfFull(c FullContents) Role {
 	if c.RecBuildings > 0 && 7*c.RecBuildings > 12*c.Tables {
 		return RecRoom
 	}
-	return RoleOf(c.Contents)
+	if r := RoleOf(c.Contents); r != General || c.ColdSides == 0 || c.Beds > 0 {
+		return r
+	}
+	return ColdStore // CSE-043: only a room that would be General
 }
 
 // Inputs are the plain measurements behind the room stats.

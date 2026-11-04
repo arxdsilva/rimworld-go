@@ -991,7 +991,7 @@ func New(cfg Config) *Game {
 		lastHit:    make(map[entity.EntityID]hitRec),
 		streams:    rngStreams{seed: cfg.Seed},
 	}
-	g.care = care.New(newCareHost(g), care.Roles{Prison: carePrison{g}, Guests: careGuests{g}, Social: careSocial{g}, Gear: careGear{g}, Meals: careMeals{g}}) // care_host*.go
+	g.care = care.New(newCareHost(g), care.Roles{Prison: carePrison{g}, Guests: careGuests{g}, Social: careSocial{g}, Gear: careGear{g}, Meals: careMeals{g}, Gifts: careGifts{g}}) // care_host*.go
 	g.mind = mind.New(newMindHost(g))
 	initMapHosts(g)
 	g.craft = craft.New(newCraftHost(g))    // craft_host.go

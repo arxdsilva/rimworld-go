@@ -112,7 +112,7 @@ func TestTwoCraftersDrawWoodFromOneStack(t *testing.T) {
 	made := func() bool { return g.stockOf(item.CarpetWood) >= 2 }
 	g.SetNeeds(a, needs.Full, needs.Full)
 	g.SetNeeds(b, needs.Full, needs.Full)
-	if starts := jobStarts(g, []entity.EntityID{a, b}, 4000, made, job.Bill, job.HaulIngredients); starts[a] > 0 || starts[b] > 0 {
+	if starts := jobStarts(g, []entity.EntityID{a, b}, 4000, made, job.Bill, job.HaulIngredients, job.PackIngredients); starts[a] > 0 || starts[b] > 0 {
 		t.Fatalf("a bill job restarted (flapping): %v", starts)
 	}
 	if !made() || g.stockOf(item.Wood) != 8 {

@@ -12,7 +12,13 @@ const (
 	NoDrugs Preset = iota
 	SocialDrinking
 	Unrestricted
+	// MoodLift is opt-in (CSE-010, ours): a social drink, only below its mood
+	// gate, whatever the recreation: the mood rule's preset.
+	MoodLift
 )
+
+// moodLiftGate is the mood MoodLift stops at (ours; mood runs 0..100).
+const moodLiftGate = 50
 
 // Minimum gap between recreational doses of one drug.
 const (
@@ -28,6 +34,8 @@ func (p Preset) Label() string {
 		return "no drugs"
 	case SocialDrinking:
 		return "social drinking"
+	case MoodLift:
+		return "mood lift"
 	}
 	return "unrestricted"
 }
@@ -53,10 +61,10 @@ func (p Preset) Allows(k item.Kind, joyLow bool, s *State, traits []trait.ID, no
 			gap, hedonist = hedonistGap, true
 		}
 	}
-	if p == SocialDrinking && k != item.Beer {
+	if (p == SocialDrinking || p == MoodLift) && k != item.Beer {
 		return false
 	}
-	if !joyLow && !hedonist {
+	if !joyLow && !hedonist && p != MoodLift {
 		return false
 	}
 	if k == item.Beer && s.Band() >= Drunk {
@@ -66,6 +74,22 @@ func (p Preset) Allows(k item.Kind, joyLow bool, s *State, traits []trait.ID, no
 		return false
 	}
 	return true
+}
+
+// MoodGate is the mood a policy's recreational doses stop at (0: none).
+func (p Preset) MoodGate() int {
+	if p == MoodLift {
+		return moodLiftGate
+	}
+	return 0
+}
+
+// MoodAllows checks the gate: refused when the mood is at or above it or, with
+// usePotential, when the mood it is recovering to is (CSE-010: one who is
+// getting better on its own does not dose). A craving doesn't ask.
+func (p Preset) MoodAllows(mood, potential int, usePotential bool) bool {
+	gate := p.MoodGate()
+	return gate == 0 || mood < gate && (!usePotential || potential < gate)
 }
 
 // AllowsMedical reports whether the policy has a colonist take medical

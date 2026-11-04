@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
@@ -166,7 +167,7 @@ func (h restRooms) RoomQuality(r int) (room.Role, int) {
 	}
 	f, rs := h.g.regs.rooms.countFacts(h.g)[r], h.g.rooms[r]
 	sum, _ := h.g.roomFilth(r)
-	return rs.tally.Role(rs.contents, f.MedicalBeds, f.PrisonerBeds), rs.tally.Stats(rs.contents, sum, f.Wealth).ImpressivenessTenths
+	return rs.tally.RoleCold(rs.contents, f.MedicalBeds, f.PrisonerBeds, h.g.thermo.ColdSides(r)), rs.tally.Stats(rs.contents, sum, f.Wealth).ImpressivenessTenths
 }
 func (h restRooms) ObjectAt(x, y int) entity.EntityID {
 	return h.g.layerBldgAt(x, y, construction.LayerObject)
@@ -264,6 +265,11 @@ func (h recHost) AddJoy(id entity.EntityID, n int) {
 }
 func (h recHost) Learn(id entity.EntityID, sk skill.ID, xp int) { h.restBodies.g.learn(id, sk, xp) }
 func (h recHost) Enjoyed(id entity.EntityID)                    { h.restBodies.g.rest.Waking.Felt(id, rest.Enjoyed) }
+func (h recHost) OutdoorsJoy() bool                             { return senseOf(h.restBodies.g).Rules.On(gameplay.OutdoorsJoy) }
+func (h recHost) OutdoorsPct(id entity.EntityID) int {
+	_, _, o := h.restBodies.g.rest.Needs.Percents(id)
+	return o
+}
 
 // recOf is the recreation component (game/recreate, AX-6), kept on the
 // social state and made on first use (a load replaces it).
@@ -281,4 +287,15 @@ func recView(g *Game) recreate.View {
 		return recreate.NewView(recHost{newRestHost(g)}, nil)
 	}
 	return recreate.NewView(recHost{newRestHost(g)}, g.soc.rec)
+}
+
+// Couples' beds, bed ownership and lovin' live in the rest package
+// (rest/beds.go, rest/lovin.go); the lovin' cooldown stays saved with the
+// gatherings and its roll on the social stream (rest_host.go).
+
+// BedForPrisoners reports bed is marked for prisoners (the inspector's
+// toggle state; M8 owns the mark).
+func (g *Game) BedForPrisoners(bed entity.EntityID) bool {
+	b, ok := g.bldgs.Get(bed)
+	return ok && b.ForPrisoners
 }

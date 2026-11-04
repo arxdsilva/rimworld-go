@@ -65,11 +65,14 @@ func TestNextPresetCycles(t *testing.T) {
 		seen[p] = true
 		p = NextPreset(p)
 	}
-	if p != drug.NoDrugs || len(seen) != 3 {
+	if p != drug.NoDrugs || len(seen) != 4 {
 		t.Fatalf("cycle ends at %v after %v", p, seen)
 	}
 	if PresetLabel(drug.Unrestricted) != "Unrestricted" {
 		t.Fatal(PresetLabel(drug.Unrestricted))
+	}
+	if PresetLabel(drug.MoodLift) != "Mood lift" {
+		t.Fatal(PresetLabel(drug.MoodLift))
 	}
 }
 

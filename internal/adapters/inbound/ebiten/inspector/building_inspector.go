@@ -46,6 +46,7 @@ func (a Building) openBillPicker(b game.BuildingView) {
 			a.kit().List(BillPickList, r, len(recipes), &sel, uikit.ListSpec{
 				RowH:  26,
 				Label: func(i int) string { return recipes[i].Label },
+				Tip:   func(i int) string { return a.Bills().pickTip(recipes[i]) },
 				Disabled: func(i int) string {
 					if p := a.shell.LockedBy("recipe:" + recipes[i].Name); p != "" {
 						return "Needs research: " + p

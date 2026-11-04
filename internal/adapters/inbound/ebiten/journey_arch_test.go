@@ -28,15 +28,15 @@ func (j *journey) archHit(id string) (uikit.Button, bool) {
 }
 
 // TestJourneyArchitectVanillaCategoriesAndPlaceholders: Tab opens the
-// Architect; each of the twelve vanilla categories opens from its button
-// and shows every card it holds in the grid. Resting the pointer on a
+// Architect; each of the twelve vanilla categories and Storage (NST-*)
+// opens from its button and shows every card it holds in the grid. Resting the pointer on a
 // placeholder shows "Not in this game yet" and its sentence; clicking it
 // arms nothing, and clicking the map afterwards places nothing.
 func TestJourneyArchitectVanillaCategoriesAndPlaceholders(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
-	if len(architect.Categories) != 12 {
-		t.Fatalf("%d categories, want the 12 vanilla ones", len(architect.Categories))
+	if len(architect.Categories) != 13 {
+		t.Fatalf("%d categories, want the 12 vanilla ones and Storage", len(architect.Categories))
 	}
 	tried := 0
 	for _, c := range architect.Categories {

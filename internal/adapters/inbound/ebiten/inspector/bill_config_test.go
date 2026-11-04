@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -313,5 +314,33 @@ func TestBillStuffRoundTrip(t *testing.T) {
 	}
 	if billMaterials([]BillIngredient{{Item: steel}}) != nil {
 		t.Error("one material is nothing to pick from")
+	}
+}
+
+// TestRecipeRowNamesKinds: the Add bill picker's row names the item kinds a
+// recipe takes (CSE-046) from the read model, on by default; with
+// FullRecipeList off the row has no tip and reads as before.
+func TestRecipeRowNamesKinds(t *testing.T) {
+	t.Parallel()
+	f, a := benchFixture(t)
+	var named game.RecipeView
+	for _, r := range game.Recipes() {
+		if len(r.InputKinds) > 0 {
+			named = r
+			break
+		}
+	}
+	if named.Name == "" {
+		t.Fatal("no recipe names its kinds")
+	}
+	if tip := a.Bills().pickTip(named); !strings.Contains(tip, named.InputKinds[0]) || !strings.HasPrefix(tip, "Takes: ") {
+		t.Fatalf("default-on tip %q for %v", tip, named.InputKinds)
+	}
+	if tip := a.Bills().pickTip(game.RecipeView{Name: "bare"}); tip != "" {
+		t.Fatalf("a recipe naming no kinds has tip %q", tip)
+	}
+	f.world.Gameplay = gameplay.Settings{}.With(gameplay.FullRecipeList, false)
+	if tip := a.Bills().pickTip(named); tip != "" {
+		t.Fatalf("toggle off: tip %q, want none", tip)
 	}
 }

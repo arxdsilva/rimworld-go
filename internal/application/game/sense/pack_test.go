@@ -55,7 +55,8 @@ func gearScene() (*Sense, *fakeGear) {
 		11: {Kind: item.Meal, Qty: 3},
 		12: {Kind: item.CorpseHuman, Qty: 1},
 	}}
-	return New(Roles{Gear: f}), f
+	s, _ := errandScene(f)
+	return s, f
 }
 
 func TestCapacityFollowsManipulation(t *testing.T) {

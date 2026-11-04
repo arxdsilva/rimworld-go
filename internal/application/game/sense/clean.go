@@ -82,8 +82,7 @@ func (c Cleaning) Assign(id entity.EntityID) bool {
 			c.walks.PostponeTile(id, job.Clean, x, y)
 			continue
 		}
-		total := c.filth.Dirt(int(b.i)) + c.filth.Stain(int(b.i))
-		ticks := (total+filth.CleanPerTick-1)/filth.CleanPerTick + cleanSlack
+		ticks := cleanTicks(c.filth.Dirt(int(b.i)) + c.filth.Stain(int(b.i)))
 		if !c.walks.StartJob(id, job.Record{Kind: job.Clean, TX: tx, TY: ty, DestX: x, DestY: y, WorkLeft: ticks, Count: ticks}) {
 			return false
 		}
@@ -115,16 +114,28 @@ func (c Cleaning) Do(id entity.EntityID, j job.Record) {
 		c.walks.SetJob(id, j)
 		return
 	}
-	nd, ns := filth.CleanStep(dirt, st)
-	c.filth.AddDirt(i, nd-dirt)
-	if ns != st {
-		c.filth.SetStain(j.DestX, j.DestY, ns)
-	}
+	left := sweep(c.filth, i, j.DestX, j.DestY, dirt, st)
 	j.WorkLeft -= u
-	if nd+ns == 0 || j.WorkLeft <= 0 {
+	if left == 0 || j.WorkLeft <= 0 {
 		j.State = job.Complete // what is left stays queued
 	}
 	c.walks.SetJob(id, j)
+}
+
+// cleanTicks is the work budget for a tile holding total dirt and stain.
+func cleanTicks(total int) int {
+	return (total+filth.CleanPerTick-1)/filth.CleanPerTick + cleanSlack
+}
+
+// sweep takes one tick's worth off tile i, dirt before stain; left is what
+// remains.
+func sweep(f Filth, i, x, y, dirt, st int) (left int) {
+	nd, ns := filth.CleanStep(dirt, st)
+	f.AddDirt(i, nd-dirt)
+	if ns != st {
+		f.SetStain(x, y, ns)
+	}
+	return nd + ns
 }
 
 // Wire switches cleaning on, at the default priority, for every colonist of

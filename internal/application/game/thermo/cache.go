@@ -229,3 +229,18 @@ func (m *Model) RoomOf(r int) Room {
 	}
 	return out
 }
+
+// ColdSides is how many coolers set under 0 °C have their cold side in
+// room r (CSE-043: a cooled store room). Counts the site cache, no map scan.
+func (m *Model) ColdSides(r int) int {
+	m.ensure()
+	n := 0
+	for _, s := range m.c.sites {
+		if s.kind == construction.Cooler && s.room == r {
+			if target, _ := m.h.Thermostat(s.id); target < 0 {
+				n++
+			}
+		}
+	}
+	return n
+}

@@ -15,7 +15,8 @@ const (
 
 	PaneW     = 400 // the inspect pane, lower-left
 	PaneH     = 188
-	PaneTabsH = 24 // its tabs, just above it
+	PaneTabsH = 24  // its tabs, just above it
+	CardMinH  = 100 // the floating card never shrinks below this
 
 	ExpandMinW = 400 // an inspector tab's panel, opened above the pane tabs
 	ExpandMaxW = 560
@@ -241,14 +242,19 @@ func Compute(sw, sh int, st Inputs) Layout {
 		}
 		gridX0 = l.ArchCats.Right() + HudMargin
 	case st.PaneShown && l.Window.Empty():
-		l.Pane = gfx.Rect{X: 0, Y: l.Tabs.Y - PaneH, W: PaneW, H: PaneH}
-		l.PaneTabs = gfx.Rect{X: 0, Y: l.Pane.Y - PaneTabsH, W: PaneW, H: PaneTabsH}
+		pw, ph := paneSize(st, rx, l.Tabs.Y-barBottom)
+		l.Pane = gfx.Rect{X: 0, Y: l.Tabs.Y - ph, W: pw, H: ph}
+		l.PaneTabs = gfx.Rect{X: 0, Y: l.Pane.Y - PaneTabsH, W: pw, H: PaneTabsH}
 		floorY = l.PaneTabs.Y
+		l.Card = placeCard(st.Card, l, W)
 		if st.ExpandedW > 0 && st.ExpandedH > 0 {
-			w := min(max(st.ExpandedW, ExpandMinW), ExpandMaxW)
-			h := min(st.ExpandedH, l.PaneTabs.Y-barBottom-HudMargin)
-			l.Expanded = gfx.Rect{X: 0, Y: l.PaneTabs.Y - h, W: w, H: h}
-			floorY = l.Expanded.Y
+			l.Expanded = placeExpanded(st, l, barBottom)
+			if l.Expanded.X == 0 {
+				floorY = l.Expanded.Y
+			}
+		}
+		if !l.Card.Empty() && l.Card.X < HudMargin+ResourcesW+HudMargin {
+			floorY = min(floorY, l.Card.Y)
 		}
 		gridX0 = l.Pane.Right() + HudMargin
 	}
@@ -266,7 +272,7 @@ func Compute(sw, sh int, st Inputs) Layout {
 		for r := 0; r < maxRows && len(l.GridCells) < st.Commands; r++ {
 			y := bottom - CmdCell - float32(r)*CmdStride
 			x0 := gridX0
-			for _, p := range []gfx.Rect{l.Expanded, l.ArchDesc} {
+			for _, p := range []gfx.Rect{l.Expanded, l.ArchDesc, l.Card} {
 				if !p.Empty() && y < p.Bottom() && y+CmdCell > p.Y {
 					x0 = max(x0, p.Right()+HudMargin)
 				}
@@ -285,7 +291,7 @@ func Compute(sw, sh int, st Inputs) Layout {
 	if n := min(st.Messages, MaxMsgs); n > 0 {
 		band := gfx.Rect{X: 0, Y: barBottom + HudMargin, W: W, H: float32(n)*MsgStride - (MsgStride - MsgRowH)}
 		left := float32(HudMargin + ResourcesW + HudMargin)
-		for _, r := range append([]gfx.Rect{l.Window, l.ArchCats, l.ArchDesc, l.Pane, l.PaneTabs, l.Expanded}, l.GridCells...) {
+		for _, r := range append([]gfx.Rect{l.Window, l.ArchCats, l.ArchDesc, l.Pane, l.PaneTabs, l.Expanded, l.Card}, l.GridCells...) {
 			if !r.Empty() && r.Y < band.Bottom() && r.Bottom() > band.Y {
 				left = max(left, r.Right()+HudMargin)
 			}
@@ -317,6 +323,102 @@ func Compute(sw, sh int, st Inputs) Layout {
 		l.HintBottom = l.PaneTabs.Y - HudMargin
 	}
 	return l
+}
+
+// paneSize is the pane's size: today's constants unless the card asks for
+// others, never past the right column (rx) or the room above the tab strip
+// (room, measured from the colonist bar's bottom to the strip).
+func paneSize(st Inputs, rx, room float32) (w, h float32) {
+	w, h = PaneW, PaneH
+	if st.PaneW > 0 {
+		w = min(st.PaneW, rx-HudMargin)
+	}
+	if st.PaneH > 0 {
+		h = max(PaneH, min(st.PaneH, room-HudMargin-PaneTabsH))
+	}
+	return w, h
+}
+
+// placeExpanded is an open tab's panel: above the pane's tabs. Under a tall
+// card pane with too little room there, it stands beside the pane; over a
+// floating card, beside the card.
+func placeExpanded(st Inputs, l Layout, barBottom float32) gfx.Rect {
+	w := min(max(st.ExpandedW, ExpandMinW), ExpandMaxW)
+	room := l.PaneTabs.Y - barBottom - HudMargin
+	r := gfx.Rect{X: 0, Y: l.PaneTabs.Y - min(st.ExpandedH, room), W: w, H: min(st.ExpandedH, room)}
+	if st.PaneH > 0 && room < st.ExpandedH {
+		h := min(st.ExpandedH, l.Tabs.Y-barBottom-HudMargin)
+		r = gfx.Rect{X: l.Pane.Right() + HudGap, Y: l.Tabs.Y - h, W: w, H: h}
+	}
+	if !l.Card.Empty() && r.Y < l.Card.Bottom() && r.Bottom() > l.Card.Y && r.X < l.Card.Right() && r.Right() > l.Card.X {
+		r.X = l.Card.Right() + HudGap
+	}
+	return r
+}
+
+// placeCard keeps the floating card on the screen and over the tab strip,
+// and lifts it clear of the pane and its tabs when they would share a column,
+// shrinking it when the room above them is short. A smaller window never
+// loses the card.
+func placeCard(c gfx.Rect, l Layout, W float32) gfx.Rect {
+	if c.Empty() {
+		return gfx.Rect{}
+	}
+	r := fitCard(c, W, l.Tabs.Y)
+	if r.X < l.Pane.Right() && r.Bottom() > l.PaneTabs.Y {
+		r.H = max(CardMinH, min(r.H, l.PaneTabs.Y-HudGap-HudMargin))
+		r.Y = max(0, l.PaneTabs.Y-HudGap-r.H)
+	}
+	return r
+}
+
+// fitCard cuts r to W x floor, moving it in before it shrinks.
+func fitCard(r gfx.Rect, W, floor float32) gfx.Rect {
+	r.W, r.H = min(r.W, W), min(r.H, floor)
+	r.X = max(0, min(r.X, W-r.W))
+	r.Y = max(0, min(r.Y, floor-r.H))
+	return r
+}
+
+// cardBase is where a w x h card sits at an anchor (0..8, row by row from the
+// top left) with no offset: HudMargin off the window's edges, the bottom row
+// resting over the tab strip.
+func cardBase(sw, sh, anchor, w, h int) (x, y int) {
+	floor := sh - TabsH
+	switch anchor % 3 {
+	case 0:
+		x = HudMargin
+	case 1:
+		x = (sw - w) / 2
+	default:
+		x = sw - w - HudMargin
+	}
+	switch anchor / 3 {
+	case 0:
+		y = HudMargin
+	case 1:
+		y = (floor - h) / 2
+	default:
+		y = floor - h - HudMargin
+	}
+	return x, y
+}
+
+// CardRect is the floating card at an anchor and offset, held on the screen.
+func CardRect(sw, sh, anchor, offX, offY, w, h int) gfx.Rect {
+	x, y := cardBase(sw, sh, anchor, w, h)
+	r := gfx.Rect{X: float32(x + offX), Y: float32(y + offY), W: float32(w), H: float32(h)}
+	return fitCard(r, float32(sw), float32(sh-TabsH))
+}
+
+// CardOffsetBounds are the offsets that keep a w x h card at an anchor wholly
+// on the screen and over the tab strip. A card too big for the screen gets the
+// one offset that holds its top left corner on it.
+func CardOffsetBounds(sw, sh, anchor, w, h int) (minX, maxX, minY, maxY int) {
+	x, y := cardBase(sw, sh, anchor, w, h)
+	minX, maxX = -x, max(-x, sw-w-x)
+	minY, maxY = -y, max(-y, sh-TabsH-h-y)
+	return minX, maxX, minY, maxY
 }
 
 // layoutBar lays out n colonist slots centred in a capW-wide band: the
@@ -447,7 +549,7 @@ func BoundsOf(rs []gfx.Rect) gfx.Rect {
 func (l Layout) Chrome() []gfx.Rect {
 	out := make([]gfx.Rect, 0, 16+len(l.GridCells))
 	for _, r := range []gfx.Rect{l.Tabs, l.Pane, l.PaneTabs, l.Expanded, l.ArchCats, l.ArchDesc, l.Window,
-		l.Global, l.Letters, l.Learn, l.Alerts, l.Bar, l.Resources, l.Messages, l.Perf} {
+		l.Global, l.Letters, l.Learn, l.Alerts, l.Bar, l.Resources, l.Messages, l.Perf, l.Card} {
 		if !r.Empty() {
 			out = append(out, r)
 		}

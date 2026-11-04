@@ -369,6 +369,7 @@ func (h travelHost) Pick(c, p entity.EntityID)                 { h.g.care.Carry.
 func (h travelHost) PutDown(c entity.EntityID)                 { h.g.care.DropPatient(c) }
 func (h travelHost) Move(id entity.EntityID, x, y int)         { h.g.cmdMove(id, x, y) }
 func (h travelHost) DropStack(st item.Stack, x, y int)         { h.g.dropStackOf(st, x, y) }
+func (h travelHost) MealRule() item.MealRule                   { return item.RuleOf(senseOf(h.g).Rules) }
 func (h travelHost) RemoveAnimal(id entity.EntityID)           { h.g.removeAnimal(id) }
 func (h travelHost) Planet() *planet.Planet                    { return h.g.worldPlanet() }
 

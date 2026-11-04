@@ -102,7 +102,7 @@ func TestJourneyAX2FurnitureCards(t *testing.T) {
 		t.Fatal("a double sleeping spot is placed at once")
 	}
 	ax2Place(j, "furniture", "animal_sleeping_box", "animal sleeping box", 12, 3)
-	ax2Place(j, "furniture", "small_shelf", "small shelf", 14, 3)
+	ax2Place(j, "storage", "small_shelf", "small shelf", 14, 3)
 	ax2Place(j, "furniture", "flood_light", "flood light", 10, 3)
 	if !j.g.BuildNow("wall", "wood", "south", 11, 5) {
 		t.Fatal("no wall")
@@ -122,7 +122,7 @@ func TestJourneyAX2FurnitureCards(t *testing.T) {
 }
 
 // TestJourneyAX2UrnLockedAndMisc (AX-2): the urn card is locked (found,
-// never built); the egg box and both steles build from Misc.
+// never built); the egg box builds from Storage and both steles from Misc.
 func TestJourneyAX2UrnLockedAndMisc(t *testing.T) {
 	t.Parallel()
 	j := archJourney(t)
@@ -134,7 +134,7 @@ func TestJourneyAX2UrnLockedAndMisc(t *testing.T) {
 	if len(j.cmdsOf(command.DesignateBuild)) != 0 {
 		t.Fatal("the urn card sent a blueprint")
 	}
-	ax2Place(j, "misc", "egg_box", "egg box", 10, 2)
+	ax2Place(j, "storage", "egg_box", "egg box", 10, 2)
 	ax2Place(j, "misc", "large_stele", "large stele", 12, 2)
 	ax2Place(j, "misc", "grand_stele", "grand stele", 14, 1)
 }

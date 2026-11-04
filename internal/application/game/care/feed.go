@@ -186,6 +186,10 @@ func (f *Feeding) Start(id, p entity.EntityID, k job.Kind, forced bool) bool {
 // walk to the patient; beside it, feed it. A patient that no longer
 // wants feeding ends the job (the host drops what the feeder carries).
 func (f *Feeding) Do(id entity.EntityID, j job.Record) {
+	if f.c.Giving.IsGift(j) {
+		f.c.Giving.Do(id, j)
+		return
+	}
 	h := f.h
 	p := j.Dest
 	if !f.wanted(j.Kind, p) || f.m == nil {

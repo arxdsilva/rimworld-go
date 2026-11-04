@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/gameplay"
 	"slices"
 
 	"rimworld-go/internal/application/game/crops"
@@ -260,7 +261,7 @@ func wantsHarvest(p plant.Plant) bool {
 // policy, taste and distance; a malnourished eater takes anything).
 func (g *Game) bestFood(id, eater entity.EntityID) (best entity.EntityID, bx, by, score int) {
 	pos, _ := g.positions.Get(id)
-	pick := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater))
+	pick := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)).Under(dietEaters{g})
 	for _, iid := range g.itemIDs {
 		st := g.stacks.Ref(iid) // read only: nothing below changes the store
 		if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden && !g.breaking(id) || !pick.Takes(st) ||
@@ -279,7 +280,7 @@ func (g *Game) bestFood(id, eater entity.EntityID) (best entity.EntityID, bx, by
 // whose meal scores higher (STO-2).
 func mealFor(g *Game, id, eater entity.EntityID) (food entity.EntityID, x, y int, paste bool) {
 	best, bx, by, score := g.bestFood(id, eater)
-	pick, meal := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)), item.Stack{Kind: item.NutrientPasteMeal}
+	pick, meal := g.sk.diet.Picker(eater, body.Malnutrition(g.bodies[eater]) > 0, cannibal(g, eater)).Under(dietEaters{g}), item.Stack{Kind: item.NutrientPasteMeal}
 	if !pick.Allows(meal.Kind) || best != 0 && pick.Score(&meal, 0) <= score {
 		return best, bx, by, false // even at the door paste would lose
 	}
@@ -298,6 +299,8 @@ func cannibal(g *Game, id entity.EntityID) bool {
 
 // dietEaters is diet.Eaters: colonists, prisoners and tame animals.
 type dietEaters struct{ g *Game }
+
+func (h dietEaters) Rules() gameplay.Settings { return senseOf(h.g).Rules }
 
 func (h dietEaters) Eater(id entity.EntityID) (bool, bool) {
 	a, beast := h.g.animals.Get(id)

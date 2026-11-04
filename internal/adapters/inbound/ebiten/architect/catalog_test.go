@@ -16,7 +16,7 @@ import (
 
 // TestArchCategoriesHaveTools: every category in Categories gets a
 // button, so each must hold cards, and every vanilla category is listed
-// (STK-AG: all twelve, in the vanilla order).
+// (STK-AG: all twelve, in the vanilla order) with Storage (NST) after Furniture.
 func TestArchCategoriesHaveTools(t *testing.T) {
 	t.Parallel()
 	var ids []string
@@ -26,7 +26,7 @@ func TestArchCategoriesHaveTools(t *testing.T) {
 			t.Errorf("category %s has no tools", c.ID)
 		}
 	}
-	want := []string{"orders", "zones", "structure", "production", "furniture", CatPower, "security", "misc",
+	want := []string{"orders", "zones", "structure", "production", "furniture", CatStorage, CatPower, "security", "misc",
 		CatFloors, CatRecreation, CatShip, CatTemperature}
 	if strings.Join(ids, ",") != strings.Join(want, ",") {
 		t.Errorf("categories %v, want %v", ids, want)

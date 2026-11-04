@@ -88,6 +88,44 @@ func (d *Doctor) tendable(pid entity.EntityID, bleeding bool) bool {
 	return (d.h.BleedPerDay(pid) > 0) == bleeding
 }
 
+// Urgency is what Urgent needs beside the host.
+type Urgency interface {
+	RoomAt(x, y int) int
+	// BleedDeathHours is the hours until id bleeds out, negative when it won't.
+	BleedDeathHours(id entity.EntityID) int
+}
+
+// urgentBleedHours is how close to bleeding out a patient comes first, before
+// anything else a doctor would do (CSE-021).
+const urgentBleedHours = 6
+
+// Urgent: doctor's next job is another patient, one in patient's room or one
+// bleeding out within urgentBleedHours, so a doctor who just tended patient
+// has no time to tidy. Read only, on a tend's end.
+func (d *Doctor) Urgent(doctor, patient entity.EntityID, u Urgency) bool {
+	x, y, _ := d.h.Pos(patient)
+	room := u.RoomAt(x, y)
+	for _, pid := range d.h.PawnIDs() {
+		if pid == doctor || d.c.Carry.Carrier(pid) != 0 {
+			continue
+		}
+		if _, owned := d.h.Owner(pid); owned {
+			continue
+		}
+		bleeding := d.h.BleedPerDay(pid) > 0
+		if !d.tendable(pid, bleeding) {
+			continue
+		}
+		if h := u.BleedDeathHours(pid); bleeding && h >= 0 && h < urgentBleedHours {
+			return true
+		}
+		if px, py, _ := d.h.Pos(pid); u.RoomAt(px, py) == room {
+			return true
+		}
+	}
+	return false
+}
+
 // assignTendOther tends the worst hurt patient that is not bleeding;
 // with no one else to tend and no other doctor around, a colonist tends
 // its own wounds (unless its self-tend is off).

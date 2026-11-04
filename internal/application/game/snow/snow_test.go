@@ -44,6 +44,7 @@ func newFake(w, h int) *fakeHost {
 func (f *fakeHost) Now() clock.Tick                        { return f.now }
 func (f *fakeHost) Weather() weather.State                 { return f.wx }
 func (f *fakeHost) SetMapDepth(d float64)                  { f.wx.SnowDepth = d }
+func (f *fakeHost) SkipClear() bool                        { return false }
 func (f *fakeHost) WeatherHeld() bool                      { return f.held }
 func (f *fakeHost) Outdoor(clock.Tick) temperature.Temp    { return f.temp }
 func (f *fakeHost) Size() (int, int)                       { return f.w, f.h }

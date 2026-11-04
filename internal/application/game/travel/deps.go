@@ -99,6 +99,8 @@ type Goods interface {
 	Spend(carry entity.EntityID)
 	// DropStack sets a copy of st down at (x, y), or beside it.
 	DropStack(st item.Stack, x, y int)
+	// MealRule is how meals stack by their ingredients (CSE-012).
+	MealRule() item.MealRule
 }
 
 // Beasts is the map's animals.

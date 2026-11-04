@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/application/game/snow"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -248,10 +249,13 @@ type snowHost struct{ g *Game }
 
 var _ snow.Host = snowHost{}
 
-func (h snowHost) Now() clock.Tick                       { return h.g.clock.Now() }
-func (h snowHost) Weather() weather.State                { return h.g.weather }
-func (h snowHost) SetMapDepth(d float64)                 { h.g.weather.SnowDepth = d }
-func (h snowHost) WeatherHeld() bool                     { return h.g.weatherFix }
+func (h snowHost) Now() clock.Tick        { return h.g.clock.Now() }
+func (h snowHost) Weather() weather.State { return h.g.weather }
+func (h snowHost) SetMapDepth(d float64)  { h.g.weather.SnowDepth = d }
+func (h snowHost) WeatherHeld() bool      { return h.g.weatherFix }
+func (h snowHost) SkipClear() bool { // CSE-028
+	return h.g.weather.Kind.Falling() && senseOf(h.g).Rules.On(gameplay.SnowWaitsForSky)
+}
 func (h snowHost) Outdoor(t clock.Tick) temperature.Temp { return h.g.climate.Outdoor(t) }
 func (h snowHost) Size() (int, int)                      { return h.g.grid.Width(), h.g.grid.Height() }
 func (h snowHost) EnsureRooms()                          { h.g.ensureRooms() }

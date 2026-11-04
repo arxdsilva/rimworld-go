@@ -201,9 +201,9 @@ func (a Tabs) healthCare(p game.PawnView, r gfx.Rect, h game.HealthView) {
 	if dead {
 		reason = "The dead need no care."
 	}
-	st := gfx.Label
-	st.Color = uikit.TextDim
-	a.kit().Label(r.X, r.Y+(r.H-float32(gfx.LineH(st)))/2, "Care", st)
+	care := gfx.Label
+	care.Color = uikit.TextDim
+	a.kit().Label(r.X, r.Y+(r.H-float32(gfx.LineH(care)))/2, "Care", care)
 	x := r.X + 40
 	w := r.Right() - x
 	if !p.Prisoner && !p.Visitor {
@@ -229,10 +229,10 @@ func (a Tabs) healthCare(p game.PawnView, r gfx.Rect, h game.HealthView) {
 		return // self-tend is for colonists
 	}
 	on := h.SelfTend
+	st := selfTendState(a.Pane, p)
 	if a.kit().Check(HealthSelfID, gfx.Rect{X: r.Right() - healthSelfW, Y: r.Y, W: healthSelfW, H: r.H}, "Self-tend", &on,
-		uikit.CheckOpts{Disabled: dead, Reason: reason,
-			Tip: "Self-tend\nWith no one else to help, this colonist tends its own wounds (at lower quality)."}) {
-		a.shell.Enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(p.ID), Enabled: on})
+		uikit.CheckOpts{Disabled: st.reason != "", Reason: st.reason, Tip: st.tip}) {
+		a.Card().setSelfTend(p, on)
 	}
 }
 

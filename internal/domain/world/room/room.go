@@ -89,10 +89,12 @@ const (
 	PrisonBarracks
 	RecRoom
 	Kitchen
+	// ColdStore is a room with a cooler set under 0 °C and no bed (CSE-043).
+	ColdStore
 )
 
 func (r Role) String() string {
-	return [...]string{"room", "bedroom", "dining room", "workshop", "barracks", "hospital", "prison cell", "prison barracks", "recreation room", "kitchen"}[r]
+	return [...]string{"room", "bedroom", "dining room", "workshop", "barracks", "hospital", "prison cell", "prison barracks", "recreation room", "kitchen", "cold store"}[r]
 }
 
 // MaxCells is the largest room (TEMP-6, wiki: Rooms: 36 regions, at most

@@ -185,7 +185,8 @@ func (g *Game) idleSocialRelax(id entity.EntityID, linger int) bool {
 	if !ok {
 		return false
 	}
-	return g.startJob(id, job.Record{Kind: job.SocialRelax, TX: x, TY: y, DestX: best.X, DestY: best.Y, WorkLeft: linger})
+	seat := job.Record{Kind: job.SocialRelax, TX: x, TY: y, DestX: best.X, DestY: best.Y, WorkLeft: linger}
+	return senseOf(g).Relax.Assign(id, seat) || g.startJob(id, seat) // game/sense (CSE-008): with a drink, when there is one
 }
 
 // companyAt reports another colonist idling within socialCompany tiles of

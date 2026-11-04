@@ -3,6 +3,7 @@ package game
 import (
 	"bytes"
 	"reflect"
+	"rimworld-go/internal/domain/gameplay"
 	"slices"
 	"testing"
 
@@ -422,7 +423,8 @@ func TestUnstowIsAnOrdinaryCarriedStack(t *testing.T) {
 	j, _ := g.jobs.Get(ada)
 	j.Kind, j.Carry = job.Haul, stack
 	g.jobs.Set(ada, j)
-	g.dropCarry(ada) // an ordinary load: it falls as any other
+	senseOf(g).Rules = senseOf(g).Rules.With(gameplay.PutBack, false) // on, it goes back: CSE-037
+	g.dropCarry(ada)                                                  // an ordinary load: it falls as any other
 	if groundNear(g, item.Steel, pos.X, pos.Y) != 20 {
 		t.Fatal("dropping what came out of the pack lost it")
 	}

@@ -114,7 +114,7 @@ func ClearWork(d uint8) int {
 // beat the candidates found.
 func (l Layer) AssignClear(id entity.EntityID) bool {
 	s := l.s
-	if s.depth == nil || s.clear == nil {
+	if s.depth == nil || s.clear == nil || l.h.SkipClear() {
 		return false
 	}
 	cg := l.chunkGrid()

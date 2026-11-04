@@ -1289,6 +1289,8 @@ saveState.Raiders{}.Mode rimworld-go/internal/application/game/raid.Mode = uint8
 saveState.Raiders{}.RetryAt uint64
 saveState.Raiders{}.Warden rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Recreation rimworld-go/internal/application/game/recreate.Save
+saveState.Recreation.Craving []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Recreation.Craving[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Recreation.Pawns map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go/internal/application/game/recreate.Pawn
 saveState.Recreation.Pawns{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Recreation.Pawns{} rimworld-go/internal/application/game/recreate.Pawn
