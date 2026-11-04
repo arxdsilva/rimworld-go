@@ -110,7 +110,7 @@ func (p *Panel) Invalidate() { p.inv++ }
 // card is enabled, restyles the pane and the selection is a pawn or animal
 // the reader knows.
 func (p *Panel) Claims(k selection.Kind, id entity.EntityID) bool {
-	hud := p.pf.Settings().HUD
+	hud := p.hud()
 	if !hud.Enabled || !hud.Pane.Restyle || id == 0 {
 		return false
 	}
@@ -135,7 +135,7 @@ func (p *Panel) ready(hud config.HUD) bool {
 // opens.
 func (p *Panel) Title(k selection.Kind, id entity.EntityID) (tint color.RGBA, tip, tab string) {
 	p.Select(k, id)
-	hud := p.pf.Settings().HUD
+	hud := p.hud()
 	if !p.ready(hud) {
 		return color.RGBA{}, "", ""
 	}
@@ -157,7 +157,7 @@ func (p *Panel) DrawFloating(dst *ebiten.Image, r gfx.Rect) { p.draw(dst, r, fal
 // Height is the tree's height in logical pixels at width w for the current
 // selection, docked or floating; DOS-4 sizes the pane and the card with it.
 func (p *Panel) Height(docked bool, w float32) float32 {
-	hud := p.pf.Settings().HUD
+	hud := p.hud()
 	if !p.ready(hud) {
 		return 0
 	}
@@ -169,6 +169,17 @@ func (p *Panel) OpenStats() {
 	if p.have {
 		statSheet{p}.open()
 	}
+}
+
+// hud is the card's settings for this frame: docked, its sizes fitted to the
+// screen's height (sheet.DockedFor); floating, as the player set them.
+func (p *Panel) hud() config.HUD {
+	h := p.pf.Settings().HUD
+	if h.Docked {
+		_, sh := p.sz.Size()
+		h = sheet.DockedFor(h, sh)
+	}
+	return h
 }
 
 func (p *Panel) openSetup() {

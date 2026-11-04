@@ -32,7 +32,7 @@ func TestApplyTierSetsEveryKnobAndKeepsChoices(t *testing.T) {
 	g := Defaults().Graphics
 	g.ApplyTier(QualityLow, 2)
 	if g.Quality != QualityLow || g.Effects != EffectsMinimal || g.Shadows || g.Lighting ||
-		g.Water != WaterSimple || g.Grass != GrassSparse || g.HiDPI || g.VSync || g.FrameCap != FrameCapDefault {
+		g.Water != WaterSimple || g.Grass != GrassSparse || g.HiDPI || !g.VSync || g.FrameCap != FrameCapDefault {
 		t.Fatalf("low tier = %+v", g)
 	}
 	g = Defaults().Graphics
@@ -139,26 +139,31 @@ func TestNormalizeRenderScale(t *testing.T) {
 	}
 }
 
-// TestFrameCapDefaults (PERF-002): every preset caps at 120 with VSync off;
-// an older file keeps VSync only when the player chose it; unknown caps
-// fall back.
+// TestFrameCapDefaults (PERF-002, PERF-003): every preset caps at 120 with
+// VSync on; an older file takes VSync on unless the player chose it off;
+// unknown caps fall back.
 func TestFrameCapDefaults(t *testing.T) {
 	t.Parallel()
 	for _, tier := range QualityLevels {
 		g := Defaults().Graphics
 		g.ApplyTier(tier, 2)
-		if g.VSync || g.FrameCap != FrameCapDefault || g.Quality != tier {
+		if !g.VSync || g.FrameCap != FrameCapDefault || g.Quality != tier {
 			t.Fatalf("%s: vsync %v cap %d quality %s", tier, g.VSync, g.FrameCap, g.Quality)
 		}
 	}
-	old := Settings{Version: 5, Graphics: Graphics{VSync: true, Effects: EffectsFull, Quality: QualityHigh,
+	old := Settings{Version: 5, Graphics: Graphics{VSync: false, Effects: EffectsFull, Quality: QualityHigh,
 		Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, HiDPI: true}}
-	if n := old.Normalize(); n.Graphics.VSync || n.Graphics.FrameCap != FrameCapDefault {
-		t.Fatalf("a version-5 file: vsync %v cap %d, want off and %d", n.Graphics.VSync, n.Graphics.FrameCap, FrameCapDefault)
+	if n := old.Normalize(); !n.Graphics.VSync || n.Graphics.FrameCap != FrameCapDefault {
+		t.Fatalf("a version-5 file: vsync %v cap %d, want on and %d", n.Graphics.VSync, n.Graphics.FrameCap, FrameCapDefault)
+	}
+	v8 := Settings{Version: 8, Graphics: Defaults().Graphics}
+	v8.Graphics.VSync = false // PERF-002's default, not a choice
+	if n := v8.Normalize(); !n.Graphics.VSync {
+		t.Fatal("a version-8 file with the old default must take VSync on")
 	}
 	old.Graphics.Chosen = []string{"vsync"}
-	if n := old.Normalize(); !n.Graphics.VSync {
-		t.Fatal("a version-5 file with VSync chosen by hand must keep it")
+	if n := old.Normalize(); n.Graphics.VSync {
+		t.Fatal("a version-5 file with VSync turned off by hand must keep it off")
 	}
 	s := Defaults()
 	s.Graphics.FrameCap = 75

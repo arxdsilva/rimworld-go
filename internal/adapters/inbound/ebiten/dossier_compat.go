@@ -7,6 +7,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier"
+	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -291,8 +292,16 @@ func (h dossierHost) drawFloating(dst *ebiten.Image) {
 
 var _ inspector.CardHost = inspectorHost{}
 
-// CardHUD is the card's settings.
-func (h inspectorHost) CardHUD() config.HUD { return h.a.settings.HUD }
+// CardHUD is the card's settings; docked, its sizes fitted to the logical
+// screen's height (sheet.DockedFor), so a resize lays the pane out again.
+func (h inspectorHost) CardHUD() config.HUD {
+	hud := h.a.settings.HUD
+	if hud.Docked {
+		_, sh := h.a.size()
+		hud = sheet.DockedFor(hud, sh)
+	}
+	return hud
+}
 
 // CardBody is the card, nil outside a session.
 func (h inspectorHost) CardBody() inspector.PaneBody {

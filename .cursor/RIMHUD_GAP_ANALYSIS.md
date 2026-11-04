@@ -79,7 +79,7 @@ Columns: id, mod feature, what we have today, status, work needed.
 |---|---|---|---|---|
 | RHUD-001 | The pane can host the card (`DockedMode`, default on) | ebiten/inspector/pane_body.go:dress | done | DOS-4 route the body through `inspector.PaneBody`; `config.HUD.Docked`; DOS-5 row; `TestJourneyDossierDocked` |
 | RHUD-002 | Switch that lets the mod restyle the pane at all (`Modify`); off forces floating and greys its controls | config/hud.go:HUD.normalize | done | `config.HUDPane.Restyle`; `Normalize`: `!Restyle` forces `Docked=false`; DOS-5 greys the group with a reason |
-| RHUD-003 | Pane height, slider plus typed entry (`Height`) | ebiten/inspector/pane_body.go:CardPane.Size | done | DOS-4 `hudlayout.Inputs.PaneH`; `config.HUDPane.Height` (188..800, clamped to the screen by `Compute`); DOS-5 slider and entry; golden test at 1113x626 |
+| RHUD-003 | Pane height, slider plus typed entry (`Height`) | ebiten/inspector/pane_body.go:CardPane.Size | done | DOS-4 `hudlayout.Inputs.PaneH`; `config.HUDPane.Height` (120..192 on a 720-tall screen, scaled by `sheet.DockedFor` and never past 30 % of the screen with the tabs, DOS-10); DOS-5 slider and entry; golden test at 1113x626 |
 | RHUD-004 | Least tab count the pane must fit (`MinTabs`) | ebiten/inspector/pane_body.go:CardPane.Size | done | `config.HUDPane.MinTabs` (6..12); DOS-4 `Inputs.PaneW = TabW * max(MinTabs, tabs)` |
 | RHUD-005 | Tab button width (`TabWidth`) | ebiten/inspector/hud_inspect.go:fixedTabRects | done | `config.HUDPane.TabW` (72..150); DOS-4 `paneTabRects` takes a fixed width when above 0 |
 | RHUD-006 | Pane width follows tabs (`PaneWidthFor`) | ebiten/inspector/pane_body.go:CardPane.Size | done | DOS-4, same `Inputs.PaneW`; the command grid already keys on `l.Pane.Right()`, `ebiten/hudlayout/layout.go:246` |
@@ -794,7 +794,7 @@ type HUD struct {
 
 type HUDPane struct {
 	Restyle     bool `json:"restyle"`
-	Height      int  `json:"height"`   // 188..800
+	Height      int  `json:"height"`   // 120..192, on a 720-tall screen (sheet.DockedFor)
 	MinTabs     int  `json:"min_tabs"` // 6..12
 	TabW        int  `json:"tab_w"`    // 72..150
 	FactionIcon bool `json:"faction_icon"`

@@ -519,7 +519,7 @@ Contents; - Power; - Stats.
 With one pawn or one animal selected, the card replaces the pane's body (RHUD, `.cursor/RIMHUD_GAP_ANALYSIS.md`). It is a tree of value widgets the player can edit; groups, buildings, plants, items, zones and cell info keep the plain pane.
 
 -   [x] on by default; Options > Accessibility has the switch, and off draws the plain pane;
--   [x] docked in a taller pane, or floating over the map at a chosen anchor;
+-   [x] docked in the pane, or floating over the map at a chosen anchor; the docked card never scrolls: pane and tabs take at most 30 % of the screen's height (DOS-10: the sizes are set for a 720-tall screen and `sheet.DockedFor` scales them with it, 168 + 24 px at 720, 252 + 24 at 1080; the built-in docked tree is two lines, a rule and a four-column strip of bars, selectors and skills);
 -   [x] setup modal from the card's gear: Look, Sections, Presets, Colours, with Back to defaults;
 -   [x] presets saved as files, with a button that opens their folder;
 -   [x] selectors on the card: food policy, allowed area (hovering a row previews it on the map), and the current hour (with Manage, which opens Schedule);
@@ -1783,7 +1783,7 @@ presentation only, never the simulation; captures ignore them.
 
 -   [x] window: fullscreen toggle (the window resizes freely; no
     resolution presets);
--   [x] VSync (off by default) and Frame cap (60 / 120 / 144 / Off; 120 on every display by default, paced by the client — PERF-002; off the colony — menu, wizard, loading — draws never exceed 60 fps, PERF-003);
+-   [x] VSync (on by default since PERF-003; off from PERF-002 to then) and Frame cap (60 / 120 / 144 / Off; 120 on every display by default, paced by the client while VSync is off — PERF-002; off the colony — menu, wizard, loading — draws never exceed 60 fps, PERF-003);
 -   [x] UI scale (UI-024: Accessibility row Auto / 75–200 %; "Sharp on
     high-density screens" (HiDPI) on the Graphics tab; its value reads
     "On, limited to WxH" while the render cap holds the frame below the

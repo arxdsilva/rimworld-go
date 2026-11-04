@@ -155,7 +155,7 @@ func TestBackgroundOnKeepsTicking(t *testing.T) {
 func TestBackgroundOnSwitchesVsync(t *testing.T) {
 	t.Parallel()
 	a, _, f, w := bgColony(t)
-	a.settings.Graphics.VSync = true // the player's choice; off by default since PERF-002
+	a.settings.Graphics.VSync = true // on by default since PERF-003
 	runInBackground(t, a, true)
 	f.Frame(t, a)
 	if !slices.Equal(w.calls, []string{"runnable:true"}) {

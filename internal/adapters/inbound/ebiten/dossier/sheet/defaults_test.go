@@ -1,6 +1,7 @@
 package sheet
 
 import (
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/platform/config"
@@ -18,25 +19,63 @@ func TestDefaultsAreValid(t *testing.T) {
 	}
 }
 
-// The docked body fits the pane's default height with room for its header and
-// tabs; the floating card fits its default height less an inset.
+// The docked body fits the pane's default height less its name row and edge;
+// the floating card fits its default height less an inset.
 func TestDefaultLayoutsFitPaneH(t *testing.T) {
 	t.Parallel()
 	d := config.Defaults().HUD
 	m := MetricsFor(d.Text)
-	const dockedBody = 300 // what the pane leaves for the card at Height 360
 	const inset = 16
 	for w := WhoColonist; w <= WhoWild; w++ {
-		if h := Measure(Default(true, w), m, 0); h > dockedBody || h <= 0 {
-			t.Errorf("docked, target %c: %v tall, room %d", w.Letter(), h, dockedBody)
+		if h := Measure(Default(true, w), m, 0); h > float32(d.Pane.Height-DockMargin) || h <= 0 {
+			t.Errorf("docked, target %c: %v tall, room %d", w.Letter(), h, d.Pane.Height-DockMargin)
 		}
 		if h := Measure(Default(false, w), m, 0); h > float32(d.Card.H-inset) || h <= 0 {
 			t.Errorf("floating, target %c: %v tall, room %d", w.Letter(), h, d.Card.H-inset)
 		}
 	}
-	if float32(d.Pane.Height) < dockedBody+60 {
-		t.Errorf("the default pane (%d) leaves less than 60 for header and tabs", d.Pane.Height)
+	if (d.Pane.Height+DockTabsH)*100 > DockRefH*DockSharePct {
+		t.Errorf("the default pane (%d) and its tabs take more than %d %% of a %d-tall screen", d.Pane.Height, DockSharePct, DockRefH)
 	}
+}
+
+// The compact docked tree shows each target exactly what the tall one it
+// replaced showed (that tree's widgets are pinned here), one rule fewer.
+func TestDockedTreeKeepsEveryWidget(t *testing.T) {
+	t.Parallel()
+	old := map[Who][]string{
+		WhoColonist: {"area_pick", "body_state", "diet_pick", "doing", "fun_bar", "hour_pick", "hunger_bar", "identity",
+			"in_hand", "mind_state", "mood_bar", "next_up", "rest_bar", "rule", "skill:animals", "skill:construction",
+			"skill:cooking", "skill:crafting", "skill:intellectual", "skill:medicine", "skill:melee", "skill:mining",
+			"skill:plants", "skill:shooting", "skill:social", "standing", "stat:work_speed", "vigour_bar"},
+		WhoStranger: {"body_state", "captive", "doing", "hunger_bar", "identity", "in_hand", "mind_state", "mood_bar",
+			"rest_bar", "rule", "standing", "vigour_bar"},
+		WhoPrisoner: {"area_pick", "body_state", "diet_pick", "doing", "hunger_bar", "identity", "keeper", "rest_bar",
+			"rule", "standing", "train:guard", "train:obedience", "train:release", "vigour_bar"},
+		WhoWild: {"body_state", "doing", "hunger_bar", "identity", "rest_bar", "rule", "standing", "vigour_bar"},
+	}
+	for w := WhoColonist; w <= WhoWild; w++ {
+		if got := widgetKeys(Default(true, w)); !slices.Equal(got, old[w]) {
+			t.Errorf("target %c:\n got %q\nwant %q", w.Letter(), got, old[w])
+		}
+	}
+}
+
+// widgetKeys is the sorted set of the tree's widgets, as key or key:def.
+func widgetKeys(n config.HUDNode) []string {
+	var out []string
+	walk(n, func(x config.HUDNode) config.HUDNode {
+		if IsWidget(x.Kind) && x.Kind != KeyGap {
+			k := x.Kind
+			if x.Def != "" {
+				k += ":" + x.Def
+			}
+			out = append(out, k)
+		}
+		return x
+	})
+	slices.Sort(out)
+	return slices.Compact(out)
 }
 
 func TestDefaultTargetsShowTheRightRows(t *testing.T) {
@@ -100,7 +139,7 @@ func TestEachBuiltInFitsItsOwnSize(t *testing.T) {
 	for _, p := range BuiltIns() {
 		m := MetricsFor(*p.Text)
 		for w := WhoColonist; w <= WhoWild; w++ {
-			if h := Measure(Prune(*p.Docked, w), m, 0); h > float32(p.DockH-60) {
+			if h := Measure(Prune(*p.Docked, w), m, 0); h > float32(p.DockH-DockMargin) {
 				t.Errorf("%s docked %c: %v in %d", p.Name, w.Letter(), h, p.DockH)
 			}
 			if h := Measure(Prune(*p.Floating, w), m, 0); h > float32(p.FloatH-16) {

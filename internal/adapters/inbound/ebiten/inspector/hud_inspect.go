@@ -89,13 +89,16 @@ const (
 	paneCloseW  = 20
 	paneChipH   = 20
 	paneChipGap = 4
-	paneBarCols = 4
-	paneBarGap  = 8
-	paneBarFill = 6 // the fill's height under its label
-	paneTabGap  = 2
-	paneTabPad  = 20 // text padding inside a tab
-	paneTabMinW = 48
-	PaneRowH    = 20
+	// paneCardBottom is the edge under the card's body; with paneTop and the
+	// name's line it is the 34 px dossier/sheet.DockMargin counts.
+	paneCardBottom = 2
+	paneBarCols    = 4
+	paneBarGap     = 8
+	paneBarFill    = 6 // the fill's height under its label
+	paneTabGap     = 2
+	paneTabPad     = 20 // text padding inside a tab
+	paneTabMinW    = 48
+	PaneRowH       = 20
 
 	PaneBodyID  = "pane.body"
 	paneFrameID = "pane.frame"
@@ -240,11 +243,14 @@ func PaneLayout(p gfx.Rect, spec Spec) Geom {
 	if spec.Subtitle != "" {
 		y += gfx.LineStep(gfx.Body)
 	}
-	y += 6
 	if spec.Card {
+		// the compact card (RHUD-003) starts right under the name and keeps
+		// a thin edge below
+		limit = p.Bottom() - paneCardBottom
 		g.Card = gfx.Rect{X: inner.X, Y: y, W: inner.W, H: max(0, limit-y)}
 		return g
 	}
+	y += 6
 	if n := len(spec.Bars); n > 0 {
 		cols := min(n, paneBarCols)
 		w := (inner.W - float32(cols-1)*paneBarGap) / float32(cols)

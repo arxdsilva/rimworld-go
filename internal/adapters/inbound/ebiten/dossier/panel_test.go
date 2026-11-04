@@ -1,6 +1,8 @@
 package dossier
 
 import (
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -10,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/platform/config"
 )
@@ -86,15 +89,34 @@ func TestSettingsChangeRebuildsAtOnce(t *testing.T) {
 	}
 }
 
-// RHUD-038: lower right docked, upper right floating.
+// RHUD-038: upper right, docked and floating. Docked, only the two lines of
+// who and how lie under it (text aligned left, the gear shows while the mouse is
+// over the card), never a bar, a skill or a value aligned right.
 func TestGearCorners(t *testing.T) {
-	d, f := gearRect(card, true), gearRect(card, false)
-	if d.Bottom() > card.Bottom() || d.Y < card.Y+card.H/2 || d.Right() > card.Right() || d.X < card.X+card.W/2 {
-		t.Fatalf("docked gear is lower right: %+v", d)
+	g := gearRect(card)
+	if g.Y < card.Y || g.Y > card.Y+card.H/2 || g.Right() > card.Right() || g.X < card.X+card.W/2 {
+		t.Fatalf("the gear is upper right: %+v", g)
 	}
-	if f.Y > card.Y+card.H/2 || f.Right() > card.Right() || f.X < card.X+card.W/2 {
-		t.Fatalf("floating gear is upper right: %+v", f)
+	s := newShell(t)
+	s.step(0, 0, false, card, true)
+	for _, it := range s.panel.lay[0].items {
+		r := gfx.Rect{X: card.X + it.x, Y: card.Y + it.y, W: it.w, H: it.h}
+		if !rectsMeet(r, g) {
+			continue
+		}
+		switch it.key {
+		case "standing", "identity", "body_state", "mind_state":
+		default:
+			t.Errorf("the docked gear covers %s", it.key)
+		}
+		if it.kind != kText {
+			t.Errorf("the docked gear covers a %v item, %s", it.kind, it.key)
+		}
 	}
+}
+
+func rectsMeet(a, b gfx.Rect) bool {
+	return a.X < b.Right() && b.X < a.Right() && a.Y < b.Bottom() && b.Y < a.Bottom()
 }
 
 // RHUD-036, 037: a press on the gear opens setup and nothing under it fires;
@@ -102,7 +124,7 @@ func TestGearCorners(t *testing.T) {
 func TestGearOpensSetupAndShieldsWidgets(t *testing.T) {
 	s := newShell(t)
 	s.setTree(false, column(widget("title")))
-	g := gearRect(card, false)
+	g := gearRect(card)
 	gx, gy := int(g.X+g.W/2), int(g.Y+g.H/2)
 	s.step(gx, gy, false, card, false)
 	if _, ok := s.kit.Find(ids.DossierGear); !ok {
@@ -488,5 +510,98 @@ func TestDroppedLayoutWarns(t *testing.T) {
 	s.step(0, 0, false, card, true)
 	if len(s.hints) != 1 || !strings.Contains(s.hints[0], "too big") {
 		t.Fatalf("hints %q", s.hints)
+	}
+}
+
+// The docked card's targets: a colonist, a prisoner, a tame and a wild animal.
+func (s *fakeShell) target(w sheet.Who) {
+	s.animal = game.AnimalView{}
+	s.pawn.Prisoner = false
+	switch w {
+	case sheet.WhoColonist, sheet.WhoStranger:
+		s.pawn.Prisoner = w == sheet.WhoStranger
+		s.panel.Select(selection.Pawn, 7)
+	default:
+		s.animal = game.AnimalView{ID: 30, Name: "Rex", Tame: w == sheet.WhoPrisoner, FoodPolicy: "Plain", Health: 90}
+		s.panel.Select(selection.Animal, 30)
+	}
+	s.panel.Invalidate()
+}
+
+// keys is what the docked layout placed inside a body h tall.
+func (s *fakeShell) keys(h float32) []string {
+	var out []string
+	for _, it := range s.panel.lay[0].items {
+		if it.y+it.h <= h+0.5 {
+			out = append(out, it.key+"@"+strconv.Itoa(int(it.y)))
+		}
+	}
+	return out
+}
+
+// The compact docked card shows every row for every target at 1280x720 and UI
+// scales 1, 1.5 and 2 (1280x720, 853x480 and 640x360 logical): what a very
+// tall pane would show, all inside the pane the card gets, with no warning.
+func TestDockedCardDropsNothing(t *testing.T) {
+	for _, scr := range [][2]int{{1280, 720}, {853, 480}, {640, 360}} {
+		for w := sheet.WhoColonist; w <= sheet.WhoWild; w++ {
+			s := newShell(t)
+			s.sw, s.sh = scr[0], scr[1]
+			s.target(w)
+			d := sheet.DockedFor(s.set.HUD, s.sh)
+			body := gfx.Rect{X: 12, Y: 40, W: float32(d.Pane.TabW*d.Pane.MinTabs - 24), H: float32(d.Pane.Height - sheet.DockMargin)}
+			tall := body
+			tall.H = 2000
+			s.step(0, 0, false, tall, true)
+			want := s.keys(tall.H)
+			s.step(0, 0, false, body, true)
+			got := s.keys(body.H)
+			if len(want) == 0 || !slices.Equal(got, want) {
+				t.Errorf("%v target %c: the pane shows\n%v\nnot\n%v", scr, w.Letter(), got, want)
+			}
+			if l := s.panel.lay[0]; l.height > body.H {
+				t.Errorf("%v target %c: %v tall in %v", scr, w.Letter(), l.height, body.H)
+			}
+			if len(s.hints) != 0 {
+				t.Errorf("%v target %c: %v", scr, w.Letter(), s.hints)
+			}
+		}
+	}
+}
+
+// A saved layout taller than the card is cut at the card's bottom, and the card
+// says so once.
+func TestTooTallLayoutWarnsOnce(t *testing.T) {
+	s := newShell(t)
+	rows := make([]config.HUDNode, 20)
+	for i := range rows {
+		rows[i] = widget("standing")
+	}
+	s.setTree(true, column(rows...))
+	r := gfx.Rect{X: 0, Y: 0, W: 500, H: 134}
+	for range 3 {
+		s.step(0, 0, false, r, true)
+		s.panel.Invalidate()
+	}
+	if len(s.hints) != 1 || !strings.Contains(s.hints[0], "doesn't fit") || !strings.Contains(s.hints[0], "floating card") {
+		t.Fatalf("hints %q", s.hints)
+	}
+	if got := len(s.keys(r.H)); got == 0 || got >= 20 {
+		t.Fatalf("%d of 20 rows in the pane", got)
+	}
+}
+
+// Docked, the card's sizes follow the screen's height; floating, they are the
+// player's.
+func TestDockedSizesFollowTheScreen(t *testing.T) {
+	s := newShell(t)
+	s.sh = 1080
+	s.step(0, 0, false, card, true)
+	if got := s.panel.builder(s.panel.hud()).body.Size; got != 18 {
+		t.Fatalf("docked text at 1080: %v, want 18", got)
+	}
+	s.set.HUD.Docked = false
+	if got := s.panel.hud().Text.BodySize; got != s.set.HUD.Text.BodySize {
+		t.Fatalf("floating text %d, want the setting %d", got, s.set.HUD.Text.BodySize)
 	}
 }

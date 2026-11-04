@@ -83,7 +83,7 @@ func DecodePreset(data []byte) (Preset, error) {
 		return Preset{}, fmt.Errorf("%w: name too long", ErrPresetInvalid)
 	}
 	p := Preset{Version: w.Version, Name: w.Name, Docked: w.Docked, Floating: w.Floating,
-		DockW: clampOrZero(w.DockW, 72, 150), DockH: clampOrZero(w.DockH, 188, 800),
+		DockW: clampOrZero(w.DockW, 72, 150), DockH: clampOrZero(w.DockH, config.HUDPaneMinH, config.HUDPaneMaxH),
 		DockTabs: clampOrZero(w.DockTabs, 6, 12), FloatW: clampOrZero(w.FloatW, 100, 1000),
 		FloatH: clampOrZero(w.FloatH, 100, 1000)}
 	if w.Text != nil {
@@ -117,11 +117,11 @@ func clampOrZero(v, lo, hi int) int {
 func clampText(t config.HUDText) config.HUDText {
 	cl := func(v, lo, hi int) int { return min(max(v, lo), hi) }
 	t.BodySize = cl(t.BodySize, 7, 20)
-	t.BodyLinePct = cl(t.BodyLinePct, 100, 250)
+	t.BodyLinePct = cl(t.BodyLinePct, config.HUDLineMinPct, 250)
 	t.LargeDelta = cl(t.LargeDelta, 0, 24)
-	t.LargeLinePct = cl(t.LargeLinePct, 100, 250)
+	t.LargeLinePct = cl(t.LargeLinePct, config.HUDLineMinPct, 250)
 	t.SmallDelta = cl(t.SmallDelta, -5, 0)
-	t.SmallLinePct = cl(t.SmallLinePct, 100, 250)
+	t.SmallLinePct = cl(t.SmallLinePct, config.HUDLineMinPct, 250)
 	t.LabelW = cl(t.LabelW, 30, 150)
 	t.ValueW = cl(t.ValueW, 30, 150)
 	return t
@@ -146,26 +146,26 @@ func BuiltIn(name string) (Preset, bool) {
 // BuiltIns are the presets that ship with the game, in menu order. Standard
 // is the default look; Roomy shows every row for every target at a larger
 // size; Snug is smaller and narrows some rows by target; Snug with traits
-// adds a traits row.
+// adds a traits row. Each docked tree fits its own pane height.
 func BuiltIns() []Preset {
 	def := config.Defaults().HUD
 	docked, floating := DefaultDocked(), DefaultFloating()
 	std := def.Text
 	roomy := std
-	roomy.BodySize, roomy.LabelW, roomy.ValueW, roomy.BodyLinePct = 13, 110, 70, 105
+	roomy.BodySize, roomy.LabelW, roomy.ValueW, roomy.BodyLinePct = 13, 110, 40, 100
 	snug := std
-	snug.BodySize, snug.LargeDelta, snug.SmallDelta, snug.LabelW, snug.ValueW = 10, 3, -1, 80, 50
+	snug.BodySize, snug.LargeDelta, snug.SmallDelta, snug.LabelW, snug.ValueW, snug.BodyLinePct = 10, 3, -1, 80, 32, 88
 	narrow := map[string]string{"hunger_bar": "cp", "rest_bar": "c", "doing": "cp"}
 	snugD, snugF := narrowed(docked, narrow), narrowed(floating, narrow)
 	return []Preset{
 		{Version: PresetVersion, Name: "Standard", Docked: &docked, Floating: &floating,
-			DockH: def.Pane.Height, DockTabs: def.Pane.MinTabs, FloatW: def.Card.W, FloatH: def.Card.H, Text: &std},
-		{Version: PresetVersion, Name: "Roomy", Docked: ptr(everyTarget(docked)), Floating: ptr(everyTarget(floating)),
-			DockH: 480, DockTabs: 7, FloatW: 460, FloatH: 560, Text: &roomy},
+			DockW: def.Pane.TabW, DockH: def.Pane.Height, DockTabs: def.Pane.MinTabs, FloatW: def.Card.W, FloatH: def.Card.H, Text: &std},
+		{Version: PresetVersion, Name: "Roomy", Docked: ptr(roomyDocked()), Floating: ptr(everyTarget(floating)),
+			DockW: 96, DockH: config.HUDPaneMaxH, DockTabs: 7, FloatW: 460, FloatH: 560, Text: &roomy},
 		{Version: PresetVersion, Name: "Snug", Docked: &snugD, Floating: &snugF,
-			DockH: 340, DockTabs: 6, FloatW: 340, FloatH: 400, Text: &snug},
+			DockW: 80, DockH: 152, DockTabs: 6, FloatW: 340, FloatH: 400, Text: &snug},
 		{Version: PresetVersion, Name: "Snug with traits", Docked: ptr(withTraits(snugD)), Floating: &snugF,
-			DockH: 360, DockTabs: 6, FloatW: 340, FloatH: 420, Text: &snug},
+			DockW: 80, DockH: 168, DockTabs: 6, FloatW: 340, FloatH: 420, Text: &snug},
 	}
 }
 

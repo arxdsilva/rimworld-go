@@ -110,8 +110,8 @@ func TestUnknownHardwareLeavesDetectionForLater(t *testing.T) {
 // that changed Effects and turned HiDPI off keeps both as the player's
 // choice; the rest takes the detected tier. config.Decode has already
 // stamped such a file with the current version, so both are covered.
-// (VSync off is the default since PERF-002, so it no longer reads as a
-// choice on an old file.)
+// (VSync is set by the migration, so it no longer reads as a choice on an
+// old file.)
 func TestPreV5FileKeepsHandChangedValues(t *testing.T) {
 	t.Parallel()
 	for _, version := range []int{4, config.SettingsVersion} {
@@ -123,7 +123,7 @@ func TestPreV5FileKeepsHandChangedValues(t *testing.T) {
 		a := hwApp(store, 16*sysinfo.GiB, 8, 1)
 		a.loadSettings()
 		g := a.settings.Graphics
-		if g.Effects != config.EffectsMinimal || g.HiDPI || g.VSync {
+		if g.Effects != config.EffectsMinimal || g.HiDPI || !g.VSync {
 			t.Fatalf("v%d: hand-changed rows overwritten: effects %q hidpi %v vsync %v", version, g.Effects, g.HiDPI, g.VSync)
 		}
 		if !slices.Contains(g.Chosen, "effects") || !slices.Contains(g.Chosen, "hidpi") || slices.Contains(g.Chosen, "vsync") {
@@ -201,7 +201,7 @@ func TestOptionsGraphicsRowsRecordTheChoice(t *testing.T) {
 		changed  func(g config.Graphics) bool
 	}{
 		{"effects", "effects", func(g config.Graphics) bool { return g.Effects == config.EffectsReduced }},
-		{"vsync", "vsync", func(g config.Graphics) bool { return g.VSync }}, // off by default since PERF-002
+		{"vsync", "vsync", func(g config.Graphics) bool { return !g.VSync }}, // on by default since PERF-003
 		{"hidpi", "hidpi", func(g config.Graphics) bool { return !g.HiDPI }},
 		{"shadows", "shadows", func(g config.Graphics) bool { return !g.Shadows }},
 		{"lighting", "lighting", func(g config.Graphics) bool { return !g.Lighting }},
@@ -299,7 +299,7 @@ func TestOptionsDetectAgain(t *testing.T) {
 	saves := store.saves
 	a.opt.ApplyOption("options.quality.detect")
 	g := store.s.Graphics
-	if g.Detected != config.QualityLow || g.Quality != config.QualityLow || len(g.Chosen) != 0 || g.VSync || g.FrameCap != config.FrameCapDefault {
+	if g.Detected != config.QualityLow || g.Quality != config.QualityLow || len(g.Chosen) != 0 || !g.VSync || g.FrameCap != config.FrameCapDefault {
 		t.Fatalf("graphics = %+v, want the low tier applied and nothing chosen", g)
 	}
 	if g.Lighting || g.Shadows || g.Grass != config.GrassSparse {

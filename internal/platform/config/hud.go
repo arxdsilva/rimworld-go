@@ -23,7 +23,7 @@ type HUD struct {
 // HUDPane is the docked card's pane.
 type HUDPane struct {
 	Restyle     bool `json:"restyle"`
-	Height      int  `json:"height"`   // 188..800
+	Height      int  `json:"height"`   // 120..192, on a 720-tall screen (dossier/sheet.DockedFor)
 	MinTabs     int  `json:"min_tabs"` // 6..12
 	TabW        int  `json:"tab_w"`    // 72..150
 	FactionIcon bool `json:"faction_icon"`
@@ -84,10 +84,10 @@ func defaultHUD() HUD {
 	return HUD{
 		Enabled: true,
 		Docked:  true, RefreshTenths: 5,
-		Pane: HUDPane{Restyle: true, Height: 360, MinTabs: 6, TabW: 72, FactionIcon: true},
+		Pane: HUDPane{Restyle: true, Height: 168, MinTabs: 6, TabW: 96, FactionIcon: true},
 		Card: HUDCard{Anchor: 6, W: 400, H: 460, LetterGap: 4},
-		Text: HUDText{BodySize: 12, BodyLinePct: 100, LargeDelta: 4, LargeLinePct: 100, SmallDelta: -2, SmallLinePct: 100,
-			LabelW: 100, ValueW: 60},
+		Text: HUDText{BodySize: 12, BodyLinePct: 89, LargeDelta: 4, LargeLinePct: 100, SmallDelta: -2, SmallLinePct: 100,
+			LabelW: 100, ValueW: 36},
 	}
 }
 
@@ -98,7 +98,7 @@ func clampInt(v, lo, hi int) int { return max(lo, min(hi, v)) }
 // normalize clamps every range, drops malformed colours and oversized trees.
 func (h HUD) normalize() HUD {
 	h.RefreshTenths = clampInt(h.RefreshTenths, 1, 30)
-	h.Pane.Height = clampInt(h.Pane.Height, 188, 800)
+	h.Pane.Height = clampInt(h.Pane.Height, HUDPaneMinH, HUDPaneMaxH)
 	h.Pane.MinTabs = clampInt(h.Pane.MinTabs, 6, 12)
 	h.Pane.TabW = clampInt(h.Pane.TabW, 72, 150)
 	h.Card.Anchor = clampInt(h.Card.Anchor, 0, 8)
@@ -110,7 +110,7 @@ func (h HUD) normalize() HUD {
 	t.LargeDelta = clampInt(t.LargeDelta, 0, 24)
 	t.SmallDelta = clampInt(t.SmallDelta, -5, 0)
 	for _, p := range []*int{&t.BodyLinePct, &t.LargeLinePct, &t.SmallLinePct} {
-		*p = clampInt(*p, 100, 250)
+		*p = clampInt(*p, HUDLineMinPct, 250)
 	}
 	t.LabelW = clampInt(t.LabelW, 30, 150)
 	t.ValueW = clampInt(t.ValueW, 30, 150)
@@ -160,4 +160,40 @@ func treeCount(n HUDNode, depth int) (int, bool) {
 		}
 	}
 	return c, true
+}
+
+// Limits of the docked pane's height, on a 720-tall screen: 192 and its tabs
+// are 30 % of the screen, the most the card may take. Line heights go below
+// 100 % so a row needs less than the font's default leading.
+const (
+	HUDPaneMinH   = 120
+	HUDPaneMaxH   = 192
+	HUDLineMinPct = 85
+)
+
+// compactDocked moves a card from before the compact pane (settings version 9)
+// to the new sizes. Only what still has the old default moves, and a layout of
+// the player's own keeps the widths and line height it was made for; normalize
+// then limits a taller pane.
+func (h HUD) compactDocked() HUD {
+	if h.Pane.Height == 360 {
+		h.Pane.Height = defaultHUD().Pane.Height
+		if h.Layouts.Docked != nil {
+			h.Pane.Height = HUDPaneMaxH // the most room a tall layout can have
+		}
+	}
+	if h.Layouts.Docked != nil {
+		return h
+	}
+	d := defaultHUD()
+	if h.Pane.TabW == 72 {
+		h.Pane.TabW = d.Pane.TabW
+	}
+	if h.Text.BodySize == 12 && h.Text.BodyLinePct == 100 {
+		h.Text.BodyLinePct = d.Text.BodyLinePct
+	}
+	if h.Text.ValueW == 60 {
+		h.Text.ValueW = d.Text.ValueW
+	}
+	return h
 }

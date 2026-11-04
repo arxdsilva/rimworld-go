@@ -182,7 +182,7 @@ func graphicsRows() []OptionRow {
 	return []OptionRow{
 		qualityRow(),
 		toggleRow("fullscreen", "Fullscreen", func(s *config.Settings) *bool { return &s.Graphics.Fullscreen }),
-		flag("vsync", "VSync", "Wait for the monitor's refresh before showing a frame. Stops tearing; off (the default) lets the frame cap pace the game instead of the screen.",
+		flag("vsync", "VSync", "Wait for the monitor's refresh before showing a frame (the default). Stops tearing and lets the screen pace the game; off lets the frame cap pace it instead.",
 			func(s *config.Settings) *bool { return &s.Graphics.VSync }),
 		frameCapRow(),
 		hidpiRow(),

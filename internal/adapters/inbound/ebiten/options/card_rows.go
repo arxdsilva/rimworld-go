@@ -14,7 +14,9 @@ import (
 // left (config.HUDCard.Anchor).
 var cardAnchors = []string{"Top left", "Top", "Top right", "Left", "Centre", "Right", "Bottom left", "Bottom", "Bottom right"}
 
-const cardHeightStep = 20
+// cardHeightStep is one press of the pane height row: six steps from the
+// shortest pane to the tallest, the default in the middle.
+const cardHeightStep = (config.HUDPaneMaxH - config.HUDPaneMinH) / 6
 
 // Why a card row is off.
 const (
@@ -40,17 +42,25 @@ func cardRows() []OptionRow {
 			},
 			apply: func(s *config.Settings, _ int) { s.HUD.Docked = !s.HUD.Docked }},
 		{Key: "cardheight", Label: "Pane height", kind: rowStep, Col: 1,
-			Tip:   "How tall the inspector pane is while it holds the card.",
-			value: func(s config.Settings) string { return fmt.Sprintf("%d", s.HUD.Pane.Height) },
-			frac:  func(s config.Settings) float64 { return float64(s.HUD.Pane.Height-188) / (800 - 188) },
+			Tip:   "How tall the inspector pane is while it holds the card, as a share of the screen with its tabs. It grows with the screen and never passes 30%.",
+			value: func(s config.Settings) string { return paneShare(s.HUD.Pane.Height) },
+			frac: func(s config.Settings) float64 {
+				return float64(s.HUD.Pane.Height-config.HUDPaneMinH) / (config.HUDPaneMaxH - config.HUDPaneMinH)
+			},
 			apply: func(s *config.Settings, d int) {
-				s.HUD.Pane.Height = max(188, min(800, s.HUD.Pane.Height+d*cardHeightStep))
+				s.HUD.Pane.Height = max(config.HUDPaneMinH, min(config.HUDPaneMaxH, s.HUD.Pane.Height+d*cardHeightStep))
 			}},
 		{Key: "cardspot", Label: "Floating card at", kind: rowChoice, Col: 1,
 			Tip:   "Where on the screen a floating card starts. Its nudge is in the card's setup.",
 			value: func(s config.Settings) string { return cardAnchors[max(0, min(len(cardAnchors)-1, s.HUD.Card.Anchor))] },
 			apply: func(s *config.Settings, _ int) { s.HUD.Card.Anchor = (s.HUD.Card.Anchor + 1) % len(cardAnchors) }},
 	}
+}
+
+// paneShare is a pane height (set for a 720-tall screen) as the share of the
+// screen the pane and its 24 px tabs take.
+func paneShare(h int) string {
+	return fmt.Sprintf("%d%%", ((h+24)*100+360)/720)
 }
 
 // cardLock is why a card row cannot change with these settings ("" when it

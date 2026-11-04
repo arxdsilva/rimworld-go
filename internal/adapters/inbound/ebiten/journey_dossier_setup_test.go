@@ -181,8 +181,8 @@ func TestJourneyDossierOptionsRows(t *testing.T) {
 	}
 	before := j.a.settings.HUD.Pane.Height
 	j.clickID("options.cardheight.inc")
-	if got := j.a.settings.HUD.Pane.Height; got != before+20 {
-		t.Fatalf("pane height %d, want %d", got, before+20)
+	if got := j.a.settings.HUD.Pane.Height; got != before+12 {
+		t.Fatalf("pane height %d, want %d (a step is a sixth of 120..192)", got, before+12)
 	}
 	if j.clickID("options.cardspot") {
 		t.Fatal("the floating place is live while the card is docked")

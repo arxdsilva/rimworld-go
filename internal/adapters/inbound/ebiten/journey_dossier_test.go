@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
@@ -162,7 +163,7 @@ func clickCardItem(j *journey, prefix, modal string) bool {
 func TestJourneyDossierDocked(t *testing.T) {
 	j, p := dossierPawn(t, true)
 	l := j.a.hud()
-	if want := j.a.settings.HUD.Pane; l.Pane.H != float32(want.Height) || l.Pane.W != float32(want.TabW*want.MinTabs) {
+	if want := sheet.DockedFor(j.a.settings.HUD, j.a.sh).Pane; l.Pane.H != float32(want.Height) || l.Pane.W != float32(want.TabW*want.MinTabs) {
 		t.Fatalf("pane %v, want %d x %d", l.Pane, want.TabW*want.MinTabs, want.Height)
 	}
 	if !l.Card.Empty() {
@@ -682,18 +683,19 @@ func TestJourneyDossierOffIsIdentical(t *testing.T) {
 }
 
 // The pane's numbers at the smallest supported window (RHUD-003): pinned so a
-// change has to be looked at.
+// change has to be looked at. 626 tall: 30 % less the tabs is 163, the text 10
+// (12 x 626/720), the tabs 80 wide (96 x 10/12).
 func TestJourneyDossierGolden1113(t *testing.T) {
 	j, _ := dossierPawn(t, true)
 	j.a.sw, j.a.sh = 1113, 626
 	j.update(3)
 	j.img = nil
 	l := j.a.hud()
-	want := gfx.Rect{X: 0, Y: 238, W: 432, H: 360}
+	want := gfx.Rect{X: 0, Y: 435, W: 480, H: 163}
 	if l.Pane != want {
 		t.Errorf("pane %+v, want %+v", l.Pane, want)
 	}
-	if wantTabs := (gfx.Rect{X: 0, Y: want.Y - hudlayout.PaneTabsH, W: 432, H: hudlayout.PaneTabsH}); l.PaneTabs != wantTabs {
+	if wantTabs := (gfx.Rect{X: 0, Y: want.Y - hudlayout.PaneTabsH, W: 480, H: hudlayout.PaneTabsH}); l.PaneTabs != wantTabs {
 		t.Errorf("tabs %+v, want %+v", l.PaneTabs, wantTabs)
 	}
 	if !l.Card.Empty() {
@@ -706,6 +708,9 @@ func TestJourneyDossierGolden1113(t *testing.T) {
 	g := inspectorpkg.PaneLayout(l.Pane, spec)
 	if h := j.a.dos.panel.Height(true, g.Card.W); h > g.Card.H {
 		t.Errorf("the default tree is %v tall in a %v body", h, g.Card.H)
+	}
+	if l.Pane.H-g.Card.H != sheet.DockMargin {
+		t.Errorf("the pane takes %v around the card, sheet.DockedFor counts %d", l.Pane.H-g.Card.H, sheet.DockMargin)
 	}
 	j.draw(1)
 }

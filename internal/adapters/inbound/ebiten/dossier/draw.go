@@ -17,14 +17,11 @@ const (
 	tipDelay  = 20 // Updates the cursor rests before the card shows
 )
 
-// gearRect is the settings button: the lower right corner docked, the upper
-// right floating.
-func gearRect(r gfx.Rect, docked bool) gfx.Rect {
-	g := gfx.Rect{X: r.Right() - gearSize - gearInset, Y: r.Y + gearInset, W: gearSize, H: gearSize}
-	if docked {
-		g.Y = r.Bottom() - gearSize - gearInset
-	}
-	return g
+// gearRect is the settings button in the card's upper right corner, docked or
+// floating: there the first row's text, aligned left, leaves room, and no
+// right-aligned value sits under it.
+func gearRect(r gfx.Rect) gfx.Rect {
+	return gfx.Rect{X: r.Right() - gearSize - gearInset, Y: r.Y + gearInset, W: gearSize, H: gearSize}
 }
 
 // live reports the kit takes input for the layer the card is declared in.
@@ -46,7 +43,7 @@ func (p *Panel) prepare(r gfx.Rect, docked bool) (*layout, config.HUD) {
 	if p.timer.asked {
 		defer func(at time.Time) { p.timer.prepareMS = settle(p.timer.prepareMS, sinceMS(at)) }(time.Now())
 	}
-	hud := p.pf.Settings().HUD
+	hud := p.hud()
 	if !p.sync(hud) {
 		return nil, hud
 	}
@@ -67,7 +64,7 @@ func (p *Panel) declare(r gfx.Rect, docked bool) {
 	live := p.live()
 	mx, my := p.sz.Cursor()
 	over := live && r.Hit(mx, my)
-	gear := gearRect(r, docked)
+	gear := gearRect(r)
 	// The gear takes its press before any widget under it can see it.
 	showGear := over && gear.Hit(mx, my) && k.Press(gear)
 	if showGear {
@@ -127,7 +124,7 @@ func (p *Panel) draw(dst *ebiten.Image, r gfx.Rect, docked bool) {
 	}
 	mx, my := p.sz.Cursor()
 	if r.Hit(mx, my) && p.live() {
-		p.drawGear(dst, gearRect(r, docked))
+		p.drawGear(dst, gearRect(r))
 	}
 }
 

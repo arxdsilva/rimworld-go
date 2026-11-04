@@ -131,11 +131,16 @@ func TestDecodeClampsSizes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.DockH != 188 || p.DockTabs != 12 || p.FloatW != 1000 || p.DockW != 72 {
+	if p.DockH != config.HUDPaneMinH || p.DockTabs != 12 || p.FloatW != 1000 || p.DockW != 72 {
 		t.Errorf("sizes %+v", p)
 	}
-	if p.Text.BodySize != 20 || p.Text.LabelW != 30 || p.Text.SmallDelta != -5 || p.Text.BodyLinePct != 100 {
+	if p.Text.BodySize != 20 || p.Text.LabelW != 30 || p.Text.SmallDelta != -5 || p.Text.BodyLinePct != config.HUDLineMinPct {
 		t.Errorf("text %+v", p.Text)
+	}
+	// a file from before the compact pane: its tall pane comes down to the most
+	tall, err := DecodePreset([]byte(`{"version":1,"name":"x","dock_h":480}`))
+	if err != nil || tall.DockH != config.HUDPaneMaxH {
+		t.Errorf("a 480 pane loads as %d (%v), want %d", tall.DockH, err, config.HUDPaneMaxH)
 	}
 	if IsOlder(p) {
 		t.Error("current version is not older")

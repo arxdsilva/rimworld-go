@@ -25,7 +25,10 @@ import (
 // the next start detects the hardware tier.
 // Version 7 added Telemetry; Normalize turns detailed usage data on for
 // anything older.
-const SettingsVersion = 8 // 8: the colonist card (RHUD); its fields decode over the defaults
+// Version 8 added the colonist card (RHUD); its fields decode over the defaults.
+// Version 9 made its docked pane compact (at most 30 % of the screen);
+// Normalize moves the values still at the old defaults.
+const SettingsVersion = 9
 
 // MaxLearnedLessons caps the learning helper's done list.
 const MaxLearnedLessons = 64
@@ -199,7 +202,7 @@ func Defaults() Settings {
 	return Settings{
 		Version: SettingsVersion,
 		Audio:   Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
-		Graphics: Graphics{VSync: false, FrameCap: FrameCapDefault, Effects: EffectsFull, HiDPI: true, Quality: QualityHigh,
+		Graphics: Graphics{VSync: true, FrameCap: FrameCapDefault, Effects: EffectsFull, HiDPI: true, Quality: QualityHigh,
 			Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, RenderScale: 1},
 		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100, ShowLearningHelper: true, ShowColonistBar: true},
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
@@ -236,6 +239,12 @@ func (s Settings) Normalize() Settings {
 	}
 	if s.Version < 7 { // before usage data: no switch, on by default
 		s.Telemetry.Advanced = true
+	}
+	if s.Version < 9 { // before the compact pane and PERF-003: VSync is on by default again (the display paces the frames; an external display in a scaled mode panicked the Mac with the client pacing them), unless off was the player's own choice
+		s.HUD = s.HUD.compactDocked()
+		if !contains(s.Graphics.Chosen, "vsync") {
+			s.Graphics.VSync = true
+		}
 	}
 	s.Version = SettingsVersion
 	s.HUD = s.HUD.normalize()

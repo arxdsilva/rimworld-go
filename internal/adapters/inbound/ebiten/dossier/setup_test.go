@@ -296,3 +296,17 @@ func TestSetupBodiesDrawInsideTheFrame(t *testing.T) {
 		}
 	}
 }
+
+// The pane height reads as its share of the screen with the tabs: the most a
+// player can set is 30 %.
+func TestPaneHeightShowsItsShare(t *testing.T) {
+	for v, want := range map[int]string{
+		config.HUDPaneMaxH: "192 (30% of the screen)",
+		168:                "168 (27% of the screen)",
+		config.HUDPaneMinH: "120 (20% of the screen)",
+	} {
+		if got := paneShare(v); got != want {
+			t.Errorf("%d: %q, want %q", v, got, want)
+		}
+	}
+}

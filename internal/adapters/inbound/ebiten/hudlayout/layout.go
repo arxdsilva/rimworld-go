@@ -17,6 +17,8 @@ const (
 	PaneH     = 188
 	PaneTabsH = 24  // its tabs, just above it
 	CardMinH  = 100 // the floating card never shrinks below this
+	// CardPaneMinH is the docked card's shortest pane (config.HUDPaneMinH).
+	CardPaneMinH = 120
 
 	ExpandMinW = 400 // an inspector tab's panel, opened above the pane tabs
 	ExpandMaxW = 560
@@ -24,6 +26,8 @@ const (
 	CmdCell    = 64 // a command button
 	CmdStride  = 68 // cell + gap
 	CmdMaxRows = 4
+	// CmdReserveCols are the command columns a wide card pane leaves free.
+	CmdReserveCols = 5
 
 	RightW      = 232 // the right column: learning helper, alerts, letters, global controls
 	MinimapSize = 180
@@ -347,15 +351,18 @@ func Compute(sw, sh int, st Inputs) Layout {
 }
 
 // paneSize is the pane's size: today's constants unless the card asks for
-// others, never past the right column (rx) or the room above the tab strip
-// (room, measured from the colonist bar's bottom to the strip).
+// others. The card's pane leaves CmdReserveCols command columns before the
+// right column (rx) unless that makes it narrower than PaneW, never passes
+// the right column, and never the room above the tab strip (room, measured
+// from the colonist bar's bottom to the strip) unless that is under
+// CardPaneMinH.
 func paneSize(st Inputs, rx, room float32) (w, h float32) {
 	w, h = PaneW, PaneH
 	if st.PaneW > 0 {
-		w = min(st.PaneW, rx-HudMargin)
+		w = min(st.PaneW, max(PaneW, rx-HudMargin-CmdReserveCols*CmdStride), rx-HudMargin)
 	}
 	if st.PaneH > 0 {
-		h = max(PaneH, min(st.PaneH, room-HudMargin-PaneTabsH))
+		h = max(CardPaneMinH, min(st.PaneH, room-HudMargin-PaneTabsH))
 	}
 	return w, h
 }

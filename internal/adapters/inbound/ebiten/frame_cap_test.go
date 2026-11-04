@@ -14,6 +14,7 @@ import (
 func cappedColony(t *testing.T) (*App, *time.Time, *[]time.Duration) {
 	t.Helper()
 	a, _, _, _ := bgColony(t)
+	a.settings.Graphics.VSync = false // on by default since PERF-003; the cap paces only without it
 	clock := time.Unix(1000, 0)
 	a.now = func() time.Time { return clock }
 	var slept []time.Duration
@@ -27,8 +28,8 @@ func cappedColony(t *testing.T) (*App, *time.Time, *[]time.Duration) {
 func TestFrameCapPacesDraws(t *testing.T) {
 	t.Parallel()
 	a, clock, slept := cappedColony(t)
-	if g := a.settings.Graphics; g.VSync || g.FrameCap != config.FrameCapDefault {
-		t.Fatalf("defaults: vsync %v cap %d, want off and %d", g.VSync, g.FrameCap, config.FrameCapDefault)
+	if g := a.settings.Graphics; g.FrameCap != config.FrameCapDefault {
+		t.Fatalf("default cap %d, want %d", g.FrameCap, config.FrameCapDefault)
 	}
 	gap := time.Second / time.Duration(config.FrameCapDefault)
 
@@ -88,6 +89,7 @@ func TestFrameCapMenuStaysAtSixty(t *testing.T) {
 	t.Parallel()
 	menu := testApp(&stubSim{w: 4, h: 4})
 	menu.finishBoot()
+	menu.settings.Graphics.VSync = false // on by default since PERF-003: the display paces
 	for _, cap := range []int{0, 120, 144} {
 		menu.settings.Graphics.FrameCap = cap
 		if got := menu.frameCapGap(); got != menuDrawGap {

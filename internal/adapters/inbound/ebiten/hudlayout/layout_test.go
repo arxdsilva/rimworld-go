@@ -152,3 +152,57 @@ func TestLettersAvoidTheCard(t *testing.T) {
 		t.Fatal("a card away from the column moved the letters")
 	}
 }
+
+// The compact card's pane (RHUD-003, 004): as wide as its tabs while five
+// command columns stay free, never narrower than the plain pane, never under
+// the right column; as tall as asked, never under CardPaneMinH. The eight
+// commands of a colonist wrap to two rows beside it and never meet it.
+func TestCardPaneLeavesCommandRoom(t *testing.T) {
+	cases := []struct {
+		sw, sh       int
+		paneW, paneH float32
+		wantW, wantH float32
+		cols         int
+	}{
+		{1288, 724, 576, 168, 576, 168, 6},
+		{1280, 720, 576, 168, 576, 168, 6},
+		{1024, 768, 624, 179, 436, 179, 4},
+		{1920, 1080, 864, 252, 864, 252, 11},
+		{853, 480, 432, 141, 400, 141, 0}, // UI scale 1.5: the plain pane's width is the least
+	}
+	for _, c := range cases {
+		l := Compute(c.sw, c.sh, Inputs{Colonists: 3, PaneShown: true, Commands: 8, PaneW: c.paneW, PaneH: c.paneH, GlobalH: 60})
+		if l.Pane.W != c.wantW || l.Pane.H != c.wantH {
+			t.Errorf("%dx%d: pane %+v, want %v x %v", c.sw, c.sh, l.Pane, c.wantW, c.wantH)
+		}
+		if l.Pane.Right() > l.Right.X-HudMargin {
+			t.Errorf("%dx%d: pane %+v reaches the right column at %v", c.sw, c.sh, l.Pane, l.Right.X)
+		}
+		if (l.Pane.H+PaneTabsH)*100 > float32(c.sh)*30 && c.sh >= 550 {
+			t.Errorf("%dx%d: pane and tabs %v tall, more than 30 %%", c.sw, c.sh, l.Pane.H+PaneTabsH)
+		}
+		if c.cols == 0 {
+			continue
+		}
+		if l.GridCols != c.cols || len(l.GridCells) != 8 {
+			t.Errorf("%dx%d: %d columns, %d cells, want %d and 8", c.sw, c.sh, l.GridCols, len(l.GridCells), c.cols)
+		}
+		rows := map[float32]bool{}
+		for _, g := range l.GridCells {
+			rows[g.Y] = true
+			if g.X < l.Pane.Right() && g.Y < l.Pane.Bottom() && g.Bottom() > l.PaneTabs.Y {
+				t.Errorf("%dx%d: command %+v meets the pane %+v", c.sw, c.sh, g, l.Pane)
+			}
+		}
+		if want := (8 + c.cols - 1) / c.cols; len(rows) != want {
+			t.Errorf("%dx%d: %d command rows, want %d", c.sw, c.sh, len(rows), want)
+		}
+	}
+	// a short card pane is never under CardPaneMinH; the plain pane is unchanged
+	if l := Compute(1280, 720, Inputs{PaneShown: true, PaneW: 576, PaneH: 90}); l.Pane.H != CardPaneMinH {
+		t.Errorf("a 90 card pane: %+v", l.Pane)
+	}
+	if l := Compute(1280, 720, Inputs{PaneShown: true}); l.Pane.W != PaneW || l.Pane.H != PaneH {
+		t.Errorf("the plain pane: %+v", l.Pane)
+	}
+}

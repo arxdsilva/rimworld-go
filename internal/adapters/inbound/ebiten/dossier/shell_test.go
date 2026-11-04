@@ -46,6 +46,7 @@ type fakeShell struct {
 	setups      int
 
 	mx, my int
+	sw, sh int // the logical screen
 	n      uint64
 	f      inputframe.Frame
 	kit    *uikit.Kit
@@ -54,7 +55,7 @@ type fakeShell struct {
 
 func newShell(t *testing.T) *fakeShell {
 	t.Helper()
-	s := &fakeShell{t: t, set: config.Defaults(), hour: 14}
+	s := &fakeShell{t: t, set: config.Defaults(), hour: 14, sw: 1280, sh: 720}
 	s.set.HUD.Enabled = true
 	s.pawn = game.PawnView{ID: 7, Name: "Bo", Health: 80, Mood: 60, Hunger: 40, Rest: 70, Recreation: 50,
 		FoodPolicy: "Plain", Sex: "male", AgeYears: 31}
@@ -95,7 +96,7 @@ func (s *fakeShell) Hint(h string) { s.hints = append(s.hints, h) }
 func (s *fakeShell) Settings() config.Settings     { return s.set }
 func (s *fakeShell) SetSettings(c config.Settings) { s.set = c }
 
-func (s *fakeShell) Size() (int, int)      { return 1280, 720 }
+func (s *fakeShell) Size() (int, int)      { return s.sw, s.sh }
 func (s *fakeShell) Cursor() (int, int)    { return s.mx, s.my }
 func (s *fakeShell) MapCursor() (int, int) { return s.mx, s.my }
 func (s *fakeShell) MapScale() float64     { return 1 }

@@ -26,3 +26,7 @@ The colonist card (RHUD, `.cursor/RIMHUD_GAP_ANALYSIS.md`): a player-edited tree
 ## Test Requirements
 - `panel_test.go`, `setup_test.go`, `setup_editor_test.go` over the fakes in `shell_test.go`; `bench_test.go` for the card's frame cost. Journeys in the root: `journey_dossier*_test.go`.
 - `sheet/rows_test.go` holds `TestEveryRHUDRowIsClassified`: the gap document's rows, counts and widget key list must agree with the code.
+
+## Docked size (DOS-10)
+
+The docked card never scrolls. `config.HUDPane.Height` (120..192), `TabW` and the text widths are measures on a 720-tall logical screen; `sheet.DockedFor(hud, sh)` fits them to the real one (`CardHUD()` in the root's `dossier_compat.go` and the panel's `hud()`), so pane and tabs take at most 30 % of the screen's height (168 + 24 at 720, 252 + 24 at 1080) and the text grows with it; under 720 the text shrinks to 9 pt before the pane passes 30 %. The setup window reads the raw values. The built-in docked tree (`sheet.DefaultDocked`) is two lines, a rule and a four-column strip (bars; selectors and state; two skill columns; training for animals): 8 rows at the default text. A saved layout taller than the card warns once (`layout.go`) and hides its last rows; the floating card keeps the player's own size.

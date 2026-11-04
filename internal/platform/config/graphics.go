@@ -39,8 +39,11 @@ var GrassLevels = []string{GrassFull, GrassReduced, GrassSparse}
 var RenderScales = []float64{1, 0.75, 0.5}
 
 // FrameCapDefault is the frame cap every preset sets (PERF-002, user
-// decision): 120 fps on every display, with VSync off, so a slow or
-// occluded screen's refresh never paces the game loop.
+// decision): 120 fps on every display while VSync is off. VSync is on by
+// default since PERF-003 (user decision, 2026-11-04): with the client
+// pacing the frames, an external display in a scaled mode panicked the
+// Mac three times; with VSync off the cap keeps a slow or occluded
+// screen's refresh from pacing the game loop.
 const FrameCapDefault = 120
 
 // FrameCaps is the Frame cap row's cycle; 0 is no cap.
@@ -109,9 +112,9 @@ func (g *Graphics) Choose(key string) {
 
 // MarkChosenFromOldDefaults treats every row a settings file from before
 // PLAY-019 had changed from that version's defaults (full effects, HiDPI
-// on) as the player's choice. VSync is not read: it is off by default
-// since PERF-002 and Normalize already turned it off for such a file, so
-// off no longer tells a choice from the migration.
+// on) as the player's choice. VSync is not read: Normalize sets it for
+// such a file (off since PERF-002, on again since PERF-003), so its value
+// no longer tells a choice from the migration.
 func (g *Graphics) MarkChosenFromOldDefaults() {
 	if g.Effects != EffectsFull {
 		g.Chosen = appendNew(g.Chosen, "effects")
@@ -135,17 +138,17 @@ func (g Graphics) matches(p Graphics) bool {
 func presetFor(tier string, devScale float64) Graphics {
 	switch tier {
 	case QualityLow:
-		return Graphics{Effects: EffectsMinimal, Water: WaterSimple, Grass: GrassSparse, FrameCap: FrameCapDefault, RenderScale: 1}
+		return Graphics{Effects: EffectsMinimal, Water: WaterSimple, Grass: GrassSparse, VSync: true, FrameCap: FrameCapDefault, RenderScale: 1}
 	case QualityMedium:
 		rs := 1.0
 		if devScale >= 2 {
 			rs = 0.75
 		}
 		return Graphics{Effects: EffectsReduced, Shadows: true, Lighting: true, Water: WaterSimple, Grass: GrassReduced,
-			HiDPI: devScale <= 2, FrameCap: FrameCapDefault, RenderScale: rs}
+			HiDPI: devScale <= 2, VSync: true, FrameCap: FrameCapDefault, RenderScale: rs}
 	}
 	return Graphics{Effects: EffectsFull, Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, HiDPI: true,
-		FrameCap: FrameCapDefault, RenderScale: 1}
+		VSync: true, FrameCap: FrameCapDefault, RenderScale: 1}
 }
 
 func appendNew(xs []string, x string) []string {

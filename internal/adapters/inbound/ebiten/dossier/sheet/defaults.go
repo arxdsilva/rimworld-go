@@ -34,38 +34,65 @@ func barsColumn() config.HUDNode {
 		widget("rest_bar"), widgetFor("fun_bar", "c"))
 }
 
-func rightColumn(withHauling bool) config.HUDNode {
-	kids := []config.HUDNode{widgetFor("area_pick", "cp"), widgetFor("hour_pick", "c"), widgetFor("diet_pick", "cp"),
-		widget("doing"), widgetFor("next_up", "c"), widgetFor("in_hand", "cs"), widgetFor("keeper", "p")}
-	if withHauling {
-		kids = append(kids, widgetFor("hauling", "cs"))
-	}
-	return box(KindColumn, kids...)
+// rightColumn is the floating card's state column.
+func rightColumn() config.HUDNode {
+	return box(KindColumn, widgetFor("area_pick", "cp"), widgetFor("hour_pick", "c"), widgetFor("diet_pick", "cp"),
+		widget("doing"), widgetFor("next_up", "c"), widgetFor("in_hand", "cs"), widgetFor("keeper", "p"),
+		widgetFor("hauling", "cs"))
 }
 
 func fill(n config.HUDNode) config.HUDNode { n.Fill = true; return n }
 
-// DefaultDocked is the built-in arrangement for the inspect pane (the pane
-// header already carries the name). Pruned for a target it stays within 300
-// pixels at the default text size.
-func DefaultDocked() config.HUDNode {
-	return fill(box(KindColumn,
-		widget("standing"), widget("identity"), widget("body_state"), widgetFor("mind_state", "cs"),
-		widget("rule"),
-		box(KindStrip, barsColumn(), rightColumn(false)),
-		widgetFor("captive", "s"),
-		widget("rule"),
-		skillBlock(), trainRows()))
+// compactRight is the docked card's state column: the selectors, what the
+// creature does and holds, its master and its captivity. Each row is for the
+// targets that can fill it, so no target gets more than six.
+func compactRight() config.HUDNode {
+	return box(KindColumn, widgetFor("area_pick", "cp"), widgetFor("hour_pick", "c"), widgetFor("diet_pick", "cp"),
+		widget("doing"), widgetFor("next_up", "c"), widgetFor("in_hand", "cs"), widgetFor("keeper", "p"),
+		widgetFor("captive", "s"))
 }
 
-// DefaultFloating is the built-in arrangement for the floating card: the
-// docked rows with the name on top, hauling, traits, records and notes.
+// skillColumns are the eleven skills and the work speed as two columns of six.
+func skillColumns() (a, b config.HUDNode) {
+	return boxFor(KindColumn, "c", generic("skill", "shooting"), generic("skill", "construction"),
+			generic("skill", "cooking"), generic("skill", "animals"), generic("skill", "medicine"),
+			generic("skill", "intellectual")),
+		boxFor(KindColumn, "c", generic("skill", "melee"), generic("skill", "mining"), generic("skill", "plants"),
+			generic("skill", "crafting"), generic("skill", "social"), generic("stat", "work_speed"))
+}
+
+// DefaultDocked is the built-in arrangement for the inspect pane (the pane
+// header already carries the name): two lines of who and how, a rule, and one
+// strip of columns (needs, state, skills, training). Pruned for any target it is
+// eight rows and a rule tall, 132 pixels at the default text.
+func DefaultDocked() config.HUDNode {
+	skillsA, skillsB := skillColumns()
+	return fill(box(KindColumn,
+		box(KindLine, widget("standing"), widget("identity")),
+		box(KindLine, widget("body_state"), widgetFor("mind_state", "cs")),
+		widget("rule"),
+		box(KindStrip, barsColumn(), compactRight(), skillsA, skillsB, trainRows())))
+}
+
+// roomyDocked is the docked tree with every row for every target, but for the
+// state column: its rows each fit one kind of target, and without their filters
+// they would pass the pane's height.
+func roomyDocked() config.HUDNode {
+	n := everyTarget(DefaultDocked())
+	strip := &n.Kids[len(n.Kids)-1]
+	strip.Kids[1] = compactRight()
+	return n
+}
+
+// DefaultFloating is the built-in arrangement for the floating card: the name
+// on top, the docked card's rows in a taller order, hauling, traits, records and
+// notes.
 func DefaultFloating() config.HUDNode {
 	return fill(box(KindColumn,
 		widget("title"),
 		widget("standing"), widget("identity"), widget("body_state"), widgetFor("mind_state", "cs"),
 		widget("rule"),
-		box(KindStrip, barsColumn(), rightColumn(true)),
+		box(KindStrip, barsColumn(), rightColumn()),
 		widgetFor("captive", "s"),
 		widget("rule"),
 		skillBlock(), trainRows(),

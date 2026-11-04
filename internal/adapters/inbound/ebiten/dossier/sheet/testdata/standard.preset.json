@@ -5,17 +5,27 @@
     "k": "column",
     "c": [
       {
-        "k": "standing"
+        "k": "line",
+        "c": [
+          {
+            "k": "standing"
+          },
+          {
+            "k": "identity"
+          }
+        ]
       },
       {
-        "k": "identity"
-      },
-      {
-        "k": "body_state"
-      },
-      {
-        "k": "mind_state",
-        "who": "cs"
+        "k": "line",
+        "c": [
+          {
+            "k": "body_state"
+          },
+          {
+            "k": "mind_state",
+            "who": "cs"
+          }
+        ]
       },
       {
         "k": "rule"
@@ -74,23 +84,15 @@
               {
                 "k": "keeper",
                 "who": "p"
+              },
+              {
+                "k": "captive",
+                "who": "s"
               }
             ]
-          }
-        ]
-      },
-      {
-        "k": "captive",
-        "who": "s"
-      },
-      {
-        "k": "rule"
-      },
-      {
-        "k": "block",
-        "c": [
+          },
           {
-            "k": "line",
+            "k": "column",
             "c": [
               {
                 "k": "skill",
@@ -98,95 +100,76 @@
               },
               {
                 "k": "skill",
-                "def": "melee"
-              }
-            ]
-          },
-          {
-            "k": "line",
-            "c": [
-              {
-                "k": "skill",
                 "def": "construction"
               },
-              {
-                "k": "skill",
-                "def": "mining"
-              }
-            ]
-          },
-          {
-            "k": "line",
-            "c": [
               {
                 "k": "skill",
                 "def": "cooking"
               },
               {
                 "k": "skill",
-                "def": "plants"
-              }
-            ]
-          },
-          {
-            "k": "line",
-            "c": [
-              {
-                "k": "skill",
                 "def": "animals"
               },
-              {
-                "k": "skill",
-                "def": "crafting"
-              }
-            ]
-          },
-          {
-            "k": "line",
-            "c": [
               {
                 "k": "skill",
                 "def": "medicine"
               },
               {
                 "k": "skill",
-                "def": "social"
+                "def": "intellectual"
               }
-            ]
+            ],
+            "who": "c"
           },
           {
-            "k": "line",
+            "k": "column",
             "c": [
               {
                 "k": "skill",
-                "def": "intellectual"
+                "def": "melee"
+              },
+              {
+                "k": "skill",
+                "def": "mining"
+              },
+              {
+                "k": "skill",
+                "def": "plants"
+              },
+              {
+                "k": "skill",
+                "def": "crafting"
+              },
+              {
+                "k": "skill",
+                "def": "social"
               },
               {
                 "k": "stat",
                 "def": "work_speed"
               }
-            ]
-          }
-        ],
-        "who": "c"
-      },
-      {
-        "k": "column",
-        "c": [
-          {
-            "k": "train",
-            "def": "obedience"
+            ],
+            "who": "c"
           },
           {
-            "k": "train",
-            "def": "guard"
-          },
-          {
-            "k": "train",
-            "def": "release"
+            "k": "column",
+            "c": [
+              {
+                "k": "train",
+                "def": "obedience"
+              },
+              {
+                "k": "train",
+                "def": "guard"
+              },
+              {
+                "k": "train",
+                "def": "release"
+              }
+            ],
+            "who": "p"
           }
-        ],
-        "who": "p"
+        ]
       }
     ],
     "fill": true
@@ -409,19 +392,20 @@
     ],
     "fill": true
   },
-  "dock_h": 360,
+  "dock_w": 96,
+  "dock_h": 168,
   "dock_tabs": 6,
   "float_w": 400,
   "float_h": 460,
   "text": {
     "body_size": 12,
-    "body_line_pct": 100,
+    "body_line_pct": 89,
     "large_delta": 4,
     "large_line_pct": 100,
     "small_delta": -2,
     "small_line_pct": 100,
     "label_w": 100,
-    "value_w": 60,
+    "value_w": 36,
     "decimals": false
   }
 }

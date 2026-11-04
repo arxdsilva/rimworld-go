@@ -3,6 +3,7 @@ package inspector
 import (
 	"testing"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -70,5 +71,21 @@ func TestTabsOpenCollapseAndRefuse(t *testing.T) {
 	p.SelectPaneTab("inspector.needs") // the open tab collapses
 	if p.PaneOpenTab() != "" || p.Tab != "character" || p.ClosePaneTab() {
 		t.Fatalf("not collapsed: %q %q", p.PaneOpenTab(), p.Tab)
+	}
+}
+
+// The compact card (RHUD-003) takes the pane less its name row and a 2 px edge:
+// 34 px in all, the margin dossier/sheet.DockMargin counts. Other panes keep the
+// gap under the name and their bottom edge.
+func TestCardBodyMargins(t *testing.T) {
+	p := gfx.Rect{X: 0, Y: 500, W: 576, H: 168}
+	g := PaneLayout(p, Spec{Title: "Bo", Card: true, Restyled: true})
+	top := float32(paneTop) + gfx.LineStep(gfx.Large)
+	if g.Card.Y != p.Y+top || g.Card.Bottom() != p.Bottom()-paneCardBottom || p.H-g.Card.H != 34 {
+		t.Fatalf("card body %+v in pane %+v: margin %v, want 34", g.Card, p, p.H-g.Card.H)
+	}
+	plain := PaneLayout(p, Spec{Title: "Bo", Lines: []string{"a line"}})
+	if plain.Body.Y != p.Y+top+6 || plain.Body.Bottom() != p.Bottom()-paneChipGap {
+		t.Fatalf("the plain body moved: %+v", plain.Body)
 	}
 }

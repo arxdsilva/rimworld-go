@@ -55,6 +55,31 @@ func (p *Panel) tree(hud config.HUD, docked bool) config.HUDNode {
 // droppedLayoutKey marks the too-big warning as given (no element has this key).
 const droppedLayoutKey = "\x00dropped"
 
+// tooTallDocked and tooTallFloating mark the warning that the layout is taller
+// than the card, one for each mode.
+const (
+	tooTallDocked   = "\x00tall.docked"
+	tooTallFloating = "\x00tall.floating"
+)
+
+// warnTooTall says once that the rows past the card's bottom are hidden (the
+// card draws only what fits).
+func (p *Panel) warnTooTall(docked bool) {
+	key := tooTallFloating
+	if docked {
+		key = tooTallDocked
+	}
+	if p.warned[key] {
+		return
+	}
+	p.warned[key] = true
+	if docked {
+		p.a.Hint("The card's layout doesn't fit the pane, so its last rows are hidden. Use the floating card or reset the card to default.")
+		return
+	}
+	p.a.Hint("The card's layout doesn't fit the card, so its last rows are hidden. Make the card taller or reset it to default.")
+}
+
 // warnBadLayout says once what is wrong with a stored tree (RHUD-057). The card
 // still draws it: what it can't read shows as a marker. An unknown element has
 // its own warning, warnUnknown, with its name.
@@ -83,6 +108,9 @@ func (p *Panel) layoutFor(hud config.HUD, docked bool, w, h float32) *layout {
 	b.place(root, 0, 0, w, h)
 	l.items = b.items
 	l.height = sheet.MeasureWith(root, b.m, 0, b.empty)
+	if l.height > h+0.5 {
+		p.warnTooTall(docked)
+	}
 	prefix := "dossier.f."
 	if docked {
 		prefix = "dossier.d."

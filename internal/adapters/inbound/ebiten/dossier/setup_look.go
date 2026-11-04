@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
@@ -174,6 +175,12 @@ func (s *Setup) lookCard(f *uikit.Form, h config.HUD) {
 	f.Gap(6)
 }
 
+// paneShare reads a pane height as the share of the screen the pane and its
+// tabs take (the height is set for a 720-tall screen).
+func paneShare(v int) string {
+	return fmt.Sprintf("%d (%d%% of the screen)", v, ((v+sheet.DockTabsH)*100+sheet.DockRefH/2)/sheet.DockRefH)
+}
+
 func noRestyle(h config.HUD) string {
 	if !h.Pane.Restyle {
 		return whyNoRestyle
@@ -187,8 +194,10 @@ func (s *Setup) lookPane(f *uikit.Form, h config.HUD) {
 	if heightOff == "" && !h.Docked {
 		heightOff = whyFloating
 	}
-	s.number(f, numSpec{id: "height", label: "Pane height", lo: 188, hi: 800, off: heightOff,
-		tip: "How tall the pane is while it holds the card. A small screen shortens it to fit."},
+	s.number(f, numSpec{id: "height", label: "Pane height", lo: config.HUDPaneMinH, hi: config.HUDPaneMaxH, off: heightOff,
+		format: paneShare,
+		tip: "How tall the pane is while it holds the card, on a 720-tall screen; a taller screen grows it in step. " +
+			"With its tabs it takes at most 30% of the screen."},
 		func(h *config.HUD) *int { return &h.Pane.Height }, h)
 	s.number(f, numSpec{id: "mintabs", label: "Tabs kept in view", lo: 6, hi: 12, off: noRestyle(h),
 		tip: "The pane is at least this many tabs wide."},
@@ -289,15 +298,15 @@ func (s *Setup) lookText(f *uikit.Form, h config.HUD) {
 	size := func(v int) string { return fmt.Sprintf("%+d", v) }
 	s.number(f, numSpec{id: "body", label: "Text size", lo: 7, hi: 20, tip: "The size of the card's ordinary text."},
 		func(h *config.HUD) *int { return &h.Text.BodySize }, h)
-	s.number(f, numSpec{id: "bodyline", label: "Text line height", lo: 100, hi: 250, format: pct, tip: "Space for each line of ordinary text."},
+	s.number(f, numSpec{id: "bodyline", label: "Text line height", lo: config.HUDLineMinPct, hi: 250, format: pct, tip: "Space for each line of ordinary text."},
 		func(h *config.HUD) *int { return &h.Text.BodyLinePct }, h)
 	s.number(f, numSpec{id: "large", label: "Name size", lo: 0, hi: 24, format: size, tip: "How much bigger than the text the name is."},
 		func(h *config.HUD) *int { return &h.Text.LargeDelta }, h)
-	s.number(f, numSpec{id: "largeline", label: "Name line height", lo: 100, hi: 250, format: pct, tip: "Space for the name's line."},
+	s.number(f, numSpec{id: "largeline", label: "Name line height", lo: config.HUDLineMinPct, hi: 250, format: pct, tip: "Space for the name's line."},
 		func(h *config.HUD) *int { return &h.Text.LargeLinePct }, h)
 	s.number(f, numSpec{id: "small", label: "Small text size", lo: -5, hi: 0, format: size, tip: "How much smaller than the text the small print is."},
 		func(h *config.HUD) *int { return &h.Text.SmallDelta }, h)
-	s.number(f, numSpec{id: "smallline", label: "Small text line height", lo: 100, hi: 250, format: pct, tip: "Space for each line of small print."},
+	s.number(f, numSpec{id: "smallline", label: "Small text line height", lo: config.HUDLineMinPct, hi: 250, format: pct, tip: "Space for each line of small print."},
 		func(h *config.HUD) *int { return &h.Text.SmallLinePct }, h)
 	s.number(f, numSpec{id: "labelw", label: "Label column width", lo: 30, hi: 150, tip: "Width kept for the names of needs, skills and stats."},
 		func(h *config.HUD) *int { return &h.Text.LabelW }, h)
