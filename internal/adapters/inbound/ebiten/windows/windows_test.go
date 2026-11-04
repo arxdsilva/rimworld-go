@@ -169,3 +169,28 @@ func TestHandDrawnWindowsButtonsAndClicks(t *testing.T) {
 		t.Fatalf("command fields %+v", sh.cmds)
 	}
 }
+
+// TestWorkSlotsCoverEveryType: each work.Type has exactly one slot in
+// work.Order, and the columns sit where a colonist breaks ties.
+func TestWorkSlotsCoverEveryType(t *testing.T) {
+	t.Parallel()
+	seen := map[int]work.Type{}
+	for ty := work.Type(0); ty < work.NumTypes; ty++ {
+		s := workSlot(int(ty))
+		if s < 0 || s >= int(work.NumTypes) || work.Order[s] != ty {
+			t.Fatalf("type %d has slot %d, Order %v", ty, s, work.Order)
+		}
+		if prev, dup := seen[s]; dup {
+			t.Fatalf("types %d and %d share slot %d", prev, ty, s)
+		}
+		seen[s] = ty
+	}
+	if len(work.Order) != int(work.NumTypes) || len(WorkColumns) != int(work.NumTypes) {
+		t.Fatalf("Order %d, columns %d, types %d", len(work.Order), len(WorkColumns), work.NumTypes)
+	}
+	r := uikit.Button{X: 10, Y: 10, W: 900, H: 400}
+	x := func(ty work.Type) float32 { return WorkCellRect(r, 0, int(ty)).X }
+	if !(x(work.Grow) < x(work.Haul) && x(work.Clean) < x(work.Research)) {
+		t.Fatalf("Grow %v Haul %v Clean %v Research %v", x(work.Grow), x(work.Haul), x(work.Clean), x(work.Research))
+	}
+}

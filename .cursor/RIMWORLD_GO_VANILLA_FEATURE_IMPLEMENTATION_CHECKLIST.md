@@ -383,7 +383,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.3 Work settings
 
--   [-] **Work types** (Haul/Construct/Grow wired; other columns are UI stubs; PLAY-020: bed rest is a per-colonist "Rest when hurt" setting, on by default, not a work column)
+-   [-] **Work types** (14 live types, ties in the wiki's order: WRK-001; PLAY-020: bed rest is a per-colonist "Rest when hurt" setting, on by default, not a work column; no patient or basic column, smith and tailor inside Craft, no art: WRK-101, WRK-102)
     -   Firefight.
     -   Patient.
     -   Doctor.
@@ -405,12 +405,12 @@ This is the heart of autonomous colony behavior.
     -   Research.
 -   [-] **Simple work enable/disable** (`SetWorkEnabled` for Haul/Construct/Grow)
     -   Pawn either performs a work type or does not.
--   [x] **Manual priorities** (per-colonist 1-4 or off per work type; AI tries priority 1 work first; ties follow work.Order)
+-   [x] **Manual priorities** (per-colonist 1-4 or off per work type; AI tries priority 1 work first; ties follow work.Order, the wiki's order and the Work tab's left to right: WRK-001, WRK-002)
     -   Multiple priority levels.
     -   Lower numeric priority means more urgent, equivalent to
         RimWorld's 1--4 behavior.
     -   Work-type ordering resolves equal priorities.
--   [ ] **Work capability display**
+-   [x] **Work capability display** (Work tab: skill level, passion, priority, incapable cells hatched with the reason)
     -   Skill level.
     -   passion.
     -   incapable work.
@@ -548,7 +548,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
 -   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
--   [x] **Harvest designation** (wild plants by order; PLAY-017: zone crops get the harvest mark when they ripen, and Cancel holds until the next ripening; Grow work type; HAUL-003: a colonist who finishes a harvest clears every ripe marked plant within 8 tiles before hauling)
+-   [x] **Harvest designation** (wild plants by order; PLAY-017: zone crops get the harvest mark when they ripen, and Cancel holds until the next ripening; zone plants are Grow work, wild plants Plant cut work (HRV-003); HAUL-003, HRV-001: a colonist who finishes a harvest clears every ripe marked plant within 8 tiles before any work but fire and doctoring; yield, waste and speed by Plants level follow the wiki: HRV-004..010)
 -   [x] **Hunt designation**
 -   [x] **Plan designation** (PLAY-012 UI-023: Plan / Remove plan paint visual layout marks with no gameplay effect; a mark clears when any building is finished on its tile; Plans button hides the overlay)
 -   [-] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))

@@ -2240,7 +2240,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] zones (stockpile paint food+wood; no grow-zone/home/allowed)
 -   [ ] stockpile settings
 -   [x] growing settings (PLAY-020)
--   [-] Work (overlay from snapshot; Grow/Bld/Haul toggle Y/-; not virtualized)
+-   [-] Work (overlay from snapshot; every live work type cycles 1-4 or off, columns left to right in the order a colonist breaks ties: `.cursor/WORK_PRIORITIES_GAP_ANALYSIS.md`; not virtualized)
 -   [ ] Schedule
 -   [-] Area Manager (SIM-046: create, rename, paint, assign; no delete or overlay)
 

@@ -39,7 +39,7 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - None. (The window mode and preset are per-session UI state.)
 
 ## Tests
-- 12 source files, 2 test files, 5 `Test*` functions; `fakeShell` (11 methods) and `fakeHost` (8 methods).
+- 12 source files, 2 test files, 6 `Test*` functions; `fakeShell` (11 methods) and `fakeHost` (8 methods).
 - Coverage 18.1 % (ARCH-005 row); the windows run mostly through the root journey tests.
 
 ## Benchmarks

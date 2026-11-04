@@ -540,7 +540,7 @@ interfaces.
     -   Name/portrait.
     -   relevant status.
     -   sortable.
--   [-] **Work-type columns** (Grow/Bld/Haul clickable Y/-; other columns `-`; ENG-003 Warden column, off by default; no patient/bed rest/basic/art/plant-cut columns)
+-   [-] **Work-type columns** (WRK-002: 14 live columns, left to right in the order a colonist breaks ties, each header with a hover card; Warden off by default; no patient, bed rest, basic or art columns, smith and tailor inside Craft: WRK-101, WRK-102)
     -   Firefight, patient, doctor, bed rest, basic, warden, handle,
         cook, hunt, construct, grow, mine, plant cut, craft categories,
         art, haul, clean, research.
@@ -548,15 +548,15 @@ interfaces.
     -   Tooltip explains work category.
 -   [-] **Simple priorities mode** (superseded by manual priorities; `SetWorkEnabled` still maps on/off to 3/off)
     -   Toggle work type on/off.
--   [x] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency)
+-   [-] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency; no drag painting yet: WRK-106)
     -   Priority values equivalent to 1--4.
     -   Click cycles values.
     -   Drag paints a priority across cells.
     -   Disabled/incapable cells are visually distinct.
--   [ ] **Skill/passions in cells**
+-   [x] **Skill/passions in cells** (skill level and passion glyph in each live cell, priority and skill in its hover card)
     -   Show relevant skill and passion in compact form without
         overwhelming the grid.
--   [ ] **Incapacity explanation**
+-   [x] **Incapacity explanation** (hatched cell, the hover names the backstory or trait)
     -   Hover reveals backstory/trait/health reason.
 
 ## 7.2 Scaling

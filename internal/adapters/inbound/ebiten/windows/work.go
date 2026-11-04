@@ -18,8 +18,9 @@ import (
 
 var WorkColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl", "Ward", "Cut"}
 
-// WorkLive maps live work columns (indexes into workColumns, which follow
-// work.Type order) to their command and pawn flag.
+// WorkLive maps live work columns (a column is a work.Type's index, which is
+// also its index in WorkColumns, WorkHelp and WorkColSkill) to their command
+// and pawn flag. Where a column is drawn is workSlot's business.
 var WorkLive = map[int]struct {
 	cmd command.WorkType
 	on  func(game.PawnView) bool
@@ -65,6 +66,9 @@ const (
 	workCellW = 46 // wide enough for the skill level, the priority and the passion glyph
 )
 
+// workHint is the header's one-line legend.
+const workHint = "1 = do first ... 4 = do last, - = never; ties: left first; click a cell to change"
+
 // WorkColSkill is the skill each work column trains and is paced by
 // (NG-1 §2.12); Firefighting, Hauling and Cleaning have none.
 var WorkColSkill = [...]struct {
@@ -88,18 +92,18 @@ var WorkColSkill = [...]struct {
 var WorkHelp = [...]string{
 	0:  "Firefighting\nBeat out fires inside the Home area and your allowed area. No skill.",
 	1:  "Doctor\nTend the wounded and the sick, and carry the downed to bed. Skill: Medicine.",
-	2:  "Growing\nSow and harvest crops, and cut grass. Skill: Plants.",
+	2:  "Growing\nSow and harvest crops in growing zones, and fell zone trees. Skill: Plants.",
 	3:  "Cooking\nCook meals at a stove or campfire and butcher animals. Skill: Cooking.",
-	4:  "Building\nBuild, deconstruct, repair, roof and smooth. Skill: Construction.",
+	4:  "Building\nBuild, deconstruct, repair, roof and smooth, and deliver materials to sites. Skill: Construction.",
 	5:  "Hunting\nHunt wild animals with a rifle, or a melee weapon. Skill: Shooting (Melee).",
-	6:  "Hauling\nCarry items to stockpiles, benches and frames. No skill.",
+	6:  "Hauling\nCarry items to stockpiles and frames, fill hoppers, refuel. No skill.",
 	7:  "Cleaning\nSweep dirt and filth off the Home area. No skill.",
 	8:  "Research\nStudy at a research bench. Skill: Intellectual.",
 	9:  "Mining\nDig out rock and ore. Skill: Mining.",
 	10: "Crafting\nWork at benches: workbench, tailoring, stonecutting. Skill: Crafting.",
 	11: "Handling\nTame, milk, shear and collect from animals. Skill: Animals.",
 	12: "Warden\nChat with prisoners, recruit them and bring them food. Off unless you turn it on. Skill: Social.",
-	13: "Plant cutting\nCut marked plants, fell marked trees and clear blight. Skill: Plants.",
+	13: "Plant cutting\nCut marked plants and grass, harvest wild plants, fell marked trees, clear blight. Skill: Plants.",
 }
 
 // incapable reports colonist p can never do work column col, and why
@@ -118,11 +122,25 @@ func (w Work) incapable(p game.PawnView, col int) (string, bool) {
 	return why, true
 }
 
-// WorkCellRect is the rectangle of colonist row's cell in column col.
+// workSlot is the screen position (0 = leftmost) of column col, a work.Type's
+// index: its place in work.Order, the order a colonist breaks ties in, so
+// left to right on screen is what the colonist does first. A type missing
+// from work.Order keeps its own index (TestWorkSlotsCoverEveryType fails).
+func workSlot(col int) int {
+	for i, t := range work.Order {
+		if int(t) == col {
+			return i
+		}
+	}
+	return col
+}
+
+// WorkCellRect is the rectangle of colonist row's cell in column col (a
+// work.Type's index), placed at the column's workSlot.
 func WorkCellRect(r uikit.Button, row, col int) gfx.Rect {
 	hx := r.X + 12 + WorkNameW
 	y := r.Y + 48 + float32(row*workRowH)
-	return gfx.Rect{X: hx + float32(col*workCellW), Y: y, W: workCellW - 4, H: workRowH - 2}
+	return gfx.Rect{X: hx + float32(workSlot(col)*workCellW), Y: y, W: workCellW - 4, H: workRowH - 2}
 }
 
 // workRowShown reports the row fits the panel.
@@ -163,7 +181,8 @@ func (w Work) Tips(sw, sh int) {
 		return
 	}
 	r := w.Rect()
-	for col := range WorkColumns {
+	for _, t := range work.Order {
+		col := int(t)
 		cr := WorkCellRect(r, 0, col)
 		w.kit().Tip("work.hdr."+uikit.Num(col), gfx.Rect{X: cr.X, Y: r.Y + 22, W: cr.W, H: 22}, WorkHelp[col])
 	}
@@ -191,7 +210,8 @@ func (w Work) want() (float32, float32) {
 	if w.live() {
 		n = len(w.sh.Pawns())
 	}
-	return float32(12 + WorkNameW + len(WorkColumns)*workCellW + 8), float32(max(160, 48+n*workRowH+20))
+	hint := 12 + gfx.TextW("Work priorities", gfx.Label) + 16 + gfx.TextW(workHint, gfx.Small) + 12
+	return max(float32(12+WorkNameW+len(WorkColumns)*workCellW+8), float32(hint)), float32(max(160, 48+n*workRowH+20))
 }
 
 func WorkCellValue(p game.PawnView, col int) string {
@@ -222,7 +242,7 @@ func (w Work) buttons() []uikit.Button {
 			b := uikit.Button{
 				ID:    ids.PrefixWorkCell + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
 				Label: "",
-				X:     float32(hx + col*workCellW),
+				X:     float32(hx + workSlot(col)*workCellW),
 				Y:     float32(y),
 				W:     float32(workCellW - 4),
 				H:     float32(workRowH - 2),
@@ -249,11 +269,11 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 	uikit.DrawPanel(screen, r.X, r.Y, r.W, r.H)
 	gfx.Text(screen, "Work priorities", float64(r.X)+12, float64(r.Y)+8, gfx.WithColor(gfx.Label, uikit.Heading))
 	hintX := float64(r.X) + 12 + float64(gfx.TextW("Work priorities", gfx.Label)) + 16
-	gfx.Text(screen, gfx.Ellipsize("1 = do first ... 4 = do last, - = never; click a cell to change", gfx.Small, float64(r.X+r.W)-12-hintX),
+	gfx.Text(screen, gfx.Ellipsize(workHint, gfx.Small, float64(r.X+r.W)-12-hintX),
 		hintX, float64(r.Y)+8+(gfx.LineH(gfx.Label)-gfx.LineH(gfx.Small))/2, gfx.WithColor(gfx.Small, uikit.TextDim))
 	hx := int(r.X) + 12 + WorkNameW
 	for i, col := range WorkColumns {
-		gfx.Text(screen, col, float64(hx+i*workCellW)+float64(workCellW-4)/2, float64(r.Y)+28, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter})
+		gfx.Text(screen, col, float64(hx+workSlot(i)*workCellW)+float64(workCellW-4)/2, float64(r.Y)+28, gfx.TextStyle{Size: gfx.Small.Size, Color: uikit.TextDim, Align: gfx.AlignCenter})
 	}
 	pawns := w.sh.Pawns()
 	for row, p := range pawns {
