@@ -633,12 +633,16 @@ func joyOffHash(seed uint64, ticks int) (uint64, *Game) {
 // before they were written: pinned at f7631b72a, where they had no behaviour. A
 // change outside the habits moves it, as it moves the scale goldens: re-pin it
 // then, with the reason.
+//
+// Re-pinned (CI-002): seed 1 was taken on arm64, where the weather fused x*y+z
+// and rounded differently. That commit on amd64 gives the value below, and with
+// the fusion gone from the per-tick code both architectures do.
 func TestHabitsOffKeepTheHash(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
 		seed uint64
 		want uint64
-	}{{1, 0xecf8cbfa3ad64226}, {2, 0xf54cac3f8e33e07f}} {
+	}{{1, 0xee2b9d9d5399d8ac}, {2, 0xf54cac3f8e33e07f}} {
 		h, g := joyOffHash(c.seed, 30000)
 		if h != c.want {
 			t.Errorf("seed %d: hash %#x, want %#x", c.seed, h, c.want)

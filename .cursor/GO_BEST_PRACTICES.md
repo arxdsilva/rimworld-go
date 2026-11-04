@@ -464,6 +464,14 @@ Do not over-wrap every integer if it creates excessive conversion noise.
 
 For deterministic cumulative simulation prefer integer/fixed-point.
 
+Where per-tick code uses floats, keep every `x*y+z` from fusing: arm64 compiles it
+to one instruction that rounds differently from amd64, so a Mac and the release
+builds drift apart. An explicit conversion stops it, `float64(x*y) + z` (Go spec,
+Floating-point operators), and costs nothing on amd64. To list what fuses, run
+`go build -o /tmp/g ./cmd/game` on arm64, then
+`go tool objdump -s 'rimworld-go/internal/application' /tmp/g | grep -E 'FN?M(ADD|SUB)[DS]'`.
+A hash pinned on a Mac is checked with `GOARCH=amd64 go test` (Rosetta) before a push.
+
 Examples:
 
 ```go

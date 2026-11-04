@@ -288,7 +288,7 @@ func ThreatPoints(s Settings, wealth, colonists int, years float64, adapt int) i
 	}
 	base := float64(colonistPts * max(colonists, 0))
 	if s.IgnoreWealth {
-		base += timePtsPerYr * years
+		base += float64(timePtsPerYr * years)
 	} else {
 		base += wealthCurve(wealth)
 	}
@@ -297,7 +297,7 @@ func ThreatPoints(s Settings, wealth, colonists int, years float64, adapt int) i
 	}
 	pts := base * float64(s.ThreatScale) / 100 * float64(max(100+adapt, 0)) / 100
 	if s.TimeEscalation {
-		pts *= math.Max(0, (100+float64(s.EscPerYear)*years)/100)
+		pts *= math.Max(0, (100+float64(float64(s.EscPerYear)*years))/100)
 	}
 	return max(int(math.Floor(pts+0.5)), pointsFloor)
 }

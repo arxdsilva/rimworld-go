@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# Prints the commit messages since the previous tag as release notes, one
+# Prints the commit messages since the previous release as release notes, one
 # collapsed section per commit that has a body. GoReleaser's changelog lists
 # subjects only; this is the rest of what each change says.
 #
-#   scripts/release_details.sh v0.1.19 > details.md
+#   scripts/release_details.sh v0.1.19 [v0.1.18] > details.md
+#
+# Without the second argument the range starts at the tag before, released or not.
 set -euo pipefail
 
 tag=${1:?usage: release_details.sh <tag>}
 range=$tag
-if prev=$(git describe --tags --abbrev=0 "$tag^" 2>/dev/null); then
+prev=${2:-$(git describe --tags --abbrev=0 "$tag^" 2>/dev/null || true)}
+if [ -n "$prev" ]; then
   range=$prev..$tag
 fi
 

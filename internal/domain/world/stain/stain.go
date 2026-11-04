@@ -88,7 +88,7 @@ func Wash(a uint16, ticks int, intensity float64, snow bool, frac *int) uint16 {
 	if ticks <= 0 || a == 0 || intensity <= 0 {
 		return a
 	}
-	pm := int(min(intensity, 1)*1000 + 0.5) // permille, deterministic rounding
+	pm := int(float64(min(intensity, 1)*1000) + 0.5) // permille, deterministic rounding
 	scale := rainScale
 	if snow {
 		scale = snowScale

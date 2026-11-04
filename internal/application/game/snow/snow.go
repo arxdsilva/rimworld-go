@@ -257,10 +257,10 @@ func (l Layer) op(step uint64, c int) (halve bool, delta int) {
 	halve = step%l.steps.WeatherBlock == 0 && !l.h.WeatherHeld() && (wx.Target == weather.Rain || wx.Target == weather.Storm)
 	f := 0.0
 	if wx.Kind.Frozen() {
-		f += fallPerStep * wx.Intensity
+		f += float64(fallPerStep * wx.Intensity)
 	}
 	tempC := float64(l.h.Outdoor(clock.Tick(step))) / 10
-	f -= meltPerDeg * math.Max(0, tempC)
+	f -= float64(meltPerDeg * math.Max(0, tempC))
 	fl := math.Floor(f)
 	delta = int(fl)
 	if fr := f - fl; fr > 0 && dither(step, c) < fr {

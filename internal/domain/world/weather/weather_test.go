@@ -1,6 +1,8 @@
 package weather
 
 import (
+	"encoding/binary"
+	"hash/fnv"
 	"math"
 	"testing"
 
@@ -228,3 +230,32 @@ func TestWeatherYearHasVariety(t *testing.T) {
 		}
 	}
 }
+
+// TestWeatherIsTheSameOnEveryArchitecture: 240 blocks, the state's floats by their
+// bits. arm64 fuses x*y+z unless the product is converted first (float64(x*y) + z)
+// and rounds differently, so this fails on one architecture when a fused sum comes
+// back. WindDir is left out: it goes through math.Sin, which the standard library
+// itself compiles with fused operations on arm64, so its last bits differ there.
+func TestWeatherIsTheSameOnEveryArchitecture(t *testing.T) {
+	t.Parallel()
+	h := fnv.New64a()
+	add := func(v float64) { _ = binary.Write(h, binary.LittleEndian, math.Float64bits(v)) }
+	s := State{}
+	for block := range uint64(240) {
+		s = NextWet(7, block, s, 12-float64(block%40), "summer", 100)
+		for range 8 {
+			s = s.Step(750, 18-float64(block%50), "winter")
+			add(s.Intensity)
+			add(s.WindSpeed)
+			add(s.SnowDepth)
+			add(s.Wetness)
+		}
+		add(s.Goal)
+		add(float64(SunFactor(s.Kind, s.Intensity)))
+	}
+	if got := h.Sum64(); got != weatherPin {
+		t.Errorf("hash %#x, want %#x", got, uint64(weatherPin))
+	}
+}
+
+const weatherPin = 0x37d7b3e761138388

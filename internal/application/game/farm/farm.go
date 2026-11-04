@@ -31,7 +31,7 @@ func GrowLight(roofed bool, sky int, art float64, lamps []Lamp, x, y int, sees S
 	if !roofed {
 		return sky * plant.FullGrowLight / 1000
 	}
-	l := min(int(art*1000+0.5), plant.LampGrowLight)
+	l := min(int(float64(art*1000)+0.5), plant.LampGrowLight)
 	for _, s := range lamps {
 		if v := plant.SunLampLight(x-s.X, y-s.Y); v > l && sees(s.X, s.Y, x, y) {
 			l = v

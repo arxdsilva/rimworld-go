@@ -15,7 +15,7 @@ func SunFactor(k Kind, intensity float64) int32 {
 	if int(k) >= len(sunFull) {
 		return 1000
 	}
-	dim := float64(1000-sunFull[k]) * (0.5 + 0.5*clamp01(intensity))
+	dim := float64(1000-sunFull[k]) * (0.5 + float64(0.5*clamp01(intensity)))
 	return 1000 - int32(math.Round(dim))
 }
 

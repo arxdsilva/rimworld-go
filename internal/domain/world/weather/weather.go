@@ -121,7 +121,7 @@ func clamp01(v float64) float64 { return math.Max(0, math.Min(1, v)) }
 
 func windSpeed(k Kind, intensity float64) float64 {
 	r := windRange[k]
-	return r[0] + (r[1]-r[0])*clamp01(intensity)
+	return r[0] + float64((r[1]-r[0])*clamp01(intensity))
 }
 
 // Next is the weather for 6-hour block b, given the previous state, the
@@ -156,12 +156,12 @@ func NextWet(seed, block uint64, prev State, meanTempC float64, season string, w
 	}
 	s := prev
 	s.Target = k
-	s.Goal = clamp01(targetIntensity[k] + (unit(seed, block, 2)-0.5)*0.3)
+	s.Goal = clamp01(targetIntensity[k] + float64((unit(seed, block, 2)-0.5)*0.3))
 	if k == Rain || k == Storm {
 		s.SnowDepth /= 2
 	}
 	day := float64(block) * blockTicks / (2500 * 24)
-	s.WindDir = unit(seed, 0, 3)*2*math.Pi + 0.6*math.Sin(2*math.Pi*day/9) + (unit(seed, block, 4)-0.5)*0.8
+	s.WindDir = float64(unit(seed, 0, 3)*2*math.Pi) + float64(0.6*math.Sin(2*math.Pi*day/9)) + float64((unit(seed, block, 4)-0.5)*0.8)
 	s.WindSpeed = windSpeed(s.Kind, s.Intensity)
 	return s
 }
@@ -187,17 +187,17 @@ func (s State) Step(dt int, tempC float64, season string) State {
 	s.WindSpeed = windSpeed(s.Kind, s.Intensity)
 	raining := s.Kind == Rain || s.Kind == Storm
 	if s.Kind.Frozen() {
-		s.SnowDepth += 0.012 * s.Intensity * k
+		s.SnowDepth += float64(0.012 * s.Intensity * k)
 	}
-	s.SnowDepth -= 0.004 * math.Max(0, tempC) * k
+	s.SnowDepth -= float64(0.004 * math.Max(0, tempC) * k)
 	if raining {
-		s.Wetness += 0.02 * s.Intensity * k
+		s.Wetness += float64(0.02 * s.Intensity * k)
 	} else {
 		dry := 0.006
 		if strings.EqualFold(season, "summer") {
 			dry *= 2
 		}
-		s.Wetness -= dry * k
+		s.Wetness -= float64(dry * k)
 	}
 	s.SnowDepth, s.Wetness = clamp01(s.SnowDepth), clamp01(s.Wetness)
 	return s

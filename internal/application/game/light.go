@@ -251,7 +251,7 @@ func (g *Game) stampLight(art []float32, sx, sy, rad int, strength float64) {
 				continue
 			}
 			dx, dy := float64(x-sx), float64(y-sy)
-			d := math.Sqrt(dx*dx + dy*dy)
+			d := math.Sqrt(float64(dx*dx) + float64(dy*dy))
 			if d > float64(rad) {
 				continue
 			}

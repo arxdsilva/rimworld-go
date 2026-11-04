@@ -144,7 +144,7 @@ func (g *Game) weatherSlow(x, y int, base int) int {
 	if pct == 0 || !g.outdoorsAt(x, y) {
 		return base
 	}
-	return int(math.Ceil(float64(base)*(1+pct) - 1e-9))
+	return int(math.Ceil(float64(float64(base)*(1+pct)) - 1e-9))
 }
 
 // weatherTempDelta is the weather's effect on outdoor air at (x, y).

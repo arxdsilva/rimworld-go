@@ -106,7 +106,7 @@ func Downwind(dx, dy int, windX, windY float64) bool {
 	if w < stillWind || d == 0 {
 		return false
 	}
-	return (float64(dx)*windX+float64(dy)*windY)/(w*d) >= downwindCos
+	return (float64(float64(dx)*windX)+float64(float64(dy)*windY))/(w*d) >= downwindCos
 }
 
 // BuildingDamage is the hit points a fire of size takes off a burning

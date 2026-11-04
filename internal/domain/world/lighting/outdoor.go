@@ -34,7 +34,7 @@ func outdoorAtHour(h float64) Level {
 				return Level(stops[i][1])
 			}
 			t := (h - stops[i-1][0]) / span
-			return Level(stops[i-1][1] + (stops[i][1]-stops[i-1][1])*t)
+			return Level(stops[i-1][1] + float64((stops[i][1]-stops[i-1][1])*t))
 		}
 	}
 	return Level(stops[len(stops)-1][1])
