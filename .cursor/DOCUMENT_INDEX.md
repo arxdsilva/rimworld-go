@@ -27,6 +27,8 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | RimHUD gap analysis (the colonist card: docked and floating, layout editor, presets, theme, every widget), RHUD rows, DOS packages | `RIMHUD_GAP_ANALYSIS.md` |
 | Neat Storage gap analysis (27 storage pieces, per-piece capacity and filters, stored-item display, admiring), NST rows | `NEAT_STORAGE_GAP_ANALYSIS.md` |
 | Common Sense gap analysis (habit rules: tidying, bills, packs, joy, wandering, toggles), CSE rows | `COMMON_SENSE_GAP_ANALYSIS.md` |
+| Work priorities gap analysis (tie-break between work types, order inside a type, the Work tab), WRK rows | `WORK_PRIORITIES_GAP_ANALYSIS.md` |
+| Harvesting gap analysis (who harvests, batching, yield and speed by Plants level), HRV rows | `HARVEST_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Multi-area work across parallel agents; every multi-area plan includes its Parallel workers section (§0) | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |
