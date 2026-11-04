@@ -99,10 +99,75 @@ def _ration():
     return S.render_asset("item", "ration_pack", zmax=0.24, extra={"item": "food", "stack": True})
 
 
+# Marbling of a steak: streaks of (x, y, half-width), in units of the steak's
+# half-length and half-depth, thin at both ends. Three patterns so the cuts of
+# a stack differ.
+_MARBLING = (
+    (((-0.74, -0.08, 0.008), (-0.34, 0.12, 0.02), (0.1, 0.0, 0.02), (0.72, 0.2, 0.008)),
+     ((-0.42, -0.52, 0.008), (0.02, -0.34, 0.018), (0.58, -0.36, 0.008)),
+     ((0.02, 0.5, 0.006), (0.3, 0.46, 0.012), (0.54, 0.56, 0.006))),
+    (((-0.76, 0.2, 0.008), (-0.3, -0.04, 0.02), (0.2, 0.14, 0.02), (0.7, -0.02, 0.008)),
+     ((-0.3, -0.58, 0.008), (0.1, -0.42, 0.018), (0.62, -0.5, 0.008)),
+     ((-0.2, 0.5, 0.006), (0.06, 0.56, 0.012), (0.36, 0.46, 0.006))),
+    (((-0.7, -0.26, 0.008), (-0.2, -0.06, 0.02), (0.26, -0.2, 0.02), (0.74, 0.04, 0.008)),
+     ((-0.36, 0.34, 0.008), (0.06, 0.26, 0.018), (0.56, 0.42, 0.008)),
+     ((-0.16, -0.62, 0.006), (0.14, -0.56, 0.012), (0.42, -0.62, 0.006))),
+)
+
+
+def _steak(tag, cx, cy, z, yaw, flesh, rim, marble, pattern=0, size=1.0, bone=None, thick=0.085):
+    """One raw cut lying flat: a kidney-shaped slice whose back arc (local +y)
+    is a band of `rim`, with streaks of `marble` across the cut face and, with
+    `bone` (ring material, core material or None), a round section set against
+    the rim. Separate flat regions, so the three toon bands stay broad and it
+    still reads when small."""
+    import math
+    rx, ry, n = 0.235 * size, 0.155 * size, 32
+    ca, sa = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+
+    def place(x, y):
+        return (cx + x * ca - y * sa, cy + x * sa + y * ca)
+
+    outer = []
+    for i in range(n):
+        t = 2 * math.pi * i / n
+        u, v = math.cos(t), math.sin(t)
+        v *= 1 + 0.2 * u        # wider towards +x
+        if v < 0:               # the kidney's dent, on the front
+            v *= 1 - 0.3 * math.exp(-((u + 0.25) / 0.5) ** 2)
+        outer.append((rx * u, ry * v))
+    # the rim band covers the back arc, tapering to nothing at both ends
+    i0, i1 = 1, 15
+    band = []
+    for i in range(i0, i1 + 1):
+        w = 0.05 * size * min(1.0, 2.2 * math.sin(math.pi * (i - i0) / (i1 - i0)))
+        x, y = outer[i]
+        k = 1 - w / math.hypot(x, y)
+        band.append((x * k, y * k))
+    body = outer[i1:] + outer[:i0 + 1] + band[1:-1]
+    fat = outer[i0:i1 + 1] + band[-2:0:-1]
+    top = z + thick
+    S.prism("%s_body" % tag, [place(*p) for p in body], z, top, flesh, bevel=0.007)
+    S.prism("%s_rim" % tag, [place(*p) for p in fat], z, top + 0.004, rim, bevel=0.007)
+    for j, streak in enumerate(_MARBLING[pattern % len(_MARBLING)]):
+        left = [(u * rx * 0.86, v * ry * 0.86 + w * size) for u, v, w in streak]
+        right = [(u * rx * 0.86, v * ry * 0.86 - w * size) for u, v, w in streak]
+        pts = [place(*p) for p in right + left[::-1]]
+        S.prism("%s_mb%d" % (tag, j), pts, top - 0.002, top + 0.003, marble, bevel=0.0)
+    if bone:
+        ring, core = bone
+        bx, by = place(-0.5 * rx, 0.34 * ry)
+        S.cyl("%s_bone" % tag, bx, by, 0.05 * size, top - 0.002, top + 0.008, ring, segs=14, bevel=0.0)
+        if core:
+            S.cyl("%s_core" % tag, bx, by, 0.022 * size, top + 0.006, top + 0.01, core, segs=10, bevel=0.0)
+
+
 def _meat():
-    for k, (x, y, r) in enumerate([(0.40, -0.56, 0.17), (0.60, -0.50, 0.15), (0.52, -0.66, 0.13)]):
-        S.blob("cut%d" % k, x, y, 0.0, r, "food_red", seed=60 + k, lumps=0.25, squash=0.55)
-    S.cyl("bone", 0.62, -0.60, 0.025, 0.08, 0.10, "ceramic", segs=8, ry=0.12, bevel=0.0)
+    """Three red steaks, two on the ground and one lying across them."""
+    for k, (x, y, z, yaw, bone) in enumerate([(0.28, -0.34, 0.0, 14, True), (0.72, -0.38, 0.0, -18, False),
+                                              (0.5, -0.68, 0.06, 186, True)]):
+        _steak("cut%d" % k, x, y, z, yaw, "skin_red", "meat_fat", "meat_fat", pattern=k,
+               bone=("ceramic", "food_red") if bone else None)
     return S.render_asset("item", "meat_pile", zmax=0.2, extra={"item": "meat", "stack": True})
 
 

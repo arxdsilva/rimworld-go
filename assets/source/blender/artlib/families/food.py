@@ -81,6 +81,11 @@ def _ell(name, c, r, mat, yaw=0.0, pitch=0.0, segs=14, rings=8):
     return ell(name, c, r, mat, yaw=yaw, pitch=pitch, segs=segs, rings=rings)
 
 
+def _steak(*args, **kw):
+    from .item import _steak as steak
+    return steak(*args, **kw)
+
+
 def _item(name, kind, zmax):
     return S.render_asset("item", name, zmax=zmax, extra={"item": kind, "stack": True})
 
@@ -198,32 +203,18 @@ def _agave_fruit_item():
 
 
 def _human_meat_item():
-    """Two flat pale-pink cuts edged in fat, stacked offset (the red meat
-    pile is rounded chunks; this reads as slabs)."""
-    for k, (x, y, z, rot) in enumerate([(0.44, -0.58, 0.0, -12), (0.56, -0.5, 0.075, 18)]):
-        pts = [(-0.2, -0.12), (0.18, -0.14), (0.22, 0.06), (0.06, 0.15), (-0.18, 0.12)]
-        a = math.radians(rot)
-        P2 = [(x + px * math.cos(a) - py * math.sin(a), y + px * math.sin(a) + py * math.cos(a)) for px, py in pts]
-        S.prism("slab%d" % k, P2, z, z + 0.07, "meat_pale", bevel=0.025)
-        # fat rim along the slab's north edge
-        fx0, fy0 = P2[2]
-        fx1, fy1 = P2[4]
-        _limb("fat%d" % k, (fx0, fy0, z + 0.04), (P2[3][0], P2[3][1], z + 0.045), 0.03, 0.03, "meat_fat", segs=8)
-        _limb("fatb%d" % k, (P2[3][0], P2[3][1], z + 0.045), (fx1, fy1, z + 0.04), 0.03, 0.026, "meat_fat", segs=8)
-        _ell("mb%d" % k, (x - 0.04, y - 0.02, z + 0.07), (0.05, 0.025, 0.006), "meat_fat", yaw=rot + 20, segs=10,
-             rings=4)
+    """Three pallid pink steaks with a sallow fat rim, bruise-dark veins and a
+    limb bone's round section: the red meat's cut in the wrong colour."""
+    for k, (x, y, z, yaw) in enumerate([(0.3, -0.36, 0.0, -10), (0.7, -0.34, 0.0, 16), (0.48, -0.68, 0.06, 172)]):
+        _steak("cut%d" % k, x, y, z, yaw, "meat_pale", "meat_fat", "pl_crop_berry", pattern=k + 1,
+               bone=("ceramic", "skin_rose"))
     return _item("human_meat", "human meat", 0.2)
 
 
 def _insect_meat_item():
-    """Lumpy yellow-green insect meat with two dark chitin plates."""
-    for k, (x, y, r) in enumerate([(0.42, -0.58, 0.15), (0.6, -0.54, 0.13), (0.5, -0.68, 0.11)]):
-        S.blob("cut%d" % k, x, y, 0.0, r, "meat_insect", seed=90 + k, lumps=0.35, squash=0.5)
-    for k, (x, y, yaw) in enumerate([(0.62, -0.4, 30), (0.3, -0.44, -40)]):
-        _ell("plate%d" % k, (x, y, 0.07), (0.12, 0.07, 0.022), "chitin", yaw=yaw, pitch=25 if k else -20, segs=12,
-             rings=6)
-        _ell("ridge%d" % k, (x, y, 0.095), (0.1, 0.012, 0.012), "meat_insect", yaw=yaw, pitch=25 if k else -20,
-             segs=8, rings=4)
+    """Three sickly yellow-green steaks with pale green marbling and no bone."""
+    for k, (x, y, z, yaw) in enumerate([(0.3, -0.34, 0.0, 22), (0.72, -0.4, 0.0, -8), (0.5, -0.68, 0.06, 194)]):
+        _steak("cut%d" % k, x, y, z, yaw, "meat_insect", "meat_fat", "scale_pale", pattern=k + 2)
     return _item("insect_meat", "insect meat", 0.2)
 
 

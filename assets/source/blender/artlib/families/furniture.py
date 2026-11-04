@@ -288,34 +288,41 @@ def _drug_table():
 
 
 def _butcher_table():
+    import math
+    from mathutils import Matrix
+    from .item import _steak
     # 3 x 1 (STK-AR), the butcher stands south of the middle cell, at the
     # chopping block; a bucket west, cut meat east, a hook rail at the back.
     _bench_legs("wood", r=0.07, h=0.5, x0=0.14, x1=2.86, y0=-0.2, y1=-0.8, bevel=0.02)
     S.box("stretcher", 0.12, -0.56, 0.12, 2.88, -0.44, 0.18, "wood", bevel=0.015)
     S.box("slab", 0.04, -0.94, 0.50, 2.96, -0.06, 0.66, "wood_plank", bevel=0.04, segments=2)
-    # middle: the block, its grooves, the cleaver and a joint on it
+    # middle: the block, its grooves, the cleaver and the steak just cut
     S.box("block", 1.08, -0.88, 0.66, 1.92, -0.20, 0.74, "wood", bevel=0.03)
     for i, y in enumerate((-0.36, -0.54, -0.72)):
         S.box("groove%d" % i, 1.12, y - 0.008, 0.738, 1.88, y + 0.008, 0.744, "bark", bevel=0.0)
-    S.ellipsoid("joint", 1.36, -0.54, 0.79, 0.15, 0.11, 0.06, "food_red", segs=14, rings=8)
-    S.ellipsoid("joint_bone", 1.36, -0.54, 0.83, 0.06, 0.035, 0.025, "ceramic", segs=10, rings=6)
+    _steak("joint", 1.36, -0.54, 0.74, 10, "skin_red", "meat_fat", "meat_fat", size=0.85,
+           bone=("ceramic", "food_red"), thick=0.07)
     S.box("blade", 1.56, -0.72, 0.74, 1.80, -0.50, 0.77, "steel", bevel=0.01)
     S.box("blade_grip", 1.80, -0.64, 0.74, 1.96, -0.58, 0.78, "metal_dark", bevel=0.01)
     # west: a pail
     S.cyl("pail", 0.44, -0.58, 0.17, 0.66, 0.90, "wood", r_top=0.19, segs=16, bevel=0.02)
     S.cyl("pail_band", 0.44, -0.58, 0.18, 0.80, 0.84, "metal_dark", segs=16, bevel=0.0)
     S.cyl("pail_in", 0.44, -0.58, 0.16, 0.86, 0.885, "food_red", segs=16, bevel=0.0)
-    # east: cuts laid out and a knife
-    for k, (x, y) in enumerate(((2.30, -0.66), (2.58, -0.60))):
-        S.ellipsoid("cut%d" % k, x, y, 0.70, 0.12, 0.08, 0.045, "food_red", segs=14, rings=8)
+    # east: steaks laid out and a knife
+    for k, (x, y, yaw) in enumerate(((2.26, -0.67, 12), (2.64, -0.62, -14))):
+        _steak("cut%d" % k, x, y, 0.66, yaw, "skin_red", "meat_fat", "meat_fat", pattern=k + 1, size=0.72, thick=0.06)
     S.box("knife", 2.20, -0.40, 0.66, 2.54, -0.36, 0.68, "steel", bevel=0.004)
     S.box("knife_grip", 2.54, -0.41, 0.66, 2.66, -0.35, 0.70, "metal_dark", bevel=0.005)
     # back rail with hooks
     S.box("rail", 0.06, -0.10, 0.66, 2.94, -0.04, 1.02, "wood", bevel=0.02)
     for i, x in enumerate((0.50, 1.00, 1.50, 2.00, 2.50)):
         S.cyl("hook%d" % i, x, -0.12, 0.012, 0.86, 1.0, "steel", segs=6, bevel=0.0)
-    S.ellipsoid("hang", 2.50, -0.13, 0.78, 0.07, 0.04, 0.09, "food_red", segs=12, rings=8)
-    S.ellipsoid("hang2", 1.00, -0.13, 0.80, 0.06, 0.035, 0.08, "food_red", segs=12, rings=8)
+    # steaks on two of the hooks, tipped towards the viewer (hung dead flat
+    # against the rail, the camera would see them as a sliver)
+    for k, x in enumerate((1.00, 2.50)):
+        n0 = len(S.objects())
+        _steak("hang%d" % k, 0.0, 0.0, 0.0, 90, "skin_red", "meat_fat", "meat_fat", pattern=k, size=0.5, thick=0.04)
+        S.transform(S.objects()[n0:], Matrix.Translation((x, -0.2, 0.8)) @ Matrix.Rotation(math.radians(55), 4, "X"))
     return (3, 1), 1.02
 
 

@@ -16,7 +16,7 @@ from mathutils import Matrix
 
 from .. import stage as S
 from . import overlay as O
-from .item import _ell, _spin, _tube
+from .item import _ell, _spin, _steak, _tube
 from .plant_base import _limb
 
 
@@ -55,11 +55,12 @@ def _wort():
 
 
 def _fine_meal():
-    """Fine meal: one wide plate with a seared cut, a mound of greens, a
-    halved root and a bread slice; a fork beside it."""
+    """Fine meal: one wide plate with a seared steak (the raw item's cut,
+    browned), a mound of greens, a halved root and a bread slice; a fork
+    beside it."""
     S.cyl("plate", 0.5, -0.55, 0.32, 0.0, 0.035, "ceramic", segs=28, bevel=0.01)
     S.cyl("rim", 0.5, -0.55, 0.32, 0.035, 0.045, "med_white", segs=28, bevel=0.0)
-    S.blob("cut", 0.44, -0.6, 0.03, 0.12, "food_red", seed=301, lumps=0.2, squash=0.45)
+    _steak("cut", 0.42, -0.6, 0.035, -14, "chitin_rust", "meat_fat", "chitin_rust_dark", size=0.72, thick=0.05)
     _ell("greens", (0.62, -0.46, 0.07), (0.09, 0.08, 0.05), "vegetation")
     _ell("root", (0.6, -0.66, 0.06), (0.06, 0.045, 0.035), "crop_fruit", yaw=30)
     S.box("bread", 0.34, -0.44, 0.035, 0.46, -0.36, 0.08, "wool_cream", bevel=0.02)
