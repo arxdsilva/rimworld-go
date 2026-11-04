@@ -26,9 +26,17 @@ A plan for a multi-area task (plan mode, a plan file, or a written phase plan) i
   - owned files;
   - forbidden files;
   - the targeted test commands the agent runs.
+- **A scope block per agent, under the tables** (user decision, 2026-11-04):
+  - **Goal:** one sentence.
+  - **Starts at:** `file:line` entry points.
+  - **Behaviour:** numbered rules, edge cases included.
+  - **Done when:** the tests that prove it.
+  - **Out:** what looks in scope and isn't, and who owns it.
 - **RAM.** The `make agent-budget` check and each wave's size (§1).
 - **Integration.** The lead's gates after each wave (§5) and the commit points.
 - **Assets.** Art, sound and creature agents whenever assets are involved: art on `opus` with `rimworld-go-art-assets`, creatures per `rimworld-go-creatures`.
+
+**As much detail as a stranger needs, and no more.** A person must follow the plan and an agent must be able to work from its block alone. Every line has to change what someone does or can check. Point at `file:line` instead of pasting code, never restate a spec, and say each thing once. Context, decisions and risks come first for the person; each agent reads only the shared contract and its block.
 
 A single-area task, or one under ~150 lines, states that in one line instead. The skill `parallel-work` has a template for the section.
 
@@ -40,7 +48,7 @@ A single-area task, or one under ~150 lines, states that in one line instead. Th
 - capture: a game run on a small map for screenshots, about 2.2 GiB (one at a time);
 - light: an agent's targeted `go test -race -run …` of its own tests, about 1 GiB with the compile.
 
-Agents never run a full package that loads the art. Never run more agents than it allows. The 15-agent cap in §5 is a ceiling, not a target. Start heavy agents a few minutes apart rather than all at once, and tell every agent to run tests with `GOFLAGS=-p=2`. If an agent reports slow tests or the machine swaps, re-check before launching more.
+Agents never run a full package that loads the art. Never run more agents than it allows. The 30-agent cap in §5 (user decision, 2026-11-04) is a ceiling, not a target: the machine has 12 cores, so 30 compiling at once crawl. Start heavy agents a few minutes apart rather than all at once, and tell every agent to run tests with `GOFLAGS=-p=2`. If an agent reports slow tests or the machine swaps, re-check before launching more.
 
 | Do (lead, before launching agents) | Don't |
 | --- | --- |
@@ -80,7 +88,7 @@ contract (spec §, read models, stubs) → **producers in parallel** (domain/sim
 | Make contract changes as the lead, additive only, and broadcast them to every affected agent | Let one agent change a shared contract |
 | After each phase, run the gates below, then apply the merge checklist in `skills/rimworld-go-review-integration/SKILL.md` | Declare done from agent reports alone |
 | Route fixes back to the owning agent | Patch an active agent's files behind its back |
-| Keep ≤ 15 agents running at once, and never more than `make agent-budget` allows | Spawn more than the work has disjoint areas for, or more than free RAM holds |
+| Keep ≤ 30 agents running at once, and never more than `make agent-budget` allows | Spawn more than the work has disjoint areas for, or more than free RAM holds |
 | Re-run `make agent-budget` before each phase and when an agent reports slow tests | Start every heavy agent in the same minute |
 
 **Gates after each phase:**
@@ -113,7 +121,7 @@ Notes:
 - **Stopped agents stay listed.** A stopped agent stays listed but is not running, and messaging it resumes it, so stopping costs nothing if you later need it.
 - **Clearing rows by hand:** the user can clear a failed or stopped row sooner with `x` in `/tasks`.
 - **Explore and Plan agents are one-shot.** Size their prompt to finish in one go.
-- **Running-agent limit:** Claude Code allows 20 running subagents by default (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`). This rule's limit of 15 or fewer, and `make agent-budget`, stay stricter.
+- **Running-agent limit:** `.claude/settings.json` sets `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=30` (the Claude Code default is 20); a session started before that line keeps the old limit. `make agent-budget` can still be stricter.
 
 ## 6. Pick the cheapest competent model
 

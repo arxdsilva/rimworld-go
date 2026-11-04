@@ -36,7 +36,7 @@ const (
 )
 
 // maxAgents is the parallel-work ceiling (PARALLEL_WORK §5).
-const maxAgents = 15
+const maxAgents = 30
 
 // agentKinds are the measured peaks (max RSS) of what agents run. Re-measure
 // with /usr/bin/time -l when the packages grow; the figures and the

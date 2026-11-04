@@ -5,9 +5,9 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 
 # Parallel work (lead checklist)
 
-0. **Writing a plan? Put the workers in it.** Before presenting any plan for a multi-area task, include its Parallel workers section (PARALLEL_WORK §0; template below): contract, waves with an agent table each, RAM, gates and commits, asset agents. A plan without it is incomplete.
+0. **Writing a plan? Put the workers in it.** Before presenting any plan for a multi-area task, include its Parallel workers section (PARALLEL_WORK §0; template below): contract, waves with an agent table and a scope block per agent, RAM, gates and commits, asset agents. A plan without it is incomplete.
 0b. **Check RAM.** Run `make agent-budget`; size the batch to what it prints (heavy and light agents), stagger the heavy ones, and give every agent `GOFLAGS=-p=2` for its tests. Re-check before each later phase (PARALLEL_WORK §1).
-1. **Map areas → agents.** List the areas the task touches (rule intro table); one agent per area/layer (hexagon). ≤ 15 running at once.
+1. **Map areas → agents.** List the areas the task touches (rule intro table); one agent per area/layer (hexagon). ≤ 30 running at once, and only as many as the work has disjoint areas for.
    1b. **Pick each agent's model** (rule §6): `haiku` for mechanical work, `sonnet` for implementation against a written contract, `opus` for determinism/pathing/jobs/saves/timing math. Escalate one tier after two failed gates.
 2. **Contract first (you, alone):**
    - `.cursor` spec sections, read models (`internal/application/game/*View`), consumer-owned interfaces, ports, typed commands, asset names/metadata, save format — additive only.
@@ -34,6 +34,13 @@ RAM: make agent-budget → <light/heavy counts>; waves ≤ <n> agents.
 |---|---|---|---|---|---|
 | <ID> | <opus|sonnet|haiku> — <why> | <scope> | <files/globs> | <files/globs> | <GOFLAGS=-p=2 go test -race … / make art FAMILIES=…> |
 
+**<ID>: <short title>**
+- **Goal:** <one sentence>
+- **Starts at:** <file:line entry points>
+- **Behaviour:** <numbered rules with the edge cases>
+- **Done when:** <the tests that prove it>
+- **Out:** <what looks in scope and isn't, and who owns it>
+
 Lead after the wave: <gates>, <budgets>, <commit message / handoff>.
 ```
 
@@ -42,7 +49,7 @@ Lead after the wave: <gates>, <budgets>, <commit message / handoff>.
 ```
 Model: <haiku|sonnet|opus> — <one-line reason>   (set the Agent `model` parameter to match)
 
-You are agent <ID> on the rimworld-go repo (/Users/asilva/youtube/rimworld-go). Read first (authoritative):
+You are agent <ID> on the rimworld-go repo (/Users/arxdsilva/go/src/github.com/insurgencygames/rimworld-go). Read first (authoritative):
 - <plan file §…>, AGENTS.md, <nearest package AGENTS.md>, .cursor/PARALLEL_WORK.md
 - <named .cursor spec sections>, skill(s) .cursor/skills/<rimworld-go-*>/SKILL.md
 
