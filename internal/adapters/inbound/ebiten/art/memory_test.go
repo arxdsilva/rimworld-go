@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -326,6 +327,25 @@ func TestTintBakesEvictLeastRecentlyUsed(t *testing.T) {
 	if lit.Image("x/y", tint(1)) == nil || len(lit.Tinted) != 1 {
 		t.Fatal("literal catalog bake")
 	}
+}
+
+// The first draw through a shared shader is the one that races (newTintShader):
+// after priming, the race detector must see nothing when goroutines draw at once.
+func TestPrimedTintShaderDrawsFromAnyGoroutine(t *testing.T) {
+	t.Parallel()
+	sh, err := newTintShader()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			dst := ebiten.NewImage(1, 1)
+			defer dst.Deallocate()
+			drawOneTinted(dst, sh)
+		})
+	}
+	wg.Wait()
 }
 
 // tint.kage is TintNRGBA on the GPU: its Go twin agrees with the CPU bake

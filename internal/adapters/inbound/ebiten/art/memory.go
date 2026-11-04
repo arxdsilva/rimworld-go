@@ -344,7 +344,27 @@ func MaskImage(mask *image.NRGBA, clip image.Rectangle) (*ebiten.Image, image.Re
 var tintKage []byte
 
 // TintShader is tint.kage, compiled once.
-var TintShader = sync.OnceValues(func() (*ebiten.Shader, error) { return ebiten.NewShader(tintKage) })
+var TintShader = sync.OnceValues(newTintShader)
+
+// newTintShader compiles tint.kage and draws with it once. Ebitengine sizes a
+// shader's uniforms on its first draw, without a lock, and this shader is shared
+// by the whole process: the game bakes on one goroutine, but parallel tests do
+// not, and the race detector fails them.
+func newTintShader() (*ebiten.Shader, error) {
+	sh, err := ebiten.NewShader(tintKage)
+	if err != nil {
+		return nil, err
+	}
+	dst := ebiten.NewImage(1, 1)
+	defer dst.Deallocate()
+	drawOneTinted(dst, sh)
+	return sh, nil
+}
+
+// drawOneTinted draws one pixel through sh with an empty tint.
+func drawOneTinted(dst *ebiten.Image, sh *ebiten.Shader) {
+	dst.DrawRectShader(1, 1, sh, &ebiten.DrawRectShaderOptions{Uniforms: map[string]any{"Tint": []float32{0, 0, 0}}})
+}
 
 // TintTexel is tint.kage's colour channel (its Go twin; TintNRGBA is the
 // CPU bake it matches to two levels, flooring twice where this rounds
