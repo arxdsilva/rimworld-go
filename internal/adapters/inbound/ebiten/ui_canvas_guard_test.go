@@ -97,6 +97,7 @@ var canvasExempt = map[string]string{
 	"render/overlay/fog_draw.go:DrawFogLayer":          "world: fog of war chunks over the map",
 	"render/env/grass_batch.go:BakeGrassTint":          "world: grass batches",
 	"art/memory.go:bakeTint":                           "world: tinted sprite texture baked offscreen on the GPU",
+	"art/memory.go:drawOneTinted":                      "world: one offscreen pixel that readies the tint shader",
 	"render/env/grass_batch.go:flushGrass":             "world: grass batches",
 	"gfx/batch.go:Flush":                               "world: triangle batches",
 	"render/env/water_draw.go:DrawWaterTile":           "world: water",

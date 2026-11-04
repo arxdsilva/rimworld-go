@@ -92,7 +92,7 @@ Lead after each wave: `go build ./...`, `make fmt vet lint`, `make arch`, the fu
 
 ## Outcome (2026-11-04)
 
-All wave packages merged; released as v0.1.24.
+All wave packages merged; released as v0.1.25 (v0.1.24 failed CI and published no archives, see CI-002).
 
 | Mod | Rows | Done | Excluded |
 |---|---|---|---|
