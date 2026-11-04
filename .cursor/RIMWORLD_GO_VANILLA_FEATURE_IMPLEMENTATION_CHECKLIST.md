@@ -177,12 +177,12 @@ The first playable surface.
 -   [-] **Entity rendering** (pawns and animals from snapshots with curved, eased, sub-frame motion and stride-driven walk/trot frames; original art for items/plants/frames/walls/beds; no projectiles)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
--   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; center-on-selection not implemented)
+-   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; CTL-017: a middle tap rotates the held object, a middle drag pans; center-on-selection not implemented)
     -   Pan.
     -   Zoom.
     -   Center on selected entity/event.
     -   Screen-to-world tile conversion.
--   [-] **Selection** (single click-to-select pawn with vendor crosshair overlay; drag-select multiple not implemented)
+-   [x] **Selection** (click, stack cycling, Shift, box and double click over every selectable kind: UI-016, CTL-001..007)
     -   Click entity/tile.
     -   Drag-select multiple player pawns.
     -   Selection overlays.
@@ -2523,7 +2523,7 @@ STK-AG: every core vanilla item has a card in its vanilla category (`.cursor/ARC
 -   [x] **Keyboard shortcuts** (UI-016: action registry in `internal/platform/input`; camera, time, tabs, selection, orders, overlays, Architect, gizmo keys, screenshots, developer keys)
 -   [ ] **Control groups**
 -   [x] **Shift command queue** (order menu and drafted moves, formations included)
--   [x] **Double-click select same type** (UI-016)
+-   [x] **Double-click select same type** (UI-016, CTL-001..004)
 -   [x] **Drag designation** (areas, build lines/rectangles/ovals with Ctrl to square, UI-016)
 -   [x] **Cancel tool** (right-click or Esc leaves a tool; C picks the Cancel tool)
 -   [x] **Rebindable controls where practical** (Options › Controls, saved; modifiers are fixed)

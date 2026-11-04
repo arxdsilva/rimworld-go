@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/platform/input"
 )
 
 func testTradeView() game.TradeView {
@@ -127,4 +128,50 @@ func (s *fakeShell) frame(dl *Dealings) {
 	s.kit.Begin()
 	dl.SyncDealings()
 	s.kit.RunModals(s.kit.CloseModal)
+}
+
+// CTL-018: Ctrl multiplies a trade step by 10, Shift by 100, both by 1000;
+// the amount never passes what the colony or the trader holds.
+func TestTradeStepsFollowCtrlAndShift(t *testing.T) {
+	t.Parallel()
+	s, dl := newFake()
+	v := testTradeView()
+	v.Rows[0].TraderQty, v.Rows[0].ColonyQty = 2000, 30
+	s.tv = &v
+	s.frame(dl)
+	s.frame(dl)
+	wood := v.Rows[0].Kind
+	press := func(id string, mods input.Mod) {
+		s.f.Raw.Mods = mods
+		if !s.kit.Click(id) {
+			t.Fatalf("no widget %s", id)
+		}
+		s.frame(dl)
+	}
+	press("trade."+wood+".take.1", 0)
+	if got := dl.trade.net[wood]; got != 1 {
+		t.Fatalf("plain take 1 = %d", got)
+	}
+	press("trade."+wood+".take.1", input.ModCtrl)
+	if got := dl.trade.net[wood]; got != 11 {
+		t.Fatalf("ctrl take: %d, want 11", got)
+	}
+	press("trade."+wood+".take.1", input.ModShift)
+	if got := dl.trade.net[wood]; got != 111 {
+		t.Fatalf("shift take: %d, want 111", got)
+	}
+	press("trade."+wood+".take.1", input.ModCtrl|input.ModShift)
+	if got := dl.trade.net[wood]; got != 1111 {
+		t.Fatalf("both: %d, want 1111", got)
+	}
+	press("trade."+wood+".take.1", input.ModCtrl|input.ModShift)
+	if got := dl.trade.net[wood]; got != 2000 {
+		t.Fatalf("take clamps to the trader's stock: %d", got)
+	}
+	press("trade."+wood+".give.1", input.ModCtrl|input.ModShift)
+	press("trade."+wood+".give.1", input.ModCtrl|input.ModShift)
+	press("trade."+wood+".give.1", input.ModCtrl|input.ModShift)
+	if got := dl.trade.net[wood]; got != -30 {
+		t.Fatalf("give clamps to the colony's stock: %d", got)
+	}
 }

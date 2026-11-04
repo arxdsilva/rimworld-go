@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
 )
@@ -167,4 +168,11 @@ type Card struct {
 	Disabled              bool
 	Reason                string
 	Toggle, On            bool
+	Options               []CardOption // the right-click menu (CTL-016); empty: none
+}
+
+// CardOption is one entry of a card's right-click menu: a command sent as is.
+type CardOption struct {
+	Label string
+	Cmd   command.Command
 }

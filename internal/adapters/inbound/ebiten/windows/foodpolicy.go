@@ -89,6 +89,7 @@ func (w Assign) foodButton(p game.PawnView, rr gfx.Rect, x float32) {
 	}
 	if w.kit().Button(id, br, gfx.Ellipsize(label, gfx.Body, float64(br.W)-12), uikit.BtnOpts{Tip: assignFoodTip}) {
 		w.sh.Enqueue(command.Command{Kind: command.SetFoodPolicy, Pawn: uint64(p.ID), Index: next})
+		w.armCell(paintFood, id, next)
 	}
 }
 

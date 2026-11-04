@@ -57,7 +57,7 @@ func (c Alerts) Count() int {
 func (c Right) MessageCount() int { return len(c.liveMessageList()) }
 
 // RightClick answers a right-click over the column: on a
-// letter it dismisses it, on an alert it centres the previous target. A
+// letter or a message it dismisses it, on an alert it centres the previous target. A
 // right-click anywhere else in the column's rects is taken and does
 // nothing, so it never reaches the map beneath.
 func (c Right) RightClick(mx, my int) bool {
@@ -78,6 +78,12 @@ func (c Right) RightClick(mx, my int) bool {
 			if row.Older == 0 {
 				c.dismissLetter(row.Letter.ID)
 			}
+			return true
+		}
+	}
+	for _, row := range c.MessageRows(l) {
+		if row.R.Hit(mx, my) {
+			c.session().dismissMessage(row.Msg)
 			return true
 		}
 	}
@@ -103,6 +109,7 @@ type rightState struct {
 	fresh     map[uint64]uint64 // new letter -> presentation frame it arrived
 	read      map[uint64]bool   // letters the player opened
 	ending    bool              // the ending screen has opened this session (ending.go, AX-8)
+	dismissed map[string]bool   // messages the player cleared with a right click, while they are still listed
 	goneArmed bool              // a colonist was here since the everyone-gone screen last opened (ending.go, MAP-14)
 }
 

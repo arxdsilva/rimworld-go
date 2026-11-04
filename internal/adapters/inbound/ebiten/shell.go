@@ -546,7 +546,8 @@ func clickRoutes() []clickRoute {
 		on(ids.PrefixAlert, func(a *App, id string) { a.chrome.Alerts().Focus(id) }),     // hud/alerts.go
 		on(ids.PrefixBldg, (*App).applyBuildingClick),                                    // building_inspector.go
 		on(ids.PrefixBill, (*App).applyBuildingClick),                                    // building_inspector.go
-		on(ids.PrefixWorkCell, (*App).toggleWorkCell),                                    // app.go
+		on(ids.PrefixWorkCell, func(a *App, id string) { a.win.Work().Click(id) }),       // windows/work.go
+		on(ids.PrefixWorkHead, func(a *App, id string) { a.win.Work().HeadClick(id, a.in.Shift(), false) }),
 		exact(ids.TabMenu, func(a *App, _ string) { a.apply(intent{kind: intentPause}) }),
 		{id: ids.PrefixOptions, prefix: true, run: func(a *App, id string) bool { // screen_options.go
 			if id == ids.OptionsBack { // the screen intent, not an option

@@ -165,6 +165,13 @@ func (m *Mover) Step(tx, ty int, onMap bool, rotate int, left, cancel bool) bool
 	return true
 }
 
+// Rotate turns the building being moved, if there is one.
+func (m *Mover) Rotate(dir int) {
+	if m.st.On {
+		m.st.Facing = RotateFacing(m.st.Facing, dir)
+	}
+}
+
 // Handle feeds move mode this frame's input; true when move mode took it
 // (so selection must not also act on the click). Escape is the Esc
 // chain's, so it is handled once.

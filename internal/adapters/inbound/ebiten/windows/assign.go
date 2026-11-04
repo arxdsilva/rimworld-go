@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/drug"
@@ -182,7 +183,9 @@ func (w Assign) body(body gfx.Rect) {
 			continue
 		}
 		if w.kit().Button(id, br, PresetLabel(r.policy), uikit.BtnOpts{Tip: assignDrugTip}) {
-			w.sh.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(r.id), Mode: uint8(NextPreset(r.policy))})
+			next := NextPreset(r.policy)
+			w.sh.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(r.id), Mode: uint8(next)})
+			w.armCell(paintDrug, id, int(next))
 		}
 	}
 }
@@ -191,7 +194,9 @@ func (w Assign) body(body gfx.Rect) {
 func (w Assign) careButton(r assignRow, rr gfx.Rect) {
 	cr := gfx.Rect{X: rr.X + assignNameW + assignDrugW + 10, Y: rr.Y, W: min(assignCareW, rr.W-assignNameW-assignDrugW-10), H: rr.H}
 	if w.kit().Button(AssignCareID(r.id), cr, r.care.Label(), uikit.BtnOpts{Tip: assignCareTip}) {
-		w.sh.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(NextCare(r.care))})
+		next := NextCare(r.care)
+		w.sh.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(next)})
+		w.armCell(paintCare, AssignCareID(r.id), int(next))
 	}
 }
 
@@ -223,4 +228,74 @@ func (w Assign) defaultCare(r gfx.Rect) {
 // AssignDrugID is a colonist's drug policy button id.
 func AssignDrugID(id entity.EntityID) string {
 	return "assign.drug." + strconv.FormatUint(uint64(id), 10)
+}
+
+// Painting by drag (CTL-015): the first click on a column's cell arms the
+// painter with the value it set; holding the button and moving over the
+// same column's other cells gives them that value too.
+const (
+	paintDrug = iota + 1 // the painted column, kept above the value in Value
+	paintCare
+	paintFood
+	assignColShift = 16
+	assignValMask  = 1<<assignColShift - 1
+)
+
+// armCell starts a paint of value v over column col, from cell id.
+func (w Assign) armCell(col int, id string, v int) { w.paint.Arm(id, col<<assignColShift|v) }
+
+// assignCell splits a cell id into its column and colonist.
+func assignCell(id string) (col int, pawn uint64, ok bool) {
+	for c, prefix := range [...]string{paintDrug: "assign.drug.", paintCare: "assign.care.", paintFood: assignFoodPrefix} {
+		if prefix != "" && strings.HasPrefix(id, prefix) {
+			n, err := strconv.ParseUint(id[len(prefix):], 10, 64)
+			return c, n, err == nil
+		}
+	}
+	return 0, 0, false
+}
+
+// Drag keeps painting while the mouse is held over the armed column.
+func (w Assign) Drag() {
+	if !w.Open || w.Mode != AssignModalID || !w.paint.Armed || !w.live() {
+		return
+	}
+	cell := ""
+	if col, _, ok := assignCell(w.kit().Hot); ok && col == w.paint.Value>>assignColShift {
+		cell = w.kit().Hot
+	}
+	if id, ok := w.paint.Entered(w.kit().Host().Frame().Down(inputframe.Left), cell); ok {
+		w.paintCell(id)
+	}
+}
+
+// paintCell gives the colonist of cell id the painted value, unless it
+// already has it.
+func (w Assign) paintCell(id string) {
+	col, pawn, ok := assignCell(id)
+	if !ok {
+		return
+	}
+	v := w.paint.Value & assignValMask
+	for _, p := range w.sh.Pawns() {
+		if uint64(p.ID) != pawn || p.Status == "dead" {
+			continue
+		}
+		switch col {
+		case paintDrug:
+			rd, known := w.sh.Env().Game.(drugPolicyReader)
+			if known && int(rd.DrugPolicy(p.ID)) != v {
+				w.sh.Enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: pawn, Mode: uint8(v)})
+			}
+		case paintCare:
+			if int(p.CareLevel) != v {
+				w.sh.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: pawn, Mode: uint8(v)})
+			}
+		case paintFood:
+			if pol, ok := foodPolicyByID(w.sh.World().FoodPolicies, v); ok && pol.Name != p.FoodPolicy {
+				w.sh.Enqueue(command.Command{Kind: command.SetFoodPolicy, Pawn: pawn, Index: v})
+			}
+		}
+		return
+	}
 }

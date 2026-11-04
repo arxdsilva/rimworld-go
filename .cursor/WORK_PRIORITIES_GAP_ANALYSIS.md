@@ -65,7 +65,7 @@ State: `done` shipped; `open` owed to a later change; `kept` differs from the wi
 | WRK-103 | Simple mode: the manual priorities toggle with plain checks. | open | |
 | WRK-104 | Sorting by a column (CTL-103). Changing a whole column from its header moved to CTL-014. | open | |
 | WRK-105 | The sound when assigning a pawn to work it will do poorly (wiki). | open | |
-| WRK-106 | Dragging to paint priorities: CTL-015. | open | |
+| WRK-106 | Dragging to paint priorities: CTL-015. | done | `ebiten/windows/work.go` |
 | WRK-107 | A delivery taken from the Construct slot is a `job.Haul`, so the colonist card names it Hauling and its speed reads as Haul work. Cosmetic. | open | `game/bio_view.go` |
 
 ## Already matching

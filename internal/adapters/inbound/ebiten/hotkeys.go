@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
+	"rimworld-go/pkg/mathx"
 )
 
 // Hotkeys (UI-016): what each resolved action does in the colony. The
@@ -17,9 +18,15 @@ import (
 
 // midDragState is the middle-mouse camera drag.
 type midDragState struct {
-	on   bool
-	x, y int
+	on     bool
+	x, y   int
+	sx, sy int  // where the press began
+	moved  bool // past midTapSlop: a camera drag, not a tap
 }
+
+// midTapSlop is how far, in map pixels, a middle press may wander and still be
+// a tap that rotates the held object (CTL-017).
+const midTapSlop = 6
 
 // handleViewKeys runs on every screen: screenshot and hide UI.
 func (a *App) handleViewKeys() {
@@ -193,8 +200,12 @@ func (a *App) draftSelection() {
 
 // forbidSelection is F: the selected item stacks are forbidden, or allowed
 // when all already are; with no stack selected, a selected door or bed
-// flips (STK-AL).
+// flips (STK-AL); a group flips stacks and doors together (CTL-009).
 func (a *App) forbidSelection() {
+	if a.sel.Grouped() {
+		a.insp.Commands().ToggleForbidGroup()
+		return
+	}
 	items := a.sel.SelectedItems()
 	if len(items) == 0 {
 		a.insp.Building().ForbidSelection()
@@ -354,11 +365,18 @@ func (a *App) cameraInput(v camerapkg.Viewport) camInput {
 	switch {
 	case f.Clicked(inputframe.Middle):
 		f.Take(inputframe.Middle)
-		a.midDrag = midDragState{on: true, x: mx, y: my}
+		a.midDrag = midDragState{on: true, x: mx, y: my, sx: mx, sy: my}
 	case a.midDrag.on && f.Down(inputframe.Middle):
 		c.dragX, c.dragY = float64(mx-a.midDrag.x), float64(my-a.midDrag.y)
 		a.midDrag.x, a.midDrag.y = mx, my
+		a.midDrag.moved = a.midDrag.moved || mathx.Abs(mx-a.midDrag.sx) > midTapSlop || mathx.Abs(my-a.midDrag.sy) > midTapSlop
 	default:
+		if a.midDrag.on && !a.midDrag.moved { // a tap turns what the mouse holds
+			if a.arch.Open && a.arch.ToolID != "" {
+				a.arch.RotateTool(1)
+			}
+			a.arch.Mover.Rotate(1)
+		}
 		a.midDrag.on = false
 	}
 	return c

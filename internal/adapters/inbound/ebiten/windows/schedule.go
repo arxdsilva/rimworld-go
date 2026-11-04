@@ -167,16 +167,16 @@ func (w Schedule) Paint(id string) {
 
 // Drag keeps painting while the mouse is held over cells.
 func (w Schedule) Drag() {
-	if !w.Open || w.Mode != "schedule" || !w.live() || !w.kit().Host().Frame().Down(inputframe.Left) {
+	if !w.Open || w.Mode != "schedule" || !w.live() {
 		return
 	}
+	down := w.kit().Host().Frame().Down(inputframe.Left)
+	cell := ""
 	mx, my := w.sh.Cursor()
 	if b, ok := uikit.HitButton(w.buttons(), mx, my); ok && strings.HasPrefix(b.ID, ids.PrefixSchedCell) {
-		if b.ID != w.lastPainted {
-			w.lastPainted = b.ID
-			w.Paint(b.ID)
-		}
-		return
+		cell = b.ID
 	}
-	w.lastPainted = ""
+	if id, ok := w.paint.Entered(down, cell); ok {
+		w.Paint(id)
+	}
 }

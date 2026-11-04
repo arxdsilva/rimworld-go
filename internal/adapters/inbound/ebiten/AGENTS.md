@@ -99,7 +99,7 @@ never imports a feature.
   input.
 - Escape on colony (`handleColonyEscape`): hidden UI, order/debug menu,
   formation drag, Move mode, Architect tool, Architect, windows,
-  building/frame/group/pawn selection, then pause — each feature exposes its
+  building/frame/zone/group/animal/item/plant/pawn selection, then pause — each feature exposes its
   `Escape`-style call; the root keeps the order.
 - HUD, inspector, Architect and windows consume pointer hits before map
   selection (`colonyChromeHit`). Disabled buttons do not navigate; they

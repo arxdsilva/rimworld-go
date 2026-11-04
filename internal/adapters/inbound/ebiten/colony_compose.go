@@ -242,8 +242,8 @@ func (a *App) drawSelectionMarks(screen *ebiten.Image) {
 }
 
 // hudRightClick lets a HUD region answer a right-click (dismiss a letter,
-// cycle an alert back, open a command's options). True when it took it;
+// cycle an alert back, open a command's options, lower a work priority). True when it took it;
 // it only ever takes clicks over the HUD.
 func (a *App) hudRightClick(mx, my int) bool {
-	return a.chrome.Right().RightClick(mx, my) || a.insp.Commands().RightClickCommand(mx, my) || a.chrome.Res().RightClick(mx, my)
+	return a.chrome.Right().RightClick(mx, my) || a.insp.Commands().RightClickCommand(mx, my) || a.chrome.Res().RightClick(mx, my) || a.win.Work().RightClick(mx, my)
 }

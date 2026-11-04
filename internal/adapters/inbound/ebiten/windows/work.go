@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
@@ -50,6 +51,14 @@ func WorkPriority(p game.PawnView, col int) int {
 		return 3
 	}
 	return 0
+}
+
+// PrevPriority is NextPriority's inverse: off -> 4 -> 3 -> 2 -> 1 -> off.
+func PrevPriority(v int) int {
+	if v <= 0 {
+		return 4
+	}
+	return v - 1
 }
 
 // NextPriority cycles a cell: off -> 1 -> 2 -> 3 -> 4 -> off.
@@ -224,8 +233,24 @@ func WorkCellValue(p game.PawnView, col int) string {
 	return "-"
 }
 
-// buttons are the Work window's priority cells (an incapable one disabled).
+// buttons are the Work window's priority cells (an incapable one disabled)
+// and, after them, one header button per column (CTL-014).
 func (w Work) buttons() []uikit.Button {
+	out := w.cellButtons()
+	r := w.Rect()
+	for _, t := range work.Order {
+		col := int(t)
+		if _, ok := WorkTypeForCol(col); !ok {
+			continue
+		}
+		cr := WorkCellRect(r, 0, col)
+		out = append(out, uikit.Button{ID: ids.PrefixWorkHead + strconv.Itoa(col), X: cr.X, Y: r.Y + 22, W: cr.W, H: 22, Quiet: true})
+	}
+	return out
+}
+
+// cellButtons are the priority cells alone (an incapable one disabled).
+func (w Work) cellButtons() []uikit.Button {
 	r := w.Rect()
 	hx := int(r.X) + 12 + WorkNameW
 	pawns := w.sh.Pawns()
@@ -284,7 +309,7 @@ func (w Work) draw(screen *ebiten.Image, sw, sh int) {
 		gfx.Text(screen, gfx.Ellipsize(w.sh.PawnLabel(p), gfx.Body, WorkNameW-8), float64(r.X)+12, float64(y)+(workRowH-2-gfx.LineH(gfx.Body))/2, gfx.Body)
 	}
 	mx, my := w.sh.Cursor()
-	drawButtons(screen, w.buttons(), mx, my)
+	drawButtons(screen, w.cellButtons(), mx, my)
 	for row, p := range pawns {
 		y := int(r.Y) + 48 + row*workRowH
 		if y > int(r.Y+r.H)-20 {
@@ -336,4 +361,133 @@ func drawHatch(dst *ebiten.Image, r gfx.Rect) {
 		gfx.Line(sub, r.X+d, r.Bottom(), r.X+d+r.H, r.Y, 1, c, false)
 	}
 	uikit.StrokeRect(dst, r, uikit.BtnBorder)
+}
+
+// parseWorkCell splits "work.cell.<pawn>.<col>".
+func parseWorkCell(id string) (pawn uint64, col int, ok bool) {
+	a, b, found := strings.Cut(strings.TrimPrefix(id, ids.PrefixWorkCell), ".")
+	if !found {
+		return 0, 0, false
+	}
+	pn, err1 := strconv.ParseUint(a, 10, 64)
+	c, err2 := strconv.Atoi(b)
+	return pn, c, err1 == nil && err2 == nil
+}
+
+// pawnByID is the colonist's read model.
+func (w Work) pawnByID(id uint64) (game.PawnView, bool) {
+	for _, p := range w.sh.Pawns() {
+		if uint64(p.ID) == id {
+			return p, true
+		}
+	}
+	return game.PawnView{}, false
+}
+
+// set sends the priority of p's column col unless it already has it or the
+// colonist can never do that work.
+func (w Work) set(p game.PawnView, col, value int) {
+	wt, ok := WorkTypeForCol(col)
+	if !ok || p.Incapable.Enabled(work.Type(col)) || WorkPriority(p, col) == value {
+		return
+	}
+	w.sh.Enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: uint64(p.ID), Work: wt, Count: value})
+}
+
+// Click is a left click on cell id: the next priority, which a drag then
+// paints over the cells it passes (CTL-015).
+func (w Work) Click(id string) {
+	pn, col, ok := parseWorkCell(id)
+	if !ok || !w.live() {
+		return
+	}
+	p, ok := w.pawnByID(pn)
+	if !ok || p.Incapable.Enabled(work.Type(col)) {
+		return
+	}
+	next := NextPriority(WorkPriority(p, col))
+	w.set(p, col, next)
+	w.paint.Arm(id, next)
+}
+
+// RightClick is a right click at (mx, my): a cell takes the previous
+// priority and arms the drag with it. It reports whether the click was on a
+// cell; an incapable one is consumed with no effect (CTL-013).
+func (w Work) RightClick(mx, my int) bool {
+	if !w.Open || (w.Mode != "work" && w.Mode != "") || !w.live() {
+		return false
+	}
+	b, ok := uikit.HitButton(w.cellButtons(), mx, my)
+	if !ok {
+		if h, on := uikit.HitButton(w.Buttons(), mx, my); on {
+			return w.HeadClick(h.ID, w.kit().Host().Frame().Shift(), true)
+		}
+		return false
+	}
+	if b.Disabled {
+		return true
+	}
+	pn, col, ok := parseWorkCell(b.ID)
+	if !ok {
+		return true
+	}
+	if p, ok := w.pawnByID(pn); ok {
+		prev := PrevPriority(WorkPriority(p, col))
+		w.set(p, col, prev)
+		w.paint.Arm(b.ID, prev)
+	}
+	return true
+}
+
+// HeadClick is a click on a column header, id ids.PrefixWorkHead+<col>. With
+// shift, the first capable colonist's next priority (previous when inverse,
+// the right button) goes to every capable colonist; without it nothing
+// changes (CTL-014). It reports whether id was a header.
+func (w Work) HeadClick(id string, shift, inverse bool) bool {
+	if !strings.HasPrefix(id, ids.PrefixWorkHead) {
+		return false
+	}
+	col, err := strconv.Atoi(strings.TrimPrefix(id, ids.PrefixWorkHead))
+	if err != nil || !shift || !w.live() {
+		return err == nil
+	}
+	target, have := 0, false
+	for _, p := range w.sh.Pawns() {
+		if p.Incapable.Enabled(work.Type(col)) {
+			continue
+		}
+		if !have {
+			target, have = NextPriority(WorkPriority(p, col)), true
+			if inverse {
+				target = PrevPriority(WorkPriority(p, col))
+			}
+		}
+		w.set(p, col, target)
+	}
+	return true
+}
+
+// Drag keeps painting the first click's priority over the cells the held
+// mouse passes.
+func (w Work) Drag() {
+	if !w.Open || (w.Mode != "work" && w.Mode != "") || !w.live() {
+		return
+	}
+	down := w.kit().Host().Frame().Down(inputframe.Left) || w.kit().Host().Frame().Down(inputframe.Right)
+	cell := ""
+	if w.paint.Armed {
+		mx, my := w.sh.Cursor()
+		if b, ok := uikit.HitButton(w.cellButtons(), mx, my); ok && !b.Disabled {
+			cell = b.ID
+		}
+	}
+	id, ok := w.paint.Entered(down, cell)
+	if !ok || !w.paint.Armed {
+		return
+	}
+	if pn, col, ok := parseWorkCell(id); ok {
+		if p, ok := w.pawnByID(pn); ok {
+			w.set(p, col, w.paint.Value)
+		}
+	}
 }

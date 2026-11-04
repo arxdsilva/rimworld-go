@@ -2,6 +2,7 @@ package windows
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -355,6 +356,9 @@ func (w Animals) Draw(screen *ebiten.Image, sw, sh int) {
 			uikit.DrawButton(screen, b, b.Contains(mx, my))
 		}
 	}
+	if w.Wild {
+		w.drawWildArrow(screen)
+	}
 }
 
 func (w Animals) drawColony(screen *ebiten.Image, r uikit.Button) {
@@ -645,5 +649,94 @@ func (w Animals) masterMenu(an game.AnimalView) {
 			w.sh.Float(r.X+float32(cols.at(colMaster))-2, r.Y+animalsRowTop+float32(i*animalRowH)+26, opts)
 			return
 		}
+	}
+}
+
+// mapProjector is what the wild-row arrow needs of the camera: a world
+// point in map pixels (consumer-owned; the root's view implements it).
+type mapProjector interface {
+	WorldToScreenF(wx, wy float64) (float32, float32)
+}
+
+// hoveredWildRow is the Wild list row under the cursor.
+func (w Animals) hoveredWildRow() (game.WildlifeRow, float32, bool) {
+	if !w.Open || !w.Wild || !w.live() {
+		return game.WildlifeRow{}, 0, false
+	}
+	r := w.Rect()
+	mx, my := w.sh.Cursor()
+	fy := float32(my) - (r.Y + animalsRowTop)
+	if float32(mx) < r.X || float32(mx) >= r.X+r.W || fy < 0 {
+		return game.WildlifeRow{}, 0, false
+	}
+	i := int(fy) / animalRowH
+	rows := w.wildlife()
+	y := r.Y + animalsRowTop + float32(i*animalRowH)
+	if i >= len(rows) || y+animalRowH > r.Y+r.H {
+		return game.WildlifeRow{}, 0, false
+	}
+	return rows[i], y + animalRowH/2, true
+}
+
+// WildArrow is the arrow of the hovered Wild row (CTL-019): from the row's
+// right edge to the screen spot of one of its animals, the one nearest the
+// screen centre. ok is false without a hovered row, a camera, or an animal
+// that is on screen and out of the fog.
+func (w Animals) WildArrow() (x0, y0, x1, y1 float32, ok bool) {
+	row, ry, hov := w.hoveredWildRow()
+	if !hov {
+		return
+	}
+	cam, has := w.sh.(mapProjector)
+	if !has {
+		return
+	}
+	sw, sh := w.sh.Size()
+	cx, cy := float32(sw)/2, float32(sh)/2
+	mw, _ := w.sh.MapSize()
+	fog := w.sh.World().Fog
+	scale := float32(gfx.UIScale())
+	best := float32(-1)
+	for _, an := range w.sh.World().Animals {
+		if an.Tame || an.Species != row.Species {
+			continue
+		}
+		if i := an.Y*mw + an.X; mw > 0 && i >= 0 && i < len(fog) && fog[i] != 0 {
+			continue // under fog
+		}
+		px, py := cam.WorldToScreenF(float64(an.X)+0.5, float64(an.Y)+0.5)
+		px, py = px/scale, py/scale
+		if px < 0 || py < 0 || px >= float32(sw) || py >= float32(sh) {
+			continue
+		}
+		if d := (px-cx)*(px-cx) + (py-cy)*(py-cy); best < 0 || d < best {
+			best, x1, y1 = d, px, py
+		}
+	}
+	if best < 0 {
+		return
+	}
+	r := w.Rect()
+	return r.X + r.W, ry, x1, y1, true
+}
+
+// drawWildArrow draws the hovered row's arrow: a line with a head at the
+// animal. It allocates nothing.
+func (w Animals) drawWildArrow(screen *ebiten.Image) {
+	x0, y0, x1, y1, ok := w.WildArrow()
+	if !ok {
+		return
+	}
+	gfx.Line(screen, x0, y0, x1, y1, 3, uikit.Accent, true)
+	dx, dy := x0-x1, y0-y1
+	n := float32(math.Hypot(float64(dx), float64(dy)))
+	if n < 1 {
+		return
+	}
+	dx, dy = dx/n*14, dy/n*14                   // back along the line, 14 px
+	for _, s := range [2]float32{0.45, -0.45} { // a head's two sides, turned by about 26 degrees
+		hx := dx*float32(math.Cos(float64(s))) - dy*float32(math.Sin(float64(s)))
+		hy := dx*float32(math.Sin(float64(s))) + dy*float32(math.Cos(float64(s)))
+		gfx.Line(screen, x1, y1, x1+hx, y1+hy, 3, uikit.Accent, true)
 	}
 }

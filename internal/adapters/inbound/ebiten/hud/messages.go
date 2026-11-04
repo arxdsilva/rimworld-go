@@ -113,9 +113,18 @@ func (c Right) liveMessageList() []liveMessage {
 	}
 	now := c.sh.Present()
 	msgs := c.sh.World().Messages
+	st := c.session()
+	for k := range st.dismissed { // a cleared notice that left the list is forgotten
+		if !listed(msgs, k) {
+			delete(st.dismissed, k)
+		}
+	}
 	var live []liveMessage
 	for _, m := range msgs {
 		k := messageKey(m)
+		if st.dismissed[k] {
+			continue
+		}
 		first, ok := c.MsgSeen[k]
 		if !ok {
 			c.MsgSeen[k], first = now, now
@@ -128,6 +137,25 @@ func (c Right) liveMessageList() []liveMessage {
 		live = live[len(live)-messageShown:]
 	}
 	return live
+}
+
+// listed reports whether a notice with key k is in msgs.
+func listed(msgs []game.MessageView, k string) bool {
+	for _, m := range msgs {
+		if messageKey(m) == k {
+			return true
+		}
+	}
+	return false
+}
+
+// dismissMessage hides m for as long as the game still lists it (a right
+// click on its row). It is presentation state, outside the save.
+func (st *rightState) dismissMessage(m game.MessageView) {
+	if st.dismissed == nil {
+		st.dismissed = map[string]bool{}
+	}
+	st.dismissed[messageKey(m)] = true
 }
 
 // liveMessages are the notices still on screen, oldest first.

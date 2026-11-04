@@ -39,6 +39,7 @@ const (
 	PrefixBldg         = "bldg."
 	PrefixBill         = "bill."
 	PrefixWorkCell     = "work.cell."
+	PrefixWorkHead     = "work.head."
 	PrefixOptions      = "options."
 	PrefixInspector    = "inspector."
 )

@@ -120,7 +120,7 @@ type Set struct {
 	// replacing tab click change those, never this field.
 	modal *uikit.Modal
 
-	lastPainted string // the schedule cell the drag painted last
+	paint painter // the left button's drag over a window's cells
 
 	// The Wild list, read again only when the simulation tick moves.
 	wildRows []game.WildlifeRow

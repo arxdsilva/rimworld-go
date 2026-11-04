@@ -449,7 +449,7 @@ The map fills the whole screen; the HUD floats over it.
 -   additive/subtractive;
 -   multi-selection;
 -   cycle stacked entities;
--   double-click same category where useful.
+-   double-click same category where useful. Furniture, blueprints and zones group too; walls, the hopper, floors, fences, conduits and plants do not (`MOUSE_CONTROLS_GAP_ANALYSIS.md`).
 
 ## Time
 
@@ -559,7 +559,7 @@ Disabled commands show reason.
 - **Command buttons:** the action bar became square command buttons right of the pane (icon, label, hotkey, disabled reason in the tooltip), wrapping upward.
   - Hotkeys follow declaration order; dedicated keys stay (R draft, F forbid).
   - Per-colonist choices are options: right-click or the corner arrow. These cover Equip/Wear/Eat/Haul on items, "Now by…" on plants, the trough filter and an animal's master.
-  - A group selection merges its members' commands: a toggle shows mixed, and a command is disabled only when it is for every member.
+  - A group selection merges its members' commands: a toggle shows mixed, and a command is disabled only when it is for every member. A menu merges to the options every member has, and the pick runs on each; a command for one thing (Move, Copy, Settings) leaves the grid.
 - **Nothing selected:** the hovered cell's details show as text at the lower-left.
 
 ------------------------------------------------------------------------

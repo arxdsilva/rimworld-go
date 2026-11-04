@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/command"
 )
 
 // The Architect on the colony HUD (PLAY-018: ARCHITECT owns it). At the
@@ -69,7 +70,7 @@ func (t *Tool) Cards() []Card {
 				Disabled: true, Reason: PlannedReason})
 			continue
 		}
-		b := Card{ID: ids.PrefixArchTool + head, Label: d.Label, Icon: d.Icon, Toggle: true}
+		b := Card{ID: ids.PrefixArchTool + head, Label: d.Label, Icon: d.Icon, Toggle: true, Options: t.orderOptions(d.ID)}
 		stuff := t.ToolStuff(d)
 		stock := 0
 		if bv, ok := Buildable(d.Build); ok && bv.Carpet {
@@ -411,4 +412,31 @@ func CropTip(c game.CropView) string {
 		fmt.Fprintf(&b, " Lives %.0f days.", c.Lifespan)
 	}
 	return b.String()
+}
+
+// orderOptions is the right-click menu of an order tool (CTL-016): the
+// whole map at once. Forbid and Allow flip every stack; Hunt and Tame drop
+// every mark of their own (Undesignate clears just the named order).
+func (t *Tool) orderOptions(id string) []CardOption {
+	var label string
+	c := command.Command{}
+	switch id {
+	case "forbid", "allow":
+		label, c = "Forbid all on the map", command.Command{Kind: command.DesignateForbid, Enabled: true}
+		if id == "allow" {
+			label, c = "Allow all on the map", command.Command{Kind: command.DesignateForbid}
+		}
+	case "hunt":
+		label, c = "Cancel all hunting", command.Command{Kind: command.Undesignate, Order: command.OrderHunt}
+	case "tame":
+		label, c = "Cancel all taming", command.Command{Kind: command.Undesignate, Order: command.OrderTame}
+	default:
+		return nil
+	}
+	w, h := t.sh.MapSize()
+	if w <= 0 || h <= 0 {
+		return nil
+	}
+	c.X2, c.Y2 = w-1, h-1
+	return []CardOption{{Label: label, Cmd: c}}
 }

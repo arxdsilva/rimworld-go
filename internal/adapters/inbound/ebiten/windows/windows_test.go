@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -128,8 +129,8 @@ func TestHandDrawnWindowsButtonsAndClicks(t *testing.T) {
 		t.Fatal("buttons with no window open")
 	}
 	w.Show("work")
-	if got := len(w.Buttons()); got != 2*len(WorkLive) {
-		t.Fatalf("work cells %d, want %d", got, 2*len(WorkLive))
+	if got := len(w.Buttons()); got != 3*len(WorkLive) { // cells, then a header per column (CTL-014)
+		t.Fatalf("work buttons %d, want %d", got, 3*len(WorkLive))
 	}
 	if ww, wh := w.Want(); ww <= 0 || wh <= 0 {
 		t.Fatalf("work wants %vx%v", ww, wh)
@@ -192,5 +193,178 @@ func TestWorkSlotsCoverEveryType(t *testing.T) {
 	x := func(ty work.Type) float32 { return WorkCellRect(r, 0, int(ty)).X }
 	if !(x(work.Grow) < x(work.Haul) && x(work.Clean) < x(work.Research)) {
 		t.Fatalf("Grow %v Haul %v Clean %v Research %v", x(work.Grow), x(work.Haul), x(work.Clean), x(work.Research))
+	}
+}
+
+// cursorShell is a fakeShell whose pointer a test places.
+type cursorShell struct {
+	*fakeShell
+	mx, my int
+}
+
+func (c *cursorShell) Cursor() (int, int) { return c.mx, c.my }
+
+// workFixture opens Work over three colonists; Cy cannot do Cook (col 3).
+func workFixture() (*cursorShell, *Set) {
+	f := &fakeShell{}
+	f.kit = uikit.New(fakeHost{f})
+	sh := &cursorShell{fakeShell: f}
+	sh.env.Game = fakeReader{}
+	var inc work.Mask
+	inc = inc.Set(work.Cook, true)
+	sh.pawns = []game.PawnView{
+		{ID: 1, Name: "Ada", Priorities: []int{0, 0, 0, 2}},
+		{ID: 2, Name: "Bo", Priorities: []int{0, 0, 0, 4}},
+		{ID: 3, Name: "Cy", Incapable: inc, Priorities: []int{0, 0, 0, 0}},
+	}
+	w := New(sh)
+	w.Show("work")
+	return sh, w
+}
+
+func cellID(p uint64, col int) string {
+	return ids.PrefixWorkCell + uitoa(p) + "." + uitoa(uint64(col))
+}
+
+func uitoa(n uint64) string {
+	if n == 0 {
+		return "0"
+	}
+	s := ""
+	for ; n > 0; n /= 10 {
+		s = string(rune('0'+n%10)) + s
+	}
+	return s
+}
+
+func cellCenter(t *testing.T, w *Set, id string) (int, int) {
+	t.Helper()
+	for _, b := range w.Work().cellButtons() {
+		if b.ID == id {
+			return int(b.X + b.W/2), int(b.Y + b.H/2)
+		}
+	}
+	t.Fatalf("no cell %s", id)
+	return 0, 0
+}
+
+func TestPrevPriorityInvertsNext(t *testing.T) {
+	t.Parallel()
+	for v := 0; v <= 4; v++ {
+		if PrevPriority(NextPriority(v)) != v || NextPriority(PrevPriority(v)) != v {
+			t.Fatalf("not inverse at %d", v)
+		}
+	}
+	if PrevPriority(1) != 0 || PrevPriority(0) != 4 {
+		t.Fatal("cycle")
+	}
+}
+
+func TestWorkRightClickLowersAndCycles(t *testing.T) {
+	t.Parallel()
+	sh, w := workFixture()
+	sh.mx, sh.my = cellCenter(t, w, cellID(1, 3))
+	if !w.Work().RightClick(sh.mx, sh.my) {
+		t.Fatal("not consumed")
+	}
+	if len(sh.cmds) != 1 || sh.cmds[0].Kind != command.SetWorkPriority || sh.cmds[0].Pawn != 1 || sh.cmds[0].Count != 1 {
+		t.Fatalf("%+v", sh.cmds)
+	}
+	sh.pawns[0].Priorities[3] = 0 // off cycles to 4
+	w.Work().RightClick(sh.mx, sh.my)
+	if sh.cmds[1].Count != 4 {
+		t.Fatalf("off lowered to %d", sh.cmds[1].Count)
+	}
+	if w.Work().RightClick(-5, -5) {
+		t.Fatal("click off the cells was consumed")
+	}
+}
+
+func TestWorkRightClickIncapableConsumesWithNoEffect(t *testing.T) {
+	t.Parallel()
+	sh, w := workFixture()
+	mx, my := cellCenter(t, w, cellID(3, 3))
+	if !w.Work().RightClick(mx, my) || len(sh.cmds) != 0 {
+		t.Fatalf("consumed or sent: %+v", sh.cmds)
+	}
+}
+
+func TestWorkHeaderShiftSetsAllCapable(t *testing.T) {
+	t.Parallel()
+	sh, w := workFixture()
+	head := ids.PrefixWorkHead + "3"
+	w.Work().HeadClick(head, false, false)
+	if len(sh.cmds) != 0 {
+		t.Fatalf("no shift changed %+v", sh.cmds)
+	}
+	w.Work().HeadClick(head, true, false) // Ada has 2: next is 3 for everyone capable
+	if len(sh.cmds) != 2 {
+		t.Fatalf("%+v", sh.cmds)
+	}
+	for _, c := range sh.cmds {
+		if c.Count != 3 || c.Pawn == 3 {
+			t.Fatalf("%+v", c)
+		}
+	}
+	sh.cmds = nil
+	sh.pawns[1].Priorities[3] = 3 // already equal: only Ada is sent
+	sh.pawns[0].Priorities[3] = 3
+	sh.pawns[0].Priorities[3] = 2
+	w.Work().HeadClick(head, true, false)
+	if len(sh.cmds) != 1 || sh.cmds[0].Pawn != 1 {
+		t.Fatalf("sent where equal: %+v", sh.cmds)
+	}
+}
+
+func TestWorkHeaderShiftRightIsInverse(t *testing.T) {
+	t.Parallel()
+	sh, w := workFixture()
+	w.Work().HeadClick(ids.PrefixWorkHead+"3", true, true) // Ada 2 -> 1 for all capable
+	if len(sh.cmds) != 2 || sh.cmds[0].Count != 1 || sh.cmds[1].Count != 1 {
+		t.Fatalf("%+v", sh.cmds)
+	}
+}
+
+func TestWorkDragPaintsOncePerNewCellAndSkipsIncapable(t *testing.T) {
+	t.Parallel()
+	sh, w := workFixture()
+	sh.pawns[1].Priorities[3] = 0
+	sh.f = inputframe.NewFrame(inputframe.Raw{Down: [inputframe.NumMouse]bool{inputframe.Left: true}})
+	w.Work().Click(cellID(1, 3)) // 2 -> 3, armed with 3
+	if len(sh.cmds) != 1 || sh.cmds[0].Count != 3 {
+		t.Fatalf("%+v", sh.cmds)
+	}
+	drag := func(id string) {
+		sh.mx, sh.my = cellCenter(t, w, id)
+		w.Work().Drag()
+	}
+	drag(cellID(1, 3)) // the pressed cell again: nothing
+	drag(cellID(2, 3))
+	drag(cellID(2, 3)) // same cell: not re-sent
+	drag(cellID(3, 3)) // incapable: skipped
+	if len(sh.cmds) != 2 || sh.cmds[1].Pawn != 2 || sh.cmds[1].Count != 3 {
+		t.Fatalf("%+v", sh.cmds)
+	}
+	sh.f = inputframe.NewFrame(inputframe.Raw{}) // released
+	drag(cellID(1, 4))
+	if len(sh.cmds) != 2 || w.paint.Armed {
+		t.Fatalf("painted after release: %+v", sh.cmds)
+	}
+}
+
+func TestWorkColumnsFollowOrderForHeadersAndCells(t *testing.T) {
+	t.Parallel()
+	_, w := workFixture()
+	r := w.Rect()
+	for _, b := range w.Work().buttons() {
+		if len(b.ID) > len(ids.PrefixWorkHead) && b.ID[:len(ids.PrefixWorkHead)] == ids.PrefixWorkHead {
+			col := int(b.ID[len(b.ID)-1] - '0')
+			if len(b.ID) > len(ids.PrefixWorkHead)+1 {
+				col = col + 10*int(b.ID[len(b.ID)-2]-'0')
+			}
+			if b.X != WorkCellRect(uikit.Button{X: r.X, Y: r.Y, W: r.W, H: r.H}, 0, col).X {
+				t.Fatalf("header %s at %v", b.ID, b.X)
+			}
+		}
 	}
 }

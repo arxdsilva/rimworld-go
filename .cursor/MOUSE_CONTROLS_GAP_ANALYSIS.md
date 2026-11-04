@@ -7,12 +7,13 @@ Scope: what the mouse does on the map, the bar, the windows and the dialogs. Loa
 | Item | Decision |
 |---|---|
 | Goal | A double click on furniture or an item takes the same type on screen, and any action then applies to all of them (user, 2026-11-04). Everything else the sources list comes with it. |
-| Who does not group | Walls, hopper and trees, from the wiki. All other plants, floors, fences and conduits are our rule: they come in rows. A plain click still selects one. |
+| Who does not group | Walls, hopper and trees, from the wiki. All other plants, floors (carpet too), fences and conduits are our rule: they come in rows. A plain click still selects one. A wall blueprint does group (report). |
 | Shift mixes kinds | One report only, kept because the user asked for everything. A box still takes one kind. |
-| Bar order | Saved in the save file, outside the state hash, empty by default, no `SaveVersion` bump. It never reaches AI or work. |
+| Bar order | Saved in the save file, empty by default, no `SaveVersion` bump. It enters the state hash only once the player moved someone, since it travels by command; unused, every pinned hash holds. It never reaches AI or work. |
 | Work header | Shift-click gives every capable colonist the next value of the first capable one; Shift-right the previous. The tip does not define the step. |
 | Painting | The value of the first click, like the Schedule brush. |
 | Box result | Dragging over a base now selects furniture instead of clearing the selection. |
+| Double click with nothing alike | It stays a click, so two quick clicks still cycle a tile's stack. With two alike on screen they form a group. |
 
 ## Sources
 
@@ -30,26 +31,26 @@ State: `done` shipped; `open` owed to a later change.
 
 | Id | Vanilla | Source | State | Where |
 |---|---|---|---|---|
-| CTL-001 | Double click takes the same type on screen, doors included. | Wiki | open | `selection`, `multiselect_render.go` |
-| CTL-002 | Double click on a blueprint. | Report | open | same |
-| CTL-003 | Double click on a zone takes the zones in view. | Wiki | open | same |
-| CTL-004 | Double click on a plant in a zone takes the zones. | Report | open | same |
-| CTL-005 | Shift adds any groupable kind. | Wiki | open | `selection` |
-| CTL-006 | Shift mixes kinds; the pane says "Various". | Report | open | `selection`, `inspector/multiselect.go` |
-| CTL-007 | The box takes furniture, blueprints and zones. | Wiki | open | `multiselect_render.go` |
-| CTL-008 | The pane shows the quantity for every group. | Wiki | open | `inspector/multiselect.go` |
-| CTL-009 | An action applies to every member. | User | open | `inspector/hud_commands.go` |
-| CTL-010 | Right click dismisses a message. | Tip | open | `hud/messages.go` |
-| CTL-011 | Right drag on the bar reorders it. | Wiki, tip | open | `hud`, `game/roster` |
-| CTL-012 | Right click on the bar opens the world on that colonist. | Wiki | open | `hud` |
-| CTL-013 | Right click on a Work cell lowers the priority. | Tip | open | `windows/work.go` |
-| CTL-014 | Shift-click a work type's name changes all colonists. | Tip | open | `windows/work.go` |
-| CTL-015 | Dragging paints Work, Assign and the food policy. | Tip, report | open | `windows/` |
-| CTL-016 | Right click on orders: forbid all, cancel all hunting. | Tip | open | `architect` |
-| CTL-017 | The middle button rotates the object being placed. | Wiki | open | `hotkeys.go` |
-| CTL-018 | Ctrl ×10, Shift ×100, both ×1000 on trade and caravan. | Wiki | open | `uikit`, `dialogs` |
-| CTL-019 | Hovering a wildlife row points an arrow at the animal. | Wiki | open | `windows/animals.go` |
-| CTL-020 | Escape clears the selection. Bug: a lone animal, item or plant stayed selected. | Memory | open | `app.go` |
+| CTL-001 | Double click takes the same type on screen, doors included. | Wiki | done | `selection`, `multiselect_render.go` |
+| CTL-002 | Double click on a blueprint. | Report | done | same |
+| CTL-003 | Double click on a zone takes the zones in view. | Wiki | done | same |
+| CTL-004 | Double click on a plant in a zone takes the zones. | Report | done | same |
+| CTL-005 | Shift adds any groupable kind. | Wiki | done | `selection` |
+| CTL-006 | Shift mixes kinds; the pane says "Various". | Report | done | `selection`, `inspector/multiselect.go` |
+| CTL-007 | The box takes furniture, blueprints and zones. | Wiki | done | `multiselect_render.go` |
+| CTL-008 | The pane shows the quantity for every group. | Wiki | done | `inspector/multiselect.go` |
+| CTL-009 | An action applies to every member. | User | done | `inspector/hud_commands.go` |
+| CTL-010 | Right click dismisses a message. | Tip | done | `hud/messages.go` |
+| CTL-011 | Right drag on the bar reorders it. | Wiki, tip | done | `hud`, `game/roster` |
+| CTL-012 | Right click on the bar opens the world on that colonist. | Wiki | done | `hud` |
+| CTL-013 | Right click on a Work cell lowers the priority. | Tip | done | `windows/work.go` |
+| CTL-014 | Shift-click a work type's name changes all colonists. | Tip | done | `windows/work.go` |
+| CTL-015 | Dragging paints Work and Assign, Food column included (the food policy editor has no per-colonist column). | Tip, report | done | `windows/` |
+| CTL-016 | Right click on orders: forbid all, cancel all hunting. | Tip | done | `architect` |
+| CTL-017 | The middle button rotates the object being placed. | Wiki | done | `hotkeys.go` |
+| CTL-018 | Ctrl ×10, Shift ×100, both ×1000 on trade and caravan. | Wiki | done | `uikit`, `dialogs` |
+| CTL-019 | Hovering a wildlife row points an arrow at the animal. | Wiki | done | `windows/animals.go` |
+| CTL-020 | Escape clears the selection. Bug: a lone animal, item or plant stayed selected. | Memory | done | `app.go` |
 | CTL-101 | Right click with several undrafted colonists opens a menu. | Memory | open: no source for how it works | |
 | CTL-102 | A colonist's name in Work and Assign jumps to them. Only Animals does. | Memory | open | |
 | CTL-103 | A column header sorts the column. | Memory | open (WRK-104) | |

@@ -61,3 +61,6 @@ The colony HUD's regions: resource bar, colonist bar, right column (letters, mes
 
 ## Fish tank (FISH)
 `alerts_tank.go`: "Fish dying" (`FishDyingAlertKey`, a stocked tank with `Tank.Trouble`).
+
+## Mouse on the bar and the messages (CTL-010..012)
+`bar_drag.go`: `ColonistBar.HandleRight` owns the right button from a press on a portrait until the release. It sends `SetColonistOrder` with the target's `BarOrder` (one rank across all maps, not the place in the grouped list), `ports.OpenWorld` on a click, a hint across maps. The "+N" slot takes no part. `rightState.dismissed` hides a message while the game still lists it; presentation only, never saved.

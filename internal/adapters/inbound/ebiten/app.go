@@ -11,8 +11,6 @@ import (
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	windowspkg "rimworld-go/internal/adapters/inbound/ebiten/windows"
-	"strconv"
-	"strings"
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -350,7 +348,7 @@ func (a *App) handleColonyEscape() bool {
 		a.arch.Zones.Clear() // zone_select.go
 		return true
 	}
-	if a.sel.Grouped() {
+	if a.sel.Grouped() || a.sel.HasAnimal || a.sel.HasItem || a.sel.HasPlant {
 		a.sel.Clear(selection.None)
 		return true
 	}
@@ -763,38 +761,6 @@ func drawDim(screen *ebiten.Image, sw, sh int) {
 	gfx.FillRect(screen, 0, 0, float32(sw), float32(sh), uikit.Dim, false)
 }
 
-func (a *App) toggleWorkCell(id string) {
-	if a.renderer == nil {
-		return
-	}
-	rest := strings.TrimPrefix(id, "work.cell.")
-	parts := strings.Split(rest, ".")
-	if len(parts) != 2 {
-		return
-	}
-	pawnN, err := strconv.ParseUint(parts[0], 10, 64)
-	if err != nil {
-		return
-	}
-	col, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return
-	}
-	wt, ok := windowspkg.WorkTypeForCol(col)
-	if !ok {
-		return
-	}
-	next := work3
-	for _, p := range a.renderer.snapshot() {
-		if uint64(p.ID) == pawnN {
-			next = windowspkg.NextPriority(windowspkg.WorkPriority(p, col))
-		}
-	}
-	a.renderer.enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: pawnN, Work: wt, Count: next})
-}
-
-const work3 = 3
-
 // NewApp returns an App on the boot screen. Simulation is not created
 // until Start is pressed.
 func NewApp(cfg AppConfig) *App {
@@ -930,6 +896,9 @@ func (a *App) Update() error {
 		}
 	}
 
+	if a.colonyLive() && !a.chrome.Hidden {
+		a.chrome.Bar().HandleRight(&a.in) // reorder the bar, or open the world (hud/bar_drag.go)
+	}
 	if a.colonyLive() && !a.chrome.Hidden && a.in.Clicked(inputframe.Right) {
 		if mx, my := a.currentCursor(); a.hudRightClick(mx, my) { // hud.go: letters, alerts, command options
 			a.in.Take(inputframe.Right)
@@ -944,6 +913,8 @@ func (a *App) Update() error {
 			a.renderer.applyCamera(a.mapViewport(), a.cameraInput(a.mapViewport())) // physical (camera.go)
 		}
 		a.win.Schedule().Drag()
+		a.win.Work().Drag()
+		a.win.Assign().Drag()
 		if (a.ord.Float.Open || a.tools.State.Menu) && a.in.Clicked(inputframe.Left) {
 			a.ord.CloseFloat() // click outside a menu just closes it
 			a.tools.State.Menu = false

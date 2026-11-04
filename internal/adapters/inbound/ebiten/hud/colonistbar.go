@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -95,6 +96,10 @@ type barState struct {
 	// mp is the bar's entries with several maps open (MAP-1), built once an
 	// Update; groups are the non-empty maps, parallel to the layout's frames.
 	mp barMaps
+	// ord is the sorted copy of the colonists (bar order), reused; drag is
+	// the right-button gesture in flight (bar_drag.go).
+	ord  []game.PawnView
+	drag barDrag
 }
 
 // barMaps is the multi-map bar's per-Update memo.
@@ -398,10 +403,11 @@ func (c ColonistBar) Pawns() []game.PawnView {
 					out = append(out, q)
 				}
 			}
+			slices.SortStableFunc(out, byBarOrder)
 			return out
 		}
 	}
-	return pawns
+	return c.barSorted(pawns)
 }
 
 // groups are the map groups with colonists on the bar; nil with one map
@@ -436,6 +442,7 @@ func (c ColonistBar) multi() ([]game.PawnView, []mapnav.Group) {
 			if len(ps) == 0 || len(groups) == hudlayout.MaxBarGroups {
 				continue
 			}
+			slices.SortStableFunc(ps, byBarOrder)
 			g.Pawns = ps
 			groups = append(groups, g)
 			pawns = append(pawns, ps...)
@@ -530,6 +537,7 @@ func (c ColonistBar) DrawPortraits(screen *ebiten.Image, sh int) {
 		slot := l.BarSlots[i]
 		c.drawCard(screen, barCardOf(slot, l.BarScale), p, c.Picked(p.ID), slot.Hit(mx, my), c.statusesWith(p, fires))
 	}
+	c.drawDrag(screen, pawns[:n])
 	if slot, ok := barMoreSlot(l); ok {
 		drawBarMore(screen, slot, l.BarMore, slot.Hit(mx, my))
 	}

@@ -250,8 +250,14 @@ func TestArchitectToolsAreCommands(t *testing.T) {
 			if bv, ok := architect.Buildable(tool.Build); ok && !strings.Contains(cb.Desc, "Cost: ") {
 				t.Errorf("%s: Desc %q lacks the cost of %s", tool.ID, cb.Desc, bv.Kind)
 			}
-			if cb.Run != nil || len(cb.Cmds) > 0 || cb.Options != nil {
-				t.Errorf("%s: legacy ids go through applyClick, got Run/Cmds/Options", cb.ID)
+			if cb.Run != nil || len(cb.Cmds) > 0 {
+				t.Errorf("%s: legacy ids go through applyClick, got Run/Cmds", cb.ID)
+			}
+			// CTL-016: only the map-wide orders have a right-click menu, and
+			// TestJourneyMouseLeftClickOnAnOrderArmsIt proves a left click still arms them.
+			mapWide := tool.ID == "forbid" || tool.ID == "allow" || tool.ID == "hunt" || tool.ID == "tame"
+			if (cb.Options != nil) != mapWide {
+				t.Errorf("%s: Options set = %v, want %v", cb.ID, cb.Options != nil, mapWide)
 			}
 			bv, _ := architect.Buildable(tool.Build)
 			unbuilt := tool.Build != "" && construction.DefOf(construction.Kind(bv.ID)).Unbuildable // A2: the urn

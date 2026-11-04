@@ -161,12 +161,12 @@ func (dl *Dealings) commsFaction(d *commsDraft, f game.CommsFactionView, r gfx.R
 		why = "No silver within reach of a trade beacon."
 	}
 	if dl.kit().Button(fmt.Sprintf("comms.%d.giftless", id), gfx.Rect{X: r.X + 10, Y: by, W: 30, H: h}, "-", uikit.BtnOpts{Disabled: amount <= 1, Reason: "Least is 1 silver."}) {
-		d.stepGift(id, -CommsGiftStep)
+		d.stepGift(id, -CommsGiftStep*qtyMult(dl.kit()))
 	}
 	dl.kit().Label(r.X+46, by+7, fmt.Sprintf("%d", amount), gfx.Label)
 	if dl.kit().Button(fmt.Sprintf("comms.%d.giftmore", id), gfx.Rect{X: r.X + 86, Y: by, W: 30, H: h}, "+", uikit.BtnOpts{
 		Disabled: amount >= d.view.BeaconSilver, Reason: "That is all the silver in reach."}) {
-		d.stepGift(id, CommsGiftStep)
+		d.stepGift(id, CommsGiftStep*qtyMult(dl.kit()))
 	}
 	earn := faction.GiftGoodwill(amount)
 	if dl.kit().Button(fmt.Sprintf("comms.%d.gift", id), gfx.Rect{X: r.X + 124, Y: by, W: 170, H: h}, "Gift silver", uikit.BtnOpts{

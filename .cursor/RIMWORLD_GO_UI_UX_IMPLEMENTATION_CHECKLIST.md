@@ -238,10 +238,10 @@ This is the minimum UI required to interact with a running simulation.
 -   [x] **Selection cycling** (UI-011: clicking the same tile again cycles its stack)
     -   When multiple selectable things share a cell, provide
         predictable way to inspect/cycle them.
--   [x] **Drag-select colonists** (UI-016: a left drag boxes colonists, else animals, else items; Shift+click and Shift+drag add/remove)
+-   [x] **Drag-select colonists** (UI-016: a left drag boxes colonists, else animals, items, furniture, blueprints, zones; Shift+click and Shift+drag add/remove, mixing kinds: CTL-005..007)
     -   Rectangle selects player-controllable pawns.
     -   Modifiers add/remove from selection.
--   [x] **Double-click same-type selection** (UI-016: visible colonists, animals of the species, stacks of the item)
+-   [x] **Double-click same-type selection** (UI-016: visible colonists, animals of the species, stacks of the item; CTL-001..004: furniture, blueprints, zones, and a zone's plant takes the zones)
     -   Select visible entities of the same relevant type, useful for
         pawns/animals/items.
 -   [-] **Selection markers** (yellow outline on the selected pawn; every group member outlined and its colonist-bar slot lit (UI-016); no hostile/friendly differentiation yet)
@@ -327,7 +327,7 @@ building, item, plant, animal, corpse or tile.
     -   Disabled command must explain *why*: incapable, unreachable,
         reserved, missing material, wrong faction, research missing,
         unsafe, etc.
--   [-] **Multi-selection actions** (UI-016: group panel with Draft all/Undraft all, Forbid all/Allow all and the member list; R, F and right-click act on every member; formation moves; no assign area yet; PLAY-018: a group's commands merge (mixed toggles, disabled only when disabled for all))
+-   [-] **Multi-selection actions** (UI-016: group panel with Draft all/Undraft all, Forbid all/Allow all and the member list; R, F and right-click act on every member; formation moves; no assign area yet; PLAY-018: a group's commands merge (mixed toggles, disabled only when disabled for all); CTL-008, 009: furniture, blueprints, zones and mixed groups, a menu merges to the options all share, Move and Copy stay single)
     -   Draft/undraft.
     -   assign area.
     -   group commands.
@@ -363,7 +363,7 @@ building, item, plant, animal, corpse or tile.
     -   caravan/off-map.
     -   break risk.
     -   Icons must remain readable without opening inspector.
--   [-] **Ordering** (insertion order inside a group; MAP-1: one frame per open map (label chip, red dot on a threat, current map highlighted), then caravan groups; `hud/colonistbar.go`, `Colonists()`; a click on another map's colonist switches, selects and centres; no custom sort)
+-   [x] **Ordering** (insertion order inside a group; MAP-1: one frame per open map (label chip, red dot on a threat, current map highlighted), then caravan groups; `hud/colonistbar.go`, `Colonists()`; a click on another map's colonist switches, selects and centres; CTL-011: a right drag reorders within a map's group, saved)
     -   Stable default ordering.
     -   Later allow groups/custom ordering.
 -   [x] **Large-colony scaling** (PLAY-018: the bar scales to 0.75 and 0.5 and wraps to 2-3 rows, then a "+N" slot; it never reaches the resource list or the right column)
@@ -488,7 +488,7 @@ the player's primary world-editing command surface.
 -   [x] **Copy/paste settings** (U5: Copy and Paste buttons, `PasteStockpile`; disabled reasons)
     -   Important quality-of-life feature.
 -   [x] **Shelf and storage-building priority** (STO-3: `cmd.shelf.storage` opens the same window for shelves, hoppers, sarcophagi and graves; five priority buttons)
--   [-] **Link storage** (STO-3: `cmd.shelf.link` picks one other shelf at a time, `cmd.shelf.unlink`, group naming via `RenameZone`; missing: shift multi-select, buildings cannot be multi-selected)
+-   [-] **Link storage** (STO-3: `cmd.shelf.link` picks one other shelf at a time, `cmd.shelf.unlink`, group naming via `RenameZone`; CTL-005: shelves can be multi-selected with Shift, but linking still picks one at a time)
 -   [x] **Capacity readouts** (STO-3: "Stored x of y stacks" on zone and building panes; the Accepts line reads the real filter; dispenser pane lists hoppers and fill)
 -   [x] **Zones overlay toggle and colours** (STO-3: `overlay.zones` Shift+Z and `hud.zones`; storage zones outlined in a fixed palette by zone id)
 
@@ -548,7 +548,7 @@ interfaces.
     -   Tooltip explains work category.
 -   [-] **Simple priorities mode** (superseded by manual priorities; `SetWorkEnabled` still maps on/off to 3/off)
     -   Toggle work type on/off.
--   [-] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency; no drag painting yet: WRK-106)
+-   [-] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency; CTL-013..015: right click lowers, Shift on a column's name changes all, dragging paints; the simple checkbox mode is WRK-103)
     -   Priority values equivalent to 1--4.
     -   Click cycles values.
     -   Drag paints a priority across cells.

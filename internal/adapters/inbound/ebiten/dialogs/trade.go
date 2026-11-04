@@ -419,6 +419,7 @@ func (dl *Dealings) tradeRow(d *tradeDraft, r game.TradeRowView, y float32,
 	dl.kit().Label(cAmt.X+8, mid, label, amt)
 
 	lo, hi := d.bounds(r)
+	mult := qtyMult(dl.kit()) // tradeDraft.set clamps to the row's bounds
 	btn := gfx.Rect{X: 0, Y: y + 2, W: 40, H: tradeRowH - 4}
 	for i, s := range tradeSteps { // give: All, 10, 1 (left to right)
 		btn.X = cSell.X + float32(i)*42
@@ -431,8 +432,8 @@ func (dl *Dealings) tradeRow(d *tradeDraft, r game.TradeRowView, y float32,
 		case n <= lo:
 			why = "That is everything you have."
 		}
-		step := s.n
-		if step == 0 {
+		step := s.n * mult
+		if s.n == 0 {
 			step = r.ColonyQty
 		}
 		if dl.kit().Button("trade."+r.Kind+".give."+s.id, btn, s.label, uikit.BtnOpts{Disabled: why != "", Reason: why}) {
@@ -451,12 +452,19 @@ func (dl *Dealings) tradeRow(d *tradeDraft, r game.TradeRowView, y float32,
 		case n >= hi:
 			why = "That is all they have."
 		}
-		step := s.n
-		if step == 0 {
+		step := s.n * mult
+		if s.n == 0 {
 			step = r.TraderQty
 		}
 		if dl.kit().Button("trade."+r.Kind+".take."+s.id, btn, s.label, uikit.BtnOpts{Disabled: why != "", Reason: why}) {
 			d.step(r, step)
 		}
 	}
+}
+
+// qtyMult is the multiplier the held Ctrl and Shift put on a counter's step
+// (CTL-018): x10, x100, x1000 with both.
+func qtyMult(k *uikit.Kit) int {
+	f := k.Host().Frame()
+	return uikit.QtyStep(f.Ctrl(), f.Shift())
 }

@@ -82,4 +82,3 @@ State: `done` (before this change), `closed` (this change), `open` (left, with t
 
 - B4: per-faction door passability (visitors, traders and breaking colonists through a forbidden door). Pathing has one colonist grid; this needs a region layer, which belongs to a defence or pathing task.
 - Downed pawns dropping their weapon (vanilla): a combat rule, not an allow rule; when it lands, its drop uses `allow.Forbids.DropForbidden`.
-- Building multi-select (several doors at once): the selection model groups pawns, animals and items only (`selection/selection.go`); F works on one selected door or bed.

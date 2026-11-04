@@ -49,3 +49,6 @@ The colony's main-tab windows: Work, Schedule, Assign, Animals (with the wildlif
 - `App.ng` stays on App because `Env.Planet` reads it.
 - The wizard-to-factions glue stays in the root.
 - Lowest coverage among the feature packages: add tests with any change to a window's click handling.
+
+## Mouse painting (CTL-013..015, 019)
+`paint.go`: one `painter` on `Set` (one window is open at a time): a first click arms it with its value, and `Drag` spreads that value over the cells the held mouse enters, once each. Schedule, Work and Assign use it; `Assign.Drag` covers Drugs, Medical and Food. Work: `RightClick` lowers a cell or runs a header with the right button, `HeadClick` needs Shift, incapable colonists are skipped silently. `Animals.WildArrow` is the arrow to a hovered wild row; it needs the shell's `WorldToScreenF` through the consumer-owned `mapProjector`.

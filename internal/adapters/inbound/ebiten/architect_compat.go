@@ -129,6 +129,15 @@ func (a *App) archToolCommands() []inspector.Button {
 	for i, c := range cards {
 		out[i] = inspector.Button{ID: c.ID, Label: c.Label, Icon: c.Icon, Desc: c.Desc,
 			Disabled: c.Disabled, Reason: c.Reason, Toggle: c.Toggle, On: c.On}
+		if opts := c.Options; len(opts) > 0 { // CTL-016: the right-click menu
+			out[i].Options = func() []inspector.Option {
+				list := make([]inspector.Option, len(opts))
+				for k, o := range opts {
+					list[k] = inspector.Option{Label: o.Label, Cmd: &o.Cmd}
+				}
+				return list
+			}
+		}
 	}
 	return out
 }

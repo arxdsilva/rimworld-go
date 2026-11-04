@@ -32,6 +32,7 @@ func newFake(sim Sim) (*Tool, *fakeShell) {
 func (f *fakeShell) Env() Env                               { return f.env }
 func (f *fakeShell) World() game.WorldView                  { return f.w }
 func (f *fakeShell) Pawns() []game.PawnView                 { return nil }
+func (f *fakeShell) MapSize() (int, int)                    { return 40, 30 }
 func (f *fakeShell) Tick() clock.Tick                       { return 1 }
 func (f *fakeShell) Enqueue(c command.Command)              { f.cmds = append(f.cmds, c) }
 func (f *fakeShell) Hint(s string)                          { f.hint = s }
