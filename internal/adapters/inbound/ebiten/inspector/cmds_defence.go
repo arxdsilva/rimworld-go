@@ -82,7 +82,7 @@ func (a Building) defenceCommands(b game.BuildingView) []Button {
 			aimDesc, clrDesc = "Click a tile for the next volley; a drafted colonist mans the battery and fires it once. Esc or a right click cancels.",
 				"Drop the target: the battery holds its rockets."
 		}
-		out = append(out, Button{ID: MortarAimID, Label: "Set target", Icon: "order_attack", Desc: aimDesc,
+		out = append(out, Button{ID: MortarAimID, Label: "Set target", Icon: "order_attack", Single: true, Desc: aimDesc,
 			Run: func() { a.shell.Do(ports.AimMortar{ID: id, X: bx, Y: by}) }})
 		clr := Button{ID: MortarClrID, Label: "Clear target", Icon: "order_cancel", Desc: clrDesc,
 			Cmds: []command.Command{{Kind: command.ClearMortarTarget, X: b.X, Y: b.Y}}}

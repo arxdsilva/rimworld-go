@@ -40,44 +40,71 @@ func (a *App) zoneCommands(id uint16) []inspector.Button {
 	}
 	if z.Kind == game.ZoneStockpile || z.Kind == game.ZoneDump {
 		zid := z.ID
-		out = append(out, a.zonePriorityCmd(z), inspector.Button{ID: "cmd.zone.storage", Label: "Settings", Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
+		out = append(out, a.zonePriorityCmd(z), inspector.Button{ID: "cmd.zone.storage", Label: "Settings", Single: true, Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
 			Desc: "Choose which items this storage accepts, set special filters, copy and paste settings, and rename it.",
 			Run:  func() { a.win.Storage().Open(zid) }})
 	}
 	return append(out, a.zoneExpandCmd(), a.zoneShrinkCmd(), a.zoneDeleteCmd(z), a.zoneHideCmd(z), a.zoneRenameCmd(z))
 }
 
+// zoneMenu is the Run of a button whose Options are a pick list: it lists
+// them above the button with id, and the pick runs that option.
+func zoneMenu(a *App, id string, options func() []inspector.Option) func() {
+	return func() {
+		x, y := a.insp.Commands().Anchor(id)
+		opts := options()
+		entries := make([]game.OrderOption, len(opts))
+		for i, o := range opts {
+			entries[i] = game.OrderOption{Label: o.Label, Disabled: o.Disabled, Reason: o.Reason}
+		}
+		a.ord.OpenPick(x, y, true, entries, func(i int) {
+			if opts[i].Run != nil {
+				opts[i].Run()
+			}
+		})
+	}
+}
+
 // zoneCropCmd is "Plant: <crop>": a click lists the crops above the button.
+// The list is also its Options (Menu), so a group of zones merges it into
+// one menu of the crops they share, and a pick reaches every zone.
 func (a *App) zoneCropCmd(z game.ZoneView) inspector.Button {
 	zid, cur := z.ID, z.Crop
+	options := func() []inspector.Option {
+		entries, names := a.zoneCropEntries(cur)
+		opts := make([]inspector.Option, len(entries))
+		for i, e := range entries {
+			name := names[i]
+			opts[i] = inspector.Option{Label: e.Label, Disabled: e.Disabled, Reason: e.Reason,
+				Run: func() { a.pickZoneCrop(zid, cur, name) }}
+		}
+		return opts
+	}
 	return inspector.Button{ID: "cmd.zone.crop", Label: "Plant: " + architect.ZoneCropName(cur), Icon: a.zoneCropIcon(cur),
 		Desc: "Pick what this zone grows. Colonists harvest or cut the old plants and sow the new crop.",
-		Run: func() {
-			x, y := a.insp.Commands().Anchor("cmd.zone.crop")
-			entries, names := a.zoneCropEntries(cur)
-			a.ord.OpenPick(x, y, true, entries, func(i int) { a.pickZoneCrop(zid, cur, names[i]) })
-		}}
+		Menu: true, Options: options, Run: zoneMenu(a, "cmd.zone.crop", options)}
 }
 
 // zonePriorityCmd is "Priority: <level>" on a stockpile or dumping
 // stockpile (PLAY-023): a click lists the five priorities above the
-// button and the pick sends SetZonePriority.
+// button and the pick sends SetZonePriority. Options (Menu), so a group of
+// stockpiles shares one menu.
 func (a *App) zonePriorityCmd(z game.ZoneView) inspector.Button {
 	zid, cur := z.ID, architect.ZonePriorityName(z)
+	options := func() []inspector.Option {
+		names := game.StoragePriorities()
+		opts := make([]inspector.Option, len(names))
+		for i, n := range names {
+			opts[i] = inspector.Option{Label: n, Run: func() { a.pickZonePriority(zid, cur, names, i) }}
+			if n == cur {
+				opts[i].Label += " (current)"
+			}
+		}
+		return opts
+	}
 	return inspector.Button{ID: "cmd.zone.priority", Label: "Priority: " + cur, Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
 		Desc: "Haulers fill higher-priority storage first and carry things up from lower-priority storage when there is room.",
-		Run: func() {
-			x, y := a.insp.Commands().Anchor("cmd.zone.priority")
-			names := game.StoragePriorities()
-			entries := make([]game.OrderOption, len(names))
-			for i, n := range names {
-				entries[i] = game.OrderOption{Label: n}
-				if n == cur {
-					entries[i].Label += " (current)"
-				}
-			}
-			a.ord.OpenPick(x, y, true, entries, func(i int) { a.pickZonePriority(zid, cur, names, i) })
-		}}
+		Menu: true, Options: options, Run: zoneMenu(a, "cmd.zone.priority", options)}
 }
 
 // pickZonePriority sends SetZonePriority for the picked level (nothing
@@ -163,7 +190,7 @@ func (a *App) zoneCutCmd(z game.ZoneView) inspector.Button {
 
 // zoneExpandCmd starts the Expand tool.
 func (a *App) zoneExpandCmd() inspector.Button {
-	return inspector.Button{ID: "cmd.zone.expand", Label: "Expand", Icon: a.zoneIcon("zone_expand", "zone_grow"),
+	return inspector.Button{ID: "cmd.zone.expand", Label: "Expand", Single: true, Icon: a.zoneIcon("zone_expand", "zone_grow"),
 		Toggle: true, On: a.arch.Zones.On(architect.ZoneToolExpand),
 		Desc: "Drag a rectangle to add tiles to this zone. Stays on until right-click or Esc.",
 		Run:  func() { a.arch.Zones.Start(architect.ZoneToolExpand) }}
@@ -171,7 +198,7 @@ func (a *App) zoneExpandCmd() inspector.Button {
 
 // zoneShrinkCmd starts the Shrink tool.
 func (a *App) zoneShrinkCmd() inspector.Button {
-	return inspector.Button{ID: "cmd.zone.shrink", Label: "Shrink", Icon: a.zoneIcon("zone_shrink", "plan_clear"),
+	return inspector.Button{ID: "cmd.zone.shrink", Label: "Shrink", Single: true, Icon: a.zoneIcon("zone_shrink", "plan_clear"),
 		Toggle: true, On: a.arch.Zones.On(architect.ZoneToolShrink),
 		Desc: "Drag a rectangle to remove this zone's tiles (a click removes one). Other zones are untouched. Stays on until right-click or Esc.",
 		Run:  func() { a.arch.Zones.Start(architect.ZoneToolShrink) }}
@@ -204,7 +231,7 @@ func (a *App) zoneHideCmd(z game.ZoneView) inspector.Button {
 
 // zoneRenameCmd opens the name dialog.
 func (a *App) zoneRenameCmd(z game.ZoneView) inspector.Button {
-	return inspector.Button{ID: "cmd.zone.rename", Label: "Rename", Icon: a.zoneIcon("zone_rename"),
+	return inspector.Button{ID: "cmd.zone.rename", Label: "Rename", Single: true, Icon: a.zoneIcon("zone_rename"),
 		Desc: "Give this zone a name of your own. It shows on the map and in this pane.",
 		Run:  func() { a.openZoneRename(z) }}
 }

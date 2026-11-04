@@ -716,7 +716,7 @@ func TestSelectLessonSeesEveryKindOfSelection(t *testing.T) {
 		"plant":  func(a *App) { a.sel.SelPlant, a.sel.HasPlant = 4, true },
 		"item":   func(a *App) { a.sel.SelItem, a.sel.HasItem = 5, true },
 		"frame":  func(a *App) { a.sel.SelFrame, a.sel.HasFrame = 6, true },
-		"group":  func(a *App) { a.sel.Group = selectionpkg.Group{Kind: selectionpkg.Pawn, Ids: []entity.EntityID{1, 2}} },
+		"group":  func(a *App) { a.sel.Group = selectionpkg.GroupOf(selectionpkg.Pawn, []entity.EntityID{1, 2}) },
 	}
 	for name, sel := range kinds {
 		t.Run(name, func(t *testing.T) {

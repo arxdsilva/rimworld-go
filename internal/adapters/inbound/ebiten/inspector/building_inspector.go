@@ -76,21 +76,7 @@ func (a Building) openBillPicker(b game.BuildingView) {
 // billMaxCount caps a bill's target.
 const BillMaxCount = 9999
 
-// qtyStep is a numeric control's step for the held modifiers (UI-016):
-// x10 with Ctrl, x100 with Shift, x1000 with both.
-func qtyStep(ctrl, shift bool) int {
-	switch {
-	case ctrl && shift:
-		return 1000
-	case shift:
-		return 100
-	case ctrl:
-		return 10
-	}
-	return 1
-}
-
-func (a Building) qtyStep() int { return qtyStep(a.env().Ctrl, a.env().Shift) }
+func (a Building) qtyStep() int { return uikit.QtyStep(a.env().Ctrl, a.env().Shift) }
 
 // recipe.Mode values (mirrored; the adapter only sends the numbers).
 const (
@@ -490,7 +476,7 @@ func (a Building) bedCommands(b game.BuildingView) []Button {
 		if n > 1 {
 			label = fmt.Sprintf("Owner %d", slot+1)
 		}
-		owner := Button{ID: BedOwnerID(slot), Label: label,
+		owner := Button{ID: BedOwnerID(slot), Label: label, Single: true,
 			Desc: "Choose who sleeps here. Now: " + a.bedOwnerName(b, slot) + "."}
 		if b.Medical {
 			owner.Disabled, owner.Reason = true, "Medical beds have no owner"

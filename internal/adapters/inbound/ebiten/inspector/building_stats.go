@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"slices"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
@@ -60,10 +61,23 @@ func forbidCommand(b game.BuildingView) Button {
 	return c
 }
 
-// ForbidSelection is F on a selected door or sleeping place (STK-AL):
-// its Forbid toggle flips.
+// ForbidSelection is F on selected doors or sleeping places (STK-AL): their
+// Forbid toggle flips. A group takes the rule stacks use: all forbidden
+// already allows them, else the ones not forbidden are forbidden.
 func (a Building) ForbidSelection() {
-	if b, ok := a.SelectedBuilding(); ok && forbiddable(b) {
-		a.shell.Enqueue(forbidCommand(b).Cmds[0])
+	var bs []game.BuildingView
+	if a.sel.Grouped() {
+		bs = slices.DeleteFunc(a.sel.SelectedBuildings(), func(b game.BuildingView) bool { return !forbiddable(b) })
+	} else if b, ok := a.SelectedBuilding(); ok && forbiddable(b) {
+		bs = []game.BuildingView{b}
+	}
+	all := len(bs) > 0
+	for _, b := range bs {
+		all = all && b.Forbidden
+	}
+	for _, b := range bs {
+		if b.Forbidden == all {
+			a.shell.Enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(b.ID), Enabled: !all})
+		}
 	}
 }

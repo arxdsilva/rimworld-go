@@ -58,6 +58,12 @@ type Button struct {
 	Toggle   bool // a toggle (Draft, Forbid): On says which way
 	On       bool
 	Mixed    bool // a merged toggle that is on for some members only
+	// Single marks a command that only makes sense for one selection (Move,
+	// Copy, a picker that names a target): a group does not offer it.
+	Single bool
+	// Menu makes a left click open the Options menu, as a right-click does
+	// (otherwise a left click runs the first enabled option).
+	Menu bool
 
 	Run     func()            // run on click, else Cmds, else applyClick(ID)
 	Cmds    []command.Command // enqueued on click
@@ -179,7 +185,7 @@ func (a Commands) cellButtons() []uikit.Button {
 // commandGridButtons are the command buttons as hit targets (a group's are
 // groupButtons, which colonyButtons also lists).
 func (a Commands) CommandGridButtons() []uikit.Button {
-	if a.sel.Grouped() {
+	if a.sel.Grouped() && !a.env().ArchOpen { // GroupButtons has them; an open Architect's tools replace the group's
 		return nil
 	}
 	return a.cellButtons()
@@ -359,6 +365,11 @@ func (a Commands) RunCommand(c Button) {
 		for _, cm := range c.Cmds {
 			a.shell.Enqueue(cm)
 		}
+	case c.Menu && c.Options != nil:
+		x, y := a.Anchor(c.ID)
+		a.openMenu(x, y, c.Options())
+	case c.ID != "" && !strings.HasPrefix(c.ID, ids.PrefixCmd): // a routed id keeps its click: its Options are the right click's (an order tool arms)
+		a.shell.Click(c.ID)
 	case c.Options != nil:
 		for _, o := range c.Options() {
 			if !o.Disabled {
@@ -366,8 +377,6 @@ func (a Commands) RunCommand(c Button) {
 				return
 			}
 		}
-	case !strings.HasPrefix(c.ID, ids.PrefixCmd):
-		a.shell.Click(c.ID)
 	}
 }
 
@@ -415,7 +424,11 @@ func (a Commands) openCommandOptions(c cmdSlot) {
 		a.shell.Hint(c.cmd.Reason)
 		return
 	}
-	opts := c.cmd.Options()
+	a.openMenu(c.r.X, c.r.Y, c.cmd.Options())
+}
+
+// openMenu lists opts above (x, y); a pick runs that option.
+func (a Commands) openMenu(x, y float32, opts []Option) {
 	if len(opts) == 0 {
 		return
 	}
@@ -423,7 +436,7 @@ func (a Commands) openCommandOptions(c cmdSlot) {
 	for i, o := range opts {
 		entries[i] = game.OrderOption{Label: o.Label, Disabled: o.Disabled, Reason: o.Reason}
 	}
-	a.shell.Pick(c.r.X, c.r.Y, true, entries, func(i int) { a.runOption(opts[i]) })
+	a.shell.Pick(x, y, true, entries, func(i int) { a.runOption(opts[i]) })
 }
 
 // rightClickCommand opens a command's options under a right-click. A
@@ -443,8 +456,7 @@ func (a Commands) RightClickCommand(mx, my int) bool {
 // times a frame.
 type groupMemo struct {
 	updates uint64
-	kind    selection.Kind
-	ids     []entity.EntityID
+	members []selection.Cand
 	out     []Button
 	ok      bool
 }
@@ -456,7 +468,10 @@ type groupMemo struct {
 //     that have the command);
 //   - a toggle is On when all members that have it are on, Mixed when only
 //     some are;
-//   - Options are per member and are dropped.
+//   - a command a member marks Single is not offered at all;
+//   - Options merge when every member has them: one menu of the options
+//     they share (the same label, "(current)" aside), and a pick runs on
+//     each member's own option, skipping members where it is disabled.
 //
 // The merged id is "cmd.group.<key>". A click runs run(member, command)
 // for each member whose command is enabled and, for a toggle, whose On
@@ -471,6 +486,9 @@ func MergeCommands(sets [][]Button, run func(member int, c Button)) []Button {
 	byKey := map[string]*slot{}
 	for m, set := range sets {
 		for _, c := range set {
+			if c.Single {
+				continue
+			}
 			k := c.mergeKey()
 			s := byKey[k]
 			if s == nil {
@@ -488,7 +506,7 @@ func MergeCommands(sets [][]Button, run func(member int, c Button)) []Button {
 		m := s.first
 		m.ID = "cmd.group." + strings.TrimPrefix(k, ids.PrefixCmd)
 		m.Key = k
-		m.Options, m.Cmds = nil, nil
+		m.Options, m.Cmds, m.Menu = nil, nil, false
 		n := len(s.cmds)
 		off, on := 0, 0
 		reasons := map[string]int{}
@@ -516,7 +534,23 @@ func MergeCommands(sets [][]Button, run func(member int, c Button)) []Button {
 		}
 		m.On = m.Toggle && on == n
 		m.Mixed = m.Toggle && on > 0 && on < n
+		if m.Toggle { // read as what a click does: the members that will flip speak
+			for _, c := range s.cmds {
+				if c.On == m.On {
+					m.Label, m.Icon, m.Desc = c.Label, c.Icon, c.Desc
+					break
+				}
+			}
+		}
 		members, cmds, toggleOn := s.members, s.cmds, m.On
+		if mo, ok := mergeOptions(cmds, members, run); ok {
+			m.Options, m.Menu = mo, s.first.Menu
+			if m.Menu {
+				m.Run = nil // a click opens the merged menu (RunCommand)
+				out = append(out, m)
+				continue
+			}
+		}
 		m.Run = func() {
 			for i, c := range cmds {
 				if c.Disabled || (c.Toggle && c.On != toggleOn) {
@@ -530,6 +564,71 @@ func MergeCommands(sets [][]Button, run func(member int, c Button)) []Button {
 		out = append(out, m)
 	}
 	return out
+}
+
+// currentMark is how a menu marks the entry already in force.
+const currentMark = " (current)"
+
+// mergeOptions is the merged menu of cmds (one per member): the options all
+// of them list, in the first member's order. ok is false unless every
+// command has Options.
+func mergeOptions(cmds []Button, members []int, run func(member int, c Button)) (func() []Option, bool) {
+	for _, c := range cmds {
+		if c.Options == nil {
+			return nil, false
+		}
+	}
+	return func() []Option {
+		per := make([]map[string]Option, len(cmds))
+		var first []Option
+		for i, c := range cmds {
+			per[i] = map[string]Option{}
+			for _, o := range c.Options() {
+				per[i][strings.TrimSuffix(o.Label, currentMark)] = o
+			}
+			if i == 0 {
+				first = c.Options()
+			}
+		}
+		var out []Option
+		for _, f := range first {
+			key := strings.TrimSuffix(f.Label, currentMark)
+			shared, allCurrent, disabled := true, true, 0
+			reason := ""
+			for _, p := range per {
+				o, ok := p[key]
+				if !ok {
+					shared = false
+					break
+				}
+				allCurrent = allCurrent && strings.HasSuffix(o.Label, currentMark)
+				if o.Disabled {
+					if disabled == 0 {
+						reason = o.Reason
+					}
+					disabled++
+				}
+			}
+			if !shared {
+				continue
+			}
+			label := key
+			if allCurrent {
+				label += currentMark
+			}
+			opt := Option{Label: label, Disabled: disabled == len(per), Reason: reason}
+			opt.Run = func() {
+				for i, p := range per {
+					if o := p[key]; !o.Disabled && run != nil {
+						one := o
+						run(members[i], Button{Options: func() []Option { return []Option{one} }})
+					}
+				}
+			}
+			out = append(out, opt)
+		}
+		return out
+	}, true
 }
 
 // cmdLabelMinSize is the smallest a command label shrinks to before a

@@ -133,13 +133,13 @@ func TestJourneySelectShiftClickAddsAndRemoves(t *testing.T) {
 	j.clickTile(ax, ay, inputframe.Left, 0)
 	j.settle()
 	j.clickTile(bx, by, inputframe.Left, input.ModShift)
-	if !j.a.sel.Grouped() || len(j.a.sel.Group.Ids) != 2 {
-		t.Fatalf("group %v after a Shift click, want both colonists", j.a.sel.Group.Ids)
+	if !j.a.sel.Grouped() || len(j.a.sel.Group.IDs()) != 2 {
+		t.Fatalf("group %v after a Shift click, want both colonists", j.a.sel.Group.IDs())
 	}
 	j.settle()
 	j.clickTile(bx, by, inputframe.Left, input.ModShift)
 	if j.a.sel.Grouped() || !j.a.renderer.HasSelect() || j.a.renderer.Selected() != ids[0] {
-		t.Fatalf("after the second Shift click: group %v, selected %v", j.a.sel.Group.Ids, j.a.renderer.Selected())
+		t.Fatalf("after the second Shift click: group %v, selected %v", j.a.sel.Group.IDs(), j.a.renderer.Selected())
 	}
 }
 
@@ -149,8 +149,8 @@ func TestJourneySelectBoxSelect(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{10, 4}, [2]int{12, 4}))
 	j.dragTiles(inputframe.Left, 7, 3, 13, 5, 0)
-	if !j.a.sel.Grouped() || len(j.a.sel.Group.Ids) != 3 || j.a.sel.Group.Kind != selectionpkg.Pawn {
-		t.Fatalf("box select gave kind %v ids %v, want 3 colonists", j.a.sel.Group.Kind, j.a.sel.Group.Ids)
+	if !j.a.sel.Grouped() || len(j.a.sel.Group.IDs()) != 3 || j.a.sel.Group.Kind() != selectionpkg.Pawn {
+		t.Fatalf("box select gave kind %v ids %v, want 3 colonists", j.a.sel.Group.Kind(), j.a.sel.Group.IDs())
 	}
 }
 
@@ -162,8 +162,8 @@ func TestJourneySelectDoubleClickKind(t *testing.T) {
 	ax, ay := tileOf(j, 0)
 	j.clickTile(ax, ay, inputframe.Left, 0)
 	j.clickTile(ax, ay, inputframe.Left, 0)
-	if !j.a.sel.Grouped() || len(j.a.sel.Group.Ids) != 3 {
-		t.Fatalf("a double click grouped %v, want all 3 colonists", j.a.sel.Group.Ids)
+	if !j.a.sel.Grouped() || len(j.a.sel.Group.IDs()) != 3 {
+		t.Fatalf("a double click grouped %v, want all 3 colonists", j.a.sel.Group.IDs())
 	}
 }
 

@@ -41,7 +41,7 @@ func TestGroupCommandRunsLegacyMembersOneByOne(t *testing.T) {
 	if len(got) != 3 || got[0].Pawn != 1 || got[1].Pawn != 2 || got[2].Pawn != 3 {
 		t.Fatalf("ClearOrders for each member: %+v", s.cmds)
 	}
-	if !a.sel.Grouped() || len(a.sel.Group.Ids) != 3 {
+	if !a.sel.Grouped() || len(a.sel.Group.IDs()) != 3 {
 		t.Fatalf("the group survives the click: %+v", a.sel.Group)
 	}
 }

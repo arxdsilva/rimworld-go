@@ -86,7 +86,7 @@ func (a Thing) crateCommands(it game.ItemView) []Button {
 	if it.AX.Building == "" {
 		return nil
 	}
-	c := Button{ID: ReinstallBtnID, Label: "Reinstall", Icon: "order_uninstall",
+	c := Button{ID: ReinstallBtnID, Label: "Reinstall", Icon: "order_uninstall", Single: true,
 		Desc: "Pick a spot for the " + it.AX.Building + ": a builder carries the crate there and installs it.",
 		Run:  func() { a.shell.Do(ports.ReinstallCrate{ID: it.ID}) }}
 	if it.Carried {

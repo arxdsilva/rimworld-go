@@ -269,7 +269,7 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 	f.MoveTo(a, 10, 4)
 	a.updates += selectionpkg.DoubleClickFrames // not a double click
 	f.Click(t, a, inputframe.Left, input.ModShift)
-	if !a.sel.Grouped() || len(a.sel.Group.Ids) != 2 {
+	if !a.sel.Grouped() || len(a.sel.Group.IDs()) != 2 {
 		t.Fatalf("Shift+click adds: group = %+v", a.sel.Group)
 	}
 	a.updates += selectionpkg.DoubleClickFrames
@@ -278,7 +278,7 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 		t.Fatal("Shift+click again takes it out (one left: the single selection)")
 	}
 	f.Drag(t, a, inputframe.Left, 7, 3, 13, 5, 0)
-	if !a.sel.Grouped() || a.sel.Group.Kind != selectionpkg.Pawn || len(a.sel.Group.Ids) != 3 {
+	if !a.sel.Grouped() || a.sel.Group.Kind() != selectionpkg.Pawn || len(a.sel.Group.IDs()) != 3 {
 		t.Fatalf("box select = %+v", a.sel.Group)
 	}
 	a.updates += selectionpkg.DoubleClickFrames
@@ -288,7 +288,7 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 		t.Fatal("a plain click goes back to one")
 	}
 	f.Click(t, a, inputframe.Left, 0) // a double click
-	if !a.sel.Grouped() || len(a.sel.Group.Ids) != 3 {
+	if !a.sel.Grouped() || len(a.sel.Group.IDs()) != 3 {
 		t.Fatalf("double click takes every colonist on screen: %+v", a.sel.Group)
 	}
 	if bs := a.insp.Commands().GroupButtons(); len(bs) == 0 {
@@ -304,7 +304,7 @@ func TestDoubleClickSameSpecies(t *testing.T) {
 	f.MoveTo(a, 8, 4)
 	f.Click(t, a, inputframe.Left, 0)
 	f.Click(t, a, inputframe.Left, 0)
-	if !a.sel.Grouped() || a.sel.Group.Kind != selectionpkg.Animal || len(a.sel.Group.Ids) != 2 {
+	if !a.sel.Grouped() || a.sel.Group.Kind() != selectionpkg.Animal || len(a.sel.Group.IDs()) != 2 {
 		t.Fatalf("double click on a deer takes the deer: %+v", a.sel.Group)
 	}
 }

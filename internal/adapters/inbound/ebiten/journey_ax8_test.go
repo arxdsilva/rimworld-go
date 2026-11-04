@@ -142,6 +142,7 @@ func TestJourneyAX8EscapeShip(t *testing.T) {
 	// a downed colonist is carried into the second casket (game/travel's
 	// carry, extended to ship caskets)
 	careDown(j, downed)
+	j.settle() // the last click was on this tile: another now would be a double click on the caskets
 	careSelect(j, pawn)
 	j.settle()
 	name := j.pawn(downed).Name

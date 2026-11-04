@@ -271,6 +271,10 @@ func TestGroupInspectorAtScale1_5(t *testing.T) {
 			}
 		}
 		for _, o := range bs[:i] {
+			// A merged menu (Options) puts an arrow in the corner of its own cell.
+			if strings.HasPrefix(b.ID, "cmd.options.") || strings.HasPrefix(o.ID, "cmd.options.") {
+				continue
+			}
 			if b.X < o.X+o.W && o.X < b.X+b.W && b.Y < o.Y+o.H && o.Y < b.Y+b.H {
 				t.Errorf("%s overlaps %s", b.ID, o.ID)
 			}

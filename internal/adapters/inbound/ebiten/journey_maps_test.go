@@ -129,7 +129,7 @@ func TestJourneyMapsShiftClickAcrossMapsRefused(t *testing.T) {
 		t.Fatalf("a Shift click showed map %d, want it to stay on 0", got)
 	}
 	if j.a.sel.Grouped() || j.a.renderer.Selected() != home {
-		t.Fatalf("the Shift click changed the selection: group %v, selected %v", j.a.sel.Group.Ids, j.a.renderer.Selected())
+		t.Fatalf("the Shift click changed the selection: group %v, selected %v", j.a.sel.Group.IDs(), j.a.renderer.Selected())
 	}
 	toasted := false
 	for _, ts := range j.a.chrome.LiveToasts() {

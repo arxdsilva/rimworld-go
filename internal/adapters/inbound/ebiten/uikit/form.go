@@ -176,14 +176,28 @@ func StyledButton(k *Kit, id string, r gfx.Rect, label string, o BtnOpts, fn fun
 func Stepper(k *Kit, id string, r gfx.Rect, v *int, lo, hi int) {
 	*v = max(lo, min(hi, *v))
 	bw := float32(28)
-	StyledButton(k, id+".dec", gfx.Rect{X: r.X, Y: r.Y, W: bw, H: r.H}, "-", BtnOpts{Disabled: *v <= lo, Reason: fmt.Sprintf("The minimum is %d.", lo)}, func() { *v = max(lo, *v-1) })
-	StyledButton(k, id+".inc", gfx.Rect{X: r.X + bw + 56, Y: r.Y, W: bw, H: r.H}, "+", BtnOpts{Disabled: *v >= hi, Reason: fmt.Sprintf("The maximum is %d.", hi)}, func() { *v = min(hi, *v+1) })
+	StyledButton(k, id+".dec", gfx.Rect{X: r.X, Y: r.Y, W: bw, H: r.H}, "-", BtnOpts{Disabled: *v <= lo, Reason: fmt.Sprintf("The minimum is %d.", lo)}, func() { *v = max(lo, *v-QtyStep(k.in().Ctrl(), k.in().Shift())) })
+	StyledButton(k, id+".inc", gfx.Rect{X: r.X + bw + 56, Y: r.Y, W: bw, H: r.H}, "+", BtnOpts{Disabled: *v >= hi, Reason: fmt.Sprintf("The maximum is %d.", hi)}, func() { *v = min(hi, *v+QtyStep(k.in().Ctrl(), k.in().Shift())) })
 	val := *v
 	k.Queue(func(dst *ebiten.Image) {
 		st := gfx.Label
 		st.Align = gfx.AlignCenter
 		gfx.Text(dst, strconv.Itoa(val), float64(r.X+bw+28), float64(r.Y)+(float64(r.H)-gfx.LineH(st))/2, st)
 	})
+}
+
+// QtyStep is a numeric control's step for the held modifiers (UI-016):
+// x10 with Ctrl, x100 with Shift, x1000 with both.
+func QtyStep(ctrl, shift bool) int {
+	switch {
+	case ctrl && shift:
+		return 1000
+	case shift:
+		return 100
+	case ctrl:
+		return 10
+	}
+	return 1
 }
 
 // Choice is a dropdown: a button showing the current option that opens a

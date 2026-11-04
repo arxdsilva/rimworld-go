@@ -80,7 +80,8 @@ func (r *Renderer) bodyInRect(an game.AnimalView, x0, y0, x1, y1 float32) bool {
 }
 
 // thingsIn lists what lies inside a screen rectangle: colonists, else
-// animals, else ground items (each in read-model order).
+// animals, else ground items (each in read-model order), else what
+// selection.Boxed takes: furniture, blueprints or zones.
 func (a *App) thingsIn(x0, y0, x1, y1 float32) (selectionpkg.Kind, []entity.EntityID) {
 	r := a.renderer
 	var ids []entity.EntityID
@@ -113,21 +114,23 @@ func (a *App) thingsIn(x0, y0, x1, y1 float32) (selectionpkg.Kind, []entity.Enti
 	if len(ids) > 0 {
 		return selectionpkg.Item, ids
 	}
-	return selectionpkg.None, nil
+	return selectionpkg.Boxed(w, func(wx, wy float64) bool { return r.inRect(wx, wy, x0, y0, x1, y1) })
 }
 
 // boxSelect selects what the dragged box covers; with add (Shift) it joins
-// a selection of the same kind.
+// the selection.
 func (a *App) boxSelect(sx0, sy0, sx1, sy1 int, add bool) {
 	kind, ids := a.thingsIn(screenRect(sx0, sy0, sx1, sy1))
 	a.sel.ApplyBox(kind, ids, add)
 }
 
 // selectSameOnScreen is the double click: every visible colonist, animal
-// of the same species, or stack of the same item.
+// of the same species, stack of the same item, or what selection.Alike
+// takes for a building, blueprint, zone or a zone's plant. What cannot group
+// takes a plain click.
 func (a *App) selectSameOnScreen() {
-	c, ok := a.selectedCand()
-	if !ok || !selectionpkg.Groupable(c.Kind) {
+	c, ok := a.sel.Selected()
+	if !ok {
 		a.sel.ClickSelect()
 		return
 	}
@@ -157,6 +160,14 @@ func (a *App) selectSameOnScreen() {
 				ids = append(ids, o.ID)
 			}
 		}
+	default:
+		members, ok := selectionpkg.Alike(w, c, func(wx, wy float64) bool { return r.inRect(wx, wy, x0, y0, x1, y1) })
+		if !ok || len(members) < 2 { // nothing alike: the click still cycles a tile's stack
+			a.sel.ClickSelect()
+			return
+		}
+		a.sel.SetMembers(members)
+		return
 	}
 	a.sel.SetGroup(c.Kind, append([]entity.EntityID{c.ID}, ids...))
 }
@@ -172,18 +183,34 @@ func (a *App) drawGroupMarks(screen *ebiten.Image) {
 		sx, sy := r.worldToScreenF(wx, wy)
 		vector.StrokeRect(screen, sx+1, sy+1, tile-2, tile-2, 2, r.selectClr, false)
 	}
-	switch a.sel.Group.Kind {
-	case selectionpkg.Pawn:
-		for _, p := range a.sel.SelectedPawns() {
-			mark(r.interpWorld(p))
+	for _, p := range a.sel.SelectedPawns() {
+		mark(r.interpWorld(p))
+	}
+	for _, an := range a.sel.SelectedAnimals() {
+		mark(r.interpAnimal(an))
+	}
+	for _, it := range a.sel.SelectedItems() {
+		mark(float64(it.X), float64(it.Y))
+	}
+	for _, b := range a.sel.SelectedBuildings() {
+		a.drawBuildingSelection(screen, b)
+	}
+	for _, f := range a.sel.SelectedFrames() {
+		for dy := 0; dy < max(f.H, 1); dy++ {
+			for dx := 0; dx < max(f.W, 1); dx++ {
+				mark(float64(f.X+dx), float64(f.Y+dy))
+			}
 		}
-	case selectionpkg.Animal:
-		for _, an := range a.sel.SelectedAnimals() {
-			mark(r.interpAnimal(an))
-		}
-	case selectionpkg.Item:
-		for _, it := range a.sel.SelectedItems() {
-			mark(float64(it.X), float64(it.Y))
+	}
+	if zones := a.sel.SelectedZones(); len(zones) > 0 {
+		sw, sh := a.shell.Size()
+		pw, ph := int(math.Ceil(float64(sw)*a.mapScale())), int(math.Ceil(float64(sh)*a.mapScale())) // map pixels, like the camera
+		for _, z := range zones {
+			x0, y0 := r.worldToScreenF(float64(z.MinX), float64(z.MinY))
+			x1, y1 := r.worldToScreenF(float64(z.MaxX+1), float64(z.MaxY+1))
+			if x1 >= 0 && y1 >= 0 && x0 <= float32(pw) && y0 <= float32(ph) { // the highlight reads the plants in view
+				architectMap{a}.DrawZoneMark(screen, z, pw, ph, r.cam.Tile())
+			}
 		}
 	}
 }

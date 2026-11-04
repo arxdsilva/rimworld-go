@@ -32,6 +32,8 @@ const (
 	Plant
 	Frame
 	Zone // PLAY-020: a zone (the id is a zone id)
+	// Mixed is a group's kind when its members differ (CTL-006); never a Cand's.
+	Mixed
 )
 
 // Cand is one selectable thing on a tile.
@@ -48,10 +50,54 @@ type Cycle struct {
 	Ok   bool
 }
 
-// Group is a multi-selection of one kind (colonists, animals or items).
+// Group is a multi-selection. Its members may be of different kinds (Shift,
+// CTL-006); Kind says which.
 type Group struct {
-	Kind Kind
-	Ids  []entity.EntityID
+	Members []Cand
+}
+
+// GroupOf is a group of ids that are all of one kind.
+func GroupOf(kind Kind, ids []entity.EntityID) Group {
+	g := Group{Members: make([]Cand, len(ids))}
+	for i, id := range ids {
+		g.Members[i] = Cand{Kind: kind, ID: id}
+	}
+	return g
+}
+
+// Kind is the members' common kind, Mixed when they differ, None when empty.
+func (g Group) Kind() Kind {
+	if len(g.Members) == 0 {
+		return None
+	}
+	k := g.Members[0].Kind
+	for _, c := range g.Members[1:] {
+		if c.Kind != k {
+			return Mixed
+		}
+	}
+	return k
+}
+
+// IDs is every member's id, in selection order. Across kinds an id alone
+// does not name a member: read Members for that.
+func (g Group) IDs() []entity.EntityID {
+	out := make([]entity.EntityID, len(g.Members))
+	for i, c := range g.Members {
+		out[i] = c.ID
+	}
+	return out
+}
+
+// IDsOf is the ids of the members of kind k, in selection order.
+func (g Group) IDsOf(k Kind) []entity.EntityID {
+	var out []entity.EntityID
+	for _, c := range g.Members {
+		if c.Kind == k {
+			out = append(out, c.ID)
+		}
+	}
+	return out
 }
 
 // Press is the map's left press: where it went down (for the drag box)
@@ -88,15 +134,12 @@ type Model struct {
 // New is an empty selection reading the colony through sh.
 func New(sh Shell, host Host) *Model { return &Model{sh: sh, host: host} }
 
-// Groupable kinds can form a group.
-func Groupable(k Kind) bool { return k == Pawn || k == Animal || k == Item }
-
 // Grouped reports a multi-selection is active.
-func (m *Model) Grouped() bool { return len(m.Group.Ids) >= 2 }
+func (m *Model) Grouped() bool { return len(m.Group.Members) >= 2 }
 
 // InGroup reports id is a member of a group of kind k.
 func (m *Model) InGroup(k Kind, id entity.EntityID) bool {
-	return m.Grouped() && m.Group.Kind == k && slices.Contains(m.Group.Ids, id)
+	return m.Grouped() && slices.Contains(m.Group.Members, Cand{Kind: k, ID: id})
 }
 
 // Selectables is SelectablesAt for a click on the map: an animal whose
@@ -323,6 +366,8 @@ func (m *Model) Selected() (Cand, bool) {
 		return Cand{Kind: Plant, ID: m.SelPlant}, true
 	case m.HasFrame:
 		return Cand{Kind: Frame, ID: m.SelFrame}, true
+	case m.HasZone:
+		return Cand{Kind: Zone, ID: entity.EntityID(m.ZoneSel)}, true
 	}
 	return Cand{}, false
 }
@@ -386,58 +431,59 @@ func (m *Model) SelectedFrame() (game.FrameView, bool) {
 // SetGroup selects ids of kind: nothing, one thing (the single panel) or
 // a group.
 func (m *Model) SetGroup(kind Kind, ids []entity.EntityID) {
-	var clean []entity.EntityID
-	seen := map[entity.EntityID]bool{}
-	for _, id := range ids {
-		if !seen[id] {
-			seen[id] = true
-			clean = append(clean, id)
+	m.SetMembers(GroupOf(kind, ids).Members)
+}
+
+// SetMembers selects the members, of any kinds: nothing, one thing (the
+// single panel) or a group.
+func (m *Model) SetMembers(members []Cand) {
+	var clean []Cand
+	seen := map[Cand]bool{}
+	for _, c := range members {
+		if !seen[c] {
+			seen[c] = true
+			clean = append(clean, c)
 		}
 	}
 	switch len(clean) {
 	case 0:
 		m.Clear(None)
 	case 1:
-		m.Select(Cand{Kind: kind, ID: clean[0]})
+		m.Select(clean[0])
 	default:
 		m.Clear(None)
-		m.Group = Group{Kind: kind, Ids: clean}
+		m.Group = Group{Members: clean}
 	}
 }
 
 // SelectionSet is the current selection as a kind and ids (a group or the
-// single selection of a groupable kind).
+// single selection of a kind that can group). Across kinds, Group.Members
+// names each member.
 func (m *Model) SelectionSet() (Kind, []entity.EntityID) {
-	if m.Grouped() {
-		return m.Group.Kind, slices.Clone(m.Group.Ids)
-	}
-	if c, ok := m.Selected(); ok && Groupable(c.Kind) {
-		return c.Kind, []entity.EntityID{c.ID}
-	}
-	return None, nil
+	g := Group{Members: m.currentSet()}
+	return g.Kind(), g.IDs()
 }
 
-// ToggleInSet adds c to the selection or takes it out (a different kind
-// starts over with c).
+// currentSet is a copy of the group, or the single selection if it can group.
+func (m *Model) currentSet() []Cand {
+	if m.Grouped() {
+		return slices.Clone(m.Group.Members)
+	}
+	if c, ok := m.Selected(); ok && m.CanGroup(c) {
+		return []Cand{c}
+	}
+	return nil
+}
+
+// ToggleInSet adds c to the selection, whatever kinds it holds, or takes it
+// out.
 func (m *Model) ToggleInSet(c Cand) {
-	kind, ids := m.SelectionSet()
-	if kind != c.Kind {
-		m.SetGroup(c.Kind, []entity.EntityID{c.ID})
+	set := m.currentSet()
+	if i := slices.Index(set, c); i >= 0 {
+		m.SetMembers(slices.Delete(set, i, i+1))
 		return
 	}
-	out := ids[:0]
-	found := false
-	for _, id := range ids {
-		if id == c.ID {
-			found = true
-			continue
-		}
-		out = append(out, id)
-	}
-	if !found {
-		out = append(out, c.ID)
-	}
-	m.SetGroup(kind, out)
+	m.SetMembers(append(set, c))
 }
 
 // CandUnderCursor is what a plain click would select first.
@@ -454,10 +500,13 @@ func (m *Model) CandUnderCursor() (Cand, bool) {
 }
 
 // ShiftClick adds the thing under the cursor to the selection, or takes
-// it out when it is already in. Other kinds start a new selection.
+// it out when it is already in. What cannot group takes a plain click.
 func (m *Model) ShiftClick() {
 	c, ok := m.CandUnderCursor()
-	if !ok || !Groupable(c.Kind) {
+	if !ok { // bare ground: the selection stays, for a Shift+box starting here
+		return
+	}
+	if !m.CanGroup(c) {
 		m.ClickSelect()
 		return
 	}
@@ -465,8 +514,8 @@ func (m *Model) ShiftClick() {
 }
 
 // ApplyBox selects what a dragged box covered (kind and ids from the
-// renderer's hit test); with add (Shift) it joins a selection of the same
-// kind.
+// renderer's hit test); with add (Shift) it joins the selection, whatever
+// kinds that holds.
 func (m *Model) ApplyBox(kind Kind, ids []entity.EntityID, add bool) {
 	if kind == None {
 		if !add {
@@ -474,12 +523,11 @@ func (m *Model) ApplyBox(kind Kind, ids []entity.EntityID, add bool) {
 		}
 		return
 	}
+	boxed := GroupOf(kind, ids).Members
 	if add {
-		if k, cur := m.SelectionSet(); k == kind {
-			ids = append(cur, ids...)
-		}
+		boxed = append(m.currentSet(), boxed...)
 	}
-	m.SetGroup(kind, ids)
+	m.SetMembers(boxed)
 }
 
 // SelectedPawns is the selected colonists: the group's living members in
@@ -496,10 +544,7 @@ func (m *Model) SelectedPawns() []game.PawnView {
 		}
 		return nil
 	}
-	if m.Group.Kind != Pawn {
-		return nil
-	}
-	return members(m.Group.Ids, pawns, func(p game.PawnView) entity.EntityID { return p.ID })
+	return members(m.Group.IDsOf(Pawn), pawns, func(p game.PawnView) entity.EntityID { return p.ID })
 }
 
 // SelectedItems is the selected ground stacks (group or single).
@@ -510,32 +555,67 @@ func (m *Model) SelectedItems() []game.ItemView {
 		}
 		return nil
 	}
-	if m.Group.Kind != Item {
+	ids := m.Group.IDsOf(Item)
+	if len(ids) == 0 { // the group marks ask every frame
 		return nil
 	}
 	ground := slices.DeleteFunc(slices.Clone(m.sh.World().Items), func(it game.ItemView) bool { return it.Carried })
-	return members(m.Group.Ids, ground, func(it game.ItemView) entity.EntityID { return it.ID })
+	return members(ids, ground, func(it game.ItemView) entity.EntityID { return it.ID })
 }
 
 // SelectedAnimals is the group's animals.
 func (m *Model) SelectedAnimals() []game.AnimalView {
-	if !m.Grouped() || m.Group.Kind != Animal {
+	if !m.Grouped() {
 		return nil
 	}
-	return members(m.Group.Ids, m.sh.World().Animals, func(an game.AnimalView) entity.EntityID { return an.ID })
+	return members(m.Group.IDsOf(Animal), m.sh.World().Animals, func(an game.AnimalView) entity.EntityID { return an.ID })
+}
+
+// SelectedBuildings is the group's buildings.
+func (m *Model) SelectedBuildings() []game.BuildingView {
+	if !m.Grouped() {
+		return nil
+	}
+	return members(m.Group.IDsOf(Building), m.sh.World().Buildings, func(b game.BuildingView) entity.EntityID { return b.ID })
+}
+
+// SelectedFrames is the group's blueprints.
+func (m *Model) SelectedFrames() []game.FrameView {
+	if !m.Grouped() {
+		return nil
+	}
+	return members(m.Group.IDsOf(Frame), m.sh.World().Frames, func(f game.FrameView) entity.EntityID { return f.ID })
+}
+
+// SelectedZones is the group's zones; a member's ID is the zone id.
+func (m *Model) SelectedZones() []game.ZoneView {
+	if !m.Grouped() {
+		return nil
+	}
+	return members(m.Group.IDsOf(Zone), m.sh.World().Zones, func(z game.ZoneView) entity.EntityID { return entity.EntityID(z.ID) })
 }
 
 // members returns the views for ids, in id order, dropping ones that are
-// gone.
+// gone. The group marks ask every frame, so no ids reads nothing and only
+// the ids get a map entry, never the views.
 func members[V any](ids []entity.EntityID, views []V, id func(V) entity.EntityID) []V {
-	byID := make(map[entity.EntityID]V, len(views))
-	for _, v := range views {
-		byID[id(v)] = v
+	if len(ids) == 0 {
+		return nil
+	}
+	at := make(map[entity.EntityID]int, len(ids))
+	for _, i := range ids {
+		at[i] = -1
+	}
+	for vi := range views {
+		k := id(views[vi])
+		if _, want := at[k]; want {
+			at[k] = vi
+		}
 	}
 	var out []V
 	for _, i := range ids {
-		if v, ok := byID[i]; ok {
-			out = append(out, v)
+		if vi := at[i]; vi >= 0 {
+			out = append(out, views[vi])
 		}
 	}
 	return out
@@ -611,17 +691,41 @@ func (m *Model) ApplyGroupClick(id string) {
 			}
 		}
 	default:
-		if n, ok := pickID(id); ok {
-			m.Select(Cand{Kind: m.Group.Kind, ID: n})
+		if c, ok := m.pickMember(id); ok {
+			m.Select(c)
 		}
 	}
 }
 
-func pickID(id string) (entity.EntityID, bool) {
+// PickID is the button id of a group row. A zone's id can equal another
+// member's entity id, so a zone's carries a mark.
+func PickID(c Cand) string {
+	n := strconv.FormatUint(uint64(c.ID), 10)
+	if c.Kind == Zone {
+		return "group.pick.z" + n
+	}
+	return "group.pick." + n
+}
+
+// pickMember is the group member a pick button names. An unmarked id means
+// the entity with that id, then the zone.
+func (m *Model) pickMember(id string) (Cand, bool) {
 	rest, ok := strings.CutPrefix(id, "group.pick.")
 	if !ok {
 		rest = id
 	}
+	rest, isZone := strings.CutPrefix(rest, "z")
 	n, err := strconv.ParseUint(rest, 10, 64)
-	return entity.EntityID(n), err == nil
+	if err != nil {
+		return Cand{}, false
+	}
+	zone := Cand{Kind: Zone, ID: entity.EntityID(n)}
+	if !isZone {
+		for _, c := range m.Group.Members {
+			if c.ID == zone.ID && c.Kind != Zone {
+				return c, true
+			}
+		}
+	}
+	return zone, slices.Contains(m.Group.Members, zone)
 }

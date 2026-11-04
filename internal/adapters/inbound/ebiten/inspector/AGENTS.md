@@ -59,3 +59,6 @@ The selection's inspector: the pane with its tabs (pawn needs, gear, health, soc
 
 ## Fish tank (FISH)
 `tank.go`: `tankProducer` wraps the building producer in `New` (no method on `Building`): a Stock picker button (`TankStockBtnID`, `command.SetTankStock`), stock/growth/health lines, the `Fish dying:` trouble line (drawn as a warning) and a Feed bar from `Tank.FeedPct`.
+
+## Group commands (CTL-006..009)
+`multiselect.go`: `Button.Single` drops a command from a group; ids in `groupSingle` do the same for files whose buttons do not set it. `MergeCommands` merges by key: a merged menu (`Options`, `Button.Menu` opens it on a left click) holds the options every member has, and a pick runs each member's own. `selection.PickID` names the pane's rows. `ToggleForbidGroup` is F on a group. With the Architect open the grid is its tools, so `CommandGridButtons` serves them even with a group selected.

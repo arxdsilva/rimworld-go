@@ -107,12 +107,12 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 
 // moveCommands are Move, Copy and, while a move is pending, Cancel move.
 func (a Building) MoveCommands(b game.BuildingView) []Button {
-	mv := Button{ID: "bldg.move", Label: "Move", Icon: "move",
+	mv := Button{ID: "bldg.move", Label: "Move", Icon: "move", Single: true,
 		Desc: "Pick a new spot; it is reinstalled there, keeping its bills, fuel and owners."}
 	if movable, _ := a.shell.MoveState(b); !movable {
 		mv.Disabled, mv.Reason = true, "can't be moved"
 	}
-	cp := Button{ID: "bldg.copy", Label: "Copy", Icon: "copy",
+	cp := Button{ID: "bldg.copy", Label: "Copy", Icon: "copy", Single: true,
 		Desc: "Open the Architect with this building's tool, material and facing."}
 	if p := a.shell.LockedBy("build:" + b.Kind); p != "" {
 		cp.Disabled, cp.Reason = true, "needs research: "+p

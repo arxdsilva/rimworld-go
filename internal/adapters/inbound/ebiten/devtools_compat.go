@@ -76,7 +76,7 @@ func (h devtoolsHost) Selected() devtools.Selected {
 		s.Frame = &v
 	}
 	if a.sel.Grouped() {
-		s.Group = a.sel.Group.Ids
+		s.Group = a.sel.Group.IDs()
 	}
 	return s
 }

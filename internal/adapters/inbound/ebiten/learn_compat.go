@@ -108,7 +108,7 @@ func (a *App) learnSelection() string {
 	r := a.renderer
 	switch {
 	case a.sel.Grouped():
-		return fmt.Sprintf("g%d:%v", a.sel.Group.Kind, a.sel.Group.Ids)
+		return fmt.Sprintf("g%d:%v", a.sel.Group.Kind(), a.sel.Group.IDs())
 	case r.HasSelect():
 		return fmt.Sprintf("p%d", r.Selected())
 	case a.sel.HasBuilding:
