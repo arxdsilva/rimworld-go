@@ -126,7 +126,7 @@ func TestSaveSingleMapHasNoExtraMaps(t *testing.T) {
 	if dec.Decode(&info) != nil || dec.Decode(&s) != nil {
 		t.Fatal("decode")
 	}
-	if info.Version != 12 || SaveVersion != 12 || s.ExtraMaps != nil || s.View != 0 {
+	if info.Version != SaveVersion || s.ExtraMaps != nil || s.View != 0 {
 		t.Fatalf("v%d save with %d extra maps, view %d", info.Version, len(s.ExtraMaps), s.View)
 	}
 	if l := loadAsVersion(t, g, 11); l.StateHash() != g.StateHash() || len(l.maps) != 1 {

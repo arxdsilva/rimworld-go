@@ -101,7 +101,7 @@ func (h mindActs) Seize(id entity.EntityID) {
 	delete(h.g.draft, id)
 	delete(h.g.orderQueue, id)
 }
-func (h mindActs) Wander(id entity.EntityID, linger int) bool { return h.g.idleWander(id, linger) }
+func (h mindActs) Wander(id entity.EntityID, linger int) bool { return wanderOf(h.g).Pick(id, linger) }
 func (h mindActs) CanBinge(id entity.EntityID) bool {
 	b, _, _, _ := h.g.bestFood(id, id)
 	return b != 0
@@ -117,7 +117,7 @@ func (h mindActs) Hide(id entity.EntityID, ticks int) {
 	g := h.g
 	p, ok := hideSpot(g, id)
 	if !ok || !g.reachable(id, p.X, p.Y) {
-		g.idleWander(id, 300)
+		wanderOf(g).Pick(id, 300)
 		return
 	}
 	g.startJob(id, job.Record{Kind: job.Hide, TX: p.X, TY: p.Y, WorkLeft: ticks})

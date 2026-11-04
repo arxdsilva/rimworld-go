@@ -9,7 +9,7 @@ The selection's inspector: the pane with its tabs (pawn needs, gear, health, soc
 - `Run` and `Options` are closures; `Chip` and `Producer` are its small value types.
 - `Shell` = `Sizer + Commands + World + PawnSel + Widgets + Host + Peers + Labels`.
 - `Host` (8 methods, plus `Dispatcher` and `Hinter`): `Env`, `Layout`, `Pick`, `Click`, `Selection`, `Hostiles`, and others.
-- `Peers` (8): the Architect's areas, move mode, buildability, research locks. `Labels` (8): text and portrait helpers. `Sim` (7 read methods: `OrdersAt`, `Health`, `Social`, `Prisoner`, `Bio`, `LearnedThisWeek`, `PlantGrowth`).
+- `Peers` (8): the Architect's areas, move mode, buildability, research locks. `Labels` (8): text and portrait helpers. `Sim` (7 read methods: `OrdersAt`, `Health`, `Social`, `Prisoner`, `Bio`, `Dossier`, `PlantGrowth`).
 - `bedPrisonReader` (in `building_inspector.go`): one method, `BedForPrisoners`.
 
 ## Allowed Dependencies

@@ -16,8 +16,12 @@ import (
 type Buildings struct{}
 
 // ZoneKind is the zone a storage building of kind k lays and the
-// settings a new one starts with (ok false for any other building).
+// settings a new one starts with (ok false for any other building). The
+// 27 storage pieces lay a shelf zone carrying their profile (NST).
 func ZoneKind(k construction.Kind) (zone.Kind, zone.Zone, bool) {
+	if p, ok := construction.NeatProfile(k); ok {
+		return zone.KindShelf, zone.NewProfile(zone.Profile(p)), true
+	}
 	switch k {
 	case construction.Shelf, construction.SmallShelf: // A2: the small shelf is a 1x1 shelf (wiki: Small shelf)
 		return zone.KindShelf, zone.NewShelf(), true
@@ -46,7 +50,7 @@ func (Buildings) Of(zs *zone.Map, m Machines, z zone.Zone) entity.EntityID {
 	var id entity.EntityID
 	zs.EachCell(z.ID, func(x, y int) bool { id = m.ObjectAt(x, y); return false })
 	if b, ok := m.Building(id); ok {
-		if zk, _, ok := ZoneKind(b.Kind); ok && zk == z.Kind {
+		if zk, proto, ok := ZoneKind(b.Kind); ok && zk == z.Kind && proto.Profile == z.Profile {
 			return id
 		}
 	}
@@ -56,28 +60,36 @@ func (Buildings) Of(zs *zone.Map, m Machines, z zone.Zone) entity.EntityID {
 // ZoneOf is the zone storage building id carries (ok false for none).
 func (Buildings) ZoneOf(zs *zone.Map, m Machines, id entity.EntityID) (zone.Zone, bool) {
 	b, ok := m.Building(id)
-	zk, _, isStore := ZoneKind(b.Kind)
+	zk, proto, isStore := ZoneKind(b.Kind)
 	if !ok || !isStore {
 		return zone.Zone{}, false
 	}
 	zid, in := zs.At(b.X, b.Y)
 	z, _ := zs.Zone(zid)
-	return z, in && z.Kind == zk
+	return z, in && z.Kind == zk && z.Profile == proto.Profile
 }
 
 // Lay lays a finished (or moved) storage building's zone over cells.
 // Zones under the footprint give up the cells; a zone of its kind left
 // without its building (the building moved away) is lifted, and its
-// settings go with the building.
+// settings go with the building. Only a zone of the building's own profile
+// can be its old zone: any other is lifted without adopting its settings.
 func (s Buildings) Lay(zs *zone.Map, m Machines, k construction.Kind, cells [][2]int) {
 	zk, proto, ok := ZoneKind(k)
 	if !ok || len(cells) == 0 {
 		return
 	}
+	adopt := func(z zone.Zone) {
+		if z.Profile == proto.Profile {
+			proto = z
+		} else {
+			zs.Unlink(z.ID)
+		}
+	}
 	for _, c := range cells {
 		if id, in := zs.At(c[0], c[1]); in {
 			if z, _ := zs.Zone(id); z.Kind == zk {
-				proto = z // a move onto its own old cells
+				adopt(z) // a move onto its own old cells
 			}
 		}
 	}
@@ -85,7 +97,8 @@ func (s Buildings) Lay(zs *zone.Map, m Machines, k construction.Kind, cells [][2
 	var stale [][2]int
 	zs.Each(func(z zone.Zone) bool {
 		if z.Kind == zk && s.Of(zs, m, z) == 0 {
-			proto, stale = z, append(stale, zs.Cells(z.ID)...)
+			adopt(z)
+			stale = append(stale, zs.Cells(z.ID)...)
 		}
 		return true
 	})
@@ -146,7 +159,58 @@ func (Buildings) Fill(zs *zone.Map, l Larder, z zone.Zone, filled bool) (group u
 		return uint64(z.Group), stored, 1
 	}
 	zs.EachCell(z.ID, func(x, y int) bool { stored += l.StacksAt(x, y); return true })
-	return uint64(z.Group), stored, z.Cells * z.Kind.Stacks()
+	return uint64(z.Group), stored, z.Cells * z.Slots()
+}
+
+// ProfileKind is the building kind of storage piece profile p (ok false for
+// ProfileNone and an unknown one).
+func ProfileKind(p zone.Profile) (construction.Kind, bool) {
+	k := construction.DisplayCase + construction.Kind(p) - 1
+	n, ok := construction.NeatProfile(k)
+	return k, ok && n == int(p)
+}
+
+// ProfileName is the build name of profile p's piece, "" for the rest
+// (ZoneView.Profile).
+func ProfileName(p zone.Profile) string {
+	if k, ok := ProfileKind(p); ok {
+		return construction.DefOf(k).Name
+	}
+	return ""
+}
+
+// ProfileRows is the settings window's filter tree for the piece named by a
+// ZoneView.Profile, within its own ceiling (nil for any other name).
+func ProfileRows(name string, filter []string) []zone.Row {
+	k, ok := construction.Parse(name)
+	if !ok {
+		return nil
+	}
+	p, ok := construction.NeatProfile(k)
+	if !ok {
+		return nil
+	}
+	return zone.RowsForProfile(zone.KindShelf, zone.Profile(p), filter)
+}
+
+// Slot is where stack id lies in a storage piece, for ItemView: the piece's
+// construction kind as a byte and the stack's index among its cell's stacks in
+// item-list order. Zeros for a carried stack and off a piece: plain shelves
+// have no slot layout. It costs one zone lookup, and on a piece one cell's list.
+func (Buildings) Slot(zs *zone.Map, g Ground, id entity.EntityID, st item.Stack) (piece, slot uint8) {
+	if st.Carrier != 0 {
+		return 0, 0
+	}
+	k, ok := ProfileKind(zone.ProfileAt(zs, st.X, st.Y))
+	if !ok {
+		return 0, 0
+	}
+	for i, oid := range g.LooseAt(st.X, st.Y) {
+		if oid == id {
+			return uint8(k), uint8(i)
+		}
+	}
+	return uint8(k), 0
 }
 
 // Grave is grave or sarcophagus bid's settings (its zone, else a new

@@ -397,6 +397,18 @@ const (
 	SetTankStock
 	NewWanderers
 	ReconnectPower
+	// SetName (RHUD): Pawn takes Name; "" restores its generated name.
+	// Colonists and tame animals only.
+	SetName
+	// CSE: SetGameplayToggle sets toggle Index to Enabled, SetGameplayLimit
+	// limit Index to Count (gameplay.Settings). SetBenchClean: bench Target
+	// is tidied before its bills (Enabled) or not. MarkUnload: Pawn marks
+	// (Enabled) or unmarks an item to unload; Mode 0 pack entry Index, 1
+	// apparel slot Index, 2 weapon, 3 spare weapon.
+	SetGameplayToggle
+	SetGameplayLimit
+	SetBenchClean
+	MarkUnload
 )
 
 // LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).

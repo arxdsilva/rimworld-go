@@ -312,6 +312,35 @@ const (
 	// FishTank (FISH-*, append only, saved): a powered tank that raises a
 	// stock of fish (game/aqua).
 	FishTank
+	// Neat storage (NST-*, append only, saved): furniture that lays a shelf
+	// zone with its own capacity and item ceiling (zone.Profile), in this order.
+	DisplayCase
+	RoundPedestal
+	SmallDisplayShelf
+	DisplayShelf
+	WeaponRack
+	NarrowWardrobe
+	Wardrobe
+	NarrowDisplayCabinet
+	DisplayCabinet
+	OpenShelf
+	TwoTierDisplayShelf
+	NarrowTallShelf
+	TallShelf
+	Safe
+	Drum
+	HorizontalWeaponRack
+	VerticalWeaponRack
+	TextileRack
+	MeatHook
+	MiniPallet
+	HalfPallet
+	Pallet
+	SmallCrate
+	Crate
+	LargeCrate
+	TallCrate
+	CorpseDumpSpot
 	kindCount
 )
 
@@ -662,7 +691,37 @@ var defs = [kindCount]Def{
 	// ours), with the same scaled cost, passed through the same way.
 	FishTank: {Kind: FishTank, Name: "fish tank", Wood: 11, Work: 280, Layer: LayerObject,
 		Rotatable: true, Size: [2]int{1, 4}, MetalOK: true, MetalOnly: true, Components: 1},
-	SunLamp: {Kind: SunLamp, Name: "sun lamp", Wood: 4, Work: 33, Layer: LayerObject, MetalOK: true, MetalOnly: true},
+	// NST (Neat Storage). Sizes follow the published mod table; every cost, work,
+	// stuff and flag figure is our own tuning (NEAT_STORAGE_GAP_ANALYSIS.md).
+	// None blocks movement: haulers step onto storage cells.
+	DisplayCase:          {Kind: DisplayCase, Name: "display case", Wood: 3, Work: 60, Layer: LayerObject, Rotatable: true, StoneOK: true, MetalOK: true},
+	RoundPedestal:        {Kind: RoundPedestal, Name: "round pedestal", Wood: 2, Work: 50, Layer: LayerObject, StoneOK: true},
+	SmallDisplayShelf:    {Kind: SmallDisplayShelf, Name: "small display shelf", Wood: 1, Work: 30, Layer: LayerObject, Rotatable: true, StoneOK: true, MetalOK: true},
+	DisplayShelf:         {Kind: DisplayShelf, Name: "display shelf", Wood: 2, Work: 55, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	WeaponRack:           {Kind: WeaponRack, Name: "weapon rack", Wood: 2, Work: 55, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, MetalOK: true},
+	NarrowWardrobe:       {Kind: NarrowWardrobe, Name: "narrow wardrobe", Wood: 2, Work: 45, Layer: LayerObject, Rotatable: true, StoneOK: true, MetalOK: true},
+	Wardrobe:             {Kind: Wardrobe, Name: "wardrobe", Wood: 3, Work: 70, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	NarrowDisplayCabinet: {Kind: NarrowDisplayCabinet, Name: "narrow display cabinet", Wood: 2, Work: 50, Layer: LayerObject, Rotatable: true, StoneOK: true, MetalOK: true},
+	DisplayCabinet:       {Kind: DisplayCabinet, Name: "display cabinet", Wood: 4, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	OpenShelf:            {Kind: OpenShelf, Name: "open shelf", Wood: 3, Work: 60, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	TwoTierDisplayShelf:  {Kind: TwoTierDisplayShelf, Name: "two tier display shelf", Wood: 4, Work: 80, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	NarrowTallShelf:      {Kind: NarrowTallShelf, Name: "narrow tall shelf", Wood: 2, Work: 50, Layer: LayerObject, Rotatable: true, StoneOK: true, MetalOK: true},
+	TallShelf:            {Kind: TallShelf, Name: "tall shelf", Wood: 4, Work: 95, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	Safe:                 {Kind: Safe, Name: "safe", Wood: 5, Work: 150, Layer: LayerObject, MetalOK: true, MetalOnly: true},
+	Drum:                 {Kind: Drum, Name: "drum", Wood: 3, Work: 80, Layer: LayerObject, MetalOK: true, MetalOnly: true},
+	HorizontalWeaponRack: {Kind: HorizontalWeaponRack, Name: "horizontal weapon rack", Wood: 5, Work: 110, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, MetalOK: true, MetalOnly: true},
+	VerticalWeaponRack:   {Kind: VerticalWeaponRack, Name: "vertical weapon rack", Wood: 5, Work: 110, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, MetalOK: true, MetalOnly: true},
+	TextileRack:          {Kind: TextileRack, Name: "textile rack", Wood: 2, Work: 50, Layer: LayerObject, Rotatable: true, MetalOK: true},
+	MeatHook:             {Kind: MeatHook, Name: "meat hook", Wood: 3, Work: 70, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, MetalOK: true, MetalOnly: true},
+	MiniPallet:           {Kind: MiniPallet, Name: "mini pallet", Wood: 1, Work: 25, Layer: LayerObject},
+	HalfPallet:           {Kind: HalfPallet, Name: "half pallet", Wood: 2, Work: 45, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}},
+	Pallet:               {Kind: Pallet, Name: "pallet", Wood: 4, Work: 80, Layer: LayerObject, Size: [2]int{2, 2}},
+	SmallCrate:           {Kind: SmallCrate, Name: "small crate", Wood: 2, Work: 40, Layer: LayerObject, StoneOK: true, MetalOK: true},
+	Crate:                {Kind: Crate, Name: "crate", Wood: 3, Work: 60, Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}, StoneOK: true, MetalOK: true},
+	LargeCrate:           {Kind: LargeCrate, Name: "large crate", Wood: 6, Work: 110, Layer: LayerObject, Size: [2]int{2, 2}, StoneOK: true, MetalOK: true},
+	TallCrate:            {Kind: TallCrate, Name: "tall crate", Wood: 7, Work: 120, Layer: LayerObject, Size: [2]int{2, 2}, StoneOK: true, MetalOK: true},
+	CorpseDumpSpot:       {Kind: CorpseDumpSpot, Name: "corpse dump spot", Wood: 2, Work: 30, Layer: LayerObject},
+	SunLamp:              {Kind: SunLamp, Name: "sun lamp", Wood: 4, Work: 33, Layer: LayerObject, MetalOK: true, MetalOnly: true},
 	// TEMP-1, wiki: Passive cooler (50 wood; game/thermo cools, fuel.go
 	// burns its wood), Vent (30 steel, impassable; open or shut like a
 	// power toggle). Scaled as the wave D rows; the work is original

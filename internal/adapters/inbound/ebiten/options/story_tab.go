@@ -36,11 +36,14 @@ const (
 
 // UI declares the Story tab's widgets (the other tabs are legacy buttons).
 func (o *Screen) UI(sw, sh int) {
-	if !o.sh.Env().Running || o.CurrentTab() != "story" {
-		return
+	switch {
+	case o.CurrentTab() == "habits":
+		uikit.OnScreenLayer(o.sh.Kit())
+		o.habitsTab(sw, sh)
+	case o.sh.Env().Running && o.CurrentTab() == "story":
+		uikit.OnScreenLayer(o.sh.Kit())
+		o.storyTab(sw, sh)
 	}
-	uikit.OnScreenLayer(o.sh.Kit())
-	o.storyTab(sw, sh)
 }
 
 // setStoryteller and setDifficulty are the tab's typed commands, applied

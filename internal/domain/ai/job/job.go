@@ -184,6 +184,13 @@ const (
 	// (game/aqua; Animals skill, Handling work).
 	StockTank
 	NetTank
+	// CSE-*, game/sense and game/craft: cleaning a room's route before or
+	// after a job, gathering a bill's ingredients in the pack, unloading a
+	// marked pack entry, and taking a spare meal.
+	CleanRoom
+	PackIngredients
+	UnloadPack
+	TakeSpare
 )
 
 // Hauls reports a haul job: a plain haul, or FOOD-4's hopper fill, a
@@ -380,6 +387,14 @@ func (k Kind) String() string {
 		return "stock fish tank"
 	case NetTank:
 		return "net fish tank"
+	case CleanRoom:
+		return "clean room"
+	case PackIngredients:
+		return "pack ingredients"
+	case UnloadPack:
+		return "unload pack"
+	case TakeSpare:
+		return "take spare meal"
 	default:
 		return "idle"
 	}

@@ -23,6 +23,7 @@ import (
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/resize"
 	"rimworld-go/internal/application/game/rest"
+	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/thermo"
 	"rimworld-go/internal/domain/difficulty"
@@ -100,7 +101,7 @@ import (
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 12
+const SaveVersion = 13
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -381,7 +382,9 @@ type saveState struct {
 	People     *peopleSave
 	Bodies     []entry[savedBody] // body.go: slices since MED-00, gob reads the older shape
 	Surgery    *surgerySave
-	Drugs      []entry[savedDrug] // drugs.go: slices since MED-00
+	Drugs      []entry[savedDrug] // dose_host.go: slices since MED-00
+	Sense      *sense.Save        // game/sense (CSE, v13): nil at the defaults
+	PetNames   []entry[string]    // skills.go (RHUD-025): renamed animals' rolled names; nil until a rename
 	Prisoners  []entry[prisoner.State]
 	World      *worldSave
 	Areas      *area.Set
@@ -541,6 +544,8 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
 	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
 	s.Diet = g.sk.diet.Export()        // game/diet (FOOD-4): nil at the defaults
+	s.Sense = senseOf(g).Export()      // game/sense (CSE): nil at the defaults
+	s.PetNames = g.sk.exportPetNames() // skills.go (RHUD-025): nil until a rename
 	s.History = slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -751,6 +756,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.sk.diet.Import(s.Diet)     // game/diet (FOOD-4)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
+	senseOf(g).Import(s.Sense) // game/sense (CSE)
+	g.sk.importPetNames(s.PetNames)
 	g.history = s.History
 	if err := g.importStreams(s.RNGStreams); err != nil {
 		return nil, info, fmt.Errorf("restore rng streams: %w", err)
@@ -821,7 +828,7 @@ func importMapFields(g *Game, s *saveState) {
 	g.importDirt(s.Dirt, s.Carried) // filth.go
 	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued
 	if !s.CleanWired {
-		g.wireCleaning() // clean.go: an older save switches cleaning on once
+		cleaningOf(g).Wire() // game/sense: an older save switches cleaning on once
 	}
 	// bridge.go (MAPGEN-3): older saves have no sea
 	g.importOcean(s.Ocean)

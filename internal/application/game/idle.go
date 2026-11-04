@@ -102,33 +102,7 @@ func (g *Game) assignIdle(id entity.EntityID) bool {
 			return true
 		}
 	}
-	return g.idleWander(id, linger)
-}
-
-// idleWander strolls to a random reachable tile nearby.
-func (g *Game) idleWander(id entity.EntityID, linger int) bool {
-	pos, _ := g.positions.Get(id)
-	r := 5
-	if g.temperamentOf(id) == Wanderer {
-		r = 9
-	}
-	for try := 0; try < 8; try++ {
-		x := pos.X + g.rng.IntN(2*r+1) - r
-		y := pos.Y + g.rng.IntN(2*r+1) - r
-		if x == pos.X && y == pos.Y || !g.grid.Walkable(x, y) || g.bedCovering(x, y) || g.idleFireBlocked(x, y) || !g.inArea(id, x, y) { // areas.go
-			continue
-		}
-		if _, taken := g.reserve.TileOwner(x, y); taken {
-			continue
-		}
-		if !g.reachable(id, x, y) {
-			continue
-		}
-		if g.startJob(id, job.Record{Kind: job.Wander, TX: x, TY: y, WorkLeft: linger}) {
-			return true
-		}
-	}
-	return false
+	return wanderOf(g).Pick(id, linger) // game/sense
 }
 
 // idleChat walks over to another free colonist nearby for a chat.

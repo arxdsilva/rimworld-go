@@ -1,13 +1,12 @@
 package game
 
 import (
-	"fmt"
 	"slices"
-	"strings"
 
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/hit"
+	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/armor"
@@ -238,36 +237,14 @@ func importMap[T any](es []entry[T]) map[entity.EntityID]*T {
 	return m
 }
 
-// capacityTip is the capacity's hover card: its name, then one line a
-// factor (body.CapacityFactors) and the result.
-func capacityTip(b *body.Body, c body.Capacity) string {
-	var sb strings.Builder
-	sb.WriteString(capacityLabels[c])
-	for _, f := range b.CapacityFactors(c) {
-		if f.Label == "=" {
-			fmt.Fprintf(&sb, "\n= %d%%", f.Pct)
-			continue
-		}
-		fmt.Fprintf(&sb, "\n%s %d%%", f.Label, f.Pct)
-	}
-	return sb.String()
-}
-
-// capacityLabels name body.Capacity values for the Health tab.
-var capacityLabels = [body.NumCaps]string{
-	body.Consciousness: "Consciousness", body.Moving: "Moving", body.Manipulation: "Manipulation",
-	body.Sight: "Sight", body.Hearing: "Hearing", body.Talking: "Talking", body.Breathing: "Breathing",
-	body.BloodPumping: "Blood pumping", body.BloodFiltration: "Blood filtration", body.Digestion: "Digestion", // MED-05
-}
-
 // Part status words of the Health tab (PartView.Status starts with one).
 const (
-	PartHealthy    = "healthy"
-	PartMissing    = "missing"
-	PartReplaced   = "replaced"   // under an artificial limb
-	PartArtificial = "artificial" // "artificial: peg leg"
-	PartWounded    = "wounded"    // "wounded: 2 wounds (tended), 1 scar"
-	PartScarred    = "scarred"
+	PartHealthy    = roster.PartHealthy
+	PartMissing    = roster.PartMissing
+	PartReplaced   = roster.PartReplaced
+	PartArtificial = roster.PartArtificial
+	PartWounded    = roster.PartWounded
+	PartScarred    = roster.PartScarred
 )
 
 // viewBody is id's body for a read model: its own, or for a pawn never hurt
@@ -282,51 +259,6 @@ func (g *Game) viewBody(id entity.EntityID) *body.Body {
 		body.Reconcile(b, v.Injury, 0)
 	}
 	return b
-}
-
-// coveredByImplant reports a missing part p standing under an implant on
-// one of its ancestors (a foot under a prosthetic leg).
-func coveredByImplant(b *body.Body, p body.Part) bool {
-	for q, i := body.DefOf(p).Parent, 0; i < int(body.NumParts); q, i = body.DefOf(q).Parent, i+1 {
-		if b.Implant(q).IsImplant() {
-			return true
-		}
-		if body.DefOf(q).Parent == q {
-			return false
-		}
-	}
-	return false
-}
-
-// partStatus is the Health tab's status line for one part.
-func partStatus(b *body.Body, s body.PartStatus) string {
-	switch {
-	case s.Missing && s.Fitted:
-		return PartArtificial + ": " + s.Implant.String()
-	case s.Missing && coveredByImplant(b, s.Part):
-		return PartReplaced
-	case s.Missing:
-		return PartMissing
-	case s.Wounds > 0:
-		t := fmt.Sprintf("%s: %d wound%s", PartWounded, s.Wounds, plural(s.Wounds))
-		if s.Tended {
-			t += " (tended)"
-		}
-		if s.Scars > 0 {
-			t += fmt.Sprintf(", %d scar%s", s.Scars, plural(s.Scars))
-		}
-		return t
-	case s.Scars > 0:
-		return fmt.Sprintf("%s: %d scar%s", PartScarred, s.Scars, plural(s.Scars))
-	}
-	return PartHealthy
-}
-
-func plural(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
 }
 
 // implantKinds are the implant item kinds in kind order.
@@ -353,7 +285,7 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	}
 	b := g.viewBody(id)
 	v, _ := g.vital.Get(id)
-	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: g.drugLines(id), // drugs.go
+	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: doseOf(g).Lines(id), // game/dose
 		State: healthState(v, b), BloodLossPct: int(b.BloodLoss) / 10, BleedPerDay: int(b.BleedPerDay()) / 10,
 		DeathInHours: b.BleedDeathHours()} // bleed.go (MED-01)
 	g.conditionRows(id, b, &hv) // MED-02: conditions, the infection headline and its death clock
@@ -362,12 +294,12 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	}
 	hv.Capacities = make([]CapacityView, 0, body.NumCaps)
 	for c := body.Capacity(0); c < body.NumCaps; c++ {
-		hv.Capacities = append(hv.Capacities, CapacityView{Label: capacityLabels[c], Pct: int(b.Capacity(c)) / 10, Tip: capacityTip(b, c)})
+		hv.Capacities = append(hv.Capacities, CapacityView{Label: roster.CapacityLabels[c], Pct: int(b.Capacity(c)) / 10, Tip: roster.CapacityTip(b, c)})
 	}
 	ps := b.Parts()
 	hv.Parts = make([]PartView, 0, len(ps))
 	for _, s := range ps {
-		pv := PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP, Part: int(s.Part),
+		pv := PartView{Label: s.Label, Status: roster.PartStatus(b, s), HP: s.HP, Part: int(s.Part),
 			Bleed: int(b.PartBleedPerDay(s.Part)) / 10, TendTip: body.PartTendTip(b, s.Part)}
 		if s.Fitted {
 			pv.Implant = s.Implant.String()
@@ -471,7 +403,7 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 				cv.Due = true
 			}
 		}
-		cv.Tip = conditionTip(c, d, cv, tended)
+		cv.Tip = roster.ConditionTip(c, d, cv, tended)
 		if aging {
 			cv.Tip = body.AgingTip(c, cv.Label, g.agingSalt(id))
 		}
@@ -488,34 +420,6 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 	if h := g.condDeathHours(id, b); h >= 0 && (hv.DeathInHours < 0 || h < hv.DeathInHours) {
 		hv.DeathInHours = h
 	}
-}
-
-// conditionTip is a condition row's hover card: severity and immunity,
-// the tend and its quality, and how the race goes.
-func conditionTip(c body.Condition, d body.CondDef, cv ConditionView, tended bool) string {
-	t := fmt.Sprintf("%s\nSeverity %d%% · immunity %d%%.", cv.Label, cv.SevPct, cv.ImmPct)
-	switch {
-	case tended && d.CureTendSum > 0:
-		t += fmt.Sprintf("\nTended at %d%% quality; the next tend can follow in %d hours.", cv.TendPct, cv.DueInHours)
-	case tended:
-		t += fmt.Sprintf("\nTended at %d%% quality: slowed by %d%% a day for %d more hours.", cv.TendPct, int(d.TendMax*c.TendQ/1000)/10, cv.DueInHours)
-	case d.TendEvery > 0 && c.TendQ > 0:
-		t += fmt.Sprintf("\nLast tended at %d%% quality; it needs tending again now.", cv.TendPct)
-	case d.TendEvery > 0:
-		t += "\nUntended: it needs a doctor now."
-	}
-	switch {
-	case d.CureTendSum > 0: // MED-04: parasites
-		t += fmt.Sprintf("\nNo immunity: cured by tending once the tends add up to %d%% quality (%d%% so far).", d.CureTendSum/10, int(c.TendSum)/10)
-	case d.ImmPerDay == 0: // no race to win: food poisoning, anesthetic, overdose, chronic conditions
-	case c.Immunity >= infection.Full:
-		t += "\nImmune: it is receding."
-	case cv.Losing:
-		t += "\nLosing: at this rate it kills before immunity builds. Better tends (skill, medicine, a hospital bed) slow it."
-	default:
-		t += "\nWinning: immunity should build before it gets worse."
-	}
-	return t
 }
 
 // hits lands combat hits (game/hit, CBT-1) on g: a stateless value over
@@ -583,6 +487,7 @@ func (h hitHarm) Hold(id entity.EntityID, until uint64) {
 	m := h.g.motionOf(id)
 	m.NextMoveAt = max(m.NextMoveAt, until)
 	h.g.motion.Set(id, m)
+	h.g.sk.noteStun(id, until, h.Now()) // skills.go: for the card only, NextMoveAt also holds walkers
 	if j, ok := h.g.jobs.Get(id); ok && (j.Kind == job.Attack || j.Kind == job.Hunt) {
 		j.WorkLeft = max(j.WorkLeft, int(until-h.Now()))
 		h.g.jobs.Set(id, j)

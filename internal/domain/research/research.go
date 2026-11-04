@@ -273,8 +273,9 @@ var defs = [NumProjects]Def{
 	Metalworking: {Project: Metalworking, Name: "metalworking", Label: "Metalworking", Cost: 700, TechLevel: Medieval,
 		Desc: "A wood-fired forge to beat steel into maces, short swords and throwing spears.",
 		Unlocks: []string{"build:wood-fired forge", "build:electric forge", "recipe:make_mace", "recipe:make_gladius", "recipe:make_pila",
-			"recipe:make_simple_helmet",                                  // PRD-4: wiki Simple helmet (Smithing)
-			"build:steel tile", "build:silver tile", "build:gold tile"}}, // AX-0, wiki: Floors (Smithing)
+			"recipe:make_simple_helmet",                                // PRD-4: wiki Simple helmet (Smithing)
+			"build:steel tile", "build:silver tile", "build:gold tile", // AX-0, wiki: Floors (Smithing)
+			"build:textile rack", "build:meat hook"}}, // NST
 	// wiki: Long blades (Medieval, 400, Smithing).
 	Bladesmithing: {Project: Bladesmithing, Name: "bladesmithing", Label: "Bladesmithing", Cost: 400, TechLevel: Medieval,
 		Requires: []Project{Metalworking},
@@ -285,7 +286,8 @@ var defs = [NumProjects]Def{
 	// wiki: Machining (Industrial, 1000, Electricity + Smithing).
 	MachineTools: {Project: MachineTools, Name: "machine_tools", Label: "Machine tools", Cost: 1000, TechLevel: Industrial,
 		Requires: []Project{Electricity, Metalworking},
-		Desc:     "A powered table of lathes and drills for gun parts and steel limbs.", Unlocks: []string{"build:machining table"}},
+		Desc:     "A powered table of lathes and drills for gun parts and steel limbs.", Unlocks: []string{"build:machining table",
+			"build:safe", "build:drum", "build:horizontal weapon rack", "build:vertical weapon rack"}}, // NST
 	// wiki: Blowback operation (Industrial, 500, Gunsmithing).
 	SelfLoading: {Project: SelfLoading, Name: "self_loading", Label: "Self-loading actions", Cost: 500, TechLevel: Industrial,
 		Requires: []Project{Gunsmithing},

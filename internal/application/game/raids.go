@@ -271,6 +271,7 @@ func (g *Game) dropRaiderGear(id entity.EntityID) {
 // raider who got away is an off-map person again, its relations kept;
 // whatever it carried is put down first.
 func (g *Game) removeRaider(id entity.EntityID) {
+	senseOf(g).Gear.Spill(id) // game/sense (CSE-036)
 	if p := g.personOf(id); p != nil && p.Where == whereRaider {
 		p.Where = whereOffMap
 	}
@@ -386,6 +387,7 @@ func (g *Game) Wealth() int {
 			w += animal.DefOf(a.Species).MaxHP * 2
 		}
 	}
+	w += senseOf(g).Gear.Wealth() // game/sense (CSE-036): what its colonists carry
 	return w
 }
 

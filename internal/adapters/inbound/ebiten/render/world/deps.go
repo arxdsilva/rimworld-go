@@ -86,6 +86,7 @@ type base struct {
 	// (sprite.Pass.Cast) that the overlays skip a figure's stains on.
 	Cast       *light.Cast
 	steamHeard map[[2]int]uint64 // each vent's last burst already cued
+	neat       neatIndex         // neat_keys.go: the storage piece on a tile
 
 	// LOD is the zoom tier, the chunk and whole-map bakes and the frame's
 	// chunk lists; Links the cached wall/rock/fence connectivity; Stone the

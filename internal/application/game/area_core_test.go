@@ -256,7 +256,7 @@ func TestAreaRecreationFilters(t *testing.T) {
 	}
 	g.jobs.Set(id, job.Record{})
 	for i := 0; i < 20; i++ {
-		if g.idleWander(id, 300) {
+		if wanderOf(g).Pick(id, 300) {
 			if j, _ := g.jobs.Get(id); j.TX > 9 {
 				t.Fatalf("wandered to %d,%d outside", j.TX, j.TY)
 			}

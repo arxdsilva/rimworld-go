@@ -1,6 +1,8 @@
 package inspector
 
 import (
+	"image/color"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
@@ -11,8 +13,8 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/dossierview"
 	"rimworld-go/internal/domain/pawn/look"
-	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
 )
@@ -30,13 +32,22 @@ type Sim interface {
 	Health(id entity.EntityID) (game.HealthView, bool)
 	Social(id entity.EntityID) (game.SocialView, bool)
 	Prisoner(id entity.EntityID) (game.PrisonerView, bool)
-	// Bio is a colonist's biography; LearnedThisWeek its experience gained
-	// in the last 7 days per skill.
+	// Bio is a colonist's biography; Dossier's LearnedWeek its experience
+	// gained in the last 7 days per skill.
 	Bio(id entity.EntityID) (game.BioView, bool)
-	LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int
+	Dossier(id entity.EntityID) (dossierview.Card, bool)
 	// PlantGrowth is why a plant is or isn't growing now and when it
 	// ripens.
 	PlantGrowth(id entity.EntityID) (game.PlantGrowthView, bool)
+}
+
+// PaneBody can take over a selection's pane body (the colonist card, RHUD):
+// which selections it claims, its widgets, its drawing and its title row.
+type PaneBody interface {
+	Claims(k selection.Kind, id entity.EntityID) bool
+	Declare(r gfx.Rect)
+	Draw(dst *ebiten.Image, r gfx.Rect)
+	Title(k selection.Kind, id entity.EntityID) (tint color.RGBA, tip, tab string)
 }
 
 // Env is what the inspector reads of the program around it, as of the

@@ -139,6 +139,7 @@ func (g *Game) arrestChance(arrester, target entity.EntityID) int {
 func (g *Game) makePrisoner(target, captor entity.EntityID) {
 	now := uint64(g.clock.Now())
 	g.ensurePerson(target)
+	senseOf(g).Gear.Spill(target) // game/sense (CSE-036): no prisoner keeps a pack
 	if slices.Contains(g.pawnIDs, target) {
 		g.pawnIDs = withoutID(g.pawnIDs, target)
 		g.mind.End(target) // mind (SIM-066): an arrested breaker's break ends

@@ -32,6 +32,13 @@ type Host interface {
 	Rooms
 	Senses
 	Feelings
+	Displays
+}
+
+// Displays reads what lies on a cell (the admired piece's stack).
+type Displays interface {
+	// Holds reports a stack lies on cell (x, y).
+	Holds(x, y int) bool
 }
 
 // Bodies places and tasks a pawn.

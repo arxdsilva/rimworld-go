@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/application/game/axview"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/application/game/visit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
@@ -113,7 +114,9 @@ func WandererPawn(seed uint64, rules pawngen.Rules) pawngen.Pawn {
 }
 
 // WandererBio is WandererPawn's card for the picker.
-func WandererBio(seed uint64, rules pawngen.Rules) BioView { return bioOf(WandererPawn(seed, rules)) }
+func WandererBio(seed uint64, rules pawngen.Rules) BioView {
+	return roster.BioOf(WandererPawn(seed, rules))
+}
 
 // cmdNewWanderers brings a new group in from an edge of the first colony map,
 // the same way a wanderer comes, under the player's control (MAP-19; name:

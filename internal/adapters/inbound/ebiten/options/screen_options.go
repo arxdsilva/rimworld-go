@@ -54,7 +54,7 @@ type optionAction struct {
 	off      func(sc *Screen) string
 }
 
-var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility", "story": "Story"}
+var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility", "story": "Story", "habits": "Habits"}
 
 func OptionTabs() []string { return []string{"audio", "graphics", "gameplay", "controls", "access"} }
 
@@ -63,15 +63,15 @@ func OptionTabs() []string { return []string{"audio", "graphics", "gameplay", "c
 func (o *Screen) TabList() []string {
 	tabs := OptionTabs()
 	if !o.sh.Env().Running {
-		return tabs
+		return append(tabs[:3:3], "habits", "controls", "access")
 	}
-	return append(tabs[:3:3], "story", "controls", "access")
+	return append(tabs[:3:3], "story", "habits", "controls", "access")
 }
 
 // Layout (px).
 const (
 	optTabY    = 108
-	optTabW    = 150
+	optTabW    = 112
 	optRowY    = 164
 	optRowStep = 44
 	OptCtrlX   = 260
@@ -349,8 +349,8 @@ func OptionRows(tab string) []OptionRow {
 		}
 	case "controls":
 		return nil // controls_ui.go draws its own rows
-	case "story":
-		return nil // story_tab.go declares its own widgets
+	case "story", "habits":
+		return nil // story_tab.go and habits_tab.go declare their own widgets
 	case "access":
 		return []OptionRow{
 			uiScaleRow(),
@@ -488,7 +488,7 @@ func (o *Screen) DrawOptions(screen *ebiten.Image, sw, sh int) {
 	o.sh.PaintMenu(screen, sw, sh, "Options", nil, nil)
 	uikit.DrawPanel(screen, 40, 96, float32(sw-80), float32(sh-180))
 	tab := o.CurrentTab()
-	if tab == "story" { // the kit paints the tab's content over the panel
+	if tab == "story" || tab == "habits" { // the kit paints the tab's content over the panel
 		mx, my := o.sh.Cursor()
 		o.drawButtons(screen, o.Buttons(sw, sh), mx, my)
 		return

@@ -58,7 +58,7 @@ const (
 	MaxMsgs   = 5
 
 	ArchCatsW = 212 // the Architect's two category columns
-	ArchCatsH = 204 // six rows of two category buttons (12 vanilla categories, STK-AG): 2*8 pad + 6*28 + 5*4
+	ArchCatsH = 216 // seven rows of two category buttons (12 vanilla categories and storage, STK-AG, NST): 2*8 pad + 7*26 + 6*3
 	ArchDescW = 320
 )
 
@@ -91,6 +91,13 @@ type Inputs struct {
 	ArchDescH            float32 // the Architect description box (0: none)
 	WindowW, WindowH     float32 // an open main-tab window's wanted size (0: none)
 	PerfW, PerfH         float32 // the performance box's size (0: off)
+	// The colonist card (RHUD), zero keeps today's layout. PaneW and PaneH
+	// size the pane; Card is the floating card; letters avoid LetterAvoid and
+	// use LetterGap between them (0: HudGap).
+	PaneW, PaneH float32
+	Card         gfx.Rect
+	LetterAvoid  gfx.Rect
+	LetterGap    float32
 }
 
 // BarGroup is one map's frame on the colonist bar: its label chip on top
@@ -126,6 +133,7 @@ type Layout struct {
 	Resources gfx.Rect
 	Messages  gfx.Rect
 	Perf      gfx.Rect // the performance overlay (perf_overlay.go, PERF-002); empty when off
+	Card      gfx.Rect // the floating colonist card; empty when docked or off
 
 	HintX, HintBottom float32 // disabled-reason hints and toasts sit above this
 }

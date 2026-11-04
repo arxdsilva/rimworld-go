@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/application/game/craft"
+	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/application/game/thermo"
 	"slices"
 
@@ -196,7 +197,7 @@ func (g *Game) fillBuildingView(bv *BuildingView, id entity.EntityID, b construc
 	fillOrderViews(g, bv, id, b)                       // move.go (AX-1): uninstall and open marks
 	bv.AX.ReadingBonus = booksOf(g).CaseBonus(id, b)   // game/books (AX-7): a bookcase's room
 	shipOf(g).FillBuilding(shipHost{g}, &bv.AX, id, b) // story.go: game/ship (AX-8)
-	if b.Kind.Recreation() {                           // game/recreate (AX-6): joy kind and users
+	if _, joy := recreate.SpecOf(b.Kind); joy {        // game/recreate (AX-6, NST): joy kind and users
 		bv.AX.Joy, bv.AX.Users = recView(g).PieceView(id)
 	}
 	bv.Linked, bv.WorkSpeed, bv.Epitaph = g.craft.Stations.View(id, b, bv.Epitaph)
@@ -246,5 +247,5 @@ func equalBuildingView(a, b *BuildingView) bool {
 		a.Facilities == b.Facilities && a.Forbidden == b.Forbidden && a.HoldOpen == b.HoldOpen && a.HasTarget == b.HasTarget &&
 		a.HoldFire == b.HoldFire && a.Barrel == b.Barrel && a.Shells == b.Shells && a.TargetX == b.TargetX &&
 		a.TargetY == b.TargetY && a.WorkSpeed == b.WorkSpeed && slices.Equal(a.Linked, b.Linked) &&
-		a.Group == b.Group && a.Stored == b.Stored && a.Capacity == b.Capacity && a.Open == b.Open && a.HeatRate == b.HeatRate && a.ResearchSpeed == b.ResearchSpeed && a.Analyzer == b.Analyzer && a.AX == b.AX
+		a.Group == b.Group && a.Stored == b.Stored && a.Capacity == b.Capacity && a.Open == b.Open && a.HeatRate == b.HeatRate && a.ResearchSpeed == b.ResearchSpeed && a.Analyzer == b.Analyzer && a.AX == b.AX && a.CleanOff == b.CleanOff
 }

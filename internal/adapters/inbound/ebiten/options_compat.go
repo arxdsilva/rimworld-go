@@ -16,6 +16,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/storyteller"
@@ -141,10 +142,19 @@ func (s optionsSaver) Load(path string) (string, clock.Tick, error) {
 	return slot, sim.Tick(), nil
 }
 
-// optionsStory is what the Story tab borrows from the wizard and the colony.
+// optionsStory is what the Story and Habits tabs borrow from the wizard and
+// the colony.
 type optionsStory struct{ a *App }
 
 var _ options.Story = optionsStory{}
+
+// Rules is the colony's habit rules, from the read model.
+func (h optionsStory) Rules() gameplay.Settings {
+	if h.a.renderer == nil {
+		return gameplay.Settings{}
+	}
+	return h.a.renderer.game.World().Gameplay
+}
 
 // StoryView is the colony's storyteller, difficulty and save mode.
 func (s optionsStory) StoryView() game.StoryView {

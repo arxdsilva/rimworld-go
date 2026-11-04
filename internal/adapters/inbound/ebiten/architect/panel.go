@@ -28,8 +28,8 @@ import (
 const (
 	archPad    = 8 // inside the category panel and the description box
 	archCatW   = 96
-	archCatH   = 28
-	archCatGap = 4
+	archCatH   = 26
+	archCatGap = 3
 
 	archBtnH     = 22 // a material or crop button
 	archBtnGap   = 4

@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/application/game/maps"
 	"rimworld-go/internal/application/game/raid"
+	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/ship"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/application/game/visit"
@@ -83,6 +84,7 @@ type worldState struct {
 	maxColonies int           // Options' cap, sent at start and load (never saved; 0 means 1)
 	visitH      visit.Host    // game/visit's host (visitsOf), built once
 	atlas       maps.Atlas    // game/maps: the open maps beyond the first (MAP-01)
+	sense       *sense.Sense  // senseOf (sense_host.go): the habit rules (CSE)
 }
 
 // worldSave is worldState as saved.
@@ -635,6 +637,7 @@ func closeMap(g *Game, id uint32) {
 	gone := slices.Concat(g.pawnIDs, g.animalIDs, g.itemIDs, g.bldgIDs, g.plantIDs, g.frameIDs)
 	for _, pid := range g.pawnIDs {
 		g.setWhere(pid, whereOffMap) // left behind: lost to the colony
+		senseOf(g).Gear.Spill(pid)   // game/sense (CSE-036): its pack goes with what is on the map
 	}
 	for _, e := range gone {
 		forget(g, e)
@@ -924,6 +927,7 @@ func (h mapsFound) Wipe() {
 		}
 	}
 	for _, id := range g.pawnIDs {
+		senseOf(g).Gear.Spill(id) // game/sense (CSE-036): the items go below, with the rest
 		g.reserve.ReleaseOwner(id)
 		g.setWhere(id, whereOffMap)
 		g.positions.Delete(id)

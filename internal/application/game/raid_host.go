@@ -278,6 +278,7 @@ func (h raidKidnap) Off(id, t entity.EntityID) {
 	g.care.Carry.Drop(id)
 	pos, _ := g.positions.Get(id)
 	g.positions.Set(t, pos)
+	senseOf(g).Gear.Spill(t) // game/sense (CSE-036): the pack stays behind at the edge
 	fac := 0
 	if p := g.personOf(id); p != nil {
 		fac = p.Faction

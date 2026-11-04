@@ -239,7 +239,7 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	}
 	ts := g.traitThoughts(id, mood.AppendActive(dst, g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
 	ts = append(ts, g.bodyThoughts(id)...)                                                                    // body.go
-	ts = append(ts, g.drugThoughts(id)...)                                                                    // drugs.go
+	ts = append(ts, doseOf(g).Thoughts(id)...)                                                                // game/dose
 	return append(ts, g.socialThoughts(id)...)                                                                // social_mood.go
 }
 

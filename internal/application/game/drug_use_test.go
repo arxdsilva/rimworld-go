@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"rimworld-go/internal/application/game/dose"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/incident"
@@ -60,10 +61,10 @@ func hasDrugThought(g *Game, id entity.EntityID, k mood.Kind) bool {
 // addict doses id with k until hooked (deterministic: the drug stream).
 func drugAddict(t *testing.T, g *Game, id entity.EntityID, k item.Kind) {
 	t.Helper()
-	for i := 0; i < 500 && !g.drugState(id).Addicted(k); i++ {
-		g.ingestDose(id, k)
+	for i := 0; i < 500 && !doseOf(g).State(id).Addicted(k); i++ {
+		doseOf(g).Ingest(id, k)
 	}
-	if !g.drugState(id).Addicted(k) {
+	if !doseOf(g).State(id).Addicted(k) {
 		t.Fatalf("never got hooked on %v", k)
 	}
 }
@@ -117,7 +118,7 @@ func TestDrugTipsyThoughtDecaysThenHangover(t *testing.T) {
 	t.Parallel()
 	g, id := drugColony(t)
 	for i := 0; i < 3; i++ {
-		g.ingestDose(id, item.Beer)
+		doseOf(g).Ingest(id, item.Beer)
 	}
 	if !hasDrugThought(g, id, mood.Drunk) {
 		t.Fatalf("thoughts %+v: three beers make it tipsy", g.thoughts(id))
@@ -129,7 +130,7 @@ func TestDrugTipsyThoughtDecaysThenHangover(t *testing.T) {
 	if !found {
 		t.Fatalf("Needs tab thoughts %+v lack %q", g.Snapshot()[0].Thoughts, mood.DefOf(mood.Drunk).Label)
 	}
-	if len(g.drugLines(id)) == 0 {
+	if len(doseOf(g).Lines(id)) == 0 {
 		t.Fatal("the Health tab shows the alcohol line")
 	}
 	drugStepFed(g, id, 3*clock.TicksPerHour)
@@ -149,7 +150,7 @@ func TestDrugTipsyThoughtDecaysThenHangover(t *testing.T) {
 func TestDrugAddictionLifecycle(t *testing.T) {
 	t.Parallel()
 	g, id := drugColony(t)
-	g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
+	doseOf(g).SetPolicy(id, uint8(drug.Unrestricted))
 	drugAddict(t, g, id, item.AshleafTea)
 	a := drugAddiction(g, id, item.AshleafTea)
 	a.Need = 40 // two hours from withdrawal
@@ -260,7 +261,7 @@ func TestDrugAbstainerNeverDrinks(t *testing.T) {
 	t.Parallel()
 	g, _ := drugColony(t)
 	id := spawnGen(t, g, 3, 3, genPawn("Prue", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Abstainer} }))
-	g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
+	doseOf(g).SetPolicy(id, uint8(drug.Unrestricted))
 	g.SpawnStack(item.Beer, 3, 9, 2)
 	g.SpawnStack(item.AshleafTea, 3, 10, 2)
 	for i := 0; i < 30; i++ {
@@ -278,10 +279,10 @@ func TestDrugAbstainerNeverDrinks(t *testing.T) {
 func TestDrugSaveRoundTrip(t *testing.T) {
 	t.Parallel()
 	g, id := drugColony(t)
-	g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
+	doseOf(g).SetPolicy(id, uint8(drug.Unrestricted))
 	drugAddict(t, g, id, item.AshleafTea)
-	g.ingestDose(id, item.Beer)
-	g.ingestDose(id, item.SparkTablet)
+	doseOf(g).Ingest(id, item.Beer)
+	doseOf(g).Ingest(id, item.SparkTablet)
 	g.SpawnStack(item.Beer, 4, 9, 2)
 	drugStepFed(g, id, 500)
 	h := saveLoad(t, g)
@@ -306,7 +307,7 @@ func TestDrugDeterminismSameSeed(t *testing.T) {
 	t.Parallel()
 	run := func() uint64 {
 		g, id := drugColony(t)
-		g.cmdSetDrugPolicy(id, uint8(drug.Unrestricted))
+		doseOf(g).SetPolicy(id, uint8(drug.Unrestricted))
 		g.SpawnStack(item.Beer, 4, 9, 2)
 		g.SpawnStack(item.AshleafTea, 4, 10, 5)
 		g.SpawnStack(item.SparkTablet, 4, 4, 6)
@@ -344,7 +345,7 @@ func TestOverdoseStagesKill(t *testing.T) {
 	g, id := drugColony(t)
 	seen := map[int]bool{}
 	for i := 0; i < 10; i++ {
-		if g.ingestDose(id, item.SparkTablet) {
+		if doseOf(g).Ingest(id, item.SparkTablet) {
 			break
 		}
 		b := g.bodies[id]
@@ -383,12 +384,12 @@ func TestOverdoseExtremeMayKill(t *testing.T) {
 	for seed := uint64(1); seed <= 40; seed++ {
 		g := New(Config{Seed: seed, Width: 16, Height: 8})
 		id, _ := g.SpawnNamedPawn(2, 2, "Ada")
-		g.drugState(id)
+		doseOf(g).State(id)
 		v, _ := g.vital.Get(id)
 		b := g.ensureBody(id, &v)
 		b.AddOverdose(999, uint64(g.clock.Now()))
 		for h := 0; h < 30; h++ {
-			g.drugTick(id, uint64(h+1)*clock.TicksPerHour-uint64(id)*drugTickStagger%clock.TicksPerHour)
+			doseOf(g).Tick(id, uint64(h+1)*clock.TicksPerHour-uint64(id)*dose.TickStagger%clock.TicksPerHour)
 		}
 		if v, _ := g.vital.Get(id); v.Status == health.Dead {
 			if v.Cause != health.CauseOverdose {
@@ -408,7 +409,7 @@ func TestOverdoseExtremeMayKill(t *testing.T) {
 func TestOverdoseDecays(t *testing.T) {
 	t.Parallel()
 	g, id := drugColony(t)
-	g.ingestDose(id, item.ProphylTablet)
+	doseOf(g).Ingest(id, item.ProphylTablet)
 	sev := g.bodies[id].Overdose()
 	if sev < 80 || sev > 140 {
 		t.Fatalf("prophyl overdose %d, want 80..140", sev)
@@ -432,7 +433,7 @@ func TestOverdoseDecays(t *testing.T) {
 	b.AddOverdose(800, uint64(g2.clock.Now()))
 	g2.bodyChanged(id2, b, &v)
 	g2.updateDowned(id2, b, &v)
-	g2.drugState(id2)
+	doseOf(g2).State(id2)
 	if v, _ := g2.vital.Get(id2); v.Status != health.Downed {
 		t.Fatalf("extreme overdose downs: %v", v.Status)
 	}
@@ -457,7 +458,7 @@ func TestPainkillerHalvesPain(t *testing.T) {
 	if hv.Pain != 45 {
 		t.Fatalf("pain %d%%", hv.Pain)
 	}
-	g.ingestDose(id, item.NumbrootTincture)
+	doseOf(g).Ingest(id, item.NumbrootTincture)
 	hv, _ = g.Health(id)
 	if hv.Pain != 22 {
 		t.Fatalf("numbed pain %d%%, want 22", hv.Pain)
@@ -530,7 +531,7 @@ func TestProphylBlocksMalaria(t *testing.T) {
 	t.Parallel()
 	g, id := drugColony(t)
 	other, _ := g.SpawnNamedPawn(4, 2, "Bo")
-	g.ingestDose(id, item.ProphylTablet)
+	doseOf(g).Ingest(id, item.ProphylTablet)
 	for _, k := range []body.CondKind{body.CondMalaria, body.CondPlague, body.CondSleepingSickness} {
 		if c := g.diseaseCandidates(k); len(c) != 1 || c[0] != other {
 			t.Fatalf("%v candidates %v: the protected colonist is left out", k, c)
@@ -548,7 +549,7 @@ func TestProphylBlocksMalaria(t *testing.T) {
 	if _, has := g.bodies[other].Cond(body.CondMalaria); !has {
 		t.Fatal("the other colonist caught it")
 	}
-	lines := g.drugLines(id)
+	lines := doseOf(g).Lines(id)
 	if len(lines) != 1 || lines[0].Label != "protected by prophyl" {
 		t.Fatalf("drug lines %+v", lines)
 	}
@@ -587,7 +588,7 @@ func TestProphylRetakenEveryFiveDays(t *testing.T) {
 		t.Fatalf("second dose at %d, first %d", last, first)
 	}
 	// "no drugs": none, ever
-	g.cmdSetDrugPolicy(id, uint8(drug.NoDrugs))
+	doseOf(g).SetPolicy(id, uint8(drug.NoDrugs))
 	g.clock.Advance(6 * clock.TicksPerDay)
 	drugStepFed(g, id, 3*clock.TicksPerHour)
 	if n := g.stockOf(item.ProphylTablet); n != 3 {
@@ -631,7 +632,7 @@ func TestLegacyDrugSaveLoadsWithMedicalDrugs(t *testing.T) {
 	if !s.Policy.AllowsMedical(item.ProphylTablet, 0, false, s, uint64(g.clock.Now())) {
 		t.Fatal("prophyl due at once")
 	}
-	g.ingestDose(id, item.ProphylTablet)
+	doseOf(g).Ingest(id, item.ProphylTablet)
 	if out := g.exportDrugs(); len(out) != 1 || out[0].V.LastDoses[4] == 0 {
 		t.Fatalf("the new drug's slot saves: %+v", out)
 	}

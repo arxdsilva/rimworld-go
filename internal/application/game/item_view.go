@@ -66,7 +66,7 @@ func sameItemView(a, b ItemView) bool {
 		a.OfName == b.OfName && a.Animal == b.Animal && a.Wreck == b.Wreck && a.Catch == b.Catch && a.Forbidden == b.Forbidden &&
 		a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked && a.PoisonPermille == b.PoisonPermille &&
 		a.Quality == b.Quality && a.Stuff == b.Stuff && a.HP == b.HP && a.MaxHP == b.MaxHP && a.Tainted == b.Tainted &&
-		a.Urgent == b.Urgent && slices.Equal(a.Ingredients, b.Ingredients) && a.Meat == b.Meat && a.AX == b.AX
+		a.Urgent == b.Urgent && slices.Equal(a.Ingredients, b.Ingredients) && a.Meat == b.Meat && a.AX == b.AX && a.Store == b.Store && a.Slot == b.Slot
 }
 
 // appendItemViews appends every visible stack's view to out and counts it
@@ -91,6 +91,7 @@ func (g *Game) appendItemViews(out []ItemView, t *itemCounts) []ItemView {
 		g.fillCorpseView(&out[len(out)-1], st)  // burial.go
 		fillCrateView(&out[len(out)-1], st)     // move.go (AX-1): a crated building's kind and material
 		books.FillItem(&out[len(out)-1].AX, st) // game/books (AX-7): a book's title, teaching, power
+		out[len(out)-1].Store, out[len(out)-1].Slot = g.haul.store.Buildings.Slot(g.zones, haulHost{g}, id, st)
 		if st.Carrier != 0 {
 			continue
 		}

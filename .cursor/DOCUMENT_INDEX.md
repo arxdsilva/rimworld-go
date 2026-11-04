@@ -24,6 +24,9 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | World generation and globe gap analysis (biomes, movement, features, search, globe look), wiki constants, WG phases | `WORLDGEN_GAP_ANALYSIS.md` |
 | Multiple simultaneous maps gap analysis (site, settlement, colony and encounter maps, caravan and pod rules), wiki constants, MAP phases | `MULTIMAP_GAP_ANALYSIS.md` |
 | Power wires gap analysis (visible wire, 6-tile range, generators and batteries conduct, Reconnect, blueprint wires), wiki constants, PWR-1..5 | `POWER_GAP_ANALYSIS.md` |
+| RimHUD gap analysis (the colonist card: docked and floating, layout editor, presets, theme, every widget), RHUD rows, DOS packages | `RIMHUD_GAP_ANALYSIS.md` |
+| Neat Storage gap analysis (27 storage pieces, per-piece capacity and filters, stored-item display, admiring), NST rows | `NEAT_STORAGE_GAP_ANALYSIS.md` |
+| Common Sense gap analysis (habit rules: tidying, bills, packs, joy, wandering, toggles), CSE rows | `COMMON_SENSE_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Multi-area work across parallel agents; every multi-area plan includes its Parallel workers section (§0) | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |

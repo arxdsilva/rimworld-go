@@ -49,10 +49,10 @@ func (s *State) Seek(id entity.EntityID, linger int) bool {
 	n := 0
 	for _, bid := range h.BuildingIDs() {
 		b, ok := h.Building(bid)
-		if !ok || !b.Kind.Recreation() || b.Forbidden || b.Ruin || b.Ancient {
+		sp, rec := SpecOf(b.Kind)
+		if !ok || !rec || b.Forbidden || b.Ruin || b.Ancient {
 			continue
 		}
-		sp, _ := SpecOf(b.Kind)
 		d := pathing.Dist(px, py, b.X, b.Y)
 		if d > Reach || p.Tol.IsBored(sp.Joy) || !h.AreaAllows(id, b.X, b.Y) || !s.usable(id, bid, b, sp, false) {
 			continue
@@ -108,8 +108,25 @@ func (s *State) usable(id, bid entity.EntityID, b construction.Building, sp Spec
 		}
 		roofed, _ := h.Roof(b.X, b.Y)
 		return !roofed && h.Sky() <= dark && h.Sight(id) > 0
+	case Admire:
+		return h.Sight(id) > 0 && displays(h, b)
 	}
 	return true
+}
+
+// displays reports piece b has something to admire: a sculpture always, a
+// display case or pedestal only while a stack lies on its cell.
+func displays(h Displays, b construction.Building) bool {
+	if b.Kind != construction.DisplayCase && b.Kind != construction.RoundPedestal {
+		return true
+	}
+	fp, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+	for _, c := range fp {
+		if h.Holds(c[0], c[1]) {
+			return true
+		}
+	}
+	return false
 }
 
 // cells are where a colonist enjoys piece b from.
@@ -154,7 +171,7 @@ func (s *State) start(id, bid entity.EntityID, b construction.Building, linger i
 		score := pathing.Dist(px, py, x, y)
 		if o := h.ObjectAt(x, y); o != 0 {
 			ob, _ := h.Building(o)
-			if !isSeat(ob.Kind) || ob.Forbidden || sp.Mode == Toss || sp.Mode == Gaze {
+			if !isSeat(ob.Kind) || ob.Forbidden || sp.Mode == Toss || sp.Mode == Gaze || sp.Mode == Admire {
 				continue
 			}
 			score -= SeatBonus

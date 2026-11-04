@@ -94,6 +94,10 @@ func (g *Game) applyOne(c command.Command) {
 		command.ProposeTrade, command.CloseTrade, command.CommsCallTrader, command.CommsGift,
 		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms: // trade_session.go, comms.go (PLAY-024)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
+	case command.SetGameplayToggle, command.SetGameplayLimit, command.SetBenchClean, command.MarkUnload:
+		senseOf(g).Apply(c) // game/sense (CSE)
+	case command.SetName:
+		applySetName(g, c) // bio_view.go (RHUD-025)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
 	case command.SetDifficulty:
@@ -349,7 +353,7 @@ func (g *Game) phaseNeeds() {
 		}
 		g.wakeFromAnaesthetic(id, &v, now) // surgery.go
 		g.heal(id, &v, now)
-		g.drugTick(id, now) // drugs.go: hourly, staggered
+		doseOf(g).Tick(id, now) // game/dose: hourly, staggered
 		if v, _ = g.vital.Get(id); v.Status == health.Dead {
 			continue // an overdose killed it; the stale record must not undo that
 		}
@@ -419,6 +423,7 @@ func (g *Game) interrupt(id entity.EntityID, reason job.FailReason) {
 	if !ok {
 		return
 	}
+	senseOf(g).Tidy.Forget(id) // game/sense: an interrupted tidy is not resumed
 	g.dropCarry(id)
 	g.care.DropPatient(id)
 	g.reserve.ReleaseOwner(id)
@@ -435,6 +440,11 @@ func (g *Game) interrupt(id entity.EntityID, reason job.FailReason) {
 func (g *Game) dropCarry(id entity.EntityID) {
 	j, ok := g.jobs.Get(id)
 	if !ok || j.Carry == 0 {
+		return
+	}
+	if senseOf(g).Gear.BackToPack(id, j.Carry) { // game/sense (CSE-037)
+		j.Carry = 0
+		g.jobs.Set(id, j)
 		return
 	}
 	pos, _ := g.positions.Get(id)
@@ -485,7 +495,11 @@ func (g *Game) phaseAI() {
 			g.reserve.ReleaseOwner(id)
 			g.releaseDelivery(id)
 			g.jobs.Set(id, job.Record{})
-			j = job.Record{}
+			if senseOf(g).Tidy.After(id, j) { // game/sense: back to what a tidy interrupted
+				j, _ = g.jobs.Get(id)
+			} else {
+				j = job.Record{}
+			}
 		}
 		g.releaseStaleDelivery(id, j) // a delivery swapped out without an interrupt
 		g.care.Rest.Update(id)        // care/rest.go: starts and ends bed rest
@@ -604,7 +618,10 @@ func (g *Game) phaseAI() {
 			idling = j
 		}
 		if !needs.WorkScheduled(act) {
-			if g.assignWear(id) || g.assignDrugUse(id) { // drugs.go: a drink or a craving first
+			if g.assignWear(id) || doseOf(g).Assign(id) { // game/dose: a drink or a craving first
+				continue
+			}
+			if !senseOf(g).TopOff.Wants(id, g.joy[id]) && g.assignWorkByPriority(id) { // game/sense (CSE-002)
 				continue
 			}
 			g.keepIdling(id, idling) // recreation: free time
@@ -616,7 +633,7 @@ func (g *Game) phaseAI() {
 		if g.assignWorkByPriority(id) {
 			continue
 		}
-		if g.assignWear(id) || g.assignDrugUse(id) {
+		if g.assignWear(id) || doseOf(g).Assign(id) {
 			continue
 		}
 		g.keepIdling(id, idling) // nothing to do: free time
@@ -640,6 +657,9 @@ func (g *Game) keepIdling(id entity.EntityID, idling job.Record) {
 }
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
+	if r, ok := senseOf(g).Tidy.Before(id, rec); ok { // game/sense (CSE-017)
+		rec = r
+	}
 	if j, _ := g.jobs.Get(id); j.Kind == job.Read && rec.Kind != job.Read {
 		g.dropCarry(id) // game/books (AX-7): work replaces reading; the book is put down
 	}
@@ -946,7 +966,7 @@ func haulCands(g *Game, id entity.EntityID, k item.Kind) {
 // haulRoom is how much of kind k storage cell (x, y) still takes (cellCap).
 func haulRoom(g *Game, k item.Kind, x, y int) int {
 	z, _ := g.storageAt(x, y)
-	return g.idx.ground.Room(haulHost{g}, k, x, y, z.Kind.Stacks(), cellCap(g, k, x, y))
+	return g.idx.ground.Room(haulHost{g}, k, x, y, z.Slots(), cellCap(g, k, x, y))
 }
 
 // haulHost is game/haul's Host (HAUL-002).
@@ -1126,7 +1146,9 @@ func (g *Game) phaseJobs() {
 		case job.ClearSnow:
 			g.doClearSnow(id, j) // game/snow
 		case job.Clean:
-			g.doClean(id, j) // clean.go
+			cleaningOf(g).Do(id, j) // game/sense
+		case job.CleanRoom, job.UnloadPack, job.TakeSpare:
+			senseOf(g).Do(id, j) // game/sense (CSE)
 		case job.FightFire:
 			g.doFightFire(id, j) // firefight.go
 		case job.Flick:
@@ -1141,7 +1163,7 @@ func (g *Game) phaseJobs() {
 		case job.Surgery:
 			g.doSurgery(id, j) // surgery.go
 		case job.Ingest:
-			g.doIngest(id, j) // drugs.go
+			doseOf(g).Do(id, j) // game/dose
 		case job.Lovin:
 			g.rest.Lovin.Do(id, j) // rest/lovin.go
 		case job.Gather:

@@ -19,13 +19,14 @@ import (
 // bench; Benches every bench kind that runs it (PRD-3: a recipe can run at
 // several, electric twins included), in kind order.
 type RecipeView struct {
-	ID      uint8
-	Name    string
-	Label   string
-	Bench   string
-	Benches []string
-	Input   string // e.g. "0.5 nutrition of raw food"; several ingredients joined with " + "
-	Output  string
+	ID         uint8
+	Name       string
+	Label      string
+	Bench      string
+	Benches    []string
+	InputKinds []string // CSE-046: the item kinds each input takes, named
+	Input      string   // e.g. "0.5 nutrition of raw food"; several ingredients joined with " + "
+	Output     string
 }
 
 // RunsAt reports a bench of kind name (construction.Kind.String) runs

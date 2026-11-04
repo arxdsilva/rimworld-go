@@ -45,6 +45,7 @@ const (
 
 // Exact ids more than one feature names.
 const (
+	DossierGear  = "dossier.gear" // the colonist card's settings button (RHUD)
 	TabWork      = "tab.work"
 	TabSchedule  = "tab.schedule"
 	TabResearch  = "tab.research"

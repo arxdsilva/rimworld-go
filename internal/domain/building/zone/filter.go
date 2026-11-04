@@ -258,6 +258,7 @@ func (f Filter) Names() []string {
 type kindSets struct {
 	storable, old, food, wood, stone, carcasses, chunks, goods Filter
 	corpses, rawFood, bodies                                   Filter
+	profile                                                    [profileEnd]Filter // NST: each storage piece's ceiling
 }
 
 // sets is worked out once (Allows runs for every loose item in the
@@ -276,6 +277,7 @@ var sets = func() (s kindSets) {
 	s.goods = s.old.AndNot(s.food).AndNot(s.wood).AndNot(s.stone)
 	s.corpses = filterWhere(item.Kind.IsCorpse).Or(s.bodies)
 	s.rawFood, _ = resolvePath("Foods/Raw food")
+	s.profile = profileSets(s)
 	return s
 }()
 
@@ -322,8 +324,12 @@ func Universe(k Kind) Filter {
 }
 
 // legacy is the filter a zone's older switches give (Effective before any
-// edit).
+// edit). Storage pieces are newer than the switches (NewProfile is explicit),
+// so one without a filter goes by its ceiling.
 func legacy(z Zone) Filter {
+	if z.Profile != ProfileNone {
+		return UniverseOf(z.Kind, z.Profile)
+	}
 	var f Filter
 	if z.Food {
 		f = f.Or(sets.food)
@@ -373,22 +379,22 @@ func (z Zone) Allows(k item.Kind) bool {
 }
 
 // SetAllowed allows (on) or forbids every kind of set in z (within its
-// Universe), turning the zone's older switches into an explicit Filter
+// UniverseOf), turning the zone's older switches into an explicit Filter
 // first. SetAllowed(Root's set, on) is "allow all" or "clear all".
 func (z *Zone) SetAllowed(set Filter, on bool) {
 	f := z.Effective()
 	if on {
-		f = f.Or(set.And(Universe(z.Kind)))
+		f = f.Or(set.And(UniverseOf(z.Kind, z.Profile)))
 	} else {
 		f = f.AndNot(set)
 	}
 	z.Filter, z.Custom = f, true
 }
 
-// PasteFrom copies src's filter (within z's Universe), special filters
+// PasteFrom copies src's filter (within z's UniverseOf), special filters
 // and priority onto z.
 func (z *Zone) PasteFrom(src Zone) {
-	z.Filter, z.Custom, z.Special, z.Priority = src.Effective().And(Universe(z.Kind)), true, src.Special, src.Priority
+	z.Filter, z.Custom, z.Special, z.Priority = src.Effective().And(UniverseOf(z.Kind, z.Profile)), true, src.Special, src.Priority
 }
 
 // AllowsStack reports storage zone z takes stack st: its kind and its
@@ -412,14 +418,18 @@ func Rows(names []string) []Row { return RowsFor(KindStockpile, names) }
 // RowsFor is Rows for a storage zone of kind k: only the nodes holding a
 // kind of its Universe (a hopper's raw food, a grave's corpses), each
 // judged on those kinds alone.
-func RowsFor(k Kind, names []string) []Row {
+func RowsFor(k Kind, names []string) []Row { return RowsForProfile(k, ProfileNone, names) }
+
+// RowsForProfile is RowsFor for a zone of kind k with profile p: a storage
+// piece's rows are its own ceiling (UniverseOf).
+func RowsForProfile(k Kind, p Profile, names []string) []Row {
 	var allowed Filter
 	for _, name := range names {
 		if set, ok := Resolve(name); ok {
 			allowed = allowed.Or(set)
 		}
 	}
-	u := Universe(k)
+	u := UniverseOf(k, p)
 	tree := Tree()
 	out := make([]Row, 0, len(tree))
 	for _, n := range tree {

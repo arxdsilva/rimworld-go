@@ -2,10 +2,10 @@ package ebiten
 
 import (
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/dossierview"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/schedule"
-	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -86,7 +86,6 @@ type SimColony interface {
 	Bio(id entity.EntityID) (game.BioView, bool)
 	Buildables() []game.BuildableView
 	IncapableReason(id entity.EntityID, t work.Type) string
-	LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int
 	PlantGrowth(id entity.EntityID) (game.PlantGrowthView, bool)
 }
 
@@ -94,6 +93,7 @@ type SimColony interface {
 // Social and Health tabs, a prisoner's tab (ok false: nothing to show),
 // the World tab, the allowed areas and the colony History.
 type SimTabs interface {
+	Dossier(id entity.EntityID) (dossierview.Card, bool)
 	Social(id entity.EntityID) (game.SocialView, bool)
 	Health(id entity.EntityID) (game.HealthView, bool)
 	Prisoner(id entity.EntityID) (game.PrisonerView, bool)

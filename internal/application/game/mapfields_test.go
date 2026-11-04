@@ -1,10 +1,11 @@
 package game
 
 import (
-	"rimworld-go/internal/domain/world/terrain"
 	"testing"
 
+	"rimworld-go/internal/application/game/mapfields"
 	"rimworld-go/internal/domain/world/mapgen"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // fieldsGame is a Setup colony stamped with the current generator version.
@@ -105,7 +106,7 @@ func TestMapFieldLayersLiveLayersFollowTheGame(t *testing.T) {
 // ground, after the terrain types.
 func TestTerrainLegendHasBridgesAndVaults(t *testing.T) {
 	t.Parallel()
-	l := terrainLegend()
+	l := mapfields.TerrainLegend()
 	n := len(terrain.Names())
 	if len(l) != n+2 || l[n].Label != "bridge" || l[n+1].Label != "sealed vault" {
 		t.Fatalf("legend tail %+v", l[n:])

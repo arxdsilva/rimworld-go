@@ -43,7 +43,7 @@ func Search(c Cells, st item.Stack, nx, ny int, keep func(x, y int) bool, floor 
 		for top := 1; top >= 0; top-- { // top-up cells first, then free ones
 			for i := range zs {
 				if z := &zs[i]; z.AllowsStack(st) && !(s.ok && z.Box.Dist(nx, ny) > s.d) && !(any && s.ok) {
-					s.zone(z.ID, z.Kind, top == 1)
+					s.zone(z.ID, z.Kind, z.Slots(), top == 1)
 				}
 			}
 			if s.ok {
@@ -70,9 +70,9 @@ type search struct {
 
 // zone visits zone id's cells (row-major), stopping below the rows that
 // could still hold a better cell.
-func (s *search) zone(id zone.ID, kind zone.Kind, top bool) {
-	shelf := kind.Stacks() > 1 // a shelf's or a bookcase's (A7) several stacks a cell
-	s.slots = kind.Stacks()
+func (s *search) zone(id zone.ID, kind zone.Kind, slots int, top bool) {
+	shelf := slots > 1 // several stacks a cell: a shelf, a bookcase (A7), a storage piece (NST)
+	s.slots = slots
 	s.c.Zones().EachCell(id, func(cx, cy int) bool {
 		if s.ok && (s.any || cy-s.ny > s.d) {
 			return false

@@ -31,6 +31,13 @@ type Larder interface {
 	StacksAt(x, y int) int
 }
 
+// Ground lists a cell's stacks for the item views' slots.
+type Ground interface {
+	// LooseAt lists the stacks lying loose on (x, y), in item-list order.
+	// The slice is the host's, good until its next call.
+	LooseAt(x, y int) []entity.EntityID
+}
+
 // Items lists the stacks for the urgent marks.
 type Items interface {
 	ItemIDs() []entity.EntityID

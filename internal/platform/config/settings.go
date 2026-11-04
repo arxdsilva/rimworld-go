@@ -25,7 +25,7 @@ import (
 // the next start detects the hardware tier.
 // Version 7 added Telemetry; Normalize turns detailed usage data on for
 // anything older.
-const SettingsVersion = 7 // 6: PERF-002, VSync off and a frame cap by default
+const SettingsVersion = 8 // 8: the colonist card (RHUD); its fields decode over the defaults
 
 // MaxLearnedLessons caps the learning helper's done list.
 const MaxLearnedLessons = 64
@@ -39,6 +39,7 @@ type Settings struct {
 	Accessibility Accessibility `json:"accessibility"`
 	Controls      Controls      `json:"controls"`
 	Telemetry     Telemetry     `json:"telemetry"`
+	HUD           HUD           `json:"hud"`
 }
 
 // Telemetry is the usage data the game sends (usagehttp). Basic data is
@@ -203,6 +204,7 @@ func Defaults() Settings {
 		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100, ShowLearningHelper: true, ShowColonistBar: true},
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
 		Telemetry:     Telemetry{Advanced: true},
+		HUD:           defaultHUD(),
 	}
 }
 
@@ -236,6 +238,7 @@ func (s Settings) Normalize() Settings {
 		s.Telemetry.Advanced = true
 	}
 	s.Version = SettingsVersion
+	s.HUD = s.HUD.normalize()
 	s.Gameplay.LearnedLessons = dedupeLessons(s.Gameplay.LearnedLessons)
 	for _, v := range []*int{&s.Audio.Master, &s.Audio.Music, &s.Audio.Effects, &s.Audio.Ambience, &s.Audio.UI} {
 		*v = snap(*v, 0, 100, VolumeStep)

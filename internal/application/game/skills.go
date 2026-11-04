@@ -1,12 +1,15 @@
 package game
 
 import (
+	"maps"
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/diet"
 	"rimworld-go/internal/application/game/recreate"
 	"rimworld-go/internal/domain/animal"
+	"slices"
 	"strings"
 
+	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/combat/attack"
@@ -59,6 +62,60 @@ type skillState struct {
 	working   map[entity.EntityID]workingRec   // last skilled work (transient)
 	carry     map[entity.EntityID]*needCarry   // fractional need drains
 	diet      diet.Book                        // food policies and who holds which (game/diet, FOOD-4), saved
+	stun      map[entity.EntityID]uint64       // the tick a stun ends (the card; transient, never hashed)
+	petNames  map[entity.EntityID]string       // a renamed animal's rolled name (saved, nil until a rename)
+}
+
+// stunSweep is how many stun records may gather before the spent ones go.
+const stunSweep = 64
+
+// noteStun records id stunned until that tick. It only feeds the card: a
+// stun's effect is the hold on the pawn's motion and job.
+func (s *skillState) noteStun(id entity.EntityID, until, now uint64) {
+	if s.stun == nil {
+		s.stun = make(map[entity.EntityID]uint64)
+	}
+	if len(s.stun) >= stunSweep {
+		maps.DeleteFunc(s.stun, func(_ entity.EntityID, u uint64) bool { return u <= now })
+	}
+	s.stun[id] = max(s.stun[id], until)
+}
+
+// renamePet is the name an animal called cur takes when asked for name, ""
+// for no change: name, keeping cur aside on the first rename; or for "", the
+// kept name.
+func (s *skillState) renamePet(id entity.EntityID, cur, name string) string {
+	kept, renamed := s.petNames[id]
+	switch {
+	case name == "":
+		delete(s.petNames, id)
+		return kept
+	case !renamed:
+		if s.petNames == nil {
+			s.petNames = make(map[entity.EntityID]string)
+		}
+		s.petNames[id] = cur
+	}
+	return name
+}
+
+// exportPetNames is the PetNames save field in id order (nil: none).
+func (s *skillState) exportPetNames() []entry[string] {
+	var out []entry[string]
+	for _, id := range slices.Sorted(maps.Keys(s.petNames)) {
+		out = append(out, entry[string]{id, s.petNames[id]})
+	}
+	return out
+}
+
+// importPetNames restores exportPetNames' state.
+func (s *skillState) importPetNames(es []entry[string]) {
+	for _, e := range es {
+		if s.petNames == nil {
+			s.petNames = make(map[entity.EntityID]string, len(es))
+		}
+		s.petNames[e.ID] = e.V
+	}
 }
 
 // pawnFx is everything derived from a bio: the stat sheet and the per
@@ -404,15 +461,24 @@ func (g *Game) learnLogOf(id entity.EntityID) *learnLog {
 	return lg
 }
 
-// LearnedThisWeek is the experience each skill of colonist id gained in
-// the last 7 days (Bio tab "This week: +N"), in skill.ID order.
-func (g *Game) LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int {
-	var out [skill.NumSkills]int
-	lg := g.sk.learned[id]
-	if lg == nil {
-		return out
+// saturated is which skills have hit today's learning cap. learn stops a
+// passionate pawn a point short when a whole point more would pass the cap,
+// so that counts as well.
+func (lg *learnLog) saturated(day int32) [skill.NumSkills]bool {
+	var out [skill.NumSkills]bool
+	if lg.day != day {
+		return out // a new day, not rolled over yet
 	}
-	day := int32(uint64(g.clock.Now()) / clock.TicksPerDay)
+	for sk := range out {
+		out[sk] = lg.today[sk] >= learnCapDay-1
+	}
+	return out
+}
+
+// lastWeek is the experience each skill gained in the 7 days up to day (Bio
+// tab "This week: +N"), in skill.ID order.
+func (lg *learnLog) lastWeek(day int32) [skill.NumSkills]int {
+	var out [skill.NumSkills]int
 	for d := day - 6; d <= day; d++ {
 		if d < 0 || d > lg.day || lg.day-d >= 7 {
 			continue
@@ -539,14 +605,24 @@ func (g *Game) paceStep(id entity.EntityID, ticks int) int {
 // lovesWork is the passion of the skill id is working with right now
 // (NoPassion when idle or not on skilled work).
 func (g *Game) lovesWork(id entity.EntityID) skill.Passion {
+	sk, ok := activeSkill(g, id)
+	if !ok {
+		return skill.NoPassion
+	}
+	return g.skillOf(id, sk).Passion
+}
+
+// activeSkill is the skill id is working with right now: it made progress
+// within workingTicks and is still on that job.
+func activeSkill(g *Game, id entity.EntityID) (skill.ID, bool) {
 	w, ok := g.sk.working[id]
 	if !ok || uint64(g.clock.Now())-w.tick > workingTicks {
-		return skill.NoPassion
+		return 0, false
 	}
 	if j, _ := g.jobs.Get(id); !j.Active() || j.Kind == job.Sleep || j.Kind == job.Eat {
-		return skill.NoPassion
+		return 0, false
 	}
-	return g.skillOf(id, w.sk).Passion
+	return w.sk, true
 }
 
 // traitThoughts applies id's traits and the difficulty to its thoughts:
@@ -707,7 +783,7 @@ func (g *Game) bioView(id entity.EntityID) (BioView, bool) {
 	if set := g.sk.skills[id]; set != nil {
 		p.Skills = *set
 	}
-	return bioOf(p), true
+	return roster.BioOf(p), true
 }
 
 // --- saves ------------------------------------------------------------

@@ -1,0 +1,427 @@
+{
+  "version": 1,
+  "name": "Standard",
+  "docked": {
+    "k": "column",
+    "c": [
+      {
+        "k": "standing"
+      },
+      {
+        "k": "identity"
+      },
+      {
+        "k": "body_state"
+      },
+      {
+        "k": "mind_state",
+        "who": "cs"
+      },
+      {
+        "k": "rule"
+      },
+      {
+        "k": "strip",
+        "c": [
+          {
+            "k": "column",
+            "c": [
+              {
+                "k": "vigour_bar"
+              },
+              {
+                "k": "mood_bar",
+                "who": "cs"
+              },
+              {
+                "k": "hunger_bar"
+              },
+              {
+                "k": "rest_bar"
+              },
+              {
+                "k": "fun_bar",
+                "who": "c"
+              }
+            ]
+          },
+          {
+            "k": "column",
+            "c": [
+              {
+                "k": "area_pick",
+                "who": "cp"
+              },
+              {
+                "k": "hour_pick",
+                "who": "c"
+              },
+              {
+                "k": "diet_pick",
+                "who": "cp"
+              },
+              {
+                "k": "doing"
+              },
+              {
+                "k": "next_up",
+                "who": "c"
+              },
+              {
+                "k": "in_hand",
+                "who": "cs"
+              },
+              {
+                "k": "keeper",
+                "who": "p"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "k": "captive",
+        "who": "s"
+      },
+      {
+        "k": "rule"
+      },
+      {
+        "k": "block",
+        "c": [
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "shooting"
+              },
+              {
+                "k": "skill",
+                "def": "melee"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "construction"
+              },
+              {
+                "k": "skill",
+                "def": "mining"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "cooking"
+              },
+              {
+                "k": "skill",
+                "def": "plants"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "animals"
+              },
+              {
+                "k": "skill",
+                "def": "crafting"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "medicine"
+              },
+              {
+                "k": "skill",
+                "def": "social"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "intellectual"
+              },
+              {
+                "k": "stat",
+                "def": "work_speed"
+              }
+            ]
+          }
+        ],
+        "who": "c"
+      },
+      {
+        "k": "column",
+        "c": [
+          {
+            "k": "train",
+            "def": "obedience"
+          },
+          {
+            "k": "train",
+            "def": "guard"
+          },
+          {
+            "k": "train",
+            "def": "release"
+          }
+        ],
+        "who": "p"
+      }
+    ],
+    "fill": true
+  },
+  "floating": {
+    "k": "column",
+    "c": [
+      {
+        "k": "title"
+      },
+      {
+        "k": "standing"
+      },
+      {
+        "k": "identity"
+      },
+      {
+        "k": "body_state"
+      },
+      {
+        "k": "mind_state",
+        "who": "cs"
+      },
+      {
+        "k": "rule"
+      },
+      {
+        "k": "strip",
+        "c": [
+          {
+            "k": "column",
+            "c": [
+              {
+                "k": "vigour_bar"
+              },
+              {
+                "k": "mood_bar",
+                "who": "cs"
+              },
+              {
+                "k": "hunger_bar"
+              },
+              {
+                "k": "rest_bar"
+              },
+              {
+                "k": "fun_bar",
+                "who": "c"
+              }
+            ]
+          },
+          {
+            "k": "column",
+            "c": [
+              {
+                "k": "area_pick",
+                "who": "cp"
+              },
+              {
+                "k": "hour_pick",
+                "who": "c"
+              },
+              {
+                "k": "diet_pick",
+                "who": "cp"
+              },
+              {
+                "k": "doing"
+              },
+              {
+                "k": "next_up",
+                "who": "c"
+              },
+              {
+                "k": "in_hand",
+                "who": "cs"
+              },
+              {
+                "k": "keeper",
+                "who": "p"
+              },
+              {
+                "k": "hauling",
+                "who": "cs"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "k": "captive",
+        "who": "s"
+      },
+      {
+        "k": "rule"
+      },
+      {
+        "k": "block",
+        "c": [
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "shooting"
+              },
+              {
+                "k": "skill",
+                "def": "melee"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "construction"
+              },
+              {
+                "k": "skill",
+                "def": "mining"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "cooking"
+              },
+              {
+                "k": "skill",
+                "def": "plants"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "animals"
+              },
+              {
+                "k": "skill",
+                "def": "crafting"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "medicine"
+              },
+              {
+                "k": "skill",
+                "def": "social"
+              }
+            ]
+          },
+          {
+            "k": "line",
+            "c": [
+              {
+                "k": "skill",
+                "def": "intellectual"
+              },
+              {
+                "k": "stat",
+                "def": "work_speed"
+              }
+            ]
+          }
+        ],
+        "who": "c"
+      },
+      {
+        "k": "column",
+        "c": [
+          {
+            "k": "train",
+            "def": "obedience"
+          },
+          {
+            "k": "train",
+            "def": "guard"
+          },
+          {
+            "k": "train",
+            "def": "release"
+          }
+        ],
+        "who": "p"
+      },
+      {
+        "k": "traits",
+        "who": "cs"
+      },
+      {
+        "k": "line",
+        "c": [
+          {
+            "k": "tally",
+            "def": "kills"
+          },
+          {
+            "k": "tally",
+            "def": "damage"
+          }
+        ],
+        "who": "c"
+      },
+      {
+        "k": "notes"
+      }
+    ],
+    "fill": true
+  },
+  "dock_h": 360,
+  "dock_tabs": 6,
+  "float_w": 400,
+  "float_h": 460,
+  "text": {
+    "body_size": 12,
+    "body_line_pct": 100,
+    "large_delta": 4,
+    "large_line_pct": 100,
+    "small_delta": -2,
+    "small_line_pct": 100,
+    "label_w": 100,
+    "value_w": 60,
+    "decimals": false
+  }
+}

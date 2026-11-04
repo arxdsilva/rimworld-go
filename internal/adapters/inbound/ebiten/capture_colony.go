@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/windows"
 	wizardpkg "rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"slices"
+	"strings"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
@@ -30,6 +31,7 @@ import (
 //	work-incapable   the Work tab with hatched incapable cells (and one tip)
 //	arrival          the drop pods falling (use -capture-ticks 60)
 //	options-story    Options > Story
+//	options-habits   Options > Habits
 //	letter-intro     the intro letter (use -capture-ticks 300)
 //	arch-hospital    the Architect's Hospital bed card, tooltip with components
 //	arch-cabinet     the Architect's Tool cabinet card, tooltip with components
@@ -42,7 +44,7 @@ import (
 
 // colonyCaptures lists the states above.
 var colonyCaptures = []string{
-	"factions-colony", "bio", "work-incapable", "arrival", "options-story",
+	"factions-colony", "bio", "work-incapable", "arrival", "options-story", "options-habits",
 	"letter-intro", "arch-hospital", "arch-cabinet", "arch-locked", "chips", "world",
 }
 
@@ -181,8 +183,8 @@ func (a *App) captureColonyUI(ui string) {
 				}
 			}
 		}
-	case "options-story":
-		a.opt.Tab = "story"
+	case "options-story", "options-habits":
+		a.opt.Tab = strings.TrimPrefix(ui, "options-")
 		a.cursor = &[2]int{-100, -100}
 		a.apply(intent{kind: intentPush, screen: ports.ScreenOptions})
 	case "arch-hospital":

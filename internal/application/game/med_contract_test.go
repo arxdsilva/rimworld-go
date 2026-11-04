@@ -75,7 +75,7 @@ func pegLegged(t *testing.T) (*Game, entity.EntityID) {
 		t.Fatal("install")
 	}
 	g.bodyChanged(id, b, &v)
-	g.drugState(id).Ingest(item.AshleafTea, nil, 50)
+	doseOf(g).State(id).Ingest(item.AshleafTea, nil, 50)
 	g.warmIndexes(true) // roofs and rooms, as a load warms them, so hashes compare
 	return g, id
 }

@@ -112,7 +112,7 @@ func (a Tabs) gearTabBody(id entity.EntityID, r gfx.Rect) {
 	if !ok {
 		return
 	}
-	lines := GearStatLines(p)
+	lines := append(GearStatLines(p), PackRows(p)...) // gear_rows.go (CSE-036)
 	rows := len(GearRows(p)) - 1
 	g := GearLayoutFor(rows)
 	step := gfx.LineStep(gfx.Small)

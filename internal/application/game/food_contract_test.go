@@ -142,7 +142,7 @@ func TestSameItemViewSeesEveryField(t *testing.T) {
 			f.SetBool(true)
 		case reflect.Int, reflect.Int64:
 			f.SetInt(1)
-		case reflect.Uint64:
+		case reflect.Uint64, reflect.Uint8:
 			f.SetUint(1)
 		case reflect.Float64:
 			f.SetFloat(1)

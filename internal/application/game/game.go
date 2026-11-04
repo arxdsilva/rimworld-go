@@ -18,6 +18,7 @@ import (
 	rlab "rimworld-go/internal/application/game/research"
 	"rimworld-go/internal/application/game/rest"
 	"rimworld-go/internal/application/game/thermo"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/world/biome"
@@ -79,27 +80,31 @@ type Config struct {
 
 // PawnView is a read-only snapshot of a single pawn.
 type PawnView struct {
-	ID            entity.EntityID
-	Name          string
-	X, Y          int
-	Map           MapID // the map X, Y are on (MAP-0)
-	Activity      schedule.Activity
-	Job           string
-	Hunger        int
-	Rest          int
-	Status        string
-	Reason        string
-	WorkHaul      bool
-	WorkConstruct bool
-	WorkGrow      bool
-	WorkMine      bool
-	WorkCook      bool
-	WorkHunt      bool
-	WorkCraft     bool
-	WorkDoctor    bool
-	WorkResearch  bool
-	WorkClean     bool
-	WorkFirefight bool // PLAY-015 (firefight.go)
+	ID       entity.EntityID
+	Name     string
+	X, Y     int
+	Map      MapID // the map X, Y are on (MAP-0)
+	Activity schedule.Activity
+	Job      string
+	Hunger   int
+	Rest     int
+	// Pack is what the pawn carries on its back (CSE-036), with its weight
+	// and limit in grams.
+	Pack                      []PackItemView
+	PackGrams, PackLimitGrams int
+	Status                    string
+	Reason                    string
+	WorkHaul                  bool
+	WorkConstruct             bool
+	WorkGrow                  bool
+	WorkMine                  bool
+	WorkCook                  bool
+	WorkHunt                  bool
+	WorkCraft                 bool
+	WorkDoctor                bool
+	WorkResearch              bool
+	WorkClean                 bool
+	WorkFirefight             bool // PLAY-015 (firefight.go)
 	// NG-1 identity (PAWN-G fills): sex, build, age, look, incapable work,
 	// skill levels and passions (skill.ID order), adulthood title.
 	Sex       string
@@ -304,8 +309,11 @@ type ItemView struct {
 	// Of/OfName: whose body a human corpse (or bones) is (SIM-017).
 	Of     entity.EntityID
 	OfName string
-	Animal string // species key of a CorpseAnimal ("deer"), SIM-019
-	Meat   string // FOOD-3: the species key a meat stack was butchered from ("cow": "cow meat"; "" untagged)
+	// Store and Slot (NST): the storage furniture's construction kind this
+	// stack lies in (0: loose) and its index among the cell's stacks.
+	Store, Slot uint8
+	Animal      string // species key of a CorpseAnimal ("deer"), SIM-019
+	Meat        string // FOOD-3: the species key a meat stack was butchered from ("cow": "cow meat"; "" untagged)
 	// Wreck (DEF-4): the CorpseAnimal is a mechanoid's wreck (Kind
 	// "harrow wreck"): it keeps, nothing eats it, it is shredded for salvage.
 	Wreck bool
@@ -495,6 +503,7 @@ type BuildingView struct {
 	Barrel, Shells, TargetX, TargetY, WorkSpeed int
 	Linked                                      []string
 	// STO/CBT contract (0 until STO-2): storage Group id, Stored stacks of Capacity.
+	CleanOff         bool // CSE-019: the player turned tidying before bills off here
 	Group            uint64
 	Stored, Capacity int
 	Open             bool            // TEMP-0 contract (false until TEMP-1): a vent letting air through (command.ToggleVent)
@@ -540,8 +549,18 @@ type PlantView struct {
 	// follows the clock, so it stays off this per-plant view.
 }
 
+// PackItemView is one stack in a pawn's pack.
+type PackItemView struct {
+	ID     uint32
+	Name   string
+	Qty    int
+	Unload bool
+}
+
 // WorldView is the non-pawn read model for HUD and the map.
 type WorldView struct {
+	// Gameplay is the colony's habit rules (CSE); the Habits tab shows it.
+	Gameplay gameplay.Settings
 	// Biome is the map's setting: display name and key (SIM-023).
 	Biome, BiomeKey string
 	// TreesFelled is how many trees the visiting timbergnaws have eaten
@@ -789,7 +808,7 @@ type Game struct {
 	mind    *mind.Mind                      // mind package (SIM-066): mental breaks
 	craft   *craft.Craft                    // craft package (PRD-0): bills, drying, tool cabinets
 	surg    *surgeryState                   // surgery.go
-	drugs   map[entity.EntityID]*drug.State // drugs.go
+	drugs   map[entity.EntityID]*drug.State // dose_host.go, game/dose
 	prison  *prison.Prison                  // prison package: prisoners, warden work
 	rest    *rest.Sleep                     // rest package (BED-0): beds, sleep, waking thoughts
 	worldSt *worldState                     // world_state.go
@@ -1373,11 +1392,12 @@ func (g *Game) snapshot() []PawnView {
 		cv := g.care.View(id, j)                                                   // care package: carry, tend, care level, bed rest
 		pv.CareLevel = uint8(cv.CareLevel)                                         // MED-03
 		pv.Disease = g.diseaseLabel(id)                                            // disease.go (MED-04)
-		pv.OverdosePct, pv.OverdoseStage = g.overdoseView(id)                      // drugs.go (MED-07)
+		pv.OverdosePct, pv.OverdoseStage = doseOf(g).Overdose(id)                  // game/dose (MED-07)
 		pv.Weapon, pv.WeaponStats = weaponDefOf(g, id).Name, weapon.Stats(weaponOf(g, id))
 		gv := g.combat.Gear.View(id) // combat/gear.go (CBT-3)
 		pv.WeaponQuality, pv.WeaponStuff, pv.Spare, pv.ShieldPct, pv.Smokepops, pv.Kills, pv.DamageDealt = gv.Quality, gv.Stuff, gv.Spare, gv.ShieldPct, gv.Smokepops, gv.Kills, gv.Damage
 		pv.ThreatResponse = g.combat.Drafts.Response(id).String()
+		pv.Pack, pv.PackGrams, pv.PackLimitGrams = packView(g, id) // sense_gear_host.go (CSE-036)
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed
@@ -1468,6 +1488,7 @@ func (g *Game) world() WorldView {
 		Schedule:    g.scheduleView(),
 	}
 	w.Research, w.Locked = g.lab.Lists(g.views.on) // game/research
+	w.Gameplay = senseOf(g).Rules                  // game/sense (CSE)
 	w.AX.DeepOreVer, w.AX.DeepOre = g.br.ind.DeepOre(g.grid.Width())
 	shipOf(g).FillWorld(shipHost{g}, &w.AX) // story.go: game/ship (AX-8)
 	w.AX.EveryoneGone = everyoneGone(g)

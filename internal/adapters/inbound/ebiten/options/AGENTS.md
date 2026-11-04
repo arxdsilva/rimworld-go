@@ -8,13 +8,13 @@ The Options screen and the settings it edits: the tabs (graphics, audio, control
 - Pure store functions: `LoadSettings`, `SaveSettings(h Hooks, s) string`, `ApplyDetectedTier`; `Hooks` (the side effects a changed setting needs) and `Detect` (the detected hardware tier).
 - `OptionRow`/`OptionRows(tab)`: the row table for each tab; `RebindState`, `PendingBind`: the key capture.
 - `Env`, `NewSlotName()`.
-- Interfaces: `Host` (7 methods: `Env`, `SetSettings`, `Cue`, `Toast`, `Send`, `PaintMenu`, `Rebind`), `Saver` (3: `Save`, `List`, `Load`), `Story` (6: `StoryView`, `PaintCard`, `CardTip`, `PresetTip`, `SaveMode`, `OpenCustom`).
+- Interfaces: `Host` (7 methods: `Env`, `SetSettings`, `Cue`, `Toast`, `Send`, `PaintMenu`, `Rebind`), `Saver` (3: `Save`, `List`, `Load`), `Story` (7: `StoryView`, `PaintCard`, `CardTip`, `PresetTip`, `SaveMode`, `OpenCustom`, `Rules`).
 - `Shell` = `Hinter + Sizer + Settings + Widgets + World + Host + Saver + Story`.
 
 ## Allowed Dependencies
 - Leaves: `gfx`, `ids`, `ports`, `uikit`.
 - Application read model: `application/game` (`StoryView`, slot data).
-- Domain value types: `difficulty`, `sim/clock`, `sim/command`, `storyteller`.
+- Domain value types: `difficulty`, `gameplay` (the Habits tab), `sim/clock`, `sim/command`, `storyteller`.
 - `platform/config` (Settings, Gain defaults), `platform/input` (actions), `platform/sysinfo` (RAM and tier detection).
 - Ebitengine; stdlib (`errors`, `fmt`, `math`, `strconv`, `strings`, `time`).
 

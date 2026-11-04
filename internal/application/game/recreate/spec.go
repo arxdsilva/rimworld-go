@@ -21,6 +21,9 @@ const (
 	Watch
 	// Gaze: looked through from its spot under the night sky (telescope).
 	Gaze
+	// Admire: art looked at from a cell beside it (display case and pedestal
+	// while holding a stack, sculptures always).
+	Admire
 )
 
 // Spec is one recreation piece's numbers.
@@ -68,6 +71,10 @@ func SpecOf(k construction.Kind) (s Spec, ok bool) {
 		return Spec{Mode: Watch, Joy: recreation.JoyTelevision, Power: 1600, Users: 42, Verb: "watch television"}, true
 	case construction.Telescope:
 		return Spec{Gaze, recreation.JoyTelescope, 1200, 1, false, skill.Intellectual, true, "stargaze"}, true
+	case construction.DisplayCase, construction.RoundPedestal,
+		construction.SmallSculpture, construction.LargeSculpture, construction.GrandSculpture:
+		// NST-G, original tuning: art gives solitary joy at a fixed power.
+		return Spec{Mode: Admire, Joy: recreation.JoySolitary, Power: 700, Users: 1, Verb: "admire"}, true
 	}
 	return Spec{}, false
 }

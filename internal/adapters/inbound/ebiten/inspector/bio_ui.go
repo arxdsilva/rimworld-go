@@ -122,7 +122,8 @@ func (a Tabs) bioTab(id entity.EntityID, r gfx.Rect) {
 		a.kit().Label(in.X, in.Y, "No biography for this colonist.", uikit.DimText())
 		return
 	}
-	week := a.sim().LearnedThisWeek(p.ID)
+	card, _ := a.sim().Dossier(p.ID)
+	week := card.LearnedWeek
 	u := a.kit()
 
 	// Portrait and names.

@@ -14,7 +14,7 @@ The renderer's world pipeline: the draw order of one frame (ground, floors, zone
 ## Allowed Dependencies
 - Leaves: `art`, `camera`, `gfx`, `uikit`.
 - Layers: `render` (the view), `render/creature`, `render/cue`, `render/env`, `render/light`, `render/motion`, `render/overlay`, `render/sprite`.
-- `application/game` read models; domain `sim/clock`, `sim/entity`.
+- `application/game` read models; domain `sim/clock`, `sim/entity`, `building/construction` (the Neat Storage pieces, `neat_keys.go`).
 - Ebitengine (`ebiten`, `vector`); stdlib (`cmp`, `fmt`, `image`, `image/color`, `math`).
 - `pkg/randx` (`Mix64`).
 

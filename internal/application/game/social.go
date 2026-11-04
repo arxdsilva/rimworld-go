@@ -326,7 +326,7 @@ type careGear struct{ g *Game }
 func (h careGear) HasGear(target entity.EntityID) bool {
 	_, armed := h.g.equip[target]
 	w := h.g.apparel[target]
-	return armed || w.On != [craft.Slots]craft.Piece{} // TEMP-4: every layer
+	return armed || w.On != [craft.Slots]craft.Piece{} || senseOf(h.g).Gear.Has(target) // TEMP-4: every layer; CSE-036: a pack
 }
 
 // StripGear drops target's apparel and weapon where it lies.
@@ -335,6 +335,7 @@ func (h careGear) StripGear(target entity.EntityID) bool {
 	if !h.HasGear(target) {
 		return false
 	}
+	senseOf(g).Gear.Spill(target) // game/sense (CSE-036)
 	pos, _ := g.positions.Get(target)
 	for _, s := range wearSlots {
 		if p := g.apparel[target].On[s]; p.Kind != 0 {

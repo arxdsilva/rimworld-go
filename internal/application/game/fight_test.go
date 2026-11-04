@@ -99,7 +99,7 @@ func TestFightChanceTableAndMultipliers(t *testing.T) {
 	}
 	g.SetNeeds(b, needs.Full, needs.Full)
 	// drink: the drug state's multiplier (alcohol band x withdrawal)
-	s := g.drugState(b)
+	s := doseOf(g).State(b)
 	s.Alcohol = 450
 	if m := s.FightMultiplier(); m <= 1000 {
 		t.Fatalf("drunk multiplier %d should raise the chance", m)

@@ -1092,6 +1092,10 @@ saveState.People.Persons[].Parents[] rimworld-go/internal/domain/sim/entity.Enti
 saveState.People.Persons[].Where uint8
 saveState.People.Seeded bool
 saveState.People.Version uint8
+saveState.PetNames []rimworld-go/internal/application/game.entry[string]
+saveState.PetNames[] rimworld-go/internal/application/game.entry[string]
+saveState.PetNames[].ID rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.PetNames[].V string
 saveState.Plan []int32
 saveState.Plan[] int32
 saveState.PlantIDs []rimworld-go/internal/domain/sim/entity.EntityID
@@ -1337,6 +1341,103 @@ saveState.Scheds map[rimworld-go/internal/domain/sim/entity.EntityID]rimworld-go
 saveState.Scheds{key} rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Scheds{} rimworld-go/internal/domain/pawn/schedule.Grid = [24]rimworld-go/internal/domain/pawn/schedule.Activity
 saveState.Scheds{}[] rimworld-go/internal/domain/pawn/schedule.Activity = int
+saveState.Sense rimworld-go/internal/application/game/sense.Save
+saveState.Sense.FromPack []rimworld-go/internal/application/game/sense.CarryEntry
+saveState.Sense.FromPack[] rimworld-go/internal/application/game/sense.CarryEntry
+saveState.Sense.FromPack[].Item rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.FromPack[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.HaulAt []rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.HaulAt[] rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.HaulAt[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.HaulAt[].Until uint64
+saveState.Sense.NoClean []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Sense.NoClean[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Packs []rimworld-go/internal/application/game/sense.PackEntry
+saveState.Sense.Packs[] rimworld-go/internal/application/game/sense.PackEntry
+saveState.Sense.Packs[].Pack rimworld-go/internal/domain/pawn/inventory.Pack
+saveState.Sense.Packs[].Pack.Items []rimworld-go/internal/domain/pawn/inventory.Entry
+saveState.Sense.Packs[].Pack.Items[] rimworld-go/internal/domain/pawn/inventory.Entry
+saveState.Sense.Packs[].Pack.Items[].ID uint32
+saveState.Sense.Packs[].Pack.Items[].Stack rimworld-go/internal/domain/economy/item.Stack
+saveState.Sense.Packs[].Pack.Items[].Stack.Animal uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.Book uint32
+saveState.Sense.Packs[].Pack.Items[].Stack.Building uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.Carrier rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Packs[].Pack.Items[].Stack.DiedAt uint64
+saveState.Sense.Packs[].Pack.Items[].Stack.Dried bool
+saveState.Sense.Packs[].Pack.Items[].Stack.Forbidden bool
+saveState.Sense.Packs[].Pack.Items[].Stack.Hatch int
+saveState.Sense.Packs[].Pack.Items[].Stack.HaulMarked bool
+saveState.Sense.Packs[].Pack.Items[].Stack.IngredientSpecies [4]uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.IngredientSpecies[] uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.Ingredients [4]rimworld-go/internal/domain/economy/item.Kind
+saveState.Sense.Packs[].Pack.Items[].Stack.Ingredients[] rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.Kind rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.Of rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Packs[].Pack.Items[].Stack.Poison int16
+saveState.Sense.Packs[].Pack.Items[].Stack.Qty int
+saveState.Sense.Packs[].Pack.Items[].Stack.Quality uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.Rot int
+saveState.Sense.Packs[].Pack.Items[].Stack.Stuff rimworld-go/internal/domain/economy/item.Kind = uint8
+saveState.Sense.Packs[].Pack.Items[].Stack.Tame bool
+saveState.Sense.Packs[].Pack.Items[].Stack.Unclaimed bool
+saveState.Sense.Packs[].Pack.Items[].Stack.Wear int
+saveState.Sense.Packs[].Pack.Items[].Stack.X int
+saveState.Sense.Packs[].Pack.Items[].Stack.Y int
+saveState.Sense.Packs[].Pack.Items[].Stack.Yield uint16
+saveState.Sense.Packs[].Pack.Items[].Unload bool
+saveState.Sense.Packs[].Pack.Next uint32
+saveState.Sense.Packs[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Resume []rimworld-go/internal/application/game/sense.ResumeEntry
+saveState.Sense.Resume[] rimworld-go/internal/application/game/sense.ResumeEntry
+saveState.Sense.Resume[].Job rimworld-go/internal/domain/ai/job.Record
+saveState.Sense.Resume[].Job.BillIndex int
+saveState.Sense.Resume[].Job.Carry rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Resume[].Job.Count int
+saveState.Sense.Resume[].Job.Dest rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Resume[].Job.DestX int
+saveState.Sense.Resume[].Job.DestY int
+saveState.Sense.Resume[].Job.Fail rimworld-go/internal/domain/ai/job.FailReason = uint8
+saveState.Sense.Resume[].Job.Forced bool
+saveState.Sense.Resume[].Job.HasSpare bool
+saveState.Sense.Resume[].Job.Kind rimworld-go/internal/domain/ai/job.Kind = uint8
+saveState.Sense.Resume[].Job.Path []rimworld-go/internal/domain/ai/pathing.Point
+saveState.Sense.Resume[].Job.PathI int
+saveState.Sense.Resume[].Job.Path[] rimworld-go/internal/domain/ai/pathing.Point
+saveState.Sense.Resume[].Job.Path[].X int
+saveState.Sense.Resume[].Job.Path[].Y int
+saveState.Sense.Resume[].Job.PickupI int
+saveState.Sense.Resume[].Job.Pickups []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Sense.Resume[].Job.Pickups[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Resume[].Job.Route []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Sense.Resume[].Job.RouteI int
+saveState.Sense.Resume[].Job.Route[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Resume[].Job.SpareX int
+saveState.Sense.Resume[].Job.SpareY int
+saveState.Sense.Resume[].Job.State rimworld-go/internal/domain/ai/job.State = uint8
+saveState.Sense.Resume[].Job.TX int
+saveState.Sense.Resume[].Job.TY int
+saveState.Sense.Resume[].Job.Target rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Resume[].Job.WorkLeft int
+saveState.Sense.Resume[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.Rules rimworld-go/internal/domain/gameplay.Settings
+saveState.Sense.Rules.Flipped uint64
+saveState.Sense.Rules.Limits [3]uint8
+saveState.Sense.Rules.Limits[] uint8
+saveState.Sense.SpareAt []rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.SpareAt[] rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.SpareAt[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.SpareAt[].Until uint64
+saveState.Sense.TidyAt []rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.TidyAt[] rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.TidyAt[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.TidyAt[].Until uint64
+saveState.Sense.TopOff []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.Sense.TopOff[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.UnloadAt []rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.UnloadAt[] rimworld-go/internal/application/game/sense.TickEntry
+saveState.Sense.UnloadAt[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Sense.UnloadAt[].Until uint64
 saveState.Shots []rimworld-go/internal/domain/combat/projectile.Shot
 saveState.Shots[] rimworld-go/internal/domain/combat/projectile.Shot
 saveState.Shots[].Aimed bool
@@ -2775,6 +2876,7 @@ saveState.ZoneMap.Zones[].Name string
 saveState.ZoneMap.Zones[].NoCut bool
 saveState.ZoneMap.Zones[].NoSow bool
 saveState.ZoneMap.Zones[].Priority rimworld-go/internal/domain/building/zone.Priority = int8
+saveState.ZoneMap.Zones[].Profile rimworld-go/internal/domain/building/zone.Profile = uint8
 saveState.ZoneMap.Zones[].Special rimworld-go/internal/domain/building/zone.Special
 saveState.ZoneMap.Zones[].Special.HPMax uint8
 saveState.ZoneMap.Zones[].Special.HPMin uint8

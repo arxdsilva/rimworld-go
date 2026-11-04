@@ -1,6 +1,8 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/dose"
+	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/application/game/travel"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -67,20 +69,8 @@ type HealthView struct {
 	SelfTend     bool
 }
 
-// ConditionView is one condition row of the Health tab: severity,
-// immunity and tend quality in percent, Due when it needs tending now,
-// and the tooltip text. MED-02: TendPct is the last tend's quality (0:
-// never tended), DueInHours the whole hours until it needs its next tend
-// (0 when Due or it takes no tending), Losing whether it is on course to
-// kill before immunity wins.
-type ConditionView struct {
-	Label                   string
-	SevPct, ImmPct, TendPct int
-	Due                     bool
-	Tip                     string
-	DueInHours              int
-	Losing                  bool
-}
+// ConditionView is one row of the Health tab (game/roster).
+type ConditionView = roster.ConditionView
 
 // OperationOptionView is one operation the Health tab can queue:
 // Disabled options can still be queued (a bill may make the item later).
@@ -130,10 +120,7 @@ type OperationView struct {
 }
 
 // DrugLineView is one drug effect, tolerance or addiction line.
-type DrugLineView struct {
-	Label string
-	Pct   int
-}
+type DrugLineView = dose.Line
 
 // PrisonerView is one prisoner's Prisoner tab; Mode is a prisoner.Mode.
 type PrisonerView struct {

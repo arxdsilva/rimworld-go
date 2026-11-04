@@ -212,6 +212,13 @@ func BuildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/shelf_" + FacingOr(facing)
 	case BookcaseKind, SmallBookcaseKind: // A7 (AR3's art): empty; BookcaseKey picks the filled looks
 		return BookcaseKey(kind, facing, 0)
+	case "display case", "round pedestal", "small display shelf", "display shelf", "weapon rack",
+		"narrow wardrobe", "wardrobe", "narrow display cabinet", "display cabinet", "open shelf",
+		"two tier display shelf", "narrow tall shelf", "tall shelf", "safe", "drum",
+		"horizontal weapon rack", "vertical weapon rack", "textile rack", "meat hook",
+		"mini pallet", "half pallet", "pallet", "small crate", "crate", "large crate", "tall crate",
+		"corpse dump spot": // NST: neat_keys.go
+		return NeatKey(kind, facing)
 	case "hopper": // STO-2
 		return "furniture/hopper"
 	case "nutrient paste dispenser":

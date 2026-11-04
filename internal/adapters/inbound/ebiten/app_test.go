@@ -13,6 +13,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/application/game/dossierview"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/combat/attack"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -115,9 +116,13 @@ func (s *stubSim) Buildables() []game.BuildableView {
 func (s *stubSim) IncapableReason(id entity.EntityID, t work.Type) string {
 	return s.incapable[id][t]
 }
-func (s *stubSim) LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int { return s.learned[id] }
-func (s *stubSim) Apply(command.Command)                                   {}
-func (s *stubSim) Enqueue(c command.Command)                               { s.cmds = append(s.cmds, c) }
+func (s *stubSim) Dossier(id entity.EntityID) (dossierview.Card, bool) {
+	c := dossierview.New()
+	c.LearnedWeek = s.learned[id]
+	return c, true
+}
+func (s *stubSim) Apply(command.Command)     {}
+func (s *stubSim) Enqueue(c command.Command) { s.cmds = append(s.cmds, c) }
 func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
 	if x < 0 || y < 0 || x >= s.w || y >= s.h {
 		return false, "outside the map"

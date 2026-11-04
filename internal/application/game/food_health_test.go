@@ -31,7 +31,7 @@ func TestStonedAndWormsAddHunger(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	id, _ := g.SpawnNamedPawn(4, 4, "Pat")
-	g.drugState(id).Ingest(item.AshleafTea, nil, uint64(g.clock.Now()))
+	doseOf(g).State(id).Ingest(item.AshleafTea, nil, uint64(g.clock.Now()))
 	if hr, rr := g.diseaseNeedRates(id, 1000, 1000); hr != 1300 || rr != 1000 {
 		t.Fatalf("stoned: %d %d, want 1300 1000", hr, rr)
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
@@ -39,7 +40,9 @@ func (o *Objects) runDraw(dst *ebiten.Image, w *game.WorldView, d *ArtDraw, tile
 		o.drawItemObj(dst, &w.Items[d.I], tile, sw, sh)
 	case objForbidden:
 		it := &w.Items[d.I]
-		o.DrawForbiddenMark(dst, it.X, it.Y, tile, sw, sh)
+		if p := neatPieceOf(it.Store); p == nil || !p.hides(it.Slot) { // no mark on a stack nobody sees
+			o.DrawForbiddenMark(dst, it.X, it.Y, tile, sw, sh)
+		}
 	case objAnimal:
 		o.Creatures.DrawAnimalFigure(o.v, o.Pass(), dst, w.Animals[d.I], d.wx, d.wy, LodTile(tile))
 	case objPawn:
@@ -216,8 +219,65 @@ func (o *Objects) DrawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 	o.DrawSpritePose(dst, key, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
 }
 
+// itemRow is a stack's draw row: its own tile's, or for a stack in a storage
+// piece the row that draws it after the piece (neat_keys.go).
+func (o *Objects) itemRow(w *game.WorldView, it *game.ItemView) float64 {
+	if it.Store != 0 {
+		if p := neatPieceOf(it.Store); p != nil {
+			c, _ := o.neat.at(w.StructVer, w.Buildings, p, it)
+			return stackRow(c, it)
+		}
+	}
+	return float64(it.Y)
+}
+
+// drawStoredItem draws a stack in storage piece p at its slot (NST): nothing
+// in a closed piece or past a heap's first few, a corpse lying at its slot,
+// on end where the piece stands its stacks up.
+// False when the stack has no art, for the caller's fallback.
+func (o *Objects) drawStoredItem(dst *ebiten.Image, p *neatPiece, it *game.ItemView, tile float64, sw, sh int) bool {
+	if p.hides(it.Slot) {
+		return true
+	}
+	ax, ay, k, _ := o.stackSlot(p, it)
+	if it.Kind == "human corpse" {
+		if pawn, ok := o.Creatures.DeceasedOf(o.v, *it); ok {
+			ps := creature.CorpsePlanFor(o.v.Art, *it).Ps
+			ps.Sx, ps.Sy = k, k
+			wx, wy := stackOrigin(ax, ay, k, 1, 1)
+			o.Creatures.DrawFigure(o.v, o.Pass(), dst, pawn, wx, wy, tile, ps)
+			return true
+		}
+	}
+	key := SizedItemKey(ItemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Qty)
+	cs := sprite.ItemCS(*it)
+	if it.Kind == "bones" {
+		key = creature.BonesSprite(it.X, it.Y)
+	} else {
+		key, cs = o.StoneItem(key, it.Kind, cs)
+	}
+	m := o.art().MetaOf(key)
+	if m == nil {
+		return false
+	}
+	k *= motion.PopScale((*o.Creatures.ItemBorn)[it.ID], o.v.Present)
+	if p.show == showOnEnd {
+		fw, fh := float64(m.Footprint[0]), float64(m.Footprint[1])
+		o.DrawSpritePose(dst, key, color.NRGBA{}, ax-fw/2, ay-fh/2, tile, stackOnEnd(fw, fh, k, cs))
+		return true
+	}
+	wx, wy := stackOrigin(ax, ay, k, m.Footprint[0], m.Footprint[1])
+	o.drawSpriteScaled(dst, key, color.NRGBA{}, wx, wy, tile, sw, sh, cs, k)
+	return true
+}
+
 // drawItemObj draws a ground stack (corpses and bones their own way).
 func (o *Objects) drawItemObj(dst *ebiten.Image, it *game.ItemView, tile float64, sw, sh int) {
+	if it.Store != 0 {
+		if p := neatPieceOf(it.Store); p != nil && o.drawStoredItem(dst, p, it, tile, sw, sh) {
+			return
+		}
+	}
 	if it.Kind == "human corpse" || it.Kind == "bones" {
 		o.Creatures.DrawCorpseItem(o.v, o.Pass(), dst, *it, tile, sw, sh)
 		return

@@ -105,6 +105,7 @@ func (g *Game) phaseClimate() {
 	g.br.ind.Pumps(industryHost{g}).Advance(climateInterval)
 	g.expose()
 	g.craft.Condition.Rot(climateInterval)           // craft/condition.go
+	senseOf(g).Gear.Rot(climateInterval)             // game/sense (CSE-036)
 	g.craft.Condition.Weather(uint64(g.clock.Now())) // PRD-2: deterioration and worn wear, hourly
 	g.craft.Drying.Advance(climateInterval)          // craft/drying.go; frost: per chunk with the plants (plant_growth.go)
 }

@@ -28,21 +28,78 @@ func (lb *Labels) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile f
 	}
 	for i := range w.Items {
 		it := &w.Items[i]
+		if it.Store != 0 && !it.Carried {
+			if p := neatPieceOf(it.Store); p != nil {
+				lb.storedCount(screen, p, it, tile)
+				continue
+			}
+		}
 		if it.Carried || it.Qty <= 1 || !lb.LOD.InView(it.X, it.Y, 1, 1) { // lod.go: off screen
 			continue
 		}
-		s := strconv.Itoa(it.Qty)
-		sx, sy := lb.worldToScreen(it.X, it.Y)
-		// the tag is UI chrome anchored to a world tile: place it in
-		// logical pixels (world position / ui scale), text and rect via the canvas
-		k := float32(1 / gfx.UIScale())
-		tw := gfx.TextW(s, gfx.Small) + 6
-		th := gfx.LineStep(gfx.Small) - 2
-		x := sx*k + float32(tile)*k - tw - 2
-		y := sy*k + float32(tile)*k - th - 2
-		gfx.FillRect(screen, x, y, tw, th, uikit.Shade(190), false)
-		gfx.Text(screen, s, float64(x)+3, float64(y)-1, gfx.Small)
+		lb.tileCount(screen, it.X, it.Y, it.Qty, tile)
 	}
+	lb.heapCounts(screen, tile)
+}
+
+// tileCount prints n in the bottom-right corner of tile (x, y).
+func (lb *Labels) tileCount(screen *ebiten.Image, x, y, n int, tile float64) {
+	s := strconv.Itoa(n)
+	sx, sy := lb.worldToScreen(x, y)
+	// the tag is UI chrome anchored to a world tile: place it in
+	// logical pixels (world position / ui scale), text and rect via the canvas
+	k := float32(1 / gfx.UIScale())
+	tw := gfx.TextW(s, gfx.Small) + 6
+	th := gfx.LineStep(gfx.Small) - 2
+	drawCountTag(screen, s, sx*k+float32(tile)*k-tw-2, sy*k+float32(tile)*k-th-2, tw, th)
+}
+
+// drawCountTag is the small dark tag with s at logical (x, y), tw x th.
+func drawCountTag(screen *ebiten.Image, s string, x, y, tw, th float32) {
+	gfx.FillRect(screen, x, y, tw, th, uikit.Shade(190), false)
+	gfx.Text(screen, s, float64(x)+3, float64(y)-1, gfx.Small)
+}
+
+// storedCount is a stack's count in storage piece p (NST): none in a closed
+// piece, none below the closest zoom tier in a piece of many slots, centred
+// over the stack's slot so a cell's tags don't lie on one another. A heap's
+// stacks only add to its one tag (heapCounts).
+func (lb *Labels) storedCount(screen *ebiten.Image, p *neatPiece, it *game.ItemView, tile float64) {
+	if p.show == showNone || !lb.LOD.InView(it.X, it.Y, 1, 1) {
+		return
+	}
+	if p.show == showHeap {
+		if lb.neat.heaps == nil {
+			lb.neat.heaps = map[[2]int]int{}
+		}
+		lb.neat.heaps[[2]int{it.X, it.Y}] += it.Qty
+		return
+	}
+	if !p.showsCount(it.Qty, tile) {
+		return
+	}
+	ax, ay, scale, ok := lb.stackSlot(p, it)
+	if !ok {
+		lb.tileCount(screen, it.X, it.Y, it.Qty, tile)
+		return
+	}
+	s := strconv.Itoa(it.Qty)
+	sx, sy := lb.worldToScreenF(ax, ay+scale/2) // the stack's bottom edge
+	k := float32(1 / gfx.UIScale())
+	tw := gfx.TextW(s, gfx.Small) + 6
+	th := gfx.LineStep(gfx.Small) - 2
+	drawCountTag(screen, s, sx*k-tw/2, sy*k-th, tw, th)
+}
+
+// heapCounts prints each heap's one tag: everything lying on the tile, drawn
+// or not, and empties the tally for the next frame.
+func (lb *Labels) heapCounts(screen *ebiten.Image, tile float64) {
+	for c, n := range lb.neat.heaps {
+		if n > 1 {
+			lb.tileCount(screen, c[0], c[1], n, tile)
+		}
+	}
+	clear(lb.neat.heaps)
 }
 
 // interactBubbleTicks is how long a social interaction's bubble stays over

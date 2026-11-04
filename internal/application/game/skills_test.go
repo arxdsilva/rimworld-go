@@ -1,14 +1,17 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/dossierview"
 	rlab "rimworld-go/internal/application/game/research"
 	"strings"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/attack"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/look"
@@ -177,8 +180,8 @@ func TestLearningSaturation(t *testing.T) {
 	if got := totalXP(g.skillOf(id, skill.Mining)) - before - day1; got < 150 || got > 151 {
 		t.Fatalf("next day learned %d, want 150 (major passion)", got)
 	}
-	if w := g.LearnedThisWeek(id); int64(w[skill.Mining]) != totalXP(g.skillOf(id, skill.Mining))-before {
-		t.Errorf("this week %d", w[skill.Mining])
+	if c, _ := g.Dossier(id); int64(c.LearnedWeek[skill.Mining]) != totalXP(g.skillOf(id, skill.Mining))-before {
+		t.Errorf("this week %d", c.LearnedWeek[skill.Mining])
 	}
 	shoot := g.skillOf(id, skill.Shooting)
 	g.learn(id, skill.Shooting, 500)
@@ -488,5 +491,331 @@ func TestImportBiosMigratesLegacy(t *testing.T) {
 	old.importBios(nil, nil, nil)
 	if p, ok := old.bioFor(oa); !ok || p.Look != g.sk.bios[ada].Look || p.Skills != skill.NeutralSet() {
 		t.Fatal("legacy migration")
+	}
+}
+
+// card is id's dossier, which must exist.
+func card(t *testing.T, g *Game, id entity.EntityID) dossierview.Card {
+	t.Helper()
+	c, ok := g.Dossier(id)
+	if !ok {
+		t.Fatalf("no card for %d", id)
+	}
+	return c
+}
+
+// TestDossierBreakLevelsShiftWithTraits: the card's levels are the ones the
+// mind breaks at, and a running break reports its tier.
+func TestDossierBreakLevelsShiftWithTraits(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	plain, _ := g.SpawnNamedPawn(2, 2, "Ada")
+	steady := spawnGen(t, g, 3, 2, genPawn("Rain", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Steady} }))
+	brittle := spawnGen(t, g, 4, 2, genPawn("Sun", func(p *pawngen.Pawn) { p.Traits = []trait.ID{trait.Brittle} }))
+	for _, w := range []struct {
+		id   entity.EntityID
+		want dossierview.BreakLevels
+	}{
+		{plain, dossierview.BreakLevels{Minor: 35, Major: 20, Extreme: 5}},
+		{steady, dossierview.BreakLevels{Minor: 29, Major: 16, Extreme: 4}},
+		{brittle, dossierview.BreakLevels{Minor: 41, Major: 23, Extreme: 5}},
+	} {
+		if got := card(t, g, w.id).BreakAt; got != w.want {
+			t.Errorf("%s: levels %+v, want %+v", g.name(w.id), got, w.want)
+		}
+	}
+	if c := card(t, g, plain); c.BreakTier != mentalbreak.TierNone {
+		t.Errorf("no break, tier %v", c.BreakTier)
+	}
+	g.ForceBreak(plain, mentalbreak.Tantrum)
+	if got, want := card(t, g, plain).BreakTier, mentalbreak.TierOf(mentalbreak.Tantrum); got != want {
+		t.Errorf("tier %v, want %v", got, want)
+	}
+}
+
+// TestDossierSaturatedAtCap: a skill at the day's cap reads saturated, others
+// don't, and the next day clears it. Reading rolls nothing over.
+func TestDossierSaturatedAtCap(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	id := spawnGen(t, g, 2, 2, genPawn("Rain", func(p *pawngen.Pawn) { p.Skills[skill.Mining].Passion = skill.Major }))
+	if c := card(t, g, id); c.Saturated[skill.Mining] {
+		t.Fatal("saturated before learning anything")
+	}
+	g.learn(id, skill.Mining, 100)
+	if c := card(t, g, id); c.Saturated[skill.Mining] {
+		t.Fatal("saturated after a little learning")
+	}
+	for i := 0; i < 20000; i++ {
+		g.learn(id, skill.Mining, 1)
+	}
+	c := card(t, g, id)
+	if !c.Saturated[skill.Mining] || c.Saturated[skill.Shooting] {
+		t.Fatalf("saturated %v", c.Saturated)
+	}
+	day := g.sk.learned[id].day
+	g.clock.Advance(24 * 2500)
+	if c := card(t, g, id); c.Saturated[skill.Mining] {
+		t.Fatal("still saturated the next day")
+	}
+	if g.sk.learned[id].day != day {
+		t.Fatal("the card rolled the learning log over")
+	}
+}
+
+// TestDossierActiveSkillExpires: -1 when idle, the skill while it progresses,
+// -1 again after the sim's own workingTicks.
+func TestDossierActiveSkillExpires(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
+	if c := card(t, g, id); c.ActiveSkill != dossierview.NoneID || c.WorkType != dossierview.NoneID {
+		t.Fatalf("idle: active %d, work %d", c.ActiveSkill, c.WorkType)
+	}
+	g.jobs.Set(id, job.Record{Kind: job.Mine, State: job.Do})
+	g.workProgress(id, skill.Mining, true)
+	c := card(t, g, id)
+	if c.ActiveSkill != int(skill.Mining) || c.WorkType != int(work.Mine) {
+		t.Fatalf("mining: active %d, work %d", c.ActiveSkill, c.WorkType)
+	}
+	g.clock.Advance(workingTicks)
+	if c := card(t, g, id); c.ActiveSkill != int(skill.Mining) {
+		t.Fatalf("at workingTicks: active %d", c.ActiveSkill)
+	}
+	g.clock.Advance(1)
+	if c := card(t, g, id); c.ActiveSkill != dossierview.NoneID {
+		t.Fatalf("past workingTicks: active %d", c.ActiveSkill)
+	}
+}
+
+// TestDossierStunUnsaved: a stun shows on the card, moves no state hash, and
+// a save does not carry it; a pawn only waiting to step is not stunned.
+func TestDossierStunUnsaved(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	id, _ := g.SpawnNamedPawn(2, 2, "Ada")
+	now := uint64(g.clock.Now())
+	m := g.motionOf(id)
+	m.NextMoveAt = now + 50
+	g.motion.Set(id, m)
+	if c := card(t, g, id); c.StunTicks != 0 {
+		t.Fatalf("a walker reads stunned for %d", c.StunTicks)
+	}
+	before := g.StateHash()
+	g.sk.noteStun(id, now+100, now)
+	if got := g.StateHash(); got != before {
+		t.Fatalf("the stun record moved the hash: %#x, was %#x", got, before)
+	}
+	hitHarm{g}.Hold(id, now+120)
+	if c := card(t, g, id); c.StunTicks != 120 {
+		t.Fatalf("stun ticks %d, want 120", c.StunTicks)
+	}
+	if c := card(t, saveLoad(t, g), id); c.StunTicks != 0 {
+		t.Fatalf("a load kept the stun: %d", c.StunTicks)
+	}
+	hitHarm{g}.SetStaggerUntil(id, now+30)
+	if c := card(t, g, id); c.StaggerTicks != 30 {
+		t.Fatalf("stagger ticks %d, want 30", c.StaggerTicks)
+	}
+	g.clock.Advance(121)
+	if c := card(t, g, id); c.StunTicks != 0 || c.StaggerTicks != 0 {
+		t.Fatalf("spent timers read %d, %d", c.StunTicks, c.StaggerTicks)
+	}
+	for i := entity.EntityID(1000); i < 1000+stunSweep+1; i++ {
+		g.sk.noteStun(i, uint64(g.clock.Now()), uint64(g.clock.Now())) // spent at once
+	}
+	if len(g.sk.stun) > stunSweep {
+		t.Fatalf("spent stuns pile up: %d", len(g.sk.stun))
+	}
+}
+
+// TestSetNameRoundTripsASave: colonists and tame animals take a name that
+// survives a save, "" gives back the generated one even after a load, and
+// nobody else can be renamed.
+func TestSetNameRoundTripsASave(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 1, Width: 12, Height: 8})
+	ada := spawnGen(t, g, 2, 2, genPawn("Rain", nil))
+	pet, err := g.spawnAnimal(animal.Species(0), 4, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wild, err := g.spawnAnimal(animal.Species(0), 5, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, _ := g.animals.Get(pet)
+	a.Tame, a.Name = true, "Biscuit"
+	g.animals.Set(pet, a)
+	petName := func(g *Game) string { a, _ := g.animals.Get(pet); return a.Name }
+	send := func(g *Game, id entity.EntityID, name string) {
+		applySetName(g, command.Command{Kind: command.SetName, Pawn: uint64(id), Name: name})
+	}
+	clean := g.StateHash()
+	send(g, ada, " Stormy ")
+	send(g, pet, "Rex")
+	send(g, pet, "Rex-Two")
+	send(g, wild, "Nope")
+	send(g, 999999, "Nope")
+	send(g, ada, "Way too long a name for anyone")
+	send(g, ada, "R2D2")
+	if g.name(ada) != "Stormy" || petName(g) != "Rex-Two" {
+		t.Fatalf("renamed: %q, %q", g.name(ada), petName(g))
+	}
+	if a, _ := g.animals.Get(wild); a.Name != "" {
+		t.Fatalf("a wild animal took a name: %q", a.Name)
+	}
+	if g.isPawn(999999) {
+		t.Fatal("a rename made a pawn")
+	}
+	h := saveLoad(t, g)
+	if h.name(ada) != "Stormy" || petName(h) != "Rex-Two" {
+		t.Fatalf("after a load: %q, %q", h.name(ada), petName(h))
+	}
+	if v := h.Snapshot(); v[0].Name != "Stormy" {
+		t.Fatalf("snapshot name %q", v[0].Name)
+	}
+	send(h, ada, "")
+	send(h, pet, "")
+	if h.name(ada) != "Rain" || petName(h) != "Biscuit" {
+		t.Fatalf("restored: %q, %q", h.name(ada), petName(h))
+	}
+	if len(h.sk.exportPetNames()) != 0 {
+		t.Fatal("a restored name stays set aside")
+	}
+	send(g, ada, "")
+	send(g, pet, "")
+	if got := g.StateHash(); got != clean {
+		t.Fatalf("renamed and restored, hash %#x, was %#x", got, clean)
+	}
+	send(g, pet, "") // nothing to restore: no change
+	if petName(g) != "Biscuit" {
+		t.Fatalf("second restore: %q", petName(g))
+	}
+}
+
+// TestSetNameRefusesVisitorsAndRaiders: through the real command path a
+// colonist's new name shows at once, even paused, and a raider keeps its own.
+func TestSetNameRefusesVisitorsAndRaiders(t *testing.T) {
+	t.Parallel()
+	g, ada := raidGame(t)
+	g.Raid(1)
+	rid := g.raiderIDs[0]
+	was := g.name(rid)
+	_ = g.Snapshot()
+	g.Enqueue(command.Command{Kind: command.SetName, Pawn: ada, Name: "Stormy"})
+	g.Enqueue(command.Command{Kind: command.SetName, Pawn: uint64(rid), Name: "Stormy"})
+	g.ApplyPending()
+	if g.name(rid) != was {
+		t.Fatalf("a raider was renamed %q", g.name(rid))
+	}
+	found := false
+	for _, v := range g.Snapshot() {
+		found = found || (v.ID == uint64ToID(ada) && v.Name == "Stormy")
+	}
+	if !found {
+		t.Fatal("the paused snapshot missed the new name")
+	}
+	v, ca := visitorCard(t)
+	if ca.Relation != dossierview.RelationNone || ca.Faction == "" || ca.FactionEmblem == "" {
+		t.Fatalf("visitor card %+v", ca)
+	}
+	vn := v.name(v.trade.caravan.Trader)
+	applySetName(v, command.Command{Kind: command.SetName, Pawn: uint64(v.trade.caravan.Trader), Name: "Stormy"})
+	if v.name(v.trade.caravan.Trader) != vn {
+		t.Fatal("a visitor was renamed")
+	}
+}
+
+// visitorCard is a game with a trader caravan and its trader's card.
+func visitorCard(t *testing.T) (*Game, dossierview.Card) {
+	t.Helper()
+	g, c := caravanGame(t)
+	return g, card(t, g, c.Trader)
+}
+
+// TestDossierFacts: the rest of the card, for a colonist, a trader, a raider,
+// a bill, an attack and animals; an unknown id has no card.
+func TestDossierFacts(t *testing.T) {
+	t.Parallel()
+	g, ada := raidGame(t)
+	col := uint64ToID(ada)
+	if _, ok := g.Dossier(999999); ok {
+		t.Fatal("a card for nobody")
+	}
+	c := card(t, g, col)
+	if c.Relation != dossierview.RelationOwn || c.FactionEmblem != "ui_icon/faction_player" || c.Faction != "" {
+		t.Fatalf("colonist %+v", c)
+	}
+	if c.Stats != stat.Base() && c.Stats != g.sk.stats[col].sheet {
+		t.Fatalf("stats %v", c.Stats)
+	}
+	if c.EatSpeedPct != 100 {
+		t.Fatalf("eating speed %d", c.EatSpeedPct)
+	}
+	if c.AgeDayOfYear != int(g.sk.bios[col].AgeDays)%pawngen.DaysPerYear {
+		t.Fatalf("age day %d", c.AgeDayOfYear)
+	}
+	m := g.meleeOf(col)
+	var hit, dodge, yield int
+	for _, l := range c.ExtraLines[skill.Melee] {
+		switch l.Label {
+		case "Melee hit chance":
+			hit = l.Pct
+		case "Melee dodge chance":
+			dodge = l.Pct
+		}
+	}
+	if hit != attack.HitChanceOf(m)/10 || dodge != attack.DodgeChanceOf(m)/10 {
+		t.Fatalf("melee lines %d, %d", hit, dodge)
+	}
+	yield = c.ExtraLines[skill.Mining][0].Pct
+	if yield != g.skillPct(col, skill.Mining, 4, 60, 140) {
+		t.Fatalf("mining yield %d", yield)
+	}
+
+	g.Raid(1)
+	rid := g.raiderIDs[0]
+	if r := card(t, g, rid); r.Relation != dossierview.RelationFoe {
+		t.Fatalf("raider relation %v", r.Relation)
+	}
+	g.jobs.Set(col, job.Record{Kind: job.Attack, State: job.Do, Target: rid})
+	if c := card(t, g, col); c.AttackTarget != g.name(rid) || c.WorkType != dossierview.NoneID {
+		t.Fatalf("attacking: %+v", c.AttackTarget)
+	}
+	g.craft.Bills.Set(77, []recipe.Bill{{Recipe: recipe.CampfireMeal}})
+	g.jobs.Set(col, job.Record{Kind: job.Bill, State: job.Do, Dest: 77})
+	if c := card(t, g, col); c.WorkType != int(recipe.DefOf(recipe.CampfireMeal).Skill) {
+		t.Fatalf("bill work type %d", c.WorkType)
+	}
+	g.jobs.Set(col, job.Record{Kind: job.Bill, State: job.Do, Dest: 78})
+	if c := card(t, g, col); c.WorkType != dossierview.NoneID {
+		t.Fatalf("a bill gone from its bench: work type %d", c.WorkType)
+	}
+
+	aid, err := g.spawnAnimal(animal.Species(0), 2, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if an := card(t, g, aid); an.Relation != dossierview.RelationWild || an.ActiveSkill != dossierview.NoneID || an.WorkType != dossierview.NoneID {
+		t.Fatalf("wild animal %+v", an)
+	}
+	a, _ := g.animals.Get(aid)
+	a.Tame, a.Mode, a.Target = true, animal.Attack, rid
+	g.animals.Set(aid, a)
+	if an := card(t, g, aid); an.Relation != dossierview.RelationOwn || an.AttackTarget != g.name(rid) {
+		t.Fatalf("tame hunter %+v", an)
+	}
+
+	v, tc := caravanGame(t)
+	if got := card(t, v, tc.Trader).Role; got == "" {
+		t.Fatal("a trader without a role")
+	}
+	if len(tc.Members) > 1 {
+		for _, id := range tc.Members {
+			if id != tc.Trader && card(t, v, id).Role != "" {
+				t.Fatal("a guard with a trader's role")
+			}
+		}
 	}
 }

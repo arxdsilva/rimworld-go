@@ -192,7 +192,7 @@ func TestCleanTargetGone(t *testing.T) {
 	g, id := cleanGame(t)
 	j := job.Record{Kind: job.Clean, State: job.Do, DestX: 8, DestY: 6, WorkLeft: 20, Count: 20}
 	g.jobs.Set(id, j)
-	g.doClean(id, j)
+	cleaningOf(g).Do(id, j)
 	if r, _ := g.jobs.Get(id); r.State != job.Fail || r.Fail != job.TargetGone {
 		t.Fatalf("a clean tile gave %+v", r)
 	}
@@ -201,7 +201,7 @@ func TestCleanTargetGone(t *testing.T) {
 	if queued(g, 8, 6) {
 		t.Fatal("cleared Home still queued")
 	}
-	g.doClean(id, j)
+	cleaningOf(g).Do(id, j)
 	if r, _ := g.jobs.Get(id); r.State != job.Fail {
 		t.Fatalf("outside Home gave %+v", r)
 	}
@@ -209,7 +209,7 @@ func TestCleanTargetGone(t *testing.T) {
 	g.paintHome(8, 6, 8, 6, true)
 	g.addDirt(tileIdx(g, 8, 6), -300)
 	j.WorkLeft = 5
-	g.doClean(id, j)
+	cleaningOf(g).Do(id, j)
 	if r, _ := g.jobs.Get(id); r.State != job.Complete {
 		t.Fatalf("started tile now clean gave %+v", r)
 	}
@@ -228,7 +228,7 @@ func TestWorkCleanToggle(t *testing.T) {
 		t.Fatal("WorkClean toggle ignored")
 	}
 	// an old save's colonist without cleaning gets it once
-	g.wireCleaning()
+	cleaningOf(g).Wire()
 	if !pawn(t, g, id).WorkClean || g.prioOf(id)[work.Clean] != work.DefaultPriority {
 		t.Fatal("wireCleaning left cleaning off")
 	}
@@ -248,7 +248,7 @@ func BenchmarkAssignClean(b *testing.B) {
 		b.Fatalf("only %d queued", len(g.filth.cleanQ))
 	}
 	for b.Loop() {
-		if !g.assignClean(id) {
+		if !cleaningOf(g).Assign(id) {
 			b.Fatal("no clean job")
 		}
 		g.reserve.ReleaseOwner(id)

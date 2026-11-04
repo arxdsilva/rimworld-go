@@ -15,13 +15,16 @@ func axMaxHP(k Kind) (int, bool) {
 		return 20, true
 	case AnimalSleepingBox, PlantPot, Table: // wiki: Table (1x2) 75
 		return 75, true
-	case Table2x2, RingToss, ChessTable, Bookcase:
+	case Table2x2, RingToss, ChessTable, Bookcase,
+		DisplayShelf, WeaponRack, Wardrobe, DisplayCabinet, OpenShelf, TwoTierDisplayShelf, TallShelf, HorizontalWeaponRack, VerticalWeaponRack, MeatHook, HalfPallet, Pallet, Crate, LargeCrate, TallCrate: // NST 2x1 and 2x2, ours
 		return 100, true
 	case Table2x4:
 		return 150, true
 	case Table3x3:
 		return 175, true
-	case SmallShelf, WallTorch, EggBox, SmallBookcase:
+	case SmallShelf, WallTorch, EggBox, SmallBookcase,
+		DisplayCase, RoundPedestal, SmallDisplayShelf, NarrowWardrobe, NarrowDisplayCabinet, NarrowTallShelf,
+		Safe, Drum, TextileRack, MiniPallet, SmallCrate, CorpseDumpSpot: // NST 1x1, ours
 		return 50, true
 	case Urn, IEDFoam, IEDWarhead:
 		return 40, true

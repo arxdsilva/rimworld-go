@@ -50,7 +50,7 @@ type ToolDef struct {
 }
 
 // Category ids beyond the original four rows (STK-AG: the panel shows all
-// twelve vanilla categories in six rows of two, hudlayout.ArchCatsH).
+// vanilla categories and storage in seven rows of two, hudlayout.ArchCatsH).
 const (
 	CatPower       = "power"
 	CatTemperature = "temperature"

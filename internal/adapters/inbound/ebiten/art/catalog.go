@@ -59,6 +59,48 @@ type Meta struct {
 	// tiles (metadata "gait"), so the feet stay planted; 0 when absent.
 	PPT  float64
 	Gait float64
+	// SlotScale is how large a stored stack draws on this storage piece
+	// (metadata "slot_scale", NST); 0 when the sprite gives none. Slots are
+	// its attachments slot0, slot1, ... by number, read once at load so a
+	// draw looks one up without a string or a map.
+	SlotScale float64
+	Slots     []SlotPoint
+}
+
+// SlotPoint is one slot attachment in canvas pixels. Set is false for a
+// number the metadata skipped.
+type SlotPoint struct {
+	X, Y float64
+	Set  bool
+}
+
+// MaxSlots bounds the slot numbers read from metadata: a stray big number
+// in an attachment's name must not grow every lookup table.
+const MaxSlots = 16
+
+// Slot is attachment slot<n> in canvas pixels; false when the sprite has
+// none.
+func (m *Meta) Slot(n int) ([2]float64, bool) {
+	if n < 0 || n >= len(m.Slots) || !m.Slots[n].Set {
+		return [2]float64{}, false
+	}
+	return [2]float64{m.Slots[n].X, m.Slots[n].Y}, true
+}
+
+// setSlot records attachment name when it is slot<n>.
+func (m *Meta) setSlot(name string, p [2]float64) {
+	num, ok := strings.CutPrefix(name, "slot")
+	if !ok {
+		return
+	}
+	n, err := strconv.Atoi(num)
+	if err != nil || n < 0 || n >= MaxSlots {
+		return
+	}
+	for len(m.Slots) <= n {
+		m.Slots = append(m.Slots, SlotPoint{})
+	}
+	m.Slots[n] = SlotPoint{X: p[0], Y: p[1], Set: true}
 }
 
 // PxPerTile is the sprite's baked density: its "ppt", else TilePx.
@@ -104,6 +146,8 @@ func ParseMeta(src string) (Meta, error) {
 			m.PPT, err = strconv.ParseFloat(val, 64)
 		case !nested && key == "gait":
 			m.Gait, err = strconv.ParseFloat(val, 64)
+		case !nested && key == "slot_scale":
+			m.SlotScale, err = strconv.ParseFloat(val, 64)
 		case nested && parent == "tint" && key == "group":
 			m.TintGroup = val
 		case nested && parent == "tint" && key == "mask":
@@ -112,6 +156,9 @@ func ParseMeta(src string) (Meta, error) {
 			var p [2]float64
 			p, err = flatyaml.Pair(val)
 			m.Attach[key] = p
+			if err == nil {
+				m.setSlot(key, p)
+			}
 		}
 		if err != nil {
 			return m, fmt.Errorf("%s: %w", key, err)

@@ -108,8 +108,8 @@ func TestArchitectCategoriesInTwoColumns(t *testing.T) {
 		if !within(b, l.ArchCats) {
 			t.Errorf("%s %+v is outside ArchCats %+v", b.ID, b, l.ArchCats)
 		}
-		if b.W < 92 || b.W > 104 || b.H != 28 {
-			t.Errorf("%s is %vx%v, want about 100x28", b.ID, b.W, b.H)
+		if b.W < 92 || b.W > 104 || b.H != 26 { // 26: seven rows fit a small screen, NST
+			t.Errorf("%s is %vx%v, want about 100x26", b.ID, b.W, b.H)
 		}
 		if b.Selected != (architect.Categories[i].ID == a.arch.Cat) {
 			t.Errorf("%s selected = %v with archCat %q", b.ID, b.Selected, a.arch.Cat)

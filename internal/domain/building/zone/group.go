@@ -41,12 +41,13 @@ func (m *Map) Members(g ID) []ID {
 
 // Link puts building zone id into leader's storage group (starting one
 // named after leader when it has none), taking the group's settings. Both
-// must be building zones of one kind; a zone already in another group
-// leaves it first. It reports whether anything changed.
+// must be building zones of one kind and one profile (a group shares one
+// filter, so a weapon rack never links to a shelf); a zone already in
+// another group leaves it first. It reports whether anything changed.
 func (m *Map) Link(id, leader ID) bool {
 	m.ver++
 	r, l := m.rec(id), m.rec(leader)
-	if r == nil || l == nil || id == leader || !r.z.Kind.Building() || r.z.Kind != l.z.Kind {
+	if r == nil || l == nil || id == leader || !r.z.Kind.Building() || r.z.Kind != l.z.Kind || r.z.Profile != l.z.Profile {
 		return false
 	}
 	if l.z.Group == 0 {

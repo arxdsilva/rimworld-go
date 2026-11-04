@@ -96,7 +96,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Research:
 		return g.lab.Assign(id, workTries) || g.br.ind.Ops(industryHost{g}).Assign(id, false, workTries) || travelOf(g).AssignScan(id, workTries) // game/research, game/industry and game/travel scanners
 	case work.Clean:
-		return g.assignClean(id) || g.snowOf().AssignClear(id) // clean.go, game/snow
+		return cleaningOf(g).Assign(id) || g.snowOf().AssignClear(id) // game/sense, game/snow
 	}
 	return false
 }

@@ -17,7 +17,7 @@ import (
 // Tracked-in dirt (SIM-021): pawns pick dirt up on outdoor soil and field
 // work, leave a trail of it indoors, and wipe it off on entrance carpets.
 // Indoor dirt never fades; colonists clean it inside the Home area
-// (clean.go). Rooms lose impressiveness to it (rooms.go).
+// (game/sense). Rooms lose impressiveness to it (rooms.go).
 //
 // Invariants (checked by TestRoomFilthIncrementalMatchesRebuild):
 //   - nz is exactly the sorted indexes of tiles with dirt;

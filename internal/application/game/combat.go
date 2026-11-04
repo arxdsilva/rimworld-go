@@ -123,6 +123,7 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	g.mind.Downed(id) // mind: the dead keep no break
 	g.spawnCorpse(id)
 	g.dropRaiderGear(id)           // the weapon falls beside the body
+	senseOf(g).Gear.Spill(id)      // game/sense (CSE-036): the pack too; on the road, into the caravan's goods
 	g.combat.Gear.Died(id, killer) // combat/gear.go (CBT-3): a death of wounds is the last attacker's kill
 	g.socialOnDeath(id, killer)    // social_grief.go: relations, grief, killer opinion
 	g.bondsOnDeath(id)             // bonds.go: bonded animals lose their master

@@ -165,6 +165,10 @@ type Zone struct {
 	// linked to (Link), and an edit to one (Update) reaches them all. A
 	// group's id is its first member's zone id, never reused.
 	Group ID
+	// Profile (NST) is the furniture a KindShelf zone lies under when that
+	// furniture sets its own capacity and item ceiling (profile.go). Zero is
+	// a plain shelf, so old saves and state hashes are unchanged.
+	Profile Profile
 }
 
 // compatible: two zones of these settings merge when they touch. Only the
@@ -641,7 +645,7 @@ func (m *Map) Set(id ID, z Zone) {
 	if r == nil {
 		return
 	}
-	z.ID, z.Kind, z.Cells = r.z.ID, r.z.Kind, r.z.Cells
+	z.ID, z.Kind, z.Cells, z.Profile = r.z.ID, r.z.Kind, r.z.Cells, r.z.Profile
 	r.z = z
 	var ids []ID
 	for _, c := range r.idx {
@@ -663,8 +667,8 @@ func (m *Map) Set(id ID, z Zone) {
 }
 
 // Update changes zone id's settings in place with fn (flags, name,
-// stockpile filters). The id, kind, tile count and crop stay whatever fn
-// does, and nothing merges: a crop change goes through Set.
+// stockpile filters). The id, kind, tile count, crop and profile stay
+// whatever fn does, and nothing merges: a crop change goes through Set.
 func (m *Map) Update(id ID, fn func(*Zone)) {
 	m.ver++
 	r := m.rec(id)
@@ -673,7 +677,7 @@ func (m *Map) Update(id ID, fn func(*Zone)) {
 	}
 	z := r.z
 	fn(&z)
-	z.ID, z.Kind, z.Cells, z.Crop, z.Group = r.z.ID, r.z.Kind, r.z.Cells, r.z.Crop, r.z.Group
+	z.ID, z.Kind, z.Cells, z.Crop, z.Group, z.Profile = r.z.ID, r.z.Kind, r.z.Cells, r.z.Crop, r.z.Group, r.z.Profile
 	r.z = z
 	m.share(r.z)
 }

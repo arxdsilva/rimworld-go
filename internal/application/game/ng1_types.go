@@ -1,9 +1,9 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/roster"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
-	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/world/planet"
@@ -83,58 +83,41 @@ type DetailLine struct {
 	Tip     string
 }
 
-// SkillView is one skill row.
-type SkillView struct {
-	Key, Label string
-	Level      int
-	LevelLabel string
-	Passion    int // 0 none, 1 minor, 2 major
-	Incapable  bool
-	XPPct      int
-	SpeedPct   int
-	Affects    string // work it drives
+// The identity read models and the character-creation pool live in
+// game/roster; these are their names for the adapters.
+type (
+	SkillView     = roster.SkillView
+	TraitView     = roster.TraitView
+	BioView       = roster.BioView
+	CandidateView = roster.CandidateView
+	TeamReport    = roster.TeamReport
+	TeamSkill     = roster.TeamSkill
+	CandidatePool = roster.CandidatePool
+)
+
+// NewCandidatePool is roster.NewCandidatePool.
+func NewCandidatePool(seed uint64, fx scenario.Effects) *CandidatePool {
+	return roster.NewCandidatePool(seed, fx)
 }
 
-// TraitView is one trait chip.
-type TraitView struct {
-	Key, Label, Desc, Effects string
-}
+const (
+	MaxNameRunes   = roster.MaxNameRunes
+	WarnNoFighter  = roster.WarnNoFighter
+	WarnNoDoctor   = roster.WarnNoDoctor
+	WarnNoCook     = roster.WarnNoCook
+	WarnNoGrower   = roster.WarnNoGrower
+	WarnNoBuilder  = roster.WarnNoBuilder
+	WarnNoResearch = roster.WarnNoResearch
+	WarnYoungOrOld = roster.WarnYoungOrOld
+)
 
-// BioView is a colonist's identity (pawn Bio tab, character creation).
-type BioView struct {
-	First, Nick, Last string
-	Sex, Build        string
-	AgeYears          int
-	Childhood         string
-	ChildhoodDesc     string
-	Adulthood         string
-	AdulthoodDesc     string
-	Traits            []TraitView
-	Skills            []SkillView
-	Incapable         []string // "Violence (backstory: Convoy mechanic)"
-	Conditions        []string
-	Look              look.Look
-}
-
-// CandidateView is a character-creation candidate.
-type CandidateView struct {
-	BioView
-	Selected bool
-	Index    int
-}
-
-// TeamReport is the Selected colonists' combined skills and gaps.
-type TeamReport struct {
-	Best     []TeamSkill
-	Warnings []string
-}
-
-// TeamSkill is a skill's best level among the Selected and who has it.
-type TeamSkill struct {
-	Key, Label string
-	Level      int
-	Who        string
-}
+// Rename errors (the screen shows err.Error()).
+var (
+	ErrNickRequired = roster.ErrNickRequired
+	ErrNameTooLong  = roster.ErrNameTooLong
+	ErrNameChars    = roster.ErrNameChars
+	ErrNickTaken    = roster.ErrNickTaken
+)
 
 // FactionView is a faction row (setup and colony).
 type FactionView struct {

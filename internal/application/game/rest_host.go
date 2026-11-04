@@ -256,6 +256,7 @@ func (h recHost) Powered(id entity.EntityID) bool { return h.restBodies.g.powere
 func (h recHost) Sky() int                        { return int(skyLight(h.restBodies.g) * 1000) }
 func (h recHost) Sight(id entity.EntityID) int    { return int(h.restBodies.g.capacity(id, body.Sight)) }
 func (h recHost) PawnIDs() []entity.EntityID      { return h.restBodies.g.pawnIDs }
+func (h recHost) Holds(x, y int) bool             { return h.restBodies.g.itemAt(x, y) != 0 }
 func (h recHost) Wealth() int                     { return h.restBodies.g.Wealth() }
 func (h recHost) Joy(id entity.EntityID) int      { return h.restBodies.g.joy[id] }
 func (h recHost) AddJoy(id entity.EntityID, n int) {

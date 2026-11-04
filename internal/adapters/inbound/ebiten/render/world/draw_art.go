@@ -205,10 +205,11 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 				if it.Carried || !l.Near(it.X, it.Y, 2, 2) { // an XL corpse reaches 1.66 tiles (PLAY-022)
 					continue
 				}
+				row := p.Ob.itemRow(&w, it) // objects.go: a stored stack over its piece
 				if it.Forbidden {
-					draws = append(draws, ArtDraw{Row: float64(it.Y) + 0.001, Col: float64(it.X), Kind: objForbidden, I: i})
+					draws = append(draws, ArtDraw{Row: row + 0.001, Col: float64(it.X), Kind: objForbidden, I: i})
 				}
-				draws = append(draws, ArtDraw{Row: float64(it.Y), Col: float64(it.X), Kind: objItem, I: i})
+				draws = append(draws, ArtDraw{Row: row, Col: float64(it.X), Kind: objItem, I: i})
 			}
 		}
 		for _, i := range cv.Frames {

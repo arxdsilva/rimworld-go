@@ -29,6 +29,7 @@ type fakeHost struct {
 	sky     int
 	pawns   []entity.EntityID
 	enjoyed int
+	held    map[[2]int]bool
 	starts  int
 }
 
@@ -66,6 +67,7 @@ func (f *fakeHost) Powered(id entity.EntityID) bool             { return f.power
 func (f *fakeHost) Sky() int                                    { return f.sky }
 func (f *fakeHost) Sight(entity.EntityID) int                   { return 1000 }
 func (f *fakeHost) PawnIDs() []entity.EntityID                  { return f.pawns }
+func (f *fakeHost) Holds(x, y int) bool                         { return f.held[[2]int{x, y}] }
 func (f *fakeHost) Wealth() int                                 { return 0 }
 func (f *fakeHost) Joy(id entity.EntityID) int                  { return f.joy[id] }
 func (f *fakeHost) AddJoy(id entity.EntityID, n int)            { f.joy[id] = recreation.Clamp(f.joy[id] + n) }
@@ -363,6 +365,89 @@ func TestWatchCellsFaceTheScreen(t *testing.T) {
 					t.Fatalf("%s %s: watch cell %v behind the screen at %v", c.k, f, w, fp[0])
 				}
 			}
+		}
+	}
+}
+
+// TestAdmire (NST-G): a display case is admired only while it holds a
+// stack; a sculpture always; the session is a plain Recreate job.
+func TestAdmire(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	f.add(10, construction.Building{Kind: construction.DisplayCase, X: 20, Y: 20})
+	f.pawn(1, 20, 24, 0)
+	s := New(f)
+	if s.Seek(1, 600) {
+		t.Fatal("an empty display case is admired")
+	}
+	f.held = map[[2]int]bool{{20, 20}: true}
+	if !s.Seek(1, 600) || f.jobs[1].Dest != 10 || f.jobs[1].Kind != job.Recreate {
+		t.Fatalf("stocked case: job %+v, want Recreate at 10", f.jobs[1])
+	}
+	if sp := mustSpec(t, construction.DisplayCase); sp.Mode != Admire || sp.Joy != recreation.JoySolitary || sp.Power != 700 || sp.Users != 1 || sp.Verb != "admire" {
+		t.Fatalf("spec %+v", sp)
+	}
+	g := newFake()
+	g.add(11, construction.Building{Kind: construction.SmallSculpture, X: 20, Y: 20})
+	g.pawn(2, 20, 24, 0)
+	if !New(g).Seek(2, 600) || g.jobs[2].Dest != 11 {
+		t.Fatal("a sculpture is not admired")
+	}
+}
+
+// TestAdmireNoFlap: a case whose stack comes and goes every tick cuts the
+// session short, and the colonist then waits RetryTicks before another.
+func TestAdmireNoFlap(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	f.add(10, construction.Building{Kind: construction.RoundPedestal, X: 20, Y: 20})
+	f.pawn(1, 20, 24, 0)
+	f.held = map[[2]int]bool{{20, 20}: true}
+	s := New(f)
+	if !s.Seek(1, 600) {
+		t.Fatal("stocked pedestal not admired")
+	}
+	starts := f.starts
+	for i := 0; i < RetryTicks*2; i++ {
+		f.now++
+		f.held[[2]int{20, 20}] = i%2 == 0
+		if j := f.jobs[1]; j.Active() {
+			s.Do(1, j)
+		} else {
+			s.Seek(1, 600)
+		}
+	}
+	if got := f.starts - starts; got > 2 {
+		t.Fatalf("%d sessions in %d flickering ticks, want at most 2", got, RetryTicks*2)
+	}
+}
+
+// TestAdmireDeterministic: the same setup picks the same pieces twice.
+func TestAdmireDeterministic(t *testing.T) {
+	t.Parallel()
+	pick := func() []entity.EntityID {
+		f := newFake()
+		f.held = map[[2]int]bool{{10, 10}: true, {30, 10}: true}
+		f.add(10, construction.Building{Kind: construction.DisplayCase, X: 10, Y: 10})
+		f.add(11, construction.Building{Kind: construction.LargeSculpture, X: 30, Y: 10})
+		f.add(12, construction.Building{Kind: construction.RoundPedestal, X: 30, Y: 10 + 8})
+		var out []entity.EntityID
+		s := New(f)
+		for pid := entity.EntityID(1); pid <= 3; pid++ {
+			f.pawn(pid, 20, 10+int(pid), 0)
+			if s.Seek(pid, 300) {
+				out = append(out, f.jobs[pid].Dest)
+			}
+		}
+		return out
+	}
+	a, b := pick(), pick()
+	if len(a) == 0 || len(a) != len(b) {
+		t.Fatalf("picks %v vs %v", a, b)
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			t.Fatalf("picks %v vs %v", a, b)
 		}
 	}
 }

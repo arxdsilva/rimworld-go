@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/gameplay"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/storyteller"
@@ -70,8 +71,8 @@ type Saver interface {
 	Load(path string) (slot string, tick clock.Tick, err error)
 }
 
-// Story is what the Story tab borrows from the New Colony wizard and the
-// running colony.
+// Story is what the Story and Habits tabs borrow from the New Colony wizard
+// and the running colony.
 type Story interface {
 	// StoryView is the colony's storyteller, difficulty and save mode.
 	StoryView() game.StoryView
@@ -86,6 +87,9 @@ type Story interface {
 	// OpenCustom opens the Custom difficulty dialog on the colony's values;
 	// accept gets the settings when the player accepts.
 	OpenCustom(v game.StoryView, accept func(difficulty.Settings))
+	// Rules is the colony's habit rules, for the Habits tab (the zero value
+	// outside a colony).
+	Rules() gameplay.Settings
 }
 
 // Shell composes the roles the screen calls with its Host.
