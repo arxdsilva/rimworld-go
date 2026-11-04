@@ -83,6 +83,19 @@ func wrongForZone(p plant.Plant, z zone.Zone) bool {
 	return !p.Zone || p.Species != plant.Species(z.Crop)
 }
 
+// wildPlant: harvesting plant p is Plant cut work, not Grow (HRV-003): no
+// growing zone sowed it and none covers its cell.
+func wildPlant(g *Game, p plant.Plant) bool {
+	_, in := g.zoneAt(p.X, p.Y)
+	return !p.Zone && !in
+}
+
+// plantYield is id's Plant Harvest Yield in permille (HRV-005, HRV-008).
+func (g *Game) plantYield(id entity.EntityID) int {
+	k := keyOf(g.bodies[id]) // body.go: Manipulation and Sight, permille
+	return plant.HarvestYieldPermil(int(g.skillOf(id, skPlants).Level), int(k[1])/10, int(k[2])/10)
+}
+
 // assignZoneClear sends grower id to cut the nearest plant that stands in
 // the way of a growing zone (PLAY-017): a wrong plant (wrongForZone) on a
 // cell that could otherwise be sown now. A ripe one is left to the harvest

@@ -47,9 +47,14 @@ func (g *Game) setPriority(id entity.EntityID, t work.Type, v int) {
 	g.labor.Set(id, p.Mask())
 }
 
-// assignWorkByPriority starts the most urgent work the colonist can do.
+// assignWorkByPriority starts the most urgent work the colonist can do. Only a fire
+// and a patient come before a harvest sweep, and leave the mark (HRV-001).
 func (g *Game) assignWorkByPriority(id entity.EntityID) bool {
 	pr := g.prioOf(id)
+	if g.haul.sweep.Armed(id) && (pr[work.Firefight] > 0 && g.assignWorkType(id, work.Firefight) ||
+		pr[work.Doctor] > 0 && g.care.Doctor.Assign(id) || g.haul.sweep.Next(haulHost{g}, id)) {
+		return true
+	}
 	for p := uint8(1); p <= work.Lowest; p++ {
 		for _, t := range work.Order {
 			if pr[t] == p && g.assignWorkType(id, t) {
@@ -77,27 +82,27 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Warden:
 		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
-		return g.haul.sweep.Next(haulHost{g}, id) || g.haulUrgent(id) || g.fillHoppers(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || // haul_priority.go, trough_feed.go; game/haul: a harvest sweep first (HAUL-003)
-			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || ordersOf(g).AssignHaul(id) || travelOf(g).AssignLoad(id) || travelOf(g).AssignPack(id) || g.assignHaul(id) // FOOD-4: hoppers, barrels; AX-1: open, strip; AX-9: pods
+		return g.haulUrgent(id) || g.assignRefuel(id) || ordersOf(g).AssignHaul(id) || travelOf(g).AssignLoad(id) || travelOf(g).AssignPack(id) || g.assignBury(id) || g.fillHoppers(id) || g.fillTroughs(id) ||
+			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || g.assignHaul(id) // WRK-007: urgent (STO-2), refuel, open, strip (AX-1), travel load (AX-9), corpses, hoppers (FOOD-4), troughs, bills, general
 	case work.Construct:
-		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
-			g.assignConstruct(id) || ordersOf(g).AssignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go; AX-1: uninstall, install
+		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first; WRK-004 and WRK-003 for the rest
+			ordersOf(g).AssignConstruct(id) || g.assignRoof(id) || g.assignConstruct(id) || g.assignDelivery(id) || g.assignRepair(id) || g.assignSmooth(id) // AX-1: uninstall, install
 	case work.Cook, work.Craft:
-		return t == work.Cook && g.fillHoppers(id) || g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // haul_priority.go, craft/shop.go
+		return g.craft.Shop.Assign(id, work.Mask(0).Set(t, true)) // craft/shop.go
 	case work.Hunt:
 		return g.combat.Hunting.Assign(id) // combat/hunt.go
-	case work.Handle: // SIM-026: taming moved here from Hunt
-		return g.assignRope(id) || g.herdOf().AssignTame(id) || g.assignTrain(id) || g.herdOf().AssignRest(id) || (g.tanks != nil && g.tanks.Assign(id)) // rope.go, herd, bonds.go, game/aqua
+	case work.Handle: // SIM-026: taming moved here from Hunt; WRK-005: slaughter and collecting come before it
+		return g.assignRope(id) || g.herdOf().AssignRest(id) || g.herdOf().AssignTame(id) || g.assignTrain(id) || (g.tanks != nil && g.tanks.Assign(id)) // rope.go, herd, bonds.go, game/aqua
 	case work.Grow:
-		return haul.Harvest(haulHost{g}, id) || g.assignSow(id) // game/haul
-	case work.PlantCut: // FOOD-2: cutting split from growing (wiki: Plants)
-		return g.assignCut(id)
+		return haul.Harvest(haulHost{g}, id, haul.RipeCrops) || g.assignSow(id) // game/haul
+	case work.PlantCut: // FOOD-2: cutting split from growing (wiki: Plants); HRV-003: wild harvests first
+		return haul.Harvest(haulHost{g}, id, haul.RipeWild) || g.assignCut(id)
 	case work.Mine:
 		return g.assignMine(id) || g.br.ind.Ops(industryHost{g}).Assign(id, true, workTries) // game/industry: deep drills (AX-4)
 	case work.Research:
 		return g.lab.Assign(id, workTries) || g.br.ind.Ops(industryHost{g}).Assign(id, false, workTries) || travelOf(g).AssignScan(id, workTries) // game/research, game/industry and game/travel scanners
 	case work.Clean:
-		return cleaningOf(g).Assign(id) || g.snowOf().AssignClear(id) // game/sense, game/snow
+		return g.snowOf().AssignClear(id) || cleaningOf(g).Assign(id) // WRK-006; game/snow, game/sense
 	}
 	return false
 }

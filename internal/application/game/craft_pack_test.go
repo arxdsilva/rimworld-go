@@ -445,7 +445,7 @@ func stackFirstGame(t *testing.T, bx, by, zx, zy int) (*Game, entity.EntityID, e
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	senseOf(g).Rules = senseOf(g).Rules.With(gameplay.HaulAllIngredients, false)
 	ada, _ := g.SpawnNamedPawn(1, 1, "Ada")
-	g.setPriority(ada, work.Craft, 1) // hauling, the same priority, would come first (work.Order)
+	g.setPriority(ada, work.Craft, 1) // the bill before any plain hauling
 	bench := buildNow(t, g, construction.Workbench, item.Wood, construction.South, bx, by)
 	g.Apply(command.Command{Kind: command.AddBill, X: bx, Y: by, Recipe: uint8(recipe.Club), Mode: uint8(recipe.DoCount), Count: 1})
 	g.Apply(command.Command{Kind: command.DesignateStockpile, X: zx, Y: zy, X2: zx + 1, Y2: zy + 1})

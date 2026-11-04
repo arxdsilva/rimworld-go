@@ -38,7 +38,8 @@ func RunsBill(k job.Kind) bool {
 
 // WorkTypeOf is the work type whose priority starts a job of kind k (NoneID
 // for free time, needs, drafted orders, and bills: see RunsBill). The kinds
-// follow Game.assignWorkType, which has the only such mapping in the game.
+// follow Game.assignWorkType, which has the only such mapping in the game. A
+// harvest is Grow here; the game answers Plant cut for a wild plant (HRV-003).
 func WorkTypeOf(k job.Kind) int {
 	t := work.NumTypes
 	switch k {

@@ -65,16 +65,16 @@ func (hd *Herd) Do(id entity.EntityID, j job.Record) bool {
 	return true
 }
 
-// Assign is the Handle work giver after roping: feed a downed animal,
-// tame, milk or shear, slaughter (the game's training sits between taming
-// and collecting: AssignTame and AssignRest split around it).
+// AssignTame is the Handle work giver after AssignRest: feed a downed
+// animal, tame (the game's training comes right after it).
 func (hd *Herd) AssignTame(id entity.EntityID) bool {
 	return hd.Feed.Assign(id) || hd.Taming.Assign(id)
 }
 
-// AssignRest is the givers after training: collect, then slaughter.
+// AssignRest is the Handle work giver right after roping (WRK-005):
+// slaughter, then milk or shear.
 func (hd *Herd) AssignRest(id entity.EntityID) bool {
-	return hd.Collect.Assign(id) || hd.Slaughter.Assign(id)
+	return hd.Slaughter.Assign(id) || hd.Collect.Assign(id)
 }
 
 // Holds reports a herd job of id's that keeps animal aid still (the

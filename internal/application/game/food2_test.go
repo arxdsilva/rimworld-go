@@ -217,7 +217,7 @@ func TestPartialHarvestAtSeventyPercent(t *testing.T) {
 	if !p.Designated {
 		t.Fatal("corn at 70 % could not be marked for harvest")
 	}
-	want := p.HarvestYield(g.skillYield(id, skPlants, g.diffYield(DiffCrop, 22)))
+	want := p.HarvestYield(plant.YieldAmount(g.diffYield(DiffCrop, 22), g.plantYield(id)))
 	for i := 0; i < 40 && plantAlive(g, corn); i++ {
 		g.SetNeeds(id, needs.Full, needs.Full)
 		g.Step(100)

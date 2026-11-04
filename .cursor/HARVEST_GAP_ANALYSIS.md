@@ -48,22 +48,23 @@ Yield = table × (100 % + (Manipulation − 100 %) × 30 %) × min(100 %, 100 % 
 
 ## Rows
 
-State: `planned` being done now; `done` shipped; `open` owed to a later change; `kept` differs on purpose.
+State: `done` shipped; `open` owed to a later change; `kept` differs on purpose.
 
 | Id | Gap | Wiki | Before | State |
 |---|---|---|---|---|
-| HRV-001 | Grouping nearby plants | Batched | Sweep tried only in the Haul slot | planned: continues before the priority loop, after Firefight and Doctor |
-| HRV-002 | Sweep ends on a plant outside the allowed area | Work stays in the area | The nearest plant was refused and the sweep ended | planned: the search skips plants outside the area |
-| HRV-003 | Who harvests wild plants | Plant cut; Grow harvests crops | Grow | planned: outside a zone and not sown is Plant cut, otherwise Grow |
-| HRV-004 | Damage | Up to half: 50 % health loses 25 % | 50 % damage lost 50 % | planned |
-| HRV-005 | Yield by level | The table above | Straight line, 72 % at 0, 100 % at 7, 140 % at 20 | planned |
-| HRV-006 | Yield below 100 % | Chance of wasting everything; no smaller amount described | Smaller amount, and a waste chance only under level 4 | planned |
-| HRV-007 | Yield above 100 % | Proportional bonus | Proportional bonus | planned, on the new table |
-| HRV-008 | Manipulation and Sight | 30 % and 20 % weight | Ignored | planned |
-| HRV-009 | Speed by level | 8 % + 11.5 % per level, minimum 10 %: 10 % at 0, 100 % at 8, 238 % at 20 | 58 % at 0, 100 % at 7, 178 % at 20 | planned |
-| HRV-010 | By-product of a wasted harvest | "The entire harvest will be wasted" | Straw still dropped | planned |
+| HRV-001 | Grouping nearby plants | Batched | Sweep tried only in the Haul slot | done: continues before the priority loop, after a fire and a patient. Operations, animal care and Doctor bench bills wait for the field |
+| HRV-002 | Sweep ends on a plant outside the allowed area | Work stays in the area | The nearest plant was refused and the sweep ended | done: the search skips plants outside the area |
+| HRV-003 | Who harvests wild plants | Plant cut; Grow harvests crops | Grow | done: outside a zone and not sown is Plant cut, otherwise Grow |
+| HRV-004 | Damage | Up to half: 50 % health loses 25 % | 50 % damage lost 50 % | done |
+| HRV-005 | Yield by level | The table above | Straight line, 72 % at 0, 100 % at 7, 140 % at 20 | done |
+| HRV-006 | Yield below 100 % | Chance of wasting everything; no smaller amount described | Smaller amount, and a waste chance only under level 4 | done |
+| HRV-007 | Yield above 100 % | Proportional bonus | Proportional bonus | done, on the new table |
+| HRV-008 | Manipulation and Sight | 30 % and 20 % weight | Ignored | done |
+| HRV-009 | Speed by level | 8 % + 11.5 % per level, minimum 10 %: 10 % at 0, 100 % at 8, 238 % at 20 | 58 % at 0, 100 % at 7, 178 % at 20 | done |
+| HRV-010 | By-product of a wasted harvest | "The entire harvest will be wasted" | Straw still dropped | done |
 | HRV-101 | Plants specialist, Field hand and other offsets | Listed | Absent: no such role or implant | open |
 | HRV-102 | Drug crops use another stat | Listed | No drug crops (FOOD scope) | open |
+| HRV-103 | Sight in Plant Work Speed | 30 % importance, 100 % limit | Not applied; the speed runs on the per-tick path and the package is at its line ceiling | open |
 
 ## Already matching
 

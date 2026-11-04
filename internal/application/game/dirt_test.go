@@ -290,6 +290,7 @@ func TestWheatExtraStraw(t *testing.T) {
 	g := dirtGame(t)
 	scheduleAll(g, schedule.Work)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	setSkill(g, id, skPlants, 8) // HRV-005, HRV-009: full speed and yield, no waste roll
 	pid, err := g.spawnPlant(plant.Wheat, 6, 5, plant.DefOf(plant.Wheat).GrowTicks)
 	if err != nil {
 		t.Fatal(err)
@@ -309,6 +310,7 @@ func TestCottonYieldsCloth(t *testing.T) {
 	t.Parallel()
 	g := dirtGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	setSkill(g, id, skPlants, 8) // HRV-005, HRV-009: full speed and yield, no waste roll
 	pid, _ := g.spawnPlant(plant.Cotton, 6, 5, plant.DefOf(plant.Cotton).GrowTicks)
 	g.doHarvest(id, job.Record{Kind: job.Harvest, State: job.Do, Target: pid, TX: 6, TY: 5, WorkLeft: 1})
 	if c, ok := stackOf(g, item.Cloth); !ok || c.Qty != plant.DefOf(plant.Cotton).Yield {

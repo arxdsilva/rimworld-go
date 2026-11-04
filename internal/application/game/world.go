@@ -281,7 +281,7 @@ func (g *Game) scanMineList() [][2]int {
 }
 
 func (g *Game) assignCut(id entity.EntityID) bool {
-	best := g.nearestPlant(id, job.Cut, func(p plant.Plant) bool { return p.Cut })
+	best := g.nearestPlant(id, job.Cut, func(p plant.Plant) bool { return p.Cut && g.areaAllows(id, p.X, p.Y) }) // HRV-002
 	if best == 0 {
 		return g.assignCutGrass(id) // grass.go: marked grass after plants
 	}
@@ -334,7 +334,7 @@ func (g *Game) doCut(id entity.EntityID, j job.Record) {
 		return
 	}
 	wood, d := p.WoodYield(), plant.DefOf(p.Species)
-	if n := p.HarvestYield(g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield))); n > 0 {
+	if n := p.HarvestYield(plant.YieldAmount(g.diffYield(DiffCrop, d.Yield), g.plantYield(id))); n > 0 {
 		g.dropStack(d.Yields, n, p.X, p.Y) // FOOD-2: a crop cut from 65 % gives its harvest (wiki: Plants)
 	}
 	g.removePlant(j.Target)

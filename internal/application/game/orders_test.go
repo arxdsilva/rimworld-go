@@ -236,10 +236,16 @@ func TestOrdersAtReasons(t *testing.T) {
 	}
 	g.SpawnStack(item.Wood, 5, 8, 2)
 	g.SetWork(id, work.Haul, false)
+	g.SetWork(id, work.Construct, false)
 	if o := g.OrdersAt(id, 5, 2)[1]; !o.Disabled || o.Reason != ReasonNoHaul {
-		t.Fatalf("haul disabled: %+v", o)
+		t.Fatalf("haul and construct disabled: %+v", o)
+	}
+	g.SetWork(id, work.Construct, true) // a delivery is Construct work too
+	if o := g.OrdersAt(id, 5, 2)[1]; o.Disabled {
+		t.Fatalf("construct alone should supply: %+v", o)
 	}
 	g.SetWork(id, work.Haul, true)
+	g.SetWork(id, work.Construct, false)
 	o := g.OrdersAt(id, 5, 2)[1]
 	if o.Disabled || o.Cmd.Kind != command.Prioritize || o.Cmd.Order != command.OrderSupply {
 		t.Fatalf("supply should be available: %+v", o)

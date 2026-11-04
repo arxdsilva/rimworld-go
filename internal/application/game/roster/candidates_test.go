@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/trait"
 	"rimworld-go/internal/domain/scenario"
+	"rimworld-go/internal/domain/world/plant"
 )
 
 const poolSeed = 0x5EED_CAFE
@@ -327,7 +328,7 @@ func TestBioOfFields(t *testing.T) {
 		}
 	}
 	if s := v.Skills[skill.Plants]; s.Incapable || s.Level != 12 || s.LevelLabel != "Expert" || s.Passion != 2 ||
-		s.XPPct != 25 || s.Affects == "" || s.SpeedPct != skill.SpeedPermil(12)/10 {
+		s.XPPct != 25 || s.Affects == "" || s.SpeedPct != plant.WorkSpeedPermil(12)/10 { // HRV-009
 		t.Fatalf("plants %+v", s)
 	}
 	if s := v.Skills[skill.Social]; s.SpeedPct != 0 || s.Level != 7 {
@@ -345,13 +346,17 @@ func TestBioOfFields(t *testing.T) {
 		t.Fatalf("tireless construction speed %d%%, want 120", s.SpeedPct)
 	}
 
-	// A legacy pawn: no backstories, all skills neutral at 100%.
+	// A legacy pawn: no backstories, all skills neutral at 100% (Plants on its own curve, HRV-009).
 	lv := BioOf(pawngen.Legacy(7, "Mira", 5, 5, 6))
 	if lv.Childhood != "—" || lv.Adulthood != "—" || lv.Nick != "Mira" || lv.Sex != "Male" || lv.Incapable != nil || lv.Traits != nil {
 		t.Fatalf("legacy %+v", lv)
 	}
 	for _, s := range lv.Skills {
-		if s.Level != skill.Neutral || (s.Key != "social" && s.SpeedPct != 100) {
+		want := 100
+		if s.Key == "plants" {
+			want = plant.WorkSpeedPermil(skill.Neutral) / 10
+		}
+		if s.Level != skill.Neutral || (s.Key != "social" && s.SpeedPct != want) {
 			t.Fatalf("legacy skill %+v", s)
 		}
 	}

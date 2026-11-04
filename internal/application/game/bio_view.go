@@ -102,7 +102,7 @@ func fillPawnCard(g *Game, c *dossierview.Card, id entity.EntityID, now uint64) 
 		Animals: int(g.skillOf(id, skill.Animals).Level), Cooking: int(g.skillOf(id, skill.Cooking).Level),
 		Medicine: int(g.skillOf(id, skill.Medicine).Level), Melee: g.meleeOf(id),
 		MineYieldPct:         g.skillPct(id, skill.Mining, 4, 60, 140) * g.diffScale(DiffMine, 100) / 100,
-		CropYieldPct:         g.skillPct(id, skill.Plants, 4, 60, 140) * g.diffScale(DiffCrop, 100) / 100,
+		CropYieldPct:         g.plantYield(id) * g.diffScale(DiffCrop, 100) / 1000,
 		ButcherDifficultyPct: g.diffScale(DiffButcher, 100),
 	})
 }
@@ -123,8 +123,12 @@ func pawnRelation(g *Game, id entity.EntityID) dossierview.Relation {
 	return dossierview.RelationOwn
 }
 
-// workTypeOfJob is the work type of job j: a bill's is its recipe's.
+// workTypeOfJob is the work type of job j: a bill's is its recipe's, a wild
+// plant's harvest is Plant cut (HRV-003).
 func workTypeOfJob(g *Game, j job.Record) int {
+	if p, ok := g.plants.Get(j.Target); ok && j.Kind == job.Harvest && wildPlant(g, p) {
+		return dossierview.WorkTypeOf(job.Cut)
+	}
 	if !dossierview.RunsBill(j.Kind) {
 		return dossierview.WorkTypeOf(j.Kind)
 	}

@@ -228,7 +228,13 @@ func TestGrownGolden(t *testing.T) {
 	// for a clear sky. With every habit off this fixture's hash is the one
 	// f7631b72a gives (seeds 7 and 3, 8000 ticks), so nothing moved outside the
 	// toggles. Stable over -count=2.
-	const want uint64 = 0xba1495be71601c63
+	//
+	// Re-pinned (WRK-001, HRV-001..010): the tie-break between work types and the
+	// order inside them follow the wiki, a harvest sweep goes on before the priority
+	// loop, and harvests use its yield and speed numbers. The year proof compared with
+	// the commit before: same meals eaten, no deaths, no malnutrition, food within 6 %
+	// at each ten-day mark past the first. Same hash on arm64 and amd64.
+	const want uint64 = 0x7623a063b8e7b5be
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

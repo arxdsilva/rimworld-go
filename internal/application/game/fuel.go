@@ -29,8 +29,6 @@ import (
 
 const (
 	refuelWork = 30
-	// oilWood: one ember oil burns as long as this many logs (SIM-026).
-	oilWood = 3
 	// the fuel table's numbers (game/industry/fuel.go)
 	torchLogs, torchBurn, generatorBurn, chemfuelTicks = industry.TorchLogs, industry.TorchBurn, industry.GeneratorBurn, industry.ChemfuelTicks
 )
@@ -154,29 +152,10 @@ func (g *Game) burnFuel() {
 
 // --- refuelling ------------------------------------------------------------
 
-// fuelTicks is how long one item of kind k burns (0: not a fuel): a log
-// TicksPerWood, an ember oil oilWood logs' worth.
-func fuelTicks(k item.Kind) int {
-	switch k {
-	case item.Wood:
-		return TicksPerWood
-	case item.EmberOil:
-		return oilWood * TicksPerWood
-	case item.Chemfuel:
-		return chemfuelTicks
-	case item.Hay, item.Kibble: // FISH-*: fish feed, as raw plant food below
-		return rules.FeedItemTicks
-	}
-	if (recipe.Input{AnyVeg: true}).Accepts(k) {
-		return rules.FeedItemTicks
-	}
-	return 0
-}
-
 // fuelRoom is how many items of fuel k burner bid takes before it is full
 // (a part-burnt one rounds up).
 func (g *Game) fuelRoom(bid entity.EntityID, k item.Kind) int {
-	per := fuelTicks(k)
+	per := industry.FuelTicks(k)
 	if per <= 0 {
 		return 0
 	}
@@ -273,7 +252,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 	}
 	if j.Carry == 0 {
 		st, ok := g.stacks.Get(j.Target)
-		if !ok || st.Carrier != 0 || fuelTicks(st.Kind) == 0 {
+		if !ok || st.Carrier != 0 || industry.FuelTicks(st.Kind) == 0 {
 			j.State, j.Fail = job.Fail, job.TargetGone
 			g.jobs.Set(id, j)
 			return
@@ -316,7 +295,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 	full := g.fuelCap(j.Dest)
 	if st, ok := g.stacks.Get(j.Carry); ok && len(j.Route) > 0 {
 		give := min(st.Qty, g.fuelRoom(j.Dest, st.Kind))
-		g.setFuel(j.Dest, min(full, g.fuel[j.Dest]+give*fuelTicks(st.Kind)))
+		g.setFuel(j.Dest, min(full, g.fuel[j.Dest]+give*industry.FuelTicks(st.Kind)))
 		if st.Qty -= give; st.Qty > 0 {
 			g.putStack(j.Carry, st)
 			j.RouteI = len(j.Route)
@@ -326,7 +305,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 			return
 		}
 	} else if ok {
-		g.setFuel(j.Dest, min(full, g.fuel[j.Dest]+st.Qty*fuelTicks(st.Kind)))
+		g.setFuel(j.Dest, min(full, g.fuel[j.Dest]+st.Qty*industry.FuelTicks(st.Kind)))
 	}
 	g.deleteItem(j.Carry)
 	j.Carry = 0

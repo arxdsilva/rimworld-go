@@ -118,11 +118,12 @@ func TestHarvestSweepPicksTheFieldBeforeHauling(t *testing.T) {
 	sweepAll(t, g, id, bushes)
 }
 
-// TestHarvestSweepSkipsAFarPlant: a ripe bush 20 tiles off is left for
-// later; the grower hauls the first pile first.
+// TestHarvestSweepSkipsAFarPlant: with hauling at priority 1, a ripe bush 20
+// tiles off is left for later; the grower hauls the first pile first.
 func TestHarvestSweepSkipsAFarPlant(t *testing.T) {
 	t.Parallel()
 	g, id, bushes := sweepScene(t, 1, 4, 26)
+	setPrio(g, id, command.WorkHaul, 1) // Plant cut comes before Haul at equal priority (WRK-001)
 	firstHarvestDone(t, g, id, bushes)
 	j := untilJob(t, g, id, 2000, func(j job.Record) bool { return j.Kind == job.Haul || j.Kind == job.Harvest && j.Target == bushes[1] })
 	if j.Kind != job.Haul {
@@ -133,9 +134,10 @@ func TestHarvestSweepSkipsAFarPlant(t *testing.T) {
 	}
 }
 
-// TestHarvestSweepNeedsGrow: a grower whose Grow work is turned off while
-// it picks a prioritized bush does not go on to the next one.
-func TestHarvestSweepNeedsGrow(t *testing.T) {
+// TestHarvestSweepNeedsTheWork: a picker whose Plant cut work, which wild
+// bushes are (HRV-003), is turned off while it picks a prioritized bush does
+// not go on to the next one.
+func TestHarvestSweepNeedsTheWork(t *testing.T) {
 	t.Parallel()
 	g, id, bushes := sweepScene(t, 1, 4, 6)
 	setPrio(g, id, command.WorkHaul, 0) // nothing else to do: the second bush is left alone
@@ -143,17 +145,17 @@ func TestHarvestSweepNeedsGrow(t *testing.T) {
 	if j, _ := g.jobs.Get(id); j.Kind != job.Harvest || !j.Forced || j.Target != bushes[0] {
 		t.Fatalf("forced job %+v, want the harvest of the first bush", j)
 	}
-	setPrio(g, id, command.WorkGrow, 0)
+	setPrio(g, id, command.WorkPlantCut, 0)
 	setPrio(g, id, command.WorkHaul, 3)
 	firstHarvestDone(t, g, id, bushes)
 	for range 2000 {
 		g.Step(1)
 		if j, _ := g.jobs.Get(id); j.Kind == job.Harvest {
-			t.Fatalf("a grower with Grow off picked again: %+v", j)
+			t.Fatalf("a picker with Plant cut off picked again: %+v", j)
 		}
 	}
 	if g.haul.sweep.Armed(id) {
-		t.Fatal("the mark stayed with Grow off")
+		t.Fatal("the mark stayed with Plant cut off")
 	}
 }
 
@@ -194,13 +196,13 @@ func TestHarvestSweepDraftStops(t *testing.T) {
 	}
 }
 
-// TestHarvestSweepBeatsAnUrgentHaul: with Haul at priority 1 and Grow at
+// TestHarvestSweepBeatsAnUrgentHaul: with Haul at priority 1 and Plant cut at
 // 3, a sweep already started still picks the whole field first.
 func TestHarvestSweepBeatsAnUrgentHaul(t *testing.T) {
 	t.Parallel()
 	g, id, bushes := sweepScene(t, 1, 4, 6, 8, 10, 12)
 	setPrio(g, id, command.WorkHaul, 1)
-	setPrio(g, id, command.WorkGrow, 3)
+	setPrio(g, id, command.WorkPlantCut, 3)
 	sweepAll(t, g, id, bushes)
 }
 

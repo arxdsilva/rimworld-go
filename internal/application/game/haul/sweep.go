@@ -12,17 +12,17 @@ import (
 // the game's marked-plant index, so a sweep never walks the plants.
 type SweepHost interface {
 	Harvester
-	// GrowOn reports whether pawn id does Grow work (priority above 0).
-	GrowOn(id entity.EntityID) bool
+	// HarvestWork is the plants pawn id's work types take (priority above 0).
+	HarvestWork(id entity.EntityID) Ripe
 	// Position is pawn id's cell.
 	Position(id entity.EntityID) (x, y int)
 }
 
-// Sweep is the colonists who just finished a harvest (HAUL-003): before
-// they haul anything they pick every ripe marked plant within Radius of
-// where they stand, so a field is cleared before its piles are carried
-// (and haul.Plan gathers them in one load). The marks are a sorted id
-// list: deterministic to walk and to save.
+// Sweep is the colonists who just finished a harvest (HAUL-003, HRV-001):
+// before any other work but their firefighting and doctoring they pick every
+// ripe marked plant within Radius of where they stand, so a field is cleared
+// before its piles are carried (and haul.Plan gathers them in one load). The
+// marks are a sorted id list: deterministic to walk and to save.
 type Sweep struct {
 	armed []entity.EntityID
 }
@@ -48,17 +48,17 @@ func (s *Sweep) Disarm(id entity.EntityID) {
 }
 
 // Next starts marked pawn id's next harvest: the nearest ripe marked plant
-// when it lies within Radius (Chebyshev, the plant search's own measure)
-// of the pawn and Grow work is on. It reports whether one started;
-// otherwise the mark goes, so the sweep ends once and the pawn hauls
+// its work types take (HRV-003), when it lies within Radius (Chebyshev, the
+// plant search's own measure) of the pawn. It reports whether one started;
+// otherwise the mark goes, so the sweep ends once and the pawn works on
 // without a plant that ripens later pulling it back (hysteresis: only a
 // finished harvest marks again). An unmarked pawn returns false at once.
 func (s *Sweep) Next(h SweepHost, id entity.EntityID) bool {
 	if !s.Armed(id) {
 		return false
 	}
-	if h.GrowOn(id) {
-		t, x, y, ok := h.NearestRipe(id)
+	if takes := h.HarvestWork(id); takes != 0 {
+		t, x, y, ok := h.NearestRipe(id, takes)
 		px, py := h.Position(id)
 		if ok && pathing.Dist(px, py, x, y) <= Radius && h.StartHarvest(id, t) {
 			return true

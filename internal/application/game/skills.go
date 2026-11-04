@@ -46,8 +46,6 @@ const (
 	// workingTicks: a pawn counts as doing skilled work (passion joy)
 	// this long after its last unit of progress.
 	workingTicks = 2
-	// fumbleBelow: harvesting below this Plants level may fail.
-	fumbleBelow = 4
 	// lovesWorkMajor is the passion thought for a major passion.
 	lovesWorkMajor = 4
 )
@@ -355,10 +353,10 @@ func (g *Game) workProgressPct(id entity.EntityID, sk skill.ID, hasSkill bool, p
 		return 0
 	}
 	rate := int64(1000)
-	if fx := g.sk.stats[id]; fx != nil && !fx.neutral || hasSkill && g.skillOf(id, sk).Level != skill.Neutral || pct != 100 {
+	if fx := g.sk.stats[id]; fx != nil && !fx.neutral || hasSkill && roster.LevelSpeed(sk, g.skillOf(id, sk).Level) != 1000 || pct != 100 {
 		rate = int64(g.statOf(id, stat.WorkSpeed)) * int64(pct) / 100
 		if hasSkill {
-			rate = rate * int64(skill.SpeedPermil(g.skillOf(id, sk).Level)) / 1000
+			rate = rate * int64(roster.LevelSpeed(sk, g.skillOf(id, sk).Level)) / 1000
 			if fx := g.sk.stats[id]; fx != nil {
 				rate = rate * int64(fx.workPct[sk]) / 100
 			}
@@ -542,9 +540,9 @@ func (g *Game) skillPct(id entity.EntityID, sk skill.ID, perLevel, lo, hi int) i
 	return min(max(100+perLevel*(l-skill.Neutral), lo), hi)
 }
 
-// skillYield scales a harvest/mining/butcher yield by sk: ×clamp(100 +
-// 4·(L−7), 60, 140)% (exact for a neutral pawn). Positive yields stay at
-// least 1.
+// skillYield scales a mining yield by sk (plants have plant.YieldAmount):
+// ×clamp(100 + 4·(L−7), 60, 140)% (exact for a neutral pawn). Positive yields
+// stay at least 1.
 func (g *Game) skillYield(id entity.EntityID, sk skill.ID, qty int) int {
 	pct := g.skillPct(id, sk, 4, 60, 140)
 	if pct == 100 || qty <= 0 {
@@ -562,16 +560,6 @@ func (g *Game) butcherYield(id entity.EntityID, qty int) int {
 
 // ReasonSkill refuses work the colonist is not skilled enough for.
 const ReasonSkill = "not skilled enough"
-
-// fumbled reports a failed harvest: below Plants 4 a harvest fails
-// (4−L)·6% of the time. Neutral pawns never roll (no rng use).
-func (g *Game) fumbled(id entity.EntityID) bool {
-	l := int(g.skillOf(id, skill.Plants).Level)
-	if l >= fumbleBelow {
-		return false
-	}
-	return g.rng.IntN(100) < (fumbleBelow-l)*6
-}
 
 // meleeOf is id's melee numbers for the wiki's hit and dodge curves
 // (CBT-2): its Melee level (a creature has none), Sight, Manipulation and

@@ -35,6 +35,7 @@ const (
 	ReasonNoHaul      = "hauling disabled"
 	ReasonNoConstruct = "construction disabled"
 	ReasonNoGrow      = "growing disabled"
+	ReasonNoPlantCut  = "plant cutting disabled"
 	ReasonNoWood      = "no free wood"
 	ReasonNotReady    = "needs wood first"
 	ReasonSupplied    = "already supplied"
@@ -129,7 +130,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok {
 			return job.Record{}, ReasonGone
 		}
-		if !m.Enabled(work.Haul) {
+		if !m.Enabled(work.Haul) && !m.Enabled(work.Construct) { // the wiki lists deliveries under both
 			return job.Record{}, ReasonNoHaul
 		}
 		if fr.Ready() {
@@ -164,7 +165,9 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok {
 			return job.Record{}, ReasonGone
 		}
-		if !m.Enabled(work.Grow) {
+		if wild := wildPlant(g, p); wild && !m.Enabled(work.PlantCut) { // HRV-003
+			return job.Record{}, ReasonNoPlantCut
+		} else if !wild && !m.Enabled(work.Grow) {
 			return job.Record{}, ReasonNoGrow
 		}
 		if !p.HarvestableNow() { // FOOD-2: from 65 % growth
@@ -199,7 +202,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.PlantCut) { // FOOD-2: its own work type
-			return job.Record{}, ReasonNoGrow
+			return job.Record{}, ReasonNoPlantCut
 		}
 		if r := g.busyBy(id, pid); r != "" {
 			return job.Record{}, r

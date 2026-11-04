@@ -106,5 +106,7 @@ func (p Priorities) Set(t Type, v int) Priorities {
 	return p
 }
 
-// Order is the tie-break among work types sharing a priority.
-var Order = []Type{Firefight, Doctor, Warden, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, PlantCut, Mine, Research, Clean}
+// Order is the tie-break among work types sharing a priority, and the Work
+// tab's left-to-right order (WRK-001, wiki: Work): hauling comes near the end,
+// so a grower clears the field and a builder builds before piles are carried.
+var Order = []Type{Firefight, Doctor, Warden, Handle, Cook, Hunt, Construct, Grow, Mine, PlantCut, Craft, Haul, Clean, Research}

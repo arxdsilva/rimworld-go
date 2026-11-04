@@ -832,6 +832,12 @@ func (g *Game) assignEat(id entity.EntityID) {
 
 func (g *Game) assignHaul(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
+	return g.assignDelivery(id) || g.haulToStockpile(id, pos, g.itemIDs, 0) // nothing to supply (or it fell through)
+}
+
+// assignDelivery carries materials to frames: Construct and Haul work both (WRK-003).
+func (g *Game) assignDelivery(id entity.EntityID) bool {
+	pos, _ := g.positions.Get(id)
 	for range workTries {
 		rec, shares, ok := g.planDelivery(id, pos)
 		if !ok {
@@ -844,7 +850,7 @@ func (g *Game) assignHaul(id entity.EntityID) bool {
 			break // not out of reach: planning again picks the same load
 		}
 	}
-	return g.haulToStockpile(id, pos, g.itemIDs, 0) // nothing to supply (or it fell through)
+	return false
 }
 
 // haulToStockpile carries the nearest loose stack to a stockpile, trying
@@ -852,7 +858,7 @@ func (g *Game) assignHaul(id entity.EntityID) bool {
 // SIM-027), at most workTries stacks; kinds with no stockpile room are
 // skipped once found full. It looks among ids (every item, or the urgent
 // ones, STO-2) and with dest set only stores in zones of that kind (a
-// cook filling hoppers).
+// hauler filling hoppers).
 func (g *Game) haulToStockpile(id entity.EntityID, pos Position, ids []entity.EntityID, dest zone.Kind) bool {
 	var tried []entity.EntityID
 	var full []item.Kind
@@ -1062,10 +1068,14 @@ func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity
 	})
 }
 
-// NearestRipe, StartHarvest and GrowOn make haulHost game/haul's SweepHost.
-func (h haulHost) GrowOn(id entity.EntityID) bool { return h.g.prioOf(id)[work.Grow] > 0 }
-func (h haulHost) NearestRipe(id entity.EntityID) (entity.EntityID, int, int, bool) {
-	t := h.g.nearestPlant(id, job.Harvest, haul.WantsHarvest)
+// NearestRipe, StartHarvest and HarvestWork make haulHost game/haul's SweepHost.
+func (h haulHost) HarvestWork(id entity.EntityID) haul.Ripe {
+	return haul.RipeFor(h.g.prioOf(id)[work.Grow] > 0, h.g.prioOf(id)[work.PlantCut] > 0)
+}
+func (h haulHost) NearestRipe(id entity.EntityID, takes haul.Ripe) (entity.EntityID, int, int, bool) {
+	t := h.g.nearestPlant(id, job.Harvest, func(p plant.Plant) bool { // HRV-002: startJob would refuse the area's outside
+		return haul.WantsHarvest(p) && takes.Takes(wildPlant(h.g, p)) && h.g.areaAllows(id, p.X, p.Y)
+	})
 	p, ok := h.g.plants.Get(t)
 	return t, p.X, p.Y, ok && t != 0
 }
@@ -1514,16 +1524,16 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	d := plant.DefOf(p.Species)
-	if g.fumbled(id) { // low Plants skill: nothing comes of it (skills.go)
+	d, y := plant.DefOf(p.Species), g.plantYield(id)
+	if w := plant.WasteChancePermil(y); w > 0 && g.rng.IntN(1000) < w { // HRV-006, HRV-010: all of it wasted, the by-product too
 		pos, _ := g.positions.Get(id)
 		g.message(pos.X, pos.Y, "%s fumbled the harvest.", g.name(id))
 	} else {
-		// a frost- or heat-damaged plant yields (100 - Damage)% (PLAY-016), from 65 % growth (FOOD-2)
-		g.dropStack(d.Yields, p.HarvestYield(g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield))), p.X, p.Y)
-	}
-	if n := p.HarvestYield(d.ExtraQty); n > 0 { // FOOD-2: half at 65 % growth, none blighted
-		g.dropStack(d.Extra, n, p.X, p.Y) // a by-product: straw with wheat
+		// a frost- or heat-damaged plant yields less (PLAY-016, HRV-004), from 65 % growth (FOOD-2)
+		g.dropStack(d.Yields, p.HarvestYield(plant.YieldAmount(g.diffYield(DiffCrop, d.Yield), y)), p.X, p.Y)
+		if n := p.HarvestYield(d.ExtraQty); n > 0 { // FOOD-2: half at 65 % growth, none blighted
+			g.dropStack(d.Extra, n, p.X, p.Y) // a by-product: straw with wheat
+		}
 	}
 	if d.Regrows {
 		p.Growth = d.GrowTicks * d.RegrowTo / 100

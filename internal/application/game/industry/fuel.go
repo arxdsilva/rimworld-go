@@ -3,6 +3,8 @@ package industry
 import (
 	"rimworld-go/internal/domain/building/aqua"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 )
 
 // The shared fuel table (PLAY-021, moved here from game/fuel.go by AX-4):
@@ -71,4 +73,26 @@ func FuelSpec(k construction.Kind) (Fuel, bool) {
 		return Fuel{CapTicks: aqua.FeedFull, Below: aqua.FeedBelow, BurnPermil: 1000}, true
 	}
 	return Fuel{}, false
+}
+
+// oilWood: one ember oil burns as long as this many logs (SIM-026).
+const oilWood = 3
+
+// FuelTicks is how long one item of kind k burns (0: not a fuel): a log
+// TicksPerWood, an ember oil oilWood logs' worth.
+func FuelTicks(k item.Kind) int {
+	switch k {
+	case item.Wood:
+		return TicksPerWood
+	case item.EmberOil:
+		return oilWood * TicksPerWood
+	case item.Chemfuel:
+		return ChemfuelTicks
+	case item.Hay, item.Kibble: // FISH-*: fish feed, as raw plant food below
+		return aqua.FeedItemTicks
+	}
+	if (recipe.Input{AnyVeg: true}).Accepts(k) {
+		return aqua.FeedItemTicks
+	}
+	return 0
 }

@@ -151,8 +151,9 @@ func TestTopOffJobsDoNotFlap(t *testing.T) {
 // their first Recreation hours just topped off (the case the rule is for: a normal
 // day reaches that only some evenings). It counts, over colonists and ticks, the
 // ticks in Recreation hours, those spent on real work, those asleep in a Sleep hour
-// (a nap in a free hour gives way to the work, by design) and those hungry.
-func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept, hungry int) {
+// (a nap in a free hour gives way to the work, by design), those hungry and not at or
+// on the way to a meal, and the longest hungry spell of any colonist.
+func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept, unfed, longest int) {
 	t.Helper()
 	g := NewColony(Config{Seed: 1, Width: 48, Height: 40})
 	s := senseOf(g)
@@ -160,6 +161,7 @@ func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept,
 	applyNow(g, command.Command{Kind: command.DesignateCut, X: 0, Y: 0, X2: 47, Y2: 39})
 	applyNow(g, command.Command{Kind: command.DesignateMine, X: 0, Y: 0, X2: 47, Y2: 39})
 	seen := map[entity.EntityID]bool{}
+	spell := map[entity.EntityID]int{}
 	for i := 0; i < ticks; i++ {
 		g.Step(1)
 		for _, id := range g.pawnIDs {
@@ -171,7 +173,13 @@ func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept,
 				slept++
 			}
 			if n, _ := g.need.Get(id); n.Hungry() {
-				hungry++
+				spell[id]++
+				longest = max(longest, spell[id])
+				if !j.Kind.Eating() {
+					unfed++
+				}
+			} else {
+				spell[id] = 0
 			}
 			if g.activityOf(id) != schedule.Recreation {
 				continue
@@ -186,7 +194,7 @@ func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept,
 			}
 		}
 	}
-	return hours, worked, slept, hungry
+	return hours, worked, slept, unfed, longest
 }
 
 // TestRecreationBlockWorksWhenFull is the balance change whole: a default colony
@@ -194,18 +202,23 @@ func workedInRecreation(t *testing.T, on bool, ticks int) (hours, worked, slept,
 func TestRecreationBlockWorksWhenFull(t *testing.T) {
 	t.Parallel()
 	ticks := 40000 // past the evening's Recreation hours from 08:00
-	hoursOff, workedOff, sleptOff, hungryOff := workedInRecreation(t, false, ticks)
-	hoursOn, workedOn, sleptOn, hungryOn := workedInRecreation(t, true, ticks)
-	t.Logf("recreation hours: off %d of %d colonist-ticks at work, on %d of %d (%.1f%%); sleep %d to %d, hungry %d to %d",
-		workedOff, hoursOff, workedOn, hoursOn, 100*float64(workedOn)/float64(max(hoursOn, 1)), sleptOff, sleptOn, hungryOff, hungryOn)
+	hoursOff, workedOff, sleptOff, unfedOff, longestOff := workedInRecreation(t, false, ticks)
+	hoursOn, workedOn, sleptOn, unfedOn, longestOn := workedInRecreation(t, true, ticks)
+	t.Logf("recreation hours: off %d of %d colonist-ticks at work, on %d of %d (%.1f%%); sleep %d to %d, hungry away from a meal %d to %d, longest hunger %d to %d",
+		workedOff, hoursOff, workedOn, hoursOn, 100*float64(workedOn)/float64(max(hoursOn, 1)), sleptOff, sleptOn, unfedOff, unfedOn, longestOff, longestOn)
 	if hoursOn == 0 || workedOn <= workedOff {
 		t.Fatalf("rule on: %d worked of %d, rule off %d of %d", workedOn, hoursOn, workedOff, hoursOff)
 	}
 	if sleptOn < sleptOff*9/10 {
 		t.Fatalf("slept %d, was %d: a topped-off colonist must keep its bedtime", sleptOn, sleptOff)
 	}
-	if hungryOn > hungryOff*5/4+200 {
-		t.Fatalf("hungry %d, was %d: a topped-off colonist must keep eating", hungryOn, hungryOff)
+	// A hungry colonist drops the work at once. It may have further to walk: a worker
+	// is out in the field when the meal comes due, an idler is next to the food.
+	if unfedOn > unfedOff*5/4+200 {
+		t.Fatalf("hungry and not going to eat %d ticks, was %d: a topped-off colonist must keep eating", unfedOn, unfedOff)
+	}
+	if longestOn > longestOff+600 { // a walk across this 48x40 map
+		t.Fatalf("longest hunger %d ticks, was %d: a topped-off colonist must keep eating", longestOn, longestOff)
 	}
 }
 

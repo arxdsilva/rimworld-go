@@ -26,7 +26,7 @@ Scope: the Work tab and how a colonist picks work: the tie-break between work ty
 | 1 | Firefight | 1 | 1 | |
 | 2 | Patient | no column | no column | Automatic before work; WRK-101 |
 | 3 | Doctor | 2 | 2 | |
-| 4 | Bed rest | no column | no column | Automatic before work; WRK-101 |
+| 4 | Bed rest | no column | no column | The per-colonist "Rest when hurt" setting (PLAY-020); WRK-101 |
 | 5 | Basic | no column | no column | Flicking is in Construct, opening in Haul; WRK-101 |
 | 6 | Warden | 3 | 3 | |
 | 7 | Handle | 9 | 4 | |
@@ -45,19 +45,19 @@ Scope: the Work tab and how a colonist picks work: the tie-break between work ty
 
 ## Rows
 
-State: `planned` being done now; `done` shipped; `open` owed to a later change; `kept` differs from the wiki on purpose.
+State: `done` shipped; `open` owed to a later change; `kept` differs from the wiki on purpose.
 
 | Id | Gap | State | Where |
 |---|---|---|---|
-| WRK-001 | `work.Order` had Haul 4th, Craft before Hunt, Plant cut before Mine, Research before Clean. | planned | `domain/ai/work/work.go` |
-| WRK-002 | Tab columns followed `work.Type`, while the tie-break followed `work.Order`: the player read Grow before Haul and the colonist did Haul first. Columns now follow `work.Order`; everything else stays indexed by type. | planned | `ebiten/windows/work.go` |
-| WRK-003 | Delivering to frames was Haul work only. The wiki lists it under Construct and Haul. With Haul near the end, this would stall every building site whenever plants or rock had work left. | planned | `game/priorities.go`, `game/tick.go` |
-| WRK-004 | Construct's inner order: wiki has uninstall, roofs, frames, deliveries, deconstruct, repair, floors. Ours had frames, uninstall, repair, roofs. | planned | `game/priorities.go` |
-| WRK-005 | Handle's inner order: wiki has pen, slaughter, release, milk, shear, tame, train. Ours had pen, tame, train, collect, slaughter, so a long training queue kept milk waiting. | planned | `game/priorities.go`, `game/herd/herd.go` |
-| WRK-006 | Clean's inner order: wiki clears snow before filth; ours the reverse. | planned | `game/priorities.go` |
-| WRK-007 | Haul's inner order: wiki has refuel, load, strip, corpses, hoppers, cremation, general. Ours put hoppers first. Our "urgent" mark (STO-2) stays first; it has no wiki counterpart. | planned | `game/priorities.go` |
-| WRK-008 | Cook also filled hoppers; the wiki lists that under Haul only. | planned | `game/priorities.go` |
-| WRK-009 | Tab text: the header did not state the tie-break, and Growing claimed to cut grass, which is Plant cut since FOOD-2. | planned | `ebiten/windows/work.go` |
+| WRK-001 | `work.Order` had Haul 4th, Craft before Hunt, Plant cut before Mine, Research before Clean. | done | `domain/ai/work/work.go` |
+| WRK-002 | Tab columns followed `work.Type`, while the tie-break followed `work.Order`: the player read Grow before Haul and the colonist did Haul first. Columns now follow `work.Order`; everything else stays indexed by type. | done | `ebiten/windows/work.go` |
+| WRK-003 | Delivering to frames was Haul work only. The wiki lists it under Construct and Haul. With Haul near the end, this would stall every building site whenever plants or rock had work left. Construct now delivers, and a forced Supply order takes Haul or Construct. | done | `game/priorities.go`, `game/tick.go` |
+| WRK-004 | Construct's inner order: wiki has uninstall, roofs, frames, deliveries, deconstruct, repair, floors. Ours had frames, uninstall, repair, roofs. | done | `game/priorities.go` |
+| WRK-005 | Handle's inner order: wiki has pen, slaughter, release, milk, shear, tame, train. Ours had pen, tame, train, collect, slaughter, so a long training queue kept milk waiting. | done | `game/priorities.go`, `game/herd/herd.go` |
+| WRK-006 | Clean's inner order: wiki clears snow before filth; ours the reverse. | done | `game/priorities.go` |
+| WRK-007 | Haul's inner order: wiki has refuel, load, strip, corpses, hoppers, cremation, general. Ours put hoppers first. Our "urgent" mark (STO-2) stays first; it has no wiki counterpart. | done | `game/priorities.go` |
+| WRK-008 | Cook also filled hoppers; the wiki lists that under Haul only. | done | `game/priorities.go` |
+| WRK-009 | Tab text: the header did not state the tie-break, and Growing claimed to cut grass, which is Plant cut since FOOD-2. | done | `ebiten/windows/work.go` |
 | WRK-010 | Doctor's inner order: wiki has tends, operations, then rescue; ours rescues first. | kept | MED-03's decision |
 | WRK-011 | Haul delivers to frames before general hauling; the wiki lists general first. Kept so that a hauler with Construct off still feeds a site before clearing the map. | kept | `game/tick.go` |
 | WRK-101 | Patient, Bed rest and Basic columns. Needs new `work.Type` values and a save migration. | open | |
@@ -66,6 +66,7 @@ State: `planned` being done now; `done` shipped; `open` owed to a later change; 
 | WRK-104 | Sorting by a column and changing a whole column from its header. Memory of the game, not on the wiki. | open | |
 | WRK-105 | The sound when assigning a pawn to work it will do poorly (wiki). | open | |
 | WRK-106 | Dragging to paint priorities. The UI checklist marked it done; the code only has clicks. | open | |
+| WRK-107 | A delivery taken from the Construct slot is a `job.Haul`, so the colonist card names it Hauling and its speed reads as Haul work. Cosmetic. | open | `game/bio_view.go` |
 
 ## Already matching
 

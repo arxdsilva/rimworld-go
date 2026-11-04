@@ -190,7 +190,7 @@ func TestDamagedYield(t *testing.T) {
 	for _, c := range []struct {
 		dmg     uint8
 		qty, at int
-	}{{0, 7, 7}, {30, 7, 4}, {50, 8, 4}, {99, 12, 0}, {100, 5, 0}, {10, 0, 0}} {
+	}{{0, 7, 7}, {30, 7, 5}, {50, 8, 6}, {99, 12, 6}, {100, 5, 2}, {100, 8, 4}, {10, 0, 0}} {
 		if got := (Plant{Damage: c.dmg}).DamagedYield(c.qty); got != c.at {
 			t.Fatalf("DamagedYield(%d) at %d%% = %d, want %d", c.qty, c.dmg, got, c.at)
 		}

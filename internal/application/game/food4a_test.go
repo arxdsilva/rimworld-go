@@ -17,7 +17,7 @@ import (
 // FOOD-4a: cooking and preservation in the whole game.
 
 // TestHaulerFillsHopper: a pawn doing only hauling fills a hopper with a
-// FillHopper job (wiki: Hopper: hauling and cooking work both).
+// FillHopper job (WRK-008: Haul work only).
 func TestHaulerFillsHopper(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 16})

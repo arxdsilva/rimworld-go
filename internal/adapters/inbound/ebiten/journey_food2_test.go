@@ -375,9 +375,9 @@ func TestJourneyMealShowsIngredients(t *testing.T) {
 	}
 }
 
-// TestJourneyHaulerFillsBarrelCookDoesNot (FOOD-4): a cook fills the
-// hopper but leaves the barrel's fill bill; the same colonist as a hauler
-// fills the barrel.
+// TestJourneyHaulerFillsBarrelCookDoesNot (FOOD-4, WRK-008): a cook leaves
+// both the hopper and the barrel's fill bill; the same colonist as a hauler
+// fills them.
 func TestJourneyHaulerFillsBarrelCookDoesNot(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}))
@@ -412,17 +412,13 @@ func TestJourneyHaulerFillsBarrelCookDoesNot(t *testing.T) {
 		return false
 	}
 	j.key("Digit3", 0)
-	for i := 0; i < 4000 && !hopperHas(); i++ {
-		careFeed(j)
-		j.update(1)
-	}
-	for i := 0; i < 1500; i++ {
+	for i := 0; i < 5500 && !hopperHas(); i++ {
 		careFeed(j)
 		j.update(1)
 	}
 	j.key("Space", 0)
-	if !hopperHas() {
-		t.Fatalf("the cook did not fill the hopper: items %+v", fdItems(j, "berries"))
+	if hopperHas() {
+		t.Fatalf("the cook filled the hopper: that is hauling work (WRK-008): items %+v", fdItems(j, "berries"))
 	}
 	if barrelFilled() {
 		t.Fatal("the cook filled the fermenting barrel: that is hauling work")
@@ -430,13 +426,16 @@ func TestJourneyHaulerFillsBarrelCookDoesNot(t *testing.T) {
 	j.g.Enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: id, Work: command.WorkHaul, Count: 1})
 	j.g.ApplyPending()
 	j.key("Digit3", 0)
-	for i := 0; i < 6000 && !barrelFilled(); i++ {
+	for i := 0; i < 6000 && !(barrelFilled() && hopperHas()); i++ {
 		careFeed(j)
 		j.update(1)
 	}
 	j.key("Space", 0)
 	if !barrelFilled() {
 		t.Fatalf("the hauler never filled the barrel; wort left %d", f2Qty(j, item.Wort))
+	}
+	if !hopperHas() {
+		t.Fatalf("the hauler never filled the hopper: items %+v", fdItems(j, "berries"))
 	}
 }
 

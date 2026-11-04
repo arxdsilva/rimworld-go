@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/application/game/industry"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
@@ -191,7 +192,7 @@ func TestEmberOilFuelsCampfire(t *testing.T) {
 	if st, _ := stackOf(g, item.EmberOil); st.Qty != 3 {
 		t.Fatalf("ember oil left = %d, want 3", st.Qty)
 	}
-	if fuelTicks(item.EmberOil) != 3*fuelTicks(item.Wood) || fuelTicks(item.GraniteBlocks) != 0 {
+	if industry.FuelTicks(item.EmberOil) != 3*industry.FuelTicks(item.Wood) || industry.FuelTicks(item.GraniteBlocks) != 0 {
 		t.Fatal("one oil burns as long as three logs")
 	}
 }

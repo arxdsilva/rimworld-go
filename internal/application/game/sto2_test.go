@@ -158,19 +158,27 @@ func TestHopperRefillNoFlap(t *testing.T) {
 	}
 }
 
-// TestCookFillsHopper: hopper filling is cook work too (wiki).
-func TestCookFillsHopper(t *testing.T) {
+// TestHopperIsHaulWorkOnly (WRK-008, wiki: Work): a cook with Haul off leaves
+// a hopper empty; a hauler fills it.
+func TestHopperIsHaulWorkOnly(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 30, Height: 16})
 	buildNow(t, g, construction.Hopper, item.Steel, construction.South, 4, 4)
 	spawn(t, g, item.Meat, 40, 12, 4)
 	cook, _ := g.SpawnNamedPawn(10, 10, "Cook")
 	onlyWork(g, cook, work.Cook)
+	for range 200 {
+		runFed(g, 1, cook)
+		if g.itemAt(4, 4) != 0 {
+			t.Fatal("a cook with Haul off filled the hopper")
+		}
+	}
+	onlyWork(g, cook, work.Haul)
 	for i := 0; i < 200 && g.itemAt(4, 4) == 0; i++ {
 		runFed(g, 1, cook)
 	}
 	if st, _ := g.stacks.Get(g.itemAt(4, 4)); st.Kind != item.Meat || st.Qty != 40 {
-		t.Fatalf("the cook filled the hopper with %+v", st)
+		t.Fatalf("the hauler filled the hopper with %+v", st)
 	}
 }
 

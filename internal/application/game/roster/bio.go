@@ -12,11 +12,21 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/pawn/trait"
+	"rimworld-go/internal/domain/world/plant"
 )
 
 // Bio read-model construction shared by character creation
 // (CandidatePool.Views) and the colony's Bio tab (Game.Bio) (NG-1 §2.9,
 // §5.4).
+
+// LevelSpeed is the speed in permille of work trained by sk at level l: plant
+// work has its own curve (HRV-009), the rest skill.SpeedPermil.
+func LevelSpeed(sk skill.ID, l uint8) int {
+	if sk == skill.Plants {
+		return plant.WorkSpeedPermil(int(l))
+	}
+	return skill.SpeedPermil(l)
+}
 
 // SkillView is one skill row.
 type SkillView struct {
@@ -146,8 +156,7 @@ func BioOf(p pawngen.Pawn) BioView {
 			sv.XPPct = s.XPPct()
 			if skillAffects[id].hasWork {
 				// Level speed × WorkSpeed stat × trait/condition skill speed.
-				sv.SpeedPct = int(int64(skill.SpeedPermil(s.Level)) * workSpeed *
-					int64(pawngen.SkillWorkPct(p, id)) / 1_000_000)
+				sv.SpeedPct = int(int64(LevelSpeed(id, s.Level)) * workSpeed * int64(pawngen.SkillWorkPct(p, id)) / 1_000_000)
 			}
 		}
 		v.Skills[id] = sv

@@ -124,11 +124,11 @@ func damageSpan(rate int, t0, t1 uint64) int {
 	return int(t1*r/per - t0*r/per)
 }
 
-// DamagedYield is a harvest of qty from p reduced by its damage:
-// (100 − Damage)%, rounded down, never below zero.
+// DamagedYield is a harvest of qty from p reduced by its damage: up to half
+// (wiki: Plants; 50 % health loses 25 %), rounded down (HRV-004).
 func (p Plant) DamagedYield(qty int) int {
 	if qty <= 0 {
 		return 0
 	}
-	return max(qty*(100-min(int(p.Damage), 100))/100, 0)
+	return qty * (200 - min(int(p.Damage), 100)) / 200
 }

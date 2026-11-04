@@ -23,8 +23,8 @@ func TestPartialHarvest(t *testing.T) {
 	if (Plant{Species: Corn, Growth: gt, Blight: 30}).HarvestYield(22) != 0 {
 		t.Error("a blighted crop yields something")
 	}
-	if (Plant{Species: Corn, Growth: gt, Damage: 50}).HarvestYield(22) != 11 {
-		t.Error("damage halves the yield")
+	if (Plant{Species: Corn, Growth: gt, Damage: 50}).HarvestYield(22) != 16 {
+		t.Error("50 % damage loses a quarter of the yield") // HRV-004
 	}
 	if (Plant{Species: Tree, Growth: DefOf(Tree).GrowTicks}).HarvestableNow() {
 		t.Error("a tree is never harvested")

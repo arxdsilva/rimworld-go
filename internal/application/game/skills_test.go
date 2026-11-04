@@ -63,7 +63,8 @@ func backstoryWith(t *testing.T, b backstory.Bits) backstory.Def {
 // TestNeutralPawnTimingsUnchanged: a neutral pawn (SpawnNamedPawn) works
 // exactly as the old boolean workTick did — 1 unit on every tick it
 // allowed, 0 on the low-mood ticks it skipped — skilled or not, and every
-// other skill/trait hook is the identity for it.
+// other skill/trait hook is the identity for it. Plant work has its own speed
+// curve (HRV-009, TestPlantWorkProgress).
 func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 3, Width: 12, Height: 8})
@@ -82,6 +83,9 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 				want = 1
 			}
 			sk := skill.ID(i % int(skill.NumSkills))
+			if sk == skill.Plants {
+				sk = skill.Mining
+			}
 			if got := g.workProgress(id, sk, i%3 != 0); got != want {
 				t.Fatalf("tick %d pawn %d: progress %d, workTick %d", i, id, got, want)
 			}

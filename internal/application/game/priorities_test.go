@@ -29,8 +29,8 @@ func TestEqualPrioritiesFollowTheDefaultOrder(t *testing.T) {
 	t.Parallel()
 	g, id := choiceGame(t)
 	g.Step(2)
-	if j, _ := g.jobs.Get(uint64ToID(id)); j.Kind != job.Haul {
-		t.Fatalf("job %v: at equal priority hauling comes before growing", j.Kind)
+	if j, _ := g.jobs.Get(uint64ToID(id)); j.Kind != job.Harvest {
+		t.Fatalf("job %v: at equal priority harvesting comes before hauling (WRK-001)", j.Kind)
 	}
 }
 

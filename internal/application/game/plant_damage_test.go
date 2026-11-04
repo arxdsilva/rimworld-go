@@ -236,28 +236,42 @@ func TestDamagedHarvestYieldsLess(t *testing.T) {
 	t.Parallel()
 	g := dirtGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	setSkill(g, id, skPlants, 8) // HRV-005, HRV-009: full speed and yield, no waste roll
 	pid, _ := g.spawnPlant(plant.Wheat, 6, 5, plant.DefOf(plant.Wheat).GrowTicks)
 	p, _ := g.plants.Get(pid)
 	p.Damage = 30
 	g.plants.Set(pid, p)
 	g.doHarvest(id, job.Record{Kind: job.Harvest, State: job.Do, Target: pid, TX: 6, TY: 5, WorkLeft: 1})
 	d := plant.DefOf(plant.Wheat)
-	if w, ok := stackOf(g, item.Wheat); !ok || w.Qty != d.Yield*70/100 {
-		t.Fatalf("wheat at 30%% damage = %+v %v, want %d", w, ok, d.Yield*70/100)
+	if w, ok := stackOf(g, item.Wheat); !ok || w.Qty != d.Yield*85/100 { // HRV-004: half the damage is lost
+		t.Fatalf("wheat at 30%% damage = %+v %v, want %d", w, ok, d.Yield*85/100)
 	}
-	if s, ok := stackOf(g, item.Straw); !ok || s.Qty != d.ExtraQty*70/100 {
-		t.Fatalf("straw at 30%% damage = %+v %v, want %d", s, ok, d.ExtraQty*70/100)
+	if s, ok := stackOf(g, item.Straw); !ok || s.Qty != d.ExtraQty*85/100 {
+		t.Fatalf("straw at 30%% damage = %+v %v, want %d", s, ok, d.ExtraQty*85/100)
 	}
-	// a ruined crop yields nothing (and drops no empty stack)
+	// a nearly dead crop loses just about half; a blighted one yields nothing
+	// (and drops no empty stack)
 	h := dirtGame(t)
 	hid, _ := h.SpawnNamedPawn(5, 5, "Ada")
+	setSkill(h, hid, skPlants, 8)
 	cid, _ := h.spawnPlant(plant.Corn, 6, 5, plant.DefOf(plant.Corn).GrowTicks)
 	c, _ := h.plants.Get(cid)
 	c.Damage = 99
 	h.plants.Set(cid, c)
 	h.doHarvest(hid, job.Record{Kind: job.Harvest, State: job.Do, Target: cid, TX: 6, TY: 5, WorkLeft: 1})
-	if s, ok := stackOf(h, item.Corn); ok {
-		t.Fatalf("99%% damaged corn yielded %+v", s)
+	if s, ok := stackOf(h, item.Corn); !ok || s.Qty != plant.DefOf(plant.Corn).Yield*101/200 {
+		t.Fatalf("99%% damaged corn yielded %+v, want %d", s, plant.DefOf(plant.Corn).Yield*101/200)
+	}
+	b := dirtGame(t)
+	bid, _ := b.SpawnNamedPawn(5, 5, "Ada")
+	setSkill(b, bid, skPlants, 8)
+	cid, _ = b.spawnPlant(plant.Corn, 6, 5, plant.DefOf(plant.Corn).GrowTicks)
+	c, _ = b.plants.Get(cid)
+	c.Blight = 30
+	b.plants.Set(cid, c)
+	b.doHarvest(bid, job.Record{Kind: job.Harvest, State: job.Do, Target: cid, TX: 6, TY: 5, WorkLeft: 1})
+	if s, ok := stackOf(b, item.Corn); ok {
+		t.Fatalf("blighted corn yielded %+v", s)
 	}
 }
 
