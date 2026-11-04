@@ -10,6 +10,7 @@ The selection's inspector: the pane with its tabs (pawn needs, gear, health, soc
 - `Shell` = `Sizer + Commands + World + PawnSel + Widgets + Host + Peers + Labels`.
 - `Host` (8 methods, plus `Dispatcher` and `Hinter`): `Env`, `Layout`, `Pick`, `Click`, `Selection`, `Hostiles`, and others.
 - `Peers` (8): the Architect's areas, move mode, buildability, research locks. `Labels` (8): text and portrait helpers. `Sim` (7 read methods: `OrdersAt`, `Health`, `Social`, `Prisoner`, `Bio`, `Dossier`, `PlantGrowth`).
+- `CardHost`: what the pane asks about the colonist card (`CardHUD`, `CardBody`, `CardBadge`, `CardStats`). With the card on, the pane's head buttons are `pane.head.*` and are not focusable, so Tab keeps opening the Architect.
 - `bedPrisonReader` (in `building_inspector.go`): one method, `BedForPrisoners`.
 
 ## Allowed Dependencies

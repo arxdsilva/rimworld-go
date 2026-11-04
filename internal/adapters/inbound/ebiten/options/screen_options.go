@@ -352,11 +352,11 @@ func OptionRows(tab string) []OptionRow {
 	case "story", "habits":
 		return nil // story_tab.go and habits_tab.go declare their own widgets
 	case "access":
-		return []OptionRow{
+		return append([]OptionRow{
 			uiScaleRow(),
 			toggleRow("reducedmotion", "Reduced motion", func(s *config.Settings) *bool { return &s.Accessibility.ReducedMotion }),
 			toggleRow("reducedflash", "Reduced flashing", func(s *config.Settings) *bool { return &s.Accessibility.ReducedFlashing }),
-		}
+		}, cardRows()...)
 	}
 	return []OptionRow{
 		volumeRow("master", "Master volume", func(a *config.Audio) *int { return &a.Master }),
@@ -412,13 +412,13 @@ func (o *Screen) Buttons(sw, sh int) []uikit.Button {
 	rows := OptionRows(tab)
 	for i, r := range rows {
 		_, cx, y := OptPos(rows, i)
+		lock := o.optionLock(r.Key) // saves.go: developer mode is locked in commitment mode; card rows by their settings
 		if r.kind == rowStep {
 			out = append(out,
-				uikit.Button{ID: ids.PrefixOptions + r.Key + ".dec", Label: "-", X: cx, Y: y, W: OptBtnH, H: OptBtnH},
-				uikit.Button{ID: ids.PrefixOptions + r.Key + ".inc", Label: "+", X: cx + OptBtnH + 8 + optBarW + 8, Y: y, W: OptBtnH, H: OptBtnH})
+				uikit.Button{ID: ids.PrefixOptions + r.Key + ".dec", Label: "-", X: cx, Y: y, W: OptBtnH, H: OptBtnH, Disabled: lock != "", Reason: lock},
+				uikit.Button{ID: ids.PrefixOptions + r.Key + ".inc", Label: "+", X: cx + OptBtnH + 8 + optBarW + 8, Y: y, W: OptBtnH, H: OptBtnH, Disabled: lock != "", Reason: lock})
 			continue
 		}
-		lock := o.optionLock(r.Key) // saves.go: developer mode is locked in commitment mode
 		out = append(out, uikit.Button{ID: ids.PrefixOptions + r.Key, Label: o.rowValue(r), X: cx, Y: y, W: 160, H: OptBtnH,
 			Disabled: lock != "", Reason: lock, Tip: r.Tip})
 		if x := r.extra; x != nil {
@@ -446,6 +446,9 @@ func (o *Screen) ApplyOption(id string) {
 		o.applyControlsClick(key) // controls_ui.go
 		o.sh.Cue("ui.toggle")
 		return
+	}
+	if o.optionLock(strings.TrimSuffix(strings.TrimSuffix(key, ".dec"), ".inc")) != "" {
+		return // a greyed row does nothing, whoever asks
 	}
 	for _, r := range OptionRows(o.CurrentTab()) {
 		if x := r.extra; x != nil && key == r.Key+"."+x.key {

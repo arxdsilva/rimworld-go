@@ -17,6 +17,7 @@ import (
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
+	"rimworld-go/internal/adapters/outbound/cardpresetfile"
 	"rimworld-go/internal/adapters/outbound/ebitenaudio"
 	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/adapters/outbound/scenariofile"
@@ -31,6 +32,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/weather"
 	"rimworld-go/internal/platform/config"
+	"rimworld-go/internal/platform/openfolder"
 	"rimworld-go/internal/platform/sysinfo"
 )
 
@@ -50,7 +52,7 @@ func main() {
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | zone | zone-shrink | power | power-overlay | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll | factions-colony | bio | work-incapable | arrival | options-story | options-habits | dossier | dossier-float | dossier-log | dossier-animal | letter-intro | arch-hospital | arch-cabinet | arch-locked | chips | social | health | prisoner | history | world | assign | turret | trade | perf")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | zone | zone-shrink | power | power-overlay | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll | factions-colony | bio | work-incapable | arrival | options-story | options-habits | dossier | dossier-float | dossier-log | dossier-animal | dossier-setup | dossier-setup-sections | dossier-setup-presets | dossier-setup-colours | letter-intro | arch-hospital | arch-cabinet | arch-locked | chips | social | health | prisoner | history | world | assign | turret | trade | perf")
 	captureUIScale := flag.Float64("capture-ui-scale", 0, "dev: with -capture, shoot at this UI scale (1280s x 720s frame) to review scaled layouts; 0 = scale 1")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
@@ -110,6 +112,7 @@ func main() {
 		Capture:      shot,
 		Saves:        saveHooks(),
 		Settings:     settingsHooks(shot != nil, gfxOverrides),
+		CardFiles:    cardFiles(shot != nil),
 		Scenarios:    scenarioStore(shot != nil),
 		FPSProbe:     probe,
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
@@ -508,6 +511,20 @@ type devGraphics struct {
 
 func (d devGraphics) any() bool {
 	return d.hidpi != nil || d.vsync != nil || d.renderScale != 0 || d.tier != "" || d.windowed
+}
+
+// cardFiles wires the colonist card's presets to <config>/rimworld-go/dossier.
+// Captures get none, so they never read or write the player's folder.
+func cardFiles(capturing bool) uiadapter.CardFiles {
+	if capturing {
+		return uiadapter.CardFiles{}
+	}
+	store, err := cardpresetfile.Default()
+	if err != nil {
+		log.Printf("card presets not kept: %v", err)
+		return uiadapter.CardFiles{}
+	}
+	return uiadapter.CardFiles{Store: store, Open: openfolder.Open, Folder: store.Dir}
 }
 
 // settingsHooks wires the Options to the per-user settings file. Captures

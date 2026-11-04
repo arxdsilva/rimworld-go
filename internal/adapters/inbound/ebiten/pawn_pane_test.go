@@ -266,6 +266,7 @@ func TestAreaChipOpensPicker(t *testing.T) {
 	s.areas = []game.AreaView{{Index: 0, ID: 3, Name: "Indoors", Cells: 12}, {Index: 1, ID: 5, Name: "Yard", Cells: 30}}
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
+	a.settings.HUD.Enabled = false // the plain pane's chip; the card has its own selector
 	a.renderer.Select(1)
 	f.Frame(t, a)
 	if !hasWidget(a, "inspector.area") {
@@ -296,6 +297,7 @@ func TestAreaChipIsAButtonOnThePane(t *testing.T) {
 	s.areas = []game.AreaView{{Index: 0, ID: 3, Name: "Indoors", Cells: 12}}
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
+	a.settings.HUD.Enabled = false // the plain pane's chip; the card has its own selector
 	a.renderer.Select(1)
 	f.Frame(t, a)
 	var chip uikit.Button
@@ -562,6 +564,8 @@ func TestPawnCommandsAreGridCells(t *testing.T) {
 func TestPawnBioTabOpensThroughThePane(t *testing.T) {
 	t.Parallel()
 	a, f := paneApp(t, paneSim())
+	a.settings.HUD.Enabled = false // the plain pane: the card's tall pane opens it beside itself
+	f.Frame(t, a)
 	click(t, a, "inspector.bio")
 	f.Frame(t, a)
 	if !a.insp.Tabs().BioTabOn() || !hasWidget(a, "bio.skill.0") {

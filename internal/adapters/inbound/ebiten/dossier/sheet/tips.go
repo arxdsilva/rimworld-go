@@ -295,7 +295,12 @@ func TrainDesc(s training.Skill) string {
 }
 
 // TrainTip is a behaviour's description, progress and how it fades.
-func TrainTip(t game.AnimalTrainingView) []TipLine {
+func TrainTip(a game.AnimalView, t game.AnimalTrainingView) []TipLine {
+	return append(AnimalTip(a), trainLines(t)...)
+}
+
+// trainLines is what one behaviour teaches and how far along it is.
+func trainLines(t game.AnimalTrainingView) []TipLine {
 	s := training.Skill(t.Skill)
 	out := []TipLine{{Text: t.Label}}
 	if d := TrainDesc(s); d != "" {

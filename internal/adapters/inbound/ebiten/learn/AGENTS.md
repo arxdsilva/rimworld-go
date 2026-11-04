@@ -8,7 +8,8 @@ The learning helper (PLAY-018): the lessons, which are done, the card and chrome
 - `Lesson` and `ByID(id)`: the lesson catalogue.
 - `State`, `Memo` (the draft memo), `Row`, `Layout`, `Frame`, `Sensed` (what the helper senses about the colony).
 - `KeyFunc func(input.Action) string`: renders a live key binding into lesson text.
-- `Host` (7 methods): `Colony`, `Chain`, `Frame`, `Sense`, `Layout`, `Updates`, `Save`.
+- `Host` (7 methods): `Colony`, `Chain`, `Frame`, `Sense`, `Layout`, `Updates`, `Save`. `Sense` also reports the pointer on the colonist card and the card's setup modal (`Sensed.CardHover`, `SetupOpen`, `SetupLook`, `SetupLayout`).
+- `Lesson.Needs`: a lesson that applies only under some settings. The five card lessons need the card on; they neither count nor show with it off.
 - `Shell` = `Hinter + Sizer + Settings + Widgets + Host`.
 
 ## Allowed Dependencies
@@ -41,7 +42,7 @@ The learning helper (PLAY-018): the lessons, which are done, the card and chrome
 - Writes settings only through `Host.Save`; the package writes no files itself.
 
 ## Tests
-- 6 source files, 2 test files, 4 `Test*` functions (`TestLessonCatalog`, `TestLessonTextShowsLiveKeysAndSurvivesNoBinding`, `TestDraftMemoNeedsTheDraftFirst`, `TestHelperCompletesAndHooksOnce`).
+- 6 source files, 2 test files. The card lessons also have journeys in the root (`journey_dossier_lessons_test.go`).
 - Coverage 34 % (ARCH-005 row); the rest runs through the root's learn tests.
 
 ## Benchmarks

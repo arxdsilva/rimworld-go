@@ -121,6 +121,7 @@ func TestJourneyOrdersRescueVisitor(t *testing.T) {
 	if !v.Visitor {
 		t.Fatal("fixture: the downed pawn is not a visitor")
 	}
+	dossierOff(j) // the visitor lies in the map's corner, behind the docked card
 	doer, _ := careFirstColonist(j)
 	careSelect(j, doer)
 	labels := careRightClickSettled(j, v.X, v.Y)

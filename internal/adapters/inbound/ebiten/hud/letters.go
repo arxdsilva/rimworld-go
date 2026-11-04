@@ -90,6 +90,7 @@ type LetterRow struct {
 	R      gfx.Rect
 	Letter game.LetterView // zero for the "+N older" row
 	Older  int             // > 0: the "+N older" row
+	Opens  uint64          // the "+N older" row: the newest folded letter, which a click opens
 }
 
 // LetterRowLabel is the text a row shows.
@@ -117,13 +118,17 @@ func (c Right) LetterRows(l hudlayout.Layout) []LetterRow {
 		n++
 	}
 	rows := make([]LetterRow, 0, n)
-	top := l.Letters.Bottom() - float32(n)*(hudlayout.LetterRowH+hudlayout.HudGap) + hudlayout.HudGap
+	gap := l.LetterGap // RHUD-475; zero reads as the usual gap
+	if gap <= 0 {
+		gap = hudlayout.HudGap
+	}
+	top := l.Letters.Bottom() - float32(n)*(hudlayout.LetterRowH+gap) + gap
 	at := func(i int) gfx.Rect {
-		return gfx.Rect{X: l.Letters.X, Y: top + float32(i)*(hudlayout.LetterRowH+hudlayout.HudGap), W: l.Letters.W, H: hudlayout.LetterRowH}
+		return gfx.Rect{X: l.Letters.X, Y: top + float32(i)*(hudlayout.LetterRowH+gap), W: l.Letters.W, H: hudlayout.LetterRowH}
 	}
 	i := 0
 	if older > 0 {
-		rows = append(rows, LetterRow{R: at(i), Older: older})
+		rows = append(rows, LetterRow{R: at(i), Older: older, Opens: ls[len(ls)-shown-1].ID})
 		i++
 	}
 	for _, lt := range ls[len(ls)-shown:] {
@@ -139,10 +144,11 @@ func (c Right) LetterButtons() []uikit.Button { return c.letterButtonsIn(c.sh.La
 func (c Right) letterButtonsIn(l hudlayout.Layout) []uikit.Button {
 	var out []uikit.Button
 	for _, row := range c.LetterRows(l) {
+		id := row.Letter.ID
 		if row.Older > 0 {
-			continue
+			id = row.Opens // RHUD-474: the bundle opens the newest folded letter
 		}
-		out = append(out, uikit.Button{ID: ids.PrefixLetter + strconv.FormatUint(row.Letter.ID, 10), Label: LetterRowLabel(row),
+		out = append(out, uikit.Button{ID: ids.PrefixLetter + strconv.FormatUint(id, 10), Label: LetterRowLabel(row),
 			X: row.R.X, Y: row.R.Y, W: row.R.W, H: row.R.H})
 	}
 	return out

@@ -514,6 +514,19 @@ Entity types can register applicable inspector tabs: - General; -
 Character; - Needs; - Health; - Social; - Gear; - Prisoner; - Bills; -
 Contents; - Power; - Stats.
 
+## Colonist card
+
+With one pawn or one animal selected, the card replaces the pane's body (RHUD, `.cursor/RIMHUD_GAP_ANALYSIS.md`). It is a tree of value widgets the player can edit; groups, buildings, plants, items, zones and cell info keep the plain pane.
+
+-   [x] on by default; Options > Accessibility has the switch, and off draws the plain pane;
+-   [x] docked in a taller pane, or floating over the map at a chosen anchor;
+-   [x] setup modal from the card's gear: Look, Sections, Presets, Colours, with Back to defaults;
+-   [x] presets saved as files, with a button that opens their folder;
+-   [x] selectors on the card: food policy, allowed area (hovering a row previews it on the map), and the current hour (with Manage, which opens Schedule);
+-   [x] the letter stack moves clear of a floating card;
+-   [x] five lessons in the learning helper, only while the card is on;
+-   [x] the developer inspector shows each widget's timing.
+
 ## Action bar
 
 Only valid contextual commands appear.
@@ -1818,7 +1831,13 @@ presentation only, never the simulation; captures ignore them.
 -   [x] conflicts ("Swap?" before a used key is taken);
 -   [x] reset.
 
+### Habits
+
+-   [x] Common Sense habits: one switch per habit and the limits (they belong to the colony and go through typed commands).
+
 ### Accessibility
+
+-   [x] colonist card: on or off, where it sits, the pane's height, and where a floating card starts;
 
 -   [x] text/UI scale (UI-024: one UI scale row, Auto or 75–200 %, text included);
 -   [ ] color-vision support;

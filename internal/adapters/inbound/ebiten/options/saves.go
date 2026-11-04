@@ -90,7 +90,7 @@ func (s *Screen) optionLock(key string) string {
 	if key == "devmode" && s.sh.Env().Commitment {
 		return commitDevReason
 	}
-	return ""
+	return cardLock(key, s.sh.Settings().HUD)
 }
 
 // RefreshSlots re-reads the save list for the load screen.

@@ -10,7 +10,10 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-const manageLabel = "Manage..."
+const (
+	manageLabel    = "Manage..."
+	hourActivities = 4 // Anything, Work, Recreation, Sleep
+)
 
 // menus are the card's selectors and click-throughs.
 type menus struct{ p *Panel }
@@ -68,37 +71,18 @@ func (m menus) dietChoice(pols []game.FoodPolicyView, i int) {
 	m.p.a.Enqueue(command.Command{Kind: command.SetFoodPolicy, Pawn: uint64(m.p.id), Index: pols[i].ID})
 }
 
+// pickArea opens the game's allowed area list: hovering a row draws that area
+// on the map, and its Manage row opens the manager (RHUD-089, 092, 094).
 func (m menus) pickArea() {
 	if m.p.sc == nil {
 		return
 	}
-	areas := m.p.r.Areas()
-	refs := []int{command.AreaUnrestricted, command.AreaHome}
-	opts := []string{"Unrestricted", "Home"}
-	for _, a := range areas {
-		refs = append(refs, int(a.ID))
-		opts = append(opts, a.Name)
-	}
-	cur, now := 0, m.p.sc.AreaOf(m.p.id)
-	if now == 0 {
-		now = command.AreaUnrestricted
-	}
-	for i, r := range refs {
-		if r == now {
-			cur = i
-		}
-	}
-	opts = append(opts, manageLabel)
-	uikit.Picker(m.p.k, "dossier.area", "Allowed area", opts, cur, func(i int) { m.areaChoice(refs, i) })
+	m.p.a.AreaPicker("Allowed area", m.p.sc.AreaOf(m.p.id), true, m.areaChoice)
 }
 
-// areaChoice runs option i of the area menu: a ref, or the manager.
-func (m menus) areaChoice(refs []int, i int) {
-	if i >= len(refs) {
-		m.p.a.ManageAreas()
-		return
-	}
-	m.p.a.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(m.p.id), Index: refs[i]})
+// areaChoice assigns the chosen area.
+func (m menus) areaChoice(ref int) {
+	m.p.a.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(m.p.id), Index: ref})
 }
 
 // pickHour sets what the schedule has for the current hour.
@@ -107,12 +91,17 @@ func (m menus) pickHour() {
 		return
 	}
 	hour := m.p.sc.Hour()
-	opts := []string{"Anything", "Work", "Recreation", "Sleep"}
+	opts := []string{"Anything", "Work", "Recreation", "Sleep", manageLabel}
 	uikit.Picker(m.p.k, "dossier.hour", "Hour "+strconv.Itoa(hour), opts, int(m.p.d.p.Activity),
 		func(i int) { m.hourChoice(hour, i) })
 }
 
-// hourChoice sets hour to activity i for the selected person.
+// hourChoice sets hour to activity i for the selected person; the row after
+// the activities opens the Schedule window (RHUD-100).
 func (m menus) hourChoice(hour, i int) {
+	if i >= hourActivities {
+		m.p.a.ShowWindow(ids.TabSchedule)
+		return
+	}
 	m.p.a.Enqueue(command.Command{Kind: command.SetSchedule, Pawn: uint64(m.p.id), Index: hour, Mode: uint8(i)})
 }

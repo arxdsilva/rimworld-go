@@ -25,8 +25,8 @@ Columns of the main table: id, piece, cells (w x h, facing south), per-cell capa
 | | Count |
 |---|---|
 | Pieces (rows) | 27 |
-| Done / partial | 0 / 0 |
-| Missing | 27 |
+| Done / partial | 27 / 0 |
+| Missing | 0 |
 | Footprints | 12 of 1x1, 12 of 2x1, 3 of 2x2 (48 cells in all) |
 | Capacity | 1 stack/cell: 2; 3: 3; 4: 4; 6: 17; 12: 1 |
 | Research-gated | 6 (4 Machining, 2 Smithing); 21 free |
@@ -38,35 +38,35 @@ Columns of the main table: id, piece, cells (w x h, facing south), per-cell capa
 
 Costs are in our units (`Def.Wood` = stuff units, `Def.Work` = construct ticks, scaled like the shelf: Shelf = 2 stuff, 50 work for 2x1; Small shelf = 1, 25). Beauty is in points (the table stores thousandths; Shelf 0.5, Dresser 5, End table 3, Small sculpture 50). "Shelf set" is the shelf's ceiling (`zone.Universe(KindShelf)`: everything storable but chunks and corpses). Sets are named by the filter-tree paths in `zone/filter.go:110`. Priority defaults: Preferred for furniture like the shelf; Normal for pallets, crates and the dump spot, so they do not out-rank stockpiles.
 
-| id | Piece (build name) | Cells | Per cell | Research | Accepted items (proposed) | Cost (proposed) | Beauty / admire (proposed) | Status | Work needed |
+| id | Piece (build name) | Cells | Per cell | Research | Accepted items (proposed) | Cost (proposed) | Beauty / admire (proposed) | Status | Where it lives |
 |---|---|---|---|---|---|---|---|---|---|
-| NST-001 | Display case (`display case`) | 1x1 | 1 | none | Display set: Weapons, Apparel, Items, Manufactured, Raw resources/Metals (no food, corpses, chunks, bulk materials) | 3 stuff (wood, steel or stone), 60 work | +4; admired when it holds a stack | missing | kind, profile, art (4 facings), admire |
-| NST-002 | Round pedestal (`round pedestal`) | 1x1 | 1 | none | Display set | 2 stuff (wood or stone), 50 work | +6; admired when it holds a stack | missing | kind, profile, art (1 sprite), admire |
-| NST-003 | Small display shelf (`small display shelf`) | 1x1 | 3 | none | Display set | 1 stuff, 30 work | +0.8 | missing | kind, profile, art (4 facings) |
-| NST-004 | Display shelf (`display shelf`) | 2x1 | 3 | none | Display set | 2 stuff, 55 work | +1 | missing | kind, profile, art (4 facings) |
-| NST-005 | Weapon rack (`weapon rack`) | 2x1 | 3 | none | Weapons (melee, ranged, grenades) | 2 stuff (wood or steel), 55 work | +0.5 | missing | kind, profile, art (4 facings) |
-| NST-006 | Narrow wardrobe (`narrow wardrobe`) | 1x1 | 4 | none | Apparel, Manufactured/Textiles | 2 stuff, 45 work | +0.5 | missing | kind, profile, art (4 facings) |
-| NST-007 | Wardrobe (`wardrobe`) | 2x1 | 4 | none | Apparel, Manufactured/Textiles | 3 stuff, 70 work | +1 | missing | kind, profile, art (4 facings) |
-| NST-008 | Narrow display cabinet (`narrow display cabinet`) | 1x1 | 4 | none | Cabinet set: Display set plus Foods/Meals and Medicine | 2 stuff, 50 work | +1.5 | missing | kind, profile, art (4 facings) |
-| NST-009 | Display cabinet (`display cabinet`) | 2x1 | 4 | none | Cabinet set | 4 stuff, 90 work | +2 | missing | kind, profile, art (4 facings) |
-| NST-010 | Open shelf (`open shelf`) | 2x1 | 6 | none | Shelf set | 3 stuff, 60 work | +0.5 | missing | kind, profile, art (4 facings) |
-| NST-011 | 2-tier display shelf (`two tier display shelf`) | 2x1 | 6 | none | Display set | 4 stuff, 80 work | +1 | missing | kind, profile, art (4 facings) |
-| NST-012 | Narrow tall shelf (`narrow tall shelf`) | 1x1 | 6 | none | Shelf set | 2 stuff, 50 work | +0.5 | missing | kind, profile, art (4 facings) |
-| NST-013 | Tall shelf (`tall shelf`) | 2x1 | 6 | none | Shelf set | 4 stuff, 95 work | +0.5 | missing | kind, profile, art (4 facings) |
-| NST-014 | Safe (`safe`) | 1x1 | 6 | Machining | Valuables: Raw resources/Metals, Manufactured/Components, Items/Parts, Medicine, Drugs, Prosthetics | 5 steel, 150 work | 0 | missing | kind, profile, research key, art (1 sprite) |
-| NST-015 | Drum (`drum`) | 1x1 | 6 | Machining | Raw resources/Chemicals, Brewing and leaves, Milk, Beer | 3 steel, 80 work | -1 | missing | kind, profile, research key, art (1 sprite) |
-| NST-016 | Horizontal weapon rack (`horizontal weapon rack`) | 2x1 | 6 | Machining | Weapons | 5 steel, 110 work | +0.5 | missing | kind, profile, research key, art (4 facings) |
-| NST-017 | Vertical weapon rack (`vertical weapon rack`) | 2x1 | 6 | Machining | Weapons | 5 steel, 110 work | +0.5 | missing | kind, profile, research key, art (4 facings) |
-| NST-018 | Textile rack (`textile rack`) | 1x1 | 6 | Smithing | Manufactured/Textiles, Items/Carpets | 2 stuff (wood or steel), 50 work | +0.5 | missing | kind, profile, research key, art (4 facings) |
-| NST-019 | Meat hook (`meat hook`) | 2x1 | 6 | Smithing | Foods/Raw food/Meat (meat, human meat, insect meat, fish) | 3 steel, 70 work | -2 | missing | kind, profile, research key, art (4 facings) |
-| NST-020 | Mini pallet (`mini pallet`) | 1x1 | 6 | none | Shelf set | 1 wood, 25 work | -0.5 | missing | kind, profile, art (1 sprite) |
-| NST-021 | Half pallet (`half pallet`) | 2x1 | 6 | none | Shelf set | 2 wood, 45 work | -0.5 | missing | kind, profile, art (4 facings) |
-| NST-022 | Pallet (`pallet`) | 2x2 | 6 | none | Shelf set | 4 wood, 80 work | -1 | missing | kind, profile, art (1 sprite) |
-| NST-023 | Small crate (`small crate`) | 1x1 | 6 | none | Shelf set | 2 stuff, 40 work | 0 | missing | kind, profile, art (1 sprite) |
-| NST-024 | Crate (`crate`) | 2x1 | 6 | none | Shelf set | 3 stuff, 60 work | 0 | missing | kind, profile, art (4 facings) |
-| NST-025 | Large crate (`large crate`) | 2x2 | 6 | none | Shelf set | 6 stuff, 110 work | -0.5 | missing | kind, profile, art (1 sprite) |
-| NST-026 | Tall crate (`tall crate`) | 2x2 | 6 | none | Shelf set | 7 stuff, 120 work | -0.5 | missing | kind, profile, art (1 sprite) |
-| NST-027 | Corpse dump spot (`corpse dump spot`) | 1x1 | 12 | none | Corpses (human, animal), Bones, Chunks; rotten allowed (like `zone.NewDump`) | 2 wood, 30 work | -3 | missing | kind, profile, art (1 sprite), render of 12 bodies |
+| NST-001 | Display case (`display case`) | 1x1 | 1 | none | Display set: Weapons, Apparel, Items, Manufactured, Raw resources/Metals (no food, corpses, chunks, bulk materials) | 3 stuff (wood, steel or stone), 60 work | +4; admired when it holds a stack | done | domain/building/construction/construction.go:DisplayCase |
+| NST-002 | Round pedestal (`round pedestal`) | 1x1 | 1 | none | Display set | 2 stuff (wood or stone), 50 work | +6; admired when it holds a stack | done | domain/building/construction/construction.go:RoundPedestal |
+| NST-003 | Small display shelf (`small display shelf`) | 1x1 | 3 | none | Display set | 1 stuff, 30 work | +0.8 | done | domain/building/construction/construction.go:SmallDisplayShelf |
+| NST-004 | Display shelf (`display shelf`) | 2x1 | 3 | none | Display set | 2 stuff, 55 work | +1 | done | domain/building/construction/construction.go:DisplayShelf |
+| NST-005 | Weapon rack (`weapon rack`) | 2x1 | 3 | none | Weapons (melee, ranged, grenades) | 2 stuff (wood or steel), 55 work | +0.5 | done | domain/building/construction/construction.go:WeaponRack |
+| NST-006 | Narrow wardrobe (`narrow wardrobe`) | 1x1 | 4 | none | Apparel, Manufactured/Textiles | 2 stuff, 45 work | +0.5 | done | domain/building/construction/construction.go:NarrowWardrobe |
+| NST-007 | Wardrobe (`wardrobe`) | 2x1 | 4 | none | Apparel, Manufactured/Textiles | 3 stuff, 70 work | +1 | done | domain/building/construction/construction.go:Wardrobe |
+| NST-008 | Narrow display cabinet (`narrow display cabinet`) | 1x1 | 4 | none | Cabinet set: Display set plus Foods/Meals and Medicine | 2 stuff, 50 work | +1.5 | done | domain/building/construction/construction.go:NarrowDisplayCabinet |
+| NST-009 | Display cabinet (`display cabinet`) | 2x1 | 4 | none | Cabinet set | 4 stuff, 90 work | +2 | done | domain/building/construction/construction.go:DisplayCabinet |
+| NST-010 | Open shelf (`open shelf`) | 2x1 | 6 | none | Shelf set | 3 stuff, 60 work | +0.5 | done | domain/building/construction/construction.go:OpenShelf |
+| NST-011 | 2-tier display shelf (`two tier display shelf`) | 2x1 | 6 | none | Display set | 4 stuff, 80 work | +1 | done | domain/building/construction/construction.go:TwoTierDisplayShelf |
+| NST-012 | Narrow tall shelf (`narrow tall shelf`) | 1x1 | 6 | none | Shelf set | 2 stuff, 50 work | +0.5 | done | domain/building/construction/construction.go:NarrowTallShelf |
+| NST-013 | Tall shelf (`tall shelf`) | 2x1 | 6 | none | Shelf set | 4 stuff, 95 work | +0.5 | done | domain/building/construction/construction.go:TallShelf |
+| NST-014 | Safe (`safe`) | 1x1 | 6 | Machining | Valuables: Raw resources/Metals, Manufactured/Components, Items/Parts, Medicine, Drugs, Prosthetics | 5 steel, 150 work | 0 | done | domain/building/construction/construction.go:Safe |
+| NST-015 | Drum (`drum`) | 1x1 | 6 | Machining | Raw resources/Chemicals, Brewing and leaves, Milk, Beer | 3 steel, 80 work | -1 | done | domain/building/construction/construction.go:Drum |
+| NST-016 | Horizontal weapon rack (`horizontal weapon rack`) | 2x1 | 6 | Machining | Weapons | 5 steel, 110 work | +0.5 | done | domain/building/construction/construction.go:HorizontalWeaponRack |
+| NST-017 | Vertical weapon rack (`vertical weapon rack`) | 2x1 | 6 | Machining | Weapons | 5 steel, 110 work | +0.5 | done | domain/building/construction/construction.go:VerticalWeaponRack |
+| NST-018 | Textile rack (`textile rack`) | 1x1 | 6 | Smithing | Manufactured/Textiles, Items/Carpets | 2 stuff (wood or steel), 50 work | +0.5 | done | domain/building/construction/construction.go:TextileRack |
+| NST-019 | Meat hook (`meat hook`) | 2x1 | 6 | Smithing | Foods/Raw food/Meat (meat, human meat, insect meat, fish) | 3 steel, 70 work | -2 | done | domain/building/construction/construction.go:MeatHook |
+| NST-020 | Mini pallet (`mini pallet`) | 1x1 | 6 | none | Shelf set | 1 wood, 25 work | -0.5 | done | domain/building/construction/construction.go:MiniPallet |
+| NST-021 | Half pallet (`half pallet`) | 2x1 | 6 | none | Shelf set | 2 wood, 45 work | -0.5 | done | domain/building/construction/construction.go:HalfPallet |
+| NST-022 | Pallet (`pallet`) | 2x2 | 6 | none | Shelf set | 4 wood, 80 work | -1 | done | domain/building/construction/construction.go:Pallet |
+| NST-023 | Small crate (`small crate`) | 1x1 | 6 | none | Shelf set | 2 stuff, 40 work | 0 | done | domain/building/construction/construction.go:SmallCrate |
+| NST-024 | Crate (`crate`) | 2x1 | 6 | none | Shelf set | 3 stuff, 60 work | 0 | done | domain/building/construction/construction.go:Crate |
+| NST-025 | Large crate (`large crate`) | 2x2 | 6 | none | Shelf set | 6 stuff, 110 work | -0.5 | done | domain/building/construction/construction.go:LargeCrate |
+| NST-026 | Tall crate (`tall crate`) | 2x2 | 6 | none | Shelf set | 7 stuff, 120 work | -0.5 | done | domain/building/construction/construction.go:TallCrate |
+| NST-027 | Corpse dump spot (`corpse dump spot`) | 1x1 | 12 | none | Corpses (human, animal), Bones, Chunks; rotten allowed (like `zone.NewDump`) | 2 wood, 30 work | -3 | done | domain/building/construction/construction.go:CorpseDumpSpot |
 
 Unknown in the mod, so ours: every cost, stuff, work, beauty and hit-point figure; which item filter each piece uses (the description only says "a wider variety of items"); whether the weapon racks differ in what they take (here they differ in looks only); whether Safe and Drum are locked to certain items; the default priority; whether the display case and pedestal need an item inside to be admired. Hit points follow our small shelf (50) for 1x1 pieces and the bookcase (100) for 2x1 and 2x2 ones; metal pieces use the steel multiplier already in `StuffStats`.
 

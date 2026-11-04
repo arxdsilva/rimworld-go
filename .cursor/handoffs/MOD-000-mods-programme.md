@@ -89,3 +89,19 @@ Lead after each wave: `go build ./...`, `make fmt vet lint`, `make arch`, the fu
 - Roles are per component: `TidyRoles`, `GearRoles`, `JoyRoles`, declared in the component's file, with adapters in that owner's `game/sense_*_host.go` and one line in `senseOf`.
 - `craft`, `care`, `snow`, `recreate` roles are declared by the agents that use them, with their adapter, not by W0-C.
 - A command kind the client does not emit yet needs no owed entry: the guard fails on those. The change that first emits one ships its journey.
+
+## Outcome (2026-11-04)
+
+All wave packages merged; released as v0.1.24.
+
+| Mod | Rows | Done | Excluded |
+|---|---|---|---|
+| RimHUD | 504 | 429 | 75 |
+| Neat Storage | 27 | 27 | 0 |
+| Common Sense | 55 | 45 | 10 |
+
+Each gap document lists under Counts where a done row differs from the mod. DOS-9 records the flip to on and the bugs it exposed.
+
+Simulation benchmark, grown fixture, seed 1, tick mean in ms, before and after the programme: 120 pawns 0.176 and 0.188; 250 pawns 0.252 and 0.243; 500 pawns 0.292 and 0.308. Frame cost of the card, from `BenchmarkDossierDraw`: about 0.1 ms and 555 allocations per draw.
+
+Not touched by this programme, still open: the `newMapState` hash window, `SaveInfo.Day` and `RIMWORLD_UPDATE_SAVE_FIXTURE`.

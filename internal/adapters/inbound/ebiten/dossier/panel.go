@@ -64,6 +64,7 @@ type Panel struct {
 	look
 	setupFn func()
 	onSetup func()
+	timer   cardTimer
 }
 
 // New builds the card. r reads the selection, a acts, p holds the settings
@@ -89,6 +90,7 @@ func (p *Panel) Select(k selection.Kind, id entity.EntityID) {
 	p.kind, p.id = k, id
 	p.have = false
 	p.dropHover()
+	p.timer.reset()
 }
 
 // Reset forgets the selection and every cache (a map switch, the return to

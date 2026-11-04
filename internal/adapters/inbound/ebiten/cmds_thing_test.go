@@ -1082,6 +1082,7 @@ func TestAnimalAreaChipOnThePane(t *testing.T) {
 	s := bondSim()
 	s.areas = []game.AreaView{{Index: 0, ID: 3, Name: "Yard", Cells: 20}}
 	a, f := colonyApp(t, s)
+	a.settings.HUD.Enabled = false // the plain pane's chip; the card has its own selector
 	a.sel.Select(selectionpkg.Cand{Kind: selectionpkg.Animal, ID: 50})
 	f.Frame(t, a)
 	click(t, a, "animal.area")

@@ -132,7 +132,7 @@ func (t tipper) tipLines(it *item) []sheet.TipLine {
 		}
 	case tipTrain:
 		if it.arg < len(d.a.Training) {
-			return sheet.TrainTip(d.a.Training[it.arg])
+			return sheet.TrainTip(d.a, d.a.Training[it.arg])
 		}
 	}
 	return nil

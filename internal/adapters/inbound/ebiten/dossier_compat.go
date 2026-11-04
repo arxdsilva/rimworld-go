@@ -26,9 +26,18 @@ import (
 // the hover from the map behind the card.
 const floatFrameID = "dossier.frame"
 
+// CardFiles is where the card's presets live (nil Store and Open: none; the
+// Presets tab then says why it cannot keep a look or show the folder).
+type CardFiles struct {
+	Store  dossier.PresetStore
+	Open   dossier.FolderOpener
+	Folder string
+}
+
 // dossierState is the App's hold on the card.
 type dossierState struct {
 	panel  *dossier.Panel
+	setup  *dossier.Setup
 	viewed game.MapID
 	badge  cardBadge
 }
@@ -46,12 +55,18 @@ func (d dossierState) reset() {
 	if d.panel != nil {
 		d.panel.Reset()
 	}
+	if d.setup != nil {
+		d.setup.Reset()
+	}
 }
 
 // newDossier builds the card over this session's art.
 func newDossier(a *App) dossierState {
 	h := dossierHost{a}
 	st := dossierState{panel: dossier.New(h, h, h, shellSize{a}, a.uiSt(), a.art, h)}
+	cf := a.cfg.CardFiles
+	st.setup = dossier.NewSetup(st.panel, a.uiSt(), h, h, cf.Store, cf.Open, cf.Folder, shellSize{a})
+	st.panel.SetOnSetup(st.setup.Open)
 	if r := a.renderer; r != nil && r.game != nil {
 		st.viewed = r.game.ViewedMap()
 	}
@@ -163,9 +178,6 @@ func (h dossierHost) AreaPicker(title string, cur int, base bool, pick func(ref 
 	h.a.arch.Areas.OpenPicker(title, cur, base, pick)
 }
 
-// ManageAreas opens the area manager.
-func (h dossierHost) ManageAreas() { h.a.arch.Areas.OpenManager() }
-
 // Hint shows why a click did nothing.
 func (h dossierHost) Hint(s string) { h.a.hint = s }
 
@@ -220,6 +232,21 @@ func (h dossierHost) followMap() {
 		h.a.dos.viewed = m
 		h.a.dos.reset()
 	}
+}
+
+// pointerOnCard reports the pointer is over the card as shown now, in the pane
+// or floating.
+func (h dossierHost) pointerOnCard() bool {
+	a := h.a
+	if a.dos.panel == nil || !a.settings.HUD.Enabled || a.chrome.Hidden || a.world.Open() {
+		return false
+	}
+	if _, _, ok := a.insp.Card().Target(); !ok {
+		return false
+	}
+	l := a.hud()
+	mx, my := a.currentCursor()
+	return l.Card.Hit(mx, my) || (a.settings.HUD.Docked && l.Pane.Hit(mx, my))
 }
 
 // declareFloating declares the floating card: the backing widget first, then

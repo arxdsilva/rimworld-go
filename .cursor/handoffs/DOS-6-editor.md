@@ -1,0 +1,17 @@
+# DOS-6: Sections tab, Presets tab, preset store, folder opener
+
+Files: `ebiten/dossier/setup_sections.go`, `setup_presets.go`, `setup_editor_test.go`; `internal/adapters/outbound/cardpresetfile/` (+AGENTS.md); `internal/platform/openfolder/` (+AGENTS.md); `ebiten/journey_dossier_edit_test.go`. Hunks: `ebiten/dossier_compat.go` (`CardFiles`, `dossierState.setup`, `newDossier` builds the `Setup` and `SetOnSetup(setup.Open)`, `reset` resets it), `ebiten/app.go` (`AppConfig.CardFiles`), `cmd/game/main.go` (`cardFiles()`, wiring only). `setup_stub.go` (DOS-5's) deleted: both stubs now exist for real.
+
+## Behaviour
+- Sections: tree of the current mode (`HUD.Docked`) on a `uikit.List`, indented, colour by kind (`tree_*`), attributes at the right (bar style, fills, targets), tooltip with the key. Detail pane: fold, up, down, remove, three add menus (layout, value, bar -> style), fill checkbox (stacks and panels), four target checkboxes (the last one on is disabled with a reason), definition and bar-style pickers, "Use the built-in layout". Every edit is applied to a clone, refused when `sheet.Validate` finds more problems than before (hint shows why), then written with `Setup.Edit` (clears `Preset`). A tree equal to the built-in one is stored nil.
+- Presets: built-ins and the player's files in one list (source label, "in use"), Use, Delete (confirm), name field + six save flags, "Keep as a look", "Show card files". Files are read when the tab opens (a gap of more than 3 Updates), capped at 100 listed; a file the codec refuses stays listed as unreadable and using it puts the built-in layouts back with a hint. Save refuses a bad name (`sheet.ValidName`), no flags, a full folder, or an encode over `sheet.MaxPresetBytes` (256 KiB). Open failure disables the button with the reason until the tab is reopened.
+- `cardpresetfile`: name = 1..64 of `[A-Za-z0-9_-]`, anything else is `ErrName` and touches nothing (tests: empty, `..`, `.`, slashes, backslash, NUL, space, dot, too long). File = `<name>.json` in `<config>/rimworld-go/dossier`; atomic writes; 256 KiB cap on save and load. The Presets tab saves under `sheet.Slug(name)`.
+- `openfolder.Open`: `open`/`explorer`/`xdg-open`, path as one argument, creates the folder, starts without waiting. Own code, no new module (cli/browser is used only by updatecheck).
+- Captures get no store (`cardFiles(capturing)`), so they never touch the player's folder.
+
+## Rows
+Done: RHUD-058, 330-335, 338, 344, 349-353, 358-369, 371-378, 380 (all by the above). 348: partial, as the doc says (key shown, no mod source). 332 collapse is a button on the selected row, not a click on the row's marker. 333: `tree_mine` marks widgets the built-in tree does not have. 349: "label" is the element's name, shown read-only (a node has no label field). 368/369: the manage list is the Presets tab's own list, not a second modal. 375 only fires for a file older than `PresetVersion` (none exist yet).
+
+## Tests
+`go test -race ./internal/adapters/outbound/cardpresetfile/ ./internal/platform/openfolder/ ./internal/adapters/inbound/ebiten/dossier/` pass; `TestJourneyDossierEditAddBar`, `TestJourneyDossierPresetSaveLoad` (includes a hostile file) pass; `make arch` passes. The journeys open the window through `dossier.Setup.Open` because the gear exists only under the pointer.
+Capture: Sections and Presets tabs shot with a temporary env hook (removed); no `-capture-ui` case exists for the setup window yet.

@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/art"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/building/construction"
@@ -486,5 +487,25 @@ func TestNeatDrawsWithoutArt(t *testing.T) {
 	}
 	for _, tile := range []float64{float64(LiveMin) - 1, 8} { // the other tiers
 		r.frame(tile)
+	}
+}
+
+// A small body on a heap stays on its slot: the middle of a lying figure sits
+// k*shift from the feet, so the pose's own offset has to shrink with it.
+func TestHeapBodyCentresOnTheSlot(t *testing.T) {
+	const shift, feetX, feetY, drop = 0.4, 0.5, 0.9, 0.1
+	for _, side := range []float64{1, -1} {
+		for _, k := range []float64{1, 0.5, 0.3} {
+			lying := motion.Pose{Px: feetX, Py: feetY, Rot: side * math.Pi / 2, Dx: -side * shift, Dy: drop}
+			ps, wx, wy := heapBody(lying, 3.25, 7.75, k)
+			midX := wx + ps.Px + ps.Dx + side*k*shift
+			midY := wy + ps.Py + ps.Dy
+			if math.Abs(midX-3.25) > 1e-9 || math.Abs(midY-7.75) > 1e-9 {
+				t.Fatalf("side %v k %v: middle at %v,%v, want 3.25,7.75", side, k, midX, midY)
+			}
+			if ps.Sx != k || ps.Sy != k {
+				t.Fatalf("scale %v,%v, want %v", ps.Sx, ps.Sy, k)
+			}
+		}
 	}
 }

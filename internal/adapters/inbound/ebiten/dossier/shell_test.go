@@ -34,13 +34,16 @@ type fakeShell struct {
 	hour     int
 	area     int
 
-	set    config.Settings
-	cmds   []command.Command
-	tabs   []string
-	wins   []string
-	hints  []string
-	mgr    int
-	setups int
+	set         config.Settings
+	cmds        []command.Command
+	tabs        []string
+	wins        []string
+	hints       []string
+	pickerTitle string
+	pickerCur   int
+	pickerBase  bool
+	pick        func(int)
+	setups      int
 
 	mx, my int
 	n      uint64
@@ -84,10 +87,9 @@ func (s *fakeShell) Areas() []game.AreaView                             { return
 func (s *fakeShell) Enqueue(c command.Command) { s.cmds = append(s.cmds, c) }
 func (s *fakeShell) OpenTab(n string)          { s.tabs = append(s.tabs, n) }
 func (s *fakeShell) ShowWindow(n string)       { s.wins = append(s.wins, n) }
-func (s *fakeShell) AreaPicker(string, int, bool, func(int)) {
-	s.t.Fatal("the card draws its own area menu")
+func (s *fakeShell) AreaPicker(title string, cur int, base bool, pick func(int)) {
+	s.pickerTitle, s.pickerCur, s.pickerBase, s.pick = title, cur, base, pick
 }
-func (s *fakeShell) ManageAreas()  { s.mgr++ }
 func (s *fakeShell) Hint(h string) { s.hints = append(s.hints, h) }
 
 func (s *fakeShell) Settings() config.Settings     { return s.set }

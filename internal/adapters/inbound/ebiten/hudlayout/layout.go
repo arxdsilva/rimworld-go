@@ -121,7 +121,8 @@ type Layout struct {
 
 	Right                                   gfx.Rect // the right column's band (x and width)
 	Global, Minimap, Letters, Learn, Alerts gfx.Rect
-	LetterRows, AlertRows                   int // rows that fit (the last may be "+N")
+	LetterRows, AlertRows                   int     // rows that fit (the last may be "+N")
+	LetterGap                               float32 // the padding between letter rows (0: none shown)
 
 	Bar      gfx.Rect   // bounding box of the colonist bar
 	BarSlots []gfx.Rect // one per shown colonist (the last may be "+N")
@@ -182,16 +183,36 @@ func Compute(sw, sh int, st Inputs) Layout {
 		}
 	}
 	if st.Letters > 0 {
+		g := float32(HudGap) // RHUD-475: the padding between letters
+		if st.LetterGap > 0 {
+			g = st.LetterGap
+		}
 		rows := min(st.Letters, MaxLetters)
 		if st.Letters > MaxLetters {
 			rows++ // "+N older"
 		}
-		room := int((stackBottom - HudMargin - top - alertReserve + HudGap) / (LetterRowH + HudGap))
+		lo, hi := top, stackBottom-HudMargin // the band the letters may use
+		if a := st.LetterAvoid; !a.Empty() && a.Right() > rx && a.X < rx+RightW && a.Bottom() > lo && a.Y < hi {
+			// RHUD-471, 472: a floating card over the column. The letters take
+			// the larger free band, below the card (kept at the bottom) or above.
+			fit := func(lo, hi float32) int { return max(0, int((hi-lo+g)/(LetterRowH+g))) }
+			if below := fit(a.Bottom()+HudMargin, hi); below >= fit(lo, a.Y-HudMargin) {
+				lo = a.Bottom() + HudMargin
+			} else {
+				hi = a.Y - HudMargin
+			}
+		}
+		floor := lo
+		if lo == top {
+			floor += alertReserve // the alerts keep their rows above
+		}
+		room := int((hi - floor + g) / (LetterRowH + g))
 		rows = max(0, min(rows, room))
 		if rows > 0 {
-			h := float32(rows)*(LetterRowH+HudGap) - HudGap
-			l.Letters = gfx.Rect{X: rx, Y: stackBottom - HudMargin - h, W: RightW, H: h}
+			h := float32(rows)*(LetterRowH+g) - g
+			l.Letters = gfx.Rect{X: rx, Y: hi - h, W: RightW, H: h}
 			l.LetterRows = rows
+			l.LetterGap = g
 			stackBottom = l.Letters.Y
 		}
 	}
@@ -248,7 +269,7 @@ func Compute(sw, sh int, st Inputs) Layout {
 		floorY = l.PaneTabs.Y
 		l.Card = placeCard(st.Card, l, W)
 		if st.ExpandedW > 0 && st.ExpandedH > 0 {
-			l.Expanded = placeExpanded(st, l, barBottom)
+			l.Expanded = placeExpanded(st, l, barBottom, rx)
 			if l.Expanded.X == 0 {
 				floorY = l.Expanded.Y
 			}
@@ -342,7 +363,7 @@ func paneSize(st Inputs, rx, room float32) (w, h float32) {
 // placeExpanded is an open tab's panel: above the pane's tabs. Under a tall
 // card pane with too little room there, it stands beside the pane; over a
 // floating card, beside the card.
-func placeExpanded(st Inputs, l Layout, barBottom float32) gfx.Rect {
+func placeExpanded(st Inputs, l Layout, barBottom, rx float32) gfx.Rect {
 	w := min(max(st.ExpandedW, ExpandMinW), ExpandMaxW)
 	room := l.PaneTabs.Y - barBottom - HudMargin
 	r := gfx.Rect{X: 0, Y: l.PaneTabs.Y - min(st.ExpandedH, room), W: w, H: min(st.ExpandedH, room)}
@@ -353,6 +374,7 @@ func placeExpanded(st Inputs, l Layout, barBottom float32) gfx.Rect {
 	if !l.Card.Empty() && r.Y < l.Card.Bottom() && r.Bottom() > l.Card.Y && r.X < l.Card.Right() && r.Right() > l.Card.X {
 		r.X = l.Card.Right() + HudGap
 	}
+	r.W = min(r.W, rx-HudMargin-r.X) // beside the pane it can reach the right column
 	return r
 }
 

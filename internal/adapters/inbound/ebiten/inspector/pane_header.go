@@ -106,7 +106,7 @@ func (c CardPane) declareHeadButton(b headButton, r gfx.Rect) {
 	if img != nil {
 		label = ""
 	}
-	if u.Button(b.id, r, label, uikit.BtnOpts{Disabled: b.reason != "", Reason: b.reason, Tip: b.tip, Selected: b.selected}) && b.run != nil {
+	if u.Button(b.id, r, label, uikit.BtnOpts{Disabled: b.reason != "", Reason: b.reason, Tip: b.tip, Selected: b.selected, NoFocus: true}) && b.run != nil {
 		b.run()
 	}
 	if img != nil {

@@ -258,6 +258,17 @@ func stackOrigin(ax, ay, k float64, fw, fh int) (wx, wy float64) {
 	return ax - float64(fw)/2, ay - float64(fh)*(1-k/2)
 }
 
+// heapBody scales a lying figure's pose by k and gives the tile to draw it at so
+// that the body's middle lands on (ax, ay). LyingPose's offsets centre the
+// figure at full size, so they shrink with it; left whole, they push a small
+// body off its heap.
+func heapBody(ps motion.Pose, ax, ay, k float64) (out motion.Pose, wx, wy float64) {
+	ps.Sx, ps.Sy = k, k
+	ps.Dx *= k
+	ps.Dy *= k
+	return ps, ax - ps.Px, ay - ps.Py - ps.Dy
+}
+
 // stackSlot is slotPoint for stack it of piece p on this frame's world.
 func (b *base) stackSlot(p *neatPiece, it *game.ItemView) (ax, ay, k float64, ok bool) {
 	w := &b.v.W

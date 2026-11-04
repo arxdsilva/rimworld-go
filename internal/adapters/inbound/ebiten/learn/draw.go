@@ -61,7 +61,7 @@ func (h *Helper) Draw(screen *ebiten.Image) {
 
 	if !collapsed {
 		drawRows(screen, lay, mx, my)
-		note := fmt.Sprintf("%d of %d learned", len(Catalog)-h.count(), len(Catalog))
+		note := fmt.Sprintf("%d of %d learned", h.total()-h.count(), h.total())
 		nst := gfx.WithColor(gfx.Small, mix(uikit.TutorText, uikit.TutorPanel, 0.2))
 		if flashing {
 			note, nst = "Done: "+flashTitle, gfx.WithColor(gfx.Small, uikit.TutorHeading)

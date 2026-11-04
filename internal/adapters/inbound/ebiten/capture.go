@@ -614,8 +614,8 @@ func (a *App) captureUI(ui string) {
 		a.cursor = &[2]int{x, y}
 	case "search", "rooms", "multiselect", "drawstyle", "hideui":
 		a.captureInput(ui, at)
-	case "dossier", "dossier-float", "dossier-log", "dossier-animal", "factions-colony", "bio", "work-incapable", "arrival", "options-story", "options-habits", "letter-intro",
-		"arch-hospital", "arch-cabinet", "arch-locked", "chips", "world":
+	case "dossier", "dossier-float", "dossier-log", "dossier-animal", "dossier-setup", "dossier-setup-sections", "dossier-setup-presets", "dossier-setup-colours", "factions-colony", "bio", "work-incapable", "arrival", "options-story", "options-habits", "letter-intro",
+		"arch-hospital", "arch-cabinet", "arch-storage", "arch-locked", "chips", "world":
 		a.captureColonyUI(ui) // capture_colony.go
 	case "architect":
 		a.arch.OpenPanel()

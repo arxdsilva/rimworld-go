@@ -240,6 +240,7 @@ func TestInspectorAreaLine(t *testing.T) {
 	t.Parallel()
 	s := areaStub()
 	a, f := areaApp(t, s)
+	a.settings.HUD.Enabled = false // the plain pane's chip; the card has its own selector
 	a.renderer.Select(1)
 	f.Frame(t, a)
 	w, ok := a.uiSt().Find("inspector.area")

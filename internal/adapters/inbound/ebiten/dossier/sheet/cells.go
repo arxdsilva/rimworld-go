@@ -97,7 +97,7 @@ func TrainCell(t game.AnimalTrainingView) Cell {
 	if !t.Allowed {
 		return Cell{}
 	}
-	cell := Cell{Label: t.Label, Value: strconv.Itoa(t.Steps) + " of " + strconv.Itoa(t.Needed), Tip: JoinTip(TrainTip(t))}
+	cell := Cell{Label: t.Label, Value: strconv.Itoa(t.Steps) + " of " + strconv.Itoa(t.Needed), Tip: JoinTip(trainLines(t))}
 	if t.Needed > 0 {
 		cell.Pct = min(t.Steps*100/t.Needed, 100)
 	}

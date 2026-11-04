@@ -52,6 +52,12 @@ const (
 	PanFrames = 24
 	// ZoomSteps is the wheel notches or zoom keys that finish it too.
 	ZoomSteps = 2
+	// CardRestFrames is how long the pointer rests on the card (0.75 s) to
+	// finish the hover lesson.
+	CardRestFrames = 45
+	// LookRestFrames is how long the setup window stays on Look (2.5 s) to
+	// finish the lesson that reads it.
+	LookRestFrames = 150
 	// FlashFrames is how long a lesson done on its own is highlighted.
 	FlashFrames = 150
 )
@@ -69,6 +75,9 @@ type State struct {
 	panFrames  float64 // camera: frames of pan input so far
 	zoomSteps  float64 // camera: wheel notches and zoom keys so far
 	nLearned   int     // lessons done at the last Update: a drop is a reset
+	cardFrames int     // Updates in a row the pointer rested on the card
+	lookFrames int     // Updates in a row the setup window stayed on Look
+	setupWas   bool    // the setup window was up at the last Update
 	open       string  // the lesson whose card is up
 	flashID    string  // the lesson just done on its own
 	flashUntil uint64  // Host.Updates when its highlight ends
@@ -100,22 +109,38 @@ func (h *Helper) learned(id string) bool {
 	return slices.Contains(h.sh.Settings().Gameplay.LearnedLessons, id)
 }
 
-// count is the number of lessons not done yet.
-func (h *Helper) count() int {
+// applies reports the lesson is on offer with the current settings.
+func (h *Helper) applies(l *Lesson) bool {
+	return l.Needs == nil || l.Needs(h.sh.Settings())
+}
+
+// total is the number of lessons on offer, done or not.
+func (h *Helper) total() int {
 	n := 0
 	for i := range Catalog {
-		if !h.learned(Catalog[i].ID) {
+		if h.applies(&Catalog[i]) {
 			n++
 		}
 	}
 	return n
 }
 
-// left is the lessons not done yet, in order.
+// count is the number of lessons on offer not done yet.
+func (h *Helper) count() int {
+	n := 0
+	for i := range Catalog {
+		if h.applies(&Catalog[i]) && !h.learned(Catalog[i].ID) {
+			n++
+		}
+	}
+	return n
+}
+
+// left is the lessons on offer not done yet, in order.
 func (h *Helper) left() []*Lesson {
 	out := make([]*Lesson, 0, len(Catalog))
 	for i := range Catalog {
-		if !h.learned(Catalog[i].ID) {
+		if h.applies(&Catalog[i]) && !h.learned(Catalog[i].ID) {
 			out = append(out, &Catalog[i])
 		}
 	}
@@ -203,6 +228,7 @@ func (h *Helper) hook() {
 // rebase makes the helper start counting from now.
 func (st *State) rebase() {
 	st.based, st.memo, st.panFrames, st.zoomSteps = false, Memo{}, 0, 0
+	st.cardFrames, st.lookFrames, st.setupWas = 0, 0, false
 }
 
 // UI runs once per Update on the colony (the widget-kit hook): it hooks the
@@ -257,6 +283,7 @@ func (h *Helper) watch() {
 	sensed := h.sh.Sense()
 	if !st.based {
 		st.lastSel, st.lastSpeed, st.based = sensed.Selection, sensed.Speed, true
+		st.setupWas = sensed.SetupOpen
 		return
 	}
 	pan, zoom := h.cameraInput(sensed)
@@ -269,11 +296,34 @@ func (h *Helper) watch() {
 	// the game pausing itself on a threat is not the player's doing
 	f.SpeedSet = sensed.Speed != st.lastSpeed && !(sensed.Speed == 0 && sensed.ThreatPaused)
 	st.lastSpeed = sensed.Speed
+	h.watchCard(sensed, &f)
 	for _, l := range h.left() {
 		if l.OnUI != nil && l.OnUI(f) {
 			h.Complete(l.ID, true)
 		}
 	}
+}
+
+// watchCard reads the colonist card's signals into f. A rest counts Updates in
+// a row, so passing over the card on the way elsewhere doesn't finish a lesson.
+func (h *Helper) watchCard(sensed Sensed, f *Frame) {
+	st := &h.st
+	st.cardFrames = nextRest(st.cardFrames, sensed.CardHover && !sensed.SetupOpen)
+	st.lookFrames = nextRest(st.lookFrames, sensed.SetupOpen && sensed.SetupLook)
+	f.CardRead = st.cardFrames >= CardRestFrames
+	f.LookRead = st.lookFrames >= LookRestFrames
+	f.SetupOpened = sensed.SetupOpen && !st.setupWas
+	f.SetupClosed = st.setupWas && !sensed.SetupOpen
+	f.LayoutsSeen = sensed.SetupOpen && sensed.SetupLayout
+	st.setupWas = sensed.SetupOpen
+}
+
+// nextRest counts Updates in a row a condition held.
+func nextRest(n int, on bool) int {
+	if on {
+		return n + 1
+	}
+	return 0
 }
 
 // ApplyClick handles a "learn." click.

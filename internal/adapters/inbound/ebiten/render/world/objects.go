@@ -242,9 +242,7 @@ func (o *Objects) drawStoredItem(dst *ebiten.Image, p *neatPiece, it *game.ItemV
 	ax, ay, k, _ := o.stackSlot(p, it)
 	if it.Kind == "human corpse" {
 		if pawn, ok := o.Creatures.DeceasedOf(o.v, *it); ok {
-			ps := creature.CorpsePlanFor(o.v.Art, *it).Ps
-			ps.Sx, ps.Sy = k, k
-			wx, wy := stackOrigin(ax, ay, k, 1, 1)
+			ps, wx, wy := heapBody(creature.CorpsePlanFor(o.v.Art, *it).Ps, ax, ay, k)
 			o.Creatures.DrawFigure(o.v, o.Pass(), dst, pawn, wx, wy, tile, ps)
 			return true
 		}

@@ -4,6 +4,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"image/color"
 	"strconv"
+	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
@@ -12,6 +13,10 @@ import (
 
 // cardPad is the margin inside the floating card's background.
 const cardPad = 6
+
+// cardGutter is the space between children placed side by side: a right-aligned
+// value must not touch the text of the next column.
+const cardGutter = 8
 
 // layout is the items of one mode (docked or floating) at one size.
 type layout struct {
@@ -34,11 +39,34 @@ func (p *Panel) tree(hud config.HUD, docked bool) config.HUDNode {
 	root := p.defs[modeIdx(docked)]
 	if l := hud.Layouts.Floating; !docked && l != nil {
 		root = *l
+		p.warnBadLayout(root)
 	}
 	if l := hud.Layouts.Docked; docked && l != nil {
 		root = *l
+		p.warnBadLayout(root)
+	}
+	if hud.Layouts.Dropped && !p.warned[droppedLayoutKey] {
+		p.warned[droppedLayoutKey] = true
+		p.a.Hint("A saved card layout was too big to use, so the built-in one is back.")
 	}
 	return sheet.Prune(root, p.d.who)
+}
+
+// droppedLayoutKey marks the too-big warning as given (no element has this key).
+const droppedLayoutKey = "\x00dropped"
+
+// warnBadLayout says once what is wrong with a stored tree (RHUD-057). The card
+// still draws it: what it can't read shows as a marker. An unknown element has
+// its own warning, warnUnknown, with its name.
+func (p *Panel) warnBadLayout(root config.HUDNode) {
+	for _, bad := range sheet.Validate(root) {
+		if strings.HasPrefix(bad.Text, "unknown element") || p.warned[bad.Text] {
+			continue
+		}
+		p.warned[bad.Text] = true
+		p.a.Hint("The saved card layout has a problem: " + bad.Text + ". The Sections tab or Back to defaults can fix it.")
+		return
+	}
 }
 
 // layoutFor is the mode's items at size w x h, built again only when the size
@@ -127,9 +155,9 @@ func (b *builder) placeAcross(n config.HUDNode, x, y, w, h float32, line bool) {
 	}
 	hs := sheet.Heights(n, b.m, h, b.empty)
 	rowH := hs[0]
-	cw := w / float32(len(kids))
+	cw := (w - cardGutter*float32(len(kids)-1)) / float32(len(kids))
 	for i, k := range kids {
-		b.place(k, x+float32(i)*cw, y, cw, rowH)
+		b.place(k, x+float32(i)*(cw+cardGutter), y, cw, rowH)
 	}
 }
 

@@ -70,6 +70,10 @@ func (h learnHost) Sense() learn.Sensed {
 			s.EdgePan = true
 		}
 	}
+	s.CardHover = dossierHost{a}.pointerOnCard()
+	if su := a.dos.setup; su != nil {
+		s.SetupOpen, s.SetupLook, s.SetupLayout = su.Showing()
+	}
 	return s
 }
 

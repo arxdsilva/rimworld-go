@@ -499,9 +499,9 @@ This is the heart of autonomous colony behavior.
 
 ## 6.2 Carrying/inventory
 
--   [-] **Pawn carry tracker** (haul `Carrier`, shown as a load in both arms; no personal inventory)
+-   [x] **Pawn carry tracker** (haul `Carrier`, shown as a load in both arms; the pack is the personal inventory below)
     -   Pawn can carry an item stack while performing jobs.
--   [ ] **Personal inventory**
+-   [x] **Personal inventory** (CSE-036: `domain/pawn/inventory`, a pack of 40 kg times Manipulation, kept apart from weapon and apparel; holds a spare meal and ingredients on the way to a bench; shown on the Gear tab; lost with a caravan's last member)
     -   Support carried consumables/medicine/other inventory where
         vanilla behavior needs it.
     -   Inventory distinct from equipped weapon and worn apparel.
@@ -524,6 +524,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Linked storage groups** (STO-2: `group.go` Link/Unlink, an edit reaches every member, `zone.Map.SameStore`, a group can be a bill source)
 -   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold one 75 raw-food stack (wiki; STK-ST `zone.HopperStack`) at Important and refill below half (original); FOOD-4: haulers and cooks fill hoppers through the `FillHopper` job, wardens and doctors fetch paste for patients and prisoners; missing: none known, kept partial for the dispenser's original hopper numbers)
 -   [x] **Graves and sarcophagi as storage** (STO-2: corpse filters and priority; sarcophagus holds colonists only)
+-   [x] **Per-building storage** (NST: 27 pieces in the Architect's Storage category, each with its own size, stacks per cell and item filter; stored items are drawn on them, and the display case and pedestal can be admired)
 -   [x] **Stack limits** (STO-2 wiki limits, then STK-ST by user decision: every stackable kind stacks to 1000 per tile; weapons, apparel, belts, corpses, implants, organs and stone chunks one per stack; a hopper keeps one 75 raw-food stack (wiki); haulers top up any room; `.cursor/STORAGE_GAP_ANALYSIS.md`)
 
 ## 6.4 Hauling

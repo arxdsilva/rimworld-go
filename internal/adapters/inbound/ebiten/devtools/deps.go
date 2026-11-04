@@ -50,6 +50,8 @@ type Host interface {
 	StepTick()
 	// Icon is the UI icon "ui_icon/<name>" (nil while the art is missing).
 	Icon(name string) *ebiten.Image
+	// CardTiming is the colonist card's timing lines (none without a card).
+	CardTiming() []string
 }
 
 // Shell composes the roles the panels call with their Host.

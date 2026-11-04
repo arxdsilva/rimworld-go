@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"rimworld-go/internal/application/game"
 )
 
 type gapRow struct {
@@ -187,5 +189,22 @@ func TestParseIDs(t *testing.T) {
 		if _, err := parseIDs(bad); err == nil {
 			t.Errorf("%q should fail", bad)
 		}
+	}
+}
+
+// RHUD-284: a trainable's tooltip is the animal's summary, then what it teaches.
+func TestTrainTipStartsWithTheAnimal(t *testing.T) {
+	t.Parallel()
+	a := game.AnimalView{Name: "Rex", Label: "dustbuck", Tame: true}
+	tip := TrainTip(a, game.AnimalTrainingView{Label: "Obedience", Needed: 3})
+	if len(tip) < 3 || !strings.HasPrefix(tip[0].Text, "Rex, dustbuck") {
+		t.Fatalf("tip %+v", tip)
+	}
+	var taught bool
+	for _, l := range tip {
+		taught = taught || l.Text == "Obedience"
+	}
+	if !taught {
+		t.Fatalf("no line for the skill: %+v", tip)
 	}
 }

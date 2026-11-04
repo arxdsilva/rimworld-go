@@ -175,7 +175,7 @@ use these primitives.
 -   [-] **Toast/message** (PLAY-018: messages fade under the colonist bar; toasts stack just above the command buttons or the pane; no shared toast widget)
 -   [x] **Persistent alert card**
 -   [ ] **Tooltip**
--   [ ] **Rich tooltip/stat breakdown**
+-   [-] **Rich tooltip/stat breakdown** (RHUD: every line of the colonist card has a tooltip, with the stat's factors where a formula exists; other panels have none yet)
 -   [ ] **Drag painting tool**
     -   For zones, schedules and priorities.
 -   [ ] **Resizable/repositionable developer window primitive**
@@ -286,7 +286,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line; PLAY-018: one lower-left inspect pane for every kind (header, compact status bars, chips, scrolling lines) with its tabs opening a panel upward; AX-7: a book's pane is titled by its generated title and quality and lists what it teaches and what its quality gives, with a Read button; a bookcase's pane lists its books and the room's reading bonus; a colonist's pane says what it reads)
+-   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line; PLAY-018: one lower-left inspect pane for every kind (header, compact status bars, chips, scrolling lines) with its tabs opening a panel upward; AX-7: a book's pane is titled by its generated title and quality and lists what it teaches and what its quality gives, with a Read button; a bookcase's pane lists its books and the room's reading bonus; a colonist's pane says what it reads) (RHUD: the card's pane head adds the faction emblem with goodwill and a rename button)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
@@ -593,7 +593,7 @@ interfaces.
 -   [ ] **Tooltip for each mode**
     -   Explain that schedule influences autonomous intent rather than
         being a hard script in emergencies.
--   [-] **Current pawn schedule in inspector** (selected pawn shows the current hour's activity; no full schedule grid yet)
+-   [-] **Current pawn schedule in inspector** (selected pawn shows the current hour's activity; no full schedule grid yet) (RHUD: the card's hour selector sets the hour and Manage opens the Schedule window)
 -   [ ] **Group schedule presets**
     -   Later large-colony feature.
 
@@ -603,7 +603,7 @@ interfaces.
 
 ## 9.1 Needs tab
 
--   [-] **Need bars** (food and rest 0–100; BED-3: comfort, beauty and outdoors bars on the inspector Needs tab; the recreation bar reads "fun", and AX-6 adds rows under it: the joy kind it enjoys now and its tolerances with "(bored)"; missing: chemical/addiction need bars)
+-   [-] **Need bars** (food and rest 0–100; BED-3: comfort, beauty and outdoors bars on the inspector Needs tab; the recreation bar reads "fun", and AX-6 adds rows under it: the joy kind it enjoys now and its tolerances with "(bored)"; missing: chemical/addiction need bars) (RHUD: the card shows every need bar in its layout)
     -   Food.
     -   rest.
     -   recreation.
@@ -742,7 +742,7 @@ understandable.
 
 ## 11.3 Rename/customization
 
--   [ ] **Rename colonist**
+-   [x] **Rename colonist** (RHUD-025: a rename button on the pane head with the card on, sent as the `SetName` command and saved)
     -   Nickname/allowed identity fields.
     -   Presentation command goes through application if persisted.
 

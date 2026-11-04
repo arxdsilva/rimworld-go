@@ -54,7 +54,7 @@ func (a Tabs) gearUnloadButtons(p game.PawnView, r gfx.Rect, g GearLayout, lines
 		if marked {
 			label, tip = "Cancel", "Cancel\nLeave this in the pack."
 		}
-		if a.kit().Button(UnloadID(what, n), rect, label, uikit.BtnOpts{Tip: tip}) {
+		if a.kit().Button(UnloadID(what, n), rect, label, uikit.BtnOpts{Tip: tip, NoFocus: true}) {
 			a.shell.Enqueue(command.Command{Kind: command.MarkUnload, Pawn: uint64(p.ID), Mode: uint8(mode), Index: index, Enabled: !marked})
 		}
 	}

@@ -12,7 +12,8 @@ import (
 
 func TestLessonCatalog(t *testing.T) {
 	t.Parallel()
-	want := []string{"camera", "select", "build", "zones", "work", "schedule", "draft", "forbid", "research", "speed"}
+	want := []string{"camera", "select", "build", "zones", "work", "schedule", "draft", "forbid", "research", "speed",
+		"dossier_hover", "dossier_gear", "dossier_look", "dossier_sections", "dossier_close"}
 	var got []string
 	seen := map[string]bool{}
 	keys := newFake().KeyName
@@ -94,5 +95,86 @@ func TestHelperCompletesAndHooksOnce(t *testing.T) {
 	h.Observe(command.Command{Kind: command.SetResearch})
 	if slices.Contains(f.s.Gameplay.LearnedLessons, "research") {
 		t.Fatal("a scripted capture is not the player")
+	}
+}
+
+func TestCardLessonsNeedTheCard(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	h := New(f)
+	on := h.count()
+	f.s.HUD.Enabled = false
+	off := h.count()
+	if on-off != 5 || h.total() != len(Catalog)-5 {
+		t.Fatalf("with the card off %d lessons left of %d, total %d: want five fewer", off, on, h.total())
+	}
+	for _, l := range h.left() {
+		if strings.HasPrefix(l.ID, "dossier_") {
+			t.Fatalf("%s offered with the card off", l.ID)
+		}
+	}
+}
+
+// doneAfter feeds the helper one reading per Update and says which card lessons
+// finished.
+func doneAfter(f *fakeShell, h *Helper, readings ...Sensed) []string {
+	f.sensed = Sensed{}
+	h.watch() // the baseline
+	for _, s := range readings {
+		f.sensed = s
+		h.watch()
+	}
+	var out []string
+	for _, id := range f.s.Gameplay.LearnedLessons {
+		if strings.HasPrefix(id, "dossier_") {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func TestCardLessonsFinishOnWhatThePlayerDoes(t *testing.T) {
+	t.Parallel()
+	repeat := func(s Sensed, n int) []Sensed {
+		out := make([]Sensed, n)
+		for i := range out {
+			out[i] = s
+		}
+		return out
+	}
+	on := func(s Sensed) Sensed { s.SetupOpen = true; return s }
+	for _, c := range []struct {
+		name     string
+		readings []Sensed
+		want     []string
+	}{
+		{"a pass over the card teaches nothing", append(repeat(Sensed{CardHover: true}, CardRestFrames-1), Sensed{}), nil},
+		{"resting on it does", repeat(Sensed{CardHover: true}, CardRestFrames), []string{"dossier_hover"}},
+		{"breaking the rest starts it over", append(append(repeat(Sensed{CardHover: true}, CardRestFrames-1), Sensed{}), repeat(Sensed{CardHover: true}, CardRestFrames-1)...), nil},
+		{"opening the window is the gear", []Sensed{on(Sensed{})}, []string{"dossier_gear"}},
+		{"a glance at Look is not reading it", repeat(on(Sensed{SetupLook: true}), LookRestFrames-1), []string{"dossier_gear"}},
+		{"staying on Look is", repeat(on(Sensed{SetupLook: true}), LookRestFrames), []string{"dossier_gear", "dossier_look"}},
+		{"the layout tabs", []Sensed{on(Sensed{SetupLayout: true})}, []string{"dossier_gear", "dossier_sections"}},
+		{"closing", []Sensed{on(Sensed{}), {}}, []string{"dossier_gear", "dossier_close"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			f := newFake()
+			if got := doneAfter(f, New(f), c.readings...); !slices.Equal(got, c.want) {
+				t.Fatalf("finished %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestWindowAlreadyUpAtTheBaselineIsNotAnOpening(t *testing.T) {
+	t.Parallel()
+	f := newFake()
+	h := New(f)
+	f.sensed = Sensed{SetupOpen: true}
+	h.watch()
+	h.watch()
+	if len(f.s.Gameplay.LearnedLessons) != 0 {
+		t.Fatalf("learned %v from a window that was already up", f.s.Gameplay.LearnedLessons)
 	}
 }

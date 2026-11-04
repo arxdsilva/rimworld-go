@@ -67,6 +67,7 @@ func TestLogTabButtonAndRendering(t *testing.T) {
 // above the pane and a second click folds it again.
 func TestAnimalLogToggle(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
+	a.settings.HUD.Enabled = false // the plain pane
 	if _, err := g.SpawnAnimal("dustbuck", 10, 10); err != nil {
 		t.Fatal(err)
 	}

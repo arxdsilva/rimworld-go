@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	inspectorpkg "rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -25,12 +26,63 @@ import (
 // floating card and its anchors, the toggle and the rename dialog. Every
 // journey turns the card on through the settings first; it ships off.
 
-// dossierOn turns the card on, docked or floating, through the settings.
+// dossierOn turns the card on, docked or floating, through the Options rows
+// (Accessibility tab) as a player would, and returns to the colony.
 func dossierOn(j *journey, docked bool) {
 	j.t.Helper()
-	h := &j.a.settings.HUD // the Options rows come with the setup screen
-	h.Enabled, h.Docked, h.Pane.Restyle = true, docked, true
+	dossierSet(j, true, docked)
+}
+
+// dossierOff turns the card off through the Options rows: the plain pane.
+func dossierOff(j *journey) {
+	j.t.Helper()
+	dossierSet(j, false, j.a.settings.HUD.Docked)
+}
+
+// dossierSet walks to Options and back. The Escapes on the way may drop the
+// selection: a journey that needs it clicks the thing again.
+func dossierSet(j *journey, on, docked bool) {
+	j.t.Helper()
+	for i := 0; i < 4 && !hasWidget(j.a, "pause.options") && !j.clickable("pause.options"); i++ {
+		j.key("Escape", 0) // the first one may only drop the selection
+		j.update(1)
+	}
+	j.clickID("pause.options")
+	if j.a.nav.screen() != ports.ScreenOptions {
+		j.t.Fatalf("Options opened %s", j.a.nav.screen())
+	}
+	j.clickID("options.tab.access")
+	if j.a.settings.HUD.Docked != docked {
+		if !j.a.settings.HUD.Enabled {
+			j.clickID("options.card") // the placement row greys out with the card off
+		}
+		j.clickID("options.carddock")
+	}
+	if j.a.settings.HUD.Enabled != on {
+		j.clickID("options.card")
+	}
+	h := j.a.settings.HUD
+	if h.Enabled != on || h.Docked != docked {
+		j.t.Fatalf("the Options rows left the card enabled=%v docked=%v, want %v and docked=%v", h.Enabled, h.Docked, on, docked)
+	}
+	for i := 0; i < 3 && j.a.nav.screen() != ports.ScreenColony; i++ {
+		j.key("Escape", 0)
+		j.update(1)
+	}
+	for i := 0; i < 2 && j.a.nav.overlay() != overlayNone; i++ {
+		j.key("Escape", 0)
+	}
 	j.update(1)
+}
+
+// clickable reports a HUD button or kit widget of the current screen has the id.
+func (j *journey) clickable(id string) bool {
+	for _, b := range j.a.layoutHits(j.a.sw, j.a.sh) {
+		if b.ID == id {
+			return true
+		}
+	}
+	return hasWidget(j.a, id)
 }
 
 // dossierClick clicks what stands on a cell.
@@ -467,12 +519,14 @@ func TestJourneyDossierRename(t *testing.T) {
 
 func TestJourneyDossierToggle(t *testing.T) {
 	j := newJourney(t)
+	dossierOff(j)
 	p := j.a.renderer.snapshot()[0]
 	dossierClick(j, p.X, p.Y)
 	if hasWidget(j.a, hud.DossierButtonID) {
 		t.Fatal("the toggle shows with the card off")
 	}
 	dossierOn(j, true)
+	dossierClick(j, p.X, p.Y)
 	j.update(1)
 	j.clickID(hud.DossierButtonID)
 	j.update(2)
@@ -568,9 +622,10 @@ func TestJourneyDossierStaleID(t *testing.T) {
 // no widget, no toggle of the card's, the same after it has been on.
 func TestJourneyDossierOffIsIdentical(t *testing.T) {
 	j := newJourney(t)
-	if j.a.settings.HUD.Enabled {
-		t.Fatal("the card must ship off until the last wave")
+	if !j.a.settings.HUD.Enabled {
+		t.Fatal("the card ships on")
 	}
+	dossierOff(j)
 	p := j.a.renderer.snapshot()[0]
 	dossierClick(j, p.X, p.Y)
 	capture := func() (hudlayout.Layout, []string, inspectorpkg.Spec) {
@@ -602,6 +657,7 @@ func TestJourneyDossierOffIsIdentical(t *testing.T) {
 
 	// a run with the card on, then off again, ends where it began
 	dossierOn(j, true)
+	dossierClick(j, p.X, p.Y)
 	j.update(2)
 	j.draw(1)
 	j.a.settings.HUD.Enabled = false

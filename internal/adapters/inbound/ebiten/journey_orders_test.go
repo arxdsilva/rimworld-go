@@ -552,6 +552,8 @@ func TestJourneyOrdersRescueQueued(t *testing.T) {
 	doer, patient, px, py := careDoerAndPatient(j)
 	name := j.pawn(patient).Name
 	ordPick(j, 0)
+	j.lookAt(6, 7) // the docked card fills the lower left
+	j.update(1)
 	j.clickTile(6, 7, inputframe.Right, 0)
 	j.pick("Go here")
 	if !j.pawn(doer).HasOrder {

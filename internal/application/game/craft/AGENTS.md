@@ -32,6 +32,7 @@ Production: every bench's bills and the bill commands, finding and doing bill wo
 - `internal/application/game` (the guard's `imports` rule), adapters, platform, Ebitengine, global RNG, wall clock.
 
 ## Public Contracts
+- `packgather.go` (CSE-029): a crafter takes ingredients into the pack on the way to the bench when they fit, nearest first.
 - `deps.go` (FOOD-4: `Stock.Ingredient` went; craft finds single stacks itself): `Host` embeds value-only roles (Benches, Stock, Output, Workers, Crafters, Makers, Weathering, Workshop), each ≤ 8 methods (Benches, Workers and Crafters are full: a new need is a new role; PRD-3 moved DriedStock, Merge and PutDown into craft). The game implements them with adapter types in `craft_host.go`; none adds a method to `game.Game`. Fuel (`fuel.go`, shared with lamps and generators) and bench work speed (`workProgressPct`, skills.go) stay in game behind `Benches.Fuel` and `Crafters.BenchWork`.
 - The read model types live here (view.go); game re-exports them as aliases (`game.BillView`, `game.BillIngredients`, `game.BillIngredientView`, `game.RecipeView`, `game.Recipes`, `game.Bill*`), and `BillView` stays comparable (building views are diffed with `slices.Equal`).
 - Saved state keeps its gob names: `Game.Bills` (`map[EntityID][]recipe.Bill`), `Game.Racks` (`map[EntityID]craft.Batch`, fields `Kind`, `Qty`, `Rot`, `Left`) and `Game.Art` (`map[EntityID]craft.Artwork`, fields `Seed`, `Maker`; only standing sculptures are exported); a nil field keeps what is there, so older saves load.

@@ -1,6 +1,7 @@
 package hudlayout
 
 import (
+	"reflect"
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
@@ -125,5 +126,29 @@ func TestLayoutBarGroupsOverflow(t *testing.T) {
 	}
 	if l.Bar.Right() > l.Right.X {
 		t.Errorf("bar %+v reaches the right column", l.Bar)
+	}
+}
+
+// A floating card over the right column pushes the letters off it, and the
+// gap spaces them; without the card nothing changes (RHUD-471, 472, 475, 478).
+func TestLettersAvoidTheCard(t *testing.T) {
+	t.Parallel()
+	base := Compute(1920, 1080, Inputs{Letters: 3, PaneShown: true})
+	same := Compute(1920, 1080, Inputs{Letters: 3, PaneShown: true, LetterGap: 0})
+	if !reflect.DeepEqual(base, same) {
+		t.Fatal("a zero gap changed the layout")
+	}
+	card := gfx.Rect{X: base.Right.X - 100, Y: base.Letters.Y - 20, W: 300, H: 200}
+	l := Compute(1920, 1080, Inputs{Letters: 3, PaneShown: true, LetterAvoid: card, LetterGap: 8})
+	if l.LetterRows == 0 || !l.Letters.Intersect(card).Empty() {
+		t.Fatalf("letters %+v overlap the card %+v (rows %d)", l.Letters, card, l.LetterRows)
+	}
+	if l.LetterGap != 8 {
+		t.Fatalf("gap %v, want 8", l.LetterGap)
+	}
+	// a card off the column leaves the letters where they were
+	far := Compute(1920, 1080, Inputs{Letters: 3, PaneShown: true, LetterAvoid: gfx.Rect{X: 10, Y: 10, W: 300, H: 300}})
+	if !reflect.DeepEqual(far, base) {
+		t.Fatal("a card away from the column moved the letters")
 	}
 }

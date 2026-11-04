@@ -1,6 +1,8 @@
 package dossier
 
 import (
+	"time"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
@@ -41,6 +43,9 @@ func body(r gfx.Rect, docked bool) gfx.Rect {
 // prepare reads what the frame needs and returns the layout, or nil when the
 // card has nothing to show.
 func (p *Panel) prepare(r gfx.Rect, docked bool) (*layout, config.HUD) {
+	if p.timer.asked {
+		defer func(at time.Time) { p.timer.prepareMS = settle(p.timer.prepareMS, sinceMS(at)) }(time.Now())
+	}
 	hud := p.pf.Settings().HUD
 	if !p.sync(hud) {
 		return nil, hud
@@ -51,6 +56,9 @@ func (p *Panel) prepare(r gfx.Rect, docked bool) (*layout, config.HUD) {
 
 // declare registers what can be clicked or hovered, once per Update.
 func (p *Panel) declare(r gfx.Rect, docked bool) {
+	if p.timer.asked {
+		defer func(at time.Time) { p.timer.declareMS = settle(p.timer.declareMS, sinceMS(at)) }(time.Now())
+	}
 	l, _ := p.prepare(r, docked)
 	if l == nil {
 		return
@@ -104,12 +112,18 @@ func (p *Panel) draw(dst *ebiten.Image, r gfx.Rect, docked bool) {
 		uikit.DrawPanel(dst, r.X, r.Y, r.W, r.H)
 	}
 	bx := body(r, docked)
-	for i := range l.items {
-		it := &l.items[i]
-		if it.y+it.h > bx.H+0.5 {
-			continue
+	if p.timer.asked {
+		at := time.Now()
+		p.drawTimed(dst, l, bx)
+		p.timer.drawMS, p.timer.seen, p.timer.asked = settle(p.timer.drawMS, sinceMS(at)), true, false
+	} else {
+		for i := range l.items {
+			it := &l.items[i]
+			if it.y+it.h > bx.H+0.5 {
+				continue
+			}
+			p.drawItem(dst, it, bx.X+it.x, bx.Y+it.y)
 		}
-		p.drawItem(dst, it, bx.X+it.x, bx.Y+it.y)
 	}
 	mx, my := p.sz.Cursor()
 	if r.Hit(mx, my) && p.live() {

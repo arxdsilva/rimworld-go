@@ -99,9 +99,9 @@ func TestLettersPlusNOlder(t *testing.T) {
 			t.Errorf("row %d = letter %d, want %d", i+1, r.Letter.ID, want)
 		}
 	}
-	for _, b := range a.chrome.Right().Buttons(a.sw) {
-		if b.ID == "letter.0" || strings.Contains(b.Label, "older") {
-			t.Errorf("the +N older row is a button: %+v", b)
+	for _, b := range a.chrome.Right().Buttons(a.sw) { // RHUD-474: the +N older row opens the newest folded letter (id 3)
+		if b.ID == "letter.0" || strings.Contains(b.Label, "older") && b.ID != "letter.3" {
+			t.Errorf("the +N older row is the wrong button: %+v", b)
 		}
 	}
 	// dismissing a visible one brings an older one back

@@ -90,3 +90,11 @@ func (h devtoolsHost) StepTick() {
 
 // Icon is the UI icon "ui_icon/<name>".
 func (h devtoolsHost) Icon(name string) *ebiten.Image { return h.a.arch.Icon(name) }
+
+// CardTiming is the colonist card's timing, while the card is on.
+func (h devtoolsHost) CardTiming() []string {
+	if p := h.a.dos.panel; p != nil && h.a.settings.HUD.Enabled {
+		return p.TimingLines()
+	}
+	return nil
+}

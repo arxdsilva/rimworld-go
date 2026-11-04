@@ -28,7 +28,6 @@ type Actions interface {
 	OpenTab(name string)
 	ShowWindow(tab string)
 	AreaPicker(title string, cur int, base bool, pick func(ref int))
-	ManageAreas()
 	Hint(string)
 }
 

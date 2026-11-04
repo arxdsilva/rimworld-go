@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/adapters/inbound/ebiten/dossier/sheet"
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
@@ -259,8 +261,9 @@ func TestFoodSelector(t *testing.T) {
 	}
 }
 
-// RHUD-089, 093, 094: the area selector assigns and manages, and its back takes
-// the area's colour.
+// RHUD-089, 092, 093: the area selector opens the game's area list (its hover
+// preview and Manage row live there) and assigns, and its back takes the area's
+// colour.
 func TestAreaSelector(t *testing.T) {
 	s := newShell(t)
 	s.area = 5
@@ -274,14 +277,13 @@ func TestAreaSelector(t *testing.T) {
 	if it.back != want {
 		t.Fatalf("back %v want %v", it.back, want)
 	}
-	refs := []int{command.AreaUnrestricted, command.AreaHome, 5}
-	menus{s.panel}.areaChoice(refs, 2)
-	if s.cmds[0].Kind != command.AssignArea || s.cmds[0].Index != 5 {
-		t.Fatalf("assign %+v", s.cmds)
+	menus{s.panel}.pickArea()
+	if s.pick == nil || s.pickerCur != 5 || !s.pickerBase || s.pickerTitle != "Allowed area" {
+		t.Fatalf("area list opened with cur %d base %v title %q", s.pickerCur, s.pickerBase, s.pickerTitle)
 	}
-	menus{s.panel}.areaChoice(refs, 3)
-	if s.mgr != 1 {
-		t.Fatal("the last entry opens the manager")
+	s.pick(5)
+	if s.cmds[0].Kind != command.AssignArea || s.cmds[0].Index != 5 || s.cmds[0].Pawn != 7 {
+		t.Fatalf("assign %+v", s.cmds)
 	}
 	s.area = 0
 	s.panel.Invalidate()
@@ -304,6 +306,10 @@ func TestHourSelector(t *testing.T) {
 	c := s.cmds[0]
 	if c.Kind != command.SetSchedule || c.Index != 14 || c.Mode != 1 || c.Pawn != 7 {
 		t.Fatalf("schedule %+v", c)
+	}
+	menus{s.panel}.hourChoice(14, hourActivities) // RHUD-100: Manage...
+	if len(s.cmds) != 1 || len(s.wins) != 1 || s.wins[0] != ids.TabSchedule {
+		t.Fatalf("Manage sent %+v and opened %v, want only the Schedule window", s.cmds, s.wins)
 	}
 }
 
@@ -416,5 +422,71 @@ func TestDefaultTreesDrawForEveryTarget(t *testing.T) {
 			t.Fatalf("docked=%v: default layout is empty", docked)
 		}
 		s.paint(card, docked)
+	}
+}
+
+// TestTimingOnlyWhenAsked: nobody asking means no clock and no numbers; asking
+// fills the numbers from the next draw on, and another selection drops them.
+func TestTimingOnlyWhenAsked(t *testing.T) {
+	s := newShell(t)
+	card := gfx.Rect{X: 0, Y: 0, W: 400, H: 460}
+	img := ebiten.NewImage(404, 464)
+	s.step(0, 0, false, card, true)
+	s.panel.Draw(img, card)
+	if s.panel.timer.seen || len(s.panel.timer.widgetMS) != 0 {
+		t.Fatal("the card measured itself with nobody asking")
+	}
+	if got := s.panel.TimingLines(); got != nil {
+		t.Fatalf("lines before a measured draw: %v", got)
+	}
+	s.step(0, 0, false, card, true)
+	s.panel.Draw(img, card)
+	lines := s.panel.TimingLines()
+	if len(lines) < 2 || !strings.HasPrefix(lines[0], "card: draw ") {
+		t.Fatalf("timing lines = %v", lines)
+	}
+	if len(lines) > timingShown+1 {
+		t.Fatalf("%d lines, the list holds %d", len(lines), timingShown+1)
+	}
+	if !s.panel.timer.asked {
+		t.Fatal("reading the lines should ask for the next frame")
+	}
+	s.panel.Draw(img, card)
+	if s.panel.timer.asked {
+		t.Fatal("a draw should use up the request, so a closed overlay stops the clock")
+	}
+	s.panel.Select(selection.Animal, 99)
+	if s.panel.timer.seen {
+		t.Fatal("another selection keeps the old numbers")
+	}
+}
+
+// RHUD-057: a stored layout the card can't use as it stands says so, once.
+func TestBadStoredLayoutWarnsOnce(t *testing.T) {
+	s := newShell(t)
+	bad := column(widget("mood_bar"))
+	bad.Kids[0].Kids = []config.HUDNode{widget("food_bar")} // a widget cannot hold anything
+	s.setTree(true, bad)
+	s.step(0, 0, false, card, true)
+	s.panel.Invalidate()
+	s.step(0, 0, false, card, true)
+	n := 0
+	for _, h := range s.hints {
+		if strings.Contains(h, "saved card layout has a problem") {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("hints %q: want the problem named once", s.hints)
+	}
+}
+
+func TestDroppedLayoutWarns(t *testing.T) {
+	s := newShell(t)
+	s.set.HUD.Layouts.Dropped = true
+	s.panel.Invalidate()
+	s.step(0, 0, false, card, true)
+	if len(s.hints) != 1 || !strings.Contains(s.hints[0], "too big") {
+		t.Fatalf("hints %q", s.hints)
 	}
 }

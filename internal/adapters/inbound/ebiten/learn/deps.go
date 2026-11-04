@@ -15,6 +15,11 @@ type Sensed struct {
 	Selection    string // names what is selected ("" nothing); a change is a new selection
 	Speed        int    // the game speed tier (0 paused)
 	ThreatPaused bool   // the game paused itself on a threat
+
+	CardHover   bool // the pointer is over the colonist card
+	SetupOpen   bool // the card's setup window is up
+	SetupLook   bool // ... on its Look tab
+	SetupLayout bool // ... on its Sections or Presets tab
 }
 
 // Host is what the feature needs of the program that no ports role

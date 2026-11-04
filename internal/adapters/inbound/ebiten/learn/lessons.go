@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
 )
 
-// The learning helper's lessons (PLAY-018: LEARN owns them). Ten short
-// lessons in our own words, shown three at a time in order. A lesson is done
+// The learning helper's lessons (PLAY-018: LEARN owns them). Short lessons in
+// our own words, shown three at a time in order. A lesson is done
 // when the player does the thing (a command seen through Host.Chain, or a UI
 // event read each Update, helper.go) or presses "Got it".
 
@@ -29,6 +30,9 @@ type Lesson struct {
 	// OnUI reports the lesson done by what changed on screen this Update
 	// (nil: no UI event finishes it).
 	OnUI func(f Frame) bool
+	// Needs says the lesson applies with these settings (nil: always). One
+	// that does not is neither shown nor counted.
+	Needs func(config.Settings) bool
 }
 
 // Memo is what the helper remembers of the commands so far, for the
@@ -42,7 +46,17 @@ type Frame struct {
 	Panned   bool // the player has panned or zoomed enough (cameraInput)
 	Selected bool // a new thing was selected
 	SpeedSet bool // the player changed the game speed
+
+	CardRead    bool // the pointer rested on the colonist card
+	SetupOpened bool // the card's setup window just opened
+	LookRead    bool // the setup window stayed on its Look tab a while
+	LayoutsSeen bool // the setup window is on its Sections or Presets tab
+	SetupClosed bool // the card's setup window just closed
 }
+
+// cardOn gates the colonist card's lessons: without the card there is no gear
+// to press.
+func cardOn(s config.Settings) bool { return s.HUD.Enabled }
 
 // cmdIn reports c is one of kinds.
 func cmdIn(c command.Command, kinds ...command.Kind) bool {
@@ -145,6 +159,38 @@ var Catalog = []Lesson{
 			key(input.Pause), key(input.Speed1), key(input.Speed2), key(input.Speed3))
 	},
 		OnUI: func(f Frame) bool { return f.SpeedSet }},
+
+	{ID: "dossier_hover", Title: "Read the colonist card", Goal: "Rest the pointer on a colonist's card.", Needs: cardOn, Body: func(KeyFunc) string {
+		return "Select a colonist and the card shows their state, needs and work at a glance. " +
+			"Rest the pointer on a line and a tip says where its number comes from. " +
+			"Some lines also open what they name when you click them."
+	},
+		OnUI: func(f Frame) bool { return f.CardRead }},
+
+	{ID: "dossier_gear", Title: "Open the card settings", Goal: "Click the gear on the colonist card.", Needs: cardOn, Body: func(KeyFunc) string {
+		return "A small gear shows on the card while the pointer is over it. " +
+			"It opens the setup window, where every change reaches the card at once and nothing touches the colony."
+	},
+		OnUI: func(f Frame) bool { return f.SetupOpened }},
+
+	{ID: "dossier_look", Title: "Settings on the Look tab", Goal: "Read the Look tab of the card setup.", Needs: cardOn, Body: func(KeyFunc) string {
+		return "The Look tab sets where the card sits, how big it is, its text and how often it refreshes. " +
+			"A greyed row says why it is off right now. " +
+			"Back to defaults puts everything as it was."
+	},
+		OnUI: func(f Frame) bool { return f.LookRead }},
+
+	{ID: "dossier_sections", Title: "Sections and presets", Goal: "Open the Sections or Presets tab.", Needs: cardOn, Body: func(KeyFunc) string {
+		return "Sections lists what the card shows and in what order, and you can move, remove or add any line. " +
+			"Presets keeps a card you like as a file, to load again or to pass to a friend."
+	},
+		OnUI: func(f Frame) bool { return f.LayoutsSeen }},
+
+	{ID: "dossier_close", Title: "Close the setup window", Goal: "Press Close when you are done.", Needs: cardOn, Body: func(KeyFunc) string {
+		return "Your changes are already kept, so Close only puts the window away. " +
+			"The card stays as you left it in every colony, and a switch in Options turns it off if you prefer the plain pane."
+	},
+		OnUI: func(f Frame) bool { return f.SetupClosed }},
 }
 
 // ByID is the catalog entry with id (nil: none).

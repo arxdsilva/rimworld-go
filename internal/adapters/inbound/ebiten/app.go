@@ -127,6 +127,8 @@ type AppConfig struct {
 	// Updates says whether a newer release exists (nil: none known; captures,
 	// tests, dev).
 	Updates mainmenu.Updates
+	// CardFiles keeps the colonist card's presets (zero value: none).
+	CardFiles CardFiles
 }
 
 // Usage is what the App reports about a session (cmd/game wires usagehttp).

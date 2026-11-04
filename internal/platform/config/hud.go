@@ -58,6 +58,9 @@ type HUDText struct {
 type HUDLayouts struct {
 	Docked   *HUDNode `json:"docked,omitempty"`
 	Floating *HUDNode `json:"floating,omitempty"`
+	// Dropped says Normalize threw a stored tree away for being too big, so the
+	// card can say so. Never written.
+	Dropped bool `json:"-"`
 }
 
 // HUDNode is one node of a card layout: a container (column strip block line)
@@ -79,7 +82,7 @@ const (
 
 func defaultHUD() HUD {
 	return HUD{
-		Enabled: false, // DOS-9 flips this once the card is whole
+		Enabled: true,
 		Docked:  true, RefreshTenths: 5,
 		Pane: HUDPane{Restyle: true, Height: 360, MinTabs: 6, TabW: 72, FactionIcon: true},
 		Card: HUDCard{Anchor: 6, W: 400, H: 460, LetterGap: 4},
@@ -122,8 +125,12 @@ func (h HUD) normalize() HUD {
 			delete(h.Colors, k)
 		}
 	}
-	h.Layouts.Docked = boundedTree(h.Layouts.Docked)
-	h.Layouts.Floating = boundedTree(h.Layouts.Floating)
+	docked, floating := h.Layouts.Docked, h.Layouts.Floating
+	h.Layouts.Docked = boundedTree(docked)
+	h.Layouts.Floating = boundedTree(floating)
+	if h.Layouts.Docked != docked || h.Layouts.Floating != floating {
+		h.Layouts.Dropped = true
+	}
 	return h
 }
 

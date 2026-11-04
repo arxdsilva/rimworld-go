@@ -99,7 +99,7 @@ func (p *Panel) inspectLines() []string {
 func (p *Panel) inspectorLines() []string {
 	e := p.sh.Env()
 	return append([]string{fmt.Sprintf("Debug inspector  tick %d", p.sh.Tick()),
-		fmt.Sprintf("update budget: owed %d held %d", e.Owed, e.Held)}, p.inspectLines()...)
+		fmt.Sprintf("update budget: owed %d held %d", e.Owed, e.Held)}, append(p.inspectLines(), p.sh.CardTiming()...)...)
 }
 
 // inspectorSize is the inspector panel's size.

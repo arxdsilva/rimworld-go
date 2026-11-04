@@ -278,6 +278,7 @@ type BtnOpts struct {
 	Reason   string // shown as the tooltip while disabled
 	Tip      string // hover card: "Title\nbody"
 	Selected bool
+	NoFocus  bool // out of the Tab order: a button of the map's HUD, where Tab opens the Architect
 }
 
 func (s BtnStyle) Colors(hover, down, selected bool) (fill, border, text color.RGBA) {
@@ -308,7 +309,7 @@ func (k *Kit) Button(id string, r gfx.Rect, label string, o BtnOpts) bool {
 	if o.Disabled && o.Reason != "" {
 		tip = o.Reason
 	}
-	w := Widget{ID: id, Label: label, R: r, Focusable: true, Disabled: o.Disabled, Reason: o.Reason, Tip: tip}
+	w := Widget{ID: id, Label: label, R: r, Focusable: !o.NoFocus, Disabled: o.Disabled, Reason: o.Reason, Tip: tip}
 	clicked := false
 	w.Click = func() {
 		if o.Disabled {

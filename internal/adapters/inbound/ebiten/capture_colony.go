@@ -42,6 +42,7 @@ import (
 //	dossier-float    the floating card beside the plain pane
 //	dossier-log      the floating card with the log in the pane's body, a tab open
 //	dossier-animal   the card on a tame animal
+//	dossier-setup    the card's setup dialog on its Look tab (also -sections, -presets, -colours)
 //
 // Captures are developer tooling: they use the same Enqueue / Step calls
 // as play and a fixed seed, so a shot is repeatable.
@@ -49,8 +50,9 @@ import (
 // colonyCaptures lists the states above.
 var colonyCaptures = []string{
 	"factions-colony", "bio", "work-incapable", "arrival", "options-story", "options-habits",
-	"letter-intro", "arch-hospital", "arch-cabinet", "arch-locked", "chips", "world",
+	"letter-intro", "arch-hospital", "arch-cabinet", "arch-storage", "arch-locked", "chips", "world",
 	"dossier", "dossier-float", "dossier-log", "dossier-animal",
+	"dossier-setup", "dossier-setup-sections", "dossier-setup-presets", "dossier-setup-colours",
 }
 
 // colonyCapture reports ui is one of them.
@@ -179,6 +181,8 @@ func (a *App) captureColonyUI(ui string) {
 		}
 	case "dossier", "dossier-float", "dossier-log", "dossier-animal":
 		dossierHost{a}.capture(ui, pawns, sw, sh)
+	case "dossier-setup", "dossier-setup-sections", "dossier-setup-presets", "dossier-setup-colours":
+		captureDossierSetup(a, ui, pawns, sw, sh)
 	case "work-incapable":
 		a.win.Open, a.win.Mode = true, "work"
 		for row, p := range pawns {
@@ -204,9 +208,27 @@ func (a *App) captureColonyUI(ui string) {
 		a.arch.SelectCategory("misc")
 		a.arch.SelectTool("tool_cabinet")
 		cardAt("tool_cabinet")
+	case "arch-storage":
+		a.arch.OpenPanel()
+		a.arch.SelectCategory("storage")
+		cardAt("display_case")
 	case "arch-locked":
 		a.arch.OpenPanel()
 		a.arch.SelectCategory("temperature")
 		cardAt("campfire")
+	}
+}
+
+// captureDossierSetup opens the card's setup dialog on the tab the state names, over
+// the docked card; the Colours shot has two colours changed, so its list and
+// editor show a difference.
+func captureDossierSetup(a *App, ui string, pawns []game.PawnView, sw, sh int) {
+	dossierHost{a}.capture("dossier", pawns, sw, sh)
+	tab := map[string]int{"dossier-setup": 0, "dossier-setup-sections": 1, "dossier-setup-presets": 2, "dossier-setup-colours": 3}[ui]
+	if tab == 3 {
+		a.settings.HUD.Colors = map[string]string{"bar_main": "#3FA7E0FF", "tone_good": "#9ADB8CFF"}
+	}
+	if s := a.dos.setup; s != nil {
+		s.OpenAt(tab)
 	}
 }

@@ -6,7 +6,7 @@ Developer mode: the dev panel's spawns, cheats and toggles, the map-field overla
 ## Owned Concepts
 - `Panel` (20 methods, 10 exported) built by `New(sh Shell) *Panel`.
 - `State` (dev panel state; holds `Run func(d Tools) string` per action), `Action`, `Env`, `Selected`, `PanelRects`, `FieldsOverlay`.
-- Interfaces: `Host` (6 methods: `Env`, `HUD`, `Toast`, `Selected`, `StepTick`, `Icon`); `Tools` (8 methods: `SpawnAnimal`, `KillAnimal`, `FireIncident`, `Raid`, `SpawnStack`, `SetNeeds`, `DevLosePart`, `DevSpawnImplants`); `Keys` (`Fired`); `FieldSource` (`MapFieldLayers`).
+- Interfaces: `Host` (7 methods: `Env`, `HUD`, `Toast`, `Selected`, `StepTick`, `Icon`, `CardTiming`, the colonist card's per-widget timings for the inspector); `Tools` (8 methods: `SpawnAnimal`, `KillAnimal`, `FireIncident`, `Raid`, `SpawnStack`, `SetNeeds`, `DevLosePart`, `DevSpawnImplants`); `Keys` (`Fired`); `FieldSource` (`MapFieldLayers`).
 - Helpers: `FieldPixels`, `FieldLegendLines`, `Column`, `LoseParts`; constants `FieldAlpha`, `LosePickID`.
 - `var _ Tools = (*game.Game)(nil)` in `state.go` is the compile check that the root's game satisfies `Tools`.
 

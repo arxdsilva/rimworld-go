@@ -20,6 +20,7 @@ type fakeShell struct {
 	env    Env
 	layout hudlayout.Layout
 	sel    Selected
+	timing []string
 	tier   int
 	steps  int
 	toasts []string
@@ -57,3 +58,4 @@ func (f *fakeShell) Toast(s string)                            { f.toasts = appe
 func (f *fakeShell) Selected() Selected                        { return f.sel }
 func (f *fakeShell) StepTick()                                 { f.steps++ }
 func (f *fakeShell) Icon(string) *ebiten.Image                 { return nil }
+func (f *fakeShell) CardTiming() []string                      { return f.timing }
