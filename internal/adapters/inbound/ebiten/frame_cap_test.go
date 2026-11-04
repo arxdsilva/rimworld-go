@@ -80,6 +80,43 @@ func TestFrameCapOff(t *testing.T) {
 	}
 }
 
+// TestFrameCapMenuStaysAtSixty (PERF-003): off the colony (the menu,
+// loading, the prewarm) draws are never faster than 60 fps, with the cap
+// Off or at 120; VSync on still leaves the display to pace. The colony
+// keeps the player's cap, Off included.
+func TestFrameCapMenuStaysAtSixty(t *testing.T) {
+	t.Parallel()
+	menu := testApp(&stubSim{w: 4, h: 4})
+	menu.finishBoot()
+	for _, cap := range []int{0, 120, 144} {
+		menu.settings.Graphics.FrameCap = cap
+		if got := menu.frameCapGap(); got != menuDrawGap {
+			t.Fatalf("menu with cap %d: gap %v, want %v", cap, got, menuDrawGap)
+		}
+	}
+	menu.settings.Graphics.FrameCap = 30
+	if got := menu.frameCapGap(); got != time.Second/30 {
+		t.Fatalf("menu with cap 30: gap %v, want 1/30 s", got)
+	}
+	menu.settings.Graphics.FrameCap, menu.settings.Graphics.VSync = 0, true
+	if got := menu.frameCapGap(); got != 0 {
+		t.Fatalf("menu with vsync: gap %v, want 0", got)
+	}
+	if menuDrawGap != time.Second/60 {
+		t.Fatalf("menuDrawGap = %v, want 60 fps", menuDrawGap)
+	}
+
+	colony, _, _ := cappedColony(t)
+	colony.settings.Graphics.FrameCap = 0
+	if got := colony.frameCapGap(); got != 0 {
+		t.Fatalf("colony with the cap Off: gap %v, want none", got)
+	}
+	colony.settings.Graphics.FrameCap = 144
+	if got := colony.frameCapGap(); got != time.Second/144 {
+		t.Fatalf("colony at 144: gap %v", got)
+	}
+}
+
 // TestFrameCapRow: the Options row cycles the caps and is a preset row.
 func TestFrameCapRow(t *testing.T) {
 	t.Parallel()

@@ -76,6 +76,70 @@ func TestComputeUIScale(t *testing.T) {
 	if got := computeUIScale(s, 1920, 1080, 2, true); got != gfx.UnitScale {
 		t.Fatalf("capture = %+v, want unit", got)
 	}
+	// PERF-003: above the render cap dev shrinks, the UI keeps its size
+	// (ui is from the points) and the map's render scale stays 1.
+	got := computeUIScale(s, 3360, 1890, 2, false)
+	if want := math.Sqrt(maxRenderPixels / (3360.0 * 1890)); math.Abs(got.Dev-want) > 1e-9 || got.UI != 2 || got.World != 1 || math.Abs(got.S-2*want) > 1e-9 {
+		t.Fatalf("3360x1890 at 2x = %+v, want dev %.4f ui 2 world 1", got, want)
+	}
+	if got := computeUIScale(s, 7680, 4320, 1, false); math.Abs(got.Dev-2.0/3) > 1e-9 || got.UI != 2 || got.World != 1 {
+		t.Fatalf("8K at 1x = %+v, want dev 2/3 (below 1)", got)
+	}
+	s.Graphics.HiDPI = false
+	if got := computeUIScale(s, 3360, 1890, 2, false); got.Dev != 1 {
+		t.Fatalf("HiDPI off on a capped screen = %+v, want dev 1", got)
+	}
+}
+
+// TestRenderCapAnyScreen (PERF-003): on every screen the frame holds at
+// most maxRenderPixels, no side above maxRenderSide, the logical window
+// keeps the setup screens' minimum, and the physical corners map into the
+// logical window and back.
+func TestRenderCapAnyScreen(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		w, h   float64
+		dev    float64
+		capped bool
+	}{
+		{"720p", 1280, 720, 1, false},
+		{"1080p", 1920, 1080, 1, false},
+		{"1440p at 2x (5K)", 2560, 1440, 2, false},
+		{"4K at 1x", 3840, 2160, 1, false},
+		{"4K at 2x", 3840, 2160, 2, true},
+		{"5K at 1x", 5120, 2880, 1, false},
+		{"6K at 2x", 3008, 1692, 2, true},
+		{"3360x1890 at 2x (the panic)", 3360, 1890, 2, true},
+		{"8K at 1x", 7680, 4320, 1, true},
+		{"ultrawide 16384x1000 at 1x", 16384, 1000, 1, true},
+	} {
+		a := scaledTestApp(t, c.dev, nil)
+		pw, ph := a.LayoutF(c.w, c.h)
+		if pw*ph > maxRenderPixels+1e-3 || float64(a.pw*a.ph) > maxRenderPixels+pw+ph+1 {
+			t.Errorf("%s: %gx%g physical (%dx%d), above the cap", c.name, pw, ph, a.pw, a.ph)
+		}
+		if a.pw > maxRenderSide || a.ph > maxRenderSide {
+			t.Errorf("%s: a side of %dx%d is above %d", c.name, a.pw, a.ph, maxRenderSide)
+		}
+		if float64(a.sw) < uikit.MinSetupW || float64(a.sh) < uikit.MinSetupH {
+			t.Errorf("%s: logical %dx%d below the minimum", c.name, a.sw, a.sh)
+		}
+		if _, _, capped := (optionsHost{a}).renderLimit(); capped != c.capped {
+			t.Errorf("%s: capped = %v, want %v (dev %v -> %v)", c.name, capped, c.capped, c.dev, a.scale.Dev)
+		}
+		if !c.capped && a.scale.Dev != c.dev {
+			t.Errorf("%s: dev %v changed to %v under the cap", c.name, c.dev, a.scale.Dev)
+		}
+		if x, y := a.toLogical(0, 0); x != 0 || y != 0 {
+			t.Errorf("%s: origin maps to (%d,%d)", c.name, x, y)
+		}
+		if x, y := a.toLogical(a.pw-1, a.ph-1); x < 0 || y < 0 || x >= a.sw || y >= a.sh {
+			t.Errorf("%s: far corner maps to (%d,%d) outside %dx%d", c.name, x, y, a.sw, a.sh)
+		}
+		if float64(a.sw)*a.scale.S < pw-1e-6 || float64(a.sh)*a.scale.S < ph-1e-6 {
+			t.Errorf("%s: logical %dx%d at %v does not cover %gx%g", c.name, a.sw, a.sh, a.scale.S, pw, ph)
+		}
+	}
 }
 
 func scaledTestApp(t *testing.T, dev float64, mutate func(*config.Settings)) *App {
@@ -102,6 +166,24 @@ func TestLayoutFHiDPI(t *testing.T) {
 	}
 	if lw, lh := a.Layout(1280, 720); lw != 2560 || lh != 1440 {
 		t.Fatalf("Layout = %dx%d, want the LayoutF size rounded", lw, lh)
+	}
+
+	// PERF-003: the panic's screen, "3360x1890" at 2x, is 16:9 like the cap,
+	// so it draws exactly 5120x2880 (dev 1.52) and not 6720x3780; the
+	// logical window is the same 1680x945 at UI scale 2 as uncapped.
+	wide := scaledTestApp(t, 2, nil)
+	pw, ph = wide.LayoutF(3360, 1890)
+	if math.Abs(pw-5120) > 1e-6 || math.Abs(ph-2880) > 1e-6 || wide.pw != 5120 || wide.ph != 2880 {
+		t.Fatalf("3360x1890 at 2x: LayoutF %vx%v physical %dx%d, want 5120x2880", pw, ph, wide.pw, wide.ph)
+	}
+	if wide.sw != 1680 || wide.sh != 945 || wide.scale.UI != 2 || math.Abs(wide.scale.Dev-5120.0/3360) > 1e-9 {
+		t.Fatalf("3360x1890 at 2x: logical %dx%d scale %+v, want 1680x945 at ui 2", wide.sw, wide.sh, wide.scale)
+	}
+	if w, h, capped := (optionsHost{wide}).renderLimit(); !capped || w != 5120 || h != 2880 {
+		t.Fatalf("renderLimit = %dx%d capped %v", w, h, capped)
+	}
+	if _, _, capped := (optionsHost{a}).renderLimit(); capped {
+		t.Fatal("1280x720 at 2x reports the cap")
 	}
 
 	off := scaledTestApp(t, 2, func(s *config.Settings) { s.Graphics.HiDPI = false })

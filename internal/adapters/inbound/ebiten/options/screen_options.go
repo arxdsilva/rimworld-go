@@ -185,8 +185,7 @@ func graphicsRows() []OptionRow {
 		flag("vsync", "VSync", "Wait for the monitor's refresh before showing a frame. Stops tearing; off (the default) lets the frame cap pace the game instead of the screen.",
 			func(s *config.Settings) *bool { return &s.Graphics.VSync }),
 		frameCapRow(),
-		flag("hidpi", "Sharp on high-density screens", "Render at the screen's true resolution. Costs GPU time on very large maps.",
-			func(s *config.Settings) *bool { return &s.Graphics.HiDPI }),
+		hidpiRow(),
 		withTip(toggleRow("perfoverlay", "Performance overlay", func(s *config.Settings) *bool { return &s.Graphics.PerfOverlay }),
 			"Shows fps, 1 % low, frame, update and draw time, sim rate and memory in a small box by the resources. Costs nothing measurable."),
 		detail(choiceRow("effects", "Effects", "How many weather, smoke and spark particles draw. Reduced and Minimal cost less CPU and GPU time.",
@@ -203,13 +202,34 @@ func graphicsRows() []OptionRow {
 	}
 }
 
+// hidpiRow is Sharp on high-density screens (Graphics.HiDPI). Its value
+// names the render cap when it holds the frame below the screen's full
+// size (PERF-003: never more pixels a frame than a 5K screen at 2x).
+func hidpiRow() OptionRow {
+	r := chosenRow(withTip(toggleRow("hidpi", "Sharp on high-density screens", func(s *config.Settings) *bool { return &s.Graphics.HiDPI }),
+		"Render at the screen's true resolution. Costs GPU time on very large maps. "+
+			"A frame never holds more pixels than a 5K screen at 2x (5120x2880): a bigger screen draws a little softer, never slower."))
+	r.live = func(o *Screen) string {
+		s := o.sh.Settings()
+		if s.Graphics.HiDPI {
+			if lim := o.sh.Env().RenderLimit; lim != nil {
+				if w, h, capped := lim(); capped {
+					return fmt.Sprintf("On, limited to %dx%d", w, h)
+				}
+			}
+		}
+		return onOff(s.Graphics.HiDPI)
+	}
+	return r
+}
+
 // frameCapRow is Frame cap (PERF-002): the most frames a second the game
 // draws with VSync off (background.go frameCapGap), cycling config.FrameCaps;
 // 120 on every display by default.
 func frameCapRow() OptionRow {
 	return chosenRow(OptionRow{Key: "framecap", Label: "Frame cap", kind: rowChoice,
 		Tip: "The most frames a second the game draws with VSync off: 120 on every display by default. " +
-			"Off draws as fast as the computer can; on macOS the screen's own refresh still bounds it.",
+			"Off draws as fast as the computer can; on macOS the screen's own refresh still bounds it. The menu and loading stay at 60.",
 		value: func(s config.Settings) string { return FrameCapLabel(s.Graphics.FrameCap) },
 		apply: func(s *config.Settings, _ int) {
 			s.Graphics.FrameCap = cycle(config.FrameCaps, s.Graphics.FrameCap)

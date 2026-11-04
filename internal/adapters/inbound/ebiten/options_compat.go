@@ -59,13 +59,24 @@ func newOptions(a *App) *options.Screen {
 	return options.New(optionsShell{a.shell, optionsHost{a}, optionsSaver{a}, optionsStory{a}})
 }
 
+// renderLimit is the physical size the render cap (ui_scale.go, PERF-003)
+// holds the frame to, and whether it is holding it (the screen asks for
+// more than the cap allows).
+func (h optionsHost) renderLimit() (w, ht int, capped bool) {
+	a := h.a
+	if a.cfg.Capture != nil || !a.settings.Graphics.HiDPI {
+		return a.pw, a.ph, false
+	}
+	return a.pw, a.ph, a.scale.Dev < a.devRaw-1e-9
+}
+
 // Env is the program as of now.
 func (h optionsHost) Env() options.Env {
 	a := h.a
 	return options.Env{
 		Running: a.renderer != nil, Commitment: a.commitment(), Capture: a.cfg.Capture != nil,
 		CanSave: a.canSave(), CanLoad: a.canLoad(), Hardware: a.cfg.Hardware,
-		DeviceScale: a.deviceScale, UIScale: a.scale.UI, Bindings: a.bindings(),
+		DeviceScale: a.deviceScale, RenderLimit: h.renderLimit, UIScale: a.scale.UI, Bindings: a.bindings(),
 		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods,
 	}
 }

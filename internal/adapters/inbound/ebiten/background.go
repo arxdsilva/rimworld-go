@@ -4,6 +4,8 @@ import (
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 )
 
 // "Run in background" (PLAY-017 §4, Options > Gameplay).
@@ -80,17 +82,32 @@ func (a *App) syncBackground() {
 	}
 }
 
+// menuDrawGap is the shortest time between two draws off the colony: the
+// menu, the wizard, loading and the art prewarm have nothing to gain from
+// more than 60 fps, and "Off" there once drew a 25 M pixel menu as fast as
+// the GPU could while four cores deflated sprites (PERF-003).
+const menuDrawGap = time.Second / 60
+
 // frameCapGap is the shortest time between two draws under the frame cap
 // (Graphics.FrameCap, PERF-002: 120 fps on every display by default, with
 // VSync off, so the screen's refresh never paces the game). It is 0, no
-// cap, while VSync is on (the display paces), with the cap Off, and for a
-// capture or the fps probe (both uncapped by design).
+// cap, while VSync is on (the display paces), for a capture or the fps
+// probe (both uncapped by design), and with the cap Off on the colony,
+// where Off is for measuring. Off the colony it is never shorter than
+// menuDrawGap.
 func (a *App) frameCapGap() time.Duration {
 	g := a.settings.Graphics
-	if g.FrameCap <= 0 || g.VSync || a.cfg.Capture != nil || a.cfg.FPSProbe != nil {
+	if g.VSync || a.cfg.Capture != nil || a.cfg.FPSProbe != nil {
 		return 0
 	}
-	return time.Second / time.Duration(g.FrameCap)
+	var gap time.Duration
+	if g.FrameCap > 0 {
+		gap = time.Second / time.Duration(g.FrameCap)
+	}
+	if a.nav.screen() != ports.ScreenColony {
+		gap = max(gap, menuDrawGap)
+	}
+	return gap
 }
 
 // capBackgroundDraw ends a Draw: it waits out the rest of the frame's gap,

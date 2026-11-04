@@ -1783,9 +1783,12 @@ presentation only, never the simulation; captures ignore them.
 
 -   [x] window: fullscreen toggle (the window resizes freely; no
     resolution presets);
--   [x] VSync (off by default) and Frame cap (60 / 120 / 144 / Off; 120 on every display by default, paced by the client — PERF-002);
+-   [x] VSync (off by default) and Frame cap (60 / 120 / 144 / Off; 120 on every display by default, paced by the client — PERF-002; off the colony — menu, wizard, loading — draws never exceed 60 fps, PERF-003);
 -   [x] UI scale (UI-024: Accessibility row Auto / 75–200 %; "Sharp on
-    high-density screens" (HiDPI) on the Graphics tab);
+    high-density screens" (HiDPI) on the Graphics tab; its value reads
+    "On, limited to WxH" while the render cap holds the frame below the
+    screen's full size — one frame never holds more pixels than 5120x2880
+    nor a side above 8192, on any screen, PERF-003);
 -   [x] effects/detail (Full/Reduced/Minimal: particles, weather drops,
     menu embers and dust);
 -   [x] quality preset (PLAY-019: High / Medium / Low, picked from the

@@ -51,6 +51,33 @@ func autoUIScale(w, h float64) float64 {
 	return math.Max(autoUIMin, math.Min(autoUIMax, f))
 }
 
+// The render cap (PERF-003). One frame never holds more physical pixels
+// than a 5K screen at 2x, nor a side above what Metal accepts on every
+// Mac: above either, dev shrinks (below 1 if it must) and the window system
+// scales the frame up to the screen. A display mode above the panel's
+// native size (a 4K panel "looking like" 3360x1890 draws 6720x3780, 25 M
+// pixels a frame) therefore costs the GPU and the memory no more than the
+// biggest frame that has run here for months. The UI is laid out in points
+// (autoUIScale), so nothing changes size; only the map's sharpness.
+const (
+	maxRenderPixels = 5120 * 2880
+	maxRenderSide   = 8192
+)
+
+// capDev is dev lowered until a w x h window in points fits the render cap.
+func capDev(w, h, dev float64) float64 {
+	if w <= 0 || h <= 0 || dev <= 0 {
+		return dev
+	}
+	if (w*dev)*(h*dev) > maxRenderPixels {
+		dev = math.Sqrt(maxRenderPixels / (w * h))
+	}
+	if side := math.Max(w, h); side*dev > maxRenderSide {
+		dev = (maxRenderSide - 0.5) / side // the physical size rounds up
+	}
+	return dev
+}
+
 // computeUIScale is the scale for the settings, a w x h window in points
 // and the screen's device scale factor. Captures are always 1. The map's
 // render scale never takes the map below one pixel per point (1/dev): at
@@ -62,6 +89,7 @@ func computeUIScale(st config.Settings, w, h, dev float64, capture bool) gfx.Sca
 	if !st.Graphics.HiDPI || dev <= 0 || math.IsNaN(dev) {
 		dev = 1
 	}
+	dev = capDev(w, h, dev)
 	world := 1.0
 	if dev > 1 {
 		world = math.Max(renderScaleOf(st.Graphics), 1/dev)

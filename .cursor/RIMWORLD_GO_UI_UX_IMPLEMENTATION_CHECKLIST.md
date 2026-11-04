@@ -2292,7 +2292,7 @@ A UI checkbox is complete only when all applicable items below pass.
 -   [ ] Tooltip/help text exists for non-obvious mechanics.
 -   [ ] Scrolling works at realistic data size.
 -   [ ] Lists/tables are virtualized when scale requires it.
--   [x] Layout works at supported UI scales/resolutions. (UI-024: setup screens, HUD, panels, tools and Options tested at 100/150/200 %; HiDPI renders at the screen's true resolution)
+-   [x] Layout works at supported UI scales/resolutions. (UI-024: setup screens, HUD, panels, tools and Options tested at 100/150/200 %; HiDPI renders at the screen's true resolution up to the render cap of 5120x2880 pixels a frame, PERF-003)
 -   [ ] Important states are not communicated by color alone.
 -   [ ] No expensive world scan occurs every frame.
 -   [-] Automated tests cover controller/view-model logic where
