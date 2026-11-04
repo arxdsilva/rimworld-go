@@ -366,8 +366,9 @@ type saveState struct {
 	// Incoming (HAUL-001): material on its way to each frame or fuel user.
 	Incoming map[entity.EntityID]int
 	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.
-	Deliveries   map[entity.EntityID][]haulShare
-	HarvestSweep []entity.EntityID // HAUL-003 (game/haul): growers sweeping a field, ascending; nil when none
+	Deliveries    map[entity.EntityID][]haulShare
+	HarvestSweep  []entity.EntityID // HAUL-003 (game/haul): growers sweeping a field, ascending; nil when none
+	ColonistOrder []entity.EntityID // CTL-011 (game/roster): the colonist bar, first to last; nil until moved
 	// Geo and Smooths (SIM-029): stone types, ore veins and smoothing
 	// marks; absent in older saves, whose geology is regenerated from
 	// their terrain and whose legacy stone becomes granite blocks.
@@ -539,14 +540,15 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
 	s.Surgery = g.exportSurgery()
-	s.BedRest = g.care.Rest.Export()   // care/rest.go (PLAY-020)
-	s.Mind = g.mind.Export()           // mind (SIM-066)
-	s.FeedRetry = g.care.Feed.Export() // care/feed.go (SIM-064)
-	s.Care = g.care.Policy.Export()    // care package (MED-03): nil at the defaults
-	s.Trade = g.exportTrade()          // trade.go (PLAY-024): nil while there is nothing to keep
-	s.Diet = g.sk.diet.Export()        // game/diet (FOOD-4): nil at the defaults
-	s.Sense = senseOf(g).Export()      // game/sense (CSE): nil at the defaults
-	s.PetNames = g.sk.exportPetNames() // skills.go (RHUD-025): nil until a rename
+	s.BedRest = g.care.Rest.Export()    // care/rest.go (PLAY-020)
+	s.Mind = g.mind.Export()            // mind (SIM-066)
+	s.FeedRetry = g.care.Feed.Export()  // care/feed.go (SIM-064)
+	s.Care = g.care.Policy.Export()     // care package (MED-03): nil at the defaults
+	s.Trade = g.exportTrade()           // trade.go (PLAY-024): nil while there is nothing to keep
+	s.Diet = g.sk.diet.Export()         // game/diet (FOOD-4): nil at the defaults
+	s.Sense = senseOf(g).Export()       // game/sense (CSE): nil at the defaults
+	s.PetNames = g.sk.exportPetNames()  // skills.go (RHUD-025): nil until a rename
+	s.ColonistOrder = g.sk.bar.Export() // game/roster (CTL-011): nil until the player moves someone
 	s.History = slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -759,6 +761,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importPrisoners(s.Prisoners)
 	senseOf(g).Import(s.Sense) // game/sense (CSE)
 	g.sk.importPetNames(s.PetNames)
+	g.sk.bar.Import(s.ColonistOrder) // game/roster (CTL-011): none in an older save
 	g.history = s.History
 	if err := g.importStreams(s.RNGStreams); err != nil {
 		return nil, info, fmt.Errorf("restore rng streams: %w", err)

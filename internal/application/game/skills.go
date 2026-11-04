@@ -62,6 +62,17 @@ type skillState struct {
 	diet      diet.Book                        // food policies and who holds which (game/diet, FOOD-4), saved
 	stun      map[entity.EntityID]uint64       // the tick a stun ends (the card; transient, never hashed)
 	petNames  map[entity.EntityID]string       // a renamed animal's rolled name (saved, nil until a rename)
+	bar       roster.BarOrder                  // the colonist bar's order (saved, CTL-011): only views read it
+}
+
+// barColonists is who stands on the colonist bar: every open map's colonists,
+// maps in id order (Colonists' order, the bar's default).
+func barColonists(g *Game) []entity.EntityID {
+	var on []entity.EntityID
+	for _, m := range g.maps {
+		on = append(on, m.pawnIDs...)
+	}
+	return on
 }
 
 // stunSweep is how many stun records may gather before the spent ones go.
@@ -399,7 +410,7 @@ func (g *Game) learn(id entity.EntityID, sk skill.ID, xp int) {
 		}
 	}
 	s := &set[sk]
-	pct := int64(passionPct(s.Passion))
+	pct := int64(roster.PassionPct(s.Passion))
 	left := int64(learnCapDay - lg.today[sk])
 	if left <= 0 {
 		return
@@ -410,34 +421,14 @@ func (g *Game) learn(id entity.EntityID, sk skill.ID, xp int) {
 			return
 		}
 	}
-	before, lv := totalXP(*s), s.Level
+	before, lv := roster.TotalXP(*s), s.Level
 	skill.Learn(s, xp)
-	gain := int32(totalXP(*s) - before)
+	gain := int32(roster.TotalXP(*s) - before)
 	lg.today[sk] += gain
 	lg.week[lg.day%7][sk] += gain
 	if s.Level != lv {
 		g.rebuildStats(id)
 	}
-}
-
-// passionPct mirrors skill.Learn's passion multiplier (for the cap).
-func passionPct(p skill.Passion) int {
-	switch p {
-	case skill.Minor:
-		return 100
-	case skill.Major:
-		return 150
-	}
-	return 35
-}
-
-// totalXP is a skill's experience since level 0.
-func totalXP(s skill.Skill) int64 {
-	t := int64(s.XP)
-	for l := uint8(0); l < s.Level; l++ {
-		t += int64(skill.Cost(l))
-	}
-	return t
 }
 
 // learnLogOf is id's learning log, rolled over to today: a new day

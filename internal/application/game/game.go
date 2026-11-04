@@ -80,6 +80,7 @@ type Config struct {
 
 // PawnView is a read-only snapshot of a single pawn.
 type PawnView struct {
+	BarOrder int // place on the colonist bar (CTL-011)
 	ID       entity.EntityID
 	Name     string
 	X, Y     int
@@ -1337,8 +1338,9 @@ func (g *Game) snapshot() []PawnView {
 	live := g.postponedTops(g.views.postBuf) // postpone.go: one pass for every colonist
 	g.views.postBuf = live
 	views := make([]PawnView, 0, len(g.pawnIDs))
-	beds := g.rest.Beds.Bedded(g.pawnIDs) // rest/beds.go (BED-3)
-	for _, id := range g.pawnIDs {
+	beds := g.rest.Beds.Bedded(g.pawnIDs)                 // rest/beds.go (BED-3)
+	places := g.sk.bar.Places(barColonists(g), g.pawnIDs) // skills.go: game/roster (CTL-011)
+	for i, id := range g.pawnIDs {
 		pos, _ := g.positions.Get(id)
 		name, _ := g.names.Get(id)
 		j, _ := g.jobs.Get(id)
@@ -1350,6 +1352,7 @@ func (g *Game) snapshot() []PawnView {
 			reason = health.CauseNoBed.String()
 		}
 		views = append(views, PawnView{
+			BarOrder:      places[i],
 			ID:            id,
 			Map:           MapID(g.mapState.id),
 			Name:          name,

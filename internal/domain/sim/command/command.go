@@ -409,6 +409,9 @@ const (
 	SetGameplayLimit
 	SetBenchClean
 	MarkUnload
+	// SetColonistOrder moves colonist Pawn to place Count on the colonist bar
+	// (CTL-011). The order is the player's: no AI or work reads it.
+	SetColonistOrder
 )
 
 // LaunchPods arrival modes (Command.Mode), AX-0 contract (A9).

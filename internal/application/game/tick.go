@@ -98,6 +98,8 @@ func (g *Game) applyOne(c command.Command) {
 		senseOf(g).Apply(c) // game/sense (CSE)
 	case command.SetName:
 		applySetName(g, c) // bio_view.go (RHUD-025)
+	case command.SetColonistOrder:
+		g.sk.bar.Move(barColonists(g), entity.EntityID(c.Pawn), c.Count) // game/roster (CTL-011)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
 	case command.SetDifficulty:

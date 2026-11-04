@@ -3,6 +3,7 @@ package game
 import (
 	"rimworld-go/internal/application/game/dossierview"
 	rlab "rimworld-go/internal/application/game/research"
+	"rimworld-go/internal/application/game/roster"
 	"strings"
 	"testing"
 
@@ -171,20 +172,20 @@ func TestLearningSaturation(t *testing.T) {
 		p.Skills[skill.Mining].Passion = skill.Major
 		p.Traits = []trait.ID{trait.Gentle}
 	}))
-	before := totalXP(g.skillOf(id, skill.Mining))
+	before := roster.TotalXP(g.skillOf(id, skill.Mining))
 	for i := 0; i < 20000; i++ {
 		g.learn(id, skill.Mining, 1)
 	}
-	day1 := totalXP(g.skillOf(id, skill.Mining)) - before
+	day1 := roster.TotalXP(g.skillOf(id, skill.Mining)) - before
 	if day1 > learnCapDay || day1 < learnCapDay-1 {
 		t.Fatalf("learned %d in a day, cap %d", day1, learnCapDay)
 	}
 	g.clock.Advance(24 * 2500)
 	g.learn(id, skill.Mining, 100)
-	if got := totalXP(g.skillOf(id, skill.Mining)) - before - day1; got < 150 || got > 151 {
+	if got := roster.TotalXP(g.skillOf(id, skill.Mining)) - before - day1; got < 150 || got > 151 {
 		t.Fatalf("next day learned %d, want 150 (major passion)", got)
 	}
-	if c, _ := g.Dossier(id); int64(c.LearnedWeek[skill.Mining]) != totalXP(g.skillOf(id, skill.Mining))-before {
+	if c, _ := g.Dossier(id); int64(c.LearnedWeek[skill.Mining]) != roster.TotalXP(g.skillOf(id, skill.Mining))-before {
 		t.Errorf("this week %d", c.LearnedWeek[skill.Mining])
 	}
 	shoot := g.skillOf(id, skill.Shooting)

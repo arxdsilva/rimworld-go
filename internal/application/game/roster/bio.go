@@ -2,7 +2,8 @@
 // read models built from a generated pawn, the character-creation pool that
 // exists before any Game (NG-1 §2.9, §5.4), and the Health tab's text. It is
 // pure and holds no simulation state; the game package names its types for
-// the adapters (ng1_types.go).
+// the adapters (ng1_types.go). The one thing it keeps is the colonist bar's
+// order (bar.go), which only the view reads.
 package roster
 
 import (
@@ -180,4 +181,24 @@ func backstoryText(id backstory.ID, sex look.Sex, name string) (title, desc stri
 		return noBackstory, ""
 	}
 	return d.Title, backstory.Fill(d.Desc, sex, name)
+}
+
+// PassionPct mirrors skill.Learn's passion multiplier (for the daily cap).
+func PassionPct(p skill.Passion) int {
+	switch p {
+	case skill.Minor:
+		return 100
+	case skill.Major:
+		return 150
+	}
+	return 35
+}
+
+// TotalXP is a skill's experience since level 0.
+func TotalXP(s skill.Skill) int64 {
+	t := int64(s.XP)
+	for l := uint8(0); l < s.Level; l++ {
+		t += int64(skill.Cost(l))
+	}
+	return t
 }
