@@ -48,4 +48,4 @@ jobs:
       - run: make vuln
       # -p 2: on 4 vCPUs the two big binaries otherwise starve each other towards
       # the per-binary timeout (.cursor/handoffs/CI-001-race-budget-and-memory.md).
-      - run: xvfb-run -a go test -race -p 2 -timeout 10m ./...
+      - run: scripts/ci_test.sh
