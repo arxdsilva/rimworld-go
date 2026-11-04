@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/application/game/haul"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/entity"
@@ -76,7 +77,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Warden:
 		return g.prison.Assign(id) // prison/warden.go
 	case work.Haul:
-		return g.haulUrgent(id) || g.fillHoppers(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || // haul_priority.go, trough_feed.go
+		return g.haul.sweep.Next(haulHost{g}, id) || g.haulUrgent(id) || g.fillHoppers(id) || g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || // haul_priority.go, trough_feed.go; game/haul: a harvest sweep first (HAUL-003)
 			g.craft.Bills.AnyFor(work.Haul) && g.craft.Shop.Assign(id, work.Mask(0).Set(work.Haul, true)) || ordersOf(g).AssignHaul(id) || travelOf(g).AssignLoad(id) || travelOf(g).AssignPack(id) || g.assignHaul(id) // FOOD-4: hoppers, barrels; AX-1: open, strip; AX-9: pods
 	case work.Construct:
 		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
@@ -88,7 +89,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Handle: // SIM-026: taming moved here from Hunt
 		return g.assignRope(id) || g.herdOf().AssignTame(id) || g.assignTrain(id) || g.herdOf().AssignRest(id) || (g.tanks != nil && g.tanks.Assign(id)) // rope.go, herd, bonds.go, game/aqua
 	case work.Grow:
-		return g.assignHarvest(id) || g.assignSow(id)
+		return haul.Harvest(haulHost{g}, id) || g.assignSow(id) // game/haul
 	case work.PlantCut: // FOOD-2: cutting split from growing (wiki: Plants)
 		return g.assignCut(id)
 	case work.Mine:

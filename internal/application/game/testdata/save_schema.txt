@@ -512,6 +512,8 @@ saveState.GrowZones[].MaxY int
 saveState.GrowZones[].MinX int
 saveState.GrowZones[].MinY int
 saveState.H int
+saveState.HarvestSweep []rimworld-go/internal/domain/sim/entity.EntityID
+saveState.HarvestSweep[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.History []rimworld-go/internal/application/game.historyEntry
 saveState.History[] rimworld-go/internal/application/game.historyEntry
 saveState.History[].Kind string

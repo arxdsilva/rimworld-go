@@ -548,7 +548,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
 -   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
--   [x] **Harvest designation** (wild plants by order; PLAY-017: zone crops get the harvest mark when they ripen, and Cancel holds until the next ripening; Grow work type)
+-   [x] **Harvest designation** (wild plants by order; PLAY-017: zone crops get the harvest mark when they ripen, and Cancel holds until the next ripening; Grow work type; HAUL-003: a colonist who finishes a harvest clears every ripe marked plant within 8 tiles before hauling)
 -   [x] **Hunt designation**
 -   [x] **Plan designation** (PLAY-012 UI-023: Plan / Remove plan paint visual layout marks with no gameplay effect; a mark clears when any building is finished on its tile; Plans button hides the overlay)
 -   [-] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))

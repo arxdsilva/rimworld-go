@@ -26,7 +26,7 @@ import (
 // jobIndexes are the job-giver structures (never saved).
 type jobIndexes struct {
 	// marks: plants with a harvest, cut or zone flag — the only ones
-	// nearestPlant's wants (wantsHarvest, Cut, wantsZoneChop) can match.
+	// nearestPlant's wants (haul.WantsHarvest, Cut, wantsZoneChop) can match.
 	marks idSet
 	// cands, scanCands: nearestPlant scratch.
 	cands, scanCands []plantCand

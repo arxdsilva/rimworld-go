@@ -35,6 +35,7 @@ type haulState struct {
 	// storedAt (PLAY-023, haul_priority.go): the tick each stack was set
 	// down in a storage zone below the best one taking it.
 	storedAt map[entity.EntityID]uint64
+	sweep    haul.Sweep  // HAUL-003: growers who pick the field before they haul (saved)
 	cands    []haul.Cand // HAUL-002 scratch (planGather): never saved
 	picks    []haul.Pick
 	store    store.Store  // STO-2: storage buildings, urgent marks, the paste dispenser (game/store)

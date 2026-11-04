@@ -366,7 +366,8 @@ type saveState struct {
 	// Incoming (HAUL-001): material on its way to each frame or fuel user.
 	Incoming map[entity.EntityID]int
 	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.
-	Deliveries map[entity.EntityID][]haulShare
+	Deliveries   map[entity.EntityID][]haulShare
+	HarvestSweep []entity.EntityID // HAUL-003 (game/haul): growers sweeping a field, ascending; nil when none
 	// Geo and Smooths (SIM-029): stone types, ore veins and smoothing
 	// marks; absent in older saves, whose geology is regenerated from
 	// their terrain and whose legacy stone becomes granite blocks.
@@ -610,7 +611,7 @@ func exportMapFields(g *Game, s *saveState) {
 	s.PenMarkers, s.PenAnimals = slices.Clone(g.pens), g.exportPenAnimals()
 	s.Ocean = g.exportOcean()            // bridge.go (MAPGEN-3): the sea bitset, nil without a sea
 	s.AX4 = g.br.ind.Export(g.bldgs.Has) // game/industry (AX-4)
-	s.ZoneMap, s.Incoming, s.Deliveries = g.exportZones(), g.exportIncoming(), g.exportDeliveries()
+	s.ZoneMap, s.Incoming, s.Deliveries, s.HarvestSweep = g.exportZones(), g.exportIncoming(), g.exportDeliveries(), g.haul.sweep.Export()
 	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
 	s.Orders = ordersOf(g).Export() // game/orders (AX-1)
 	s.Power = g.exportPower()       // power.go (PLAY-021): nil without power
@@ -839,7 +840,8 @@ func importMapFields(g *Game, s *saveState) {
 	g.importZones(s.ZoneMap)
 	g.importIncoming(s.Incoming)
 	g.importDeliveries(s.Deliveries)
-	g.afterLoadAnimals() // legacy corpses and bills (wildlife.go)
+	g.haul.sweep.Import(s.HarvestSweep) // game/haul (HAUL-003): none in an older save
+	g.afterLoadAnimals()                // legacy corpses and bills (wildlife.go)
 	g.importGeology(s.Geo, s.Smooths, s.StructVer)
 	ordersOf(g).Import(s.Orders) // game/orders (AX-1)
 	g.importPower(s.Power)       // power.go (PLAY-021)

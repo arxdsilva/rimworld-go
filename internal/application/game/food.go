@@ -249,13 +249,6 @@ func (g *Game) markRipeHarvest(id entity.EntityID) {
 	g.notePlantMark(id) // jobindex.go
 }
 
-// wantsHarvest: ripe food plants that carry a harvest mark. Zone crops get
-// theirs when they ripen or when a zone is drawn over them
-// (markRipeHarvest), so "Cancel harvest" cancels until the next ripening.
-func wantsHarvest(p plant.Plant) bool {
-	return p.HarvestableNow() && p.Designated // FOOD-2: from 65 % growth (wiki: Plants)
-}
-
 // bestFood is the free food stack pawn id would fetch for eater (itself or
 // whom it feeds), its tile and optimality (game/diet, FOOD-4: the eater's
 // policy, taste and distance; a malnourished eater takes anything).

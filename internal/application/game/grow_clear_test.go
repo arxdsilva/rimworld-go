@@ -386,28 +386,6 @@ func TestZoneDrawnOverRipePlantMarksIt(t *testing.T) {
 	}
 }
 
-// TestWantsHarvestNeedsTheMark: a ripe zone crop is wanted only while
-// marked; a ripe wild plant likewise.
-func TestWantsHarvestNeedsTheMark(t *testing.T) {
-	t.Parallel()
-	ripe := plant.Plant{Species: plant.Potato, Growth: plant.DefOf(plant.Potato).GrowTicks, Zone: true}
-	if wantsHarvest(ripe) {
-		t.Fatal("an unmarked ripe zone crop is wanted")
-	}
-	ripe.Designated = true
-	if !wantsHarvest(ripe) {
-		t.Fatal("a marked ripe crop is not wanted")
-	}
-	ripe.Growth = 0
-	if wantsHarvest(ripe) {
-		t.Fatal("an unripe marked crop is wanted")
-	}
-	wild := plant.Plant{Species: plant.BerryBush, Growth: plant.DefOf(plant.BerryBush).GrowTicks, Designated: true}
-	if !wantsHarvest(wild) {
-		t.Fatal("a marked ripe wild bush is not wanted")
-	}
-}
-
 // TestCancelHarvestSticksOnRipeZoneCrop: a ripe, marked zone crop is
 // harvested; after "Cancel harvest" (Undesignate harvest) a grower leaves
 // it standing.

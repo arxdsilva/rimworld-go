@@ -8,6 +8,7 @@ Stockpile hauling's own rules. A consumer sub-package of `internal/application/g
 - `Gather` (step.go): the pickup walk. `Next` heads to the next pile left that still joins the load (skipping vanished, taken, forbidden, changed or unreachable piles); `Arrive` takes the pile into the carried stack (rot and poison averaged by quantity) and walks on. Interrupts need nothing here: the game drops the carried load and frees the hauler's claims. `TargetGone` (AL-3) is what a job does when a stack leaves the map under it: only a walk to the stack ends (State Goto), so a job fails at once rather than at the empty spot, a hauler on its way to a pile skips to the next, and a pawn using the stack up (State Do) or already carrying its load is left alone; `game.stackGone` calls it from `deleteItem`.
 - Storage room (load.go): `Toppable` (a stack takes a load), `Cell.Room` and `Capacity` (a load never exceeds what the carrier, the stack limit and the destination cell allow), `SplitLoad` (the load split off a pile).
 - `Ground` (ground.go, STO-1): the per-cell index of loose stacks, in item-list order, verified not trusted (rebuilt when the game's `Moved` generation moves or the store is replaced; every lookup re-checks the store; `looseIndexed`/`looseScan` compared under the game's index self-check). `First`, `Others`, `Room` and `Shelf` answer the game's `itemAt`, `cellFull`, `haulRoom` and the storage search's shelf loads.
+- `Sweep` (sweep.go, HAUL-003): growers who just finished a harvest. `Next` (first option of the game's Haul work) starts the nearest ripe marked plant within `Radius` (Chebyshev, as `pathing.Dist`) of the pawn while Grow is on; otherwise the mark goes until the next finished harvest (hysteresis). Marks are a sorted id slice, saved as `saveState.HarvestSweep`. `Harvest` and `WantsHarvest` (harvest.go) are the Grow work's harvest start, behind the `Harvester`/`SweepHost` roles in deps-style interfaces that the game's `haulHost` implements.
 - HAUL-001 delivery keys and shares (slots.go, route.go): `SlotKey`/`SlotFrame`/`SlotOpen`, `Supply*`, `RouteReach`, `RouteFrames`, `Share`, `Shares`, `Route`. The delivery planner itself stays in `game/haul_route.go`.
 
 ## Not Here
@@ -15,5 +16,5 @@ Stockpile hauling's own rules. A consumer sub-package of `internal/application/g
 - Construction deliveries, bill product storing and trough feeding: they never gather.
 
 ## Allowed Dependencies
-- Domain value types (`sim/entity`, `ai/job`, `ai/pathing`, `economy/item`, `building/construction`) and `pkg/mathx` (`Abs`) only.
+- Domain value types (`sim/entity`, `ai/job`, `ai/pathing`, `economy/item`, `building/construction`, `world/plant`) and `pkg/mathx` (`Abs`) only.
 - Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.

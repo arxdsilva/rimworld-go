@@ -1062,15 +1062,16 @@ func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity
 	})
 }
 
-func (g *Game) assignHarvest(id entity.EntityID) bool {
-	best := g.nearestPlant(id, job.Harvest, wantsHarvest)
-	if best == 0 {
-		return false
-	}
-	bp, _ := g.plants.Get(best)
-	return g.startJob(id, job.Record{
-		Kind: job.Harvest, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: plant.DefOf(bp.Species).HarvestWork,
-	})
+// NearestRipe, StartHarvest and GrowOn make haulHost game/haul's SweepHost.
+func (h haulHost) GrowOn(id entity.EntityID) bool { return h.g.prioOf(id)[work.Grow] > 0 }
+func (h haulHost) NearestRipe(id entity.EntityID) (entity.EntityID, int, int, bool) {
+	t := h.g.nearestPlant(id, job.Harvest, haul.WantsHarvest)
+	p, ok := h.g.plants.Get(t)
+	return t, p.X, p.Y, ok && t != 0
+}
+func (h haulHost) StartHarvest(id, t entity.EntityID) bool {
+	p, _ := h.g.plants.Get(t)
+	return h.g.startJob(id, job.Record{Kind: job.Harvest, Target: t, TX: p.X, TY: p.Y, WorkLeft: plant.DefOf(p.Species).HarvestWork})
 }
 
 func (g *Game) phaseJobs() {
@@ -1531,6 +1532,7 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 	} else {
 		g.removePlant(j.Target)
 	}
+	g.haul.sweep.Arm(id) // game/haul (HAUL-003): the field before the piles, fumbled or not
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
