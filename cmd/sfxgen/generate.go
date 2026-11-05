@@ -15,15 +15,19 @@ type skip struct{ id, why string }
 // money rules live here: an approved or still-unheard sound is never
 // regenerated, and a rejected one gets exactly one paid retry (-retry).
 // A free (local) take has no retry cap: a rejected sound is simply made
-// again, and -retry still limits a run to the rejected ones.
-func decide(sel []Sound, l *Ledger, retry, free bool) (todo []Sound, skips []skip) {
+// again, and -retry still limits a run to the rejected ones. An approved
+// take from the backend supersede names doesn't count: the sound is made
+// again, to replace it (empty: every approved take counts).
+func decide(sel []Sound, l *Ledger, retry, free bool, supersede string) (todo []Sound, skips []skip) {
 	for _, s := range sel {
 		rejected := 0
 		why := ""
 		for _, i := range l.forID(s.ID) {
 			switch l.Takes[i].state() {
 			case stateApproved:
-				why = "already approved"
+				if supersede == "" || l.Takes[i].backend() != supersede {
+					why = "already approved"
+				}
 			case statePending:
 				if why == "" {
 					why = "take waiting for review"
@@ -84,10 +88,10 @@ func (a *app) generate() error {
 		return err
 	}
 	if a.cfg.backend == backendMoss {
-		todo, skips := decide(sel, l, a.cfg.retry, true)
+		todo, skips := decide(sel, l, a.cfg.retry, true, a.cfg.supersede)
 		return a.generateMoss(p, todo, skips, l)
 	}
-	todo, skips := decide(sel, l, a.cfg.retry, false)
+	todo, skips := decide(sel, l, a.cfg.retry, false, a.cfg.supersede)
 	ctx := context.Background()
 	var sub subscription
 	var subp *subscription

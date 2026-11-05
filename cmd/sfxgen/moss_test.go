@@ -218,9 +218,33 @@ func TestMossRejectedIsMadeAgainAndFailuresStop(t *testing.T) {
 	if n := len(e.readLedger().Takes); n != 2 {
 		t.Fatalf("a failed take was logged (%d takes)", n)
 	}
-	todo, skips := decide([]Sound{{ID: "animal.cow.call"}}, e.readLedger(), false, false)
+	todo, skips := decide([]Sound{{ID: "animal.cow.call"}}, e.readLedger(), false, false, "")
 	if len(todo) != 0 || len(skips) != 1 || !strings.Contains(skips[0].why, "rejected twice") {
 		t.Fatal("the paid backend keeps its retry cap")
+	}
+}
+
+// TestSupersedeMakesApprovedTakesAgain: -supersede replaces only the named
+// backend's approved takes, and a take waiting for review still stops a
+// second one, so a stopped run picks up where it left off.
+func TestSupersedeMakesApprovedTakesAgain(t *testing.T) {
+	t.Parallel()
+	l := &Ledger{Takes: []Take{
+		{ID: "animal.cow.call", Take: 1, Backend: backendElevenLabs, Approved: "a"},
+		{ID: "animal.pig.call", Take: 1, Backend: backendMoss, Approved: "a"},
+		{ID: "animal.emu.call", Take: 1, Backend: backendElevenLabs, Approved: "a"},
+		{ID: "animal.emu.call", Take: 2, Backend: backendMoss},
+	}}
+	sel := []Sound{{ID: "animal.cow.call"}, {ID: "animal.pig.call"}, {ID: "animal.emu.call"}}
+	todo, skips := decide(sel, l, false, true, backendElevenLabs)
+	if len(todo) != 1 || todo[0].ID != "animal.cow.call" {
+		t.Fatalf("todo = %+v", todo)
+	}
+	if len(skips) != 2 || skips[0].why != "already approved" || skips[1].why != "take waiting for review" {
+		t.Fatalf("skips = %+v", skips)
+	}
+	if todo, _ := decide(sel[:1], l, false, true, ""); len(todo) != 0 {
+		t.Fatal("without the flag an approved take stays")
 	}
 }
 

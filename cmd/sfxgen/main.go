@@ -28,6 +28,8 @@
 //
 //	sfxgen -dry-run [-only ids]            the plan (moss: time and command; elevenlabs: credits)
 //	sfxgen [-only ids]                     generate with MOSS and process (free, local)
+//	sfxgen -supersede elevenlabs [-only ids]
+//	                                       also make sounds again whose approved take came from that backend
 //	sfxgen -backend elevenlabs [-only ids] [-max-credits N]
 //	                                       paid; key from $ELEVENLABS_API_KEY only
 //	sfxgen -process [-only ids]            raw takes -> sfx/animals/<key>_<event>.ogg (+ _b)
@@ -61,7 +63,7 @@ const keyEnv = "ELEVENLABS_API_KEY"
 // config is every flag.
 type config struct {
 	prompts, ledger, out, assets, baseURL string
-	only                                  string
+	only, supersede                       string
 	dryRun, process, review, retry        bool
 	budgetFromAPI                         bool
 	maxCredits, budget, reserve           int
@@ -125,6 +127,7 @@ func newApp(args []string, getenv func(string) string, stdout, stderr io.Writer)
 	fs.Float64Var(&c.creditRate, "credit-rate", 10, "estimated credits per second of sound")
 	fs.Float64Var(&c.seconds, "seconds", 0, "override every selected sound's length (for the 1 s cost sketch)")
 	fs.BoolVar(&c.retry, "retry", false, "generate the one allowed retry of sounds rejected once")
+	fs.StringVar(&c.supersede, "supersede", "", "make sounds again even if approved, when the approved take came from this backend")
 	fs.BoolVar(&c.process, "process", false, "turn approved (or -only) takes into Ogg files")
 	fs.BoolVar(&c.review, "review", false, "write the review page (-o)")
 	fs.StringVar(&c.reviewOut, "o", "", "-review: HTML output path (default stdout)")
