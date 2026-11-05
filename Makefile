@@ -136,7 +136,7 @@ art-preview:  ## contact sheet + ART §34 prototype scene
 	python3 assets/source/tools/contact_sheet.py
 	python3 assets/source/tools/compose_scene.py
 
-# ---- README media (docs/media, docs/clips): animated WebP only -------------
+# ---- gallery media (docs/media, docs/clips): animated WebP only -------------
 SHOT := $(BIN_DIR)/game -capture
 
 # $(call webp,DIR,NAME,FLAGS[,ENCODER ARGS]): record frames to bin/clips/NAME,
@@ -150,7 +150,7 @@ clip = $(call webp,docs/clips,$(1),$(2),$(3))
 still = $(call webp,docs/media,$(1),$(2))
 
 .PHONY: media
-media:  ## README gallery as short animated WebPs in docs/media (needs python3 + Pillow)
+media:  ## gallery stills as short animated WebPs in docs/media (needs python3 + Pillow)
 	go build -o $(BIN_DIR)/game ./cmd/game
 	$(call still,colony,-capture-ticks 12000 -capture-zoom 0.8 -capture-frames 180)
 	$(call still,architect,-capture-ui architect -capture-frames 150)
@@ -167,7 +167,7 @@ media:  ## README gallery as short animated WebPs in docs/media (needs python3 +
 	$(call still,rock_close,-scenario walls -capture-ticks 2 -capture-zoom 1.2 -capture-frames 150)
 
 .PHONY: clips
-clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
+clips:  ## gallery animated WebP clips in docs/clips (needs python3 + Pillow)
 	go build -o $(BIN_DIR)/game ./cmd/game
 	$(call clip,lategame,-scenario lategame -capture-ui lategame -capture-ticks 1200 -capture-frames 360,--step 3 --fps 20 --quality 45 --max-bytes 2600000)
 	$(call clip,colony_life,-capture-ui follow -capture-frames 240,--quality 45 --max-bytes 2000000)
