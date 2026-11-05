@@ -160,7 +160,7 @@ func TestMossGenerateLogsProcessesAndApproves(t *testing.T) {
 		t.Fatalf("ledger = %+v", l.Takes)
 	}
 	tk := l.Takes[0]
-	if tk.ID != "animal.cow.call" || tk.Backend != backendMoss || tk.Tool != mossTool || tk.Credits != 0 || tk.Seed != (&app{}).mossSeed("animal.cow.call", 1) ||
+	if tk.ID != "animal.cow.call" || tk.Backend != backendMoss || tk.Tool != mossTool || tk.Credits != 0 || tk.Seed != (&app{}).mossSeed("animal.cow.call", 1) || tk.Steps != 100 ||
 		tk.File != "raw/animal.cow.call_t1.wav" || tk.Prompt != "prompt for animal.cow.call, dry" || tk.Seconds != 1.5 || tk.state() != statePending {
 		t.Fatalf("take = %+v", tk)
 	}

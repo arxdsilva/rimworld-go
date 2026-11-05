@@ -21,6 +21,7 @@ type Take struct {
 	Tool     string  `json:"tool"`
 	Backend  string  `json:"backend,omitempty"`
 	Seed     int64   `json:"seed,omitempty"`
+	Steps    int     `json:"steps,omitempty"`
 	Seconds  float64 `json:"seconds"`
 	Loop     bool    `json:"loop,omitempty"`
 	Credits  int     `json:"credits"`

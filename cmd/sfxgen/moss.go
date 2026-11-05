@@ -27,8 +27,10 @@ const (
 const (
 	mossTool    = "moss_soundeffect_v2"
 	mossLicense = "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally"
-	// mossClipSeconds is about how long one take takes on an Apple M-series
-	// GPU (the model always denoises a 30 s latent, whatever the length).
+	// mossClipSeconds is about how long one take of 100 steps takes on an
+	// Apple M-series GPU; time scales with steps. The model always denoises a
+	// 30 s latent, whatever the length: a shorter max_inference_seconds turns
+	// the output to noise, so it is not a way to go faster.
 	mossClipSeconds = 240
 )
 
@@ -259,7 +261,7 @@ func (a *app) generateMoss(p Prompts, todo []Sound, skips []skip, l *Ledger) err
 			return fmt.Errorf("%s: the runner wrote no %s", s.ID, raw)
 		}
 		l.Takes = append(l.Takes, Take{ID: s.ID, Take: n, File: a.ledgerPath(raw), Tool: mossTool, Backend: backendMoss,
-			Seed: seed, Seconds: s.Seconds, Date: a.now().Format("2006-01-02"), Prompt: p.text(s)})
+			Seed: seed, Steps: a.cfg.moss.steps, Seconds: s.Seconds, Date: a.now().Format("2006-01-02"), Prompt: p.text(s)})
 		if err := l.save(a.cfg.ledger); err != nil {
 			return err
 		}
@@ -302,7 +304,7 @@ func (a *app) dryRunMoss(p Prompts, todo []Sound, skips []skip, l *Ledger) {
 		fmt.Fprintf(a.stdout, "skip %s: %s\n", k.id, k.why)
 	}
 	fmt.Fprintf(a.stdout, "total: %d sounds, %.1f s of audio, about %d min on the local GPU (backend moss, no credits)\n",
-		len(todo), secs, (len(todo)*mossClipSeconds+59)/60)
+		len(todo), secs, (len(todo)*mossClipSeconds*a.cfg.moss.steps/100+59)/60)
 	if len(todo) > 0 {
 		s := todo[0]
 		n := l.nextTake(s.ID)
