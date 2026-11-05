@@ -4,7 +4,7 @@ Scope: the fighting itself, vanilla core only (no DLC): drafting and orders, ran
 
 ## Status (2026-10-30)
 
-All five combat phases are done (CBT-1 and CBT-2 in wave 2, CBT-3, CBT-4 and CBT-5 in wave 3, 2026-10-30; handoffs `handoffs/CBT-1-damage-model.md` through `handoffs/CBT-5-explosions-and-combat-ui.md`). Remaining gaps: uranium and reinforced barrels have no source (steel stands in); explosions do not count toward kill and damage records; stalking while hunting is skipped (not in core); mech voices are blocked; light is still a fixed accuracy factor; the multi-part cut table and the miss-radius table are unverified; other original tuning is listed in the handoffs. Every row in section 3 shows its state.
+All five combat phases are done (CBT-1 and CBT-2 in wave 2, CBT-3, CBT-4 and CBT-5 in wave 3, 2026-10-30; handoffs `handoffs/CBT-1-damage-model.md` through `handoffs/CBT-5-explosions-and-combat-ui.md`). Remaining gaps: uranium and reinforced barrels have no source (steel stands in); explosions do not count toward kill and damage records; stalking while hunting is skipped (not in core); mech voices are blocked; the multi-part cut table is unverified; shooting inputs, trait numbers and interception by distance are open in `SHOOTING_GAP_ANALYSIS.md`; other original tuning is listed in the handoffs. Every row in section 3 shows its state.
 
 | Phase | Delivers | State |
 |---|---|---|
@@ -48,11 +48,11 @@ State legend: `done`, `partial`, `missing`. `Today` evidence is `file:function` 
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Hit chance = per-tile skill accuracy ^ distance x weapon band x factors; per-tile shooting 0 -> 89 %, 10 -> 97 %, 20 -> 99 %; Careful shooter +5, Trigger-happy -5; weapon bands touch 3, short 12, medium 25, long 40 tiles (wiki: Shooting accuracy). | `attack.ShooterFactor`, weapon bands in `domain/combat/weapon` (DEF-1/DEF-2). | None known. | DEF-1 | done |
-| Weather and light scale accuracy; fog and rain penalties (wiki: Shooting accuracy). | `combat/strike.go` `report` fixes `Light: NoLightPenalty`, `Weather: ClearFactor` (about lines 208-213); `attack.FogFactor` (about line 120) is unused. | Read light from `light.go` and weather from `climate.go`. Done in CBT-2: weather factors unless both ends are roofed. Open: light is still fixed. | CBT-2 | partial |
+| Hit chance = per-tile skill accuracy ^ distance x weapon band x factors; per-tile shooting 0 -> 89 %, 10 -> 97 %, 20 -> 99 %; Careful shooter +5, Trigger-happy -5; weapon bands touch 3, short 12, medium 25, long 40 tiles (wiki: Shooting accuracy). | `attack.ShooterFactor`, weapon bands in `domain/combat/weapon` (DEF-1/DEF-2). | Corrected 2026-11-05: the per-tile curve and bands are in, but the trait numbers and how points apply differ (`SHOOTING_GAP_ANALYSIS.md`, SHT-002, SHT-101). | DEF-1 | partial |
+| Weather scales accuracy (wiki: Shooting accuracy). | `combat/combat.go` `Weather`, `combat/strike.go:264`, unless both ends are roofed. `Light: NoLightPenalty` stays: the pages read give no core light rule, only an Ideology precept. `attack.FogFactor` waits for fog weather. | None. Corrected 2026-11-05. | CBT-2 | done |
 | Ranges are Euclidean distances. | `weapon.InRange`/`Distance` use Chebyshev (`domain/combat/weapon/weapon.go` about lines 291-310). | Euclidean range and minimum range. | CBT-2 | done |
-| Miss radius scales with accuracy: 100 % -> 1.0, 22 % -> 2.0, 11 % -> 4.0, 7 % -> 6.0, 4 % -> 8.0, 2 % -> 10.0; a stray lands 50 % on nothing, 50 % on whatever is in the landing cell (wiki: Combat). | `combat/shot.go` (`fire`, `fly`, `through`, `land`), `attack.StrayHit`. Original tuning: an aimed shot hits only within `Tracking` (1 tile) of the aim point. | Miss radius table not wired; tracking constant is original. CBT-2 wired the hit at fire time (`projectile.Shot.Hit`); miss radius table still to verify. | CBT-2 | partial |
-| Interception 40 % x body size, clamped 4 % to 80 %, none within 5 tiles, full at 12+; allies safe within 5 tiles of the shooter (wiki: Combat). | `attack.InterceptChance`, `attack.FriendlySafe` (DEF-1). | None known. | DEF-1 | done |
+| Miss radius scales with accuracy: 100 % -> 1.0, 22 % -> 2.0, 11 % -> 4.0, 7 % -> 6.0, 4 % -> 8.0, 2 % -> 10.0; a stray lands 50 % on nothing, 50 % on whatever is in the landing cell (wiki: Combat). | `combat/shot.go` (`fire`, `fly`, `through`, `land`), `attack.StrayHit`. Original tuning: an aimed shot hits only within `Tracking` (1 tile) of the aim point. | None. Corrected 2026-11-05: the table is wired (`attack/shot.go:52`) and matches. The tracking constant is original. | CBT-2 | done |
+| Interception 40 % x body size, clamped 4 % to 80 %, none within 5 tiles, full at 12+; allies safe within 5 tiles of the shooter (wiki: Combat). | `attack.InterceptChance`, `attack.FriendlySafe` (DEF-1). | Corrected 2026-11-05: no distance rule. The body-size rule and the allies' 5 tiles are in (`SHOOTING_GAP_ANALYSIS.md`, SHT-005). | DEF-1 | partial |
 | Targets are chosen by threat weight (wiki: Combat). | Colonist targeting nearest-first; raiders see 3.9. | Threat-weighted choice. CBT-4. | CBT-4 | done |
 | Weapon has warmup, cooldown, burst and an accuracy curve. | `weapon.Def` (DEF-0/DEF-2); `Strikes.Do`/`next`. | None. | DEF-2 | done |
 
@@ -146,7 +146,7 @@ State legend: `done`, `partial`, `missing`. `Today` evidence is `file:function` 
 
 | Vanilla behaviour | Today | Gap | Phase | State |
 |---|---|---|---|---|
-| Shooting and Melee experience is gained per attack with different rates for hits and misses (wiki: Skills). The exact vanilla rates are not published in the pages used. | Flat `combatXP` 120 per attack, hit or miss (`game/skills.go` about lines 36, 422); `learnCapDay` 4000. | Rates differ by hit or miss; original tuning where the wiki gives none. CBT-2: XP per second of attack cycle, 80 hit / 30 miss (original tuning). Open: wiki rates unpublished. | CBT-2 | partial |
+| Shooting and Melee experience is gained per attack with different rates for hits and misses (wiki: Skills). The exact vanilla rates are not published in the pages used. | `attack.CombatXP` through `combatLearn` (`game/skills.go:484`), 80 hit / 30 miss per second of the cycle; `learnCapDay` 4000. | Original tuning, as the wiki gives no rates. Daily cap and decay: `SHOOTING_GAP_ANALYSIS.md`, SHT-302. | CBT-2 | partial |
 
 ### 3.12 Prisoners
 
@@ -179,10 +179,10 @@ Every constant is named in code with `// wiki: <page>`.
 
 | Constant | Value | Page | Phase |
 |---|---|---|---|
-| Per-tile shooting accuracy | skill 0 -> 89 %, 10 -> 97 %, 20 -> 99 %; Careful +5, Trigger-happy -5 | Shooting accuracy | DEF-1 (done) |
+| Per-tile shooting accuracy | skill 0 -> 89 %, 10 -> 97 %, 20 -> 99 %; Careful +5, Trigger-happy -5 on the score (`SHOOTING_GAP_ANALYSIS.md`) | Shooting accuracy | DEF-1 (curve), SHT-1, SHT-2 (open) |
 | Weapon bands | touch 3, short 12, medium 25, long 40 | Shooting accuracy | DEF-1 (done) |
-| Miss radius | 100 % 1.0, 22 % 2.0, 11 % 4.0, 7 % 6.0, 4 % 8.0, 2 % 10.0 | Combat | CBT-2 |
-| Interception | 40 % x body size, 4-80 %, none <= 5 tiles, full at 12+ | Combat | DEF-1 (done) |
+| Miss radius | 100 % 1.0, 22 % 2.0, 11 % 4.0, 7 % 6.0, 4 % 8.0, 2 % 10.0 | Combat | CBT-2 (done) |
+| Interception | 40 % x body size, 4-80 %, none <= 5 tiles, full at 12+ | Combat | DEF-1 (body size), SHT-1 (distance, open) |
 | Stopping power | body size <= power: 1/6 speed, 95 ticks | Combat | CBT-1 |
 | Melee hit score | skill (+4 unskilled) + 12 x (min(sight, 150 %) - 100 %) + same for manipulation + 4 Brawler; -20 -> 5 %, 0 -> 50 %, 20 -> 90 % | Melee hit chance | CBT-2 |
 | Melee damage variation | x0.8..1.2 | Combat | CBT-2 |
@@ -226,7 +226,7 @@ About 20 of the inventory's evidence lines were checked by grep. The facts held 
 | Uranium (slug turret) and reinforced barrel (mortar) have no trade or crafting source; steel stands in | rearm, future production |
 | Explosions do not count toward kill and damage records | `combat/log.go`, records |
 | Stalking while hunting is skipped (the wiki page was missing; not in core) | hunting |
-| Light accuracy factor, multi-part cut table and miss-radius table not verified | CBT follow-up |
+| Multi-part cut table not verified | CBT follow-up |
 | Wardens and doctors do not fetch paste (STO-2) | care |
 | Original tuning to review: prison break timing, hive rates, cover numbers, cook-off limits, item destruction thresholds, tantrum length | handoffs |
 

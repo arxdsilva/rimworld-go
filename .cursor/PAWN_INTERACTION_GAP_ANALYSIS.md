@@ -4,7 +4,7 @@ Scope: bring colonist-to-colonist interaction (player orders on a target pawn, r
 
 ## Status (2026-10-29)
 
-SIM-061…066 are done (rule and care extraction; orders on a pawn; rescue fidelity and guests; feeding patients; visiting the sick and strip; mental breaks that target others). Open: feeding downed animals, tantrum and escape breaks, an event that brings strangers, and the out-of-scope rows. Every row in section 3 is `open` except the ones that section 3.5 lists as already at fidelity. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+SIM-061…066 are done (rule and care extraction; orders on a pawn; rescue fidelity and guests; feeding patients; visiting the sick and strip; mental breaks that target others). Open: feeding downed animals, tantrum and escape breaks, an event that brings strangers (RSC-001), and the out-of-scope rows. What's still different about rescue is in `RESCUE_GAP_ANALYSIS.md`. Every row in section 3 is `open` except the ones that section 3.5 lists as already at fidelity. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 
@@ -36,7 +36,7 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 | "Tend X" when drafted. | `EmergencyTend` works and, since SIM-062, Shift queues it behind the current order (`tick.go`, `order_queue.go` `execOrder`). | — | SIM-062 | done |
 | "Feed X" for a downed or bedridden patient. | SIM-064: "Feed <name>" (`Feeding.judge/force`, `care/feed.go`), offered below 80 % food, disabled "no food". | — | SIM-064 | done |
 | "Strip X" for a downed pawn or a prisoner. | SIM-065: "Strip <name>" on any downed pawn or a prisoner (`care/strip.go`); stripping a downed guest costs −40 goodwill. | — | SIM-065 | done |
-| "Carry X to a cryptosleep casket". | No casket building. | - | - | out of scope (needs a casket building) |
+| "Carry X to a cryptosleep casket". | Corrected 2026-11-05: built since, `travel/casket.go` (`command.EnterCasket`, job `CarryToCasket`). | - | - | done |
 | "Melee attack X" on a berserk colonist. | SIM-066: `standingRaider` admits a standing colonist in berserk or murderous rage; a drafted colonist gets "Melee attack/Shoot <name>" (no "raider" label), anyone "Arrest <name>". | — | SIM-066 | done |
 | The order queue names each order's target. | SIM-062: `orderLabel` also matches `Command.Target` (`order_queue.go`; `TestOrderLabelMatchesTarget`). | — | SIM-062 | done |
 | A drafted right-click on any pawn with options opens the menu. | SIM-061: `hasPawnOrder` (`internal/adapters/inbound/ebiten/orders/float.go`), true for `EmergencyTend` or `Prioritize` with a target. A drafted group still checks the first drafted pawn's options, which may differ from the primary pawn. | — | SIM-061, SIM-062 | done |
@@ -47,9 +47,9 @@ Legend for the `State` column: `open`, `done`, `out of scope (needs X)`. `Today`
 |---|---|---|---|---|
 | Any downed colonist out of bed is rescued, whatever the cause (injury, blood loss, hunger, disease, toxins, heat, cold). Exhaustion is a collapse into sleep, not a rescue. | SIM-063: `InjuredDowned` (`care/rescue.go`) admits every downed cause but `CauseNoBed`; in-bed anaesthesia stays (out of bed is required). | — | SIM-063 | done |
 | Non-hostile downed humanlikes (guests, traders, allies, strangers) are rescued, tended under the guest care group, and leave when healed. Goodwill reacts. | SIM-063: guests (visitors, traders, allies, faction-less strangers) are rescued autonomously and by order, tended under the guest care group, leave when healed (+12 goodwill); a guest dying downed costs −5 (`care/guest.go`, `visitors.go`). | — | SIM-063 | done |
-| A rescued faction-less stranger may ask to join (vanilla 19.5). | SIM-063: a recovered stranger asks to join (50 % safe / 100 % unsafe); the letter has Accept (`command.AcceptLetter`) and Decline. No event spawns strangers yet (`Game.DevJoinOffer` for tests). | — | SIM-063 | done |
+| A rescued faction-less stranger may ask to join (vanilla 19.5). | SIM-063: a recovered stranger asks to join (50 % safe / 100 % unsafe); the letter has Accept (`command.AcceptLetter`) and Decline. No event spawns strangers yet (`Game.DevJoinOffer` for tests; `RESCUE_GAP_ANALYSIS.md`, RSC-001). | — | SIM-063 | done |
 | A downed prisoner outside a bed is carried back to a prison bed by a warden. | SIM-063: wardens carry a downed prisoner back to a prison bed, autonomously and by "Take <name> to bed" (`care/prisonbed.go`). | — | SIM-063 | done |
-| Safe bed: reachable, not burning, not forbidden, not deadly in temperature. A patient that needs care gets a medical bed, else their own bed, else any free bed. | SIM-063: `SafeBedFor` filters fire within a tile and air beyond the 90 °C margin (`BedHazard`), ranks medical beds first for a patient who needs care or a guest, else its own bed, else any free bed; a rescue keeps the patient's own claim and holds another bed for the stay. | — | SIM-061 (merge), SIM-063 (rules) | done |
+| Safe bed: reachable, not burning, not forbidden, not deadly in temperature. A patient that needs care gets a medical bed, else their own bed, else any free bed. | SIM-063: `SafeBedFor` filters fire within a tile and air beyond the 90 °C margin (`BedHazard`), ranks medical beds first for a patient who needs care or a guest (Downed says nearest; kept, RSC-303), else its own bed, else any free bed; a rescue keeps the patient's own claim and holds another bed for the stay. | — | SIM-061 (merge), SIM-063 (rules) | done |
 | A carrier that is downed, drafted or fleeing drops the patient. | SIM-063: draft, a new order, flight and a downed carrier drop the patient through `interrupt`; a patient dying mid-carry is dropped by `Doctor.PatientDied` (combat.go); one test each (`rescue_fidelity_test.go`). | — | SIM-063 | done |
 | The carry relation is cheap to query both ways. | `care.Carries` (`care/carry.go`): a two-way index replaced the `g.carrying` map and its linear scan. | — | SIM-061 | done |
 | Capture and rescue share one carry-to-bed flow. | SIM-062: `carryToBed` (`care/carrybed.go`) drives both `DoRescue` and `DoCapture`; the trip picks the bed (`SafeBedFor` or the prison bed) and the end action. | — | SIM-062 | done |
@@ -80,7 +80,7 @@ Tending priority chain and quality, care policy, self-tend, surgery queue, socia
 
 | Item | Missing prerequisite | State |
 |---|---|---|
-| Cryptosleep casket carry | No casket building. | out of scope (needs a casket building) |
+| Cryptosleep casket carry | Built since: `travel/casket.go`. | done |
 | Beat out fire on a burning pawn | Pawns have no burning state. | out of scope (needs a burning state) |
 | Resurrection | No resurrection item or serum. | out of scope (needs a resurrection item) |
 | Carry to an arbitrary spot | No free-carry command or drop target. | out of scope (needs a carry-to-cell command) |
@@ -96,14 +96,14 @@ Values from the W1 research (2026-10-29). Most wiki pages state no game version,
 | Ravenous threshold | 1,250 of 10,000 (wiki 0.125) | https://rimworldwiki.com/wiki/Saturation | SIM-064 |
 | Feeding trigger above Hungry | not published: original tuning, feed at Hungry | https://rimworldwiki.com/wiki/Work | SIM-064 |
 | Downed food-need fall | not published: same rate as awake (original tuning) | https://rimworldwiki.com/wiki/Saturation | SIM-064 |
-| Doctor work-giver order | urgent tend, tend, emergency self-tend, self-tend, feed patient, surgery, rescue ally, animal tend, feed animal patient, animal surgery, sick visit (entity/hemogen/bioferrite rows have no counterpart) | https://rimworldwiki.com/wiki/Work | SIM-063, SIM-064, SIM-065 |
+| Doctor work-giver order (the code runs rescue first on purpose: RSC-304) | urgent tend, tend, emergency self-tend, self-tend, feed patient, surgery, rescue ally, animal tend, feed animal patient, animal surgery, sick visit (entity/hemogen/bioferrite rows have no counterpart) | https://rimworldwiki.com/wiki/Work | SIM-063, SIM-064, SIM-065 |
 | Goodwill: a downed faction member recovers and leaves | +12 | https://rimworldwiki.com/wiki/Guest | SIM-063 |
-| Goodwill: return a downed member to its faction | +16 | https://rimworldwiki.com/wiki/Goodwill | SIM-063 |
+| Goodwill: return a downed member to its faction (not implemented, +12 kept: RSC-301) | +16 | https://rimworldwiki.com/wiki/Goodwill | SIM-063 |
 | Goodwill: strip a downed guest | −40 (the Goodwill and Factions pages; the Guest page says none: decision −40) | https://rimworldwiki.com/wiki/Goodwill | SIM-065 |
 | Goodwill: a guest dies downed on the map | not published: −5, the published 'non-hostile member killed' value | https://rimworldwiki.com/wiki/Goodwill | SIM-063 |
 | Goodwill: arrest a visitor | relation set to −75 | https://rimworldwiki.com/wiki/Goodwill | SIM-062 (reference) |
 | Rescued-stranger join chance | 0.5 when leaving is safe, 1.0 when not (page tagged Verify) | https://rimworldwiki.com/wiki/Guest | SIM-063 |
-| Rescue safety margin | bed reachable within 90 °C beyond the rescuer's comfort range | https://rimworldwiki.com/wiki/Rescue | SIM-063 |
+| Rescue safety margin (the code measures the everyday band, not the rescuer's: RSC-201) | bed reachable within 90 °C beyond the rescuer's comfort range | https://rimworldwiki.com/wiki/Rescue | SIM-063 |
 | Opinion of the rescuer | +15 (page also lists +25; decision +15) | https://rimworldwiki.com/wiki/Social | SIM-063 |
 | Visit-sick recreation gain | 0.216 of the recreation bar for both, over 1500 ticks | https://rimworldwiki.com/wiki/Joy | SIM-065 |
 | Visit-sick minimum opinion | not published: original tuning | https://rimworldwiki.com/wiki/Joy | SIM-065 |
