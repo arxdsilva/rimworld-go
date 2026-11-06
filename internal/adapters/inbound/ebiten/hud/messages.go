@@ -327,7 +327,7 @@ func MessageLine(m game.MessageView) string { return MessageLineIn(en, m) }
 // MessageLineIn is MessageLine in tr's language.
 func MessageLineIn(tr lang.Tr, m game.MessageView) string {
 	if m.Letter && m.Title != "" {
-		return lang.Tf(tr, "Letter: %s", m.Title)
+		return lang.Tf(tr, "Letter: %s", tr.T(m.Title))
 	}
-	return m.Text
+	return lang.Msg(tr, m.Msg, m.Text)
 }

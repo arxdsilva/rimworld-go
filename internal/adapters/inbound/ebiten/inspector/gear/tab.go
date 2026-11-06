@@ -184,7 +184,7 @@ func (t Tab) buttons(p game.PawnView, r Row, rr gfx.Rect, ac access) {
 	case ac.broken != "":
 		drop.Disabled, drop.Reason = true, ac.broken
 	case p.Gear.NoDrop != "":
-		drop.Disabled, drop.Reason = true, p.Gear.NoDrop
+		drop.Disabled, drop.Reason = true, t.f.T(p.Gear.NoDrop) // a game/sense Why* key
 	}
 	if t.iconButton(DropID(r.What, r.N), next(btnSz), "ui_icon/gear_drop", "D", drop) {
 		t.h.Enqueue(command.Command{Kind: command.DropGear, Pawn: uint64(id), Mode: r.Mode, Index: r.N, Queue: t.h.Shift()})
@@ -224,7 +224,7 @@ func (t Tab) eatButton(id entity.EntityID, r Row, br gfx.Rect, ac access) {
 	case ac.broken != "":
 		o.Disabled, o.Reason = true, ac.broken
 	case r.EatWhy != "":
-		o.Disabled, o.Reason = true, r.EatWhy
+		o.Disabled, o.Reason = true, t.f.T(r.EatWhy) // a game/sense Why* key
 	}
 	if t.iconButton(EatID(r.N), br, "ui_icon/gear_eat", "E", o) {
 		t.h.Enqueue(command.Command{Kind: command.ConsumeFromPack, Pawn: uint64(id), Index: r.N})

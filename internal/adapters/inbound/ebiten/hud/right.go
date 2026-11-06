@@ -173,7 +173,7 @@ func (c Right) Hover(l hudlayout.Layout) (RightCard, gfx.Rect, bool) {
 			return RightCard{Title: c.sh.Tf("%d older letters", row.Older),
 				Body: c.sh.T("Right-click a letter to dismiss it and bring an older one back."), Clr: uikit.PanelBorder}, row.R, true
 		}
-		text := row.Letter.Text
+		text := LetterTextIn(c.sh, row.Letter)
 		if r := []rune(text); len(r) > 240 {
 			text = string(r[:240]) + "..."
 		}

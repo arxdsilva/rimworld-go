@@ -12,14 +12,18 @@ import (
 	"testing"
 )
 
-var update = flag.Bool("update", false, "rewrite assets/lang/en.json from the client's T/Tf calls")
+var update = flag.Bool("update", false, "rewrite assets/lang/en.json from the client's T/Tf calls and the game's posts")
 
 // TestCatalogIsCurrent: assets/lang/en.json holds exactly the keys the
-// client passes to T and Tf as literals (values = keys). It is the
+// client passes to T and Tf as literals, and the simulation's message and
+// letter keys (simKeys; values = keys). It is the
 // template translators copy; run with -update after adding text.
 func TestCatalogIsCurrent(t *testing.T) {
 	t.Parallel()
 	keys := catalogKeys(parseClient(t))
+	for k := range simKeys(parseTree(t, gameRel), module(t, repoRoot(t))+"/"+gameRel) {
+		keys[k] = true
+	}
 	want := renderEnglish(t, keys)
 	file := filepath.Join(repoRoot(t), "assets", "lang", EnglishCode+".json")
 	if *update {

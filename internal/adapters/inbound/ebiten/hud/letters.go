@@ -105,8 +105,11 @@ func LetterRowLabelIn(tr lang.Tr, r LetterRow) string {
 	if r.Letter.Title == "" {
 		return tr.T("Letter")
 	}
-	return r.Letter.Title
+	return tr.T(r.Letter.Title)
 }
+
+// LetterTextIn is a letter's body in tr's language (English: l.Text).
+func LetterTextIn(tr lang.Tr, l game.LetterView) string { return lang.Msg(tr, l.Msg, l.Text) }
 
 // LetterRows lays the stack out in l's Letters rect: the "+N older" row
 // first when letters were folded, then the newest letters, oldest on top,
@@ -267,7 +270,7 @@ func (c Right) jumpToLetter(l game.LetterView) {
 
 // OpenLetter pushes the letter window for a message that is a letter.
 func (c Right) OpenLetter(m game.MessageView) {
-	l := game.LetterView{Tick: m.Tick, Title: m.Title, Text: m.Text, Focus: m.Focus, X: -1, Y: -1}
+	l := game.LetterView{Tick: m.Tick, Title: m.Title, Text: m.Text, Msg: m.Msg, Focus: m.Focus, X: -1, Y: -1}
 	if m.X != 0 || m.Y != 0 {
 		l.X, l.Y = m.X, m.Y
 	}
@@ -276,16 +279,17 @@ func (c Right) OpenLetter(m game.MessageView) {
 
 // openLetterView pushes the letter window for l and marks it read.
 func (c Right) openLetterView(l game.LetterView) {
-	title := l.Title
-	if title == "" {
-		title = c.sh.T("Letter")
+	key := l.Title // the window id keeps the English title in every language
+	if key == "" {
+		key = "Letter"
 	}
+	title := c.sh.T(key)
 	if l.ID != 0 {
 		c.session().read[l.ID] = true
 	}
-	lines := gfx.WrapPx(l.Text, gfx.Body, letterW-2*uikit.ModalPad)
+	lines := gfx.WrapPx(LetterTextIn(c.sh, l), gfx.Body, letterW-2*uikit.ModalPad)
 	h := float32(uikit.ModalTitleH+uikit.ModalFooterH+2*uikit.ModalPad) + float32(len(lines))*float32(gfx.LineH(gfx.Body)) + 8
-	id := fmt.Sprintf("letter.%d.%s", l.Tick, title)
+	id := fmt.Sprintf("letter.%d.%s", l.Tick, key)
 	if l.ID != 0 {
 		id = fmt.Sprintf("letter.%d", l.ID)
 	}

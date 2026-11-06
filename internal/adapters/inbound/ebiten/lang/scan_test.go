@@ -65,12 +65,19 @@ func module(t *testing.T, root string) string {
 
 const ebitenRel = "internal/adapters/inbound/ebiten"
 
+// gameRel is the simulation tree whose posts the catalog also keys.
+const gameRel = "internal/application/game"
+
 // parseClient parses every non-test Go file under the ebiten client.
-func parseClient(t *testing.T) []*srcFile {
+func parseClient(t *testing.T) []*srcFile { return parseTree(t, ebitenRel) }
+
+// parseTree parses every non-test Go file under rel (a slash path below
+// the repository root); pkg and rel of each file are relative to it.
+func parseTree(t *testing.T, treeRel string) []*srcFile {
 	t.Helper()
 	root := repoRoot(t)
-	base := filepath.Join(root, ebitenRel)
-	importBase := module(t, root) + "/" + ebitenRel
+	base := filepath.Join(root, filepath.FromSlash(treeRel))
+	importBase := module(t, root) + "/" + treeRel
 	var out []*srcFile
 	err := filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
