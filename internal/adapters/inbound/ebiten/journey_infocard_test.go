@@ -9,14 +9,19 @@ import (
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/infocard"
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 )
 
 func TestJourneyInfoCardOpensAndEscapeCloses(t *testing.T) {
 	j := newJourney(t)
 	pid := j.a.shell.Pawns()[0].ID
-	j.a.renderer.Select(pid)
+	p := j.pawn(uint64(pid))
+	j.clickTile(p.X, p.Y, inputframe.Left, 0) // select the colonist
 	j.update(2)
+	if id, ok := j.a.shell.Selected(); !ok || id != pid {
+		t.Fatalf("clicking the colonist selected %v %v, want %v", id, ok, pid)
+	}
 
 	j.a.shell.Do(ports.OpenInfoCard{Kind: "flak vest"})
 	j.update(2)

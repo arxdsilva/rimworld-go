@@ -6,10 +6,11 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 )
 
-// TestJourneyCustomCursor (OPT-028): the option hides the OS cursor and
+// TestCustomCursorDrawsThePointer (OPT-028): the option hides the OS cursor and
 // draws the pointer sprite last, at the mouse; off, the OS cursor returns
-// and nothing is drawn.
-func TestJourneyCustomCursor(t *testing.T) {
+// and nothing is drawn. Not parallel and not a journey: it reads the
+// process-wide draw trace.
+func TestCustomCursorDrawsThePointer(t *testing.T) {
 	j := newJourney(t)
 	j.a.art = testArt(t)
 	visible := true
