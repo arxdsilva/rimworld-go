@@ -91,6 +91,9 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 		if forbiddable(b) {
 			out = append(out, forbidCommand(a.shell, b))
 		}
+		if b.Refuelable { // refuel.go (REF-1)
+			out = append(out, autoRefuelCommand(a.shell, b))
+		}
 		out = append(out, a.powerCommandsIn(a.env().Units, b)...) // cmds_power.go (PLAY-021)
 		out = append(out, ventCommandsT(a.shell, b)...)           // temp_ui.go (TEMP-5)
 		out = append(out, potCommands(a.shell, b)...)             // ax2.go (AX-2)
@@ -188,7 +191,7 @@ func (a Building) buildingLines(b game.BuildingView) []string {
 	}
 	w := a.shell.World()
 	add(world.RoomLabelAt(w, b.X, b.Y))
-	add(fuelLine(b))
+	add(fuelLine(a.shell, b))
 	if !b.Hostile { // MAP-13: on no grid, so power says nothing about it
 		add(overlay.TurretLine(b))
 		add(PowerLinesIn(a.env().Units, b, w)...)

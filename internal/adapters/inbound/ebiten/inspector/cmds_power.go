@@ -226,7 +226,19 @@ func powerBars(tr lang.Tr, b game.BuildingView) []Bar {
 // burning, a campfire banked down, or a torch the rain put out. "" says
 // nothing (a generator holding fuel while switched off: its power lines
 // say why).
-func fuelLine(b game.BuildingView) string {
+func fuelLine(tr lang.Tr, b game.BuildingView) string {
+	line := fuelState(b)
+	if !b.Refuelable || b.AutoRefuel {
+		return line
+	}
+	if note := tr.T("auto refuel off"); line != "" {
+		return line + " (" + note + ")"
+	}
+	return tr.T("auto refuel off")
+}
+
+// fuelState is the fire's own state, before the auto-refuel note.
+func fuelState(b game.BuildingView) string {
 	switch {
 	case !b.Fuel:
 		return ""
