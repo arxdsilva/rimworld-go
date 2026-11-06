@@ -46,27 +46,23 @@ type Palette struct {
 // Palette is the palette of a.ColorVision.
 func (a Access) Palette() Palette { return PaletteFor(a.ColorVision) }
 
-// PaletteFor is the variant called name; an unknown name is normal.
-//
-// PLACEHOLDER VALUES: the three colour-vision variants below are a plain
-// blue / orange / yellow remap so the switch can be seen and tested. The
-// real values come from the art pass (assets/palettes/ui.yaml keys
-// ui.<variant>.danger, ui.<variant>.good, ui.<variant>.warning); once those
-// keys exist TestColorVisionVariantsMatchYAML pins them, and these literals
-// are replaced by the YAML's values.
+// PaletteFor is the variant called name; an unknown name is normal. The
+// values are assets/palettes/ui.yaml's ui.<variant>.{danger,good,warning}
+// (TestColorVisionVariantsMatchYAML); deuteranopia and protanopia share one
+// set, checked to stay apart under both.
 func PaletteFor(name string) Palette {
-	normal := Palette{Danger: Danger, Good: Good, Warning: Warning}
+	p := Palette{Danger: Danger, Good: Good, Warning: Warning}
 	switch name {
-	case ColorVisionDeuter, ColorVisionProtan:
-		// red/green confusion: separate danger and good by hue and lightness.
-		normal.Danger = color.RGBA{R: 0xFF, G: 0x8A, B: 0x3D, A: 0xFF}
-		normal.Good = color.RGBA{R: 0x6C, G: 0xB4, B: 0xFF, A: 0xFF}
-	case ColorVisionTritan:
-		// blue/yellow confusion: keep danger red, move good to teal.
-		normal.Good = color.RGBA{R: 0x4F, G: 0xE0, B: 0xD0, A: 0xFF}
-		normal.Warning = color.RGBA{R: 0xFF, G: 0xD0, B: 0xE0, A: 0xFF}
+	case ColorVisionDeuter, ColorVisionProtan: // red and green confused: coral, lemon, sky blue
+		p.Danger = color.RGBA{R: 0xEA, G: 0x9E, B: 0x94, A: 0xFF}
+		p.Warning = color.RGBA{R: 0xF8, G: 0xEA, B: 0x52, A: 0xFF}
+		p.Good = color.RGBA{R: 0x8E, G: 0xC4, B: 0xFB, A: 0xFF}
+	case ColorVisionTritan: // blue and yellow confused: coral, pale peach, teal
+		p.Danger = color.RGBA{R: 0xFF, G: 0x90, B: 0x80, A: 0xFF}
+		p.Warning = color.RGBA{R: 0xFF, G: 0xDD, B: 0xB0, A: 0xFF}
+		p.Good = color.RGBA{R: 0x62, G: 0xD6, B: 0xC0, A: 0xFF}
 	}
-	return normal
+	return p
 }
 
 // Tokens returns the palette's status colours by token name (the YAML keys
