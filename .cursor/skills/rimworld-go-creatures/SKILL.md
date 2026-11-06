@@ -47,7 +47,7 @@ Canonical sources (read by section, never paste whole files):
 - [ ] `render/cue/animal_sounds.go` `VoiceGroups`: map the key to its fallback group (`small_mammal`, `large_mammal`, `canid`, `felid`, `bovid`, `bird_small`, `bird_large`, `reptile`, `insect`, `mech`; `mech` has no group sounds and falls to generic).
 - [ ] Generate with `cmd/sfxgen` (MOSS by default): `-dry-run -only <key>` (the plan and the command line) → `sfxgen -only <key>` (generates locally and processes each take: ffmpeg + oggenc trim, loudness, OGG, pitch variant) → `sfxgen -review` page → **user listens and approves** → `sfxgen -approve <ids>` (writes the ledger, `audio.json` with source, license and `reviewed_by`). Check each clip lands within about 2 LU of its target and is not trimmed short; regenerate (a rejected MOSS sound is simply made again) with tighter prompts otherwise. Paid alternative: `-backend elevenlabs -dry-run` (show the credits) → **user approves the spend** → generate → `make animal-audio` → review → approve.
 - [ ] `make audio-check` passes (decodes, 48 kHz, budget, roster coverage).
-- [ ] License line on every entry: MOSS (`MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally`) or ElevenLabs (free tier: non-commercial, credit ElevenLabs — or the paid licence if the account changed); `THIRD_PARTY_NOTICES.md` kept true.
+- [ ] License line on every entry: MOSS (`MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally`) or the paid ElevenLabs licence; free-tier (non-commercial) output fails `make audio-check`; `THIRD_PARTY_NOTICES.md` kept true.
 
 ### 4. Presentation hooks
 - [ ] `animal_blurbs.go`: one original line (≤ 70 chars).

@@ -184,7 +184,7 @@ func TestMossGenerateLogsProcessesAndApproves(t *testing.T) {
 	mpath := filepath.Join(e.assets, filepath.FromSlash(audiomanifest.Rel))
 	os.MkdirAll(filepath.Dir(mpath), 0o755)
 	writeManifestFile(t, mpath, audiomanifest.Manifest{Sounds: []audiomanifest.Entry{{ID: "animal.cow.call", Bus: "effects", Volume: 0.7,
-		Files: []string{"sfx/animals/old.ogg"}, Source: audiomanifest.SourceElevenLabs, License: elevenLabsLicense}}}) // a generated entry is replaced
+		Files: []string{"sfx/animals/old.ogg"}, Source: audiomanifest.SourceElevenLabs, License: "ElevenLabs Creator plan"}}}) // a generated entry is replaced
 	if _, _, err := e.cli("-approve", "animal.cow.*", "-reviewer", "tester"); err != nil {
 		t.Fatal(err)
 	}

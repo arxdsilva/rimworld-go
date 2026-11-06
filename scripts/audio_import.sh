@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Import an approved ElevenLabs take into the game (SND-002).
+# Import an approved ambience or music take into the game (SND-002).
 #
-#   scripts/audio_import.sh <raw-file> <file-in-prompts.json> <credits> "<license>"
-#   e.g. scripts/audio_import.sh assets/source/audio/elevenlabs/raw/x.mp3 ambience/day.ogg 400 "ElevenLabs Creator plan"
+#   scripts/audio_import.sh <raw-file> <file-in-prompts.json> <credits> "<license>" [moss-seed]
+#   e.g. scripts/audio_import.sh assets/source/audio/moss/raw/amb.day_t1.wav ambience/day.ogg 0 \
+#          "MOSS-SoundEffect v2.0 model (Apache-2.0), generated locally" 7
+#   A MOSS seed lists the file as a MOSS take; without one it is an ElevenLabs take.
 #
 # Loudness-normalizes (measured, then gained: music -16 LUFS stereo,
 # ambience -20 LUFS mono),
@@ -10,11 +12,11 @@
 # Ogg Vorbis into assets/generated/audio/<file>, and lists it in the sound
 # list with its prompt, credits and license (audiogen -register).
 set -euo pipefail
-if [ $# -ne 4 ]; then
-  sed -n '2,5p' "$0" >&2
+if [ $# -ne 4 ] && [ $# -ne 5 ]; then
+  sed -n '2,7p' "$0" >&2
   exit 2
 fi
-raw=$1 rel=$2 credits=$3 license=$4
+raw=$1 rel=$2 credits=$3 license=$4 seed=${5:-0}
 case $rel in
   music/*) lufs=-16 ch=2 q=4 ;;
   ambience/*) lufs=-20 ch=1 q=3 ;;
@@ -38,6 +40,6 @@ fi
 out=assets/generated/audio/$rel
 mkdir -p "$(dirname "$out")"
 ffmpeg -hide_banner -loglevel error -y -i "$src" -c:a libvorbis -q:a "$q" "$out"
-go run ./cmd/audiogen -register "$rel" -credits "$credits" -license "$license"
+go run ./cmd/audiogen -register "$rel" -credits "$credits" -license "$license" -seed "$seed"
 go run ./cmd/audiogen -check
 echo "audio_import: $out ($(du -h "$out" | cut -f1))"

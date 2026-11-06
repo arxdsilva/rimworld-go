@@ -10,10 +10,7 @@ import (
 	"rimworld-go/pkg/audiomanifest"
 )
 
-const (
-	elevenLabsTool    = "text_to_sound_effects"
-	elevenLabsLicense = "ElevenLabs free tier: non-commercial use, credit ElevenLabs"
-)
+const elevenLabsTool = "text_to_sound_effects"
 
 // matchLedgerIDs lists the ledger's animal ids that match list; a pattern
 // that matches nothing is an error.
@@ -78,9 +75,11 @@ func (a *app) approveIDs(list string) error {
 		t.Approved = a.cfg.reviewer
 		e := audiomanifest.Entry{ID: id, Bus: audiomanifest.BusEffects, Volume: spec.volume, Files: files,
 			Source: audiomanifest.SourceElevenLabs, Tool: elevenLabsTool, Prompt: t.Prompt, Seconds: t.Seconds,
-			Credits: credits, Date: t.Date, License: elevenLabsLicense, Review: a.cfg.reviewer}
+			Credits: credits, Date: t.Date, License: a.cfg.license, Review: a.cfg.reviewer}
 		if t.backend() == backendMoss {
 			e.Source, e.Tool, e.License, e.Seed = audiomanifest.SourceMOSS, mossTool, mossLicense, uint64(t.Seed)
+		} else if e.License == "" {
+			return fmt.Errorf("%s: an ElevenLabs take needs -license with the paid plan's terms (free-tier output is non-commercial)", id)
 		}
 		replaced := false
 		for k := range m.Sounds {

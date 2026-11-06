@@ -10,8 +10,8 @@
 //	audiogen -check                    validate the sound list against the files
 //	audiogen -loopfix in.wav out.wav   make an imported loop seamless
 //	audiogen -looping music/menu.ogg   print whether prompts.json marks it a loop
-//	audiogen -register ambience/day.ogg -credits 400 -license "..."
-//	                                   list an imported ElevenLabs take
+//	audiogen -register ambience/day.ogg -license "..." [-seed 7 | -credits 400]
+//	                                   list an imported MOSS (-seed) or ElevenLabs take
 package main
 
 import (
@@ -49,6 +49,7 @@ func main() {
 	credits := flag.Int("credits", 0, "-register: ElevenLabs credits the take cost")
 	license := flag.String("license", "", "-register: the plan and terms the take was made under")
 	reviewer := flag.String("reviewer", "arxdsilva", "-register: who listened and approved it")
+	seed := flag.Uint64("seed", 0, "-register: the MOSS seed of the take (0: an ElevenLabs take)")
 	flag.Parse()
 	var err error
 	switch {
@@ -63,11 +64,11 @@ func main() {
 		}
 	case *reg != "":
 		if *license == "" {
-			err = errors.New("-register needs -license (the ElevenLabs plan and terms)")
+			err = errors.New("-register needs -license (the model's or plan's terms)")
 			break
 		}
 		var e audiomanifest.Entry
-		if e, err = register(*assets, *reg, *credits, *license, *reviewer); err == nil {
+		if e, err = register(*assets, *reg, *credits, *license, *reviewer, *seed); err == nil {
 			fmt.Printf("audiogen: %s now has %d file(s), %d credits\n", e.ID, len(e.Files), e.Credits)
 		}
 	case *loopfix:

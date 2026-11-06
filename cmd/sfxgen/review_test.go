@@ -82,7 +82,17 @@ func TestApproveWritesManifestSorted(t *testing.T) {
 		Take{ID: "animal.canid.call", Take: 1, Seconds: 1.5, Credits: 15, Prompt: "canid", Date: "2026-10-22"},
 	)
 	fakeClips(t, e, "cow_call.ogg", "cow_call_b.ogg", "cow_hurt.ogg", "cow_hurt_b.ogg", "cow_die.ogg", "canid_call.ogg")
-	if _, _, err := e.cli("-approve", "animal.cow.*"); err != nil {
+	if _, _, err := e.cli("-approve", "animal.cow.*"); err == nil || !strings.Contains(err.Error(), "-license") {
+		t.Fatalf("an ElevenLabs take approved without its plan's terms: %v", err)
+	}
+	if _, _, err := e.cli("-approve", "animal.cow.*", "-license", "ElevenLabs free tier: non-commercial use, credit ElevenLabs"); err == nil {
+		t.Fatal("a non-commercial take reached the sound list")
+	}
+	if b, _ := os.ReadFile(mpath); string(b) != string(before) {
+		t.Fatal("a refused approval wrote the sound list")
+	}
+	const paid = "ElevenLabs Creator plan: commercial use"
+	if _, _, err := e.cli("-approve", "animal.cow.*", "-license", paid); err != nil {
 		t.Fatal(err)
 	}
 	m := readManifestFile(t, mpath)
@@ -101,7 +111,7 @@ func TestApproveWritesManifestSorted(t *testing.T) {
 	call, _ := m.Lookup("animal.cow.call")
 	want := audiomanifest.Entry{ID: "animal.cow.call", Bus: "effects", Volume: 0.7, Files: []string{"sfx/animals/cow_call.ogg", "sfx/animals/cow_call_b.ogg"},
 		Source: "elevenlabs", Tool: "text_to_sound_effects", Prompt: "call1", Seconds: 2, Credits: 20, Date: "2026-10-22",
-		License: "ElevenLabs free tier: non-commercial use, credit ElevenLabs", Review: "arxdsilva"}
+		License: paid, Review: "arxdsilva"}
 	if call.ID != want.ID || call.Bus != want.Bus || call.Volume != want.Volume || strings.Join(call.Files, ",") != strings.Join(want.Files, ",") ||
 		call.Source != want.Source || call.Tool != want.Tool || call.Prompt != want.Prompt || call.Seconds != want.Seconds ||
 		call.Credits != want.Credits || call.Date != want.Date || call.License != want.License || call.Review != want.Review {
@@ -121,7 +131,7 @@ func TestApproveWritesManifestSorted(t *testing.T) {
 	}
 	// idempotent
 	after, _ := os.ReadFile(mpath)
-	if _, _, err := e.cli("-approve", "animal.cow.*"); err != nil {
+	if _, _, err := e.cli("-approve", "animal.cow.*", "-license", paid); err != nil {
 		t.Fatal(err)
 	}
 	again, _ := os.ReadFile(mpath)
@@ -129,10 +139,10 @@ func TestApproveWritesManifestSorted(t *testing.T) {
 		t.Fatal("approve is not idempotent")
 	}
 	// a placeholder is not replaced unless asked
-	if _, _, err := e.cli("-approve", "animal.canid.call"); err == nil {
+	if _, _, err := e.cli("-approve", "animal.canid.call", "-license", paid); err == nil {
 		t.Fatal("a procedural placeholder was replaced silently")
 	}
-	if _, _, err := e.cli("-approve", "animal.canid.call", "-replace"); err != nil {
+	if _, _, err := e.cli("-approve", "animal.canid.call", "-license", paid, "-replace"); err != nil {
 		t.Fatal(err)
 	}
 	if c, _ := readManifestFile(t, mpath).Lookup("animal.canid.call"); c.Source != "elevenlabs" {

@@ -36,6 +36,8 @@ func TestValidateRejects(t *testing.T) {
 		func(e *Entry) { e.License = "" },
 		func(e *Entry) { e.Volume = 2 },
 		func(e *Entry) { e.Files = []string{"../../etc/passwd"} },
+		func(e *Entry) { e.License = "ElevenLabs free tier: non-commercial use, credit ElevenLabs" },
+		func(e *Entry) { e.License = "CC BY-NC 4.0 (NonCommercial)" },
 	}
 	for i, f := range bad {
 		e := good

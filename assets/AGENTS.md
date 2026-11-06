@@ -130,9 +130,9 @@ PLAY-010 (unused assets are deleted, see AGENTS.md). `generated/ingame_capture.p
 ```text
 generated/audio/{ui,sfx,ambience,music}/   # 48 kHz: WAV effects, Ogg Vorbis music/ambience
 metadata/audio/audio.json                  # the sound list: id, bus, loop, volume, files, provenance
-source/audio/prompts.json                  # ElevenLabs prompts in spending order + credit budget
-source/audio/elevenlabs/ledger.json        # every ElevenLabs take, approved or not, with its cost
-source/audio/elevenlabs/raw/               # downloads before review (git-ignored)
+source/audio/prompts.json                  # ambience prompts (and the ElevenLabs credit budget)
+source/audio/elevenlabs/ledger.json        # every generated take (MOSS or ElevenLabs), approved or not
+source/audio/moss/raw/                     # MOSS takes before review (git-ignored)
 ```
 
 - Every sound is original. Effects are made in code (`cmd/audiogen`,
@@ -141,11 +141,12 @@ source/audio/elevenlabs/raw/               # downloads before review (git-ignore
 - Music is composed in code too (`cmd/audiogen/music.go`, `pkg/musicsynth`:
   scores played by synthesized guitar, strings, horn, bass and drums
   through a reverb): edit a score, then `make music`.
-- Ambience beds come from ElevenLabs within a 10,000-credit
-  budget, in `prompts.json` priority order: one retry per sound at most,
-  every take in the ledger. Import approved takes with
+- Ambience beds (day, night, rain) and animal voices are generated with
+  the local MOSS-SoundEffect model (`cmd/sfxgen`, `cmd/sfxgen/moss/generate.py`)
+  and approved by ear. Import an approved ambience take with
   `scripts/audio_import.sh` (loudness, 48 kHz, seamless loops, Vorbis,
-  sound-list entry with prompt, credits and license).
+  sound-list entry). Every sound must be shareable: `make audio-check`
+  fails on a non-commercial licence, so ElevenLabs free-tier output can't ship.
 - Ids: `ui.*` (interface bus), `sfx.*` (effects), `amb.*` (ambience),
   `music.*` (music). Several files on one id are variants (effects pick
   one at random; music plays them in turn).

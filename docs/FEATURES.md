@@ -228,7 +228,7 @@ The full feature list, grouped by area. Back to the [README](../README.md). The 
   - Noto Sans throughout the menus, HUD and inspectors, and a minimap (Shift+M, click to move) on big maps.
   - Map sizes from 200x200 to 500x500, holding about 60 fps or better at 3x speed on a grown 500x500 colony.
 - **Sound and options:**
-  - Every species has its own call, attack, hurt and death voice (generated with ElevenLabs, reviewed by ear).
+  - Every species has its own call, attack, hurt and death voice (generated locally with the open MOSS-SoundEffect model, reviewed by ear).
   - Code-made sound effects that pan with the camera and fade as you zoom out, ambience for day, night and rain, and composed music for the menu, colony life and raids.
   - Options cover volumes, fullscreen, a 120 fps frame cap on every display (VSync off by default; both can be changed), graphics quality (High, Medium or Low, picked for your computer at the first start, with Shadows, Lighting, Water, Grass and World detail rows you can change), a performance overlay, effects detail, autosave interval, edge scrolling, reduced motion and running in the background (off pauses the colony while the window is away), and are saved between runs.
   - The UI scales sharply with the window (Auto, or 75–200 %) and renders at full resolution on high-density screens.

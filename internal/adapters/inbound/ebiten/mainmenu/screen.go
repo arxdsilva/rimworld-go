@@ -186,9 +186,8 @@ func CreditsLines() []string {
 		"",
 		"Music and sound effects: original, made in code (cmd/audiogen).",
 		"Noto Sans: SIL Open Font License 1.1.",
-		"Ambience and animal voices: generated with ElevenLabs",
-		"(elevenlabs.io), free tier,",
-		"non-commercial use.",
+		"Ambience and animal voices: generated locally with",
+		"MOSS-SoundEffect v2.0 (OpenMOSS, Apache-2.0).",
 	}
 }
 

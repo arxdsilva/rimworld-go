@@ -69,6 +69,7 @@ type config struct {
 	maxCredits, budget, reserve           int
 	creditRate, seconds                   float64
 	reviewOut, approve, reject, reviewer  string
+	license                               string // -approve: the ElevenLabs plan the takes were made under
 	replace                               bool
 	backoff                               time.Duration
 	backend                               string
@@ -134,6 +135,7 @@ func newApp(args []string, getenv func(string) string, stdout, stderr io.Writer)
 	fs.StringVar(&c.approve, "approve", "", "comma-separated ids or globs a person approved")
 	fs.StringVar(&c.reject, "reject", "", "comma-separated ids or globs a person rejected")
 	fs.StringVar(&c.reviewer, "reviewer", "arxdsilva", "who listened")
+	fs.StringVar(&c.license, "license", "", "-approve of ElevenLabs takes: the paid plan's terms (free-tier output is non-commercial and cannot ship)")
 	fs.BoolVar(&c.replace, "replace", false, "-approve: replace a sound-list entry that is not from ElevenLabs (e.g. a placeholder)")
 	fs.StringVar(&c.baseURL, "base-url", "https://api.elevenlabs.io", "API base URL (tests point it at httptest)")
 	fs.DurationVar(&c.backoff, "backoff", 2*time.Second, "first wait before retrying a 429/5xx (doubles each time)")

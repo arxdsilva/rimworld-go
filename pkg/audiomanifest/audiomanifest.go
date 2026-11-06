@@ -87,7 +87,7 @@ func Encode(w io.Writer, m Manifest) error {
 }
 
 // Validate checks every entry has an id, a known bus, files, a source and
-// a license, and that ids are unique.
+// a license that allows commercial use, and that ids are unique.
 func (m Manifest) Validate() error {
 	seen := map[string]bool{}
 	for _, e := range m.Sounds {
@@ -102,6 +102,8 @@ func (m Manifest) Validate() error {
 			return fmt.Errorf("%s: no files", e.ID)
 		case e.Source == "" || e.License == "":
 			return fmt.Errorf("%s: missing source or license", e.ID)
+		case NonCommercial(e.License):
+			return fmt.Errorf("%s: license %q forbids commercial use; every sound must be shareable", e.ID, e.License)
 		case e.Volume <= 0 || e.Volume > 1:
 			return fmt.Errorf("%s: volume %v outside (0, 1]", e.ID, e.Volume)
 		}
@@ -113,6 +115,18 @@ func (m Manifest) Validate() error {
 		seen[e.ID] = true
 	}
 	return nil
+}
+
+// NonCommercial reports whether a license line limits the sound to
+// non-commercial use, as the ElevenLabs free tier does.
+func NonCommercial(license string) bool {
+	l := strings.ToLower(license)
+	for _, w := range []string{"non-commercial", "noncommercial", "non commercial"} {
+		if strings.Contains(l, w) {
+			return true
+		}
+	}
+	return false
 }
 
 // Lookup returns the entry for id.

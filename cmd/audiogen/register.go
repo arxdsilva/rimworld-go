@@ -52,9 +52,13 @@ func promptFor(assets, file string) (prompt, error) {
 	return prompt{}, fmt.Errorf("%s is not in %s", file, promptsRel)
 }
 
+// mossTool names the local model in the sound list, as cmd/sfxgen does.
+const mossTool = "moss_soundeffect_v2"
+
 // register adds an imported, approved file to the sound list under its
-// prompt's id (a second file of an id becomes another variant).
-func register(assets, file string, credits int, license, reviewer string) (audiomanifest.Entry, error) {
+// prompt's id (a second file of an id becomes another variant). A seed
+// above 0 marks a MOSS take made with that seed; 0 an ElevenLabs take.
+func register(assets, file string, credits int, license, reviewer string, seed uint64) (audiomanifest.Entry, error) {
 	p, err := promptFor(assets, file)
 	if err != nil {
 		return audiomanifest.Entry{}, err
@@ -72,11 +76,18 @@ func register(assets, file string, credits int, license, reviewer string) (audio
 			e, i = x, k
 		}
 	}
-	if i >= 0 && e.Source != audiomanifest.SourceElevenLabs {
+	if i >= 0 && !audiomanifest.Generated(e.Source) {
 		return audiomanifest.Entry{}, fmt.Errorf("%s is already a %s sound", p.ID, e.Source)
 	}
+	source, tool := audiomanifest.SourceElevenLabs, p.Tool
+	if seed > 0 {
+		source, tool, credits = audiomanifest.SourceMOSS, mossTool, 0
+	}
+	if e.Source != source { // a take from another backend replaces the old one
+		e.Files, e.Credits = nil, 0
+	}
 	e.ID, e.Bus, e.Loop, e.Volume = p.ID, audiomanifest.BusOf(p.ID), p.Loop, p.Volume
-	e.Source, e.Tool, e.Prompt, e.Seconds = audiomanifest.SourceElevenLabs, p.Tool, p.Prompt, p.Seconds
+	e.Source, e.Tool, e.Prompt, e.Seconds, e.Seed = source, tool, p.Prompt, p.Seconds, seed
 	e.Credits += credits
 	e.Date = time.Now().Format("2006-01-02")
 	e.License, e.Review = license, reviewer
