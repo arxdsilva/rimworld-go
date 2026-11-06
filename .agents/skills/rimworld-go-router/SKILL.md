@@ -1,38 +1,21 @@
 ---
 name: rimworld-go-router
-description: Route any rimworld-go engineering task to the smallest relevant set of project skills and canonical documents. Use first for ambiguous, cross-cutting, or newly assigned tasks.
+description: Route any rimworld-go task to the smallest set of skills and spec sections. Use first for ambiguous, cross-cutting or new tasks.
 ---
 
 # rimworld-go Task Router
+
+Tools without skill discovery (Cursor, Codex) open this file at task start.
 
 Use this skill before implementation when the correct subsystem or context set is not already obvious.
 
 ## Goal
 
-Select the smallest sufficient context and skill set for the task.
+Select the smallest sufficient context and skill set. Never load every document or skill by default.
 
-Never load every project document or every skill by default.
+## Documents
 
-## Canonical project documents
-
-Read in this order only as needed:
-
-1. `/AGENTS.md`
-2. nearest package `AGENTS.md`
-3. relevant source interfaces/types
-4. relevant tests
-5. relevant `docs/systems/*.md`
-6. relevant `docs/adr/*.md`
-7. `.agents/specs/HEXAGONAL_ARCHITECTURE.md`
-8. `.agents/specs/GO_BEST_PRACTICES.md`
-9. `.agents/specs/SOLID_GO.md` when a change adds methods or fields to an existing large type, declares an interface, adds a package-level var or `init()`, or creates or splits a package
-10. `.agents/specs/MASTER_SPEC.md` only when broader product intent is required
-11. `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a gameplay feature
-12. `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a UI feature
-13. `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` when implementing or changing a player-facing screen, window, overlay, or HUD layout (via skill `rimworld-go-ui-screens`; load named sections only)
-14. `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task produces or changes player-visible art, renderer presentation, UI chrome, or asset-pipeline tooling (via skill `rimworld-go-art-assets`; load named sections only)
-
-Token/context policy is defined by `.agents/specs/AI_TOKEN_OPTIMIZATION.md`.
+Everything is indexed in `.agents/README.md`; load spec sections, never whole files. A normal task loads: the task, root `AGENTS.md`, the nearest package `AGENTS.md`, relevant interfaces and tests, and 1-3 skills.
 
 ## Routing table
 
@@ -41,11 +24,10 @@ Token/context policy is defined by `.agents/specs/AI_TOKEN_OPTIMIZATION.md`.
 | New feature or domain behavior | `rimworld-go-feature` |
 | Package/dependency/interface design | `rimworld-go-hexagonal` |
 | Splitting a god type, growing `App`/`Renderer`/`Game`, a failing `internal/arch` guard | `rimworld-go-hexagonal` + `.agents/specs/SOLID_GO.md` |
-| Tick order, RNG, authoritative state, replay determinism | `rimworld-go-determinism` |
+| Tick order, RNG, authoritative state, replay determinism, save/load, schema, snapshots, replay | `rimworld-go-determinism` |
 | Hot loops, scale, allocations, data layout | `rimworld-go-performance` |
 | Paths, regions, movement, congestion | `rimworld-go-pathing` |
 | Intents, work discovery, jobs, reservations | `rimworld-go-ai-jobs` |
-| Save/load, schema, snapshots, replay | `rimworld-go-persistence-replay` |
 | Definitions, YAML/JSON content, mods | `rimworld-go-content-modding` |
 | Sprites, icons, UI chrome, palettes, pivots, atlases, renderer presentation, asset pipeline | `rimworld-go-art-assets` |
 | Player-facing screens, windows, overlays, HUD layout, navigation, inspectors, management tables | `rimworld-go-ui-screens` |
@@ -57,7 +39,7 @@ Token/context policy is defined by `.agents/specs/AI_TOKEN_OPTIMIZATION.md`.
 | Task spans 2+ areas (domain, sim, ports, renderer, adapters, cmd, art, content, docs) or the user asks for parallel agents | `parallel-work` |
 | Planning a multi-area task (plan mode, a plan file, a phase plan) | `parallel-work` (§0: the plan includes its Parallel workers section) |
 
-A normal task should use **1–3 skills**, not the full catalog.
+A normal task uses 1-3 skills.
 
 ## Classification questions
 
@@ -76,25 +58,7 @@ Determine:
 
 ## Output before coding
 
-Internally establish a task packet:
-
-```text
-Task ID:
-Objective:
-Owner package:
-Allowed packages:
-Forbidden packages:
-Skills:
-Canonical docs:
-Tests:
-Benchmarks:
-Determinism impact:
-Save/mod impact:
-Art/visual impact:
-Screen/UI impact:
-```
-
-Keep it concise.
+Fill `.agents/templates/TASK_PACKET.md` internally; keep it concise.
 
 ## Stop conditions
 
