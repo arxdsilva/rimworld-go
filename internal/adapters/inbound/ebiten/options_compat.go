@@ -188,7 +188,7 @@ func (s optionsStory) PaintCard(dst *ebiten.Image, r gfx.Rect, p storyteller.Pro
 
 // CardTip is a storyteller card's hover text.
 func (s optionsStory) CardTip(p storyteller.Profile) string {
-	return wizardpkg.ModeCaption(p.Mode) + ". " + wizardpkg.PacingTip(p)
+	return wizardpkg.ModeCaptionIn(&s.a.shell.shellTexts, p.Mode) + ". " + wizardpkg.PacingTipIn(&s.a.shell.shellTexts, p)
 }
 
 // PresetTip is a difficulty row's hover text.
@@ -264,7 +264,7 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 	}
 	timeOff := ""
 	if !s.TimeEscalation {
-		timeOff = wizardpkg.DisabledNote
+		timeOff = a.shell.T("Only used with time-based escalation")
 	}
 	a.diffSlider(left, "ep", a.shell.T("Escalation per year"), &s.EscPerYear, "ep", wizardpkg.PctText, timeOff, a.shell.T("Escalation per year\nHow much the threat size grows each year."))
 	a.diffCheck(left, "iw", a.shell.T("Ignore wealth"), &s.IgnoreWealth, timeOff, a.shell.T("Ignore wealth\nThreat size follows time and people only, not what you own."))
@@ -279,11 +279,11 @@ func (a *App) storyCustomBody(body gfx.Rect, cd *wizardpkg.CustomDiff, formH *fl
 	right.SectionTitle(a, a.shell.T("Health and mind"))
 	a.diffSlider(right, "mo", a.shell.T("Mood offset"), &s.MoodOffset, "mo", wizardpkg.SignedText, "", a.shell.T("Mood offset\nAdded to every colonist's mood."))
 	a.diffSlider(right, "if", a.shell.T("Infection chance"), &s.Infection, "if", wizardpkg.PctText, "", "")
-	a.diffSlider(right, "df", a.shell.T("Disease frequency"), &s.DiseaseFreq, "df", wizardpkg.PctText, "", wizardpkg.DiseaseFreqTip)
+	a.diffSlider(right, "df", a.shell.T("Disease frequency"), &s.DiseaseFreq, "df", wizardpkg.PctText, "", a.shell.T("Disease frequency\nHow often flu, plague, malaria, sleeping sickness, gut worms and muscle parasites strike, from day 15 (malaria in warm lands, sleeping sickness in the tropics). 100% is the normal rate; 0% turns diseases off."))
 	if row, ok := right.Row(18); ok {
 		ns := gfx.Small
 		ns.Color = uikit.TextDim
-		a.uiSt().Label(row.X, row.Y, wizardpkg.DiseaseFreqNote, ns)
+		a.uiSt().Label(row.X, row.Y, a.shell.T("How often diseases strike; 0% turns them off."), ns)
 	}
 	a.diffSlider(right, "pt", a.shell.T("Pain tolerance offset"), &s.PainTolerance, "pt", wizardpkg.SignedText, "", "")
 	right.Gap(8)
