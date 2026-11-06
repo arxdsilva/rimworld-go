@@ -290,6 +290,9 @@ func (a *App) handleColonyEscape() bool {
 	if a.nav.screen() != portspkg.ScreenColony || a.nav.overlay() != overlayNone {
 		return false
 	}
+	if a.tools.Escape() { // the developer log, when Esc closes it (OPT-030)
+		return true
+	}
 	if a.chrome.Hidden {
 		a.chrome.Hidden = false // Esc brings the interface back first
 		return true

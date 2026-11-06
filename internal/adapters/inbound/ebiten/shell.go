@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"path/filepath"
 	architectpkg "rimworld-go/internal/adapters/inbound/ebiten/architect"
 	camerapkg "rimworld-go/internal/adapters/inbound/ebiten/camera"
 	"rimworld-go/internal/adapters/inbound/ebiten/lang"
@@ -19,6 +20,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/assetroot"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
 )
@@ -57,7 +59,7 @@ func newShell(a *App) shell {
 	return shell{
 		shellHint{a}, shellSize{a}, shellCmd{a}, shellWorld{a}, shellView{a}, shellSel{a},
 		shellOverlay{a}, shellSpeed{a}, shellSettings{a}, shellPanels{a}, shellWidgets{a}, shellSaves{a}, shellDispatch{a},
-		shellTexts{&lang.Live{}}, screenTable(), clickRoutes(),
+		newTexts(), screenTable(), clickRoutes(),
 	}
 }
 
@@ -353,8 +355,30 @@ func (s shellSaves) NewestSlot() int         { return s.a.newestSlot() }
 // ---- Texts
 
 // shellTexts serves the current catalog (lang.Live: English until the
-// Language option sets one, OPT-001).
-type shellTexts struct{ live *lang.Live }
+// Language option sets one, OPT-001); dir is assets/lang ("" when the
+// folder is missing: English only).
+type shellTexts struct {
+	live *lang.Live
+	dir  string
+}
+
+// newTexts finds assets/lang and starts in English.
+func newTexts() shellTexts {
+	dir, err := assetroot.Find(filepath.FromSlash("assets/lang"), true)
+	if err != nil {
+		dir = ""
+	}
+	return shellTexts{&lang.Live{}, dir}
+}
+
+// use switches to the catalog for code; one that does not load is English.
+func (s shellTexts) use(code string) {
+	c, err := lang.Load(s.dir, code)
+	if err != nil {
+		c = lang.Catalog{}
+	}
+	s.live.Set(c)
+}
 
 // T translates src.
 func (s shellTexts) T(src string) string { return s.live.T(src) }

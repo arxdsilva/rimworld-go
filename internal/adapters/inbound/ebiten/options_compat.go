@@ -78,7 +78,7 @@ func (h optionsHost) Env() options.Env {
 		Running: a.renderer != nil, Commitment: a.commitment(), Capture: a.cfg.Capture != nil,
 		CanSave: a.canSave(), CanLoad: a.canLoad(), Hardware: a.cfg.Hardware,
 		DeviceScale: a.deviceScale, RenderLimit: h.renderLimit, UIScale: a.scale.UI, Bindings: a.bindings(),
-		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods,
+		Pressed: a.in.Raw.Pressed, Mods: a.in.Raw.Mods, LangDir: a.shell.shellTexts.dir,
 	}
 }
 
@@ -403,6 +403,7 @@ func (a *App) applySettings() {
 	if a.cfg.Display != nil { // OPT-029: window size preset, borderless
 		a.cfg.Display(a.settings.Camera.Window, a.settings.Camera.Borderless)
 	}
+	a.shell.use(a.settings.General.Language) // OPT-001
 	a.syncRenderer()
 	a.cfg.Sound.SetVolumes(a.settings.Audio)
 }
