@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector/gear"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -400,8 +401,8 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 	if rot := itemRotLine(it); rot != "" { // right under the freshness line
 		lines = append(lines[:1:1], append([]string{rot}, lines[1:]...)...)
 	}
-	title := QualifiedTitle(ItemTitle(it), it.Stuff, it.Quality)
-	lines = append(ItemFactLines(it), lines...)
+	title := gear.QualifiedTitle(ItemTitle(it), it.Stuff, it.Quality)
+	lines = append(gear.ItemFactLines(it), lines...)
 	if ln := CrateLine(it); ln != "" { // cmds_orders.go (AX-1)
 		lines = append(lines, ln)
 	}
@@ -452,7 +453,7 @@ func (a Thing) ItemCommands(id entity.EntityID) []Button {
 	for _, v := range ItemVerbs(it, InStockpile(a.shell.World(), it.X, it.Y)) {
 		out = append(out, a.colonistVerbCmd(v.ID, v.Label, v.Icon, v.Desc, it.X, it.Y, v.Match))
 	}
-	return append(out, a.crateCommands(it)...) // cmds_orders.go (AX-1): Reinstall
+	return append(append(out, a.crateCommands(it)...), a.itemInfoButton(it)) // cmds_orders.go (AX-1): Reinstall; item_inspector.go: Info
 }
 
 // ---- plants ----

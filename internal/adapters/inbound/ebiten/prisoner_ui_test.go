@@ -24,14 +24,14 @@ func prisonerSim() *stubSim {
 	return s
 }
 
-func TestPrisonerTabReplacesGearAndFits(t *testing.T) {
+func TestPrisonerTabBesideGearAndFits(t *testing.T) {
 	t.Parallel()
 	s := prisonerSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(2)
 	f.Frame(t, a)
-	if _, ok := findButton(a, "inspector.gear"); ok {
-		t.Fatal("a prisoner's Gear tab gives way to its Prisoner tab")
+	if b, ok := findButton(a, "inspector.gear"); !ok || b.Disabled {
+		t.Fatal("a prisoner keeps the Gear tab beside its Prisoner tab (GEAR-008)")
 	}
 	tab, ok := findButton(a, inspector.PrisonerTabID)
 	if !ok || tab.Disabled {

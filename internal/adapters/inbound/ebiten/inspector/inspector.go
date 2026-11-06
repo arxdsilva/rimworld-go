@@ -203,56 +203,6 @@ func needColor(pct int) color.RGBA {
 	return uikit.SliderFill
 }
 
-// GearLayout is the Gear tab's vertical layout (offsets from the top of
-// its content): drawGear paints it.
-type GearLayout struct {
-	WeaponVal, Wearing, Clothes, Comfort, Hint float32
-}
-
-// gearLayoutFor lays the tab out for lines Wearing rows below "everyday
-// clothes".
-func GearLayoutFor(lines int) GearLayout {
-	hs, ss := gfx.LineStep(gfx.Label), gfx.LineStep(gfx.Small)
-	var g GearLayout
-	g.WeaponVal = hs
-	g.Wearing = hs + ss + 6
-	g.Clothes = g.Wearing + hs
-	g.Comfort = g.Clothes + float32(lines+1)*ss + 6
-	g.Hint = g.Comfort + ss + 6
-	return g
-}
-
-// drawGear lists what the colonist carries and wears and the comfortable
-// temperature range that gives it, inside in. Rows that do not fit are
-// left out.
-func drawGear(screen *ebiten.Image, p game.PawnView, in gfx.Rect, temp func(tenths int) string) {
-	rows := GearRows(p)
-	g := GearLayoutFor(len(rows) - 1)
-	fx, fy := float64(in.X), float64(in.Y)
-	head := gfx.WithColor(gfx.Label, uikit.Heading)
-	ss := float64(gfx.LineStep(gfx.Small))
-	fits := func(off float64, st gfx.TextStyle) bool {
-		return float32(fy+off+float64(gfx.LineStep(st))) <= in.Bottom()
-	}
-	gfx.Text(screen, "Weapon", fx, fy, head)
-	gfx.Text(screen, gfx.Ellipsize(WeaponTitle(p), gfx.Small, float64(in.W)-12), fx+12, fy+float64(g.WeaponVal), gfx.Small)
-	gfx.Text(screen, "Wearing", fx, fy+float64(g.Wearing), head)
-	ly := fy + float64(g.Clothes)
-	for _, row := range rows {
-		if !fits(ly-fy, gfx.Small) {
-			break
-		}
-		gfx.Text(screen, gfx.Ellipsize(row, gfx.Small, float64(in.W)-12), fx+12, ly, gfx.Small)
-		ly += ss
-	}
-	if fits(float64(g.Comfort), gfx.Small) {
-		gfx.Text(screen, fmt.Sprintf("Comfortable  %s to %s", temp(p.ComfortMin), temp(p.ComfortMax)), fx, fy+float64(g.Comfort), gfx.Small)
-	}
-	if fits(float64(g.Hint), gfx.Small) {
-		gfx.Text(screen, gfx.Ellipsize("Weapons and clothes lying nearby: the Equip command.", gfx.Small, float64(in.W)), fx, fy+float64(g.Hint), gfx.WithColor(gfx.Small, uikit.TextDim))
-	}
-}
-
 // drawNeedsTab is the Needs tab's body, drawn into r, the expanded panel's
 // inner rectangle: every need as a bar, how the colonist feels, and the
 // thoughts behind the mood. Rows that do not fit are left out.
@@ -300,30 +250,8 @@ func (a Pawn) drawNeedsTab(screen *ebiten.Image, id entity.EntityID, r gfx.Rect)
 	}
 }
 
-// gearRows is the Wearing list (PLAY-017): everyday clothes, each garment
-// (by name and "(you chose this)" when the player ordered it, else with
-// what it does), and the garment the colonist is walking to put on.
-func GearRows(p game.PawnView) []string {
-	rows := []string{"everyday clothes"}
-	for _, i := range GearLayerOrder(p.Apparel) { // temp_ui.go (TEMP-5): skin to outer, then head and belt
-		l := GearLine(p.Apparel[i])
-		if i < len(p.ApparelForced) && p.ApparelForced[i] {
-			name, _, _ := strings.Cut(l, " (")
-			l = strings.TrimSpace(name) + "  (you chose this)"
-		}
-		if i < len(p.Worn) {
-			if ins := InsulationLine(p.Apparel[i], p.Worn[i].Stuff, p.Worn[i].Quality); ins != "" {
-				l += "  " + strings.TrimPrefix(ins, "Insulation: ")
-			}
-		}
-		rows = append(rows, GearLayerTag(p.Apparel[i])+l)
-	}
-	if p.ChangingInto != "" {
-		rows = append(rows, "Changing into: "+p.ChangingInto)
-	}
-	return rows
-}
-
+// GearLine is a garment's name with what it does (the Gear tab's tooltip
+// note, PLAY-017).
 func GearLine(a string) string {
 	switch a {
 	case "parka":

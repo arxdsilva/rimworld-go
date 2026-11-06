@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector/gear"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
@@ -134,7 +134,7 @@ func TestJourneyWeaponQualityKept(t *testing.T) {
 	ordPick(j, 0)
 	j.clickID("inspector.gear")
 	j.draw(2)
-	lines := strings.ToLower(inspector.WeaponTitle(p) + "\n" + strings.Join(inspector.GearStatLines(p), "\n"))
+	lines := strings.ToLower(gear.WeaponTitle(p) + "\n" + strings.Join(gear.StatLines(p), "\n"))
 	if !strings.Contains(lines, "masterwork") {
 		t.Fatalf("the gear tab lines do not show the quality:\n%s", lines)
 	}

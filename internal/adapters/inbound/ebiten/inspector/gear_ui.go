@@ -1,139 +1,56 @@
 package inspector
 
 import (
-	"fmt"
-	"reflect"
+	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
-	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/economy/quality"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector/gear"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/domain/gameplay"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// The Gear tab's combat lines (CBT-5 UI): the weapon with its quality and
-// stuff, the weapon tooltip, the spare weapon, the shield belt charge and
-// the pawn's combat record. CBT-3 fills PawnView.Spare and ShieldPct
-// beside the quality and stuff, so they are read by name and absent
-// fields read as nothing.
+// The Gear tab lives in inspector/gear (GEAR-2); gearHost is its Host and
+// Facts over the pane.
+type gearHost struct{ p *Pane }
 
-// shieldBarH is the shield belt charge bar's height.
-const shieldBarH = 13
+var (
+	_ gear.Host  = gearHost{}
+	_ gear.Facts = gearHost{}
+)
 
-// WeaponTitle is the wielded weapon with its stuff and quality
-// ("Steel longsword (good)"); WeaponQuality is quality.Level+1 (0: none).
-func WeaponTitle(p game.PawnView) string {
-	q := ""
-	if p.WeaponQuality > 0 && quality.Level(p.WeaponQuality-1).Valid() {
-		q = quality.Level(p.WeaponQuality - 1).String()
+func (h gearHost) Enqueue(c command.Command) { h.p.shell.Enqueue(c) }
+func (h gearHost) Do(it ports.Intent)        { h.p.shell.Do(it) }
+func (h gearHost) Kit() *uikit.Kit           { return h.p.kit() }
+func (h gearHost) Shift() bool               { return h.p.env().Shift }
+func (h gearHost) Unloading() bool           { return h.p.shell.World().Gameplay.On(gameplay.ManualUnload) }
+
+func (h gearHost) Image(key string) *ebiten.Image {
+	if c := h.p.env().Art; c.Has(key) {
+		return c.Image(key, color.NRGBA{})
 	}
-	return QualifiedTitle(p.Weapon, p.WeaponStuff, q)
+	return nil
 }
 
-// WeaponTip is the weapon line's tooltip: its damage and cooldown, and
-// for a melee weapon what that comes to each second (UI checklist 12.3).
-func WeaponTip(p game.PawnView) string {
-	w := p.WeaponStats
-	if w.Name == "" {
-		return ""
-	}
-	title := Capitalize(WeaponTitle(p))
-	if w.Melee {
-		cycle := secs(w.Warmup + w.Cooldown)
-		body := fmt.Sprintf("Melee. Damage %d per hit, cooldown %.1fs.", w.Damage, secs(w.Cooldown))
-		if cycle > 0 {
-			body += fmt.Sprintf(" About %.1f damage per second when every blow lands.", float64(w.Damage)/cycle)
-		}
-		return title + "\n" + body
-	}
-	return title + "\n" + fmt.Sprintf("Ranged. Damage %d per shot, warmup %.1fs, cooldown %.1fs, range %d.",
-		w.Damage, secs(w.Warmup), secs(w.Cooldown), w.Range)
+func (h gearHost) ItemImage(kind string) *ebiten.Image { return h.Image(world.ItemSprite(kind)) }
+
+func (h gearHost) Temp(tenths int) string         { return h.p.shell.Temp(tenths) }
+func (h gearHost) LayerOrder(worn []string) []int { return GearLayerOrder(worn) }
+func (h gearHost) LayerTag(name string) string    { return GearLayerTag(name) }
+func (h gearHost) Note(kind string) string        { return GearLine(kind) }
+func (h gearHost) Insulation(kind, stuff, q string) string {
+	return InsulationLine(kind, stuff, q)
 }
 
-// optField is the exported field name of a PawnView, when it exists.
-func optField(p game.PawnView, name string) (reflect.Value, bool) {
-	f := reflect.ValueOf(p).FieldByName(name)
-	return f, f.IsValid()
-}
-
-// ShieldCharge is the shield belt's charge in percent; ok is false when
-// the pawn wears none (or the read model has no such field yet).
-func ShieldCharge(p game.PawnView) (pct int, ok bool) {
-	f, has := optField(p, "ShieldPct")
-	if !has || !f.CanInt() || f.Int() <= 0 {
-		return 0, false
-	}
-	return int(f.Int()), true
-}
-
-// SpareName is the spare weapon the pawn carries ("" when none). The
-// field may be a name, or a slot holding an item kind and a quantity.
-func SpareName(p game.PawnView) string {
-	f, ok := optField(p, "Spare")
-	if !ok {
-		return ""
-	}
-	switch f.Kind() {
-	case reflect.String:
-		return f.String()
-	case reflect.Struct:
-		qty, k := f.FieldByName("Qty"), f.FieldByName("Kind")
-		if !qty.IsValid() || !k.IsValid() || !qty.CanInt() || qty.Int() <= 0 {
-			return ""
-		}
-		name := fmt.Sprint(k.Interface())
-		if qty.Int() > 1 {
-			name += fmt.Sprintf(" x%d", qty.Int())
-		}
-		return name
-	}
-	return ""
-}
-
-// CombatExtraLines are the Gear tab's spare weapon and combat record
-// lines.
-func CombatExtraLines(p game.PawnView) []string {
-	var out []string
-	if s := SpareName(p); s != "" {
-		out = append(out, "Spare weapon: "+s)
-	}
-	if p.Kills > 0 || p.DamageDealt > 0 {
-		out = append(out, fmt.Sprintf("Kills %d   Damage dealt %d", p.Kills, p.DamageDealt))
-	}
-	return out
-}
-
-// gearTabBody declares the Gear tab of colonist id inside r: the lists
-// (drawn through the canvas queue), the weapon tooltip and the shield
-// charge bar.
+// gearTabBody declares the Gear tab of pawn id inside r.
 func (a Tabs) gearTabBody(id entity.EntityID, r gfx.Rect) {
-	p, ok := a.pawnView(id)
-	if !ok {
-		return
+	if p, ok := a.pawnView(id); ok {
+		h := gearHost{a.Pane}
+		gear.New(h, h).Declare(p, r)
 	}
-	lines := append(GearStatLines(p), PackRows(p)...) // gear_rows.go (CSE-036)
-	rows := len(GearRows(p)) - 1
-	g := GearLayoutFor(rows)
-	step := gfx.LineStep(gfx.Small)
-	if tip := WeaponTip(p); tip != "" {
-		a.kit().Tip("inspector.gear.weapon", gfx.Rect{X: r.X + 12, Y: r.Y + g.WeaponVal, W: r.W - 12, H: step}, tip)
-	}
-	a.gearUnloadButtons(p, r, g, lines) // gear_rows.go (CSE-038)
-	pct, shield := ShieldCharge(p)
-	by := r.Y + g.Hint + step + 6 + float32(len(lines))*step + 4
-	a.kit().Queue(func(dst *ebiten.Image) {
-		drawGear(dst, p, r, a.shell.Temp)
-		y := float64(r.Y) + float64(g.Hint) + float64(step) + 6
-		for _, l := range lines {
-			if float32(y)+step > r.Bottom() {
-				break
-			}
-			gfx.Text(dst, gfx.Ellipsize(l, gfx.Small, float64(r.W)), float64(r.X), y, gfx.Small)
-			y += float64(step)
-		}
-		if shield && by+shieldBarH <= r.Bottom() {
-			drawNeedBar(dst, int(r.X), int(by), int(r.W), shieldBarH, pct, "shield")
-		}
-	})
 }

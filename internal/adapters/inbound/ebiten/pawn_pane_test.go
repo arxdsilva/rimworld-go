@@ -323,7 +323,7 @@ func TestAreaChipIsAButtonOnThePane(t *testing.T) {
 	}
 }
 
-func TestPawnPanePrisonerSwapsGearForPrisoner(t *testing.T) {
+func TestPawnPanePrisonerHasGearAndPrisoner(t *testing.T) {
 	t.Parallel()
 	s := prisonerSim()
 	a, f := colonyApp(t, s)
@@ -334,8 +334,8 @@ func TestPawnPanePrisonerSwapsGearForPrisoner(t *testing.T) {
 	for _, tb := range spec.Tabs {
 		ids = append(ids, tb.ID)
 	}
-	if slices.Contains(ids, "inspector.gear") || !slices.Contains(ids, "inspector.prisoner") {
-		t.Fatalf("a prisoner's Gear tab gives way to its Prisoner tab: %v", ids)
+	if !slices.Contains(ids, "inspector.gear") || !slices.Contains(ids, "inspector.prisoner") {
+		t.Fatalf("a prisoner has both Gear and Prisoner tabs (GEAR-008): %v", ids)
 	}
 	if tb, _ := paneTabByID(spec, inspectorpkg.PrisonerTabID); tb.Declare == nil || tb.WantW < hudlayout.ExpandMinW {
 		t.Fatalf("Prisoner tab %+v is a widget-kit tab", tb)

@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector/gear"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -29,7 +30,6 @@ import (
 // gets the panel inset by paneInset, so every body also copes with less.
 const (
 	needsWantW, needsWantH       = 400, 260
-	gearWantW, gearWantH         = 400, 360
 	logWantW, logWantH           = 400, 280
 	bioWantW, bioWantH           = 480, 404
 	healthWantW, healthWantH     = 480, 360
@@ -150,7 +150,7 @@ func (a Pawn) equipCommand(p game.PawnView) Button {
 
 // pawnPane is colonist id's pane: name, age and title, status bars, the
 // area and schedule chips, lines, and the Needs/Bio/Health/Social/Gear/Log
-// tabs (Gear gives way to Prisoner for a prisoner). Title is "" for a
+// tabs (and Prisoner for a prisoner). Title is "" for a
 // colonist the snapshot does not have.
 func (a Pawn) PawnPane(id entity.EntityID) Spec {
 	p, ok := a.pawnView(id)
@@ -350,9 +350,9 @@ func wearingSummary(p game.PawnView) string {
 }
 
 // pawnTabs are the tabs that open above the pane. Bio is disabled for a
-// colonist without a biography; a prisoner's Gear gives way to Prisoner.
-// Needs, Gear and Log draw the legacy way; Bio, Health, Social and Prisoner
-// declare widget-kit bodies.
+// colonist without a biography; a prisoner has Prisoner beside Gear.
+// Needs and Log draw the legacy way; Bio, Health, Social, Gear and
+// Prisoner declare widget-kit bodies.
 func (a Pawn) pawnTabs(p game.PawnView) []Tab {
 	id := p.ID
 	bio := Tab{ID: "inspector.bio", Label: "Bio", WantW: bioWantW, WantH: bioWantH,
@@ -360,13 +360,13 @@ func (a Pawn) pawnTabs(p game.PawnView) []Tab {
 	if !HasBio(p) {
 		bio.Disabled, bio.Reason = true, "No biography for this colonist"
 	}
-	gear := Tab{ID: "inspector.gear", Label: "Gear", WantW: gearWantW, WantH: gearWantH,
-		Declare: func(r gfx.Rect) { a.Tabs().gearTabBody(id, r) }}
-	if a.Tabs().isPrisoner(id) {
-		gear = Tab{ID: PrisonerTabID, Label: "Prisoner", WantW: prisonerWantW, WantH: prisonerWantH,
-			Declare: func(r gfx.Rect) { a.Tabs().prisonerTabBody(id, r) }}
+	gearTabs := []Tab{{ID: "inspector.gear", Label: "Gear", WantW: gear.WantW, WantH: gear.WantH,
+		Declare: func(r gfx.Rect) { a.Tabs().gearTabBody(id, r) }}} // inspector/gear (GEAR-2)
+	if a.Tabs().isPrisoner(id) { // GEAR-008: a prisoner keeps Gear beside Prisoner
+		gearTabs = append(gearTabs, Tab{ID: PrisonerTabID, Label: "Prisoner", WantW: prisonerWantW, WantH: prisonerWantH,
+			Declare: func(r gfx.Rect) { a.Tabs().prisonerTabBody(id, r) }})
 	}
-	return []Tab{
+	return append([]Tab{
 		{ID: "inspector.needs", Label: "Needs", WantW: needsWantW, WantH: needsWantH,
 			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawNeedsTab(screen, id, r) }},
 		bio,
@@ -374,10 +374,9 @@ func (a Pawn) pawnTabs(p game.PawnView) []Tab {
 			Declare: func(r gfx.Rect) { a.Tabs().kitTabBody(id, "health", r) }},
 		{ID: "inspector.social", Label: "Social", WantW: socialWantW, WantH: socialWantH,
 			Declare: func(r gfx.Rect) { a.Tabs().kitTabBody(id, "social", r) }},
-		gear,
-		{ID: "inspector.log", Label: "Log", WantW: logWantW, WantH: logWantH,
-			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawPawnLog(screen, id, r) }},
-	}
+	}, append(gearTabs,
+		Tab{ID: "inspector.log", Label: "Log", WantW: logWantW, WantH: logWantH,
+			Draw: func(screen *ebiten.Image, r gfx.Rect) { a.drawPawnLog(screen, id, r) }})...)
 }
 
 // PawnFoodLines are the colonist's food policy and last meal (empty until
@@ -391,4 +390,13 @@ func PawnFoodLines(p game.PawnView) []string {
 		out = append(out, "Last meal: "+p.LastMeal)
 	}
 	return out
+}
+
+// InspirationLine is the pawn status line for an active inspiration
+// ("inspired creativity" becomes "Inspired: creativity").
+func InspirationLine(insp string) string {
+	if insp == "" {
+		return ""
+	}
+	return "Inspired: " + strings.TrimPrefix(insp, "inspired ")
 }

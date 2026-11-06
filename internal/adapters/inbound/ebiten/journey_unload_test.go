@@ -3,7 +3,7 @@ package ebiten
 import (
 	"testing"
 
-	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector/gear"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -25,7 +25,7 @@ func TestJourneyGearUnload(t *testing.T) {
 	j.update(2)
 	j.draw(2)
 	j.reset()
-	if !j.clickID(inspector.UnloadID("weapon", 0)) {
+	if !j.clickID(gear.UnloadID("weapon", 0)) {
 		t.Fatal("the Unload button is disabled")
 	}
 	c, ok := j.lastCmd(command.MarkUnload)

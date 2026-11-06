@@ -1,12 +1,10 @@
 package inspector
 
 import (
-	"slices"
 	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -80,16 +78,6 @@ func TestAnimalTempLines(t *testing.T) {
 	}
 }
 
-func TestGearRowsAreInLayerOrder(t *testing.T) {
-	t.Parallel()
-	p := game.PawnView{Apparel: []string{"tuque", "parka", "t-shirt", "pants"}, ApparelForced: []bool{false, false, false, true}}
-	rows := GearRows(p)
-	want := []string{"everyday clothes", "Skin: t-shirt", "Skin: pants  (you chose this)", "Outer: leather parka  (much warmer, hot in summer)", "Head: knitted tuque  (warmer)"}
-	if !slices.Equal(rows, want) {
-		t.Fatalf("rows %q\nwant %q", rows, want)
-	}
-}
-
 func TestInsulationLine(t *testing.T) {
 	t.Parallel()
 	if InsulationLine("steel", "", "") != "" || InsulationLine("nothing", "", "") != "" {
@@ -98,10 +86,6 @@ func TestInsulationLine(t *testing.T) {
 	parka := InsulationLine("parka", "", "")
 	if !strings.HasPrefix(parka, "Insulation: cold ") {
 		t.Fatalf("parka line %q", parka)
-	}
-	rows := GearRows(game.PawnView{Apparel: []string{"parka"}, Worn: []craft.WornView{{Kind: "parka"}}})
-	if !strings.Contains(rows[1], "cold ") {
-		t.Fatalf("gear row %q lacks the insulation", rows[1])
 	}
 	if !strings.Contains(strings.Join(ItemLines(game.ItemView{Kind: "parka", FreshDays: -1}, false), "|"), "Insulation: cold") {
 		t.Fatal("the item pane lacks the insulation line")

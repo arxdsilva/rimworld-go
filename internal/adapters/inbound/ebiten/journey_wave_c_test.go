@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
-	"rimworld-go/internal/adapters/inbound/ebiten/inspector"
+	"rimworld-go/internal/adapters/inbound/ebiten/inspector/gear"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
@@ -234,9 +234,8 @@ func TestJourneyGearTabWeaponStats(t *testing.T) {
 	j.update(2)
 	j.draw(2)
 	p := j.pawn(pawn)
-	// the Gear tab draws its rows, then the weapon and armor stat lines
-	text := strings.ToLower(p.Weapon + "\n" + strings.Join(inspector.GearRows(p), "\n") +
-		"\n" + strings.Join(inspector.GearStatLines(p), "\n"))
+	// the Gear tab's tooltips carry the weapon and armor stat lines
+	text := strings.ToLower(p.Weapon + "\n" + strings.Join(gear.StatLines(p), "\n"))
 	for _, want := range []string{"damage", "range", "armor"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("gear tab lacks %q:\n%s", want, text)

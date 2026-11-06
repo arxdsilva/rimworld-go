@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -169,6 +170,17 @@ func ItemVerbs(it game.ItemView, stored bool) []ItemVerb {
 			"Have a colonist carry it to a stockpile. A click sends the nearest; right-click picks who.", OrderIs(command.OrderHaul)})
 	}
 	return out
+}
+
+// ItemInfoID is the item pane's Info button (GEAR-006).
+const ItemInfoID = "cmd.item.info"
+
+// itemInfoButton opens the read-only Info card on the stack.
+func (a Thing) itemInfoButton(it game.ItemView) Button {
+	id, kind := it.ID, it.Kind
+	return Button{ID: ItemInfoID, Label: "Info", Icon: "gear_info", Single: true,
+		Desc: "Info\nWhat this is, in full.",
+		Run:  func() { a.shell.Do(ports.OpenInfoCard{ID: id, Kind: kind}) }}
 }
 
 // applyItemClick handles an "item.*" button.

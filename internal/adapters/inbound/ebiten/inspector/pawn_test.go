@@ -46,25 +46,6 @@ func TestPostponedLine(t *testing.T) {
 	}
 }
 
-// PLAY-017: the Gear tab marks the garments the player chose and names the
-// one the colonist is walking to put on; the layout below follows.
-func TestGearRows(t *testing.T) {
-	p := game.PawnView{Apparel: []string{"parka", "tuque"}, ApparelForced: []bool{true, false}, ChangingInto: "duster"}
-	rows := GearRows(p)
-	want := []string{"everyday clothes", "Outer: leather parka  (you chose this)", "Head: knitted tuque  (warmer)", "Changing into: duster"}
-	if !slices.Equal(rows, want) {
-		t.Fatalf("rows %q\nwant %q", rows, want)
-	}
-	if got := GearRows(game.PawnView{}); !slices.Equal(got, []string{"everyday clothes"}) {
-		t.Fatalf("bare colonist rows %q", got)
-	}
-	// the comfort line (and the hint after it) sit below every Wearing row
-	g := GearLayoutFor(len(rows) - 1)
-	if last := g.Clothes + float32(len(rows))*gfx.LineStep(gfx.Small); g.Comfort < last || g.Hint <= g.Comfort {
-		t.Fatalf("comfort at %v, hint at %v, want both below the last row ending at %v", g.Comfort, g.Hint, last)
-	}
-}
-
 func TestLogLineTextAndWrap(t *testing.T) {
 	t.Parallel()
 	if got := LogLineText(game.LogLineView{Day: 2, Hour: 7, Text: "Ate a meal"}); got != "Day 2, 07h  Ate a meal" {
