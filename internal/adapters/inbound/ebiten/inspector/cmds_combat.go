@@ -28,16 +28,16 @@ func (a Pawn) combatCommands(p game.PawnView) []Button {
 	}
 	id := p.ID
 	out := []Button{
-		{ID: FireAtWillID, Label: a.shell.T("Fire at will"), Icon: "order_attack", Toggle: true, On: p.FireAtWill,
-			Desc: a.shell.T("Shoot at hostiles in range without being ordered to. Turn it off to fire only on your orders."),
+		{ID: FireAtWillID, Label: trOf(a.Pane).T("Fire at will"), Icon: "order_attack", Toggle: true, On: p.FireAtWill,
+			Desc: trOf(a.Pane).T("Shoot at hostiles in range without being ordered to. Turn it off to fire only on your orders."),
 			Cmds: []command.Command{{Kind: command.SetFireAtWill, Pawn: uint64(id), Enabled: !p.FireAtWill}}},
-		{ID: HoldPositionID, Label: a.shell.T("Hold position"), Icon: "draft", Toggle: true, On: p.HoldPosition,
-			Desc: a.shell.T("Stay on this tile and do not chase targets."),
+		{ID: HoldPositionID, Label: trOf(a.Pane).T("Hold position"), Icon: "draft", Toggle: true, On: p.HoldPosition,
+			Desc: trOf(a.Pane).T("Stay on this tile and do not chase targets."),
 			Cmds: []command.Command{{Kind: command.SetHoldPosition, Pawn: uint64(id), Enabled: !p.HoldPosition}}},
 	}
 	if p.Grenades > 0 {
-		out = append(out, Button{ID: ThrowGrenadeID, Label: a.shell.T("Throw grenade"), Icon: "order_attack",
-			Desc: a.shell.Tf(a.shell.T("Click a tile on the map to throw a grenade there (%d carried). Esc or a right click cancels."), p.Grenades),
+		out = append(out, Button{ID: ThrowGrenadeID, Label: trOf(a.Pane).T("Throw grenade"), Icon: "order_attack",
+			Desc: trOf(a.Pane).Tf(trOf(a.Pane).T("Click a tile on the map to throw a grenade there (%d carried). Esc or a right click cancels."), p.Grenades),
 			Run:  func() { a.shell.Do(ports.AimGrenade{Pawn: id}) }})
 	}
 	return out

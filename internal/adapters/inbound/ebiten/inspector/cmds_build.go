@@ -92,7 +92,7 @@ func (a Building) BuildingCommands(id entity.EntityID) []Button {
 			out = append(out, forbidCommand(a.shell, b))
 		}
 		out = append(out, a.powerCommandsIn(a.env().Units, b)...) // cmds_power.go (PLAY-021)
-		out = append(out, ventCommands(b)...)                     // temp_ui.go (TEMP-5)
+		out = append(out, ventCommandsT(a.shell, b)...)           // temp_ui.go (TEMP-5)
 		out = append(out, potCommands(a.shell, b)...)             // ax2.go (AX-2)
 		out = append(out, a.MoveCommands(b)...)
 		out = append(out, orderCommands(a, b)...)                    // cmds_orders.go (AX-1): uninstall, open a grave

@@ -408,7 +408,7 @@ func (a Thing) ItemPane(id entity.EntityID) Spec {
 		lines = append(lines, ln)
 	}
 	var bars []Bar
-	if b, ok := RotBar(it); ok { // FOOD-5: how much shelf life is left
+	if b, ok := RotBarT(a.shell, it); ok { // FOOD-5: how much shelf life is left
 		bars = append(bars, b)
 	}
 	return Spec{Title: title, Subtitle: ItemCategory(it), Bars: bars, Lines: lines, Close: "item.close"}
@@ -475,7 +475,7 @@ func (a Thing) PlantPane(id entity.EntityID) Spec {
 	if plantCaptionWarns(gv) {
 		col = uikit.Warning // a roof, a lamp or a fire is needed
 	}
-	return Spec{Title: PlantTitle(p), Subtitle: plantSubtitle(p), Close: "plant.close",
+	return Spec{Title: PlantTitleT(a.shell, p), Subtitle: plantSubtitle(p), Close: "plant.close",
 		Bars:  []Bar{{Label: a.shell.T("Growth"), Pct: p.Growth, Color: col}},
 		Lines: PlantPaneLines(p, gv)}
 }

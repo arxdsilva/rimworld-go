@@ -176,7 +176,7 @@ func (a Tabs) healthTab(p game.PawnView, in gfx.Rect) {
 	h, ok := a.sim().Health(p.ID)
 	top := in.Y + float32(gfx.LineStep(gfx.Label)) + 8
 	if !ok {
-		a.kit().Label(in.X, top, noDataYet, uikit.DimText())
+		a.kit().Label(in.X, top, a.shell.T("No data yet."), uikit.DimText())
 		return
 	}
 	a.healthCare(p, gfx.Rect{X: in.X, Y: top, W: in.W, H: healthCareH}, h) // MED-03

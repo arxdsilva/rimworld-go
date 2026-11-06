@@ -289,21 +289,21 @@ const (
 )
 
 // animalLogRows are the Log tab's rows, wrapped for a body w px wide.
-func animalLogRows(an game.AnimalView, w float32) []string {
-	return WrapLogRows(an.Log, float64(w-uikit.ScrollBarW)-4)
+func animalLogRows(tr lang.Tr, an game.AnimalView, w float32) []string {
+	return WrapLogRowsT(tr, an.Log, float64(w-uikit.ScrollBarW)-4)
 }
 
 // declareAnimalLog declares the Log tab's scroll area over inner (the wheel
 // and the scrollbar).
 func (a Animal) declareAnimalLog(an game.AnimalView, inner gfx.Rect) {
-	rows := animalLogRows(an, inner.W)
+	rows := animalLogRows(a.shell, an, inner.W)
 	a.kit().ScrollArea(AnimalLogID, inner, float32(len(rows)*logLineH()), uikit.ScrollOpts{Step: float32(3 * logLineH())})
 }
 
 // drawAnimalLogTab is the Log tab body: the animal's full log, newest
 // first, scrolled by the area declareAnimalLog declared.
 func (a Animal) drawAnimalLogTab(screen *ebiten.Image, an game.AnimalView, inner gfx.Rect) {
-	rows := animalLogRows(an, inner.W)
+	rows := animalLogRows(a.shell, an, inner.W)
 	if len(rows) == 0 {
 		gfx.Text(screen, a.shell.T("Nothing has happened yet."), float64(inner.X), float64(inner.Y), gfx.WithColor(LogStyle, uikit.TextDim))
 		return

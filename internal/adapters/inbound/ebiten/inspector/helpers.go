@@ -1,7 +1,10 @@
 package inspector
 
 import (
+	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -78,4 +81,17 @@ func ruinTitle(b game.BuildingView) string {
 		adj = "wooden"
 	}
 	return "Ruined " + adj + " " + b.Kind
+}
+
+// englishTexts is the catalog of a bare Pane: the source text.
+type englishTexts struct{ lang.English }
+
+func (englishTexts) Tf(src string, args ...any) string { return fmt.Sprintf(src, args...) }
+
+// trOf is p's catalog; a bare Pane (a test's) has no shell and reads English.
+func trOf(p *Pane) ports.Texts {
+	if p == nil || p.shell == nil {
+		return englishTexts{}
+	}
+	return p.shell
 }
