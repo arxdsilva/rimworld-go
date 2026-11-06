@@ -1,9 +1,9 @@
-# care package
+# internal/application/game/care
 
-## Package Purpose
+## Purpose
 Looking after pawns that cannot look after themselves: the carry relation, rescue to a safe bed, tending and emergency tending, bed rest, the medical care policy, and the pawn-targeted orders (Rescue, Capture, Arrest, Prioritize tending, Feed, Strip). A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by SIM-061; the gap backlog is `.agents/gaps/PAWN_INTERACTION_GAP_ANALYSIS.md`.
 
-## Owned Concepts
+## Owns
 - `Care` (care.go): the root, built by `New(Host, Roles)`; components as exported fields; the care level and self-tend commands, `DropPatient`, `FollowCarriers`, `View(id, j) CareView`, `SafeBedFor` (beds.go), `PawnOrders` (orders.go), `Force` and `judge` (forced.go: one verdict for the menu row and the order), `Do` (jobs.go: the SIM-063…065 jobs), `kindOf` (targets.go: colonist, prisoner, guest, stranger, hostile). Kept at ≤ 40 methods: a feature's entry points go on its component, not here.
 - `Carries` (carry.go): who carries whom, a two-way index, carriers in ascending order.
 - `Policy` (policy.go): care levels per pawn and per group, self-tend; saved as `PolicySave`.
@@ -16,26 +16,23 @@ Looking after pawns that cannot look after themselves: the carry relation, rescu
 - Capture and arrest (capture.go, SIM-062) with the shared carry-to-bed driver (carrybed.go).
 - `Option`: field-identical to `game.OrderOption`.
 
-## Allowed Dependencies
-- Domain value types (`sim/entity`, `sim/command`, `ai/job`, `pawn/health`, `pawn/medcare`, `construction`, `economy/item`, `world/pathing`, …).
-- Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
-- `pkg/mathx` (`Abs`).
+## Depends on
+- `sim/entity`, `sim/command`, `ai/job`, `pawn/health`, `pawn/medcare`, `construction`, `economy/item`, `world/pathing`, …, `pkg/mathx` (`Abs`).
 
-## Forbidden Dependencies
-- `internal/application/game` (the guard's `imports` rule), adapters, platform, Ebitengine, global RNG, wall clock.
+## Must not depend on
+- `internal/application/game` (the guard's `imports` rule): the roles in `deps.go` are the only way in.
 
-## Public Contracts
+## Contracts
 - `deps.go`: `Host` embeds eight value-only roles (Bodies, Roster, Beds, Reach, Jobs, Health, Treatment, Events), each ≤ 8 methods (`Reach` embeds `Climate`, AIL-1, served by the game's `careReach` in `heat.go`); `Roles` carries the rest as their own interfaces: `Prison` (capture/arrest), `Guests` (guest lifecycle), `Social` (visits), `Gear` (strip), `Meals` (feeding, declared in feed.go). The game implements them with adapter types (`care_host.go`, `care_host_prison.go`, and beside the game code they wrap: `prisoners.go`, `visitors.go`, `social.go`, because the game package's file budget is full); none adds a method to `game.Game`.
 - Saved state keeps gob field names (`Carrying`, `TendedUntil`, `Care`, `BedRest`, `FeedRetry`); a nil field loads an older save.
 - Pawn-targeted orders are `command.Prioritize` with `Order.TargetsPawn()` and the target in `Command.Target`; reason strings in reasons.go and next to each verb.
 
 ## Invariants
-- No randomness, no wall clock; maps iterated only in sorted order.
-- Every need- or threshold-driven behaviour has hysteresis or a cooldown and a no-flap test.
+- Maps iterated only in sorted order.
+
+## Hot paths
+- `Doctor.DoRescue`/`DoTend`, `Rest`'s per-tick checks and `Care.FollowCarriers` run on the tick path. Host calls pass values only; `go build -gcflags=-m=2` showed no caller local escaping through them (SIM-061). `Carries.Each` walks a sorted slice and never sorts on the tick path.
 
 ## Tests
 - Unit tests here run against `fakeHost` (host_test.go) plus per-role fakes (fakeprison, fakeguests, fakesocial, fakehost_* files); coverage ≈ 97 % at SIM-066. No-flap tests: `TestRestDoesNotFlap`, `TestFeedDoesNotFlap`, `TestGuestDoesNotFlap`, the visit pair test, `TestExposureRescueDoesNotFlap` (AIL-1).
 - Whole-game tests (medical, bed rest, care policy, bleeding, rescue, kidnap, save round trips) stay in `internal/application/game`.
-
-## Hot Paths
-- `Doctor.DoRescue`/`DoTend`, `Rest`'s per-tick checks and `Care.FollowCarriers` run on the tick path. Host calls pass values only; `go build -gcflags=-m=2` showed no caller local escaping through them (SIM-061). `Carries.Each` walks a sorted slice and never sorts on the tick path.

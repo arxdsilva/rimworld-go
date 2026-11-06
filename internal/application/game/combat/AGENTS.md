@@ -1,9 +1,9 @@
-# combat package
+# internal/application/game/combat
 
-## Package Purpose
+## Purpose
 Fighting: line of sight and cover, attack resolution and the attack/hunt job, defending against attackers (fight or flee), spike traps, raiders breaching walls and doors, and the sentry turrets. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by DEF-0; the gap backlog is `.agents/gaps/DEFENCE_GAP_ANALYSIS.md`. Raids themselves are the sibling `game/raid` package (DEF-4), which reaches Strikes, Breach and Turrets through the game.
 
-## Owned Concepts
+## Owns
 - `Combat` (combat.go): the root, built by `New(Host, Roles)`; components as exported fields and no methods of its own (a feature's entry points go on its component).
 - `Sight` (combat.go): `Line` (Bresenham, endpoints excluded; rock, walls and doors block), `CanHit` (range, then sight for guns past touching distance), `Cover` (best object-layer cover beside the target, facing the shooter). `SwitchMargin`.
 - `Strikes` (strike.go): `Target` (attackable: living animal, standing humanlike, sentry turret), `Strike` (main stream) / `StrikeRoll` (a brawl's social-stream roll), `Do` (Attack and Hunt jobs: close in, warmup, burst, cooldown; `job.Record.Count` holds the burst shots left), `AutoEngage` (an idle drafted pawn), `Report` (hit chance with its factors: `attack.Report`, the game's `HitChance` read accessor). `AimTicks(d)` is `d.Warmup`; `CycleTicks(d)` the wait after an attack. Hits pass worn armor (`armor.Hit`; a halved sharp hit bruises).
@@ -26,15 +26,13 @@ Fighting: line of sight and cover, attack resolution and the attack/hunt job, de
 
 - AX-5 (foam.go): fire foam (`explosion.Foam`: `Blasts.smother` douses every fire a burst reaches and spills `stain.Foam` through role `Foam` (`Foamer`, 4: FiresNear, Burning, Douse, Spill)); `Poppers` (a phaser: an armed foam popper lights its fuse in the trap queue when a fire is within 3.9 tiles, bursts 150 ticks later over 9.9 and is re-laid); the foam and warhead charges in `Traps` (`isIED` is `construction.Kind.IsCharge`, an explicit set); chemfuel turrets in `Turrets` (`LoadOf`, `Charges`, `Spent`, `wantsRearm`, `chemfuel`, `Arm.Cool` saved as `ArmSave.Cool`): the foam turret (`foamStep`: sprays of 41 blobs at the fires it sees, one charge each, 3600-tick wait); the rocket battery is on the mortar's path (battery.go `stepBattery`: manned like a mortar, it fires only at the player's target, a volley of 12 each scattered within 5.75 tiles from a full load, then clears the target and recharges 7200 ticks; `Mortars.pw` checks its power); rearms haul chemfuel for both; mortars load foam shells (`Mortar.Foam`); a smashed popper, foam turret or rocket battery bursts (`Turrets.Blast`); a lying antimatter warhead cooks off.
 
-## Allowed Dependencies
-- Domain value types (`combat/weapon`, `combat/projectile`, `combat/attack`, `combat/armor`, `combat/damage`, `building/construction`, `animal`, `pawn/body`, `pawn/health`, `economy/item`, `ai/job`, `ai/pathing`, `sim/entity`).
-- Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
-- `pkg/mathx` (`Abs`).
+## Depends on
+- `combat/weapon`, `combat/projectile`, `combat/attack`, `combat/armor`, `combat/damage`, `building/construction`, `animal`, `pawn/body`, `pawn/health`, `economy/item`, `ai/job`, `ai/pathing`, `sim/entity`, `pkg/mathx` (`Abs`).
 
-## Forbidden Dependencies
-- `internal/application/game`, adapters, platform, Ebitengine, global RNG, wall clock.
+## Must not depend on
+- `internal/application/game`: the roles in `deps.go` are the only way in.
 
-## Public Contracts
+## Contracts
 - `deps.go`: `Host` embeds eight value-only roles, each ≤ 8 methods: Creatures (8, with `Armor`), Rosters (6), Ground (8; `AnyBuilt` takes a kind predicate), Skills (6, with `ShotAim`), Jobs (5), Harm (7), Events (7), Dice (2). `Who` has the game's creature-index kind bits. `Roles` carries Power (4), Flight (6), Hunts (7), Breaches (2), Field (6: plants, chunk tiles, building lists, map size, dry walkable, reserved tile) and Supply (3: stock, pick up, spend). The game implements them in `internal/application/game/combat_host.go`; none adds a method to `game.Game`.
 - On the game, behind roles: wounds, death and the harm cascade (`hurt`, `hurtAs`), building damage, rebuild blueprints and repair (`damageBuilding`, `assignRepair`), the calm window (`g.calm`, also cleared by lying down and stashing), presentation stamps (`g.traces`, `g.lastStrike`, `g.lastHit`), the hostile-map and breach-map path queries, and hunting work (`assignHunt`).
 - Saved state keeps gob field names: the save's `Turrets` field (`Version`, `Aims` of `ID, Target, Dir, ShotAt, ReadyAt, SeenAt, StunnedUntil, Burst`; DEF-3 adds `Arms`, `Mortars`, `Doors`, `Fuses`, `Rearms`); nil while nothing holds state. The save's `Shots` (`[]projectile.Shot`), nil while nothing flies.
@@ -42,7 +40,7 @@ Fighting: line of sight and cover, attack resolution and the attack/hunt job, de
 - Numbers: wiki numbers (ENG-003) for the knife, club, spear and rifle (the bolt-action rifle), accuracy bands, shooter accuracy per tile, armor, miss radius, stray and intercept rules; wiki cover values (`domain/combat/cover`, DEF-3); original tuning for fists and natural weapons, body sizes of the size classes, `Tracking`, and the turret (`.agents/handoffs/_plans/PLAY024_PLAN.md`; instant until DEF-3).
 
 ## Invariants
-- Every roll comes from `Dice`: strikes and traps on the game's main stream, turrets on the defence stream; a brawl passes its own social-stream roll to `StrikeRoll`. No wall clock.
+- Every roll comes from `Dice`: strikes and traps on the game's main stream, turrets on the defence stream; a brawl passes its own social-stream roll to `StrikeRoll`.
 - DEF-1 changed behaviour on purpose: the raid/250 hash moved (grown and raid/500 have no fight in their 3000 ticks).
 - DEF-3 hysteresis: hold fire drops the target and a released turret looks again only on its scan tick (`TestTurretHoldDoesNotFlap`); a door closes `door.StayOpen` after its last user (`TestDoorsOpenForColonists`, domain `TestAutoCloseDoesNotFlap`); a mortar crew stays `MortarManMin` and stands down only after `MortarIdleRelease` without a target (`TestMortarCrewDoesNotFlap`); a rearm is asked at a quarter barrel or half a rack and fills to full.
 - DEF-4: fire at will and hold position change only on a command (`TestDraftSwitchesDoNotFlap`).
@@ -50,12 +48,12 @@ Fighting: line of sight and cover, attack resolution and the attack/hunt job, de
 - MAP-13 hysteresis: a settlement's turret has the same lock and release as ours, per its own target rule (`colonyTarget`); a colonist turns on it only when it is `SwitchMargin` closer than any creature, and leaves it only for a creature `SwitchMargin` closer than it (`TestHostileTurretDoesNotFlap`).
 - Hysteresis: a turret locks within `TurretLock` and lets go past `TurretRelease` or after `TurretLost` ticks out of sight; an armed colonist (or a raider choosing a turret) switches targets only for one `SwitchMargin` closer; a fleeing colonist keeps running to `FleeRelease` and holds back `FleeCalm` ticks.
 
-## Tests
-- Unit tests here run against `fakeHost` (host_test.go); coverage ≈ 97 % at DEF-1 (shot_test.go: burst, bands, stray, friendly fire, armor, saves). Whole-game: `combat_model_test.go`. No-flap tests: `TestDefendSwitchDoesNotFlap`, `TestTurretLetsGo`, `TestReachHysteresis`.
-- Whole-game tests: `internal/application/game/settlement_turret_test.go`, `turret_test.go`, `allies_test.go`, `combat_test.go`, `combat_state_test.go`, `defense_test.go`, `flee_test.go`, `fight_test.go`.
-
-## Hot Paths
+## Hot paths
 - `Guard.Defend` runs per undrafted colonist per tick: the attacking-animal scan fills a reused `[]Seen` through `Rosters.Near` and checks candidates the way `nearestWhere` does (only one that would beat the best); the raider loop is one `RaiderOn` call per raider.
 - `Sight.Line` runs per tile (turret scans, allies, light, bonds, social): two value host calls per tile (`Rock`, `Object`). `Turrets.Phase` runs per turret per tick, scanning every `TurretScanEvery` ticks.
 - `Shots.Step` runs per shot per tick: one `Near` (radius 0) per cell entered, the shot slice and the Near and armor buffers reused (no allocation once grown).
 - Host calls pass values only (§7); `go build -gcflags=-m=2` shows no caller local escaping through them, and no closure in the package escapes.
+
+## Tests
+- Unit tests here run against `fakeHost` (host_test.go); coverage ≈ 97 % at DEF-1 (shot_test.go: burst, bands, stray, friendly fire, armor, saves). Whole-game: `combat_model_test.go`. No-flap tests: `TestDefendSwitchDoesNotFlap`, `TestTurretLetsGo`, `TestReachHysteresis`.
+- Whole-game tests: `internal/application/game/settlement_turret_test.go`, `turret_test.go`, `allies_test.go`, `combat_test.go`, `combat_state_test.go`, `defense_test.go`, `flee_test.go`, `fight_test.go`.

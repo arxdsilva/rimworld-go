@@ -1,9 +1,9 @@
-# raid package
+# internal/application/game/raid
 
-## Package Purpose
+## Purpose
 Threats: the legacy storyteller's die and raid plans, the raider AI (arrive, assault, siege camp, flee), predator packs, hive swarms and the rock sappers dig through. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by DEF-4 step 1 as a pure extraction of the game's `raids.go`, `raid_plans.go` and `hive.go`; the gap backlog is `.agents/gaps/DEFENCE_GAP_ANALYSIS.md`.
 
-## Owned Concepts
+## Owns
 - `Raid` (raid.go): the root, built by `New(Host, Roles)`; components as exported fields, no methods of its own.
 - Types the game stores and saves: `Raider` (the save's `Raiders` map values), `Group` (`RaidGroups`), `Plan` (`Assault`, `Siege`, `Sappers`; `String`), `Mode` (`Arriving`, `Assaulting`, `Fleeing`). Field names are gob names: never rename.
 - `Raiders` (raiders.go): `Think(id, now)` (the threat phase, per raider: prisoners handed to the host, dead and downed raiders, flight, siege camp and dig-in, breach, assault, turret targeting), `Camp(ex, ey)` (a siege's camp tile).
@@ -18,15 +18,13 @@ Threats: the legacy storyteller's die and raid plans, the raider AI (arrive, ass
 - CBT-4 hive mounds (nest.go): `Hives.List`, `Step` (from `Pods.Step`); an infestation in a dark, warm, roofed cave raises a `construction.HiveMound` whose swarm is its brood; it breeds (a dormant insect a day, up to 3), spreads (every 3-4 days within 10 tiles, never beside another, at most 30), wakes its brood when a colonist comes within 10; destroyed, it is forgotten. Saved in `MechSave.Hives` (and `MechSave.Pods`).
 - Kidnapping (kidnap.go, moved from the game's kidnap.go by CBT-4): `Kidnaps.Try`, `Step`, `End` (`KidnapRange`, `KidnapScan`, `KidnapCooldown`).
 
-## Allowed Dependencies
-- Domain value types (`ai/job`, `animal`, `combat/weapon`, `pawn/health`, `incident`, `sim/clock`, `sim/entity`, `world/grid`, `world/temperature`).
-- Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
-- `pkg/mathx` (`Abs`).
+## Depends on
+- `ai/job`, `animal`, `combat/weapon`, `pawn/health`, `incident`, `sim/clock`, `sim/entity`, `world/grid`, `world/temperature`, `pkg/mathx` (`Abs`).
 
-## Forbidden Dependencies
-- `internal/application/game`, adapters, platform, Ebitengine, global RNG, wall clock.
+## Must not depend on
+- `internal/application/game`: the roles in `deps.go` are the only way in.
 
-## Public Contracts
+## Contracts
 - `deps.go`: `Host` embeds eight value-only roles, each ≤ 8 methods: Roster (7), Captives (4), Bodies (7), Jobs (5), Fight (8), Ground (8), Events (2), Dice (1). `Roles` carries Wild (6), Story (6), Mech (R2), the DEF-4 roles in roles.go: Arrive (4, with `Crash`), Mischief (5), SiegeWorks (3), Chronicle (1), and the CBT-4 roles Tactics (8, tactics.go), Nest (3, nest.go), Kidnap (8, kidnap.go). The game implements them in `internal/application/game/raid_host.go` (Jobs and Dice reuse combat's `combatJobs` and `combatDice`); none adds a method to `game.Game`.
 - On the game, behind roles: the raider records and raid groups (`g.raiders`, `g.raidGroups`, `g.raiderIDs`; prisoners, visitors, kidnappers, caskets and factions write them too), `g.nextThreat`/`g.threatsOn` (story.go writes them), spawning raids (`raidFrom`: people, factions, relatives), `edgeTile`, `nearestColonist`, `removeRaider`, the read model (`raiderViews`), wealth and raid kits, and the sapper path maps.
 - Numbers: original tuning (raid gaps, siege setup, camp range, sight range, rock hit points, hive swarm sizes, pod fall and roof crush, steal minimum, burn count, strategy bands; CBT-4: danger bonuses, cover radius 12, margin 150, hold 600, look 60, bounding advance, retreat loot reach 8, resupply interval, hive breeding/spreading intervals and brood, dark below 30 % light). Wiki (ENG-003, `domain/raid/rules.go`): map entry weights, flee share 40-70 %, siege storm 1.5-3 days and 8 % per hit, two siege mortars, big-threat weights; CBT-4: staged assault timer 10-15 h, siege resupply 12 meals, hive 130 HP, spread within 10 tiles, cap 30, aggro radius 10, -17 °C.
@@ -38,9 +36,9 @@ Threats: the legacy storyteller's die and raid plans, the raider AI (arrive, ass
 - Hysteresis: a raider that found no way in waits `RaiderRetry`; a fleeing raider never returns to the fight (`TestRetreatAtFleeShareNoFlap`); a siege holds its camp until its storm; a staged raid storms once and a raider walks back only past `StageWander`, and the group storms on sight of a colonist or at its 10-15 h assault timer (`TestStagedRaidStormsOnceNoFlap`); thieves and burners retry on `RaiderRetry` cooldowns.
 - Hysteresis (MAP-17): a settlement's defender turns out on a target in `SightRange`, a wound, or a blow on its compound (`Raiders.Alarm`, `Group.Alarm` newer than `Raider.Engaged`); it stays out `defendHold`, each further blow or wound starting that over, and only then past `defendRelease` goes back to its post (`TestDefendEngagesAndReleasesNoFlap`, `TestDefendAlarmTurnsOutAndDoesNotFlap`).
 
+## Hot paths
+- `Raiders.Think` runs per raider per tick: value host calls only (one map lookup for the record, one for the vital record, one job read). The rivalry pass is once a tick over the raiders; a rival scan per raider only while rival factions share the map; staging checks every 30 ticks per raider. `Pods.Step` loops the groups once a tick.
+
 ## Tests
 - Unit tests here: `raid_test.go` (threat odds, plan names, rock damage with save round trip).
 - Whole-game tests stay in the game: `raids_test.go`, `raid_plans_test.go`, `raid_def4_test.go` (pods, staging, retreat, sieges with mortars, steal, burn, rivals, IEDs, combat log, saves), `raid_cbt4_test.go` (cover and its no-flap, threat weighting, grenades, retreat loot, crops, resupply, escapes, mechanoid bashing and pods, hive mounds, threat response), `hive_test.go`, `kidnap_test.go`, `prisoner_test.go`, `turret_test.go`. They cover this package to about 85 % (`-coverpkg`).
-
-## Hot Paths
-- `Raiders.Think` runs per raider per tick: value host calls only (one map lookup for the record, one for the vital record, one job read). The rivalry pass is once a tick over the raiders; a rival scan per raider only while rival factions share the map; staging checks every 30 ticks per raider. `Pods.Step` loops the groups once a tick.

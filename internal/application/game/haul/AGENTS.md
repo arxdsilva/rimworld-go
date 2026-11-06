@@ -1,9 +1,9 @@
-# haul package
+# internal/application/game/haul
 
-## Package Purpose
+## Purpose
 Stockpile hauling's own rules. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by HAUL-002 when the game package sat at its budget.
 
-## Owned Concepts
+## Owns
 - `Plan` (gather.go, HAUL-002): the load a stockpile haul gathers. A greedy chain from the first pile: each next pile is the nearest same-load candidate within `Radius` (8 tiles Chebyshev, original tuning) of the last one taken, ties to the lower id, up to the load's capacity; the last pile may be taken in part. `Pickups` encodes the picks into `job.Record.Pickups` (stack id, count pairs); `ClaimAll` claims each pile's planned count when the job starts (RES-1 count claims: another hauler may plan the rest of a pile; the game releases the first pile's claim once the load is split off it).
 - `Gather` (step.go): the pickup walk. `Next` heads to the next pile left that still joins the load (skipping vanished, taken, forbidden, changed or unreachable piles); `Arrive` takes the pile into the carried stack (rot and poison averaged by quantity) and walks on. Interrupts need nothing here: the game drops the carried load and frees the hauler's claims. `TargetGone` (AL-3) is what a job does when a stack leaves the map under it: only a walk to the stack ends (State Goto), so a job fails at once rather than at the empty spot, a hauler on its way to a pile skips to the next, and a pawn using the stack up (State Do) or already carrying its load is left alone; `game.stackGone` calls it from `deleteItem`.
 - Storage room (load.go): `Toppable` (a stack takes a load), `Cell.Room` and `Capacity` (a load never exceeds what the carrier, the stack limit and the destination cell allow), `SplitLoad` (the load split off a pile).
@@ -12,10 +12,12 @@ Stockpile hauling's own rules. A consumer sub-package of `internal/application/g
 - `Harvest`, `WantsHarvest` and `Ripe` (harvest.go, HRV-003): the harvest start of the Grow slot (`RipeCrops`) and the Plant cut slot (`RipeWild`), behind the `Harvester`/`SweepHost` roles that the game's `haulHost` implements. The host decides what is wild (`game.wildPlant`: no zone sowed it or covers its cell) and skips plants outside the pawn's allowed area (HRV-002), so `startJob` never refuses one and ends a sweep.
 - HAUL-001 delivery keys and shares (slots.go, route.go): `SlotKey`/`SlotFrame`/`SlotOpen`, `Supply*`, `RouteReach`, `RouteFrames`, `Share`, `Shares`, `Route`. The delivery planner itself stays in `game/haul_route.go`.
 
-## Not Here
+## Depends on
+- `sim/entity`, `ai/job`, `ai/pathing`, `economy/item`, `building/construction`, `world/plant`, `pkg/mathx` (`Abs`).
+
+## Must not depend on
+- `internal/application/game`: the roles in `deps.go` are the only way in.
+
+## Notes
 - Choosing the first pile and its storage cell, and the candidate scan: `game/tick.go` (`haulToStockpile`, `planGather`, `haulCands`), `game/zones.go` (`storageCell`, `storeSearch` over `zone.Stores`) and `game/haul_priority.go`.
 - Construction deliveries, bill product storing and trough feeding: they never gather. Deliveries (`game.assignDelivery`) are both Construct and Haul work (WRK-003).
-
-## Allowed Dependencies
-- Domain value types (`sim/entity`, `ai/job`, `ai/pathing`, `economy/item`, `building/construction`, `world/plant`) and `pkg/mathx` (`Abs`) only.
-- Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.

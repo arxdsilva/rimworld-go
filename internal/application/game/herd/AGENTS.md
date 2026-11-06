@@ -1,12 +1,10 @@
-# herd package
+# internal/application/game/herd
 
+## Purpose
 The colony's animal handling: taming, training, feeding, collecting and slaughter.
 
-## Animal life (`game/animal_life.go`)
-
-The rules the game package runs beside this package.
-
-Animal life (SIM-026, plan 4.1-4.3): growing up, old age, mating,
+## Notes
+Animal life (SIM-026, plan 4.1-4.3, `game/animal_life.go`; the rules the game package runs beside this package): growing up, old age, mating,
 birth, eggs and hatching. Everything runs inside phaseAnimals, from
 fields on animal.State and item.Stack, with no state of its own:
 

@@ -1,8 +1,8 @@
 # assets
 
-Presentation-only art. Nothing in this tree is authoritative simulation
-state. The renderer and other inbound adapters consume these files;
-`internal/domain` must not.
+Presentation-only art: the renderer and other inbound adapters consume these
+files; `internal/domain` must not. Clean room, unused-asset removal and the
+no-outline rule for plants: root `AGENTS.md`.
 
 ## Original art pipeline (ART Wave 0/1, §34 prototype)
 
@@ -18,6 +18,9 @@ make audio         # procedural sound effects (cmd/audiogen) + the sound list
 make music         # composed music (cmd/audiogen/music.go) -> Ogg, needs ffmpeg
 make audio-check   # sound list vs files, 48 kHz, 20 MB budget
 ```
+
+On the dev Mac run `PATH=/usr/local/bin:$PATH make art-check`: only
+`/usr/local/bin/python3` has Pillow, and the Makefile calls bare `python3`.
 
 Rules:
 
@@ -122,7 +125,7 @@ of sight.
 
 The renderer draws the original set (ART-006); without `metadata/` it
 draws plain coloured fallbacks. The old vendor sprite pack was removed in
-PLAY-010 (unused assets are deleted, see AGENTS.md). `generated/ingame_capture.png` comes from
+PLAY-010 (unused assets are deleted, root `AGENTS.md`). `generated/ingame_capture.png` comes from
 `make art-capture` (real renderer).
 
 ## Audio (SND-002)

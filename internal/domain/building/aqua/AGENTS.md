@@ -1,17 +1,17 @@
-# aqua package
+# internal/domain/building/aqua
 
-## Package Purpose
+## Purpose
 The pure rules of fish farming in tanks (FISH-*, `.agents/handoffs/_plans/FISH_TANK_PLAN.md` §3): the stocks, how one grows, suffers and dies, and what a harvest yields.
 
-## Owned Concepts
+## Owns
 - `Species`, `Def`, `DefOf`: the stocks (saved by value, append only).
 - `Tank`, `Step`, `Conditions`, `Outcome`, `Cause`: a tank's state and its rules over elapsed ticks.
 - `FeedFull`, `FeedBelow`, `FeedItemTicks`: the feed table `game/industry` reads; `NetYield`, `StockWork`, `NetWork`.
 
-## Allowed Dependencies
-- `sim/clock` (constants), `world/temperature`. Nothing from application or adapters.
+## Depends on
+- `sim/clock` (constants), `world/temperature`.
 
 ## Invariants
-- No RNG, no clock reads, no state of its own.
+- No state of its own.
 - Every number is original tuning: nothing in vanilla farms fish.
 - The dying warning starts at `WarnBelow` and clears at `WarnClear` (hysteresis).

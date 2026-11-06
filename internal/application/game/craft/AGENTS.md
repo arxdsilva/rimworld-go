@@ -1,9 +1,9 @@
-# craft package
+# internal/application/game/craft
 
-## Package Purpose
+## Purpose
 Production: every bench's bills and the bill commands, finding and doing bill work (fetch, carry, work, product), drying racks, the tool-cabinet bonus and the electric benches. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by PRD-0; the gap backlog is `.agents/gaps/PRODUCTION_GAP_ANALYSIS.md`. Later phases (PRD-1…4) add multi-ingredient recipes, bill settings, quality, stuff choice, art and deterioration hooks here.
 
-## Owned Concepts
+## Owns
 - `Craft` (craft.go): the root, built by `New(Host)`; components as exported fields; `ElectricBench`, `ElectricPct`, `ElectricSpeedPct` (PLAY-021, also used by game's research bench). Kept small: a feature's entry points go on its component, never here.
 - `Bills` (bills.go): bills per bench; `Apply` (AddBill/SetBill/RemoveBill, and PRD-1's ConfigureBill/SetBillIngredient/ReorderBill in settings.go), `Defaults` for a new bench, `Forget`, `AnyFor` (doctoring bills), `UpgradeLegacy` (older saves' butcher bills), `Line` (one bill's up-to-date copy and status) and the `Bill*` status strings; saved as the map itself.
 - `Shop` (shop.go): `Assign` (the first wanted bill at the first bench in building order, honouring the bill's worker, skill range and ingredient retry) and `Do` (one tick of a bill job: fetch, work, finish, then the store mode).
@@ -23,15 +23,13 @@ Production: every bench's bills and the bill commands, finding and doing bill wo
 - `Action` (action.go): the action word for bill work at a bench (game's `billAction`).
 - Stack moves (stockops.go): `driedStock`, `merge`, `putDown` over the host's plain stack reads and writes.
 
-## Allowed Dependencies
-- Domain value types (`sim/entity`, `sim/command`, `ai/job`, `ai/work`, `ai/pathing`, `economy/recipe`, `economy/item`, `economy/quality`, `building/construction`, `building/power`, `pawn/skill`, `animal`).
-- Nothing from `internal/application/game`: the roles in `deps.go` are the only way in.
-- `pkg/mathx` (`Abs`).
+## Depends on
+- `sim/entity`, `sim/command`, `ai/job`, `ai/work`, `ai/pathing`, `economy/recipe`, `economy/item`, `economy/quality`, `building/construction`, `building/power`, `pawn/skill`, `animal`, `pkg/mathx` (`Abs`).
 
-## Forbidden Dependencies
-- `internal/application/game` (the guard's `imports` rule), adapters, platform, Ebitengine, global RNG, wall clock.
+## Must not depend on
+- `internal/application/game` (the guard's `imports` rule): the roles in `deps.go` are the only way in.
 
-## Public Contracts
+## Contracts
 - `packgather.go` (CSE-029): a crafter takes ingredients into the pack on the way to the bench when they fit, nearest first.
 - `deps.go` (FOOD-4: `Stock.Ingredient` went; craft finds single stacks itself): `Host` embeds value-only roles (Benches, Stock, Output, Workers, Crafters, Makers, Weathering, Workshop), each ≤ 8 methods (Benches, Workers and Crafters are full: a new need is a new role; PRD-3 moved DriedStock, Merge and PutDown into craft). The game implements them with adapter types in `craft_host.go`; none adds a method to `game.Game`. Fuel (`fuel.go`, shared with lamps and generators) and bench work speed (`workProgressPct`, skills.go) stay in game behind `Benches.Fuel` and `Crafters.BenchWork`.
 - The read model types live here (view.go); game re-exports them as aliases (`game.BillView`, `game.BillIngredients`, `game.BillIngredientView`, `game.RecipeView`, `game.Recipes`, `game.Bill*`), and `BillView` stays comparable (building views are diffed with `slices.Equal`).
@@ -39,12 +37,12 @@ Production: every bench's bills and the bill commands, finding and doing bill wo
 - `RecipeView.Benches` lists every bench kind running a recipe (`recipe.Def.At`: Bench, Also, electric twins); `RunsAt(kind)` is the UI's check.
 
 ## Invariants
-- No randomness but the host's craft stream (`Makers.Roll`: quality and art seeds; a meal's poison is rolled by the host in `Output.DropMeal`), no wall clock.
+- The only randomness is the host's craft stream (`Makers.Roll`: quality and art seeds; a meal's poison is rolled by the host in `Output.DropMeal`).
 - Maps are ranged only for order-free work (`AnyFor` existence check, `UpgradeLegacy` per bench); everything ordered walks the host's building or pawn id slices.
+
+## Hot paths
+- `Shop.Assign` (every idle cook/crafter/doctor) and `Shop.Do` run on the tick path; the multi-stack search runs only when the single nearest stack won't do and reuses `Shop.buf`; `Bills.AppendViews` runs on every view build and allocates nothing for a single-input recipe; `Drying.Advance` every climate interval. Host calls pass values only; `Benches.Bench` copies a building only when it is a bench, so the bench scan copies no other building.
 
 ## Tests
 - Unit tests run against `fakeHost` (host_test.go); coverage ≈ 99 % at PRD-0.
 - Whole-game tests (production, electric benches, drying, burial, carpets, stone, save round trips, PRD-1 `bills_settings_test.go`) stay in `internal/application/game`. No-flap: `TestNoIngredientsRetriesAfterACooldown` (a bill with nothing to gather searches once per `IngredientRetry`).
-
-## Hot Paths
-- `Shop.Assign` (every idle cook/crafter/doctor) and `Shop.Do` run on the tick path; the multi-stack search runs only when the single nearest stack won't do and reuses `Shop.buf`; `Bills.AppendViews` runs on every view build and allocates nothing for a single-input recipe; `Drying.Advance` every climate interval. Host calls pass values only; `Benches.Bench` copies a building only when it is a bench, so the bench scan copies no other building.
