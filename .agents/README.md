@@ -71,31 +71,7 @@ Each file holds the decisions, wiki constants and phase rows for one area. Load 
 
 ## 5. Handoffs (`handoffs/`)
 
-`INDEX.md` lists every task ID with title, date and `ledger#anchor`; look an ID up there, then open that section. Each ledger holds one section per task, in the format of `templates/HANDOFF.md`. Originals: `git show 76d605d04:.agents/handoffs/<stem>.md`.
-
-| Ledger | Families |
-|---|---|
-| `SIM.md` | SIM |
-| `ART.md` | ART, SHADOW, CURSOR, VIEW |
-| `SND.md` | SND |
-| `AX.md` | AX |
-| `STORAGE.md` | STK, NST, STO, ZONE, HAUL |
-| `UI.md` | UI, CTL, TIME |
-| `DOS.md` | DOS |
-| `ARCH.md` | ARCH |
-| `PERF.md` | OPT, PERF |
-| `ENG.md` | ENG |
-| `MED.md` | MED, AIL |
-| `GEAR.md` | GEAR |
-| `DEF.md` | DEF, CBT, SHT |
-| `FOOD.md` | FOOD, FEED, FISH (with the fish tank plan) |
-| `BASE.md` | PRD, PWR, REF, TEMP, RSCH, BED, WRK, SURV, RES |
-| `WORLD.md` | MAP, WG |
-| `PLAY.md` | PLAY (with plans PLAY010-PLAY024) |
-| `NG.md` | The new-game plan (NG1) |
-| `MOD.md` | MOD, CSE |
-| `OPS.md` | CI, DEPS, REL, UPDATE, USAGE, LOG, TOKEN, DOCS, REVIEW, QA, SYS |
-| `AI.md` | AI (this agent-guidance layout) |
+`INDEX.md` lists each ledger with its ID families, then every task ID with title, date and `ledger#anchor`; look an ID up there and open that section. A finished task appends one section to its family's ledger (`templates/HANDOFF.md`) and rebuilds the index with `python3 scripts/handoff_index.py`. Originals: `git show 76d605d04:.agents/handoffs/<stem>.md`.
 
 ## 6. Skills (`skills/<name>/SKILL.md`)
 
@@ -131,6 +107,8 @@ Claude discovers them by description; Cursor and Codex open the router first. A 
 ## 8. Hooks (`hooks/`)
 
 `read_guard.py` (denies large shell views and whole-file Reads) and `agent_model_guard.py` (requires a named model on `general-purpose` agents), both run from `.claude/settings.json`. Tests: `python3 .agents/hooks/test_hooks.py`. Details: `AI_TOKEN_OPTIMIZATION` §32a.
+
+Guard: `internal/arch/agents_test.go` (run by `make arch` and CI) fails on paths into the old tool folders, broken links or `.agents/` paths, ledger anchors that name no section, `.claude/skills` links that do not match `.agents/skills`, ledger sections missing from `INDEX.md`, and a root `AGENTS.md` over its byte budget (`internal/arch/agents_budget.txt`, only shrinks).
 
 ## 9. Tool adapters
 
