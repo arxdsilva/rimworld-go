@@ -232,12 +232,8 @@ func TestJourneyRschBuildHiTechBenchAndAnalyzer(t *testing.T) {
 		j.leaveArch()
 	}
 	run := func(done func() bool, what string) {
-		j.key("Digit3", 0)
-		for i := 0; i < 12000 && !done(); i++ {
-			careFeed(j)
-			j.update(1)
-		}
-		j.key("Space", 0)
+		careFeed(j)
+		j.ff(72000, ffStride, func() bool { careFeed(j); return done() }) // 12000 Updates at Very fast
 		if !done() {
 			t.Fatalf("the %s was not built: %+v", what, j.world().Frames)
 		}
