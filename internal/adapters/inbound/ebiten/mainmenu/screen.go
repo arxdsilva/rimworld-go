@@ -11,6 +11,8 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/platform/config"
+	"rimworld-go/pkg/randx"
 )
 
 // Main menu metrics (NG-1 §2.1): a right rail of 300x40 buttons, 10 px
@@ -38,7 +40,8 @@ type Screen struct {
 	splash       *ebiten.Image
 	diorama      *Diorama
 	tried        bool
-	updateHidden bool // the player pressed Later: gone until the next launch
+	updateHidden bool   // the player pressed Later: gone until the next launch
+	picked       string // the background "random" settled on this launch ("" not yet)
 }
 
 // New is the menu screen over its shell.
@@ -137,7 +140,7 @@ func (s *Screen) declareRAMNotice(sw, sh int) {
 // Draw paints the main menu: the diorama (or the gradient), the splash,
 // the title with the version and the rail.
 func (s *Screen) Draw(screen *ebiten.Image, sw, sh int) {
-	if !s.DrawDiorama(screen, sw, sh, 0) {
+	if s.Background() == config.MenuSplash || !s.DrawDiorama(screen, sw, sh, 0) {
 		uikit.DrawMenuBackdrop(screen, sw, sh)
 	}
 	s.drawSplash(screen, sw, sh)
@@ -204,4 +207,29 @@ func NewestSlot(slots []ports.SaveSlot) int {
 		}
 	}
 	return best
+}
+
+// Seeder is what a shell may offer so "random" differs between launches:
+// a presentation seed (never the simulation's). Without it random settles
+// on the diorama.
+type Seeder interface{ MenuSeed() uint64 }
+
+// Background is the backdrop in use (OPT-015): config.MenuDiorama, the
+// colony scene under the hero art (today's look), or config.MenuSplash, the
+// hero art alone on the gradient. "random" settles on one of the two once
+// per launch, from the shell's presentation seed.
+func (s *Screen) Background() string {
+	switch m := s.sh.Settings().Interface.MenuBackground; m {
+	case config.MenuSplash:
+		return m
+	case config.MenuRandom:
+		if s.picked == "" {
+			s.picked = config.MenuDiorama
+			if sd, ok := s.sh.(Seeder); ok && randx.Mix64(sd.MenuSeed())&1 == 1 {
+				s.picked = config.MenuSplash
+			}
+		}
+		return s.picked
+	}
+	return config.MenuDiorama
 }

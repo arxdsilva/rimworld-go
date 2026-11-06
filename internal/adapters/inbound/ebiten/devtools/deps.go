@@ -74,6 +74,7 @@ type Panel struct {
 	// State is the panels' presentation state. The root points it at its
 	// own copy until the sweep deletes that.
 	State *State
+	watch logWatch // what the developer log options have seen (logopts.go)
 }
 
 // New builds the feature over its shell.

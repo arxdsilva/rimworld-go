@@ -229,7 +229,8 @@ func (a *Areas) toolPick(id string) bool {
 
 // arm arms Architect tool id (an allowed-area tool) on area ref.
 func (a *Areas) arm(id string, ref int) {
-	a.Cat, a.ToolID, a.Drag, a.Style = "zones", id, false, StyleDefault
+	a.Cat, a.ToolID, a.Drag = "zones", id, false
+	a.Style = a.styles.start(a.sh, id)
 	a.paint = ref
 	a.sh.SyncOverlays()
 }

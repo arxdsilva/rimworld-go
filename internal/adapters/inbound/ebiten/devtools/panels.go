@@ -13,13 +13,21 @@ import (
 
 // debugLogLines is the last messages (with their tick) and every
 // colonist's postponed work.
-func debugLogLines(w game.WorldView, pawns []game.PawnView, n int) []string {
+func debugLogLines(w game.WorldView, pawns []game.PawnView, n int, verbose bool) []string {
 	var out []string
 	msgs := w.Messages
 	if len(msgs) > n {
 		msgs = msgs[len(msgs)-n:]
 	}
 	for _, m := range msgs {
+		if verbose {
+			flag := ""
+			if m.Danger {
+				flag = " [danger]"
+			}
+			out = append(out, fmt.Sprintf("t%-7d (%d,%d)%s %s", m.Tick, m.X, m.Y, flag, m.Text))
+			continue
+		}
 		out = append(out, fmt.Sprintf("t%-7d %s", m.Tick, m.Text))
 	}
 	for _, p := range pawns {
@@ -36,9 +44,13 @@ func debugLogLines(w game.WorldView, pawns []game.PawnView, n int) []string {
 // logShown is the debug log's lines, at most n, each cut to the log's
 // width (at most devLogMaxW, and maxW when the column is narrower).
 func (p *Panel) logShown(n int, maxW float32) []string {
-	lines := debugLogLines(p.sh.World(), p.sh.Pawns(), 12)
-	if len(lines) > 18 {
-		lines = lines[:18]
+	keep, most := 12, 18
+	if p.sh.Settings().Developer.VerboseLog {
+		keep, most = 40, 60
+	}
+	lines := debugLogLines(p.sh.World(), p.sh.Pawns(), keep, p.sh.Settings().Developer.VerboseLog)
+	if len(lines) > most {
+		lines = lines[:most]
 	}
 	if n < len(lines) {
 		lines = lines[:max(n, 0)]

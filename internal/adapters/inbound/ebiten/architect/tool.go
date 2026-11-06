@@ -43,7 +43,8 @@ type Tool struct {
 	X0, Y0, X1, Y1 int  // the drag box, in tiles
 	Ctrl           bool // Ctrl held: the drag box is square (drawstyle.go)
 	// Style is the drag tool's draw style (StyleDefault: the tool's own).
-	Style DrawStyle
+	Style  DrawStyle
+	styles styleMemory // the last style picked per tool (style_memory.go)
 
 	desc  descState // the description box, measured (panel.go)
 	locks lockCache // the scenario's locked buildings (locks.go)
@@ -365,7 +366,7 @@ func (t *Tool) SelectTool(id string) {
 	}
 	t.ToolID = id
 	t.Drag = false
-	t.Style = StyleDefault
+	t.Style = t.styles.start(t.sh, id)
 }
 
 // Icon is the ui_icon art named name (nil without art).
@@ -710,7 +711,7 @@ func (t *Tool) Preset(kind, stuff, facing string) bool {
 		t.Cat = d.Category
 		t.ToolID = d.ID
 		t.Drag = false
-		t.Style = StyleDefault
+		t.Style = t.styles.start(t.sh, d.ID)
 		if bv, ok := Buildable(kind); ok && len(bv.Stuffs) > 1 {
 			t.Stuff = bv.Stuffs[0]
 			for _, s := range bv.Stuffs {

@@ -82,6 +82,7 @@ func (t *Tool) rotateOrStyle(dir int) {
 	}
 	if styles := ToolStyles(d); len(styles) > 1 {
 		t.Style = cycleStyle(styles, t.CurStyle(d), dir)
+		t.styles.pick(t.ToolID, t.Style)
 		return
 	}
 	t.RotateTool(dir)

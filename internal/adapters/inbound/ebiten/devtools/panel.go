@@ -117,6 +117,7 @@ func (p *Panel) HandleKeys(f Keys) {
 		return
 	}
 	st := p.State
+	p.watchLog()
 	switch {
 	case f.Fired(input.DevUltrafast):
 		if p.sh.SpeedTier() == speedUltra {

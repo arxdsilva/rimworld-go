@@ -110,3 +110,7 @@ func (h menuHost) DownloadUpdate() { h.a.cfg.Updates.DownloadUpdate() }
 func (h menuHost) DrawFlame(dst *ebiten.Image, sx, sy float32, t, tile, k float64) {
 	creature.DrawFlameScreen(dst, sx, sy, t, tile, k)
 }
+
+// MenuSeed is the presentation seed the menu's "random" background draws
+// from: the launch time, never the simulation's RNG.
+func (h menuHost) MenuSeed() uint64 { return uint64(h.a.now().UnixNano()) }

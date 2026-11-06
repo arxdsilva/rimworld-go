@@ -68,7 +68,7 @@ func nameRune(r rune) bool { return unicode.IsLetter(r) || r == ' ' || r == '\''
 // the scenario's people rules. A new key makes a new pool.
 func (w pawnsPage) poolKeyFor(ng *Draft) string {
 	fx := ng.Scenario.Apply()
-	return fmt.Sprintf("%d|%d|%d|%v", SetupSeedOf(ng), fx.People, fx.ChooseFrom, fx.Rules)
+	return fmt.Sprintf("%d|%d|%d|%v|%q", SetupSeedOf(ng), fx.People, fx.ChooseFrom, fx.Rules, w.sh.Settings().General.PreferredNames)
 }
 
 // ensurePool makes the candidate pool when it is missing or stale.
@@ -77,7 +77,7 @@ func (w pawnsPage) ensurePool(ng *Draft) {
 	if ng.Pool != nil && ng.PoolKey == key {
 		return
 	}
-	ng.Pool, ng.PoolKey = game.NewCandidatePool(SetupSeedOf(ng), ng.Scenario.Apply()), key
+	ng.Pool, ng.PoolKey = w.newPool(ng), key
 	ng.PawnSel, ng.NamesOf, ng.NameErr = 0, -1, ""
 	ng.drag = rosterDrag{}
 }
@@ -85,7 +85,7 @@ func (w pawnsPage) ensurePool(ng *Draft) {
 // undoCharacters restores the pool as it was on entry (the pool is
 // deterministic from its seed).
 func (w pawnsPage) undoCharacters(ng *Draft) {
-	ng.Pool = game.NewCandidatePool(SetupSeedOf(ng), ng.Scenario.Apply())
+	ng.Pool = w.newPool(ng)
 	ng.NamesOf, ng.NameErr = -1, ""
 }
 

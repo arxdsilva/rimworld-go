@@ -198,3 +198,6 @@ func toolByID(id string) (architect.ToolDef, bool) {
 	return d, ok
 }
 func allArchTools() []architect.ToolDef { return architect.AllTools() }
+
+// RememberStyles is Camera.RememberStyles (OPT-025).
+func (h architectHost) RememberStyles() bool { return h.a.settings.Camera.RememberStyles }

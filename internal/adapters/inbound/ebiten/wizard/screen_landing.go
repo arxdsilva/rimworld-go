@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"slices"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -18,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
 	"rimworld-go/internal/domain/world/temperature"
+	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -88,6 +90,24 @@ func MapSizeOptions() []game.MapSizeView {
 
 // DefaultMapSideEnabled is the map side of a fresh draft: 250 when it is
 // enabled, else the largest enabled side below it.
+// TestMapSides are the small maps developer mode can add (OPT-031).
+func TestMapSides() []int { return []int{60, 80, 100} }
+
+// MapSizeOptionsFor is MapSizeOptions, led by the test sizes when developer
+// mode and Developer.TestMapSizes are both on. A test size is never the
+// default.
+func MapSizeOptionsFor(s config.Settings) []game.MapSizeView {
+	opts := MapSizeOptions()
+	if !s.Gameplay.DevMode || !s.Developer.TestMapSizes {
+		return opts
+	}
+	out := make([]game.MapSizeView, 0, 3+len(opts))
+	for _, side := range TestMapSides() {
+		out = append(out, game.MapSizeView{Side: side, Enabled: true, Reason: ""})
+	}
+	return append(out, opts...)
+}
+
 func DefaultMapSideEnabled() int {
 	best := min(DefaultMapSide, game.MaxEnabledSide)
 	for _, o := range MapSizeOptions() {
@@ -105,6 +125,9 @@ func MapSizeLabel(o game.MapSizeView) string {
 	l := fmt.Sprintf("%d x %d", o.Side, o.Side)
 	if o.Side == PreReleaseSide && game.MaxEnabledSide < 200 {
 		l += " (pre-release)"
+	}
+	if slices.Contains(TestMapSides(), o.Side) {
+		l += " (test)"
 	}
 	return l
 }
@@ -540,7 +563,7 @@ func (w landingPage) drawLanding(screen *ebiten.Image, sw, sh int) {
 
 func (w landingPage) pushLandingAdvanced() {
 	ng := w.draft()
-	opts := MapSizeOptions()
+	opts := MapSizeOptionsFor(w.sh.Settings())
 	h := float32(uikit.ModalTitleH+uikit.ModalFooterH+2*uikit.ModalPad) + 26 + 5*uikit.RadioRowH + 40 + 26 + float32(len(opts))*uikit.RadioRowH
 	w.kit().Push(uikit.Modal{
 		ID: "land.advanced", Title: "Advanced", W: landModalW, H: h,
