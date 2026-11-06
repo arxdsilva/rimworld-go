@@ -350,6 +350,11 @@ func (a Building) ApplyBuildingClick(id string) {
 			a.shell.Enqueue(c)
 		}
 		return
+	case AutoRefuelID: // refuel.go (REF-1)
+		for _, c := range autoRefuelCommand(a.shell, b).Cmds {
+			a.shell.Enqueue(c)
+		}
+		return
 	}
 	if id == BillPickBtn {
 		a.openBillPicker(b)
