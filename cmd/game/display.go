@@ -30,3 +30,13 @@ func parseSize(s string) (w, h int, ok bool) {
 	}
 	return w, h, true
 }
+
+// applyCursor shows or hides the OS cursor: hidden while the game draws its
+// own pointer (OPT-028).
+func applyCursor(visible bool) {
+	if visible {
+		ebiten.SetCursorMode(ebiten.CursorModeVisible)
+	} else {
+		ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	}
+}

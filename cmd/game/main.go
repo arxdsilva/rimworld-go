@@ -123,6 +123,7 @@ func main() {
 			ebiten.SetVsyncEnabled(vsync)
 		},
 		Display:  applyDisplay,          // display.go (OPT-029)
+		Cursor:   applyCursor,           // display.go (OPT-028)
 		Hardware: hardware(shot != nil), // PLAY-019: graphics tier and the low-memory notice
 		NewSim: func(ng uiadapter.NewGame) (uiadapter.Simulation, error) {
 			if *scenario == "grown" { // dev: the benchmark's grown colony at -width x -height

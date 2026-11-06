@@ -25,6 +25,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/options"
 	"rimworld-go/internal/adapters/inbound/ebiten/orders"
 	"rimworld-go/internal/adapters/inbound/ebiten/perf"
+	"rimworld-go/internal/adapters/inbound/ebiten/pointer"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldview"
@@ -112,6 +113,9 @@ type AppConfig struct {
 	// Display applies the window size preset (a config.WindowSizes entry,
 	// "" free) and borderless fullscreen (OPT-029; nil: leave it alone).
 	Display func(size string, borderless bool)
+	// Cursor shows or hides the OS cursor for the game's own pointer
+	// (OPT-028, pointer package; nil: leave it alone).
+	Cursor func(visible bool)
 	// Sound plays the client's audio (nil: silent).
 	Sound Sound
 	// Hardware reads the machine's memory and cores (PLAY-019): the first
@@ -1051,4 +1055,14 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.chrome.DrawToasts(screen, sw, sh)
 	}
 	a.drawCapture(screen)
+	if a.settings.Camera.CustomCursor && a.cfg.Capture == nil { // OPT-028: the pointer package draws it over everything
+		mx, my := float64(a.in.Raw.Mx)/a.scale.S, float64(a.in.Raw.My)/a.scale.S
+		if a.cursor != nil {
+			mx, my = float64(a.cursor[0]), float64(a.cursor[1])
+		}
+		shown := pointer.Draw(screen, a.art, mx, my, a.ng != nil && a.ng.Load != nil)
+		if a.cfg.Cursor != nil {
+			a.cfg.Cursor(!shown)
+		}
+	}
 }

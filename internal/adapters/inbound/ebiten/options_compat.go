@@ -403,6 +403,9 @@ func (a *App) applySettings() {
 	if a.cfg.Display != nil { // OPT-029: window size preset, borderless
 		a.cfg.Display(a.settings.Camera.Window, a.settings.Camera.Borderless)
 	}
+	if a.cfg.Cursor != nil && !a.settings.Camera.CustomCursor { // OPT-028: off gives the OS cursor back
+		a.cfg.Cursor(true)
+	}
 	a.shell.use(a.settings.General.Language) // OPT-001
 	a.syncRenderer()
 	a.cfg.Sound.SetVolumes(a.settings.Audio)

@@ -9,5 +9,3 @@ generated/ui/icons/thermostat_*.png  # PLAY-021: the heater and cooler thermosta
 metadata/ui_icon/thermostat_*.yaml  # PLAY-021: the heater and cooler thermostat -/+ buttons arrive in wave 3 (POWERPANE)
 generated/ui/icons/gear_*.png  # drawn by GEAR-2 Gear tab (Wave 2)
 metadata/ui_icon/gear_*.yaml  # drawn by GEAR-2 Gear tab (Wave 2)
-metadata/cursor/pointer*.yaml  # OPT-028 cursor (Wave 2)
-generated/ui/cursors/pointer*.png  # OPT-028 cursor (Wave 2)
