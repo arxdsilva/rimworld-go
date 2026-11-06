@@ -85,8 +85,8 @@ func (c *Set) DrawAnimalOverlays(v *render.View, pass sprite.Pass, cull *Cull, s
 			bob := motion.Pose{Px: 0.5, Py: 0.5, Sx: 0.5, Sy: 0.5}
 			c.DrawSpritePose(v, pass, screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-lift-0.5-0.05*math.Sin(float64(v.Present)*0.08), tile, bob)
 		}
-		if an.Tame && an.Name != "" && tile >= NameMinTile {
-			c.DrawAnimalName(v, cull, screen, an.Name, wx+0.5, wy+1.0)
+		if label := AnimalLabel(v.Prefs.AnimalNames, an); label != "" && tile >= NameMinTile {
+			c.DrawAnimalName(v, cull, screen, label, wx+0.5, wy+1.0)
 		}
 		if an.Health < 100 {
 			sx, sy := v.WorldToScreenF(wx+0.15, wy-BarLift(top))
@@ -155,6 +155,22 @@ const (
 // NameMinTile is the smallest tile (physical px) a tame animal's name
 // shows at: the zoom the stack counts show from (labels.go).
 const NameMinTile = 36
+
+// AnimalLabel is the name plate text of an animal under mode (OPT-010,
+// config.AnimalNameModes): "none" shows nothing; "tame" every tame animal,
+// by name or by species when it has none; anything else (the default,
+// "named") only named tame animals.
+func AnimalLabel(mode string, an *game.AnimalView) string {
+	switch {
+	case !an.Tame || mode == "none":
+		return ""
+	case an.Name != "":
+		return an.Name
+	case mode == "tame":
+		return an.Label
+	}
+	return ""
+}
 
 // DrawAnimalName puts a tame animal's name on a dark plate, centred
 // under the tile point (wx, wy) in tiles. The anchor is a world

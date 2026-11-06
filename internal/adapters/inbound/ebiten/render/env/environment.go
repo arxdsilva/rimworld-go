@@ -223,6 +223,16 @@ func TileKey(x, y int) uint32 { return uint32(y)<<16 | uint32(x)&0xffff }
 // envTime is the presentation clock in seconds.
 func envTime(v *render.View) float64 { return float64(v.Present) / 60 }
 
+// swayTime is the clock the plants' wind phase runs on (OPT-026): the
+// presentation clock, or a fixed instant when Plant sway is off, so every
+// plant holds the pose the wind gives it at that instant.
+func swayTime(v *render.View) float64 {
+	if !v.Prefs.PlantSway {
+		return 0
+	}
+	return envTime(v)
+}
+
 // --- wind ---------------------------------------------------------------------
 
 // WindAt is the local wind at world (x, y) in tiles per second: the
@@ -306,7 +316,7 @@ func (e *Sky) PlantPose(v *render.View, x, y int, kind PlantKind, amount, scale 
 	if kind > KindTree {
 		kind = KindBush
 	}
-	t := envTime(v)
+	t := swayTime(v)
 	h := sprite.TileHash(x, y)
 	hp := float64(h>>40&0xffff) / 65536
 	ph := 0.8 * (hp - 0.5)

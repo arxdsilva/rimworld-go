@@ -750,7 +750,7 @@ func (e *Layer) DrawCropObj(v *render.View, dst *ebiten.Image, w *game.WorldView
 	ps := e.PlantPose(v, p.X, p.Y, KindCrop, CropSwayAmount(p.Species), 1)
 	lean, hs := -ps.Skew, min(max(ps.Sy, 0.5), 1.25)
 	swayK := CropSwayFactor(p.Species)
-	t := envTime(v)
+	t := swayTime(v)
 	sky, lamp := e.Lit.LightTile(v, p.X, p.Y)
 	tx, ty := v.WorldToScreenF(float64(p.X), float64(p.Y))
 	tl := float32(tile)

@@ -328,6 +328,7 @@ func (p *Pipeline) DrawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	clM.Pad, clM.PadS = p.AnimalPads(tile)
 	clM.White = l.WhiteImg()
 	p.Creatures.DrawAnimalOverlays(v, p.Pass(), &clM, screen, w, tile)
+	creature.DrawFarPawns(p.Creatures, v, &clM, screen, w) // OPT-016: dots and silhouettes at the map tier
 	if v.HasSelect {
 		for _, pw := range v.Pawns {
 			if pw.ID == v.Selected {
