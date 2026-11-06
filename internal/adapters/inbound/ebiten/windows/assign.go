@@ -20,17 +20,18 @@ import (
 // emits SetDrugPolicy, or the care level (SetMedicalCare); the window only
 // reads them back. Under the rows, the default care level of each group
 // (colonists, prisoners, guests, animals) cycles the same way and emits
-// SetDefaultCare. Food and apparel columns come with their systems.
+// SetDefaultCare. The Food column and its policies are in foodpolicy.go, the
+// Apparel column and Clear forced in apparel_policy.go.
 
 const (
 	AssignModalID = "colony.assign"
 	assignW       = 880
 	assignH       = 480
 	AssignRowH    = 30
-	assignNameW   = 180
+	assignNameW   = 140
 	assignHeadH   = 24
-	assignDrugW   = 170
-	assignCareW   = 150 // MED-03: the medical care column
+	assignDrugW   = 130
+	assignCareW   = 120 // MED-03: the medical care column
 )
 
 const assignCareTip = "Medical care\n" +
@@ -139,24 +140,26 @@ func (w Assign) body(body gfx.Rect) {
 		return
 	}
 	head, rest := body.SplitV(assignHeadH)
+	cols := newAssignCols(body.W)
 	hs := gfx.WithColor(gfx.Label, uikit.Heading)
 	w.kit().Label(head.X, head.Y, "Colonist", hs)
-	w.kit().Label(head.X+assignNameW, head.Y, "Drugs", hs)
-	w.kit().Tip("assign.head.drugs", gfx.Rect{X: head.X + assignNameW, Y: head.Y, W: 120, H: head.H}, assignDrugTip)
-	careX := head.X + assignNameW + assignDrugW + 10
-	w.kit().Label(careX, head.Y, "Medical", hs)
-	w.kit().Tip("assign.head.care", gfx.Rect{X: careX, Y: head.Y, W: 120, H: head.H}, assignCareTip)
-	foodX := careX + assignCareW + 10
-	w.kit().Label(foodX, head.Y, "Food", hs)
-	w.kit().Tip("assign.head.food", gfx.Rect{X: foodX, Y: head.Y, W: 120, H: head.H}, assignFoodTip)
+	w.kit().Label(head.X+cols.drugX, head.Y, "Drugs", hs)
+	w.kit().Tip("assign.head.drugs", gfx.Rect{X: head.X + cols.drugX, Y: head.Y, W: 120, H: head.H}, assignDrugTip)
+	w.kit().Label(head.X+cols.careX, head.Y, "Medical", hs)
+	w.kit().Tip("assign.head.care", gfx.Rect{X: head.X + cols.careX, Y: head.Y, W: 120, H: head.H}, assignCareTip)
+	w.kit().Label(head.X+cols.foodX, head.Y, "Food", hs)
+	w.kit().Tip("assign.head.food", gfx.Rect{X: head.X + cols.foodX, Y: head.Y, W: 120, H: head.H}, assignFoodTip)
+	if w.outfitHead(head, cols) { // GEAR-3: the Apparel header opens the policy editor
+		return
+	}
 	rest, foot := rest.SplitV(rest.H - 2*AssignRowH) // MED-03: the default care row
 	w.defaultCare(foot)
-	if w.kit().Button(AssignFoodEditID, gfx.Rect{X: head.Right() - 260, Y: head.Y - 2, W: 130, H: head.H}, "Food policies",
+	if w.kit().Button(AssignFoodEditID, gfx.Rect{X: foot.Right() - 250, Y: foot.Y, W: 120, H: AssignRowH - 4}, "Food policies",
 		uikit.BtnOpts{Tip: "Food policies\nMake and edit what each colonist, prisoner and animal may eat."}) {
 		w.OpenFoodPolicies()
 		return
 	}
-	if w.kit().Button("assign.areas", gfx.Rect{X: head.Right() - 120, Y: head.Y - 2, W: 120, H: head.H}, "Manage areas",
+	if w.kit().Button("assign.areas", gfx.Rect{X: foot.Right() - 120, Y: foot.Y, W: 120, H: AssignRowH - 4}, "Manage areas",
 		uikit.BtnOpts{Tip: "Allowed areas\nMake, rename, invert and delete areas. Pick a colonist's area in the Schedule tab, an animal's in the Animals tab."}) {
 		w.sh.ManageAreas() // the Architect's area manager
 	}
@@ -173,10 +176,11 @@ func (w Assign) body(body gfx.Rect) {
 		if rr.Y < area.View.Y || rr.Bottom() > area.View.Bottom() {
 			continue // outside the view: no widgets
 		}
-		w.kit().Label(rr.X, rr.Y+(rr.H-float32(gfx.LineH(gfx.Body)))/2, gfx.Ellipsize(r.name, gfx.Body, assignNameW-12), gfx.Body)
-		w.careButton(r, rr) // MED-03
-		w.foodButton(r.pawn, rr, rr.X+assignNameW+assignDrugW+10+assignCareW+10)
-		br := gfx.Rect{X: rr.X + assignNameW, Y: rr.Y, W: min(assignDrugW, rr.W-assignNameW), H: rr.H}
+		w.kit().Label(rr.X, rr.Y+(rr.H-float32(gfx.LineH(gfx.Body)))/2, gfx.Ellipsize(r.name, gfx.Body, float64(cols.nameW)-12), gfx.Body)
+		w.careButton(r, rr, cols) // MED-03
+		w.foodButton(r.pawn, rr, rr.X+cols.foodX)
+		w.outfitCells(r.pawn, rr, cols) // GEAR-3
+		br := gfx.Rect{X: rr.X + cols.drugX, Y: rr.Y, W: min(cols.drugW, rr.W-cols.drugX), H: rr.H}
 		id := AssignDrugID(r.id)
 		if !r.known {
 			w.kit().Button(id, br, "-", uikit.BtnOpts{Disabled: true, Reason: "Drug policies are not available in this game."})
@@ -191,8 +195,8 @@ func (w Assign) body(body gfx.Rect) {
 }
 
 // careButton is a colonist's medical care button (MED-03).
-func (w Assign) careButton(r assignRow, rr gfx.Rect) {
-	cr := gfx.Rect{X: rr.X + assignNameW + assignDrugW + 10, Y: rr.Y, W: min(assignCareW, rr.W-assignNameW-assignDrugW-10), H: rr.H}
+func (w Assign) careButton(r assignRow, rr gfx.Rect, cols assignCols) {
+	cr := gfx.Rect{X: rr.X + cols.careX, Y: rr.Y, W: min(cols.careW, rr.W-cols.careX), H: rr.H}
 	if w.kit().Button(AssignCareID(r.id), cr, r.care.Label(), uikit.BtnOpts{Tip: assignCareTip}) {
 		next := NextCare(r.care)
 		w.sh.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(next)})
@@ -237,6 +241,7 @@ const (
 	paintDrug = iota + 1 // the painted column, kept above the value in Value
 	paintCare
 	paintFood
+	paintOutfit
 	assignColShift = 16
 	assignValMask  = 1<<assignColShift - 1
 )
@@ -246,7 +251,7 @@ func (w Assign) armCell(col int, id string, v int) { w.paint.Arm(id, col<<assign
 
 // assignCell splits a cell id into its column and colonist.
 func assignCell(id string) (col int, pawn uint64, ok bool) {
-	for c, prefix := range [...]string{paintDrug: "assign.drug.", paintCare: "assign.care.", paintFood: assignFoodPrefix} {
+	for c, prefix := range [...]string{paintDrug: "assign.drug.", paintCare: "assign.care.", paintFood: assignFoodPrefix, paintOutfit: assignOutfitPrefix} {
 		if prefix != "" && strings.HasPrefix(id, prefix) {
 			n, err := strconv.ParseUint(id[len(prefix):], 10, 64)
 			return c, n, err == nil
@@ -294,6 +299,10 @@ func (w Assign) paintCell(id string) {
 		case paintFood:
 			if pol, ok := foodPolicyByID(w.sh.World().FoodPolicies, v); ok && pol.Name != p.FoodPolicy {
 				w.sh.Enqueue(command.Command{Kind: command.SetFoodPolicy, Pawn: pawn, Index: v})
+			}
+		case paintOutfit:
+			if int(p.Gear.ApparelPolicy) != v && outfitPolicyIndex(w.sh.World().Gear.Policies, v) >= 0 {
+				w.sh.Enqueue(command.Command{Kind: command.SetApparelPolicy, Pawn: pawn, Index: v})
 			}
 		}
 		return

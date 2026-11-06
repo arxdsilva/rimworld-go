@@ -138,11 +138,16 @@ type Set struct {
 	// food is the Food policies window's state (foodpolicy.go).
 	food *foodState
 
+	// outfit is the Apparel policies window's state (apparel_policy_editor.go).
+	outfit *outfitState
+
 	research *researchState // the Research tab's tree, selection and caches (research_tree.go, RSCH-2)
 }
 
 // New builds the feature over its shell.
-func New(sh Shell) *Set { return &Set{sh: sh, storage: &storageState{}, food: &foodState{}} }
+func New(sh Shell) *Set {
+	return &Set{sh: sh, storage: &storageState{}, food: &foodState{}, outfit: &outfitState{}}
+}
 
 // The windows, each a view over the set.
 type (
