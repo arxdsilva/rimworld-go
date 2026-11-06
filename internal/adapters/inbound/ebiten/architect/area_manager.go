@@ -29,9 +29,7 @@ const (
 	areasH       = 460
 	areasRowH    = 34
 	// AreasMax is the colony's area cap (area.MaxAreas).
-	AreasMax    = area.MaxAreas
-	areasEmpty  = "No areas: add one to restrict where colonists go."
-	areasCapWhy = "A colony has at most 8 allowed areas (Home is not one)."
+	AreasMax = area.MaxAreas
 	// AreasConfirm is the delete confirmation's modal id.
 	AreasConfirm = "colony.areas.confirm"
 )
@@ -43,13 +41,13 @@ func (a *Areas) OpenManager() {
 	}
 	names := map[int]*string{}
 	a.sh.Kit().Push(uikit.Modal{
-		ID: AreasModalID, Title: "Allowed areas", W: areasW, H: areasH,
+		ID: AreasModalID, Title: a.sh.T("Allowed areas"), W: areasW, H: areasH,
 		Draw: func(body gfx.Rect) { a.body(body, names) },
 		Buttons: []uikit.ModalButton{
-			{ID: "close", Label: "Close", Style: uikit.BtnPrimary, Closes: true},
-			{ID: "areas.new", Label: "New area", Disabled: func() string {
+			{ID: "close", Label: a.sh.T("Close"), Style: uikit.BtnPrimary, Closes: true},
+			{ID: "areas.new", Label: a.sh.T("New area"), Disabled: func() string {
 				if len(a.sim().Areas()) >= AreasMax {
-					return areasCapWhy
+					return a.sh.T("A colony has at most 8 allowed areas (Home is not one).")
 				}
 				return ""
 			}, OnClick: a.newArea},
@@ -95,12 +93,12 @@ func (a *Areas) deleteArea(ar game.AreaView) {
 		del()
 		return
 	}
-	who := fmt.Sprintf("%d colonists and animals use", n)
+	who := a.sh.Tf("%d colonists and animals use", n)
 	if n == 1 {
-		who = "1 colonist or animal uses"
+		who = a.sh.T("1 colonist or animal uses")
 	}
-	a.sh.Kit().Confirm(AreasConfirm, "Delete area",
-		fmt.Sprintf("%s \"%s\". Deleting it makes them unrestricted.", who, ar.Name), "Delete", true, del)
+	a.sh.Kit().Confirm(AreasConfirm, a.sh.T("Delete area"),
+		a.sh.Tf("%s \"%s\". Deleting it makes them unrestricted.", who, ar.Name), a.sh.T("Delete"), true, del)
 }
 
 // body declares one row per area.
@@ -108,9 +106,9 @@ func (a *Areas) body(body gfx.Rect, names map[int]*string) {
 	k := a.sh.Kit()
 	areas := a.sim().Areas()
 	head, rest := body.SplitV(28)
-	k.Label(head.X, head.Y, "Architect > Zones > Expand allowed area paints one.", gfx.WithColor(gfx.Small, uikit.TextDim))
+	k.Label(head.X, head.Y, a.sh.T("Architect > Zones > Expand allowed area paints one."), gfx.WithColor(gfx.Small, uikit.TextDim))
 	if len(areas) == 0 {
-		k.Label(rest.X, rest.Y+4, areasEmpty, uikit.DimText())
+		k.Label(rest.X, rest.Y+4, a.sh.T("No areas: add one to restrict where colonists go."), uikit.DimText())
 		return
 	}
 	sa := k.ScrollArea("areas.list", rest, float32(len(areas)*areasRowH), uikit.ScrollOpts{Step: areasRowH * 2})
@@ -138,19 +136,19 @@ func (a *Areas) body(body gfx.Rect, names map[int]*string) {
 		}
 		fr := gfx.Rect{X: rr.X + 28, Y: rr.Y, W: rr.W - 28 - 190, H: rr.H}
 		_, committed := k.TextField(fid, fr, v, uikit.TextFieldSpec{
-			MaxLen: 24, Placeholder: "Area name", Normalize: strings.TrimSpace})
+			MaxLen: 24, Placeholder: a.sh.T("Area name"), Normalize: strings.TrimSpace})
 		if committed && *v != "" && *v != ar.Name {
 			a.sh.Enqueue(command.Command{Kind: command.RenameArea, Index: id, Name: *v})
 		} else if k.Edit.ID != fid {
 			*v = ar.Name
 		}
-		k.Label(fr.Right()+8, rr.Y+(rr.H-float32(gfx.LineH(gfx.Small)))/2, fmt.Sprintf("%d cells", ar.Cells), gfx.WithColor(gfx.Small, uikit.TextDim))
-		if k.Button(fmt.Sprintf("areas.invert.%d", id), gfx.Rect{X: rr.Right() - 86, Y: rr.Y, W: 56, H: rr.H}, "Invert", uikit.BtnOpts{
-			Tip: "Invert\nSwap the area's tiles: painted become empty and the rest becomes painted."}) {
+		k.Label(fr.Right()+8, rr.Y+(rr.H-float32(gfx.LineH(gfx.Small)))/2, a.sh.Tf("%d cells", ar.Cells), gfx.WithColor(gfx.Small, uikit.TextDim))
+		if k.Button(fmt.Sprintf("areas.invert.%d", id), gfx.Rect{X: rr.Right() - 86, Y: rr.Y, W: 56, H: rr.H}, a.sh.T("Invert"), uikit.BtnOpts{
+			Tip: a.sh.T("Invert\nSwap the area's tiles: painted become empty and the rest becomes painted.")}) {
 			a.sh.Enqueue(command.Command{Kind: command.InvertArea, Index: id})
 		}
 		if k.Button(fmt.Sprintf("areas.delete.%d", id), gfx.Rect{X: rr.Right() - 26, Y: rr.Y, W: 26, H: rr.H}, "X", uikit.BtnOpts{
-			Style: uikit.BtnDanger, Tip: "Delete\nRemove this area. Anyone restricted to it becomes unrestricted."}) {
+			Style: uikit.BtnDanger, Tip: a.sh.T("Delete\nRemove this area. Anyone restricted to it becomes unrestricted.")}) {
 			a.deleteArea(ar)
 		}
 	}

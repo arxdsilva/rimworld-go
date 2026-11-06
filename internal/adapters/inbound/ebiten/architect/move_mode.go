@@ -219,14 +219,14 @@ func (m *Mover) Draw(screen *ebiten.Image) {
 	okMove, why := m.valid(b, tx, ty)
 	m.sh.DrawPlacementGhost(screen, b.Kind, b.Stuff, FacingNames[m.st.Facing],
 		[]GhostCell{{X: tx, Y: ty, OK: okMove, Reason: why}})
-	msg := "Move " + m.sh.BuildingTitle(b)
+	msg := m.sh.Tf("Move %s", m.sh.BuildingTitle(b))
 	if m.st.Crate != 0 {
-		msg = "Reinstall " + b.Kind // reinstall.go (AX-1)
+		msg = m.sh.Tf("Reinstall %s", b.Kind) // reinstall.go (AX-1)
 	}
 	if !okMove {
-		msg += "   can't move: " + why
+		msg += m.sh.Tf("   can't move: %s", why)
 	} else if bv, ok := Buildable(b.Kind); ok && bv.Rotatable {
-		msg += "   " + m.rotateKeys() + " rotate"
+		msg += m.sh.Tf("   %s rotate", m.rotateKeys())
 	}
 	gfx.FillRect(screen, float32(mx+16), float32(my+18), gfx.TextW(msg, gfx.Body)+16, gfx.LineStep(gfx.Body)+4, uikit.Panel, false)
 	gfx.Text(screen, msg, float64(mx+24), float64(my+20), gfx.Body)

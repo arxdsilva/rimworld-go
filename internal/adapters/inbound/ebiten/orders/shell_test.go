@@ -1,6 +1,7 @@
 package orders
 
 import (
+	"fmt"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
@@ -54,3 +55,6 @@ func (f *fakeShell) TilePx() float64                                       { ret
 func (f *fakeShell) WorldToScreen(x, y int) (float32, float32) {
 	return float32(x * 16), float32(y * 16)
 }
+
+func (f *fakeShell) T(src string) string               { return src }
+func (f *fakeShell) Tf(src string, args ...any) string { return fmt.Sprintf(src, args...) }

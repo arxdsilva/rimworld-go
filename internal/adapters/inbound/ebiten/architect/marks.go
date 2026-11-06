@@ -118,7 +118,7 @@ func (m *Marks) drawPowerGhostLinks(screen *ebiten.Image, d ToolDef, cells []Gho
 			x0, y0, x1 = min(x0, f[0]), min(y0, f[1]), max(x1, f[0])
 		}
 		sx, sy := m.sh.WorldToScreenF(float64(x0+x1+1)/2, float64(y0))
-		worldTag(screen, PowerGhostLabel, float64(sx), float64(sy), gfx.WithColor(gfx.Small, uikit.Warning))
+		worldTag(screen, m.sh.T("Not connected"), float64(sx), float64(sy), gfx.WithColor(gfx.Small, uikit.Warning))
 		g.Emit("not connected", c.X, c.Y, overlay.TokenNRGBA(uikit.Warning))
 	}
 }

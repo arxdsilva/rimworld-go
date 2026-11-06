@@ -266,7 +266,7 @@ func (c *Controller) HandleOrders() {
 		return
 	}
 	if sel.Grouped() {
-		c.sh.Hint("Draft the colonists to move them together")
+		c.sh.Hint(c.sh.T("Draft the colonists to move them together"))
 		return
 	}
 	c.RightClickTile(tx, ty, float32(mx), float32(my))

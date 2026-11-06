@@ -151,7 +151,7 @@ func (m *Marks) drawOpenPen(screen *ebiten.Image, pv game.PenView, tile float32,
 		penSide(screen, sx, sy, tile, side, penOpenClr, true)
 	}
 	k := 1 / gfx.UIScale()
-	gfx.Text(screen, "Not enclosed", float64(sx)*k, float64(sy-tile*0.4)*k, gfx.TextStyle{Size: 11, Bold: true, Color: penOpenClr})
+	gfx.Text(screen, m.sh.T("Not enclosed"), float64(sx)*k, float64(sy-tile*0.4)*k, gfx.TextStyle{Size: 11, Bold: true, Color: penOpenClr})
 }
 
 // penSide strokes one side of the tile at (sx, sy); dashed draws it as

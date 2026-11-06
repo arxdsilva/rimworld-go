@@ -65,9 +65,10 @@ func (t *Tool) Cards() []Card {
 		if m, ok := ToolByID(t.ToolID); ok && d.Family != "" && m.Family == d.Family {
 			d = m // a family's card stands for its armed member (A2)
 		}
+		d = t.tx.localize(t.sh, d)
 		if d.Planned { // a greyed placeholder: its sentence, and why it cannot be used
 			out = append(out, Card{ID: ids.PrefixArchTool + d.ID, Label: d.Label, Icon: d.Icon, Desc: d.Desc,
-				Disabled: true, Reason: PlannedReason})
+				Disabled: true, Reason: t.sh.T("Not in this game yet")})
 			continue
 		}
 		b := Card{ID: ids.PrefixArchTool + head, Label: d.Label, Icon: d.Icon, Toggle: true, Options: t.orderOptions(d.ID)}
@@ -221,11 +222,12 @@ func (t *Tool) buildPlan(k planKey) DescPlan {
 		if k.hasWorld {
 			add(StockLine(w, w.Wood, ""), gfx.Body)
 		}
-		add("Pick something to place", dim)
+		add(t.sh.T("Pick something to place"), dim)
 		p.H = y + archPad
 		return p
 	}
 
+	d = t.tx.localize(t.sh, d)
 	add(d.Label, head)
 	add(d.Desc, dim)
 	bv, built := Buildable(d.Build)

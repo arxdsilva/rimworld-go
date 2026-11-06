@@ -104,7 +104,7 @@ func (c *Controller) DrawFloat(screen *ebiten.Image) {
 	r := c.FloatRect()
 	uikit.DrawPanel(screen, r.X-2, r.Y-2, r.W+4, r.H+4)
 	if c.Float.Pick == nil {
-		gfx.Text(screen, "Shift: queue (max 3)", float64(r.X)+10, float64(r.Y+r.H)-FloatHintH, gfx.WithColor(gfx.Small, uikit.TextDim))
+		gfx.Text(screen, c.sh.T("Shift: queue (max 3)"), float64(r.X)+10, float64(r.Y+r.H)-FloatHintH, gfx.WithColor(gfx.Small, uikit.TextDim))
 	}
 	mx, my := c.sh.Cursor()
 	for i, b := range c.FloatButtons() {
@@ -184,7 +184,7 @@ func (c *Controller) RightClickTile(tx, ty int, sx, sy float32) {
 	if !ok {
 		return
 	}
-	if opts := FireOrders(p, c.sh.World(), tx, ty); opts != nil && !c.creatureAt(tx, ty, p.ID) {
+	if opts := fireOrders(c.sh, p, c.sh.World(), tx, ty); opts != nil && !c.creatureAt(tx, ty, p.ID) {
 		c.openAt(opts, tx, ty, sx, sy)
 		return
 	}

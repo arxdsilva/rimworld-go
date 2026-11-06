@@ -4,6 +4,7 @@ package orders
 // drawing is render/overlay, fire_world_draw.go).
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -22,6 +23,11 @@ func fireOn(w game.WorldView, x, y int) (game.FireView, bool) {
 // walk there, or beat the fire out (a forced order, anywhere). Nil when
 // the pawn is not drafted or the cell is not burning.
 func FireOrders(p game.PawnView, w game.WorldView, tx, ty int) []game.OrderOption {
+	return fireOrders(lang.English{}, p, w, tx, ty)
+}
+
+// fireOrders is FireOrders with its labels in tr's language.
+func fireOrders(tr lang.Tr, p game.PawnView, w game.WorldView, tx, ty int) []game.OrderOption {
 	if !p.Drafted {
 		return nil
 	}
@@ -29,8 +35,8 @@ func FireOrders(p game.PawnView, w game.WorldView, tx, ty int) []game.OrderOptio
 		return nil
 	}
 	return []game.OrderOption{
-		{Label: "Go here", Cmd: command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty}},
-		{Label: "Extinguish fire", Cmd: command.Command{Kind: command.Prioritize, Pawn: uint64(p.ID), X: tx, Y: ty, Order: command.OrderExtinguish}},
+		{Label: tr.T("Go here"), Cmd: command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty}},
+		{Label: tr.T("Extinguish fire"), Cmd: command.Command{Kind: command.Prioritize, Pawn: uint64(p.ID), X: tx, Y: ty, Order: command.OrderExtinguish}},
 	}
 }
 

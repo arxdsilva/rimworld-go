@@ -13,6 +13,7 @@ import (
 
 // Labels names what the root alone knows how to title.
 type Labels interface {
+	ports.Texts
 	// BuildingTitle is the name a building shows under ("Granite wall").
 	BuildingTitle(game.BuildingView) string
 }

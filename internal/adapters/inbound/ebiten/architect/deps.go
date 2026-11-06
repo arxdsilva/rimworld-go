@@ -118,9 +118,15 @@ type Map interface {
 	Overlays() *overlay.Set
 }
 
+// words is the hint line and the catalog, one embedded role in Shell.
+type words interface {
+	ports.Hinter
+	ports.Texts
+}
+
 // Shell composes the roles the tool calls with its Host and the map.
 type Shell interface {
-	ports.Hinter
+	words
 	ports.Sizer
 	ports.Commands
 	ports.World

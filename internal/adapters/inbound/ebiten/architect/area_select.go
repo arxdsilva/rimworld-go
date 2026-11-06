@@ -61,7 +61,7 @@ func scheduleRect(s Schedule, row int) (gfx.Rect, bool) {
 func (a *Areas) scheduleColumn(s Schedule) {
 	r := s.Win
 	if hr, ok := scheduleRect(s, 0); ok {
-		a.sh.Kit().Label(hr.X, hr.Y-float32(gfx.LineH(gfx.Small))-1, "Allowed area", gfx.WithColor(gfx.Small, uikit.TextDim))
+		a.sh.Kit().Label(hr.X, hr.Y-float32(gfx.LineH(gfx.Small))-1, a.sh.T("Allowed area"), gfx.WithColor(gfx.Small, uikit.TextDim))
 	}
 	for row, id := range s.Rows {
 		if row == 0 {
@@ -92,7 +92,7 @@ func (a *Areas) Chip(p game.PawnView) (Chip, bool) {
 	if !known {
 		return Chip{}, false
 	}
-	return Chip{ID: AreaChipID, Label: "Area: " + AreaRefLabel(sim.Areas(), ref), Tip: AssignAreaTip}, true
+	return Chip{ID: AreaChipID, Label: a.sh.Tf("Area: %s", areaRefLabel(a.sh, sim.Areas(), ref)), Tip: assignAreaTip(a.sh)}, true
 }
 
 // inspectorChip answers the pane's area chip: a widget with the chip's

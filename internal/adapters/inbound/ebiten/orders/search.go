@@ -248,15 +248,15 @@ func (c *Controller) DrawSearch(screen *ebiten.Image, sw int) {
 		cursor = "_"
 	}
 	query := []rune(c.Search.Text)
-	for len(query) > 1 && gfx.TextW("Search: "+string(query)+cursor, gfx.Body) > r.W-28 {
+	for len(query) > 1 && gfx.TextW(c.sh.Tf("Search: %s", string(query)+cursor), gfx.Body) > r.W-28 {
 		query = query[1:] // keep the end of a long query, where the player is typing
 	}
-	gfx.Text(screen, "Search: "+string(query)+cursor, float64(r.X)+14, float64(r.Y)+8+(24-gfx.LineH(gfx.Body))/2, gfx.Body)
+	gfx.Text(screen, c.sh.Tf("Search: %s", string(query)+cursor), float64(r.X)+14, float64(r.Y)+8+(24-gfx.LineH(gfx.Body))/2, gfx.Body)
 	hits := c.SearchHits()
 	if len(hits) == 0 {
-		msg := "Type a name, species, item or building"
+		msg := c.sh.T("Type a name, species, item or building")
 		if c.Search.Text != "" {
-			msg = "Nothing matches"
+			msg = c.sh.T("Nothing matches")
 		}
 		gfx.Text(screen, msg, float64(r.X)+16, float64(r.Y)+42, gfx.WithColor(gfx.Body, uikit.TextDim))
 	}

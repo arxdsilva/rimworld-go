@@ -2,6 +2,7 @@ package architect
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -33,7 +34,6 @@ const (
 	areaPickW    = 380
 	areaPickRowH = 30
 	areaSwatchW  = 14
-	areaManage   = "Manage allowed areas..."
 )
 
 // areaRef normalises a read-model ref: 0 (never an id) is unrestricted.
@@ -57,16 +57,21 @@ func areaByID(areas []game.AreaView, id int) (game.AreaView, bool) {
 // AreaRefLabel is the dropdown text for a ref: "Unrestricted", "Home" or
 // the area's name (a ref to a vanished area reads Unrestricted).
 func AreaRefLabel(areas []game.AreaView, ref int) string {
+	return areaRefLabel(lang.English{}, areas, ref)
+}
+
+// areaRefLabel is AreaRefLabel in tr's language.
+func areaRefLabel(tr lang.Tr, areas []game.AreaView, ref int) string {
 	switch ref = areaRef(ref); ref {
 	case command.AreaHome:
-		return "Home"
+		return tr.T("Home")
 	case command.AreaUnrestricted:
-		return "Unrestricted"
+		return tr.T("Unrestricted")
 	}
 	if ar, ok := areaByID(areas, ref); ok {
 		return ar.Name
 	}
-	return "Unrestricted"
+	return tr.T("Unrestricted")
 }
 
 // AreaTint is area ar's colour (opaque); an uncoloured area is grey.
@@ -89,10 +94,15 @@ type AreaPickOpt struct {
 // AreaPickOpts lists the rows: with base, Unrestricted and Home first;
 // then every area.
 func AreaPickOpts(areas []game.AreaView, base bool) []AreaPickOpt {
+	return areaPickOpts(lang.English{}, areas, base)
+}
+
+// areaPickOpts is AreaPickOpts in tr's language.
+func areaPickOpts(tr lang.Tr, areas []game.AreaView, base bool) []AreaPickOpt {
 	var out []AreaPickOpt
 	if base {
-		out = append(out, AreaPickOpt{Ref: command.AreaUnrestricted, Label: "Unrestricted"},
-			AreaPickOpt{Ref: command.AreaHome, Label: "Home"})
+		out = append(out, AreaPickOpt{Ref: command.AreaUnrestricted, Label: tr.T("Unrestricted")},
+			AreaPickOpt{Ref: command.AreaHome, Label: tr.T("Home")})
 	}
 	for _, ar := range areas {
 		out = append(out, AreaPickOpt{Ref: int(ar.ID), Label: ar.Name, Swatch: AreaTint(ar), Has: true})
@@ -112,7 +122,7 @@ func (a *Areas) OpenPicker(title string, cur int, base bool, pick func(ref int))
 		ID: AreaPickID, Title: title, W: areaPickW, H: 460,
 		Draw: func(body gfx.Rect) { a.pickBody(body, cur, base, pick) },
 		Buttons: []uikit.ModalButton{
-			{ID: "close", Label: "Close", Style: uikit.BtnPrimary, Closes: true, OnClick: reset},
+			{ID: "close", Label: a.sh.T("Close"), Style: uikit.BtnPrimary, Closes: true, OnClick: reset},
 		},
 		OnClose: reset,
 	})
@@ -123,10 +133,10 @@ func (a *Areas) OpenPicker(title string, cur int, base bool, pick func(ref int))
 func (a *Areas) pickBody(body gfx.Rect, cur int, base bool, pick func(ref int)) {
 	k := a.sh.Kit()
 	ov := a.sh.Overlays()
-	opts := AreaPickOpts(a.sim().Areas(), base)
+	opts := areaPickOpts(a.sh, a.sim().Areas(), base)
 	list, foot := body.SplitV(-areaPickRowH - 8)
 	if len(opts) == 0 {
-		k.Label(list.X, list.Y+4, areasEmpty, uikit.DimText())
+		k.Label(list.X, list.Y+4, a.sh.T("No areas: add one to restrict where colonists go."), uikit.DimText())
 	}
 	sa := k.ScrollArea("areapick.list", list, float32(len(opts)*areaPickRowH), uikit.ScrollOpts{Step: areaPickRowH * 2})
 	y := sa.View.Y - sa.Off
@@ -157,7 +167,7 @@ func (a *Areas) pickBody(body gfx.Rect, cur int, base bool, pick func(ref int)) 
 		}
 	}
 	ov.Area.Hover = hover
-	if k.Button("areapick.manage", foot.Inset(0), areaManage, uikit.BtnOpts{}) {
+	if k.Button("areapick.manage", foot.Inset(0), a.sh.T("Manage allowed areas..."), uikit.BtnOpts{}) {
 		k.CloseModal(AreaPickID)
 		ov.Area.Hover = 0
 		a.OpenManager()
@@ -175,9 +185,9 @@ func (a *Areas) Dropdown(id string, r gfx.Rect, ref int, pick func(ref int)) {
 	}
 	k := a.sh.Kit()
 	areas := sim.Areas()
-	label := AreaRefLabel(areas, ref)
-	if k.Button(id, r, label+"  v", uikit.BtnOpts{Tip: AssignAreaTip}) {
-		a.OpenPicker("Allowed area", ref, true, pick)
+	label := areaRefLabel(a.sh, areas, ref)
+	if k.Button(id, r, label+"  v", uikit.BtnOpts{Tip: assignAreaTip(a.sh)}) {
+		a.OpenPicker(a.sh.T("Allowed area"), ref, true, pick)
 	}
 	if ar, ok := areaByID(areas, areaRef(ref)); ok {
 		sw := AreaTint(ar)
@@ -188,9 +198,14 @@ func (a *Areas) Dropdown(id string, r gfx.Rect, ref int, pick func(ref int)) {
 }
 
 // AssignAreaTip is the allowed-area selector's hover card.
-const AssignAreaTip = "Allowed area\n" +
-	"Where it may go: Unrestricted, Home, or a painted area. Outside it, work and wandering are avoided. " +
-	"Drafted colonists and direct orders ignore it."
+var AssignAreaTip = assignAreaTip(lang.English{})
+
+// assignAreaTip is AssignAreaTip in tr's language.
+func assignAreaTip(tr lang.Tr) string {
+	return tr.T("Allowed area\n") +
+		tr.T("Where it may go: Unrestricted, Home, or a painted area. Outside it, work and wandering are avoided. ") +
+		tr.T("Drafted colonists and direct orders ignore it.")
+}
 
 // Architect submenus: the zone cards "Expand allowed area" and "Clear
 // allowed area" open the list of areas; choosing one arms the tool for it.

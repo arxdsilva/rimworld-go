@@ -1,6 +1,7 @@
 package architect
 
 import (
+	"fmt"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
@@ -44,3 +45,6 @@ func (f *fakeShell) MapCursor() (int, int)                  { return f.hover[0],
 func (f *fakeShell) TileAt(mx, my int) (int, int)           { return mx, my }
 func (f *fakeShell) Layout() hudlayout.Layout               { return hudlayout.Layout{} }
 func (f *fakeShell) BuildingTitle(game.BuildingView) string { return "Thing" }
+
+func (f *fakeShell) T(src string) string               { return src }
+func (f *fakeShell) Tf(src string, args ...any) string { return fmt.Sprintf(src, args...) }

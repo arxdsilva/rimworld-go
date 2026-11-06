@@ -77,9 +77,9 @@ func (c *Controller) HandleAim() bool {
 	f.Take(inputframe.Right)
 	if c.Aim.Fresh { // once, as the mode opens (the hint draws through the canvas)
 		if c.Aim.Grenade {
-			c.sh.Hint("Click a tile to throw the grenade; Esc or right-click cancels")
+			c.sh.Hint(c.sh.T("Click a tile to throw the grenade; Esc or right-click cancels"))
 		} else {
-			c.sh.Hint("Click a tile to target the mortar; Esc or right-click cancels")
+			c.sh.Hint(c.sh.T("Click a tile to target the mortar; Esc or right-click cancels"))
 		}
 	}
 	var crew entity.EntityID // the selected colonist mans it

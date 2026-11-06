@@ -2,6 +2,7 @@ package architect
 
 import (
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -54,23 +55,29 @@ func (z *Zones) State() *ZoneState { return &z.st }
 func (z *Zones) NoteCell(c [2]int) { z.st.cell, z.st.hasCell = c, true }
 
 // String is the tool's name in its button and hint.
-func (k ZoneToolKind) String() string {
+func (k ZoneToolKind) String() string { return k.label(lang.English{}) }
+
+// label is String in tr's language.
+func (k ZoneToolKind) label(tr lang.Tr) string {
 	switch k {
 	case ZoneToolExpand:
-		return "Expand"
+		return tr.T("Expand")
 	case ZoneToolShrink:
-		return "Shrink"
+		return tr.T("Shrink")
 	}
 	return ""
 }
 
 // ZoneToolHint is the text that follows the cursor.
-func ZoneToolHint(k ZoneToolKind, z game.ZoneView) string {
-	what := "drag to add tiles"
+func ZoneToolHint(k ZoneToolKind, z game.ZoneView) string { return zoneToolHint(lang.English{}, k, z) }
+
+// zoneToolHint is ZoneToolHint in tr's language.
+func zoneToolHint(tr lang.Tr, k ZoneToolKind, z game.ZoneView) string {
+	what := tr.T("drag to add tiles")
 	if k == ZoneToolShrink {
-		what = "drag to remove tiles"
+		what = tr.T("drag to remove tiles")
 	}
-	return k.String() + " " + zoneTitle(z) + ": " + what + " · right-click or Esc: done"
+	return lang.Tf(tr, "%s %s: %s · right-click or Esc: done", k.label(tr), zoneTitle(tr, z), what)
 }
 
 // Start arms tool k on the selected zone. A click on the armed tool's
@@ -230,7 +237,7 @@ func (z *Zones) submit(zv game.ZoneView) {
 	switch st.Kind {
 	case ZoneToolExpand:
 		if why, free := ZoneDragRefusal(x0, y0, x1, y1, func(x, y int) string { return z.RefusalAt(zv.Kind, x, y) }); !free {
-			hint := "nothing to add there"
+			hint := z.sh.T("nothing to add there")
 			if why != ZoneNoReason && why != game.ZoneRefuseTaken {
 				hint += ": " + strings.ToLower(why) // PLAY-023: the most common refusal
 			}
@@ -241,7 +248,7 @@ func (z *Zones) submit(zv game.ZoneView) {
 	case ZoneToolShrink:
 		own := z.sh.Overlays().Zones.ZoneGeomOf(zv).Cells
 		if !AnyZoneCell(x0, y0, x1, y1, func(x, y int) bool { return own[[2]int{x, y}] }) {
-			z.sh.Hint("none of this zone's tiles there")
+			z.sh.Hint(z.sh.T("none of this zone's tiles there"))
 			return
 		}
 		z.sh.Enqueue(command.Command{Kind: command.RemoveZoneCells, Target: uint64(zv.ID), X: x0, Y: y0, X2: x1, Y2: y1})
@@ -332,30 +339,36 @@ func ZoneDragRefusal(x0, y0, x1, y1 int, refusal func(x, y int) string) (why str
 }
 
 // ZoneDragHint is the hint for a drag nothing in which can be zoned.
-func ZoneDragHint(why string) string {
+func ZoneDragHint(why string) string { return zoneDragHint(lang.English{}, why) }
+
+// zoneDragHint is ZoneDragHint in tr's language.
+func zoneDragHint(tr lang.Tr, why string) string {
 	if why == "" || why == ZoneNoReason {
-		return "No free tiles there"
+		return tr.T("No free tiles there")
 	}
-	return "Can't zone here: " + why
+	return lang.Tf(tr, "Can't zone here: %s", why)
 }
 
 // ZoneTipText is the cursor tip naming why the hovered cell is refused
 // ("" when it is fine).
-func ZoneTipText(why string) string {
+func ZoneTipText(why string) string { return zoneTipText(lang.English{}, why) }
+
+// zoneTipText is ZoneTipText in tr's language.
+func zoneTipText(tr lang.Tr, why string) string {
 	switch why {
 	case "":
 		return ""
 	case ZoneNoReason:
-		return "Can't zone here"
+		return tr.T("Can't zone here")
 	}
-	return "Can't zone: " + why
+	return lang.Tf(tr, "Can't zone: %s", why)
 }
 
 // drawRefusalTip names, beside the cursor, why the hovered cell can't
 // take the zone.
 func (z *Zones) drawRefusalTip(screen *ebiten.Image, kind string, mx, my int) {
 	tx, ty := z.sh.TileAt(z.sh.MapCursor())
-	msg := ZoneTipText(z.RefusalAt(kind, tx, ty))
+	msg := zoneTipText(z.sh, z.RefusalAt(kind, tx, ty))
 	if msg == "" {
 		return
 	}
@@ -434,7 +447,7 @@ func (z *Zones) drawToolHint(screen *ebiten.Image, zv game.ZoneView, k ZoneToolK
 	if z.sh.ChromeHit(mx, my, sw, sh) {
 		return
 	}
-	msg := ZoneToolHint(k, zv)
+	msg := zoneToolHint(z.sh, k, zv)
 	boxW, boxH := gfx.TextW(msg, gfx.Body)+16, gfx.LineStep(gfx.Body)+4
 	icon := z.Icon(z.toolIcon(k))
 	iconW := float32(0)

@@ -29,6 +29,7 @@ import (
 // held tool shows).
 type Tool struct {
 	sh Shell
+	tx toolTexts // the catalog in the player's language (tooltext.go)
 
 	// The state other root files read until the sweep repoints them to
 	// methods (ARCH-005 wave 5.3; the lead moved these from App).
@@ -148,7 +149,7 @@ func (t *Tool) Buttons() []uikit.Button {
 		return nil
 	}
 	out := make([]uikit.Button, 0, len(Categories)+16)
-	for i, c := range Categories {
+	for i, c := range t.tx.of(t.sh).cats {
 		col, row := i%2, i/2
 		out = append(out, uikit.Button{
 			ID: ids.PrefixArchCat + c.ID, Label: c.Label,
@@ -347,7 +348,7 @@ func (t *Tool) SelectTool(id string) {
 		return
 	}
 	if d.Planned {
-		t.sh.Hint(PlannedReason)
+		t.sh.Hint(t.sh.T("Not in this game yet"))
 		return
 	}
 	if t.Areas.toolPick(id) { // area_menu.go: the allowed-area tools open a submenu
@@ -580,7 +581,7 @@ func (t *Tool) Submit() {
 		}
 		if kind := ZoneKindOf(d); kind != "" {
 			if why, free := ZoneDragRefusal(x0, y0, x1, y1, func(x, y int) string { return t.Zones.RefusalAt(kind, x, y) }); !free {
-				t.sh.Hint(ZoneDragHint(why)) // the command still goes out; the sim ignores it
+				t.sh.Hint(zoneDragHint(t.sh, why)) // the command still goes out; the sim ignores it
 			}
 		}
 		for _, run := range runs {
@@ -676,16 +677,16 @@ func (t *Tool) DrawGhost(screen *ebiten.Image) {
 		}
 	}
 	bv, _ := Buildable(d.Build)
-	msg := fmt.Sprintf("%s x%d  %d %s", d.Label, valid, valid*bv.Wood, stuff)
+	msg := t.sh.Tf("%s x%d  %d %s", t.tx.localize(t.sh, d).Label, valid, valid*bv.Wood, stuff)
 	if replaces != "" {
 		if isSwapLabel(replaces) {
 			msg += "   " + replaces
 		} else {
-			msg += "   replaces " + replaces
+			msg += t.sh.Tf("   replaces %s", replaces)
 		}
 	}
 	if firstBad != "" {
-		msg += "   can't place: " + firstBad
+		msg += t.sh.Tf("   can't place: %s", firstBad)
 	}
 	cursorTip(screen, msg, mx, my, sw)
 }

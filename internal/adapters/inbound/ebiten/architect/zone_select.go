@@ -3,6 +3,7 @@ package architect
 import (
 	"fmt"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 	"sync"
 
@@ -182,29 +183,34 @@ func (z *Zones) DrawSelection(screen *ebiten.Image) {
 // ---- the pane ----
 
 // ZoneKindName is the zone kind in words ("Growing zone").
-func ZoneKindName(z game.ZoneView) string {
+func ZoneKindName(z game.ZoneView) string { return zoneKindName(lang.English{}, z) }
+
+// zoneKindName is ZoneKindName in tr's language.
+func zoneKindName(tr lang.Tr, z game.ZoneView) string {
 	switch z.Kind {
 	case game.ZoneGrow:
-		return "Growing zone"
+		return tr.T("Growing zone")
 	case game.ZonePen:
-		return "Pen"
+		return tr.T("Pen")
 	case game.ZoneDump:
-		return "Dumping stockpile"
+		return tr.T("Dumping stockpile")
 	}
-	return "Stockpile"
+	return tr.T("Stockpile")
 }
 
 // ZoneDefaultName is the name a zone has until the player names it.
-func ZoneDefaultName(z game.ZoneView) string {
-	return fmt.Sprintf("%s %d", ZoneKindName(z), z.ID)
+func ZoneDefaultName(z game.ZoneView) string { return zoneDefaultName(lang.English{}, z) }
+
+func zoneDefaultName(tr lang.Tr, z game.ZoneView) string {
+	return fmt.Sprintf("%s %d", zoneKindName(tr, z), z.ID)
 }
 
 // zoneTitle is the zone's name, or its default.
-func zoneTitle(z game.ZoneView) string {
+func zoneTitle(tr lang.Tr, z game.ZoneView) string {
 	if z.Name != "" {
 		return z.Name
 	}
-	return ZoneDefaultName(z)
+	return zoneDefaultName(tr, z)
 }
 
 // Pane is the selected zone's inspect pane.
@@ -213,9 +219,9 @@ func (z *Zones) Pane(id uint16) ZonePane {
 	if !ok {
 		return ZonePane{}
 	}
-	sp := ZonePane{Title: zoneTitle(zv), Close: "zone.close", Lines: z.Lines(zv)}
+	sp := ZonePane{Title: zoneTitle(z.sh, zv), Close: "zone.close", Lines: z.Lines(zv)}
 	if zv.Name != "" {
-		sp.Subtitle = ZoneDefaultName(zv)
+		sp.Subtitle = zoneDefaultName(z.sh, zv)
 	}
 	return sp
 }
@@ -230,7 +236,7 @@ func (z *Zones) Lines(zv game.ZoneView) []string {
 	out := []string{size}
 	switch zv.Kind {
 	case game.ZoneGrow:
-		out = append(out, "Plant: "+ZoneCropName(zv.Crop))
+		out = append(out, z.sh.Tf("Plant: %s", zoneCropName(z.sh, zv.Crop)))
 		out = append(out, z.climateLine(zv), z.plantsLine(zv))
 		if zv.NoSow {
 			out = append(out, "Sowing off")
@@ -254,9 +260,12 @@ func ZonePriorityName(z game.ZoneView) string {
 }
 
 // ZoneCropName is the crop's name for the pane and the button.
-func ZoneCropName(crop string) string {
+func ZoneCropName(crop string) string { return zoneCropName(lang.English{}, crop) }
+
+// zoneCropName is ZoneCropName in tr's language.
+func zoneCropName(tr lang.Tr, crop string) string {
 	if crop == "" {
-		return "nothing"
+		return tr.T("nothing")
 	}
 	return CropLabel(crop)
 }
