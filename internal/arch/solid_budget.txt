@@ -4,7 +4,6 @@
 
 # --- size rules ---
 fields rimworld-go/internal/adapters/inbound/ebiten.App 57
-fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 26
 fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 34  # the same debt, moved with the type (ARCH-003); 51 -> 34 when the relief moved planet data into planetGeom and the frame into xform/cornerCache/ovMesh (WG-1)
 fields rimworld-go/internal/adapters/inbound/ebiten/wizard.Draft 42  # the same debt, moved with the type (ARCH-005 wave 5.2; was newGameState 43)
 fields rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 30  # the same debt, moved with the type (ARCH-003 wave 3.2; was uiState 32)
