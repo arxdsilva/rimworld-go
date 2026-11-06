@@ -33,8 +33,7 @@ const (
 	// dementiaWanderDays is the mean days between a demented colonist's
 	// confused wanders. wiki: Ailments (MTB 5 days).
 	dementiaWanderDays = 5
-	// dementiaWanderTicks is how long a confused wander lasts (original
-	// tuning).
+	// dementiaWanderTicks is how long a confused wander lasts (original tuning).
 	dementiaWanderTicks = 4 * clock.TicksPerHour
 )
 

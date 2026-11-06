@@ -671,6 +671,9 @@ saveState.Messages[].Focus rimworld-go/internal/domain/sim/entity.EntityID = uin
 saveState.Messages[].Kind string
 saveState.Messages[].Letter bool
 saveState.Messages[].Map rimworld-go/internal/application/game.MapID = uint32
+saveState.Messages[].Msg rimworld-go/pkg/msgfmt.Text
+saveState.Messages[].Msg.Format string
+saveState.Messages[].Msg.Packed string
 saveState.Messages[].Text string
 saveState.Messages[].Tick uint64
 saveState.Messages[].Title string

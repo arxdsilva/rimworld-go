@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/temperature"
+	"rimworld-go/pkg/msgfmt"
 )
 
 // climateInterval is how often (ticks) rot and frost are applied.
@@ -17,8 +18,9 @@ const maxMessages = 12
 type MessageView struct {
 	Tick uint64
 	Text string
-	X, Y int   // where it happened, for jumping the camera
-	Map  MapID // the map X, Y are on (MAP-0)
+	Msg  msgfmt.Text // Text as its catalog key and args (OPT-001; zero: show Text)
+	X, Y int         // where it happened, for jumping the camera
+	Map  MapID       // the map X, Y are on (MAP-0)
 	// Danger marks a threat arriving (raids, predator packs): the UI may
 	// pause the game for it.
 	Danger bool

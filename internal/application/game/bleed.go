@@ -110,8 +110,7 @@ func (g *Game) updateDowned(id entity.EntityID, b *body.Body, v *health.Record) 
 	}
 }
 
-// bleedingNow reports living humanlike id losing blood from an open
-// wound.
+// bleedingNow reports living humanlike id losing blood from an open wound.
 func (g *Game) bleedingNow(id entity.EntityID) bool {
 	b := g.bodies[id]
 	if b == nil || b.BleedPerDay() == 0 {

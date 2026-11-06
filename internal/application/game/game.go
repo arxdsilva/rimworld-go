@@ -23,6 +23,7 @@ import (
 	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/pkg/msgfmt"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -350,6 +351,7 @@ type LetterView struct {
 	Kind  string // "threat", "caution", "info" or "good"
 	Title string
 	Text  string
+	Msg   msgfmt.Text     // Title and Text: Text as its catalog key and args (OPT-001; zero: show Text)
 	X, Y  int             // where it happened (-1: nowhere)
 	Map   MapID           // the map X, Y are on (MAP-0)
 	Focus entity.EntityID // the creature it is about (0: none)
@@ -535,8 +537,7 @@ type PlantView struct {
 	Stage       int // 0 sown .. 3 ripe
 	Cut         bool
 	Wilted      bool // a crop suffering frost or stalled growth (SIM-016)
-	// Zone is the crop of the growing zone the plant stands in ("" when
-	// none).
+	// Zone is the crop of the growing zone the plant stands in ("" when none).
 	Zone string
 	// Light needs (MAPGEN-3, plant_light.go): NeedsDark withers in light
 	// (duskmoss), NeedsLight grows only lit (moss); Withering is losing
@@ -638,8 +639,7 @@ type WorldView struct {
 	// tile, with their settings.
 	Zones []ZoneView
 	// Roofs (SIM-018): RoofCells is the roof.Cell flags per tile
-	// (row-major, TerrainW wide); RoofCollapses are collapses of the last
-	// hour.
+	// (row-major, TerrainW wide); RoofCollapses are collapses of the last hour.
 	RoofCells     []uint8
 	RoofCollapses []RoofCollapseView
 	Bursts        []BurstView // explosive animal deaths of the last hour (SIM-019, wildlife.go)
