@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/terrain"
@@ -241,5 +242,88 @@ func TestSaveRoundTrip(t *testing.T) {
 	r.Import(v)
 	if len(r.ore) != len(s.ore) || r.finds != 1 || r.work[5] != 77 || r.work[6] != 0 || r.flow != nil {
 		t.Fatalf("round trip: %+v", v)
+	}
+}
+
+// refuelFake is a one-burner host for Plan.
+type refuelFake struct {
+	b      construction.Building
+	fuel   int
+	stacks map[item.Kind]item.Stack
+	feed   item.Stack
+	noSpot bool
+	spare  bool
+}
+
+func (f *refuelFake) Building(entity.EntityID) (construction.Building, bool) { return f.b, true }
+func (f *refuelFake) Fuel(entity.EntityID) int                               { return f.fuel }
+func (f *refuelFake) Ingredient(_ entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
+	if st, ok := f.stacks[in.Kind]; ok {
+		return entity.EntityID(100 + int(in.Kind)), st
+	}
+	return 0, item.Stack{}
+}
+func (f *refuelFake) TankFeed(entity.EntityID, int) (entity.EntityID, item.Stack) {
+	if f.feed.Qty > 0 {
+		return 7, f.feed
+	}
+	return 0, item.Stack{}
+}
+func (f *refuelFake) Beside(_ entity.EntityID, x, y int) (int, int, bool) { return x + 1, y, !f.noSpot }
+func (f *refuelFake) Spare(item.Stack, int, int) (int, int, bool)         { return 9, 9, f.spare }
+
+func TestRefuelPlan(t *testing.T) {
+	camp := func() *refuelFake {
+		return &refuelFake{b: construction.Building{Kind: construction.Campfire, X: 3, Y: 4},
+			stacks: map[item.Kind]item.Stack{item.Wood: {Kind: item.Wood, Qty: 3}}}
+	}
+	f := camp()
+	rec, why := Plan(f, 1, 5)
+	if why != "" || rec.Kind != job.Refuel || rec.Dest != 5 || rec.DestX != 4 || rec.WorkLeft != RefuelWork ||
+		rec.Count != Room(CampfireLogs*TicksPerWood, 0, item.Wood) || rec.HasSpare {
+		t.Fatalf("wood: %+v %q", rec, why)
+	}
+	f = camp()
+	f.stacks = map[item.Kind]item.Stack{item.EmberOil: {Kind: item.EmberOil, Qty: 1}}
+	if rec, why = Plan(f, 1, 5); why != "" || rec.Target != entity.EntityID(100+int(item.EmberOil)) {
+		t.Fatalf("ember oil: %+v %q", rec, why)
+	}
+	f.stacks = nil
+	if _, why = Plan(f, 1, 5); why != RefuseNoFuel+item.Wood.String() {
+		t.Fatalf("neither: %q", why)
+	}
+	g := &refuelFake{b: construction.Building{Kind: construction.ChemfuelGenerator},
+		stacks: map[item.Kind]item.Stack{item.Wood: {Kind: item.Wood, Qty: 9}}}
+	if _, why = Plan(g, 1, 5); why != RefuseNoFuel+item.Chemfuel.String() {
+		t.Fatalf("chemfuel burner took wood: %q", why)
+	}
+	f = camp()
+	f.fuel = CampfireLogs * TicksPerWood
+	if _, why = Plan(f, 1, 5); why != RefuseFull {
+		t.Fatalf("full: %q", why)
+	}
+	f = camp()
+	f.noSpot = true
+	if _, why = Plan(f, 1, 5); why != RefuseUnreachable {
+		t.Fatalf("no spot: %q", why)
+	}
+	f = camp()
+	f.stacks[item.Wood] = item.Stack{Kind: item.Wood, Qty: 40}
+	f.spare = true
+	rec, _ = Plan(f, 1, 5)
+	if !rec.HasSpare || rec.SpareX != 9 || len(rec.Route) != 1 || rec.Route[0] != 5 || rec.Count != min(40, item.CarryLimit) {
+		t.Fatalf("spare: %+v", rec)
+	}
+	t1 := &refuelFake{b: construction.Building{Kind: construction.FishTank}, feed: item.Stack{Kind: item.Kibble, Qty: 2}}
+	if rec, why = Plan(t1, 1, 5); why != "" || rec.Target != 7 {
+		t.Fatalf("tank feed: %+v %q", rec, why)
+	}
+}
+
+func TestRoomRounding(t *testing.T) {
+	c := 10 * TicksPerWood
+	if Room(c, 0, item.Wood) != 10 || Room(c, 1, item.Wood) != 10 || Room(c, TicksPerWood, item.Wood) != 9 ||
+		Room(c, c, item.Wood) != 0 || Room(c, 0, item.Steel) != 0 {
+		t.Fatal("room rounding")
 	}
 }

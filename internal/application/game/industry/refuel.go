@@ -39,9 +39,68 @@ type RefuelHost interface {
 	Spare(st item.Stack, x, y int) (int, int, bool)
 }
 
+// RefuelWork is the work a hauler spends feeding a burner once there.
+const RefuelWork = 30
+
+// Room is how many items of fuel k a burner of capacity capTicks holding
+// fuel ticks takes before it is full (a part-burnt one rounds up); 0 for an
+// item that is no fuel.
+func Room(capTicks, fuel int, k item.Kind) int {
+	per := FuelTicks(k)
+	if per <= 0 {
+		return 0
+	}
+	return max(0, (capTicks-fuel+per-1)/per)
+}
+
 // Plan is the refuel job pawn would start on burner bid, or why it can't:
 // RefuseFull, RefuseNoFuel plus the fuel, or RefuseUnreachable. It does not
 // check the burner's threshold, reservations or the pawn's work types.
 func Plan(h RefuelHost, pawn, bid entity.EntityID) (job.Record, string) {
-	return job.Record{}, "" // REF-1 contract stub: filled by the move out of game/fuel.go
+	b, ok := h.Building(bid)
+	if !ok {
+		return job.Record{}, RefuseUnreachable
+	}
+	spec, _ := FuelSpec(b.Kind)
+	have := h.Fuel(bid)
+	fuel := item.Wood
+	if b.Kind == construction.ChemfuelGenerator || b.Kind == construction.PodLauncher {
+		fuel = item.Chemfuel // AX-4, AX-9: they take chemfuel only
+	} else if b.Kind == construction.FishTank {
+		fuel = item.Hay // FISH-*: hay first; the tank feed has the rest
+	}
+	need := Room(spec.CapTicks, have, fuel)
+	if need == 0 {
+		return job.Record{}, RefuseFull
+	}
+	sid, st := h.Ingredient(pawn, recipe.Input{Kind: fuel, Qty: 1, Max: need})
+	switch {
+	case sid != 0:
+	case fuel == item.Hay:
+		if sid, st = h.TankFeed(pawn, need); sid == 0 {
+			return job.Record{}, RefuseNoFuel + fuel.String()
+		}
+	case fuel == item.Chemfuel:
+		return job.Record{}, RefuseNoFuel + fuel.String()
+	default:
+		fuel = item.EmberOil
+		need = Room(spec.CapTicks, have, fuel)
+		if sid, st = h.Ingredient(pawn, recipe.Input{Kind: fuel, Qty: 1, Max: need}); sid == 0 {
+			return job.Record{}, RefuseNoFuel + item.Wood.String()
+		}
+	}
+	sx, sy, ok := h.Beside(pawn, b.X, b.Y)
+	if !ok {
+		return job.Record{}, RefuseUnreachable
+	}
+	rec := job.Record{Kind: job.Refuel, Target: sid, TX: st.X, TY: st.Y, Dest: bid,
+		DestX: sx, DestY: sy, WorkLeft: RefuelWork, Count: need}
+	if st.Qty > need {
+		// HAUL-001: a full load when a stockpile cell takes the rest
+		if px, py, ok := h.Spare(st, b.X, b.Y); ok {
+			rec.Count = max(need, min(st.Qty, item.CarryLimit))
+			rec.Route, rec.SpareX, rec.SpareY, rec.HasSpare = []entity.EntityID{bid}, px, py, true
+		}
+	}
+	return rec, ""
 }

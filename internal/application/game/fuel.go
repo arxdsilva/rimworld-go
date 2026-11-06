@@ -28,7 +28,7 @@ import (
 // with campfires only behaves exactly as it did before the table existed.
 
 const (
-	refuelWork = 30
+	refuelWork = industry.RefuelWork
 	// the fuel table's numbers (game/industry/fuel.go)
 	torchLogs, torchBurn, generatorBurn, chemfuelTicks = industry.TorchLogs, industry.TorchBurn, industry.GeneratorBurn, industry.ChemfuelTicks
 )
@@ -152,14 +152,29 @@ func (g *Game) burnFuel() {
 
 // --- refuelling ------------------------------------------------------------
 
-// fuelRoom is how many items of fuel k burner bid takes before it is full
-// (a part-burnt one rounds up).
+// refuelHost is the game as industry.Plan reads it.
+type refuelHost struct{ g *Game }
+
+func (h refuelHost) Building(id entity.EntityID) (construction.Building, bool) {
+	return h.g.bldgs.Get(id)
+}
+func (h refuelHost) Fuel(id entity.EntityID) int { return h.g.fuel[id] }
+func (h refuelHost) Ingredient(p entity.EntityID, in recipe.Input) (entity.EntityID, item.Stack) {
+	return h.g.ingredientFor(p, in)
+}
+func (h refuelHost) TankFeed(p entity.EntityID, need int) (entity.EntityID, item.Stack) {
+	return tankFeed(h.g, p, need)
+}
+func (h refuelHost) Beside(p entity.EntityID, x, y int) (int, int, bool) {
+	return h.g.besideSpot(p, x, y)
+}
+func (h refuelHost) Spare(st item.Stack, x, y int) (int, int, bool) {
+	return h.g.stockpileCell(st, x, y)
+}
+
+// fuelRoom is how many items of fuel k burner bid takes before it is full.
 func (g *Game) fuelRoom(bid entity.EntityID, k item.Kind) int {
-	per := industry.FuelTicks(k)
-	if per <= 0 {
-		return 0
-	}
-	return max(0, (g.fuelCap(bid)-g.fuel[bid]+per-1)/per)
+	return industry.Room(g.fuelCap(bid), g.fuel[bid], k)
 }
 
 // assignRefuel sends a hauler with wood (or, with none about, ember oil)
@@ -196,40 +211,9 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 		return a.fuel < b.fuel || a.fuel == b.fuel && a.bid < b.bid
 	})
 	for _, f := range fires {
-		b, _ := g.bldgs.Get(f.bid)
-		fuel := item.Wood
-		if b.Kind == construction.ChemfuelGenerator || b.Kind == construction.PodLauncher {
-			fuel = item.Chemfuel // AX-4, AX-9: they take chemfuel only
-		} else if b.Kind == construction.FishTank {
-			fuel = item.Hay // FISH-*: hay first; tankFeed has the rest
-		}
-		need := g.fuelRoom(f.bid, fuel)
-		sid, st := g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need})
-		if sid == 0 && fuel == item.Hay {
-			if sid, st = tankFeed(g, id, need); sid == 0 {
-				continue
-			}
-		} else if sid == 0 && fuel == item.Chemfuel {
-			continue
-		} else if sid == 0 {
-			fuel = item.EmberOil
-			need = g.fuelRoom(f.bid, fuel)
-			if sid, st = g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need}); sid == 0 {
-				continue // no wood: a tank or a chemfuel burner further on may still be served
-			}
-		}
-		sx, sy, ok := g.besideSpot(id, b.X, b.Y)
-		if !ok {
-			continue
-		}
-		rec := job.Record{Kind: job.Refuel, Target: sid, TX: st.X, TY: st.Y, Dest: f.bid,
-			DestX: sx, DestY: sy, WorkLeft: refuelWork, Count: need}
-		if st.Qty > need {
-			// HAUL-001: a full load when a stockpile cell takes the rest
-			if px, py, ok := g.stockpileCell(st, b.X, b.Y); ok {
-				rec.Count = max(need, min(st.Qty, item.CarryLimit))
-				rec.Route, rec.SpareX, rec.SpareY, rec.HasSpare = []entity.EntityID{f.bid}, px, py, true
-			}
+		rec, why := industry.Plan(refuelHost{g}, id, f.bid)
+		if why != "" {
+			continue // no fuel or no spot: a tank or a chemfuel burner further on may still be served
 		}
 		if !g.startJob(id, rec) {
 			continue
