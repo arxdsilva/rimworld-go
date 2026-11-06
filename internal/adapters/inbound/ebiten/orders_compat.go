@@ -22,7 +22,7 @@ type ordersHost struct{ a *App }
 
 var (
 	_ orders.Host   = ordersHost{}
-	_ orders.Labels = ordersHost{}
+	_ orders.Labels = ordersShell{} // the texts come from the shell (OPT-001)
 )
 
 // ordersShell is the feature's view of the App: the ports roles plus its Host.
