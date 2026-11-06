@@ -165,15 +165,15 @@ func (g *Game) needsComfort(id entity.EntityID) bool {
 	return g.exposure[id].Held(exposure.Mild, chillHost{g}.AirAt(id), g.bandsOf(id))
 }
 
-// warmSpot finds the nearest reachable spot in a room with bearable air for
-// a colonist suffering exposure (thermo.Spot: the cached room cells). ok is
-// false when there is none.
+// warmSpot: the nearest reachable spot whose air (a room's or the open air,
+// AIL-003) is bearable for a colonist suffering exposure; ok false if none.
 func (g *Game) warmSpot(id entity.EntityID) (int, int, bool) {
 	g.ensureRooms()
 	pos, _ := g.positions.Get(id)
-	cold, bands, temps := g.exposure[id].Hypo >= g.exposure[id].Heat, g.bandsOf(id), g.thermo.Temps
+	cold, bands, out := g.exposure[id].Hypo >= g.exposure[id].Heat, g.bandsOf(id), g.climate.Outdoor(g.clock.Now())
 	return g.thermo.Spot(pos.X, pos.Y, func(r int) bool {
-		return r >= 0 && r < len(temps) && (cold && int(temps[r]) >= bands.Min || !cold && int(temps[r]) <= bands.Max)
+		t, ok := g.thermo.Air(r, out)
+		return ok && (cold && int(t) >= bands.Min || !cold && int(t) <= bands.Max)
 	}, func(x, y int) bool {
 		owner, taken := g.reserve.TileOwner(x, y)
 		return g.grid.Walkable(x, y) && !g.bedCovering(x, y) && (!taken || owner == id)

@@ -82,7 +82,7 @@ func TestPsychologicallyOutdoors(t *testing.T) {
 
 // TestSpotMatchesFullScan (TEMP-6): the cached search finds exactly what
 // the full-map scan it replaced found, on random maps, bearable sets and
-// blocked cells.
+// blocked cells, with the open air bearable in half the trials (AIL-003).
 func TestSpotMatchesFullScan(t *testing.T) {
 	rng := rand.New(rand.NewPCG(1, 2))
 	for trial := range 200 {
@@ -104,7 +104,8 @@ func TestSpotMatchesFullScan(t *testing.T) {
 		for range 60 {
 			blocked[rng.IntN(60*40)] = true
 		}
-		bearable := func(r int) bool { return r >= 0 && warm[r] }
+		open := trial%2 == 1
+		bearable := func(r int) bool { return r >= 0 && warm[r] || r == room.Outdoors && open }
 		free := func(x, y int) bool { return !blocked[y*60+x] }
 		far := rng.IntN(20)
 		reach := func(x, y int) bool { return (x+y)%7 != far%7 }
@@ -198,5 +199,21 @@ func TestHotRoomsAndCooldown(t *testing.T) {
 	m2.Import(m.Temps, m.Residual, s)
 	if m2.MayIgnite(1000 + IgniteCooldown - 1) {
 		t.Fatal("the cooldown is lost on load")
+	}
+}
+
+// TestAirIsTheRoomsOrTheOpenAirs (AIL-003): a room's held air, the open
+// air for room.Outdoors, and nothing for a wall or an unknown room.
+func TestAirIsTheRoomsOrTheOpenAirs(t *testing.T) {
+	m := model(newFake(20, 10, [3]int{2, 2, 4}), 200, 1)
+	m.Temps[0] = 310
+	for _, c := range []struct {
+		r    int
+		want temperature.Temp
+		ok   bool
+	}{{0, 310, true}, {room.Outdoors, 150, true}, {room.Wall, 0, false}, {5, 0, false}} {
+		if got, ok := m.Air(c.r, 150); got != c.want || ok != c.ok {
+			t.Errorf("Air(%d) = %d %v, want %d %v", c.r, got, ok, c.want, c.ok)
+		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/internal/domain/world/temperature"
 )
 
 // Outdoors judgements (TEMP-6, wiki: Rooms). Rooms here are the
@@ -60,8 +61,10 @@ type spot struct{ i, d int }
 
 // Spot is the nearest free, reachable cell in a room whose air bearable
 // accepts, for a creature at (x, y) (TEMP-6: the
-// warmth-seeking search over the cached room cells). bearable says a
-// room's air will do, free a cell is walkable and open to the creature,
+// warmth-seeking search over the cached room cells), or in the open air
+// when bearable accepts room.Outdoors (AIL-003: a summer night outside cools
+// a heatstroke victim when every room still holds the day's heat). bearable
+// says a room's air will do, free a cell is walkable and open to the creature,
 // reach it can walk there. Candidates go nearest first by pathing.Dist
 // (ties by cell index) and only the spotTries nearest are path-checked;
 // only bearable rooms are walked, nearest box first, and a room whose box
@@ -103,10 +106,56 @@ func (m *Model) Spot(x, y int, bearable func(r int) bool, free, reach func(x, y 
 		slices.SortFunc(spots, byDist)
 		spots = spots[:min(len(spots), spotTries)]
 	}
+	if bearable(room.Outdoors) {
+		spots = m.outdoorSpots(spots, x, y, free, byDist)
+	}
 	for _, s := range spots {
 		if reach(s.i%w, s.i/w) {
 			return s.i % w, s.i / w, true
 		}
 	}
 	return 0, 0, false
+}
+
+// outReach is how far (cells) Spot looks for open air: the outdoor area is
+// one huge room, so its cells are walked in rings out from the creature
+// instead of listed.
+const outReach = 64
+
+// outdoorSpots adds the nearest free outdoor cells to spots (kept to the
+// spotTries nearest), ring by ring out to outReach, and stops at the first
+// ring beyond the spotTries-th candidate.
+func (m *Model) outdoorSpots(spots []spot, x, y int, free func(x, y int) bool, byDist func(a, b spot) int) []spot {
+	grid, w, h := m.h.RoomGrid()
+	for k := 0; k <= outReach; k++ {
+		if len(spots) >= spotTries && k > spots[spotTries-1].d {
+			break
+		}
+		for cy := max(y-k, 0); cy <= min(y+k, h-1); cy++ {
+			step := 2 * k // the ring's sides: its first and last column only
+			if cy == y-k || cy == y+k || k == 0 {
+				step = 1
+			}
+			for cx := x - k; cx <= x+k; cx += step {
+				if cx >= 0 && cx < w && grid[cy*w+cx] == room.Outdoors && free(cx, cy) {
+					spots = append(spots, spot{cy*w + cx, k})
+				}
+			}
+		}
+		slices.SortFunc(spots, byDist)
+		spots = spots[:min(len(spots), spotTries)]
+	}
+	return spots
+}
+
+// Air is room r's temperature, or out for the open air (room.Outdoors);
+// ok is false for anything else (a wall).
+func (m *Model) Air(r int, out temperature.Temp) (temperature.Temp, bool) {
+	switch {
+	case r == room.Outdoors:
+		return out, true
+	case r >= 0 && r < len(m.Temps):
+		return m.Temps[r], true
+	}
+	return 0, false
 }

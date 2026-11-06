@@ -113,3 +113,47 @@ func pawnViewOf(g *Game, id entity.EntityID) PawnView {
 	}
 	return PawnView{}
 }
+
+// TestHeatstrokeVictimWithNoCoolRoomIsCarriedIntoTheOpenAir (AIL-003):
+// every room is held hot (the heatwave has passed outside, not inside), so
+// no bed heals her; the open air at 22 °C does. A doctor carries her out
+// once, she recovers on the ground and stands, and nobody carries her back.
+func TestHeatstrokeVictimWithNoCoolRoomIsCarriedIntoTheOpenAir(t *testing.T) {
+	t.Parallel()
+	g, ada, bo, _ := heatwaveColony(t, 320)
+	pin := func() {
+		g.ensureRooms()
+		g.thermo.Temps[g.roomAt(4, 3)], g.thermo.Temps[g.roomAt(16, 3)] = 320, 320
+	}
+	pin()
+	if out := g.climate.Outdoor(g.clock.Now()); int(out) > g.bandsOf(ada).Max {
+		t.Fatalf("the open air (%d) must be bearable (max %d)", out, g.bandsOf(ada).Max)
+	}
+	carries, carrying, stood := 0, false, uint64(0)
+	for tick := 0; tick < 12*clock.TicksPerHour && stood == 0; tick += 50 {
+		g.Step(50)
+		pin()
+		g.SetNeeds(bo, needs.Full, needs.Full)
+		if now := g.care.Carry.Patient(bo) == ada; now != carrying {
+			carrying = now
+			if now {
+				carries++
+			}
+		}
+		if v, _ := g.vital.Get(ada); v.Status == health.Alive {
+			stood = uint64(tick)
+		}
+	}
+	p := posOf(g, ada)
+	if stood == 0 || carries != 1 || g.roomAt(p.X, p.Y) >= 0 {
+		t.Fatalf("stood after %d ticks, carried %d times, in room %d at %+v", stood, carries, g.roomAt(p.X, p.Y), p)
+	}
+	for tick := 0; tick < 2*clock.TicksPerHour; tick += 50 {
+		g.Step(50)
+		pin()
+		if g.care.Carry.Patient(bo) == ada {
+			t.Fatal("carried again after she stood")
+		}
+	}
+	t.Logf("carried outside once, stood after %.1f h", float64(stood)/clock.TicksPerHour)
+}
