@@ -1,12 +1,14 @@
 package infocard
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
 )
 
 // Reader is the read model the card is built from.
 type Reader interface {
+	lang.Tr
 	Pawns() []game.PawnView
 	World() game.WorldView
 }
@@ -16,6 +18,7 @@ type Reader interface {
 type Shell interface {
 	ports.World
 	ports.Widgets
+	ports.Texts
 }
 
 // Window opens the Info card over a shell.

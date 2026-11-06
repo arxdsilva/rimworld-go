@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -17,7 +18,18 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 )
 
+// The descriptions the tests compare against.
+const (
+	wordsApparel  = "Worn on the body. What it covers, how many layers it takes and what it is made of decide how much it shields and how warm it keeps you."
+	wordsFood     = "Eaten to ease hunger. Meals made from several ingredients keep better and satisfy more than raw scraps."
+	wordsDrug     = "Taken for its effect rather than its nutrition. Doses wear off, and some leave the user wanting more."
+	wordsMaterial = "A raw or refined material. Builders and crafters turn it into walls, tools, clothing and more."
+	wordsGone     = "This item is no longer there."
+	wordsUnknown  = "Nothing is known about this item."
+)
+
 type fakeShell struct {
+	lang.English
 	kit    *uikit.Kit
 	f      inputframe.Frame
 	pawns  []game.PawnView
@@ -36,12 +48,13 @@ func (h fakeHost) Cue(string)               {}
 func (h fakeHost) Hint(string)              {}
 func (h fakeHost) ReducedMotion() bool      { return true }
 
-func (s *fakeShell) World() game.WorldView  { return s.w }
-func (s *fakeShell) Pawns() []game.PawnView { return s.pawns }
-func (s *fakeShell) MapSize() (int, int)    { return 0, 0 }
-func (s *fakeShell) Tick() clock.Tick       { return 0 }
-func (s *fakeShell) Date() clock.Date       { return clock.Date{} }
-func (s *fakeShell) Kit() *uikit.Kit        { return s.kit }
+func (s *fakeShell) Tf(src string, args ...any) string { return lang.Tf(s, src, args...) }
+func (s *fakeShell) World() game.WorldView             { return s.w }
+func (s *fakeShell) Pawns() []game.PawnView            { return s.pawns }
+func (s *fakeShell) MapSize() (int, int)               { return 0, 0 }
+func (s *fakeShell) Tick() clock.Tick                  { return 0 }
+func (s *fakeShell) Date() clock.Date                  { return clock.Date{} }
+func (s *fakeShell) Kit() *uikit.Kit                   { return s.kit }
 
 func newFake() (*fakeShell, *Window) {
 	s := &fakeShell{sw: 1280, sh: 720}

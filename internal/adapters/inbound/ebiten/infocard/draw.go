@@ -28,7 +28,7 @@ func (w *Window) Open(q ports.OpenInfoCard) {
 		ID: ID, Title: Build(w.sh, q).Title, W: winW, H: winH,
 		Draw: func(body gfx.Rect) { w.body(q, body) },
 		Buttons: []uikit.ModalButton{
-			{ID: CloseID, Label: "Close", Closes: true},
+			{ID: CloseID, Label: w.sh.T("Close"), Closes: true},
 		},
 	})
 }
