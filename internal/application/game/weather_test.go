@@ -54,8 +54,12 @@ func TestPhaseWeatherAdvancesDeterministically(t *testing.T) {
 	d := New(Config{Seed: 3, Width: 24, Height: 14})
 	jumpTo(d, 10, 1)
 	d.generate(3)
-	c.Step(40 * 15000)
-	d.Step(40 * 15000)
+	// up to 40 weather blocks, stopping at the first block boundary
+	// (after the first block) where they differ
+	for i := 0; i < 40 && (i == 0 || c.Weather() == d.Weather()); i++ {
+		c.Step(15000)
+		d.Step(15000)
+	}
 	if c.Weather() == d.Weather() {
 		t.Error("different maps should get different weather")
 	}

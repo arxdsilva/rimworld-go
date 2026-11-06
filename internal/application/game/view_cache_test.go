@@ -1,10 +1,10 @@
 package game_test
 
 import (
-	"reflect"
 	"testing"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/testkit/deepeq"
 )
 
 // TestViewCacheMatchesFresh: the renderer's read models (view cache on,
@@ -25,20 +25,21 @@ func TestViewCacheMatchesFresh(t *testing.T) {
 	}
 	cached, fresh := colony(), colony()
 	cached.SetViewCache(true)
+	eq := deepeq.New()
 	prevW, prevP := cached.World(), cached.Snapshot()
 	wantW, wantP := fresh.World(), fresh.Snapshot()
 	for i := 0; i < 1500; i++ {
 		cached.Step(3)
 		fresh.Step(3)
 		w, p := cached.World(), cached.Snapshot()
-		if !reflect.DeepEqual(prevW, wantW) || !reflect.DeepEqual(prevP, wantP) {
+		if !eq.Equal(prevW, wantW) || !eq.Equal(prevP, wantP) {
 			t.Fatalf("update %d: an earlier view was rewritten", i)
 		}
 		wantW, wantP = fresh.World(), fresh.Snapshot()
-		if !reflect.DeepEqual(w, wantW) {
+		if !eq.Equal(w, wantW) {
 			t.Fatalf("update %d: cached World differs from a fresh one", i)
 		}
-		if !reflect.DeepEqual(p, wantP) {
+		if !eq.Equal(p, wantP) {
 			t.Fatalf("update %d: cached Snapshot differs from a fresh one", i)
 		}
 		prevW, prevP = w, p

@@ -38,11 +38,13 @@ func TestGrowZoneSowsGrowsAndHarvests(t *testing.T) {
 	}
 	// let them ripen (daylight only, about two days) and be harvested,
 	// keeping the pawn fed and rested
-	for i := 0; i < 40; i++ {
+	// (stopping once the yield is in: the colonist, kept fed, eats none)
+	yield := plant.DefOf(plant.Radish).Yield
+	for i := 0; i < 40 && g.World().FoodByKind["radishes"] < yield; i++ {
 		g.SetNeeds(id, needs.Full, needs.Full)
 		g.Step(plant.DefOf(plant.Radish).GrowTicks / 10)
 	}
-	if got := g.World().FoodByKind["radishes"]; got < plant.DefOf(plant.Radish).Yield {
+	if got := g.World().FoodByKind["radishes"]; got < yield {
 		t.Fatalf("radishes harvested = %d", got)
 	}
 }

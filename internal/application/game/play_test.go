@@ -81,19 +81,37 @@ func TestFirstPlayableHaulBedEatSleep(t *testing.T) {
 	}
 	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 10, Y: 5, X2: 12, Y2: 7})
 	g.Enqueue(command.Command{Kind: command.DesignateBed, X: 6, Y: 7}) // inside the open start area
-	g.Step(80000)
-
+	// up to 80000 ticks, stopping once the whole loop has happened
+	var bedDone, foodInStock, ate, slept bool
+	for done := 0; done < 80000 && !(bedDone && foodInStock && ate && slept); done += 2000 {
+		g.Step(2000)
+		bedDone, foodInStock, ate, slept = firstPlayableLoop(g)
+	}
 	world := g.World()
-	bedDone := false
+	if !bedDone {
+		t.Fatalf("expected a completed bed, frames=%d buildings=%d", len(world.Frames), len(world.Buildings))
+	}
+	if !foodInStock {
+		t.Fatalf("expected food in a stockpile, items=%v zones=%v", world.Items, world.Zones)
+	}
+	if !ate {
+		t.Fatal("expected a pawn to eat")
+	}
+	if !slept {
+		t.Fatal("expected a pawn to sleep in the bed")
+	}
+}
+
+// firstPlayableLoop reports what TestFirstPlayableHaulBedEatSleep waits
+// for: a built bed, start-kit food in a stockpile, a colonist who ate and
+// one who slept in the bed.
+func firstPlayableLoop(g *Game) (bedDone, foodInStock, ate, slept bool) {
+	world := g.World()
 	for _, b := range world.Buildings {
 		if b.Kind == "bed" {
 			bedDone = true
 		}
 	}
-	if !bedDone {
-		t.Fatalf("expected a completed bed, frames=%d buildings=%d", len(world.Frames), len(world.Buildings))
-	}
-	foodInStock := false
 	for _, it := range world.Items {
 		if it.Kind == item.SurvivalMeal.String() && !it.Carried { // FOOD-4: the start kit's food
 			for _, z := range zonesOf(world, ZoneStockpile) {
@@ -103,24 +121,11 @@ func TestFirstPlayableHaulBedEatSleep(t *testing.T) {
 			}
 		}
 	}
-	if !foodInStock {
-		t.Fatalf("expected food in a stockpile, items=%v zones=%v", world.Items, world.Zones)
-	}
-	ate, slept := false, false
 	for _, p := range g.Snapshot() {
-		if p.Ate {
-			ate = true
-		}
-		if p.SleptInBed {
-			slept = true
-		}
+		ate = ate || p.Ate
+		slept = slept || p.SleptInBed
 	}
-	if !ate {
-		t.Fatal("expected a pawn to eat")
-	}
-	if !slept {
-		t.Fatal("expected a pawn to sleep in the bed")
-	}
+	return bedDone, foodInStock, ate, slept
 }
 
 func TestHarvestYieldsFood(t *testing.T) {

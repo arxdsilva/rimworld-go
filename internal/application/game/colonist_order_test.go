@@ -2,6 +2,7 @@ package game
 
 import (
 	"slices"
+	"sync"
 	"testing"
 
 	"rimworld-go/internal/domain/sim/command"
@@ -198,6 +199,41 @@ func orderRun(t *testing.T, seed uint64, reorder bool) *Game {
 	return g
 }
 
+// orderRunOut is what the order tests read from one finished orderRun.
+type orderRunOut struct {
+	pawnIDs []entity.EntityID
+	ordered bool   // the bar holds an order
+	hash    uint64 // StateHash at the end
+	cleared uint64 // StateHash with the order cleared
+}
+
+// orderRunMemo holds orderRun for seeds 1 and 2, with and without the
+// reordering, played once for both tests that read them.
+var orderRunMemo [2][2]struct {
+	once sync.Once
+	out  orderRunOut
+}
+
+// sharedOrderRun is orderRun(seed, reorder) for seed 1 or 2, played once.
+func sharedOrderRun(t *testing.T, seed uint64, reorder bool) orderRunOut {
+	t.Helper()
+	r := 0
+	if reorder {
+		r = 1
+	}
+	m := &orderRunMemo[seed-1][r]
+	m.once.Do(func() {
+		g := orderRun(t, seed, reorder)
+		m.out = orderRunOut{pawnIDs: slices.Clone(g.pawnIDs), ordered: g.sk.bar.Export() != nil, hash: g.StateHash()}
+		g.sk.bar.Import(nil)
+		m.out.cleared = g.StateHash()
+	})
+	if m.out.pawnIDs == nil {
+		t.Fatalf("orderRun(%d, %v) failed in the test that played it", seed, reorder)
+	}
+	return m.out
+}
+
 // TestColonistOrderOnlyTheView is the rule of the order: it enters the state
 // hash (it is saved state, and commands replay deterministically), and nothing
 // else moves. With the order cleared, a reordered colony hashes the same as
@@ -205,32 +241,31 @@ func orderRun(t *testing.T, seed uint64, reorder bool) *Game {
 func TestColonistOrderOnlyTheView(t *testing.T) {
 	t.Parallel()
 	for _, seed := range []uint64{1, 2} {
-		plain, moved := orderRun(t, seed, false), orderRun(t, seed, true)
-		if moved.sk.bar.Export() == nil {
+		plain, moved := sharedOrderRun(t, seed, false), sharedOrderRun(t, seed, true)
+		if !moved.ordered {
 			t.Fatal("the run never reordered")
 		}
-		if plain.sk.bar.Export() != nil {
+		if plain.ordered {
 			t.Fatal("the plain run has an order")
 		}
 		if !slices.Equal(plain.pawnIDs, moved.pawnIDs) {
 			t.Fatalf("pawnIDs: %v, %v", plain.pawnIDs, moved.pawnIDs)
 		}
-		if plain.StateHash() == moved.StateHash() {
+		if plain.hash == moved.hash {
 			t.Fatal("the order should enter the hash")
 		}
-		moved.sk.bar.Import(nil)
-		if a, b := plain.StateHash(), moved.StateHash(); a != b {
+		if a, b := plain.hash, moved.cleared; a != b {
 			t.Fatalf("seed %d: the order changed the simulation: %x, %x", seed, a, b)
 		}
 	}
 }
 
 // TestColonistOrderSameSeedSameHash: with and without the command, a seed
-// repeats.
+// repeats (a second play against the one TestColonistOrderOnlyTheView reads).
 func TestColonistOrderSameSeedSameHash(t *testing.T) {
 	t.Parallel()
 	for _, reorder := range []bool{false, true} {
-		if a, b := orderRun(t, 3, reorder).StateHash(), orderRun(t, 3, reorder).StateHash(); a != b {
+		if a, b := sharedOrderRun(t, 1, reorder).hash, orderRun(t, 1, reorder).StateHash(); a != b {
 			t.Fatalf("reorder %v: %x, %x", reorder, a, b)
 		}
 	}
