@@ -14,3 +14,23 @@ gfx/canvas.go:* # draw-trace events for tests and the probe
 app.go:"asset warning: " # developer warning about missing generated art
 uikit/modal.go:X # the close button's glyph
 uikit/form.go:"  v" # the dropdown arrow glyph
+
+# Wave 3 (OPT-001): glyphs, ids, units and the product name.
+architect/area_manager.go:"X" # the delete button's glyph
+architect/area_menu.go:"  v" # the dropdown arrow glyph
+dossier/build.go:" v" # the dropdown arrow glyph
+inspector/log_ui.go:"v" # the scroll-hint arrow at the log's foot
+dossier/sheet/lines_misc.go:" °C" # unit glyph
+units/units.go:/^(°F|K|°C|1\.8 °F|1 K|1 °C|Fahrenheit|Kelvin|Celsius)$/ # unit glyphs and names; options translates the names (tempUnitName)
+worldinfo/legend.go:/^%\.0f (mm|m)$/ # unit glyphs
+windows/research_panel.go:"Debug: finish now" # developer-mode button
+mainmenu/screen.go:/^rimworld-go( +%s)?$/ # the product name (and version)
+screen_boot.go:"rimworld-go" # the product name
+worldview/objects.go:/^(map|caravan|settlement|site|pod)$/ # Kind.String: a selection key and widget id
+inspector/building_inspector.go:/^[vMCx]$/ # single-glyph button faces
+inspector/hud_inspect.go:"X" # the close button's glyph
+inspector/health_ui.go:/^(Install %s \(%s\)|Remove implant \(%s\)|Amputate )$/ # matched against the simulation's English operation label; translated with it in Wave 4 (W4-SIMTEXT)
+inspector/floor_title.go:* # composes floor names from kind names; translated with item and kind names in Wave 4 (W4-SIMTEXT)
+inspector/helpers.go:/^(Stone|Steel|Ruined |wooden)$/ # composes building names from kind names; Wave 4 (W4-SIMTEXT)
+inspector/building_inspector.go:"Wooden bridge" # a building name; Wave 4 (W4-SIMTEXT)
+inspector/animal_inspector.go:"animal" # AnimalLabel's fallback kind name; Wave 4 (W4-SIMTEXT)

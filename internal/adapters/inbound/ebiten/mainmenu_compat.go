@@ -21,11 +21,11 @@ func (a *App) newestSlot() int { return mainmenu.NewestSlot(a.opt.Slots) }
 
 // creditsButtons is the Credits screen's Back button.
 func (a *App) creditsButtons(sw, sh int) []uikit.Button {
-	return []uikit.Button{{ID: "credits.back", Label: "Back", X: 40, Y: footerY(sh), W: 140, H: 36}}
+	return []uikit.Button{{ID: "credits.back", Label: a.shell.T("Back"), X: 40, Y: footerY(sh), W: 140, H: 36}}
 }
 
 func (a *App) drawCredits(screen *ebiten.Image, sw, sh int) {
-	a.paintMenu(screen, sw, sh, "Credits", mainmenu.CreditsLines(), a.creditsButtons(sw, sh))
+	a.paintMenu(screen, sw, sh, a.shell.T("Credits"), mainmenu.CreditsLines(), a.creditsButtons(sw, sh))
 }
 
 // hasSaves reports a loadable save exists (for Continue).

@@ -99,7 +99,7 @@ func (a *App) keyName(act input.Action) string {
 	if l := a.bindings().Label(act); l != "" {
 		return l
 	}
-	return "its key"
+	return a.shell.T("its key")
 }
 
 // learnSelection names what is selected ("" for nothing) so a change of
