@@ -24,6 +24,9 @@ type Pawn struct {
 	// OUT-003 (game/outfit): the apparel policy the pawn dresses by.
 	ApparelPolicy     uint32
 	ApparelPolicyName string
+	// GEAR-1 (game/sense): why nothing on this pawn can be dropped (a guest,
+	// hostile, downed or dead); "" when drops are allowed.
+	NoDrop string
 }
 
 // Use is what the Gear tab's Eat button does with a pack entry (GEAR-005).
@@ -39,6 +42,7 @@ const (
 type Pack struct {
 	Grams int // the stack's mass
 	Use   Use
+	Why   string // why Eat is refused for this entry ("" allowed)
 }
 
 // Policy is one apparel policy as the Assign window lists it (game/outfit,
