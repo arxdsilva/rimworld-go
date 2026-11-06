@@ -42,11 +42,11 @@ For every item:
 8.  Update mod/content definitions if the feature is data-driven.
 9.  If the item includes sprites, icons, UI chrome, renderer
     presentation, or asset files, follow
-    `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` via
+    `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` via
     `rimworld-go-art-assets` and update matching ART wave checkboxes
     there.
 10. If the item is player-observable as a named screen, window, overlay,
-    or HUD layout, follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` via
+    or HUD layout, follow `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` via
     `rimworld-go-ui-screens` and update matching screen-wave checkboxes
     there.
 11. Tick the item only after its acceptance criteria pass.
@@ -492,7 +492,7 @@ This is the heart of autonomous colony behavior.
     -   Items can take damage.
     -   Outdoor/unroofed or unsuitable storage can cause deterioration
         where applicable.
--   [x] **Item forbidden state** (SIM-028: `Stack.Forbidden`; haul, eat, equip, bills, refuel, troughs and burial skip it; Forbid/Allow area tools, item toggle, F key; follow-ups: stacks forbidden mid-haul are not interrupted; STK-AL (`game/allow`, `.cursor/ALLOW_GAP_ANALYSIS.md`): bodies, weapons and a thief's haul dropped at a death start forbidden outside the home area (any faction), animal carcasses too unless a hunter or predator takes the kill, map loot (ruins, vaults, caskets) starts forbidden, an order (eat, haul, equip/wear) on a forbidden item allows it, a binge ignores forbidding)
+-   [x] **Item forbidden state** (SIM-028: `Stack.Forbidden`; haul, eat, equip, bills, refuel, troughs and burial skip it; Forbid/Allow area tools, item toggle, F key; follow-ups: stacks forbidden mid-haul are not interrupted; STK-AL (`game/allow`, `.agents/gaps/ALLOW_GAP_ANALYSIS.md`): bodies, weapons and a thief's haul dropped at a death start forbidden outside the home area (any faction), animal carcasses too unless a hunter or predator takes the kill, map loot (ruins, vaults, caskets) starts forbidden, an order (eat, haul, equip/wear) on a forbidden item allows it, a binge ignores forbidding)
     -   Player can forbid/unforbid items.
     -   Autonomous hauling/use ignores forbidden targets unless
         explicitly ordered where appropriate.
@@ -508,7 +508,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.3 Stockpile zones
 
--   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (STK-ST vanilla parity: corpses and chunks, rotting ones too, Normal priority, own icon; `.cursor/STORAGE_GAP_ANALYSIS.md`), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
+-   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (STK-ST vanilla parity: corpses and chunks, rotting ones too, Normal priority, own icon; `.agents/gaps/STORAGE_GAP_ANALYSIS.md`), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
     -   Paint storage cells.
 -   [x] **Storage filters** (PRD-4 then STO-2: `domain/building/zone/filter.go` tree to depth 3 with human corpses, bones, body parts and unfinished categories; `FilterRoot` allow all/clear all; 10 special toggles in `special.go` (fresh, non-deadman's apparel, smeltable, burnable, grave colonist/stranger, rotten, tainted and others) plus HP and quality ranges; vanilla defaults for new stockpiles (no corpses, bones, chunks or rotten; dumps take corpses and chunks), old zones keep their switches; copy and paste, names; stockpiles and shelves)
     -   Category tree.
@@ -525,7 +525,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Hopper and nutrient paste dispenser** (STO-2: `game/store`; dispenser 0.3 nutrition per 0.9 meal, up to 13 hoppers, 200 W, research, paste thought -4; hoppers hold one 75 raw-food stack (wiki; STK-ST `zone.HopperStack`) at Important and refill below half (original); FOOD-4: haulers and cooks fill hoppers through the `FillHopper` job, wardens and doctors fetch paste for patients and prisoners; missing: none known, kept partial for the dispenser's original hopper numbers)
 -   [x] **Graves and sarcophagi as storage** (STO-2: corpse filters and priority; sarcophagus holds colonists only)
 -   [x] **Per-building storage** (NST: 27 pieces in the Architect's Storage category, each with its own size, stacks per cell and item filter; stored items are drawn on them, and the display case and pedestal can be admired)
--   [x] **Stack limits** (STO-2 wiki limits, then STK-ST by user decision: every stackable kind stacks to 1000 per tile; weapons, apparel, belts, corpses, implants, organs and stone chunks one per stack; a hopper keeps one 75 raw-food stack (wiki); haulers top up any room; `.cursor/STORAGE_GAP_ANALYSIS.md`)
+-   [x] **Stack limits** (STO-2 wiki limits, then STK-ST by user decision: every stackable kind stacks to 1000 per tile; weapons, apparel, belts, corpses, implants, organs and stone chunks one per stack; a hopper keeps one 75 raw-food stack (wiki); haulers top up any room; `.agents/gaps/STORAGE_GAP_ANALYSIS.md`)
 
 ## 6.4 Hauling
 
@@ -711,7 +711,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
     -   Mature plants generate harvest work.
     -   Skill can affect yield/failure.
--   [x] **Fish tanks** (FISH: not vanilla, built from vanilla parts; a hydroponics-sized powered tank behind the Aquaculture research, three stocks, feed hauled like fuel, stock and net work on the Animals skill, raw fish as meat. `.cursor/FISH_TANK_PLAN.md` §3)
+-   [x] **Fish tanks** (FISH: not vanilla, built from vanilla parts; a hydroponics-sized powered tank behind the Aquaculture research, three stocks, feed hauled like fuel, stock and net work on the Animals skill, raw fish as meat. `.agents/handoffs/_plans/FISH_TANK_PLAN.md` §3)
 -   [x] **Wild plants** (seeded generation scatters trees and berry bushes on fertile ground; PLAY-010 SIM-038: per-biome bramble thicket (slows walking), ground moss, desert rosette, ball cactus, elephant ear, fire lily, dandelions)
     -   Map generation creates harvestable/non-harvestable vegetation.
 
@@ -1689,7 +1689,7 @@ have prerequisites, and technologies unlock buildings/gear.
 
 ## 21.1 Research definitions
 
--   [x] **Research project** (RSCH-1: 54 projects at wiki base costs, tech levels, bench tiers (simple, hi-tech, hi-tech + multi-analyzer) and drawn plus hidden prerequisites, mapped onto our content; the tech-level cost multiplier (a tribe pays 1.5x Medieval, 2x Industrial+); `.cursor/RESEARCH_GAP_ANALYSIS.md` §4)
+-   [x] **Research project** (RSCH-1: 54 projects at wiki base costs, tech levels, bench tiers (simple, hi-tech, hi-tech + multi-analyzer) and drawn plus hidden prerequisites, mapped onto our content; the tech-level cost multiplier (a tribe pays 1.5x Medieval, 2x Industrial+); `.agents/gaps/RESEARCH_GAP_ANALYSIS.md` §4)
     -   Cost.
     -   prerequisites.
     -   tech level.
@@ -2462,7 +2462,7 @@ the player-facing system.
 
 ## 34.1 Architect/build menu
 
-STK-AG: every core vanilla item has a card in its vanilla category (`.cursor/ARCHITECT_GAP_ANALYSIS.md`); missing ones are greyed placeholders.
+STK-AG: every core vanilla item has a card in its vanilla category (`.agents/gaps/ARCHITECT_GAP_ANALYSIS.md`); missing ones are greyed placeholders.
 
 -   [x] **Orders** (18 of 18; AX-1: Uninstall into a crated building and Reinstall, trees-only Chop wood, Slaughter, Claim, Strip, Open)
 -   [x] **Zone/area** (15 of 15; AX-1: Delete zone and the two roof-area clear tools)

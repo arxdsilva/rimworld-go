@@ -1,6 +1,6 @@
 # PRD-0: the craft package and the quality domain
 
-Date: 2026-10-29. Programme BED/PRD/DEF (`.cursor/PRODUCTION_GAP_ANALYSIS.md`). Wave A, committed with BED-0 and DEF-0: the three extractions share `game.go`/`tick.go`/`save.go` wiring.
+Date: 2026-10-29. Programme BED/PRD/DEF (`.agents/gaps/PRODUCTION_GAP_ANALYSIS.md`). Wave A, committed with BED-0 and DEF-0: the three extractions share `game.go`/`tick.go`/`save.go` wiring.
 
 ## What changed
 - **`internal/application/game/craft`** (X1, opus) now holds bills (`Bills`), bench work (`Shop`), drying racks (`Drying`) and the tool-cabinet bonus (`Cabinets`). Its five roles (Benches, Stock, Output, Workers, Crafters) are value-only, at most 8 methods each, and adapted in `game/craft_host.go`. `production.go` and `drying.go` are gone.

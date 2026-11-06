@@ -1,6 +1,6 @@
 # What works today
 
-The full feature list, grouped by area. Back to the [README](../README.md). The backlogs are in the [vanilla feature checklist](../.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md) and the [UI/UX checklist](../.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md).
+The full feature list, grouped by area. Back to the [README](../README.md). The backlogs are in the [vanilla feature checklist](../.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md) and the [UI/UX checklist](../.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md).
 
 - [Building and construction](#building-and-construction)
 - [Zones, areas and storage](#zones-areas-and-storage)

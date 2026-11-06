@@ -1,7 +1,7 @@
 # mind package
 
 ## Package Purpose
-Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds), the minor breaks (sad wander, food binge, hide in room), the breaks aimed at others (insulting spree, targeted insults, berserk, murderous rage), the catatonic collapse, and the course of a social fight (its brawl job: closing in and the punches). A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by SIM-066; the gap backlog is `.cursor/PAWN_INTERACTION_GAP_ANALYSIS.md`.
+Mental breaks: the hourly break check (wiki tiers, MTB, trait-shifted thresholds), the minor breaks (sad wander, food binge, hide in room), the breaks aimed at others (insulting spree, targeted insults, berserk, murderous rage), the catatonic collapse, and the course of a social fight (its brawl job: closing in and the punches). A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by SIM-066; the gap backlog is `.agents/gaps/PAWN_INTERACTION_GAP_ANALYSIS.md`.
 
 ## Owned Concepts
 - `Mind` (mind.go): built by `New(Host)`; `Tick(id, j)` (the AI phase, standing colonists), `Downed(id)` (the AI phase's downed branch and every blow), `End(id)` (an arrest), `Force(id, k)` (dev tools), `Target(id)` (read model), `Thresholds(id)`, `Export`/`Import`, `StartFight`/`EndFight`/`InFight`/`Brawl` (fight.go; `Brawl` runs the brawl job in the game's job phase).

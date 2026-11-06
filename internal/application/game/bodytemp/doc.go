@@ -5,5 +5,5 @@
 // warmth-seeking spot search is thermo.Spot (TEMP-6). The formulas, stages and frostbite
 // rules are the domain's (domain/pawn/exposure, domain/pawn/body
 // cond_frostbite.go); the game reaches in through consumer-owned roles
-// (.cursor/SOLID_GO.md §7, §10).
+// (.agents/specs/SOLID_GO.md §7, §10).
 package bodytemp

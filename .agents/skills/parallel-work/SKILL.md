@@ -1,6 +1,6 @@
 ---
 name: parallel-work
-description: Split a multi-area rimworld-go task across parallel subagents per .cursor/PARALLEL_WORK.md — contract first, disjoint file ownership, lead-only shared config, phased integration. Use for any task touching two or more of domain, simulation, ports, renderer/UI, outbound adapters, cmd, art pipeline, content or docs, or whenever the user asks to work in parallel.
+description: Split a multi-area rimworld-go task across parallel subagents per .agents/specs/PARALLEL_WORK.md — contract first, disjoint file ownership, lead-only shared config, phased integration. Use for any task touching two or more of domain, simulation, ports, renderer/UI, outbound adapters, cmd, art pipeline, content or docs, or whenever the user asks to work in parallel.
 ---
 
 # Parallel work (lead checklist)
@@ -50,8 +50,8 @@ Lead after the wave: <gates>, <budgets>, <commit message / handoff>.
 Model: <haiku|sonnet|opus> — <one-line reason>   (set the Agent `model` parameter to match)
 
 You are agent <ID> on the rimworld-go repo (/Users/arxdsilva/go/src/github.com/insurgencygames/rimworld-go). Read first (authoritative):
-- <plan file §…>, AGENTS.md, <nearest package AGENTS.md>, .cursor/PARALLEL_WORK.md
-- <named .cursor spec sections>, skill(s) .cursor/skills/<rimworld-go-*>/SKILL.md
+- <plan file §…>, AGENTS.md, <nearest package AGENTS.md>, .agents/specs/PARALLEL_WORK.md
+- <named .cursor spec sections>, skill(s) .agents/skills/<rimworld-go-*>/SKILL.md
 
 ## Contract (pasted in full)
 <C-sections this agent follows>

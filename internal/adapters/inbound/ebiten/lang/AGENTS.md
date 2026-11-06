@@ -1,7 +1,7 @@
 # lang package
 
 ## Package Purpose
-The client's translation layer (OPT-001, `.cursor/OPTIONS_GAP_ANALYSIS.md` "Translation layer"). Keys are the English source strings, so English needs no catalog and draws its source byte for byte.
+The client's translation layer (OPT-001, `.agents/gaps/OPTIONS_GAP_ANALYSIS.md` "Translation layer"). Keys are the English source strings, so English needs no catalog and draws its source byte for byte.
 
 ## Owned Concepts
 - `Tr` (`T(src)`), `English`, `Tf(tr, src, args...)`, `Msg(tr, msgfmt.Text, text)` (a simulation message or letter: `text` when it has no format, else the format translated and joined with each argument translated by exact key), `Live` (the shell's current catalog behind `ports.Texts`).

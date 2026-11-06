@@ -11,11 +11,11 @@ Quality pass on PLAY-001 through SURV-001. Headless tests compile and pass. Dupl
 
 - `internal/application/game/{tick.go,play_test.go}`
 - `internal/adapters/inbound/ebiten/hud_test.go`
-- `.cursor/handoffs/PLAY-001-path-jobs-names.md`
-- `.cursor/handoffs/PLAY-002-eat-sleep-needs.md` (kept; deleted `PLAY-002-needs-eat-sleep.md`)
-- `.cursor/handoffs/PLAY-003-stockpile-haul-architect.md` (kept; deleted `PLAY-003-first-playable.md`)
-- `.cursor/handoffs/SURV-001-harvest-starvation.md` (kept; deleted `SURV-001-harvest-starve.md`)
-- `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (Harvest note)
+- `.agents/handoffs/PLAY-001-path-jobs-names.md`
+- `.agents/handoffs/PLAY-002-eat-sleep-needs.md` (kept; deleted `PLAY-002-needs-eat-sleep.md`)
+- `.agents/handoffs/PLAY-003-stockpile-haul-architect.md` (kept; deleted `PLAY-003-first-playable.md`)
+- `.agents/handoffs/SURV-001-harvest-starvation.md` (kept; deleted `SURV-001-harvest-starve.md`)
+- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (Harvest note)
 
 ## Public Contracts Changed
 

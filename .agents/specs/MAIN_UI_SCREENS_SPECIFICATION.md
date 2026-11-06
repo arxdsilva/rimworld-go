@@ -19,8 +19,8 @@
 > appropriate, and visual identity.
 >
 > **Agent loading:** This file is *not* default context. Route via
-> `.cursor/skills/rimworld-go-router/SKILL.md` and follow
-> `.cursor/skills/rimworld-go-ui-screens/SKILL.md`. Load §0, §58, §59, and
+> `.agents/skills/rimworld-go-router/SKILL.md` and follow
+> `.agents/skills/rimworld-go-ui-screens/SKILL.md`. Load §0, §58, §59, and
 > only the named screen section for the task. Tick Wave UI / architecture
 > / DoD checkboxes in this file using `[x]` / `[-]` / `[!]`.
 
@@ -516,7 +516,7 @@ Contents; - Power; - Stats.
 
 ## Colonist card
 
-With one pawn or one animal selected, the card replaces the pane's body (RHUD, `.cursor/RIMHUD_GAP_ANALYSIS.md`). It is a tree of value widgets the player can edit; groups, buildings, plants, items, zones and cell info keep the plain pane.
+With one pawn or one animal selected, the card replaces the pane's body (RHUD, `.agents/gaps/RIMHUD_GAP_ANALYSIS.md`). It is a tree of value widgets the player can edit; groups, buildings, plants, items, zones and cell info keep the plain pane.
 
 -   [x] on by default; Options > Accessibility has the switch, and off draws the plain pane;
 -   [x] docked in the pane, or floating over the map at a chosen anchor; the docked card never scrolls: pane and tabs take at most 30 % of the screen's height (DOS-10: the sizes are set for a 720-tall screen and `sheet.DockedFor` scales them with it, 168 + 24 px at 720, 252 + 24 at 1080; the built-in docked tree is two lines, a rule and a four-column strip of bars, selectors and skills);
@@ -774,7 +774,7 @@ Manage and inspect equipment, apparel and carried items.
 -   inventory;
 -   carrying capacity/mass where applicable.
 
-GEAR-* (`.cursor/GEAR_GAP_ANALYSIS.md`): summary lines first (mass
+GEAR-* (`.agents/gaps/GEAR_GAP_ANALYSIS.md`): summary lines first (mass
 carried against carrying capacity, comfortable range, overall armour
 Sharp / Blunt / Heat, move speed), then Equipment, Apparel in layer
 order, and the pack. Each row: icon, label with quality, HP %, mass,
@@ -805,7 +805,7 @@ Primary interface for changing the colony's physical environment.
 ## Categories
 
 STK-AG: all twelve vanilla categories are always shown, in the vanilla
-order, as six rows of two buttons (`.cursor/ARCHITECT_GAP_ANALYSIS.md`
+order, as six rows of two buttons (`.agents/gaps/ARCHITECT_GAP_ANALYSIS.md`
 lists every core item and its card):
 
 -   Orders;
@@ -1788,7 +1788,7 @@ Settings live in `internal/platform/config` and are saved to
 `<user config dir>/rimworld-go/settings.json` (UI-012). They change
 presentation only, never the simulation; captures ignore them.
 
-OPT-* (`.cursor/OPTIONS_GAP_ANALYSIS.md`) added the General, Interface
+OPT-* (`.agents/gaps/OPTIONS_GAP_ANALYSIS.md`) added the General, Interface
 and Developer tabs below.
 
 ## Tabs
@@ -2284,7 +2284,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] zones (stockpile paint food+wood; no grow-zone/home/allowed)
 -   [ ] stockpile settings
 -   [x] growing settings (PLAY-020)
--   [-] Work (overlay from snapshot; every live work type cycles 1-4 or off, columns left to right in the order a colonist breaks ties: `.cursor/WORK_PRIORITIES_GAP_ANALYSIS.md`; not virtualized)
+-   [-] Work (overlay from snapshot; every live work type cycles 1-4 or off, columns left to right in the order a colonist breaks ties: `.agents/gaps/WORK_PRIORITIES_GAP_ANALYSIS.md`; not virtualized)
 -   [ ] Schedule
 -   [-] Area Manager (SIM-046: create, rename, paint, assign; no delete or overlay)
 

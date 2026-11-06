@@ -23,7 +23,7 @@ validator clean. The renderer still draws the vendor pack.
 - `assets/generated/**`, `assets/metadata/**` (generated)
 - `assets/AGENTS.md`, `Makefile` (art, art-check, art-preview targets)
 - `tools/blender-mcp/` (Blender MCP add-on copy + Claude desktop installer)
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` (Wave 0/1/2/3, §23, §33, §34 boxes)
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` (Wave 0/1/2/3, §23, §33, §34 boxes)
 
 ## Public Contracts Changed
 

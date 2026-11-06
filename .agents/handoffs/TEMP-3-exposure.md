@@ -1,6 +1,6 @@
 # TEMP-3: pawn and animal exposure (agent X)
 
-Wiki fidelity under ENG-003 (temperature). Gap rows: `.cursor/TEMPERATURE_GAP_ANALYSIS.md` §3.4, §3.5.
+Wiki fidelity under ENG-003 (temperature). Gap rows: `.agents/gaps/TEMPERATURE_GAP_ANALYSIS.md` §3.4, §3.5.
 
 ## What changed
 - `domain/pawn/exposure`: base range 16-26 C; fixed-point severity (`Full` = 1.0); `HypoGain` max(0.00075, (d-10) x 0.0000645), `HeatGain` 0.0000645 x curve (1:1 to 25, 50→40, 100→60, 400→100), floor 0.000375; `Recovery` max(0.0015, min(0.015, 0.027 x sev)); `Step` runs 60-tick sub-steps. Hypothermia recovers at Min or warmer, heatstroke at Max or cooler, both hold in the margin. `Bands.Thought`: the 4-rung ladders, one rung per 10 C past the range (original). `FrostbiteChance` 500-4500 ppm per 60 ticks from 37 % to 100 % (original).

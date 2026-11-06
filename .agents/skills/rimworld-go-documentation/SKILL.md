@@ -8,19 +8,18 @@ description: Create or update rimworld-go ADRs, system design documents, package
 ## Canonical ownership
 
 ```text
-.cursor/MASTER_SPEC.md              product/game scope
-.cursor/HEXAGONAL_ARCHITECTURE.md   architecture/dependency model
-.cursor/GO_BEST_PRACTICES.md        Go engineering standard
-.cursor/AI_TOKEN_OPTIMIZATION.md    context/token policy
-.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md   visual production / asset pipeline
-.cursor/MAIN_UI_SCREENS_SPECIFICATION.md      per-screen layout / navigation / commands
-.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md   ordered gameplay feature backlog
-.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md             ordered UI/UX backlog
-.cursor/rules/*                     Cursor always-on recognition
+.agents/specs/MASTER_SPEC.md              product/game scope
+.agents/specs/HEXAGONAL_ARCHITECTURE.md   architecture/dependency model
+.agents/specs/GO_BEST_PRACTICES.md        Go engineering standard
+.agents/specs/AI_TOKEN_OPTIMIZATION.md    context/token policy
+.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md   visual production / asset pipeline
+.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md      per-screen layout / navigation / commands
+.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md   ordered gameplay feature backlog
+.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md             ordered UI/UX backlog
 docs/systems/*              subsystem behavior
 docs/adr/*                  cross-cutting decisions
 package AGENTS.md           package-local constraints
-.cursor/handoffs/*                  completed-task deltas
+.agents/handoffs/*                  completed-task deltas
 ```
 
 Do not copy long canonical sections into multiple files.

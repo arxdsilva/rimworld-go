@@ -2,7 +2,7 @@
 // (FOOD-2): growing light from the sun, sun lamps and plain lamps, the
 // blight's strike and spread, wild plants sprouting back to the biome's
 // density, the ripening estimate and the plant death notices. It is a
-// consumer sub-package of internal/application/game (.cursor/SOLID_GO.md
+// consumer sub-package of internal/application/game (.agents/specs/SOLID_GO.md
 // §10): pure functions over the domain tables, nothing from the game;
 // chances come from plant.Roll, never the simulation's RNG.
 package farm

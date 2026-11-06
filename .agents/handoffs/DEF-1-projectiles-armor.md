@@ -1,6 +1,6 @@
 # DEF-1: projectiles, burst, armor, combat overlays
 
-Date: 2026-10-29. Wave B (committed with PRD-1 and BED-1). Backlog `.cursor/DEFENCE_GAP_ANALYSIS.md`.
+Date: 2026-10-29. Wave B (committed with PRD-1 and BED-1). Backlog `.agents/gaps/DEFENCE_GAP_ANALYSIS.md`.
 
 ## What changed
 - **Shots** (C1, opus; `combat/shot.go`, `strike.go`, domain `projectile`, `attack`, `armor`):

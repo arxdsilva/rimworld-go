@@ -39,7 +39,7 @@ func (g *Game) Breaking(id entity.EntityID) string { return g.breaks[id].kind.St
 func (g *Game) ForceBreak(id entity.EntityID, k mentalbreak.Kind) { g.viewGen++; g.mind.Force(id, k) }
 
 // mindHost implements mind.Host (mind/deps.go) over the game: one small
-// adapter per role, so no method is added to Game (.cursor/SOLID_GO.md §10).
+// adapter per role, so no method is added to Game (.agents/specs/SOLID_GO.md §10).
 type mindHost struct {
 	mindPawns
 	mindBreaks

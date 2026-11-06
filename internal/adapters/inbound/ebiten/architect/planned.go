@@ -1,6 +1,6 @@
 package architect
 
-// Placeholder cards (STK-AG, .cursor/ARCHITECT_GAP_ANALYSIS.md): every
+// Placeholder cards (STK-AG, .agents/gaps/ARCHITECT_GAP_ANALYSIS.md): every
 // core vanilla Architect item this game does not have yet sits in its
 // vanilla category as a greyed card. It cannot be armed, placed or
 // dragged, so it never emits a command; its tooltip says PlannedReason

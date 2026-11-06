@@ -9,7 +9,7 @@
 // burning generators, fires, steam vents and warm bodies.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. The
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. The
 // simulation comes in through the consumer-owned roles in deps.go, which
 // the game package implements with small adapter types (thermo_host.go).
 // The game keeps one *Model and calls Step on the climate phase and Remap

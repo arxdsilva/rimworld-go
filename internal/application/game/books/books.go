@@ -8,7 +8,7 @@
 // zone.KindBookcase).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package; the roles
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package; the roles
 // in deps.go are its only way in. It keeps no clock; its only dice are
 // the game's (Colony.Roll), drawn only when a book can be picked, so a
 // colony without books draws nothing. Everything it keeps is derived

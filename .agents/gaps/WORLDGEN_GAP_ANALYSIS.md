@@ -1,6 +1,6 @@
 # World generation and globe gap analysis (WG-0..WG-3)
 
-Scope: the Create world and Select starting site screens (the planet, its biomes, rivers, roads, named features, tile inspector, search, filters, units, seeds) and how the globe is drawn, compared with core vanilla RimWorld 1.5 (no DLC). Load only for WG-* tasks. Phase handoffs go in `.cursor/handoffs/WG-N-*.md`. Sister document for what happens after the globe: `MULTIMAP_GAP_ANALYSIS.md`. Sources: rimworldwiki.com pages Biomes, World, World generation, Caravan, Faction base, Time zone (2026-11-02). Names and prose here are ours; the wiki fixes only numbers and which features exist.
+Scope: the Create world and Select starting site screens (the planet, its biomes, rivers, roads, named features, tile inspector, search, filters, units, seeds) and how the globe is drawn, compared with core vanilla RimWorld 1.5 (no DLC). Load only for WG-* tasks. Phase handoffs go in `.agents/handoffs/WG-N-*.md`. Sister document for what happens after the globe: `MULTIMAP_GAP_ANALYSIS.md`. Sources: rimworldwiki.com pages Biomes, World, World generation, Caravan, Faction base, Time zone (2026-11-02). Names and prose here are ours; the wiki fixes only numbers and which features exist.
 
 ## Decisions
 

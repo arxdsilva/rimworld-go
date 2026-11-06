@@ -5,7 +5,7 @@ description: Create, change, or review rimworld-go sprites, icons, UI chrome, pa
 
 # Art Direction & Asset Pipeline
 
-Canonical spec: `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`.
+Canonical spec: `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`.
 
 Do not paste that file into prompts. Read it by section. Do not load it for headless simulation-only work with no visual output.
 
@@ -28,7 +28,7 @@ Always:
 
 - root `AGENTS.md`;
 - this skill;
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` §1 (definition of done), §2 (principles), §35 (acceptance).
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` §1 (definition of done), §2 (principles), §35 (acceptance).
 
 Then only the sections that match the asset family:
 
@@ -50,8 +50,8 @@ Then only the sections that match the asset family:
 Also load:
 
 - `assets/AGENTS.md` when that package exists;
-- matching item(s) in `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` (rendering/content) or `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (UI chrome/icons);
-- matching named screen in `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` when chrome/icons belong to a player-facing screen;
+- matching item(s) in `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` (rendering/content) or `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (UI chrome/icons);
+- matching named screen in `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` when chrome/icons belong to a player-facing screen;
 - existing templates, palettes, and neighboring assets in the same family.
 
 ## Clean-room
@@ -87,7 +87,7 @@ gameplay requirement
 6. Write sidecar metadata (footprint, pivot, attachments, tint regions, export).
 7. Validate with `assettool` / `contentlint` when those tools exist.
 8. Inspect in the real renderer at normal gameplay zoom, on light and dark terrain.
-9. Update matching ART wave checkboxes in `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` (`[x]` / `[-]` / `[!]`).
+9. Update matching ART wave checkboxes in `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` (`[x]` / `[-]` / `[!]`).
 10. If the work also maps to a vanilla or UI checklist item, update that checkbox in the same change.
 11. Delete every asset, alias, metadata file and loader the change leaves unused (spec §25 housekeeping); `make art-check` must report no orphans.
 12. Plants and grass: no contour (`outline_width=0`, spec §9).

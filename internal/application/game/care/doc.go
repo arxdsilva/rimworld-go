@@ -3,7 +3,7 @@
 // and the orders a player gives one pawn about another (SIM-061…065).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. Everything
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. Everything
 // it needs from the simulation comes through the consumer-owned roles in
 // deps.go, which the game package implements with small adapter types in
 // care_host.go. The game package builds one *Care and keeps one field.

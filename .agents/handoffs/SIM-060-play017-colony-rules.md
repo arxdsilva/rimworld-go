@@ -1,6 +1,6 @@
 # Task Handoff
 
-Task ID: SIM-060 (PLAY-017 §1, §5, §7, §8, §10, §11; plan `.cursor/PLAY017_PLAN.md`)
+Task ID: SIM-060 (PLAY-017 §1, §5, §7, §8, §10, §11; plan `.agents/handoffs/_plans/PLAY017_PLAN.md`)
 Status: complete
 
 ## Summary

@@ -1,6 +1,6 @@
 # TEMP-1: room thermodynamics (agent R)
 
-Wiki fidelity under ENG-003 (temperature). Gap rows: `.cursor/TEMPERATURE_GAP_ANALYSIS.md` §3.2, §3.3.
+Wiki fidelity under ENG-003 (temperature). Gap rows: `.agents/gaps/TEMPERATURE_GAP_ANALYSIS.md` §3.2, §3.3.
 
 ## What changed
 - New `application/game/thermo` behind a host in `game/thermo_host.go` (`power_heat.go` moved there with `git mv`). The equalisation math is in `domain/world/temperature/equalise.go`.

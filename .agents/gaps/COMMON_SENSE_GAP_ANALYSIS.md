@@ -2,7 +2,7 @@
 
 Scope: every behaviour in the 1.6 build of the Common Sense mod for RimWorld, compared with our game at commit `359f99d0f`. Load it for CSE work only. Sources: the mod's C# files, its 1.6 patch and def XML, its settings strings and its workshop description, read on 2026-11-03 to learn what it does. The mod's repository has no license: no code, text or name of it enters this repo; every name below (`Habits`, `sense`, `Tidy`, `Pack`) and all prose is ours. Mod setting keys appear only in the source column of the tables, so a reader can find the behaviour again.
 
-Paths are relative to `internal/` unless they start with `.cursor/`. `game/` means `internal/application/game/`. Line numbers are from the commit above; other agents were working in the same checkout, so re-check them before editing.
+Paths are relative to `internal/` unless they start with `.agents/`. `game/` means `internal/application/game/`. Line numbers are from the commit above; other agents were working in the same checkout, so re-check them before editing.
 
 ## Decisions
 
@@ -212,7 +212,7 @@ The shared design, `sense.Tidy`, is in CSE-017; the rows after it are its caller
 
 ## Size check
 
-Checked against `internal/arch/solid_budget.txt` and `.cursor/SOLID_GO.md` §8, §10:
+Checked against `internal/arch/solid_budget.txt` and `.agents/specs/SOLID_GO.md` §8, §10:
 
 | Line | Budget | Consequence |
 |---|---|---|
@@ -228,7 +228,7 @@ Checked against `internal/arch/solid_budget.txt` and `.cursor/SOLID_GO.md` §8, 
 
 ### Parallel workers
 
-Rules: `.cursor/PARALLEL_WORK.md`. Everyone works on `main` in the shared checkout, with disjoint files. Hooks in shared files are added by WP0 as inert calls, so feature agents never edit `game/tick.go`, `game/save.go` or `command.go`. Models are a suggestion; the lead decides.
+Rules: `.agents/specs/PARALLEL_WORK.md`. Everyone works on `main` in the shared checkout, with disjoint files. Hooks in shared files are added by WP0 as inert calls, so feature agents never edit `game/tick.go`, `game/save.go` or `command.go`. Models are a suggestion; the lead decides.
 
 | Wave | Packages | Gate |
 |---|---|---|
@@ -395,7 +395,7 @@ Shared-file notes: `craft/view.go` is touched by WP6 and WP9; the lead gives it 
 1. **Pack capacity.** 40 kg times Manipulation is original tuning. RimWorld's own figure would need ENG-003 extended by the user; this doc does not assume it.
 2. **CSE-002 balance.** Colonists at full recreation will work in Recreation hours. It matches the mod's intent but changes daily rhythm the most. Default on as the brief says; the lead may want a playtest.
 3. **CSE-010 preset.** Adding `MoodLift` is a new player-facing policy to give the mod's rule something to act on. If unwanted, the row stays `missing` with no gate.
-4. **Doc index and handoff.** `.cursor/DOCUMENT_INDEX.md` and `.cursor/handoffs/` were outside this task's one file; the lead adds the row and the handoff.
+4. **Doc index and handoff.** `.agents/README.md` and `.agents/handoffs/` were outside this task's one file; the lead adds the row and the handoff.
 
 ## Not verified
 

@@ -1,11 +1,11 @@
 // Package orders is the Architect's remaining vanilla orders (AX-1,
-// .cursor/ARCHITECT_GAP_ANALYSIS.md Orders): uninstall a building into a
+// .agents/gaps/ARCHITECT_GAP_ANALYSIS.md Orders): uninstall a building into a
 // crate and reinstall it, strip downed people, open graves and caskets,
 // claim abandoned buildings, and the pure rules of chop wood, slaughter
 // and remove floor.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package; the roles
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package; the roles
 // in deps.go are its only way in. It keeps no clock and no dice, and walks
 // its marks in ascending id order, so it is deterministic.
 package orders

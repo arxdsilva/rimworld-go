@@ -84,7 +84,7 @@ The user wants the full vanilla-style setup experience, from **New Game** to the
 | D16 | Names | Storytellers **Orla Vane** "the Steady Hand", **Bram Holloway** "the Hearthkeeper", **Kestrel Quay** "the Gambler". Difficulties **Wanderer, Gentle, Settled, Seasoned, Grim, Merciless** + Custom. Scenarios **Broken Hull, Ember Clan, Gilded Expedition, Bare Hands** |
 
 ### 0.4 Binding rules
-- **Originals only.** Never copy RimWorld names, prose, portraits, faction names, scenario text, storyteller likenesses, balance tables or layouts. Sources: AGENTS.md; `.cursor/MASTER_SPEC.md` L10, L1223, §86; ART spec clean-room §1; UI checklist L1434; vanilla checklist L1830, L1868, L239-240.
+- **Originals only.** Never copy RimWorld names, prose, portraits, faction names, scenario text, storyteller likenesses, balance tables or layouts. Sources: AGENTS.md; `.agents/specs/MASTER_SPEC.md` L10, L1223, §86; ART spec clean-room §1; UI checklist L1434; vanilla checklist L1830, L1868, L239-240.
 - **Structure** follows the user's reference flow. **Content** is ours.
 - **Architecture** (AGENTS.md):
   - Domain stays headless and deterministic: no global RNG and no wall-clock time in gameplay; all randomness comes from `pkg/randx` with a per-package salt.
@@ -99,7 +99,7 @@ The user wants the full vanilla-style setup experience, from **New Game** to the
   - Golden state hashes are pinned before engine work. An intended behaviour change re-pins them, with the reason recorded in the handoff.
 - **Checklists and handoffs** (AGENTS.md):
   - Every satisfied item in the UI/UX checklist, the vanilla checklist, the ART spec and the screens spec gets `[x]`/`[-]`/`[!]` in the same change.
-  - Every scoped task leaves a handoff in `.cursor/handoffs/`.
+  - Every scoped task leaves a handoff in `.agents/handoffs/`.
   - Player-observable behaviour ships with its UI.
 - **Git:** work on `main`; commit per stage area; never push.
 
@@ -1881,7 +1881,7 @@ Water ambience uses the existing ambience director: on-screen water fraction →
 
 ---
 
-## 8. Execution (`.cursor/PARALLEL_WORK.md`, skill `parallel-work`)
+## 8. Execution (`.agents/specs/PARALLEL_WORK.md`, skill `parallel-work`)
 
 ### 8.1 Phase 0: Lead contract (one commit series, before any agent)
 1. **Dependencies:** `go get github.com/go-text/typesetting@latest` (pulled by text/v2) and `go mod tidy`. Add the font files plus `OFL.txt` under `ebiten/fontdata/`.

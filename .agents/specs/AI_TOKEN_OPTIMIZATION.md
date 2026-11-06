@@ -158,11 +158,11 @@ It should link to canonical docs rather than duplicate them.
 Example:
 
 ```text
-Architecture: .cursor/HEXAGONAL_ARCHITECTURE.md
-Go rules: .cursor/GO_BEST_PRACTICES.md
-Token rules: .cursor/AI_TOKEN_OPTIMIZATION.md
-Art/assets: .cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md
-Screens: .cursor/MAIN_UI_SCREENS_SPECIFICATION.md
+Architecture: .agents/specs/HEXAGONAL_ARCHITECTURE.md
+Go rules: .agents/specs/GO_BEST_PRACTICES.md
+Token rules: .agents/specs/AI_TOKEN_OPTIMIZATION.md
+Art/assets: .agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md
+Screens: .agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md
 ```
 
 ---
@@ -245,7 +245,7 @@ This can save thousands of tokens.
 
 # 10. Context Index
 
-> **Not built:** `.cursor/CONTEXT_INDEX.md` does not exist. Use `.cursor/DOCUMENT_INDEX.md` and skill `rimworld-go-router`.
+> **Not built:** `.cursor/CONTEXT_INDEX.md` does not exist. Use `.agents/README.md` and skill `rimworld-go-router`.
 
 Create:
 
@@ -730,15 +730,15 @@ Advisory rules in this guide did not hold: most subagent work ran on the lead's 
 
 | Rule | Where | Limit |
 | --- | --- | --- |
-| Long shell views go through ranged Read | `.claude/hooks/read_guard.py` | Over 150 lines per command (`READ_GUARD_MAX_VIEW_LINES`) |
-| Big files are read in ranges | `.claude/hooks/read_guard.py` | Whole-file Read over 500 lines (`READ_GUARD_MIN_LINES`) |
-| `general-purpose` agents name a model | `.claude/hooks/agent_model_guard.py` | Any spawn with no `model` |
+| Long shell views go through ranged Read | `.agents/hooks/read_guard.py` | Over 150 lines per command (`READ_GUARD_MAX_VIEW_LINES`) |
+| Big files are read in ranges | `.agents/hooks/read_guard.py` | Whole-file Read over 500 lines (`READ_GUARD_MIN_LINES`) |
+| `general-purpose` agents name a model | `.agents/hooks/agent_model_guard.py` | Any spawn with no `model` |
 | `Explore` runs on Haiku | `.claude/agents/Explore.md` | Explicit `model` overrides it |
 | Context stays small | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` in `.claude/settings.json` | Auto-compact at 300k |
 
 Small shell views stay allowed on purpose. Through Read they print the same text, so denying them only adds a call, and every call re-reads the whole context. `READ_GUARD=off` disables the read guard.
 
-Measure with `python3 scripts/token_report.py --since <date>`. Before changing a guard rule, run `--last 400 --replay` to see what it would deny, and run `python3 .claude/hooks/test_hooks.py`. The baseline and expected results are in `.cursor/handoffs/TOKEN-001-usage-guards.md`.
+Measure with `python3 scripts/token_report.py --since <date>`. Before changing a guard rule, run `--last 400 --replay` to see what it would deny, and run `python3 .agents/hooks/test_hooks.py`. The baseline and expected results are in `.agents/handoffs/TOKEN-001-usage-guards.md`.
 
 ---
 
@@ -855,7 +855,7 @@ Potential commands:
 ```bash
 go run ./tools/contextpack --task PATH-021
 go run ./tools/repomap
-go run ./tools/handofflint .cursor/handoffs/PATH-021.md
+go run ./tools/handofflint .agents/handoffs/PATH-021.md
 ```
 
 `contextpack` can output exactly the files/summaries an agent should receive.
@@ -910,9 +910,9 @@ Use:
 - named ART_DIRECTION sections plus neighboring reference assets, never the whole art bible plus an atlas dump;
 - named MAIN_UI_SCREENS sections for the screen under work, never the whole 50-screen spec.
 
-For visual tasks, follow `rimworld-go-art-assets` section routing instead of pasting `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` in full.
+For visual tasks, follow `rimworld-go-art-assets` section routing instead of pasting `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` in full.
 
-For screen tasks, follow `rimworld-go-ui-screens` section routing instead of pasting `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` in full.
+For screen tasks, follow `rimworld-go-ui-screens` section routing instead of pasting `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` in full.
 
 ---
 

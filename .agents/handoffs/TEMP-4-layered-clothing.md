@@ -1,6 +1,6 @@
 # TEMP-4: layered clothing (agent A, art by AR)
 
-Wiki fidelity under ENG-003 (temperature). Gap rows: `.cursor/TEMPERATURE_GAP_ANALYSIS.md` §3.6. Art handoff: `TEMP-art-climate-and-clothing.md`.
+Wiki fidelity under ENG-003 (temperature). Gap rows: `.agents/gaps/TEMPERATURE_GAP_ANALYSIS.md` §3.6. Art handoff: `TEMP-art-climate-and-clothing.md`.
 
 ## What changed
 - 8 layer slots (`item.Slot`, `craft.Slots`), including SkinTorso, SkinLegs, Middle and Outer (the old Body slot) from the contract. The jacket is Outer (wiki). Occupancy (`item.Kind.Occupies`): tribalwear takes SkinLegs; plate and marine armour take Middle and Legs. `craft.Outfit.Conflicts` stops layer pairs sharing a region.

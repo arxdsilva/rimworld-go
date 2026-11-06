@@ -1,6 +1,6 @@
 # SIM-062: orders on a pawn (rescue, capture, arrest, prioritize tending)
 
-Date: 2026-10-29. Programme SIM-061…066; backlog `.cursor/PAWN_INTERACTION_GAP_ANALYSIS.md`; previous phase `SIM-061-care-package.md`.
+Date: 2026-10-29. Programme SIM-061…066; backlog `.agents/gaps/PAWN_INTERACTION_GAP_ANALYSIS.md`; previous phase `SIM-061-care-package.md`.
 
 ## What the player gets
 Select a colonist, right-click a pawn. The menu lists, per pawn on the tile:

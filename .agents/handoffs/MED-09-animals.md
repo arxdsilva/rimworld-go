@@ -1,6 +1,6 @@
 # MED-09: animal medicine
 
-Part of the RimWorld-style medical overhaul (`.cursor/MEDICAL_GAP_ANALYSIS.md`).
+Part of the RimWorld-style medical overhaul (`.agents/gaps/MEDICAL_GAP_ANALYSIS.md`).
 
 ## Behaviour
 - **Body adapter** (`game/animal_health.go`): a hurt animal gets the human body model with every wound on one part (Torso).

@@ -551,7 +551,7 @@ Build green; legacy tests untouched.
    - vanilla checklist (map generation items, caves, rivers, roads, ruins, geysers/vents, fog);
    - UI/UX checklist (dev tools, fog);
    - README;
-   - `.cursor/MASTER_SPEC.md` map-generation section pointer.
+   - `.agents/specs/MASTER_SPEC.md` map-generation section pointer.
 7. Commits on `main` per area; no push.
 
 ## Critical files

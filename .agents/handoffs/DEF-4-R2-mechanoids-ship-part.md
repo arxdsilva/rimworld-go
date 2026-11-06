@@ -1,6 +1,6 @@
 # DEF-4 (R2): mechanoids and the crashed ship part
 
-Date: 2026-10-29. Wave E, agent R2. Backlog `.cursor/DEFENCE_GAP_ANALYSIS.md` (mechanoid and ship-part rows). Built on R1a's `game/raid` package; raids, drafted control and the storyteller wiring are in `DEF-4-R1-raids-drafted-control.md`; the shredding recipe is PRD-4's. Contract (CT2): roster rows, `weapon.MechBlades/PulseLance/NeedleCaster`, `construction.ShipPart`, incident `CrashedShipPart`.
+Date: 2026-10-29. Wave E, agent R2. Backlog `.agents/gaps/DEFENCE_GAP_ANALYSIS.md` (mechanoid and ship-part rows). Built on R1a's `game/raid` package; raids, drafted control and the storyteller wiring are in `DEF-4-R1-raids-drafted-control.md`; the shredding recipe is PRD-4's. Contract (CT2): roster rows, `weapon.MechBlades/PulseLance/NeedleCaster`, `construction.ShipPart`, incident `CrashedShipPart`.
 
 ## What changed
 - **Species** (original designs, wiki role stats): Harrow (blade skirmisher, fast), Spindle (sniper), Bulwark (heavy gunner, XL, slow), Quill (skirmisher). Archetype `ArchMech`, behaviour `Mechanoid` (`domain/animal/animal.go`, `mech.go`).

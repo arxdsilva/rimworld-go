@@ -11,9 +11,9 @@ Pawn sprites (and their selection marker) now lerp from the previous tile to the
 
 - `internal/adapters/inbound/ebiten/renderer.go`
 - `internal/adapters/inbound/ebiten/renderer_test.go`
-- `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`
+- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`
 
 ## Public Contracts Changed
 

@@ -1,7 +1,7 @@
 # prison package
 
 ## Package Purpose
-The colony's prisoners: each one's state (interaction mode, resistance, next visit), a prisoner's life on the raid roster (needs, healing, sleeping in its bed, pottering about its room, a released pawn or visitor walking out), and the warden's work (meals, visits, resistance, recruiting, release, execution). A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10); capture and arrest stay in `care` (SIM-062), the prisoner read models and `makePrisoner` in the game's `prisoners.go`.
+The colony's prisoners: each one's state (interaction mode, resistance, next visit), a prisoner's life on the raid roster (needs, healing, sleeping in its bed, pottering about its room, a released pawn or visitor walking out), and the warden's work (meals, visits, resistance, recruiting, release, execution). A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10); capture and arrest stay in `care` (SIM-062), the prisoner read models and `makePrisoner` in the game's `prisoners.go`.
 
 ## Owned Concepts
 - `Prison` (prison.go): built by `New(Host)`; `Is`, `State` (the tab's read model and tests), `Take` (a new prisoner), `Release`, `Drop`, `SetMode`, `Export`/`Import` (the save's `Prisoners` field, copied by the game in id order).

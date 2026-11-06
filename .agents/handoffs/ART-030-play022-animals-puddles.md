@@ -1,6 +1,6 @@
 # Task Handoff
 
-Task ID: ART-030 (PLAY-022; plan and lead contract `.cursor/PLAY022_PLAN.md`)
+Task ID: ART-030 (PLAY-022; plan and lead contract `.agents/handoffs/_plans/PLAY022_PLAN.md`)
 Status: complete
 
 ## Summary

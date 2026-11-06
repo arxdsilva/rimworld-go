@@ -35,7 +35,7 @@ Three requests:
 - **`cmd/rambudget` + `make agent-budget`:** prints total and available RAM, the measured peak of each agent kind, and the most agents to run at once, both heavy (`go test -race` on a big package, a Blender run) and light. The peaks are measured once in this batch (`/usr/bin/time -l` max RSS of `go test -race` on `internal/application/game` and `internal/adapters/inbound/ebiten`, a Blender family run, a capture) and kept in the tool, so they can be re-measured later.
   - Budget = available − 4 GB reserve (OS, IDE, the lead).
   - Max heavy = budget / heavy peak; light agents count at their own peak.
-- **Rule** (`.cursor/PARALLEL_WORK.md` §1 and §5, skill `parallel-work` step 0, plus a feedback memory):
+- **Rule** (`.agents/specs/PARALLEL_WORK.md` §1 and §5, skill `parallel-work` step 0, plus a feedback memory):
   - Before launching any agent, and again before each later phase, the lead runs `make agent-budget` and never runs more agents than it allows.
   - Heavy agents are staggered, not all started at once.
   - Agents pass `GOFLAGS=-p=2` on their test runs, which caps parallel package builds.
@@ -123,11 +123,11 @@ Then run `make agent-budget` and launch only what it allows (expected on this ma
 5. `make art-check`.
 6. RSS and fps before/after: menu, 250 and 500 colonies.
 7. Captures at each quality tier, plus the crop captures.
-8. Docs: handoffs; the checklists (graphics options, performance, crop art); README (system requirements and the Options line); `.cursor/PARALLEL_WORK.md`; `assets/AGENTS.md` note on crop anchoring.
+8. Docs: handoffs; the checklists (graphics options, performance, crop art); README (system requirements and the Options line); `.agents/specs/PARALLEL_WORK.md`; `assets/AGENTS.md` note on crop anchoring.
 9. Commits by area on `main`; no push.
 
 ## Critical files
 - `internal/platform/sysinfo/` (new), `internal/platform/config/settings.go`, `cmd/rambudget/` (new), `cmd/game/main.go`, `Makefile`, `scripts/package_release.sh`
 - `internal/adapters/inbound/ebiten/{crop_batch.go, art.go, art_atlas.go, light.go, shadow.go, water_draw.go, grass_batch.go, settings.go, screen_options.go, screen_landing.go, fps_probe.go}`
 - `internal/application/game/scenarios.go` (MapSizes)
-- `.cursor/PARALLEL_WORK.md`, `.cursor/skills/parallel-work/SKILL.md`
+- `.agents/specs/PARALLEL_WORK.md`, `.agents/skills/parallel-work/SKILL.md`

@@ -1,6 +1,6 @@
 # ENG-006: sentry turrets, trade, radio console (PLAY-024, phases 0–3)
 
-The user asked for RimWorld-style communications and defence devices, with full trade. All numbers are original tuning (`.cursor/PLAY024_PLAN.md`); all names are original.
+The user asked for RimWorld-style communications and defence devices, with full trade. All numbers are original tuning (`.agents/handoffs/_plans/PLAY024_PLAN.md`); all names are original.
 
 ## Sentry turret
 - **Building and power:** construction `SentryTurret` (steel, 140 HP, cover 30 %), research Sentry guns. It draws 120 W while holding a target and 40 W idle, in a defense power class that is shed last.

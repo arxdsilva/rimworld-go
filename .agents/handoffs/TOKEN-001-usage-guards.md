@@ -4,8 +4,8 @@ Scope: agent tooling only, no game code. Prompted by Spotify's Portal `shunt` ar
 
 ## Changed
 - `.claude/settings.json` (new): the hooks below, and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000`.
-- `.claude/hooks/read_guard.py`: denies whole-file Reads over 500 lines and `cat`/`sed -n` commands printing over 150 lines of repo files. Limits add up across a command. Fails open.
-- `.claude/hooks/agent_model_guard.py`: denies a `general-purpose` or untyped spawn with no `model`.
+- `.agents/hooks/read_guard.py`: denies whole-file Reads over 500 lines and `cat`/`sed -n` commands printing over 150 lines of repo files. Limits add up across a command. Fails open.
+- `.agents/hooks/agent_model_guard.py`: denies a `general-purpose` or untyped spawn with no `model`.
 - `.claude/agents/Explore.md`: `Explore` on Haiku, locating code only.
 - `scripts/token_report.py`: scorecard (`--last`, `--since`) and guard dry-run (`--replay`).
 - Docs: `AI_TOKEN_OPTIMIZATION.md` §32a and "not built" notes, `PARALLEL_WORK.md` §5a and §6, one rule in root `AGENTS.md`.
@@ -16,7 +16,7 @@ Scope: agent tooling only, no game code. Prompted by Spotify's Portal `shunt` ar
 - **Root `AGENTS.md` rule added** (not in the plan). In auto mode the harness tells agents to read with `cat` and `sed -n`, so without this each agent would waste a call learning the rule.
 
 ## Verified
-- `python3 .claude/hooks/test_hooks.py`: 25 tests pass.
+- `python3 .agents/hooks/test_hooks.py`: 25 tests pass.
 - Fresh headless Haiku sessions:
   - untyped Agent, `sed -n 1,200p` and a whole-file Read of `tick.go` were denied with the right messages;
   - a ranged Read passed;

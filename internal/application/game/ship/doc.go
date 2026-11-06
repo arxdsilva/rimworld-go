@@ -13,7 +13,7 @@
 // caskets, and the colony's story ends (WorldView.AX.Ending "ship").
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. The game
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. The game
 // implements the roles in deps.go with one adapter (game/ship_host.go)
 // and keeps one State, built on first use, off its world state. Ships are
 // recomputed only when the structure version moves; raids are spaced by

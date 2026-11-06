@@ -89,7 +89,7 @@ const (
 	// "custom:" + difficulty.Encode(settings) (NG-1 §2.4).
 	SetDifficulty
 	// Social and host systems (ENG-003). Field use per
-	// .cursor/SOCIAL_SYSTEM_CONTRACT.md C1.
+	// .agents/specs/SOCIAL_SYSTEM_CONTRACT.md C1.
 	//
 	// AddOperation queues surgery on patient Pawn: Index is the body.OpKind,
 	// Build the body part, Stuff the item kind (an implant).

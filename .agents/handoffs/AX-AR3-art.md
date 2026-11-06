@@ -8,7 +8,7 @@ AX wave 2, 2026-11-02, clean-room original art. Run with `make art FAMILIES="rec
 - `assets/palettes/materials_ax_ar3.yaml` (new): `felt`, `felt_dark`, `felt_wine`, the `book_*` covers, `page_cream`, `schematic_blue`/`schematic_line`, and the emissives `tv_screen_glow` and `tv_picture_glow`.
 - `assets/source/blender/build.py`: adds `recreation` and `library` to FAMILIES.
 - Generated: 34 recreation sprites (12 of them glow layers), 18 library sprites, 14 icons, plus metadata and normal maps.
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`:
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`:
   - wave 2 "basic resources/items" and wave 4 "furniture families" rows extended; both stay `[-]` until the in-game review;
   - new §41 lists every key.
 

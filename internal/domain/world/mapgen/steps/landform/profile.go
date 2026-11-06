@@ -1,4 +1,4 @@
-// Package landform holds the MAPGEN-2 landform passes (.cursor/PLAY013_PLAN.md
+// Package landform holds the MAPGEN-2 landform passes (.agents/handoffs/_plans/PLAY013_PLAN.md
 // §2.1, §2.2, §2.5): elevation and mountain bias, the provisional rock
 // mask, cave tunnels, and final rock with cleanup and natural roofs.
 package landform

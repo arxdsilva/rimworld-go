@@ -1,6 +1,6 @@
 # REF-1: ordered refuels and the auto refuel switch
 
-A burner that ran dry ("X out of wood") had no player answer. Now a colonist can be ordered to refuel it, and each burner has an Auto refuel switch. The gap analysis is `.cursor/REFUEL_GAP_ANALYSIS.md` (REF-001..015). No new numbers, so no ENG-003 extension.
+A burner that ran dry ("X out of wood") had no player answer. Now a colonist can be ordered to refuel it, and each burner has an Auto refuel switch. The gap analysis is `.agents/gaps/REFUEL_GAP_ANALYSIS.md` (REF-001..015). No new numbers, so no ENG-003 extension.
 
 ## What changed
 - **Planning moved.** `game/industry/refuel.go` holds the trip plan haulers and the order share: `Plan(RefuelHost, pawn, burner)` (fuel choice: wood, then ember oil; chemfuel only for the chemfuel generator and pod launcher; hay, then tank feed), `Room`, `RefuelWork`. It also holds `Controllable` (a fuel user that is not a fish tank or hostile) and `Gate` (the order's pre-checks). `game/fuel.go` keeps the candidate loop and sort; its `refuelHost` adapts the game. The move alone was hash-identical: grown fixture, seed 9, 120 tiles, `0x78f1eca8840ed959` after 2000 ticks and `0x8c4d9b4e88416ef7` after 30000.

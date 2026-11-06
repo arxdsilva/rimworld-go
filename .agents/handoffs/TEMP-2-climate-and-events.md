@@ -1,6 +1,6 @@
 # TEMP-2: outdoor climate and events (agent W)
 
-Wiki fidelity under ENG-003 (temperature). Gap rows: `.cursor/TEMPERATURE_GAP_ANALYSIS.md` §3.1, §3.7.
+Wiki fidelity under ENG-003 (temperature). Gap rows: `.agents/gaps/TEMPERATURE_GAP_ANALYSIS.md` §3.1, §3.7.
 
 ## What changed
 - Biomes: `biome.c(summer, winter, swing)` reaches the wiki summer max / winter min for every biome. Temperate is 5 C +-24 with a swing of 6 (original). `biome.Fit` keeps planet sites inside their biome. `biome.Warmth` keeps the old means for animal habitat bands (this fixed `TestClimateFit` and `TestStrayJoinsTame`).

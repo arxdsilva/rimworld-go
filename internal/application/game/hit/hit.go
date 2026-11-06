@@ -3,7 +3,7 @@
 // wound the hit's own form leaves, with overkill, stagger and stun.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. The
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. The
 // simulation comes in through the small roles below, which the game
 // implements with adapter types; a Wounds value is stateless (the stagger
 // lives in the game's motion records), so the game builds one per call.

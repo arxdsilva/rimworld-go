@@ -9,7 +9,7 @@ import (
 
 // Host is everything the orders need from the simulation: value-only
 // roles the game implements with one small adapter (game/move.go,
-// ordersHost), each at most eight methods (.cursor/SOLID_GO.md §10).
+// ordersHost), each at most eight methods (.agents/specs/SOLID_GO.md §10).
 type Host interface {
 	Buildings
 	Hands

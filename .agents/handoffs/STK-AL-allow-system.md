@@ -4,7 +4,7 @@ User request: "do a gap analysis on the allow system and add it to this change".
 
 ## Delivered
 
-- `.cursor/ALLOW_GAP_ANALYSIS.md`: 31 rows (15 forbidding things, 5 forbidding buildings, 11 allowed areas) with the vanilla behaviour, our evidence, the gap and the state. 9 gaps closed here (F3, F4, F5, F6, F7, F10, F11, F12, A2), 1 left open (B4), 1 not a gap per the wiki (copy area), 1 without content (cargo pods).
+- `.agents/gaps/ALLOW_GAP_ANALYSIS.md`: 31 rows (15 forbidding things, 5 forbidding buildings, 11 allowed areas) with the vanilla behaviour, our evidence, the gap and the state. 9 gaps closed here (F3, F4, F5, F6, F7, F10, F11, F12, A2), 1 left open (B4), 1 not a gap per the wiki (copy area), 1 without content (cargo pods).
 - Sources: wiki Allowed area, Zone/Area, Home area, Orders, Door, Menus, Assign. The Forbidden and Forbid pages returned 404; the auto-forbid and order-allows-target rows rest on documented game behaviour and say so.
 - New sub-package `internal/application/game/allow` (stateless): `allow.Forbids` over `allow.Host` (roles Stacks, Buildings, Ground; 3/3/2 methods). It owns setting a stack's or building's flag, the Forbid/Allow rectangle, the haul mark and Haul things rectangle, `Ordered`, and the auto-forbid rules `DropForbidden` (outside the home area) and `CorpseForbidden` (except a kill its hunter or a predator takes). `game/forbid.go` is now the adapter (`allowHost`) plus thin wrappers; no Game field, no new file in package game.
 - Behaviour changes in package game (exact edits at the call sites):

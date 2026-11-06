@@ -3,7 +3,7 @@
 User request (2026-10-30): a gap analysis of food production, with every element added as close to RimWorld as possible, carried through until complete. ENG-003 is extended to food production (AGENTS.md).
 
 ## What changed
-- `.cursor/FOOD_GAP_ANALYSIS.md`: the full gap analysis (growing, animals, cooking, preservation, eating, hunger, UI). Each row has the wiki behaviour, evidence, gap, phase (FOOD-1..5) and status, plus a decision record:
+- `.agents/gaps/FOOD_GAP_ANALYSIS.md`: the full gap analysis (growing, animals, cooking, preservation, eating, hunger, UI). Each row has the wiki behaviour, evidence, gap, phase (FOOD-1..5) and status, plus a decision record:
   - the vanilla nutrition scale;
   - original crops, troughs and the drying rack kept;
   - drug crops and devilstrand out of food scope;

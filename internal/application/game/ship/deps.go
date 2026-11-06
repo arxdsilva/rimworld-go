@@ -7,7 +7,7 @@ import (
 )
 
 // Host is everything the ship needs from the simulation, as
-// consumer-owned roles of at most eight methods (.cursor/SOLID_GO.md §7).
+// consumer-owned roles of at most eight methods (.agents/specs/SOLID_GO.md §7).
 type Host interface {
 	Sites
 	Crew

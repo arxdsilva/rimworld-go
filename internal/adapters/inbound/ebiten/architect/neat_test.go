@@ -30,7 +30,7 @@ func TestEveryNeatStorageRowHasACard(t *testing.T) {
 			t.Fatal("no go.mod above the package")
 		}
 	}
-	doc, err := os.ReadFile(filepath.Join(dir, ".cursor", "NEAT_STORAGE_GAP_ANALYSIS.md"))
+	doc, err := os.ReadFile(filepath.Join(dir, ".agents", "gaps", "NEAT_STORAGE_GAP_ANALYSIS.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

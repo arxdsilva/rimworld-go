@@ -1,6 +1,6 @@
 # AX-4: power and industry made real
 
-Scope: the AX programme's A4 rows (`.cursor/ARCHITECT_GAP_ANALYSIS.md`), ENG-003 wiki numbers, original names. The lead's decision also made A4 the owner of `Def.Extra` delivery.
+Scope: the AX programme's A4 rows (`.agents/gaps/ARCHITECT_GAP_ANALYSIS.md`), ENG-003 wiki numbers, original names. The lead's decision also made A4 the owner of `Def.Extra` delivery.
 
 ## Behaviour
 - **Secondary materials (every kind).**

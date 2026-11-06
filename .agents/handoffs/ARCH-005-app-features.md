@@ -1,7 +1,7 @@
 # ARCH-005: the App's features leave the root
 
 ## Why
-`App` had 950 methods over 126 files and 111 fields (ARCH-001): every HUD region, panel, screen and dialog was a method on it. Each feature becomes a package with one type behind a `Shell` composed of `ports` roles (`.cursor/SOLID_GO.md` §6–§7; ARCH-002 built the seam, ARCH-003 the leaves it draws with). The root keeps `App`, the loop, the navigator, the click routes and the screen table, and satisfies every role.
+`App` had 950 methods over 126 files and 111 fields (ARCH-001): every HUD region, panel, screen and dialog was a method on it. Each feature becomes a package with one type behind a `Shell` composed of `ports` roles (`.agents/specs/SOLID_GO.md` §6–§7; ARCH-002 built the seam, ARCH-003 the leaves it draws with). The root keeps `App`, the loop, the navigator, the click routes and the screen table, and satisfies every role.
 
 ## Contract additions (lead)
 `ports.Screen` with its names (the root's `screenID` aliases it), the navigation intents `Push/Back/StartGame/Quit/ReturnToMenu/Resume/Pause`, `ports.Widgets{Kit}`, `ports.Saves{Slots, RefreshSlots, LoadSlot, NewestSlot}` and `ports.SaveSlot`. A feature that needs something no role has declares ONE local interface (≤ 8 methods) in its `deps.go` that a small `<pkg>Host{a *App}` adapter in its root compat file satisfies.

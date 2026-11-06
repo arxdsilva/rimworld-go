@@ -394,7 +394,7 @@ the player's primary world-editing command surface.
 -   [x] **Architect button/tab** (opens on last category)
     -   Opens build/designation categories.
     -   Remembers last category optionally.
--   [x] **Category navigation** (PLAY-018: two category columns at the lower-left, a description box above them; STK-AG: all twelve vanilla categories in vanilla order — Orders, Zones, Structure, Production, Furniture, Power, Security, Misc, Floors, Recreation, Ship, Temperature — always shown, six rows of two; tools moved to their vanilla category, `.cursor/ARCHITECT_GAP_ANALYSIS.md`)
+-   [x] **Category navigation** (PLAY-018: two category columns at the lower-left, a description box above them; STK-AG: all twelve vanilla categories in vanilla order — Orders, Zones, Structure, Production, Furniture, Power, Security, Misc, Floors, Recreation, Ship, Temperature — always shown, six rows of two; tools moved to their vanilla category, `.agents/gaps/ARCHITECT_GAP_ANALYSIS.md`)
     -   Orders.
     -   Zone/Area.
     -   Structure.

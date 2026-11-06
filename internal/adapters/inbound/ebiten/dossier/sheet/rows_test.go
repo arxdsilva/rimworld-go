@@ -38,7 +38,7 @@ func repoRoot(t *testing.T) string {
 
 func readGapDoc(t *testing.T) (rows []gapRow, doc string) {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(repoRoot(t), ".cursor", "RIMHUD_GAP_ANALYSIS.md"))
+	b, err := os.ReadFile(filepath.Join(repoRoot(t), ".agents", "gaps", "RIMHUD_GAP_ANALYSIS.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func readGapDoc(t *testing.T) (rows []gapRow, doc string) {
 	return rows, doc
 }
 
-// TestEveryRHUDRowIsClassified: .cursor/RIMHUD_GAP_ANALYSIS.md lists every
+// TestEveryRHUDRowIsClassified: .agents/gaps/RIMHUD_GAP_ANALYSIS.md lists every
 // feature of the mod this card is measured against. Ids run in order with no
 // repeat, each status is one of four, every row has five columns, a row that
 // is neither done nor excluded names the package that finishes it, the counts

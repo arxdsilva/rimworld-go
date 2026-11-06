@@ -1,6 +1,6 @@
 # Combat gap analysis (CBT-0..CBT-5)
 
-Scope: the fighting itself, vanilla core only (no DLC): drafting and orders, ranged and melee attacks, the damage model, armor, weapons and equipment, turrets, traps and structures, explosions, hostile and colonist AI, combat experience, prisoners, combat UI, and sounds and effects. Load only for CBT-* tasks. Phase handoffs go in `.cursor/handoffs/CBT-N-*.md`. This document starts where `DEFENCE_GAP_ANALYSIS.md` (DEF-0..DEF-4, done) stopped: it lists what is still wrong or missing after those waves. Sister documents: `DEFENCE_GAP_ANALYSIS.md`, `PRODUCTION_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`.
+Scope: the fighting itself, vanilla core only (no DLC): drafting and orders, ranged and melee attacks, the damage model, armor, weapons and equipment, turrets, traps and structures, explosions, hostile and colonist AI, combat experience, prisoners, combat UI, and sounds and effects. Load only for CBT-* tasks. Phase handoffs go in `.agents/handoffs/CBT-N-*.md`. This document starts where `DEFENCE_GAP_ANALYSIS.md` (DEF-0..DEF-4, done) stopped: it lists what is still wrong or missing after those waves. Sister documents: `DEFENCE_GAP_ANALYSIS.md`, `PRODUCTION_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`.
 
 ## Status (2026-10-30)
 

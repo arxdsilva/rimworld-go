@@ -1,6 +1,6 @@
 # SIM-066: mental breaks that target others; the W3 integration
 
-Date: 2026-10-29. Programme SIM-061…066 (`.cursor/PAWN_INTERACTION_GAP_ANALYSIS.md`). This handoff also records the integration, gates and budget for SIM-063…066. The four phases are one commit: the lead's contract files carry all four, so `git add` by path could not split them.
+Date: 2026-10-29. Programme SIM-061…066 (`.agents/gaps/PAWN_INTERACTION_GAP_ANALYSIS.md`). This handoff also records the integration, gates and budget for SIM-063…066. The four phases are one commit: the lead's contract files carry all four, so `git add` by path could not split them.
 
 ## What changed (M1, opus)
 - **New sub-package `internal/application/game/mind`.** It owns break risk, choice, acting out and recovery, plus social fights (moved by P1). The game keeps one field, and `mental.go` is gone. Its six roles (Pawns, Breaks, Acts, Aggression, Brawls, Events) are adapted in `game/mind_host.go`.

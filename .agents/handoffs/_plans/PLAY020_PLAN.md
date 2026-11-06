@@ -266,12 +266,12 @@ Run `make agent-budget` before each wave. Expected: 5.7 GiB, art slot 1, light 5
 
    Then the fps probe before/after.
 5. Docs:
-   - handoff `.cursor/handoffs/UI-028-play020-...md`;
+   - handoff `.agents/handoffs/UI-028-play020-...md`;
    - `ART_DIRECTION_AND_ASSET_PIPELINE.md` (zone fill, menu lighting, lamp radius in-game, new icons);
    - the vanilla checklist: §11.5 medical beds, §5.3 bed rest/patient, lamps, sowing, growing-zone settings;
    - the UI/UX checklist: `:467-469` select, expand and shrink; `:474-488` the stockpile panel (partly); `:492` crop selector; `:499` allow sowing; `:2069-2070` zone settings; social bubbles; bed and pawn commands;
    - `MAIN_UI_SCREENS_SPECIFICATION.md`: §2 background, §18 growing settings, the selection order;
-   - `.cursor/SOCIAL_SYSTEM_CONTRACT.md` commands (`:141`);
+   - `.agents/specs/SOCIAL_SYSTEM_CONTRACT.md` commands (`:141`);
    - ebiten `AGENTS.md`: the lamp model, zone selection and tools.
 6. Commits by area on `main`, no push:
    - contract;

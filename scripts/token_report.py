@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Token usage scorecard from Claude Code transcripts (read-only).
 
-Prints the metrics tracked in .cursor/handoffs/TOKEN-001-usage-guards.md, so a
+Prints the metrics tracked in .agents/handoffs/TOKEN-001-usage-guards.md, so a
 later run can be compared with the baseline.
 
   python3 scripts/token_report.py --last 400
@@ -202,7 +202,7 @@ def print_scorecard(r, nfiles):
 
 def load_guard():
     sys.dont_write_bytecode = True
-    path = os.path.join(REPO, ".claude", "hooks", "read_guard.py")
+    path = os.path.join(REPO, ".agents", "hooks", "read_guard.py")
     spec = importlib.util.spec_from_file_location("read_guard", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

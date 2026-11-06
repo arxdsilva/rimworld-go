@@ -1,6 +1,6 @@
 # Task Handoff
 
-Task ID: ENG-005 (PLAY-021; plan `.cursor/PLAY021_PLAN.md`, with sim-core design notes in its appendix)
+Task ID: ENG-005 (PLAY-021; plan `.agents/handoffs/_plans/PLAY021_PLAN.md`, with sim-core design notes in its appendix)
 Status: complete
 
 ## Summary

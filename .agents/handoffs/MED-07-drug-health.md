@@ -1,6 +1,6 @@
 # MED-07: drug health effects (painkiller, prophylaxis, overdose)
 
-Part of the RimWorld-style medical overhaul (`.cursor/MEDICAL_GAP_ANALYSIS.md`).
+Part of the RimWorld-style medical overhaul (`.agents/gaps/MEDICAL_GAP_ANALYSIS.md`).
 
 ## Behaviour
 - **Overdose** (`CondOverdose`, wiki: Overdose).

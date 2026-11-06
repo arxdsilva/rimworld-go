@@ -1,4 +1,4 @@
-// Package pipeline runs the MAPGEN-2 steps in order (.cursor/PLAY013_PLAN.md
+// Package pipeline runs the MAPGEN-2 steps in order (.agents/handoffs/_plans/PLAY013_PLAN.md
 // §1.1): the composition of package mapgen's passes.
 package pipeline
 

@@ -1,7 +1,7 @@
 # aqua package
 
 ## Package Purpose
-Fish tanks on one map (FISH-*, `.cursor/FISH_TANK_PLAN.md` §3): each tank's state, the hourly step, the handler's stock and net jobs, the player's stock choice and the read model. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10). The rules live in `internal/domain/building/aqua`.
+Fish tanks on one map (FISH-*, `.agents/handoffs/_plans/FISH_TANK_PLAN.md` §3): each tank's state, the hourly step, the handler's stock and net jobs, the player's stock choice and the read model. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10). The rules live in `internal/domain/building/aqua`.
 
 ## Owned Concepts
 - `Tanks` (aqua.go): one per map (`mapState.tanks`, nil until a tank is used), `Entry` per tank with a stock chosen, sorted by id. `Phase`, `Assign`, `Do`, `Apply`, `Gone`, `Export`, `Import`.

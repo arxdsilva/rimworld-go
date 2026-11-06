@@ -1,6 +1,6 @@
 # UI-020 The new-game flow, widget kit, real font and in-colony additions
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md`). Commits: `9ea84352` (widget kit), `c2f24849` (scenario, editor, storyteller, difficulty), `d62f06ed` (globe, backdrop), `d7b8c84d` (world, landing, factions, characters, loading), `a9ca527c` (commitment UI, minimap, colony UI), `6cf941f2` (setup sounds), `e531b633` (font sweep).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md`). Commits: `9ea84352` (widget kit), `c2f24849` (scenario, editor, storyteller, difficulty), `d62f06ed` (globe, backdrop), `d7b8c84d` (world, landing, factions, characters, loading), `a9ca527c` (commitment UI, minimap, colony UI), `6cf941f2` (setup sounds), `e531b633` (font sweep).
 
 ## What changed
 

@@ -1,7 +1,7 @@
 # rest package
 
 ## Package Purpose
-Sleeping: where a pawn sleeps (its own bed, its partner's double bed, the nearest free bed, the floor), who owns which bed, the sleep job driver and when a sleeper gets up, and the thoughts it wakes with. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by BED-0; the gap backlog is `.cursor/BEDS_GAP_ANALYSIS.md`.
+Sleeping: where a pawn sleeps (its own bed, its partner's double bed, the nearest free bed, the floor), who owns which bed, the sleep job driver and when a sleeper gets up, and the thoughts it wakes with. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by BED-0; the gap backlog is `.agents/gaps/BEDS_GAP_ANALYSIS.md`.
 
 ## Owned Concepts
 - `Sleep` (sleep.go): the root, built by `New(Host)`. Named `Sleep`, not `Rest`, so it never reads as `care.Rest`. `Assign` (bed, else floor), `InPlace` (the floor), `Do` (the sleep job driver, one tick), `done` (when a sleeper gets up), and the rested marks (`RestedFree`, `MarkRested`, `Unmark`, `Export`/`Import`, saved as `RestedFree`). Kept small: a feature's entry points go on its component.

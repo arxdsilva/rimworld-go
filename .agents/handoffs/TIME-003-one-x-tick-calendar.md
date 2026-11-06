@@ -17,8 +17,8 @@ Aligned the dual time system: 60 ticks per real second at 1x, 2500 ticks per hou
 - `internal/adapters/inbound/ebiten/renderer.go`
 - `internal/adapters/inbound/ebiten/renderer_test.go`
 - `cmd/game/main.go`
-- `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`
+- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`
 
 ## Public Contracts Changed
 

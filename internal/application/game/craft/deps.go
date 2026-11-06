@@ -12,7 +12,7 @@ import (
 )
 
 // Host is everything craft needs from the simulation, as consumer-owned
-// roles (.cursor/SOLID_GO.md §7, §10). The game package implements each
+// roles (.agents/specs/SOLID_GO.md §7, §10). The game package implements each
 // role with a small adapter type (craft_host.go). Every method takes and
 // returns values: never a pointer to a caller's local, never a closure,
 // so a host call on the tick path moves nothing to the heap.

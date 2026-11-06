@@ -1,6 +1,6 @@
 # CTL-001..020: mouse controls
 
-User request (2026-11-04): double click on furniture or an item takes the same type on screen, and any action applies to them all; and everything else missing from the mouse. Rows, sources and decisions: `.cursor/MOUSE_CONTROLS_GAP_ANALYSIS.md`.
+User request (2026-11-04): double click on furniture or an item takes the same type on screen, and any action applies to them all; and everything else missing from the mouse. Rows, sources and decisions: `.agents/gaps/MOUSE_CONTROLS_GAP_ANALYSIS.md`.
 
 ## What changed
 

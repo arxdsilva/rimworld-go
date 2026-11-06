@@ -5,11 +5,11 @@ description: Implement or review rimworld-go player-facing screens, windows, ove
 
 # Main UI Screens
 
-Canonical spec: `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`.
+Canonical spec: `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`.
 
-Ordered backlog: `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`.
+Ordered backlog: `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`.
 
-Visual chrome/icons: `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` via `rimworld-go-art-assets`.
+Visual chrome/icons: `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` via `rimworld-go-art-assets`.
 
 Do not paste the screens spec into prompts. Read it by section. Do not load it for headless simulation-only work with no screen.
 
@@ -34,7 +34,7 @@ Always:
 
 - root `AGENTS.md`;
 - this skill;
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` §0 (architecture), §58 (screen vs window vs overlay), §59 (definition of done).
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` §0 (architecture), §58 (screen vs window vs overlay), §59 (definition of done).
 
 Then only the screen family for the task:
 
@@ -58,8 +58,8 @@ Then only the screen family for the task:
 
 Also load:
 
-- matching item(s) in `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`;
-- matching gameplay item(s) in `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`;
+- matching item(s) in `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`;
+- matching gameplay item(s) in `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`;
 - named ART_DIRECTION sections when the screen includes original chrome/icons;
 - presentation package `AGENTS.md` and existing read-model / command interfaces.
 

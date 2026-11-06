@@ -15,8 +15,8 @@
 > principles and gameplay readability---not proprietary artwork.
 >
 > **Agent loading:** This file is *not* default context. Route via
-> `.cursor/skills/rimworld-go-router/SKILL.md` and follow
-> `.cursor/skills/rimworld-go-art-assets/SKILL.md`. Load §1, §2, §35, and
+> `.agents/skills/rimworld-go-router/SKILL.md` and follow
+> `.agents/skills/rimworld-go-art-assets/SKILL.md`. Load §1, §2, §35, and
 > only the category/pipeline sections that skill names for the task.
 > Tick ART wave / prototype-gate / acceptance checkboxes in this file
 > using `[x]` / `[-]` / `[!]` when work lands. For UI chrome that belongs
@@ -1477,7 +1477,7 @@ doing its job.
 ## 37. Social & host systems asset list (ENG-003)
 
 Normative key list for the social and host-system feature set
-(`.cursor/SOCIAL_SYSTEM_CONTRACT.md`). None of these exist yet: until each
+(`.agents/specs/SOCIAL_SYSTEM_CONTRACT.md`). None of these exist yet: until each
 is generated the renderer draws its vector stand-in (`social_art.go`,
 `drawIconFallback`) and the Architect keeps the tool in
 `archToolsPendingArt`. When an asset lands, move its tool to `archTools`
@@ -1519,7 +1519,7 @@ cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
 
 ## 38. Sentry turret, trade beacon and radio console (PLAY-024)
 
-Normative key list (contract in `.cursor/PLAY024_PLAN.md`). None exist yet:
+Normative key list (contract in `.agents/handoffs/_plans/PLAY024_PLAN.md`). None exist yet:
 until each is generated the renderer draws the plain building fallback and
 the Architect keeps the tool out of `archTools` (so
 `TestGeneratedArtCoversRenderer` does not ask for it). Every sprite follows

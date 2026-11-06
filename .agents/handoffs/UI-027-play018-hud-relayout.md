@@ -1,6 +1,6 @@
 # Task Handoff
 
-Task ID: UI-027 (PLAY-018; plan `.cursor/PLAY018_PLAN.md`)
+Task ID: UI-027 (PLAY-018; plan `.agents/handoffs/_plans/PLAY018_PLAN.md`)
 Status: complete
 
 ## Summary

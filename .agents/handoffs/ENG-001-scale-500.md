@@ -1,6 +1,6 @@
 # ENG-001 Engine scale: 200 to 500 tiles a side
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §6; decision D6, 60 fps at every size). Commits: `4d68b9aa` (E0/E1), `049759a4` (profiling flags), `f815d545` (E2, E3 with the setup work), `a9ca527c` (E4, E5, saves), `07f74a0c` (E5 follow-up), `46d1110d` (FPS probe).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md` §6; decision D6, 60 fps at every size). Commits: `4d68b9aa` (E0/E1), `049759a4` (profiling flags), `f815d545` (E2, E3 with the setup work), `a9ca527c` (E4, E5, saves), `07f74a0c` (E5 follow-up), `46d1110d` (FPS probe).
 
 ## Status
 Engine budgets and the final frame-rate gate pass on the numbers recorded below. `game.MaxEnabledSide` (`internal/application/game/ng1_types.go`) is **500** (commit ce78855a): Advanced offers every size from 200x200 to 500x500, 350 and above marked "needs a capable computer".

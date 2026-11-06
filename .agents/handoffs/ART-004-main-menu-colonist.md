@@ -17,7 +17,7 @@ The post-boot main menu now shows an original cel-shaded colonist bust on the le
 - `internal/adapters/inbound/ebiten/app.go`
 - `internal/adapters/inbound/ebiten/app_test.go`
 - `internal/adapters/inbound/ebiten/AGENTS.md`
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`
 
 ## Public Contracts Changed
 

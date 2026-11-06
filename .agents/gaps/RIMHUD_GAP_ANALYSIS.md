@@ -729,7 +729,7 @@ Every row is one colour key. A key maps to a `uikit` token by default and to `co
 
 ## Budget constraints
 
-Measured at `e924244d3` against `internal/arch/solid_budget.txt` and `.cursor/SOLID_GO.md` §8. Budget lines only shrink.
+Measured at `e924244d3` against `internal/arch/solid_budget.txt` and `.agents/specs/SOLID_GO.md` §8. Budget lines only shrink.
 
 | Package or type | Now | Limit | Consequence |
 |---|---|---|---|
@@ -766,7 +766,7 @@ No file in `game/dossierview` counts toward `game`, since sub-packages are measu
 
 ## Proposed split
 
-Multi-area task, so this follows `.cursor/PARALLEL_WORK.md` §0. File ownership is disjoint within a wave. Sizes assume `make agent-budget` allows three or four at once.
+Multi-area task, so this follows `.agents/specs/PARALLEL_WORK.md` §0. File ownership is disjoint within a wave. Sizes assume `make agent-budget` allows three or four at once.
 
 ### Contract (lead, before any agent)
 
@@ -1009,7 +1009,7 @@ Widget keys: `gap rule title diet_pick clothes_pick area_pick hour_pick standing
 
 | id | model and reason | job | owned files | forbidden | tests |
 |---|---|---|---|---|---|
-| DOS-9 | `sonnet`, verification and docs | Timing overlay; flip `Enabled`; update `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (lines 289, 301, 596, 606, 743, 178), `MAIN_UI_SCREENS_SPECIFICATION.md` §10 and §42, `AGENTS.md` package map; handoff; a capture for visual acceptance | `ebiten/devtools/panels.go`, `config/settings.go`, `.cursor/` docs, `ebiten/capture_colony.go` | all else | `make test`, `make arch`, `make test-journeys`, inside CI's 10-minute `-race` budget |
+| DOS-9 | `sonnet`, verification and docs | Timing overlay; flip `Enabled`; update `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (lines 289, 301, 596, 606, 743, 178), `MAIN_UI_SCREENS_SPECIFICATION.md` §10 and §42, `AGENTS.md` package map; handoff; a capture for visual acceptance | `ebiten/devtools/panels.go`, `config/settings.go`, `.agents/` docs, `ebiten/capture_colony.go` | all else | `make test`, `make arch`, `make test-journeys`, inside CI's 10-minute `-race` budget |
 
 ### Dependencies
 

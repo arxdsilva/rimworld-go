@@ -1,7 +1,7 @@
 # ARCH-002: in-package preparation for the ebiten decomposition
 
 ## Why
-Before any file leaves `internal/adapters/inbound/ebiten`, every feature must reach the shell through a seam that survives the move, so that moving a feature is mechanical (`.cursor/SOLID_GO.md` §10). Two waves, no file moves: the lead built the seam (2.0), five parallel agents repointed the feature files to it (2.1).
+Before any file leaves `internal/adapters/inbound/ebiten`, every feature must reach the shell through a seam that survives the move, so that moving a feature is mechanical (`.agents/specs/SOLID_GO.md` §10). Two waves, no file moves: the lead built the seam (2.0), five parallel agents repointed the feature files to it (2.1).
 
 ## What exists now
 - **`ports/`** — the role interfaces (`Hinter`, `Sizer`, `Commands`, `World`, `View`, `PawnSel`, `Overlays`, `Speed`, `Settings`, `Panels`, `Dispatcher`, each ≤ 8 methods) and the closed `Intent` set (`OpenArchitect`, `CloseArchitect`, `PresetBuildTool`, `ShowWindow`, `CloseWindows`, `SelectPawn`, `TogglePawnInSet`, `ClearSelection`, `CenterOnPawn`).
@@ -19,7 +19,7 @@ Before any file leaves `internal/adapters/inbound/ebiten`, every feature must re
 
 ## Findings
 - `gopls rename` (v0.17.1) works on this toolchain: ARCH-003's identifier exports are type-aware renames, not sed.
-- Benchmark baseline `.cursor/handoffs/ARCH-002-bench-before.txt` ran while the `-race` suites were also running, so its timings are noisy; re-record it on a quiet machine before the first renderer-layer move (ARCH-004 step 0).
+- Benchmark baseline `.agents/handoffs/ARCH-002-bench-before.txt` ran while the `-race` suites were also running, so its timings are noisy; re-record it on a quiet machine before the first renderer-layer move (ARCH-004 step 0).
 - `TestUIDrawsThroughCanvas` keys world-position conversions on the selector name; it now also recognises the shell's `WorldToScreen*`.
 
 ## Next

@@ -10,7 +10,7 @@ import (
 )
 
 // Host is everything the industry needs from the simulation, as
-// consumer-owned roles (.cursor/SOLID_GO.md §7, §10).
+// consumer-owned roles (.agents/specs/SOLID_GO.md §7, §10).
 type Host interface {
 	Sites
 	Ground

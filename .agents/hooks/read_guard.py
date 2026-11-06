@@ -8,7 +8,7 @@ cannot parse or resolve is allowed.
 
 READ_GUARD=off disables it. READ_GUARD_MIN_LINES sets the whole-file Read limit and
 READ_GUARD_MAX_VIEW_LINES the lines one shell command may print from repo files.
-See .cursor/AI_TOKEN_OPTIMIZATION.md.
+See .agents/specs/AI_TOKEN_OPTIMIZATION.md.
 """
 import glob
 import json

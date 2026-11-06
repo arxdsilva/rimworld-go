@@ -1,7 +1,7 @@
 # raid package
 
 ## Package Purpose
-Threats: the legacy storyteller's die and raid plans, the raider AI (arrive, assault, siege camp, flee), predator packs, hive swarms and the rock sappers dig through. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by DEF-4 step 1 as a pure extraction of the game's `raids.go`, `raid_plans.go` and `hive.go`; the gap backlog is `.cursor/DEFENCE_GAP_ANALYSIS.md`.
+Threats: the legacy storyteller's die and raid plans, the raider AI (arrive, assault, siege camp, flee), predator packs, hive swarms and the rock sappers dig through. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by DEF-4 step 1 as a pure extraction of the game's `raids.go`, `raid_plans.go` and `hive.go`; the gap backlog is `.agents/gaps/DEFENCE_GAP_ANALYSIS.md`.
 
 ## Owned Concepts
 - `Raid` (raid.go): the root, built by `New(Host, Roles)`; components as exported fields, no methods of its own.

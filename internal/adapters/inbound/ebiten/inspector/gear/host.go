@@ -1,5 +1,5 @@
 // Package gear is the colonist inspector's Gear tab (GEAR-2,
-// .cursor/GEAR_GAP_ANALYSIS.md; MAIN_UI_SCREENS_SPECIFICATION.md §16): the
+// .agents/gaps/GEAR_GAP_ANALYSIS.md; MAIN_UI_SCREENS_SPECIFICATION.md §16): the
 // summary lines (mass carried, the pack, the comfortable range, overall
 // armour, move speed, apparel policy), then Equipment, Apparel in layer
 // order and the pack, each item a row with its sprite, label, HP, mass and

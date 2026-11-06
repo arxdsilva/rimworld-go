@@ -1,6 +1,6 @@
 # MAP-5: enemy doors, hostile visitors, new wanderers
 
-Closes the MAP-4 leftovers the vanilla way (asked 2026-11-02). Gap rows MAP-17 to MAP-20 in `.cursor/MULTIMAP_GAP_ANALYSIS.md`; plan `.cursor/FISH_TANK_PLAN.md`.
+Closes the MAP-4 leftovers the vanilla way (asked 2026-11-02). Gap rows MAP-17 to MAP-20 in `.agents/gaps/MULTIMAP_GAP_ANALYSIS.md`; plan `.agents/handoffs/_plans/FISH_TANK_PLAN.md`.
 
 ## What changed
 - Doors (MAP-17, wiki: Door): `mapsSettle.Settle` lays doors shut with `Building.Hostile`. `Doors.Shut` lets defenders through; colonists and all animals are shut out by `colonistGrid` and the region `Enemy` flag. A drafted Attack order breaks a door. `orders.Claimable` takes a hostile door once `Raiders.Defending()==0`; turrets stay refused. Defenders inside go out when the compound is hit, held by `defendHold` so they can't flap.

@@ -4,7 +4,7 @@
 // food poisoning chances and the colony's days of food.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. The
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. The
 // policy book is plain state the game keeps and saves; the rest are pure
 // functions of a stack, a distance and the eater.
 package diet

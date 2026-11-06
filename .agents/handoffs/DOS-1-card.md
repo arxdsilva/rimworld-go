@@ -25,7 +25,7 @@
 - A pet's generated name came from `g.rng`, so its first rename keeps the old one in `PetNames`. New field, additive, nil until a rename. `SaveVersion` stays 13. The schema refresh moved only the four `saveState.PetNames*` lines.
 - A rename moves the state hash through `Names` or the animal's `Name`, by design. Restoring brings it back (`TestSetNameRoundTripsASave`).
 
-## Settled rows (`.cursor/RIMHUD_GAP_ANALYSIS.md`)
+## Settled rows (`.agents/gaps/RIMHUD_GAP_ANALYSIS.md`)
 
 - 119 excluded: no pack flag; a caravan takes any tame animal, so the label would name them all. Removed from the DOS-1 list.
 - 182 stays partial: sleepers skip `decayNeeds`, bed or not, so the bed clause goes.

@@ -1,6 +1,6 @@
 # FISH: fish tanks
 
-Fish farming, asked 2026-11-02 "the way RimWorld would do it". Vanilla has no fish farming (Odyssey has a fishing zone), so this is ours, built from vanilla parts: the building behaves like a hydroponics basin, the work like the Fish job, the item like meat. Spec `.cursor/FISH_TANK_PLAN.md` §3.
+Fish farming, asked 2026-11-02 "the way RimWorld would do it". Vanilla has no fish farming (Odyssey has a fishing zone), so this is ours, built from vanilla parts: the building behaves like a hydroponics basin, the work like the Fish job, the item like meat. Spec `.agents/handoffs/_plans/FISH_TANK_PLAN.md` §3.
 
 ## What changed
 - Domain: `domain/building/aqua` (species, growth, health); `item.Fish`, `construction.FishTank`, `research.Aquaculture`, `job.StockTank`, `job.NetTank`.

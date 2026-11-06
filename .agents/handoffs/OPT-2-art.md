@@ -29,7 +29,7 @@ Design:
 - Deutan and protan share values because they pass the check for both. Separate keys let them be tuned later.
 
 ```yaml
-# OPT-018 colour-vision sets (Machado 2009 checked; see .cursor/handoffs/OPT-2-art.md).
+# OPT-018 colour-vision sets (Machado 2009 checked; see .agents/handoffs/OPT-2-art.md).
 ui.deutan.danger: "#EA9E94FF"
 ui.deutan.warning: "#F8EA52FF"
 ui.deutan.good: "#8EC4FBFF"

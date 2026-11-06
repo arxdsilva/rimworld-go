@@ -12,7 +12,7 @@ import (
 
 // thermoHost implements thermo.Host (thermo/deps.go) over the game: one
 // small adapter type per role, so Game gains no method (TEMP-1,
-// .cursor/SOLID_GO.md §10). Heaters' and coolers' thermostats (PLAY-021)
+// .agents/specs/SOLID_GO.md §10). Heaters' and coolers' thermostats (PLAY-021)
 // stay in power.go: their targets and working flags are saved there.
 type thermoHost struct {
 	thermoMap

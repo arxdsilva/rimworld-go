@@ -14,7 +14,7 @@ import (
 )
 
 // Host is everything visit needs from the simulation, as consumer-owned
-// roles (.cursor/SOLID_GO.md §7, §10).
+// roles (.agents/specs/SOLID_GO.md §7, §10).
 type Host interface {
 	Bodies
 	Movers

@@ -1,6 +1,6 @@
 # PRD-1: bill settings, multi-ingredient recipes, gathering
 
-Date: 2026-10-29. Programme BED/PRD/DEF, wave B (committed with BED-1 and DEF-1). Backlog `.cursor/PRODUCTION_GAP_ANALYSIS.md`.
+Date: 2026-10-29. Programme BED/PRD/DEF, wave B (committed with BED-1 and DEF-1). Backlog `.agents/gaps/PRODUCTION_GAP_ANALYSIS.md`.
 
 ## What changed
 - **Recipes and bills** (P1, opus; `internal/domain/economy/recipe`):

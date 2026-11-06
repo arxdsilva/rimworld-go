@@ -1,6 +1,6 @@
 # Options gap analysis (OPT-*)
 
-Scope: the Options screen and what each option changes, compared against the vanilla 1.6 options dialog, plus the translation layer behind a Language option. Load only for OPT-* tasks. Handoffs go in `.cursor/handoffs/OPT-N-*.md`. The screen's layout rules are in `MAIN_UI_SCREENS_SPECIFICATION.md` §42.
+Scope: the Options screen and what each option changes, compared against the vanilla 1.6 options dialog, plus the translation layer behind a Language option. Load only for OPT-* tasks. Handoffs go in `.agents/handoffs/OPT-N-*.md`. The screen's layout rules are in `MAIN_UI_SCREENS_SPECIFICATION.md` §42.
 
 ## Decision record
 

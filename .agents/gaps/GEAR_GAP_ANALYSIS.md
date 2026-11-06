@@ -1,6 +1,6 @@
 # Gear tab and outfits gap analysis (GEAR-*, OUT-*)
 
-Scope: the colonist Gear tab (what a pawn wears, wields and carries, and what the player can do from there) and apparel policies (outfits) on the Assign window. Vanilla core only. Load only for GEAR-* or OUT-* tasks. Phase handoffs go in `.cursor/handoffs/GEAR-N-*.md`. Sister documents: `TEMPERATURE_GAP_ANALYSIS.md` (insulation, layers), `COMBAT_GAP_ANALYSIS.md` and `DEFENCE_GAP_ANALYSIS.md` (armour, weapons), `PRODUCTION_GAP_ANALYSIS.md` (quality, item HP).
+Scope: the colonist Gear tab (what a pawn wears, wields and carries, and what the player can do from there) and apparel policies (outfits) on the Assign window. Vanilla core only. Load only for GEAR-* or OUT-* tasks. Phase handoffs go in `.agents/handoffs/GEAR-N-*.md`. Sister documents: `TEMPERATURE_GAP_ANALYSIS.md` (insulation, layers), `COMBAT_GAP_ANALYSIS.md` and `DEFENCE_GAP_ANALYSIS.md` (armour, weapons), `PRODUCTION_GAP_ANALYSIS.md` (quality, item HP).
 
 ## Decision record
 

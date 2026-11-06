@@ -27,7 +27,7 @@ You played the game and asked for fourteen changes, listed below with your decis
 
 ## Phase 0: lead contract (one commit, before any agent)
 
-0.1. **Agent cap.** Change "≤ 5" to "≤ 15" in `.cursor/PARALLEL_WORK.md:56` and `.cursor/skills/parallel-work/SKILL.md:8`. Save a feedback memory: rimworld-go allows up to 15 parallel agents.
+0.1. **Agent cap.** Change "≤ 5" to "≤ 15" in `.agents/specs/PARALLEL_WORK.md:56` and `.agents/skills/parallel-work/SKILL.md:8`. Save a feedback memory: rimworld-go allows up to 15 parallel agents.
 
 0.2. **XS size (TDD).**
 - Add `TestXSBetweenOldAndS` (`internal/domain/animal/animal_test.go`): every XS animal is longer than 0.35, and the largest XS (with trim) is shorter than the smallest S (with trim). Run it red.

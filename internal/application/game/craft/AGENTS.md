@@ -1,7 +1,7 @@
 # craft package
 
 ## Package Purpose
-Production: every bench's bills and the bill commands, finding and doing bill work (fetch, carry, work, product), drying racks, the tool-cabinet bonus and the electric benches. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by PRD-0; the gap backlog is `.cursor/PRODUCTION_GAP_ANALYSIS.md`. Later phases (PRD-1…4) add multi-ingredient recipes, bill settings, quality, stuff choice, art and deterioration hooks here.
+Production: every bench's bills and the bill commands, finding and doing bill work (fetch, carry, work, product), drying racks, the tool-cabinet bonus and the electric benches. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by PRD-0; the gap backlog is `.agents/gaps/PRODUCTION_GAP_ANALYSIS.md`. Later phases (PRD-1…4) add multi-ingredient recipes, bill settings, quality, stuff choice, art and deterioration hooks here.
 
 ## Owned Concepts
 - `Craft` (craft.go): the root, built by `New(Host)`; components as exported fields; `ElectricBench`, `ElectricPct`, `ElectricSpeedPct` (PLAY-021, also used by game's research bench). Kept small: a feature's entry points go on its component, never here.

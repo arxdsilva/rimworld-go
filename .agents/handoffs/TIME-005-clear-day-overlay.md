@@ -13,8 +13,8 @@ Colony viewport no longer applies a warm sky grade during morning or afternoon. 
 - `internal/adapters/inbound/ebiten/daylight_test.go`
 - `internal/adapters/inbound/ebiten/splash_test.go`
 - `assets/source/raster/ui/main_menu_colonist.png`
-- `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`
+- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`
 
 ## Public Contracts Changed
 

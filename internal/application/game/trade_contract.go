@@ -6,7 +6,7 @@ import "rimworld-go/internal/domain/sim/entity"
 // comms dialogs consume (ProposeTrade's offer codec is trade.EncodeOffer).
 // The producers are trade_session.go and comms.go (agent S2, Phase 1);
 // the dialogs (agent U1, Phase 2) read them through their own interfaces.
-// See .cursor/MAIN_UI_SCREENS_SPECIFICATION.md §28 and §29.
+// See .agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md §28 and §29.
 
 // TradeView is the open trade session (Game.TradeView; ok false while
 // none is open). Prices are per unit in hundredths of a silver.

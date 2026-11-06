@@ -216,8 +216,8 @@ const (
 	// bench (ElectricResearchBench) links to for the hardest projects.
 	MultiAnalyzer
 	// AX-0 contract (append only, saved). Every vanilla Architect item the
-	// game lacked (.cursor/ARCHITECT_GAP_ANALYSIS.md), each owned by one AX
-	// agent (.cursor/handoffs/AX-0-contract.md). Planned() is true for
+	// game lacked (.agents/gaps/ARCHITECT_GAP_ANALYSIS.md), each owned by one AX
+	// agent (.agents/handoffs/AX-0-contract.md). Planned() is true for
 	// every one of them until its owner makes it real (ax_<owner>.go), so
 	// none can be designated (placement.go placeFrameStuff) and none has
 	// an Architect tool, art or behaviour yet.

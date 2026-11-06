@@ -1,6 +1,6 @@
 # WRK-001, HRV-001..010: work order and harvesting
 
-User request (2026-11-04): gap analyses of the Work tab and of harvesting against vanilla, and the "harvested piles are hauled at once" report. Findings and every row: `.cursor/WORK_PRIORITIES_GAP_ANALYSIS.md`, `.cursor/HARVEST_GAP_ANALYSIS.md`.
+User request (2026-11-04): gap analyses of the Work tab and of harvesting against vanilla, and the "harvested piles are hauled at once" report. Findings and every row: `.agents/gaps/WORK_PRIORITIES_GAP_ANALYSIS.md`, `.agents/gaps/HARVEST_GAP_ANALYSIS.md`.
 
 ## What changed
 

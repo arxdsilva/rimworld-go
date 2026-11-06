@@ -1,6 +1,6 @@
 # Documentation Index
 
-All paths below are relative to this `.cursor/` folder unless noted.
+All paths below are relative to this `.agents/` folder unless noted.
 
 | Need | Read |
 |---|---|

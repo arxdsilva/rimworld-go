@@ -1,4 +1,4 @@
-# SOLID guard budget (.cursor/SOLID_GO.md §8): the debt the tree carried when the guard landed (ARCH-001, 2026-10-28).
+# SOLID guard budget (.agents/specs/SOLID_GO.md §8): the debt the tree carried when the guard landed (ARCH-001, 2026-10-28).
 # One line per violation: 'rule key ceiling' for the size rules, 'rule key' for init/global/imports.
 # Lines only shrink: lower a ceiling when a split lands, delete a line when the debt is paid. Never add or raise one.
 

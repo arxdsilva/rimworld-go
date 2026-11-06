@@ -1,6 +1,6 @@
 # ENG-007: military aid by radio (PLAY-024 phase 4)
 
-Original tuning; the values are in `.cursor/PLAY024_PLAN.md`.
+Original tuning; the values are in `.agents/handoffs/_plans/PLAY024_PLAN.md`.
 
 ## Behaviour
 - **Request:** the comms dialog's "Request aid" (`CommsRequestAid`) is open only for friendly factions. It costs 20 goodwill and has a 3-day cooldown. Each disabled case shows its reason:

@@ -9,7 +9,7 @@ Columns of the main table: id, piece, cells (w x h, facing south), per-cell capa
 | Item | Decision |
 |---|---|
 | Scope | All 27 pieces are built: new building kinds, costs, art, Architect cards, research gates, item filters, rendering of stored items, a catalog test, and one row each below. Status vocabulary is the Architect doc's: `missing`, `partial`, `done`. |
-| Exception (ENG-003 style) | **New exception, user decision (2026-11-03): the sizes and per-cell capacities in the table follow the mod's published table.** Everything else (costs, stuff, beauty, hit points, filters, work) is original tuning. The lead adds "NST-*" to the exception list in the root `AGENTS.md` next to ENG-003 (`...2026-11-02 and 2026-11-03`), adding "the Neat Storage furniture set (NST-*, `.cursor/NEAT_STORAGE_GAP_ANALYSIS.md`)". |
+| Exception (ENG-003 style) | **New exception, user decision (2026-11-03): the sizes and per-cell capacities in the table follow the mod's published table.** Everything else (costs, stuff, beauty, hit points, filters, work) is original tuning. The lead adds "NST-*" to the exception list in the root `AGENTS.md` next to ENG-003 (`...2026-11-02 and 2026-11-03`), adding "the Neat Storage furniture set (NST-*, `.agents/gaps/NEAT_STORAGE_GAP_ANALYSIS.md`)". |
 | "Max items per cell" means stacks | Our shelf holds `zone.ShelfStacks` = 3 stacks per cell (`zone/map.go:44`), each up to `item.StackLimit` = 1000, and the mod calls its shelf-like pieces "slightly more per cell than vanilla" at 4 and 6 against vanilla's 3. So the mod's number is read as **stacks per cell**. Corpses, weapons and apparel are one-item stacks, so the corpse dump spot's 12 is 12 bodies a cell. |
 | Per-building capacity | Today capacity is per zone **kind** (`zone.Kind.Stacks()`: shelf 3, bookcase 5, others 1). 27 capacities and 12 filters cannot be new zone kinds without a switch per kind across the game. Decision: all 27 lay a `KindShelf` zone carrying a new saved field `Zone.Profile` (type `zone.Profile`, uint8, 0 = plain shelf), which selects slots and the filter ceiling. See Framework. |
 | Walkability | None of the 27 has `BlocksMove`, like the shelf and the hopper: haulers step onto a storage cell (`store.Search` `Blocked`, `TileTaken`) and a blocking building would make its cells unreachable. Pallets, crates and cabinets are therefore walk-through, as shelves are. The room cuts no space for them (`room/tally.go:185` `cutsSpace` reads `BlocksMove`). |
@@ -189,11 +189,11 @@ Limits: 40 methods per type, 25 fields per type with behaviour, 8 methods per in
 
 ## Checklists and docs to update in the implementing changes
 
-`RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` (storage items, line 513 onwards: add NST), `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (Architect category), `ART_DIRECTION_AND_ASSET_PIPELINE.md` §13 (storage furniture), `ARCHITECT_GAP_ANALYSIS.md` (Decisions: categories; the four moved cards), `STORAGE_GAP_ANALYSIS.md` (a pointer here), `DOCUMENT_INDEX.md`, root `AGENTS.md` (exception), `architect/AGENTS.md`, a handoff `.cursor/handoffs/NST-*.md` per agent.
+`RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` (storage items, line 513 onwards: add NST), `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (Architect category), `ART_DIRECTION_AND_ASSET_PIPELINE.md` §13 (storage furniture), `ARCHITECT_GAP_ANALYSIS.md` (Decisions: categories; the four moved cards), `STORAGE_GAP_ANALYSIS.md` (a pointer here), `DOCUMENT_INDEX.md`, root `AGENTS.md` (exception), `architect/AGENTS.md`, a handoff `.agents/handoffs/NST-*.md` per agent.
 
 ## Proposed split
 
-Parallel workers (PARALLEL_WORK §0). Areas: domain, application, renderer/UI adapter, art pipeline, docs. Run `make agent-budget` first; art agents are about 3 GiB each (Blender), so at most the number it prints, started a few minutes apart. Agents run `GOFLAGS=-p=2` and their own targeted tests; only the lead runs the whole ebiten package. Every agent leaves a handoff in `.cursor/handoffs/NST-<id>.md`.
+Parallel workers (PARALLEL_WORK §0). Areas: domain, application, renderer/UI adapter, art pipeline, docs. Run `make agent-budget` first; art agents are about 3 GiB each (Blender), so at most the number it prints, started a few minutes apart. Agents run `GOFLAGS=-p=2` and their own targeted tests; only the lead runs the whole ebiten package. Every agent leaves a handoff in `.agents/handoffs/NST-<id>.md`.
 
 ### Wave 0: the lead, alone (the contract)
 

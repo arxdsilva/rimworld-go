@@ -1,6 +1,6 @@
 # Beds, sleep and rooms gap analysis (BED-0..BED-3)
 
-Scope: bring beds, rest, room quality and the comfort, beauty and outdoors needs to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for BED-* tasks. Phase handoffs go in `.cursor/handoffs/BED-N-*.md`. Sister documents: `PRODUCTION_GAP_ANALYSIS.md` (quality rolls feed bed stats) and `DEFENCE_GAP_ANALYSIS.md`.
+Scope: bring beds, rest, room quality and the comfort, beauty and outdoors needs to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for BED-* tasks. Phase handoffs go in `.agents/handoffs/BED-N-*.md`. Sister documents: `PRODUCTION_GAP_ANALYSIS.md` (quality rolls feed bed stats) and `DEFENCE_GAP_ANALYSIS.md`.
 
 ## Status (2026-10-29)
 
@@ -15,7 +15,7 @@ Wave D done for BED-3 (needs: comfort, beauty, outdoors; handoff `handoffs/BED-3
 | Numbers | ENG-003 in `AGENTS.md` was extended on 2026-10-29 to beds, production and defence. Published RimWorld wiki numbers are used as tuning data. Names and prose stay original. |
 | Clean room | No wiki text, code, art or sprite data is copied. Each constant is a named constant with a `// wiki: <page>` comment, or `// original tuning` where the wiki gives none. Section 4 lists them. |
 | Art and sound | Art ships with each phase that adds a building or item (skill `rimworld-go-art-assets`). Sound generation for this effort is pre-approved by the user; the lead states the count before each run. BED-1..3 add no creature, so the four-sound creature rule does not apply here. |
-| New package | `internal/application/game` is at its SOLID ceiling. New sleeping, bed-stat and room-thought code lives in the concise sub-package `internal/application/game/rest` (`.cursor/SOLID_GO.md` section 10): a consumer-owned `deps.go` with roles of at most 8 methods, adapters in game, one Game field, saved state keeping its gob names. Bed rest and medical-bed holding stay in `game/care`. |
+| New package | `internal/application/game` is at its SOLID ceiling. New sleeping, bed-stat and room-thought code lives in the concise sub-package `internal/application/game/rest` (`.agents/specs/SOLID_GO.md` section 10): a consumer-owned `deps.go` with roles of at most 8 methods, adapters in game, one Game field, saved state keeping its gob names. Bed rest and medical-bed holding stay in `game/care`. |
 | Budget | BED-0 moves more than its adapters, so package game shrinks first. No later phase may leave package game larger (lines, files, `Game` methods) than the previous commit. |
 | Hysteresis | Every new need- or threshold-driven behaviour (sitting down for comfort, going outside for the outdoors need, animals choosing beds) starts and stops at different thresholds or has a cooldown, and ships a no-flap test modelled on `sleep_test.go`. |
 | Determinism | No new global RNG and no wall clock. Quality-dependent numbers are pure functions of the item's stored quality (from the `quality` domain package, PRD-0). |

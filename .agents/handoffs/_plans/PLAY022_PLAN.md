@@ -88,7 +88,7 @@ Three requests from play (2026-10-27):
   - rain ripples only inside puddle pixels.
 - **Clean-up (remove-unused-assets rule):** retire the puddle sprites, normals, metadata and their `weather.py` builder, plus `puddleShape`. Normalgen and `isGroundKey` treat any remaining ground decal as flat.
 
-## Execution (`.cursor/PARALLEL_WORK.md`)
+## Execution (`.agents/specs/PARALLEL_WORK.md`)
 **Lead contract first:**
 - the metadata keys `ppt` (int) and `gait` (float tiles per cycle), parsed in `art.go`'s meta with defaults (128; the old 1.6);
 - the size area targets and the memory cap rule;
@@ -159,7 +159,7 @@ Three requests from play (2026-10-27):
    - ART spec: §11.1 sizes as areas, `ppt`, §27.1 gait per species, the puddle section `:620-625`;
    - the creatures skill (sizes, gait);
    - assets/AGENTS.md;
-   - handoff `.cursor/handoffs/ART-0xx-play022-animals-puddles.md`;
+   - handoff `.agents/handoffs/ART-0xx-play022-animals-puddles.md`;
    - checklists.
 7. Commits by area on `main` (contract, sim, renderer, art, puddles, dev, docs); no push.
 

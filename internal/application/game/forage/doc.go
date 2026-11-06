@@ -5,7 +5,7 @@
 // starving and searching far).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package and needs
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package and needs
 // nothing from it beyond the region labels it is handed (Labels, a
 // consumer-owned role the region map satisfies). It is deterministic: no
 // random numbers, no clock; maps are only looked up, never iterated for

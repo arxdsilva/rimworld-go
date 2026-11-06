@@ -1,6 +1,6 @@
 // Package gearfacts is the Gear tab's summary numbers and what worn armour
 // does to move speed (GEAR-1: GEAR-001, GEAR-002, GEAR-009 in
-// .cursor/GEAR_GAP_ANALYSIS.md). It is pure: the game passes the outfit,
+// .agents/gaps/GEAR_GAP_ANALYSIS.md). It is pure: the game passes the outfit,
 // what else is carried and the body's numbers, and gets values back.
 package gearfacts
 

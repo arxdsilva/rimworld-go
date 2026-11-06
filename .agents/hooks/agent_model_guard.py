@@ -9,7 +9,7 @@ import sys
 
 UNTYPED = {None, "", "general-purpose"}
 MESSAGE = ("agent_model_guard: pass model for this agent: haiku, sonnet, or opus for hard "
-           "reasoning and all art (.cursor/PARALLEL_WORK.md §6).")
+           "reasoning and all art (.agents/specs/PARALLEL_WORK.md §6).")
 
 
 def check(tool_input):

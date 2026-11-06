@@ -2,7 +2,7 @@
 
 Everything under `assets/generated/world` and `assets/metadata` is
 rendered from this folder. See `assets/AGENTS.md` for the rules and the
-ART spec (`.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`) for intent.
+ART spec (`.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`) for intent.
 
 ```text
 build.py                 entry: blender -b --factory-startup -P build.py -- [family ...]

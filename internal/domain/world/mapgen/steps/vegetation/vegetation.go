@@ -1,4 +1,4 @@
-// Package vegetation is the MAPGEN-2 "vegetation" pass (.cursor/PLAY013_PLAN.md
+// Package vegetation is the MAPGEN-2 "vegetation" pass (.agents/handoffs/_plans/PLAY013_PLAN.md
 // §3.6): a vegetation density field with clearings, then wild plants placed
 // hierarchically (trees in groves, shrubs in thickets, ground plants in
 // patches) under local saturation, and the starting grass mask.

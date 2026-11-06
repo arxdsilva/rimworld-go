@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-// The SOLID guard (.cursor/SOLID_GO.md §8). It parses every non-test Go
+// The SOLID guard (.agents/specs/SOLID_GO.md §8). It parses every non-test Go
 // file under internal/ and cmd/ (syntax only, no type checking, so it
 // runs in a couple of seconds) and measures, per package:
 //
@@ -154,7 +154,7 @@ func TestSOLID(t *testing.T) {
 
 	budget, order := readBudget(t, filepath.Join(root, "internal", "arch", "solid_budget.txt"))
 	if bad := judge(found, budget, order); len(bad) > 0 {
-		t.Errorf("SOLID guard (.cursor/SOLID_GO.md §8): %d violation(s)\n\t%s", len(bad), strings.Join(bad, "\n\t"))
+		t.Errorf("SOLID guard (.agents/specs/SOLID_GO.md §8): %d violation(s)\n\t%s", len(bad), strings.Join(bad, "\n\t"))
 	}
 }
 

@@ -1,6 +1,6 @@
 // Package sense holds the small everyday habits of a colonist's day: tidying
 // the home, strolling when idle. Each is a component of its own over the
-// roles below (.cursor/SOLID_GO.md §10); the game package implements the
+// roles below (.agents/specs/SOLID_GO.md §10); the game package implements the
 // roles with small adapters (sense_host.go), and builds a component where
 // it needs one, so there is no state here and nothing is saved.
 package sense

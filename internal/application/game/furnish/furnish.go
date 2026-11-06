@@ -4,7 +4,7 @@
 // the vanilla 1x2 table.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package, and
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package, and
 // reaches the simulation only through Host. It holds no state of its own:
 // a pot's plant and growth are construction.Building.Plant and Growth,
 // saved with the building. It is deterministic: no random numbers, no

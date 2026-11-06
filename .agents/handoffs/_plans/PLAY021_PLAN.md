@@ -125,7 +125,7 @@ The user wants electricity "just like RimWorld does".
   - one-shots: switch click, short-circuit zap and crackle, flare buzz.
   - Loops are keyed per building in `colonyAmbience` (`sound_director.go:302`); one-shots via `r.cue`.
 
-## Execution (`.cursor/PARALLEL_WORK.md`; after PLAY-020)
+## Execution (`.agents/specs/PARALLEL_WORK.md`; after PLAY-020)
 **Lead contract first** (additive, built, committed):
 - Building kinds and defs: conduit, hidden conduit, switch, the four generators, battery, torch lamp, heater, cooler, electric stove, electric tailoring and research benches. Appended to `construction.go` with `LayerConduit`, `NumLayers` and `RecipeBench`.
 - The `power` domain API with stub bodies.

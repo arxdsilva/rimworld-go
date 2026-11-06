@@ -1,6 +1,6 @@
 # AX-7: books and bookcases made real
 
-Scope: the AX programme's A7 rows (`.cursor/ARCHITECT_GAP_ANALYSIS.md` Bookcase, Small bookcase): vanilla 1.5 core books end to end, ENG-003 wiki numbers, original names, prose and titles.
+Scope: the AX programme's A7 rows (`.agents/gaps/ARCHITECT_GAP_ANALYSIS.md` Bookcase, Small bookcase): vanilla 1.5 core books end to end, ENG-003 wiki numbers, original names, prose and titles.
 
 ## Behaviour
 - **Books** (`domain/economy/book`): novel, textbook and schematic are items (one per stack) with a quality and `item.Stack.Book`, a seed that fixes:

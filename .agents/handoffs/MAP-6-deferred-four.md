@@ -1,6 +1,6 @@
 # MAP-6: the four deferred items, second pass
 
-Asked 2026-11-03: a gap analysis of the items MAP-5 reported as deferred, and fix them. Detail and sources: `.cursor/MULTIMAP_GAP_ANALYSIS.md`, "The four deferred items, second pass"; rows MAP-21 to MAP-23. Done alone, no workers: one lead, in sequence.
+Asked 2026-11-03: a gap analysis of the items MAP-5 reported as deferred, and fix them. Detail and sources: `.agents/gaps/MULTIMAP_GAP_ANALYSIS.md`, "The four deferred items, second pass"; rows MAP-21 to MAP-23. Done alone, no workers: one lead, in sequence.
 
 ## What changed
 - Turrets (MAP-21): a settlement's turret is claimable once no defender stands, and `Building.OffGrid` keeps it running. `orders.ReasonDefenders` says why a Claim took nothing. `combat/turret_fuse.go` gives every turret the wiki's fuse. Autocannon and slug turret now burst (5.9 tiles) and can't be moved. A settlement's turret shoots manhunters.

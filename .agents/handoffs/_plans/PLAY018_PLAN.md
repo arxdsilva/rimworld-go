@@ -126,7 +126,7 @@ The map fills the whole screen (`colonyViewport` = full screen) and the HUD floa
    - ART §17/§33 palette note.
 
 ## Agents (14; contract first, then all in parallel; consumers code against the stubs)
-**Art rule (user, 2026-10-25):** every agent that makes or changes art (palette, icons, sprites, Blender families, visual review of art) runs on the best model available, `opus`, and loads the art-assets skill (`.cursor/skills/rimworld-go-art-assets/SKILL.md`). At the start of execution the lead records this in `.cursor/PARALLEL_WORK.md` §6 and as a feedback memory. Art is never put on a lower tier to save cost.
+**Art rule (user, 2026-10-25):** every agent that makes or changes art (palette, icons, sprites, Blender families, visual review of art) runs on the best model available, `opus`, and loads the art-assets skill (`.agents/skills/rimworld-go-art-assets/SKILL.md`). At the start of execution the lead records this in `.agents/specs/PARALLEL_WORK.md` §6 and as a feedback memory. Art is never put on a lower tier to save cost.
 
 | Agent | Model | Owns |
 |---|---|---|
@@ -201,4 +201,4 @@ A haiku agent runs the capture sweep and builds the contact sheets at the end, w
 - `internal/platform/config/settings.go`
 - `assets/palettes/ui.yaml`
 - `assets/source/blender/artlib/families/overlay.py`
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`

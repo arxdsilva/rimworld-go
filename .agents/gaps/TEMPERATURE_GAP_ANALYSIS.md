@@ -1,6 +1,6 @@
 # Temperature management gap analysis (TEMP-0..TEMP-5)
 
-Scope: outdoor climate and events, room thermodynamics, heat sources and sinks, pawn and animal comfort and exposure, clothing, temperature-driven effects, and the UI, vanilla core only (no DLC). Load only for TEMP-* tasks. Phase handoffs go in `.cursor/handoffs/TEMP-N-*.md`. The pieces exist (biome climates, per-room temperature, heater and cooler, campfire, hypothermia and heatstroke, warmth-seeking, auto-dressing), but the model is coarse and most numbers are original. Sister documents: `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
+Scope: outdoor climate and events, room thermodynamics, heat sources and sinks, pawn and animal comfort and exposure, clothing, temperature-driven effects, and the UI, vanilla core only (no DLC). Load only for TEMP-* tasks. Phase handoffs go in `.agents/handoffs/TEMP-N-*.md`. The pieces exist (biome climates, per-room temperature, heater and cooler, campfire, hypothermia and heatstroke, warmth-seeking, auto-dressing), but the model is coarse and most numbers are original. Sister documents: `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
 
 ## Status (2026-10-31)
 

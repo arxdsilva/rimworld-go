@@ -1,7 +1,7 @@
 # care package
 
 ## Package Purpose
-Looking after pawns that cannot look after themselves: the carry relation, rescue to a safe bed, tending and emergency tending, bed rest, the medical care policy, and the pawn-targeted orders (Rescue, Capture, Arrest, Prioritize tending, Feed, Strip). A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by SIM-061; the gap backlog is `.cursor/PAWN_INTERACTION_GAP_ANALYSIS.md`.
+Looking after pawns that cannot look after themselves: the carry relation, rescue to a safe bed, tending and emergency tending, bed rest, the medical care policy, and the pawn-targeted orders (Rescue, Capture, Arrest, Prioritize tending, Feed, Strip). A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by SIM-061; the gap backlog is `.agents/gaps/PAWN_INTERACTION_GAP_ANALYSIS.md`.
 
 ## Owned Concepts
 - `Care` (care.go): the root, built by `New(Host, Roles)`; components as exported fields; the care level and self-tend commands, `DropPatient`, `FollowCarriers`, `View(id, j) CareView`, `SafeBedFor` (beds.go), `PawnOrders` (orders.go), `Force` and `judge` (forced.go: one verdict for the menu row and the order), `Do` (jobs.go: the SIM-063…065 jobs), `kindOf` (targets.go: colonist, prisoner, guest, stranger, hostile). Kept at ≤ 40 methods: a feature's entry points go on its component, not here.

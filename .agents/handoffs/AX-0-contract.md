@@ -1,6 +1,6 @@
 # AX-0: inert contract for every vanilla Architect item
 
-User request (2026-11-01): make every `missing` and `partial` row of `.cursor/ARCHITECT_GAP_ANALYSIS.md` real. ENG-003 is extended to AX-* (wiki numbers, original names). The inventory is in the lead's scratchpad (`ax-inventory.md`), and the wiki numbers are in `wiki-ax.md`.
+User request (2026-11-01): make every `missing` and `partial` row of `.agents/gaps/ARCHITECT_GAP_ANALYSIS.md` real. ENG-003 is extended to AX-* (wiki numbers, original names). The inventory is in the lead's scratchpad (`ax-inventory.md`), and the wiki numbers are in `wiki-ax.md`.
 
 ## Rules for every owner
 - **Append only, and everything is saved by number.** New construction kinds, item kinds, commands, orders, jobs, research projects, recreation activities and stain kinds were all appended at the end of their enums. Never reorder them.

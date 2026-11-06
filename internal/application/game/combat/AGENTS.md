@@ -1,7 +1,7 @@
 # combat package
 
 ## Package Purpose
-Fighting: line of sight and cover, attack resolution and the attack/hunt job, defending against attackers (fight or flee), spike traps, raiders breaching walls and doors, and the sentry turrets. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by DEF-0; the gap backlog is `.cursor/DEFENCE_GAP_ANALYSIS.md`. Raids themselves are the sibling `game/raid` package (DEF-4), which reaches Strikes, Breach and Turrets through the game.
+Fighting: line of sight and cover, attack resolution and the attack/hunt job, defending against attackers (fight or flee), spike traps, raiders breaching walls and doors, and the sentry turrets. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by DEF-0; the gap backlog is `.agents/gaps/DEFENCE_GAP_ANALYSIS.md`. Raids themselves are the sibling `game/raid` package (DEF-4), which reaches Strikes, Breach and Turrets through the game.
 
 ## Owned Concepts
 - `Combat` (combat.go): the root, built by `New(Host, Roles)`; components as exported fields and no methods of its own (a feature's entry points go on its component).
@@ -39,7 +39,7 @@ Fighting: line of sight and cover, attack resolution and the attack/hunt job, de
 - On the game, behind roles: wounds, death and the harm cascade (`hurt`, `hurtAs`), building damage, rebuild blueprints and repair (`damageBuilding`, `assignRepair`), the calm window (`g.calm`, also cleared by lying down and stashing), presentation stamps (`g.traces`, `g.lastStrike`, `g.lastHit`), the hostile-map and breach-map path queries, and hunting work (`assignHunt`).
 - Saved state keeps gob field names: the save's `Turrets` field (`Version`, `Aims` of `ID, Target, Dir, ShotAt, ReadyAt, SeenAt, StunnedUntil, Burst`; DEF-3 adds `Arms`, `Mortars`, `Doors`, `Fuses`, `Rearms`); nil while nothing holds state. The save's `Shots` (`[]projectile.Shot`), nil while nothing flies.
 - Traces: melee, turret and trap blows are `projectile.Whole`; a shot leaves `Fired` (at the muzzle; Hit = aimed) and `Landed` (Hit, Building, Damage after armor; Hit with Damage 0 = armor stopped it).
-- Numbers: wiki numbers (ENG-003) for the knife, club, spear and rifle (the bolt-action rifle), accuracy bands, shooter accuracy per tile, armor, miss radius, stray and intercept rules; wiki cover values (`domain/combat/cover`, DEF-3); original tuning for fists and natural weapons, body sizes of the size classes, `Tracking`, and the turret (`.cursor/PLAY024_PLAN.md`; instant until DEF-3).
+- Numbers: wiki numbers (ENG-003) for the knife, club, spear and rifle (the bolt-action rifle), accuracy bands, shooter accuracy per tile, armor, miss radius, stray and intercept rules; wiki cover values (`domain/combat/cover`, DEF-3); original tuning for fists and natural weapons, body sizes of the size classes, `Tracking`, and the turret (`.agents/handoffs/_plans/PLAY024_PLAN.md`; instant until DEF-3).
 
 ## Invariants
 - Every roll comes from `Dice`: strikes and traps on the game's main stream, turrets on the defence stream; a brawl passes its own social-stream roll to `StrikeRoll`. No wall clock.

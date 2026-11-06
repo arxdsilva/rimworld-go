@@ -7,7 +7,7 @@
 // "need a research project" alert and the Research tab's read model.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. The
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. The
 // simulation comes in through the consumer-owned roles in deps.go, which
 // the game package implements with small adapter types (research.go).
 // The game keeps one *Lab; its Prog, Cur, Set and Carry are saved.

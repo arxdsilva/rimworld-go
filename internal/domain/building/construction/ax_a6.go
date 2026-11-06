@@ -2,7 +2,7 @@ package construction
 
 // plannedA6 is A6's kinds not live yet (recreation; AX-0 contract). This
 // file is A6's, and so are the predicates below. Every A6 kind is live
-// since AX-6 (.cursor/handoffs/AX-6-recreation.md).
+// since AX-6 (.agents/handoffs/AX-6-recreation.md).
 func plannedA6(Kind) bool { return false }
 
 // Recreation reports a piece colonists enjoy their free time at (AX-6):

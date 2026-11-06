@@ -1,6 +1,6 @@
 # MED-06: surgery v2, organs, euthanasia, anesthetic, vitals monitor
 
-Part of the RimWorld-style medical overhaul (`.cursor/MEDICAL_GAP_ANALYSIS.md`).
+Part of the RimWorld-style medical overhaul (`.agents/gaps/MEDICAL_GAP_ANALYSIS.md`).
 The numbers come from the wiki (Doctoring, Vitals monitor, Human resources)
 under the ENG-003/MED exception.
 

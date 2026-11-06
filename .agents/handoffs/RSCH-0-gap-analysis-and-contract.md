@@ -3,7 +3,7 @@
 User request (2026-11-01): find another major missing feature and overhaul research (the Research UI) to work as close to RimWorld as possible, no questions. ENG-003 is extended to research (AGENTS.md).
 
 ## What changed
-- `.cursor/RESEARCH_GAP_ANALYSIS.md`: phases RSCH-0..3, decision record, gap tables (mechanics and speed, tech levels and cost, benches and facility, selection/alerts/letters, UI, scenarios) and the project table (wiki cost, tech level, prerequisites, bench tier, mapped project or "content not in game").
+- `.agents/gaps/RESEARCH_GAP_ANALYSIS.md`: phases RSCH-0..3, decision record, gap tables (mechanics and speed, tech levels and cost, benches and facility, selection/alerts/letters, UI, scenarios) and the project table (wiki cost, tech level, prerequisites, bench tier, mapped project or "content not in game").
 - `AGENTS.md`: ENG-003 exception names research (RSCH-*) and 2026-11-01.
 - Vanilla checklist row "Research project" no longer says "5 projects" (45 projects, flat costs); checkbox left `[x]` for now, RSCH-1 revisits it.
 

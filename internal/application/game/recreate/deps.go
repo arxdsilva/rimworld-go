@@ -7,7 +7,7 @@
 // builds (the variety rule, recreation.Tolerance).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package and
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package and
 // reaches the simulation only through Host. Its state (tolerances, the
 // fractional recreation carried, retry cooldowns) hangs off the game's
 // social state and is saved as saveState.Recreation. It is deterministic:

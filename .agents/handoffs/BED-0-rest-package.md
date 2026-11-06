@@ -1,6 +1,6 @@
 # BED-0: the rest package, stats and room formulas
 
-Date: 2026-10-29. Programme BED/PRD/DEF (`.cursor/BEDS_GAP_ANALYSIS.md`). Wave A, committed with PRD-0 and DEF-0.
+Date: 2026-10-29. Programme BED/PRD/DEF (`.agents/gaps/BEDS_GAP_ANALYSIS.md`). Wave A, committed with PRD-0 and DEF-0.
 
 ## What changed
 - **`internal/application/game/rest`** (X2, opus) now holds sleeping: when and where (`Sleep`), bed claims and partner beds (`Beds`), and waking room thoughts (`Waking`). Its seven roles are value-only, adapted in `game/rest_host.go`. The `restedFree` field moved in, so its game field nets zero. Bed rest stays in `care`; lovin' stays in game.

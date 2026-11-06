@@ -11,9 +11,9 @@ Moved the entire `.agent/` tree into `.cursor/` so specs, skills, handoffs, and 
 
 - `AGENTS.md` (paths only)
 - `.agent/**` → `.cursor/**` (git mv)
-- `.cursor/skills/rimworld-go-art-assets/` and `rimworld-go-ui-screens/` now hold the full playbooks (stubs removed)
-- `.cursor/skills/README.md`, `manifest.txt`, `rimworld-go-documentation/SKILL.md`
-- `.cursor/DOCUMENT_INDEX.md`
+- `.agents/skills/rimworld-go-art-assets/` and `rimworld-go-ui-screens/` now hold the full playbooks (stubs removed)
+- `.agents/skills/README.md`, `manifest.txt`, `rimworld-go-documentation/SKILL.md`
+- `.agents/README.md`
 - `.cursor/rules/art-direction.mdc`, `ui-screens.mdc`
 
 ## Public Contracts Changed
@@ -22,8 +22,8 @@ None. Agent-facing documentation layout only. Go packages and `docs/` are unchan
 
 ## Invariants / Decisions
 
-- Canonical agent data lives under `.cursor/`: specs at the `.cursor/` root, playbooks in `.cursor/skills/`, handoffs in `.cursor/handoffs/`, always-on recognition in `.cursor/rules/`.
-- Root `AGENTS.md` remains the always-applied workspace rule and now points at `.cursor/DOCUMENT_INDEX.md`.
+- Canonical agent data lives under `.cursor/`: specs at the `.cursor/` root, playbooks in `.agents/skills/`, handoffs in `.agents/handoffs/`, always-on recognition in `.cursor/rules/`.
+- Root `AGENTS.md` remains the always-applied workspace rule and now points at `.agents/README.md`.
 - Skills are native Cursor project skills (auto-discovered); no duplicate stub layer.
 - Historical handoffs were rewritten to the new paths so later agents do not look in `.agent/`.
 
@@ -55,4 +55,4 @@ Generated/future files mentioned in token-optimization examples (`interfaces/`, 
 
 ## Follow-ups
 
-- None required for the move. Continue using `.cursor/handoffs/` for new tasks.
+- None required for the move. Continue using `.agents/handoffs/` for new tasks.

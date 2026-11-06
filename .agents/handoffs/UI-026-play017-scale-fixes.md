@@ -1,6 +1,6 @@
 # Task Handoff
 
-Task ID: UI-026 (PLAY-017 §2–4, §5 UI, §6, §9, §11 UI, §12; plan `.cursor/PLAY017_PLAN.md`)
+Task ID: UI-026 (PLAY-017 §2–4, §5 UI, §6, §9, §11 UI, §12; plan `.agents/handoffs/_plans/PLAY017_PLAN.md`)
 Status: complete
 
 ## Summary

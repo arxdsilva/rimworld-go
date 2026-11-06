@@ -16,7 +16,7 @@ import (
 // Architect tool catalog (MAIN_UI_SCREENS §17, UI checklist §5). The
 // category panel shows every vanilla Architect category; an item this game
 // does not have yet is a greyed placeholder card (planned.go,
-// .cursor/ARCHITECT_GAP_ANALYSIS.md). Buildable costs come from the
+// .agents/gaps/ARCHITECT_GAP_ANALYSIS.md). Buildable costs come from the
 // simulation's catalog (game.Buildables) so the UI never drifts.
 
 // PlaceMode is how a tool turns a drag into cells.
@@ -486,7 +486,7 @@ func toolDefs(tr lang.Tr) []ToolDef {
 			Desc: tr.T("Pushes the ship into the sky (3x4); a ship needs three. Q/E rotates.")},
 		{ID: "ship_sensor", Label: tr.T("Ship sensor cluster"), Category: CatShip, Icon: "ship_sensor", Mode: PlaceSingle, Build: "ship sensor cluster",
 			Desc: tr.T("Lets the ship find its way (2x2); a ship needs one to launch.")},
-		// NST-001..027 (Neat Storage; .cursor/NEAT_STORAGE_GAP_ANALYSIS.md): Build is the build name, Icon the slug.
+		// NST-001..027 (Neat Storage; .agents/gaps/NEAT_STORAGE_GAP_ANALYSIS.md): Build is the build name, Icon the slug.
 		{ID: "display_case", Label: tr.T("Display case"), Category: CatStorage, Icon: "display_case", Mode: PlaceSingle, Build: "display case",
 			Desc: tr.T("A glass-fronted box for one fine thing. Colonists who walk past stop to look at it. Q/E rotates.")},
 		{ID: "round_pedestal", Label: tr.T("Round pedestal"), Category: CatStorage, Icon: "round_pedestal", Mode: PlaceSingle, Build: "round pedestal",

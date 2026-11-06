@@ -238,7 +238,7 @@ func TestPlannedCardsAreGreyAndInert(t *testing.T) {
 	}
 }
 
-// TestEveryGapRowHasACard: .cursor/ARCHITECT_GAP_ANALYSIS.md lists every
+// TestEveryGapRowHasACard: .agents/gaps/ARCHITECT_GAP_ANALYSIS.md lists every
 // core vanilla Architect item with the card that stands for it. Each
 // row's card exists in that category, a missing row's card is a
 // placeholder and a done or partial row's card works, every placeholder
@@ -257,7 +257,7 @@ func TestEveryGapRowHasACard(t *testing.T) {
 			t.Fatal("no go.mod above the package")
 		}
 	}
-	doc, err := os.ReadFile(filepath.Join(dir, ".cursor", "ARCHITECT_GAP_ANALYSIS.md"))
+	doc, err := os.ReadFile(filepath.Join(dir, ".agents", "gaps", "ARCHITECT_GAP_ANALYSIS.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

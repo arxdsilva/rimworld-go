@@ -1,6 +1,6 @@
 # DEF-4 (R1): raids, drafted control, IED leftovers, combat log
 
-Date: 2026-10-29. Wave E, agent R1. Backlog `.cursor/DEFENCE_GAP_ANALYSIS.md` §3.1, §3.5, §3.7, §3.8. Built on R1a's `game/raid` extraction; mechanoids and ship parts are R2's.
+Date: 2026-10-29. Wave E, agent R1. Backlog `.agents/gaps/DEFENCE_GAP_ANALYSIS.md` §3.1, §3.5, §3.7, §3.8. Built on R1a's `game/raid` extraction; mechanoids and ship parts are R2's.
 
 ## What changed
 - **Domain** `internal/domain/raid/rules.go`: `PickArrival`, `PickStrategy`, `Fit`, `FleeLoss`, `Broken`, siege, staging, pod and target-priority constants (100 % covered).

@@ -1,6 +1,6 @@
 # DEF-3: cover, traps, turrets, mortars and doors
 
-Date: 2026-10-29. Wave D. Backlog `.cursor/DEFENCE_GAP_ANALYSIS.md` (sections 3.3, 3.5). Contract commit `8f3932359` (arch(contract): wave D kinds, commands SetDoorHoldOpen/SetMortarTarget/ClearMortarTarget/SetTurretHold, jobs ManMortar/RearmTurret, BuildingView HoldOpen/Barrel/Shells/TargetX/TargetY/HasTarget/HoldFire) came first.
+Date: 2026-10-29. Wave D. Backlog `.agents/gaps/DEFENCE_GAP_ANALYSIS.md` (sections 3.3, 3.5). Contract commit `8f3932359` (arch(contract): wave D kinds, commands SetDoorHoldOpen/SetMortarTarget/ClearMortarTarget/SetTurretHold, jobs ManMortar/RearmTurret, BuildingView HoldOpen/Barrel/Shells/TargetX/TargetY/HasTarget/HoldFire) came first.
 
 ## What changed
 - **Cover** (`domain/combat/cover`, `Sight`): permille cover from buildings, rock, grown trees, cacti, bushes and stone chunks (chunk tiles cached 250 ticks). Wall and door 40 to 75 (wiki), barricade 55, turrets 40/50. `CoverPct` deleted; the overlay uses `cover.OfBuilding`.

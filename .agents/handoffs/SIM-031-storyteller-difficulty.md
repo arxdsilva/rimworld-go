@@ -1,6 +1,6 @@
 # SIM-031 Storytellers, difficulty and threat points
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §3.2, §3.3, §4.5, §5.2, §5.3). Commits: `37f2935d` (domain), `f815d545` (in play), `46d1110d` (stats follow difficulty changes).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md` §3.2, §3.3, §4.5, §5.2, §5.3). Commits: `37f2935d` (domain), `f815d545` (in play), `46d1110d` (stats follow difficulty changes).
 
 ## What changed
 

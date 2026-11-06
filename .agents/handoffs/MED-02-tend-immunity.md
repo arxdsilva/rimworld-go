@@ -1,6 +1,6 @@
 # MED-02: tend quality, healing, scars, infection vs immunity
 
-Part of the RimWorld-style medical overhaul (`.cursor/MEDICAL_GAP_ANALYSIS.md`).
+Part of the RimWorld-style medical overhaul (`.agents/gaps/MEDICAL_GAP_ANALYSIS.md`).
 The numbers come from the RimWorld wiki (Medical Tend Quality / Doctoring,
 Infection, Injury) under the ENG-003/MED exception.
 

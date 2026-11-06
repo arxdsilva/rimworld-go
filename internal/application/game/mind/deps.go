@@ -9,7 +9,7 @@ import (
 )
 
 // Host is everything mind needs from the simulation, as consumer-owned
-// roles (.cursor/SOLID_GO.md §7, §10). Every method takes and returns
+// roles (.agents/specs/SOLID_GO.md §7, §10). Every method takes and returns
 // values, so a host call on the tick path moves nothing to the heap.
 type Host interface {
 	Pawns

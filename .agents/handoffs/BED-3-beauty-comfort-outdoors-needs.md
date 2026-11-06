@@ -1,6 +1,6 @@
 # BED-3: comfort, beauty and outdoors needs
 
-Date: 2026-10-29. Wave D. Backlog `.cursor/BEDS_GAP_ANALYSIS.md` (section 3.6). Contract commit `8f3932359` (arch(contract): wave D kinds, commands, jobs and read-model fields) added the `SitDown` job and `PawnView` Comfort/Beauty/Outdoors (percent) before this work started.
+Date: 2026-10-29. Wave D. Backlog `.agents/gaps/BEDS_GAP_ANALYSIS.md` (section 3.6). Contract commit `8f3932359` (arch(contract): wave D kinds, commands, jobs and read-model fields) added the `SitDown` job and `PawnView` Comfort/Beauty/Outdoors (percent) before this work started.
 
 ## What changed
 - **Needs** (B3; `game/rest/needs.go`, `beauty.go`, `seats.go`, `room_mood.go`, `waking.go`, `beds.go`): `NeedRecord` holds comfort, beauty and outdoors. Updates every 150 ticks per pawn, staggered by id. Need thoughts are memories refreshed while their stage holds.

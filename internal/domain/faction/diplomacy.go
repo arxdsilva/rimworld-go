@@ -1,7 +1,7 @@
 package faction
 
 // Diplomacy over the radio (PLAY-024, original tuning in
-// .cursor/PLAY024_PLAN.md).
+// .agents/handoffs/_plans/PLAY024_PLAN.md).
 
 // Diplomacy rules.
 const (

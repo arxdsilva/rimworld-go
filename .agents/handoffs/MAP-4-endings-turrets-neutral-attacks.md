@@ -1,6 +1,6 @@
 # MAP-4: the everyone-gone ending, hostile turrets, neutral attacks
 
-Settles the three questions MAP-2 and MAP-3 left open for the user (decided 2026-11-02, all as recommended). Gap rows MAP-13 to MAP-16 in `.cursor/MULTIMAP_GAP_ANALYSIS.md`.
+Settles the three questions MAP-2 and MAP-3 left open for the user (decided 2026-11-02, all as recommended). Gap rows MAP-13 to MAP-16 in `.agents/gaps/MULTIMAP_GAP_ANALYSIS.md`.
 
 ## What changed
 - Ending (MAP-14): `AX.EveryoneGone` from `everyoneGone` (`world_stash.go`): no living colonist on a map, on the road, in a pod or casket, due to land, or away on the ship. Prisoners, animals and the kidnapped don't count. `hud/ending.go` opens modal `ending.gone` with Keep watching, Load game and Main menu; a latch stops it reopening until colonists have come back. It also fires when everyone dies, which had no flow at all.

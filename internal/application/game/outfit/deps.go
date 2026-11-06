@@ -4,7 +4,7 @@
 // be worn (GEAR-3, OUT-001…005).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. The game
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. The game
 // implements the roles below with small adapters (apparel.go) and builds
 // a Dresser where it needs one; the free-clothes Index is per map state
 // the game keeps (never saved).

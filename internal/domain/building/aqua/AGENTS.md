@@ -1,7 +1,7 @@
 # aqua package
 
 ## Package Purpose
-The pure rules of fish farming in tanks (FISH-*, `.cursor/FISH_TANK_PLAN.md` §3): the stocks, how one grows, suffers and dies, and what a harvest yields.
+The pure rules of fish farming in tanks (FISH-*, `.agents/handoffs/_plans/FISH_TANK_PLAN.md` §3): the stocks, how one grows, suffers and dies, and what a harvest yields.
 
 ## Owned Concepts
 - `Species`, `Def`, `DefOf`: the stocks (saved by value, append only).

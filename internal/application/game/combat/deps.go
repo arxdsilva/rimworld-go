@@ -18,7 +18,7 @@ import (
 )
 
 // Host is everything combat needs from the simulation, as consumer-owned
-// roles (.cursor/SOLID_GO.md §7, §10). Every method takes and returns
+// roles (.agents/specs/SOLID_GO.md §7, §10). Every method takes and returns
 // values (or a slice combat owns), so a host call on the tick path moves
 // no caller local to the heap. Roles beyond these eight come in Roles.
 type Host interface {

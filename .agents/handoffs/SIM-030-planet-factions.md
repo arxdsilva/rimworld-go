@@ -1,6 +1,6 @@
 # SIM-030 Planet generator, landing-site parameters and factions
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §3.4, §4.1, §4.2, §5.5). Commits: `a85704f2` (planet, site parameters), `37f2935d` (factions), `15b2ca1c`..`f815d545` (raid attribution in play).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md` §3.4, §4.1, §4.2, §5.5). Commits: `a85704f2` (planet, site parameters), `37f2935d` (factions), `15b2ca1c`..`f815d545` (raid attribution in play).
 
 ## What changed
 

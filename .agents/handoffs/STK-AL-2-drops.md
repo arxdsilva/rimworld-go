@@ -1,6 +1,6 @@
 # STK-AL 2: what drops on the map
 
-Fixes the glitch reported 2026-11-02: an animal's kill was allowed by default, a colonist went for it, and the predator had already eaten it. Rows F6 and F16 to F22 in `.cursor/ALLOW_GAP_ANALYSIS.md`.
+Fixes the glitch reported 2026-11-02: an animal's kill was allowed by default, a colonist went for it, and the predator had already eaten it. Rows F6 and F16 to F22 in `.agents/gaps/ALLOW_GAP_ANALYSIS.md`.
 
 ## Root cause
 Three faults stacked:

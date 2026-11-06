@@ -1,6 +1,6 @@
 # ART-014 Pawn builds, storyteller busts, water and NG-1 world art
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §7; decisions D5, D9, D12). Commits: `ece5b5e8` (pawns, atlas), `f7bebeb1` (busts, water, icons, items), `42cb19d2`, `24836829` (portrait key).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md` §7; decisions D5, D9, D12). Commits: `ece5b5e8` (pawns, atlas), `f7bebeb1` (busts, water, icons, items), `42cb19d2`, `24836829` (portrait key).
 
 ## What changed
 

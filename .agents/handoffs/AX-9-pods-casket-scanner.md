@@ -1,6 +1,6 @@
 # AX-9: stasis casket, transport pods, mineral scanner, hitching spot
 
-Scope: the AX programme's A9 rows (`.cursor/ARCHITECT_GAP_ANALYSIS.md` Misc), ENG-003 wiki numbers, original names. The five kinds are no longer Planned (`construction/ax_a9.go`), so the gap doc has no placeholder left (191 rows, all working cards).
+Scope: the AX programme's A9 rows (`.agents/gaps/ARCHITECT_GAP_ANALYSIS.md` Misc), ENG-003 wiki numbers, original names. The five kinds are no longer Planned (`construction/ax_a9.go`), so the gap doc has no placeholder left (191 rows, all working cards).
 
 ## Behaviour
 - **Stasis casket** (wiki: Cryptosleep casket).

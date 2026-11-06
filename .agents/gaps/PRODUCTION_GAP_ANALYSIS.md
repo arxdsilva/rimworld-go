@@ -1,6 +1,6 @@
 # Production gap analysis (PRD-0..PRD-4)
 
-Scope: bring benches, bills, recipes, item quality, materials, deterioration, art and stockpile filters to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for PRD-* tasks. Phase handoffs go in `.cursor/handoffs/PRD-N-*.md`. Sister documents: `BEDS_GAP_ANALYSIS.md` and `DEFENCE_GAP_ANALYSIS.md`. Armor and weapon recipes are shared with DEF-2.
+Scope: bring benches, bills, recipes, item quality, materials, deterioration, art and stockpile filters to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for PRD-* tasks. Phase handoffs go in `.agents/handoffs/PRD-N-*.md`. Sister documents: `BEDS_GAP_ANALYSIS.md` and `DEFENCE_GAP_ANALYSIS.md`. Armor and weapon recipes are shared with DEF-2.
 
 ## Status (2026-10-29)
 
@@ -15,7 +15,7 @@ Wave D done for PRD-3 (benches, work speed, art and sculptures; handoff `handoff
 | Numbers | ENG-003 in `AGENTS.md` was extended on 2026-10-29 to beds, production and defence. Published RimWorld wiki numbers are used as tuning data. Names and prose stay original. |
 | Clean room | No wiki text, code, art or sprite data is copied. Each constant is a named constant with a `// wiki: <page>` comment, or `// original tuning` where the wiki gives none. Section 4 lists them. Sculpture descriptions are generated from original grammar, never copied. |
 | Art and sound | Art ships with each phase that adds a bench or item (skill `rimworld-go-art-assets`). Sound generation for this effort is pre-approved by the user; the lead states the count before each run. Benches get work sounds only if the existing set has none. |
-| New package | `internal/application/game` is at its SOLID ceiling. Bills, recipes, bench work, drying and the tool-cabinet bonus move into the concise sub-package `internal/application/game/craft` (`.cursor/SOLID_GO.md` section 10): a consumer-owned `deps.go` with roles of at most 8 methods, adapters in game, one Game field, saved state keeping its gob names (bills keep theirs). New behaviour goes on component types, never on the package root type. |
+| New package | `internal/application/game` is at its SOLID ceiling. Bills, recipes, bench work, drying and the tool-cabinet bonus move into the concise sub-package `internal/application/game/craft` (`.agents/specs/SOLID_GO.md` section 10): a consumer-owned `deps.go` with roles of at most 8 methods, adapters in game, one Game field, saved state keeping its gob names (bills keep theirs). New behaviour goes on component types, never on the package root type. |
 | Quality | Item quality (awful to legendary) is a pure domain package, `internal/domain/economy/quality`: levels, the skill roll curve (the caller supplies the roll), stat and price multipliers. Beds, armor and weapons read it. |
 | Budget | PRD-0 moves more than its adapters, so package game shrinks first. No later phase may leave package game larger (lines, files, `Game` methods) than the previous commit. |
 | Hysteresis | Ingredient search retries, inspiration triggers and any bill threshold (pause and unpause) use different start and stop values or a retry cooldown, with a no-flap test. |

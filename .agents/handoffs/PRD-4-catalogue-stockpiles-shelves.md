@@ -1,6 +1,6 @@
 # PRD-4: recipe catalogue, stockpile filters, shelves, barrel
 
-Date: 2026-10-29. Wave E, agent P4. Backlog `.cursor/PRODUCTION_GAP_ANALYSIS.md` (3.2, 3.4, 3.5).
+Date: 2026-10-29. Wave E, agent P4. Backlog `.agents/gaps/PRODUCTION_GAP_ANALYSIS.md` (3.2, 3.4, 3.5).
 
 ## What changed
 - **Recipes** (`domain/economy/recipe/wave_e.go`, rows appended to `recipe.go`): 31 ids. Stove: fine, lavish, pemmican, survival meal. Butcher table and spot: kibble, 50 and 35. Brewing bench: wort. Barrel: fill. Drug table: ash flake, silverdust, battle tonic, reagent. Refinery: chemfuel from wood or raw food. Fabrication bench: advanced components, marine armor and helmet. Machining table: flak vest, pants and jacket, the advanced helmet, frag grenades, molotovs, four mortar shells, shred mechanoid. Smithy: plate armor, simple helmet. Smelter: smelt metal apparel.

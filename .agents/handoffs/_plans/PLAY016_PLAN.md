@@ -176,4 +176,4 @@ Variants v0..3 per stage.
 - `internal/domain/world/plant/plant.go`
 - `internal/application/game/{plant_growth.go, plant_view.go, save.go}`
 - `internal/adapters/inbound/ebiten/{crop_batch.go, draw_art.go, environment.go (buildPlantKeys), plant_inspector.go}`
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` §9.3
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` §9.3

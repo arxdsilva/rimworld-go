@@ -1,6 +1,6 @@
 # MAP-0: multiple maps, gap analysis and inert contract
 
-User request (2026-11-02): all four map features (site maps, attacking settlements, founding a second colony, encounter maps), with every open map ticking every tick. Plan Part 2; analysis in `.cursor/MULTIMAP_GAP_ANALYSIS.md`.
+User request (2026-11-02): all four map features (site maps, attacking settlements, founding a second colony, encounter maps), with every open map ticking every tick. Plan Part 2; analysis in `.agents/gaps/MULTIMAP_GAP_ANALYSIS.md`.
 
 ## What changed
 - `mapState` bundle embedded in `Game` (field promotion keeps `g.grid`); `Game` fields 144 to 64, methods 1889 to 1837, lines 53537 to 53328.

@@ -2,7 +2,7 @@
 
 Asked 2026-11-03: gap-analyse the three mods and add everything they add, RimHUD as complete as possible; meat art as steaks; then commit, tag, push; no questions.
 
-Gap documents, each with the rows and work per row: `.cursor/RIMHUD_GAP_ANALYSIS.md` (RHUD, packages DOS-n), `.cursor/NEAT_STORAGE_GAP_ANALYSIS.md` (NST, packages WP-A…), `.cursor/COMMON_SENSE_GAP_ANALYSIS.md` (CSE, packages WP0…). A row's Work column is the job description. Meat art is done (`ART-MEAT-steaks.md`).
+Gap documents, each with the rows and work per row: `.agents/gaps/RIMHUD_GAP_ANALYSIS.md` (RHUD, packages DOS-n), `.agents/gaps/NEAT_STORAGE_GAP_ANALYSIS.md` (NST, packages WP-A…), `.agents/gaps/COMMON_SENSE_GAP_ANALYSIS.md` (CSE, packages WP0…). A row's Work column is the job description. Meat art is done (`ART-MEAT-steaks.md`).
 
 ## Lead decisions on the docs' open questions
 

@@ -3,7 +3,7 @@
 // add quality rolls, stuff choice, art and deterioration hooks here.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. Everything
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. Everything
 // it needs from the simulation comes through the consumer-owned roles in
 // deps.go, which the game package implements with small adapter types in
 // craft_host.go. The game package builds one *Craft and keeps one field.

@@ -21,9 +21,9 @@ The calendar now names morning, afternoon, evening, and night from the hour. Out
 - `internal/adapters/inbound/ebiten/daylight.go`
 - `internal/adapters/inbound/ebiten/daylight_test.go`
 - `internal/adapters/inbound/ebiten/renderer.go`
-- `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`
+- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`
 
 ## Public Contracts Changed
 

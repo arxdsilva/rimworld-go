@@ -1,6 +1,6 @@
 # BED-1: bed stats, bedrolls, animal beds, bed furniture, forbidding buildings
 
-Date: 2026-10-29. Wave B (committed with PRD-1 and DEF-1). Backlog `.cursor/BEDS_GAP_ANALYSIS.md`.
+Date: 2026-10-29. Wave B (committed with PRD-1 and DEF-1). Backlog `.agents/gaps/BEDS_GAP_ANALYSIS.md`.
 
 ## What changed
 - **New kinds** (B1, opus; `construction.go`, `construction/furniture.go`):

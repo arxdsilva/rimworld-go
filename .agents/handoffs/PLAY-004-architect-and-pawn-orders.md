@@ -26,7 +26,7 @@ planned object; doors open when occupied.
 - `internal/adapters/inbound/ebiten/{architect,archtools,orders}.go`, `draw_art.go`, `app.go`, `hud.go`, `inspector.go`, `renderer.go`, `art.go`, `capture.go`, tests, `AGENTS.md`
 - `cmd/game/main.go` (`-capture-ui`), `Makefile`
 - `assets/source/blender/artlib/families/{furniture,overlay}.py` → cot facings, card/order/draft icons, deconstruct marker; regenerated assets
-- `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
 
 ## Public Contracts Changed
 

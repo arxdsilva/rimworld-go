@@ -10,7 +10,7 @@ import (
 )
 
 // journey_arch_test.go: the Architect's vanilla categories and placeholder
-// cards (STK-AG, .cursor/ARCHITECT_GAP_ANALYSIS.md).
+// cards (STK-AG, .agents/gaps/ARCHITECT_GAP_ANALYSIS.md).
 var _ = owe("journey_arch_test.go",
 	[]string{},
 	[]string{})

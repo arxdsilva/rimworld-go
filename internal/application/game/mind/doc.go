@@ -4,7 +4,7 @@
 // recovers with catharsis (SIM-066).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. What it
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. What it
 // needs from the simulation comes through the consumer-owned roles in
 // deps.go, which the game implements with small adapter types in
 // mind_host.go. The game builds one *Mind and keeps one field.

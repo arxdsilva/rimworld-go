@@ -1,6 +1,6 @@
 # BED-2: room statistics, roles and room thoughts
 
-Date: 2026-10-29. Wave C. Backlog `.cursor/BEDS_GAP_ANALYSIS.md` (sections 3.4, 3.5).
+Date: 2026-10-29. Wave C. Backlog `.agents/gaps/BEDS_GAP_ANALYSIS.md` (sections 3.4, 3.5).
 
 ## What changed
 - **Domain** (B2, opus; `domain/world/room/tally.go`, `stats.go`, `room.go`): a `Tally` built at room rebuild holds cells, building beauty (furniture x stuff factor + offset x quality), floor beauty and cleanliness (bare -1/-1, wood 0, stone tile and smooth +1, carpet +2), building and floor value. The old ad-hoc score is removed; impressiveness stages live in `stats.go`.

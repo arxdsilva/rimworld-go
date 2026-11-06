@@ -14,8 +14,8 @@ Canonical sources (read by section, never paste whole files):
 | Roster (sim, binding) | `internal/domain/animal/animal.go` — `Roster` rows, `buildDef` formulas |
 | Roster (art, mirror) | `assets/source/blender/artlib/families/animal_roster.py` |
 | Art rules | ART spec §11 / §11.1 (roster, originals rule, sprite set), §16.2 (blood), §6.1 (creatures cast no shadow, 2026-10-31) |
-| Sound rules | `.cursor/handoffs/SND-001-audio-runtime.md` (addendum: animal voices), `SND-003-animal-voices.md` once written; plan of record for ids, fallback, spending |
-| Wildlife behaviour | `.cursor/handoffs/SIM-019-wildlife.md` |
+| Sound rules | `.agents/handoffs/SND-001-audio-runtime.md` (addendum: animal voices), `SND-003-animal-voices.md` once written; plan of record for ids, fallback, spending |
+| Wildlife behaviour | `.agents/handoffs/SIM-019-wildlife.md` |
 
 ## Hard rules
 
@@ -54,7 +54,7 @@ Canonical sources (read by section, never paste whole files):
 - [ ] Nothing else is per-species in the renderer (frames by `Attack`, `_f` by `Female`, markers by `Size`, corpses by `ItemView.Animal`, blood by figure; creatures cast no shadow) — if you find yourself adding a species switch, extend the roster data instead.
 
 ### 5. Close out
-- [ ] Full gates (`.cursor/PARALLEL_WORK.md` §5): build, fmt, vet, lint, `-race`, determinism ×3, `make art-check`, `make audio-check`, benchmarks.
+- [ ] Full gates (`.agents/specs/PARALLEL_WORK.md` §5): build, fmt, vet, lint, `-race`, determinism ×3, `make art-check`, `make audio-check`, benchmarks.
 - [ ] Handoff note (species, art review, sounds generated/approved with backend, seeds or credits spent) and checklist boxes (vanilla Animals / Wildlife, UI/UX animals tab) — `[x]`/`[-]`/`[!]` honestly.
 
 ## Tests that enforce this (must stay green; never weaken)
@@ -68,4 +68,4 @@ Canonical sources (read by section, never paste whole files):
 | `make audio-check` roster coverage | a roster key whose four events don't resolve to a playable sound |
 
 ## Parallel work
-A batch of new creatures is multi-area (domain, art, audio, renderer, docs): follow `.cursor/PARALLEL_WORK.md` — the lead writes the roster rows in Go **and** Python first (the contract), then art, sound and sim workers run in parallel; MOSS generation stays lead-run (one take at a time: memory) and paid ElevenLabs generation stays lead-gated and user-approved.
+A batch of new creatures is multi-area (domain, art, audio, renderer, docs): follow `.agents/specs/PARALLEL_WORK.md` — the lead writes the roster rows in Go **and** Python first (the contract), then art, sound and sim workers run in parallel; MOSS generation stays lead-run (one take at a time: memory) and paid ElevenLabs generation stays lead-gated and user-approved.

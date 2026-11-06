@@ -16,10 +16,10 @@ Finished the dual-time surface: clock-face HH:MM:SS (2500-tick hour mapped onto 
 - `internal/application/game/game_test.go`
 - `internal/adapters/inbound/ebiten/renderer.go`
 - `internal/adapters/inbound/ebiten/renderer_test.go`
-- `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`
-- `.cursor/HEXAGONAL_ARCHITECTURE.md`
+- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`
+- `.agents/specs/HEXAGONAL_ARCHITECTURE.md`
 
 ## Public Contracts Changed
 

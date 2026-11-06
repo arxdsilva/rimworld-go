@@ -1,6 +1,6 @@
 // Package crops is the catalogue of what a growing zone can sow, as the
 // UI reads it (crop picker, hover). A consumer sub-package of
-// internal/application/game (.cursor/SOLID_GO.md §10): pure functions
+// internal/application/game (.agents/specs/SOLID_GO.md §10): pure functions
 // over the domain plant and terrain tables, nothing from the game.
 package crops
 

@@ -1,5 +1,5 @@
 // Package allow is the colony's allow system (STK-AL,
-// .cursor/ALLOW_GAP_ANALYSIS.md): forbidding and allowing item stacks and
+// .agents/gaps/ALLOW_GAP_ANALYSIS.md): forbidding and allowing item stacks and
 // buildings, the auto-forbid rule for what the dead leave behind, and the
 // player's orders that clear the flag (the Haul things mark, an ordered
 // pick-up). Allowed areas stay with the game (areas.go); this package
@@ -25,7 +25,7 @@ import (
 )
 
 // Host is everything Forbids needs from the simulation, as consumer-owned
-// roles (.cursor/SOLID_GO.md §7, §10). Values only.
+// roles (.agents/specs/SOLID_GO.md §7, §10). Values only.
 type Host interface {
 	Stacks
 	Buildings

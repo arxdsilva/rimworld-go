@@ -1,6 +1,6 @@
 # Pawn-to-pawn interaction gap analysis (SIM-061..SIM-066)
 
-Scope: bring colonist-to-colonist interaction (player orders on a target pawn, rescue, bed choice, feeding and visiting the helpless, strip, mental breaks that involve others) to RimWorld-wiki fidelity. Load only for SIM-061..066 tasks. Phase handoffs go in `.cursor/handoffs/SIM-06N-*.md`.
+Scope: bring colonist-to-colonist interaction (player orders on a target pawn, rescue, bed choice, feeding and visiting the helpless, strip, mental breaks that involve others) to RimWorld-wiki fidelity. Load only for SIM-061..066 tasks. Phase handoffs go in `.agents/handoffs/SIM-06N-*.md`.
 
 ## Status (2026-10-29)
 
@@ -13,7 +13,7 @@ SIM-061…066 are done (rule and care extraction; orders on a pawn; rescue fidel
 | Goal | The user asked for pawn-to-pawn interaction "as close as possible with RimWorld". Their example: select a colonist, right-click a downed one, choose Rescue, and the rescuer carries the patient to a safe bed. |
 | Numbers | ENG-003 in `AGENTS.md` was extended on 2026-10-29 to pawn-to-pawn care and mental breaks (SIM-061..066). Published RimWorld wiki numbers are used as tuning data. Names and prose stay original. |
 | Clean room | No wiki text, code, art or sprite data is copied. Only numeric facts are taken. Each is a named constant with a `// wiki: <page>` comment, or `// original tuning` where the wiki gives none. Section 4 lists the constants. |
-| New packages | `internal/application/game` is at its SOLID ceiling. New features therefore go into concise sub-packages: `internal/application/game/care` (SIM-061, rescue/tend/carry/beds/orders) and `internal/application/game/mind` (SIM-066, mental breaks). Rule: `.cursor/SOLID_GO.md` section 10. A sub-package is a consumer of the root and never imports it. |
+| New packages | `internal/application/game` is at its SOLID ceiling. New features therefore go into concise sub-packages: `internal/application/game/care` (SIM-061, rescue/tend/carry/beds/orders) and `internal/application/game/mind` (SIM-066, mental breaks). Rule: `.agents/specs/SOLID_GO.md` section 10. A sub-package is a consumer of the root and never imports it. |
 | Orders | Pawn-targeted orders ride on `command.Prioritize` with the target in `Command.Target`. That reuses forced-job semantics, the Shift queue (max 3), failure re-queue and disabled reasons. |
 | Hysteresis | Every new need- or threshold-driven behaviour (feeding patients, visiting the sick, aggressive breaks) starts and stops at different thresholds or has a cooldown, and ships a no-flap test modelled on `sleep_test.go`. |
 | Determinism | No new global RNG and no wall clock. Care takes time from the host and draws on the existing medical stream. Break selection takes its roll from the caller. |

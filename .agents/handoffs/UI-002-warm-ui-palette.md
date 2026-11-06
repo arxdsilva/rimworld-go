@@ -16,8 +16,8 @@ Menu, boot, pause, options, load, and credits chrome now uses an original warm d
 - `internal/adapters/inbound/ebiten/app.go`
 - `internal/adapters/inbound/ebiten/screen_menu.go`
 - `internal/adapters/inbound/ebiten/AGENTS.md`
-- `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`
+- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`
 
 ## Public Contracts Changed
 

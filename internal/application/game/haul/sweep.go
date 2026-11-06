@@ -8,7 +8,7 @@ import (
 )
 
 // SweepHost is what the harvest sweep needs from the simulation (a
-// consumer-owned role, .cursor/SOLID_GO.md §7). NearestRipe goes through
+// consumer-owned role, .agents/specs/SOLID_GO.md §7). NearestRipe goes through
 // the game's marked-plant index, so a sweep never walks the plants.
 type SweepHost interface {
 	Harvester

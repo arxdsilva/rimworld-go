@@ -16,8 +16,8 @@ Colony play now has original HUD chrome instead of debug overlay text: a resourc
 - `internal/adapters/inbound/ebiten/renderer.go`
 - `internal/adapters/inbound/ebiten/hud_test.go`
 - `internal/adapters/inbound/ebiten/AGENTS.md`
-- `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`
-- `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`
+- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
 
 ## Public Contracts Changed
 

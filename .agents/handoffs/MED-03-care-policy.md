@@ -1,6 +1,6 @@
 # MED-03: medical care policy, doctor work order, emergency tend
 
-Part of the RimWorld-style medical overhaul (`.cursor/MEDICAL_GAP_ANALYSIS.md`).
+Part of the RimWorld-style medical overhaul (`.agents/gaps/MEDICAL_GAP_ANALYSIS.md`).
 
 ## Behaviour
 - **Care levels** (`domain/pawn/medcare`): No care, Care with no medicine, Herbal or less, Industrial or less, Best available.

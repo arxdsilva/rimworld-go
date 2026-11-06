@@ -1,6 +1,6 @@
 # WG-1: planet v1 domain and the globe relief
 
-Closes the domain half of `.cursor/WORLDGEN_GAP_ANALYSIS.md` and the relief half of the globe look.
+Closes the domain half of `.agents/gaps/WORLDGEN_GAP_ANALYSIS.md` and the relief half of the globe look.
 
 ## What changed
 - **Versioning (WG-17).** `planet.CurrentVersion = 1`; the wizard sets it (`newgame_state.go`, `screen_worldgen.go`). Every generator change is gated on `Version >= 1`; v0 worlds rebuild as before (`TestV0WorldUnchanged`), and `TestPlanetGoldenHashV1` pins v1.

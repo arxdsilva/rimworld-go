@@ -1,6 +1,6 @@
 # PWR: visible power wires and Reconnect
 
-Asked 2026-11-03: powered items such as wall lamps, coolers and heaters should connect with a small visible wire to the closest power source or wiring, even when it is built in a wall, and the game should connect and disconnect the way RimWorld does. Detail, wiki sources and rows PWR-1 to PWR-5: `.cursor/POWER_GAP_ANALYSIS.md`. Plan: `~/.claude/plans/redraw-the-narrators-they-glimmering-lampson.md`.
+Asked 2026-11-03: powered items such as wall lamps, coolers and heaters should connect with a small visible wire to the closest power source or wiring, even when it is built in a wall, and the game should connect and disconnect the way RimWorld does. Detail, wiki sources and rows PWR-1 to PWR-5: `.agents/gaps/POWER_GAP_ANALYSIS.md`. Plan: `~/.claude/plans/redraw-the-narrators-they-glimmering-lampson.md`.
 
 ## What changed
 - Graph (`domain/building/power`): `ConnectRange` 3 to 6 (Chebyshev, ours). Generators and batteries conduct. A conductor touching another conductor is on that grid with no wire. A set of only generators and batteries wires out once. `Node.Pin` is the conductor the player chose; `Link.Next` is the conductor Reconnect moves to. Of conductors equally far the wire takes the straightest, then the smaller y, then the smaller x (`footDist`), so a lamp above a conduit doesn't wire to a diagonal tile. `Role.Device`, `Spec.Thermostat`, `Mix`, `FlagBits`, `SortByNode` moved in from `application/game` (`listing.go`) to pay the `game` budget.

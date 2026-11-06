@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the PreToolUse hooks: python3 .claude/hooks/test_hooks.py"""
+"""Tests for the PreToolUse hooks: python3 .agents/hooks/test_hooks.py"""
 import json
 import os
 import subprocess

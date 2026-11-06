@@ -1,6 +1,6 @@
 # RSCH-1: research simulation at wiki fidelity
 
-Agent S, 2026-11-01. The request was to overhaul research to work as close to RimWorld as possible. ENG-003 is extended to RSCH-*. The spec is `.cursor/RESEARCH_GAP_ANALYSIS.md`; §3.7 has the final mapping and every original-tuning value.
+Agent S, 2026-11-01. The request was to overhaul research to work as close to RimWorld as possible. ENG-003 is extended to RSCH-*. The spec is `.agents/gaps/RESEARCH_GAP_ANALYSIS.md`; §3.7 has the final mapping and every original-tuning value.
 
 ## What changed
 - **`domain/research`:**

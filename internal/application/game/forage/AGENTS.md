@@ -1,7 +1,7 @@
 # forage package
 
 ## Package Purpose
-A tame animal's food search rules (FEED-001). A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created when the game package sat at its budget.
+A tame animal's food search rules (FEED-001). A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created when the game package sat at its budget.
 
 ## Owned Concepts
 - `Reach` (reach.go): the cells an animal can walk to (or eat from beside) on its region layer; a label compare per cell, never a search. Wild animals use it only while fences stand (`game.fenceReachable`); tame animals always, on `region.Tame` when the colony's doors and gates open for them (`game.gatesOpen`), else `region.Wild`.

@@ -8,7 +8,7 @@ AX wave 1, 2026-11-01, clean-room original art. Run with `make art FAMILIES="dec
 - `assets/palettes/materials_decor.yaml` (new): jade, plasteel and uranium walls, silver and gold trims, concrete, pavers, grout, sterile tile, carpet neutrals, clay, and the `flood_white` emissive.
 - `assets/source/blender/build.py`: adds `decor` and `flooring` to FAMILIES.
 - Generated output: about 300 world sprites with metadata and normal maps, 18 floors (lit flat, no normal map) and 29 icons.
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`:
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`:
   - Wave 4 rows "material variants" and "furniture families" are now `[-]`; what's missing is the in-game review.
   - New §40 lists every key.
 

@@ -1,6 +1,6 @@
 # SIM-033 Landing-site maps and water
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §4.3, §5.6, §7.3; decision D12). Commits: `cf293081` (generation), `f815d545` (rules in play), `f7bebeb1` (art), `6cf941f2` (ambience).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md` §4.3, §5.6, §7.3; decision D12). Commits: `cf293081` (generation), `f815d545` (rules in play), `f7bebeb1` (art), `6cf941f2` (ambience).
 
 ## What changed
 

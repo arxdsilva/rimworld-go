@@ -1,7 +1,7 @@
 # dossier package
 
 ## Package Purpose
-The colonist card (RHUD, `.cursor/RIMHUD_GAP_ANALYSIS.md`): a player-edited tree of value widgets for one pawn or animal, docked in the inspect pane or floating over the map, and the setup modal that edits it. Read-only over the game: it reads read models through `Reader` and sends typed commands through `Actions`. On by default; `config.HUD.Enabled` off leaves the plain pane.
+The colonist card (RHUD, `.agents/gaps/RIMHUD_GAP_ANALYSIS.md`): a player-edited tree of value widgets for one pawn or animal, docked in the inspect pane or floating over the map, and the setup modal that edits it. Read-only over the game: it reads read models through `Reader` and sends typed commands through `Actions`. On by default; `config.HUD.Enabled` off leaves the plain pane.
 
 ## Owned Concepts
 - `Panel`: the card. `Select`, `Declare`/`Draw` in the pane, `DeclareFloating`/`DrawFloating` over the map, `Invalidate`, `Reset`, `OpenStats`, `TimingLines`.

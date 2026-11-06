@@ -1,7 +1,7 @@
 # haul package
 
 ## Package Purpose
-Stockpile hauling's own rules. A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), created by HAUL-002 when the game package sat at its budget.
+Stockpile hauling's own rules. A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), created by HAUL-002 when the game package sat at its budget.
 
 ## Owned Concepts
 - `Plan` (gather.go, HAUL-002): the load a stockpile haul gathers. A greedy chain from the first pile: each next pile is the nearest same-load candidate within `Radius` (8 tiles Chebyshev, original tuning) of the last one taken, ties to the lower id, up to the load's capacity; the last pile may be taken in part. `Pickups` encodes the picks into `job.Record.Pickups` (stack id, count pairs); `ClaimAll` claims each pile's planned count when the job starts (RES-1 count claims: another hauler may plan the rest of a pile; the game releases the first pile's claim once the load is split off it).

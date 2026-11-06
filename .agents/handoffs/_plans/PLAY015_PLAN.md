@@ -435,4 +435,4 @@ The lead commits per area.
 - **Art and sound:**
   - `assets/source/blender/artlib/families/{effect.py, structure.py, overlay.py}`;
   - `cmd/audiogen/recipes.go`.
-- **Docs:** `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`, both checklists, `README.md`.
+- **Docs:** `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`, both checklists, `README.md`.

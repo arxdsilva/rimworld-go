@@ -1,6 +1,6 @@
 # AX-3: every vanilla floor, made real
 
-User request (2026-11-01, AX programme): make every Floors row of `.cursor/ARCHITECT_GAP_ANALYSIS.md` work end to end, with wiki numbers (ENG-003 extended to AX-*) and original names.
+User request (2026-11-01, AX programme): make every Floors row of `.agents/gaps/ARCHITECT_GAP_ANALYSIS.md` work end to end, with wiki numbers (ENG-003 extended to AX-*) and original names.
 
 ## What works
 - **Floor kinds.** Straw matting (hay), concrete, paved tile, steel tile, silver tile, gold tile, sterile tile (steel, plus silver through A4's secondary-material delivery), stone tile and flagstone (any stone blocks), and the carpet floor (cloth).

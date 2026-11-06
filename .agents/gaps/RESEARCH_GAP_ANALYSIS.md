@@ -1,6 +1,6 @@
 # Research gap analysis (RSCH-0..RSCH-3)
 
-Scope: research speed and cost, tech levels, the project table, research benches and the multi-analyzer, project selection, alerts and letters, the Research tab, and starting research per scenario, vanilla core only (no DLC). Load only for RSCH-* tasks. Phase handoffs go in `.cursor/handoffs/RSCH-N-*.md`. The pieces exist (a 45-project DAG, one current project, a bench job, a list UI), but projects have flat hand-tuned costs, no tech level or bench tier, and the screen is a list rather than a tech tree. Sister documents: `TEMPERATURE_GAP_ANALYSIS.md`, `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`.
+Scope: research speed and cost, tech levels, the project table, research benches and the multi-analyzer, project selection, alerts and letters, the Research tab, and starting research per scenario, vanilla core only (no DLC). Load only for RSCH-* tasks. Phase handoffs go in `.agents/handoffs/RSCH-N-*.md`. The pieces exist (a 45-project DAG, one current project, a bench job, a list UI), but projects have flat hand-tuned costs, no tech level or bench tier, and the screen is a list rather than a tech tree. Sister documents: `TEMPERATURE_GAP_ANALYSIS.md`, `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`.
 
 ## Status (2026-11-01)
 

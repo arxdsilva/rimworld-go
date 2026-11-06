@@ -32,7 +32,7 @@ ui.warning: "#EDA94AFF"
 ui.danger: "#FFA094FF"
 ui.good: "#8ACF6AFF"
 # OPT-018 colour-vision variants of the status colours (checked with the
-# Machado 2009 matrices, .cursor/handoffs/OPT-2-art.md); deuteranopia and
+# Machado 2009 matrices, .agents/handoffs/OPT-2-art.md); deuteranopia and
 # protanopia share one set.
 ui.deuteranopia.danger: "#EA9E94FF"
 ui.deuteranopia.warning: "#F8EA52FF"

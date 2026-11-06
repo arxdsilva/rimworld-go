@@ -1,7 +1,7 @@
 # MED-00: medical overhaul contract and save groundwork
 
 This is part of the medical overhaul towards RimWorld's system. The gap
-analysis and wiki constants are in `.cursor/MEDICAL_GAP_ANALYSIS.md`. The
+analysis and wiki constants are in `.agents/gaps/MEDICAL_GAP_ANALYSIS.md`. The
 ENG-003 wiki-numbers exception now also covers MED-* (AGENTS.md).
 
 ## What changed (no simulation behaviour change)

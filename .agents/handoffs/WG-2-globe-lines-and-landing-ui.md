@@ -1,6 +1,6 @@
 # WG-2: roads, rivers and labels on the globe; landing UI; units; journeys
 
-Second half of the globe look and the UI of `.cursor/WORLDGEN_GAP_ANALYSIS.md`.
+Second half of the globe look and the UI of `.agents/gaps/WORLDGEN_GAP_ANALYSIS.md`.
 
 ## What changed
 - **Globe lines and names** (`globe/labels.go`): rivers by size (creek 0.6 to huge 2.4, tapered, ending at the shore), roads by class (`road_*`), shore stroke, feature labels by zoom band and facing with a collision pass (at most 24). `worldinfo.DrawLegend` reads `globe.HillLegend/RoadLegend/RiverLegend`. Grid toggle (`land.grid`, `world.grid`).

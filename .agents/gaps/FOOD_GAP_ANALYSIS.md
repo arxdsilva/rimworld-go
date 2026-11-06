@@ -1,6 +1,6 @@
 # Food production gap analysis (FOOD-0..FOOD-5)
 
-Scope: growing, animals and butchering, cooking, preservation, eating, and hunger and malnutrition, vanilla core only (no DLC). Load only for FOOD-* tasks. Phase handoffs go in `.cursor/handoffs/FOOD-N-*.md`. The loops exist (zones, sowing, harvest, hunting, milk and eggs, recipes, rot, eating, poisoning, starvation), but the numbers and many mechanics are not vanilla. Sister documents: `PRODUCTION_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
+Scope: growing, animals and butchering, cooking, preservation, eating, and hunger and malnutrition, vanilla core only (no DLC). Load only for FOOD-* tasks. Phase handoffs go in `.agents/handoffs/FOOD-N-*.md`. The loops exist (zones, sowing, harvest, hunting, milk and eggs, recipes, rot, eating, poisoning, starvation), but the numbers and many mechanics are not vanilla. Sister documents: `PRODUCTION_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
 
 ## Status (2026-10-31)
 

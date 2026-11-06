@@ -42,7 +42,7 @@ func (r Ripe) Takes(wild bool) bool {
 }
 
 // Harvester is what starting a harvest needs from the simulation (a
-// consumer-owned role, .cursor/SOLID_GO.md §7).
+// consumer-owned role, .agents/specs/SOLID_GO.md §7).
 type Harvester interface {
 	// NearestRipe is the nearest plant of the kinds in takes that
 	// WantsHarvest picks and pawn id may take (allowed area, claims,

@@ -10,7 +10,7 @@ import (
 )
 
 // The roles the books need from the simulation, each at most eight
-// methods (.cursor/SOLID_GO.md §7, §10). The game hands in its existing
+// methods (.agents/specs/SOLID_GO.md §7, §10). The game hands in its existing
 // adapters where one already fits (research's for Sites, haul's for
 // Items, the orders' for Hands) and one small adapter for Mind and
 // Colony.

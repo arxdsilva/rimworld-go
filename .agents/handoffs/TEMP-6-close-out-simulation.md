@@ -1,6 +1,6 @@
 # TEMP-6: close-out simulation (agent Z)
 
-Wiki fidelity under ENG-003 (temperature). Gap rows: `.cursor/TEMPERATURE_GAP_ANALYSIS.md` §3.0 (TEMP-0 row closed), §3.2, §3.3, §3.5, §3.6.
+Wiki fidelity under ENG-003 (temperature). Gap rows: `.agents/gaps/TEMPERATURE_GAP_ANALYSIS.md` §3.0 (TEMP-0 row closed), §3.2, §3.3, §3.5, §3.6.
 
 ## What changed
 - **Outdoors judgements** (`game/thermo/outdoors.go`, wiki: Rooms). `OutdoorsForWork(r)` is true above 25 % unroofed or above 100 unroofed cells. `PsychOutdoors(r)` is true at 300 or more unroofed cells, or for the edge-open outdoor area with at least 50 % unroofed. Both read cached counts.

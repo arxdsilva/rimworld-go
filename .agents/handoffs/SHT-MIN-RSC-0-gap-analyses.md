@@ -4,7 +4,7 @@ User request (2026-11-05): how shooting, mining and rescue work in RimWorld, wha
 
 ## What changed
 
-- New: `.cursor/SHOOTING_GAP_ANALYSIS.md`, `.cursor/MINING_GAP_ANALYSIS.md`, `.cursor/RESCUE_GAP_ANALYSIS.md`, each with leverage ideas, sourced numbers, rows and proposed phases.
+- New: `.agents/gaps/SHOOTING_GAP_ANALYSIS.md`, `.agents/gaps/MINING_GAP_ANALYSIS.md`, `.agents/gaps/RESCUE_GAP_ANALYSIS.md`, each with leverage ideas, sourced numbers, rows and proposed phases.
 - Corrected: `COMBAT` (Careful row, weather and light, miss radius, interception, XP path, status), `DEFENCE` (lines 37 and 137), `PAWN_INTERACTION` (casket, join, bed rank, Doctor order, +16, margin).
 - `DOCUMENT_INDEX.md` has three new rows; `AGENTS.md` extends ENG-003.
 

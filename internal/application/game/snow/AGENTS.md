@@ -1,7 +1,7 @@
 # snow package
 
 ## Package Purpose
-The per-tile snow layer and the snow clearing area with its shovelling job (PLAY-015 §4). A consumer sub-package of `internal/application/game` (`.cursor/SOLID_GO.md` §10), moved out to pay for game lines.
+The per-tile snow layer and the snow clearing area with its shovelling job (PLAY-015 §4). A consumer sub-package of `internal/application/game` (`.agents/specs/SOLID_GO.md` §10), moved out to pay for game lines.
 
 ## Owned Concepts
 - `State`: depth, clearing area, derived counts and view caches; the game keeps it as `snowState = snow.State` in its map state.

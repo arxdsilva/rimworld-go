@@ -1,6 +1,6 @@
 # Multiple maps gap analysis (MAP-0..MAP-6)
 
-Scope: several maps open and ticking at once (the colony, mineral sites, attacked settlements, founded colonies and caravan encounters), the caravan and pod rules that open them, and the UI that switches between them, compared with core vanilla RimWorld 1.5 (no DLC). Load only for MAP-* tasks. Phase handoffs go in `.cursor/handoffs/MAP-N-*.md`. AX-9 (transport pods, caravans, the mineral scanner) refused all of this as needing "a second map". Sister document: `WORLDGEN_GAP_ANALYSIS.md` (WG-03 supplies the movement difficulty that MAP-09 uses). Sources: rimworldwiki.com pages Caravan, Colony, Faction base, Long-range mineral scanner, Transport pod, Ending, Goodwill (2026-11-02). Names and prose are ours.
+Scope: several maps open and ticking at once (the colony, mineral sites, attacked settlements, founded colonies and caravan encounters), the caravan and pod rules that open them, and the UI that switches between them, compared with core vanilla RimWorld 1.5 (no DLC). Load only for MAP-* tasks. Phase handoffs go in `.agents/handoffs/MAP-N-*.md`. AX-9 (transport pods, caravans, the mineral scanner) refused all of this as needing "a second map". Sister document: `WORLDGEN_GAP_ANALYSIS.md` (WG-03 supplies the movement difficulty that MAP-09 uses). Sources: rimworldwiki.com pages Caravan, Colony, Faction base, Long-range mineral scanner, Transport pod, Ending, Goodwill (2026-11-02). Names and prose are ours.
 
 ## Decisions
 

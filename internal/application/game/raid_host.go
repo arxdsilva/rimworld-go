@@ -17,7 +17,7 @@ import (
 
 // raidHost implements raid.Host (raid/deps.go) over the game: one small
 // adapter type per role, each a thin view of *Game, so no method is added
-// to Game itself (.cursor/SOLID_GO.md §10). Jobs and Dice are combat's
+// to Game itself (.agents/specs/SOLID_GO.md §10). Jobs and Dice are combat's
 // adapters (combat_host.go): the same calls on the same main stream.
 type raidHost struct {
 	raidRoster

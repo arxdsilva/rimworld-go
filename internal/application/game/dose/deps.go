@@ -2,7 +2,7 @@
 // policy, the hourly wearing off, the search for a dose, and what a dose
 // does. The states stay on the game (saved as Drugs, in save.go's types, so
 // the save's type names stay put); this package holds the behaviour, over
-// the roles below (.cursor/SOLID_GO.md §10). The game implements them with
+// the roles below (.agents/specs/SOLID_GO.md §10). The game implements them with
 // small adapters (dose_host.go) and builds the component where it needs it.
 package dose
 

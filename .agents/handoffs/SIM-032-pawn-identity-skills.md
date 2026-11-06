@@ -1,6 +1,6 @@
 # SIM-032 Colonist identity, skills in play and character creation
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §3.5-§3.9, §4.6, §5.4; decisions D3, D9). Commits: `15b2ca1c` (domain), `07a536fe` (candidate pool), `f815d545` (in play, saves), `a9ca527c` (Bio tab and Work tab).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md` §3.5-§3.9, §4.6, §5.4; decisions D3, D9). Commits: `15b2ca1c` (domain), `07a536fe` (candidate pool), `f815d545` (in play, saves), `a9ca527c` (Bio tab and Work tab).
 
 ## What changed
 

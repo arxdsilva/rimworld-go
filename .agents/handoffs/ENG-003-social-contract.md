@@ -5,7 +5,7 @@ Status: done (contract only; no feature behaviour)
 
 ## Summary
 
-Implements `.cursor/SOCIAL_SYSTEM_CONTRACT.md` C1-C4: every shared enum and
+Implements `.agents/specs/SOCIAL_SYSTEM_CONTRACT.md` C1-C4: every shared enum and
 def field appended, the seven domain packages as compilable stubs, the
 application skeleton (phases, containers, RNG streams, hooks at their call
 sites, job dispatch, read models, save fields) and the UI contract (Simulation

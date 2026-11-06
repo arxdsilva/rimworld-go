@@ -1,6 +1,6 @@
 # PRD-2: quality, stuff, condition, inspiration
 
-Date: 2026-10-29. Wave C. Backlog `.cursor/PRODUCTION_GAP_ANALYSIS.md` (section 3.2).
+Date: 2026-10-29. Wave C. Backlog `.agents/gaps/PRODUCTION_GAP_ANALYSIS.md` (section 3.2).
 
 ## What changed
 - **Quality** (P2, opus; `game/craft/quality.go`, domain `economy/quality`): rolled from the worker's skill at craft completion and at construction. Items: apparel and weapons (grenades not). Buildings: bed, bedroll, animal bed, end table, dresser, table, chair, horseshoe pin. Stacks and `Building` carry Quality (gob-additive).

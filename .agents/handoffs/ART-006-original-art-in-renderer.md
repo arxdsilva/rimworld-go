@@ -28,7 +28,7 @@ renderer.
 - `assets/source/blender/artlib/families/{furniture,terrain}.py` (cot;
   more terrain variety), regenerated `assets/generated`, `assets/metadata`
 - `Makefile` (`art-capture`), `assets/AGENTS.md`,
-  `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`
+  `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`
 
 ## Public Contracts Changed
 

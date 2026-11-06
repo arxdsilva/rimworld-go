@@ -1,6 +1,6 @@
 # Task Handoff
 
-Task ID: ENG-004 (PLAY-019; plan `.cursor/PLAY019_PLAN.md`)
+Task ID: ENG-004 (PLAY-019; plan `.agents/handoffs/_plans/PLAY019_PLAN.md`)
 Status: complete
 
 ## Summary
@@ -12,7 +12,7 @@ Status: complete
 
 **Parallel work:**
 - `cmd/rambudget` (`make agent-budget`) reads free RAM (`internal/platform/sysinfo`: macOS sysctl, Linux `/proc/meminfo`, Windows `GlobalMemoryStatusEx`) and prints how many heavy, art and light agents fit after a 4 GiB reserve.
-- The rule is in `.cursor/PARALLEL_WORK.md` §1/§3/§5 and skill `parallel-work` step 0: run it before each launch and phase, and agents test with `GOFLAGS=-p=2` and targeted `-run` only.
+- The rule is in `.agents/specs/PARALLEL_WORK.md` §1/§3/§5 and skill `parallel-work` step 0: run it before each launch and phase, and agents test with `GOFLAGS=-p=2` and targeted `-run` only.
 
 **Memory diet** (`art_memory.go`, `tint.kage`):
 - The game indexes the art and decodes on first use. A background prewarm keeps deflated copies (~46 MiB) of every file family except animals.

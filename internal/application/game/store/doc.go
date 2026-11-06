@@ -5,7 +5,7 @@
 // hoppers beside it (Paste).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. What it
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. What it
 // needs from the simulation comes through the consumer-owned roles in
 // deps.go, which the game package implements with small adapters beside
 // the code they serve (zones.go). It is deterministic: no random

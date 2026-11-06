@@ -10,7 +10,7 @@ import (
 )
 
 // Host is everything gather needs from the simulation, as consumer-owned
-// roles (.cursor/SOLID_GO.md §7, §10). Every method takes and returns
+// roles (.agents/specs/SOLID_GO.md §7, §10). Every method takes and returns
 // values: gatherings run on the tick path of every pawn.
 type Host interface {
 	Folk

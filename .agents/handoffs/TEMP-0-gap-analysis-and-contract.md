@@ -3,7 +3,7 @@
 User request (2026-10-31): temperature management "just like rimworld has", with a deep gap analysis first. ENG-003 is extended to temperature management (AGENTS.md).
 
 ## What changed
-- `.cursor/TEMPERATURE_GAP_ANALYSIS.md`: the gap analysis (outdoor and events, rooms, heat sources, pawn exposure, animals, clothing layers, temperature-driven effects, UI), each row with wiki behaviour, evidence, gap, phase (TEMP-0..5) and state, plus a decision record (ENG-003, layered clothing, normal storyteller events, water freezing out of scope).
+- `.agents/gaps/TEMPERATURE_GAP_ANALYSIS.md`: the gap analysis (outdoor and events, rooms, heat sources, pawn exposure, animals, clothing layers, temperature-driven effects, UI), each row with wiki behaviour, evidence, gap, phase (TEMP-0..5) and state, plus a decision record (ENG-003, layered clothing, normal storyteller events, water freezing out of scope).
 - `AGENTS.md`: the ENG-003 exception now names temperature management (TEMP-*) and 2026-10-31.
 - Checklist corrections: vanilla "Outdoor temperature" description, vanilla "Heat sources/sinks" from `[x]` to `[-]` (no passive cooler), MAIN_UI time-controls row ("no temperature/weather" was stale).
 - Craft temperature-units bug (benches and barrel read tenths as whole degrees) is a TEMP-0 row; the fix and regression test are the lead's.

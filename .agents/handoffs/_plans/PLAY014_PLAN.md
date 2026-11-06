@@ -331,7 +331,7 @@ Produced as 16 connection variants by open-side mask (planks run across the span
   - "Geothermal" unchanged.
 - **Checklists** (UI): the Architect bridge tool, the casket inspector action, and the plant readout.
 - **Handoffs:** pick the next free numbers at the time (the other session writes handoffs too). SIM (cave plants + light), SIM (roads + bridges), SIM (vaults), ART (bridge, duskmoss, casket).
-- Copy this plan to `.cursor/PLAY014_PLAN.md`.
+- Copy this plan to `.agents/handoffs/_plans/PLAY014_PLAN.md`.
 
 ## 6. Execution (parallel-work rules, ≤ 15 agents, disjoint ownership)
 ### Phase 0: lead contract (one commit)

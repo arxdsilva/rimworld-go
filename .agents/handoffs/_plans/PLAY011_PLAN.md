@@ -259,7 +259,7 @@ If the target is gone (deconstructed, destroyed, or moved away before completion
    - Select a fence: Move is disabled.
    - Swap a bed's material: the owner keeps it.
 6. **Docs:**
-   - Handoff `.cursor/handoffs/UI-022-orientation-and-material-swap.md`.
+   - Handoff `.agents/handoffs/UI-022-orientation-and-material-swap.md`.
    - Vanilla checklist: Blueprint (auto facing, swap) and Deconstruction/Replace items.
    - UI/UX checklist: Ghost blueprint (per-cell facing, swap label) and Validity visualization (neutral same-material).
    - README construction line ("doors and gates face along their walls; paint a different material over a wall, floor or furniture to change it in place").

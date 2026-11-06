@@ -11,7 +11,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// journey_allow_test.go (STK-AL, .cursor/ALLOW_GAP_ANALYSIS.md): the allow
+// journey_allow_test.go (STK-AL, .agents/gaps/ALLOW_GAP_ANALYSIS.md): the allow
 // system through the player's input path. A journey colony (game.New) has
 // no Home; alHome paints rows 6..23, so rows 0..5 lie outside it.
 

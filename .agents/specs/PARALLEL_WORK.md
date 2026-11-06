@@ -12,7 +12,7 @@ Split work across **parallel subagents** whenever a task touches two or more of 
 | composition root | `cmd/**` |
 | art pipeline | `assets/source/**` and its generated output (`assets/generated/**`, `assets/metadata/**`) |
 | content | `content/`, `mods/` |
-| docs / specs | `.cursor/*.md`, `docs/`, `README.md` |
+| docs / specs | `.agents/specs/*.md`, `docs/`, `README.md` |
 
 ## 0. Every plan includes its parallel work (user decision, 2026-10-29)
 
@@ -53,7 +53,7 @@ Agents never run a full package that loads the art. Never run more agents than i
 | Do (lead, before launching agents) | Don't |
 | --- | --- |
 | Run **`make agent-budget`** and size the batch to it | Launch a batch without checking free RAM |
-| Write the **shared contract**: `.cursor/*.md` spec sections (e.g. ART §, UI screen §), application read models (`internal/application/game/*View`), consumer-owned interfaces in the consuming package (`HEXAGONAL_ARCHITECTURE.md` §6), ports in `internal/ports/**`, typed commands (`internal/domain/sim/command`), asset names, metadata and attachment schema, save format | Let agents invent interfaces each other depend on |
+| Write the **shared contract**: `.agents/specs/*.md` spec sections (e.g. ART §, UI screen §), application read models (`internal/application/game/*View`), consumer-owned interfaces in the consuming package (`HEXAGONAL_ARCHITECTURE.md` §6), ports in `internal/ports/**`, typed commands (`internal/domain/sim/command`), asset names, metadata and attachment schema, save format | Let agents invent interfaces each other depend on |
 | **Stub every new hook** so every agent compiles from the first minute | Let a consumer wait for a producer to compile |
 | **Add every dependency** (`go get`, `go mod tidy`) | Let two agents touch `go.mod` / `go.sum` |
 | Make all **shared-config** edits: `go.mod`, `go.sum`, `Makefile`, `.gitignore`, CI workflows, staticcheck config, `cmd/**` (flags, scenarios), `assets/palettes/*.yaml`, `assets/source/blender/artlib/{contracts.py,stage.py}`, `README.md`, `.cursor` checklists, specs and handoffs | Hand shared config to an agent |
@@ -142,4 +142,4 @@ Every subagent runs on the **cheapest model that can do its job well**. Choose p
 | State the model and a one-line reason in every launch, and add a Model column to every phase table | Leave the model implicit (it then inherits the lead's) |
 | Keep the lead on the session's model | Use other models (e.g. `fable`) unless the user asks for it |
 
-**Enforced by hooks (`.claude/settings.json`).** `.claude/hooks/agent_model_guard.py` denies a `general-purpose` or untyped spawn with no `model`, so the tier is always a choice. Forks and agent types with their own model are exempt. `Explore` runs on `haiku` through `.claude/agents/Explore.md`: it locates code, and judgement stays with the lead or an `opus` agent. An explicit `model` on a spawn still overrides it.
+**Enforced by hooks (`.claude/settings.json`).** `.agents/hooks/agent_model_guard.py` denies a `general-purpose` or untyped spawn with no `model`, so the tier is always a choice. Forks and agent types with their own model are exempt. `Explore` runs on `haiku` through `.claude/agents/Explore.md`: it locates code, and judgement stays with the lead or an `opus` agent. An explicit `model` on a spawn still overrides it.

@@ -14,7 +14,7 @@ import (
 
 // prisonHost implements prison.Host (prison/deps.go) over the game: the
 // care adapters it shares (care_host*.go) and four small ones of its own,
-// so no method is added to Game (.cursor/SOLID_GO.md §10).
+// so no method is added to Game (.agents/specs/SOLID_GO.md §10).
 type prisonHost struct {
 	careBodies
 	careRoster

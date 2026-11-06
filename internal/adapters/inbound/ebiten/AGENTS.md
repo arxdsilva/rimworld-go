@@ -11,7 +11,7 @@ and the colony viewport with its HUD chrome. Screens consume read models
 (`Snapshot()`, `World()`) and emit session intents plus typed gameplay
 commands via `Enqueue`. Domain code does not import this package.
 
-Since ARCH-001…006 (`.cursor/SOLID_GO.md`, `.cursor/handoffs/ARCH-00*.md`)
+Since ARCH-001…006 (`.agents/specs/SOLID_GO.md`, `.agents/handoffs/ARCH-00*.md`)
 this root package is the **composition root** only. Every feature and every
 draw layer is its own package under this directory, each behind a small
 consumer-owned interface; the root constructs them (`NewApp`, `New`) and
@@ -132,7 +132,7 @@ never imports a feature.
   (`TestUIPaletteMatchesYAML` in `uikit`).
 - The main-menu splash and the diorama are optional; without them the
   gradient backdrop is drawn. Their motion runs on `menuTick`, never the sim.
-- Size limits (`.cursor/SOLID_GO.md` §8) hold for every type here; `App`
+- Size limits (`.agents/specs/SOLID_GO.md` §8) hold for every type here; `App`
   (57 fields, 244 methods) and `Renderer` (48, 153) are the remaining
   budgeted debt in `internal/arch/solid_budget.txt` — only lower it.
 

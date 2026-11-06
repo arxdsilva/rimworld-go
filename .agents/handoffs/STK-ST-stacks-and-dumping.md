@@ -1,6 +1,6 @@
 # STK-ST: stacks of 1000 and the dumping stockpile
 
-User request (2026-11-01): "a stockpile tile must get up to 1000 items of the same type (unless they are for bolders)" and "we must have dumping stockpile zones just like rimworld". Gap analysis: `.cursor/STORAGE_GAP_ANALYSIS.md` (S1-S10 stacks, D1-D10 dump).
+User request (2026-11-01): "a stockpile tile must get up to 1000 items of the same type (unless they are for bolders)" and "we must have dumping stockpile zones just like rimworld". Gap analysis: `.agents/gaps/STORAGE_GAP_ANALYSIS.md` (S1-S10 stacks, D1-D10 dump).
 
 ## Behaviour
 - `item.Kind.StackLimit()` (`domain/economy/item/value.go`) is now either 1000 (`item.StackLimit`) or 1. It is 1 for kinds with per-unit identity (weapons, contract weapons, apparel, belts, corpses, implants, organs) and for stone chunks. Everything else is 1000, bones included. The STO-2/PRD-4 per-kind wiki table is gone.

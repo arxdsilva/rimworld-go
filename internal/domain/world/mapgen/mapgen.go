@@ -1,5 +1,5 @@
 // Package mapgen is the field-based colony-map generator for landing sites
-// (MAPGEN-2, .cursor/PLAY013_PLAN.md). It builds a map in ordered passes
+// (MAPGEN-2, .agents/handoffs/_plans/PLAY013_PLAN.md). It builds a map in ordered passes
 // (steps, in package mapgen/pipeline; each pass lives in mapgen/steps/...):
 // continuous fields first (elevation, fertility, wetness, stone
 // material), then landforms (rock, caves, water), then the discrete map

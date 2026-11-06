@@ -16,8 +16,8 @@ Wired the CC0 Rgsdev character pack under `assets/` into the Ebitengine adapter.
 - `internal/adapters/inbound/ebiten/pack_test.go`
 - `internal/adapters/inbound/ebiten/sprites.go`
 - `internal/adapters/inbound/ebiten/sprites_test.go`
-- `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
-- `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`
+- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`
 
 ## Public Contracts Changed
 

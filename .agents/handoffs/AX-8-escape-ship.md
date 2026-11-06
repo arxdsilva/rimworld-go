@@ -1,6 +1,6 @@
 # AX-8: the escape ship, end to end
 
-Scope: the AX programme's A8 rows (`.cursor/ARCHITECT_GAP_ANALYSIS.md` Ship), built at ENG-003 wiki numbers with original names and prose. The wiki pages are Ship, Ship reactor and Persona core. MASTER_SPEC §89 lists "space travel; planetary endgames".
+Scope: the AX programme's A8 rows (`.agents/gaps/ARCHITECT_GAP_ANALYSIS.md` Ship), built at ENG-003 wiki numbers with original names and prose. The wiki pages are Ship, Ship reactor and Persona core. MASTER_SPEC §89 lists "space travel; planetary endgames".
 
 ## Behaviour
 - **Parts.** Six kinds: structural beam, ship stasis casket, computer core, reactor, engine and sensor cluster. Costs, work and research are the AX-0 contract's defs. All six are now live (`construction/ax_a8.go` plans nothing), and every one has an Architect card in the Ship category.

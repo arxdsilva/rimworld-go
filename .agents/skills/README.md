@@ -4,7 +4,7 @@ This package contains reusable `SKILL.md` playbooks for AI coding agents working
 
 ## Location
 
-These playbooks live in `.cursor/skills/` so Cursor auto-discovers them. Do not load all skills into every task. Start with `rimworld-go-router`.
+These playbooks live in `.agents/skills/` so Cursor auto-discovers them. Do not load all skills into every task. Start with `rimworld-go-router`.
 
 ## Skills
 
@@ -27,7 +27,7 @@ These playbooks live in `.cursor/skills/` so Cursor auto-discovers them. Do not 
 | rimworld-go-debugging | Reproduce and fix simulation bugs |
 | rimworld-go-review-integration | PR review and multi-agent merge |
 | rimworld-go-documentation | ADRs, system docs, AGENTS, handoffs |
-| parallel-work | Split multi-area tasks across parallel subagents (`.cursor/PARALLEL_WORK.md`) |
+| parallel-work | Split multi-area tasks across parallel subagents (`.agents/specs/PARALLEL_WORK.md`) |
 
 ## Suggested repo layout
 

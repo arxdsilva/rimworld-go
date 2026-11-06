@@ -1,6 +1,6 @@
 # DEF-0: the combat package and the combat domain
 
-Date: 2026-10-29. Programme BED/PRD/DEF (`.cursor/DEFENCE_GAP_ANALYSIS.md`). Wave A, committed with PRD-0 and BED-0.
+Date: 2026-10-29. Programme BED/PRD/DEF (`.agents/gaps/DEFENCE_GAP_ANALYSIS.md`). Wave A, committed with PRD-0 and BED-0.
 
 ## What changed
 - **`internal/application/game/combat`** (X3, opus): components `Sight` (line of sight, cover), `Strikes`, `Guard` (defending), `Traps`, `Breach` and `Turrets`.

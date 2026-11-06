@@ -1,6 +1,6 @@
 # DEF-2: weapons, armor, explosions
 
-Date: 2026-10-29. Wave C. Backlog `.cursor/DEFENCE_GAP_ANALYSIS.md`.
+Date: 2026-10-29. Wave C. Backlog `.agents/gaps/DEFENCE_GAP_ANALYSIS.md`.
 
 ## What changed
 - **Catalogue** (C2, opus): 30 weapon and armor item kinds. Melee: mace, gladius, longsword, pila beside club, knife and spear. Ranged: short and recurve bows, greatbow, revolver, autopistol, machine pistol, assault and sniper rifles, pump and chain shotguns, heavy SMG, LMG, minigun, incendiary and EMP launchers. Grenades: frag, molotov, EMP. Armor: flak pants, vest and jacket, plate armor, marine armor, simple and advanced helmets. Weapon names are singular ("frag grenade"); item kinds plural. Rocket launchers skipped.

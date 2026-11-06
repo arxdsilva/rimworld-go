@@ -1,6 +1,6 @@
 # SIM-034 Components, industrial medicine, tool cabinet, hospital bed and pod shells
 
-Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §4.8, §5.6; decision D13). Commits: `cf293081` (rules), `f815d545` (in play), `f7bebeb1` (art).
+Part of NG-1 (`.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md` §4.8, §5.6; decision D13). Commits: `cf293081` (rules), `f815d545` (in play), `f7bebeb1` (art).
 
 ## What changed
 

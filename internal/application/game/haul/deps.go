@@ -7,7 +7,7 @@ import (
 )
 
 // Host is what gathering needs from the simulation (a consumer-owned
-// role, .cursor/SOLID_GO.md §7): stack reads and writes, a path for the
+// role, .agents/specs/SOLID_GO.md §7): stack reads and writes, a path for the
 // hauler and the release of a pile's claim. Values only: a call on the
 // tick path moves nothing to the heap.
 type Host interface {

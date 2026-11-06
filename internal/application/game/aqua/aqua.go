@@ -1,10 +1,10 @@
-// Package aqua is fish farming in tanks (FISH-*, .cursor/FISH_TANK_PLAN.md
+// Package aqua is fish farming in tanks (FISH-*, .agents/handoffs/_plans/FISH_TANK_PLAN.md
 // §3): the state of each tank on a map, stepped hourly over its own list, the
 // handler's work (work.Handle on the Animals skill), the player's stock
 // choice, and the read model. The rules live in domain/building/aqua.
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package; the roles in
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package; the roles in
 // deps.go are its only way in. It draws no dice, reads time only from the
 // host's tick, and walks tanks in id order.
 package aqua

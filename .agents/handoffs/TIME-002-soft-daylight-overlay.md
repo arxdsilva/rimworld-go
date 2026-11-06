@@ -11,7 +11,7 @@ Softened the presentation sky grade: muted hues and a 48-alpha night cap so day/
 
 - `internal/adapters/inbound/ebiten/daylight.go`
 - `internal/adapters/inbound/ebiten/daylight_test.go`
-- `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
+- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`
 
 ## Public Contracts Changed
 

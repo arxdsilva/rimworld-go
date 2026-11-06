@@ -1,6 +1,6 @@
 # MED-04: diseases and outbreaks
 
-Part of the RimWorld-style medical overhaul (`.cursor/MEDICAL_GAP_ANALYSIS.md`).
+Part of the RimWorld-style medical overhaul (`.agents/gaps/MEDICAL_GAP_ANALYSIS.md`).
 The numbers come from the RimWorld wiki disease pages under the ENG-003/MED
 exception.
 

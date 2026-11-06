@@ -28,7 +28,7 @@ import (
 
 // combatHost implements combat.Host (combat/deps.go) over the game: one
 // small adapter type per role, each a thin view of *Game, so no method is
-// added to Game itself (.cursor/SOLID_GO.md §10). Every method passes
+// added to Game itself (.agents/specs/SOLID_GO.md §10). Every method passes
 // values only: they run on the tick path (§7).
 type combatHost struct {
 	combatCreatures

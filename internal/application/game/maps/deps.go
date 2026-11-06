@@ -12,7 +12,7 @@ import (
 )
 
 // Host is everything the caravans and the map lifecycle need from the
-// simulation, as consumer-owned roles (.cursor/SOLID_GO.md §7, §10). The
+// simulation, as consumer-owned roles (.agents/specs/SOLID_GO.md §7, §10). The
 // game package implements each role with a small adapter type. Calls act
 // on the map the simulation is stepping when they are made.
 type Host interface {

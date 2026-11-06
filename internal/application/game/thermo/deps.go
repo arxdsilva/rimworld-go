@@ -8,7 +8,7 @@ import (
 )
 
 // Host is everything the model needs from the simulation, as
-// consumer-owned roles (.cursor/SOLID_GO.md §7, §10).
+// consumer-owned roles (.agents/specs/SOLID_GO.md §7, §10).
 type Host interface {
 	Map
 	Sites

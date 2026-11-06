@@ -1,6 +1,6 @@
 # SIM-063: rescue fidelity, safe beds, guests, prisoners back to bed
 
-Date: 2026-10-29. Programme SIM-061…066 (`.cursor/PAWN_INTERACTION_GAP_ANALYSIS.md`). Committed together with SIM-064…066 (shared contract files); see `SIM-066-mental-breaks.md` for the gates and the budget.
+Date: 2026-10-29. Programme SIM-061…066 (`.agents/gaps/PAWN_INTERACTION_GAP_ANALYSIS.md`). Committed together with SIM-064…066 (shared contract files); see `SIM-066-mental-breaks.md` for the gates and the budget.
 
 ## What changed
 - **Who is rescued** (S3, opus): every downed cause except collapse-asleep (`CauseNoBed`), including malnutrition, disease, blood loss, heat and cold, and anaesthesia out of bed. Rescue covers colonists and guests: visitors, traders, allies and faction-less strangers (S4).

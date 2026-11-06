@@ -3,5 +3,5 @@
 // an offer against the colony's goods, the trader's stock and silver, and
 // the negotiation terms. It is headless and deterministic: randomness comes
 // in as an explicit *randx.Rand, and nothing here knows about maps, pawns
-// or the clock. Tuning lives in .cursor/PLAY024_PLAN.md (original numbers).
+// or the clock. Tuning lives in .agents/handoffs/_plans/PLAY024_PLAN.md (original numbers).
 package trade

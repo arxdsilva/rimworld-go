@@ -1,6 +1,6 @@
 # PRD-3: benches, work speed, art and sculptures
 
-Date: 2026-10-29. Wave D. Backlog `.cursor/PRODUCTION_GAP_ANALYSIS.md` (sections 3.1, 3.3, 3.4). Contract commit `8f3932359` (arch(contract): wave D kinds, commands, jobs and read-model fields) landed the construction kinds, `BuildingView` Linked/WorkSpeed and the display names ("wood-fired forge", "electric forge", "powered door") before this work started.
+Date: 2026-10-29. Wave D. Backlog `.agents/gaps/PRODUCTION_GAP_ANALYSIS.md` (sections 3.1, 3.3, 3.4). Contract commit `8f3932359` (arch(contract): wave D kinds, commands, jobs and read-model fields) landed the construction kinds, `BuildingView` Linked/WorkSpeed and the display names ("wood-fired forge", "electric forge", "powered door") before this work started.
 
 ## What changed
 - **Recipes** (P3; `domain/economy/recipe/{recipe.go,benches.go}`): `Def.Also`, `Def.Builds`, `Input.Smelt`, `Base`, `At`, `SmeltYield`; 24 recipes appended. Workbench recipes stay at the workbench and run at wiki benches through `Also` (`RecipeView.Benches`, `RunsAt`). New: smithy blades and pila, crafting-spot bows, 13 machining-table guns, smelting metal weapons back to steel, three sculptures. The butcher spot gets the butchering bill.

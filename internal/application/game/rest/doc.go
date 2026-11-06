@@ -10,7 +10,7 @@
 // seats it sits on live here too (needs.go, beauty.go, seats.go, BED-3).
 //
 // It is a consumer sub-package of internal/application/game
-// (.cursor/SOLID_GO.md §10): it never imports the game package. Everything
+// (.agents/specs/SOLID_GO.md §10): it never imports the game package. Everything
 // it needs from the simulation comes through the consumer-owned roles in
 // deps.go, which the game package implements with small adapter types in
 // rest_host.go. The game package builds one *Sleep and keeps one field.

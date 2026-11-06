@@ -1,6 +1,6 @@
 # NST-B: storage behaviour of the 27 Neat Storage pieces (WP-B)
 
-Rows F1-F5, F9, F10 of `.cursor/NEAT_STORAGE_GAP_ANALYSIS.md`, and the read model of "Display of stored items".
+Rows F1-F5, F9, F10 of `.agents/gaps/NEAT_STORAGE_GAP_ANALYSIS.md`, and the read model of "Display of stored items".
 
 ## Done
 
