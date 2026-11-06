@@ -20,7 +20,10 @@ type uiHost struct{ a *App }
 
 var _ uikit.Host = uiHost{}
 
-func (h uiHost) Frame() *inputframe.Frame  { return &h.a.in }
+func (h uiHost) Frame() *inputframe.Frame {
+	syncKit(h.a)
+	return &h.a.in
+}
 func (h uiHost) Cursor() (int, int)        { return h.a.currentCursor() }
 func (h uiHost) Size() (int, int)          { return h.a.size() }
 func (h uiHost) Updates() uint64           { return h.a.updates }
@@ -28,6 +31,18 @@ func (h uiHost) KeyRepeat(key string) bool { return h.a.keyRepeat(key) }
 func (h uiHost) Cue(id string)             { h.a.cfg.Sound.Play(id, 1, 0) }
 func (h uiHost) Hint(text string)          { h.a.hint = text }
 func (h uiHost) ReducedMotion() bool       { return h.a.settings.Accessibility.ReducedMotion }
+
+// syncKit copies the Interface settings the kit honours (tooltip delay,
+// colour vision, confirmations, larger small text) into the kit and the
+// canvas. It runs on every frame read and writes only on a change.
+func syncKit(a *App) {
+	i := a.settings.Interface
+	acc := uikit.Access{Set: true, TooltipDelayMS: i.TooltipDelayMS, ColorVision: i.ColorVision, Confirm: i.Confirm}
+	if a.ui.Access != acc {
+		a.ui.Access = acc
+	}
+	gfx.SetLargerSmall(i.LargerSmall)
+}
 
 // ---- free functions
 

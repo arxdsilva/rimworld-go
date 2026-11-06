@@ -67,7 +67,7 @@ func TipLayout(tip string, sw, sh, mx, my int) TipCard {
 
 // TipVisible reports the pending tooltip has waited long enough.
 func (k *Kit) TipVisible() bool {
-	return k.tip.text != "" && k.TipFrames >= TipDelay
+	return k.tip.text != "" && k.TipFrames >= k.Access.TipFrames()
 }
 
 // Tip makes r a hover area with a tooltip and nothing else.

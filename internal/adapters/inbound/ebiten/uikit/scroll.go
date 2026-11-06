@@ -85,7 +85,7 @@ func (k *Kit) ScrollArea(id string, r gfx.Rect, contentH float32, o ScrollOpts) 
 			thumb := ScrollThumbRect(bar, off, maxOff, contentH)
 			if k.Press(bar) {
 				if thumb.Hit(mx, my) {
-					k.Active, k.dragY = thumbID, float32(my)-thumb.Y
+					k.Active, k.scr.dragY = thumbID, float32(my)-thumb.Y
 				} else if float32(my) < thumb.Y {
 					off -= r.H * pageFrac
 				} else {
@@ -93,15 +93,15 @@ func (k *Kit) ScrollArea(id string, r gfx.Rect, contentH float32, o ScrollOpts) 
 				}
 			}
 			if k.Active == thumbID {
-				off = scrollOffFromThumb(bar, thumb.H, float32(my)-k.dragY, maxOff)
+				off = scrollOffFromThumb(bar, thumb.H, float32(my)-k.scr.dragY, maxOff)
 				if !k.in().Down(inputframe.Left) {
 					k.Active = ""
 					k.release()
 				}
 			}
-			if k.pageDelta != 0 && (k.Focus == id || hover) {
-				off += float32(k.pageDelta) * r.H * pageFrac
-				k.pageDelta = 0
+			if k.scr.page != 0 && (k.Focus == id || hover) {
+				off += float32(k.scr.page) * r.H * pageFrac
+				k.scr.page = 0
 			}
 		}
 	}

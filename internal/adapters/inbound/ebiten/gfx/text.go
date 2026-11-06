@@ -38,11 +38,18 @@ type TextStyle struct {
 	Align Align
 }
 
+// SmallSize and LargerSmallSize are the Small style's pixel sizes, normal and
+// with the larger-small-text option on (OPT-009).
+const (
+	SmallSize       = 11
+	LargerSmallSize = 13
+)
+
 // The type scale (NG-1 §1.1) in logical pixels. Faces are rasterised at
 // Size x the UI scale (PLAY-012), so text is always sharp; positions and
 // metrics stay logical.
 var (
-	Small = TextStyle{Size: 11}
+	Small = TextStyle{Size: SmallSize}
 	Body  = TextStyle{Size: 13}
 	Label = TextStyle{Size: 13, Bold: true}
 	Large = TextStyle{Size: 16, Bold: true}
@@ -90,7 +97,11 @@ func FaceSize(size, s float64) (px, k float64) {
 // face returns the cached face for a style at UI scale s and its glyph
 // scale k (call with fontMu held).
 func face(st TextStyle, s float64) (*text.GoTextFace, float64) {
-	px, sc := FaceSize(st.Size, s)
+	size := st.Size
+	if size == SmallSize && cur.largerSmall {
+		size = LargerSmallSize
+	}
+	px, sc := FaceSize(size, s)
 	k := faceKey{px, st.Bold}
 	if f, ok := fontFaces[k]; ok {
 		return f, sc

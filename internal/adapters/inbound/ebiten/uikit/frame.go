@@ -9,7 +9,7 @@ import (
 
 // Tooltip metrics (NG-1 §1.4).
 const (
-	TipDelay = 24  // frames the cursor rests before the card shows
+	TipDelay = 24  // frames the cursor rests before the card shows (the default; Access.TipFrames)
 	TipMaxW  = 360 // card width cap in px
 )
 
@@ -36,7 +36,7 @@ func (k *Kit) CountHeld(raw *inputframe.Raw) {
 	for key := range now {
 		k.HeldN[key]++
 	}
-	k.pageDelta = 0
+	k.scr.page = 0
 }
 
 // TakePages takes PageUp and PageDown out of the frame while a scroll
@@ -51,7 +51,7 @@ func (k *Kit) TakePages(raw *inputframe.Raw, mx, my int) {
 		dir int
 	}{{"PageUp", -1}, {"PageDown", 1}} {
 		if inputframe.RepeatFire(k.HeldN[p.key]) {
-			k.pageDelta += p.dir
+			k.scr.page += p.dir
 		}
 		DropPressed(raw, p.key)
 	}
@@ -150,7 +150,7 @@ func (k *Kit) tipTick(mx, my int, pressing bool) {
 		k.tip.text = w.Tip
 	}
 	if dragging {
-		k.TipFrames = max(k.TipFrames, TipDelay) // a dragged slider shows its value at once
+		k.TipFrames = max(k.TipFrames, k.Access.TipFrames()) // a dragged slider shows its value at once
 	}
 }
 

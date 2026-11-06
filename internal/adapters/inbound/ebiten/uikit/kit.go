@@ -42,8 +42,11 @@ type Kit struct {
 	// rested on its widget.
 	tip       tipState
 	TipFrames int
-	// dragY is the grab offset of the active scrollbar drag.
-	dragY float32
+	// scr is the scroll views' per-frame state.
+	scr scrollSt
+	// Access is the player's accessibility settings (access.go); the host
+	// sets it when the settings change.
+	Access Access
 
 	frame    uint64
 	mx, my   int
@@ -64,7 +67,13 @@ type Kit struct {
 	Modals    []Modal
 	sorts     map[string]sortState
 	lines     map[string]lineCache
-	pageDelta int // PageUp/PageDown taken for a scroll view this frame (-1, 0, +1)
+}
+
+// scrollSt is dragY, the grab offset of the active scrollbar drag, and page,
+// the PageUp/PageDown taken for a scroll view this frame (-1, 0, +1).
+type scrollSt struct {
+	dragY float32
+	page  int
 }
 
 // tipState is the pending tooltip: its widget, its text and where the
@@ -282,11 +291,16 @@ type BtnOpts struct {
 }
 
 func (s BtnStyle) Colors(hover, down, selected bool) (fill, border, text color.RGBA) {
+	return s.ColorsIn(PaletteFor(ColorVisionNormal), hover, down, selected)
+}
+
+// ColorsIn is Colors with the status colours of palette p.
+func (s BtnStyle) ColorsIn(p Palette, hover, down, selected bool) (fill, border, text color.RGBA) {
 	switch s {
 	case BtnPrimary:
 		fill, border, text = LerpRGBA(BtnSelected, Accent, 0.6), Accent, Field
 	case BtnDanger:
-		fill, border, text = LerpRGBA(Btn, Danger, 0.35), Danger, Text
+		fill, border, text = LerpRGBA(Btn, p.Danger, 0.35), p.Danger, Text
 	default:
 		fill, border, text = Btn, BtnBorder, Text
 		if selected {
@@ -335,7 +349,7 @@ func (k *Kit) Button(id string, r gfx.Rect, label string, o BtnOpts) bool {
 	k.Queue(func(dst *ebiten.Image) {
 		hover := k.Hot == id && !o.Disabled
 		down := hover && k.in().Down(inputframe.Left) && k.Active == ""
-		fill, border, text := o.Style.Colors(hover, down, o.Selected)
+		fill, border, text := o.Style.ColorsIn(k.Access.Palette(), hover, down, o.Selected)
 		if o.Disabled {
 			fill, border, text = BtnDisabled, BtnBorder, TextDisabled
 		}

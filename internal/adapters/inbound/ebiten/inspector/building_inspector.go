@@ -321,8 +321,11 @@ func (a Building) ApplyBuildingClick(id string) {
 		return
 	}
 	if id == "bldg.deconstruct" {
-		a.shell.Enqueue(command.Command{Kind: command.DesignateDeconstruct, X: b.X, Y: b.Y,
-			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
+		c := command.Command{Kind: command.DesignateDeconstruct, X: b.X, Y: b.Y,
+			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1}
+		uikit.ConfirmIf(a.kit(), "bldg.deconstruct.confirm", "Deconstruct this building?",
+			"Colonists will take it apart and return part of what it cost. The building is gone once they finish.",
+			"Deconstruct", true, func() { a.shell.Enqueue(c) })
 		return
 	}
 	if a.applyBedClick(id, b) || a.ApplyCasketClick(id, b) || a.applyPenClick(id, b) {

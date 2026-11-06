@@ -257,7 +257,9 @@ func (w Animals) Click(id string) {
 			}
 			w.sh.Enqueue(c)
 		case "release":
-			w.sh.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n})
+			uikit.ConfirmIf(w.sh.Kit(), "animals.release.confirm", "Release this animal?",
+				"It goes wild again and is no longer yours. A bonded colonist will mind.",
+				"Release", true, func() { w.sh.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n}) })
 		case "diet":
 			if next, ok := NextFoodPolicy(w.sh.World().FoodPolicies, an.FoodPolicy); ok {
 				w.sh.Enqueue(command.Command{Kind: command.SetFoodPolicy, Pawn: n, Index: next})

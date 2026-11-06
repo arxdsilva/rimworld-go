@@ -118,7 +118,10 @@ func (a Animal) ApplyAnimalClick(id string) {
 		}
 		a.shell.Enqueue(c)
 	case "animal.release":
-		a.shell.Enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)})
+		c := command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)}
+		uikit.ConfirmIf(a.kit(), "animal.release.confirm", "Release this animal?",
+			"It goes wild again and is no longer yours. A bonded colonist will mind.",
+			"Release", true, func() { a.shell.Enqueue(c) })
 	case "animal.area": // the pane's allowed-area chip (a tame animal that is not penned)
 		if an.Tame && !an.Penned {
 			a.shell.AreaPicker("Allowed area", an.AreaRef, true, func(ref int) { a.shell.AssignArea(an.ID, ref) })

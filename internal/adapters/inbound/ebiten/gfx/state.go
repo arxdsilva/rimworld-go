@@ -14,9 +14,10 @@ import (
 // read it; tests that install a trace or another scale never run in
 // parallel. It is listed in internal/arch/solid_budget.txt.
 var cur = struct {
-	scale Scale
-	passK float64    // the render scale while a world pass draws into the map's offscreen, 0 otherwise
-	pass  *WorldPass // the world pass drawing into an offscreen, nil otherwise
+	scale       Scale
+	largerSmall bool       // text of the Small size is drawn at LargerSmallSize (OPT-009)
+	passK       float64    // the render scale while a world pass draws into the map's offscreen, 0 otherwise
+	pass        *WorldPass // the world pass drawing into an offscreen, nil otherwise
 	// tracePass is the draw pass running now: "world" while the renderer
 	// draws the map (camera-positioned, physical pixels), "hud" otherwise.
 	// traceVia is "worldText" or "worldIcon" while those helpers draw.
@@ -128,3 +129,15 @@ func Icon(dst, img *ebiten.Image, x, y, size float64) {
 	op.Filter = ebiten.FilterLinear
 	DrawImage(dst, img, op)
 }
+
+// SetLargerSmall makes text of the Small size draw (and measure) at
+// LargerSmallSize; a no-op when unchanged. Layout code measures through the
+// same path, so wraps and heights follow.
+func SetLargerSmall(on bool) {
+	if cur.largerSmall != on {
+		cur.largerSmall = on
+	}
+}
+
+// LargerSmall reports the option.
+func LargerSmall() bool { return cur.largerSmall }
