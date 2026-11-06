@@ -1407,6 +1407,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.ThreatResponse = g.combat.Drafts.Response(id).String()
 		pv.Pack, pv.PackGrams, pv.PackLimitGrams = packView(g, id) // sense_gear_host.go (CSE-036)
 		pv.Gear = outfitView(g, id, gearFacts(g, id))              // body.go: game/gearfacts (GEAR-1); apparel.go: game/outfit (GEAR-3)
+		pv.Gear.NoDrop = senseOf(g).Gear.DropWhy(id, -1, 0)        // game/sense/drop.go (GEAR-1): -1 is sense.ModeAny
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy, pv.CarryingPawn, pv.Tended, pv.OnMedicalBed = cv.CarriedBy, cv.Carrying, cv.Tended, cv.OnMedicalBed

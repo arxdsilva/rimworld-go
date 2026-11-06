@@ -31,12 +31,9 @@ func (h senseGear) Rotted(id entity.EntityID, k item.Kind, qty int) {
 
 func (h senseGear) Stack(stack entity.EntityID) (item.Stack, bool) { return h.g.stacks.Get(stack) }
 func (h senseGear) RemoveQty(stack entity.EntityID, n int) {
-	st, ok := h.g.stacks.Get(stack)
-	switch {
-	case !ok:
-	case st.Qty <= n:
+	if st, ok := h.g.stacks.Get(stack); ok && st.Qty <= n {
 		h.g.deleteItem(stack)
-	default:
+	} else if ok {
 		st.Qty -= n
 		h.g.putStack(stack, st)
 	}
@@ -171,7 +168,14 @@ func (h senseGear) DropSpare(id entity.EntityID) bool {
 	h.g.combat.Drafts.DropSpare(id, false)
 	return had
 }
-func (h senseGear) Interrupt(id entity.EntityID) { h.g.interrupt(id, job.Interrupted) }
+func (h senseGear) Interrupt(id entity.EntityID)                 { h.g.interrupt(id, job.Interrupted) }
+func (h senseGear) Up(id entity.EntityID) bool                   { return h.g.standingPawn(id) } // GEAR-1 (sense/drop.go)
+func (h senseGear) Prisoner(id entity.EntityID) bool             { return h.g.prison.Is(id) }
+func (h senseGear) Outfit(id entity.EntityID) craft.Outfit       { return h.g.apparel[id] }
+func (h senseGear) SetOutfit(id entity.EntityID, o craft.Outfit) { h.g.apparel[id] = o; h.g.viewGen++ }
+func (h senseGear) MayDose(id entity.EntityID, k item.Kind) bool {
+	return slices.Contains(doseOf(h.g).Allowed(id), k)
+}
 
 // layOn sets st down at (x, y) on map m, merging as anything set down does, with
 // everything it was (its make, a book's title, its rot) kept.
@@ -191,7 +195,7 @@ func packView(g *Game, id entity.EntityID) ([]PackItemView, int, int) {
 	p := gear.Pack(id)
 	var rows []PackItemView
 	for _, e := range p.Items {
-		rows = append(rows, PackItemView{ID: e.ID, Name: e.Stack.Kind.String(), Qty: e.Stack.Qty, Unload: e.Unload})
+		rows = append(rows, PackItemView{ID: e.ID, Name: e.Stack.Kind.String(), Qty: e.Stack.Qty, Unload: e.Unload, Gear: gear.PackGear(id, e)})
 	}
 	return rows, p.Grams(), gear.Capacity(id)
 }

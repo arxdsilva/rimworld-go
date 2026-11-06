@@ -67,7 +67,7 @@ func (g *Game) applyOne(c command.Command) {
 			return // a colonist in a mental break won't take orders
 		}
 	}
-	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.EmergencyTend {
+	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.EmergencyTend || c.Kind == command.DropGear && c.Queue { // GEAR-1: a plain drop leaves the queue alone
 		id := entity.EntityID(c.Pawn)
 		if c.Queue {
 			g.queueOrder(id, c)

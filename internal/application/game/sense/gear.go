@@ -14,6 +14,7 @@ type GearRoles interface {
 	GearJobs
 	GearFood
 	GearWorn
+	GearOrders
 }
 
 // GearJobs is how Gear sends a colonist on an errand.

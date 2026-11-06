@@ -77,7 +77,7 @@ func (s *Sense) Apply(c command.Command) {
 	case command.MarkUnload:
 		s.Gear.Mark(entity.EntityID(c.Pawn), int(c.Mode), c.Index, c.Enabled)
 	case command.DropGear, command.ConsumeFromPack, command.SetApparelForced:
-		// GEAR-1 contract: ignored until GEAR-1 (GEAR_GAP_ANALYSIS.md).
+		s.Gear.applyGear(c.Kind, entity.EntityID(c.Pawn), int(c.Mode), c.Index, c.Enabled) // drop.go (GEAR-1)
 	}
 }
 

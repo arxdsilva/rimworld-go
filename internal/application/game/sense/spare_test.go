@@ -29,6 +29,7 @@ type errand struct {
 	searches           int
 	laid               []entity.EntityID
 	takenOff           []int
+	orders             // GEAR-1's side (drop_test.go)
 }
 
 // errandScene builds the habits on an errand game side over f.

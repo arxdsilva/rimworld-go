@@ -113,6 +113,8 @@ func (g *Game) execOrder(id entity.EntityID, c command.Command) string {
 			return reason
 		}
 		g.care.Doctor.EmergencyTend(id, entity.EntityID(c.Target))
+	case command.DropGear:
+		return senseOf(g).Gear.Drop(id, int(c.Mode), c.Index) // game/sense/drop.go (GEAR-1)
 	case command.Prioritize:
 		if c.Order.TargetsPawn() {
 			if reason := g.care.Force(id, c.Order, entity.EntityID(c.Target)); reason != "" {
@@ -137,6 +139,9 @@ func (g *Game) execOrder(id entity.EntityID, c command.Command) string {
 func (g *Game) orderLabel(id entity.EntityID, c command.Command) string {
 	if c.Kind == command.MovePawn {
 		return fmt.Sprintf("Go to (%d, %d)", c.X, c.Y)
+	}
+	if c.Kind == command.DropGear {
+		return "Drop gear"
 	}
 	for _, o := range g.OrdersAt(id, c.X, c.Y) {
 		if o.Cmd.Kind == c.Kind && o.Cmd.Order == c.Order && o.Cmd.Layer == c.Layer && o.Cmd.Target == c.Target {
