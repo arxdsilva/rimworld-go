@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime"
@@ -65,6 +66,14 @@ func main() {
 	vsync := flag.Bool("vsync", true, "dev: wait for the display's refresh; -vsync=false uncaps the frame rate for -fpsprobe (overrides the Graphics setting for this run without saving it)")
 	renderScale := flag.Float64("render-scale", 0, "dev: draw the map at this share of the physical pixels (1, 0.75 or 0.5; PERF-002) for this run without saving it; 0 = the Graphics setting")
 	flag.Parse()
+	if dir := logDir(); dir != "" { // OPT-003: Options › Open log folder shows this
+		if f, err := openLogFile(dir); err == nil {
+			log.SetOutput(io.MultiWriter(os.Stderr, f))
+			defer f.Close()
+		} else {
+			log.Printf("log file off this run: %v", err)
+		}
+	}
 	var hidpiOverride, vsyncOverride *bool
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
