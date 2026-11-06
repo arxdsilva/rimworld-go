@@ -1,7 +1,7 @@
 # inspector package
 
 ## Package Purpose
-The selection's inspector: the pane with its tabs (pawn needs, gear, health, social, bio, log; animals, buildings, frames, items, plants, pens, troughs, caskets, groups), the command grid under it, the command producers for every selectable kind, and the marks drawn over what is selected. `Pane` reads the selection and the world through `Shell` and emits typed commands; the root plugs the Architect's tool commands in for an empty selection. Feature package (ARCH-005 wave 5.4, agent A7).
+The selection's inspector: the pane with its tabs (pawn needs, gear, health, social, bio, log; animals, buildings, frames, items, plants, pens, troughs, caskets, groups), the command grid under it, the command producers for every selectable kind, and the marks drawn over what is selected. `Pane` reads the selection and the world through `Shell` and emits typed commands; the root plugs the Architect's tool commands in for an empty selection. Feature package (ARCH-005 wave 5.4, agent A7). The Gear tab's body (rows, buttons, summary, tooltips) lives in the leaf `gear/` behind its own `Host` and `Facts`; `gear_ui.go` here only adapts the pane to them (GEAR-2).
 
 ## Owned Concepts
 - `Pane` (37 methods): tabs, body, layout, draw. Each kind is a type over `*Pane`: `Commands` (26), `Pawn` (19), `Tabs` (32: health, social, bio, log, prisoner, pen, trough), `Animal` (17), `Building` (36), `Thing` (11), each `struct{*Pane}`.
