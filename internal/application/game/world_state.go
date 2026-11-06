@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/application/game/maps"
+	"rimworld-go/internal/application/game/outfit"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/sense"
 	"rimworld-go/internal/application/game/ship"
@@ -85,6 +86,7 @@ type worldState struct {
 	visitH      visit.Host    // game/visit's host (visitsOf), built once
 	atlas       maps.Atlas    // game/maps: the open maps beyond the first (MAP-01)
 	sense       *sense.Sense  // senseOf (sense_host.go): the habit rules (CSE)
+	outfits     outfit.Book   // outfitBook (apparel.go): apparel policies (GEAR-3), saved as Outfits
 }
 
 // worldSave is worldState as saved.

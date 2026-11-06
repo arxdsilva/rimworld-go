@@ -51,15 +51,38 @@ func Shifted(b exposure.Bands, cold, heat int) exposure.Bands {
 	return b
 }
 
-// Dresser is dressing over the game's roles and a map's clothes index.
-// It holds no state of its own: build one where it is needed.
+// Dresser is dressing over the game's roles, a map's clothes index and
+// the colony's apparel policies. It holds no state of its own: build one
+// where it is needed.
 type Dresser struct {
-	idx *Index
-	r   Roles
+	idx  *Index
+	book *Book // nil: the defaults
+	r    Roles
 }
 
-// New is a Dresser over idx (the current map's) and the roles.
-func New(idx *Index, r Roles) Dresser { return Dresser{idx: idx, r: r} }
+// New is a Dresser over idx (the current map's), book and the roles.
+func New(idx *Index, book *Book, r Roles) Dresser { return Dresser{idx: idx, book: book, r: r} }
+
+// policy is colonist id's apparel policy.
+func (d Dresser) policy(id entity.EntityID) Policy {
+	if d.book == nil {
+		return defaults[Anything]
+	}
+	return d.book.Of(id)
+}
+
+// shed is the first slot (in Slots order) whose garment policy p refuses
+// and the colonist may take off now (ok false: none): one slot per check, so a
+// policy change undresses a colonist piece by piece, each slot then held
+// for Cool like any change (OUT-004). Forced slots never are.
+func shed(cur craft.Outfit, locked [craft.Slots]bool, p Policy) (item.Slot, bool) {
+	for _, s := range Slots {
+		if pc := cur.On[s]; pc.Kind != 0 && !locked[s] && !p.Takes(pc.Stack(0, 0)) {
+			return s, true
+		}
+	}
+	return 0, false
+}
 
 // Wear puts on the garment stack sid (one item), dropping whatever was in
 // that slot; forced: the player ordered it, and the slot becomes theirs.
@@ -90,7 +113,8 @@ func (d Dresser) Wear(id, sid entity.EntityID, st item.Stack, forced bool) {
 // changing into: covered where it is naked, or at least Gain less
 // discomfort than what it has on, judged with its comfort shift on both
 // sides. Slots the player chose, and slots in their cooldown, keep what
-// they have. With full false the plan is optimistic: every kind in the
+// they have; a garment its apparel policy refuses comes off (shed), and
+// only garments the policy allows go on. With full false the plan is optimistic: every kind in the
 // apparel index counts as lying at its feet. Garments only ever drop out
 // of the full plan's choices, so when the optimistic plan finds nothing
 // worth the change neither does the full one: the cheap gate busy
@@ -98,19 +122,23 @@ func (d Dresser) Wear(id, sid entity.EntityID, st item.Stack, forced bool) {
 func (d Dresser) Plan(id entity.EntityID, full bool) (craft.Plan, bool) {
 	cur := d.r.Wardrobe.Worn(id)
 	locked := d.locked(id, cur)
+	pol := d.policy(id)
+	off, shedding := shed(cur, locked, pol)
 	var buf [craft.Slots][maxOpts]craft.Option
 	var opts [craft.Slots][]craft.Option
 	for _, s := range Slots {
-		opts[s] = append(buf[s][:0], craft.Option{Kind: cur.Kind(s)}) // keep it on
+		if opts[s] = buf[s][:0]; s != off || !shedding {
+			opts[s] = append(opts[s], craft.Option{Kind: cur.Kind(s)}) // keep it on
+		}
 		if cur.Kind(s) != 0 && !locked[s] {
 			opts[s] = append(opts[s], craft.Option{}) // take it off
 		}
 	}
 	if full {
-		d.candidates(id, cur, locked, &opts)
+		d.candidates(id, cur, locked, pol, &opts)
 	} else {
 		for _, k := range d.Kinds() {
-			if s := k.Slot(); !locked[s] && k != cur.Kind(s) {
+			if s := k.Slot(); !locked[s] && k != cur.Kind(s) && pol.Kind(k) {
 				opts[s] = append(opts[s], craft.Option{Kind: k})
 			}
 		}
@@ -118,18 +146,19 @@ func (d Dresser) Plan(id entity.EntityID, full bool) (craft.Plan, bool) {
 	mean := d.r.Weather.DailyMean()
 	c, h := d.r.Weather.Comfort(id)
 	best := craft.Best(&opts, Shifted(exposure.Everyday, c, h), mean)
-	return best, cur.Naked() && !best.Naked || craft.DayFit(Shifted(cur.Bands(), c, h), mean)-best.Miss >= Gain
+	return best, shedding || cur.Naked() && !best.Naked || craft.DayFit(Shifted(cur.Bands(), c, h), mean)-best.Miss >= Gain
 }
 
 // candidates adds to opts, per slot, the nearest garment of each kind
 // colonist id could go and put on: lying free (not carried, forbidden,
-// reserved by another or put off), inside its allowed area and reachable.
-// Kinds it already wears and locked slots are skipped.
-func (d Dresser) candidates(id entity.EntityID, cur craft.Outfit, locked [craft.Slots]bool, opts *[craft.Slots][]craft.Option) {
+// reserved by another or put off), allowed by its policy p, inside its
+// allowed area and reachable. Kinds it already wears and locked slots are
+// skipped.
+func (d Dresser) candidates(id entity.EntityID, cur craft.Outfit, locked [craft.Slots]bool, p Policy, opts *[craft.Slots][]craft.Option) {
 	px, py := d.r.Walks.Pos(id)
 	for _, sid := range d.Stock(true) {
 		sp := d.r.Stock.Stack(sid)
-		if sp == nil || sp.Qty <= 0 || sp.Carrier != 0 || sp.Forbidden || sp.Tainted() { // PRD-2: a dead man's clothes only by order
+		if sp == nil || sp.Qty <= 0 || sp.Carrier != 0 || sp.Forbidden || !p.Takes(*sp) { // PRD-2: a dead man's clothes only by order, or by a policy that allows them
 			continue
 		}
 		s := sp.Kind.Slot()
@@ -291,4 +320,18 @@ func (d Dresser) Interrupt(id entity.EntityID, j job.Record) {
 	}
 	d.r.Walks.Interrupt(id)
 	d.Dress(id)
+}
+
+// ClearForced releases every garment the player forced on colonist id
+// (OUT-005): its policy may take them off from the next check on.
+func (d Dresser) ClearForced(id entity.EntityID) bool {
+	w := d.r.Wardrobe.Worn(id)
+	if w.Forced == 0 {
+		return false
+	}
+	for _, s := range Slots {
+		w.SetForced(s, false)
+	}
+	d.r.Wardrobe.SetWorn(id, w)
+	return true
 }

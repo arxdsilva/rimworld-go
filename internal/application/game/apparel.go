@@ -1,12 +1,16 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/application/game/craft"
 	"rimworld-go/internal/application/game/gearview"
 	"rimworld-go/internal/application/game/outfit"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/exposure"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -27,7 +31,20 @@ type apparelIndex = outfit.Index
 
 // outfitOf is game/outfit's dressing over the current map.
 func outfitOf(g *Game) outfit.Dresser {
-	return outfit.New(&g.clothes, outfit.Roles{Wardrobe: outfitWardrobe{g}, Stock: outfitStock{g}, Weather: outfitWeather{g}, Walks: outfitWalks{g}})
+	return outfit.New(&g.clothes, outfitBook(g), outfit.Roles{Wardrobe: outfitWardrobe{g}, Stock: outfitStock{g}, Weather: outfitWeather{g}, Walks: outfitWalks{g}})
+}
+
+// outfitBook is the colony's apparel policies (game/outfit, GEAR-3).
+func outfitBook(g *Game) *outfit.Book { return &g.worldS().outfits }
+
+// applyOutfit runs SetApparelPolicy, EditApparelPolicy and
+// ClearForcedApparel (tick.go).
+func applyOutfit(g *Game, c command.Command) {
+	if c.Kind == command.ClearForcedApparel {
+		outfitOf(g).ClearForced(entity.EntityID(c.Pawn))
+		return
+	}
+	outfitBook(g).Apply(c, outfitWearers{g})
 }
 
 // bandsOf is a colonist's comfortable range given what it wears.
@@ -108,11 +125,13 @@ func (g *Game) dressCheck(id entity.EntityID) bool { return outfitOf(g).Check(id
 // outfit (PLAY-017; tick.go).
 func (g *Game) dressInterrupt(id entity.EntityID, j job.Record) { outfitOf(g).Interrupt(id, j) }
 
-// outfitView adds the apparel policy to v (GEAR-3 contract: unchanged until game/outfit).
-func outfitView(_ *Game, _ entity.EntityID, v gearview.Pawn) gearview.Pawn { return v }
+// outfitView adds the apparel policy to v (PawnView.Gear, OUT-003).
+func outfitView(g *Game, id entity.EntityID, v gearview.Pawn) gearview.Pawn {
+	return outfitBook(g).View(id, v)
+}
 
-// outfitWorld is WorldView.Gear (GEAR-3 contract: zero until game/outfit).
-func outfitWorld(*Game) gearview.World { return gearview.World{} }
+// outfitWorld is WorldView.Gear: the apparel policies (OUT-001).
+func outfitWorld(g *Game) gearview.World { return gearview.World{Policies: outfitBook(g).Views()} }
 
 // game/outfit's roles over the game: pointer-shaped, so building a
 // Dresser allocates nothing.
@@ -121,7 +140,27 @@ type (
 	outfitStock    struct{ g *Game }
 	outfitWeather  struct{ g *Game }
 	outfitWalks    struct{ g *Game }
+	outfitWearers  struct{ g *Game }
 )
+
+// Wearer: a living colonist of the colony, not a guest or a raider.
+func (h outfitWearers) Wearer(id entity.EntityID) bool {
+	v, ok := h.g.vital.Get(id)
+	return ok && v.Status != health.Dead && h.g.colonist(id) && !h.g.visitor(id)
+}
+
+// Wearers is everyone dressed who is neither a raider nor a guest, on
+// any map or away (the apparel map is colony-wide), in id order.
+func (h outfitWearers) Wearers() []entity.EntityID {
+	var out []entity.EntityID
+	for id := range h.g.apparel {
+		if !h.g.isRaider(id) && !h.g.visitor(id) {
+			out = append(out, id)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
 
 func (h outfitWardrobe) Worn(id entity.EntityID) craft.Outfit       { return h.g.apparel[id] }
 func (h outfitWardrobe) SetWorn(id entity.EntityID, w craft.Outfit) { h.g.apparel[id] = w }

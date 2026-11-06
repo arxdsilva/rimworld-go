@@ -998,6 +998,36 @@ saveState.Orders.Open []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.Orders.Open[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.Orders.Strip []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.Orders.Strip[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Outfits rimworld-go/internal/application/game/outfit.Save
+saveState.Outfits.Assigned []rimworld-go/internal/application/game/outfit.Assigned
+saveState.Outfits.Assigned[] rimworld-go/internal/application/game/outfit.Assigned
+saveState.Outfits.Assigned[].Pawn rimworld-go/internal/domain/sim/entity.EntityID = uint64
+saveState.Outfits.Assigned[].Policy int
+saveState.Outfits.Default int
+saveState.Outfits.Next int
+saveState.Outfits.Policies []rimworld-go/internal/application/game/outfit.Policy
+saveState.Outfits.Policies[] rimworld-go/internal/application/game/outfit.Policy
+saveState.Outfits.Policies[].Allow rimworld-go/internal/domain/building/zone.Filter = [4]uint64
+saveState.Outfits.Policies[].Allow[] uint64
+saveState.Outfits.Policies[].ID int
+saveState.Outfits.Policies[].Name string
+saveState.Outfits.Policies[].NoStuff rimworld-go/internal/domain/building/zone.Filter = [4]uint64
+saveState.Outfits.Policies[].NoStuff[] uint64
+saveState.Outfits.Policies[].Special rimworld-go/internal/domain/building/zone.Special
+saveState.Outfits.Policies[].Special.HPMax uint8
+saveState.Outfits.Policies[].Special.HPMin uint8
+saveState.Outfits.Policies[].Special.NoBurnable bool
+saveState.Outfits.Policies[].Special.NoClean bool
+saveState.Outfits.Policies[].Special.NoColonist bool
+saveState.Outfits.Policies[].Special.NoFresh bool
+saveState.Outfits.Policies[].Special.NoNonBurnable bool
+saveState.Outfits.Policies[].Special.NoNonSmeltable bool
+saveState.Outfits.Policies[].Special.NoRotten bool
+saveState.Outfits.Policies[].Special.NoSmeltable bool
+saveState.Outfits.Policies[].Special.NoStranger bool
+saveState.Outfits.Policies[].Special.NoTainted bool
+saveState.Outfits.Policies[].Special.QualityMax uint8
+saveState.Outfits.Policies[].Special.QualityMin uint8
 saveState.PawnIDs []rimworld-go/internal/domain/sim/entity.EntityID
 saveState.PawnIDs[] rimworld-go/internal/domain/sim/entity.EntityID = uint64
 saveState.PenAnimals []rimworld-go/internal/application/game.penAnimalSave

@@ -255,6 +255,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.herdOf().Auto.Apply(c) // game/herd (FOOD-3)
 	case command.SetFoodPolicy, command.EditFoodPolicy:
 		g.sk.diet.Apply(c, dietEaters{g}) // game/diet (FOOD-4): food policies
+	case command.SetApparelPolicy, command.EditApparelPolicy, command.ClearForcedApparel:
+		applyOutfit(g, c) // apparel.go: game/outfit (GEAR-3)
 	case command.DesignateUninstall, command.Reinstall, command.DesignateStrip, command.DesignateOpen, command.DesignateClaim,
 		command.DesignateChopWood, command.DesignateSlaughter, command.DesignateRemoveFloor, command.DesignateDeleteZone,
 		command.DesignateClearRoofArea, command.DesignateClearNoRoofArea:

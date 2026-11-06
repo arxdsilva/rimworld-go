@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/application/game/industry"
 	"rimworld-go/internal/application/game/mind"
 	"rimworld-go/internal/application/game/orders"
+	"rimworld-go/internal/application/game/outfit"
 	"rimworld-go/internal/application/game/raid"
 	"rimworld-go/internal/application/game/recreate"
 	rlab "rimworld-go/internal/application/game/research"
@@ -97,11 +98,13 @@ import (
 // does the same for the benches it gives the wiki footprints (game/resize).
 // v11 (AX-0) is for the AX owners' steps (A2 tables, A3 floors and carpets).
 // v12 (MAP-0) adds the extra open maps (ExtraMaps): an older binary refuses
-// a save it would read as the first map alone.
+// a save it would read as the first map alone. v14 (GEAR-3) adds the
+// apparel policies (Outfits): an older save gets the defaults, everyone on
+// Anything.
 // migrateSave runs the steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 13
+const SaveVersion = 14
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -386,6 +389,7 @@ type saveState struct {
 	Surgery    *surgerySave
 	Drugs      []entry[savedDrug] // dose_host.go: slices since MED-00
 	Sense      *sense.Save        // game/sense (CSE, v13): nil at the defaults
+	Outfits    *outfit.Save       // game/outfit (GEAR-3, v14): nil at the defaults
 	PetNames   []entry[string]    // skills.go (RHUD-025): renamed animals' rolled names; nil until a rename
 	Prisoners  []entry[prisoner.State]
 	World      *worldSave
@@ -547,6 +551,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Trade = g.exportTrade()           // trade.go (PLAY-024): nil while there is nothing to keep
 	s.Diet = g.sk.diet.Export()         // game/diet (FOOD-4): nil at the defaults
 	s.Sense = senseOf(g).Export()       // game/sense (CSE): nil at the defaults
+	s.Outfits = outfitBook(g).Export()  // game/outfit (GEAR-3): nil at the defaults
 	s.PetNames = g.sk.exportPetNames()  // skills.go (RHUD-025): nil until a rename
 	s.ColonistOrder = g.sk.bar.Export() // game/roster (CTL-011): nil until the player moves someone
 	s.History = slices.Clone(g.history)
@@ -759,7 +764,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.sk.diet.Import(s.Diet)     // game/diet (FOOD-4)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
-	senseOf(g).Import(s.Sense) // game/sense (CSE)
+	senseOf(g).Import(s.Sense)      // game/sense (CSE)
+	outfitBook(g).Import(s.Outfits) // game/outfit (GEAR-3): nil before v14
 	g.sk.importPetNames(s.PetNames)
 	g.sk.bar.Import(s.ColonistOrder) // game/roster (CTL-011): none in an older save
 	g.history = s.History
@@ -911,6 +917,8 @@ func (g *Game) migrateSave(v int) {
 		g.migrateBenches(resize.V11, resize.RefundV10) // A2: 1x1 tables become 1x2 (taken down and refunded where they no longer fit)
 		fallthrough
 	case v < 12: // MAP-0: an older save has one map, nothing to change
+		fallthrough
+	case v < 14: // GEAR-3: no apparel policies yet: Import(nil) gave the defaults, everyone on Anything
 	}
 	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }
