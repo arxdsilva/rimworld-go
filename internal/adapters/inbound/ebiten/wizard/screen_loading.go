@@ -138,6 +138,6 @@ func (w *Flow) drawLoading(screen *ebiten.Image, sw, sh int) {
 	uikit.DrawPanel(screen, box.X, box.Y, box.W, box.H)
 	st := gfx.Large
 	st.Color = uikit.Heading
-	gfx.Text(screen, "Preparing your colony", float64(box.X+20), float64(box.Y+16), st)
+	gfx.Text(screen, w.sh.T("Preparing your colony"), float64(box.X+20), float64(box.Y+16), st)
 	uikit.DrawProgress(screen, gfx.Rect{X: box.X + 20, Y: box.Y + 56, W: box.W - 40, H: 60}, ld.Phase, float64(ld.frac), "")
 }

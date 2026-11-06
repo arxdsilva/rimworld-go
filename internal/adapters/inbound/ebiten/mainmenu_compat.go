@@ -84,6 +84,9 @@ func (h menuHost) KeyName(x input.Action) string { return shellSettings(h).KeyNa
 func (h menuHost) KeyHint(x input.Action) string { return shellSettings(h).KeyHint(x) }
 func (h menuHost) Kit() *uikit.Kit               { return shellWidgets(h).Kit() }
 
+func (h menuHost) T(src string) string               { return h.a.shell.T(src) }
+func (h menuHost) Tf(src string, args ...any) string { return h.a.shell.Tf(src, args...) }
+
 func (h menuHost) LoadSplash() (*ebiten.Image, error) {
 	if h.a.cfg.LoadSplash == nil {
 		return nil, mainmenu.ErrNoLoader

@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/globemath"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/planet"
@@ -43,18 +44,21 @@ const (
 	NumModes
 )
 
-func (m Mode) String() string {
+func (m Mode) String() string { return m.Label(lang.English{}) }
+
+// Label is the mode's name in the player's language.
+func (m Mode) Label(tr lang.Tr) string {
 	switch m {
 	case ModeTemperature:
-		return "Temperature"
+		return tr.T("Temperature")
 	case ModeRainfall:
-		return "Rainfall"
+		return tr.T("Rainfall")
 	case ModeElevation:
-		return "Elevation"
+		return tr.T("Elevation")
 	case ModeHilliness:
-		return "Hilliness"
+		return tr.T("Hilliness")
 	}
-	return "Biome"
+	return tr.T("Biome")
 }
 
 // Pointer results of Update: no tile, or the uncovered part of the sphere

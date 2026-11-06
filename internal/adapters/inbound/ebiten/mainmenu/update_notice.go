@@ -1,11 +1,10 @@
 package mainmenu
 
 import (
-	"fmt"
-
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 )
 
@@ -33,16 +32,19 @@ type Updates interface {
 }
 
 // VersionLine is the running version, with the newer release when one is known.
-func VersionLine(current, newer string) string {
+func VersionLine(current, newer string) string { return VersionLineIn(lang.English{}, current, newer) }
+
+// VersionLineIn is VersionLine in the player's language.
+func VersionLineIn(tr lang.Tr, current, newer string) string {
 	if newer == "" {
 		return current
 	}
-	return fmt.Sprintf("%s (%s available)", current, newer)
+	return lang.Tf(tr, "%s (%s available)", current, newer)
 }
 
 // updateHeadline is the card's first line.
-func updateHeadline(version string) string {
-	return fmt.Sprintf("Version %s is available", version)
+func updateHeadline(tr lang.Tr, version string) string {
+	return lang.Tf(tr, "Version %s is available", version)
 }
 
 // UpdateCard is the notice's card: under the title and the version line, and
@@ -64,7 +66,7 @@ func (s *Screen) declareUpdateNotice(sw int) {
 	}
 	card := UpdateCard(sw, page)
 	lines := gfx.WrapPx(page, gfx.Body, float64(card.W-2*ramCardPad-ramCardStripe))
-	headline := updateHeadline(version)
+	headline := updateHeadline(s.sh, version)
 	k := s.sh.Kit()
 	k.Panel(card)
 	k.Queue(func(dst *ebiten.Image) {
@@ -79,11 +81,11 @@ func (s *Screen) declareUpdateNotice(sw int) {
 	y := card.Bottom() - ramCardPad - ramBtnH
 	download := gfx.Rect{X: card.Right() - ramCardPad - updateDownloadW, Y: y, W: updateDownloadW, H: ramBtnH}
 	later := gfx.Rect{X: download.X - updateBtnGap - updateLaterW, Y: y, W: updateLaterW, H: ramBtnH}
-	s.noticeButton(UpdateLaterID, later, "Later",
-		uikit.BtnOpts{Tip: "Later\nHide this notice until the next time you start the game."},
+	s.noticeButton(UpdateLaterID, later, s.sh.T("Later"),
+		uikit.BtnOpts{Tip: s.sh.T("Later\nHide this notice until the next time you start the game.")},
 		func() { s.updateHidden = true })
-	s.noticeButton(UpdateDownloadID, download, "Download",
-		uikit.BtnOpts{Style: uikit.BtnPrimary, Tip: "Download\nOpen the download page in your browser."},
+	s.noticeButton(UpdateDownloadID, download, s.sh.T("Download"),
+		uikit.BtnOpts{Style: uikit.BtnPrimary, Tip: s.sh.T("Download\nOpen the download page in your browser.")},
 		s.sh.DownloadUpdate)
 }
 

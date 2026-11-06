@@ -69,7 +69,7 @@ func (v chromeBar) declareChrome(sw, sh int, p *planet.Planet) []gfx.Rect {
 
 // podsHead is the targeting line under the globe.
 func (v targeting) podsHead() string {
-	return "Launch: click a target within the ring · the pods reach " + strconv.Itoa(v.pods.rng) + " tiles, " + strconv.Itoa(v.pods.loadKg) + " kg aboard · Esc cancels"
+	return v.sh.Tf("Launch: click a target within the ring · the pods reach %d tiles, %d kg aboard · Esc cancels", v.pods.rng, v.pods.loadKg)
 }
 
 // declareTools declares the toolbar, the search box and the legend, and

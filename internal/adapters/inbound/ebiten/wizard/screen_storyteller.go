@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/storyteller"
@@ -41,16 +42,19 @@ var SaveModes = []saveModeInfo{
 }
 
 // ModeCaption is a one-line feel of a pacing model.
-func ModeCaption(m storyteller.Mode) string {
+func ModeCaption(m storyteller.Mode) string { return ModeCaptionIn(lang.English{}, m) }
+
+// ModeCaptionIn is ModeCaption in the player's language.
+func ModeCaptionIn(tr lang.Tr, m storyteller.Mode) string {
 	switch m {
 	case storyteller.Cycle:
-		return "Hard weeks, then rest"
+		return tr.T("Hard weeks, then rest")
 	case storyteller.Calm:
-		return "Slow, gentle, forgiving"
+		return tr.T("Slow, gentle, forgiving")
 	case storyteller.Dice:
-		return "Any day, any size"
+		return tr.T("Any day, any size")
 	}
-	return "The old rhythm"
+	return tr.T("The old rhythm")
 }
 
 // PacingOf is the example pacing of a storyteller: a fixed showcase seed,
@@ -68,7 +72,7 @@ func StoryRects(content gfx.Rect) storyLayout {
 }
 
 func (w storyPage) drawStoryteller(screen *ebiten.Image, sw, sh int) {
-	w.drawNGFrame(screen, sw, sh, "Choose Storyteller")
+	w.drawNGFrame(screen, sw, sh, w.sh.T("Choose Storyteller"))
 }
 
 func (w storyPage) storytellerUI(sw, sh int) {
@@ -87,7 +91,7 @@ func (w storyPage) storytellerUI(sw, sh int) {
 		r := gfx.Rect{X: L.Left.X, Y: L.Left.Y + float32(i)*(storyCardH+storyCardGap), W: storyLeftW, H: storyCardH}
 		pick := func() { ng.Storyteller = p.Key }
 		wd := uikit.Widget{ID: "story.pick." + p.Key, R: r, Label: p.Name, Focusable: true, Click: func() { w.kit().OK(); pick() },
-			Tip: p.Name + ", " + p.Title + "\n" + ModeCaption(p.Mode)}
+			Tip: p.Name + ", " + p.Title + "\n" + ModeCaptionIn(w.sh, p.Mode)}
 		u := w.kit()
 		if u.Add(wd) && (w.kit().Press(r) || w.kit().KeyAct(wd.ID)) {
 			w.kit().OK()
@@ -100,7 +104,7 @@ func (w storyPage) storytellerUI(sw, sh int) {
 	w.storyCentre(L.Centre, cur)
 	w.storyRight(ng, L.Right)
 
-	w.ngFooter(footer, "Next", ids.WizardNext, uikit.BtnOpts{}, func() {
+	w.ngFooter(footer, w.sh.T("Next"), ids.WizardNext, uikit.BtnOpts{}, func() {
 		s := w.sh.Settings()
 		s.Gameplay.LastStoryteller = ng.Storyteller
 		s.Gameplay.LastDifficulty = ng.Preset.Key()
@@ -174,7 +178,7 @@ func (w storyPage) paintStoryCard(dst *ebiten.Image, r gfx.Rect, p storyteller.P
 	ts := gfx.Small
 	ts.Color = uikit.TextDim
 	gfx.Text(dst, p.Title, tx, y+2, ts)
-	gfx.Text(dst, ModeCaption(p.Mode), tx, y+2+gfx.LineH(ts)+8, ts)
+	gfx.Text(dst, ModeCaptionIn(w.sh, p.Mode), tx, y+2+gfx.LineH(ts)+8, ts)
 }
 
 // storyCentre is the chosen storyteller: portrait, name, bio and the
@@ -204,9 +208,9 @@ func (w storyPage) storyCentre(r gfx.Rect, p storyteller.Profile) {
 		gfx.Text(dst, p.Title, float64(text.X), y+2, ts)
 		cs := gfx.Body
 		cs.Color = uikit.Accent
-		gfx.Text(dst, "Pacing: "+ModeCaption(p.Mode), float64(text.X), y+2+gfx.LineH(ts)+10, cs)
+		gfx.Text(dst, w.sh.Tf("Pacing: %s", ModeCaptionIn(w.sh, p.Mode)), float64(text.X), y+2+gfx.LineH(ts)+10, cs)
 	})
-	w.kit().Tip("story.mode", gfx.Rect{X: text.X, Y: text.Y, W: text.W, H: 90}, p.Name+"\n"+PacingTip(p))
+	w.kit().Tip("story.mode", gfx.Rect{X: text.X, Y: text.Y, W: text.W, H: 90}, p.Name+"\n"+PacingTipIn(w.sh, p))
 
 	// The bio, between the portrait and the pacing chart.
 	bioY := pr.Bottom() + 10
@@ -232,28 +236,31 @@ func (w storyPage) storyCentre(r gfx.Rect, p storyteller.Profile) {
 
 	chart := gfx.Rect{X: in.X, Y: in.Bottom() - sparkBlockH + 6, W: in.W, H: sparkBlockH - 6}
 	vals := PacingOf(p)
-	w.kit().Tip("story.pacing", chart, "Example pacing\nSixty days of one possible story. Each bar is a day; taller bars are bigger threats and gaps are quiet days.")
-	u.Queue(func(dst *ebiten.Image) { drawPacing(dst, chart, vals) })
+	w.kit().Tip("story.pacing", chart, w.sh.T("Example pacing\nSixty days of one possible story. Each bar is a day; taller bars are bigger threats and gaps are quiet days."))
+	u.Queue(func(dst *ebiten.Image) { drawPacing(w.sh, dst, chart, vals) })
 }
 
 // PacingTip describes how a storyteller paces threats, for the tooltip.
-func PacingTip(p storyteller.Profile) string {
+func PacingTip(p storyteller.Profile) string { return PacingTipIn(lang.English{}, p) }
+
+// PacingTipIn is PacingTip in the player's language.
+func PacingTipIn(tr lang.Tr, p storyteller.Profile) string {
 	switch p.Mode {
 	case storyteller.Cycle:
-		return fmt.Sprintf("%d days of pressure, then %d days of rest. First big threat around day %d.", p.CycleOn, p.CycleOff, p.FirstThreatDay)
+		return lang.Tf(tr, "%d days of pressure, then %d days of rest. First big threat around day %d.", p.CycleOn, p.CycleOff, p.FirstThreatDay)
 	case storyteller.Calm:
-		return fmt.Sprintf("One big threat every %d to %d days, with more good news between. First around day %d.", p.GapMin, p.GapMax, p.FirstThreatDay)
+		return lang.Tf(tr, "One big threat every %d to %d days, with more good news between. First around day %d.", p.GapMin, p.GapMax, p.FirstThreatDay)
 	case storyteller.Dice:
-		return fmt.Sprintf("Each morning rolls the dice for a big threat. First possible on day %d.", p.FirstThreatDay)
+		return lang.Tf(tr, "Each morning rolls the dice for a big threat. First possible on day %d.", p.FirstThreatDay)
 	}
 	return ""
 }
 
 // drawPacing draws daily threat bars with a caption.
-func drawPacing(dst *ebiten.Image, r gfx.Rect, vals []int) {
+func drawPacing(tr lang.Tr, dst *ebiten.Image, r gfx.Rect, vals []int) {
 	cs := gfx.Small
 	cs.Color = uikit.TextDim
-	gfx.Text(dst, "Example pacing — every colony differs.", float64(r.X), float64(r.Y), cs)
+	gfx.Text(dst, tr.T("Example pacing — every colony differs."), float64(r.X), float64(r.Y), cs)
 	chart := gfx.Rect{X: r.X, Y: r.Y + float32(gfx.LineH(cs)) + 6, W: r.W, H: r.H - float32(gfx.LineH(cs)) - 6 - float32(gfx.LineH(cs)) - 2}
 	uikit.FillRect(dst, chart, uikit.Field)
 	uikit.StrokeRect(dst, chart, uikit.PanelBorder)
@@ -281,7 +288,7 @@ func drawPacing(dst *ebiten.Image, r gfx.Rect, vals []int) {
 		case SparkDays:
 			ls.Align = gfx.AlignRight
 		}
-		gfx.Text(dst, fmt.Sprintf("day %d", d), float64(x), float64(chart.Bottom())+2, ls)
+		gfx.Text(dst, lang.Tf(tr, "day %d", d), float64(x), float64(chart.Bottom())+2, ls)
 	}
 }
 
@@ -305,7 +312,7 @@ func (w storyPage) storyRight(ng *Draft, r gfx.Rect) {
 	headH := float32(gfx.LineH(hs)) + 4
 	sd := gfx.Small
 	noteW := in.W - uikit.ScrollBarW - 6
-	note := "Storyteller and difficulty can be changed later in Options. Save mode can't."
+	note := w.sh.T("Storyteller and difficulty can be changed later in Options. Save mode can't.")
 	noteH := wrapHeight(note, gfx.Small, noteW)
 
 	type srow struct {
@@ -351,7 +358,7 @@ func (w storyPage) storyRight(ng *Draft, r gfx.Rect) {
 		rr := shown(sr)
 		btn := gfx.Rect{X: rr.Right() - 104, Y: rr.Y + 8, W: 100, H: 24}
 		if btn.Y >= area.View.Y && btn.Bottom() <= area.View.Bottom() {
-			uikit.StyledButton(w.kit(), "diff.customize", btn, "Customize...", uikit.BtnOpts{Tip: "Customize\nEdit every difficulty value."}, w.openCustomDifficulty)
+			uikit.StyledButton(w.kit(), "diff.customize", btn, w.sh.T("Customize..."), uikit.BtnOpts{Tip: w.sh.T("Customize\nEdit every difficulty value.")}, w.openCustomDifficulty)
 		}
 	}
 	for _, sr := range rows {
@@ -369,8 +376,8 @@ func (w storyPage) storyRight(ng *Draft, r gfx.Rect) {
 	u.Queue(func(dst *ebiten.Image) {
 		sub := gfx.ClipTo(dst, area.View)
 		top := area.View.Y - area.Off
-		gfx.Text(sub, "Difficulty", float64(area.View.X+2), float64(top)+2, hs)
-		gfx.Text(sub, "Save mode", float64(area.View.X+2), float64(top+saveHeadY)+2, hs)
+		gfx.Text(sub, w.sh.T("Difficulty"), float64(area.View.X+2), float64(top)+2, hs)
+		gfx.Text(sub, w.sh.T("Save mode"), float64(area.View.X+2), float64(top+saveHeadY)+2, hs)
 		ns := gfx.Small
 		ns.Color = uikit.TextDim
 		for i, l := range gfx.WrapPx(note, ns, float64(noteW)) {

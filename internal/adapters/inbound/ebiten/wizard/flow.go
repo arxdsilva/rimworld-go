@@ -85,7 +85,7 @@ func (w *Flow) Draw(s ports.Screen, dst *ebiten.Image, sw, sh int) {
 	case ports.ScreenStoryteller:
 		storyPage{w}.drawStoryteller(dst, sw, sh)
 	case ports.ScreenWorldGen:
-		w.drawNGFrame(dst, sw, sh, "Create World")
+		w.drawNGFrame(dst, sw, sh, w.sh.T("Create World"))
 	case ports.ScreenLanding:
 		landingPage{w}.drawLanding(dst, sw, sh)
 	case ports.ScreenPawns:
@@ -93,7 +93,7 @@ func (w *Flow) Draw(s ports.Screen, dst *ebiten.Image, sw, sh int) {
 			w.drawLoading(dst, sw, sh)
 			return
 		}
-		w.drawNGFrame(dst, sw, sh, "Create Characters")
+		w.drawNGFrame(dst, sw, sh, w.sh.T("Create Characters"))
 	}
 }
 

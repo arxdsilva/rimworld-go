@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
@@ -116,6 +117,22 @@ func SlugOf(name string) string {
 	return s
 }
 
+// fixBeforeSaving is Save's reason while the scenario has n errors.
+func fixBeforeSaving(tr lang.Tr, n int) string {
+	if n == 1 {
+		return tr.T("Fix 1 problem before saving.")
+	}
+	return lang.Tf(tr, "Fix %d problems before saving.", n)
+}
+
+// fixProblemsShort is Done's reason while the scenario has n errors.
+func fixProblemsShort(tr lang.Tr, n int) string {
+	if n == 1 {
+		return tr.T("Fix 1 problem")
+	}
+	return lang.Tf(tr, "Fix %d problems", n)
+}
+
 // ---- the choice lists ----------------------------------------------------
 
 var (
@@ -134,7 +151,6 @@ var (
 	edCondNames  = mapNames(len(edConditions), func(i int) string { return edConditions[i].Label() + " — " + edConditions[i].Desc() })
 	edPawnNames  = mapNames(len(edPawnConds), func(i int) string { return scenario.PawnConditionLabel(edPawnConds[i]) })
 	edProjNames  = mapNames(int(research.NumProjects), func(i int) string { return research.DefOf(research.Project(i)).Label })
-	edWhoNames   = []string{"Every colonist", "One random colonist", "Random colonists"}
 )
 
 func mapNames(n int, f func(int) string) []string {
@@ -180,7 +196,7 @@ func editorRects(content gfx.Rect) editorLayout {
 }
 
 func (w editorPage) drawScenarioEditor(screen *ebiten.Image, sw, sh int) {
-	w.drawNGFrame(screen, sw, sh, "Scenario Editor")
+	w.drawNGFrame(screen, sw, sh, w.sh.T("Scenario Editor"))
 }
 
 func (w editorPage) editorUI(sw, sh int) {
@@ -214,22 +230,22 @@ func (w editorPage) editorUI(sw, sh int) {
 	}
 	nameR := gfx.Rect{X: L.header.X, Y: L.header.Y, W: max(160, min(360, x-L.header.X)), H: L.header.H}
 	w.kit().TextField("sced.name", nameR, &ed.Def.Name, uikit.TextFieldSpec{MaxLen: scenario.MaxName, Placeholder: "Scenario name",
-		Normalize: strings.TrimSpace, Tip: "Name\nUp to 40 characters."})
-	saveOpts := uikit.BtnOpts{Tip: "Save\nWrite the scenario to the scenarios folder."}
+		Normalize: strings.TrimSpace, Tip: w.sh.T("Name\nUp to 40 characters.")})
+	saveOpts := uikit.BtnOpts{Tip: w.sh.T("Save\nWrite the scenario to the scenarios folder.")}
 	switch {
 	case w.store() == nil:
 		saveOpts.Disabled, saveOpts.Reason = true, "Scenario files are unavailable in this build."
 	case errs > 0:
-		saveOpts.Disabled, saveOpts.Reason = true, fmt.Sprintf("Fix %d problem%s before saving.", errs, plural(errs))
+		saveOpts.Disabled, saveOpts.Reason = true, fixBeforeSaving(w.sh, errs)
 	}
-	uikit.StyledButton(w.kit(), "sced.save", rects[0], "Save", saveOpts, w.editorSave)
-	uikit.StyledButton(w.kit(), "sced.load", rects[1], "Load", uikit.BtnOpts{Disabled: w.store() == nil, Reason: "Scenario files are unavailable in this build.", Tip: "Load\nReplace this scenario with one from the scenarios folder."}, w.editorLoad)
-	uikit.StyledButton(w.kit(), "sced.reset", rects[2], "Reset", uikit.BtnOpts{Tip: "Reset\nBack to how the scenario was when the editor opened."}, func() {
+	uikit.StyledButton(w.kit(), "sced.save", rects[0], w.sh.T("Save"), saveOpts, w.editorSave)
+	uikit.StyledButton(w.kit(), "sced.load", rects[1], w.sh.T("Load"), uikit.BtnOpts{Disabled: w.store() == nil, Reason: w.sh.T("Scenario files are unavailable in this build."), Tip: w.sh.T("Load\nReplace this scenario with one from the scenarios folder.")}, w.editorLoad)
+	uikit.StyledButton(w.kit(), "sced.reset", rects[2], w.sh.T("Reset"), uikit.BtnOpts{Tip: w.sh.T("Reset\nBack to how the scenario was when the editor opened.")}, func() {
 		ed.Def = CloneDef(ed.orig)
 		ed.Open = map[int]bool{}
 		ed.reveal = -1
 	})
-	uikit.StyledButton(w.kit(), "sced.seed", rects[3], "Randomize seed", uikit.BtnOpts{Tip: fmt.Sprintf("Randomize seed\nThe scenario's own seed (now %d) only drives its random parts, such as a random pet. It is not the planet seed.", ed.Def.Seed)}, func() {
+	uikit.StyledButton(w.kit(), "sced.seed", rects[3], w.sh.T("Randomize seed"), uikit.BtnOpts{Tip: w.sh.Tf("Randomize seed\nThe scenario's own seed (now %d) only drives its random parts, such as a random pet. It is not the planet seed.", ed.Def.Seed)}, func() {
 		ed.Def.Seed = rand.Uint64N(1<<32) + 1
 	})
 
@@ -242,9 +258,9 @@ func (w editorPage) editorUI(sw, sh int) {
 
 	done := uikit.BtnOpts{}
 	if errs > 0 {
-		done.Disabled, done.Reason = true, fmt.Sprintf("Fix %d problem%s", errs, plural(errs))
+		done.Disabled, done.Reason = true, fixProblemsShort(w.sh, errs)
 	}
-	w.ngFooter(footer, "Done", "sced.done", done, w.editorDone)
+	w.ngFooter(footer, w.sh.T("Done"), "sced.done", done, w.editorDone)
 }
 
 // validationPanel lists the problems; clicking one shows its part.
@@ -254,12 +270,12 @@ func (w editorPage) validationPanel(ed *editorState, r gfx.Rect, probs []scenari
 	in := r.Inset(10)
 	hs := gfx.Label
 	hs.Color = uikit.Heading
-	w.kit().Label(in.X, in.Y, "Validation", hs)
+	w.kit().Label(in.X, in.Y, w.sh.T("Validation"), hs)
 	list := gfx.Rect{X: in.X, Y: in.Y + float32(gfx.LineH(hs)) + 6, W: in.W, H: in.H - float32(gfx.LineH(hs)) - 6}
 	if len(probs) == 0 {
 		gs := gfx.Body
 		gs.Color = uikit.Good
-		w.kit().Label(list.X, list.Y, "No problems found.", gs)
+		w.kit().Label(list.X, list.Y, w.sh.T("No problems found."), gs)
 		return
 	}
 	type prow struct {
@@ -273,7 +289,7 @@ func (w editorPage) validationPanel(ed *editorState, r gfx.Rect, probs []scenari
 	for _, p := range probs {
 		msg := p.Msg
 		if p.Part >= 0 {
-			msg = fmt.Sprintf("Part %d. %s", p.Part+1, msg)
+			msg = w.sh.Tf("Part %d. %s", p.Part+1, msg)
 		}
 		lines := gfx.WrapPx(msg, gfx.Body, float64(list.W-uikit.ScrollBarW-30))
 		h := float32(len(lines))*lh + 8
@@ -332,7 +348,7 @@ func (w editorPage) validationPanel(ed *editorState, r gfx.Rect, probs []scenari
 func (w editorPage) editorForm(ng *Draft, ed *editorState, r gfx.Rect, probs []scenario.Problem) {
 	w.kit().Panel(r)
 	body, bar := r.SplitV(-(edRowH + 12))
-	uikit.StyledButton(w.kit(), "sced.add", gfx.Rect{X: bar.X + 8, Y: bar.Y + 4, W: 150, H: edRowH}, "Add part...", uikit.BtnOpts{Style: uikit.BtnPrimary, Tip: "Add part\nAdd another rule to the scenario."}, w.openAddPart)
+	uikit.StyledButton(w.kit(), "sced.add", gfx.Rect{X: bar.X + 8, Y: bar.Y + 4, W: 150, H: edRowH}, w.sh.T("Add part..."), uikit.BtnOpts{Style: uikit.BtnPrimary, Tip: w.sh.T("Add part\nAdd another rule to the scenario.")}, w.openAddPart)
 	view := body.Inset(6)
 	area := w.kit().ScrollArea("sced.form", view, ng.formHeight("sced.form"), uikit.ScrollOpts{Step: 48})
 	f := uikit.NewForm(area)
@@ -340,11 +356,11 @@ func (w editorPage) editorForm(ng *Draft, ed *editorState, r gfx.Rect, probs []s
 
 	// Summary and description.
 	if row, ok := f.Row(edRowH); ok {
-		c := uikit.RowLabel(w.kit(), row, "Summary", 92)
+		c := uikit.RowLabel(w.kit(), row, w.sh.T("Summary"), 92)
 		w.kit().TextField("sced.summary", c.Inset(2), &d.Summary, uikit.TextFieldSpec{MaxLen: scenario.MaxSummary, Placeholder: "One line shown in the list"})
 	}
 	if row, ok := f.Row(22); ok {
-		uikit.RowLabel(w.kit(), row, "Description", 120)
+		uikit.RowLabel(w.kit(), row, w.sh.T("Description"), 120)
 	}
 	if row, ok := f.Row(68); ok {
 		w.kit().TextField("sced.desc", row.Inset(2), &d.Desc, uikit.TextFieldSpec{Multiline: true, MaxLen: scenario.MaxDesc, Placeholder: "The story of the start"})
@@ -352,15 +368,15 @@ func (w editorPage) editorForm(ng *Draft, ed *editorState, r gfx.Rect, probs []s
 	f.Gap(6)
 
 	// Mandatory block.
-	f.SectionTitle(w.sh, "Starting setup")
+	f.SectionTitle(w.sh, w.sh.T("Starting setup"))
 	if row, ok := f.Row(edRowH); ok {
-		c := uikit.RowLabel(w.kit(), row, "Player faction", 120)
+		c := uikit.RowLabel(w.kit(), row, w.sh.T("Player faction"), 120)
 		sel := 0
 		if d.Faction == faction.Clans {
 			sel = 1
 		}
-		uikit.Segmented(w.kit(), "sced.faction", gfx.Rect{X: c.X, Y: c.Y + 3, W: min(c.W, 240), H: c.H - 6}, []string{"Settlers", "Clan"}, &sel,
-			[]string{"Settlers\nIndustrial colonists who ride down in pods.", "Clan\nA tribe that walks in with what it carries."})
+		uikit.Segmented(w.kit(), "sced.faction", gfx.Rect{X: c.X, Y: c.Y + 3, W: min(c.W, 240), H: c.H - 6}, []string{w.sh.T("Settlers"), w.sh.T("Clan")}, &sel,
+			[]string{w.sh.T("Settlers\nIndustrial colonists who ride down in pods."), w.sh.T("Clan\nA tribe that walks in with what it carries.")})
 		if sel == 1 {
 			d.Faction = faction.Clans
 		} else {
@@ -368,7 +384,7 @@ func (w editorPage) editorForm(ng *Draft, ed *editorState, r gfx.Rect, probs []s
 		}
 	}
 	if row, ok := f.Row(edRowH); ok {
-		c := uikit.RowLabel(w.kit(), row, "Starting people", 120)
+		c := uikit.RowLabel(w.kit(), row, w.sh.T("Starting people"), 120)
 		old := d.People
 		uikit.Stepper(w.kit(), "sced.people", gfx.Rect{X: c.X, Y: c.Y + 3, W: 112, H: c.H - 6}, &d.People, scenario.MinPeople, scenario.MaxPeople)
 		if d.People != old {
@@ -377,25 +393,25 @@ func (w editorPage) editorForm(ng *Draft, ed *editorState, r gfx.Rect, probs []s
 		d.ChooseFrom = max(d.People, min(d.People+scenario.MaxExtraPool, d.ChooseFrom))
 	}
 	if row, ok := f.Row(edRowH); ok {
-		c := uikit.RowLabel(w.kit(), row, "Choose from", 120)
+		c := uikit.RowLabel(w.kit(), row, w.sh.T("Choose from"), 120)
 		uikit.Stepper(w.kit(), "sced.choose", gfx.Rect{X: c.X, Y: c.Y + 3, W: 112, H: c.H - 6}, &d.ChooseFrom, d.People, d.People+scenario.MaxExtraPool)
 	}
 	if row, ok := f.Row(edRowH); ok {
-		c := uikit.RowLabel(w.kit(), row, "Arrival", 120)
+		c := uikit.RowLabel(w.kit(), row, w.sh.T("Arrival"), 120)
 		sel := int(d.Arrival)
-		uikit.Segmented(w.kit(), "sced.arrival", gfx.Rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{"Drop pods", "Standing", "Walk in"}, &sel, nil)
+		uikit.Segmented(w.kit(), "sced.arrival", gfx.Rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{w.sh.T("Drop pods"), w.sh.T("Standing"), w.sh.T("Walk in")}, &sel, nil)
 		d.Arrival = scenario.Arrival(sel)
 	}
 	if row, ok := f.Row(edRowH); ok {
-		c := uikit.RowLabel(w.kit(), row, "Tech level", 120)
+		c := uikit.RowLabel(w.kit(), row, w.sh.T("Tech level"), 120)
 		sel := int(d.Tech)
-		uikit.Segmented(w.kit(), "sced.tech", gfx.Rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{"Neolithic", "Industrial", "Spacer"}, &sel, nil)
+		uikit.Segmented(w.kit(), "sced.tech", gfx.Rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{w.sh.T("Neolithic"), w.sh.T("Industrial"), w.sh.T("Spacer")}, &sel, nil)
 		d.Tech = faction.Tech(sel)
 	}
 	f.Gap(8)
 
 	// Optional parts.
-	f.SectionTitle(w.sh, "Optional parts")
+	f.SectionTitle(w.sh, w.sh.T("Optional parts"))
 	partProbs := map[int]bool{}
 	for _, p := range probs {
 		if p.Part >= 0 && p.Severity == scenario.Error {
@@ -467,18 +483,18 @@ func (w editorPage) partCard(f *uikit.Form, ng *Draft, ed *editorState, i int, b
 			}
 		})
 		bx := hdr.Right() + 4
-		uikit.StyledButton(w.kit(), "sced.up."+uikit.Num(i), gfx.Rect{X: bx, Y: hdr.Y, W: btn, H: hdr.H}, "^", uikit.BtnOpts{Disabled: i == 0, Reason: "Already first.", Tip: "Move up"}, func() {
+		uikit.StyledButton(w.kit(), "sced.up."+uikit.Num(i), gfx.Rect{X: bx, Y: hdr.Y, W: btn, H: hdr.H}, "^", uikit.BtnOpts{Disabled: i == 0, Reason: w.sh.T("Already first."), Tip: w.sh.T("Move up")}, func() {
 			ed.Def.Parts[i], ed.Def.Parts[i-1] = ed.Def.Parts[i-1], ed.Def.Parts[i]
 			ed.Open[i], ed.Open[i-1] = ed.Open[i-1], ed.Open[i]
 			changed = true
 		})
-		uikit.StyledButton(w.kit(), "sced.down."+uikit.Num(i), gfx.Rect{X: bx + btn + 4, Y: hdr.Y, W: btn, H: hdr.H}, "v", uikit.BtnOpts{Disabled: i == len(ed.Def.Parts)-1, Reason: "Already last.", Tip: "Move down"}, func() {
+		uikit.StyledButton(w.kit(), "sced.down."+uikit.Num(i), gfx.Rect{X: bx + btn + 4, Y: hdr.Y, W: btn, H: hdr.H}, w.sh.T("v"), uikit.BtnOpts{Disabled: i == len(ed.Def.Parts)-1, Reason: w.sh.T("Already last."), Tip: w.sh.T("Move down")}, func() {
 			ed.Def.Parts[i], ed.Def.Parts[i+1] = ed.Def.Parts[i+1], ed.Def.Parts[i]
 			ed.Open[i], ed.Open[i+1] = ed.Open[i+1], ed.Open[i]
 			changed = true
 		})
 		// The button ids are the spec's: sced.up.<i>, sced.down.<i>, sced.del.<i>.
-		uikit.StyledButton(w.kit(), "sced.del."+uikit.Num(i), gfx.Rect{X: bx + 2*(btn+4), Y: hdr.Y, W: btn, H: hdr.H}, "x", uikit.BtnOpts{Style: uikit.BtnDanger, Tip: "Remove this part"}, func() {
+		uikit.StyledButton(w.kit(), "sced.del."+uikit.Num(i), gfx.Rect{X: bx + 2*(btn+4), Y: hdr.Y, W: btn, H: hdr.H}, w.sh.T("x"), uikit.BtnOpts{Style: uikit.BtnDanger, Tip: w.sh.T("Remove this part")}, func() {
 			ed.Def.Parts = append(ed.Def.Parts[:i], ed.Def.Parts[i+1:]...)
 			for k := i; k < len(ed.Def.Parts)+1; k++ {
 				ed.Open[k] = ed.Open[k+1]
@@ -537,11 +553,11 @@ func (w editorPage) partControls(f *uikit.Form, ng *Draft, ed *editorState, i in
 		}
 	}
 	itemRows := func() {
-		if c, ok := w.ctl(f, "Item"); ok {
-			uikit.Choice(w.kit(), id("item"), c, "Item", edItemNames, IndexWhere(len(EdItems), func(k int) bool { return EdItems[k] == p.Item }), "",
+		if c, ok := w.ctl(f, w.sh.T("Item")); ok {
+			uikit.Choice(w.kit(), id("item"), c, w.sh.T("Item"), edItemNames, IndexWhere(len(EdItems), func(k int) bool { return EdItems[k] == p.Item }), "",
 				func(k int) { p.Item = EdItems[k] })
 		}
-		if c, ok := w.ctl(f, "Quantity"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Quantity")); ok {
 			q := int(p.Qty)
 			hi := scenario.MaxQty
 			if p.Item.IsWeapon() {
@@ -552,22 +568,22 @@ func (w editorPage) partControls(f *uikit.Form, ng *Draft, ed *editorState, i in
 		}
 	}
 	incidentRow := func() {
-		if c, ok := w.ctl(f, "Incident"); ok {
-			uikit.Choice(w.kit(), id("incident"), c, "Incident", edIncNames, IndexWhere(len(edIncidents), func(k int) bool { return edIncidents[k].Key == p.Incident }), "",
+		if c, ok := w.ctl(f, w.sh.T("Incident")); ok {
+			uikit.Choice(w.kit(), id("incident"), c, w.sh.T("Incident"), edIncNames, IndexWhere(len(edIncidents), func(k int) bool { return edIncidents[k].Key == p.Incident }), "",
 				func(k int) { p.Incident = edIncidents[k].Key })
 		}
 	}
 	switch p.Kind {
 	case scenario.PartForcedTrait:
-		if c, ok := w.ctl(f, "Trait"); ok {
-			uikit.Choice(w.kit(), id("trait"), c, "Trait", edTraitNames, IndexWhere(len(edTraits), func(k int) bool { return edTraits[k].ID == p.Trait }), "",
+		if c, ok := w.ctl(f, w.sh.T("Trait")); ok {
+			uikit.Choice(w.kit(), id("trait"), c, w.sh.T("Trait"), edTraitNames, IndexWhere(len(edTraits), func(k int) bool { return edTraits[k].ID == p.Trait }), "",
 				func(k int) { p.Trait = edTraits[k].ID })
 		}
-		if c, ok := w.ctl(f, "Who gets it"); ok {
-			uikit.Choice(w.kit(), id("who"), c, "Who gets the trait", edWhoNames, int(p.Who), "", func(k int) { p.Who = scenario.Who(k) })
+		if c, ok := w.ctl(f, w.sh.T("Who gets it")); ok {
+			uikit.Choice(w.kit(), id("who"), c, w.sh.T("Who gets the trait"), []string{w.sh.T("Every colonist"), w.sh.T("One random colonist"), w.sh.T("Random colonists")}, int(p.Who), "", func(k int) { p.Who = scenario.Who(k) })
 		}
 		if p.Who == scenario.WhoNRandom {
-			if c, ok := w.ctl(f, "How many"); ok {
+			if c, ok := w.ctl(f, w.sh.T("How many")); ok {
 				n := int(p.N)
 				uikit.Stepper(w.kit(), id("n"), gfx.Rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &n, 1, max(1, d.People))
 				p.N = uint8(n)
@@ -575,93 +591,93 @@ func (w editorPage) partControls(f *uikit.Form, ng *Draft, ed *editorState, i in
 		}
 		chance("Chance")
 	case scenario.PartAgeRange:
-		if c, ok := w.ctl(f, "Youngest"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Youngest")); ok {
 			v := int(p.MinAge)
 			uikit.Stepper(w.kit(), id("min"), gfx.Rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &v, scenario.MinAge, scenario.MaxAge)
 			p.MinAge = uint8(v)
 		}
-		if c, ok := w.ctl(f, "Oldest"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Oldest")); ok {
 			v := int(p.MaxAge)
 			uikit.Stepper(w.kit(), id("max"), gfx.Rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &v, scenario.MinAge, scenario.MaxAge)
 			p.MaxAge = uint8(v)
 		}
 	case scenario.PartForcedCondition:
-		if c, ok := w.ctl(f, "Condition"); ok {
-			uikit.Choice(w.kit(), id("cond"), c, "Condition", edPawnNames, IndexWhere(len(edPawnConds), func(k int) bool { return edPawnConds[k] == p.PawnCond }), "",
+		if c, ok := w.ctl(f, w.sh.T("Condition")); ok {
+			uikit.Choice(w.kit(), id("cond"), c, w.sh.T("Condition"), edPawnNames, IndexWhere(len(edPawnConds), func(k int) bool { return edPawnConds[k] == p.PawnCond }), "",
 				func(k int) { p.PawnCond = pawngen.Condition(edPawnConds[k]) })
 		}
 		chance("Chance")
 	case scenario.PartNoClothes:
 		if row, ok := f.Row(edRowH); ok {
-			w.kit().Label(row.X+14, row.Y+6, "Colonists arrive with nothing to wear. No options.", uikit.DimText())
+			w.kit().Label(row.X+14, row.Y+6, w.sh.T("Colonists arrive with nothing to wear. No options."), uikit.DimText())
 		}
 	case scenario.PartStartItem:
 		itemRows()
 	case scenario.PartScatterItem:
 		itemRows()
-		if c, ok := w.ctl(f, "Piles"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Piles")); ok {
 			n := int(p.N)
 			uikit.Stepper(w.kit(), id("piles"), gfx.Rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &n, 1, 20)
 			p.N = uint8(n)
 		}
-		if c, ok := w.ctl(f, "Where"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Where")); ok {
 			sel := 1
 			if p.Near {
 				sel = 0
 			}
-			uikit.Segmented(w.kit(), id("near"), gfx.Rect{X: c.X, Y: c.Y, W: min(c.W, 260), H: c.H}, []string{"Near the start", "Anywhere"}, &sel, nil)
+			uikit.Segmented(w.kit(), id("near"), gfx.Rect{X: c.X, Y: c.Y, W: min(c.W, 260), H: c.H}, []string{w.sh.T("Near the start"), w.sh.T("Anywhere")}, &sel, nil)
 			p.Near = sel == 0
 		}
 	case scenario.PartStartAnimal:
-		if c, ok := w.ctl(f, "Random pet"); ok {
-			w.kit().Check(id("random"), gfx.Rect{X: c.X, Y: c.Y, W: 220, H: c.H}, "A cat, dog or guinea pig", &p.Random, uikit.CheckOpts{})
+		if c, ok := w.ctl(f, w.sh.T("Random pet")); ok {
+			w.kit().Check(id("random"), gfx.Rect{X: c.X, Y: c.Y, W: 220, H: c.H}, w.sh.T("A cat, dog or guinea pig"), &p.Random, uikit.CheckOpts{})
 		}
-		if c, ok := w.ctl(f, "Species"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Species")); ok {
 			dis := ""
 			if p.Random {
-				dis = "A random pet is used."
+				dis = w.sh.T("A random pet is used.")
 			}
-			uikit.Choice(w.kit(), id("species"), c, "Species", edAnimalName, IndexWhere(len(edAnimals), func(k int) bool { return edAnimals[k] == p.Species }), dis,
+			uikit.Choice(w.kit(), id("species"), c, w.sh.T("Species"), edAnimalName, IndexWhere(len(edAnimals), func(k int) bool { return edAnimals[k] == p.Species }), dis,
 				func(k int) { p.Species = animal.Species(edAnimals[k]) })
 		}
-		if c, ok := w.ctl(f, "Count"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Count")); ok {
 			n := int(p.N)
 			uikit.Stepper(w.kit(), id("count"), gfx.Rect{X: c.X, Y: c.Y, W: 112, H: c.H}, &n, 1, scenario.MaxAnimals)
 			p.N = uint8(n)
 		}
 	case scenario.PartCondition:
-		if c, ok := w.ctl(f, "Condition"); ok {
-			uikit.Choice(w.kit(), id("cond"), c, "Permanent condition", mapNames(len(edCondNames), func(i int) string {
+		if c, ok := w.ctl(f, w.sh.T("Condition")); ok {
+			uikit.Choice(w.kit(), id("cond"), c, w.sh.T("Permanent condition"), mapNames(len(edCondNames), func(i int) string {
 				return units.FromUnit(w.sh.Settings().Gameplay.TempUnit).Text(edCondNames[i])
 			}), IndexWhere(len(edConditions), func(k int) bool { return edConditions[k] == p.Cond }), "",
 				func(k int) { p.Cond = edConditions[k] })
 		}
 	case scenario.PartScheduledIncident:
 		incidentRow()
-		if c, ok := w.ctl(f, "First day"); ok {
+		if c, ok := w.ctl(f, w.sh.T("First day")); ok {
 			v := int(p.FirstDay)
 			w.ngNum(id("first"), gfx.Rect{X: c.X, Y: c.Y, W: 90, H: c.H}, &v, scenario.MinFirstDay, scenario.MaxFirstDay)
 			p.FirstDay = uint16(min(v, 65535))
 		}
-		if c, ok := w.ctl(f, "Repeat every"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Repeat every")); ok {
 			v := int(p.EveryDays)
 			w.ngNum(id("every"), gfx.Rect{X: c.X, Y: c.Y, W: 90, H: c.H}, &v, 0, scenario.MaxEveryDays)
 			p.EveryDays = uint16(min(v, 65535))
-			w.kit().Label(c.X+100, c.Y+(c.H-float32(gfx.LineH(gfx.Body)))/2, "days (0 = once)", uikit.DimText())
+			w.kit().Label(c.X+100, c.Y+(c.H-float32(gfx.LineH(gfx.Body)))/2, w.sh.T("days (0 = once)"), uikit.DimText())
 		}
 	case scenario.PartDisabledIncident:
 		incidentRow()
 	case scenario.PartDisallowBuilding:
-		if c, ok := w.ctl(f, "Building"); ok {
-			uikit.Choice(w.kit(), id("building"), c, "Building", edBuildNames, IndexWhere(len(edBuildings), func(k int) bool { return edBuildings[k].Kind == p.Building }), "",
+		if c, ok := w.ctl(f, w.sh.T("Building")); ok {
+			uikit.Choice(w.kit(), id("building"), c, w.sh.T("Building"), edBuildNames, IndexWhere(len(edBuildings), func(k int) bool { return edBuildings[k].Kind == p.Building }), "",
 				func(k int) { p.Building = edBuildings[k].Kind })
 		}
 	case scenario.PartResearch:
-		if c, ok := w.ctl(f, "Project"); ok {
-			uikit.Choice(w.kit(), id("project"), c, "Research project", edProjNames, int(p.Project), "", func(k int) { p.Project = research.Project(k) })
+		if c, ok := w.ctl(f, w.sh.T("Project")); ok {
+			uikit.Choice(w.kit(), id("project"), c, w.sh.T("Research project"), edProjNames, int(p.Project), "", func(k int) { p.Project = research.Project(k) })
 		}
 	case scenario.PartResearchCost:
-		if c, ok := w.ctl(f, "Cost"); ok {
+		if c, ok := w.ctl(f, w.sh.T("Cost")); ok {
 			v := int(p.Percent)
 			w.pctSlider(id("percent"), c, &v, scenario.MinCostPct, scenario.MaxCostPct, "Research cost")
 			p.Percent = uint16(v)
@@ -686,7 +702,7 @@ func (w editorPage) openAddPart() {
 		total += headH + float32(len(c.Kinds))*kindH
 	}
 	w.kit().Push(uikit.Modal{
-		ID: "sced.addpart", Title: "Add part", W: 600, H: 520,
+		ID: "sced.addpart", Title: w.sh.T("Add part"), W: 600, H: 520,
 		Draw: func(body gfx.Rect) {
 			u := w.kit()
 			area := w.kit().ScrollArea("modal.sced.addpart.scroll", body, total, uikit.ScrollOpts{Step: kindH})
@@ -747,7 +763,7 @@ func (w editorPage) openAddPart() {
 				}
 			}
 		},
-		Buttons: []uikit.ModalButton{{ID: "cancel", Label: "Cancel", Closes: true}},
+		Buttons: []uikit.ModalButton{{ID: "cancel", Label: w.sh.T("Cancel"), Closes: true}},
 	})
 }
 
@@ -778,17 +794,17 @@ func (w editorPage) editorSave() {
 	def.Builtin, def.Key = false, ""
 	data, err := scenario.Encode(def)
 	if err != nil {
-		w.sh.Hint("cannot save: " + err.Error())
+		w.sh.Hint(w.sh.Tf("cannot save: %s", err.Error()))
 		return
 	}
 	name := SlugOf(def.Name)
 	write := func() {
 		if err := st.Save(name, data); err != nil {
-			w.sh.Hint("save failed: " + err.Error())
+			w.sh.Hint(w.sh.Tf("save failed: %s", err.Error()))
 			return
 		}
 		ed.Saved, ed.SavedAs = data, name
-		w.sh.Hint("saved " + name)
+		w.sh.Hint(w.sh.Tf("saved %s", name))
 		ng.RefreshScenarios(w.store(), w.Unsaved)
 	}
 	files, _ := st.List()
@@ -799,7 +815,7 @@ func (w editorPage) editorSave() {
 		}
 	}
 	if exists && ed.SavedAs != name {
-		w.kit().Confirm("sced.overwrite", "Overwrite scenario?", fmt.Sprintf("A scenario file named \"%s\" already exists. Replace it?", name), "Overwrite", true, write)
+		w.kit().Confirm("sced.overwrite", w.sh.T("Overwrite scenario?"), w.sh.Tf("A scenario file named \"%s\" already exists. Replace it?", name), w.sh.T("Overwrite"), true, write)
 		return
 	}
 	write()
@@ -820,13 +836,13 @@ func (w editorPage) editorLoad() {
 		}
 	}
 	cols := []uikit.TableCol{
-		{ID: "name", Title: "Name", Cell: func(i int) string { return files[i].Name },
+		{ID: "name", Title: w.sh.T("Name"), Cell: func(i int) string { return files[i].Name },
 			Less: func(x, y int) bool { return strings.ToLower(files[x].Name) < strings.ToLower(files[y].Name) }},
-		{ID: "mod", Title: "Modified", W: 150, Cell: func(i int) string { return files[i].Modified },
+		{ID: "mod", Title: w.sh.T("Modified"), W: 150, Cell: func(i int) string { return files[i].Modified },
 			Less: func(x, y int) bool { return files[x].Modified < files[y].Modified }},
 	}
 	w.kit().Push(uikit.Modal{
-		ID: "sced.loadfile", Title: "Load scenario", W: 560, H: 440,
+		ID: "sced.loadfile", Title: w.sh.T("Load scenario"), W: 560, H: 440,
 		Draw: func(body gfx.Rect) {
 			ed := w.draft().Ed
 			if ed == nil {
@@ -840,7 +856,7 @@ func (w editorPage) editorLoad() {
 				_, tb = body.SplitV(h + 8)
 			}
 			if len(files) == 0 {
-				uikit.TextLines(w.kit(), tb.X, tb.Y, tb.W, "No scenario files yet. Save one first.", uikit.DimText())
+				uikit.TextLines(w.kit(), tb.X, tb.Y, tb.W, w.sh.T("No scenario files yet. Save one first."), uikit.DimText())
 				return
 			}
 			row := -1
@@ -848,7 +864,7 @@ func (w editorPage) editorLoad() {
 				w.loadScenarioFile(files[row].Name)
 			}
 		},
-		Buttons: []uikit.ModalButton{{ID: "cancel", Label: "Cancel", Closes: true}},
+		Buttons: []uikit.ModalButton{{ID: "cancel", Label: w.sh.T("Cancel"), Closes: true}},
 	})
 }
 

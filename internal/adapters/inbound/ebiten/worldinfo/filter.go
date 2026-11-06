@@ -6,6 +6,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/domain/world/biome"
@@ -99,8 +100,9 @@ func (f *FilterPanel) Draw(k *uikit.Kit, prefix string, x, y float32, u units.Te
 	hs := gfx.Label
 	hs.Color = uikit.Heading
 	cy := in.Y
-	k.Label(in.X, cy, "Random site criteria", hs)
-	k.Tip(prefix+".tip", gfx.Rect{X: in.X, Y: cy, W: in.W, H: 20}, "Random site criteria\nSelect random site only picks tiles that match every criterion you set. Nothing set means any tile.")
+	tl := trOf(k)
+	k.Label(in.X, cy, tl.T("Random site criteria"), hs)
+	k.Tip(prefix+".tip", gfx.Rect{X: in.X, Y: cy, W: in.W, H: 20}, tl.T("Random site criteria\nSelect random site only picks tiles that match every criterion you set. Nothing set means any tile."))
 	cy += 22
 
 	// Biomes, two columns.
@@ -118,8 +120,8 @@ func (f *FilterPanel) Draw(k *uikit.Kit, prefix string, x, y float32, u units.Te
 
 	// Temperature range.
 	tr := gfx.Rect{X: in.X, Y: cy, W: in.W, H: filterRowH}
-	k.Check(prefix+".temp", gfx.Rect{X: tr.X, Y: tr.Y, W: 150, H: tr.H - 2}, "Yearly mean", &f.TempOn,
-		uikit.CheckOpts{Tip: "Temperature range\nOnly tiles whose yearly mean temperature lies in the range."})
+	k.Check(prefix+".temp", gfx.Rect{X: tr.X, Y: tr.Y, W: 150, H: tr.H - 2}, tl.T("Yearly mean"), &f.TempOn,
+		uikit.CheckOpts{Tip: tl.T("Temperature range\nOnly tiles whose yearly mean temperature lies in the range.")})
 	if f.TempOn {
 		if f.TempMin == 0 && f.TempMax == 0 {
 			f.TempMin, f.TempMax = 5, 30
@@ -130,7 +132,7 @@ func (f *FilterPanel) Draw(k *uikit.Kit, prefix string, x, y float32, u units.Te
 	cy += filterRowH + 6
 
 	// Hills.
-	k.Label(in.X, cy, "Terrain", hs)
+	k.Label(in.X, cy, tl.T("Terrain"), hs)
 	cy += 22
 	hw := in.W / 2
 	for n, h := range hillChoices {
@@ -153,17 +155,17 @@ func (f *FilterPanel) Draw(k *uikit.Kit, prefix string, x, y float32, u units.Te
 		t := t
 		b := gfx.Rect{X: in.X + float32(n%2)*(bw+8), Y: cy + float32(n/2)*(filterRowH+4), W: bw, H: filterRowH}
 		uikit.StyledButton(k, prefix+"."+t.id, b, t.label+": "+triLabels[*t.v], uikit.BtnOpts{Selected: *t.v != planet.Any,
-			Tip: t.label + "\nAny, only tiles with it, or only tiles without it."}, func() { *t.v = nextTri(*t.v) })
+			Tip: lang.Tf(tl, "%s\nAny, only tiles with it, or only tiles without it.", t.label)}, func() { *t.v = nextTri(*t.v) })
 	}
 	cy += 2*(filterRowH+4) + 2
-	stone := "Any"
+	stone := tl.T("Any")
 	if f.Stone != geology.None {
 		stone = f.Stone.Label()
 	}
-	uikit.StyledButton(k, prefix+".stone", gfx.Rect{X: in.X, Y: cy, W: in.W, H: filterRowH}, "Stone: "+stone, uikit.BtnOpts{Selected: f.Stone != geology.None,
-		Tip: "Stone\nOnly tiles whose rock includes this stone."}, func() { f.Stone = nextStone(f.Stone) })
+	uikit.StyledButton(k, prefix+".stone", gfx.Rect{X: in.X, Y: cy, W: in.W, H: filterRowH}, lang.Tf(tl, "Stone: %s", stone), uikit.BtnOpts{Selected: f.Stone != geology.None,
+		Tip: tl.T("Stone\nOnly tiles whose rock includes this stone.")}, func() { f.Stone = nextStone(f.Stone) })
 	cy += filterRowH + 8
-	uikit.StyledButton(k, prefix+".reset", gfx.Rect{X: in.X, Y: cy, W: 110, H: 30}, "Reset", uikit.BtnOpts{Disabled: !f.Active(), Reason: "Nothing is set."}, f.Reset)
+	uikit.StyledButton(k, prefix+".reset", gfx.Rect{X: in.X, Y: cy, W: 110, H: 30}, tl.T("Reset"), uikit.BtnOpts{Disabled: !f.Active(), Reason: tl.T("Nothing is set.")}, f.Reset)
 	return r
 }
 
@@ -180,4 +182,12 @@ func (f *FilterPanel) stepper(k *uikit.Kit, id string, x, y float32, v *int, u u
 		st.Align = gfx.AlignCenter
 		gfx.Text(dst, text, float64(x+bw+27), float64(y)+(float64(h)-gfx.LineH(st))/2, st)
 	})
+}
+
+// trOf is the kit's catalog (English while it has none).
+func trOf(k *uikit.Kit) lang.Tr {
+	if k == nil || k.Access.Tr == nil {
+		return lang.English{}
+	}
+	return k.Access.Tr
 }

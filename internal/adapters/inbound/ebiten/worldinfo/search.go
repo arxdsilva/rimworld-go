@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/world/planet"
 )
@@ -64,26 +65,27 @@ func (s *SearchBox) Draw(k *uikit.Kit, prefix string, right, y float32, f Finder
 	k.Panel(r)
 	in := r.Inset(searchPad)
 	field := gfx.Rect{X: in.X, Y: in.Y, W: in.W, H: searchFieldH}
+	tl := trOf(k)
 	k.TextField(prefix+".field", field, &s.Query, uikit.TextFieldSpec{
-		MaxLen: 40, Placeholder: "Find a region or settlement",
-		Tip: "Search\nType part of a name: oceans, seas, lakes, mountain ranges, deserts, forests, ice caps and settlements.",
+		MaxLen: 40, Placeholder: tl.T("Find a region or settlement"),
+		Tip: tl.T("Search\nType part of a name: oceans, seas, lakes, mountain ranges, deserts, forests, ice caps and settlements."),
 	})
 	s.refresh(f)
 	y0 := field.Bottom() + 6
 	if len(s.hits) == 0 {
 		if s.Query != "" {
-			k.Label(in.X+4, y0+5, "Nothing by that name.", uikit.DimText())
+			k.Label(in.X+4, y0+5, tl.T("Nothing by that name."), uikit.DimText())
 		}
 		return r
 	}
 	for n, h := range s.hits {
 		if n >= searchMaxRows {
-			k.Label(in.X+4, y0+float32(n)*searchRowH+2, fmt.Sprintf("%d more. Type more letters.", len(s.hits)-searchMaxRows), uikit.DimText())
+			k.Label(in.X+4, y0+float32(n)*searchRowH+2, lang.Tf(tl, "%d more. Type more letters.", len(s.hits)-searchMaxRows), uikit.DimText())
 			break
 		}
 		h := h
 		row := gfx.Rect{X: in.X, Y: y0 + float32(n)*searchRowH, W: in.W, H: searchRowH - 2}
-		uikit.StyledButton(k, fmt.Sprintf("%s.result.%d", prefix, n), row, "", uikit.BtnOpts{Tip: h.Name + "\n" + h.Kind.Label() + ". Click to look at it on the globe."}, func() { pick(h) })
+		uikit.StyledButton(k, fmt.Sprintf("%s.result.%d", prefix, n), row, "", uikit.BtnOpts{Tip: lang.Tf(tl, "%s\n%s. Click to look at it on the globe.", h.Name, h.Kind.Label())}, func() { pick(h) })
 		name, kind := h.Name, h.Kind.Label()
 		k.Queue(func(dst *ebiten.Image) {
 			st := gfx.Body

@@ -99,6 +99,9 @@ func (h wizHost) KeyHint(x input.Action) string { return shellSettings(h).KeyHin
 func (h wizHost) Kit() *uikit.Kit               { return shellWidgets(h).Kit() }
 func (h wizHost) Do(it portspkg.Intent)         { shellDispatch(h).Do(it) }
 
+func (h wizHost) T(src string) string               { return h.a.shell.T(src) }
+func (h wizHost) Tf(src string, args ...any) string { return h.a.shell.Tf(src, args...) }
+
 func (h wizHost) Env() wizard.Env {
 	a := h.a
 	return wizard.Env{

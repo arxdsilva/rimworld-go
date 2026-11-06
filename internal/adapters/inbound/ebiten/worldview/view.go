@@ -1,7 +1,6 @@
 package worldview
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -31,7 +30,6 @@ const (
 	// opening it re-reads at once.
 	refreshTicks  = 15
 	refreshFrames = 30
-	noMap         = "This colony has no world map."
 )
 
 // chart is the planet being shown: the colony's params, the builder
@@ -275,7 +273,7 @@ func (v *View) refresh(env Env, p *planet.Planet) {
 	if src, ok := env.Game.(WorldSource); ok {
 		r.sites = src.WorldSites()
 	}
-	v.objs = buildObjects(v.objs, r)
+	v.objs = buildObjectsIn(v.sh, v.objs, r)
 	v.syncLive(p)
 	for i := range v.objs {
 		if o := &v.objs[i]; o.Kind == KindPod {
@@ -607,9 +605,9 @@ func (v *View) DrawGlobe(dst *ebiten.Image, sw, sh int) {
 	if v.g == nil {
 		uikit.FillRect(dst, gfx.WinRect(sw, sh), uikit.Space)
 		if !v.sh.UIHidden() {
-			msg := noMap
+			msg := v.sh.T("This colony has no world map.")
 			if v.chart.hasMap {
-				msg = fmt.Sprintf("Charting the world… %d%%", v.chartPct())
+				msg = v.sh.Tf("Charting the world… %d%%", v.chartPct())
 			}
 			gfx.Text(dst, msg, float64(sw)/2-120, float64(sh)/2, uikit.DimText())
 		}

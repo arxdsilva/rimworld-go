@@ -70,15 +70,15 @@ func (s *Screen) LoadScene() {
 // can be used.
 func (s *Screen) Buttons(sw, sh int) []uikit.Button {
 	cx := RailX(sw)
-	cont := uikit.ButtonSpec{ID: ids.MenuContinue, Label: "Continue", Disabled: !s.sh.HasSaves(), Reason: "no saves yet"}
+	cont := uikit.ButtonSpec{ID: ids.MenuContinue, Label: s.sh.T("Continue"), Disabled: !s.sh.HasSaves(), Reason: s.sh.T("no saves yet")}
 	specs := []uikit.ButtonSpec{
-		{ID: ids.MenuNewGame, Label: "New Colony"},
-		{ID: ids.MenuLoad, Label: "Load Game"},
-		{ID: "menu.plugins", Label: "Plugins", Disabled: true, Reason: "not implemented"},
-		{ID: ids.MenuOptions, Label: "Options"},
-		{ID: "menu.tutorial", Label: "Tutorial / Help", Disabled: true, Reason: "not implemented"},
-		{ID: ids.MenuCredits, Label: "Credits"},
-		{ID: ids.MenuQuit, Label: "Quit"},
+		{ID: ids.MenuNewGame, Label: s.sh.T("New Colony")},
+		{ID: ids.MenuLoad, Label: s.sh.T("Load Game")},
+		{ID: "menu.plugins", Label: s.sh.T("Plugins"), Disabled: true, Reason: s.sh.T("not implemented")},
+		{ID: ids.MenuOptions, Label: s.sh.T("Options")},
+		{ID: "menu.tutorial", Label: s.sh.T("Tutorial / Help"), Disabled: true, Reason: s.sh.T("not implemented")},
+		{ID: ids.MenuCredits, Label: s.sh.T("Credits")},
+		{ID: ids.MenuQuit, Label: s.sh.T("Quit")},
 	}
 	if cont.Disabled {
 		specs = append([]uikit.ButtonSpec{specs[0], cont}, specs[1:]...)
@@ -133,8 +133,8 @@ func (s *Screen) declareRAMNotice(sw, sh int) {
 		}
 	})
 	btn := gfx.Rect{X: card.Right() - ramCardPad - ramBtnW, Y: card.Bottom() - ramCardPad - ramBtnH, W: ramBtnW, H: ramBtnH}
-	opts := uikit.BtnOpts{Tip: "Got it\nHide this notice. It comes back only if the computer's memory changes."}
-	s.noticeButton(RAMDismissID, btn, "Got it", opts, func() { s.sh.DismissRAMNotice(total) })
+	opts := uikit.BtnOpts{Tip: s.sh.T("Got it\nHide this notice. It comes back only if the computer's memory changes.")}
+	s.noticeButton(RAMDismissID, btn, s.sh.T("Got it"), opts, func() { s.sh.DismissRAMNotice(total) })
 }
 
 // Draw paints the main menu: the diorama (or the gradient), the splash,

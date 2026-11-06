@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
@@ -65,9 +66,9 @@ func (v inspector) declareInspector(r gfx.Rect) {
 	in := r.Inset(inspPad)
 	title, lines, gizmos := v.inspect()
 	if title == "" {
-		k.Label(in.X, in.Y, "World", gfx.WithColor(gfx.Label, uikit.Heading))
-		k.Label(in.X, in.Y+24, "Click a colony, caravan, settlement or tile.", uikit.DimText())
-		k.Label(in.X, in.Y+24+lineH, "Double-click one of our maps to show it.", uikit.DimText())
+		k.Label(in.X, in.Y, v.sh.T("World"), gfx.WithColor(gfx.Label, uikit.Heading))
+		k.Label(in.X, in.Y+24, v.sh.T("Click a colony, caravan, settlement or tile."), uikit.DimText())
+		k.Label(in.X, in.Y+24+lineH, v.sh.T("Double-click one of our maps to show it."), uikit.DimText())
 		return
 	}
 	k.Label(in.X, in.Y, gfx.Ellipsize(title, gfx.Label, float64(in.W)), gfx.WithColor(gfx.Label, uikit.Heading))
@@ -146,11 +147,11 @@ func (v inspector) inspectMap(o *Object) (string, []line, []gizmo) {
 	jump := gizmo{name: "jump", label: "Jump", tip: "Jump\nShow this map.", run: func() { v.jump(id) }}
 	abandon := gizmo{name: "abandon", label: "Abandon", tip: "Abandon\nLeave this map for good. Everyone and everything still on it is lost.",
 		run: func() {
-			body := "Everyone and everything still on " + o.Label + " will be lost. This cannot be undone."
+			body := v.sh.Tf("Everyone and everything still on %s will be lost. This cannot be undone.", o.Label)
 			if v.endsGame(m) {
-				body += " Nobody would be left: this ends the game."
+				body += v.sh.T(" Nobody would be left: this ends the game.")
 			}
-			v.kit().Confirm(AbandonID, "Abandon "+o.Label, body, "Abandon", true,
+			v.kit().Confirm(AbandonID, v.sh.Tf("Abandon %s", o.Label), body, v.sh.T("Abandon"), true,
 				func() { v.send(command.Command{Kind: command.AbandonMap, Target: uint64(id)}) })
 		}}
 	if m.Kind == "colony" {
@@ -271,14 +272,15 @@ func (v inspector) attackSettlement(id uint64, site game.WorldSiteView, settled 
 		send()
 		return
 	}
-	v.kit().Confirm(AttackID, "Attack "+site.Faction, attackConfirmText(site), "Attack", true, send)
+	v.kit().Confirm(AttackID, v.sh.Tf("Attack %s", site.Faction), attackText(v.sh, site), v.sh.T("Attack"), true, send)
 }
 
 // attackConfirmText is the confirm's body: who is attacked, how they
 // stand with us now, and what the attack costs.
-func attackConfirmText(site game.WorldSiteView) string {
-	return fmt.Sprintf("%s is %s toward us. Attacking their settlement costs %d goodwill and turns them hostile; "+
-		"goodwill recovers only slowly with time and gifts.", site.Faction, site.Relation, attackGoodwill)
+func attackConfirmText(site game.WorldSiteView) string { return attackText(lang.English{}, site) }
+
+func attackText(tr lang.Tr, site game.WorldSiteView) string {
+	return lang.Tf(tr, "%s is %s toward us. Attacking their settlement costs %d goodwill and turns them hostile; goodwill recovers only slowly with time and gifts.", site.Faction, site.Relation, attackGoodwill)
 }
 
 // settleReason is why caravan id on tile may not found a colony there: the

@@ -88,12 +88,18 @@ type Host interface {
 	SettleReason(id uint64) (why string, ok bool)
 }
 
+// presentation is what the view reads of the player's settings and language.
+type presentation interface {
+	ports.Settings
+	ports.Texts
+}
+
 // Shell composes the roles the view calls with its Host.
 type Shell interface {
 	ports.Sizer
 	ports.Commands
 	ports.World
-	ports.Settings
+	presentation
 	ports.Panels
 	ports.Widgets
 	ports.Dispatcher

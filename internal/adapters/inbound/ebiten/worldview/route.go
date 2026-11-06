@@ -54,7 +54,7 @@ func (v router) setRouteTarget(t int) {
 	p := v.chart.planet
 	r.to, r.path, r.why, r.eta, r.note = t, nil, "", "—", ""
 	if p == nil {
-		r.why = noMap
+		r.why = v.sh.T("This colony has no world map.")
 		return
 	}
 	if t == r.from {
@@ -176,9 +176,9 @@ func (v router) declareRouteBar(r gfx.Rect) {
 	k := v.kit()
 	rt := &v.route
 	k.Panel(r)
-	head := "Travel: click a tile on the globe."
+	head := v.sh.T("Travel: click a tile on the globe.")
 	if rt.to >= 0 {
-		head = "Travel to " + v.tileName(rt.to) + " · " + rt.eta
+		head = v.sh.Tf("Travel to %s · %s", v.tileName(rt.to), rt.eta)
 	}
 	k.Label(r.X+10, r.Y+8, gfx.Ellipsize(head, gfx.Label, float64(r.W-20)), gfx.WithColor(gfx.Label, uikit.Heading))
 	note := rt.note
@@ -193,12 +193,12 @@ func (v router) declareRouteBar(r gfx.Rect) {
 		why = "Click a tile on the globe first."
 	}
 	by := r.Bottom() - 32
-	if k.Button(ConfirmID, gfx.Rect{X: r.Right() - 220, Y: by, W: 100, H: 26}, "Confirm", uikit.BtnOpts{Style: uikit.BtnPrimary,
-		Disabled: why != "", Reason: why, Tip: "Confirm\nThe caravan sets off along this route."}) {
+	if k.Button(ConfirmID, gfx.Rect{X: r.Right() - 220, Y: by, W: 100, H: 26}, v.sh.T("Confirm"), uikit.BtnOpts{Style: uikit.BtnPrimary,
+		Disabled: why != "", Reason: why, Tip: v.sh.T("Confirm\nThe caravan sets off along this route.")}) {
 		v.send(command.Command{Kind: command.CaravanTravel, Target: rt.caravan, Count: rt.to})
 		v.route = routeState{}
 	}
-	if k.Button(CancelID, gfx.Rect{X: r.Right() - 110, Y: by, W: 100, H: 26}, "Cancel", uikit.BtnOpts{}) {
+	if k.Button(CancelID, gfx.Rect{X: r.Right() - 110, Y: by, W: 100, H: 26}, v.sh.T("Cancel"), uikit.BtnOpts{}) {
 		v.route = routeState{}
 	}
 }
@@ -210,5 +210,5 @@ func (v *View) tileName(t int) string {
 	if len(v.tiles) > 0 {
 		return v.objs[v.tiles[0]].Label
 	}
-	return "tile " + strconv.Itoa(t)
+	return v.sh.Tf("tile %d", t)
 }

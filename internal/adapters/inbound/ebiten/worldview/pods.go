@@ -206,7 +206,7 @@ func (v targeting) declarePodTargets(r gfx.Rect) {
 	k := v.kit()
 	k.Panel(r)
 	in := r.Inset(inspPad)
-	k.Label(in.X, in.Y, "Targets in range", gfx.WithColor(gfx.Label, uikit.Heading))
+	k.Label(in.X, in.Y, v.sh.T("Targets in range"), gfx.WithColor(gfx.Label, uikit.Heading))
 	body := gfx.Rect{X: in.X, Y: in.Y + 24, W: in.W, H: in.H - 24}
 	targets := v.podTargets()
 	const rowH = 30
@@ -282,7 +282,7 @@ func (v targeting) mirrorReason(t int, mode uint8) string {
 	ps := &v.pods
 	p := v.chart.planet
 	if p == nil {
-		return noMap
+		return v.sh.T("This colony has no world map.")
 	}
 	if t < 0 || t >= p.TileCount() {
 		return "Pick a tile on the world map."
@@ -354,7 +354,7 @@ func (v targeting) declarePodMenu(r gfx.Rect) {
 	k := v.kit()
 	ps := &v.pods
 	k.Panel(r)
-	head := fmt.Sprintf("%s · %d of %d tiles", v.tileName(ps.target), v.podDist(ps.target), ps.rng)
+	head := v.sh.Tf("%s · %d of %d tiles", v.tileName(ps.target), v.podDist(ps.target), ps.rng)
 	k.Label(r.X+10, r.Y+8, gfx.Ellipsize(head, gfx.Label, float64(r.W-20)), gfx.WithColor(gfx.Label, uikit.Heading))
 	y := r.Y + 34
 	w := &ps.why
@@ -376,7 +376,7 @@ func (v targeting) declarePodMenu(r gfx.Rect) {
 		}
 		y += podRowH
 	}
-	if k.Button(PodCancelID, gfx.Rect{X: r.X + 8, Y: y, W: r.W - 16, H: podRowH - 4}, "Cancel", uikit.BtnOpts{}) {
+	if k.Button(PodCancelID, gfx.Rect{X: r.X + 8, Y: y, W: r.W - 16, H: podRowH - 4}, v.sh.T("Cancel"), uikit.BtnOpts{}) {
 		ps.menu = false
 	}
 }
@@ -400,7 +400,7 @@ func (v targeting) launch(mode uint8) {
 	if mode == command.PodArriveAttackEdge || mode == command.PodArriveAttackCentre {
 		// MAP-15: an attack on a settlement that is not hostile asks first.
 		if site, settled := v.siteAt(ps.target); settled && site.Relation != "hostile" {
-			v.kit().Confirm(AttackID, "Attack "+site.Faction, attackConfirmText(site), "Attack", true, func() {
+			v.kit().Confirm(AttackID, v.sh.Tf("Attack %s", site.Faction), attackText(v.sh, site), v.sh.T("Attack"), true, func() {
 				v.send(c)
 				v.pods = podState{}
 			})
@@ -429,7 +429,7 @@ func (v *View) HandleSpot() bool {
 	f.Take(inputframe.Right)
 	if v.spot.fresh {
 		v.spot.fresh = false
-		v.kit().Host().Hint("Click the cell the pods land on; Esc or right-click cancels")
+		v.kit().Host().Hint(v.sh.T("Click the cell the pods land on; Esc or right-click cancels"))
 		return true
 	}
 	if right {

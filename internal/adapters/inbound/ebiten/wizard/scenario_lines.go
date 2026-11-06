@@ -7,6 +7,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
@@ -33,14 +34,14 @@ func PrettyKey(s string) string {
 
 func itemLabel(k item.Kind) string { return PrettyKey(k.String()) }
 
-func techLabel(t faction.Tech) string {
+func techLabel(tr lang.Tr, t faction.Tech) string {
 	switch t {
 	case faction.Neolithic:
-		return "Neolithic"
+		return tr.T("Neolithic")
 	case faction.Spacer:
-		return "Spacer"
+		return tr.T("Spacer")
 	}
-	return "Industrial"
+	return tr.T("Industrial")
 }
 
 func arrivalLabel(a scenario.Arrival) string {
@@ -105,7 +106,10 @@ func mergeStacks(in []scenario.Stack) []scenario.Stack {
 }
 
 // ScenarioLines is the key-value body of a scenario's details panel.
-func ScenarioLines(d scenario.Def) []game.DetailLine {
+func ScenarioLines(d scenario.Def) []game.DetailLine { return ScenarioLinesIn(lang.English{}, d) }
+
+// ScenarioLinesIn is ScenarioLines in the player's language.
+func ScenarioLinesIn(tr lang.Tr, d scenario.Def) []game.DetailLine {
 	e := d.Apply()
 	var out []game.DetailLine
 	out = append(out, kv("Player faction", factionLabel(d.Faction)))
@@ -115,7 +119,7 @@ func ScenarioLines(d scenario.Def) []game.DetailLine {
 	}
 	out = append(out, kv("Starting people", people))
 	out = append(out, kv("Arrival", arrivalLabel(d.Arrival)))
-	out = append(out, kv("Tech level", techLabel(d.Tech)))
+	out = append(out, kv("Tech level", techLabel(tr, d.Tech)))
 	out = append(out, kv("Research cost", fmt.Sprintf("%d%% of normal", e.ResearchCostPct)))
 	if len(e.Research) > 0 {
 		out = append(out, heading("Research granted"))

@@ -91,5 +91,6 @@ type Shell interface {
 	ports.Settings
 	ports.Widgets
 	ports.Dispatcher
+	ports.Texts
 	Host
 }

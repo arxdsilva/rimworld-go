@@ -286,12 +286,12 @@ func (w *Flow) GoBack() bool {
 	switch w.screen() {
 	case ports.ScreenScenarioEditor:
 		if ng := w.d; ng != nil && ng.Ed != nil && ng.Ed.Dirty() {
-			w.kit().Confirm("sced.discard", "Discard changes?", "The scenario has changes that were not saved or kept. Leave the editor and lose them?", "Discard", true, w.pop)
+			w.kit().Confirm("sced.discard", w.sh.T("Discard changes?"), w.sh.T("The scenario has changes that were not saved or kept. Leave the editor and lose them?"), w.sh.T("Discard"), true, w.pop)
 			return false
 		}
 	case ports.ScreenScenario:
 		if ng := w.d; ng != nil && ng.changedLater() {
-			w.kit().Confirm("scen.discard", "Discard this new colony setup?", "You changed later steps of this setup. Going back to the main menu throws those choices away.", "Discard", true, w.pop)
+			w.kit().Confirm("scen.discard", w.sh.T("Discard this new colony setup?"), w.sh.T("You changed later steps of this setup. Going back to the main menu throws those choices away."), w.sh.T("Discard"), true, w.pop)
 			return false
 		}
 	}
@@ -348,7 +348,7 @@ func (w *Flow) Click(id string) bool {
 // screen. Enter presses the forward button when it is enabled.
 func (w *Flow) ngFooter(footer gfx.Rect, label, nextID string, o uikit.BtnOpts, onNext func()) {
 	back := func() { w.kit().Host().Cue("ui.page"); w.back() }
-	uikit.StyledButton(w.kit(), ids.WizardBack, uikit.FooterBack(footer), "Back", uikit.BtnOpts{}, back)
+	uikit.StyledButton(w.kit(), ids.WizardBack, uikit.FooterBack(footer), w.sh.T("Back"), uikit.BtnOpts{}, back)
 	if o.Style == uikit.BtnNormal {
 		o.Style = uikit.BtnPrimary
 	}
@@ -414,7 +414,7 @@ func (w editorPage) ngNum(id string, r gfx.Rect, v *int, lo, hi int) {
 	if w.kit().Edit.ID != id { // not being typed into: follow the model
 		*buf = strconv.Itoa(*v)
 	}
-	changed, committed := w.kit().TextField(id, r, buf, uikit.TextFieldSpec{MaxLen: 5, Valid: uikit.DigitsOnly, Tip: fmt.Sprintf("%d to %d", lo, hi)})
+	changed, committed := w.kit().TextField(id, r, buf, uikit.TextFieldSpec{MaxLen: 5, Valid: uikit.DigitsOnly, Tip: w.sh.Tf("%d to %d", lo, hi)})
 	if changed || committed {
 		if n, err := strconv.Atoi(*buf); err == nil {
 			*v = n

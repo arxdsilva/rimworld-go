@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/globe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/faction"
 )
@@ -24,7 +25,8 @@ type FacRow struct {
 	Goodwill    int
 	Relation    faction.Relation
 	Settlements int
-	Tech        string
+	Tech        string // English; TechKind is the translatable form
+	TechKind    faction.Tech
 	Emblem      string // ui_icon key
 	Accent      color.NRGBA
 	Capital     int // world tile of the capital, -1 none
@@ -32,14 +34,17 @@ type FacRow struct {
 	Swarm       bool
 }
 
-func RelationLabel(r faction.Relation) string {
+func RelationLabel(r faction.Relation) string { return RelationLabelIn(lang.English{}, r) }
+
+// RelationLabelIn is RelationLabel in the player's language.
+func RelationLabelIn(tr lang.Tr, r faction.Relation) string {
 	switch r {
 	case faction.Hostile:
-		return "Hostile"
+		return tr.T("Hostile")
 	case faction.Friendly:
-		return "Friendly"
+		return tr.T("Friendly")
 	}
-	return "Neutral"
+	return tr.T("Neutral")
 }
 
 func RelationColor(r faction.Relation) color.RGBA {
@@ -60,7 +65,7 @@ func FactionRows(fs []faction.Faction) []FacRow {
 		r := FacRow{
 			ID: f.ID, Name: f.Name, Type: f.Type, TypeLabel: d.Label,
 			Goodwill: f.Goodwill, Relation: f.Relation, Settlements: len(f.Settlements),
-			Tech: techLabel(d.Tech), Emblem: "ui_icon/faction_" + d.Key,
+			Tech: techLabel(lang.English{}, d.Tech), TechKind: d.Tech, Emblem: "ui_icon/faction_" + d.Key,
 			Accent: globe.Accent(f.Type), Capital: -1,
 		}
 		if f.Leader.Name != "" {

@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/scenario"
 )
@@ -50,7 +51,10 @@ func (e ScenEntry) matches(q string) bool {
 }
 
 // Rows lays the list out: the "Built-in" group, then "Your scenarios".
-func (ng *Draft) Rows(storeOK bool) ([]scenRow, float32) {
+func (ng *Draft) Rows(storeOK bool) ([]scenRow, float32) { return ng.RowsIn(lang.English{}, storeOK) }
+
+// RowsIn is Rows in the player's language.
+func (ng *Draft) RowsIn(tr lang.Tr, storeOK bool) ([]scenRow, float32) {
 	q := strings.ToLower(strings.TrimSpace(ng.Search))
 	var out []scenRow
 	y := float32(0)
@@ -59,13 +63,13 @@ func (ng *Draft) Rows(storeOK bool) ([]scenRow, float32) {
 		out = append(out, r)
 		y += h
 	}
-	add(scenRow{Kind: RowHeader, Text: "Built-in"}, scenRowHeadH)
+	add(scenRow{Kind: RowHeader, Text: tr.T("Built-in")}, scenRowHeadH)
 	for i, e := range ng.Entries {
 		if e.builtin && e.matches(q) {
 			add(scenRow{Kind: RowEntry, Entry: i}, scenRowEntryH)
 		}
 	}
-	add(scenRow{Kind: RowHeader, Text: "Your scenarios"}, scenRowHeadH)
+	add(scenRow{Kind: RowHeader, Text: tr.T("Your scenarios")}, scenRowHeadH)
 	n := 0
 	for i, e := range ng.Entries {
 		if !e.builtin && e.matches(q) {
@@ -105,7 +109,7 @@ func ScenarioRects(content gfx.Rect) scenarioLayout {
 }
 
 func (w scenarioPage) drawScenario(screen *ebiten.Image, sw, sh int) {
-	w.drawNGFrame(screen, sw, sh, "Choose Scenario")
+	w.drawNGFrame(screen, sw, sh, w.sh.T("Choose Scenario"))
 }
 
 func (w scenarioPage) scenarioUI(sw, sh int) {
@@ -129,19 +133,19 @@ func (w scenarioPage) scenarioUI(sw, sh int) {
 		return gfx.Rect{X: L.Buttons.X + float32(i)*(third+6), Y: L.Buttons.Y, W: third, H: L.Buttons.H}
 	}
 	sel := ng.Selected()
-	uikit.StyledButton(w.kit(), "scen.new", b(0), "New scenario", uikit.BtnOpts{Tip: "New scenario\nStart a fresh scenario in the editor."}, func() {
+	uikit.StyledButton(w.kit(), "scen.new", b(0), w.sh.T("New scenario"), uikit.BtnOpts{Tip: w.sh.T("New scenario\nStart a fresh scenario in the editor.")}, func() {
 		editorPage(w).openEditor(newScenarioDef(), "")
 	})
-	editOpts := uikit.BtnOpts{Tip: "Edit a copy\nOpen a copy of the selected scenario in the editor. The original is never changed."}
+	editOpts := uikit.BtnOpts{Tip: w.sh.T("Edit a copy\nOpen a copy of the selected scenario in the editor. The original is never changed.")}
 	if sel == nil || sel.Err != "" {
 		editOpts.Disabled, editOpts.Reason = true, "Select a readable scenario first."
 	}
-	uikit.StyledButton(w.kit(), "scen.edit", b(1), "Edit a copy", editOpts, func() {
+	uikit.StyledButton(w.kit(), "scen.edit", b(1), w.sh.T("Edit a copy"), editOpts, func() {
 		if s := ng.Selected(); s != nil {
 			editorPage(w).openEditor(CopyForEditing(s.Def), s.Key)
 		}
 	})
-	uikit.StyledButton(w.kit(), "scen.import", b(2), "Load file...", uikit.BtnOpts{Disabled: w.store() == nil, Reason: "Scenario files are unavailable in this build.", Tip: "Load file\nPick a scenario file from the scenarios folder."}, w.openScenarioFiles)
+	uikit.StyledButton(w.kit(), "scen.import", b(2), w.sh.T("Load file..."), uikit.BtnOpts{Disabled: w.store() == nil, Reason: w.sh.T("Scenario files are unavailable in this build."), Tip: w.sh.T("Load file\nPick a scenario file from the scenarios folder.")}, w.openScenarioFiles)
 
 	w.kit().Panel(L.Right)
 	if sel != nil {
@@ -157,12 +161,12 @@ func (w scenarioPage) scenarioUI(sw, sh int) {
 	case sel == nil:
 		next.Disabled, next.Reason = true, "Select a scenario first."
 	case sel.Err != "":
-		next.Disabled, next.Reason = true, "Can't read this file ("+sel.Err+")"
+		next.Disabled, next.Reason = true, w.sh.Tf("Can't read this file (%s)", sel.Err)
 	case sel.errCount() > 0:
 		next.Disabled = true
-		next.Reason = fmt.Sprintf("Fix %d problem%s in the editor", sel.errCount(), plural(sel.errCount()))
+		next.Reason = fixProblems(w.sh, sel.errCount())
 	}
-	w.ngFooter(footer, "Next", ids.WizardNext, next, func() {
+	w.ngFooter(footer, w.sh.T("Next"), ids.WizardNext, next, func() {
 		if s := ng.Selected(); s != nil && s.Err == "" {
 			ng.Scenario = CloneDef(s.Def)
 			w.forward()
@@ -170,11 +174,20 @@ func (w scenarioPage) scenarioUI(sw, sh int) {
 	})
 }
 
-func plural(n int) string {
+// fixProblems is the Next button's reason while the scenario has n errors.
+func fixProblems(tr lang.Tr, n int) string {
 	if n == 1 {
-		return ""
+		return tr.T("Fix 1 problem in the editor")
 	}
-	return "s"
+	return lang.Tf(tr, "Fix %d problems in the editor", n)
+}
+
+// problemsToFix is the list row's summary for n errors.
+func problemsToFix(tr lang.Tr, n int) string {
+	if n == 1 {
+		return tr.T("1 problem to fix")
+	}
+	return lang.Tf(tr, "%d problems to fix", n)
 }
 
 // CloneDef copies a scenario so the draft never aliases a list entry.
@@ -188,16 +201,16 @@ func (w scenarioPage) scenarioUnreadable(r gfx.Rect, e *ScenEntry) {
 	in := r.Inset(14)
 	hs := gfx.Title
 	hs.Color = uikit.Danger
-	w.kit().Label(in.X, in.Y, "Can't read this file", hs)
+	w.kit().Label(in.X, in.Y, w.sh.T("Can't read this file"), hs)
 	y := in.Y + float32(gfx.LineH(hs)) + 8
-	uikit.TextLines(w.kit(), in.X, y, in.W, e.File+".json: "+e.Err, uikit.DimText())
+	uikit.TextLines(w.kit(), in.X, y, in.W, w.sh.Tf("%s.json: %s", e.File, e.Err), uikit.DimText())
 }
 
 // scenarioList declares the list (groups, rows, delete buttons) and the
 // keyboard selection.
 func (w scenarioPage) scenarioList(ng *Draft, r gfx.Rect) {
 	u := w.kit()
-	rows, total := ng.Rows(w.store() != nil)
+	rows, total := ng.RowsIn(w.sh, w.store() != nil)
 	w.kit().Panel(r)
 	if u.Focus == "scen.list" && !w.kit().ModalOpen() {
 		step := 0
@@ -243,7 +256,7 @@ func (w scenarioPage) scenarioList(ng *Draft, r gfx.Rect) {
 			del := gfx.Rect{X: row.Right() - 30, Y: row.Bottom() - 28, W: 22, H: 22}
 			if del.Y >= area.View.Y && del.Bottom() <= area.View.Bottom() {
 				key := e.Key
-				uikit.StyledButton(w.kit(), "scen.del."+key, del, "x", uikit.BtnOpts{Style: uikit.BtnDanger, Tip: "Delete\nRemove this scenario."}, func() { w.confirmDeleteScenario(key) })
+				uikit.StyledButton(w.kit(), "scen.del."+key, del, w.sh.T("x"), uikit.BtnOpts{Style: uikit.BtnDanger, Tip: w.sh.T("Delete\nRemove this scenario.")}, func() { w.confirmDeleteScenario(key) })
 			}
 		}
 		idx := v.row.Entry
@@ -252,7 +265,7 @@ func (w scenarioPage) scenarioList(ng *Draft, r gfx.Rect) {
 		pick := func() {
 			u.Focus = "scen.list"
 			if entries[idx].Err != "" {
-				w.kit().Deny("Can't read this file (" + entries[idx].Err + ")")
+				w.kit().Deny(w.sh.Tf("Can't read this file (%s)", entries[idx].Err))
 				return
 			}
 			ng.Sel = idx
@@ -337,7 +350,7 @@ func (w scenarioPage) paintScenarioRow(dst *ebiten.Image, view gfx.Rect, row sce
 		}
 		if errs := e.errCount(); errs > 0 && e.Err == "" {
 			sum.Color = uikit.Warning
-			gfx.Text(dst, fmt.Sprintf("%d problem%s to fix", errs, plural(errs)), float64(tx), float64(r.Y)+30, sum)
+			gfx.Text(dst, problemsToFix(w.sh, errs), float64(tx), float64(r.Y)+30, sum)
 		} else {
 			lines := gfx.WrapPx(e.Summary, sum, float64(r.W-(tx-r.X)-14))
 			for i := 0; i < len(lines) && i < 2; i++ {
@@ -372,7 +385,7 @@ func (w scenarioPage) confirmDeleteScenario(key string) {
 			name = e.Name
 		}
 	}
-	w.kit().Confirm("scen.delete", "Delete scenario?", fmt.Sprintf("Delete \"%s\"? This can't be undone.", name), "Delete", true, func() { w.deleteScenario(key) })
+	w.kit().Confirm("scen.delete", w.sh.T("Delete scenario?"), w.sh.Tf("Delete \"%s\"? This can't be undone.", name), w.sh.T("Delete"), true, func() { w.deleteScenario(key) })
 }
 
 // deleteScenario removes a custom scenario: its file, or the unsaved copy.
@@ -390,7 +403,7 @@ func (w scenarioPage) deleteScenario(key string) {
 			}
 		case e.File != "" && w.store() != nil:
 			if err := w.store().Delete(e.File); err != nil {
-				w.sh.Hint("delete failed: " + err.Error())
+				w.sh.Hint(w.sh.Tf("delete failed: %s", err.Error()))
 			}
 		}
 	}
@@ -406,22 +419,22 @@ func (w scenarioPage) openScenarioFiles() {
 	files, err := w.store().List()
 	msg := ""
 	if err != nil {
-		msg = "Can't read the scenarios folder: " + err.Error()
+		msg = w.sh.Tf("Can't read the scenarios folder: %s", err.Error())
 	}
 	cols := []uikit.TableCol{
-		{ID: "name", Title: "Name", Cell: func(i int) string { return files[i].Name },
+		{ID: "name", Title: w.sh.T("Name"), Cell: func(i int) string { return files[i].Name },
 			Less: func(x, y int) bool { return strings.ToLower(files[x].Name) < strings.ToLower(files[y].Name) }},
-		{ID: "mod", Title: "Modified", W: 150, Cell: func(i int) string { return files[i].Modified },
+		{ID: "mod", Title: w.sh.T("Modified"), W: 150, Cell: func(i int) string { return files[i].Modified },
 			Less: func(x, y int) bool { return files[x].Modified < files[y].Modified }},
 	}
 	w.kit().Push(uikit.Modal{
-		ID: "scen.load", Title: "Load scenario file", W: 560, H: 420,
+		ID: "scen.load", Title: w.sh.T("Load scenario file"), W: 560, H: 420,
 		Draw: func(body gfx.Rect) {
 			tb := body
 			if msg != "" || len(files) == 0 {
 				note := msg
 				if note == "" {
-					note = "No scenario files yet. Save one from the editor."
+					note = w.sh.T("No scenario files yet. Save one from the editor.")
 				}
 				uikit.TextLines(w.kit(), body.X, body.Y, body.W, note, uikit.DimText())
 				return
@@ -436,6 +449,6 @@ func (w scenarioPage) openScenarioFiles() {
 				ng.selectKey("file." + name)
 			}
 		},
-		Buttons: []uikit.ModalButton{{ID: "cancel", Label: "Cancel", Closes: true}},
+		Buttons: []uikit.ModalButton{{ID: "cancel", Label: w.sh.T("Cancel"), Closes: true}},
 	})
 }

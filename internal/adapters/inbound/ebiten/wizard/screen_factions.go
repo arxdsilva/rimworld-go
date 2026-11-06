@@ -8,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/globe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/domain/faction"
 )
@@ -32,39 +33,42 @@ func (w landingPage) factionColumns(rows []FacRow) []uikit.TableCol {
 			r := rows[i]
 			w.DrawEmblem(dst, r.Emblem, r.Accent, cell.X+10, cell.Y+(cell.H-24)/2, 24)
 		}},
-		{ID: "name", Title: "Name", W: 200, Cell: func(i int) string { return rows[i].Name },
+		{ID: "name", Title: w.sh.T("Name"), W: 200, Cell: func(i int) string { return rows[i].Name },
 			Less: func(x, y int) bool { return strings.ToLower(rows[x].Name) < strings.ToLower(rows[y].Name) }},
-		{ID: "type", Title: "Type", W: 100, Cell: func(i int) string { return rows[i].TypeLabel },
+		{ID: "type", Title: w.sh.T("Type"), W: 100, Cell: func(i int) string { return rows[i].TypeLabel },
 			Less: func(x, y int) bool { return rows[x].TypeLabel < rows[y].TypeLabel }},
-		{ID: "leader", Title: "Leader", Cell: func(i int) string { return rows[i].Leader },
+		{ID: "leader", Title: w.sh.T("Leader"), Cell: func(i int) string { return rows[i].Leader },
 			Less: func(x, y int) bool { return rows[x].Leader < rows[y].Leader }},
-		{ID: "goodwill", Title: "Goodwill", W: 150, Draw: func(dst *ebiten.Image, i int, cell gfx.Rect) { drawGoodwill(dst, cell, rows[i]) },
+		{ID: "goodwill", Title: w.sh.T("Goodwill"), W: 150, Draw: func(dst *ebiten.Image, i int, cell gfx.Rect) { drawGoodwill(dst, cell, rows[i]) },
 			Less: func(x, y int) bool { return rows[x].Goodwill < rows[y].Goodwill },
-			Tip:  func(i int) string { return "Goodwill\n" + GoodwillTip(rows[i]) }},
-		{ID: "relation", Title: "Relation", W: 90, Draw: func(dst *ebiten.Image, i int, cell gfx.Rect) {
+			Tip:  func(i int) string { return w.sh.Tf("Goodwill\n%s", GoodwillTipIn(w.sh, rows[i])) }},
+		{ID: "relation", Title: w.sh.T("Relation"), W: 90, Draw: func(dst *ebiten.Image, i int, cell gfx.Rect) {
 			st := gfx.Body
 			st.Color = RelationColor(rows[i].Relation)
-			gfx.Text(dst, RelationLabel(rows[i].Relation), float64(cell.X+uikit.TableCellPad), float64(cell.Y)+(float64(cell.H)-gfx.LineH(st))/2, st)
+			gfx.Text(dst, RelationLabelIn(w.sh, rows[i].Relation), float64(cell.X+uikit.TableCellPad), float64(cell.Y)+(float64(cell.H)-gfx.LineH(st))/2, st)
 		}, Less: func(x, y int) bool { return rows[x].Relation < rows[y].Relation }},
-		{ID: "settle", Title: "Settlements", W: 100, Align: gfx.AlignRight, Cell: func(i int) string {
+		{ID: "settle", Title: w.sh.T("Settlements"), W: 100, Align: gfx.AlignRight, Cell: func(i int) string {
 			if rows[i].Swarm {
 				return "-"
 			}
 			return fmt.Sprint(rows[i].Settlements)
 		}, Less: func(x, y int) bool { return rows[x].Settlements < rows[y].Settlements }},
-		{ID: "tech", Title: "Tech", W: 100, Cell: func(i int) string { return rows[i].Tech },
+		{ID: "tech", Title: w.sh.T("Tech"), W: 100, Cell: func(i int) string { return techLabel(w.sh, rows[i].TechKind) },
 			Less: func(x, y int) bool { return rows[x].Tech < rows[y].Tech }},
 	}
 }
 
-func GoodwillTip(r FacRow) string {
+func GoodwillTip(r FacRow) string { return GoodwillTipIn(lang.English{}, r) }
+
+// GoodwillTipIn is GoodwillTip in the player's language.
+func GoodwillTipIn(tr lang.Tr, r FacRow) string {
 	switch r.Relation {
 	case faction.Hostile:
-		return "Hostile. They raid you. Goodwill must climb to -10 before they calm down."
+		return tr.T("Hostile. They raid you. Goodwill must climb to -10 before they calm down.")
 	case faction.Friendly:
-		return "Friendly. They stay friendly while goodwill stays at +30 or more."
+		return tr.T("Friendly. They stay friendly while goodwill stays at +30 or more.")
 	}
-	return "Neutral. At -50 or less they turn hostile; at +50 or more, friendly."
+	return tr.T("Neutral. At -50 or less they turn hostile; at +50 or more, friendly.")
 }
 
 // drawGoodwill is the -100..+100 bar with the number.
@@ -103,10 +107,10 @@ func (w landingPage) pushFactions(ng *Draft, g *globe.View) {
 	rows := FactionRows(ng.Planet.Factions)
 	ng.facSel = -1
 	w.kit().Push(uikit.Modal{
-		ID: FacModalID, Title: "Factions", W: facModalMaxW, H: facModalH,
+		ID: FacModalID, Title: w.sh.T("Factions"), W: facModalMaxW, H: facModalH,
 		Draw: func(body gfx.Rect) {
 			tb, hint := body.SplitV(-24)
-			w.kit().Label(hint.X, hint.Y+6, "Click a faction to find its capital on the globe.", uikit.DimText())
+			w.kit().Label(hint.X, hint.Y+6, w.sh.T("Click a faction to find its capital on the globe."), uikit.DimText())
 			w.factionsTable(gfx.Rect{X: tb.X, Y: tb.Y, W: tb.W, H: tb.H}, rows, &ng.facSel, func(r FacRow) {
 				if r.Capital < 0 {
 					return // the Swarm has no settlements
@@ -118,6 +122,6 @@ func (w landingPage) pushFactions(ng *Draft, g *globe.View) {
 				}
 			})
 		},
-		Buttons: []uikit.ModalButton{{ID: "close", Label: "Close", Style: uikit.BtnPrimary, Closes: true}},
+		Buttons: []uikit.ModalButton{{ID: "close", Label: w.sh.T("Close"), Style: uikit.BtnPrimary, Closes: true}},
 	})
 }

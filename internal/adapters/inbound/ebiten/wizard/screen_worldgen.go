@@ -1,7 +1,6 @@
 package wizard
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/globe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
@@ -62,24 +62,26 @@ func pctLabels(v []int) []string {
 }
 
 // WorldPhaseName is the progress modal's phase text.
-func WorldPhaseName(p planet.Phase) string {
+func WorldPhaseName(p planet.Phase) string { return worldPhaseName(lang.English{}, p) }
+
+func worldPhaseName(tr lang.Tr, p planet.Phase) string {
 	switch p {
 	case planet.PhaseShape:
-		return "Shaping the globe"
+		return tr.T("Shaping the globe")
 	case planet.PhaseElevation:
-		return "Raising land"
+		return tr.T("Raising land")
 	case planet.PhaseClimate:
-		return "Climate"
+		return tr.T("Climate")
 	case planet.PhaseBiomes:
-		return "Biomes"
+		return tr.T("Biomes")
 	case planet.PhaseRivers:
-		return "Rivers"
+		return tr.T("Rivers")
 	case planet.PhaseFactions:
-		return "Settling factions"
+		return tr.T("Settling factions")
 	case planet.PhaseRoads:
-		return "Roads"
+		return tr.T("Roads")
 	}
-	return "Done"
+	return tr.T("Done")
 }
 
 // worldTiles estimates the tile count of a coverage.
@@ -108,15 +110,15 @@ func (w worldPage) worldGenUI(sw, sh int) {
 	w.worldLeft(ng, cols[0])
 	w.worldRight(ng, cols[1])
 
-	label, tip := "Generate", ""
+	label, tip := w.sh.T("Generate"), ""
 	if ng.WorldReady() {
-		label = "Next"
+		label = w.sh.T("Next")
 	} else if ng.Planet != nil {
 		tip = "These settings differ from the world you made. Generate it again."
 	}
-	uikit.StyledButton(w.kit(), "world.resetAll", gfx.Rect{X: uikit.FooterBack(footer).Right() + 12, Y: uikit.FooterBack(footer).Y, W: 120, H: uikit.FooterBtnH}, "Reset all",
-		uikit.BtnOpts{Tip: "Reset all\nPut every world setting back to its default and roll a new seed."}, func() {
-			w.kit().Confirm("world.resetAll.confirm", "Reset all world settings?", "Every setting on this screen goes back to its default and the seed is replaced.", "Reset", true, w.resetWorldAll)
+	uikit.StyledButton(w.kit(), "world.resetAll", gfx.Rect{X: uikit.FooterBack(footer).Right() + 12, Y: uikit.FooterBack(footer).Y, W: 120, H: uikit.FooterBtnH}, w.sh.T("Reset all"),
+		uikit.BtnOpts{Tip: w.sh.T("Reset all\nPut every world setting back to its default and roll a new seed.")}, func() {
+			w.kit().Confirm("world.resetAll.confirm", w.sh.T("Reset all world settings?"), w.sh.T("Every setting on this screen goes back to its default and the seed is replaced."), w.sh.T("Reset"), true, w.resetWorldAll)
 		})
 	w.ngFooter(footer, label, "world.generate", uikit.BtnOpts{Tip: tip}, w.worldGenerate)
 }
@@ -135,21 +137,21 @@ func (w worldPage) worldLeft(ng *Draft, col gfx.Rect) {
 	in := col.Inset(14)
 	hs := gfx.Large
 	hs.Color = uikit.Heading
-	w.kit().Label(in.X, in.Y, "Planet", hs)
+	w.kit().Label(in.X, in.Y, w.sh.T("Planet"), hs)
 	w.worldName(ng, in, hs)
 	y := in.Y + float32(gfx.LineH(hs)) + 10
 
 	// Seed.
-	w.worldLabel("world.seed.lbl", gfx.Rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, "Seed",
-		"Seed\nThe same seed and settings always make the same world. Any text of 1 to 32 characters.")
+	w.worldLabel("world.seed.lbl", gfx.Rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, w.sh.T("Seed"),
+		w.sh.T("Seed\nThe same seed and settings always make the same world. Any text of 1 to 32 characters."))
 	y += worldLabelH
 	diceW := float32(80)
 	w.kit().TextField("world.seed", gfx.Rect{X: in.X, Y: y, W: in.W - diceW - 8, H: worldFieldH}, &ng.World.SeedText, uikit.TextFieldSpec{
 		MaxLen: MaxSeedText, Valid: SeedTextRune, Normalize: normalizeSeedText, Placeholder: "seed",
-		Tip: "Seed\nLetters, digits, space, - and _ (1 to 32 characters).",
+		Tip: w.sh.T("Seed\nLetters, digits, space, - and _ (1 to 32 characters)."),
 	})
-	uikit.StyledButton(w.kit(), "world.dice", gfx.Rect{X: in.Right() - diceW, Y: y, W: diceW, H: worldFieldH}, "Dice",
-		uikit.BtnOpts{Tip: "Randomize seed\nReplace the seed with a random phrase. It does not generate."},
+	uikit.StyledButton(w.kit(), "world.dice", gfx.Rect{X: in.Right() - diceW, Y: y, W: diceW, H: worldFieldH}, w.sh.T("Dice"),
+		uikit.BtnOpts{Tip: w.sh.T("Randomize seed\nReplace the seed with a random phrase. It does not generate.")},
 		func() { ng.World.SeedText = RandomWorldPhrase() })
 	y += worldFieldH + worldRowGap + 6
 
@@ -161,10 +163,10 @@ func (w worldPage) worldLeft(ng *Draft, col gfx.Rect) {
 			idx = i
 		}
 	}
-	w.worldLabel("world.coverage.lbl", gfx.Rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, "Globe coverage",
-		"Globe coverage\nHow much of the planet is generated. Bigger worlds take longer. This is not your colony's map size.")
+	w.worldLabel("world.coverage.lbl", gfx.Rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, w.sh.T("Globe coverage"),
+		w.sh.T("Globe coverage\nHow much of the planet is generated. Bigger worlds take longer. This is not your colony's map size."))
 	y += worldLabelH
-	if w.sliderInt("world.coverage", gfx.Rect{X: in.X, Y: y, W: in.W, H: worldSliderH}, &idx, uikit.SliderSpec{Stops: pctLabels(opts), Title: "Globe coverage"}) {
+	if w.sliderInt("world.coverage", gfx.Rect{X: in.X, Y: y, W: in.W, H: worldSliderH}, &idx, uikit.SliderSpec{Stops: pctLabels(opts), Title: w.sh.T("Globe coverage")}) {
 		ng.World.Coverage = opts[idx]
 	}
 	y += worldSliderH + worldRowGap + 6
@@ -187,17 +189,17 @@ func (w worldPage) worldLeft(ng *Draft, col gfx.Rect) {
 
 	// Status.
 	st := uikit.DimText()
-	w.kit().Label(in.X, y, fmt.Sprintf("About %s tiles at this coverage.", groupDigits(worldTiles(ng.World.Coverage))), st)
+	w.kit().Label(in.X, y, w.sh.Tf("About %s tiles at this coverage.", groupDigits(worldTiles(ng.World.Coverage))), st)
 	y += float32(gfx.LineH(st)) + 4
 	switch {
 	case ng.WorldReady():
 		ok := gfx.Body
 		ok.Color = uikit.Good
-		w.kit().Label(in.X, y, "A world with these settings is ready. Next keeps it.", ok)
+		w.kit().Label(in.X, y, w.sh.T("A world with these settings is ready. Next keeps it."), ok)
 	case ng.Planet != nil:
 		ws := gfx.Body
 		ws.Color = uikit.Warning
-		w.kit().Label(in.X, y, "Settings changed since the last world. Generate it again.", ws)
+		w.kit().Label(in.X, y, w.sh.T("Settings changed since the last world. Generate it again."), ws)
 	}
 }
 
@@ -207,12 +209,12 @@ func (w worldPage) worldName(ng *Draft, in gfx.Rect, hs gfx.TextStyle) {
 	if ng.Planet == nil {
 		return
 	}
-	badge := fmt.Sprintf("v%d", ng.Planet.Params.Version)
+	badge := w.sh.Tf("v%d", ng.Planet.Params.Version)
 	bs := gfx.Small
 	bs.Color = uikit.TextDim
 	bw := gfx.TextW(badge, bs) + 12
 	br := gfx.Rect{X: in.Right() - bw, Y: in.Y + 3, W: bw, H: float32(gfx.LineH(bs)) + 6}
-	w.kit().Tip("world.version", br, fmt.Sprintf("World generator version %d\nSaved worlds keep the version they were made with, so they stay as they were.", ng.Planet.Params.Version))
+	w.kit().Tip("world.version", br, w.sh.Tf("World generator version %d\nSaved worlds keep the version they were made with, so they stay as they were.", ng.Planet.Params.Version))
 	w.kit().Queue(func(dst *ebiten.Image) {
 		uikit.FillRect(dst, br, uikit.Field)
 		uikit.StrokeRect(dst, br, uikit.PanelBorder)
@@ -253,11 +255,11 @@ func (w worldPage) worldRight(ng *Draft, col gfx.Rect) {
 	in := col.Inset(14)
 	hs := gfx.Large
 	hs.Color = uikit.Heading
-	w.kit().Label(in.X, in.Y, "Factions", hs)
+	w.kit().Label(in.X, in.Y, w.sh.T("Factions"), hs)
 	y := in.Y + float32(gfx.LineH(hs)) + 4
 	sub := gfx.Small
 	sub.Color = uikit.TextDim
-	w.kit().Label(in.X, y, "Who else lives on the planet. Each faction owns settlements; hostile ones send raids.", sub)
+	w.kit().Label(in.X, y, w.sh.T("Who else lives on the planet. Each faction owns settlements; hostile ones send raids."), sub)
 	y += float32(gfx.LineH(sub)) + 10
 
 	slots := ng.World.Factions
@@ -272,23 +274,23 @@ func (w worldPage) worldRight(ng *Draft, col gfx.Rect) {
 		}
 	}
 	if len(slots) == 0 {
-		w.kit().Label(in.X+4, y+6, "No factions. The planet will be empty.", uikit.DimText())
+		w.kit().Label(in.X+4, y+6, w.sh.T("No factions. The planet will be empty."), uikit.DimText())
 		y += worldFacRowH
 	}
 
 	// The Swarm is always present.
 	sw := gfx.Rect{X: in.X, Y: y, W: in.W, H: worldFacRowH}
-	w.kit().Tip("world.fac.swarm", sw, "Always present\nHive swarms are part of every world. They are always hostile and have no settlements.")
+	w.kit().Tip("world.fac.swarm", sw, w.sh.T("Always present\nHive swarms are part of every world. They are always hostile and have no settlements."))
 	w.kit().Queue(func(dst *ebiten.Image) {
 		uikit.FillRect(dst, sw, uikit.Field)
 		uikit.StrokeRect(dst, sw, uikit.PanelBorder)
 		w.DrawEmblem(dst, "ui_icon/faction_swarm", globe.Accent(faction.Swarm), sw.X+8, sw.Y+(sw.H-24)/2, 24)
 		st := gfx.Label
 		st.Color = uikit.TextDim
-		gfx.Text(dst, "Hive swarms", float64(sw.X+44), float64(sw.Y)+(float64(sw.H)-gfx.LineH(st))/2, st)
+		gfx.Text(dst, w.sh.T("Hive swarms"), float64(sw.X+44), float64(sw.Y)+(float64(sw.H)-gfx.LineH(st))/2, st)
 		dt := gfx.Small
 		dt.Color, dt.Align = uikit.TextDim, gfx.AlignRight
-		gfx.Text(dst, "Always present", float64(sw.Right()-10), float64(sw.Y)+(float64(sw.H)-gfx.LineH(dt))/2, dt)
+		gfx.Text(dst, w.sh.T("Always present"), float64(sw.Right()-10), float64(sw.Y)+(float64(sw.H)-gfx.LineH(dt))/2, dt)
 	})
 	y += worldFacRowH + 12
 
@@ -298,15 +300,15 @@ func (w worldPage) worldRight(ng *Draft, col gfx.Rect) {
 	if len(addable) == 0 {
 		reason = "Every faction type is at its maximum."
 	}
-	uikit.StyledButton(w.kit(), "world.facAdd", gfx.Rect{X: in.X, Y: y, W: 150, H: 32}, "Add faction...", uikit.BtnOpts{Disabled: reason != "", Reason: reason}, w.pushAddFaction)
-	uikit.StyledButton(w.kit(), "world.facReset", gfx.Rect{X: in.X + 158, Y: y, W: 150, H: 32}, "Reset factions", uikit.BtnOpts{Tip: "Reset factions\nBack to the default factions."},
+	uikit.StyledButton(w.kit(), "world.facAdd", gfx.Rect{X: in.X, Y: y, W: 150, H: 32}, w.sh.T("Add faction..."), uikit.BtnOpts{Disabled: reason != "", Reason: reason}, w.pushAddFaction)
+	uikit.StyledButton(w.kit(), "world.facReset", gfx.Rect{X: in.X + 158, Y: y, W: 150, H: 32}, w.sh.T("Reset factions"), uikit.BtnOpts{Tip: w.sh.T("Reset factions\nBack to the default factions.")},
 		func() { ng.World.Factions = faction.DefaultSlots() })
 	y += 32 + 12
 
 	if !HostileCapable(ng.World.Factions) {
 		ws := gfx.Body
 		ws.Color = uikit.Warning
-		for _, l := range gfx.WrapPx(NoHostileWarning, ws, float64(in.W)) {
+		for _, l := range gfx.WrapPx(w.sh.T("No faction can raid you. Raids will be replaced by other threats."), ws, float64(in.W)) {
 			w.kit().Label(in.X, y, l, ws)
 			y += float32(gfx.LineH(ws))
 		}
@@ -325,11 +327,11 @@ func (w worldPage) worldFacRow(row gfx.Rect, d faction.Def, s *faction.Slot, i i
 		gfx.Text(dst, d.Label, float64(row.X+44), float64(row.Y)+5, st)
 		ss := gfx.Small
 		ss.Color = uikit.TextDim
-		gfx.Text(dst, techLabel(d.Tech)+", up to "+strconv.Itoa(d.MaxCount), float64(row.X+44), float64(row.Y)+5+gfx.LineH(st), ss)
+		gfx.Text(dst, w.sh.Tf("%s, up to %d", techLabel(w.sh, d.Tech), d.MaxCount), float64(row.X+44), float64(row.Y)+5+gfx.LineH(st), ss)
 	})
-	w.kit().Tip("world.fac."+d.Key+".tip", gfx.Rect{X: row.X, Y: row.Y, W: row.W - 190, H: row.H}, factionTypeTip(d))
+	w.kit().Tip("world.fac."+d.Key+".tip", gfx.Rect{X: row.X, Y: row.Y, W: row.W - 190, H: row.H}, factionTypeTip(w.sh, d))
 	rm := gfx.Rect{X: row.Right() - 36, Y: row.Y + 8, W: 28, H: 28}
-	uikit.StyledButton(w.kit(), "world.fac."+d.Key+".rm", rm, "x", uikit.BtnOpts{Tip: "Remove\nTake this faction type off the planet."}, func() {
+	uikit.StyledButton(w.kit(), "world.fac."+d.Key+".rm", rm, w.sh.T("x"), uikit.BtnOpts{Tip: w.sh.T("Remove\nTake this faction type off the planet.")}, func() {
 		fs := w.draft().World.Factions
 		w.draft().World.Factions = append(append([]faction.Slot(nil), fs[:i]...), fs[i+1:]...)
 	})
@@ -337,15 +339,15 @@ func (w worldPage) worldFacRow(row gfx.Rect, d faction.Def, s *faction.Slot, i i
 }
 
 // factionTypeTip explains a faction type on its row.
-func factionTypeTip(d faction.Def) string {
-	rel := "Starts neutral or friendly."
+func factionTypeTip(tr lang.Tr, d faction.Def) string {
+	rel := tr.T("Starts neutral or friendly.")
 	switch {
 	case d.Fixed && d.GoodwillMax < 0:
-		rel = "Always hostile."
+		rel = tr.T("Always hostile.")
 	case d.GoodwillMin <= -50:
-		rel = "Can turn hostile and raid you."
+		rel = tr.T("Can turn hostile and raid you.")
 	}
-	return d.Label + "\n" + techLabel(d.Tech) + " people. " + rel
+	return d.Label + "\n" + lang.Tf(tr, "%s people. %s", techLabel(tr, d.Tech), rel)
 }
 
 // pushAddFaction opens the "Add faction" list.
@@ -356,7 +358,7 @@ func (w worldPage) pushAddFaction() {
 	for i, t := range types {
 		labels[i] = faction.DefOf(t).Label
 	}
-	uikit.Picker(w.kit(), "world.facAdd.pick", "Add faction", labels, -1, func(i int) {
+	uikit.Picker(w.kit(), "world.facAdd.pick", w.sh.T("Add faction"), labels, -1, func(i int) {
 		t := types[i]
 		if k := SlotIndex(ng.World.Factions, t); k >= 0 {
 			ng.World.Factions[k].Count++
@@ -385,10 +387,10 @@ func (w worldPage) worldGenerate() {
 	ng.Builder = game.NewPlanetBuilder(p)
 	ng.GenStep, ng.GenPhase, ng.GenFrac, ng.genErr = worldStepStart, planet.PhaseShape, 0, ""
 	w.kit().Push(uikit.Modal{
-		ID: WorldProgress, Title: "Generating world", W: 520, H: 190,
+		ID: WorldProgress, Title: w.sh.T("Generating world"), W: 520, H: 190,
 		Draw: func(body gfx.Rect) { w.worldProgressBody(body) },
 		Buttons: []uikit.ModalButton{
-			{ID: "cancel", Label: "Cancel", Closes: true, OnClick: w.cancelWorld},
+			{ID: "cancel", Label: w.sh.T("Cancel"), Closes: true, OnClick: w.cancelWorld},
 		},
 		OnClose: w.cancelWorld,
 	})
@@ -413,7 +415,7 @@ func (w worldPage) worldProgressBody(body gfx.Rect) {
 		}
 		return
 	}
-	phase, frac := WorldPhaseName(ng.GenPhase), float64(ng.GenFrac)
+	phase, frac := worldPhaseName(w.sh, ng.GenPhase), float64(ng.GenFrac)
 	r := gfx.Rect{X: body.X, Y: body.Y + 8, W: body.W, H: 44}
 	w.kit().Queue(func(dst *ebiten.Image) { uikit.DrawProgress(dst, r, phase, frac, "") })
 }

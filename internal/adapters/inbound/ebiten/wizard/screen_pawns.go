@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/globe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/application/game"
@@ -90,12 +91,15 @@ func (w pawnsPage) undoCharacters(ng *Draft) {
 }
 
 // StartReason is why Start is disabled ("" it is enabled).
-func (ng *Draft) StartReason() string {
+func (ng *Draft) StartReason() string { return ng.StartReasonIn(lang.English{}) }
+
+// StartReasonIn is StartReason in the player's language.
+func (ng *Draft) StartReasonIn(tr lang.Tr) string {
 	if ng.NameErr != "" {
 		return ng.NameErr
 	}
 	if ng.Pool == nil || len(ng.Pool.Selected()) == 0 {
-		return "There is nobody to send. The scenario needs at least one colonist."
+		return tr.T("There is nobody to send. The scenario needs at least one colonist.")
 	}
 	return ""
 }
@@ -138,30 +142,30 @@ func (w pawnsPage) pawnsUI(sw, sh int) {
 
 func (w pawnsPage) pawnsFooter(ng *Draft, footer gfx.Rect) {
 	back := uikit.FooterBack(footer)
-	uikit.StyledButton(w.kit(), ids.WizardBack, back, "Back", uikit.BtnOpts{}, w.back)
+	uikit.StyledButton(w.kit(), ids.WizardBack, back, w.sh.T("Back"), uikit.BtnOpts{}, w.back)
 	x := back.Right() + 12
-	uikit.StyledButton(w.kit(), "pawns.reroll", gfx.Rect{X: x, Y: back.Y, W: 120, H: uikit.FooterBtnH}, "Randomize", uikit.BtnOpts{
-		Tip: "Randomize\nRoll this colonist again. An edited name is kept; hold Shift to roll a new name too."},
+	uikit.StyledButton(w.kit(), "pawns.reroll", gfx.Rect{X: x, Y: back.Y, W: 120, H: uikit.FooterBtnH}, w.sh.T("Randomize"), uikit.BtnOpts{
+		Tip: w.sh.T("Randomize\nRoll this colonist again. An edited name is kept; hold Shift to roll a new name too.")},
 		func() { w.rerollSelected(ng) })
 	x += 128
-	uikit.StyledButton(w.kit(), "pawns.rerollAll", gfx.Rect{X: x, Y: back.Y, W: 130, H: uikit.FooterBtnH}, "Randomize all", uikit.BtnOpts{Tip: "Randomize all\nRoll every candidate again."},
+	uikit.StyledButton(w.kit(), "pawns.rerollAll", gfx.Rect{X: x, Y: back.Y, W: 130, H: uikit.FooterBtnH}, w.sh.T("Randomize all"), uikit.BtnOpts{Tip: w.sh.T("Randomize all\nRoll every candidate again.")},
 		func() {
-			w.kit().Confirm("pawns.rerollAll.confirm", "Randomize everyone?", "Every candidate is rolled again. Names you edited are kept.", "Randomize", false, func() {
+			w.kit().Confirm("pawns.rerollAll.confirm", w.sh.T("Randomize everyone?"), w.sh.T("Every candidate is rolled again. Names you edited are kept."), w.sh.T("Randomize"), false, func() {
 				ng.Pool.RandomizeAll()
 				ng.NamesOf = -1
 			})
 		})
 	x += 138
-	uikit.StyledButton(w.kit(), "pawns.reset", gfx.Rect{X: x, Y: back.Y, W: 130, H: uikit.FooterBtnH}, "Undo changes", uikit.BtnOpts{Tip: "Undo changes\nPut the candidates back as they were when you came here."},
+	uikit.StyledButton(w.kit(), "pawns.reset", gfx.Rect{X: x, Y: back.Y, W: 130, H: uikit.FooterBtnH}, w.sh.T("Undo changes"), uikit.BtnOpts{Tip: w.sh.T("Undo changes\nPut the candidates back as they were when you came here.")},
 		func() { w.undoCharacters(ng) })
 
-	reason := ng.StartReason()
+	reason := ng.StartReasonIn(w.sh)
 	start := func() {
-		if ng.StartReason() == "" {
+		if ng.StartReasonIn(w.sh) == "" {
 			w.beginLoading()
 		}
 	}
-	uikit.StyledButton(w.kit(), ids.WizardStart, uikit.FooterNext(footer), "Start", uikit.BtnOpts{Style: uikit.BtnPrimary, Disabled: reason != "", Reason: reason}, start)
+	uikit.StyledButton(w.kit(), ids.WizardStart, uikit.FooterNext(footer), w.sh.T("Start"), uikit.BtnOpts{Style: uikit.BtnPrimary, Disabled: reason != "", Reason: reason}, start)
 	if w.in().Fired(input.Accept) && reason == "" && !w.kit().ModalOpen() && !w.kit().Editing() {
 		start()
 	}
@@ -173,7 +177,7 @@ func (w pawnsPage) pawnsFooter(ng *Draft, footer gfx.Rect) {
 	if why := w.sh.Env().SessionErr; why != "" {
 		st := gfx.Body
 		st.Color = uikit.Danger
-		w.kit().Label(footer.X+uikit.DialogPad, footer.Y-float32(gfx.LineH(st))-4, "Start failed: "+why, st)
+		w.kit().Label(footer.X+uikit.DialogPad, footer.Y-float32(gfx.LineH(st))-4, w.sh.Tf("Start failed: %s", why), st)
 	}
 }
 
@@ -274,8 +278,8 @@ func (w pawnsPage) pawnsRoster(ng *Draft, r gfx.Rect, views []game.CandidateView
 		sub := gfx.ClipTo(dst, area.View)
 		hs := gfx.Label
 		hs.Color = uikit.Heading
-		gfx.Text(sub, fmt.Sprintf("Selected (%d)", nSel), float64(area.View.X+6), float64(listR.Y-area.Off)+3, hs)
-		gfx.Text(sub, fmt.Sprintf("Left behind (%d)", nLeft), float64(area.View.X+6), float64(listR.Y+RosterY(nSel, nSel)-pawnHeadH-area.Off)+3, hs)
+		gfx.Text(sub, w.sh.Tf("Selected (%d)", nSel), float64(area.View.X+6), float64(listR.Y-area.Off)+3, hs)
+		gfx.Text(sub, w.sh.Tf("Left behind (%d)", nLeft), float64(area.View.X+6), float64(listR.Y+RosterY(nSel, nSel)-pawnHeadH-area.Off)+3, hs)
 		for pos, v := range views {
 			rr := rowAt(pos)
 			if rr.Bottom() < area.View.Y || rr.Y > area.View.Bottom() {
@@ -307,13 +311,13 @@ func (w pawnsPage) pawnsRoster(ng *Draft, r gfx.Rect, views []game.CandidateView
 	if i >= n-1 {
 		dnR = "Already last."
 	}
-	uikit.StyledButton(w.kit(), "pawns.up", gfx.Rect{X: r.X + 4, Y: by, W: half, H: 28}, "Up", uikit.BtnOpts{Disabled: upR != "", Reason: upR, Tip: "Move up\nMove this candidate up the roster."},
+	uikit.StyledButton(w.kit(), "pawns.up", gfx.Rect{X: r.X + 4, Y: by, W: half, H: 28}, w.sh.T("Up"), uikit.BtnOpts{Disabled: upR != "", Reason: upR, Tip: w.sh.T("Move up\nMove this candidate up the roster.")},
 		func() { ng.Pool.Move(i, i-1); ng.PawnSel = i - 1; ng.NamesOf = -1 })
-	uikit.StyledButton(w.kit(), "pawns.down", gfx.Rect{X: r.X + 4 + half + 6, Y: by, W: half, H: 28}, "Down", uikit.BtnOpts{Disabled: dnR != "", Reason: dnR, Tip: "Move down\nMove this candidate down the roster."},
+	uikit.StyledButton(w.kit(), "pawns.down", gfx.Rect{X: r.X + 4 + half + 6, Y: by, W: half, H: 28}, w.sh.T("Down"), uikit.BtnOpts{Disabled: dnR != "", Reason: dnR, Tip: w.sh.T("Move down\nMove this candidate down the roster.")},
 		func() { ng.Pool.Move(i, i+1); ng.PawnSel = i + 1; ng.NamesOf = -1 })
-	swapLabel, swapReason := "Swap with left-behind...", ""
+	swapLabel, swapReason := w.sh.T("Swap with left-behind..."), ""
 	if i >= nSel {
-		swapLabel = "Swap with selected..."
+		swapLabel = w.sh.T("Swap with selected...")
 	}
 	if nSel == 0 || nLeft == 0 {
 		swapReason = "There is nobody to swap with."
@@ -368,7 +372,7 @@ func (w pawnsPage) pushSwap(ng *Draft, views []game.CandidateView, nSel int) {
 			labels = append(labels, v.Nick+", "+candidateLine(v))
 		}
 	}
-	uikit.Picker(w.kit(), "pawns.swap", "Swap with", labels, -1, func(k int) {
+	uikit.Picker(w.kit(), "pawns.swap", w.sh.T("Swap with"), labels, -1, func(k int) {
 		ng.Pool.Swap(i, idx[k])
 		ng.NamesOf = -1
 	})
@@ -381,7 +385,7 @@ func (w pawnsPage) pawnsDetail(ng *Draft, r gfx.Rect, views []game.CandidateView
 	w.kit().Panel(r)
 	in := r.Inset(12)
 	if len(views) == 0 {
-		w.kit().Label(in.X, in.Y, "No candidates.", uikit.DimText())
+		w.kit().Label(in.X, in.Y, w.sh.T("No candidates."), uikit.DimText())
 		return
 	}
 	v := views[ng.PawnSel]
@@ -434,7 +438,7 @@ func (w pawnsPage) pawnsDetail(ng *Draft, r gfx.Rect, views []game.CandidateView
 	y += 16
 
 	// Sex, age, build, faction.
-	info := fmt.Sprintf("%s, age %d (biological)", v.Sex, v.AgeYears)
+	info := w.sh.Tf("%s, age %d (biological)", v.Sex, v.AgeYears)
 	w.kit().Label(left.X, y, info, gfx.Body)
 	y += 20
 	badge := faction.DefOf(ng.Scenario.Faction)
@@ -445,7 +449,7 @@ func (w pawnsPage) pawnsDetail(ng *Draft, r gfx.Rect, views []game.CandidateView
 	u.Queue(func(dst *ebiten.Image) {
 		w.DrawEmblem(dst, "ui_icon/faction_"+badge.Key, globe.Accent(badge.Type), left.X, by-1, 18)
 		st := uikit.DimText()
-		gfx.Text(dst, fmt.Sprintf("%s. Build: %s.", badge.Label, v.Build), float64(left.X+24), float64(by), st)
+		gfx.Text(dst, w.sh.Tf("%s. Build: %s.", badge.Label, v.Build), float64(left.X+24), float64(by), st)
 	})
 	y += 24
 
@@ -459,7 +463,7 @@ func (w pawnsPage) pawnsDetail(ng *Draft, r gfx.Rect, views []game.CandidateView
 	y = w.traitChips(left.X, y, left.W, v)
 
 	// Incapable of.
-	incap, full := "None", ""
+	incap, full := w.sh.T("None"), ""
 	col := uikit.TextDim
 	if len(v.Incapable) > 0 {
 		names := make([]string, len(v.Incapable))
@@ -472,14 +476,14 @@ func (w pawnsPage) pawnsDetail(ng *Draft, r gfx.Rect, views []game.CandidateView
 		incap, full, col = strings.Join(names, ", "), strings.Join(v.Incapable, "\n"), uikit.Danger
 	}
 	iy := y
-	w.kit().Label(left.X, iy, "Incapable of:", gfx.Label)
+	w.kit().Label(left.X, iy, w.sh.T("Incapable of:"), gfx.Label)
 	u.Queue(func(dst *ebiten.Image) {
 		st := gfx.Body
 		st.Color = col
 		gfx.Text(dst, uikit.FitText(incap, st, left.W-110), float64(left.X+104), float64(iy), st)
 	})
 	if full != "" {
-		w.kit().Tip("pawns.incap.tip", gfx.Rect{X: left.X, Y: y, W: left.W, H: 18}, "Incapable of\n"+full)
+		w.kit().Tip("pawns.incap.tip", gfx.Rect{X: left.X, Y: y, W: left.W, H: 18}, w.sh.Tf("Incapable of\n%s", full))
 	}
 	y += 26
 
@@ -494,8 +498,8 @@ func (w pawnsPage) pawnsDetail(ng *Draft, r gfx.Rect, views []game.CandidateView
 	w.skillsTable(gfx.Rect{X: in.X, Y: skillsTop, W: in.W, H: pawnSkillHdrH + rowH*float32(len(v.Skills))}, v, rowH)
 
 	hy := in.Bottom() - healthH + 6
-	w.kit().Label(in.X, hy, "Health:", gfx.Label)
-	text := "No conditions"
+	w.kit().Label(in.X, hy, w.sh.T("Health:"), gfx.Label)
+	text := w.sh.T("No conditions")
 	if len(v.Conditions) > 0 {
 		text = strings.Join(v.Conditions, "\n")
 	}
@@ -539,10 +543,10 @@ func (w pawnsPage) backstoryLine(x, y, width float32, label, title, desc, id str
 
 // traitChips lays the traits out as chips and returns the next y.
 func (w pawnsPage) traitChips(x, y, width float32, v game.CandidateView) float32 {
-	w.kit().Label(x, y+2, "Traits:", gfx.Label)
+	w.kit().Label(x, y+2, w.sh.T("Traits:"), gfx.Label)
 	cx, cy := x+64, y
 	if len(v.Traits) == 0 {
-		w.kit().Label(cx, y+2, "None", uikit.DimText())
+		w.kit().Label(cx, y+2, w.sh.T("None"), uikit.DimText())
 		return y + 28
 	}
 	for i, t := range v.Traits {
@@ -577,29 +581,32 @@ func SkillLevelText(s game.SkillView) string {
 	return fmt.Sprint(s.Level)
 }
 
-func passionText(p int) string {
+func passionText(tr lang.Tr, p int) string {
 	switch p {
 	case 1:
-		return "minor passion: learns faster"
+		return tr.T("minor passion: learns faster")
 	case 2:
-		return "major passion: learns much faster"
+		return tr.T("major passion: learns much faster")
 	}
-	return "no passion"
+	return tr.T("no passion")
 }
 
 // SkillTip is a skill row's hover card.
-func SkillTip(s game.SkillView) string {
+func SkillTip(s game.SkillView) string { return SkillTipIn(lang.English{}, s) }
+
+// SkillTipIn is SkillTip in the player's language.
+func SkillTipIn(tr lang.Tr, s game.SkillView) string {
 	if s.Incapable {
-		return s.Label + "\nIncapable. This colonist can't do this work."
+		return s.Label + tr.T("\nIncapable. This colonist can't do this work.")
 	}
 	t := fmt.Sprintf("%s: %s (%d)\n", s.Label, s.LevelLabel, s.Level)
 	if s.Affects != "" {
-		t += "Affects: " + s.Affects + ". "
+		t += lang.Tf(tr, "Affects: %s. ", s.Affects)
 	}
 	if s.SpeedPct > 0 {
-		t += fmt.Sprintf("Work speed %d%%. ", s.SpeedPct)
+		t += lang.Tf(tr, "Work speed %d%%. ", s.SpeedPct)
 	}
-	return t + "Passion: " + passionText(s.Passion) + "."
+	return t + lang.Tf(tr, "Passion: %s.", passionText(tr, s.Passion))
 }
 
 // skillsTable draws the skills with passion glyphs, level numbers and bars.
@@ -607,16 +614,16 @@ func (w pawnsPage) skillsTable(r gfx.Rect, v game.CandidateView, rowH float32) {
 	u := w.kit()
 	for i, s := range v.Skills {
 		row := gfx.Rect{X: r.X, Y: r.Y + pawnSkillHdrH + float32(i)*rowH, W: r.W, H: rowH}
-		w.kit().Tip(fmt.Sprintf("pawns.skill.%d", i), row, SkillTip(s))
+		w.kit().Tip(fmt.Sprintf("pawns.skill.%d", i), row, SkillTipIn(w.sh, s))
 	}
 	u.Queue(func(dst *ebiten.Image) {
 		hs := gfx.Label
 		hs.Color = uikit.Heading
 		uikit.FillRect(dst, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uikit.Btn)
 		uikit.StrokeRect(dst, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uikit.BtnBorder)
-		gfx.Text(dst, "Skill", float64(r.X+8), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
-		gfx.Text(dst, "Passion", float64(r.X+160), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
-		gfx.Text(dst, "Level", float64(r.X+240), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
+		gfx.Text(dst, w.sh.T("Skill"), float64(r.X+8), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
+		gfx.Text(dst, w.sh.T("Passion"), float64(r.X+160), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
+		gfx.Text(dst, w.sh.T("Level"), float64(r.X+240), float64(r.Y)+(pawnSkillHdrH-gfx.LineH(hs))/2, hs)
 		for i, s := range v.Skills {
 			row := gfx.Rect{X: r.X, Y: r.Y + pawnSkillHdrH + float32(i)*rowH, W: r.W, H: rowH}
 			if i%2 == 1 {
@@ -660,18 +667,18 @@ func (w pawnsPage) pawnsTeam(ng *Draft, r gfx.Rect) {
 	in := r.Inset(12)
 	hs := gfx.Large
 	hs.Color = uikit.Heading
-	w.kit().Label(in.X, in.Y, "Team", hs)
+	w.kit().Label(in.X, in.Y, w.sh.T("Team"), hs)
 	rep := ng.Pool.Team()
 	y := in.Y + float32(gfx.LineH(hs)) + 8
-	w.kit().Label(in.X, y, "Best skill among the selected", uikit.DimText())
+	w.kit().Label(in.X, y, w.sh.T("Best skill among the selected"), uikit.DimText())
 	y += 22
 	const rowH = 20
 	for i, b := range rep.Best {
 		row := gfx.Rect{X: in.X, Y: y + float32(i)*rowH, W: in.W, H: rowH}
 		who := b.Who
-		tip := b.Label + "\nBest level on the team"
+		tip := b.Label + w.sh.T("\nBest level on the team")
 		if who == "" {
-			tip += ": nobody can do this."
+			tip += w.sh.T(": nobody can do this.")
 		} else {
 			tip += ": " + who + "."
 		}
@@ -696,7 +703,7 @@ func (w pawnsPage) pawnsTeam(ng *Draft, r gfx.Rect) {
 	if len(rep.Warnings) == 0 {
 		g := gfx.Body
 		g.Color = uikit.Good
-		w.kit().Label(in.X, y, "The team has what it needs.", g)
+		w.kit().Label(in.X, y, w.sh.T("The team has what it needs."), g)
 		return
 	}
 	for _, wn := range rep.Warnings {

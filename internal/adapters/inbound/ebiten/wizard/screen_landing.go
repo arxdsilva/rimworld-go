@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/globe"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/adapters/inbound/ebiten/worldinfo"
@@ -38,7 +39,7 @@ const (
 )
 
 // LandTitle heads the screen.
-const LandTitle = "Choose your landing site"
+const LandTitle = "Choose your landing site" // keep in step with the T call in the landing draw
 
 // landGeo is the screen's rectangles.
 type landGeo struct {
@@ -209,15 +210,15 @@ func (w landingPage) landingGlobe(ng *Draft) *globe.View {
 }
 
 // tileReason is why Next is disabled for the draft's tile ("" it isn't).
-func (ng *Draft) tileReason() string {
+func (ng *Draft) tileReason(tr lang.Tr) string {
 	if ng.Planet == nil {
-		return "Generate a world first."
+		return tr.T("Generate a world first.")
 	}
 	if ng.Tile < 0 {
 		if ng.Outside {
 			return planet.ReasonOutside
 		}
-		return "Choose a landing site first."
+		return tr.T("Choose a landing site first.")
 	}
 	if ok, reason := ng.Planet.ValidLanding(ng.Tile); !ok {
 		return reason
@@ -240,14 +241,14 @@ func (w landingPage) landingUI(sw, sh int) {
 	g.SetArea(float64(geo.Globe.X), float64(geo.Globe.Y), float64(geo.Globe.W), float64(geo.Globe.H))
 
 	// The top-right controls.
-	uikit.StyledButton(w.kit(), "land.mode", geo.mode, "View: "+g.Mode().String(), uikit.BtnOpts{Tip: "View mode\nColour the globe by biome, temperature, rainfall, elevation or hilliness."},
+	uikit.StyledButton(w.kit(), "land.mode", geo.mode, w.sh.Tf("View: %s", g.Mode().Label(w.sh)), uikit.BtnOpts{Tip: w.sh.T("View mode\nColour the globe by biome, temperature, rainfall, elevation or hilliness.")},
 		func() { g.SetMode((g.Mode() + 1) % globe.NumModes) })
-	uikit.StyledButton(w.kit(), "land.legend", geo.legend, "Legend", uikit.BtnOpts{Selected: ng.Land.Legend,
-		Tip: "Legend\nWhat the colours, rivers and roads on the globe mean."}, func() { ng.Land.Legend = !ng.Land.Legend })
-	uikit.StyledButton(w.kit(), "land.grid", geo.grid, "Grid", uikit.BtnOpts{Selected: g.Grid(),
-		Tip: "Grid\nShow the tile edges once you zoom in."}, func() { g.SetGrid(!g.Grid()) })
-	uikit.StyledButton(w.kit(), "land.search", geo.search, "Search", uikit.BtnOpts{Selected: ng.Land.Search,
-		Tip: "Search\nFind a named ocean, sea, lake, mountain range, desert, forest, ice cap or settlement."}, func() { ng.Land.Search = !ng.Land.Search })
+	uikit.StyledButton(w.kit(), "land.legend", geo.legend, w.sh.T("Legend"), uikit.BtnOpts{Selected: ng.Land.Legend,
+		Tip: w.sh.T("Legend\nWhat the colours, rivers and roads on the globe mean.")}, func() { ng.Land.Legend = !ng.Land.Legend })
+	uikit.StyledButton(w.kit(), "land.grid", geo.grid, w.sh.T("Grid"), uikit.BtnOpts{Selected: g.Grid(),
+		Tip: w.sh.T("Grid\nShow the tile edges once you zoom in.")}, func() { g.SetGrid(!g.Grid()) })
+	uikit.StyledButton(w.kit(), "land.search", geo.search, w.sh.T("Search"), uikit.BtnOpts{Selected: ng.Land.Search,
+		Tip: w.sh.T("Search\nFind a named ocean, sea, lake, mountain range, desert, forest, ice cap or settlement.")}, func() { ng.Land.Search = !ng.Land.Search })
 
 	// Bottom bar.
 	w.kit().Panel(geo.bar)
@@ -335,16 +336,16 @@ func (w landingPage) landBar(ng *Draft, g *globe.View, bar gfx.Rect) {
 		x += bw + 10
 	}
 	btn(ids.WizardBack, "Back", 110, uikit.BtnOpts{}, w.back)
-	btn("land.random", "Select random site", 190, uikit.BtnOpts{Tip: "Select random site\nPick a pleasant place at random, matching your criteria if you set any. Press again for another."}, func() { w.randomLanding(ng, g) })
+	btn("land.random", "Select random site", 190, uikit.BtnOpts{Tip: w.sh.T("Select random site\nPick a pleasant place at random, matching your criteria if you set any. Press again for another.")}, func() { w.randomLanding(ng, g) })
 	x -= 10 - 2 // the caret sits against the button it belongs to
 	btn("land.filter", "v", 30, uikit.BtnOpts{Selected: ng.Land.Filter || ng.Land.Criteria.Active(),
-		Tip: "Random site criteria\nChoose biomes, temperature, terrain, rivers, coast, roads, caves and stone for Select random site."},
+		Tip: w.sh.T("Random site criteria\nChoose biomes, temperature, terrain, rivers, coast, roads, caves and stone for Select random site.")},
 		func() { ng.Land.Filter = !ng.Land.Filter })
-	btn("land.advanced", "Advanced...", 120, uikit.BtnOpts{Tip: "Advanced\nStarting season and map size."}, w.pushLandingAdvanced)
-	btn("land.factions", "Factions...", 120, uikit.BtnOpts{Tip: "Factions\nWho lives on this planet."}, func() { w.pushFactions(ng, g) })
-	reason := ng.tileReason()
+	btn("land.advanced", "Advanced...", 120, uikit.BtnOpts{Tip: w.sh.T("Advanced\nStarting season and map size.")}, w.pushLandingAdvanced)
+	btn("land.factions", "Factions...", 120, uikit.BtnOpts{Tip: w.sh.T("Factions\nWho lives on this planet.")}, func() { w.pushFactions(ng, g) })
+	reason := ng.tileReason(w.sh)
 	next := func() {
-		if ng.tileReason() == "" {
+		if ng.tileReason(w.sh) == "" {
 			w.forward()
 		}
 	}
@@ -364,9 +365,9 @@ func (w landingPage) randomLanding(ng *Draft, g *globe.View) {
 	ng.LandRolls++
 	if t < 0 {
 		if ng.Land.Criteria.Active() {
-			w.kit().Deny("No tile matches.")
+			w.kit().Deny(w.sh.T("No tile matches."))
 		} else {
-			w.kit().Deny("No tile on this world can be landed on.")
+			w.kit().Deny(w.sh.T("No tile on this world can be landed on."))
 		}
 		return
 	}
@@ -387,14 +388,14 @@ type infoBlock struct {
 func (w landingPage) landInfoPanel(ng *Draft, r gfx.Rect, tile int, uncovered bool) {
 	hs := gfx.Large
 	hs.Color = uikit.Heading
-	w.kit().Label(r.X, r.Y, "Tile info", hs)
+	w.kit().Label(r.X, r.Y, w.sh.T("Tile info"), hs)
 	body := gfx.Rect{X: r.X, Y: r.Y + float32(gfx.LineH(hs)) + 8, W: r.W, H: r.H - float32(gfx.LineH(hs)) - 8}
 	if uncovered || tile == globe.ModeUncovered {
 		w.kit().Label(body.X, body.Y, planet.ReasonOutside, uikit.DimText())
 		return
 	}
 	if tile < 0 {
-		uikit.TextLines(w.kit(), body.X, body.Y, body.W, "Click a tile on the globe to see what it is like. Drag to turn the planet, scroll to zoom.", uikit.DimText())
+		uikit.TextLines(w.kit(), body.X, body.Y, body.W, w.sh.T("Click a tile on the globe to see what it is like. Drag to turn the planet, scroll to zoom."), uikit.DimText())
 		return
 	}
 	info := w.tileInfoFor(ng, tile)
@@ -467,7 +468,7 @@ func (w landingPage) infoBlocks(ti worldinfo.TileInfo, width float32) []infoBloc
 		if ti.Difficulty != "" {
 			t := gfx.Small
 			t.Color = uikit.Warning
-			gfx.Text(dst, "Difficulty: "+ti.Difficulty, float64(r.X+58), float64(r.Y+8)+gfx.LineH(nameSt), t)
+			gfx.Text(dst, w.sh.Tf("Difficulty: %s", ti.Difficulty), float64(r.X+58), float64(r.Y+8)+gfx.LineH(nameSt), t)
 		}
 	}})
 	out = append(out, infoBlock{h: float32(len(blurbLines))*float32(gfx.LineH(gfx.Body)) + 8, draw: func(dst *ebiten.Image, r gfx.Rect) {
@@ -554,9 +555,9 @@ func (w landingPage) drawLanding(screen *ebiten.Image, sw, sh int) {
 	st.Align = gfx.AlignCenter
 	cx := float64(geo.title.X + geo.title.W/2)
 	st.Color = color.RGBA{0, 0, 0, 200}
-	gfx.Text(screen, LandTitle, cx+1.5, float64(geo.title.Y)+1.5, st)
+	gfx.Text(screen, w.sh.T("Choose your landing site"), cx+1.5, float64(geo.title.Y)+1.5, st)
 	st.Color = uikit.Heading
-	gfx.Text(screen, LandTitle, cx, float64(geo.title.Y), st)
+	gfx.Text(screen, w.sh.T("Choose your landing site"), cx, float64(geo.title.Y), st)
 }
 
 // ---- Advanced ---------------------------------------------------------------------------------
@@ -566,11 +567,11 @@ func (w landingPage) pushLandingAdvanced() {
 	opts := MapSizeOptionsFor(w.sh.Settings())
 	h := float32(uikit.ModalTitleH+uikit.ModalFooterH+2*uikit.ModalPad) + 26 + 5*uikit.RadioRowH + 40 + 26 + float32(len(opts))*uikit.RadioRowH
 	w.kit().Push(uikit.Modal{
-		ID: "land.advanced", Title: "Advanced", W: landModalW, H: h,
+		ID: "land.advanced", Title: w.sh.T("Advanced"), W: landModalW, H: h,
 		Draw: func(body gfx.Rect) { w.landingAdvancedBody(ng, body, opts) },
 		Buttons: []uikit.ModalButton{
-			{ID: "close", Label: "Close", Style: uikit.BtnPrimary, Closes: true},
-			{ID: "reset", Label: "Reset", OnClick: func() { ng.Season, ng.MapSize = -1, DefaultMapSideEnabled() }},
+			{ID: "close", Label: w.sh.T("Close"), Style: uikit.BtnPrimary, Closes: true},
+			{ID: "reset", Label: w.sh.T("Reset"), OnClick: func() { ng.Season, ng.MapSize = -1, DefaultMapSideEnabled() }},
 		},
 	})
 }
@@ -579,24 +580,24 @@ func (w landingPage) landingAdvancedBody(ng *Draft, body gfx.Rect, opts []game.M
 	hs := gfx.Label
 	hs.Color = uikit.Heading
 	y := body.Y
-	w.kit().Label(body.X, y, "Starting season", hs)
-	w.kit().Tip("land.season.tip", gfx.Rect{X: body.X, Y: y, W: body.W, H: 22}, "Starting season\nSeason the colony starts in, at this site.")
+	w.kit().Label(body.X, y, w.sh.T("Starting season"), hs)
+	w.kit().Tip("land.season.tip", gfx.Rect{X: body.X, Y: y, W: body.W, H: 22}, w.sh.T("Starting season\nSeason the colony starts in, at this site."))
 	y += 26
 	sel := ng.Season + 1
 	if w.kit().Radio("land.season", gfx.Rect{X: body.X, Y: y, W: body.W, H: 5 * uikit.RadioRowH}, append([]string{"Auto"}, seasonNames...), &sel, uikit.RadioOpts{
-		Tips: []string{"Auto\nThe first season that is already warm (" + w.units().Whole(8) + " or more) and getting warmer; otherwise the warmest one."},
+		Tips: []string{w.sh.Tf("Auto\nThe first season that is already warm (%s or more) and getting warmer; otherwise the warmest one.", w.units().Whole(8))},
 	}) {
 		ng.Season = sel - 1
 	}
 	y += 5*uikit.RadioRowH + 6
-	note := "Pick a landing site to see what Auto means there."
+	note := w.sh.T("Pick a landing site to see what Auto means there.")
 	if ng.Planet != nil && ng.Tile >= 0 {
-		note = "Auto starts this site in " + seasonNames[AutoSeason(ng.Planet.Site(ng.Tile).Climate)] + "."
+		note = w.sh.Tf("Auto starts this site in %s.", seasonNames[AutoSeason(ng.Planet.Site(ng.Tile).Climate)])
 	}
 	w.kit().Label(body.X, y, note, uikit.DimText())
 	y += 34
-	w.kit().Label(body.X, y, "Map size", hs)
-	w.kit().Tip("land.mapsize.tip", gfx.Rect{X: body.X, Y: y, W: body.W, H: 22}, "Map size\nThe side of the square local map. Bigger maps take longer to build and need a faster computer.")
+	w.kit().Label(body.X, y, w.sh.T("Map size"), hs)
+	w.kit().Tip("land.mapsize.tip", gfx.Rect{X: body.X, Y: y, W: body.W, H: 22}, w.sh.T("Map size\nThe side of the square local map. Bigger maps take longer to build and need a faster computer."))
 	y += 26
 	labels := make([]string, len(opts))
 	dis := make([]string, len(opts))

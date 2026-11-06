@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/application/game/axview"
 )
@@ -79,7 +80,10 @@ type readModels struct {
 
 // buildObjects lists every world object of r, in pick order (maps,
 // caravans, settlements, mineral sites, pods), each kind in read order.
-func buildObjects(dst []Object, r readModels) []Object {
+func buildObjects(dst []Object, r readModels) []Object { return buildObjectsIn(lang.English{}, dst, r) }
+
+// buildObjectsIn is buildObjects in the player's language.
+func buildObjectsIn(tr lang.Tr, dst []Object, r readModels) []Object {
 	dst = dst[:0]
 	on := func(t int) bool { return t >= 0 && t < r.tiles }
 	for _, m := range r.maps {
@@ -90,8 +94,8 @@ func buildObjects(dst []Object, r readModels) []Object {
 		}
 	}
 	if len(r.maps) == 0 && on(r.world.Tile) { // a game with no map list: the colony tile
-		o := newObject(KindMap, 0, r.world.Tile, "Colony")
-		o.Map = game.MapView{Label: "Colony", Kind: "colony", Tile: r.world.Tile}
+		o := newObject(KindMap, 0, r.world.Tile, tr.T("Colony"))
+		o.Map = game.MapView{Label: tr.T("Colony"), Kind: "colony", Tile: r.world.Tile}
 		dst = append(dst, o)
 	}
 	for _, c := range r.world.Caravans {
