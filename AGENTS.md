@@ -1,59 +1,40 @@
-# rimworld-go — Root AI/Contributor Instructions
+# rimworld-go — root agent instructions
 
 Read only what the current task needs.
 
-All canonical specs, rules, and agent-facing data live in [`.agents/`](.agents/README.md):
-- `.agents/specs/MASTER_SPEC.md` — product/system scope.
-- `.agents/specs/HEXAGONAL_ARCHITECTURE.md` — dependency direction, ports/adapters, repository ownership.
-- `.agents/specs/GO_BEST_PRACTICES.md` — mandatory Go engineering rules.
-- `.agents/specs/SOLID_GO.md` — SOLID applied to Go here: type, interface and package size limits, no `init()` registration, no mutable package state; enforced by `internal/arch/solid_test.go` (`make arch`), budgets in `solid_budget.txt` only shrink.
-- `.agents/specs/AI_TOKEN_OPTIMIZATION.md` — context/token discipline.
-- `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` — visual production, sprites, icons, UI chrome, and asset pipeline (load only when that work is in scope; playbook: `.agents/skills/rimworld-go-art-assets/SKILL.md`).
-- `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` — per-screen layout, navigation, commands, and states (load only when a player-facing screen is in scope; playbook: `.agents/skills/rimworld-go-ui-screens/SKILL.md`).
-- `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` — ordered vanilla gameplay feature backlog.
-- `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` — ordered player-facing UI/UX backlog.
-- `.agents/handoffs/` — per-task AI handoff records.
-- `.agents/skills/` — task playbooks; start with `.agents/skills/rimworld-go-router/SKILL.md`.
-- `.agents/specs/PARALLEL_WORK.md` — how multi-area tasks fan out to parallel subagents (playbook: `.agents/skills/parallel-work/SKILL.md`).
+## Where things are
+- `.agents/README.md` indexes every spec, checklist, gap analysis, ledger, skill, template and hook.
+- At task start, Cursor and Codex open `.agents/skills/rimworld-go-router/SKILL.md`; Claude lists the skills itself.
+- Specs are in `.agents/specs/`, the two checklists in `.agents/backlog/`, gap analyses in `.agents/gaps/`.
+- History: `.agents/handoffs/INDEX.md` and the family ledgers beside it.
+- `.cursor/` holds only `mcp.json`; `.claude/` only settings, the Explore agent and skill links.
 
-Non-negotiable rules:
+## Non-negotiables
 - Dependencies point inward: adapters → application → domain.
-- Domain must remain headless and deterministic.
-- One authoritative simulation owner; no goroutine-per-pawn/job.
-- Search before creating shared primitives or utilities: this repo, then the standard library, then well-known libraries (GO_BEST_PRACTICES §86).
-- Third-party libraries are allowed in cmd, adapters and platform, never in domain, application or pkg (enforced by internal/arch). Every module in go.mod is listed in THIRD_PARTY_NOTICES.md.
-- All external mutations enter as typed commands.
-- UI/rendering never mutates domain state directly.
-- Any code that depends on an adapter, or an adapter that depends on the application layer, must depend on a small, consumer-owned interface (the behavior it needs), never the concrete type directly — construct concrete types only at the composition root. This is SOLID's Dependency Inversion Principle; keep each such interface single-purpose per the Interface Segregation Principle. See `.agents/specs/HEXAGONAL_ARCHITECTURE.md` §6.
-- Type, interface and package size limits (`.agents/specs/SOLID_GO.md` §8: ≤40 methods per type, ≤25 fields on a type with behaviour, ≤8 methods per interface, ≤12k lines / 60 files per package) are enforced by `go test ./internal/arch/`. Never raise a line in `internal/arch/solid_budget.txt`, only lower or delete one; new features of a package at its ceiling go into a concise sub-package behind a consumer-owned host (`.agents/specs/SOLID_GO.md` §10); register nothing from `init()`; no package-level var assigned at runtime outside the documented exceptions.
+- The domain stays headless (pixels, textures, camera and animation live in presentation adapters) and deterministic.
+- One authoritative simulation owner; no goroutine per pawn or job.
+- External mutations enter as typed commands; UI and rendering never mutate domain state.
+- Code that depends on an adapter, or an adapter that depends on the application, uses a small single-purpose consumer-owned interface; concrete types are built only at the composition root (`.agents/specs/HEXAGONAL_ARCHITECTURE.md` §6).
+- Size limits (≤40 methods per type, ≤25 fields on a type with behaviour, ≤8 methods per interface, ≤12k lines or 60 files per package), no `init()` registration, no runtime-assigned package vars: `.agents/specs/SOLID_GO.md` §8–10, enforced by `make arch`. Lines in `internal/arch/solid_budget.txt` only shrink; a package at its ceiling grows through a sub-package (§10).
+- Search before creating a shared primitive: this repo, then the standard library, then a well-known library (`.agents/specs/GO_BEST_PRACTICES.md` §86).
+- Third-party libraries only in cmd, adapters and platform, never in domain, application or pkg; every `go.mod` module is in `THIRD_PARTY_NOTICES.md`.
 - No global RNG or wall-clock time in authoritative gameplay.
-- Avoid global scans; use indexes, batching, sleeping, and invalidation.
-- Animals make full decisions every 60 ticks through the bucket index (`internal/application/game/animal_index.go`, `animal_needs.go`); never scan all creatures per tick. Biome data lives in `internal/domain/world/biome`, nature-event definitions in `internal/domain/incident`.
-- Every need-, threat- or threshold-driven behaviour must start and stop at different thresholds (hysteresis), or have a minimum duration or retry cooldown, so actors don't flap between two activities. Any new one ships with a no-flap test (see `internal/application/game/sleep_test.go`).
-- View long file ranges with Read and `offset`/`limit`, not `cat` or `sed -n`, even where the harness suggests the shell: a hook (`.agents/specs/AI_TOKEN_OPTIMIZATION.md` §32a) denies shell views over 150 lines and whole-file Reads over 500. Name a `model` when spawning a `general-purpose` agent (`.agents/specs/PARALLEL_WORK.md` §6).
-- Run relevant tests and benchmarks. Tests always run with `-race` (`make test`, CI, agents, one-off `go test`); keep the suite inside CI's 10-minute `-race` budget (tests that need real art index it lazily: `realArt`/`testArt`/`atlasArt` in the ebiten package).
-- Do not weaken tests to pass CI.
-- Do not copy proprietary code, assets, text, or balancing data.
-  Exception (ENG-003, extended 2026-10-26, 2026-10-29, 2026-10-30, 2026-10-31, 2026-11-01, 2026-11-02, 2026-11-03, 2026-11-04, 2026-11-05 and 2026-11-06): the social/host-system feature set, the medical system (MED-*, `.agents/gaps/MEDICAL_GAP_ANALYSIS.md`), pawn-to-pawn care and mental breaks (SIM-061…066, `.agents/gaps/PAWN_INTERACTION_GAP_ANALYSIS.md`), beds, production and defence (BED-*, PRD-*, DEF-*, `.agents/gaps/{BEDS,PRODUCTION,DEFENCE}_GAP_ANALYSIS.md`), food production (FOOD-*, `.agents/gaps/FOOD_GAP_ANALYSIS.md`), temperature management (TEMP-*, `.agents/gaps/TEMPERATURE_GAP_ANALYSIS.md`), research (RSCH-*, `.agents/gaps/RESEARCH_GAP_ANALYSIS.md`), storage and the Architect (STK-*, AX-*, `.agents/gaps/ARCHITECT_GAP_ANALYSIS.md`), the globe and multiple maps (WG-*, MAP-*, `.agents/gaps/{WORLDGEN,MULTIMAP}_GAP_ANALYSIS.md`), power wiring (PWR-*, `.agents/gaps/POWER_GAP_ANALYSIS.md`), work priorities and harvesting (WRK-*, HRV-*, `.agents/gaps/{WORK_PRIORITIES,HARVEST}_GAP_ANALYSIS.md`), shooting, mining and rescue (SHT-*, MIN-*, RSC-*, `.agents/gaps/{SHOOTING,MINING,RESCUE}_GAP_ANALYSIS.md`), and the gear tab, outfits and ailments (GEAR-*, OUT-*, AIL-*, `.agents/gaps/{GEAR,AILMENTS}_GAP_ANALYSIS.md`) use published RimWorld wiki numbers by explicit user decision; names and prose stay original.
-  The Neat Storage furniture set (NST-*, `.agents/gaps/NEAT_STORAGE_GAP_ANALYSIS.md`) uses the mod's published sizes and per-cell capacities by explicit user decision (2026-11-03); its costs, filters and looks are our own. RimHUD (RHUD-*, `.agents/gaps/RIMHUD_GAP_ANALYSIS.md`) and Common Sense (CSE-*, `.agents/gaps/COMMON_SENSE_GAP_ANALYSIS.md`) reimplement behaviour only: their repositories have no license, so no code, text, names or colours enter this repo.
-- Remove unused assets and resources in the same change that makes them unused: sprites, sounds, fonts, metadata, palette entries, vendor packs, generated files and their loaders. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it; delete it in the change that removes the last reader. `make art-check` fails on orphans not listed with a reason in `assets/metadata/orphan_allow.txt`.
+- No global scans: use indexes, batching, sleeping and invalidation.
+- Animals decide every 60 ticks through the bucket index (`internal/application/game/animal_index.go`, `animal_needs.go`), never a per-tick scan of all creatures (skill `rimworld-go-ai-jobs`, which also locates biome and nature-event data).
+- Need-, threat- and threshold-driven behaviour starts and stops at different thresholds (or has a minimum duration or retry cooldown) and ships with a no-flap test (`internal/application/game/sleep_test.go`).
+- Run the relevant tests and benchmarks, always with `-race` (`make test`, CI, one-off `go test`), inside CI's 10-minute `-race` budget; tests needing real art index it lazily (`realArt`/`testArt`/`atlasArt`). Never weaken a test to pass CI.
+- No proprietary code, assets, text or balance data; the user-approved exceptions are in `.agents/specs/CLEAN_ROOM.md`.
+- Remove unused assets, resources and their loaders in the change that makes them unused (no fallback nobody draws; an alias lives only while something reads it); `make art-check` fails on orphans not listed with a reason in `assets/metadata/orphan_allow.txt` (ART §25).
 - Grass and plants (ground plants, bushes, crops, trees) never have a contour or outline.
-- Every scoped task must leave a concise handoff in `.agents/handoffs/`.
-- Multi-area tasks follow `.agents/specs/PARALLEL_WORK.md` (skill `parallel-work`): contract first, disjoint file ownership, lead-only shared config, phased verification; and every plan for such a task includes its Parallel workers section (waves, agent tables with models, owned and forbidden files, tests, gates, and a short scope block per agent: goal, entry points, behaviour, done when, out) before it is presented, with every line earning its place (PARALLEL_WORK §0); at most 30 agents run at once, a ceiling bounded by `make agent-budget` (§5); reuse agents before spawning new ones and stop each one once its work is committed (PARALLEL_WORK §5a).
-- Whenever work satisfies (fully or partially) an item in `.agents/backlog/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md`, or `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.
-- Any newly implemented domain/application behavior that is player-observable per `.agents/specs/MASTER_SPEC.md` or `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` must ship with a corresponding HUD/UI representation (read-only, via `Snapshot()`/read models, never a direct domain reference) in the same change. If that representation is a named screen, follow `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` via skill `rimworld-go-ui-screens`. If no sensible on-screen representation exists yet (e.g. a pure internal primitive with no player-facing effect), state why in the handoff instead of adding one.
-- Player-facing screens, windows, overlays, HUD layout, and navigation must follow `.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` via skill `rimworld-go-ui-screens`. Load only the sections that skill names for the screen. Use `.agents/backlog/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` for ordered backlog/acceptance. Screens consume read models and emit typed commands; they never mutate domain state. Skip that spec for headless simulation-only work with no screen.
-- Every new or changed animal/creature follows skill `rimworld-go-creatures` (`.agents/skills/rimworld-go-creatures/SKILL.md`): roster row in Go and the art mirror, rig art with full sprite set, and **all four generated sounds** (`call`, `attack`, `hurt`, `die`) through `cmd/sfxgen`, with the local MOSS-SoundEffect backend by default (user decision 2026-10-31) and ElevenLabs only with user-approved spending — never ship a creature silent, on placeholder voices only, or as a copy of a RimWorld-invented creature.
-- Player-visible sprites, icons, UI chrome, renderer presentation, palettes, pivots, atlases, and asset-pipeline tooling must follow `.agents/specs/ART_DIRECTION_AND_ASSET_PIPELINE.md` via skill `rimworld-go-art-assets`. Load only the sections that skill names for the asset family. Domain stays headless: pixels, texture handles, camera, and animation stay in presentation adapters. Never trace, extract, or reconstruct proprietary RimWorld art. Skip that spec for headless simulation-only work with no visual output.
+- When work meets an item in a `.agents/backlog/` checklist, the art spec or the screens spec, update its checkbox in the same change: `[x]` all acceptance criteria met, `[-]` partial (note what is missing), `[!]` blocked (note why).
+- Player-observable behaviour ships with a read-only HUD/UI representation (via `Snapshot()`/read models) in the same change, or the handoff says why none exists (`.agents/specs/MAIN_UI_SCREENS_SPECIFICATION.md` §0).
+- Screens, windows, overlays and HUD go through skill `rimworld-go-ui-screens`; sprites, icons, UI chrome, palettes and asset tooling through `rimworld-go-art-assets`; every new or changed creature through `rimworld-go-creatures` (all four generated sounds, local MOSS by default, ElevenLabs only with approved spending).
+- Multi-area tasks follow `.agents/specs/PARALLEL_WORK.md`: every plan has its Parallel workers section (§0); contract first, disjoint file ownership, lead-only shared config; at most 30 agents, bounded by `make agent-budget` (§5); reuse agents, stop each once its work is committed (§5a).
+- Every scoped task appends one section to its family ledger in `.agents/handoffs/` and one row to `INDEX.md` (`.agents/templates/HANDOFF.md`).
+- Read long files with Read `offset`/`limit`; a hook denies shell views over 150 lines and whole-file Reads over 500 (`.agents/specs/AI_TOKEN_OPTIMIZATION.md` §32a). Name a `model` when spawning a `general-purpose` agent (`PARALLEL_WORK.md` §6).
 
-## Repository-specific override: commits
-
-In this repository only, the global rule forbidding agents from running `git add`/`git commit` does not apply. Agents may stage and commit their own changes here, following the message style and safety rules in the global git workflow guidance (no `--force`, no `--no-verify`, no rewriting published history, never push without explicit request).
-
-## Repository-specific override: work on `main`
-
-This repository has a single developer (arxdsilva). All work happens directly on `main`: do not create feature branches, worktrees (`isolation: "worktree"`), or pull requests unless the user asks for one. This overrides any "branch first when on the default branch" guidance. Parallel subagents (`.agents/specs/PARALLEL_WORK.md`) share the main checkout with disjoint file ownership. Pushing and tagging still need an explicit request.
-
-## Releases
-
-Pushing a `v*` tag (`git tag v0.1.0 && git push origin v0.1.0`) runs `.github/workflows/release.yml`. The workflow tests the code, then builds Linux (amd64), Windows (amd64, no cgo) and macOS (universal arm64+amd64, cgo) binaries. Each binary is packaged by `scripts/package_release.sh` with the runtime assets. GoReleaser (`.goreleaser.yaml`) then publishes the archives as a GitHub release, with checksums and a changelog grouped by commit type from the previous tag, followed by the commit bodies (`scripts/release_details.sh`), so write commit messages for the people reading the release; a tag with a `-` (e.g. `v0.2.0-rc1`) becomes a prerelease. The binary finds `assets/` next to itself (`internal/platform/assetroot`), and the menu shows the version from `-ldflags "-X main.version=<tag>"`. Any new runtime asset directory must be added to the packaging script. The notes start at the last tag that has a published release (`scripts/previous_release.sh`), so a tag whose workflow failed loses nothing. Both workflows test through `scripts/ci_test.sh`, which publishes what failed and the slowest test binaries as annotations, readable without a login (job logs are not): `https://api.github.com/repos/arxdsilva/rimworld-go/check-runs/<job id>/annotations`.
+## Repository overrides
+- Agents may stage and commit their own changes here (no `--force`, no `--no-verify`, no rewriting published history). While agents share the checkout, commit with `git commit -m … -- <paths>`.
+- Never add Co-Authored-By or Generated-with trailers to commits or PRs.
+- All work happens on `main`: no branches, worktrees (`isolation: "worktree"`) or pull requests unless the user asks. Push and tag only on explicit request.
+- Releases (tags, packaging, release notes from commit bodies): `.agents/specs/RELEASES.md`.
