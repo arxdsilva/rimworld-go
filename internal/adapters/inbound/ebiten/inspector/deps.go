@@ -147,6 +147,13 @@ type Labels interface {
 	Traits(x, y, w float32, v game.CandidateView) float32
 }
 
+// Words are the labels the root owns and the catalog that translates the
+// inspector's text.
+type Words interface {
+	Labels
+	ports.Texts
+}
+
 // Shell composes the roles the inspector calls with its Host, the other
 // features and the labels.
 type Shell interface {
@@ -157,8 +164,7 @@ type Shell interface {
 	ports.Widgets
 	Host
 	Peers
-	Labels
-	ports.Texts
+	Words
 }
 
 // Producer is what the inspector shows for one selection kind: its pane
