@@ -714,6 +714,7 @@ var orderWork = map[command.Order]work.Type{
 	command.OrderFlick:       work.Construct, // PLAY-021: flicking is construction work
 	command.OrderSupply:      work.Haul,
 	command.OrderHaul:        work.Haul,
+	command.OrderRefuel:      work.Haul,
 	command.OrderHarvest:     work.Grow,
 	command.OrderSow:         work.Grow,
 	command.OrderCut:         work.PlantCut, // FOOD-2

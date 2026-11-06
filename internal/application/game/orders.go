@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/application/game/care"
 	"rimworld-go/internal/application/game/combat"
 	"rimworld-go/internal/application/game/haul"
+	"rimworld-go/internal/application/game/industry"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
@@ -57,10 +58,7 @@ const (
 func (g *Game) drafted(id entity.EntityID) bool { return g.draft[id] }
 
 func (g *Game) setDraft(id entity.EntityID, on bool) {
-	if !g.alive(id) {
-		return
-	}
-	if g.draft[id] == on {
+	if !g.alive(id) || g.draft[id] == on {
 		return
 	}
 	g.interrupt(id, job.Cancelled)
@@ -208,6 +206,13 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 			return job.Record{}, r
 		}
 		return job.Record{Kind: job.Cut, Target: pid, TX: x, TY: y, WorkLeft: plant.DefOf(p.Species).CutWork}, ""
+	case command.OrderRefuel:
+		bid := g.layerBldgAt(x, y, layer)
+		b, ok := g.bldgs.Get(bid)
+		if why := industry.Gate(b, ok, m.Enabled(work.Haul), g.busyBy(id, bid)); why != "" {
+			return job.Record{}, why // the burner's half-tank threshold and NoAutoRefuel don't apply
+		}
+		return industry.Plan(refuelHost{g}, id, bid)
 	case command.OrderSmooth:
 		return g.forcedSmooth(id, x, y, m.Enabled(work.Construct)) // smooth.go
 	case command.OrderMine:
@@ -321,11 +326,9 @@ func (g *Game) busyBy(id, target entity.EntityID) string {
 	return ""
 }
 
-func (g *Game) nearestFree(id entity.EntityID, match func(item.Kind) bool) (entity.EntityID, int, int) {
+func (g *Game) nearestFree(id entity.EntityID, match func(item.Kind) bool) (best entity.EntityID, bx, by int) {
 	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
 	bestD := 1 << 30
-	var bx, by int
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
 		if !ok || !match(st.Kind) || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
@@ -432,7 +435,9 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		rec = planGather(g, id, rec, st)
 	}
 	rec.Forced = true
-	g.startJob(id, rec)
+	if g.startJob(id, rec) && o == command.OrderRefuel {
+		g.reserve.TryEntity(id, rec.Dest) // as assignRefuel holds its burner
+	}
 }
 
 // OrdersAt lists what pawn id can be told to do at (x, y): "Go here"
@@ -470,7 +475,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			switch o {
 			case command.OrderDeconstruct:
 				tx, ty = g.workSpot(pawn, x, y)
-			case command.OrderMine, command.OrderSmooth, command.OrderTrade, command.OrderUseComms:
+			case command.OrderMine, command.OrderSmooth, command.OrderRefuel, command.OrderTrade, command.OrderUseComms:
 				tx, ty = -1, -1 // forcedJob already checked a reachable spot (PLAY-024: beside the trader, the console's spot)
 			}
 			if tx >= 0 && !g.reachable(pawn, tx, ty) {
@@ -502,6 +507,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			}
 			if b.Kind.Sleeps() {
 				add("Sleep in "+b.Kind.String(), command.OrderSleep, layer)
+			}
+			if industry.Controllable(b) {
+				add("Prioritize refueling "+b.Kind.String(), command.OrderRefuel, layer)
 			}
 			if g.flickAt(x, y) == bid { // power_flick.go: a pending power switch or toggle (PLAY-021)
 				add("Flick "+b.Kind.String(), command.OrderFlick, layer)

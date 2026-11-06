@@ -19,6 +19,8 @@ const (
 	RefuseFull        = "already full"
 	RefuseNoFuel      = "no free " // followed by the fuel's name
 	RefuseUnreachable = "cannot reach"
+	RefuseGone        = "no longer there"  // game.ReasonGone
+	RefuseNoHaul      = "hauling disabled" // game.ReasonNoHaul
 )
 
 // RefuelHost is what planning a refuel reads from the simulation.
@@ -45,6 +47,19 @@ type RefuelHost interface {
 func Controllable(b construction.Building) bool {
 	_, ok := FuelSpec(b.Kind)
 	return ok && b.Kind != construction.FishTank && !b.Hostile
+}
+
+// Gate is why a player's refuel order on b is refused before planning: the
+// burner is gone or not controllable, hauling is off for the pawn, or busy
+// (another pawn's claim, "" if free). Its words are the game's order reasons.
+func Gate(b construction.Building, found, haulOn bool, busy string) string {
+	switch {
+	case !found || !Controllable(b):
+		return RefuseGone
+	case !haulOn:
+		return RefuseNoHaul
+	}
+	return busy
 }
 
 // RefuelWork is the work a hauler spends feeding a burner once there.

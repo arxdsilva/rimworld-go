@@ -258,6 +258,11 @@ func TestOrdersAtReasons(t *testing.T) {
 	if o := g.OrdersAt(id, 3, 0)[0]; !o.Disabled || o.Reason != ReasonBlocked {
 		t.Fatalf("go here on blocked: %+v", o)
 	}
+	placeFuel(t, g, construction.Campfire, 6, 1) // REF-1: a burner row, enabled with the wood about
+	g.Step(1)
+	if o := g.OrdersAt(id, 6, 1); len(o) != 2 || o[1].Cmd.Order != command.OrderRefuel || o[1].Disabled {
+		t.Fatalf("refuel row: %+v", o)
+	}
 }
 
 func TestBuildablesMatchCatalog(t *testing.T) {
