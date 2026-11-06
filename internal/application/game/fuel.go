@@ -188,7 +188,7 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 			continue
 		}
 		spec, ok := fuelSpec(b.Kind)
-		if !ok || b.Deconstruct || g.fuel[bid] >= spec.Below {
+		if !ok || b.Deconstruct || b.NoAutoRefuel || b.Hostile || g.fuel[bid] >= spec.Below { // REF-1/13: switched off, or a hostile settlement's
 			continue
 		}
 		if b.Kind == construction.FishTank && (g.tanks == nil || !g.tanks.WantsFeed(bid)) {

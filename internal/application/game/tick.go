@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/application/game/furnish"
 	"rimworld-go/internal/application/game/haul"
+	"rimworld-go/internal/application/game/industry"
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
@@ -176,6 +177,11 @@ func (g *Game) applyOne(c command.Command) {
 		g.setTroughFilter(entity.EntityID(c.Target), c.Mode)
 	case command.CancelFrame:
 		g.cancelFrame(entity.EntityID(c.Target)) // frame_view.go
+	case command.SetAutoRefuel: // REF-1: a burner's Auto refuel switch; fish tanks, beds, hostile burners ignore it
+		if b, ok := g.bldgs.Get(entity.EntityID(c.Target)); ok && industry.Controllable(b) {
+			b.NoAutoRefuel, g.viewGen = !c.Enabled, g.viewGen+1
+			g.bldgs.Set(entity.EntityID(c.Target), b)
+		}
 	case command.SetForbidden:
 		g.setForbidden(entity.EntityID(c.Target), c.Enabled) // forbid.go
 	case command.DesignateForbid:
