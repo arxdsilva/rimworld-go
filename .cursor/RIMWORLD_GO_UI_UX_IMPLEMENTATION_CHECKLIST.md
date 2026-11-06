@@ -757,15 +757,15 @@ understandable.
     -   quality.
     -   condition.
     -   key combat stats.
--   [-] **Worn apparel** (BED/PRD-2, DEF-2: gear tab lists each worn piece with stuff, quality, condition flags and armor lines; layer coverage not drawn)
+-   [x] **Worn apparel** (BED/PRD-2, DEF-2; GEAR-2: rows in layer order with sprite, quality, HP %, mass, locked and tainted marks; the tooltip lists armour, insulation, layer and body cover)
     -   Layer/body coverage.
     -   armor.
     -   insulation.
     -   quality.
     -   condition.
--   [ ] **Inventory**
+-   [x] **Inventory** (GEAR-2: the pack section, "Name xQty" and mass per row, with Drop, Eat/Take and Info)
     -   Carried items and quantities.
--   [ ] **Carrying mass/capacity if relevant**
+-   [x] **Carrying mass/capacity if relevant** (GEAR-1/2: "Mass carried X / Y kg" over weapon, spare, apparel and pack against 75 kg × Manipulation × body size, warning colour when over; the pack's own limit on its line)
 
 ## 12.2 Gear actions
 
@@ -773,17 +773,17 @@ understandable.
 -   [x] **Equip**
 -   [x] **Gear tab combat additions** (CBT-3/CBT-5: weapon quality and stuff, spare weapon, kills and damage, shield charge bar, smokepop Use button, threat response control)
 -   [x] **Staggered status** (CBT-1: `Staggered` on `PawnView` and `AnimalView`; Health tab names stab and gunshot wounds)
--   [ ] **Wear**
--   [ ] **Consume/use where valid**
--   [ ] **Inspect item**
+-   [x] **Wear** (the item pane's Wear and Equip nearby; GEAR-011 keeps it there, as the Gear tab lists only what is carried)
+-   [x] **Consume/use where valid** (GEAR-1/2: Eat or Take on pack food and drugs sends `ConsumeFromPack`; refused with the reason when full, the drug policy forbids it, downed or in a mental break)
+-   [x] **Inspect item** (GEAR-2: the Info window from every Gear row and the item pane's Info button, `ports.OpenInfoCard`)
 
 ## 12.3 Combat-stat tooltips
 
 -   [x] **Weapon accuracy/range/warmup/cooldown** (DEF-2: gear tab WeaponStats lines)
 -   [x] **Melee damage/cooldown** (CBT-5: gear tab tooltip for melee and ranged damage and cooldown; gun-stock blows carry the gun's name)
 -   [x] **Armor by damage category** (DEF-2: gear tab ApparelArmor lines (sharp, blunt, heat))
--   [-] **Temperature insulation** (TEMP-4: the inspector's comfort range sums every worn layer's wiki insulation; the naked thought shows in the mood list; TEMP-5: the gear tab lists garments by layer, skin to outer; missing: per-garment insulation lines)
--   [ ] **Movement/work penalties from gear**
+-   [x] **Temperature insulation** (TEMP-4: the inspector's comfort range sums every worn layer's wiki insulation; the naked thought shows in the mood list; TEMP-5: the gear tab lists garments by layer, skin to outer; GEAR-2: each garment's tooltip and the Info window give its insulation)
+-   [x] **Movement/work penalties from gear** (GEAR-1: wiki move offsets for flak and plate armour slow the wearer through the stat sheet; the tab's summary and each garment's tooltip show the move offset; vanilla apparel here carries no work penalty)
 
 ------------------------------------------------------------------------
 
@@ -994,7 +994,7 @@ This screen centralizes per-pawn behavioral policies.
 
 -   [ ] **Pawn rows**
 -   [ ] **Food restriction**
--   [ ] **Apparel policy**
+-   [x] **Apparel policy** (OUT-003/005, GEAR-3: an Apparel column on the Assign tab, click to cycle and drag to paint, a default for new colonists, Clear forced per row)
 -   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy manager)
 -   [ ] **Medical care**
 -   [x] **Allowed area where chosen UX places it** (SIM-046: Assign tab)
@@ -1017,10 +1017,10 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 17.4 Apparel policy editor
 
--   [ ] **Allowed apparel**
--   [ ] **Quality range**
--   [ ] **Condition range**
--   [ ] **Tainted allowance**
+-   [x] **Allowed apparel** (OUT-001/002, GEAR-3: the editor opened from the Apparel header lists, creates, copies, renames and deletes policies, with a tree of apparel kinds and a materials list)
+-   [x] **Quality range** (GEAR-3: low and high sliders)
+-   [x] **Condition range** (GEAR-3: HP low and high sliders)
+-   [x] **Tainted allowance** (GEAR-3: the tainted check)
 -   [ ] **Automatic replacement behavior explanation**
 
 ## 17.5 Drug policy editor
@@ -1660,7 +1660,7 @@ the player what just happened and what requires attention.
 
 -   [ ] **Small non-blocking autosave indicator**
 -   [ ] **Autosave failure alert**
--   [ ] **Rotating autosave configuration**
+-   [x] **Rotating autosave configuration** (OPT-006: Options › General "Autosaves kept" 1–25; `<slot>-autosave-1…N`, oldest overwritten; Load lists them all, paged)
 
 ------------------------------------------------------------------------
 
@@ -1668,7 +1668,7 @@ the player what just happened and what requires attention.
 
 ## 34.1 Graphics
 
--   [ ] **Resolution/window mode**
+-   [x] **Resolution/window mode** (OPT-029: Options › Graphics window size presets and borderless fullscreen, applied live)
 -   [x] **VSync/frame cap** (VSync toggle, on by default since PERF-003; PERF-002: Frame cap 60 / 120 / 144 / Off in Options › Graphics, 120 on every display by default, paced in the client)
 -   [x] **UI scale** (UI-024: Options › Accessibility, Auto (follows the window, 1280×720 = 100 %) or 75–200 %, applies live)
 -   [x] **Rendering quality toggles** (PLAY-019: Quality High/Medium/Low/Custom picked from the hardware at the first start, Detect again; Shadows, Lighting, Water, Grass rows applied live; the player's own changes always kept)
@@ -1676,25 +1676,25 @@ the player what just happened and what requires attention.
 -   [x] **World render scale** (PERF-002: Full / 3/4 / Half of the physical pixels; HUD and text native; preset High Full, Medium 3/4 on 2× displays)
 -   [x] **Performance overlay** (PERF-002: Options › Graphics toggle; fps, 1 % low, frame, update and draw time, sim rate and held ticks, heap and GC rate, a frame-time sparkline, by the resource list; also with the UI hidden)
 -   [x] **Hardware check** (PLAY-019: RAM and cores read once at startup; a low-memory notice on the main menu and per-size memory warnings in the new-game wizard; warns only)
--   [ ] **Far-zoom detail**
+-   [x] **Far-zoom detail** (OPT-016: Options › Interface far-zoom pawns, none, hostiles or all, drawn as dots, silhouettes or both at the map tier)
 
 ## 34.2 Audio
 
--   [ ] **Master**
--   [ ] **Music**
--   [ ] **Effects**
--   [ ] **Ambient**
--   [ ] **UI**
+-   [x] **Master** (Options › Audio volume sliders, saved in settings.json; OPT-034: shipped before, ticked now)
+-   [x] **Music**
+-   [x] **Effects**
+-   [x] **Ambient**
+-   [x] **UI**
 
 ## 34.3 Gameplay
 
--   [x] **Pause on threat** (Options › Gameplay, on by default; PLAY-017: animal chases trigger it)
+-   [x] **Pause on threat** (Options › General "Automatic pause": Never, Major threat (the default), Any threat or Any letter, OPT-005; PLAY-017: animal chases trigger it)
 -   [x] **Run in background** (PLAY-017: Options › Gameplay; off pauses the colony while the window is away, on keeps it running at a capped frame rate)
 -   [x] **Share detailed usage data** (Options › Gameplay, on by default; `usagehttp`, see the README's "What data the game sends")
--   [ ] **Autosave interval**
--   [ ] **Default speed behavior**
--   [ ] **Edge scrolling**
--   [ ] **Confirmation preferences**
+-   [x] **Autosave interval** (Options › Gameplay; OPT-034: shipped before, ticked now)
+-   [x] **Default speed behavior** (OPT-004 pause on load; OPT-020 speed after unpausing, Normal or the last speed)
+-   [x] **Edge scrolling** (Options › Gameplay; OPT-034: shipped before, ticked now)
+-   [x] **Confirmation preferences** (OPT-019: Options › Interface; deconstruct and releasing an animal ask first)
 -   [x] **Tutorial/learning helper** (PLAY-018: Options › Gameplay "Learning helper" with Reset lessons)
 
 ## 34.4 Controls
@@ -1706,12 +1706,12 @@ the player what just happened and what requires attention.
 
 ## 34.5 Accessibility
 
--   [ ] **UI scaling**
+-   [x] **UI scaling** (UI-024: see 34.1)
 -   [ ] **Color-independent state indicators**
--   [ ] **Color-vision-friendly palette option**
--   [ ] **Reduced flashing/effects**
--   [-] **Text size** (text scales with the UI scale (UI-024); no separate text-size setting)
--   [ ] **Tooltip delay**
+-   [-] **Color-vision-friendly palette option** (OPT-018: Options › Accessibility Normal, Deuteranopia, Protanopia or Tritanopia; the kit's buttons and status colours follow it; missing: mood, letter and alert colours outside the kit)
+-   [x] **Reduced flashing/effects** (Reduced motion and the Effects density; OPT-027 screen shake 0–200 %, off with Reduced motion)
+-   [x] **Text size** (text scales with the UI scale (UI-024); OPT-009 Options › Accessibility "Larger small text" raises the small face from 11 to 13)
+-   [x] **Tooltip delay** (OPT-017: Options › Accessibility)
 -   [ ] **Pause-friendly interaction**
 -   [ ] **Keyboard navigation where practical**
 
@@ -2105,7 +2105,7 @@ Complete:
 -   [ ] Needs/mood.
 -   [ ] Health.
 -   [ ] Character/skills.
--   [ ] Gear.
+-   [x] Gear. (GEAR-001…012: see 12.1–12.3)
 -   [ ] Social.
 -   [x] Prisoner basics. (SIM-045)
 -   [ ] Alerts/messages.

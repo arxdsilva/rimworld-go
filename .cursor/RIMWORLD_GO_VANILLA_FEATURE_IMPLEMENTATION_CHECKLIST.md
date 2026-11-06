@@ -196,7 +196,7 @@ The first playable surface.
     -   Position.
     -   Basic description.
     -   Context-sensitive tabs supplied by entity capabilities.
--   [-] **Pawn inspect panel** (name, job/activity, food/rest, drafted state + Draft button; no mood/gear/skills/social)
+-   [-] **Pawn inspect panel** (name, job/activity, food/rest, drafted state + Draft button; Gear and Social tabs since (GEAR-2, UI-022); no mood/skills)
     -   Name.
     -   Current job/activity.
     -   Draft status.
@@ -1340,7 +1340,7 @@ treatment, and surgery are major colony-management systems.
     -   Conflicting body layers/slots cannot be worn together.
 -   [x] **Apparel deterioration** (PRD-2: worn pieces lose 1 HP on 40 % of days; ratty at 50 % HP, tattered under 20 %)
     -   Worn apparel can lose condition.
--   [-] **Apparel policy** (PLAY-017: colonists change straight into the best outfit for their comfortable range, before work and by dropping interruptible work, with a 1 C dead band and a per-slot cooldown; TEMP-4: every layer (`craft/dress.go`), covered before naked, nothing taken off just to spare insulation; a Wear order keeps its slot; changes logged on the colonist; no player policy screen)
+-   [x] **Apparel policy** (PLAY-017: colonists change straight into the best outfit for their comfortable range, before work and by dropping interruptible work, with a 1 C dead band and a per-slot cooldown; TEMP-4: every layer (`craft/dress.go`), covered before naked, nothing taken off just to spare insulation; a Wear order keeps its slot; changes logged on the colonist; OUT-001…005: named apparel policies (Anything, Worker, Soldier, Nudist and the player's own) filter kind, material, HP, quality and tainted; auto-dress keeps to the policy, takes off a refused garment one slot per check under the slot cooldown, never a forced one; the Assign tab's Apparel column and editor)
     -   Allowed categories.
     -   minimum condition.
     -   quality filters.
@@ -2119,7 +2119,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Food restriction policy** (FOOD-4/FOOD-5: policies Lavish, Fine, Simple, Paste, Raw, Nothing and an Animal feed default for tame animals; Assign tab Food column and policy editor; `SetFoodPolicy` / `EditFoodPolicy`; food search respects them)
     -   Allowed food categories/items.
     -   Pawn food search respects policy.
--   [ ] **Apparel policy**
+-   [x] **Apparel policy** (OUT-001…005, GEAR-3: Assign tab Apparel column, default for new colonists, Clear forced, policy editor; `SetApparelPolicy` / `EditApparelPolicy` / `ClearForcedApparel`)
     -   Already implemented functionally; expose colony-wide policy
         editor.
 -   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy editor)
@@ -2491,7 +2491,7 @@ STK-AG: every core vanilla item has a card in its vanilla category (`.cursor/ARC
 
 -   [ ] **Needs**
 -   [-] **Health** (SIM-039/UI-022: Health tab live)
--   [ ] **Gear**
+-   [x] **Gear** (GEAR-001…012: summary of mass, comfort, overall armour and move speed; equipment, apparel and pack rows with Info, Drop, Lock and Eat; prisoners may drop, guests read only)
 -   [x] **Social** (UI-022: Social tab live)
 -   [ ] **Character/bio**
 -   [ ] **Records**
