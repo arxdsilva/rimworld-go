@@ -13,6 +13,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/hud"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
+	"rimworld-go/internal/adapters/inbound/ebiten/infocard"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
@@ -434,7 +435,7 @@ func (s shellDispatch) Do(it ports.Intent) {
 	case ports.CloseWorld:
 		a.world.Close()
 	case ports.OpenInfoCard:
-		// GEAR-006 contract: the Info window (W2-INFO) handles it.
+		infocard.New(a.shell).Open(it) // GEAR-006: a kit modal over the map, no state of its own
 	case ports.Push:
 		a.apply(intent{kind: intentPush, screen: it.Screen})
 	case ports.Back:
