@@ -1,5 +1,5 @@
 // Package axview is the AX-0 contract's read-model fields (every vanilla
-// Architect item, .agents/handoffs/AX-0-contract.md): one struct per game
+// Architect item, .agents/handoffs/AX.md#ax-0-contract): one struct per game
 // view, carried as its AX field (game.BuildingView.AX and so on), so the
 // AX owners fill and read their own fields without editing game.go. Every
 // field is zero until its owner fills it; each names its owner. Building

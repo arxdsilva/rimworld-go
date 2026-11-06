@@ -1,6 +1,6 @@
 # Ailments gap analysis (AIL-*)
 
-Scope: the conditions that build up and fade on their own or with care (exposure, disease, infection, food poisoning, toxins, malnutrition, blood loss), checked for two things: that they match their wiki pages, and that no state can hold a pawn down forever. Load only for AIL-* tasks. Handoffs go in `.agents/handoffs/AIL-N-*.md`. The numbers already live in `TEMPERATURE_GAP_ANALYSIS.md` (TEMP-3) and `MEDICAL_GAP_ANALYSIS.md` (MED-02, MED-04); this document holds only what is still different.
+Scope: the conditions that build up and fade on their own or with care (exposure, disease, infection, food poisoning, toxins, malnutrition, blood loss), checked for two things: that they match their wiki pages, and that no state can hold a pawn down forever. Load only for AIL-* tasks. Handoffs are sections of `.agents/handoffs/MED.md`. The numbers already live in `TEMPERATURE_GAP_ANALYSIS.md` (TEMP-3) and `MEDICAL_GAP_ANALYSIS.md` (MED-02, MED-04); this document holds only what is still different.
 
 ## Decision record
 

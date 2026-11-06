@@ -8,7 +8,7 @@ import (
 	"rimworld-go/pkg/mathx"
 )
 
-// Crossings (MAPGEN-3, .agents/handoffs/_plans/PLAY014_PLAN.md §3.3): where a road crosses
+// Crossings (MAPGEN-3, .agents/handoffs/PLAY.md#play014_plan §3.3): where a road crosses
 // river or lake water it crosses on an old wooden bridge, a straight strip
 // two cells wide from the last dry bank cell to the first, so it reads as
 // road, planks, road. The strip runs along the map axis nearest the

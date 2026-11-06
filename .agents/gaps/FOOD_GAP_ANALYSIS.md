@@ -1,6 +1,6 @@
 # Food production gap analysis (FOOD-0..FOOD-5)
 
-Scope: growing, animals and butchering, cooking, preservation, eating, and hunger and malnutrition, vanilla core only (no DLC). Load only for FOOD-* tasks. Phase handoffs go in `.agents/handoffs/FOOD-N-*.md`. The loops exist (zones, sowing, harvest, hunting, milk and eggs, recipes, rot, eating, poisoning, starvation), but the numbers and many mechanics are not vanilla. Sister documents: `PRODUCTION_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
+Scope: growing, animals and butchering, cooking, preservation, eating, and hunger and malnutrition, vanilla core only (no DLC). Load only for FOOD-* tasks. Phase handoffs are sections of `.agents/handoffs/FOOD.md`. The loops exist (zones, sowing, harvest, hunting, milk and eggs, recipes, rot, eating, poisoning, starvation), but the numbers and many mechanics are not vanilla. Sister documents: `PRODUCTION_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
 
 ## Status (2026-10-31)
 
@@ -9,12 +9,12 @@ All phases FOOD-0 to FOOD-6 are done (FOOD-1 to FOOD-3 wave 1, FOOD-4 and FOOD-5
 | Phase | Delivers | State |
 |---|---|---|
 | FOOD-0 | This analysis; ENG-003 extended; inert contract (kinds, species, buildings, commands); stale checklist rows corrected | done |
-| FOOD-1 | Nutrition and hunger: vanilla 1.0 / 0.9 / 0.05 scale, 1.6 per day, saturation bands, eating at 30 %, malnutrition, animal hunger by size and age | done (wave 1, 2026-10-30; `handoffs/FOOD-1-nutrition-and-hunger.md`) |
-| FOOD-2 | Growing: rice, strawberries, haygrass, hops; wiki growth model; partial harvest; lifespan; hydroponics and sun lamp; blight; trees; wild plants; Plant cutting work type | done (wave 1, 2026-10-30; `handoffs/FOOD-2-growing.md`) |
-| FOOD-3 | Animals: butchering formula, meat kinds, human and insect meat, slaughter job, auto-slaughter, per-species products, taming cost, hunter carry, egg and milk eating | done (wave 1, 2026-10-30; `handoffs/FOOD-3-animals-butchering.md`) |
-| FOOD-4 | Cooking and eating: food policies, nutrition recipes, batch bills, ingredients, moods, choice, poisoning, fed patients, deterioration, stove fuel, bench temperature | done (wave 2, 2026-10-30; `handoffs/FOOD-4-cooking-eating.md`) |
-| FOOD-5 | UI: policy tab, animals columns, days of food, fertility overlay, plant and building panes, tooltips | done (wave 2, 2026-10-30; `handoffs/FOOD-5-food-ui.md`) |
-| FOOD-6 | Close-out: pawn food health, growing-zone roof rule, butcher table, breeding values, eclipse and toxic fallout, binge and eating time, rot bar and sky UI, year proof | done (2026-10-31; `handoffs/FOOD-6-close-out.md`) |
+| FOOD-1 | Nutrition and hunger: vanilla 1.0 / 0.9 / 0.05 scale, 1.6 per day, saturation bands, eating at 30 %, malnutrition, animal hunger by size and age | done (wave 1, 2026-10-30; `.agents/handoffs/FOOD.md#food-1-nutrition-and-hunger`) |
+| FOOD-2 | Growing: rice, strawberries, haygrass, hops; wiki growth model; partial harvest; lifespan; hydroponics and sun lamp; blight; trees; wild plants; Plant cutting work type | done (wave 1, 2026-10-30; `.agents/handoffs/FOOD.md#food-2-growing`) |
+| FOOD-3 | Animals: butchering formula, meat kinds, human and insect meat, slaughter job, auto-slaughter, per-species products, taming cost, hunter carry, egg and milk eating | done (wave 1, 2026-10-30; `.agents/handoffs/FOOD.md#food-3-animals-butchering`) |
+| FOOD-4 | Cooking and eating: food policies, nutrition recipes, batch bills, ingredients, moods, choice, poisoning, fed patients, deterioration, stove fuel, bench temperature | done (wave 2, 2026-10-30; `.agents/handoffs/FOOD.md#food-4-cooking-eating`) |
+| FOOD-5 | UI: policy tab, animals columns, days of food, fertility overlay, plant and building panes, tooltips | done (wave 2, 2026-10-30; `.agents/handoffs/FOOD.md#food-5-food-ui`) |
+| FOOD-6 | Close-out: pawn food health, growing-zone roof rule, butcher table, breeding values, eclipse and toxic fallout, binge and eating time, rot bar and sky UI, year proof | done (2026-10-31; `.agents/handoffs/FOOD.md#food-6-close-out`) |
 
 ## 1. Decision record
 

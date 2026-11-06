@@ -1,10 +1,10 @@
 # Defence gap analysis (DEF-0..DEF-4)
 
-Scope: bring ranged and melee combat, armor, cover, explosions, traps, turrets, mortars, doors, drafted behaviour, raids, mechanoids and infestations to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for DEF-* tasks. Phase handoffs go in `.agents/handoffs/DEF-N-*.md`. Sister documents: `BEDS_GAP_ANALYSIS.md` and `PRODUCTION_GAP_ANALYSIS.md` (PRD-4 crafts the weapons and armor that DEF-2 defines).
+Scope: bring ranged and melee combat, armor, cover, explosions, traps, turrets, mortars, doors, drafted behaviour, raids, mechanoids and infestations to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for DEF-* tasks. Phase handoffs are sections of `.agents/handoffs/DEF.md`. Sister documents: `BEDS_GAP_ANALYSIS.md` and `PRODUCTION_GAP_ANALYSIS.md` (PRD-4 crafts the weapons and armor that DEF-2 defines).
 
 ## Status (2026-10-29)
 
-Wave D done for DEF-3 (cover, IEDs, turrets, mortars, doors; handoff `handoffs/DEF-3-cover-traps-turrets-mortars-doors.md`). Wave C done for DEF-2 (weapons, armor, explosions; handoff `handoffs/DEF-2-weapons-armor-explosions.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). Wave E done for DEF-4 (raids, drafted control, mechanoids, ship part; handoffs `handoffs/DEF-4-R1-raids-drafted-control.md` and `handoffs/DEF-4-R2-mechanoids-ship-part.md`). The programme's five waves are done; the gaps that remain are in section 3.10. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave D done for DEF-3 (cover, IEDs, turrets, mortars, doors; handoff `.agents/handoffs/DEF.md#def-3-cover-traps-turrets-mortars-doors`). Wave C done for DEF-2 (weapons, armor, explosions; handoff `.agents/handoffs/DEF.md#def-2-weapons-armor-explosions`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/combat` extraction, the combat domain packages and the weapon `Def` extension (DEF-0). Wave E done for DEF-4 (raids, drafted control, mechanoids, ship part; handoffs `.agents/handoffs/DEF.md#def-4-r1-raids-drafted-control` and `.agents/handoffs/DEF.md#def-4-r2-mechanoids-ship-part`). The programme's five waves are done; the gaps that remain are in section 3.10. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 

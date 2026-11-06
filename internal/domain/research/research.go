@@ -108,7 +108,7 @@ const (
 	Greatbows
 	ProphylPressing
 	// AX-0 contract (append only, saved; wiki: Research, original names):
-	// the projects that gate the AX content (.agents/handoffs/AX-0-contract.md).
+	// the projects that gate the AX content (.agents/handoffs/AX.md#ax-0-contract).
 	// Each unlocks only AX-0 kinds, which stay Planned (unbuildable) until
 	// their owner makes them real. WaterPower (wiki: Watermill),
 	// FoamSuppression (Firefoam), SterileSurfaces (Sterile materials),

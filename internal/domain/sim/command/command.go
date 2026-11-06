@@ -207,7 +207,7 @@ const (
 	// 1 paints a dumping stockpile instead of a stockpile.
 	SetZonePriority
 	// PLAY-024 trade and comms, acting on the open session (one at a
-	// time; PLAY024_PLAN.md): ProposeTrade offers the deal in Name
+	// time; .agents/handoffs/PLAY.md#play024_plan): ProposeTrade offers the deal in Name
 	// (game.EncodeTradeOffer of []trade.Delta: positive Qty the colony
 	// buys, negative it sells), as a gift when Enabled; CloseTrade ends
 	// the trade session. CommsCallTrader opens trade with the orbital ship

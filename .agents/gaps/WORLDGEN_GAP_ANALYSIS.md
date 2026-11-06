@@ -1,6 +1,6 @@
 # World generation and globe gap analysis (WG-0..WG-3)
 
-Scope: the Create world and Select starting site screens (the planet, its biomes, rivers, roads, named features, tile inspector, search, filters, units, seeds) and how the globe is drawn, compared with core vanilla RimWorld 1.5 (no DLC). Load only for WG-* tasks. Phase handoffs go in `.agents/handoffs/WG-N-*.md`. Sister document for what happens after the globe: `MULTIMAP_GAP_ANALYSIS.md`. Sources: rimworldwiki.com pages Biomes, World, World generation, Caravan, Faction base, Time zone (2026-11-02). Names and prose here are ours; the wiki fixes only numbers and which features exist.
+Scope: the Create world and Select starting site screens (the planet, its biomes, rivers, roads, named features, tile inspector, search, filters, units, seeds) and how the globe is drawn, compared with core vanilla RimWorld 1.5 (no DLC). Load only for WG-* tasks. Phase handoffs are sections of `.agents/handoffs/WORLD.md`. Sister document for what happens after the globe: `MULTIMAP_GAP_ANALYSIS.md`. Sources: rimworldwiki.com pages Biomes, World, World generation, Caravan, Faction base, Time zone (2026-11-02). Names and prose here are ours; the wiki fixes only numbers and which features exist.
 
 ## Decisions
 
@@ -16,9 +16,9 @@ Scope: the Create world and Select starting site screens (the planet, its biomes
 
 | Phase | Delivers | State |
 |---|---|---|
-| WG-0 | This analysis and the contract (`handoffs/WG-0-gap-analysis-and-contract.md`) | done |
-| WG-1 | Domain: v1 params, biome scoring, `MoveDifficulty`, forage and disease per biome, time zone, road classes, huge river, features, search, filtered random landing, nearby bases, quadrum temperatures, planet name; globe relief, lighting, snow, soft borders, shallow band (`handoffs/WG-1-planet-v1-and-relief.md`) | done |
-| WG-2 | Globe lines and labels, `worldinfo` tile panel, search, filter and legend, planet name header, temperature unit, journeys (`handoffs/WG-2-globe-lines-and-landing-ui.md`) | done |
+| WG-0 | This analysis and the contract (`.agents/handoffs/WORLD.md#wg-0-gap-analysis-and-contract`) | done |
+| WG-1 | Domain: v1 params, biome scoring, `MoveDifficulty`, forage and disease per biome, time zone, road classes, huge river, features, search, filtered random landing, nearby bases, quadrum temperatures, planet name; globe relief, lighting, snow, soft borders, shallow band (`.agents/handoffs/WORLD.md#wg-1-planet-v1-and-relief`) | done |
+| WG-2 | Globe lines and labels, `worldinfo` tile panel, search, filter and legend, planet name header, temperature unit, journeys (`.agents/handoffs/WORLD.md#wg-2-globe-lines-and-landing-ui`) | done |
 
 ## Items
 

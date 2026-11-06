@@ -14,7 +14,7 @@ import (
 )
 
 // Military aid (PLAY-024 Phase 4, original tuning in
-// .agents/handoffs/_plans/PLAY024_PLAN.md). "Request aid" over the radio costs a friendly
+// .agents/handoffs/PLAY.md#play024_plan). "Request aid" over the radio costs a friendly
 // faction's goodwill and queues a Call; after DelayMinH..DelayMaxH hours
 // a group of AllyMin..AllyMax armed fighters walks in from a map edge.
 // They are visitors marked Ally, so they stay out of the colonist bar,

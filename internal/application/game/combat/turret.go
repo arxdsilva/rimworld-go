@@ -14,7 +14,7 @@ import (
 // staggered cadence through the creature index, locks on, aims, and fires
 // its weapon.SentryGun on the defence stream; it is shed last in a
 // brownout (power.ClassDefense) and bursts when destroyed (Blast, from the
-// game's building damage). Tuning: .agents/handoffs/_plans/PLAY024_PLAN.md.
+// game's building damage). Tuning: .agents/handoffs/PLAY.md#play024_plan.
 //
 // The lock has hysteresis so a turret never flaps between holding and
 // idling (nor its power draw between 120 and 40 W): it locks on within

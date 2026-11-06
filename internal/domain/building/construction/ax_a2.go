@@ -4,7 +4,7 @@ import "rimworld-go/internal/domain/economy/item"
 
 // plannedA2 is A2's kinds not live yet (structure, furniture and decor;
 // AX-0 contract). This file is A2's, and so are the predicates below.
-// Every A2 kind is live since AX-2 (.agents/handoffs/AX-2-structure-furniture.md).
+// Every A2 kind is live since AX-2 (.agents/handoffs/AX.md#ax-2-structure-furniture).
 func plannedA2(Kind) bool { return false }
 
 // IsTable reports a dining table of any size (wiki: Table 1x2, 2x2, 2x4,

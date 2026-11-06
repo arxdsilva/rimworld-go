@@ -1,6 +1,6 @@
 # Pawn-to-pawn interaction gap analysis (SIM-061..SIM-066)
 
-Scope: bring colonist-to-colonist interaction (player orders on a target pawn, rescue, bed choice, feeding and visiting the helpless, strip, mental breaks that involve others) to RimWorld-wiki fidelity. Load only for SIM-061..066 tasks. Phase handoffs go in `.agents/handoffs/SIM-06N-*.md`.
+Scope: bring colonist-to-colonist interaction (player orders on a target pawn, rescue, bed choice, feeding and visiting the helpless, strip, mental breaks that involve others) to RimWorld-wiki fidelity. Load only for SIM-061..066 tasks. Phase handoffs are sections of `.agents/handoffs/SIM.md`.
 
 ## Status (2026-10-29)
 

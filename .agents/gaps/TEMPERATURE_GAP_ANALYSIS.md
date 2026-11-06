@@ -1,6 +1,6 @@
 # Temperature management gap analysis (TEMP-0..TEMP-5)
 
-Scope: outdoor climate and events, room thermodynamics, heat sources and sinks, pawn and animal comfort and exposure, clothing, temperature-driven effects, and the UI, vanilla core only (no DLC). Load only for TEMP-* tasks. Phase handoffs go in `.agents/handoffs/TEMP-N-*.md`. The pieces exist (biome climates, per-room temperature, heater and cooler, campfire, hypothermia and heatstroke, warmth-seeking, auto-dressing), but the model is coarse and most numbers are original. Sister documents: `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
+Scope: outdoor climate and events, room thermodynamics, heat sources and sinks, pawn and animal comfort and exposure, clothing, temperature-driven effects, and the UI, vanilla core only (no DLC). Load only for TEMP-* tasks. Phase handoffs are sections of `.agents/handoffs/BASE.md`. The pieces exist (biome climates, per-room temperature, heater and cooler, campfire, hypothermia and heatstroke, warmth-seeking, auto-dressing), but the model is coarse and most numbers are original. Sister documents: `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`, `COMBAT_GAP_ANALYSIS.md`.
 
 ## Status (2026-10-31)
 
@@ -8,13 +8,13 @@ TEMP-0 to TEMP-4 are done (TEMP-0 contract and units fix committed; TEMP-1 to TE
 
 | Phase | Delivers | State |
 |---|---|---|
-| TEMP-0 | This analysis; ENG-003 extended; inert contract (constructions, command, item kinds, layer slots, conditions, moods, incidents, view fields); craft temperature-units fix with a regression test; stale checklist rows corrected | done (committed; `handoffs/TEMP-0-gap-analysis-and-contract.md`) |
-| TEMP-1 | Room thermodynamics (new `game/thermo`): 120-tick equalisation, wall and roof exposure, doors and vents, heater, cooler, passive cooler, campfire and torch caps, production and body heat | done (`handoffs/TEMP-1-room-thermodynamics.md`) |
-| TEMP-2 | Outdoor and events: biome extremes checked, heat wave, cold snap and volcanic winter as storyteller incidents, Extreme weather weighting, per-plant cold death | done (`handoffs/TEMP-2-climate-and-events.md`) |
-| TEMP-3 | Exposure: 16-26 C base range, wiki gain and recovery formulas, stage effects, frostbite, 4-stage moods, prisoners and guests, animal comfort ranges and death, insect slowdown | done (`handoffs/TEMP-3-exposure.md`) |
-| TEMP-4 | Layered clothing: layer slots, seven new garments, wiki apparel factors, tailoring recipes, naked thought, layered auto-dressing, worn-layer art | done (`handoffs/TEMP-4-layered-clothing.md`) |
+| TEMP-0 | This analysis; ENG-003 extended; inert contract (constructions, command, item kinds, layer slots, conditions, moods, incidents, view fields); craft temperature-units fix with a regression test; stale checklist rows corrected | done (committed; `.agents/handoffs/BASE.md#temp-0-gap-analysis-and-contract`) |
+| TEMP-1 | Room thermodynamics (new `game/thermo`): 120-tick equalisation, wall and roof exposure, doors and vents, heater, cooler, passive cooler, campfire and torch caps, production and body heat | done (`.agents/handoffs/BASE.md#temp-1-room-thermodynamics`) |
+| TEMP-2 | Outdoor and events: biome extremes checked, heat wave, cold snap and volcanic winter as storyteller incidents, Extreme weather weighting, per-plant cold death | done (`.agents/handoffs/BASE.md#temp-2-climate-and-events`) |
+| TEMP-3 | Exposure: 16-26 C base range, wiki gain and recovery formulas, stage effects, frostbite, 4-stage moods, prisoners and guests, animal comfort ranges and death, insect slowdown | done (`.agents/handoffs/BASE.md#temp-3-exposure`) |
+| TEMP-4 | Layered clothing: layer slots, seven new garments, wiki apparel factors, tailoring recipes, naked thought, layered auto-dressing, worn-layer art | done (`.agents/handoffs/BASE.md#temp-4-layered-clothing`) |
 | TEMP-5 | UI: temperature overlay, vent and passive cooler panes, heat lines, health stages and frostbite, animal temperature, alerts, climate event chip, gear layers | done |
-| TEMP-6 | Close-out simulation: OutdoorsForWork and psychologically outdoors where the game judges outdoors, the 5184-tile room cap, spontaneous ignition and heat burns, the warmth-spot cache, freezer proof, drying rack check, env-gated real-game probes | done (`handoffs/TEMP-6-close-out-simulation.md`) |
+| TEMP-6 | Close-out simulation: OutdoorsForWork and psychologically outdoors where the game judges outdoors, the 5184-tile room cap, spontaneous ignition and heat burns, the warmth-spot cache, freezer proof, drying rack check, env-gated real-game probes | done (`.agents/handoffs/BASE.md#temp-6-close-out-simulation`) |
 
 ## 1. Decision record
 

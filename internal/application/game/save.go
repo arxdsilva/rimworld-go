@@ -440,7 +440,7 @@ type mapSave struct {
 	State   saveState
 }
 
-// powerSave is the saved electricity, in id order (PLAY021_PLAN.md
+// powerSave is the saved electricity, in id order (.agents/handoffs/PLAY.md#play021_plan
 // Appendix): battery charge (W·ticks), the devices and switches the
 // player wants off and those actually off (a flick is pending where they
 // differ), the consumers the last balance left unpowered, shed consumers

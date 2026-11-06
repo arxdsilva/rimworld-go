@@ -11,7 +11,7 @@ const WTicksPerWh = 2500
 // publish how it measures; ours is Chebyshev.
 const ConnectRange = 6
 
-// Balance rules (PLAY021_PLAN.md Balance; our numbers).
+// Balance rules (.agents/handoffs/PLAY.md#play021_plan Balance; our numbers).
 const (
 	// ShedTicks is the least time a consumer shed in a brownout stays off
 	// (one game hour).

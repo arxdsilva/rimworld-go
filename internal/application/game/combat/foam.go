@@ -10,7 +10,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Fire foam and the AX-5 defences (.agents/handoffs/AX-5-foam-security.md).
+// Fire foam and the AX-5 defences (.agents/handoffs/AX.md#ax-5-foam-security).
 //
 // A foam burst (explosion.Foam) puts out every fire it reaches and leaves
 // fire foam on the ground (stain.Foam: nothing burns under it until it is

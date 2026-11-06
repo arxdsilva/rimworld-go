@@ -8,7 +8,7 @@ import (
 	"rimworld-go/pkg/randx"
 )
 
-// The cave pass (MAPGEN-3, .agents/handoffs/_plans/PLAY014_PLAN.md §1): after the surface
+// The cave pass (MAPGEN-3, .agents/handoffs/PLAY.md#play014_plan §1): after the surface
 // plants, dark cave floor gets duskmoss in small tight clusters, and lit
 // cave mouths an occasional ordinary moss where the biome has it. A biome
 // with no plants at all keeps its caves bare.

@@ -1,4 +1,4 @@
-// Package roads is the "roads" pass (MAPGEN-2, .agents/handoffs/_plans/PLAY013_PLAN.md §3.3):
+// Package roads is the "roads" pass (MAPGEN-2, .agents/handoffs/PLAY.md#play013_plan §3.3):
 // world roads enter the map at edge points and meet at a junction near the
 // middle. Each road is routed by A* over a terrain cost grid, pulled
 // straight where that costs nothing, smoothed (Chaikin corner cutting) and

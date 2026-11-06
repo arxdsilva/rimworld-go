@@ -1,6 +1,6 @@
 # Allow system gap analysis (STK-AL)
 
-Scope: RimWorld's forbid/allow system for things and buildings, plus allowed areas (pawn area restriction), vanilla core only. The user asked on 2026-11-01: "do a gap analysis on the allow system and add it to this change". Load only for allow, forbid or allowed-area work. Handoff: `handoffs/STK-AL-allow-system.md`. Sister documents: `STORAGE_GAP_ANALYSIS.md` (dumping, hauling) and `ARCHITECT_GAP_ANALYSIS.md` (the Orders cards).
+Scope: RimWorld's forbid/allow system for things and buildings, plus allowed areas (pawn area restriction), vanilla core only. The user asked on 2026-11-01: "do a gap analysis on the allow system and add it to this change". Load only for allow, forbid or allowed-area work. Handoff: `.agents/handoffs/STORAGE.md#stk-al-allow-system`. Sister documents: `STORAGE_GAP_ANALYSIS.md` (dumping, hauling) and `ARCHITECT_GAP_ANALYSIS.md` (the Orders cards).
 
 ## 1. Decision record
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Token usage scorecard from Claude Code transcripts (read-only).
 
-Prints the metrics tracked in .agents/handoffs/TOKEN-001-usage-guards.md, so a
+Prints the metrics tracked in .agents/handoffs/OPS.md#token-001-usage-guards, so a
 later run can be compared with the baseline.
 
   python3 scripts/token_report.py --last 400

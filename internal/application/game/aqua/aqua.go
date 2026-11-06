@@ -1,4 +1,4 @@
-// Package aqua is fish farming in tanks (FISH-*, .agents/handoffs/_plans/FISH_TANK_PLAN.md
+// Package aqua is fish farming in tanks (FISH-*, .agents/handoffs/FOOD.md#fish_tank_plan
 // §3): the state of each tank on a map, stepped hourly over its own list, the
 // handler's work (work.Handle on the Animals skill), the player's stock
 // choice, and the read model. The rules live in domain/building/aqua.

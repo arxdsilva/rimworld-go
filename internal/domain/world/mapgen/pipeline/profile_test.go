@@ -16,7 +16,7 @@ import (
 	"rimworld-go/internal/domain/world/terrain"
 )
 
-// Profile tests (.agents/handoffs/_plans/PLAY013_PLAN.md §4): each landform profile must
+// Profile tests (.agents/handoffs/PLAY.md#play013_plan §4): each landform profile must
 // land in its range on every one of profileSeeds seeds, and every map must
 // be sound and playable.
 

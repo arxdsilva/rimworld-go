@@ -193,7 +193,7 @@ Do not encode essential state by hue alone.
 
 ## 8. Terrain
 
-**NG-1 water (normative):** terrain `shallow_water` (walk 300, unbuildable), `deep_water` (impassable), `mud` (walk 140, fertility 70), `track` (dirt road, walk 90, not farmable); 4 variants each (`terrain/<type>_v0..3`), 16-mask edges for mud-over-soil and shallow-over-deep, shore-foam masks; `ebiten/render/env/water.kage` ripple + caustic glints on the presentation clock (4-frame fallback; Reduced Motion freezes it). See `NG1_NEW_GAME_PLAN.md` §4.3, §7.3.
+**NG-1 water (normative):** terrain `shallow_water` (walk 300, unbuildable), `deep_water` (impassable), `mud` (walk 140, fertility 70), `track` (dirt road, walk 90, not farmable); 4 variants each (`terrain/<type>_v0..3`), 16-mask edges for mud-over-soil and shallow-over-deep, shore-foam masks; `ebiten/render/env/water.kage` ripple + caustic glints on the presentation clock (4-frame fallback; Reduced Motion freezes it). See `.agents/handoffs/NG.md#ng1_new_game_plan` §4.3, §7.3.
 
 
 Initial terrain families: soil, rich soil, stony soil, sand, gravel,
@@ -392,7 +392,7 @@ renderer may mirror them.
 
 ## 10. Pawn Visual System
 
-**NG-1 builds (normative):** one parametrised rig (`families/pawn.py` `BUILDS`) gives six builds — `m_thin, m_avg, m_heavy, f_thin, f_avg, f_heavy` — for body and every apparel layer, every facing; keys `pawn/<layer>_<build>_<facing>`, the old `pawn/body_…` keys alias `m_avg`. Hair styles short, crop, bun, long, braid, shaved, curls, tail; beards short, full, moustache (males, 40 %); a grey-hair palette entry. The pawn family is atlas-packed by `cmd/atlasgen` (≤4096² pages, `assets/metadata/atlas/<family>.yaml`). Looks are domain data (`pawn/look.Look`); `look.Legacy(id)` reproduces pre-NG-1 looks. See `NG1_NEW_GAME_PLAN.md` §4.6, §7.1.
+**NG-1 builds (normative):** one parametrised rig (`families/pawn.py` `BUILDS`) gives six builds — `m_thin, m_avg, m_heavy, f_thin, f_avg, f_heavy` — for body and every apparel layer, every facing; keys `pawn/<layer>_<build>_<facing>`, the old `pawn/body_…` keys alias `m_avg`. Hair styles short, crop, bun, long, braid, shaved, curls, tail; beards short, full, moustache (males, 40 %); a grey-hair palette entry. The pawn family is atlas-packed by `cmd/atlasgen` (≤4096² pages, `assets/metadata/atlas/<family>.yaml`). Looks are domain data (`pawn/look.Look`); `look.Legacy(id)` reproduces pre-NG-1 looks. See `.agents/handoffs/NG.md#ng1_new_game_plan` §4.6, §7.1.
 
 
 Pawns are compositional, not one flattened sprite per colonist.
@@ -711,7 +711,7 @@ system.
 - **Storyteller busts** (painted raster sources in `source/raster/ui/portraits/` with their prompts in `briefs.md`, cut by `make portraits` / `tools/portrait_cut.py` into 512×640 busts + 120×150 head-and-shoulders thumbnails, transparent, dark contour; the style matches the main-menu colonist: heroic comic bust, bold black cel outlines, flat cel shading, slight painterly texture; ART-023): Orla Vane (late 50s, close-cropped silver hair, dispatcher's headset round the neck, quilted navy jacket with a reflective stripe, calm half-smile); Bram Holloway (60s, broad, ruddy, short white beard, knitted cardigan over an apron, steaming mug); Kestrel Quay (30s, angular, asymmetric dark hair with one shaved side, long coat with brass buttons, a card between two fingers, one raised eyebrow). Never reference RimWorld storyteller art; silhouettes, palettes and props must differ clearly.
 - **Main-menu hero** (ART-028): an original scout with a sled dog in the same style, cut by `make portraits` (`cut_menu`) from `source/raster/ui/menu/hero.png` (prompt in `menu/briefs.md`) into `source/raster/ui/main_menu_colonist.png` (904×1104, bottom-flush RGBA). No existing illustration may be used as a reference or input. ART-029: the figure keeps margin on the source's right and top (the splash is anchored bottom-left, so those edges show); `cut_menu` refuses a source cut there, inks no contour along a cut side, and `TestMenuSplashKeepsItsRightEdgeFree` guards the output.
 - **Icons:** `ui_icon/scenario_<key>` + `scenario_custom`, `passion_minor|major`, `skill_<key>`, `trait`, `factions`, `minimap`, `components`, `industrial_medicine`, `tool_cabinet`, `hospital_bed`.
-- Details: `NG1_NEW_GAME_PLAN.md` §1, §2, §7.
+- Details: `.agents/handoffs/NG.md#ng1_new_game_plan` §1, §2, §7.
 
 ## 18. Factions and Overlays
 
@@ -719,7 +719,7 @@ Factions are data-driven through emblem, accent palette, optional
 apparel palette, and optional architecture palette. Prefer shared world
 art plus faction identity layers over entirely unique asset libraries.
 
-**NG-1 factions (normative):** emblems `ui_icon/faction_<settlers|clans|drifters|freebooters|swarm|player>`, settlement icons `ui_icon/settlement_<neolithic|industrial>` tinted by the faction accent; the globe is CPU relief geometry vertex-coloured from `assets/palettes/world.yaml` (WG plan §1.2): one muted colour per biome, hills and mountains raised off the sphere and faceted under the upper-left sun, bare `rock` and `snow` caps by height, soft biome borders, a `shallow` coastal band and pale `shore` coastline, an optional tile `grid`, the Hilliness view in `hill_*`; no sprites, photo textures or specular. On top: calm `river` lines tapered from their sources and ending at the shore (creeks only zoomed in), roads by class (`road_path` dotted, `road_dirt` dashed, `road_stone` solid, `road_asphalt` with a `road_centre` dash, highways 1.6× wide), feature names in `label`/`label_ocean` (spaced capitals for oceans) with a 1 px shadow and a 24-label collision cap, faction-tinted settlement emblems, hover/selected tile outlines, starfield. See `NG1_NEW_GAME_PLAN.md` §2.7, §4.1, §7.3.
+**NG-1 factions (normative):** emblems `ui_icon/faction_<settlers|clans|drifters|freebooters|swarm|player>`, settlement icons `ui_icon/settlement_<neolithic|industrial>` tinted by the faction accent; the globe is CPU relief geometry vertex-coloured from `assets/palettes/world.yaml` (WG plan §1.2): one muted colour per biome, hills and mountains raised off the sphere and faceted under the upper-left sun, bare `rock` and `snow` caps by height, soft biome borders, a `shallow` coastal band and pale `shore` coastline, an optional tile `grid`, the Hilliness view in `hill_*`; no sprites, photo textures or specular. On top: calm `river` lines tapered from their sources and ending at the shore (creeks only zoomed in), roads by class (`road_path` dotted, `road_dirt` dashed, `road_stone` solid, `road_asphalt` with a `road_centre` dash, highways 1.6× wide), feature names in `label`/`label_ocean` (spaced capitals for oceans) with a 1 px shadow and a 24-label collision cap, faction-tinted settlement emblems, hover/selected tile outlines, starfield. See `.agents/handoffs/NG.md#ng1_new_game_plan` §2.7, §4.1, §7.3.
 
 Renderer-owned reusable overlays include selection, hover, hostile
 target, blueprint, forbidden, hunt, harvest, cut, mine, deconstruct,
@@ -1462,7 +1462,7 @@ doing its job.
 
 Normative key list for the social and host-system feature set
 (`.agents/specs/SOCIAL_SYSTEM_CONTRACT.md`). Status: the assets exist (ART-019, see
-`.agents/handoffs/ART-019-social-host-assets.md`); the six order icons and the face-scar overlay are not wired yet, see the checklists. When an asset lands, move its tool to `archTools`
+`.agents/handoffs/ART.md#art-019-social-host-assets`); the six order icons and the face-scar overlay are not wired yet, see the checklists. When an asset lands, move its tool to `archTools`
 (TestPendingArtToolsLackArt fails until you do), add its keys to the
 renderer's sprite lookups, and only then let `TestGeneratedArtCoversRenderer`
 cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
@@ -1501,7 +1501,7 @@ cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
 
 ## 38. Sentry turret, trade beacon and radio console (PLAY-024)
 
-Normative key list (contract in `.agents/handoffs/_plans/PLAY024_PLAN.md`). Status: the sprites and icons are generated (`assets/metadata/defense`, `power`, `ui_icon`); see the checklists for what is wired. Every sprite follows
+Normative key list (contract in `.agents/handoffs/PLAY.md#play024_plan`). Status: the sprites and icons are generated (`assets/metadata/defense`, `power`, `ui_icon`); see the checklists for what is wired. Every sprite follows
 §12-§17 (pivots, palette, outline rules) and §24 metadata; all designs
 original, never traced from RimWorld.
 

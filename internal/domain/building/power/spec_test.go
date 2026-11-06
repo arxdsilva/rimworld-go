@@ -7,7 +7,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 )
 
-// TestSpecOf pins every kind's electrical definition (PLAY021_PLAN.md
+// TestSpecOf pins every kind's electrical definition (.agents/handoffs/PLAY.md#play021_plan
 // Model): conduits carry, the switch cuts, the generators' peaks, the
 // battery's capacity, the consumers' draw and idle W and shed classes; the
 // torch lamp and every other kind are not electrical.

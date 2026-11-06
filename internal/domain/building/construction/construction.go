@@ -217,7 +217,7 @@ const (
 	MultiAnalyzer
 	// AX-0 contract (append only, saved). Every vanilla Architect item the
 	// game lacked (.agents/gaps/ARCHITECT_GAP_ANALYSIS.md), each owned by one AX
-	// agent (.agents/handoffs/AX-0-contract.md). Planned() is true for
+	// agent (.agents/handoffs/AX.md#ax-0-contract). Planned() is true for
 	// every one of them until its owner makes it real (ax_<owner>.go), so
 	// none can be designated (placement.go placeFrameStuff) and none has
 	// an Architect tool, art or behaviour yet.
@@ -566,7 +566,7 @@ var defs = [kindCount]Def{
 	// 1.5 times our hospital bed's work. The steel is original tuning.
 	VitalsMonitor: {Kind: VitalsMonitor, Name: "vitals monitor", Wood: 40, Work: 300, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, MetalOK: true, MetalOnly: true, Components: 1},
-	// PLAY-024 (our costs, PLAY024_PLAN.md): steel pieces (Wood is the
+	// PLAY-024 (our costs, .agents/handoffs/PLAY.md#play024_plan): steel pieces (Wood is the
 	// steel). The console's operator stands at its spot, south of the desk's
 	// middle (STK-BN, wiki: Comms console, 3x2).
 	SentryTurret: {Kind: SentryTurret, Name: "sentry turret", Wood: 90, Work: 400, Layer: LayerObject, BlocksMove: true,

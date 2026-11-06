@@ -1,17 +1,17 @@
 # Research gap analysis (RSCH-0..RSCH-3)
 
-Scope: research speed and cost, tech levels, the project table, research benches and the multi-analyzer, project selection, alerts and letters, the Research tab, and starting research per scenario, vanilla core only (no DLC). Load only for RSCH-* tasks. Phase handoffs go in `.agents/handoffs/RSCH-N-*.md`. The pieces exist (a 45-project DAG, one current project, a bench job, a list UI), but projects have flat hand-tuned costs, no tech level or bench tier, and the screen is a list rather than a tech tree. Sister documents: `TEMPERATURE_GAP_ANALYSIS.md`, `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`.
+Scope: research speed and cost, tech levels, the project table, research benches and the multi-analyzer, project selection, alerts and letters, the Research tab, and starting research per scenario, vanilla core only (no DLC). Load only for RSCH-* tasks. Phase handoffs are sections of `.agents/handoffs/BASE.md`. The pieces exist (a 45-project DAG, one current project, a bench job, a list UI), but projects have flat hand-tuned costs, no tech level or bench tier, and the screen is a list rather than a tech tree. Sister documents: `TEMPERATURE_GAP_ANALYSIS.md`, `FOOD_GAP_ANALYSIS.md`, `MEDICAL_GAP_ANALYSIS.md`, `BEDS_GAP_ANALYSIS.md`.
 
 ## Status (2026-11-01)
 
-RSCH-0 (this analysis, ENG-003 extension, stale checklist row) and RSCH-1 (simulation, `handoffs/RSCH-1-research-simulation.md`) are done; see the RSCH-2 and RSCH-3 rows.
+RSCH-0 (this analysis, ENG-003 extension, stale checklist row) and RSCH-1 (simulation, `.agents/handoffs/BASE.md#rsch-1-research-simulation`) are done; see the RSCH-2 and RSCH-3 rows.
 
 | Phase | Delivers | State |
 |---|---|---|
-| RSCH-0 | This analysis; ENG-003 extended; inert contract (tech level and bench tier on `Def`, command and view fields, hi-tech bench and multi-analyzer names); stale checklist row corrected | done (`handoffs/RSCH-0-gap-analysis-and-contract.md`) |
-| RSCH-1 | Simulation: wiki cost, tech-level cost multiplier, research speed stat, bench factor, difficulty factor, project table, bench gating, hi-tech bench and multi-analyzer facility, starting research, save migration | done (`handoffs/RSCH-1-research-simulation.md`; `game/research`) |
-| RSCH-2 | Research tab UI (tech tree graph, info panel, search), "Need research project" alert, research-complete letter, bench inspector progress, tab tooltip | done (UI side; `handoffs/RSCH-2-research-tab.md`): the alert and letter content come from RSCH-1 |
-| RSCH-3 | Art: hi-tech bench, simple bench resize, multi-analyzer, project and tree chrome | done: simple bench 3x2 and hi-tech bench 5x2 in four facings, multi-analyzer 2x2 with its glow (on) layer, Architect icons and the renderer key (`handoffs/RSCH-3-research-bench-art.md`); RSCH-1 footprints match; tree chrome is the RSCH-2 tab's procedural drawing (vanilla nodes are text boxes, no project icons) |
+| RSCH-0 | This analysis; ENG-003 extended; inert contract (tech level and bench tier on `Def`, command and view fields, hi-tech bench and multi-analyzer names); stale checklist row corrected | done (`.agents/handoffs/BASE.md#rsch-0-gap-analysis-and-contract`) |
+| RSCH-1 | Simulation: wiki cost, tech-level cost multiplier, research speed stat, bench factor, difficulty factor, project table, bench gating, hi-tech bench and multi-analyzer facility, starting research, save migration | done (`.agents/handoffs/BASE.md#rsch-1-research-simulation`; `game/research`) |
+| RSCH-2 | Research tab UI (tech tree graph, info panel, search), "Need research project" alert, research-complete letter, bench inspector progress, tab tooltip | done (UI side; `.agents/handoffs/BASE.md#rsch-2-research-tab`): the alert and letter content come from RSCH-1 |
+| RSCH-3 | Art: hi-tech bench, simple bench resize, multi-analyzer, project and tree chrome | done: simple bench 3x2 and hi-tech bench 5x2 in four facings, multi-analyzer 2x2 with its glow (on) layer, Architect icons and the renderer key (`.agents/handoffs/BASE.md#rsch-3-research-bench-art`); RSCH-1 footprints match; tree chrome is the RSCH-2 tab's procedural drawing (vanilla nodes are text boxes, no project icons) |
 
 ## 1. Decision record
 

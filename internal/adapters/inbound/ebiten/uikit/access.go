@@ -55,7 +55,7 @@ func (a Access) Palette() Palette { return PaletteFor(a.ColorVision) }
 // The colour-vision variants of the status colours (OPT-018): Tokens
 // carries them as ui.<variant>.{danger,good,warning}, the keys of
 // assets/palettes/ui.yaml. Deuteranopia and protanopia share one set,
-// checked to stay apart under both (.agents/handoffs/OPT-2-art.md).
+// checked to stay apart under both (.agents/handoffs/PERF.md#opt-2-art).
 var (
 	redGreenPalette = Palette{ // coral, sky blue, lemon
 		Danger:  color.RGBA{R: 0xEA, G: 0x9E, B: 0x94, A: 0xFF},

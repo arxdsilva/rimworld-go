@@ -1,6 +1,6 @@
 # Refuelling gap analysis (REF-001..)
 
-Scope: how colonists feed fuel to the buildings that burn it (campfire, torch lamps, wood-fired and chemfuel generators, pod launcher, fueled smithy and stove, passive cooler), and what the player can do about it. Core vanilla RimWorld 1.5 only. Load only for REF-* tasks. The fuel table and burning rules are PLAY-021's (`handoffs/` PLAY-021 files) and AX-4/AX-9's; this file covers what is still different. Handoff: `handoffs/REF-1-prioritize-refuel-auto-toggle.md`.
+Scope: how colonists feed fuel to the buildings that burn it (campfire, torch lamps, wood-fired and chemfuel generators, pod launcher, fueled smithy and stove, passive cooler), and what the player can do about it. Core vanilla RimWorld 1.5 only. Load only for REF-* tasks. The fuel table and burning rules are PLAY-021's (`handoffs/` PLAY-021 files) and AX-4/AX-9's; this file covers what is still different. Handoff: `.agents/handoffs/BASE.md#ref-1-prioritize-refuel-auto-toggle`.
 
 ## Decision record
 

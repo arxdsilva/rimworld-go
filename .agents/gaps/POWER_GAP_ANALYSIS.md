@@ -1,6 +1,6 @@
 # Power wires gap analysis (PWR-1..PWR-5)
 
-Scope: how a powered device joins a grid, the wire that shows it, and the Reconnect button, compared with core vanilla RimWorld 1.5 (no DLC). Load only for PWR-* tasks. The earlier power system is PLAY-021 (`handoffs/` PLAY-021 files); this file covers what PWR-* changed on top of it. Handoff: `handoffs/PWR-power-wires.md`.
+Scope: how a powered device joins a grid, the wire that shows it, and the Reconnect button, compared with core vanilla RimWorld 1.5 (no DLC). Load only for PWR-* tasks. The earlier power system is PLAY-021 (`handoffs/` PLAY-021 files); this file covers what PWR-* changed on top of it. Handoff: `.agents/handoffs/BASE.md#pwr-power-wires`.
 
 Wiki pages read on 2026-11-03: Power, Power conduit, Wall lamp, Cooler, Heater, Battery. The Power page calls its mechanics a stub. The Power conduit, Wall lamp, Cooler, Heater and Battery pages carry "Unverified articles" tags. Treat every number below as the wiki's best published figure, not as verified game data.
 

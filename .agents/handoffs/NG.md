@@ -1,6 +1,6 @@
 # NG handoffs
 
-Families: NG (the NG1 new-game plan). Each section condenses one task's handoff; the full original of `NG1_NEW_GAME_PLAN` is `git show 76d605d04:.agents/handoffs/_plans/NG1_NEW_GAME_PLAN.md`. New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
+Families: NG (the NG1 new-game plan). Each section condenses one task's handoff; the full original of `NG1_NEW_GAME_PLAN` is `git show 76d605d04:.agents/handoffs/NG.md#ng1_new_game_plan`. New sections go at the end, in the format of `.agents/templates/HANDOFF.md`.
 
 ## NG1_NEW_GAME_PLAN
 NG-1: complete new-game flow, big maps at 60 fps, generated colonists, factions, water · 2026-10-22 · fbc76fd69

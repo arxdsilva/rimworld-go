@@ -1,6 +1,6 @@
 # Multiple maps gap analysis (MAP-0..MAP-6)
 
-Scope: several maps open and ticking at once (the colony, mineral sites, attacked settlements, founded colonies and caravan encounters), the caravan and pod rules that open them, and the UI that switches between them, compared with core vanilla RimWorld 1.5 (no DLC). Load only for MAP-* tasks. Phase handoffs go in `.agents/handoffs/MAP-N-*.md`. AX-9 (transport pods, caravans, the mineral scanner) refused all of this as needing "a second map". Sister document: `WORLDGEN_GAP_ANALYSIS.md` (WG-03 supplies the movement difficulty that MAP-09 uses). Sources: rimworldwiki.com pages Caravan, Colony, Faction base, Long-range mineral scanner, Transport pod, Ending, Goodwill (2026-11-02). Names and prose are ours.
+Scope: several maps open and ticking at once (the colony, mineral sites, attacked settlements, founded colonies and caravan encounters), the caravan and pod rules that open them, and the UI that switches between them, compared with core vanilla RimWorld 1.5 (no DLC). Load only for MAP-* tasks. Phase handoffs are sections of `.agents/handoffs/WORLD.md`. AX-9 (transport pods, caravans, the mineral scanner) refused all of this as needing "a second map". Sister document: `WORLDGEN_GAP_ANALYSIS.md` (WG-03 supplies the movement difficulty that MAP-09 uses). Sources: rimworldwiki.com pages Caravan, Colony, Faction base, Long-range mineral scanner, Transport pod, Ending, Goodwill (2026-11-02). Names and prose are ours.
 
 ## Decisions
 
@@ -29,11 +29,11 @@ Scope: several maps open and ticking at once (the colony, mineral sites, attacke
 
 | Phase | Delivers | State |
 |---|---|---|
-| MAP-0 | This analysis; the inert contract (`handoffs/MAP-0-contract.md`) | done |
-| MAP-1 | Site maps, all maps tick, pack-up, mineral site map, colonist bar and map switching, camera per map (`handoffs/MAP-1-site-maps.md`) | done |
-| MAP-2 | Settlement attack, defenders, pod modes, storyteller target map (`handoffs/MAP-2-attack-and-pods.md`) | done |
-| MAP-3 | Founding, abandoning, caravan speed, encounters (`handoffs/MAP-3-founding-and-encounters.md`) | done |
-| MAP-4 | The three open questions: hostile turrets, everyone-gone ending, neutral attacks, and the goodwill rule (`handoffs/MAP-4-endings-turrets-neutral-attacks.md`) | done |
+| MAP-0 | This analysis; the inert contract (`.agents/handoffs/WORLD.md#map-0-contract`) | done |
+| MAP-1 | Site maps, all maps tick, pack-up, mineral site map, colonist bar and map switching, camera per map (`.agents/handoffs/WORLD.md#map-1-site-maps`) | done |
+| MAP-2 | Settlement attack, defenders, pod modes, storyteller target map (`.agents/handoffs/WORLD.md#map-2-attack-and-pods`) | done |
+| MAP-3 | Founding, abandoning, caravan speed, encounters (`.agents/handoffs/WORLD.md#map-3-founding-and-encounters`) | done |
+| MAP-4 | The three open questions: hostile turrets, everyone-gone ending, neutral attacks, and the goodwill rule (`.agents/handoffs/WORLD.md#map-4-endings-turrets-neutral-attacks`) | done |
 
 ## Items
 

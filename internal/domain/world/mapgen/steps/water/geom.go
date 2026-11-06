@@ -1,4 +1,4 @@
-// Package water holds the MAPGEN-2 water passes (.agents/handoffs/_plans/PLAY013_PLAN.md
+// Package water holds the MAPGEN-2 water passes (.agents/handoffs/PLAY.md#play013_plan
 // §2.3): the coast bands, the river with its banks, floodplain, canyon and
 // fords, the lakes, and the wetness field that finishes after them. All
 // numbers are our own.

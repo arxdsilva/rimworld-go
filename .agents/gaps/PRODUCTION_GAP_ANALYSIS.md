@@ -1,10 +1,10 @@
 # Production gap analysis (PRD-0..PRD-4)
 
-Scope: bring benches, bills, recipes, item quality, materials, deterioration, art and stockpile filters to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for PRD-* tasks. Phase handoffs go in `.agents/handoffs/PRD-N-*.md`. Sister documents: `BEDS_GAP_ANALYSIS.md` and `DEFENCE_GAP_ANALYSIS.md`. Armor and weapon recipes are shared with DEF-2.
+Scope: bring benches, bills, recipes, item quality, materials, deterioration, art and stockpile filters to RimWorld-wiki fidelity (vanilla core only, no DLC). Load only for PRD-* tasks. Phase handoffs are sections of `.agents/handoffs/BASE.md`. Sister documents: `BEDS_GAP_ANALYSIS.md` and `DEFENCE_GAP_ANALYSIS.md`. Armor and weapon recipes are shared with DEF-2.
 
 ## Status (2026-10-29)
 
-Wave D done for PRD-3 (benches, work speed, art and sculptures; handoff `handoffs/PRD-3-benches-work-speed-sculptures.md`). Wave C done for PRD-2 (quality, stuff, condition, inspiration; handoff `handoffs/PRD-2-quality-stuff-condition.md`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/craft` extraction, the `quality` domain package and the wiki constants (PRD-0). Wave E done for PRD-4 (recipe catalogue, stockpile filters, shelves, barrel; handoff `handoffs/PRD-4-catalogue-stockpiles-shelves.md`). The programme's five waves are done; the gaps that remain are in section 3.7. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
+Wave D done for PRD-3 (benches, work speed, art and sculptures; handoff `.agents/handoffs/BASE.md#prd-3-benches-work-speed-sculptures`). Wave C done for PRD-2 (quality, stuff, condition, inspiration; handoff `.agents/handoffs/BASE.md#prd-2-quality-stuff-condition`). Wave B done (PRD-1/BED-1/DEF-1). Wave A done earlier: the `game/craft` extraction, the `quality` domain package and the wiki constants (PRD-0). Wave E done for PRD-4 (recipe catalogue, stockpile filters, shelves, barrel; handoff `.agents/handoffs/BASE.md#prd-4-catalogue-stockpiles-shelves`). The programme's five waves are done; the gaps that remain are in section 3.7. Every row in section 3 is `open` unless it says `done` or `partial`. Rows are ticked per phase by the lead, in the same commit that ships the phase.
 
 ## 1. Decision record
 

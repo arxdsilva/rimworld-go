@@ -15,7 +15,7 @@ Hungry tame animals reach the food the colony has · 2026-10-30 · c686524c9
 
 ## FISH-tanks
 Fish tanks · 2026-11-02 · e6f921d82
-- Changed: fish farming asked 2026-11-02 "the way RimWorld would do it". Vanilla has none (Odyssey has a fishing zone), so ours: building like a hydroponics basin, work like the Fish job, item like meat. Spec `.agents/handoffs/_plans/FISH_TANK_PLAN.md` §3.
+- Changed: fish farming asked 2026-11-02 "the way RimWorld would do it". Vanilla has none (Odyssey has a fishing zone), so ours: building like a hydroponics basin, work like the Fish job, item like meat. Spec `.agents/handoffs/FOOD.md#fish_tank_plan` §3.
 - Changed: domain `domain/building/aqua` (species, growth, health); `item.Fish`, `construction.FishTank`, `research.Aquaculture`, `job.StockTank`, `job.NetTank`. `game/aqua`: one `*aqua.Tanks` per map on `mapState`, stepped hourly from `burnFuel`; feed through the refuel pipeline; saved, nil while no tank exists so goldens hold.
 - Changed: `assignRefuel` skips a burner with no fuel to hand instead of ending the search (an empty torch had starved tanks behind it).
 - UI: Architect card, inspector stock picker and lines, "Fish dying" alert, sprites with powered glow and three growth stages. `BuildingView.Tank`; `command.SetTankStock`.

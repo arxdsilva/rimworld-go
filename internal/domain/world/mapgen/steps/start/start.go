@@ -1,5 +1,5 @@
 // Package start holds the landing-spot pass ("start") and the final
-// validation pass ("validate") of MAPGEN-2 (.agents/handoffs/_plans/PLAY013_PLAN.md §4).
+// validation pass ("validate") of MAPGEN-2 (.agents/handoffs/PLAY.md#play013_plan §4).
 package start
 
 import (

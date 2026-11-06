@@ -46,7 +46,7 @@ type Def struct {
 	Specialty            []string
 }
 
-// Price rules (hundredths of a silver, percent; PLAY024_PLAN.md).
+// Price rules (hundredths of a silver, percent; .agents/handoffs/PLAY.md#play024_plan).
 const (
 	// BuyMarkupPct is the markup over value at Social 0 and goodwill 0;
 	// each Social level takes off SocialStepCenti hundredths of a point and
