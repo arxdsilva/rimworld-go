@@ -429,6 +429,9 @@ const (
 	SetApparelPolicy
 	EditApparelPolicy
 	ClearForcedApparel
+	// SetAutoRefuel (REF-1): haulers keep burner Target fuelled (Enabled)
+	// or leave it to ordered refuels only.
+	SetAutoRefuel
 )
 
 // EditApparelPolicy modes (Command.Mode), GEAR-3 contract.
@@ -552,6 +555,9 @@ const (
 	OrderChopWood
 	OrderRead
 	OrderEnterCasket
+	// OrderRefuel (REF-1): fill the burner at X, Y to full now, whatever
+	// its auto refuel setting and however full it is.
+	OrderRefuel
 )
 
 // TargetsPawn reports an order that acts on the pawn in Command.Target

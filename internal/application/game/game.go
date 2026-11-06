@@ -431,9 +431,9 @@ type BuildingView struct {
 	// Drying rack contents: DryQty items of DryKind, DryPct percent dry.
 	DryKind        string
 	DryQty, DryPct int
-	// Campfire: FuelPct of capacity left, Burning when lit (not banked).
-	Fuel, Burning bool
-	FuelPct       int
+	// Burners: FuelPct left, Burning when lit; REF-1 Refuelable/AutoRefuel.
+	Fuel, Burning, Refuelable, AutoRefuel bool
+	FuelPct                               int
 	// HPPct is the building's health (percent); below 100 it is damaged.
 	HPPct int
 	// Catch: an installed carpet's share of tracked dirt wiped, percent (SIM-021).

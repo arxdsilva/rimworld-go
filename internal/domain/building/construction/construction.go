@@ -1388,6 +1388,9 @@ type Building struct {
 	// Growth its growth, permille.
 	Plant  uint8
 	Growth uint16
+	// NoAutoRefuel (REF-1): haulers leave this burner alone; only an
+	// ordered refuel feeds it (command.SetAutoRefuel). Zero: auto refuel.
+	NoAutoRefuel bool
 }
 
 // HP is the building's remaining hit points.
