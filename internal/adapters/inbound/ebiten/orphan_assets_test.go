@@ -30,6 +30,7 @@ const assetsDir = "../../../../assets"
 // spriteDirs maps metadata/<family> to the directory holding its PNGs.
 var spriteDirs = map[string]string{
 	"ui_icon": "generated/ui/icons", "ui_menu": "generated/ui/menu", "ui_portrait": "generated/ui/portraits",
+	"cursor": "generated/ui/cursors",
 }
 
 func pngDir(family string) string {
