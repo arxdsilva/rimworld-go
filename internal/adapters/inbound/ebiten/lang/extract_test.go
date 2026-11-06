@@ -21,8 +21,18 @@ var update = flag.Bool("update", false, "rewrite assets/lang/en.json from the cl
 func TestCatalogIsCurrent(t *testing.T) {
 	t.Parallel()
 	keys := catalogKeys(parseClient(t))
-	for k := range simKeys(parseTree(t, gameRel), module(t, repoRoot(t))+"/"+gameRel) {
+	sim, built, finished := simKeys(parseTree(t, gameRel), module(t, repoRoot(t))+"/"+gameRel)
+	for k := range sim {
 		keys[k] = true
+	}
+	// Formats built at run time and finished text reach the catalog as a
+	// Plain key no template holds, so they stay English (-v lists them).
+	t.Logf("%d simulation keys; %d formats built at run time, %d finished-text posts", len(sim), len(built), len(finished))
+	for _, u := range built {
+		t.Log("  built:    " + u)
+	}
+	for _, u := range finished {
+		t.Log("  finished: " + u)
 	}
 	want := renderEnglish(t, keys)
 	file := filepath.Join(repoRoot(t), "assets", "lang", EnglishCode+".json")
