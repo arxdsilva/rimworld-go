@@ -46,23 +46,32 @@ type Palette struct {
 // Palette is the palette of a.ColorVision.
 func (a Access) Palette() Palette { return PaletteFor(a.ColorVision) }
 
-// PaletteFor is the variant called name; an unknown name is normal. The
-// values are assets/palettes/ui.yaml's ui.<variant>.{danger,good,warning}
-// (TestColorVisionVariantsMatchYAML); deuteranopia and protanopia share one
-// set, checked to stay apart under both.
-func PaletteFor(name string) Palette {
-	p := Palette{Danger: Danger, Good: Good, Warning: Warning}
-	switch name {
-	case ColorVisionDeuter, ColorVisionProtan: // red and green confused: coral, lemon, sky blue
-		p.Danger = color.RGBA{R: 0xEA, G: 0x9E, B: 0x94, A: 0xFF}
-		p.Warning = color.RGBA{R: 0xF8, G: 0xEA, B: 0x52, A: 0xFF}
-		p.Good = color.RGBA{R: 0x8E, G: 0xC4, B: 0xFB, A: 0xFF}
-	case ColorVisionTritan: // blue and yellow confused: coral, pale peach, teal
-		p.Danger = color.RGBA{R: 0xFF, G: 0x90, B: 0x80, A: 0xFF}
-		p.Warning = color.RGBA{R: 0xFF, G: 0xDD, B: 0xB0, A: 0xFF}
-		p.Good = color.RGBA{R: 0x62, G: 0xD6, B: 0xC0, A: 0xFF}
+// The colour-vision variants of the status colours (OPT-018): Tokens
+// carries them as ui.<variant>.{danger,good,warning}, the keys of
+// assets/palettes/ui.yaml. Deuteranopia and protanopia share one set,
+// checked to stay apart under both (.cursor/handoffs/OPT-2-art.md).
+var (
+	redGreenPalette = Palette{ // coral, sky blue, lemon
+		Danger:  color.RGBA{R: 0xEA, G: 0x9E, B: 0x94, A: 0xFF},
+		Good:    color.RGBA{R: 0x8E, G: 0xC4, B: 0xFB, A: 0xFF},
+		Warning: color.RGBA{R: 0xF8, G: 0xEA, B: 0x52, A: 0xFF},
 	}
-	return p
+	tritanPalette = Palette{ // coral, teal, pale peach
+		Danger:  color.RGBA{R: 0xFF, G: 0x90, B: 0x80, A: 0xFF},
+		Good:    color.RGBA{R: 0x62, G: 0xD6, B: 0xC0, A: 0xFF},
+		Warning: color.RGBA{R: 0xFF, G: 0xDD, B: 0xB0, A: 0xFF},
+	}
+)
+
+// PaletteFor is the variant called name; an unknown name is normal.
+func PaletteFor(name string) Palette {
+	switch name {
+	case ColorVisionDeuter, ColorVisionProtan:
+		return redGreenPalette
+	case ColorVisionTritan:
+		return tritanPalette
+	}
+	return Palette{Danger: Danger, Good: Good, Warning: Warning}
 }
 
 // Tokens returns the palette's status colours by token name (the YAML keys
