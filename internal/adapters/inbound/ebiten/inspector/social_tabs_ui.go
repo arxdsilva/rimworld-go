@@ -37,11 +37,11 @@ func (a Tabs) kitTabBody(id entity.EntityID, tab string, r gfx.Rect) {
 	}
 	in := r
 	if tab == "social" {
-		a.kit().Label(in.X, in.Y, "Social", gfx.WithColor(gfx.Label, uikit.Heading))
+		a.kit().Label(in.X, in.Y, a.shell.T("Social"), gfx.WithColor(gfx.Label, uikit.Heading))
 		a.socialTab(p, in) // social_ui.go
 		return
 	}
-	a.kit().Label(in.X, in.Y, "Health", gfx.WithColor(gfx.Label, uikit.Heading))
+	a.kit().Label(in.X, in.Y, a.shell.T("Health"), gfx.WithColor(gfx.Label, uikit.Heading))
 	a.healthTab(p, in) // health_ui.go
 }
 

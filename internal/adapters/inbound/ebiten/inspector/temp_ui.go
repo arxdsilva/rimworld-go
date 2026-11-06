@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"sort"
 	"strings"
 
@@ -29,15 +30,18 @@ func isVent(b game.BuildingView) bool { return b.Kind == ventKind }
 
 // ventCommands is a vent's one button: open it to let air through the wall,
 // shut it to seal the wall again.
-func ventCommands(b game.BuildingView) []Button {
+func ventCommands(b game.BuildingView) []Button { return ventCommandsT(lang.English{}, b) }
+
+// ventCommandsT is ventCommands in tr's language.
+func ventCommandsT(tr lang.Tr, b game.BuildingView) []Button {
 	if !isVent(b) {
 		return nil
 	}
-	desc := "Open the vent so air flows between the rooms on either side. A colonist walks over and flicks it, so it takes a moment."
+	desc := tr.T("Open the vent so air flows between the rooms on either side. A colonist walks over and flicks it, so it takes a moment.")
 	if b.Open {
-		desc = "Shut the vent to seal the wall again. A colonist walks over and flicks it, so it takes a moment."
+		desc = tr.T("Shut the vent to seal the wall again. A colonist walks over and flicks it, so it takes a moment.")
 	}
-	return []Button{{ID: ventToggleCmdID, Label: "Open", Icon: "power_toggle", Toggle: true, On: b.Open, Desc: desc,
+	return []Button{{ID: ventToggleCmdID, Label: tr.T("Open"), Icon: "power_toggle", Toggle: true, On: b.Open, Desc: desc,
 		Cmds: []command.Command{{Kind: command.ToggleVent, Target: uint64(b.ID), Enabled: !b.Open}}}}
 }
 

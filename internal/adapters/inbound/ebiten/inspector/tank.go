@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render/world"
@@ -34,7 +35,7 @@ type tankProducer struct{ b Building }
 func (t tankProducer) Pane(id entity.EntityID) Spec {
 	p := t.b.BuildingPane(id)
 	if bv, ok := t.b.BuildingView(id); ok && bv.Kind == FishTankKind && bv.Tank != nil {
-		p.Bars = append(p.Bars, Bar{Label: "Feed", Pct: bldgPct(bv.Tank.FeedPct), Color: uikit.Accent})
+		p.Bars = append(p.Bars, Bar{Label: t.b.shell.T("Feed"), Pct: bldgPct(bv.Tank.FeedPct), Color: uikit.Accent})
 		p.Lines = append(p.Lines, TankLines(bv.Tank)...)
 	}
 	return p
@@ -47,7 +48,7 @@ func (t tankProducer) Commands(id entity.EntityID) []Button {
 	if !ok || bv.Kind != FishTankKind || bv.Tank == nil || bv.Hostile {
 		return out
 	}
-	return append([]Button{TankStockButton(bv)}, out...)
+	return append([]Button{TankStockButton(t.b.shell, bv)}, out...)
 }
 
 // TankLines are a tank's pane lines: stock, growth, the ready state, health
@@ -77,28 +78,28 @@ func TankLines(t *game.TankView) []string {
 
 // TankStockButton is the stock picker of tank b: one option per species,
 // the current one and any that Reason refuses disabled, and Empty.
-func TankStockButton(b game.BuildingView) Button {
+func TankStockButton(tr lang.Tr, b game.BuildingView) Button {
 	t := b.Tank
 	opts := make([]Option, 0, len(t.Options)+1)
 	for _, o := range t.Options {
 		op := Option{Label: capitalize(o.Label), Cmd: &command.Command{Kind: command.SetTankStock, Target: uint64(b.ID), Count: o.ID}}
 		switch {
 		case o.ID == t.StockID && t.Stock != "":
-			op.Disabled, op.Reason = true, "Already the stock"
+			op.Disabled, op.Reason = true, tr.T("Already the stock")
 		case o.Reason != "":
 			op.Disabled, op.Reason = true, o.Reason
 		}
 		opts = append(opts, op)
 	}
 	if t.Stock != "" {
-		opts = append(opts, Option{Label: "Empty", Cmd: &command.Command{Kind: command.SetTankStock, Target: uint64(b.ID)}})
+		opts = append(opts, Option{Label: tr.T("Empty"), Cmd: &command.Command{Kind: command.SetTankStock, Target: uint64(b.ID)}})
 	}
-	desc := "Which fish this tank raises."
+	desc := tr.T("Which fish this tank raises.")
 	if t.Stock != "" {
-		desc += " Now: " + t.Stock + "."
+		desc += lang.Tf(tr, " Now: %s.", t.Stock)
 	}
-	return Button{ID: TankStockBtnID, Label: "Stock", Icon: "fish_tank", Options: func() []Option { return opts },
-		Desc: desc + " Click to switch; right-click to pick."}
+	return Button{ID: TankStockBtnID, Label: tr.T("Stock"), Icon: "fish_tank", Options: func() []Option { return opts },
+		Desc: desc + tr.T(" Click to switch; right-click to pick.")}
 }
 
 // capitalize upper-cases the first letter of s.

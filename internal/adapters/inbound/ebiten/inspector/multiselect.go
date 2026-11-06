@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"slices"
 	"strings"
 
@@ -105,17 +106,17 @@ func (a Commands) kindRows(k selection.Kind) []groupRow {
 // group is "Various (5)". Buildings of one kind are named by it.
 func (a Commands) groupNoun(k selection.Kind, n int) string {
 	if k == selection.Mixed {
-		return fmt.Sprintf("Various (%d)", n)
+		return a.shell.Tf("Various (%d)", n)
 	}
-	noun := map[selection.Kind]string{selection.Pawn: "colonist", selection.Animal: "animal", selection.Item: "item",
-		selection.Building: "building", selection.Frame: "blueprint", selection.Zone: "zone"}[k]
+	one := map[selection.Kind]string{selection.Pawn: a.shell.T("colonist"), selection.Animal: a.shell.T("animal"), selection.Item: a.shell.T("item"),
+		selection.Building: a.shell.T("building"), selection.Frame: a.shell.T("blueprint"), selection.Zone: a.shell.T("zone")}[k]
 	if k == selection.Building {
-		noun = a.sameBuildingNoun(noun)
+		one = a.sameBuildingNoun(one)
 	}
 	if n != 1 {
-		noun = pluralNoun(noun)
+		one = pluralNoun(a.shell, one)
 	}
-	return fmt.Sprintf("%d %s", n, noun)
+	return fmt.Sprintf("%d %s", n, one)
 }
 
 // sameBuildingNoun is the lower-case title when every selected building
@@ -136,11 +137,11 @@ func (a Commands) sameBuildingNoun(fallback string) string {
 }
 
 // pluralNoun is noun in the plural ("door" -> "doors", "bench" -> "benches").
-func pluralNoun(noun string) string {
+func pluralNoun(tr lang.Tr, noun string) string {
 	if strings.HasSuffix(noun, "s") || strings.HasSuffix(noun, "x") || strings.HasSuffix(noun, "ch") || strings.HasSuffix(noun, "sh") {
-		return noun + "es"
+		return lang.Tf(tr, "%ses", noun)
 	}
-	return noun + "s"
+	return lang.Tf(tr, "%ss", noun)
 }
 
 // groupButtons are the group's command buttons in the grid (the pane's
@@ -164,11 +165,11 @@ func (a Commands) GroupPane() Spec {
 	}
 	spec := Spec{
 		Title:    a.groupNoun(a.sel.Group.Kind(), len(rows)),
-		Subtitle: "Shift+click adds or removes",
+		Subtitle: a.shell.T("Shift+click adds or removes"),
 		Close:    "group.close",
 	}
 	for _, r := range rows {
-		spec.Rows = append(spec.Rows, Row{ID: selection.PickID(selection.Cand{Kind: r.kind, ID: r.id}), Label: r.label, Tip: "Select only this one"})
+		spec.Rows = append(spec.Rows, Row{ID: selection.PickID(selection.Cand{Kind: r.kind, ID: r.id}), Label: r.label, Tip: a.shell.T("Select only this one")})
 	}
 	return spec
 }
@@ -268,12 +269,12 @@ func (a Commands) groupOwnCommands() []Button {
 				on++
 			}
 		}
-		draft := Button{ID: "group.draft", Key: "draft", Label: "Draft", Icon: "draft", Hotkey: input.Draft,
-			Desc: "Draft every selected colonist."}
+		draft := Button{ID: "group.draft", Key: "draft", Label: a.shell.T("Draft"), Icon: "draft", Hotkey: input.Draft,
+			Desc: a.shell.T("Draft every selected colonist.")}
 		draft.On = on == len(pawns)
 		draft.Mixed = on > 0 && on < len(pawns)
-		out = append(out, draft, Button{ID: "group.undraft", Key: "undraft", Label: "Undraft", Icon: "draft",
-			Desc: "Stand every selected colonist down."})
+		out = append(out, draft, Button{ID: "group.undraft", Key: "undraft", Label: a.shell.T("Undraft"), Icon: "draft",
+			Desc: a.shell.T("Stand every selected colonist down.")})
 	}
 	items := a.sel.SelectedItems()
 	if len(items) == 0 {
@@ -286,22 +287,22 @@ func (a Commands) groupOwnCommands() []Button {
 			on++
 		}
 	}
-	forbid := Button{ID: "group.forbid", Key: "forbid", Label: "Forbid", Icon: "order_forbid", Hotkey: input.Forbid,
-		Desc: "Colonists will not touch forbidden stacks."}
-	allow := Button{ID: "group.allow", Key: "allow", Label: "Allow", Icon: "order_allow",
-		Desc: "Let colonists use these stacks again."}
+	forbid := Button{ID: "group.forbid", Key: "forbid", Label: a.shell.T("Forbid"), Icon: "order_forbid", Hotkey: input.Forbid,
+		Desc: a.shell.T("Colonists will not touch forbidden stacks.")}
+	allow := Button{ID: "group.allow", Key: "allow", Label: a.shell.T("Allow"), Icon: "order_allow",
+		Desc: a.shell.T("Let colonists use these stacks again.")}
 	if a.groupForbidsBuildings() {
 		forbid.ID, forbid.Run = "cmd.group.forbid", func() { a.forbidGroup(true) }
 		allow.ID, allow.Run = "cmd.group.allow", func() { a.forbidGroup(false) }
-		forbid.Desc = "Colonists will not touch forbidden stacks, doors or beds."
-		allow.Desc = "Let colonists use these stacks, doors and beds again."
+		forbid.Desc = a.shell.T("Colonists will not touch forbidden stacks, doors or beds.")
+		allow.Desc = a.shell.T("Let colonists use these stacks, doors and beds again.")
 	}
 	forbid.On = on == len(targets)
 	forbid.Mixed = on > 0 && on < len(targets)
 	out = append(out, forbid, allow)
 	if haulMarkable(items) {
-		out = append(out, Button{ID: "group.haulmark", Key: "haulmark", Label: "Mark for hauling", Icon: "order_haul",
-			Desc: "Colonists will haul the stacks found on the map."})
+		out = append(out, Button{ID: "group.haulmark", Key: "haulmark", Label: a.shell.T("Mark for hauling"), Icon: "order_haul",
+			Desc: a.shell.T("Colonists will haul the stacks found on the map.")})
 	}
 	return out
 }

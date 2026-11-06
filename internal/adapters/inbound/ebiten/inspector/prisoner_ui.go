@@ -92,12 +92,12 @@ func (a Tabs) prisonerCommands(p game.PawnView) []Button {
 	if p.Prisoner || p.Hostile || p.Embodied || p.Status == "dead" {
 		return nil
 	}
-	capture := Button{ID: PrisonerCapture, Label: "Capture", Icon: "capture"}
-	arrest := Button{ID: PrisonerArrest, Label: "Arrest", Icon: "arrest",
-		Desc: "Arrest " + p.Name + ": another colonist takes them to a prisoner bed.",
+	capture := Button{ID: PrisonerCapture, Label: a.shell.T("Capture"), Icon: "capture"}
+	arrest := Button{ID: PrisonerArrest, Label: a.shell.T("Arrest"), Icon: "arrest",
+		Desc: a.shell.Tf("Arrest %s: another colonist takes them to a prisoner bed.", p.Name),
 		Cmds: []command.Command{{Kind: command.Arrest, Target: uint64(p.ID)}}}
 	if p.Visitor {
-		arrest.Desc += " Trying it turns their whole faction hostile."
+		arrest.Desc += a.shell.T(" Trying it turns their whole faction hostile.")
 	}
 	var target game.PawnView
 	found := false
@@ -112,12 +112,12 @@ func (a Tabs) prisonerCommands(p game.PawnView) []Button {
 	switch {
 	case p.Status != "alive":
 		capture.Disabled, capture.Reason = true, p.Status
-		capture.Desc = "Capture a downed enemy and carry them to a bed marked For prisoners."
+		capture.Desc = a.shell.T("Capture a downed enemy and carry them to a bed marked For prisoners.")
 	case !found:
-		capture.Disabled, capture.Reason = true, "no downed enemy to capture"
-		capture.Desc = "Capture a downed enemy and carry them to a bed marked For prisoners."
+		capture.Disabled, capture.Reason = true, a.shell.T("no downed enemy to capture")
+		capture.Desc = a.shell.T("Capture a downed enemy and carry them to a bed marked For prisoners.")
 	default:
-		capture.Desc = "Capture " + target.Name + ": carry them to a bed marked For prisoners."
+		capture.Desc = a.shell.Tf("Capture %s: carry them to a bed marked For prisoners.", target.Name)
 		capture.Cmds = []command.Command{{Kind: command.Capture, Pawn: uint64(p.ID), Target: uint64(target.ID)}}
 	}
 	return []Button{capture, arrest}
@@ -151,10 +151,10 @@ func (a Tabs) prisonerTab(p game.PawnView, in gfx.Rect) {
 	a.kit().Label(in.X, in.Y, gfx.Ellipsize(a.shell.PawnLabel(p), gfx.Label, float64(in.W)), gfx.WithColor(gfx.Label, uikit.Heading))
 	y := in.Y + float32(gfx.LineStep(gfx.Label)) + 8
 	a.queueIcon("ui_icon/prisoner", in.X, y+2)
-	a.kit().Label(in.X+prisonerIcon+6, y, "Prisoner of the colony", gfx.Body)
+	a.kit().Label(in.X+prisonerIcon+6, y, a.shell.T("Prisoner of the colony"), gfx.Body)
 	y += float32(gfx.LineStep(gfx.Body)) + 8
 
-	a.kit().Label(in.X, y, fmt.Sprintf("Resistance %d", v.Resistance), gfx.Body)
+	a.kit().Label(in.X, y, a.shell.Tf("Resistance %d", v.Resistance), gfx.Body)
 	bar := gfx.Rect{X: in.X + 120, Y: y + 4, W: in.W - 120, H: 10}
 	frac := min(float32(v.Resistance)/float32(prisonerResMax), 1)
 	a.kit().Queue(func(dst *ebiten.Image) {
@@ -163,7 +163,7 @@ func (a Tabs) prisonerTab(p game.PawnView, in gfx.Rect) {
 	})
 	y += float32(gfx.LineStep(gfx.Body)) + 10
 
-	a.kit().Label(in.X, y, "Interaction", gfx.Label)
+	a.kit().Label(in.X, y, a.shell.T("Interaction"), gfx.Label)
 	y += float32(gfx.LineStep(gfx.Label)) + 4
 	const bw, bh, gap = 120, 24, 8
 	for i, m := range PrisonerModes {
@@ -177,20 +177,20 @@ func (a Tabs) prisonerTab(p game.PawnView, in gfx.Rect) {
 		}
 	}
 	rel := gfx.Rect{X: in.X + 2*(bw+gap), Y: y + bh + 6, W: bw, H: bh}
-	ro := uikit.BtnOpts{Tip: "Release now\nThe prisoner gets up and walks home."}
+	ro := uikit.BtnOpts{Tip: a.shell.T("Release now\nThe prisoner gets up and walks home.")}
 	if p.Status != "alive" {
-		ro.Disabled, ro.Reason = true, "too hurt to walk out"
+		ro.Disabled, ro.Reason = true, a.shell.T("too hurt to walk out")
 	}
-	if a.kit().Button(PrisonerRelease, rel, "Release now", ro) {
+	if a.kit().Button(PrisonerRelease, rel, a.shell.T("Release now"), ro) {
 		a.shell.Enqueue(command.Command{Kind: command.ReleasePrisoner, Target: uint64(p.ID)})
 	}
 	y += 2*(bh+6) + 8
 
 	warden := v.Warden
 	if warden == "" {
-		warden = "none yet"
+		warden = a.shell.T("none yet")
 	}
-	a.kit().Label(in.X, y, "Warden: "+warden, gfx.Body)
+	a.kit().Label(in.X, y, a.shell.Tf("Warden: %s", warden), gfx.Body)
 	y += float32(gfx.LineStep(gfx.Body)) + 6
 	for _, w := range a.PrisonerWarnings(p, v) {
 		a.kit().Label(in.X, y, gfx.Ellipsize(w, gfx.Small, float64(in.W)), gfx.WithColor(gfx.Small, uikit.Warning))

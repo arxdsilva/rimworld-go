@@ -1,6 +1,7 @@
 package inspector
 
 import (
+	"fmt"
 	"rimworld-go/internal/adapters/inbound/ebiten/hudlayout"
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
@@ -41,6 +42,11 @@ func (h fakeHost) KeyRepeat(string) bool    { return false }
 func (h fakeHost) Cue(string)               {}
 func (h fakeHost) Hint(string)              {}
 func (h fakeHost) ReducedMotion() bool      { return true }
+
+// T and Tf are English: the fake serves the texts the real shell translates.
+func (f *fakeShell) T(src string) string { return src }
+
+func (f *fakeShell) Tf(src string, args ...any) string { return fmt.Sprintf(src, args...) }
 
 func (f *fakeShell) Kit() *uikit.Kit {
 	if f.kit == nil {

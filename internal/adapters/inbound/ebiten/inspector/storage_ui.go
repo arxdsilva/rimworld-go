@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"rimworld-go/internal/application/game"
@@ -58,8 +59,8 @@ func (a Building) shelfStorageCommand(b game.BuildingView) []Button {
 		return nil
 	}
 	zid := z.ID
-	out := []Button{{ID: StorageID, Label: "Storage", Icon: "zone_stockpile",
-		Desc: "Choose which items this accepts, set its priority and special filters, and copy or paste settings.",
+	out := []Button{{ID: StorageID, Label: a.shell.T("Storage"), Icon: "zone_stockpile",
+		Desc: a.shell.T("Choose which items this accepts, set its priority and special filters, and copy or paste settings."),
 		Run:  func() { a.shell.Do(ports.OpenStorage{Zone: zid}) }}}
 	if z.Kind != game.ZoneShelf || (b.Kind != shelfKind && z.Profile == "") {
 		return out // only the shelf and the Neat Storage pieces link (NST)
@@ -83,18 +84,18 @@ func otherShelves(a Building, b game.BuildingView, profile string) []game.ZoneVi
 // one's group takes this shelf in and they share one set of settings.
 func linkCommand(a Building, b game.BuildingView, z game.ZoneView) Button {
 	others := otherShelves(a, b, z.Profile)
-	c := Button{ID: LinkStorageID, Label: "Link settings", Icon: "zone_stockpile", Desc: "Join another shelf's group so both share one set of settings, priority and name."}
+	c := Button{ID: LinkStorageID, Label: a.shell.T("Link settings"), Icon: "zone_stockpile", Desc: a.shell.T("Join another shelf's group so both share one set of settings, priority and name.")}
 	if len(others) == 0 {
-		c.Disabled, c.Reason = true, "no other shelf to link to"
+		c.Disabled, c.Reason = true, a.shell.T("no other shelf to link to")
 		return c
 	}
 	self := b.ID
 	c.Run = func() {
 		entries := make([]game.OrderOption, len(others))
 		for i, o := range others {
-			entries[i] = game.OrderOption{Label: shelfLabel(o)}
+			entries[i] = game.OrderOption{Label: shelfLabel(a.shell, o)}
 			if z.Group != 0 && o.Group == z.Group {
-				entries[i].Disabled, entries[i].Reason = true, "already linked"
+				entries[i].Disabled, entries[i].Reason = true, a.shell.T("already linked")
 			}
 		}
 		x, y := a.Commands().Anchor(LinkStorageID)
@@ -109,20 +110,24 @@ func linkCommand(a Building, b game.BuildingView, z game.ZoneView) Button {
 
 // unlinkCommand takes the shelf out of its group.
 func unlinkCommand(a Building, b game.BuildingView, z game.ZoneView) Button {
-	c := Button{ID: UnlinkStorageID, Label: "Unlink", Icon: "order_cancel", Desc: "Leave the group: this shelf keeps its current settings on its own.",
+	var tr lang.Tr = lang.English{} // a bare Building (a test's) has no shell
+	if a.Pane != nil {
+		tr = a.shell
+	}
+	c := Button{ID: UnlinkStorageID, Label: tr.T("Unlink"), Icon: "order_cancel", Desc: tr.T("Leave the group: this shelf keeps its current settings on its own."),
 		Cmds: []command.Command{{Kind: command.UnlinkStorage, Target: uint64(b.ID)}}}
 	if z.Group == 0 {
-		c.Disabled, c.Reason = true, "not linked to another shelf"
+		c.Disabled, c.Reason = true, tr.T("not linked to another shelf")
 	}
 	return c
 }
 
 // shelfLabel names a shelf for the link pick: its zone name, else its tile.
-func shelfLabel(z game.ZoneView) string {
+func shelfLabel(tr lang.Tr, z game.ZoneView) string {
 	if z.Name != "" {
 		return z.Name
 	}
-	return fmt.Sprintf("Shelf at (%d, %d)", z.MinX, z.MinY)
+	return lang.Tf(tr, "Shelf at (%d, %d)", z.MinX, z.MinY)
 }
 
 // storageLines are the stored-of-capacity line and the group line of a

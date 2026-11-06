@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"sort"
 	"strings"
 
@@ -146,29 +147,34 @@ const PenTabW = 400 // the Pen tab's panel
 // and sexes the pen takes (with All / None), and the auto-cut checklist.
 // The status and food lines are the pane's.
 func PenTabBody(w game.WorldView, pv game.PenView, viewW float32) TabBody {
+	return PenTabBodyT(lang.English{}, w, pv, viewW)
+}
+
+// PenTabBodyT is PenTabBody with its words in tr's language.
+func PenTabBodyT(tr lang.Tr, w game.WorldView, pv game.PenView, viewW float32) TabBody {
 	var body TabBody
 	y := float32(0)
-	body.Labels = append(body.Labels, tabLabel{Text: "Animals", y: y, st: gfx.Label})
+	body.Labels = append(body.Labels, tabLabel{Text: tr.T("Animals"), y: y, st: gfx.Label})
 	body.Buttons = append(body.Buttons,
-		uikit.Button{ID: "bldg.pen.all", Label: "All", X: viewW - 118, Y: y, W: 56, H: penBtnH},
-		uikit.Button{ID: "bldg.pen.none", Label: "None", X: viewW - 56, Y: y, W: 56, H: penBtnH})
+		uikit.Button{ID: "bldg.pen.all", Label: tr.T("All"), X: viewW - 118, Y: y, W: 56, H: penBtnH},
+		uikit.Button{ID: "bldg.pen.none", Label: tr.T("None"), X: viewW - 56, Y: y, W: 56, H: penBtnH})
 	y += 24
 	rows := penSpeciesRows(w, pv)
 	for _, row := range rows {
 		body.Buttons = append(body.Buttons,
 			uikit.Button{ID: "bldg.pen.sp." + row.key, Label: row.label, X: 0, Y: y, W: 190, H: penBtnH, Selected: row.set.Allow},
-			uikit.Button{ID: "bldg.pen.sp." + row.key + ".m", Label: "M", X: 200, Y: y, W: 44, H: penBtnH, Selected: row.set.Male,
-				Tip: "Males\nTake male " + row.label + " animals."},
-			uikit.Button{ID: "bldg.pen.sp." + row.key + ".f", Label: "F", X: 250, Y: y, W: 44, H: penBtnH, Selected: row.set.Female,
-				Tip: "Females\nTake female " + row.label + " animals."})
+			uikit.Button{ID: "bldg.pen.sp." + row.key + ".m", Label: tr.T("M"), X: 200, Y: y, W: 44, H: penBtnH, Selected: row.set.Male,
+				Tip: lang.Tf(tr, "Males\nTake male %s animals.", row.label)},
+			uikit.Button{ID: "bldg.pen.sp." + row.key + ".f", Label: tr.T("F"), X: 250, Y: y, W: 44, H: penBtnH, Selected: row.set.Female,
+				Tip: lang.Tf(tr, "Females\nTake female %s animals.", row.label)})
 		y += penRowH
 	}
 	if len(rows) == 0 {
-		body.Labels = append(body.Labels, tabLabel{Text: "No penned animals in the colony yet.", x: 4, y: y + 2, w: viewW - 4, st: gfx.Body})
+		body.Labels = append(body.Labels, tabLabel{Text: tr.T("No penned animals in the colony yet."), x: 4, y: y + 2, w: viewW - 4, st: gfx.Body})
 		y += penRowH
 	}
 	y += 10
-	body.Labels = append(body.Labels, tabLabel{Text: "Auto-cut (every 2 hours, inside an enclosed pen)", y: y, w: viewW, st: gfx.Label})
+	body.Labels = append(body.Labels, tabLabel{Text: tr.T("Auto-cut (every 2 hours, inside an enclosed pen)"), y: y, w: viewW, st: gfx.Label})
 	y += 24
 	cut := map[string]bool{}
 	for _, k := range pv.Settings.AutoCut {
@@ -188,9 +194,9 @@ func (a Building) penTab(b game.BuildingView) Tab {
 	id := b.ID
 	h := float32(2 * PaneInset)
 	if pv, ok := a.PenOf(b); ok {
-		h += PenTabBody(a.shell.World(), pv, PenTabW-2*PaneInset-uikit.ScrollBarW).H
+		h += PenTabBodyT(a.shell, a.shell.World(), pv, PenTabW-2*PaneInset-uikit.ScrollBarW).H
 	}
-	return Tab{ID: "inspector.pen", Label: "Pen", WantW: PenTabW, WantH: h,
+	return Tab{ID: "inspector.pen", Label: a.shell.T("Pen"), WantW: PenTabW, WantH: h,
 		Declare: func(r gfx.Rect) { a.penTabUI(id, r) }}
 }
 
@@ -205,7 +211,7 @@ func (a Building) penTabUI(id entity.EntityID, r gfx.Rect) {
 	if !ok {
 		return
 	}
-	a.declareTabBody("bldg.pen.body", r, PenTabBody(a.shell.World(), pv, r.W-uikit.ScrollBarW), a.ApplyBuildingClick)
+	a.declareTabBody("bldg.pen.body", r, PenTabBodyT(a.shell, a.shell.World(), pv, r.W-uikit.ScrollBarW), a.ApplyBuildingClick)
 }
 
 // penPlantLabel is a plant species key as words ("jungle_tree").

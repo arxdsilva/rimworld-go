@@ -95,7 +95,7 @@ func (a Pawn) equipNearby(p game.PawnView) []equipOption {
 		for _, o := range a.sim().OrdersAt(p.ID, c.it.X, c.it.Y) {
 			if OrderIs(command.OrderEquip)(o) && (strings.HasPrefix(o.Label, "Equip") || strings.HasPrefix(o.Label, "Wear")) && !o.Disabled {
 				out = append(out, equipOption{Item: c.it.ID, Cmd: o.Cmd,
-					Label: fmt.Sprintf("%s \u2014 %d tiles", o.Label, c.dist)})
+					Label: a.shell.Tf("%s \u2014 %d tiles", o.Label, c.dist)})
 				break
 			}
 		}
@@ -228,7 +228,7 @@ func (a Pawn) drawNeedsTab(screen *ebiten.Image, id entity.EntityID, r gfx.Rect)
 	if float32(fy)+gfx.LineStep(gfx.Body) > in.Bottom() {
 		return
 	}
-	gfx.Text(screen, "feels "+p.MoodLabel, float64(x), fy, gfx.WithColor(gfx.Body, uikit.TextDim))
+	gfx.Text(screen, a.shell.Tf("feels %s", p.MoodLabel), float64(x), fy, gfx.WithColor(gfx.Body, uikit.TextDim))
 	ty := fy + float64(gfx.LineStep(gfx.Body)) + 4
 	for _, row := range JoyRows(p) { // ax6.go (AX-6): what it enjoys now, its recreation tolerances
 		if float32(ty)+gfx.LineStep(gfx.Small) > in.Bottom() {

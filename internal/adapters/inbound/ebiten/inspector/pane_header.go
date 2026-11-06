@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -186,7 +187,7 @@ func (c CardPane) selectNext(k selection.Kind, id entity.EntityID) {
 		}
 	}
 	if len(cands) < 2 || at < 0 {
-		c.shell.Hint("Nothing else on this cell.")
+		c.shell.Hint(c.shell.T("Nothing else on this cell."))
 		return
 	}
 	c.sel.Select(cands[(at+1)%len(cands)])
@@ -246,7 +247,7 @@ func (c CardPane) pickCare(id entity.EntityID, cur medcare.Policy) {
 	for p := medcare.Policy(0); p < medcare.NumPolicies; p++ {
 		opts[p] = p.Label()
 	}
-	uikit.Picker(c.kit(), HeadCareID, "Medical care", opts, int(cur), func(i int) {
+	uikit.Picker(c.kit(), HeadCareID, c.shell.T("Medical care"), opts, int(cur), func(i int) {
 		c.shell.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(id), Mode: uint8(i)})
 	})
 }
@@ -266,13 +267,13 @@ func (c CardPane) selfTendButton(p game.PawnView) headButton {
 func (c CardPane) setSelfTend(p game.PawnView, on bool) {
 	c.shell.Enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(p.ID), Enabled: on})
 	if on && !p.WorkDoctor {
-		c.shell.Hint(c.shell.PawnLabel(p) + " has doctoring switched off.")
+		c.shell.Hint(c.shell.Tf("%s has doctoring switched off.", c.shell.PawnLabel(p)))
 	}
 }
 
 // renameButton opens the rename dialog (RHUD-025).
 func (c CardPane) renameButton(id entity.EntityID, name string) headButton {
-	return headButton{id: HeadRenameID, label: "N", icon: "ui_icon/zone_rename", tip: "Rename\nGive this one a new name.",
+	return headButton{id: HeadRenameID, label: "N", icon: "ui_icon/zone_rename", tip: c.shell.T("Rename\nGive this one a new name."),
 		run: func() { c.openRename(id, name) }}
 }
 
@@ -287,11 +288,11 @@ func (c CardPane) openRename(id entity.EntityID, name string) {
 			c.shell.Enqueue(command.Command{Kind: command.SetName, Pawn: uint64(id), Name: clean})
 		}
 	}
-	u.Push(uikit.Modal{ID: headRenameMod, Title: "Rename " + name, W: 380, H: 180,
+	u.Push(uikit.Modal{ID: headRenameMod, Title: c.shell.Tf("Rename %s", name), W: 380, H: 180,
 		Draw: func(r gfx.Rect) { c.renameBody(r, &text) },
 		Buttons: []uikit.ModalButton{
-			{ID: "ok", Label: "Rename", Style: uikit.BtnPrimary, Closes: true, OnClick: send, Disabled: func() string { return renameRefusal(text) }},
-			{ID: "cancel", Label: "Cancel", Closes: true},
+			{ID: "ok", Label: c.shell.T("Rename"), Style: uikit.BtnPrimary, Closes: true, OnClick: send, Disabled: func() string { return renameRefusal(c.shell, text) }},
+			{ID: "cancel", Label: c.shell.T("Cancel"), Closes: true},
 		}})
 	u.Focus, u.TabTo = HeadRenameFld, HeadRenameFld
 }
@@ -299,10 +300,10 @@ func (c CardPane) openRename(id entity.EntityID, name string) {
 // renameBody declares the dialog's field and its hint.
 func (c CardPane) renameBody(r gfx.Rect, text *string) {
 	u := c.kit()
-	u.TextField(HeadRenameFld, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: 28}, text, uikit.TextFieldSpec{Placeholder: "Generated name"})
-	note := "Leave it empty for the name it started with."
+	u.TextField(HeadRenameFld, gfx.Rect{X: r.X, Y: r.Y, W: r.W, H: 28}, text, uikit.TextFieldSpec{Placeholder: c.shell.T("Generated name")})
+	note := c.shell.T("Leave it empty for the name it started with.")
 	st := uikit.DimText()
-	if why := renameRefusal(*text); why != "" {
+	if why := renameRefusal(c.shell, *text); why != "" {
 		note = why
 		st = gfx.WithColor(st, uikit.Warning)
 	}
@@ -310,9 +311,9 @@ func (c CardPane) renameBody(r gfx.Rect, text *string) {
 }
 
 // renameRefusal is why a name will not do ("": it will).
-func renameRefusal(s string) string {
+func renameRefusal(tr lang.Tr, s string) string {
 	if _, ok := dossierview.CleanName(strings.TrimSpace(s)); !ok {
-		return "Names hold letters, spaces, apostrophes and hyphens, and stay short."
+		return tr.T("Names hold letters, spaces, apostrophes and hyphens, and stay short.")
 	}
 	return ""
 }
@@ -326,14 +327,14 @@ type selfTend struct {
 // selfTendState is the Health tab's and the header's self-tend control. With
 // the card off it is today's: disabled only for the dead, with today's words.
 func selfTendState(a *Pane, p game.PawnView) selfTend {
-	st := selfTend{tip: "Self-tend\nWith no one else to help, this colonist tends its own wounds (at lower quality)."}
+	st := selfTend{tip: a.shell.T("Self-tend\nWith no one else to help, this colonist tends its own wounds (at lower quality).")}
 	if p.Status == "dead" {
-		st.reason = "The dead need no care."
+		st.reason = a.shell.T("The dead need no care.")
 	}
 	if _, _, on := (CardPane{a}).host(); !on {
 		return st
 	}
-	st.tip = fmt.Sprintf("Self-tend\nWith no one else to help, this colonist tends its own wounds, at %d %% of a doctor's quality.", body.SelfTendFactor/10)
+	st.tip = a.shell.Tf("Self-tend\nWith no one else to help, this colonist tends its own wounds, at %d %% of a doctor's quality.", body.SelfTendFactor/10)
 	if st.reason == "" {
 		if r, ok := a.sim().(doctorReader); ok {
 			st.reason = r.IncapableReason(p.ID, work.Doctor)

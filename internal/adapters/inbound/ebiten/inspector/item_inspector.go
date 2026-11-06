@@ -2,6 +2,7 @@ package inspector
 
 import (
 	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"slices"
@@ -178,8 +179,8 @@ const ItemInfoID = "cmd.item.info"
 // itemInfoButton opens the read-only Info card on the stack.
 func (a Thing) itemInfoButton(it game.ItemView) Button {
 	id, kind := it.ID, it.Kind
-	return Button{ID: ItemInfoID, Label: "Info", Icon: "gear_info", Single: true,
-		Desc: "Info\nWhat this is, in full.",
+	return Button{ID: ItemInfoID, Label: a.shell.T("Info"), Icon: "gear_info", Single: true,
+		Desc: a.shell.T("Info\nWhat this is, in full."),
 		Run:  func() { a.shell.Do(ports.OpenInfoCard{ID: id, Kind: kind}) }}
 }
 
@@ -227,7 +228,10 @@ func IngredientsLine(it game.ItemView) string {
 // life left (the days it keeps over the kind's full shelf days), green
 // while fresh and red near spoiling. ok is false for what never spoils, is
 // dried, rotten or carried.
-func RotBar(it game.ItemView) (Bar, bool) {
+func RotBar(it game.ItemView) (Bar, bool) { return RotBarT(lang.English{}, it) }
+
+// RotBarT is RotBar with its label in tr's language.
+func RotBarT(tr lang.Tr, it game.ItemView) (Bar, bool) {
 	if it.FreshDays < 0 || it.Rotten || it.Dried || it.Carried {
 		return Bar{}, false
 	}
@@ -240,5 +244,5 @@ func RotBar(it game.ItemView) (Bar, bool) {
 		pct = int(it.FreshDays / total * 100)
 	}
 	pct = max(0, min(100, pct))
-	return Bar{Label: "Freshness", Pct: pct, Color: HealthColor(pct)}, true
+	return Bar{Label: tr.T("Freshness"), Pct: pct, Color: HealthColor(pct)}, true
 }

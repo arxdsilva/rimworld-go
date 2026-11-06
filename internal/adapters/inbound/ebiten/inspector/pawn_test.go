@@ -1,6 +1,7 @@
 package inspector
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"slices"
 	"strings"
 	"testing"
@@ -48,7 +49,7 @@ func TestPostponedLine(t *testing.T) {
 
 func TestLogLineTextAndWrap(t *testing.T) {
 	t.Parallel()
-	if got := LogLineText(game.LogLineView{Day: 2, Hour: 7, Text: "Ate a meal"}); got != "Day 2, 07h  Ate a meal" {
+	if got := LogLineText(lang.English{}, game.LogLineView{Day: 2, Hour: 7, Text: "Ate a meal"}); got != "Day 2, 07h  Ate a meal" {
 		t.Fatalf("text = %q", got)
 	}
 	rows := WrapLogRows([]game.LogLineView{{Day: 1, Hour: 1, Text: strings.Repeat("x", 60)}}, 200)

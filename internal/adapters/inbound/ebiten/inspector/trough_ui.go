@@ -39,16 +39,16 @@ func (a Building) troughCommands(b game.BuildingView) []Button {
 	for _, f := range troughFilters {
 		o := Option{Label: f.label, Cmd: &command.Command{Kind: command.SetTroughFilter, Target: uint64(b.ID), Mode: f.mode}}
 		if b.TroughFilter == f.key {
-			o.Disabled, o.Reason = true, "Already set"
+			o.Disabled, o.Reason = true, a.shell.T("Already set")
 		}
 		opts = append(opts, o)
 	}
-	desc := "Which feed haulers put in."
+	desc := a.shell.T("Which feed haulers put in.")
 	if b.TroughFilter != "" {
-		desc += " Now: " + b.TroughFilter + "."
+		desc += a.shell.Tf(" Now: %s.", b.TroughFilter)
 	}
-	return []Button{{ID: "cmd.bldg.trough", Label: "Feed", Options: func() []Option { return opts },
-		Desc: desc + " Click to switch; right-click to pick."}}
+	return []Button{{ID: "cmd.bldg.trough", Label: a.shell.T("Feed"), Options: func() []Option { return opts },
+		Desc: desc + a.shell.T(" Click to switch; right-click to pick.")}}
 }
 
 // penAnimals are the tame animals standing in the pen that holds tile

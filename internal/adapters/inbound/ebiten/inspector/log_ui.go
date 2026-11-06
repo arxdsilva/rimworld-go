@@ -1,7 +1,7 @@
 package inspector
 
 import (
-	"fmt"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -15,8 +15,6 @@ import (
 // pane's Log tab (animal_inspector.go) render LogLineView read models,
 // newest first.
 
-const logEmptyText = "Nothing has happened yet."
-
 // logStyle is the log's text: the small size, so a panel shows many rows.
 var LogStyle = gfx.Small
 
@@ -24,19 +22,24 @@ var LogStyle = gfx.Small
 func logLineH() int { return int(gfx.LineStep(LogStyle)) }
 
 // logLineText is "Day D, HHh  Text".
-func LogLineText(l game.LogLineView) string {
-	return fmt.Sprintf("Day %d, %02dh  %s", l.Day, l.Hour, l.Text)
+func LogLineText(tr lang.Tr, l game.LogLineView) string {
+	return lang.Tf(tr, "Day %d, %02dh  %s", l.Day, l.Hour, l.Text)
 }
 
 // wrapLogRows lays lines (newest first) out as rows no wider than maxW px;
 // a long line wraps onto indented continuation rows.
 func WrapLogRows(lines []game.LogLineView, maxW float64) []string {
+	return WrapLogRowsT(lang.English{}, lines, maxW)
+}
+
+// WrapLogRowsT is WrapLogRows with the day stamps in tr's language.
+func WrapLogRowsT(tr lang.Tr, lines []game.LogLineView, maxW float64) []string {
 	maxW = max(maxW, 60)
 	indent := "  "
 	iw := float64(gfx.TextW(indent, LogStyle))
 	var rows []string
 	for _, l := range lines {
-		for i, row := range gfx.WrapPx(LogLineText(l), LogStyle, maxW-iw) {
+		for i, row := range gfx.WrapPx(LogLineText(tr, l), LogStyle, maxW-iw) {
 			if i > 0 {
 				row = indent + row
 			}
@@ -54,10 +57,10 @@ func ClampLogScroll(scroll, rows, visible int) int {
 // drawLogRows draws the visible slice of rows from scroll, with a small
 // scroll hint at the right edge (hintX) when more are hidden. Returns the
 // clamped offset.
-func drawLogRows(screen *ebiten.Image, rows []string, x, y, w, visible, scroll int) int {
+func drawLogRows(tr lang.Tr, screen *ebiten.Image, rows []string, x, y, w, visible, scroll int) int {
 	lh := logLineH()
 	if len(rows) == 0 {
-		gfx.Text(screen, logEmptyText, float64(x), float64(y), gfx.WithColor(LogStyle, uikit.TextDim))
+		gfx.Text(screen, tr.T("Nothing has happened yet."), float64(x), float64(y), gfx.WithColor(LogStyle, uikit.TextDim))
 		return 0
 	}
 	scroll = ClampLogScroll(scroll, len(rows), visible)
@@ -149,6 +152,6 @@ func (a Pawn) drawPawnLog(screen *ebiten.Image, id entity.EntityID, r gfx.Rect) 
 func (a Pawn) DrawPawnLogRows(screen *ebiten.Image, p game.PawnView, r gfx.Rect) {
 	a.SyncLogFor(p.ID)
 	x, y, w, h := LogBodyRect(r)
-	rows := WrapLogRows(p.Log, float64(w)-12)
-	a.LogScroll = drawLogRows(screen, rows, x, y, w, h/logLineH(), a.LogScroll)
+	rows := WrapLogRowsT(a.shell, p.Log, float64(w)-12)
+	a.LogScroll = drawLogRows(a.shell, screen, rows, x, y, w, h/logLineH(), a.LogScroll)
 }

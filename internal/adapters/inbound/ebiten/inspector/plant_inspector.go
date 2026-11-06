@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"math"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strconv"
 	"strings"
 
@@ -31,15 +32,18 @@ func Capitalize(s string) string {
 
 // plantTitle names the plant: trees by their drawn variant, the rest by
 // species.
-func PlantTitle(p game.PlantView) string {
+func PlantTitle(p game.PlantView) string { return PlantTitleT(lang.English{}, p) }
+
+// PlantTitleT is PlantTitle in tr's language.
+func PlantTitleT(tr lang.Tr, p game.PlantView) string {
 	switch p.Species {
 	case "pine":
-		return "Pine tree"
+		return tr.T("Pine tree")
 	case "jungle_tree":
-		return "Jungle tree"
+		return tr.T("Jungle tree")
 	}
 	if isTree(p) {
-		return Capitalize(env.TreeSpecies[env.TreeSpeciesAt(sprite.TileHash(p.X, p.Y))]) + " tree"
+		return lang.Tf(tr, "%s tree", Capitalize(env.TreeSpecies[env.TreeSpeciesAt(sprite.TileHash(p.X, p.Y))]))
 	}
 	return Capitalize(p.Species)
 }

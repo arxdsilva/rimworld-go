@@ -3,6 +3,7 @@ package inspector
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"sort"
 	"strings"
 
@@ -21,8 +22,7 @@ import (
 const (
 	socialRowH      = 24
 	socialLogRowH   = 18
-	SocialEmptyText = "No relationships yet"
-	socialLogEmpty  = "Nothing has happened yet."
+	SocialEmptyText = "No relationships yet" // the English source; the tab draws it through T
 	socialRowsID    = "social.rows"
 	socialLogID     = "social.log"
 )
@@ -59,9 +59,12 @@ func OpinionColor(v int) color.RGBA {
 }
 
 // statusTag is the short tag of a relation whose person is not around.
-func StatusTag(s string) string {
+func StatusTag(s string) string { return StatusTagT(lang.English{}, s) }
+
+// StatusTagT is StatusTag in tr's language.
+func StatusTagT(tr lang.Tr, s string) string {
 	if s == "caravan" {
-		return "in caravan"
+		return tr.T("in caravan")
 	}
 	return s
 }
@@ -102,7 +105,7 @@ func (a Tabs) socialTab(p game.PawnView, in gfx.Rect) {
 	s, ok := a.sim().Social(p.ID)
 	top := in.Y + float32(gfx.LineStep(gfx.Label)) + 8
 	if !ok {
-		a.kit().Label(in.X, top, noDataYet, uikit.DimText())
+		a.kit().Label(in.X, top, a.shell.T("No data yet."), uikit.DimText())
 		return
 	}
 	rowsH := (in.Bottom() - top) * 0.55
@@ -110,7 +113,7 @@ func (a Tabs) socialTab(p game.PawnView, in gfx.Rect) {
 	a.socialRows(rows, s.Relations)
 
 	ly := rows.Bottom() + 8
-	a.kit().Label(in.X, ly, "Social log", gfx.Label)
+	a.kit().Label(in.X, ly, a.shell.T("Social log"), gfx.Label)
 	ly += float32(gfx.LineStep(gfx.Label)) + 2
 	a.socialLog(gfx.Rect{X: in.X, Y: ly, W: in.W, H: in.Bottom() - ly}, s.Log)
 }
@@ -119,7 +122,7 @@ func (a Tabs) socialTab(p game.PawnView, in gfx.Rect) {
 func (a Tabs) socialRows(r gfx.Rect, rels []game.RelationRowView) {
 	u := a.kit()
 	if len(rels) == 0 {
-		a.kit().Label(r.X, r.Y, SocialEmptyText, uikit.DimText())
+		a.kit().Label(r.X, r.Y, a.shell.T("No relationships yet"), uikit.DimText())
 		return
 	}
 	area := a.kit().ScrollArea(socialRowsID, r, float32(len(rels))*socialRowH, uikit.ScrollOpts{Step: socialRowH * 2})
@@ -138,22 +141,22 @@ func (a Tabs) socialRows(r gfx.Rect, rels []game.RelationRowView) {
 	u.Queue(func(dst *ebiten.Image) {
 		sub := gfx.ClipTo(dst, area.View)
 		for _, v := range shown {
-			paintRelationRow(sub, gfx.Rect{X: area.View.X, Y: v.y, W: area.View.W, H: socialRowH}, rels[v.i], v.i%2 == 1)
+			paintRelationRow(a.shell, sub, gfx.Rect{X: area.View.X, Y: v.y, W: area.View.W, H: socialRowH}, rels[v.i], v.i%2 == 1)
 		}
 	})
 	for _, v := range shown {
 		hit := gfx.Rect{X: area.View.X, Y: v.y, W: area.View.W, H: socialRowH}.Intersect(area.View)
-		a.kit().Add(uikit.Widget{ID: fmt.Sprintf("social.row.%d", v.i), R: hit, Label: relationLine(rels[v.i]), Tip: RelationTip(rels[v.i])})
+		a.kit().Add(uikit.Widget{ID: fmt.Sprintf("social.row.%d", v.i), R: hit, Label: relationLine(a.shell, rels[v.i]), Tip: RelationTip(rels[v.i])})
 	}
 }
 
 // relationLine is a row's plain text (its accessible label).
-func relationLine(r game.RelationRowView) string {
+func relationLine(tr lang.Tr, r game.RelationRowView) string {
 	ln := fmt.Sprintf("%s  %+d / %+d", r.Name, r.OpinionTo, r.OpinionFrom)
 	if r.Label != "" {
 		ln = r.Label + " " + ln
 	}
-	if t := StatusTag(r.Status); t != "" {
+	if t := StatusTagT(tr, r.Status); t != "" {
 		ln += " (" + t + ")"
 	}
 	return ln
@@ -161,7 +164,7 @@ func relationLine(r game.RelationRowView) string {
 
 // paintRelationRow draws one relation row: perspective label, name, status
 // tag, the big opinion of them and the small (their opinion of us).
-func paintRelationRow(dst *ebiten.Image, row gfx.Rect, r game.RelationRowView, stripe bool) {
+func paintRelationRow(tr lang.Tr, dst *ebiten.Image, row gfx.Rect, r game.RelationRowView, stripe bool) {
 	if stripe {
 		uikit.FillRect(dst, row, uiStripe)
 	}
@@ -181,7 +184,7 @@ func paintRelationRow(dst *ebiten.Image, row gfx.Rect, r game.RelationRowView, s
 		nm.Color = uikit.TextDim
 	}
 	gfx.Text(dst, uikit.FitText(r.Name, nm, nameW), float64(row.X+labelW), ty, nm)
-	if t := StatusTag(r.Status); t != "" {
+	if t := StatusTagT(tr, r.Status); t != "" {
 		gfx.Text(dst, uikit.FitText(t, small, tagW-4), float64(row.X+labelW+nameW), sy, small)
 	}
 	big := gfx.Label
@@ -197,7 +200,7 @@ func paintRelationRow(dst *ebiten.Image, row gfx.Rect, r game.RelationRowView, s
 // socialLog is the scrollable social log, newest first.
 func (a Tabs) socialLog(r gfx.Rect, log []game.SocialLogLineView) {
 	if len(log) == 0 {
-		a.kit().Label(r.X, r.Y, socialLogEmpty, uikit.DimText())
+		a.kit().Label(r.X, r.Y, a.shell.T("Nothing has happened yet."), uikit.DimText())
 		return
 	}
 	lines := LogNewestFirst(log)

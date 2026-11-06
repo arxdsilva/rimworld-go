@@ -1,6 +1,7 @@
 package inspector
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/lang"
 	"strings"
 	"testing"
 
@@ -31,7 +32,7 @@ func TestTankPaneLinesAndPicker(t *testing.T) {
 	if got := TankLines(&game.TankView{}); len(got) != 1 || !strings.Contains(got[0], "none chosen") {
 		t.Errorf("empty tank lines %q", got)
 	}
-	opts := TankStockButton(game.BuildingView{ID: 9, Tank: v}).Options()
+	opts := TankStockButton(lang.English{}, game.BuildingView{ID: 9, Tank: v}).Options()
 	if len(opts) != 4 || opts[0].Label != "Tilapia" || opts[0].Disabled {
 		t.Fatalf("options %+v", opts)
 	}
