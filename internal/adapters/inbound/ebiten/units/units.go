@@ -10,31 +10,44 @@ import (
 	"strings"
 )
 
-// UnitF is the Gameplay.TempUnit setting that selects Fahrenheit; any
-// other value (normally "") is Celsius.
-const UnitF = "F"
+// UnitF and UnitK are the Gameplay.TempUnit settings that select Fahrenheit
+// and Kelvin (OPT-007); any other value (normally "") is Celsius.
+const (
+	UnitF = "F"
+	UnitK = "K"
+)
 
-// Temp is how temperatures read. The zero value is Celsius.
-type Temp struct{ F bool }
+// Temp is how temperatures read. The zero value is Celsius; F and K are
+// exclusive (F wins if both are set).
+type Temp struct{ F, K bool }
+
+// kelvinZero is 0 °C in kelvin.
+const kelvinZero = 273.15
 
 // Celsius is the default formatter.
 var Celsius = Temp{}
 
 // FromUnit builds the formatter of a Gameplay.TempUnit setting.
-func FromUnit(unit string) Temp { return Temp{F: unit == UnitF} }
+func FromUnit(unit string) Temp { return Temp{F: unit == UnitF, K: unit == UnitK} }
 
 // Name is the unit's long name ("Celsius").
 func (u Temp) Name() string {
 	if u.F {
 		return "Fahrenheit"
 	}
+	if u.K {
+		return "Kelvin"
+	}
 	return "Celsius"
 }
 
-// Symbol is "°C" or "°F".
+// Symbol is "°C", "°F" or "K" (Kelvin has no degree sign).
 func (u Temp) Symbol() string {
 	if u.F {
 		return "°F"
+	}
+	if u.K {
+		return "K"
 	}
 	return "°C"
 }
@@ -44,6 +57,9 @@ func (u Temp) Value(c float64) float64 {
 	if u.F {
 		return c*9/5 + 32
 	}
+	if u.K {
+		return c + kelvinZero
+	}
 	return c
 }
 
@@ -52,6 +68,9 @@ func (u Temp) Value(c float64) float64 {
 func (u Temp) FromDisplay(v float64) float64 {
 	if u.F {
 		return (v - 32) * 5 / 9
+	}
+	if u.K {
+		return v - kelvinZero
 	}
 	return v
 }
@@ -69,8 +88,12 @@ func (u Temp) Delta(c float64) float64 {
 // ever state differences. Celsius returns s itself.
 func (u Temp) Text(s string) string {
 	const mark = " °C"
-	if !u.F || !strings.Contains(s, mark) {
+	if (!u.F && !u.K) || !strings.Contains(s, mark) {
 		return s
+	}
+	suffix := " °F"
+	if u.K {
+		suffix = " K"
 	}
 	var b strings.Builder
 	for {
@@ -93,7 +116,7 @@ func (u Temp) Text(s string) string {
 		if s[start] == '+' {
 			b.WriteByte('+')
 		}
-		b.WriteString(strconv.FormatFloat(u.Delta(n), 'f', -1, 64) + " °F")
+		b.WriteString(strconv.FormatFloat(u.Delta(n), 'f', -1, 64) + suffix)
 		s = s[at+len(mark):]
 	}
 }
@@ -108,13 +131,13 @@ func (u Temp) Tenths(tenths int) string {
 
 // Compact is Tenths without the space or degree sign ("-3C", "37F").
 func (u Temp) Compact(tenths int) string {
-	return strconv.Itoa(round(u.Value(float64(tenths)/10))) + u.Symbol()[len("°"):]
+	return strconv.Itoa(round(u.Value(float64(tenths)/10))) + strings.TrimPrefix(u.Symbol(), "°")
 }
 
 // Target formats a thermostat or comfort figure in tenths of a degree
 // Celsius: whole degrees when whole, else one decimal ("21.5 °C").
 func (u Temp) Target(tenths int) string {
-	if !u.F {
+	if !u.F && !u.K {
 		if tenths%10 == 0 {
 			return fmt.Sprintf("%d °C", tenths/10)
 		}
@@ -125,10 +148,11 @@ func (u Temp) Target(tenths int) string {
 		return fmt.Sprintf("%s%d.%d °C", sign, t/10, t%10)
 	}
 	v := u.Value(float64(tenths) / 10)
+	deg := " " + u.Symbol()
 	if math.Abs(v-math.Round(v)) < 0.05 {
-		return fmt.Sprintf("%d °F", round(v))
+		return fmt.Sprintf("%d%s", round(v), deg)
 	}
-	return fmt.Sprintf("%.1f °F", v)
+	return fmt.Sprintf("%.1f%s", v, deg)
 }
 
 // Degrees formats a temperature in degrees Celsius to the given decimals
@@ -144,6 +168,9 @@ func (u Temp) Whole(c float64) string { return u.Degrees(c, 0) }
 func (u Temp) Step() string {
 	if u.F {
 		return "1.8 °F"
+	}
+	if u.K {
+		return "1 K"
 	}
 	return "1 °C"
 }

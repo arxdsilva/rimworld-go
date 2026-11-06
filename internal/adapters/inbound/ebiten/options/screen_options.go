@@ -10,7 +10,6 @@ import (
 	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
-	"rimworld-go/internal/adapters/inbound/ebiten/units"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -39,8 +38,12 @@ type OptionRow struct {
 	// applyApp, when set, replaces apply for a change that needs the running
 	// app (the screen's device scale, the hardware).
 	applyApp func(sc *Screen, s *config.Settings, d int)
-	// Col is 0 for the first column and 1 for the second (Graphics only).
+	// Col is 0 for the first column and 1 for the second.
 	Col int
+	// run, when set, makes the row a one-shot action (open a folder, ask to
+	// restore the defaults, edit names): the click calls it and changes no
+	// setting by itself (rows_general.go).
+	run func(sc *Screen)
 }
 
 // optionAction is a one-shot button on a row (e.g. Reset lessons): it
@@ -54,18 +57,38 @@ type optionAction struct {
 	off      func(sc *Screen) string
 }
 
-var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility", "story": "Story", "habits": "Habits"}
+var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility", "story": "Story", "habits": "Habits",
+	"general": "General", "interface": "Interface", "developer": "Developer"}
 
-func OptionTabs() []string { return []string{"audio", "graphics", "gameplay", "controls", "access"} }
+// OptionTabs are the tabs every Options screen has. General and Interface
+// (OPT-*) follow the older ones, so the tab a screen opens on and the Story
+// tab's place stay where they were.
+func OptionTabs() []string {
+	return []string{"audio", "graphics", "gameplay", "controls", "access", "general", "interface"}
+}
 
 // TabList is the tabs on offer now: Story (story_tab.go) joins them
-// while a colony is running.
+// while a colony is running, Developer while developer mode is on.
 func (o *Screen) TabList() []string {
 	tabs := OptionTabs()
-	if !o.sh.Env().Running {
-		return append(tabs[:3:3], "habits", "controls", "access")
+	out := append(tabs[:3:3], "habits")
+	if o.sh.Env().Running {
+		out = append(tabs[:3:3], "story", "habits")
 	}
-	return append(tabs[:3:3], "story", "habits", "controls", "access")
+	out = append(out, tabs[3:]...)
+	if o.sh.Settings().Gameplay.DevMode {
+		out = append(out, "developer")
+	}
+	return out
+}
+
+// tabW is a tab button's width: optTabW, narrowed so that n tabs fit the
+// screen's width.
+func tabW(sw, n int) float32 {
+	if n <= 0 {
+		return optTabW
+	}
+	return float32(max(40, min(optTabW, (sw-2*56-8*(n-1))/n)))
 }
 
 // Layout (px).
@@ -77,7 +100,6 @@ const (
 	OptCtrlX   = 260
 	OptBtnH    = 32
 	optBarW    = 160
-	optNoteY   = 24 // below the last row
 	// the second column (Graphics): its labels and controls
 	optCol2LabelX = 600
 	optCol2CtrlX  = 720
@@ -326,10 +348,9 @@ func (o *Screen) rowValue(r OptionRow) string {
 func OptionRows(tab string) []OptionRow {
 	switch tab {
 	case "graphics":
-		return graphicsRows()
+		return append(graphicsRows(), windowRows()...)
 	case "gameplay":
-		return []OptionRow{
-			toggleRow("pausethreat", "Pause on threat", func(s *config.Settings) *bool { return &s.Gameplay.PauseOnThreat }),
+		return append([]OptionRow{
 			withTip(toggleRow("runinbackground", "Run in background", func(s *config.Settings) *bool { return &s.Gameplay.RunInBackground }),
 				"Keep the colony running while the window is in the background or minimised. Off: the game pauses until you come back."),
 			withTip(toggleRow("usagedata", "Share detailed usage data", func(s *config.Settings) *bool { return &s.Telemetry.Advanced }),
@@ -347,16 +368,6 @@ func OptionRows(tab string) []OptionRow {
 					return float64(s.Gameplay.PanSpeed-config.PanSpeedMin) / (config.PanSpeedMax - config.PanSpeedMin)
 				},
 				apply: func(s *config.Settings, d int) { s.Gameplay.PanSpeed += d * config.PanSpeedStep }},
-			{Key: "tempunit", Label: "Temperature unit", kind: rowChoice, Col: 1, // second column: the first is full at 960x540
-				Tip:   "How temperatures read everywhere: degrees Celsius or Fahrenheit.",
-				value: func(s config.Settings) string { return units.FromUnit(s.Gameplay.TempUnit).Name() },
-				apply: func(s *config.Settings, _ int) {
-					if s.Gameplay.TempUnit == units.UnitF {
-						s.Gameplay.TempUnit = ""
-					} else {
-						s.Gameplay.TempUnit = units.UnitF
-					}
-				}},
 			{Key: "maxcolonies", Label: "Max colonies", kind: rowStep, Col: 1,
 				value: func(s config.Settings) string { return fmt.Sprintf("%d", s.Gameplay.Colonies()) },
 				frac: func(s config.Settings) float64 {
@@ -366,7 +377,13 @@ func OptionRows(tab string) []OptionRow {
 					s.Gameplay.MaxColonies = max(1, min(s.Gameplay.Colonies()+d, config.MaxColoniesLimit))
 				}},
 			toggleRow("devmode", "Developer mode", func(s *config.Settings) *bool { return &s.Gameplay.DevMode }),
-		}
+		}, cameraRows()...)
+	case "general":
+		return generalRows()
+	case "interface":
+		return interfaceRows()
+	case "developer":
+		return developerRows()
 	case "controls":
 		return nil // controls_ui.go draws its own rows
 	case "story", "habits":
@@ -376,7 +393,7 @@ func OptionRows(tab string) []OptionRow {
 			uiScaleRow(),
 			toggleRow("reducedmotion", "Reduced motion", func(s *config.Settings) *bool { return &s.Accessibility.ReducedMotion }),
 			toggleRow("reducedflash", "Reduced flashing", func(s *config.Settings) *bool { return &s.Accessibility.ReducedFlashing }),
-		}, cardRows()...)
+		}, append(accessRows(), cardRows()...)...)
 	}
 	return []OptionRow{
 		volumeRow("master", "Master volume", func(a *config.Audio) *int { return &a.Master }),
@@ -394,7 +411,8 @@ var optionNotes = map[string]string{
 }
 
 func (o *Screen) CurrentTab() string {
-	if _, ok := optionTabLabels[o.Tab]; ok && (o.Tab != "story" || o.sh.Env().Running) {
+	if _, ok := optionTabLabels[o.Tab]; ok && (o.Tab != "story" || o.sh.Env().Running) &&
+		(o.Tab != "developer" || o.sh.Settings().Gameplay.DevMode) {
 		return o.Tab
 	}
 	return "audio"
@@ -422,9 +440,11 @@ func OptPos(rows []OptionRow, i int) (labelX, ctrlX, y float32) {
 func (o *Screen) Buttons(sw, sh int) []uikit.Button {
 	tab := o.CurrentTab()
 	var out []uikit.Button
-	for i, t := range o.TabList() {
+	list := o.TabList()
+	tw := tabW(sw, len(list))
+	for i, t := range list {
 		out = append(out, uikit.Button{ID: "options.tab." + t, Label: optionTabLabels[t],
-			X: float32(56 + i*(optTabW+8)), Y: optTabY, W: optTabW, H: OptBtnH, Selected: t == tab})
+			X: 56 + float32(i)*(tw+8), Y: optTabY, W: tw, H: OptBtnH, Selected: t == tab})
 	}
 	if tab == "controls" {
 		out = append(out, o.controlsButtons(sw, sh)...)
@@ -494,6 +514,11 @@ func (o *Screen) ApplyOption(id string) {
 	}
 	for _, r := range OptionRows(o.CurrentTab()) {
 		if r.Key == key {
+			if r.run != nil {
+				r.run(o)
+				o.sh.Cue("ui.toggle")
+				return
+			}
 			s := o.sh.Settings()
 			if r.applyApp != nil {
 				r.applyApp(o, &s, d)
@@ -539,9 +564,10 @@ func (o *Screen) DrawOptions(screen *ebiten.Image, sw, sh int) {
 		gfx.Text(screen, r.value(o.sh.Settings()), float64(stepValueX(cx)), ty, gfx.Body)
 	}
 	if note := optionNotes[tab]; note != "" {
-		ny := float64(rowY(len(rows))) + optNoteY - 20
-		for i, ln := range gfx.WrapPx(note, gfx.Small, float64(sw)-2*56-16) {
-			gfx.Text(screen, ln, 56, ny+float64(i)*gfx.LineH(gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
+		// beside the Back button: the rows fill the panel
+		ny := float64(footerY(sh)) + 2
+		for i, ln := range gfx.WrapPx(note, gfx.Small, float64(sw)-200-56) {
+			gfx.Text(screen, ln, 200, ny+float64(i)*gfx.LineH(gfx.Small), gfx.WithColor(gfx.Small, uikit.TextDim))
 		}
 	}
 	mx, my := o.sh.Cursor()

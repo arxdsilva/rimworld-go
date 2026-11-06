@@ -37,6 +37,14 @@ type Env struct {
 	Bindings    input.Bindings // the live key bindings
 	Pressed     []string       // keys that went down this frame
 	Mods        input.Mod      // modifiers held with them
+	// OpenFolder shows a folder in the file browser (nil: platform/openfolder).
+	OpenFolder func(path string) error
+	// SavesDir and LogDir are the folders the General tab opens ("": the
+	// per-user config folder's saves and logs).
+	SavesDir, LogDir string
+	// LangDir is assets/lang, where the Language row lists the catalogs
+	// ("": English only).
+	LangDir string
 }
 
 // Host is what the screen needs of the program that no ports role
@@ -136,6 +144,8 @@ type Screen struct {
 	SlotsRead   bool             // the main menu read the list once
 	SaveSlot    string           // the current colony's save slot
 	AutosaveDay int              // in-game day of the last autosave
+	SlotPage    int              // the Load screen's page of saves
+	namesDraft  string           // the preferred names dialog's text
 }
 
 // New builds the feature over its shell.

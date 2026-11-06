@@ -49,16 +49,17 @@ func (s *Screen) SaveNow(slot string) bool {
 }
 
 // TickAutosave saves at AutosaveHour every Options-chosen number of
-// in-game days (0: never) to <slot>-autosave; a commitment colony saves
-// its own slot every day, whatever Options say.
+// in-game days (0: never) to <slot>-autosave, or with General.AutosavesKept
+// above one to the next of <slot>-autosave-1…N (autosaveSlot); a
+// commitment colony saves its own slot every day, whatever Options say.
 func (s *Screen) TickAutosave() {
 	env := s.sh.Env()
 	if !env.CanSave || env.Capture {
 		return
 	}
-	n, slot := s.sh.Settings().Gameplay.AutosaveDays, s.SaveSlot+"-autosave"
+	n := s.sh.Settings().Gameplay.AutosaveDays
 	if env.Commitment {
-		n, slot = 1, s.SaveSlot // min(Options, daily), never off
+		n = 1 // min(Options, daily), never off
 	}
 	if n <= 0 {
 		return
@@ -67,8 +68,59 @@ func (s *Screen) TickAutosave() {
 	day := int(s.sh.Tick()) / 60000
 	if d.Hour == AutosaveHour && day-s.AutosaveDay >= n {
 		s.AutosaveDay = day
+		slot := s.SaveSlot
+		if !env.Commitment {
+			slot = autosaveSlot(s, day)
+		}
 		s.SaveNow(slot)
 	}
+}
+
+// autosaveSlot is the slot the next autosave of this colony is written
+// to. One kept autosave is <slot>-autosave, as it always was. With more it
+// is the first of <slot>-autosave-1…N that does not exist, else the one
+// written longest ago, so the oldest is overwritten; when the save list
+// cannot be read it goes round by the in-game day.
+func autosaveSlot(s *Screen, day int) string {
+	base := s.SaveSlot + "-autosave"
+	kept := s.sh.Settings().General.AutosavesKept
+	if kept <= 1 {
+		return base
+	}
+	slots, err := s.sh.List()
+	if err != nil || !s.sh.Env().CanLoad {
+		return fmt.Sprintf("%s-%d", base, day%kept+1)
+	}
+	var oldest time.Time
+	pick := ""
+	for i := 1; i <= kept; i++ {
+		name := fmt.Sprintf("%s-%d", base, i)
+		at, found := time.Time{}, false
+		for _, sl := range slots {
+			if sl.Name == name {
+				at, found = sl.Modified, true
+				break
+			}
+		}
+		if !found {
+			return name
+		}
+		if pick == "" || at.Before(oldest) {
+			pick, oldest = name, at
+		}
+	}
+	return pick
+}
+
+// baseSlot is a colony's slot name from the name of one of its autosaves
+// (<slot>-autosave or <slot>-autosave-N).
+func baseSlot(name string) string {
+	if i := strings.LastIndex(name, "-autosave-"); i >= 0 {
+		if _, err := strconv.Atoi(name[i+len("-autosave-"):]); err == nil {
+			return name[:i]
+		}
+	}
+	return strings.TrimSuffix(name, "-autosave")
 }
 
 // SaveBeforeLeaving saves a commitment colony as the player leaves it
@@ -95,7 +147,7 @@ func (s *Screen) optionLock(key string) string {
 
 // RefreshSlots re-reads the save list for the load screen.
 func (s *Screen) RefreshSlots() {
-	s.Slots = nil
+	s.Slots, s.SlotPage = nil, 0
 	if !s.sh.Env().CanLoad {
 		return
 	}
@@ -109,6 +161,11 @@ func (s *Screen) RefreshSlots() {
 
 // LoadSlot replaces the session with saved game i.
 func (s *Screen) LoadSlot(i int) {
+	if i == slotNextPage { // the "more saves" row of a long list
+		_, _, pages := s.slotWindow()
+		s.SlotPage = (s.SlotPage + 1) % max(1, pages)
+		return
+	}
 	if i < 0 || i >= len(s.Slots) || !s.sh.Env().CanLoad {
 		return
 	}
@@ -122,7 +179,7 @@ func (s *Screen) LoadSlot(i int) {
 		s.sh.Hint("load failed: " + err.Error())
 		return
 	}
-	s.SaveSlot = strings.TrimSuffix(slot, "-autosave")
+	s.SaveSlot = baseSlot(slot)
 	s.AutosaveDay = int(tick) / 60000
 	s.sh.Hint("loaded " + sl.Name)
 }
@@ -139,18 +196,42 @@ const (
 	EndingTag = "Complete: escaped by ship"
 )
 
-// LoadButtons are the Load screen's buttons: Back, then one per slot.
+// slotNextPage is the index the "more saves" row sends (load.slot.-1): the
+// root hands every load.slot.N click to LoadSlot(N).
+const slotNextPage = -1
+
+// slotWindow is the saves the Load screen shows now: slots start..start+n
+// (all of them up to slotRows; a longer list gives slotRows-1 per page and
+// a row to turn the page), and the number of pages.
+func (s *Screen) slotWindow() (start, n, pages int) {
+	if len(s.Slots) <= slotRows {
+		return 0, len(s.Slots), 1
+	}
+	per := slotRows - 1
+	pages = (len(s.Slots) + per - 1) / per
+	page := max(0, min(s.SlotPage, pages-1))
+	start = page * per
+	return start, min(per, len(s.Slots)-start), pages
+}
+
+// LoadButtons are the Load screen's buttons: Back, then one per slot shown,
+// then, when the list is longer than a page, the row that turns the page.
 func (s *Screen) LoadButtons(sw, sh int) []uikit.Button {
 	out := []uikit.Button{{ID: "load.back", Label: "Back", X: 40, Y: footerY(sh), W: 140, H: 36}}
 	x := float32(sw)/2 - 300
-	for i, sl := range s.Slots {
-		if i >= slotRows {
-			break
-		}
+	start, n, pages := s.slotWindow()
+	for j := 0; j < n; j++ {
+		i, sl := start+j, s.Slots[start+j]
 		// the row's text is drawn by DrawLoad (proportional columns)
 		out = append(out, uikit.Button{ID: ids.PrefixLoadSlot + strconv.Itoa(i), Quiet: true,
-			X: x, Y: float32(120 + i*(slotRowH+6)), W: 600, H: slotRowH,
+			X: x, Y: float32(120 + j*(slotRowH+6)), W: 600, H: slotRowH,
 			Disabled: sl.Err != "", Reason: sl.Err})
+	}
+	if pages > 1 {
+		page := start/(slotRows-1) + 1
+		out = append(out, uikit.Button{ID: ids.PrefixLoadSlot + strconv.Itoa(slotNextPage),
+			Label: fmt.Sprintf("More saves (page %d of %d)", page, pages),
+			X:     x, Y: float32(120 + n*(slotRowH+6)), W: 600, H: slotRowH})
 	}
 	return out
 }
@@ -163,11 +244,10 @@ func (s *Screen) DrawLoad(screen *ebiten.Image, sw, sh int) {
 	}
 	buttons := s.LoadButtons(sw, sh)
 	s.sh.PaintMenu(screen, sw, sh, "Load Game", body, buttons)
-	for i, sl := range s.Slots {
-		if i >= slotRows {
-			break
-		}
-		b := buttons[i+1]
+	start, n, _ := s.slotWindow()
+	for j := 0; j < n; j++ {
+		sl := s.Slots[start+j]
+		b := buttons[j+1]
 		bx, by := float64(b.X), float64(b.Y)
 		right := float64(b.X+b.W) - 12
 		if !sl.Modified.IsZero() {

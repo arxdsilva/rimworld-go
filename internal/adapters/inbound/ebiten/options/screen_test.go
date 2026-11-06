@@ -107,7 +107,7 @@ func TestStoryTabExistsOnlyWhileAColonyRuns(t *testing.T) {
 	if got := s.CurrentTab(); got != "story" {
 		t.Fatalf("colony: tab %q, want story", got)
 	}
-	if tabs := s.TabList(); len(tabs) != 7 || tabs[3] != "story" || tabs[4] != "habits" {
+	if tabs := s.TabList(); len(tabs) != 9 || tabs[3] != "story" || tabs[4] != "habits" {
 		t.Fatalf("tabs %v, want story in fourth place and habits after it", tabs)
 	}
 }
